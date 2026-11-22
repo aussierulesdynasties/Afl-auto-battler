@@ -37,7 +37,7 @@ func _run() -> void:
 		for c in oval.find_children("Crowd", "", true, false):
 			c.visible = false
 	var cam: Camera3D = oval.camera
-	cam.far = 3000.0
+	cam.far = maxf(cam.far, 3000.0)   # a ground with a backdrop sees further (GroundModels.backdrop_far)
 	cam.near = 0.05
 	for spec in args.slice(2):
 		var parts := str(spec).split(":")

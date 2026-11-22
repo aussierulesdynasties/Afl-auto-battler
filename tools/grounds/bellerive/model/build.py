@@ -78,25 +78,172 @@ def sweep(mb, bs, sec, cap0=True, cap1=True, capm='conc_grey'):
 
 
 # ---------------- the main stand: Ricky Ponting (west) + David Boon (south), one continuous bowl ----------------
-def main_sec(b):
-    T = periodic(D['main']['tiers'])(b)
-    d1, z1, w, rz, d2, z2, zb = T
+# Each tier is real stepped rows (a riser and a tread a row), not a slope painted with seats: the seats are
+# instanced 3D shells on the treads (seat_list(), written beside the glb). The row count is fixed within a
+# sweep, so the bowl is swept in two parts that meet at SPLIT, the Boon / Ponting join: the Boon's rows
+# (S counts) and the Ponting's (W counts) each run at their own pitch. ROWS: (lower, upper).
+SPLIT = 214.0
+ROWS = {'S': (10, 9), 'W': (12, 16)}
+
+
+def stepped(r0, z0, r1, z1, n, mt='tread', mr='riser'):
+    """n rows from (r0, z0) up to (r1, z1): a riser up, then a tread out, each row."""
+    out = []; run = (r1 - r0) / n; rise = (z1 - z0) / n
+    for k in range(n):
+        out += [(r0 + k * run, z0 + (k + 1) * rise, mr), (r0 + (k + 1) * run, z0 + (k + 1) * rise, mt)]
+    return out
+
+
+def main_tiers(b):
+    """The main stand's two tiers at bearing b: [(r0, z0, r1, z1), (r0, z0, r1, z1)] (lower, upper)."""
+    d1, z1, w, rz, d2, z2, zb = periodic(D['main']['tiers'])(b)
     f = rf(b); fz = D['fence_h']
-    m1 = seatmat(b, 'lower'); m2 = seatmat(b, 'upper')
-    return [(f, 0.0, None), (f, fz, 'fence'), (f + 0.6, fz, 'conc_grey'), (f + d1, z1, m1),
-            (f + d1 + w, z1, 'conc_grey'), (f + d1 + w, z1 + rz, 'tier_wall'), (f + d2, z2, m2),
-            (f + d2 + 1.2, z2, 'conc_grey'), (f + d2 + 1.2, zb, 'backwall')]
+    return [(f + 0.6, fz, f + d1, z1), (f + d1 + w, z1 + rz, f + d2, z2)]
 
 
-def seatmat(b, tier):
-    for b0, b1, t, m in D['main']['seatmats']:
-        if b0 <= b % 360 < b1 and t in (tier, 'both'): return m
-    return 'seats_blue'
+def main_sec_n(nl, nu):
+    def sec(b):
+        d1, z1, w, rz, d2, z2, zb = periodic(D['main']['tiers'])(b)
+        f = rf(b); fz = D['fence_h']
+        (a0, b0, a1, b1), (c0, e0, c1, e1) = main_tiers(b)
+        return ([(f, 0.0, None), (f, fz, 'fence'), (f + 0.6, fz, 'conc_grey')] + stepped(a0, b0, a1, b1, nl)
+                + [(f + d1 + w, z1, 'conc_grey'), (f + d1 + w, z1 + rz, 'ribbon' if rz > 2.0 else 'tier_wall')] + stepped(c0, e0, c1, e1, nu)
+                + [(f + d2 + 1.2, z2, 'conc_grey'), (f + d2 + 1.2, zb, 'backwall')])
+    return sec
+
+
+def main_sec(b):
+    return main_sec_n(*ROWS['S' if b < SPLIT else 'W'])(b)
+
+
+def main_parts():
+    M = D['main']; return [(arc(M['b0'], SPLIT), 'S'), (arc(SPLIT, M['b1']), 'W')]
+
+
+PONTING_B0 = 212.0
+
+
+def arc_frame(b0, b1, r_of):
+    """Arc-length frame along a facade: s (m along the wall at its own radius) -> bearing, and a point at
+    (s, z, out) with `out` metres outward of the wall line r_of(b)."""
+    bs = np.linspace(b0, b1, 721); rr = np.array([r_of(b) for b in bs])
+    ss = np.concatenate([[0.0], np.cumsum(np.radians(np.diff(bs)) * 0.5 * (rr[1:] + rr[:-1]))])
+    bear = lambda s_: float(np.interp(s_, ss, bs))
+    def P(s_, z, out=0.0):
+        b = bear(s_); return P3(b, r_of(b) + out, z)
+    return ss[-1], bear, P
+
+
+def ribbon(mb, P, s0, s1, z0, z1, out, m, step=1.5):
+    """A wall band between s0 and s1 (z0..z1), `out` m off the wall line, in short flat pieces round the arc."""
+    n = max(1, int(math.ceil((s1 - s0) / step)))
+    for k in range(n):
+        a, b_ = s0 + (s1 - s0) * k / n, s0 + (s1 - s0) * (k + 1) / n
+        mb.face([P(a, z0, out), P(b_, z0, out), P(b_, z1, out), P(a, z1, out)], m)
+
+
+def hband(mb, P, s0, s1, z, out0, out1, m, step=1.5):
+    """A horizontal band at height z from `out0` to `out1` off the wall line (a soffit or a ledge)."""
+    n = max(1, int(math.ceil((s1 - s0) / step)))
+    for k in range(n):
+        a, b_ = s0 + (s1 - s0) * k / n, s0 + (s1 - s0) * (k + 1) / n
+        mb.face([P(a, z, out0), P(b_, z, out0), P(b_, z, out1), P(a, z, out1)], m)
+
+
+def post(mb, P, s_, z0, z1, out, w, d, m):
+    """A square column or mullion w (along the wall) x d (out from it) at s_."""
+    q = [(s_ - w / 2, out), (s_ + w / 2, out), (s_ + w / 2, out + d), (s_ - w / 2, out + d)]
+    for (a, o1), (b_, o2) in zip(q, q[1:] + q[:1]):
+        mb.face([P(a, z0, o1), P(b_, z0, o2), P(b_, z1, o2), P(a, z1, o1)], m)
+    mb.face([P(a, z1, o) for a, o in q], m)
+
+
+def boon_facade(mb, b0, b1, fac, zfac):
+    """Boon Stand outside (GE cf_195): a deep pale cladding band from 6.2 m to the roof, and under it the
+    concourse glazing set 1.6 m back behind white columns every 7.2 m, mullions every 1.8 m."""
+    L, bear, P = arc_frame(b0, b1, fac)
+    zt = zfac(0.5 * (b0 + b1)); zb = 6.2; rec = -1.6
+    ribbon(mb, P, 0, L, zb, zt, 0.0, 'boon_band')
+    hband(mb, P, 0, L, zb, 0.0, rec, 'roof_soffit')
+    ribbon(mb, P, 0, L, 0.0, zb, rec, 'boon_glass')
+    hband(mb, P, 0, L, 0.6, rec, rec + 0.35, 'conc_grey')                 # the glazing's plinth
+    ribbon(mb, P, 0, L, 0.0, 0.6, rec + 0.35, 'conc_grey')
+    n = int(L // 7.2)
+    for k in range(n + 1):
+        post(mb, P, k * L / n, 0.0, zb, -0.45, 0.45, 0.45, 'steel_white')
+    m = int(L // 1.8)
+    for k in range(m):
+        post(mb, P, (k + 0.5) * L / m, 0.6, zb, rec, 0.1, 0.14, 'steel_white')
+    for z in (3.2,):                                                        # transom
+        hband(mb, P, 0, L, z, rec, rec + 0.12, 'steel_white')
+
+
+def _cuts(L, lo, hi, rng, off=0.0):
+    """Irregular stations along 0..L: gaps between lo and hi metres, the ends exactly 0 and L."""
+    out = [0.0]; s_ = off if off > 0 else rng.uniform(lo, hi)
+    while s_ < L - lo * 0.6:
+        out.append(s_); s_ += rng.uniform(lo, hi)
+    return out + [L]
+
+
+def _zip(A, B):
+    """Triangles between two rows of stations A and B (each a sorted list of (s, node)), the way a
+    folded skin is cut: always step along whichever row's next station comes first."""
+    tris = []; i = j = 0
+    while i < len(A) - 1 or j < len(B) - 1:
+        if j >= len(B) - 1 or (i < len(A) - 1 and A[i + 1][0] <= B[j + 1][0]):
+            tris.append((A[i][1], A[i + 1][1], B[j][1])); i += 1
+        else:
+            tris.append((A[i][1], B[j + 1][1], B[j][1])); j += 1
+    return tris
+
+
+def ponting_skin(mb, b0, b1, fac, zfac):
+    """Ricky Ponting Stand outside (GE cf_240, cf_270): a folded skin of big flat panels, cut irregularly.
+    Five rows of nodes, each row's stations spaced at random (seeded) and in and out of the wall line, are
+    zipped into triangles, so no two panels match: a pale silver crown folding out from the roof edge, a
+    band of big blue glass and pale panels whose bottom edge rises and falls, then pale facets tucking back
+    in over the concourse. Under it the glazed concourse sits 2.4 m back."""
+    L, bear, P = arc_frame(b0, b1, fac)
+    zt = zfac(0.5 * (b0 + b1)); rng = np.random.default_rng(240)
+    # nodes are (s, z, out); a row is a list of (s, node)
+    row = lambda ss, zf, out: [(s_, (s_, zf(), out)) for s_ in ss]
+    r0 = row(_cuts(L, 10.0, 16.0, rng), lambda: zt, 0.0)
+    mids = [0.0] + [0.5 * (r0[k][0] + r0[k + 1][0]) + rng.uniform(-1.5, 1.5) for k in range(len(r0) - 1)] + [L]
+    r1 = row(mids, lambda: zt - 3.2 + rng.uniform(-0.4, 0.4), 0.9)
+    r2 = row(_cuts(L, 7.0, 14.0, rng), lambda: zt - 6.0 + rng.uniform(-0.6, 0.6), 1.2)
+    r3 = row(_cuts(L, 6.0, 13.0, rng), lambda: rng.uniform(8.0, 11.5), 0.7)
+    r4 = row(_cuts(L, 8.0, 16.0, rng), lambda: 4.6, -1.4)
+    # the glass band's colours run in irregular lengths: mostly blue glass, some sky, grey and pale panels
+    segs = _cuts(L, 4.0, 13.0, rng)
+    cols = rng.choice(['skin_blue', 'skin_blue', 'skin_blue', 'skin_sky', 'skin_grey', 'skin_pale', 'skin_pale'],
+                      len(segs))
+    for A, B, m1, m2 in [(r0, r1, 'skin_silver', 'skin_silver2'), (r1, r2, 'skin_silver2', 'skin_pale'),
+                         (r2, r3, None, None), (r3, r4, 'skin_pale', 'skin_silver2')]:
+        for n_, t in enumerate(_zip(A, B)):
+            (s1, z1, _), (s2, z2, _), (s3, z3, _) = t
+            if (s2 - s1) * (z3 - z1) - (s3 - s1) * (z2 - z1) < 0:    # face out: counter-clockwise seen from outside
+                t = (t[0], t[2], t[1])
+            if m1 is None:
+                m = str(cols[max(0, int(np.searchsorted(segs, (s1 + s2 + s3) / 3.0)) - 1)])
+            else:
+                m = m1 if n_ % 2 == 0 else m2
+            mb.face([P(*q) for q in t], m)
+    # concourse under the skin: soffit back from the lowest nodes, then dark glazing behind columns
+    hband(mb, P, 0, L, 4.6, -1.4, -2.4, 'roof_soffit')
+    ribbon(mb, P, 0, L, 0.0, 4.6, -2.4, 'backwall')
+    n = max(2, int(round(L / 12.5)))
+    for k in range(n + 1):
+        post(mb, P, k * L / n, 0.0, 4.6, -2.2, 0.5, 0.5, 'steel_white')
+    # the skin's ends, closed against the stand
+    for s_ in (0.0, L):
+        mb.face([P(s_, 0.0, -2.4), P(s_, 0.0, 0.0), P(s_, zt, 0.0), P(s_, 4.6, -2.4)], 'skin_silver2')
 
 
 def main_all(col):
     M = D['main']; mb = MB('main_stand'); bs = arc(M['b0'], M['b1'])
-    sweep(mb, bs, main_sec)
+    for part, k in main_parts():
+        sweep(mb, part, main_sec_n(*ROWS[k]))
     R = periodic(M['roof'])
     # roof: front fascia, sloping white deck, outer fascia, soffit back to the stand's back wall
     rin = lambda b: (R(b)[0], R(b)[2]); rout = lambda b: (R(b)[1], R(b)[3])
@@ -112,9 +259,10 @@ def main_all(col):
     def zfac(b): return R(b)[3] - th
     sb = lambda b: main_sec(b)[-1]
     strip(mb, bs, lambda b: (sb(b)[0], sb(b)[1]), lambda b: (fac(b), sb(b)[1]), 'roof_soffit')
-    for b0, b1, m in M['facmats']:
-        bb = [b for b in bs if b0 - 1e-6 <= b <= b1 + 1e-6]
-        if len(bb) > 1: strip(mb, bb[::-1], lambda b: (fac(b), 0.0), lambda b: (fac(b), zfac(b)), m)  # v up the wall
+    # the facades are modelled (2026-11-22): the Boon's recessed glazed concourse under a deep band, the
+    # Ponting's folded skin of triangular panels (GE close views cf_195, cf_240, cf_270)
+    boon_facade(mb, M['b0'], PONTING_B0, fac, zfac)
+    ponting_skin(mb, PONTING_B0, M['b1'], fac, zfac)
     for b, flip in ((bs[0], False), (bs[-1], True)):
         endcap(mb, b, [(sb(b)[0], 0.0), (fac(b), 0.0), (fac(b), zfac(b)), (sb(b)[0], zfac(b))], M['endmat'], flip)
         endcap(mb, b, [(R(b)[0], R(b)[2] - th), (R(b)[1], R(b)[3] - th), (R(b)[1], R(b)[3]), (R(b)[0], R(b)[2])], 'roof_fascia', flip)
@@ -136,19 +284,75 @@ def skylights(col):
 
 
 # ---------------- Members (NW) + the north building: glazed two-level face behind a few rows, flat white roof -------
+MEM_ROWS = 3
+
+
+def _window(mb, P, a, b_, z0, z1, d, mw='render_white', pane='win_dark'):
+    """A window cut d metres into the wall line between s = a..b_, z0..z1: reveals, sill, head, dark pane."""
+    mb.face([P(a, z0, 0), P(a, z0, -d), P(a, z1, -d), P(a, z1, 0)], mw)
+    mb.face([P(b_, z0, -d), P(b_, z0, 0), P(b_, z1, 0), P(b_, z1, -d)], mw)
+    mb.face([P(a, z0, -d), P(a, z0, 0), P(b_, z0, 0), P(b_, z0, -d)], 'conc_grey')
+    mb.face([P(a, z1, 0), P(a, z1, -d), P(b_, z1, -d), P(b_, z1, 0)], mw)
+    mb.face([P(a, z0, -d), P(b_, z0, -d), P(b_, z1, -d), P(a, z1, -d)], pane, uv=[(0, 0), (1, 0), (1, 1), (0, 1)])
+
+
+def _wall_with_holes(mb, P, L, z0, z1, holes, m):
+    """The wall line from z0 to z1 over 0..L, with rectangular holes [(a, b_, h0, h1)] left open."""
+    xs = sorted({0.0, L, *[h[0] for h in holes], *[h[1] for h in holes]})
+    for s0, s1 in zip(xs, xs[1:]):
+        mid = 0.5 * (s0 + s1); zs = [z0]
+        for a, b_, h0, h1 in holes:
+            if a <= mid <= b_: zs += [h0, h1]
+        zs = sorted(zs) + [z1]
+        for k in range(0, len(zs) - 1, 2):
+            if zs[k + 1] > zs[k] + 1e-3:
+                ribbon(mb, P, s0, s1, zs[k], zs[k + 1], 0.0, m, step=4.0)
+
+
+def members_wall(mb, b0, b1, r_of, zr):
+    """The Members' outer wall (GE cf_320, cf_345): plain white render, a few small square windows high up
+    and spaced unevenly, and at the foot of its north end a glazed entry set 1.2 m in under the wall. Every
+    window is cut into the wall with reveals and a sill, not painted on."""
+    L, bear, P = arc_frame(b0, b1, r_of)
+    top = min(zr(b) for b in np.linspace(b0, b1, 40))
+    rng = np.random.default_rng(320)
+    holes = []
+    s_ = rng.uniform(6.0, 12.0)
+    while s_ < L - 4.0:                    # the high windows: about 1.2 m square, 6-20 m apart
+        w = rng.uniform(1.0, 1.5); z0 = rng.choice([9.4, 9.4, 9.8]); holes.append((s_, s_ + w, z0, z0 + w * 0.8))
+        s_ += w + rng.uniform(6.0, 20.0)
+    c = 0.55 * L                           # a pair low down near the middle (GE cf_320, right of the trees)
+    holes += [(c, c + 1.2, 5.6, 6.6), (c + 6.0, c + 7.2, 5.6, 6.6)]
+    ent = (L - 26.0, L - 3.0, 0.0, 3.0)    # the north end's glazed entry
+    _wall_with_holes(mb, P, L, 0.0, top, holes + [ent], 'render_white')
+    n = int(math.ceil(L / 2.0))            # where the roof steps up (the north building), the wall above
+    for k in range(n):
+        s0, s1 = k * L / n, (k + 1) * L / n; z1 = zr(bear(0.5 * (s0 + s1)))
+        if z1 > top + 0.01: ribbon(mb, P, s0, s1, top, z1, 0.0, 'render_white', step=4.0)
+    for a, b_, z0, z1 in holes:
+        _window(mb, P, a, b_, z0, z1, 0.3)
+    a, b_, z0, z1 = ent; d = 1.2
+    _window(mb, P, a, b_, z0, z1, d, pane='boon_glass')
+    n = int((b_ - a) // 3.2)
+    for k in range(1, n):
+        post(mb, P, a + k * (b_ - a) / n, 0.0, z1, -d, 0.12, 0.14, 'steel_white')
+    for k in range(1, n + 1):
+        post(mb, P, a + (k - 0.5) * (b_ - a) / n, 0.0, z1, -0.4, 0.35, 0.35, 'render_white')
+
+
 def members_all(col):
     M = D['members']; mb = MB('members'); bs = arc(M['b0'], M['b1'])
     RI = periodic(M['rin']); RO = periodic(M['rout']); ZR = periodic(M['zr']); fz = D['fence_h']
     def sec(b):
         f = rf(b); ri = RI(b)[0]; g = ri + 0.6; zr = ZR(b)[0]
-        return [(f, 0.0, None), (f, fz, 'fence'), (f + 0.6, fz, 'conc_grey'), (g - 0.4, 2.4, 'seats_dark'),
-                (g, 2.4, 'conc_grey'), (g, zr - 1.2, 'glass_members')]
+        return ([(f, 0.0, None), (f, fz, 'fence'), (f + 0.6, fz, 'conc_grey')] + stepped(f + 0.6, fz, g - 0.4, 2.4, MEM_ROWS)
+                + [(g, 2.4, 'conc_grey'), (g, zr - 1.2, 'glass_members')])
     sweep(mb, bs, sec, cap0=False)
     zr = lambda b: ZR(b)[0]
     strip(mb, bs, lambda b: (RI(b)[0] + 0.6, zr(b) - 1.2), lambda b: (RI(b)[0], zr(b) - 1.2), 'roof_soffit')
     strip(mb, bs, lambda b: (RI(b)[0], zr(b) - 1.2), lambda b: (RI(b)[0], zr(b)), 'roof_fascia')
     strip(mb, bs, lambda b: (RI(b)[0], zr(b)), lambda b: (RO(b)[0], zr(b)), 'roof_flat')
-    strip(mb, bs[::-1], lambda b: (RO(b)[0], 0.0), lambda b: (RO(b)[0], zr(b)), 'fac_members')
+    members_wall(mb, M['b0'], M['b1'], lambda b: RO(b)[0], zr)
     # the step between the Members (13.5 m) and the taller north building (17 m)
     b = 332.0; endcap(mb, b, [(RI(b)[0], 13.5), (RO(b)[0], 13.5), (RO(b)[0], 14.0), (RI(b)[0], 14.0)], 'fac_members', flip=True)
     b = bs[-1]; endcap(mb, b, [(rf(b), 0.0), (RO(b)[0], 0.0), (RO(b)[0], zr(b)), (RI(b)[0], zr(b)), (RI(b)[0] + 0.6, 2.4),
@@ -171,8 +375,8 @@ def nstand(col):
     N = D['nstand']; F = Frame(dict(c=N['c'], a=N['a'], L=N['L'], W=5.0)); mb = MB('northern_stand'); h = N['L'] / 2
     rv0, rv1 = N['roof_v']; zf, zb = N['zr']; sv0, sv1 = N['seat_v']; sz0, sz1 = N['seat_z']
     P = lambda u, v, z: F.P(u, v, z)
-    # seating deck: rows rising toward the back
-    n = 6
+    # seating deck: rows rising toward the back, raised on an arcaded front wall (GE from the field, 2026-11-22)
+    n = N.get('rows', 6)
     for k in range(n):
         v0 = sv0 + (sv1 - sv0) * k / n; v1 = sv0 + (sv1 - sv0) * (k + 1) / n; z = sz0 + (sz1 - sz0) * k / (n - 1)
         mb.face([P(-h, v0, z), P(h, v0, z), P(h, v1, z), P(-h, v1, z)], 'seats_dark',
@@ -181,9 +385,9 @@ def nstand(col):
         if zn > z: mb.face([P(-h, v1, z), P(h, v1, z), P(h, v1, zn), P(-h, v1, zn)], 'conc_grey')
         mb.face([P(-h, v0, 0), P(-h, v0, z), P(-h, v1, z), P(-h, v1, 0)][::-1], 'nstand_wall')
         mb.face([P(h, v0, 0), P(h, v0, z), P(h, v1, z), P(h, v1, 0)], 'nstand_wall')
-    mb.face([P(-h, sv0, 0), P(h, sv0, 0), P(h, sv0, sz0), P(-h, sv0, sz0)], 'conc_grey')
+    arcade(mb, N, P, h, sv0, sz0)
     # back wall and end walls up to the roof, roof slab, fascia, posts
-    mb.face([P(h, rv1, 0), P(-h, rv1, 0), P(-h, rv1, zb), P(h, rv1, zb)], 'nstand_wall')
+    back_bays(mb, P, h, rv1, zb)
     for s in (-1, 1):
         q = [P(s * h, sv1, sz1), P(s * h, rv1, 0), P(s * h, rv1, zb), P(s * h, sv1, zb + (zf - zb) * (sv1 - rv1) / (rv0 - rv1))]
         q = [P(s * h, sv1, 0)] + q[1:] + [P(s * h, sv1, sz1)]
@@ -197,6 +401,47 @@ def nstand(col):
     for i in range(k + 1):
         u = -h + i * N['L'] / k; mb.beam(P(u, rv0 + 0.3, 0), P(u, rv0 + 0.3, zf - t), 0.25, 0.25, 'steel_white')
     mb.build(col)
+
+
+
+def back_bays(mb, P, h, v, top, nb=8, d=0.6):
+    """The Northern Stand's back wall (GE cf_030): pilasters a bay apart and, between them, openings 3.2 m
+    high set d back to a dark inside, a lintel band over them up to the roof."""
+    W = 2 * h / nb; zo = min(3.2, top - 0.6); pw = 0.6
+    for k in range(nb + 1):
+        u = -h + k * W; a, b_ = max(-h, u - pw / 2), min(h, u + pw / 2)
+        mb.face([P(b_, v, 0), P(a, v, 0), P(a, v, zo), P(b_, v, zo)], 'nstand_wall')
+        for uu in (a, b_):
+            if -h < uu < h:
+                mb.face([P(uu, v, 0), P(uu, v - d, 0), P(uu, v - d, zo), P(uu, v, zo)], 'nstand_wall')
+    for k in range(nb):
+        a, b_ = -h + k * W + pw / 2, -h + (k + 1) * W - pw / 2
+        mb.face([P(b_, v - d, 0), P(a, v - d, 0), P(a, v - d, zo), P(b_, v - d, zo)], 'vom_dark')
+        mb.face([P(a, v, zo), P(a, v - d, zo), P(b_, v - d, zo), P(b_, v, zo)], 'nstand_wall')
+    mb.face([P(h, v, zo), P(-h, v, zo), P(-h, v, top), P(h, v, top)], 'nstand_wall')
+
+
+def arcade(mb, N, P, h, v, top, depth=0.8):
+    """The Northern Stand's front wall under its seats: N['arches'] segmental arches, each opening a modelled
+    recess `depth` deep with a dark back, the piers and spandrels in the stand's cream render."""
+    na, aw, sp, ri = N['arches'], N['arch_w'], N['arch_spring'], N['arch_rise']
+    hw = aw / 2; R_ = (hw * hw + ri * ri) / (2 * ri); zc = sp + ri - R_
+    cs = [-h + (k + 0.5) * 2 * h / na for k in range(na)]
+    def arc_pts(c, m=10):
+        a0 = math.asin(hw / R_)
+        return [(c + R_ * math.sin(t), zc + R_ * math.cos(t)) for t in np.linspace(-a0, a0, m + 1)]
+    edges = [-h] + [x for c in cs for x in (c - hw, c + hw)] + [h]
+    for k in range(0, len(edges), 2):                       # piers, full height
+        mb.face([P(edges[k], v, 0), P(edges[k + 1], v, 0), P(edges[k + 1], v, top), P(edges[k], v, top)], 'nstand_wall')
+    for c in cs:
+        A = arc_pts(c)
+        for (u0, z0), (u1, z1) in zip(A, A[1:]):             # spandrel over the arch, and the arch's soffit
+            mb.face([P(u0, v, z0), P(u1, v, z1), P(u1, v, top), P(u0, v, top)], 'nstand_wall')
+            mb.face([P(u0, v, z0), P(u0, v + depth, z0), P(u1, v + depth, z1), P(u1, v, z1)], 'nstand_wall')
+        for u in (c - hw, c + hw):                           # jambs
+            mb.face([P(u, v, 0), P(u, v + depth, 0), P(u, v + depth, sp), P(u, v, sp)], 'nstand_wall')
+        back = [P(c - hw, v + depth, 0), P(c + hw, v + depth, 0)] + [P(u, v + depth, z) for u, z in A[::-1]]
+        mb.face(back, 'vom_dark')
 
 
 # ---------------- east: concrete terrace steps at the fence, a grassed hill behind ----------------
@@ -228,34 +473,271 @@ def apron(col):
 
 
 def scoreboard(col):
+    """The east scoreboard (GE fac_100, cs_090): the dark screen toward the field, a 3.4 m deep steel box
+    behind it clad in pale panels with its frame standing proud (posts, rails and X bracing in four bays),
+    on a dark plant room with louvred doors. The screen's face stays where the data puts it."""
     S = D['scoreboard']; mb = MB('scoreboard'); F = Frame(dict(c=S['c'], a=S['a'], L=S['L'], W=S['W']))
-    mb.box(S['c'], S['L'], S['W'], S['H'], S['a'], 'scoreboard_back', z0=S['z0'])
-    h = S['L'] / 2; v = -S['W'] / 2 - 0.03   # screen face toward the field (west): blank dark screen
-    z0, z1 = S['z0'] + 0.4, S['z0'] + S['H'] - 0.4
-    mb.face([F.P(h - 0.4, v, z0), F.P(-h + 0.4, v, z0), F.P(-h + 0.4, v, z1), F.P(h - 0.4, v, z1)], 'screen', uv=[(0, 0), (1, 0), (1, 1), (0, 1)])
-    for u in (-h + 2.5, h - 2.5): mb.box(F.P(u, 0)[:2], 1.0, 1.0, S['z0'], S['a'], 'steel_galv')
+    h = S['L'] / 2; vf = -S['W'] / 2; dep = 3.4; vb = vf + dep; z0, z1 = S['z0'], S['z0'] + S['H']
+    q = lambda u, v, z=None: F.P(u, v, z)
+    # the box: back, ends, top and underside, clad
+    mb.face([q(-h, vb, z0), q(h, vb, z0), q(h, vb, z1), q(-h, vb, z1)], 'scoreboard_back')
+    mb.face([q(h, vf, z0), q(h, vf, z1), q(h, vb, z1), q(h, vb, z0)][::-1], 'scoreboard_back')
+    mb.face([q(-h, vb, z0), q(-h, vb, z1), q(-h, vf, z1), q(-h, vf, z0)][::-1], 'scoreboard_back')
+    mb.face([q(-h, vf, z1), q(-h, vb, z1), q(h, vb, z1), q(h, vf, z1)][::-1], 'steel_galv')
+    mb.face([q(-h, vf, z0), q(h, vf, z0), q(h, vb, z0), q(-h, vb, z0)][::-1], 'steel_galv')
+    # the screen's frame and the screen itself, set 0.15 m into it
+    mb.face([q(h, vf, z0), q(-h, vf, z0), q(-h, vf, z1), q(h, vf, z1)], 'steel_galv')
+    mb.face([q(h - 0.4, vf - 0.03, z0 + 0.4), q(-h + 0.4, vf - 0.03, z0 + 0.4), q(-h + 0.4, vf - 0.03, z1 - 0.4),
+             q(h - 0.4, vf - 0.03, z1 - 0.4)], 'screen', uv=[(0, 0), (1, 0), (1, 1), (0, 1)])
+    # the frame standing 0.25 m proud of the back: posts, three rails, an X in each bay
+    vo = vb + 0.14; us = np.linspace(-h, h, 5)
+    for u in us: mb.beam(q(u, vo, z0), q(u, vo, z1 + 0.25), 0.28, 0.28, 'steel_white')
+    for z in (z0 + 0.1, 0.5 * (z0 + z1), z1):
+        mb.beam(q(-h - 0.14, vo, z), q(h + 0.14, vo, z), 0.28, 0.24, 'steel_white')
+    for u0, u1 in zip(us, us[1:]):
+        for za, zb in ((z0 + 0.1, 0.5 * (z0 + z1)), (0.5 * (z0 + z1), z1)):
+            mb.beam(q(u0, vo, za), q(u1, vo, zb), 0.16, 0.16, 'steel_white')
+            mb.beam(q(u1, vo, za), q(u0, vo, zb), 0.16, 0.16, 'steel_white')
+    # the plant room under it: dark block, louvred doors set into its back
+    c = q(0.0, vf + dep / 2); mb.box(c, S['L'] - 1.0, dep, z0, S['a'], 'conc_grey', mtop='steel_galv')
+    for u in (-4.0, 0.5, 4.5):
+        a_, b_ = u - 0.9, u + 0.9; v = vb - 0.5 + 0.02
+        mb.face([q(a_, v, 0.0), q(b_, v, 0.0), q(b_, v, 2.3), q(a_, v, 2.3)], 'vom_dark')
+        mb.face([q(a_, v - 0.25, 0.0), q(a_, v, 0.0), q(a_, v, 2.3), q(a_, v - 0.25, 2.3)][::-1], 'conc_grey')
     mb.build(col)
 
 
 def towers(col):
+    """The four light towers (GE out_*): white tapering 12-sided poles, a service platform with a railing
+    under the head, and the head itself: a galvanised frame carrying 4 rows of 9 lamps, each lamp a
+    modelled box with a glass face, the whole head tilted 22 degrees down at the centre square."""
     T = D['towers']; mb = MB('light_towers'); H = T['H']
     for x, y in T['pos']:
-        n = 8; r0, r1 = 1.3, 0.6
+        n = 12; r0, r1 = 1.3, 0.55
         P0 = [(x + r0 * math.cos(2 * math.pi * k / n), y + r0 * math.sin(2 * math.pi * k / n)) for k in range(n)]
         P1 = [(x + r1 * math.cos(2 * math.pi * k / n), y + r1 * math.sin(2 * math.pi * k / n)) for k in range(n)]
         for k in range(n):
             j = (k + 1) % n; mb.face([(*P0[k], 0), (*P0[j], 0), (*P1[j], H), (*P1[k], H)], 'tower')
-        # lamp head facing the centre, tilted down 25 degrees
-        a = math.atan2(-x, -y); ux, uy = math.cos(a), -math.sin(a); fx, fy = math.sin(a), math.cos(a)
-        Fr = Frame(dict(c=(x + fx * 0.8, y + fy * 0.8), a=math.degrees(math.atan2(uy, ux)), L=7.0, W=1.2))
-        c = Fr.P(0, 0)[:2]; mb.box(c, 7.0, 1.0, 4.2, math.degrees(math.atan2(uy, ux)), 'steel_galv', z0=H - 1.0)
-        z0, z1 = H - 0.8, H + 3.0
-        mb.face([Fr.P(3.4, 0.55, z0), Fr.P(-3.4, 0.55, z0), Fr.P(-3.4, 0.55, z1), Fr.P(3.4, 0.55, z1)][::-1], 'lamps',
-                uv=[(0, 0), (1, 0), (1, 1), (0, 1)])
+        mb.cyl((x, y), 1.9, 0.0, 0.6, 'conc_grey', n=12, top='conc_grey')             # footing
+        a = math.atan2(-x, -y)                                                       # bearing to the centre
+        f = np.array([math.sin(a), math.cos(a), 0.0]); s_ = np.array([math.cos(a), -math.sin(a), 0.0])
+        up = np.array([0, 0, 1.0]); tilt = math.radians(22)
+        fz = f * math.cos(tilt) - up * math.sin(tilt); uz = up * math.cos(tilt) + f * math.sin(tilt)
+        base = np.array([x, y, H]) + f * 0.9
+        W, Hh = 8.4, 4.2
+        # platform and railing just under the head
+        pz = H - 0.9; pc = np.array([x, y, pz]) + f * 0.6
+        corners = [pc + s_ * u + f * v for u, v in ((-W / 2 - 0.3, -1.0), (W / 2 + 0.3, -1.0), (W / 2 + 0.3, 1.6), (-W / 2 - 0.3, 1.6))]
+        mb.face([tuple(c) for c in corners], 'steel_galv')
+        mb.face([tuple(c - up * 0.15) for c in corners[::-1]], 'steel_galv')
+        for i in range(4):
+            p, q_ = corners[i] + up * 1.1, corners[(i + 1) % 4] + up * 1.1
+            mb.beam(tuple(p), tuple(q_), 0.06, 0.06, 'steel_galv')
+            mb.beam(tuple(corners[i]), tuple(corners[i] + up * 1.1), 0.06, 0.06, 'steel_galv')
+        # the head's frame: two posts off the pole, rails top and bottom and between the lamp rows
+        hc = base + up * 1.0
+        def hp(u, v, w=0.0): return tuple(hc + s_ * u + uz * v + fz * w)
+        for v in np.linspace(0.0, Hh, 5):
+            mb.beam(hp(-W / 2, v), hp(W / 2, v), 0.14, 0.14, 'steel_galv')
+        for u in (-W / 2, -W / 6, W / 6, W / 2):
+            mb.beam(hp(u, -0.1), hp(u, Hh + 0.1), 0.14, 0.14, 'steel_galv')
+        mb.beam(tuple(np.array([x, y, H - 0.6])), hp(-W / 6, 0.4), 0.3, 0.3, 'steel_galv')
+        mb.beam(tuple(np.array([x, y, H - 0.6])), hp(W / 6, 0.4), 0.3, 0.3, 'steel_galv')
+        # lamps: 4 rows of 9 boxes, glass faces toward the ground
+        for j in range(4):
+            for i in range(9):
+                u = -W / 2 + (i + 0.5) * W / 9; v = (j + 0.5) * Hh / 4; e = 0.36
+                c = [hp(u + du * e, v + dv * e, 0.1) for du, dv in ((-1, -1), (1, -1), (1, 1), (-1, 1))]
+                cf = [hp(u + du * e, v + dv * e, 0.65) for du, dv in ((-1, -1), (1, -1), (1, 1), (-1, 1))]
+                for k in range(4):
+                    mb.face([c[k], c[(k + 1) % 4], cf[(k + 1) % 4], cf[k]], 'steel_galv')
+                mb.face(cf, 'lamp_face'); mb.face(c[::-1], 'steel_galv')
+    mb.build(col)
+
+
+# ---------------- vomitories: the tunnels up through the back of the lower tier (GE from the field) ----------------
+# Every other seating block has one at its middle: a pale concrete portal box over the top VOM_ROWS rows, its mouth
+# a dark tunnel set back into it (modelled, not painted), its roof level with the concourse behind.
+VOM_W = 2.6
+VOM_ROWS = 6
+
+
+def vom_bearings():
+    out = []
+    for part, key in main_parts():
+        b0, b1 = part[0], part[-1]; bm = 0.5 * (b0 + b1)
+        r = main_tiers(bm)[0][2] - 0.3
+        L = math.radians(b1 - b0) * r; n = max(1, int(round(L / AISLE_EVERY)))
+        for j in range(0, n, 2):
+            out.append((b0 + (b1 - b0) * (j + 0.5) / n, key))
+    return out
+
+
+def vomitories(col):
+    mb = MB('vomitories')
+    for b, key in vom_bearings():
+        nl = ROWS[key][0]
+        r0, z0, r1, z1 = main_tiers(b)[0]; run = (r1 - r0) / nl
+        ra = r0 + (nl - VOM_ROWS) * run; za = z0 + (nl - VOM_ROWS) * (z1 - z0) / nl
+        a = math.radians(b); ur = (math.sin(a), math.cos(a)); ut = (math.cos(a), -math.sin(a))
+        P = lambda r, t, z: (r * ur[0] + t * ut[0], r * ur[1] + t * ut[1], z)
+        w = VOM_W / 2; top = max(z1 + 0.15, za + 2.9); t = 0.3; zo = za + 2.4   # mouth 2.4 m high, its box 2.9 m
+        # outer box: two side walls (each t thick) and the lid
+        for s_ in (-1, 1):
+            o, i = s_ * w, s_ * (w - t)
+            mb.face([P(ra, o, za - 0.2), P(r1, o, za - 0.2), P(r1, o, top), P(ra, o, top)][::(1 if s_ > 0 else -1)], 'vom_conc')
+            mb.face([P(ra, i, za - 0.2), P(ra, i, top), P(r1, i, top), P(r1, i, za - 0.2)][::(1 if s_ > 0 else -1)], 'vom_dark')
+            mb.face([P(ra, o, za - 0.2), P(ra, o, top), P(ra, i, top), P(ra, i, za - 0.2)][::(-1 if s_ > 0 else 1)], 'vom_conc')
+        mb.face([P(ra, -w, top), P(r1, -w, top), P(r1, w, top), P(ra, w, top)][::-1], 'vom_conc')
+        # lintel over the mouth, then the tunnel's ceiling and its dark back
+        mb.face([P(ra, -w + t, zo), P(ra, w - t, zo), P(ra, w - t, top), P(ra, -w + t, top)][::-1], 'vom_conc')
+        mb.face([P(ra, -w + t, zo), P(r1, -w + t, zo), P(r1, w - t, zo), P(ra, w - t, zo)], 'vom_dark')
+        mb.face([P(r1 - 0.05, -w + t, za - 0.2), P(r1 - 0.05, w - t, za - 0.2), P(r1 - 0.05, w - t, zo), P(r1 - 0.05, -w + t, zo)][::-1], 'vom_dark')
+        mb.face([P(ra, -w + t, za + 0.02), P(r1, -w + t, za + 0.02), P(r1, w - t, za + 0.02), P(ra, w - t, za + 0.02)][::-1], 'tread')
     mb.build(col)
 
 
 def build_all():
     clear(); col = bpy.context.scene.collection
-    main_all(col); skylights(col); members_all(col); nstand(col); terrace(col); scoreboard(col); towers(col); apron(col)
+    main_all(col); vomitories(col); skylights(col); members_all(col); nstand(col); terrace(col); scoreboard(col); towers(col); apron(col)
     fence_only(col, D['members']['b1'], 360 + D['terrace']['b0'])
+
+
+# ---------------- seats: instanced 3D shells on the treads (the MCG standard's seat files) ----------------
+SEAT_W = 0.5           # seat pitch along the row
+AISLE_EVERY = 16.0     # m of row between aisle stairs (Google Earth: about 16 m blocks in the Boon)
+AISLE_W = 1.2
+HEADROOM = 2.6         # the seat rule: open sky, or at least this much under a roof
+
+
+def roof_z(b, r):
+    """The main roof's underside above radius r at bearing b, or None where there is no roof over it."""
+    rin, rout, zin, zout = periodic(D['main']['roof'])(b)
+    if not (rin <= r <= rout) or not (D['main']['b0'] <= b <= D['main']['b1']):
+        return None
+    return zin + (zout - zin) * (r - rin) / (rout - rin) - D['main']['roof_th']
+
+
+def _row_seats(out, b0, b1, rows, colour_of, gap=()):
+    """Seats along rows [(r_front, r_back, z)] between bearings b0 and b1, aisles every AISLE_EVERY m of row
+    (and at the bearings in gap). Each seat: (bearing, radius of its origin, tread z, colour)."""
+    for k, (rf_, rb_, z, bb) in enumerate(rows):
+        r = rb_ - 0.30
+        L = math.radians(b1 - b0) * r
+        n_blocks = max(1, int(round(L / AISLE_EVERY)))
+        for blk in range(n_blocks):
+            s0 = blk * L / n_blocks + AISLE_W / 2; s1 = (blk + 1) * L / n_blocks - AISLE_W / 2
+            m = int((s1 - s0) // SEAT_W)
+            for i in range(m):
+                s = s0 + (s1 - s0 - m * SEAT_W) / 2 + (i + 0.5) * SEAT_W
+                b = b0 + math.degrees(s / r)
+                if any(abs(b - g) < math.degrees(AISLE_W / 2 / r) for g in gap):
+                    continue
+                rz = roof_z(b, r)
+                if rz is not None and rz - z < HEADROOM:
+                    continue
+                out.append((b, r, z, colour_of(b, k, bb)))
+
+
+def seat_list():
+    """Every seat as (bearing, radius, tread z, colour)."""
+    out = []
+    for part, key in main_parts():
+        nl, nu = ROWS[key]; b0, b1 = part[0], part[-1]
+        # rows at the part's middle bearing; each seat then takes its own bearing's tread
+        for tier, n in ((0, nl), (1, nu)):
+            for k in range(n):
+                rows = []
+                def at(b, k=k, tier=tier, n=n):
+                    r0, z0, r1, z1 = main_tiers(b)[tier]; run = (r1 - r0) / n
+                    return r0 + k * run, r0 + (k + 1) * run, z0 + (k + 1) * (z1 - z0) / n
+                bm = 0.5 * (b0 + b1); rf_, rb_, z = at(bm)
+                tmp = []
+                _row_seats(tmp, b0, b1, [(rf_, rb_, z, bm)], lambda b, kk, bb, tier=tier, k=k: (tier, k))
+                for b, r, z_, c in tmp:
+                    f_, rb2, z2 = at(b)          # the seat's own row at its bearing
+                    if tier == 0 and k >= nl - VOM_ROWS and any(
+                            abs(math.radians(b - vb) * rb2) < VOM_W / 2 + 0.25 for vb, _ in vom_bearings()):
+                        continue
+                    out.append((b, rb2 - 0.30, z2, seat_colour(key, tier, k, b)))
+    # the Members' front rows (dark grey), where a row is deep enough to hold a seat
+    M = D['members']; RI = periodic(M['rin'])
+    for k in range(MEM_ROWS):
+        def at(b, k=k):
+            f = rf(b); r0, r1 = f + 0.6, RI(b)[0] + 0.2; run = (r1 - r0) / MEM_ROWS
+            return r0 + (k + 1) * run, D['fence_h'] + (k + 1) * (2.4 - D['fence_h']) / MEM_ROWS, run
+        tmp = []
+        bm = 0.5 * (M['b0'] + M['b1'])
+        _row_seats(tmp, M['b0'] + 1.0, M['b1'] - 1.0, [(0, at(bm)[0], at(bm)[1], bm)], lambda *a: 0)
+        for b, r, z, c in tmp:
+            rb_, z_, run = at(b)
+            if run >= 0.75:
+                out.append((b, rb_ - 0.30, z_, 'seat_bel_dark'))
+    out = [(r * math.sin(math.radians(b)), r * math.cos(math.radians(b)), z, b, c) for b, r, z, c in out]
+    # the Northern Stand's rows (white), facing the field across its own frame
+    N = D['nstand']; F = Frame(dict(c=N['c'], a=N['a'], L=N['L'], W=5.0)); n = N['rows']
+    sv0, sv1 = N['seat_v']; sz0, sz1 = N['seat_z']; h = N['L'] / 2
+    for k in range(n):
+        v1 = sv0 + (sv1 - sv0) * (k + 1) / n; z = sz0 + (sz1 - sz0) * k / (n - 1)
+        m = int((N['L'] - 1.0) // SEAT_W)
+        for i in range(m):
+            u = -h + 0.5 + (i + 0.5) * SEAT_W
+            x, y = F.P(u, v1 - 0.30)
+            out.append((x, y, z, -N['a'], 'seat_bel_white'))
+    # the east terrace: bench blocks on its three lowest steps (GE from the field)
+    T = D['terrace']
+    for k in range(3):
+        for blk in np.arange(T['b0'] + 3, T['b1'] - 3, 9.0):
+            for i in range(14):
+                f = 0; b = blk + i * 0.4
+                r = rf(b) + 0.4 + (k + 1) * T['run'] - 0.30; z = 0.5 + (k + 1) * T['rise']
+                out.append((r * math.sin(math.radians(b)), r * math.cos(math.radians(b)), z, b, 'seat_bel_white'))
+    return out
+
+
+def seat_colour(stand, tier, row, b):
+    # Boon: the five front rows pale blue-grey, as Google Earth shows them from the field
+    if stand == 'S' and tier == 0 and row < 5:
+        return 'seat_bel_pale'
+    return 'seat_bel_blue'
+
+
+
+SEAT_TMPL = None
+
+
+def seat_template():
+    """One moulded seat, glTF frame (x along the row, y up, +z toward the field), origin on the tread under
+    the seat's back edge: a pan 0.44 x 0.40 at 0.43 m on a pedestal, a back 0.42 high leaning 12 degrees."""
+    tris = []
+    def box(cx, cy, cz, sx, sy, sz, lean=0.0):
+        ca, sa = math.cos(lean), math.sin(lean)
+        P = []
+        for dx, dy, dz in ((-1, -1, -1), (1, -1, -1), (1, 1, -1), (-1, 1, -1), (-1, -1, 1), (1, -1, 1), (1, 1, 1), (-1, 1, 1)):
+            y, z = dy * sy / 2, dz * sz / 2
+            y, z = y * ca + z * sa, -y * sa + z * ca
+            P.append((cx + dx * sx / 2, cy + y, cz + z))
+        ctr = np.mean(P, axis=0)
+        for a, b_, c, d in ((0, 1, 2, 3), (4, 7, 6, 5), (0, 4, 5, 1), (1, 5, 6, 2), (2, 6, 7, 3), (3, 7, 4, 0)):
+            for t in ((P[a], P[b_], P[c]), (P[a], P[c], P[d])):
+                A, B, C = (np.array(q) for q in t)
+                # Godot's front face: Plane(a, b, c).normal = (a - c) x (a - b) looks out of the box
+                if np.dot(np.cross(A - C, A - B), (A + B + C) / 3 - ctr) < 0:
+                    t = (t[0], t[2], t[1])
+                tris.extend(t)
+    box(0.0, 0.415, 0.24, 0.44, 0.05, 0.40)              # pan
+    box(0.0, 0.66, 0.05, 0.42, 0.42, 0.05, lean=0.21)   # back
+    box(0.0, 0.2, 0.22, 0.08, 0.40, 0.25)               # pedestal
+    return tris
+
+
+def seat_transforms(seats):
+    """Row-major 3x4 per seat in the glTF frame (x east, y up, z south) for GroundModels' seat files. A seat is
+    (x east, y north, z up, bearing it faces away from, colour): it looks back along that bearing."""
+    out = {}
+    for x, y, z, b, c in seats:
+        a = math.radians(b); sb, cb = math.sin(a), math.cos(a)
+        X = (cb, 0.0, sb); Y = (0.0, 1.0, 0.0); Zv = (-sb, 0.0, cb)   # +z toward the field
+        o = (x, z, -y)
+        out.setdefault(c, []).append([X[0], Y[0], Zv[0], o[0], X[1], Y[1], Zv[1], o[1], X[2], Y[2], Zv[2], o[2]])
+    return out
