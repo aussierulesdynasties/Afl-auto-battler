@@ -57,7 +57,8 @@ and Riverbank stands have their stacked levels: LED ribbon, red middle tier, gla
 with its LED ribbon and glass rail, upper glazed level, fascia. Every name is solid raised letters (DejaVu Sans, spacing
 and weight matched to each photo): CHAPPELL STAND, SIR EDWIN SMITH STAND, SIR DONALD BRADMAN PAVILION, GAVIN WANGANEEN
 STAND, JACK OATEY STAND, MAX BASHEER STAND, FOS WILLIAMS STAND, RIVERBANK STAND (gen.py `tier_parts`, spec `fronts`,
-`zones`). The west roof's back band keeps its old base (spec `back_z0`).
+`zones`). The west roof's back band keeps its old base (spec `back_z0`). The petals' front hems now arch up between
+the valleys as in the photos (spec `lobet`: west full lobe height at the hem, east 0.7); they were nearly level.
 
 Still short (2026-11-22): the entrance glass band's lettering is unreadable in Google Earth (plain glass, nothing
 invented); the camera and media boxes cut into the upper tiers, the player benches in front of the Bradman, and the

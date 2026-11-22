@@ -3,8 +3,8 @@ job 0 faces 3356
 seats_0 3356 tread faces 1482 seats
 job 1 faces 21606
 seats_1 21606 tread faces 9755 seats
-job 2 faces 29618
-seats_2 29618 tread faces 13350 seats
+job 2 faces 29650
+seats_2 29650 tread faces 13364 seats
 job 3 faces 27922
 seats_3 27922 tread faces 12894 seats
 job 4 faces 302
@@ -13,5 +13,5 @@ job 5 faces 136
 seats_5 136 tread faces 64 seats
 job 6 faces 1268
 seats_6 1268 tread faces 575 seats
-seat instances 38243 block-row seats dropped by seat_ok 1172
+seat instances 38257 block-row seats dropped by seat_ok 1158
 ok /home/user/Afl-auto-battler/.claude/review/adelaide/model
