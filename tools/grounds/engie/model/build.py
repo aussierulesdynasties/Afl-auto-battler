@@ -1,7 +1,8 @@
 # ENGIE Stadium (Sydney Showground Stadium, Sydney Olympic Park) as it is today, rebuilt to the MCG standard
-# (docs/MCG_STANDARD.md). Plan from OpenStreetMap (ODbL: osm.py writes the fence, roof edges, light masts and video
-# wall into engie.json); everything else modelled by eye from photos (Google Earth and Street View for looking at
-# only, never measured or sampled; see the data-source rule in docs/MCG_STANDARD.md).
+# (docs/MCG_STANDARD.md). Plan: one smooth curve fitted to a Google Earth top-down trace, every ring (field edge,
+# stand front, roof front and back) an exact offset of it, and roof heights by Google Earth stereo
+# (tools/grounds/engie/fit, measuring only; no imagery is kept or baked in). OSM (ODbL, osm.py) gives the light
+# masts and the video wall. Sections are modelled to Google Earth obliques and a Street View photo sphere.
 # Data: model/engie.json. Runs inside Blender: import build; build.build_all().
 # Frame: x east, y north, z up from the field, metres; bearings clockwise from north, from the OSM pitch's centre.
 #
@@ -105,13 +106,13 @@ def endcap(mb, b, S, m, flip=False):
 # platform under the roof (a raised row of boxes behind a parapet), then the back wall.
 FRONT_Z = 1.4
 TREAD = 0.80
-LOW_N, LOW_RISE = 13, 0.36
+LOW_N, LOW_RISE = 15, 0.36
 AISLE = 1.8
 # Level 3 between the tiers: the corporate suites (Sydney Showground fact sheet: suites 1-12 and function rooms on
 # L3). A glazed front 2.5 m tall, set 0.6 m back under the upper tier's 0.6 m fascia (photo sphere: the dark band
 # between the tiers right round the bowl).
 SUITE_H, FASCIA_H, OVER = 2.5, 0.6, 0.6
-UP_N, UP_RISE = 9, 0.42
+UP_N, UP_RISE = 12, 0.42
 OPEN_N, OPEN_RISE = 16, 0.40
 
 
@@ -352,20 +353,31 @@ def vomitories(col):
 
 
 # ---------------- roofs ----------------
-# Heights, by eye: the roofs' front edges about 17 m over the field and their backs a little lower; the old
-# segments arch up about 2.4 m mid-span between their towers. The underside is
-# a corrugated deck 0.9 m under the sheet, on radial rafters.
-ROOF_ZF, ROOF_ZB, ROOF_TH = 17.0, 16.5, 0.9
-ARCH = 2.4
+# Heights measured by stereo from two Google Earth top-down pairs 150 m apart (tools/grounds/engie/fit/heights.py,
+# 2026-11-22): the old segments' sheet is 21.5 m over the field at the front and 18.3 m at the back at their ends,
+# arching 3.2 m higher mid-span; the 2012 north roof falls from 21.5 m at its west end to 18 m by the open corner,
+# the east roof rises from 18.2 m by the open corner to 21.3 m at its south end; both backs about 18 m.
+# The underside is a corrugated deck 0.9 m under the sheet, on radial rafters.
+ROOF_TH = 0.9
+OLD_ZF, OLD_ZB, ARCH = 21.5, 18.3, 3.2
+NEW_ZB = 18.0
+NEW_ZF = {'N': ([315.3, 330.0, 345.0, 363.0], [21.5, 21.3, 19.0, 18.0]),
+          'E': ([77.0, 106.0, 120.0, 135.4], [18.2, 18.4, 21.3, 21.3])}
 
 
 def roof_top(s, b, r):
     """The roof sheet's height at bearing b, radius r, on stand s."""
     rf_, rb_ = roof_front(b), roof_back(b); t = min(1.0, max(0.0, (r - rf_) / max(1.0, rb_ - rf_)))
-    z = ROOF_ZF + (ROOF_ZB - ROOF_ZF) * t
     if s['kind'] == 'old':
+        z = OLD_ZF + (OLD_ZB - OLD_ZF) * t
         z += ARCH * math.sin(math.pi * min(1.0, max(0.0, (b - s['b0']) / (s['b1'] - s['b0']))))
-    return z
+        return z
+    bb = b % 360
+    xs, zs = NEW_ZF.get(s['name'], ([0.0, 360.0], [19.0, 19.0]))
+    if bb < xs[0] - 1.0:
+        bb += 360.0
+    zf = float(np.interp(bb, xs, zs))
+    return zf + (NEW_ZB - zf) * t
 
 
 def roofed():
@@ -971,10 +983,20 @@ SEAT_W = 0.5
 
 
 def roof_under(b, r):
-    s = stand_at(b)
-    if s is None or s['kind'] == 'open' or not (roof_front(b) <= r <= roof_back(b)):
+    """The roof deck's underside over (b, r), or None. A roof's ends overhang a few degrees past its stand's
+    bearings (over the tower gaps and the open corner's joins), so the nearest roofed stand within 6 degrees
+    counts there, at its end."""
+    if not (roof_front(b) - 1.0 <= r <= roof_back(b) + 0.5):
         return None
-    return roof_top(s, b, r) - ROOF_TH - 0.4
+    best = None
+    for s in roofed():
+        for bb in (b % 360, b % 360 + 360, b % 360 - 360):
+            d = 0.0 if s['b0'] <= bb <= s['b1'] else min(abs(bb - s['b0']), abs(bb - s['b1']))
+            if d <= 6.0 and (best is None or d < best[0]):
+                best = (d, s, min(max(bb, s['b0']), s['b1']))
+    if best is None:
+        return None
+    return roof_top(best[1], best[2], r) - ROOF_TH - 0.4
 
 
 def seat_list():

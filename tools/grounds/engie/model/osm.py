@@ -49,12 +49,13 @@ def main():
                 r = r0_ + (r1_ - r0_) * t; best = r if best is None else max(best, r)
         D_site[k] = round(best, 1)
     D = json.load(open(os.path.join(HERE, 'engie.json')))
-    D['rf'] = [[round(b, 1), r] for b, r in rf]; D['rb'] = [[round(b, 1), r] for b, r in rb]
+    # rf and rb are no longer taken from OSM: its grandstand way is 7 to 9 m small on the west and south
+    # (Google Earth trace, tools/grounds/engie/fit); fit/tojson.py writes them as offsets of one fitted curve.
     D['osm_masts'] = sorted(masts)
     D['osm_video_wall'] = [[round(b, 1), round(r, 1)] for b, r in vw]
     D['site'] = [[k, r] for k, r in sorted(D_site.items())]
     json.dump(D, open(os.path.join(HERE, 'engie.json'), 'w'), indent=1)
-    print('rf', len(rf), rf[0], rf[-1]); print('rb', len(rb), rb[0], rb[-1]); print('masts', sorted(masts)); print('video wall', vw)
+    print('masts', sorted(masts)); print('video wall', vw)
 
 
 if __name__ == '__main__':
