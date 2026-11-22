@@ -2,7 +2,7 @@ extends SceneTree
 ## A close look at one spot of a ground, built as a match builds it, for a fault the
 ## pre-inspection measured (preinspect_grounds.gd).
 ##   godot --path . --rendering-method mobile --script tools/visual/preinspect_look.gd -- OUTDIR GROUND NAME:px,py,pz,tx,ty,tz[,fov] ...
-## Positions are the match's metres. PREINSPECT_NO_CROWD=1 hides the crowd (the seats as the fly-through shows them). Saves OUTDIR/<slug>_<NAME>.png. Looks only.
+## Positions are the match's metres. PREINSPECT_NO_CROWD=1 hides the crowd (the seats as the fly-through shows them); PREINSPECT_NO_HUD=1 hides the score panel; PREINSPECT_MARK_MAT=<material> paints that material magenta. Saves OUTDIR/<slug>_<NAME>.png. Looks only.
 
 
 func _initialize() -> void:
@@ -36,6 +36,24 @@ func _run() -> void:
 	if OS.get_environment("PREINSPECT_NO_CROWD") != "":
 		for c in oval.find_children("Crowd", "", true, false):
 			c.visible = false
+	# PREINSPECT_NO_HUD=1 hides the score panel and the other overlays (a ground check, not a broadcast).
+	if OS.get_environment("PREINSPECT_NO_HUD") != "":
+		for c in oval.find_children("*", "CanvasItem", true, false):
+			(c as CanvasItem).visible = false
+		for c in oval.find_children("*", "CanvasLayer", true, false):
+			(c as CanvasLayer).visible = false
+	# PREINSPECT_MARK_MAT=name draws that material's surfaces flat magenta (to find what a fault in a capture is).
+	var mark := OS.get_environment("PREINSPECT_MARK_MAT")
+	if mark != "":
+		var flag := StandardMaterial3D.new()
+		flag.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		flag.albedo_color = Color(1, 0, 1)
+		for mi in oval.find_children("*", "MeshInstance3D", true, false):
+			var m: Mesh = (mi as MeshInstance3D).mesh
+			for i in (m.get_surface_count() if m else 0):
+				var sm := m.surface_get_material(i)
+				if sm and sm.resource_name == mark:
+					(mi as MeshInstance3D).set_surface_override_material(i, flag)
 	var cam: Camera3D = oval.camera
 	cam.far = maxf(cam.far, 3000.0)   # a ground with a backdrop sees further (GroundModels.backdrop_far)
 	cam.near = 0.05

@@ -608,9 +608,13 @@ def tree(acc, t, land):
         rr = np.minimum(rr, max(1.0, 0.16 * h) if t["genus"] != "Populus" else 0.24 * h)
     cb = zb + h * base_f
     ch = zb + h - cb
-    vary = 0.72 + 0.22 * rng.random()   # lit by the match's sun: darker than the register's leaf to read as Google Earth's     # Google Earth's crowns in sun are brighter than the register's leaf
+    vary = 0.66 + 0.2 * rng.random()    # lit by the match's sun: darker than the register's leaf to read as Google Earth's
     lc = shade(leaf, vary)
-    far = math.hypot(t["x"] - C[0], t["y"] - C[1]) > 600
+    dist = math.hypot(t["x"] - C[0], t["y"] - C[1])
+    if dist < NEAR_TREES and prof in (ROUND, GUM):
+        lobed_crown(acc, key, t, bs, rr, cb, ch, lc, prof is GUM)
+        trunk(acc, key, t, zb, h, cb, ch, bark)
+        return
     n = len(bs)
     V, cols = [], []
     for k, (f, s) in enumerate(prof):
@@ -637,7 +641,54 @@ def tree(acc, t, land):
         F.append(((nr - 1) * n + i, (nr - 1) * n + (i + 1) % n, top))
         F.append(((i + 1) % n, i, bot))
     acc.mesh((key, "leaf"), V, F, cols)
-    # Trunk: a tapered five-sided stem up into the crown.
+    trunk(acc, key, t, zb, h, cb, ch, bark)
+
+
+NEAR_TREES = 260.0     # the trees seen from the stands: crowns built of lobes, as Google Earth's canopy reads
+
+
+def lobed_crown(acc, key, t, bs, rr, cb, ch, lc, gum):
+    """A broadleaf crown as a cluster of leafy lobes inside the LiDAR outline: a central mass and 3 to 6 lobes
+    round it, each an eight-sided ellipsoid, lit lighter on top and darker beneath."""
+    r = float(np.mean(rr))
+    nl = int(np.clip(round(r / 2.0), 3, 6))
+    lobes = [(t["x"], t["y"], cb + ch * 0.5, 0.62 * r, 0.5 * ch)]
+    for i in range(nl):
+        a = bs[0] + 2 * math.pi * (i + rng.uniform(-0.25, 0.25)) / nl
+        rad = float(np.interp(a, bs, rr, period=2 * math.pi))
+        d = rad * rng.uniform(0.4, 0.55)
+        zc = cb + ch * rng.uniform(0.38, 0.62 if not gum else 0.72)
+        lr = rad * rng.uniform(0.45, 0.6)
+        lobes.append((t["x"] + math.cos(a) * d, t["y"] + math.sin(a) * d, zc, lr, ch * rng.uniform(0.3, 0.42)))
+    lat = [-80, -45, -10, 25, 60]
+    n = 8
+    for (x, y, z, lr, lz) in lobes:
+        V, cols = [], []
+        sh = rng.uniform(0.9, 1.08)
+        for la in lat:
+            cl, sl = math.cos(math.radians(la)), math.sin(math.radians(la))
+            jit = 1.0 + rng.uniform(-0.16, 0.16, n)
+            off = rng.uniform(0, 2 * math.pi)
+            for i in range(n):
+                b = off * 0.15 + 2 * math.pi * i / n
+                V.append((x + math.cos(b) * lr * cl * jit[i], y + math.sin(b) * lr * cl * jit[i], z + lz * sl))
+                cols.append(shade(lc, sh * (0.7 + 0.42 * (sl + 1) / 2) * rng.uniform(0.94, 1.05)))
+        top = len(V); V.append((x, y, z + lz * 1.02)); cols.append(shade(lc, sh * 1.14))
+        bot = len(V); V.append((x, y, z - lz)); cols.append(shade(lc, sh * 0.62))
+        F = []
+        for k in range(len(lat) - 1):
+            for i in range(n):
+                a0, a1 = k * n + i, k * n + (i + 1) % n
+                F += [(a0, a1, a1 + n), (a0, a1 + n, a0 + n)]
+        k = len(lat) - 1
+        for i in range(n):
+            F.append((k * n + i, k * n + (i + 1) % n, top))
+            F.append(((i + 1) % n, i, bot))
+        acc.mesh((key, "leaf"), V, F, cols)
+
+
+def trunk(acc, key, t, zb, h, cb, ch, bark):
+    """A tapered three-sided stem up into the crown."""
     tr = max(0.12, h / 70.0)
     zt = cb + ch * 0.35
     for i in range(3):
