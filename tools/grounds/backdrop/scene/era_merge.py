@@ -14,6 +14,10 @@ lat0, lon0 = spec['lat'], spec['lon']; KX = 111320 * math.cos(math.radians(lat0)
 if not os.path.exists(os.path.join(D, 'osm_now.json')): shutil.copy(os.path.join(D, 'osm.json'), os.path.join(D, 'osm_now.json'))
 NOW = json.load(open(os.path.join(D, 'osm_now.json')))['elements']
 OLD = json.load(open(os.path.join(D, 'osm_%s.json' % tag)))['elements']
+for e in OLD:   # tagging since retired: a riverbank or reservoir area is water today
+    t = e.get('tags', {})
+    if t.get('waterway') == 'riverbank': t.update(natural='water', water='river')
+    if t.get('landuse') in ('reservoir', 'basin'): t.update(natural='water')
 sj = json.load(open(os.path.join(PD, 'sat.json'))); hm, mp = sj['half_m'], sj['m_per_px']
 SA_OLD = np.asarray(Image.open(os.path.join(PD, 'sat_%s.png' % tag)).convert('RGB')).astype(np.float32)
 SA_NOW = np.asarray(Image.open(os.path.join(PD, 'sat_now.png')).convert('RGB')).astype(np.float32)
