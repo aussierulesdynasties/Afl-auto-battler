@@ -88,6 +88,14 @@ def main():
             cols.append(None)
             continue
         cols.append((a, rw, top + 0.2, y1))
+    # a column whose ray up found the roof far above its neighbours (the roof's tip, a tower) would draw a
+    # spike: hold each top to the lowest of its neighbours plus 0.3 m
+    tops = [c[3] if c else None for c in cols]
+    for i, c in enumerate(cols):
+        if c is None:
+            continue
+        near = [t for t in tops[max(0, i - 4):i + 5] if t is not None]
+        cols[i] = c[:3] + (min(c[3], float(np.min(near)) + 0.3),)
     tris = []
 
     def quad(p0, p1, p2, p3, n, c):
