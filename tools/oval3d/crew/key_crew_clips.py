@@ -313,6 +313,138 @@ def p_behind(t):
     curl("r", POINT)
 
 
+# The boundary umpire's throw-in (b1, real time): his back to the ground, ball at his chest; up
+# overhead; a dip of 0.4 s to the bottom, the ball between his feet 15-25 cm off the turf, knees
+# 100-110 degrees, trunk 45-55 degrees forward with a flat back; held 0.2-0.3 s; a drive of 0.45 s
+# to let it go straight overhead and a little behind, his feet off the turf, back arched 30-40
+# degrees and one leg (the left, as near as the footage shows) kicked up in front; 0.6 s back.
+BALL_GRIP = {"index": (18, 16, 8), "middle": (20, 18, 8), "ring": (22, 20, 10), "pinky": (24, 22, 10),
+             "thumb": (8, 10, 6)}
+LEG = {}
+
+
+def _rest_feet():
+    """Where each foot is in the idle at t, and how it is turned."""
+    return {s: (pose["foot_" + s].head.copy(), pose["foot_" + s].matrix.to_3x3().copy()) for s in ("l", "r")}
+
+
+def leg(s, foot_at, foot_rot=None, pole=Vector((0, -1, 0))):
+    """Leg s: the ankle at foot_at, the knee toward pole (forward), the foot turned foot_rot
+    (armature space) or as it was."""
+    th, ca, fo = "thigh_" + s, "calf_" + s, "foot_" + s
+    keep = foot_rot if foot_rot is not None else pose[fo].matrix.to_3x3().copy()
+    a = (bones[th].tail_local - bones[th].head_local).length
+    b = (bones[ca].tail_local - bones[ca].head_local).length
+    hip = pose[th].head.copy()
+    d = Vector(foot_at) - hip
+    L = min(d.length, (a + b) * 0.9995)
+    d.normalize()
+    cos_a = (a * a + L * L - b * b) / (2 * a * L)
+    ang = math.acos(max(-1.0, min(1.0, cos_a)))
+    p = Vector(pole).normalized()
+    p = p - d * p.dot(d)
+    p.normalize()
+    knee = hip + (d * math.cos(ang) + p * math.sin(ang)) * a
+    aim(th, knee - hip)
+    aim(ca, hip + d * L - pose[ca].head)
+    pb = pose[fo]
+    pb.matrix = Matrix.Translation(pb.head.copy()) @ keep.to_4x4()
+    update()
+
+
+def hips(drop=0.0, back=0.0, pitch=0.0, bend=0.0, feet=None):
+    """The hips dropped `drop` m and moved `back` m behind him, tipped `pitch` degrees forward,
+    the spine bent `bend` degrees more forward over its three bones (negative: arched back);
+    the feet kept where `feet` has them (planted), when given."""
+    pb = pose["pelvis"]
+    m = Matrix.Rotation(math.radians(pitch), 3, Vector((1, 0, 0))) @ pb.matrix.to_3x3()
+    pb.matrix = Matrix.Translation(pb.head + Vector((0, back, -drop))) @ m.to_4x4()
+    update()
+    for b in ("spine_01", "spine_02", "spine_03"):
+        turn(b, Vector((1, 0, 0)), bend / 3.0)
+    if feet:
+        for s_, (at, rot) in feet.items():
+            leg(s_, at, rot)
+
+
+def hold_ball(c, hand_dir, spread=0.125, pole_down=True):
+    """Both hands either side of a ball at c (its middle), palms in, fingers spread round it."""
+    for s_, sx in (("r", -1.0), ("l", 1.0)):
+        pole = Vector((sx, 0.3, -1.0)) if pole_down else Vector((sx, 0.0, 0.3))
+        reach(s_, c + Vector((sx * spread, 0.04, -0.02)), pole, hand_dir, palm=Vector((-sx, 0, 0)))
+        curl(s_, BALL_GRIP)
+
+
+def p_ti_chest(t):
+    """Squared up, back to the ground, the ball at his chest."""
+    set_idle(t)
+    hold_ball(Vector((0.0, -0.3, 1.24)), Vector((0, -0.85, 0.5)))
+
+
+def p_ti_over(t):
+    """The ball lifted straight up overhead, arms near straight."""
+    set_idle(t)
+    turn("head", Vector((1, 0, 0)), -6)
+    hold_ball(Vector((0.0, -0.14, 2.08)), Vector((0, -0.15, 1)), pole_down=False)
+
+
+def p_ti_down(t):
+    """On the way down: knees starting to give, the ball coming down past his chest."""
+    set_idle(t)
+    feet = _rest_feet()
+    hips(drop=0.1, back=0.06, pitch=8, bend=8, feet=feet)
+    hold_ball(Vector((0.0, -0.46, 1.0)), Vector((0, -0.7, -0.7)))
+
+
+def p_ti_bottom(t):
+    """The bottom of the dip: knees about 105 degrees, trunk about 50 degrees forward and flat,
+    the ball between his feet about 20 cm off the turf."""
+    set_idle(t)
+    feet = _rest_feet()
+    hips(drop=0.27, back=0.27, pitch=32, bend=30, feet=feet)
+    # Shoulders reaching down to the ball.
+    for s_ in ("r", "l"):
+        c_ = pose["clavicle_" + s_]
+        aim("clavicle_" + s_, (c_.tail - c_.head).normalized() + Vector((0, -0.15, -0.45)))
+    turn("head", Vector((1, 0, 0)), -24)
+    mid = (feet["l"][0] + feet["r"][0]) * 0.5
+    hold_ball(Vector((0.0, mid.y - 0.12, 0.22)), Vector((0, -0.25, -1)))
+
+
+def p_ti_rise(t):
+    """Driving up: legs nearly straight, the ball swung up in front of his face."""
+    set_idle(t)
+    feet = _rest_feet()
+    hips(drop=0.05, back=0.03, pitch=4, bend=-4, feet=feet)
+    turn("head", Vector((1, 0, 0)), -10)
+    hold_ball(Vector((0.0, -0.5, 1.5)), Vector((0, -0.4, 1)))
+
+
+def p_ti_release(t):
+    """Let go: the ball straight overhead and a little behind, back arched about 35 degrees,
+    both feet off the turf, the left leg kicked up in front, the right toe pointed."""
+    set_idle(t)
+    hips(drop=-0.16, back=-0.02, pitch=-10, bend=-25)
+    turn("head", Vector((1, 0, 0)), -14)
+    hold_ball(Vector((0.0, 0.32, 2.3)), Vector((0, 0.45, 1)), spread=0.13, pole_down=False)
+    aim("thigh_l", Vector((0.04, -0.7, -0.72)))
+    aim("calf_l", Vector((0.02, -0.05, -1)))
+    aim("foot_l", Vector((0, -0.75, -0.66)))
+    aim("thigh_r", Vector((-0.04, 0.12, -1)))
+    aim("calf_r", Vector((-0.02, 0.3, -1)))
+    aim("foot_r", Vector((0, -0.35, -0.94)))
+
+
+def p_ti_land(t):
+    """Down again, knees giving, arms coming down through the follow-through."""
+    set_idle(t)
+    feet = _rest_feet()
+    hips(drop=0.08, back=0.02, pitch=4, bend=-6, feet=feet)
+    for s_, sx in (("r", -1.0), ("l", 1.0)):
+        reach(s_, Vector((sx * 0.3, 0.05, 1.85)), Vector((sx, 0.2, -0.3)), Vector((sx * 0.3, 0.3, 1)))
+        curl(s_, RELAX)
+
+
 CLIPS = {
     # name: [(seconds, pose)], from the idle's stand and back to it. The goal is formed in
     # 0.6 s, a tenth of a second a step (a3 f_011-017); held 1.6 s (the broadcasts cut away
@@ -321,7 +453,15 @@ CLIPS = {
                     (0.62, p_goal), (2.2, p_goal), (2.7, p_stand)],
     # Raised in 0.4 s (a6 f_043-047), held 1.5 s.
     "behind_signal": [(0.0, p_stand), (0.4, p_behind), (1.9, p_behind), (2.4, p_stand)],
+    # Lifted overhead in 0.35 s (not timed in b1: it opens there); the dip 0.4 s with a key on
+    # the way down; held 0.25 s; the drive 0.45 s, through the ball at his face; let go at
+    # THROW_REL; landed and back in 0.6 s.
+    "throw_in": [(0.0, p_ti_chest), (0.35, p_ti_over), (0.55, p_ti_down), (0.75, p_ti_bottom),
+                 (1.0, p_ti_bottom), (1.22, p_ti_rise), (1.45, p_ti_release), (1.72, p_ti_land),
+                 (2.05, p_stand)],
 }
+THROW_REL = 1.45
+ONLY = os.environ.get("CREW_ONLY", "")
 
 
 if os.environ.get("CREW_POSE_DEBUG"):
@@ -338,6 +478,23 @@ if os.environ.get("CREW_POSE_DEBUG"):
             print("  ", f, "len %.3f tip.palm %.3f tip.dir %.3f" % (v.length, v.dot(n), v.dot(hd)), tuple(round(x, 3) for x in pose["%s_01_%s" % (f, s_)].scale), pose["%s_01_%s" % (f, s_)].rotation_mode)
     sys.exit(0)
 
+def _measure(t, nm):
+    """The numbers the reference gives, for checking a throw-in pose: knee angles, the trunk's lean
+    from upright (forward +), the ball (between the hands) and the feet's lowest point."""
+    def knee(s_):
+        a = pose["thigh_" + s_].head - pose["calf_" + s_].head
+        b = pose["foot_" + s_].head - pose["calf_" + s_].head
+        return math.degrees(a.angle(b))
+    tr = pose["neck_01"].head - pose["pelvis"].head
+    lean = math.degrees(math.atan2(-tr.y, tr.z))
+    ball = (pose["hand_r"].head + pose["hand_l"].head) * 0.5
+    low = min(min(pose[n].head.z, pose[n].tail.z) for n in ("foot_l", "ball_l", "foot_r", "ball_r"))
+    sh = pose["upperarm_r"].head
+    print("  shoulder (%.2f, %.2f, %.2f) arm %.2f to wrist %.2f" % (sh.x, sh.y, sh.z, arm_len("r"), (pose["hand_r"].head - sh).length))
+    print("THROW %.2f %-13s knees r %.0f l %.0f  trunk %+.0f  hands mid (%.2f, %.2f, %.2f)  feet low %.3f" % (
+        t, nm, knee("r"), knee("l"), lean, ball.x, ball.y, ball.z, low))
+
+
 # Keying straight into a named action each time.
 made = []
 for name, keys in CLIPS.items():
@@ -348,6 +505,8 @@ for name, keys in CLIPS.items():
         # Pose with no action driving, then key into act.
         arm.animation_data.action = None
         fn(t)
+        if name == "throw_in":
+            _measure(t, fn.__name__)
         arm.animation_data.action = act
         f = 1 + t * FPS
         for pb in pose:
@@ -381,6 +540,8 @@ if PREVIEW:
             o.hide_render = True
     views = {"front": Vector((0.0, -4.2, 1.2)), "side": Vector((-4.2, -0.3, 1.2))}
     for act in made:
+        if ONLY and act.name != ONLY:
+            continue
         arm.animation_data.action = act
         for t, _ in CLIPS[act.name][1:-1]:
             scene.frame_set(int(round(1 + t * FPS)))

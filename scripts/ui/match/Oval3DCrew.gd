@@ -20,6 +20,8 @@ const MH_GLB := "res://assets/oval3d/crew_mh.glb"
 const CLIPS_GLB := "res://assets/oval3d/crew_clips.glb"
 const GOAL_SIGNAL := "goal_signal"
 const BEHIND_SIGNAL := "behind_signal"
+## The boundary umpire's throw-in.
+const THROW_IN := "throw_in"
 
 ## What each crew role wears over the body.
 const OUTFITS := {

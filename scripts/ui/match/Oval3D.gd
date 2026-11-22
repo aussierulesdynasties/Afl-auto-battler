@@ -2349,8 +2349,9 @@ func _add_umpires(scene: PackedScene) -> void:
 		if role == "field":
 			_number(u, Oval3DCrew.field_number(_crew_seed, fields))
 			fields += 1
-		if role == "goal":
-			# His signals (Oval3DCrew.clips).
+		if role == "goal" or role == "boundary":
+			# The crew's own clips (Oval3DCrew.clips): a goal umpire's signals, a boundary
+			# umpire's throw-in.
 			var ap: AnimationPlayer = u["anim"]
 			var lib := ap.get_animation_library("")
 			var own := Oval3DCrew.clips(ap.get_node(ap.root_node).get_path_to(u["skel"]))
@@ -2440,6 +2441,18 @@ const UMP_SETUP_TRUST := 0.7
 const UMP_SQUARE := 3.0
 ## A ball-up or throw-in: the lift of the ball from his chest, played at UMP_LIFT_RATE.
 const UMP_T_LIFT := 0.45
+## The boundary umpire's throw-in (Oval3DCrew.THROW_IN, keyed from 2025 broadcasts): from the
+## ball at his chest he lets it go overhead at THROW_T_REL, timed to the director's throw-in (its
+## `in`, right to a frame once `sure`): he starts as soon as it could go in (`soonest`) and waits
+## at the bottom of his dip until it is going.
+const THROW_T_REL := 1.45
+## The bottom of the dip, held from THROW_T_BOTTOM to THROW_T_DRIVE in the clip.
+const THROW_T_BOTTOM := 0.75
+const THROW_T_DRIVE := 1.0
+## At most this much quicker than the broadcast's pace (a quicker throw's arms snap); a throw still
+## short of letting go keeps the ball in his hands until he does (_umpire_clip).
+const THROW_RATE_MAX := 1.6
+var _ump_tempo := 1.0
 const UMP_LIFT_RATE := 2.0
 ## On his mark within this many metres; the ball comes to his hands within UMP_TAKE of it.
 const UMP_SET := 0.3
@@ -2518,6 +2531,9 @@ func _move_umpires(frame_dt: float) -> void:
 	_ump_time = director.time
 	if dt > 0.0:
 		_ump_step = dt
+	# Director seconds to a real one (2 through the pauses, rule 2.93): a throw-in keeps real time.
+	if dt > 0.0 and frame_dt > 0.0:
+		_ump_tempo = dt / frame_dt
 	var spots := _umpire_spots()
 	var bp: Vector2 = director.ball["pos"]
 	var st: Dictionary = director.stoppage_now()
@@ -2537,9 +2553,10 @@ func _move_umpires(frame_dt: float) -> void:
 		var ap: AnimationPlayer = u["anim"]
 		var k := int(u["k"])
 		if u.has("clip"):
-			# A score's signal keeps real time: it is the umpire's own, not the play's, and the
-			# pause after a goal runs at double speed (rule 2.93).
-			var own_dt := frame_dt if str((u["clip"] as Dictionary).get("kind", "")) == "signal" else dt
+			# A score's signal and a throw-in keep real time: they are the umpire's own, not the
+			# play's, and the pauses run at double speed (rule 2.93); the throw is timed to the
+			# director's in real seconds (_ump_tempo).
+			var own_dt := frame_dt if str((u["clip"] as Dictionary).get("kind", "")) in ["signal", "throw"] else dt
 			held = _umpire_clip(u, st, own_dt) or held
 			continue
 		if u.has("out") and _umpire_blend_out(u, dt):
@@ -2587,11 +2604,24 @@ func _move_umpires(frame_dt: float) -> void:
 			# On his mark with the ball: it is in his hands, held at his chest (the clip's
 			# first frame) until he puts it in play.
 			held = true
+			var throw := str(st["kind"]) == "throwin" and ap.has_animation(Oval3DCrew.THROW_IN)
 			if ap.current_animation != UMP_CLIP:
 				ap.play(UMP_CLIP, 0.25)
 			ap.seek(0.0, false)
 			ap.advance(maxf(dt, 1e-4))
 			var going := _bounce_in(st)
+			if throw and float(st.get("soonest", INF)) / _ump_tempo <= THROW_T_REL:
+				# The ball may go in as soon as his throw could get it away: he starts, and waits
+				# at the bottom of his dip until it is sure to (_umpire_clip keeps time with it).
+				# From his hold (the ball at his chest, as the throw starts) into the throw; when
+				# the ball goes in sooner than his whole throw takes even quickened (a quick
+				# restart late in a match), into its dip part-way, never past the bottom.
+				var real_in := float(st["in"]) / _ump_tempo if bool(st.get("sure", false)) else INF
+				var t0 := clampf(THROW_T_REL - real_in * THROW_RATE_MAX, 0.0, THROW_T_BOTTOM)
+				ap.play(Oval3DCrew.THROW_IN, 0.2 if t0 > 0.0 else 0.1)
+				ap.seek(t0, true)
+				u["clip"] = {"kind": "throw", "t": t0, "rate": 1.0, "end": ap.current_animation_length}
+				continue
 			var squared := face == Vector2.ZERO or absf(angle_difference(node.rotation.y, atan2(face.x, face.y))) < 0.3
 			if str(st["kind"]) == "bounce" and is_finite(going) and squared:
 				# The bounce is coming: the clip starts, and keeps time with it (_umpire_clip).
@@ -2661,12 +2691,32 @@ func _umpire_clip(u: Dictionary, st: Dictionary, dt: float) -> bool:
 	elif bouncing:
 		# After the ball hits the turf, the follow-through runs at the take's own speed.
 		rate = 1.0
+	var throwing := str(c["kind"]) == "throw"
+	if throwing and before < THROW_T_REL:
+		# Keeping time with the director's throw-in: let go as the ball goes up. Once the pack
+		# has gone (the ball already in flight) he gets it away at once.
+		var going := float(st.get("in", 0.0)) if str(st.get("kind", "")) == "throwin" else 0.0
+		going = maxf(going - _ump_step, 0.0) / _ump_tempo
+		# Down into the dip at the take's pace or quicker; at the bottom (where the broadcasts'
+		# umpires pause) he waits as long as the ball needs; the drive up never stalls.
+		var lo := 1.0 if before < THROW_T_BOTTOM else (0.0 if before < THROW_T_DRIVE else 0.6)
+		rate = clampf((THROW_T_REL - before) / maxf(going, 0.02), lo, THROW_RATE_MAX)
+	elif throwing:
+		rate = 1.0
 	c["t"] = before + dt * rate
 	if float(c["t"]) >= float(c["end"]):
 		_end_umpire_clip(u)
 		return false
 	# Advanced, never sought: a seek would leave the blend in from his stand where it was.
 	ap.advance(float(c["t"]) - before)
+	if throwing:
+		# His until the director throws it up: on time his hands are overhead letting it go; when
+		# the throw came too soon for the whole of his (a quick restart late in a match) it leaves
+		# his hands as they drive up (_umpire_let_go eases it onto its flight), never stuck in
+		# them while it should be in the air.
+		if str(director.ball.get("mode", "")) == "flight":
+			c["flown"] = true
+		return not c.get("flown", false)
 	if not bouncing:
 		return false
 	if float(c["t"]) < UMP_T_REL:
