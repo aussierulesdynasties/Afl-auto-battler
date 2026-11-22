@@ -30,6 +30,10 @@ uniform float view = 1.0;
 uniform vec4 seen_zenith : source_color = vec4(0.0);   // the seen sky's own colours, when
 uniform vec4 seen_horizon : source_color = vec4(0.0);  // set (alpha 1); else the light's
 uniform float sky_curve = 0.7;      // how high the horizon colour reaches (sin of elevation)
+// How much of the sky's colour its light keeps (the cubemap the ground and the men are lit by;
+// the seen sky keeps all of it). 1 as approved; the broadcast colour (Oval3DTurf.broadcast) takes
+// some out, so turf in shade stays green rather than going teal under a deep blue sky.
+uniform float light_tint = 1.0;
 uniform float disc = 20.0;          // the sun's disc brightness
 uniform sampler2D clouds_tex : filter_linear_mipmap, repeat_enable;  // seamless cloud noise           // the seen sky's brightness, set for the camera's exposure
 
@@ -45,6 +49,7 @@ void sky() {
 		up += glow.rgb * glow_energy * (pow(sd, 24.0) * 0.5 + pow(sd, 128.0));
 		c = mix(bowl.rgb, up, smoothstep(bowl_top - 0.02, bowl_top + 0.02, y));
 		c = mix(grass.rgb * grass_energy, c, smoothstep(-0.02, 0.02, y));
+		c = mix(vec3(dot(c, vec3(0.2126, 0.7152, 0.0722))), c, light_tint);
 	} else {
 		float h = max(y, 0.0);
 		vec3 zc = seen_zenith.a > 0.0 ? seen_zenith.rgb : zenith.rgb;
