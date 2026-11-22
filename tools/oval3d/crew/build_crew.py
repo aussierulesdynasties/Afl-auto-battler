@@ -457,8 +457,46 @@ def soften_weights(ob, iters=10, bones_near=("clavicle_l", "clavicle_r", "uppera
             ob.vertex_groups[k].add([i], x, "REPLACE")
 
 
-soften_weights(shirt)
-soften_weights(vest)
+def rebind_weights(ob):
+    """Each point of the cloth takes the bone weights of the body's surface right under it,
+    blended across the body triangle it lies over (its four strongest, summing to one). The
+    cloth was moved off the body (relaxed, extended, laid over the shirt) after it was cut from
+    it, so the weights it was cut with no longer belong where its points now are: a sleeve's
+    underside kept the trunk's weights and hung in flaps as the arm went up."""
+    from mathutils.geometry import barycentric_transform
+    bm_ = bmesh.new()
+    bm_.from_mesh(body.data)
+    bmesh.ops.triangulate(bm_, faces=bm_.faces[:])
+    bm_.faces.ensure_lookup_table()
+    tri = [[v.index for v in f.verts] for f in bm_.faces]
+    co = [v.co.copy() for v in bm_.verts]
+    tree = BVHTree.FromBMesh(bm_)
+    bm_.free()
+    bw = [dict((groups[g.group], g.weight) for g in v.groups if g.weight > 0.0) for v in body.data.vertices]
+    out = []
+    for v in ob.data.vertices:
+        hit, _, fi, _ = tree.find_nearest(v.co)
+        a, b, c = tri[fi]
+        # Barycentric weights of the hit point on the triangle.
+        p_ = barycentric_transform(hit, co[a], co[b], co[c], Vector((1, 0, 0)), Vector((0, 1, 0)), Vector((0, 0, 1)))
+        mix = {}
+        for idx, t in zip((a, b, c), (p_.x, p_.y, p_.z)):
+            for k, x in bw[idx].items():
+                mix[k] = mix.get(k, 0.0) + x * max(t, 0.0)
+        top = sorted(mix.items(), key=lambda kv: -kv[1])[:4]
+        tot = sum(x for _, x in top) or 1.0
+        out.append({k: x / tot for k, x in top})
+    for g in ob.vertex_groups:
+        g.remove(range(len(ob.data.vertices)))
+    for i, w in enumerate(out):
+        for k, x in w.items():
+            if k not in ob.vertex_groups:
+                ob.vertex_groups.new(name=k)
+            ob.vertex_groups[k].add([i], x, "REPLACE")
+
+
+rebind_weights(shirt)
+rebind_weights(vest)
 thicken(vest, 0.003)
 thicken(shirt)
 

@@ -15,6 +15,11 @@ extends RefCounted
 
 const AVERAGE_GLB := "res://assets/oval3d/crew_average.glb"
 const MH_GLB := "res://assets/oval3d/crew_mh.glb"
+## The crew's own clips, keyed on the footballers' skeleton from broadcast reference
+## (tools/oval3d/crew/key_crew_clips.py): the goal umpire's signals.
+const CLIPS_GLB := "res://assets/oval3d/crew_clips.glb"
+const GOAL_SIGNAL := "goal_signal"
+const BEHIND_SIGNAL := "behind_signal"
 
 ## What each crew role wears over the body.
 const OUTFITS := {
@@ -46,6 +51,7 @@ const FIELD_NUMBERS := [1, 2, 3, 4, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 
 const LEG_BONES := ["pelvis", "thigh_l", "thigh_r", "calf_l", "calf_r"]
 
 static var _pieces := {}
+static var _clips := {}
 static var _covered := {}
 
 
@@ -255,6 +261,43 @@ static func covered(mi: MeshInstance3D, hide: Array) -> Mesh:
 		out.surface_set_material(s, am.surface_get_material(s))
 		out.surface_set_name(s, am.surface_get_name(s))
 	_covered[key] = out
+	return out
+
+
+## CLIPS_GLB's clips, played once, their tracks pointed at the skeleton at skel_path (from the
+## AnimationPlayer's root) by bone name. Loaded once per path; every umpire shares them.
+static func clips(skel_path: NodePath) -> Dictionary:
+	var key := str(skel_path)
+	if _clips.has(key):
+		return _clips[key]
+	var out := {}
+	_clips[key] = out
+	if not ResourceLoader.exists(CLIPS_GLB):
+		return out
+	var ps := load(CLIPS_GLB) as PackedScene
+	if ps == null:
+		return out
+	var n := ps.instantiate()
+	for src in n.find_children("*", "AnimationPlayer", true, false):
+		for name in (src as AnimationPlayer).get_animation_list():
+			var a: Animation = (src as AnimationPlayer).get_animation(name).duplicate(true)
+			# Turns only, and where his hips are: the clip's bone lengths are the body it was
+			# keyed on, and each man keeps his own (the file keeps every track, so a bone
+			# held still through a clip still holds its pose).
+			for t in range(a.get_track_count() - 1, -1, -1):
+				var bn := a.track_get_path(t).get_concatenated_subnames()
+				if a.track_get_type(t) == Animation.TYPE_SCALE_3D \
+						or (a.track_get_type(t) == Animation.TYPE_POSITION_3D and bn != "pelvis"):
+					a.remove_track(t)
+			for t in range(a.get_track_count()):
+				var path := a.track_get_path(t)
+				var bone := path.get_concatenated_subnames()
+				if bone == "":
+					bone = str(path.get_name(path.get_name_count() - 1))
+				a.track_set_path(t, NodePath(key + ":" + bone))
+			a.loop_mode = Animation.LOOP_NONE
+			out[str(name)] = a
+	n.free()
 	return out
 
 

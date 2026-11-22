@@ -2349,6 +2349,14 @@ func _add_umpires(scene: PackedScene) -> void:
 		if role == "field":
 			_number(u, Oval3DCrew.field_number(_crew_seed, fields))
 			fields += 1
+		if role == "goal":
+			# His signals (Oval3DCrew.clips).
+			var ap: AnimationPlayer = u["anim"]
+			var lib := ap.get_animation_library("")
+			var own := Oval3DCrew.clips(ap.get_node(ap.root_node).get_path_to(u["skel"]))
+			for n in own:
+				if not lib.has_animation(n):
+					lib.add_animation(n, own[n])
 		var at: Vector2 = spots[k][1]
 		(u["node"] as Node3D).position = Vector3(at.x, 0.0, at.y)
 		umpires.append(u)
@@ -2523,12 +2531,16 @@ func _move_umpires(frame_dt: float) -> void:
 	_ump_placed = _ump_placed or first
 	_ump_cut = false
 	_ump_snapped = first
+	_goal_signals()
 	for u in umpires:
 		var node: Node3D = u["node"]
 		var ap: AnimationPlayer = u["anim"]
 		var k := int(u["k"])
 		if u.has("clip"):
-			held = _umpire_clip(u, st, dt) or held
+			# A score's signal keeps real time: it is the umpire's own, not the play's, and the
+			# pause after a goal runs at double speed (rule 2.93).
+			var own_dt := frame_dt if str((u["clip"] as Dictionary).get("kind", "")) == "signal" else dt
+			held = _umpire_clip(u, st, own_dt) or held
 			continue
 		if u.has("out") and _umpire_blend_out(u, dt):
 			continue
@@ -2601,6 +2613,34 @@ func _move_umpires(frame_dt: float) -> void:
 		if not u.has("clip"):
 			u["clip"] = {"kind": "lift", "t": 0.0, "rate": UMP_LIFT_RATE, "end": UMP_T_LIFT}
 	_umpire_ball_state(held)
+
+
+## A score signalled: once the ball has crossed the line (the director's emit), the goal umpire
+## at that end turns to the ground and signals it, a goal with both index fingers (the right arm
+## straight out at the shoulder, the left hand at the waist) or a behind with one (2025 AFL
+## broadcasts). Once per score.
+func _goal_signals() -> void:
+	var shot := director.shot_now()
+	if shot.is_empty() or not str(shot.get("phase", "")) in ["emit", "celebrate"]:
+		return
+	var to: Vector2 = shot["to"]
+	for u in umpires:
+		if str(u.get("role", "")) != "goal" or u.has("clip") or int(u.get("signalled", -1)) == int(shot["k"]):
+			continue
+		var node: Node3D = u["node"]
+		if signf(node.position.x) != signf(to.x):
+			continue
+		u["signalled"] = int(shot["k"])
+		var ap: AnimationPlayer = u["anim"]
+		var clip := Oval3DCrew.GOAL_SIGNAL if bool(shot["goal"]) else Oval3DCrew.BEHIND_SIGNAL
+		if not ap.has_animation(clip):
+			return
+		u.erase("out")
+		# Facing up the ground, to the field umpires.
+		node.rotation.y = atan2(-node.position.x, -node.position.z)
+		ap.play(clip, 0.15)
+		ap.seek(0.0, false)
+		u["clip"] = {"kind": "signal", "t": 0.0, "rate": 1.0, "end": ap.current_animation_length}
 
 
 ## One frame of an umpire's one-off clip (a bounce, or the lift of a ball-up or throw-in). True
