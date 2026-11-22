@@ -118,6 +118,9 @@ const SURROUNDS := {
 const PARTS := {
 	"mcg": [{"mesh": "trusses.bin", "hide": ["trusses"], "name": "Trusses"},
 			{"mesh": "ledges.bin", "name": "SlabEdges"}],
+	# The SCG's boxes: a pale parapet and dark glass from each stand's top row to its roof, where the
+	# model showed the back of a blank wall from the field (tools/grounds/scg/boxes.py).
+	"scg": [{"mesh": "boxes.bin", "name": "Boxes"}],
 }
 
 ## Per-ground corrections to a model's materials, by material name, checked against Google Earth
@@ -153,9 +156,9 @@ const MATERIAL_FIX := {
 		"fascia": {"metallic": 0.0, "roughness": 0.9},
 		"hroof": {"metallic": 0.0, "roughness": 0.85, "albedo_color": Color(2.0, 1.2, 1.75)},
 		"hgreen": {"albedo_color": Color(2.0, 1.2, 1.75)},
-		"glasst": {"metallic": 0.0, "roughness": 0.4, "albedo_color": Color(1.05, 0.68, 0.46)},
-		"glass": {"metallic": 0.0, "roughness": 0.35, "albedo_color": Color(1.15, 1.1, 1.0)},
-		"glassd": {"metallic": 0.0, "roughness": 0.35, "albedo_color": Color(1.2, 1.15, 1.05)},
+		"glasst": {"metallic": 0.0, "roughness": 0.6, "albedo_color": Color(1.45, 0.88, 0.58)},
+		"glass": {"metallic": 0.0, "roughness": 0.6, "albedo_color": Color(0.95, 0.88, 0.8)},
+		"glassd": {"metallic": 0.0, "roughness": 0.6, "albedo_color": Color(1.0, 0.93, 0.85)},
 		"glassroof": {"metallic": 0.0, "roughness": 0.4},
 		# The concourse paving round the stands: weathered concrete, not near-white.
 		"conc": {"metallic": 0.0, "roughness": 1.0, "albedo_color": Color(0.7, 0.69, 0.66)},
