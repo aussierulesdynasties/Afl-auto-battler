@@ -7,6 +7,7 @@
 #  - the name signs where the real ones are (facade.json `signs`), each a 32 m drop from the bronze's top, letters near it;
 #  - the export leaves the 3D seats out (they ship as seats_*.bin, checked by tools/grounds/seat_check.gd).
 import bpy,bmesh,sys,math,json,os
+sys.path.insert(0,os.path.dirname(os.path.abspath(__file__)))
 from mathutils import Vector
 A=sys.argv[sys.argv.index('--')+1:];dst,blend=A[0],A[1]
 me_dir=os.path.dirname(os.path.abspath(__file__))
@@ -14,16 +15,6 @@ here=os.path.join(me_dir,'..','..','..','.claude','review','optus','scripts')
 J=json.load(open(os.path.join(here,'geom.json')));TX=os.path.join(here,'..','tex');TI=json.load(open(os.path.join(TX,'info.json')));BH=TI['bronze_h_m'];GH=30.0   # glass UV height: one 30 m drop (bronze.py draws the glass), no repeat over the east dip
 FJ=json.load(open(os.path.join(me_dir,'facade.json')))
 import numpy as _np0
-def _compass(p,oc=J['oc']):return (90.0-math.degrees(math.atan2(p[1]-oc[1],p[0]-oc[0])))%360.0
-_CP=[_compass(p) for p in J['drum']]
-_tk=_np0.array(sorted(FJ['top'].items(),key=lambda kv:float(kv[0])),float)
-_tx=_np0.concatenate([_tk[:,0]-360,_tk[:,0],_tk[:,0]+360]);_ty=_np0.tile(_tk[:,1],3)
-_raw=_np0.array([_np0.interp(c,_tx,_ty) for c in _CP])
-_k=FJ.get('smooth',9);J['hb']=[float(_np0.mean(_np0.take(_raw,range(i-_k,i+_k+1),mode='wrap'))) for i in range(len(_raw))]
-def _sign_at(c,w):
-    d=[min(abs(x-c),360-abs(x-c)) for x in _CP];i0=int(_np0.argmin(d));return (i0-w//2)%J['N'],(i0-w//2)%J['N']+w
-TI['signs']={'sign_a_%d'%k:_sign_at(float(c),FJ['sign_segments']) for k,c in enumerate(FJ['signs'])}
-SIGN_DROP=FJ['sign_drop_m'];BULGE=FJ['bulge_m'];BROWS=8
 bpy.ops.wm.read_factory_settings(use_empty=True)
 me=bpy.data.meshes.new('optus');ob=bpy.data.objects.new('optus',me);bpy.context.scene.collection.objects.link(ob)
 def mat(name,rough=0.8,metal=0.0):
@@ -35,9 +26,9 @@ MB=mat('bronze',0.55,0.3);MG=mat('glass',0.15,0.2);MS=mat('seats');MR=mat('roof'
 MC=mat('concrete');MT=mat('terrace');MP=mat('plaza');MD=mat('deck');MK=mat('clad',0.4,0.4);MKL=mat('clad',0.85,0.0);MX=mat('dark')
 MPW=mat('podwall');MLV=mat('louvre',0.5);MBN=mat('bench');MAI=mat('aisle');MRS=mat('riser')
 bm=bmesh.new();uv=bm.loops.layers.uv.new('UVMap')
-N=J['N'];K=J['K'];NB=J['NB']
+
+import shape as SH
 V2=lambda p:Vector((p[0],p[1],0))
-POD=[V2(p) for p in J['pod']];DR=[V2(p) for p in J['drum']];RF=[V2(p) for p in J['roof']];IN=[V2(p) for p in J['inner']];HB=J['hb'];IZ=J['iz']
 def face(vs,mi,uvs=None,want=None):
     f=bm.faces.new(vs);f.material_index=mi;f.normal_update()
     if want is not None and f.normal.dot(want)<0:f.normal_flip()
@@ -60,156 +51,6 @@ def flat(Ra,za,Rb,zb,mi,sc=10.0,up=True,sel=None):
     for i in range(N):
         if sel and not sel(i):continue
         j=(i+1)%N;vs=[a[i],a[j],b[j],b[i]];face(vs,mi,[(v.co.x/sc,v.co.y/sc) for v in vs],Vector((0,0,1 if up else -1)))
-c=lambda z:(lambda i:z)
-# o2 sees podium segments 382..415,0..123. Segments 144..367 (two bays inside the hidden arc, on bay boundaries) get
-# the street-level glazed entrance storey of close-ups 092/192 and c5 instead of the raised podium.
-HS,HE=144,368;hid=lambda i:HS<=i<HE;vis=lambda i:not hid(i)
-MEN=mat('entrance',0.12,0.1);MCO=mat('column',0.5)
-# plaza apron, podium wall, terrace
-pass
-wall(POD,c(0.0),c(6.4),MPW,TI['podwall_m'][0],TI['podwall_m'][1],sel=vis)
-flat(POD,c(6.4),DR,c(6.4),MT,TI['terrace_m'],sel=vis)
-# bronze screen, ledge, glass band
-# bronze screen: from 8.0 m up to the measured top; UV = real metres, top-anchored (texture spans 2 bays x 22 m)
-BAY2=2*arcs(DR)[N]/NB;sD=arcs(DR);ZB=8.0
-ZE=7.0;EH=16.0   # entrance glass UV height: one 16 m drop (the east lobby is 15 m), bronze.py draws it
-# East (facade.json `lobby`): the bronze lifts over the main entrance's tall glass lobby, Google Earth 060-090.
-_lb=FJ['lobby'];_ZEi=[ZE+(_lb['top_m']-ZE)*max(0.0,min(1.0,(_lb['half_deg']+_lb['ramp_deg']-min(abs(c-_lb['centre']),360-abs(c-_lb['centre'])))/_lb['ramp_deg'])) for c in _CP]
-ZEf=lambda i:_ZEi[i%N]
-zv=lambda i:ZEf(i) if HS<i<HE else ZB      # bronze comes down to the clerestory head on the entrance side
-# o2 (2026-11-19): from segment 53 westward a dark glazed strip runs under the bronze: bronze ends 12.5 m at 57, 13.5 m from 63
-# Google Earth 000 and 330 (2026-11-21): the same glazed storey, dark blue glass and white posts, runs on round the north
-# and north-west on the podium, so the bronze stands at 12.5 m there too (was 8 m with a 1.6 m dark recess).
-ZGK=[(57,12.5),(63,13.5),(143,13.5)];import numpy as _np
-ZG=lambda i:float(_np.interp(i,[k[0] for k in ZGK],[k[1] for k in ZGK])) if 57<=i<=143 else (ZEf(i) if HS<i<HE else 12.5)
-MXG=mat('storey',0.2,0.1);ZST,SH=13.5,6.0   # storey.png: image top at 13.5 m, 6 m drop, 2 bays wide (bronze.py)
-for i in list(range(HE,N))+list(range(0,144)):   # 143->144 and 367->368 too: the strip closes the bronze's step down at both hidden-arc ends
-    j=(i+1)%N;w=Vector((DR[i].x+DR[j].x,DR[i].y+DR[j].y,0)).normalized()
-    vs_=[P(DR[i],zv(i)),P(DR[j],zv(j))]+([P(DR[j],ZG(j))] if ZG(j)>zv(j)+1e-6 else [])+[P(DR[i],ZG(i))]
-    uv_=[(v.co.z,(sD[i] if k in (0,len(vs_)-1) else sD[i+1])/BAY2) for k,v in enumerate(vs_)]
-    face(vs_,MXG,[(u_,1-(ZST-z_)/SH) for z_,u_ in uv_],w)
-_zv=zv;zv=lambda i:max(_zv(i),ZG(i))
-for a_,b_ in ((HS,HS+1),(HE-1,HE)):            # entrance-side ends: bronze bottom steps 8 m <-> 7 m in one segment over a 7 m soffit; close the triangle
-    w=Vector((DR[a_].x+DR[b_].x,DR[a_].y+DR[b_].y,0)).normalized()
-    vs_=[P(DR[a_],ZE),P(DR[b_],ZE)]+([P(DR[b_],zv(b_))] if zv(b_)>ZE+1e-6 else [])+([P(DR[a_],zv(a_))] if zv(a_)>ZE+1e-6 else [])
-    if len(vs_)>=3:face(vs_,MX,[(0,0),(0.4,0),(0.4,0.4),(0,0.4)][:len(vs_)],w)
-lo=[P(DR[i],zv(i)) for i in range(N)];hi=[P(DR[i],HB[i]) for i in range(N)]
-SG=TI.get('signs',{});SMA=mat('sign_a',0.55,0.3)
-# The bronze in BROWS rows, bowed out BULGE m at mid-height (0 at its foot and top, so every join stays closed).
-_nrm=[Vector((DR[i].x-J['oc'][0],DR[i].y-J['oc'][1],0)).normalized() for i in range(N)]
-_rows=[[bm.verts.new(DR[i]+_nrm[i]*BULGE*math.sin(math.pi*k/BROWS)+Vector((0,0,zv(i)+(HB[i]-zv(i))*k/BROWS))) for i in range(N)] for k in range(BROWS+1)]
-_rows[0]=lo;_rows[BROWS]=hi
-_inside=lambda a0,a1,i:(a0<=i<a1) or (a0<=i+N<a1)
-for i in range(N):
-    j=(i+1)%N;w=Vector((DR[i].x+DR[j].x,DR[i].y+DR[j].y,0)).normalized()
-    sg=[k for k,(a0,a1) in SG.items() if _inside(a0,a1,i)]
-    zi=lambda k,q:zv(q)+(HB[q]-zv(q))*k/BROWS
-    for k in range(BROWS):
-        vs=[_rows[k][i],_rows[k][j],_rows[k+1][j],_rows[k+1][i]]
-        if sg:                                   # name signs: u along the sign, v down from the bronze's top
-            a0,a1=SG[sg[0]];ii=i if i>=a0 else i+N;u0,u1=(ii-a0)/(a1-a0),(ii+1-a0)/(a1-a0)
-            vz=lambda z,q:1-(HB[q]-z)/SIGN_DROP
-            face(vs,SMA,[(u0,vz(zi(k,i),i)),(u1,vz(zi(k,j),j)),(u1,vz(zi(k+1,j),j)),(u0,vz(zi(k+1,i),i))],w)
-        else:
-            face(vs,MB,[(sD[i]/BAY2,1-(HB[i]-zi(k,i))/BH),(sD[i+1]/BAY2,1-(HB[j]-zi(k,j))/BH),(sD[i+1]/BAY2,1-(HB[j]-zi(k+1,j))/BH),(sD[i]/BAY2,1-(HB[i]-zi(k+1,i))/BH)],w)
-# shadowed recess under the screen with posts every half bay (o2: dark strip and white posts under the bronze)
-DRI=[DR[i]-Vector((DR[i].x,DR[i].y,0)).normalized()*1.2 for i in range(N)]
-wall(DRI,c(6.4),c(ZB),MX,4,4,sel=vis)
-flat(DR,c(6.4),DRI,c(6.4),MT,TI['plaza_m'],sel=vis)  # deck floor under the recess (was a see-through gap)
-flat(DR,c(ZB),DRI,c(ZB),MX,4,up=False,sel=vis)
-# --- entrance side: plaza at street level up to a glazed storey 1.5 m under the bronze, white columns under its edge
-DRG=[DR[i]-Vector((DR[i].x,DR[i].y,0)).normalized()*1.5 for i in range(N)];sG=arcs(DRG);EB=TI['entrance_bay_m']*sG[N]/sD[N]
-def gflat(Ra,Rb,z,sel):
-    a=[P(Ra[i],z) for i in range(N)];b=[P(Rb[i],z) for i in range(N)]
-    for i in range(N):
-        if not sel(i):continue
-        j=(i+1)%N;vs=[a[i],a[j],b[j],b[i]];face(vs,MP,[(v.co.x/TI['plaza_m'],v.co.y/TI['plaza_m']) for v in vs],Vector((0,0,1)))   # street apron: plain paving (texture pass)
-gflat(POD,DRG,0.0,hid)
-lo_=[P(DRG[i],0.0) for i in range(N)];hi_=[P(DRG[i],ZEf(i)) for i in range(N)]
-for i in range(HS,HE):
-    j=i+1;w=Vector((DRG[i].x+DRG[j].x,DRG[i].y+DRG[j].y,0)).normalized()
-    face([lo_[i],lo_[j],hi_[j],hi_[i]],MEN,[(sG[i]/EB,0),(sG[j]/EB,0),(sG[j]/EB,ZEf(j)/EH),(sG[i]/EB,ZEf(i)/EH)],w)
-flat(DR,ZEf,DRG,ZEf,MX,4,up=False,sel=hid)
-for e,sg in ((HS,1),(HE,-1)):                 # close the two ends where the podium stops (podium, recess, soffit)
-    t=(POD[(e+1)%N]-POD[e]).normalized()*sg
-    face([P(POD[e],0),P(DRG[e],0),P(DRG[e],6.4),P(POD[e],6.4)],MPW,[(0,0),(1,0),(1,1.6),(0,1.6)],t)
-    face([P(DR[e],6.4),P(DRG[e],6.4),P(DRG[e],ZB),P(DR[e],ZB)],MX,[(0,0),(0.4,0),(0.4,0.4),(0,0.4)],t)
-def cyl(cx,cy,z0,z1,r,mi,n=12):
-    ring=[(cx+r*math.cos(2*math.pi*k/n),cy+r*math.sin(2*math.pi*k/n)) for k in range(n)]
-    for k in range(n):
-        a_,b_=ring[k],ring[(k+1)%n];w=Vector(((a_[0]+b_[0])/2-cx,(a_[1]+b_[1])/2-cy,0)).normalized()
-        face([bm.verts.new((a_[0],a_[1],z0)),bm.verts.new((b_[0],b_[1],z0)),bm.verts.new((b_[0],b_[1],z1)),bm.verts.new((a_[0],a_[1],z1))],mi,[(k/n,0),((k+1)/n,0),((k+1)/n,1),(k/n,1)],w)
-for i in range(HS+K//2,HE,K//2):              # columns every half bay, front face under the bronze edge
-    q=DR[i]-Vector((DR[i].x,DR[i].y,0)).normalized()*0.55;cyl(q.x,q.y,0.0,ZEf(i),0.25,MCO)
-# true frame (camL level fit): deck on the bronze top, glass storey set back 4.5 m, soffit 44.4, white fascia to the
-# roof edge at 46.55, membrane falling to the inner edge IZ
-ZS,ZF=44.4,46.55
-# west 166-250 (r2/westfix.py): the band moved out to o2's line; glass, columns and braces stay on the old drum (drum0)
-DR0=[V2(p) for p in J.get('drum0',J['drum'])]
-GL=[V2(p) for p in J['glass']] if 'glass' in J else [DR0[i]-Vector((DR0[i].x,DR0[i].y,0)).normalized()*4.5 for i in range(N)]  # west glass from o2 (r2/westfix.py)
-# The upper tier's back row runs almost to the roof's edge (seats_*.bin: within 1-2 m of the drum, past it over the
-# east dip), so a glass line set 4.5 m back stood inside the stand and its last rows sat out in the open above the
-# bronze, lit, with their crowd (2026-11-22 close view). Google Earth shows a dark glazed strip with white posts under
-# the fascia instead: the glass now stands 1.2 m outside the back row of its wedge and its neighbours (no sawtooth), never past the fascia.
-def _seat_back():
-    import glob as _g
-    oc_=_np0.array(J['oc'][:2]);best=_np0.zeros(N)
-    da=[math.atan2(DR[i].y-oc_[1],DR[i].x-oc_[0]) for i in range(N)];da=_np0.array(da)
-    for fn in _g.glob(os.path.join(me_dir,'..','..','..','assets','grounds','optus','seats_*.bin')):
-        a=_np0.fromfile(fn,dtype=_np0.float32).reshape(-1,12);x=a[:,3]-oc_[0];y=-a[:,11]-oc_[1]
-        ang=_np0.arctan2(y,x);r=_np0.hypot(x,y)
-        d=_np0.abs((ang[:,None]-da[None,:]+math.pi)%(2*math.pi)-math.pi);k=_np0.argmin(d,axis=1)
-        _np0.maximum.at(best,k,r)
-    return best
-_SB0=_seat_back();_SB=_np0.array([max(_SB0[(i+d)%N] for d in range(-3,4)) for i in range(N)]);_oc2=Vector((J['oc'][0],J['oc'][1],0))
-def _push(i):
-    d=GL[i]-_oc2;r=d.length;rf=(RF[i]-_oc2).length
-    r2=min(max(r,_SB[i]+1.2),rf-0.6) if _SB[i]>0 else r
-    return _oc2+d.normalized()*r2
-GL=[_push(i) for i in range(N)]
-flat(DR,lambda i:HB[i],GL,lambda i:HB[i],MD,TI['plaza_m'])
-sR=arcs(RF);BAYR=2*sR[N]/NB;sGL=arcs(GL);BAYG=2*sGL[N]/NB
-for i in range(N):
-    j=(i+1)%N;w=Vector((GL[i].x+GL[j].x,GL[i].y+GL[j].y,0)).normalized()
-    face([P(GL[i],HB[i]),P(GL[j],HB[j]),P(GL[j],ZS),P(GL[i],ZS)],MG,[(sGL[i]/BAYG,1-(ZS-HB[i])/GH),(sGL[i+1]/BAYG,1-(ZS-HB[j])/GH),(sGL[i+1]/BAYG,1.0),(sGL[i]/BAYG,1.0)],w)
-wall(RF,c(ZS),c(ZF),MW,1e6,1e6)
-# roof membrane: barrel vault per bay
-# Google Earth close views (roof_S, roof_top, 2026-11-22): one long white pillow per bay from the fascia to the inner
-# edge, deep valleys with the steel trusses riding them, and the inner edge scalloped between the trusses' tips.
-# (#1867 had five cushions a bay, which read as a quilt from the air.)
-SCAL=0.8   # how far each bay's inner edge curves back between the trusses' tips, m
-_ro=lambda i:(RF[i]-IN[i]).normalized()
-INS=[IN[i]+_ro(i)*SCAL*math.sin(math.pi*(i%K)/K) for i in range(N)]
-T=14;rows=[]
-_env=lambda t:min(1.0,t/0.1,(1.0-t)/0.25)   # the pillows flatten into a straight inner edge
-for k in range(T+1):
-    t=k/T;row=[]
-    for i in range(N):
-        p=RF[i].lerp(INS[i],t);zb=ZF+(IZ-ZF)*t
-        bul=1.2*math.sin(math.pi*(i%K)/K)**0.6*_env(t)*(0.8+0.2*abs(math.sin(3*math.pi*t))**0.5)   # three soft cushions a bay (Google Earth roof_S)
-        row.append(bm.verts.new((p.x,p.y,zb+bul)))
-    rows.append(row)
-for k in range(T):
-    for i in range(N):
-        j=(i+1)%N;vs=[rows[k][i],rows[k][j],rows[k+1][j],rows[k+1][i]]
-        u0=(i%K)/K;u1=(i%K+1)/K          # roof.png (bronze.py): one bay across u, fascia (0) to inner edge (1) along v
-        face(vs,MR,[(u0,1-k/T),(u1,1-k/T),(u1,1-(k+1)/T),(u0,1-(k+1)/T)],Vector((0,0,1)))
-flat(RF,c(ZS),INS,c(IZ-1.0),MU,10,up=False)
-oc=Vector((J['oc'][0],J['oc'][1],0))
-wall(INS,c(IZ-1.0),c(IZ+0.2),MW,1e6,1e6,outward=False,ctr=oc)
-# inner edge: Google Earth shows a grey steel ring standing over the membrane's edge, and a gutter line just inside the
-# white fascia; both run unbroken round the bowl
-_ring=lambda R,z,r,m:[tube(Vector((R[i].x,R[i].y,z(i))),Vector((R[(i+1)%N].x,R[(i+1)%N].y,z((i+1)%N))),r,m) for i in range(N)]
-MST=mat('steel',0.6,0.0)   # steel.png (bronze.py): light grey; metallic picked up the sky and turned them blue
-# light fittings: a floodlight bank hung under each truss's tip at the inner edge (Google Earth under_E)
-for bi in range(NB):
-    i=bi*K;q=IN[i]+_ro(i)*0.8;d=_ro(i);sd=Vector((-d.y,d.x,0))
-    pts=[q+d*a_+sd*b_ for a_,b_ in((-0.5,-1.6),(0.5,-1.6),(0.5,1.6),(-0.5,1.6))]
-    lo4=[P(p_,IZ-2.4) for p_ in pts];hi4=[P(p_,IZ-1.0) for p_ in pts]
-    for e in range(4):
-        f_=(e+1)%4;nn=((pts[e]+pts[f_])/2-q).normalized()
-        face([lo4[e],lo4[f_],hi4[f_],hi4[e]],MST,[(0,0),(1,0),(1,1),(0,1)],nn)
-    face(lo4[::-1],MW,[(0,0),(1,0),(1,1),(0,1)],Vector((0,0,-1)))
 def tube(a,b,r,mi):
     d=(b-a);L=d.length
     if L<1e-3:return
@@ -218,38 +59,274 @@ def tube(a,b,r,mi):
     for q in range(4):
         r2=(q+1)%4;w=((ca[q].co+ca[r2].co)/2-a).normalized()
         face([ca[q],ca[r2],cb[r2],cb[q]],mi,[(q/4,0),((q+1)/4,0),((q+1)/4,L/4),(q/4,L/4)],w)
-# o2 west: a white canopy over the wide terrace at 22.5 m, glass line out to the measured edge, posts on the terrace
-CJ=J.get('canopy');CS=set(k for k,_ in CJ['r'] if HB[k]<=CJ['z']+0.5) if CJ else set()   # only where the bronze is below it
-if CJ:
-    ZCN=CJ['z'];CR={k:r for k,r in CJ['r']};OC2=Vector((J['oc'][0],J['oc'][1],0))
-    CO=[(OC2+(DR[i]-OC2).normalized()*CR[i]) if i in CR else GL[i] for i in range(N)]
-    csel=lambda i:i in CS and (i+1)%N in CS
-    flat(GL,c(ZCN),CO,c(ZCN),MW,1e6,sel=csel);flat(GL,c(ZCN-0.35),CO,c(ZCN-0.35),MW,1e6,up=False,sel=csel)
-    wall(CO,c(ZCN-0.35),c(ZCN),MW,1e6,1e6,sel=csel)
-    for i in sorted(CS)[::K//2]:
-        q=CO[i]-(CO[i]-OC2).normalized()*0.4;tube(Vector((q.x,q.y,HB[i])),Vector((q.x,q.y,ZCN-0.35)),0.12,MW)
-# Primary trusses (Google Earth roof_S/roof_top close crops, 2026-11-22): a triangular lattice truss rides each valley,
-# two top chords about 2.4 m apart over one bottom chord on the membrane, so from above it reads as a wide ladder with
-# a zigzag between its chords, not one line. Chords 0.6 m thick so they still read from Google Earth's range. Deepest a third of the way in, shallow at the inner tip; light grey.
+def cyl(cx,cy,z0,z1,r,mi,n=12):
+    ring=[(cx+r*math.cos(2*math.pi*k/n),cy+r*math.sin(2*math.pi*k/n)) for k in range(n)]
+    for k in range(n):
+        a_,b_=ring[k],ring[(k+1)%n];w=Vector(((a_[0]+b_[0])/2-cx,(a_[1]+b_[1])/2-cy,0)).normalized()
+        face([bm.verts.new((a_[0],a_[1],z0)),bm.verts.new((b_[0],b_[1],z0)),bm.verts.new((b_[0],b_[1],z1)),bm.verts.new((a_[0],a_[1],z1))],mi,[(k/n,0),((k+1)/n,0),((k+1)/n,1),(k/n,1)],w)
+MST=mat('steel',0.6,0.0)   # steel.png (bronze.py): light grey; metallic picked up the sky and turned them blue
+# ---------------------------------------------------------------------------------------------------------------
+# The plan (2026-11-22 rebuild): every ring is an exact offset of ONE smooth curve, the roof's outer edge as traced
+# from six calibrated Google Earth nadir shots (shape.py, fit 0.09 m RMS). The ring is cut at the 50 trusses
+# (LSAA: fifty cantilevers; found on Google Earth square to the edge) and each bay into K equal arcs, so the
+# trusses, the bays and every ring's vertices line up radially. No vertex comes from a hand-traced polygon.
+# Heights: the roof edge from Google Earth's own height readout (41-43 m; published "42m-high"), the facade from
+# 1,080 Google Earth hover points on 12 oblique views (survey/fac_coef.npy: offset from the edge by height and
+# bearing, 0.55 m RMS), the bronze's top from 60 readings off those views (facade.json).
+NB=SH.NBAY;K=16;N=NB*K
+_ss=[];_ts=[float(SH.truss_s(b)) for b in range(NB)]+[float(SH.truss_s(0))+SH.PERIMETER]
+for b in range(NB):
+    for k in range(K):_ss.append(_ts[b]+(_ts[b+1]-_ts[b])*k/K)
+TH=[float(SH.th_at_s(s)) for s in _ss]
+EP=SH.edge_xy(_np0.array(TH));EN=SH.edge_normal(_np0.array(TH))
+CP=[(90.0-math.degrees(t))%360.0 for t in TH]   # compass bearing of each vertex
+def CI(c):
+    """index of the vertex nearest compass bearing c"""
+    d=[min(abs(x-c),360-abs(x-c)) for x in CP];return int(_np0.argmin(d))
+def ARC(c0,c1):
+    """vertex indices from bearing c0 round to c1, in index order (bearing falling, clockwise seen from above)"""
+    i=CI(c0);j=CI(c1);out=[i]
+    while i!=j:i=(i+1)%N;out.append(i)
+    return out
+def CIN(c,a,b):
+    """bearing c inside the clockwise arc from a down to b (a > b in falling order)"""
+    return ((a-c)%360.0)<=((a-b)%360.0)
+def RING(d):
+    """ring of N points d(i) m outside the roof edge along its normal (negative: inside)"""
+    return [Vector((EP[i][0]+d(i)*EN[i][0],EP[i][1]+d(i)*EN[i][1],0.0)) for i in range(N)]
+def per(table):
+    """periodic linear interpolation of {bearing: value}"""
+    k=_np0.array(sorted((float(a),float(v)) for a,v in table.items()));x=_np0.concatenate([k[:,0]-360,k[:,0],k[:,0]+360]);y=_np0.tile(k[:,1],3)
+    return lambda c:float(_np0.interp(c,x,y))
+# roof edge height and the facade offset surface
+ZEDGE=[float(SH.edge_z(t)) for t in TH]
+ZF_=[z+0.2 for z in ZEDGE];ZS_=[z-1.2 for z in ZF_];ZGT_=[z-3.4 for z in ZS_]   # fascia top, soffit, glass head
+_FC=_np0.load(os.path.join(me_dir,'survey','fac_coef.npy'));_FK=_np0.array([0,5,9,13,17,21,25,29,33,37,41.0])
+def FAC(i,h):
+    t=TH[i];hat=_np0.clip(1-abs(h-_FK)/4.0,0,None);fs=[1.0]
+    for n in range(1,4):fs+=[math.cos(n*t),math.sin(n*t)]
+    return float(min(6.0,max(-2.0,(hat[:,None]*_np0.array(fs)[None,:]).ravel()@_FC)))
+def FP(i,h,dd=0.0):
+    d=FAC(i,h)+dd;return Vector((EP[i][0]+d*EN[i][0],EP[i][1]+d*EN[i][1],h))
+RF=RING(lambda i:0.0)
+# the bronze's top (facade.json `top`, 60 Google Earth readings) and foot
+_top=per(FJ['top']);HB=[_top(c) for c in CP]
+# the bronze's foot (Google Earth facade views): low on the street side north and north-east, lifted over the
+# east lobby's tall glass, over a dark glazed storey on the podium west and south
+_zv=per({0:6.0,30:6.5,46:7.0,100:7.5,130:8.5,160:9.0,190:10.0,220:10.5,250:11.0,280:13.0,300:13.0,320:10.0,340:7.0})
+_lb=FJ['lobby'];LOB=[max(0.0,min(1.0,(_lb['half_deg']+_lb['ramp_deg']-min(abs(c-_lb['centre']),360-abs(c-_lb['centre'])))/_lb['ramp_deg'])) for c in CP]
+ZV=[_zv(c)+(_lb['top_m']-_zv(c))*LOB[i] for i,c in enumerate(CP)]
+# podium: deck edge and height by bearing from 784 Google Earth hovers (survey/podium.json): ~7 m from the
+# south-east (100) round the south and west, 6 m north-west, falling to 3.5 m at 340; the north and east stand at
+# street level
+PJ=json.load(open(os.path.join(me_dir,'survey','podium.json')))
+PODB,PODA=float(PJ['arc'][0]),float(PJ['arc'][1])
+_pe=per({k:v[0] for k,v in PJ['edge'].items()});_zd=per({k:v[1] for k,v in PJ['edge'].items()})
+ZD=[_zd(c) if CIN(c,PODA,PODB) else 0.0 for c in CP]
+POD=RING(lambda i:_pe(CP[i]))
+INPOD=[CIN(c,PODA,PODB) for c in CP]
+NAMES=FJ['signs']
+def _sign_at(c,w):
+    i0=CI(c);return (i0-w//2)%N,(i0-w//2)%N+w
+SG={'sign_a_%d'%k:_sign_at(float(c),FJ['sign_segments']*2) for k,c in enumerate(NAMES)}
+TI['signs']=SG
+c=lambda z:(lambda i:z)
+MEN=mat('entrance',0.12,0.1);MCO=mat('column',0.5);MXG=mat('storey',0.2,0.1);SMA=mat('sign_a',0.55,0.3)
+def quad_strip(A,B,mi,uvA,uvB,want,sel=None):
+    """faces between two rows of verts A[i], B[i] (closed ring)"""
+    for i in range(N):
+        if sel and not sel(i):continue
+        j=(i+1)%N;face([A[i],A[j],B[j],B[i]],mi,[uvA(i),uvA(j,True),uvB(j,True),uvB(i)],want(i))
+OUT=lambda i:Vector((EN[i][0]+EN[(i+1)%N][0],EN[i][1]+EN[(i+1)%N][1],0)).normalized()
+sF=arcs([FP(i,20.0) for i in range(N)]);BAY2=2*sF[N]/NB
+# --- podium: wall from the ground to the deck, deck out to the facade's foot
+podsel=lambda i:INPOD[i] and INPOD[(i+1)%N]
+wall(POD,c(0.0),lambda i:ZD[i],MPW,TI['podwall_m'][0],TI['podwall_m'][1],sel=podsel)
+flat(POD,lambda i:ZD[i],[FP(i,ZD[i]) for i in range(N)],lambda i:ZD[i],MT,TI['terrace_m'],sel=podsel)
+for e in (CI(PODA),CI(PODB)):   # end walls where the podium stops
+    t=Vector((-EN[e][1],EN[e][0],0));a_=POD[e];b_=FP(e,0.0)
+    face([P(a_,0),P(b_,0),P(b_,ZD[e]),P(a_,ZD[e])],MPW,[(0,0),(1,0),(1,1.6),(0,1.6)],t)
+# --- the storey under the bronze: dark glazing with white posts from the deck (or street) to the bronze's foot,
+# set 0.6 m back; on the east lobby the tall entrance glass, 1.1 m back (Google Earth hover: -1.1 m)
+BASE=[ZD[i] for i in range(N)]
+GLb=[P(FP(i,BASE[i],-0.6-0.5*LOB[i]),BASE[i]) for i in range(N)]
+GLt=[P(FP(i,ZV[i],-0.6-0.5*LOB[i]),ZV[i]) for i in range(N)]
+for i in range(N):
+    j=(i+1)%N;mi=MEN if LOB[i]>0.5 else MXG;h0,h1=(16.0,0.0) if mi==MEN else (6.0,0.0)
+    face([GLb[i],GLb[j],GLt[j],GLt[i]],mi,[(sF[i]/BAY2,BASE[i]/h0),(sF[i+1]/BAY2,BASE[j]/h0),(sF[i+1]/BAY2,ZV[j]/h0),(sF[i]/BAY2,ZV[i]/h0)],OUT(i))
+# soffit under the bronze's foot, from the storey glass out to the bronze
+BF=[P(FP(i,ZV[i]),ZV[i]) for i in range(N)]
+for i in range(N):
+    j=(i+1)%N;face([GLt[i],GLt[j],BF[j],BF[i]],MX,[(0,0),(1,0),(1,1),(0,1)],Vector((0,0,-1)))
+for i in range(0,N,K//2):   # posts every half bay in the storey (Google Earth: white posts under the bronze)
+    q=FP(i,BASE[i],-0.25);cyl(q.x,q.y,BASE[i],ZV[i],0.18 if LOB[i]<0.5 else 0.25,MCO)
+# --- bronze: BROWS rows from its foot to its top, each vertex on the measured facade surface
+BROWS=14
+BR=[[P(FP(i,ZV[i]+(HB[i]-ZV[i])*k/BROWS),ZV[i]+(HB[i]-ZV[i])*k/BROWS) for i in range(N)] for k in range(BROWS+1)]
+BR[0]=BF
+_inside=lambda a0,a1,i:(a0<=i<a1) or (a0<=i+N<a1)
+for i in range(N):
+    j=(i+1)%N;w=OUT(i);sg=[k for k,(a0,a1) in SG.items() if _inside(a0,a1,i)]
+    zi=lambda k,q:ZV[q]+(HB[q]-ZV[q])*k/BROWS
+    for k in range(BROWS):
+        vs=[BR[k][i],BR[k][j],BR[k+1][j],BR[k+1][i]]
+        if sg:
+            a0,a1=SG[sg[0]];ii=i if i>=a0 else i+N;u0,u1=(ii-a0)/(a1-a0),(ii+1-a0)/(a1-a0)
+            vz=lambda z,q:1-(HB[q]-z)/FJ['sign_drop_m']
+            face(vs,SMA,[(u0,vz(zi(k,i),i)),(u1,vz(zi(k,j),j)),(u1,vz(zi(k+1,j),j)),(u0,vz(zi(k+1,i),i))],w)
+        else:
+            face(vs,MB,[(sF[i]/BAY2,1-(HB[i]-zi(k,i))/BH),(sF[i+1]/BAY2,1-(HB[j]-zi(k,j))/BH),(sF[i+1]/BAY2,1-(HB[j]-zi(k+1,j))/BH),(sF[i]/BAY2,1-(HB[i]-zi(k+1,i))/BH)],w)
+# --- glass band from the bronze's top to the glass head, on the same surface
+GROWS=10
+GR=[BR[BROWS]]+[[P(FP(i,HB[i]+(ZGT_[i]-HB[i])*k/GROWS),HB[i]+(ZGT_[i]-HB[i])*k/GROWS) for i in range(N)] for k in range(1,GROWS+1)]
+sGL=arcs([FP(i,30.0) for i in range(N)]);BAYG=2*sGL[N]/NB
+for i in range(N):
+    j=(i+1)%N;w=OUT(i)
+    for k in range(GROWS):
+        za=lambda q,kk:HB[q]+(ZGT_[q]-HB[q])*kk/GROWS
+        face([GR[k][i],GR[k][j],GR[k+1][j],GR[k+1][i]],MG,[(sGL[i]/BAYG,1-(ZS_[i]-za(i,k))/GH),(sGL[i+1]/BAYG,1-(ZS_[j]-za(j,k))/GH),(sGL[i+1]/BAYG,1-(ZS_[j]-za(j,k+1))/GH),(sGL[i]/BAYG,1-(ZS_[i]-za(i,k+1))/GH)],w)
+# --- the dark open strip under the fascia: glass head ledge back to a dark wall 5 m behind the roof's edge,
+# white posts at the trusses (Google Earth: slim white posts in a dark strip between the glass and the fascia).
+# Depth: 53 oblique hover hits at 37-41 m inside the strip read d -2.5 to -7.3 m, median -4.8 (2026-11-22).
+REC=RING(lambda i:-5.0)
+ga=GR[GROWS];ra=[P(REC[i],ZGT_[i]) for i in range(N)];rb=[P(REC[i],ZS_[i]) for i in range(N)];fa=[P(RF[i],ZS_[i]) for i in range(N)]
+for i in range(N):
+    j=(i+1)%N
+    face([ga[i],ga[j],ra[j],ra[i]],MW,[(0,0),(1,0),(1,1),(0,1)],Vector((0,0,1)))
+    face([ra[i],ra[j],rb[j],rb[i]],MX,[(0,0),(1,0),(1,1),(0,1)],OUT(i))
+    face([rb[i],rb[j],fa[j],fa[i]],MX,[(0,0),(1,0),(1,1),(0,1)],Vector((0,0,-1)))
+for b in range(NB):
+    i=b*K;q=FP(i,ZGT_[i],-0.2);q2=Vector((EP[i][0]-0.4*EN[i][0],EP[i][1]-0.4*EN[i][1],0))
+    tube(Vector((q.x,q.y,ZGT_[i])),Vector((q2.x,q2.y,ZS_[i])),0.22,MW)
+wall(RF,lambda i:ZS_[i],lambda i:ZF_[i],MW,1e6,1e6)
+# --- west canopy (Google Earth views 180/210: a white ledge at ~25 m over a terrace, bearings 238-280)
+CZ=25.0;CAN=[CIN(cc,280.0,238.0) for cc in CP]
+csel=lambda i:CAN[i] and CAN[(i+1)%N] and HB[i]<CZ-0.5
+CO=[FP(i,CZ,2.5) for i in range(N)];CIi=[FP(i,CZ,0.0) for i in range(N)]
+for i in range(N):
+    if not csel(i):continue
+    j=(i+1)%N
+    face([P(CIi[i],CZ),P(CIi[j],CZ),P(CO[j],CZ),P(CO[i],CZ)],MW,[(0,0),(1,0),(1,1),(0,1)],Vector((0,0,1)))
+    face([P(CIi[i],CZ-0.35),P(CIi[j],CZ-0.35),P(CO[j],CZ-0.35),P(CO[i],CZ-0.35)],MW,[(0,0),(1,0),(1,1),(0,1)],Vector((0,0,-1)))
+    face([P(CO[i],CZ-0.35),P(CO[j],CZ-0.35),P(CO[j],CZ),P(CO[i],CZ)],MW,[(0,0),(1,0),(1,1),(0,1)],OUT(i))
+for i in range(0,N,K//2):
+    if csel(i):q=CO[i]-Vector((EN[i][0],EN[i][1],0))*0.4;tube(Vector((q.x,q.y,HB[i])),Vector((q.x,q.y,CZ-0.35)),0.12,MW)
+# --- roof: the inner edge is its own measured curve (survey/inner_c.json), met by each truss line square to the edge
+_IC=_np0.array(json.load(open(os.path.join(me_dir,'survey','inner_c.json'))));IZ=float(json.load(open(os.path.join(me_dir,'survey','inner_z.json')))['z'])
+def _inner_hit(i):
+    o=_np0.array(EP[i]);n=_np0.array(EN[i]);t=40.0
+    for _ in range(40):
+        p=o-n*t;a=math.atan2(p[1]-SH.OC[1],p[0]-SH.OC[0]);r=float(SH.fourier(_IC,a));t+=(_np0.hypot(*(p-SH.OC))-r)*0.9
+    p=o-n*t;return Vector((p[0],p[1],0))
+IN=[_inner_hit(i) for i in range(N)]
+
+# roof membrane: one barrel vault a bay (LSAA: "a conventional barrel vault supported by three arches"), from the
+# fascia to the inner edge, scalloped back between the trusses' tips. The scallop is centred on the measured curve
+# (its mean offset is zero), so the edge Google Earth traces sits on inner_c: tips 0.5 m in front, mid-bay 0.3 m behind.
+SCAL=0.8
+_ro=lambda i:(RF[i]-IN[i]).normalized()
+INS=[IN[i]+_ro(i)*SCAL*(math.sin(math.pi*(i%K)/K)-2/math.pi) for i in range(N)]
+T=14;rows=[]
+_env=lambda t:min(1.0,t/0.1,(1.0-t)/0.25)
+# the membrane dips 1.5 m below the fascia-to-inner-edge line mid-way: Google Earth hovers on the roof top read 1.0-1.5 m
+# under the edge height across d -20 to -36 m (159 hits off the 12 oblique views, 1 m readouts), the vault adding ~0.6 m
+DIP=lambda t:1.5*math.sin(math.pi*t)
+ZR=lambda i,t:ZF_[i]+(IZ-ZF_[i])*t-DIP(t)
+for k in range(T+1):
+    t=k/T;row=[]
+    for i in range(N):
+        p=RF[i].lerp(INS[i],t)
+        bul=0.8*math.sin(math.pi*(i%K)/K)**0.6*_env(t)*(0.8+0.2*abs(math.sin(3*math.pi*t))**0.5)
+        row.append(bm.verts.new((p.x,p.y,ZR(i,t)+bul)))
+    rows.append(row)
+for k in range(T):
+    for i in range(N):
+        j=(i+1)%N;vs=[rows[k][i],rows[k][j],rows[k+1][j],rows[k+1][i]]
+        u0=(i%K)/K;u1=(i%K+1)/K
+        face(vs,MR,[(u0,1-k/T),(u1,1-k/T),(u1,1-(k+1)/T),(u0,1-(k+1)/T)],Vector((0,0,1)))
+_ur=[[bm.verts.new((RF[i].lerp(INS[i],k/T).x,RF[i].lerp(INS[i],k/T).y,ZR(i,k/T)-1.0-0.2*(1-k/T))) for i in range(N)] for k in range(T+1)]
+for k in range(T):   # underside: 1.0-1.2 m under the membrane's valley line, following its dip
+    for i in range(N):
+        j=(i+1)%N;face([_ur[k][i],_ur[k+1][i],_ur[k+1][j],_ur[k][j]],MU,[(0,0),(1,0),(1,1),(0,1)],Vector((0,0,-1)))
+oc=Vector((SH.OC[0],SH.OC[1],0))
+wall(INS,c(IZ-1.0),c(IZ+0.2),MW,1e6,1e6,outward=False,ctr=oc)
+_ring=lambda R,z,r,m:[tube(Vector((R[i].x,R[i].y,z(i))),Vector((R[(i+1)%N].x,R[(i+1)%N].y,z((i+1)%N))),r,m) for i in range(N)]
+for bi in range(NB):   # a floodlight bank under each truss's tip
+    i=bi*K;q=IN[i]+_ro(i)*0.8;d=_ro(i);sd=Vector((-d.y,d.x,0))
+    pts=[q+d*a_+sd*b_ for a_,b_ in((-0.5,-1.6),(0.5,-1.6),(0.5,1.6),(-0.5,1.6))]
+    lo4=[P(p_,IZ-2.4) for p_ in pts];hi4=[P(p_,IZ-1.0) for p_ in pts]
+    for e in range(4):
+        f_=(e+1)%4;nn=((pts[e]+pts[f_])/2-q).normalized()
+        face([lo4[e],lo4[f_],hi4[f_],hi4[e]],MST,[(0,0),(1,0),(1,1),(0,1)],nn)
+    face(lo4[::-1],MW,[(0,0),(1,0),(1,1),(0,1)],Vector((0,0,-1)))
+# primary trusses: a triangular lattice in each valley, square to the edge, ending at the membrane's tip (Google Earth
+# close views: the lattice stops at the gutter line, 2026-11-22 overlay)
 for bi in range(NB):
-    i=bi*K;o=RF[i];n=IN[i];rd=(n-o);rd.z=0;rd.normalize();sd=Vector((-rd.y,rd.x,0))
-    def at(t,dz=0.0,off=0.0,o=o,n=n,sd=sd):
-        p=o.lerp(n,t)+sd*off;return Vector((p.x,p.y,ZF+(IZ-ZF)*t+dz))
+    i=bi*K;o=RF[i];n=INS[i];sd=Vector((-EN[i][1],EN[i][0],0))
+    def at(t,dz=0.0,off=0.0,o=o,n=n,sd=sd,i=i):
+        p=o.lerp(n,t)+sd*off;return Vector((p.x,p.y,ZF_[i]+(IZ-ZF_[i])*t-DIP(t)+dz))
     top=lambda t:(0.6+2.6*min(t/0.3,1.0) if t<0.3 else 3.2-2.3*(t-0.3)/0.7)
     nseg=16;HW=1.2
     for s_ in range(nseg):
         t0,t1=s_/nseg,(s_+1)/nseg;tm=(t0+t1)/2
         for sg in(-1,1):
-            tube(at(t0,top(t0),sg*HW),at(t1,top(t1),sg*HW),0.3,MST)          # top chords
-            tube(at(t0,top(t0),sg*HW),at(tm,0.25),0.13,MST);tube(at(tm,0.25),at(t1,top(t1),sg*HW),0.13,MST)   # web
-        tube(at(t0,0.25),at(t1,0.25),0.3,MST)                                 # bottom chord
-        tube(at(t0,top(t0),-HW),at(t0,top(t0),HW),0.12,MST)                    # rung
-        tube(at(t0,top(t0),-HW if s_%2 else HW),at(t1,top(t1),HW if s_%2 else -HW),0.11,MST)   # top-plane zigzag
+            tube(at(t0,top(t0),sg*HW),at(t1,top(t1),sg*HW),0.3,MST)
+            tube(at(t0,top(t0),sg*HW),at(tm,0.25),0.13,MST);tube(at(tm,0.25),at(t1,top(t1),sg*HW),0.13,MST)
+        tube(at(t0,0.25),at(t1,0.25),0.3,MST)
+        tube(at(t0,top(t0),-HW),at(t0,top(t0),HW),0.12,MST)
+        tube(at(t0,top(t0),-HW if s_%2 else HW),at(t1,top(t1),HW if s_%2 else -HW),0.11,MST)
     tube(at(1,top(1),-HW),at(1,top(1),HW),0.08,MST)
     for sg in(-1,1):tube(at(0,0.0,sg*HW),at(0,top(0),sg*HW),0.15,MST);tube(at(1,0.0,sg*HW*0.5),at(1,top(1),sg*HW),0.15,MST)
 _ring(INS,lambda i:IZ+0.9,0.35,MST)
 _GT=[RF[i].lerp(INS[i],0.05) for i in range(N)]
-_ring(_GT,lambda i:ZF+(IZ-ZF)*0.05+0.35,0.18,MW)
+_ring(_GT,lambda i:ZF_[i]+(IZ-ZF_[i])*0.05-DIP(0.05)+0.35,0.18,MW)
+
+# --- HALO, the rooftop climb's platform on the west roof (survey/halo.json, traced off the straight-down Google Earth
+# shot): a deck whose outline is the hull of the lean-out ring and the half-round lookout, an open centre in the ring,
+# an oval opening in the deck, glass rails round every edge, a lift/stair drum.
+HJ=json.load(open(os.path.join(me_dir,'survey','halo.json')))
+def _circ(c,r,n=48,a0=0.0):return [(c[0]+r*math.cos(a0+2*math.pi*k/n),c[1]+r*math.sin(a0+2*math.pi*k/n)) for k in range(n)]
+def _hull(pts):
+    pts=sorted(set(pts));cr=lambda o,a,b:(a[0]-o[0])*(b[1]-o[1])-(a[1]-o[1])*(b[0]-o[0]);lo=[];hi=[]
+    for q in pts:
+        while len(lo)>=2 and cr(lo[-2],lo[-1],q)<=0:lo.pop()
+        lo.append(q)
+    for q in reversed(pts):
+        while len(hi)>=2 and cr(hi[-2],hi[-1],q)<=0:hi.pop()
+        hi.append(q)
+    return lo[:-1]+hi[:-1]
+def _caps(a,b,r,n=24):
+    ang=math.atan2(b[1]-a[1],b[0]-a[0])
+    return [(b[0]+r*math.cos(ang-math.pi/2+math.pi*k/n),b[1]+r*math.sin(ang-math.pi/2+math.pi*k/n)) for k in range(n+1)]+\
+           [(a[0]+r*math.cos(ang+math.pi/2+math.pi*k/n),a[1]+r*math.sin(ang+math.pi/2+math.pi*k/n)) for k in range(n+1)]
+_hr=HJ['ring'];_he=HJ['end'];_ho=HJ['opening'];ZH=HJ['deck_top'];ZH0=ZH-HJ['deck_thick']
+_out=_hull(_circ(_hr['c'],_hr['r_out'],96)+_circ(_he['c'],_he['r'],96))
+_holes=[_circ(_hr['c'],_hr['r_in'],72),_caps(_ho['a'],_ho['b'],_ho['r'])]
+def _loopfill(loops,z,up):
+    es=[]
+    for L in loops:
+        vs=[bm.verts.new((x,y,z)) for x,y in L]
+        es+=[bm.edges.new((vs[k],vs[(k+1)%len(vs)])) for k in range(len(vs))]
+    r=bmesh.ops.triangle_fill(bm,use_beauty=True,use_dissolve=False,edges=es)
+    for f in r['geom']:
+        if isinstance(f,bmesh.types.BMFace):
+            f.material_index=MST;f.normal_update()
+            if (f.normal.z<0)==up:f.normal_flip()
+_loopfill([_out]+_holes,ZH,True);_loopfill([_out]+_holes,ZH0,False)
+def _band(L,z0,z1,mi,inside=False):
+    for k in range(len(L)):
+        a=L[k];b=L[(k+1)%len(L)];vs=[P(Vector((a[0],a[1],0)),z0),P(Vector((b[0],b[1],0)),z0),P(Vector((b[0],b[1],0)),z1),P(Vector((a[0],a[1],0)),z1)]
+        n=Vector((b[1]-a[1],-(b[0]-a[0]),0)).normalized()*(-1 if inside else 1)
+        face(vs,mi,[(0,0),(1,0),(1,1),(0,1)],n)
+_band(_out,ZH0,ZH,MST)
+for L in _holes:_band(L,ZH0,ZH,MST,inside=True)
+for L in [_out]+_holes:
+    _band(L,ZH,ZH+HJ["rail_h"],MG)
+    for k in range(len(L)):
+        a=L[k];b=L[(k+1)%len(L)];tube(Vector((a[0],a[1],ZH+HJ['rail_h'])),Vector((b[0],b[1],ZH+HJ['rail_h'])),0.05,MST)
+_hd=HJ['drum'];_dc=_circ(_hd['c'],_hd['r'],32);_band(_dc,ZH,ZH+_hd['h'],MW)
+face([P(Vector((x,y,0)),ZH+_hd['h']) for x,y in _dc],MW,[(0,0)]*len(_dc),Vector((0,0,1)))
+
     # Google Earth (east and north close views): no white Y columns outside the glass, only slim white posts in the
     # dark open strip between the glass's head and the roof's fascia (drawn in the glass texture, bronze.py).
 # bowl seating inside, turf
@@ -257,12 +334,22 @@ FE=J['fence'];oc=Vector((FE['c'][0],FE['c'][1],0));ang=FE['ang'];U=Vector((math.
 U=Vector((math.cos(ang),math.sin(ang),0));Vv=Vector((-math.sin(ang),math.cos(ang),0))
 def ell(d,a=82.2,b=64.05):
     du,dv=d.dot(U),d.dot(Vv);k=1/math.sqrt((du/a)**2+(dv/b)**2);return oc+d*k
-L0=[ell((RF[i]-oc).normalized(),FE['a'],FE['b']) for i in range(N)];ZK=1.36   # tier heights x camL level fit
-L1=[L0[i].lerp(RF[i],0.42) for i in range(N)];L3=[L0[i].lerp(RF[i],0.97) for i in range(N)]
+L0=[ell((RF[i]-oc).normalized(),FE['a'],FE['b']) for i in range(N)]
+# The bowl's three visible rakes, each an offset of the roof edge that moves out 1.3-2.8 m a metre of height.
+# survey/tier_fit.json is fitted to 312 Google Earth hovers from four cameras inside the bowl (tierfit.py):
+# d = c0 + c1 cos th + c2 sin th + slope*h, rms 1.1 m (upper), 1.1 m (middle), 1.6 m (lower), 1 m height readouts.
+# The upper tier's front overhangs the middle tier by ~6 m. Published: five tiers (worldconstructionnetwork).
+TF=json.load(open(os.path.join(me_dir,'survey','tier_fit.json')))
+def RT(nm,h):
+    c=TF[nm]['c'];return RING(lambda i:c[0]+c[1]*math.cos(TH[i])+c[2]*math.sin(TH[i])+TF[nm]['slope']*h)
+ZL0,ZL1,ZM0,ZM1,ZU0,ZU1=2.0,6.5,8.0,17.5,19.5,33.5
+LA=RT('lower',ZL0);LB=RT('lower',ZL1);LC=RT('mid',ZM0);LD=RT('mid',ZM1);LE=RT('upper',ZU0);LF=RT('upper',ZU1)
+_gap=[((LA[i]-oc).length-(L0[i]-oc).length) for i in range(N)]
+print('bowl front behind the match fence: min %.1f max %.1f m'%(min(_gap),max(_gap)))
 # bowl: stand texture = one real seating bay (063), u once per bay along the ring, v by height through the three tiers
 SL=arcs(L0);BAYL=SL[N]/NB
 SU=[SL[i]/BAYL for i in range(N+1)]
-KN=[(0,1.0),(1.6*ZK,0.95),(12*ZK,0.71),(15*ZK,0.667),(31.5*ZK,0.0)]
+KN=[(0,1.0),(ZL0,0.95),(ZM1,0.71),(ZU0,0.667),(ZU1,0.0)]
 def VZ(z):
     for (z0,f0),(z1,f1) in zip(KN,KN[1:]):
         if z<=z1:return 1-(f0+(f1-f0)*(z-z0)/(z1-z0))
@@ -284,10 +371,21 @@ def swall(R,z0,z1):
     for i in range(N):
         j=(i+1)%N;cc=(R[i]+R[j])/2-oc;cc.z=0
         face([lo[i],lo[j],hi[j],hi[i]],MS,[(SU[i],VZ(z0)),(SU[i+1],VZ(z0)),(SU[i+1],VZ(z1)),(SU[i],VZ(z1))],-cc.normalized())
-swall(L0,0.0,1.6*ZK)
-rake(L0,1.6*ZK,L1,12.0*ZK,24)
-swall(L1,12.0*ZK,15.0*ZK)
-rake(L1,15.0*ZK,L3,31.5*ZK,30)
+swall(LA,0.0,ZL0)
+rake(LA,ZL0,LB,ZL1,15)
+flat(LB,c(ZL1),LC,c(ZL1),MC)            # the walkway in front of the middle tier, then its 1.5 m front wall
+swall(LC,ZL1,ZM0)
+rake(LC,ZM0,LD,ZM1,19)
+# under the upper tier: its slab follows the rake 1 m below the treads, over the middle tier's back rows
+def _hu(i,d):
+    c_=TF['upper']['c'];return (d-(c_[0]+c_[1]*math.cos(TH[i])+c_[2]*math.sin(TH[i])))/TF['upper']['slope']
+_dLD=[TF['mid']['c'][0]+TF['mid']['c'][1]*math.cos(TH[i])+TF['mid']['c'][2]*math.sin(TH[i])+TF['mid']['slope']*ZM1 for i in range(N)]
+ZUB=[_hu(i,_dLD[i])-1.0 for i in range(N)]
+wall(LD,lambda i:ZM1,lambda i:ZUB[i],MC,1e6,1e6,outward=False,ctr=oc)   # back of the middle tier
+flat(LD,lambda i:ZUB[i],LE,c(ZU0-0.9),MU,up=False)
+swall(LE,ZU0-0.9,ZU0)                   # the upper tier's balcony front
+rake(LE,ZU0,LF,ZU1,23)
+swall(LF,ZU1,ZU1+3.5)
 # no turf inside the bowl and no plaza beyond the podium edge: the game draws the turf (director: "Leave field out")
 def prism(pts,h,roofmi,wallmi,glassband=False,louvre_from=None):
     pts=[Vector((p[0],p[1],0)) for p in pts];n=len(pts);cc=sum(pts,Vector())/n
@@ -354,7 +452,7 @@ for i in range(4):
 face(hi,MKL,[(v.co.x/4,v.co.y/4) for v in hi],Vector((0,0,1)))
 # deck at 6.4 m from the podium edge out to the stair head, west to the curved building's east wall (OSM 695799455,
 # x -181.3), south to y 17.5 (Esri: light paving between the podium and that building). Lamps along the head (o2).
-D0,D1=50,66
+D0,D1=CI(294.8),CI(281.0)   # the stair head's deck, by bearing (was segments 50-66 of the old ring)
 dp=[POD[D0],cs[0],cs[2],T1,T2,Vector((-183.4,45.7,0)),Vector((-181.3,43.2,0)),Vector((-181.3,17.5,0))]+[POD[i] for i in range(D1,D0,-1)]
 dp=[Vector((v.x,v.y,0)) for v in dp]
 dk=bm.faces.new([P(v,ZT) for v in dp]);dk.normal_update()
@@ -421,7 +519,7 @@ inw=lambda i:-Vector((POD[i].x,POD[i].y,0)).normalized()
 def near_stair(v):
     d=(v-T1);ax=(T2-T1);s=d.dot(ax.normalized());return -1.0<=s<=ax.length+1.0 and abs(d.cross(ax.normalized()).z)<4.0
 runs=[];cur=[]
-for i in list(range(HE,N))+list(range(0,HS+1)):
+for i in ARC(PODA,PODB):
     if i in DECK_I:
         if cur:runs.append(cur);cur=[]
         continue
@@ -429,37 +527,38 @@ for i in list(range(HE,N))+list(range(0,HS+1)):
 if cur:runs.append(cur)
 BZ0,BZ1=6.4,7.5                                            # o2: low see-through mesh balustrade, ~1.1 m, steel top rail
 # o2: the west/north edge has the mesh balustrade; past the east pavilion (seg 72 on) it is a solid sandstone parapet
-PAR=72
+PAR=set(ARC(275.7,PODB))   # bearings 276 round to the podium's south-east end: solid parapet
 mruns=[];pruns=[]
 for run in runs:
-    a_=[i for i in run if not (PAR<=i<HS+1)];b_=[i for i in run if PAR<=i<HS+1]
-    if a_:mruns.append(a_+([b_[0]] if b_ and a_[-1]==PAR-1 else []))
+    a_=[i for i in run if i not in PAR];b_=[i for i in run if i in PAR]
+    if a_:mruns.append(a_+([b_[0]] if b_ else []))
     if b_:pruns.append(b_)
 for run in pruns:
     AR=arcs(POD)   # parapet face shares the podium wall's u, so its block joints run straight up from the wall's
-    sweep([POD[i]+inw(i)*0.15 for i in run],6.4,7.5,0.3,MPW,TI['podwall_m'][0],TI['podwall_m'][1],sa=[AR[i] for i in run])
+    for a_,b_ in zip(run,run[1:]):sweep([POD[a_]+inw(a_)*0.15,POD[b_]+inw(b_)*0.15],ZD[a_],ZD[a_]+1.1,0.3,MPW,TI['podwall_m'][0],TI['podwall_m'][1],sa=[AR[a_],AR[a_]+(POD[b_]-POD[a_]).length])
 for run in mruns:
     pts=[POD[i]+inw(i)*0.12 for i in run];sP=[0.0]
     for a_,b_ in zip(pts,pts[1:]):sP.append(sP[-1]+(b_-a_).length)
-    lo=[P(p,BZ0+0.08) for p in pts];hi=[P(p,BZ1-0.05) for p in pts]
+    zr=[ZD[i] for i in run];lo=[P(p,z+0.08) for p,z in zip(pts,zr)];hi=[P(p,z+1.05) for p,z in zip(pts,zr)]
     for k in range(len(pts)-1):
         face([lo[k],lo[k+1],hi[k+1],hi[k]],MMS,[(sP[k],0),(sP[k+1],0),(sP[k+1],1.0),(sP[k],1.0)],-inw(run[k]))
-    sweep([Vector((p.x,p.y,0)) for p in pts],BZ1-0.05,BZ1,0.07,MLP)       # top rail
-    sweep([Vector((p.x,p.y,0)) for p in pts],BZ0,BZ0+0.08,0.07,MLP)       # foot rail
+    for k in range(len(pts)-1):
+        q0=Vector((pts[k].x,pts[k].y,0));q1=Vector((pts[k+1].x,pts[k+1].y,0))
+        sweep([q0,q1],zr[k]+1.05,zr[k]+1.1,0.07,MLP);sweep([q0,q1],zr[k],zr[k]+0.08,0.07,MLP)   # top and foot rails
     nxt=0.0
     for k,p in enumerate(pts):                                             # posts every ~1.8 m and at both ends
-        if sP[k]>=nxt or k==len(pts)-1:boxp(p,0.035,BZ0,BZ1,MLP);nxt=sP[k]+1.8
+        if sP[k]>=nxt or k==len(pts)-1:boxp(p,0.035,zr[k],zr[k]+1.1,MLP);nxt=sP[k]+1.8
 # lamp posts: o2 measures 3.5-3.75 m poles every ~7.2 m, standing just inside the balustrade (first one at seg 29)
 LH=3.7;LS=7.2;s0=0.0;sp=[0.0]
-order=list(range(HE,N))+list(range(0,HS+1))
+order=ARC(PODA,PODB);NOLAMP=set(ARC(282.7,210.6))
 for a_,b_ in zip(order,order[1:]):sp.append(sp[-1]+(POD[b_]-POD[a_]).length)
-ph=sp[order.index(29)]%LS;t=ph
+ph=sp[order.index(CI(313.0))]%LS;t=ph
 while t<sp[-1]-1.0:
     k=max(q for q in range(len(sp)) if sp[q]<=t);i=order[k];j=order[min(k+1,len(order)-1)]
     f=(t-sp[k])/max(sp[min(k+1,len(sp)-1)]-sp[k],1e-6);e=POD[i].lerp(POD[j],f);c_=e+inw(i)*0.6
-    if i not in DECK_I and j not in DECK_I and (c_-Vector((lx,ly,0))).length>4.0 and not (64<=i<HS+1):   # o2: no lamps east of the pavilion
-        cyl(c_.x,c_.y,6.4,6.4+LH,0.07,MLP,8)
-        boxp(c_,0.16,6.4+LH,6.4+LH+0.14,MLP)                                # lamp head
+    if i not in DECK_I and j not in DECK_I and (c_-Vector((lx,ly,0))).length>4.0 and i not in NOLAMP:   # o2: no lamps by the west pavilion
+        cyl(c_.x,c_.y,ZD[i],ZD[i]+LH,0.07,MLP,8)
+        boxp(c_,0.16,ZD[i]+LH,ZD[i]+LH+0.14,MLP)                                # lamp head
     t+=LS
 for c_ in HEADL:                                                           # o2: lamps along the stair head
     cyl(c_.x,c_.y,ZT,ZT+LH,0.07,MLP,8);boxp(c_,0.16,ZT+LH,ZT+LH+0.14,MLP)
@@ -502,8 +601,8 @@ def _seats(Ra,za,Rb,zb,rowsn,tier_of,aoff,vom):
         if r>1:   # aisle stairs: a half step on each row's tread (the rows rise ~0.6 m, so a real aisle has two steps per row)
             for c in np.arange(aoff,bayv[-1]-0.1,7.4):
                 s=float(np.interp(c,bayv,cs));i=int(min(N-1,max(0,np.searchsorted(cs,s,side='right')-1)));f=(s-cs[i])/max(cs[i+1]-cs[i],1e-9);j=(i+1)%N
-                AST.append((Rf[i].lerp(Rf[j],f),Rk[i].lerp(Rk[j],f),pz,(zb-za)/rowsn,0.6*sc_))
-        if vom and pz+0.01>=10.2*ZK:
+                AST.append((Rf[i].lerp(Rf[j],f),Rk[i].lerp(Rk[j],f),pz,(zb-za)/rowsn,0.5*float(np.interp(c+0.6,bayv,cs)-np.interp(c-0.6,bayv,cs))-0.02))   # the gap's own local width
+        if vom and pz+0.01>=ZM0+0.6*(ZM1-ZM0):
             for b0 in np.arange(0,bayv[-1],14.8):gaps.append((np.interp(b0+3.2,bayv,cs),np.interp(b0+5.0,bayv,cs)))
         gaps=sorted((max(0.0,a),min(cs[N],b)) for a,b in gaps if b>0 and a<cs[N])
         edges=[0.0]+[x for g in gaps for x in g]+[cs[N]]
@@ -515,8 +614,9 @@ def _seats(Ra,za,Rb,zb,rowsn,tier_of,aoff,vom):
                 SEAT.append((p.x,p.y,pz,fw.x,fw.y))
                 c=np.array(_TC[tn])/255*(1.0 if (r-1)%2 else 0.96)+(1 if _R.random()<0.5 else -1)*0.075*_R.uniform(0.7,1.0)*_AX
                 SMAT.append(c)
-_seats(L0,1.6*ZK,L1,12.0*ZK,24,lambda r:'lo' if 1.6+10.4*(r+1)/24<=6.4+0.01 else 'mid',0.0,True)
-_seats(L1,15.0*ZK,L3,31.5*ZK,30,lambda r:'up',3.7,False)
+_seats(LA,ZL0,LB,ZL1,15,lambda r:'lo',0.0,False)
+_seats(LC,ZM0,LD,ZM1,19,lambda r:'mid',0.0,True)
+_seats(LE,ZU0,LF,ZU1,23,lambda r:'up',3.7,False)
 print('seats',len(SEAT),'tread depth min/max %.2f %.2f'%(min(_depth),max(_depth)))
 # drop any seat whose spot is taken by other structure (roof columns, walls): ray down from 1.2 m over the pan's
 # back, middle and front must land on the seat's own tread
@@ -529,7 +629,7 @@ for x,y,z,fx,fy in SEAT:
             q=Vector((x+fx*d+fy*sx,y+fy*d-fx*sx,z+1.2));h=_bv.ray_cast(q,Vector((0,0,-1)),2.0)
             if h[0] is None or abs(h[0].z-z)>0.02:ok=False
     _keep.append(ok)
-print('seats dropped (spot taken)',_keep.count(False))
+print('seats dropped (spot taken)',_keep.count(False),'by tier lo/mid/up',[sum(1 for (x,y,z,a_,b_),k in zip(SEAT,_keep) if not k and lo_<=z<hi_) for lo_,hi_ in ((0,ZL1+0.1),(ZM0-0.1,ZM1+0.1),(ZU0-0.1,99))])
 SEAT=[s for s,k in zip(SEAT,_keep) if k];SMAT=[s for s,k in zip(SMAT,_keep) if k]
 SE=np.array(SEAT,float);SC=np.clip(np.array(SMAT),0,1)
 # six plastics: each tier colour pushed grey-blue or tan (mean of its seats), so the export stays plain materials

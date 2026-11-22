@@ -53,7 +53,9 @@ func _run() -> void:
 			pos = ground.global_transform * Vector3(pos.x, pos.z, -pos.y)
 			tgt = ground.global_transform * Vector3(tgt.x, tgt.z, -tgt.y)
 		cam.global_position = pos
-		cam.look_at(tgt, Vector3.UP if absf((tgt - pos).normalized().y) < 0.999 else Vector3.FORWARD)
+		# Straight down: model frame keeps the model's north (+y) at the top of the picture, as Google Earth does.
+		var north := (ground.global_transform.basis * Vector3.FORWARD).normalized() if model_frame and ground != null else Vector3.FORWARD
+		cam.look_at(tgt, Vector3.UP if absf((tgt - pos).normalized().y) < 0.999 else north)
 		cam.fov = v[6] if v.size() > 6 else 60.0
 		for i in 8:
 			await process_frame
