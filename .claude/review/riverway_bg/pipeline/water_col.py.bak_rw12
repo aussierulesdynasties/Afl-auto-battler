@@ -1,0 +1,22 @@
+"""data/<g>/prep/water_col.png: river colour map for the scene's water surface (wrapped so uv = xy / (2 NE)): Ross River
+olive-brown, lighter within ~6 m of the bank, slow tone drift. Mask from the painted ground (water colour). python -E water_col.py spec.json"""
+import sys, json, numpy as np
+from PIL import Image, ImageFilter
+sp = json.load(open(sys.argv[1])); D = 'data/%s/prep/' % sp['name']; W0 = np.array(sp['palette']['water'], float)
+g = np.asarray(Image.open(D + 'ground.png').convert('RGB'), float); N = g.shape[0]; px = 2 * sp['near_half_m'] / N
+m = (np.abs(g - W0).sum(2) < 18)
+im = Image.fromarray((m * 255).astype(np.uint8)); d = np.zeros(m.shape)
+for k in range(int(8 / px)):
+    im = im.filter(ImageFilter.MinFilter(3)); d += np.asarray(im) > 0
+d *= px   # metres from the bank (capped 8)
+rng = np.random.default_rng(3)
+def noise(s):
+    a = rng.random((N // s + 3, N // s + 3)); return np.asarray(Image.fromarray((a * 255).astype(np.uint8)).resize(((N // s + 3) * s,) * 2, Image.BICUBIC), float)[:N, :N] / 255
+base = np.array(sp['palette'].get('river_paint', [70, 72, 55]), float)
+c = base[None, None] * (0.92 + 0.14 * noise(200))[..., None]
+edge = np.clip(1 - d / 6.0, 0, 1)[..., None]
+c = c * (1 - edge) + np.array([112, 108, 80]) * edge
+c = np.where(m[..., None], c, base)
+c = c[::-1]                       # row 0 = south (Blender v up)
+c = np.roll(np.roll(c, -N // 2, 0), -N // 2, 1)   # uv 0 = scene origin
+Image.fromarray(np.clip(c[::-1], 0, 255).astype(np.uint8)).save(D + 'water_col.png'); print('water_col', N, round(px, 3), int(m.sum()))
