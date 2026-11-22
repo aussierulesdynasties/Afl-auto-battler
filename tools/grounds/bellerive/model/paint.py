@@ -177,6 +177,8 @@ t.save('lamps')
 from PIL import ImageDraw, ImageFont
 def sign(name, bg, fg, font, W=1.8, H=15.0):
     w, h = int(H * PPM), int(W * PPM); im = Image.new('RGB', (w, h), bg); d = ImageDraw.Draw(im)
+    if not os.path.exists(font):   # off Windows: Liberation Sans has Arial's metrics
+        font = '/usr/share/fonts/truetype/liberation/LiberationSans-%s.ttf' % ('Bold' if 'bd' in font else 'Regular')
     f = ImageFont.truetype(font, int(h * 0.62)); txt = 'NINJA STADIUM'
     # GE x330: lettering on the lower three quarters; above it the white cap carries a round navy emblem (ring + stroke),
     # and the navy panel stops below the cap (left of the strip = bottom once rotated)
@@ -227,5 +229,30 @@ fac_ponting()
 
 
 if __name__ == '__main__':
+    # ---- stepped rows (2026-11-22 rebuild): the treads and risers the 3D seats stand on. Precast grey concrete,
+    # the tread worn paler along its front edge, the riser darker with a drip line under the nosing.
+    t = T(4.0, 1.0, (150, 152, 150), n=3, bl=(1.0, 6)); t.vl(0.02, 0.03, mul=0.8); t.save('tread')
+    t = T(4.0, 1.0, (112, 116, 118), n=3, bl=(1.0, 6)); t.vl(0.02, 0.03, mul=0.8); t.streaks(10, 0, 1, mul=0.85)
+    t.save('riser')
+    # vomitory portals: pale precast concrete, and the tunnel's own dark painted inside
+    t = T(3.0, 3.0, (176, 178, 176), n=3, bl=(1.0, 7)); t.streaks(8, 0, 3, mul=0.88); t.save('vom_conc')
+    t = T(2.0, 2.0, (34, 36, 40), n=3, bl=(1.0, 4)); t.save('vom_dark')
+    # the tier front between the Ponting's tiers: a dark LED ribbon board (blank: no sponsors), a pale capping
+    t = T(6.0, 3.6, (28, 30, 36), n=3, bl=(1.0, 3))
+    for u in np.arange(0, 6, 0.6): t.vl(u, 0.02, mul=0.7)
+    t.rect(0, 6, 3.4, 3.6, (180, 182, 180)); t.hl(2.6, 0.04, mul=0.6); t.save('ribbon')
+    # modelled facades (2026-11-22): each panel is its own face, so the textures are plain finishes only
+    for name, col in (('skin_silver', (220, 226, 230)), ('skin_silver2', (196, 206, 214)), ('skin_pale', (184, 194, 202)),
+                      ('skin_blue', (80, 113, 150)), ('skin_sky', (117, 154, 197)), ('skin_grey', (123, 141, 167))):
+        t = T(4.0, 4.0, col, n=2.5, bl=(1.5, 5)); t.vl(0.02, 0.03, mul=0.86); t.hl(0.02, 0.03, mul=0.86)
+        if 'silver' in name or 'pale' in name:
+            t.streaks(8, 0, 4, mul=0.93)
+        t.save(name)
+    t = T(3.6, 6.6, (204, 210, 212), n=3, bl=(2, 6)); t.hl(3.3, 0.04, mul=0.85); t.vl(0.02, 0.04, mul=0.85)
+    t.streaks(12, 0, 6.6, mul=0.9); t.save('boon_band')
+    t = T(1.8, 5.6, (48, 62, 76), n=3, bl=(1.5, 5)); t.a[:t.h // 3] *= 1.25; t.save('boon_glass')
+    t = T(8.0, 6.0, (224, 224, 218), n=3, bl=(2, 7)); t.streaks(14, 0, 6, mul=0.9); t.grime_bottom(1.0)
+    t.save('render_white')
+    t = T(1.2, 1.2, (40, 50, 60), n=3, bl=(0.5, 4)); t.a[:t.h // 2] *= 1.3; t.save('win_dark')
     json.dump(TILE, open(OUT + 'tiles.json', 'w', newline=''), indent=0)
     for k in sorted(TILE): print(f'{k:16s} stddev {sd(k):5.1f}')
