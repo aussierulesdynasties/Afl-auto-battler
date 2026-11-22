@@ -450,6 +450,56 @@ def build_club(m):
     _balustrade(m, [(top_u, sv1 - 0.05), (L - 1.2, sv1 - 0.05)], DECK, 1.1)
     # ---- the south end: the first floor's glass box over a stone base
     _glass_wall_end(m, 0.0, WEST, UPPER, DECK, EAVE)
+    _south_end(m)
+
+
+# The south end past the glass (2025 aerial photo from the south-east, Barossa-Park-62; the satellite read with its
+# lean taken off): the first floor runs on south over a stone base. On its west part a dark louvred plant enclosure,
+# open to the sky, with the air-conditioning units inside, abuts the glass end; on its field side the deck carries on
+# under the verandah, which wraps round the corner on two maroon columns. The terraces climb up to its south.
+S_U = -9.0          # the enclosure's south wall (u)
+S_V0, S_V1 = 5.6, 16.3   # its west and east walls (v)
+S_VER = -6.5        # the deck and verandah's south edge, field side (u)
+S_TOP = DECK + 3.9  # the louvres' top
+
+
+def _south_end(m):
+    # stone base under the enclosure and under the field-side deck
+    ubox(m, "sandstone", S_U, 0.0, S_V0, S_V1, -1.0, DECK - 0.25)
+    ubox(m, "sandstone", S_VER, 0.0, S_V1, FACE + 0.5, -1.0, DECK - 0.25)
+    # the first floor slab, its edge as the main deck's
+    ubox(m, "concrete", S_U, 0.0, S_V0, S_V1, DECK - 0.25, DECK, mats={"bottom": "soffit"})
+    ubox(m, "concrete", S_VER, 0.0, S_V1, DECK_EDGE, DECK - 0.25, DECK, mats={"bottom": "soffit"})
+    # the louvred enclosure: vertical blades 0.15 m apart, turned 45 degrees, between a top and bottom channel, on the
+    # south, west and east sides (the north side is the glass end)
+    sides = [((S_U, S_V0), (S_U, S_V1)), ((S_U, S_V0), (-0.4, S_V0)), ((S_U, S_V1), (-0.4, S_V1))]
+    for (ua, va), (ub, vb) in sides:
+        ln = math.hypot(ub - ua, vb - va)
+        n = int(ln / 0.15)
+        for i in range(n + 1):
+            f = i / n
+            u, v = ua + (ub - ua) * f, va + (vb - va) * f
+            m.beam("frame_dark", C3(u, v, DECK + 0.1), C3(u, v, S_TOP - 0.1), 0.02, 0.11,
+                   up=tuple(_n(np.array(C3(1, 1, 0)) - np.array(C3(0, 0, 0)))))
+        for hh in (DECK, S_TOP - 0.12):
+            m.beam("clad_dark", C3(ua, va, hh), C3(ub, vb, hh), 0.12, 0.12)
+        for f in np.linspace(0, 1, max(2, int(ln / 3.0) + 1)):
+            u, v = ua + (ub - ua) * f, va + (vb - va) * f
+            m.beam("clad_dark", C3(u, v, DECK), C3(u, v, S_TOP), 0.1, 0.1)
+    # the plant inside: condensing units on a frame
+    for k, (u, v) in enumerate([(-7.4, 8.0), (-7.4, 11.2), (-4.2, 8.0), (-4.2, 11.2), (-2.0, 13.6)]):
+        ubox(m, "white_render", u - 1.0, u + 1.0, v - 0.6, v + 0.6, DECK + 0.25, DECK + 1.75)
+        ubox(m, "frame_dark", u - 1.1, u + 1.1, v - 0.7, v + 0.7, DECK, DECK + 0.25)
+        ubox(m, "frame_dark", u - 0.5, u + 0.5, v - 0.55, v + 0.55, DECK + 1.75, DECK + 1.8)
+    # the verandah round the corner: dark roof on maroon columns, its fascia, the slatted balustrade along the deck
+    ubox(m, "roof_dark", S_VER - 0.3, 0.0, S_V1, DECK_EDGE + 0.5, VER_H, VER_H + 0.18, mats={"bottom": "soffit"})
+    ubox(m, "clad_dark", S_VER - 0.36, S_VER - 0.3, S_V1, DECK_EDGE + 0.56, VER_H - 0.1, VER_H + 0.28)
+    ubox(m, "clad_dark", S_VER - 0.36, -0.2, DECK_EDGE + 0.5, DECK_EDGE + 0.56, VER_H - 0.1, VER_H + 0.28)
+    for v in (S_V1 + 0.6, DECK_EDGE - 0.35):
+        ubox(m, "steel_maroon", S_VER + 0.05, S_VER + 0.25, v - 0.1, v + 0.1, DECK, VER_H)
+    ubox(m, "steel_maroon", S_VER + 0.05, S_VER + 0.25, S_V1 + 0.5, DECK_EDGE - 0.25, VER_H - 0.25, VER_H)
+    _balustrade(m, [(S_VER, S_V1 + 0.1), (S_VER, DECK_EDGE - 0.05)], DECK, 1.1, along_v=True)
+    _balustrade(m, [(S_VER, DECK_EDGE - 0.05), (0.0, DECK_EDGE - 0.05)], DECK, 1.1)
 
 
 def _q(m, mat, pts, up=True):
