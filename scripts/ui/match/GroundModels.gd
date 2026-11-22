@@ -850,6 +850,17 @@ static func _backdrop_materials(model: Node) -> void:
 		var mesh: Mesh = (mi as MeshInstance3D).mesh
 		if mesh == null:
 			continue
+		# Land, suburbs and far trees lie in the open like the turf: marked open_ground, so
+		# Oval3DTurf.light_stands leaves them off the stand shader (whose green-less sky light turned
+		# York Park's far hilltops purple). Buildings (facade_*, roof_*, nb_*) stay on it.
+		var open := true
+		for i in mesh.get_surface_count():
+			var m0 := mesh.surface_get_material(i)
+			var n0 := m0.resource_name if m0 != null else ""
+			if n0.begins_with("facade_") or n0.begins_with("roof_") or n0.begins_with("nb_"):
+				open = false
+		if open:
+			mi.set_meta("open_ground", true)
 		for i in mesh.get_surface_count():
 			var mat := mesh.surface_get_material(i) as BaseMaterial3D
 			if mat == null:
