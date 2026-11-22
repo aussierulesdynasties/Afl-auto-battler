@@ -112,9 +112,11 @@ for u in (0.0, 1.5, 3.0): t.vl(u, 0.05, col=(200, 204, 206))
 al = np.full((t.h, t.w), 0.4); t.mask(0, 3.0, 0.94, 1.0, al, 1.0)
 for u in (0.0, 1.5, 3.0): t.mask(u - 0.025, u + 0.025, 0, 1.0, al, 1.0)
 t.save('glass_rail', al)
-t = T(4.0, 4.0, (196, 214, 222), n=3, bl=(1, 5))
+# The canopies: pale polycarbonate sheet, near opaque from above (Google Earth top-down reads (195, 219, 236) with the
+# rafters showing through), ribbed every metre.
+t = T(4.0, 4.0, (200, 220, 232), n=3, bl=(1, 5))
 for u in np.arange(0, 4, 1.0): t.vl(u, 0.06, col=(230, 232, 232))
-al = np.full((t.h, t.w), 0.45)
+al = np.full((t.h, t.w), 0.82)
 for u in np.arange(0, 4.01, 1.0): t.mask(u - 0.03, u + 0.03, 0, 4.0, al, 1.0)
 t.save('canopy_glass', al)
 t = T(6.0, 3.0, (44, 54, 64), n=3, bl=(1.5, 5))

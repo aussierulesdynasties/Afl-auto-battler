@@ -2,7 +2,7 @@ extends SceneTree
 ## A close look at one spot of a ground, built as a match builds it, for a fault the
 ## pre-inspection measured (preinspect_grounds.gd).
 ##   godot --path . --rendering-method mobile --script tools/visual/preinspect_look.gd -- OUTDIR GROUND NAME:px,py,pz,tx,ty,tz[,fov] ...
-## Positions are the match's metres. PREINSPECT_NO_CROWD=1 hides the crowd (the seats as the fly-through shows them); PREINSPECT_NO_HUD=1 hides the score panel; PREINSPECT_MARK_MAT=<material> paints that material magenta. Saves OUTDIR/<slug>_<NAME>.png. Looks only.
+## Positions are the match's metres. PREINSPECT_NO_CROWD=1 hides the crowd (the seats as the fly-through shows them); PREINSPECT_NO_HUD=1 hides the score panel; PREINSPECT_MARK_MAT=<material> paints that material magenta; PREINSPECT_UP=x,y,z sets the camera's up. Saves OUTDIR/<slug>_<NAME>.png. Looks only.
 
 
 func _initialize() -> void:
@@ -61,7 +61,12 @@ func _run() -> void:
 		var parts := str(spec).split(":")
 		var v := parts[1].split_floats(",")
 		cam.global_position = Vector3(v[0], v[1], v[2])
-		cam.look_at(Vector3(v[3], v[4], v[5]), Vector3.UP)
+		# PREINSPECT_UP=x,y,z: the camera's up for a straight-down view (Vector3.UP is parallel to it there).
+		var up := Vector3.UP
+		if OS.get_environment("PREINSPECT_UP") != "":
+			var u := OS.get_environment("PREINSPECT_UP").split_floats(",")
+			up = Vector3(u[0], u[1], u[2])
+		cam.look_at(Vector3(v[3], v[4], v[5]), up)
 		cam.fov = v[6] if v.size() > 6 else 60.0
 		for i in 8:
 			await process_frame

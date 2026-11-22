@@ -13,17 +13,58 @@ C = np.array(D['C'])
 STEP = 0.5
 
 # ---------------- the frame round the fence ----------------
-_p = np.array(G['pitch']) - C
-_b = np.degrees(np.arctan2(_p[:, 0], _p[:, 1])) % 360; _r = np.hypot(_p[:, 0], _p[:, 1]); _o = np.argsort(_b)
-# The fence is smoothed a little: the OSM outline's nodes sit about 5 m apart, and the rows must not kink at them.
-_bs = np.arange(0, 360, 0.5)
-_rs = np.interp(_bs, _b[_o], _r[_o], period=360)
-_k = np.exp(-0.5 * (np.arange(-8, 9) / 3.0) ** 2); _k /= _k.sum()
-_rs = np.convolve(np.concatenate([_rs[-8:], _rs, _rs[:8]]), _k, 'valid')
+# The fence is a smooth closed curve fitted to Google Earth (manuka.json fence: r(bearing) about C, a Fourier series),
+# and every ring of the ground stands an exact offset from it: d metres along the fence's outward normal at bearing b.
+_FC = np.array(D['fence']['fourier'])
+_K = np.arange(1, (len(_FC) - 1) // 2 + 1)
 
 
 def rf(b):
-    return float(np.interp(b % 360, _bs, _rs, period=360))
+    a = math.radians(b)
+    return float(_FC[0] + _FC[1::2] @ np.cos(_K * a) + _FC[2::2] @ np.sin(_K * a))
+
+
+def fence_pt(b):
+    a = math.radians(b); r = rf(b); return np.array([C[0] + r * math.sin(a), C[1] + r * math.cos(a)])
+
+
+def _dfence(b, e=0.01):
+    return (fence_pt(b + e) - fence_pt(b - e)) / (2 * e)      # per degree, clockwise
+
+
+def tangent2(b):
+    t = _dfence(b); return t / np.linalg.norm(t)
+
+
+def normal2(b):
+    t = tangent2(b); return np.array([-t[1], t[0]]) * -1 if np.dot([-t[1], t[0]], [math.sin(math.radians(b)), math.cos(math.radians(b))]) < 0 else np.array([-t[1], t[0]])
+
+
+def off(b, d):
+    """the point d metres past the fence along its outward normal at bearing b"""
+    p = fence_pt(b) + d * normal2(b); return (float(p[0]), float(p[1]))
+
+
+def per_deg(b, d):
+    """metres of the ring d past the fence per degree of bearing at b"""
+    return float(np.linalg.norm(np.array(off(b + 0.01, d)) - np.array(off(b - 0.01, d))) / 0.02)
+
+
+def ring_len(b0, b1, d, step=0.25):
+    bs = np.arange(b0, b1 + 1e-9, step); return float(sum(per_deg(x, d) for x in bs[:-1] + step / 2) * step) if len(bs) > 1 else 0.0
+
+
+def ring_at(b0, d, s):
+    """the bearing s metres along the ring d past the fence from b0"""
+    b = b0; left = s
+    while left > 1e-6:
+        st = min(0.25, left / per_deg(b, d)); left -= st * per_deg(b + st / 2, d); b += st
+    return b
+
+
+def facing(b):
+    """the bearing of the fence's outward normal at b (a seat faces back along it)"""
+    n = normal2(b); return math.degrees(math.atan2(n[0], n[1])) % 360
 
 
 def pol(b, r):
@@ -35,8 +76,8 @@ def P3(b, r, z):
 
 
 def Q(b, d, z):
-    """bearing, metres past the fence, height"""
-    return P3(b, rf(b) + d, z)
+    """bearing, metres past the fence (along its normal), height"""
+    return (*off(b, d), z)
 
 
 def arc(b0, b1, step=STEP):
@@ -91,11 +132,20 @@ def stepped(d0, z0, d1, z1, n, mt='tread', mr='riser'):
 
 
 def tangent(b):
-    a = math.radians(b); return np.array([math.cos(a), -math.sin(a), 0.0])
+    t = tangent2(b); return np.array([t[0], t[1], 0.0])
 
 
 def radial(b):
-    a = math.radians(b); return np.array([math.sin(a), math.cos(a), 0.0])
+    n = normal2(b); return np.array([n[0], n[1], 0.0])
+
+
+def RB(S, b):
+    """a roof's back edge past the fence at bearing b: rb, or interpolated along rb_at [[bearing, rb], ...]"""
+    t = S.get('rb_at')
+    if not t:
+        return S['rb']
+    xs = [x for x, _ in t]; bu = b if b >= xs[0] - 1e-6 else b + 360
+    return float(np.interp(bu, xs, [y for _, y in t]))
 
 
 def in_range(b, b0, b1):
@@ -109,7 +159,8 @@ L = D['lower']; FZ = D['fence_h']
 
 def lower_ranges():
     """bearing ranges of the low terrace: everywhere but the east bank (and the Bradman takes its own)"""
-    return [(133.0, 258.0), (293.0, 417.0)]
+    g0, g1 = L['gaps'][0]
+    return [(g1, B['b0']), (B['b1'], 360.0 + g0)]
 
 
 def lower_sec(b):
@@ -133,70 +184,80 @@ def astand_sec(S):
         return ([(L['conc'], L['z1'], None), (S['d0'], L['z1'], 'concourse'), (S['d0'], S['z0'], 'tier_wall')]
                 + stepped(S['d0'], S['z0'], S['d1'], S['z1'], S['rows'])
                 + [(S['d1'] + 0.8, S['z1'], 'conc'), (S['d1'] + 0.8, S['rbz'] - 0.45, 'backwall'),
-                   (S['rb'] + 0.3, S['rbz'] - 0.45, 'conc_dk'), (S['rb'] + 0.3, 0.0, 'render_white')])
+                   (RB(S, b) + 0.3, S['rbz'] - 0.45, 'conc_dk'), (RB(S, b) + 0.3, 0.0, 'render_white')])
     return sec
 
 
 def roof_band(mb, bs, S, m_top='roof_grey', m_soffit='roof_soffit', fascia='fascia_dark'):
     """A roof with thickness: deck, soffit, a deep front fascia and a back edge."""
     th = 0.35
-    top = lambda b: [(S['rf'], S['rfz']), (S['rb'], S['rbz'])]
-    strip(mb, bs, lambda b: (S['rf'], S['rfz']), lambda b: (S['rb'], S['rbz']), m_top)
-    strip(mb, bs, lambda b: (S['rb'], S['rbz'] - th), lambda b: (S['rf'], S['rfz'] - th), m_soffit)
+    top = lambda b: [(S['rf'], S['rfz']), (RB(S, b), S['rbz'])]
+    strip(mb, bs, lambda b: (S['rf'], S['rfz']), lambda b: (RB(S, b), S['rbz']), m_top)
+    strip(mb, bs, lambda b: (RB(S, b), S['rbz'] - th), lambda b: (S['rf'], S['rfz'] - th), m_soffit)
     strip(mb, bs, lambda b: (S['rf'] - 0.05, S['rfz'] - 1.0), lambda b: (S['rf'] - 0.05, S['rfz'] + 0.12), fascia)
     strip(mb, bs, lambda b: (S['rf'] - 0.05, S['rfz'] + 0.12), lambda b: (S['rf'] + 0.25, S['rfz'] + 0.12), 'steel_galv')
     strip(mb, bs, lambda b: (S['rf'] + 0.25, S['rfz'] - 1.0), lambda b: (S['rf'] - 0.05, S['rfz'] - 1.0), 'steel_galv')
-    strip(mb, bs, lambda b: (S['rb'], S['rbz'] - th), lambda b: (S['rb'], S['rbz'] + 0.1), 'steel_galv')
+    strip(mb, bs, lambda b: (RB(S, b), S['rbz'] - th), lambda b: (RB(S, b), S['rbz'] + 0.1), 'steel_galv')
     for b, fl in ((bs[0], False), (bs[-1], True)):
-        endcap(mb, b, [(S['rf'] - 0.05, S['rfz'] - 1.0), (S['rf'] + 0.25, S['rfz'] - 1.0), (S['rb'], S['rbz'] - th),
-                       (S['rb'], S['rbz'] + 0.1), (S['rf'] - 0.05, S['rfz'] + 0.12)], 'fascia_dark', flip=fl)
+        endcap(mb, b, [(S['rf'] - 0.05, S['rfz'] - 1.0), (S['rf'] + 0.25, S['rfz'] - 1.0), (RB(S, b), S['rbz'] - th),
+                       (RB(S, b), S['rbz'] + 0.1), (S['rf'] - 0.05, S['rfz'] + 0.12)], 'fascia_dark', flip=fl)
 
 
 def aframes(mb, b0, b1, S, every=18.0):
     """White tubular A-frames standing on the roof (Google Earth from the field): two legs splayed along the roof's
     front, an apex 3 m above it, a tie back to the roof's rear; one each ~18 m round the stand."""
-    r = rf(0.5 * (b0 + b1)) + S['rf']; L_ = math.radians((b1 - b0) % 360 or 360) * r
+    L_ = ring_len(b0, b0 + ((b1 - b0) % 360 or 360), S['rf'])
     n = max(1, int(round(L_ / every)))
     for i in range(n + 1):
         b = b0 + ((b1 - b0) % 360) * i / n
         if i in (0, n):
             b = b0 + (0.6 if i == 0 else ((b1 - b0) % 360) - 0.6)
-        d = S['rf'] + 1.2; z = S['rfz'] + (S['rbz'] - S['rfz']) * (d - S['rf']) / (S['rb'] - S['rf'])
+        d = S['rf'] + 1.2; z = S['rfz'] + (S['rbz'] - S['rfz']) * (d - S['rf']) / (RB(S, b) - S['rf'])
         c = np.array(Q(b, d, z)); t = tangent(b); up = np.array([0, 0, 1.0])
         apex = c + up * 3.0
         for s in (-1, 1):
             mb.beam(tuple(c + t * s * 2.2), tuple(apex), 0.22, 0.22, 'steel_white')
-        mb.beam(tuple(apex), tuple(np.array(Q(b, S['rb'] - 1.0, S['rbz'] + 0.1))), 0.12, 0.12, 'steel_white')
+        mb.beam(tuple(apex), tuple(np.array(Q(b, RB(S, b) - 1.0, S['rbz'] + 0.1))), 0.12, 0.12, 'steel_white')
         mb.beam(tuple(apex), tuple(np.array(Q(b, S['rf'] - 0.1, S['rfz'] + 0.1))), 0.1, 0.1, 'steel_white')
         mb.box(tuple(apex[:2]), 0.4, 0.4, 0.3, b, 'steel_white', z0=apex[2] - 0.1)
 
 
 def roof_posts(mb, b0, b1, S, every=9.0):
     """Columns at the back of the tier carrying the roof, and a raking beam under the soffit to each."""
-    r = rf(0.5 * (b0 + b1)) + S['d1']; L_ = math.radians((b1 - b0) % 360 or 360) * r
+    L_ = ring_len(b0, b0 + ((b1 - b0) % 360 or 360), S['d1'])
     n = max(1, int(round(L_ / every)))
     for i in range(n + 1):
         b = b0 + ((b1 - b0) % 360) * i / n
         p = Q(b, S['d1'] + 0.5, S['z1']); q = Q(b, S['d1'] + 0.5, S['rbz'] - 0.4)
         mb.beam(p, q, 0.35, 0.35, 'steel_galv')
-        mb.beam(Q(b, S['rf'] + 0.3, S['rfz'] - 0.75), Q(b, S['rb'], S['rbz'] - 0.75), 0.25, 0.45, 'steel_galv')
+        mb.beam(Q(b, S['rf'] + 0.3, S['rfz'] - 0.75), Q(b, RB(S, b), S['rbz'] - 0.75), 0.25, 0.45, 'steel_galv')
 
 
 def astands(col):
     for name, S in ((k, v) for k, v in D['astands'].items() if not k.startswith('_')):
         mb = MB('stand_' + name); bs = arc(S['b0'], S['b1'])
         sweep(mb, bs, astand_sec(S), capm='conc')
-        roof_band(mb, bs, S)
-        aframes(mb, S['b0'], S['b1'], S); roof_posts(mb, S['b0'], S['b1'], S)
+        r0, r1 = S.get('roof_b0', S['b0']), S.get('roof_b1', S['b1'])     # the dark roof; a canopy covers the rest
+        rbs = arc(r0, r1)
+        roof_band(mb, rbs, S)
+        aframes(mb, r0, r1, S); roof_posts(mb, S['b0'], S['b1'], S)
         # handrail along the front of the tier, above the concourse
         strip(mb, bs, lambda b: (S['d0'] - 0.05, S['z0']), lambda b: (S['d0'] - 0.05, S['z0'] + 1.0), 'glass_rail')
         mb.build(col)
-    # The north-west link between the Bradman and Hawke Terrace: same tier, a translucent canopy over the gate.
-    mb = MB('nw_canopy'); S = D['astands']['north']
-    bs = arc(304.0, 312.0)
-    strip(mb, bs, lambda b: (S['rf'] + 2.0, S['rfz'] + 0.6), lambda b: (S['rb'], S['rbz'] + 0.6), 'canopy_glass')
-    for b in (304.0, 308.0, 312.0):
-        mb.beam(Q(b, S['rf'] + 2.0, S['rfz'] + 0.6), Q(b, S['rb'], S['rbz'] + 0.6), 0.18, 0.3, 'steel_white')
+    # The stands' ends beside the Bradman: the same tier under translucent canopies on white steel rafters
+    # (Google Earth top-down: pale, the frame showing through), traced end to end.
+    mb = MB('canopies')
+    for K_ in D['canopies']['list']:
+        S = D['astands'][K_['of']]; bs = arc(K_['b0'], K_['b1']); zf = S['rfz'] + 0.6; zb = S['rbz'] + 0.6
+        strip(mb, bs, lambda b: (K_['rf'], zf), lambda b: (K_['rb'], zb), 'canopy_glass')
+        strip(mb, bs, lambda b: (K_['rb'], zb), lambda b: (K_['rf'], zf), 'canopy_glass')
+        strip(mb, bs, lambda b: (K_['rf'], zf - 0.4), lambda b: (K_['rf'], zf + 0.05), 'steel_white')
+        strip(mb, bs, lambda b: (K_['rb'], zb - 0.3), lambda b: (K_['rb'], zb + 0.05), 'steel_white')
+        n = max(1, int(round(ring_len(K_['b0'], K_['b1'], K_['rf']) / 4.0)))
+        for i in range(n + 1):
+            b = K_['b0'] + (K_['b1'] - K_['b0']) * i / n
+            mb.beam(Q(b, K_['rf'], zf - 0.2), Q(b, K_['rb'], zb - 0.2), 0.18, 0.3, 'steel_white')
+            mb.beam(Q(b, S['d1'] + 0.5, S['z1']), Q(b, S['d1'] + 0.5, zb - 0.3), 0.3, 0.3, 'steel_white')
     mb.build(col)
 
 
@@ -216,8 +277,10 @@ def bradman_sec(b):
 
 
 def bradman_plan():
-    """The roof's outline: OSM's Bradman Stand way, its front edge pulled to roof_front past the fence."""
-    return [tuple(p) for p in G['122524193'][:-1]]
+    """The roof's outline (traced on Google Earth): the band roof_front..back past the fence, b0..b1, clockwise front
+    then back, every point an exact offset from the fence."""
+    bs = arc(B['b0'], B['b1'], 0.5)
+    return [off(b, B['roof_front']) for b in bs] + [off(b, B['back']) for b in bs[::-1]]
 
 
 def bradman(col):
@@ -225,9 +288,9 @@ def bradman(col):
     sweep(mb, bs, bradman_sec, capm='render_white')
     # vomitories up through the upper tier: concrete portals with a dark tunnel set into them, roofs at the boxes
     for vb in B['voms']:
-        w = 1.4; r0 = rf(vb) + B['d0'] + 6.0; r1 = rf(vb) + B['d1'] + 1.0
+        w = 1.4; r0 = B['d0'] + 6.0; r1 = B['d1'] + 1.0
         zb = B['z0'] + 6.0 * (B['z1'] - B['z0']) / (B['d1'] - B['d0'])
-        u = radial(vb); t = tangent(vb); o = np.array([*pol(vb, 0), 0.0])
+        u = radial(vb); t = tangent(vb); o = np.array([*fence_pt(vb), 0.0])
         P = lambda r, s, z: tuple(o + u * r + t * s + np.array([0, 0, z]))
         for s in (-1, 1):
             mb.face([P(r0, s * w, zb - 0.2), P(r1, s * w, zb - 0.2), P(r1, s * w, B['z1'] + 0.3), P(r0, s * w, zb + 2.6)][::s], 'plinth')
@@ -239,10 +302,14 @@ def bradman(col):
     mb.build(col)
     # the roof: a deep white slab over OSM's footprint, fascia 2.6 m, the soffit falling to the boxes
     mb = MB('bradman_roof'); poly = ccw(bradman_plan()); top = B['roof_top']
+    _past = {}       # each outline point's exact distance past the fence
+    for b_ in arc(B['b0'], B['b1'], 0.5):
+        for d_ in (B['roof_front'], B['back']):
+            q_ = off(b_, d_); _past[(round(q_[0], 3), round(q_[1], 3))] = d_
     # each vertex's soffit height by how far it is from the field
     def soff(p):
         d = math.hypot(p[0] - C[0], p[1] - C[1]); b = math.degrees(math.atan2(p[0] - C[0], p[1] - C[1])) % 360
-        dd = d - rf(b); f = np.clip((dd - B['roof_front']) / (B['back'] - B['roof_front']), 0, 1)
+        dd = _past.get((round(p[0], 3), round(p[1], 3)), d - rf(b)); f = np.clip((dd - B['roof_front']) / (B['back'] - B['roof_front']), 0, 1)
         return B['soffit_front'] + (B['soffit_back'] - B['soffit_front']) * f
     mb.cap(poly, top, 'roof_white')
     n = len(poly)
@@ -260,8 +327,11 @@ def bradman(col):
         mb.face([(*p, top), (*q, top), (*q, top + 0.35), (*p, top + 0.35)], 'fascia_white')
         mb.face([(*b2, top), (*a, top), (*a, top + 0.35), (*b2, top + 0.35)], 'fascia_white')
         mb.face([(*p, top + 0.35), (*q, top + 0.35), (*b2, top + 0.35), (*a, top + 0.35)], 'fascia_white')
-    for (x, y, l, w) in ((-86.0, 2.0, 6.0, 3.0), (-82.0, 18.0, 4.0, 3.0), (-90.0, -10.0, 3.0, 2.5)):
-        mb.box((x, y), l, w, 1.8, 15.0, 'plant', z0=top, mtop='plant')
+    # plant on the deck (Google Earth top-down): the louvred plant enclosure by the back edge, a unit in front, a vent
+    for (pb0, pb1, pd0, pd1, ph) in ((280.5, 284.0, 29.5, 32.8, 1.8), (282.5, 283.5, 27.5, 28.7, 1.2), (265.6, 266.2, 23.3, 25.6, 0.8)):
+        bm_ = 0.5 * (pb0 + pb1); t_ = tangent2(bm_)
+        mb.box(off(bm_, 0.5 * (pd0 + pd1)), ring_len(pb0, pb1, 0.5 * (pd0 + pd1)), pd1 - pd0, ph,
+               math.degrees(math.atan2(t_[1], t_[0])), 'plant', z0=top, mtop='plant')
     # the stand's back: three storeys under the roof, a glazed top floor behind louvres (Google Earth from the west)
     back = []
     for p, q in zip(poly, poly[1:] + poly[:1]):
@@ -313,8 +383,7 @@ def red_stands(col):
         # a glass balustrade along the front, white posts every 2.4 m
         bs = arc(b0, b1)
         strip(mb, bs, lambda b: (R_['d0'] + 0.1, R_['z0']), lambda b: (R_['d0'] + 0.1, R_['z0'] + 1.0), 'glass_rail')
-        r = rf(0.5 * (b0 + b1)) + R_['d0'] + 0.1
-        for b in np.arange(b0, b1 + 0.01, math.degrees(2.4 / r)):
+        for b in np.arange(b0, b1 + 0.01, 2.4 / per_deg(0.5 * (b0 + b1), R_['d0'] + 0.1)):
             mb.beam(Q(b, R_['d0'] + 0.1, R_['z0']), Q(b, R_['d0'] + 0.1, R_['z0'] + 1.05), 0.06, 0.06, 'steel_white')
     # the stairs between the blocks: concrete flights up from the path, handrails each side
     for (a0, a1), (c0, c1) in zip(R_['blocks'], R_['blocks'][1:]):
@@ -366,45 +435,63 @@ M = D['media']
 
 
 def media(col):
-    """Curved in plan, four levels: a glazed corporate level just above the seats, then three levels behind vertical
-    bronze fins, under a white curved roof with a dark rim. Its front leans out over the top rows."""
+    """Curved in plan, four levels: a glazed corporate level standing forward just above the seats, three dark glass
+    levels set back above it, a deep dark ledge wrapping the top, the white deck set back over it; bronze fins round
+    the back (Google Earth 3D and the calibrated top-down)."""
     mb = MB('media_centre'); bs = arc(M['b0'], M['b1'], 0.5)
     z0 = M['z_under']; zt = M['z_roof']
     # seats under it: the low terrace (lower_all) runs in front; the building's underside is open to the concourse
     face = lambda b: M['face'] + 1.2 * math.sin(math.pi * (b - M['b0']) / (M['b1'] - M['b0']))   # bowed toward the field
-    back = lambda b: M['back'] - 4.0 * abs((b - 0.5 * (M['b0'] + M['b1'])) / (0.5 * (M['b1'] - M['b0']))) ** 2
+    back = lambda b: float(np.interp(b, *zip(*M['roof_back_at']))) - 1.0      # the deck's traced back edge, 1 m out
     # floors (slab edges proud of the glass by 0.5 m) and the glass behind
+    # the corporate level's glass box stands forward (face); the floors above sit back under the ledge (Google Earth 3D)
+    upper = lambda b: M['ledge']['front'] - 0.6
     for i, z in enumerate(M['levels']):
         za = z; zb = M['levels'][i + 1] if i + 1 < len(M['levels']) else zt - 0.8
-        strip(mb, bs, lambda b, za=za: (face(b) - 0.5, za), lambda b, za=za: (face(b) - 0.5, za + 0.4), 'slab_dark')
-        strip(mb, bs, lambda b, za=za: (face(b), za + 0.4), lambda b, za=za: (face(b) - 0.5, za + 0.4), 'slab_dark')
-        strip(mb, bs, lambda b, za=za: (face(b) - 0.5, za), lambda b, za=za: (face(b), za), 'slab_dark')
-        strip(mb, bs, lambda b, za=za: (face(b), za + 0.4), lambda b, za=za, zb=zb: (face(b), zb), 'media_glass' if i == 0 else 'glass_dark')
+        fc = face if i == 0 else upper
+        strip(mb, bs, lambda b, za=za, fc=fc: (fc(b) - 0.5, za), lambda b, za=za, fc=fc: (fc(b) - 0.5, za + 0.4), 'slab_dark')
+        strip(mb, bs, lambda b, za=za, fc=fc: (fc(b), za + 0.4), lambda b, za=za, fc=fc: (fc(b) - 0.5, za + 0.4), 'slab_dark')
+        strip(mb, bs, lambda b, za=za, fc=fc: (fc(b) - 0.5, za), lambda b, za=za, fc=fc: (fc(b), za), 'slab_dark')
+        strip(mb, bs, lambda b, za=za, fc=fc: (fc(b), za + 0.4), lambda b, za=za, zb=zb, fc=fc: (fc(b), zb), 'media_glass' if i == 0 else 'glass_dark')
+        if i == 1:      # the corporate box's roof, from its glass back to the floors above
+            strip(mb, bs, lambda b: (face(b) - 0.5, za + 0.01), lambda b: (upper(b), za + 0.01), 'slab_dark')
     # the underside over the concourse and the sides and back of the block
     strip(mb, bs, lambda b: (back(b), z0), lambda b: (face(b), z0), 'roof_soffit')
     strip(mb, bs, lambda b: (back(b), 0.0), lambda b: (back(b), zt - 0.8), 'bronze_wall')
     for b, fl in ((bs[0], False), (bs[-1], True)):
-        endcap(mb, b, [(face(b), z0), (back(b), z0), (back(b), zt - 0.8), (face(b), zt - 0.8)], 'bronze_wall', flip=fl)
+        z1_ = M['levels'][1]
+        endcap(mb, b, [(face(b), z0), (back(b), z0), (back(b), zt - 0.8), (upper(b), zt - 0.8), (upper(b), z1_), (face(b), z1_)],
+               'bronze_wall', flip=fl)
         endcap(mb, b, [(L['conc'], 0.0), (back(b), 0.0), (back(b), z0), (L['conc'], z0)], 'render_white', flip=fl)
-    # bronze fins: 0.12 m blades, 0.55 m deep, every 0.7 m on the three upper levels, front and back
-    for side, dd, sgn in (('front', face, -1), ('back', back, 1)):
+    # bronze fins: 0.12 m blades, 0.55 m deep, every 0.7 m on the three upper levels of the back (the front is glass)
+    for side, dd, sgn in (('back', back, 1),):
         b = bs[0]
         while b < bs[-1]:
-            r = rf(b) + dd(b); step = math.degrees(0.7 / r)
+            step = 0.7 / per_deg(b, dd(b))
             for i in range(1, len(M['levels'])):
                 za = M['levels'][i] + 0.4; zb = M['levels'][i + 1] if i + 1 < len(M['levels']) else zt - 0.8
                 p = Q(b, dd(b) + sgn * 0.3, za); q = Q(b, dd(b) + sgn * 0.3, zb)
                 mb.beam(p, q, 0.12, 0.55, 'bronze')
             b += step
-    # roof: white deck, dark rim 0.7 m deep standing 1 m out from the walls all round
-    rm = lambda b: face(b) - 1.0; rb = lambda b: back(b) + 1.0
-    strip(mb, bs, lambda b: (rm(b), zt), lambda b: (rb(b), zt), 'roof_white')
-    strip(mb, bs, lambda b: (rb(b), zt - 0.8), lambda b: (rm(b), zt - 0.8), 'roof_soffit')
-    strip(mb, bs, lambda b: (rm(b), zt - 0.8), lambda b: (rm(b), zt + 0.1), 'rim_dark')
-    strip(mb, bs, lambda b: (rb(b), zt + 0.1), lambda b: (rb(b), zt - 0.8), 'rim_dark')
-    for b, fl in ((bs[0] - 0.6, False), (bs[-1] + 0.6, True)):
-        endcap(mb, b, [(rm(b), zt - 0.8), (rb(b), zt - 0.8), (rb(b), zt + 0.1), (rm(b), zt + 0.1)], 'rim_dark', flip=fl)
-    strip(mb, arc(M['b0'] - 0.6, M['b1'] + 0.6), lambda b: (rm(b), zt + 0.1), lambda b: (rm(b) + 0.4, zt + 0.1), 'rim_dark')
+    # the ledge: a deep dark band wrapping the top floor, its fascia toward the field, wider than the block
+    G_ = M['ledge']; lbs = arc(G_['b0'], G_['b1'], 0.5); df_ = M['deck_front']
+    strip(mb, lbs, lambda b: (G_['front'], G_['z_front']), lambda b: (df_, G_['z_back']), 'roof_grey')
+    strip(mb, lbs, lambda b: (df_, G_['z_front'] - G_['fascia']), lambda b: (G_['front'], G_['z_front'] - G_['fascia']), 'roof_soffit')
+    strip(mb, lbs, lambda b: (G_['front'], G_['z_front'] - G_['fascia']), lambda b: (G_['front'], G_['z_front']), 'rim_dark')
+    for b, fl in ((lbs[0], False), (lbs[-1], True)):
+        endcap(mb, b, [(G_['front'], G_['z_front'] - G_['fascia']), (df_, G_['z_front'] - G_['fascia']), (df_, G_['z_back']),
+                       (G_['front'], G_['z_front'])], 'rim_dark', flip=fl)
+    # roof: white deck set back behind the ledge, dark rim 0.7 m deep, the back 1 m out from the wall
+    # roof: the white deck on its traced outline, a dark rim 0.9 m deep all round, its front standing on the ledge
+    O = M['deck_outline']
+    strip(mb, arc(O[0][0], O[1][0], 0.5), lambda b: (df_, G_['z_back']), lambda b: (df_, zt - 0.8), 'rim_dark')
+    poly = ccw([off(b, d) for b, d in O])
+    mb.cap(poly, zt + 0.1, 'roof_white')
+    for tri_ in earclip(poly):
+        mb.face([(x, y, zt - 0.8) for x, y in tri_][::-1], 'roof_soffit')
+    for i in range(len(poly)):
+        p, q = poly[i], poly[(i + 1) % len(poly)]
+        mb.face([(*p, zt - 0.8), (*q, zt - 0.8), (*q, zt + 0.1), (*p, zt + 0.1)], 'rim_dark')
     # the curved white canopy over the top floor's south-east balcony
     mb.build(col)
 
@@ -416,7 +503,7 @@ def scoreboard(col):
     on the frieze, a clock in a small pediment on top."""
     # (named fingleton_board, not scoreboard: a hand-worked board, so the match lays no live face over it)
     S = D['scoreboard']; mb = MB('fingleton_board')
-    P = [np.array(p) for p in G['1290130248'][:-1]]
+    P = [np.array(off(b, d)) for b, d in D['scoreboard']['plan']]
     # the long sides of the OSM rectangle: the face is the one nearer the field
     e0 = P[1] - P[0]; e1 = P[2] - P[1]
     if np.linalg.norm(e0) < np.linalg.norm(e1):
@@ -580,7 +667,7 @@ def towers(col):
 
 # ---------------- the curator's residence ----------------
 def residence(col):
-    S = D['residence']; mb = MB('residence'); c = pol(S['b'], rf(S['b']) + S['d'])
+    S = D['residence']; mb = MB('residence'); c = off(S['b'], S['d'])
     F = Frame(dict(c=c, a=S['a'], L=S['L'], W=S['W'])); h = S['L'] / 2; w = S['W'] / 2
     poly = [F.P(-h, -w), F.P(h, -w), F.P(h, w), F.P(-h, w)]
     mb.prism(poly, 0.0, S['eave'], 'render_cream')
@@ -600,7 +687,7 @@ def residence(col):
 # ---------------- outside: the apron round the stands' backs ----------------
 def apron(col):
     mb = MB('apron'); bs = arc(0, 360, 1.0)
-    out = lambda b: (24.0 if not in_range(b, 258, 293) else B['back'] + 1.0) if not in_range(b, 171, 194) else M['back'] + 1.5
+    out = lambda b: (24.0 if not in_range(b, B['b0'], B['b1']) else B['back'] + 1.0) if not in_range(b, M['b0'] - 4.5, M['b1'] + 4.0) else 32.5
     strip(mb, bs, lambda b: (out(b), -0.02), lambda b: (L['conc'] - 0.5, -0.02), 'paving')
     mb.build(col)
 
@@ -634,28 +721,23 @@ def _rows(out, b0, b1, d0, z0, d1, z1, n, colour, skip=lambda b, k: False):
     for k in range(n):
         run = (d1 - d0) / n
         dd = d0 + (k + 1) * run - 0.30; z = z0 + (k + 1) * (z1 - z0) / n
-        bm = 0.5 * (b0 + b1); r = rf(bm) + dd
-        Ltot = math.radians(b1 - b0) * r; nb = max(1, int(round(Ltot / AISLE_EVERY)))
+        Ltot = ring_len(b0, b1, dd); nb = max(1, int(round(Ltot / AISLE_EVERY)))
         for blk in range(nb):
             s0 = blk * Ltot / nb + AISLE_W / 2; s1 = (blk + 1) * Ltot / nb - AISLE_W / 2
             m = int((s1 - s0) // SEAT_W)
             for i in range(m):
                 s = s0 + (s1 - s0 - m * SEAT_W) / 2 + (i + 0.5) * SEAT_W
-                b = b0 + math.degrees(s / r)
+                b = ring_at(b0, dd, s)
                 if skip(b, k): continue
-                x, y = pol(b, rf(b) + dd)
-                out.append((x, y, z, b, colour() if callable(colour) else colour))
+                x, y = off(b, dd)
+                out.append((x, y, z, facing(b), colour() if callable(colour) else colour))
 
 
 def seat_list():
     out = []
     # the low terrace: light grey seats (the Bradman's five front rows too)
     for b0, b1 in lower_ranges():
-        if b0 < 258.0 < b1:
-            _rows(out, b0, 258.0, L['d0'], L['z0'], L['d1'], L['z1'], L['rows'], 'seat_mk_pale',
-                  skip=lambda b, k: in_range(b, M['b0'] - 1, M['b1'] + 1) and False)
-        else:
-            _rows(out, b0, b1, L['d0'], L['z0'], L['d1'], L['z1'], L['rows'], 'seat_mk_pale')
+        _rows(out, b0, b1, L['d0'], L['z0'], L['d1'], L['z1'], L['rows'], 'seat_mk_pale')
     n5 = L['bradman_rows']; run = (L['d1'] - L['d0']) / L['rows']; rise = (L['z1'] - L['z0']) / L['rows']
     _rows(out, B['b0'], B['b1'], L['d0'], L['z0'], L['d0'] + n5 * run, L['z0'] + n5 * rise, n5, 'seat_mk_pale')
     # the A-frame stands: mixed colours; seats keep 2.6 m headroom under the roof (the seat rule)
@@ -663,18 +745,19 @@ def seat_list():
         def skip(b, k, S=S):
             dd = S['d0'] + (k + 1) * (S['d1'] - S['d0']) / S['rows'] - 0.3; z = S['z0'] + (k + 1) * (S['z1'] - S['z0']) / S['rows']
             if dd < S['rf']: return False
-            rz = S['rfz'] - 0.35 + (S['rbz'] - S['rfz']) * (dd - S['rf']) / (S['rb'] - S['rf'])
+            rz = S['rfz'] - 0.35 + (S['rbz'] - S['rfz']) * (dd - S['rf']) / (RB(S, b) - S['rf'])
             return rz - z < 2.6
         _rows(out, S['b0'], S['b1'], S['d0'], S['z0'], S['d1'], S['z1'], S['rows'], _mix, skip)
     # the Bradman's upper tier: white and light grey, none in the vomitories
     def bskip(b, k):
         dd = B['d0'] + (k + 1) * (B['d1'] - B['d0']) / B['rows']
-        return dd > B['d0'] + 6.0 and any(abs(math.radians(b - v) * (rf(v) + dd)) < 1.7 for v in B['voms'])
+        return dd > B['d0'] + 6.0 and any(abs(b - v) * per_deg(v, dd) < 1.7 for v in B['voms'])
     _rows(out, B['b0'], B['b1'], B['d0'], B['z0'], B['d1'], B['z1'], B['rows'],
           lambda: 'seat_mk_white' if _rng.random() < 0.7 else 'seat_mk_pale', bskip)
     # the east terraces: red
     for b0, b1 in R_['blocks']:
-        _rows(out, b0 + 0.3, b1 - 0.3, R_['d0'], R_['z0'], R_['d1'], R_['z1'], R_['rows'], 'seat_mk_red')
+        _rows(out, b0 + 0.3, b1 - 0.3, R_['d0'], R_['z0'], R_['d1'], R_['z1'], R_['rows'], 'seat_mk_red',
+              lambda b, k: any(abs(b - a) * per_deg(a, R_['d0'] + 5.0) < 0.6 for a in R_['aisles']))
     return out
 
 
