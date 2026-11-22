@@ -261,7 +261,7 @@ _Update this section whenever 3D work merges. It is the one place 3D progress is
 | Mars Stadium | model built, not yet pushed (local worktree, 2026-11-20) | |
 | Accor Stadium | model built, not yet pushed (local worktree, 2026-11-20) | |
 | Marrara Oval (TIO Darwin) | under way, not yet pushed (site data and roof scripts, 2026-11-19) | |
-| The Gabba | model, 3D seats; plays in a match (built 2026-11-19/20 on a branch that never merged; brought in from the PC) | |
+| The Gabba | model, 3D seats; plays in a match; v7 to the MCG standard 2026-11-22: modelled steel and roof, real seat colours, Woolloongabba from OpenStreetMap (tools/grounds/gabba/README.md) | |
 | Barossa Park, Traeger Park, Sky Stadium, Jiangwan Stadium, Hands Oval, Blacktown, Summit Park, Macquarie Point | to confirm: no work found in the repo or its local worktrees | |
 
 Machine pre-inspection of the 30 match grounds, before the director's fly-through (2026-11-21, #1950):

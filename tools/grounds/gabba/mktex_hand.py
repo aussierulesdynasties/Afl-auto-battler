@@ -197,11 +197,12 @@ for i in range(int(8 / 1.5) + 1):
         c.rect(3 + i * 1.5, j * 1.25, 3 + (i + 1) * 1.5, (j + 1) * 1.25, tone((196, 196, 190), R.integers(-7, 8)))
 for i in range(7): c.vline(3 + i * 1.5, 0, 20, (158, 158, 154), 0.025)
 for j in range(17): c.rect(3, j * 1.25 - 0.012, 11, j * 1.25 + 0.012, (158, 158, 154))
-BLUE_C = (44, 86, 170)
-c.rect(0, 0, 3, 20, BLUE_C)
-for j in range(1, 14): c.rect(0, j * 1.5 - 0.012, 3, j * 1.5 + 0.012, (32, 64, 128))
-c.vline(1.5, 0, 20, (32, 64, 128), 0.025); c.vline(3.0, 0, 20, (30, 34, 40), 0.06)
-c.rect(0, 18.6, 11, 20, BLUE_C); c.rect(0, 18.6, 11, 18.66, (32, 64, 128))
+BLUE_C = (52, 72, 112)                                                     # v7: the sign band only (Google Earth 2026-11-22)
+PIER = (218, 220, 216)                                                     # v7: the piers are white render, not blue
+c.rect(0, 0, 3, 20, PIER)
+for j in range(1, 14): c.rect(0, j * 1.5 - 0.012, 3, j * 1.5 + 0.012, (190, 192, 188))
+c.vline(1.5, 0, 20, (190, 192, 188), 0.025); c.vline(3.0, 0, 20, (120, 124, 128), 0.06)
+c.rect(0, 18.6, 11, 20, BLUE_C); c.rect(0, 18.6, 11, 18.66, (32, 44, 72))
 for zb in (6.2, 12.4):                                                     # louvre boxes 4.2 m wide, 3.2 m tall
     x0 = 4.6
     c.rect(x0, zb, x0 + 4.2, zb + 3.2, (34, 40, 48))
