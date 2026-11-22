@@ -23,3 +23,5 @@ These lines go on the game's credits screen before 1.0.
   © OpenStreetMap contributors (ODbL).
 - The landmark buildings next to the ground (tools/grounds/marvel/landmarks.py) are modelled by eye
   from Google Earth on OpenStreetMap footprints; no imagery is shipped.
+- Buildings out to 950 m: City of Melbourne, 2023 Building Footprints (3D massing),
+  data.melbourne.vic.gov.au, CC BY.
