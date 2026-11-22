@@ -33,6 +33,7 @@ ROOT = os.path.normpath(os.path.join(HERE, "..", "..", ".."))
 OUT = os.path.join(ROOT, "data", "ground_boundaries.json")
 MAX_ORDER = 16
 ORDER_SLACK = 0.03   # m of rms: a higher order must buy more than this to be used
+MAX_UNSEEN_DEG = 25.0  # a longer unseen stretch of the line would be the fit guessing: the ground is held
 OUTLIER = 1.0        # m: a traced point this far off the first fit is left out (fit)
 DENSE = 7200         # samples of the fitted curve when measuring distance to it
 
@@ -142,6 +143,13 @@ def main():
             return np.stack([p @ u, p @ v], axis=-1)
 
         line = frame(d["line"])
+        # Only the painted line actually seen counts; a stretch the trace bridged is not a measurement.
+        if "line_seen" in d:
+            line = line[np.array(d["line_seen"], bool)]
+        gap = largest_gap_deg(line)
+        if gap > MAX_UNSEEN_DEG:
+            report.append("%-10s HELD: %.0f deg of the line unseen in one stretch (most allowed %.0f)" % (slug, gap, MAX_UNSEEN_DEG))
+            continue
         coef, order, stats = fit(line)
         goal_x = float(np.linalg.norm(g1 - g0) / 2.0)
         entry = {
