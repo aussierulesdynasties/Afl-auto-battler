@@ -159,6 +159,15 @@ Open at Optus: seat colours from Street View (stage 4), on top of the seat fix (
   and `ge_compare.py sheet` lays the pairs side by side. Views live with the ground
   (`tools/grounds/adelaide/qa/views.json`); a view with `cam` is a fixed camera for a photosphere or Street
   View picture supplied by hand. Grounds now play at their own size (#1949), so the camera needs no stretch.
+- **Google Earth's camera, measured (2026-11-22).** Pairs made before this were framed wrongly and are good for
+  looks and colours only, never sizes. Measured at Adelaide and the MCG by putting the mouse on points whose
+  place on screen was worked out first (the status bar gives the lat/lon under it; all fell within a metre):
+  the URL's `35y` is the vertical field of view of the whole browser window, centred on it, so our picture of
+  the 720-row crop needs 25.6 degrees, not 23.5. The `a` altitude is the look-at point's height above sea
+  level, and the turf's height must be Google Earth's own (Adelaide 26 m, not the 40 m used; MCG 8 m):
+  `ge_shoot.js <work> --level`, then `ge_compare.py level`. Google Earth also lifts a camera it thinks too
+  low, by 15-30 m at Adelaide below about 100 m, keeping its spot and tilt; `ge_shoot.js` saves the status
+  bar beside each shot and a second `ge_compare.py plan` puts ours where Google Earth's really was.
 - **Street View at Adelaide is a drone photosphere.** Asking Google Maps for a panorama at the field centre
   returns a 360 drone sphere taken above the Riverbank Stand (April 2021); `qa/sv_views.json` matches it
   looking north, east, south and west.

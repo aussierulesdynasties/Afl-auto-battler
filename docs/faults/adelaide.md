@@ -64,9 +64,12 @@ Still short (2026-11-22): the entrance glass band's lettering is unreadable in G
 invented); the camera and media boxes cut into the upper tiers, the player benches in front of the Bradman, and the
 V struts under the Riverbank's middle tier are not built yet; the east names' places along the stand are read from one
 oblique photo (to within a few metres); the stands hold 38,200 seats plus the Hill's 2,900, short of the real ground,
-and the photos' widths suggest the west stand may stand taller than its fitted roof allows (unresolved: Google Earth
-views from the pitch do not frame like ours yet); the roof petals' valleys read softer than the real membrane;
-parkland canopy is thinner; OSM's roof colours paint some nearby buildings salmon pink.
+and the main entrance stands about 1.3 times too wide between its two brick towers in the calibrated Google Earth
+pair (`w_face`); the roof petals' valleys read softer than the real membrane;
+parkland canopy is thinner; OSM's roof colours paint some nearby buildings salmon pink. The west stand's height is
+settled: once the compare tool framed like Google Earth (2026-11-22: its field of view, the turf's height and Google
+Earth lifting low cameras, docs/MCG_STANDARD.md), the west roof line, the light towers and the arcade sit on Google
+Earth's in every low view, so the photos' widths misled.
 
 Found in the Google Earth pass (2026-11-21) and fixed: the Riverbank Stand's back was a dark navy drum (now storeys:
 stone and glass at the street, a maroon band, glass, pale louvres with white struts to the roof); the lower bowl and
