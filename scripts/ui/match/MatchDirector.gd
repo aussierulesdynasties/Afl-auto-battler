@@ -1364,7 +1364,13 @@ func _free_phases(k: int) -> Array:
 		# Holding the ball and incorrect disposal are paid off a tackle, as in real footy: the
 		# man caught has it, the man paid the free runs him down and tackles him (the tackle
 		# clips), the umpire pays it, and the tackler gets up and takes the ball.
-		return out + [{"t": "possess", "who": victim, "quiet": true},
+		# He has it in his hands first: off the flight above, or, from a ball lying loose (a
+		# clanger before it), gathered where it is (it was put in his hands 31 m off: seed
+		# 2027, event 900).
+		var his := [{"t": "possess", "who": victim, "quiet": true}]
+		if out.is_empty() and not (str(ball["mode"]) == "held" and int(ball["holder"]) == victim):
+			his = [{"t": "collect", "who": victim, "roll": true}] + his
+		return out + his + [
 				{"t": "chase", "who": tk, "victim": victim, "max": 1.6, "run_in": true},
 				{"t": "down", "who": tk, "victim": victim, "dur": 0.55},
 				{"t": "emit"}, {"t": "wait", "dur": TAKE_UP}] + _take_free(tk) \
