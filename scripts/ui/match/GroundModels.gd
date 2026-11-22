@@ -124,13 +124,14 @@ const MATERIAL_FIX := {
 		"tier_fascia": {"albedo_color": Color(2.2, 2.2, 2.1)},
 	},
 	# Optus (2026-11-21, against Google Earth): the white PTFE roof is matte; built at roughness 0.6 it
-	# took the sky's blue from every angle. The bronze fins are anodised aluminium: a soft metal sheen
-	# that catches low sun (tools/grounds/optus/bronze.py draws them).
+	# took the sky's blue from every angle. The bronze fins (tools/grounds/optus/bronze.py) carry the slate
+	# and warm streaks they show from the air; with no sky to mirror (the stand shader lights them), a
+	# metal only turned them black in shade (2026-11-22), so they stay nearly matte.
 	"optus": {
 		"roof": {"metallic": 0.0, "roughness": 0.95, "albedo_color": Color(0.97, 0.96, 0.93)},
-		"bronze": {"metallic": 0.12, "roughness": 0.55},
-		"sign_a": {"metallic": 0.12, "roughness": 0.55},
-		# The glass storeys read mid grey-green from outside in daylight, not sky blue.
+		"bronze": {"metallic": 0.1, "roughness": 0.5},
+		"sign_a": {"metallic": 0.1, "roughness": 0.5},
+		# The glass storeys read blue-teal grey from outside in daylight (bronze.py glass), not sky blue.
 		"glass": {"metallic": 0.1, "roughness": 0.3},
 	},
 }

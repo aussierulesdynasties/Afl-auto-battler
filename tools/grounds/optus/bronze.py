@@ -47,11 +47,16 @@ OLD_SIGN = (37.28464798665914, 32.0)   # #1867's sign_a in metres (its letters a
 # The fin colours (sRGB) and how often each is drawn; the low-frequency drift picks lighter or darker.
 # Google Earth's north and east close views (2026-11-21): a dark chocolate base with long, thin, high-contrast runs of
 # copper, salmon and pale pinkish sand, so the fins still read as streaks from across the river.
+# 2026-11-22 (third pass, against Google Earth's facade views at range): the anodised fins mirror the sky, so from
+# the air they read slate grey-blue with thin warm streaks, on the lit side and the shaded side alike. The match light
+# has no sky for a metal to mirror (a flat background colour), so the fins carry what they show: a slate base and
+# runs of warm bronze, copper and pale sand. The first passes' dark chocolate rendered near black in shade and brick
+# red in sun, nothing like the real facade from across the river.
 TONES = np.array([
-    (64, 52, 48), (78, 60, 54), (94, 68, 56), (98, 66, 52), (118, 78, 60),
-    (140, 92, 70), (162, 108, 84), (184, 130, 106), (204, 160, 140),
+    (72, 86, 96), (82, 95, 104), (96, 102, 106), (108, 100, 96), (118, 100, 94),
+    (130, 106, 96), (146, 118, 106), (170, 150, 138), (196, 188, 182),
 ], float)
-COPPER_RED = np.array([(170, 96, 78), (186, 112, 92), (150, 80, 62)], float)
+COPPER_RED = np.array([(140, 100, 90), (150, 108, 96), (128, 90, 80)], float)
 BLUE = np.array((128, 190, 222), float)
 
 
@@ -189,16 +194,16 @@ def _noise(h, w, cells, seed):
 def glass():
     """The glass band over the bronze, one tile 2 bays wide (u) and GLASS_H down from the soffit (Google Earth 060/000):
     a dark open strip 4.2 m deep with a slim white post each bay under the roof's fascia, a white head rail, then pale
-    grey-green glazing in 2.2 m floors, each with a bright louvre band at its foot and faint mullions every 1.55 m."""
+    blue-teal grey glazing in 2.2 m floors, each with a bright louvre band at its foot and faint mullions every 1.55 m."""
     w, h = 1024, int(GLASS_H * 32)
     d = (np.arange(h)[:, None] + 0.5) / 32.0 * np.ones((1, w))
     u = (np.arange(w)[None, :] + 0.5) / w * np.ones((h, 1))
     img = np.zeros((h, w, 3))
-    base = np.array((150, 172, 160), float)
+    base = np.array((100, 128, 138), float)   # Google Earth 090: blue-teal grey (95, 122, 130), not green
     f = ((d - 4.6) % 2.2) / 2.2                                 # 0 at a floor's top, 1 at its foot
     img[:] = base * (1.08 - 0.22 * f)[..., None]
-    img = np.where((f > 0.8)[..., None], np.array((230, 236, 230), float), img)           # louvre band
-    img = np.where((f > 0.95)[..., None], np.array((112, 128, 122), float), img)          # its shadow
+    img = np.where((f > 0.8)[..., None], np.array((204, 214, 216), float), img)           # louvre band
+    img = np.where((f > 0.95)[..., None], np.array((70, 92, 100), float), img)          # its shadow
     mull = (np.abs(((u * 20) % 1) - 0.5) > 0.47)
     img = np.where(mull[..., None], img * 0.9 + 18, img)
     img *= (1.0 + 0.05 * _noise(h, w, (12, 40), 3))[..., None]
@@ -217,7 +222,7 @@ def entrance():
     z = (ENTRANCE_H - (np.arange(h)[:, None] + 0.5) / 32.0) * np.ones((1, w))   # image bottom is the ground
     u = (np.arange(w)[None, :] + 0.5) / w * np.ones((h, 1))
     t = (z % 2.5) / 2.5
-    img = np.array((128, 154, 150), float) * (0.94 + 0.12 * t)[..., None]
+    img = np.array((104, 132, 140), float) * (0.94 + 0.12 * t)[..., None]
     img = np.where((z < 2.6)[..., None], np.array((84, 100, 100), float), img)            # doors in shade
     img = np.where((t < 0.04)[..., None] & (z > 0.3)[..., None], np.array((210, 214, 212), float), img)
     mull = np.abs(((u * 4) % 1) - 0.5) > 0.5 - 0.12 / 3.6
@@ -260,7 +265,7 @@ def roof():
 
 def steel():
     """The roof trusses' steel: light grey, so they read as Google Earth's grey spines along the valleys."""
-    g = np.array((178, 182, 186), float) * (1.0 + 0.03 * _noise(64, 64, (4, 4), 8))[..., None]
+    g = np.array((212, 214, 216), float) * (1.0 + 0.03 * _noise(64, 64, (4, 4), 8))[..., None]
     return Image.fromarray(g.clip(0, 255).astype(np.uint8), "RGB")
 
 

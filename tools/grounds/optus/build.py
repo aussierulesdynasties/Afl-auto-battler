@@ -147,6 +147,26 @@ ZS,ZF=44.4,46.55
 # west 166-250 (r2/westfix.py): the band moved out to o2's line; glass, columns and braces stay on the old drum (drum0)
 DR0=[V2(p) for p in J.get('drum0',J['drum'])]
 GL=[V2(p) for p in J['glass']] if 'glass' in J else [DR0[i]-Vector((DR0[i].x,DR0[i].y,0)).normalized()*4.5 for i in range(N)]  # west glass from o2 (r2/westfix.py)
+# The upper tier's back row runs almost to the roof's edge (seats_*.bin: within 1-2 m of the drum, past it over the
+# east dip), so a glass line set 4.5 m back stood inside the stand and its last rows sat out in the open above the
+# bronze, lit, with their crowd (2026-11-22 close view). Google Earth shows a dark glazed strip with white posts under
+# the fascia instead: the glass now stands 1.2 m outside the back row of its wedge and its neighbours (no sawtooth), never past the fascia.
+def _seat_back():
+    import glob as _g
+    oc_=_np0.array(J['oc'][:2]);best=_np0.zeros(N)
+    da=[math.atan2(DR[i].y-oc_[1],DR[i].x-oc_[0]) for i in range(N)];da=_np0.array(da)
+    for fn in _g.glob(os.path.join(me_dir,'..','..','..','assets','grounds','optus','seats_*.bin')):
+        a=_np0.fromfile(fn,dtype=_np0.float32).reshape(-1,12);x=a[:,3]-oc_[0];y=-a[:,11]-oc_[1]
+        ang=_np0.arctan2(y,x);r=_np0.hypot(x,y)
+        d=_np0.abs((ang[:,None]-da[None,:]+math.pi)%(2*math.pi)-math.pi);k=_np0.argmin(d,axis=1)
+        _np0.maximum.at(best,k,r)
+    return best
+_SB0=_seat_back();_SB=_np0.array([max(_SB0[(i+d)%N] for d in range(-3,4)) for i in range(N)]);_oc2=Vector((J['oc'][0],J['oc'][1],0))
+def _push(i):
+    d=GL[i]-_oc2;r=d.length;rf=(RF[i]-_oc2).length
+    r2=min(max(r,_SB[i]+1.2),rf-0.6) if _SB[i]>0 else r
+    return _oc2+d.normalized()*r2
+GL=[_push(i) for i in range(N)]
 flat(DR,lambda i:HB[i],GL,lambda i:HB[i],MD,TI['plaza_m'])
 sR=arcs(RF);BAYR=2*sR[N]/NB;sGL=arcs(GL);BAYG=2*sGL[N]/NB
 for i in range(N):
@@ -166,7 +186,7 @@ for k in range(T+1):
     t=k/T;row=[]
     for i in range(N):
         p=RF[i].lerp(INS[i],t);zb=ZF+(IZ-ZF)*t
-        bul=1.2*math.sin(math.pi*(i%K)/K)**0.6*_env(t)
+        bul=1.2*math.sin(math.pi*(i%K)/K)**0.6*_env(t)*(0.8+0.2*abs(math.sin(3*math.pi*t))**0.5)   # three soft cushions a bay (Google Earth roof_S)
         row.append(bm.verts.new((p.x,p.y,zb+bul)))
     rows.append(row)
 for k in range(T):
@@ -177,7 +197,10 @@ for k in range(T):
 flat(RF,c(ZS),INS,c(IZ-1.0),MU,10,up=False)
 oc=Vector((J['oc'][0],J['oc'][1],0))
 wall(INS,c(IZ-1.0),c(IZ+0.2),MW,1e6,1e6,outward=False,ctr=oc)
-MST=mat('steel',0.5,0.4)   # steel.png (bronze.py): the trusses read light grey against the membrane, not white
+# inner edge: Google Earth shows a grey steel ring standing over the membrane's edge, and a gutter line just inside the
+# white fascia; both run unbroken round the bowl
+_ring=lambda R,z,r,m:[tube(Vector((R[i].x,R[i].y,z(i))),Vector((R[(i+1)%N].x,R[(i+1)%N].y,z((i+1)%N))),r,m) for i in range(N)]
+MST=mat('steel',0.6,0.0)   # steel.png (bronze.py): light grey; metallic picked up the sky and turned them blue
 # light fittings: a floodlight bank hung under each truss's tip at the inner edge (Google Earth under_E)
 for bi in range(NB):
     i=bi*K;q=IN[i]+_ro(i)*0.8;d=_ro(i);sd=Vector((-d.y,d.x,0))
@@ -205,18 +228,28 @@ if CJ:
     wall(CO,c(ZCN-0.35),c(ZCN),MW,1e6,1e6,sel=csel)
     for i in sorted(CS)[::K//2]:
         q=CO[i]-(CO[i]-OC2).normalized()*0.4;tube(Vector((q.x,q.y,HB[i])),Vector((q.x,q.y,ZCN-0.35)),0.12,MW)
+# Primary trusses (Google Earth roof_S/roof_top close crops, 2026-11-22): a triangular lattice truss rides each valley,
+# two top chords about 2.4 m apart over one bottom chord on the membrane, so from above it reads as a wide ladder with
+# a zigzag between its chords, not one line. Chords 0.6 m thick so they still read from Google Earth's range. Deepest a third of the way in, shallow at the inner tip; light grey.
 for bi in range(NB):
-    i=bi*K;o=RF[i];n=IN[i]
-    def at(t,dz=0.0,o=o,n=n):
-        p=o.lerp(n,t);return Vector((p.x,p.y,ZF+(IZ-ZF)*t+dz))
-    top=lambda t:(2.8*min(t/0.35,1.0) if t<0.35 else 2.8-2.0*(t-0.35)/0.65)
-    nseg=12
+    i=bi*K;o=RF[i];n=IN[i];rd=(n-o);rd.z=0;rd.normalize();sd=Vector((-rd.y,rd.x,0))
+    def at(t,dz=0.0,off=0.0,o=o,n=n,sd=sd):
+        p=o.lerp(n,t)+sd*off;return Vector((p.x,p.y,ZF+(IZ-ZF)*t+dz))
+    top=lambda t:(0.6+2.6*min(t/0.3,1.0) if t<0.3 else 3.2-2.3*(t-0.3)/0.7)
+    nseg=16;HW=1.2
     for s_ in range(nseg):
-        t0,t1=s_/nseg,(s_+1)/nseg
-        tube(at(t0,top(t0)),at(t1,top(t1)),0.32,MST);tube(at(t0,0.2),at(t1,0.2),0.22,MST)
-        if s_%2==0:tube(at(t0,0.2),at(t1,top(t1)),0.22,MST)
-        else:tube(at(t0,top(t0)),at(t1,0.2),0.22,MST)
-    tube(at(0,0.2),at(0,top(0)+0.01),0.2,MW);tube(at(1,0.2),at(1,top(1)),0.2,MW)
+        t0,t1=s_/nseg,(s_+1)/nseg;tm=(t0+t1)/2
+        for sg in(-1,1):
+            tube(at(t0,top(t0),sg*HW),at(t1,top(t1),sg*HW),0.3,MST)          # top chords
+            tube(at(t0,top(t0),sg*HW),at(tm,0.25),0.13,MST);tube(at(tm,0.25),at(t1,top(t1),sg*HW),0.13,MST)   # web
+        tube(at(t0,0.25),at(t1,0.25),0.3,MST)                                 # bottom chord
+        tube(at(t0,top(t0),-HW),at(t0,top(t0),HW),0.12,MST)                    # rung
+        tube(at(t0,top(t0),-HW if s_%2 else HW),at(t1,top(t1),HW if s_%2 else -HW),0.11,MST)   # top-plane zigzag
+    tube(at(1,top(1),-HW),at(1,top(1),HW),0.08,MST)
+    for sg in(-1,1):tube(at(0,0.0,sg*HW),at(0,top(0),sg*HW),0.15,MST);tube(at(1,0.0,sg*HW*0.5),at(1,top(1),sg*HW),0.15,MST)
+_ring(INS,lambda i:IZ+0.9,0.35,MST)
+_GT=[RF[i].lerp(INS[i],0.05) for i in range(N)]
+_ring(_GT,lambda i:ZF+(IZ-ZF)*0.05+0.35,0.18,MW)
     # Google Earth (east and north close views): no white Y columns outside the glass, only slim white posts in the
     # dark open strip between the glass's head and the roof's fascia (drawn in the glass texture, bronze.py).
 # bowl seating inside, turf
