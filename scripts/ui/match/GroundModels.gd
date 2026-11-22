@@ -141,6 +141,9 @@ const MATERIAL_FIX := {
 		"roof_teal": {"albedo_color": Color(0.72, 0.86, 0.8)},
 		# The north stands' masts and ties: pale painted tubes in Google Earth, not dark galvanised.
 		"steel_galv": {"metallic": 0.0, "roughness": 0.55, "albedo_color": Color(0.9, 0.9, 0.88)},
+		# The front of each tier: Street View and a photo sphere on the ground show a pale concrete
+		# parapet over a thin dark ribbon, not the near-black band the texture paints.
+		"tier_fascia": {"albedo_color": Color(2.2, 2.2, 2.1)},
 	},
 	# Optus (2026-11-21, against Google Earth): the white PTFE roof is matte; built at roughness 0.6 it
 	# took the sky's blue from every angle. The bronze fins are anodised aluminium: a soft metal sheen
@@ -170,8 +173,10 @@ const SEAT_COLOURS := {
 	# middle tiers, a blue band along the front of the middle tier, teal-blue top tier
 	# (grey-green in the Members' north-west).
 	"seat_mcg_white": Color(0.96, 0.88, 0.80), "seat_mcg_grey": Color(0.76, 0.70, 0.64),
-	"seat_mcg_blue": Color(0.14, 0.26, 0.46), "seat_mcg_teal": Color(0.20, 0.34, 0.44),
+	"seat_mcg_blue": Color(0.18, 0.32, 0.52), "seat_mcg_teal": Color(0.42, 0.64, 0.66),
 	"seat_mcg_sage": Color(0.50, 0.58, 0.56),
+	# The front of the lower tier from the Members' round to the north: green (a photo sphere on the ground).
+	"seat_mcg_green": Color(0.46, 0.70, 0.58),
 	"seat_green": Color(0.314, 0.549, 0.455), "seat_teal": Color(0.384, 0.620, 0.541),
 	"seat_blue": Color(0.2, 0.318, 0.467), "seat_paleblue": Color(0.482, 0.612, 0.714),
 	"seat_mint": Color(0.502, 0.706, 0.655), "seat_dkgreen": Color(0.039, 0.243, 0.125),
