@@ -19,8 +19,8 @@ Norwood). Delete your copy when you next touch your ground's QA.
   crop is 25.58 degrees. The old copies used 23.5, which drew ours 8% too close.
 - **Turf height.** Use Google Earth's own turf height from the status bar (`ge_shoot.js --level`), not a map's.
 - **Low cameras.** GE lifts them 15-30 m, so `plan` reads where each one really went.
-- **Straight down.** `plan` now passes north as the picture's up to `preinspect_look.gd`. The old 3-degree
-  nudge tilted every roof 5% of its height off its footprint.
+- **Straight down.** `plan` aims 0.1 m north of the spot (0.01 deg off vertical), so the picture comes out
+  north-up. The old 3-degree nudge tilted every roof 5% of its height off its footprint.
 - **Line up before measuring.** Run `register`. A model 20-40 m off its starting guess makes a narrow search lock
   onto the wrong match: this happened to 9 grounds in the shape audit. A turn over 2 degrees means the
   model, or its surroundings, isn't north-up, or the origin is wrong. That is the Traeger fault: surroundings

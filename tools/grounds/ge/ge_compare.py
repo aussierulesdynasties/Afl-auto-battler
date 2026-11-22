@@ -141,13 +141,12 @@ def plan(gname, views, work):
                      "https://earth.google.com/web/@%.7f,%.7f,%.1fa,%.1fd,%gy,%.1fh,%.1ft,0r" % (lat, lon, g["ge_alt"] + u, d, GE_FOV, v["h"], v["t"])])
         dirv = (math.sin(t) * math.sin(h), math.sin(t) * math.cos(h), -math.cos(t))
         cam = (e - d * dirv[0], n - d * dirv[1], u - d * dirv[2])
-        # Straight down: world up is the view direction, so tell preinspect_look which way north is (the old
-        # 3-degree nudge south tilted every roof 5% of its height off its footprint).
-        up = None
-        if v["t"] < 3:
-            o, nn = to_match(g, (0, 0, 0)), to_match(g, (0, 0, -1))
-            up = (nn[0] - o[0], nn[1] - o[1], nn[2] - o[2])
         tgt = (e, n, u)
+        if v["t"] < 3:
+            # Straight down: world up is the view direction, so aim 0.1 m north of the spot and the picture comes
+            # out north-up (0.01 deg off vertical; the old 3-degree nudge south tilted every roof 5% of its height
+            # off its footprint).
+            tgt = (e, n + 0.1, u)
         ro = readouts(os.path.join(work, "ge", v["name"] + "_cam.png"))
         if ro and ro[0][0] is not None:
             # where Google Earth really put it: same spot and tilt, its own height (the readout is to the metre)
@@ -161,8 +160,6 @@ def plan(gname, views, work):
         pc = to_match(g, (cam[0], cam[2], -cam[1]))
         pt = to_match(g, (tgt[0], tgt[2], -tgt[1]))
         spec = "%s:%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f" % ((v["name"],) + pc + pt + (v.get("fov", FOV),))
-        if up:
-            spec += ",%.4f,%.4f,%.4f" % up
         specs.append(spec)
     json.dump(urls, open(os.path.join(work, "urls.json"), "w"), indent=1)
     # Straight down on the field centre from 500 m, for reading Google Earth's turf height (ge_shoot.js --level).

@@ -18,7 +18,7 @@ camera. Use Google Earth 3D for outside and overhead views, and Street View on t
   - Line the model up with `register` before measuring anything. Pass is 1 m and 0.5 deg.
   - Judge by numbers, never by eye: `outline` for plan, published dimensions for heights, and `ge_solve.py`
     for an oblique's true camera.
-- **Our camera for the same view.** `tools/visual/preinspect_look.gd` takes `name:px,py,pz,tx,ty,tz,fov[,ux,uy,uz]`.
+- **Our camera for the same view.** `tools/visual/preinspect_look.gd` takes `name:px,py,pz,tx,ty,tz,fov`.
   - Model axes: x is east, -z is north.
   - The MCG field centre is lat -37.81977, lon 144.98316, and Google Earth's turf is 8 m.
   - The camera sits at `target - range * dir`, with
