@@ -383,8 +383,11 @@ static func backdrop(slug: String, base := "") -> Node3D:
 
 
 ## A model's own far ground, hidden when its backdrop is drawn (the two would fight for a pixel):
-## Adelaide's model carries a 6 km grass plane.
-const BACKDROP_HIDES := {"adelaide": ["ao_ground"]}
+## Adelaide's model carries a 6 km grass plane; the ground kit's first drafts (#1930) a 240 m concourse disc;
+## the WACA, Bruce and North Hobart a flat plate round the stands (tools/grounds/backdrop/scene: run1.sh SKIP).
+const BACKDROP_HIDES := {"adelaide": ["ao_ground"], "barossa": ["concourse"], "sky": ["concourse"],
+	"jiangwan": ["concourse"], "hands": ["concourse"], "blacktown": ["concourse"], "summit": ["concourse"],
+	"macpoint": ["concourse"], "waca": ["land", "road"], "bruce": ["g_ground"], "north_hobart": ["ground"]}
 
 const BACKDROP_SHADER := preload("res://scripts/ui/match/oval3d_backdrop.gdshader")
 
@@ -413,6 +416,11 @@ static func _backdrop_materials(model: Node) -> void:
 			else:
 				mat.vertex_color_use_as_albedo = true
 				mat.disable_receive_shadows = true   # past the shadow map's reach it reads blue-grey
+				if key.begins_with("tree_") and mat.transparency == BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR:
+					# leaf cards (Cazaly's palms and figs): their vertex colours were written for Blender's
+					# light and draw near-black here, so the pale leaf texture takes a plain foliage green
+					mat.vertex_color_use_as_albedo = false
+					mat.albedo_color = Color(0.5, 0.6, 0.4)
 
 
 static func has_backdrop(slug: String, base := "") -> bool:
