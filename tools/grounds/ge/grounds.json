@@ -50,8 +50,9 @@
   "lon": 151.0676851,
   "ge_alt": 10.0,
   "source": "ENGIE rebuild: OSM pitch way 320262641 (PR #2037)",
-  "note": "the shape audit's lining-up wanted a 3.9 deg turn the thread's own fit does not show; check with register",
-  "ge_alt_source": "GE status bar at the field centre, shape audit 2026-11-22 (+-1 m); confirm with --level"
+  "note": "north-up: the ENGIE thread turned its traced GE roof edges against the model from -4 to +4 deg; best fit 0 to 0.25 deg, error doubles at 3.9 deg. The shape audit's 3.9 deg was its matcher, not the model",
+  "ge_alt_source": "GE status bar at the field centre, shape audit 2026-11-22 (+-1 m); confirm with --level",
+  "turn_deg": 0.0
  },
  "gabba": {
   "lat": -27.4858478,
@@ -65,7 +66,7 @@
   "lon": 144.3546774,
   "ge_alt": 18.0,
   "source": "GMHBA rebuild: 7 GE wall-foot points (PR #2016)",
-  "note": "the shape audit's lining-up of the 16:00 glb put the origin 21.7 m south of this; the thread's own GE check says this one is right: resolve on the next register run",
+  "note": "origin checked by the GMHBA thread: every model vertex projected from this origin lands on GE's straight-down shot within a couple of metres, and a shift search has its minimum within about 4 m of zero (seat rows make it shallow). The shape audit's 21.7 m was its matcher locking on repeating seat rows",
   "ge_alt_source": "GE status bar at the field centre, shape audit 2026-11-22 (+-1 m); confirm with --level"
  },
  "hands": {
