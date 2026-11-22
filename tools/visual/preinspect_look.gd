@@ -3,7 +3,7 @@ extends SceneTree
 ## pre-inspection measured (preinspect_grounds.gd).
 ##   godot --path . --rendering-method mobile --script tools/visual/preinspect_look.gd -- OUTDIR GROUND NAME:px,py,pz,tx,ty,tz[,fov] ...
 ## Positions are the match's metres. PREINSPECT_NO_CROWD=1 hides the crowd (the seats as the fly-through shows them). Saves OUTDIR/<slug>_<NAME>.png. Looks only.
-## PREINSPECT_MODEL_FRAME=1 reads positions in the model's own frame instead (x east, y north, z up, metres), the frame
+## PREINSPECT_SUN=pitch,yaw turns the sun. PREINSPECT_MODEL_FRAME=1 reads positions in the model's own frame instead (x east, y north, z up, metres), the frame
 ## Google Earth views are worked out in (docs/MCG_STANDARD.md); PREINSPECT_SIZE=WxH sets the picture (default 960x540).
 
 
@@ -39,6 +39,12 @@ func _run() -> void:
 	if OS.get_environment("PREINSPECT_NO_CROWD") != "":
 		for c in oval.find_children("Crowd", "", true, false):
 			c.visible = false
+	# PREINSPECT_SUN=pitch,yaw (degrees, the match frame) turns the sun, to compare a face's colour lit as Google Earth's
+	# capture lit it rather than in the match's own light.
+	var sun_env := OS.get_environment("PREINSPECT_SUN").split_floats(",")
+	if sun_env.size() == 2:
+		for l in oval.find_children("*", "DirectionalLight3D", true, false):
+			(l as DirectionalLight3D).rotation_degrees = Vector3(sun_env[0], sun_env[1], 0.0)
 	var cam: Camera3D = oval.camera
 	var model_frame := OS.get_environment("PREINSPECT_MODEL_FRAME") != ""
 	var ground := oval.find_child("Ground", true, false) as Node3D
