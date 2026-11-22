@@ -1000,6 +1000,18 @@ static func _kit_edges(m: Mesh) -> Mesh:
 	# The cloth under the drawn hem is worn as shorts: its moulded folds are smoothed away.
 	var gbs := am.surface_get_blend_shape_arrays(gs)
 	_smooth_hem(ga, gbs, gi, wid, pts.size(), faces, level)
+	# The guernsey hangs as cloth: it spans the body's hollows instead of following every muscle.
+	# The shorts as cloth too: the front spans the groin from thigh to thigh.
+	var sa := am.surface_get_arrays(ss) if ss >= 0 else []
+	var sbs := am.surface_get_blend_shape_arrays(ss) if ss >= 0 else []
+	var shorts_sets := []
+	if ss >= 0:
+		_flat_front(sa, sbs)
+		shorts_sets = [sa[Mesh.ARRAY_VERTEX]]
+		for sb in sbs:
+			shorts_sets.append(sb[Mesh.ARRAY_VERTEX])
+	_drape(ga, gbs, gi, wid, pts.size(), faces, low - 0.03, shorts_sets)
+	gv = ga[Mesh.ARRAY_VERTEX]
 	# The guernsey's pattern coordinates (as the shader reads them) near its neck and armholes,
 	# lent to the skin there so the skin can wear the guernsey up to the drawn edge.
 	var guv: PackedVector2Array = ga[Mesh.ARRAY_TEX_UV]
@@ -1071,8 +1083,8 @@ static func _kit_edges(m: Mesh) -> Mesh:
 	for b in range(am.get_blend_shape_count()):
 		out.add_blend_shape(am.get_blend_shape_name(b))
 	for s in range(am.get_surface_count()):
-		var a := ga if s == gs else am.surface_get_arrays(s)
-		var bsa := gbs if s == gs else am.surface_get_blend_shape_arrays(s)
+		var a := ga if s == gs else (sa if s == ss else am.surface_get_arrays(s))
+		var bsa := gbs if s == gs else (sbs if s == ss else am.surface_get_blend_shape_arrays(s))
 		var flags := _custom_format(am, s)
 		if s == gs:
 			a[Mesh.ARRAY_VERTEX] = gv
@@ -1087,6 +1099,321 @@ static func _kit_edges(m: Mesh) -> Mesh:
 		out.surface_set_name(s, am.surface_get_name(s))
 	_edged[m] = out
 	return out
+
+
+## Taubin passes that ease the knit's surface once it hangs.
+const DRAPE_SMOOTH := 30
+## The chest band the guernsey falls from: DRAPE_CHEST under the guernsey's top (the armpits) to
+## DRAPE_ABOVE over it.
+const DRAPE_CHEST := 0.12
+const DRAPE_ABOVE := 0.10
+## How far the hem stands outside the shorts it covers.
+const DRAPE_OVER := 0.005
+
+## The guernsey hangs from the chest and the shoulder blades (2026-11-22: the white of Sydney's
+## guernsey showed a lumpy pot belly). The club cuts (tools/kits/guernsey3d/recut5.py) smooth the
+## cloth below the chest, but in doing so push its front up to 2 cm out past the body at the belly
+## (measured at the centre line: the cut's chest 15.6 cm in front of the body's middle, its belly
+## 17.3 cm, the body's own belly 15.5 cm), so a white guernsey showed a pot belly. A worn guernsey
+## falls from the chest: below the chest band (DRAPE_CHEST under the armpits) no part of its front
+## stands further forward than the chest in the same 2 cm column, and no part of its back further
+## back than the shoulder blades; down through the hem strip, which the shader paints as shorts, it
+## still stays DRAPE_OVER outside the shorts under it. Then the knit is eased (Taubin, which keeps its
+## size; the hem's own edge keeps its line), so the lumps of muscle under it go. Nothing moves at the
+## neck and armholes (above top, eased in over 7 cm, where the skin wears the guernsey up to its
+## drawn edge). The rest pose and every build morph hang from their own shape (shorts_sets: the
+## shorts' points in the rest pose, then in each morph).
+static func _drape(ga: Array, bsa: Array, gi: PackedInt32Array, wid: PackedInt32Array,
+		count: int, faces: Dictionary, top: float, shorts_sets: Array) -> void:
+	var gv: PackedVector3Array = ga[Mesh.ARRAY_VERTEX]
+	var nbr := []
+	nbr.resize(count)
+	for i in range(count):
+		nbr[i] = PackedInt32Array()
+	for e: Vector2i in faces:
+		nbr[e.x].append(e.y)
+		nbr[e.y].append(e.x)
+	var edge := {}
+	for e: Vector2i in faces:
+		if faces[e] == 1:
+			edge[e.x] = true
+			edge[e.y] = true
+	var one := PackedInt32Array()
+	one.resize(count)
+	for i in range(gv.size()):
+		one[wid[i]] = i
+	var sets := [ga]
+	sets.append_array(bsa)
+	for arrs: Array in sets:
+		var vs: PackedVector3Array = arrs[Mesh.ARRAY_VERTEX]
+		var p := PackedVector3Array()
+		p.resize(count)
+		var wt := PackedFloat32Array()
+		wt.resize(count)
+		var lo := INF
+		var hi := -INF
+		var xlo := INF
+		for w in range(count):
+			p[w] = vs[one[w]]
+			lo = minf(lo, p[w].y)
+			hi = maxf(hi, p[w].y)
+			xlo = minf(xlo, p[w].x)
+			wt[w] = smoothstep(top, top - 0.07, p[w].y)
+		# One middle for the whole guernsey, the chest's (a belly that stands out would move a
+		# level's own middle forward with it).
+		var mid := _depth_middle(p)
+		var m0 := 0.0
+		for j in range(11):
+			m0 += _middle_at(mid, top - 0.05 + 0.01 * j) / 11.0
+		# Front and back, per 2 cm column: the furthest the chest (and shoulder blades) stand out,
+		# from DRAPE_CHEST under the guernsey's top to DRAPE_ABOVE over it.
+		var nx := int(ceil(-2.0 * xlo / 0.02)) + 2
+		var capf := PackedFloat32Array()
+		capf.resize(nx)
+		capf.fill(-INF)
+		var capb := capf.duplicate()
+		for w in range(count):
+			if p[w].y > top + DRAPE_ABOVE or p[w].y < top - DRAPE_CHEST:
+				continue
+			var x := clampi(int((p[w].x - xlo) / 0.02), 0, nx - 1)
+			var d := p[w].z - m0
+			if d > 0.0:
+				capf[x] = maxf(capf[x], d)
+			else:
+				capb[x] = maxf(capb[x], -d)
+		# The shorts under the hem, per column and 1 cm level: the cloth stays DRAPE_OVER outside them.
+		var nl := int(ceil((hi - lo) / 0.01)) + 1
+		var flf := PackedFloat32Array()
+		flf.resize(nl * nx)
+		flf.fill(-INF)
+		var flb := flf.duplicate()
+		var si := sets.find(arrs)
+		if si >= 0 and si < shorts_sets.size():
+			for q: Vector3 in shorts_sets[si]:
+				if q.y < lo or q.y > hi:
+					continue
+				var k := clampi(int((q.y - lo) / 0.01), 0, nl - 1)
+				var x := clampi(int((q.x - xlo) / 0.02), 0, nx - 1)
+				var d := q.z - m0
+				if d > 0.0:
+					flf[k * nx + x] = maxf(flf[k * nx + x], d + DRAPE_OVER)
+				else:
+					flb[k * nx + x] = maxf(flb[k * nx + x], -d + DRAPE_OVER)
+		var dz := PackedVector3Array()
+		dz.resize(count)
+		for w in range(count):
+			if wt[w] <= 0.0 or p[w].y >= top - DRAPE_CHEST:
+				continue
+			var k := clampi(int((p[w].y - lo) / 0.01), 0, nl - 1)
+			var x := clampi(int((p[w].x - xlo) / 0.02), 0, nx - 1)
+			var d := p[w].z - m0
+			var out := absf(d)
+			var cap: float = capf[x] if d > 0.0 else capb[x]
+			var fl: float = flf[k * nx + x] if d > 0.0 else flb[k * nx + x]
+			var want := out
+			if cap > 0.0:
+				want = minf(want, cap)
+			want = maxf(want, fl)
+			if want != out:
+				# Eased in over the 4 cm under the chest band, so the cloth leaves the chest smoothly.
+				var e := smoothstep(top - DRAPE_CHEST, top - DRAPE_CHEST - 0.04, p[w].y)
+				dz[w] = Vector3(0.0, 0.0, signf(d) * (want - out) * wt[w] * e)
+		# The pull eased across neighbours, so no crease shows where columns and levels meet.
+		for it in range(8):
+			var t := dz.duplicate()
+			for w in range(count):
+				if wt[w] <= 0.0 or nbr[w].is_empty():
+					continue
+				var avg := Vector3.ZERO
+				for u in nbr[w]:
+					avg += dz[u]
+				t[w] = (dz[w] + avg / float(nbr[w].size())) * 0.5
+			dz = t
+		for w in range(count):
+			p[w] += dz[w]
+		# Then the knit's surface is eased: the lumps of muscle under it go (the hem's own edge
+		# keeps its line).
+		for it in range(DRAPE_SMOOTH):
+			for f in [0.5, -0.53]:
+				var t := p.duplicate()
+				for w in range(count):
+					if wt[w] <= 0.0 or nbr[w].is_empty() or edge.has(w):
+						continue
+					var avg := Vector3.ZERO
+					for u in nbr[w]:
+						avg += p[u]
+					t[w] = p[w] + f * wt[w] * (avg / float(nbr[w].size()) - p[w])
+				p = t
+		for i in range(vs.size()):
+			vs[i] = p[wid[i]]
+		arrs[Mesh.ARRAY_VERTEX] = vs
+		var ns: PackedVector3Array = arrs[Mesh.ARRAY_NORMAL]
+		if ns == null or ns.is_empty():
+			continue
+		var acc := PackedVector3Array()
+		acc.resize(count)
+		for f in range(0, gi.size(), 3):
+			var a := wid[gi[f]]
+			var b := wid[gi[f + 1]]
+			var c := wid[gi[f + 2]]
+			var fn := (p[c] - p[a]).cross(p[b] - p[a])
+			acc[a] += fn
+			acc[b] += fn
+			acc[c] += fn
+		for i in range(vs.size()):
+			if wt[wid[i]] > 0.0 and acc[wid[i]].length_squared() > 0.0:
+				var n := acc[wid[i]].normalized()
+				ns[i] = n if n.dot(ns[i]) >= 0.0 else -n
+		arrs[Mesh.ARRAY_NORMAL] = ns
+
+
+## The shorts' front over the groin (2026-11-22: the shorts read as briefs). The body's shorts are
+## its own skin, so at the groin they stood up to 1 cm proud of the thighs' fronts. Shorts are cloth
+## stretched from one thigh to the other: within FLAT_REACH of the middle no point stands further
+## forward than the thighs' fronts at its level (FLAT_REACH to 10 cm out), eased out to nothing at
+## FLAT_REACH and above the groin (FLAT_UP); the pull is eased across neighbours so the cloth
+## moves as one piece and never folds. Rest pose and every build alike.
+const FLAT_REACH := 0.07
+## How far above the fork of the legs the groin's front is flattened (eased out over 5 cm more).
+const FLAT_UP := 0.17
+## How much of the bulge past the thighs' line is kept (cloth over the groin is not quite flat).
+const FLAT_KEEP := 0.25
+## The most a point is pressed back (the bulge is about a centimetre).
+const FLAT_MOST := 0.012
+static func _flat_front(sa: Array, sbs: Array) -> void:
+	var sv: PackedVector3Array = sa[Mesh.ARRAY_VERTEX]
+	var si: PackedInt32Array = sa[Mesh.ARRAY_INDEX]
+	var weld := {}
+	var wid := PackedInt32Array()
+	wid.resize(sv.size())
+	var count := 0
+	for i in range(sv.size()):
+		var k := Vector3i((sv[i] * 1e5).round())
+		if not weld.has(k):
+			weld[k] = count
+			count += 1
+		wid[i] = weld[k]
+	var one := PackedInt32Array()
+	one.resize(count)
+	for i in range(sv.size()):
+		one[wid[i]] = i
+	var nbr := []
+	nbr.resize(count)
+	for i in range(count):
+		nbr[i] = {}
+	for f in range(0, si.size(), 3):
+		for c in range(3):
+			var a := wid[si[f + c]]
+			var b := wid[si[f + (c + 1) % 3]]
+			nbr[a][b] = true
+			nbr[b][a] = true
+	var sets := [sa]
+	sets.append_array(sbs)
+	for arrs: Array in sets:
+		var vs: PackedVector3Array = arrs[Mesh.ARRAY_VERTEX]
+		var p := PackedVector3Array()
+		p.resize(count)
+		var lo := INF
+		var hi := -INF
+		for w in range(count):
+			p[w] = vs[one[w]]
+			lo = minf(lo, p[w].y)
+			hi = maxf(hi, p[w].y)
+		var nl := int(ceil((hi - lo) / 0.01)) + 1
+		# The thighs' front faces only (facing forward), never the insides of the legs.
+		var ns_in: PackedVector3Array = arrs[Mesh.ARRAY_NORMAL] if arrs[Mesh.ARRAY_NORMAL] != null else PackedVector3Array()
+		var thigh := PackedFloat32Array()
+		thigh.resize(nl)
+		thigh.fill(-INF)
+		for w in range(count):
+			var ax := absf(p[w].x)
+			if ax >= FLAT_REACH and ax < 0.10 and (ns_in.is_empty() or ns_in[one[w]].z > 0.5):
+				var k := clampi(int((p[w].y - lo) / 0.01), 0, nl - 1)
+				thigh[k] = maxf(thigh[k], p[w].z)
+		# The groin: from the fork of the legs (the lowest point on the middle line) up FLAT_UP.
+		var fork := INF
+		for w in range(count):
+			if absf(p[w].x) < 0.01:
+				fork = minf(fork, p[w].y)
+		# The thighs' fronts eased over 5 cm of height, so no level shows as a step.
+		var th := thigh.duplicate()
+		for k in range(nl):
+			var sum := 0.0
+			var n := 0
+			for j in range(maxi(0, k - 2), mini(nl, k + 3)):
+				if thigh[j] > -INF:
+					sum += thigh[j]
+					n += 1
+			th[k] = sum / n if n > 0 else -INF
+		var wt := PackedFloat32Array()
+		wt.resize(count)
+		var dz := PackedFloat32Array()
+		dz.resize(count)
+		for w in range(count):
+			var f := clampf((p[w].y - lo) / 0.01, 0.0, float(nl - 1))
+			var k := mini(int(f), nl - 2)
+			if th[k] == -INF or th[k + 1] == -INF:
+				continue
+			var plane := lerpf(th[k], th[k + 1], f - float(k))
+			# Every point standing out of the thighs' line is pressed back towards it, in order (a point
+			# in front stays in front), so the bulge flattens without folding.
+			var d := p[w].z - plane
+			if d <= 0.0:
+				continue
+			# Not the fork's own underside (its first 3 cm, eased over 4 cm more).
+			wt[w] = smoothstep(FLAT_REACH, FLAT_REACH - 0.03, absf(p[w].x)) \
+					* smoothstep(fork + FLAT_UP + 0.05, fork + FLAT_UP - 0.01, p[w].y) \
+					* smoothstep(fork + 0.03, fork + 0.07, p[w].y)
+			dz[w] = -minf(d * (1.0 - FLAT_KEEP), FLAT_MOST) * wt[w]
+		var before := p.duplicate()
+		var moved := {}
+		for w in range(count):
+			if absf(dz[w]) > 1e-5:
+				p[w].z += dz[w]
+		# The corners round a moved one turn with it too.
+		for w in range(count):
+			if absf(dz[w]) > 1e-5:
+				moved[w] = true
+				for u in nbr[w]:
+					moved[u] = true
+		for i in range(vs.size()):
+			vs[i] = p[wid[i]]
+		arrs[Mesh.ARRAY_VERTEX] = vs
+		var ns: PackedVector3Array = arrs[Mesh.ARRAY_NORMAL]
+		if ns == null or ns.is_empty():
+			continue
+		# Each normal turned by as much as the faces round it turned (the faces' own normals before
+		# and after), so the crowded faces of the fork, which never moved, cannot spoil it.
+		var n0 := _face_normals(before, si, wid, count)
+		var n1 := _face_normals(p, si, wid, count)
+		for i in range(vs.size()):
+			var w := wid[i]
+			if moved.has(w) and n0[w].length_squared() > 0.0 and n1[w].length_squared() > 0.0:
+				var a := n0[w].normalized()
+				var b := n1[w].normalized()
+				if a.dot(b) > 0.999999:
+					continue
+				var ax := a.cross(b)
+				if ax.length_squared() < 1e-12:
+					continue
+				ns[i] = ns[i].rotated(ax.normalized(), a.angle_to(b)).normalized()
+		arrs[Mesh.ARRAY_NORMAL] = ns
+
+
+## Per welded corner, the sum of its faces' normals (area weighted).
+static func _face_normals(p: PackedVector3Array, si: PackedInt32Array, wid: PackedInt32Array,
+		count: int) -> PackedVector3Array:
+	var acc := PackedVector3Array()
+	acc.resize(count)
+	for f in range(0, si.size(), 3):
+		var a := wid[si[f]]
+		var b := wid[si[f + 1]]
+		var c := wid[si[f + 2]]
+		var fn := (p[c] - p[a]).cross(p[b] - p[a])
+		acc[a] += fn
+		acc[b] += fn
+		acc[c] += fn
+	return acc
 
 
 ## The guernsey's cloth below the drawn hem line (level), which the shader paints as shorts: the
