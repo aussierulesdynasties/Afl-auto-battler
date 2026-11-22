@@ -1,0 +1,39 @@
+"""Hand-made far land tile tex/mt/far_land.png (1024 px = 900 m, seamless): paddocks from random recursive splits, each its own
+tone, tree belts along some boundaries, copses, farm tracks, and a few patches of suburb grain. Method as People First's far land.
+Writes far_land.mean (linear mean). python -E py_mk_far_land.py"""
+import os, numpy as np
+from PIL import Image, ImageDraw, ImageFilter
+H = os.path.dirname(os.path.abspath(__file__)); R = np.random.default_rng(31); n = 1024
+im = Image.new('RGB', (n * 3, n * 3)); d = ImageDraw.Draw(im)
+def rect_wrap(x0, y0, x1, y1, c):
+    for ox in (0, n, 2 * n):
+        for oy in (0, n, 2 * n): d.rectangle([x0 + ox, y0 + oy, x1 + ox, y1 + oy], fill=c)
+BELT = (70, 86, 58)
+def split(x0, y0, x1, y1, dep):
+    w, h = x1 - x0, y1 - y0
+    if dep > 7 or (w < 120 and h < 120) or (dep > 2 and R.random() < 0.15):
+        t = R.choice([0.74, 0.82, 0.9, 0.98, 1.06, 0.86]); hue = R.uniform(-0.10, 0.06)
+        c = tuple(int(v) for v in np.clip(np.array([t * (1 + hue), t, t * (1 - hue) * 0.86]) * 205, 0, 255))
+        rect_wrap(x0, y0, x1, y1, c)
+        if R.random() < 0.55: rect_wrap(x0, y0, x1, y0 + 6, BELT)       # tree belts on some fence lines
+        if R.random() < 0.45: rect_wrap(x0, y0, x0 + 6, y1, BELT)
+        if R.random() < 0.2: rect_wrap(x0 + w // 2, y0, x0 + w // 2 + 2, y1, (176, 166, 140))   # farm track
+        return
+    if w > h: m = x0 + int(w * R.uniform(0.3, 0.7)); split(x0, y0, m, y1, dep + 1); split(m, y0, x1, y1, dep + 1)
+    else: m = y0 + int(h * R.uniform(0.3, 0.7)); split(x0, y0, x1, m, dep + 1); split(x0, m, x1, y1, dep + 1)
+split(0, 0, n, n, 0)
+a = np.asarray(im, np.float32)[n:2 * n, n:2 * n].copy()
+yy, xx = np.mgrid[0:n, 0:n]
+for _ in range(3):   # suburb grain patches: roofs on pale yards, street lines
+    cx, cy = R.integers(0, n, 2); r = int(R.integers(70, 140))
+    dx = (xx - cx + n // 2) % n - n // 2; dy = (yy - cy + n // 2) % n - n // 2; m = dx ** 2 + dy ** 2 < r * r
+    a[m] = [168, 170, 150]
+    roofs = m & (R.random((n, n)) < 0.22); a[roofs] = np.array([[176, 104, 84], [130, 134, 136], [160, 160, 154]])[R.integers(0, 3, roofs.sum())]
+    a[m & ((yy % 18) < 2)] = [150, 150, 146]
+cl = np.asarray(Image.fromarray((R.random((48, 48)) * 255).astype(np.uint8)).resize((n, n), Image.BICUBIC), np.float32) / 255 > 0.78
+a[cl] = a[cl] * 0.45 + np.array(BELT, np.float32) * 0.55     # copses
+a *= 1 + 0.06 * (R.random((n, n, 1)) - 0.5)
+a = np.asarray(Image.fromarray(np.clip(a, 0, 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(0.7)), np.float32)
+Image.fromarray(np.clip(a, 0, 255).astype(np.uint8)).save(os.path.join(H, 'tex', 'mt', 'far_land.png'))
+open(os.path.join(H, 'tex', 'mt', 'far_land.mean'), 'w').write('%.4f' % float(((a / 255.0) ** 2.2).mean()))
+print('ok', open(os.path.join(H, 'tex', 'mt', 'far_land.mean')).read())
