@@ -730,10 +730,10 @@ def indoor_centre(col):
 
 
 # ---------------- the north-east video board on the hill (GE in_W, out_W) ----------------
-# Placed by matching where it sits in two Google Earth views to where the same camera puts it in ours (the
-# scoreboard lines up in both): bearing 70.3, 97 m out (the two views agree within 2 m). About 14.4 x 6.2 m,
-# its foot 3.2 m up on three braced legs, turned to the ground like the scoreboard.
-VB = dict(b=70.3, r=97.0, L=14.4, H=6.2, z0=3.2, dep=0.9)
+# Placed by eye: on the hill top a third of the way from the scoreboard toward the north stand, then checked
+# side by side with Google Earth's in_W and out_W. About 14.4 x 6.2 m, its foot 3.2 m up on three braced
+# legs, turned to the ground like the scoreboard.
+VB = dict(b=70.0, r=97.0, L=14.4, H=6.2, z0=3.2, dep=0.9)
 
 
 def video_board(col):
