@@ -179,7 +179,7 @@ RU=np.array([roof_top(u*1.0,v*1.0)-1.2 for u,v in zip(PU*0.96,PV*0.96)])  # roof
 for nm,(u_,vin,vout) in(('w0',(-84.3,51.0,74.0)),('w1',(84.0,51.0,74.0)),('e0',(-84.1,-52.2,-74.0)),('e1',(84.6,-52.2,-74.0))):
     vs=np.linspace(vin,vout,12);top=[float(slab_z(np.array(abs(v))))-1.1 for v in vs]
     q=[(u_,v,ZO-0.2) for v in vs]+[(u_,v,t) for v,t in zip(vs[::-1],top[::-1])]
-    add('slab_end_'+nm,q,[list(range(len(q)))],'fascia')
+    add('slab_end_'+nm,q,[list(range(len(q)))],'soffit')  # under the roof, so the underside's paint, not the bright fascia
 south=PU>92
 def segm(a,b):return [b if s else a for s in south]
 def cl(z):return np.minimum(z,RU-0.4) if np.ndim(z) else np.minimum(np.full(K,z),RU-0.4)
@@ -246,7 +246,7 @@ for cu,cv,h in((-45.8,110.4,17.8),(43.3,111.8,16.7)):
 # ---------------- seating bowl inside (no field): three tiers between the pitch fence and the outer wall
 PA,PB,PN=G('PA',86.0),G('PB',72.0),G('PN',2.2)
 rp=se_r(TH,PA,PB,PN)+2.0;D=r0-6.0-rp
-SEATS=[]
+SEATS=[];SEATUV=[]
 def _arc(R):
     Rc=np.r_[R,R[:1]];d=np.linalg.norm(np.diff(Rc[:,:2],axis=0),axis=1);return Rc,d,np.r_[0,np.cumsum(d)]
 def aisle_angles(R,pitch=0.5,block=24,aisle=1.2):
@@ -264,7 +264,7 @@ def seat_row(R,AA,pitch=0.5,aisle=1.2):
         if len(AA) and da.min()<aisle/2+0.22:s+=0.1;continue
         w0=np.array(wv(p));w1=np.array(wv(p*np.array([0.99,0.99,1.0])))  # inward = towards the pitch centre
         dv=w1[:2]-w0[:2];dv/=np.linalg.norm(dv)+1e-12;SEATS.append([round(float(w0[0]),3),round(float(w0[1]),3),round(float(w0[2]),3),round(float(dv[0]),4),round(float(dv[1]),4)])
-        s+=pitch
+        SEATUV.append((float(p[0]),float(p[1]),float(p[2])));s+=pitch
 def tier(name,f0,f1,zf,zb,lip=1.1,front='concrete'):
     a=rp+D*f0;b=rp+D*f1;c=np.cos(TH);s=np.sin(TH)
     P=lambda r,z:np.stack([r*c,r*s,np.full(K,z) if np.ndim(z)==0 else z],1)
@@ -280,6 +280,100 @@ def tier(name,f0,f1,zf,zb,lip=1.1,front='concrete'):
 # the middle and top tiers' fronts carry the ribbon screens that run right round the bowl
 tier('tier1',0.0,0.62,FL+1.4,FL+12.0);tier('tier2',0.40,0.80,FL+15.0,FL+23.0,front='ribbon');_b3=rp+D*1.0;_rt=np.array([roof_top(r*math.cos(t),r*math.sin(t)) for r,t in zip(_b3,TH)])
 tier('tier3',0.62,1.0,FL+26.5,np.minimum(FL+37.0,_rt-1.5),front='ribbon')  # back row stays under the roof (ends at 33-38 m)
+# ---------------- under the roof (photos of the bowl, Wikimedia Commons: Docklands_Stadium_Dec2022, Marvel_Stadium_
+# during_curtain_raiser, Marvel_Stadium_before_Hawthorn_Hawks_vs_Brisbane_Lions_-_26_May_2024; looked at, not copied).
+# The roof's underside is a grid of pale steel: cross girders every 10.5 m, purlins along, and a diagonal in every
+# bay, so it reads as triangles from the seats. A lighting gantry runs round the opening's edge with two rows of
+# floodlights under it; screens hang from it at the ends and the four corners. All modelled, nothing painted.
+from scipy.spatial import cKDTree
+_ST=cKDTree(np.array(SEATUV)[:,:2]);_SZ=np.array(SEATUV)[:,2]
+def clear(a,b,gap=2.6):
+    """True when every point of the member a-b is gap m above the seats within 2.5 m of it (heads and sightlines)."""
+    for t in np.linspace(0,1,max(2,int(np.linalg.norm(np.subtract(b,a))/1.5)+1)):
+        q=np.add(a,np.subtract(b,a)*t);ii=_ST.query_ball_point(q[:2],2.5)
+        if ii and q[2]-0.4<_SZ[ii].max()+gap:return False
+    return True
+def grid(name,uu,vv,zf,w=0.38,drop=0.45,diag=True):
+    """Members on a (u,v) lattice hanging drop m under the surface z=zf(u,v): cross girders along v, purlins along u,
+    one diagonal per bay (alternating), each kept only where it clears the seats."""
+    P=lambda u,v:(u,v,zf(u,v)-drop);segs=[]
+    for u in uu:segs+=[(P(u,vv[j]),P(u,vv[j+1])) for j in range(len(vv)-1)]
+    for v in vv:segs+=[(P(uu[i],v),P(uu[i+1],v)) for i in range(len(uu)-1)]
+    if diag:
+        for i in range(len(uu)-1):
+            for j in range(len(vv)-1):
+                a,b=((uu[i],vv[j]),(uu[i+1],vv[j+1])) if (i+j)%2 else ((uu[i],vv[j+1]),(uu[i+1],vv[j]))
+                segs.append((P(*a),P(*b)))
+    segs=[sg for sg in segs if clear(*sg)]
+    if segs:beams(name,segs,w,'white')
+def under_slab(sg,vin,u0,u1):
+    zf=lambda u,v:float(slab_z(np.array(abs(v))))-1.1
+    vv=[sg*abs(v) for v in (abs(vin)+0.6,58.5,66.0,74.0,82.0,90.0,98.0)]
+    grid('slab_under_%s'%('w' if sg>0 else 'e'),np.linspace(u0+0.6,u1-0.6,17),vv,zf)
+under_slab(1,51.0,-84.3,84.0);under_slab(-1,-52.2,-84.1,84.6)
+# the shut roof's three plates each side: the same grid under each (group roofshut, so it goes when the roof opens)
+for sg,vin in((1,51.0),(-1,52.2)):
+    for k in range(3):
+        a=0.15+vin*k/3+(0.6 if k else 0.4);b=vin*(k+1)/3-0.2;zb=ZO+0.35*(k+1)-0.3
+        grid('roofshut_under_%s%d'%('w' if sg>0 else 'e',k),np.linspace(-83.0,83.0,17),[sg*a,sg*(a+b)/2,sg*b],lambda u,v,zb=zb:zb,w=0.34,drop=0.32)
+# end roofs: radial ribs under the channels, three rings across them
+def under_end(nm,ARC,sgn):
+    c=np.array([sgn*40.0,0]);d=ARC-c;ph=np.arctan2(d[:,1],sgn*d[:,0]);rr=np.hypot(*d.T);segs=[];rings={}
+    for f in np.radians(np.arange(-55.65,56,5.3)):
+        e=np.array([sgn*math.cos(f),math.sin(f)]);r1=np.interp(f,ph,rr)-3.0;r0=(UE+0.8-40)/abs(math.cos(f))
+        if r1<=r0+2:continue
+        pts=[]
+        for t in np.linspace(r0,r1,9):x,y=c+e*t;pts.append((x,y,end_z(x,y)-0.55))
+        segs+=[(pts[i],pts[i+1]) for i in range(len(pts)-1)]
+        for k in(2,4,6):rings.setdefault(k,[]).append(pts[k])
+    for k,R in rings.items():segs+=[(R[i],R[i+1]) for i in range(len(R)-1)]
+    segs=[s_ for s_ in segs if clear(*s_)]
+    beams(nm,segs,0.38,'white')
+under_end('end_n_under',ARC_N,-1);under_end('end_s_under',ARC_S,1)
+# lighting gantry: a box truss 2.4 m deep under the opening's edge, floodlights every 2 m in two rows under it
+LAMPS=[]
+def gantry(nm,a,b,ztop,inward):
+    a=np.asarray(a,float);b=np.asarray(b,float);L=np.linalg.norm(b-a);t=(b-a)/L;n=np.asarray(inward,float);n/=np.linalg.norm(n)
+    m=max(2,int(L/2.4));top=[];bot=[]
+    for i in range(m+1):
+        p=a+t*L*i/m;top.append([(p[0]+n[0]*w,p[1]+n[1]*w,ztop) for w in(-1.0,1.0)]);bot.append([(p[0]+n[0]*w,p[1]+n[1]*w,ztop-2.4) for w in(-1.0,1.0)])
+    segs=[]
+    for X in(top,bot):
+        for s_ in(0,1):segs+=[(X[i][s_],X[i+1][s_]) for i in range(m)]
+    web=[]
+    for i in range(m+1):
+        web+=[(top[i][0],bot[i][0]),(top[i][1],bot[i][1]),(bot[i][0],bot[i][1])]
+        if i<m:web+=[(top[i][0],bot[i+1][0]),(top[i][1],bot[i+1][1])]
+    beams(nm+'_ch',segs,0.3,'silver');beams(nm+'_web',web,0.14,'silver')
+    k=int(L/2.0)
+    for i in range(k):
+        p=a+t*(1.0+i*2.0)
+        for w in(-0.55,0.55):LAMPS.append((p[0]+n[0]*w,p[1]+n[1]*w,ztop-2.4,n))
+gantry('gantry_w',(-83.6,51.6),(83.3,51.6),ZO-1.2,(0,-1));gantry('gantry_e',(-83.4,-52.8),(83.9,-52.8),ZO-1.2,(0,1))
+gantry('gantry_n',(-UE-0.6,-50.0),(-UE-0.6,49.6),ZO-0.3,(1,0));gantry('gantry_s',(UE+0.6,-50.6),(UE+0.6,50.4),ZO-0.3,(-1,0))
+# each floodlight: a housing tipped 30 deg towards the pitch, lens on its lower face
+V=[];F=[];M=[]
+for x,y,z,n in LAMPS:
+    tip=np.array([n[0]*0.5,n[1]*0.5,-0.866]);ax=np.array([-n[1],n[0],0.0]);up=np.cross(ax,tip);c=np.array([x,y,z-0.35])
+    o=len(V)
+    for sz in(-0.28,0.28):
+        for sa,su in((-0.28,-0.28),(0.28,-0.28),(0.28,0.28),(-0.28,0.28)):V.append(tuple(c+tip*sz+ax*sa+up*su))
+    F+=[[0+o,1+o,2+o,3+o],[4+o,7+o,6+o,5+o],[o,4+o,5+o,1+o],[1+o,5+o,6+o,2+o],[2+o,6+o,7+o,3+o],[3+o,7+o,4+o,o]]
+    M+=['signblack','lamp','signblack','signblack','signblack','signblack']
+add('gantry_lamps',V,F,M)
+# screens: the two big ones hang from the end gantries, one off each side of the axis (diagonally opposite); four
+# smaller ones hang at the opening's corners, angled to the centre. Face material 'screen' (Oval3DScreens draws on it).
+def screen(nm,c,facing,w,h,ztop,d=1.0):
+    c=np.asarray(c,float);f=np.asarray(facing,float);f/=np.linalg.norm(f);s_=np.array([-f[1],f[0]])
+    q=[c-s_*w/2-f*d,c+s_*w/2-f*d,c+s_*w/2,c-s_*w/2]
+    prism(nm+'_box',[tuple(x) for x in q],ztop-h-0.5,ztop,'signblack','signblack',bottom='signblack')
+    fr=[c-s_*(w/2-0.35)+f*0.02,c+s_*(w/2-0.35)+f*0.02]
+    add(nm,[(fr[0][0],fr[0][1],ztop-h-0.15),(fr[1][0],fr[1][1],ztop-h-0.15),(fr[1][0],fr[1][1],ztop-0.65),(fr[0][0],fr[0][1],ztop-0.65)],[[0,1,2,3]],'screen',[[(0,0),(1,0),(1,1),(0,1)]])
+    for k in(-1,1):beams(nm+'_hang%d'%(k>0),[((*(c+s_*k*w/3-f*0.5),ztop),(*(c+s_*k*w/3-f*0.5),ztop+2.6))],0.12,'silver')
+zg=ZO-0.3-2.4-0.6
+screen('screen_n',(-UE+0.6,20.0),(1,0),19.0,7.0,zg);screen('screen_s',(UE-0.6,-20.0),(-1,0),19.0,7.0,zg)
+for i,(cu,cv) in enumerate(((-81.0,48.5),(81.0,48.5),(-81.0,-49.5),(81.0,-49.5))):
+    screen('screen_c%d'%i,(cu,cv),(-np.sign(cu),-np.sign(cv)),9.0,4.6,ZO-1.2-2.4-0.6)
 from shapely.geometry import Polygon,Point
 def vent_block(nm,f,z0,z1,zb0,zb1,bay=7.0,pier=1.6,depth=0.45,wall='bluepanel',top='concrete'):
     # the blue service blocks (Google Earth c_ne): solid blue cladding with big louvred vent openings cut

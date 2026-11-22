@@ -22,6 +22,9 @@ def mat(name):
     rough={'glass':0.15,'curtain':0.12,'silver':0.35,'teal':0.45,'tank':0.3}.get(src,0.8)
     b.inputs['Roughness'].default_value=rough
     if src in('glass','curtain','silver','tank'):b.inputs['Metallic'].default_value=0.35 if src!='silver' else 0.5
+    # floodlight lenses and the tier ribbons light up (glTF emissive, so the game shows them lit)
+    em={'lamp':6.0,'ribbon':1.2}.get(src)
+    if em:nt.links.new(tx.outputs['Color'],b.inputs['Emission Color']);b.inputs['Emission Strength'].default_value=em
     if name=='deck2':
         hs=nt.nodes.new('ShaderNodeHueSaturation');hs.inputs['Value'].default_value=0.93
         nt.links.new(tx.outputs['Color'],hs.inputs['Color']);nt.links.new(hs.outputs['Color'],b.inputs['Base Color'])

@@ -165,8 +165,8 @@ const SEAT_COLOURS := {
 	"seat_mcg_white": Color(0.96, 0.88, 0.80), "seat_mcg_grey": Color(0.76, 0.70, 0.64),
 	"seat_mcg_blue": Color(0.18, 0.32, 0.52), "seat_mcg_teal": Color(0.42, 0.64, 0.66),
 	"seat_mcg_sage": Color(0.50, 0.58, 0.56),
-	# Marvel Stadium by level (tools/grounds/marvel/seats.py), from Google Earth and Street View.
-	"seat_marvel_lo": Color8(62, 80, 104), "seat_marvel_mid": Color8(62, 80, 104), "seat_marvel_up": Color8(62, 80, 104),
+	# Marvel Stadium by level (tools/grounds/marvel/seats.py): neutral grey, as photos of the bowl show them (2026-11-22).
+	"seat_marvel_lo": Color8(110, 112, 116), "seat_marvel_mid": Color8(110, 112, 116), "seat_marvel_up": Color8(110, 112, 116),
 	# The front of the lower tier from the Members' round to the north: green (a photo sphere on the ground).
 	"seat_mcg_green": Color(0.46, 0.70, 0.58),
 	"seat_green": Color(0.314, 0.549, 0.455), "seat_teal": Color(0.384, 0.620, 0.541),
