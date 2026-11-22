@@ -166,7 +166,7 @@ for k in range(T+1):
     t=k/T;row=[]
     for i in range(N):
         p=RF[i].lerp(INS[i],t);zb=ZF+(IZ-ZF)*t
-        bul=1.7*math.sin(math.pi*(i%K)/K)**0.7*_env(t)
+        bul=1.2*math.sin(math.pi*(i%K)/K)**0.6*_env(t)
         row.append(bm.verts.new((p.x,p.y,zb+bul)))
     rows.append(row)
 for k in range(T):
@@ -214,8 +214,8 @@ for bi in range(NB):
     for s_ in range(nseg):
         t0,t1=s_/nseg,(s_+1)/nseg
         tube(at(t0,top(t0)),at(t1,top(t1)),0.32,MST);tube(at(t0,0.2),at(t1,0.2),0.22,MST)
-        if s_%2==0:tube(at(t0,0.2),at(t1,top(t1)),0.16,MST)
-        else:tube(at(t0,top(t0)),at(t1,0.2),0.16,MST)
+        if s_%2==0:tube(at(t0,0.2),at(t1,top(t1)),0.22,MST)
+        else:tube(at(t0,top(t0)),at(t1,0.2),0.22,MST)
     tube(at(0,0.2),at(0,top(0)+0.01),0.2,MW);tube(at(1,0.2),at(1,top(1)),0.2,MW)
     # Google Earth (east and north close views): no white Y columns outside the glass, only slim white posts in the
     # dark open strip between the glass's head and the roof's fascia (drawn in the glass texture, bronze.py).

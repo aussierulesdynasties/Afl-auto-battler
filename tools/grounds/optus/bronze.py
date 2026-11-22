@@ -247,7 +247,7 @@ def roof():
     w, h = 256, 1024
     u = (np.arange(w)[None, :] + 0.5) / w * np.ones((h, 1))
     v = (np.arange(h)[:, None] + 0.5) / h * np.ones((1, w))
-    img = np.array((246, 246, 243), float) * (0.82 + 0.18 * np.sin(np.pi * u) ** 0.6)[..., None]
+    img = np.array((246, 246, 243), float) * (0.88 + 0.12 * np.sin(np.pi * u) ** 0.6)[..., None]
     img *= (1.0 + 0.025 * _noise(h, w, (16, 4), 6))[..., None]
     for c in (0.36, 0.68):
         img[np.abs(v - c) < 0.0025] *= 0.9
