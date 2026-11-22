@@ -89,3 +89,57 @@ Ruled out:
 
 - Move One: its EULA 7.1.2 makes Move AI the owner of the output.
 - GVHMR, the SMPL-based models and opencap-monocular: non-commercial licences.
+
+## Reel feedback fixes (2026-11-22, evening)
+
+The director watched the moves reel: "some of the animations create some strange model contortion",
+"the ball drop from hand to foot when they kick is very floaty", "the players are holding the ball
+horizontally like a dinner plate", and "the tackler is standing by idly waiting for the tackle".
+Every fix below was measured, not judged by eye.
+
+**The kick's ball.** The footage (kick_on_run_03, drop_punt_02) shows the ball guided down in the
+kicking-side hand alone, at about hip height, while the other arm swings up and away. The clips do
+the same: the palms are about 1 m apart in the run-in, and the kicking-side hand is at 0.87-0.92 m.
+We had drawn the ball between both palms, in mid-air at about 1.2 m, lying flat across them, and let it
+go from there. Now:
+
+- As the palms part, the ball moves over to the kicking-side palm.
+- In that hand the ball leans about 42 deg off the flat along his run, as the footage measures.
+- It falls near upright, 0-10 deg off vertical as in drop_punt_02 side-on, under real gravity in real seconds.
+
+Measured over 120 s, seed 31:
+
+| | Before | After |
+| --- | --- | --- |
+| Release height (median) | 0.92 m | 0.76 m |
+| Implied g (median) | 7.1 m/s² | 9.4 m/s² |
+
+A touch that comes earlier than planned re-times the rest of the fall from where the ball is. It
+never falls slower than gravity.
+
+**The idle tackler.** A tackler who slowed below running pace as he arrived stood in the idle clip
+until the take started. A man within 6 m of the carrier now keeps running up to 0.6 s longer, and the
+take starts well inside that. Over 4 of 4 takes he stood 0.00 s.
+
+**Contortions.** `tools/oval3d/dump_clip_joints.gd` and `tools/oval3d/joint_audit.py` split every
+joint's rotation into twist and bend, and a hinge's bend into the part on the hinge and the part off
+it. The Epic GASP clips are the baseline: their elbows stay within ~32 deg off the hinge. The worst
+broadcast-made clips:
+
+| Clip | Joint | Fault |
+| --- | --- | --- |
+| umpire_bounce_01 | Right elbow | 21 deg backwards past straight |
+| umpire_bounce_01 | Left elbow | 63 deg off its hinge |
+| kick_on_run_02_run, ground_ball_run_01, run_bounce_01, ground_ball_01, dont_argue_01 | Elbows | 40-59 deg off the hinge |
+| spoil_rance_01 | Ankle | 79 deg |
+
+`ClipLimits` holds the broadcast clips inside a real body's limits as a match loads them:
+
+- Elbow: 35 deg off the hinge and 10 deg past straight.
+- Knee: 20 deg off the hinge and 5 deg past straight.
+- Wrist: 70 deg of twist and 70 deg of bend.
+- Ankle and neck: limited the same way.
+
+The GASP clips are untouched. After the limits, the worst broadcast joint is 37 deg (the audit's own
+rounding), against 63. `tools/oval3d/pose_stills.gd` renders any clip frame with and without the
+limits to check them.

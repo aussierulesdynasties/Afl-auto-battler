@@ -35,6 +35,8 @@ func _run() -> void:
 		for c in kids:
 			sum += sk.get_bone_rest(c).origin.length()
 		hand_len[b] = sum / maxf(1.0, kids.size()) if kids.size() > 0 else 0.1
+	# As a match plays them (Oval3D._player): held inside ClipLimits.
+	ClipLimits.apply(ap, sk)
 	var data := {}
 	for anim_name in ap.get_animation_list():
 		ap.play(anim_name)

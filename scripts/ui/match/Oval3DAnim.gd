@@ -21,6 +21,11 @@ const RATE_MAX := 3.4
 const PACE_FOLLOW := 0.08      # s: the drawn pace is smoothed over about this long
 const JUMP := 20.0             # m/s: a drawn move faster than this is a re-placement, not running
 const STOP_HOLD := 0.2         # s: he must be that slow this long to stand; a shorter check is part of the run
+## A man closing on the ball carrier who slows as he gets there is setting himself for the
+## tackle, not stopping: he keeps running this much longer (the take starts well inside it).
+## Director 2026-11-22: "the tackler is standing by idly waiting for the tackle".
+const CLOSE_IN := 6.0          # m from the carrier
+const CLOSE_HOLD := 0.6        # s
 const TURN := 9.0              # rad/s (about 520 degrees): the fastest he turns, a footballer's pivot
 ## Running, he changes direction off a planted foot: the body swings round quickly while a foot
 ## is held on the turf (_plant keeps that foot where and how it landed) and hardly at all in the
@@ -52,6 +57,7 @@ const HURRY := 2.0             # how fast the get-up plays once the play has mov
 ## lets him move from then).
 const UP_IN := 1.5
 const FAR := 5.0               # m: his token this far from him = the play has moved on
+const CLOSE_EARLY := 0.8       # s: a slowing tackler's take may start this much before its usual lead
 const MOVE_OFF := 0.3          # m/s: his token moving this fast = the play wants him (a take ends at up_s)
 const KNOCK_UP := 0.2           # s of a scoop's clip past the touch before a ball off his hands ends it
 const KNOCK_OFF := 1.0          # m: how far off him that ball has to be by then
@@ -86,6 +92,17 @@ const MOVE_RATE_MAX := 1.6     # fastest
 const GRAVITY := 9.8           # m/s^2: the dropped ball falls to the boot
 const ON_BOOT := 0.09          # m: the ball's centre above the toe bone at contact
 const ON_PALM := 0.08          # m: a handball sits this far above the palm that holds it
+## A kicker lets the ball go from one hand, the kick side's, not from between both: in the run-in
+## his other arm swings up and away (palm gap ~1 m in every kick clip, measured 2026-11-22) while
+## the kick-side hand guides the ball down to about hip height (0.87-0.92 m) and drops it. As the
+## palms part from HELD_GAP to FREE_GAP the ball goes over to the kick-side palm.
+const HELD_GAP := 0.32         # m: palms closer than this hold it between them
+const FREE_GAP := 0.55         # m: palms this far apart: it is on the kick-side palm alone
+## Its long axis, measured off the broadcast footage 2026-11-22: in the guiding hand in the run-in
+## it leans ~42 deg off the flat, pointing the way he runs (kick_on_run_03); as it drops it is
+## near upright, 0-10 deg off the vertical (drop_punt_02 side-on), point down to the boot.
+const GUIDE_TILT := deg_to_rad(42.0)
+const DROP_TILT := deg_to_rad(82.0)
 const CATCH_EASE := 0.12       # s of clip before a mark's contact that the ball runs into his hands
 ## The director's touch can come before the clip's contact (its estimate of the hold was long, or
 ## it gave no warning at all). The ball then stays on his palm or falls to his boot a moment
@@ -130,7 +147,6 @@ var _legs: Array = []          # bone indices [thigh, calf, foot, ball] per leg,
 ## down, w: 1 held .. 0 the clip's, step: s into a shuffle step (-1 none), from: where it began}
 var _feet: Array = []
 var _launching := -1           # the man whose clip still owes the ball its contact (launch_pending)
-var _tackle_wait := {}         # a tackle that landed mid-kick: {who, victim, at}, started after the contact
 var _moments := {}             # clip -> clip_moments.json entry, plus what _read_moments measures
 
 
@@ -298,10 +314,6 @@ func _add_look(p: Dictionary) -> void:
 ## clip starts now), and every running pair's clip time.
 func frame(dt: float) -> void:
 	_clock += dt
-	if not _tackle_wait.is_empty() and not _mid_move(int(_tackle_wait["who"])) \
-			and not _mid_move(int(_tackle_wait["victim"])):
-		_start(int(_tackle_wait["who"]), int(_tackle_wait["victim"]), true, _tackle_wait["at"])
-		_tackle_wait = {}
 	var ahead := director.tackle_ahead()
 	if not ahead.is_empty() and not _pairs.is_empty():
 		var who := int(ahead["who"])
@@ -314,9 +326,11 @@ func frame(dt: float) -> void:
 			var d := _drawn(who).distance_to(_drawn(v))
 			for name in _pairs:
 				need = maxf(need, _lead(name, d))
-			# A man mid-kick or mid-handball finishes his swing first: the tackle lands on him
-			# after the ball is gone, never cutting the move before boot or fist meets it.
-			if due <= need and not _mid_move(who) and not _mid_move(v):
+			# A tackler the director has slowed as he arrives would stand (under RUN_FROM) and
+			# wait for the take: the take starts then instead, its run-in carrying him in
+			# (director 2026-11-22: "the tackler is standing by idly waiting for the tackle").
+			var slowing := (_pace[who] as Vector2).length() < RUN_FROM and due <= need + CLOSE_EARLY
+			if due <= need or slowing:
 				_start(who, v, false)
 	var seen := {}
 	for pr in _in:
@@ -394,7 +408,8 @@ func _start(who: int, v: int, arrived: bool, at := Vector2.INF) -> void:
 	for i in [who, v]:
 		if not (_in[i] as Dictionary).is_empty():
 			_leave(i)
-		_once[i] = {}
+		if not _mid_move(i):
+			_once[i] = {}
 	var pk: Dictionary = players[who]
 	var pv: Dictionary = players[v]
 	var far := false
@@ -470,9 +485,14 @@ func _start(who: int, v: int, arrived: bool, at := Vector2.INF) -> void:
 				v: {"anim": name + "_tacklee", "pivot": Vector3(V.x, 0.0, V.y), "w": Vector3.ZERO,
 						"dy": float(best["turn"])}}}
 	for i in [who, v]:
+		_in[i] = pr
+		if _mid_move(i):
+			# Tackled as he kicks or handballs: the tackler comes on at once (never standing
+			# waiting), and this man's swing plays on until boot or fist meets the ball, then he
+			# joins the take where it has got to (step()).
+			continue
 		_once[i] = {}
 		_snap(i, players[i])
-		_in[i] = pr
 		_back[i] = Vector2.INF
 		_gap[i] = Vector2.ZERO
 		for m in _looks[i]:
@@ -481,7 +501,11 @@ func _start(who: int, v: int, arrived: bool, at := Vector2.INF) -> void:
 
 ## Pose player i for this frame. holder = the index with the ball in his hands, or -1.
 func step(i: int, p: Dictionary, holder: int, pos: Vector2, vel: Vector2, dt: float) -> void:
-	if not (_in[i] as Dictionary).is_empty():
+	if not (_in[i] as Dictionary).is_empty() and not _mid_move(i):
+		if not (_once[i] as Dictionary).is_empty():
+			# His kick has met the ball: into the take that started round him.
+			_once[i] = {}
+			_snap(i, p)
 		_was[i] = Vector2.INF
 		_feet[i] = [{}, {}]
 		_step_pair(i, p, dt, vel)
@@ -543,7 +567,10 @@ func step(i: int, p: Dictionary, holder: int, pos: Vector2, vel: Vector2, dt: fl
 	_still[i] = 0.0 if speed > RUN_FROM else float(_still[i]) + dt
 	# A check in his stride (slow for under STOP_HOLD) is still running: he doesn't stand up
 	# for three frames and set off again.
-	var running: bool = speed > RUN_FROM or (float(_still[i]) < STOP_HOLD
+	var hold := STOP_HOLD
+	if holder >= 0 and holder != i and holder < players.size() and here.distance_to(Vector2((players[holder]["node"] as Node3D).position.x, (players[holder]["node"] as Node3D).position.z)) < CLOSE_IN:
+		hold = CLOSE_HOLD
+	var running: bool = speed > RUN_FROM or (float(_still[i]) < hold
 			and ap.current_animation in ["jog", "carry"] and dt > 0.0)
 	# He turns at a footballer's pivot, never through half a turn in one frame. dt 0 (the
 	# first draw) sets him facing.
@@ -1047,10 +1074,6 @@ func event(i: int, kind: StringName, at: Vector2, other := -1) -> void:
 	if kind == &"tackle" and other >= 0 and other < _in.size() and not _pairs.is_empty():
 		var pr: Dictionary = _in[i]
 		if pr.is_empty() or int(pr["who"]) != i or int(pr["victim"]) != other:
-			if _mid_move(i) or _mid_move(other):
-				# He is tackled as he kicks: the swing finishes (the ball off his boot) first.
-				_tackle_wait = {"who": i, "victim": other, "at": at}
-				return
 			_start(i, other, true, at)
 			return
 		pr["arrived"] = true
@@ -1111,11 +1134,9 @@ func _read_moments(p: Dictionary) -> void:
 		if str(m["kind"]) == "mark":
 			swing = at - hips    # he faces the ball he marks
 		ap.seek(float(m["start"]), true)
-		var palms := _palms(p)
 		m["at"] = at
 		m["hips_c"] = Vector2(hips.x, hips.z)
 		m["aim"] = atan2(swing.x, swing.z)
-		m["palm_h"] = (palms[0] + palms[1]).y * 0.5
 		_moments[name] = m
 	ap.play("idle")
 
@@ -1203,6 +1224,9 @@ func _steer(i: int, o: Dictionary) -> void:
 	var due := director.dispose_due(i) if str(o["how"]) != "mark" else director.catch_due(i)
 	if due.is_empty():
 		return
+	if o.has("drop"):
+		# The ball is falling to his boot: the clip keeps the pace the fall was timed at.
+		return
 	var to_go := float(o["touch"]) - float(o["t"])
 	o["rate"] = clampf(to_go / maxf(float(due["left"]), 0.02), MOVE_RATE_MIN, MOVE_RATE_MAX)
 
@@ -1229,22 +1253,90 @@ func ball_at(i: int) -> Vector3:
 		var palms := _palms(p)
 		var hold: Vector3 = palms[1] if str(m["limb"]) == "hand_l" else palms[0]
 		return xf * hold + Vector3.UP * ON_PALM
-	var at: Vector3 = m["at"]
-	var fall := sqrt(2.0 * maxf(float(m["palm_h"]) - at.y, 0.05) / GRAVITY)
-	var rel := c - fall
-	if t < rel:
-		return Vector3.INF
+	var to := xf * (m["at"] as Vector3)
 	if not o.has("drop"):
-		var palms := _palms(p)
-		o["drop"] = xf * ((palms[0] + palms[1]) * 0.5)
-		o["drop_t"] = t
+		# He lets go when the real seconds left to the contact are the time the ball takes to
+		# fall from the hand that has it (where it is now) to the top of his boot: g, in real
+		# time, whatever pace the clip is played at (measured 2026-11-22: a 0.5 s float, g 7.1,
+		# when it was let go from between both palms).
+		var hands := _guide(p, str(m["limb"]), xf)
+		o["guide"] = float(hands["w"])
+		var fall := sqrt(2.0 * maxf((hands["at"] as Vector3).y - to.y, 0.05) / GRAVITY)
+		var left := (c - t) / maxf(float(o.get("rate", 1.0)), 0.05)
+		if left > fall:
+			return Vector3.INF if float(hands["w"]) <= 0.0 else hands["at"]
+		o["drop"] = hands["at"]
+		o["drop_clock"] = _clock
+		o["drop_span"] = maxf(left, 0.01)
+		o["drop_fall"] = o["drop_span"]   # the fall as first timed (measure_oval3d_moves)
+		o["drop_g"] = GRAVITY
+		o["drop_v0"] = ((to.y - (hands["at"] as Vector3).y) + 0.5 * GRAVITY * left * left) / maxf(left, 0.01)
 	var from: Vector3 = o["drop"]
-	var to := xf * at
-	var span := maxf(c - float(o["drop_t"]), 0.01)
-	var tau := t - float(o["drop_t"])
-	var u := clampf(tau / span, 0.0, 1.0)
-	var v0 := (to.y - from.y + 0.5 * GRAVITY * span * span) / span
-	return Vector3(lerpf(from.x, to.x, u), from.y + v0 * tau - 0.5 * GRAVITY * tau * tau, lerpf(from.z, to.z, u))
+	var span := float(o["drop_span"])
+	if _clock - float(o["drop_clock"]) >= span:
+		# Fallen to the boot while the clip waits a frame or two short of its contact for the
+		# director's touch (HOLD_SHORT): on the boot, which is all but there.
+		return xf * _limb(p, str(m["limb"]))
+	var tau := clampf(_clock - float(o["drop_clock"]), 0.0, span)
+	var u := tau / span
+	var g := float(o["drop_g"])
+	o["drop_to"] = to
+	return Vector3(lerpf(from.x, to.x, u), from.y + float(o["drop_v0"]) * tau - 0.5 * g * tau * tau, lerpf(from.z, to.z, u))
+
+
+## A falling kick's ball now: [where it is, how fast it is falling (m/s, up +)].
+func _drop_now(o: Dictionary) -> Array:
+	var from: Vector3 = o["drop"]
+	var span := float(o["drop_span"])
+	var tau := clampf(_clock - float(o["drop_clock"]), 0.0, span)
+	var g := float(o["drop_g"])
+	var v0 := float(o["drop_v0"])
+	var to: Vector3 = o.get("drop_to", from)
+	var u := tau / span
+	var at := Vector3(lerpf(from.x, to.x, u), from.y + v0 * tau - 0.5 * g * tau * tau, lerpf(from.z, to.z, u))
+	return [at, v0 - g * tau]
+
+
+## Where a kicker's hands have the ball before he drops it: between his palms while they are
+## together, on the kick-side palm once they part (HELD_GAP..FREE_GAP). {at: world point, w: 0..1
+## of the way to that palm}.
+func _guide(p: Dictionary, limb: String, xf: Transform3D) -> Dictionary:
+	var palms := _palms(p)
+	var l: Vector3 = palms[0]
+	var r: Vector3 = palms[1]
+	var w := smoothstep(HELD_GAP, FREE_GAP, l.distance_to(r))
+	var kick_hand: Vector3 = r if limb == "ball_r" else l
+	return {"at": xf * ((l + r) * 0.5).lerp(kick_hand, w), "w": w}
+
+
+## The way the ball's long axis points while his kick has it (world), ZERO when it simply lies
+## across his palms. Across the palms while they hold it together, leaning GUIDE_TILT off the
+## flat along his run once the kick-side hand has it alone, near upright as it drops.
+func ball_axis(i: int) -> Vector3:
+	if i < 0 or i >= _once.size():
+		return Vector3.ZERO
+	var o: Dictionary = _once[i]
+	if o.is_empty() or str(o.get("kind", "")) != "kick" or float(o["t"]) >= float(o["touch"]):
+		return Vector3.ZERO
+	var p: Dictionary = players[i]
+	var xf := (p["node"] as Node3D).transform
+	var fwd := xf.basis.z
+	fwd.y = 0.0
+	fwd = fwd.normalized() if fwd.length() > 0.01 else Vector3.FORWARD
+	if o.has("drop"):
+		return fwd * cos(DROP_TILT) + Vector3.UP * sin(DROP_TILT)
+	var w := float(o.get("guide", 0.0))
+	if w <= 0.0:
+		return Vector3.ZERO
+	var palms := _palms(p)
+	var across: Vector3 = xf.basis * ((palms[1] as Vector3) - (palms[0] as Vector3))
+	var lean := fwd * cos(GUIDE_TILT) + Vector3.UP * sin(GUIDE_TILT)
+	if across.length() < 0.01:
+		return lean
+	across = across.normalized()
+	if across.dot(lean) < 0.0:
+		across = -across
+	return across.slerp(lean, w).normalized()
 
 
 ## The man who has marked the ball before the director gives it to him (see _step_once): the
@@ -1279,6 +1371,25 @@ func catch_at() -> Dictionary:
 func _arrive(i: int, o: Dictionary) -> void:
 	o["arrived"] = true
 	var to_go := float(o["touch"]) - float(o["t"])
+	if o.has("drop") and to_go > 0.0:
+		# The ball is already falling to his boot: the clip hurries to the contact and the fall
+		# is re-timed to meet it from where the ball is now, never slower than gravity.
+		var now := _drop_now(o)
+		var span := to_go / MOVE_RATE_MAX
+		var to: Vector3 = (players[i]["node"] as Node3D).transform * ((_moments[str(o["anim"])] as Dictionary)["at"] as Vector3)
+		var g := 2.0 * ((now[0] as Vector3).y + float(now[1]) * span - to.y) / (span * span)
+		var v0 := float(now[1])
+		if g < GRAVITY:
+			g = GRAVITY
+			v0 = (to.y - (now[0] as Vector3).y + 0.5 * g * span * span) / span
+		o["drop"] = now[0]
+		o["drop_clock"] = _clock
+		o["drop_span"] = span
+		o["drop_v0"] = v0
+		o["drop_g"] = g
+		o["rate"] = MOVE_RATE_MAX
+		_launching = i
+		return
 	if to_go <= 0.0:
 		o["rate"] = 1.0
 		return
@@ -1288,6 +1399,11 @@ func _arrive(i: int, o: Dictionary) -> void:
 	o["rate"] = MOVE_RATE_MAX
 	if str(o["how"]) != "mark":
 		_launching = i
+
+
+## The man launch_pending draws the ball for, -1 when none.
+func launching() -> int:
+	return _launching
 
 
 ## The man whose kick or handball the director has already let go but whose clip has not reached
