@@ -969,7 +969,7 @@ for st in S['stands']:
                 return None   # a brick wall here stood in front of its recessed glass floor (director's screenshot 2026-11-22)
         walls(stands, P, lambda B: np.minimum(zf(B), wb), 0.0, st['wall'], kind=st.get('wall_kind', 'concrete'), lift=lift)
         if st.get('arches'): arcade(stands, P, zf, st)
-        for bt in st.get('brick_towers', []): brick_tower(stands, P, bt, st['wall'])
+        for bt in st.get('brick_towers', []): brick_tower(stands, P, bt, bt.get('col', st['wall']))   # the towers are a paler terracotta than the arcade (Google Earth)
         if st.get('south_block'): south_block(stands, P, st)
         for gw in st.get('green_walls', []):
             BB = densify(P, 2.0); green_wall(stands, np.r_[BB, BB[:1]], st, gw)

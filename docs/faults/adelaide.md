@@ -64,12 +64,16 @@ Still short (2026-11-22): the entrance glass band's lettering is unreadable in G
 invented); the camera and media boxes cut into the upper tiers, the player benches in front of the Bradman, and the
 V struts under the Riverbank's middle tier are not built yet; the east names' places along the stand are read from one
 oblique photo (to within a few metres); the stands hold 38,200 seats plus the Hill's 2,900, short of the real ground,
-and the main entrance stands about 1.3 times too wide between its two brick towers in the calibrated Google Earth
-pair (`w_face`); the roof petals' valleys read softer than the real membrane;
+the roof petals' valleys read softer than the real membrane;
 parkland canopy is thinner; OSM's roof colours paint some nearby buildings salmon pink. The west stand's height is
 settled: once the compare tool framed like Google Earth (2026-11-22: its field of view, the turf's height and Google
 Earth lifting low cameras, docs/MCG_STANDARD.md), the west roof line, the light towers and the arcade sit on Google
-Earth's in every low view, so the photos' widths misled.
+Earth's in every low view, so the photos' widths misled. The calibrated pairs did show the main entrance 1.3 times
+too wide: its brick towers stood 60 m apart and 25 m tall, where Google Earth's straight-down and west views put them
+48 m apart (north tower 8 m further south) and 28 m tall, a paler terracotta than the arcade. The building between them
+now rises to 24.5 m, under the roof's edge, as in Google Earth: grey walls, a light glass ribbon at 10-13 m and a row of
+framed windows at 20-23 m with a white edge above (it stopped at 17.5 m with the stand's back wall showing over it). The
+three canopies are narrower (5.5 m) and climb to 10.5 m at the facade; the ivy walls outside the towers are 11 m wide.
 
 Found in the Google Earth pass (2026-11-21) and fixed: the Riverbank Stand's back was a dark navy drum (now storeys:
 stone and glass at the street, a maroon band, glass, pale louvres with white struts to the roof); the lower bowl and
