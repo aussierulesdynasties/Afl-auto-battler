@@ -15,7 +15,7 @@ and the ground set in its surroundings. Looks only: nothing here reads back into
   options that reproduce the passed model vertex for vertex (`EVEN=1 NEARDZ=3 MEMB=0.27` were missing from the old README).
   Its hand-made textures stay in `.claude/review/peoplefirst/build/htex` (no photo pixels).
 - `src/precinct.json`: 24 sheds, halls, marquees and portables round the ground, plan and roof colour read off the
-  reference satellite (`.claude/review/peoplefirst/reference/sat.png`, the plan source), heights from Google Earth.
+  reference satellite (kept in the project files, never committed; surrounds.py reads it from PF_SAT), heights from Google Earth.
 - `qa/`: `ge_compare.py` and `ge_shoot.js` (copies of GMHBA's, with People First added), `views.json` (13 wide views)
   and `close.json` (12 close-ups). See the docstring for the four commands.
 

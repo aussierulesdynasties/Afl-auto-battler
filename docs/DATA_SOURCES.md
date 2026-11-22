@@ -64,6 +64,12 @@ The map data is © OpenStreetMap contributors and is available under the Open Da
 (ODbL). Any release credits must carry that line. No aerial imagery is shipped: Google Earth and
 Esri imagery are used only to check the look by eye.
 
+People First Stadium (tools/grounds/people_first/surrounds.py) is painted the same way from OpenStreetMap, with
+the precinct's sheds and halls that OpenStreetMap lacks taken from Microsoft's Global ML Building Footprints
+(© Microsoft, Open Database Licence, ODbL). Its paving classes are read from a reference satellite image that
+stays in the project files and is never committed or shipped. The Gold Coast skyline handed to the background
+scene (people_first_skyline.json) is OpenStreetMap data (© OpenStreetMap contributors, ODbL).
+
 ## What we have vs wishlist
 
 Base: `data/players_2026.csv` — 669 players, season totals only:

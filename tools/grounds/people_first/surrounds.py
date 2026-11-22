@@ -180,7 +180,8 @@ def relations(paths):
     return out
 
 
-SAT = os.path.join(HERE, "..", "..", "..", ".claude", "review", "peoplefirst", "reference", "sat.png")
+# The reference satellite is looked at, never committed (docs/MCG_STANDARD.md): it lives in the project files.
+SAT = os.environ.get("PF_SAT", "/mnt/project-files/people-first-rebuild/review-imagery/reference/sat.png")
 SAT_MPP, SAT_X0, SAT_Y0 = 0.2636169345611428, 1031.4608367085457, 1190.0975657999516  # build/sat.json: the model's origin
 
 
@@ -397,7 +398,51 @@ def building_list(ways, in_foot):
         for x, z in pts:
             out += [x, z]
     out += street_houses(ways, in_foot)
+    out += ms_buildings(ways, in_foot)
     return np.array(out, "<f4")
+
+
+# Microsoft's Global ML Building Footprints (ODbL, docs/CREDITS_3D.md) fill in the precinct's sheds and halls that
+# OpenStreetMap lacks round Carrara: within 450 m, off the stadium, not on an OpenStreetMap building, not in a
+# residential area (street_houses draws those). Height from the footprint's own estimate, at least 3 m.
+MS_TILE = "https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/" \
+    "RegionName=Australia/quadkey=311213012/part-00044-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz"
+
+
+def ms_buildings(ways, in_foot):
+    import gzip
+    import json
+    path = "/tmp/people_first_msbf.csv.gz"
+    if not os.path.exists(path):
+        urllib.request.urlretrieve(MS_TILE, path)
+    taken = [np.array([S.model_xz(*q) for q in p]) for t, p in ways if "building" in t and len(p) > 3]
+    resid = [np.array([S.model_xz(*q) for q in p]) for t, p in ways if t.get("landuse") == "residential" and len(p) > 3]
+
+    def inside(x, z, poly):
+        c = False
+        for i in range(len(poly)):
+            (ax, az), (bx, bz) = poly[i], poly[i - 1]
+            if (az > z) != (bz > z) and x < ax + (bx - ax) * (z - az) / (bz - az):
+                c = not c
+        return c
+    out = []
+    for line in gzip.open(path, "rt"):
+        f = json.loads(line)
+        ring = f["geometry"]["coordinates"][0]
+        en = [S.en(lat, lon) for lon, lat in ring[:-1]]
+        pts = [S.model_xz(*q) for q in en]
+        cx, cz = sum(x for x, z in pts) / len(pts), sum(z for x, z in pts) / len(pts)
+        if math.hypot(cx, cz) > 450 or in_foot(en):
+            continue
+        if any(inside(cx, cz, q) for q in taken) or any(inside(cx, cz, q) for q in resid):
+            continue
+        h = max(3.0, float(f["properties"].get("height", -1) or -1))
+        out.append(float(len(pts)))
+        out.append(h)
+        for x, z in pts:
+            out += [x, z]
+    return out
+
 
 
 if __name__ == "__main__":
