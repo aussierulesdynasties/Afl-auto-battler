@@ -1244,6 +1244,21 @@ static func _drape(ga: Array, bsa: Array, gi: PackedInt32Array, wid: PackedInt32
 						avg += p[u]
 					t[w] = p[w] + f * wt[w] * (avg / float(nbr[w].size()) - p[w])
 				p = t
+		# The easing pulls some hem points back inside the shorts (their waistband showed through the
+		# hem in bumps): last of all, every point stays DRAPE_OVER outside the shorts anywhere within a
+		# column and a level of it.
+		for w in range(count):
+			if wt[w] <= 0.0 or p[w].y >= top - DRAPE_CHEST:
+				continue
+			var k := clampi(int((p[w].y - lo) / 0.01), 0, nl - 1)
+			var x := clampi(int((p[w].x - xlo) / 0.02), 0, nx - 1)
+			var d := p[w].z - m0
+			var fl := -INF
+			for kk in range(maxi(k - 1, 0), mini(k + 2, nl)):
+				for xx in range(maxi(x - 1, 0), mini(x + 2, nx)):
+					fl = maxf(fl, flf[kk * nx + xx] if d > 0.0 else flb[kk * nx + xx])
+			if fl > absf(d):
+				p[w].z = m0 + signf(d) * fl
 		for i in range(vs.size()):
 			vs[i] = p[wid[i]]
 		arrs[Mesh.ARRAY_VERTEX] = vs
