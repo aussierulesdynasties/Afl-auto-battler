@@ -434,6 +434,10 @@ def stand_z(st, V):
     for zn in st.get('zones', []):   # a section with its own storeys (the Bradman Pavilion): its own profile inside its sweep
         k = in_sweep(pt_ang(V), zn['ang'])
         if k.any(): z[k] = interp(zn['profile'], dd[k])
+    if st.get('_pits'):   # the interchange benches sit in pits cut into the front rows (bench_pits)
+        from shapely import contains_xy
+        for pg, pz in st['_pits']:
+            k = contains_xy(pg, V[:, 0], V[:, 1]); z[k] = np.minimum(z[k], pz)
     le = st.get('low_end')
     if le:
         a, b = np.array(le['line'], float); n = np.array([-(b - a)[1], (b - a)[0]]) / np.linalg.norm(b - a)
@@ -901,6 +905,27 @@ def tier_parts(m, G_, parts, rng=None):
                     from shapely.geometry import Polygon as _Pg
                     qq, nn, _ = run.at(np.array([s - w, s + w]))
                     BOX_KEEP_OUT.append(_Pg([qq[0] - nn[0] * 0.3, qq[1] - nn[1] * 0.3, qq[1] + nn[1] * e1, qq[0] + nn[0] * e1]))
+            elif t == 'bench':   # the players' interchange benches set into the front rows before the Bradman (2026
+                # photo): a raised floor, a bench row under a clear sloping roof on a dark frame, glazed ends, a dark back
+                s0 = run.s_of(pt['at'])
+                if s0 is None: continue
+                for off in pt['off']:
+                    s = s0 + off; w = pt['w'] / 2
+                    if not (0 < s - w and s + w < L): continue
+                    zf, zr, fr = pt['z'][0], pt['z'][1], pt.get('frame', (38, 40, 44))
+                    prism(m, run, s - w, s + w, 0, e1, -0.5, zf, pt.get('floor', (120, 122, 124)), 'concrete', 'ftuel')
+                    prism(m, run, s - w, s + w, e1 - 0.25, e1, zf, zr + 0.5, fr, 'steel', 'fbtuel')          # back
+                    prism(m, run, s - w + 0.3, s + w - 0.3, e1 - 1.0, e1 - 0.3, zf, zf + 0.45, pt.get('seat', (30, 34, 46)), 'steel', 'ftuel')
+                    prism(m, run, s - w + 0.3, s + w - 0.3, e1 - 0.32, e1 - 0.25, zf + 0.45, zf + 1.0, pt.get('seat', (30, 34, 46)), 'steel', 'ftuel')
+                    for a_ in (s - w, s + w - 0.06):   # glazed ends on a dark post
+                        prism(m, run, a_, a_ + 0.06, 0.15, e1 - 0.25, zf, zr, (170, 186, 192), 'glass', 'fbtuel')
+                        prism(m, run, a_, a_ + 0.06, 0.0, 0.15, zf, zr + 0.15, fr, 'steel', 'fbtuel')
+                    for z_, e_ in ((zr, 0.0), (zr + 0.25, e1 * 0.5)):   # the clear roof, rising towards the back in two steps
+                        prism(m, run, s - w, s + w, e_, e1 - 0.25 if e_ else e1 * 0.5, z_, z_ + 0.05, (200, 212, 216), 'glass', 'tu')
+                    prism(m, run, s - w, s + w, -0.05, 0.08, zr - 0.12, zr + 0.06, fr, 'steel', 'ftuel')        # roof's front beam
+                    from shapely.geometry import Polygon as _Pg
+                    qq, nn, _ = run.at(np.array([s - w, s + w]))
+                    BOX_KEEP_OUT.append(_Pg([qq[0] - nn[0] * 0.3, qq[1] - nn[1] * 0.3, qq[1] + nn[1] * (e1 + 0.3), qq[0] + nn[0] * (e1 + 0.3)]))
             elif t == 'backwall':
                 BACK_JOBS.append((run, pt))
             elif t == 'name':
@@ -948,6 +973,28 @@ def cut_low(P, le):
     ring = lambda g: np.array(g.exterior.coords)
     return ring(max(hi, key=lambda g: g.area)), ring(max(lo, key=lambda g: g.area))
 
+def bench_pits(st, P):
+    """plan outlines of the benches' pits (the 'bench' fronts of the stand and its zones), each with its floor height,
+    worked out as tier_parts places the benches; the stand's surface drops to the floor inside them"""
+    from shapely.geometry import Polygon as _Pg
+    out = []; G_all = _Pg(P).buffer(0)
+    for zn in [st] + st.get('zones', []):
+        G_ = G_all.intersection(zone_wedge(zn['ang'])) if zn is not st else G_all
+        for pt in zn.get('fronts', []):
+            if pt['t'] != 'bench': continue
+            d0, d1 = pt['d']
+            for run in runs_at(G_, d0, pt.get('ang')):
+                s0 = run.s_of(pt['at'])
+                if s0 is None: continue
+                for off in pt['off']:
+                    sa, sb_ = s0 + off - pt['w'] / 2, s0 + off + pt['w'] / 2
+                    if not (0 < sa and sb_ < run.L[-1]): continue
+                    S_ = np.linspace(sa, sb_, 25); q, nv, _ = run.at(S_)
+                    ring = np.r_[q - nv * 0.6, (q + nv * (d1 - d0))[::-1]]
+                    out.append((_Pg(ring).buffer(0), pt['z'][0] - 0.02))
+    return out
+
+
 low_parts = []; seat_jobs = []
 for st in S['stands']:
     P = stand_poly(st)
@@ -957,6 +1004,10 @@ for st in S['stands']:
     ds = [k for k, _ in st['profile']] + [x for b in st['bands'] for x in (b[0] - 0.05, b[0] + 0.05)]
     for zn in st.get('zones', []): ds += [k for k, _ in zn['profile']] + [x for b in zn['bands'] for x in (b[0] - 0.05, b[0] + 0.05)]
     cr = iso_rings(P, sorted(set(ds)), st.get('step', 2.0))
+    st['_pits'] = bench_pits(st, P)
+    for pg, _ in st['_pits']:   # crisp pit walls: the outline and a ring 6 cm outside it
+        for bf in (0.0, 0.06):
+            rg = np.array(pg.buffer(bf, join_style=2).exterior.coords); cr = np.r_[cr, densify(rg, 0.5)]
     for zn in st.get('zones', []):   # the zone's side walls: two radial lines 8 cm apart at each end of its sweep
         rr = np.linalg.norm(P - PC, axis=1); rs = np.arange(rr.min() - 2, rr.max() + 2, 0.5)
         for a_ in zn['ang']:
