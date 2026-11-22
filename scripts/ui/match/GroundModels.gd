@@ -52,7 +52,8 @@ const FIT := {
 	"people_first": [-0.72, 0.04, 0.02, -72.6, 89.11, 72.26],
 	"engie": [20.64, -43.32, 0.0, -41.1, 92.14, 76.44],
 	"bellerive": [0.31, -0.64, -0.02, 68.7, 86.9, 66.77],
-	"manuka": [5.93, 8.15, 0.03, -82.9, 85.94, 73.1],
+	# Manuka: rebuilt 2026-11-22 round the OSM pitch outline (tools/grounds/manuka/model); an ellipse fitted to that fence.
+	"manuka": [4.68, 5.03, 0.0, -80.0, 85.94, 72.31],
 	"norwood": [1.96, -3.15, 0.0, 88.3, 88.73, 63.59],
 	"waverley_park": [-1.08, 5.64, 0.0, -34.6, 92.9, 71.99],
 	"windy_hill": [6.01, -11.01, 0.05, 1.4, 78.42, 67.69],
@@ -175,6 +176,11 @@ const SEAT_COLOURS := {
 	"seat_aqua": Color(0.527, 0.719, 0.757),
 	# Bellerive: mid-blue plastic all round the Boon and Ponting stands (Google Earth from the field).
 	"seat_bel_blue": Color8(72, 108, 146),
+	# Manuka (Google Earth from the field, 2026-11-22): pale grey front terraces, white Bradman, red east terraces,
+	# and the A-frame stands' scattered reds, oranges, blues, greys, teals and yellows.
+	"seat_mk_pale": Color8(196, 198, 196), "seat_mk_white": Color8(226, 228, 226), "seat_mk_red": Color8(176, 40, 42),
+	"seat_mk_orange": Color8(214, 108, 42), "seat_mk_blue": Color8(44, 84, 150), "seat_mk_grey": Color8(112, 116, 122),
+	"seat_mk_teal": Color8(38, 128, 138), "seat_mk_yellow": Color8(222, 182, 44),
 	# The Members' front rows dark grey; the Northern Stand's and the east terrace's benches white.
 	"seat_bel_pale": Color8(150, 168, 186), "seat_bel_dark": Color8(58, 62, 70), "seat_bel_white": Color8(214, 216, 214),
 	# MCG, by tier from Street View on the ground and Google Earth: white and light grey lower and
