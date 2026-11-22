@@ -3774,7 +3774,7 @@ func _test_match_crew(res: Dictionary) -> void:
 	_check(int(roles.get("field", 0)) == 4 and int(roles.get("boundary", 0)) == 4 and int(roles.get("goal", 0)) == 2,
 			"A match has 4 field, 4 boundary and 2 goal umpires: %s" % roles)
 	_check(dressed, "Every umpire wears his role's clothes (Oval3DCrew.OUTFITS)")
-	_check(numbers.size() == 4 and not numbers.has(-1), "Each field umpire wears his own real number: %s" % numbers.keys())
+	_check(numbers.size() == 4 and not numbers.has(-1), "Each field umpire wears his own real number: %s" % [numbers.keys()])
 	var trainers := 0
 	var runners := 0
 	var at_fence := true
