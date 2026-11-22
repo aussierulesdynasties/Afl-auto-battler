@@ -881,10 +881,14 @@ def tier_parts(m, G_, parts, rng=None):
                     box(m, cc - n3 * 0.01, tip, 0.03, (30, 30, 32), 'steel')
             elif t == 'box':   # a camera or media box let into the upper tier's front rows (2026 photos): open to the
                 # pitch, side walls and roof, glazed at the back; the seats it covers go to the seat check (headroom)
-                s0 = run.s_of(pt['at'])
-                if s0 is None: continue
-                for off in pt['off']:
-                    s = s0 + off; w = pt['w'] / 2
+                if 'n' in pt:   # spread evenly along the tier (the Riverbank's, 2026 photo: one at every other aisle)
+                    mg = pt.get('margin', 6.0); sl = [mg + (L - 2 * mg) * (i + 0.5) / pt['n'] for i in range(pt['n'])]
+                else:
+                    s0 = run.s_of(pt['at'])
+                    if s0 is None: continue
+                    sl = [s0 + off for off in pt['off']]
+                for s in sl:
+                    w = pt['w'] / 2
                     if not (0 < s - w and s + w < L): continue
                     zf, zr, tk = pt['z'][0], pt['z'][1], 0.25
                     for a_, b_ in ((s - w, s - w + tk), (s + w - tk, s + w)):   # side walls, down into the rake
