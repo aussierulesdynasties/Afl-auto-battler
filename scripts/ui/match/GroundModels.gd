@@ -521,19 +521,30 @@ static func _add_buildings(root: Node3D, buf: PackedFloat32Array, y: float, tint
 	var i := 0
 	var b := 0
 	while i + 1 < buf.size():
+		# A record is n, height, then n points; or, for a stacked part of a building (Marvel: the City
+		# of Melbourne's massing), -n, top, base, building id, then n points. One building's parts
+		# share a look.
 		var n := int(buf[i])
 		var h: float = buf[i + 1]
+		var z0 := 0.0
+		var head := 2
+		var id := -1
+		if n < 0:
+			n = -n
+			z0 = buf[i + 2]
+			id = int(buf[i + 3])
+			head = 4
 		var foot := PackedVector2Array()
 		for k in n:
-			foot.append(Vector2(buf[i + 2 + k * 2], buf[i + 3 + k * 2]))
-		i += 2 + n * 2
+			foot.append(Vector2(buf[i + head + k * 2], buf[i + head + 1 + k * 2]))
+		i += head + n * 2
 		b += 1
 		var wall: Color = WALLS[b % WALLS.size()]
 		var roof := wall.darkened(0.18)
 		if towers:
 			# The same building gets the same look every match: its pick hangs on its own corner.
-			var pick := absi(int(foot[0].x * 7.0) * 31 + int(foot[0].y * 3.0) * 17 + b)
-			var glassy := (pick % 100) < (75 if h > 30.0 else 30)
+			var pick := absi(int(foot[0].x * 7.0) * 31 + int(foot[0].y * 3.0) * 17 + b) if id < 0 else id * 7919 % 100003
+			var glassy := (pick % 100) < ((75 if h > 30.0 else 30) if id < 0 else 60)
 			wall = GLASS[pick % GLASS.size()] if glassy else CONCRETE[pick % CONCRETE.size()]
 			wall.a = 1.0 if glassy else 0.5
 			roof = Color8(128, 128, 124) if glassy else wall.darkened(0.25)  # Google Earth's grey roofs (top view)
@@ -549,8 +560,8 @@ static func _add_buildings(root: Node3D, buf: PackedFloat32Array, y: float, tint
 			var shade := wall * (0.92 + 0.08 * absf(out.x))
 			shade.a = wall.a
 			var side := a.distance_to(c)
-			for q: Array in [[Vector3(a.x, y, a.y), Vector2(run, 0.0)], [Vector3(c.x, y, c.y), Vector2(run + side, 0.0)],
-					[Vector3(c.x, y + h, c.y), Vector2(run + side, h)], [Vector3(a.x, y, a.y), Vector2(run, 0.0)],
+			for q: Array in [[Vector3(a.x, y + z0, a.y), Vector2(run, z0)], [Vector3(c.x, y + z0, c.y), Vector2(run + side, z0)],
+					[Vector3(c.x, y + h, c.y), Vector2(run + side, h)], [Vector3(a.x, y + z0, a.y), Vector2(run, z0)],
 					[Vector3(c.x, y + h, c.y), Vector2(run + side, h)], [Vector3(a.x, y + h, a.y), Vector2(run, h)]]:
 				v.append(q[0])
 				nrm.append(out)

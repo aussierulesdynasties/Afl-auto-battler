@@ -106,6 +106,9 @@ def main():
     # the blue blocks' plain cladding: the panel joints of the slate texture, a mid blue (Google Earth c_ne)
     CONTRAST["bluepanel"] = 0.5
     retint("bluepanel", (96, 112, 140), src="slate", out="bluepanel")
+    # the west podium's piers and spandrels: grey-blue panels, not white (Google Earth c_w, ferry_b)
+    CONTRAST["podiumpanel"] = 0.5
+    retint("podiumpanel", (126, 136, 148), src="slate", out="podiumpanel")
     tiles = os.path.join(TEX, "tiles.json")
     j = json.load(open(tiles))
     j["endrib"] = j["endroof"]
@@ -114,6 +117,7 @@ def main():
     j["ribbon"] = [12, 1.7]
     j["grille"] = [3, 3]
     j["bluepanel"] = j["slate"]
+    j["podiumpanel"] = j["slate"]
     for gone in ("office", "undercroft", "louvre"):
         j.pop(gone, None)
     json.dump(j, open(tiles, "w"))

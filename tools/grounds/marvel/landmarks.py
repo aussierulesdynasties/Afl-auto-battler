@@ -88,13 +88,20 @@ TILE = {}
 def make_textures():
     # NAB, 700 Bourke Street (Google Earth ge_nab_a/b): dark blue reflective glass in 1.5 m panes with
     # thin dark mullions; the light sections silver-white panels with a few slot windows; roof plant grey.
-    curtain("nab_glass", (48, 58, 74), (34, 40, 50), bay=1.5, floor=3.9, noise=10.0)
+    curtain("nab_glass", (46, 50, 57), (32, 35, 40), bay=1.5, floor=3.9, noise=10.0)
     TILE["nab_glass"] = (6.0, 7.8)
     panels("nab_silver", (205, 210, 214), (150, 156, 162), w=1.5, h=1.3, holes=(52, 58, 66))
     TILE["nab_silver"] = (6.0, 5.2)
     flat("fin_white", (232, 234, 236))
     flat("corner_red", (196, 84, 52))
     flat("roof_grey", (138, 138, 134), noise=6.0)
+    flat("roof_dark", (78, 82, 88), noise=6.0)
+    # Southern Cross's roof: pale weathered metal, the valleys' glazing grey-blue, the sides' louvres
+    panels("sx_roof", (186, 178, 162), (168, 160, 146), w=3.0, h=1.0, noise=3.0)
+    TILE["sx_roof"] = (12.0, 4.0)
+    flat("sx_glass", (150, 166, 176))
+    curtain("sx_louvre", (96, 108, 118), (150, 156, 160), bay=1.2, floor=0.6, slab=0.25, noise=4.0)
+    TILE["sx_louvre"] = (4.8, 1.2)
     flat("podium_glass", (70, 92, 112))
     # Docklands' pale offices: grey-white panels, dark ribbon glazing (ge_seven_b, ge_aflhouse_b)
     panels("pale_panel", (204, 206, 206), (168, 170, 172), w=1.8, h=1.4)
@@ -114,7 +121,7 @@ def make_textures():
     flat("slab_grey", (176, 184, 192))
     flat("timber", (74, 64, 52))
     flat("concrete_deck", (170, 168, 160))
-    for n in ("fin_white", "corner_red", "roof_grey", "podium_glass", "white_band", "steel", "rock_a", "rock_b",
+    for n in ("fin_white", "corner_red", "roof_grey", "roof_dark", "sx_glass", "podium_glass", "white_band", "steel", "rock_a", "rock_b",
               "timber", "concrete_deck", "balustrade", "slab_grey", "steel_dark"):
         TILE[n] = (4.0, 4.0)
 
@@ -360,7 +367,7 @@ def nab(g, ring, h=72.0):
     apex = np.r_[np.mean(np.array(T), 0), top + 9.0]
     for i in range(3):
         a, b = T[i], T[(i + 1) % 3]
-        g.poly("nab_glass", [np.r_[a, top + 1.4], np.r_[b, top + 1.4], apex])
+        g.poly("roof_dark", [np.r_[a, top + 1.4], np.r_[b, top + 1.4], apex])
     # the ground storey's soffit
     g.cap("roof_grey", [tuple(q) for q in ring], base - 0.6, up=False)
 
@@ -599,6 +606,68 @@ def gantries(g, W, step=55.0, reach=450.0):
                 strut(g, "steel_dark", np.r_[q0, 7.0 if i % 2 else 7.8], np.r_[q1, 7.8 if i % 2 else 7.0], 0.07)
 
 
+def southern_cross(g, ring):
+    """Southern Cross Station's roof (2006): a field of soft domes over the platforms, six long dunes
+    running with the tracks with glazed valleys between, each dune rising into domes about 42 m apart
+    with a vent cowl on every crown; the edges about 14 m up, the crowns about 24 m. Under it the
+    sides are louvred glass from 7 m, open below (Google Earth sx_top, sx_nw, sx_sw)."""
+    from shapely.geometry import Point, Polygon
+    P = Polygon(ring)
+    A, B, C = np.array([562.5, -275.5]), np.array([358.1, -352.2]), np.array([284.3, -155.4])
+    u = (A - B) / np.linalg.norm(A - B)          # across the dunes
+    v = (C - B) / np.linalg.norm(C - B)          # along the tracks
+    LU, LV = float(np.linalg.norm(A - B)), float(np.linalg.norm(C - B))
+    ND, NDOME = 6, 5
+
+    def z_at(a, b):
+        fu = (a / LU * ND) % 1.0
+        fv = (b / LV * NDOME) % 1.0
+        edge = min(a, LU - a, b, LV - b)
+        rise = min(1.0, max(0.0, edge / 12.0))
+        return 14.0 + rise * 10.0 * math.sin(math.pi * fu) ** 0.8 * (0.45 + 0.55 * math.sin(math.pi * fv) ** 2)
+
+    step = 3.0
+    na, nb = int(LU / step), int(LV / step)
+    inside = Polygon(ring).buffer(2.0)
+    for i in range(na):
+        for j in range(nb):
+            a0, a1, b0, b1 = i * step, (i + 1) * step, j * step, (j + 1) * step
+            cpt = B + u * (a0 + a1) / 2 + v * (b0 + b1) / 2
+            if not inside.contains(Point(*cpt)):
+                continue
+            fu = (((a0 + a1) / 2) / LU * ND) % 1.0
+            mat = "sx_glass" if (fu < 0.045 or fu > 0.955) else "sx_roof"
+            q = [(a0, b0), (a1, b0), (a1, b1), (a0, b1)]
+            g.poly(mat, [(*(B + u * a + v * b), z_at(a, b)) for a, b in q])
+    # vent cowls on every dome's crown: a curved hood 4 m wide opening down the dune
+    for d in range(ND):
+        for k in range(NDOME):
+            a = (d + 0.5) * LU / ND
+            b = (k + 0.5) * LV / NDOME
+            c = B + u * a + v * b
+            if not P.contains(Point(*c)):
+                continue
+            z = z_at(a, b)
+            for m in range(4):
+                t0, t1 = math.pi * m / 4, math.pi * (m + 1) / 4
+                p0 = c + u * 2.0 * math.cos(t0)
+                p1 = c + u * 2.0 * math.cos(t1)
+                g.poly("white_band", [(*p0, z), (*p1, z), (*(p1 - v * 2.5), z + 2.0 * math.sin(t1)),
+                                      (*(p0 - v * 2.5), z + 2.0 * math.sin(t0))])
+            # the hood's dark mouth
+            g.poly("roof_dark", [(*(c - v * 2.5 + u * 2.0 * math.cos(math.pi * m / 8)), z + 2.0 * math.sin(math.pi * m / 8) * 0.95)
+                                 for m in range(9)])
+    # the sides under the roof's edge: louvred glass from 7 m up, the concourse open below it
+    rr = ccw(ring)
+    for i in range(len(rr)):
+        a_, b_ = np.array(rr[i]), np.array(rr[(i + 1) % len(rr)])
+        def loc(pt):
+            w = pt - B
+            return z_at(min(max(float(np.dot(w, u)), 0.0), LU), min(max(float(np.dot(w, v)), 0.0), LV))
+        g.poly("sx_louvre", [(*a_, 7.0), (*b_, 7.0), (*b_, loc(b_) - 0.3), (*a_, loc(a_) - 0.3)])
+        g.poly("roof_grey", [(*a_, 6.4), (*b_, 6.4), (*b_, 7.0), (*a_, 7.0)])
+
+
 def build():
     import bpy
     import bmesh  # noqa: F401
@@ -621,6 +690,7 @@ def build():
         jetty(g, W[wid][1])
         gangway(g, W[wid][1], [(-198.1, -34.0), (-223.8, -42.3), (-220.1, -53.6), (-206.7, -92.3), (-202.4, -104.2)])
     gantries(g, W)
+    southern_cross(g, W["33261083"][1])
     water_ring = [tuple(q) for q in W["23368547"][1]]
     def in_water(pt):
         return _inside(pt, water_ring)

@@ -37,7 +37,7 @@ STADIUM_WAY = "22971441"
 SUNSET_PLAZA = [(-198.1, -34.0), (-223.8, -42.3), (-220.1, -53.6), (-206.7, -92.3), (-202.4, -104.2), (-176.7, -95.2)]
 # Buildings modelled one by one from Google Earth in tools/grounds/marvel/landmarks.py (landmarks.glb):
 # left out of buildings.bin so they are not drawn twice.
-LANDMARK_WAYS = {"221441430", "33261092", "44158938", "1246185747", "296368687", "332358301", "221441428", "992236548",
+LANDMARK_WAYS = {"33261083", "221441430", "33261092", "44158938", "1246185747", "296368687", "332358301", "221441428", "992236548",
                  "57019580"}  # AFL House: a 2 m strip along the stadium's own west building, which the model has
 
 # Colours: Google Earth's over Docklands, painted through the match light's measured response (GroundModels
@@ -333,8 +333,56 @@ def building_height(t):
             "industrial": 7.0, "roof": 0.0, "train_station": 7.0, "hotel": 40.0}.get(t.get("building"), 8.0)
 
 
+
+# City of Melbourne's 3D building massing (2023 building footprints, CC BY): every structure as stacked
+# footprints, each from its own base to its own top (metres above sea level), so towers keep their
+# podiums, setbacks and crowns. Docklands, the CBD, Southbank and West Melbourne are all inside it.
+COM_URL = ("https://data.melbourne.vic.gov.au/api/explore/v2.1/catalog/datasets/2023-building-footprints/"
+           "exports/geojson?where=in_bbox(geo_point_2d,%f,%f,%f,%f)")
+COM_CACHE = "/tmp/marvel_com_2023.geojson"
+
+
+def com_massing(st, skip_polys):
+    """Records for buildings.bin's stacked form: -n, top, base, structure id, then x, z per point.
+    Leaves out the stadium and the hand-modelled landmarks (any part whose middle falls in them)."""
+    import json
+    if not os.path.exists(COM_CACHE):
+        x0, y0, x1, y1 = BBOX
+        fetch(COM_URL % (y0, x0, y1, x1), COM_CACHE)
+    out, covered = [], []
+    for f in json.load(open(COM_CACHE))["features"]:
+        q = f["properties"]
+        if q.get("footprint_type") != "Structure" or q.get("footprint_max_elevation") is None:
+            continue
+        g = f["geometry"]
+        polys = [g["coordinates"]] if g["type"] == "Polygon" else g["coordinates"]
+        base = q["footprint_min_elevation"] - q["structure_min_elevation"]
+        top = q["footprint_max_elevation"] - q["structure_min_elevation"]
+        if top - base < 0.6 or top < 2.0:
+            continue
+        sid = float(int(q["structure_id"]) % 100000)
+        for poly in polys:
+            ring = [xy(lat, lon) for lon, lat in poly[0]]
+            if len(ring) < 4:
+                continue
+            c = tuple(np.array(ring[:-1]).mean(0))
+            if (st and _inside(c, st)) or any(_inside(c, sp) for sp in skip_polys):
+                continue
+            pts = [model_xz(*r) for r in ring[:-1]]
+            if max(max(abs(x), abs(z)) for x, z in pts) > 950:
+                continue
+            covered.append(ring)
+            out += [-float(len(pts)), top, base, sid]
+            for x, z in pts:
+                out += [x, z]
+    return out, covered
+
+
 def building_list(ways, st):
-    out = []
+    skip = [p for t, p in ways if t.get("_id") in LANDMARK_WAYS and len(p) > 3]
+    out, covered = com_massing(st, skip)
+    # OpenStreetMap's outlines fill in only where the city's massing has nothing
+    cover_pts = [tuple(np.array(r[:-1]).mean(0)) for r in covered]
     for t, p in ways:
         if "building" not in t or len(p) < 4 or p[0] != p[-1] or t.get("layer", "0").startswith("-"):
             continue
@@ -342,6 +390,8 @@ def building_list(ways, st):
             continue
         a = np.array(p[:-1])
         if st and _inside(tuple(a.mean(0)), st):
+            continue
+        if any(_inside(cp, p) for cp in cover_pts) or any(_inside(tuple(a.mean(0)), r) for r in covered):
             continue
         pts = [model_xz(*q) for q in p[:-1]]
         if max(max(abs(x), abs(z)) for x, z in pts) > 950:
