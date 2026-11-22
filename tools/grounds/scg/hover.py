@@ -38,6 +38,8 @@ sys.path.insert(0, ROOT)
 sys.path.insert(0, os.path.join(ROOT, ".."))
 import ge_compare as gc       # noqa: E402
 import gecam                   # noqa: E402
+import relief                  # noqa: E402
+LAND = np.fromfile(relief.OUT, "<f4")[2:].reshape(relief.N, relief.N) if os.path.exists(relief.OUT) else None
 
 LAT0, LON0 = -33.8916, 151.2248
 KX, KY = 111320.0 * math.cos(math.radians(LAT0)), 110574.0
@@ -276,8 +278,10 @@ def read(work):
     blds = dict(gecam.buildings())
     out = {}
     gpts = []
-    print("%-5s %-7s %7s %6s %6s %6s  %-11s %s" % ("bldg", "kind", "ground", "eave", "ridge", "n", "was e/r", "walls: moved m (outward +)"))
+    print("%-5s %-7s %7s %6s %6s %6s  %-11s %s" % ("bldg", "kind", "ground", "eave", "ridge", "hits", "was e/r", "walls: moved m (outward +)"))
     for name, rows in rec.items():
+        if name not in blds:
+            continue            # dropped from unmapped.json since it was hovered
         q = blds[name]
         poly = Polygon(q[:-1])
         roof = [r[2] for t, r in rows if t[0] == "roof" and poly.buffer(-1.0).contains(Point(r[0], r[1]))]
@@ -293,12 +297,23 @@ def read(work):
         if not roof or not ground:
             print("%-5s too few readouts (roof %d, ground %d)" % (name, len(roof), len(ground)))
             continue
+        # the ground beside it: the land (relief.py: the walls' outer readouts and the terrain grid together,
+        # a reading on a neighbour's roof or a tree dropped) under its corners; the lines' own outer readouts
+        # land on the next shed's roof as often as the ground in the studios' lot
         g = float(np.median(ground))
-        roof = np.array(roof) - g
+        if LAND is not None:
+            g = turf + float(np.mean([relief.relief_at(float(x), float(z), LAND) for x, z in q[:-1]]))
+        allroof = np.array(roof) - g
+        roof = allroof[allroof > 2.5]          # readouts on the roof; the rest fell on the ground or a yard
+        hit = len(roof) / max(len(allroof), 1)
+        if len(roof) < 4:
+            print("%-5s only %d of %d roof readouts on a roof: outline not on the building" % (name, len(roof), len(allroof)))
+            out[name] = {"roof_hits": len(roof), "roof_points": len(allroof), "ground_over_turf": g - turf, "spec": list(sp[name])}
+            continue
         kind = sp[name][1]
         if kind in ("gable", "hip", "monitor", "vault"):
-            eave = float(np.percentile(roof, 20))
-            ridge = float(np.median(np.sort(roof)[-max(1, len(roof) // 4):]))
+            eave = float(np.percentile(roof, 15))
+            ridge = float(np.percentile(roof, 90))
         else:
             eave, ridge = float(np.median(roof)), None
         moves = {}
@@ -322,11 +337,11 @@ def read(work):
             if m is not None:
                 d[k] = m
         outline = move_walls(q, d)
-        out[name] = {"outline": np.round(outline, 2).tolist(), "ground_over_turf": g - turf, "eave": eave, "ridge": ridge, "roof_points": len(roof),
+        out[name] = {"roof_hits": int(len(roof)), "outline": np.round(outline, 2).tolist(), "ground_over_turf": g - turf, "eave": eave, "ridge": ridge, "roof_points": len(allroof),
                      "roof_spread": float(np.percentile(roof, 75) - np.percentile(roof, 25)), "wall_moves": moves,
                      "spec": list(sp[name])}
-        print("%-5s %-7s %+6.0f %6.1f %6s %6d  %4.1f/%-6.1f %s" % (
-            name, kind, g - turf, eave, "-" if ridge is None else "%.1f" % ridge, len(roof), sp[name][0], sp[name][2],
+        print("%-5s %-7s %+6.0f %6.1f %6s %6s  %4.1f/%-6.1f %s" % (
+            name, kind, g - turf, eave, "-" if ridge is None else "%.1f" % ridge, "%d/%d" % (len(roof), len(allroof)), sp[name][0], sp[name][2],
             " ".join("%d:%s" % (k, "-" if m is None else "%+.1f" % m) for k, m in sorted(moves.items()))))
     json.dump(out, open(os.path.join(work, "hover.json"), "w"), indent=1)
     # the land: the walls' outer readouts and the terrain grid's (plan_terrain), over the SCG's turf

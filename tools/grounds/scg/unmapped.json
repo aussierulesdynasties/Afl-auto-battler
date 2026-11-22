@@ -27,33 +27,6 @@
   "solid": true
  },
  {
-  "ge_blob": 36,
-  "footprint": [
-   [
-    195.63,
-    -147.2
-   ],
-   [
-    184.0,
-    -156.7
-   ],
-   [
-    175.35,
-    -146.13
-   ],
-   [
-    186.97,
-    -136.61
-   ]
-  ],
-  "eave": 5,
-  "roof": "gable",
-  "rise": 1.5,
-  "walls": "CREAM",
-  "roof_colour": "BEIGE",
-  "solid": true
- },
- {
   "ge_blob": 37,
   "footprint": [
    [
@@ -108,33 +81,6 @@
   "solid": false
  },
  {
-  "ge_blob": 52,
-  "footprint": [
-   [
-    167.88,
-    -83.98
-   ],
-   [
-    191.5,
-    -83.07
-   ],
-   [
-    192.15,
-    -100.23
-   ],
-   [
-    168.54,
-    -101.13
-   ]
-  ],
-  "eave": 4,
-  "roof": "flat",
-  "rise": 0,
-  "walls": "OFFICE",
-  "roof_colour": "GREY",
-  "solid": false
- },
- {
   "ge_blob": 65,
   "footprint": [
    [
@@ -162,112 +108,60 @@
   "solid": true
  },
  {
-  "ge_blob": 71,
-  "footprint": [
-   [
-    149.58,
-    9.52
-   ],
-   [
-    148.59,
-    33.18
-   ],
-   [
-    159.9,
-    33.66
-   ],
-   [
-    160.89,
-    9.98
-   ]
-  ],
-  "eave": 6,
-  "roof": "hip",
-  "rise": 2,
-  "walls": "CREAM",
-  "roof_colour": "GREY",
-  "solid": false
- },
- {
   "ge_blob": 72,
   "footprint": [
    [
-    277.87,
-    17.82
+    281.7,
+    32.9
    ],
    [
-    292.45,
-    32.39
+    289.2,
+    24.9
    ],
    [
-    302.93,
-    21.9
+    275.6,
+    11.8
    ],
    [
-    288.37,
-    7.32
+    268.0,
+    19.8
    ]
   ],
-  "eave": 5,
-  "roof": "gable",
-  "rise": 2,
-  "walls": "BRICK",
-  "roof_colour": "TERRACOTTA",
-  "solid": false
+  "eave": 3.4,
+  "roof": "flat",
+  "rise": 0.0,
+  "walls": "CREAM",
+  "roof_colour": "BEIGE",
+  "solid": false,
+  "measured": "Google Earth hover grid, 2 m spacing (2026-11-22): a low flat shed 3.4 m over the land"
  },
  {
   "ge_blob": 76,
   "footprint": [
    [
-    248.28,
-    26.23
+    222.0,
+    45.0
    ],
    [
-    225.61,
-    48.89
+    236.0,
+    31.0
    ],
    [
-    252.92,
-    76.21
+    261.5,
+    54.0
    ],
    [
-    275.59,
-    53.55
+    247.5,
+    69.0
    ]
   ],
-  "eave": 7,
-  "roof": "vault",
-  "rise": 3,
+  "eave": 6.0,
+  "roof": "gable",
+  "rise": 2.3,
   "walls": "CREAM",
   "roof_colour": "WHITE",
-  "solid": true
- },
- {
-  "ge_blob": 94,
-  "footprint": [
-   [
-    -95.67,
-    140.92
-   ],
-   [
-    -100.44,
-    124.24
-   ],
-   [
-    -106.39,
-    125.94
-   ],
-   [
-    -101.61,
-    142.61
-   ]
-  ],
-  "eave": 4,
-  "roof": "flat",
-  "rise": 0,
-  "walls": "OFFICE",
-  "roof_colour": "GREY",
-  "solid": false
+  "solid": true,
+  "measured": "Google Earth hover grid, 2 m spacing (2026-11-22): eave 6.0, ridge 8.3 m over the land"
  },
  {
   "ge_blob": 110,
@@ -295,5 +189,33 @@
   "walls": "CREAM",
   "roof_colour": "SAGE",
   "solid": false
+ },
+ {
+  "ge_blob": 176,
+  "footprint": [
+   [
+    229.4,
+    63.8
+   ],
+   [
+    240.2,
+    70.9
+   ],
+   [
+    245.2,
+    63.2
+   ],
+   [
+    234.4,
+    56.1
+   ]
+  ],
+  "eave": 10.6,
+  "roof": "flat",
+  "rise": 0.0,
+  "walls": "CREAM",
+  "roof_colour": "WHITE",
+  "solid": true,
+  "measured": "Google Earth hover grid (2026-11-22): the taller wing of u76, 10.6 m"
  }
 ]
