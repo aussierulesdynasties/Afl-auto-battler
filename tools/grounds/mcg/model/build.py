@@ -425,6 +425,7 @@ def facade_all(mb, secs, fb, ri, ro, rh, tiers, matat):
     corners = env_corners(); cs = set(corners)
     brk = set(np.round(np.arange(0, 360, STEP), 4)) | cs | {round(s_[0] % 360, 4) for s_ in D['facade']}
     for u in D.get('undercroft', []): brk |= {round(u[0], 4), round(u[1], 4)}
+    brk |= set(GSS_APEX)  # the GSS block's folded point is a footprint corner too (a 14 deg turn, under the 15 deg sharp-corner test)
     fbs = np.array(sorted(brk))
     fp = np.full(len(fbs), np.nan)
     for k in ('shane_warne', 'mcc', 'olympic', 'ponsford'):
@@ -557,6 +558,50 @@ def facade_all(mb, secs, fb, ri, ro, rh, tiers, matat):
             mb.face(q, hm, uv=uv); mb.face(q[::-1], hm, uv=uv[::-1])
 
 
+# ---------------- Great Southern Stand (Shane Warne Stand) central back block ----------------
+# Its south face is two flat walls that meet in an outward point at the light tower (T5), each running back toward the
+# field by `ang` degrees, so the block's ends sit ~3 m north of the point. The footprint traced it as a shallow inward V
+# (east end, mid, west end below), so those three footprint corners are moved onto the two walls: the point touches the
+# tower's mast on its field side, the ends keep their x. The raised top box (block `box`) keeps its mean set-back from
+# the face and folds the same way; the stair tower at the east end (block `stair`) moves back with the end.
+GSS = dict(east=(20.25, -130.99), mid=(-5.96, -127.7), west=(-29.34, -128.52), tower='T5', ang=7.0,
+           box=(174.5, 191.0), stair=(171.0, 173.5))
+BLOCK_FRONT = {}  # (b0, b1) of a block -> radius of its front face at bearing b (a folded front); else its r1
+GSS_APEX = []     # bearings where a folded face turns, kept as exact vertices
+
+
+def ray_line(b, p, q):
+    """distance along bearing b's ray from the centre to the infinite line through p and q"""
+    d = np.array(pol(b, 1.0)); p = np.array(p, float); e = np.array(q, float) - p
+    return float(np.linalg.solve(np.array([[d[0], -e[0]], [d[1], -e[1]]]), p)[0])
+
+
+def gss_fold():
+    P = D['osm']['shane_warne']; T = next(t for t in D['towers'] if t['name'] == GSS['tower'])
+    ix = {k: next(i for i, v in enumerate(P) if math.dist(v, GSS[k]) < 0.01) for k in ('east', 'mid', 'west')}
+    old = [list(v) for v in P]; tn = math.tan(math.radians(GSS['ang']))
+    A = (T['xy'][0], T['xy'][1] + T['r_base'])  # the point: on the mast's field side
+    E = (GSS['east'][0], A[1] + abs(GSS['east'][0] - A[0]) * tn); W = (GSS['west'][0], A[1] + abs(GSS['west'][0] - A[0]) * tn)
+    P[ix['east']], P[ix['mid']], P[ix['west']] = list(E), list(A), list(W)
+    GSS_APEX.append(round(math.degrees(math.atan2(*A)) % 360, 4))
+    for blk in D['blocks']:
+        if tuple(blk[:2]) == GSS['stair']:  # the end stair tower keeps its depth in front of the face
+            bm = 0.5 * (blk[0] + blk[1]); blk[3] += polar_of_poly(P, [bm])[0] - polar_of_poly(old, [bm])[0]
+            print('gss stair tower front r1 -> %.2f' % blk[3])
+        if tuple(blk[:2]) == GSS['box']:  # top box: the folded face, set in by the box's mean set-back
+            bs = np.arange(blk[0], blk[1] + 1e-6, 0.5); d = float(np.mean(polar_of_poly(old, bs) - blk[3]))
+            nE = np.array([E[1] - A[1], A[0] - E[0]]); nE /= np.linalg.norm(nE)  # each wall's normal toward the field
+            nW = np.array([A[1] - W[1], W[0] - A[0]]); nW /= np.linalg.norm(nW)
+            if nE[1] < 0: nE = -nE
+            if nW[1] < 0: nW = -nW
+            eL = (np.array(E) + d * nE, np.array(A) + d * nE); wL = (np.array(A) + d * nW, np.array(W) + d * nW)
+            Ad = np.array(A) + np.array([0.0, d / math.cos(math.radians(GSS['ang']))])
+            ab = math.degrees(math.atan2(*Ad)) % 360; GSS_APEX.append(round(ab, 4))
+            BLOCK_FRONT[tuple(blk[:2])] = lambda b, eL=eL, wL=wL, ab=ab: ray_line(b, *(eL if b % 360 < ab else wL))
+            print('gss top box set-back %.2f m, point at bearing %.3f' % (d, ab))
+    print('gss fold: point', A, 'east end', E, 'west end', W)
+
+
 def mast_bearings():
     """Bearings of the Northern Stand roof masts: one every M['arc'] metres of outer roof edge from M['b0']."""
     M = D['masts']; ro = periodic(D['roof_outer']); bs = []
@@ -639,19 +684,25 @@ def canopy_all(col):
             mb.face([P3(a0, r, z1), P3(a1, r, z1), P3(a1, r - 8, z1), P3(a0, r - 8, z1)], 'roof_grey')
     for b0, b1, r0, r1, zt, fm, sm in D.get('blocks', []):  # stair towers and podiums standing out from the facade
         n = max(2, int(abs(b1 - b0) / 0.5) + 1); bb = np.linspace(b0, b1, n); kk = math.pi / 180
-        tv = TILE.get(fm, (1, 1))[1]; sv = TILE.get(sm, (1, 1))[1]; Lf = (b1 - b0) * kk * r1
+        rf = BLOCK_FRONT.get((b0, b1), lambda b, r1=r1: r1)  # front radius by bearing (an arc unless folded)
+        if (b0, b1) in BLOCK_FRONT:  # folded front: its turn is an exact vertex, distances measured along the face
+            bb = np.array(sorted(set(bb) | {a for a in GSS_APEX if b0 < a < b1}))
+            sd = np.concatenate([[0.0], np.cumsum([math.dist(pol(a, rf(a)), pol(c, rf(c))) for a, c in zip(bb, bb[1:])])])
+        else:
+            sd = (bb - b0) * kk * r1
+        tv = TILE.get(fm, (1, 1))[1]; sv = TILE.get(sm, (1, 1))[1]; Lf = sd[-1]
         whole = TILE.get(fm, (1, 1))[0] >= 0.8 * Lf; Cc = CORNER_C
-        for a0, a1 in zip(bb, bb[1:]):  # front: its own whole windows, plain strip at both corners
-            u0 = face_u(fm, (a0 - b0) * kk * r1, 0.0, Lf, Cc, Cc, whole); u1 = face_u(fm, (a1 - b0) * kk * r1, 0.0, Lf, Cc, Cc, whole)
-            mb.face([P3(a0, r1, 0), P3(a1, r1, 0), P3(a1, r1, zt), P3(a0, r1, zt)][::-1], fm,
+        for (a0, a1), s0, s1 in zip(zip(bb, bb[1:]), sd, sd[1:]):  # front: its own whole windows, plain strip at both corners
+            u0 = face_u(fm, s0, 0.0, Lf, Cc, Cc, whole); u1 = face_u(fm, s1, 0.0, Lf, Cc, Cc, whole)
+            mb.face([P3(a0, rf(a0), 0), P3(a1, rf(a1), 0), P3(a1, rf(a1), zt), P3(a0, rf(a0), zt)][::-1], fm,
                     uv=[(u0, 0), (u1, 0), (u1, zt / tv), (u0, zt / tv)][::-1])
-            mb.face([P3(a0, r0, zt), P3(a1, r0, zt), P3(a1, r1, zt), P3(a0, r1, zt)], 'roof_grey')
+            mb.face([P3(a0, r0, zt), P3(a1, r0, zt), P3(a1, rf(a1), zt), P3(a0, rf(a0), zt)], 'roof_grey')
         for b, sg in ((b0, -1), (b1, 1)):  # sides: the same, so no window sits on either vertical edge
-            q = [P3(b, r0, 0), P3(b, r1, 0), P3(b, r1, zt), P3(b, r0, zt)]; L = r1 - r0
+            r1 = rf(b); q = [P3(b, r0, 0), P3(b, r1, 0), P3(b, r1, zt), P3(b, r0, zt)]; L = r1 - r0
             v0, v1 = face_u(sm, 0.0, 0.0, L, Cc, Cc, False), face_u(sm, L, 0.0, L, Cc, Cc, False)
             mb.face(q if sg > 0 else q[::-1], sm, uv=[(v0, 0), (v1, 0), (v1, zt / sv), (v0, zt / sv)] if sg > 0 else [(v0, zt / sv), (v1, zt / sv), (v1, 0), (v0, 0)])
             # solid strip on both faces at this front corner (director: "a solid strip at every corner")
-            cp = np.array(pol(b, r1)); tg = np.array(pol(b + sg * 0.01, r1)) - cp; tg /= np.linalg.norm(tg)
+            cp = np.array(pol(b, r1)); tg = np.array(pol(b + sg * 0.01, rf(b + sg * 0.01))) - cp; tg /= np.linalg.norm(tg)
             ro = np.array(pol(b, 1.0)) - np.array(pol(b, 0.0)); ro /= np.linalg.norm(ro); h = CORNER_C / 2
             for m_, dirv, nv in ((fm, -tg, ro), (sm, -ro, tg)):  # front face runs back along -tg, side face inward
                 mm = 'cs_' + m_; tq = TILE.get(mm, (0.6, 1))[1]; o = nv * 0.03
@@ -714,3 +765,6 @@ def struct_all(col):
         mm.beam(P3(b1, o1, z1), ap, 0.3, 0.3, 'steel_galv'); mm.beam(P3(b2, o2, z2), ap, 0.3, 0.3, 'steel_galv')  # V stays
         mm.beam(P3(b1, o1, z1), P3(b2, o2, z2), 0.25, 0.25, 'steel_galv')  # tie along the mast tops
     mm.build(col)
+
+
+gss_fold()  # once, when the module loads, before any build reads the footprint or the blocks
