@@ -27,6 +27,39 @@ camera. Use Google Earth 3D for outside and overhead views, and Street View on t
   - into the bowl from each end;
   - Street View from the centre square.
 
+## Where shipped data may come from (every ground)
+
+Google Earth, Street View and aerial imagery are for **looking at**, never for **taking from**.
+Google's Earth terms forbid copying its content and building a product on it (Google Earth End User
+Additional Terms, section 2); Esri's World Imagery terms forbid extracting data from its basemap.
+Anything that ends up inside the game, or inside the public repo, must come from a source whose
+licence allows it.
+
+| Allowed into shipped files | Licence, and the credit it needs |
+|---|---|
+| Our own modelling by eye: shapes, proportions, colours judged by a person (or agent) looking at any reference, then built by hand | Ours |
+| OpenStreetMap: outlines, heights, trees, roads, water | ODbL: "© OpenStreetMap contributors" |
+| Microsoft Global ML Building Footprints | ODbL: credit Microsoft |
+| Meta and WRI High Resolution Canopy Height (tree positions and heights) | CC BY 4.0: credit Meta and World Resources Institute |
+| Government open data: Geoscience Australia and state LiDAR, elevation, planning drawings released under CC BY | CC BY 4.0: credit the agency |
+| AWS Terrain Tiles (Terrarium elevation) | Credit the listed sources (SRTM, GMTED, ETOPO1 and others) |
+| Photos we took, or photos licensed for reuse (Wikimedia Commons CC BY or CC BY-SA, public domain) | As the photo's licence says |
+
+Never in a shipped file or a committed file: anything **traced, measured by a script, counted,
+sampled or cropped** from Google Earth, Google Maps, Street View, Esri World Imagery, Apple Maps,
+Nearmap, press photos, stock photos or image-search results. That covers tree positions or counts,
+building outlines, heights read off a 3D mesh, colours sampled pixel by pixel, texture crops and
+screenshots baked into a texture.
+
+Allowed with those sources: looking at them while modelling; side-by-side QA sheets that compare
+our model with them, kept in the project's private files and never committed to the repo (it is
+public). Committing a capture of Google Earth or Esri, or a downloaded press photo, republishes it.
+
+Every credit lands in `docs/CREDITS_3D.md` (one line per source and ground) and the game's credits
+screen before 1.0. A ground built before this rule (2026-11-22) is checked against it as part of its
+rebuild: swap any extracted data for an allowed source above (the Bellerive rebuild swapped Esri-traced
+trees for the Meta canopy map and Microsoft footprints), then delete the extracted files.
+
 ## Seats
 
 A seat goes only on a sloped row with a floor under it. It must be either in the open or under a roof
@@ -85,7 +118,7 @@ The ground round the stadium comes from OpenStreetMap, never from aerial imagery
   Earth's. The map, trees and buildings take no sun shadow: past the shadow map's 160 m, the Mobile
   renderer drew them as if in shade (blue-grey), and the trees' shade is painted in instead.
 - **Every mapped tree, plus fill:** OpenStreetMap maps only some of the parks' trees, so each park
-  is filled to Google Earth's density (one tree per 190 m² of open grass). Each is a lumpy canopy and a trunk, drawn as batches in 250 m blocks, with no
+  is filled to the density seen on Google Earth (an eye judgement; placing trees from imagery is not allowed) (one tree per 190 m² of open grass). Each is a lumpy canopy and a trunk, drawn as batches in 250 m blocks, with no
   shadows.
 - **Buildings:** the map's footprints extruded to their tagged height, as one mesh.
 
