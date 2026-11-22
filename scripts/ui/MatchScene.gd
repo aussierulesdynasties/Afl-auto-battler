@@ -3669,7 +3669,11 @@ func _on_event(ev: Dictionary) -> void:
 	# feed and the scoreboard are built (about 6 ms later, measured). A goal skipped
 	# past still counts toward the run the crowd is riding; it makes no sound.
 	if _crowd != null:
-		_crowd.event(str(ev.get("kind", "")), int(ev.get("side", 0)), shown_usec, not _skipping, int(ev.get("q", 0)))
+		var heard_as := str(ev.get("kind", ""))
+		# A tackle paid as holding the ball is the crowd's "BALL!".
+		if heard_as == "free" and str(ev.get("free_cause", "")) == "holding_ball":
+			heard_as = "ball"
+		_crowd.event(heard_as, int(ev.get("side", 0)), shown_usec, not _skipping, int(ev.get("q", 0)))
 	var event_index := _playback_event_index
 	_playback_event_index += 1
 	# Skipping to the break releases a quarter's events at once: the rings and
