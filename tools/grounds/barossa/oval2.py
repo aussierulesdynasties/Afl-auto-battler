@@ -1,24 +1,68 @@
-"""The second oval, north-west of Barossa Park (the old Lyndoch recreation oval, Gather Round's fan zone): its turf,
-the gravel path round it, goal and behind posts at both ends, four training light poles, the three interchange
-shelters on the east wing and the cricket nets past the north end.
+"""The second oval, north-west of Barossa Park (the old Lyndoch recreation oval, Gather Round's fan zone): its turf
+with the running track's lane lines mown in, the gravel path down its west side, goal and behind posts at both ends,
+four training light poles, the three interchange shelters on the east wing and the cricket nets past the north end.
 
-Traced on the 2026 satellite mosaic (the oval is not in OpenStreetMap): the grass is an ellipse about 157 x 209 m
-round (-196.8, 176.6), its long axis 4 degrees west of north (the grass's own centroid and second moments); the
-boundary line runs about 8 m inside the grass edge. The light poles stand where their shadows start; the shelters,
-nets and path from the mosaic. The 2025 Gather Round photo (from the north-west) shows the same layout.
+Measured on the 2026 satellite mosaic (the oval is not in OpenStreetMap). The six lane lines (ground level, so true
+on the leaning aerial) are one smooth curve and its exact offsets: a superellipse |along/A|^n + |across/B|^n = 1
+round (-196.8, 182.91), long axis 14.38 degrees west of north, A 72.46 m, B 47.18 m, n 3.02, fitted by making the
+mosaic's lines along its normals as sharp as they go; the lines lie 0.3 + 1.22 k m outside it (k = 0..5), 1.22 m
+lanes. Against the mosaic: 8,216 strong line samples, rms 0.33 m, 90% within 0.55 m (shape_check.py). The grass
+round it runs on into the park, so it has no edge of its own; the turf is painted to 4 m past the outer lane. The
+goal posts' shadows cross the track's ends, so the posts stand just outside it on the long axis (to about 2 m). The
+light poles stand where their shadows start; the shelters, nets and path from the mosaic. The 2025 Gather Round
+photo (from the south-east) shows the mown rings, the posts at both ends and the light poles.
 """
 import math
 
 import numpy as np
 
-C = (-196.8, 176.6)
-BEARING = -4.0          # long axis, degrees east of north
-GRASS = (78.5, 104.6)   # grass edge, semi axes across and along
-FIELD = (71.0, 96.0)    # boundary line
-PATH_IN, PATH_W = 2.0, 3.0   # the gravel path: from 2 m outside the grass edge, 3 m wide (west and south sides)
+C = (-196.8, 182.91)
+BEARING = -14.38                 # long axis, degrees east of north
+TRACK = (47.18, 72.46, 3.02)     # superellipse: semi axes across and along, exponent
+LANES = [0.3 + 1.22 * k for k in range(6)]   # lane lines, metres outside the curve
+TURF = LANES[-1] + 4.0           # mown turf to 4 m past the outer lane
+KEEP = LANES[-1] + 12.0          # no vines or planted trees within this
+POSTS_AT = 72.46 + LANES[-1] + 1.5   # goal line, along the axis from the middle
+PATH = [(-268.0, 297.3), (-266.7, 273.3), (-268.0, 246.7), (-270.7, 220.0), (-274.7, 188.0), (-281.3, 158.7),
+        (-285.3, 140.0), (-280.0, 118.7), (-260.0, 97.3), (-233.3, 78.7), (-212.0, 70.7), (-188.0, 62.7)]
+PATH_W = 3.0
 POLES = [(-161.7, 258.3), (-245.0, 261.7), (-221.7, 116.7), (-128.3, 138.3)]
 SHELTERS = [(-121.0, 197.0), (-120.5, 184.0), (-120.0, 172.0)]   # interchange shelters, along the boundary
 NETS = ((-258.0, 300.0), (-248.0, 258.0))   # cricket nets: west and east lane edges at the north and south ends
+_CURVE = None
+_TREE = None
+
+
+def curve(n=20000):
+    """the track's base curve, dense, in the oval's own frame (across, along) and its outward normals"""
+    global _CURVE
+    if _CURVE is None:
+        B, A, ex = TRACK
+        t = np.linspace(0, 2 * math.pi, n, endpoint=False)
+        c, s = np.cos(t), np.sin(t)
+        x = B * np.sign(c) * np.abs(c) ** (2 / ex)
+        y = A * np.sign(s) * np.abs(s) ** (2 / ex)
+        nx = np.sign(x) * np.abs(x / B) ** (ex - 1) / B
+        ny = np.sign(y) * np.abs(y / A) ** (ex - 1) / A
+        ln = np.hypot(nx, ny) + 1e-12
+        _CURVE = (np.stack([x, y], 1), np.stack([nx / ln, ny / ln], 1))
+    return _CURVE
+
+
+def offset(e, n):
+    """signed distance (metres, + outside) from the track's base curve, square to it"""
+    global _TREE
+    from scipy.spatial import cKDTree
+    P, Nn = curve()
+    if _TREE is None:
+        _TREE = cKDTree(P)
+    x, y = local(e, n)
+    shp = np.shape(x)
+    q = np.stack([np.ravel(x), np.ravel(y)], 1)
+    _, i = _TREE.query(q)
+    d = q - P[i]
+    out = np.hypot(d[:, 0], d[:, 1]) * np.sign(np.sum(d * Nn[i], 1))
+    return out.reshape(shp) if shp else float(out[0])
 
 
 def net_texture(size=128, metres=0.5):
@@ -46,58 +90,65 @@ def plan(across, along):
 
 
 def stale_vineyard(pts):
-    """True for an OpenStreetMap vineyard drawn before the oval was built: one that covers the oval's grass. Its
-    vines are gone (the 2026 mosaic shows the oval, its paths and the precinct there), so it is neither painted
-    nor planted."""
+    """True for an OpenStreetMap vineyard drawn before the oval was built: one that covers the oval's turf. Its vines
+    are gone (the 2026 mosaic shows the oval, its paths and the precinct there), so it is neither painted nor
+    planted."""
     from shapely.geometry import Polygon
     poly = Polygon(pts).buffer(0)
-    t = np.linspace(0, 2 * math.pi, 48, endpoint=False)
-    ell = Polygon([plan(GRASS[0] * math.cos(a), GRASS[1] * math.sin(a)) for a in t])
-    return poly.intersection(ell).area > 0.3 * ell.area
+    P, Nn = curve(400)
+    ring = [plan(*(p + q * TURF)) for p, q in zip(P, Nn)]
+    turf = Polygon(ring)
+    return poly.intersection(turf).area > 0.3 * turf.area
 
 
-def on_oval(e, n, margin=1.1):
-    """inside the grass (and its path) of the second oval"""
-    x, y = local(e, n)
-    return math.hypot(x / GRASS[0], y / GRASS[1]) < margin
-
-
-def rho(e, n, semi):
-    x, y = local(e, n)
-    return np.hypot(x / semi[0], y / semi[1])
+def on_oval(e, n):
+    """within the oval's turf and the grass kept clear round it"""
+    return offset(e, n) < KEEP
 
 
 def paint(img, E, N, base_grass):
     """paint the oval into a texture (H x W x 3 float, sRGB 0-255) whose pixels sit at plan E, N"""
     x, y = local(E, N)
-    rg = np.hypot(x / GRASS[0], y / GRASS[1])
-    rf = np.hypot(x / FIELD[0], y / FIELD[1])
-    grass = rg < 1.0
+    near = np.abs(x) < TRACK[0] + TURF + 2
+    near &= np.abs(y) < TRACK[1] + TURF + 2
+    d = np.full(E.shape, np.inf)
+    d[near] = offset(E[near], N[near])
     turf = np.array((92, 136, 58), float)
-    apron = np.array((104, 138, 64), float)
-    # mowing: straight bands along the ground through the middle, rings round the outside
+    # mowing: straight bands along the ground inside the track (as the mosaic shows), rings following it outside
     band = (np.floor(x / 7.5) % 2).astype(float)
-    ring = (np.floor((1.0 - rf) * 96.0 / 4.5) % 2).astype(float)
-    inner = rf < 0.62
-    shade = np.where(inner, band, ring)
+    ring = (np.floor(np.where(np.isfinite(d), d, 0) / 3.0) % 2).astype(float)
+    shade = np.where(d < 0, band, ring)
     col = turf[None, None, :] * (0.94 + 0.1 * shade)[..., None]
-    img[grass] = np.where((rf < 1.0)[..., None], col, apron[None, None, :] * np.ones_like(col))[grass]
-    # the boundary line
-    line = np.abs(rf - 1.0) * min(FIELD) < 0.08
-    img[line & grass] = (214, 218, 206)
-    # the path (gravel) round the west and south: grass edge + PATH_IN to + PATH_W
-    dist = (rg - 1.0) * min(GRASS)
-    path = (dist > PATH_IN) & (dist < PATH_IN + PATH_W) & ((x < 0) | (y < -40))
-    img[path] = (188, 178, 156)
+    m = d < TURF
+    img[m] = col[m]
+    # the lane lines, mown in darker (the mosaic and the 2025 photo show them as dark rings, not paint)
+    for L in LANES:
+        line = np.abs(d - L) < 0.06
+        img[line] = turf * 0.72
+    # the gravel path down the west side
+    _path(img, E, N)
     return img
 
 
+def _path(img, E, N):
+    from scipy.interpolate import splprep, splev
+    from scipy.spatial import cKDTree
+    pts = np.array(PATH)
+    tck, _ = splprep([pts[:, 0], pts[:, 1]], s=len(pts) * 2.0)
+    q = np.array(splev(np.linspace(0, 1, 2000), tck)).T
+    box = (E > q[:, 0].min() - 5) & (E < q[:, 0].max() + 5) & (N > q[:, 1].min() - 5) & (N < q[:, 1].max() + 5)
+    dd, _ = cKDTree(q).query(np.stack([E[box], N[box]], 1))
+    m = np.zeros(E.shape, bool)
+    m[box] = dd < PATH_W / 2
+    img[m] = (188, 178, 156)
+
+
 def goal_posts(m, h, mat_post, mat_pad):
-    """goal and behind posts at both ends on the boundary line: goal posts 6.4 m apart, 12 m tall, behind posts 6.4 m
-    outside them, 7 m tall, the lower 2.5 m of each padded"""
+    """goal and behind posts at both ends just outside the track on the long axis: goal posts 6.4 m apart, 12 m tall,
+    behind posts 6.4 m outside them, 7 m tall, the lower 2.5 m of each padded"""
     for end in (-1, 1):
         for off, tall in ((-9.6, 7.0), (-3.2, 12.0), (3.2, 12.0), (9.6, 7.0)):
-            e, n = plan(off, end * FIELD[1])
+            e, n = plan(off, end * POSTS_AT)
             y0 = h(e, n)
             m.tube(mat_post, (e, y0, -n), (e, y0 + tall, -n), 0.06, 0.05, seg=8)
             m.tube(mat_pad, (e, y0, -n), (e, y0 + 2.5, -n), 0.16, 0.16, seg=10)

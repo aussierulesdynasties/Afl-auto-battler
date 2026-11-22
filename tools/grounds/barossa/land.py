@@ -169,18 +169,20 @@ ROAD_W = {"primary": 10.0, "secondary": 9.0, "tertiary": 8.0, "residential": 7.0
           "service": 4.0, "track": 3.5, "living_street": 5.0, "cycleway": 2.5, "footway": 2.0, "path": 1.8}
 
 
-def paint_land(ways, rels, sat_cls):
-    W = TEX
+def paint_ground(ways, rels, sat_cls, half=R, px=TEX):
+    """the land's colours (no grain) on a px x px grid covering +-half m round the fence centre; the precinct
+    (precinct.py) paints its open ground from the same function so the two meet without a seam"""
+    W = px
+    mpp = 2 * half / px
     base = np.ones((W, W, 3), np.float32) * np.array(C["paddock"], np.float32)
     im = Image.fromarray(base.astype(np.uint8))
     d = ImageDraw.Draw(im)
-    P = lambda p: ((p[0] + R) / MPP, (R - p[1]) / MPP)
+    P = lambda p: ((p[0] + half) / mpp, (half - p[1]) / mpp)
     # unmapped land by its coarse class (wooded / irrigated / dry), measured on the satellite
-    cls_img = Image.fromarray(sat_cls).resize((W, W), Image.NEAREST)
-    ca = np.array(cls_img)
+    w, g = sat_cls
     arr = np.array(im).astype(np.float32)
-    arr[ca == 1] = C["wood"]
-    arr[ca == 2] = C["lawn"]
+    arr = arr * (1 - w - g)[..., None] + np.array(C["wood"], np.float32) * w[..., None] \
+        + np.array(C["lawn"], np.float32) * g[..., None]
     im = Image.fromarray(arr.astype(np.uint8))
     d = ImageDraw.Draw(im)
     order = ["farmland", "meadow", "grass", "orchard", "residential", "recreation_ground", "vineyard", "quarry",
@@ -206,23 +208,29 @@ def paint_land(ways, rels, sat_cls):
     for t, pts in ways:
         if t.get("waterway") in ("stream", "river", "drain", "ditch") and len(pts) > 1:
             w = 5.0 if t.get("waterway") == "river" else 3.0
-            d.line([P(p) for p in pts], fill=C["creek"], width=max(1, int(w / MPP)), joint="curve")
+            d.line([P(p) for p in pts], fill=C["creek"], width=max(1, int(w / mpp)), joint="curve")
     for t, pts in ways:
         hw = t.get("highway")
         if hw in ROAD_W and len(pts) > 1:
             c = C["track"] if hw in ("track", "path") or t.get("surface") in ("unpaved", "gravel", "dirt") else C["road"]
-            d.line([P(p) for p in pts], fill=c, width=max(1, int(ROAD_W[hw] / MPP)), joint="curve")
+            d.line([P(p) for p in pts], fill=c, width=max(1, int(ROAD_W[hw] / mpp)), joint="curve")
         if (t.get("railway") or t.get("disused:railway")) and len(pts) > 1:
-            d.line([P(p) for p in pts], fill=C["rail"], width=int(4.0 / MPP), joint="curve")
+            d.line([P(p) for p in pts], fill=C["rail"], width=int(4.0 / mpp), joint="curve")
     # house yards: a ring of garden round each house in town
     for t, pts in ways:
         if "building" in t and len(pts) > 2:
             d.polygon([P(p) for p in pts], fill=C["yard"])
     a = np.array(im).astype(np.float32)
     # the second oval (oval2.py): its west part lies out here past the precinct
-    g = (np.arange(W) + 0.5) * MPP - R
+    g = (np.arange(W) + 0.5) * mpp - half
     E, N = np.meshgrid(g, -g)
     oval2.paint(a, E, N, C["lawn"])
+    return a
+
+
+def paint_land(ways, rels, sat_cls):
+    W = TEX
+    a = paint_ground(ways, rels, sat_cls)
     n1 = paint.fbm(W, W, 301, (16, 48, 128, 512), (0.35, 0.3, 0.2, 0.15))
     n2 = paint.fbm(W, W, 302, (1024, 2048, 2048, 4096), (0.3, 0.3, 0.2, 0.2))
     a *= (0.86 + 0.2 * n1 + 0.1 * (n2 - 0.5))[..., None]
@@ -230,27 +238,36 @@ def paint_land(ways, rels, sat_cls):
     return np.array(out)
 
 
-def coarse_classes(sat, canopy):
-    """64 x 64 m-ish cells -> 0 dry / 1 wooded / 2 green, on the texture's own grid (R square)"""
+def coarse_classes(sat, canopy, half=R, px=TEX):
+    """the share of wooded and of green (watered) ground round each texture pixel, measured on the satellite and
+    softened over about 4 m so class edges are smooth curves, not cells -> (wood, green), each TEX x TEX, 0..1"""
     cv2 = sat.cv2
-    n = 256
-    out = np.zeros((n, n), np.uint8)
-    cell = 2 * R / n
-    V = sat.hsv[..., 2]
-    S = sat.hsv[..., 1]
-    H = sat.hsv[..., 0]
-    for i in range(n):
-        for j in range(n):
-            e0, n0 = -R + j * cell, R - i * cell
-            x0, y0 = sat.px(e0, n0)
-            x1, y1 = sat.px(e0 + cell, n0 - cell)
-            x0, y0, x1, y1 = int(x0), int(y0), int(x1), int(y1)
-            if x0 < 0 or y0 < 0 or x1 > V.shape[1] or y1 > V.shape[0]:
-                continue
-            c = canopy[y0:y1, x0:x1].mean()
-            g = ((H[y0:y1, x0:x1] > 30) & (H[y0:y1, x0:x1] < 75) & (S[y0:y1, x0:x1] > 70) & (V[y0:y1, x0:x1] > 70)).mean()
-            out[i, j] = 1 if c > 0.35 else (2 if g > 0.5 else 0)
-    return out
+    H, S, V = sat.hsv[..., 0], sat.hsv[..., 1], sat.hsv[..., 2]
+    green = ((H > 30) & (H < 75) & (S > 70) & (V > 70)).astype(np.float32)
+    wood = (canopy > 0.5).astype(np.float32)
+    sig = 4.0 / SAT_RES
+    green = cv2.GaussianBlur(green, (0, 0), sig)
+    wood = cv2.GaussianBlur(wood, (0, 0), sig)
+    mpp = 2 * half / px
+    e = (np.arange(px) + 0.5) * mpp - half        # columns run east
+    nn = half - (np.arange(px) + 0.5) * mpp       # rows run south from the north edge
+    x = ((e + SAT_HALF) / SAT_RES - 0.5).astype(np.float32)
+    y = ((SAT_HALF - nn) / SAT_RES - 0.5).astype(np.float32)
+    X, Y = np.meshgrid(x, y)
+    wood = cv2.remap(wood, X, Y, cv2.INTER_LINEAR)
+    green = cv2.remap(green, X, Y, cv2.INTER_LINEAR)
+    # a smooth step: mostly one class or the other, with a soft rim
+    st = lambda f, lo, hi: np.clip((f - lo) / (hi - lo), 0, 1) ** 2 * (3 - 2 * np.clip((f - lo) / (hi - lo), 0, 1))
+    w = st(wood, 0.25, 0.45)
+    g = st(green, 0.4, 0.6) * (1 - w)
+    return w, g
+
+
+def ground_window(half, px):
+    """paint_ground for a window round the fence centre, loading the map and the satellite itself"""
+    ways, rels = load_osm()
+    sat = Sat()
+    return paint_ground(ways, rels, coarse_classes(sat, sat.canopy(), half, px), half, px)
 
 
 # ------------------------------------------------------------------ terrain

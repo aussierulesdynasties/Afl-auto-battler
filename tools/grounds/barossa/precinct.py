@@ -20,6 +20,7 @@ MPP = 2 * HALF / PX
 
 # surface classes
 GRASS, VERGE, ASPHALT, CONCRETE, PATH, NETBALL, TENNIS, MULCH, BALLAST, DRY, PARKING, BOWLS, OVAL2, SAND = range(14)
+OPEN = 14   # ground no trace covers: painted as the land round it (land.paint_ground)
 COL = {
     GRASS: (104, 128, 66), VERGE: (96, 124, 60), ASPHALT: (70, 71, 74), CONCRETE: (200, 196, 186), PATH: (186, 180, 168),
     NETBALL: (38, 74, 140), TENNIS: (40, 78, 136), MULCH: (104, 80, 58), BALLAST: (128, 114, 98), DRY: (176, 156, 110),
@@ -76,7 +77,7 @@ def classify():
     ring = np.array([interp(RING, x) for x in np.arange(0, 360.5, 0.5)])
     k = np.clip((b * 2).astype(int), 0, 720)
     verge, road0, road1, conc = ring[k, 0], ring[k, 1], ring[k, 2], ring[k, 3]
-    cls = np.full(E.shape, GRASS, np.uint8)
+    cls = np.full(E.shape, OPEN, np.uint8)
     cls[off < 0] = GRASS
     cls[(off >= 0) & (off < verge)] = VERGE
     cls[(off >= road0) & (off < road1)] = ASPHALT
@@ -105,6 +106,12 @@ def paint_map(cls):
     out = np.zeros(cls.shape + (3,), np.float32)
     for c, col in COL.items():
         out[cls == c] = col
+    # open ground takes the land's own colours (OpenStreetMap land use, the satellite's wooded and watered shares),
+    # so the precinct's square edge does not show against the land texture past it
+    import land
+    op = cls == OPEN
+    if op.any():
+        out[op] = land.ground_window(HALF, PX)[op]
     # the second oval's turf, mowing and path (oval2.py), over the grass the polygons gave it
     e = (np.arange(PX) + 0.5) * MPP - HALF
     E, N = np.meshgrid(e, -e)

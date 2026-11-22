@@ -16,6 +16,9 @@ curves fitted to a trace, every ring an exact offset; errors measured, never jud
 3. The clubroom roof: the mosaic's roof (light grey, Lab) against the model's roof drawn the aerial's way, leaning
    (lean_view.py: the aerial is not straight down, a point h up shows LEAN * h north-north-east of its foot).
    Reported: overlap (intersection over union) and the distance from the model's roof outline to the mosaic's.
+4. The second oval's lane lines (oval2.py: one superellipse and its exact offsets): the mosaic (work/z20w.png) is
+   sampled along the curve's normals; on each sample, each line's darkest point within 0.6 m of where the model puts
+   it, where that line shows clearly. Reported: the distance between them.
 """
 import math
 import os
@@ -29,7 +32,7 @@ import plan  # noqa: E402
 
 RES, HALF = 0.2, 150.0
 LIMITS = {"fence_rms": 0.5, "fence_p95": 1.0, "road_median": 0.75, "road_p90": 1.5, "roof_iou": 0.9, "roof_median": 0.5,
-          "roof_p90": 1.5}
+          "roof_p90": 1.5, "lanes_rms": 0.5, "lanes_p90": 1.0}
 CLEAR = [(0, 44), (62, 108), (140, 232)]   # bearings where the road's outer edge runs clear
 
 
@@ -146,6 +149,37 @@ def roof_check(a):
     return ok
 
 
+def lanes_check():
+    import cv2
+    import oval2
+    w = cv2.imread(os.path.join(HERE, "work", "z20w.png"))
+    if w is None:
+        raise SystemExit("work/z20w.png missing: python3 tools/grounds/barossa/satmosaic.py 20 300 0.2 work/z20w.png")
+    g = cv2.cvtColor(w, cv2.COLOR_BGR2GRAY).astype(np.float32)
+    bh = cv2.morphologyEx(g, cv2.MORPH_BLACKHAT, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7, 7)))
+    P, Nn = oval2.curve(1600)
+    offs = np.arange(-1.0, 8.0, 0.05)
+    x = P[:, 0][:, None] + Nn[:, 0][:, None] * offs[None]
+    y = P[:, 1][:, None] + Nn[:, 1][:, None] * offs[None]
+    E, N = oval2.plan(x, y)
+    s = cv2.remap(bh, ((E + 300) / RES - 0.5).astype(np.float32), ((300 - N) / RES - 0.5).astype(np.float32),
+                  cv2.INTER_LINEAR)
+    res = []
+    for L in oval2.LANES:
+        win = (offs > L - 0.6) & (offs < L + 0.6)
+        sub = s[:, win]
+        i = np.argmax(sub, 1)
+        clear = sub[np.arange(len(i)), i] > 8
+        res.append((offs[win][i] - L)[clear])
+    d = np.abs(np.concatenate(res))
+    rms, p90 = float(np.sqrt(np.mean(d ** 2))), float(np.percentile(d, 90))
+    ok = rms <= LIMITS["lanes_rms"] and p90 <= LIMITS["lanes_p90"]
+    print("SECOND OVAL lane lines %s: %d clear samples of %d; rms %.2f m (limit %.2f), 90%% within %.2f m (limit %.2f)"
+          % ("PASS" if ok else "FAIL", len(d), len(oval2.LANES) * len(P), rms, LIMITS["lanes_rms"], p90,
+             LIMITS["lanes_p90"]))
+    return ok
+
+
 def main():
     a = mosaic()
     ok = True
@@ -188,6 +222,7 @@ def main():
           % (np.mean(m0[sw] - inn[sw]), np.max(np.abs(m0[sw] - inn[sw]))))
     r_ok = roof_check(a)
     ok &= r_ok
+    ok &= lanes_check()
     print("ALL PASS" if ok else "SOME FAIL")
     return 0 if ok else 1
 
