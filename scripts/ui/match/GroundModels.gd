@@ -91,6 +91,12 @@ const FIT := {
 ## its ground painted from OpenStreetMap (tools/grounds/mcg/surrounds.py), `span` m a side round the
 ## model's middle, and `trees` the park's trees from the same map (x, z, height, canopy, shade).
 const SURROUNDS := {
+	# ENGIE: the showground, Olympic Boulevard and its plazas, the Brickpit and the parklands to Haslams Creek
+	# painted from OpenStreetMap with every mapped tree (tools/grounds/engie/surrounds/surrounds.py); its
+	# buildings are modelled in engie_part2.glb (surrounds/landmarks.py), so none are stood up here. It starts
+	# under the stands (85 m), the stadium's paved site drawn over it by the model.
+	"engie": {"y": -0.04, "inner": 85.0, "colour": Color(0.43, 0.46, 0.33),
+			"map": "surrounds.webp", "span": 2048.0, "trees": "trees.bin"},
 	"mcg": {"y": -0.03, "inner": 140.0, "colour": Color(0.45, 0.55, 0.27),
 			"map": "surrounds.webp", "span": 2048.0, "trees": "trees.bin", "buildings": "buildings.bin"},
 }

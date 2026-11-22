@@ -1,5 +1,6 @@
 # ENGIE proof renders and the GLB. Run with the bpy module:
 #   python3 proofs.py OUT_DIR glb            -> OUT_DIR/engie.glb + seat files (seat_tmpl_*.bin, seats_*.bin, legs_*.bin)
+#   (renders: --with=OTHER.glb also draws that glb, e.g. the surroundings from surrounds/landmarks.py)
 #   python3 proofs.py OUT_DIR plan             -> OUT_DIR/plan.png, orthographic, 520 m square, north up
 #   python3 proofs.py OUT_DIR views V.json [names...]  -> renders matching Google Earth views (ge_compare.py cameras)
 # Axes: x east, y north, z up (Blender); the glTF exporter puts north on glTF -Z.
@@ -8,9 +9,14 @@ HERE = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, HERE)
 import bpy, mathutils
 import numpy as np
 import build
-argv = sys.argv[1:]; out = argv[0]; job = argv[1]
+argv = sys.argv[1:]
+WITH = [a.split('=', 1)[1] for a in argv if a.startswith('--with=')]   # extra glbs (the surroundings) for renders
+argv = [a for a in argv if not a.startswith('--with=')]
+out = argv[0]; job = argv[1]
 os.makedirs(out, exist_ok=True)
 build.build_all()
+for g in WITH:
+    bpy.ops.import_scene.gltf(filepath=g)
 sc = bpy.context.scene
 
 
@@ -45,9 +51,15 @@ def setup_render(w=1280, h=720):
     sd = bpy.data.lights.new('sun', 'SUN'); sd.energy = 3.5; so = bpy.data.objects.new('sun', sd); sc.collection.objects.link(so)
     so.rotation_euler = (math.radians(40), 0, math.radians(30))
     # a field for context
-    bpy.ops.mesh.primitive_plane_add(size=400, location=(0, 0, -0.02))
+    sur = os.path.join(HERE, '..', '..', '..', '..', 'assets', 'grounds', 'engie', 'surrounds.webp')
+    big = bool(WITH) and os.path.exists(sur)
+    bpy.ops.mesh.primitive_plane_add(size=2048 if big else 400, location=(0, 0, -0.04))
     fm = bpy.data.materials.new('field'); fm.use_nodes = True
-    fm.node_tree.nodes['Principled BSDF'].inputs['Base Color'].default_value = (0.12, 0.25, 0.08, 1)
+    if big:   # the surroundings map (surrounds/surrounds.py), as the game lays it
+        tx = fm.node_tree.nodes.new('ShaderNodeTexImage'); tx.image = bpy.data.images.load(sur)
+        fm.node_tree.links.new(tx.outputs['Color'], fm.node_tree.nodes['Principled BSDF'].inputs['Base Color'])
+    else:
+        fm.node_tree.nodes['Principled BSDF'].inputs['Base Color'].default_value = (0.12, 0.25, 0.08, 1)
     bpy.context.object.data.materials.append(fm)
     cd = bpy.data.cameras.new('cam'); cd.clip_end = 6000; cd.sensor_fit = 'VERTICAL'
     co = bpy.data.objects.new('cam', cd); sc.collection.objects.link(co); sc.camera = co

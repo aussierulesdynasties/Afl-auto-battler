@@ -40,6 +40,7 @@ def periodic(tab):
 
 
 _F = periodic(D['fence']); _G = periodic(D['front_gap']); _RF = periodic(D['rf']); _RB = periodic(D['rb'])
+_SITE = periodic(D['site'])
 def rF(b): return _F(b)[0]
 def r0(b): return rF(b) + _G(b)[0]
 def roof_front(b): return _RF(b)[0]
@@ -943,7 +944,8 @@ def scoreboard(col):
 
 # ---------------- the ground round the stadium ----------------
 def apron(col):
-    """Paving from the outside walls out to 150 m; the surroundings take over beyond (GroundModels.SURROUNDS)."""
+    """Paving from the outside walls out to the stadium's site outline (OSM); the surroundings map takes over
+    beyond it (GroundModels.SURROUNDS): the roads, car parks and pavilions round the ground."""
     mb = MB('apron')
     def wall(b):
         bb = b % 360
@@ -951,7 +953,9 @@ def apron(col):
             return tier_open(b)[2] + 2.8
         return back_r(b)
     bs = arc(0.0, 360.0, 1.0)
-    quad_strip(mb, bs, lambda b: (wall(b), 0.01), lambda b: (150.0, 0.01), 'paving')
+    quad_strip(mb, bs, lambda b: (wall(b), 0.01), lambda b: (max(wall(b) + 3.0, _SITE(b)[0]), 0.01), 'paving')
+    # a kerb along the site's edge
+    quad_strip(mb, bs, lambda b: (max(wall(b) + 3.0, _SITE(b)[0]), 0.01), lambda b: (max(wall(b) + 3.0, _SITE(b)[0]), 0.15), 'conc_light')
     mb.build(col)
 
 

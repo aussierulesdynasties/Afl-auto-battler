@@ -23,3 +23,16 @@ orange at the open end) on black shells.
 Sources: OpenStreetMap (ODbL, (c) OpenStreetMap contributors) for the plan; the Sydney Showground fact sheet
 and ANCR's 2012 project sheet for the suites level, tower count and roof-edge floods; Google Earth 3D and a
 Street View photo sphere in the stands for looking at (QA images stay out of the repo).
+
+## The surroundings
+
+    cd tools/grounds/engie/surrounds
+    python3 surrounds.py OSM_DIR/*.osm            # -> assets/grounds/engie/surrounds.webp (2 km ground map) + trees.bin
+    python3 landmarks.py OSM_DIR OUT/engie_part2.glb   # with the bpy module: the buildings, copied to assets/grounds/engie/
+
+Every building within 1.1 km stands on its own OpenStreetMap footprint at its own height, with the roof form
+Google Earth shows: Stadium Australia (the bowl, the ring roof and its two arched trusses, the spiral ramp towers),
+Qudos Bank (Afterpay) Arena with its leaning masts, The Dome, the exhibition halls' tent bays and fabric canopy,
+the showground pavilions (cross gables; Downes, Munro and Pig & Goat as the long ventilated sheds), Woodchop
+Stadium, Schmidt Arena's dirt ring and green-roofed stand, the white marquee, the Brickpit Ring Walk, and the
+offices and hotels of Olympic Park. Map data (c) OpenStreetMap contributors, ODbL. Google Earth for looking at only.
