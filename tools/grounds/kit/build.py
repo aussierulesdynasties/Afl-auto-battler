@@ -24,8 +24,24 @@ def pol(b, r):
     a = math.radians(b); return (r * math.sin(a), r * math.cos(a))
 
 
+FF = D.get('fence_fourier')   # optional: the fence as one smooth polar Fourier curve about FF['c'] (replaces the ellipse)
+
+
+def ff_R(th):
+    """radius of the Fourier fence curve about FF['c'] at math angle th (radians, from +x toward +y)"""
+    return FF['a0'] + sum(a * math.cos(k * th) + b * math.sin(k * th) for k, (a, b) in enumerate(FF['ab'], 1))
+
+
 def fence_r(b):
-    """radius from the origin to the fence ellipse along bearing b"""
+    """radius from the origin to the boundary fence along bearing b"""
+    if FF:   # march out along the ray to the curve, then bisect (the origin is inside the curve)
+        d = np.array(pol(b, 1.0)); c = np.array(FF['c'])
+        f = lambda r: np.linalg.norm(d * r - c) - ff_R(math.atan2(*(d * r - c)[::-1]))
+        lo, hi = 0.0, 1.0
+        while f(hi) < 0: lo, hi = hi, hi + 5.0
+        for _ in range(40):
+            mid = 0.5 * (lo + hi); lo, hi = (mid, hi) if f(mid) < 0 else (lo, mid)
+        return 0.5 * (lo + hi)
     x0, y0, a1, a2, rot = FE; t = math.radians(rot); d = np.array(pol(b, 1.0))
     # ellipse in its own frame: ((u/a1)^2 + (v/a2)^2 = 1), u along rot
     c, s = math.cos(t), math.sin(t)

@@ -15,55 +15,105 @@
   {
    "name": "grandstand",
    "kind": "single",
-   "b0": 226.0,
+   "b0": 230.5,
    "b1": 293.0,
    "roof": [
     [
-     226,
-     84,
-     108
+     230.5,
+     78.7,
+     103.2
     ],
     [
-     235,
-     77,
-     103
+     234,
+     78.55,
+     103.05
     ],
     [
-     245,
-     75.5,
-     100
+     238,
+     78.45,
+     102.95
+    ],
+    [
+     242,
+     78.41,
+     102.91
+    ],
+    [
+     246,
+     78.4,
+     102.9
+    ],
+    [
+     250,
+     78.45,
+     102.95
+    ],
+    [
+     254,
+     78.56,
+     103.06
     ],
     [
      258,
-     77,
-     101
+     78.76,
+     103.26
+    ],
+    [
+     262,
+     79.09,
+     103.59
+    ],
+    [
+     266,
+     79.54,
+     104.04
     ],
     [
      270,
-     79.3,
-     103.4
+     80.08,
+     104.58
+    ],
+    [
+     274,
+     80.64,
+     105.14
+    ],
+    [
+     278,
+     81.16,
+     105.66
     ],
     [
      282,
-     80.5,
-     105
+     81.56,
+     106.06
     ],
     [
-     293,
-     83.3,
-     107.8
+     286,
+     81.88,
+     106.38
+    ],
+    [
+     290,
+     82.17,
+     106.67
+    ],
+    [
+     293.0,
+     82.45,
+     106.95
     ]
    ],
-   "seat_front": 3.0,
+   "seat_front": 1.0,
    "z_seat": [
-    1.4,
-    11.5
+    1.0,
+    5.4
    ],
    "z_roof": [
-    16.5,
-    18.0
+    11.0,
+    11.0
    ],
-   "back_in": 2.0,
+   "back_in": 1.5,
    "rib": 0,
    "mats": {
     "seat": "conc_tread",
@@ -74,7 +124,8 @@
    },
    "row_cols": [
     "seat_bt"
-   ]
+   ],
+   "seat_depth": 8.8
   }
  ],
  "outer_r": 96,
@@ -157,7 +208,7 @@
   "path": "track_dirt",
   "outside": "ground_grass"
  },
- "_note": "Blacktown International Sportspark, Oval 1 (Rooty Hill, Sydney), first draft. Plan traced on Google satellite tiles (work/sat.png, 2026); heights estimated, not measured. Stadium only: no turf, posts, nets, signs, lettering or crowd.",
+ "_note": "Blacktown International Sportspark, Oval 1 (Rooty Hill, Sydney). Stage 1 of the rebuild (2026-11-22): the boundary fence is one smooth curve (fence_fourier) fitted to the NSW 7.5 cm aerial; the grandstand's roof footprint and 11 m height come from Google Earth's 3D mesh (straight-down shots, roof front 0.3 m over the fence, 24.5 m deep). Seat rows (11, 1.0-5.4 m) are estimated from the published 1,600 seats, not measured. Still the first draft's: rooftop masts (missing), the south wing, the indoor centre, light tower positions and heights, surrounds.",
  "fence_mat": "pickets",
  "fence_cap": "paint_white",
  "step": 0.5,
@@ -244,5 +295,64 @@
     82
    ]
   }
+ },
+ "fence_fourier": {
+  "c": [
+   -4.9,
+   2.29
+  ],
+  "a0": 79.73276553345218,
+  "ab": [
+   [
+    0.0404923518645609,
+    0.08164638392022898
+   ],
+   [
+    -4.735126800337347,
+    -2.009532530406897
+   ],
+   [
+    -0.1462064292521593,
+    0.12614033953977727
+   ],
+   [
+    0.3374722423944071,
+    0.26773251027359146
+   ],
+   [
+    0.028562690779125016,
+    -0.047644368080495804
+   ],
+   [
+    0.07213885614263672,
+    -0.011949435958610708
+   ],
+   [
+    -0.1992226258892899,
+    0.06789801513956081
+   ],
+   [
+    0.0422941993708146,
+    0.04726172155667071
+   ],
+   [
+    0.09156747330294429,
+    0.07337229007467629
+   ],
+   [
+    0.061067629394385974,
+    -0.15030035913683948
+   ],
+   [
+    -0.05145951717974401,
+    0.013444868696603772
+   ],
+   [
+    -0.06994212611986567,
+    0.011103355412774699
+   ]
+  ],
+  "K": 12,
+  "how": "K=12 polar Fourier about c (x east, y north, model metres) fitted to the boundary thread's seen fence-rail trace plus the grass edge (+0.3 m to the rail line) traced on the NSW 7.5 cm aerial in front of the grandstand"
  }
 }
