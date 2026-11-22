@@ -114,7 +114,7 @@ func build(p_director: MatchDirector, home: String, away: String) -> void:
 	screens.build(self, get_node_or_null("Ground"), GroundModels.match_fence(), home, away)
 	var scene: PackedScene = load(player_glb)
 	# Each club in its home guernsey, as the vignettes dress them (StoppageVignette._dress).
-	var kits := [_kit(GameDB.club_guernsey(home)), _kit(GameDB.club_guernsey(away))]
+	var kits := [_kit(GameDB.club_guernsey(home)), _kit(away_guernsey(home, away))]
 	for t in director.tokens:
 		var side := int(t.get("side", 0))
 		var p := _player(scene, kits[side], GameDB.club_colours(home if side == 0 else away), home if side == 0 else away)
@@ -583,6 +583,18 @@ static func load_glb(path: String) -> Node3D:
 	return GroundModels.load_glb(path)
 
 
+## The away side's guernsey: its real clash guernsey when the two sides' kits are too alike on the
+## turf (the same call the 2D oval makes, PitchView.kits_for), else its home one. Only a club wearing
+## its current guernsey (not a Legacy season's) and with a clash guernsey on file changes.
+static func away_guernsey(home: String, away: String) -> Dictionary:
+	var g: Dictionary = GameDB.club_guernsey(away)
+	var clash := GameDB.club_clash_kit(away)
+	if g.has("today") and not clash.is_empty() and bool(PitchView.kits_for(home, away)[1].get("clash", false)):
+		g = g.duplicate()
+		g["today"] = clash
+	return g
+
+
 ## One kit material per club: the region fields in the mesh pick skin, hair, guernsey,
 ## shorts, socks and boots per pixel, and the guernsey wears the club's design
 ## (oval3d_player.gdshader). kit is GameDB.club_guernsey's {design, base, pattern, pattern2,
@@ -608,9 +620,10 @@ func _kit(kit: Dictionary) -> ShaderMaterial:
 	# The club's current home guernsey, drawn from its photo (data/kits_today.csv), with its
 	# collar and armhole bindings on the guernsey's own edges.
 	var today: Dictionary = kit.get("today", {})
-	if not today.is_empty() and GameDB.kits_today_atlas() != null:
+	var atlas: Texture2D = GameDB.kits_clash_atlas() if today.get("clash", false) else GameDB.kits_today_atlas()
+	if not today.is_empty() and atlas != null:
 		m.set_shader_parameter("kit_design", [float(100 + int(today["cell"]))])
-		m.set_shader_parameter("kit_atlas", GameDB.kits_today_atlas())
+		m.set_shader_parameter("kit_atlas", atlas)
 		m.set_shader_parameter("kit_grid", GameDB.kits_today_grid())
 		m.set_shader_parameter("kit_collar", today["collar"])
 		m.set_shader_parameter("kit_arms", today["armholes"])
@@ -907,6 +920,10 @@ static func _middle_at(mid: PackedFloat32Array, y: float) -> float:
 ## x and y are -SKIN_REACH: a small number, so the edge's smoothing stays a pixel wide). CUSTOM2: x metres in front of the body's middle, so a triangle over a seam knows
 ## which side it is on; yzw on that skin, the nearest guernsey corner's pattern coordinates. Once
 ## per mesh; every player shares the copy.
+## How far from an edge's own line a binding can reach (the widest is 3 cm, Canberra's collar).
+const BIND_REACH := 0.045
+
+
 static func _kit_edges(m: Mesh) -> Mesh:
 	if _edged.has(m):
 		return _edged[m]
@@ -1044,8 +1061,12 @@ static func _kit_edges(m: Mesh) -> Mesh:
 				var r := _nearest_arm(p, arms)
 				if kind == 1.0:
 					# The bindings are a few centimetres at most: only the top of the guernsey is measured.
-					e.x = n.x + float(neck["out"])
-					e.y = r.x
+					# Only near its own edge: a point 15 cm from the neck, down the back by the armhole,
+					# has a neck point nearest whose way in runs away from it and read as outside the
+					# neck, so the collar drew a patch over the shoulder blade (2026-11-22, the clash
+					# collars); the same down the side seam below the armpit.
+					e.x = n.x + float(neck["out"]) if n.y < BIND_REACH else FAR
+					e.y = r.x if r.y < BIND_REACH else FAR
 				elif n.y < SKIN_REACH:
 					# Round the armholes the model's own edge is the line (re-cut smooth in the
 					# model): skin there stays skin, and only the neck's line counts.

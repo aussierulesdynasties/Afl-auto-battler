@@ -1509,15 +1509,46 @@ var _kits_today_tex: Texture2D = null
 
 func _today_kits() -> Dictionary:
 	if _kits_today == null:
-		_kits_today = {}
-		if FileAccess.file_exists(KITS_TODAY_CSV):
-			for r in _read_dicts(KITS_TODAY_CSV):
-				var trim := func(c: String) -> Color: return Color.from_string(c, Color(0, 0, 0, 0)) if c != "" else Color(0, 0, 0, 0)
-				_kits_today[str(r["code"])] = {"cell": int(r["cell"]), "collar": trim.call(str(r.get("collar", ""))),
-						"collar_cm": float(str(r.get("collar_cm", "0"))), "armholes": trim.call(str(r.get("armholes", ""))),
-						"armholes_cm": float(str(r.get("armholes_cm", "0"))), "shorts": trim.call(str(r.get("shorts", ""))),
-						"number": trim.call(str(r.get("number", ""))), "number_edge": trim.call(str(r.get("number_edge", "")))}
+		_kits_today = _read_kits(KITS_TODAY_CSV)
 	return _kits_today
+
+
+func _read_kits(path: String) -> Dictionary:
+	var out := {}
+	if FileAccess.file_exists(path):
+		for r in _read_dicts(path):
+			var trim := func(c: String) -> Color: return Color.from_string(c, Color(0, 0, 0, 0)) if c != "" else Color(0, 0, 0, 0)
+			out[str(r["code"])] = {"cell": int(r["cell"]), "collar": trim.call(str(r.get("collar", ""))),
+					"collar_cm": float(str(r.get("collar_cm", "0"))), "armholes": trim.call(str(r.get("armholes", ""))),
+					"armholes_cm": float(str(r.get("armholes_cm", "0"))), "shorts": trim.call(str(r.get("shorts", ""))),
+					"number": trim.call(str(r.get("number", ""))), "number_edge": trim.call(str(r.get("number_edge", "")))}
+	return out
+
+
+## Each club's current clash guernsey for the 3D match player, drawn from the club's shop photos onto
+## its home cut (tools/kits/guernsey3d/clash): data/kits_clash.csv, same fields as kits_today and the
+## same cells, in its own atlas. A club with none (Sydney) is missing.
+const KITS_CLASH_CSV := "res://data/kits_clash.csv"
+const KITS_CLASH_ATLAS := "res://assets/oval3d/kits_clash.png"
+var _kits_clash = null
+var _kits_clash_tex: Texture2D = null
+
+
+## The club's clash guernsey ({} when it has none), marked "clash" for Oval3D._kit.
+func club_clash_kit(code: String) -> Dictionary:
+	if _kits_clash == null:
+		_kits_clash = _read_kits(KITS_CLASH_CSV)
+	if not _kits_clash.has(code):
+		return {}
+	var k: Dictionary = (_kits_clash[code] as Dictionary).duplicate()
+	k["clash"] = true
+	return k
+
+
+func kits_clash_atlas() -> Texture2D:
+	if _kits_clash_tex == null and ResourceLoader.exists(KITS_CLASH_ATLAS):
+		_kits_clash_tex = load(KITS_CLASH_ATLAS)
+	return _kits_clash_tex
 
 
 ## The current guernseys' atlas and its cells a row and rows (kits_today.py: 4 a row, square sides).
