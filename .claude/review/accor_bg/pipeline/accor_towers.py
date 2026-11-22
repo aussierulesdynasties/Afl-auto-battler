@@ -1,0 +1,70 @@
+# Olympic Boulevard light towers (Sydney Olympic Park), copied from ref_accor/Looking_down_Olympic_Boulevard...jpg (CC BY-SA, Commons).
+# Positions: satellite caps (towers_find.py -> data/accor/towers.json). Lattice mast widening upward, tilted square cap, lamp ring.
+# 19 towers, curated one by one on the aerial (_towers_curate.py): cap centres. Mast foot = cap - (6.4, 16.0) m (measured lean).
+_keep = [tuple(p) for p in json.load(open(os.path.join(HERE, 'data', spec['name'], 'towers_curated.json')))]
+_LEAN = (6.4, 16.0)
+_TV, _TF = [], []
+def _beam(a, b, r=0.09):
+    a = np.array(a, float); b = np.array(b, float); d = b - a; L = np.linalg.norm(d)
+    if L < 1e-6: return
+    d /= L; up = np.array([0, 0, 1.0]) if abs(d[2]) < 0.9 else np.array([1.0, 0, 0])
+    u = np.cross(d, up); u /= np.linalg.norm(u); v = np.cross(d, u); n = len(_TV)
+    for c in (a, b):
+        for s, t in ((1, 1), (-1, 1), (-1, -1), (1, -1)): _TV.append(tuple(c + (u * s + v * t) * r))
+    for k in range(4): _TF.append((n + k, n + (k + 1) % 4, n + 4 + (k + 1) % 4, n + 4 + k))
+_CV, _CF = [], []
+for (x, y) in _keep:
+    z0 = float(height([x], [y])[0]); H = 30.0; NS_ = 10
+    ang = math.atan2(-x, -y) * 0   # masts are square to the boulevard grid
+    fx, fy = x - _LEAN[0], y - _LEAN[1]
+    def leg(i, z):
+        f = (z - z0) / H; w = 0.6 + 1.0 * f       # half-width 0.6 m at the foot, 1.6 m at the head
+        sx, sy = ((1, 1), (-1, 1), (-1, -1), (1, -1))[i]
+        j = int(round(f * NS_)); zz = 0.0 if j in (0, NS_) else (1.3 if j % 2 else -1.3)   # zig-zag mast nodes (ref photos)
+        return (fx + (x - fx) * f + sx * w + zz, fy + (y - fy) * f + sy * w - zz * 0.4, z)
+    for k in range(NS_):
+        za = z0 + H * k / NS_; zb = z0 + H * (k + 1) / NS_
+        for i in range(4):
+            _beam(leg(i, za), leg(i, zb), 0.11)
+            _beam(leg(i, zb), leg((i + 1) % 4, zb), 0.06)
+            _beam(leg(i, za) if k % 2 == 0 else leg((i + 1) % 4, za), leg((i + 1) % 4, zb) if k % 2 == 0 else leg(i, zb), 0.05)
+    # neck and cap: 6 x 6 m plate tilted 12 degrees, on a short post
+    _beam((x, y, z0 + H), (x, y, z0 + H + 1.6), 0.25)
+    zc = z0 + H + 1.8; t = math.tan(math.radians(12)); n = len(_CV)
+    for sx, sy in ((-3, -3), (3, -3), (3, 3), (-3, 3)):
+        _CV.append((x + sx, y + sy, zc + sy * t)); 
+    for sx, sy in ((-3, -3), (3, -3), (3, 3), (-3, 3)):
+        _CV.append((x + sx, y + sy, zc + sy * t - 0.35))
+    _CF += [(n, n + 1, n + 2, n + 3), (n + 7, n + 6, n + 5, n + 4)] + [(n + i, n + 4 + i, n + 4 + (i + 1) % 4, n + (i + 1) % 4) for i in range(4)]
+    # lamp heads under the cap
+    for sx, sy in ((-1.6, 0), (1.6, 0), (0, -1.6), (0, 1.6)):
+        _beam((x + sx, y + sy, zc - 1.0), (x + sx * 1.3, y + sy * 1.3, zc - 0.5), 0.3)
+_BV, _BF = [], []
+def _box(cx, cy, z0, hx, hy, h):
+    n = len(_BV)
+    for zz in (z0, z0 + h):
+        for sx, sy in ((-1, -1), (1, -1), (1, 1), (-1, 1)): _BV.append((cx + sx * hx, cy + sy * hy, zz))
+    _BF.extend([(n + 4, n + 5, n + 6, n + 7)] + [(n + i, n + (i + 1) % 4, n + 4 + (i + 1) % 4, n + 4 + i) for i in range(4)])
+_PV, _PF = [], []
+for (x, y) in _keep:
+    fx, fy = x - _LEAN[0], y - _LEAN[1]; z0 = float(height([fx], [fy])[0])
+    for dx in (-2.6, 2.6): _box(fx - 3.2 + dx, fy + 0.5, z0, 0.5, 1.6, 9.0)   # white portal: two slab legs 9 m (TZG photos)
+    _box(fx - 3.2, fy + 0.5, z0 + 8.0, 3.1, 1.6, 1.0)                 # portal head beam
+    cx, cy = x - 6.0, y + 3.0; zc = float(height([cx], [cy])[0]) + 8.0
+    for k in range(5):                                                # solar canopy 16 m wide, five 1.4 m rows (TZG photos)
+        n = len(_PV); yy = cy - 3.8 + k * 1.9
+        for sx, sy in ((-8, -0.7), (8, -0.7), (8, 0.7), (-8, 0.7)): _PV.append((cx + sx, yy + sy, zc + sy * 0.3))
+        _PF.append((n, n + 1, n + 2, n + 3))
+    for sx in (-5, 5):
+        _beam((cx + sx, cy - 3.8, zc - 8.0), (cx + sx, cy - 3.8, zc), 0.12); _beam((cx + sx, cy + 3.8, zc - 8.0), (cx + sx, cy + 3.8, zc), 0.12)
+def _flat(nm, col, rough, metal):
+    m = bpy.data.materials.new(nm); m.use_nodes = True; b = m.node_tree.nodes['Principled BSDF']
+    b.inputs['Base Color'].default_value = (*[(c / 255) ** 2.2 for c in col], 1); b.inputs['Roughness'].default_value = rough; b.inputs['Metallic'].default_value = metal
+    return m
+_ms = _flat('tower_steel', spec['palette'].get('tower_steel', [168, 180, 190]), 0.45, 0.6)
+_mc = mat_img('tower_cap', os.path.join(HERE, 'tex', 'accor_cap.png'), 0.5)
+_o = mk_obj('bg_blvd_towers', _TV, _TF, _ms); set_uv_box(_o.data, 1.0)
+_o2 = mk_obj('bg_blvd_tower_caps', _CV, _CF, _mc); set_uv_box(_o2.data, 1.0)
+_o3 = mk_obj('bg_blvd_tower_bases', _BV, _BF, _flat('tower_base', [214, 214, 208], 0.8, 0.0)); set_uv_box(_o3.data, 1.0)
+_o4 = mk_obj('bg_blvd_tower_pv', _PV, _PF, _flat('tower_pv', [38, 46, 62], 0.3, 0.2)); set_uv_box(_o4.data, 1.0)
+print('boulevard towers', len(_keep))
