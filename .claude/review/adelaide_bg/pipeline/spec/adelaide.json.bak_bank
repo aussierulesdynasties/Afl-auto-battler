@@ -1,0 +1,488 @@
+{
+ "name": "adelaide",
+ "lat": -34.915489777922076,
+ "lon": 138.59627692467532,
+ "seed": 7,
+ "clear_r_m": 175,
+ "near_half_m": 1500,
+ "near_step_m": 7.5,
+ "far_half_m": 30000,
+ "far_step_m": 250,
+ "ground_m_per_px": 1.5,
+ "tree_r_m": 1500,
+ "street_trees": 14,
+ "rivers_dry": false,
+ "glb": "../glb/adelaide.glb",
+ "palette": {
+  "ground_default": [
+   132,
+   136,
+   124
+  ],
+  "spinifex": [
+   120,
+   140,
+   82
+  ],
+  "lawn": [
+   100,
+   132,
+   64
+  ],
+  "yard": [
+   124,
+   138,
+   98
+  ],
+  "rock": [
+   120,
+   116,
+   108
+  ],
+  "sand": [
+   200,
+   184,
+   150
+  ],
+  "water": [
+   66,
+   92,
+   88
+  ],
+  "road": [
+   84,
+   84,
+   82
+  ],
+  "path": [
+   184,
+   178,
+   164
+  ],
+  "ballast": [
+   128,
+   118,
+   104
+  ],
+  "paved": [
+   176,
+   174,
+   166
+  ],
+  "parking": [
+   92,
+   91,
+   88
+  ],
+  "walls_house": [
+   [
+    88,
+    92,
+    98
+   ]
+  ],
+  "walls_block": [
+   [
+    204,
+    204,
+    199
+   ],
+   [
+    158,
+    138,
+    102
+   ],
+   [
+    142,
+    75,
+    54
+   ],
+   [
+    176,
+    170,
+    160
+   ]
+  ],
+  "walls_tower": [
+   [
+    54,
+    71,
+    89
+   ],
+   [
+    189,
+    194,
+    201
+   ],
+   [
+    69,
+    77,
+    97
+   ],
+   [
+    150,
+    160,
+    168
+   ],
+   [
+    86,
+    116,
+    134
+   ],
+   [
+    104,
+    128,
+    126
+   ],
+   [
+    206,
+    200,
+    188
+   ]
+  ],
+  "roofs_house": [
+   [
+    154,
+    74,
+    50
+   ],
+   [
+    107,
+    110,
+    110
+   ],
+   [
+    122,
+    59,
+    44
+   ],
+   [
+    62,
+    65,
+    67
+   ]
+  ],
+  "roofs_flat": [
+   [
+    219,
+    222,
+    217
+   ],
+   [
+    138,
+    138,
+    135
+   ],
+   [
+    160,
+    158,
+    150
+   ]
+  ],
+  "far_flat": [
+   120,
+   128,
+   108
+  ],
+  "far_veg": [
+   82,
+   104,
+   74
+  ],
+  "far_steep": [
+   78,
+   96,
+   72
+  ],
+  "haze": [
+   184,
+   196,
+   208
+  ],
+  "sky_top": [
+   70,
+   120,
+   180
+  ],
+  "sky_hor": [
+   190,
+   204,
+   216
+  ],
+  "track": [
+   70,
+   64,
+   60
+  ],
+  "dry_turf": [
+   168,
+   150,
+   112
+  ],
+  "court_navy": [
+   52,
+   66,
+   120
+  ],
+  "court_play": [
+   40,
+   90,
+   150
+  ]
+ },
+ "cover": [
+  [
+   "landuse",
+   "residential",
+   "yard"
+  ],
+  [
+   "landuse",
+   "commercial|retail|industrial|construction",
+   "paved"
+  ],
+  [
+   "landuse",
+   "railway",
+   "ballast"
+  ],
+  [
+   "amenity",
+   "parking",
+   "parking"
+  ],
+  [
+   "leisure",
+   "park|pitch|golf_course|garden|recreation_ground|common",
+   "lawn"
+  ],
+  [
+   "landuse",
+   "grass|recreation_ground|cemetery",
+   "lawn"
+  ],
+  [
+   "natural",
+   "wood|scrub",
+   "spinifex"
+  ],
+  [
+   "natural",
+   "water",
+   "water"
+  ],
+  [
+   "leisure",
+   "pitch",
+   "lawn"
+  ]
+ ],
+ "tree_fill": [
+  [
+   "leisure",
+   "park|garden|common",
+   420
+  ],
+  [
+   "leisure",
+   "golf_course",
+   900
+  ],
+  [
+   "landuse",
+   "grass",
+   800
+  ],
+  [
+   "natural",
+   "wood",
+   60
+  ],
+  [
+   "landuse",
+   "residential",
+   1700
+  ],
+  [
+   "leisure",
+   "pitch",
+   0
+  ],
+  [
+   "leisure",
+   "stadium",
+   0
+  ]
+ ],
+ "tree_kinds": [
+  "elm",
+  "red_gum",
+  "plane"
+ ],
+ "levels_default": {
+  "*": 7,
+  "house": 5,
+  "residential": 5,
+  "detached": 5,
+  "terrace": 7,
+  "semidetached_house": 6,
+  "apartments": 14,
+  "commercial": 12,
+  "office": 24,
+  "retail": 7,
+  "industrial": 9,
+  "warehouse": 9,
+  "school": 9,
+  "university": 14,
+  "hospital": 20,
+  "stadium": 28,
+  "train_station": 10
+ },
+ "trim_base": [
+  "ground"
+ ],
+ "model_blend": "../glb/adelaide.blend",
+ "house_wall_tex": "adl_bluestone.png",
+ "paint_poly": [
+  [
+   "dry_turf",
+   [
+    [
+     -264.4,
+     5.5
+    ],
+    [
+     -263.8,
+     -7.1
+    ],
+    [
+     -260.5,
+     -20.1
+    ],
+    [
+     -250.6,
+     -30.1
+    ],
+    [
+     -239.0,
+     -33.7
+    ],
+    [
+     -221.8,
+     -33.7
+    ],
+    [
+     -171.6,
+     -23.9
+    ],
+    [
+     -158.3,
+     -19.4
+    ],
+    [
+     -147.2,
+     -10.1
+    ],
+    [
+     -143.7,
+     1.4
+    ],
+    [
+     -149.0,
+     28.1
+    ],
+    [
+     -154.5,
+     48.8
+    ],
+    [
+     -159.8,
+     57.8
+    ],
+    [
+     -168.4,
+     71.2
+    ],
+    [
+     -178.7,
+     76.7
+    ],
+    [
+     -187.1,
+     78.7
+    ],
+    [
+     -196.2,
+     80.6
+    ],
+    [
+     -213.1,
+     79.9
+    ],
+    [
+     -227.9,
+     73.3
+    ],
+    [
+     -241.7,
+     61.6
+    ],
+    [
+     -252.1,
+     46.0
+    ],
+    [
+     -259.7,
+     29.1
+    ],
+    [
+     -264.4,
+     5.5
+    ]
+   ]
+  ],
+  [
+   "lawn",
+   [
+    [
+     -260,
+     -60
+    ],
+    [
+     -140,
+     -60
+    ],
+    [
+     -140,
+     -118
+    ],
+    [
+     -260,
+     -118
+    ]
+   ]
+  ]
+ ],
+ "roof_col_at": [
+  [
+   -121,
+   -197,
+   [
+    150,
+    82,
+    70
+   ]
+  ],
+  [
+   -32,
+   -207,
+   [
+    228,
+    228,
+    222
+   ]
+  ]
+ ],
+ "court_slabs": true,
+ "court_col": "court_navy"
+}

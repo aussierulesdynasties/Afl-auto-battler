@@ -5939,6 +5939,34 @@ func my_head_to_head(code: String) -> Array:
 	return Matchup.head_to_head(my_club, code, season.lists, season.selections, my_squad())
 
 
+## The papers' tips for a match (Tipping.panel): `m` is {"home", "away"} and,
+## for a final, its "tag" (MatchKickoff.upcoming_match). Each side's strength
+## as picked, as on the Overall row of the head to head (your selection for
+## you), its ladder place, percentage, games, last-five form, and the
+## home-ground edge the engine plays. [] without a season or either side.
+func match_tips(m: Dictionary) -> Array:
+	var h := str(m.get("home", ""))
+	var a := str(m.get("away", ""))
+	if season == null or h == "" or a == "" or not season.lists.has(h) or not season.lists.has(a):
+		return []
+	var edge: Array = season.finals_at_home(m) if season.is_regular_done() \
+			else season.round_at_home(season.round_index, h, a)
+	var order := {}
+	var rows := season.ladder_sorted()
+	for i in range(rows.size()):
+		order[str(rows[i]["code"])] = i + 1
+	var sides := []
+	for i in range(2):
+		var code := h if i == 0 else a
+		var sq: Squad = my_squad() if code == my_club else Squad.new(code, season.lists[code], false, code,
+				season.selections.get(code, {}))
+		var row: Dictionary = season.ladder.get(code, {})
+		sides.append({"code": code, "strength": sq.strength(), "pos": int(order.get(code, 0)),
+				"pct": float(row.get("pct", 100.0)) if int(row.get("p", 0)) > 0 else 100.0,
+				"played": int(row.get("p", 0)), "form": season.club_form(code), "edge": bool(edge[i])})
+	return Tipping.panel(sides[0], sides[1])
+
+
 ## Their danger, who they are missing and their run (Matchup.people).
 func opponent_people(code: String) -> Array:
 	if season == null or code == "" or not season.lists.has(code):

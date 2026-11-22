@@ -1,0 +1,3 @@
+{"out":"video2","res":[1280,720],"samples":16,"sun":{"az":110,"el":45,"power":4.5},
+"sky":[[0.0,[0.77,0.84,0.89]],[0.45,[0.25,0.49,0.77]]],
+"views":[{"name":"orbit","video":{"r":520,"z":190,"look":[0,0,10],"frames":8,"fps":24,"start_deg":90,"fov_h":60,"samples":16}}]}

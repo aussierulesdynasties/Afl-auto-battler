@@ -1,0 +1,39 @@
+import json
+s=json.load(open('spec/peoplefirst.json'))
+s.pop('paint_poly',None)
+s.update(name='riverway',lat=-19.317618,lon=146.731873,seed=11,glb='ground/riverway.glb',haze_m=22000)
+s['palette'].update(ground_default=[132,138,98],lawn=[104,136,66],yard=[124,136,88],spinifex=[96,108,66],water=[70,92,84],
+ roofs_house=[[196,198,194],[150,152,150],[176,96,70],[108,116,122],[214,214,208]],
+ far_flat=[128,132,92],far_veg=[84,100,62],far_steep=[104,100,78])
+s['tree_kinds']=['ghost_gum','paperbark','red_gum']
+s['rw_bigroof']=[200,198,190]
+json.dump(s,open('spec/riverway.json','w'),indent=1)
+s=json.load(open('spec/riverway.json'))
+s['palette'].update(water=[44,50,44],
+ roofs_house=[[226,228,226],[206,208,206],[188,192,192],[226,228,226],[150,156,158],[176,104,80]],
+ roofs_flat=[[230,232,230],[204,206,204],[176,178,176]])
+s['rw_bigroof']=[200,198,190]
+json.dump(s,open('spec/riverway.json','w'),indent=1)
+s=json.load(open('spec/riverway.json'))
+s['clear_r_m']=102
+s['palette']['lagoon']=[112,196,188]
+s['paint_poly']=[['parking',[[-300,-40],[-225,-30],[-215,-150],[-305,-160]]],
+ ['lagoon',[[-132,-206],[-92,-190],[-46,-176],[-38,-196],[-58,-236],[-104,-226]]]]
+s['rw_bigroof']=[200,198,190]
+json.dump(s,open('spec/riverway.json','w'),indent=1)
+s=json.load(open('spec/riverway.json'))
+s['tree_kinds_extra']={'rain_tree':[8.0,8.5,0.55,4.0,0.5,[62,88,48],[110,100,88],1],'mango':[4.8,5.6,0.85,2.4,0.35,[52,80,44],[96,84,72],1]}
+s['tree_kinds']=['rain_tree','mango','mango','paperbark','rain_tree','red_gum']
+s['rw_bigroof']=[200,198,190]
+json.dump(s,open('spec/riverway.json','w'),indent=1)
+s=json.load(open('spec/riverway.json'))
+s.update(rw_facades=True,rw_water=True,all_metal_roofs=True)
+s['palette'].update(lawn=[93,110,56],yard=[104,112,70],ground_default=[110,114,78],river_paint=[70,72,55],
+ roofs_house=[[232,232,226],[190,190,184],[136,140,138],[90,94,88],[234,224,196],[110,112,112],[232,232,226],[150,72,58]],
+ roofs_flat=[[232,232,226],[204,206,204],[176,178,176],[190,190,184]])
+s['tree_kinds_extra']={'rain_tree':[8.0,8.5,0.55,4.0,0.5,[52,76,42],[110,100,88],1],'mango':[4.8,5.6,0.85,2.4,0.35,[44,68,38],[96,84,72],1]}
+s['paint_poly']=[['parking',[[-300,-40],[-225,-30],[-215,-150],[-305,-160]]],
+ ['paved',[[-140,-200],[-92,-182],[-42,-168],[-30,-198],[-54,-244],[-108,-234]]],
+ ['lagoon',[[-132,-206],[-92,-190],[-46,-176],[-38,-196],[-58,-236],[-104,-226]]]]
+s['rw_bigroof']=[200,198,190]
+json.dump(s,open('spec/riverway.json','w'),indent=1)
