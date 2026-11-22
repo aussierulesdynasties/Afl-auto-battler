@@ -23,11 +23,13 @@ GROUNDS = {
     # Google Earth's field level is 10 m (work/dz.txt).
     # Cazaly's: the model's origin is the centroid of the OSM pitch outline (tools/grounds/cazalys/work/geo.py).
     "cazalys": {"lat": -16.935653, "lon": 145.749062, "ge_alt": 5.0,
-                "fit": [-0.1, 4.55, -0.01, 61.9, 87.98, 75.36]},
+                "fit": [-1.21, 3.69, -0.01, 61.13, 87.49, 75.22]},
     "bellerive": {"lat": -42.8773092, "lon": 147.3737365, "ge_alt": 10.0,
                   "fit": [0.31, -0.64, -0.02, 68.7, 86.9, 66.77]},
 }
-FOV = 23.5
+# Google Earth draws 35 deg over its 1000 px tall window; ge_shoot keeps the middle 720 rows, so the capture spans
+# 2 atan(360 / (500 / tan 17.5)) = 25.58 deg (it was 23.5 here, which drew our view 8% closer than Google Earth's).
+FOV = 25.58
 
 
 def to_match(g, p):
@@ -68,10 +70,10 @@ def plan(gname, views, work):
                      "https://earth.google.com/web/@%.7f,%.7f,%.1fa,%.1fd,35y,%.1fh,%.1ft,0r" % (lat, lon, g["ge_alt"] + u, d, v["h"], v["t"])])
         dirv = (math.sin(t) * math.sin(h), math.sin(t) * math.cos(h), -math.cos(t))
         cam = (e - d * dirv[0], n - d * dirv[1], u - d * dirv[2])
-        # Straight down: nudge the camera 3 degrees south so north stays up the picture (preinspect_look
-        # only keeps world up as the picture's up while the view is under 87.4 degrees from vertical).
-        if v["t"] < 3:
-            cam = (cam[0], cam[1] - 0.05 * d, cam[2])
+        # Straight down: nudge the camera 3 degrees back from the heading (preinspect_look only keeps world up as the
+        # picture's up while the view is under 87.4 degrees from vertical).
+        if v["t"] < 3:   # straight down: lean back from the heading so the picture's up is the heading, as Google Earth's
+            cam = (cam[0] - 0.05 * d * math.sin(h), cam[1] - 0.05 * d * math.cos(h), cam[2])
         pc = to_match(g, (cam[0], cam[2], -cam[1]))
         pt = to_match(g, (e, u, -n))
         specs.append("%s:%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.1f" % ((v["name"],) + pc + pt + (v.get("fov", FOV),)))

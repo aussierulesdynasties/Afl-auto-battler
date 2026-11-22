@@ -27,13 +27,29 @@ def pol(b, r):
 
 def fence_r(b):
     """radius from the origin to the fence ellipse along bearing b"""
-    x0, y0, a1, a2, rot = FE; t = math.radians(rot); d = np.array(pol(b, 1.0))
-    c, s = math.cos(t), math.sin(t)
-    def tr(p): return np.array([c * p[0] + s * p[1], -s * p[0] + c * p[1]])
-    p = tr(np.array([-x0, -y0])); q = tr(d)
-    A = (q[0] / a1) ** 2 + (q[1] / a2) ** 2; B = 2 * (p[0] * q[0] / a1 ** 2 + p[1] * q[1] / a2 ** 2)
-    C = (p[0] / a1) ** 2 + (p[1] / a2) ** 2 - 1
-    return (-B + math.sqrt(B * B - 4 * A * C)) / (2 * A)
+    return fence_off(b, 0.0)
+
+
+_OFF = {}
+def fence_off(b, d):
+    """radius from the origin, along bearing b, to the curve offset d metres square to the fence (outward +): every ring
+    that follows the fence is an exact parallel of it, not a radial copy"""
+    if d not in _OFF:
+        x0, y0, a1, a2, rot = FE; t = math.radians(rot); c, s = math.cos(t), math.sin(t)
+        th = np.linspace(0, 2 * math.pi, 14400, endpoint=False); u, v = a1 * np.cos(th), a2 * np.sin(th)
+        nx, ny = u / a1 ** 2, v / a2 ** 2; nn = np.hypot(nx, ny); u, v = u + d * nx / nn, v + d * ny / nn
+        X, Y = x0 + c * u - s * v, y0 + s * u + c * v
+        B = np.degrees(np.arctan2(X, Y)) % 360; o = np.argsort(B); B, R = B[o], np.hypot(X, Y)[o]
+        _OFF[d] = (np.concatenate([B[-1:] - 360, B, B[:1] + 360]), np.concatenate([R[-1:], R, R[:1]]))
+    B, R = _OFF[d]; return float(np.interp(b % 360, B, R))
+
+
+def fence_n(b):
+    """unit outward normal of the fence where bearing b meets it (rows and seats square to the fence, not to the bearing)"""
+    x0, y0, a1, a2, rot = FE; t = math.radians(rot); c, s_ = math.cos(t), math.sin(t)
+    x, y = pol(b, fence_r(b)); u = c * (x - x0) + s_ * (y - y0); v = -s_ * (x - x0) + c * (y - y0)
+    nx, ny = u / a1 ** 2, v / a2 ** 2; n = math.hypot(nx, ny); nx, ny = nx / n, ny / n
+    return (c * nx - s_ * ny, s_ * nx + c * ny)
 
 
 def interp(tab, b):
@@ -145,26 +161,30 @@ def seat(P, t, o, z, col, shell=None, post=True):
     oriented(POSTS, [X(-0.04, -0.45, 0.0), X(0.04, -0.45, 0.0), X(0.04, -0.45, 0.38), X(-0.04, -0.45, 0.38)], 'steel_galv', -o3)
 
 
-def seat_rows(bs, prof, k, n, pal, aisle=12.0, gap=1.1):
-    """3D seats on the n treads of seat segment k of a polar stand: one every 0.5 m, an aisle stair every 12 m"""
+def seat_rows(bs, prof, k, n, pal, aisle=12.0, gap=1.1, aisles=None):
+    """3D seats on the n treads of seat segment k of a polar stand: one every 0.5 m along the row, square to the fence;
+    aisle stairs at the measured bearings ([bearing, width] pairs) or, without them, every 12 m"""
     b0, b1 = bs[0], bs[-1]; rf = prof(0.5 * (b0 + b1))[k][0]
-    ab = []; s = aisle / 2
-    while True:
-        b = b0 + math.degrees(s / rf)
-        if b > b1 - math.degrees(2 / rf): break
-        ab.append(b); s += aisle
-    AISLES.extend(ab)
+    if aisles is None:
+        ab = []; s = aisle / 2
+        while True:
+            b = b0 + math.degrees(s / rf)
+            if b > b1 - math.degrees(2 / rf): break
+            ab.append((b, gap)); s += aisle
+    else:
+        ab = [(float(a), float(w)) for a, w in aisles]
+    AISLES.extend(a for a, w in ab)
     for j in range(n):
         b = b0 + math.degrees(0.6 / rf)
         while True:
             P = prof(b); (r0, z0), (r1, z1) = P[k], P[k + 1]
             rr = r0 + (r1 - r0) * (j + 1) / n; zz = z0 + (z1 - z0) * j / (n - 1) if n > 1 else z0
             if b > b1 - math.degrees(0.6 / rr): break
-            if all(abs(math.radians(b - a)) * rr > gap / 2 + 0.25 for a in ab):
-                a = math.radians(b); o = (math.sin(a), math.cos(a)); t = (math.cos(a), -math.sin(a))
+            if all(abs(math.radians(b - a)) * rr > w / 2 + 0.25 for a, w in ab):
+                o = fence_n(b); t = (o[1], -o[0])
                 seat(pol(b, rr), t, o, zz, pick(pal))
             b += math.degrees(0.5 / rr)
-    return ab
+    return [a for a, w in ab]
 
 
 def aisle_stairs(mb, ab, prof, k, n):
@@ -196,12 +216,14 @@ def brange(b0, b1):
 
 # ---------------- west side: open terraces and the roofed grandstand ----------------
 def open_terrace(S, mb):
-    bs = brange(S['b0'], S['b1']); zs0, zs1 = S['z_seat']
+    """an open seated terrace, every line of it parallel to the fence (Google Earth top-down, straightened along the
+    fence, 2026-11-22): a front wall, n seat rows rising to the rear walkway, a parapet at the back"""
+    bs = brange(S['b0'], S['b1']); zs0, zs1 = S['z_seat']; f, r1, w = S['front'], S['rows_to'], S['walk_to']
     def prof(b):
-        rs0 = fence_r(b % 360) + S['front']; rb = interp(S['back'], b)[0]
-        return [(rs0, 0.0), (rs0, zs0), (rb - 0.4, zs1), (rb - 0.4, zs1 + 1.1), (rb, zs1 + 1.1), (rb, 0.0)]
-    n = nrows(prof, bs, 1); tp, tm = terrace(prof, ['conc_wall', 'seat', 'conc_wall', 'conc_wall', 'conc_wall'], [(1, n)])
-    strip(mb, bs, tp, tm, -1); ab = seat_rows(bs, prof, 1, n, S['pal']); aisle_stairs(mb, ab, prof, 1, n)
+        b %= 360; rs0 = fence_off(b, f); rr = fence_off(b, r1); rw = fence_off(b, w); rp = fence_off(b, w + 0.25)
+        return [(rs0, 0.0), (rs0, zs0), (rr, zs1), (rw, zs1), (rw, zs1 + 1.1), (rp, zs1 + 1.1), (rp, 0.0)]
+    n = S['rows']; tp, tm = terrace(prof, ['conc_wall', 'seat', 'conc_tread', 'conc_wall', 'conc_wall', 'conc_wall'], [(1, n)])
+    strip(mb, bs, tp, tm, -1); ab = seat_rows(bs, prof, 1, n, S['pal'], aisles=S.get('aisles')); aisle_stairs(mb, ab, prof, 1, n)
     for b, sg in ((bs[0], -1), (bs[-1], 1)):
         endcap(mb, b, tp(b), 'conc_wall', sg)
 
@@ -211,7 +233,7 @@ def grandstand(G, mb, mr):
     level at the back of the upper tier, the concourse building behind"""
     bs = brange(G['b0'], G['b1']); zl0, zl1 = G['z_lower']; zu0, zu1 = G['z_upper']; zg = G['z_glaze']
     def geo(b):
-        rs0 = fence_r(b % 360) + G['front']; ru0 = interp(G['upper_front'], b)[0]; ru1 = interp(G['upper_back'], b)[0]
+        rs0 = fence_off(b % 360, G['front']); ru0 = interp(G['upper_front'], b)[0]; ru1 = interp(G['upper_back'], b)[0]
         rr = interp(G['rear'], b)[0]; return rs0, ru0, ru1, rr
     def prof(b):
         rs0, ru0, ru1, rr = geo(b)
@@ -228,24 +250,31 @@ def grandstand(G, mb, mr):
 
 
 def gs_roof(G, mr, bs, geo):
-    """the grandstand roof as built (Google Earth 3D, top-down view gr_top and obliques gr_*, 2026-11-22; Commons 2022
-    photos 3 and 11): one plane sheet with straight edges traced from above, the rear stepping out round the south notch,
-    rising 1 m to the back; a light walkway strip across it to a camera cage at the front edge; three short masts on
-    top, each a star of round ties down to the sheet, linked into a W along the front"""
-    R = G['roof_poly']; P = ccw([tuple(p) for p in R['poly']]); zf, zr = G['z_roof']; th = 0.45
-    f0, f1 = np.array(R['front'][0], float), np.array(R['front'][1], float); tf = (f1 - f0) / np.linalg.norm(f1 - f0)
+    """the grandstand roof as built, measured (roof_poly's note): a level-looking sheet, the plane through the eight measured
+    corners (11.4-12.0 m), its outline folded in plan where the front kinks (FK) and back to the rear kink (RK); the two
+    panels' ribs run square to their own front edges, which is what makes the fold read in GE and the photos. A walkway strip
+    across it to a camera cage; three pyramid frames of round white tubes, each from an apex 2.5-2.8 m over the sheet down
+    to feet on it, the end frames linked to the middle one into a W"""
+    R = G['roof_poly']; P = ccw([tuple(p) for p in R['poly']]); th = 0.45; PL = R['plane']
+    ZZ = lambda p: PL[0] * p[0] + PL[1] * p[1] + PL[2]
+    f0, f1 = np.array(R['front'][0], float), np.array(R['front'][-1], float); tf = (f1 - f0) / np.linalg.norm(f1 - f0)
     nb = np.array([-tf[1], tf[0]])   # into the roof, away from the field
     if np.dot(nb, np.mean(np.array(P), 0) - f0) < 0: nb = -nb
-    Dp = max(nb @ (np.array(p) - f0) for p in P)
-    ZZ = lambda p: zf + (zr - zf) * (nb @ (np.array(p[:2], float) - f0)) / Dp
-    tu, tv = TILE['roof_gs']; ru = np.array([nb[0], nb[1]])   # sheeting ribs run front to back
-    for tri in earclip(P):
-        q = [(x, y, ZZ((x, y))) for x, y in tri]; uv = [((np.array((x, y)) @ tf) / tu, (np.array((x, y)) @ ru) / tv) for x, y in tri]
-        oriented(mr, q, 'roof_gs', UP, uv)
-        oriented(mr, [(x, y, zz - th) for x, y, zz in q], 'roof_soffit', -UP, uv)
+    k0, k1 = np.array(R['fold'][0], float), np.array(R['fold'][1], float); tk = (k1 - k0) / np.linalg.norm(k1 - k0)
+    nk = np.array([-tk[1], tk[0]]); ck = nk @ k0
+    tu, tv = TILE['roof_gs']
+    for sg, (a, b) in ((1, R['front'][:2]), (-1, R['front'][1:])):   # each panel: clip the outline at the fold
+        a, b = np.array(a, float), np.array(b, float)
+        if sg * (nk @ ((a + b) / 2) - ck) < 0: sg = -sg
+        H = hclip(P, nk, ck, sg)
+        tp = (b - a) / np.linalg.norm(b - a); rp = np.array([-tp[1], tp[0]])   # ribs square to this panel's front
+        for tri in earclip(ccw(H)):
+            q = [(x, y, ZZ((x, y))) for x, y in tri]; uv = [((np.array((x, y)) @ tp) / tu, (np.array((x, y)) @ rp) / tv) for x, y in tri]
+            oriented(mr, q, 'roof_gs', UP, uv)
+            oriented(mr, [(x, y, zz - th) for x, y, zz in q], 'roof_soffit', -UP, uv)
     for i in range(len(P)):   # fascia band all round, deeper along the front
         a, b = np.array(P[i]), np.array(P[(i + 1) % len(P)])
-        n = np.array([b[1] - a[1], a[0] - b[0]]); n /= np.linalg.norm(n); dz = 0.9 if n @ nb < -0.95 else 0.6
+        n = np.array([b[1] - a[1], a[0] - b[0]]); n /= np.linalg.norm(n); dz = 0.9 if n @ nb < -0.8 else 0.6
         oriented(mr, [(*a, ZZ(a) - dz), (*b, ZZ(b) - dz), (*b, ZZ(b) + 0.06), (*a, ZZ(a) + 0.06)], 'fascia', np.array([*n, 0]))
         ai, bi = a - n * 0.25, b - n * 0.25
         oriented(mr, [(*a, ZZ(a) - dz), (*b, ZZ(b) - dz), (*bi, ZZ(bi) - th), (*ai, ZZ(ai) - th)], 'fascia', -UP)
@@ -283,14 +312,13 @@ def gs_roof(G, mr, bs, geo):
     b = bs[0] + 1.0
     while b < bs[-1] - 0.5:
         rs0, ru0, ru1, rr = geo(b); p = P3(b, ru0 - 0.4, G['z_lower'][1]); mr.beam(p, (p[0], p[1], ZZ(p) - th), 0.3, 0.3, 'steel_white'); b += 6.6
-    # masts and ties (GE top-down: three stars; photo 3: round white tubes, the peaks ~3.5 m over the roof)
+    # pyramid frames (measured: apex xyz, feet on the sheet; photo 2022_10: round white tubes, no mast below the apex)
     on = lambda q: (q[0], q[1], ZZ(q) + 0.05)
-    for M in R['masts']:
-        c = M['at']; top = (c[0], c[1], ZZ(c) + R['mast_h'])
-        mr.beam(on(c), top, 0.6, 0.6, 'steel_white', tube=True)
-        for q in M['ties']:
-            mr.beam(top, on(q), 0.42, 0.42, 'steel_white', tube=True)   # GE: the ties read as broad silver members
-            mr.cyl(q, 0.35, ZZ(q) - 0.05, ZZ(q) + 0.25, 'steel_white', n=8, top='steel_white')   # tie shoe on the roof
+    for M in R['frames']:
+        top = tuple(M['apex']); mr.cyl(top[:2], 0.32, top[2] - 0.3, top[2] + 0.15, 'steel_white', n=10, top='steel_white')
+        for q in M['feet']:
+            mr.beam(top, on(q), 0.32, 0.32, 'steel_white', tube=True)
+            mr.cyl(q, 0.3, ZZ(q) - 0.05, ZZ(q) + 0.25, 'steel_white', n=8, top='steel_white')   # tie shoe on the sheet
 
 
 def club_roofs(C, mb):
@@ -1047,10 +1075,10 @@ def boundary_seats(mb):
     """loose tip-up seats on a concrete kerb just behind the fence, colours in threes: maroon, gold, teal (photos 01, 04-06)"""
     B = D['boundary_seats']; P = D['palettes']['boundary']; cyc = [p[0] for p in P]; grp = B['group']
     for a0, a1 in B['arcs']:
-        r0 = fence_r(a0) + B['behind']; b = a0 + math.degrees(0.5 / r0); k = 0; run = []
+        r0 = fence_off(a0, B['behind']); b = a0 + math.degrees(0.5 / r0); k = 0; run = []
         while b < a1:
             if not in_arc(b, B['skip']):
-                r = fence_r(b) + B['behind']; a = math.radians(b); o = (math.sin(a), math.cos(a)); t = (math.cos(a), -math.sin(a))
+                r = fence_off(b, B['behind']); a = math.radians(b); o = (math.sin(a), math.cos(a)); t = (math.cos(a), -math.sin(a))
                 seat(pol(b, r + 0.55), t, o, 0.15, cyc[(k // grp) % len(cyc)]); run.append(b); k += 1
                 b += math.degrees(0.52 / r)
                 if k % (grp * 4) == 0: b += math.degrees(B['gap'] / r)
@@ -1067,10 +1095,10 @@ def boundary_seats(mb):
             bs = np.arange(s0 - 0.3, s1 + 0.3, 0.5)
             for i in range(len(bs) - 1):
                 ba, bb = bs[i], bs[i + 1]
-                q = [P3(ba, fence_r(ba) + 0.25, 0.15), P3(bb, fence_r(bb) + 0.25, 0.15), P3(bb, fence_r(bb) + 1.35, 0.15), P3(ba, fence_r(ba) + 1.35, 0.15)]
+                q = [P3(ba, fence_off(ba, 0.25), 0.15), P3(bb, fence_off(bb, 0.25), 0.15), P3(bb, fence_off(bb, 1.35), 0.15), P3(ba, fence_off(ba, 1.35), 0.15)]
                 oriented(mb, q, 'conc_kerb', UP)
-                oriented(mb, [P3(ba, fence_r(ba) + 0.25, 0), P3(bb, fence_r(bb) + 0.25, 0), q[1], q[0]], 'conc_kerb', -np.array([*pol(0.5 * (ba + bb), 1), 0]))
-                oriented(mb, [P3(ba, fence_r(ba) + 1.35, 0), P3(bb, fence_r(bb) + 1.35, 0), q[2], q[3]], 'conc_kerb', np.array([*pol(0.5 * (ba + bb), 1), 0]))
+                oriented(mb, [P3(ba, fence_off(ba, 0.25), 0), P3(bb, fence_off(bb, 0.25), 0), q[1], q[0]], 'conc_kerb', -np.array([*pol(0.5 * (ba + bb), 1), 0]))
+                oriented(mb, [P3(ba, fence_off(ba, 1.35), 0), P3(bb, fence_off(bb, 1.35), 0), q[2], q[3]], 'conc_kerb', np.array([*pol(0.5 * (ba + bb), 1), 0]))
 
 
 DIP = None
@@ -1126,14 +1154,14 @@ def ground(col):
             if t > 0 and 0 <= s <= 1: best = t if best is None else max(best, t)
         return best or fence_r(b) + 20
     for i in range(len(bs) - 1):
-        ba, bb = bs[i], bs[i + 1]; fa, fb = fence_r(ba % 360), fence_r(bb % 360)
-        for r0a, r0b, r1a, r1b, m, z in ((fa, fb, fa + 2.5, fb + 2.5, 'paving', -0.01), (fa + 2.5, fb + 2.5, outer(ba), outer(bb), 'grass', -0.02)):
+        ba, bb = bs[i], bs[i + 1]; fa, fb = fence_r(ba % 360), fence_r(bb % 360); pa, pb = fence_off(ba, 2.5), fence_off(bb, 2.5)
+        for r0a, r0b, r1a, r1b, m, z in ((fa, fb, pa, pb, 'paving', -0.01), (pa, pb, outer(ba), outer(bb), 'grass', -0.02)):
             q = [P3(ba, r0a, z), P3(bb, r0b, z), P3(bb, r1b, z), P3(ba, r1a, z)]
             E = D.get('earth')   # bare earth behind the west end (GE 3D 2026): earth from behind the paving ring out to the measured back line, grass beyond
             if m == 'grass' and E and E['b0'] <= ba and bb <= E['b1']:
                 bk = lambda b: float(np.interp(b, [k[0] for k in E['back']], [k[1] for k in E['back']]))
                 ea, eb = min(bk(ba), r1a), min(bk(bb), r1b)
-                for g, mm in (([P3(ba, r0a, z), P3(bb, r0b, z), P3(bb, eb, z), P3(ba, ea, z)], 'earth'), ([P3(ba, ea, z), P3(bb, eb, z), P3(bb, r1b, z), P3(ba, r1a, z)], 'grass')):
+                for g, mm in (([P3(ba, r0a, z), P3(bb, r0b, z), P3(bb, eb, z), P3(ba, ea, z)], E.get('mat', 'earth')), ([P3(ba, ea, z), P3(bb, eb, z), P3(bb, r1b, z), P3(ba, r1a, z)], 'grass')):
                     oriented(mb, g, mm, UP, uv=[(p[0] / TILE[mm][0], p[1] / TILE[mm][1]) for p in g])
                 continue
             if m == 'grass' and DIP is not None and min(np.hypot(p[0] - DIP[0][:, 0].mean(), p[1] - DIP[0][:, 1].mean()) for p in q) < 45:
