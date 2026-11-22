@@ -12,7 +12,9 @@ if F['yaw']:
 s['palette'].update({'infield': [170, 128, 96], 'park_dry': [150, 138, 100], 'court_green': [58, 108, 80], 'turf_blue': [92, 150, 180], 'turf_runoff': [60, 104, 150]})
 # rural grounds: open land OSM leaves untagged is paddock, not the town's grey-green verge (read as concrete from above)
 if g in ('barossa', 'summit', 'bruce'): s['palette']['ground_default'] = [124, 132, 90]
-if os.environ.get('BG_REAL'): s['cover'].append(['leisure', 'track', 'sand'])   # race and trotting tracks: their own patch, coloured from the aerial
+if os.environ.get('BG_REAL'): s['cover'].append(['leisure', 'track', 'sand'])
+if os.environ.get('BG_REAL'):   # building sites: bare sand or fill, coloured from the aerial, not paving
+    s['cover'] = [[k, v.replace('|construction', ''), c] if k == 'landuse' else [k, v, c] for k, v, c in s['cover']] + [['landuse', 'construction', 'park_dry']]   # race and trotting tracks: their own patch, coloured from the aerial
 if os.environ.get('BG_REAL'): s['tree_lod_m'] = [300.0, 700.0]   # real place: every crown kept, simpler sooner
 if os.environ.get('BG_REAL'): s['real'] = True   # real place: aerial colours, Sentinel-2, canopy, Overture heights (real.py)
 _lmj = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'real_lm.json')
