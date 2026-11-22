@@ -1627,7 +1627,11 @@ func _loc(k: int) -> Vector2:
 			if absf(x - src.x) < 12.0 and absf(dy) < 10.0:
 				dy = (signf(dy_raw) if dy_raw != 0.0 else 1.0) * _rng.randf_range(10.0, 18.0)
 			# (The roll is made as before whatever the plan, so the stream is unchanged.)
-			if absf(src.y) > 22.0 and _rng.randf() < 0.1 and _plan_of(int(ev.get("side", 0))) != "attacking":
+			# Controlled tempo and Slow it down go wide and switch it more often
+			# (rule 2.45; row 201 gap 8). The roll is the same one either way.
+			var ks := int(ev.get("side", 0))
+			var switch_p := 0.25 if _plan_of(ks) == "controlled" or _burst_on(ks, "hold") else 0.1
+			if absf(src.y) > 22.0 and _rng.randf() < switch_p and _plan_of(ks) != "attacking":
 				dy = -src.y * 1.3 + _rng.randf_range(-5.0, 5.0)   # a switch of play (never down the corridor)
 		var y := src.y + dy
 		var side := int(ev.get("side", 0))
@@ -1636,6 +1640,10 @@ func _loc(k: int) -> Vector2:
 			# from his slot, up his lane, never across to the ball, so the
 			# receivers never converge on one column.
 			y = float(_lane[a]) + _rng.randf_range(-1.0, 1.0)
+			# ... and it never switches (rule 2.45): from a flank, it goes no
+			# further than the corridor on the far side.
+			if absf(src.y) >= 10.0 and signf(y) != signf(src.y):
+				y = signf(y) * minf(absf(y), maxf(0.0, 24.0 - absf(src.y)))
 		elif x * _dir(side) < MatchMotion.gx(-45.0):
 			y *= 1.15   # clearing from defence: toward the boundary, away from the corridor
 		p = Vector2(x, y)

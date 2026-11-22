@@ -56,6 +56,7 @@ func run() -> void:
 	_t("_test_match_ground")
 	_t("_test_ground_models")
 	_t("_test_ground_screens")
+	_t("_test_stand_light")
 	_t("_test_mcg_crowd", [res])
 	_t("_test_graphics_levels", [res])
 	_t("_test_discs_apart")
@@ -2262,7 +2263,7 @@ func _test_three_d_numbers() -> void:
 ## Settings > Graphics (Oval3DQuality): High is the look as built; Low draws every supporter as a
 ## card (no 3D people built), takes the seats' own shadows and the blades away, and draws the
 ## picture at three-quarter size. At every level the seats are drawn in slices round the bowl, so
-## the camera draws only those in view.
+## the camera draws only those in view. Rain falls at both, Low with fewer drops.
 func _test_graphics_levels(res: Dictionary) -> void:
 	for level in [Oval3DQuality.HIGH, Oval3DQuality.LOW]:
 		var d := MatchDirector.new()
@@ -2288,7 +2289,7 @@ func _test_graphics_levels(res: Dictionary) -> void:
 				seat_casting += 1 if g.cast_shadow != GeometryInstance3D.SHADOW_CASTING_SETTING_OFF else 0
 			elif str(g.name).begins_with("bowl"):
 				bowl_casting += 1 if g.cast_shadow != GeometryInstance3D.SHADOW_CASTING_SETTING_OFF else 0
-		_check(slices >= GroundModels.SEAT_SECTORS / 2 and seats > 70000 and bowl_casting > 0,
+		_check(slices >= GroundModels.SEAT_SECTORS / 2 and seats > 55000 and bowl_casting > 0,
 				"%s: the MCG's %d seats are drawn in %d slices round the bowl; the bowl casts its shade" % [level, seats, slices])
 		var people := 0
 		for ch: Dictionary in oval.crowd._chunks:
@@ -2302,12 +2303,64 @@ func _test_graphics_levels(res: Dictionary) -> void:
 			_check(people == 0 and first.visibility_range_begin == 0.0 and seat_casting == 0
 					and vp.scaling_3d_scale < 1.0 and not oval.turf.blades_on,
 					"Low: every supporter a card, no seat shadows, no blades, a smaller picture (%d casting)" % seat_casting)
+		# A wet day (rule 2.83): rain falls at every level, fewer drops lower down; the far stands
+		# grey in it, the men look wet, the towers are on by day. A dry day after it takes all that away.
+		_check(oval.turf.rain == null and float(RenderingServer.global_shader_parameter_get("oval_wet")) == 0.0,
+				"%s: no rain and dry kit on a fine day" % level)
+		oval.turf.apply(VignetteWeather.WET, VignetteKickoff.DAY)
+		var rain: Oval3DRain = oval.turf.rain
+		_check(rain != null and rain.amount == int(Oval3DQuality.preset(level)["rain"]) and rain.get_parent() == oval
+				and oval._env.fog_enabled and float(RenderingServer.global_shader_parameter_get("oval_wet")) == 1.0
+				and oval.turf.fill.visible,
+				"%s wet: %d drops falling, haze, wet kit, the towers on" % [level, rain.amount if rain else -1])
+		_check(((rain.draw_pass_1 as QuadMesh).material as BaseMaterial3D).render_priority == Material.RENDER_PRIORITY_MAX,
+				"%s wet: the rain is drawn over the match film, not wiped by it" % level)
+		oval.turf.apply("", VignetteKickoff.DAY)
+		_check(oval.turf.rain == null and not oval._env.fog_enabled
+				and float(RenderingServer.global_shader_parameter_get("oval_wet")) == 0.0 and not oval.turf.fill.visible,
+				"%s: a fine day after a wet one has no rain, haze or wet kit" % level)
 		vp.queue_free()
 
 
 ## The ground's big screens and fence signs (Oval3DScreens, row 202 2b): a match at a ground whose
 ## model has screens lays a face over each, facing the ground, that shows the score, a goal and
 ## the clock; the boards ring the fence in both clubs' colours; the inspector (no clubs) gets none.
+## The stands' light (director, 2026-11-21: roof undersides "grey, a faint green tint"): the model's
+## surfaces take the stand shader; a face turned up keeps the sky's light, one turned down loses the
+## grass's green; at night nothing changes; the men and the turf keep their own materials.
+func _test_stand_light() -> void:
+	var d := MatchDirector.new()
+	var res := _result(42)
+	d.setup(res, res["events"])
+	var oval := Oval3D.new()
+	oval.ground = "MCG"
+	(Engine.get_main_loop() as SceneTree).root.add_child(oval)
+	oval.build(d, "COL", "GEE")
+	var stand := 0
+	var other := 0
+	for mi: MeshInstance3D in oval.find_children("*", "MeshInstance3D", true, false):
+		if mi.mesh == null or not oval.get_node("Ground").is_ancestor_of(mi):
+			continue
+		for i in mi.mesh.get_surface_count():
+			var m := mi.get_active_material(i) as ShaderMaterial
+			if m != null and m.shader == Oval3DTurf.STAND_SHADER:
+				stand += 1
+				_check(m.resource_name != "", "A stand surface keeps its material's name")
+			else:
+				other += 1
+	_check(stand > 50, "The MCG's surfaces take the stands' light (%d, %d others)" % [stand, other])
+	var sm: ShaderMaterial = oval.turf.env.sky.sky_material
+	var grey: Array = oval.turf.stand_light(sm, 1.0, Oval3DTurf.STAND_GREEN)
+	var sky: Array = oval.turf.stand_light(sm, 1.0, 1.0)
+	_check((grey[4] - sky[4]).length() < 0.002, "A face turned up is lit as before (%s)" % (grey[4] - sky[4]))
+	var down: Vector3 = grey[0] - sky[0]
+	_check(down.y < -0.02 and down.x > 0.0, "A face turned down loses the grass's green (%s)" % down)
+	oval.turf.apply("", VignetteKickoff.NIGHT)
+	var m0: ShaderMaterial = oval.turf._stand_mats[0]
+	_check(m0.get_shader_parameter("amb_down") == Vector3.ZERO, "At night the stands' light is unchanged")
+	oval.queue_free()
+
+
 func _test_ground_screens() -> void:
 	var d := MatchDirector.new()
 	var res := _result(42)
@@ -2364,7 +2417,9 @@ func _test_mcg_crowd(res: Dictionary) -> void:
 	for mi in oval.find_child("Ground", false, false).get_children():
 		if mi is MultiMeshInstance3D and str(mi.name).begins_with("seats_"):
 			seats += (mi as MultiMeshInstance3D).multimesh.instance_count
-	_check(crowd != null and crowd.get_parent().name == "Ground" and seats > 70000,
+	# About 60,000 since the seat rule (seats only on a sloped row with a floor, in the open or
+	# under at least 2.6 m of headroom) took the ones the model had floating or under a tier.
+	_check(crowd != null and crowd.get_parent().name == "Ground" and seats > 55000,
 			"The MCG has its crowd, on the model (%d seats)" % seats)
 	_check(crowd.supporters > seats * 0.88 and crowd.supporters < seats * 0.96,
 			"Most of the MCG's seats are taken, a few left empty (%d of %d)" % [crowd.supporters, seats])

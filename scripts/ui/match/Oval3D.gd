@@ -552,6 +552,7 @@ func _ground_model(slug: String, base := "", home := "", away := "") -> void:
 	add_child(root)
 	Oval3DQuality.apply_model(quality, root)
 	turf.set_ground(slug)
+	turf.light_stands(root)
 	_turf_mat.set_shader_parameter("fence_clip", GroundModels.match_fence())
 	_apron_skirt()
 	if home == "":

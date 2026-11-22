@@ -37,7 +37,7 @@
    ],
    "roof": {
     "z_front": 6.2,
-    "z_back": 5.4,
+    "z_back": 6.0,
     "over_front": 1.8,
     "over_back": 1.5,
     "posts": 6.5,
@@ -69,7 +69,7 @@
    ],
    "roof": {
     "z_front": 6.0,
-    "z_back": 5.2,
+    "z_back": 5.8,
     "over_front": 1.8,
     "over_back": 1.5,
     "posts": 6.5,
@@ -101,7 +101,7 @@
    ],
    "roof": {
     "z_front": 6.4,
-    "z_back": 5.6,
+    "z_back": 6.2,
     "over_front": 1.5,
     "over_back": 2.5,
     "posts": 6.0,
