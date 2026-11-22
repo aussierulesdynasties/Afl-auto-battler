@@ -223,8 +223,8 @@
    "name": "new_se",
    "lean": [],
    "b0": 98,
-   "b1": 142,
-   "kind": "two_tier",
+   "b1": 139,
+   "kind": "shell",
    "roof": [
     [
      102,
@@ -254,23 +254,13 @@
    ],
    "seat_front": 2.4,
    "z_seat": [
-    1.3,
-    4.0
-   ],
-   "lower_back": 9.0,
-   "box": [
-    2.0,
-    3.0
+    1.2,
+    4.2
    ],
    "z_upper": [
-    3.5,
-    11.0
+    5.4,
+    12.0
    ],
-   "z_roof": [
-    18.5,
-    17.5
-   ],
-   "back_in": 2.0,
    "mats": {
     "seat": "seats_green",
     "roof": "roof_white",
@@ -278,19 +268,58 @@
     "front": "conc_wall",
     "box": "conc_wall"
    },
-   "rib": 0,
-   "solar": [],
-   "arch": 4.0,
-   "camber": 1.5,
-   "raft": 4.5,
-   "open_back": 7.0
+   "lower_back": 9.6,
+   "wall_in": 4.5,
+   "bay": 4.6,
+   "doors": 3,
+   "back": [
+    [
+     102,
+     97.0
+    ],
+    [
+     110,
+     101.0
+    ],
+    [
+     120,
+     101.9
+    ],
+    [
+     130,
+     100.0
+    ],
+    [
+     142,
+     94.0
+    ]
+   ],
+   "shell": {
+    "z_back": 14.8,
+    "z_front": 20.5,
+    "drop": 3.0,
+    "drop_front": 4.0,
+    "curl": 1.8,
+    "lens": 0.55
+   },
+   "cores": [
+    [
+     98.6,
+     -1
+    ],
+    [
+     138.4,
+     1,
+     "brick_core"
+    ]
+   ]
   },
   {
    "name": "new_s",
    "lean": [],
-   "b0": 142,
+   "b0": 145,
    "b1": 188,
-   "kind": "two_tier",
+   "kind": "shell",
    "roof": [
     [
      146,
@@ -315,23 +344,13 @@
    ],
    "seat_front": 2.4,
    "z_seat": [
-    1.3,
-    4.0
-   ],
-   "lower_back": 9.0,
-   "box": [
-    2.0,
-    3.0
+    1.2,
+    4.2
    ],
    "z_upper": [
-    3.5,
-    10.0
+    5.4,
+    12.0
    ],
-   "z_roof": [
-    17.5,
-    16.5
-   ],
-   "back_in": 2.0,
    "mats": {
     "seat": "seats_green",
     "roof": "roof_white",
@@ -339,12 +358,42 @@
     "front": "conc_wall",
     "box": "conc_wall"
    },
-   "rib": 0,
-   "solar": [],
-   "arch": 3.0,
-   "camber": 1.2,
-   "raft": 4.5,
-   "open_back": 7.0
+   "lower_back": 9.6,
+   "wall_in": 4.5,
+   "bay": 4.6,
+   "doors": 3,
+   "back": [
+    [
+     146,
+     102.0
+    ],
+    [
+     160,
+     103.0
+    ],
+    [
+     175,
+     103.0
+    ],
+    [
+     188,
+     102.0
+    ]
+   ],
+   "shell": {
+    "z_back": 14.8,
+    "z_front": 20.5,
+    "drop": 3.0,
+    "drop_front": 4.0,
+    "curl": 1.8,
+    "lens": 0.55
+   },
+   "cores": [
+    [
+     187.4,
+     1
+    ]
+   ]
   },
   {
    "name": "south_bank",
@@ -372,7 +421,41 @@
    ]
   }
  ],
- "towers": [],
+ "towers": [
+  {
+   "xy": [
+    47.3,
+    97.1
+   ],
+   "top": 46,
+   "head_h": 6.2,
+   "head_w": 7.5,
+   "tiers": 3,
+   "tilt": 14
+  },
+  {
+   "xy": [
+    -77.3,
+    69.6
+   ],
+   "top": 46,
+   "head_h": 6.2,
+   "head_w": 7.5,
+   "tiers": 3,
+   "tilt": 14
+  },
+  {
+   "xy": [
+    -91.8,
+    -46.8
+   ],
+   "top": 46,
+   "head_h": 6.2,
+   "head_w": 7.5,
+   "tiers": 3,
+   "tilt": 14
+  }
+ ],
  "extras": null,
  "signs": [],
  "mats_ground": {
@@ -542,5 +625,16 @@
    "wall": "conc_tread",
    "roof": "conc_wall"
   }
- ]
+ ],
+ "videoboard": {
+  "c": [
+   -31.0,
+   -101.4
+  ],
+  "a": 163,
+  "w": 14.4,
+  "h": 7.0,
+  "z0": 7.5,
+  "depth": 1.2
+ }
 }

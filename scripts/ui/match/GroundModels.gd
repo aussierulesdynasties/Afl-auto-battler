@@ -34,6 +34,7 @@ const GROUNDS := {
 	"Jiangwan Stadium": "jiangwan", "Hands Oval": "hands",
 	"Blacktown International Sportspark": "blacktown", "Summit Park": "summit",
 	"Macquarie Point Stadium": "macpoint", "Adelaide Oval": "adelaide", "The Gabba": "gabba",
+	"Mars Stadium": "mars",
 }
 
 ## Each model's boundary fence, measured off the model (tools/grounds/fit_fence.py: an ellipse
@@ -80,6 +81,9 @@ const FIT := {
 	# Gabba's model (tools/grounds/gabba), measured the same way.
 	"adelaide": [-0.4, 1.37, 0.0, -102.0, 91.36, 65.7],
 	"gabba": [2.47, 3.47, 0.0, 175.0, 86.88, 73.71],
+	# Mars Stadium (tools/grounds/mars): its fence is the OSM pitch outline, 171 x 138 m round the published
+	# 160 x 129 m boundary.
+	"mars": [-4.18, 4.88, 0.0, -55.3, 85.24, 68.99],
 }
 
 ## The land round a model that ends at its own street (in the model's metres): the ring from
@@ -128,7 +132,7 @@ const SEAT_COLOURS := {
 	# Mars Stadium (seat_blue and seat_greyblue there keep the values already here).
 	"seat_cream": Color(0.785, 0.747, 0.655), "seat_white": Color(0.815, 0.830, 0.845),
 	"seat_navyblue": Color(0.157, 0.235, 0.502), "seat_charcoal": Color(0.141, 0.165, 0.227),
-	"seat_slategrey": Color(0.361, 0.392, 0.447),
+	"seat_slategrey": Color(0.361, 0.392, 0.447), "seat_lightgrey": Color(0.698, 0.714, 0.737),
 	# Accor: aqua lower bowl (seat_teal there keeps the value already here).
 	"seat_aqua": Color(0.527, 0.719, 0.757),
 	# MCG, by tier from Street View on the ground and Google Earth: white and light grey lower and

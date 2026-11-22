@@ -71,7 +71,7 @@ for _ in range(900):
     x, y = R.integers(0, 510), R.integers(0, 506); a[y:y + 6, x:x + 1] *= R.uniform(0.75, 1.2)
 save('grass_bank', a, (3.0, 3.0))
 # Mars seat colours (press/aus_new.jpg): royal blue, grey-blue, cream (new upper tiers), white (old stands); same moulding
-for nm, col in (('seat_blue', (38, 74, 150)), ('seat_greyblue', (112, 122, 142)), ('seat_cream', (206, 196, 172)), ('seat_white', (214, 218, 222)), ('seat_navyblue', (40, 60, 128)), ('seat_charcoal', (36, 42, 58)), ('seat_slategrey', (92, 100, 114))):
+for nm, col in (('seat_blue', (38, 74, 150)), ('seat_greyblue', (112, 122, 142)), ('seat_cream', (206, 196, 172)), ('seat_white', (214, 218, 222)), ('seat_navyblue', (40, 60, 128)), ('seat_charcoal', (36, 42, 58)), ('seat_slategrey', (92, 100, 114)), ('seat_lightgrey', (178, 182, 188)), ('seat_paleblue', (122, 156, 190))):
     a = base(128, 128, col, 2, 6); a[:, :8] *= 0.8; a[:, -8:] *= 0.8; a[:6] *= 0.86; a[-6:] *= 0.72
     a[:, 40:88] *= (1 + 0.08 * np.sin(np.linspace(0, math.pi, 48)))[None, :, None]; save(nm, a, (1, 1))
 # concrete treads and risers under the seats: plain grey, a dark nosing line, scuffing
@@ -307,7 +307,8 @@ dr.ellipse([L_(0.17, 0.12), L_(0.22, 0.15)], fill=blk)                          
 for (u0, v0, u1, v1) in ((0.02, 0.29, 0.10, 0.31), (0.05, 0.55, 0.12, 0.53), (0.50, 0.97, 0.62, 0.97), (0.24, 0.83, 0.34, 0.82)):
     dr.line([L_(u0, v0), L_(u1, v1)], fill=blk, width=6)                                      # claws
 dr.line([L_(0.40, 0.50), L_(0.52, 0.66)], fill=blk, width=6); dr.line([L_(0.58, 0.60), L_(0.56, 0.82)], fill=blk, width=6)   # haunch, leg
-F1 = ImageFont.truetype('C:/Windows/Fonts/georgia.ttf', 150); F2 = ImageFont.truetype('C:/Windows/Fonts/georgia.ttf', 96)
+_SERIF = next((f for f in ('C:/Windows/Fonts/georgia.ttf', '/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf') if os.path.exists(f)))
+F1 = ImageFont.truetype(_SERIF, 150); F2 = ImageFont.truetype(_SERIF, 96)
 def spaced(y, txt, f, x=560, sp=14):
     for ch in txt:
         dr.text((x, y), ch, font=f, fill=(66, 66, 72)); x += dr.textlength(ch, font=f) + sp
@@ -315,6 +316,25 @@ def spaced(y, txt, f, x=560, sp=14):
 x = spaced(70, 'UNIVERSITY', F1, 440); spaced(118, 'of', F2, x + 30, 4)
 spaced(270, 'TASMANIA', F1, 440, 40)
 a = np.asarray(im, float) + noise(SH_, SW_, 10, 6)[:, :, None]; save('sign_utas', a, (7.0, 1.75))
+
+
+# ---- the 2026 stands (Commons "Eureka Stadium 2026" 1-7, al_2026) ----
+concrete('conc_soffit', (172, 170, 164), pu=2.4, pv=0.8, tile=(4.8, 4.8))     # precast tread undersides, joints per unit
+concrete('parapet', (196, 192, 182), pu=3.0, pv=2.0, tile=(6.0, 6.0))        # pale precast parapet panels
+concrete('conc_core', (182, 180, 174), pu=2.4, pv=3.0, tile=(4.8, 6.0))      # lift-core precast panels, 3 m lifts
+deck('roof_under', (112, 118, 124), pitch=0.25, grime=10)                     # the roof sheeting seen from below: grey ribbed deck
+a = base(256, 512, (78, 82, 88), 4, 10); a[:, ::64] *= 0.75; weather(a, 0.1, 10, 20); save('fascia_dark', a, (4.0, 1.0))
+# brick lift building between the two stands (al_2026): red-brown face brick, 230 x 86 mm courses, raked joints
+a = base(512, 512, (140, 70, 50), 6, 16); pu_, pv_ = 512 / 2.3, 512 / 0.86
+for k in range(0, 10): a[int(k * 0.086 * pv_):int(k * 0.086 * pv_) + 4] = (120, 112, 104)
+for k in range(10):
+    off = 0 if k % 2 == 0 else 0.115
+    for j in range(11): x = int((j * 0.23 + off) * pu_) % 512; a[int(k * 0.086 * pv_):int((k + 1) * 0.086 * pv_), x:x + 3] = (120, 112, 104)
+for k in range(10):
+    for j in range(10):
+        if R.random() < 0.3: a[int(k * 0.086 * pv_) + 4:int((k + 1) * 0.086 * pv_), int(j * 0.23 * pu_) + 3:int((j + 1) * 0.23 * pu_)] *= R.uniform(0.85, 1.1)
+save('brick_core', a, (2.3, 0.86))
+a = base(256, 256, (40, 86, 150), 5, 14); a[:, 120:126] *= 0.75; weather(a, 0.12, 12, 14); save('steel_blue', a, (2.0, 2.0))   # the videoboard's blue frame (Sept 2026 aerial)
 
 json.dump(TILE, open(OUT + 'tiles.json', 'w', newline=''), indent=0)
 for nm in sorted(TILE):

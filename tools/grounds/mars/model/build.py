@@ -153,13 +153,23 @@ def seat(P, t, o, z, shell=None):
 SEAT_COL = ['seat_navyblue']
 
 
+def mountain(b, j, n):
+    """the 2026 stands' seat pattern (Premier's release: the seating bowl panels draw on Mount Buninyong and Mount
+    Warrenheip; the Sept 2026 aerial): two pale peaks rising out of the navy, a slate band along their slopes"""
+    h = sum(max(0.0, 1 - abs(b - c) / w) * a for c, w, a in ((112, 14, 0.8), (128, 9, 0.55), (158, 16, 0.85), (176, 10, 0.5)))
+    f = j / max(1, n - 1)   # 0 at the front row
+    return 'seat_white' if f < h - 0.12 else ('seat_slategrey' if f < h else 'seat_navyblue')
+
+
 def seat_colour(pal, j, n, b):
     """seat colours from the finished-ground aerial press/gi/ta_aerial.jpg (sampled) and the 2017 Commons photo
     press/wm/20170707_141248: 'blue' = the new lower banks (navy blue); 'fade' = the new upper tiers (dark charcoal navy);
     'mix' = the old stands, navy blue and slate grey scattered about half and half"""
     h = (math.sin(j * 12.9898 + b * 78.233) * 43758.5453) % 1.0
     if pal == 'blue': return 'seat_navyblue'
-    if pal == 'mix': return 'seat_slategrey' if h < 0.5 else 'seat_navyblue'
+    if pal == 'mtn': return mountain(b, j, n)
+    if pal == 'mix':   # the old stands (Commons 2022 photos from the Eastern and Eureka stands): mostly white and light
+        return 'seat_white' if h < 0.38 else 'seat_lightgrey' if h < 0.6 else 'seat_paleblue' if h < 0.8 else 'seat_navyblue'   # grey, some pale blue and navy
     return 'seat_charcoal'
 
 
@@ -509,23 +519,53 @@ def concourse(col):
 
 
 def tower(mb, T):
+    """light tower (GE Dec 2025, n300 and n060): a tapered round mast and a head of 'tiers' lamp banks stacked one over
+    another, each its own steel frame with a gap between, tilted down toward the centre"""
     x, y = T['xy']; zt = T['top']; hh = T.get('head_h', 6.0); w = T.get('head_w', 7.0); zb = zt - hh
     n = 12; r0, r1 = T.get('r_base', 0.9), T.get('r_top', 0.45)
     for k in range(n):
         a0, a1 = 2 * math.pi * k / n, 2 * math.pi * (k + 1) / n
         p = lambda a, r, z: (x + r * math.cos(a), y + r * math.sin(a), z)
-        oriented(mb, [p(a0, r0, 0), p(a1, r0, 0), p(a1, r1, zb + 1), p(a0, r1, zb + 1)], 'steel_galv',
+        oriented(mb, [p(a0, r0, 0), p(a1, r0, 0), p(a1, r1, zt - 1.0), p(a0, r1, zt - 1.0)], 'steel_galv',
                  np.array([math.cos(0.5 * (a0 + a1)), math.sin(0.5 * (a0 + a1)), 0]))
     f = np.array([-x, -y, 0.0]); f /= np.linalg.norm(f); s = np.array([-f[1], f[0], 0.0])
     tl = math.radians(T.get('tilt', 15)); up = np.array([0, 0, 1.0]) * math.cos(tl) - f * math.sin(tl); nr = np.cross(s, up)
     if np.dot(nr, f) < 0: nr = -nr
-    c0 = np.array([x, y, zb]) + f * 0.6
-    Q = lambda u, v, d=0.0: c0 + s * u * w / 2 + up * v + nr * d
-    oriented(mb, [Q(-1, 0), Q(1, 0), Q(1, hh), Q(-1, hh)], 'lamps', nr, [(0, 0), (1, 0), (1, 1), (0, 1)])
-    oriented(mb, [Q(-1, 0, -0.8), Q(1, 0, -0.8), Q(1, hh, -0.8), Q(-1, hh, -0.8)], 'steel_galv', -nr)
-    for (a, b_) in (((-1, 0), (1, 0)), ((1, 0), (1, hh)), ((1, hh), (-1, hh)), ((-1, hh), (-1, 0))):
-        q = [Q(*a), Q(*b_), Q(*b_, -0.8), Q(*a, -0.8)]; cen = Q(0, hh / 2, -0.4)
-        oriented(mb, q, 'steel_galv', np.mean(q, 0) - cen)
+    nt = T.get('tiers', 1); gap = 0.5; th = (hh - gap * (nt - 1)) / nt
+    for t in range(nt):
+        c0 = np.array([x, y, zb + t * (th + gap)]) + f * 0.9
+        Q = lambda u, v, d=0.0: c0 + s * u * w / 2 + up * v + nr * d
+        oriented(mb, [Q(-1, 0), Q(1, 0), Q(1, th), Q(-1, th)], 'lamps', nr, [(0, 0), (1, 0), (1, 1), (0, 1)])
+        oriented(mb, [Q(-1, 0, -0.7), Q(1, 0, -0.7), Q(1, th, -0.7), Q(-1, th, -0.7)], 'steel_galv', -nr)
+        for (a, b_) in (((-1, 0), (1, 0)), ((1, 0), (1, th)), ((1, th), (-1, th)), ((-1, th), (-1, 0))):
+            q = [Q(*a), Q(*b_), Q(*b_, -0.7), Q(*a, -0.7)]; cen = Q(0, th / 2, -0.35)
+            oriented(mb, q, 'steel_galv', np.mean(q, 0) - cen)
+        mb.beam(np.array([x, y, zb + t * (th + gap) + th / 2]), Q(0, th / 2, -0.7), 0.3, 0.3, 'steel_galv')   # arm to the mast
+    mb.beam(np.array([x, y, zb - 0.5]), np.array([x, y, zt + 0.3]), 0.5, 0.5, 'steel_galv')   # mast top through the head
+
+
+def videoboard(mb, B_):
+    """the 2026 south-end videoboard (Premier's release: 100 m2; Sept 2026 aerial: on its own blue steel frame behind the
+    southern goals): a screen box on two lattice legs braced to each other"""
+    c = np.array(B_['c'], float); a = math.radians(B_['a']); u = np.array([math.cos(a), math.sin(a)]); n = np.array([-u[1], u[0]])
+    if np.dot(n, -c) < 0: n = -n
+    W, H, z0, D = B_['w'], B_['h'], B_['z0'], B_['depth']; ang = B_['a']
+    mb.box(tuple(c), W + 0.6, D, H + 0.6, ang, 'board_frame', z0=z0 - 0.3)
+    f = c + n * (D / 2 + 0.02)
+    oriented(mb, [(*(f - u * W / 2), z0), (*(f + u * W / 2), z0), (*(f + u * W / 2), z0 + H), (*(f - u * W / 2), z0 + H)], 'screen_off',
+             np.array([*n, 0.0]), [(0, 0), (W / 2.0, 0), (W / 2.0, H / 2.0), (0, H / 2.0)])
+    for k in (-1, 1):   # lattice legs: four chords and zig-zag lacing, painted blue
+        lc = c - n * (D / 2 + 0.8) + u * k * (W / 2 - 2.0)
+        ch = [lc + u * du + n * dn for du in (-0.6, 0.6) for dn in (-0.6, 0.6)]
+        for p in ch: mb.beam((*p, 0.0), (*p, z0 + H), 0.18, 0.18, 'steel_blue')
+        z = 0.0; j = 0
+        while z < z0 + H - 0.1:
+            p, q = ch[j % 2], ch[(j + 1) % 2]; z2 = min(z + 1.2, z0 + H)
+            mb.beam((*p, z), (*q, z2), 0.1, 0.1, 'steel_blue'); mb.beam((*ch[2 + j % 2], z), (*ch[2 + (j + 1) % 2], z2), 0.1, 0.1, 'steel_blue')
+            z = z2; j += 1
+        mb.box(tuple(lc), 1.8, 1.8, 0.4, ang, 'conc_wall')
+    for z in (z0 - 0.3, z0 + H * 0.5):   # ties between the legs, behind the board
+        mb.beam((*(c - n * (D / 2 + 0.8) - u * (W / 2 - 2.0)), z), (*(c - n * (D / 2 + 0.8) + u * (W / 2 - 2.0)), z), 0.25, 0.25, 'steel_blue')
 
 
 def scoreboard(mb, L, R, inset, z0, z1, depth, frame, back, faces, rim, back_rim=None):
@@ -623,16 +663,23 @@ def buildings(col):
             mb.cyl(tuple(c), r, 0.0, z, B.get('drum', 'conc_wall'), n=36, top=B['roof'])
     mb.build(col)
 
+import newstand
+
+
 def build_all():
     clear(); col = bpy.context.scene.collection
     global SEATS, POSTS
     mb = MB('stands'); mr = MB('roofs'); SEATS = MB('seats'); SEATS.smooth = True; POSTS = MB('seat_posts'); SEAT_XF.clear()
+    only = os.environ.get('STANDS')
     for S in D['stands']:
+        if only and S['name'] not in only.split(','): continue
         {'bank': lambda: bank(S, mb), 'single': lambda: single(S, mb, mr), 'two_tier': lambda: two_tier(S, mb, mr),
-         'open': lambda: open_stand(S, mb), 'block': lambda: block(S, mb, mr)}[S['kind']]()
+         'open': lambda: open_stand(S, mb), 'block': lambda: block(S, mb, mr), 'shell': lambda: newstand.shell(S, mb, mr)}[S['kind']]()
     mb.build(col); mr.build(col)
     fence(col); extras(col); buildings(col); SEATS.build(col); POSTS.build(col)
     if not os.environ.get('NOCONC'): concourse(col)
+    if D.get('videoboard'):
+        mv = MB('videoboard'); videoboard(mv, D['videoboard']); mv.build(col)
     if D['towers']:
         mt = MB('towers')
         for T in D['towers']:
