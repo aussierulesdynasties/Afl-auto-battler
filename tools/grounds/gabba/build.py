@@ -62,9 +62,12 @@ def face(vs, mi, uvs=None):
 
 N = 360; A = [2 * math.pi * i / N - math.pi for i in range(N)]
 FENCE = kn('fence', 6.0); ZB = kn('bowl_top', 33.0)
+# the lower tier's top row (Google Earth hovers 2026-11-22: the lower rake climbs about 0.5 m a metre to 6-7 m at the
+# box level, not 13 m), the box level above it 3 m deep
+Z1 = kn('tier1_top', 13.0)
 def prof(a):
     r0 = rP(a) + FENCE; rb = rF(a) - 2.0; rm = r0 + kn('tier_split', 0.5) * (rb - r0)
-    return [(r0, 0.0), (r0, 1.6), (rm, 13.0), (rm, 13.4), (rm + 2.5, 13.4), (rm + 2.5, 16.0), (rb, ZB), (rF(a), ZB)]
+    return [(r0, 0.0), (r0, 1.6), (rm, Z1), (rm, Z1 + 0.4), (rm + 2.5, Z1 + 0.4), (rm + 2.5, Z1 + 3.0), (rb, ZB), (rF(a), ZB)]
 # the two seat rakes are concrete steps, one row each (the real 3D seats stand on them, end of file). Same row count
 # all round, so every tread is level all the way round the bowl.
 ROW = 0.8
@@ -258,7 +261,7 @@ for i, a in enumerate(B):
         tube(P(a, RC(a), zr), P(a, rF(a), zr), 0.16, 0.16, ST)                   # strut back to the wall
     tube(P(a, RC(a), ZR2), P(an, RC(an), ZR1), 0.22, 0.22, ST)                   # the bay's X
     tube(P(an, RC(an), ZR2), P(a, RC(a), ZR1), 0.22, 0.22, ST)
-    lattice_beam(a, 0.0, 0.0, 1.0, 0.9, 2.8, 0.7, LT, 12)                       # rafter: open lattice truss
+    lattice_beam(a, 0.0, 0.0, 1.0, 0.9, 1.6, 0.7, LT, 12)                       # rafter: open lattice truss (1.6 m at the back: the roof is 24 m up, GE hovers 2026-11-22)
     am = a + (an - a) * 0.5
     lattice_beam(am, 0.5, 0.06, 1.0, 0.45, 1.0, 0.35, LT, 8, 0.08, 0.04)        # mid-bay rib: a lighter lattice
     # leading-edge truss: two chords along the inner edge and a zig-zag web, 1.6 m deep, 8 panels a bay
@@ -382,11 +385,14 @@ if D.get('t411'):   # 411 Vulture St office: outside the stadium site line, left
                [(-105.83, 88.85), (-114.25, 93.99), (-104.75, 108.67), (-97.25, 104.08)]):
         _b = _clip(_b, -110.5, -83.0, 65.5, 102.5)
         if len(_b) >= 3: prism(_b, D['h411'], D['h411'] + 2.5, SC, True, 1, 4.0, None, RD)
-# v7 screens (2019 photo sphere, 2026-11-22): the two video screens hang at the north and south ends on the front of
-# the upper tier, from the boxes' LED ribbon up to just under the roof, in a dark housing that takes the seats
-# behind them (the build's own seat test drops every seat it covers). The first version stood one on the fence.
-def screen(ac, W_=21.0, H_=8.6):
-    p_ = prof(ac); r_ = p_[4][0] + 0.6; z0_ = p_[5][1] + 0.4
+# Screen (Google Earth 3D, 2023, measured 2026-11-22 from a camera solved on 290 hovers): one video screen, at the west
+# end over the goals, 18.8 m wide, 9.0 m to 19.1 m up, standing on the lower tier's top row; centred 4.6 m north of the
+# long axis.
+# Google Earth shows none at the north, south or east (the v7 north and south screens were wrong). It hangs on the
+# front of the upper tier in a dark housing that takes the seats behind it (the build's seat test drops them).
+def screen(ac, W_=18.8, H_=10.1, z0_=9.0):
+    p_ = prof(ac); r_ = p_[2][0] + 0.3   # its face just behind the lower tier's top row
+    H_ = min(H_, _roofz(ac, 0.5, r_ + 4.0) - 0.3 - z0_)   # under the roof (24 m, Google Earth hovers)
     hw = W_ / 2 / r_; e0, e1 = P(ac - hw, r_, 0)[:2], P(ac + hw, r_, 0)[:2]
     ux_, uy_ = math.cos(ac), math.sin(ac); D_ = 4.0
     q = [e0, e1, (e1[0] + ux_ * D_, e1[1] + uy_ * D_), (e0[0] + ux_ * D_, e0[1] + uy_ * D_)]
@@ -394,17 +400,15 @@ def screen(ac, W_=21.0, H_=8.6):
     face([(x_, y_, z0_) for x_, y_ in q[::-1]], GD)   # the housing's floor: the seat test sees it over the seats it covers
     ox, oy = -ux_ * 0.06, -uy_ * 0.06
     face([(e1[0] + ox, e1[1] + oy, z0_), (e0[0] + ox, e0[1] + oy, z0_), (e0[0] + ox, e0[1] + oy, z0_ + H_), (e1[0] + ox, e1[1] + oy, z0_ + H_)], SF, [(0, 0), (1, 0), (1, 1), (0, 1)])
-(_sx0, _sy0), (_sx1, _sy1) = D.get('screen', ((-0.9, -90.6), (-22.2, -84.6)))
-_as = math.atan2((_sy0 + _sy1) / 2 - cy, (_sx0 + _sx1) / 2 - cx)
-screen(_as); screen(math.pi / 2)    # south (where the first version's photo put it), and north at the far end
+screen(math.pi - math.atan2(4.6, 105.5))    # the west end
 _rbx = lambda a: prof(a)[4][0]          # the box glass line (rm + 2.5)
-ZLED = 16.0 - 0.9
-ring_band(_rbx, 13.4, 13.55, 0.14, GD); ring_band(_rbx, ZLED - 0.08, ZLED + 0.04, 0.12, GD); ring_band(_rbx, 15.92, 16.06, 0.16, GD)
+ZLED = Z1 + 3.0 - 0.9
+ring_band(_rbx, Z1 + 0.4, Z1 + 0.55, 0.14, GD); ring_band(_rbx, ZLED - 0.08, ZLED + 0.04, 0.12, GD); ring_band(_rbx, Z1 + 2.92, Z1 + 3.06, 0.16, GD)
 _mx = 0.0; _prev = P(A[0], _rbx(A[0]), 0)[:2]
 for i in range(1, N * 4 + 1):     # a mullion every 1.5 m of arc
     a_ = -math.pi + 2 * math.pi * i / (N * 4); q_ = P(a_, _rbx(a_), 0)[:2]; _mx += math.dist(_prev, q_); _prev = q_
     if _mx >= 1.5:
-        _mx -= 1.5; ring_box(a_, _rbx(a_), 13.55, ZLED - 0.08, 0.07, 0.11, GD)
+        _mx -= 1.5; ring_box(a_, _rbx(a_), Z1 + 0.55, ZLED - 0.08, 0.07, 0.11, GD)
 exec(open('sw.py').read())   # south-west corner buildings
 # concourse apron around the facade
 for i in range(N):
