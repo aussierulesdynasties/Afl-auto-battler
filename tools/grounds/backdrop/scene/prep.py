@@ -245,7 +245,11 @@ if spec.get('real'):
         if _tw_ok.sum() > 100:
             _tc = np.median(_AS[_tw_ok], 0); _tc = _tc * min(1.0, 175.0 / max(float(_tc.max()), 1))
             _tfrac = np.bincount(_LB[_town].ravel(), minlength=_nl + 1) / np.maximum(np.bincount(_LB.ravel(), minlength=_nl + 1), 1)
-            _MC[_tfrac > 0.5] = _tc; _good = _good | (_tfrac > 0.5); _good[0] = False
+            # ...unless the block is plainly not house land (a sand site, a bare lot): it keeps its own colour
+            _own = _good & (np.abs(_MC - _tc).mean(-1) > 30) & (_cnt >= 40)
+            _tw = (_tfrac > 0.5) & ~_own
+            _MC[_tw] = _tc; _good = _good | _tw; _good[0] = False
+            print('town blocks keeping their own colour', int(((_tfrac > 0.5) & _own).sum()))
             print('town land colour', [int(v) for v in _tc])
         # a patch the shade test empties (grey asphalt, a trotting track's sand in low sun) takes the median of all its
         # open pixels instead: still its own colour, never the blurred field
