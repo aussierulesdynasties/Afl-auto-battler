@@ -76,6 +76,12 @@ static func apply_model(level: String, root: Node) -> void:
 			g.visible = level != LOW
 		elif g.has_meta("facade_plain"):
 			g.visible = level == LOW
+	# A roof's lattice trusses (the Gabba's rafters, a model object named "lattice"): thousands of thin members drawn
+	# again into every shadow band for a shade the roof sheet already casts; High keeps their shadows.
+	if level != HIGH:
+		for g: GeometryInstance3D in root.find_children("*", "GeometryInstance3D", true, false):
+			if str(g.name).to_lower().begins_with("lattice"):
+				g.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	if bool(preset(level)["seat_shadows"]):
 		return
 	for g: GeometryInstance3D in root.find_children("*", "GeometryInstance3D", true, false):

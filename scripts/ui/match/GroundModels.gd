@@ -481,7 +481,7 @@ static func _add_trees(root: Node3D, buf: PackedFloat32Array, y: float) -> void:
 	trunk.top_radius = 0.022
 	trunk.bottom_radius = 0.035
 	trunk.height = 1.0
-	trunk.radial_segments = 5
+	trunk.radial_segments = 8
 	trunk.rings = 0
 	trunk.cap_top = false
 	trunk.cap_bottom = false
@@ -622,11 +622,12 @@ const SILL := 1.0         # wall below each window band
 const RECESS := 0.35      # how deep the glass sits behind the wall
 const PIER := 0.9         # wall kept at each end of a wall's window band
 const GLASS := Color(0.2, 0.24, 0.29)
+const MULLION := Color(0.3, 0.31, 0.33)
 
 
 ## One building near the ground, modelled: a house (low, small, near enough a rectangle) gets a
 ## hipped roof over its walls; anything of three storeys or more gets its floors and recessed
-## window bands; the rest stay plain.
+## window bands; a lower shop or works building its glazed street floor; a shed under 3.5 m stays plain.
 static func _facade(g: Dictionary, foot: PackedVector2Array, y: float, h: float, wall: Color, roof: Color) -> void:
 	var n := foot.size()
 	var area := _area(foot)
@@ -639,10 +640,13 @@ static func _facade(g: Dictionary, foot: PackedVector2Array, y: float, h: float,
 			_plain_walls(g, foot, y, eave, wall)
 			_hip_roof(g, rect, y + eave, y + eave + ridge, roof)
 			return
-	if h < 9.0:
+	if h < 3.5:
 		_plain_building(g, foot, y, h, wall, roof)
 		return
-	var floors := maxi(int(round(h / FLOOR_H)), 1)
+	# A low shop or works building (under three storeys, not a house): its street floor glazed, recessed like the
+	# flats' bands, the wall above plain to the roof.
+	var shop := h < 9.0
+	var floors := 1 if shop else maxi(int(round(h / FLOOR_H)), 1)
 	var fh := h / float(floors)
 	var sgn := _outward(foot)
 	var shade_in := wall.darkened(0.3)
@@ -662,8 +666,8 @@ static func _facade(g: Dictionary, foot: PackedVector2Array, y: float, h: float,
 		var dn := -out * RECESS
 		for f in floors:
 			var z0 := y + f * fh
-			var zs := z0 + SILL
-			var zh := z0 + fh - (0.35 if f == floors - 1 else 0.0)
+			var zs := z0 + (0.5 if shop else SILL)
+			var zh := (y + minf(2.9, h - 0.8)) if shop else z0 + fh - (0.35 if f == floors - 1 else 0.0)
 			var z1 := z0 + fh
 			var up := Vector3.UP
 			# the wall: below the band, the two piers, and above the band on the top floor
@@ -679,6 +683,16 @@ static func _facade(g: Dictionary, foot: PackedVector2Array, y: float, h: float,
 			var side := (C - A).normalized()
 			_quad(g, L + up * zs, L + dn + up * zs, L + dn + up * zh, L + up * zh, side, shade_in)
 			_quad(g, R + up * zs, R + dn + up * zs, R + dn + up * zh, R + up * zh, -side, shade_in)
+			# mullions standing 0.14 m off the glass: every 1.6 m on a shopfront, every 2.4 m on a window band
+			var span := L.distance_to(R)
+			var nm := int(span / (1.6 if shop else 2.4))
+			for m in range(1, nm + 1):
+				var mc := L.lerp(R, float(m) / float(nm + 1))
+				var w := side * 0.05
+				var mf := dn * 0.6
+				_quad(g, mc - w + mf + up * zs, mc + w + mf + up * zs, mc + w + mf + up * zh, mc - w + mf + up * zh, out, MULLION)
+				_quad(g, mc - w + dn + up * zs, mc - w + mf + up * zs, mc - w + mf + up * zh, mc - w + dn + up * zh, -side, MULLION)
+				_quad(g, mc + w + mf + up * zs, mc + w + dn + up * zs, mc + w + dn + up * zh, mc + w + mf + up * zh, side, MULLION)
 	var tri := Geometry2D.triangulate_polygon(foot)
 	for k in range(0, tri.size(), 3):
 		_tri(g, Vector3(foot[tri[k]].x, y + h, foot[tri[k]].y), Vector3(foot[tri[k + 1]].x, y + h, foot[tri[k + 1]].y),
