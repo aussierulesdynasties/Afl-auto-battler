@@ -210,7 +210,14 @@ No-shortcuts pass (2026-11-22, the person: "i never want a shortcut, i never wan
 - Imagery (satellite crops, aerial photos, overlays) was taken out of .claude/review/marvel; it is
   for looking at only. Copies are in the project files (marvel-rebuild/review-imagery).
 
+- The skyline out to 950 m is the City of Melbourne's open 3D building massing (2023 building
+  footprints, CC BY): each building as stacked parts from its own base to its own top, so podiums,
+  setbacks and crowns are real (surrounds.com_massing; buildings.bin's stacked records, -n, top, base,
+  id). OpenStreetMap's outlines fill in only where it has nothing. Look for an open massing model
+  before extruding footprints: city councils publish them.
+- Southern Cross Station's dune roof is modelled (domes, glazed valleys, vent hoods, louvred sides).
+
 Still open at Marvel: the Street View panoramas inside the bowl could not be reached headless; the
-inside is checked against Google Earth's 3D from the centre. Further out than ~250 m the buildings
-are still OpenStreetMap extrusions with the tower shader. Shaded faces read bluer than Google
+inside is checked against Google Earth's 3D from the centre. The massing's buildings take a glass or
+concrete look by a hash, not their real facades. Shaded faces read bluer than Google
 Earth's under the inspector's sky light (all grounds).

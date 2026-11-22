@@ -228,13 +228,13 @@ def prism_f(name,q,z0,z1,fn,top):
     if a<0:q=q[::-1]
     sm=[fn((q[i]+q[(i+1)%len(q)])/2) for i in range(len(q))];prism(name,q,z0,z1,'x',top,side_m=sm)
 def podium_storey(nm,u0,u1,vout,z0,z1,nb,zo,rec=1.2,top='paving'):
-    # photo: light panel piers on the front line, deep recessed glazed bays between, a solid spandrel band above the bays
-    prism_f(nm,band_poly(u0,u1,vout-rec),z0,z1,lambda m:'shopglass' if m[1]>vout-rec-0.05 else 'panel_lt',top)
+    # photo: grey-blue panel piers (Google Earth c_w: darker than the white they were) on the front line, deep recessed glazed bays between, a solid spandrel band above the bays
+    prism_f(nm,band_poly(u0,u1,vout-rec),z0,z1,lambda m:'shopglass' if m[1]>vout-rec-0.05 else 'podiumpanel',top)
     pitch=(u1-u0)/nb;pw=pitch-zo
     for i in range(nb+1):
         uc=u0+i*pitch;a,b=max(u0,uc-pw/2),min(u1,uc+pw/2)
-        box(nm+'_pier%d'%i,a,b,vout-rec,vout,z0,z1,'panel_lt','concrete')
-    box(nm+'_spandrel',u0,u1,vout-rec,vout,z1-1.8 if z1-z0>7.5 else z1-1.6,z1,'panel_lt','concrete')
+        box(nm+'_pier%d'%i,a,b,vout-rec,vout,z0,z1,'podiumpanel','concrete')
+    box(nm+'_spandrel',u0,u1,vout-rec,vout,z1-1.8 if z1-z0>7.5 else z1-1.6,z1,'podiumpanel','concrete')
 podium_storey('podium_l1',-40.0,46.0,119.0,ZP,13.2,10,6.4)
 box('podium_rail',-40,46,118.85,119.0,13.2,14.3,'glass','white');box('podium_rail_top',-40,46,118.8,119.05,14.3,14.42,'white','white')
 podium_storey('podium_l2',-43.0,31.0,113.5,13.2,21.4,9,5.6,top='concrete')
