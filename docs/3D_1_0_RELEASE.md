@@ -57,15 +57,15 @@ the machine pre-inspection clean, then his fly-through.
 | The Gabba | Rebuild open (v8: modelled steel, louvres, gates; Woolloongabba) | #2020 | Make the Gabba look real (thread closed; PR still open) |
 | GMHBA Stadium | Rebuild open (Selwood Stand roof, seats no longer black); fins and plant screens still painted | #2016 | Make GMHBA Stadium look real |
 | People First Stadium | Rebuild open (WIP); Gold Coast skyline missing | #2019 | Make People First Stadium look real |
-| ENGIE Stadium | Rebuild started 2026-11-22 | | Make Engie Stadium look real |
+| ENGIE Stadium | Outline fitted to Google Earth, Olympic Park surrounds (open) | #2037 | Make Engie Stadium look real |
 | Bellerive Oval | Rebuild open: facades, 11,453 seats, Hobart backdrop to kunanyi | #2018 | Make Bellerive Oval look real |
-| Manuka Oval | Rebuild started 2026-11-22 | | Make Manuka Oval look real |
-| Norwood Oval | First model on main (#1870); wing stands 8-9 m inside the fence (pre-inspection) | | **Nobody** |
-| Barossa Park | Kit first draft on main (#1930) | | **Nobody** |
+| Manuka Oval | Rebuild open | #2035 | Make Manuka Oval look real |
+| Norwood Oval | Rebuild open (first model #1870 had wing stands 8-9 m inside the fence) | #2042 | Make Norwood Oval look real |
+| Barossa Park | Rebuild open (WIP): own land, gums, far ranges, second oval; photo check left | #2041 | Make Barossa Park look real |
 
 ### The 24 Legacy-mode grounds
 
-Rebuilds under way: York Park, Mars Stadium (not yet in matches), Cazaly's Stadium, Traeger Park
+Rebuilds under way: York Park, Mars Stadium (open, #2036, now in matches), Cazaly's Stadium, Traeger Park
 (not yet in matches; #2006 wires it). Each has its own "Make ... look real" thread.
 
 **No owner:** Waverley Park, Windy Hill, Moorabbin Oval, Ikon Park, Whitten Oval, Football Park,
@@ -81,7 +81,7 @@ Stadium (all first drafts on main), and Accor Stadium, Marrara Oval (TIO Darwin)
 | Real surroundings per ground | #2023 holds generic OSM surrounds for 24 grounds, which he rejected: it must not merge as is. Being redone ground by ground | Build real surroundings for each ground; each ground's thread |
 | Crowd on every ground's seats | Seated on any ground with seat files; 19 grounds had none (pre-inspection, 2026-11-21) | Each ground's thread (seat rule) |
 | Live big screens | Built (#1947); 11 grounds have no screen face in their model | Each ground's thread |
-| Night lights from each ground's own towers | MCG only (#1996 open); others keep the old two-light night | Make MCG night matches look right (MCG); **nobody** for the rest |
+| Night lights from each ground's own towers | MCG only (#1996 open); others keep the old two-light night | Make MCG night matches look right (MCG); Light matches like the real grounds (the rest) |
 | Turf cut and colour | Per-ground mowing on main; broadcast colour #2014 open | Make the turf colour look like TV (closed; PR open) |
 
 ## 2. Players
@@ -94,9 +94,9 @@ Stadium (all first drafts on main), and Accor Stadium, Marrara Oval (TIO Darwin)
 | Faces: every one of the 762 real players from his portrait, automatically | v5 board; v6 under way (MetaHuman grooms per player, cornrows, buzz cuts). Not in a match yet; how 44 different heads load in a match and what they cost on a phone is not designed | | Find a way to build real player faces |
 | Hair for real players | Epic's groom library, picked and reshaped per player from the photo (part of faces v6) | | Find a way to build real player faces |
 | Club Forge hair (20 cuts) | Refitted to MetaHuman, trimmed to 20 | #1976 | as #1976 |
-| Guernseys, all 18 clubs and clash, on the MetaHuman body | Sydney and the Bulldogs cut to their photos (#1946); numbers hold on TV (#1997); the other 16 not checked against photos on the new body | | **Nobody** |
-| Umpires: field, boundary, goal | Field umpire look passed (2.75); boundary and goal umpire kits not made | | **Nobody** |
-| Trainers and runners (injuries, breaks) | Not made (asset plan order C) | | **Nobody** |
+| Guernseys, all 18 clubs and clash, on the MetaHuman body | Sydney and the Bulldogs cut to their photos (#1946); numbers hold on TV (#1997); the other 16 being checked on the new body (WIP) | #2038 | Check club guernseys on MetaHuman players |
+| Umpires: field, boundary, goal | Field umpire look passed (2.75); boundary and goal umpires open | #2043 | Add boundary and goal umpires and trainers |
+| Trainers and runners (injuries, breaks) | Open | #2043 | Add boundary and goal umpires and trainers |
 
 ## 3. Animations
 
@@ -105,7 +105,7 @@ Stadium (all first drafts on main), and Accor Stadium, Marrara Oval (TIO Darwin)
 | Pipeline: licence-checked motion sources, retarget onto MetaHuman, contact pass, play in a match | Started 2026-11-22 (groundwork allowed: "lay some groundwork at minimum") | Make player animations look like real AFL |
 | Licence of the clips we already ship (GASP, Mixamo crowd, his Rokoko captures) | Being read source by source in the same thread. Must be settled before anything ships | Make player animations look like real AFL |
 | Getting around: walk, jog, run, sprint, backpedal, side-step, starts, stops, turns | Run, carry, stand from mocap; feet planted (#2009, skating 59% of steps to 11%); no sprint, walk or backpedal loops; hard turns still slide | Make player animations look like real AFL |
-| The ball: kicks, set shot routine, handball, ground balls, marks, pack marks, smother, spoil, kick-in | Partly covered (asset plan: 123 clips); set shot routine, pack marks, smother, kick-in missing | Make player animations look like real AFL |
+| The ball: kicks, set shot routine, handball, ground balls, marks, pack marks, smother, spoil, kick-in | Partly covered (asset plan: 123 clips); set shot routine, pack marks, smother, kick-in missing; kick, handball and mark clips open (#2040) | Make player animations look like real AFL |
 | Contests: tackles, bumps, ruck, stoppage jostle, getting up | Tackles (12), ruck jump, get-ups; no stoppage set-up or pressure clips | Make player animations look like real AFL |
 | Umpire signals (free, 50, play on, goal and behind flags), throw-in throw | None: only the bounce clip exists | Make player animations look like real AFL (test clips) |
 | Injuries: down, trainers, helped off | None; today the hurt man silently becomes his replacement | Make player animations look like real AFL (test clips) |
@@ -122,7 +122,7 @@ Stadium (all first drafts on main), and Accor Stadium, Marrara Oval (TIO Darwin)
 | Close cut on tackles that stop play | On main (#1985) | | done, waits on his look |
 | Goal replay that shows the kick, TV sting | Sting on main (#2007); replay v2 open | #2022 | Add TV-style goal replays |
 | Score bug | On main (2.107) | | |
-| Goal kicker's stat card | Built | #1990 | Add TV-style match graphics |
+| Goal kicker's stat card | On main | #1990 | Add TV-style match graphics |
 | Journalists' posts on the broadcast (row 207) | Not started: when, who and what not yet asked | | **Nobody** (needs his rulings) |
 | Banner run-through before the first bounce | Built (real tear) | #2004 | Build the 3D banner run-through (thread failed; PR open) |
 | Crowd: winter clothes, cheer squads, reactions, size by real attendance | Built | #1986 (draft) #1992 | Bring the MCG crowd up to standard; Size crowds by real attendance |
@@ -181,3 +181,4 @@ What this says: the big grounds draw 2.3-4.4 million triangles a frame on High a
 - 2026-11-22: first version, built from the plan, the open PRs, the threads and project memory.
 - 2026-11-22: the director chose all 37 grounds for 1.0.
 - 2026-11-22: the data-source rule for grounds written into MCG_STANDARD.md and sent to every ground thread; softened the same day (fidelity first; only raw imagery in the repo or textures is out).
+- 2026-11-22 evening: stat card on main (#1990); owners and PRs for ENGIE, Manuka, Norwood, Barossa, Mars, guernseys, umpires and trainers, kick clips and night lights.
