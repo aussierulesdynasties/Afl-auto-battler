@@ -659,6 +659,18 @@ static func _pick(src, used: PackedInt32Array):
 ## How far a camera sees when the ground has its surroundings (backdrop()): the city skyline and
 ## the hills. Without them the match view stops at 900 m.
 const BACKDROP_FAR := 7000.0
+## Grounds whose backdrop runs further, [camera far, haze end] in m: Bellerive's reaches kunanyi /
+## Mount Wellington, 11 km across the Derwent, which a Hobart crowd sees clearly, blue with the distance.
+## Traeger Park's runs to the MacDonnell Ranges' ridges 20 km east and west in clear desert air.
+const BACKDROP_RANGE := {"bellerive": [20000.0, 60000.0], "traeger": [24000.0, 90000.0]}
+
+
+static func backdrop_far(slug: String) -> float:
+	return float(BACKDROP_RANGE[slug][0]) if BACKDROP_RANGE.has(slug) else BACKDROP_FAR
+
+
+static func backdrop_haze(slug: String, default_to: float) -> float:
+	return float(BACKDROP_RANGE[slug][1]) if BACKDROP_RANGE.has(slug) else default_to
 
 
 ## The ground's surroundings past its own street (row 202 2b, the background scenes): the park,
@@ -690,7 +702,8 @@ static func backdrop(slug: String, base := "") -> Node3D:
 ## the WACA, Bruce and North Hobart a flat plate round the stands (tools/grounds/backdrop/scene: run1.sh SKIP).
 const BACKDROP_HIDES := {"adelaide": ["ao_ground"], "barossa": ["concourse"], "sky": ["concourse"],
 	"jiangwan": ["concourse"], "hands": ["concourse"], "blacktown": ["concourse"], "summit": ["concourse"],
-	"macpoint": ["concourse"], "waca": ["land", "road"], "bruce": ["g_ground"], "north_hobart": ["ground"]}
+	"macpoint": ["concourse"], "waca": ["land", "road"], "bruce": ["g_ground"], "north_hobart": ["ground"],
+	"traeger": ["ground_dirt"]}
 
 const BACKDROP_SHADER := preload("res://scripts/ui/match/oval3d_backdrop.gdshader")
 
