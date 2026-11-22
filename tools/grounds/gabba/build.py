@@ -30,7 +30,7 @@ ST = mat('steel', W1, 0.4, 'steel.png'); DK = mat('dark', W1, 0.9, 'darkdeck.png
 T4 = mat('t411', W1, 0.5, 't411.png'); T4S = mat('t411s', W1, 0.5, 't411_slab.png'); LM = mat('lamps', W1, 0.3, 'lamphead.png')
 SI = mat('site', W1, 0.9, 'path.png'); HY = mat('hyundai', W1, 0.7, 'hyundai.png'); SC = mat('screen', W1, 0.5, 'screen.png')
 SF = mat('screenface', W1, 0.3, 'scoreface.png'); RD = mat('roofdeck', W1, 0.8, 'roofdeck.png'); FA = mat('facade', W1, 0.7, 'facade_v7.png')
-RU = mat('roof_under', W1, 0.9, 'roofunder.png'); GD = mat('girder', W1, 0.6, 'girder.png')   # v7 (mktex_v7.py)
+RU = mat('membrane_lit_under', W1, 0.9, 'roofunder.png'); GD = mat('girder', W1, 0.6, 'girder.png')   # v7 (mktex_v7.py)
 BOX = {RU: 6.0, GD: 4.0, CO: 4.0, WK: 4.0, DK: 4.0, RD: 6.0, SC: 4.0, T4S: 19.0, HY: 11.0, T4: 19.0, ST: 4.0, MB: 12.0}
 
 bm = bmesh.new(); uv = bm.loops.layers.uv.new()
@@ -128,7 +128,7 @@ for i in range(len(B)):
             face([P(b0, rF(b0), zs), P(b1, rF(b1), zs), P(b1, o1, zs), P(b0, o0, zs)], sm)
             face([P(b0, o0, zs), P(b1, o1, zs), P(b1, o1, zs + 0.45), P(b0, o0, zs + 0.45)], sm)
             face([P(b0, rF(b0), zs + 0.45), P(b0, o0, zs + 0.45), P(b1, o1, zs + 0.45), P(b1, rF(b1), zs + 0.45)], sm)
-zi, zo = D['zi'], D['zo']; NU, NV = 6, 8; ARCH = kn('arch', 2.5); SCAL = kn('scallop', 3.0); NU, NV = 16, 24
+zi, zo = D['zi'], D['zo']; NU, NV = 6, 8; ARCH = kn('arch', 2.5); SCAL = kn('scallop', 3.0); NU, NV = 8, 12   # sag is a smooth sine: 8 x 12 a bay keeps the shape and the model under SLICE_OVER
 SAG7 = 1.2; RT = 0.35   # mid-bay sag at the outer edge; the roof's thickness (top sheet over the underside)
 def roofpt(a, t, s, dz=0.0):
     ri = rI(a) + SCAL * 4 * t * (1 - t); ro = rO(a); r = ri + (ro - ri) * s
@@ -307,18 +307,21 @@ if D.get('t411'):   # 411 Vulture St office: outside the stadium site line, left
                [(-105.83, 88.85), (-114.25, 93.99), (-104.75, 108.67), (-97.25, 104.08)]):
         _b = _clip(_b, -110.5, -83.0, 65.5, 102.5)
         if len(_b) >= 3: prism(_b, D['h411'], D['h411'] + 2.5, SC, True, 1, 4.0, None, RD)
-# far-end screen block in front of the south stand, base at the fence (photo 745-822 x 351-402)
-for (x0, y0), (x1, y1) in [D.get('screen', ((-0.9, -90.6), (-22.2, -84.6)))]:
-    nx, ny = x0 - cx, y0 - cy; L = math.hypot(nx, ny); nx, ny = nx / L * 2.0, ny / L * 2.0
-    x0, y0, x1, y1 = x0 - nx * 1.25, y0 - ny * 1.25, x1 - nx * 1.25, y1 - ny * 1.25   # 2.5 m toward the field: clear of the seat rows
-    prism([(x0, y0), (x1, y1), (x1 + nx / 2, y1 + ny / 2), (x0 + nx / 2, y0 + ny / 2)], 1.0, 19.0, SC)   # 1 m deep, top at photo y 352 (material "screen": the match lays its scoreboard on the face)
-    # screen face toward the field (the white box at its foot in the photo is left out: director 2026-11-18 "remove it")
-    ox, oy = -nx / 2.0 * 0.06, -ny / 2.0 * 0.06
-    face([(x0 + ox, y0 + oy, 1.0), (x1 + ox, y1 + oy, 1.0), (x1 + ox, y1 + oy, 19.0), (x0 + ox, y0 + oy, 19.0)], SF, [(0, 0), (1, 0), (1, 1), (0, 1)])
-    bx = lambda f: (x0 + (x1 - x0) * f, y0 + (y1 - y0) * f)
-    # plinth along its foot, wider than the face (photo 735-835 x 397-404: 13% past each end, 1.0 m tall, 2 m proud, the face stands on it, dark as photo)
-    (lx_, ly_), (rx_, ry_) = bx(-0.13), bx(1.13); px_, py_ = -nx / 2.0 * 2.0, -ny / 2.0 * 2.0
-    prism([(lx_ + nx / 2, ly_ + ny / 2), (rx_ + nx / 2, ry_ + ny / 2), (rx_ + px_, ry_ + py_), (lx_ + px_, ly_ + py_)], 0.0, 1.0, DK, True, 1, 4.0, None, DK)
+# v7 screens (2019 photo sphere, 2026-11-22): the two video screens hang at the north and south ends on the front of
+# the upper tier, from the boxes' LED ribbon up to just under the roof, in a dark housing that takes the seats
+# behind them (the build's own seat test drops every seat it covers). The first version stood one on the fence.
+def screen(ac, W_=21.0, H_=8.6):
+    p_ = prof(ac); r_ = p_[4][0] + 0.6; z0_ = p_[5][1] + 0.4
+    hw = W_ / 2 / r_; e0, e1 = P(ac - hw, r_, 0)[:2], P(ac + hw, r_, 0)[:2]
+    ux_, uy_ = math.cos(ac), math.sin(ac); D_ = 4.0
+    q = [e0, e1, (e1[0] + ux_ * D_, e1[1] + uy_ * D_), (e0[0] + ux_ * D_, e0[1] + uy_ * D_)]
+    prism(q, z0_, z0_ + H_, SC, True, 1, 4.0, None, GD)
+    face([(x_, y_, z0_) for x_, y_ in q[::-1]], GD)   # the housing's floor: the seat test sees it over the seats it covers
+    ox, oy = -ux_ * 0.06, -uy_ * 0.06
+    face([(e1[0] + ox, e1[1] + oy, z0_), (e0[0] + ox, e0[1] + oy, z0_), (e0[0] + ox, e0[1] + oy, z0_ + H_), (e1[0] + ox, e1[1] + oy, z0_ + H_)], SF, [(0, 0), (1, 0), (1, 1), (0, 1)])
+(_sx0, _sy0), (_sx1, _sy1) = D.get('screen', ((-0.9, -90.6), (-22.2, -84.6)))
+_as = math.atan2((_sy0 + _sy1) / 2 - cy, (_sx0 + _sx1) / 2 - cx)
+screen(_as); screen(math.pi / 2)    # south (where the first version's photo put it), and north at the far end
 exec(open('sw.py').read())   # south-west corner buildings
 # concourse apron around the facade
 for i in range(N):
@@ -326,24 +329,32 @@ for i in range(N):
     ap = kn('apron', 8); s0 = (a0 + math.pi) * rF(a0) / 3.0; s1 = s0 + math.dist(P(a0, rF(a0), 0)[:2], P(a1, rF(a1), 0)[:2]) / 3.0   # path.png = 3 x 3.2 m of the real footpath (Commons e2)
     face([P(a0, rF(a0), 0.01), P(a1, rF(a1), 0.01), P(a1, rF(a1) + ap, 0.01), P(a0, rF(a0) + ap, 0.01)], SI, [(s0, 0), (s1, 0), (s1, ap / 3.2), (s0, ap / 3.2)])
 for ti, (x, y, h) in enumerate(D['towers']):
-    tube((x, y, 0), (x, y, h - 4), 1.3, 0.95, ST, 12)
-    a = math.atan2(cy - y, cx - x); ux, uy = -math.sin(a), math.cos(a); fx, fy = math.cos(a), math.sin(a)
-    # fan-shaped lamp head read off the panorama photo: 12 m wide at the top, 7.7 m at the bottom, 12 m tall
-    WT, WB, Hh = 5.5, 3.5, 5.5; tl = math.radians(12)
-    if ti < 2: WT, WB, Hh = WT * 0.87, WB * 0.87, Hh * 0.87   # north heads measured 13% smaller in the photo
-    def hp(s, t, back=0.0):
-        hw = WB + (WT - WB) * (t + 1) / 2
-        return (x + ux * s * hw - fx * (1.0 + back) + fx * t * Hh * math.sin(tl), y + uy * s * hw - fy * (1.0 + back) + fy * t * Hh * math.sin(tl), h + t * Hh * math.cos(tl))
-    # bbox of the crop: u = (s*hw + 6) / 12 , v = (t + 1) / 2 (crop top = head top); trapezoid fills (3/48..45/48, 3/48..45/48)
-    def tuv(s, t):
-        hw = WB + (WT - WB) * (t + 1) / 2; m = 3 / 48
-        return (m + (1 - 2 * m) * (s * hw + WT) / (2 * WT), m + (1 - 2 * m) * (t + 1) / 2)
-    cs = [(-1, -1), (1, -1), (1, 1), (-1, 1)]
-    face([hp(a, b) for a, b in cs], LM, [tuv(a, b) for a, b in cs])
-    face([hp(a, b, 0.6) for a, b in reversed(cs)], LM, [tuv(a, b) for a, b in reversed(cs)])   # back: the lamp grid shows through from behind (photo NW and SE towers)
-    for k in range(4):
-        a, b = cs[k], cs[(k + 1) % 4]
-        face([hp(*a), hp(*a, 0.6), hp(*b, 0.6), hp(*b)], LM, [(0.01, 0.01), (0.03, 0.01), (0.03, 0.03), (0.01, 0.03)])
+    tube((x, y, 0), (x, y, h - 1.0), 1.3, 0.95, ST, 12)
+    # v7 head (2019 photo sphere): an open white basket widening upward, an arc of eleven ribs turned to the field
+    # with four rails of lamps between them and the ribs' tips standing clear above the top rail; every member
+    # modelled. The lamps' faces (material "lamps") look at the middle of the ground.
+    a = math.atan2(cy - y, cx - x); sk = 0.87 if ti < 2 else 1.0   # north heads 13% smaller (photo g49)
+    def hp(th, r, z): return (x + r * math.cos(a + th), y + r * math.sin(a + th), h + z)
+    NR = 11; TH = [math.radians(-55 + 110 * k / (NR - 1)) for k in range(NR)]
+    rb_, rt_, zb_, zt_ = 1.0 * sk, 5.2 * sk, -1.0, 8.5 * sk
+    for th in TH:
+        tube(hp(th, rb_, zb_), hp(th, rt_, zt_), 0.14, 0.12, ST, 6)
+        tube(hp(th, rt_, zt_), hp(th, rt_ + 0.35 * sk, zt_ + 1.6 * sk), 0.1, 0.06, ST, 5)    # the rib's tip
+    for q in range(4):
+        f_ = (q + 0.6) / 4.2; rr = rb_ + (rt_ - rb_) * f_; zz = zb_ + (zt_ - zb_) * f_
+        for k in range(NR - 1):
+            tube(hp(TH[k], rr, zz), hp(TH[k + 1], rr, zz), 0.08, 0.08, ST, 5)                  # rail
+            for j in (0.3, 0.7):                                                                 # two lamps a bay
+                th = TH[k] + (TH[k + 1] - TH[k]) * j; c_ = mu.Vector(hp(th, rr + 0.25, zz + 0.45))
+                fwd = (mu.Vector((cx, cy, 0)) - mu.Vector((c_.x, c_.y, 0))).normalized(); fwd.z = -0.35; fwd.normalize()
+                sd = fwd.cross(mu.Vector((0, 0, 1))).normalized(); up_ = sd.cross(fwd).normalized()
+                w, hh, d = 0.32 * sk, 0.28 * sk, 0.35
+                cs = [c_ + sd * sx * w + up_ * sy * hh for sx, sy in ((-1, -1), (1, -1), (1, 1), (-1, 1))]
+                back = [v - fwd * d for v in cs]
+                face([tuple(v) for v in cs], LM, [(0.3, 0.3), (0.7, 0.3), (0.7, 0.7), (0.3, 0.7)])     # lamp glass
+                for m_ in range(4):
+                    face([tuple(cs[m_]), tuple(back[m_]), tuple(back[(m_ + 1) % 4]), tuple(cs[(m_ + 1) % 4])], ST)
+                face([tuple(v) for v in back[::-1]], ST)
 bm.normal_update()
 # any face still without UVs (slab edges, caps, the screen block) gets a box projection in metres / tile
 nbox = 0

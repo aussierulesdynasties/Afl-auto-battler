@@ -42,9 +42,9 @@ save(a, 'facade_v7.png')
 
 # roof underside: 6 m x 6 m tile, pale grey-green, seams every 3 m, faint mottle
 S = 192
-b = np.zeros((S, S, 3), float); b[:] = (220, 226, 216)   # lit from below by the sunlit field, as the photo sphere's membrane
+b = np.zeros((S, S, 3), float); b[:] = (242, 235, 218)   # cream PTFE as the photo sphere shows it (lit through by the sun in a match: membrane_lit)
 yy, xx = np.mgrid[0:S, 0:S]
-b[(xx % (S // 2)) < 2] = (196, 202, 193)
+b[(xx % (S // 2)) < 2] = (214, 208, 194)
 b += (np.asarray(Image.fromarray((R.random((8, 8)) * 255).astype(np.uint8)).resize((S, S), Image.BICUBIC), float)[..., None] / 255 - 0.5) * 10
 save(b, 'roofunder.png')
 

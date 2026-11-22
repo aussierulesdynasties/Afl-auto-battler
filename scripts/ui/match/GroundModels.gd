@@ -16,6 +16,10 @@ const FENCE := 6.0
 ## A model mesh bigger than SLICE_OVER triangles is cut into SLICES pieces round the bowl (slice_big_meshes).
 const SLICE_OVER := 200000
 const SLICES := 32
+## Grounds whose model is cut at a smaller size, and into how many pieces: [triangles over, pieces].
+## The Gabba's 130,000-triangle bowl, drawn whole, cost more triangles than its 12 pieces cost draw
+## calls (each piece is culled by the camera and by every shadow band on its own).
+const SLICE_AT := {"gabba": [60000, 12]}
 ## A ground's seats are drawn in this many slices round the bowl, so only those in view are drawn.
 const SEAT_SECTORS := 48
 ## The model sits this far under the match's turf, so its own grass never fights the turf for a pixel.
@@ -112,7 +116,8 @@ const SURROUNDS := {
 	# (tools/grounds/gabba/surrounds.py).
 	"gabba": {"y": -0.03, "inner": 100.0, "colour": Color(0.45, 0.55, 0.27),
 			"map": "surrounds.webp", "span": 2048.0, "trees": "trees.bin", "buildings": "buildings.bin",
-			"building_colours": "buildings_col.bin", "map_near": "surrounds_near.webp", "span_near": 512.0},
+			"building_colours": "buildings_col.bin", "map_near": "surrounds_near.webp", "span_near": 512.0,
+			"facades": 600.0},
 }
 
 ## Parts of a model drawn again from a build tool's own mesh (per vertex x, y, z, normal, colour;
@@ -317,7 +322,7 @@ static func instantiate(slug: String, base := "") -> Node3D:
 			for part: Dictionary in PARTS.get(slug, []):
 				_add_part(model, dir, part)
 			root.add_child(model)
-	slice_big_meshes(root)
+	slice_big_meshes(root, SLICE_AT.get(slug, [SLICE_OVER, SLICES]))
 	var fit: Array = FIT.get(slug, [0.0, 0.0])
 	_add_seats(root, dir, Vector2(float(fit[0]), float(fit[1])))
 	if SURROUNDS.has(slug):
@@ -385,7 +390,7 @@ static func _add_surrounds(root: Node3D, s: Dictionary, dir := "") -> void:
 			if s.has("building_colours") and FileAccess.file_exists(dir + str(s["building_colours"])):
 				bcol = FileAccess.get_file_as_bytes(dir + str(s["building_colours"]))
 			_add_buildings(root, FileAccess.get_file_as_bytes(dir + str(s["buildings"])).to_float32_array(), y,
-					s.get("building_tint", s.get("tint", Color.WHITE)), bcol)
+					s.get("building_tint", s.get("tint", Color.WHITE)), bcol, float(s.get("facades", 0.0)))
 		for m in s.get("models", []):
 			var extra := load_glb(dir + str(m))
 			if extra != null:
@@ -523,11 +528,15 @@ static func _add_trees(root: Node3D, buf: PackedFloat32Array, y: float) -> void:
 ## The map's buildings round the ground (point count, height, then the footprint's x, z): plain
 ## walls in a pale render or brick and a flat roof each, as one mesh. Seen past the stands and
 ## from a fly-through, they set the MCG in its city rather than on a plain.
+## `facade_r` (SURROUNDS "facades", m from the model's middle): buildings that near are modelled
+## closer (_facade): a block of flats or offices gets its floors, every window a real recess with
+## its sill, head and reveals (no windows painted on), and a house its hipped roof. They are a mesh
+## of their own ("facade_detail"); Low swaps in their plain walls ("facade_plain", Oval3DQuality).
 static func _add_buildings(root: Node3D, buf: PackedFloat32Array, y: float, tint := Color.WHITE,
-		colours := PackedByteArray()) -> void:
-	var v := PackedVector3Array()
-	var nrm := PackedVector3Array()
-	var col := PackedColorArray()
+		colours := PackedByteArray(), facade_r := 0.0) -> void:
+	var far := _geo()
+	var near := _geo()
+	var near_plain := _geo()
 	const WALLS := [Color(0.86, 0.84, 0.8), Color(0.78, 0.76, 0.72), Color(0.72, 0.6, 0.5), Color(0.9, 0.88, 0.84),
 			Color(0.66, 0.66, 0.66)]
 	var i := 0
@@ -546,32 +555,211 @@ static func _add_buildings(root: Node3D, buf: PackedFloat32Array, y: float, tint
 			var o := (b - 1) * 6
 			wall = Color8(colours[o], colours[o + 1], colours[o + 2])
 			roof = Color8(colours[o + 3], colours[o + 4], colours[o + 5])
-		# Walls face out whichever way round the footprint was drawn.
-		var ccw := 0.0
-		for k in n:
-			ccw += foot[k].cross(foot[(k + 1) % n])
-		for k in n:
-			var a := foot[k]
-			var c := foot[(k + 1) % n]
-			var out := Vector3(c.y - a.y, 0.0, a.x - c.x).normalized() * (1.0 if ccw > 0.0 else -1.0)
-			var shade := wall * (0.92 + 0.08 * absf(out.x))
-			for p: Vector3 in [Vector3(a.x, y, a.y), Vector3(c.x, y, c.y), Vector3(c.x, y + h, c.y),
-					Vector3(a.x, y, a.y), Vector3(c.x, y + h, c.y), Vector3(a.x, y + h, a.y)]:
-				v.append(p)
-				nrm.append(out)
-				col.append(shade)
-		var tri := Geometry2D.triangulate_polygon(foot)
-		for k in tri:
-			v.append(Vector3(foot[k].x, y + h, foot[k].y))
-			nrm.append(Vector3.UP)
-			col.append(roof)
-	if v.is_empty():
+		var mid := Vector2.ZERO
+		for p in foot:
+			mid += p / float(n)
+		if facade_r > 0.0 and mid.length() < facade_r:
+			_plain_building(near_plain, foot, y, h, wall, roof)
+			_facade(near, foot, y, h, wall, roof)
+		else:
+			_plain_building(far, foot, y, h, wall, roof)
+	_add_geo(root, far, "Buildings", tint, "")
+	_add_geo(root, near, "BuildingsNear", tint, "facade_detail")
+	_add_geo(root, near_plain, "BuildingsNearPlain", tint, "facade_plain").visible = false
+
+
+static func _geo() -> Dictionary:
+	return {"v": PackedVector3Array(), "n": PackedVector3Array(), "c": PackedColorArray()}
+
+
+static func _tri(g: Dictionary, a: Vector3, b: Vector3, c: Vector3, nrm: Vector3, col: Color) -> void:
+	for p: Vector3 in [a, b, c]:
+		g["v"].append(p)
+		g["n"].append(nrm)
+		g["c"].append(col)
+
+
+static func _quad(g: Dictionary, a: Vector3, b: Vector3, c: Vector3, d: Vector3, nrm: Vector3, col: Color) -> void:
+	_tri(g, a, b, c, nrm, col)
+	_tri(g, a, c, d, nrm, col)
+
+
+## Which way is out from each wall, whichever way round the footprint was drawn.
+static func _outward(foot: PackedVector2Array) -> float:
+	var ccw := 0.0
+	for k in foot.size():
+		ccw += foot[k].cross(foot[(k + 1) % foot.size()])
+	return 1.0 if ccw > 0.0 else -1.0
+
+
+static func _plain_building(g: Dictionary, foot: PackedVector2Array, y: float, h: float, wall: Color,
+		roof: Color) -> void:
+	var n := foot.size()
+	var sgn := _outward(foot)
+	for k in n:
+		var a := foot[k]
+		var c := foot[(k + 1) % n]
+		var out := Vector3(c.y - a.y, 0.0, a.x - c.x).normalized() * sgn
+		_quad(g, Vector3(a.x, y, a.y), Vector3(c.x, y, c.y), Vector3(c.x, y + h, c.y), Vector3(a.x, y + h, a.y),
+				out, wall * (0.92 + 0.08 * absf(out.x)))
+	var tri := Geometry2D.triangulate_polygon(foot)
+	for k in range(0, tri.size(), 3):
+		_tri(g, Vector3(foot[tri[k]].x, y + h, foot[tri[k]].y), Vector3(foot[tri[k + 1]].x, y + h, foot[tri[k + 1]].y),
+				Vector3(foot[tri[k + 2]].x, y + h, foot[tri[k + 2]].y), Vector3.UP, roof)
+
+
+const FLOOR_H := 3.3      # a storey
+const SILL := 1.0         # wall below each window band
+const RECESS := 0.35      # how deep the glass sits behind the wall
+const PIER := 0.9         # wall kept at each end of a wall's window band
+const GLASS := Color(0.2, 0.24, 0.29)
+
+
+## One building near the ground, modelled: a house (low, small, near enough a rectangle) gets a
+## hipped roof over its walls; anything of three storeys or more gets its floors and recessed
+## window bands; the rest stay plain.
+static func _facade(g: Dictionary, foot: PackedVector2Array, y: float, h: float, wall: Color, roof: Color) -> void:
+	var n := foot.size()
+	var area := _area(foot)
+	if h <= 9.0 and area < 400.0:
+		var rect := _min_rect(foot)
+		if not rect.is_empty() and area / float(rect["area"]) > 0.8:
+			var short: float = minf(rect["w"], rect["l"])
+			var ridge := clampf(short * 0.28, 1.2, 3.2)
+			var eave := maxf(h - ridge, 2.8)
+			_plain_walls(g, foot, y, eave, wall)
+			_hip_roof(g, rect, y + eave, y + eave + ridge, roof)
+			return
+	if h < 9.0:
+		_plain_building(g, foot, y, h, wall, roof)
 		return
+	var floors := maxi(int(round(h / FLOOR_H)), 1)
+	var fh := h / float(floors)
+	var sgn := _outward(foot)
+	var shade_in := wall.darkened(0.3)
+	for k in n:
+		var a := foot[k]
+		var c := foot[(k + 1) % n]
+		var el := a.distance_to(c)
+		var out := Vector3(c.y - a.y, 0.0, a.x - c.x).normalized() * sgn
+		var col := wall * (0.92 + 0.08 * absf(out.x))
+		var A := Vector3(a.x, 0.0, a.y)
+		var C := Vector3(c.x, 0.0, c.y)
+		if el < 2.0 * PIER + 1.5:
+			_quad(g, A + Vector3.UP * y, C + Vector3.UP * y, C + Vector3.UP * (y + h), A + Vector3.UP * (y + h), out, col)
+			continue
+		var L := A.lerp(C, PIER / el)
+		var R := C.lerp(A, PIER / el)
+		var dn := -out * RECESS
+		for f in floors:
+			var z0 := y + f * fh
+			var zs := z0 + SILL
+			var zh := z0 + fh - (0.35 if f == floors - 1 else 0.0)
+			var z1 := z0 + fh
+			var up := Vector3.UP
+			# the wall: below the band, the two piers, and above the band on the top floor
+			_quad(g, A + up * z0, C + up * z0, C + up * zs, A + up * zs, out, col)
+			_quad(g, A + up * zs, L + up * zs, L + up * zh, A + up * zh, out, col)
+			_quad(g, R + up * zs, C + up * zs, C + up * zh, R + up * zh, out, col)
+			if zh < z1:
+				_quad(g, A + up * zh, C + up * zh, C + up * z1, A + up * z1, out, col)
+			# the glass, set back, and the recess's four sides
+			_quad(g, L + dn + up * zs, R + dn + up * zs, R + dn + up * zh, L + dn + up * zh, out, GLASS)
+			_quad(g, L + up * zs, R + up * zs, R + dn + up * zs, L + dn + up * zs, Vector3.UP, col)
+			_quad(g, L + up * zh, R + up * zh, R + dn + up * zh, L + dn + up * zh, Vector3.DOWN, shade_in)
+			var side := (C - A).normalized()
+			_quad(g, L + up * zs, L + dn + up * zs, L + dn + up * zh, L + up * zh, side, shade_in)
+			_quad(g, R + up * zs, R + dn + up * zs, R + dn + up * zh, R + up * zh, -side, shade_in)
+	var tri := Geometry2D.triangulate_polygon(foot)
+	for k in range(0, tri.size(), 3):
+		_tri(g, Vector3(foot[tri[k]].x, y + h, foot[tri[k]].y), Vector3(foot[tri[k + 1]].x, y + h, foot[tri[k + 1]].y),
+				Vector3(foot[tri[k + 2]].x, y + h, foot[tri[k + 2]].y), Vector3.UP, roof)
+
+
+static func _plain_walls(g: Dictionary, foot: PackedVector2Array, y: float, h: float, wall: Color) -> void:
+	var sgn := _outward(foot)
+	for k in foot.size():
+		var a := foot[k]
+		var c := foot[(k + 1) % foot.size()]
+		var out := Vector3(c.y - a.y, 0.0, a.x - c.x).normalized() * sgn
+		_quad(g, Vector3(a.x, y, a.y), Vector3(c.x, y, c.y), Vector3(c.x, y + h, c.y), Vector3(a.x, y + h, a.y),
+				out, wall * (0.92 + 0.08 * absf(out.x)))
+
+
+static func _area(foot: PackedVector2Array) -> float:
+	var s := 0.0
+	for k in foot.size():
+		s += foot[k].cross(foot[(k + 1) % foot.size()])
+	return absf(s) * 0.5
+
+
+## The smallest rectangle round the footprint lined up with one of its walls: its middle, long
+## axis (unit), half length and half width; empty if the footprint is degenerate.
+static func _min_rect(foot: PackedVector2Array) -> Dictionary:
+	var best := {}
+	for k in foot.size():
+		var e := foot[(k + 1) % foot.size()] - foot[k]
+		if e.length() < 0.5:
+			continue
+		var u := e.normalized()
+		var v := Vector2(-u.y, u.x)
+		var lo := Vector2(INF, INF)
+		var hi := Vector2(-INF, -INF)
+		for p in foot:
+			var q := Vector2(p.dot(u), p.dot(v))
+			lo = lo.min(q)
+			hi = hi.max(q)
+		var a := (hi.x - lo.x) * (hi.y - lo.y)
+		if best.is_empty() or a < float(best["area"]):
+			var m := (lo + hi) * 0.5
+			best = {"area": a, "mid": u * m.x + v * m.y, "u": u, "v": v, "l": hi.x - lo.x, "w": hi.y - lo.y}
+	if not best.is_empty() and float(best["area"]) < 1.0:
+		return {}
+	return best
+
+
+## A hipped roof over the rectangle, 0.4 m of eave all round: a ridge along the long side, four
+## slopes (two trapezoids, two triangles).
+static func _hip_roof(g: Dictionary, rect: Dictionary, z_eave: float, z_ridge: float, col: Color) -> void:
+	var u: Vector2 = rect["u"]
+	var v: Vector2 = rect["v"]
+	var hl: float = rect["l"] * 0.5 + 0.4
+	var hw: float = rect["w"] * 0.5 + 0.4
+	if hw > hl:
+		var t := u
+		u = v
+		v = -t
+		var th := hl
+		hl = hw
+		hw = th
+	var m: Vector2 = rect["mid"]
+	var r := maxf(hl - hw, 0.0)
+	var c00 := m - u * hl - v * hw
+	var c10 := m + u * hl - v * hw
+	var c11 := m + u * hl + v * hw
+	var c01 := m - u * hl + v * hw
+	var p0 := m - u * r
+	var p1 := m + u * r
+	var E := func(p: Vector2) -> Vector3: return Vector3(p.x, z_eave, p.y)
+	var Rg := func(p: Vector2) -> Vector3: return Vector3(p.x, z_ridge, p.y)
+	var dz := z_ridge - z_eave
+	var nside := func(d: Vector2) -> Vector3: return Vector3(d.x * dz, hw, d.y * dz).normalized()
+	_quad(g, E.call(c00), E.call(c10), Rg.call(p1), Rg.call(p0), nside.call(-v), col * 0.92)
+	_quad(g, E.call(c11), E.call(c01), Rg.call(p0), Rg.call(p1), nside.call(v), col)
+	_tri(g, E.call(c10), E.call(c11), Rg.call(p1), nside.call(u), col * 0.96)
+	_tri(g, E.call(c01), E.call(c00), Rg.call(p0), nside.call(-u), col * 0.96)
+
+
+static func _add_geo(root: Node3D, g: Dictionary, name: String, tint: Color, meta: String) -> MeshInstance3D:
+	var mi := MeshInstance3D.new()
+	mi.name = name
+	if (g["v"] as PackedVector3Array).is_empty():
+		return mi
 	var arr := []
 	arr.resize(Mesh.ARRAY_MAX)
-	arr[Mesh.ARRAY_VERTEX] = v
-	arr[Mesh.ARRAY_NORMAL] = nrm
-	arr[Mesh.ARRAY_COLOR] = col
+	arr[Mesh.ARRAY_VERTEX] = g["v"]
+	arr[Mesh.ARRAY_NORMAL] = g["n"]
+	arr[Mesh.ARRAY_COLOR] = g["c"]
 	var mesh := ArrayMesh.new()
 	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
 	var mat := StandardMaterial3D.new()
@@ -581,13 +769,14 @@ static func _add_buildings(root: Node3D, buf: PackedFloat32Array, y: float, tint
 	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
 	mat.roughness = 0.95
 	mat.disable_receive_shadows = true
-	var mi := MeshInstance3D.new()
-	mi.name = "Buildings"
 	mi.mesh = mesh
 	mi.material_override = mat
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	mi.set_meta("open_ground", true)
+	if meta != "":
+		mi.set_meta(meta, true)
 	root.add_child(mi)
+	return mi
 
 
 ## A canopy of about radius 1: two lumpy lobes, one high and one off to the side, so a park of them
@@ -627,16 +816,16 @@ static func _canopy_mesh() -> ArrayMesh:
 ## Huggins Stand; People First's two halves) is cut into SLICES pieces by bearing round its own
 ## middle, the same triangles and materials, so the camera draws only the pieces in its view
 ## instead of the whole bowl every frame. The picture is unchanged.
-static func slice_big_meshes(root: Node) -> void:
+static func slice_big_meshes(root: Node, at := [SLICE_OVER, SLICES]) -> void:
 	for mi: MeshInstance3D in root.find_children("*", "MeshInstance3D", true, false):
 		if mi.mesh == null or mi.skin != null:
 			continue
 		var tris := 0
 		for si in range(mi.mesh.get_surface_count()):
 			tris += mi.mesh.surface_get_array_index_len(si) / 3
-		if tris <= SLICE_OVER:
+		if tris <= int(at[0]):
 			continue
-		var pieces := _slices(mi.mesh, mi)
+		var pieces := _slices(mi.mesh, mi, int(at[1]))
 		var parent := mi.get_parent()
 		for k in range(pieces.size()):
 			var piece := MeshInstance3D.new()
@@ -653,10 +842,10 @@ static func slice_big_meshes(root: Node) -> void:
 ## The mesh's triangles sorted into SLICES meshes by the bearing of each triangle's first corner
 ## from the middle of the mesh's box; each piece keeps only the corners it uses. With `src_mi`, each
 ## surface keeps that instance's override (MATERIAL_FIX), not only the mesh's own material.
-static func _slices(mesh: Mesh, src_mi: MeshInstance3D = null) -> Array:
+static func _slices(mesh: Mesh, src_mi: MeshInstance3D = null, count := SLICES) -> Array:
 	var mid := mesh.get_aabb().get_center()
 	var meshes := []
-	for k in range(SLICES):
+	for k in range(count):
 		meshes.append(ArrayMesh.new())
 	for si in range(mesh.get_surface_count()):
 		var arr := mesh.surface_get_arrays(si)
@@ -667,18 +856,18 @@ static func _slices(mesh: Mesh, src_mi: MeshInstance3D = null) -> Array:
 			for i in range(verts.size()):
 				idx[i] = i
 		var per := []
-		for k in range(SLICES):
+		for k in range(count):
 			per.append(PackedInt32Array())
 		for t in range(0, idx.size() - 2, 3):
 			var v := verts[idx[t]]
-			var k := int(fposmod(atan2(v.z - mid.z, v.x - mid.x), TAU) / TAU * SLICES) % SLICES
+			var k := int(fposmod(atan2(v.z - mid.z, v.x - mid.x), TAU) / TAU * count) % count
 			per[k].append(idx[t])
 			per[k].append(idx[t + 1])
 			per[k].append(idx[t + 2])
 		var remap := PackedInt32Array()
 		remap.resize(verts.size())
 		var mat := src_mi.get_active_material(si) if src_mi != null else mesh.surface_get_material(si)
-		for k in range(SLICES):
+		for k in range(count):
 			var tri: PackedInt32Array = per[k]
 			if tri.is_empty():
 				continue
