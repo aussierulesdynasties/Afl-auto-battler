@@ -10,7 +10,7 @@ extends SceneTree
 ## it is game speed, at 30 fps half speed.
 
 const DT := 1.0 / 60.0
-const BEFORE := 1.4
+const BEFORE_S := 1.4   # s filmed before each moment (FILM_BEFORE overrides: a chase-down's run)
 const AFTER := 0.9
 
 
@@ -61,6 +61,7 @@ func _run() -> void:
 		# The match's TV coverage (PitchView): the wing camera, set shots, ball-ups.
 		oval.camera.make_current()
 		tv = load("res://scripts/ui/match/Oval3DBroadcast.gd").new(oval)
+	var BEFORE := float(OS.get_environment("FILM_BEFORE")) if OS.get_environment("FILM_BEFORE") != "" else BEFORE_S
 	var t := 0.0
 	var warm := false
 	var frames := {}

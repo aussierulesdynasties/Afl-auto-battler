@@ -72,7 +72,7 @@ func _run() -> void:
 				idle.append(t - float(moving_t.get(who, t)))
 				if OS.get_environment("MOVES_EACH") != "" and anim.director._pi < anim.director._phases.size():
 					var ph: Dictionary = anim.director._phases[anim.director._pi]
-					print("  take geometry: phase %s carrier pace, gap, behind = %s" % [str(ph.get("t", "")), str(ph.get("_geo", []))])
+					print("  take geometry: phase %s gap to carrier, behind him = %s" % [str(ph.get("t", "")), str(ph.get("_geo", []))])
 				if anim.director.chasing_down():
 					run_downs.append([t, who, int(pr_w["victim"]), (anim._pace[who] as Vector2).length(), (anim._pace[int(pr_w["victim"])] as Vector2).length()])
 				if OS.get_environment("MOVES_EACH") != "":

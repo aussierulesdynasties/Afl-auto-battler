@@ -1124,14 +1124,13 @@ func _fifty_phases(k: int) -> Array:
 	return out
 
 
-## A chase-down tackle (_enter "chase"): the carrier is running faster than RUN_DOWN_PACE (m/s
-## drawn) with the tackler more than RUN_DOWN_GAP behind him (within ~50 deg of his line). He runs
-## on at RUN_DOWN_CARRIER urgency and is run down within RUN_DOWN_MAX s.
-const RUN_DOWN_PACE := 3.0
-const RUN_DOWN_GAP := 3.0
+## A chase-down tackle (_enter "chase"): the tackler is more than RUN_DOWN_GAP m behind the
+## carrier, within ~50 deg of the carrier's line to his own goal. The carrier takes off for it at
+## RUN_DOWN_CARRIER urgency and is run down within RUN_DOWN_MAX s.
+const RUN_DOWN_GAP := 4.0
 const RUN_DOWN_BEHIND := 0.65
 const RUN_DOWN_CARRIER := 0.35
-const RUN_DOWN_MAX := 3.0
+const RUN_DOWN_MAX := 3.5
 
 
 ## Whether the tackle being run down now is a chase-down from behind (the crowd calls "Ball!").
@@ -2594,18 +2593,18 @@ func _enter(p: Dictionary) -> void:
 		"chase":
 			var vt: Dictionary = tokens[int(p["victim"])]
 			var tk0: Dictionary = tokens[int(p["who"])]
-			var run: Vector2 = vt["vel"]
 			var gap: Vector2 = (vt["pos"] as Vector2) - (tk0["pos"] as Vector2)
 			# A chase-down (director 2026-11-22: "really cool chase down tackles from behind"):
-			# the carrier is running and the tackler comes from behind him, so the carrier runs on
-			# along his line and the tackler sprints him down. Otherwise the carrier is caught
-			# where he stands. The tackle itself is the sim's, either way.
-			p["_geo"] = [run.length() * TEMPO, gap.length(), gap.normalized().dot(run.normalized()) if run.length() > 0.01 else 0.0]
-			if p.get("run_down", false) and run.length() * TEMPO > RUN_DOWN_PACE \
-					and gap.length() > RUN_DOWN_GAP and gap.normalized().dot(run.normalized()) > RUN_DOWN_BEHIND:
+			# the tackler is behind the carrier, as the carrier looks at his own goal, so the
+			# carrier takes off for it and the tackler sprints him down. Otherwise the carrier is
+			# caught where he stands. The tackle itself is the sim's, either way.
+			var att := Vector2(MatchMotion.GOAL_X * _dir(int(vt["side"])), 0.0) - (vt["pos"] as Vector2)
+			var behind := gap.normalized().dot(att.normalized()) if gap.length() > 0.01 and att.length() > 0.01 else 0.0
+			p["_geo"] = [gap.length(), behind]
+			if p.get("run_down", false) and gap.length() > RUN_DOWN_GAP and behind > RUN_DOWN_BEHIND:
 				p["chasing"] = true
 				p["max"] = RUN_DOWN_MAX
-				MatchMotion.set_goal(vt, (vt["pos"] as Vector2) + run.normalized() * 30.0, RUN_DOWN_CARRIER, true)
+				MatchMotion.set_goal(vt, (vt["pos"] as Vector2) + att.normalized() * 30.0, RUN_DOWN_CARRIER, true)
 			else:
 				p["chasing"] = false
 				MatchMotion.set_goal(vt, vt["pos"], 0.2, true)
