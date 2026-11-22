@@ -296,7 +296,7 @@ jobs:
     needs: plan
     if: needs.plan.outputs.code == 'true' && (github.event_name == 'pull_request' || github.event_name == 'merge_group')
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25   # the first import of every ground's 3D model and background scene takes up to 20 min on a runner
     steps:
       - uses: actions/checkout@v4
 

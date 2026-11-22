@@ -113,7 +113,7 @@ say "== Quick: skipping the import (.godot exists; a script error still fails it
 summary+=("| import | skipped | --quick |")
 else
 say "== Importing the project"
-timeout 600 "$GODOT" --headless --path . --editor --import > "$LOG_DIR/import.log" 2>&1
+timeout 1200 "$GODOT" --headless --path . --editor --import > "$LOG_DIR/import.log" 2>&1
 import_code=$?
 if [ "$import_code" != 0 ] || grep -qE "SCRIPT ERROR|Parse Error|Compile Error" "$LOG_DIR/import.log"; then
 	grep -E -A3 "SCRIPT ERROR|Parse Error|Compile Error" "$LOG_DIR/import.log" || true
