@@ -17,5 +17,5 @@ rm -f out/$g/scene.blend; $P scene.py -- spec/$g.json 2>&1 | grep -vE "unregiste
 ls -la out/$g/
 Y=$($P -c "import json;print(json.load(open('spec/$g.json'))['yaw'])")
 mkdir -p $WORK/bd/$g
-BG_HULL_SKIP=$(echo $SKIP | tr ' ' ',') BG_YAW=$Y BG_BUDGET=${BG_BUDGET:-800000} BG_VARIANTS=2 BG_SLICE=120000 $P $REPO/tools/grounds/backdrop/reduce.py -- out/$g/scene.blend $WORK/bd/$g/${g}_backdrop.glb ${TEX:-4096} > $WORK/bd/$g/reduce.log 2>&1
+BG_HULL_SKIP=$(echo $SKIP | tr ' ' ',') BG_YAW=$Y BG_BUDGET=${BG_BUDGET:-800000} BG_VARIANTS=2 BG_SLICE=120000 $P $REPO/tools/grounds/backdrop/reduce.py -- out/$g/scene.blend $WORK/bd/$g/${g}_backdrop.glb ${TEX:-4096} ${NEAR_R:-350} ${MID_KEEP:-0.4} ${FAR_KEEP:-0.15} > $WORK/bd/$g/reduce.log 2>&1
 tail -3 $WORK/bd/$g/reduce.log; ls -la $WORK/bd/$g

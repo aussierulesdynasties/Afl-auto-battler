@@ -2333,7 +2333,7 @@ func _test_ground_backdrop() -> void:
 	_check(GroundModels.has_backdrop("mcg") and GroundModels.has_backdrop("gmhba"),
 			"The MCG and GMHBA Stadium have their surroundings")
 	_check(not GroundModels.has_backdrop("gabba"), "The Gabba has none (its own surrounds, #2020)")
-	for g in ["MCG", "The Gabba"]:
+	for g in ["MCG", "WACA", "The Gabba"]:   # the WACA: the first ground rebuilt as the real place
 		var d := MatchDirector.new()
 		var res := _result(42)
 		d.setup(res, res["events"])
@@ -2348,7 +2348,7 @@ func _test_ground_backdrop() -> void:
 			oval.free()
 			continue
 		_check(bds.size() == 1 and (bds[0] as Node).get_parent().name == "Ground",
-				"The MCG's surroundings are laid with its model (%d)" % bds.size())
+				"%s's surroundings are laid with its model (%d)" % [g, bds.size()])
 		if bds.size() != 1:
 			oval.free()
 			continue
@@ -2358,9 +2358,9 @@ func _test_ground_backdrop() -> void:
 		_check(shadow.is_empty(), "The surroundings cast no shadow (%d do)" % shadow.size())
 		_check(oval.camera.far >= GroundModels.BACKDROP_FAR, "The camera sees out to the skyline (%.0f m)" % oval.camera.far)
 		_check(oval._env.fog_enabled and oval._env.fog_depth_begin >= 500.0,
-				"The haze starts well past the stadium (%.0f m)" % oval._env.fog_depth_begin)
+				"%s: the haze starts well past the stadium (%.0f m)" % [g, oval._env.fog_depth_begin])
 		var over := 0
-		var fence := GroundModels.MATCH_FENCE * 1.15
+		var fence := GroundModels.match_fence()
 		for n in geo:
 			var mi := n as MeshInstance3D
 			if mi == null or not str(mi.name).begins_with("bg_near_ground"):
@@ -2369,9 +2369,13 @@ func _test_ground_backdrop() -> void:
 			for i in mi.mesh.get_surface_count():
 				for v in mi.mesh.surface_get_arrays(i)[Mesh.ARRAY_VERTEX]:
 					var p: Vector3 = xf * v
-					if pow(p.x / fence.x, 2) + pow(p.z / fence.y, 2) < 1.0 and p.y > -1.0:
+					# inside the fence it lies under the model's own ground (GroundModels.UNDER_TURF, 0.1 m
+					# under the turf); out to 15% past the fence (the stands at most grounds, the grass banks
+					# at the WACA's ends) none of it rises over the turf
+					var e := pow(p.x / fence.x, 2) + pow(p.z / fence.y, 2)
+					if (e < 1.0 and p.y > -0.2) or (e < 1.3225 and p.y > 0.0):
 						over += 1
-		_check(over == 0, "None of the park's ground lies over the arena (%d points)" % over)
+		_check(over == 0, "%s: none of the park's ground lies over the arena (%d points)" % [g, over])
 		oval.free()
 ## The stands' light (director, 2026-11-21: roof undersides "grey, a faint green tint"): the model's
 ## surfaces take the stand shader; a face turned up keeps the sky's light, one turned down loses the

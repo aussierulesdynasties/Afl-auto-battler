@@ -96,6 +96,15 @@ bm = bmesh.new(); bm.from_mesh(g.data); M = g.matrix_world
 kill = [f for f in bm.faces if under_stadium(*(M @ f.calc_center_median()).xy)]
 bmesh.ops.delete(bm, geom=kill, context='FACES'); bm.to_mesh(g.data); bm.free()
 print('ground faces cut under stadium', len(kill))
+# a face kept because its middle lies outside the footprint can still have a corner inside it, at
+# the ground's height over the arena's edge: those corners sink under the model's own ground
+sunk = 0
+Mi = g.matrix_world.inverted()
+for v in g.data.vertices:
+    w = M @ v.co
+    if under_stadium(w.x, w.y) and w.z > -1.5:
+        w.z = -1.5; v.co = Mi @ w; sunk += 1
+print('ground corners sunk under stadium', sunk)
 
 if SKYLINE:
     exec(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'skyline.py')).read())

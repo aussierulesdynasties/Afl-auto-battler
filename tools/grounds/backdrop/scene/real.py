@@ -44,7 +44,7 @@ def canopy(SA):
     from scipy.ndimage import uniform_filter, binary_opening, binary_closing
     mu = uniform_filter(V, 7); sd = np.sqrt(np.maximum(0, uniform_filter(V * V, 7) - mu * mu))
     water = (uniform_filter(V, 15) < 55) & (uniform_filter(sd, 15) < 10)
-    t = (exg > 10) & (V < 95) & (V > 25) & (sd > 8) & ~water
+    t = (exg > 8) & (V < 110) & (V > 14) & (sd > 8) & ~water   # checked on Queens Gardens' belts and shrubberies
     return binary_closing(binary_opening(t, iterations=2), iterations=1)
 
 def shade(SA):

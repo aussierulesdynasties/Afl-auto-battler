@@ -222,9 +222,12 @@ if spec.get('real'):
             if el['type'] != 'way' or 'geometry' not in el or 'building' in tg or 'highway' in tg: continue
             if not any(k in tg for k in ('landuse', 'leisure', 'amenity', 'natural', 'surface', 'place', 'man_made', 'tourism')): continue
             q = ring(el)
-            if len(q) > 3 and q[0] == q[-1]: _ar.append((abs(area(q)), q))
+            if len(q) > 3 and q[0] == q[-1]: _ar.append((abs(area(q)), q, tg))
         _RI = Image.new('I', (N, N), 0); _rd = ImageDraw.Draw(_RI)
-        for k_, (_, q) in enumerate(sorted(_ar, key=lambda t: -t[0])): _rd.polygon(P(q), fill=k_ + 1)
+        _TWN = Image.new('L', (N, N), 0); _td_ = ImageDraw.Draw(_TWN)   # town land: house and shop blocks
+        for k_, (_, q, tg_) in enumerate(sorted(_ar, key=lambda t: -t[0])):
+            _rd.polygon(P(q), fill=k_ + 1)
+            _td_.polygon(P(q), fill=255 if tg_.get('landuse') in ('residential', 'commercial', 'retail', 'industrial') else 0)
         _key = _key * 100000 + np.asarray(_RI).astype(np.int64)
         _LB = np.zeros(_soft.shape, np.int64); _nl = 0
         for kv in np.unique(_key[_soft]):
@@ -235,6 +238,24 @@ if spec.get('real'):
         _med = np.nan_to_num(_med) * np.minimum(1.0, 175.0 / np.maximum(_med.max(-1, keepdims=True), 1))
         _good = np.concatenate([[False], (_cnt[1:] >= np.maximum(6, 0.08 * _tot[1:]))])
         _MC = np.zeros((_nl + 1, 3), np.float32); _MC[1:] = _med
+        # town land (house blocks, shops, unmapped land between roads): one shared colour, the median of all of it, so
+        # the blocks don't read as a quilt; Sentinel-2 then gives each street its light and dark
+        _town = _soft & ((np.asarray(_RI) == 0) | (np.asarray(_TWN) > 0))
+        _tw_ok = _ok & _town
+        if _tw_ok.sum() > 100:
+            _tc = np.median(_AS[_tw_ok], 0); _tc = _tc * min(1.0, 175.0 / max(float(_tc.max()), 1))
+            _tfrac = np.bincount(_LB[_town].ravel(), minlength=_nl + 1) / np.maximum(np.bincount(_LB.ravel(), minlength=_nl + 1), 1)
+            _MC[_tfrac > 0.5] = _tc; _good = _good | (_tfrac > 0.5); _good[0] = False
+            print('town land colour', [int(v) for v in _tc])
+        # a patch the shade test empties (grey asphalt, a trotting track's sand in low sun) takes the median of all its
+        # open pixels instead: still its own colour, never the blurred field
+        _bad2 = (np.asarray(_bm.filter(ImageFilter.MaxFilter(5))) > 0) | _tm | _pool
+        _ok2 = _soft & ~_bad2[_ai[:, None], _aj[None, :]]
+        _cnt2 = np.bincount(_LB[_ok2].ravel(), minlength=_nl + 1)
+        _need = np.nonzero(~_good & (_cnt2 >= np.maximum(6, 0.08 * _tot)))[0]; _need = _need[_need > 0]
+        if len(_need):
+            _m2 = np.stack([_nd.median(_AS[..., k], np.where(_ok2, _LB, 0), _need) for k in range(3)], -1)
+            _MC[_need] = np.nan_to_num(_m2) * np.minimum(1.0, 175.0 / np.maximum(_m2.max(-1, keepdims=True), 1)); _good[_need] = True
         # big patches (unmapped city land, a whole park) vary inside: the patch's colour is modulated by Sentinel-2's
         # 10 m colours (DEA, CC BY 4.0) relative to the patch's own Sentinel-2 median, so a dry corner reads dry
         _areaM = _tot * PX * PX; _wf = np.clip((_areaM - 8000) / 12000, 0, 1)
@@ -260,9 +281,11 @@ if spec.get('real'):
             _S2M = np.ones((_nl + 1, 3), np.float32); _S2M[1:] = np.nan_to_num(_s2med, nan=1.0); _S2M[_S2M <= 0] = 1.0
             _r = np.ones(_soft.shape + (3,), np.float32)
             _q = _S2g[_s2ok] / _S2M[_LB[_s2ok]]; _lq = _q.mean(-1, keepdims=True)
-            _r[_s2ok] = np.clip(_lq, 0.8, 1.25) * np.clip(_q / np.maximum(_lq, 1e-3), 0.9, 1.1)   # mostly light and dark, a little hue
+            _r[_s2ok] = np.clip(_lq, 0.9, 1.1)   # light and dark only: a hue shift read as smears
             _r = np.stack([_gf(_r[..., c], 6 / PX) for c in range(3)], -1)   # no 10 m stair steps
-            _r = 1 + (_r - 1) * _wf[_LB][..., None]
+            # only unmapped land (city blocks) varies: a mapped park, track or ground keeps one clean colour, with edges
+            _unm = _town
+            _r = 1 + (_r - 1) * (_wf[_LB] * _unm)[..., None]
             _a0[_use] = _MC[_LB[_use]] * _r[_use]
             print('sentinel-2 variation inside big patches')
         else:

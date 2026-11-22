@@ -77,7 +77,15 @@ func _run() -> void:
 		root.mesh_lod_threshold = 0.0
 	var cam: Camera3D = oval.camera
 	var quick := "quick" in args   # three shots: the broadcast wide shot and two from outside
-	for s in _shots():
+	# shot=name:x,y,z:ax,ay,az:fov  one extra camera (Godot metres; fov in degrees), e.g. a Google Earth match
+	var extra := []
+	for a in args:
+		if str(a).begins_with("shot="):
+			var q := str(a).substr(5).split(":")
+			var e := q[1].split_floats(","); var t := q[2].split_floats(",")
+			extra.append([q[0], Vector3(e[0], e[1], e[2]), Vector3(t[0], t[1], t[2]), -float(q[3])])
+	var only := not extra.is_empty()
+	for s in (extra if only else _shots()):
 		if quick and not (s[0] in ["main_wide", "outside_park", "outside_high"]):
 			continue
 		# The broadcast cameras draw nothing nearer than 20 m (Oval3DBroadcast.NEAR, rule 2.101):
