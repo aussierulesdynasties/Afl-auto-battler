@@ -136,7 +136,7 @@ func build(p_director: MatchDirector, home: String, away: String) -> void:
 	add_child(ball)
 	camera = Camera3D.new()
 	camera.fov = 30.0
-	camera.far = GroundModels.BACKDROP_FAR if _far_view else 900.0
+	camera.far = _far_view if _far_view > 0.0 else 900.0
 	# Placed in world space, so turning the ground for a change of ends (set_ends) leaves
 	# the camera where the broadcast puts it.
 	camera.top_level = true
@@ -525,7 +525,7 @@ func _ground_model(slug: String, base := "", home := "", away := "") -> void:
 	add_child(root)
 	Oval3DQuality.apply_model(quality, root)
 	if GroundModels.has_backdrop(slug, base):
-		_backdrop_view()
+		_backdrop_view(slug)
 	if turf == null:   # a bare view (the ground inspector's test): the model alone
 		return
 	turf.set_ground(slug)
@@ -553,19 +553,19 @@ const HAZE_FROM := 600.0
 const HAZE_TO := 9000.0
 
 
-var _far_view := false
+var _far_view := 0.0
 
 
-func _backdrop_view() -> void:
-	_far_view = true
+func _backdrop_view(slug := "") -> void:
+	_far_view = GroundModels.backdrop_far(slug)
 	if camera != null:
-		camera.far = GroundModels.BACKDROP_FAR
+		camera.far = _far_view
 	if _env == null:   # a bare view (the ground inspector's test) has no sky to haze into
 		return
 	_env.fog_enabled = true
 	_env.fog_mode = Environment.FOG_MODE_DEPTH
 	_env.fog_depth_begin = HAZE_FROM
-	_env.fog_depth_end = HAZE_TO
+	_env.fog_depth_end = GroundModels.backdrop_haze(slug, HAZE_TO)
 	_env.fog_depth_curve = 0.8
 	_env.fog_density = 1.0
 	_env.fog_aerial_perspective = 0.0
