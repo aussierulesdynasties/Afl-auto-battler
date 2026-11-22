@@ -30,13 +30,19 @@ Checked against Google Earth 3D (36 views) and a 2019 photo sphere taken on the 
 - **Steel, all modelled**: a white column at every rafter from the footpath to 5 m above the roof, a stay from
   its top onto the roof, two white ring beams (under the fascia and at 14 m) with an X in every bay, and struts
   back to the wall.
-- **Roof**: a sheet with depth (white top, pale grey-green underside 0.35 m below, a 1.2 m outer fascia), each
+- **Roof**: a sheet with depth (white top, cream PTFE underside 0.35 m below, drawn as `membrane_lit_under` so the match lights it
+  through with the sun (Oval3DTurf.MEMBRANE_THROUGH; the only ground excepted from the grey-green underside rule), a 1.2 m outer fascia), each
   bay sagging between the rafters; no tent peaks. Under it: a dark tapered rafter at every column, a rib down
   each bay and the leading-edge truss along the inner edge.
 - **Seats**: gold, maroon in whole blocks, some white (photo sphere). Box fronts dark glass under an LED ribbon
   (plain colour blocks, no lettering). Hyundai Centre piers white, not blue.
+- **Light towers**: white lattice baskets (11 ribs, 4 rails, lamp boxes facing the field), not flat panels.
+- **Big screens**: on the upper tier's front at the north and south ends, in a 4 m deep housing (photo sphere).
 - **Surroundings**: `surrounds.py` (Woolloongabba from OpenStreetMap, the house yards filled with trees, the
-  CBD's towers), loaded through `GroundModels.SURROUNDS`.
+  CBD's towers), loaded through `GroundModels.SURROUNDS`. Buildings within 600 m
+  (`facades`) are modelled closer: floors with recessed window bands and reveals, hipped roofs on houses; Low
+  draws them plain. The bowl is cut into 12 pieces (`GroundModels.SLICE_AT`): High / Medium / Low draw 2.56 /
+  2.10 / 1.63 million triangles and 348 / 291 / 274 draw calls (docs/PHONE_3D_BUDGET.md).
 
 Build in the cloud with the bpy module: `python mktex_v7.py`, then build.py with
 `sys.argv = ['blender', '--', 'model_in6.json', OUT.glb, OUT.blend, 'htex']` (model_in6 is the current input),

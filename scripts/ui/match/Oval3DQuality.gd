@@ -68,6 +68,12 @@ static func apply_viewport(level: String, vp: Viewport) -> void:
 ## A ground's seats cast shadows or not, by the level: the seat batches (GroundModels) and a
 ## model's own seat meshes. The rest of the model always casts (its roofs shade the stands).
 static func apply_model(level: String, root: Node) -> void:
+	# Low draws the buildings near the ground plain (GroundModels._facade): no floors, recesses or hipped roofs.
+	for g: Node3D in root.find_children("BuildingsNear*", "Node3D", true, false):
+		if g.has_meta("facade_detail"):
+			g.visible = level != LOW
+		elif g.has_meta("facade_plain"):
+			g.visible = level == LOW
 	if bool(preset(level)["seat_shadows"]):
 		return
 	for g: GeometryInstance3D in root.find_children("*", "GeometryInstance3D", true, false):
