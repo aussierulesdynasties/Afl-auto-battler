@@ -31,7 +31,7 @@ GROUND=mat('ground',(150,150,140),None,0.95);APRON=mat('apron',(165,165,160),'ap
 SEAT=mat('seats',(214,74,62),'seat_low');SEATU=mat('seats_up',(214,74,62),'seat_up');AIS=mat('aisle',(200,200,196),'aisle_low');AISU=mat('aisle_up',(200,200,196),'aisle_up')
 WALK=mat('walk',(170,170,165),'walk');NAVY=mat('navy',(52,60,88),'navy',0.5)
 GLASS=mat('glass',(45,52,70),'glass',0.25);CONC=mat('concrete',(190,188,182),'concrete');ROOF=mat('roof',(246,246,244),'roof',0.6)
-UNDER=mat('roofunder',(215,215,212),'roofunder',0.7);YEL=mat('gold',(196,164,86),'gold',0.55,0.2);TW=mat('tower',(244,244,244),'tower',0.5)
+UNDER=mat('roofunder',(215,215,212),'roofunder',0.7);YEL=mat('gold',(196,164,86),'gold',0.55,0.2);EDGE=mat('roofedge',(78,82,92),None,0.6,0.3);TW=mat('tower',(244,244,244),'tower',0.5)
 LAMP=mat('lamps',(235,235,235),'lamps',0.4);SCR=mat('screen',(25,30,45),'screen',0.3);STR=mat('stripes',(200,120,80),'stripes',0.6)
 SBF=mat('scorefront',(28,32,42),'scorefront',0.35);SBP=mat('scorepost',(250,249,248),'scorepost');RSG=mat('redsign',(243,56,59),'redsign',0.5)
 POD=mat('podroof',(232,230,226),'podroof');FAC=mat('facade',(28,30,36),None,0.7);FIN=mat('fin',(76,78,84),None,0.7)
@@ -257,6 +257,7 @@ def fardz(a,s,inzone=0):
     if inzone:return 1.0
     return -dz*(1-math.sqrt(max(0.0,math.sin(math.pi*phase(a,s)))))*s*s
 SR=[0,0.03,0.06,0.09,0.12,0.15,0.18,0.21,0.24,0.28,0.32,0.36,0.40,0.45,0.50,0.55,0.60,0.65,0.70,0.75,0.80,0.84,0.88,0.92,0.95,0.975,0.99,1.0]  # dense rows: slanted far ribs cut diagonally across them
+SAG=float(os.environ.get('SAG',1.6))  # inner edge: how far each bay's glazed edge bows toward the field mid-bay
 NAVYW=5.25  # navy glazed strip inside the white membrane, measured on the photo (near side 5.75, far side 4.5 m)
 LOBE_IN=float(os.environ.get('LOBE_IN',0.35));LOBE_OUT=float(os.environ.get('LOBE_OUT',1.1));CAP0=float(os.environ.get('CAP0',0.94));LOBEP=float(os.environ.get('LOBEP',1.5))
 LOBE_FAR=float(os.environ.get('LOBE_FAR',LOBE_OUT));FARPOW=float(os.environ.get('FARPOW',1.0))
@@ -277,7 +278,7 @@ print('MEMB bays',len(RO)-1,'width',round(BAYW,2),'hin',round(HIN_M,2),'hout',ro
 def rp_m(a,s,dz):
     i,ph=_bay(a,s)
     if i is None:return None
-    a0,a1=ribat(i,s),ribat(i+1,s);ri=rin(a)-NAVYW+0.8-1.6*math.sin(math.pi*phase(a))
+    a0,a1=ribat(i,s),ribat(i+1,s);ri=rin(a)-NAVYW+0.8-SAG*math.sin(math.pi*phase(a))
     # plan: one smooth scallop per bay between the two rib-end radii
     e0,e1=rout(RO[i]),rout(RO[i+1])
     v=e0+(e1-e0)*ph;ro=v+SCAL*math.sqrt(max(0.0,math.sin(math.pi*ph)))  # same scallop depth on every bay
@@ -291,7 +292,7 @@ def rp(a,s,dz=0.0):
     if MEMB:
         q=rp_m(a,s,dz)
         if q is not None:return q
-    ph=phase(a,s);ri=rin(a)-NAVYW+0.8-1.6*math.sin(math.pi*phase(a));ro=rout(a);r=ri+(ro-ri)*s;z=hin(a)+(hout(a)-hin(a))*s
+    ph=phase(a,s);ri=rin(a)-NAVYW+0.8-SAG*math.sin(math.pi*phase(a));ro=rout(a);r=ri+(ro-ri)*s;z=hin(a)+(hout(a)-hin(a))*s
     # inflated tube lobe: round cross-section (sqrt of sine), height grows outward, domed cap at the outer end
     A=LOBE_IN+(LOBE_FAR-LOBE_IN)*s**FARPOW if fardz(a,s,1) else LOBE_IN+(LOBE_OUT-LOBE_IN)*s  # far zone: LOBE_FAR, height kept near the outer edge (photo: flat inner membrane)
     cap=math.sqrt(max(0.0,1-((s-CAP0)/(1-CAP0))**2)) if s>CAP0 else 1.0
@@ -299,13 +300,20 @@ def rp(a,s,dz=0.0):
     t=math.radians(a);return Vector((r*math.cos(t)+SH[0],r*math.sin(t)+SH[1],z))
 SH=D.get('roofshift',[0,0])
 # navy/white edge: row 7 of every column sits exactly on that column's navy line, so the edge is one smooth line
+BANDR=float(os.environ.get('BANDR',0));BANDM=float(os.environ.get('BANDM',6.0))  # glazed band depth at the ribs and mid-bay, m (0: the old line)
 NBULGE=float(os.environ.get('NBULGE',0.2));NBULGE_NEAR=float(os.environ.get('NBN',-0.8))
 def SC(a):
     # navy line on its own radius: rin+0.6 at the ribs, bulging outward mid-lobe (photo, east end: rounded navy lobe ends)
-    ph=phase(a);ri=rin(a)-NAVYW+0.8-1.6*math.sin(math.pi*ph);ro=rout(a)
+    ph=phase(a);ri=rin(a)-NAVYW+0.8-SAG*math.sin(math.pi*ph);ro=rout(a)
     nb=NBULGE_NEAR if 126.0<a%360<252.5 else NBULGE  # near side: band keeps its width along the scallop (photo)
-    nf=(rin(a)+0.6+nb*math.sin(math.pi*ph)-ri)/max(1.0,ro-ri);nf=min(max(nf,0.14),0.40);c=list(SR)
-    for j,d in zip(range(5,10),(-0.05,-0.025,0.0,0.025,0.05)):c[j]=nf+d
+    nf=(rin(a)+0.6+nb*math.sin(math.pi*ph)-ri)/max(1.0,ro-ri)
+    if BANDR:nf=(BANDR+(BANDM-BANDR)*math.sqrt(max(0.0,math.sin(math.pi*ph))))/max(1.0,ro-ri)
+    nf=min(max(nf,0.06),0.40);c=list(SR)
+    if BANDR:
+        for j in range(1,8):c[j]=nf*j/7   # the glazing in seven rows, so it arches with the membrane
+        c[8]=nf+0.025;c[9]=nf+0.05
+    else:
+        for j,d in zip(range(5,10),(-0.05,-0.025,0.0,0.025,0.05)):c[j]=nf+d
     for j in range(10,len(c)-1):c[j]=max(c[j],c[j-1]+0.015)  # keep rows in order past the navy rows
     return c
 SCA=[SC(a) for a in ra]
@@ -328,10 +336,10 @@ for k in range(len(SR)-1):
         q=[(k,i+1),(k,i),(k+1,i),(k+1,i+1)]
         face([bot[a][b] for a,b in q],UNDER,[(BU[a][b],BV[a][b]) for a,b in q])
 for i in range(len(ra)-1):
-    face([top[0][i],bot[0][i],bot[0][i+1],top[0][i+1]],YEL)
-    n=len(SR)-1;face([top[n][i+1],bot[n][i+1],bot[n][i],top[n][i]],YEL)
+    face([top[0][i],bot[0][i],bot[0][i+1],top[0][i+1]],EDGE)
+    n=len(SR)-1;face([top[n][i+1],bot[n][i+1],bot[n][i],top[n][i]],EDGE)
 for i in (0,len(ra)-1):
-    for k in range(len(SR)-1):face([top[k][i],top[k+1][i],bot[k+1][i],bot[k][i]] if i==0 else [top[k+1][i],top[k][i],bot[k][i],bot[k+1][i]],YEL)
+    for k in range(len(SR)-1):face([top[k][i],top[k+1][i],bot[k+1][i],bot[k][i]] if i==0 else [top[k+1][i],top[k][i],bot[k][i],bot[k+1][i]],EDGE)
 def prism(poly,z0,z1,mside,mtop,uscale=4.0):
     b=[bm.verts.new((x,y,z0)) for x,y in poly];t=[bm.verts.new((x,y,z1)) for x,y in poly];n=len(poly);acc=0
     for i in range(n):
@@ -459,7 +467,7 @@ for i in range(1,len(RI)-1):
 # Google Earth: the navy band is glazed panels in white frames, four or five to a bay; three more white bars across it
 # in every bay, between the ribs at the dips.
 for i in range(len(RI)-1):
-    for f_ in (0.25,0.5,0.75):
+    for f_ in ([k/6 for k in range(1,6)] if BANDR else (0.25,0.5,0.75)):
         a=RI[i]+(RI[i+1]-RI[i])*f_;nf=SC(a)[7];cyl(rp(a,0.0,0.08),rp(a,nf,0.08),0.1,0.1,WHITE,6)
 # yellow raking columns under the west and south-west roof edge, one per ridge
 # near side: flat dark underside 1.0 m below the roof edge, from the edge in to the stand's outer wall, and the wall face
@@ -471,7 +479,7 @@ for _a0,_a1 in zip(_UA,_UA[1:]):
     for _a in (_a0,_a1):
         _e=rp(_a,1.0,0.0);_zl=hout(_a)-UNDZ;_w=P(_a,25.0,0.0)
         # inner end: never above the roof's under-surface at the wall line (r34 poked through the membrane there)
-        _ri=rin(_a)-NAVYW+0.8-1.6*math.sin(math.pi*phase(_a));_sw=min(1.0,max(0.0,((_w-Vector((SH[0],SH[1],0))).length-_ri)/max(1.0,rout(_a)-_ri)))
+        _ri=rin(_a)-NAVYW+0.8-SAG*math.sin(math.pi*phase(_a));_sw=min(1.0,max(0.0,((_w-Vector((SH[0],SH[1],0))).length-_ri)/max(1.0,rout(_a)-_ri)))
         _zi=min(_zl,min(rp(_a,_sw+d,-0.6).z for d in (-0.06,-0.03,0.0,0.03,0.06) if 0<=_sw+d<=1)-0.4);_zl=min(_zl,rp(_a,0.97,-0.6).z-0.4)
         _q2.append((Vector((_e.x,_e.y,_zl)),P(_a,25.0,_zi),P(_a,25.0,21.0),_zi,_sw))
     # split edge-to-wall into 8 strips, each kept 0.4 m under the roof's under-surface (the rib dips sag below a straight chord)
@@ -481,7 +489,7 @@ for _a0,_a1 in zip(_UA,_UA[1:]):
         for _k in range(9):
             _u=_k/8;_v=_e2.lerp(_w2,_u);_s=1.0-(1.0-_sw2)*_u
             _dv=Vector((_v.x-SH[0],_v.y-SH[1],0));_av=math.degrees(math.atan2(_dv.y,_dv.x))%360
-            _ri2=rin(_av)-NAVYW+0.8-1.6*math.sin(math.pi*phase(_av));_s=(_dv.length-_ri2)/max(1.0,rout(_av)-_ri2)  # the roof point straight above this one
+            _ri2=rin(_av)-NAVYW+0.8-SAG*math.sin(math.pi*phase(_av));_s=(_dv.length-_ri2)/max(1.0,rout(_av)-_ri2)  # the roof point straight above this one
             _r.append(Vector((_v.x,_v.y,min(_v.z,min(rp(_av+da,min(1.0,max(0.0,_s+d)),-0.6).z for d in (-0.03,0.0,0.03) for da in (-0.1,0.0,0.1))-0.4))))
         _rows.append(_r)
     for _k in range(8):face([bm.verts.new(v) for v in (_rows[0][_k],_rows[1][_k],_rows[1][_k+1],_rows[0][_k+1])],DARK)
