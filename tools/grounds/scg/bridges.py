@@ -140,7 +140,14 @@ def main():
                     q = p[k] + nrm[k] * o
                     post(q[0], q[1], 0.0, y[k] - 1.5, 0.4, CONCRETE)
         print("bridge %s: %.0f m, %.1f m wide" % (ids[0], s[-1], width))
-    np.array(tris, "<f4").tofile(os.path.join(DIR, "bridges.bin"))
+    # stood on the land (relief.py): each vertex lifted by the land's height under it, so the ramps meet the
+    # ground and the decks keep their DECK m over the road
+    import relief
+    a = np.array(tris, "<f4").reshape(-1, 9)
+    if os.path.exists(relief.OUT):
+        G = np.fromfile(relief.OUT, "<f4")[2:].reshape(relief.N, relief.N)
+        a[:, 1] += [relief.relief_at(float(x), float(z), G) for x, z in a[:, [0, 2]]]
+    a.tofile(os.path.join(DIR, "bridges.bin"))
     print("%d triangles" % (len(tris) // 27))
 
 

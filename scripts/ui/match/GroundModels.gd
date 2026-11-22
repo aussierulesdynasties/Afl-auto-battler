@@ -111,6 +111,9 @@ const SURROUNDS := {
 			# Every building has modelled facades: those within 350 m in full (PARTS "Facades"), the rest
 			# with recessed window ribbons in city.glb (tools/grounds/scg/facades.py; buildings.bin is its source).
 			"map": "surrounds.webp", "span": 2048.0, "trees": "trees.bin",
+			# The land rises 5-11 m east of the turf (Google Earth's own heights, tools/grounds/scg/relief.py);
+			# the buildings, bridges and Allianz Stadium are stood on it by their tools, the trees here.
+			"relief": "relief.bin",
 			"models": ["allianz.glb", "city.glb"], "tint": Color(0.86, 0.84, 0.82)},
 }
 
@@ -390,16 +393,35 @@ static func _add_surrounds(root: Node3D, s: Dictionary, dir := "") -> void:
 	var uv := PackedVector2Array()
 	var nrm := PackedVector3Array()
 	var idx := PackedInt32Array()
+	# `relief`: the land's own rise and fall (relief_at), on rings close enough to follow it.
+	var relief := PackedFloat32Array()
+	if s.has("relief") and FileAccess.file_exists(dir + str(s["relief"])):
+		relief = FileAccess.get_file_as_bytes(dir + str(s["relief"])).to_float32_array()
+	var radii: Array = RINGS.map(func(f): return f if f > 0.0 else inner) + [outer]
+	if not relief.is_empty():
+		n = RELIEF_SIDES
+		radii = []
+		var r := inner
+		while r < RELIEF_REACH:
+			radii.append(r)
+			r += RELIEF_RING if r < 600.0 else RELIEF_RING * 2.0
+		radii.append_array([RELIEF_REACH, outer])
 	for i in n + 1:
 		var a := TAU * i / n
 		var d := Vector3(cos(a), 0.0, sin(a))
-		for r: float in RINGS.map(func(f): return f if f > 0.0 else inner) + [outer]:
+		for r: float in radii:
 			var p := d * r + Vector3(0.0, y, 0.0)
+			var up := Vector3.UP
+			if not relief.is_empty():
+				p.y += relief_at(relief, p.x, p.z)
+				var gx := relief_at(relief, p.x + 2.0, p.z) - relief_at(relief, p.x - 2.0, p.z)
+				var gz := relief_at(relief, p.x, p.z + 2.0) - relief_at(relief, p.x, p.z - 2.0)
+				up = Vector3(-gx, 4.0, -gz).normalized()
 			v.append(p)
 			# The painted map clamps at its edge (painted plain there); the mottle tiles.
 			uv.append(Vector2(p.x, p.z) / span + Vector2(0.5, 0.5) if map != null else Vector2(p.x, p.z) / 60.0)
-			nrm.append(Vector3.UP)
-	var per := RINGS.size() + 1
+			nrm.append(up)
+	var per := radii.size()
 	for i in n:
 		for k in per - 1:
 			var a0 := i * per + k
@@ -432,7 +454,7 @@ static func _add_surrounds(root: Node3D, s: Dictionary, dir := "") -> void:
 		g.set_meta("open_ground", true)
 		root.add_child(g)
 		if s.has("trees") and FileAccess.file_exists(dir + str(s["trees"])):
-			_add_trees(root, FileAccess.get_file_as_bytes(dir + str(s["trees"])).to_float32_array(), y)
+			_add_trees(root, FileAccess.get_file_as_bytes(dir + str(s["trees"])).to_float32_array(), y, relief)
 		if s.has("buildings") and FileAccess.file_exists(dir + str(s["buildings"])):
 			_add_buildings(root, FileAccess.get_file_as_bytes(dir + str(s["buildings"])).to_float32_array(), y,
 					s.get("building_tint", s.get("tint", Color.WHITE)), str(s.get("building_style", "")))
@@ -472,13 +494,37 @@ static func _add_surrounds(root: Node3D, s: Dictionary, dir := "") -> void:
 ## The ring's radii, m from the model's middle (0 is `inner`): close rings keep the painted map's
 ## roads straight where it is seen, the last runs out past the horizon.
 const RINGS := [0.0, 250.0, 400.0, 600.0, 850.0, 1100.0]
+## Land with `relief`: RELIEF_SIDES spokes and a ring every RELIEF_RING m (twice that past 600 m) out to
+## RELIEF_REACH, so the ground follows the land's rise and fall to within its grid (about 15 m at 600 m).
+const RELIEF_SIDES := 256
+const RELIEF_RING := 10.0
+const RELIEF_REACH := 1100.0
+
+
+## The land's height over the model's floor at x, z (model metres) from a relief buffer: its side n and
+## span m, then n x n heights row by row from the north-west corner (z rows, x columns), bilinear between
+## them, the edge's height past it. Written by each ground's relief.py (tools/grounds/scg/relief.py).
+static func relief_at(rel: PackedFloat32Array, x: float, z: float) -> float:
+	var n := int(rel[0])
+	var span := rel[1]
+	var fx := clampf((x / span + 0.5) * (n - 1), 0.0, n - 1.001)
+	var fz := clampf((z / span + 0.5) * (n - 1), 0.0, n - 1.001)
+	var ix := int(fx)
+	var iz := int(fz)
+	var tx := fx - ix
+	var tz := fz - iz
+	var a := rel[2 + iz * n + ix]
+	var b := rel[2 + iz * n + ix + 1]
+	var c := rel[2 + (iz + 1) * n + ix]
+	var d := rel[2 + (iz + 1) * n + ix + 1]
+	return lerpf(lerpf(a, b, tx), lerpf(c, d, tx), tz)
 ## Trees are drawn in square blocks this many metres a side, so the camera draws only those in view.
 const TREE_BLOCK := 250.0
 
 
 ## Every tree of the map (x, z, height, canopy radius, shade; model metres) as a trunk and a rounded
 ## canopy, one batch a block of the park. Unlit by their own shadows (the map paints their shade).
-static func _add_trees(root: Node3D, buf: PackedFloat32Array, y: float) -> void:
+static func _add_trees(root: Node3D, buf: PackedFloat32Array, y: float, relief := PackedFloat32Array()) -> void:
 	var canopy := _canopy_mesh()
 	var trunk := CylinderMesh.new()
 	trunk.top_radius = 0.022
@@ -521,6 +567,8 @@ static func _add_trees(root: Node3D, buf: PackedFloat32Array, y: float) -> void:
 			var h: float = buf[i + 2]
 			var r: float = buf[i + 3]
 			var at := Vector3(buf[i], y, buf[i + 1])
+			if not relief.is_empty():
+				at.y += relief_at(relief, at.x, at.z)
 			var turn := Basis(Vector3.UP, buf[i + 4] * TAU)
 			var crown := h - r * 1.1
 			leaves.set_instance_transform(j, Transform3D(turn.scaled(Vector3(r, r * 0.85, r)), at + Vector3(0, crown, 0)))

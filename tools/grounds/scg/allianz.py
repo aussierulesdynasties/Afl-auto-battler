@@ -232,11 +232,15 @@ def main():
     part(meshes, "under", strip(ring(c, rin, ROOF_IN - 1.2), ring(c, ro, WALL_TOP)), "down")
     part(meshes, "under", strip(ring(c, rin, ROOF_IN - 1.2), ring(c, rin, ROOF_IN)), "out", c)
     part(meshes, "pitch", disc(c, rf, 0.6))     # clear of the map under it, or they flicker at 200 m
+    # stood on the land (relief.py): the whole stadium raised to the land's height at its middle
+    import relief
+    lift = relief.relief_at(float(c[0]), float(c[1])) if os.path.exists(relief.OUT) else 0.0
     scene = trimesh.Scene()
     for i, (name, m) in enumerate(meshes):
+        m.apply_translation((0.0, lift, 0.0))
         scene.add_geometry(m, node_name="allianz_%s_%d" % (name, i), geom_name="allianz_%s_%d" % (name, i))
     scene.export(OUT, include_normals=True)
-    print("allianz.glb", OUT, "outer radius %.0f-%.0f m" % (ro.min(), ro.max()))
+    print("allianz.glb", OUT, "outer radius %.0f-%.0f m, on land %.1f m over the SCG's turf" % (ro.min(), ro.max(), lift))
 
 
 if __name__ == "__main__":
