@@ -69,9 +69,9 @@ of the ground. Calls are paired runs (same seed, call on and off), the change on
 | 3 | Too few men near the ball | 15.5-19.5 of the 36 in the ball's quarter (Alexander 2021) | 11.6-15.4 | Phase shape (as 1) |
 | 4 | No squeeze on a loose ball | 36-47 m wide (Alexander 2019) | 62-67 m. Held 2026-11-21, no change: the reference cannot be the widest pair (see below); length, area and team centre on a loose ball are IN or NEAR, and the 10th-90th percentile width (37-41 m) sits on the paper's figure | A loose-ball shape: none exists; loose balls use the open-play spots |
 | 5 | Stoppages around the ground are thin | 23 players in the ball's quarter in either 50, 17 in midfield (Alexander 2021) | 13.4 | Stoppage set-ups (`_centre_spot`, `_centre_setup`, the ball-up and throw-in spots) |
-| 6 | Kicks are short and gain little ground | 25.0 m average, ±11.8 (Spencer 2019); 25-30 m gained | 20.0 m, ±11.6; 11.2 m gained | MatchSim kick events (balance-gated) |
-| 7 | Too many kicks | 213 a team-game (Wheelo 2026) | 309 | MatchSim event count (balance-gated) |
-| 8 | Calls do not change how the side kicks | Attacking: no switch; Controlled and Slow it down: shorter, across and back (rule 2.45) | Attacking: switches stay 6%; Controlled: kicks 0.5 m longer; Slow it down: 0.2 m longer, 3 points fewer backward | MatchSim kick choice by plan (balance-gated) |
+| 6 | Kicks are short and gain little ground | 25.0 m average, ±11.8 (Spencer 2019); 25-30 m gained | 20.0 m, ±11.6; 11.2 m gained. Fixed in the sim 2026-11-21 (balance-gated, director's playtest decides): a kick gains 2.2 times the chain's mean ground and a handball 0.2 times, with 255 chains a game (was 275). 23.9 m long, 17 m gained (12 matches; ground made counts kicks back and square) | MatchSim kick events (balance-gated) |
+| 7 | Too many kicks | 213 a team-game (Wheelo 2026) | 309. 2026-11-21: the view draws a long handball as a dish and a run, and a handball entry by hand (#1957), and the sim's kicks fall to 217 a team-game with gap 6 (200-match screen) | MatchSim event count (balance-gated) |
+| 8 | Calls do not change how the side kicks | Attacking: no switch; Controlled and Slow it down: shorter, across and back (rule 2.45) | Attacking: switches stay 6%; Controlled: kicks 0.5 m longer; Slow it down: 0.2 m longer, 3 points fewer backward. 2026-11-21 (12 matches, on gap 6): Attacking switches 0.9% (was 4.1%); Controlled 7.1% switches (+2.9 points), 21% backward (+4), 1.7 m more across, 1.7 m less ground, same length; Slow it down 1.5 m shorter, 23% backward (+6), 2.6 points more switches. The kept kicks cost a Controlled side 1.5 points a game, ± 1.4 (918 paired matches) | MatchSim kick choice by plan (`KEEP_*`), view switch roll (balance-gated) |
 | 9 | A tagger does not shadow his man | a tag is permanent and goes where his man goes (2.44, 2.58); no published distance | 21.7 m apart on average, within 5 m 15.6% of the time (off: 27.0 m, 6.9%). Re-measured on main 2026-11-20 (153 matches): 9.0 m, 45%; only while his side defends, the same. Now 8.4 m, 49%: a tagger keeps up at a run | Man-on-man pull in `_structure_spot`: only inside 35 m, at most 85% of the way |
 | 10 | A switched defender drifts off his forward | everyone has an opponent (2.44) | 25.3 m apart, within 5 m 15.7% (off: 28.9 m, 13.5%). Re-measured on main 2026-11-20: 17.7 m, 25%. Explained 2026-11-21: while his side defends and the match-up is on, 10.5 m and 48% within 5 m; the rest of the 17 m is the ball in his side's hands and the forward rotated out of the forward line (handed over until he is back, by design) | Man-on-man pull (as 9) |
 | 11 | Fumble then gather: the gatherer runs 3.9 m past and the ball lies alone ~0.7 s (seed 31, FRE v STK) | the nearest man scoops it | as stated (row 197 inbox). Fixed on main by #1838: over 4 matches the gatherer is 0.6 m from the ball when he takes it and it never lies alone over 0.5 s | Loose-ball pickup; the WIP on `claude/oval3d-loose-ball-wip` fails 8 match_visual checks |
@@ -208,7 +208,7 @@ In the order the asset plan sets: the action layer and the proof passage (TODO r
 full-match coverage, then the phone check at that milestone, then the 3D scenes that replace the
 vignettes. Nothing in step 4 starts before the football proof has passed and the asset plan exists.
 
-## Status (as of 2026-11-20)
+## Status (as of 2026-11-21)
 
 _Update this section whenever 3D work merges. It is the one place 3D progress is tracked; TODO.md rows hold the detail._
 
@@ -217,7 +217,7 @@ _Update this section whenever 3D work merges. It is the one place 3D progress is
 | Freeze (no new player art, no one-incident patches) | | in force since 2026-11-16 | lifts when steps 2 and 3 are done |
 | 1. Football proof | 201 | harness built (#1695), spec checked (2.86), gap list of 14 written | fix the systems on the gap list; none fixed yet |
 | 2a. Light, tone, weather, skies | 202 | chosen and built (2.80-2.84, #1693 #1694 #1696 #1701); film look over the picture (2.112, #1839) | phone costing: every ground measured at three graphics levels in the cloud ([PHONE_3D_BUDGET.md](PHONE_3D_BUDGET.md), Settings > Graphics); the real phone run (the "Android 3D probe" APK) is next |
-| 2b. The 37 grounds | 202 | 23 of 37 have a model merged, 2 more in open PRs, 4 under way locally (table below) | land Victoria Park, Riverway, Mars and Accor; confirm the other 8; background scenes (#1878 #1892 #1897) |
+| 2b. The 37 grounds | 202 | 32 have a model that plays in a match; Accor (#1921) and Traeger (#1919) merged as WIP models; Mars, TIO and Victoria Park in open PRs; background scenes built for 11 grounds, none in a match yet (full list: [3D_INVENTORY.md](3D_INVENTORY.md)) | land the open PRs; wire background scenes into matches |
 | 2c. Crowd | 202 | chosen: 3D people within 55 m, cards beyond (2.92), built; seated on the MCG model's own seats (he chose "Seat the crowd in the MCG", 2026-11-20, #1929). Brought toward the real thing (2026-11-21, he asked for "all 3" of the coordinator's ideas, this one "club colours in the right bays, a mix of people instead of clones, and reactions to goals"; WIP, not shippable, not yet shown to him): cheer squads in the front rows behind each goal, away supporters gathered toward their end, the MCC members' reserve in its own clothes; a winter crowd (jackets, jeans, each club's guernsey in its own design, scarves, beanies) dressed from the same baked bodies (`Oval3DCrowdDress`); each sits at his own pace and lean; reactions to goals, behinds, contested marks, tackles and the siren from the two baked clips nobody used. QA sheet: `tools/visual/capture_mcg_crowd.gd`. Crowd size by fixture (2026-11-21, WIP): each match draws a crowd from a model fitted to all 866 real AFL crowds of 2023-2026 (`MatchAttendance`, `data/attendance.json`, `tools/attendance/fit.py`: ground, each club's pull home and away, derby or neutral ground, time of day, finals week; a Grand Final sells out), and the seats fill to it the way a real ground does (cheer squads and members first, lower rows before upper, whole upper bays closed). QA sheet: `tools/attendance/capture_fill.gd` | measure its cost on a phone; cheer squad flags and banners; each other ground gets it once it loads in a match |
 | 2d. Players' look | 202 | body: MetaHuman (2.85, 2.89); builds by height and weight (2.97, 2.98); faces ruled (2.99) | the Tripo heads (director generates) and the features for everyone else |
 | 2e. Cameras | 202 | main camera, goal replay, set shots, ball-up close-ups, tap to skip, TV framing, picture layout, stat bars, score bug all ruled and built (2.93-2.111, #1818); after a mark it stays on the main camera (2.113); holding-the-ball and dropped-ball frees now show the tackle, and a tackle that stops play cuts close from a wing camera (B, chosen 2026-11-21) | umpire free-kick signals and injuries need new clips (art freeze) |
@@ -236,10 +236,10 @@ _Update this section whenever 3D work merges. It is the one place 3D progress is
 | MCG | model, instanced seats | #1843 |
 | Marvel Stadium | model | #1911 |
 | Adelaide Oval | model, 3D seats; plays in a match (exported for the game by tools/grounds/adelaide) | #1856 |
-| Optus Stadium | model, roof, seats | #1867 #1880; background scene open #1897 |
+| Optus Stadium | model, roof, seats; background scene (not in a match) | #1867 #1880 #1897 |
 | SCG | model | #1909 |
-| GMHBA Stadium | exterior model | #1903; open: roof #1899, background scene #1878 |
-| People First Stadium | model, roof | #1853 #1860 #1868 #1889; background scene open #1892 |
+| GMHBA Stadium | exterior model; background scene (not in a match) | #1903 #1878; open: Selwood Stand roof #1924 |
+| People First Stadium | model, roof; background scene (not in a match) | #1853 #1860 #1868 #1889 #1892 |
 | ENGIE Stadium | texture pass | #1866 |
 | Bellerive Oval | model | #1900 |
 | Manuka Oval | model | #1865 |
@@ -257,12 +257,13 @@ _Update this section whenever 3D work merges. It is the one place 3D progress is
 | Cazaly's Stadium | model, textures | #1891; open: west building #1898 |
 | North Hobart Oval | 1991-92 model | #1854 |
 | Bruce Stadium | model, 3D seats | #1848 |
-| Riverway Stadium | model open | #1896 |
-| Mars Stadium | model built, not yet pushed (local worktree, 2026-11-20) | |
-| Accor Stadium | model built, not yet pushed (local worktree, 2026-11-20) | |
-| Marrara Oval (TIO Darwin) | under way, not yet pushed (site data and roof scripts, 2026-11-19) | |
+| Riverway Stadium | model | #1896 |
+| Mars Stadium | model open | #1920 |
+| Accor Stadium | model open | #1921 |
+| Marrara Oval (TIO Darwin) | model open | #1918 |
+| Traeger Park | model open | #1919 |
 | The Gabba | model, 3D seats; plays in a match (built 2026-11-19/20 on a branch that never merged; brought in from the PC) | |
-| Barossa Park, Traeger Park, Sky Stadium, Jiangwan Stadium, Hands Oval, Blacktown, Summit Park, Macquarie Point | to confirm: no work found in the repo or its local worktrees | |
+| Barossa Park, Sky Stadium, Jiangwan Stadium, Hands Oval, Blacktown, Summit Park, Macquarie Point | model; plays in a match (`tools/grounds/<g>/model`) | |
 
 Machine pre-inspection of the 30 match grounds, before the director's fly-through (2026-11-21, #1950):
 [3D_PREINSPECTION.md](3D_PREINSPECTION.md). Its fixes are in; its open faults are listed there.
