@@ -1,0 +1,118 @@
+# exec'd by scene.py when spec facade_mix: every block/tower gets a facade family from its OSM kind, material and colour
+# (hand-made tiles tex/fc_*.png, sizes in tex/fc_sizes.json), and its own wall colour. Southern Cross gets its wave roof.
+FCS = json.load(open(os.path.join(HERE, 'tex', 'fc_sizes.json')))
+WCOL = {
+ 'glass': [(44, 46, 50), (70, 74, 80), (36, 36, 38), (92, 96, 102), (110, 96, 80), (60, 72, 84), (128, 124, 116), (84, 60, 52)],
+ 'concrete': [(176, 168, 150), (140, 138, 132), (196, 186, 166), (120, 118, 114), (168, 150, 128)],
+ 'brick': [(150, 78, 58), (124, 70, 56), (172, 112, 82), (110, 96, 88), (196, 170, 140)],
+ 'banded': [(186, 180, 168), (150, 146, 138), (204, 196, 180), (132, 128, 122), (172, 160, 140)],
+ 'panel': [(204, 120, 62), (86, 108, 138), (150, 152, 150), (70, 70, 72), (168, 64, 52), (112, 140, 96), (200, 186, 150)],
+ 'cladding': [(168, 170, 168), (130, 134, 138), (160, 146, 120), (96, 110, 120), (150, 156, 152)],
+ 'carpark': [(176, 172, 164), (150, 148, 142)],
+}
+NAMED = {'white': (226, 224, 218), 'grey': (150, 150, 148), 'gray': (150, 150, 148), 'black': (50, 50, 52), 'brown': (120, 86, 64),
+         'red': (160, 64, 52), 'beige': (206, 190, 160), 'yellow': (214, 186, 90), 'blue': (80, 104, 140), 'green': (100, 130, 90),
+         'orange': (204, 120, 62), 'silver': (190, 192, 196), 'tan': (196, 170, 130), 'cream': (226, 216, 190)}
+def _col(v):
+    v = str(v).strip().lower()
+    if v.startswith('#') and len(v) == 7:
+        try: return tuple(int(v[i:i + 2], 16) for i in (1, 3, 5))
+        except ValueError: return None
+    return NAMED.get(v)
+def _pick(r, opts):
+    acc = 0.0
+    for p_, f_ in opts:
+        acc += p_
+        if r < acc: return f_
+    return opts[-1][1]
+_GL = sorted(f_ for f_ in FCS if f_.startswith('glass_')); GLASS = [(1.0 / len(_GL), f_) for f_ in _GL]
+BANDED = [(1.0 / 3, 'banded_' + l) for l in 'abc']
+STATION = [b for b in BL if b.get('k') == 'train_station' and b['c'] in ('tower', 'block')]
+for i, b in enumerate(BL):
+    if b['c'] not in ('block', 'tower') or b in STATION: continue
+    r = ((i * 2654435761) % 4294967296) / 4294967296.0; r2 = ((i * 40503 + 7) % 65521) / 65521.0
+    k = b.get('k', 'yes'); m = str(b.get('mat', '')).lower(); h = b['h']; A = b.get('a', 0)
+    if k in ('parking', 'carport') or b.get('am') == 'parking' or b.get('pk') == 'multi-storey' or (k == 'garage' and A > 400): f = 'carpark'
+    elif 'glass' in m: f = _pick(r, GLASS)
+    elif 'brick' in m: f = 'brick'
+    elif 'concrete' in m or 'stone' in m: f = 'concrete'
+    elif 'metal' in m or 'steel' in m: f = 'cladding'
+    elif 'rc' in b or k in ('industrial', 'warehouse', 'service', 'shed', 'hangar', 'storage', 'garage', 'garages', 'transportation') or (h < 9 and A > 2500 and k == 'yes'): f = 'cladding'
+    elif b['c'] == 'tower': f = _pick(r, [(0.5, None), (0.22, 'B'), (0.14, 'panel'), (0.14, 'concrete')]) or _pick(r2, GLASS)
+    elif k in ('apartments', 'residential', 'hotel', 'dormitory'): f = _pick(r, [(0.4, 'panel'), (0.3, None), (0.15, 'brick'), (0.15, 'concrete')]) or _pick(r2, GLASS)
+    elif k in ('commercial', 'office', 'retail', 'university', 'school', 'public', 'civic'): f = (_pick(r, [(0.3, None), (0.25, 'B'), (0.25, 'concrete'), (0.2, 'panel')]) or _pick(r2, GLASS))
+    else: f = _pick(r, [(0.35, 'panel'), (0.25, None), (0.2, 'brick'), (0.2, 'concrete')]) or _pick(r2, GLASS)
+    if f == 'B': f = _pick(r2, BANDED)
+    b['fam'] = f
+    fam_c = 'glass' if f.startswith('glass') else 'banded' if f.startswith('banded') else f
+    c = _col(b['col']) if 'col' in b else None
+    b['wc'] = c or WCOL[fam_c][int(r2 * 997) % len(WCOL[fam_c])]
+for cls in ('block', 'tower'):
+    for f in sorted(FCS):
+        if f in ('plant', 'rail_bed', 'parapet'): continue
+        build_class(cls, 'fc_%s.png' % f, FCS[f][0], FCS[f][1], sel=lambda b, f=f: b.get('fam') == f, tag='_' + f)
+
+# ---------- Southern Cross Station: undulating roof (white metal dunes with vent cowls) on glass sides ----------
+def _inside(px_, py_, poly):
+    x, y = poly[:, 0], poly[:, 1]; xj, yj = np.roll(x, 1), np.roll(y, 1); res = np.zeros(px_.shape, bool)
+    for a, b_, c, d in zip(x, y, xj, yj):
+        res ^= ((b_ > py_) != (d > py_)) & (px_ < (c - a) * (py_ - b_) / np.where(d - b_ == 0, 1e-9, d - b_) + a)
+    return res
+for b in STATION:
+    Pp = np.array(b['p'], float); cxy = Pp.mean(0); z0 = float(height(cxy[0], cxy[1])) - 1.0
+    E = np.diff(np.vstack([Pp, Pp[:1]]), axis=0); e = E[np.argmax(np.hypot(E[:, 0], E[:, 1]))]; ang = math.atan2(e[1], e[0])
+    ca_, sa_ = math.cos(ang), math.sin(ang)
+    U = (Pp - cxy) @ np.array([[ca_, -sa_], [sa_, ca_]]); u0, v0 = U.min(0) - 2; u1, v1 = U.max(0) + 2
+    st = 3.0; us = np.arange(u0, u1 + st, st); vs = np.arange(v0, v1 + st, st); UU, VV = np.meshgrid(us, vs)
+    WX = cxy[0] + UU * ca_ - VV * sa_; WY = cxy[1] + UU * sa_ + VV * ca_
+    HUMP_U, HUMP_V = spec.get('station_hump_m', [44.0, 40.0])
+    ZZ = z0 + 15.0 + 3.5 * (0.5 - 0.5 * np.cos(2 * np.pi * (UU - u0) / HUMP_U)) * (0.8 + 0.2 * np.cos(2 * np.pi * (VV - v0) / (3 * HUMP_V)))
+    IN = _inside(WX, WY, Pp)
+    V_, F_, C_ = [], [], []; idx = -np.ones(UU.shape, int)
+    for (r_, c_) in zip(*np.nonzero(IN)):
+        idx[r_, c_] = len(V_); V_.append((WX[r_, c_], WY[r_, c_], ZZ[r_, c_]))
+    for r_ in range(UU.shape[0] - 1):
+        for c_ in range(UU.shape[1] - 1):
+            q = (idx[r_, c_], idx[r_, c_ + 1], idx[r_ + 1, c_ + 1], idx[r_ + 1, c_])
+            if min(q) < 0: continue
+            F_.append(q); sh = 0.97; C_.extend([lin((200, 204, 202)) * sh] * 4)
+    # vent cowls on the hump crests
+    for iu in range(0):
+        for iv in range(int((v1 - v0) / HUMP_V) + 1):
+            cu = u0 + (iu + 0.5) * HUMP_U; cv = v0 + (iv + 0.5) * HUMP_V
+            wx = cxy[0] + cu * ca_ - cv * sa_; wy = cxy[1] + cu * sa_ + cv * ca_
+            if not _inside(np.array([wx]), np.array([wy]), Pp)[0]: continue
+            zc = z0 + 18.3; s0 = len(V_); rr = 1.8
+            for kq in range(8):
+                a_ = kq * math.pi / 4; V_.append((wx + rr * math.cos(a_), wy + rr * math.sin(a_), zc - 0.5))
+            V_.append((wx, wy, zc + 2.0))
+            for kq in range(8):
+                F_.append((s0 + kq, s0 + (kq + 1) % 8, s0 + 8)); C_.extend([lin((236, 236, 232))] * 3)
+    if F_:
+        ob = mk_obj('bg_station_roof', V_, F_, mat_vcol('station_roof', 0.35))
+        set_corner_col(ob.data, np.concatenate([np.array(C_), np.ones((len(C_), 1))], 1))
+    # glass sides up to the roof edge
+    b['fam'] = 'glass_grey'; b['wc'] = (176, 178, 182); b['h'] = 15.0
+    build_class(b['c'], 'fc_glass_grey.png', *FCS['glass_grey'], sel=lambda x, b=b: x is b, tag='_station')
+
+# ---------- railway platforms: 1.1 m concrete slabs ----------
+PFP = os.path.join(D, 'platforms.json')
+if os.path.exists(PFP):
+    V_, F_, C_ = [], [], []
+    for pts in json.load(open(PFP)):
+        Pp = np.array(pts, float)
+        if len(Pp) < 3: continue
+        if (np.dot(Pp[:, 0], np.roll(Pp[:, 1], -1)) - np.dot(Pp[:, 1], np.roll(Pp[:, 0], -1))) < 0: Pp = Pp[::-1]
+        c = Pp.mean(0); z = float(height(c[0], c[1])); kk = len(Pp); s0 = len(V_)
+        for x, y in Pp: V_.append((x, y, z - 0.5))
+        for x, y in Pp: V_.append((x, y, z + 1.1))
+        for i in range(kk):
+            j = (i + 1) % kk; F_.append((s0 + i, s0 + j, s0 + kk + j, s0 + kk + i)); C_.extend([lin((150, 148, 142))] * 4)
+        F_.append(tuple(s0 + kk + i for i in range(kk))); C_.extend([lin((104, 100, 94))] * kk)
+    if F_:
+        ob = mk_obj('bg_platforms', V_, F_, mat_vcol('platforms', 0.85))
+        set_corner_col(ob.data, np.concatenate([np.array(C_), np.ones((len(C_), 1))], 1))
+
+for _m in bpy.data.materials:   # glass: less sky specular so each tint reads
+    if _m.name.startswith('facade_') and _m.node_tree and 'Principled BSDF' in _m.node_tree.nodes:
+        _m.node_tree.nodes['Principled BSDF'].inputs['Specular IOR Level'].default_value = 0.25

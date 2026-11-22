@@ -1,0 +1,38 @@
+"""Paver mask (texture session 2026-11-20, option c): OSM path/paved anywhere, plus every untagged default-ground
+pixel inside the Docklands precinct (east: Wurundjeri Way, north: Footscray Road, west: Bolte Bridge / square edge,
+south: the river; water and grass never match the default colour)."""
+from PIL import Image, ImageDraw; import numpy as np, json, math
+S0=json.load(open('spec/marvel.json')); S=next(v for v in S0.values() if isinstance(v,dict) and 'path' in v)
+lat0,lon0=S0['lat'],S0['lon']; KX=111320*math.cos(math.radians(lat0)); KY=110540
+js=json.load(open('data/marvel/osm.json',encoding='utf-8'))['elements']; N={e['id']:e for e in js if e['type']=='node'}
+def pts(nm):
+    out=[]
+    for e in js:
+        if e['type']=='way' and e.get('tags',{}).get('name')==nm:
+            L=[((N[i]['lon']-lon0)*KX,(N[i]['lat']-lat0)*KY) for i in e.get('nodes',[]) if i in N]+[((g['lon']-lon0)*KX,(g['lat']-lat0)*KY) for g in e.get('geometry',[])]
+            out+=L
+    return np.array(out)
+W=pts('Wurundjeri Way'); W=W[(W[:,1]>-800)&(W[:,1]<900)]; W=W[np.argsort(-W[:,1])]
+F=pts('Footscray Road'); ytop=lambda x: np.interp(x,*zip(*sorted(set(map(tuple,F)))))  # road y by x
+print('W x range', W[:,0].min().round(), W[:,0].max().round(), 'F y', F[:,1].min().round(), F[:,1].max().round())
+NE=json.load(open('data/marvel/prep/meta.json'))['near']
+g=np.asarray(Image.open('data/marvel/prep/ground.png').convert('RGB')).astype(int); n=g.shape[0]; px=2*NE/n
+xe=W[0,0]; poly=[(-NE,-NE),(-NE,float(ytop(-NE)))]+[(x,float(ytop(x))) for x in np.arange(-NE,xe,10)]+[tuple(p) for p in W if p[1]<=ytop(xe)+1]+[(W[-1,0],-NE)]
+im=Image.new('L',(n,n),0); ImageDraw.Draw(im).polygon([((x+NE)/px,(NE-y)/px) for x,y in poly],fill=255)
+inside=np.asarray(im)>0
+# south edge = the Yarra's north bank (traced on pave_check.jpg, 3 m/px): nothing south of the river
+RIV=[(-1500,-300),(-600,-420),(0,-600),(420,-780),(1500,-780)]
+cut=Image.new('L',(n,n),0); ImageDraw.Draw(cut).polygon([((x+NE)/px,(NE-y)/px) for x,y in RIV+[(1500,-1500),(-1500,-1500)]],fill=255)
+inside&=np.asarray(cut)==0
+m=np.zeros((n,n),bool)
+for k in ('path','paved'): m|=(np.abs(g-S[k]).max(2)<=34)&inside
+ry=Image.new('L',(n,n),0); rd=ImageDraw.Draw(ry)   # v3: never pave the railway land
+for e in js:
+    if e['type']=='way' and e.get('tags',{}).get('landuse')=='railway' and e.get('geometry'):
+        q=[(((g_['lon']-lon0)*KX+NE)/px,(NE-(g_['lat']-lat0)*KY)/px) for g_ in e['geometry'] if g_]
+        if len(q)>2: rd.polygon(q,fill=255)
+dflt=(np.abs(g-S['ground_default']).max(2)<=34)&(np.asarray(ry)==0)
+m|=dflt   # v3: paving wherever default ground shows (texture session: no flat grey fills)
+print('default-in-precinct', (dflt&inside).mean().round(4), 'total', m.mean().round(4))
+Image.fromarray((m*255).astype(np.uint8)).save('data/marvel/prep/pave_mask.png')
+v=g.copy().astype(np.uint8); v[m]=(v[m]*0.4+np.array([255,0,0])*0.6).astype(np.uint8); Image.fromarray(v).resize((1000,1000)).save('out/marvel/pave_check.jpg')
