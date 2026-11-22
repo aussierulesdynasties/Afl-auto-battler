@@ -371,6 +371,10 @@ a = base(512, 512, (165, 128, 110), 10, 22); a += noise(512, 512, 40, 14)[:, :, 
 st = R.random((512, 512)) > 0.992; a[st] = a[st] * 0.75 + np.array([200, 190, 178]) * 0.25
 save('earth', a, (4.0, 4.0))
 
+# grandstand roof sheeting (GE 3D 2026-11-22: silver-grey, 1.12x as bright as bldg_w's roof_w in the same top-down shot); appended last so the
+# random stream of every texture above stays as it was
+deck('roof_gs', (204, 206, 210), pitch=0.25, grime=14, rot=True)
+
 json.dump(TILE, open(OUT + 'tiles.json', 'w', newline=''), indent=0)
 for nm in sorted(TILE):
     g = np.asarray(Image.open(OUT + nm + '.png').convert('L'), float); print(f'{nm:16s} grey sd {g.std():5.1f}')
