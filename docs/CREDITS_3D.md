@@ -16,3 +16,10 @@ These lines go on the game's credits screen before 1.0.
 - Streets, buildings, the river and mapped trees; the Gold Coast skyline in the background scene:
   © OpenStreetMap contributors (ODbL).
 - The precinct's sheds and halls OpenStreetMap lacks: Microsoft Global ML Building Footprints (ODbL).
+
+## Marvel Stadium
+
+- Streets, harbour, rail yards, building footprints, mapped trees and the bridges:
+  © OpenStreetMap contributors (ODbL).
+- The landmark buildings next to the ground (tools/grounds/marvel/landmarks.py) are modelled by eye
+  from Google Earth on OpenStreetMap footprints; no imagery is shipped.
