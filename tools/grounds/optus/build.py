@@ -244,15 +244,17 @@ _ro=lambda i:(RF[i]-IN[i]).normalized()
 INS=[IN[i]+_ro(i)*SCAL*(math.sin(math.pi*(i%K)/K)-2/math.pi) for i in range(N)]
 T=14;rows=[]
 _env=lambda t:min(1.0,t/0.1,(1.0-t)/0.25)
-# the membrane dips 1.5 m below the fascia-to-inner-edge line mid-way: Google Earth hovers on the roof top read 1.0-1.5 m
-# under the edge height across d -20 to -36 m (159 hits off the 12 oblique views, 1 m readouts), the vault adding ~0.6 m
-DIP=lambda t:1.5*math.sin(math.pi*t)
+# the membrane's dip below the fascia-to-inner-edge line, along the trusses (DIP) and mid-bay (DIPM), measured by
+# 260 straight-down Google Earth hovers (survey/roof_profile.json): it falls ~2 m within 8 m of the edge, and each
+# bay's vault rises up to 1 m over the valleys in the inner half
+RPJ=json.load(open(os.path.join(me_dir,'survey','roof_profile.json')))
+DIP=lambda t:float(_np0.interp(t,RPJ['t'],RPJ['valley']));DIPM=lambda t:float(_np0.interp(t,RPJ['t'],RPJ['mid']))
 ZR=lambda i,t:ZF_[i]+(IZ-ZF_[i])*t-DIP(t)
 for k in range(T+1):
     t=k/T;row=[]
     for i in range(N):
         p=RF[i].lerp(INS[i],t)
-        bul=0.8*math.sin(math.pi*(i%K)/K)**0.6*_env(t)*(0.8+0.2*abs(math.sin(3*math.pi*t))**0.5)
+        bul=(DIP(t)-DIPM(t))*math.sin(math.pi*(i%K)/K)**0.6
         row.append(bm.verts.new((p.x,p.y,ZR(i,t)+bul)))
     rows.append(row)
 for k in range(T):
