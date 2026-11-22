@@ -1,0 +1,229 @@
+{
+ "_about": "Per ground: lat/lon of the model's origin (model x east, -z north) and ge_alt, Google Earth's own turf height (m above sea level, status bar). 'source' says where each came from. Origins marked 'shape audit' were solved by lining the model up on a straight-down GE shot (register), +-1 m where 'turn_deg' is near 0; re-run `register` after any model change. A large turn_deg means the model is not north-up against Google Earth (or the lining-up was ambiguous): read the note.",
+ "adelaide": {
+  "lat": -34.915489777922076,
+  "lon": 138.59627692467532,
+  "ge_alt": 26.0,
+  "source": "Adelaide rebuild (PR #2015)",
+  "ge_alt_source": "ge_shoot --level, Adelaide rebuild 2026-11-22"
+ },
+ "barossa": {
+  "lat": -34.5984082,
+  "lon": 138.8858833,
+  "ge_alt": 178.0,
+  "source": "shape audit 2026-11-22 (register on a 600 m straight-down GE shot)",
+  "turn_deg": 0.55,
+  "ge_alt_source": "GE status bar at the field centre, shape audit 2026-11-22 (+-1 m); confirm with --level"
+ },
+ "bellerive": {
+  "lat": -42.8773092,
+  "lon": 147.3737365,
+  "ge_alt": 10.0,
+  "source": "Bellerive rebuild: OSM pitch centre (PR #2018)",
+  "ge_alt_source": "GE status bar at the field centre, shape audit 2026-11-22 (+-1 m); confirm with --level"
+ },
+ "blacktown": {
+  "lat": -33.7692997,
+  "lon": 150.8593847,
+  "ge_alt": 34.0,
+  "source": "shape audit 2026-11-22 (register on a 600 m straight-down GE shot)",
+  "turn_deg": -0.4,
+  "ge_alt_source": "GE status bar at the field centre, shape audit 2026-11-22 (+-1 m); confirm with --level"
+ },
+ "bruce": {
+  "lat": -35.2503239,
+  "lon": 149.1024345,
+  "ge_alt": 612.0,
+  "source": "shape audit 2026-11-22 (register on a 600 m straight-down GE shot)",
+  "turn_deg": 1.2,
+  "ge_alt_source": "GE status bar at the field centre, shape audit 2026-11-22 (+-1 m); confirm with --level"
+ },
+ "cazalys": {
+  "lat": -16.935653,
+  "lon": 145.749062,
+  "ge_alt": 4.0,
+  "source": "Cazaly's rebuild: OSM pitch centroid (PR #2034)",
+  "ge_alt_source": "GE status bar at the field centre, shape audit 2026-11-22 (+-1 m); confirm with --level"
+ },
+ "engie": {
+  "lat": -33.8431119,
+  "lon": 151.0676851,
+  "ge_alt": 10.0,
+  "source": "ENGIE rebuild: OSM pitch way 320262641 (PR #2037)",
+  "note": "the shape audit's lining-up wanted a 3.9 deg turn the thread's own fit does not show; check with register",
+  "ge_alt_source": "GE status bar at the field centre, shape audit 2026-11-22 (+-1 m); confirm with --level"
+ },
+ "gabba": {
+  "lat": -27.4858478,
+  "lon": 153.0380888,
+  "ge_alt": -3.0,
+  "source": "Gabba rebuild: OSM way 4049692 (PR #2020)",
+  "ge_alt_source": "GE status bar at the field centre, shape audit 2026-11-22 (+-1 m); confirm with --level"
+ },
+ "gmhba": {
+  "lat": -38.1579976,
+  "lon": 144.3546774,
+  "ge_alt": 18.0,
+  "source": "GMHBA rebuild: 7 GE wall-foot points (PR #2016)",
+  "note": "the shape audit's lining-up of the 16:00 glb put the origin 21.7 m south of this; the thread's own GE check says this one is right: resolve on the next register run",
+  "ge_alt_source": "GE status bar at the field centre, shape audit 2026-11-22 (+-1 m); confirm with --level"
+ },
+ "hands": {
+  "lat": -33.3462461,
+  "lon": 115.6430593,
+  "ge_alt": 4.0,
+  "source": "shape audit 2026-11-22 (register on a 600 m straight-down GE shot)",
+  "turn_deg": 19.65,
+  "note": "model needed a turn of about 20 deg: check whether it is north-up",
+  "ge_alt_source": "GE status bar at the field centre, shape audit 2026-11-22 (+-1 m); confirm with --level"
+ },
+ "ikon_park": {
+  "lat": -37.7839795,
+  "lon": 144.9615106,
+  "ge_alt": 43.0,
+  "source": "shape audit 2026-11-22 (register on a 600 m straight-down GE shot)",
+  "turn_deg": -6.8,
+  "note": "Legacy layout mostly gone: lining-up did not lock",
+  "ge_alt_source": "GE status bar at the field centre, shape audit 2026-11-22 (+-1 m); confirm with --level"
+ },
+ "manuka": {
+  "lat": -35.3181039,
+  "lon": 149.134539,
+  "ge_alt": 569.0,
+  "source": "shape audit 2026-11-22 (register on a 600 m straight-down GE shot)",
+  "turn_deg": 0.05,
+  "ge_alt_source": "GE status bar at the field centre, shape audit 2026-11-22 (+-1 m); confirm with --level"
+ },
+ "mars": {
+  "lat": -37.5393307,
+  "lon": 143.848132,
+  "ge_alt": 452.0,
+  "source": "shape audit 2026-11-22 (register on a 600 m straight-down GE shot)",
+  "turn_deg": -2.0,
+  "note": "GE predates the 2026 stands",
+  "ge_alt_source": "GE status bar at the field centre, shape audit 2026-11-22 (+-1 m); confirm with --level"
+ },
+ "marvel": {
+  "lat": -37.8164867,
+  "lon": 144.9475898,
+  "ge_alt": 8.0,
+  "source": "shape audit 2026-11-22 (register on a 600 m straight-down GE shot)",
+  "turn_deg": 0.35,
+  "ge_alt_source": "GE status bar at the field centre, shape audit 2026-11-22 (+-1 m); confirm with --level"
+ },
+ "mcg": {
+  "lat": -37.8199846,
+  "lon": 144.9834924,
+  "ge_alt": 8.0,
+  "source": "shape audit 2026-11-22 (register on a 600 m straight-down GE shot)",
+  "turn_deg": 0.4,
+  "ge_alt_source": "GE status bar at the field centre, shape audit 2026-11-22 (+-1 m); confirm with --level"
+ },
+ "north_hobart": {
+  "lat": -42.867825,
+  "lon": 147.3162578,
+  "ge_alt": 44.0,
+  "source": "shape audit 2026-11-22 (register on a 600 m straight-down GE shot)",
+  "turn_deg": 7.7,
+  "note": "model needed an 8 deg turn: check whether it is north-up",
+  "ge_alt_source": "GE status bar at the field centre, shape audit 2026-11-22 (+-1 m); confirm with --level"
+ },
+ "norwood": {
+  "lat": -34.9198573,
+  "lon": 138.6304504,
+  "ge_alt": 57.0,
+  "source": "shape audit 2026-11-22 (register on a 600 m straight-down GE shot)",
+  "turn_deg": 0.0,
+  "ge_alt_source": "GE status bar at the field centre, shape audit 2026-11-22 (+-1 m); confirm with --level"
+ },
+ "optus": {
+  "lat": -31.9515197,
+  "lon": 115.8900046,
+  "ge_alt": 5.0,
+  "source": "shape audit 2026-11-22 (register on a 600 m straight-down GE shot)",
+  "turn_deg": 5.7,
+  "note": "old outline: lining-up did not lock; the Optus rebuild has its own measured origin",
+  "ge_alt_source": "GE status bar at the field centre, shape audit 2026-11-22 (+-1 m); confirm with --level"
+ },
+ "people_first": {
+  "lat": -28.0062893,
+  "lon": 153.3671362,
+  "ge_alt": 4.0,
+  "source": "People First rebuild: OSM pitch way 355376900 (PR #2019)",
+  "ge_alt_source": "GE status bar at the field centre, shape audit 2026-11-22 (+-1 m); confirm with --level"
+ },
+ "riverway": {
+  "lat": -19.3176488,
+  "lon": 146.7318801,
+  "ge_alt": 16.0,
+  "source": "shape audit 2026-11-22 (register on a 600 m straight-down GE shot)",
+  "turn_deg": -0.3,
+  "ge_alt_source": "GE status bar at the field centre, shape audit 2026-11-22 (+-1 m); confirm with --level"
+ },
+ "scg": {
+  "lat": -33.8916083,
+  "lon": 151.2246417,
+  "ge_alt": 38.0,
+  "source": "shape audit 2026-11-22 (register on a 600 m straight-down GE shot)",
+  "turn_deg": -10.15,
+  "note": "lining-up ambiguous between turns of about +10 and -10 deg (near-round bowl); origin +-5 m; re-measure",
+  "ge_alt_source": "GE status bar at the field centre, shape audit 2026-11-22 (+-1 m); confirm with --level"
+ },
+ "sky": {
+  "lat": -41.2730723,
+  "lon": 174.7858662,
+  "ge_alt": 4.0,
+  "source": "shape audit 2026-11-22 (register on a 600 m straight-down GE shot)",
+  "turn_deg": -1.2,
+  "ge_alt_source": "GE status bar at the field centre, shape audit 2026-11-22 (+-1 m); confirm with --level"
+ },
+ "summit": {
+  "lat": -35.0779988,
+  "lon": 138.8934463,
+  "ge_alt": 320.0,
+  "source": "shape audit 2026-11-22 (register on a 600 m straight-down GE shot)",
+  "turn_deg": 1.75,
+  "ge_alt_source": "GE status bar at the field centre, shape audit 2026-11-22 (+-1 m); confirm with --level"
+ },
+ "waca": {
+  "lat": -31.9598995,
+  "lon": 115.8793684,
+  "ge_alt": 2.0,
+  "source": "shape audit 2026-11-22 (register on a 600 m straight-down GE shot)",
+  "turn_deg": -7.7,
+  "note": "model needed a 7-9 deg turn; re-check after lining-up passes",
+  "ge_alt_source": "GE status bar at the field centre, shape audit 2026-11-22 (+-1 m); confirm with --level"
+ },
+ "waverley_park": {
+  "lat": -37.9255784,
+  "lon": 145.1887447,
+  "ge_alt": 87.0,
+  "source": "shape audit 2026-11-22 (register on a 600 m straight-down GE shot)",
+  "turn_deg": 0.1,
+  "ge_alt_source": "GE status bar at the field centre, shape audit 2026-11-22 (+-1 m); confirm with --level"
+ },
+ "whitten": {
+  "lat": -37.8008179,
+  "lon": 144.885344,
+  "ge_alt": 24.0,
+  "source": "shape audit 2026-11-22 (register on a 600 m straight-down GE shot)",
+  "turn_deg": -12.25,
+  "note": "Legacy layout; model needed a 13 deg turn to sit on GE: check whether it is north-up",
+  "ge_alt_source": "GE status bar at the field centre, shape audit 2026-11-22 (+-1 m); confirm with --level"
+ },
+ "windy_hill": {
+  "lat": -37.7520809,
+  "lon": 144.9196186,
+  "ge_alt": 52.0,
+  "source": "shape audit 2026-11-22 (register on a 600 m straight-down GE shot)",
+  "turn_deg": 0.2,
+  "ge_alt_source": "GE status bar at the field centre, shape audit 2026-11-22 (+-1 m); confirm with --level"
+ },
+ "york_park": {
+  "lat": -41.425896,
+  "lon": 147.138976,
+  "ge_alt": 2.0,
+  "source": "York Park rebuild: OSM pitch centroid (PR #2031)",
+  "ge_alt_source": "GE status bar at the field centre, shape audit 2026-11-22 (+-1 m); confirm with --level"
+ }
+}

@@ -9,17 +9,20 @@ starts from the same rules. It covers looks only: nothing here reads back into p
 Nothing goes to the director until it has passed a side-by-side against real imagery from the same
 camera. Use Google Earth 3D for outside and overhead views, and Street View on the ground for inside.
 
-- **Google Earth in a headless browser.** Run Playwright Chromium with
-  `--use-gl=angle --use-angle=swiftshader --enable-unsafe-swiftshader --ignore-gpu-blocklist` and a
-  1280x1000 viewport, then crop rows 140 to 860. Open a fresh page for each view, or Google Earth
-  sometimes shows the globe. The URL is `earth.google.com/web/@lat,lon,alt a,range d,35y,heading h,tilt t,0r`.
-- **Our camera for the same view.** `tools/visual/preinspect_look.gd` takes `name:px,py,pz,tx,ty,tz,fov`.
+- **Use the shared tool.** Use `tools/grounds/ge/` (README there) for every ground: `ge_compare.py plan`,
+  `ge_shoot.js`, then `register` and `outline` for numbers. Its `grounds.json` holds each model's origin and
+  Google Earth's turf height.
+  - The URL's `35y` is the vertical fov of the whole 1000 px window. The 720-row crop is **25.58 deg**, not 23.5.
+  - Read the turf height and every camera height from Google Earth's status bar. GE lifts low cameras 15-30 m.
+  - Open a fresh page per shot.
+  - Line the model up with `register` before measuring anything. Pass is 1 m and 0.5 deg.
+  - Judge by numbers, never by eye: `outline` for plan, published dimensions for heights, and `ge_solve.py`
+    for an oblique's true camera.
+- **Our camera for the same view.** `tools/visual/preinspect_look.gd` takes `name:px,py,pz,tx,ty,tz,fov[,ux,uy,uz]`.
   - Model axes: x is east, -z is north.
-  - The field centre is lat -37.81977, lon 144.98316. Google Earth's field level is about 8 m.
+  - The MCG field centre is lat -37.81977, lon 144.98316, and Google Earth's turf is 8 m.
   - The camera sits at `target - range * dir`, with
     `dir = (sin t sin h east, sin t cos h north, -cos t up)`.
-  - Use a vertical fov of 23.5 to match a 16:9 crop.
-  - Close views straight into the bowl never line up exactly, so judge those by eye.
 - **The views.** Check every one before a stage is called done:
   - the director's four reference angles (from the south, east, north-east and north-west);
   - straight down;
