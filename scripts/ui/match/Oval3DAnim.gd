@@ -5,10 +5,28 @@ extends RefCounted
 ## and the ball, and advances his AnimationPlayer by dt: jog / idle / carry, and the two-man
 ## tackle clips (row 197).
 
-const JOG_SPEED := Oval3D.LOOP_SPEED
-const RUN_FROM := 1.4          # m/s: slower than this he stands
+## The run loop's own pace (m/s at rate 1) is measured off the loop itself, from how fast its
+## planted foot travels back under the hips (loop_speed): each body's loop has its own stride
+## (the MetaHuman's covers 5.40 m/s, the old body's 5.73), and a guessed constant skated them.
+const JOG_SPEED := Oval3D.LOOP_SPEED   # used only when a loop has no foot on the ground to read
+## Everything below is in drawn metres a second: how fast his node really moves across the
+## turf this frame (the director's tokens run on their own clock, MatchDirector.TEMPO times
+## slower than the picture, so a token's vel is not the pace the legs must match).
+const RUN_FROM := 2.0          # m/s drawn: slower than this he stands (and shuffles his feet)
+const RATE_MIN := 0.38         # the slowest the run loop plays, a jog a little under RUN_FROM
+## The fastest. The picture runs MatchDirector.TEMPO times the movement clock (rule 2.49), so a
+## man at a real 9 m/s is drawn at about 15: the loop plays fast enough to keep its feet under
+## him, as footage played fast does, up to this; past it the planted feet hold the difference.
+const RATE_MAX := 3.4
+const PACE_FOLLOW := 0.08      # s: the drawn pace is smoothed over about this long
+const JUMP := 20.0             # m/s: a drawn move faster than this is a re-placement, not running
 const STOP_HOLD := 0.2         # s: he must be that slow this long to stand; a shorter check is part of the run
 const TURN := 9.0              # rad/s (about 520 degrees): the fastest he turns, a footballer's pivot
+## Running, he changes direction off a planted foot: the body swings round quickly while a foot
+## is held on the turf (_plant keeps that foot where and how it landed) and hardly at all in the
+## air between strides, so a cut reads as plant-and-go, not a spin on the spot.
+const TURN_PLANTED := 24.0     # rad/s with a foot held down
+const TURN_AIR := 12.0          # rad/s with both feet off the turf
 ## Eyes on the ball (plan §2.6): the neck takes part of the turn and the head the rest, inside a
 ## real person's range (about 80 degrees each way, 35 up or down), so nobody turns like an owl.
 ## The carrier looks where he runs, not at the ball in his hands.
@@ -43,6 +61,18 @@ const GAP_MAX := 9.0           # m/s: and at most this fast
 const APART := 0.8             # m: on that run his hips stay this far from the man he tackled (or who tackled him)
 const REACH := 1.6             # m: MatchDirector's chase ends this close (its "chase" phase)
 const STEP := 1.0 / 30.0       # s: the takes' frame
+const FOOT_DOWN := 0.03        # m: a foot this close to its lowest in a loop is on the ground
+## Planted feet (real footage never skates): a foot that comes down on the turf stays where it
+## came down until the clip lifts it, the leg bending to keep it there (a two-bone reach of the
+## thigh and calf, the sole kept as it landed). It lets go if the body has gone too far from it.
+## A man standing or shuffling keeps both feet down and steps one across when his body has
+## drifted off it, so a stand that turns to the ball or creeps a metre does it in steps.
+const LET_GO := 0.06           # s: a lifted foot hands back to the clip over this long
+const PULL_RUN := 0.45         # m: running, a planted foot is dragged rather than held further than this from where the clip has it
+const PULL_STAND := 0.2        # m: standing, a foot this far off its place steps across
+const STEP_TIME := 0.22        # s: one shuffle step
+const STEP_LIFT := 0.06        # m: how high the foot comes off the turf in that step
+const LEGS := [["thigh_l", "calf_l", "foot_l", "ball_l"], ["thigh_r", "calf_r", "foot_r", "ball_r"]]
 
 var director: MatchDirector
 var players: Array
@@ -70,6 +100,14 @@ var _still: Array = []         # per player: s he has been slower than RUN_FROM
 var _takes := {}               # take name -> {dist: hips apart, foot: planted foot} per STEP
 var _tracks := {}              # animation name -> {bone: rotation track}, "hips": position track
 var _once: Array = []          # per player: the scoop he is in, {anim, t, t0, touch, end, yaw, at, off}, {} for none
+var _was: Array = []           # per player: where his node stood last frame (INF: nowhere yet)
+var _pace: Array = []          # per player: his drawn velocity on the turf, smoothed (m/s)
+var _loop_speed := {}          # loop name -> m/s its planted foot covers at rate 1
+var _floor := [INF, INF]       # each ball bone's lowest in the run loop, in the figure's space
+var _legs: Array = []          # bone indices [thigh, calf, foot, ball] per leg, [] if the rig has none
+## per player, per foot: {at: world point the ball bone is held at, yaw: node yaw when it came
+## down, w: 1 held .. 0 the clip's, step: s into a shuffle step (-1 none), from: where it began}
+var _feet: Array = []
 
 
 func _init(p_director: MatchDirector, p_players: Array) -> void:
@@ -86,6 +124,9 @@ func _init(p_director: MatchDirector, p_players: Array) -> void:
 		_mate.append(-1)
 		_rate.append(1.0)
 		_once.append({})
+		_was.append(Vector2.INF)
+		_pace.append(Vector2.ZERO)
+		_feet.append([{}, {}])
 	var res = load(PAIRS)
 	if res is JSON:
 		_pairs = (res as JSON).data
@@ -98,6 +139,17 @@ func _init(p_director: MatchDirector, p_players: Array) -> void:
 			_rig = (n as Node3D).transform * _rig
 			n = n.get_parent()
 		_read_takes(p)
+		for name in ["jog", "carry"]:
+			_loop_speed[name] = _measure_loop(p, name)
+		var skel0: Skeleton3D = p["skel"]
+		for leg in LEGS:
+			var ids := []
+			for b in leg:
+				ids.append(skel0.find_bone(b))
+			if ids.has(-1):
+				_legs = []
+				break
+			_legs.append(ids)
 
 
 ## Each take's run-in, frame by frame: how far apart the two men's hips are and which of the
@@ -119,6 +171,52 @@ func _read_takes(p: Dictionary) -> void:
 			k += 1
 		_takes[name] = {"dist": dist, "foot": foot}
 	ap.play("idle")
+
+
+## m/s the run loop covers at rate 1 on a man of the average build: how fast its planted foot
+## travels back under the hips (the loops have their travel taken out). JOG_SPEED when the clip
+## cannot be read. A man's own stride is this times his legs (p["leg"], Oval3DBuild): a tall
+## man covers more ground a stride, a short one less.
+func loop_speed(name: String, p := {}) -> float:
+	return float(_loop_speed.get(name, JOG_SPEED)) * float(p.get("leg", 1.0))
+
+
+func _measure_loop(p: Dictionary, name: String) -> float:
+	var ap: AnimationPlayer = p["anim"]
+	if not ap.has_animation(name):
+		return JOG_SPEED
+	var skel: Skeleton3D = p["skel"]
+	var feet := [skel.find_bone("ball_l"), skel.find_bone("ball_r")]
+	if feet.has(-1):
+		return JOG_SPEED
+	ap.play(name)
+	var length := ap.current_animation_length
+	var n := 150
+	var at := []
+	var lo := [INF, INF]
+	for k in range(n + 1):
+		ap.seek(length * k / n, true)
+		var row := []
+		for f in range(2):
+			var q := _rig * skel.get_bone_global_pose(feet[f]).origin
+			row.append(q)
+			lo[f] = minf(lo[f], q.y)
+		at.append(row)
+	var sum := 0.0
+	var count := 0
+	for k in range(n):
+		for f in range(2):
+			var a: Vector3 = at[k][f]
+			var b: Vector3 = at[k + 1][f]
+			if a.y < lo[f] + FOOT_DOWN and b.y < lo[f] + FOOT_DOWN:
+				sum += Vector2(b.x - a.x, b.z - a.z).length() / (length / n)
+				count += 1
+	ap.play("idle")
+	# Read off this man's build: brought back to the average one (loop_speed, _plant).
+	var leg := float(p.get("leg", 1.0))
+	if name == "jog":
+		_floor = [lo[0] / leg, lo[1] / leg]
+	return sum / count / leg if count > 0 else JOG_SPEED
 
 
 ## 0 when his left foot is the lower, 1 when his right is.
@@ -346,6 +444,8 @@ func _start(who: int, v: int, arrived: bool, at := Vector2.INF) -> void:
 ## Pose player i for this frame. holder = the index with the ball in his hands, or -1.
 func step(i: int, p: Dictionary, holder: int, pos: Vector2, vel: Vector2, dt: float) -> void:
 	if not (_in[i] as Dictionary).is_empty():
+		_was[i] = Vector2.INF
+		_feet[i] = [{}, {}]
 		_step_pair(i, p, dt, vel)
 		return
 	var node: Node3D = p["node"]
@@ -366,8 +466,6 @@ func step(i: int, p: Dictionary, holder: int, pos: Vector2, vel: Vector2, dt: fl
 		var back := clampf(2.0 * gap.length(), GAP_CLOSE, GAP_MAX)
 		_gap[i] = gap - gap.limit_length(back * dt)
 		_round(i, pos, gap, back * dt)
-		if gap.length() > 0.05:
-			vel = vel - gap.normalized() * back
 		node.position = Vector3(pos.x + (_gap[i] as Vector2).x, 0.0, pos.y + (_gap[i] as Vector2).y)
 	if not o.is_empty():
 		# The clip carries him from where the scoop began (its own run): his token runs the
@@ -377,8 +475,21 @@ func step(i: int, p: Dictionary, holder: int, pos: Vector2, vel: Vector2, dt: fl
 		var spot: Vector2 = (o["at"] as Vector2) + (o["off"] as Vector2) * (1.0 - k)
 		_gap[i] = spot - pos
 		node.position = Vector3(spot.x, 0.0, spot.y)
+		_was[i] = Vector2.INF
+		_feet[i] = [{}, {}]
 		_step_once(i, p, o, dt)
 		return
+	# How fast he is drawn moving: his node's move this frame, smoothed (the run must match
+	# the turf going under him, whatever moved him: his token, the spacing, a run back).
+	var here := Vector2(node.position.x, node.position.z)
+	if dt > 0.0 and _was[i] != Vector2.INF:
+		var dv: Vector2 = (here - (_was[i] as Vector2)) / dt
+		if dv.length() < JUMP:
+			_pace[i] = (_pace[i] as Vector2).lerp(dv, 1.0 - exp(-dt / PACE_FOLLOW))
+	elif dt > 0.0:
+		_pace[i] = vel * MatchDirector.TEMPO
+	_was[i] = here
+	vel = _pace[i]
 	var speed := vel.length()
 	var ap: AnimationPlayer = p["anim"]
 	var want := "carry" if i == holder else "idle"
@@ -393,9 +504,12 @@ func step(i: int, p: Dictionary, holder: int, pos: Vector2, vel: Vector2, dt: fl
 	var turn := TURN * dt if dt > 0.0 else PI
 	if running:
 		if speed > RUN_FROM:
-			node.rotation.y = rotate_toward(node.rotation.y, atan2(vel.x, vel.y), turn)
+			var swing := turn
+			if dt > 0.0 and not _legs.is_empty():
+				swing = (TURN_PLANTED if _held(i) else TURN_AIR) * dt
+			node.rotation.y = rotate_toward(node.rotation.y, atan2(vel.x, vel.y), swing)
 		want = "carry" if i == holder else "jog"
-		rate = clampf(maxf(speed, RUN_FROM) / JOG_SPEED, 0.45, 2.3)
+		rate = clampf(maxf(speed, RUN_FROM) / loop_speed(want, p), RATE_MIN, RATE_MAX)
 	elif i != holder:
 		# Standing: face the ball (the carrier keeps his heading).
 		var to: Vector2 = (director.ball["pos"] as Vector2) - pos
@@ -421,6 +535,7 @@ func step(i: int, p: Dictionary, holder: int, pos: Vector2, vel: Vector2, dt: fl
 	ap.advance(maxf(dt * rate, 1e-4))
 	_rate[i] = rate
 	_ease(i, p, dt)
+	_plant(i, p, dt, not running)
 	_look_at_ball(i, i == holder, dt)
 
 
@@ -592,6 +707,157 @@ func _ease(i: int, p: Dictionary, dt: float) -> void:
 	skel.set_bone_pose_position(_pelvis, cur + height * (h - cur.dot(height)))
 
 
+## Keep his planted feet where they came down (see LET_GO). `standing`: he is in the stand
+## loop, both feet down, stepping across when his body has drifted off one. dt 0 (a fresh draw)
+## takes the clip's feet as they are.
+func _plant(i: int, p: Dictionary, dt: float, standing: bool) -> void:
+	if _legs.is_empty() or _floor[0] == INF:
+		return
+	var skel: Skeleton3D = p["skel"]
+	var node: Node3D = p["node"]
+	var g := skel.global_transform
+	var feet: Array = _feet[i]
+	if dt <= 0.0:
+		_feet[i] = [{}, {}]
+		return
+	# The one foot allowed to step this frame, standing: the one furthest off its place.
+	var stepper := -1
+	if standing:
+		var worst := PULL_STAND
+		for f in range(2):
+			var lk: Dictionary = feet[f]
+			if lk.is_empty():
+				continue
+			if float(lk["step"]) >= 0.0:
+				stepper = -2  # one is already stepping
+				break
+			var q := g * skel.get_bone_global_pose(_legs[f][3]).origin
+			var off := Vector2(q.x - (lk["at"] as Vector3).x, q.z - (lk["at"] as Vector3).z).length()
+			if off > worst:
+				worst = off
+				stepper = f
+	for f in range(2):
+		var leg: Array = _legs[f]
+		var q := g * skel.get_bone_global_pose(leg[3]).origin
+		var down := q.y - node.global_position.y < float(_floor[f]) * float(p.get("leg", 1.0)) + FOOT_DOWN
+		var lk: Dictionary = feet[f]
+		if lk.is_empty():
+			if down:
+				feet[f] = {"at": q, "yaw": node.rotation.y, "w": 1.0, "step": -1.0, "from": q}
+			continue
+		var at: Vector3 = lk["at"]
+		var pull := Vector2(q.x - at.x, q.z - at.z).length()
+		if standing and down and float(lk["w"]) >= 1.0:
+			if f == stepper:
+				lk["step"] = 0.0
+				lk["from"] = at
+			if float(lk["step"]) >= 0.0:
+				# A shuffle step: the foot lifts, crosses to where the stand has it, and goes down.
+				lk["step"] = float(lk["step"]) + dt
+				var k := smoothstep(0.0, STEP_TIME, float(lk["step"]))
+				var from: Vector3 = lk["from"]
+				at = from.lerp(q, k)
+				at.y = q.y + STEP_LIFT * sin(PI * k)
+				lk["yaw"] = lerp_angle(float(lk["yaw"]), node.rotation.y, k)
+				if k >= 1.0:
+					lk["step"] = -1.0
+					at = q
+					lk["yaw"] = node.rotation.y
+				lk["at"] = at
+			else:
+				at.y = q.y
+		elif down and float(lk["w"]) >= 1.0:
+			# Held where it came down until the clip lifts it; the clip keeps the heel-toe roll.
+			# A body that has run on past the leg's reach drags it, no further than PULL_RUN.
+			if pull > PULL_RUN:
+				var back := Vector2(at.x - q.x, at.z - q.z).normalized() * PULL_RUN
+				at = Vector3(q.x + back.x, q.y, q.z + back.y)
+				lk["at"] = at
+			at.y = q.y
+		elif down and float(lk["w"]) <= 0.0:
+			# A fresh foot-strike: it holds from here.
+			lk["at"] = q
+			lk["yaw"] = node.rotation.y
+			lk["w"] = 1.0
+			lk["step"] = -1.0
+			at = q
+		else:
+			# Lifted by the clip (or pulled too far): it hands back to the clip.
+			lk["w"] = maxf(0.0, float(lk["w"]) - dt / LET_GO)
+			lk["step"] = -1.0
+			at.y = q.y
+		var w := float(lk["w"])
+		if w <= 0.0:
+			continue
+		var want := q.lerp(at, w)
+		_reach(skel, g, leg, want - q, wrapf(float(lk["yaw"]) - node.rotation.y, -PI, PI) * w)
+
+
+## Whether a foot of his is held on the turf now (last frame's plant).
+func _held(i: int) -> bool:
+	for lk in _feet[i]:
+		if not (lk as Dictionary).is_empty() and float(lk["w"]) >= 1.0 and float(lk["step"]) < 0.0:
+			return true
+	return false
+
+
+## Bend one leg so its ball bone moves by `off` (world metres), the foot turned `yaw` about the
+## up axis from where the clip has it: the thigh and calf of a two-bone reach, knee kept on the
+## side the clip bent it.
+func _reach(skel: Skeleton3D, g: Transform3D, leg: Array, off: Vector3, yaw: float) -> void:
+	if off.length_squared() < 1e-8 and absf(yaw) < 1e-4:
+		return
+	var inv := g.affine_inverse()
+	var o := inv.basis * off
+	var up := (inv.basis * Vector3.UP).normalized()
+	var th := skel.get_bone_global_pose(leg[0])
+	var ca := skel.get_bone_global_pose(leg[1])
+	var ft := skel.get_bone_global_pose(leg[2])
+	var ball := skel.get_bone_global_pose(leg[3])
+	var turn := Basis(up, yaw)
+	# Where the ankle must go: the ball's move, plus the foot's turn about the ball.
+	var target := ball.origin + o - turn * (ball.origin - ft.origin)
+	var a := th.origin
+	var b := ca.origin
+	var c := ft.origin
+	var l1 := a.distance_to(b)
+	var l2 := b.distance_to(c)
+	var to := target - a
+	var d := clampf(to.length(), absf(l1 - l2) + 0.001, l1 + l2 - 0.001)
+	if to.length() < 0.001:
+		return
+	var dir := to.normalized()
+	var bend := (b - a) - dir * (b - a).dot(dir)
+	if bend.length() < 0.001:
+		bend = (b - a).cross(c - b).cross(dir)
+		if bend.length() < 0.001:
+			return
+	bend = bend.normalized()
+	var cos_a := clampf((l1 * l1 + d * d - l2 * l2) / (2.0 * l1 * d), -1.0, 1.0)
+	var knee := a + dir * (l1 * cos_a) + bend * (l1 * sqrt(1.0 - cos_a * cos_a))
+	var r1 := _arc(b - a, knee - a)
+	var c1 := a + r1 * (c - a)
+	var r2 := _arc(c1 - knee, (a + dir * d) - knee)
+	var th_b := r1 * th.basis
+	var ca_b := r2 * r1 * ca.basis
+	var ft_b := turn * ft.basis
+	var pelvis := skel.get_bone_global_pose(skel.get_bone_parent(leg[0])).basis
+	skel.set_bone_pose_rotation(leg[0], Quaternion((pelvis.inverse() * th_b).orthonormalized()))
+	skel.set_bone_pose_rotation(leg[1], Quaternion((th_b.inverse() * ca_b).orthonormalized()))
+	skel.set_bone_pose_rotation(leg[2], Quaternion((ca_b.inverse() * ft_b).orthonormalized()))
+
+
+## The shortest turn taking direction u onto v.
+func _arc(u: Vector3, v: Vector3) -> Basis:
+	var un := u.normalized()
+	var vn := v.normalized()
+	var ax := un.cross(vn)
+	var s := ax.length()
+	if s < 1e-6:
+		return Basis.IDENTITY
+	return Basis(ax / s, atan2(s, un.dot(vn)))
+
+
 ## An animation's rotation track per bone index, and its hips' position track ("hips").
 func _bone_tracks(name: String, a: Animation, skel: Skeleton3D) -> Dictionary:
 	if not _tracks.has(name):
@@ -701,5 +967,11 @@ func event(i: int, kind: StringName, at: Vector2, other := -1) -> void:
 		(pr["rec"] as Dictionary)["event_t"] = _clock
 		(pr["rec"] as Dictionary)["at"] = at
 		return
-	if not (_in[i] as Dictionary).is_empty():
+	var pr2: Dictionary = _in[i]
+	if not pr2.is_empty() and int(pr2["victim"]) == i and kind in [&"mark", &"handball_receive", &"gather"] \
+			and float(pr2["c"]) < float(pr2["cs"]):
+		# He takes the ball as the tackle closes on him (caught holding it): the touch arrives
+		# just after the clip started, and he stays in it to be tackled.
+		return
+	if not pr2.is_empty():
 		_leave(i)

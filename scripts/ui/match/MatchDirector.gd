@@ -386,7 +386,7 @@ func _mark_meant(p: Dictionary) -> void:
 ## start the tackle clip a moment early: {who, victim, left} with `left` the director seconds
 ## before the chase gives up and the tackle lands anyway; {} otherwise. Read-only.
 func tackle_ahead() -> Dictionary:
-	if str(_beat.get("kind", "")) != "tackle" or _pi >= _phases.size():
+	if not str(_beat.get("kind", "")) in ["tackle", "free"] or _pi >= _phases.size():
 		return {}
 	var p: Dictionary = _phases[_pi]
 	if str(p.get("t", "")) != "chase" or not p.get("_entered", false):
@@ -1320,15 +1320,40 @@ func _free_phases(k: int) -> Array:
 	var out := []
 	var pk := _prev_real(k)
 	var pkind := "" if pk < 0 else str((events[pk] as Dictionary).get("kind", ""))
+	var tk := _actor_id(events[k])
+	var victim := _tackled_for(k)
 	if pkind in ["kick", "handball"]:
 		var loc := _loc(k)
 		var d := (ball["pos"] as Vector2).distance_to(loc)
 		if d > 1.0:
 			var shape := _flight_shape("handball" if pkind == "handball" and d < 18.0 else "kick", d)
-			out.append({"t": "flight", "to": loc, "dur": shape.x, "apex": shape.y, "recv": _actor_id(events[k])})
+			out.append({"t": "flight", "to": loc, "dur": shape.x, "apex": shape.y,
+					"recv": victim if victim >= 0 else tk})
+	if victim >= 0:
+		# Holding the ball and incorrect disposal are paid off a tackle, as in real footy: the
+		# man caught has it, the man paid the free runs him down and tackles him (the tackle
+		# clips), the umpire pays it, and the tackler gets up and takes the ball.
+		return out + [{"t": "possess", "who": victim, "quiet": true},
+				{"t": "chase", "who": tk, "victim": victim, "max": 1.6},
+				{"t": "down", "who": tk, "victim": victim, "dur": 0.55},
+				{"t": "emit"}, {"t": "wait", "dur": TAKE_UP}] + _take_free(tk) \
+				+ [{"t": "wait", "dur": 0.5, "ease": true}]
 	# The umpire pays it, and the man it is paid to takes the ball: it never
 	# rolls on through the free with nobody's hands on it.
 	return out + [{"t": "emit"}] + _take_free(_actor_id(events[k])) + [{"t": "wait", "dur": 0.5, "ease": true}]
+
+
+## The man caught holding the ball (or dropping it) in tackled free `k`: -1 when the free
+## is not paid off a tackle, or either man is not on the ground.
+func _tackled_for(k: int) -> int:
+	var ev: Dictionary = events[k]
+	if not str(ev.get("free_cause", "")) in ["holding_ball", "incorrect_disposal"]:
+		return -1
+	var tk := _actor_id(ev)
+	var v := _token_by_pid(str(ev.get("against_id", "")))
+	if tk < 0 or v < 0 or v == tk or int(tokens[v]["side"]) == int(tokens[tk]["side"]):
+		return -1
+	return v
 
 
 ## The free's taker goes to the ball and has it in his hands (nothing when he
@@ -1577,7 +1602,11 @@ func _loc(k: int) -> Vector2:
 			if absf(x - src.x) < 12.0 and absf(dy) < 10.0:
 				dy = (signf(dy_raw) if dy_raw != 0.0 else 1.0) * _rng.randf_range(10.0, 18.0)
 			# (The roll is made as before whatever the plan, so the stream is unchanged.)
-			if absf(src.y) > 22.0 and _rng.randf() < 0.1 and _plan_of(int(ev.get("side", 0))) != "attacking":
+			# Controlled tempo and Slow it down go wide and switch it more often
+			# (rule 2.45; row 201 gap 8). The roll is the same one either way.
+			var ks := int(ev.get("side", 0))
+			var switch_p := 0.25 if _plan_of(ks) == "controlled" or _burst_on(ks, "hold") else 0.1
+			if absf(src.y) > 22.0 and _rng.randf() < switch_p and _plan_of(ks) != "attacking":
 				dy = -src.y * 1.3 + _rng.randf_range(-5.0, 5.0)   # a switch of play (never down the corridor)
 		var y := src.y + dy
 		var side := int(ev.get("side", 0))
@@ -1586,6 +1615,10 @@ func _loc(k: int) -> Vector2:
 			# from his slot, up his lane, never across to the ball, so the
 			# receivers never converge on one column.
 			y = float(_lane[a]) + _rng.randf_range(-1.0, 1.0)
+			# ... and it never switches (rule 2.45): from a flank, it goes no
+			# further than the corridor on the far side.
+			if absf(src.y) >= 10.0 and signf(y) != signf(src.y):
+				y = signf(y) * minf(absf(y), maxf(0.0, 24.0 - absf(src.y)))
 		elif x * _dir(side) < MatchMotion.gx(-45.0):
 			y *= 1.15   # clearing from defence: toward the boundary, away from the corridor
 		p = Vector2(x, y)

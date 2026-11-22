@@ -17,7 +17,8 @@ const LOOPS_GLB := "res://assets/oval3d/player_loops.glb"
 ## candidate body (row 202 2d: the MetaHuman footballer, which carries its own loops).
 static var player_glb := PLAYER_GLB
 static var loops_glb := LOOPS_GLB
-## m/s the jog loop covers at rate 1 (14.6 m in its 2.5 s): the rate scales from this.
+## m/s the old body's jog loop was taken to cover at rate 1; the rate now scales from the pace
+## measured off each body's own loop (Oval3DAnim.loop_speed), this only when it cannot be read.
 const LOOP_SPEED := 5.83
 ## Club Forge's hair styles on the same rig, one mesh per style on the head bone
 ## (tools/oval3d/export_hair_glb.py: the pipeline's own procedural shells, hair_lib.py).
@@ -524,6 +525,7 @@ func _ground_model(slug: String, base := "", home := "", away := "") -> void:
 	add_child(root)
 	Oval3DQuality.apply_model(quality, root)
 	turf.set_ground(slug)
+	turf.light_stands(root)
 	_turf_mat.set_shader_parameter("fence_clip", GroundModels.match_fence())
 	_apron_skirt()
 	if home == "":
@@ -596,7 +598,7 @@ func _kit(kit: Dictionary) -> ShaderMaterial:
 	m.set_shader_parameter("kit_design", [float(100 + cell) if cell >= 0
 			else float(maxi(0, GameDB.GUERNSEY_DESIGNS.find(str(kit.get("design", "plain")))))])
 	m.set_shader_parameter("shorts", kit.get("shorts", Color(0.94, 0.94, 0.92)))
-	m.set_shader_parameter("digits_tex", DIGITS)
+	m.set_shader_parameter("digits_arr", digits_3d())
 	for part in ["body", "head"]:
 		for map in [["col", "Basecolor"], ["nrm", "Normal"], ["srmf", "SRMF"]]:
 			m.set_shader_parameter("skin_%s_%s" % [part, map[0]],
@@ -620,6 +622,33 @@ func _kit(kit: Dictionary) -> ShaderMaterial:
 		if (today.get("shorts", Color(0, 0, 0, 0)) as Color).a > 0.0:
 			m.set_shader_parameter("shorts", today["shorts"])
 	return m
+
+
+## The vignettes' digits for the 3D guernsey: one layer per digit, its 64 x 96 glyph in a 96 x 128
+## layer with a clear margin, and mipmaps, so a number a dozen pixels tall on the main camera is
+## read from a sheet its own size (oval3d_player.gdshader, DIGIT_CELL). Built once.
+static var _digits_3d: Texture2DArray
+static func digits_3d() -> Texture2DArray:
+	if _digits_3d == null:
+		_digits_3d = Texture2DArray.new()
+		_digits_3d.create_from_images(digit_layers())
+	return _digits_3d
+
+
+## The ten layers digits_3d is made of.
+static func digit_layers() -> Array[Image]:
+	var sheet: Image = DIGITS.get_image()
+	if sheet.is_compressed():
+		sheet.decompress()
+	sheet.convert(Image.FORMAT_RGBA8)
+	var w := sheet.get_width() / 10
+	var layers: Array[Image] = []
+	for k in range(10):
+		var cell := Image.create_empty(96, 128, false, Image.FORMAT_RGBA8)
+		cell.blit_rect(sheet, Rect2i(k * w, 0, w, sheet.get_height()), Vector2i(16, 16))
+		cell.generate_mipmaps()
+		layers.append(cell)
+	return layers
 
 
 ## His number on the back of his guernsey (0-99; -1 for none), per figure.
@@ -1892,8 +1921,12 @@ const UMP_LIFT_RATE := 2.0
 const UMP_SET := 0.3
 const UMP_TAKE := 2.5
 ## The ball goes from where it was to his hands (picked up) over UMP_PICK seconds, and from his
-## hands onto the director's flight (let go) over UMP_LET_GO.
+## hands onto the director's flight (let go) over UMP_LET_GO. Picked up, it moves with his hands
+## while the gap closes: blended from where it lay, a ball-up's ball lagged his hands as the lift
+## clip started and jumped up to 0.66 m in a frame (test_match_visual, 2026-11-21).
 const UMP_PICK := 0.3
+## ...or longer for a ball further off: the gap closes at most this many metres a match second.
+const UMP_PICK_RATE := 3.0
 const UMP_LET_GO := 0.2
 ## From the end of a clip to his stand.
 const UMP_BLEND_OUT := 0.4
@@ -1906,7 +1939,8 @@ var _ump_time := -1.0         # the director's time last frame
 var _ump_step := 1.0 / 30.0   # the director seconds of the last frame that moved
 var _ump_ball := false        # the ball is in his hands this frame
 var _ump_pick := -1.0         # seconds since he took it (the pick-up blend)
-var _ump_from := Vector3.ZERO # where the ball was when he took it
+var _ump_pick_len := UMP_PICK # ...and how long it takes
+var _ump_from := Vector3.ZERO # the ball's gap from his hands when he took it
 var _ump_off := Vector3.ZERO  # let go: his hands less the director's ball, easing out
 var _ump_off_t := -1.0
 var _ump_hit_from := Vector3.ZERO  # a bounce: where the ball left his hands
@@ -2015,7 +2049,7 @@ func _move_umpires(frame_dt: float) -> void:
 		if speed > UMP_RUN_FROM and not on_mark:
 			node.rotation.y = rotate_toward(node.rotation.y, atan2(vel.x, vel.y), turn)
 			clip = "jog"
-			rate = clampf(speed / LOOP_SPEED, 0.45, 2.3)
+			rate = clampf(speed / anim.loop_speed("jog", u), Oval3DAnim.RATE_MIN, Oval3DAnim.RATE_MAX)
 		else:
 			var to := face if face != Vector2.ZERO else bp - at
 			if to.length() > 0.5 or face != Vector2.ZERO:
@@ -2149,7 +2183,12 @@ func _umpire_ball_state(held: bool) -> void:
 	if held and not _ump_ball:
 		# Just after a cut he has it already; in play he takes it over UMP_PICK.
 		_ump_pick = -1.0 if _ump_snapped else 0.0
-		_ump_from = ball.global_position if ball != null else Vector3.ZERO
+		_ump_from = Vector3.ZERO
+		_ump_pick_len = UMP_PICK
+		if _ump_job >= 0 and ball != null:
+			var hands := _umpire_hands(umpires[_ump_job])
+			_ump_from = ball.global_position - hands  # the gap from his hands
+			_ump_pick_len = maxf(UMP_PICK, _ump_from.length() / UMP_PICK_RATE)
 	if not held and _ump_ball and ball != null:
 		_ump_off_t = 0.0
 		_ump_off = ball.global_position
@@ -2190,8 +2229,10 @@ func _umpire_ball(dt: float) -> bool:
 		_ump_pick = -1.0
 	if _ump_pick >= 0.0 and dt > 0.0:
 		_ump_pick += dt
-		var f := clampf(_ump_pick / UMP_PICK, 0.0, 1.0)
-		want = _ump_from.lerp(want, f * f * (3.0 - 2.0 * f))
+		var f := clampf(_ump_pick / _ump_pick_len, 0.0, 1.0)
+		# The gap it started at eases shut while it moves with his hands: a hand moving fast
+		# as the clip starts never leaves the ball behind.
+		want += _ump_from * (1.0 - f * f * (3.0 - 2.0 * f))
 		if f >= 1.0:
 			_ump_pick = -1.0
 	ball.global_position = want
