@@ -8,7 +8,8 @@ extends SceneTree
 ##   --film N    instead of --at: N seconds of the match screen, frame by frame, for Godot's movie
 ##               writer (run with --write-movie OUT.avi --fixed-fps 30); the coach taps the picture
 ##               1 s into the second replay. Prints each camera cut as "CUT frame shot", and each
-##               change of the main camera's zoom as "ZOOM frame tv|zooming|wide".
+##               change of the main camera's zoom as "ZOOM frame tv|zooming|wide", and each replay
+##               sting as "STING frame in|out".
 
 var _w := 540
 var _h := 1200
@@ -93,6 +94,7 @@ func _run() -> void:
 		var replays := 0
 		var was := false
 		var tap_at := -1
+		var stinging := false
 		for f in range(int(film * 30.0)):
 			await process_frame
 			var go = scene.find_child("StartQuarter", true, false)
@@ -113,6 +115,10 @@ func _run() -> void:
 			if z != zoom:
 				print("ZOOM ", f, " ", z)
 				zoom = z
+			var st: float = tv.sting()
+			if st >= 0.0 and not stinging:
+				print("STING ", f, " ", "in" if not tv.replaying else "out")
+			stinging = st >= 0.0
 			if tv.replaying and not was:
 				replays += 1
 				if replays == 2:
