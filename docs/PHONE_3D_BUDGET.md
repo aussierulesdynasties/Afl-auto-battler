@@ -179,6 +179,25 @@ already).
   table's "now" column). The cloud's software GPU is not a tiled GPU, so the phone run decides. On a
   PC the measuring tool takes `aa=none|msaa2|msaa4|fxaa` to cost each option against the level's own.
 
+## How it looks on a phone (2026-11-22)
+
+Captured at the oval's real size on a 1080 x 2400 phone (1012 x 1242, PitchView._fit_3d), not
+blown up: tools/perf/Oval3DPhone.tscn now draws into a picture of that size, as the match does.
+(Before this, its pictures and times came from a 1280 x 720 window although labelled 1080 x 1240.
+Triangles and draw calls do not depend on it; the GPU ratios moved a little.)
+
+- The softest thing in the picture is the film look's lens softening (rule 2.112): every pixel is
+  55% a blurred copy of the picture. On players about 35 px tall it smears their outline and
+  leaves a skin-coloured halo on the grass round each one. Without it the same frame is sharp
+  (board in the project files: phone_look_board.png). It is the director's ruled look, so it is
+  his to change.
+- Low drew three-quarter size and stretched it bilinearly; it now stretches with FSR 1, which
+  sharpens edges as it stretches, for about 1% more GPU time. Drawing Low at full size instead
+  costs about 40% more (as much as Medium), so it stays three-quarter.
+- Textures: the guernsey atlas, skin, heads, turf and crowd cards all have mipmaps; skin, heads and
+  turf blades filter anisotropically. Nothing found drawn without mipmaps where it shrinks, apart
+  from the guernsey number digits (filter_linear, row #1997's work).
+
 ## The budget (proposed, for the director)
 
 Nothing here is settled until the director has seen the phone (rule 94). Working numbers, from
