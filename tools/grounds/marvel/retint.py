@@ -26,8 +26,6 @@ TARGET = {
     "navy": (108, 120, 138),
     "slate": (130, 138, 150),
     "paving": (150, 146, 136),
-    # The blue office blocks on the corners (ge c_ne): a mid blue, lighter and bluer than the navy.
-    "louvre": (98, 110, 134),
     # Undersides face down, where the match light is a dim blue-violet (measured under the shut roof:
     # a (118, 122, 116) map rendered (49, 49, 69)). Painted warm and green so they render the grey with
     # a faint green the director set for roof undersides (2026-11-21), about (85, 90, 82).
@@ -51,43 +49,20 @@ def retint(name, target, src=None, out=None):
     print(out or name, m.round(), "->", target)
 
 
-def office():
-    """The pale office boxes over the east concourse (Wurundjeri Way side; Google Earth c_e, c_ne): a
-    light grey spandrel band at every storey and a ribbon of dark glass between, behind slim pale fins
-    every 0.75 m. One storey of 3.75 m by 6 m a tile; the walls start 9 m up, so each storey's
-    spandrel starts 1.5 m into the tile (texture v is height, from the bottom)."""
-    W, H = 1024, 640
+def grille():
+    """The louvres behind the blue blocks' vent openings (Google Earth c_ne): pale grey-blue slats every
+    15 cm, dark gaps between, a mullion every 1.5 m. The opening itself is modelled (vent_block); the
+    slats are too fine to read in depth. 3 m by 3 m a tile."""
+    W = H = 512
+    f = (np.arange(H) + 0.5) / H
     img = np.zeros((H, W, 3), float)
-    f = 1.0 - (np.arange(H) + 0.5) / H  # height in the storey, 0 at the bottom
-    spandrel = ((f - 0.4) % 1.0) < 0.35
+    slat = ((f * 20.0) % 1.0) < 0.55
+    img[:] = (38, 44, 58)
+    img[slat] = (150, 160, 176)
+    img[slat & (((f * 20.0) % 1.0) > 0.4)] = (112, 122, 140)
     x = (np.arange(W) + 0.5) / W
-    fin = ((x * 8.0) % 1.0) < 0.12
-    glass = np.array((104, 114, 126), float)
-    img[:] = glass
-    img[:, fin] = (186, 190, 194)
-    # a little sky in the glass's top, as Google Earth's glazing shows
-    sky = np.clip((((f - 0.4) % 1.0) - 0.35) / 0.65, 0, 1)
-    img += (np.array((0, 0, 0)) + (1 - sky)[:, None, None] * np.array((14, 16, 20)))
-    img[spandrel] = (202, 205, 209)
-    edge = (np.abs(((f - 0.4) % 1.0) - 0.35) < 0.012) | (((f - 0.4) % 1.0) < 0.012)
-    img[edge] = (150, 154, 158)
-    rng = np.random.default_rng(7)
-    img += rng.normal(0, 2.0, img.shape)
-    Image.fromarray(np.clip(img, 0, 255).astype(np.uint8), "RGB").save(os.path.join(TEX, "office.png"))
-
-
-def undercroft():
-    """The open ground floor under the east boxes: slim pale columns every 6 m in front of a shaded
-    recess, darker towards the soffit above it. 6 m by 9 m a tile (0 to 9 m up)."""
-    W, H = 512, 768
-    f = 1.0 - (np.arange(H) + 0.5) / H
-    img = np.zeros((H, W, 3), float)
-    img[:] = np.array((62, 68, 78), float)
-    img *= (1.0 - 0.35 * f)[:, None, None]
-    x = (np.arange(W) + 0.5) / W
-    img[:, x < 0.09] = (168, 170, 172)
-    img[f > 0.93] = (150, 152, 154)
-    Image.fromarray(np.clip(img, 0, 255).astype(np.uint8), "RGB").save(os.path.join(TEX, "undercroft.png"))
+    img[:, ((x * 2.0) % 1.0) < 0.035] = (170, 176, 186)
+    Image.fromarray(np.clip(img, 0, 255).astype(np.uint8), "RGB").save(os.path.join(TEX, "grille.png"))
 
 
 def ribbon():
@@ -118,19 +93,29 @@ def main():
     # The bowl's top band, over the braces up to the roof's edge, the dark blue the MARVEL STADIUM
     # letters stand on (it had the undersides' texture, which is painted warm for the dim light under
     # a roof and so read khaki out here).
-    retint("upperwall", (56, 68, 96), src="soffit", out="upperwall")
+    # 2026-11-22: (56, 68, 96) rendered near-black navy on the shaded east face, (1, 27, 70) against
+    # Google Earth's (105, 119, 136); a greyer, lighter blue keeps the letters' dark ground in the sun too.
+    retint("upperwall", (80, 92, 114), src="soffit", out="upperwall")
+    # Glazing: the dark glass rendered black in shade (Google Earth's office glass reads (96, 114, 132),
+    # its shopfronts (84, 104, 121), sky in them included). Lighter, so it reads as glass, not holes.
+    retint("glass", (74, 90, 108))
+    retint("shopglass", (68, 84, 102))
     retint("tread", (146, 146, 142), src="concrete", out="tread")
-    office()
-    undercroft()
     ribbon()
+    grille()
+    # the blue blocks' plain cladding: the panel joints of the slate texture, a mid blue (Google Earth c_ne)
+    CONTRAST["bluepanel"] = 0.5
+    retint("bluepanel", (96, 112, 140), src="slate", out="bluepanel")
     tiles = os.path.join(TEX, "tiles.json")
     j = json.load(open(tiles))
     j["endrib"] = j["endroof"]
     j["upperwall"] = j["soffit"]
     j["tread"] = j["concrete"]
     j["ribbon"] = [12, 1.7]
-    j["office"] = [6, 3.75]
-    j["undercroft"] = [6, 9]
+    j["grille"] = [3, 3]
+    j["bluepanel"] = j["slate"]
+    for gone in ("office", "undercroft", "louvre"):
+        j.pop(gone, None)
     json.dump(j, open(tiles, "w"))
 
 
