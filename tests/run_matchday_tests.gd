@@ -79,6 +79,7 @@ func _run() -> void:
 	await _t("_test_momentum_meter")
 	await _t("_test_score_bug")
 	await _t("_test_banner_3d")
+	await _t("_test_stat_card_numbers")
 	await _t("_test_vignettes_setting")
 	await _t("_test_game_feel_effects")
 	_t("_test_broken_calls")
@@ -2626,6 +2627,22 @@ func _test_score_bug() -> void:
 	m.call("_track_momentum", {"mom": 0.6})
 	_check(meter != null and is_equal_approx(float(meter.get("_v")), float(m.get("_momentum"))),
 			"The line follows momentum")
+	# A goal's stat card (row 207, rules 2.94-2.95): on the picture's foot, over the bug.
+	m.call("_show_stat_card", {"kind": "goal", "name": "Nick Daicos", "club": "COL",
+			"card": {"role": "MID", "disposals": 18, "effective_disposals": 16, "clearances": 5,
+			"contested_possessions": 11, "tackles": 3, "inside50": 2, "goals": 1}})
+	await _settle()
+	var card: Control = pitch.find_child("StatCard", true, false) if pitch != null else null
+	_check(card != null and card.is_visible_in_tree() and pitch.get_global_rect().encloses(card.get_global_rect())
+			and card.get_global_rect().end.y <= bug.get_global_rect().position.y,
+			"The goal kicker's card sits on the picture, over the bug")
+	var nums: Node = card.find_child("Numbers", true, false) if card != null else null
+	var said := ""
+	if nums != null:
+		for l: Label in nums.find_children("*", "Label", true, false):
+			said += l.text + " "
+	_check(said.strip_edges() == "18 disposals at 89% 11 contested possessions 5 clearances",
+			"The card reads disposals at their efficiency, then the role's highest (%s)" % said)
 	var why: String = await Tap.tap(line)
 	await _settle()
 	var info: Node = m.find_child("MomentumInfo", true, false)
@@ -2637,7 +2654,7 @@ func _test_score_bug() -> void:
 	why = await Tap.tap(tab)
 	await _settle()
 	_check(why == "" and drawer != null and bool(drawer.get("is_open")),
-			"The bench tab beside the line still opens the bench (%s)" % why)
+			"The bench tab beside the line still opens the bench, a card up or not (%s)" % why)
 	if drawer != null:
 		drawer.call("close")
 	m.queue_free()
@@ -2653,6 +2670,39 @@ func _test_score_bug() -> void:
 			"Without 3D the scoreboard panel stays")
 	m2.queue_free()
 	await _settle()
+
+## The stat card's numbers (rule 2.95): disposals at their efficiency first, then the two
+## highest of the role's set, ties in the set's order; a forward's marks or tackles, whichever
+## is more; never a nought. And every goal in a played match carries its kicker's card.
+func _test_stat_card_numbers() -> void:
+	var SC = load("res://scripts/ui/match/StatCard.gd")
+	var t := func(c: Dictionary) -> String:
+		return SC.text_of("A B", "Pies", c).trim_prefix("A B, Pies: ")
+	_check(t.call({"role": "DEF", "disposals": 18, "effective_disposals": 16, "intercepts": 9, "marks": 7,
+			"rebounds": 4, "spoils": 7}) == "18 disposals at 89%   9 intercepts   7 marks",
+			"A defender: intercepts, then marks before spoils on a tie")
+	_check(t.call({"role": "FWD", "disposals": 9, "effective_disposals": 6, "goals": 2, "score_involvements": 5,
+			"marks": 2, "tackles": 4}) == "9 disposals at 67%   5 score involvements   4 tackles",
+			"A forward: his tackles stand in for marks when there are more")
+	_check(t.call({"role": "MID", "disposals": 1, "effective_disposals": 1, "goals": 1, "inside50": 1})
+			== "1 disposal at 100%   1 inside 50   1 goal", "A nought gives way to his goal; singular words")
+	_check(t.call({"role": "RUCK", "disposals": 0, "hitouts": 12}) == "0 disposals   12 hitouts",
+			"No efficiency without a disposal, and no nought filled in")
+	var db = root.get_node("GameDB")
+	var MS = load("res://scripts/sim/MatchSim.gd")
+	var SQ = load("res://scripts/sim/Squad.gd")
+	var sim = MS.new(SQ.new("COL", db.club_list("COL"), true, "COL"),
+			SQ.new("CAR", db.club_list("CAR"), false, "CAR"), 4242)
+	var res: Dictionary = sim.run()
+	var goals := 0
+	var carded := 0
+	for ev: Dictionary in res.get("events", []):
+		if str(ev.get("kind", "")) == "goal":
+			goals += 1
+			if ev.get("card") is Dictionary and (ev["card"] as Dictionary).has("role"):
+				carded += 1
+	_check(goals > 0 and carded == goals, "Every goal carries its kicker's card (%d of %d)" % [carded, goals])
+
 
 ## The first player a call offers: the id behind a "<prefix><id>" button.
 func _first_pick(box: Node, prefix: String) -> String:

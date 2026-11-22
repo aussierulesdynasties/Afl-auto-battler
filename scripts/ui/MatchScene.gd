@@ -123,6 +123,7 @@ var _mom_bar: Button          # the meter (its foot is the scoreboard's, the lin
 ## A phone's 3D picture (rules 2.105-2.107): the scoreboard panel gives way to a TV
 ## score bug on the picture, and momentum to a thin line along the picture's foot.
 var _bug: ScoreBug
+var _card: StatCard = null   # the goal kicker's stat card on the picture (row 207), while it is up
 var _mom_line: Button         # the line's tap (a tap still explains momentum)
 var _mom_line_meter: Control  # MomentumMeter, a few pixels tall
 var _bug_note: Label          # the first match's momentum line, over the picture
@@ -660,6 +661,40 @@ func _place_bug() -> void:
 	_bug.position = Vector2(pill.end.x + 6.0, round(pill.get_center().y - b.y / 2.0))
 	_bug_note.size = Vector2(s.x - 16.0, 0)
 	_bug_note.position = Vector2(8.0, _bug.position.y - _bug_note.get_combined_minimum_size().y - 6.0)
+	_place_card()
+
+
+## The goal kicker's stat card on the picture's foot (row 207, rules 2.94-2.95), as a TV
+## broadcast names the man who kicked it: over the bug and Bench row, left-aligned with
+## them. A new goal replaces a card still up. Only on the 3D picture, with its bug.
+func _show_stat_card(ev: Dictionary) -> void:
+	if _bug == null or not is_instance_valid(_bug) or not (ev.get("card") is Dictionary):
+		return
+	if str(ev.get("name", "")) == "" or str(ev.get("club", "")) == "":
+		return
+	if _card != null and is_instance_valid(_card):
+		_card.queue_free()
+	_card = StatCard.new().setup(str(ev["name"]), str(ev["club"]), ev["card"])
+	_pitch.add_child(_card)
+	_pitch.move_child(_card, _bug.get_index())
+	_place_card()
+	_card.run()
+
+
+func _place_card() -> void:
+	if _card == null or not is_instance_valid(_card) or _bug == null or not is_instance_valid(_bug):
+		return
+	var edge := float(BenchDrawer.EDGE)
+	var room := _pitch.size.x - 2.0 * edge
+	var c := _card.get_combined_minimum_size()
+	_card.size = c
+	# Narrow phones: the card shrinks whole rather than cutting a number off.
+	var k := minf(1.0, room / maxf(1.0, c.x))
+	_card.scale = Vector2(k, k)
+	var top := _bug.position.y
+	if _bug_note != null and is_instance_valid(_bug_note) and _bug_note.visible:
+		top = _bug_note.position.y
+	_card.position = Vector2(edge, round(top - 8.0 - c.y * k))
 
 
 func _paint_momentum() -> void:
@@ -3684,6 +3719,7 @@ func _on_event(ev: Dictionary) -> void:
 		_flash_score(int(ev.get("side", 0)))
 		if not _skipping and _pitch != null:
 			_pitch.goal_3d(int(ev.get("side", 0)), str(ev.get("name", "")), int(ev.get("num", 0)))
+			_show_stat_card(ev)
 		_track_run(int(ev.get("side", 0)))
 	_queue_broadcast(ev, event_index)
 
