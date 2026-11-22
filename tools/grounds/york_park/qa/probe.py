@@ -94,6 +94,8 @@ def plan_stand(work, d=250.0, bearings=range(0, 360, 6), r0=72.0, r1=140.0, step
                 x, y = 640 + (e - ce) * pxm, 500 - (n - cn) * pxm
                 assert 150 <= y <= 940 and 0 <= x <= 1280, (b, r, x, y)
                 px.append([x, y]); sp.append([b, r, e, n])
+        if not sp:
+            continue
         lat, lon = G.latlon(g, ce, cn)
         jobs.append({"name": "st%03d" % s0, "spots": sp, "px": px,
                      "url": "https://earth.google.com/web/@%.7f,%.7f,%.1fa,%.0fd,%gy,0h,0t,0r" % (lat, lon, g["ge_alt"], d, G.GE_FOV)})
@@ -101,7 +103,7 @@ def plan_stand(work, d=250.0, bearings=range(0, 360, 6), r0=72.0, r1=140.0, step
     print(len(jobs), "views,", sum(len(j["px"]) for j in jobs), "spots")
 
 
-def read_stand(work):
+def read_stand(work, out_name="stand_probe.json"):
     """(bearing, asked radius, east, north, height above turf) for every spot read: the stands' outline in metres.
     A readout more than 10 m from the asked spot is dropped (the most a 30 m roof can shift in these views is 8 m)."""
     import subprocess
@@ -123,9 +125,19 @@ def read_stand(work):
             if math.hypot(e - ea, n - na) > 10.0:
                 continue
             out.append([b, r, round(e, 2), round(n, 2), hh[0][1] - g["ge_alt"]])
-    json.dump(out, open(os.path.join(HERE, "stand_probe.json"), "w"))
+    json.dump(out, open(os.path.join(HERE, out_name), "w"))
     print(len(out), "spots read")
 
 
 if __name__ == "__main__" and sys.argv[1] in ("plan_stand", "read_stand"):
     {"plan_stand": plan_stand, "read_stand": read_stand}[sys.argv[1]](sys.argv[2])
+if __name__ == "__main__" and sys.argv[1] in ("plan_fine", "read_fine"):
+    # 1-degree, 1 m close-up of the places the 6-degree pass found off: the north stand's east end and the
+    # south-west corner. Written to stand_probe_fine.json.
+    FINE = list(range(36, 54)) + list(range(198, 216))
+    if len(sys.argv) > 3:      # e.g. 342 360 st4: another 18-degree sector, read into stand_probe_fine_<a>.json
+        FINE = list(range(int(sys.argv[3]), int(sys.argv[4])))
+    if sys.argv[1] == "plan_fine":
+        plan_stand(sys.argv[2], bearings=FINE, r0=80.0, r1=118.0, step=1.0)
+    else:
+        read_stand(sys.argv[2], "stand_probe_fine.json" if len(sys.argv) < 4 else "stand_probe_fine_%s.json" % sys.argv[3])

@@ -15,7 +15,7 @@ GLB = os.path.join(HERE, "..", "..", "..", "..", "assets", "grounds", "york_park
 
 def ours(points):
     sc = trimesh.load(GLB, force="scene")
-    mesh = sc.dump(concatenate=True)          # glTF frame: x east, y up, z south
+    mesh = sc.to_geometry()                       # glTF frame: x east, y up, z south
     ray = trimesh.ray.ray_triangle.RayMeshIntersector(mesh)
     o = np.array([[e, 200.0, -n] for e, n in points]); d = np.tile([0, -1.0, 0], (len(o), 1))
     loc, idx, _ = ray.intersects_location(o, d, multiple_hits=False)
