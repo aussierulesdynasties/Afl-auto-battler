@@ -159,7 +159,8 @@ BF=[P(FP(i,ZV[i]),ZV[i]) for i in range(N)]
 for i in range(N):
     j=(i+1)%N;face([GLt[i],GLt[j],BF[j],BF[i]],MX,[(0,0),(1,0),(1,1),(0,1)],Vector((0,0,-1)))
 for i in range(0,N,K//2):   # posts every half bay in the storey (Google Earth: white posts under the bronze)
-    q=FP(i,BASE[i],-0.25);cyl(q.x,q.y,BASE[i],ZV[i],0.18 if LOB[i]<0.5 else 0.25,MCO)
+    o_=-0.6-0.5*LOB[i]+(0.22 if LOB[i]<0.5 else 0.3)   # in front of the glass all the way up: the facade leans
+    tube(FP(i,BASE[i],o_),FP(i,ZV[i],o_),0.18 if LOB[i]<0.5 else 0.25,MCO)
 # --- bronze: BROWS rows from its foot to its top, each vertex on the measured facade surface
 BROWS=14
 BR=[[P(FP(i,ZV[i]+(HB[i]-ZV[i])*k/BROWS),ZV[i]+(HB[i]-ZV[i])*k/BROWS) for i in range(N)] for k in range(BROWS+1)]
@@ -213,6 +214,45 @@ for b in range(NB):
     i=b*K;q=FP(i,ZGT_[i],-0.2);q2=Vector((EP[i][0]-0.4*EN[i][0],EP[i][1]-0.4*EN[i][1],0))
     tube(Vector((q.x,q.y,ZGT_[i])),Vector((q2.x,q2.y,ZS_[i])),0.22,MW)
 wall(RF,lambda i:ZS_[i],lambda i:ZF_[i],MW,1e6,1e6)
+# --- glazing frames as geometry; the glass textures (bronze.py glass, storey, entrance) carry only the glass's tone.
+# Glass band over the bronze: a white head rail under the glass head, a pale louvre band at the foot of each 2.2 m
+# floor and mullions every 1.63 m (Google Earth 060/000), all standing proud of the glass. Storey under the bronze:
+# a head rail and mullions every 2.0 m in front of the dark glass. East lobby: transoms every 2.5 m.
+import bisect as _bis
+def _mullions(zlo,zhi,off,step,r,mi,sel=lambda i:True,nseg=3):
+    t=step/2
+    while t<sF[N]:
+        i=min(N-1,_bis.bisect(sF,t)-1);j=(i+1)%N;f=(t-sF[i])/max(1e-9,sF[i+1]-sF[i])
+        if sel(i):
+            pts=[]
+            for q in range(nseg+1):
+                z=(zlo(i)+(zhi(i)-zlo(i))*q/nseg)*(1-f)+(zlo(j)+(zhi(j)-zlo(j))*q/nseg)*f
+                pts.append(FP(i,z,off(i)).lerp(FP(j,z,off(j)),f))
+            for a_,b_ in zip(pts,pts[1:]):tube(a_,b_,r,mi)
+        t+=step
+def _hband(z0f,z1f,back,front,mi,sel):
+    """A band between z0f(i) and z1f(i) standing from offset back(i) out to front(i): face, top and underside."""
+    fb=[P(FP(i,z0f(i),front(i)),z0f(i)) for i in range(N)];ft=[P(FP(i,z1f(i),front(i)),z1f(i)) for i in range(N)]
+    bb=[P(FP(i,z0f(i),back(i)),z0f(i)) for i in range(N)];bt=[P(FP(i,z1f(i),back(i)),z1f(i)) for i in range(N)]
+    for i in range(N):
+        j=(i+1)%N
+        if not sel(i):continue
+        face([fb[i],fb[j],ft[j],ft[i]],mi,[(0,0),(1,0),(1,1),(0,1)],OUT(i))
+        face([ft[i],ft[j],bt[j],bt[i]],mi,[(0,0),(1,0),(1,1),(0,1)],Vector((0,0,1)))
+        face([bb[i],bb[j],fb[j],fb[i]],mi,[(0,0),(1,0),(1,1),(0,1)],Vector((0,0,-1)))
+_g0=lambda i:0.0;_gf=lambda i:0.12
+_hband(lambda i:ZGT_[i]-0.4,lambda i:ZGT_[i],_g0,_gf,MW,lambda i:True)                 # head rail
+for m in range(1,12):                                                                   # louvre band at each floor foot
+    zf=lambda i,m=m:ZGT_[i]-0.4-2.2*m
+    _hband(zf,lambda i,m=m:ZGT_[i]-0.4-2.2*m+0.44,_g0,_gf,MST,lambda i,m=m:zf(i)>HB[i]+0.15 and zf((i+1)%N)>HB[(i+1)%N]+0.15)
+_mullions(lambda i:HB[i],lambda i:ZGT_[i]-0.4,lambda i:0.05,1.625,0.05,MST)
+_st=lambda i:LOB[i]<=0.5 and LOB[(i+1)%N]<=0.5
+_sb=lambda i:-0.6-0.5*LOB[i]
+_hband(lambda i:ZV[i]-0.25,lambda i:ZV[i],_sb,lambda i:_sb(i)+0.1,MW,_st)              # storey head rail
+_mullions(lambda i:BASE[i],lambda i:ZV[i]-0.25,lambda i:_sb(i)+0.05,2.03,0.04,MST,_st,1)
+for m in range(1,7):                                                                    # east lobby transoms
+    _hband(lambda i,m=m:2.5*m-0.06,lambda i,m=m:2.5*m+0.06,_sb,lambda i:_sb(i)+0.1,MW,
+           lambda i,m=m:not _st(i) and 2.5*m+0.1<ZV[i] and 2.5*m+0.1<ZV[(i+1)%N] and 2.5*m>BASE[i]+0.1)
 # --- west canopy (Google Earth views 180/210: a white ledge at ~25 m over a terrace, bearings 238-280)
 # --- the west bronze volume (survey/west_volume.json, 720 Google Earth hovers): bronze face out to 16 m from the roof
 # edge between 12.5 m and its flat top at 24.2 m, white canopy round the top edge, a glazed storey 2.5 m back below

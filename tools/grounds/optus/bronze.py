@@ -193,55 +193,43 @@ def _noise(h, w, cells, seed):
 
 def glass():
     """The glass band over the bronze, one tile 2 bays wide (u) and GLASS_H down from the soffit (Google Earth 060/000):
-    a dark open strip 4.2 m deep with a slim white post each bay under the roof's fascia, a white head rail, then pale
-    blue-teal grey glazing in 2.2 m floors, each with a bright louvre band at its foot and faint mullions every 1.55 m."""
+    pale blue-teal grey glazing in 2.2 m floors under the 3.4 m glass head (frames are geometry, build.py)."""
     w, h = 1024, int(GLASS_H * 32)
     d = (np.arange(h)[:, None] + 0.5) / 32.0 * np.ones((1, w))
     u = (np.arange(w)[None, :] + 0.5) / w * np.ones((h, 1))
     img = np.zeros((h, w, 3))
     base = np.array((100, 128, 138), float)   # Google Earth 090: blue-teal grey (95, 122, 130), not green
-    f = ((d - 4.6) % 2.2) / 2.2                                 # 0 at a floor's top, 1 at its foot
+    f = ((d - 3.8) % 2.2) / 2.2                                 # 0 at a floor's top, 1 at its foot
     img[:] = base * (1.08 - 0.22 * f)[..., None]
-    img = np.where((f > 0.8)[..., None], np.array((204, 214, 216), float), img)           # louvre band
-    img = np.where((f > 0.95)[..., None], np.array((70, 92, 100), float), img)          # its shadow
-    mull = (np.abs(((u * 20) % 1) - 0.5) > 0.47)
-    img = np.where(mull[..., None], img * 0.9 + 18, img)
     img *= (1.0 + 0.05 * _noise(h, w, (12, 40), 3))[..., None]
-    strip = d < 4.2
-    img[strip] = np.array((44, 50, 54), float) * (1.0 + 0.25 * (d[strip] / 4.2))[..., None]
-    post = strip & ((np.abs(((u * 2) % 1) - 0.5) > 0.5 - 0.35 / 32.5))
-    img[post] = (226, 228, 226)
-    img[(d >= 4.2) & (d < 4.6)] = (224, 226, 224)                                          # head rail
+    # The head rail, the louvre band at each floor's foot and the mullions are geometry now (build.py); the dark
+    # strip and its posts above the glass head are modelled too, so the glass carries only its own tone.
     return Image.fromarray(img.clip(0, 255).astype(np.uint8), "RGB")
 
 
 def entrance():
     """The street-level glazing, one entrance bay wide, ENTRANCE_H tall from the ground (Google Earth 060, 090): pale
-    green glass in 2.5 m transoms with slim white mullions every quarter bay, doors darker at the foot."""
+    green glass, doors darker at the foot (its transoms and posts are geometry, build.py)."""
     w, h = 512, int(ENTRANCE_H * 32)
     z = (ENTRANCE_H - (np.arange(h)[:, None] + 0.5) / 32.0) * np.ones((1, w))   # image bottom is the ground
     u = (np.arange(w)[None, :] + 0.5) / w * np.ones((h, 1))
     t = (z % 2.5) / 2.5
     img = np.array((104, 132, 140), float) * (0.94 + 0.12 * t)[..., None]
     img = np.where((z < 2.6)[..., None], np.array((84, 100, 100), float), img)            # doors in shade
-    img = np.where((t < 0.04)[..., None] & (z > 0.3)[..., None], np.array((210, 214, 212), float), img)
-    mull = np.abs(((u * 4) % 1) - 0.5) > 0.5 - 0.12 / 3.6
-    img[mull] = (222, 224, 222)
+    # transoms and the posts between bays are geometry (build.py)
     img *= (1.0 + 0.05 * _noise(h, w, (8, 12), 4))[..., None]
     return Image.fromarray(img.clip(0, 255).astype(np.uint8), "RGB")
 
 
 def storey():
     """The glazed storey under the bronze round the north and west (Google Earth 000, 330): dark blue glass with sky
-    caught low, slim white posts four to a tile (2 bays, about 8 m apart), a white head rail; image top at 13.5 m, 6 m."""
+    caught low (its posts, mullions and head rail are geometry, build.py); image top at 13.5 m, 6 m."""
     w, h = 1024, 192
     d = (np.arange(h)[:, None] + 0.5) / h * 6.0 * np.ones((1, w))
     u = (np.arange(w)[None, :] + 0.5) / w * np.ones((h, 1))
     img = np.array((44, 58, 78), float) * (0.9 + 0.35 * (d / 6.0))[..., None]
     img *= (1.0 + 0.06 * _noise(h, w, (4, 24), 5))[..., None]
-    img[np.abs(((u * 16) % 1) - 0.5) > 0.5 - 0.05 / 2.0] = (70, 86, 104)        # mullions
-    img[np.abs(((u * 4) % 1) - 0.5) > 0.5 - 0.3 / 8.1] = (226, 228, 226)        # posts
-    img[d < 0.25] = (222, 224, 222)
+    # mullions, posts and the head rail are geometry (build.py)
     return Image.fromarray(img.clip(0, 255).astype(np.uint8), "RGB")
 
 
