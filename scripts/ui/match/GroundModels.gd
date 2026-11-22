@@ -132,7 +132,9 @@ const PARTS := {
 			{"mesh": "join.bin", "name": "JoinTower"},
 			# The buildings nearest the ground with real facades, windows set into piers and floor edges
 			# (tools/grounds/scg/facades.py; they are out of buildings.bin).
-			{"mesh": "facades.bin", "name": "Facades"}],
+			{"mesh": "facades.bin", "name": "Facades"},
+			# Moore Park's footbridges over Anzac Parade (tools/grounds/scg/bridges.py).
+			{"mesh": "bridges.bin", "name": "Bridges"}],
 }
 
 ## Per-ground corrections to a model's materials, by material name, checked against Google Earth

@@ -21,6 +21,7 @@ SURROUNDS model, so Godot's import gives it levels of detail): a band proud of t
 its sill with the windows a recessed ribbon above it, piers at the corners, a parapet and a roof. Nothing
 round the SCG is a plain box any more. OpenStreetMap's outline of Allianz Stadium is left out (allianz.py).
 """
+import json
 import math
 import os
 
@@ -42,7 +43,7 @@ SILL = 0.9           # the band from each floor up to the window sill
 # the same render and brick palette GroundModels draws the plain buildings in
 WALLS = [(0.86, 0.84, 0.8), (0.78, 0.76, 0.72), (0.72, 0.6, 0.5), (0.9, 0.88, 0.84), (0.66, 0.66, 0.66)]
 GLASS = (0.15, 0.18, 0.21)
-TINT = (0.82, 0.79, 0.72)    # warmed: the match light's sky turns pale walls lavender, Google Earth's are cream and grey
+TINT = (0.86, 0.79, 0.63)    # warmed: the match light's sky turns pale walls lavender, Google Earth's are cream and grey
 # Roofs from Google Earth round the ground, each its own colour, not the wall's: the sheds' beige, pale
 # metal, white and grey (Google Earth sRGB (208, 194, 178), (190, 197, 190), (238, 235, 222), (176, 176, 168)),
 # Paddington's houses dark grey iron and terracotta. Divided by what the match light adds to a pale
@@ -58,10 +59,13 @@ HOUSE_ROOFS = [(0.36, 0.34, 0.29), (0.42, 0.24, 0.16), (0.45, 0.43, 0.37), (0.42
 # down the middle, the old Showground halls), "vault" (a curved roof across the short side), "canopy" (a
 # slab on posts, Moore Park's bus shelters). Solid walls are the studios' and halls' blank sheds, the rest
 # rows of windows. Read from the oblique Google Earth views against a 10 m scale (2026-11-22).
+# Wall colours calibrated against Google Earth from the eight obliques (2026-11-22): sunlit pale walls there
+# read (205-225, 183-211, 164-195), ours read the same brightness but 15 bluer and 10 less red (the match
+# light's sky), so the walls' red is lifted 5% and their blue cut 12%.
 BRICK = (0.5, 0.22, 0.12)         # Google Earth sRGB (150, 80, 60), divided by the match light's lift (bluer in shade)
-SANDSTONE = (0.68, 0.55, 0.33)    # (215, 190, 150)
-CREAM = (0.68, 0.6, 0.45)         # the sheds' painted walls (225, 215, 195)
-OFFICE = (0.7, 0.67, 0.56)        # white render (235, 235, 230)
+SANDSTONE = (0.71, 0.55, 0.29)    # (215, 190, 150)
+CREAM = (0.71, 0.6, 0.4)          # the sheds' painted walls (225, 215, 195)
+OFFICE = (0.73, 0.67, 0.49)        # white render (235, 235, 230)
 METAL, BEIGE, GREY, DARK = (0.535, 0.515, 0.43), (0.65, 0.56, 0.4), (0.58, 0.58, 0.48), (0.45, 0.43, 0.37)
 TERRACOTTA, PEACH = (0.42, 0.24, 0.16), (0.69, 0.57, 0.43)
 SPEC = {
@@ -94,6 +98,12 @@ SPEC = {
     568: (4.0, "canopy", 0.0, OFFICE, (0.72, 0.69, 0.565), False),
 }
 CLOCK_TOWER = {563: (6.0, 28.0, 5.0)}      # side, height to the cap, the cap's rise (m)
+WHITE, SAGE = (0.72, 0.69, 0.565), (0.42, 0.46, 0.38)
+# Buildings OpenStreetMap doesn't map, traced from Google Earth's overhead view (unmapped.json: each roof's
+# outline as its smallest rectangle, set back toward the view's centre by its lean; heights and roofs read
+# from the obliques against a 10 m scale). Event marquees and domes on the Showring are left out: they are
+# put up for shows and taken down.
+UNMAPPED = os.path.join(ROOT, "unmapped.json")
 
 tris = []
 
@@ -437,6 +447,12 @@ def main():
         if inside(ALLIANZ, r[2:2 + 2 * n].reshape(-1, 2)):
             continue        # OpenStreetMap's outline of Allianz Stadium: allianz.py builds the stadium itself
         building(r, b)
+    extra = json.load(open(UNMAPPED)) if os.path.exists(UNMAPPED) else []
+    for k, e in enumerate(extra):
+        foot = np.array(e["footprint"], float)
+        b = 100000 + k
+        SPEC[b] = (float(e["eave"]), e["roof"], float(e["rise"]), globals()[e["walls"]], globals()[e["roof_colour"]], e["solid"])
+        building(np.r_[len(foot), e["eave"], foot.ravel()].astype("<f4"), b)
     arr = np.array(tris, "<f4")
     arr.tofile(os.path.join(DIR, "facades.bin"))
     tris.clear()
@@ -446,6 +462,7 @@ def main():
             building(r, b, far=True)
     write_glb(os.path.join(DIR, "city.glb"))
     print("city.glb: %d buildings past %d m, %d triangles" % (len(split(np.fromfile(path, "<f4"))), NEAR, len(tris) // 27))
+    print("%d buildings traced from Google Earth (unmapped.json)" % len(extra))
     print("%d buildings (less Allianz's outline) with facades (%s), %d triangles" % (len(near), "moved out of buildings.bin" if near_first else "from near_buildings.bin", len(arr) // 27))
 
 
