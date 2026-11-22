@@ -241,6 +241,12 @@ if spec.get('real'):
         # town land (house blocks, shops, unmapped land between roads): one shared colour, the median of all of it, so
         # the blocks don't read as a quilt; Sentinel-2 then gives each street its light and dark
         _town = _soft & ((np.asarray(_RI) == 0) | (np.asarray(_TWN) > 0))
+        # unmapped land counts as town only where it is built up (house blocks nobody tagged); open unmapped land (a
+        # stadium plaza, a park's edge) keeps its own aerial colour
+        _bmg = (np.asarray(_bm) > 0)[_ai[:, None], _aj[None, :]].astype(np.float32)
+        _bmg = _nd.uniform_filter(_bmg, int(30 / PX) | 1)   # roofs within ~15 m
+        _blk = np.bincount(_LB.ravel(), weights=_bmg.ravel(), minlength=_nl + 1) / np.maximum(np.bincount(_LB.ravel(), minlength=_nl + 1), 1)
+        _town &= (np.asarray(_TWN) > 0) | (_blk[_LB] > 0.12)
         _tw_ok = _ok & _town
         if _tw_ok.sum() > 100:
             _tc = np.median(_AS[_tw_ok], 0); _tc = _tc * min(1.0, 175.0 / max(float(_tc.max()), 1))
@@ -319,6 +325,23 @@ if spec.get('real'):
             _tt = _tt & (np.abs(_MC[_LB] - _tc).max(-1) < 0.5)       # blocks that took the shared town colour
             _a0[_tt] = _gc[_tt] * np.clip(_rat[_tt], 0.85, 1.15)
             print('gardens: lawn / dry / paved colours', [[int(v) for v in c] for c in _cc], 'town mix', [round(float(v), 2) for v in _mix])
+        # open unmapped land (a stadium's plaza, a park's paved edges): lawn, terracotta paving, grey paving and dry
+        # ground where the aerial shows each, blended over ~2 m, each in its median colour on this land. One median
+        # for the whole patch painted a plaza that is grey on one side and terracotta on the other one beige.
+        _opn = _soft & _use & (np.asarray(_RI) == 0) & ~_town
+        if _opn.sum() > 500:
+            _Ai = _AS.astype(np.int16); _R_, _G_, _B_ = _Ai[..., 0], _Ai[..., 1], _Ai[..., 2]
+            _cl = np.where((_G_ > _R_ + 5) & (_G_ > _B_ + 5), 0, np.where((_R_ > _G_ + 16) & (_R_ > _B_ + 24), 1, np.where(_R_ > _B_ + 14, 2, 3)))
+            _cc = []
+            for k_ in range(4):
+                _m_ = _opn & _ok & (_cl == k_)
+                _cc.append(np.median(_AS[_m_], 0) if _m_.sum() > 30 else np.median(_AS[_opn & _ok], 0) if (_opn & _ok).sum() > 30 else _MC[_LB][_opn].mean(0))
+            _cc = np.array([c * min(1.0, 185.0 / max(float(c.max()), 1)) for c in _cc], np.float32)
+            _sh_ = np.stack([_nd.gaussian_filter(((_cl == k_) & _ok).astype(np.float32), 2.0 / PX) for k_ in range(4)], -1)
+            _den = _sh_.sum(-1, keepdims=True); _wv = np.clip(_den / 0.25, 0, 1)
+            _gc = (_sh_[..., :, None] * _cc[None, None]).sum(-2) / np.maximum(_den, 1e-6)
+            _a0[_opn] = (_wv * _gc + (1 - _wv) * _a0[..., :3])[_opn]
+            print('open land: lawn / terracotta / dry / grey', [[int(v) for v in c] for c in _cc])
         _rest = _soft & ~_use; _a0[_rest] = _F[_rest]
         print('real ground patches', _nl, 'coloured from their own aerial median', int(_good.sum()))
         img = Image.fromarray(np.clip(_a0, 0, 255).astype(np.uint8)); dr = ImageDraw.Draw(img)
