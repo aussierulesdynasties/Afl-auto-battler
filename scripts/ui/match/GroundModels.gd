@@ -53,7 +53,9 @@ const FIT := {
 	"engie": [20.64, -43.32, 0.0, -41.1, 92.14, 76.44],
 	"bellerive": [0.31, -0.64, -0.02, 68.7, 86.9, 66.77],
 	"manuka": [5.93, 8.15, 0.03, -82.9, 85.94, 73.1],
-	"norwood": [1.96, -3.15, 0.0, 88.3, 88.73, 63.59],
+	# Norwood: the rebuilt model (tools/grounds/norwood/model), origin the centre circle; the fence's
+	# ends and sides (the real ground is squarer than an ellipse: its corners keep the model's own grass).
+	"norwood": [1.97, 0.53, 0.0, 88.0, 88.6, 61.4],
 	"waverley_park": [-1.08, 5.64, 0.0, -34.6, 92.9, 71.99],
 	"windy_hill": [6.01, -11.01, 0.05, 1.4, 78.42, 67.69],
 	"moorabbin": [0.88, -2.15, 0.0, -57.5, 86.73, 69.48],
@@ -212,6 +214,10 @@ const SEAT_COLOURS := {
 	"seat_gabba_gold": Color8(226, 168, 30), "seat_gabba_orange": Color8(222, 120, 34),
 	"seat_gabba_white": Color8(236, 236, 230), "seat_gabba_blue": Color8(34, 64, 152),
 	"gabba_steel": Color(0.45, 0.46, 0.47),
+	# Norwood (AFLW 2025 photos 01 and 23): the Sir Edwin Smith Stand's green and blue plastic and its
+	# timber benches; the Western Stand's teal with its red blocks (Google Earth).
+	"seat_nw_green": Color8(46, 112, 74), "seat_nw_blue": Color8(38, 72, 138), "seat_nw_timber": Color8(150, 84, 50),
+	"seat_nw_teal": Color8(70, 124, 134), "seat_nw_red": Color8(168, 44, 40),
 }
 
 
