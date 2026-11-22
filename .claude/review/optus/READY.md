@@ -81,6 +81,7 @@ cream, middle tan, upper grey), each seat pushed toward grey-blue or tan at rand
   367-368) are now closed with the dark strip/recess material (`proof/jn/hs_*`, `proof/jn/he_*`).
 
 ## Files
+_2026-11-22: the reference photos (`refs/`), the satellite overlays (`topdown/`) and the photo-beside-render boards (`proof/`) are taken out of the repo: raw imagery is never committed (docs/MCG_STANDARD.md, "Where shipped data may come from"). The lists below describe them as they were; the sheets live in the project files._
 - `refs/o1-o4.jpg`: the reference photos (o2 is the matched one).
 - `scripts/`: build.py (Blender 5.2: `blender -b --python build.py -- <abs>/optus.glb <abs>/optus.blend`), geom.json,
   render.py + camL.json (matched camera), turn.py, board.py, parts.py, proof.sh, joins.sh, westfix.py, bpj.py,
