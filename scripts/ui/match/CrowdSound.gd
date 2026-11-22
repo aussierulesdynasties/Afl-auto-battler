@@ -37,6 +37,10 @@ const FILES := ["crowd_goal.wav", "crowd_behind.wav", "crowd_ball.wav", "crowd_s
 ## Every sound started, in order: {kind, side, q, run, db, file, gap_ms}.
 ## gap_ms is -1.0 when the caller gave no time for the event being shown.
 var heard: Array = []
+## Cues not started because a roar or the siren was still sounding, in order:
+## {kind, side, q}. (Tests: which cues land depends on how fast the match
+## plays against the audio clock, so a test counts these too.)
+var held: Array = []
 
 var _bed: AudioStreamPlayer
 var _cue: AudioStreamPlayer
@@ -145,6 +149,7 @@ func run_length() -> int:
 
 func _play(kind: String, file: String, db: float, over: bool, side: int, q: int, shown_usec: int) -> void:
 	if _cue.playing and not over:
+		held.append({"kind": kind, "side": side, "q": q})
 		return     # let the roar finish
 	var s: AudioStream = _streams.get(file)
 	if s == null:
