@@ -27,16 +27,95 @@ COL = {
     PARKING: (78, 79, 82), BOWLS: (150, 140, 104), OVAL2: (100, 132, 62), SAND: (196, 176, 140),
 }
 
+# The courts, fitted on the satellite's court lines (z18, a line template slid and turned over the top-hat image:
+# tools/grounds/barossa/README.md): centre (E, N) and the bearing of the long axis (degrees, east of north). Four
+# tennis courts west of the clubrooms; four netball courts in two blocks to the north, the north block's also lined
+# for two tennis courts.
+TENNIS_COURTS = [(-162.75, 48.75, -3.25), (-145.38, 50.25, -3.5), (-131.12, 51.5, -3.25), (-116.98, 52.88, -3.25)]
+NETBALL_COURTS = [(-93.38, 101.12, -3.5), (-74.38, 102.62, -3.5), (-99.88, 134.5, -3.75), (-73.12, 136.62, -4.25)]
+MULTI_TENNIS = [(-96.5, 136.0, -3.75), (-77.0, 137.6, -3.75)]   # the tennis lines over the north netball block
+
+
+def turned(cx, cy, pts, bearing):
+    """points (across, along) of a court-frame shape -> plan (E, N), the along axis at the bearing"""
+    c, s = math.cos(math.radians(bearing)), math.sin(math.radians(bearing))
+    return [(cx + x * c + y * s, cy - x * s + y * c) for x, y in pts]
+
+
+def box(cx, cy, hw, hh, bearing):
+    return turned(cx, cy, [(-hw, -hh), (hw, -hh), (hw, hh), (-hw, hh)], bearing)
+
+
+# the court surfaces (dark edges on the satellite) and the fences round them, in the courts' own frame
+TENNIS_SURFACE = (-139.6, 48.0, 33.4, 19.0, -3.3)
+NETBALL_NORTH = (-87.2, 138.2, 22.6, 16.8, -3.8)
+NETBALL_SOUTH = (-84.6, 101.8, 22.1, 16.6, -3.5)
+
+def court_lines():
+    """every court line as a plan polyline (points, closed): netball 30.5 x 15.25 with thirds, the centre circle
+    and the 4.9 m goal circles; tennis 23.77 x 10.97 doubles, singles, service and centre service lines"""
+    out = []
+    for cx, cy, br in NETBALL_COURTS:
+        out.append((box(cx, cy, 7.625, 15.25, br), True))
+        for sgn in (-1, 1):
+            out.append((turned(cx, cy, [(-7.625, sgn * 5.083), (7.625, sgn * 5.083)], br), False))
+            t = np.linspace(0, math.pi, 33)
+            out.append((turned(cx, cy, [(4.9 * math.cos(x), sgn * (15.25 - 4.9 * math.sin(x))) for x in t], br), False))
+        t = np.linspace(0, 2 * math.pi, 25)[:-1]
+        out.append((turned(cx, cy, [(0.45 * math.cos(x), 0.45 * math.sin(x)) for x in t], br), True))
+    for cx, cy, br in TENNIS_COURTS + MULTI_TENNIS:
+        out.append((box(cx, cy, 5.485, 11.885, br), True))
+        for sgn in (-1, 1):
+            out.append((turned(cx, cy, [(sgn * 4.115, -11.885), (sgn * 4.115, 11.885)], br), False))
+            out.append((turned(cx, cy, [(-4.115, sgn * 6.4), (4.115, sgn * 6.4)], br), False))
+            out.append((turned(cx, cy, [(0, sgn * 11.885), (0, sgn * 11.785)], br), False))   # centre mark
+        out.append((turned(cx, cy, [(0, -6.4), (0, 6.4)], br), False))
+    return out
+
+
+SURFACES = {"court_tennis": (TENNIS_SURFACE, TENNIS), "court_netball_s": (NETBALL_SOUTH, NETBALL),
+            "court_netball_n": (NETBALL_NORTH, NETBALL)}
+COURT_MPP = 0.04          # the court textures: 4 cm a pixel, lines drawn 4x finer and averaged down
+
+
+def paint_court(key):
+    """one court surface's own texture, in its own frame (u across from its west side, v along from its north end):
+    the acrylic colour with a faint mottle and every court line on it, 50 mm wide"""
+    (cx, cy, hw, hh, br), cls = SURFACES[key]
+    W, H = int(round(2 * hw / COURT_MPP)), int(round(2 * hh / COURT_MPP))
+    ss = 4
+    c, s_ = math.cos(math.radians(br)), math.sin(math.radians(br))
+    def frame(p):      # plan -> court frame (across, along)
+        de, dn = p[0] - cx, p[1] - cy
+        return de * c - dn * s_, de * s_ + dn * c
+    im = Image.new("L", (W * ss, H * ss), 0)
+    d = ImageDraw.Draw(im)
+    px = lambda q: ((q[0] + hw) / COURT_MPP * ss, (hh - q[1]) / COURT_MPP * ss)
+    lw = max(1, int(round(0.05 / COURT_MPP * ss)))
+    for pts, closed in court_lines():
+        f = [px(frame(p)) for p in pts]
+        if closed:
+            f = f + f[:1]
+        d.line(f, fill=255, width=lw, joint="curve")
+    line = np.asarray(im.resize((W, H), Image.BOX), np.float32)[..., None] / 255.0
+    base = np.array(COL[cls], np.float32)
+    n1 = paint.fbm(H, W, 707, (6, 18, 54), (0.5, 0.3, 0.2))
+    col = base * (0.95 + 0.08 * n1)[..., None]
+    out = col * (1 - line) + np.array((228, 230, 226), np.float32) * line
+    return np.clip(out, 0, 255).astype(np.uint8)
+
+
 # Hand traced on the mosaic (plan E, N).
 POLYS = [
     # second oval's surround and the land west of the courts are grass
     (GRASS, [(-180, 25), (-180, 180), (-125, 180), (-125, 80), (-110, 78), (-108, 25)]),
-    # tennis courts (six) and their apron
+    # tennis courts (four) and their apron
     (CONCRETE, [(-178, 22), (-178, 80), (-104, 80), (-104, 22)]),
-    (TENNIS, [(-175, 26), (-175, 75), (-108, 75), (-108, 26)]),
+    (TENNIS, box(*TENNIS_SURFACE)),
     # netball courts (four, two blocks)
     (CONCRETE, [(-116, 83), (-116, 163), (-60, 163), (-60, 83)]),
-    (NETBALL, [(-112, 85.5), (-112, 159), (-63, 160), (-63, 85.5)]),
+    (NETBALL, box(*NETBALL_SOUTH)),
+    (NETBALL, box(*NETBALL_NORTH)),
     # court pavilion apron and the playground
     (CONCRETE, [(-131, 124), (-131, 162), (-113, 162), (-113, 124)]),
     (MULCH, [(-152, 84), (-148, 118), (-120, 122), (-114, 100), (-118, 84)]),
@@ -132,20 +211,7 @@ def paint_map(cls):
         for i in range(cnt + 1):
             p = a + u * i
             d.line([P(p), P(p + nrm)], fill=white, width=1)
-    # court lines: netball (two courts a block, 30.5 x 15.25) and tennis (23.77 x 10.97, six)
-    for cx, cy in ((-99.5, 104.0), (-75.5, 104.0), (-99.5, 141.0), (-75.5, 141.0)):
-        _rect(d, P, cx, cy, 15.25, 30.5, white)
-        d.line([P((cx - 7.6, cy - 5.08)), P((cx + 7.6, cy - 5.08))], fill=white, width=1)
-        d.line([P((cx - 7.6, cy + 5.08)), P((cx + 7.6, cy + 5.08))], fill=white, width=1)
-        for s in (-1, 1):
-            d.arc([P((cx - 4.9, cy + s * 15.25 + 4.9)), P((cx + 4.9, cy + s * 15.25 - 4.9))], 0, 360, fill=white)
-    for k in range(6):
-        cx = -167.0 + k * 11.6
-        _rect(d, P, cx, 50.5, 10.97, 23.77, white)
-        _rect(d, P, cx, 50.5, 8.23, 23.77, white)
-        d.line([P((cx - 4.1, 50.5 - 6.4)), P((cx + 4.1, 50.5 - 6.4))], fill=white, width=1)
-        d.line([P((cx - 4.1, 50.5 + 6.4)), P((cx + 4.1, 50.5 + 6.4))], fill=white, width=1)
-        d.line([P((cx, 50.5 - 6.4)), P((cx, 50.5 + 6.4))], fill=white, width=1)
+    # court lines live on the courts' own textures (paint_court, laid by build.py)
     # ring road centre line (broken)
     for bb in np.arange(0, 236, 1.0):
         if int(bb) % 3:
@@ -161,10 +227,6 @@ def paint_map(cls):
 
 def _pol(b, off):
     return polar(b, off)
-
-
-def _rect(d, P, cx, cy, w, h, col):
-    d.rectangle([P((cx - w / 2, cy + h / 2)), P((cx + w / 2, cy - h / 2))], outline=col)
 
 
 # ------------------------------------------------------------------ heights

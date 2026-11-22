@@ -159,6 +159,20 @@ def height_at(site_h, e, n):
                  + H[i0 + 1, j0 + 1] * ax * ay)
 
 
+def surface_at(site_h, e, n):
+    """the site mesh's own height at (e, n): its quads split on the a-c diagonal (build_site), so exact on its
+    triangles where height_at's bilinear blend can sit a few centimetres off"""
+    g, H = site_h
+    fx = (e - g[0]) / (g[1] - g[0])
+    fy = (n - g[0]) / (g[1] - g[0])
+    i, j = int(np.clip(math.floor(fy), 0, len(g) - 2)), int(np.clip(math.floor(fx), 0, len(g) - 2))
+    x, y = fx - j, fy - i
+    ha, hb, hc, hd = H[i, j], H[i, j + 1], H[i + 1, j + 1], H[i + 1, j]
+    if x >= y:
+        return float(ha + (hb - ha) * x + (hc - hb) * y)
+    return float(ha + (hc - hd) * x + (hd - ha) * y)
+
+
 # ------------------------------------------------------------------ picket fence
 
 def build_fence(m):
@@ -174,7 +188,7 @@ def build_fence(m):
 
     def at(d):
         d = d % L
-        k = np.searchsorted(s, d) - 1
+        k = min(max(int(np.searchsorted(s, d, side="right")) - 1, 0), len(seg) - 1)
         f = (d - s[k]) / seg[k]
         p = xy[k] * (1 - f) + xy[(k + 1) % len(xy)] * f
         q = xy[(k + 1) % len(xy)] - xy[k]
@@ -759,7 +773,36 @@ def build_others(m, site_h):
     box_pts(m, "white_render", [(85.5, -54.5), (90.5, -54.5), (90.5, -49.5), (85.5, -49.5)], g - 0.5, g + 2.9)
     box_pts(m, "roof_white", [(85.0, -55.0), (91.0, -55.0), (91.0, -49.0), (85.0, -49.0)], g + 2.9, g + 3.1)
     # court fences: 3.6 m black chain mesh on posts every 3 m (mesh as a dark see-through-reading lattice of wires)
-    for poly in ([(-177, 24), (-106, 24), (-106, 77), (-177, 77)], [(-114, 84), (-61, 84), (-61, 161), (-114, 161)]):
+    fences = []
+    for cx, cy, hw, hh, br in (site.TENNIS_SURFACE, site.NETBALL_SOUTH, site.NETBALL_NORTH):
+        fences.append(site.box(cx, cy, hw + 0.4, hh + 0.4, br))
+    # tennis nets: posts 0.914 m outside the doubles lines, 1.07 m high, the net sagging to 0.914 m, white headband
+    for cx, cy, br in site.TENNIS_COURTS + site.MULTI_TENNIS:
+        a, b = site.turned(cx, cy, [(-6.4, 0.0), (6.4, 0.0)], br)
+        ga = height_at(site_h, cx, cy)
+        for p in (a, b):
+            m.tube("mesh_fence", P3(*p, ga), P3(*p, ga + 1.07), 0.04, seg=8)
+        ts = np.linspace(0, 1, 9)
+        top = [P3(a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, ga + 0.914 + 0.156 * (2 * t - 1) ** 2) for t in ts]
+        for p, q in zip(top[:-1], top[1:]):
+            m.quad("net", (p[0], ga + 0.03, p[2]), (q[0], ga + 0.03, q[2]), q, p)
+            m.quad("net", (q[0], ga + 0.03, q[2]), (p[0], ga + 0.03, p[2]), p, q)
+            m.beam("steel_white", p, q, 0.025, 0.05)
+    # each court surface: its own fine texture (lines sharp up close, averaged by mipmaps far off) on a 1 m grid a
+    # few millimetres over the site's own triangles
+    for key, ((cx, cy, hw, hh, br), _) in site.SURFACES.items():
+        M[key] = {"tex": (site.paint_court(key), 2 * hw, 2 * hh), "rough": 0.75}
+        nu, nv = int(math.ceil(2 * hw)), int(math.ceil(2 * hh))
+        us, vs = np.linspace(-hw, hw, nu + 1), np.linspace(-hh, hh, nv + 1)
+        def pt(x, y):
+            e, n = site.turned(cx, cy, [(x, y)], br)[0]
+            return P3(e, n, surface_at(site_h, e, n) + 0.006)
+        for a in range(nu):
+            for k in range(nv):
+                x0, x1, y0, y1 = us[a], us[a + 1], vs[k], vs[k + 1]
+                uv = [(x0 + hw, hh - y0), (x1 + hw, hh - y0), (x1 + hw, hh - y1), (x0 + hw, hh - y1)]
+                m.quad(key, pt(x0, y0), pt(x1, y0), pt(x1, y1), pt(x0, y1), uv=uv)
+    for poly in fences:
         for k in range(4):
             a, b = np.array(poly[k], float), np.array(poly[(k + 1) % 4], float)
             Lf = np.linalg.norm(b - a)
