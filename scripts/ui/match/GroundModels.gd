@@ -106,8 +106,10 @@ const SURROUNDS := {
 	# Quarter, Paddington's streets and Allianz Stadium's concourse from OpenStreetMap
 	# (tools/grounds/scg/surrounds.py), and Allianz Stadium itself in 3D (tools/grounds/scg/allianz.py). Painted for the same match light as Marvel's map.
 	"scg": {"y": -0.03, "inner": 120.0, "colour": Color(0.55, 0.56, 0.48),
-			"map": "surrounds.webp", "span": 2048.0, "trees": "trees.bin", "buildings": "buildings.bin",
-			"models": ["allianz.glb"], "tint": Color(0.86, 0.84, 0.82), "building_tint": Color(0.8, 0.8, 0.78)},
+			# Every building has modelled facades: those within 350 m in full (PARTS "Facades"), the rest
+			# with recessed window ribbons in city.glb (tools/grounds/scg/facades.py; buildings.bin is its source).
+			"map": "surrounds.webp", "span": 2048.0, "trees": "trees.bin",
+			"models": ["allianz.glb", "city.glb"], "tint": Color(0.86, 0.84, 0.82)},
 }
 
 ## Parts of a model drawn again from a build tool's own mesh (per vertex x, y, z, normal, colour;

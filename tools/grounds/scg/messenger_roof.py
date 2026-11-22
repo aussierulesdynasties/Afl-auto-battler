@@ -128,6 +128,13 @@ def main(paths):
     print("roof sector %.1f-%.1f deg; back minus front before: %.1f to %.1f m" % (
         SECTOR[0], SECTOR[1], np.min(prof[:, 3] * (prof[:, 2] - prof[:, 1])), np.max(prof[:, 3] * (prof[:, 2] - prof[:, 1]))))
 
+    # The front edge as one smooth line: the model's edge, capped at the tip, rose and fell 3-4 m twice
+    # between 60 and 100 degrees, which from above read as a lumpy shell; Google Earth shows one clean
+    # crescent. A quadratic through it keeps its fall from east to west and nothing else.
+    zf_bins = np.minimum(prof[:, 4] + prof[:, 3] * prof[:, 1],
+                         np.where(prof[:, 0] > TIP0, TIP_Z0 + (prof[:, 0] - TIP0) * TIP_RISE, 99.0))
+    edge = np.polyfit(prof[:, 0], zf_bins, 2)
+
     def heights(ang, r):
         rf = np.interp(ang, prof[:, 0], prof[:, 1])
         ro = np.interp(ang, prof[:, 0], prof[:, 2])
@@ -139,7 +146,10 @@ def main(paths):
         t = (rc - rf) / np.maximum(1.0, ro - rf)
         # The west tip: the model's front edge climbs 8 m over its last 12 degrees (95-107), which over the
         # lowered shell reads as a horn; Google Earth from the field shows the Noble and Bradman edge level to the tip.
-        zfront = np.minimum(zfront, np.where(ang > TIP0, TIP_Z0 + (ang - TIP0) * TIP_RISE, 99.0))
+        # blended back to the model's own edge over the sector's last 4 degrees, where it meets its neighbours
+        w = np.clip(np.minimum(ang - SECTOR[0], SECTOR[1] - ang) / 4.0, 0.0, 1.0)
+        raw = np.minimum(zfront, np.where(ang > TIP0, TIP_Z0 + (ang - TIP0) * TIP_RISE, 99.0))
+        zfront = w * np.polyval(edge, np.clip(ang, SECTOR[0], SECTOR[1])) + (1.0 - w) * raw
         znew = zfront - FALL * t
         return zold, znew, ro
 
@@ -154,7 +164,7 @@ def main(paths):
             v = get3_fast(bin_, idx)
             ang, r = polar(v)
             zold, znew, ro = heights(ang, r)
-            m = (ang > SECTOR[0]) & (ang < SECTOR[1]) & (r > 70) & (r < ro + 4.0) & (v[:, 1] > H0) & (zold > znew + 0.05)
+            m = (ang > SECTOR[0]) & (ang < SECTOR[1]) & (r > 70) & (r < ro + 4.0) & (v[:, 1] > H0) & (np.abs(zold - znew) > 0.05)
             if not m.any():
                 continue
             ratio = (znew[m] - H0) / np.maximum(0.5, zold[m] - H0)

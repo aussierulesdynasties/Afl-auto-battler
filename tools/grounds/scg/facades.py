@@ -15,6 +15,11 @@ window a real recess, through GroundModels.PARTS:
 The first run moves those buildings into tools/grounds/scg/near_buildings.bin (same format as
 buildings.bin) and reads them from there afterwards, so running it again changes nothing.
 Writes assets/grounds/scg/facades.bin: triangles, per vertex x, y, z, normal, colour (float32, model metres).
+
+Every other building (buildings.bin, past NEAR) is built too, into assets/grounds/scg/city.glb (a
+SURROUNDS model, so Godot's import gives it levels of detail): a band proud of the wall from each floor to
+its sill with the windows a recessed ribbon above it, piers at the corners, a parapet and a roof. Nothing
+round the SCG is a plain box any more. OpenStreetMap's outline of Allianz Stadium is left out (allianz.py).
 """
 import math
 import os
@@ -27,6 +32,7 @@ DIR = os.path.join(ROOT, "..", "..", "..", "assets", "grounds", "scg")
 NEAR_FILE = os.path.join(ROOT, "near_buildings.bin")
 PC = np.array([0.94, 11.82])
 NEAR = 350.0
+ALLIANZ = (25.7, -274.1)     # Allianz Stadium's pitch centre, model metres
 FLOOR = 3.2
 BAY = 3.0
 PROUD = 0.3
@@ -46,6 +52,15 @@ def quad(p0, p1, p2, p3, n, col):
             tris.extend(list(p) + list(n) + list(col))
 
 
+def inside(pt, poly):
+    x, y = pt
+    c = False
+    for (x0, y0), (x1, y1) in zip(poly, np.roll(poly, -1, 0)):
+        if (y0 > y) != (y1 > y) and x < (x1 - x0) * (y - y0) / (y1 - y0) + x0:
+            c = not c
+    return c
+
+
 def split(buf):
     out, i = [], 0
     while i + 1 < len(buf):
@@ -55,7 +70,7 @@ def split(buf):
     return out
 
 
-def strip_box(a, c, out, y0, y1, d0, d1, col, ends=True):
+def strip_box(a, c, out, y0, y1, d0, d1, col, ends=True, front_only=False):
     """A box along wall edge a->c (2D x, z), d0..d1 metres out from the wall, y0..y1 up."""
     t = (c - a) / np.linalg.norm(c - a)
     o = np.array([out[0], out[2]])
@@ -64,6 +79,8 @@ def strip_box(a, c, out, y0, y1, d0, d1, col, ends=True):
         q = p + o * d
         return (float(q[0]), y, float(q[1]))
     quad(P(a, d1, y0), P(c, d1, y0), P(c, d1, y1), P(a, d1, y1), out, col)                 # front
+    if front_only:
+        return
     quad(P(a, d0, y1), P(c, d0, y1), P(c, d1, y1), P(a, d1, y1), (0, 1, 0), col)           # top
     quad(P(a, d0, y0), P(c, d0, y0), P(c, d1, y0), P(a, d1, y0), (0, -1, 0), col)          # underside
     if ends:
@@ -71,7 +88,7 @@ def strip_box(a, c, out, y0, y1, d0, d1, col, ends=True):
         quad(P(c, d0, y0), P(c, d1, y0), P(c, d1, y1), P(c, d0, y1), (t[0], 0, t[1]), col)
 
 
-def building(rec, b):
+def building(rec, b, far=False):
     n, h = int(rec[0]), float(rec[1])
     foot = rec[2:2 + 2 * n].reshape(-1, 2).astype(float)
     if np.allclose(foot[0], foot[-1]):
@@ -95,11 +112,16 @@ def building(rec, b):
             continue
         for f in range(floors):
             y = f * fh
+            if far:
+                # past NEAR: one band proud from each floor to its sill, the windows a recessed ribbon
+                # (its front face only: its 0.3 m top and underside are under a pixel from past NEAR)
+                strip_box(a, c, o, y, y + SILL, 0.0, PROUD, wall, ends=False, front_only=True)
+                continue
             strip_box(a, c, o, y, y + (0.35 if f else SILL), 0.0, PROUD, wall, ends=False)
             if f:
                 strip_box(a, c, o, y + 0.35, y + SILL, 0.0, PROUD * 0.6, wall, ends=False)
-        strip_box(a, c, o, h - 1.0, h + 0.5, 0.0, PROUD, wall, ends=False)        # parapet band
-        bays = max(1, int(round(L / BAY)))
+        strip_box(a, c, o, h - 1.0, h + 0.5, 0.0, PROUD, wall, ends=False, front_only=far)    # parapet band
+        bays = 1 if far else max(1, int(round(L / BAY)))      # far: piers at the corners only
         t = (c - a) / L
         for j in range(bays + 1):
             m = a + t * (L * j / bays)
@@ -113,6 +135,35 @@ def building(rec, b):
         p = [foot[idx[q + r]] for r in range(3)]
         for v in p:
             tris.extend([float(v[0]), h - 0.1, float(v[1]), 0.0, 1.0, 0.0] + list(roof))
+
+
+def write_glb(path):
+    """tris as a glb, one mesh per colour (glTF colours are linear), for the city past NEAR: Godot's import
+    gives it levels of detail, so it costs little where it is small on screen."""
+    import trimesh
+    a = np.array(tris, "<f4").reshape(-1, 9)
+    scene = trimesh.Scene()
+    cols = np.round(a[:, 6:9], 3)
+    keys, inv = np.unique(cols, axis=0, return_inverse=True)
+    inv = inv.reshape(-1)
+    for i, k in enumerate(keys):
+        sel = np.flatnonzero(inv == i)
+        sel = sel[: len(sel) // 3 * 3]
+        v = a[sel, :3].astype(float)
+        f = np.arange(len(v)).reshape(-1, 3)
+        # wind every triangle to face the way its normal says (the quads were written either way round)
+        nrm = a[sel, 3:6].reshape(-1, 3, 3)[:, 0]
+        fn = np.cross(v[f[:, 1]] - v[f[:, 0]], v[f[:, 2]] - v[f[:, 0]])
+        back = (fn * nrm).sum(1) < 0
+        f[back] = f[back][:, ::-1]
+        m = trimesh.Trimesh(vertices=v, faces=f, vertex_normals=a[sel, 3:6].astype(float), process=False)
+        m.merge_vertices(merge_tex=True, merge_norm=False)      # corners shared only where the normals agree
+        glass = np.allclose(k, GLASS, atol=0.002)
+        m.visual = trimesh.visual.TextureVisuals(material=trimesh.visual.material.PBRMaterial(
+            name="city_%d" % i, baseColorFactor=[float(x) ** 2.2 for x in k] + [1.0], metallicFactor=0.0,
+            roughnessFactor=0.4 if glass else 0.95, doubleSided=False))
+        scene.add_geometry(m, node_name="city_%d" % i, geom_name="city_%d" % i)
+    scene.export(path, include_normals=True)
 
 
 def main():
@@ -134,10 +185,20 @@ def main():
         near.append((b, raw[i + 1:i + 3 + 2 * n]))
         i += 3 + 2 * n
     for b, r in near:
+        n = int(r[0])
+        if inside(ALLIANZ, r[2:2 + 2 * n].reshape(-1, 2)):
+            continue        # OpenStreetMap's outline of Allianz Stadium: allianz.py builds the stadium itself
         building(r, b)
     arr = np.array(tris, "<f4")
     arr.tofile(os.path.join(DIR, "facades.bin"))
-    print("%d buildings with facades (%s), %d triangles" % (len(near), "moved out of buildings.bin" if near_first else "from near_buildings.bin", len(arr) // 27))
+    tris.clear()
+    for b, r in enumerate(split(np.fromfile(path, "<f4"))):
+        n = int(r[0])
+        if not inside(ALLIANZ, r[2:2 + 2 * n].reshape(-1, 2)):
+            building(r, b, far=True)
+    write_glb(os.path.join(DIR, "city.glb"))
+    print("city.glb: %d buildings past %d m, %d triangles" % (len(split(np.fromfile(path, "<f4"))), NEAR, len(tris) // 27))
+    print("%d buildings (less Allianz's outline) with facades (%s), %d triangles" % (len(near), "moved out of buildings.bin" if near_first else "from near_buildings.bin", len(arr) // 27))
 
 
 if __name__ == "__main__":
