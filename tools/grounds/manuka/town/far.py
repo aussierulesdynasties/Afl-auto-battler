@@ -5,6 +5,8 @@ western skyline.
 
     python3 tools/grounds/manuka/town/far.py      # writes assets/grounds/manuka/manuka_backdrop_part2.glb
 
+The buildings, roads and trees between the town and 6.5 km are mid.py's (part3), standing on this land.
+
 Heights: Terrarium tiles (zoom 13, about 16 m a sample here). The land is coloured by height and slope (the suburbs'
 grey-green, dry grass, the reserves' bush), the lake by its level; nothing is aerial imagery. Parliament House is its
 OpenStreetMap outline (way 5035605) stood up to its roof line, with the four-legged flag mast (node 163535624: 50 m
