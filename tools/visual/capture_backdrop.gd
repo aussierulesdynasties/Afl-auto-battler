@@ -68,6 +68,13 @@ func _run() -> void:
 	if hide:
 		for b in oval.find_children("Backdrop", "", true, false):
 			b.visible = false
+	# hide=<part>: leave out every mesh whose name holds <part> (finding which part of a scene draws a fault)
+	for a in args:
+		if str(a).begins_with("hide="):
+			for m in oval.find_children("*" + str(a).substr(5) + "*", "MeshInstance3D", true, false):
+				(m as MeshInstance3D).visible = false
+	if "nolod" in args:
+		root.mesh_lod_threshold = 0.0
 	var cam: Camera3D = oval.camera
 	var quick := "quick" in args   # three shots: the broadcast wide shot and two from outside
 	for s in _shots():
