@@ -1,0 +1,99 @@
+From af5dc1d33c5ff4086cc1347569a51d65deb690e1 Mon Sep 17 00:00:00 2001
+From: gabebartolo-spec <gabebartolo@gmail.com>
+Date: Mon, 19 Oct 2026 20:24:44 +1100
+Subject: [PATCH] Banner scene: draw it once unseen at the title/hub so the
+ first real one doesn't stall on shader compile (cold start)
+
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+---
+ scripts/ui/HubScene.gd               |  1 +
+ scripts/ui/Main.gd                   |  9 +++++++
+ scripts/ui/match/PreMatchVignette.gd | 39 ++++++++++++++++++++++++++++
+ 3 files changed, 49 insertions(+)
+
+diff --git a/scripts/ui/HubScene.gd b/scripts/ui/HubScene.gd
+index 9edc6e0c7..bc4631ab3 100644
+--- a/scripts/ui/HubScene.gd
++++ b/scripts/ui/HubScene.gd
+@@ -1034,6 +1034,7 @@ func _warm_pre_match() -> void:
+ 		return
+ 	var mine := GameState.my_club
+ 	PreMatchVignette.warm(mine, str(m["away"]) if str(m["home"]) == mine else str(m["home"]))
++	PreMatchVignette.warm_scene(self)
+ 
+ 
+ func _upcoming_match() -> Dictionary:
+diff --git a/scripts/ui/Main.gd b/scripts/ui/Main.gd
+index fcad68db1..c2e5b8219 100644
+--- a/scripts/ui/Main.gd
++++ b/scripts/ui/Main.gd
+@@ -99,7 +99,16 @@ func _notification(what: int) -> void:
+ 		_fit_logo()
+ 
+ 
++## Once the title screen has settled: draw the banner scene unseen so the first real one
++## doesn't stall on shader compilation (PreMatchVignette.warm_scene).
++func _warm_banner_scene() -> void:
++	await get_tree().create_timer(1.0).timeout
++	if is_inside_tree() and GameState.vignettes_on():
++		PreMatchVignette.warm_scene(self)
++
++
+ func _ready() -> void:
++	_warm_banner_scene.call_deferred()
+ 	set_anchors_preset(Control.PRESET_FULL_RECT)
+ 	if GameState.new_career_setup_requested:
+ 		GameState.new_career_setup_requested = false
+diff --git a/scripts/ui/match/PreMatchVignette.gd b/scripts/ui/match/PreMatchVignette.gd
+index 27d33b333..63429b953 100644
+--- a/scripts/ui/match/PreMatchVignette.gd
++++ b/scripts/ui/match/PreMatchVignette.gd
+@@ -84,6 +84,45 @@ static func warm(my_code: String, opp_code: String) -> void:
+ 	VignetteCrowd.seats([GameDB.club_colours(my_code), GameDB.club_colours(opp_code)], 7, seat)
+ 
+ 
++static var _scene_warmed := false
++
++
++## Draws the whole banner scene once into a small off-screen viewport, so the GPU
++## driver compiles figure.gdshader and the canvas draw paths and the sheets reach the
++## GPU before the first real banner scene. A cold start (every browser page load) costs
++## the banner scene's first frame a third of a second otherwise. Nothing is shown; it
++## runs once per launch, so call it where a hitch is unseen (the title screen, the hub).
++static func warm_scene(host: Node) -> void:
++	if _scene_warmed or host == null or not host.is_inside_tree():
++		return
++	var codes: Array = GameDB.players_by_club.keys()
++	if codes.size() < 2:
++		return
++	_scene_warmed = true
++	var sides := []
++	for code in codes.slice(0, 2):
++		var ground := []
++		for p in (GameDB.players_by_club[code] as Array).slice(0, SQUAD):
++			var q: Dictionary = (p as Dictionary).duplicate()
++			q["num"] = ground.size() + 1
++			ground.append(q)
++		sides.append(ground)
++	var vp := SubViewport.new()
++	vp.name = "PreMatchWarm"
++	vp.size = Vector2i(96, 96)
++	vp.transparent_bg = true
++	vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
++	var v := PreMatchVignette.new()
++	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
++	vp.add_child(v)
++	host.add_child(vp)
++	v.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
++	v.setup_prematch(str(codes[0]), str(codes[1]), sides[0], sides[1], "Round 1")
++	for i in 3:
++		await host.get_tree().process_frame
++	vp.queue_free()
++
++
+ ## Finals footy: the fixture is a final. Every final's label says so ("Semi
+ ## Final 1", "Grand Final"); a home-and-away round's ("Round 24") never does,
+ ## and a missing label is not a final.
+-- 
+2.55.0.windows.5
+
