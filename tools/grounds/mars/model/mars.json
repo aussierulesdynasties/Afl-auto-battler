@@ -135,12 +135,15 @@
     "seat": "seats_green",
     "roof": "roof_skylit",
     "back": "facade_es",
-    "front": "conc_wall"
+    "front": "conc_wall",
+    "concback": "glass_dark"
    },
    "rib": 8.0,
    "solar": [],
    "rib_under": 1,
-   "rows": 8
+   "rows": 8,
+   "back_rel": 13.7,
+   "club": 1
   },
   {
    "name": "east",
@@ -469,56 +472,10 @@
  "buildings": [
   {
    "name": "nbsc",
-   "z": 10.0,
+   "z": 8.6,
    "wall": "facade_es",
    "roof": "roof_flat",
    "drum": "conc_wall",
-   "poly": [
-    [
-     -55.4,
-     101.6
-    ],
-    [
-     -38.6,
-     101.6
-    ],
-    [
-     -38.6,
-     112.2
-    ],
-    [
-     -3.5,
-     115.0
-    ],
-    [
-     8.8,
-     120.2
-    ],
-    [
-     14.0,
-     106.9
-    ],
-    [
-     39.3,
-     101.6
-    ],
-    [
-     40.3,
-     84.1
-    ],
-    [
-     -3.5,
-     82.4
-    ],
-    [
-     -35.1,
-     77.1
-    ],
-    [
-     -48.4,
-     68.3
-    ]
-   ],
    "plant": [
     [
      [
@@ -569,16 +526,6 @@
      3,
      1.4,
      0
-    ]
-   ],
-   "drums": [
-    [
-     [
-      38,
-      92
-     ],
-     8,
-     9.0
     ]
    ]
   },

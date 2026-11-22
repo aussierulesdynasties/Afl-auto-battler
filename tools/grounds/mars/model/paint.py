@@ -336,6 +336,12 @@ for k in range(10):
 save('brick_core', a, (2.3, 0.86))
 a = base(256, 256, (40, 86, 150), 5, 14); a[:, 120:126] *= 0.75; weather(a, 0.12, 12, 14); save('steel_blue', a, (2.0, 2.0))   # the videoboard's blue frame (Sept 2026 aerial)
 
+# ---- North Ballarat Sports Club (GE 3D n180, Sept 2026 aerial, 2022 Commons photo) ----
+concrete('sandstone', (192, 164, 120), pu=1.2, pv=0.6, tile=(4.8, 2.4))       # tan sandstone-look block, 1200 x 600 courses
+a = base(256, 256, (38, 46, 54), 2, 10)
+for y in range(256): a[y] *= 0.85 + 0.3 * y / 255                              # sky reflection brighter toward the top
+save('glass_dark', a, (6.0, 4.0))                                              # plain glazing: the mullions are modelled
+
 json.dump(TILE, open(OUT + 'tiles.json', 'w', newline=''), indent=0)
 for nm in sorted(TILE):
     g = np.asarray(Image.open(OUT + nm + '.png').convert('L'), float); print(f'{nm:16s} grey sd {g.std():5.1f}')

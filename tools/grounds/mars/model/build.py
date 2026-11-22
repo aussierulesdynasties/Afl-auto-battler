@@ -218,10 +218,13 @@ def brange(S):
 def single(S, mb, mr):
     bs = brange(S); M = S['mats']; zs0, zs1 = S['z_seat']; zr0, zr1 = S['z_roof']
     def geo(b):
-        rf = fence_r(b % 360); ri, ro = interp(S['roof'], b); rs0 = rf + S['seat_front']; rb = ro - S['back_in']
+        rf = fence_r(b % 360); ri, ro = interp(S['roof'], b); rs0 = rf + S['seat_front']
+        rb = rf + S['back_rel'] if 'back_rel' in S else ro - S['back_in']   # back_rel: the clubroom wall, measured from the fence
         return rf, ri, ro, rs0, rb
+    def zb_of(b):   # roof soffit height over the back wall
+        rf, ri, ro, rs0, rb = geo(b); return zr0 + (zr1 - zr0) * (rb - ri) / (ro - ri) - 0.6
     def prof(b):
-        rf, ri, ro, rs0, rb = geo(b); zb = zr1 - 0.6 - (zr1 - zr0) * (S['back_in'] / (ro - ri))
+        rf, ri, ro, rs0, rb = geo(b); zb = zb_of(b)
         # front wall up, seats up the rake, back wall of the bowl up to the roof, cap, facade down
         if S.get('nose'):  # open undercroft (2026 ground-floor photo): rake underside is the ceiling, blockwork wall set deep
             N = S['nose']; rw = rb - N.get('deep', 8.0); re_ = rc(rs0, rb)
@@ -239,6 +242,12 @@ def single(S, mb, mr):
     for b, sg in ((bs[0], -1), (bs[-1], 1)):
         endcap(mb, b, tp(b), 'conc_wall', sg)
     ribs = roof_strip(S, bs, geo, mr)
+    if S.get('club'):   # north stand (2022 photo): clubroom wall behind the concourse, roof columns at the top row
+        import club
+        club.club_front(S, bs, geo, mb, mr, zs1, zb_of)
+        for b in ribs:
+            rf, ri, ro, rs0, rb = geo(b); r = rc(rs0, rb) + 0.5
+            mr.cyl(pol(b, r), 0.2, zs1, zr0 + (zr1 - zr0) * (r - ri) / (ro - ri) - 0.5, 'steel_white', n=16)
     if S.get('nose'): nose(S, bs, geo, mr, mb)
     if S.get('brace'): bracing(S, ribs, geo, mr)
 
@@ -346,7 +355,7 @@ def roof_strip(S, bs, geo, mr):
         z = lambda r: zr0 + (zr1 - zr0) * (r - ri) / (ro - ri)
         pk = ri + 0.4 * (ro - ri); H = 2.4; o = 0.15
         if S.get('rib_under'): H, o = -2.4, -th - 0.15   # aerial: the old roofs are flat white on top, trusses hang underneath
-        re_ = (ro - S.get('back_in', 0) - 0.4) if S.get('rib_under') else ro - 0.2   # under-trusses stop inside the back wall
+        re_ = (geo(b)[4] - 0.4) if S.get('rib_under') else ro - 0.2   # under-trusses stop inside the back wall
         A = P3(b, ri + 0.2, z(ri + 0.2) + o); K = P3(b, pk, z(pk) + o + H); Bp = P3(b, re_, z(re_) + o)
         mr.beam(A, K, 0.35, 0.35, 'steel_white'); mr.beam(K, Bp, 0.35, 0.35, 'steel_white')
         mr.beam(A, Bp, 0.25, 0.25, 'steel_white')
@@ -662,6 +671,8 @@ def buildings(col):
     """club buildings traced from the GE top view: prism walls, flat roof, rooftop plant, round drums"""
     mb = MB('buildings')
     for B in D.get('buildings', []):
+        if B['name'] == 'nbsc':
+            import club; club.nbsc(col, B); continue
         mb.prism([tuple(q) for q in B['poly']], 0.0, B['z'], B['wall'], top=B['roof'])
         for c, L, W, h, a in B.get('plant', []):
             mb.box(tuple(c), L, W, h, a, 'paint_white', z0=B['z'])
