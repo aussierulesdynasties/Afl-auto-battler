@@ -41,7 +41,7 @@ uniform float saturation = 0.72;
 // shader was written for sRGB and converted them to linear a second time (lin below), which
 // takes the red out of the grass (open grass drew near (2, 49, 4)). `true_colour` 1 reads them
 // as the sRGB they are, and `turf_gain` brings the now lighter turf to the broadcast's brightness
-// (Oval3DTurf.TURF_GAIN). 0 is the look as approved (rule 2.81) until the director picks.
+// (Oval3DTurf.turf_gain). 0 is rule 2.81 as first approved; the game draws 1 (rule 2.114).
 uniform float true_colour = 0.0;
 uniform float turf_gain = 1.0;
 // Broadcast turf is a yellower green than the flat views' palette (TV open grass about

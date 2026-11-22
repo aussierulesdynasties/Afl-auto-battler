@@ -313,9 +313,8 @@ const BALANCE := {"day": Vector3(0.948, 1.0, 1.052), "twilight": Vector3(0.926, 
 ## read once it is several times lighter, and this brings open grass to a broadcast's brightness.
 var turf_gain := 0.65
 ## 0 is rule 2.81's look as approved; 1 the broadcast colour: the turf's colour read right
-## (turf_gain) and the camera's white balance (BALANCE). A proposal for the director (row 202, TV
-## colour); 0 until he picks.
-var broadcast := 0.0:
+## (turf_gain) and the camera's white balance (BALANCE). The director's pick, rule 2.114.
+var broadcast := 1.0:
 	set(v):
 		broadcast = v
 		if _applied:
