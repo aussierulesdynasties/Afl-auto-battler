@@ -149,7 +149,9 @@ def unpainted(out):
     the geometry; here the painting comes off and the surface behind it stays.
     - slats (Players Stand's south-west face): the white slats over the top 71 % go; the navy backing and the
       dark window slots stay.
-    - recess (under the west upper tier): the rake beams every 4.5 m (columns 0-63 and 512-568) go."""
+    - recess (under the west upper tier): the rake beams every 4.5 m (columns 0-63 and 512-568) go.
+    - fins: the painted fins go (modelled); screen: the red casing goes (modelled); lamp heads: the painted
+      grid of lamps goes (each lamp modelled)."""
     a = glb_image("slats")
     top = int(a.shape[0] * 0.71) + 3
     band = a[:top]
@@ -165,6 +167,50 @@ def unpainted(out):
         src = r[:, x1:x1 + w] if x1 + w <= r.shape[1] else r[:, x0 - w:x0]
         r[:, x0:x1] = src
     finish(r, 2).save(os.path.join(out, "recess_plain.png"))
+    # fins (the screen on the west side's south end): grey fins 0.22 m wide every 0.48 m over dark openings.
+    # The fins are modelled; the backing is the openings' dark.
+    f = glb_image("fins")
+    f[:] = np.array([26.0, 27.0, 30.0]) + noise(f.shape[0], f.shape[1], 16, 4)[..., None]
+    finish(f, 2).save(os.path.join(out, "fins_backing.png"))
+    # The scoreboard: the red casing round the screen is modelled; the screen keeps its dark LED grid.
+    sc = glb_image("screen")
+    red = (sc[..., 0] > 150) & (sc[..., 1] < 80)
+    sc[red] = sc[192, 362]
+    finish(sc, 1).save(os.path.join(out, "screen_plain.png"))
+
+    # The Premiership Stand's Cats wall: Google Earth shows silver-grey metal cladding (about 0.7 of the white
+    # roof's brightness, neutral), not cream. The cream goes to that grey; the logo, the band and the glazing stay.
+    b = glb_image("beige")
+    lum = b.mean(2)
+    cream = (lum > 170) & (b[..., 0] - b[..., 2] > 10)
+    g = lum[cream][:, None] * 0.74 * np.array([[0.98, 1.0, 1.03]])
+    b[cream] = g
+    # The Cats emblem: the source's was a crude drawing (a square-eared cat, a star for a nose, CATS in a
+    # rounded face). Erase it with the cladding of the same columns (the ribs run up the wall), then put on the
+    # emblem traced from Google Earth (trace_emblem.py) where Google Earth has it: 0.17 of the wall's width,
+    # centred 0.31 across, its middle 0.57 down the cladding (above the navy band at row 364). Drawn at 2x.
+    b[150:352, 200:400] = np.tile(b[4:105, 200:400], (2, 1, 1))
+    b = np.asarray(Image.fromarray(np.clip(b, 0, 255).astype(np.uint8)).resize((b.shape[1] * 2, b.shape[0] * 2),
+                                                                                 Image.BICUBIC), float)
+    em = Image.open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "tex_src_cats_emblem.png"))
+    w = int(0.17 * b.shape[1])
+    em = em.resize((w, round(w * em.height / em.width)), Image.LANCZOS)
+    x0, y0 = int(0.31 * b.shape[1] - w / 2), int(0.57 * 728 - em.height / 2)
+    wall = Image.fromarray(np.clip(b, 0, 255).astype(np.uint8)).convert("RGBA")
+    wall.alpha_composite(em, (x0, y0))
+    b = np.asarray(wall.convert("RGB"), float)
+    finish(b, 2).save(os.path.join(out, "beige_grey.png"))
+
+    def plain(name, rgb, size=64, amp=6):
+        a = np.full((size, size, 3), rgb, float) + noise(size, size, 8, amp)[..., None]
+        finish(a, 2).save(os.path.join(out, name))
+    plain("fin_grey.png", (150, 154, 160))
+    plain("frame_red.png", (196, 30, 36))
+    plain("lamphead.png", (78, 82, 88))
+    # The lamps' glass by day (Google Earth): dark reflective glass over a silver reflector, brighter in the middle.
+    yy, xx = np.mgrid[0:64, 0:64]
+    g = 70 + 70 * np.exp(-((yy - 32) ** 2 + (xx - 32) ** 2) / 200.0)
+    finish(np.repeat(g[..., None], 3, 2) - np.array([6.0, 3.0, 0.0]), 1).save(os.path.join(out, "lamp_glass.png"))
 
 
 if __name__ == "__main__":
