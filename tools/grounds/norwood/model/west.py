@@ -10,7 +10,8 @@ import numpy as np
 from nwlib import V, add, box3, cyl, tube, obox, unit, perp, offset_poly, along, length, wall, band, prism
 
 P = "ws"
-RF = [np.array([-54.3, -43.5]), np.array([-56.9, 3.0]), np.array([-59.4, 49.5])]   # roof front, south to north
+# roof front, south to north: OSM way 547107342, moved 1.4 m east onto the lean-corrected satellite edge
+RF = [np.array([-52.9, -43.5]), np.array([-55.5, 3.0]), np.array([-58.0, 49.5])]
 U = unit(RF[-1] - RF[0])
 
 
