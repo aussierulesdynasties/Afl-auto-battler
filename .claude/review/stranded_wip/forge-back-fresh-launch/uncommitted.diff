@@ -1,0 +1,420 @@
+diff --git a/scripts/sim/StoryEngine.gd b/scripts/sim/StoryEngine.gd
+index 5208e57ec..8a0942f6e 100644
+--- a/scripts/sim/StoryEngine.gd
++++ b/scripts/sim/StoryEngine.gd
+@@ -1104,6 +1104,9 @@ static func _drill_words(d: int, facts := {}) -> String:
+ 	var credit := float(facts.get("drill_credit", 0.0))
+ 	var l0 := PreSeason.drilled_fluency(base, credit)
+ 	var l1 := PreSeason.drilled_fluency(base, credit + float(d))
++	if facts.has("drill_own"):
++		head += " (%s needs no drilling, so they go to %s, %s)" % [str(facts["drill_own"]), plan,
++				"a plan your pre-season drills" if credit > 0.0 else "the plan the side knows least"]
+ 	if l1 != l0:
+ 		return "%s: the side's fluency in %s goes from %s to %s, so the plan works at %d%% of its strength instead of %d%%." % [
+ 				head, plan, PreSeason.fluency_long(l0), PreSeason.fluency_long(l1),
+diff --git a/scripts/state/ClubStories.gd b/scripts/state/ClubStories.gd
+index 89511b232..0ad5b4126 100644
+--- a/scripts/state/ClubStories.gd
++++ b/scripts/state/ClubStories.gd
+@@ -127,6 +127,9 @@ static func club_facts(gs, week: int, ph: String) -> Dictionary:
+ 		var plan: String = gs.card_drill_plan()
+ 		facts["pre_run"] = gs.preseason_run_forecast()
+ 		facts["drill_plan"] = CoachReport.plan_label(plan)
++		if plan != gs.club_plan:
++			# The side's own plan needs no drilling: the card says where the weeks go instead.
++			facts["drill_own"] = CoachReport.plan_label(gs.club_plan)
+ 		facts["drill_level"] = gs.plan_fluency(gs.my_club, plan)
+ 		facts["drill_credit"] = float(gs.my_drill_credit().get(plan, 0.0))
+ 	return facts
+diff --git a/scripts/state/GameState.gd b/scripts/state/GameState.gd
+index cb78fed07..e2bbee0cc 100644
+--- a/scripts/state/GameState.gd
++++ b/scripts/state/GameState.gd
+@@ -4408,7 +4408,16 @@ func plan_fluency(club: String, plan: String) -> float:
+ func plan_known_line(plan: String) -> String:
+ 	if season == null or my_club == "":
+ 		return ""
+-	return PreSeason.known_line(plan_fluency(my_club, plan))
++	var now := plan_fluency(my_club, plan)
++	var line := PreSeason.known_line(now)
++	# Drilling counts when the pre-season ends: until then, a line of its own
++	# says where the drilling set leaves the plan (as the pre-season screen does).
++	if preseason_active():
++		var after := plan_fluency_after_drills(plan)
++		if after != now:
++			line += "
++Rd 1: %s" % PreSeason.fluency_short(after)
++	return line
+ 
+ 
+ ## Where the pre-season, as your blocks are set now, leaves a plan (a card's
+@@ -4786,13 +4795,28 @@ func preseason_add_running(weeks: float) -> void:
+ 
+ 
+ ## The plan a card's drilling goes to: the one the side plays, or for a side
+-## that plays Balanced, the one it knows least.
++## on a plan that needs no drilling (Balanced, its own plan), one the coach is
++## drilling: the one the extra weeks still lift, the blocks' most drilled first,
++## then the one it knows least.
+ func card_drill_plan() -> String:
+ 	var plan := club_plan
+-	if not PreSeason.DRILL_PLANS.has(plan):
+-		_ensure_plan_known()
+-		plan = str(PreSeason.default_drill(plan, plan_known.get(my_club, {}))[0])
+-	return plan
++	if PreSeason.DRILL_PLANS.has(plan):
++		return plan
++	_ensure_plan_known()
++	var levels: Dictionary = plan_known.get(my_club, {})
++	var credit := my_drill_credit()
++	var best := ""
++	var best_score := -INF
++	for p in PreSeason.DRILL_PLANS:
++		var was := float(levels.get(p, PreSeason.WELL))
++		var c := float(credit.get(p, 0.0))
++		var lifts := PreSeason.drilled_fluency(was, c + float(PreSeason.tune("drill_step_weeks"))) > PreSeason.drilled_fluency(was, c)
++		# Lifts first, then the blocks' weeks on it, then the least known; a tie keeps the list's order.
++		var score := (1000.0 if lifts else 0.0) + c * 10.0 - was
++		if score > best_score:
++			best = str(p)
++			best_score = score
++	return best
+ 
+ 
+ ## Weeks of drilling a card adds to the plan the side plays (or, for a side that
+diff --git a/scripts/ui/Main.gd b/scripts/ui/Main.gd
+index f07c04072..f6c0750c7 100644
+--- a/scripts/ui/Main.gd
++++ b/scripts/ui/Main.gd
+@@ -112,6 +112,11 @@ func _notification(what: int) -> void:
+ 
+ func _ready() -> void:
+ 	set_anchors_preset(Control.PRESET_FULL_RECT)
++	# The engine opens the menu itself at launch, so nobody told the Router:
++	# put the menu in its history, or Back on the first screen opened from
++	# here (Club Forge) has nowhere to go.
++	if Router.stack.is_empty():
++		Router.stack = ["main"]
+ 	if GameState.new_career_setup_requested:
+ 		GameState.new_career_setup_requested = false
+ 		_mode = "setup"
+diff --git a/scripts/ui/MatchScene.gd b/scripts/ui/MatchScene.gd
+index 4762742b8..361cc3e2b 100644
+--- a/scripts/ui/MatchScene.gd
++++ b/scripts/ui/MatchScene.gd
+@@ -4673,6 +4673,8 @@ const SHEET_MAX_W := 4096.0
+ ## full time, what the calls did. Each keeps its own width and shares what is left.
+ const COL_SCORE_W := 400.0
+ const COL_CALLS_W := 270.0
++## Two groups of team numbers side by side (MatchStatsView, compact).
++const TEAM_TWO_W := 500.0
+ const SCORE_SHARE := 1.0
+ const TEAM_SHARE := 1.4
+ const CALLS_SHARE := 0.9
+@@ -4687,11 +4689,16 @@ func _stats_page(host: VBoxContainer, live: bool, players_first: bool, calls: Co
+ 		msv.compact = true
+ 		var cols := UiKit.hbox(20)
+ 		cols.name = "StatsColumns"
+-		var gaps := 20.0 * (2.0 if calls != null else 1.0)
+-		var room := UiKit.view_width(self) - 24.0 - 40.0 - gaps
+-		var shares := SCORE_SHARE + TEAM_SHARE + (CALLS_SHARE if calls != null else 0.0)
++		# Three columns only where they fit beside each other (two groups of team
++		# numbers need about TEAM_TWO_W); on a narrower window the calls go under
++		# the team numbers, so nothing runs past the screen's edge.
++		var avail := UiKit.view_width(self) - 24.0 - 40.0
++		var stacked := calls != null and avail - 40.0 < COL_SCORE_W + TEAM_TWO_W + COL_CALLS_W
++		var gaps := 20.0 * (2.0 if calls != null and not stacked else 1.0)
++		var room := avail - gaps
++		var shares := SCORE_SHARE + TEAM_SHARE + (CALLS_SHARE if calls != null and not stacked else 0.0)
+ 		# The width the team numbers will have: how many groups sit across, and how wide each is.
+-		msv.room = room * TEAM_SHARE / shares
++		msv.room = room - COL_SCORE_W if stacked else room * TEAM_SHARE / shares
+ 		bs.custom_minimum_size.x = COL_SCORE_W if calls != null else 460.0
+ 		bs.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+ 		bs.size_flags_stretch_ratio = SCORE_SHARE
+@@ -4700,6 +4707,17 @@ func _stats_page(host: VBoxContainer, live: bool, players_first: bool, calls: Co
+ 		msv.size_flags_stretch_ratio = TEAM_SHARE
+ 		msv.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+ 		cols.add_child(bs.setup(_res, live))
++		if stacked:
++			var right := UiKit.vbox(UiKit.GAP)
++			right.name = "TeamAndCalls"
++			right.size_flags_horizontal = Control.SIZE_EXPAND_FILL
++			right.size_flags_stretch_ratio = TEAM_SHARE
++			right.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
++			right.add_child(msv.setup(_res, _my_side, live))
++			right.add_child(calls)
++			cols.add_child(right)
++			host.add_child(cols)
++			return bs
+ 		cols.add_child(msv.setup(_res, _my_side, live))
+ 		if calls != null:
+ 			calls.custom_minimum_size.x = COL_CALLS_W
+diff --git a/scripts/ui/PlanTiles.gd b/scripts/ui/PlanTiles.gd
+index ef926c60b..d9620718e 100644
+--- a/scripts/ui/PlanTiles.gd
++++ b/scripts/ui/PlanTiles.gd
+@@ -60,7 +60,9 @@ static func grid(columns: int, ground: Array, profile: Array, on_pick: Callable
+ 		t.focus_mode = Control.FOCUS_NONE
+ 		# With plan familiarity on, a plan's tile says how well the side knows it.
+ 		var known := GameState.plan_known_line(k)
+-		t.custom_minimum_size = Vector2(0, 72 if GameState.plan_known_shown() else 56)
++		# A pre-season's Round 1 line under it takes a line more.
++		t.custom_minimum_size = Vector2(0, (88 if known.contains("
++") else 72) if GameState.plan_known_shown() else 56)
+ 		t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+ 		t.tooltip_text = CoachReport.plan_label(k)
+ 		var face := UiKit.vbox(0)
+diff --git a/scripts/ui/StatsHubScene.gd b/scripts/ui/StatsHubScene.gd
+index 2e957abf3..f5eb6c8b8 100644
+--- a/scripts/ui/StatsHubScene.gd
++++ b/scripts/ui/StatsHubScene.gd
+@@ -56,7 +56,10 @@ const SECTION_W := {"ladder": 880.0, "players": 1240.0, "ratings": 720.0, "award
+ 
+ 
+ func _full_width() -> float:
+-	return maxf(240.0, UiKit.view_width(self) - 28.0)
++	# The page's margins and the scroll bar's rail, which is always kept: a
++	# section as wide as the view without it pushed the page (title, tabs and
++	# all) past the right edge, so changing tabs shifted the screen.
++	return maxf(240.0, UiKit.view_width(self) - 28.0 - UiKit.SCROLL_RAIL)
+ 
+ 
+ ## The width a section has to lay itself out in: its column on a wide
+diff --git a/scripts/ui/UiKit.gd b/scripts/ui/UiKit.gd
+index 64a0fbf19..45819757a 100644
+--- a/scripts/ui/UiKit.gd
++++ b/scripts/ui/UiKit.gd
+@@ -1827,7 +1827,12 @@ static func top_bar(title_text: String, back := true, right: Control = null,
+ 		b.pressed.connect(func():
+ 			if back_cb.is_valid() and back_cb.call():
+ 				return
+-			Router.back())
++			# With nothing under this screen, Back is the menu (what Escape
++			# does); it never does nothing.
++			if Router.can_go_back():
++				Router.back()
++			else:
++				Router.to_main_menu(false))
+ 		h.add_child(b)
+ 	# The screen's title in the scoreboard face (guide §2.3: TITLE is the
+ 	# Display cut), one line, cut with an ellipsis only when it cannot fit.
+diff --git a/scripts/ui/match/MatchStatsView.gd b/scripts/ui/match/MatchStatsView.gd
+index c0836236e..2a6704b8d 100644
+--- a/scripts/ui/match/MatchStatsView.gd
++++ b/scripts/ui/match/MatchStatsView.gd
+@@ -139,7 +139,7 @@ static func _minus(now: Dictionary, was: Dictionary) -> Dictionary:
+ func _team(res: Dictionary) -> Control:
+ 	var codes := [str(res["home"]), str(res["away"])]
+ 	var t: Array = res["team"]
+-	var cols := clampi(int(room / 250.0), 2, GROUPS.size()) if compact else clampi(int(UiKit.view_width(self) / (GROUP_W + 40.0)), 1, GROUPS.size())
++	var cols := clampi(int(room / 250.0), 1, GROUPS.size()) if compact else clampi(int(UiKit.view_width(self) / (GROUP_W + 40.0)), 1, GROUPS.size())
+ 	var grid := GridContainer.new()
+ 	grid.name = "TeamStats"
+ 	grid.columns = cols
+diff --git a/scripts/ui/stats/StatsAwards.gd b/scripts/ui/stats/StatsAwards.gd
+index 95e8f815b..bfbe9e813 100644
+--- a/scripts/ui/stats/StatsAwards.gd
++++ b/scripts/ui/stats/StatsAwards.gd
+@@ -24,7 +24,7 @@ const LEAD_W := 104.0
+ const CLUB_W := 72.0
+ const GAP := 8.0
+ ## What the hub's always-kept scroll bar takes from content_width on a phone.
+-const BAR_GUTTER := 16.0
++const BAR_GUTTER := 0.0   # content_width already leaves the bar its rail
+ const FIGURE_SIZE := 17
+ ## The All-Australian slots on the oval (Awards.AA_SLOTS): the five
+ ## midfielders fill the centre square first, then the wings.
+@@ -53,8 +53,10 @@ static func build(host: Control) -> Control:
+ 	v.add_child(head)
+ 	var coleman := race(host, "Coleman Medal", "Coleman", "goals_ha", "Goals", "No goals kicked yet.")
+ 	var coaches := race(host, "Coaches Award", "CoachesAward", "coaches", "Votes", "No votes yet.")
+-	if bool(host.call("wide")):
+-		# Two races, side by side on a PC.
++	var both_w := coleman.get_combined_minimum_size().x + coaches.get_combined_minimum_size().x + 32.0
++	if bool(host.call("wide")) and both_w <= float(host.call("content_width")):
++		# Two races, side by side on a PC (one under the other when the window
++		# cannot hold both: side by side they pushed the page past its edge).
+ 		var pair := UiKit.hbox(32)
+ 		pair.name = "Races"
+ 		coleman.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+@@ -169,7 +171,7 @@ static func _honours(host: Control, aw: Dictionary) -> Control:
+ 	# The name takes the width the figure and club leave. Where a name still
+ 	# wouldn't fit (a phone), every club goes under its name instead, so the
+ 	# table keeps one shape.
+-	var row_w: float = TABLE_W if bool(host.call("wide")) else float(host.call("content_width")) - BAR_GUTTER
++	var row_w: float = minf(TABLE_W, float(host.call("content_width"))) if bool(host.call("wide")) else float(host.call("content_width")) - BAR_GUTTER
+ 	var stack := name_w > row_w - float(StatsSide.RULE_INSET) - LEAD_W - CLUB_W - fig_w - 3.0 * GAP
+ 	for i in range(rows.size()):
+ 		var x: Array = rows[i]
+diff --git a/scripts/ui/stats/StatsLadder.gd b/scripts/ui/stats/StatsLadder.gd
+index 267c51035..38141a9b5 100644
+--- a/scripts/ui/stats/StatsLadder.gd
++++ b/scripts/ui/stats/StatsLadder.gd
+@@ -44,7 +44,7 @@ const LADDER_TIGHT := [["pos", "#", 20], ["club", "Club", 0], ["p", "P", 22], ["
+ const CLUB_MIN_NARROW := 28
+ ## What the hub's always-kept scroll bar takes from content_width on a phone
+ ## (StatsAwards.BAR_GUTTER, the same 16).
+-const BAR_GUTTER := 16.0
++const BAR_GUTTER := 0.0   # content_width already leaves the bar its rail
+ ## Team stats: a per-game value for each, from GameState.season_team (only
+ ## what is recorded there). One list, so a newly recorded stat joins with one
+ ## line: {season_team key, column title, width on a phone, width on a wide
+diff --git a/tests/run_back_nav_tests.gd b/tests/run_back_nav_tests.gd
+index d896ead97..51f34c252 100644
+--- a/tests/run_back_nav_tests.gd
++++ b/tests/run_back_nav_tests.gd
+@@ -65,6 +65,7 @@ func _run() -> void:
+ 	await _t("_test_screens")
+ 	await _t("_test_overlays")
+ 	await _t("_test_main_menu")
++	await _t("_test_fresh_launch")
+ 	await _t("_test_draft")
+ 	await _t("_test_match")
+ 	await _t("_test_crawl")
+@@ -477,6 +478,31 @@ func _test_main_menu() -> void:
+ 			_table.append("%s | %s | %s" % [label, way, line])
+ 
+ 
++## The game as it opens: the engine loads the menu itself, nobody calls
++## Router.go("main"). Club Forge from there, then each way out, must land on
++## the menu (director, 2026-11-12: "back button in the club forge on pc still
++## doesnt work": the menu was not in the history, so the arrow had nowhere to go).
++func _test_fresh_launch() -> void:
++	for way in WAYS:
++		_state.reset()
++		_router.stack = []
++		change_scene_to_file("res://scenes/Main.tscn")
++		await _settle(8)
++		_check(_router.current() == "main", "fresh launch: the menu is in the history (%s)" % str(_router.stack))
++		var why_open: String = await _click_named(current_scene, "ClubForge")
++		await _settle(8)
++		var in_forge: bool = current_scene.find_child("ForgeBody", true, false) != null
++		_check(in_forge, "fresh launch: Club Forge opens from the menu (%s)" % why_open)
++		if not in_forge:
++			continue
++		var btn: Control = current_scene.find_child("TopBarBack", true, false)
++		var why: String = await _leave(way, btn)
++		await _settle(8)
++		var ok: bool = why == "" and _router.current() == "main" and current_scene.find_child("ClubForge", true, false) != null
++		_check(ok, "fresh launch: Back by %s leaves Club Forge for the menu (%s; now %s, stack %s)" % [way, why, _router.current(), str(_router.stack)])
++		_table.append("fresh launch: forge | %s | %s" % [way, "ok" if ok else "FAIL"])
++
++
+ # ---------------------------------------------------------------------------
+ # Draft: Back to the menu (it replaces, so the stack stays one deep)
+ # ---------------------------------------------------------------------------
+@@ -545,7 +571,9 @@ func _test_match() -> void:
+ 	_check(await _live_match(), "a live match is prepared")
+ 	var m := current_scene
+ 	var at_break: bool = await _to_break()
+-	_check(at_break, "the match reaches a break")
++	_check(at_break, "the match reaches a break (scene %s, stack %s, coach box %s, card %s)" % [current_scene.name,
++			str(_router.stack), current_scene.find_child("CoachBox", true, false) != null,
++			current_scene.find_child("MomentCard", true, false) != null])
+ 	if at_break:
+ 		for way in WAYS:
+ 			var ids := _control_ids(m)
+diff --git a/tests/run_stats_tests.gd b/tests/run_stats_tests.gd
+index 214e05372..6e3134887 100644
+--- a/tests/run_stats_tests.gd
++++ b/tests/run_stats_tests.gd
+@@ -56,6 +56,8 @@ func _run() -> void:
+ 	for i in range(4):
+ 		_state.advance()
+ 	await _t("_test_sections")
++	for sz in [Vector2i(960, 540), Vector2i(1280, 720)]:
++		await _t("_test_tabs_hold_width", [sz])
+ 	# The awards read the season after four rounds: before anything below
+ 	# plays it on (the fixture's finals test plays it to the end).
+ 	await _t("_test_awards_races")
+@@ -141,6 +143,44 @@ func _test_hub_button() -> void:
+ ## only in Season stats. No Ladder screen or route, no Ladder button in the
+ ## hub's nav row; a real tap on the hub's Ladder heading opens Season stats,
+ ## and a real tap on its Ladder tab shows the ladder.
++
++## Director, 2026-11-12: "changing tabs shifts the screen". Every section fits
++## inside the page with the scroll bar's rail kept, so the title and tabs stay
++## put from tab to tab.
++func _test_tabs_hold_width(sz: Vector2i) -> void:
++	var tag := "%dx%d" % [sz.x, sz.y]
++	var old_size := root.size
++	var hub_stats = load("res://scripts/ui/StatsHubScene.gd")
++	var old_current := str(hub_stats.current)
++	root.size = sz
++	hub_stats.current = "ladder"
++	var m: Control = load("res://scenes/StatsHubScene.tscn").instantiate()
++	root.add_child(m)
++	await _settle()
++	var title_at := Rect2()
++	for key in ["ladder", "players", "ratings", "awards", "fixture", "coach"]:
++		var b: Button = m.find_child("Section_" + key, true, false)
++		_check(b != null, "The %s tab is there (%s)" % [key, tag])
++		if b == null:
++			continue
++		await Tap.tap(b)
++		await _settle()
++		var sc: Control = m.find_child("StatsScroll", true, false)
++		var body: Control = m.find_child("SectionBody", true, false)
++		_check(sc != null and sc.get_global_rect().end.x <= float(sz.x) + 0.5,
++				"The %s page ends inside the window (%s: %s)" % [key, tag, str(sc.get_global_rect()) if sc else "none"])
++		_check(body != null and sc != null and body.get_combined_minimum_size().x <= sc.size.x - float(load("res://scripts/ui/UiKit.gd").SCROLL_RAIL) + 0.5,
++				"The %s section leaves the scroll bar its rail (%s)" % [key, tag])
++		var title: Control = m.find_child("TopBarTitle", true, false)
++		if title != null:
++			if key == "ladder":
++				title_at = title.get_global_rect()
++			_check(title.get_global_rect().is_equal_approx(title_at), "The title stays put on %s (%s)" % [key, tag])
++	m.queue_free()
++	await _settle()
++	root.size = old_size
++	hub_stats.current = old_current
++
+ func _test_ladder_only_in_season_stats(sz: Vector2i) -> void:
+ 	var tag := "%dx%d" % [sz.x, sz.y]
+ 	var old_size := root.size
+diff --git a/tests/test_plan_know.gd b/tests/test_plan_know.gd
+index 6d62cb7b9..36e693d8a 100644
+--- a/tests/test_plan_know.gd
++++ b/tests/test_plan_know.gd
+@@ -20,6 +20,7 @@ func run() -> void:
+ 	_t("_test_words")
+ 	_t("_test_match_effect")
+ 	_t("_test_drilling")
++	_t("_test_card_on_undrilled_plan")
+ 	_t("_test_ai")
+ 	_t("_test_report_matches_sim")
+ 	_t("_test_off_season_and_fade")
+@@ -266,6 +267,32 @@ func _test_drilling() -> void:
+ 	_check(CoachEffects.table.is_empty() or not sq.plan_know.is_empty(), "A match squad carries what its club knows")
+ 
+ 
++
++## Director, 2026-11-12, on Our plan: "why is it attack corridor?" and "fluency is
++## medium in two plans I had just trained to high in thsi very same pre season?".
++## A side on a plan that needs no drilling: a card's drilling goes to a plan the
++## coach is drilling, says so, and the plan lines show where the pre-season leaves them.
++func _test_card_on_undrilled_plan() -> void:
++	PreSeason.reload()
++	_career(false)
++	GameState.set_club_plan("balanced")
++	GameState.open_preseason()
++	GameState.set_preseason_block(0, "solid", "plan")
++	GameState.set_preseason_drills(0, ["defensive", "controlled"])
++	_check(GameState.card_drill_plan() == "defensive",
++			"A card drills a plan the coach is drilling, not the first in the list (got %s)" % GameState.card_drill_plan())
++	var words: String = StoryEngine._drill_words(2, {"drill_plan": "Defensive Press", "drill_level": 1.0,
++			"drill_credit": 1.5, "drill_own": "Balanced"})
++	_check(words.contains("Balanced needs no drilling, so they go to Defensive Press, a plan your pre-season drills"),
++			"...and the card says why it is that plan: " + words)
++	var line := GameState.plan_known_line("defensive")
++	_check(line.begins_with("Plan fluency: medium
++Rd 1: "),
++			"Mid pre-season, a drilled plan's line says where Round 1 leaves it: " + line)
++	_check(GameState.plan_known_line("attacking") == "Plan fluency: medium", "...and an undrilled plan's line is as it was")
++	_press_on()
++	_check(not GameState.plan_known_line("defensive").contains("Rd 1"), "Once the pre-season is done, one line again")
++
+ func _test_ai() -> void:
+ 	PreSeason.reload()
+ 	_career(false)
