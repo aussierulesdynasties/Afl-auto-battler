@@ -657,6 +657,10 @@ def seat_rows(m, P, zfn, bands):
                 ss = np.arange(0, ln.length, 0.05); Q = np.array([ln.interpolate(x).coords[0] for x in ss])
                 w = np.unwrap(np.arctan2(Q[:, 1] - PC[1], Q[:, 0] - PC[0])) * 90.0
                 free = (w % 14.0) >= 1.2
+                if BOX_KEEP_OUT:   # a media box splits the row like an aisle: the blocks beside it keep their seats
+                    from shapely.geometry import MultiPolygon as _MP
+                    from shapely import contains_xy
+                    bx = _MP(BOX_KEEP_OUT).buffer(0.25); free &= ~contains_xy(bx, Q[:, 0], Q[:, 1])
                 runs = []; st0 = None
                 for x, f in zip(ss, free):
                     if f and st0 is None: st0 = x
@@ -875,6 +879,24 @@ def tier_parts(m, G_, parts, rng=None):
                 for ang_, ln_ in ((math.radians(pt.get('h', 60)), 0.55), (math.radians(pt.get('mn', -30)), 0.8)):   # hands
                     tip = cc - n3 * 0.01 + pt['r'] * ln_ * (math.sin(ang_) * np.r_[tg[0], 0] + math.cos(ang_) * np.r_[0, 0, 1])
                     box(m, cc - n3 * 0.01, tip, 0.03, (30, 30, 32), 'steel')
+            elif t == 'box':   # a camera or media box let into the upper tier's front rows (2026 photos): open to the
+                # pitch, side walls and roof, glazed at the back; the seats it covers go to the seat check (headroom)
+                s0 = run.s_of(pt['at'])
+                if s0 is None: continue
+                for off in pt['off']:
+                    s = s0 + off; w = pt['w'] / 2
+                    if not (0 < s - w and s + w < L): continue
+                    zf, zr, tk = pt['z'][0], pt['z'][1], 0.25
+                    for a_, b_ in ((s - w, s - w + tk), (s + w - tk, s + w)):   # side walls, down into the rake
+                        prism(m, run, a_, b_, 0, e1, zf - 1.5, zr, pt['col'], 'concrete', 'fbtuel')
+                    prism(m, run, s - w, s + w, -0.1, e1, zr, zr + 0.3, pt['col'], 'concrete', 'fbtuel')       # roof
+                    prism(m, run, s - w, s + w, -0.12, 0.0, zr - 0.55, zr, pt.get('band', pt['col']), 'concrete', 'f')   # fascia
+                    prism(m, run, s - w + tk, s + w - tk, e1 - 0.2, e1, zf - 1.5, zr, pt.get('back', (44, 48, 54)), 'concrete', 'f')
+                    prism(m, run, s - w + tk, s + w - tk, e1 - 0.25, e1 - 0.2, zf + 1.0, zr - 0.3, pt.get('glass', (150, 176, 190)), 'glass', 'f')
+                    prism(m, run, s - w + tk, s + w - tk, 0.0, 0.05, zf - 0.1, zf + 1.0, (150, 170, 176), 'glass', 'fb')  # front rail
+                    from shapely.geometry import Polygon as _Pg
+                    qq, nn, _ = run.at(np.array([s - w, s + w]))
+                    BOX_KEEP_OUT.append(_Pg([qq[0] - nn[0] * 0.3, qq[1] - nn[1] * 0.3, qq[1] + nn[1] * e1, qq[0] + nn[0] * e1]))
             elif t == 'backwall':
                 BACK_JOBS.append((run, pt))
             elif t == 'name':
@@ -885,6 +907,7 @@ def tier_parts(m, G_, parts, rng=None):
                     NAMES_DONE.append(pt['text'])
 
 NAMES_DONE = []
+BOX_KEEP_OUT = []   # floors of the media boxes: no seats there
 def zone_wedge(rng):
     from shapely.geometry import Polygon
     A = np.radians(np.linspace(rng[0], rng[1], 60))
