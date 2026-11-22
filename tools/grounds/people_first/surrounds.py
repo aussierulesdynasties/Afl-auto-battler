@@ -24,12 +24,11 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "mcg"))
 import surrounds as S  # noqa: E402  (the MCG's painter)
 
-LAT0, LON0 = -28.0062893, 153.3671362
+LAT0, LON0 = -28.0062937, 153.3671085
 
 OUT = os.path.join(HERE, "..", "..", "..", "assets", "grounds", "people_first")
 GLBS = [os.path.join(OUT, "people_first_part%d.glb" % k) for k in (1, 2)]
-# The model's origin: OpenStreetMap's AFL pitch (way 355376900) less the fit's centre, checked on Google
-# Earth's straight-down view (tools/grounds/people_first/qa).
+# The model's origin: Google Earth's straight-down grass edge laid on the model's turf edge (qa/ge_compare.py).
 S.LAT0, S.LON0 = LAT0, LON0
 S.PITCH_E, S.PITCH_N = 0.0, 0.0
 S.MODEL_R = 0.0

@@ -16,9 +16,10 @@ UNDER_TURF = 0.1
 GROUNDS = {
     "adelaide": {"lat": -34.915489777922076, "lon": 138.59627692467532, "ge_alt": 40.0,
                  "fit": [-0.4, 1.37, 0.0, -102.0, 91.36, 65.7]},
-    # People First: the model's origin from OpenStreetMap's pitch (way 355376900) less the fit centre; first guess,
-    # checked against the straight-down view.
-    "people_first": {"lat": -28.0062893, "lon": 153.3671362, "ge_alt": 5.0,
+    # People First: the model's origin, measured 2026-11-22 by laying Google Earth's straight-down grass edge on the
+    # model's turf edge (boundary thread; median gap 1.15 m after the shift). The first guess, OpenStreetMap's pitch
+    # (way 355376900) less the fit centre, was 2.7 m east and 0.5 m north of it; the shape audit agreed (2.6 m, 1.5 m).
+    "people_first": {"lat": -28.0062937, "lon": 153.3671085, "ge_alt": 5.0,
                      "fit": [-0.72, 0.04, 0.02, -72.6, 89.11, 72.26]},
     # GMHBA: the model's origin from 7 Google Earth wall-foot points (tools/grounds/gmhba/jss_roof/measured.md).
     "gmhba": {"lat": -38.1579976, "lon": 144.3546774, "ge_alt": 20.0,
