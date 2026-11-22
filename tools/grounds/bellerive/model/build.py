@@ -729,9 +729,38 @@ def indoor_centre(col):
     mb.build(col)
 
 
+# ---------------- the north-east video board on the hill (GE in_W, out_W) ----------------
+# Placed by matching where it sits in two Google Earth views to where the same camera puts it in ours (the
+# scoreboard lines up in both): bearing 70.3, 97 m out (the two views agree within 2 m). About 14.4 x 6.2 m,
+# its foot 3.2 m up on three braced legs, turned to the ground like the scoreboard.
+VB = dict(b=70.3, r=97.0, L=14.4, H=6.2, z0=3.2, dep=0.9)
+
+
+def video_board(col):
+    mb = MB('video_board'); b = math.radians(VB['b'])
+    F = Frame(dict(c=(VB['r'] * math.sin(b), VB['r'] * math.cos(b)), a=-VB['b'] - 4.0, L=VB['L'], W=VB['dep']))
+    h = VB['L'] / 2; vf = -VB['dep'] / 2; vb = -vf; z0, z1 = VB['z0'], VB['z0'] + VB['H']
+    q = lambda u, v, z: F.P(u, v, z)
+    mb.face([q(-h, vb, z0), q(h, vb, z0), q(h, vb, z1), q(-h, vb, z1)], 'steel_galv')
+    mb.face([q(h, vf, z0), q(h, vf, z1), q(h, vb, z1), q(h, vb, z0)][::-1], 'steel_galv')
+    mb.face([q(-h, vb, z0), q(-h, vb, z1), q(-h, vf, z1), q(-h, vf, z0)][::-1], 'steel_galv')
+    mb.face([q(-h, vf, z1), q(-h, vb, z1), q(h, vb, z1), q(h, vf, z1)][::-1], 'steel_white')
+    mb.face([q(-h, vf, z0), q(h, vf, z0), q(h, vb, z0), q(-h, vb, z0)][::-1], 'steel_galv')
+    mb.face([q(h, vf, z0), q(-h, vf, z0), q(-h, vf, z1), q(h, vf, z1)], 'steel_white')     # the frame
+    mb.face([q(h - 0.25, vf - 0.03, z0 + 0.25), q(-h + 0.25, vf - 0.03, z0 + 0.25), q(-h + 0.25, vf - 0.03, z1 - 0.25),
+             q(h - 0.25, vf - 0.03, z1 - 0.25)], 'screen_blue', uv=[(0, 0), (1, 0), (1, 1), (0, 1)])
+    for u in (-h + 1.2, 0.0, h - 1.2):                    # the legs, each on a concrete pad, braced behind
+        mb.box(F.P(u, 0.0), 0.9, 0.9, 0.25, F.a * 180 / math.pi, 'conc_grey')
+        mb.beam(q(u, 0.0, 0.25), q(u, 0.0, z0 + 0.4), 0.35, 0.35, 'steel_white')
+        mb.beam(q(u, 0.0, 0.25), q(u, vb + 1.6, 0.25), 0.1, 0.1, 'steel_white')
+        mb.beam(q(u, vb + 1.6, 0.25), q(u, 0.2, z0 + 0.2), 0.18, 0.18, 'steel_white')
+    mb.beam(q(-h + 1.2, 0.0, z0 - 0.2), q(h - 1.2, 0.0, z0 - 0.2), 0.22, 0.22, 'steel_white')
+    mb.build(col)
+
+
 def build_all():
     clear(); col = bpy.context.scene.collection
-    main_all(col); vomitories(col); skylights(col); members_all(col); nstand(col); terrace(col); scoreboard(col); towers(col); apron(col); indoor_centre(col)
+    main_all(col); vomitories(col); skylights(col); members_all(col); nstand(col); terrace(col); scoreboard(col); towers(col); apron(col); indoor_centre(col); video_board(col)
     fence_only(col, D['members']['b1'], 360 + D['terrace']['b0'])
 
 

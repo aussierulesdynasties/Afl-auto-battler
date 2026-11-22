@@ -168,6 +168,11 @@ t.a[:t.h // 3] *= 1.35
 for _ in range(40):
     u, z = R.uniform(0, 3.8), R.uniform(0, 1.8); t.rect(u, u + 0.5, z, z + 0.5, mul=R.uniform(0.6, 1.6))
 t.save('screen')
+# the north-east video board (GE in_W, out_W): an LED face showing a blue screen, no words; 0.5 m modules
+t = T(4.0, 2.0, (44, 92, 168), n=3, bl=(1, 4))
+for u in np.arange(0, 4, 0.5): t.vl(u, 0.02, mul=0.75)
+for z in np.arange(0, 2, 0.5): t.hl(z, 0.02, mul=0.75)
+t.a[:t.h // 2] *= 1.12; t.save('screen_blue')
 t = T(3.0, 6.0, (220, 222, 220), n=3, bl=(1.5, 7)); t.hl(3.0, 0.04, mul=0.85); t.streaks(12, 0, 6); t.grime_bottom(1.0); t.save('tower')
 t = T(6.8, 3.8, (60, 64, 70), n=3, bl=None)
 for i in range(6):
