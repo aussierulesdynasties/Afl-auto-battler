@@ -214,8 +214,13 @@ def open_back(m, P, zf, z0, st):
             m.add(q, [(0, 1, 2, 3)[::-1] if flip else (0, 1, 2, 3)], [st['wall2']] * 4,
                   [(run, z0), (run + L, z0), (run + L, zt[i + 1]), (run, zt[i])], st.get('wall2_kind', 'concrete'))
             run += L; continue
-        ai, bi = a - nrm * ins, b - nrm * ins
-        ai, bi = inside(ai), inside(bi)  # at an acute corner the inset point can fall outside the end wall: keep it on the wall
+        def inset(p):
+            # the underside meets the slab where the tier above is clear of it: where a stand's back steps in (the
+            # west stand's upper tier north of its middle tower) a full inset put the underside through the tread
+            k = ins
+            while k > 0.5 and zf(np.array([p - nrm * k]))[0] < z0 + 0.6: k -= 0.25
+            return inside(p - nrm * k)
+        ai, bi = inset(a), inset(b)  # at an acute corner the inset point can fall outside the end wall: keep it on the wall
         # slab (faces up) and soffit (faces down and out): drawn both ways so face order cannot hide them
         S = [(a[0], a[1], z0), (b[0], b[1], z0), (bi[0], bi[1], z0), (ai[0], ai[1], z0)]
         m.add(S, [(0, 1, 2, 3), (3, 2, 1, 0)], [ob['slab']] * 4, [(run, 0), (run + L, 0), (run + L, ins), (run, ins)], 'concrete')

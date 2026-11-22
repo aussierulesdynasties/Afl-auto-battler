@@ -51,7 +51,11 @@ void fragment() {
 	// mirrors the grass below as much as it scatters it (Schlick's share, dulled by roughness).
 	vec3 f0 = mix(vec3(0.04), a.rgb, metallic_v);
 	float nv = clamp(dot(NORMAL, v), 0.0, 1.0);
-	vec3 f = f0 + (1.0 - f0) * pow(1.0 - nv, 5.0);
+	// Schlick's share as a rough face takes it (Lagarde's form: the glancing rise only reaches 1 - roughness).
+	// The plain form let a dark face at a glancing angle mirror the whole correction: its grass taken out
+	// and grey put back on a face that had mirrored little grass, and it read purple (Adelaide's big screen,
+	// its scoreboard's window frames, 2026-11-22).
+	vec3 f = f0 + (max(vec3(1.0 - roughness_v), f0) - f0) * pow(1.0 - nv, 5.0);
 	fix += f * sky_fix(r_y) * ref_scale * (1.0 - roughness_v * 0.6);
 	EMISSION = fix;
 }
