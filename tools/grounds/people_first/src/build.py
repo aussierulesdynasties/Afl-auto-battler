@@ -31,7 +31,7 @@ GROUND=mat('ground',(150,150,140),None,0.95);APRON=mat('apron',(165,165,160),'ap
 SEAT=mat('seats',(214,74,62),'seat_low');SEATU=mat('seats_up',(214,74,62),'seat_up');AIS=mat('aisle',(200,200,196),'aisle_low');AISU=mat('aisle_up',(200,200,196),'aisle_up')
 WALK=mat('walk',(170,170,165),'walk');NAVY=mat('navy',(52,60,88),'navy',0.5)
 GLASS=mat('glass',(45,52,70),'glass',0.25);CONC=mat('concrete',(190,188,182),'concrete');ROOF=mat('roof',(246,246,244),'roof',0.6)
-UNDER=mat('roofunder',(215,215,212),'roofunder',0.7);YEL=mat('yellow',(238,190,40),'yellow',0.5,0.2);TW=mat('tower',(244,244,244),'tower',0.5)
+UNDER=mat('roofunder',(215,215,212),'roofunder',0.7);YEL=mat('gold',(196,164,86),'gold',0.55,0.2);TW=mat('tower',(244,244,244),'tower',0.5)
 LAMP=mat('lamps',(235,235,235),'lamps',0.4);SCR=mat('screen',(25,30,45),'screen',0.3);STR=mat('stripes',(200,120,80),'stripes',0.6)
 SBF=mat('scorefront',(28,32,42),'scorefront',0.35);SBP=mat('scorepost',(250,249,248),'scorepost');RSG=mat('redsign',(243,56,59),'redsign',0.5)
 POD=mat('podroof',(232,230,226),'podroof');FAC=mat('facade',(28,30,36),None,0.7);FIN=mat('fin',(76,78,84),None,0.7)
@@ -562,11 +562,32 @@ for i in range(len(POLY)):
 for _b in json.load(open('precinct.json')):
     _p=[tuple(q) for q in _b['pts']]
     if sum(_p[i][0]*_p[(i+1)%4][1]-_p[(i+1)%4][0]*_p[i][1] for i in range(4))<0:_p=_p[::-1]
-    prism(_p,0.0,_b['h'],WALLR,RF[_b['roof']])
+    _nm=_b['name'];_h=_b['h'];_rm=RF[_b['roof']]
+    def face2(vs,mi):face([bm.verts.new(x) for x in vs],mi);face([bm.verts.new(x) for x in vs[::-1]],mi)   # either winding
+    if any(k in _nm for k in ('portables','kiosk','office','block')):
+        prism(_p,0.0,_h,WALLR,_rm);continue
+    # Google Earth: the sheds, halls and warehouses have low gable roofs with eaves; the marquees a row of peaked tops.
+    prism(_p,0.0,_h,WALLR,None)
+    _v=[Vector((x,y,0)) for x,y in _p];_e0,_e1=_v[1]-_v[0],_v[2]-_v[1]
+    if _e0.length<_e1.length:_v=_v[1:]+_v[:1];_e0,_e1=_e1,_e0   # _v[0]->_v[1] runs along the long side
+    _L,_W=_e0.length,_e1.length;_t=_e0/_L;_n=_e1/_W;_o=0.35
+    def _q(u,w,z):return _v[0]+_t*u+_n*w+Vector((0,0,z))
+    if 'marquee' in _nm:
+        _k=max(1,round(_L/_W));_sl=_L/_k
+        for _i in range(_k):
+            _pk=_q(_sl*(_i+0.5),_W/2,_h+1.6);_cs=[_q(_sl*_i,0,_h),_q(_sl*(_i+1),0,_h),_q(_sl*(_i+1),_W,_h),_q(_sl*_i,_W,_h)]
+            for _j in range(4):face2([_cs[_j],_cs[(_j+1)%4],_pk],_rm)
+        continue
+    _rise=min(2.5,max(0.6,0.12*_W))
+    _a=[_q(-_o,-_o,_h-0.05),_q(_L+_o,-_o,_h-0.05),_q(_L+_o,_W/2,_h+_rise),_q(-_o,_W/2,_h+_rise)]
+    _b2=[_q(-_o,_W+_o,_h-0.05),_q(_L+_o,_W+_o,_h-0.05),_q(_L+_o,_W/2,_h+_rise),_q(-_o,_W/2,_h+_rise)]
+    face2(_a,_rm);face2(_b2,_rm)
+    for _u in (0.0,_L):   # gable ends in the wall colour
+        face2([_q(_u,0,_h),_q(_u,_W,_h),_q(_u,_W/2,_h+_rise)],WALLR)
 # The entry pods round the ground's foot (Google Earth: two-storey grey blocks with a recessed dark window band and a flat
 # roof with plant, standing just outside the yellow column feet; at the south entry a pair with a round drum each, either
 # side of the sign). 14 m along the wall, 9 m deep, 6.5 m high; the window band is set 0.35 m into the wall.
-PODG=mat('podgrey',(150,152,156),None,0.8);PODW=mat('podglass',(30,34,42),None,0.2,0.4)
+PODG=mat('podgrey',(200,198,190),None,0.8);PODW=mat('podglass',(30,34,42),None,0.2,0.4)
 def _pod(a,drum=0):
     t=math.radians(a);r=rout(a)-3.0;n=Vector((math.cos(t),math.sin(t),0));tg=Vector((-math.sin(t),math.cos(t),0))
     c=Vector((SH[0],SH[1],0))+n*r

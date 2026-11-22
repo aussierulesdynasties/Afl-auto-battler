@@ -96,8 +96,9 @@ const SURROUNDS := {
 			"walls": [Color(0.62, 0.42, 0.34), Color(0.74, 0.7, 0.62), Color(0.55, 0.53, 0.5), Color(0.68, 0.5, 0.4),
 					Color(0.8, 0.78, 0.72), Color(0.6, 0.6, 0.6), Color(0.52, 0.36, 0.3)]},
 	# People First: the Carrara precinct, the Nerang River, its bush and the streets round it
-	# (tools/grounds/people_first/surrounds.py); the map laid on the model's origin.
-	"people_first": {"y": -0.04, "inner": 60.0, "colour": Color(0.41, 0.49, 0.3),
+	# (tools/grounds/people_first/surrounds.py); the map laid on the model's origin. Drawn only while the
+	# ground has no background scene: the scene covers the same land from 98 m out, in more detail.
+	"people_first": {"fallback": true, "y": -0.04, "inner": 60.0, "colour": Color(0.41, 0.49, 0.3),
 			"map": "surrounds.webp", "span": 2048.0, "trees": "trees.bin", "buildings": "buildings.bin",
 			# Carrara's walls in Google Earth: cream and white render, pale brick, grey sheds.
 			"walls": [Color(0.82, 0.8, 0.74), Color(0.72, 0.62, 0.52), Color(0.6, 0.6, 0.58), Color(0.88, 0.86, 0.82),
@@ -323,7 +324,9 @@ static func instantiate(slug: String, base := "") -> Node3D:
 	slice_big_meshes(root)
 	var fit: Array = FIT.get(slug, [0.0, 0.0])
 	_add_seats(root, dir, Vector2(float(fit[0]), float(fit[1])))
-	if SURROUNDS.has(slug):
+	# A "fallback" ring stands in only until the ground's background scene (#2023) is in the game.
+	if SURROUNDS.has(slug) and not (SURROUNDS[slug].get("fallback", false)
+			and not files(slug + "_backdrop", dir).is_empty()):
 		_add_surrounds(root, SURROUNDS[slug], dir)
 	return root
 
