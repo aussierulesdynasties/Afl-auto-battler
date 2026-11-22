@@ -78,7 +78,7 @@ def concrete(name, col, pu=3.0, pv=1.5, tile=(6.0, 6.0)):
 
 concrete('conc_wall', (176, 172, 164))
 # paving: concourse concrete slabs 1.2 m, saw joints, stains
-a = base(N, N, (112, 104, 98), 7, 24); p = N / 2.4
+a = base(N, N, (132, 132, 128), 7, 24); p = N / 2.4   # grey concrete (Google Earth 2026: the concourse reads neutral grey, not warm)
 for k in range(2): a[int(k * 1.2 * p):int(k * 1.2 * p) + 3] *= 0.7; a[:, int(k * 1.2 * p):int(k * 1.2 * p) + 3] *= 0.7
 for _ in range(25):
     cx, cy, rr = R.integers(0, N), R.integers(0, N), R.integers(10, 60); yy, xx = np.ogrid[:N, :N]
