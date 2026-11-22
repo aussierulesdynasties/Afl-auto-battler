@@ -443,55 +443,59 @@ def media(col):
     # seats under it: the low terrace (lower_all) runs in front; the building's underside is open to the concourse
     face = lambda b: M['face'] + 1.2 * math.sin(math.pi * (b - M['b0']) / (M['b1'] - M['b0']))   # bowed toward the field
     back = lambda b: float(np.interp(b, *zip(*M['roof_back_at']))) - 1.0      # the deck's traced back edge, 1 m out
-    # floors (slab edges proud of the glass by 0.5 m) and the glass behind
-    # the corporate level's glass box stands forward (face); the floors above sit back under the ledge (Google Earth 3D)
-    upper = lambda b: M['ledge']['front'] - 0.6
-    for i, z in enumerate(M['levels']):
-        za = z; zb = M['levels'][i + 1] if i + 1 < len(M['levels']) else zt - 0.8
-        fc = face if i == 0 else upper
-        strip(mb, bs, lambda b, za=za, fc=fc: (fc(b) - 0.5, za), lambda b, za=za, fc=fc: (fc(b) - 0.5, za + 0.4), 'slab_dark')
-        strip(mb, bs, lambda b, za=za, fc=fc: (fc(b), za + 0.4), lambda b, za=za, fc=fc: (fc(b) - 0.5, za + 0.4), 'slab_dark')
-        strip(mb, bs, lambda b, za=za, fc=fc: (fc(b) - 0.5, za), lambda b, za=za, fc=fc: (fc(b), za), 'slab_dark')
-        strip(mb, bs, lambda b, za=za, fc=fc: (fc(b), za + 0.4), lambda b, za=za, zb=zb, fc=fc: (fc(b), zb), 'media_glass' if i == 0 else 'glass_dark')
-        if i == 1:      # the corporate box's roof, from its glass back to the floors above
-            strip(mb, bs, lambda b: (face(b) - 0.5, za + 0.01), lambda b: (upper(b), za + 0.01), 'slab_dark')
-    # the underside over the concourse and the sides and back of the block
+    # The plan above the corporate level (Google Earth: rounded at both ends, the glass front under the ledge): the
+    # deck's traced outline 1 m in, its front brought forward to 0.6 m inside the ledge, corners rounded 3 m.
+    from shapely.geometry import Polygon
+    O = M['deck_outline']; G_ = M['ledge']; df_ = M['deck_front']
+    z1 = M['levels'][1]; zw = zt - 0.8
+    deck = Polygon([off(b, d) for b, d in O])
+    raw = Polygon([off(b, G_['front'] + 0.4) for b in arc(O[0][0], O[1][0], 0.5)] + [off(b, d) for b, d in O[2:]])
+    plan = raw.buffer(-4.0, join_style=1).buffer(3.0, join_style=1)
+    P = ccw([tuple(q) for q in list(plan.exterior.coords)[:-1]])
+    n_ = len(P)
+    def facing_field(p, q):
+        e = np.array(q) - np.array(p); L_ = np.linalg.norm(e); nn = np.array([e[1], -e[0]]) / max(L_, 1e-9)
+        m_ = (np.array(p) + np.array(q)) / 2; t_ = (np.array(C) - m_) / np.linalg.norm(np.array(C) - m_)
+        return float(np.dot(nn, t_)) > 0.55, nn, L_
+    # the corporate level: glass box standing forward over the top rows, its own floor and roof slabs
+    for za, zb_ in ((M['levels'][0], z1),):
+        strip(mb, bs, lambda b: (face(b) - 0.5, za), lambda b: (face(b) - 0.5, za + 0.4), 'slab_dark')
+        strip(mb, bs, lambda b: (face(b), za + 0.4), lambda b: (face(b) - 0.5, za + 0.4), 'slab_dark')
+        strip(mb, bs, lambda b: (face(b) - 0.5, za), lambda b: (face(b), za), 'slab_dark')
+        strip(mb, bs, lambda b: (face(b), za + 0.4), lambda b: (face(b), zb_), 'media_glass')
+    strip(mb, bs, lambda b: (back(b), z1 + 0.01), lambda b: (face(b) - 0.5, z1 + 0.01), 'slab_dark')
     strip(mb, bs, lambda b: (back(b), z0), lambda b: (face(b), z0), 'roof_soffit')
-    strip(mb, bs, lambda b: (back(b), 0.0), lambda b: (back(b), zt - 0.8), 'bronze_wall')
+    strip(mb, bs, lambda b: (back(b), 0.0), lambda b: (back(b), z1), 'bronze_wall')
     for b, fl in ((bs[0], False), (bs[-1], True)):
-        z1_ = M['levels'][1]
-        endcap(mb, b, [(face(b), z0), (back(b), z0), (back(b), zt - 0.8), (upper(b), zt - 0.8), (upper(b), z1_), (face(b), z1_)],
-               'bronze_wall', flip=fl)
+        endcap(mb, b, [(face(b), z0), (back(b), z0), (back(b), z1), (face(b), z1)], 'bronze_wall', flip=fl)
         endcap(mb, b, [(L['conc'], 0.0), (back(b), 0.0), (back(b), z0), (L['conc'], z0)], 'render_white', flip=fl)
-    # bronze fins: 0.12 m blades, 0.55 m deep, every 0.7 m on the three upper levels of the back (the front is glass)
-    for side, dd, sgn in (('back', back, 1),):
-        b = bs[0]
-        while b < bs[-1]:
-            step = 0.7 / per_deg(b, dd(b))
-            for i in range(1, len(M['levels'])):
-                za = M['levels'][i] + 0.4; zb = M['levels'][i + 1] if i + 1 < len(M['levels']) else zt - 0.8
-                p = Q(b, dd(b) + sgn * 0.3, za); q = Q(b, dd(b) + sgn * 0.3, zb)
-                mb.beam(p, q, 0.12, 0.55, 'bronze')
-            b += step
-    # the ledge: a deep dark band wrapping the top floor, its fascia toward the field, wider than the block
-    G_ = M['ledge']; lbs = arc(G_['b0'], G_['b1'], 0.5); df_ = M['deck_front']
-    strip(mb, lbs, lambda b: (G_['front'], G_['z_front']), lambda b: (df_, G_['z_back']), 'roof_grey')
-    strip(mb, lbs, lambda b: (df_, G_['z_front'] - G_['fascia']), lambda b: (G_['front'], G_['z_front'] - G_['fascia']), 'roof_soffit')
-    strip(mb, lbs, lambda b: (G_['front'], G_['z_front'] - G_['fascia']), lambda b: (G_['front'], G_['z_front']), 'rim_dark')
-    for b, fl in ((lbs[0], False), (lbs[-1], True)):
-        endcap(mb, b, [(G_['front'], G_['z_front'] - G_['fascia']), (df_, G_['z_front'] - G_['fascia']), (df_, G_['z_back']),
-                       (G_['front'], G_['z_front'])], 'rim_dark', flip=fl)
-    # roof: white deck set back behind the ledge, dark rim 0.7 m deep, the back 1 m out from the wall
-    # roof: the white deck on its traced outline, a dark rim 0.9 m deep all round, its front standing on the ledge
-    O = M['deck_outline']
-    strip(mb, arc(O[0][0], O[1][0], 0.5), lambda b: (df_, G_['z_back']), lambda b: (df_, zt - 0.8), 'rim_dark')
+    # the three floors above: a rounded block, dark glass toward the field, bronze walls and fins round the back
+    mb.prism(P, z1, zw, 'bronze_wall', top='roof_soffit', bot='roof_soffit')
+    for i in range(n_):
+        p, q = P[i], P[(i + 1) % n_]
+        front, nn, L_ = facing_field(p, q)
+        if front:
+            a_, b_ = np.array(p) + nn * 0.02, np.array(q) + nn * 0.02
+            mb.face([(*a_, z1), (*b_, z1), (*b_, zw), (*a_, zw)], 'glass_dark')
+        elif L_ > 0.05:
+            k = max(1, int(L_ / 0.7)); t = (np.array(q) - np.array(p)) / L_
+            for j in range(k):
+                c_ = np.array(p) + t * ((j + 0.5) * L_ / k) + nn * 0.3
+                for lv in range(1, len(M['levels'])):
+                    za = M['levels'][lv] + 0.4; zb = M['levels'][lv + 1] if lv + 1 < len(M['levels']) else zw
+                    mb.beam((*c_, za), (*c_, zb), 0.12, 0.55, 'bronze')
+    # floor slabs standing 0.5 m proud all round
+    sl = ccw([tuple(q) for q in list(plan.buffer(0.5, join_style=1).exterior.coords)[:-1]])
+    for lv in range(2, len(M['levels'])):
+        mb.prism(sl, M['levels'][lv], M['levels'][lv] + 0.4, 'slab_dark', top='slab_dark', bot='slab_dark')
+    # the ledge: a deep dark band wrapping the top floor, 0.6 m proud of the glass at the front and 1 m past the
+    # deck's ends and back
+    led = plan.buffer(0.6, join_style=1).union(deck.buffer(1.0, join_style=1))
+    LP = ccw([tuple(q) for q in list(led.exterior.coords)[:-1]])
+    mb.prism(LP, G_['z_front'] - G_['fascia'], G_['z_front'], 'rim_dark', top='roof_grey', bot='roof_soffit')
+    # the deck: white, on its traced outline, its dark walls rising off the ledge to a rim
     poly = ccw([off(b, d) for b, d in O])
-    mb.cap(poly, zt + 0.1, 'roof_white')
-    for tri_ in earclip(poly):
-        mb.face([(x, y, zt - 0.8) for x, y in tri_][::-1], 'roof_soffit')
-    for i in range(len(poly)):
-        p, q = poly[i], poly[(i + 1) % len(poly)]
-        mb.face([(*p, zt - 0.8), (*q, zt - 0.8), (*q, zt + 0.1), (*p, zt + 0.1)], 'rim_dark')
+    mb.prism(poly, G_['z_front'], zt + 0.1, 'rim_dark', top='roof_white')
     # the curved white canopy over the top floor's south-east balcony
     mb.build(col)
 

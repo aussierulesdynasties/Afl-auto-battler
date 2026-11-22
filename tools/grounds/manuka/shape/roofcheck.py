@@ -128,7 +128,8 @@ def roofs():
         S = D["astands"][c["of"]]
         out.append(("canopy " + c["of"], c["b0"], c["b1"], c["rf"], lambda b, c=c: c["rb"], 0.5 * (S["rfz"] + S["rbz"]) + 0.6))
     M = D["media"]; O = M["deck_outline"]
-    west = sorted([(d, b) for b, d in O[1:11]]); east = sorted([(d, b) for b, d in O[-9:] + O[:1]])
+    mid = 0.5 * (O[0][0] + O[1][0]); dmax = max(d for _, d in O) - 0.5     # the ends: outline points off the back
+    west = sorted([(d, b) for b, d in O if b > mid and d < dmax]); east = sorted([(d, b) for b, d in O if b < mid and d < dmax])
     out.append(("media deck", O[0][0], O[1][0], M["deck_front"],
                 lambda b: float(np.interp(b, *zip(*M["roof_back_at"]))), M["z_roof"],
                 (lambda d: float(np.interp(d, *zip(*east))), lambda d: float(np.interp(d, *zip(*west))))))

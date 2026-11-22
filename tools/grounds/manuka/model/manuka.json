@@ -152,7 +152,7 @@
   "hedge_h": 1.3
  },
  "media": {
-  "_": "the media and corporate building over the southern seats (in OSM's Menzies Terrace): curved, four levels behind bronze fins and dark glass, a deep dark ledge wrapping the top floor, the white roof deck set back above it with rounded back corners. Deck ends, front and back and the ledge traced on the calibrated Google Earth top-down (2026-11-22); the form from Google Earth 3D from the field; roof_back_at: the deck's back edge [bearing, d] (the block's back wall 1 m inside it); deck_outline: the white deck's outline [bearing, d] traced row by row (front corners cut back, the back corners rounded, a stair core at the south-east back corner); the front is dark glass under the ledge (Google Earth 3D close from the field: no fins on it), the fins on the back and ends",
+  "_": "the media and corporate building over the southern seats (in OSM's Menzies Terrace): curved, four levels behind bronze fins and dark glass, a deep dark ledge wrapping the top floor, the white roof deck set back above it with rounded back corners. Deck ends, front and back and the ledge traced on the calibrated Google Earth top-down (2026-11-22); the form from Google Earth 3D from the field; roof_back_at: the deck's back edge [bearing, d] (the block's back wall 1 m inside it); deck_outline: the white deck's outline [bearing, d] traced row by row (front corners cut back, the back corners rounded); the front is dark glass under the ledge (Google Earth 3D close from the field: no fins on it), the fins on the back and ends",
   "b0": 175.1,
   "b1": 196.4,
   "face": 10.5,
@@ -269,15 +269,11 @@
     30.5
    ],
    [
-    174.2,
-    29.5
+    175.15,
+    29.0
    ],
    [
-    174.2,
-    28.5
-   ],
-   [
-    174.8,
+    175.0,
     27.5
    ],
    [
