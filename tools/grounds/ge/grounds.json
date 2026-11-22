@@ -147,10 +147,10 @@
   "ge_alt_source": "GE status bar at the field centre, shape audit 2026-11-22 (+-1 m); confirm with --level"
  },
  "people_first": {
-  "lat": -28.0062893,
-  "lon": 153.3671362,
+  "lat": -28.0062937,
+  "lon": 153.3671085,
   "ge_alt": 4.0,
-  "source": "People First rebuild: OSM pitch way 355376900 (PR #2019)",
+  "source": "People First thread 2026-11-22: the OSM-pitch origin (PR #2019) moved x +2.72, z -0.49 m, measured by laying the model's turf edge on Google Earth's grass edge (median gap 1.15 m)",
   "ge_alt_source": "GE status bar at the field centre, shape audit 2026-11-22 (+-1 m); confirm with --level"
  },
  "riverway": {
