@@ -120,13 +120,13 @@ Stadium (all first drafts on main), and Accor Stadium, Marrara Oval (TIO Darwin)
 | Main camera like AFL TV (zoom by crowding, lead on the ball) | Built | #1995 | Match the main camera to AFL TV (thread failed; PR open) |
 | Set shots from behind, ruck close-ups, wide shot, after a mark stays on the main camera | On main (2.93-2.113) | | done, waits on his look |
 | Close cut on tackles that stop play | On main (#1985) | | done, waits on his look |
-| Goal replay that shows the kick, TV sting | Sting on main (#2007); replay v2 open | #2022 | Add TV-style goal replays |
+| Goal replay that shows the kick, TV sting | Sting (#2007) and the replay that shows the kick on main | #2022 | Add TV-style goal replays |
 | Score bug | On main (2.107) | | |
 | Goal kicker's stat card | On main | #1990 | Add TV-style match graphics |
 | Journalists' posts on the broadcast (row 207) | Not started: when, who and what not yet asked | | **Nobody** (needs his rulings) |
 | Banner run-through before the first bounce | Built (real tear) | #2004 | Build the 3D banner run-through (thread failed; PR open) |
 | Crowd: winter clothes, cheer squads, reactions, size by real attendance | Built | #1986 (draft) #1992 | Bring the MCG crowd up to standard; Size crowds by real attendance |
-| Crowd and real AFL siren | Built; he approved the sound | #2012 | Get a real AFL siren and crowd sound |
+| Crowd and real AFL siren | On main; he approved the sound | #2012 | Get a real AFL siren and crowd sound |
 | Sun moves with the match clock | Built | #1928 (carried by #1996) | Make MCG night matches look right |
 | Night matches | MCG built | #1996 | Make MCG night matches look right |
 | Wet matches | On main (#2003) | | |
@@ -181,4 +181,4 @@ What this says: the big grounds draw 2.3-4.4 million triangles a frame on High a
 - 2026-11-22: first version, built from the plan, the open PRs, the threads and project memory.
 - 2026-11-22: the director chose all 37 grounds for 1.0.
 - 2026-11-22: the data-source rule for grounds written into MCG_STANDARD.md and sent to every ground thread; softened the same day (fidelity first; only raw imagery in the repo or textures is out).
-- 2026-11-22 evening: stat card on main (#1990); owners and PRs for ENGIE, Manuka, Norwood, Barossa, Mars, guernseys, umpires and trainers, kick clips and night lights.
+- 2026-11-22 evening: stat card (#1990), goal replay (#2022) and siren and crowd (#2012) on main; owners and PRs for ENGIE, Manuka, Norwood, Barossa, Mars, guernseys, umpires and trainers, kick clips and night lights.
