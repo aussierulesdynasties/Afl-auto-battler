@@ -130,6 +130,9 @@ const MATERIAL_FIX := {
 	"bellerive": {
 		"roof_soffit": {"albedo_color": Color(1.06, 0.98, 0.9)},
 		"roof_white": {"metallic": 0.0, "roughness": 0.9},
+		# The practice nets' veil is matte: glossy, it mirrored the sky and the roof net read as a sheet
+		# of blue from above.
+		"mesh": {"roughness": 1.0, "metallic_specular": 0.0},
 	},
 	# GMHBA (Google Earth 3D, 2026-11-22): the seats under the roofs were painted dark ("_d") and then shaded
 	# again by the real roof, so they read near-black where the real rows read mid grey-blue; the shade
@@ -335,6 +338,8 @@ static func instantiate(slug: String, base := "") -> Node3D:
 				_paint_vertex_colours(model)
 			if MATERIAL_FIX.has(slug):
 				_fix_materials(model, MATERIAL_FIX[slug])
+			if OPEN_GROUND.has(slug):
+				_open_ground(model, OPEN_GROUND[slug])
 			for part: Dictionary in PARTS.get(slug, []):
 				_add_part(model, dir, part)
 			root.add_child(model)
@@ -1109,6 +1114,27 @@ static func _add_part(model: Node, dir: String, part: Dictionary) -> void:
 	mi.name = str(part.get("name", "Part"))
 	mi.mesh = mesh
 	model.add_child(mi)
+
+
+## Paving and practice wickets a model lays on the land outside the bowl, by mesh name: lit like the
+## land round them (the surrounds), not like a stand. Under a stand's light and its shade they read a
+## saturated blue beside sunlit grass (Bellerive's practice nets, 2026-11-22).
+const OPEN_GROUND := {"bellerive": ["nets_ground", "forecourt"]}
+
+
+static func _open_ground(model: Node, names: Array) -> void:
+	for mi: MeshInstance3D in model.find_children("*", "MeshInstance3D", true, false):
+		if mi.mesh == null or not names.any(func(n: String) -> bool: return str(mi.name).begins_with(n)):
+			continue
+		mi.set_meta("open_ground", true)
+		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		for i in mi.mesh.get_surface_count():
+			var m := mi.get_active_material(i) as BaseMaterial3D
+			if m != null:
+				var own := m.duplicate() as BaseMaterial3D
+				own.disable_receive_shadows = true
+				own.roughness = 1.0
+				mi.set_surface_override_material(i, own)
 
 
 static func _fix_materials(model: Node, fixes: Dictionary) -> void:

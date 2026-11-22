@@ -87,10 +87,17 @@ def footprint():
     rmax = np.maximum(rmax, np.roll(rmax, 1))
     rmax = np.maximum(rmax, np.roll(rmax, -1))
     out = a | (rr <= rmax[bins])
-    # The indoor centre west of the Ponting stands outside that circle; its own plan joins the footprint.
+    # The indoor centre west of the Ponting and its forecourt stand outside that circle; their own plans
+    # join the footprint.
+    return out | plan_of(sc, ("indoor_centre", "forecourt"))
+
+
+def plan_of(sc, names):
+    """The plan of the model's meshes whose names start with one of `names`, as a 1 m mask, holes filled."""
     from scipy import ndimage
+    out = np.zeros((S.SIZE, S.SIZE), bool)
     for name, g in sc.geometry.items():
-        if "indoor_centre" in name:
+        if name.startswith(names):
             w = np.asarray(g.vertices)
             b = np.zeros((S.SIZE, S.SIZE), bool)
             b[np.clip((w[:, 2] + S.SIZE / 2).astype(int), 0, S.SIZE - 1),
@@ -273,6 +280,8 @@ def main():
                 seen.add(k)
                 ways.append(e)
     foot = footprint()
+    import trimesh
+    nets = plan_of(trimesh.load(GLB), ("practice_nets",))   # no trees in the nets; the lawn stays
 
     def in_foot(pts):
         return any(foot[int(np.clip(z + S.SIZE / 2, 0, S.SIZE - 1)), int(np.clip(x + S.SIZE / 2, 0, S.SIZE - 1))]
@@ -314,12 +323,12 @@ def main():
     im.save(os.path.join(OUT, "surrounds.webp"), quality=88, method=6)
     t = S.tree_list(trees)
     if len(t):
-        keep = [not foot[int(np.clip(z + S.SIZE / 2, 0, S.SIZE - 1)), int(np.clip(x + S.SIZE / 2, 0, S.SIZE - 1))]
+        keep = [not (foot | nets)[int(np.clip(z + S.SIZE / 2, 0, S.SIZE - 1)), int(np.clip(x + S.SIZE / 2, 0, S.SIZE - 1))]
                 for x, z in t[:, :2]]
         t = t[keep]
     def blocked(x, z):
         i, j = int(np.clip(z + S.SIZE / 2, 0, S.SIZE - 1)), int(np.clip(x + S.SIZE / 2, 0, S.SIZE - 1))
-        return bool(foot[i, j] or sea[i, j] or math.hypot(x, z) < 105.0)
+        return bool(foot[i, j] or nets[i, j] or sea[i, j] or math.hypot(x, z) < 105.0)
     img = canopy_trees([tuple(q) for q in t[:, :2]], blocked)
     t = np.concatenate([t.reshape(-1, 5), img]).astype("<f4")
     print("canopy trees", len(img))

@@ -758,9 +758,50 @@ def video_board(col):
     mb.build(col)
 
 
+# ---------------- the practice nets and forecourt west of the Ponting (GE out_NW, cf_270, out_W) ------------
+# Three outdoor practice lanes on the lawn by Derwent Street's footpath, parallel to the street: a
+# synthetic wicket in each, netted sides, back and roof on galvanised posts. The indoor centre's west end
+# opens onto a paved forecourt; the yard west of its service wing is asphalt with marked bays.
+NETS = dict(c=(-120.2, 4.0), a=65.0, L=30.0, lane=3.2, n=3, H=3.6)
+
+
+def practice_nets(col):
+    mb = MB('practice_nets'); N = NETS; W = N['lane'] * N['n']
+    F = Frame(dict(c=N['c'], a=N['a'], L=N['L'], W=W)); h = N['L'] / 2; q = F.P; H = N['H']
+    vs = [-W / 2 + k * N['lane'] for k in range(N['n'] + 1)]
+    gr = MB('nets_ground')                                    # the wickets: open ground (GroundModels.OPEN_GROUND)
+    for k in range(N['n']):
+        v0, v1 = vs[k] + 0.1, vs[k + 1] - 0.1
+        gr.face([q(-h, v1, 0.03), q(h, v1, 0.03), q(h, v0, 0.03), q(-h, v0, 0.03)], 'syn_pitch',
+                uv=[(1, 0), (1, N['L'] / 4.0), (0, N['L'] / 4.0), (0, 0)])
+    gr.build(col)
+    us = np.linspace(-h, h, 9)
+    for v in vs:                                              # posts, top rails and the netted sides
+        for u in us: mb.beam(q(u, v, 0.0), q(u, v, H), 0.08, 0.08, 'steel_galv')
+        mb.beam(q(-h, v, H), q(h, v, H), 0.06, 0.06, 'steel_galv')
+        mb.face([q(-h, v, 0.0), q(h, v, 0.0), q(h, v, H), q(-h, v, H)], 'mesh')
+    for u in (-h, h):
+        mb.beam(q(u, vs[0], H), q(u, vs[-1], H), 0.06, 0.06, 'steel_galv')
+    mb.face([q(h, vs[0], 0.0), q(h, vs[-1], 0.0), q(h, vs[-1], H), q(h, vs[0], H)], 'mesh')   # the batting end
+    mb.face([q(-h, vs[0], H), q(h, vs[0], H), q(h, vs[-1], H), q(-h, vs[-1], H)], 'mesh')   # the roof net
+    mb.build(col)
+
+
+def forecourt(col):
+    mb = MB('forecourt'); F = Frame(IC); q = F.P
+    def slab(u0, u1, v0, v1, m, z=0.03):
+        mb.face([q(u0, v1, z), q(u1, v1, z), q(u1, v0, z), q(u0, v0, z)], m)
+    slab(-29.0, -20.0, -9.0, 20.0, 'pavers')                   # in front of the glass west end
+    slab(-20.0, -2.0, 9.0, 20.0, 'yard')                       # the service yard west of the wing
+    for v in (-9.0, 20.0):                                     # kerbs round the paving
+        mb.beam(q(-29.0, v, 0.06), q(-20.0 if v < 0 else -2.0, v, 0.06), 0.15, 0.12, 'conc_grey')
+    mb.beam(q(-29.0, -9.0, 0.06), q(-29.0, 20.0, 0.06), 0.15, 0.12, 'conc_grey')
+    mb.build(col)
+
+
 def build_all():
     clear(); col = bpy.context.scene.collection
-    main_all(col); vomitories(col); skylights(col); members_all(col); nstand(col); terrace(col); scoreboard(col); towers(col); apron(col); indoor_centre(col); video_board(col)
+    main_all(col); vomitories(col); skylights(col); members_all(col); nstand(col); terrace(col); scoreboard(col); towers(col); apron(col); indoor_centre(col); video_board(col); practice_nets(col); forecourt(col)
     fence_only(col, D['members']['b1'], 360 + D['terrace']['b0'])
 
 
