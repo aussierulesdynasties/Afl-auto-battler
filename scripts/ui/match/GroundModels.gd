@@ -132,6 +132,9 @@ const MATERIAL_FIX := {
 	"bellerive": {
 		"roof_soffit": {"albedo_color": Color(1.06, 0.98, 0.9)},
 		"roof_white": {"metallic": 0.0, "roughness": 0.9},
+		# The practice nets' veil is matte: glossy, it mirrored the sky and the roof net read as a sheet
+		# of blue from above.
+		"mesh": {"roughness": 1.0, "metallic_specular": 0.0},
 	},
 	# GMHBA (Google Earth 3D, 2026-11-22): the seats under the roofs were painted dark ("_d") and then shaded
 	# again by the real roof, so they read near-black where the real rows read mid grey-blue; the shade
@@ -341,6 +344,8 @@ static func instantiate(slug: String, base := "") -> Node3D:
 				_paint_vertex_colours(model)
 			if MATERIAL_FIX.has(slug):
 				_fix_materials(model, MATERIAL_FIX[slug])
+			if OPEN_GROUND.has(slug):
+				_open_ground(model, OPEN_GROUND[slug])
 			for part: Dictionary in PARTS.get(slug, []):
 				_add_part(model, dir, part)
 			root.add_child(model)
@@ -497,10 +502,19 @@ static func _add_trees(root: Node3D, buf: PackedFloat32Array, y: float) -> void:
 			var at := Vector3(buf[i], y, buf[i + 1])
 			var turn := Basis(Vector3.UP, buf[i + 4] * TAU)
 			var crown := h - r * 1.1
-			leaves.set_instance_transform(j, Transform3D(turn.scaled(Vector3(r, r * 0.85, r)), at + Vector3(0, crown, 0)))
-			# Eucalypt grey-green to elm green, a little lighter or darker tree to tree.
 			var shade: float = buf[i + 4]
-			leaves.set_instance_color(j, Color(0.92, 0.95, 0.9).lerp(Color(1.1, 1.08, 0.95), shade) * (0.85 + 0.3 * fposmod(shade * 7.3, 1.0)))
+			if shade >= 2.0:
+				# A pine or cypress (shade 2 and up, from a ground's measured canopy heights): one tall dark
+				# column from low on the trunk to the top, not a ball on a stick.
+				shade -= 2.0
+				var half := h * 0.42
+				crown = h - half * 0.95
+				leaves.set_instance_transform(j, Transform3D(turn.scaled(Vector3(r, half, r)), at + Vector3(0, crown, 0)))
+				leaves.set_instance_color(j, Color(0.62, 0.72, 0.62) * (0.85 + 0.3 * fposmod(shade * 7.3, 1.0)))
+			else:
+				leaves.set_instance_transform(j, Transform3D(turn.scaled(Vector3(r, r * 0.85, r)), at + Vector3(0, crown, 0)))
+				# Eucalypt grey-green to elm green, a little lighter or darker tree to tree.
+				leaves.set_instance_color(j, Color(0.92, 0.95, 0.9).lerp(Color(1.1, 1.08, 0.95), shade) * (0.85 + 0.3 * fposmod(shade * 7.3, 1.0)))
 			stems.set_instance_transform(j, Transform3D(Basis().scaled(Vector3(h, crown, h)), at + Vector3(0, crown * 0.5, 0)))
 		for pair in [[leaves, leaf, "Trees"], [stems, bark, "Trunks"]]:
 			var mi := MultiMeshInstance3D.new()
@@ -550,8 +564,31 @@ static func _add_buildings(root: Node3D, buf: PackedFloat32Array, y: float, wall
 			var shade := wall * (0.92 + 0.08 * absf(out.x))
 			_front(v, nrm, col, Vector3(a.x, y, a.y), Vector3(c.x, y, c.y), Vector3(c.x, y + h, c.y), out, shade)
 			_front(v, nrm, col, Vector3(a.x, y, a.y), Vector3(c.x, y + h, c.y), Vector3(a.x, y + h, a.y), out, shade)
+			if hipped and foot[k].length() < HOUSE_DETAIL_R:
+				_house_windows(a, c, y, out, v, nrm, col)
 		if hipped:
-			_hip_roof(foot, y + h, roof, v, nrm, col)
+			# The roof oversails the walls by HOUSE_EAVE (a boxed eave, its soffit seen from the street).
+			var cen := Vector2.ZERO
+			for p in foot:
+				cen += p
+			cen /= foot.size()
+			var eave := PackedVector2Array()
+			for p in foot:
+				var dd := (p - cen).length()
+				eave.append(cen + (p - cen) * ((dd + HOUSE_EAVE) / maxf(dd, 0.01)))
+			for k in n:
+				var a := foot[k]
+				var c := foot[(k + 1) % n]
+				var ea := eave[k]
+				var ec := eave[(k + 1) % n]
+				var sof := wall.lightened(0.15) * 0.8
+				sof.a = 1.0
+				_front(v, nrm, col, Vector3(a.x, y + h, a.y), Vector3(ec.x, y + h, ec.y), Vector3(c.x, y + h, c.y), Vector3.DOWN, sof)
+				_front(v, nrm, col, Vector3(a.x, y + h, a.y), Vector3(ea.x, y + h, ea.y), Vector3(ec.x, y + h, ec.y), Vector3.DOWN, sof)
+			_hip_roof(eave, y + h, roof, v, nrm, col)
+			if b % 3 == 0:                         # a brick chimney through the roof on one house in three
+				var ch := cen + (foot[0] - cen) * 0.45
+				_box(Vector3(ch.x, y + h, ch.y), Vector2(0.55, 0.75), 3.6, Color(0.55, 0.32, 0.26), v, nrm, col)
 			continue
 		var tri := Geometry2D.triangulate_polygon(foot)
 		for k in range(0, tri.size() - 2, 3):
@@ -595,6 +632,69 @@ static func _front(v: PackedVector3Array, nrm: PackedVector3Array, col: PackedCo
 	v.append_array([a, b, c])
 	nrm.append_array([n, n, n])
 	col.append_array([colour, colour, colour])
+
+
+## House detail (GMHBA's and Bellerive's suburbs): eaves past the walls everywhere, and within
+## HOUSE_DETAIL_R of the ground windows stood on the walls as frames with a dark pane, modelled, so the
+## houses read as houses from the stands' upper rows and the blimp. Past that a window is under a pixel.
+const HOUSE_EAVE := 0.45
+const HOUSE_DETAIL_R := 450.0
+
+
+## Windows along one house wall from a to c (outward normal `out`): 1.0 m wide, 1.3 m tall on a 0.9 m
+## sill, every 3.4 m or so, each a white frame standing 6 cm off the wall round a dark glass pane.
+static func _house_windows(a: Vector2, c: Vector2, y: float, out: Vector3, v: PackedVector3Array,
+		nrm: PackedVector3Array, col: PackedColorArray) -> void:
+	var L := (c - a).length()
+	if L < 2.6:
+		return
+	var n := maxi(1, int(L / 3.4))
+	var dir := (c - a) / L
+	var o2 := Vector2(out.x, out.z)
+	var frame := Color(0.92, 0.92, 0.9)
+	var glass := Color(0.16, 0.19, 0.22)
+	for k in n:
+		var m := a + dir * (L * (k + 0.5) / n)
+		var P := func(u: float, z: float, d: float) -> Vector3:
+			var q: Vector2 = m + dir * u + o2 * d
+			return Vector3(q.x, y + z, q.y)
+		var hw := 0.5
+		var z0 := 0.9
+		var z1 := 2.2
+		var t := 0.09
+		_front(v, nrm, col, P.call(-hw, z0, 0.03), P.call(hw, z0, 0.03), P.call(hw, z1, 0.03), out, glass)
+		_front(v, nrm, col, P.call(-hw, z0, 0.03), P.call(hw, z1, 0.03), P.call(-hw, z1, 0.03), out, glass)
+		# The frame: four bars, each a front face and its outer edge, 6 cm proud.
+		for bar: Array in [[-hw - t, hw + t, z0 - t, z0], [-hw - t, hw + t, z1, z1 + t], [-hw - t, -hw, z0, z1], [hw, hw + t, z0, z1]]:
+			var u0: float = bar[0]
+			var u1: float = bar[1]
+			var b0: float = bar[2]
+			var b1: float = bar[3]
+			_front(v, nrm, col, P.call(u0, b0, 0.06), P.call(u1, b0, 0.06), P.call(u1, b1, 0.06), out, frame)
+			_front(v, nrm, col, P.call(u0, b0, 0.06), P.call(u1, b1, 0.06), P.call(u0, b1, 0.06), out, frame)
+		var sill_up := Vector3.UP
+		_front(v, nrm, col, P.call(-hw - t, z0 - t, 0.0), P.call(hw + t, z0 - t, 0.0), P.call(hw + t, z0 - t, 0.08), sill_up, frame)
+		_front(v, nrm, col, P.call(-hw - t, z0 - t, 0.0), P.call(hw + t, z0 - t, 0.08), P.call(-hw - t, z0 - t, 0.08), sill_up, frame)
+
+
+## A box standing at `base` (centre of its foot), `size` x and z, `h` tall: four walls and a top.
+static func _box(base: Vector3, size: Vector2, h: float, colour: Color, v: PackedVector3Array,
+		nrm: PackedVector3Array, col: PackedColorArray) -> void:
+	var hx := size.x * 0.5
+	var hz := size.y * 0.5
+	var c := [Vector3(-hx, 0, -hz), Vector3(hx, 0, -hz), Vector3(hx, 0, hz), Vector3(-hx, 0, hz)]
+	for k in 4:
+		var p0: Vector3 = base + c[k]
+		var p1: Vector3 = base + c[(k + 1) % 4]
+		var mid := (p0 + p1) * 0.5 - base
+		var n := Vector3(mid.x, 0, mid.z).normalized()
+		var sh := colour * (0.9 + 0.1 * absf(n.x))
+		sh.a = 1.0
+		_front(v, nrm, col, p0, p1, p1 + Vector3.UP * h, n, sh)
+		_front(v, nrm, col, p0, p1 + Vector3.UP * h, p0 + Vector3.UP * h, n, sh)
+	var t := Vector3.UP * h
+	_front(v, nrm, col, base + c[0] + t, base + c[1] + t, base + c[2] + t, Vector3.UP, colour.darkened(0.3))
+	_front(v, nrm, col, base + c[0] + t, base + c[2] + t, base + c[3] + t, Vector3.UP, colour.darkened(0.3))
 
 
 ## Geelong's house roofs from above in Google Earth: terracotta tile, charcoal and grey Colorbond, pale zinc.
@@ -1020,6 +1120,27 @@ static func _add_part(model: Node, dir: String, part: Dictionary) -> void:
 	mi.name = str(part.get("name", "Part"))
 	mi.mesh = mesh
 	model.add_child(mi)
+
+
+## Paving and practice wickets a model lays on the land outside the bowl, by mesh name: lit like the
+## land round them (the surrounds), not like a stand. Under a stand's light and its shade they read a
+## saturated blue beside sunlit grass (Bellerive's practice nets, 2026-11-22).
+const OPEN_GROUND := {"bellerive": ["nets_ground", "forecourt"]}
+
+
+static func _open_ground(model: Node, names: Array) -> void:
+	for mi: MeshInstance3D in model.find_children("*", "MeshInstance3D", true, false):
+		if mi.mesh == null or not names.any(func(n: String) -> bool: return str(mi.name).begins_with(n)):
+			continue
+		mi.set_meta("open_ground", true)
+		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		for i in mi.mesh.get_surface_count():
+			var m := mi.get_active_material(i) as BaseMaterial3D
+			if m != null:
+				var own := m.duplicate() as BaseMaterial3D
+				own.disable_receive_shadows = true
+				own.roughness = 1.0
+				mi.set_surface_override_material(i, own)
 
 
 static func _fix_materials(model: Node, fixes: Dictionary) -> void:
