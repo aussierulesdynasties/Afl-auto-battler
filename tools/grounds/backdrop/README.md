@@ -38,10 +38,10 @@ What it does:
 | MCG (from 1,024 m, 480 OSM towers) | 2.38 M triangles | 0.33 M, 30 pieces | 350 m, 40%, 15% |
 | GMHBA Stadium | 4.64 M triangles | 0.96 M, 115 pieces | 250 m, 30%, 10% |
 | 10 more from the PC (Optus, Marvel, Adelaide, People First, Cazaly's, Riverway, Traeger, Mars, Accor) | | budget 800,000 triangles, 2 looks per kind | |
-| The other 24 match grounds (2026-11-22, `scene/`) | from OpenStreetMap | at most 0.8 M, 2 looks per kind | as above |
 
-The 24 were built in the cloud from OpenStreetMap with `scene/run1.sh` (see `scene/README.md`). Two settings came
-with them: `BG_YAW` turns a scene built on a turned model back into the model's frame, and `BG_HULL_SKIP` leaves
+A first pass at the other grounds was built in the cloud from OpenStreetMap with `scene/run1.sh` (see `scene/README.md`).
+It read as generic suburbs, not the real places, so none of it is in the game: each ground lands only once it is
+built to match Google Earth. Two settings came with that work: `BG_YAW` turns a scene built on a turned model back into the model's frame, and `BG_HULL_SKIP` leaves
 the model's own flat ground (WACA, Bruce, North Hobart, the kit grounds' concourse disc) out of the hull that cuts
 the scene's ground, because the game hides that ground where a backdrop is drawn (`GroundModels.BACKDROP_HIDES`).
 Historic grounds (Waverley Park, Football Park, Subiaco, Moorabbin, Windy Hill) stand in today's suburbs.
