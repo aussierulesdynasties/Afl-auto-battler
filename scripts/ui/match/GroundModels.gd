@@ -88,6 +88,16 @@ const FIT := {
 ## its ground painted from OpenStreetMap (tools/grounds/mcg/surrounds.py), `span` m a side round the
 ## model's middle, and `trees` the park's trees from the same map (x, z, height, canopy, shade).
 const SURROUNDS := {
+	# Bellerive: its streets and houses, Bellerive Beach, Kangaroo Bay and the Derwent
+	# (tools/grounds/bellerive/surrounds.py), laid on the model's origin (the OSM pitch's centre).
+	"bellerive": {"y": -0.04, "inner": 60.0, "colour": Color(0.5, 0.5, 0.34),
+			"map": "surrounds.webp", "span": 2048.0, "trees": "trees.bin", "buildings": "buildings.bin",
+			# Bellerive in Google Earth: white and cream weatherboard, red and brown brick, grey render.
+			"walls": [Color(0.86, 0.85, 0.8), Color(0.62, 0.42, 0.34), Color(0.78, 0.74, 0.64), Color(0.56, 0.55, 0.52),
+					Color(0.9, 0.9, 0.88), Color(0.66, 0.5, 0.4), Color(0.72, 0.76, 0.78)],
+			# Its roofs from above: Colorbond teal and green, terracotta, charcoal, grey, white and blue.
+			"roofs": [Color(0.32, 0.52, 0.5), Color(0.66, 0.34, 0.26), Color(0.36, 0.36, 0.38), Color(0.6, 0.6, 0.58),
+					Color(0.4, 0.56, 0.44), Color(0.82, 0.82, 0.8), Color(0.44, 0.52, 0.62), Color(0.56, 0.3, 0.24)]},
 	# GMHBA: Kardinia Park and Geelong's streets and houses (tools/grounds/gmhba/surrounds.py); the map is
 	# laid on the model's origin, the stadium's own footprint painted plain under the model.
 	"gmhba": {"y": -0.04, "inner": 60.0, "colour": Color(0.48, 0.49, 0.33),
@@ -114,6 +124,12 @@ const PARTS := {
 ## it mirrored the blue sky and read white-blue where the real roof reads warm grey; the tints bring
 ## its sunlit tops to Google Earth's colours (north 189,188,181, east 148,150,145).
 const MATERIAL_FIX := {
+	# Bellerive: the roof's underside and the stands' soffits read purple once the grass's green is taken
+	# out of their light (the stand shader); Google Earth shows them a neutral dark grey. Roof sheeting matte.
+	"bellerive": {
+		"roof_soffit": {"albedo_color": Color(1.06, 0.98, 0.9)},
+		"roof_white": {"metallic": 0.0, "roughness": 0.9},
+	},
 	# GMHBA (Google Earth 3D, 2026-11-22): the seats under the roofs were painted dark ("_d") and then shaded
 	# again by the real roof, so they read near-black where the real rows read mid grey-blue; the shade
 	# is the renderer's job, so they take the sunlit tones back. Roof sheeting matte, as at the MCG.
@@ -152,6 +168,10 @@ const VERTEX_COLOURED := ["adelaide"]
 const SEAT_COLOURS := {
 	# Accor: aqua lower bowl (seat_teal there keeps the value already here).
 	"seat_aqua": Color(0.527, 0.719, 0.757),
+	# Bellerive: mid-blue plastic all round the Boon and Ponting stands (Google Earth from the field).
+	"seat_bel_blue": Color8(72, 108, 146),
+	# The Members' front rows dark grey; the Northern Stand's and the east terrace's benches white.
+	"seat_bel_pale": Color8(150, 168, 186), "seat_bel_dark": Color8(58, 62, 70), "seat_bel_white": Color8(214, 216, 214),
 	# MCG, by tier from Street View on the ground and Google Earth: white and light grey lower and
 	# middle tiers, a blue band along the front of the middle tier, teal-blue top tier
 	# (grey-green in the Members' north-west).
@@ -318,6 +338,12 @@ static func instantiate(slug: String, base := "") -> Node3D:
 	_add_seats(root, dir, Vector2(float(fit[0]), float(fit[1])))
 	if SURROUNDS.has(slug):
 		_add_surrounds(root, SURROUNDS[slug], dir)
+	var bd := backdrop(slug, dir)
+	if bd != null:
+		root.add_child(bd)
+		for n: String in BACKDROP_HIDES.get(slug, []):   # the model's own ground, where the scene's takes over
+			for mi in root.find_children(n + "*", "MeshInstance3D", true, false):
+				(mi as MeshInstance3D).visible = false
 	return root
 
 
@@ -379,7 +405,7 @@ static func _add_surrounds(root: Node3D, s: Dictionary, dir := "") -> void:
 			_add_trees(root, FileAccess.get_file_as_bytes(dir + str(s["trees"])).to_float32_array(), y)
 		if s.has("buildings") and FileAccess.file_exists(dir + str(s["buildings"])):
 			_add_buildings(root, FileAccess.get_file_as_bytes(dir + str(s["buildings"])).to_float32_array(), y,
-					s.get("walls", []))
+					s.get("walls", []), s.get("roofs", []))
 		return
 	var noise := FastNoiseLite.new()
 	noise.frequency = 0.02
@@ -477,7 +503,8 @@ static func _add_trees(root: Node3D, buf: PackedFloat32Array, y: float) -> void:
 ## The map's buildings round the ground (point count, height, then the footprint's x, z): plain
 ## walls in a pale render or brick and a flat roof each, as one mesh. Seen past the stands and
 ## from a fly-through, they set the MCG in its city rather than on a plain.
-static func _add_buildings(root: Node3D, buf: PackedFloat32Array, y: float, walls: Array = []) -> void:
+static func _add_buildings(root: Node3D, buf: PackedFloat32Array, y: float, walls: Array = [],
+		roofs: Array = []) -> void:
 	var v := PackedVector3Array()
 	var nrm := PackedVector3Array()
 	var col := PackedColorArray()
@@ -499,7 +526,8 @@ static func _add_buildings(root: Node3D, buf: PackedFloat32Array, y: float, wall
 		var wall: Color = walls[b % walls.size()] if not walls.is_empty() else WALLS[b % WALLS.size()]
 		var roof := wall.darkened(0.18)
 		if hipped:
-			roof = HOUSE_ROOFS[(b * 7) % HOUSE_ROOFS.size()]
+			var hr: Array = roofs if not roofs.is_empty() else HOUSE_ROOFS
+			roof = hr[(b * 7) % hr.size()]
 		# Walls face out whichever way round the footprint was drawn.
 		var ccw := 0.0
 		for k in n:
@@ -509,19 +537,16 @@ static func _add_buildings(root: Node3D, buf: PackedFloat32Array, y: float, wall
 			var c := foot[(k + 1) % n]
 			var out := Vector3(c.y - a.y, 0.0, a.x - c.x).normalized() * (1.0 if ccw > 0.0 else -1.0)
 			var shade := wall * (0.92 + 0.08 * absf(out.x))
-			for p: Vector3 in [Vector3(a.x, y, a.y), Vector3(c.x, y, c.y), Vector3(c.x, y + h, c.y),
-					Vector3(a.x, y, a.y), Vector3(c.x, y + h, c.y), Vector3(a.x, y + h, a.y)]:
-				v.append(p)
-				nrm.append(out)
-				col.append(shade)
+			_front(v, nrm, col, Vector3(a.x, y, a.y), Vector3(c.x, y, c.y), Vector3(c.x, y + h, c.y), out, shade)
+			_front(v, nrm, col, Vector3(a.x, y, a.y), Vector3(c.x, y + h, c.y), Vector3(a.x, y + h, a.y), out, shade)
 		if hipped:
 			_hip_roof(foot, y + h, roof, v, nrm, col)
 			continue
 		var tri := Geometry2D.triangulate_polygon(foot)
-		for k in tri:
-			v.append(Vector3(foot[k].x, y + h, foot[k].y))
-			nrm.append(Vector3.UP)
-			col.append(roof)
+		for k in range(0, tri.size() - 2, 3):
+			_front(v, nrm, col, Vector3(foot[tri[k]].x, y + h, foot[tri[k]].y),
+					Vector3(foot[tri[k + 1]].x, y + h, foot[tri[k + 1]].y),
+					Vector3(foot[tri[k + 2]].x, y + h, foot[tri[k + 2]].y), Vector3.UP, roof)
 	if v.is_empty():
 		return
 	var arr := []
@@ -544,6 +569,21 @@ static func _add_buildings(root: Node3D, buf: PackedFloat32Array, y: float, wall
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	mi.set_meta("open_ground", true)
 	root.add_child(mi)
+
+
+## One triangle wound so its front face looks along `n` (Godot draws clockwise faces as the front).
+## The town's mesh is drawn from both sides, and a back face is lit with its normal turned round:
+## roofs wound the other way were lit from under the ground (the grass's green bounce), walls from
+## inside (sky blue only).
+static func _front(v: PackedVector3Array, nrm: PackedVector3Array, col: PackedColorArray, a: Vector3, b: Vector3,
+		c: Vector3, n: Vector3, colour: Color) -> void:
+	if (c - a).cross(b - a).dot(n) < 0.0:
+		var t := b
+		b = c
+		c = t
+	v.append_array([a, b, c])
+	nrm.append_array([n, n, n])
+	col.append_array([colour, colour, colour])
 
 
 ## Geelong's house roofs from above in Google Earth: terracotta tile, charcoal and grey Colorbond, pale zinc.
@@ -604,10 +644,7 @@ static func _hip_roof(foot: PackedVector2Array, eave: float, roof: Color, v: Pac
 				nn = -nn
 			var lit := roof * (0.78 + 0.22 * clampf(nn.dot(Vector3(0.3, 0.9, -0.3).normalized()), 0.0, 1.0) / 0.95)
 			lit.a = 1.0
-			for p: Vector3 in t:
-				v.append(p)
-				nrm.append(nn)
-				col.append(lit)
+			_front(v, nrm, col, t[0], t[1], t[2], nn, lit)
 
 
 ## A canopy of about radius 1: two lumpy lobes, one high and one off to the side, so a park of them
@@ -737,6 +774,83 @@ static func _pick(src, used: PackedInt32Array):
 	for j in range(used.size()):
 		dst[j] = src[used[j]]
 	return dst
+
+
+## How far a camera sees when the ground has its surroundings (backdrop()): the city skyline and
+## the hills. Without them the match view stops at 900 m.
+const BACKDROP_FAR := 7000.0
+## Grounds whose backdrop runs further, [camera far, haze end] in m: Bellerive's reaches kunanyi /
+## Mount Wellington, 11 km across the Derwent, which a Hobart crowd sees clearly, blue with the distance.
+const BACKDROP_RANGE := {"bellerive": [20000.0, 60000.0]}
+
+
+static func backdrop_far(slug: String) -> float:
+	return float(BACKDROP_RANGE[slug][0]) if BACKDROP_RANGE.has(slug) else BACKDROP_FAR
+
+
+static func backdrop_haze(slug: String, default_to: float) -> float:
+	return float(BACKDROP_RANGE[slug][1]) if BACKDROP_RANGE.has(slug) else default_to
+
+
+## The ground's surroundings past its own street (row 202 2b, the background scenes): the park,
+## the streets, the houses, the trees and the skyline, built in Blender round the stadium model in
+## the model's own metres (.claude/review/<ground>_bg) and cut down for a phone by
+## tools/grounds/backdrop/reduce.py into <slug>_backdrop.glb (or _backdrop_part1.glb ...). Laid
+## with the model (it is the model's child), so it fits wherever the model fits. Looks only: it
+## casts no shadow into the stadium and nothing in play reads it. null when the ground has none.
+static func backdrop(slug: String, base := "") -> Node3D:
+	var dir := base if base != "" else DIR + slug + "/"
+	var paths := files(slug + "_backdrop", dir)
+	if paths.is_empty():
+		return null
+	var root := Node3D.new()
+	root.name = "Backdrop"
+	for path in paths:
+		var model := load_glb(path)
+		if model == null:
+			continue
+		for gi in model.find_children("*", "GeometryInstance3D", true, false):
+			(gi as GeometryInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		_backdrop_materials(model)
+		root.add_child(model)
+	return root
+
+
+## A model's own far ground, hidden when its backdrop is drawn (the two would fight for a pixel):
+## Adelaide's model carries a 6 km grass plane.
+const BACKDROP_HIDES := {"adelaide": ["ao_ground"]}
+
+const BACKDROP_SHADER := preload("res://scripts/ui/match/oval3d_backdrop.gdshader")
+
+
+## The scene's materials as Blender drew them: the trees and everything else tinted by their
+## vertex colours; the walls and roofs (facade_*, roof_*) through oval3d_backdrop.gdshader, which
+## leaves their glass and frames untinted. Materials are shared, so each is made once.
+static func _backdrop_materials(model: Node) -> void:
+	var made := {}
+	for mi in model.find_children("*", "MeshInstance3D", true, false):
+		var mesh: Mesh = (mi as MeshInstance3D).mesh
+		if mesh == null:
+			continue
+		for i in mesh.get_surface_count():
+			var mat := mesh.surface_get_material(i) as BaseMaterial3D
+			if mat == null:
+				continue
+			var key := mat.resource_name
+			if key.begins_with("facade_") or key.begins_with("roof_"):
+				if not made.has(key):
+					var sm := ShaderMaterial.new()
+					sm.shader = BACKDROP_SHADER
+					sm.set_shader_parameter("tex", mat.albedo_texture)
+					made[key] = sm
+				(mi as MeshInstance3D).set_surface_override_material(i, made[key])
+			else:
+				mat.vertex_color_use_as_albedo = true
+				mat.disable_receive_shadows = true   # past the shadow map's reach it reads blue-grey
+
+
+static func has_backdrop(slug: String, base := "") -> bool:
+	return not files(slug + "_backdrop", base if base != "" else DIR + slug + "/").is_empty()
 
 
 ## Every seat in the model's own metres (seats_*.bin), for the crowd to sit on (Oval3DCrowd).
