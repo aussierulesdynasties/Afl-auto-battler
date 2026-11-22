@@ -64,6 +64,22 @@ The map data is © OpenStreetMap contributors and is available under the Open Da
 (ODbL). Any release credits must carry that line. No aerial imagery is shipped: Google Earth and
 Esri imagery are used only to check the look by eye.
 
+### Manuka Oval's surroundings (tools/grounds/manuka/town/)
+
+Manuka's town within 1.1 km and Canberra out to 30 km (`manuka_backdrop_part1.glb`, `_part2.glb`) are built from
+open data only. Credits a release must carry:
+
+- Map data © OpenStreetMap contributors, ODbL: streets, land use, building footprints and storeys, Parliament
+  House's outline and flag mast, the Black Mountain Tower.
+- © Australian Capital Territory, CC BY 4.0 (ACT Government open data, data.act.gov.au): ACT Mature Trees 2020
+  (LiDAR tree crowns and heights), ACT Tree Assets (species) and ACT Building Footprints.
+- Overture Maps Foundation buildings release (ODbL; Microsoft building heights), used to pick out two-storey houses.
+- Terrarium elevation tiles (Mapzen and the AWS Open Data registry; sources include Geoscience Australia).
+
+Esri World Imagery and Google Earth 3D were used only to measure: each roof's colour (a median inside its footprint,
+matched to a roofing colour) and the storeys of 176 buildings read by eye (`storeys.json`). No imagery is
+committed or baked into a texture.
+
 ## What we have vs wishlist
 
 Base: `data/players_2026.csv` — 669 players, season totals only:
