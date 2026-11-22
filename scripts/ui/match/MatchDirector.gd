@@ -2917,7 +2917,14 @@ func _done(p: Dictionary) -> bool:
 		"chase":
 			var tk: Dictionary = tokens[int(p["who"])]
 			var v: Dictionary = tokens[int(p["victim"])]
-			MatchMotion.set_goal(tk, v["pos"], 1.0, true)
+			var aim: Vector2 = v["pos"]
+			if p.get("chasing", false):
+				# Running a man down he aims through him, flat out: aimed at him, the arrive
+				# braking held him to the carrier's pace and the gap never closed (seed 31).
+				var on: Vector2 = (v["pos"] as Vector2) - (tk["pos"] as Vector2)
+				if on.length() > 0.01:
+					aim = (v["pos"] as Vector2) + on.normalized() * 10.0
+			MatchMotion.set_goal(tk, aim, 1.0, true)
 			return (tk["pos"] as Vector2).distance_to(v["pos"]) <= 1.6 or _pt >= float(p["max"])
 		"emit", "possess":
 			return true

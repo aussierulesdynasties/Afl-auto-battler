@@ -65,6 +65,17 @@ func _run() -> void:
 		oval.sync(DT)
 		t += DT
 		var cd: bool = anim.director.chasing_down()
+		if cd and OS.get_environment("MOVES_EACH") != "" and int(t / DT) % 15 == 0:
+			var ah: Dictionary = anim.director.tackle_ahead()
+			if not ah.is_empty():
+				var vv := int(ah["victim"])
+				var kk := int(ah["who"])
+				print("  chasing t=%.2f carrier %s pace %.1f token %.1f once=%s in=%s holder=%d | tackler %s pace %.1f gap %.1f" % [t,
+						(anim.players[vv]["anim"] as AnimationPlayer).current_animation, (anim._pace[vv] as Vector2).length(),
+						(anim.director.tokens[vv]["vel"] as Vector2).length(), str(anim._once[vv].get("anim", "")),
+						str(not (anim._in[vv] as Dictionary).is_empty()), int(anim.director.ball["holder"]),
+						(anim.players[kk]["anim"] as AnimationPlayer).current_animation, (anim._pace[kk] as Vector2).length(),
+						(anim.director.tokens[vv]["pos"] as Vector2).distance_to(anim.director.tokens[kk]["pos"])])
 		if cd and chase_from < 0.0:
 			chase_from = t
 		elif not cd and chase_from >= 0.0:

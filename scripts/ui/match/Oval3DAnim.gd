@@ -46,6 +46,7 @@ const BALL_R := 0.09          # m: the ball on the turf (Oval3D.BALL_R)
 ## stands, the take turned about him so its tackler comes from where ours is.
 const PAIRS := "res://assets/oval3d/tackle_pairs.json"
 const LEAD := 0.3              # clip s: the run-in starts at least this long before the contact
+const CHASE_LEAD := 0.35       # s: the most of a take a chase-down plays before its contact
 const LEAD_MIN := 0.12         # the least run-in, when the tackle comes without warning
 const LEAD_RATE := 1.5         # fastest the run-in plays to fit a short warning
 const SLOW := 0.6              # slowest it plays while the contact is still to come
@@ -326,6 +327,10 @@ func frame(dt: float) -> void:
 			var d := _drawn(who).distance_to(_drawn(v))
 			for name in _pairs:
 				need = maxf(need, _lead(name, d))
+			if director.chasing_down():
+				# The takes' carriers stand or walk into them: a carrier running flat out stays in
+				# his own run until the last CHASE_LEAD, then the take has him.
+				need = minf(need, CHASE_LEAD)
 			# A tackler the director has slowed as he arrives would stand (under RUN_FROM) and
 			# wait for the take: the take starts then instead, its run-in carrying him in
 			# (director 2026-11-22: "the tackler is standing by idly waiting for the tackle").
