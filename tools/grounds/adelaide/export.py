@@ -11,9 +11,9 @@ REPO = os.path.dirname(os.path.dirname(os.path.dirname(HERE)))
 SRC = os.path.join(REPO, '.claude', 'review', 'adelaide', 'model')
 TEX = os.path.join(HERE, 'tex'); TILES = {int(k): v for k, v in json.load(open(os.path.join(TEX, 'tiles.json'))).items()}
 out = os.path.abspath(sys.argv[sys.argv.index('--') + 1]); os.makedirs(out, exist_ok=True)
-ROUGH = {0: 0.8, 1: 0.6, 2: 0.9, 3: 0.45, 4: 0.35, 5: 0.15, 6: 0.85, 7: 0.9, 8: 0.5, 9: 0.7, 10: 0.42, 11: 0.85, 12: 0.92, 13: 0.6}
+ROUGH = {0: 0.8, 1: 0.85, 2: 0.9, 3: 0.45, 4: 0.35, 5: 0.15, 6: 0.85, 7: 0.9, 8: 0.5, 9: 0.7, 10: 0.42, 11: 0.85, 12: 0.92, 13: 0.6}
 METAL = {4: 0.4, 5: 0.3, 10: 0.5}
-NAMES = {0: 'paint', 1: 'seat', 2: 'concrete', 3: 'membrane', 4: 'steel', 5: 'glass', 6: 'brick', 7: 'grass', 8: 'fins',
+NAMES = {0: 'paint', 1: 'paving', 2: 'concrete', 3: 'membrane', 4: 'steel', 5: 'glass', 6: 'brick', 7: 'grass', 8: 'fins',
          9: 'timber', 10: 'copper', 11: 'stone', 12: 'turf', 13: 'scoreboard'}
 bpy.ops.wm.read_factory_settings(use_empty=True)
 MATS = {}
@@ -83,7 +83,8 @@ for l in L[h + 1 + nv:h + 1 + nv + nf]:
     q = [int(x) for x in l.split()[1:]]
     for i in range(1, len(q) - 1): tri += [V[q[0]], V[q[i]], V[q[i + 1]]]
 (np.array(tri) @ C.T).astype('<f4').tofile(os.path.join(out, 'seat_tmpl.bin'))
-D = np.load(os.path.join(SRC, 'inst', 'seats.npz')); P, Y, CC = D['pos'], D['yaw'], D['col']
+D = [np.load(os.path.join(SRC, 'inst', f)) for f in ('seats.npz', 'seats_hill.npz') if os.path.exists(os.path.join(SRC, 'inst', f))]
+P, Y, CC = (np.concatenate([d[k] for d in D]) for k in ('pos', 'yaw', 'col'))   # the stands' seats and the Hill's (hill.py)
 NAME = {(35, 55, 77): 'seat_ao_navy', (70, 70, 75): 'seat_ao_charcoal', (95, 105, 118): 'seat_ao_slate',
         (95, 118, 112): 'seat_ao_sage', (150, 45, 50): 'seat_ao_red', (200, 62, 36): 'seat_ao_orange'}
 for f in glob.glob(os.path.join(out, 'seats_*.bin')): os.remove(f)
@@ -92,5 +93,6 @@ for key, nm in NAME.items():
     for p, y in zip(P[sel], Y[sel]):
         c, s = math.cos(y), math.sin(y); A = np.array([[c, -s, 0], [s, c, 0], [0, 0, 1.0]])
         rows.append(np.hstack([C @ A @ C.T, (C @ p)[:, None]]).ravel())
-    np.array(rows).astype('<f4').tofile(os.path.join(out, 'seats_%s.bin' % nm)); print(nm, len(rows))
+    if rows: np.array(rows).astype('<f4').tofile(os.path.join(out, 'seats_%s.bin' % nm))
+    print(nm, len(rows))
 print('done', out)
