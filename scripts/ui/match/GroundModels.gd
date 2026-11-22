@@ -680,6 +680,9 @@ static func backdrop(slug: String, base := "") -> Node3D:
 			continue
 		for gi in model.find_children("*", "GeometryInstance3D", true, false):
 			(gi as GeometryInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			# the land, the trees and the town lie in the open under the sky: Oval3DTurf.light_stands
+			# leaves them on their own paint (its stand light takes the green out of far hills)
+			gi.set_meta("open_ground", true)
 		_backdrop_materials(model)
 		root.add_child(model)
 	return root

@@ -12,6 +12,8 @@ $P sat_fetch.py spec/$g.json 1500 1.0 | tail -1
 GLB=$($P -c "import json;print(json.load(open('spec/$g.json'))['glb'])")
 $P probe_outline.py -- "$GLB" data/$g/prep/footprint.json $SKIP 2>&1 | grep OUTLINE
 $P prep.py spec/$g.json 2>&1 | tail -4
+$P cars.py spec/$g.json 2>&1 | tail -1
+$P roofplant.py spec/$g.json 2>&1 | tail -1
 $P bake_ground.py $g 2>&1 | tail -1
 rm -f out/$g/scene.blend; $P scene.py -- spec/$g.json 2>&1 | grep -vE "unregister_class|^$" | tail -5
 ls -la out/$g/
