@@ -202,6 +202,12 @@ def sat_paving():
     def smooth(m):
         return np.asarray(Image.fromarray((m * 255).astype(np.uint8)).filter(F.MedianFilter(9))) > 127
     bitumen, pale = smooth(bitumen), smooth(pale)
+    # Fill the holes under 150 m2 (car roofs, shade, kerb grass) so the bitumen reads as one sealed surface.
+    from scipy import ndimage as nd
+    for m in (bitumen,):
+        lab, n = nd.label(~m)
+        sizes = nd.sum(np.ones_like(lab), lab, range(1, n + 1))
+        m |= np.isin(lab, 1 + np.nonzero(sizes < 150)[0])
     # map pixel of the satellite's top-left metre
     ox = int(round(-SAT_X0 * SAT_MPP + S.SIZE / 2))
     oz = int(round(-SAT_Y0 * SAT_MPP + S.SIZE / 2))

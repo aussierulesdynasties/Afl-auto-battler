@@ -143,7 +143,8 @@ SRED=mat('seat_red',(206,66,58),None,0.45);SGRY=mat('seat_grey',(214,208,202),No
 _SEATN=[0]
 def _nv(p):return bm.verts.new(p)
 def _q(a,b,c,d,m):face([_nv(a),_nv(b),_nv(c),_nv(d)],m)
-def tiers(alist,segfun,pitch,mf,kfun,seatmats,grey,seed):
+def tiers(alist,segfun,pitch,mf,kfun,seatmats,grey,seed,cols=None):
+    cols=cols or (SRED,SGRY)
     A=sorted(set(round(x,4) for x in alist));rr=_rnd.Random(seed)
     nrow=lambda a:(lambda s:max(1,int(round(math.hypot(s[2]-s[0],s[3]-s[1])/pitch))))(segfun(a))
     def row(a,i,n):
@@ -171,7 +172,7 @@ def tiers(alist,segfun,pitch,mf,kfun,seatmats,grey,seed):
                 if acc>=0.5:
                     acc-=0.5;df,_=row(a,i,n);dm=(df+dr)/2;m=mf(kfun(dm),a,seatmats[0])
                     if m in seatmats:
-                        col=SGRY if rr.random()<grey else SRED;_seat(a,dr,zt,col);_SEATN[0]+=1
+                        col=cols[1] if rr.random()<grey else cols[0];_seat(a,dr,zt,col);_SEATN[0]+=1
             else:prev=None
             a+=0.04
 def _seat(a,dr,zt,col):
@@ -192,7 +193,10 @@ def _lowseg(a):
 def _lowmf(k,a,mi):return low_mn(3,a,mi) if (A1-360)<=a<=A0 else low_m(3,a,mi)
 tiers(arange(A1-360,A1,1.0)+[e for e in [x%360 for x in LOWE]+[x%360+360 for x in LOWE]+[x%360-360 for x in LOWE] if A1-360<e<A1],_lowseg,0.70,_lowmf,lambda d:3,(SEAT,),0.0,1)
 _SK=[(10.226,6),(11.2,7),(12.9,8),(14.3,9),(15.1,10),(99,11)]
-tiers(arange(A0,A1,1.0)+[e for e in UPE if A0<e<A1],lambda a:(9.0,6.4,24.0,16.98),0.86,up_m,lambda d:next(k for x,k in _SK if d<=x),(SEATU,SEAT),0.22,2)
+# Upper tier: Google Earth reads it maroon in the roof's shade from every angle, where the game lit it as bright as the
+# open lower tier; its seats take the shaded tone (same plastic, the membrane's shade the renderer does not cast).
+SREDU=mat('seat_red_upper',(150,46,46),None,0.5);SGRYU=mat('seat_grey_upper',(150,146,144),None,0.5)
+tiers(arange(A0,A1,1.0)+[e for e in UPE if A0<e<A1],lambda a:(9.0,6.4,24.0,16.98),0.86,up_m,lambda d:next(k for x,k in _SK if d<=x),(SEATU,SEAT),0.22,2,(SREDU,SGRYU))
 print('SEATS',_SEATN[0])
 sweep(span,[(26.0,8.0,None,0),(26.0,9.1,YEL,1)])
 def nc_pf(a,k):
