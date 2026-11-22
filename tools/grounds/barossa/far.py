@@ -31,7 +31,7 @@ EARTH = 6371000.0 / 0.87   # the curve, eased by the air's refraction
 
 # (sRGB) the cover's colours as the ranges show them in late summer and autumn, from the reference photos
 PALETTE = {
-    "paddock": (182, 156, 110),   # cured grass on the hills, golden tan
+    "paddock": (168, 144, 104),   # cured grass on the hills, golden tan
     "woodland": (78, 86, 62),     # gums along gullies and on the range tops
     "pine": (42, 54, 42),         # Mount Crawford's plantations
     "vines": (118, 120, 78),      # vineyard rows, leaf over bare earth
@@ -90,7 +90,7 @@ def paint_texture(maps):
     e = (np.arange(w) + 0.5) * SAT_RES - SAT_HALF
     E, N = np.meshgrid(e, -e)
     d = np.hypot(E, N)
-    f = np.clip(1.0 - np.exp(-d / 16000.0), 0, 0.45)[..., None]
+    f = np.clip(1.0 - np.exp(-d / 26000.0), 0, 0.35)[..., None]
     out = out * (1 - f) + HAZE[None, None, :] * f
     return np.clip(out, 0, 255).astype(np.uint8)
 

@@ -44,6 +44,14 @@ match ground plays at FIT["barossa"] in scripts/ui/match/GroundModels.gd (the bo
 OpenStreetMap is read from the API into work/osm.osm (`/api/0.6/map?bbox=...` round the fence centre) and heights
 into work/dem by dem.py. tools/visual/ground_look.gd renders stills from cameras in the model's metres.
 
+## Shape check
+
+`shape_check.py` measures the outlines against the 0.2 m mosaic in metres and prints pass or fail against its limits
+(fence: rms 0.5 m, 95% within 1 m; ring road: median 0.75 m, 90% within 1.5 m). The fence ellipse is fitted to the
+traced grass edge; every ring (verge, road, wall) is an exact offset square to it (`plan.polar`, `plan.offsets`).
+The ring road's edges were read from the same trace, so its pass shows the model follows the trace, not an
+independent check.
+
 ## References
 
 - Google Earth (satellite and 3D) round lat -34.5984014, lon 138.8858792. The 3D mesh at Lyndoch is coarse, so

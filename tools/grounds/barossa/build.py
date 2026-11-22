@@ -19,7 +19,7 @@ sys.path.insert(0, HERE)
 
 import paint  # noqa: E402
 from geom import Mesh, write_glb, _n  # noqa: E402
-from plan import (FENCE, TOWERS, TEMP_STANDS, club, fence_r, polar, to3, bearing, interp, RING, dem_height)  # noqa: E402
+from plan import (FENCE, TOWERS, TEMP_STANDS, club, fence_r, polar, to3, bearing, interp, RING, dem_height, offsets)  # noqa: E402
 from dem import Dem  # noqa: E402
 
 import precinct as site  # noqa: E402
@@ -132,10 +132,7 @@ def build_site(dem):
     step = 2.0
     g = np.arange(-site.HALF, site.HALF + 0.01, step)
     GE, GN = np.meshgrid(g, g)
-    gb = np.degrees(np.arctan2(GE, GN)) % 360
-    gr = np.hypot(GE, GN)
-    gfr = np.vectorize(fence_r)(gb)
-    goff = gr - gfr
+    gb, goff = offsets(GE, GN)
     dh = dem.at_en(GE, GN)
     H, w = site.design(GE, GN, gb, goff, dh)
     # the arena itself sits a hand under the game's turf

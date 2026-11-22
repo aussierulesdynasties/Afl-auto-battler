@@ -67,9 +67,11 @@ const FIT := {
 	"north_hobart": [-6.71, 0.91, 0.0, -43.8, 81.59, 60.47],
 	"bruce": [21.36, -39.57, 0.4, -56.7, 104.51, 64.28],
 	"riverway": [-0.41, 1.12, 0.0, -89.9, 86.05, 72.72],
-	# The seven first drafts (#1930) are built round their fence: centre at the origin (Summit
+	# Barossa Park: the fence ellipse fitted to the grass edge traced on the 2026 mosaic (rms 0.31 m,
+	# tools/grounds/barossa/plan.py FENCE).
+	"barossa": [0.163, 0.467, 0.0, 72.716, 86.139, 65.766],
+	# The other first drafts (#1930) are built round their fence: centre at the origin (Summit
 	# 2 m off), floor 0. Jiangwan is a running-track stadium; its boundary was placed by judgement.
-	"barossa": [0.0, 0.0, 0.0, 72.7, 85.63, 65.98],
 	"sky": [0.0, 0.0, 0.0, -77.7, 81.66, 63.74],
 	"jiangwan": [0.0, 0.0, 0.0, 63.0, 84.0, 63.0],
 	"hands": [0.0, 0.0, 0.0, -61.7, 92.51, 78.09],

@@ -12,7 +12,7 @@ from PIL import Image, ImageDraw, ImageFilter
 
 import oval2
 import paint
-from plan import RING, fence_r, interp, club, FIELD_ASL
+from plan import RING, interp, club, FIELD_ASL, offsets, polar
 
 HALF = 180.0
 PX = 2048
@@ -71,10 +71,8 @@ def classify():
     e = (np.arange(PX) + 0.5) * MPP - HALF
     n = HALF - (np.arange(PX) + 0.5) * MPP
     E, N = np.meshgrid(e, n)
-    b = np.degrees(np.arctan2(E, N)) % 360
-    r = np.hypot(E, N)
-    fr = np.vectorize(fence_r)(b)
-    off = r - fr
+    # every ring is an exact offset of the fence: distance square to it, and the bearing of its foot
+    b, off = offsets(E, N)
     ring = np.array([interp(RING, x) for x in np.arange(0, 360.5, 0.5)])
     k = np.clip((b * 2).astype(int), 0, 720)
     verge, road0, road1, conc = ring[k, 0], ring[k, 1], ring[k, 2], ring[k, 3]
@@ -155,8 +153,7 @@ def paint_map(cls):
 
 
 def _pol(b, off):
-    r = fence_r(b) + off
-    return (r * math.sin(math.radians(b)), r * math.cos(math.radians(b)))
+    return polar(b, off)
 
 
 def _rect(d, P, cx, cy, w, h, col):
