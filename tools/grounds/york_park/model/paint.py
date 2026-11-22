@@ -184,6 +184,7 @@ for i in range(8):
         x0, y0 = int(i * cu + 8), int(j * cv + 10); x1, y1 = int((i + 1) * cu - 8), int((j + 1) * cv - 10)
         a[y0:y1, x0:x1] = (170, 176, 180); a[y0 + 8:y1 - 8, x0 + 8:x1 - 8] = (86, 92, 98)
 save('lamps', a, (1, 1))
+a = base(256, 256, (238, 240, 236), 3, 5); save('lamp_face', a, (1.0, 1.0))   # the modelled lamps' glass
 
 # NE gap (scoreboard corner): pavilion render with a dark window band, blue rear panels of the roof seat banks, screen switched off
 def _pav(a, pu, pv, h, w):     # white render, dark glazed band 1.0-2.6 m with a mullion every 1.5 m, grey plinth
