@@ -55,6 +55,8 @@ func run() -> void:
 	_t("_test_farewell")
 	_t("_test_match_ground")
 	_t("_test_ground_models")
+	_t("_test_traced_boundaries")
+	_t("_test_traced_ground_playback", [res])
 	_t("_test_ground_screens")
 	_t("_test_stand_light")
 	_t("_test_mcg_crowd", [res])
@@ -2186,6 +2188,8 @@ func _test_ground_models() -> void:
 		for f in files:
 			_check(ResourceLoader.exists(f), "%s is imported (%s)" % [g, f])
 		MatchMotion.use_field(GroundModels.field_for(g))
+		if not GroundModels.shape_for(slug).is_empty():
+			continue   # laid on its traced goals instead: _test_traced_boundaries
 		var fence := GroundModels.match_fence()
 		var f: Array = GroundModels.FIT[slug]
 		var t := GroundModels.fit_transform(slug)
@@ -2234,6 +2238,99 @@ func _test_ground_models() -> void:
 			and GroundModels.stretch("engie").is_equal_approx(Vector2.ONE),
 			"The turf stops at the model's fence")
 	oval.queue_free()
+
+
+## A ground whose boundary was traced on Google Earth (tools/grounds/boundary) plays on that line, not an ellipse:
+## measured, every traced point of the painted line is where the match's boundary is (within the fit's own error),
+## its goals are where the traced goals are, the model is laid on them unstretched, and the field's own sums
+## (inside, clamp, the width at x, the normal) agree with one another on the real shape.
+func _test_traced_boundaries() -> void:
+	var dir := "res://tools/grounds/boundary/traced/"
+	var names := DirAccess.get_files_at(dir)
+	_check(names.size() > 0, "At least one ground's boundary has been traced (%s)" % dir)
+	for fname in names:
+		if not fname.ends_with(".json"):
+			continue
+		var tr: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(dir + fname))
+		var slug := str(tr.get("slug", fname.get_basename()))
+		var sh := GroundModels.shape_for(slug)
+		_check(not sh.is_empty() and GroundModels.FIT.has(slug),
+				"%s's traced boundary is fitted into data/ground_boundaries.json (rerun fit_boundary.py)" % slug)
+		if sh.is_empty():
+			continue
+		GroundModels.play_on(slug, GroundModels.field(slug))
+		_check(MatchMotion.shaped(), "%s plays on its traced boundary" % slug)
+		var t := GroundModels.fit_transform(slug)
+		_check(t.basis.get_scale().is_equal_approx(Vector3.ONE), "%s's model is laid unstretched" % slug)
+		# The model's metres to the match's: every traced point of the line against the line the match plays on.
+		var worst := 0.0
+		var sq := 0.0
+		var line: Array = tr["line"]
+		for q in line:
+			var w := t * Vector3(float(q[0]), 0.0, float(q[1]))
+			var p := Vector2(w.x, w.z)
+			var off := absf(p.length() - MatchMotion.edge_r(p.angle()))
+			worst = maxf(worst, off)
+			sq += off * off
+		var rms := sqrt(sq / line.size())
+		_check(rms < 0.5 and worst < 1.5 + (2.0 if (sh["boundary_fit"] as Dictionary).has("left_out") else 0.0),
+				"%s: the match's boundary is on the traced line (rms %.2f m, worst %.2f m over %d points)" % [slug, rms, worst, line.size()])
+		for k in 2:
+			var gq: Array = (tr["goals"] as Array)[k]
+			var g := t * Vector3(float(gq[0]), 0.0, float(gq[1]))
+			_check(absf(absf(g.x) - MatchMotion.GOAL_X) < 0.01 and absf(g.z) < 0.01,
+					"%s: traced goal %d is on the match's goal line (%.2f, %.2f; goal line at %.2f)" % [slug, k, g.x, g.z, MatchMotion.GOAL_X])
+		# The field's sums on the real shape, round the whole ground.
+		var bad := 0
+		for i in 360:
+			var a := TAU * i / 360.0
+			var e := MatchMotion.edge_point(a)
+			var c := MatchMotion.clamp_to_oval(e * 1.3, 2.0)
+			if not MatchMotion.inside_oval(c, 1.99) or MatchMotion.inside_oval(e * 1.01, 0.0) \
+					or MatchMotion.fence_normal(e).dot(e.normalized()) <= 0.2:
+				bad += 1
+			# edge_y at this x on this side lands back on the line.
+			if absf(e.x) < MatchMotion.GOAL_X - 2.0:
+				var side := signf(e.y) if e.y != 0.0 else 1.0
+				var y := MatchMotion.edge_y(e.x, side)
+				var back := Vector2(e.x, y * side)
+				if absf(back.length() - MatchMotion.edge_r(back.angle())) > 0.05:
+					bad += 1
+		_check(bad == 0, "%s: inside, clamp, normal and width agree on the traced line all the way round (%d misses)" % [slug, bad])
+	# An untraced ground keeps its ellipse exactly.
+	MatchMotion.use_field(GroundModels.field_for("MCG"))
+	var ell := (MatchMotion.HALF_WID - 4.0) * sqrt(maxf(0.0, 1.0 - pow(31.0 / (MatchMotion.HALF_LEN - 1.0), 2.0)))
+	_check(not MatchMotion.shaped() and MatchMotion.edge_y(31.0, -1.0, 4.0, 1.0) == ell,
+			"An untraced ground plays on the same ellipse as before, to the last bit")
+	MatchMotion.use_field(Vector2.ZERO)
+
+
+## A match at a traced ground plays inside its real line: nobody off the ground, the ball's out-of-bounds
+## spots on the traced line, the boundary umpires just over it.
+func _test_traced_ground_playback(res: Dictionary) -> void:
+	var half: Array = (res["events"] as Array).slice(0, (res["events"] as Array).size() / 2)
+	for g in GroundModels.grounds():
+		var slug := GroundModels.slug_for(g)
+		if GroundModels.shape_for(slug).is_empty():
+			continue
+		var at := res.duplicate()
+		at["venue"] = g
+		at["events"] = half
+		_full_playback(at, " at %s" % g, 400)
+		_check(MatchMotion.shaped() and is_equal_approx(MatchMotion.GOAL_X, float(GroundModels.shape_for(slug)["goal_x"])),
+				"The match at %s is played on its traced boundary and goals" % g)
+		var d := MatchDirector.new()
+		d.setup(at, at["events"])
+		var on_line := 0
+		var out := 0
+		for k in range((at["events"] as Array).size()):
+			if str((at["events"][k] as Dictionary).get("kind", "")) in ["throwin", "last_disposal", "out_on_full"]:
+				var p := d._loc(k)
+				out += 1
+				if absf(p.length() - MatchMotion.edge_r(p.angle()) * 0.985) < 1.5:
+					on_line += 1
+		_check(out == 0 or on_line == out, "At %s the ball goes out on the traced line (%d of %d)" % [g, on_line, out])
+	MatchMotion.use_field(GroundModels.field_for(VignetteGround.ground_of(res)))
 
 
 ## Guernsey numbers on the 3D player (row 202 2d): the digits are read from one padded layer each,

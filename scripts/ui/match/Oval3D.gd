@@ -98,9 +98,10 @@ var _settle_t := 0.0           # s since it came out of his hands or the air
 
 func build(p_director: MatchDirector, home: String, away: String) -> void:
 	director = p_director
-	# The ground at its own size (MatchDirector.setup sets the same for a match's own ground).
+	# The ground at its own size, on its traced boundary where it has one (MatchDirector.setup sets the
+	# same for a match's own ground).
 	if ground != "":
-		MatchMotion.use_field(GroundModels.field_for(ground))
+		GroundModels.play_at(ground)
 	_environment()
 	_ground()
 	_posts()
@@ -111,7 +112,8 @@ func build(p_director: MatchDirector, home: String, away: String) -> void:
 		_stands(home, away)
 	screens = Oval3DScreens.new()
 	add_child(screens)
-	screens.build(self, get_node_or_null("Ground"), GroundModels.match_fence(), home, away)
+	screens.build(self, get_node_or_null("Ground"), GroundModels.match_fence(), home, away,
+			GroundModels.match_fence_shape(slug))
 	var scene: PackedScene = load(player_glb)
 	# Each club in its home guernsey, as the vignettes dress them (StoppageVignette._dress).
 	var kits := [_kit(GameDB.club_guernsey(home)), _kit(GameDB.club_guernsey(away))]
@@ -443,18 +445,42 @@ func _environment() -> void:
 func _ground() -> void:
 	var mi := MeshInstance3D.new()
 	var pm := PlaneMesh.new()
-	pm.size = Vector2(2.0 * (MatchMotion.HALF_LEN + FENCE + 1.0), 2.0 * (MatchMotion.HALF_WID + FENCE + 1.0))
+	pm.size = 2.0 * _turf_half()
 	mi.mesh = pm
 	var sm := ShaderMaterial.new()
 	sm.shader = load("res://scripts/ui/match/oval3d_ground.gdshader")
 	sm.set_shader_parameter("half_size", Vector2(MatchMotion.HALF_LEN, MatchMotion.HALF_WID))
 	sm.set_shader_parameter("goal_x", MatchMotion.GOAL_X)
+	# A traced ground's own boundary line (MatchMotion.SHAPE), the paint and the run-off following it.
+	sm.set_shader_parameter("bnd", _coefs(MatchMotion.SHAPE))
+	sm.set_shader_parameter("bnd_n", MatchMotion.SHAPE.size())
 	mi.material_override = sm
 	add_child(mi)
 	_turf_mat = sm
 	turf = Oval3DTurf.new(self, sm, _env, _sun, pm.size * 0.5)
 	add_child(turf)
 	turf.apply("", VignetteKickoff.DAY)
+
+
+## Half the turf plane's size: the field and its run-off (FENCE) and a metre, or on a traced ground the
+## furthest its fence reaches (GroundModels.match_fence_shape), so the turf meets the fence all round.
+func _turf_half() -> Vector2:
+	var half := Vector2(MatchMotion.HALF_LEN + FENCE + 1.0, MatchMotion.HALF_WID + FENCE + 1.0)
+	var f := GroundModels.match_fence_shape(GroundModels.slug_for(ground) if ground != "" else "")
+	for i in 720:
+		var t := TAU * i / 720.0
+		var r := MatchMotion.series_r(f, t) + 1.0 if not f.is_empty() else 0.0
+		half = half.max(Vector2(absf(cos(t)), absf(sin(t))) * r)
+	return half
+
+
+## A Fourier radius as the turf shader takes it: 33 floats, unused ones 0.
+static func _coefs(c: PackedFloat32Array) -> PackedFloat32Array:
+	var out := PackedFloat32Array()
+	out.resize(33)
+	for i in mini(c.size(), 33):
+		out[i] = c[i]
+	return out
 
 
 func _posts() -> void:
@@ -527,7 +553,11 @@ func _ground_model(slug: String, base := "", home := "", away := "") -> void:
 	turf.set_ground(slug)
 	turf.light_stands(root)
 	_turf_mat.set_shader_parameter("fence_clip", GroundModels.match_fence())
-	_apron_skirt()
+	var fs := GroundModels.match_fence_shape(slug)
+	_turf_mat.set_shader_parameter("fen", _coefs(fs))
+	_turf_mat.set_shader_parameter("fen_n", fs.size())
+	turf.fence_shape(fs)
+	_apron_skirt(fs)
 	if home == "":
 		return
 	var seats := GroundModels.seat_transforms(slug, base)
@@ -551,19 +581,24 @@ const SKIRT_DROP := 0.3
 ## no ground drawn between the turf's edge and its wall, and the sky under the world showed through
 ## as a white strip at the foot of the fence. A ring of the turf's apron, from just inside the
 ## match's fence to SKIRT_OUT past it, lies under the model's ground and fills that gap with grass.
-func _apron_skirt() -> void:
+func _apron_skirt(shape := PackedFloat32Array()) -> void:
 	var f := GroundModels.match_fence()
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
 	st.set_normal(Vector3.UP)
-	var n := 180
+	var n := 180 if shape.is_empty() else 720
+	# The fence's half-axes toward angle a (an ellipse's), or its traced radius there, as a scale on the
+	# unit direction: [inside edge, outside edge].
+	var ring := func(a: float) -> Array:
+		var u := Vector3(cos(a), 0.0, sin(a))
+		if shape.is_empty():
+			return [Vector3(u.x * f.x * 0.97, 0.0, u.z * f.y * 0.97), Vector3(u.x * (f.x + SKIRT_OUT), 0.0, u.z * (f.y + SKIRT_OUT))]
+		var r := MatchMotion.series_r(shape, a)
+		return [u * (r - 2.0), u * (r + SKIRT_OUT)]
 	for i in n:
-		var a0 := TAU * i / n
-		var a1 := TAU * (i + 1) / n
-		var p := [Vector3(cos(a0) * f.x * 0.97, 0.0, sin(a0) * f.y * 0.97),
-				Vector3(cos(a1) * f.x * 0.97, 0.0, sin(a1) * f.y * 0.97),
-				Vector3(cos(a1) * (f.x + SKIRT_OUT), 0.0, sin(a1) * (f.y + SKIRT_OUT)),
-				Vector3(cos(a0) * (f.x + SKIRT_OUT), 0.0, sin(a0) * (f.y + SKIRT_OUT))]
+		var r0: Array = ring.call(TAU * i / n)
+		var r1: Array = ring.call(TAU * (i + 1) / n)
+		var p := [r0[0], r1[0], r1[1], r0[1]]
 		for k in [0, 1, 2, 0, 2, 3]:
 			st.add_vertex(p[k])
 	var mi := MeshInstance3D.new()
@@ -572,6 +607,7 @@ func _apron_skirt() -> void:
 	mi.position.y = -SKIRT_DROP
 	var sm := _turf_mat.duplicate() as ShaderMaterial
 	sm.set_shader_parameter("fence_clip", Vector2.ZERO)
+	sm.set_shader_parameter("fen_n", 0)
 	mi.material_override = sm
 	add_child(mi)
 	turf.follow(sm)
@@ -1884,7 +1920,20 @@ func _umpire_spots() -> Array:
 	var out := []
 	for u in VignetteExtras.umpires(Vector2(bp.y / sy, bp.x / sx)):
 		var v: Vector2 = u["oval"]
-		out.append([u["ump"], Vector2(v.y * sx, v.x * sy)])
+		var at := Vector2(v.y * sx, v.x * sy)
+		if MatchMotion.shaped():
+			# On a traced boundary: a boundary umpire just over the real line at his spot along it (as the
+			# vignette's stand 0.9 m outside its ellipse), a goal umpire just behind the real goal line, a field
+			# umpire inside the real line.
+			match str(u["ump"]):
+				"boundary":
+					var side := signf(at.y) if at.y != 0.0 else 1.0
+					at.y = side * (MatchMotion.edge_y(at.x, side) + 0.9)
+				"goal":
+					at.x = signf(at.x) * (MatchMotion.GOAL_X + 0.5)
+				_:
+					at = MatchMotion.clamp_to_oval(at, 3.0)
+		out.append([u["ump"], at])
 	return out
 
 
@@ -1980,8 +2029,7 @@ func _stoppage_mark(st: Dictionary) -> Array:
 		"throwup":
 			return [at - Vector2(0.0, 0.6), Vector2(0.0, 1.0)]
 		_:
-			var out := Vector2(at.x / (MatchMotion.HALF_LEN * MatchMotion.HALF_LEN), at.y / (MatchMotion.HALF_WID * MatchMotion.HALF_WID))
-			out = out.normalized() if out.length() > 0.0 else Vector2(0.0, 1.0)
+			var out := MatchMotion.fence_normal(at) if at.length() > 0.0 else Vector2(0.0, 1.0)
 			return [at + out * 0.6, out]
 
 

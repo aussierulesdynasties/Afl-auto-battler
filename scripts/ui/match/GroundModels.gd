@@ -215,6 +215,50 @@ static func field_for(ground: String) -> Vector2:
 	return Vector2(float(own["length"]), float(own["width"])) * 0.5
 
 
+static var _traced := {}   # data/ground_boundaries.json's grounds, read once
+
+
+## The traced boundary of the model `slug` (data/ground_boundaries.json, tools/grounds/boundary/fit_boundary.py):
+## "frame" [x, z, degrees] the goals' midpoint and the line through them in the model's metres, "goal_x" half
+## the distance between the goal lines, "boundary" the line's Fourier radius about that midpoint, "fence" the
+## fence's where it was traced too. {} where the ground's boundary has not been traced yet (it plays on the
+## ellipse its FIT row gives).
+static func shape_for(slug: String) -> Dictionary:
+	if _traced.is_empty():
+		var parsed = JSON.parse_string(FileAccess.get_file_as_string("res://data/ground_boundaries.json"))
+		_traced = (parsed as Dictionary).get("grounds", {}) if parsed is Dictionary else {}
+		if _traced.is_empty():
+			_traced = {"": {}}
+	return _traced.get(slug, {})
+
+
+## Play the match at `ground` on its own field (MatchMotion.use_field), and on its traced boundary line and goals
+## where it has them (MatchMotion.use_shape). Every match, the fly-through and the tests set the ground up here.
+static func play_at(ground: String) -> void:
+	play_on(slug_for(ground) if ground != "" else "", field_for(ground))
+
+
+## ...the same by the model's folder, `half` the field size to fall back on.
+static func play_on(slug: String, half: Vector2) -> void:
+	MatchMotion.use_field(half)
+	var sh := shape_for(slug) if slug != "" else {}
+	if not sh.is_empty():
+		MatchMotion.use_shape(PackedFloat32Array(sh["boundary"]), float(sh["goal_x"]))
+
+
+## The fence (grass edge) of the ground the match is on, as a Fourier radius in the match's frame, where it was
+## traced; else the boundary line FENCE further out (or empty on an untraced ground: the ellipse match_fence()).
+static func match_fence_shape(slug: String) -> PackedFloat32Array:
+	if not MatchMotion.shaped():
+		return PackedFloat32Array()
+	var sh := shape_for(slug)
+	if sh.has("fence"):
+		return PackedFloat32Array(sh["fence"])
+	var f := MatchMotion.SHAPE.duplicate()
+	f[0] += FENCE
+	return f
+
+
 ## Every ground that has a model, by its name.
 static func grounds() -> Array:
 	return GROUNDS.keys()
@@ -228,8 +272,17 @@ static func fit_transform(slug: String) -> Transform3D:
 		return Transform3D.IDENTITY
 	var f: Array = FIT[slug]
 	var s := stretch(slug)
-	var basis := Basis.from_scale(Vector3(s.x, 1.0, s.y)) * Basis(Vector3.UP, deg_to_rad(float(f[3])))
+	var turn := float(f[3])
 	var centre := Vector3(float(f[0]), float(f[2]), float(f[1]))
+	# A traced ground is laid on its real goals: their midpoint to the middle, the line through them along x,
+	# and nothing stretched (the match plays on that very line, MatchMotion.use_shape).
+	var sh := shape_for(slug)
+	if not sh.is_empty():
+		var fr: Array = sh["frame"]
+		centre = Vector3(float(fr[0]), float(f[2]), float(fr[1]))
+		turn = float(fr[2])
+		s = Vector2.ONE
+	var basis := Basis.from_scale(Vector3(s.x, 1.0, s.y)) * Basis(Vector3.UP, deg_to_rad(turn))
 	return Transform3D(basis, -(basis * centre) - Vector3(0.0, UNDER_TURF, 0.0))
 
 

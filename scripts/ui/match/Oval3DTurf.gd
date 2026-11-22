@@ -148,12 +148,21 @@ func _make_blades() -> void:
 func _copy_look() -> void:
 	for f in _followers:
 		for u in mat.shader.get_shader_uniform_list():
-			if str(u["name"]) != "fence_clip":
+			if not str(u["name"]) in ["fence_clip", "fen_n"]:
 				f.set_shader_parameter(u["name"], mat.get_shader_parameter(u["name"]))
 	if _bmat == null:
 		return
 	for k in ["grass_a", "grass_b", "wet", "hot", "wind", "wind_dir"]:
 		_bmat.set_shader_parameter(k, mat.get_shader_parameter(k))
+
+
+## A traced ground's fence (GroundModels.match_fence_shape): the standing blades stop at it, not at the
+## ellipse FENCE outside the field's half-extents.
+func fence_shape(c: PackedFloat32Array) -> void:
+	if _bmat == null:
+		return
+	_bmat.set_shader_parameter("fen", Oval3D._coefs(c))
+	_bmat.set_shader_parameter("fen_n", c.size())
 
 
 ## The ground's own cut and grass (MOWING), from its GroundModels slug; "" the default.

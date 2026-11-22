@@ -480,8 +480,12 @@ func _play_replay(wall: float) -> void:
 ## The goals camera for a kick at the goals at world end `end` (+1 or -1): it stands behind the
 ## other goals and holds on these posts.
 func _goals_shot(end: float) -> void:
-	var eye := Vector3(-end * (MatchMotion.HALF_LEN + EYE_BACK), EYE_UP, 0.0)
-	_shoot(eye, Vector3(end * MatchMotion.HALF_LEN, GOALS_AIM_Y, 0.0), GOALS_WIDTH)
+	# Each end of a traced ground is its own distance out (MatchMotion.end_x); the ground may be turned
+	# half a turn (Oval3D.set_ends), so the world's end is the ground's other one then.
+	var turned := (oval.global_transform.basis * Vector3.RIGHT).x < 0.0 if oval != null else false
+	var here := end * (-1.0 if turned else 1.0)
+	var eye := Vector3(-end * (MatchMotion.end_x(-here) + EYE_BACK), EYE_UP, 0.0)
+	_shoot(eye, Vector3(end * MatchMotion.end_x(here), GOALS_AIM_Y, 0.0), GOALS_WIDTH)
 
 
 ## `aim` added to `trail` (now), and the mean of the trail's last `over` seconds.

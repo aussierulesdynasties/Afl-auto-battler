@@ -1,0 +1,112 @@
+{
+ "_about": "Each traced ground's boundary line as the match plays it (tools/grounds/boundary/fit_boundary.py). frame: [x, z, degrees] in the model's glb metres: the goals' midpoint and the line through them. boundary/fence: r(t) = a0 + sum(a_k cos kt + b_k sin kt) about that midpoint, t from the +x goal towards +y (the glb's +z after the turn).",
+ "grounds": {
+  "cazalys": {
+   "frame": [
+    -1.465,
+    4.01,
+    60.855
+   ],
+   "goal_x": 81.773,
+   "boundary": [
+    75.8915,
+    -0.1438,
+    -0.3576,
+    6.4113,
+    -0.0105,
+    0.0136,
+    0.0993,
+    0.1123,
+    -0.0107,
+    0.0117,
+    -0.0443,
+    -0.1102,
+    -0.0008,
+    0.0193,
+    0.0107,
+    0.0022,
+    -0.0005,
+    0.0029,
+    0.0305,
+    0.0136,
+    -0.0216,
+    0.0073,
+    -0.0087,
+    0.0057,
+    -0.0409,
+    0.0071,
+    0.0111,
+    -0.0704,
+    0.0025
+   ],
+   "boundary_fit": {
+    "n": 319,
+    "order": 14,
+    "rms_m": 0.101,
+    "p95_m": 0.23,
+    "max_m": 0.378,
+    "left_out": [
+     {
+      "at": [
+       -7.0,
+       70.9
+      ],
+      "off_m": 1.8
+     }
+    ],
+    "largest_gap_deg": 1.6
+   },
+   "ends_vs_goal_lines_m": [
+    0.401,
+    0.565
+   ],
+   "source": "Google Earth 3D top-down captures (2026-11-22), GE pinhole geometry calibrated on the 50 m centre square (50.0 m). line: centre of the painted boundary ridge, one point per 2 m window, 320 windows on 16 tiles round the ground. goals: middle of each goal line between the goal-post bases (shadow roots) on two d=95 m top-downs. centre: midpoint of the two goals, NOT a measured centre circle. fence: fence base, 2 m windows (shadow-corrected), kept points of the 0.32 m rms ellipse fit.",
+   "trace_error": {
+    "line_rms_to_smooth_ellipse": 0.29,
+    "line_p95": 0.55,
+    "registration": 0.3,
+    "goals": 0.4
+   },
+   "centre_vs_goals_mid_m": [
+    -0.002,
+    0.004
+   ],
+   "fence": [
+    80.9781,
+    -0.1165,
+    -0.4613,
+    6.1535,
+    0.0535,
+    -0.0134,
+    -0.0037,
+    0.1148,
+    -0.0245,
+    0.0894,
+    0.0671,
+    -0.1801,
+    0.03
+   ],
+   "fence_fit": {
+    "n": 281,
+    "order": 6,
+    "rms_m": 0.205,
+    "p95_m": 0.407,
+    "max_m": 1.037,
+    "left_out": [
+     {
+      "at": [
+       -69.7,
+       -44.9
+      ],
+      "off_m": 1.08
+     }
+    ],
+    "largest_gap_deg": 20.18
+   },
+   "runoff_m": {
+    "min": 4.59,
+    "max": 5.63
+   }
+  }
+ }
+}
