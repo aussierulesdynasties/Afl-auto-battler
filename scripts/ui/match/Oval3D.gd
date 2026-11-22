@@ -1109,6 +1109,8 @@ const DRAPE_CHEST := 0.12
 const DRAPE_ABOVE := 0.10
 ## How far the hem stands outside the shorts it covers.
 const DRAPE_OVER := 0.005
+## Passes of easing over the strip that rests on the shorts, after it is pushed outside them.
+const DRAPE_HEM_SMOOTH := 20
 
 ## The guernsey hangs from the chest and the shoulder blades (2026-11-22: the white of Sydney's
 ## guernsey showed a lumpy pot belly). The club cuts (tools/kits/guernsey3d/recut5.py) smooth the
@@ -1247,6 +1249,7 @@ static func _drape(ga: Array, bsa: Array, gi: PackedInt32Array, wid: PackedInt32
 		# The easing pulls some hem points back inside the shorts (their waistband showed through the
 		# hem in bumps): last of all, every point stays DRAPE_OVER outside the shorts anywhere within a
 		# column and a level of it.
+		var floor_at := {}
 		for w in range(count):
 			if wt[w] <= 0.0 or p[w].y >= top - DRAPE_CHEST:
 				continue
@@ -1259,6 +1262,24 @@ static func _drape(ga: Array, bsa: Array, gi: PackedInt32Array, wid: PackedInt32
 					fl = maxf(fl, flf[kk * nx + xx] if d > 0.0 else flb[kk * nx + xx])
 			if fl > absf(d):
 				p[w].z = m0 + signf(d) * fl
+			if fl > -INF:
+				floor_at[w] = fl
+		# Pushed out point by point, the strip over the shorts crumpled (creases across the lower belly):
+		# smoothed again, each pass held outside the shorts, it settles over them as one cloth.
+		for it in range(DRAPE_HEM_SMOOTH):
+			var t := p.duplicate()
+			for w: int in floor_at:
+				if edge.has(w) or nbr[w].is_empty():
+					continue
+				var avg := Vector3.ZERO
+				for u in nbr[w]:
+					avg += p[u]
+				# depth only: sliding the points up or down would carry the pattern with them (wavy hoops)
+				t[w].z = p[w].z + 0.5 * wt[w] * (avg.z / float(nbr[w].size()) - p[w].z)
+				var d := t[w].z - m0
+				if float(floor_at[w]) > absf(d):
+					t[w].z = m0 + signf(d) * float(floor_at[w])
+			p = t
 		for i in range(vs.size()):
 			vs[i] = p[wid[i]]
 		arrs[Mesh.ARRAY_VERTEX] = vs
