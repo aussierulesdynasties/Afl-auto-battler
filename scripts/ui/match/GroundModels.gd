@@ -90,15 +90,9 @@ const FIT := {
 const SURROUNDS := {
 	"mcg": {"y": -0.03, "inner": 140.0, "colour": Color(0.45, 0.55, 0.27),
 			"map": "surrounds.webp", "span": 2048.0, "trees": "trees.bin", "buildings": "buildings.bin"},
-	# Optus Stadium on the Burswood peninsula: the Swan River, Perth Water, the parks and plaza from
-	# OpenStreetMap (tools/grounds/optus/surrounds.py), and its bridges in 3D, Matagarup's arches
-	# included (`models`, tools/grounds/optus/bridges.py).
-	"optus": {"y": -0.03, "inner": 100.0, "colour": Color(0.45, 0.55, 0.27),
-			"map": "surrounds.webp", "span": 2048.0, "trees": "trees.bin", "buildings": "buildings.bin",
-			"models": ["bridges.glb"], "tint": Color(2.0, 1.4, 0.95), "building_tint": Color(1.15, 1.05, 0.98)},
 	# Marvel Stadium in Docklands: Victoria Harbour, the Southern Cross rail yards, the streets and towers
 	# round it from OpenStreetMap (tools/grounds/marvel/surrounds.py), and the Bolte Bridge's towers and
-	# deck in 3D (tools/grounds/marvel/bridges.py). Painted for the same match light as Optus's map.
+	# deck in 3D (tools/grounds/marvel/bridges.py).
 	"marvel": {"y": -0.03, "inner": 120.0, "colour": Color(0.55, 0.56, 0.52),
 			"map": "surrounds.webp", "span": 2048.0, "trees": "trees.bin", "buildings": "buildings.bin",
 			"models": ["bridges.glb", "landmarks.glb"], "tint": Color(0.86, 0.84, 0.82), "building_tint": Color.WHITE, "building_style": "towers"},
@@ -128,16 +122,6 @@ const MATERIAL_FIX := {
 		# The front of each tier: Street View and a photo sphere on the ground show a pale concrete
 		# parapet over a thin dark ribbon, not the near-black band the texture paints.
 		"tier_fascia": {"albedo_color": Color(2.2, 2.2, 2.1)},
-	},
-	# Optus (2026-11-21, against Google Earth): the white PTFE roof is matte; built at roughness 0.6 it
-	# took the sky's blue from every angle. The bronze fins are anodised aluminium: a soft metal sheen
-	# that catches low sun (tools/grounds/optus/bronze.py draws them).
-	"optus": {
-		"roof": {"metallic": 0.0, "roughness": 0.95, "albedo_color": Color(0.97, 0.96, 0.93)},
-		"bronze": {"metallic": 0.12, "roughness": 0.55},
-		"sign_a": {"metallic": 0.12, "roughness": 0.55},
-		# The glass storeys read mid grey-green from outside in daylight, not sky blue.
-		"glass": {"metallic": 0.1, "roughness": 0.3},
 	},
 }
 
@@ -379,7 +363,7 @@ static func _add_surrounds(root: Node3D, s: Dictionary, dir := "") -> void:
 		mm.disable_receive_shadows = true
 		mm.texture_repeat = false
 		mm.roughness = 1.0
-		# `tint` brings the painted map to Google Earth's colours under the match light (Optus).
+		# `tint` brings the painted map to Google Earth's colours under the match light.
 		mm.albedo_color = s.get("tint", Color.WHITE)
 		var g := MeshInstance3D.new()
 		g.name = "Surrounds"
