@@ -93,9 +93,15 @@ func check(slug: String, parent: Node, write := false) -> Dictionary:
 		mid += q
 	mid = mid / maxf(1.0, pts.size())
 	mid.y = 0.0
-	var fit := GroundModels.fit_transform(slug)
-	var fx := GroundModels.match_fence().x
-	var fz := GroundModels.match_fence().y
+	# The model laid on its own field, as every match plays it (nothing stretched): its fence
+	# centre to the middle, its long axis along x, its own fence (FIT) the boundary to keep out of.
+	var fit := Transform3D.IDENTITY
+	var fence := Vector2.INF
+	if GroundModels.FIT.has(slug):
+		var f: Array = GroundModels.FIT[slug]
+		var turn := Basis(Vector3.UP, deg_to_rad(float(f[3])))
+		fit = Transform3D(turn, -(turn * Vector3(float(f[0]), float(f[2]), float(f[1]))))
+		fence = Vector2(float(f[4]), float(f[5]))
 	# Every seat file, every seat: its spot, its floor and what stands over it.
 	var files := _seat_files(dir)
 	var bufs := {}
@@ -114,7 +120,7 @@ func check(slug: String, parent: Node, write := false) -> Dictionary:
 			var up = _ray(Vector3(p.x, maxf(base, p.y) + 0.05, p.z), Vector3(p.x, base + HEADROOM + 0.05, p.z))
 			var clear := INF if up == null else float(up.y) - base
 			var g := fit * p
-			var in_field := pow(g.x / fx, 2) + pow(g.z / fz, 2) < 1.0
+			var in_field := pow(g.x / fence.x, 2) + pow(g.z / fence.y, 2) < 1.0
 			spots.append([f, i / 12, p, drop, clear, in_field])
 	# The ground's usual drop from the pan's middle to the tread (its seat's own height).
 	var drops := []

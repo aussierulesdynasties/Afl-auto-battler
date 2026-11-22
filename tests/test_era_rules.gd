@@ -429,8 +429,12 @@ func _test_tactical_sub_2011() -> void:
 	for e in _events(sim, "substitute"):
 		var club := "GEE" if int(e["side"]) == 0 else "CAR"
 		var want := "Substitute: %s on for %s (%s)" % [e["name"], e["off_name"], GameDB.club_short(club)]
+		if e.has("synergy_on") or e.has("synergy_off"):
+			# A substitute who switches a synergy on or off is called by that line,
+			# which names him and the man he replaced.
+			want = MatchNotes.synergy_switch_words(e, "GEE", "CAR")
 		var line := MatchNotes.feed_line(e, "GEE", "CAR")
-		if bool(e.get("for_injury", false)):
+		if bool(e.get("for_injury", false)) and not (e.has("synergy_on") or e.has("synergy_off")):
 			# On for a hurt man: the injury line names him, once.
 			_check(line.is_empty(), "A substitute on for an injury is said once, in the injury line")
 		else:
