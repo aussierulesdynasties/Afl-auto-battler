@@ -6,7 +6,7 @@ from sf import *
 from scipy.interpolate import UnivariateSpline
 PRM=json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)),'prm.json'))) if os.path.exists(os.path.join(os.path.dirname(os.path.abspath(__file__)),'prm.json')) else {}
 def G(k,d):return PRM.get(k,d)
-ZS=G('ZS',44.0);ZO=G('ZO',38.0);ZG=G('ZG',33.0);ZT=G('ZT',55.0);ZB=G('ZB',46.0);ZP=G('ZP',6.5);FL=G('FL',4.0)
+ZS=G('ZS',44.0);ZO=G('ZO',37.5);ZG=G('ZG',34.0);ZT=G('ZT',55.0);ZB=G('ZB',46.0);ZP=G('ZP',6.5);FL=G('FL',4.0)
 OA,OB,ON=G('OA',118.0),G('OB',108.5),G('ON',2.5)
 PARTS=[]
 def wv(p):return np.asarray(uvw(p[0],p[1],p[2]),float).tolist()
@@ -363,7 +363,12 @@ def gantry(nm,a,b,ztop,inward):
         p=a+t*(1.0+i*2.0)
         for w in(-0.55,0.55):LAMPS.append((p[0]+n[0]*w,p[1]+n[1]*w,ztop-2.4,n))
 gantry('gantry_w',(-83.6,VW_IN+0.6),(83.3,VW_IN+0.6),ZI-1.2,(0,-1));gantry('gantry_e',(-83.4,VE_IN-0.6),(83.9,VE_IN-0.6),ZI-1.2,(0,1))
-gantry('gantry_n',(-UE-0.6,VE_IN+2.2),(-UE-0.6,VW_IN-1.4),ZO-0.3,(1,0));gantry('gantry_s',(UE+0.6,VE_IN+1.6),(UE+0.6,VW_IN-0.6),ZO-0.3,(-1,0))
+# end edge girders (Google Earth 3D picks, 2026-11-22): the end roofs' inner edge sits at |u| 80.8, 3.2 m inside the
+# slab ends, as a deep girder whose top reads 39.4 in this frame from |u| 80.8 to about 86; the roof falls away behind it
+UO=G('UO',80.8);ZEG=G('ZEG',39.4)
+for sg_,nm_ in((-1,'edge_n'),(1,'edge_s')):
+    a_,b_=sorted((sg_*UO,sg_*86.0));box(nm_,a_,b_,VE_IN,VW_IN,ZO-1.3,ZEG,'fascia','deck',bottom='soffit')
+gantry('gantry_n',(-UO-0.6,VE_IN+2.2),(-UO-0.6,VW_IN-1.4),ZO-1.3,(1,0));gantry('gantry_s',(UO+0.6,VE_IN+1.6),(UO+0.6,VW_IN-0.6),ZO-1.3,(-1,0))
 # each floodlight: a housing tipped 30 deg towards the pitch, lens on its lower face
 V=[];F=[];M=[]
 for x,y,z,n in LAMPS:
@@ -383,9 +388,9 @@ def screen(nm,c,facing,w,h,ztop,d=1.0):
     fr=[c-s_*(w/2-0.35)+f*0.02,c+s_*(w/2-0.35)+f*0.02]
     add(nm,[(fr[0][0],fr[0][1],ztop-h-0.15),(fr[1][0],fr[1][1],ztop-h-0.15),(fr[1][0],fr[1][1],ztop-0.65),(fr[0][0],fr[0][1],ztop-0.65)],[[0,1,2,3]],'screen',[[(0,0),(1,0),(1,1),(0,1)]])
     for k in(-1,1):beams(nm+'_hang%d'%(k>0),[((*(c+s_*k*w/3-f*0.5),ztop),(*(c+s_*k*w/3-f*0.5),ztop+2.6))],0.12,'silver')
-zg=ZO-0.3-2.4-0.6
-screen('screen_n',(-UE+0.6,20.0),(1,0),19.0,7.0,zg);screen('screen_s',(UE-0.6,-20.0),(-1,0),19.0,7.0,zg)
-for i,(cu,cv) in enumerate(((-81.0,VW_IN-2.5),(81.0,VW_IN-2.5),(-81.0,VE_IN+2.7),(81.0,VE_IN+2.7))):
+zg=ZO-1.3-2.4-0.6
+screen('screen_n',(-UO+0.6,20.0),(1,0),19.0,7.0,zg);screen('screen_s',(UO-0.6,-20.0),(-1,0),19.0,7.0,zg)
+for i,(cu,cv) in enumerate(((-UO+1.5,VW_IN-2.5),(UO-1.5,VW_IN-2.5),(-UO+1.5,VE_IN+2.7),(UO-1.5,VE_IN+2.7))):
     screen('screen_c%d'%i,(cu,cv),(-np.sign(cu),-np.sign(cv)),9.0,4.6,ZI-1.2-2.4-0.6)
 from shapely.geometry import Polygon,Point
 def vent_block(nm,f,z0,z1,zb0,zb1,bay=7.0,pier=1.6,depth=0.45,wall='bluepanel',top='concrete'):

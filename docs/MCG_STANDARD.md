@@ -216,7 +216,10 @@ No-shortcuts pass (2026-11-22, the person: "i never want a shortcut, i never wan
   8 m above sea level): side roofs 36-39 m above the field right up to the opening edge, end roofs 34 m
   at the opening falling to 29 m at the gutter, arch trusses 48-50 m. The side slabs had sloped down to
   32.6 m at the opening and the shut roof sat 32.9 m up, both 4-6 m low; they now sit 37-39 m up. The
-  end roofs were already within Google Earth's 1 m steps.
+  end roofs were within Google Earth's 1 m steps behind their edge. Points read off Google Earth's 3D mesh from
+  angled views (tools/grounds/marvel/fit/README.md) then showed the end roofs' inner edge 3.2 m further in
+  than modelled, as a deep girder whose top sits 1.5 m above the roof: that edge girder is now modelled, and
+  the end roofs' upper surface measures 86-92% within 1 m and 97-100% within 2 m of those points.
 
 Still open at Marvel: the small scoreboard at each end's top tier and the MARVEL seat lettering in the
 lower tier are not modelled. The massing's buildings take a glass or concrete look by a hash, not their
