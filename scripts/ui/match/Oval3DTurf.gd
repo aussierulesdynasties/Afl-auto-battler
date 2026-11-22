@@ -251,6 +251,33 @@ func apply(p_weather: String, p_slot: String) -> void:
 	_tone_to_film()
 	_light_stands()
 	_quality()
+	_wet_world(wet)
+
+
+## Drops in the air at each level (Oval3DQuality "rain"); the node drawing them while it rains.
+var rain: Oval3DRain
+
+
+## A wet day beyond the turf and sky (rule 2.83): rain falls on screen and the far stands grey in
+## it, the men's guernseys, hair and skin look wet (oval_wet, read by the player and head shaders),
+## and by day the towers are on early, their light a second faint shadow and the glint in the wet
+## turf. The graphics level sets how many drops fall (Oval3DQuality "rain").
+func _wet_world(wet: bool) -> void:
+	RenderingServer.global_shader_parameter_set("oval_wet", 1.0 if wet else 0.0)
+	Oval3DRain.haze(env, wet)
+	var level := str(oval.get("quality")) if oval.get("quality") != null else ""
+	var drops := int(Oval3DQuality.preset(level)["rain"])
+	if rain != null and (not wet or rain.amount != drops):
+		rain.queue_free()
+		rain = null
+	if wet and drops > 0 and rain == null:
+		rain = Oval3DRain.new(oval, drops)
+		oval.add_child(rain)
+	if wet and slot != VignetteKickoff.NIGHT:
+		fill.visible = true
+		fill.rotation_degrees = Vector3(-58.0, 150.0, 0.0)
+		fill.light_color = Color(0.92, 0.95, 1.0)
+		fill.light_energy = WET_DAY_TOWERS
 
 
 ## The graphics level's cuts to this look (Oval3DQuality): the sun's shadow bands, whether a
@@ -298,6 +325,8 @@ func _tone_to_film() -> void:
 ## AgX exposure for each time of day, and the factor a wet day adds (measured with
 ## tools/visual/capture_turf3d.gd: open grass in each look against the fine day's).
 const EXPOSURE := {"day": 1.0, "twilight": 2.81, "night": 1.91}
+## The towers' light on a wet day or twilight, lit early under the cloud (the night's are 1.6 and 0.5).
+const WET_DAY_TOWERS := 0.35
 const EXPOSURE_WET := {"day": 1.83, "twilight": 1.83, "night": 1.84}
 
 
