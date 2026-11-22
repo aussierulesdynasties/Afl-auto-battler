@@ -690,7 +690,7 @@ static func backdrop(slug: String, base := "") -> Node3D:
 ## the WACA, Bruce and North Hobart a flat plate round the stands (tools/grounds/backdrop/scene: run1.sh SKIP).
 const BACKDROP_HIDES := {"adelaide": ["ao_ground"], "barossa": ["concourse"], "sky": ["concourse"],
 	"jiangwan": ["concourse"], "hands": ["concourse"], "blacktown": ["concourse"], "summit": ["concourse"],
-	"macpoint": ["concourse"], "waca": ["land", "road"], "bruce": ["g_ground"], "north_hobart": ["ground"]}
+	"macpoint": ["concourse"], "waca": ["land", "road", "brick"], "bruce": ["g_ground"], "north_hobart": ["ground"]}
 
 const BACKDROP_SHADER := preload("res://scripts/ui/match/oval3d_backdrop.gdshader")
 
@@ -719,6 +719,11 @@ static func _backdrop_materials(model: Node) -> void:
 			else:
 				mat.vertex_color_use_as_albedo = true
 				mat.disable_receive_shadows = true   # past the shadow map's reach it reads blue-grey
+				if mat.roughness >= 0.7:
+					# matte ground (grass, paving, roads, roofs of far blocks): seen at a low angle its sky
+					# reflection painted whole suburbs water-blue, so it reflects next to nothing
+					mat.metallic_specular = 0.0
+					mat.roughness = 1.0
 				if key.begins_with("tree_") and mat.transparency == BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR:
 					# leaf cards (Cazaly's palms and figs): their vertex colours were written for Blender's
 					# light and draw near-black here, so the pale leaf texture takes a plain foliage green
