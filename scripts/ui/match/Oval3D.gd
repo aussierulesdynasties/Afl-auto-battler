@@ -2050,7 +2050,8 @@ func _stoppage_umpire(st: Dictionary) -> int:
 	return best
 
 
-## At a free kick the field umpire nearest its mark (not one taking a stoppage) runs in and
+## At a free kick the field umpire nearest its mark (for a ball out of bounds, the boundary
+## umpire, who is on that wing; never one taking a stoppage) runs in and
 ## stands FREE_SIDE metres off it, across the ground toward the middle, watching the mark until
 ## the ball is kicked or the taker plays on (director.free_now). The real umpire also signals
 ## the free; no clip exists for that yet (art freeze, 2026-11-21).
@@ -2065,10 +2066,11 @@ func _free_umpire(fr: Dictionary) -> int:
 	if _ump_free >= 0 and _ump_free_k == int(fr["k"]):
 		return _ump_free
 	var at: Vector2 = fr["at"]
+	var want := "boundary" if str(fr.get("kind", "")) in ["out_on_full", "last_disposal"] else "field"
 	var best := -1
 	var best_d := INF
 	for u in umpires:
-		if str(u["role"]) != "field" or (u as Dictionary).has("clip") or int(u["k"]) == _ump_job:
+		if str(u["role"]) != want or (u as Dictionary).has("clip") or int(u["k"]) == _ump_job:
 			continue
 		var n: Node3D = u["node"]
 		var d := Vector2(n.position.x, n.position.z).distance_to(at)
