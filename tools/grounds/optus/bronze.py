@@ -15,7 +15,8 @@ into assets/grounds/optus/optus.glb:
   from the bronze's top), with the letters lifted from #1867's sign (white OPTUS STADIUM, yellow "yes") set
   6 m under the top, as on the real drum.
 - `glass`: the glass band over the bronze (no white Y columns outside, Google Earth) `entrance`: the street glazing,
-  and `storey`: the glazed storey under the bronze round the north and west (also saved as tex/storey.png for build.py).
+  and `storey`: the glazed storey under the bronze round the north and west (also saved as tex/storey.png for build.py);
+  `roof` (one bay a tile, build.py) and `steel` (the trusses), also saved to tex/ for build.py.
 
     python3 tools/grounds/optus/bronze.py [--old-sign sign_a.png] [--preview out.png]
 """
@@ -239,6 +240,30 @@ def storey():
     return Image.fromarray(img.clip(0, 255).astype(np.uint8), "RGB")
 
 
+def roof():
+    """The roof membrane, one bay across (u) and fascia (image top) to inner edge (image bottom), Google Earth roof_S and
+    roof_top: white PTFE pillows, shaded toward the valleys where a grey cable line runs, two faint cross cables, a grey
+    translucent strip along the inner edge (the seats' shadow through it) and a white rim."""
+    w, h = 256, 1024
+    u = (np.arange(w)[None, :] + 0.5) / w * np.ones((h, 1))
+    v = (np.arange(h)[:, None] + 0.5) / h * np.ones((1, w))
+    img = np.array((246, 246, 243), float) * (0.82 + 0.18 * np.sin(np.pi * u) ** 0.6)[..., None]
+    img *= (1.0 + 0.025 * _noise(h, w, (16, 4), 6))[..., None]
+    for c in (0.36, 0.68):
+        img[np.abs(v - c) < 0.0025] *= 0.9
+    img[(u < 0.012) | (u > 0.988)] = (150, 154, 158)
+    img[v > 0.9] = np.array((168, 174, 178), float) * (1.0 + 0.04 * _noise(h, w, (8, 4), 7))[v > 0.9][:, None]
+    img[v > 0.985] = (238, 238, 236)
+    img[v < 0.012] = (236, 236, 234)
+    return Image.fromarray(img.clip(0, 255).astype(np.uint8), "RGB")
+
+
+def steel():
+    """The roof trusses' steel: light grey, so they read as Google Earth's grey spines along the valleys."""
+    g = np.array((178, 182, 186), float) * (1.0 + 0.03 * _noise(64, 64, (4, 4), 8))[..., None]
+    return Image.fromarray(g.clip(0, 255).astype(np.uint8), "RGB")
+
+
 def png(im):
     b = io.BytesIO()
     im.save(b, "PNG", optimize=True)
@@ -251,7 +276,7 @@ def main():
     src = sys.argv[sys.argv.index("--old-sign") + 1] if "--old-sign" in sys.argv else None
     old = Image.open(src) if src else Image.open(io.BytesIO(_view_bytes(
         js, bn, next(im for im in js["images"] if im["name"] == "sign_a")["bufferView"])))
-    new = {"bronze": tile(), "sign_a": sign(old), "glass": glass(), "entrance": entrance(), "storey": storey()}
+    new = {"bronze": tile(), "sign_a": sign(old), "glass": glass(), "entrance": entrance(), "storey": storey(), "roof": roof(), "steel": steel()}
     if "--preview" in sys.argv:
         p = sys.argv[sys.argv.index("--preview") + 1]
         for n, im in new.items():

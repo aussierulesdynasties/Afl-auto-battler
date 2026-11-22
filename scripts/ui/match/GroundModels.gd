@@ -95,7 +95,7 @@ const SURROUNDS := {
 	# included (`models`, tools/grounds/optus/bridges.py).
 	"optus": {"y": -0.03, "inner": 100.0, "colour": Color(0.45, 0.55, 0.27),
 			"map": "surrounds.webp", "span": 2048.0, "trees": "trees.bin", "buildings": "buildings.bin",
-			"models": ["bridges.glb"], "tint": Color(2.0, 1.4, 0.95), "building_tint": Color(1.15, 1.05, 0.98)},
+			"models": ["bridges.glb"], "tint": Color.WHITE, "building_tint": Color.WHITE},
 }
 
 ## Parts of a model drawn again from a build tool's own mesh (per vertex x, y, z, normal, colour;

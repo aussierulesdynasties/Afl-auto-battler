@@ -154,23 +154,39 @@ for i in range(N):
     face([P(GL[i],HB[i]),P(GL[j],HB[j]),P(GL[j],ZS),P(GL[i],ZS)],MG,[(sGL[i]/BAYG,1-(ZS-HB[i])/GH),(sGL[i+1]/BAYG,1-(ZS-HB[j])/GH),(sGL[i+1]/BAYG,1.0),(sGL[i]/BAYG,1.0)],w)
 wall(RF,c(ZS),c(ZF),MW,1e6,1e6)
 # roof membrane: barrel vault per bay
-NC=5;SUB=6;T=NC*SUB;rows=[]
+# Google Earth close views (roof_S, roof_top, 2026-11-22): one long white pillow per bay from the fascia to the inner
+# edge, deep valleys with the steel trusses riding them, and the inner edge scalloped between the trusses' tips.
+# (#1867 had five cushions a bay, which read as a quilt from the air.)
+SCAL=0.8   # how far each bay's inner edge curves back between the trusses' tips, m
+_ro=lambda i:(RF[i]-IN[i]).normalized()
+INS=[IN[i]+_ro(i)*SCAL*math.sin(math.pi*(i%K)/K) for i in range(N)]
+T=14;rows=[]
+_env=lambda t:min(1.0,t/0.1,(1.0-t)/0.25)   # the pillows flatten into a straight inner edge
 for k in range(T+1):
     t=k/T;row=[]
     for i in range(N):
-        p=RF[i].lerp(IN[i],t);zb=ZF+(IZ-ZF)*t;w=(k%SUB)/SUB
-        bul=1.1*math.sin(math.pi*(i%K)/K)*math.sin(math.pi*w)
+        p=RF[i].lerp(INS[i],t);zb=ZF+(IZ-ZF)*t
+        bul=1.7*math.sin(math.pi*(i%K)/K)**0.7*_env(t)
         row.append(bm.verts.new((p.x,p.y,zb+bul)))
     rows.append(row)
 for k in range(T):
     for i in range(N):
         j=(i+1)%N;vs=[rows[k][i],rows[k][j],rows[k+1][j],rows[k+1][i]]
-        a=RF[i].lerp(IN[i],k/T);b=RF[j].lerp(IN[j],k/T);a2=RF[i].lerp(IN[i],(k+1)/T)
-        u0=arcs(RF)[i]/8.0;u1=arcs(RF)[i+1]/8.0;rl=(RF[i]-IN[i]).length
-        face(vs,MR,[(u0,k/T*rl/8),(u1,k/T*rl/8),(u1,(k+1)/T*rl/8),(u0,(k+1)/T*rl/8)],Vector((0,0,1)))
-flat(RF,c(ZS),IN,c(IZ-1.0),MU,10,up=False)
+        u0=(i%K)/K;u1=(i%K+1)/K          # roof.png (bronze.py): one bay across u, fascia (0) to inner edge (1) along v
+        face(vs,MR,[(u0,1-k/T),(u1,1-k/T),(u1,1-(k+1)/T),(u0,1-(k+1)/T)],Vector((0,0,1)))
+flat(RF,c(ZS),INS,c(IZ-1.0),MU,10,up=False)
 oc=Vector((J['oc'][0],J['oc'][1],0))
-wall(IN,c(IZ-1.0),c(IZ+0.2),MW,1e6,1e6,outward=False,ctr=oc)
+wall(INS,c(IZ-1.0),c(IZ+0.2),MW,1e6,1e6,outward=False,ctr=oc)
+MST=mat('steel',0.5,0.4)   # steel.png (bronze.py): the trusses read light grey against the membrane, not white
+# light fittings: a floodlight bank hung under each truss's tip at the inner edge (Google Earth under_E)
+for bi in range(NB):
+    i=bi*K;q=IN[i]+_ro(i)*0.8;d=_ro(i);sd=Vector((-d.y,d.x,0))
+    pts=[q+d*a_+sd*b_ for a_,b_ in((-0.5,-1.6),(0.5,-1.6),(0.5,1.6),(-0.5,1.6))]
+    lo4=[P(p_,IZ-2.4) for p_ in pts];hi4=[P(p_,IZ-1.0) for p_ in pts]
+    for e in range(4):
+        f_=(e+1)%4;nn=((pts[e]+pts[f_])/2-q).normalized()
+        face([lo4[e],lo4[f_],hi4[f_],hi4[e]],MST,[(0,0),(1,0),(1,1),(0,1)],nn)
+    face(lo4[::-1],MW,[(0,0),(1,0),(1,1),(0,1)],Vector((0,0,-1)))
 def tube(a,b,r,mi):
     d=(b-a);L=d.length
     if L<1e-3:return
@@ -197,9 +213,9 @@ for bi in range(NB):
     nseg=12
     for s_ in range(nseg):
         t0,t1=s_/nseg,(s_+1)/nseg
-        tube(at(t0,top(t0)),at(t1,top(t1)),0.32,MW);tube(at(t0,0.2),at(t1,0.2),0.22,MW)
-        if s_%2==0:tube(at(t0,0.2),at(t1,top(t1)),0.16,MW)
-        else:tube(at(t0,top(t0)),at(t1,0.2),0.16,MW)
+        tube(at(t0,top(t0)),at(t1,top(t1)),0.32,MST);tube(at(t0,0.2),at(t1,0.2),0.22,MST)
+        if s_%2==0:tube(at(t0,0.2),at(t1,top(t1)),0.16,MST)
+        else:tube(at(t0,top(t0)),at(t1,0.2),0.16,MST)
     tube(at(0,0.2),at(0,top(0)+0.01),0.2,MW);tube(at(1,0.2),at(1,top(1)),0.2,MW)
     # Google Earth (east and north close views): no white Y columns outside the glass, only slim white posts in the
     # dark open strip between the glass's head and the roof's fascia (drawn in the glass texture, bronze.py).
