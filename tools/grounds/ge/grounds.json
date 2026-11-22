@@ -55,10 +55,10 @@
   "turn_deg": 0.0
  },
  "gabba": {
-  "lat": -27.4858478,
-  "lon": 153.0380888,
+  "lat": -27.4858463,
+  "lon": 153.0380657,
   "ge_alt": -3.0,
-  "source": "Gabba rebuild: OSM way 4049692 (PR #2020)",
+  "source": "Gabba rebuild: OSM way 4049692 (PR #2020); moved 2.28 m west, 0.17 m north to where Google Earth puts the ground (Gabba thread 2026-11-22: 2,052 GE hovers on the roof inner edge, scale 0.992, rms 0.75 m). The model itself is unchanged.",
   "ge_alt_source": "GE status bar at the field centre, shape audit 2026-11-22 (+-1 m); confirm with --level"
  },
  "gmhba": {
