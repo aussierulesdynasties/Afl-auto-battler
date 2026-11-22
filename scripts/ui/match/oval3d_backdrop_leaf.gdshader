@@ -12,7 +12,12 @@ uniform sampler2D tex : source_color, filter_linear_mipmap_anisotropic;
 void fragment() {
 	vec4 t = texture(tex, UV);
 	ALBEDO = t.rgb * COLOR.rgb;
-	ALPHA = t.a;
+	// Mipmaps average a leaf's alpha with the gaps round it, so past a few metres more and more of each
+	// spray falls under the cut and the crowns thin to sticks (Traeger QA, 2026-11-22: crowns at 100 m read
+	// a third as full as Google Earth's). Raising alpha by the mip level keeps each spray's coverage the
+	// same at every distance (Ben Golus, "Anti-aliased Alpha Test", 2017).
+	float lod = textureQueryLod(tex, UV).x;
+	ALPHA = t.a * (1.0 + max(lod, 0.0) * 0.25);
 	ALPHA_SCISSOR_THRESHOLD = 0.5;
 	ROUGHNESS = 1.0;
 	SPECULAR = 0.0;
