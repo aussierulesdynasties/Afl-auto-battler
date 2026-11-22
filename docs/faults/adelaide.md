@@ -64,10 +64,12 @@ Still short (2026-11-22): the entrance glass band's lettering is unreadable in G
 invented); the east names' places along the stand are read from one
 oblique photo (to within a few metres); the stands hold 38,200 seats plus the Hill's 2,900, short of the real ground,
 the roof petals' valleys read softer than the real membrane;
-parkland canopy is thinner and the lawns a flat bright green where Google Earth's are mottled; west of the ground the
-practice oval's wickets and nets, the tennis centre's big white roofs and the Next Gen club are missing or wrong; from
-the south the Riverbank's back reads as a plain grey drum. Roof colours are fixed: each nearby building's roof is read
-off Google Earth (`tools/grounds/adelaide/roof_colours.py`), so no more salmon sheds. The west stand's height is
+the lawns are a flat bright green where Google Earth's are muted and mottled, and from the south the Riverbank's back
+reads as a plain grey drum. Fixed from Google Earth (2026-11-22, calibrated straight-down shots, no imagery kept): each
+nearby roof's and sports pitch's colour (`roof_colours.py`: no more salmon sheds, Memorial Drive's grass courts no
+longer blue); the trees stand where Google Earth shows canopy (`ge_trees.py`, replacing the random park fill); the
+grass courts, No. 2 oval's square and the practice nets and wickets that OSM leaves out are traced (`surrounds.py`
+TRACED); the tennis centre's show-court canopy is built in 3D (`landmarks.py`). The west stand's height is
 settled: once the compare tool framed like Google Earth (2026-11-22: its field of view, the turf's height and Google
 Earth lifting low cameras, docs/MCG_STANDARD.md), the west roof line, the light towers and the arcade sit on Google
 Earth's in every low view, so the photos' widths misled. Built from the 2026 photos since: the media boxes let into the
