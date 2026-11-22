@@ -77,13 +77,22 @@ def ring(o,z,a=OA,b=OB,n=ON):
     r=se_r(TH,a,b,n)+o;zz=z if np.ndim(z) else np.full(K,z)
     return np.stack([r*np.cos(TH),r*np.sin(TH),zz],1)
 # roof end arcs (measured outer edge, smoothed by a spline in angle)
-NP=[(-84.3,74),(-90,68),(-98,61),(-105.5,52.5),(-112,40),(-115,35),(-118,23.5),(-119.5,15),(-120,0),(-119.25,-15),(-116.25,-30),(-113.75,-35),(-108,-45),(-98,-60),(-90,-67),(-84.1,-74)]
-SP=[(84.6,-74),(90,-69),(97,-64),(103.5,-60),(114.5,-40),(116.25,-35),(120.5,-15),(124.5,0),(122.75,10),(120.5,15),(117.5,35),(115,40),(110,50),(103.5,60),(97,64),(90,69),(84,74)]
+# The end roofs' outer edges: one circle each, fitted to the edge traced on Google Earth's top view (tools/grounds/
+# marvel/fit: the view tied to the harbour edge, median 1.1 m; refit until the re-measured edge's median was under 0.3 m). Both
+# centres sit about 5 m east of the stadium's axis, which is why the east halves read longer (2026-11-22).
+ARC_FIT={'N':(-21.98,-5.19,101.15),'S':(21.15,-6.74,102.56)}
+def _circ(k,sg,n=17):
+    cu,cv,r=ARC_FIT[k];vs=np.linspace(74,-74,n) if sg<0 else np.linspace(-74,74,n)
+    return [(round(float(cu+sg*math.sqrt(r*r-(v-cv)**2)),3),round(float(v),3)) for v in vs]
+NP=_circ('N',-1);SP=_circ('S',1)
+# The side roofs' edges, measured on the same view: the west roof's inner edge 2.25 m further in than the old 51.0
+# and its outer edge 1.1 m in; the east roof's outer edge 1.6 m further out (its inner edge measured -0.25 m: kept).
+VW_IN,VW_OUT,VE_IN,VE_OUT=48.8,101.7,-52.2,-105.2
 def arc(pts,sgn,n=97):
     p=np.array(pts,float);c=np.array([sgn*40.0,0]);d=p-c;ph=np.arctan2(d[:,1],sgn*d[:,0]);r=np.hypot(*d.T);o=np.argsort(ph)
     sp=UnivariateSpline(ph[o],r[o],k=3,s=len(p)*0.8);q=np.linspace(ph[o][0],ph[o][-1],n);rr=sp(q)
     out=np.stack([c[0]+sgn*rr*np.cos(q),rr*np.sin(q)],1);out[0]=p[o][0];out[-1]=p[o][-1];return out
-ARC_N=arc(NP,-1);ARC_S=arc(SP,1)
+ARC_N=np.array(_circ('N',-1,97))[::-1];ARC_S=np.array(_circ('S',1,97))  # the fitted circles exactly (arc() smoothed hand-picked points)
 def slab_z(av):  # side roof top height at |v|
     return np.where(av>=66,ZS,ZO+(np.clip(av,51,66)-51)/15*(ZS-ZO))
 def end_prof(s):return ZG+(ZO-ZG)*(1-s**1.6)
@@ -111,7 +120,7 @@ def slab(name,vin,vout,u0,u1):
         q=[(u0+1,a,z),(u1-1,a,z),(u1-1,b,z),(u0+1,b,z)]
         q2=[(x,y,zq-0.3) for x,y,zq in q];V=q+q2;F=[[0,1,2,3],[4,7,6,5],[0,4,5,1],[1,5,6,2],[2,6,7,3],[3,7,4,0]]
         add('roofshut_%s_%d'%(name[-1],k),V,F,['deck2','soffit','fascia','fascia','fascia','fascia'])
-slab('slab_w',51.0,102.8,-84.3,84.0);slab('slab_e',-52.2,-103.6,-84.1,84.6)
+slab('slab_w',VW_IN,VW_OUT,-84.3,84.0);slab('slab_e',VE_IN,VE_OUT,-84.1,84.6)
 # ---------------- end roofs: inner edge at the opening ends (u=-+84, z ZO), outer edge on the measured arc (z ZG)
 def end_z(u,v):
     A=ARC_N if u<0 else ARC_S;o=np.argsort(A[:,1]);uo=np.interp(v,A[o,1],A[o,0]);s=np.clip((abs(u)-UE)/max(abs(uo)-UE,1),0,1)
@@ -142,7 +151,7 @@ def end_roof(name,ARC,sgn):
 end_roof('end_n',ARC_N,-1);end_roof('end_s',ARC_S,1)
 # ---------------- roof height function (top), for walls/brackets under it
 def roof_top(u,v):
-    if abs(u)<=UE and abs(v)>=51:return float(slab_z(np.array(abs(v))))
+    if abs(u)<=UE and (v>=VW_IN or v<=VE_IN):return float(slab_z(np.array(abs(v))))
     return end_z(u,v)
 # ---------------- space trusses (teal): two bottom chords, one arched top chord, Warren web, posts to the roof
 def arcz(x,half,z0,z1):
@@ -163,7 +172,7 @@ def side_truss(name,v1,v2,u0,u1,n=24):
 for sg,(o1,o2,i1,i2),(u0,u1) in((1,(88.75,97.5,57.5,66.0),(-84.3,84.0)),(-1,(-88.75,-97.5,-57.5,-66.0),(-84.1,84.6))):
     side_truss('truss_%s_out'%('w' if sg>0 else 'e'),o1,o2,u0,u1);side_truss('truss_%s_in'%('w' if sg>0 else 'e'),i1,i2,u0,u1)
 def end_arch(name,sgn,n=20):
-    v0,v1=-51.4,50.2;half=(v1-v0)/2;vc=(v0+v1)/2;T=[];B1=[];B2=[]
+    v0,v1=VE_IN+0.8,VW_IN-0.8;half=(v1-v0)/2;vc=(v0+v1)/2;T=[];B1=[];B2=[]
     for i in range(n+1):
         v=v0+(v1-v0)*i/n;x=v-vc;f=1-(x/half)**2
         T.append((sgn*(UE+6.0*f),v,float(arcz(x,half,ZO,ZT))));B1.append((sgn*UE,v,float(arcz(x,half,ZO+0.3,ZB+1))));B2.append((sgn*(UE+3.5*f+0.5),v,float(arcz(x,half,ZO+0.3,ZB+1))))
@@ -176,7 +185,7 @@ end_arch('arch_n',-1);end_arch('arch_s',1)
 r0=se_r(TH,OA,OB,ON);PU=r0*np.cos(TH);PV=r0*np.sin(TH)
 RU=np.array([roof_top(u*1.0,v*1.0)-1.2 for u,v in zip(PU*0.96,PV*0.96)])  # roof underside just inside the face
 # slab end faces: close the gap between the end roof (inner edge z ZO) and the slab underside, v 51..74
-for nm,(u_,vin,vout) in(('w0',(-84.3,51.0,74.0)),('w1',(84.0,51.0,74.0)),('e0',(-84.1,-52.2,-74.0)),('e1',(84.6,-52.2,-74.0))):
+for nm,(u_,vin,vout) in(('w0',(-84.3,VW_IN,74.0)),('w1',(84.0,VW_IN,74.0)),('e0',(-84.1,VE_IN,-74.0)),('e1',(84.6,VE_IN,-74.0))):
     vs=np.linspace(vin,vout,12);top=[float(slab_z(np.array(abs(v))))-1.1 for v in vs]
     q=[(u_,v,ZO-0.2) for v in vs]+[(u_,v,t) for v,t in zip(vs[::-1],top[::-1])]
     add('slab_end_'+nm,q,[list(range(len(q)))],'soffit')  # under the roof, so the underside's paint, not the bright fascia
@@ -310,9 +319,9 @@ def under_slab(sg,vin,u0,u1):
     zf=lambda u,v:float(slab_z(np.array(abs(v))))-1.1
     vv=[sg*abs(v) for v in (abs(vin)+0.6,58.5,66.0,74.0,82.0,90.0,98.0)]
     grid('slab_under_%s'%('w' if sg>0 else 'e'),np.linspace(u0+0.6,u1-0.6,17),vv,zf)
-under_slab(1,51.0,-84.3,84.0);under_slab(-1,-52.2,-84.1,84.6)
+under_slab(1,VW_IN,-84.3,84.0);under_slab(-1,VE_IN,-84.1,84.6)
 # the shut roof's three plates each side: the same grid under each (group roofshut, so it goes when the roof opens)
-for sg,vin in((1,51.0),(-1,52.2)):
+for sg,vin in((1,VW_IN),(-1,-VE_IN)):
     for k in range(3):
         a=0.15+vin*k/3+(0.6 if k else 0.4);b=vin*(k+1)/3-0.2;zb=ZO+0.35*(k+1)-0.3
         grid('roofshut_under_%s%d'%('w' if sg>0 else 'e',k),np.linspace(-83.0,83.0,17),[sg*a,sg*(a+b)/2,sg*b],lambda u,v,zb=zb:zb,w=0.34,drop=0.32)
@@ -349,8 +358,8 @@ def gantry(nm,a,b,ztop,inward):
     for i in range(k):
         p=a+t*(1.0+i*2.0)
         for w in(-0.55,0.55):LAMPS.append((p[0]+n[0]*w,p[1]+n[1]*w,ztop-2.4,n))
-gantry('gantry_w',(-83.6,51.6),(83.3,51.6),ZO-1.2,(0,-1));gantry('gantry_e',(-83.4,-52.8),(83.9,-52.8),ZO-1.2,(0,1))
-gantry('gantry_n',(-UE-0.6,-50.0),(-UE-0.6,49.6),ZO-0.3,(1,0));gantry('gantry_s',(UE+0.6,-50.6),(UE+0.6,50.4),ZO-0.3,(-1,0))
+gantry('gantry_w',(-83.6,VW_IN+0.6),(83.3,VW_IN+0.6),ZO-1.2,(0,-1));gantry('gantry_e',(-83.4,VE_IN-0.6),(83.9,VE_IN-0.6),ZO-1.2,(0,1))
+gantry('gantry_n',(-UE-0.6,VE_IN+2.2),(-UE-0.6,VW_IN-1.4),ZO-0.3,(1,0));gantry('gantry_s',(UE+0.6,VE_IN+1.6),(UE+0.6,VW_IN-0.6),ZO-0.3,(-1,0))
 # each floodlight: a housing tipped 30 deg towards the pitch, lens on its lower face
 V=[];F=[];M=[]
 for x,y,z,n in LAMPS:
@@ -372,7 +381,7 @@ def screen(nm,c,facing,w,h,ztop,d=1.0):
     for k in(-1,1):beams(nm+'_hang%d'%(k>0),[((*(c+s_*k*w/3-f*0.5),ztop),(*(c+s_*k*w/3-f*0.5),ztop+2.6))],0.12,'silver')
 zg=ZO-0.3-2.4-0.6
 screen('screen_n',(-UE+0.6,20.0),(1,0),19.0,7.0,zg);screen('screen_s',(UE-0.6,-20.0),(-1,0),19.0,7.0,zg)
-for i,(cu,cv) in enumerate(((-81.0,48.5),(81.0,48.5),(-81.0,-49.5),(81.0,-49.5))):
+for i,(cu,cv) in enumerate(((-81.0,VW_IN-2.5),(81.0,VW_IN-2.5),(-81.0,VE_IN+2.7),(81.0,VE_IN+2.7))):
     screen('screen_c%d'%i,(cu,cv),(-np.sign(cu),-np.sign(cv)),9.0,4.6,ZO-1.2-2.4-0.6)
 from shapely.geometry import Polygon,Point
 def vent_block(nm,f,z0,z1,zb0,zb1,bay=7.0,pier=1.6,depth=0.45,wall='bluepanel',top='concrete'):
