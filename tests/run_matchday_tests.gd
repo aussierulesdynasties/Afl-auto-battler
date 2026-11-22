@@ -2522,7 +2522,7 @@ func _test_momentum_meter() -> void:
 	await _settle()
 
 
-## Rule 2.114: on the 3D picture your side runs through the banner on the match's own ground before
+## Rule 2.115: on the 3D picture your side runs through the banner on the match's own ground before
 ## the first bounce, with this match's words; a real tap on the picture ends it and the pre-match
 ## calls open; back from Change the side it does not run again.
 func _test_banner_3d() -> void:
