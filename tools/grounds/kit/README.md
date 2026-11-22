@@ -33,6 +33,15 @@ and renders are rebuilt on demand and git-ignored.
   `dome` (a whole-ground translucent roof on ribs), `outer_r` (number or [b, r] table), `mats_ground`.
 - `paint`: the ground's own textures by kind (see `kit/paint.py`). Every texture is painted in code: no photo pixels.
 
+6. Copy the GLB and seat files into `assets/grounds/<slug>/`, re-import (`godot --headless --import`), then hold the seats
+   to the shared seat rule: `godot --headless --path . --script tools/grounds/seat_check.gd -- --write <slug>` takes out
+   any seat with no floor, no headroom (2 m over its tread), inside the fence or left alone, and
+   `tests/run_ground_seats_tests.gd` fails a ground that breaks it. `tools/grounds/seat_shots.gd` films the failing seats.
+
+Seats sit on each row's own radial line (`seat_rows`), as the treads are drawn; until 2026-11-21 each row stepped along
+the row's normal instead, which walks off the treads where the bowl is not round (Sky Stadium's upper deck sat a tread
+up, sunk into the concrete with its pans through the concourse ceiling).
+
 New seat colour names go in `SEAT_COLOURS` in `scripts/ui/match/Oval3D.gd` (the build prints each mean).
 
 Stadium only, as for the other grounds: no turf, goalposts, nets, sponsor boards, lettering or crowd.

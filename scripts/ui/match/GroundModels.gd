@@ -86,6 +86,44 @@ const FIT := {
 	"gabba": [2.47, 3.47, 0.0, 175.0, 86.88, 73.71],
 }
 
+## The land round a model that ends at its own street (in the model's metres): the ring from
+## `inner` (under the model's paving) out past the horizon, at `y` just under its street, so the
+## stadium does not stand on an island in an empty world. The MCG stands in Yarra Park: `map` is
+## its ground painted from OpenStreetMap (tools/grounds/mcg/surrounds.py), `span` m a side round the
+## model's middle, and `trees` the park's trees from the same map (x, z, height, canopy, shade).
+const SURROUNDS := {
+	"mcg": {"y": -0.03, "inner": 140.0, "colour": Color(0.45, 0.55, 0.27),
+			"map": "surrounds.webp", "span": 2048.0, "trees": "trees.bin", "buildings": "buildings.bin",
+			"outer": 1024.0},   # the background scene takes over from 1,024 m (reduce.py inner=1024)
+}
+
+## Parts of a model drawn again from a build tool's own mesh (per vertex x, y, z, normal, colour;
+## float32, the model's metres), the model's own nodes named in `hide` left out. The MCG's roof
+## trusses are deep pale lattices from Google Earth, not the model's single blue beams
+## (tools/grounds/mcg/trusses.py), and its outside walls get a slab edge at every floor
+## (tools/grounds/mcg/ledges.py).
+const PARTS := {
+	"mcg": [{"mesh": "trusses.bin", "hide": ["trusses"], "name": "Trusses"},
+			{"mesh": "ledges.bin", "name": "SlabEdges"}],
+}
+
+## Per-ground corrections to a model's materials, by material name, checked against Google Earth
+## (MCG, 2026-11-21): the MCG's roof sheeting is matte grey from above. Built glossy and part metal,
+## it mirrored the blue sky and read white-blue where the real roof reads warm grey; the tints bring
+## its sunlit tops to Google Earth's colours (north 189,188,181, east 148,150,145).
+const MATERIAL_FIX := {
+	"mcg": {
+		"roof_white": {"metallic": 0.0, "roughness": 0.9, "albedo_color": Color(0.84, 0.84, 0.8)},
+		"roof_grey": {"metallic": 0.0, "roughness": 0.9, "albedo_color": Color(0.8, 0.8, 0.76)},
+		"roof_teal": {"albedo_color": Color(0.72, 0.86, 0.8)},
+		# The north stands' masts and ties: pale painted tubes in Google Earth, not dark galvanised.
+		"steel_galv": {"metallic": 0.0, "roughness": 0.55, "albedo_color": Color(0.9, 0.9, 0.88)},
+		# The front of each tier: Street View and a photo sphere on the ground show a pale concrete
+		# parapet over a thin dark ribbon, not the near-black band the texture paints.
+		"tier_fascia": {"albedo_color": Color(2.2, 2.2, 2.1)},
+	},
+}
+
 ## Models that carry their colours on the vertices (glTF COLOR_0) under a tiling detail texture.
 ## Godot's glTF reader keeps the colours but does not paint with them, so the loader turns that on.
 const VERTEX_COLOURED := ["adelaide"]
@@ -98,9 +136,14 @@ const SEAT_COLOURS := {
 	"seat_slategrey": Color(0.361, 0.392, 0.447),
 	# Accor: aqua lower bowl (seat_teal there keeps the value already here).
 	"seat_aqua": Color(0.527, 0.719, 0.757),
-	"seat_grey": Color(0.618, 0.618, 0.586), "seat_moss": Color(0.437, 0.594, 0.555),
-	"seat_navy": Color(0.068, 0.311, 0.484), "seat_slate": Color(0.272, 0.39, 0.488),
-	"seat_steel": Color(0.437, 0.484, 0.524),
+	# MCG, by tier from Street View on the ground and Google Earth: white and light grey lower and
+	# middle tiers, a blue band along the front of the middle tier, teal-blue top tier
+	# (grey-green in the Members' north-west).
+	"seat_mcg_white": Color(0.96, 0.88, 0.80), "seat_mcg_grey": Color(0.76, 0.70, 0.64),
+	"seat_mcg_blue": Color(0.18, 0.32, 0.52), "seat_mcg_teal": Color(0.42, 0.64, 0.66),
+	"seat_mcg_sage": Color(0.50, 0.58, 0.56),
+	# The front of the lower tier from the Members' round to the north: green (a photo sphere on the ground).
+	"seat_mcg_green": Color(0.46, 0.70, 0.58),
 	"seat_green": Color(0.314, 0.549, 0.455), "seat_teal": Color(0.384, 0.620, 0.541),
 	"seat_blue": Color(0.2, 0.318, 0.467), "seat_paleblue": Color(0.482, 0.612, 0.714),
 	"seat_mint": Color(0.502, 0.706, 0.655), "seat_dkgreen": Color(0.039, 0.243, 0.125),
@@ -249,6 +292,10 @@ static func instantiate(slug: String, base := "") -> Node3D:
 		if model != null:
 			if slug in VERTEX_COLOURED:
 				_paint_vertex_colours(model)
+			if MATERIAL_FIX.has(slug):
+				_fix_materials(model, MATERIAL_FIX[slug])
+			for part: Dictionary in PARTS.get(slug, []):
+				_add_part(model, dir, part)
 			root.add_child(model)
 	slice_big_meshes(root)
 	var fit: Array = FIT.get(slug, [0.0, 0.0])
@@ -259,7 +306,258 @@ static func instantiate(slug: String, base := "") -> Node3D:
 		for n: String in BACKDROP_HIDES.get(slug, []):   # the model's own ground, where the scene's takes over
 			for mi in root.find_children(n + "*", "MeshInstance3D", true, false):
 				(mi as MeshInstance3D).visible = false
+	if SURROUNDS.has(slug):
+		_add_surrounds(root, SURROUNDS[slug], dir)
 	return root
+
+
+## A flat ring of parkland round the model (SURROUNDS): grass with a broad mottle, unlit by
+## nothing it would not be lit by (it takes the sun, the sky and the stands' shade).
+static func _add_surrounds(root: Node3D, s: Dictionary, dir := "") -> void:
+	var inner: float = s["inner"]
+	var outer: float = s.get("outer", 2500.0)
+	var y: float = s["y"]
+	var n := 96
+	var map: Texture2D = null
+	if s.has("map") and ResourceLoader.exists(dir + str(s["map"])):
+		map = load(dir + str(s["map"]))
+	var span: float = s.get("span", 2048.0)
+	var v := PackedVector3Array()
+	var uv := PackedVector2Array()
+	var nrm := PackedVector3Array()
+	var idx := PackedInt32Array()
+	for i in n + 1:
+		var a := TAU * i / n
+		var d := Vector3(cos(a), 0.0, sin(a))
+		for r: float in RINGS.map(func(f): return f if f > 0.0 else inner) + [outer]:
+			var p := d * r + Vector3(0.0, y, 0.0)
+			v.append(p)
+			# The painted map clamps at its edge (painted plain there); the mottle tiles.
+			uv.append(Vector2(p.x, p.z) / span + Vector2(0.5, 0.5) if map != null else Vector2(p.x, p.z) / 60.0)
+			nrm.append(Vector3.UP)
+	var per := RINGS.size() + 1
+	for i in n:
+		for k in per - 1:
+			var a0 := i * per + k
+			var b0 := (i + 1) * per + k
+			idx.append_array([a0, a0 + 1, b0, a0 + 1, b0 + 1, b0])
+	var arr := []
+	arr.resize(Mesh.ARRAY_MAX)
+	arr[Mesh.ARRAY_VERTEX] = v
+	arr[Mesh.ARRAY_TEX_UV] = uv
+	arr[Mesh.ARRAY_NORMAL] = nrm
+	arr[Mesh.ARRAY_INDEX] = idx
+	var mesh := ArrayMesh.new()
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
+	if map != null:
+		var mm := StandardMaterial3D.new()
+		mm.resource_name = "surrounds"
+		mm.albedo_texture = map
+		# The sun's shadow map reaches 160 m from the camera; past it, on the Mobile renderer, the
+		# land read as if in shade (blue-grey). Its trees' shade is painted into the map instead.
+		mm.disable_receive_shadows = true
+		mm.texture_repeat = false
+		mm.roughness = 1.0
+		var g := MeshInstance3D.new()
+		g.name = "Surrounds"
+		g.mesh = mesh
+		g.material_override = mm
+		g.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		g.set_meta("open_ground", true)
+		root.add_child(g)
+		if s.has("trees") and FileAccess.file_exists(dir + str(s["trees"])):
+			_add_trees(root, FileAccess.get_file_as_bytes(dir + str(s["trees"])).to_float32_array(), y)
+		if s.has("buildings") and FileAccess.file_exists(dir + str(s["buildings"])):
+			_add_buildings(root, FileAccess.get_file_as_bytes(dir + str(s["buildings"])).to_float32_array(), y)
+		return
+	var noise := FastNoiseLite.new()
+	noise.frequency = 0.02
+	noise.seed = 7
+	var tex := NoiseTexture2D.new()
+	tex.noise = noise
+	tex.seamless = true
+	tex.width = 256
+	tex.height = 256
+	var grad := Gradient.new()
+	var c: Color = s["colour"]
+	grad.set_color(0, c.darkened(0.18))
+	grad.set_color(1, c.lightened(0.1))
+	tex.color_ramp = grad
+	var mat := StandardMaterial3D.new()
+	mat.resource_name = "surrounds"
+	mat.albedo_texture = tex
+	mat.roughness = 1.0
+	var mi := MeshInstance3D.new()
+	mi.name = "Surrounds"
+	mi.mesh = mesh
+	mi.material_override = mat
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	root.add_child(mi)
+
+
+## The ring's radii, m from the model's middle (0 is `inner`): close rings keep the painted map's
+## roads straight where it is seen, the last runs out past the horizon.
+const RINGS := [0.0, 250.0, 400.0, 600.0, 850.0, 1100.0]
+## Trees are drawn in square blocks this many metres a side, so the camera draws only those in view.
+const TREE_BLOCK := 250.0
+
+
+## Every tree of the map (x, z, height, canopy radius, shade; model metres) as a trunk and a rounded
+## canopy, one batch a block of the park. Unlit by their own shadows (the map paints their shade).
+static func _add_trees(root: Node3D, buf: PackedFloat32Array, y: float) -> void:
+	var canopy := _canopy_mesh()
+	var trunk := CylinderMesh.new()
+	trunk.top_radius = 0.022
+	trunk.bottom_radius = 0.035
+	trunk.height = 1.0
+	trunk.radial_segments = 5
+	trunk.rings = 0
+	trunk.cap_top = false
+	trunk.cap_bottom = false
+	var leaf := StandardMaterial3D.new()
+	leaf.resource_name = "tree_leaf"
+	leaf.vertex_color_use_as_albedo = true
+	leaf.albedo_color = Color(0.27, 0.34, 0.19)
+	leaf.roughness = 1.0
+	leaf.disable_receive_shadows = true
+	var bark := StandardMaterial3D.new()
+	bark.resource_name = "tree_bark"
+	bark.albedo_color = Color(0.33, 0.29, 0.24)
+	bark.roughness = 1.0
+	bark.disable_receive_shadows = true
+	var blocks := {}
+	for i in range(0, buf.size() - 4, 5):
+		var key := Vector2i(floori(buf[i] / TREE_BLOCK), floori(buf[i + 1] / TREE_BLOCK))
+		if not blocks.has(key):
+			blocks[key] = []
+		blocks[key].append(i)
+	for key: Vector2i in blocks:
+		var ids: Array = blocks[key]
+		var leaves := MultiMesh.new()
+		leaves.transform_format = MultiMesh.TRANSFORM_3D
+		leaves.use_colors = true
+		leaves.mesh = canopy
+		leaves.instance_count = ids.size()
+		var stems := MultiMesh.new()
+		stems.transform_format = MultiMesh.TRANSFORM_3D
+		stems.mesh = trunk
+		stems.instance_count = ids.size()
+		for j in ids.size():
+			var i: int = ids[j]
+			var h: float = buf[i + 2]
+			var r: float = buf[i + 3]
+			var at := Vector3(buf[i], y, buf[i + 1])
+			var turn := Basis(Vector3.UP, buf[i + 4] * TAU)
+			var crown := h - r * 1.1
+			leaves.set_instance_transform(j, Transform3D(turn.scaled(Vector3(r, r * 0.85, r)), at + Vector3(0, crown, 0)))
+			# Eucalypt grey-green to elm green, a little lighter or darker tree to tree.
+			var shade: float = buf[i + 4]
+			leaves.set_instance_color(j, Color(0.92, 0.95, 0.9).lerp(Color(1.1, 1.08, 0.95), shade) * (0.85 + 0.3 * fposmod(shade * 7.3, 1.0)))
+			stems.set_instance_transform(j, Transform3D(Basis().scaled(Vector3(h, crown, h)), at + Vector3(0, crown * 0.5, 0)))
+		for pair in [[leaves, leaf, "Trees"], [stems, bark, "Trunks"]]:
+			var mi := MultiMeshInstance3D.new()
+			mi.name = "%s_%d_%d" % [pair[2], key.x, key.y]
+			mi.multimesh = pair[0]
+			mi.material_override = pair[1]
+			mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			root.add_child(mi)
+
+
+## The map's buildings round the ground (point count, height, then the footprint's x, z): plain
+## walls in a pale render or brick and a flat roof each, as one mesh. Seen past the stands and
+## from a fly-through, they set the MCG in its city rather than on a plain.
+static func _add_buildings(root: Node3D, buf: PackedFloat32Array, y: float) -> void:
+	var v := PackedVector3Array()
+	var nrm := PackedVector3Array()
+	var col := PackedColorArray()
+	const WALLS := [Color(0.86, 0.84, 0.8), Color(0.78, 0.76, 0.72), Color(0.72, 0.6, 0.5), Color(0.9, 0.88, 0.84),
+			Color(0.66, 0.66, 0.66)]
+	var i := 0
+	var b := 0
+	while i + 1 < buf.size():
+		var n := int(buf[i])
+		var h: float = buf[i + 1]
+		var foot := PackedVector2Array()
+		for k in n:
+			foot.append(Vector2(buf[i + 2 + k * 2], buf[i + 3 + k * 2]))
+		i += 2 + n * 2
+		b += 1
+		var wall: Color = WALLS[b % WALLS.size()]
+		var roof := wall.darkened(0.18)
+		# Walls face out whichever way round the footprint was drawn.
+		var ccw := 0.0
+		for k in n:
+			ccw += foot[k].cross(foot[(k + 1) % n])
+		for k in n:
+			var a := foot[k]
+			var c := foot[(k + 1) % n]
+			var out := Vector3(c.y - a.y, 0.0, a.x - c.x).normalized() * (1.0 if ccw > 0.0 else -1.0)
+			var shade := wall * (0.92 + 0.08 * absf(out.x))
+			for p: Vector3 in [Vector3(a.x, y, a.y), Vector3(c.x, y, c.y), Vector3(c.x, y + h, c.y),
+					Vector3(a.x, y, a.y), Vector3(c.x, y + h, c.y), Vector3(a.x, y + h, a.y)]:
+				v.append(p)
+				nrm.append(out)
+				col.append(shade)
+		var tri := Geometry2D.triangulate_polygon(foot)
+		for k in tri:
+			v.append(Vector3(foot[k].x, y + h, foot[k].y))
+			nrm.append(Vector3.UP)
+			col.append(roof)
+	if v.is_empty():
+		return
+	var arr := []
+	arr.resize(Mesh.ARRAY_MAX)
+	arr[Mesh.ARRAY_VERTEX] = v
+	arr[Mesh.ARRAY_NORMAL] = nrm
+	arr[Mesh.ARRAY_COLOR] = col
+	var mesh := ArrayMesh.new()
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
+	var mat := StandardMaterial3D.new()
+	mat.resource_name = "city"
+	mat.vertex_color_use_as_albedo = true
+	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	mat.roughness = 0.95
+	mat.disable_receive_shadows = true
+	var mi := MeshInstance3D.new()
+	mi.name = "Buildings"
+	mi.mesh = mesh
+	mi.material_override = mat
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	mi.set_meta("open_ground", true)
+	root.add_child(mi)
+
+
+## A canopy of about radius 1: two lumpy lobes, one high and one off to the side, so a park of them
+## reads as gums and elms rather than balls on sticks.
+static func _canopy_mesh() -> ArrayMesh:
+	var sphere := SphereMesh.new()
+	sphere.radius = 1.0
+	sphere.height = 2.0
+	sphere.radial_segments = 7
+	sphere.rings = 4
+	var src := sphere.get_mesh_arrays()
+	var v := PackedVector3Array()
+	var nrm := PackedVector3Array()
+	var idx := PackedInt32Array()
+	for lobe: Array in [[Vector3(0.0, 0.1, 0.0), 0.82], [Vector3(0.42, -0.12, 0.2), 0.62], [Vector3(-0.38, -0.05, -0.28), 0.58]]:
+		var at: Vector3 = lobe[0]
+		var r: float = lobe[1]
+		var base := v.size()
+		for k in (src[Mesh.ARRAY_VERTEX] as PackedVector3Array).size():
+			var p: Vector3 = src[Mesh.ARRAY_VERTEX][k]
+			var bump := 1.0 + 0.18 * sin(p.x * 5.1 + p.y * 3.7 + at.x * 9.0) * cos(p.z * 4.3 - p.y * 2.9)
+			v.append(at + Vector3(p.x, maxf(p.y, -0.5), p.z) * r * bump)
+			nrm.append(src[Mesh.ARRAY_NORMAL][k])
+		for k in (src[Mesh.ARRAY_INDEX] as PackedInt32Array):
+			idx.append(base + k)
+	var arr := []
+	arr.resize(Mesh.ARRAY_MAX)
+	arr[Mesh.ARRAY_VERTEX] = v
+	arr[Mesh.ARRAY_NORMAL] = nrm
+	arr[Mesh.ARRAY_INDEX] = idx
+	var mesh := ArrayMesh.new()
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
+	return mesh
 
 
 ## A model mesh of more than SLICE_OVER triangles (Marvel's seats, a million each; Moorabbin's
@@ -275,7 +573,7 @@ static func slice_big_meshes(root: Node) -> void:
 			tris += mi.mesh.surface_get_array_index_len(si) / 3
 		if tris <= SLICE_OVER:
 			continue
-		var pieces := _slices(mi.mesh)
+		var pieces := _slices(mi.mesh, mi)
 		var parent := mi.get_parent()
 		for k in range(pieces.size()):
 			var piece := MeshInstance3D.new()
@@ -290,8 +588,9 @@ static func slice_big_meshes(root: Node) -> void:
 
 
 ## The mesh's triangles sorted into SLICES meshes by the bearing of each triangle's first corner
-## from the middle of the mesh's box; each piece keeps only the corners it uses.
-static func _slices(mesh: Mesh) -> Array:
+## from the middle of the mesh's box; each piece keeps only the corners it uses. With `src_mi`, each
+## surface keeps that instance's override (MATERIAL_FIX), not only the mesh's own material.
+static func _slices(mesh: Mesh, src_mi: MeshInstance3D = null) -> Array:
 	var mid := mesh.get_aabb().get_center()
 	var meshes := []
 	for k in range(SLICES):
@@ -315,7 +614,7 @@ static func _slices(mesh: Mesh) -> Array:
 			per[k].append(idx[t + 2])
 		var remap := PackedInt32Array()
 		remap.resize(verts.size())
-		var mat := mesh.surface_get_material(si)
+		var mat := src_mi.get_active_material(si) if src_mi != null else mesh.surface_get_material(si)
 		for k in range(SLICES):
 			var tri: PackedInt32Array = per[k]
 			if tri.is_empty():
@@ -543,6 +842,68 @@ static func _instances(root: Node3D, mesh: Mesh, path: String, colour: String, m
 		mi.material_override = mat
 		mi.set_meta("seats", true)
 		root.add_child(mi)
+
+
+## MATERIAL_FIX: each named material on `model` gets its own copy with the listed values.
+## One PARTS entry: its mesh added to the model, the nodes it replaces taken out.
+static func _add_part(model: Node, dir: String, part: Dictionary) -> void:
+	if not FileAccess.file_exists(dir + str(part["mesh"])):
+		return
+	for n: String in part.get("hide", []):
+		var old := model.find_child(n, true, false)
+		if old != null:
+			old.get_parent().remove_child(old)
+			old.queue_free()
+	var buf := FileAccess.get_file_as_bytes(dir + str(part["mesh"])).to_float32_array()
+	var v := PackedVector3Array()
+	var nrm := PackedVector3Array()
+	var col := PackedColorArray()
+	# Godot fronts a triangle wound clockwise; the tools write them either way, with the normal.
+	for t in range(0, buf.size() - 26, 27):
+		var p := [Vector3(buf[t], buf[t + 1], buf[t + 2]), Vector3(buf[t + 9], buf[t + 10], buf[t + 11]),
+				Vector3(buf[t + 18], buf[t + 19], buf[t + 20])]
+		var n := Vector3(buf[t + 3], buf[t + 4], buf[t + 5])
+		var order := [0, 1, 2] if (p[1] - p[0]).cross(p[2] - p[0]).dot(n) < 0.0 else [0, 2, 1]
+		for k: int in order:
+			var i: int = t + k * 9
+			v.append(p[k])
+			nrm.append(Vector3(buf[i + 3], buf[i + 4], buf[i + 5]))
+			col.append(Color(buf[i + 6], buf[i + 7], buf[i + 8]))
+	var arr := []
+	arr.resize(Mesh.ARRAY_MAX)
+	arr[Mesh.ARRAY_VERTEX] = v
+	arr[Mesh.ARRAY_NORMAL] = nrm
+	arr[Mesh.ARRAY_COLOR] = col
+	var mesh := ArrayMesh.new()
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
+	var mat := StandardMaterial3D.new()
+	mat.resource_name = "steel_truss"
+	mat.vertex_color_use_as_albedo = true
+	mat.roughness = 0.6
+	mat.metallic = 0.2
+	mesh.surface_set_material(0, mat)
+	var mi := MeshInstance3D.new()
+	mi.name = str(part.get("name", "Part"))
+	mi.mesh = mesh
+	model.add_child(mi)
+
+
+static func _fix_materials(model: Node, fixes: Dictionary) -> void:
+	var done := {}
+	for mi: MeshInstance3D in model.find_children("*", "MeshInstance3D", true, false):
+		if mi.mesh == null:
+			continue
+		for i in mi.mesh.get_surface_count():
+			var m := mi.get_active_material(i) as StandardMaterial3D
+			if m == null or not fixes.has(m.resource_name):
+				continue
+			if not done.has(m):
+				var own := m.duplicate() as StandardMaterial3D
+				var f: Dictionary = fixes[m.resource_name]
+				for k: String in f:
+					own.set(k, f[k])
+				done[m] = own
+			mi.set_surface_override_material(i, done[m])
 
 
 ## Every material on `model` paints with its vertex colours (linear, as glTF stores them).

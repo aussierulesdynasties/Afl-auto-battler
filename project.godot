@@ -59,6 +59,13 @@ enabled=PackedStringArray("res://addons/openvat_animated/plugin.cfg", "res://add
 pointing/emulate_touch_from_mouse=true
 pointing/emulate_mouse_from_touch=true
 
+[shader_globals]
+
+oval_wet={
+"type": "float",
+"value": 0.0
+}
+
 [rendering]
 
 renderer/rendering_method="mobile"
