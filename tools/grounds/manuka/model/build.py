@@ -328,7 +328,7 @@ def bradman(col):
         mb.face([(*b2, top), (*a, top), (*a, top + 0.35), (*b2, top + 0.35)], 'fascia_white')
         mb.face([(*p, top + 0.35), (*q, top + 0.35), (*b2, top + 0.35), (*a, top + 0.35)], 'fascia_white')
     # plant on the deck (Google Earth top-down): the louvred plant enclosure by the back edge, a unit in front, a vent
-    for (pb0, pb1, pd0, pd1, ph) in ((280.5, 284.0, 29.5, 32.8, 1.8), (282.5, 283.5, 27.5, 28.7, 1.2), (265.6, 266.2, 23.3, 25.6, 0.8)):
+    for (pb0, pb1, pd0, pd1, ph) in ((280.5, 284.0, 30.0, 33.3, 1.8), (282.5, 283.5, 28.0, 29.2, 1.2), (265.6, 266.2, 23.8, 26.1, 0.8)):
         bm_ = 0.5 * (pb0 + pb1); t_ = tangent2(bm_)
         mb.box(off(bm_, 0.5 * (pd0 + pd1)), ring_len(pb0, pb1, 0.5 * (pd0 + pd1)), pd1 - pd0, ph,
                math.degrees(math.atan2(t_[1], t_[0])), 'plant', z0=top, mtop='plant')
@@ -443,16 +443,12 @@ def media(col):
     # seats under it: the low terrace (lower_all) runs in front; the building's underside is open to the concourse
     face = lambda b: M['face'] + 1.2 * math.sin(math.pi * (b - M['b0']) / (M['b1'] - M['b0']))   # bowed toward the field
     back = lambda b: float(np.interp(b, *zip(*M['roof_back_at']))) - 1.0      # the deck's traced back edge, 1 m out
-    # The plan above the corporate level (Google Earth: rounded at both ends, the glass front under the ledge): the
-    # deck's traced outline 1 m in, its front brought forward to 0.6 m inside the ledge, corners rounded 3 m.
+    # The plan above the corporate level (Google Earth: rounded at both ends): the deck's traced outline 1 m in, its
+    # front stepping from 0.4 m inside the dark band's front (the first floor) to 0.5 m inside the deck's (the top
+    # floor), corners rounded 3 m.
     from shapely.geometry import Polygon
     O = M['deck_outline']; G_ = M['ledge']; df_ = M['deck_front']
     z1 = M['levels'][1]; zw = zt - 0.8
-    deck = Polygon([off(b, d) for b, d in O])
-    raw = Polygon([off(b, G_['front'] + 0.4) for b in arc(O[0][0], O[1][0], 0.5)] + [off(b, d) for b, d in O[2:]])
-    plan = raw.buffer(-4.0, join_style=1).buffer(3.0, join_style=1)
-    P = ccw([tuple(q) for q in list(plan.exterior.coords)[:-1]])
-    n_ = len(P)
     def facing_field(p, q):
         e = np.array(q) - np.array(p); L_ = np.linalg.norm(e); nn = np.array([e[1], -e[0]]) / max(L_, 1e-9)
         m_ = (np.array(p) + np.array(q)) / 2; t_ = (np.array(C) - m_) / np.linalg.norm(np.array(C) - m_)
@@ -469,33 +465,37 @@ def media(col):
     for b, fl in ((bs[0], False), (bs[-1], True)):
         endcap(mb, b, [(face(b), z0), (back(b), z0), (back(b), z1), (face(b), z1)], 'bronze_wall', flip=fl)
         endcap(mb, b, [(L['conc'], 0.0), (back(b), 0.0), (back(b), z0), (L['conc'], z0)], 'render_white', flip=fl)
-    # the three floors above: a rounded block, dark glass toward the field, bronze walls and fins round the back
-    mb.prism(P, z1, zw, 'bronze_wall', top='roof_soffit', bot='roof_soffit')
-    for i in range(n_):
-        p, q = P[i], P[(i + 1) % n_]
-        front, nn, L_ = facing_field(p, q)
-        if front:
-            a_, b_ = np.array(p) + nn * 0.02, np.array(q) + nn * 0.02
-            mb.face([(*a_, z1), (*b_, z1), (*b_, zw), (*a_, zw)], 'glass_dark')
-        elif L_ > 0.05:
-            k = max(1, int(L_ / 0.7)); t = (np.array(q) - np.array(p)) / L_
-            for j in range(k):
-                c_ = np.array(p) + t * ((j + 0.5) * L_ / k) + nn * 0.3
-                for lv in range(1, len(M['levels'])):
-                    za = M['levels'][lv] + 0.4; zb = M['levels'][lv + 1] if lv + 1 < len(M['levels']) else zw
-                    mb.beam((*c_, za), (*c_, zb), 0.12, 0.55, 'bronze')
-    # floor slabs standing 0.5 m proud all round
-    sl = ccw([tuple(q) for q in list(plan.buffer(0.5, join_style=1).exterior.coords)[:-1]])
-    for lv in range(2, len(M['levels'])):
-        mb.prism(sl, M['levels'][lv], M['levels'][lv] + 0.4, 'slab_dark', top='slab_dark', bot='slab_dark')
-    # the ledge: a deep dark band wrapping the top floor, 0.6 m proud of the glass at the front and 1 m past the
-    # deck's ends and back
-    led = plan.buffer(0.6, join_style=1).union(deck.buffer(1.0, join_style=1))
-    LP = ccw([tuple(q) for q in list(led.exterior.coords)[:-1]])
-    mb.prism(LP, G_['z_front'] - G_['fascia'], G_['z_front'], 'rim_dark', top='roof_grey', bot='roof_soffit')
-    # the deck: white, on its traced outline, its dark walls rising off the ledge to a rim
+    # the floors above: a rounded block whose field face steps back floor by floor (Google Earth: the face reads
+    # 14.5 m out at 14 to 15 m up, from the angled cameras' status bar, and the top-down sees the stepped faces as
+    # the dark band from the ledge's front to the deck's); dark glass toward the field, bronze fins round the back
+    ups = list(M['levels'][1:]) + [zw]
+    nf = len(ups) - 1
+    def floor_plan(k):
+        fr = G_['front'] + 0.4 + (df_ - 0.5 - G_['front'] - 0.4) * k / max(1, nf - 1)
+        r_ = Polygon([off(b, fr) for b in arc(O[0][0], O[1][0], 0.5)] + [off(b, d) for b, d in O[2:]])
+        return r_.buffer(-4.0, join_style=1).buffer(3.0, join_style=1)
+    for k in range(nf):
+        za, zb = ups[k], ups[k + 1]
+        pk = floor_plan(k)
+        P = ccw([tuple(q) for q in list(pk.exterior.coords)[:-1]]); n_ = len(P)
+        mb.prism(P, za, zb, 'bronze_wall', top='roof_soffit', bot='roof_soffit')
+        for i in range(n_):
+            p, q = P[i], P[(i + 1) % n_]
+            front, nn, L_ = facing_field(p, q)
+            if front:
+                a_, b_ = np.array(p) + nn * 0.02, np.array(q) + nn * 0.02
+                mb.face([(*a_, za + 0.4), (*b_, za + 0.4), (*b_, zb), (*a_, zb)], 'glass_dark')
+            elif L_ > 0.05:
+                kf = max(1, int(L_ / 0.7)); t = (np.array(q) - np.array(p)) / L_
+                for j in range(kf):
+                    c_ = np.array(p) + t * ((j + 0.5) * L_ / kf) + nn * 0.3
+                    mb.beam((*c_, za + 0.4), (*c_, zb), 0.12, 0.55, 'bronze')
+        # each floor's slab standing 0.5 m proud all round (the dark band the top-down reads at each step)
+        sl = ccw([tuple(q) for q in list(pk.buffer(0.5, join_style=1).exterior.coords)[:-1]])
+        mb.prism(sl, za, za + 0.4, 'slab_dark', top='roof_grey', bot='slab_dark')
+    # the deck: white, on its traced outline, a dark rim round the top floor
     poly = ccw([off(b, d) for b, d in O])
-    mb.prism(poly, G_['z_front'], zt + 0.1, 'rim_dark', top='roof_white')
+    mb.prism(poly, zw, zt + 0.1, 'rim_dark', top='roof_white', bot='roof_soffit')
     # the curved white canopy over the top floor's south-east balcony
     mb.build(col)
 
@@ -568,13 +568,13 @@ def scoreboard(col):
 # ---------------- the video screen ----------------
 def screen(col):
     """The screen on its steel frame (Google Earth from the field and from the north-east): a dark face in a frame,
-    a 1.6 m deep box behind it, four trussed legs braced on a deck and diagonals to the ground."""
+    a box dep m deep behind it (its top traced on the calibrated straight-down shot), four trussed legs braced on a deck and diagonals to the ground."""
     S = D['screen']; mb = MB('video_screen')
     bm = 0.5 * (S['b0'] + S['b1'])
     a = np.array(Q(S['b0'], S['d'], 0))[:2]; b = np.array(Q(S['b1'], S['d'], 0))[:2]
     u = (b - a) / np.linalg.norm(b - a); Lf = np.linalg.norm(b - a); n_ = np.array([u[1], -u[0]])
     if np.dot(n_, C - a) < 0: n_ = -n_
-    z0, z1 = S['z0'], S['z1']; dep = 1.6
+    z0, z1 = S['z0'], S['z1']; dep = S['dep']
     F = lambda s, z, o=0.0: (*(a + u * s + n_ * o), z)
     ang = math.degrees(math.atan2(u[1], u[0]))
     mb.box(tuple(a + u * Lf / 2 - n_ * dep / 2), Lf, dep, z1 - z0, ang, 'steel_dark', z0=z0)
@@ -597,12 +597,15 @@ def screen(col):
 
 # ---------------- the camera box behind the north stand ----------------
 def nest(col):
+    """The camera and commentary box right behind Hawke Terrace's roof: its top traced on a calibrated straight-down
+    shot, its height read off Google Earth's status bar (16 m at the front edge); a sloped underside on two columns."""
     S = D['nest']; mb = MB('camera_box'); c = np.array(Q(S['b'], S['d'], 0))[:2]
-    mb.cyl(tuple(c), 0.9, 0.0, S['z0'] - 2.0, 'tower', n=14)
-    # the tapered collar under the box (Google Earth: an inverted pyramid)
     t = tangent(S['b'])[:2]; r = radial(S['b'])[:2]
+    for s in (-1, 1):
+        mb.cyl(tuple(c + t * s * S['w'] / 4 + r * 0.5), 0.6, 0.0, S['z0'] - 2.0, 'tower', n=14)
+    # the sloped underside (Google Earth: narrower at the bottom, set back from the field)
     def corner(su, sv, w, dp): return c + t * su * w / 2 + r * sv * dp / 2
-    lo = [corner(su, sv, 2.0, 2.0) for su, sv in ((-1, -1), (1, -1), (1, 1), (-1, 1))]
+    lo = [corner(su, sv, S['w'] - 4.0, 2.0) + r * 0.6 for su, sv in ((-1, -1), (1, -1), (1, 1), (-1, 1))]
     hi = [corner(su, sv, S['w'], S['dep']) for su, sv in ((-1, -1), (1, -1), (1, 1), (-1, 1))]
     for i in range(4):
         j = (i + 1) % 4
