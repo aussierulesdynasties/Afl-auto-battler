@@ -71,6 +71,59 @@ def fetch(i, j, path):
         f.write(r.read())
 
 
+def canopy(ways, have):
+    """Olympic Park under its real canopy (Google Earth): the street trees of OSM's tree rows (Olympic
+    Boulevard's avenues, the showground's streets) one every 9 m, and OSM's woods, scrub and mangroves filled
+    at one tree to 120 m2 (the MCG painter fills only lawns and parks)."""
+    rng = np.random.default_rng(31)
+    gap = 7.0
+    cell = {}
+
+    def free(e, n):
+        k = (int(e // gap), int(n // gap))
+        for i in (-1, 0, 1):
+            for j in (-1, 0, 1):
+                for qe, qn in cell.get((k[0] + i, k[1] + j), ()):
+                    if (qe - e) ** 2 + (qn - n) ** 2 < gap * gap:
+                        return False
+        cell.setdefault(k, []).append((e, n))
+        return True
+
+    for e, n in have:
+        cell.setdefault((int(e // gap), int(n // gap)), []).append((e, n))
+    out = []
+    for t, p in ways:
+        if t.get("natural") == "tree_row" and len(p) > 1:
+            for (e0, n0), (e1, n1) in zip(p, p[1:]):
+                L = math.hypot(e1 - e0, n1 - n0)
+                for k in range(int(L // 9.0) + 1):
+                    f = k * 9.0 / L if L > 0 else 0.0
+                    e, n = e0 + (e1 - e0) * f, n0 + (n1 - n0) * f
+                    if free(e, n):
+                        out.append((e, n))
+        elif (t.get("natural") in ("wood", "scrub") or t.get("landuse") == "forest" or t.get("wetland") == "mangrove") and len(p) > 3:
+            a = np.array(p, float)
+            lo, hi = a.min(0), a.max(0)
+            if max(np.abs(lo).max(), np.abs(hi).max()) > 1300:
+                continue
+            area = abs(0.5 * np.sum(a[:-1, 0] * a[1:, 1] - a[1:, 0] * a[:-1, 1]))
+            want = int(area / 120.0)
+            got = 0
+            for _ in range(want * 6):
+                if got >= want:
+                    break
+                e, n = lo + rng.random(2) * (hi - lo)
+                inside = False
+                for (x0, y0), (x1, y1) in zip(a, np.roll(a, -1, 0)):
+                    if (y0 > n) != (y1 > n) and e < x0 + (n - y0) * (x1 - x0) / (y1 - y0):
+                        inside = not inside
+                if inside and free(e, n):
+                    out.append((float(e), float(n))); got += 1
+    out = [q for q in out if max(abs(v) for v in S.model_xz(*q)) < S.SIZE / 2 - 2]
+    print("canopy trees", len(out))
+    return out
+
+
 def site_mask():
     """The stadium's own paved site (engie.json 'site', OSM way 4385854) in the map's pixels: the model draws
     everything inside it."""
@@ -98,6 +151,7 @@ def main():
             if e not in seen:
                 seen.add(e); trees.append(e)
         ways += w
+    trees += canopy(ways, trees)
     foot = site_mask()
 
     def in_foot(pts):
