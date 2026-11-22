@@ -5,6 +5,8 @@ extends SceneTree
 ## Positions are the match's metres. PREINSPECT_NO_CROWD=1 hides the crowd (the seats as the fly-through shows them). Saves OUTDIR/<slug>_<NAME>.png. Looks only.
 ## PREINSPECT_MODEL_FRAME=1 reads positions in the model's own frame instead (x east, y north, z up, metres), the frame
 ## Google Earth views are worked out in (docs/MCG_STANDARD.md); PREINSPECT_SIZE=WxH sets the picture (default 960x540).
+## PREINSPECT_SUN=az,el puts the sun where it was in the Google Earth imagery (compass bearing from the model's north
+## and elevation, degrees; needs PREINSPECT_MODEL_FRAME), so colours compare under the same light.
 
 
 func _initialize() -> void:
@@ -58,6 +60,22 @@ func _run() -> void:
 		cam.look_at(tgt, Vector3.UP if absf((tgt - pos).normalized().y) < 0.999 else north)
 		cam.fov = v[6] if v.size() > 6 else 60.0
 		for i in 8:
+			_place_sun(oval, ground, model_frame)
 			await process_frame
 		root.get_viewport().get_texture().get_image().save_png(out.path_join("%s_%s.png" % [GroundModels.slug_for(g), parts[0]]))
 	quit(0)
+
+
+## PREINSPECT_SUN: the sun's light along the bearing and elevation given in the model frame (x east, y north, z up).
+func _place_sun(oval: Node, ground: Node3D, model_frame: bool) -> void:
+	var sv := OS.get_environment("PREINSPECT_SUN").split_floats(",")
+	if sv.size() != 2 or not model_frame or ground == null:
+		return
+	var sun := oval.get("_sun") as DirectionalLight3D
+	if sun == null:
+		return
+	var az := deg_to_rad(sv[0])
+	var el := deg_to_rad(sv[1])
+	var m := Vector3(sin(az) * cos(el), cos(az) * cos(el), sin(el))   # towards the sun, model frame
+	var to_sun := (ground.global_transform.basis * Vector3(m.x, m.z, -m.y)).normalized()
+	sun.global_basis = Basis.looking_at(-to_sun, Vector3.UP if absf(to_sun.y) < 0.999 else Vector3.FORWARD)

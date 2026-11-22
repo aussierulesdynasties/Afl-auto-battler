@@ -34,6 +34,7 @@ roof edge as a sustained brightness drop, at sub-pixel precision. The shots are 
 | bronze_top.json | Top of the bronze cladding, 60 readings, 5 harmonics (facade.json `top`) | 0.98 m rms |
 | halo.json | HALO rooftop platform, digitised off the straight-down shot g_-75_+0 (0.20 m a pixel) | about ±1 m |
 | pavilions.json | The two riverside pavilions on the west podium. Outlines traced on a 0.1 m orthophoto at roof height (`ortho.py`); the shaded east edges come from roof hovers. Roof heights come from each hover's camera ray (north 11.4 m, south 11.8 m). Storeys, slots, windows and columns come from two low river-side views (bn3, bs3; 68 hovers, cameras solved to 3-4 px) | faces 0.3 m median |
+| sun.json (`sun.py`) | The sun in Google Earth's imagery, from the east roof's shadow on the turf: bearing 67.6°, elevation 45.5°. Captures use it (PREINSPECT_SUN) so colours compare under the same light | shadow line 0.55 m median, 42 points |
 | west_volume.json `storey_in_by_bearing` | How far the storey under the bronze sits back, by bearing: 0 to 2.4 m (hovers at 8-11 m) | |
 
 ## Checks against the build
