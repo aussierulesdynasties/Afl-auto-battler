@@ -28,10 +28,68 @@ def tube(mb, p, q, r, m, n=10):
 
 
 def up0(S, rs0, rb):
-    """front of the upper tier: behind the lower tier and its 1.8 m cross-aisle, or further back where the stand is deep, so the
-    upper tier keeps 'upper_rows' rows (2026 aerial: ~10 lower rows, ~13 upper; the two stands seat 5,000) and the
-    cross-aisle widens into a mid concourse"""
-    return max(rs0 + S['lower_back'] + 1.8, rb - 0.4 - S.get('upper_rows', 99) * B.ROW)
+    """front of the upper tier: behind the lower tier and its cross-aisle (Google Earth, Dec 2025: the south stand's
+    treads run on from about 7.5 m out), or further back where 'upper_rows' is set and the stand is deep"""
+    return max(rs0 + S['lower_back'] + S.get('aisle_w', 1.8), rb - 0.4 - S.get('upper_rows', 99) * B.ROW)
+
+
+class Upper:
+    """the upper tier's rows at a fixed tread depth 'row_upper' (Google Earth, the south stand's treads: 1.0 m) and a fixed riser, so where the stand
+    is shallower (its lens-shaped back comes in toward the ends) it has fewer rows, not squeezed ones, and its top is lower.
+    The riser puts the top row mid-stand at z_upper[1]."""
+    def __init__(self, S, bs, geo):
+        self.S, self.geo, self.RW = S, geo, S.get('row_upper', B.ROW)
+        self.zu0, zu1 = S['z_upper']
+        self.NM = max(self.n(b) for b in bs)
+        nm = self.n(0.5 * (bs[0] + bs[-1])); self.riser = (zu1 - self.zu0) / max(1, nm - 1)
+
+    def span(self, b):
+        rf, ri, ro, rs0, rb = self.geo(b); return up0(self.S, rs0, rb), rb - 0.4
+
+    def n(self, b):
+        ru, rt = self.span(b); return max(1, int(round((rt - ru) / self.RW)))
+
+    def treads(self, b):
+        """[(r_front, r_back, z)] for each row at bearing b; the last tread ends at the parapet"""
+        ru, rt = self.span(b); n = self.n(b)
+        return [(ru + k * self.RW, rt if k == n - 1 else ru + (k + 1) * self.RW, self.zu0 + k * self.riser) for k in range(n)]
+
+    def top(self, b):
+        return self.zu0 + (self.n(b) - 1) * self.riser
+
+    def stepped(self, b):
+        """the rake as NM treads (rows past this bearing's last collapse onto it, so every section has the same points)"""
+        T = self.treads(b); n = len(T); P = [(T[0][0], T[0][2])]
+        for k in range(self.NM):
+            r0, r1, z = T[min(k, n - 1)]
+            if k > 0: P.append((P[-1][0], z))
+            P.append((r1, z))
+        return P
+
+
+def upper_seats(S, bs, U, pal):
+    """one seat every 0.5 m on each upper row, an aisle stair every 12 m (as build.seat_rows); a row exists only where the
+    stand is deep enough for it"""
+    b0, b1 = bs[0], bs[-1]; rf = U.span(0.5 * (b0 + b1))[0]
+    ab = []; s = 6.0
+    while True:
+        b = b0 + math.degrees(s / rf)
+        if b > b1 - math.degrees(2 / rf): break
+        ab.append(b); s += 12.0
+    B.AISLES.extend(ab)
+    for j in range(U.NM):
+        b = b0 + math.degrees(0.6 / rf)
+        while b < b1:
+            T = U.treads(b)
+            if j < len(T):
+                rr, zz = T[j][1], T[j][2]
+                if b > b1 - math.degrees(0.6 / rr): break
+                if all(abs(math.radians(b - a)) * rr > 1.1 / 2 + 0.25 for a in ab):
+                    a = math.radians(b); o = (math.sin(a), math.cos(a)); t = (math.cos(a), -math.sin(a))
+                    B.SEAT_COL[0] = B.seat_colour(pal, j, U.NM, b); B.seat(B.pol(b, rr), t, o, zz)
+                b += math.degrees(0.5 / rr)
+            else:
+                b += 0.1
 
 
 def shell(S, mb, mr):
@@ -43,37 +101,40 @@ def shell(S, mb, mr):
         rf = B.fence_r(b % 360); ri, ro = B.interp(S['roof'], b); rs0 = rf + S['seat_front']; rb = B.interp(S['back'], b)[0]
         return rf, ri, ro, rs0, rb
 
-    def prof(b):
-        rf, ri, ro, rs0, rb = geo(b); rl = rs0 + LB; ru = up0(S, rs0, rb)
-        # front wall, lower rake, the cross-aisle step up, upper rake, parapet over the back
-        return [(rs0, 0.0), (rs0, zs0), (rl, zs1), (rl, zs1 + 0.2), (ru, zs1 + 0.2), (ru, zu0), (rb - 0.4, zu1),
-                (rb - 0.4, zu1 + 1.1), (rb, zu1 + 1.1), (rb, zu1 - 1.4)]
+    U = Upper(S, bs, geo)
 
-    n1, n5 = B.nrows(prof, bs, 1), B.nrows(prof, bs, 5)
-    mats = [M['front'], M['seat'], 'conc_wall', 'conc_tread', 'conc_wall', M['seat'], 'conc_wall', 'conc_wall', 'parapet']
-    tp, tm = B.terrace(prof, mats, [(1, n1), (5, n5)])
+    def prof(b):
+        rf, ri, ro, rs0, rb = geo(b); rl = rs0 + LB; ru, rt = U.span(b); zt = U.top(b)
+        # front wall, lower rake, the cross-aisle step up, the upper rows, parapet over the back
+        return ([(rs0, 0.0), (rs0, zs0), (rl, zs1), (rl, zs1 + 0.2), (ru, zs1 + 0.2)] + U.stepped(b) +
+                [(rt, zt + 1.1), (rb, zt + 1.1), (rb, zt - 1.4)])
+
+    n1 = B.nrows(prof, bs, 1)
+    mats = [M['front'], M['seat'], 'conc_wall', 'conc_tread', 'conc_wall'] + ['conc_tread'] * (2 * U.NM - 1) + \
+        ['conc_wall', 'conc_wall', 'parapet']
+    tp, tm = B.terrace(prof, mats, [(1, n1)])
     B.strip(mb, bs, tp, tm, -1)
-    B.seat_rows(bs, prof, 1, n1, pal='blue'); B.seat_rows(bs, prof, 5, n5, pal=S.get('pal', 'mtn'))
+    B.seat_rows(bs, prof, 1, n1, pal='blue'); upper_seats(S, bs, U, S.get('pal', 'mtn'))
     for b, sg in ((b0, -1), (b1, 1)):
-        P = tp(b); rf, ri, ro, rs0, rb = geo(b); ru = up0(S, rs0, rb)
-        B.endcap(mb, b, P + [(rb - 0.9, zu1 - 2.0), (ru, zu0 - 0.45), (ru, 0.0)], 'conc_wall', sg)
-    underside(S, bs, geo, n5, mb, mr)
+        P = tp(b); ru, rt = U.span(b); rb = geo(b)[4]
+        B.endcap(mb, b, P + [(rb - 0.9, U.top(b) - 2.0), (ru, zu0 - 0.45), (ru, 0.0)], 'conc_wall', sg)
+    underside(S, bs, geo, U, mb, mr)
     ground_floor(S, bs, geo, mb)
     roof(S, bs, geo, mr)
     for c in S.get('cores', []):
         core(mb, c[0], geo, S, c[1], c[2] if len(c) > 2 else 'conc_core')
 
 
-def underside(S, bs, geo, n5, mb, mr):
+def underside(S, bs, geo, U, mb, mr):
     """the upper tier seen from behind: a stepped precast soffit one step per row, the back parapet's own underside,
     a raker beam under every bay, columns down to the ground and X bracing between them"""
     zs0, zs1 = S['z_seat']; zu0, zu1 = S['z_upper']; LB = S['lower_back']; th = 0.45
     for i in range(len(bs) - 1):
         ba, bb = bs[i], bs[i + 1]
         def steps(b):
-            rf, ri, ro, rs0, rb = geo(b); r0 = up0(S, rs0, rb); r1 = rb - 0.4; pts = [(r1 - 0.5, zu1 - 2.0)]
-            for k in range(n5 - 1, -1, -1):   # each tread's underside, back to front
-                zk = zu0 + (zu1 - zu0) * k / max(1, n5 - 1) - th; rk = r0 + (r1 - r0) * k / n5
+            T = U.treads(b); r1 = U.span(b)[1]; pts = [(r1 - 0.5, U.top(b) - 2.0)]
+            for k in range(U.NM - 1, -1, -1):   # each tread's underside, back to front (rows past this bearing's last collapse)
+                rk, _, z = T[min(k, len(T) - 1)]; zk = z - th
                 pts.append((pts[-1][0], zk)); pts.append((rk, zk))
             return pts
         A, Bq = steps(ba), steps(bb); bm = math.radians(0.5 * (ba + bb)); rad = np.array([math.sin(bm), math.cos(bm), 0.0])
@@ -85,8 +146,8 @@ def underside(S, bs, geo, n5, mb, mr):
     bay = S['bay']; b = bs[0] + math.degrees(0.5 * bay / geo(bs[0])[4])
     cols = []
     while b < bs[-1] - 0.2:
-        rf, ri, ro, rs0, rb = geo(b); r0 = up0(S, rs0, rb)
-        zf = lambda r: zu0 + (zu1 - zu0) * (r - r0) / (rb - 0.4 - r0) - 0.75
+        rf, ri, ro, rs0, rb = geo(b); r0 = up0(S, rs0, rb); zt = U.top(b)
+        zf = lambda r: zu0 + (zt - zu0) * (r - r0) / (rb - 0.4 - r0) - 0.75
         mr.beam(B.P3(b, r0 + 0.5, zf(r0 + 0.5)), B.P3(b, rb - 0.2, zf(rb - 0.2)), 0.45, 0.9, 'steel_galv')   # raker
         rc = rb - 3.5; cols.append((b, rc, zf(rc) - 0.45))
         mr.beam(B.P3(b, rc, 0.0), B.P3(b, rc, zf(rc) - 0.4), 0.45, 0.45, 'steel_galv')   # back column
@@ -99,16 +160,16 @@ def underside(S, bs, geo, n5, mb, mr):
         mr.beam(B.P3(bb, rb_, zl), B.P3(ba, ra, za - 0.3), 0.18, 0.18, 'steel_galv')
     # the parapet's chamfered bottom edge: a sloped face from the parapet foot back under the rake
     for i in range(len(bs) - 1):
-        ba, bb = bs[i], bs[i + 1]; ra, rb_ = geo(ba)[4], geo(bb)[4]
+        ba, bb = bs[i], bs[i + 1]; ra, rb_ = geo(ba)[4], geo(bb)[4]; ta, tb = U.top(ba), U.top(bb)
         bm = math.radians(0.5 * (ba + bb)); rad = np.array([math.sin(bm), math.cos(bm), 0.0])
-        B.oriented(mb, [B.P3(ba, ra, zu1 - 1.4), B.P3(bb, rb_, zu1 - 1.4), B.P3(bb, rb_ - 0.9, zu1 - 2.0), B.P3(ba, ra - 0.9, zu1 - 2.0)],
+        B.oriented(mb, [B.P3(ba, ra, ta - 1.4), B.P3(bb, rb_, tb - 1.4), B.P3(bb, rb_ - 0.9, tb - 2.0), B.P3(ba, ra - 0.9, ta - 2.0)],
                    'parapet', rad - up)
         # the galvanised ring girder under the parapet: 1.0 m deep plate girder, flanges proud
-        ga, gb = ra - 1.3, rb_ - 1.3; zt, zb = zu1 - 2.0, zu1 - 3.0
-        B.oriented(mr, [B.P3(ba, ga, zb), B.P3(bb, gb, zb), B.P3(bb, gb, zt), B.P3(ba, ga, zt)], 'steel_galv', rad)
-        for z in (zb, zt - 0.05):
-            B.oriented(mr, [B.P3(ba, ga - 0.2, z), B.P3(bb, gb - 0.2, z), B.P3(bb, gb + 0.2, z), B.P3(ba, ga + 0.2, z)], 'steel_galv', -up if z == zb else up)
-            B.oriented(mr, [B.P3(ba, ga + 0.2, z), B.P3(bb, gb + 0.2, z), B.P3(bb, gb + 0.2, z + 0.05), B.P3(ba, ga + 0.2, z + 0.05)], 'steel_galv', rad)
+        ga, gb = ra - 1.3, rb_ - 1.3
+        B.oriented(mr, [B.P3(ba, ga, ta - 3.0), B.P3(bb, gb, tb - 3.0), B.P3(bb, gb, tb - 2.0), B.P3(ba, ga, ta - 2.0)], 'steel_galv', rad)
+        for dz, n in ((-3.0, -up), (-2.05, up)):
+            B.oriented(mr, [B.P3(ba, ga - 0.2, ta + dz), B.P3(bb, gb - 0.2, tb + dz), B.P3(bb, gb + 0.2, tb + dz), B.P3(ba, ga + 0.2, ta + dz)], 'steel_galv', n)
+            B.oriented(mr, [B.P3(ba, ga + 0.2, ta + dz), B.P3(bb, gb + 0.2, tb + dz), B.P3(bb, gb + 0.2, tb + dz + 0.05), B.P3(ba, ga + 0.2, ta + dz + 0.05)], 'steel_galv', rad)
 
 
 def ground_floor(S, bs, geo, mb):
@@ -129,7 +190,7 @@ def ground_floor(S, bs, geo, mb):
         else:
             B.oriented(mb, [B.P3(ba, ra, 0), B.P3(bb, rb_, 0), B.P3(bb, rb_, zw), B.P3(ba, ra, zw)], 'conc_block', rad)
         B.oriented(mb, [B.P3(ba, ra, zw), B.P3(bb, rb_, zw), B.P3(bb, rb_ + 0.3, zw), B.P3(ba, ra + 0.3, zw)], 'conc_wall', up)
-        rfa, rfb = [geo(x)[3] + S['lower_back'] + 1.8 for x in (ba, bb)]
+        rfa, rfb = [up0(S, geo(x)[3], geo(x)[4]) for x in (ba, bb)]
         B.oriented(mb, [B.P3(ba, rfa, zw), B.P3(bb, rfb, zw), B.P3(bb, rb_, zw), B.P3(ba, ra, zw)], 'conc_soffit', up)
         zt = S['z_upper'][0] - 0.45
         B.oriented(mb, [B.P3(ba, rfa, zw), B.P3(bb, rfb, zw), B.P3(bb, rfb, zt), B.P3(ba, rfa, zt)], 'conc_block', rad)

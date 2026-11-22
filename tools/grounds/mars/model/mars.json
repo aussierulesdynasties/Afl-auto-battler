@@ -248,34 +248,114 @@
   {
    "name": "new_se",
    "lean": [],
-   "b0": 98,
-   "b1": 139,
+   "b0": 100.5,
+   "b1": 139.5,
    "kind": "shell",
    "roof": [
     [
-     102,
-     80.0,
-     100.0
+     100.5,
+     75.38,
+     85.38
     ],
     [
-     110,
-     80.5,
-     104.0
+     102.5,
+     74.81,
+     89.03
     ],
     [
-     120,
-     79.4,
-     104.9
+     104.5,
+     74.65,
+     91.73
     ],
     [
-     130,
-     81.0,
-     103.0
+     106.5,
+     74.63,
+     93.56
     ],
     [
-     142,
-     85.0,
-     97.0
+     108.5,
+     74.32,
+     94.89
+    ],
+    [
+     110.5,
+     74.05,
+     97.15
+    ],
+    [
+     112.5,
+     73.76,
+     98.61
+    ],
+    [
+     114.5,
+     73.37,
+     99.17
+    ],
+    [
+     116.5,
+     73.32,
+     99.54
+    ],
+    [
+     118.5,
+     73.47,
+     99.99
+    ],
+    [
+     120.5,
+     73.42,
+     100.32
+    ],
+    [
+     122.5,
+     73.53,
+     100.75
+    ],
+    [
+     124.5,
+     73.49,
+     101.09
+    ],
+    [
+     126.5,
+     73.84,
+     101.32
+    ],
+    [
+     128.5,
+     73.99,
+     101.46
+    ],
+    [
+     130.5,
+     74.56,
+     100.48
+    ],
+    [
+     132.5,
+     75.11,
+     99.09
+    ],
+    [
+     134.5,
+     75.85,
+     98.3
+    ],
+    [
+     136.5,
+     76.49,
+     97.09
+    ],
+    [
+     138.5,
+     77.4,
+     95.69
+    ],
+    [
+     139.5,
+     77.94,
+     94.84
     ]
    ],
    "seat_front": 2.4,
@@ -294,30 +374,94 @@
     "front": "conc_wall",
     "box": "conc_wall"
    },
-   "lower_back": 8.0,
+   "lower_back": 5.0,
    "wall_in": 4.5,
    "bay": 4.6,
    "doors": 3,
    "back": [
     [
-     102,
-     97.0
+     100.5,
+     82.88
     ],
     [
-     110,
-     101.0
+     102.5,
+     86.53
     ],
     [
-     120,
-     101.9
+     104.5,
+     89.23
     ],
     [
-     130,
-     100.0
+     106.5,
+     91.06
     ],
     [
-     142,
-     94.0
+     108.5,
+     92.39
+    ],
+    [
+     110.5,
+     94.65
+    ],
+    [
+     112.5,
+     96.11
+    ],
+    [
+     114.5,
+     96.67
+    ],
+    [
+     116.5,
+     97.04
+    ],
+    [
+     118.5,
+     97.49
+    ],
+    [
+     120.5,
+     97.82
+    ],
+    [
+     122.5,
+     98.25
+    ],
+    [
+     124.5,
+     98.59
+    ],
+    [
+     126.5,
+     98.82
+    ],
+    [
+     128.5,
+     98.96
+    ],
+    [
+     130.5,
+     97.98
+    ],
+    [
+     132.5,
+     96.59
+    ],
+    [
+     134.5,
+     95.8
+    ],
+    [
+     136.5,
+     94.59
+    ],
+    [
+     138.5,
+     93.19
+    ],
+    [
+     139.5,
+     92.34
     ]
    ],
    "shell": {
@@ -326,7 +470,7 @@
     "drop": 3.0,
     "drop_front": 4.0,
     "curl": 1.8,
-    "lens": 0.55
+    "lens": 1.0
    },
    "cores": [
     [
@@ -334,39 +478,120 @@
      -1
     ],
     [
-     138.4,
+     138.9,
      1,
      "brick_core"
     ]
    ],
-   "upper_rows": 13
+   "aisle_w": 1.2,
+   "row_upper": 1.0
   },
   {
    "name": "new_s",
    "lean": [],
-   "b0": 145,
-   "b1": 188,
+   "b0": 150.5,
+   "b1": 187.5,
    "kind": "shell",
    "roof": [
     [
-     146,
-     86.0,
-     105.0
+     150.5,
+     80.53,
+     93.53
     ],
     [
-     160,
-     88.0,
-     106.0
+     152.5,
+     80.48,
+     96.15
     ],
     [
-     175,
-     92.0,
-     106.0
+     154.5,
+     80.92,
+     98.42
     ],
     [
-     188,
-     95.0,
-     105.0
+     156.5,
+     81.49,
+     100.57
+    ],
+    [
+     158.5,
+     81.68,
+     102.65
+    ],
+    [
+     160.5,
+     82.05,
+     104.46
+    ],
+    [
+     162.5,
+     82.31,
+     106.27
+    ],
+    [
+     164.5,
+     82.54,
+     108.05
+    ],
+    [
+     166.5,
+     83.24,
+     109.81
+    ],
+    [
+     168.5,
+     83.95,
+     111.24
+    ],
+    [
+     170.5,
+     84.49,
+     111.59
+    ],
+    [
+     172.5,
+     85.15,
+     111.58
+    ],
+    [
+     174.5,
+     85.83,
+     111.47
+    ],
+    [
+     176.5,
+     86.69,
+     111.33
+    ],
+    [
+     178.5,
+     87.6,
+     111.08
+    ],
+    [
+     180.5,
+     88.74,
+     110.51
+    ],
+    [
+     182.5,
+     89.92,
+     109.92
+    ],
+    [
+     184.5,
+     91.06,
+     109.29
+    ],
+    [
+     186.5,
+     92.4,
+     108.48
+    ],
+    [
+     187.5,
+     93.14,
+     108.04
     ]
    ],
    "seat_front": 2.4,
@@ -385,26 +610,90 @@
     "front": "conc_wall",
     "box": "conc_wall"
    },
-   "lower_back": 8.0,
+   "lower_back": 5.0,
    "wall_in": 4.5,
    "bay": 4.6,
    "doors": 3,
    "back": [
     [
-     146,
-     102.0
+     150.5,
+     91.03
     ],
     [
-     160,
-     103.0
+     152.5,
+     93.65
     ],
     [
-     175,
-     103.0
+     154.5,
+     95.92
     ],
     [
-     188,
-     102.0
+     156.5,
+     98.07
+    ],
+    [
+     158.5,
+     100.15
+    ],
+    [
+     160.5,
+     101.96
+    ],
+    [
+     162.5,
+     103.77
+    ],
+    [
+     164.5,
+     105.55
+    ],
+    [
+     166.5,
+     107.31
+    ],
+    [
+     168.5,
+     108.74
+    ],
+    [
+     170.5,
+     109.09
+    ],
+    [
+     172.5,
+     109.08
+    ],
+    [
+     174.5,
+     108.97
+    ],
+    [
+     176.5,
+     108.83
+    ],
+    [
+     178.5,
+     108.58
+    ],
+    [
+     180.5,
+     108.01
+    ],
+    [
+     182.5,
+     107.42
+    ],
+    [
+     184.5,
+     106.79
+    ],
+    [
+     186.5,
+     105.98
+    ],
+    [
+     187.5,
+     105.54
     ]
    ],
    "shell": {
@@ -413,15 +702,16 @@
     "drop": 3.0,
     "drop_front": 4.0,
     "curl": 1.8,
-    "lens": 0.55
+    "lens": 1.0
    },
    "cores": [
     [
-     187.4,
+     186.9,
      1
     ]
    ],
-   "upper_rows": 13
+   "aisle_w": 1.2,
+   "row_upper": 1.0
   },
   {
    "name": "south_bank",
@@ -613,5 +903,6 @@
   "depth": 1.2
  },
  "_towers_note": "Three towers, counted and placed from Google Earth straight-down tiles by parallax (qa/towers.py): lamp-head centres 37.7 m up (W, four tiles; published 37 m), the mast 0.9 m behind each head.",
- "_rings_note": "ring [front, back]: the roof edges as distances out from the fence curve, read in Google Earth straight-down tiles (qa/rings.py) with the roof heights read off matched oblique views (qa/heights.py), iterated until both settle (west 1.45/23.15 m at 15.0/11.3 m; east front 2.2 m at 6.8 m; north front 0.15 m at 7.2 m). Back edges marked null or heights not listed could not be read and keep the traced values."
+ "_rings_note": "ring [front, back]: the roof edges as distances out from the fence curve, read in Google Earth straight-down tiles (qa/rings.py) with the roof heights read off matched oblique views (qa/heights.py), iterated until both settle (west 1.45/23.15 m at 15.0/11.3 m; east front 2.2 m at 6.8 m; north front 0.15 m at 7.2 m). Back edges marked null or heights not listed could not be read and keep the traced values.",
+ "_newstands_note": "new_se and new_s plan from Google Earth's straight-down tiles (Dec 2025), measured as offsets from the fence curve (qa/newstands.py): the south-east roof (on by then) by parallax across two tiles, its front rail 5-8 m out at 14-16 m up and its back 18-33 m out; the south stand from its steel frame (front truss about 5 m out, back 21-33 m out) and its terraces (treads about 1.0 m deep (23 over 22.5 to 23.3 m where none were missed) from 7.2 to 8.6 m out to about 29 to 31 m out, so the stand back is 2.5 m inside the roof back). Upper rows keep that fixed 1.0 m depth and end at the stand's back wall. Heights other than the roof front are not measured."
 }

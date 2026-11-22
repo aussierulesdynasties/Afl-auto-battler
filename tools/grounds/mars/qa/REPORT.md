@@ -89,18 +89,60 @@ finished.
   - The ellipse runs 1.3 m short of the curve along the long axis.
 - **Not changed here:** `FENCE` is shared by every ground and changes play, and balance is the director's to call.
 
-## Seats
+## Seats against the published capacity (2026-11-22)
 
-- The shared seat rule (`tools/grounds/seat_check.gd`) took out 383 seats: 382 for headroom and 1 for having no
-  neighbour.
-- About 280 of them are the new stands' top rows, which sit under the shell roofs' low ends. That is a model fault
-  to re-read from the 2026 photos.
-- About 100 are the west stand's back rows at its north end, under the corporate block.
-- That leaves 9,759 seats, against about 10,100 real ones (5,127 in the old stands and 5,000 in the new).
+- **Published:** the two new stands are "two grandstands side by side each seating 2,500" (Austadiums, April 2024), 5,000 new
+  seats and 10,000 seated in all (Development Victoria; the Premier, 30 September 2026). The old stands seat 5,127
+  (Wikipedia) or 5,060 (AFL).
+- **Limit:** each new stand within 2% of 2,500 once the shared seat rule (`tools/grounds/seat_check.gd`) has taken out every
+  seat without floor or headroom.
+- **Before:** the south-east stand held 2,311 after the rule and the south stand 2,472. The rule took 383 seats, about 280
+  of them the new stands' top rows: those stands' rows were squeezed to a fixed count, so they ran out past the roof's
+  lens-shaped back at both ends and lost their headroom. The geometry was wrong, not the rule.
+- **Measured** (`newstands.py`, Google Earth's straight-down tiles of December 2025, as offsets out from the fence curve):
+
+  | What | How | Result |
+  | --- | --- | --- |
+  | South-east roof, front rail | parallax across two tiles, edge found at each height 0 to 30 m | 5.1 to 6.1 m out mid-stand, 7 to 8 m at the ends; 13 to 17.5 m up (tiles agree within 0.2 m) |
+  | South-east roof, sheeting back | the same | 30 to 33 m out mid-stand, 22 to 27 m near the ends |
+  | South stand's ends and back | its steel frame, picked on the tile unrolled at the roof's height (15 m) | 150.5 to 187.5 deg; back 23 m out at the ends to 33 m mid-stand |
+  | South stand's treads | light/dark period along the offset, tiles read at 8 m up | 23 treads over 22.5 to 23.3 m where none were missed: about 1.0 m a row, from about 8 m out to 29 to 31 m |
+  | South-east roof's front height, second check | the drone photo of September 2026 (`photo_cam.py`: centre square within 4 px, far fence median 1.6 px) | its dark front band lies 16 to 20 m up on a line 5.5 m out; the model has 16.5 to 20.5 m |
+
+  The model's south-east roof front had sat 4 to 6 m too far back and its back up to 3.5 m too far out.
+- **Rebuilt:** both new stands from those tables. The upper rows now keep a fixed 1.0 m depth and end where the stand's
+  back wall comes in, 2.5 m inside the roof's back edge (the south stand's treads stop there), so the stand has fewer rows
+  where it is shallower instead of squeezed ones. The south-east stand now spans 100.5 to 139.5 deg (was 98 to 139) and the
+  south stand 150.5 to 187.5 deg (was 145 to 188).
+- **Result:**
+
+  | Stand | Seats now | Published | Verdict |
+  | --- | --- | --- | --- |
+  | South-east | 2,334 | 2,500 | FAIL, 6.6% short |
+  | South | 2,372 | 2,500 | FAIL, 5.1% short |
+  | Old stands (west, north, east) | 4,847 | 5,060 to 5,127 | FAIL, 4 to 5% short |
+  | All | 9,558 (was 9,759) | 10,000 | FAIL, 4.4% short |
+
+  The seat rule now takes 139 seats (was 383), and only 27 of them in the new stands.
+- **Why they are still short, not yet measured:**
+  - The drone photo shows the front (lower) rows running on along the fence past the ends of both roofs and across the gap
+    between them. The model's lower tier stops at each roof's end. The photo's camera is too coarse at the far end
+    (about 1 m a pixel in depth) to place where those rows end.
+  - Seat width (the model gives every seat 0.5 m) and aisle spacing (a stair every 12 m) are the model's, not measured.
+  - The split between the lower and upper tiers is not measured: the model's lower tier runs 2.4 to 7.4 m out, then a
+    1.2 m cross-aisle.
+- **Old stands:** about 100 of the west stand's back rows at its north end sit under the corporate block (headroom).
+
+## Light tower seen in the drone photo
+
+- The drone photo's camera puts its left-hand pole 10 m west of the east tower placed from Google Earth, which would stand
+  it inside the east stand. That is not possible, so the camera is likely out at that corner of the frame (no fixed point
+  there). Not settled; the tower stays where Google Earth puts it.
 
 ## What these files are
 
 - `fence_trace.json`: the traced fence points, as numbers.
 - `fence_curve.json`: the fitted curve, read by `model/build.py`.
+- `newstands.py`, `photo_cam.py`: the new stands' measurements and the drone photo's camera (above).
 
 Neither holds any Google Earth imagery.
