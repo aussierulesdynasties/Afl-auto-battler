@@ -2265,7 +2265,7 @@ func _test_three_d_numbers() -> void:
 ## painted, and each binding colour is set with its width.
 func _test_clash_guernsey_3d() -> void:
 	var g: Dictionary = Oval3D.away_guernsey("FRE", "MEL")
-	_check(bool(g["today"].get("clash", false)) and str(g["today"].get("picture", "")).contains("clash"),
+	_check(bool(g["today"].get("clash", false)) and int(g["today"].get("cell", -1)) == int(GameDB.club_clash_kit("MEL")["cell"]),
 			"Melbourne at Fremantle wear their clash guernsey in 3D")
 	_check(not bool(Oval3D.away_guernsey("HAW", "WCE")["today"].get("clash", false)),
 			"West Coast at Hawthorn wear their home guernsey in 3D")
