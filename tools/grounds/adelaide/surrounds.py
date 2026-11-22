@@ -15,6 +15,7 @@ shade per tree) and buildings.bin (per building: point count, height, then x, z 
 all float32 in the model's metres: x east, z south, the model's 0, 0 (gen.py's OSM origin) at the middle
 of the map. Map data (c) OpenStreetMap contributors, ODbL.
 """
+import json
 import math
 import os
 import sys
@@ -437,6 +438,12 @@ HOUSE_WALLS = [(214, 200, 176), (196, 150, 118), (224, 218, 204), (176, 120, 92)
 CITY_WALLS = [(200, 200, 196), (168, 176, 182), (214, 210, 200), (140, 150, 160), (186, 176, 160)]
 
 
+# Each roof's own colour read off Google Earth where it could be (roof_colours.py: one median colour per building,
+# no imagery kept); the palette above only for roofs outside its shots or under trees.
+_RC = os.path.join(os.path.dirname(os.path.abspath(__file__)), "roof_colours.json")
+GE_ROOFS = json.load(open(_RC)) if os.path.exists(_RC) else {}
+
+
 def _colour(v):
     if not v:
         return None
@@ -471,7 +478,8 @@ def building_list(ways, st):
             out += [x, z]
         house = t.get("building") in ("house", "terrace", "detached", "semidetached_house", "garage", "shed") or h < 9
         wall = _colour(t.get("building:colour")) or (HOUSE_WALLS if house else CITY_WALLS)[rng.integers(4 if house else 5)]
-        roof = _colour(t.get("roof:colour")) or (HOUSE_ROOFS if house else FLAT_ROOFS)[rng.integers(5 if house else 4)]
+        pal = (HOUSE_ROOFS if house else FLAT_ROOFS)[rng.integers(5 if house else 4)]   # drawn always: later draws stay put
+        roof = _colour(t.get("roof:colour")) or (tuple(GE_ROOFS[t["_id"]]) if t.get("_id") in GE_ROOFS else pal)
         cols += list(wall) + list(roof)
     return np.array(out, "<f4"), np.array(cols, np.uint8)
 
