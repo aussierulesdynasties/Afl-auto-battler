@@ -155,9 +155,9 @@ class Forest:
 
     def _clump(self, c, s, col, rng, crown_c=None):
         """Two crossed leaf cards (one upright, one tipped over) showing a spray from the leaf atlas. Each
-        card is laid twice, front and back, both with the normal pointing out from the crown's middle, so
-        the crown shades as one mass from every side (a double-sided material would turn the back face's
-        normal into the crown and draw it black)."""
+        card is laid twice, front and back, both with the same normal (out from the crown's middle and up),
+        so the crown shades as one mass from every side (a double-sided material would turn the back
+        face's normal into the crown and draw it black)."""
         cc = crown_c if crown_c is not None else c
         yaw = rng.uniform(0, math.pi)
         f = rng.uniform(0.86, 1.0)
@@ -176,8 +176,11 @@ class Forest:
             uv = [(u0, v0 + 0.5), (u0 + 0.5, v0 + 0.5), (u0 + 0.5, v0), (u0, v0)]
             ns = []
             for x in q:
+                # out from the crown's middle, leaning well up: a gum's leaves hang edge-on and pass light,
+                # so even the crown's shaded side reads grey-green from the ground, never black
                 v = x - cc + np.array([0, s * 0.6, 0])
-                ns.append(tuple(v / (np.linalg.norm(v) + 1e-9)))
+                v = 0.45 * v / (np.linalg.norm(v) + 1e-9) + np.array([0.0, 0.9, 0.0])
+                ns.append(tuple(v / np.linalg.norm(v)))
             b = self.leaf
             b.P += [tuple(x) for x in q]
             b.N += ns

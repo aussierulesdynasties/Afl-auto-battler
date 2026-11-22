@@ -706,11 +706,13 @@ const BACKDROP_HIDES := {"adelaide": ["ao_ground"], "barossa": ["concourse"], "s
 	"traeger": ["ground_dirt"]}
 
 const BACKDROP_SHADER := preload("res://scripts/ui/match/oval3d_backdrop.gdshader")
+const BACKDROP_LEAF_SHADER := preload("res://scripts/ui/match/oval3d_backdrop_leaf.gdshader")
 
 
 ## The scene's materials as Blender drew them: the trees and everything else tinted by their
 ## vertex colours; the walls and roofs (facade_*, roof_*) through oval3d_backdrop.gdshader, which
-## leaves their glass and frames untinted. Materials are shared, so each is made once.
+## leaves their glass and frames untinted; one-sided cut-out leaf cards through
+## oval3d_backdrop_leaf.gdshader. Materials are shared, so each is made once.
 static func _backdrop_materials(model: Node) -> void:
 	var made := {}
 	for mi in model.find_children("*", "MeshInstance3D", true, false):
@@ -722,7 +724,17 @@ static func _backdrop_materials(model: Node) -> void:
 			if mat == null:
 				continue
 			var key := mat.resource_name
-			if key.begins_with("facade_") or key.begins_with("roof_"):
+			if mat.transparency == BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR and mat.cull_mode == BaseMaterial3D.CULL_BACK \
+					and not key.begins_with("tree_"):
+				# one-sided leaf cards (Traeger's gums): through oval3d_backdrop_leaf.gdshader, as the
+				# standard material's alpha scissor drew them black
+				if not made.has(key):
+					var lm := ShaderMaterial.new()
+					lm.shader = BACKDROP_LEAF_SHADER
+					lm.set_shader_parameter("tex", mat.albedo_texture)
+					made[key] = lm
+				(mi as MeshInstance3D).set_surface_override_material(i, made[key])
+			elif key.begins_with("facade_") or key.begins_with("roof_"):
 				if not made.has(key):
 					var sm := ShaderMaterial.new()
 					sm.shader = BACKDROP_SHADER

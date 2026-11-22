@@ -36,6 +36,28 @@ def build(path):
     w.save(path)
 
 
+def fill_crowns(a):
+    """A far gum's crown as the eye takes it in at a distance: one ragged mass, not single leaves. The gaps
+    between sprays narrower than 10 cm a pixel x 9 are closed with the colour of the leaves round them, a
+    little darker (the inside of the crown). Without it the texture's smaller mipmaps average the sprays'
+    alpha under the cut and a distant gum drew as its bare dark limbs. Under transparent texels, the mean
+    leaf colour (no dark fringe when the texture is filtered)."""
+    import cv2
+    m = a[..., 3] > 128
+    ker = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (9, 9))
+    closed = cv2.morphologyEx(m.astype(np.uint8), cv2.MORPH_CLOSE, ker).astype(bool)
+    closed = cv2.morphologyEx(closed.astype(np.uint8), cv2.MORPH_OPEN,
+                              cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))).astype(bool) | m
+    w = cv2.GaussianBlur(m.astype(np.float32), (0, 0), 3)
+    col = np.stack([cv2.GaussianBlur(a[..., c] * m, (0, 0), 3) for c in range(3)], -1) / np.maximum(w, 1e-4)[..., None]
+    new = closed & ~m
+    a[new, :3] = col[new] * 0.85
+    mean = a[m][:, :3].mean(0)
+    a[~closed, :3] = mean
+    a[..., 3] = np.where(closed, 255, 0)
+    return a
+
+
 def render(glb_path, out):
     import bpy
     bpy.ops.wm.read_factory_settings(use_empty=True)
@@ -136,12 +158,7 @@ def render(glb_path, out):
     atlas = Image.new("RGBA", (CELL * len(VARIANTS), CELL * 2), (0, 0, 0, 0))
     for k, t in enumerate(tiles):
         atlas.paste(Image.open(t).convert("RGBA"), ((k % len(VARIANTS)) * CELL, (k // len(VARIANTS)) * CELL))
-    # under transparent texels, the mean leaf colour (no dark fringe when the texture is filtered)
-    a = np.asarray(atlas).astype(np.float32)
-    m = a[..., 3] > 128
-    mean = a[m][:, :3].mean(0)
-    a[~m, :3] = mean
-    a[..., 3] = np.where(m, 255, 0)
+    a = fill_crowns(np.asarray(atlas).astype(np.float32))
     Image.fromarray(a.astype(np.uint8)).save(out)
     import json
     json.dump(sides, open(out[:-4] + ".json", "w"))

@@ -24,8 +24,8 @@ GROUNDS = {
     "bellerive": {"lat": -42.8773092, "lon": 147.3737365, "ge_alt": 10.0,
                   "fit": [0.31, -0.64, -0.02, 68.7, 86.9, 66.77]},
     # Traeger: the model's origin is the OSM pitch's centre (tools/grounds/traeger/scene/geo.py); Google Earth's
-    # field level is 558 m (its straight-down views from "575 a, 800 d" measure 0.515 m a pixel: 817 m up).
-    "traeger": {"lat": -23.7097309, "lon": 133.8759053, "ge_alt": 558.0,
+    # field level is 573 m (its status bar's elevation with the pointer on the oval; the DEM says 576).
+    "traeger": {"lat": -23.7097309, "lon": 133.8759053, "ge_alt": 573.0,
                 "fit": [3.62, -8.97, -0.05, -90.9, 93.26, 73.2]},
 }
 FOV = float(__import__("os").environ.get("GE_FOV", "23.5"))

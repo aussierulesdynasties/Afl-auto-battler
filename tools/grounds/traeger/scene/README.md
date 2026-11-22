@@ -6,7 +6,7 @@ data and measured off Google Earth. Model metres: x east, y up, z south, origin 
 
 | Part | File | Script | What it is |
 |---|---|---|---|
-| near | `traeger_backdrop_part1.glb` | `near.py` | The ground out to 1,300 m (surfaces traced from Google Earth and painted fresh), every OSM building, every gum |
+| near | `traeger_backdrop_part1.glb` | `near.py` | The ground out to 1,300 m (surfaces traced from Google Earth and painted fresh), every building (OSM, and Microsoft's footprints where OSM has none), every gum |
 | far | `traeger_backdrop_part2.glb` | `far.py` | The land from 1,300 m to 24 km: real terrain (the MacDonnell Ranges, Heavitree Gap, Mt Gillen), coloured from Sentinel-2 |
 
 ## Build
@@ -19,12 +19,13 @@ python3 near.py ../../../../assets/grounds/traeger/traeger_backdrop_part1.glb MO
 ```
 
 `MOSAIC.png` is Google Earth's straight-down mosaic (`qa/`: `ge_nadir.js` shoots `qa/nadir.json`'s 35 views from
-800 m up, `mosaic.py` joins them at 0.5 m a pixel). It is a measuring reference: it stays out of the repo, and
+800 m up with its labels and 3D buildings off, so its flat aerial imagery; `mosaic.py` joins them at 0.5 m a
+pixel). It is a measuring reference: it stays out of the repo, and
 no pixel of it reaches the game. What is read off it:
 
 - **Surfaces** (`surface.py`): every pixel sorted into 22 surface classes by colour, the canopies, shade and
   roofs taken out, the edges tidied, then each class painted in its own colour and grain.
-- **Gums** (`canopy.py`): every canopy's place and spread, moved back by the view's lean; the height from
+- **Gums** (`canopy.py`): every canopy's place and spread, the height from
   Meta and WRI's canopy height map.
 - **Roof colours** (`canopy.py`): each roof's median colour.
 - **The colour grade** (`grade.py`, fitted by `qa/grade_fit.py`): Sentinel-2 matched to Google Earth on open land.
@@ -43,6 +44,7 @@ Without a mosaic, `near.py` paints OSM areas over Sentinel-2's colour and stands
 ## Sources and credits
 
 - Map data (c) OpenStreetMap contributors, ODbL.
+- Building footprints OpenStreetMap lacks: Microsoft Global ML Building Footprints, ODbL.
 - Contains modified Copernicus Sentinel data 2025 (scene S2B_53KLP_20251029).
 - Terrain: Terrarium tiles (AWS Open Data, Mapzen; SRTM and others).
 - Tree heights: Meta and World Resources Institute, High Resolution Canopy Height Maps (2024), CC BY 4.0.
