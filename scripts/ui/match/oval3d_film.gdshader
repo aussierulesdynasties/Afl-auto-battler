@@ -29,6 +29,11 @@ uniform bool tone = false;
 uniform float exposure = 1.0;
 uniform vec4 awp = vec4(1.0); // the AgX curve: contrast, toe, slope, shoulder
 uniform vec3 grade = vec3(1.0); // brightness, contrast, saturation
+// The broadcast camera's white balance: gains on the drawn light, set for each time of day so a
+// grey card lying on the open turf comes out grey (Oval3DTurf.BALANCE). `broadcast` 0 is rule
+// 2.81's tone as approved, unbalanced; 1 the balanced picture.
+uniform vec3 balance = vec3(1.0);
+uniform float broadcast = 0.0;
 
 vec3 allenwp_curve(vec3 x) {
 	const float xo = 0.18;
@@ -90,7 +95,7 @@ void fragment() {
 	p += (hash(floor(uv * VIEWPORT_SIZE / scale) + vec2(mod(frame, 251.0) * 17.13, mod(frame, 251.0) * 3.71)) - 0.5) * 0.035;
 	vec3 o = to_l(p);
 	if (tone) {
-		o = tone_map(o);
+		o = tone_map(o * mix(vec3(1.0), balance, broadcast));
 	}
 	ALBEDO = o;
 }
