@@ -91,8 +91,8 @@ def stand():
         f0, f1 = line(-0.5)[i], line(-0.5)[i + 1]
         b0, b1 = line(D_BACK + 0.4)[i], line(D_BACK + 0.4)[i + 1]
         zf, zb = z_roof(-0.5), z_roof(D_BACK + 0.4)
-        add(P + "_roof", [(f1[0], f1[1], zf), (f0[0], f0[1], zf), (b0[0], b0[1], zb), (b1[0], b1[1], zb)], "roof_zinc")
-        add(P + "_roof", [(f0[0], f0[1], zf - 0.35), (f1[0], f1[1], zf - 0.35), (b1[0], b1[1], zb - 0.35), (b0[0], b0[1], zb - 0.35)], "underside_dark")
+        add(P + "_roof", [(b1[0], b1[1], zb), (b0[0], b0[1], zb), (f0[0], f0[1], zf), (f1[0], f1[1], zf)], "roof_zinc")   # faces up
+        add(P + "_roof", [(b0[0], b0[1], zb - 0.35), (b1[0], b1[1], zb - 0.35), (f1[0], f1[1], zf - 0.35), (f0[0], f0[1], zf - 0.35)], "underside_dark")   # faces down
         add(P + "_roof", [(f0[0], f0[1], zf - 0.6), (f1[0], f1[1], zf - 0.6), (f1[0], f1[1], zf + 0.05), (f0[0], f0[1], zf + 0.05)], "fascia_cream")
         add(P + "_roof", [(b1[0], b1[1], zb - 0.35), (b0[0], b0[1], zb - 0.35), (b0[0], b0[1], zb + 0.05), (b1[0], b1[1], zb + 0.05)], "steel_charcoal")
     # roof ends
