@@ -286,9 +286,37 @@ PAVILION = dict(mat='brick_red', frame='paint_white', reveal='render_cream', row
                 doors=[dict(h=2.4, w=1.2, every=12.0, min_len=10.0, fill='glass_dark')])
 
 
+MEASURED = json.load(open(os.path.join(HERE, 'neighbours_heights.json'))) if os.path.exists(
+    os.path.join(HERE, 'neighbours_heights.json')) else {}
+
+
+def measured(c):
+    """(eave, ridge, median) in m above the turf, read off Google Earth with the mouse at 9 spots on the roof
+    (qa/probe.py, the calibrated tool's status bar; whole metres). None when fewer than 4 spots hit the roof."""
+    m = MEASURED.get('b_%d_%d' % (round(c[0]), round(c[1])))
+    if not m:
+        return None
+    hs = sorted(h for h in m['all'] if h > 1.5)
+    if len(hs) < 4:
+        return None
+    q = lambda f: hs[min(len(hs) - 1, int(f * (len(hs) - 1) + 0.5))]
+    return q(0.25), q(0.9), q(0.5)
+
+
 def build_one(mb, b, sty, H, roof):
     P = ccw(b['pts'])
     kind = roof[0]
+    m = measured(b['c'])
+    if m:                    # Google Earth's measured heights win over the eye's
+        eave, ridge, med = m
+        if kind == 'flat':
+            H = med
+        else:
+            H = eave
+            r = max(0.8, ridge - eave)
+            if kind == 'gables':
+                r = min(r, 0.3 * roof[2])
+            roof = (roof[0], r) + tuple(roof[2:])
     if kind == 'saw':
         _, r, pitch, axis, mat = roof[:5]; extra = roof[5] if len(roof) > 5 else {}
         top = roof_saw(mb, P, H, r, pitch, axis, mat, skylights=extra.get('skylights'))
@@ -315,7 +343,8 @@ def build_one(mb, b, sty, H, roof):
 def rivers_edge(mb, b):
     """River's Edge (2020): a wedge in zinc standing seams, four floors of punched windows, and a folded parapet that
     zigzags up and down along the river side; behind it a white membrane roof with a sloped skylight and solar."""
-    P = ccw(b['pts']); H = 15.5; outline = []
+    P = ccw(b['pts']); outline = []
+    ms = measured(b['c']); H = ms[2] if ms else 15.5     # Google Earth: roof 19 m, the folds' peaks 22 m
     for i, W in enumerate(edges(P)):
         zig = W.L > 60
         if zig:     # the long sides fold in plan: facets 4.6 m wide stepping 1.4 m out and back, each with a slot window per floor
@@ -329,7 +358,7 @@ def rivers_edge(mb, b):
                 for z0, z1 in ((0.6, 3.6), (4.8, 7.0), (8.4, 10.6), (12.0, 14.2)):
                     if (k + int(z0)) % 3:
                         holes.append((m - 0.6, m + 0.6, z0, z1, 'glass_dark', 0.0, None))
-            top = lambda s, W=W: H + 2.4 * (1 - abs(((s / (2 * W.L / n)) % 1) * 2 - 1))
+            top = lambda s, W=W: H + (max(1.5, ms[1] - ms[2]) if ms else 2.4) * (1 - abs(((s / (2 * W.L / n)) % 1) * 2 - 1))
         else:
             st = dict(SILVER, rows=[dict(z=(0.4, 7.0), bay=6.0, ribbon=True, pier=0.5, mull=1.5, transom=[3.6])] + SILVER['rows'][2:])
             holes = openings_for(W.L, H, st)
@@ -389,7 +418,6 @@ B = [
     ((221.7, -193.8), 'shed 107', SHED, 6.4, ('gables', 2.6, 11.2, ax(37.9), 'roof_grey')),
     ((248.5, -216.9), 'shed 106', SHED_RED, 5.4, ('gables', 1.8, 7.9, ax(37.9), 'roof_rust')),
     ((154.8, -279.5), 'QVMAG Inveresk', SHED, 8.6, ('gables', 3.2, 12.6, ax(37.9), 'roof_grey')),
-    ((151.0, -174.4), 'Annexe link', SHED, 6.0, ('gables', 1.6, 9.9, ax(-142.3), 'roof_grey')),
     ((20.1, -223.5), 'Big Picture School', SCHOOL, 7.2, ('flat', 'roof_flat')),
     ((7.7, -250.2), 'Tramway Museum', SHED_RED, 5.8, ('gables', 2.4, 17.5, ax(-165.6), 'roof_grey')),
     ((-26.8, -274.6), 'Tramsheds', SHED_RED, 5.0, ('gables', 2.0, 13.6, ax(-166.0), 'roof_grey')),
@@ -438,6 +466,9 @@ def build_all(out):
         m = MBm.MB('nb_' + name.lower().replace(' ', '_').replace("'", ''))
         build_one(m, b, sty, H, roof)
         m.build()
+    # OpenStreetMap's small university block between the Annexe and the sheds reads turf height on Google Earth
+    # (gone, or never there): drawn by nobody.
+    used.append(find(151.0, -174.4)['c'])
     m = MBm.MB('nb_rivers_edge'); b = find(150.1, -96.7); used.append(b['c']); rivers_edge(m, b)
     m.build()
     # Every other non-house footprint over 400 m2 (Invermay's warehouses, workshops and shops) gets the treatment most
