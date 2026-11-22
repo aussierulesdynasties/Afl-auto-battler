@@ -647,7 +647,7 @@ if os.path.exists(_SP):
         px = _SA[y0:y1, x0:x1][np.asarray(mk) > 0]
         if len(px) > 20:
             md = np.median(px, 0)
-            _cap = 135.0 if (spec.get('real') and b['c'] == 'block') else 185.0   # flat roofs: the aerial's glare off membrane is not their colour
+            _cap = 175.0 if (spec.get('real') and b['c'] == 'block') else 185.0   # flat roofs: the aerial's glare off membrane is not their colour
             if not (md[1] > md[0] + 6 and md[1] >= md[2]): b['roof_c'] = [int(v * min(1.0, _cap / max(md))) for v in md]   # tree-covered roofs keep the palette
 json.dump(BLD, open(os.path.join(OUT, 'buildings.json'), 'w'))
 print('buildings', len(BLD), 'towers', sum(b['c'] == 'tower' for b in BLD))
