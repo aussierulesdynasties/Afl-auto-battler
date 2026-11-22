@@ -29,7 +29,7 @@ from PIL import Image, ImageFilter
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-from glb_images import read_glb, replace_images, _view_bytes  # noqa: E402
+from glb_images import read_glb, replace_images, write_glb, _view_bytes  # noqa: E402
 
 REPO = os.path.join(HERE, "..", "..", "..")
 GLB = os.path.join(REPO, "assets", "grounds", "optus", "optus.glb")
@@ -53,7 +53,8 @@ PALE = np.array([(185, 187, 187), (202, 202, 200), (165, 167, 169)], float)
 # Google Earth's), Google Earth's brightness over our capture's at 236 facade hovers 18-30 m up
 # on the 12 matched views, both lit by Google Earth's sun (survey/sun.json); the hue gap is Google Earth's haze.
 COPPER_RED = np.array([(165, 101, 88), (178, 114, 99), (147, 92, 81)], float)
-BASE_RM, STREAK_RM = (0.55, 0.3), (0.4, 0.75)   # (roughness, metalness): the base as before, the streaks metal
+BASE_RM = (0.55, 0.3)   # (roughness, metalness), the whole bronze
+SHADE_K = 1.1           # a streak in shade, over the base (Google Earth's shaded views: p90/p50 1.08-1.14)
 P_PALE, P_RED = 0.13, 0.08   # the share of each fin row's length that is a streak of each kind
 
 
@@ -141,13 +142,17 @@ def colour(s, d, finish=False):
         (S.shape[1], S.shape[0]), Image.BILINEAR), float) / 128.0 - 1.0
     out *= (1.0 + 0.03 * grain)[..., None]
     if finish:
-        # glTF metal-roughness: green roughness, blue metalness. The streaks are bright anodised runs that catch the
-        # sun: lit, they stand out as on Google Earth's lit views (p90/p50 1.5); in shade they all but vanish
-        # (Google Earth 1.1). A matte streak kept its 1.6 in shade, so the streaks are metal and the base less so.
+        # glTF occlusion-metal-roughness (red occlusion, green roughness, blue metalness). Google Earth's streaks stand
+        # out on the lit side (p90/p50 1.5) and all but vanish in shade (1.1); a plain streak keeps its 1.6 in shade.
+        # Occlusion dims only the sky's light, never the sun's, so each streak pixel gets the occlusion that brings it
+        # to 1.1x the base in shade, and keeps its full brightness in sun. (Metal streaks, tried first, changed nothing.)
+        lin = lambda x: (np.clip(x, 0, 255) / 255.0) ** 2.2
+        lum = lambda x: (lin(x) * np.array([0.2126, 0.7152, 0.0722])).sum(-1)
+        lb = float(lum(BASE.mean(0)))
         mr = np.zeros(S.shape + (3,), np.uint8)
-        mr[..., 0] = 255
-        mr[..., 1] = np.where(kinds > 0, STREAK_RM[0], BASE_RM[0]) * 255
-        mr[..., 2] = np.where(kinds > 0, STREAK_RM[1], BASE_RM[1]) * 255
+        mr[..., 0] = np.where(kinds > 0, np.clip(SHADE_K * lb / np.maximum(lum(out), 1e-4), 0, 1), 1.0) * 255
+        mr[..., 1] = BASE_RM[0] * 255
+        mr[..., 2] = BASE_RM[1] * 255
         return mr
     return np.clip(out, 0, 255).astype(np.uint8)
 
@@ -177,12 +182,19 @@ def letters(old):
     return np.asarray(mi, float)[..., None] / 255.0, np.asarray(ci, float)
 
 
-def sign_finish():
-    """The metal-roughness map under the name sign (the letters keep the bronze's finish under them)."""
+def sign_finish(old):
+    """The finish map under the name sign; the letters take no occlusion (placed as in sign())."""
     w, h = int(round(SIGN_W * PX)), int(round(SIGN_DROP * PX))
     s = 7.3 + (np.arange(w) + 0.5) / w * SIGN_W
     d = (np.arange(h) + 0.5) / h * SIGN_DROP
-    return Image.fromarray(colour(s, d, True), "RGB")
+    mr = colour(s, d, True).astype(float)
+    alpha, _ = letters(old)
+    lh, lw = alpha.shape[:2]
+    y0 = int(round(LETTERS_D * PX - lh / 2))
+    x0 = (w - lw) // 2
+    sub = mr[y0:y0 + lh, x0:x0 + lw, 0]
+    mr[y0:y0 + lh, x0:x0 + lw, 0] = sub * (1 - alpha[..., 0]) + 255 * alpha[..., 0]
+    return Image.fromarray(mr.clip(0, 255).astype(np.uint8), "RGB")
 
 
 def sign(old):
@@ -288,7 +300,7 @@ def main():
     old = Image.open(src) if src else Image.open(io.BytesIO(_view_bytes(
         js, bn, next(im for im in js["images"] if im["name"] == "sign_a")["bufferView"])))
     new = {"bronze": tile(), "sign_a": sign(old), "glass": glass(), "entrance": entrance(), "storey": storey(), "roof": roof(), "steel": steel(),
-           "bronze_mr": tile(True), "sign_a_mr": sign_finish()}
+           "bronze_mr": tile(True), "sign_a_mr": sign_finish(old)}
     if "--preview" in sys.argv:
         p = sys.argv[sys.argv.index("--preview") + 1]
         for n, im in new.items():
@@ -298,6 +310,13 @@ def main():
     for n in ("bronze_mr", "sign_a_mr"):
         new[n].save(os.path.join(REPO, ".claude", "review", "optus", "tex", n + ".png"))
     replace_images(GLB, {n: png(im) for n, im in new.items() if n in names})
+    # The finish maps' red channel is the occlusion: point each bronze material's occlusion at its own map.
+    js, bn = read_glb(GLB)
+    for m in js["materials"]:
+        mrt = m.get("pbrMetallicRoughness", {}).get("metallicRoughnessTexture")
+        if m.get("name") in ("bronze", "sign_a") and mrt:
+            m["occlusionTexture"] = {"index": mrt["index"]}
+    write_glb(GLB, js, bn)
     print({n: im.size for n, im in new.items()})
 
 
