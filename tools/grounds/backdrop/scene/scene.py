@@ -421,7 +421,7 @@ def hip_rect(P):   # minimum-area rectangle: centre, long-axis unit u, short-axi
     return u * (a0 + a1) / 2 + v * (b0 + b1) / 2, u, v, a1 - a0, b1 - b0
 def build_class(cls, tex, tw, th, var=None, gr=0.13):
     verts, faces, cols, uvs = [], [], [], []
-    RF = {'metal': [[], [], [], []], 'tile': [[], [], [], []], 'corr': [[], [], [], []], 'far': [[], [], [], []]}   # roof meshes: verts, faces, cols, uvs
+    RF = {'metal': [[], [], [], []], 'tile': [[], [], [], []], 'corr': [[], [], [], []], 'far': [[], [], [], []], 'flat': [[], [], [], []]}   # roof meshes: verts, faces, cols, uvs
     walls = [lin(c) for c in PAL['walls_' + cls]]
     roofs = [lin(c) for c in PAL['roofs_' + ('house' if cls == 'house' else 'flat')]]
     FLS = [[], [], []]
@@ -435,7 +435,8 @@ def build_class(cls, tex, tw, th, var=None, gr=0.13):
         h = b['h']
         wc = walls[b['wall'] % len(walls)] * (1 + 0.06 * (rng.random() - 0.5))
         rc = lin(b['roof_c']) if b.get('roof_c') else roofs[b['roof'] % len(roofs)] * (1 + 0.08 * (rng.random() - 0.5))
-        shed = cls == 'block' and b['a'] >= 400 and h <= 10
+        shed = (bool(b['shed']) and cls == 'block' and h <= 14) if 'shed' in b else (cls == 'block' and b['a'] >= 400 and h <= 10)
+        flatr = bool(spec.get('real')) and cls == 'block' and not shed and not b.get('open')   # real place: a flat roof inside a 0.6 m parapet
         V_, F_, C_, U_ = (CL if shed else (verts, faces, cols, uvs)); TW, TH = (12.0, 12.0) if shed else (tw, th)
         pitched = cls == 'house'
         if pitched: hc, hu, hv, hL, hW = hip_rect(P); rh = min(3.4, (hW / 2 + 0.45) * math.tan(math.radians(25)))
@@ -443,9 +444,9 @@ def build_class(cls, tex, tw, th, var=None, gr=0.13):
         top = base + 1.0 + h - rh
         _gb = base
         if b.get('open'): base = top - 1.4; shed = False; V_, F_, C_, U_ = verts, faces, cols, uvs; TW, TH = tw, th   # canopy: 0.4 m fascia only
-        k = len(P); s0 = len(V_)
+        k = len(P); s0 = len(V_); wtop = top + (0.6 if flatr else 0.0)
         for x, y in P: V_.append((x, y, base))
-        for x, y in P: V_.append((x, y, top))
+        for x, y in P: V_.append((x, y, wtop))
         per = 0.0
         for i in range(k):
             j = (i + 1) % k
@@ -453,9 +454,17 @@ def build_class(cls, tex, tw, th, var=None, gr=0.13):
             F_.append((s0 + i, s0 + j, s0 + k + j, s0 + k + i))
             C_ += [wc] * 4
             u0, u1 = per / TW, (per + L) / TW
-            v0, v1 = -1.0 / TH, (top - base - 1.0) / TH
+            v0, v1 = -1.0 / TH, (wtop - base - 1.0) / TH
             U_ += [(u0, v0), (u1, v0), (u1, v1), (u0, v1)]
             per += L
+        if flatr:   # the parapet's inner face, from the roof up to its top
+            s1 = len(V_)
+            for x, y in P: V_.append((x, y, top))
+            for x, y in P: V_.append((x, y, wtop))
+            for i in range(k):
+                j = (i + 1) % k
+                F_.append((s1 + i, s1 + k + i, s1 + k + j, s1 + j)); C_ += [tuple(np.array(wc)[:3] * 0.85) + tuple(np.array(wc)[3:])] * 4
+                U_ += [(0.0, 0.0), (0.0, 0.6 / TH), (0.05, 0.6 / TH), (0.05, 0.0)]
         if b.get('open'):   # steel posts at each corner, ground to roof
             for x, y in P:
                 o = len(V_); d = 0.08
@@ -470,6 +479,7 @@ def build_class(cls, tex, tw, th, var=None, gr=0.13):
         RT = 3.04
         if kind == 'metal' and cls == 'block' and b['a'] >= 400: kind, RT = 'far', 12.0   # sheds: sheet runs along the long axis, multiplied (512 px = 12 m)
         if kind == 'far' and b['a'] >= 1500: kind, RT = 'far', 12.0   # big industrial roofs: coarse sheet runs (512 px = 24 m)
+        if flatr: kind, RT = 'flat', 8.0   # membrane or concrete: the aerial's colour, a faint grain
         if kind == 'far': rc = np.minimum(0.35 * np.array(rc)[:3] + 0.65 * np.array(lin((120, 123, 124)))[:3], np.array(lin((98, 100, 100)))[:3])   # zincalume grey, never paper white
         rv, rf, rcl, ruv = RF[kind]; r0 = len(rv)
         def ruv_(x, y, sw=(kind == 'far')): a_, b_ = (x * ct + y * st) / RT, (-x * st + y * ct) / RT; return (b_, a_) if sw else (a_, b_)
@@ -507,7 +517,7 @@ def build_class(cls, tex, tw, th, var=None, gr=0.13):
     set_uv(ob.data, uvs)
     for kind, (rv, rf, rcl, ruv) in RF.items():
         if not rf: continue
-        ro = mk_obj('bg_roof_%s_%s%s' % (cls, kind, sfx), rv, rf, mat_mul('roof_%s_far' % cls, os.path.join(HERE, 'tex', 'mt', 'roof_shed.png'), 0.55, 1 / float(open(os.path.join(HERE, 'tex', 'mt', 'roof_shed.mean')).read())) if kind == 'far' else mat_facade('roof_%s_%s' % (cls, kind), os.path.join(HERE, 'tex', 'mt/roof_corrugated.png' if kind == 'corr' else 'mt/roof_far.png' if kind == 'far' else 'roof_%s.png' % kind)))
+        ro = mk_obj('bg_roof_%s_%s%s' % (cls, kind, sfx), rv, rf, mat_mul('roof_%s_flat' % cls, os.path.join(HERE, 'tex', 'mt', 'roof_flat.png'), 0.8, 1 / float(open(os.path.join(HERE, 'tex', 'mt', 'roof_flat.mean')).read())) if kind == 'flat' else mat_mul('roof_%s_far' % cls, os.path.join(HERE, 'tex', 'mt', 'roof_shed.png'), 0.55, 1 / float(open(os.path.join(HERE, 'tex', 'mt', 'roof_shed.mean')).read())) if kind == 'far' else mat_facade('roof_%s_%s' % (cls, kind), os.path.join(HERE, 'tex', 'mt/roof_corrugated.png' if kind == 'corr' else 'mt/roof_far.png' if kind == 'far' else 'roof_%s.png' % kind)))
         set_corner_col(ro.data, np.concatenate([np.array(rcl), np.ones((len(rcl), 1))], 1))
         set_uv(ro.data, [ruv[i] for f_ in rf for i in f_])
 for _i, b in enumerate(BL):

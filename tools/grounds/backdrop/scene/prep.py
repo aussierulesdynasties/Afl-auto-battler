@@ -561,6 +561,19 @@ _OVH = None
 if spec.get('real'):
     import real as _real
     _OVH = _real.overture_heights(spec['name'], xy)
+_IND = None
+if spec.get('real'):   # industrial land: an untagged building there is a shed or a works
+    from shapely.geometry import Polygon as _SPoly, Point as _SPt
+    from shapely.ops import unary_union as _SU
+    _SHEDK = ('industrial', 'warehouse', 'shed', 'manufacture', 'hangar', 'barn', 'farm_auxiliary', 'storage_tank', 'factory', 'depot', 'transportation')
+    _ip = []
+    for el in js:
+        if el['type'] == 'way' and el.get('tags', {}).get('landuse') in ('industrial', 'railway'):
+            _r = ring(el)
+            if len(_r) >= 4:
+                try: _ip.append(_SPoly(_r).buffer(0))
+                except Exception: pass
+    _IND = _SU(_ip) if _ip else None
 skip_r = spec["clear_r_m"]; _FPP = os.path.join(OUT, "footprint.json"); _FPR = np.array(json.load(open(_FPP))) if os.path.exists(_FPP) else None
 for el in js + PARTS:
     t = el.get('tags', {})
@@ -579,7 +592,7 @@ for el in js + PARTS:
         try: h = float(t['building:levels']) * 3.4 + 1.0
         except Exception: pass
     kind = t['building']
-    if h is None and _OVH is not None: h = _OVH(cx, cy)
+    if h is None and _OVH is not None: h = _OVH(cx, cy, pts)
     if h is None: h = LV.get(kind, LV['*'])
     if area(pts) < 0: pts = pts[::-1]
     A = abs(area(pts))
@@ -595,6 +608,8 @@ for el in js + PARTS:
         _glass = [i for i in _light if _wt[i][2] > _wt[i][0]] or _light
         BLD[-1]['wall'] = int(rng.choice(_cream if kind in ('apartments', 'residential', 'hotel', 'dormitory') else _glass if kind in ('office', 'commercial', 'government') else _light))
     if kind == 'roof': BLD[-1]['open'] = 1; BLD[-1]['c'] = 'block'   # OSM building=roof: open canopy (roof on posts)
+    if spec.get('real'):   # real place: only sheds, works and warehouses get clad walls and sheet roofs (scene.py)
+        BLD[-1]['shed'] = int(kind in _SHEDK or (kind == 'yes' and _IND is not None and _IND.contains(_SPt(cx, cy))))
 # real place: a lot mapped as one outline but built as a tower on a podium (Google Earth views) is split into its
 # parts: ["split", [x, y], [[u0, u1, v0, v1, h, wall_rgb|null], ...]], u along the lot's long side from its west end,
 # v across it from its south side, as fractions of the lot's oriented box
@@ -620,7 +635,7 @@ if os.path.exists(_SP):
     _sj = json.load(open(os.path.join(D, 'sat.json'))); _SA = np.asarray(Image.open(_SP).convert('RGB')); _hm, _mp = _sj['half_m'], _sj['m_per_px']
     for b in BLD:
         P_ = np.array(b['p']); A_ = 0.5 * abs(np.dot(P_[:, 0], np.roll(P_[:, 1], -1)) - np.dot(P_[:, 1], np.roll(P_[:, 0], -1)))
-        if b['c'] == 'tower' or (b['c'] == 'block' and A_ < 400): continue
+        if b['c'] == 'tower' or (b['c'] == 'block' and A_ < 400 and not spec.get('real')): continue
         q = [((x + _hm) / _mp, (_hm - y) / _mp) for x, y in b['p']]
         x0, y0 = [int(min(v)) for v in zip(*q)]; x1, y1 = [int(max(v)) + 1 for v in zip(*q)]
         if x0 < 0 or y0 < 0 or x1 >= _SA.shape[1] or y1 >= _SA.shape[0]: continue
@@ -628,7 +643,8 @@ if os.path.exists(_SP):
         px = _SA[y0:y1, x0:x1][np.asarray(mk) > 0]
         if len(px) > 20:
             md = np.median(px, 0)
-            if not (md[1] > md[0] + 6 and md[1] >= md[2]): b['roof_c'] = [int(v * min(1.0, 185.0 / max(md))) for v in md]   # tree-covered roofs keep the palette
+            _cap = 160.0 if (spec.get('real') and b['c'] == 'block') else 185.0   # flat roofs: the aerial's glare off membrane is not their colour
+            if not (md[1] > md[0] + 6 and md[1] >= md[2]): b['roof_c'] = [int(v * min(1.0, _cap / max(md))) for v in md]   # tree-covered roofs keep the palette
 json.dump(BLD, open(os.path.join(OUT, 'buildings.json'), 'w'))
 print('buildings', len(BLD), 'towers', sum(b['c'] == 'tower' for b in BLD))
 

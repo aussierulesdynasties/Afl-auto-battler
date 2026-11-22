@@ -22,11 +22,20 @@ def overture_heights(g, xy):
         except Exception: continue
         polys.append(transform(lambda x, y, z=None: xy(y, x), g_)); hs.append(float(h))
     tree = STRtree(polys)
-    from shapely.geometry import Point
-    def look(cx, cy):
+    from shapely.geometry import Point, Polygon
+    def look(cx, cy, pts=None):
+        """the tallest Overture building at the outline's middle, or (with the outline) the tallest one
+        lying mostly inside it: one OSM outline often holds a whole block of flats"""
         pt = Point(cx, cy); best = None
         for i in tree.query(pt):
             if polys[i].contains(pt): best = hs[i] if best is None else max(best, hs[i])
+        if pts is not None and len(pts) >= 3:
+            try: q = Polygon(pts).buffer(0)
+            except Exception: q = None
+            if q is not None and q.area > 0:
+                for i in tree.query(q):
+                    a_ = polys[i].area
+                    if a_ > 8 and polys[i].intersection(q).area > 0.5 * a_: best = hs[i] if best is None else max(best, hs[i])
         return best
     print('overture heights', len(polys))
     return look
