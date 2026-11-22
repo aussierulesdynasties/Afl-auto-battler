@@ -172,6 +172,31 @@ def osm(r=1400.0):
     return nodes, out
 
 
+# Microsoft's Global ML Building Footprints (ODbL): the zoom-9 quadkey tile over Alice Springs.
+MS_BUILDINGS = ("https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/"
+                "RegionName=Australia/quadkey=310311130/part-00145-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz")
+
+
+def ms_buildings(r=1400.0):
+    """Footprints [(e, n)...] within r of the ground from Microsoft's building footprints, traced by machine off
+    aerial imagery: Alice Springs' OpenStreetMap lacks some 500 houses and sheds that these have."""
+    import gzip
+    import json
+    path = os.path.join(CACHE, "ms_310311130.csv.gz")
+    if not os.path.exists(path):
+        os.makedirs(CACHE, exist_ok=True)
+        req = urllib.request.Request(MS_BUILDINGS, headers={"User-Agent": "afl-ground-builder/1.0"})
+        with urllib.request.urlopen(req, timeout=120) as resp, open(path, "wb") as f:
+            f.write(resp.read())
+    out = []
+    for line in gzip.open(path, "rt"):
+        ring = json.loads(line)["geometry"]["coordinates"][0]
+        p = [tuple(float(x) for x in en(la, lo)) for lo, la in ring]
+        if math.hypot(*np.mean(p, 0)) < r:
+            out.append(p)
+    return out
+
+
 # Meta and WRI's 1 m canopy height map (2024, CC BY 4.0), one zoom-9 quadkey tile over Alice Springs.
 CHM = "https://dataforgood-fb-data.s3.amazonaws.com/forests/v1/alsgedi_global_v6_float/chm/310311130.tif"
 

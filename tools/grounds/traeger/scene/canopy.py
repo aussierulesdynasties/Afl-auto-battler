@@ -1,8 +1,10 @@
 """Reading Google Earth's straight-down views of Alice Springs (the mosaic, 0.5 m a pixel over +-1,300 m,
 made by qa/mosaic.py from 35 views shot 800 m up): where each gum's canopy is and what colour each roof is.
 
-Every view is a perspective from 800 m, so anything tall leans away from the view's centre by its height /
-800 of its distance: a roof 4 m up 300 m off-centre shows 1.5 m further out. Both readings undo that lean.
+The views are shot with Google Earth's 3D buildings off (qa/ge_nadir.js), so they are its flat aerial imagery:
+nothing leans from the view's centre. With 3D on (MOSAIC_3D=1), every view is a perspective from 800 m and
+anything tall leans away from the view's centre by its height / 800 of its distance (a roof 4 m up 300 m
+off-centre shows 1.5 m further out); both readings then undo that lean.
 The mosaic is a measuring reference only; none of its pixels is drawn in the game.
 """
 import json
@@ -15,6 +17,7 @@ from scipy import ndimage
 
 R, K = 1300.0, 2.0
 CAM_H = 800.0
+LEAN = os.environ.get("MOSAIC_3D") == "1"      # the mosaic was shot with 3D buildings on
 HERE = os.path.dirname(os.path.abspath(__file__))
 
 
@@ -33,6 +36,8 @@ class Mosaic:
         return self.centres[int(np.argmin(d))]
 
     def lean(self, e, n, h):
+        if not LEAN:
+            return e, n
         c = self._centre(e, n)
         return e + (e - c[0]) * h / CAM_H, n + (n - c[1]) * h / CAM_H
 
@@ -95,6 +100,8 @@ class Mosaic:
 
 
 def _unlean(mo, e, n, h):
+    if not LEAN:
+        return e, n
     c = mo._centre(e, n)
     f = h / CAM_H
     return (e + f * c[0]) / (1 + f), (n + f * c[1]) / (1 + f)

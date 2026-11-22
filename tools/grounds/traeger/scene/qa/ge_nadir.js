@@ -1,7 +1,7 @@
 // Google Earth straight-down views for mosaic.py (measuring only: the shots stay out of the repo).
 //   node ge_nadir.js nadir.json OUTDIR FROM TO      (two processes on halves of the list go twice as fast)
 // A fresh page per view; Google Earth's popups are found and closed by find_popup.py, and a shot under
-// 1.8 MB (the globe, or tiles still loading) is taken again.
+// MIN_BYTES (the globe, or tiles still loading) is taken again.
 const { chromium } = require('playwright');
 const path = require('path');
 const fs=require('fs'); const cp=require('child_process');
@@ -19,6 +19,12 @@ const fs=require('fs'); const cp=require('child_process');
         await p.goto(url, {timeout:90000});
         await p.waitForTimeout(40000);
         await p.keyboard.press('Escape');
+        // Basemap settings (Ctrl+B): "Clean" (no place names or pins, which would be traced as ground)
+        // and 3D buildings off (flat imagery with no lean); then close the panel and let the tiles load.
+        await p.keyboard.press('Control+b'); await p.waitForTimeout(2500);
+        await p.mouse.click(288,396); await p.waitForTimeout(800);
+        await p.mouse.click(273,840); await p.waitForTimeout(800);
+        await p.mouse.click(296,131); await p.waitForTimeout(8000);
         for (let k=0;k<3;k++) {
           const tmp=`${outd}/_tmp_${from}.png`;
           await p.screenshot({path: tmp});
@@ -28,7 +34,7 @@ const fs=require('fs'); const cp=require('child_process');
         }
         await p.waitForTimeout(2500);
         const buf = await p.screenshot({path: `${outd}/${v.name}.png`});
-        ok = buf.length > 1800000;
+        ok = buf.length > parseInt(process.env.MIN_BYTES||'1800000');
         console.log('shot', v.name, buf.length, ok);
       } catch(e){ console.log('fail',v.name,e.message); }
       await p.close();

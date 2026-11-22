@@ -7,7 +7,7 @@ taken from it is a map of surfaces, the way a surveyor would trace one:
    red earth, buff dry grass, irrigated turf, asphalt, concrete, gravel, courts and so on. Classes come out
    of the data, so Alice Springs' own surfaces set them.
 2. What stands up off the ground is taken out: the canopies, their shade, the roofs (OpenStreetMap's
-   footprints, moved by the view's lean). Their pixels take the class of the nearest open ground.
+   footprints, moved by the view's lean when shot in 3D). Their pixels take the class of the nearest open ground.
 3. A majority filter tidies the edges (no single pixels), as a hand trace would.
 4. Each class is painted in its own median colour, with its own measured grain: fBm noise at 6 m, 1.5 m and
    0.3 m scaled to the class's own spread, and the class's broad unevenness (patchy watering, worn tracks)

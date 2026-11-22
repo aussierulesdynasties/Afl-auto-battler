@@ -6,12 +6,14 @@
   the stadium and following the real heights from 350 m out (Billy Goat Hill to the east, the rise to the
   ranges), painted by paint.py: an inner map 500 m a side at 0.24 m a pixel round the stadium and an outer
   map 2.6 km a side at 1.27 m.
-- Buildings: every OpenStreetMap footprint outside the stadium model (bldg.py), each roof in its colour off
+- Buildings: every OpenStreetMap footprint outside the stadium model, and Microsoft's footprints for the
+  ~500 that OpenStreetMap lacks (bldg.py), each roof in its colour off
   Google Earth's straight-down views (MOSAIC: the mosaic of them, 0.5 m a pixel, see qa/README).
 - Gums: every canopy in those views (canopy.py) stood up as a tree (trees.py).
 
 Model metres (x east, y up, z south), the field's level at 0. Looks only. Map data (c) OpenStreetMap
-contributors (ODbL); Contains modified Copernicus Sentinel data 2025.
+contributors (ODbL); Microsoft Global ML Building Footprints (ODbL); Contains modified Copernicus Sentinel
+data 2025. Needs shapely.
 """
 import math
 import os
@@ -188,6 +190,7 @@ def main(path, mosaic):
         if r > R_OUT - 20 or in_model(mm, p):
             continue
         blds.append((wid, t, p, r))
+    blds += _ms_extra(blds, mm)
     # trees
     if mos:
         roofm = surface.roof_mask(mos, [(t, p, wid) for wid, t, p, _ in blds], _storeys)
@@ -264,6 +267,27 @@ def main(path, mosaic):
     w.save(path)
     tris = len(F) + sum(len(b.F) for b in list(B.walls.values()) + [B.roof, B.trim, B.glass]) + len(Fo.leaf.F) + len(Fo.bark.F) + len(Fo.far.F)
     print("near", path, "buildings", B.count, "trees", Fo.n, "triangles", tris)
+
+
+def _ms_extra(blds, mm):
+    """The buildings OpenStreetMap lacks (some 500 houses, sheds and carports round the ground): Microsoft's
+    footprints (geo.ms_buildings) that no OpenStreetMap building already covers by a third or more."""
+    from shapely.geometry import Polygon
+    from shapely.strtree import STRtree
+    have = [Polygon(p).buffer(0) for _, _, p, _ in blds]
+    tree = STRtree(have)
+    out = []
+    for k, p in enumerate(geo.ms_buildings(R_OUT)):
+        g = Polygon(p).buffer(0)
+        c = np.mean(p, 0)
+        r = math.hypot(*c)
+        if r > R_OUT - 20 or g.area < 6.0 or in_model(mm, p) or on_field(*c):
+            continue
+        if sum(g.intersection(have[i]).area for i in tree.query(g)) >= g.area / 3:
+            continue
+        out.append(("ms%d" % k, {"building": "yes"}, p, r))
+    print("buildings from Microsoft's footprints:", len(out))
+    return out
 
 
 def _slabs(cv, d, blds):
