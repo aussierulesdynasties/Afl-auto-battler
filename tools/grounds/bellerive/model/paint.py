@@ -144,10 +144,13 @@ t = T(5.0, 0.95, (178, 176, 166), n=5, bl=(0.8, 9))
 for u in (0.0, 2.5): t.vl(u + 0.02, 0.04, mul=0.7)
 t.hl(0.9, 0.06, mul=0.82); t.save('terrace')
 # grass hill (GE f135, gate 2026-11-19): green grass with dry straw patches, faint mower stripes
-t = T(10.0, 10.0, (100, 134, 80), n=10, bl=(2.5, 16))
-for u in np.arange(0, 10, 2.5): t.rect(u, u + 1.25, 0, 10, mul=np.array([1.06, 1.06, 1.02]))
-for _ in range(14):
-    u, z, r = R.uniform(0, 10), R.uniform(0, 10), R.uniform(0.4, 1.4); t.rect(u, u + r, z, z + r * 0.6, mul=np.array([1.38, 1.14, 1.3]))
+# 2026-11-22 (GE cs_090, summer): mostly dry olive-tan, green only in patches
+t = T(10.0, 10.0, (124, 126, 82), n=10, bl=(2.5, 16))
+for u in np.arange(0, 10, 2.5): t.rect(u, u + 1.25, 0, 10, mul=np.array([1.04, 1.04, 1.02]))
+for _ in range(30):
+    u, z, r = R.uniform(0, 10), R.uniform(0, 10), R.uniform(0.8, 2.6); t.rect(u, u + r, z, z + r * 0.6, mul=np.array([1.18, 1.1, 1.12]))
+for _ in range(10):
+    u, z, r = R.uniform(0, 10), R.uniform(0, 10), R.uniform(0.8, 2.0); t.rect(u, u + r, z, z + r * 0.7, mul=np.array([0.82, 0.98, 0.82]))
 t.save('grass_hill')
 # concourse apron: concrete slabs 3 m with saw joints, oil stains
 t = T(6.0, 6.0, (158, 156, 150), n=5, bl=(1.5, 10))
@@ -171,6 +174,7 @@ for i in range(6):
     for j in range(3):
         u, z = 0.35 + i * 1.06, 0.3 + j * 1.15; t.rect(u, u + 0.9, z, z + 0.95, (226, 230, 232)); t.rect(u + 0.2, u + 0.7, z + 0.2, z + 0.75, (250, 250, 244))
 t.save('lamps')
+t = T(1.0, 1.0, (238, 240, 236), n=3, bl=(0.5, 5)); t.save('lamp_face')   # the modelled lamps' glass
 
 # ---- NINJA STADIUM tower sign (GE x330, hand-lettered): two vertical panels reading bottom to top.
 # North face: white panel, black regular capitals. West face: navy panel, white bold capitals.

@@ -178,36 +178,63 @@ def boon_facade(mb, b0, b1, fac, zfac):
         hband(mb, P, 0, L, z, rec, rec + 0.12, 'steel_white')
 
 
+def _cuts(L, lo, hi, rng, off=0.0):
+    """Irregular stations along 0..L: gaps between lo and hi metres, the ends exactly 0 and L."""
+    out = [0.0]; s_ = off if off > 0 else rng.uniform(lo, hi)
+    while s_ < L - lo * 0.6:
+        out.append(s_); s_ += rng.uniform(lo, hi)
+    return out + [L]
+
+
+def _zip(A, B):
+    """Triangles between two rows of stations A and B (each a sorted list of (s, node)), the way a
+    folded skin is cut: always step along whichever row's next station comes first."""
+    tris = []; i = j = 0
+    while i < len(A) - 1 or j < len(B) - 1:
+        if j >= len(B) - 1 or (i < len(A) - 1 and A[i + 1][0] <= B[j + 1][0]):
+            tris.append((A[i][1], A[i + 1][1], B[j][1])); i += 1
+        else:
+            tris.append((A[i][1], B[j + 1][1], B[j][1])); j += 1
+    return tris
+
+
 def ponting_skin(mb, b0, b1, fac, zfac):
-    """Ricky Ponting Stand outside (GE cf_240, cf_270): a folded skin of big triangular panels. Four rows of
-    nodes alternate along the wall half a bay apart and in and out of it, so every panel is its own plane:
-    pale silver up top folding out from the roof edge, a band of blue glass and pale panels, then pale
-    facets tucking back in over the concourse. Under it the glazed concourse sits 2.4 m back."""
+    """Ricky Ponting Stand outside (GE cf_240, cf_270): a folded skin of big flat panels, cut irregularly.
+    Five rows of nodes, each row's stations spaced at random (seeded) and in and out of the wall line, are
+    zipped into triangles, so no two panels match: a pale silver crown folding out from the roof edge, a
+    band of big blue glass and pale panels whose bottom edge rises and falls, then pale facets tucking back
+    in over the concourse. Under it the glazed concourse sits 2.4 m back."""
     L, bear, P = arc_frame(b0, b1, fac)
-    zt = zfac(0.5 * (b0 + b1))
-    n = max(2, int(round(L / 12.5))); W = L / n
-    rows = [(zt, 0.0, 0.0), (14.0, 0.5, 1.2), (8.6, 0.0, 0.5), (4.6, 0.5, -1.4)]   # (z, bay offset, out)
-    node = lambda r, i: P(min(L, max(0.0, (i + rows[r][1]) * W)), rows[r][0], rows[r][2])
-    glass = ['skin_blue', 'skin_sky', 'skin_blue', 'skin_grey']
-    for i in range(-1, n + 1):
-        for r in range(3):
-            a, b_ = (r, i), (r, i + 1)
-            if rows[r][1] == 0.0:      # this row on the bay lines, the next half a bay on
-                t1 = [node(*a), node(*b_), node(r + 1, i)]; t2 = [node(r + 1, i - 1), node(r + 1, i), node(*a)]
+    zt = zfac(0.5 * (b0 + b1)); rng = np.random.default_rng(240)
+    # nodes are (s, z, out); a row is a list of (s, node)
+    row = lambda ss, zf, out: [(s_, (s_, zf(), out)) for s_ in ss]
+    r0 = row(_cuts(L, 10.0, 16.0, rng), lambda: zt, 0.0)
+    mids = [0.0] + [0.5 * (r0[k][0] + r0[k + 1][0]) + rng.uniform(-1.5, 1.5) for k in range(len(r0) - 1)] + [L]
+    r1 = row(mids, lambda: zt - 3.2 + rng.uniform(-0.4, 0.4), 0.9)
+    r2 = row(_cuts(L, 7.0, 14.0, rng), lambda: zt - 6.0 + rng.uniform(-0.6, 0.6), 1.2)
+    r3 = row(_cuts(L, 6.0, 13.0, rng), lambda: rng.uniform(8.0, 11.5), 0.7)
+    r4 = row(_cuts(L, 8.0, 16.0, rng), lambda: 4.6, -1.4)
+    # the glass band's colours run in irregular lengths: mostly blue glass, some sky, grey and pale panels
+    segs = _cuts(L, 4.0, 13.0, rng)
+    cols = rng.choice(['skin_blue', 'skin_blue', 'skin_blue', 'skin_sky', 'skin_grey', 'skin_pale', 'skin_pale'],
+                      len(segs))
+    for A, B, m1, m2 in [(r0, r1, 'skin_silver', 'skin_silver2'), (r1, r2, 'skin_silver2', 'skin_pale'),
+                         (r2, r3, None, None), (r3, r4, 'skin_pale', 'skin_silver2')]:
+        for n_, t in enumerate(_zip(A, B)):
+            (s1, z1, _), (s2, z2, _), (s3, z3, _) = t
+            if (s2 - s1) * (z3 - z1) - (s3 - s1) * (z2 - z1) < 0:    # face out: counter-clockwise seen from outside
+                t = (t[0], t[2], t[1])
+            if m1 is None:
+                m = str(cols[max(0, int(np.searchsorted(segs, (s1 + s2 + s3) / 3.0)) - 1)])
             else:
-                t1 = [node(*a), node(*b_), node(r + 1, i + 1)]; t2 = [node(r + 1, i), node(r + 1, i + 1), node(*a)]
-            if r == 0:
-                m1, m2 = 'skin_silver', 'skin_silver2'
-            elif r == 1:
-                m1, m2 = glass[i % 4], ('skin_pale' if i % 3 == 0 else glass[(i + 1) % 4])
-            else:
-                m1, m2 = 'skin_pale', 'skin_silver2'
-            mb.face(t1, m1); mb.face(t2, m2)
+                m = m1 if n_ % 2 == 0 else m2
+            mb.face([P(*q) for q in t], m)
     # concourse under the skin: soffit back from the lowest nodes, then dark glazing behind columns
     hband(mb, P, 0, L, 4.6, -1.4, -2.4, 'roof_soffit')
     ribbon(mb, P, 0, L, 0.0, 4.6, -2.4, 'backwall')
+    n = max(2, int(round(L / 12.5)))
     for k in range(n + 1):
-        post(mb, P, k * W, 0.0, 4.6, -2.2, 0.5, 0.5, 'steel_white')
+        post(mb, P, k * L / n, 0.0, 4.6, -2.2, 0.5, 0.5, 'steel_white')
     # the skin's ends, closed against the stand
     for s_ in (0.0, L):
         mb.face([P(s_, 0.0, -2.4), P(s_, 0.0, 0.0), P(s_, zt, 0.0), P(s_, 4.6, -2.4)], 'skin_silver2')
@@ -260,29 +287,57 @@ def skylights(col):
 MEM_ROWS = 3
 
 
+def _window(mb, P, a, b_, z0, z1, d, mw='render_white', pane='win_dark'):
+    """A window cut d metres into the wall line between s = a..b_, z0..z1: reveals, sill, head, dark pane."""
+    mb.face([P(a, z0, 0), P(a, z0, -d), P(a, z1, -d), P(a, z1, 0)], mw)
+    mb.face([P(b_, z0, -d), P(b_, z0, 0), P(b_, z1, 0), P(b_, z1, -d)], mw)
+    mb.face([P(a, z0, -d), P(a, z0, 0), P(b_, z0, 0), P(b_, z0, -d)], 'conc_grey')
+    mb.face([P(a, z1, 0), P(a, z1, -d), P(b_, z1, -d), P(b_, z1, 0)], mw)
+    mb.face([P(a, z0, -d), P(b_, z0, -d), P(b_, z1, -d), P(a, z1, -d)], pane, uv=[(0, 0), (1, 0), (1, 1), (0, 1)])
+
+
+def _wall_with_holes(mb, P, L, z0, z1, holes, m):
+    """The wall line from z0 to z1 over 0..L, with rectangular holes [(a, b_, h0, h1)] left open."""
+    xs = sorted({0.0, L, *[h[0] for h in holes], *[h[1] for h in holes]})
+    for s0, s1 in zip(xs, xs[1:]):
+        mid = 0.5 * (s0 + s1); zs = [z0]
+        for a, b_, h0, h1 in holes:
+            if a <= mid <= b_: zs += [h0, h1]
+        zs = sorted(zs) + [z1]
+        for k in range(0, len(zs) - 1, 2):
+            if zs[k + 1] > zs[k] + 1e-3:
+                ribbon(mb, P, s0, s1, zs[k], zs[k + 1], 0.0, m, step=4.0)
+
+
 def members_wall(mb, b0, b1, r_of, zr):
-    """The Members' outer wall (GE cf_320): white render with small square windows, two to an 8 m bay in two
-    storeys, each set 0.3 m into the wall (a modelled reveal round a dark pane), not painted on."""
+    """The Members' outer wall (GE cf_320, cf_345): plain white render, a few small square windows high up
+    and spaced unevenly, and at the foot of its north end a glazed entry set 1.2 m in under the wall. Every
+    window is cut into the wall with reveals and a sill, not painted on."""
     L, bear, P = arc_frame(b0, b1, r_of)
-    nb = max(1, int(round(L / 8.0))); W = L / nb; ww, d = 1.4, 0.3
-    rows = [(6.0, 7.2), (10.2, 11.4)]
-    for k in range(nb):
-        s0, s1 = k * W, (k + 1) * W; c = 0.5 * (s0 + s1); a, b_ = c - ww / 2, c + ww / 2
-        top = zr(bear(c))
-        cuts = [0.0] + [z for zz in rows for z in zz] + [top]
-        for j in range(0, len(cuts) - 1):
-            z0, z1 = cuts[j], cuts[j + 1]
-            if j % 2 == 0:                     # a full-width band between window rows
-                ribbon(mb, P, s0, s1, z0, z1, 0.0, 'render_white', step=W)
-            else:                              # the window row: piers either side, the recess between
-                ribbon(mb, P, s0, a, z0, z1, 0.0, 'render_white', step=W)
-                ribbon(mb, P, b_, s1, z0, z1, 0.0, 'render_white', step=W)
-                mb.face([P(a, z0, 0), P(a, z0, -d), P(a, z1, -d), P(a, z1, 0)], 'render_white')
-                mb.face([P(b_, z0, -d), P(b_, z0, 0), P(b_, z1, 0), P(b_, z1, -d)], 'render_white')
-                mb.face([P(a, z0, -d), P(a, z0, 0), P(b_, z0, 0), P(b_, z0, -d)], 'conc_grey')   # sill
-                mb.face([P(a, z1, 0), P(a, z1, -d), P(b_, z1, -d), P(b_, z1, 0)], 'render_white')
-                mb.face([P(a, z0, -d), P(b_, z0, -d), P(b_, z1, -d), P(a, z1, -d)], 'win_dark',
-                        uv=[(0, 0), (1, 0), (1, 1), (0, 1)])
+    top = min(zr(b) for b in np.linspace(b0, b1, 40))
+    rng = np.random.default_rng(320)
+    holes = []
+    s_ = rng.uniform(6.0, 12.0)
+    while s_ < L - 4.0:                    # the high windows: about 1.2 m square, 6-20 m apart
+        w = rng.uniform(1.0, 1.5); z0 = rng.choice([9.4, 9.4, 9.8]); holes.append((s_, s_ + w, z0, z0 + w * 0.8))
+        s_ += w + rng.uniform(6.0, 20.0)
+    c = 0.55 * L                           # a pair low down near the middle (GE cf_320, right of the trees)
+    holes += [(c, c + 1.2, 5.6, 6.6), (c + 6.0, c + 7.2, 5.6, 6.6)]
+    ent = (L - 26.0, L - 3.0, 0.0, 3.0)    # the north end's glazed entry
+    _wall_with_holes(mb, P, L, 0.0, top, holes + [ent], 'render_white')
+    n = int(math.ceil(L / 2.0))            # where the roof steps up (the north building), the wall above
+    for k in range(n):
+        s0, s1 = k * L / n, (k + 1) * L / n; z1 = zr(bear(0.5 * (s0 + s1)))
+        if z1 > top + 0.01: ribbon(mb, P, s0, s1, top, z1, 0.0, 'render_white', step=4.0)
+    for a, b_, z0, z1 in holes:
+        _window(mb, P, a, b_, z0, z1, 0.3)
+    a, b_, z0, z1 = ent; d = 1.2
+    _window(mb, P, a, b_, z0, z1, d, pane='boon_glass')
+    n = int((b_ - a) // 3.2)
+    for k in range(1, n):
+        post(mb, P, a + k * (b_ - a) / n, 0.0, z1, -d, 0.12, 0.14, 'steel_white')
+    for k in range(1, n + 1):
+        post(mb, P, a + (k - 0.5) * (b_ - a) / n, 0.0, z1, -0.4, 0.35, 0.35, 'render_white')
 
 
 def members_all(col):
@@ -418,30 +473,85 @@ def apron(col):
 
 
 def scoreboard(col):
+    """The east scoreboard (GE fac_100, cs_090): the dark screen toward the field, a 3.4 m deep steel box
+    behind it clad in pale panels with its frame standing proud (posts, rails and X bracing in four bays),
+    on a dark plant room with louvred doors. The screen's face stays where the data puts it."""
     S = D['scoreboard']; mb = MB('scoreboard'); F = Frame(dict(c=S['c'], a=S['a'], L=S['L'], W=S['W']))
-    mb.box(S['c'], S['L'], S['W'], S['H'], S['a'], 'scoreboard_back', z0=S['z0'])
-    h = S['L'] / 2; v = -S['W'] / 2 - 0.03   # screen face toward the field (west): blank dark screen
-    z0, z1 = S['z0'] + 0.4, S['z0'] + S['H'] - 0.4
-    mb.face([F.P(h - 0.4, v, z0), F.P(-h + 0.4, v, z0), F.P(-h + 0.4, v, z1), F.P(h - 0.4, v, z1)], 'screen', uv=[(0, 0), (1, 0), (1, 1), (0, 1)])
-    for u in (-h + 2.5, h - 2.5): mb.box(F.P(u, 0)[:2], 1.0, 1.0, S['z0'], S['a'], 'steel_galv')
+    h = S['L'] / 2; vf = -S['W'] / 2; dep = 3.4; vb = vf + dep; z0, z1 = S['z0'], S['z0'] + S['H']
+    q = lambda u, v, z=None: F.P(u, v, z)
+    # the box: back, ends, top and underside, clad
+    mb.face([q(-h, vb, z0), q(h, vb, z0), q(h, vb, z1), q(-h, vb, z1)], 'scoreboard_back')
+    mb.face([q(h, vf, z0), q(h, vf, z1), q(h, vb, z1), q(h, vb, z0)][::-1], 'scoreboard_back')
+    mb.face([q(-h, vb, z0), q(-h, vb, z1), q(-h, vf, z1), q(-h, vf, z0)][::-1], 'scoreboard_back')
+    mb.face([q(-h, vf, z1), q(-h, vb, z1), q(h, vb, z1), q(h, vf, z1)][::-1], 'steel_galv')
+    mb.face([q(-h, vf, z0), q(h, vf, z0), q(h, vb, z0), q(-h, vb, z0)][::-1], 'steel_galv')
+    # the screen's frame and the screen itself, set 0.15 m into it
+    mb.face([q(h, vf, z0), q(-h, vf, z0), q(-h, vf, z1), q(h, vf, z1)], 'steel_galv')
+    mb.face([q(h - 0.4, vf - 0.03, z0 + 0.4), q(-h + 0.4, vf - 0.03, z0 + 0.4), q(-h + 0.4, vf - 0.03, z1 - 0.4),
+             q(h - 0.4, vf - 0.03, z1 - 0.4)], 'screen', uv=[(0, 0), (1, 0), (1, 1), (0, 1)])
+    # the frame standing 0.25 m proud of the back: posts, three rails, an X in each bay
+    vo = vb + 0.14; us = np.linspace(-h, h, 5)
+    for u in us: mb.beam(q(u, vo, z0), q(u, vo, z1 + 0.25), 0.28, 0.28, 'steel_white')
+    for z in (z0 + 0.1, 0.5 * (z0 + z1), z1):
+        mb.beam(q(-h - 0.14, vo, z), q(h + 0.14, vo, z), 0.28, 0.24, 'steel_white')
+    for u0, u1 in zip(us, us[1:]):
+        for za, zb in ((z0 + 0.1, 0.5 * (z0 + z1)), (0.5 * (z0 + z1), z1)):
+            mb.beam(q(u0, vo, za), q(u1, vo, zb), 0.16, 0.16, 'steel_white')
+            mb.beam(q(u1, vo, za), q(u0, vo, zb), 0.16, 0.16, 'steel_white')
+    # the plant room under it: dark block, louvred doors set into its back
+    c = q(0.0, vf + dep / 2); mb.box(c, S['L'] - 1.0, dep, z0, S['a'], 'conc_grey', mtop='steel_galv')
+    for u in (-4.0, 0.5, 4.5):
+        a_, b_ = u - 0.9, u + 0.9; v = vb - 0.5 + 0.02
+        mb.face([q(a_, v, 0.0), q(b_, v, 0.0), q(b_, v, 2.3), q(a_, v, 2.3)], 'vom_dark')
+        mb.face([q(a_, v - 0.25, 0.0), q(a_, v, 0.0), q(a_, v, 2.3), q(a_, v - 0.25, 2.3)][::-1], 'conc_grey')
     mb.build(col)
 
 
 def towers(col):
+    """The four light towers (GE out_*): white tapering 12-sided poles, a service platform with a railing
+    under the head, and the head itself: a galvanised frame carrying 4 rows of 9 lamps, each lamp a
+    modelled box with a glass face, the whole head tilted 22 degrees down at the centre square."""
     T = D['towers']; mb = MB('light_towers'); H = T['H']
     for x, y in T['pos']:
-        n = 8; r0, r1 = 1.3, 0.6
+        n = 12; r0, r1 = 1.3, 0.55
         P0 = [(x + r0 * math.cos(2 * math.pi * k / n), y + r0 * math.sin(2 * math.pi * k / n)) for k in range(n)]
         P1 = [(x + r1 * math.cos(2 * math.pi * k / n), y + r1 * math.sin(2 * math.pi * k / n)) for k in range(n)]
         for k in range(n):
             j = (k + 1) % n; mb.face([(*P0[k], 0), (*P0[j], 0), (*P1[j], H), (*P1[k], H)], 'tower')
-        # lamp head facing the centre, tilted down 25 degrees
-        a = math.atan2(-x, -y); ux, uy = math.cos(a), -math.sin(a); fx, fy = math.sin(a), math.cos(a)
-        Fr = Frame(dict(c=(x + fx * 0.8, y + fy * 0.8), a=math.degrees(math.atan2(uy, ux)), L=7.0, W=1.2))
-        c = Fr.P(0, 0)[:2]; mb.box(c, 7.0, 1.0, 4.2, math.degrees(math.atan2(uy, ux)), 'steel_galv', z0=H - 1.0)
-        z0, z1 = H - 0.8, H + 3.0
-        mb.face([Fr.P(3.4, 0.55, z0), Fr.P(-3.4, 0.55, z0), Fr.P(-3.4, 0.55, z1), Fr.P(3.4, 0.55, z1)][::-1], 'lamps',
-                uv=[(0, 0), (1, 0), (1, 1), (0, 1)])
+        mb.cyl((x, y), 1.9, 0.0, 0.6, 'conc_grey', n=12, top='conc_grey')             # footing
+        a = math.atan2(-x, -y)                                                       # bearing to the centre
+        f = np.array([math.sin(a), math.cos(a), 0.0]); s_ = np.array([math.cos(a), -math.sin(a), 0.0])
+        up = np.array([0, 0, 1.0]); tilt = math.radians(22)
+        fz = f * math.cos(tilt) - up * math.sin(tilt); uz = up * math.cos(tilt) + f * math.sin(tilt)
+        base = np.array([x, y, H]) + f * 0.9
+        W, Hh = 8.4, 4.2
+        # platform and railing just under the head
+        pz = H - 0.9; pc = np.array([x, y, pz]) + f * 0.6
+        corners = [pc + s_ * u + f * v for u, v in ((-W / 2 - 0.3, -1.0), (W / 2 + 0.3, -1.0), (W / 2 + 0.3, 1.6), (-W / 2 - 0.3, 1.6))]
+        mb.face([tuple(c) for c in corners], 'steel_galv')
+        mb.face([tuple(c - up * 0.15) for c in corners[::-1]], 'steel_galv')
+        for i in range(4):
+            p, q_ = corners[i] + up * 1.1, corners[(i + 1) % 4] + up * 1.1
+            mb.beam(tuple(p), tuple(q_), 0.06, 0.06, 'steel_galv')
+            mb.beam(tuple(corners[i]), tuple(corners[i] + up * 1.1), 0.06, 0.06, 'steel_galv')
+        # the head's frame: two posts off the pole, rails top and bottom and between the lamp rows
+        hc = base + up * 1.0
+        def hp(u, v, w=0.0): return tuple(hc + s_ * u + uz * v + fz * w)
+        for v in np.linspace(0.0, Hh, 5):
+            mb.beam(hp(-W / 2, v), hp(W / 2, v), 0.14, 0.14, 'steel_galv')
+        for u in (-W / 2, -W / 6, W / 6, W / 2):
+            mb.beam(hp(u, -0.1), hp(u, Hh + 0.1), 0.14, 0.14, 'steel_galv')
+        mb.beam(tuple(np.array([x, y, H - 0.6])), hp(-W / 6, 0.4), 0.3, 0.3, 'steel_galv')
+        mb.beam(tuple(np.array([x, y, H - 0.6])), hp(W / 6, 0.4), 0.3, 0.3, 'steel_galv')
+        # lamps: 4 rows of 9 boxes, glass faces toward the ground
+        for j in range(4):
+            for i in range(9):
+                u = -W / 2 + (i + 0.5) * W / 9; v = (j + 0.5) * Hh / 4; e = 0.36
+                c = [hp(u + du * e, v + dv * e, 0.1) for du, dv in ((-1, -1), (1, -1), (1, 1), (-1, 1))]
+                cf = [hp(u + du * e, v + dv * e, 0.65) for du, dv in ((-1, -1), (1, -1), (1, 1), (-1, 1))]
+                for k in range(4):
+                    mb.face([c[k], c[(k + 1) % 4], cf[(k + 1) % 4], cf[k]], 'steel_galv')
+                mb.face(cf, 'lamp_face'); mb.face(c[::-1], 'steel_galv')
     mb.build(col)
 
 
