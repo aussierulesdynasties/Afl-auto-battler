@@ -53,6 +53,17 @@ season facts) comes from the same free public pages as the 2010s, for those year
 2026 draft page (the 2026 mid-season rookie draft). Details, counts and gaps:
 [research/LEGACY_2020S_MANIFEST.md](research/LEGACY_2020S_MANIFEST.md).
 
+## Ground surroundings (tools/grounds/mcg/surrounds.py, MCG flagship stage 6)
+
+The land round the MCG in a match is drawn from OpenStreetMap. This includes Yarra Park's paths, car
+parks and trees, the roads, the Jolimont rail yards and the buildings' footprints and heights. The
+script fetches about 2 km round the ground from the OpenStreetMap API, then paints
+`assets/grounds/mcg/surrounds.webp` and writes `trees.bin` and `buildings.bin`.
+
+The map data is © OpenStreetMap contributors and is available under the Open Database Licence
+(ODbL). Any release credits must carry that line. No aerial imagery is shipped: Google Earth and
+Esri imagery are used only to check the look by eye.
+
 ## What we have vs wishlist
 
 Base: `data/players_2026.csv` — 669 players, season totals only:

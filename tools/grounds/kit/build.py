@@ -153,8 +153,8 @@ def seat_rows(bs, prof, k, n, aisle=12.0, gap=1.1):
     # radial columns (bearing steps), so every row ends the same distance from its aisle
     sec = [b0] + ab + [b1]
     clr = lambda i: (0.3 if i == 0 else gap / 2 + 0.25)
-    def row0(b):
-        P = prof(b); (r0, z0), (r1, z1) = P[k], P[k + 1]; return np.array(pol(b, r0 + (r1 - r0) / n)), (r1 - r0) / n, z0, z1
+    def row(b, j):   # the back of tread j on the radial line at bearing b (where stepped() draws it), z0, z1
+        P = prof(b); (r0, z0), (r1, z1) = P[k], P[k + 1]; return np.array(pol(b, r0 + (r1 - r0) * (j + 1) / n)), z0, z1
     for j in range(n):
         for i in range(len(sec) - 1):
             lo = sec[i] + math.degrees(clr(i) / rf); hi = sec[i + 1] - math.degrees(clr(i + 1 if i + 1 < len(sec) - 1 else 0) / rf)
@@ -165,15 +165,17 @@ def seat_rows(bs, prof, k, n, aisle=12.0, gap=1.1):
             offs = [(m - (N - 1) / 2) * st for m in range(N)]
             for m in range(N):
                 bb = mid + offs[m]
-                q0, dr, z0, z1 = row0(bb); tt = np.array(row0(bb + 0.05)[0]) - np.array(row0(bb - 0.05)[0]); tt /= np.linalg.norm(tt)
+                # each row on its own radial line: a step of dr along the row's normal walks off the radial
+                # treads where the bowl is not round (Sky Stadium's upper rows ended a tread up, sunk into it)
+                q, z0, z1 = row(bb, j); tt = row(bb + 0.05, j)[0] - row(bb - 0.05, j)[0]; tt /= np.linalg.norm(tt)
                 oo = np.array((-tt[1], tt[0]))
-                if oo @ q0 < 0: oo = -oo
+                if oo @ q < 0: oo = -oo
                 zz = z0 + (z1 - z0) * j / (n - 1) if n > 1 else z0
                 if SEAT_MIX:
                     cs, ps = zip(*SEAT_MIX); col = cs[int(SEAT_RNG.choice(len(cs), p=np.array(ps) / sum(ps)))]
                 else:
                     col = ROW_COLS[min(j, len(ROW_COLS) - 1)]
-                seat(tuple(q0 + oo * dr * j), tuple(tt), tuple(oo), zz, col=col)
+                seat(tuple(q), tuple(tt), tuple(oo), zz, col=col)
 
 
 def endcap(mb, b, pts, m, sign):

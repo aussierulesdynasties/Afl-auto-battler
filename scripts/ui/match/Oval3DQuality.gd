@@ -30,16 +30,18 @@ const LEVELS := [LOW, MEDIUM, HIGH]
 ##   tower_shadows how many of a ground's light towers throw the men's shadows at night (each
 ##                 draws the men again into its own part of the sun's shadow map); the rest
 ##                 light without one
+##   rain          drops in the air on a wet day (rule 2.83: when it rains, rain falls on screen, so
+##                 every level keeps some; High is the approved prototype's count)
 const PRESETS := {
 	HIGH: {"shadow_atlas": 4096, "shadow_filter": RenderingServer.SHADOW_QUALITY_SOFT_HIGH, "splits": 4,
 			"seat_shadows": true, "stand_shade": true, "people_d": 55.0, "lod": 1.0, "scale": 1.0,
-			"blades": true, "tower_shadows": 4},
+			"blades": true, "tower_shadows": 4, "rain": 40000},
 	MEDIUM: {"shadow_atlas": 2048, "shadow_filter": RenderingServer.SHADOW_QUALITY_SOFT_LOW, "splits": 4,
 			"seat_shadows": false, "stand_shade": true, "people_d": 30.0, "lod": 2.0, "scale": 1.0,
-			"blades": true, "tower_shadows": 2},
+			"blades": true, "tower_shadows": 2, "rain": 20000},
 	LOW: {"shadow_atlas": 2048, "shadow_filter": RenderingServer.SHADOW_QUALITY_SOFT_LOW, "splits": 2,
 			"seat_shadows": false, "stand_shade": false, "people_d": 0.0, "lod": 4.0, "scale": 0.75,
-			"blades": false, "tower_shadows": 1},
+			"blades": false, "tower_shadows": 1, "rain": 10000},
 }
 
 
