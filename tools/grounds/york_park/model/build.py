@@ -422,11 +422,31 @@ def tower(mb, T):
     if np.dot(nr, f) < 0: nr = -nr
     c0 = np.array([x, y, zb]) + f * 0.6
     Q = lambda u, v, d=0.0: c0 + s * u * w / 2 + up * v + nr * d
-    oriented(mb, [Q(-1, 0), Q(1, 0), Q(1, hh), Q(-1, hh)], 'lamps', nr, [(0, 0), (1, 0), (1, 1), (0, 1)])
-    oriented(mb, [Q(-1, 0, -0.8), Q(1, 0, -0.8), Q(1, hh, -0.8), Q(-1, hh, -0.8)], 'steel_galv', -nr)
-    for (a, b_) in (((-1, 0), (1, 0)), ((1, 0), (1, hh)), ((1, hh), (-1, hh)), ((-1, hh), (-1, 0))):
-        q = [Q(*a), Q(*b_), Q(*b_, -0.8), Q(*a, -0.8)]; cen = Q(0, hh / 2, -0.4)
-        oriented(mb, q, 'steel_galv', np.mean(q, 0) - cen)
+    # The head (GE l045-l315, the grandstand photo): an open galvanised frame of rails and posts, the 4 rows of
+    # 8 lamps on it each a modelled box whose glass face looks down at the ground; the sky shows between them.
+    for v in np.linspace(0.0, hh, 5):
+        mb.beam(tuple(Q(-1, v, -0.3)), tuple(Q(1, v, -0.3)), 0.16, 0.16, 'steel_galv')
+    for u in (-1, -1 / 3, 1 / 3, 1):
+        mb.beam(tuple(Q(u, -0.1, -0.3)), tuple(Q(u, hh + 0.1, -0.3)), 0.16, 0.16, 'steel_galv')
+    for u in (-1 / 3, 1 / 3):   # two struts back to the pole
+        mb.beam((x, y, zb + 0.8), tuple(Q(u, 0.5, -0.3)), 0.3, 0.3, 'steel_galv')
+    for j in range(4):
+        for i in range(8):
+            u = -1 + (i + 0.5) * 2 / 8; v = (j + 0.5) * hh / 4; e = 0.34
+            c = [Q(u + du * e / (w / 2), v + dv * e, -0.2) for du, dv in ((-1, -1), (1, -1), (1, 1), (-1, 1))]
+            cf = [Q(u + du * e / (w / 2), v + dv * e, 0.45) for du, dv in ((-1, -1), (1, -1), (1, 1), (-1, 1))]
+            cen = Q(u, v, 0.12)
+            for k in range(4):
+                q = [c[k], c[(k + 1) % 4], cf[(k + 1) % 4], cf[k]]
+                oriented(mb, q, 'steel_galv', np.mean(q, 0) - cen)
+            oriented(mb, cf, 'lamp_face', nr); oriented(mb, c, 'steel_galv', -nr)
+    # a service platform with a railing just under the head
+    pz = zb - 0.9; pc = np.array([x, y, pz]) + f * 0.4
+    corners = [pc + s * u_ + f * v_ for u_, v_ in ((-w / 2 - 0.3, -1.0), (w / 2 + 0.3, -1.0), (w / 2 + 0.3, 1.5), (-w / 2 - 0.3, 1.5))]
+    oriented(mb, corners, 'steel_galv', np.array([0, 0, 1.0])); oriented(mb, [c_ - np.array([0, 0, 0.15]) for c_ in corners], 'steel_galv', np.array([0, 0, -1.0]))
+    for i_ in range(4):
+        p_, q_ = corners[i_] + np.array([0, 0, 1.1]), corners[(i_ + 1) % 4] + np.array([0, 0, 1.1])
+        mb.beam(tuple(p_), tuple(q_), 0.06, 0.06, 'steel_galv'); mb.beam(tuple(corners[i_]), tuple(p_), 0.06, 0.06, 'steel_galv')
 
 
 def scoreboard(mb, L, R, inset, z0, z1, depth, frame, back, faces, rim, back_rim=None):
