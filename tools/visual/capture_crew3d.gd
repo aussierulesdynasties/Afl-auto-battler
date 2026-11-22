@@ -2,7 +2,7 @@ extends SceneTree
 ## The match crew on the 3D oval (row 202): every umpire, trainer and runner in his clothes,
 ## filmed close, then the crew at work in a seeded match: a trainer's drink run while a set shot
 ## is lined up, and a runner on after a goal.
-##   godot --path . --rendering-method mobile --script tools/visual/capture_crew3d.gd -- OUTDIR [SEED]
+##   godot --path . --rendering-method mobile --script tools/visual/capture_crew3d.gd -- OUTDIR [SEED] [portraits]
 ## Saves OUTDIR/role_<role>_<k>_<view>.png (front, side, back, from 3.2 m) and
 ## OUTDIR/<drinks|runner>_<n>/fNNN.png, and prints where each crew member stood or ran.
 
@@ -80,6 +80,18 @@ func _run() -> void:
 		cam.global_position = mid + (fw + side * 0.6).normalized() * 1.4 + Vector3(0, 0.55, 0)
 		cam.look_at(mid + Vector3(0, 0.5, 0), Vector3.UP)
 		await _shot(pv, out, "role_%s_close" % key)
+		# A trainer's bottle hand, close: the bottle gripped in a closed fist.
+		if p.has("bottle"):
+			var sk: Skeleton3D = p["skel"]
+			var hand := sk.global_transform * sk.get_bone_global_pose(sk.find_bone("hand_r"))
+			var at := hand * Vector3(0, 0.07, 0)
+			for hv in [["out", side], ["front", fw]]:
+				cam.global_position = at + (hv[1] as Vector3) * 0.55 + Vector3(0, 0.08, 0)
+				cam.look_at(at, Vector3.UP)
+				await _shot(pv, out, "role_%s_hand_%s" % [key, hv[0]])
+	if args.size() > 2 and str(args[2]) == "portraits":
+		quit()
+		return
 	# The crew at work.
 	var films := {"drinks": 0, "runner": 0}
 	var left := 0

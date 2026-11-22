@@ -62,21 +62,37 @@ static func bench(side: int) -> Vector2:
 	return _outside(Vector2(x, y), BENCH_OUT)
 
 
-## The crew of both clubs: four trainers and a runner each, in the club's own shorts and socks
+## Trainers' shorts: black (2025 broadcasts, three clubs).
+const TRAINER_SHORTS := Color(0.04, 0.04, 0.045)
+## The yellow squeeze bottles trainers hand out (2025 broadcasts).
+const BOTTLE := Color(1.0, 0.86, 0.12)
+
+
+## The crew of both clubs: four trainers and a runner each, in the club's own socks (the runner his shorts too)
 ## (body: each club's kit material) under the crew's tops. clubs: [home, away].
 func build(scene: PackedScene, body: Array, clubs: Array) -> void:
 	var shorts := []
+	var tops := []
 	for c in clubs:
-		shorts.append(GameDB.club_guernsey(c).get("shorts", Color(0.1, 0.1, 0.12)))
+		var g: Dictionary = GameDB.club_guernsey(c)
+		shorts.append(g.get("shorts", Color(0.1, 0.1, 0.12)))
+		tops.append(g.get("base", Color(0.07, 0.07, 0.08)))
 	var tee_kits := []
 	var vest_kits := []
 	var runner_kits := []
+	var trainer_body := []
 	for side in range(2):
 		var sh: Color = shorts[side]
-		tee_kits.append(oval._kit({"design": "plain", "base": Color(0.07, 0.07, 0.08),
-				"pattern": Color(0.07, 0.07, 0.08), "pattern2": Color(0.07, 0.07, 0.08), "shorts": sh}))
+		var top: Color = tops[side]
+		# 2025 broadcasts: the purple vest over the club's own top, with black shorts.
+		tee_kits.append(oval._kit({"design": "plain", "base": top, "pattern": top, "pattern2": top,
+				"shorts": TRAINER_SHORTS}))
 		vest_kits.append(oval._kit({"design": "plain", "base": Oval3DCrew.TRAINER_VEST,
-				"pattern": Oval3DCrew.TRAINER_VEST, "pattern2": Oval3DCrew.TRAINER_VEST, "shorts": sh}))
+				"pattern": Oval3DCrew.TRAINER_VEST, "pattern2": Oval3DCrew.TRAINER_VEST,
+				"shorts": TRAINER_SHORTS}))
+		var tb := (body[side] as ShaderMaterial).duplicate() as ShaderMaterial
+		tb.set_shader_parameter("shorts", TRAINER_SHORTS)
+		trainer_body.append(tb)
 		runner_kits.append(oval._kit({"design": "plain", "base": Oval3DCrew.RUNNER_TOP,
 				"pattern": Oval3DCrew.RUNNER_TOP, "pattern2": Oval3DCrew.RUNNER_TOP, "shorts": sh}))
 	var k := 0
@@ -86,7 +102,7 @@ func build(scene: PackedScene, body: Array, clubs: Array) -> void:
 				var spot := arc_spot(end, wing)
 				# The two clubs side by side along the fence.
 				var along := Vector2(-spot.y, spot.x).normalized() * PAIR * (0.5 if side == 0 else -0.5)
-				_add(scene, "trainer", side, spot + along, body[side], tee_kits[side], vest_kits[side], k)
+				_add(scene, "trainer", side, spot + along, trainer_body[side], tee_kits[side], vest_kits[side], k)
 				k += 1
 		_add(scene, "runner", side, bench(side), body[side], runner_kits[side], null, k)
 		k += 1
@@ -124,18 +140,18 @@ func _bottle(c: Dictionary) -> void:
 	var mi := MeshInstance3D.new()
 	mi.name = "crew_bottle"
 	mi.mesh = (all["crew_bottle"] as Dictionary)["mesh"]
-	mi.transform = BOTTLE_IN_HAND
+	var grip := Oval3DGrip.new()
+	grip.name = "grip"
+	skel.add_child(grip)
+	mi.transform = grip.held_at(skel)
 	var m := StandardMaterial3D.new()
-	m.albedo_color = Color(0.86, 0.88, 0.9, 1.0)
+	m.albedo_color = BOTTLE
 	m.roughness = 0.35
 	mi.material_override = m
 	on.add_child(mi)
 	c["bottle"] = mi
 
 
-## The bottle's place in the right hand's frame: gripped round its middle in the palm, upright
-## as the hand hangs. Measured on the body's rest hand (capture_crew3d.gd checks it sits in the palm).
-static var BOTTLE_IN_HAND := Transform3D(Basis(Vector3(0, 0, 1), deg_to_rad(90.0)), Vector3(0.0, 0.08, 0.035))
 
 
 ## One frame: who is wanted where (a drink in a break before a shot, the runner after a goal),
@@ -253,6 +269,9 @@ func _move(c: Dictionary, dt: float, bp: Vector2) -> void:
 	# Standing at the fence far from the camera, his idle is not worth a phone's time to pose:
 	# it holds until the camera comes near or he moves.
 	var cam := oval.get_viewport().get_camera_3d() if oval.is_inside_tree() else null
-	if clip == "idle" and job < 0 and cam != null and cam.global_position.distance_to(n.global_position) > FAR:
+	# (Posed once first, so his hands hold what they carry.)
+	if clip == "idle" and job < 0 and cam != null and c.get("posed", false) \
+			and cam.global_position.distance_to(n.global_position) > FAR:
 		return
+	c["posed"] = true
 	ap.advance(maxf(dt * rate, 1e-4))

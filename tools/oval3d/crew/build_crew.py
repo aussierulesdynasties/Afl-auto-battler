@@ -1031,6 +1031,8 @@ def bottle():
         for k in range(n):
             bm.faces.new((a[k], a[(k + 1) % n], b[(k + 1) % n], b[k]))
     bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-5)
+    # Faces out (the rings were wound inward: it drew dark, lit from inside).
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
     m = bpy.data.meshes.new("crew_bottle")
     bm.to_mesh(m)
     ob = bpy.data.objects.new("crew_bottle", m)
