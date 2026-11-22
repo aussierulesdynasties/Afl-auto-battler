@@ -45,6 +45,9 @@ const GOLDEN_REAL := "c7c47ccb082c9a1cd4ed671c2b9bf30c"
 ## season's print is the one taken before it was written down, which is the
 ## proof that writing it down changed no result and no draw.
 const BOOKKEEPING_KEYS := ["impact_by", "breeze_side"]
+## Event keys that only feed the picture: a goal's TV stat card (row 207) copies
+## the kicker's numbers at that goal and draws nothing, so leaving it out keeps the print.
+const EVENT_BOOKKEEPING_KEYS := ["card"]
 ## Team counts that record where something happened, not what happened: the
 ## pressure zones (pressure acts in the defensive half, tackles inside 50,
 ## 2026-11-14) are counted without a draw, so leaving them out keeps the print.
@@ -240,6 +243,10 @@ func _season_print() -> String:
 				for k in BOOKKEEPING_KEYS:
 					(c as Dictionary).erase(k)
 				_strip_team_bookkeeping(c)
+				for e in (c as Dictionary).get("events", []):
+					if e is Dictionary:
+						for k in EVENT_BOOKKEEPING_KEYS:
+							(e as Dictionary).erase(k)
 			games.append(c)
 		played.append(games)
 	out.append(JSON.stringify(played, "", true))
