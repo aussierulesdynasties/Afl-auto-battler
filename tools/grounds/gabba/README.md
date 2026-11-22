@@ -20,3 +20,25 @@ Needs Blender 5.2, Godot 4.7.2 and Python with numpy, Pillow, scipy and imageio-
    `gp/`), the sunlit seat close-up and `gabba_exterior.mp4`. The Godot path in `rt2.sh`/`h8chain.sh` is this PC's.
 
 Knobs and measured part positions are in `model_in5.json`; `geo.py` holds the camera projection.
+
+## v7: to the MCG standard (2026-11-22)
+
+Checked against Google Earth 3D (36 views) and a 2019 photo sphere taken on the ground
+(docs/MCG_STANDARD.md). The plan (bowl, roof outline, towers) already matched Google Earth; the rest was rebuilt:
+
+- **Outside walls**: charcoal cladding over a grey precast first floor (`facade_v7.png`), no blue glass.
+- **Steel, all modelled**: a white column at every rafter from the footpath to 5 m above the roof, a stay from
+  its top onto the roof, two white ring beams (under the fascia and at 14 m) with an X in every bay, and struts
+  back to the wall.
+- **Roof**: a sheet with depth (white top, pale grey-green underside 0.35 m below, a 1.2 m outer fascia), each
+  bay sagging between the rafters; no tent peaks. Under it: a dark tapered rafter at every column, a rib down
+  each bay and the leading-edge truss along the inner edge.
+- **Seats**: gold, maroon in whole blocks, some white (photo sphere). Box fronts dark glass under an LED ribbon
+  (plain colour blocks, no lettering). Hyundai Centre piers white, not blue.
+- **Surroundings**: `surrounds.py` (Woolloongabba from OpenStreetMap, the house yards filled with trees, the
+  CBD's towers), loaded through `GroundModels.SURROUNDS`.
+
+Build in the cloud with the bpy module: `python mktex_v7.py`, then build.py with
+`sys.argv = ['blender', '--', 'model_in6.json', OUT.glb, OUT.blend, 'htex']` (model_in6 is the current input),
+copy the glb and seat bins to `assets/grounds/gabba` (`seats_seat_<c>.bin` -> `seats_seat_gabba_<c>.bin`),
+`godot --headless --import`, `seat_check.gd -- gabba`. QA views are in `qa/` for `tools/grounds/ge_compare.py`.

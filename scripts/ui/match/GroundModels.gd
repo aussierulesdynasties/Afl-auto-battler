@@ -107,6 +107,12 @@ const SURROUNDS := {
 			# The precinct and the parkland next to the stands at 4 pixels a metre (the far map's 1 m smeared
 			# the concourse and paths seen from the stands: director's fault 11).
 			"map_near": "surrounds_near.webp", "span_near": 512.0},
+	# The Gabba in Woolloongabba: Vulture, Stanley and Main Streets, the Cross River Rail works, the East
+	# Brisbane houses and yards, Kangaroo Point and the river, the CBD's towers to the north-west
+	# (tools/grounds/gabba/surrounds.py).
+	"gabba": {"y": -0.03, "inner": 100.0, "colour": Color(0.45, 0.55, 0.27),
+			"map": "surrounds.webp", "span": 2048.0, "trees": "trees.bin", "buildings": "buildings.bin",
+			"building_colours": "buildings_col.bin", "map_near": "surrounds_near.webp", "span_near": 512.0},
 }
 
 ## Parts of a model drawn again from a build tool's own mesh (per vertex x, y, z, normal, colour;
@@ -180,9 +186,10 @@ const SEAT_COLOURS := {
 	"seat_ao_navy": Color8(35, 55, 77), "seat_ao_charcoal": Color8(70, 70, 75),
 	"seat_ao_slate": Color8(100, 116, 114), "seat_ao_sage": Color8(95, 118, 112),
 	"seat_ao_red": Color8(150, 45, 50), "seat_ao_orange": Color8(200, 62, 36),
-	# The Gabba's seat mix (tools/grounds/gabba/mktex_hand.py, from photo g49) and its steel seat legs.
-	"seat_gabba_gold": Color8(226, 168, 30), "seat_gabba_orange": Color8(222, 120, 34),
-	"seat_gabba_white": Color8(236, 236, 230), "seat_gabba_blue": Color8(34, 64, 152),
+	# The Gabba's seats (tools/grounds/gabba/build.py v7, from a 2019 photo sphere on the ground): gold above all,
+	# maroon in whole blocks, some white; and its steel seat legs.
+	"seat_gabba_gold": Color8(226, 168, 30), "seat_gabba_maroon": Color8(112, 30, 46),
+	"seat_gabba_white": Color8(236, 236, 230),
 	"gabba_steel": Color(0.45, 0.46, 0.47),
 }
 

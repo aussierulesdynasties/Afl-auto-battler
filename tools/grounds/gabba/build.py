@@ -17,20 +17,21 @@ def mat(name, rgb, rough=0.8, tex=None, metal=0.0):
     b.inputs['Base Color'].default_value = (*[c ** 2.2 for c in rgb], 1)
     b.inputs['Roughness'].default_value = rough; b.inputs['Metallic'].default_value = metal
     if tex:
-        t = m.node_tree.nodes.new('ShaderNodeTexImage'); t.image = bpy.data.images.load(TEX + '/' + tex)
+        t = m.node_tree.nodes.new('ShaderNodeTexImage'); t.image = bpy.data.images.load(TEX + '/' + tex, check_existing=True)   # one image per file: the bpy module's exporter lost duplicates' pixels
         m.node_tree.links.new(t.outputs['Color'], b.inputs['Base Color'])
     me.materials.append(m); return len(me.materials) - 1
 
 # every texture is hand-made (mktex_hand.py -> htex/); no photo pixels
 W1 = (1, 1, 1)
 GR = mat('grass', W1, 0.95, 'grass.png'); SE = mat('seats', W1, 0.85, 'seats.png')
-WK = mat('walk', W1, 0.9, 'concrete.png'); GL = mat('glass', W1, 0.25, 'boxglass.png')
+WK = mat('walk', W1, 0.9, 'concrete.png'); GL = mat('glass', W1, 0.25, 'boxglass_v7.png')
 CO = mat('concrete', W1, 0.85, 'concrete.png'); MB = mat('membrane', W1, 0.6, 'membrane.png')
 ST = mat('steel', W1, 0.4, 'steel.png'); DK = mat('dark', W1, 0.9, 'darkdeck.png')
 T4 = mat('t411', W1, 0.5, 't411.png'); T4S = mat('t411s', W1, 0.5, 't411_slab.png'); LM = mat('lamps', W1, 0.3, 'lamphead.png')
 SI = mat('site', W1, 0.9, 'path.png'); HY = mat('hyundai', W1, 0.7, 'hyundai.png'); SC = mat('screen', W1, 0.5, 'screen.png')
-SF = mat('screenface', W1, 0.3, 'scoreface.png'); RD = mat('roofdeck', W1, 0.8, 'roofdeck.png'); FA = mat('facade', W1, 0.7, 'facade_bay.png')
-BOX = {CO: 4.0, WK: 4.0, DK: 4.0, RD: 6.0, SC: 4.0, T4S: 19.0, HY: 11.0, T4: 19.0, ST: 4.0, MB: 12.0}
+SF = mat('screenface', W1, 0.3, 'scoreface.png'); RD = mat('roofdeck', W1, 0.8, 'roofdeck.png'); FA = mat('facade', W1, 0.7, 'facade_v7.png')
+RU = mat('roof_under', W1, 0.9, 'roofunder.png'); GD = mat('girder', W1, 0.6, 'girder.png')   # v7 (mktex_v7.py)
+BOX = {RU: 6.0, GD: 4.0, CO: 4.0, WK: 4.0, DK: 4.0, RD: 6.0, SC: 4.0, T4S: 19.0, HY: 11.0, T4: 19.0, ST: 4.0, MB: 12.0}
 
 bm = bmesh.new(); uv = bm.loops.layers.uv.new()
 cx, cy = D['Cc']
@@ -121,16 +122,19 @@ for i in range(len(B)):
         face([P(b0, rF(b0), 0), P(b1, rF(b1), 0), P(b1, rF(b1), zt), P(b0, rF(b0), zt)], FA, [(u0, 0), (u1, 0), (u1, zt / ZF), (u0, zt / ZF)])
         if ZB > ZF: face([P(b0, rF(b0), ZF), P(b1, rF(b1), ZF), P(b1, rF(b1), ZB), P(b0, rF(b0), ZB)], DK)
         # floor slab edges standing proud of the face at each level
-        for zs, dep in ((kn('podium', 10.5), 1.2), (16.0, 0.5), (22.0, 0.5)):
+        # v7: pale concrete at the first floor, the upper slab edges dark like the cladding (Google Earth)
+        for zs, dep, sm in ((6.0, 0.8, CO), (kn('podium', 10.5), 1.2, GD), (16.0, 0.5, GD), (22.0, 0.5, GD)):
             o0, o1 = rF(b0) + dep, rF(b1) + dep
-            face([P(b0, rF(b0), zs), P(b1, rF(b1), zs), P(b1, o1, zs), P(b0, o0, zs)], CO)
-            face([P(b0, o0, zs), P(b1, o1, zs), P(b1, o1, zs + 0.45), P(b0, o0, zs + 0.45)], CO)
-            face([P(b0, rF(b0), zs + 0.45), P(b0, o0, zs + 0.45), P(b1, o1, zs + 0.45), P(b1, rF(b1), zs + 0.45)], CO)
+            face([P(b0, rF(b0), zs), P(b1, rF(b1), zs), P(b1, o1, zs), P(b0, o0, zs)], sm)
+            face([P(b0, o0, zs), P(b1, o1, zs), P(b1, o1, zs + 0.45), P(b0, o0, zs + 0.45)], sm)
+            face([P(b0, rF(b0), zs + 0.45), P(b0, o0, zs + 0.45), P(b1, o1, zs + 0.45), P(b1, rF(b1), zs + 0.45)], sm)
 zi, zo = D['zi'], D['zo']; NU, NV = 6, 8; ARCH = kn('arch', 2.5); SCAL = kn('scallop', 3.0); NU, NV = 16, 24
-def roofpt(a, t, s):
+SAG7 = 1.2; RT = 0.35   # mid-bay sag at the outer edge; the roof's thickness (top sheet over the underside)
+def roofpt(a, t, s, dz=0.0):
     ri = rI(a) + SCAL * 4 * t * (1 - t); ro = rO(a); r = ri + (ro - ri) * s
-    # saddle bay (street photo tx/e4): the outer edge hangs down between the mast tops, the middle of the bay lifts
-    z = zi + (zo - zi) * s + ARCH * math.sin(math.pi * t) * (math.sin(math.pi * s) - s)
+    # v7 (Google Earth close-ups, 2026-11-22): each bay's sheet hangs between the rafters, most at the outer edge
+    # (the scalloped fascia seen from the street), a ridge over every rafter; no tent peaks.
+    z = zi + (zo - zi) * s - SAG7 * math.sin(math.pi * t) * s ** 1.5 + dz
     return P(a, r, z)
 for i in range(len(B)):
     a0 = B[i]; a1 = B[(i + 1) % len(B)]
@@ -138,15 +142,31 @@ for i in range(len(B)):
     G = [[bm.verts.new(roofpt(a0 + (a1 - a0) * u / NU, u / NU, v / NV)) for v in range(NV + 1)] for u in range(NU + 1)]
     for u in range(NU):
         for v in range(NV):
-            f = bm.faces.new((G[u][v], G[u + 1][v], G[u + 1][v + 1], G[u][v + 1])); f.material_index = MB
-            for l, t in zip(f.loops, [(u / NU, v / NV), ((u + 1) / NU, v / NV), ((u + 1) / NU, (v + 1) / NV), (u / NU, (v + 1) / NV)]): l[uv].uv = t
+            f = bm.faces.new((G[u][v], G[u][v + 1], G[u + 1][v + 1], G[u + 1][v])); f.material_index = MB   # faces up
+            for l, t in zip(f.loops, [(u / NU, v / NV), (u / NU, (v + 1) / NV), ((u + 1) / NU, (v + 1) / NV), ((u + 1) / NU, v / NV)]): l[uv].uv = t
+    # v7: the underside, RT below (pale grey-green membrane, photo sphere 2019), faces down, and the fascia closing
+    # the edge all round: the roof is a sheet with depth, not a single skin
+    GU = [[bm.verts.new(roofpt(a0 + (a1 - a0) * u / NU, u / NU, v / NV, -RT)) for v in range(NV + 1)] for u in range(NU + 1)]
+    for u in range(NU):
+        for v in range(NV):
+            f = bm.faces.new((GU[u][v], GU[u + 1][v], GU[u + 1][v + 1], GU[u][v + 1])); f.material_index = RU
+            for l, t in zip(f.loops, [(u / 2, v), ((u + 1) / 2, v), ((u + 1) / 2, v + 1), (u / 2, v + 1)]): l[uv].uv = (t[0] * 0.5, t[1] * 0.25)
+        for v, ok in ((0, True), (NV, False)):   # inner and outer fascia
+            q = [G[u][v], G[u + 1][v], GU[u + 1][v], GU[u][v]]
+            f = bm.faces.new(q if ok else q[::-1]); f.material_index = MB
+            for l, t in zip(f.loops, [(0, 0), (0.1, 0), (0.1, 0.02), (0, 0.02)]): l[uv].uv = t
+        # the outer fascia drops 1.2 m below the sheet's edge (Google Earth: a deep white edge, scalloped with the sag)
+        o0, o1 = GU[u][NV].co, GU[u + 1][NV].co
+        d0 = bm.verts.new((o0.x, o0.y, o0.z - 1.2)); d1 = bm.verts.new((o1.x, o1.y, o1.z - 1.2))
+        f = bm.faces.new((GU[u + 1][NV], GU[u][NV], d0, d1)); f.material_index = MB
+        for l, t in zip(f.loops, [(0, 0), (0.1, 0), (0.1, 0.02), (0, 0.02)]): l[uv].uv = t
 
 # dark band closing the slot between the facade top and the roof underside (g49: the stand back is closed up to the roof;
 # an open slot let low sun through onto the shaded east seats and field)
 ZC = kn('band_top', 99.0)   # flat top of the band: above it, the roof lifts at each mast and lets the sun through (g49's lit crescents)
 def _roofz(a, t, r):
     ri = rI(a) + SCAL * 4 * t * (1 - t); ro = rO(a); s = min(1.0, max(0.0, (r - ri) / (ro - ri)))
-    return zi + (zo - zi) * s + ARCH * math.sin(math.pi * t) * (math.sin(math.pi * s) - s)
+    return zi + (zo - zi) * s - SAG7 * math.sin(math.pi * t) * s ** 1.5 - RT
 for i in range(len(B)):
     a0 = B[i]; a1 = B[(i + 1) % len(B)]
     if a1 < a0: a1 += 2 * math.pi
@@ -169,15 +189,49 @@ def tube(p0, p1, r0, r1, m, n=8):
     f = bm.faces.new(rb); f.material_index = m
     for l in f.loops: l[uv].uv = (0.5, 0.5)
 
-GT = kn('glass_top', 25)
+# ---- v7 steel (Google Earth close-ups and the 2019 photo sphere, 2026-11-22), every member modelled, none painted:
+# outside, a white column at every rafter, from the footpath through the roof's edge to 5 m above it, with a stay from its
+# top down onto the roof; two white ring beams joining the columns (under the fascia and at 14 m) with a big X in every
+# bay between them, and struts back to the dark wall behind. Under the roof, a dark tapered rafter at every column, a
+# lighter rib down the middle of each bay, and the leading-edge truss along the inner edge.
+RC = lambda a: rO(a) + 0.3                       # the column line, just outside the roof's edge
+ZR1 = zo - RT - SAG7 - 1.6; ZR2 = 14.0; ZTOP = zo + 5.0   # the top ring beam just clear of the fascia at mid-bay
+def bx_beam(a, t, s0, s1, d0, d1, w, m, n=8):
+    """a tapered box beam hung under the roof along the radial line at bay position t (angle a), s from s0 to s1,
+    d0 -> d1 deep, w wide (all four sides)"""
+    pts = []
+    for k in range(n + 1):
+        ss = s0 + (s1 - s0) * k / n; dd = d0 + (d1 - d0) * k / n
+        top = mu.Vector(roofpt(a, t, ss, -RT - 0.02)); nrm = mu.Vector((-math.sin(a), math.cos(a), 0)) * (w / 2)
+        pts.append((top - nrm, top + nrm, top + nrm - mu.Vector((0, 0, dd)), top - nrm - mu.Vector((0, 0, dd))))
+    vs = [[bm.verts.new(q) for q in ring] for ring in pts]
+    for k in range(n):
+        for j in range(4):
+            f = bm.faces.new((vs[k][j], vs[k + 1][j], vs[k + 1][(j + 1) % 4], vs[k][(j + 1) % 4])); f.material_index = m
+    for ring in (vs[0], vs[-1][::-1]):
+        f = bm.faces.new(ring); f.material_index = m
 for i, a in enumerate(B):
     an = B[(i + 1) % len(B)]
-    pin = P(a, rI(a), zi + 0.4); pout = P(a, rO(a), zo + kn('mast', 0.4))
-    tube(pin, pout, 0.45, 0.45, ST)
-    tube(pout, P(a, rF(a) + 0.6, ZB), 0.35, 0.35, ST)
-    tube(pout, P(an, rF(an) + 0.6, GT), 0.25, 0.25, ST)
-    tube(P(an, rO(an), zo), P(a, rF(a) + 0.6, GT), 0.25, 0.25, ST)
-    tube(P(a, rF(a) + 0.6, 0), P(a, rF(a) + 0.6, ZB), 0.3, 0.3, ST)
+    if an < a: an += 2 * math.pi
+    c0 = P(a, RC(a), 0); ctop = P(a, RC(a), ZTOP)
+    tube(c0, ctop, 0.38, 0.32, ST)                                              # column
+    tube(ctop, roofpt(a, 0.0, 0.55, 0.15), 0.18, 0.18, ST)                      # stay onto the roof
+    for zr, rr in ((ZR1, 0.30), (ZR2, 0.26)):
+        tube(P(a, RC(a), zr), P(an, RC(an), zr), rr, rr, ST)                     # ring beam
+        tube(P(a, RC(a), zr), P(a, rF(a), zr), 0.16, 0.16, ST)                   # strut back to the wall
+    tube(P(a, RC(a), ZR2), P(an, RC(an), ZR1), 0.22, 0.22, ST)                   # the bay's X
+    tube(P(an, RC(an), ZR2), P(a, RC(a), ZR1), 0.22, 0.22, ST)
+    bx_beam(a, 0.0, 0.0, 1.0, 0.9, 2.8, 0.55, GD)                                # rafter
+    am = a + (an - a) * 0.5
+    bx_beam(am, 0.5, 0.06, 1.0, 0.35, 0.9, 0.3, GD, 6)                           # mid-bay rib
+    # leading-edge truss: two chords along the inner edge and a zig-zag web, 1.6 m deep, 8 panels a bay
+    NP = 8
+    for k in range(NP):
+        t0, t1 = k / NP, (k + 1) / NP; b0, b1 = a + (an - a) * t0, a + (an - a) * t1
+        u0 = roofpt(b0, t0, 0.03, -RT - 0.15); u1 = roofpt(b1, t1, 0.03, -RT - 0.15)
+        l0 = (u0[0], u0[1], u0[2] - 1.6); l1 = (u1[0], u1[1], u1[2] - 1.6)
+        tube(u0, u1, 0.14, 0.14, GD, 6); tube(l0, l1, 0.14, 0.14, GD, 6)
+        tube(l0, u1, 0.07, 0.07, GD, 5) if k % 2 == 0 else tube(u0, l1, 0.07, 0.07, GD, 5)
 
 def prism(poly, z0, z1, m, vh=None, nz=6, uw=10.0, vm=None, capm=None, uo=0.0):
     poly = poly[:-1] if poly[0] == poly[-1] else poly
@@ -257,7 +311,7 @@ if D.get('t411'):   # 411 Vulture St office: outside the stadium site line, left
 for (x0, y0), (x1, y1) in [D.get('screen', ((-0.9, -90.6), (-22.2, -84.6)))]:
     nx, ny = x0 - cx, y0 - cy; L = math.hypot(nx, ny); nx, ny = nx / L * 2.0, ny / L * 2.0
     x0, y0, x1, y1 = x0 - nx * 1.25, y0 - ny * 1.25, x1 - nx * 1.25, y1 - ny * 1.25   # 2.5 m toward the field: clear of the seat rows
-    prism([(x0, y0), (x1, y1), (x1 + nx / 2, y1 + ny / 2), (x0 + nx / 2, y0 + ny / 2)], 1.0, 19.0, SC)   # 1 m deep, top at photo y 352
+    prism([(x0, y0), (x1, y1), (x1 + nx / 2, y1 + ny / 2), (x0 + nx / 2, y0 + ny / 2)], 1.0, 19.0, SC)   # 1 m deep, top at photo y 352 (material "screen": the match lays its scoreboard on the face)
     # screen face toward the field (the white box at its foot in the photo is left out: director 2026-11-18 "remove it")
     ox, oy = -nx / 2.0 * 0.06, -ny / 2.0 * 0.06
     face([(x0 + ox, y0 + oy, 1.0), (x1 + ox, y1 + oy, 1.0), (x1 + ox, y1 + oy, 19.0), (x0 + ox, y0 + oy, 19.0)], SF, [(0, 0), (1, 0), (1, 1), (0, 1)])
@@ -315,7 +369,7 @@ def plain(name, rgb, rough=0.55, metal=0.0):
     m = bpy.data.materials.new(name); m.use_nodes = True; b = m.node_tree.nodes['Principled BSDF']
     b.inputs['Base Color'].default_value = (*[(c / 255) ** 2.2 for c in rgb], 1)
     b.inputs['Roughness'].default_value = rough; b.inputs['Metallic'].default_value = metal; return m
-SEATS = []; ASTEPS = []
+SEATS = []; ASTEPS = []; BLK = []
 AF = np.linspace(-math.pi, math.pi, 7201)
 for ti in (0, 1):
     n = NROWS[ti]; TT = np.array([_tiers(a)[ti] for a in AF])
@@ -335,7 +389,7 @@ for ti in (0, 1):
             ns = int((blk - 1.2) // 0.5); s0 = sa + 0.6 + (blk - 1.2 - ns * 0.5) / 2
             for j in range(ns):
                 s = s0 + (j + 0.5) * 0.5; a = float(np.interp(s, sm, AF)); r = float(np.interp(s, sm, rr))
-                SEATS.append(((cx + r * math.cos(a), cy + r * math.sin(a), z), (-math.cos(a), -math.sin(a))))
+                SEATS.append(((cx + r * math.cos(a), cy + r * math.sin(a), z), (-math.cos(a), -math.sin(a)))); BLK.append((ti, b, k // 6))
             if k < n - 1:   # aisle stair: half steps up each riser
                 a = float(AIS[b]); r0_ = float(np.interp(a, AF, TT[:, 0])); tk = float(np.interp(a, AF, t))
                 rs = r0_ + (k + 1) * tk - tk / 4
@@ -356,9 +410,16 @@ for i in range(len(PS)):   # each seat on the tread under it; dropped if the cor
     for x in (-0.2, 0.0, 0.2):
         if bvh.ray_cast(Vector(PS[i] + x * side[i] + (0, 0, 0.05)), up, 0.85)[0] is not None: keep[i] = False
 print('SEATS dropped', int((~keep).sum()))
-PS, fw, side = PS[keep], fw[keep], side[keep]
+PS, fw, side = PS[keep], fw[keep], side[keep]; BLK = [b_ for b_, k_ in zip(BLK, keep) if k_]
 FINAL = (PS, fw, side)
-ci = np.random.default_rng(49).choice(4, len(PS), p=[0.50, 0.15, 0.31, 0.04])
+# v7 seat colours (photo sphere from the ground, 2019): gold above all, maroon in whole blocks and bands, some white.
+# Each block of a tier, six rows deep, takes one mix: gold (most), maroon or white-flecked.
+_rng = np.random.default_rng(49); _mix = {}
+MIX = {'g': [0.86, 0.10, 0.04], 'm': [0.18, 0.78, 0.04], 'w': [0.40, 0.15, 0.45]}
+ci = np.zeros(len(PS), int)
+for i_, key in enumerate(BLK):
+    if key not in _mix: _mix[key] = _rng.choice(['g', 'm', 'w'], p=[0.62, 0.26, 0.12])
+    ci[i_] = _rng.choice(3, p=MIX[_mix[key]])
 # Lean seat mesh (glb under 50 MB): only faces that can be seen. Pan: top, front, two sides. Back: all but the bottom.
 # One 8 cm steel leg under each gap (both neighbours stand on it), a 4 cm leg flush under a block end; leg sides only.
 # Chunks of 800 seats keep each part under 65,536 vertices (16-bit indices).
@@ -385,7 +446,7 @@ tris([(_bx(-0.04, 0.04, -0.22, 0.04, 0.0, 0.40), LEGF)]).tofile(OUTD + '/leg_tmp
 def xf(o, sd, f, sx=1.0):
     B = np.c_[sd * sx, f, (0, 0, 1.0)]; R = C @ B @ C.T
     return np.c_[R, C @ o].astype('<f4').ravel()
-SN = ('seat_gold', 'seat_orange', 'seat_white', 'seat_blue'); XS = {n: [] for n in SN}; XL = []
+SN = ('seat_gold', 'seat_maroon', 'seat_white'); XS = {n: [] for n in SN}; XL = []
 for i in range(len(PS)):
     XS[SN[int(ci[i])]].append(xf(PS[i], side[i], fw[i]))
     if kd.find(PS[i] + 0.5 * side[i])[2] < 0.1: XL.append(xf(PS[i] + 0.25 * side[i], side[i], fw[i]))
@@ -404,7 +465,10 @@ am.update(); bpy.context.scene.collection.objects.link(bpy.data.objects.new('ais
 print('SEATS', len(PS), 'rows', NROWS, 'aisle steps', len(ASTEPS))
 for im in bpy.data.images:   # textures as the MCG: 512 px at most, WebP
     if im.size[0] and max(im.size) > 512:
-        k = 512 / max(im.size); im.scale(max(1, round(im.size[0] * k)), max(1, round(im.size[1] * k)))
+        k = 512 / max(im.size); im.scale(max(1, round(im.size[0] * k)), max(1, round(im.size[1] * k))); im.pack()   # packed: the glTF exporter reads the scaled pixels (the bpy module failed on an unpacked scaled image)
+for im in bpy.data.images:   # load and pack every texture before export (the bpy module's exporter read unloaded ones as empty)
+    if im.source == 'FILE' and not im.packed_file:
+        im.reload(); im.pack()
 bpy.ops.wm.save_as_mainfile(filepath=args[2])
-bpy.ops.export_scene.gltf(filepath=args[1], export_format='GLB', export_image_format='WEBP')
+bpy.ops.export_scene.gltf(filepath=args[1], export_format='GLB', export_image_format=os.environ.get('GABBA_IMG', 'WEBP'))   # GABBA_IMG=AUTO (PNG) where the bpy module's WebP copy fails
 print('TRIS', sum(len(p.vertices) - 2 for p in me.polygons))
