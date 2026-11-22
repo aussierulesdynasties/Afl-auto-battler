@@ -5,7 +5,7 @@ extends SceneTree
 ## Fremantle v St Kilda (seed 31 unless given) played at 60 frames a second, exactly as
 ## measure_oval3d_moves.gd plays it (so its "who=N t=T" lines name the moments). For each
 ## WHO@T, every frame from T-1.4 s to T+0.9 s is saved as <OUTDIR>/m<k>_<frame>.png, the camera
-## 5 m to his side at chest height, following him (side-on as he turns). Moments
+## 5 m to his side at chest height (FILM_CAM=broadcast: the match camera), following him (side-on as he turns). Moments
 ## must not overlap in time (one camera): film overlapping ones in separate runs. Every frame is a 60 Hz step: encoded at 60 fps
 ## it is game speed, at 30 fps half speed.
 
@@ -50,10 +50,17 @@ func _run() -> void:
 	oval.build(d, "FRE", "STK")
 	oval.turf.apply(str(res.get("weather", "")), "day")
 	# Our own camera: the match's broadcast camera keeps moving itself between frames.
+	# FILM_CAM=broadcast keeps the match's own camera (the picture as played) instead.
+	var broadcast := OS.get_environment("FILM_CAM") == "broadcast"
 	var cam := Camera3D.new()
 	root.add_child(cam)
 	cam.fov = 35.0
 	cam.far = 2000.0
+	var tv = null
+	if broadcast:
+		# The match's TV coverage (PitchView): the wing camera, set shots, ball-ups.
+		oval.camera.make_current()
+		tv = load("res://scripts/ui/match/Oval3DBroadcast.gd").new(oval)
 	var t := 0.0
 	var warm := false
 	var frames := {}
@@ -65,6 +72,8 @@ func _run() -> void:
 		d.advance(DT)
 		oval.sync(DT)
 		t += DT
+		if tv != null:
+			tv.frame(DT, t)
 		for k in range(moments.size()):
 			var m: Dictionary = moments[k]
 			if t < float(m["t"]) - BEFORE or t > float(m["t"]) + AFTER:
@@ -84,7 +93,8 @@ func _run() -> void:
 				for i in range(30):
 					await process_frame
 				warm = true
-			cam.make_current()
+			if not broadcast:
+				cam.make_current()
 			await RenderingServer.frame_post_draw
 			var f := int(frames.get(k, 0))
 			root.get_viewport().get_texture().get_image().save_png(out.path_join("m%d_%04d.png" % [k, f]))
