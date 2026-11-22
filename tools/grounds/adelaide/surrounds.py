@@ -176,6 +176,8 @@ def area_colour(t):
         return SAND
     if t.get("amenity") == "parking" and t.get("parking") not in ("underground", "multi-storey"):
         return PARKING
+    if t.get("leisure") == "pitch" and t.get("_id") in GE_PITCHES:   # its surface as Google Earth shows it
+        return tuple(GE_PITCHES[t["_id"]])
     if t.get("leisure") == "pitch" and t.get("sport") == "tennis":
         return TENNIS
     if t.get("leisure") == "pitch":
@@ -442,6 +444,8 @@ CITY_WALLS = [(200, 200, 196), (168, 176, 182), (214, 210, 200), (140, 150, 160)
 # no imagery kept); the palette above only for roofs outside its shots or under trees.
 _RC = os.path.join(os.path.dirname(os.path.abspath(__file__)), "roof_colours.json")
 GE_ROOFS = json.load(open(_RC)) if os.path.exists(_RC) else {}
+_PC = os.path.join(os.path.dirname(os.path.abspath(__file__)), "pitch_colours.json")
+GE_PITCHES = json.load(open(_PC)) if os.path.exists(_PC) else {}
 
 
 def _colour(v):
