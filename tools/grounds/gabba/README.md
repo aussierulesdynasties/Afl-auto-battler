@@ -53,3 +53,22 @@ Build in the cloud with the bpy module: `python mktex_v7.py`, then build.py with
 `sys.argv = ['blender', '--', 'model_in6.json', OUT.glb, OUT.blend, 'htex']` (model_in6 is the current input),
 copy the glb and seat bins to `assets/grounds/gabba` (`seats_seat_<c>.bin` -> `seats_seat_gabba_<c>.bin`),
 `godot --headless --import`, `seat_check.gd -- gabba`. QA views are in `qa/` for `tools/grounds/ge_compare.py`.
+
+## v9: heights measured in Google Earth (2026-11-22)
+
+Measured with the mouse in Google Earth 3D (the status bar gives lat/lon and height under the pointer). The
+heights are above Google Earth's turf (-3 m). There were 2,052 hovers from a camera 450 m straight above the centre
+(36 bearings), 290 more down two columns of an oblique view whose camera was solved from them (1.6 px rms), and
+a side view from the north. Google Earth's heights check out on the south-west light tower: 74 m there, 74.2 m in
+the model.
+
+- **Roof**: flat at 24 m from the inner edge to the outer edge at every bearing (`zi` = `zo` = 24.0; it was
+  38.7 m falling to 29.3 m). The rafters are 1.6 m deep at the back (was 2.8 m), so they clear the top rows.
+- **Plan**: the inner edge has no size error (best-fit scale 0.992, leftover 0.75 m rms, worst 1.75 m).
+  Google Earth puts the whole ground 2.3 m west (dx -2.28 m, dy +0.17 m). The seat front moves with it, so the
+  model keeps its origin; ge_compare offsets Google Earth instead.
+- **Bowl**: the lower tier climbs about 0.5 m per metre and its top row is at 7 m (`tier1_top`; it was 13 m).
+  The box level runs from 7.4 m to 10 m, and the upper tier tops out at 19.8 m (`bowl_top`, under the roof).
+- **Screen**: one screen, at the west end over the goals: 18.8 m wide, 9.0 m to 19.1 m up, centred 4.6 m
+  north of the long axis. Google Earth (2023) has no screen at the north, south or east, so the v7 north and
+  south screens were removed.
