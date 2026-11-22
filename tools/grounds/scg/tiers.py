@@ -6,7 +6,8 @@ parapet over the dark void of the concourse behind the tier below. This builds t
 as solid geometry (GroundModels.PARTS) and takes out the seats where they stand:
 
 - per degree of the north stands (TIERS_FROM to TIERS_TO), the seats' radius against height is fitted;
-- at each break height the seats within GAP metres are removed (a gangway's worth);
+- at each break height the seats within GAP metres are removed (a gangway's worth), and any seat that
+  leaves alone;
 - a floor, a dark recess 1.6 m high, then a pale parapet 1.1 m high standing 0.5 m proud, and the
   tier's top deck behind it, all real faces with their normals.
 
@@ -42,6 +43,16 @@ def main():
     drop = np.zeros(len(s), bool)
     for yb in BREAKS:
         drop |= sector & (np.abs(y - yb) < GAP)
+    # a seat the gangway left on its own (no neighbour within 1 m) goes too: the seat rule's company
+    from scipy.spatial import cKDTree
+    while True:
+        keep = ~drop
+        pts = np.c_[x, y, z][keep]
+        cnt = np.array([len(n) for n in cKDTree(pts).query_ball_point(pts, 1.0)])
+        lone = np.flatnonzero(keep)[cnt < 2]
+        if not len(lone):
+            break
+        drop[lone] = True
     s[~drop].astype("<f4").tofile(path)
     fits = {}
     for a in np.arange(TIERS_FROM, TIERS_TO + 0.01, 1.0):
