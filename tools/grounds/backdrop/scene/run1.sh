@@ -3,7 +3,7 @@ WORK=${WORK:-/home/user/work}; REPO=${REPO:-$(cd "$(dirname "$0")/../../../.." &
 g=$1; cd $WORK/proto; P=python3
 mkdir -p data/$g/prep out/$g
 # the model's own flat ground that the game hides where the backdrop is drawn (GroundModels.BACKDROP_HIDES)
-SKIP=$(case $g in barossa|sky|jiangwan|hands|blacktown|summit|macpoint) echo concourse;; waca) echo land road;; bruce) echo g_ground;; north_hobart) echo ground;; esac)
+SKIP=$(case $g in barossa|sky|jiangwan|hands|blacktown|summit|macpoint) echo concourse;; waca) echo land road brick;; bruce) echo g_ground;; north_hobart) echo ground;; esac)
 cp $WORK/data/$g/osm.json $WORK/data/$g/osm_parts.json data/$g/
 $P mkspec2.py $g
 L=$($P -c "import json;s=json.load(open('spec/$g.json'));print(s['lat'],s['lon'])")
