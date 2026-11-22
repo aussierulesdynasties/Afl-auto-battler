@@ -140,7 +140,7 @@ Stadium (all first drafts on main), and Accor Stadium, Marrara Oval (TIO Darwin)
 | Real phone frame times at Low, Medium and High | Not measured: needs the "Android 3D probe" APK installed on his phone. Cloud numbers below | **He** (install and run it), then this thread reads the numbers |
 | Video memory | MCG on High 678 MB on main today; with the MetaHuman bodies about 976 MB (#1982's measure). Rule of thumb for a mid phone: keep under 1.5 GB | Each item's owner, this thread watches |
 | Download size of a 3D build | Imported assets about 750 MB before the rebuilds and backdrops land (#2023 alone adds about 1.4 GB of models). Not yet exported or measured as an APK | **Nobody** |
-| Licences of everything that ships | MetaHuman is decided: comply only. Where ground data may come from is now one rule in [MCG_STANDARD.md](MCG_STANDARD.md) ("Where shipped data may come from"): Google Earth, Street View and aerial imagery are for looking at, never for taking from; each ground thread swaps extracted data as it rebuilds. Still open: the MetaHuman body file in the public repo (assets/oval3d/player_mh.glb); third-party captures committed under .claude/review and tools/grounds (Google Earth, Esri tiles, image-search photos); motion clips (above); docs/CREDITS_3D.md and the credits screen | Ground threads (their data); this thread (the rule, the credits list); **nobody** for the rest |
+| Licences of everything that ships | MetaHuman is decided: comply only. Where ground data may come from is now one rule in [MCG_STANDARD.md](MCG_STANDARD.md) ("Where shipped data may come from"): fidelity first, copying from Google Earth is fine, no raw imagery committed or baked into a shipped texture. Still open: the MetaHuman body file in the public repo (assets/oval3d/player_mh.glb); third-party captures committed under .claude/review and tools/grounds (Google Earth, Esri tiles, image-search photos); motion clips (above); docs/CREDITS_3D.md and the credits screen | Ground threads (their data); this thread (the rule, the credits list); **nobody** for the rest |
 | Tests and the nightly ground shots green on main | Many PRs above wait in the merge queue, several stacked on each other | Audit everything built for the 3D view (merge queue doctor) |
 | His look on every item | Not started for grounds (fly-through) | He |
 
@@ -179,4 +179,4 @@ What this says: the big grounds draw 2.3-4.4 million triangles a frame on High a
 
 - 2026-11-22: first version, built from the plan, the open PRs, the threads and project memory.
 - 2026-11-22: the director chose all 37 grounds for 1.0.
-- 2026-11-22: the data-source rule for grounds written into MCG_STANDARD.md and sent to every ground thread.
+- 2026-11-22: the data-source rule for grounds written into MCG_STANDARD.md and sent to every ground thread; softened the same day (fidelity first; only raw imagery in the repo or textures is out).
