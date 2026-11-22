@@ -47,9 +47,12 @@ OLD_SIGN = (37.28464798665914, 32.0)   # #1867's sign_a in metres (its letters a
 # (f270, shade): a dark charcoal-slate base, nearly uniform, crossed by long thin streaks one fin high, 6-13 m long:
 # pale grey-white ones and terracotta copper-red ones. No mid-tone runs and no blue: the earlier passes drew short runs
 # across the whole tone scale, which read as brickwork (PC GPU capture 2026-11-22).
-BASE = np.array([(54, 57, 60), (60, 62, 64), (66, 66, 66), (62, 59, 57)], float)
-PALE = np.array([(168, 170, 170), (184, 184, 182), (150, 152, 154)], float)
-COPPER_RED = np.array([(150, 92, 80), (162, 104, 90), (134, 84, 74)], float)
+BASE = np.array([(79, 83, 88), (88, 91, 93), (96, 96, 96), (91, 86, 83)], float)
+PALE = np.array([(185, 187, 187), (202, 202, 200), (165, 167, 169)], float)
+# 2026-11-23: the tile lifted 1.32x overall (base 1.46x, streaks 1.1x, since our streaks already stood out more than
+# Google Earth's), Google Earth's brightness over our capture's at 236 facade hovers 18-30 m up
+# on the 12 matched views, both lit by Google Earth's sun (survey/sun.json); the hue gap is Google Earth's haze.
+COPPER_RED = np.array([(165, 101, 88), (178, 114, 99), (147, 92, 81)], float)
 P_PALE, P_RED = 0.13, 0.08   # the share of each fin row's length that is a streak of each kind
 
 
@@ -193,7 +196,7 @@ def glass():
     d = (np.arange(h)[:, None] + 0.5) / 32.0 * np.ones((1, w))
     u = (np.arange(w)[None, :] + 0.5) / w * np.ones((h, 1))
     img = np.zeros((h, w, 3))
-    base = np.array((100, 128, 138), float)   # Google Earth 090: blue-teal grey (95, 122, 130), not green
+    base = np.array((86, 109, 118), float)   # 2026-11-23: (100,128,138) / 1.17, our capture's brightness over Google Earth's at 128 glass-band hovers
     f = ((d - 3.8) % 2.2) / 2.2                                 # 0 at a floor's top, 1 at its foot
     img[:] = base * (1.08 - 0.22 * f)[..., None]
     img *= (1.0 + 0.05 * _noise(h, w, (12, 40), 3))[..., None]
