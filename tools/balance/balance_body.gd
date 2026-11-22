@@ -228,6 +228,8 @@ func play(from: int, count: int, out: String, weather: String,
 		# (or a lead mark played on to) taken inside that side's forward 50, and
 		# a forward's mark in the goal-square pack.
 		var mi50 := [0, 0]
+		# Where those marks come from: a kicked mark, a lead or pass taken ("receive"), a pack.
+		var mi50_by := {"mark": [0, 0], "receive": [0, 0], "pack": [0, 0]}
 		# Goals off a pass inside 50 in general play (MatchSim._i50_give: its
 		# pass events carry "hand"), each side's: the goal's previous events
 		# are that pass, or the pass and the lead mark it found.
@@ -250,6 +252,7 @@ func play(from: int, count: int, out: String, weather: String,
 				var s := int(ev.get("side", 0))
 				if float(ev.get("fp", 0.0)) * (1.0 if s == 0 else -1.0) >= f50:
 					mi50[s] += 1
+					(mi50_by[kind] as Array)[s] += 1
 		var teams := []
 		var rosters: Array = sim.rosters()
 		var stats: Dictionary = r["players"]
@@ -262,6 +265,8 @@ func play(from: int, count: int, out: String, weather: String,
 			t["stoppages"] = ball_ups + throw_ins
 			t["marks_inside_50"] = mi50[side]
 			t["i50_pass_goals"] = i50_pass_goals[side]
+			for src in mi50_by:
+				t["mi50_" + str(src)] = (mi50_by[src] as Array)[side]
 			_shot_counts(t, sim.shot_log, side)
 			t["strength"] = snappedf((sq_h if side == 0 else sq_a).strength(), 0.01)
 			q_score[side][3] = int(r["score"][side])
