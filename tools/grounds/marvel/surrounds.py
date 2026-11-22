@@ -34,6 +34,11 @@ BBOX = (LON0 - 0.0125, LAT0 - 0.0099, LON0 + 0.0125, LAT0 + 0.0099)   # lon/lat,
 RELATIONS = [954522, 11570858]
 SIZE = 2048            # pixels a side, 1 m each, centred on the model's 0, 0
 STADIUM_WAY = "22971441"
+SUNSET_PLAZA = [(-198.1, -34.0), (-223.8, -42.3), (-220.1, -53.6), (-206.7, -92.3), (-202.4, -104.2), (-176.7, -95.2)]
+# Buildings modelled one by one from Google Earth in tools/grounds/marvel/landmarks.py (landmarks.glb):
+# left out of buildings.bin so they are not drawn twice.
+LANDMARK_WAYS = {"221441430", "33261092", "44158938", "1246185747", "296368687", "332358301", "221441428", "992236548",
+                 "57019580"}  # AFL House: a 2 m strip along the stadium's own west building, which the model has
 
 # Colours: Google Earth's over Docklands, painted through the match light's measured response (GroundModels
 # SURROUNDS tint 2.0, 1.4, 0.95, then about R 0.95x - 10, G 0.84x, B 0.85x on screen), so each renders as
@@ -49,7 +54,7 @@ PARKING = (132, 137, 132)
 PATH = (216, 220, 194)
 PAVED = (184, 190, 176)        # concrete plazas, promenades and the stadium's concourse
 PLAZA = (206, 150, 128)        # the red-brown paving of the promenades (Harbour Esplanade, Docklands Park)
-BALLAST = (126, 128, 118)       # the Southern Cross yards read grey in Google Earth
+BALLAST = (136, 126, 112)       # the Southern Cross yards: grey-brown ballast in Google Earth (top, c_e)
 RAIL = (80, 76, 70)
 ROOF = (168, 179, 174)
 WATER = (62, 79, 76)
@@ -238,12 +243,23 @@ def paint(trees, ways):
     order = sorted([(WIDTH.get(t.get("highway"), 0), t, p) for t, p in ways
                     if t.get("highway") in WIDTH and len(p) > 1 and t.get("tunnel") != "yes"
                     and t.get("bridge") is None and t.get("area") != "yes"
-                    and t.get("layer", "0") in ("0", "-1")], key=lambda a: a[0])
+                    and t.get("layer", "0") in ("0", "-1")
+                    # the rail yard's private staff walkways are ballast underfoot, not paved paths
+                    and not (t.get("access") in ("private", "no") and t.get("highway") in ("footway", "steps", "path", "service"))],
+                   key=lambda a: a[0])
     for w, t, p in order:
         fill = PATH if w < 4.6 and t.get("highway") != "service" else ASPHALT
         if t.get("highway") == "service" and t.get("service") == "parking_aisle":
             fill = PARKING
         d.line(poly(p), fill=fill, width=max(1, int(round(w))), joint="curve")
+    # Docklands Sunset Point, the pier plaza on Harbour Esplanade: red-brown pavers with pale bands
+    # (Google Earth ge_ferry_b); the map has it only inside the promenade's multipolygon
+    d.polygon(poly(SUNSET_PLAZA), fill=PLAZA)
+    for k in range(1, 5):
+        a, b = SUNSET_PLAZA[0], SUNSET_PLAZA[5]
+        f = k / 5.0
+        q0 = (a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f)
+        d.line(poly([q0, (q0[0] - 24.0, q0[1] - 8.0)]), fill=(222, 196, 170), width=2)
     for t, p in ways:
         if "building" in t and len(p) > 2 and t.get("building") not in ("roof",) and t.get("_id") != STADIUM_WAY:
             d.polygon(poly(p), fill=ROOF)
@@ -295,7 +311,12 @@ def tree_list(trees, st):
         if (st and _inside((e, n), st)) or abs(x) > 950 or abs(z) > 950:
             continue
         h = rng.uniform(7.0, 15.0)
-        out.append((x, z, h, h * rng.uniform(0.3, 0.4), rng.uniform(0.0, 1.0)))
+        r = h * rng.uniform(0.3, 0.4)
+        if -215.0 < e < -120.0 and -260.0 < n < 260.0:
+            # Harbour Esplanade's street trees: tall and slim (Google Earth ge_ferry_b, c_w)
+            h = rng.uniform(10.0, 13.0)
+            r = h * rng.uniform(0.17, 0.21)
+        out.append((x, z, h, r, rng.uniform(0.0, 1.0)))
     return np.array(out, "<f4")
 
 
@@ -317,7 +338,7 @@ def building_list(ways, st):
     for t, p in ways:
         if "building" not in t or len(p) < 4 or p[0] != p[-1] or t.get("layer", "0").startswith("-"):
             continue
-        if t.get("_id") == STADIUM_WAY:
+        if t.get("_id") == STADIUM_WAY or t.get("_id") in LANDMARK_WAYS:
             continue
         a = np.array(p[:-1])
         if st and _inside(tuple(a.mean(0)), st):

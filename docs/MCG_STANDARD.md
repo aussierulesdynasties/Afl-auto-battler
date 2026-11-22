@@ -181,13 +181,36 @@ Close-up pass (2026-11-21, same day), what a harsh look found and fixed:
   texture, painted warm for the dim light under a roof, and read khaki outside. It is its own dark
   blue now (`upperwall`). A texture tuned for one light must not be shared with a face in another.
 - The east office boxes are pale with a spandrel band and fins over ribbon glazing, on an open
-  colonnade (`office`, `undercroft`), as Google Earth's close views show; the corner blocks a muted blue.
+  colonnade, as Google Earth's close views show; the corner blocks a muted blue. (First painted on as
+  textures; modelled the next day, see below.)
 - Inside: the aisle stairs read as white ladders (the treads were the outside's white concrete; now
   a mid grey `tread`), and the middle and top tiers' fronts carry dark ribbon screens.
 - The surrounding towers: `building_style: "towers"` draws them as blue-grey glass curtain walls
   (a mullion every 1.5 m, a slab every floor) or concrete with rows of windows, in one shader that
   fades the pattern with distance (GroundModels.TOWER_SHADER); same mesh, same draw call.
 
-Still open at Marvel: from above, building roofs read paler than Google Earth's under the match sun;
-the Street View panoramas inside the bowl could not be reached headless, so the inside was checked
-against Google Earth's 3D from the centre (low detail) and the known look of the ground.
+No-shortcuts pass (2026-11-22, the person: "i never want a shortcut, i never want a placeholder"):
+
+- Painted-on geometry replaced: the east office boxes have modelled spandrel bands, slim fins every
+  0.75 m, a recessed glass lobby and round columns (parts2 `office_box`); the blue service blocks have
+  real recessed louvre openings between piers (`vent_block`). The painted `office` and `undercroft`
+  textures are gone. Rule: if it has depth in Google Earth, it has depth in the model.
+- The glass and the blues were near-black in shade: lighter and greyer now (retint.py).
+- The surrounding towers' colours went into the shader as sRGB but were read as linear, so every wall
+  and roof drew far paler than its palette (roofs near white from above). TOWER_SHADER converts them.
+- Landmarks (tools/grounds/marvel/landmarks.py, landmarks.glb), each modelled by eye from Google
+  Earth's 3D, footprints from OpenStreetMap: NAB 700 Bourke (folded facets, white triangle shades,
+  red strips, V-strut ground storey, folded glass roof), the former Seven Network HQ (ribbon windows
+  set back, tiered drum, lattice mast), the round glass office, Victoria Point, 720 Bourke (rippling
+  balcony slabs), the two sawtooth towers to the north, the ferry shed, the pier plaza's paving,
+  the jetties, rock armour along Harbour Esplanade, the old pile rows, and the rail yard's wiring
+  gantries. Their OpenStreetMap footprints are left out of buildings.bin (surrounds.LANDMARK_WAYS).
+- Harbour Esplanade's street trees are tall and slim (a tree listed over four times as tall as its
+  crown is wide draws a narrow crown); the yard's private walkways no longer paint as white paths.
+- Imagery (satellite crops, aerial photos, overlays) was taken out of .claude/review/marvel; it is
+  for looking at only. Copies are in the project files (marvel-rebuild/review-imagery).
+
+Still open at Marvel: the Street View panoramas inside the bowl could not be reached headless; the
+inside is checked against Google Earth's 3D from the centre. Further out than ~250 m the buildings
+are still OpenStreetMap extrusions with the tower shader. Shaded faces read bluer than Google
+Earth's under the inspector's sky light (all grounds).
