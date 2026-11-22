@@ -194,7 +194,8 @@ func set_level(k: float) -> void:
 		beams[i].light_energy = (total * share / n if beam else 0.0) * _beam_k[i] * level
 	for g in _glows:
 		g.visible = on
-	_glow_mat.set_shader_parameter("strength", minf(1.0, level * 4.0))
+	if _glow_mat != null:
+		_glow_mat.set_shader_parameter("strength", minf(1.0, level * 4.0))
 	if _roofline != null:
 		_roofline.visible = on
 	for l in _lamps:
