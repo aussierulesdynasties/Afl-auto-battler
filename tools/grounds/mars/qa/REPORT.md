@@ -118,12 +118,12 @@ finished.
 
   | Stand | Seats now | Published | Verdict |
   | --- | --- | --- | --- |
-  | South-east | 2,334 | 2,500 | FAIL, 6.6% short |
-  | South | 2,372 | 2,500 | FAIL, 5.1% short |
+  | South-east | 2,333 | 2,500 | FAIL, 6.7% short |
+  | South | 2,366 | 2,500 | FAIL, 5.4% short |
   | Old stands (west, north, east) | 4,847 | 5,060 to 5,127 | FAIL, 4 to 5% short |
-  | All | 9,558 (was 9,759) | 10,000 | FAIL, 4.4% short |
+  | All | 9,551 (was 9,759) | 10,000 | FAIL, 4.5% short |
 
-  The seat rule now takes 139 seats (was 383), and only 27 of them in the new stands.
+  The seat rule now takes 147 seats (was 383), and only about 35 of them in the new stands.
 - **Why they are still short, not yet measured:**
   - The drone photo shows the front (lower) rows running on along the fence past the ends of both roofs and across the gap
     between them. The model's lower tier stops at each roof's end. The photo's camera is too coarse at the far end
@@ -132,6 +132,17 @@ finished.
   - The split between the lower and upper tiers is not measured: the model's lower tier runs 2.4 to 7.4 m out, then a
     1.2 m cross-aisle.
 - **Old stands:** about 100 of the west stand's back rows at its north end sit under the corporate block (headroom).
+
+## Corners in the outline (shape audit, 2026-11-22)
+
+- **Limit:** no turn of 3 deg or more on an edge that should be smooth.
+- The audit counted 14.9 such corners per 100 m on the old model's outline (the OSM fence and traced rings).
+- **Now:** 0.5 per 100 m. The fence curve and the west, east and north roof fronts have none (exact offsets). The new
+  stands' measured tables had a 3 deg kink at every read point (26 on the south-east roof), so each edge is now one
+  degree-4 polynomial in bearing through the reads: within 0.21 m of the front reads and 0.75 m of the back reads (rms 0.10
+  and 0.34 m), inside what the reads themselves agree to. The 4 left are on the north roof's back, which keeps its
+  traced table where it runs into the clubrooms' roof (not measurable straight down): NOT FIXED.
+- The wall base side-on in matched Google Earth views stays NOT MEASURED (trees hide the west base; see above).
 
 ## Light tower seen in the drone photo
 

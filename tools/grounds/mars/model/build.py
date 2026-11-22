@@ -90,7 +90,23 @@ def interp(tab, b):
     t = np.array(tab, float); return [float(np.interp(b, t[:, 0], t[:, k])) for k in range(1, t.shape[1])]
 
 
+def _smooth():
+    """a stand with 'smooth': n has its measured 'roof' and 'back' tables (offsets read every 2 deg or so,
+    qa/newstands.py) replaced by one polynomial of degree n in bearing per edge, as offsets from the fence, sampled every
+    0.5 deg: straight-line steps between the read points left a 3 deg kink at each of them"""
+    for S in D['stands']:
+        if 'smooth' not in S: continue
+        for key in ('roof', 'back'):
+            T = np.array(S[key], float); b = T[:, 0]; t = (b - b[0]) / (b[-1] - b[0]) * 2 - 1
+            bs = np.arange(b[0], b[-1] + 1e-6, 0.5); ts = (bs - b[0]) / (b[-1] - b[0]) * 2 - 1
+            rf = np.array([fence_r(x) for x in b]); rfs = np.array([fence_r(x) for x in bs]); cols = []
+            for c in range(1, T.shape[1]):
+                cols.append(rfs + np.polyval(np.polyfit(t, T[:, c] - rf, S['smooth']), ts))
+            S[key] = [[float(x)] + [float(col[i]) for col in cols] for i, x in enumerate(bs)]
+
+
 _rings()
+_smooth()
 
 
 def oriented(mb, q, m, out, uv=None):

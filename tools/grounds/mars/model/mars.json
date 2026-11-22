@@ -484,7 +484,8 @@
     ]
    ],
    "aisle_w": 1.2,
-   "row_upper": 1.0
+   "row_upper": 1.0,
+   "smooth": 4
   },
   {
    "name": "new_s",
@@ -711,7 +712,8 @@
     ]
    ],
    "aisle_w": 1.2,
-   "row_upper": 1.0
+   "row_upper": 1.0,
+   "smooth": 4
   },
   {
    "name": "south_bank",
