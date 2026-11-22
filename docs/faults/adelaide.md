@@ -62,7 +62,7 @@ the valleys as in the photos (spec `lobet`: west full lobe height at the hem, ea
 
 Still short (2026-11-22): the entrance glass band's lettering is unreadable in Google Earth (plain glass, nothing
 invented); the east names' places along the stand are read from one
-oblique photo (to within a few metres); the stands hold 38,200 seats plus the Hill's 2,900, short of the real ground,
+oblique photo (to within a few metres); the stands hold 37,431 seats plus the Hill's 2,860, short of the real ground (see the seat gap below),
 the roof petals' valleys read softer than the real membrane;
 the lawns are a flat bright green where Google Earth's are muted and mottled. The Riverbank's back is rebuilt from
 Google Earth's own height readings (2026-11-22, the status bar under the mouse on calibrated south views): it was one
@@ -81,7 +81,7 @@ matching straight-down shots, checked against Google Earth's own position readin
 and west roofs, traced off an aerial photo, sat 4.8 m and 3.5 m east of Google Earth's and are moved (east roof overlap
 0.78 -> 0.93). Left: the east roof's pitch edge is about 1.3 m deep of Google Earth's and the west roof's pitch edge
 1-4.5 m deep along its southern half. Moving the east roof let 595 upper-tier seats pass the headroom check (60 lost):
-39,756 -> 40,291. Fixed from Google Earth (2026-11-22, calibrated straight-down shots, no imagery kept): each
+39,756 -> 40,291. The seat gap (2026-11-22): the published stand figures are West 14,000 (Hassell: "over four levels"), East 19,000, Riverbank 14,000, 50,083 seated in all; ours are West 10,513, East 14,492, Riverbank 12,293 (corners included), with the Hill's 2,860 against about 3,000. No seat map, architect page or engineering paper read gives rows per tier (the Port Adelaide 2020 map only shows Level 5 priced rows running A to X, general admission from Y, in the East and the Riverbank, which our upper tiers of 22 and 25 rows roughly match). Matched Google Earth views from over the field (project file adelaide-standard/stand_tiers_vs_google_earth_2026-11-22.jpg) put the East's and the Riverbank's tiers, walkways and fascias where ours are; rows are too fine to count there, and the West's centre is draped under its roof. So where the 9,800 missing seats sit is not settled: it needs a stand section drawing (SMA or the development application) before any tier moves. The lawns, measured: Google Earth's sunlit park grass reads (115, 154, 113) median, a blue haze over everything there, and the drone photo sphere's (May 2021) about (105, 115, 55); ours are LAWN (100, 140, 72) and BASE (112, 135, 80), between the two, so the colour stays until it is judged on the PC's GPU. Fixed from Google Earth (2026-11-22, calibrated straight-down shots, no imagery kept): each
 nearby roof's and sports pitch's colour (`roof_colours.py`: no more salmon sheds, Memorial Drive's grass courts no
 longer blue); the trees stand where Google Earth shows canopy (`ge_trees.py`, replacing the random park fill); the
 grass courts, No. 2 oval's square and the practice nets and wickets that OSM leaves out are traced (`surrounds.py`
