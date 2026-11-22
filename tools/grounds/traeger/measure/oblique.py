@@ -31,7 +31,7 @@ sys.path.insert(0, os.path.join(HERE, "..", "scene"))
 import geo  # noqa: E402
 
 F, CX, CY, W, H = 1585.8, 640.0, 360.0, 1280, 720
-GLB = os.path.join(HERE, "..", "..", "..", "..", "assets", "grounds", "traeger", "traeger.glb")
+GLB = os.environ.get("GLB", os.path.join(HERE, "..", "..", "..", "..", "assets", "grounds", "traeger", "traeger.glb"))
 VIEWS = os.environ.get("VIEWS", os.path.join(HERE, "..", "qa", "views.json"))
 SKIP = {"ground_dirt"}     # the ground itself: measured as the turf edge
 # light towers: thin lattices the picture blurs into the ground; measured by eye in the fly-through
@@ -126,6 +126,8 @@ def solve(img, v):
     # edge a pixel or two), so a straight-down view keeps its link's heading and level and solves where it stands
     nadir = v["t"] < 1
     free = np.array([0, 1, 2]) if nadir else np.array([0, 1, 2, 3, 4, 5])
+    if v.get("solve") == "xy":     # a close straight-down view of the oval's curved end: where the camera stands
+        free = np.array([0, 1])
     p = p0.copy()
     # held near Google Earth's camera: its link fixes the position to a few metres, but a capture can sit a few
     # degrees off (the page's bars move the crop), so the aim is left loose and first found by a coarse search
@@ -150,7 +152,7 @@ def solve(img, v):
     p[3] += best[1]
     p[4] += best[2]
     xs = np.array([1, 1, 1, .01, .01, .01])[free]
-    for R in (12, 8, 5, 3, 1.5):
+    for R in v.get("search_m", (12, 8, 5, 3, 1.5)):
         M = edge_matches(p, P, sig, R)
         X = np.array([m[0] for m in M])
         Y = np.array([m[1] for m in M])

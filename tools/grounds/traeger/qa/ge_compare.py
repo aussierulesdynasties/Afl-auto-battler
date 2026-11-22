@@ -28,7 +28,7 @@ GROUNDS = {
     # Its model is laid in its own frame, turned 25.4 degrees off north (tools/grounds/traeger/align.json):
     # "w2m" takes a view's north-up east/north into that frame before the match fit.
     "traeger": {"lat": -23.7097309, "lon": 133.8759053, "ge_alt": 573.0, "w2m": "traeger",
-                "fit": [3.62, -8.97, -0.05, -90.9, 93.26, 73.2]},
+                "fit": [4.17, -8.65, -0.05, -91.82, 91.8, 73.94]},
 }
 
 
