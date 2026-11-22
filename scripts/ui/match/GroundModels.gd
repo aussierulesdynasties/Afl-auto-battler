@@ -105,7 +105,9 @@ const SURROUNDS := {
 	# The SCG in Moore Park: the park's dry grass and avenues of figs, Tramway Oval, the Entertainment
 	# Quarter, Paddington's streets and Allianz Stadium's concourse from OpenStreetMap
 	# (tools/grounds/scg/surrounds.py), and Allianz Stadium itself in 3D (tools/grounds/scg/allianz.py). Painted for the same match light as Marvel's map.
-	"scg": {"y": -0.03, "inner": 120.0, "colour": Color(0.55, 0.56, 0.48),
+	# inner 100: the stands' backs reach in to 100-110 m from the middle; at 120 the sky showed through
+	# a gap between them and the land, a pale blue ring round the ground from above.
+	"scg": {"y": -0.03, "inner": 100.0, "colour": Color(0.55, 0.56, 0.48),
 			# Every building has modelled facades: those within 350 m in full (PARTS "Facades"), the rest
 			# with recessed window ribbons in city.glb (tools/grounds/scg/facades.py; buildings.bin is its source).
 			"map": "surrounds.webp", "span": 2048.0, "trees": "trees.bin",
@@ -162,7 +164,8 @@ const MATERIAL_FIX := {
 	# the sky's blue; the heritage stands' roofs a pale weathered sage, not bright green; the glass
 	# blue-grey behind pale mullions, not deep blue.
 	"scg": {
-		"roof": {"metallic": 0.0, "roughness": 0.95, "albedo_color": Color(0.84, 0.83, 0.8)},
+		# warm white: Google Earth's (238, 235, 222); the match light's sky had turned (0.84, 0.83, 0.8) pale blue
+		"roof": {"metallic": 0.0, "roughness": 0.95, "albedo_color": Color(0.88, 0.85, 0.77)},
 		"fascia": {"metallic": 0.0, "roughness": 0.9},
 		"hroof": {"metallic": 0.0, "roughness": 0.85, "albedo_color": Color(2.0, 1.2, 1.75)},
 		"hgreen": {"albedo_color": Color(2.0, 1.2, 1.75)},
@@ -170,9 +173,10 @@ const MATERIAL_FIX := {
 		"glass": {"metallic": 0.0, "roughness": 0.6, "albedo_color": Color(0.95, 0.88, 0.8)},
 		"glassd": {"metallic": 0.0, "roughness": 0.6, "albedo_color": Color(1.0, 0.93, 0.85)},
 		"glassroof": {"metallic": 0.0, "roughness": 0.4},
-		# The concourse paving round the stands: weathered concrete, not near-white.
-		"conc": {"metallic": 0.0, "roughness": 1.0, "albedo_color": Color(0.7, 0.69, 0.66)},
-		"podium": {"roughness": 0.95, "albedo_color": Color(0.88, 0.88, 0.86)},
+		# The concourse paving round the stands: Google Earth's warm grey concrete (155, 148, 138), as the
+		# map paints the forecourts beyond it (tools/grounds/scg/surrounds.py CONCOURSE), not near-white.
+		"conc": {"metallic": 0.0, "roughness": 1.0, "albedo_color": Color(0.6, 0.56, 0.5)},
+		"podium": {"metallic": 0.0, "roughness": 1.0, "albedo_color": Color(0.62, 0.58, 0.52)},
 	},
 }
 

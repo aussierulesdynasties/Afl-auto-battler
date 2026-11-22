@@ -8,12 +8,17 @@ streets of houses (its URBAN colour), clear of buildings and of the trees alread
 
 - Paddington (north of the ground, x > PADD_X0, z < PADD_Z1): one tree per PADD_DENSITY square metres;
 - the other streets of houses: one per OTHER_DENSITY;
-- 7-14 m high, crowns 0.4-0.55 of the height, never within GAP metres of another tree.
+- 7-14 m high, crowns 0.4-0.55 of the height, never within GAP metres of another tree;
+- before those, street trees: one every STREET_GAP metres along both verges of every street,
+  10-18 m, where the verge is open ground, as Google Earth shows the streets round the ground lined;
+- and first of all, the canopy Google Earth shows within about 350 m of the ground (canopy_ge.png, traced by
+  canopy.py): the figs and gums of the Entertainment Quarter, Disney Studios' lot and Driver Avenue that
+  OpenStreetMap leaves out, a tree every GAP metres through each patch of canopy, 11-20 m high.
 
     python3 tools/grounds/scg/paddington.py
 
-The first run keeps the mapped trees in tools/grounds/scg/trees_mapped.bin and reads them from there
-afterwards, so running it again gives the same trees.bin. Model metres: x east, z south.
+The first run after surrounds.py keeps the mapped trees in tools/grounds/scg/trees_mapped.bin and reads
+them from there afterwards, so running it again gives the same trees.bin. Model metres: x east, z south.
 """
 import math
 import os
@@ -33,6 +38,38 @@ PADD_X0, PADD_Z1 = -380.0, -170.0
 PADD_DENSITY = 1.0 / 260.0
 OTHER_DENSITY = 1.0 / 900.0
 GAP = 7.0
+CANOPY = os.path.join(ROOT, "canopy_ge.png")
+CANOPY_R = 130.0          # the canopy mask's trees stop at the stands' backs
+STREET_GAP = 13.0         # metres between street trees
+VERGE = 2.5               # metres from the kerb to the trunk
+STREET_WIDTH = {"trunk": 14, "primary": 13, "secondary": 11, "tertiary": 9, "residential": 7,
+                "unclassified": 6, "living_street": 5}      # surrounds.py's widths
+ROAD = np.array([140, 134, 124])                             # surrounds.py's ASPHALT
+
+
+def streets():
+    """Each street's segments (model x, z) and half its width, from the OpenStreetMap tiles surrounds.py
+    fetched (/tmp/scg_surrounds_*.osm)."""
+    import glob
+    import xml.etree.ElementTree as ET
+    lat0, lon0 = -33.8916, 151.2248
+    kx, ky = 111320.0 * math.cos(math.radians(lat0)), 110574.0
+    nodes, out, seen = {}, [], set()
+    files = sorted(glob.glob("/tmp/scg_surrounds_*.osm"))
+    roots = [ET.parse(f).getroot() for f in files]
+    for r in roots:
+        for n in r.findall("node"):
+            nodes[n.get("id")] = ((float(n.get("lon")) - lon0) * kx, -(float(n.get("lat")) - lat0) * ky)
+    for r in roots:
+        for w in r.findall("way"):
+            t = {x.get("k"): x.get("v") for x in w.findall("tag")}
+            hw = t.get("highway")
+            if hw not in STREET_WIDTH or w.get("id") in seen or t.get("tunnel") == "yes" or t.get("bridge") == "yes":
+                continue
+            seen.add(w.get("id"))
+            p = [nodes[x.get("ref")] for x in w.findall("nd") if x.get("ref") in nodes]
+            out += [(p[k], p[k + 1], STREET_WIDTH[hw] / 2) for k in range(len(p) - 1)]
+    return out
 
 
 def footprints():
@@ -51,11 +88,15 @@ def footprints():
 
 
 def main():
-    if not os.path.exists(MAPPED):
-        np.fromfile(os.path.join(DIR, "trees.bin"), "<f4").tofile(MAPPED)
+    now = np.fromfile(os.path.join(DIR, "trees.bin"), "<f4")
+    if not os.path.exists(MAPPED) or len(now) <= os.path.getsize(MAPPED) // 4:
+        now.tofile(MAPPED)          # a fresh trees.bin from surrounds.py: the mapped trees
     have = np.fromfile(MAPPED, "<f4").reshape(-1, 5)
     im = np.asarray(Image.open(os.path.join(DIR, "surrounds.webp")).convert("RGB")).astype(int)
-    urban = np.abs(im - URBAN[None, None, :]).sum(-1) < 14
+    # the map's grain lifts all three channels alike: match the hue tightly and the brightness loosely,
+    # so the paved plazas, close to URBAN in brightness, are told apart by their hue
+    hue = im - im.mean(-1, keepdims=True)
+    urban = (np.abs(hue - (URBAN - URBAN.mean())[None, None, :]).sum(-1) < 8) & (np.abs(im.mean(-1) - URBAN.mean()) < 25)
     # keep off the buildings, with a metre's margin, and off the edges of the urban areas (roads)
     blk = Image.new("L", (SIZE, SIZE), 0)
     d = ImageDraw.Draw(blk)
@@ -81,6 +122,55 @@ def main():
     for a, b in have[:, :2]:
         cell.setdefault(key(a, b), []).append((a, b))
     added = []
+    road = (np.abs(hue - (ROAD - ROAD.mean())[None, None, :]).sum(-1) < 6) & (np.abs(im.mean(-1) - ROAD.mean()) < 8)
+
+    def free(a, b):
+        i, j = key(a, b)
+        return not any(math.hypot(a - p, b - q) < GAP for di in (-1, 0, 1) for dj in (-1, 0, 1)
+                       for p, q in cell.get((i + di, j + dj), []))
+
+    # Google Earth's canopy first: every pixel of it in random order, a tree wherever none stands within GAP
+    if os.path.exists(CANOPY):
+        cm = np.asarray(Image.open(CANOPY).convert("L")) > 0
+        # never on a playing field (the Showring is open grass; its dark patches traced as canopy)
+        field = np.abs(im - np.array([112, 146, 70])[None, None, :]).sum(-1) < 40     # surrounds.py's PITCH
+        cz, cx = np.nonzero(cm & ~blk & ~road & ~field)
+        for k in rng.permutation(len(cx)):
+            a, b = cx[k] - SIZE / 2 + float(rng.random()), cz[k] - SIZE / 2 + float(rng.random())
+            if math.hypot(a - PC[0], b - PC[1]) < CANOPY_R or not free(a, b):
+                continue
+            h = float(rng.uniform(11.0, 20.0))
+            added.append((a, b, h, h * float(rng.uniform(0.45, 0.6)), float(rng.uniform(0.7, 1.0))))
+            cell.setdefault(key(a, b), []).append((a, b))
+    n_canopy = len(added)
+    # street trees next: Google Earth shows the streets round the ground lined both sides (Moreton Bay
+    # figs on Moore Park Road, Driver Avenue and Anzac Parade, planes through Paddington), which
+    # OpenStreetMap maps only in places. One every STREET_GAP metres along each street's verge, where the
+    # verge is open ground (not a building, not road).
+    for (ax, az), (bx, bz), half in streets():
+        L = math.hypot(bx - ax, bz - az)
+        if L < 1.0:
+            continue
+        tx, tz = (bx - ax) / L, (bz - az) / L
+        for side in (-1.0, 1.0):
+            off = half + VERGE
+            ox, oz = -tz * off * side, tx * off * side
+            t = float(rng.uniform(0, STREET_GAP))
+            while t < L:
+                a, b = ax + tx * t + ox, az + tz * t + oz
+                t += STREET_GAP * float(rng.uniform(0.8, 1.2))
+                if math.hypot(a - PC[0], b - PC[1]) < MODEL_R or max(abs(a), abs(b)) > REACH:
+                    continue
+                pxx, pzz = int(a + SIZE / 2), int(b + SIZE / 2)
+                if blk[pzz, pxx] or road[pzz, pxx]:
+                    continue
+                i, j = key(a, b)
+                if any(math.hypot(a - p, b - q) < GAP for di in (-1, 0, 1) for dj in (-1, 0, 1) for p, q in cell.get((i + di, j + dj), [])):
+                    continue
+                h = float(rng.uniform(10.0, 18.0))
+                added.append((a, b, h, h * float(rng.uniform(0.42, 0.58)), float(rng.uniform(0.75, 1.0))))
+                cell.setdefault((i, j), []).append((a, b))
+    n_street = len(added) - n_canopy
     for sel, dens in ((padd, PADD_DENSITY), (~padd, OTHER_DENSITY)):
         cx, cz = x[sel], z[sel]
         want = int(len(cx) * dens)
@@ -99,8 +189,8 @@ def main():
             got += 1
     out = np.concatenate([have, np.array(added, "<f4").reshape(-1, 5)])
     out.astype("<f4").tofile(os.path.join(DIR, "trees.bin"))
-    print("trees: %d mapped + %d in the streets of houses (%d in Paddington) = %d" % (
-        len(have), len(added), sum(1 for t in added if t[0] > PADD_X0 and t[1] < PADD_Z1), len(out)))
+    print("trees: %d mapped + %d from Google Earth's canopy + %d along streets + %d in the streets of houses = %d" % (
+        len(have), n_canopy, n_street, len(added) - n_street - n_canopy, len(out)))
 
 
 if __name__ == "__main__":

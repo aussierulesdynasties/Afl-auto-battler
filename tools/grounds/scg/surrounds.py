@@ -46,12 +46,14 @@ PITCH = (112, 146, 70)         # irrigated ovals and fields (Tramway Oval, the S
 SCRUB = (137, 137, 100)
 WETLAND = (105, 119, 82)
 SAND = (221, 220, 176)
-ASPHALT = (98, 100, 100)
-PARKING = (128, 130, 126)
-PATH = (206, 204, 186)
-PAVED = (158, 158, 150)        # concrete plazas and the stadiums' concourses
+SHOWRING_WAY = "212255119"     # OpenStreetMap's outline of the Entertainment Quarter's Showring
+SHOWRING_RING = 6
+ASPHALT = (140, 134, 124)      # Google Earth's roads here are warm light grey (150, 142, 132): the match light cools and darkens the map about a tenth
+PARKING = (138, 134, 126)
+PATH = (172, 164, 148)         # Moore Park's paths in Google Earth (145, 135, 128), a touch lighter than the roads
+PAVED = (156, 147, 138)        # concrete plazas and forecourts: Google Earth's (155-161, 144-148, 130-138)
 PLAZA = (190, 160, 140)
-CONCOURSE = (124, 122, 114)    # the SCG's concourse and forecourts: grey concrete in Google Earth
+CONCOURSE = (150, 140, 126)    # the SCG's concourse and forecourts: warm grey concrete in Google Earth
 BALLAST = (126, 128, 118)
 RAIL = (80, 76, 70)
 ROOF = (140, 142, 138)
@@ -233,6 +235,14 @@ def paint(trees, ways):
         if t.get("_hole"):
             continue
         d.polygon(poly(p), fill=area_colour(t))
+    # The Entertainment Quarter's Showring: OpenStreetMap maps it only as a pedestrian area, Google Earth
+    # shows a grass arena inside a paved ring about SHOWRING_RING metres wide.
+    for t, p in ways:
+        if t.get("_id") == SHOWRING_WAY:
+            ring = Image.new("L", (SIZE, SIZE), 0)
+            ImageDraw.Draw(ring).polygon(poly(p), fill=255)
+            ring = ring.filter(ImageFilter.MinFilter(2 * SHOWRING_RING + 1))
+            im.paste(Image.new("RGB", (SIZE, SIZE), PITCH), (0, 0), ring)
     for t, p in ways:
         if t.get("railway") in ("rail", "light_rail", "tram") and len(p) > 1 and t.get("tunnel") != "yes":
             d.line(poly(p), fill=BALLAST, width=5, joint="curve")
@@ -251,6 +261,10 @@ def paint(trees, ways):
         d.line(poly(p), fill=fill, width=max(1, int(round(w))), joint="curve")
     for t, p in ways:
         if "building" in t and len(p) > 2 and t.get("building") not in ("roof",) and t.get("_id") != STADIUM_WAY:
+            # the SCG's own stands are mapped as buildings reaching past the model's walls: under them
+            # the concourse shows, not a pale roof ring round the ground
+            if st and _inside(tuple(np.mean(np.array(p[:-1]), axis=0)), st):
+                continue
             d.polygon(poly(p), fill=ROOF)
     arr = np.asarray(im, float)
     shade = Image.new("L", (SIZE, SIZE), 0)
