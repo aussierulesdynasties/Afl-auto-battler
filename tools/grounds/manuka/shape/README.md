@@ -31,5 +31,12 @@ shot. Measuring and tracing only: no imagery is kept in the repository or baked 
 - `outline.py SHOT CAM_X CAM_Y CAM_H`: the model's own roofs projected through the calibrated camera against the
   shot's strongest edges (catches anything roofcheck's list leaves out; it picks the strongest edge, so faint roof
   fronts over concourses read as misses).
+- `oblique.py` (+ `ge_probe.js`): the heights. Six angled Google Earth cameras, each solved from the status bar
+  under 15 pixels (field of view fixed at 25.58 degrees; 1.3 to 2.0 px rms), then Google Earth's own height under
+  pixels aimed at every roof against ours where Google Earth hit. Limits: median |error| 1.0 m, 90th percentile 2.0 m
+  (the status bar rounds heights to the metre). 2026-11-22: median 0.03 m, 90th percentile 0.92 m on 229 hits.
+  Heights read the same way set the seats (front rows 3 to 4 m at 12 to 14 m out), the screen (6.5 to 14 m) and the
+  camera box (top 16 m). Under-roof hits are unreliable in Google Earth's mesh: used only to bound the rows.
+  A roof's height moves its top-down trace by its lean, so roofcheck.py is re-run after any height change.
 - `trace.py`, `fit.py`: the fence trace and its fits; `matchspace.py`: model frame to the match's metres for
   `tools/visual/preinspect_look.gd`.
