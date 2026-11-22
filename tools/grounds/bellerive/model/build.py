@@ -597,9 +597,141 @@ def vomitories(col):
     mb.build(col)
 
 
+# ---------------- the indoor centre west of the Ponting Stand (OSM building=sports_centre) -----------------
+# GE out_W, out_NW, cf_240: a flat-roofed two-storey white box, 40 x 18 m, its long axis 23 deg south of east
+# and its east end against the Ponting Stand. Its upper floor is wrapped in two bands of glass on the north,
+# south and west faces: tall pale glass under the roof edge, a white floor line, a lower band of dark glass;
+# the ground floor is white render with doors and dark windows, glazed across the west end. A single-storey
+# service wing with a roller door stands on the north face's east end, a plant screen on its roof.
+IC = dict(c=(-113.38, -39.23), a=-23.16, L=40.0, W=18.0)
+IC_FLOOR, IC_EAVE, IC_TOP = 4.4, 9.0, 9.6     # first floor, underside of the roof edge, top of the parapet
+IC_BANDS = [(4.9, 6.45, 'dk'), (6.7, 8.9, 'up')]
+
+
+def edge_frame(p, q):
+    """A straight wall from plan point p to q, outward on the right: (s, z, out) -> 3D, and its length."""
+    p = np.array(p, float); q = np.array(q, float); L = float(np.linalg.norm(q - p)); t = (q - p) / L
+    n = np.array([t[1], -t[0]])
+    def P(s_, z, out=0.0):
+        x, y = p + t * s_ + n * out; return (float(x), float(y), z)
+    return L, P
+
+
+def curtain(mb, P, a, b_, z0, z1, d=0.2, bay=1.5, transoms=(), glass='cw_glass'):
+    """Glass set d into the wall between s = a..b_, z0..z1, with reveals, aluminium mullions every `bay` m
+    and transoms at the given heights, all modelled."""
+    _window(mb, P, a, b_, z0, z1, d, pane=glass)
+    n = max(1, int(round((b_ - a) / bay)))
+    for k in range(1, n):
+        post(mb, P, a + k * (b_ - a) / n, z0, z1, -d, 0.07, 0.12, 'steel_white')
+    for z in transoms:
+        for k in range(n):
+            s0, s1 = a + k * (b_ - a) / n + 0.035, a + (k + 1) * (b_ - a) / n - 0.035
+            mb.face([P(s0, z - 0.04, -d + 0.1), P(s1, z - 0.04, -d + 0.1), P(s1, z + 0.04, -d + 0.1), P(s0, z + 0.04, -d + 0.1)], 'steel_white')
+            mb.face([P(s0, z + 0.04, -d + 0.1), P(s1, z + 0.04, -d + 0.1), P(s1, z + 0.04, -d), P(s0, z + 0.04, -d)], 'steel_white')
+
+
+def ic_wall(mb, P, L, top, openings, glass_runs):
+    """One face: rendered wall to `top` with the openings left open, then the glass in them."""
+    _wall_with_holes(mb, P, L, 0.0, top, [o[:4] for o in openings], 'render_white')
+    for a, b_, z0, z1, kind in openings:
+        if kind == 'door':
+            _window(mb, P, a, b_, z0, z1, 0.25, pane='vom_dark')
+        elif kind == 'roller':
+            _window(mb, P, a, b_, z0, z1, 0.35, pane='steel_galv')
+            for z in np.arange(z0 + 0.2, z1, 0.2):   # the roller door's slats
+                mb.face([P(a, z - 0.02, -0.33), P(b_, z - 0.02, -0.33), P(b_, z, -0.30), P(a, z, -0.30)], 'conc_grey')
+        else:
+            curtain(mb, P, a, b_, z0, z1, **glass_runs.get(kind, {}))
+
+
+def fascia(mb, P, L, z0, z1, out=0.3, par=0.25):
+    """The deep white fascia standing `out` proud of the wall, its soffit, and the parapet's top and inside."""
+    # each face carries the corner square at its own end, so no two faces lie on top of each other
+    ribbon(mb, P, -out, L + out, z0, z1, out, 'render_white', step=L)
+    hband(mb, P, 0.0, L + out, z0, 0.0, out, 'render_white', step=L)
+    hband(mb, P, 0.0, L + out, z1, 0.0, out, 'steel_white', step=L)
+    hband(mb, P, 0.0, L - par, z1, -par, 0.0, 'steel_white', step=L)
+    ribbon(mb, P, L, 0.0, z1 - 0.6, z1, -par, 'render_white', step=L)   # the parapet's inner face, reversed
+
+
+def indoor_centre(col):
+    mb = MB('indoor_centre'); F = Frame(IC); h, w = IC['L'] / 2, IC['W'] / 2
+    C = [F.P(-h, -w), F.P(h, -w), F.P(h, w), F.P(-h, w)]          # SW, SE, NE, NW: counter-clockwise
+    wing_u = 4.0                                                    # the service wing runs from here to the east end
+    rng = np.random.default_rng(77)
+    runs = dict(up=dict(glass='cw_glass'), dk=dict(glass='cw_glass_dk'), low=dict(glass='win_dark'),
+                gl=dict(glass='cw_glass_dk', transoms=(2.5,)))
+    def bands(L, a=0.5, b_=None):
+        return [(a, (L - 0.5) if b_ is None else b_, z0, z1, k) for z0, z1, k in IC_BANDS]
+    # south face (C0 -> C1): both glass bands end to end, dark windows and two doors on the ground floor
+    L, P = edge_frame(C[0], C[1])
+    op = bands(L); s_ = 1.2
+    while s_ < L - 3.0:
+        if abs(s_ - 14.0) < 2.0 or abs(s_ - 29.0) < 2.0:
+            op.append((s_, s_ + 1.8, 0.0, 2.4, 'door')); s_ += 4.2; continue
+        wd = 3.0 if rng.random() < 0.7 else 4.5
+        op.append((s_, min(s_ + wd, L - 1.2), 1.0, 3.3, 'low')); s_ += wd + 1.2
+    ic_wall(mb, P, L, IC_EAVE, op, runs); fascia(mb, P, L, IC_EAVE, IC_TOP)
+    # east face (C1 -> C2): against the stand's back, plain render
+    L, P = edge_frame(C[1], C[2])
+    ic_wall(mb, P, L, IC_EAVE, [], {}); fascia(mb, P, L, IC_EAVE, IC_TOP)
+    # north face (C2 -> C3): the bands over the wing too; ground floor windows and a door west of the wing
+    L, P = edge_frame(C[2], C[3]); sw = h - wing_u
+    op = bands(L, 0.5) + [(L - 3.4, L - 1.6, 0.0, 2.4, 'door')]
+    op += [(sw + 1.5 + k * 4.6, sw + 4.5 + k * 4.6, 1.0, 3.3, 'low') for k in range(int((L - sw - 5.5) // 4.6))]
+    ic_wall(mb, P, L, IC_EAVE, op, runs); fascia(mb, P, L, IC_EAVE, IC_TOP)
+    # west end (C3 -> C0): the bands, and below them the ground floor glazed behind white piers, doors in it
+    L, P = edge_frame(C[3], C[0])
+    op = bands(L) + [(0.8, L - 0.8, 0.3, 3.9, 'gl')]
+    ic_wall(mb, P, L, IC_EAVE, op, runs); fascia(mb, P, L, IC_EAVE, IC_TOP)
+    for a in (L / 2 - 2.1, L / 2 + 0.1):
+        mb.face([P(a, 0.3, -0.1), P(a + 2.0, 0.3, -0.1), P(a + 2.0, 2.5, -0.1), P(a, 2.5, -0.1)], 'vom_dark')
+    for k in range(1, 4):
+        post(mb, P, 0.8 + k * (L - 1.6) / 4, 0.0, 4.4, 0.0, 0.35, 0.3, 'render_white')
+    # the roof inside the parapet: a roof hatch and one small plant unit (GE out_W: the roof is near bare)
+    q = lambda u, v, z: F.P(u, v, z)
+    i = 0.25; zr = IC_TOP - 0.6
+    mb.face([q(-h + i, -w + i, zr), q(h - i, -w + i, zr), q(h - i, w - i, zr), q(-h + i, w - i, zr)], 'roof_white')
+    for u, v, L_, W_, H_ in ((-6.0, 5.5, 1.0, 1.0, 0.45), (12.0, 4.0, 1.6, 1.2, 0.9)):
+        mb.box(F.P(u, v), L_, W_, H_, IC['a'], 'steel_galv', z0=zr, mtop='steel_white')
+    # the service wing on the north face's east half (GE out_W, out_NW): one storey, 11 m deep, its east side
+    # following the Ponting's back round; a roller door and a door in its west end, high windows on its
+    # north side, a 0.6 m parapet, and a 1.6 m plant screen round the west half of its roof
+    wu0, wv0, wv1, wz, rs = -2.0, w, w + 11.0, 5.0, 100.6
+    def r_at(u, v):
+        x, y = F.P(u, v); return math.hypot(x, y)
+    def u_on(v):                                   # where the line v meets the stand's back, r = rs
+        lo, hi = wu0, h + 5.0
+        for _ in range(50):
+            m_ = 0.5 * (lo + hi); lo, hi = (m_, hi) if r_at(m_, v) > rs else (lo, m_)
+        return lo
+    arc_uv = [(u_on(v), v) for v in np.linspace(wv0, wv1, 6)]
+    G = [F.P(wu0, wv0)] + [F.P(u, v) for u, v in arc_uv] + [F.P(wu0, wv1)]
+    n = len(G)
+    for k in range(1, n):                          # edge 0 (its south side) is the main block's wall
+        a, b_ = G[k], G[(k + 1) % n]
+        L, P = edge_frame(a, b_)
+        op = []
+        if k == n - 1: op = [(1.5, 5.0, 0.0, 3.8, 'roller'), (6.4, 7.4, 0.0, 2.2, 'door')]
+        if k == n - 2: op = [(1.5 + 3.2 * j, 2.7 + 3.2 * j, 2.2, 3.1, 'low') for j in range(int((L - 2.5) // 3.2))]
+        ic_wall(mb, P, L, wz + 0.6, op, runs)
+        hband(mb, P, 0.0, max(0.1, L - 0.25), wz + 0.6, -0.25, 0.0, 'steel_white', step=L)
+        ribbon(mb, P, L, 0.0, wz, wz + 0.6, -0.25, 'render_white', step=L)
+    mb.cap(G, wz, 'roof_white')
+    sc_u = wu0 + 0.5 * (arc_uv[-1][0] - wu0)
+    S = [F.P(sc_u, wv1 - 0.25), F.P(wu0 + 0.25, wv1 - 0.25), F.P(wu0 + 0.25, wv0 + 1.0)]
+    for a, b_ in zip(S, S[1:]):
+        L, P = edge_frame(a, b_)
+        for o in (0.0, -0.2):
+            ribbon(mb, P, 0.0, L, wz, wz + 1.8, o, 'render_white', step=L)
+        hband(mb, P, 0.0, L, wz + 1.8, -0.2, 0.0, 'render_white', step=L)
+    mb.build(col)
+
+
 def build_all():
     clear(); col = bpy.context.scene.collection
-    main_all(col); vomitories(col); skylights(col); members_all(col); nstand(col); terrace(col); scoreboard(col); towers(col); apron(col)
+    main_all(col); vomitories(col); skylights(col); members_all(col); nstand(col); terrace(col); scoreboard(col); towers(col); apron(col); indoor_centre(col)
     fence_only(col, D['members']['b1'], 360 + D['terrace']['b0'])
 
 
