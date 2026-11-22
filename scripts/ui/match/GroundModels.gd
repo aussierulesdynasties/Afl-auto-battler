@@ -95,6 +95,13 @@ const SURROUNDS := {
 			# Geelong's walls in Google Earth: red and brown brick, cream render, grey block, weatherboard.
 			"walls": [Color(0.62, 0.42, 0.34), Color(0.74, 0.7, 0.62), Color(0.55, 0.53, 0.5), Color(0.68, 0.5, 0.4),
 					Color(0.8, 0.78, 0.72), Color(0.6, 0.6, 0.6), Color(0.52, 0.36, 0.3)]},
+	# People First: the Carrara precinct, the Nerang River, its bush and the streets round it
+	# (tools/grounds/people_first/surrounds.py); the map laid on the model's origin.
+	"people_first": {"y": -0.04, "inner": 60.0, "colour": Color(0.41, 0.49, 0.3),
+			"map": "surrounds.webp", "span": 2048.0, "trees": "trees.bin", "buildings": "buildings.bin",
+			# Carrara's walls in Google Earth: cream and white render, pale brick, grey sheds.
+			"walls": [Color(0.82, 0.8, 0.74), Color(0.72, 0.62, 0.52), Color(0.6, 0.6, 0.58), Color(0.88, 0.86, 0.82),
+					Color(0.66, 0.5, 0.42), Color(0.74, 0.72, 0.68)]},
 	"mcg": {"y": -0.03, "inner": 140.0, "colour": Color(0.45, 0.55, 0.27),
 			"map": "surrounds.webp", "span": 2048.0, "trees": "trees.bin", "buildings": "buildings.bin"},
 }

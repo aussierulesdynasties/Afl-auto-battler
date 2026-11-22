@@ -239,7 +239,7 @@ _Update this section whenever 3D work merges. It is the one place 3D progress is
 | Optus Stadium | model, roof, seats | #1867 #1880; background scene open #1897 |
 | SCG | model | #1909 |
 | GMHBA Stadium | exterior model | #1903; open: roof #1899, background scene #1878 |
-| People First Stadium | model, roof | #1853 #1860 #1868 #1889; background scene open #1892 |
+| People First Stadium | model, roof; MCG standard r36 (fins, podium, scoreboard lattice, pods, Carrara surroundings: tools/grounds/people_first) | #1853 #1860 #1868 #1889; background scene open #1892 |
 | ENGIE Stadium | texture pass | #1866 |
 | Bellerive Oval | model | #1900 |
 | Manuka Oval | model | #1865 |
