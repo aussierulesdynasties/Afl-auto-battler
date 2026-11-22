@@ -42,37 +42,45 @@ def verandah(part, a, b, depth, z, posts_every=2.6, mat="roof_slate_grey"):
 
 def townhouses():
     """Six two-storey townhouses in a row (Google Earth e_270): orange-red brick, white-trimmed sash windows
-    two to a floor on the gable end facing the ground, grey Colorbond gables, a low wing at the back."""
-    ys = [-14.5, -23.9, -33.3, -42.7, -52.1]
-    for k, y in enumerate(ys):
-        part = P + "_terrace"
-        gable_building(part, (80.5, y), 0.0, 13.0, 8.8, 6.0, 8.9, "brick_terrace", "roof_pale", over=0.35,
-                       windows=[(1.1, 1.0, 2.6, 4.2), (1.1, 3.9, 5.4, 4.2)], gable_mat="brick_terrace")
-        gable_building(part, (89.6, y + 1.2), 0.0, 5.2, 5.0, 3.0, 4.6, "brick_terrace", "roof_pale", over=0.3,
-                       windows=(1.0, 0.9, 2.2, 2.4))
-        chimney(part, (85.8, y + 4.0), 7.0, 10.0)
+    two to a floor on the gable end facing the ground, grey Colorbond gables, a low wing at the back.
+    Each roof traced on Google Earth's top-down mosaic (lean taken out for 7 m, 2026-11-22): the party walls
+    at y below, each main roof's west and east ends in WE/EE (roof edges, overhang included)."""
+    YB = [-11.5, -18.9, -26.1, -33.2, -40.3, -45.6, -53.0]
+    WE = [75.25, 76.22, 76.51, 76.9, 77.19, 76.51]
+    EE = [83.32, 86.26, 84.3, 87.61, 87.9, 83.71]
+    part = P + "_terrace"
+    for k in range(6):
+        y0, y1 = YB[k], YB[k + 1]
+        yc, wd = (y0 + y1) / 2, y0 - y1
+        x0, x1 = WE[k] + 0.35, EE[k] - 0.35
+        gable_building(part, ((x0 + x1) / 2, yc), 0.0, x1 - x0, wd - 0.6, 6.0, 8.9, "brick_terrace", "roof_pale",
+                       over=0.35, windows=[(1.1, 1.0, 2.6, min(4.2, wd - 3.0)), (1.1, 3.9, 5.4, min(4.2, wd - 3.0))],
+                       gable_mat="brick_terrace")
+        gable_building(part, (x1 + 2.6, yc), 0.0, 5.2, min(5.0, wd - 0.8), 3.0, 4.6, "brick_terrace", "roof_pale",
+                       over=0.3, windows=(1.0, 0.9, 2.2, 2.4))
+        chimney(part, (x1 - 2.4, y0 - 0.9), 7.0, 10.0)
         # party walls stand proud of the roof between the houses
         if k:
-            yy = y + 4.7
-            obox(part, (80.5, yy), 0.0, 13.6, 0.36, 6.0, 7.3, "brick_terrace", top="render_cream")
+            obox(part, ((x0 + x1) / 2, y0), 0.0, x1 - x0 + 0.6, 0.36, 6.0, 7.3, "brick_terrace", top="render_cream")
         # small timber deck and steps on the ground side
-        obox(part, (73.2, y), 0.0, 1.6, 3.2, 0.0, 0.5, "timber_dark", top="timber_dark")
-    # the south end house, set back and lower (top-down tile: x 70-80, y -57 to -66)
-    gable_building(P + "_terrace", (75.5, -61.5), math.pi / 2, 8.5, 9.0, 5.8, 8.4, "brick_terrace", "roof_pale",
-                   over=0.35, windows=[(1.1, 1.0, 2.6, 3.6), (1.1, 3.9, 5.4, 3.6)], gable_mat="brick_terrace")
+        obox(part, (x0 - 0.8, yc), 0.0, 1.6, 3.2, 0.0, 0.5, "timber_dark", top="timber_dark")
+    # the low flat-roofed garage at the row's south end
+    prism(part, [(77.5, -53.6), (82.0, -53.6), (82.0, -60.0), (77.5, -60.0)], 0.0, 3.2, "brick_terrace", top="roof_grey")
+    # the south end house, set back and lower, hipped to the ground (top-down: x 70.4-78.9, y -58.0 to -66.5)
+    gable_building(part, (74.65, -62.25), math.pi / 2, 7.8, 7.8, 5.8, 8.4, "brick_terrace", "roof_pale",
+                   over=0.35, windows=[(1.1, 1.0, 2.6, 3.2), (1.1, 3.9, 5.4, 3.2)], hip=True)
     # the jacarandas' bed and the low brick wall in front of the row (between the terrace walk and the houses)
-    for y0, y1 in ((-10.0, -58.0),):
-        box3(P + "_terrace", V(71.0, y0, 0.0), V(71.0, y1, 0.0), 0.3, 0.9, "brick_terrace")
+    box3(part, V(71.0, -10.0, 0.0), V(71.0, -57.0, 0.0), 0.3, 0.9, "brick_terrace")
 
 
 def big_house():
     """Behind the row: a two-storey brick house under a big grey hipped roof with chimneys, and its south wing."""
     part = P + "_house_e"
-    gable_building(part, (110.5, -30.0), math.pi / 2, 36.0, 20.0, 7.2, 11.2, "brick_terrace", "roof_slate_grey",
+    gable_building(part, (108.75, -27.85), math.pi / 2, 29.9, 20.1, 7.2, 11.2, "brick_terrace", "roof_slate_grey",
                    over=0.5, windows=[(1.3, 1.1, 3.0, 3.6), (1.3, 4.3, 6.2, 3.6)], hip=True)
-    for y in (-18.0, -27.0, -36.0, -44.0):
-        chimney(part, (106.0, y), 9.0, 12.6)
-    gable_building(part, (110.0, -51.5), 0.0, 22.0, 8.0, 3.4, 5.4, "brick_terrace", "roof_slate_grey", over=0.4,
+    for y in (-17.0, -24.0, -31.0, -38.0):
+        chimney(part, (104.5, y), 9.0, 12.6)
+    gable_building(part, (110.0, -48.5), 0.0, 22.0, 8.0, 3.4, 5.4, "brick_terrace", "roof_slate_grey", over=0.4,
                    windows=(1.2, 1.0, 2.4, 3.2), hip=True)
 
 
@@ -107,22 +115,22 @@ def villa_37():
 
 
 def villa_ne():
-    """The two-storey red-brick villa at the north-east (e_090): grey hipped roof, two-level verandah facing
+    """The two-storey red-brick villa at the north-east (e_090; placed on Google Earth's top-down mosaic): grey hipped roof, two-level verandah facing
     the ground with white posts and balustrade, chimneys."""
     part = P + "_villa_ne"
-    gable_building(part, (102.0, 79.0), 0.0, 23.0, 15.0, 7.4, 11.0, "brick_terrace", "roof_slate_grey", over=0.5,
+    gable_building(part, (99.5, 79.0), 0.0, 23.0, 15.0, 7.4, 11.0, "brick_terrace", "roof_slate_grey", over=0.5,
                    windows=[(1.3, 1.1, 3.1, 3.8), (1.3, 4.4, 6.4, 3.8)], hip=True, quoins="render_cream")
-    a, b = (90.4, 72.0), (90.4, 86.0)
+    a, b = (87.9, 72.0), (87.9, 86.0)
     verandah(part, b, a, 2.6, 3.5)
     verandah(part, b, a, 2.6, 7.1)
     # the balcony floor and balustrade
-    obox(part, (89.1, 79.0), 0.0, 2.6, 14.0, 3.55, 3.75, "timber_white", top="timber_dark", bottom="timber_white")
-    box3(part, V(87.9, 72.0, 4.75), V(87.9, 86.0, 4.75), 0.08, 0.08, "timber_white")
+    obox(part, (86.6, 79.0), 0.0, 2.6, 14.0, 3.55, 3.75, "timber_white", top="timber_dark", bottom="timber_white")
+    box3(part, V(85.4, 72.0, 4.75), V(85.4, 86.0, 4.75), 0.08, 0.08, "timber_white")
     for y in np.arange(72.2, 86.0, 0.16):
-        box3(part, V(87.9, y, 3.75), V(87.9, y, 4.75), 0.03, 0.03, "timber_white")
-    for y in (74.0, 84.0):
-        chimney(part, (106.0, y), 10.0, 12.8)
-    gable_building(part, (107.0, 66.5), 0.0, 12.0, 8.0, 3.4, 5.2, "brick_terrace", "roof_slate_grey", over=0.4,
+        box3(part, V(85.4, y, 3.75), V(85.4, y, 4.75), 0.03, 0.03, "timber_white")
+    for y in (71.5, 84.0):
+        chimney(part, (103.5, y), 10.0, 12.8)
+    gable_building(part, (104.5, 66.5), 0.0, 12.0, 8.0, 3.4, 5.2, "brick_terrace", "roof_slate_grey", over=0.4,
                    windows=(1.2, 1.0, 2.6, 3.2), hip=True)
 
 
@@ -151,25 +159,31 @@ def south_east():
                        windows=[(1.2, 1.0, 2.8, 3.0), (1.2, 4.0, 5.9, 3.0)], gable_mat="render_cream")
     gable_building(part, (96.0, -93.5), 0.0, 22.0, 9.0, 6.4, 9.4, "render_cream", "roof_slate_grey", over=0.4,
                    windows=[(1.2, 1.0, 2.8, 3.2), (1.2, 4.0, 5.6, 3.2)], hip=True)
-    # the pool and its paving (the water a hand under the coping)
-    obox(part, (94.0, -79.0), 0.0, 16.0, 9.0, 0.0, 0.12, "concrete", top="concrete")
-    obox(part, (93.0, -79.5), 0.0, 9.0, 4.4, 0.12, 0.14, "glass_rail", top="glass_rail")
-    # the modern house: flat roof, dark frames
-    prism(part, [(72.0, -63.0), (91.0, -63.0), (91.0, -76.0), (72.0, -76.0)], 0.0, 6.6, "render_white",
-          top="roof_grey")
-    for x in (76.0, 83.0):
-        obox(part, (x, -69.5), 0.0, 5.0, 8.0, 6.6, 6.72, "window_dark", top="window_dark")
-    # the tennis court with its lines (white strips a few millimetres proud) and its fence
-    obox(part, (74.5, -85.5), math.pi / 2, 32.0, 14.0, 0.0, 0.04, "court_surround", top="court_surround")
-    obox(part, (74.5, -85.5), math.pi / 2, 23.8, 11.0, 0.04, 0.05, "court_green", top="court_green")
-    for x in (69.0, 70.4, 78.6, 80.0):
-        box3(part, V(x, -97.4, 0.05), V(x, -73.6, 0.05), 0.05, 0.006, "paint_white")
-    for y in (-97.4, -91.9, -79.1, -73.6):
-        box3(part, V(69.0, y, 0.05), V(80.0, y, 0.05), 0.05, 0.006, "paint_white")
-    box3(part, V(74.5, -91.9, 0.05), V(74.5, -79.1, 0.05), 0.05, 0.006, "paint_white")
-    box3(part, V(67.5, -85.5, 1.07), V(81.5, -85.5, 1.07), 0.04, 0.04, "steel_dark")   # the net
-    for (x0, y0), (x1, y1) in (((67.5, -101.5), (81.5, -101.5)), ((81.5, -101.5), (81.5, -69.5)),
-                               ((81.5, -69.5), (67.5, -69.5)), ((67.5, -69.5), (67.5, -101.5))):
+    # the pool and its paving (the water a hand under the coping): top-down, pool x 92.3-97.7, y -77.3 to -81.7
+    obox(part, (94.5, -78.8), 0.0, 17.0, 9.0, 0.0, 0.12, "concrete", top="concrete")
+    obox(part, (95.0, -79.5), 0.0, 5.4, 4.4, 0.12, 0.14, "glass_rail", top="glass_rail")
+    # the two modern houses north of the pool: flat roofs covered in solar panels (traced, lean out for 6.6 m)
+    for (x0, x1, y0, y1) in ((80.8, 90.1, -73.0, -63.5), (93.1, 102.6, -73.6, -60.6)):
+        prism(part, [(x0, y0), (x1, y0), (x1, y1), (x0, y1)], 0.0, 6.6, "render_white", top="roof_grey")
+        for xx in np.arange(x0 + 1.4, x1 - 1.0, 2.2):
+            obox(part, (xx, (y0 + y1) / 2), 0.0, 1.8, (y1 - y0) - 2.4, 6.7, 6.78, "window_dark", top="window_dark")
+    # the low building south of the court, its flat roof under two rows of solar panels
+    prism(part, [(68.5, -104.7), (84.3, -104.7), (84.3, -97.8), (68.5, -97.8)], 0.0, 3.5, "render_white", top="roof_grey")
+    for yy in (-99.9, -102.6):
+        obox(part, (76.4, yy), 0.0, 14.4, 1.9, 3.6, 3.68, "window_dark", top="window_dark")
+    # the tennis court (Google Earth top-down: its green x 66.05-82.35, y -66.8 to -97.8) with its lines
+    # (white strips a few millimetres proud) and its fence
+    CX, CY = 74.2, -82.3
+    obox(part, (CX, CY), math.pi / 2, 31.0, 16.3, 0.0, 0.04, "court_surround", top="court_surround")
+    obox(part, (CX, CY), math.pi / 2, 23.77, 10.97, 0.04, 0.05, "court_green", top="court_green")
+    for dx in (-5.485, -4.115, 4.115, 5.485):
+        box3(part, V(CX + dx, CY - 11.885, 0.05), V(CX + dx, CY + 11.885, 0.05), 0.05, 0.006, "paint_white")
+    for dy in (-11.885, -6.4, 6.4, 11.885):
+        box3(part, V(CX - 5.485, CY + dy, 0.05), V(CX + 5.485, CY + dy, 0.05), 0.05, 0.006, "paint_white")
+    box3(part, V(CX, CY - 6.4, 0.05), V(CX, CY + 6.4, 0.05), 0.05, 0.006, "paint_white")
+    box3(part, V(CX - 7.0, CY, 1.07), V(CX + 7.0, CY, 1.07), 0.04, 0.04, "steel_dark")   # the net
+    X0, X1, Y0, Y1 = CX - 8.15, CX + 8.15, CY - 15.5, CY + 15.5
+    for (x0, y0), (x1, y1) in (((X0, Y0), (X1, Y0)), ((X1, Y0), (X1, Y1)), ((X1, Y1), (X0, Y1)), ((X0, Y1), (X0, Y0))):
         L = math.hypot(x1 - x0, y1 - y0)
         for t in np.arange(0.0, L + 0.01, 3.0):
             x, y = x0 + (x1 - x0) * t / L, y0 + (y1 - y0) * t / L

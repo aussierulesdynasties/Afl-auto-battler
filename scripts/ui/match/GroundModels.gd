@@ -53,10 +53,13 @@ const FIT := {
 	"engie": [20.64, -43.32, 0.0, -41.1, 92.14, 76.44],
 	"bellerive": [0.31, -0.64, -0.02, 68.7, 86.9, 66.77],
 	"manuka": [5.93, 8.15, 0.03, -82.9, 85.94, 73.1],
-	# Norwood: the rebuilt model (tools/grounds/norwood/model), origin the centre circle; the largest
-	# ellipse inside its fence and the Western Stand's podium (the real ground is squarer than an ellipse:
-	# its corners keep the model's own grass).
-	"norwood": [2.14, 0.49, 0.0, 84.56, 88.71, 58.4],
+	# Norwood: the rebuilt model (tools/grounds/norwood/model), origin the centre circle. Laid on the
+	# painted boundary traced on Google Earth's top-down mosaic (2026-11-22): goal line to goal line
+	# 163.9 m, 107.8 m across the flanks (published 165 x 110). The real boundary is squarer than any
+	# ellipse and its flanks sit 2.5 m east of the goals' line, so this is the seat-safe ellipse with the
+	# smallest worst miss: goals and centre square 2.4 m east of the real ones, flanks within 0.6 m
+	# between the 50 m arcs, pockets 5-12 m inside the real line.
+	"norwood": [2.4, 0.2, 0.0, 88.5, 87.93, 60.25],
 	"waverley_park": [-1.08, 5.64, 0.0, -34.6, 92.9, 71.99],
 	"windy_hill": [6.01, -11.01, 0.05, 1.4, 78.42, 67.69],
 	"moorabbin": [0.88, -2.15, 0.0, -57.5, 86.73, 69.48],
@@ -116,8 +119,8 @@ const SURROUNDS := {
 			"inner_by_angle": [
 				67.2, 68.0, 69.1, 70.6, 72.2, 74.0, 75.9, 77.9, 80.3, 82.8, 85.3, 87.7, 89.0, 91.2, 93.5, 95.5,
 				97.4, 98.2, 98.9, 99.9, 100.3, 100.5, 100.6, 100.5, 100.1, 99.6, 98.9, 98.1, 97.0, 95.8, 94.4, 92.2,
-				89.7, 87.1, 84.4, 81.6, 78.9, 76.5, 74.0, 71.6, 68.6, 66.1, 64.1, 62.7, 61.7, 61.0, 60.4, 60.2,
-				60.3, 60.8, 61.5, 62.3, 63.5, 65.5, 68.1, 71.1, 74.8, 78.2, 81.1, 84.0, 87.6, 90.1, 92.4, 95.4,
+				89.7, 87.1, 84.4, 81.6, 78.9, 77.3, 77.2, 74.4, 71.3, 68.7, 66.6, 65.1, 64.0, 63.3, 62.9, 62.7,
+				62.8, 63.2, 63.8, 64.7, 66.0, 68.1, 70.8, 73.9, 77.7, 82.2, 86.2, 86.6, 87.6, 90.1, 92.4, 95.4,
 				97.1, 98.1, 98.9, 99.6, 100.0, 100.2, 100.3, 100.2, 100.1, 99.2, 98.2, 97.1, 95.9, 94.5, 93.9, 92.3,
 				90.6, 89.1, 87.4, 85.6, 83.6, 81.5, 79.3, 77.1, 74.9, 72.9, 71.1, 69.6, 68.3, 67.4, 66.9, 66.8],
 			"map": "surrounds.webp", "span": 2048.0, "trees": "trees.bin", "buildings": "buildings.bin",
