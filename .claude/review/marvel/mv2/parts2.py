@@ -280,6 +280,55 @@ def tier(name,f0,f1,zf,zb,lip=1.1,front='concrete'):
 # the middle and top tiers' fronts carry the ribbon screens that run right round the bowl
 tier('tier1',0.0,0.62,FL+1.4,FL+12.0);tier('tier2',0.40,0.80,FL+15.0,FL+23.0,front='ribbon');_b3=rp+D*1.0;_rt=np.array([roof_top(r*math.cos(t),r*math.sin(t)) for r,t in zip(_b3,TH)])
 tier('tier3',0.62,1.0,FL+26.5,np.minimum(FL+37.0,_rt-1.5),front='ribbon')  # back row stays under the roof (ends at 33-38 m)
+from shapely.geometry import Polygon,Point
+def vent_block(nm,f,z0,z1,zb0,zb1,bay=7.0,pier=1.6,depth=0.45,wall='bluepanel',top='concrete'):
+    # the blue service blocks (Google Earth c_ne): solid blue cladding with big louvred vent openings cut
+    # into it, the louvres set back behind the cladding's face, not painted on it
+    P=Polygon(f);f=list(P.exterior.coords)[:-1];core=list(P.buffer(-depth,join_style=2).exterior.coords)[:-1]
+    prism(nm+'_vents',core,zb0,zb1,'grille',top)
+    prism(nm,f,z0,zb0,wall,wall)
+    prism(nm+'_head',f,zb1,z1,wall,top,bottom=wall)
+    n=len(f)
+    for i in range(n):
+        a=np.array(f[i]);b=np.array(f[(i+1)%n]);L=np.linalg.norm(b-a)
+        if L<pier*2:continue
+        d=(b-a)/L;out=np.array([d[1],-d[0]])
+        if P.contains(Point(*(0.5*(a+b)+out*0.3))):out=-out
+        k=max(1,int((L-pier)/(bay+pier)));w=(L-pier*(k+1))/k
+        for j in range(k+1):
+            t0=j*(w+pier);c0=a+d*t0;c1=a+d*(t0+pier)
+            q4=[tuple(c0),tuple(c1),tuple(c1-out*depth),tuple(c0-out*depth)]
+            prism(nm+'_pier%d_%d'%(i,j),q4,zb0,zb1,wall,wall)
+def office_box(nm,q,z0=9.0,z1=24.0,storey=3.75):
+    # modelled, not painted: an open ground floor (slim round columns every 7.5 m on the outer line, the
+    # glazed lobby wall set 2.5 m back under the box's soffit); above, the glazing set 0.35 m back behind a
+    # proud pale spandrel band at the foot of every storey and a parapet, with slim pale fins every 0.75 m
+    f=lean(q,z1);P=Polygon(f)
+    core=list(P.buffer(-0.35,join_style=2).exterior.coords)[:-1];lobby=list(P.buffer(-2.5,join_style=2).exterior.coords)[:-1]
+    prism(nm+'_lobby',lobby,0.0,z0,'shopglass','concrete')
+    prism(nm,core,z0,z1-0.8,'glass','concrete',bottom='concrete')
+    prism(nm+'_soffit',f,z0-0.45,z0,'panel_lt','panel_lt',bottom='concrete')
+    z=z0
+    while z<z1-1.0:
+        prism(nm+'_band%d'%int(z*10),f,z,z+1.2,'panel_lt','panel_lt',bottom='panel_lt');z+=storey
+    prism(nm+'_parapet',f,z1-0.8,z1,'panel_lt','concrete',bottom='panel_lt')
+    # the edges that face out (the one along the stadium wall, v -107, has no fins or columns)
+    V=[];F=[];UV=[];n=len(q)
+    for i in range(n):
+        if abs(q[i][1]+107.0)<0.01 and abs(q[(i+1)%n][1]+107.0)<0.01:continue
+        a=np.array(f[i]);b=np.array(f[(i+1)%n]);L=np.linalg.norm(b-a);d=(b-a)/L;out=np.array([d[1],-d[0]])
+        if P.contains(Point(*(0.5*(a+b)+out*0.5))):out=-out
+        for t in np.arange(0.6,L-0.3,0.75):
+            c=a+d*t-out*0.18
+            for zz0,zz1 in [(z0+1.2+k*storey,min(z0+(k+1)*storey,z1-0.8)) for k in range(int((z1-z0)/storey)+1)]:
+                if zz1-zz0<0.2:continue
+                cc,ff,uu=beamV(np.r_[c,zz0],np.r_[c,zz1],0.0);o=len(V)
+                pts=[np.r_[c+d*sx*0.05+out*sy*0.17,zz] for zz in (zz0,zz1) for sx,sy in((-1,-1),(1,-1),(1,1),(-1,1))]
+                V+=[tuple(p_) for p_ in pts];F+=[[o+i_ for i_ in fa] for fa in ([0,1,5,4],[1,2,6,5],[2,3,7,6],[3,0,4,7])]
+                UV+=[[(0,zz0),(0.1,zz0),(0.1,zz1),(0,zz1)]]*4
+        for t in np.arange(3.0,L-1.0,7.5):
+            c=a+d*t-out*0.6;cyl(nm+'_col%d_%d'%(i,int(t)),tuple(c),0.32,0.0,z0-0.45,'white','white',12)
+    if V:add(nm+'_fins',V,F,'silver',UV)
 # ---------------- corner complexes (west measured: satellite lean + aerial, mv/sz.py, mv/vert.py); east = 180-degree twin
 def face_v(u,o=0.0):
     vv=np.linspace(0,130,2600);thv=np.arctan2(vv,u);j=np.where(np.hypot(u,vv)<=se_r(thv,OA,OB,ON)+o)[0];return vv[j[-1]] if len(j) else 0.0
@@ -298,8 +347,8 @@ def fill_line(name,L,z0,z1,off,side,top):
     return q
 for sg in(1,-1):
     tw='w' if sg>0 else 'e';m=lambda u,v:(sg*u,sg*v)
-    prism('cornerN_tower_'+tw,[m(*c) for c in TWN],0.0,33.0,'louvre','concrete')
-    if sg>0:prism('cornerS_tower_'+tw,[m(*c) for c in TWS],0.0,33.0,'louvre','concrete')
+    prism('cornerN_tower_'+tw,[m(*c) for c in TWN],0.0,33.0,'bluepanel','concrete')
+    if sg>0:prism('cornerS_tower_'+tw,[m(*c) for c in TWS],0.0,33.0,'bluepanel','concrete')
     for uc,vc in((-54.2,107.2),(54.3,108.4)):
         cu,cv=m(uc,vc);box('beige_%s_%d'%(tw,int(uc)),cu-6,cu+6,cv-5,cv+5,0.0,27.4,'slate','glass' if (sg<0 and cu<0) else 'canvas')
     for u0_,u1_ in((-80,-58),(57,80)):
@@ -307,26 +356,26 @@ for sg in(1,-1):
         prism('pod_%s_%d'%(tw,u0_),q,24.0,31.0,'curtain','silver')
     for k,L in enumerate((FLN,FLS)):
         if sg<0 and k==1:L=[c for c in L if c[0]<88.0]  # NE: the satellite shows open paving north of u -88
-        q=fill_line('',L,0,0,0.0,'','');prism('fill1_%s_%d'%(tw,k),[m(*c) for c in q],0.0,22.0,'louvre','concrete')
+        q=fill_line('',L,0,0,0.0,'','');vent_block('fill1_%s_%d'%(tw,k),[m(*c) for c in q],0.0,22.0,9.0,16.0)
         q=fill_line('',L,0,0,2.5,'','');prism('fill0_%s_%d'%(tw,k),[m(*c) for c in q],0.0,10.0,'slate','concrete')
 # ---------------- east side, read off the straight-down satellite (roof outline seen at height z, footprint = roof + lean*z,
 # lean du +0.1738, dv +0.0805 per metre); heights from the shadow lengths (0.5 m of shadow per metre, calibrated on the roof edge)
 def lean(q,z):return [(u+0.1738*z,v+0.0805*z) for u,v in q]
 # NE corner: one long block (roof 9.3 m wide, 38.7 m long) from the roof corner to the plaza, z 33, plant room on top to 37
 NEB=[(-120.3,-59.1),(-125.6,-66.7),(-93.9,-88.9),(-88.6,-81.3)]
-prism('cornerNE_block',lean(NEB,33.0),0.0,33.0,'louvre','concrete')
+prism('cornerNE_block',lean(NEB,33.0),0.0,33.0,'bluepanel','concrete')
 _c=np.mean(lean([(-106.4,-78.3)],37.0),0);rbox('cornerNE_plant',tuple(_c),9.0,7.5,math.atan2(-0.574,0.819),33.0,37.0,'silver','concrete')
 # B: office block north of the deck (Google Earth c_e, c_ne: pale boxes, a spandrel band and a ribbon of
 # glass behind fins every storey, over an open ground floor of slim columns): roof u -55..-21, v -107..-125 (north half), out to -131 south of u -40; z 24
+from shapely.geometry import Point
 for nm,q in(('eastB_n',[(-55.0,-107.0),(-55.0,-125.0),(-40.0,-125.0),(-40.0,-107.0)]),('eastB_s',[(-40.0,-107.0),(-40.0,-131.0),(-21.0,-131.0),(-21.0,-107.0)])):
-    f=lean(q,24.0);prism(nm+'_lo',f,0.0,9.0,'undercroft','concrete');prism(nm,f,9.0,24.0,'office','concrete')
+    office_box(nm,q)
 # D: office block south of the deck: roof u 10..47.5, east edge v -127.5 at u 12 to -124.4 at u 47.5; z 24
-q=[(10.0,-107.0),(10.0,-131.3),(47.5,-124.6),(47.5,-107.0)];f=lean(q,24.0)
-prism('eastD_lo',f,0.0,9.0,'undercroft','concrete');prism('eastD',f,9.0,24.0,'office','concrete')
+office_box('eastD',[(10.0,-107.0),(10.0,-131.3),(47.5,-124.6),(47.5,-107.0)])
 # roof plant on B and D (the dark grilles in the satellite)
 for nm,q,z in(('eastB_plant',[(-54.0,-109.0),(-54.0,-117.0),(-47.0,-117.0),(-47.0,-109.0)],24.0),('eastB_plant2',[(-38.0,-108.5),(-38.0,-123.0),(-22.5,-123.0),(-22.5,-108.5)],24.0),
                 ('eastD_plant',[(11.0,-110.0),(11.0,-124.0),(28.0,-124.0),(28.0,-110.0)],24.0),('eastD_plant2',[(32.0,-107.5),(32.0,-116.0),(44.5,-116.0),(44.5,-107.5)],24.0)):
-    prism(nm,lean(q,z+2.0),z,z+2.0,'louvre','silver')
+    vent_block(nm,lean(q,z+2.0),z,z+2.0,z+0.25,z+1.75,bay=3.0,pier=0.8,depth=0.25,wall='silver',top='silver')
 # C: car deck between B and D (roof u -21..10, v -116..-124, z 7) and the white walkway strip beside the wall (v -107..-116, z 10)
 prism('eastC_deck',lean([(-21.0,-116.0),(-21.0,-124.0),(10.0,-124.0),(10.0,-116.0)],7.0),0.0,7.0,'navy','paving')
 prism('eastC_walk',lean([(-21.0,-107.0),(-21.0,-116.0),(10.0,-116.0),(10.0,-107.0)],10.0),0.0,10.0,'glass','white')
