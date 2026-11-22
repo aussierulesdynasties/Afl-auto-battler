@@ -1,0 +1,70 @@
+# ---------- Melbourne Park arenas (director 2026-11-20 "Yes, build all four"): OSM footprints, roofs copied from the aerial ----------
+if 'arenas' in LM:
+    AR = json.load(open(os.path.join(HERE, 'data', spec['name'], 'prep', 'arenas.json')))
+    def byname(nm):
+        for i, b in enumerate(BL):
+            if b.get('name') == nm: return i
+        return None
+    def dome(key, P, z0, rise, rings, f_top, uvmode='plan'):
+        """roof rising from footprint P (at z0) to a smaller copy f_top of it; height follows a quarter sine; plan-mapped UVs."""
+        tw, th = LMS['lm_%s.png' % key]; V, F, U = bk(key); k = len(P); c = np.mean(P, 0); n0 = len(V)
+        for r in range(rings + 1):
+            t = r / rings; f = 1 - (1 - f_top) * t; z = z0 + rise * math.sin(t * math.pi / 2)
+            for x, y in P:
+                q = c + (np.array((x, y)) - c) * f; V.append((q[0], q[1], z)); U.append((q[0] / tw, q[1] / th))
+        for r in range(rings):
+            for i in range(k):
+                a = n0 + r * k + i; b = n0 + r * k + (i + 1) % k; F.append((a, b, b + k, a + k))
+        return [tuple(np.array(V[n0 + rings * k + i][:2])) for i in range(k)], z0 + rise
+    # Rod Laver: round ribbed white dome over white walls, glazed centre panel (aerial), 30 m
+    i = byname('Rod Laver Arena'); P = ccw(AR['Rod Laver Arena']); z = gz(P)
+    if i is not None: drop.add(i)
+    wall_ring('arena_wall', P, z, z + 17, z); top, zt = dome('ribwhite', P, z + 17, 11, 6, 0.55)
+    cap('glazed', scaled(top, 0.98), zt + 0.3); wall_ring('ribwhite', scaled(top, 0.98), zt - 0.5, zt + 0.3)
+    c = np.mean(P, 0)
+    for k_ in range(0, len(P), 2):   # radial roof ribs over the dome (aerial: ~24 ribs)
+        p = np.array(P[k_]); pts = [(c + (p - c) * (1 - 0.45 * t), z + 17 + 11 * math.sin(t * math.pi / 2) + 0.6) for t in np.linspace(0, 1, 6)]
+        for (a2, za), (b2, zb) in zip(pts, pts[1:]): beam('white', (a2[0], a2[1], za), (b2[0], b2[1], zb), 0.6)
+    print('landmark rod laver base', round(z, 1))
+    # Margaret Court (OSM outline = the copper long-roof hall west of Rod Laver on the aerial): copper walls and roof, 16 m
+    i = byname('Margaret Court Arena'); P = ccw(AR['Margaret Court Arena']); z = gz(P)
+    if i is not None: drop.add(i)
+    wall_ring('arena_wall', P, z, z + 6, z); wall_ring('copper', P, z + 6, z + 14, z)
+    top, zt = dome('copper', P, z + 14, 4, 2, 0.9); cap('copper', top, zt)
+    print('landmark margaret court base', round(z, 1))
+    # John Cain: white stepped box roof with glazed truss panel in the middle (aerial), 30 m
+    i = byname('John Cain Arena'); P = ccw(AR['John Cain Arena']); z = gz(P)
+    if i is not None: drop.add(i)
+    wall_ring('arena_wall', P, z, z + 20, z); top, zt = dome('ribwhite', P, z + 20, 6, 3, 0.8)
+    G = scaled(top, 0.75); cap('ribwhite', top, zt); wall_ring('ribwhite', G, zt, zt + 3); cap('glazed', G, zt + 3)
+    print('landmark john cain base', round(z, 1))
+    # AAMI Park: ring of white geodesic bubbles round a rectangular pitch (aerial: 6 lobes per long side, 4 per end), 30 m
+    P = ccw(AR['AAMI Park']); z = gz(P); c = np.mean(P, 0)
+    P = [P[j] for j in range(0, len(P), 2)]; k = len(P)
+    ang = np.arctan2(np.array(P)[:, 1] - c[1], np.array(P)[:, 0] - c[0])
+    per = np.concatenate([[0], np.cumsum([math.hypot(P[(j + 1) % k][0] - P[j][0], P[(j + 1) % k][1] - P[j][1]) for j in range(k)])]); L = per[-1]
+    NL = 20; tw, th = LMS['lm_bubble.png']; V, F, U = bk('bubble'); n0 = len(V); S = 10
+    inner = scaled(P, 0.6)
+    for s_ in range(S + 1):
+        t = s_ / S
+        for j in range(k):
+            lob = abs(math.sin(math.pi * NL * per[j] / L))     # 0 at the valleys between bubbles, 1 at each crown
+            o = np.array(P[j]); q = o + (np.array(inner[j]) - o) * t
+            zz = z + 6 + (22 + 6 * lob) * math.sin(math.pi * min(1, t * 1.15) / 1) ** 0.7 * (0.75 + 0.25 * lob)
+            q = q + (o - c) / np.linalg.norm(o - c) * 4 * lob * math.sin(math.pi * t)   # bubbles bulge outward
+            V.append((q[0], q[1], zz)); U.append((per[j] / tw, t * 40 / th))
+    for s_ in range(S):
+        for j in range(k):
+            a = n0 + s_ * k + j; b = n0 + s_ * k + (j + 1) % k; F.append((a, b, b + k, a + k))
+    wall_ring('arena_wall', P, z, z + 6, z)
+    T1 = scaled(P, 0.6); T2 = scaled(P, 0.48)    # empty seat bowl inside the shell, down to the pitch
+    V, F, U = bk('tiers'); n0 = len(V); tw, th = LMS['lm_tiers.png']
+    for j in range(k):
+        V += [(T1[j][0], T1[j][1], z + 16), (T2[j][0], T2[j][1], z + 1)]; U += [(per[j] / tw, 18 / th), (per[j] / tw, 0)]
+    for j in range(k):
+        a, b = n0 + 2 * j, n0 + 2 * ((j + 1) % k); F.append((a + 1, b + 1, b, a))
+    # pitch: 136 x 88 m rectangle (real dimensions incl. run-off) aligned with the shell's long axis
+    Pa = np.array(P) - c; ev = np.linalg.eigh(Pa.T @ Pa)[1][:, 1]; ex = np.array([-ev[1], ev[0]])
+    R = [tuple(c + ev * su * 68 + ex * sv * 44) for su, sv in [(-1, -1), (1, -1), (1, 1), (-1, 1)]]
+    cap('pitch', ccw(R), z + 1.05)
+    print('landmark aami park base', round(z, 1))
