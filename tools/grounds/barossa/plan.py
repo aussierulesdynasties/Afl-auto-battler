@@ -124,20 +124,23 @@ RING = [
 ]
 
 # The temporary grandstands of Gather Round 2026, as the satellite caught them (the open stands with blue seats in the
-# 2026 match photo): front edge a -> b (plan), rows rising away from the field.
+# 2026 match photo): front edge a -> b (plan), rows rising away from the field. Each placed by fitting its outline, as
+# the aerial's lean shows it, to the mosaic's edges (lean_view.py): the first trace had taken their tops for their feet.
 TEMP_STANDS = [
-    {"name": "south_west", "a": (-63.5, -72.0), "b": (-44.0, -88.5), "depth": 9.6, "rows": 12},
-    {"name": "south", "a": (-38.5, -92.0), "b": (-14.5, -101.0), "depth": 9.6, "rows": 12},
-    {"name": "north_east", "a": (54.0, 59.5), "b": (63.5, 42.0), "depth": 10.4, "rows": 13},
+    {"name": "south_west", "a": (-63.5, -75.0), "b": (-44.0, -91.5), "depth": 9.6, "rows": 12},
+    {"name": "south", "a": (-40.9, -90.6), "b": (-16.9, -99.6), "depth": 9.6, "rows": 12},
+    {"name": "north_east", "a": (53.8, 53.9), "b": (63.3, 36.4), "depth": 10.4, "rows": 13},
 ]
 
-# Light towers (four, about 40 m, galvanised tapered poles with a frame of LED floods), placed from the satellite's
-# leaning poles and their shadows.
-TOWERS = [(27.5, 78.5), (-41.0, -80.0), (-56.0, 66.0), (66.0, -42.0)]
+# Light towers (four galvanised tapered poles with a frame of LED floods). Each base is where its pole's shadow starts
+# on the mosaic, checked against its head less the aerial's lean (lean_view.LEAN x 32.7 m); the solved drone photo puts
+# the heads' middles 31-35 m up (mean 32.7).
+TOWERS = [(32.9, 78.3), (-40.6, -79.8), (-56.4, 62.4), (69.2, -39.2)]
+TOWER_TOP = 31.2   # pole top; the head frame's middle sits 1.5 m above it
 
 # The clubrooms: a frame along the building (u north-north-east, bearing 9 degrees) and across it (v toward the field).
-CLUB_O = (-100.5, 28.0)
-CLUB_B = 9.0
+CLUB_O = (-100.03, 26.59)   # the roof fitted to the mosaic's roof with the aerial's lean (lean_view.py)
+CLUB_B = 10.41
 
 
 def club(u, v):

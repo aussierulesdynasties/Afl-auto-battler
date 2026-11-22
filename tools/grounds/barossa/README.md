@@ -50,12 +50,21 @@ into work/dem by dem.py. tools/visual/ground_look.gd renders stills from cameras
 (fence: rms 0.5 m, 95% within 1 m; ring road: median 0.75 m, 90% within 1.5 m). The fence ellipse is fitted to the
 traced grass edge; every ring (verge, road, wall) is an exact offset square to it (`plan.polar`, `plan.offsets`).
 The ring road's edges were read from the same trace, so its pass shows the model follows the trace, not an
-independent check.
+independent check. The clubroom roof is checked the aerial's way (below): overlap 0.9, outline median 0.5 m, 90% within
+1.5 m.
+
+**The aerial leans.** The 2026 Google mosaic is not straight down: a point h metres up shows `lean_view.LEAN * h`
+(0.28 east, 0.65 north per metre) from its foot. The light towers measure it (each head 9.3 m east and 21.3 m north of
+the start of its shadow), and the drone photo barossa-park.jpg, its camera solved from the fence, the east crossing
+and the south goal posts (fence to 0.3 px), puts the heads 31-35 m up and the goal posts 14.8 m (behind posts 9.6 m).
+So roofs, stands and tower heads traced off the mosaic are their tops, metres north of their feet; only ground lines
+(fence, kerbs, slab edges, wall feet, shadow starts) are true. `lean_view.py` draws the model the aerial's way to
+compare: the clubrooms, the three stands and the towers were re-placed with it (each had been 3-7 m off).
 
 ## References
 
 - Google Earth (satellite and 3D) round lat -34.5984014, lon 138.8858792. The 3D mesh at Lyndoch is coarse, so
-  heights come from the photos.
+  heights come from the photos (the drone photo's solved camera) and the aerial's lean.
 - austadiums.com: barossa-park.jpg (aerial from the south-east), barossa-park-gather-round25.jpg,
   barossa-park-26.jpg (a 2026 match, the temporary stands), lyndoch-recreation-park.jpg, the upgrade photos.
 - The clubrooms from the north-east (BarossaPark_09849.jpg) and the 2025 Gather Round view with the ranges

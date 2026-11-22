@@ -19,7 +19,7 @@ sys.path.insert(0, HERE)
 
 import paint  # noqa: E402
 from geom import Mesh, write_glb, _n  # noqa: E402
-from plan import (FENCE, TOWERS, TEMP_STANDS, club, fence_r, polar, to3, bearing, interp, RING, dem_height, offsets)  # noqa: E402
+from plan import (FENCE, TOWERS, TOWER_TOP, TEMP_STANDS, club, fence_r, polar, to3, bearing, interp, RING, dem_height, offsets)  # noqa: E402
 from dem import Dem  # noqa: E402
 
 import precinct as site  # noqa: E402
@@ -227,7 +227,7 @@ def build_towers(m, site_h):
         # the head faces the field's middle
         to_mid = _n(np.array((-e, -n)))
         side = np.array((to_mid[1], -to_mid[0]))
-        top = 40.0
+        top = TOWER_TOP
         m.tube("steel_galv", P3(e, n, base - 0.3), P3(e, n, base + top), 0.42, 0.2, seg=12)
         # base plate and footing collar
         m.tube("concrete", P3(e, n, base - 0.3), P3(e, n, base + 0.35), 0.8, 0.8, seg=12)
@@ -277,13 +277,13 @@ def build_towers(m, site_h):
 
 # ------------------------------------------------------------------ clubrooms
 
-L = 52.0          # length along the building
+L = 47.08         # length along the building (the roof, -0.6 to L + 0.6, fitted to the mosaic)
 BAY = 6.5        # structural bay: the stone piers below and the maroon columns above
 GF = 0.25         # ground floor level
 DECK = 4.4        # first floor / deck level
-FACE = 24.4       # ground floor face to the field (v)
-DECK_EDGE = 25.1
-UPPER = 20.5      # first floor glazing (v), set back behind the deck
+FACE = 22.62      # ground floor face to the field (v)
+DECK_EDGE = 23.32
+UPPER = 18.72     # first floor glazing (v), set back behind the deck
 WEST = 2.0        # first floor's west wall
 VER_H = 7.3       # verandah roof
 EAVE, RIDGE = 8.6, 12.2
@@ -376,10 +376,10 @@ def build_club(m):
     ubox(m, "roof_dark", -0.2, L + 0.2, UPPER - 0.2, DECK_EDGE + 0.5, VER_H, VER_H + 0.18, mats={"bottom": "soffit"})
     ubox(m, "clad_dark", -0.2, L + 0.2, DECK_EDGE + 0.5, DECK_EDGE + 0.56, VER_H - 0.1, VER_H + 0.28)
     # ---- the folded roof: four gables, ridges across the building, white sheet with a white fascia. The folds are
-    # where the satellite's sunlit and shaded slopes meet (0.2 m mosaic): valleys at u 5.4, 15.4, 24.8 and 36.9, the
-    # ridges midway, the north gable the widest, so the highest (one pitch for all, as the photos show); south of
-    # the first gable a flat roof.
-    folds = [5.4, 15.4, 24.8, 36.9, L]
+    # where the mosaic's sunlit and shaded slopes meet, read along the roof with the aerial's lean taken off
+    # (lean_view.LEAN): valleys at u 10.3, 19.3 and 31.8, the ridges midway, the north gable the widest, so the
+    # highest (one pitch for all, as the photos show); the eave's overhang south of the first.
+    folds = [0.6, 10.3, 19.3, 31.8, L]
     pitch = math.tan(math.radians(29.0))
     v0, v1 = WEST - 1.2, DECK_EDGE + 0.4
     ubox(m, "roof_white", -0.6, folds[0], v0, v1, EAVE - 0.6, EAVE - 0.38, mats={"bottom": "roof_soffit"})
@@ -411,10 +411,11 @@ def build_club(m):
     # the box gutters at each fold
     for u in folds:
         ubox(m, "steel_white", u - 0.25, u + 0.25, v0, v1, EAVE - 0.05, EAVE + 0.1)
-    # ---- the tower at the north-east corner, on the field side (dark on the mosaic at u 52.6-58, v 20.5-26; the
-    # photo from the north-east shows it standing over the stair's foot): dark grey box, a thin light trim at the top
-    # (sign left off)
-    t0, t1, tv0, tv1, th = L + 0.6, L + 6.0, 20.5, 26.0, 14.5
+    # ---- the tower at the north-east corner, on the field side: its dark top shows on the mosaic 14.5 m of the
+    # aerial's lean (lean_view.LEAN) north of its footprint; the photo from the north-east shows it rising over the
+    # roof beside the stair. Dark grey box, a thin light trim at the top (sign
+    # left off)
+    t0, t1, tv0, tv1, th = 44.4, 49.9, 16.1, 21.5, 14.5
     ubox(m, "clad_black", t0, t1, tv0, tv1, -1.0, th)
     ubox(m, "steel_galv", t0 - 0.05, t1 + 0.05, tv0 - 0.05, tv1 + 0.05, th, th + 0.12)
     ubox(m, "frame_dark", t0 + 2.0, t0 + 2.6, tv1, tv1 + 0.1, 1.5, th - 1.0)
@@ -422,7 +423,7 @@ def build_club(m):
     # corner; 23 risers, 0.3 m goings, a landing at deck level onto the deck; dark slat balustrades, a stone stringer
     nr = 23
     rise = (DECK - GF) / (nr + 1)
-    sv0, sv1 = 26.1, 28.6
+    sv0, sv1 = 24.32, 26.82
     top_u = L + 1.4
     foot = top_u + nr * 0.3
     for i in range(nr):

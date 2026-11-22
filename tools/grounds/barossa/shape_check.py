@@ -13,6 +13,9 @@ curves fitted to a trace, every ring an exact offset; errors measured, never jud
    road's band taken at each bearing, then a median over 6 degrees. Reported: the model's road edges (RING) against
    it, on the bearings where the road runs clear (not under the north-east stand, 45-60, the clubroom concourse,
    236-334, nor where the road turns away to the car parks).
+3. The clubroom roof: the mosaic's roof (light grey, Lab) against the model's roof drawn the aerial's way, leaning
+   (lean_view.py: the aerial is not straight down, a point h up shows LEAN * h north-north-east of its foot).
+   Reported: overlap (intersection over union) and the distance from the model's roof outline to the mosaic's.
 """
 import math
 import os
@@ -25,7 +28,8 @@ sys.path.insert(0, HERE)
 import plan  # noqa: E402
 
 RES, HALF = 0.2, 150.0
-LIMITS = {"fence_rms": 0.5, "fence_p95": 1.0, "road_median": 0.75, "road_p90": 1.5}
+LIMITS = {"fence_rms": 0.5, "fence_p95": 1.0, "road_median": 0.75, "road_p90": 1.5, "roof_iou": 0.9, "roof_median": 0.5,
+          "roof_p90": 1.5}
 CLEAR = [(0, 44), (62, 108), (140, 232)]   # bearings where the road's outer edge runs clear
 
 
@@ -110,6 +114,38 @@ def trace_road(a):
     return bs, med(inn), med(out)
 
 
+def roof_check(a):
+    import cv2
+    import build
+    import lean_view
+    build.materials()
+    m = build.Mesh()
+    build.build_club(m)
+    roof = np.concatenate([np.array(m.parts[k]["v"]) for k in m.parts if k.startswith("roof_white")])
+    model = lean_view.silhouette(roof)
+    ys, xs = np.nonzero(model)
+    y0, y1, x0, x1 = ys.min() - 80, ys.max() + 80, xs.min() - 80, xs.max() + 80
+    lab = cv2.cvtColor(a, cv2.COLOR_BGR2LAB).astype(int)
+    grey = ((lab[..., 0] > 185) & (np.abs(lab[..., 1] - 128) < 5) & (np.abs(lab[..., 2] - 128) < 6)).astype(np.uint8)
+    grey = cv2.morphologyEx(grey, cv2.MORPH_OPEN, np.ones((3, 3), np.uint8))
+    win = np.zeros_like(grey)
+    win[y0:y1, x0:x1] = grey[y0:y1, x0:x1]
+    n, lb, st, _ = cv2.connectedComponentsWithStats(win)
+    real = cv2.morphologyEx((lb == 1 + np.argmax(st[1:, 4])).astype(np.uint8), cv2.MORPH_CLOSE, np.ones((9, 9), np.uint8))
+    A, B = model[y0:y1, x0:x1] > 0, real[y0:y1, x0:x1] > 0
+    iou = (A & B).sum() / (A | B).sum()
+    cnt, _ = cv2.findContours(A.astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+    edge = cv2.Canny(B.astype(np.uint8) * 255, 50, 150) > 0
+    dt = cv2.distanceTransform((~edge).astype(np.uint8), cv2.DIST_L2, 5)
+    P = np.concatenate([c[:, 0] for c in cnt])
+    d = dt[P[:, 1], P[:, 0]] * RES
+    med, p90 = float(np.median(d)), float(np.percentile(d, 90))
+    ok = iou >= LIMITS["roof_iou"] and med <= LIMITS["roof_median"] and p90 <= LIMITS["roof_p90"]
+    print("CLUBROOM ROOF %s: overlap %.3f (limit %.2f); outline median %.2f m (limit %.2f), 90%% within %.2f m (limit %.2f)"
+          % ("PASS" if ok else "FAIL", iou, LIMITS["roof_iou"], med, LIMITS["roof_median"], p90, LIMITS["roof_p90"]))
+    return ok
+
+
 def main():
     a = mosaic()
     ok = True
@@ -150,6 +186,8 @@ def main():
     m0 = np.array([plan.interp(plan.RING, b)[1] for b in bs])
     print("ROAD inner edge, south-west (wall side, 186-215): mean %+.2f m, max %.2f m"
           % (np.mean(m0[sw] - inn[sw]), np.max(np.abs(m0[sw] - inn[sw]))))
+    r_ok = roof_check(a)
+    ok &= r_ok
     print("ALL PASS" if ok else "SOME FAIL")
     return 0 if ok else 1
 
