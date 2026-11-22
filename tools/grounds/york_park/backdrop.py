@@ -15,7 +15,7 @@ at 4 m a pixel (streets by their class, every building's roof, parks, the rivers
 every mapped building past the surroundings map is stood up on the hillside where it is: houses under a
 hipped roof, the rest flat-roofed at their tagged or usual height.
 
-Writes assets/grounds/york_park/york_park_backdrop.glb in model metres (glTF: x east, y up, -z north), the
+Writes assets/grounds/york_park/york_park_backdrop_part1.glb in model metres (glTF: x east, y up, -z north), the
 field's level (5 m above the sea) at 0 and the water a hand under it: the painted land to 4 km, the
 vertex-coloured land beyond, and the buildings. The ground rises out of the flat surroundings ring between
 1,000 and 1,500 m, so the two meet without a step. Looks only: GroundModels.backdrop() draws it with no
@@ -30,7 +30,7 @@ import numpy as np
 from PIL import Image
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-OUT = os.path.join(HERE, "..", "..", "..", "assets", "grounds", "york_park", "york_park_backdrop.glb")
+OUT = os.path.join(HERE, "..", "..", "..", "assets", "grounds", "york_park", "york_park_backdrop_part1.glb")
 LAT0, LON0 = -41.425896, 147.138976
 FIELD_ASL = 5.0
 Z = 13

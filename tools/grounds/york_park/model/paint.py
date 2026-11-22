@@ -315,6 +315,28 @@ if F1:
     spaced(270, 'TASMANIA', F1, 440, 40)
     a = np.asarray(im, float) + noise(SH_, SW_, 10, 6)[:, :, None]; save('sign_utas', a, (7.0, 1.75))
 
+# ---- the neighbours (neighbours.py): UTAS Inveresk's railway-workshop sheds, The Workshop, River's Edge, the Library,
+# the Stone Building, the Tramsheds and Invermay Park. Colours read off Google Earth 2026 (qa lm_* close-ups).
+# Own seed, so the textures above stay as they were whether or not the sign's font was found.
+R = np.random.default_rng(41)
+def _corr(step, dark):     # corrugated sheet: a soft rib every `step` m
+    def f(a, pu, pv, h, w):
+        x = np.arange(w) / pu / step; a *= (1 - (1 - dark) * (0.5 + 0.5 * np.cos(2 * math.pi * x)))[None, :, None]
+    return f
+facade('clad_bluegrey', (128, 142, 154), _corr(0.076, 0.88))   # the sheds' walls: blue-grey corrugated iron
+facade('clad_silver', (178, 182, 184), _ribs(0.3, 0.8))        # River's Edge, the Library: zinc standing seams
+facade('render_cream', (212, 202, 176), _plain)                # the Stone Building's painted brick
+facade('panel_dark', (66, 70, 74), _joints)                    # Levee Studio, the Workshop's base
+facade('render_sand', (196, 184, 160), _plain)
+deck('roof_rust', (150, 92, 70), grime=34)                     # the north-east sheds' old red iron
+deck('roof_pale', (196, 200, 202))                             # the newer sheds' Zincalume
+deck('roof_red', (168, 62, 50))                                # Invermay Park's pavilions
+for nm, col, rough in (('frame_black', (30, 32, 34), 3), ('skylight', (206, 198, 160), 8), ('door_roller', (150, 154, 156), 6)):
+    a = base(256, 256, col, 2, rough)
+    if nm == 'door_roller':
+        for k in range(0, 256, 8): a[k:k + 2] *= 0.75          # roller slats
+    save(nm, a, (2.0, 2.0))
+
 json.dump(TILE, open(OUT + 'tiles.json', 'w', newline=''), indent=0)
 for nm in sorted(TILE):
     g = np.asarray(Image.open(OUT + nm + '.png').convert('L'), float); print(f'{nm:16s} grey sd {g.std():5.1f}')

@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://dnvt8wfjioxhi"
-path="res://.godot/imported/york_park_backdrop.glb-31bab4baab095ae847845940c16ab451.scn"
+uid="uid://b0hk8unmhjnyy"
+path="res://.godot/imported/york_park_backdrop_part1.glb-74afba401dc4d4d261c33ca99cead0aa.scn"
 
 [deps]
 
-source_file="res://assets/grounds/york_park/york_park_backdrop.glb"
-dest_files=["res://.godot/imported/york_park_backdrop.glb-31bab4baab095ae847845940c16ab451.scn"]
+source_file="res://assets/grounds/york_park/york_park_backdrop_part1.glb"
+dest_files=["res://.godot/imported/york_park_backdrop_part1.glb-74afba401dc4d4d261c33ca99cead0aa.scn"]
 
 [params]
 

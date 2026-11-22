@@ -863,7 +863,9 @@ static func _backdrop_materials(model: Node) -> void:
 					made[key] = sm
 				(mi as MeshInstance3D).set_surface_override_material(i, made[key])
 			else:
-				mat.vertex_color_use_as_albedo = true
+				# Tinted only where the mesh carries colours: a modelled part (York Park's neighbours)
+				# has none, and the tint would read whatever the missing array left behind.
+				mat.vertex_color_use_as_albedo = (mesh.surface_get_format(i) & Mesh.ARRAY_FORMAT_COLOR) != 0
 				mat.disable_receive_shadows = true   # past the shadow map's reach it reads blue-grey
 
 

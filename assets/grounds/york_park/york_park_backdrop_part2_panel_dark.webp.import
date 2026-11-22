@@ -2,19 +2,19 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://c52m08sn4dm5e"
-path="res://.godot/imported/york_park_backdrop_0.png-0da695d3af0d0747e3671492682e4126.ctex"
+uid="uid://cicadlpnfoxif"
+path="res://.godot/imported/york_park_backdrop_part2_panel_dark.webp-f82779d8d198d7d688638815bb9037f1.ctex"
 metadata={
 "vram_texture": false
 }
 generator_parameters={
-"md5": "bfcb4d6e67b89ed6e13e1499e50e4036"
+"md5": "5776af7229ba8c4193e8c2a3e351dc4b"
 }
 
 [deps]
 
-source_file="res://assets/grounds/york_park/york_park_backdrop_0.png"
-dest_files=["res://.godot/imported/york_park_backdrop_0.png-0da695d3af0d0747e3671492682e4126.ctex"]
+source_file="res://assets/grounds/york_park/york_park_backdrop_part2_panel_dark.webp"
+dest_files=["res://.godot/imported/york_park_backdrop_part2_panel_dark.webp-f82779d8d198d7d688638815bb9037f1.ctex"]
 
 [params]
 

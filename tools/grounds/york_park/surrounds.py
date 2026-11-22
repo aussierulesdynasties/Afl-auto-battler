@@ -15,7 +15,7 @@ Writes assets/grounds/york_park/surrounds.webp, trees.bin and buildings.bin (the
 model metres: x east, z south, the model's origin (the OSM pitch's centroid) at 0, 0.
 Map data (c) OpenStreetMap contributors, ODbL. Tree positions near the ground: Esri World Imagery.
 """
-import math
+import json, math
 import os
 import sys
 import urllib.request
@@ -349,8 +349,13 @@ def building_list(ways, in_foot):
     """GMHBA's rule: untagged blocks under 400 m2 and the mapped houses are single-storey houses under a
     hipped roof (a negative height); Invermay is the same weatherboard and brick suburb."""
     out = []
+    # neighbours.py models these itself (UTAS Inveresk, Invermay Park, the Invermay Road sheds): leave them out.
+    modelled = json.load(open(os.path.join(HERE, "neighbours_used.json")))
     for t, p in ways:
         if "building" not in t or len(p) < 4 or p[0] != p[-1] or t.get("layer", "0").startswith("-"):
+            continue
+        c = np.array(p[:-1]).mean(0)
+        if any(abs(c[0] - e) < 1.0 and abs(c[1] - n) < 1.0 for e, n in modelled):
             continue
         pts = [S.model_xz(*q) for q in p[:-1]]
         if in_foot(p) or max(max(abs(x), abs(z)) for x, z in pts) > 950:
