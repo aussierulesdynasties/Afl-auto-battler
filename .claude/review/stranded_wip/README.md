@@ -5,7 +5,8 @@ It is saved here so main shows what exists. **Nothing here is wired into the gam
 a copy of files. Apply a patch only after you have checked it against today's main. Each item still needs its
 own TODO row and its own PR before it plays.
 
-Every source worktree is still on the PC, untouched. Nothing was deleted.
+Every source worktree is still on the PC, untouched. Nothing was deleted. Copied GDScript files end in `.gd.txt`,
+so Godot and the linter leave them alone. Drop the `.txt` to use one.
 
 | Folder | Where it was | What it is | Notes |
 |---|---|---|---|
