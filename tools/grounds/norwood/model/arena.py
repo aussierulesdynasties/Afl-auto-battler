@@ -28,9 +28,11 @@ def fence_pt(deg):
 
 N = 720
 LOOP = [fence_pt(360.0 * i / N) for i in range(N)]
-# Along the Western Stand the grass runs to the stand's brick podium and there is no picket fence (AFLW
-# 2025 photo 23): the loop follows the podium face there, a hand in front of it.
+# Along the Western Stand the grass runs under the roof to the stand's brick podium and there is no picket
+# fence (AFLW 2025 photo 23): OSM's grass edge there is only the roof's edge seen from above. The loop
+# follows the podium face, a hand in front of it, and eases back onto OSM's line over 6 m past each end.
 STAND = [False] * N
+EASE = 6.0
 
 
 def _podium():
@@ -38,11 +40,14 @@ def _podium():
     pod = west.line(west.D_POD)
     ys = [p[1] for p in pod]
     for i, q in enumerate(LOOP):
-        if ys[0] - 2.0 <= q[1] <= ys[-1] + 2.0 and q[0] < 0:
-            x = float(np.interp(q[1], ys, [p[0] for p in pod]))
-            if q[0] < x + 0.15:
-                LOOP[i] = np.array([x + 0.15, q[1]])
-                STAND[i] = True
+        if q[0] >= 0 or not (ys[0] - EASE < q[1] < ys[-1] + EASE):
+            continue
+        y = min(max(q[1], ys[0]), ys[-1])
+        x = float(np.interp(y, ys, [p[0] for p in pod])) + 0.15
+        out = max(ys[0] - q[1], q[1] - ys[-1], 0.0) / EASE
+        w = 1.0 - out * out * (3 - 2 * out)
+        LOOP[i] = np.array([q[0] + w * (x - q[0]), q[1]])
+        STAND[i] = out == 0.0
 
 
 _podium()

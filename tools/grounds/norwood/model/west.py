@@ -10,8 +10,10 @@ import numpy as np
 from nwlib import V, add, box3, cyl, tube, obox, unit, perp, offset_poly, along, length, wall, band, prism
 
 P = "ws"
-# roof front, south to north: OSM way 547107342, moved 1.4 m east onto the lean-corrected satellite edge
-RF = [np.array([-52.9, -43.5]), np.array([-55.5, 3.0]), np.array([-58.0, 49.5])]
+# roof front, south to north: OSM way 547107342 moved 0.9 m west. The roof's front edge, traced every 5 m on
+# Google Earth's top-down mosaic with the lean taken out for its 8.8 m height, stands 0.9 m (0.0-1.3) west of
+# OSM's line (2026-11-22). The satellite mosaic sits 2.3 m east of Google Earth's frame: never trace from it.
+RF = [np.array([-55.2, -43.5]), np.array([-57.8, 3.0]), np.array([-60.3, 49.5])]
 U = unit(RF[-1] - RF[0])
 
 

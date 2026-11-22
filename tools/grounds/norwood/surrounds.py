@@ -35,6 +35,11 @@ GLB = os.path.join(OUT, "norwood.glb")
 S.LAT0, S.LON0 = -34.919825, 138.630446
 S.PITCH_E, S.PITCH_N = 0.0, 0.0
 S.MODEL_R = 0.0
+# Each source moved onto Google Earth's frame (the model's): OpenStreetMap sits 0.5 m east and 2.0 m south of it
+# (the pitch outline against the top-down mosaic, model/arena.py), Esri's imagery 2.3 m east and 0.5 m north
+# (phase correlation of the grass edge and the fence). Metres east, north added to each source's positions.
+OSM_SHIFT = (-0.5, 2.0)
+ESRI_SHIFT = (-2.3, -0.5)
 # Google Earth's Norwood in early summer: watered lawns in the parks, dry straw verges, grey-brown streets
 # under heavy street trees, pale grey and terracotta roofs.
 S.BASE = (132, 126, 98)
@@ -250,6 +255,9 @@ def main():
     seen = set()
     for p in paths:
         t, w = S.load(p)
+        dx, dn = OSM_SHIFT                              # the loader's points are (east, north)
+        t = [(e[0] + dx, e[1] + dn) for e in t]
+        w = [(tg, [(q[0] + dx, q[1] + dn) for q in pts]) for tg, pts in w]
         for e in t:
             if e not in seen:
                 seen.add(e)
@@ -430,6 +438,7 @@ def ortho_z(r=ROOF_R, z=ROOF_Z, step=0.5):
                 np.asarray(Image.open(p).convert("RGB"))
     e = np.arange(-r, r, step) + step / 2
     E, N = np.meshgrid(e, -e)
+    E, N = E - ESRI_SHIFT[0], N - ESRI_SHIFT[1]      # model metres -> where the imagery shows them
     x, y = txy(S.LAT0 + N / 110574.0, S.LON0 + E / (111320.0 * math.cos(math.radians(S.LAT0))))
     px = np.clip(((x - X0) * 256).astype(int), 0, M.shape[1] - 1)
     py = np.clip(((y - Y0) * 256).astype(int), 0, M.shape[0] - 1)

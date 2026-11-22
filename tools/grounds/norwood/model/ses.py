@@ -21,7 +21,10 @@ TILE_C = (4.2, -84.8)
 ZE = 9.0              # eave (front and back)
 PITCH = math.radians(27.0)
 D = 16.4              # eave to eave, front to back
-FE = [lean((-48.5, -72.5), ZE, TILE_W), lean((-36.0, -85.0), ZE, TILE_W), lean((-11.5, -98.2), ZE, TILE_C), lean((13.0, -99.0), ZE, TILE_C)]
+# The front eave, end to end. Its three straight runs were traced along the red roof's edge on Google
+# Earth's top-down mosaic every 0.5 m (lean taken out for the 9 m eave) and fitted as lines (rms 0.12,
+# 0.50, 0.17 m); the corners are where those lines meet (2026-11-22).
+FE = [lean((-48.5, -72.5), ZE, TILE_W), np.array([-32.61, -88.32]), np.array([-12.22, -97.84]), lean((13.0, -99.0), ZE, TILE_C)]
 ZR = ZE + D / 2 * math.tan(PITCH)
 OVER = 0.9            # eave overhang past the back wall
 DECK = 1.9            # the seating deck's front edge above the concourse
