@@ -8,9 +8,11 @@ The match plays on a ground's traced boundary line, not an ellipse, once it has 
 - `pending/`: traces waiting for their model to merge (Norwood's is in the frame of the model in PR #2042). Move to
   `traced/` and rerun the fit when it lands. Blacktown's trace is good, but the model on main is a first draft whose
   fence and south stand sit up to ~4 m off the real fence, so the turf drawn to the real fence overlaps the stand: it
-  waits for the model to be rebuilt to Google Earth. People First's trace (shifted +2.72, -0.49 onto the
-  model as built) is complete, but laid on it the model's north stand front sits ~1-2 m from the painted line where the
-  real run-off is 5.3 m: the north stand is too far in. Held until the model is fixed.
+  waits for the model to be rebuilt to Google Earth. People First's trace is in PR #2019's corrected origin (no shift
+  needed); laid on main's older model the north stand front sits ~1-2 m from the painted line where the real run-off is
+  5.3 m, so it waits for #2019 to merge and a re-render.
+- Live: Cazaly's (line fit 0.10 m rms, in-match paint vs trace 0.31 m rms) and GMHBA (trace 0.08 m rms, in-match
+  paint vs trace 0.34 m rms, the model's sign ring a steady 1.0 m inside the traced fence all round).
 - `python3 tools/grounds/boundary/fit_boundary.py` fits each trace (polar Fourier radius about the goals' midpoint,
   x through the goals) and writes `data/ground_boundaries.json` with the fit error per ground.
 - Check in a match: `godot --path . --rendering-method mobile --script tools/grounds/boundary/topdown.gd -- OUT "<ground>"`

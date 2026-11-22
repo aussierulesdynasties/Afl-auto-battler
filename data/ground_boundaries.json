@@ -107,6 +107,126 @@
     "min": 4.59,
     "max": 5.63
    }
+  },
+  "gmhba": {
+   "frame": [
+    -6.1,
+    12.85,
+    -69.77
+   ],
+   "goal_x": 84.098,
+   "boundary": [
+    70.3931,
+    0.3988,
+    -1.0774,
+    14.3928,
+    0.3453,
+    -0.2407,
+    1.1939,
+    0.6753,
+    0.0824,
+    -0.0956,
+    0.0955,
+    -0.4534,
+    0.0413,
+    -0.0255,
+    -0.2761,
+    -0.1438,
+    -0.0473,
+    0.0001,
+    -0.0489,
+    0.0141,
+    -0.0625,
+    -0.0192,
+    0.0468,
+    -0.0296,
+    -0.0606
+   ],
+   "boundary_fit": {
+    "n": 340,
+    "order": 12,
+    "rms_m": 0.011,
+    "p95_m": 0.018,
+    "max_m": 0.025,
+    "largest_gap_deg": 11.02
+   },
+   "ends_vs_goal_lines_m": [
+    0.769,
+    0.733
+   ],
+   "source": "Google Earth 3D, close straight-down shots (130 m camera) stitched; tile set gem (Google Earth's current 3D imagery, viewed 2026-11-22), about 0.08 m pixels. AFL markings visible. Ten straight-down Google Earth shots from a ~130 m camera round the boundary, stitched into one east/north picture at 0.08 m. Painted line traced as the ridge of a thin bright line with lit grass 1.5 m either side, along 1440 rays, then a 12-term Fourier radius about the centre fitted to the points seen. Goals: middle of the goal line from a 6.4 x 9 m goal-square template, checked against the 50 m arcs. Centre: 50 m centre square + 10 m circle template.",
+   "trace_error": {
+    "line_rms_to_fit": 0.08,
+    "line_rms_to_smooth_K6": 0.28,
+    "seen_share": 0.92,
+    "longest_unseen_arc_deg": 10.8,
+    "placement_on_google_earth": "Google Earth itself (the frame the GMHBA origin was solved in from 7 GE wall-foot points); camera heights read off GE's status bar to 1 m (about 0.7% in scale); the 50 m arcs come out at 49.7 and 50.2 m",
+    "source_pixel": "about 0.08"
+   },
+   "centre_vs_goals_mid_m": [
+    0.579,
+    -0.107
+   ],
+   "fence": [
+    76.2277,
+    0.5246,
+    -1.1347,
+    14.5987,
+    0.1438,
+    -0.3054,
+    1.5054,
+    0.7746,
+    0.221,
+    0.0602,
+    -0.0614,
+    -0.5775,
+    -0.0649,
+    -0.1409,
+    -0.1378,
+    0.0644,
+    0.1358,
+    0.2016,
+    -0.0468,
+    0.0938,
+    -0.1115,
+    -0.1525,
+    0.1754
+   ],
+   "fence_fit": {
+    "n": 325,
+    "order": 11,
+    "rms_m": 0.301,
+    "p95_m": 0.608,
+    "max_m": 2.042,
+    "left_out": [
+     {
+      "at": [
+       34.3,
+       55.8
+      ],
+      "off_m": 1.51
+     },
+     {
+      "at": [
+       32.9,
+       55.8
+      ],
+      "off_m": 1.69
+     },
+     {
+      "at": [
+       31.6,
+       55.8
+      ],
+      "off_m": 1.87
+     }
+    ],
+    "largest_gap_deg": 5.25
+   },
+   "runoff_m": {
+    "min": 4.88,
+    "max": 7.38
+   }
   }
  }
 }
