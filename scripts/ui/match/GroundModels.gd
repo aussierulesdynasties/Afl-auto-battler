@@ -88,6 +88,13 @@ const FIT := {
 ## its ground painted from OpenStreetMap (tools/grounds/mcg/surrounds.py), `span` m a side round the
 ## model's middle, and `trees` the park's trees from the same map (x, z, height, canopy, shade).
 const SURROUNDS := {
+	# GMHBA: Kardinia Park and Geelong's streets and houses (tools/grounds/gmhba/surrounds.py); the map is
+	# laid on the model's origin, the stadium's own footprint painted plain under the model.
+	"gmhba": {"y": -0.04, "inner": 60.0, "colour": Color(0.48, 0.49, 0.33),
+			"map": "surrounds.webp", "span": 2048.0, "trees": "trees.bin", "buildings": "buildings.bin",
+			# Geelong's walls in Google Earth: red and brown brick, cream render, grey block, weatherboard.
+			"walls": [Color(0.62, 0.42, 0.34), Color(0.74, 0.7, 0.62), Color(0.55, 0.53, 0.5), Color(0.68, 0.5, 0.4),
+					Color(0.8, 0.78, 0.72), Color(0.6, 0.6, 0.6), Color(0.52, 0.36, 0.3)]},
 	"mcg": {"y": -0.03, "inner": 140.0, "colour": Color(0.45, 0.55, 0.27),
 			"map": "surrounds.webp", "span": 2048.0, "trees": "trees.bin", "buildings": "buildings.bin"},
 }
@@ -107,6 +114,24 @@ const PARTS := {
 ## it mirrored the blue sky and read white-blue where the real roof reads warm grey; the tints bring
 ## its sunlit tops to Google Earth's colours (north 189,188,181, east 148,150,145).
 const MATERIAL_FIX := {
+	# GMHBA (Google Earth 3D, 2026-11-22): the seats under the roofs were painted dark ("_d") and then shaded
+	# again by the real roof, so they read near-black where the real rows read mid grey-blue; the shade
+	# is the renderer's job, so they take the sunlit tones back. Roof sheeting matte, as at the MCG.
+	"gmhba": {
+		# The seat shells were cut out by alpha (glTF MASK); in a match that path drew every seat black
+		# (2026-11-22, lavapipe and the Mobile renderer). Drawn solid, the 1 cm gaps between shells are lost.
+		"seatback": {"albedo_color": Color(0.8, 0.82, 0.86), "transparency": BaseMaterial3D.TRANSPARENCY_DISABLED},
+		"seatpan": {"albedo_color": Color(0.8, 0.82, 0.86), "transparency": BaseMaterial3D.TRANSPARENCY_DISABLED},
+		"seatback_d": {"albedo_color": Color(1.3, 1.32, 1.38), "transparency": BaseMaterial3D.TRANSPARENCY_DISABLED},
+		"seatpan_d": {"albedo_color": Color(1.3, 1.32, 1.38), "transparency": BaseMaterial3D.TRANSPARENCY_DISABLED},
+		# Solar panels: near-black in Google Earth, not a sky mirror.
+		"solar": {"roughness": 0.85},
+		"tread_d": {"albedo_color": Color(1.9, 1.9, 1.9)},
+		"aisle_d": {"albedo_color": Color(1.6, 1.6, 1.6)},
+		"tread": {"albedo_color": Color(1.15, 1.15, 1.12)},
+		"roof": {"metallic": 0.0, "roughness": 0.9},
+		"roofg": {"metallic": 0.0, "roughness": 0.9},
+	},
 	"mcg": {
 		"roof_white": {"metallic": 0.0, "roughness": 0.9, "albedo_color": Color(0.84, 0.84, 0.8)},
 		"roof_grey": {"metallic": 0.0, "roughness": 0.9, "albedo_color": Color(0.8, 0.8, 0.76)},
@@ -353,7 +378,8 @@ static func _add_surrounds(root: Node3D, s: Dictionary, dir := "") -> void:
 		if s.has("trees") and FileAccess.file_exists(dir + str(s["trees"])):
 			_add_trees(root, FileAccess.get_file_as_bytes(dir + str(s["trees"])).to_float32_array(), y)
 		if s.has("buildings") and FileAccess.file_exists(dir + str(s["buildings"])):
-			_add_buildings(root, FileAccess.get_file_as_bytes(dir + str(s["buildings"])).to_float32_array(), y)
+			_add_buildings(root, FileAccess.get_file_as_bytes(dir + str(s["buildings"])).to_float32_array(), y,
+					s.get("walls", []))
 		return
 	var noise := FastNoiseLite.new()
 	noise.frequency = 0.02
@@ -451,7 +477,7 @@ static func _add_trees(root: Node3D, buf: PackedFloat32Array, y: float) -> void:
 ## The map's buildings round the ground (point count, height, then the footprint's x, z): plain
 ## walls in a pale render or brick and a flat roof each, as one mesh. Seen past the stands and
 ## from a fly-through, they set the MCG in its city rather than on a plain.
-static func _add_buildings(root: Node3D, buf: PackedFloat32Array, y: float) -> void:
+static func _add_buildings(root: Node3D, buf: PackedFloat32Array, y: float, walls: Array = []) -> void:
 	var v := PackedVector3Array()
 	var nrm := PackedVector3Array()
 	var col := PackedColorArray()
@@ -462,13 +488,18 @@ static func _add_buildings(root: Node3D, buf: PackedFloat32Array, y: float) -> v
 	while i + 1 < buf.size():
 		var n := int(buf[i])
 		var h: float = buf[i + 1]
+		# A negative height is a house: walls to the eaves at -h, then a hipped roof (GMHBA's Geelong).
+		var hipped := h < 0.0
+		h = absf(h)
 		var foot := PackedVector2Array()
 		for k in n:
 			foot.append(Vector2(buf[i + 2 + k * 2], buf[i + 3 + k * 2]))
 		i += 2 + n * 2
 		b += 1
-		var wall: Color = WALLS[b % WALLS.size()]
+		var wall: Color = walls[b % walls.size()] if not walls.is_empty() else WALLS[b % WALLS.size()]
 		var roof := wall.darkened(0.18)
+		if hipped:
+			roof = HOUSE_ROOFS[(b * 7) % HOUSE_ROOFS.size()]
 		# Walls face out whichever way round the footprint was drawn.
 		var ccw := 0.0
 		for k in n:
@@ -483,6 +514,9 @@ static func _add_buildings(root: Node3D, buf: PackedFloat32Array, y: float) -> v
 				v.append(p)
 				nrm.append(out)
 				col.append(shade)
+		if hipped:
+			_hip_roof(foot, y + h, roof, v, nrm, col)
+			continue
 		var tri := Geometry2D.triangulate_polygon(foot)
 		for k in tri:
 			v.append(Vector3(foot[k].x, y + h, foot[k].y))
@@ -510,6 +544,70 @@ static func _add_buildings(root: Node3D, buf: PackedFloat32Array, y: float) -> v
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	mi.set_meta("open_ground", true)
 	root.add_child(mi)
+
+
+## Geelong's house roofs from above in Google Earth: terracotta tile, charcoal and grey Colorbond, pale zinc.
+const HOUSE_ROOFS := [Color(0.62, 0.36, 0.28), Color(0.34, 0.34, 0.35), Color(0.55, 0.55, 0.54),
+		Color(0.7, 0.42, 0.32), Color(0.45, 0.46, 0.47), Color(0.74, 0.74, 0.72), Color(0.52, 0.3, 0.25)]
+
+
+## A hipped roof over a house's footprint: each eave rises to a ridge along the footprint's long axis,
+## 0.45 of the house's narrow half-width high (about a 24 degree pitch). Faces lit by their slope.
+static func _hip_roof(foot: PackedVector2Array, eave: float, roof: Color, v: PackedVector3Array,
+		nrm: PackedVector3Array, col: PackedColorArray) -> void:
+	var c := Vector2.ZERO
+	for p in foot:
+		c += p
+	c /= foot.size()
+	# Long axis from the longest edge.
+	var ax := Vector2.RIGHT
+	var best := 0.0
+	for k in foot.size():
+		var e := foot[(k + 1) % foot.size()] - foot[k]
+		if e.length() > best:
+			best = e.length()
+			ax = e.normalized()
+	var across := Vector2(-ax.y, ax.x)
+	var lo_a := INF
+	var hi_a := -INF
+	var lo_b := INF
+	var hi_b := -INF
+	for p in foot:
+		var q := p - c
+		lo_a = minf(lo_a, q.dot(ax))
+		hi_a = maxf(hi_a, q.dot(ax))
+		lo_b = minf(lo_b, q.dot(across))
+		hi_b = maxf(hi_b, q.dot(across))
+	var half_w := (hi_b - lo_b) * 0.5
+	var mid := c + across * (lo_b + hi_b) * 0.5
+	var rise := minf(half_w * 0.45, 3.0)
+	var ridge_half := maxf(0.0, (hi_a - lo_a) * 0.5 - half_w)
+	var amid := (lo_a + hi_a) * 0.5
+	var r0 := mid + ax * (amid - ridge_half)
+	var r1 := mid + ax * (amid + ridge_half)
+	for k in foot.size():
+		var a := foot[k]
+		var b := foot[(k + 1) % foot.size()]
+		# Each eave edge climbs to the nearer end of the ridge (a hip at the ends, a slope along the sides).
+		var ra := r0 if (a - r0).length() <= (a - r1).length() else r1
+		var rb := r0 if (b - r0).length() <= (b - r1).length() else r1
+		var pa := Vector3(a.x, eave, a.y)
+		var pb := Vector3(b.x, eave, b.y)
+		var qa := Vector3(ra.x, eave + rise, ra.y)
+		var qb := Vector3(rb.x, eave + rise, rb.y)
+		var tris := [[pa, pb, qb]]
+		if ra != rb:
+			tris.append([pa, qb, qa])
+		for t: Array in tris:
+			var nn: Vector3 = (t[1] - t[0]).cross(t[2] - t[0]).normalized()
+			if nn.y < 0.0:
+				nn = -nn
+			var lit := roof * (0.78 + 0.22 * clampf(nn.dot(Vector3(0.3, 0.9, -0.3).normalized()), 0.0, 1.0) / 0.95)
+			lit.a = 1.0
+			for p: Vector3 in t:
+				v.append(p)
+				nrm.append(nn)
+				col.append(lit)
 
 
 ## A canopy of about radius 1: two lumpy lobes, one high and one off to the side, so a park of them
