@@ -29,6 +29,9 @@ def _put(k, V, F, c):
     v, f, cl = G[k]; o = len(v); v += V.tolist(); f += [tuple(o + q for q in fc) for fc in F]; cl += [c] * sum(len(fc) for fc in F)
 def _rot(V, a): c, s = math.cos(a), math.sin(a); return np.stack([V[:, 0] * c - V[:, 1] * s, V[:, 0] * s + V[:, 1] * c, V[:, 2]], 1)
 ICO0, ICO0F = _ico(0)
+# the far crown: an octahedron (8 faces), a few pixels at 700 m, so the budget keeps every tree's crown
+OCT = np.array([[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]], float)
+OCTF = [(0, 2, 4), (2, 1, 4), (1, 3, 4), (3, 0, 4), (2, 0, 5), (1, 2, 5), (3, 1, 5), (0, 3, 5)]
 # distance detail (a tree 500 m out is a few pixels on a phone): near trees as built; from LOD_MID their crown is its
 # 3 biggest clumps as 20-face blobs; from LOD_FAR one blob the size of the whole crown and no trunk. The budget then
 # keeps every tree instead of thinning the canopy.
@@ -47,7 +50,7 @@ def _flush():
     else:
         B = np.array([[b[1], b[2], b[3], b[4], b[5]] for b in _BUF]); k = _BUF[0][0]; col = _BUF[0][7]
         lo = np.min(B[:, :3] - B[:, [3, 3, 4]], 0); hi = np.max(B[:, :3] + B[:, [3, 3, 4]], 0); c = (lo + hi) / 2; r = (hi - lo) / 2 * 0.9
-        V = (ICO0 + rng.normal(0, 0.06, ICO0.shape)) * r; _put(k, _rot(V, _BUF[0][6]) + c, ICO0F, col)
+        V = (OCT + rng.normal(0, 0.05, OCT.shape)) * r; _put(k, _rot(V, _BUF[0][6]) + c, OCTF, col)
     _BUF = []
 def _trunk(k, x, y, z, r, h, col, lean=(0, 0)):
     if _LOD == 2: return
