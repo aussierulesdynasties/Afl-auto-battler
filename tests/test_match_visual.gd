@@ -3803,10 +3803,25 @@ func _test_match_crew(res: Dictionary) -> void:
 	var wrong := []
 	var was_drinks := false
 	var was_runner := false
+	var scores := {}          # shot k -> its goal umpire's signal ("" until he gives one)
+	var signal_wrong := []
 	while d.time < 600.0 and frames < 40000 and pv.playing:
 		pv._process(dt)
 		frames += 1
 		var shot := d.shot_now()
+		if not shot.is_empty() and str(shot.get("phase", "")) in ["emit", "celebrate"]:
+			var k := int(shot["k"])
+			if not scores.has(k):
+				scores[k] = ""
+			for u in oval.umpires:
+				if str(u["role"]) != "goal" or not u.has("clip") or str(u["clip"]["kind"]) != "signal":
+					continue
+				var given := str((u["anim"] as AnimationPlayer).current_animation)
+				if scores[k] == "":
+					scores[k] = given
+					var want := Oval3DCrew.GOAL_SIGNAL if bool(shot["goal"]) else Oval3DCrew.BEHIND_SIGNAL
+					if given != want or signf((u["node"] as Node3D).position.x) != signf((shot["to"] as Vector2).x):
+						signal_wrong.append("%s at %.0f s for a %s" % [given, d.time, "goal" if shot["goal"] else "behind"])
 		var set_break := not shot.is_empty() and bool(shot.get("set", false))
 		var goal := not shot.is_empty() and bool(shot.get("goal", false))
 		var st := d.stoppage_now()
@@ -3831,6 +3846,10 @@ func _test_match_crew(res: Dictionary) -> void:
 		was_runner = r_on
 	_check(drinks > 0 and runs > 0, "Drinks go out before set shots (%d) and runners after goals (%d)" % [drinks, runs])
 	_check(wrong.is_empty(), "Trainers and runners are on the ground only when the rules let them: %s" % [wrong.slice(0, 4)])
+	var unsignalled := scores.keys().filter(func(k): return scores[k] == "")
+	_check(scores.size() > 0 and unsignalled.is_empty(),
+			"The goal umpire at the scoring end signals every score (%d scores, %d not signalled)" % [scores.size(), unsignalled.size()])
+	_check(signal_wrong.is_empty(), "Two hands for a goal, one for a behind, from the scoring end: %s" % [signal_wrong.slice(0, 4)])
 	pv.queue_free()
 
 ## The umpires at stoppages on the 3D oval (row 197; the field umpire passed, rule 2.75): at a
