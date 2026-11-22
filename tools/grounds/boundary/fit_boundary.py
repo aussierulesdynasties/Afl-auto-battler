@@ -147,6 +147,10 @@ def main():
         if "line_seen" in d:
             line = line[np.array(d["line_seen"], bool)]
         gap = largest_gap_deg(line)
+        if not d.get("fence"):
+            # The turf stops at the fence: without the real one it would be a guess FENCE out from the line.
+            report.append("%-10s HELD: no traced fence" % slug)
+            continue
         if gap > MAX_UNSEEN_DEG:
             report.append("%-10s HELD: %.0f deg of the line unseen in one stretch (most allowed %.0f)" % (slug, gap, MAX_UNSEEN_DEG))
             continue
