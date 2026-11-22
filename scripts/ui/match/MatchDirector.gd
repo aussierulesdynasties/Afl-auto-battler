@@ -459,6 +459,41 @@ func stoppage_now() -> Dictionary:
 	return {}
 
 
+## The free kick being taken right now, for the 3D umpires: {at, k} with `at` its mark (where
+## the ball is, in the taker's hands or on its way there) and `k` the free's event. From when
+## the umpire pays it until the ball leaves the taker's boot or he plays on; {} otherwise.
+## Read-only.
+func free_now() -> Dictionary:
+	if _beat.is_empty():
+		return {}
+	var k := int(_beat["k"])
+	var kind := str(_beat["kind"])
+	if kind in FREE_KINDS:
+		if not _phases.slice(0, mini(_pi + 1, _phases.size())).any(
+				func(q): return str(q.get("t", "")) == "emit"):
+			return {}
+		return {"at": _loc(k), "k": k}
+	var pk := _prev_real(k)
+	if pk < 0 or not str((events[pk] as Dictionary).get("kind", "")) in FREE_KINDS:
+		return {}
+	if str(ball["mode"]) == "flight" or not _locs.has(pk):
+		return {}
+	var at: Vector2 = _locs[pk]
+	if (ball["pos"] as Vector2).distance_to(at) > FREE_PLAY_ON:
+		return {}
+	return {"at": at, "k": pk}
+
+
+## The kinds of free kick (MatchSim's log), and how far the ball may be off a free's mark
+## before the taker has played on.
+const FREE_KINDS := ["free", "last_disposal", "out_on_full", "fifty"]
+const FREE_PLAY_ON := 4.0
+## A chase is home within CHASE_REACH metres; a tackler's run in takes at most CHASE_MAX director
+## seconds (a man 50 m off: about 5 s at a footballer's top speed).
+const CHASE_REACH := 1.6
+const CHASE_MAX := 6.0
+
+
 ## About how many director seconds set-up `p` (the current phase) has left, by _done's own test:
 ## its least time, and the time the slowest man it waits for needs to get within SETUP_NEAR of his
 ## spot at his pace now (the SETUP_STRAGGLERS slowest are not waited for), at most its cap. An
@@ -1068,7 +1103,7 @@ func _tackle_phases(k: int) -> Array:
 			victim = _actor_id(events[pk])
 	if tk < 0 or victim < 0:
 		return [{"t": "emit", "log": true}]
-	return [{"t": "chase", "who": tk, "victim": victim, "max": 1.6},
+	return [{"t": "chase", "who": tk, "victim": victim, "max": 1.6, "run_in": true},
 			{"t": "emit", "log": true},
 			{"t": "down", "who": tk, "victim": victim, "dur": 0.55}]
 
@@ -1330,7 +1365,7 @@ func _free_phases(k: int) -> Array:
 		# man caught has it, the man paid the free runs him down and tackles him (the tackle
 		# clips), the umpire pays it, and the tackler gets up and takes the ball.
 		return out + [{"t": "possess", "who": victim, "quiet": true},
-				{"t": "chase", "who": tk, "victim": victim, "max": 1.6},
+				{"t": "chase", "who": tk, "victim": victim, "max": 1.6, "run_in": true},
 				{"t": "down", "who": tk, "victim": victim, "dur": 0.55},
 				{"t": "emit"}, {"t": "wait", "dur": TAKE_UP}] + _take_free(tk) \
 				+ [{"t": "wait", "dur": 0.5, "ease": true}]
@@ -2491,7 +2526,22 @@ func _enter(p: Dictionary) -> void:
 				mode = str(p["mode"])
 		"chase":
 			var vt: Dictionary = tokens[int(p["victim"])]
-			MatchMotion.set_goal(vt, vt["pos"], 0.2, true)
+			if p.get("run_in", false):
+				# A tackler a long way off runs the whole way in (a tackle that lands with
+				# him metres short draws the tackle clip dragging him there: seed 31, 49 m),
+				# for at most CHASE_MAX.
+				var tt: Dictionary = tokens[int(p["who"])]
+				var far := (tt["pos"] as Vector2).distance_to(vt["pos"]) - CHASE_REACH
+				p["max"] = clampf(far / maxf(float(tt["top"]), 1.0) * 1.25 + 0.3, float(p["max"]), CHASE_MAX)
+			var ahead := Vector2(MatchMotion.GOAL_X * _dir(int(vt["side"])), 0.0) - (vt["pos"] as Vector2)
+			var tpos: Vector2 = tokens[int(p["who"])]["pos"]
+			if p.get("run_in", false) and float(p["max"]) > 1.6 and ahead.dot(tpos - (vt["pos"] as Vector2)) > 0.0:
+				# ...and with the tackler goal side of him, the man he runs down does not stand
+				# waiting: he carries it on toward goal, into the tackle.
+				var into := (ahead.normalized() + (tpos - (vt["pos"] as Vector2)).normalized()).normalized()
+				MatchMotion.set_goal(vt, (vt["pos"] as Vector2) + into * 30.0, 0.5, true)
+			else:
+				MatchMotion.set_goal(vt, vt["pos"], 0.2, true)
 			MatchMotion.set_goal(tokens[int(p["who"])], vt["pos"], 1.0, true)
 			_busy[int(p["who"])] = true
 			_busy[int(p["victim"])] = true
@@ -2792,7 +2842,7 @@ func _done(p: Dictionary) -> bool:
 			var tk: Dictionary = tokens[int(p["who"])]
 			var v: Dictionary = tokens[int(p["victim"])]
 			MatchMotion.set_goal(tk, v["pos"], 1.0, true)
-			return (tk["pos"] as Vector2).distance_to(v["pos"]) <= 1.6 or _pt >= float(p["max"])
+			return (tk["pos"] as Vector2).distance_to(v["pos"]) <= CHASE_REACH or _pt >= float(p["max"])
 		"emit", "possess":
 			return true
 		"hold":

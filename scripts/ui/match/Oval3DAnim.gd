@@ -41,6 +41,8 @@ const BALL_R := 0.09          # m: the ball on the turf (Oval3D.BALL_R)
 ## stands, the take turned about him so its tackler comes from where ours is.
 const PAIRS := "res://assets/oval3d/tackle_pairs.json"
 const LEAD := 0.3              # clip s: the run-in starts at least this long before the contact
+## m: how much further out than a take's own run-in its clip may start.
+const RUN_IN_SLACK := 3.0
 const LEAD_MIN := 0.12         # the least run-in, when the tackle comes without warning
 const LEAD_RATE := 1.5         # fastest the run-in plays to fit a short warning
 const SLOW := 0.6              # slowest it plays while the contact is still to come
@@ -283,9 +285,14 @@ func frame(dt: float) -> void:
 			# Start as soon as the run-in of some take, from the distance he is out, fits.
 			var need := LEAD
 			var d := _drawn(who).distance_to(_drawn(v))
+			var run_in := 0.0
 			for name in _pairs:
 				need = maxf(need, _lead(name, d))
-			if due <= need:
+				run_in = maxf(run_in, float((_takes[name]["dist"] as Array)[0]))
+			# ...and no further out than a take's own run-in (and a stride or two): from a long
+			# way off he runs in on his legs first, not on the clip (seed 31: a 30 m run-in on a
+			# take a few metres long, the clip dragging him).
+			if due <= need and d <= run_in + RUN_IN_SLACK:
 				_start(who, v, false)
 	var seen := {}
 	for pr in _in:
@@ -293,6 +300,17 @@ func frame(dt: float) -> void:
 			continue
 		seen[pr["id"]] = true
 		_advance(pr, dt)
+
+
+## An interchange (Oval3D._send_off): the man coming on is drawn at `from` (the gate) and
+## runs to his slot's spot, as a man back from a tackle does (GAP_CLOSE to GAP_MAX).
+func run_on(i: int, from: Vector2) -> void:
+	if i < 0 or i >= _gap.size():
+		return
+	if not (_in[i] as Dictionary).is_empty():
+		_leave(i)
+	_back[i] = Vector2.INF
+	_gap[i] = from - (director.tokens[i]["pos"] as Vector2)
 
 
 ## Animation seconds until the chase from `who` to `v` reaches MatchDirector's REACH.
