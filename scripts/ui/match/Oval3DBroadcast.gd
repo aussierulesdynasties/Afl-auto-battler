@@ -37,6 +37,12 @@ extends RefCounted
 ## (skip_replay) brings the picture back live at once. A behind gets none, except the deciding
 ## one (it is the last score and wins or levels the game), replayed after the siren.
 ##
+## As real TV does (Seven's and Fox Footy's replay stings), the picture goes into the replay and
+## back out of it behind a sting: a band sweeps across the picture in the scoring club's colours,
+## and the cut happens while the band covers it, so live and replay never meet in a bare cut.
+## The sting is WIPE_S of real time, at any match speed; PitchView draws it (sting()). A tap
+## skips at once, with no sting (rule 2.110).
+##
 ## Times are match seconds as the view plays them (the speed the coach picked applied), so at 4x
 ## the picture is the 1x picture played four times as fast.
 
@@ -61,6 +67,7 @@ const CLEAR := 0.5            # m: a man nearer the sight line than this blocks 
 const REPLAY_RATE := 0.5      # the replay plays at half real speed
 const REPLAY_BEFORE := 0.58   # director s of the replay before the kick
 const REPLAY_AFTER := 0.23    # ...and after the ball reaches the goals
+const WIPE_S := 0.5           # real s of a sting: the band covers the picture at its middle
 const LONG_KICK := 40.0       # m: a kick at least this long is watched on the wide shot
 const ZOOM_S := 0.5           # real s a zoom takes, in or out
 const CUT := 8.0              # m: a ball moved further than this in one frame was put back (a
@@ -87,7 +94,12 @@ var _replay_end := 0.0        # its last record's time (director time)
 var _replay_x := 0.0          # the goal line it was kicked at
 var _replay_t := 0.0          # where the replay is (director time)
 var _after_siren: Array = []  # the deciding behind's clip, for after the siren
+var _after_side := 0          # ...and the side that kicked it
 var replaying := false        # the picture shows a replay
+var _wipe := -1.0             # real s into a sting; -1 none
+var _out := false             # the sting is taking the picture out of the replay
+var _wipe_clip: Array = []    # the replay the sting is covering the cut to; [] a sting back to live
+var replay_side := 0          # the side that scored the goal being replayed (the sting's colours)
 var _kick_wide := false       # a long kick's zoom out still running (rule 2.111)
 var _zoom := 1.0              # 0 the normal TV-height shot, 1 the wide shot (rule 2.111)
 
@@ -110,6 +122,7 @@ static func main_eye() -> Vector3:
 func frame(dt: float, wall := 0.0) -> void:
 	_t += dt
 	_record()
+	_step_wipe(wall)
 	if replaying:
 		_play_replay(wall)
 		return
@@ -290,19 +303,56 @@ func _after_score() -> void:
 	_score_t = -1.0
 	if clip.size() < 2:
 		return
+	replay_side = int((oval.director.events[k] as Dictionary).get("side", 0))
 	if str((oval.director.events[k] as Dictionary).get("kind", "")) == "goal":
-		_start_replay(clip)
+		_sting_in(clip)
 	elif oval.director.deciding_behind(k):
 		_after_siren = clip
+		_after_side = replay_side
 
 
 ## The deciding behind's replay, once the siren has gone (rule 2.96). False when there is none.
 func replay_after_siren() -> bool:
 	if _after_siren.is_empty():
 		return false
-	_start_replay(_after_siren)
+	replay_side = _after_side
+	_sting_in(_after_siren)
 	_after_siren = []
 	return true
+
+
+## The replay is on the picture, or a sting is taking the picture into or out of it.
+func on_replay() -> bool:
+	return replaying or _wipe >= 0.0
+
+
+## Where the sting is: 0 starting, 0.5 covering the picture (the cut), 1 gone; -1 none.
+func sting() -> float:
+	return _wipe / WIPE_S if _wipe >= 0.0 else -1.0
+
+
+## The sting into a replay: live play goes on under the band until it covers the picture.
+func _sting_in(clip: Array) -> void:
+	_wipe_clip = clip
+	_wipe = 0.0
+
+
+## The sting runs on `wall` real seconds: at its middle the picture cuts, into the replay or
+## back to live.
+func _step_wipe(wall: float) -> void:
+	if _wipe < 0.0:
+		return
+	var was := _wipe
+	_wipe += wall
+	if was < WIPE_S * 0.5 and _wipe >= WIPE_S * 0.5:
+		if not _wipe_clip.is_empty():
+			_start_replay(_wipe_clip)
+			_wipe_clip = []
+		elif replaying:
+			_cut_live()
+	if _wipe >= WIPE_S:
+		_wipe = -1.0
+		_out = false
 
 
 func _start_replay(clip: Array) -> void:
@@ -314,10 +364,17 @@ func _start_replay(clip: Array) -> void:
 	shot = "goals"
 
 
-## Back to the live picture: the replay is over, or the coach skipped it.
+## The coach skipped the replay (rule 2.110): the picture is live again at once, no sting.
 func skip_replay() -> void:
-	if not replaying:
-		return
+	_wipe_clip = []
+	_wipe = -1.0
+	_out = false
+	if replaying:
+		_cut_live()
+
+
+## Back to the live picture.
+func _cut_live() -> void:
 	replaying = false
 	_replay = []
 	# Off the live picture for the replay: the umpires go to where the live play has them now
@@ -331,11 +388,14 @@ func skip_replay() -> void:
 ## One frame of the replay, `wall` real seconds on: every recorded man, umpire and the ball put
 ## where they were (between the two nearest records), over the live picture's.
 func _play_replay(wall: float) -> void:
-	_replay_t += wall * REPLAY_RATE
+	if not _out:
+		_replay_t += wall * REPLAY_RATE
 	if _replay_t > _replay_end:
-		skip_replay()
-		frame(0.0)
-		return
+		# Over: the last moment holds under the sting back to live.
+		_replay_t = _replay_end
+		if not _out:
+			_out = true
+			_wipe = 0.0
 	var j := 0
 	while j < _replay.size() - 2 and float(_replay[j + 1]["t"]) < _replay_t:
 		j += 1

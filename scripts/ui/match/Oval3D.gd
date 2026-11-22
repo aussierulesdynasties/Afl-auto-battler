@@ -17,7 +17,8 @@ const LOOPS_GLB := "res://assets/oval3d/player_loops.glb"
 ## candidate body (row 202 2d: the MetaHuman footballer, which carries its own loops).
 static var player_glb := PLAYER_GLB
 static var loops_glb := LOOPS_GLB
-## m/s the jog loop covers at rate 1 (14.6 m in its 2.5 s): the rate scales from this.
+## m/s the old body's jog loop was taken to cover at rate 1; the rate now scales from the pace
+## measured off each body's own loop (Oval3DAnim.loop_speed), this only when it cannot be read.
 const LOOP_SPEED := 5.83
 ## Club Forge's hair styles on the same rig, one mesh per style on the head bone
 ## (tools/oval3d/export_hair_glb.py: the pipeline's own procedural shells, hair_lib.py).
@@ -607,7 +608,7 @@ func _kit(kit: Dictionary) -> ShaderMaterial:
 	m.set_shader_parameter("kit_design", [float(100 + cell) if cell >= 0
 			else float(maxi(0, GameDB.GUERNSEY_DESIGNS.find(str(kit.get("design", "plain")))))])
 	m.set_shader_parameter("shorts", kit.get("shorts", Color(0.94, 0.94, 0.92)))
-	m.set_shader_parameter("digits_tex", DIGITS)
+	m.set_shader_parameter("digits_arr", digits_3d())
 	for part in ["body", "head"]:
 		for map in [["col", "Basecolor"], ["nrm", "Normal"], ["srmf", "SRMF"]]:
 			m.set_shader_parameter("skin_%s_%s" % [part, map[0]],
@@ -631,6 +632,33 @@ func _kit(kit: Dictionary) -> ShaderMaterial:
 		if (today.get("shorts", Color(0, 0, 0, 0)) as Color).a > 0.0:
 			m.set_shader_parameter("shorts", today["shorts"])
 	return m
+
+
+## The vignettes' digits for the 3D guernsey: one layer per digit, its 64 x 96 glyph in a 96 x 128
+## layer with a clear margin, and mipmaps, so a number a dozen pixels tall on the main camera is
+## read from a sheet its own size (oval3d_player.gdshader, DIGIT_CELL). Built once.
+static var _digits_3d: Texture2DArray
+static func digits_3d() -> Texture2DArray:
+	if _digits_3d == null:
+		_digits_3d = Texture2DArray.new()
+		_digits_3d.create_from_images(digit_layers())
+	return _digits_3d
+
+
+## The ten layers digits_3d is made of.
+static func digit_layers() -> Array[Image]:
+	var sheet: Image = DIGITS.get_image()
+	if sheet.is_compressed():
+		sheet.decompress()
+	sheet.convert(Image.FORMAT_RGBA8)
+	var w := sheet.get_width() / 10
+	var layers: Array[Image] = []
+	for k in range(10):
+		var cell := Image.create_empty(96, 128, false, Image.FORMAT_RGBA8)
+		cell.blit_rect(sheet, Rect2i(k * w, 0, w, sheet.get_height()), Vector2i(16, 16))
+		cell.generate_mipmaps()
+		layers.append(cell)
+	return layers
 
 
 ## His number on the back of his guernsey (0-99; -1 for none), per figure.
@@ -2026,7 +2054,7 @@ func _move_umpires(frame_dt: float) -> void:
 		if speed > UMP_RUN_FROM and not on_mark:
 			node.rotation.y = rotate_toward(node.rotation.y, atan2(vel.x, vel.y), turn)
 			clip = "jog"
-			rate = clampf(speed / LOOP_SPEED, 0.45, 2.3)
+			rate = clampf(speed / anim.loop_speed("jog", u), Oval3DAnim.RATE_MIN, Oval3DAnim.RATE_MAX)
 		else:
 			var to := face if face != Vector2.ZERO else bp - at
 			if to.length() > 0.5 or face != Vector2.ZERO:
