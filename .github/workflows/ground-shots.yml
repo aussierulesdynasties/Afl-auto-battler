@@ -1,0 +1,230 @@
+name: Ground shots
+
+# Catch a ground that quietly breaks between the director's reviews (row 202).
+# Every night, every ground with a model in the match (GroundModels) is built
+# exactly as a match builds it and filmed from the same fixed cameras
+# (tools/visual/capture_grounds3d.gd: high, wing, end, fence), on the phone's
+# renderer (Forward Mobile, Vulkan in software). tools/ground_shots.py compares
+# each shot with the last good night on main and flags every ground that looks
+# different, split into:
+#   - changed with none of its own files touched: a shared change (light, turf,
+#     seats, crowd, fitting) moved it. These are the ones to look at.
+#   - changed along with its own model or textures: expected, still worth a look.
+#   - no longer captured: it failed to load. This turns the run red.
+# A night with changes adds a comment, with the table, to the open issue
+# "Ground shots: what changed"; the run's artifact has a sheet per changed
+# ground (baseline, now, changed pixels in red). Nothing changed: no comment.
+#
+# A ready pull request that touches a ground or the 3D view gets the same check
+# against the last good night (information only, never a required check; it
+# never comments). When only ground folders changed, only those grounds are
+# filmed. Its "baseline" includes whatever else merged since that night.
+#
+# A night when main has not moved since the baseline films nothing and carries
+# the baseline forward. Dispatch it on main to make a fresh baseline at once:
+#   gh workflow run ground-shots.yml --ref main
+#   gh run download <run-id> -n ground-shots-report
+on:
+  schedule:
+    - cron: "0 18 * * *"   # 05:00 Melbourne (AEDT), after the long suites
+  workflow_dispatch:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - "assets/grounds/**"
+      - "scripts/ui/match/GroundModels.gd"
+      - "scripts/ui/match/Oval3D*.gd"
+      - "scripts/ui/match/oval3d_*.gdshader"
+      - "addons/sky_3d/**"
+      - "tools/visual/capture_grounds3d.gd"
+      - "tools/ground_shots.py"
+      - ".github/workflows/ground-shots.yml"
+
+permissions:
+  contents: read
+  actions: read
+  issues: write
+
+concurrency:
+  group: ground-shots-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  GODOT_VERSION: "4.7.2"
+  ISSUE_TITLE: "Ground shots: what changed"
+
+jobs:
+  shots:
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    env:
+      GH_TOKEN: ${{ github.token }}
+      IS_MAIN: ${{ github.event_name != 'pull_request' && github.ref == 'refs/heads/main' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: The last good night on main
+        id: base
+        run: |
+          # The newest successful run of this workflow on main that kept a baseline.
+          mkdir -p baseline
+          found=""
+          for id in $(gh run list --repo "$GITHUB_REPOSITORY" --workflow ground-shots.yml --branch main \
+                --status success --limit 20 --json databaseId,event \
+                --jq '.[] | select(.event != "pull_request") | .databaseId'); do
+            [ "$id" = "$GITHUB_RUN_ID" ] && continue
+            if gh run download "$id" --repo "$GITHUB_REPOSITORY" -n ground-shots-baseline -D baseline 2>/dev/null; then
+              found="$id"; break
+            fi
+          done
+          sha=$(cat baseline/sha.txt 2>/dev/null || true)
+          echo "run=$found" >> "$GITHUB_OUTPUT"
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          echo "Baseline: run ${found:-none}, commit ${sha:-none}"
+          head="${{ github.event.pull_request.head.sha || github.sha }}"
+          : > changed.txt
+          if [ -n "$sha" ]; then
+            git fetch -q --depth=1 origin "$sha" && git diff --name-only "$sha" HEAD > changed.txt || true
+          fi
+          echo "$(wc -l < changed.txt) files changed since the baseline"
+          # Nothing moved on main since the last good night: carry it forward, film nothing.
+          if [ "$IS_MAIN" = "true" ] && [ "$sha" = "$GITHUB_SHA" ]; then
+            echo "same=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "same=false" >> "$GITHUB_OUTPUT"
+          fi
+          # Which grounds to film: all of them, unless this is a pull request that
+          # changed nothing but ground folders.
+          only=""
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            git fetch -q --depth=1 origin "${{ github.event.pull_request.base.sha }}"
+            git diff --name-only "${{ github.event.pull_request.base.sha }}" HEAD > pr_files.txt
+            if [ -s pr_files.txt ] && ! grep -qv '^assets/grounds/' pr_files.txt; then
+              only=$(sed -n 's#^assets/grounds/\([^/]*\)/.*#\1#p' pr_files.txt | sort -u | tr '\n' ' ')
+            fi
+          fi
+          echo "only=$only" >> "$GITHUB_OUTPUT"
+          echo "Grounds to film: ${only:-all}"
+
+      - name: Virtual display and software Vulkan
+        if: steps.base.outputs.same != 'true'
+        run: |
+          # The runner's apt mirror sometimes fails to resolve; retry 3 times, 20 s apart.
+          for try in 1 2 3; do
+            sudo apt-get -o Acquire::Retries=5 update -qq && sudo apt-get -o Acquire::Retries=5 install -y -qq --fix-missing xvfb mesa-vulkan-drivers libvulkan1 fonts-dejavu-core > /dev/null && break
+            [ "$try" = 3 ] && exit 1
+            echo "apt failed (try $try), retrying in 20 s"; sleep 20
+          done
+          python3 -m pip install --quiet pillow
+          ls /usr/share/vulkan/icd.d/
+
+      - name: Cache Godot
+        if: steps.base.outputs.same != 'true'
+        id: godot-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/godot
+          key: godot-${{ env.GODOT_VERSION }}-linux-x86_64
+
+      - name: Download Godot ${{ env.GODOT_VERSION }}
+        if: steps.base.outputs.same != 'true' && steps.godot-cache.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/godot && cd ~/godot
+          name="Godot_v${GODOT_VERSION}-stable_linux.x86_64"
+          curl -fsSL --retry 3 -o godot.zip \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/${name}.zip" \
+          || curl -fsSL --retry 3 -o godot.zip \
+            "https://downloads.godotengine.org/?version=${GODOT_VERSION}&flavor=stable&slug=linux.x86_64.zip&platform=linux.64"
+          unzip -q godot.zip && rm godot.zip
+          mv "${name}" godot && chmod +x godot
+
+      - name: Import the project
+        if: steps.base.outputs.same != 'true'
+        run: |
+          timeout 900 "$HOME/godot/godot" --headless --path . --editor --import > import.log 2>&1 || true
+          if grep -qE "SCRIPT ERROR|Parse Error|Compile Error" import.log; then
+            grep -E -A3 "SCRIPT ERROR|Parse Error|Compile Error" import.log | head -40
+            echo "::error::scripts failed to compile during import"
+            exit 1
+          fi
+
+      - name: Film every ground
+        if: steps.base.outputs.same != 'true'
+        env:
+          ONLY: ${{ steps.base.outputs.only }}
+        run: |
+          mkdir -p out/shots
+          icd=$(ls /usr/share/vulkan/icd.d/lvp_icd*.json | head -1)
+          # ONLY is split on spaces on purpose: ground folder names from git.
+          VK_ICD_FILENAMES="$icd" xvfb-run -a -s "-screen 0 1280x720x24" \
+            timeout 3600 "$HOME/godot/godot" --path . --rendering-method mobile \
+            --script tools/visual/capture_grounds3d.gd -- "$PWD/out/shots" 480 270 $ONLY > capture.log 2>&1 \
+            || echo "::warning::the capture exited non-zero"
+          grep -E "GROUND|TIMEOUT|SCRIPT ERROR" capture.log || true
+          echo "$GITHUB_SHA" > out/shots/sha.txt
+          echo "$(ls out/shots/*.png 2>/dev/null | wc -l) shots"
+
+      - name: Carry the baseline forward
+        if: steps.base.outputs.same == 'true'
+        run: |
+          echo "main has not moved since the last good night (${{ steps.base.outputs.sha }}): nothing to film."
+          mkdir -p out && cp -r baseline out/shots
+          echo "## Ground shots" >> "$GITHUB_STEP_SUMMARY"
+          echo "main has not changed since the last good night; nothing filmed." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Compare with the last good night
+        id: compare
+        if: steps.base.outputs.same != 'true'
+        run: |
+          base="baseline"
+          if [ -n "${{ steps.base.outputs.only }}" ]; then
+            # Only some grounds were filmed: compare those alone.
+            mkdir -p baseline_only
+            for g in ${{ steps.base.outputs.only }}; do cp baseline/"$g"_*.png baseline_only/ 2>/dev/null || true; done
+            base="baseline_only"
+          fi
+          title="Ground shots"
+          [ -n "${{ steps.base.outputs.sha }}" ] && title="Ground shots against ${{ steps.base.outputs.sha }}"
+          code=0
+          python3 tools/ground_shots.py "$base" out/shots out/report --changed-files changed.txt --title "$title" || code=$?
+          cat out/report/report.md >> "$GITHUB_STEP_SUMMARY"
+          changed=$(python3 -c "import json; print(len(json.load(open('out/report/report.json'))['changed']))")
+          echo "changed=$changed" >> "$GITHUB_OUTPUT"
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+          cp capture.log out/report/ 2>/dev/null || true
+          exit "$code"
+
+      - name: Keep tonight as the baseline
+        if: always() && env.IS_MAIN == 'true' && (steps.compare.outcome == 'success' || steps.base.outputs.same == 'true')
+        uses: actions/upload-artifact@v4
+        with:
+          name: ground-shots-baseline
+          path: out/shots/
+          retention-days: 90
+
+      - name: Upload the report
+        if: always() && steps.base.outputs.same != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ground-shots-report
+          path: |
+            out/report/
+            capture.log
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Note the changes on the issue
+        if: always() && env.IS_MAIN == 'true' && steps.base.outputs.same != 'true' && steps.base.outputs.sha != '' && (steps.compare.outputs.changed != '0' || steps.compare.outputs.code != '0')
+        run: |
+          run_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          {
+            if [ -f out/report/report.md ]; then cat out/report/report.md; else echo "The comparison did not run; see the log."; fi
+            echo
+            echo "Commits since the baseline: ${{ steps.base.outputs.sha }}...${GITHUB_SHA}"
+            echo "Sheets: ${run_url} (artifact ground-shots-report)"
+          } > comment.md
+          num=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --search "\"$ISSUE_TITLE\" in:title" --json number,title \
+                --jq "[.[] | select(.title==\"$ISSUE_TITLE\")][0].number // empty")
+          if [ -n "$num" ]; then gh issue comment "$num" --repo "$GITHUB_REPOSITORY" --body-file comment.md
+          else gh issue create --repo "$GITHUB_REPOSITORY" --title "$ISSUE_TITLE" --body-file comment.md; fi
