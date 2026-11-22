@@ -25,7 +25,10 @@ uniform vec4 kit_pattern[1];
 uniform vec4 kit_pattern2[1];
 uniform vec4 kit_pattern3[1];
 uniform float kit_design[1];
-uniform sampler2D digits_tex : filter_linear, repeat_disable;   // 0-9: R fill, G outline
+// The digits 0-9, one layer each (R fill, G outline), padded and with mipmaps (Oval3D.digits_3d):
+// from the main camera a number is about a dozen pixels tall, and a digit read off one sheet with no
+// mipmaps came out as scattered texels that changed every frame (a 35 read as 56).
+uniform sampler2DArray digits_arr : filter_linear_mipmap_anisotropic, repeat_disable;
 uniform sampler2D kit_atlas : source_color, filter_linear_mipmap, repeat_disable;   // kits_today has mipmaps (seen from 15 m up)
 uniform ivec2 kit_grid = ivec2(1, 1);
 // A current guernsey's collar and armhole bindings (data/kits_today.csv), kit_trim metres wide
@@ -49,6 +52,13 @@ varying vec2 kit_uw;
 varying vec3 kit_g;  // on that skin, the nearest guernsey corner's pattern coordinates
 const float HEM_SHADOW = 0.35;     // how much the guernsey's hem darkens the shorts just under it
 const float HEM_SHADOW_M = 0.015;  // and how far down (1.5 cm)
+// A wet day (Oval3DTurf.apply sets oval_wet, 0 dry .. 1 raining): soaked cloth's colour and sheen,
+// wet hair's colour, and how much smoother wet skin reads.
+global uniform float oval_wet;
+const float WET_CLOTH = 0.8;
+const float WET_CLOTH_ROUGH = 0.55;
+const float WET_HAIR = 0.75;
+const float WET_SKIN_ROUGH = 0.7;
 // The player's own number (0-99), per figure; -1 for none.
 instance uniform int number = -1;
 
@@ -75,6 +85,13 @@ const vec2 NUMBER_UP = vec2(0.485, 0.875);     // where 2026 match backs carry i
 // The same spot on a picture kit, whose coordinates are the photo's own pixels (row 189 the shoulder line, 2310 px a metre).
 const vec2 NUMBER_ACROSS_PIC = vec2(0.3525, 0.6525);
 const vec2 NUMBER_UP_PIC = vec2(0.5425, 0.818);
+// A digit's glyph (64 x 96 px) inside its padded layer (96 x 128 px, Oval3D.digits_3d): its share
+// of the layer, and where it starts.
+const vec2 DIGIT_CELL = vec2(64.0 / 96.0, 96.0 / 128.0);
+const vec2 DIGIT_PAD = vec2(16.0 / 96.0, 16.0 / 128.0);
+// The digits' mipmap is picked one level finer than the pixel's own footprint: crisper strokes on
+// a number a dozen pixels tall, still steady as he runs (the plain footprint blurred a 23 into an 11).
+const float DIGIT_SHARPEN = 0.5;
 
 float region(float f) {
 	float aa = max(fwidth(f), 1e-3);
@@ -279,30 +296,52 @@ vec3 kit_image(int cell, vec3 g, float fore, vec2 uw) {
 	return textureGrad(kit_atlas, (c + at) / cells, dFdx(g.xy) / cells, dFdy(g.xy) / cells).rgb;
 }
 
-// The number printed on the back: x = 1 where it's drawn (alpha), rgb its colour.
-vec4 number_on_back(int n, vec3 g, vec3 base, bool mirrored, bool pic) {
+// The number printed on the back: x = 1 where it's drawn (alpha), rgb its colour. gx, gy: how g.xy
+// changes across a screen pixel (dFdx, dFdy, taken outside any branch), which picks the digits' mipmap.
+// The digits are copied from figure.gdshader's; only how they are sampled differs (the vignettes
+// draw them at one size, flat).
+vec4 number_on_back(int n, vec3 g, vec3 base, bool mirrored, bool pic, vec2 gx, vec2 gy) {
 	vec2 across = pic ? NUMBER_ACROSS_PIC : NUMBER_ACROSS;
 	vec2 up = pic ? NUMBER_UP_PIC : NUMBER_UP;
+	float sx = mirrored ? 1.0 : -1.0;
 	float x = (across.y - g.x) / (across.y - across.x);   // from behind, left to right
 	if (mirrored) {
 		x = 1.0 - x;      // the frame is flipped on screen: flip the digits back
 	}
 	float y = (up.y - g.y) / (up.y - up.x);             // top down
-	int digit = n;
-	float dx = (x - 0.25) * 2.0;
-	if (n >= 10) {
-		digit = x < 0.5 ? n / 10 : n % 10;
-		dx = x < 0.5 ? x * 2.0 : x * 2.0 - 1.0;
-	}
-	if (dx < 0.0 || dx > 1.0 || y < 0.0 || y > 1.0) {
+	// Each digit's own coordinate (0-1 across its glyph), in its padded layer.
+	float du = 2.0 * sx / (across.y - across.x) * DIGIT_CELL.x;
+	float dv = -1.0 / (up.y - up.x) * DIGIT_CELL.y;
+	vec2 grad_x = vec2(du * gx.x, dv * gx.y) * DIGIT_SHARPEN;
+	vec2 grad_y = vec2(du * gy.x, dv * gy.y) * DIGIT_SHARPEN;
+	float v = y * DIGIT_CELL.y + DIGIT_PAD.y;
+	if (v < 0.0 || v > 1.0) {
 		return vec4(0.0);
 	}
-	vec4 d = texture(digits_tex, vec2((float(digit) + dx) / 10.0, y));
+	vec2 d = vec2(0.0);
+	if (n >= 10) {
+		// Both digits, each read with its padding: the pair joins smoothly however small it is drawn.
+		float ul = 2.0 * x * DIGIT_CELL.x + DIGIT_PAD.x;
+		float ur = (2.0 * x - 1.0) * DIGIT_CELL.x + DIGIT_PAD.x;
+		if (ul >= 0.0 && ul <= 1.0) {
+			d = max(d, textureGrad(digits_arr, vec3(ul, v, float(n / 10)), grad_x, grad_y).rg);
+		}
+		if (ur >= 0.0 && ur <= 1.0) {
+			d = max(d, textureGrad(digits_arr, vec3(ur, v, float(n % 10)), grad_x, grad_y).rg);
+		}
+	} else {
+		float u = (x - 0.25) * 2.0 * DIGIT_CELL.x + DIGIT_PAD.x;
+		if (u >= 0.0 && u <= 1.0) {
+			d = textureGrad(digits_arr, vec3(u, v, float(n)), grad_x, grad_y).rg;
+		}
+	}
 	float lum = dot(base, vec3(0.299, 0.587, 0.114));
 	vec3 ink = kit_number.a > 0.0 ? kit_number.rgb : (lum > 0.58 ? vec3(0.06, 0.06, 0.07) : vec3(1.0));
 	// Edged in the guernsey's own colour, so it reads across stripes and panels (or the club's edge).
 	vec3 edge = kit_number_edge.a > 0.0 ? kit_number_edge.rgb : base;
-	return vec4(mix(edge, ink, d.r), d.g * (1.0 - smoothstep(0.35, 0.6, g.z)));
+	// Filtered, the fill's share can pass the outline's by a hair: keep it inside.
+	float fill = min(d.x, d.y) / max(d.y, 1e-4);
+	return vec4(mix(edge, ink, fill), d.y * (1.0 - smoothstep(0.35, 0.6, g.z)));
 }
 
 void vertex() {
@@ -330,9 +369,10 @@ void fragment() {
 		vec3 p = design(dn, g);
 		jumper = base + (pat - base) * p.x + (pat2 - base) * p.y + (pat3 - base) * p.z;
 	}
+	vec2 g_dx = dFdx(g.xy), g_dy = dFdy(g.xy);
 	if (number >= 0) {
 		vec3 under = dn >= 100 ? jumper : base;
-		vec4 num = number_on_back(number, g, under, false, dn >= 100);
+		vec4 num = number_on_back(number, g, under, false, dn >= 100, g_dx, g_dy);
 		jumper = mix(jumper, num.rgb, num.a);
 	}
 	// The bindings, a set width in from the neck and the armholes.
@@ -386,6 +426,11 @@ void fragment() {
 	}
 	c = mix(c, shorts.rgb * (1.0 - shade), bottom);
 	c = mix(c, jumper, top);
+	// A wet day (rule 2.83, Oval3DTurf sets oval_wet): soaked cloth goes a shade darker and
+	// holds a dull sheen; wet hair darkens; wet skin shines more. Looks only.
+	float cloth = clamp(max(top, bottom) + region(COLOR.b + COLOR.a * step(0.02, COLOR.b)), 0.0, 1.0);
+	c *= mix(1.0, mix(1.0, WET_CLOTH, cloth), oval_wet);
+	c *= mix(1.0, mix(1.0, WET_HAIR, region(UV2.x) * (1.0 - cloth)), oval_wet);
 	ALBEDO = c;
 	// Where bare skin shows: its own bumps and sheen. Kit and hair keep the flat cloth.
 	// (The kit as drawn: a guernsey cut past the body's old guernsey colours took the skin's sheen in patches.)
@@ -394,7 +439,7 @@ void fragment() {
 		* has_maps;
 	NORMAL_MAP = vec3(s_nrm.r, 1.0 - s_nrm.g, 1.0);
 	NORMAL_MAP_DEPTH = bare;
-	ROUGHNESS = mix(0.82, s_rough, bare);
+	ROUGHNESS = mix(mix(0.82, WET_CLOTH_ROUGH, oval_wet), s_rough * mix(1.0, WET_SKIN_ROUGH, oval_wet), bare);
 	// Soft skin light (oval3d_skin_light.gdshaderinc) on bare skin only: never on the guernsey or shorts.
 	skin_wrap = bare * (1.0 - top) * (1.0 - bottom);
 	spec_amt = 0.5;
