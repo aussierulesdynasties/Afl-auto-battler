@@ -120,7 +120,15 @@ const PARTS := {
 			{"mesh": "ledges.bin", "name": "SlabEdges"}],
 	# The SCG's boxes: a pale parapet and dark glass from each stand's top row to its roof, where the
 	# model showed the back of a blank wall from the field (tools/grounds/scg/boxes.py).
-	"scg": [{"mesh": "boxes.bin", "name": "Boxes"}],
+	"scg": [{"mesh": "boxes.bin", "name": "Boxes"},
+			# The north stands' two tier fronts: parapet, walkway and the dark void under the tier above
+			# (tools/grounds/scg/tiers.py).
+			{"mesh": "tiers.bin", "name": "TierFronts"},
+			# The pale stair tower where the north stands meet the Members' (tools/grounds/scg/join.py).
+			{"mesh": "join.bin", "name": "JoinTower"},
+			# The buildings nearest the ground with real facades, windows set into piers and floor edges
+			# (tools/grounds/scg/facades.py; they are out of buildings.bin).
+			{"mesh": "facades.bin", "name": "Facades"}],
 }
 
 ## Per-ground corrections to a model's materials, by material name, checked against Google Earth

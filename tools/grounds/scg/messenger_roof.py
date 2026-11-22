@@ -11,7 +11,7 @@ the roof's top surface per half degree (height against distance from the pitch c
 edge where it is and lays the back FALL metres lower than the front. Everything in the sector above
 H0 (the roof, its fascias and glazed strip, the back walls and struts under it) is squeezed onto the new
 line, so walls still meet the roof and nothing pokes through. The light towers, lamps and scoreboard are
-left alone. Roof normals are recomputed. Run it once on the model as #1909 shipped it:
+left alone. Roof normals are recomputed. Run it on the model as #1909 shipped it (git show ee2e5e27:assets/grounds/scg/scg_part1.glb ...), never twice:
 
     python3 tools/grounds/scg/messenger_roof.py assets/grounds/scg/scg_part1.glb assets/grounds/scg/scg_part2.glb
 
@@ -26,6 +26,7 @@ import numpy as np
 PC = np.array([0.94, 11.82])      # x, z of the pitch centre (geo.py's PC)
 SECTOR = (39.0, 114.0)            # degrees anticlockwise from east (90 = north): the Messenger roof
 FALL = 1.5                        # metres the back edge sits under the front edge
+TIP0, TIP_Z0, TIP_RISE = 96.0, 26.8, 0.0   # the tip's front edge held level with the Noble's, 26.8 m
 H0 = 22.0                         # nothing below this moves (the top seats are at 23 m, under the front edge)
 ROOF = ("roof", "roofu", "fascia", "glassroof")
 KEEP = ("tower", "lamp", "headback", "sbface", "sbad", "sbback", "screen")
@@ -136,6 +137,9 @@ def main(paths):
         zold = ic + sl * rc
         zfront = ic + sl * rf
         t = (rc - rf) / np.maximum(1.0, ro - rf)
+        # The west tip: the model's front edge climbs 8 m over its last 12 degrees (95-107), which over the
+        # lowered shell reads as a horn; Google Earth from the field shows the Noble and Bradman edge level to the tip.
+        zfront = np.minimum(zfront, np.where(ang > TIP0, TIP_Z0 + (ang - TIP0) * TIP_RISE, 99.0))
         znew = zfront - FALL * t
         return zold, znew, ro
 
