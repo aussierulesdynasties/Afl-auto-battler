@@ -43,3 +43,8 @@ tests/output/
 captures/**/*.import
 docs/**/*.import
 tools/wheelo/cache/
+
+# Aerial imagery is never committed (docs/MCG_STANDARD.md); the private copy is in the project files (adelaide-standard/private-imagery)
+.claude/review/adelaide/esri/
+.claude/review/adelaide/hill/plan_*.jpg
+.claude/review/adelaide/proof/topdown_overlay.png
