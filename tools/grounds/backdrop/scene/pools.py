@@ -136,8 +136,11 @@ if _PZ[1]:
     _po = mk_obj('bg_plaza', _PZ[0], _PZ[1], mat_mul('plaza', os.path.join(HERE, 'tex', 'mt', 'mv_plaza_pavers.png'), 0.85, 1 / 0.534))
     _n = sum(len(q) for q in _PZ[1]); set_corner_col(_po.data, np.tile(np.array([*srgb([146, 136, 124]), 1.0]), (_n, 1)))
     set_uv(_po.data, [_PZ[2][i] for q in _PZ[1] for i in q]); print('plazas', len(_PZ[1]))
-# car parks (amenity=parking, surface not grass): People First park asphalt, one 104 m seamless tile, 40 m mottle
-_CP = ([], [], [])
+# car parks (amenity=parking, surface not grass): each lot's asphalt colour and the cars parked in it from the close
+# aerial (cars.py -> carparks.json: colours and positions, never pixels). Bay lines only where the cars sit on a
+# 16 m two-row grid (its direction and phase from the cars); elsewhere plain asphalt.
+_CJ = os.path.join(HERE, 'data', name, 'carparks.json'); _CJ = json.load(open(_CJ)) if os.path.exists(_CJ) else {}
+_CP = ([], [], [], []); _CQ = ([], [], [], []); _CARS = []; _SEEN = set()
 for _el in json.load(open(os.path.join(HERE, 'data', name, 'osm.json'), encoding='utf-8'))['elements']:
     _t = _el.get('tags', {})
     if _el['type'] != 'way' or _t.get('amenity') != 'parking' or _t.get('parking') in ('multi-storey', 'underground') or _t.get('surface') in ('grass', 'gravel', 'dirt') or not _el.get('geometry'): continue
@@ -146,17 +149,92 @@ for _el in json.load(open(os.path.join(HERE, 'data', name, 'osm.json'), encoding
     if len(_p) < 3 or max(max(abs(a), abs(b)) for a, b in _p) > meta['near'] - 10: continue
     _A = np.array(_p, float)
     if _area(_A) < 0: _A = _A[::-1]
-    _c = _A.mean(0)
     if KFr is not None and all(np.hypot(*q) < KFr[int((np.degrees(np.arctan2(q[1], q[0])) % 360) // 2)] + 2 for q in _A): continue   # wholly under the ground model
-    _hs = height(_A[:, 0], _A[:, 1]); v, f, uv = _CP; o = len(v)
-    v += [(x, y, float(z) + 0.08) for (x, y), z in zip(_A, _hs)]; f.append(tuple(range(o, o + len(_A)))); _E = np.diff(np.vstack([_A, _A[:1]]), axis=0); _e = _E[np.argmax(np.hypot(_E[:, 0], _E[:, 1]))]; _th = math.atan2(_e[1], _e[0]); _cs, _sn = math.cos(_th), math.sin(_th)
-    uv += [((x * _cs + y * _sn) / 15.6, (-x * _sn + y * _cs) / 16.0) for x, y in _A]   # bay rows run along the lot's longest side
-if _CP[1]:
-    from mathutils import noise as _nz2
-    _co = mk_obj('bg_carparks', _CP[0], _CP[1], mat_mul('park_bays', os.path.join(HERE, 'tex', 'mt', 'park_bays.png'), 0.92, 1.0))
-    _lv = [i for q in _CP[1] for i in q]
-    _nn = np.array([_nz2.noise(Vector((_CP[0][i][0] / 40.0, _CP[0][i][1] / 40.0, 0.5))) for i in _lv]); _m = 0.85 + 0.15 * np.clip(_nn * 0.5 + 0.5, 0, 1)
-    set_corner_col(_co.data, np.stack([_m, _m, _m, np.ones_like(_m)], 1)); set_uv(_co.data, [_CP[2][i] for i in _lv]); print('car parks', len(_CP[1]))
+    if _el['id'] in _SEEN: continue   # an era file can carry a way twice
+    _SEEN.add(_el['id']); _L = _CJ.get(str(_el['id']))
+    if _L: _CARS += _L['cars']
+    _grid = bool(_L and _L['pv'] is not None) or (not _CJ)
+    # draped on the ground: the outline every 6 m and a 6 m grid inside, triangulated, so a big lot follows the land
+    # (one flat polygon 0.08 m up sank under every rise and the ground showed through)
+    _B = []
+    for _i in range(len(_A)):
+        _a, _b = _A[_i], _A[(_i + 1) % len(_A)]; _nseg = max(1, int(np.hypot(*(_b - _a)) // 6))
+        _B += [_a + (_b - _a) * t for t in np.arange(_nseg) / _nseg]
+    _B = np.array(_B); _g0, _g1 = _A.min(0), _A.max(0)
+    _GX, _GY = np.meshgrid(np.arange(_g0[0] + 3, _g1[0], 6.0), np.arange(_g0[1] + 3, _g1[1], 6.0)); _G = np.stack([_GX.ravel(), _GY.ravel()], 1)
+    def _inside(Q, poly=_A):
+        x, y = Q[:, 0], Q[:, 1]; r = np.zeros(len(Q), bool); j = len(poly) - 1
+        for i in range(len(poly)):
+            xi, yi = poly[i]; xj, yj = poly[j]
+            r ^= ((yi > y) != (yj > y)) & (x < (xj - xi) * (y - yi) / ((yj - yi) + 1e-12) + xi); j = i
+        return r
+    if len(_G): _G = _G[_inside(_G)]
+    _Q = np.vstack([_B, _G]) if len(_G) else _B
+    from scipy.spatial import Delaunay as _Dl
+    try: _T = _Dl(_Q).simplices
+    except Exception: continue
+    _T = _T[_inside(_Q[_T].mean(1))]
+    _hs = height(_Q[:, 0], _Q[:, 1]); v, f, uv, col = _CP if _grid else _CQ; o = len(v)
+    v += [(x, y, float(z) + 0.1) for (x, y), z in zip(_Q, _hs)]; _P3 = _Q[_T]; _cr = (_P3[:, 1, 0] - _P3[:, 0, 0]) * (_P3[:, 2, 1] - _P3[:, 0, 1]) - (_P3[:, 1, 1] - _P3[:, 0, 1]) * (_P3[:, 2, 0] - _P3[:, 0, 0])
+    f += [(o + int(t[0]), o + int(t[1]), o + int(t[2])) if c_ > 0 else (o + int(t[0]), o + int(t[2]), o + int(t[1])) for t, c_ in zip(_T, _cr)]   # all facing up
+    _A = _Q
+    if _L: _th, _pu, _pv = _L['th'], _L['pu'] or 0.0, _L['pv'] or 0.0
+    else: _E = np.diff(np.vstack([_A, _A[:1]]), axis=0); _e = _E[np.argmax(np.hypot(_E[:, 0], _E[:, 1]))]; _th = math.atan2(_e[1], _e[0]); _pu = _pv = 0.0
+    _cs, _sn = math.cos(_th), math.sin(_th)
+    uv += [((x * _cs + y * _sn - _pu) / 15.6, (_pv - (-x * _sn + y * _cs)) / 16.0) for x, y in _A]   # bay rows run along th; image rows run down v
+    col += [srgb(_L['colour'] if _L else PAL.get('parking', [92, 91, 88]))] * len(_A)
+from mathutils import noise as _nz2
+from PIL import Image
+for _nm, (_v, _f, _uv, _col), _tex in (('bg_carparks', _CP, 'park_bays.png'), ('bg_carparks_plain', _CQ, 'park_plain.png')):
+    if not _f: continue
+    _im = np.asarray(Image.open(os.path.join(HERE, 'tex', 'mt', _tex)).convert('RGB'), np.float32) / 255
+    _lin = np.where(_im <= 0.04045, _im / 12.92, ((_im + 0.055) / 1.055) ** 2.4).mean()
+    _co = mk_obj(_nm, _v, _f, mat_mul(_nm[3:], os.path.join(HERE, 'tex', 'mt', _tex), 0.92, 1.0 / _lin))
+    _lv = [i for q in _f for i in q]
+    _nn = np.array([_nz2.noise(Vector((_v[i][0] / 40.0, _v[i][1] / 40.0, 0.5))) for i in _lv]); _m = 0.92 + 0.08 * np.clip(_nn * 0.5 + 0.5, 0, 1)
+    _c = np.array([_col[i] for i in _lv]) * _m[:, None]
+    set_corner_col(_co.data, np.hstack([_c, np.ones((len(_c), 1))])); set_uv(_co.data, [_uv[i] for i in _lv]); print(_nm, len(_f))
+# the parked cars: a body and a glasshouse, each a lidless box (20 triangles); the roof and bonnet take the colour
+# the aerial shows on that car, the side and end glass is dark. A car in six is a longer, taller wagon or ute.
+if _CARS:
+    _V, _F, _C = [], [], []
+    _rng = np.random.default_rng(11)
+    def _box(c, hd, L, W, z0, z1, Lt, Wt, dx, side, top):
+        cs, sn = math.cos(hd), math.sin(hd); o = len(_V)
+        for (l, w, z) in ((-L / 2, -W / 2, z0), (L / 2, -W / 2, z0), (L / 2, W / 2, z0), (-L / 2, W / 2, z0),
+                          (dx - Lt / 2, -Wt / 2, z1), (dx + Lt / 2, -Wt / 2, z1), (dx + Lt / 2, Wt / 2, z1), (dx - Lt / 2, Wt / 2, z1)):
+            _V.append((c[0] + l * cs - w * sn, c[1] + l * sn + w * cs, c[2] + z))
+        for q, k in (((0, 1, 5, 4), side), ((1, 2, 6, 5), side), ((2, 3, 7, 6), side), ((3, 0, 4, 7), side), ((4, 5, 6, 7), top)):
+            _F.append(tuple(o + i for i in q)); _C.extend([k] * 4)
+    _gz = height(np.array([c[0] for c in _CARS]), np.array([c[1] for c in _CARS]))
+    for (x, y, hd, r, g, b), z in zip(_CARS, _gz):
+        big = _rng.random() < 1 / 6; L = 4.9 if big else 4.45; W = 1.85 if big else 1.78; H = 1.7 if big else 1.45
+        if _rng.random() < 0.5: hd += math.pi
+        paint = [*srgb([r, g, b]), 1.0]; low = [*(np.array(srgb([r, g, b])) * 0.7), 1.0]; glass = [*srgb([28, 32, 36]), 1.0]
+        c = (x, y, float(z) + 0.08)
+        _box(c, hd, L, W, 0.22, 0.9, L - 0.1, W - 0.04, 0.0, low, paint)                                         # body to the waist
+        _box((c[0], c[1], c[2] + 0.9), hd, (2.9 if big else 2.5), W - 0.12, 0.0, H - 0.9, (2.6 if big else 1.6), W - 0.36, (-0.45 if big else -0.3), glass, paint)   # glasshouse
+    _ob = mk_obj('bg_cars', _V, _F, mat_vcol('car_paint', 0.45)); set_corner_col(_ob.data, np.array(_C, np.float32)); print('cars', len(_CARS))
+# what stands on the flat roofs (roofplant.py -> roofplant.json: positions, sizes and colours read from the close
+# aerial): lidless boxes on the roof inside the parapet. Housings darkened by their own shade in the aerial lift a little.
+_RPJ = os.path.join(HERE, 'data', name, 'roofplant.json')
+if os.path.exists(_RPJ) and spec.get('real'):
+    _BI = {b['_i']: b for b in BL}
+    _V, _F, _C = [], [], []
+    for bi, x, y, L, W, hd, ht, r, g, b_ in json.load(open(_RPJ)):
+        b = _BI.get(bi)
+        if b is None or b['c'] != 'block' or b.get('open') or (b.get('shed') and b['h'] <= 14): continue   # replaced by a landmark, or not a flat roof
+        cxy = np.array(b['p'], float).mean(0); top = float(height(cxy[0], cxy[1])) + b['h']
+        cs, sn = math.cos(hd), math.sin(hd); o = len(_V)
+        c3 = np.array([r, g, b_], float); c3 = c3 * min(1.45, 190.0 / max(c3.max(), 1)) if c3.mean() < 110 else c3
+        top_c = [*srgb(list(c3)), 1.0]; side_c = [*(np.array(srgb(list(c3))) * 0.75), 1.0]
+        for zz in (top - 0.05, top + ht):
+            for l, w in ((-L / 2, -W / 2), (L / 2, -W / 2), (L / 2, W / 2), (-L / 2, W / 2)):
+                _V.append((x + l * cs - w * sn, y + l * sn + w * cs, zz))
+        for q, k in (((0, 1, 5, 4), side_c), ((1, 2, 6, 5), side_c), ((2, 3, 7, 6), side_c), ((3, 0, 4, 7), side_c), ((4, 5, 6, 7), top_c)):
+            _F.append(tuple(o + i for i in q)); _C.extend([k] * 4)
+    if _F:
+        _ob = mk_obj('bg_roof_plant', _V, _F, mat_vcol('roof_plant', 0.6)); set_corner_col(_ob.data, np.array(_C, np.float32)); print('roof plant', len(_F) // 5)
 # shade canopies on the lawn between the 50 m pools (satellite: 4 square pyramid canopies, ~9.5 m, orange/blue/yellow/sage)
 _SH = []
 for _cx, _cy, _col in () if name != 'gmhba' else ((265, 175, (225, 110, 75)), (205, 330, (45, 60, 170)), (145, 515, (225, 205, 60)), (85, 680, (175, 195, 175))):

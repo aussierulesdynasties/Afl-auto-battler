@@ -294,6 +294,31 @@ if spec.get('real'):
             print('sentinel-2 variation inside big patches')
         else:
             _a0[_use] = _MC[_LB[_use]]
+        # gardens: town land between the houses is lawn, dry grass or bare earth, and paving, in the aerial's own
+        # proportions where it stands (each cell classed from the aerial, blended over ~2.5 m), each class in its
+        # town-wide median colour; light and dark from above are kept. Classes only: no aerial pixel is copied.
+        if _tw_ok.sum() > 100:
+            _Ai = _AS.astype(np.int16); _R_, _G_, _B_ = _Ai[..., 0], _Ai[..., 1], _Ai[..., 2]
+            _cl = np.where((_G_ > _R_ + 5) & (_G_ > _B_ + 5), 0, np.where((_R_ > _B_ + 14) & (_R_ < _G_ + 22), 1, 2))   # lawn, dry/bare, paved
+            _see = _ok & ~(_R_ >= _G_ + 22)                          # terracotta roofs the outlines miss are not ground
+            _tt = _town & _use
+            _cc = []
+            for k_ in range(3):
+                _m_ = _tw_ok & _see & (_cl == k_)
+                _cc.append(np.median(_AS[_m_], 0) if _m_.sum() > 50 else _tc)
+            _cc = np.array([c * min(1.0, 175.0 / max(float(c.max()), 1)) for c in _cc], np.float32)
+            # soft proportions: each class's share in the cell's neighbourhood (open ground only), unseen cells take the town mix
+            _sh_ = []
+            for k_ in range(3):
+                _num = _nd.gaussian_filter(((_cl == k_) & _see).astype(np.float32), 2.5 / PX); _sh_.append(_num)
+            _sh_ = np.stack(_sh_, -1); _den = _sh_.sum(-1, keepdims=True)
+            _mix = np.bincount(_cl[_tw_ok & _see].ravel(), minlength=3).astype(np.float32); _mix /= _mix.sum()
+            _wv = np.clip(_den / 0.25, 0, 1); _sh_ = _wv * _sh_ / np.maximum(_den, 1e-6) + (1 - _wv) * _mix[None, None, :]
+            _gc = (_sh_[..., :, None] * _cc[None, None]).sum(-2)
+            _rat = _a0 / np.maximum(_MC[_LB][..., :], 1)          # the Sentinel-2 light and dark already applied
+            _tt = _tt & (np.abs(_MC[_LB] - _tc).max(-1) < 0.5)       # blocks that took the shared town colour
+            _a0[_tt] = _gc[_tt] * np.clip(_rat[_tt], 0.85, 1.15)
+            print('gardens: lawn / dry / paved colours', [[int(v) for v in c] for c in _cc], 'town mix', [round(float(v), 2) for v in _mix])
         _rest = _soft & ~_use; _a0[_rest] = _F[_rest]
         print('real ground patches', _nl, 'coloured from their own aerial median', int(_good.sum()))
         img = Image.fromarray(np.clip(_a0, 0, 255).astype(np.uint8)); dr = ImageDraw.Draw(img)
@@ -417,6 +442,7 @@ for el in js:
         dr.line(P(pts), fill=tuple(PAL['sand' if dry else 'water']), width=max(1, int(wd / PX)))
     hw = t.get('highway')
     if hw and t.get('bridge') and t.get('bridge') != 'no': hw = None
+    if hw == 'service' and t.get('service') == 'parking_aisle' and spec.get('real'): hw = None   # a lot's aisles are its own asphalt (cars.py, pools.py)
     if hw:
         wd = {'motorway': 22, 'trunk': 18, 'primary': 16, 'secondary': 13, 'tertiary': 11, 'residential': 8,
               'unclassified': 8, 'service': 5, 'footway': 2.5, 'path': 2, 'cycleway': 2.5, 'pedestrian': 6}.get(hw)
@@ -469,9 +495,7 @@ if os.path.exists(_SP):
             _Q = np.array(pts, float); _E = np.diff(_Q, axis=0); _e = _E[np.argmax(np.hypot(_E[:, 0], _E[:, 1]))]; _th = math.atan2(_e[1], _e[0])
             _vv = -_X * math.sin(_th) + _Y * math.cos(_th); _uu = _X * math.cos(_th) + _Y * math.sin(_th)
             if tg.get('amenity') == 'parking':
-                _ph = np.mod(_vv, 16.0); _f = np.where(_ph < 6.0, 0.82, 1.08)            # 6 m aisle darker, then two 5 m bay rows
-                _f = np.where(np.abs(_ph - 11.0) < 0.5, 1.45, _f)                        # pale line between the bay rows
-                _f = np.where((_ph >= 6.0) & (np.mod(_uu, 2.6) < 0.5), _f * 1.12, _f)    # bay ends
+                _f = np.ones_like(_uu)   # the lot's own colour; its lines and cars are modelled over it (cars.py, pools.py)
             else:
                 _kk = (np.floor(_uu / 6.0) * 7919 + np.floor(_vv / 6.0) * 104729).astype(np.int64); _f = 0.94 + 0.12 * ((_kk * 2654435761) % 1000) / 1000.0
                 _f = np.where((np.mod(_uu, 6.0) < 0.5) | (np.mod(_vv, 6.0) < 0.5), _f * 0.86, _f)   # 6 m slabs
@@ -545,6 +569,7 @@ for el in js:
     t = el.get('tags', {}); hw = t.get('highway')
     if el['type'] != 'way' or hw not in ('motorway', 'trunk', 'primary', 'secondary', 'tertiary', 'residential', 'unclassified', 'service'): continue
     if (t.get('bridge') and t.get('bridge') != 'no') or (t.get('tunnel', 'no') != 'no') or t.get('covered') == 'yes': continue
+    if hw == 'service' and t.get('service') == 'parking_aisle' and spec.get('real'): continue
     pts = ring(el); run = []
     for x, y in pts + [(1e9, 1e9)]:
         if abs(x) < NEAR and abs(y) < NEAR: run.append([round(x, 2), round(y, 2)]); continue

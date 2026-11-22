@@ -174,6 +174,10 @@ if os.path.exists(_wmp): _WM = np.load(_wmp); _isw = _WM[np.clip(_pi * _WM.shape
 _low = (~_isw) & (_co[:, 2] < ZSEA + 3.2)
 _co[_low, 2] = ZSEA + 3.2; _nm.vertices.foreach_set('co', _co.ravel()); _nm.update()
 print('near ground lifted over the water plane', int(_low.sum()))
+# everything laid on the ground after this (car parks, cars, roof plant, buildings) reads the lifted height, so it
+# stands on the ground the game draws and not under it
+_gi = np.clip(np.round((_co[_low, 0] + NE) / NS).astype(int), 0, near.shape[1] - 1); _gj = np.clip(np.round((_co[_low, 1] + NE) / NS).astype(int), 0, near.shape[0] - 1)
+near[_gj, _gi] = np.maximum(near[_gj, _gi], ZSEA + 3.2)
 d = np.hypot(VF[:, 0], VF[:, 1])
 hz = (1 - np.exp(-d / spec.get('haze_m', 22000)))[:, None] * 0.85
 vc = vc * (1 - hz) + lin(PAL['haze'])[None] * hz
