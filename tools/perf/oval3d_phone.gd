@@ -9,7 +9,11 @@ extends Node
 ## counts, memory and the ratios of the times carry over to a phone):
 ##   godot --path . --rendering-method mobile tools/perf/Oval3DPhone.tscn -- [grounds=mcg,marvel]
 ##       [levels=high,low] [size=1012x1242] [measure=5] [out=rows.json] [shots=DIR] [aa=msaa2] [quit]
+##       [looks=NAME:px,py,pz,tx,ty,tz[,fov];NAME2:...]
 ## shots=DIR saves each ground and level's last measured frame as DIR/<ground>_<level>.png.
+## looks= also saves, after the measuring, a still from each fixed camera (match metres, from p
+## looking at t, fov 60 unless given) as DIR/<ground>_<level>_<NAME>.png: a façade or roof
+## detail the broadcast camera never frames, at the level's own render settings and aa=.
 ## Columns: frame = wall time a frame (mean, then the worst 5%); proc = the whole frame's process
 ## time; cpu / gpu = the renderer's own measured time; draws and ktris = what the frame drew;
 ## mem = the game's memory and the video memory in use, MB; load = s to build the scene.
@@ -120,6 +124,18 @@ func _run() -> void:
 				await RenderingServer.frame_post_draw
 				var slug_s: String = "stand" if g == "(stand)" else GroundModels.GROUNDS[g]
 				vp.get_texture().get_image().save_png("%s/%s_%s.png" % [shots, slug_s, level])
+				for spec in _arg("looks", "").split(";", false):
+					var parts := spec.split(":")
+					var v := parts[1].split_floats(",")
+					var cam: Camera3D = oval.camera
+					cam.far = maxf(cam.far, 3000.0)
+					cam.global_position = Vector3(v[0], v[1], v[2])
+					cam.look_at(Vector3(v[3], v[4], v[5]), Vector3.UP)
+					cam.fov = v[6] if v.size() > 6 else 60.0
+					for i in 8:
+						await get_tree().process_frame
+					await RenderingServer.frame_post_draw
+					vp.get_texture().get_image().save_png("%s/%s_%s_%s.png" % [shots, slug_s, level, parts[0]])
 				label.visible = true
 			var fr: Array = acc["frames"]
 			fr.sort()
