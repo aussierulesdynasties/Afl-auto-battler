@@ -64,10 +64,18 @@ N = 360; A = [2 * math.pi * i / N - math.pi for i in range(N)]
 FENCE = kn('fence', 6.0); ZB = kn('bowl_top', 33.0)
 # the lower tier's top row (Google Earth hovers 2026-11-22: the lower rake climbs about 0.5 m a metre to 6-7 m at the
 # box level, not 13 m), the box level above it 3 m deep
-Z1 = kn('tier1_top', 13.0)
+Z1 = kn('tier1_top', 13.0); ZU = kn('upper_front', Z1 + 3.0)
 def prof(a):
-    r0 = rP(a) + FENCE; rb = rF(a) - 2.0; rm = r0 + kn('tier_split', 0.5) * (rb - r0)
-    return [(r0, 0.0), (r0, 1.6), (rm, Z1), (rm, Z1 + 0.4), (rm + 2.5, Z1 + 0.4), (rm + 2.5, Z1 + 3.0), (rb, ZB), (rF(a), ZB)]
+    # v9 (2026-11-22): the upper tier overhangs the lower one, as at the real ground (capacity 37,478 for AFL,
+    # Wikipedia; 42,000 on the venue's own page). The lower tier runs on under the upper tier's front to the boxes;
+    # the upper tier starts further forward. Google Earth hovers: lower rake about 0.45 m a metre, upper tier front
+    # near 10-11 m (the west screen's foot at 9 m), roof 24 m.
+    r0 = rP(a) + FENCE; rb = rF(a) - 2.0
+    rl = r0 + kn('lower_split', 0.70) * (rb - r0); ru = r0 + kn('upper_split', 0.45) * (rb - r0)
+    return [(r0, 0.0), (r0, 1.6), (rl, Z1), (rl, Z1 + 0.4), (rl + 2.5, Z1 + 0.4), (ru, ZU), (rb, ZB), (rF(a), ZB)]
+def soffit_z(a, r):
+    """underside of the upper tier at radius r (0.7 m under its rake)"""
+    p = prof(a); return p[5][1] - 0.7 + (r - p[5][0]) * (p[6][1] - p[5][1]) / (p[6][0] - p[5][0])
 # the two seat rakes are concrete steps, one row each (the real 3D seats stand on them, end of file). Same row count
 # all round, so every tread is level all the way round the bowl.
 ROW = 0.8
@@ -82,8 +90,8 @@ def _steps(r0, z0, r1, z1, n):
     return out
 def prof_s(a):
     p = prof(a); T = _tiers(a); a_ = _steps(*T[0], NROWS[0]); b_ = _steps(*T[1], NROWS[1])
-    pts = [p[0], p[1]] + a_ + [(p[2][0], p[3][1]), p[4], p[5]] + b_ + [p[7]]
-    mats = [WK] + [WK] * len(a_) + [WK, WK, GL] + [WK] * len(b_) + [DK]
+    pts = [p[0], p[1]] + a_ + [(p[2][0], p[3][1]), p[4], (p[4][0], Z1 + 3.06), (p[4][0], soffit_z(a, p[4][0])), (p[5][0], p[5][1] - 0.7), p[5]] + b_ + [p[7]]
+    mats = [WK] + [WK] * len(a_) + [WK, WK, GL, DK, DK, DK] + [WK] * len(b_) + [DK]   # box glass, the wall over it, the upper tier's soffit, its front
     return pts, mats
 for i in range(N):
     a0 = A[i]; a1 = a0 + 2 * math.pi / N
@@ -386,12 +394,12 @@ if D.get('t411'):   # 411 Vulture St office: outside the stadium site line, left
         _b = _clip(_b, -110.5, -83.0, 65.5, 102.5)
         if len(_b) >= 3: prism(_b, D['h411'], D['h411'] + 2.5, SC, True, 1, 4.0, None, RD)
 # Screen (Google Earth 3D, 2023, measured 2026-11-22 from a camera solved on 290 hovers): one video screen, at the west
-# end over the goals, 18.8 m wide, 9.0 m to 19.1 m up, standing on the lower tier's top row; centred 4.6 m north of the
+# end over the goals, 18.8 m wide, 9.0 m to 19.1 m up, on the upper tier's front; centred 4.6 m north of the
 # long axis.
 # Google Earth shows none at the north, south or east (the v7 north and south screens were wrong). It hangs on the
 # front of the upper tier in a dark housing that takes the seats behind it (the build's seat test drops them).
 def screen(ac, W_=18.8, H_=10.1, z0_=9.0):
-    p_ = prof(ac); r_ = p_[2][0] + 0.3   # its face just behind the lower tier's top row
+    p_ = prof(ac); r_ = p_[5][0] + 0.3   # its face on the upper tier's front
     H_ = min(H_, _roofz(ac, 0.5, r_ + 4.0) - 0.3 - z0_)   # under the roof (24 m, Google Earth hovers)
     hw = W_ / 2 / r_; e0, e1 = P(ac - hw, r_, 0)[:2], P(ac + hw, r_, 0)[:2]
     ux_, uy_ = math.cos(ac), math.sin(ac); D_ = 4.0
@@ -512,8 +520,8 @@ for i in range(len(PS)):   # each seat on the tread under it; dropped if the cor
             hh = bvh.ray_cast(Vector(PS[i] + x * side[i] + y * fw[i] + (0, 0, 1.0)), dn, 2.0); hz.append(None if hh[0] is None else hh[0].z)
     if None in hz or max(hz) - min(hz) > 0.02: keep[i] = False; continue
     PS[i, 2] = max(hz)
-    for x in (-0.2, 0.0, 0.2):
-        if bvh.ray_cast(Vector(PS[i] + x * side[i] + (0, 0, 0.05)), up, 0.85)[0] is not None: keep[i] = False
+    for x, y in ((-0.2, 0.0), (0.0, 0.0), (0.2, 0.0), (0.0, -0.25), (0.0, 0.2)):
+        if bvh.ray_cast(Vector(PS[i] + x * side[i] + y * fw[i] + (0, 0, 0.05)), up, 2.1)[0] is not None: keep[i] = False   # the seat rule's 2 m headroom (tools/grounds/seat_rule.gd)
 print('SEATS dropped', int((~keep).sum()))
 PS, fw, side = PS[keep], fw[keep], side[keep]; BLK = [b_ for b_, k_ in zip(BLK, keep) if k_]
 FINAL = (PS, fw, side)
