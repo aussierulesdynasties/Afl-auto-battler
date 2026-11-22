@@ -524,7 +524,9 @@ def concourse(col):
             if abs(np.linalg.det(M)) < 1e-9: continue
             t, s = np.linalg.solve(M, a)
             if t > 0 and 0 <= s <= 1: best = t if best is None else max(best, t)
-        return best or fence_r(b) + 20
+        # the model paves only the ring round the stands; past it the surroundings map (surrounds/data.py) paints the
+        # precinct's real car parks, roads and lawns from OSM
+        return min(best or fence_r(b) + 20, fence_r(b) + 30.0)
     for i in range(len(bs) - 1):
         ba, bb = bs[i], bs[i + 1]
         q = [P3(ba, fence_r(ba % 360), -0.02), P3(bb, fence_r(bb % 360), -0.02), P3(bb, outer(bb), -0.02), P3(ba, outer(ba), -0.02)]
