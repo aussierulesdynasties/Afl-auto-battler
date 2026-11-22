@@ -55,6 +55,8 @@ var _left_at := -1.0       # when the scene went black, waiting for the match
 var _scene_then: Node = null
 var _auto := -1.0          # play_through: seconds until the run (-1: off)
 var _mine := 0             # how many of the tokens are yours (they come first)
+var _crowd: CrowdSound = null   # the murmur and the run-through roar (presentation only)
+var _home := true          # your side is at home: the bigger crowd is yours
 var _cross_cache := []     # where and when each of yours goes through the banner
 var _cross_key := -1.0     # the _since the crossings were worked out for (they don't move after it)
 var _tear_cache := PackedFloat64Array()   # when each banner piece rips (column-major), for those crossings
@@ -117,6 +119,12 @@ func setup_prematch(my_code: String, opp_code: String, my_ground: Array, opp_gro
 	_huddle_since = -1.0
 	_slots = _huddle_slots()
 	_frozen = false
+	_home = str(banner_ctx.get("home", my_code)) == my_code
+	# The crowd in before the bounce: the murmur, then the roar as they run out.
+	if _crowd == null:
+		_crowd = CrowdSound.new()
+		_crowd.name = "Crowd"
+		add_child(_crowd)
 	_dress()
 	# The same broadcast grade as the centre bounce and the replay; the bars and the words
 	# go on its overlay, so they stay ungraded.
@@ -185,6 +193,8 @@ func _go(p: int, words: String) -> void:
 	_since = _t
 	if p == HUDDLE:
 		_huddle_since = _t
+	if p == RUN and _crowd != null:
+		_crowd.run_through(_home)
 	copy = words
 
 
