@@ -103,7 +103,10 @@ const SURROUNDS := {
 	# own ground stops there, and inside it the match's turf and the model's floor take over.
 	"adelaide": {"y": -0.03, "inner": 105.0, "colour": Color(0.45, 0.55, 0.27),
 			"map": "surrounds.webp", "span": 2048.0, "trees": "trees.bin", "buildings": "buildings.bin",
-			"models": ["landmarks.glb"], "building_colours": "buildings_col.bin"},
+			"models": ["landmarks.glb"], "building_colours": "buildings_col.bin",
+			# The precinct and the parkland next to the stands at 4 pixels a metre (the far map's 1 m smeared
+			# the concourse and paths seen from the stands: director's fault 11).
+			"map_near": "surrounds_near.webp", "span_near": 512.0},
 }
 
 ## Parts of a model drawn again from a build tool's own mesh (per vertex x, y, z, normal, colour;
@@ -326,33 +329,17 @@ static func _add_surrounds(root: Node3D, s: Dictionary, dir := "") -> void:
 	if s.has("map") and ResourceLoader.exists(dir + str(s["map"])):
 		map = load(dir + str(s["map"]))
 	var span: float = s.get("span", 2048.0)
-	var v := PackedVector3Array()
-	var uv := PackedVector2Array()
-	var nrm := PackedVector3Array()
-	var idx := PackedInt32Array()
-	for i in n + 1:
-		var a := TAU * i / n
-		var d := Vector3(cos(a), 0.0, sin(a))
-		for r: float in RINGS.map(func(f): return f if f > 0.0 else inner) + [outer]:
-			var p := d * r + Vector3(0.0, y, 0.0)
-			v.append(p)
-			# The painted map clamps at its edge (painted plain there); the mottle tiles.
-			uv.append(Vector2(p.x, p.z) / span + Vector2(0.5, 0.5) if map != null else Vector2(p.x, p.z) / 60.0)
-			nrm.append(Vector3.UP)
-	var per := RINGS.size() + 1
-	for i in n:
-		for k in per - 1:
-			var a0 := i * per + k
-			var b0 := (i + 1) * per + k
-			idx.append_array([a0, a0 + 1, b0, a0 + 1, b0 + 1, b0])
-	var arr := []
-	arr.resize(Mesh.ARRAY_MAX)
-	arr[Mesh.ARRAY_VERTEX] = v
-	arr[Mesh.ARRAY_TEX_UV] = uv
-	arr[Mesh.ARRAY_NORMAL] = nrm
-	arr[Mesh.ARRAY_INDEX] = idx
-	var mesh := ArrayMesh.new()
-	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
+	# `map_near`: the land next to the stands painted finer (`span_near` m a side), drawn out to just inside its
+	# edge; the far map's ring starts where it stops, on the same vertices, so the two meet without a seam.
+	var near: Texture2D = null
+	if map != null and s.has("map_near") and ResourceLoader.exists(dir + str(s["map_near"])):
+		near = load(dir + str(s["map_near"]))
+	var span_near: float = s.get("span_near", 512.0)
+	var r_near := span_near / 2.0 - 2.0
+	var radii: Array = RINGS.map(func(f): return f if f > 0.0 else inner) + [outer]
+	if near != null:
+		radii = [r_near] + radii.filter(func(r): return r > r_near + 1.0)
+	var mesh := _ring_mesh(radii, n, y, span if map != null else -60.0)
 	if map != null:
 		var mm := StandardMaterial3D.new()
 		mm.resource_name = "surrounds"
@@ -371,6 +358,17 @@ static func _add_surrounds(root: Node3D, s: Dictionary, dir := "") -> void:
 		g.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		g.set_meta("open_ground", true)
 		root.add_child(g)
+		if near != null:
+			var nm := mm.duplicate() as StandardMaterial3D
+			nm.resource_name = "surrounds_near"
+			nm.albedo_texture = near
+			var gn := MeshInstance3D.new()
+			gn.name = "SurroundsNear"
+			gn.mesh = _ring_mesh([inner, r_near], n, y, span_near)
+			gn.material_override = nm
+			gn.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			gn.set_meta("open_ground", true)
+			root.add_child(gn)
 		if s.has("trees") and FileAccess.file_exists(dir + str(s["trees"])):
 			_add_trees(root, FileAccess.get_file_as_bytes(dir + str(s["trees"])).to_float32_array(), y)
 		if s.has("buildings") and FileAccess.file_exists(dir + str(s["buildings"])):
@@ -412,6 +410,39 @@ static func _add_surrounds(root: Node3D, s: Dictionary, dir := "") -> void:
 	mi.material_override = mat
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	root.add_child(mi)
+
+
+## A flat ring at height `y` through `radii` (m from the model's middle), `n` steps round. UVs: a painted
+## map `span` m a side centred on the middle (clamped at its edge), or for a negative span a texture
+## tiling every -span m.
+static func _ring_mesh(radii: Array, n: int, y: float, span: float) -> ArrayMesh:
+	var v := PackedVector3Array()
+	var uv := PackedVector2Array()
+	var nrm := PackedVector3Array()
+	var idx := PackedInt32Array()
+	for i in n + 1:
+		var a := TAU * i / n
+		var d := Vector3(cos(a), 0.0, sin(a))
+		for r: float in radii:
+			var p := d * r + Vector3(0.0, y, 0.0)
+			v.append(p)
+			uv.append(Vector2(p.x, p.z) / span + Vector2(0.5, 0.5) if span > 0.0 else Vector2(p.x, p.z) / -span)
+			nrm.append(Vector3.UP)
+	var per := radii.size()
+	for i in n:
+		for k in per - 1:
+			var a0 := i * per + k
+			var b0 := (i + 1) * per + k
+			idx.append_array([a0, a0 + 1, b0, a0 + 1, b0 + 1, b0])
+	var arr := []
+	arr.resize(Mesh.ARRAY_MAX)
+	arr[Mesh.ARRAY_VERTEX] = v
+	arr[Mesh.ARRAY_TEX_UV] = uv
+	arr[Mesh.ARRAY_NORMAL] = nrm
+	arr[Mesh.ARRAY_INDEX] = idx
+	var mesh := ArrayMesh.new()
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
+	return mesh
 
 
 ## The ring's radii, m from the model's middle (0 is `inner`): close rings keep the painted map's

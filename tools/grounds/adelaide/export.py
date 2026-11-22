@@ -11,8 +11,8 @@ REPO = os.path.dirname(os.path.dirname(os.path.dirname(HERE)))
 SRC = os.path.join(REPO, '.claude', 'review', 'adelaide', 'model')
 TEX = os.path.join(HERE, 'tex'); TILES = {int(k): v for k, v in json.load(open(os.path.join(TEX, 'tiles.json'))).items()}
 out = os.path.abspath(sys.argv[sys.argv.index('--') + 1]); os.makedirs(out, exist_ok=True)
-ROUGH = {0: 0.8, 1: 0.85, 2: 0.9, 3: 0.45, 4: 0.35, 5: 0.15, 6: 0.85, 7: 0.9, 8: 0.5, 9: 0.7, 10: 0.42, 11: 0.85, 12: 0.92, 13: 0.6}
-METAL = {4: 0.4, 5: 0.3, 10: 0.5}
+ROUGH = {0: 0.8, 1: 0.85, 2: 0.9, 3: 0.9, 4: 0.6, 5: 0.15, 6: 0.85, 7: 0.9, 8: 0.5, 9: 0.7, 10: 0.42, 11: 0.85, 12: 0.92, 13: 0.6}
+METAL = {4: 0.1, 5: 0.3, 10: 0.5}   # painted steel and the membrane matte: glossier, they mirrored the sky purple-blue (2026-11-22)
 NAMES = {0: 'paint', 1: 'paving', 2: 'concrete', 3: 'membrane', 4: 'steel', 5: 'glass', 6: 'brick', 7: 'grass', 8: 'fins',
          9: 'timber', 10: 'copper', 11: 'stone', 12: 'turf', 13: 'scoreboard'}
 bpy.ops.wm.read_factory_settings(use_empty=True)

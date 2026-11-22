@@ -38,6 +38,12 @@ KY = 110574.0
 # River Torrens' multipolygon (Torrens Lake is a way in the main map).
 RELATIONS = [73256]
 SIZE = 2048            # pixels a side, 1 m each, centred on the model's 0, 0
+# The near map (surrounds_near.webp): the precinct and the parkland next to the stands at 4 pixels a metre, 512 m a
+# side, so the concourse, kerbs and paths stay sharp from a seat or the ground's own footpath (director fault 11:
+# the far map's 1 m pixels smeared there). GroundModels draws it out to 254 m and the far map beyond.
+NEAR_SIZE, NEAR_SPAN = 2048, 512.0
+# What paint() draws at: pixels a side and metres a pixel (set per map by paint()).
+_PX = {"size": SIZE, "ppm": 1.0}
 STADIUM_WAY = "268922032"
 
 # Colours: Google Earth's over the North Adelaide parklands in late spring, painted for the match light with no
@@ -79,7 +85,8 @@ def model_xz(e, n):
 
 def px(e, n):
     x, z = model_xz(e, n)
-    return (x + SIZE / 2, z + SIZE / 2)
+    k = _PX["ppm"]
+    return (x * k + _PX["size"] / 2, z * k + _PX["size"] / 2)
 
 
 def fetch(url, path):
@@ -236,11 +243,18 @@ def stadium_ring(ways):
     return grown + [grown[0]]
 
 
-def paint(trees, ways):
+def paint(trees, ways, size=SIZE, span=float(SIZE)):
+    """the map `span` m a side round the model's 0, 0 at `size` pixels. The broad mottle is the far map's own field,
+    cut out and enlarged for the near map, so the two meet without a seam"""
     rng = np.random.default_rng(7)
     n1 = np.asarray(Image.fromarray((rng.random((64, 64)) * 255).astype(np.uint8)).resize((SIZE, SIZE), Image.BICUBIC), float) / 255
     n2 = np.asarray(Image.fromarray((rng.random((256, 256)) * 255).astype(np.uint8)).resize((SIZE, SIZE), Image.BICUBIC), float) / 255
     mott = (n1 - 0.5) * 0.22 + (n2 - 0.5) * 0.12
+    if size != SIZE or span != SIZE:
+        a = int(round(SIZE / 2 - span / 2)); b = int(round(SIZE / 2 + span / 2))
+        mott = np.asarray(Image.fromarray(mott[a:b, a:b].astype(np.float32), "F").resize((size, size), Image.BICUBIC), float)
+    _PX["size"], _PX["ppm"] = size, size / span
+    k = _PX["ppm"]
     base = np.clip(np.array(BASE, float)[None, None, :] * (1.0 + mott[..., None]), 0, 255).astype(np.uint8)
     im = Image.fromarray(base, "RGB")
     d = ImageDraw.Draw(im)
@@ -262,10 +276,10 @@ def paint(trees, ways):
         d.polygon(poly(p), fill=area_colour(t))
     for t, p in ways:
         if t.get("railway") in ("rail", "light_rail", "tram") and len(p) > 1 and t.get("tunnel") != "yes":
-            d.line(poly(p), fill=BALLAST, width=5, joint="curve")
+            d.line(poly(p), fill=BALLAST, width=max(1, int(round(5 * k))), joint="curve")
     for t, p in ways:
         if t.get("railway") in ("rail", "light_rail", "tram") and len(p) > 1 and t.get("tunnel") != "yes":
-            d.line(poly(p), fill=RAIL, width=1)
+            d.line(poly(p), fill=RAIL, width=max(1, int(round(1 * k))))
     # Roads and paths; bridges are drawn in 3D (bridges.glb), so the river shows under them.
     order = sorted([(WIDTH.get(t.get("highway"), 0), t, p) for t, p in ways
                     if t.get("highway") in WIDTH and len(p) > 1 and t.get("tunnel") != "yes"
@@ -275,22 +289,32 @@ def paint(trees, ways):
         fill = PATH if w < 4.6 and t.get("highway") != "service" else ASPHALT
         if t.get("highway") == "service" and t.get("service") == "parking_aisle":
             fill = PARKING
-        d.line(poly(p), fill=fill, width=max(1, int(round(w))), joint="curve")
+        d.line(poly(p), fill=fill, width=max(1, int(round(w * k))), joint="curve")
     for t, p in ways:
         if "building" in t and len(p) > 2 and t.get("building") not in ("roof",) and t.get("_id") != STADIUM_WAY:
             d.polygon(poly(p), fill=ROOF)
     arr = np.asarray(im, float)
-    shade = Image.new("L", (SIZE, SIZE), 0)
+    if k >= 2:   # the near map: the concourse's paving slabs (1.2 m, a tone each, faint joints) where it is paved
+        pav = np.all(arr == np.array(PAVED, float), axis=-1)
+        yy, xx = np.mgrid[0:size, 0:size]
+        slab = 1.2 * k
+        tone = rng.random((int(size / slab) + 2, int(size / slab) + 2))
+        sx, sy = (xx / slab).astype(int), (yy / slab).astype(int)
+        f = 1.0 + (tone[sy, sx] - 0.5) * 0.06
+        joint = ((xx % slab) < 1.0) | ((yy % slab) < 1.0)
+        f = np.where(joint, 0.9, f)
+        arr = np.where(pav[..., None], arr * f[..., None], arr)
+    shade = Image.new("L", (size, size), 0)
     sd = ImageDraw.Draw(shade)
     for e, n, r in trees:
         x, y = px(e, n)
-        sd.ellipse((x - r, y - r, x + r, y + r), fill=150)
-    shade = np.asarray(shade.filter(ImageFilter.GaussianBlur(2.5)), float) / 255
+        sd.ellipse((x - r * k, y - r * k, x + r * k, y + r * k), fill=150)
+    shade = np.asarray(shade.filter(ImageFilter.GaussianBlur(2.5 * k)), float) / 255
     arr *= (1.0 - 0.45 * shade)[..., None]
-    grain = (rng.random((SIZE, SIZE)) - 0.5) * 10
+    grain = (rng.random((size, size)) - 0.5) * 10
     arr += grain[..., None]
-    yy, xx = np.mgrid[0:SIZE, 0:SIZE]
-    r = np.hypot(xx - SIZE / 2, yy - SIZE / 2)
+    yy, xx = np.mgrid[0:size, 0:size]
+    r = np.hypot(xx - size / 2, yy - size / 2) / k
     edge = np.clip((r - 900) / 120, 0, 1)[..., None]
     arr = arr * (1 - edge) + np.array(URBAN, float) * edge
     return Image.fromarray(np.clip(arr, 0, 255).astype(np.uint8), "RGB")
@@ -474,6 +498,8 @@ def main():
     trees += fill_parks(paint(trees, ways), trees, ways, st)
     im = paint(trees, ways)
     im.save(os.path.join(OUT, "surrounds.webp"), quality=88, method=6)
+    paint(trees, ways, NEAR_SIZE, NEAR_SPAN).save(os.path.join(OUT, "surrounds_near.webp"), quality=88, method=6)
+    _PX["size"], _PX["ppm"] = SIZE, 1.0
     t = tree_list(trees, st)
     t.tofile(os.path.join(OUT, "trees.bin"))
     b, bc = building_list(ways, st)
