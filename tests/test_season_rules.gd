@@ -24,12 +24,12 @@ const GOLDEN := {
 	"fixture:3": "928bc55d620e04e745cf7adb88b56ae8",
 	"fixture:2027": "57bffb38d600d4036767ef691d623a80",
 	"fixture:90210": "1734a8fcc9068e3e444e293a25f944b4",
-	"played:2027": "ef20eed830622e21ef6781ea8034ff51",
-	"played:7": "91a053128ff61ba9d037216d8ca18ab0",
+	"played:2027": "c84c4d53758a96fce371330915bfb2af",
+	"played:7": "2ce6261e0529d8de79a98e9d8e603307",
 }
 const PLAYED_WITH_OVR := {
-	"played:2027": "6dfd774136078b88dcdbc73463c4e4ce",
-	"played:7": "0e7f793a35627cba0fcb49f172795298",
+	"played:2027": "d46f839e5dd151dc363a86d554ced16a",
+	"played:7": "17a42d66e499ea71484b2511b9d6441e",
 }
 
 const Golden := preload("res://tests/season_golden.gd")
