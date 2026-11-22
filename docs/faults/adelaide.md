@@ -74,7 +74,14 @@ dark tower standing clear at its east end (28 m). Still open there: Google Earth
 boundary, where our top rows run to 52 m, so the real deck under the roof is about 11 m deeper and the columns lean
 further; Google Earth's heights under the roofs drape (seats there read 8 m too high and flat), so the upper tier's
 depth needs a section drawing or the centre photo sphere before the seats move. The plaza south of the stand is 3 m
-above the turf in Google Earth and flat with it here, and the white shade sail on the deck is not built. Fixed from Google Earth (2026-11-22, calibrated straight-down shots, no imagery kept): each
+above the turf in Google Earth and flat with it here, and the white shade sail on the deck is not built. Roof
+outlines fitted top-down to Google Earth (2026-11-22, after the shape audit flagged them; masks of the white roofs in
+matching straight-down shots, checked against Google Earth's own position readings): the Riverbank's pitch-side hem was
+0.5-4.3 m short of the real one (OSM's outline stopped it) and now sits within median 0.2 m, 1.6 m at worst; the east
+and west roofs, traced off an aerial photo, sat 4.8 m and 3.5 m east of Google Earth's and are moved (east roof overlap
+0.78 -> 0.93). Left: the east roof's pitch edge is about 1.3 m deep of Google Earth's and the west roof's pitch edge
+1-4.5 m deep along its southern half. Moving the east roof let 595 upper-tier seats pass the headroom check (60 lost):
+39,756 -> 40,291. Fixed from Google Earth (2026-11-22, calibrated straight-down shots, no imagery kept): each
 nearby roof's and sports pitch's colour (`roof_colours.py`: no more salmon sheds, Memorial Drive's grass courts no
 longer blue); the trees stand where Google Earth shows canopy (`ge_trees.py`, replacing the random park fill); the
 grass courts, No. 2 oval's square and the practice nets and wickets that OSM leaves out are traced (`surrounds.py`

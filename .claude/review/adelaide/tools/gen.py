@@ -1179,7 +1179,12 @@ for rf in S['roofs']:
         u0 = F[0] - F[1]; u1 = F[-1] - F[-2]
         E = np.r_[[F[0] + u0 / np.linalg.norm(u0) * 60], F, [F[-1] + u1 / np.linalg.norm(u1) * 60]]
         far = PC + (E - PC) * 4.0
-        keep = Polygon(np.r_[E, far[::-1]]).buffer(0); got = Polygon(P).buffer(0).intersection(keep)
+        keep = Polygon(np.r_[E, far[::-1]]).buffer(0); PP = Polygon(P).buffer(0)
+        g_ = rf['front_cut'].get('grow', 0.0)   # the traced hem lies beyond OSM's outline: let the roof reach it there only
+        if g_:
+            from shapely.geometry import LineString
+            PP = PP.union(PP.buffer(g_).intersection(LineString(F).buffer(g_ + 1.0)))
+        got = PP.intersection(keep)
         if got.geom_type != 'Polygon': got = max(got.geoms, key=lambda g: g.area)
         rr = rf['front_cut'].get('round', 0.0)  # metres: round the corners where the cut meets the end edges (no spike, no notch)
         if rr: got = got.buffer(-rr).buffer(rr).buffer(rr).buffer(-rr)
