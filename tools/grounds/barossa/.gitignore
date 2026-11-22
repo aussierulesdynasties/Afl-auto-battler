@@ -1,6 +1,4 @@
-model/tex/
-work/tiles/
-work/sat.png
-work/plan.png
+work/
 render/
 render.log
+__pycache__/
