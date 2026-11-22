@@ -24,8 +24,8 @@ def gable_building(part, c, ang, L, W, z_eave, z_ridge, wallmat, roofmat, over=0
         a, b = corners[(k + 1) % 4], corners[k]
         side_len = float(np.linalg.norm(b - a))
         ops = []
-        if windows:
-            w, h0, h1, step = windows
+        rows = windows if isinstance(windows, list) else ([windows] if windows else [])
+        for w, h0, h1, step in rows:          # one row of openings per storey
             n = int(side_len // step)
             for j in range(n):
                 m = (j + 0.5) * side_len / n

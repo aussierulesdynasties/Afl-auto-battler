@@ -28,6 +28,24 @@ def fence_pt(deg):
 
 N = 720
 LOOP = [fence_pt(360.0 * i / N) for i in range(N)]
+# Along the Western Stand the grass runs to the stand's brick podium and there is no picket fence (AFLW
+# 2025 photo 23): the loop follows the podium face there, a hand in front of it.
+STAND = [False] * N
+
+
+def _podium():
+    import west
+    pod = west.line(west.D_POD)
+    ys = [p[1] for p in pod]
+    for i, q in enumerate(LOOP):
+        if ys[0] - 2.0 <= q[1] <= ys[-1] + 2.0 and q[0] < 0:
+            x = float(np.interp(q[1], ys, [p[0] for p in pod]))
+            if q[0] < x + 0.15:
+                LOOP[i] = np.array([x + 0.15, q[1]])
+                STAND[i] = True
+
+
+_podium()
 
 
 _NRM = []
@@ -87,6 +105,9 @@ def fence():
         seg = float(np.linalg.norm(b - a))
         u = unit(b - a)
         n = -perp(u)
+        if STAND[i] or STAND[(i + 1) % N]:
+            acc = (acc + seg) % 0.13
+            continue
         # rails
         for z in (0.25, 0.85):
             box3(P + "_fence", (a[0] - n[0] * 0.05, a[1] - n[1] * 0.05, z), (b[0] - n[0] * 0.05, b[1] - n[1] * 0.05, z), 0.04, 0.09, "paint_white")
@@ -120,7 +141,8 @@ def fence():
             u = unit(b - a)
             n = -perp(u)
             q = p - n * 0.06
-            obox(P + "_fence", q, math.atan2(u[1], u[0]), 0.1, 0.1, 0.0, 1.15, "paint_white", top="paint_white")
+            if not (STAND[i] or STAND[(i + 1) % N]):
+                obox(P + "_fence", q, math.atan2(u[1], u[0]), 0.1, 0.1, 0.0, 1.15, "paint_white", top="paint_white")
             s += post_every
         run += seg
         i += 1
@@ -154,7 +176,32 @@ def surfaces():
             # the back of the terrace drops to the street behind it
             a, b = RINGS[rw][i], RINGS[rw][j]
             add(P + "_ground", [(b[0], b[1], 0.0), (a[0], a[1], 0.0), (a[0], a[1], z), (b[0], b[1], z)], "concrete_riser")
-        strip(rw, rw + 6.0, 0.0, "asphalt")
+
+
+def edge_radius(n=96):
+    """The venue's outer edge (the back of the walk) as a radius every 360/n degrees, the angle measured in
+    the glb's plan (x east, z south) from +x toward +z, as GroundModels.SURROUNDS' inner_by_angle reads it."""
+    pts = []
+    for i in range(N):
+        d1 = deg_of(i + 0.5)
+        nst = int(round(interp(TERR, d1)))
+        pts.append(rp(APRON + nst * TREAD + interp(WALK, d1), i))
+    P_ = np.array(pts)
+    out = []
+    for k in range(n):
+        a = 2 * math.pi * k / n
+        dvec = np.array([math.cos(a), -math.sin(a)])         # Blender plan: +z in the glb is -y here
+        best = 1e9
+        for i in range(N):
+            p, q = P_[i], P_[(i + 1) % N]
+            m = np.array([[dvec[0], p[0] - q[0]], [dvec[1], p[1] - q[1]]])
+            if abs(np.linalg.det(m)) < 1e-9:
+                continue
+            t, u = np.linalg.solve(m, p)
+            if t > 0 and 0 <= u <= 1:
+                best = min(best, t)
+        out.append(round(float(best), 1))
+    return out
 
 
 def benches():
@@ -226,7 +273,7 @@ def towers():
 def grass():
     """Grass inside the fence, a hand under the match's own turf: it shows only where the real ground's
     squarer corners reach past the match's elliptical turf, and in the fly-through."""
-    c = np.array([1.97, -0.53, -0.04])
+    c = np.array([2.14, -0.49, -0.04])
     for i in range(N):
         a, b = LOOP[i], LOOP[(i + 1) % N]
         add(P + "_grass", [c, (a[0], a[1], -0.04), (b[0], b[1], -0.04)], "grass")

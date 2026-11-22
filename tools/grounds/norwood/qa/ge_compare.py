@@ -23,11 +23,11 @@ GROUNDS = {
     # Google Earth's field level is 10 m (work/dz.txt).
     # Norwood: the model's origin is the centre circle (Google Earth's top-down mosaic); field level 50 m.
     "norwood": {"lat": -34.919825, "lon": 138.630446, "ge_alt": 50.0,
-                "fit": [1.97, 0.53, 0.0, 88.0, 88.6, 61.4]},
+                "fit": [2.14, 0.49, 0.0, 84.56, 88.71, 58.4]},
     "bellerive": {"lat": -42.8773092, "lon": 147.3737365, "ge_alt": 10.0,
                   "fit": [0.31, -0.64, -0.02, 68.7, 86.9, 66.77]},
 }
-FOV = 23.5
+FOV = 25.6   # Google Earth's 35 degrees over the 1000 px window, cropped to 720 rows (ge_shoot.js)
 
 
 def to_match(g, p):

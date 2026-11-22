@@ -53,9 +53,10 @@ const FIT := {
 	"engie": [20.64, -43.32, 0.0, -41.1, 92.14, 76.44],
 	"bellerive": [0.31, -0.64, -0.02, 68.7, 86.9, 66.77],
 	"manuka": [5.93, 8.15, 0.03, -82.9, 85.94, 73.1],
-	# Norwood: the rebuilt model (tools/grounds/norwood/model), origin the centre circle; the fence's
-	# ends and sides (the real ground is squarer than an ellipse: its corners keep the model's own grass).
-	"norwood": [1.97, 0.53, 0.0, 88.0, 88.6, 61.4],
+	# Norwood: the rebuilt model (tools/grounds/norwood/model), origin the centre circle; the largest
+	# ellipse inside its fence and the Western Stand's podium (the real ground is squarer than an ellipse:
+	# its corners keep the model's own grass).
+	"norwood": [2.14, 0.49, 0.0, 84.56, 88.71, 58.4],
 	"waverley_park": [-1.08, 5.64, 0.0, -34.6, 92.9, 71.99],
 	"windy_hill": [6.01, -11.01, 0.05, 1.4, 78.42, 67.69],
 	"moorabbin": [0.88, -2.15, 0.0, -57.5, 86.73, 69.48],
@@ -108,6 +109,26 @@ const SURROUNDS := {
 			# Geelong's walls in Google Earth: red and brown brick, cream render, grey block, weatherboard.
 			"walls": [Color(0.62, 0.42, 0.34), Color(0.74, 0.7, 0.62), Color(0.55, 0.53, 0.5), Color(0.68, 0.5, 0.4),
 					Color(0.8, 0.78, 0.72), Color(0.6, 0.6, 0.6), Color(0.52, 0.36, 0.3)]},
+	# Norwood: Kent Town and Norwood's streets, villas, cottages and townhouses (tools/grounds/norwood/surrounds.py),
+	# laid on the model's origin (the centre circle). The houses that face the ground are in the model itself.
+	"norwood": {"y": -0.04, "inner": 60.0, "colour": Color(0.5, 0.49, 0.38),
+			# The venue's own edge (the back of its walk) every 3.75 degrees (tools/grounds/norwood/model/arena.py).
+			"inner_by_angle": [
+				67.2, 68.0, 69.1, 70.6, 72.2, 74.0, 75.9, 77.9, 80.3, 82.8, 85.3, 87.7, 89.0, 91.2, 93.5, 95.5,
+				97.4, 98.2, 98.9, 99.9, 100.3, 100.5, 100.6, 100.5, 100.1, 99.6, 98.9, 98.1, 97.0, 95.8, 94.4, 92.2,
+				89.7, 87.1, 84.4, 81.6, 78.9, 76.5, 74.0, 71.6, 68.6, 66.1, 64.1, 62.7, 61.7, 61.0, 60.4, 60.2,
+				60.3, 60.8, 61.5, 62.3, 63.5, 65.5, 68.1, 71.1, 74.8, 78.2, 81.1, 84.0, 87.6, 90.1, 92.4, 95.4,
+				97.1, 98.1, 98.9, 99.6, 100.0, 100.2, 100.3, 100.2, 100.1, 99.2, 98.2, 97.1, 95.9, 94.5, 93.9, 92.3,
+				90.6, 89.1, 87.4, 85.6, 83.6, 81.5, 79.3, 77.1, 74.9, 72.9, 71.1, 69.6, 68.3, 67.4, 66.9, 66.8],
+			"map": "surrounds.webp", "span": 2048.0, "trees": "trees.bin", "buildings": "buildings.bin",
+			# Norwood in Google Earth: bluestone and sandstone villa fronts, red brick, cream render, white townhouses.
+			# (linear, as the vertex colours are read; each roof's own colour is in roofs.bin)
+			"walls": [Color(0.181, 0.19, 0.199), Color(0.579, 0.428, 0.237), Color(0.349, 0.133, 0.082), Color(0.681, 0.612, 0.456),
+					Color(0.793, 0.793, 0.755), Color(0.456, 0.279, 0.164), Color(0.279, 0.106, 0.071)],
+			"roof_colours": "roofs.bin",
+			# Its roofs from above: galvanised and Colorbond grey, charcoal, terracotta, red iron, pale zinc.
+			"roofs": [Color(0.6, 0.6, 0.58), Color(0.36, 0.37, 0.39), Color(0.66, 0.36, 0.28), Color(0.56, 0.26, 0.22),
+					Color(0.74, 0.74, 0.72), Color(0.46, 0.48, 0.47), Color(0.42, 0.5, 0.44), Color(0.82, 0.82, 0.8)]},
 	"mcg": {"y": -0.03, "inner": 140.0, "colour": Color(0.45, 0.55, 0.27),
 			"map": "surrounds.webp", "span": 2048.0, "trees": "trees.bin", "buildings": "buildings.bin"},
 }
@@ -369,7 +390,8 @@ static func _add_surrounds(root: Node3D, s: Dictionary, dir := "") -> void:
 	var inner: float = s["inner"]
 	var outer: float = s.get("outer", 2500.0)
 	var y: float = s["y"]
-	var n := 96
+	var by_angle: Array = s.get("inner_by_angle", [])
+	var n := 96 if by_angle.is_empty() else by_angle.size()
 	var map: Texture2D = null
 	if s.has("map") and ResourceLoader.exists(dir + str(s["map"])):
 		map = load(dir + str(s["map"]))
@@ -381,7 +403,10 @@ static func _add_surrounds(root: Node3D, s: Dictionary, dir := "") -> void:
 	for i in n + 1:
 		var a := TAU * i / n
 		var d := Vector3(cos(a), 0.0, sin(a))
-		for r: float in RINGS.map(func(f): return f if f > 0.0 else inner) + [outer]:
+		# A venue that is not round ends where its own ground ends: inner_by_angle gives that edge (m) every
+		# 360/n degrees from +x toward +z; the land starts half a metre inside it, under the model's ground.
+		var r0: float = inner if by_angle.is_empty() else float(by_angle[i % by_angle.size()]) - 0.5
+		for r: float in RINGS.map(func(f): return f if f > 0.0 else r0) + [outer]:
 			var p := d * r + Vector3(0.0, y, 0.0)
 			v.append(p)
 			# The painted map clamps at its edge (painted plain there); the mottle tiles.
@@ -420,8 +445,11 @@ static func _add_surrounds(root: Node3D, s: Dictionary, dir := "") -> void:
 		if s.has("trees") and FileAccess.file_exists(dir + str(s["trees"])):
 			_add_trees(root, FileAccess.get_file_as_bytes(dir + str(s["trees"])).to_float32_array(), y)
 		if s.has("buildings") and FileAccess.file_exists(dir + str(s["buildings"])):
+			var rgb := PackedFloat32Array()
+			if s.has("roof_colours") and FileAccess.file_exists(dir + str(s["roof_colours"])):
+				rgb = FileAccess.get_file_as_bytes(dir + str(s["roof_colours"])).to_float32_array()
 			_add_buildings(root, FileAccess.get_file_as_bytes(dir + str(s["buildings"])).to_float32_array(), y,
-					s.get("walls", []), s.get("roofs", []))
+					s.get("walls", []), s.get("roofs", []), rgb)
 		return
 	var noise := FastNoiseLite.new()
 	noise.frequency = 0.02
@@ -529,7 +557,7 @@ static func _add_trees(root: Node3D, buf: PackedFloat32Array, y: float) -> void:
 ## walls in a pale render or brick and a flat roof each, as one mesh. Seen past the stands and
 ## from a fly-through, they set the MCG in its city rather than on a plain.
 static func _add_buildings(root: Node3D, buf: PackedFloat32Array, y: float, walls: Array = [],
-		roofs: Array = []) -> void:
+		roofs: Array = [], roof_rgb := PackedFloat32Array()) -> void:
 	var v := PackedVector3Array()
 	var nrm := PackedVector3Array()
 	var col := PackedColorArray()
@@ -553,6 +581,9 @@ static func _add_buildings(root: Node3D, buf: PackedFloat32Array, y: float, wall
 		if hipped:
 			var hr: Array = roofs if not roofs.is_empty() else HOUSE_ROOFS
 			roof = hr[(b * 7) % hr.size()]
+		# A ground that lists each roof's own colour from above (SURROUNDS "roof_colours", linear RGB).
+		if roof_rgb.size() >= b * 3:
+			roof = Color(roof_rgb[b * 3 - 3], roof_rgb[b * 3 - 2], roof_rgb[b * 3 - 1])
 		# Walls face out whichever way round the footprint was drawn.
 		var ccw := 0.0
 		for k in n:
@@ -892,7 +923,7 @@ static func _pick(src, used: PackedInt32Array):
 const BACKDROP_FAR := 7000.0
 ## Grounds whose backdrop runs further, [camera far, haze end] in m: Bellerive's reaches kunanyi /
 ## Mount Wellington, 11 km across the Derwent, which a Hobart crowd sees clearly, blue with the distance.
-const BACKDROP_RANGE := {"bellerive": [20000.0, 60000.0]}
+const BACKDROP_RANGE := {"bellerive": [20000.0, 60000.0], "norwood": [23000.0, 60000.0]}
 
 
 static func backdrop_far(slug: String) -> float:

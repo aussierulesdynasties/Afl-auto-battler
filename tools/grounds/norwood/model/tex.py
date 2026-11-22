@@ -196,6 +196,14 @@ def main():
     sheeting("roof_pale", (186, 186, 180))
     sheeting("corr_cream", (214, 204, 176), th=3.0)
     brick("brick_dark", (132, 64, 50), (150, 136, 120))
+    # The buildings round the ground (town.py), from Google Earth's east and north obliques.
+    brick("brick_terrace", (164, 84, 60), (196, 182, 160))               # the east townhouses' orange-red brick
+    sheeting("corr_bluegrey", (170, 186, 192), th=3.0)                   # the east shed's pale blue-grey walls
+    sheeting("roof_slate_grey", (128, 134, 136))                         # villas' grey Colorbond and slate
+    flat("court_green", (58, 112, 74), amp=5)                            # synthetic tennis court
+    flat("court_surround", (150, 78, 60), amp=5)
+    flat("timber_white", (232, 230, 222), amp=3)                         # verandah posts, frieze, balustrades
+    flat("bluestone", (96, 100, 104), amp=10)
     json.dump(SPEC, open(os.path.join(OUT, "spec.json"), "w"), indent=1)
     print(len(SPEC), "textures")
 
