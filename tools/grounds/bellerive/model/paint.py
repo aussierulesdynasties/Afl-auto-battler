@@ -258,5 +258,8 @@ if __name__ == '__main__':
     t = T(8.0, 6.0, (224, 224, 218), n=3, bl=(2, 7)); t.streaks(14, 0, 6, mul=0.9); t.grime_bottom(1.0)
     t.save('render_white')
     t = T(1.2, 1.2, (40, 50, 60), n=3, bl=(0.5, 4)); t.a[:t.h // 2] *= 1.3; t.save('win_dark')
+    # the indoor centre's curtain wall (GE cf_240, out_W): pale blue-grey glass, the sky in its upper half
+    t = T(1.5, 2.2, (146, 174, 190), n=2.5, bl=(1.0, 4)); t.a[:t.h // 2] *= 1.08; t.save('cw_glass')
+    t = T(1.5, 1.6, (64, 86, 100), n=2.5, bl=(1.0, 4)); t.a[:t.h // 3] *= 1.2; t.save('cw_glass_dk')   # the band under it
     json.dump(TILE, open(OUT + 'tiles.json', 'w', newline=''), indent=0)
     for k in sorted(TILE): print(f'{k:16s} stddev {sd(k):5.1f}')
