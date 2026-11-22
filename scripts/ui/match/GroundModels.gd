@@ -89,8 +89,9 @@ const FIT := {
 ## model's middle, and `trees` the park's trees from the same map (x, z, height, canopy, shade).
 const SURROUNDS := {
 	# Bellerive: its streets and houses, Bellerive Beach, Kangaroo Bay and the Derwent
-	# (tools/grounds/bellerive/surrounds.py), laid on the model's origin (the OSM pitch's centre).
-	"bellerive": {"y": -0.04, "inner": 60.0, "colour": Color(0.5, 0.5, 0.34),
+	# (tools/grounds/bellerive/surrounds.py), laid on the model's origin (the OSM pitch's centre). It starts under the
+	# apron (88 m, past the fence everywhere): under the turf it z-fought from a blimp's height (grey bars).
+	"bellerive": {"y": -0.04, "inner": 88.0, "colour": Color(0.5, 0.5, 0.34),
 			"map": "surrounds.webp", "span": 2048.0, "trees": "trees.bin", "buildings": "buildings.bin",
 			# Bellerive in Google Earth: white and cream weatherboard, red and brown brick, grey render.
 			"walls": [Color(0.86, 0.85, 0.8), Color(0.62, 0.42, 0.34), Color(0.78, 0.74, 0.64), Color(0.56, 0.55, 0.52),
