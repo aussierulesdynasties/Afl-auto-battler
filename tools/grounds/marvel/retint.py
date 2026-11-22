@@ -71,19 +71,29 @@ def ribbon():
     sponsors). 12 m by 1.7 m a tile; the fronts run from 0.6 m under the tier's front row."""
     W, H = 1024, 145
     img = np.zeros((H, W, 3), float)
-    img[:] = (22, 26, 40)
+    # 2026-11-22: the photos of the bowl (Wikimedia Commons, curtain raiser and 2025 panorama) show the ribbons
+    # as bright light-blue bands right round each tier; the dark screen read as a black stripe. The build
+    # makes this texture emissive too, so the ribbons glow at night.
+    img[:] = (20, 30, 56)
     f = 1.0 - (np.arange(H) + 0.5) / H
-    band = (f > 0.32) & (f < 0.78)
-    img[band] = (30, 52, 104)
+    band = (f > 0.24) & (f < 0.86)
+    img[band] = (44, 118, 204)
     rng = np.random.default_rng(3)
     x = 40
     while x < W - 60:
         w = int(rng.integers(18, 70))
         rows = (f > 0.46) & (f < 0.64)
-        img[rows, x:x + w] = (150, 170, 210)
+        img[rows, x:x + w] = (196, 222, 255)
         x += w + int(rng.integers(10, 40))
     img[(f < 0.06) | (f > 0.94)] = (150, 152, 156)
     Image.fromarray(np.clip(img, 0, 255).astype(np.uint8), "RGB").save(os.path.join(TEX, "ribbon.png"))
+
+
+def flat():
+    """Flat-coloured textures: the floodlights' lenses (emissive in the build) and the screens' dark faces
+    (the match draws the score over them, Oval3DScreens)."""
+    for n, c in (("lamp", (255, 250, 236)), ("screen", (16, 20, 28))):
+        Image.fromarray(np.full((16, 16, 3), c, np.uint8), "RGB").save(os.path.join(TEX, "%s.png" % n))
 
 
 def main():
@@ -103,6 +113,7 @@ def main():
     retint("tread", (146, 146, 142), src="concrete", out="tread")
     ribbon()
     grille()
+    flat()
     # the blue blocks' plain cladding: the panel joints of the slate texture, a mid blue (Google Earth c_ne)
     CONTRAST["bluepanel"] = 0.5
     retint("bluepanel", (96, 112, 140), src="slate", out="bluepanel")
@@ -116,6 +127,8 @@ def main():
     j["tread"] = j["concrete"]
     j["ribbon"] = [12, 1.7]
     j["grille"] = [3, 3]
+    j["lamp"] = [1, 1]
+    j["screen"] = [1, 1]
     j["bluepanel"] = j["slate"]
     j["podiumpanel"] = j["slate"]
     for gone in ("office", "undercroft", "louvre"):

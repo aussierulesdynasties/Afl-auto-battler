@@ -217,7 +217,19 @@ No-shortcuts pass (2026-11-22, the person: "i never want a shortcut, i never wan
   before extruding footprints: city councils publish them.
 - Southern Cross Station's dune roof is modelled (domes, glazed valleys, vent hoods, louvred sides).
 
-Still open at Marvel: the Street View panoramas inside the bowl could not be reached headless; the
-inside is checked against Google Earth's 3D from the centre. The massing's buildings take a glass or
-concrete look by a hash, not their real facades. Shaded faces read bluer than Google
-Earth's under the inspector's sky light (all grounds).
+- Inside, checked against photos of the bowl (Wikimedia Commons: the 2025 panorama, the curtain raiser,
+  Hawthorn v Brisbane 2024, the December 2022 graduation under the shut roof; looked at only). Google
+  Earth's 3D is no use from the centre (its mesh shows walls, not the bowl). Now modelled: the roof's
+  underside grid (cross girders every 10.5 m, purlins, a diagonal in every bay, under the fixed roofs,
+  the shut roof's plates and the end roofs, each member kept only where it clears the seats by 2.6 m),
+  the lighting gantry round the opening (a 2.4 m box truss) with 2 rows of floodlights every 2 m
+  (emissive lenses), two big screens hanging from the end gantries and four at the opening's corners
+  (face material `screen`, so the match draws the score on them). The seats are neutral grey, not navy;
+  the tier ribbons are bright light blue and glow. The slab end faces under the roof take the
+  underside's paint (as bright fascia they read as white panels in the corners).
+
+Still open at Marvel: the small scoreboard at each end's top tier and the MARVEL seat lettering in the
+lower tier are not modelled. The massing's buildings take a glass or concrete look by a hash, not their
+real facades. Under the shut roof the seats and treads still take the sky's blue light from above (the
+match lights them as if open to the sky), so the grey seats render blue-grey; the photos show them
+neutral under the roof's floodlights. That is the match lighting (Oval3DTurf), not the model.
