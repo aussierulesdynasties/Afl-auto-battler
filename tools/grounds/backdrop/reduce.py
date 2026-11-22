@@ -168,6 +168,8 @@ SCALE = 1.0
 if BUDGET:
     want = 0.45 * BUDGET
     thin = MID_KEEP * zone[1] + FAR_KEEP * zone[2]
+    if os.environ.get('BG_KEEP_TREES'):   # real place: every tree stays; trees21 makes the far ones cheap instead
+        thin = 0
     if zone[0] + thin > want and thin > 0:
         SCALE = max(0.05, (want - min(zone[0], 0.5 * want)) / thin)
     print('tree tris near/mid/far', [int(z) for z in zone], 'keep scale', round(SCALE, 3))
