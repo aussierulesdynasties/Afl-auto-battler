@@ -52,7 +52,7 @@ def fill(P, step, creases=None):
     T = T[path.contains_points(cen)]
     return V, T
 
-KIND = {'plain': 0, 'seats': 1, 'concrete': 2, 'roof': 3, 'steel': 4, 'glass': 5, 'brick': 6, 'grass': 7, 'fins': 8, 'timber': 9}
+KIND = {'plain': 0, 'seats': 1, 'concrete': 2, 'roof': 3, 'steel': 4, 'glass': 5, 'brick': 6, 'grass': 7, 'fins': 8, 'timber': 9, 'copper': 10, 'stone': 11}
 class Mesh:
     """vertices carry colour, a material kind (alpha channel) and UVs in metres (s, t) for the hand-made shaders"""
     def __init__(s): s.v = []; s.c = []; s.f = []; s.uv = []; s.k = []
@@ -140,9 +140,10 @@ def ccw(P):
     for i in range(len(P) - 1): a += P[i, 0] * P[i + 1, 1] - P[i + 1, 0] * P[i, 1]
     return a > 0
 
-def walls(m, P, ztop_fn, zbot, col, step=2.0, kind='concrete', skip=None):
+def walls(m, P, ztop_fn, zbot, col, step=2.0, kind='concrete', skip=None, lift=None):
     """vertical walls on every edge of P from zbot to ztop_fn(points), outward facing; skip = boxes [x0,y0,x1,y1]
-    where another model (the hotel) is the stand's outer face"""
+    where another model (the hotel) is the stand's outer face; lift(a, b) -> a higher base for an edge whose lower
+    storey is built by something else (the west stand's arcade), or None"""
     B = densify(P, step); B = np.r_[B, B[:1]]
     zt = np.maximum(ztop_fn(B), zbot); n = len(B)
     V = np.r_[np.c_[B, np.full(n, zbot)], np.c_[B, zt]]
@@ -152,10 +153,18 @@ def walls(m, P, ztop_fn, zbot, col, step=2.0, kind='concrete', skip=None):
         mid = (B[i] + B[i + 1]) / 2
         if skip and any(b[0] <= mid[0] <= b[2] and b[1] <= mid[1] <= b[3] for b in skip): continue
         if zt[i] <= zbot + 0.01 and zt[i + 1] <= zbot + 0.01: continue   # top below the base (the low pitch-side edge): no wall
+        zl = lift(B[i], B[i + 1]) if lift else None
+        if zl is not None:   # this edge's wall starts higher: its own quad, so the shared base row stays as it is
+            o = len(V); a, b = B[i], B[i + 1]
+            if zl >= max(zt[i], zt[i + 1]): continue
+            V = np.r_[V, [(a[0], a[1], zl), (b[0], b[1], zl), (b[0], b[1], max(zt[i + 1], zl)), (a[0], a[1], max(zt[i], zl))]]
+            q = (o, o + 1, o + 2, o + 3); F.append(q[::-1] if flip else q); continue
         q = (i, i + 1, n + i + 1, n + i)
         F.append(q[::-1] if flip else q)
     L = np.r_[0, np.cumsum(np.linalg.norm(np.diff(B, axis=0), axis=1))]
-    m.add(V, F, np.tile(col, (len(V), 1)), np.r_[np.c_[L, np.full(n, zbot)], np.c_[L, zt]], kind)
+    UV = np.r_[np.c_[L, np.full(n, zbot)], np.c_[L, zt]]
+    if len(V) > 2 * n: UV = np.r_[UV, [(L[int(np.argmin(np.linalg.norm(B - v[:2], axis=1)))], v[2]) for v in V[2 * n:]]]
+    m.add(V, F, np.tile(col, (len(V), 1)), UV, kind)
 
 
 def struts(m, P, zf, sp):
@@ -235,38 +244,123 @@ def open_back(m, P, zf, z0, st):
         run += L
 
 
-def arches(m, P, zf, st):
-    """ground-floor arched openings in the base wall and a sandstone string course, on edges facing away from the pitch"""
+def arcade_edge(st, a, b, zt_a, zt_b, flip, P=None):
+    """True on a base-wall edge that carries the arcade: facing away from the pitch, tall enough for the string course,
+    outside the south block (the entrance building has its own ground floor)"""
+    ar = st['arches']; mid = (a + b) / 2; e = b - a; L = np.linalg.norm(e)
+    nrm = np.array([e[1], -e[0]]) / (L + 1e-9)
+    if flip: nrm = -nrm
+    return nrm @ (mid - PC) / (np.linalg.norm(mid - PC) + 1e-9) >= 0.5 and min(zt_a, zt_b) >= ar['trim_z'][1] and not in_block(st, mid)
+
+
+IVY = None   # the climbing plants over the arcade: their own part (export gives it the leaf material)
+
+
+def arcade(m, P, zf, st):
+    """the Western Grandstand's ground-floor arcade, built, never painted on (director 2026-11-22: the dark arches must not
+    be painted on): the brick face up to the string course has real arched openings cut through it, each with brick
+    reveals `depth` m deep, a dark passage behind (stairs climb inside, west_2019) and a paved floor; a sandstone beam
+    crosses each opening (west_2019), the string course stands proud as a moulding with a top and underside, and the
+    face carries climbing plants (Google Earth: the arcade is green with leaves, the openings clear)"""
+    global IVY
     ar = st['arches']; B = densify(P, 2.0); B = np.r_[B, B[:1]]; flip = not ccw(P); zt = zf(B)
-    run = 0.0; seg = []; z0, z1 = ar['trim_z']
+    z0, z1 = ar['trim_z']; D = ar.get('depth', 1.8); r = ar['w'] / 2; zs = ar['h'] - r
+    brick, trim, dark = st['wall'], ar['trim'], ar['col']
+    run = 0.0; seg = []
     for i in range(len(B) - 1):
-        a, b = B[i], B[i + 1]; mid = (a + b) / 2; e = b - a; L = np.linalg.norm(e)
+        a, b = B[i], B[i + 1]; e = b - a; L = np.linalg.norm(e)
+        if not arcade_edge(st, a, b, zt[i], zt[i + 1], flip): run += L; continue
         nrm = np.array([e[1], -e[0]]) / (L + 1e-9)
         if flip: nrm = -nrm
-        if nrm @ (mid - PC) / (np.linalg.norm(mid - PC) + 1e-9) < 0.5 or min(zt[i], zt[i + 1]) < z1 or in_block(st, mid): run += L; continue
-        o = nrm * 0.06; ta, tb = a + o, b + o
-        m.add([(ta[0], ta[1], z0), (tb[0], tb[1], z0), (tb[0], tb[1], z1), (ta[0], ta[1], z1)], [(0, 1, 2, 3), (3, 2, 1, 0)],
-              [ar['trim']] * 4, [(run, z0), (run + L, z0), (run + L, z1), (run, z1)], 'concrete')
-        seg.append((run, L, a, e / L, nrm))
-        run += L
-    # arches by distance along each continuous run of back-facing wall
+        seg.append((run, L, a, e / L, nrm)); run += L
     runs = []
     for sg in seg:
         if runs and abs(runs[-1][-1][0] + runs[-1][-1][1] - sg[0]) < 1e-6: runs[-1].append(sg)
         else: runs.append([sg])
-    r = ar['w'] / 2; zs = ar['h'] - r
+    rng = np.random.default_rng(11)
+    if IVY is None: IVY = Mesh()
+    two = lambda F: F + [f[::-1] for f in F]
     for R_ in runs:
-        s0, s1 = R_[0][0], R_[-1][0] + R_[-1][1]; n = int((s1 - s0 - ar['w']) // ar['every']) + 1
-        if n < 1: continue
-        lead = (s1 - s0 - (n - 1) * ar['every']) / 2
-        for k in range(n):
-            s = s0 + lead + k * ar['every']
-            st_, L, a, d, nrm = next(x for x in R_ if x[0] <= s <= x[0] + x[1])
-            c = a + d * (s - st_) + nrm * 0.07
-            pts = [(-r, 0.0), (r, 0.0)] + [(r * math.cos(t), zs + r * math.sin(t)) for t in np.linspace(0, math.pi, 13)]
-            V = [(c[0] + d[0] * x, c[1] + d[1] * x, z) for x, z in pts]
-            F = [(0, 1, 2)] + [(0, 2 + j, 3 + j) for j in range(12)]
-            m.add(V, F + [f[::-1] for f in F], [ar['col']] * len(V), [(s + x, z) for x, z in pts], 'plain')
+        s0, s1 = R_[0][0], R_[-1][0] + R_[-1][1]
+        def at(s, off=0.0):
+            st_, L, a, d, nrm = next((x for x in R_ if x[0] - 1e-6 <= s <= x[0] + x[1] + 1e-6), R_[-1])
+            p = a + d * (s - st_) + nrm * off; return p, nrm
+        n = int((s1 - s0 - ar['w'] - 1.0) // ar['every']) + 1
+        C = []
+        if n >= 1:
+            lead = (s1 - s0 - (n - 1) * ar['every']) / 2; C = [s0 + lead + k * ar['every'] for k in range(n)]
+        def open_bot(s, sm):   # the face's bottom at s: the ground, or the arch's crown over an opening
+            for c in C:
+                if abs(sm - c) < r: return zs + math.sqrt(max(0.0, r * r - (s - c) ** 2))
+            return 0.0
+        # the face: columns between breakpoints (edge ends, arch jambs, arch curve samples), ground or crown up to z0
+        ss = {s0, s1} | {x[0] for x in R_}
+        for c in C: ss |= {c + r * math.cos(t) for t in np.linspace(0, math.pi, 17)}
+        ss = sorted(x for x in ss if s0 - 1e-6 <= x <= s1 + 1e-6)
+        for sa, sb in zip(ss[:-1], ss[1:]):
+            if sb - sa < 1e-4: continue
+            sm = (sa + sb) / 2; ba, bb = open_bot(sa, sm), open_bot(sb, sm)
+            (pa, _), (pb, _) = at(sa + 1e-5), at(sb - 1e-5)
+            m.add([(pa[0], pa[1], ba), (pb[0], pb[1], bb), (pb[0], pb[1], z0), (pa[0], pa[1], z0)], two([(0, 1, 2, 3)]),
+                  [brick] * 4, [(sa, ba), (sb, bb), (sb, z0), (sa, z0)], 'brick')
+        # the string course: a moulding 0.18 m proud, with its top and underside
+        for st_, L, a, d, nrm in R_:
+            b = a + d * L; o = nrm * 0.18
+            for q, uv in (([(a + o, z0), (b + o, z0), (b + o, z1), (a + o, z1)], [(st_, z0), (st_ + L, z0), (st_ + L, z1), (st_, z1)]),
+                          ([(a, z1), (b, z1), (b + o, z1), (a + o, z1)], [(st_, 0), (st_ + L, 0), (st_ + L, 0.18), (st_, 0.18)]),
+                          ([(a, z0), (b, z0), (b + o, z0), (a + o, z0)], [(st_, 0), (st_ + L, 0), (st_ + L, 0.18), (st_, 0.18)])):
+                m.add([(p[0], p[1], z) for p, z in q], two([(0, 1, 2, 3)]), [trim] * 4, uv, 'stone')
+        for c in C:
+            # the opening's outline on the face: up one jamb, over the arch, down the other
+            ol = [(c - r, 0.0)] + [(c + r * math.cos(t), zs + r * math.sin(t)) for t in np.linspace(math.pi, 0, 17)] + [(c + r, 0.0)]
+            out = [at(sx)[0] for sx, _ in ol]; nr = at(c)[1]; inn = [p - nr * D for p in out]
+            V = [(p[0], p[1], z) for p, (_, z) in zip(out, ol)] + [(p[0], p[1], z) for p, (_, z) in zip(inn, ol)]
+            k = len(ol); F = [(j, j + 1, k + j + 1, k + j) for j in range(k - 1)]
+            acc = np.r_[0, np.cumsum([math.hypot(ol[j + 1][0] - ol[j][0], ol[j + 1][1] - ol[j][1]) for j in range(k - 1)])]
+            m.add(V, two(F), [brick] * len(V), [(u, 0) for u in acc] + [(u, D) for u in acc], 'brick')   # the reveals
+            # the passage's back wall (in shadow) and floor
+            Vb = [(p[0], p[1], z) for p, (_, z) in zip(inn, ol)]
+            m.add(Vb, two([(0, j, j + 1) for j in range(1, k - 1)]), [dark] * k, [(sx, z) for sx, z in ol], 'concrete')
+            fl = [inn[0], inn[-1], out[-1], out[0]]
+            m.add([(p[0], p[1], 0.03) for p in fl], two([(0, 1, 2, 3)]), [(132, 128, 120)] * 4, [(0, 0), (2 * r, 0), (2 * r, D), (0, D)], 'concrete')
+            # stairs climbing across the passage (west_2019): treads and risers from one jamb up toward the other
+            ns = 12; hs = min(zs * 0.8, 3.6)
+            for j in range(ns):
+                u0, u1 = -r + 2 * r * j / ns, -r + 2 * r * (j + 1) / ns; za, zb = hs * j / ns, hs * (j + 1) / ns
+                pa, pb = at(c + u0, -0.6)[0], at(c + u1, -0.6)[0]
+                qa, qb = pa - nr * (D - 0.7), pb - nr * (D - 0.7)
+                m.add([(pa[0], pa[1], 0.0), (pb[0], pb[1], 0.0), (pb[0], pb[1], zb), (pa[0], pa[1], zb)], two([(0, 1, 2, 3)]),
+                      [(118, 116, 110)] * 4, [(u0, 0), (u1, 0), (u1, zb), (u0, zb)], 'concrete')   # the flight's side, solid
+                m.add([(pa[0], pa[1], za), (qa[0], qa[1], za), (qa[0], qa[1], zb), (pa[0], pa[1], zb)], two([(0, 1, 2, 3)]),
+                      [(150, 148, 142)] * 4, [(0, 0), (1, 0), (1, zb - za), (0, zb - za)], 'concrete')
+                m.add([(pa[0], pa[1], zb), (qa[0], qa[1], zb), (qb[0], qb[1], zb), (pb[0], pb[1], zb)], two([(0, 1, 2, 3)]),
+                      [(176, 174, 168)] * 4, [(0, 0), (1, 0), (1, 1), (0, 1)], 'concrete')
+            # the sandstone beam across the opening, set in from the face (west_2019: ivy hangs off it)
+            bz = ar.get('beam_z', 4.0)
+            if bz + 0.45 < zs:
+                pa, pb = at(c - r, -0.35)[0], at(c + r, -0.35)[0]
+                box(m, (pa[0], pa[1], bz + 0.22), (pb[0], pb[1], bz + 0.22), 0.45, trim, 'stone')
+        # climbing plants: leaf mats 0.12 m proud of the face over the piers and spandrels, a ragged top above the
+        # string course, clear of every opening; drawn as their own part
+        iv = ar.get('ivy')
+        if not iv: continue
+        ss2 = sorted(set(ss) | set(np.arange(s0, s1, 0.6)))
+        top = {x: iv['top'] + rng.uniform(-iv['rag'], iv['rag']) for x in ss2}
+        for sa, sb in zip(ss2[:-1], ss2[1:]):
+            if sb - sa < 1e-4: continue
+            sm = (sa + sb) / 2
+            if rng.uniform() < iv.get('gap', 0.0): continue
+            ba, bb = open_bot(sa, sm), open_bot(sb, sm)
+            (pa, _), (pb, _) = at(sa + 1e-5, 0.12), at(sb - 1e-5, 0.12)
+            ta, tb = top[sa], top[sb]
+            if ta <= ba + 0.2 and tb <= bb + 0.2: continue
+            # over the string course the mat steps out round the moulding
+            pa2, pb2 = at(sa + 1e-5, 0.30)[0], at(sb - 1e-5, 0.30)[0]
+            V = [(pa[0], pa[1], ba), (pb[0], pb[1], bb), (pb[0], pb[1], z0 - 0.05), (pa[0], pa[1], z0 - 0.05),
+                 (pa2[0], pa2[1], z0), (pb2[0], pb2[1], z0), (pb2[0], pb2[1], z1), (pa2[0], pa2[1], z1),
+                 (pa[0], pa[1], z1 + 0.05), (pb[0], pb[1], z1 + 0.05), (pb[0], pb[1], max(tb, z1 + 0.1)), (pa[0], pa[1], max(ta, z1 + 0.1))]
+            F = [(0, 1, 2, 3), (3, 2, 5, 4), (4, 5, 6, 7), (7, 6, 9, 8), (8, 9, 10, 11)]
+            IVY.add(V, two(F), [iv['col']] * len(V), [(sa if j % 4 in (0, 3) else sb, v[2]) for j, v in enumerate(V)], 'grass')
 
 
 def brick_tower(m, P, bt, col):
@@ -380,25 +474,106 @@ def south_block(m, P, st):
         m.add([(qa[0], qa[1], H), (qb[0], qb[1], H), (ib[0], ib[1], H), (ia[0], ia[1], H)], [(0, 1, 2, 3), (3, 2, 1, 0)],
               [sb['roof_col']] * 4, [(run, 0), (run + L, 0), (run + L, sb['roof_in']), (run, sb['roof_in'])], 'concrete')
         run += L
-    # shade sails: twisted tensioned sheets from the facade out over the forecourt (high and low corners alternate)
-    sv = sb['sails']; segs = []
+    if 'entrance' in sb: entrance(m, B, st)
+
+
+def facade_at(B, st, y, min_r=100):
+    """the point on the stand's back edge at northing y and its outward normal (the edge of B, a densified outline,
+    that crosses y on the side away from the pitch)"""
+    best = None
     for i in range(len(B) - 1):
-        p0, p1 = B[i], B[i + 1]; mid = (p0 + p1) / 2
-        if in_block(st, mid) and np.linalg.norm(mid - PC) > sv['min_r']: segs.append((p0, p1))
-    def at(y):
-        for p0, p1 in segs:
-            if min(p0[1], p1[1]) <= y <= max(p0[1], p1[1]):
-                t = (y - p0[1]) / (p1[1] - p0[1]); q = p0 + (p1 - p0) * t; e = (p1 - p0) / np.linalg.norm(p1 - p0)
-                n = np.array([e[1], -e[0]]); n = n if n @ (q - PC) > 0 else -n
-                return q, n
-    for y0, y1 in sv['y']:
-        (a, na), (b, nb) = at(y0), at(y1); o = sv['out']; zi, zo = sv['z_in'], sv['z_out']
-        V = [(a[0] + na[0] * 0.2, a[1] + na[1] * 0.2, zi[0]), (b[0] + nb[0] * 0.2, b[1] + nb[1] * 0.2, zi[1]),
-             (b[0] + nb[0] * o, b[1] + nb[1] * o, zo[1]), (a[0] + na[0] * o, a[1] + na[1] * o, zo[0])]
-        Lw = float(np.linalg.norm(b - a))
-        m.add(V, [(0, 1, 2), (0, 2, 3), (2, 1, 0), (3, 2, 0)], [sv['col']] * 4, [(0, 0), (Lw, 0), (Lw, o), (0, o)], 'plain')
-        for c in (V[2], V[3]):  # posts at the outer corners
-            box(m, (c[0], c[1], 0), c, 0.2, sv['post'], 'steel')
+        p0, p1 = B[i], B[i + 1]
+        if not (min(p0[1], p1[1]) <= y <= max(p0[1], p1[1])) or abs(p1[1] - p0[1]) < 1e-9: continue
+        q = p0 + (p1 - p0) * (y - p0[1]) / (p1[1] - p0[1])
+        if np.linalg.norm(q - PC) < min_r: continue
+        if best is None or np.linalg.norm(q - PC) > np.linalg.norm(best[0] - PC):
+            e = (p1 - p0) / np.linalg.norm(p1 - p0); n = np.array([e[1], -e[0]]); n = n if n @ (q - PC) > 0 else -n
+            best = (q, n)
+    return best
+
+
+def solid(m, Q, z0, z1, col, kind, top=None, bottom=False):
+    """a vertical prism over the plan quad Q (4 points, either winding) from z0 to z1, with its top (and bottom)"""
+    for k in range(4):
+        a, b = Q[k], Q[(k + 1) % 4]; L = float(np.linalg.norm(b - a))
+        m.add([(a[0], a[1], z0), (b[0], b[1], z0), (b[0], b[1], z1), (a[0], a[1], z1)], [(0, 1, 2, 3), (3, 2, 1, 0)],
+              [col] * 4, [(0, z0), (L, z0), (L, z1), (0, z1)], kind)
+    for z, on in ((z1, True), (z0, bottom)):
+        if on: m.add([(q[0], q[1], z) for q in Q], [(0, 1, 2, 3), (3, 2, 1, 0)], [top or col] * 4,
+                     [(float(q[0]), float(q[1])) for q in Q], 'concrete' if top else kind)
+
+
+def entrance(m, B, st):
+    """the main entrance between the brick towers (Google Earth from War Memorial Drive; the director's close-up of
+    2026-11-22): a glazed ground floor standing out from the facade, its roof a terrace inside an orange-brick rim, three
+    pale tensile canopies leaning back from the rim to the facade, and a dark round-topped pod at each end"""
+    en = st['south_block']['entrance']; y0, y1 = en['y']; out = en['out']; H = en['h']
+    f0, n0 = facade_at(B, st, y0); f1, n1 = facade_at(B, st, y1)
+    t = (f1 - f0) / np.linalg.norm(f1 - f0); n = (n0 + n1) / np.linalg.norm(n0 + n1); W = float(np.linalg.norm(f1 - f0))
+    # the facade steps (it stands 2 m further out between y -45 and -13): v counts from its outermost face
+    vm = max(float((facade_at(B, st, y)[0] - f0) @ n) for y in np.linspace(y0, y1, 40))
+    P = lambda u, v: f0 + t * u + n * (v + vm)   # u along the facade from y0, v out from it
+    # the glazed ground floor: glass front and ends, a dark slab edge, the terrace deck on top
+    bk = -vm - 0.3   # the back of the podium, inside the facade all along
+    solid(m, [P(0, bk), P(W, bk), P(W, out), P(0, out)], 0.0, H - 0.6, en['glass'], 'glass')
+    solid(m, [P(0, bk), P(W, bk), P(W, out + 0.15), P(0, out + 0.15)], H - 0.6, H, en['slab'], 'concrete', top=en['deck'])
+    # the brick rim: a 1.1 m parapet round the terrace's front and ends, 0.45 m thick, coping on top
+    r = 0.45; hr = en['rim_h']
+    for Q in ([P(0, out - r), P(W, out - r), P(W, out + 0.15), P(0, out + 0.15)],
+              [P(0, bk), P(r, bk), P(r, out - r), P(0, out - r)],
+              [P(W - r, bk), P(W, bk), P(W, out - r), P(W - r, out - r)]):
+        solid(m, Q, H - 1.6, H + hr, en['brick'], 'brick', top=en['coping'])
+    # canopies: pale membranes, each pinned low at the rim and high at the facade, bellied down between
+    cw, gap = en['canopy_w'], en['canopy_gap']; nC = len(en['canopy_u'])
+    for uc in en['canopy_u']:
+        nu, nv = 8, 6; V = []; UV = []
+        for j in range(nv + 1):
+            fv = j / nv; v = (out - 0.8) * (1 - fv) + 0.5 * fv; z = (H + en['canopy_z'][0]) * (1 - fv) + en['canopy_z'][1] * fv
+            for i in range(nu + 1):
+                fu = i / nu; u = uc - cw / 2 + cw * fu
+                sag = en['sag'] * math.sin(math.pi * fu) * math.sin(math.pi * fv)
+                p = P(u, v); V.append((p[0], p[1], z - sag)); UV.append((cw * fu, fv * 4))
+        F = [(j * (nu + 1) + i, j * (nu + 1) + i + 1, (j + 1) * (nu + 1) + i + 1, (j + 1) * (nu + 1) + i) for j in range(nv) for i in range(nu)]
+        m.add(V, [f[::-1] for f in F], [en['canopy']] * len(V), UV, 'plain')   # one face, up: two coincident faces fought
+        for u, v, zt in ((uc - cw / 2, out - 0.8, H + en['canopy_z'][0]), (uc + cw / 2, out - 0.8, H + en['canopy_z'][0])):
+            p = P(u, v); box(m, (p[0], p[1], H), (p[0], p[1], zt), 0.18, en['post'], 'steel')   # masts at the low corners
+        for u in (uc - cw / 2, uc + cw / 2):  # high corners tied back to the facade
+            a, b = P(u, 0.5), P(u, 0.0); box(m, (a[0], a[1], en['canopy_z'][1]), (b[0], b[1], en['canopy_z'][1] + 0.3), 0.12, en['post'], 'steel')
+    # pods: dark round-topped boxes standing on the terrace at each end
+    for uc in en['pod_u']:
+        w, d, h = en['pod']; rr = d / 2; vc = out - 0.8 - rr - 0.3
+        prof = [(-rr, 0.0)] + [(rr * math.cos(a), h - rr + rr * math.sin(a)) for a in np.linspace(math.pi, 0, 9)] + [(rr, 0.0)]
+        prof = prof[:1] + prof[1:-1] + prof[-1:]
+        k = len(prof); V = []
+        for side in (-w / 2, w / 2):
+            for v, z in prof:
+                p = P(uc + side, vc + v); V.append((p[0], p[1], H + z))
+        F = [(j, j + 1, k + j + 1, k + j) for j in range(k - 1)]
+        F += [(0, j, j + 1) for j in range(1, k - 1)] + [(k, k + j + 1, k + j) for j in range(1, k - 1)]
+        m.add(V, F + [f[::-1] for f in F], [en['pod_col']] * len(V), [(v, z) for v, z in prof] * 2, 'steel')
+    # the glass band's graphic (Google Earth shows pale shapes behind the glass, too blurred to read: not invented)
+
+
+def green_wall(m, B, st, gw):
+    """a planted wall: a stair core standing out of the facade beside a brick tower (Google Earth from War Memorial
+    Drive: green from the ground most of the way up), its faces covered in climbing plants (the ivy part)"""
+    global IVY
+    if IVY is None: IVY = Mesh()
+    (f0, n0), (f1, n1) = facade_at(B, st, gw['y'][0]), facade_at(B, st, gw['y'][1])
+    n = (n0 + n1) / np.linalg.norm(n0 + n1); o = gw['out']
+    Q = [f0 - n * 0.5, f1 - n * 0.5, f1 + n * o, f0 + n * o]
+    solid(m, Q, 0.0, gw['h'], gw['col'], 'concrete', top=gw['col'])
+    # leaves on the three outer faces, 0.15 m proud, up to a ragged top below the core's top
+    rng = np.random.default_rng(int(abs(gw['y'][0]) * 10))
+    for a, b in ((Q[3], Q[0]), (Q[2], Q[3]), (Q[1], Q[2])):
+        e = b - a; L = float(np.linalg.norm(e)); nn = np.array([e[1], -e[0]]) / L
+        if nn @ ((a + b) / 2 - (Q[0] + Q[2]) / 2) < 0: nn = -nn
+        k = max(2, int(L / 0.6)); us = np.linspace(0, 1, k + 1); tops = gw['green'] + rng.uniform(-gw['rag'], gw['rag'], k + 1)
+        for j in range(k):
+            pa, pb = a + e * us[j] + nn * 0.15, a + e * us[j + 1] + nn * 0.15
+            IVY.add([(pa[0], pa[1], 0.3), (pb[0], pb[1], 0.3), (pb[0], pb[1], tops[j + 1]), (pa[0], pa[1], tops[j])],
+                    [(0, 1, 2, 3), (3, 2, 1, 0)], [gw['ivy']] * 4, [(L * us[j], 0.3), (L * us[j + 1], 0.3), (L * us[j + 1], tops[j + 1]), (L * us[j], tops[j])], 'grass')
+
 
 # real seats (gate 2026-11-20, director: seats only): every seat its own moulded shell (pan and back) with a gap to the
 # next, in rows on stepped concrete treads, in each stand's band colours; aisles every 14 m as on the old painted rows
@@ -556,10 +731,21 @@ for st in S['stands']:
     parapet(stands, P, zf); front_skin(stands, P, zf)
     wb = st.get('wall_h')
     if wb:
-        walls(stands, P, lambda B: np.minimum(zf(B), wb), 0.0, st['wall'], kind=st.get('wall_kind', 'concrete'))
-        if st.get('arches'): arches(stands, P, zf, st)
+        lift = None
+        if st.get('arches'):   # the arcade builds the base wall's lower storey on its edges; the plain wall starts above it
+            fl = not ccw(P)
+            def lift(a, b, st=st, zf=zf, fl=fl):
+                za, zb_ = np.minimum(zf(np.array([a, b])), wb)
+                if arcade_edge(st, a, b, za, zb_, fl): return st['arches']['trim_z'][1]
+                e = b - a; nrm = np.array([e[1], -e[0]]) * (-1 if fl else 1); mid = (a + b) / 2
+                if nrm @ (mid - PC) > 0 and in_block(st, mid): return 99.0   # the south block's own storeys are its face:
+                return None   # a brick wall here stood in front of its recessed glass floor (director's screenshot 2026-11-22)
+        walls(stands, P, lambda B: np.minimum(zf(B), wb), 0.0, st['wall'], kind=st.get('wall_kind', 'concrete'), lift=lift)
+        if st.get('arches'): arcade(stands, P, zf, st)
         for bt in st.get('brick_towers', []): brick_tower(stands, P, bt, st['wall'])
         if st.get('south_block'): south_block(stands, P, st)
+        for gw in st.get('green_walls', []):
+            BB = densify(P, 2.0); green_wall(stands, np.r_[BB, BB[:1]], st, gw)
         if st.get('band'):  # dark band capping the base wall
             bh = st['band'][0]; walls(stands, P, lambda B: np.minimum(zf(B), wb + bh), wb, st['band'][1])
             if st.get('open_back'): open_back(stands, P, zf, wb + bh, st)
@@ -583,6 +769,7 @@ for st, PL, le in low_parts:
     seat_jobs.append((PL, zl, st['bands']))
     walls(stands, PL, zl, 0.0, st['wall'], kind=st.get('wall_kind', 'concrete'))
 stands.save('stands')
+if IVY is not None: IVY.save('ivy')
 
 for blk in S.get('blocks', []):
     m = Mesh(); P = way(blk['way']) if 'way' in blk else np.array(blk['poly'], float)
