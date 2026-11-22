@@ -190,7 +190,7 @@ for i in range(2): c.rect(4.75 + i * 9.5, 0, 4.75 + i * 9.5 + 0.3, 0.7, (150, 15
 c.save('t411_slab.png', grain=1.5)
 
 # ---------------------------------------------------------------- Hyundai Centre wall: 11 m tile, 20 m tall (Commons e5 for layout)
-# Blue cladding pier, grey precast panels on a 1.5 x 1.25 m grid, white vertical louvre boxes over dark glass, dark glazing at street level.
+# Blue cladding pier, grey precast panels on a 1.5 x 1.25 m grid, dark glass at the louvre boxes and at street level (their frames, fins and mullions are modelled in build.py).
 c = Canvas(11.0, 20.0, 48, (196, 196, 190))
 for i in range(int(8 / 1.5) + 1):
     for j in range(16):
@@ -205,14 +205,9 @@ c.vline(1.5, 0, 20, (190, 192, 188), 0.025); c.vline(3.0, 0, 20, (120, 124, 128)
 c.rect(0, 18.6, 11, 20, BLUE_C); c.rect(0, 18.6, 11, 18.66, (32, 44, 72))
 for zb in (6.2, 12.4):                                                     # louvre boxes 4.2 m wide, 3.2 m tall
     x0 = 4.6
-    c.rect(x0, zb, x0 + 4.2, zb + 3.2, (34, 40, 48))
-    c.rect(x0 - 0.1, zb + 3.1, x0 + 4.3, zb + 3.3, (60, 64, 70))
-    for k in range(6):
-        fx = x0 + 0.2 + k * 0.7
-        c.rect(fx, zb + 0.1, fx + 0.22, zb + 3.1, (240, 240, 236)); c.rect(fx + 0.18, zb + 0.1, fx + 0.24, zb + 3.1, (170, 172, 172))
+    c.rect(x0, zb, x0 + 4.2, zb + 3.2, (34, 40, 48))      # the dark glass only: frame and fins are modelled (build.py)
 c.grad(3, 0, 11, 3.6, (70, 82, 96), (34, 40, 48))                          # street-level glazing
-for i in range(6): c.vline(3 + i * 1.6, 0, 3.6, (24, 26, 30), 0.08)
-c.rect(3, 3.6, 11, 3.75, (60, 64, 70))
+# shopfront mullions and head are modelled (build.py hyundai_details)
 c.save('hyundai.png', grain=2.0)
 c = Canvas(6, 6, 48, (232, 234, 234))                                      # flat roofs: pale grey membrane, lapped sheets
 for k in range(4): c.hline(k * 1.5 + 0.01, (206, 208, 208), 0.02)

@@ -37,12 +37,17 @@ Checked against Google Earth 3D (36 views) and a 2019 photo sphere taken on the 
 - **Seats**: gold, maroon in whole blocks, some white (photo sphere). Box fronts dark glass under an LED ribbon
   (plain colour blocks, no lettering). Hyundai Centre piers white, not blue.
 - **Light towers**: white lattice baskets (11 ribs, 4 rails, lamp boxes facing the field), not flat panels.
+- **No painted geometry (v8)**: box fronts' mullions, sill, transom and capping; the Hyundai Centre's louvre boxes
+  (frame and six fins) and shopfront mullions and head; the gate block's recessed opening with glazed doors, the
+  portholes and round window with reveals, the glass-block stair and its rail; the Gate 7 roof's upstand and vents;
+  the terrace's tables and benches; the skylight's frames. All modelled; the textures carry only surface colour.
+  The gate's painted "7" is gone (director "C: no lettering").
 - **Big screens**: on the upper tier's front at the north and south ends, in a 4 m deep housing (photo sphere).
 - **Surroundings**: `surrounds.py` (Woolloongabba from OpenStreetMap, the house yards filled with trees, the
   CBD's towers), loaded through `GroundModels.SURROUNDS`. Buildings within 600 m
-  (`facades`) are modelled closer: floors with recessed window bands and reveals, hipped roofs on houses; Low
-  draws them plain. The bowl is cut into 12 pieces (`GroundModels.SLICE_AT`): High / Medium / Low draw 2.56 /
-  2.10 / 1.63 million triangles and 348 / 291 / 274 draw calls (docs/PHONE_3D_BUDGET.md).
+  (`facades`) are modelled closer: floors with recessed window bands and reveals, a recessed glazed street floor on
+  low shops, hipped roofs on houses; Low draws them plain. The bowl is cut into 12 pieces (`GroundModels.SLICE_AT`): High / Medium / Low draw 2.98 /
+  2.66 / 2.02 million triangles and 353 / 312 / 297 draw calls (the MCG 3.33 / 3.03 / 2.43 million) (docs/PHONE_3D_BUDGET.md).
 
 Build in the cloud with the bpy module: `python mktex_v7.py`, then build.py with
 `sys.argv = ['blender', '--', 'model_in6.json', OUT.glb, OUT.blend, 'htex']` (model_in6 is the current input),

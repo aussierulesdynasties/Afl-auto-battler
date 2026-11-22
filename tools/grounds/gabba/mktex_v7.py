@@ -27,7 +27,7 @@ a[np.broadcast_to(pod, (H, W))] = (122, 122, 118)    # grey precast podium
 # cladding: panels 1.3 m wide, 3.0 m tall, dark reveal joints
 joint = ((x % 1.3) < 0.05) & ~pod | (((z - 6.0) % 3.0) < 0.06) & ~pod
 a[joint] = (40, 41, 44)
-# podium: precast panels 3.25 m x 3.5 m, joints, and a darker band of louvres at 6-8 m (plant rooms)
+# podium: precast panels 3.25 m x 3.5 m and their joints
 pj = (((x % 3.25) < 0.06) | ((z % 3.5) < 0.06)) & pod
 a[pj] = (100, 100, 97)
 # rain streaks down the podium, panel tone wobble on the cladding
@@ -52,11 +52,9 @@ save(b, 'roofunder.png')
 g = np.zeros((64, 64, 3), float); g[:] = (74, 76, 78); g += R.normal(0, 2.5, (64, 64))[..., None]
 save(g, 'girder.png')
 
-# box glass: four 1.5 m panes per 6 m, dark neutral, a sky streak in the top third
+# box glass: dark neutral glass only; its mullions, sill and head are modelled in build.py (no frames painted on)
 c = np.zeros((166, 384, 3), float)
 c[:] = np.linspace(92, 46, 166)[:, None, None] * np.array([1.0, 1.02, 1.06])
-c[:, (np.arange(384) % 96) < 4] = (34, 35, 37)
-c[:5] = (34, 35, 37); c[-5:] = (34, 35, 37)
 # the top 0.9 m of the 2.6 m face: the LED ribbon along the front of the boxes (photo sphere), shown as plain blocks of
 # colour (no lettering, director 2026-11-18): dark board, club and sponsor colours in 3 m runs
 rib = int(166 * 0.9 / 2.6)
@@ -65,5 +63,4 @@ cols = [(28, 70, 160), (232, 190, 40), (30, 30, 36), (120, 30, 50), (40, 150, 80
 for k in range(2):
     cc = cols[R.integers(len(cols))]; x0 = k * 192
     c[6:rib - 6, x0 + 10:x0 + 182] = cc
-    c[rib // 2 - 3:rib // 2 + 3, x0 + 30:x0 + 160] = tuple(255 - v // 2 for v in cc)
 save(c, 'boxglass_v7.png')

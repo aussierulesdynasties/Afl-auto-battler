@@ -31,7 +31,8 @@ T4 = mat('t411', W1, 0.5, 't411.png'); T4S = mat('t411s', W1, 0.5, 't411_slab.pn
 SI = mat('site', W1, 0.9, 'path.png'); HY = mat('hyundai', W1, 0.7, 'hyundai.png'); SC = mat('screen', W1, 0.5, 'screen.png')
 SF = mat('screenface', W1, 0.3, 'scoreface.png'); RD = mat('roofdeck', W1, 0.8, 'roofdeck.png'); FA = mat('facade', W1, 0.7, 'facade_v7.png')
 RU = mat('membrane_lit_under', W1, 0.9, 'roofunder.png'); GD = mat('girder', W1, 0.6, 'girder.png')   # v7 (mktex_v7.py)
-BOX = {RU: 6.0, GD: 4.0, CO: 4.0, WK: 4.0, DK: 4.0, RD: 6.0, SC: 4.0, T4S: 19.0, HY: 11.0, T4: 19.0, ST: 4.0, MB: 12.0}
+LT = mat('lattice', W1, 0.6, 'girder.png')   # the roof's lattice trusses: their own object, so a phone's Medium and Low can drop their shadows
+BOX = {RU: 6.0, GD: 4.0, LT: 4.0, CO: 4.0, WK: 4.0, DK: 4.0, RD: 6.0, SC: 4.0, T4S: 19.0, HY: 11.0, T4: 19.0, ST: 4.0, MB: 12.0}
 
 bm = bmesh.new(); uv = bm.loops.layers.uv.new()
 cx, cy = D['Cc']
@@ -175,7 +176,7 @@ for i in range(len(B)):
         z0 = min(_roofz(b0, t0, rF(b0)) - 0.15, ZC); z1 = min(_roofz(b1, t1, rF(b1)) - 0.15, ZC)
         if z0 > zt or z1 > zt: face([P(b0, rF(b0), zt), P(b1, rF(b1), zt), P(b1, rF(b1), max(z1, zt)), P(b0, rF(b0), max(z0, zt))], DK)
 
-def tube(p0, p1, r0, r1, m, n=8):
+def tube(p0, p1, r0, r1, m, n=8, cap=True):
     a = mu.Vector(p0); b = mu.Vector(p1); d = (b - a).normalized()
     up = mu.Vector((0, 0, 1)) if abs(d.z) < 0.9 else mu.Vector((1, 0, 0))
     x = d.cross(up).normalized(); y = d.cross(x)
@@ -186,6 +187,7 @@ def tube(p0, p1, r0, r1, m, n=8):
         f = bm.faces.new((ra[k], ra[(k + 1) % n], rb[(k + 1) % n], rb[k])); f.material_index = m
         u0 = k / n; u1 = (k + 1) / n
         for l, t in zip(f.loops, [(u0, 0), (u1, 0), (u1, L), (u0, L)]): l[uv].uv = t
+    if not cap: return
     f = bm.faces.new(rb); f.material_index = m
     for l in f.loops: l[uv].uv = (0.5, 0.5)
 
@@ -196,6 +198,41 @@ def tube(p0, p1, r0, r1, m, n=8):
 # lighter rib down the middle of each bay, and the leading-edge truss along the inner edge.
 RC = lambda a: rO(a) + 0.3                       # the column line, just outside the roof's edge
 ZR1 = zo - RT - SAG7 - 1.6; ZR2 = 14.0; ZTOP = zo + 5.0   # the top ring beam just clear of the fascia at mid-bay
+# v7 box fronts (2019 photo sphere): the glass sits between dark aluminium mullions every 1.5 m, with a sill at the foot,
+# a transom under the LED ribbon and a capping over it, all standing proud of the glass (modelled, none painted on)
+def ring_box(a, r, z0, z1, wd, dr, m):
+    """a small box on the bowl at angle a: wd m wide along the arc, from radius r out to r + dr, z0 to z1"""
+    h = wd / 2 / r; q = [P(a - h, r, 0)[:2], P(a + h, r, 0)[:2], P(a + h, r + dr, 0)[:2], P(a - h, r + dr, 0)[:2]]
+    for k in range(4):
+        if k == 0: continue   # the back sits on the glass
+        p0, p1 = q[k], q[(k + 1) % 4]
+        face([(*p0, z0), (*p1, z0), (*p1, z1), (*p0, z1)], m)
+    face([(x_, y_, z1) for x_, y_ in q], m); face([(x_, y_, z0) for x_, y_ in q[::-1]], m)
+def ring_band(r, z0, z1, dr, m, n=360):
+    """a band standing dr proud of the circle of radius r(a) all round the bowl, z0 to z1 (front, top and bottom faces)"""
+    for i in range(n):
+        a0 = A[i]; a1 = a0 + 2 * math.pi / n; r0, r1 = r(a0), r(a1)
+        face([P(a0, r0 + dr, z0), P(a1, r1 + dr, z0), P(a1, r1 + dr, z1), P(a0, r0 + dr, z1)], m)
+        face([P(a0, r0, z1), P(a0, r0 + dr, z1), P(a1, r1 + dr, z1), P(a1, r1, z1)], m)
+        face([P(a0, r0, z0), P(a1, r1, z0), P(a1, r1 + dr, z0), P(a0, r0 + dr, z0)], m)
+def lattice_beam(a, t, s0, s1, d0, d1, w, m, n=10, rc=0.12, rw=0.06):
+    """an open lattice rafter hung under the roof along the radial line at bay position t (angle a), s from s0 to s1,
+    d0 -> d1 deep: two top chords w apart under the membrane, one bottom chord, and a Warren web of diagonals with a
+    vertical at every node, all square hollow sections (2019 photo sphere: dark open trusses, sky showing through between the members)"""
+    nrm = mu.Vector((-math.sin(a), math.cos(a), 0)) * (w / 2)
+    tops, bots = [], []
+    for k in range(n + 1):
+        ss = s0 + (s1 - s0) * k / n; dd = d0 + (d1 - d0) * k / n
+        top = mu.Vector(roofpt(a, t, ss, -RT - 0.02)) - mu.Vector((0, 0, rc))
+        tops.append((top - nrm, top + nrm)); bots.append(top - mu.Vector((0, 0, dd - 2 * rc)))
+    for k in range(n):
+        for j in (0, 1): tube(tops[k][j], tops[k + 1][j], rc, rc, m, 4, False)                 # top chords
+        tube(bots[k], bots[k + 1], rc * 1.15, rc * 1.15, m, 4, False)                          # bottom chord
+        j = k % 2
+        tube(tops[k][j] if k % 2 == 0 else tops[k + 1][j], bots[k + 1] if k % 2 == 0 else bots[k], rw, rw, m, 4, False)   # diagonal
+        tube(tops[k][1 - j] if k % 2 == 0 else tops[k + 1][1 - j], bots[k + 1] if k % 2 == 0 else bots[k], rw, rw, m, 4, False)
+    for k in range(n + 1):
+        for j in (0, 1): tube(tops[k][j], bots[k], rw, rw, m, 4, False)                         # verticals, a V in section
 def bx_beam(a, t, s0, s1, d0, d1, w, m, n=8):
     """a tapered box beam hung under the roof along the radial line at bay position t (angle a), s from s0 to s1,
     d0 -> d1 deep, w wide (all four sides)"""
@@ -221,17 +258,17 @@ for i, a in enumerate(B):
         tube(P(a, RC(a), zr), P(a, rF(a), zr), 0.16, 0.16, ST)                   # strut back to the wall
     tube(P(a, RC(a), ZR2), P(an, RC(an), ZR1), 0.22, 0.22, ST)                   # the bay's X
     tube(P(an, RC(an), ZR2), P(a, RC(a), ZR1), 0.22, 0.22, ST)
-    bx_beam(a, 0.0, 0.0, 1.0, 0.9, 2.8, 0.55, GD)                                # rafter
+    lattice_beam(a, 0.0, 0.0, 1.0, 0.9, 2.8, 0.7, LT, 12)                       # rafter: open lattice truss
     am = a + (an - a) * 0.5
-    bx_beam(am, 0.5, 0.06, 1.0, 0.35, 0.9, 0.3, GD, 6)                           # mid-bay rib
+    lattice_beam(am, 0.5, 0.06, 1.0, 0.45, 1.0, 0.35, LT, 8, 0.08, 0.04)        # mid-bay rib: a lighter lattice
     # leading-edge truss: two chords along the inner edge and a zig-zag web, 1.6 m deep, 8 panels a bay
     NP = 8
     for k in range(NP):
         t0, t1 = k / NP, (k + 1) / NP; b0, b1 = a + (an - a) * t0, a + (an - a) * t1
         u0 = roofpt(b0, t0, 0.03, -RT - 0.15); u1 = roofpt(b1, t1, 0.03, -RT - 0.15)
         l0 = (u0[0], u0[1], u0[2] - 1.6); l1 = (u1[0], u1[1], u1[2] - 1.6)
-        tube(u0, u1, 0.14, 0.14, GD, 6); tube(l0, l1, 0.14, 0.14, GD, 6)
-        tube(l0, u1, 0.07, 0.07, GD, 5) if k % 2 == 0 else tube(u0, l1, 0.07, 0.07, GD, 5)
+        tube(u0, u1, 0.14, 0.14, LT, 6); tube(l0, l1, 0.14, 0.14, LT, 6)
+        tube(l0, u1, 0.07, 0.07, LT, 5) if k % 2 == 0 else tube(u0, l1, 0.07, 0.07, LT, 5)
 
 def prism(poly, z0, z1, m, vh=None, nz=6, uw=10.0, vm=None, capm=None, uo=0.0):
     poly = poly[:-1] if poly[0] == poly[-1] else poly
@@ -278,9 +315,47 @@ for _f in (0.2, 0.5, 0.8):                        # fans: grey shroud 3.2 m acro
     tube((_fx, _fy, 23.0), (_fx, _fy, 23.15), 0.6, 0.6, DK, 12)      # dark hub
 for vx, vy in [(-127.25, -16.88), (-130.66, -18.33), (-128.18, -13.65), (-130.32, -12.97), (-128.39, -11.5)]:
     tube((vx, vy, 20.0), (vx, vy, 20.8), 0.6, 0.6, ST, 12)
+def wall_box(p0, e, n, x0, x1, d0, d1, z0, z1, m):
+    """a box on a wall: x along the wall from p0 (unit e), d out from it (unit n), z up; the back face is left off"""
+    W_ = lambda x, d, z: (p0[0] + e[0] * x + n[0] * d, p0[1] + e[1] * x + n[1] * d, z)
+    face([W_(x0, d1, z0), W_(x1, d1, z0), W_(x1, d1, z1), W_(x0, d1, z1)], m)                # front
+    face([W_(x0, d0, z1), W_(x0, d1, z1), W_(x1, d1, z1), W_(x1, d0, z1)], m)                # top
+    face([W_(x0, d0, z0), W_(x1, d0, z0), W_(x1, d1, z0), W_(x0, d1, z0)], m)                # bottom
+    face([W_(x0, d0, z0), W_(x0, d1, z0), W_(x0, d1, z1), W_(x0, d0, z1)], m)                # ends
+    face([W_(x1, d1, z0), W_(x1, d0, z0), W_(x1, d0, z1), W_(x1, d1, z1)], m)
+def hyundai_details(poly, T=11.0):
+    """Hyundai Centre (Commons e5): on every 11 m bay of the wall (the texture's bay, same u), the two louvre boxes as
+    real boxes, a dark frame 0.45 m proud with six white vertical fins in it, and the street-level shopfront's mullions
+    and the head over it, standing proud of the glass (none of it painted on)"""
+    poly = poly[:-1] if poly[0] == poly[-1] else poly
+    ccx = sum(x for x, y in poly) / len(poly); ccy = sum(y for x, y in poly) / len(poly); L = 0.0
+    for k in range(len(poly)):
+        p0, p1 = poly[k], poly[(k + 1) % len(poly)]; seg = math.dist(p0, p1)
+        if seg < 1e-6: continue
+        e = ((p1[0] - p0[0]) / seg, (p1[1] - p0[1]) / seg); n = (e[1], -e[0])
+        if n[0] * ((p0[0] + p1[0]) / 2 - ccx) + n[1] * ((p0[1] + p1[1]) / 2 - ccy) < 0: n = (-n[0], -n[1])
+        b = math.floor(L / T) * T
+        while b < L + seg:
+            def has(x0, x1): return b + x0 >= L - 1e-6 and b + x1 <= L + seg + 1e-6
+            off = b - L
+            for zb in (6.2, 12.4):                                  # louvre boxes, 4.2 x 3.2 m
+                if not has(4.5, 8.9): break
+                X0, X1 = off + 4.6, off + 8.8
+                wall_box(p0, e, n, X0 - 0.1, X1 + 0.1, 0.0, 0.45, zb + 3.1, zb + 3.3, GD)          # head
+                wall_box(p0, e, n, X0 - 0.1, X1 + 0.1, 0.0, 0.45, zb - 0.1, zb + 0.1, GD)          # sill
+                for xx in (X0 - 0.1, X1 - 0.1): wall_box(p0, e, n, xx, xx + 0.2, 0.0, 0.45, zb + 0.1, zb + 3.1, GD)
+                for f_ in range(6):
+                    fx = X0 + 0.2 + f_ * 0.7
+                    wall_box(p0, e, n, fx, fx + 0.22, 0.05, 0.4, zb + 0.1, zb + 3.1, ST)             # white fin
+            if has(3.0, 11.0):                                        # shopfront: mullions every 1.6 m, a head over it
+                wall_box(p0, e, n, off + 3.0, off + 11.0, 0.0, 0.5, 3.6, 3.8, GD)
+                for m_ in range(6): wall_box(p0, e, n, off + 3.0 + m_ * 1.6 - 0.05, off + 3.0 + m_ * 1.6 + 0.05, 0.0, 0.12, 0.0, 3.6, GD)
+            b += T
+        L += seg
 for k, poly in D["parts"].items():
     if k == "483353591": continue   # NE white building: built in sw.py from the satellite
     prism(poly, 0, 20, HY, True, 6, 11.0, 20.0, RD)   # Hyundai Centre wall, Commons e5
+    hyundai_details(poly)
 if D.get('t411'):   # 411 Vulture St office: outside the stadium site line, left out (director rule: model stops at the outer fence)
     prism(D['t411'], 0, D['h411'], T4, True, 6, 19.0, None, RD)
     # 411 Vulture St: a balcony slab at every floor, standing 1.0 m proud of the face (photo: serrated edge, 12 bands)
@@ -322,6 +397,14 @@ def screen(ac, W_=21.0, H_=8.6):
 (_sx0, _sy0), (_sx1, _sy1) = D.get('screen', ((-0.9, -90.6), (-22.2, -84.6)))
 _as = math.atan2((_sy0 + _sy1) / 2 - cy, (_sx0 + _sx1) / 2 - cx)
 screen(_as); screen(math.pi / 2)    # south (where the first version's photo put it), and north at the far end
+_rbx = lambda a: prof(a)[4][0]          # the box glass line (rm + 2.5)
+ZLED = 16.0 - 0.9
+ring_band(_rbx, 13.4, 13.55, 0.14, GD); ring_band(_rbx, ZLED - 0.08, ZLED + 0.04, 0.12, GD); ring_band(_rbx, 15.92, 16.06, 0.16, GD)
+_mx = 0.0; _prev = P(A[0], _rbx(A[0]), 0)[:2]
+for i in range(1, N * 4 + 1):     # a mullion every 1.5 m of arc
+    a_ = -math.pi + 2 * math.pi * i / (N * 4); q_ = P(a_, _rbx(a_), 0)[:2]; _mx += math.dist(_prev, q_); _prev = q_
+    if _mx >= 1.5:
+        _mx -= 1.5; ring_box(a_, _rbx(a_), 13.55, ZLED - 0.08, 0.07, 0.11, GD)
 exec(open('sw.py').read())   # south-west corner buildings
 # concourse apron around the facade
 for i in range(N):
@@ -366,6 +449,13 @@ for f in bm.faces:
             l[uv].uv = (x / S, y / S) if nz_ >= max(nx, ny) else ((y / S, z / S) if nx >= ny else (x / S, z / S))
 print('BOXUV', nbox)
 bm.to_mesh(me); bm.free()
+# the lattice trusses as their own object ("lattice"): the match drops their shadows on Medium and Low (Oval3DQuality)
+_lm = me.copy(); _lm.name = 'lattice'
+for _m, _keep in ((me, False), (_lm, True)):
+    _b = bmesh.new(); _b.from_mesh(_m)
+    bmesh.ops.delete(_b, geom=[f for f in _b.faces if (f.material_index == LT) != _keep], context='FACES')
+    _b.to_mesh(_m); _b.free()
+bpy.context.scene.collection.objects.link(bpy.data.objects.new('lattice', _lm))
 
 # ---------------------------------------------------------------- real 3D empty seats (as Optus): pan, back, two half legs;
 # neighbours' half legs meet as one grey steel leg under each gap, block-end legs trimmed flush with the pan.
@@ -482,4 +572,4 @@ for im in bpy.data.images:   # load and pack every texture before export (the bp
         im.reload(); im.pack()
 bpy.ops.wm.save_as_mainfile(filepath=args[2])
 bpy.ops.export_scene.gltf(filepath=args[1], export_format='GLB', export_image_format=os.environ.get('GABBA_IMG', 'WEBP'))   # GABBA_IMG=AUTO (PNG) where the bpy module's WebP copy fails
-print('TRIS', sum(len(p.vertices) - 2 for p in me.polygons))
+print('TRIS', sum(len(p.vertices) - 2 for p in me.polygons), 'lattice', sum(len(p.vertices) - 2 for p in _lm.polygons))
