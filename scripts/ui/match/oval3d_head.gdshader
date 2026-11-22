@@ -18,6 +18,7 @@ instance uniform vec4 skin : source_color = vec4(0.76, 0.57, 0.45, 1.0);
 // 0,0 there (the eyeballs) means no map. The normal map is DirectX (green down the image, +v).
 uniform sampler2D skin_head_nrm : hint_normal, filter_linear_mipmap_anisotropic, repeat_disable;
 uniform sampler2D skin_head_srmf : filter_linear_mipmap, repeat_disable;
+global uniform float oval_wet;   // Oval3DTurf.apply: 0 dry .. 1 raining
 
 #include "res://scripts/ui/match/oval3d_skin_light.gdshaderinc"
 
@@ -38,7 +39,8 @@ void fragment() {
 	float map_rough = mix(rough, texture(skin_head_srmf, UV2).g, has_maps);
 	// Above the band a back is the inside of a beard card: its texture there is skin (a pale shard in his
 	// beard), so it takes the beard's own dark instead; it still closes the scan's holes.
-	ROUGHNESS = mix(map_rough, ring_skin.a, band);
+	// A wet day: his skin shines more, by the same factor as the body's (oval3d_player.gdshader), so the join holds.
+	ROUGHNESS = mix(map_rough, ring_skin.a, band) * mix(1.0, 0.7, oval_wet);
 	// The head carries no tangents (its normals are re-aimed in the band), so the map's frame comes from how
 	// UV2 runs across the screen (a cotangent frame from the pixel's derivatives).
 	if (FRONT_FACING && has_maps > 0.5) {
