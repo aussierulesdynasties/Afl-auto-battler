@@ -71,6 +71,11 @@ func fill(v: VBoxContainer) -> void:
 		# its word (director, 2026-11-07: "show every line and overall team rank too").
 		for row in GameState.my_head_to_head(code):
 			lines.add_child(_h2h_row(row, code))
+	if with_report:
+		var tips := _tips_view()
+		if tips != null:
+			v.add_child(_rule())
+			v.add_child(tips)
 	v.add_child(_synergy_view())
 	# What the week says about your own people, set apart from the facts above.
 	var notes := UiKit.vbox(8)
@@ -180,6 +185,62 @@ func _h2h_row(row: Dictionary, opp: String) -> Control:
 	return one
 
 
+## The papers' tips for this match (Tipping, director 2026-11-21): who each
+## journalist tips to win and by how much, under one line of how the panel
+## splits. Each pick in its club's colour beside its guernsey. null with no
+## match to tip.
+func _tips_view() -> Control:
+	var m := MatchKickoff.upcoming_match()
+	var tips := GameState.match_tips(m)
+	if tips.is_empty():
+		return null
+	var h := str(m["home"])
+	var a := str(m["away"])
+	var opp := a if h == GameState.my_club else h
+	var inks: Array = UiKit.club_ink_pair(GameState.my_club, opp)
+	var ink := {GameState.my_club: inks[0], opp: inks[1]}
+	var box := UiKit.vbox(8)
+	box.name = "Tips"
+	box.add_child(UiKit.lbl("The tips", UiKit.NAME, UiKit.TEXT, true))
+	var names := {h: GameDB.club_name(h), a: GameDB.club_name(a)}
+	var t := Tipping.tally(tips, h, a)
+	var lead := h if int(t[h]) > int(t[a]) else a
+	var head := UiKit.lbl(Tipping.headline(tips, names), UiKit.HEADING,
+			UiKit.club_name_colour(ink[lead]), true)
+	head.name = "TipsHeadline"
+	head.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	box.add_child(head)
+	var rows := UiKit.vbox(6)
+	rows.name = "TipsPanel"
+	box.add_child(rows)
+	for tip in tips:
+		var pick := str(tip["pick"])
+		var row := UiKit.hbox(10)
+		row.name = "Tip_" + str(tip["journalist"])
+		row.set_meta("pick", pick)
+		row.set_meta("margin", int(tip["margin"]))
+		var who := UiKit.vbox(0)
+		who.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		who.add_child(UiKit.lbl(str(tip["name"]), UiKit.SECONDARY, UiKit.TEXT, true))
+		var outlet := UiKit.lbl(str(tip["outlet"]), UiKit.FINE, Color(SOFT, 0.8))
+		who.add_child(outlet)
+		row.add_child(who)
+		# The pick's guernsey, so two clubs in like colours (Eagles, Tigers)
+		# still read apart at a glance.
+		var crest := _crest_tile(pick, 20.0)
+		crest.name = "TipCrest"
+		crest.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		row.add_child(crest)
+		var said := UiKit.lbl("%s by %d" % [GameDB.club_short(pick), int(tip["margin"])], UiKit.SECONDARY,
+				UiKit.club_name_colour(ink[pick]), true)
+		said.name = "TipPick"
+		said.custom_minimum_size = Vector2(132, 0)
+		said.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		row.add_child(said)
+		rows.add_child(row)
+	return box
+
+
 ## A fact about your own people with a short bar in `ink` at its left: its own
 ## row, never a stray line under the buttons.
 func _note_row(body: Control, ink: Color) -> Control:
@@ -206,13 +267,13 @@ func _rule() -> Control:
 
 ## A guernsey on a light tile, so a dark club (Carlton's navy) still reads on
 ## the dark page: 30 px of crest on a 36 px tile.
-func _crest_tile(code: String) -> Control:
+func _crest_tile(code: String, crest := 30.0) -> Control:
 	var tile := PanelContainer.new()
 	tile.name = "CrestTile"
 	tile.add_theme_stylebox_override("panel", UiKit.style(Color("e8e4da"), 3, UiKit.RADIUS))
 	tile.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	tile.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-	tile.add_child(UiKit.club_marker(code, 30.0))
+	tile.add_child(UiKit.club_marker(code, crest))
 	return tile
 
 
