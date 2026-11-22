@@ -52,8 +52,8 @@ const FIT := {
 	"people_first": [-0.72, 0.04, 0.02, -72.6, 89.11, 72.26],
 	# ENGIE: an ellipse through the field edge traced from Google Earth (tools/grounds/engie/fit) gives the
 	# centre and axis; its halves are a 162 x 126 m field plus FENCE, a metre inside the real 164 x 128, so
-	# the game's fence runs 2.3 m outside the real grass edge and clears the front rows (2026-11-22).
-	"engie": [-5.01, -3.48, 0.0, -44.3, 87.0, 69.0],
+	# the game's fence runs 0.6 m (sides) to 3.2 m (ends) outside the grass edge and clears the front rows (2026-11-22).
+	"engie": [-4.26, -3.6, 0.0, -44.0, 87.0, 69.0],
 	"bellerive": [0.31, -0.64, -0.02, 68.7, 86.9, 66.77],
 	"manuka": [5.93, 8.15, 0.03, -82.9, 85.94, 73.1],
 	"norwood": [1.96, -3.15, 0.0, 88.3, 88.73, 63.59],

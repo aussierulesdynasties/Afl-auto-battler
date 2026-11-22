@@ -1,7 +1,8 @@
 # ENGIE Stadium (Sydney Showground Stadium, Sydney Olympic Park) as it is today, rebuilt to the MCG standard
-# (docs/MCG_STANDARD.md). Plan: one smooth curve fitted to a Google Earth top-down trace, every ring (field edge,
-# stand front, roof front and back) an exact offset of it, and roof heights by Google Earth stereo
-# (tools/grounds/engie/fit, measuring only; no imagery is kept or baked in). OSM (ODbL, osm.py) gives the light
+# (docs/MCG_STANDARD.md). Plan measured from Google Earth top-down (tools/grounds/engie/fit, measuring only; no
+# imagery is kept or baked in): the field edge one smooth curve; the 1998 bowl one smooth curve with its roof back an
+# exact offset; the 2012 north and east roofs circular arcs joined tangentially to it in the tower gaps, ending
+# square beside the open end; the stand front 1.6 m inside the roof front. Roof heights by Google Earth stereo. OSM (ODbL, osm.py) gives the light
 # masts and the video wall. Sections are modelled to Google Earth obliques and a Street View photo sphere.
 # Data: model/engie.json. Runs inside Blender: import build; build.build_all().
 # Frame: x east, y north, z up from the field, metres; bearings clockwise from north, from the OSM pitch's centre.
@@ -43,7 +44,20 @@ def periodic(tab):
 _F = periodic(D['fence']); _G = periodic(D['front_gap']); _RF = periodic(D['rf']); _RB = periodic(D['rb'])
 _SITE = periodic(D['site'])
 def rF(b): return _F(b)[0]
-def r0(b): return rF(b) + _G(b)[0]
+_SF = periodic(D['stand_front']) if 'stand_front' in D else None
+def r0(b):
+    """The stand's front wall: the roof front ring 1.6 m in under the roofs (engie.json stand_front, measured);
+    at the open north-east end the field edge plus front_gap; over the tower gaps either side of it (3 to 8 and
+    72 to 77 degrees) an even blend of the two, so the rows meet the open stand without a step."""
+    a = b % 360
+    op = rF(b) + _G(b)[0]
+    if _SF is None or 8.0 <= a <= 72.0:
+        return op
+    if 3.0 < a < 8.0:
+        t = (a - 3.0) / 5.0; return (1 - t) * _SF(b)[0] + t * op
+    if 72.0 < a < 77.0:
+        t = (77.0 - a) / 5.0; return (1 - t) * _SF(b)[0] + t * op
+    return _SF(b)[0]
 def roof_front(b): return _RF(b)[0]
 def roof_back(b): return _RB(b)[0]
 
@@ -134,9 +148,16 @@ def tier_low(b):
     a = r0(b) + 0.3; return a, FRONT_Z, a + LOW_N * TREAD, FRONT_Z + LOW_N * LOW_RISE
 
 
+def up_n(b):
+    """The upper tier's rows at bearing b: 12, fewer where the outside wall comes closer (the east stand's north end,
+    where the stand front follows the roof's flare out but the roof's back edge does not: Google Earth top-down)."""
+    _, _, r1, _ = tier_low(b); a = r1 + AISLE
+    return max(0, min(UP_N, int((back_r(b) - 1.8 - a) / TREAD + 1e-6)))
+
+
 def tier_up(b):
-    _, _, r1, z1 = tier_low(b); a = r1 + AISLE; z = z1 + SUITE_H + FASCIA_H
-    return a, z, a + UP_N * TREAD, z + UP_N * UP_RISE
+    _, _, r1, z1 = tier_low(b); a = r1 + AISLE; z = z1 + SUITE_H + FASCIA_H; n = up_n(b)
+    return a, z, a + n * TREAD, z + n * UP_RISE
 
 
 def tier_open(b):
@@ -152,10 +173,16 @@ def top_z(b):
     return tier_up(b)[3]
 
 
-def stepped(r0_, z0, n, run, rise, mt='tread', mr='riser'):
+def stepped(r0_, z0, n, run, rise, mt='tread', mr='riser', used=None):
+    """n rows of steps; with used < n the rows past used fold onto the last one (zero size), so every bearing's
+    section has the same points for the sweep."""
     out = []
+    u = n if used is None else used
     for k in range(n):
-        out += [(r0_ + k * run, z0 + (k + 1) * rise, mr), (r0_ + (k + 1) * run, z0 + (k + 1) * rise, mt)]
+        j = min(k, u - 1)
+        if j < 0:
+            out += [(r0_, z0, mr), (r0_, z0, mt)]; continue
+        out += [(r0_ + j * run, z0 + (j + 1) * rise, mr), (r0_ + (j + 1) * run, z0 + (j + 1) * rise, mt)]
     return out
 
 
@@ -165,7 +192,7 @@ def sec_roofed(b):
             + stepped(a0, z0, LOW_N, TREAD, LOW_RISE)
             + [(c0 + OVER, z1, 'conc_light'), (c0 + OVER, z1 + SUITE_H, 'suite_glass'), (c0, z1 + SUITE_H, 'soffit'),
                (c0, e0, 'tier_fascia')]
-            + stepped(c0, e0, UP_N, TREAD, UP_RISE)
+            + stepped(c0, e0, UP_N, TREAD, UP_RISE, used=up_n(b))
             + [(c1 + 1.6, e1, 'conc_light'), (c1 + 1.6, e1 + 1.1, 'parapet'), (c1 + 1.8, e1 + 1.1, 'parapet'),
                (c1 + 1.8, e1 + 0.9, 'parapet'), (rb, e1 + 0.9, 'deck')])
 
@@ -245,7 +272,7 @@ def tiers_at(b):
     if is_open(b):
         a0, z0, a1, z1 = tier_open(b); return [(a0, z0, OPEN_N, TREAD, OPEN_RISE)]
     a0, z0, a1, z1 = tier_low(b); c0, e0, c1, e1 = tier_up(b)
-    return [(a0, z0, LOW_N, TREAD, LOW_RISE), (c0, e0, UP_N, TREAD, UP_RISE)]
+    return [(a0, z0, LOW_N, TREAD, LOW_RISE), (c0, e0, up_n(b), TREAD, UP_RISE)]
 
 
 def blocks():
@@ -384,16 +411,29 @@ def roofed():
     return [s for s in D['stands'] if s['kind'] != 'open']
 
 
+def roof_end(s, key, b):
+    """The roof's end as a bearing by fraction f across it (0 front, 1 back): radial at b unless engie.json gives
+    the stand roof_ends (the north and east roofs end square beside the open end: measured top-down, roofends.py)."""
+    e = s.get('roof_ends', {}).get(key)
+    if not e:
+        return lambda f: b
+    return lambda f: e[0] + (e[1] - e[0]) * f
+
+
 def roof(col):
     mb = MB('roofs')
     for s in roofed():
         b0, b1 = s['b0'] - (0.0 if s['kind'] == 'old' else 1.0), s['b1'] + (0.0 if s['kind'] == 'old' else 1.0)
+        E0, E1 = roof_end(s, 'b0', b0), roof_end(s, 'b1', b1)
         bs = arc(b0, b1, 0.5)
+        # the sheet's bearing grid sheared so each end runs where it was measured (roof_ends: square ends)
+        SB = lambda b, f: E0(f) + (b - b0) / (b1 - b0) * (E1(f) - E0(f))
         RS = lambda b, f: roof_front(b) + (roof_back(b) - roof_front(b)) * f
         fr = np.linspace(0, 1, 9)
         for b_0, b_1 in zip(bs, bs[1:]):
             for f0, f1 in zip(fr, fr[1:]):
-                q = [(b_0, RS(b_0, f0)), (b_1, RS(b_1, f0)), (b_1, RS(b_1, f1)), (b_0, RS(b_0, f1))]
+                q = [(SB(b_0, f0), RS(SB(b_0, f0), f0)), (SB(b_1, f0), RS(SB(b_1, f0), f0)),
+                     (SB(b_1, f1), RS(SB(b_1, f1), f1)), (SB(b_0, f1), RS(SB(b_0, f1), f1))]
                 top = [P3(b, r, roof_top(s, b, r)) for b, r in q]
                 bot = [P3(b, r, roof_top(s, b, r) - ROOF_TH) for b, r in q]
                 kk = math.pi / 180; rm = RS(b_0, 0.5); tu, tv = TILE.get('roof_top', (1, 1))
@@ -401,20 +441,21 @@ def roof(col):
                 mb.face(top, 'roof_top', uv=uv); mb.face(bot[::-1], 'roof_under', uv=uv[::-1])
             # front and back fascias
             for f, m, out in ((0.0, 'fascia', -1), (1.0, 'fascia_back', 1)):
-                a = (b_0, RS(b_0, f)); c = (b_1, RS(b_1, f))
+                a = (SB(b_0, f), RS(SB(b_0, f), f)); c = (SB(b_1, f), RS(SB(b_1, f), f))
                 q = [P3(a[0], a[1], roof_top(s, *a) - ROOF_TH - 0.2), P3(c[0], c[1], roof_top(s, *c) - ROOF_TH - 0.2),
                      P3(c[0], c[1], roof_top(s, *c) + 0.15), P3(a[0], a[1], roof_top(s, *a) + 0.15)]
                 mb.face(q if out < 0 else q[::-1], m)
         for b, sg in ((b0, 1), (b1, -1)):
-            pts = [(roof_front(b) + (roof_back(b) - roof_front(b)) * f) for f in fr]
-            top = [P3(b, r, roof_top(s, b, r) + 0.15) for r in pts]; bot = [P3(b, r, roof_top(s, b, r) - ROOF_TH - 0.2) for r in pts]
+            pts = [(SB(b, f), RS(SB(b, f), f)) for f in fr]
+            top = [P3(bb, r, roof_top(s, bb, r) + 0.15) for bb, r in pts]; bot = [P3(bb, r, roof_top(s, bb, r) - ROOF_TH - 0.2) for bb, r in pts]
             for i in range(len(pts) - 1):
                 q = [bot[i], bot[i + 1], top[i + 1], top[i]]
                 mb.face(q if sg > 0 else q[::-1], 'fascia')
-        roof_under_frame(mb, s, b0, b1)
+        i0, i1 = max(E0(0.0), E0(1.0)), min(E1(0.0), E1(1.0))   # the span every radial part fits inside
+        roof_under_frame(mb, s, i0, i1)
         if s['kind'] != 'old':
-            roof_trusses(mb, s, b0, b1)
-        roof_lights(mb, s, b0, b1)
+            roof_trusses(mb, s, i0, i1)
+        roof_lights(mb, s, i0, i1)
     stays(mb)
     roof_edge_floods(mb)
     mb.build(col)
@@ -1013,7 +1054,9 @@ def seat_list():
                 L = math.radians(b1 - b0) * r; m = int(L // SEAT_W)
                 for i in range(m):
                     b = b0 + math.degrees((i + 0.5) * L / m / r)
-                    rr_a, zz_a, _, rn, rs = tiers_at(b)[ti]
+                    rr_a, zz_a, nn, rn, rs = tiers_at(b)[ti]
+                    if k >= nn:
+                        continue
                     rr = rr_a + (k + 1) * rn - 0.30; zz = zz_a + (k + 1) * rs
                     if any(abs(math.radians(b - a) * rr) < AISLE_W / 2 + 0.2 for a in al):
                         continue
