@@ -375,56 +375,64 @@ def build_club(m):
     ubox(m, "steel_maroon", 0, L, DECK_EDGE - 0.47, DECK_EDGE - 0.23, VER_H - 0.25, VER_H)
     ubox(m, "roof_dark", -0.2, L + 0.2, UPPER - 0.2, DECK_EDGE + 0.5, VER_H, VER_H + 0.18, mats={"bottom": "soffit"})
     ubox(m, "clad_dark", -0.2, L + 0.2, DECK_EDGE + 0.5, DECK_EDGE + 0.56, VER_H - 0.1, VER_H + 0.28)
-    # ---- the folded roof: four gables, ridges across the building, white sheet with a white fascia
-    g = 4
-    gw = L / g
+    # ---- the folded roof: four gables, ridges across the building, white sheet with a white fascia. The folds are
+    # where the satellite's sunlit and shaded slopes meet (0.2 m mosaic): valleys at u 5.4, 15.4, 24.8 and 36.9, the
+    # ridges midway, the north gable the widest, so the highest (one pitch for all, as the photos show); south of
+    # the first gable a flat roof.
+    folds = [5.4, 15.4, 24.8, 36.9, L]
+    pitch = math.tan(math.radians(29.0))
     v0, v1 = WEST - 1.2, DECK_EDGE + 0.4
-    for k in range(g):
-        u0, um, u1 = k * gw, k * gw + gw / 2, (k + 1) * gw
-        for (ua, ha), (ub, hb) in (((u0 - (0.6 if k == 0 else 0), EAVE - (0.17 if k == 0 else 0)), (um, RIDGE)),
-                                   ((um, RIDGE), (u1 + (0.6 if k == g - 1 else 0), EAVE - (0.17 if k == g - 1 else 0)))):
+    ubox(m, "roof_white", -0.6, folds[0], v0, v1, EAVE - 0.6, EAVE - 0.38, mats={"bottom": "roof_soffit"})
+    for k in range(len(folds) - 1):
+        u0, u1 = folds[k], folds[k + 1]
+        um, ridge = (u0 + u1) / 2, EAVE + (u1 - u0) / 2 * pitch
+        last = k == len(folds) - 2
+        for (ua, ha), (ub, hb) in (((u0, EAVE), (um, ridge)),
+                                   ((um, ridge), (u1 + (0.6 if last else 0), EAVE - (0.17 if last else 0)))):
             t = 0.22
             top = [C3(ua, v0, ha + t), C3(ub, v0, hb + t), C3(ub, v1, hb + t), C3(ua, v1, ha + t)]
             bot = [C3(ua, v0, ha), C3(ub, v0, hb), C3(ub, v1, hb), C3(ua, v1, ha)]
             _q(m, "roof_white", top, up=True)
             _q(m, "roof_soffit", bot, up=False)
             # fascia on both cut edges
-            m.quad("steel_white", bot[1], bot[0], top[0], top[1]) if _faces(bot[1], bot[0], top[0], -1) else m.quad("steel_white", top[1], top[0], bot[0], bot[1])
-            m.quad("steel_white", bot[3], bot[2], top[2], top[3]) if _faces(bot[3], bot[2], top[2], 1) else m.quad("steel_white", top[3], top[2], bot[2], bot[3])
+            m.quad("steel_white", bot[1], bot[0], top[0], top[1])
+            m.quad("steel_white", bot[3], bot[2], top[2], top[3])
         # gable infill: glazing to the field, dark cladding to the west, with mullions
         for vv, mat in ((UPPER, "glass"), (WEST, "clad_dark")):
-            a, b, c = C3(u0, vv, EAVE), C3(u1, vv, EAVE), C3(um, vv, RIDGE)
+            a, b, c = C3(u0, vv, EAVE), C3(u1, vv, EAVE), C3(um, vv, ridge)
             m.tri(mat, a, b, c)
             m.tri(mat, a, c, b)
             if mat == "glass":
-                for i in range(1, 8):
-                    uu = u0 + gw * i / 8
-                    hh = EAVE + (RIDGE - EAVE) * (1 - abs(uu - um) / (gw / 2))
+                n = max(4, int(round((u1 - u0) / 1.6)))
+                for i in range(1, n):
+                    uu = u0 + (u1 - u0) * i / n
+                    hh = EAVE + (ridge - EAVE) * (1 - abs(uu - um) / ((u1 - u0) / 2))
                     ubox(m, "frame_dark", uu - 0.04, uu + 0.04, UPPER, UPPER + 0.12, EAVE, hh)
-    # the eaves' valley gutters (box gutters at each fold)
-    for k in range(g + 1):
-        u = k * gw
+    # the box gutters at each fold
+    for u in folds:
         ubox(m, "steel_white", u - 0.25, u + 0.25, v0, v1, EAVE - 0.05, EAVE + 0.1)
-    # ---- tower at the north-west corner: dark grey box with a thin light trim at the top (sign left off)
-    ubox(m, "clad_black", L + 0.3, L + 5.0, 3.5, 8.5, -1.0, 13.8)
-    ubox(m, "steel_galv", L + 0.25, L + 5.05, 3.45, 8.55, 13.8, 13.92)
-    ubox(m, "frame_dark", L + 2.35, L + 2.95, 8.5, 8.6, 1.5, 12.8)
-    # ---- the north stair: along the north end from beside the tower up to the deck; 23 risers, 0.3 m goings,
-    # then a landing at deck level round to the deck; balustrades of dark slats, a stone stringer wall
-    s0 = 9.0
+    # ---- the tower at the north-east corner, on the field side (dark on the mosaic at u 52.6-58, v 20.5-26; the
+    # photo from the north-east shows it standing over the stair's foot): dark grey box, a thin light trim at the top
+    # (sign left off)
+    t0, t1, tv0, tv1, th = L + 0.6, L + 6.0, 20.5, 26.0, 14.5
+    ubox(m, "clad_black", t0, t1, tv0, tv1, -1.0, th)
+    ubox(m, "steel_galv", t0 - 0.05, t1 + 0.05, tv0 - 0.05, tv1 + 0.05, th, th + 0.12)
+    ubox(m, "frame_dark", t0 + 2.0, t0 + 2.6, tv1, tv1 + 0.1, 1.5, th - 1.0)
+    # ---- the north stair: on the field side of the tower, rising south from the ground to the deck's north-east
+    # corner; 23 risers, 0.3 m goings, a landing at deck level onto the deck; dark slat balustrades, a stone stringer
     nr = 23
     rise = (DECK - GF) / (nr + 1)
-    u0s, u1s = L + 0.4, L + 2.9
+    sv0, sv1 = 26.1, 28.6
+    top_u = L + 1.4
+    foot = top_u + nr * 0.3
     for i in range(nr):
-        va = s0 + i * 0.3
-        ubox(m, "concrete_step", u0s, u1s, va, va + 0.3, GF - 0.2, GF + rise * (i + 1))
-    ubox(m, "concrete_step", u0s, u1s, s0 + nr * 0.3, DECK_EDGE, 3.9, DECK, mats={"bottom": "soffit"})
-    ubox(m, "sandstone", u0s, u1s, s0 + nr * 0.3, s0 + nr * 0.3 + 0.4, -0.5, 3.9)
-    for uu in (u0s + 0.05, u1s - 0.05):
-        _balustrade(m, [(uu, s0 - 0.2), (uu, s0 + nr * 0.3)], None, 1.0, slope=(GF, DECK, s0, s0 + nr * 0.3), along_v=True)
-    _balustrade(m, [(u1s - 0.05, s0 + nr * 0.3), (u1s - 0.05, DECK_EDGE - 0.15)], DECK, 1.1)
-    _balustrade(m, [(u1s - 0.05, DECK_EDGE - 0.15), (L - 0.1, DECK_EDGE - 0.15)], DECK, 1.1)
-    ubox(m, "sandstone", u1s, u1s + 0.3, s0, s0 + nr * 0.3, -0.5, GF + 0.3)
+        ub = foot - i * 0.3
+        ubox(m, "concrete_step", ub - 0.3, ub, sv0, sv1, GF - 0.2, GF + rise * (i + 1))
+    ubox(m, "concrete_step", L - 1.2, top_u, DECK_EDGE - 0.2, sv1, 3.9, DECK, mats={"bottom": "soffit"})
+    ubox(m, "sandstone", top_u, foot, sv0 - 0.4, sv0, -0.5, GF + 0.3)
+    for vv in (sv0 + 0.05, sv1 - 0.05):
+        _balustrade(m, [(foot + 0.2, vv), (top_u, vv)], None, 1.0, slope=(GF, DECK, foot, top_u))
+    _balustrade(m, [(top_u, sv1 - 0.05), (L - 1.2, sv1 - 0.05)], DECK, 1.1)
     # ---- the south end: the first floor's glass box over a stone base
     _glass_wall_end(m, 0.0, WEST, UPPER, DECK, EAVE)
 
