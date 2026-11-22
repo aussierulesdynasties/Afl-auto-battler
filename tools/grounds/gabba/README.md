@@ -67,8 +67,12 @@ the model.
 - **Plan**: the inner edge has no size error (best-fit scale 0.992, leftover 0.75 m rms, worst 1.75 m).
   Google Earth puts the whole ground 2.3 m west (dx -2.28 m, dy +0.17 m). The seat front moves with it, so the
   model keeps its origin; ge_compare offsets Google Earth instead.
-- **Bowl**: the lower tier climbs about 0.5 m per metre and its top row is at 7 m (`tier1_top`; it was 13 m).
-  The box level runs from 7.4 m to 10 m, and the upper tier tops out at 19.8 m (`bowl_top`, under the roof).
+- **Bowl**: the upper tier overhangs the lower one. The lower tier rises about 0.45 m per metre to 9 m, 20 rows
+  (`tier1_top`, `lower_split`), and runs on under the upper tier to the glass of the boxes. The upper tier starts
+  at 11 m (`upper_front`, `upper_split`) and rises over 16 rows to 19.8 m (`bowl_top`). That makes 37,286
+  seats, against 37,478 for AFL (Wikipedia; the venue's own page says 42,000, of which 2,609 are corporate). The
+  old bowl had 27 rows and no overhang: 27,994 seats. The build drops any seat with less than 2 m clear over it,
+  as the seat rule does.
 - **Screen**: one screen, at the west end over the goals: 18.8 m wide, 9.0 m to 19.1 m up, centred 4.6 m
   north of the long axis. Google Earth (2023) has no screen at the north, south or east, so the v7 north and
   south screens were removed.
