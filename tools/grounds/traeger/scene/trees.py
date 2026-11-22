@@ -78,7 +78,7 @@ class Forest:
             a0 = rng.uniform(0, 2 * math.pi)
             for i in range(nl):
                 a = a0 + 2 * math.pi * i / nl + rng.normal(0, 0.35)
-                out = rad * rng.uniform(0.55, 0.95)
+                out = rad * rng.uniform(0.45, 0.8)     # with the clusters round each end the leaf reaches the canopy edge
                 end = np.array([e + math.cos(a) * out, crown_y + rad * rng.uniform(-0.15, 0.35), -n + math.sin(a) * out])
                 knee = top + (end - top) * 0.45 + np.array([0, rad * 0.12, 0])
                 if near:
@@ -92,11 +92,14 @@ class Forest:
                     t2 = knee + np.array([math.cos(a2) * rad * 0.35, rad * rng.uniform(0.15, 0.4), math.sin(a2) * rad * 0.35])
                     self._limb(knee, t2, tr * 0.35, tr * 0.15, bark, 3)
                     tips.append((t2, a2))
+        # Clusters big enough to close the crown to Google Earth's fill (QA 2026-11-22: at 0.26-0.36 of the
+        # crown's radius the gums read as lollipops on sticks against Google Earth's wall of canopy); gaps
+        # stay inside each spray (the leaf atlas is a third leaf), so the crown is still open up close.
         for end, a in tips:
-            nc = 2 if near else 1
+            nc = 3 if near else 2
             for k in range(nc):
-                c = end + np.array([rng.normal(0, rad * 0.16), rad * rng.uniform(-0.05, 0.18), rng.normal(0, rad * 0.16)])
-                s = rad * (rng.uniform(0.26, 0.36) if near else rng.uniform(0.42, 0.5))
+                c = end + np.array([rng.normal(0, rad * 0.2), rad * rng.uniform(-0.12, 0.18), rng.normal(0, rad * 0.2)])
+                s = rad * (rng.uniform(0.36, 0.46) if near else rng.uniform(0.5, 0.6))
                 col = LEAF[int(rng.integers(len(LEAF)))]
                 self._clump(c, s, col, rng, np.array([e, crown_y, -n]))
 
