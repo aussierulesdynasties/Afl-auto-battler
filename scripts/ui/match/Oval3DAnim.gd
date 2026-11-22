@@ -74,6 +74,27 @@ const STEP_TIME := 0.22        # s: one shuffle step
 const STEP_LIFT := 0.06        # m: how high the foot comes off the turf in that step
 const LEGS := [["thigh_l", "calf_l", "foot_l", "ball_l"], ["thigh_r", "calf_r", "foot_r", "ball_r"]]
 
+## Kicks, handballs and marks (row 198): the motion-capture clips of each, played so that the
+## frame where boot or fist meets the ball, or the ball meets his hands, lands on the director's
+## touch (clip_moments.json, read off each clip by tools/oval3d/clip_markers.py). The clip starts
+## that long ahead of the touch, while he still holds the ball (MatchDirector.dispose_due) or
+## while it is still in the air to him (catch_due), and its rate steers the contact frame onto
+## the touch as the director's estimate firms up.
+const MOMENTS := "res://assets/oval3d/clip_moments.json"
+const MOVE_RATE_MIN := 0.6     # slowest a kick, handball or mark plays while its touch is coming
+const MOVE_RATE_MAX := 1.6     # fastest
+const GRAVITY := 9.8           # m/s^2: the dropped ball falls to the boot
+const ON_BOOT := 0.09          # m: the ball's centre above the toe bone at contact
+const ON_PALM := 0.08          # m: a handball sits this far above the palm that holds it
+const CATCH_EASE := 0.12       # s of clip before a mark's contact that the ball runs into his hands
+## The director's touch can come before the clip's contact (its estimate of the hold was long, or
+## it gave no warning at all). The ball then stays on his palm or falls to his boot a moment
+## longer while the clip hurries to the contact (launch_pending), never leaving from his hands:
+## at most this much clip time is left to play (any more is cut, eased from the pose he was in).
+const CATCH_UP_MAX := 0.3
+const HOLD_SHORT := 0.02      # clip s short of the contact a move waits at for a late touch
+const CAUGHT_MAX := 2.0       # s a mark taken ahead of the director's possession is kept, at most
+
 var director: MatchDirector
 var players: Array
 ## One record per tackle drawn: who, victim, pair, start_t, event_t, hit_t (the clock when the
@@ -108,6 +129,9 @@ var _legs: Array = []          # bone indices [thigh, calf, foot, ball] per leg,
 ## per player, per foot: {at: world point the ball bone is held at, yaw: node yaw when it came
 ## down, w: 1 held .. 0 the clip's, step: s into a shuffle step (-1 none), from: where it began}
 var _feet: Array = []
+var _launching := -1           # the man whose clip still owes the ball its contact (launch_pending)
+var _tackle_wait := {}         # a tackle that landed mid-kick: {who, victim, at}, started after the contact
+var _moments := {}             # clip -> clip_moments.json entry, plus what _read_moments measures
 
 
 func _init(p_director: MatchDirector, p_players: Array) -> void:
@@ -139,6 +163,7 @@ func _init(p_director: MatchDirector, p_players: Array) -> void:
 			_rig = (n as Node3D).transform * _rig
 			n = n.get_parent()
 		_read_takes(p)
+		_read_moments(p)
 		for name in ["jog", "carry"]:
 			_loop_speed[name] = _measure_loop(p, name)
 		var skel0: Skeleton3D = p["skel"]
@@ -273,6 +298,10 @@ func _add_look(p: Dictionary) -> void:
 ## clip starts now), and every running pair's clip time.
 func frame(dt: float) -> void:
 	_clock += dt
+	if not _tackle_wait.is_empty() and not _mid_move(int(_tackle_wait["who"])) \
+			and not _mid_move(int(_tackle_wait["victim"])):
+		_start(int(_tackle_wait["who"]), int(_tackle_wait["victim"]), true, _tackle_wait["at"])
+		_tackle_wait = {}
 	var ahead := director.tackle_ahead()
 	if not ahead.is_empty() and not _pairs.is_empty():
 		var who := int(ahead["who"])
@@ -285,7 +314,9 @@ func frame(dt: float) -> void:
 			var d := _drawn(who).distance_to(_drawn(v))
 			for name in _pairs:
 				need = maxf(need, _lead(name, d))
-			if due <= need:
+			# A man mid-kick or mid-handball finishes his swing first: the tackle lands on him
+			# after the ball is gone, never cutting the move before boot or fist meets it.
+			if due <= need and not _mid_move(who) and not _mid_move(v):
 				_start(who, v, false)
 	var seen := {}
 	for pr in _in:
@@ -353,10 +384,17 @@ func _hit(pr: Dictionary) -> void:
 ## Start a pair: the take whose tackler comes from nearest where ours is, turned about the
 ## tacklee. `arrived` when the director's contact has already come (the run-in's pace is set
 ## each frame in _advance from the time left).
+## True while his kick or handball clip is still short of its contact (the ball not yet gone).
+func _mid_move(i: int) -> bool:
+	var o: Dictionary = _once[i]
+	return not o.is_empty() and str(o.get("how", "")) in ["kick", "handball"] and float(o["t"]) < float(o["touch"])
+
+
 func _start(who: int, v: int, arrived: bool, at := Vector2.INF) -> void:
 	for i in [who, v]:
 		if not (_in[i] as Dictionary).is_empty():
 			_leave(i)
+		_once[i] = {}
 	var pk: Dictionary = players[who]
 	var pv: Dictionary = players[v]
 	var far := false
@@ -450,10 +488,17 @@ func step(i: int, p: Dictionary, holder: int, pos: Vector2, vel: Vector2, dt: fl
 		return
 	var node: Node3D = p["node"]
 	var o: Dictionary = _once[i]
-	if not o.is_empty() and (float(o["t"]) >= float(o["end"]) or _off_hands(i, o, holder, pos)):
+	if not o.is_empty():
+		o["keep"] = o.has("caught") and holder != i and _clock - float(o["caught"]) < CAUGHT_MAX
+	if not o.is_empty() and not o.get("keep", false) \
+			and (float(o["t"]) >= float(o["end"]) or _off_hands(i, o, holder, pos)):
 		# The clip's end (MatchDirector.SCOOPS): the jog eases in over BLEND.
 		_end_once(i)
 		o = {}
+	if o.is_empty() and (_in[i] as Dictionary).is_empty() and _gap[i] == Vector2.ZERO:
+		o = _move_due(i, holder)
+	elif not o.is_empty() and str(o.get("how", "")) != "" and not o.get("arrived", false):
+		_steer(i, o)
 	if _back[i] != Vector2.INF:
 		# Off the take's ground (the frame after it ends): he stands where his hips were.
 		node.transform = Transform3D(Basis(Vector3.UP, float(_face[i])), node.position)
@@ -471,7 +516,8 @@ func step(i: int, p: Dictionary, holder: int, pos: Vector2, vel: Vector2, dt: fl
 		# The clip carries him from where the scoop began (its own run): his token runs the
 		# same line at the same pace, and any gap left closes as from a take once it ends.
 		var t0 := float(o["t0"])
-		var k := clampf((float(o["t"]) - t0) / (float(o["touch"]) - t0), 0.0, 1.0)
+		var span := float(o["touch"]) - t0
+		var k := 1.0 if span <= 0.001 else clampf((float(o["t"]) - t0) / span, 0.0, 1.0)
 		var spot: Vector2 = (o["at"] as Vector2) + (o["off"] as Vector2) * (1.0 - k)
 		_gap[i] = spot - pos
 		node.position = Vector3(spot.x, 0.0, spot.y)
@@ -541,7 +587,24 @@ func step(i: int, p: Dictionary, holder: int, pos: Vector2, vel: Vector2, dt: fl
 
 ## A scoop at the ball: the clip at its time, facing where the ball lay when it began.
 func _step_once(i: int, p: Dictionary, o: Dictionary, dt: float) -> void:
-	o["t"] = float(o["t"]) + dt
+	if str(o.get("how", "")) == "mark" and not o.get("arrived", false) and director.catch_due(i).is_empty():
+		# The ball has come down (its flight is over) but the director still has him running the
+		# last of the way onto it: the mark is his now, his hands at it this frame (eased, as a
+		# late touch). He plays it out and keeps the ball until the director hands it to him,
+		# never standing frozen with his hands up nor the ball waiting in the air for him.
+		_arrive(i, o)
+		o["rate"] = 1.0
+		o["caught"] = _clock
+		o["keep"] = true
+	var t := float(o["t"]) + dt * float(o.get("rate", 1.0))
+	if o.has("caught") and o.get("keep", false):
+		t = minf(t, float(o["end"]))
+	if str(o.get("how", "")) != "" and not o.get("arrived", false) and t > float(o["touch"]) - HOLD_SHORT:
+		# The director's hold ran longer than its estimate: he waits a frame short of the contact
+		# (boot or hands not through the ball before the ball leaves or arrives).
+		o["held"] = float(o.get("held", 0.0)) + dt
+		t = maxf(float(o["t"]), float(o["touch"]) - HOLD_SHORT)
+	o["t"] = t
 	var ap: AnimationPlayer = p["anim"]
 	(p["node"] as Node3D).rotation.y = float(o["yaw"])
 	if ap.current_animation != str(o["anim"]):
@@ -549,6 +612,10 @@ func _step_once(i: int, p: Dictionary, o: Dictionary, dt: float) -> void:
 	ap.seek(minf(float(o["t"]), ap.current_animation_length), true)
 	_rate[i] = 1.0
 	_ease(i, p, dt)
+	# The clip carries his hips off its origin (a kick's run-through, a scoop): his ring stays
+	# under him, as in a take.
+	var hips := _rig * (p["skel"] as Skeleton3D).get_bone_global_pose(_pelvis)
+	(p["ring"] as Node3D).position = Vector3(hips.origin.x, 0.03, hips.origin.z)
 	_look_at_ball(i, false, dt)
 
 
@@ -956,11 +1023,34 @@ func event(i: int, kind: StringName, at: Vector2, other := -1) -> void:
 		_once[i] = {"anim": str(sc["clip"]), "t": t0, "t0": t0, "touch": float(sc["touch"]),
 				"end": float(sc["end"]), "yaw": yaw, "at": spot, "off": here - fw * run - spot}
 		return
-	if not (_once[i] as Dictionary).is_empty():
+	var o: Dictionary = _once[i]
+	if kind in [&"kick", &"handball", &"mark"]:
+		if not o.is_empty() and str(o.get("how", "")) == str(kind):
+			# The touch his clip was steering for: from here it plays at its own pace, and a
+			# late clip jumps to its contact (eased from the pose he was in), never the ball
+			# leaving or landing before boot, fist or hands are there.
+			_arrive(i, o)
+			return
+		if (_in[i] as Dictionary).is_empty() and kind != &"mark":
+			# No warning (the director gave no hold before it): the clip from CATCH_UP_MAX
+			# before its contact, eased in from his stride, the ball held until boot or fist
+			# meets it.
+			if not o.is_empty():
+				_end_once(i)
+			var clip := _move_clip(i, str(kind))
+			if clip != "":
+				_start_move(i, clip, CATCH_UP_MAX, at, false)
+				_arrive(i, _once[i])
+			return
+	if not o.is_empty():
 		_end_once(i)
 	if kind == &"tackle" and other >= 0 and other < _in.size() and not _pairs.is_empty():
 		var pr: Dictionary = _in[i]
 		if pr.is_empty() or int(pr["who"]) != i or int(pr["victim"]) != other:
+			if _mid_move(i) or _mid_move(other):
+				# He is tackled as he kicks: the swing finishes (the ball off his boot) first.
+				_tackle_wait = {"who": i, "victim": other, "at": at}
+				return
 			_start(i, other, true, at)
 			return
 		pr["arrived"] = true
@@ -975,3 +1065,248 @@ func event(i: int, kind: StringName, at: Vector2, other := -1) -> void:
 		return
 	if not pr2.is_empty():
 		_leave(i)
+
+
+## The clip each move plays: a kick off his own foot (the player's "foot", right unless his
+## record says left; a left-footer has a left-foot take), on the run or from a walk; a handball;
+## a mark at the height the ball comes to him.
+func _move_clip(i: int, how: String, high := true) -> String:
+	var pick := ""
+	match how:
+		"kick":
+			if str(players[i].get("foot", "R")) == "L":
+				pick = "kick_on_run_02_run"
+			elif (_pace[i] as Vector2).length() > RUN_FROM:
+				pick = "kick_on_run_03"
+			else:
+				pick = "drop_punt_02"
+		"handball":
+			pick = "handball_on_run_01"
+		"mark":
+			pick = "overhead_mark_01" if high else "chest_mark_02"
+	return pick if _moments.has(pick) else ""
+
+
+## Each move clip's contact, measured once on the first figure as the game draws him: where the
+## boot (its top, where the ball meets it) or the palms are at the contact frame, the way the
+## swing or reach goes then (the clip's own aim, turned onto the target when played), and how high
+## his palms hold the ball when the clip starts (where a dropped ball falls from).
+func _read_moments(p: Dictionary) -> void:
+	var res = load(MOMENTS)
+	if not res is JSON:
+		return
+	var ap: AnimationPlayer = p["anim"]
+	var data: Dictionary = (res as JSON).data
+	for name in data:
+		if not ap.has_animation(name):
+			continue
+		var m: Dictionary = (data[name] as Dictionary).duplicate()
+		var c := float(m["contact"])
+		ap.play(name)
+		ap.seek(c, true)
+		var at := _limb(p, str(m["limb"]))
+		var hips := _clip_hips(ap, name, c).origin
+		ap.seek(maxf(c - STEP, 0.0), true)
+		var swing := at - _limb(p, str(m["limb"]))
+		if str(m["kind"]) == "mark":
+			swing = at - hips    # he faces the ball he marks
+		ap.seek(float(m["start"]), true)
+		var palms := _palms(p)
+		m["at"] = at
+		m["hips_c"] = Vector2(hips.x, hips.z)
+		m["aim"] = atan2(swing.x, swing.z)
+		m["palm_h"] = (palms[0] + palms[1]).y * 0.5
+		_moments[name] = m
+	ap.play("idle")
+
+
+## A ball-handling bone's point in the figure's space: a boot's top or a palm (60% along the
+## hand bone, the point Oval3D._hold_ball uses).
+func _limb(p: Dictionary, limb: String) -> Vector3:
+	var skel: Skeleton3D = p["skel"]
+	if limb.begins_with("hand"):
+		var palms := _palms(p)
+		return (palms[0] + palms[1]) * 0.5
+	var pose := skel.get_bone_global_pose(skel.find_bone(limb))
+	return _rig * pose.origin + Vector3.UP * ON_BOOT
+
+
+## Both palms in the figure's space, [left, right].
+func _palms(p: Dictionary) -> Array:
+	var skel: Skeleton3D = p["skel"]
+	var out := []
+	for k in range(2):
+		var b := int((p["hands"] as Array)[k])
+		var pose := skel.get_bone_global_pose(b)
+		out.append(_rig * (pose.origin + pose.basis.y.normalized() * float(p["hand_len"][k]) * 0.6))
+	return out
+
+
+## A kick or handball coming from his hands, or a mark coming to them, close enough that its
+## clip's lead from start to contact covers it: the clip starts.
+func _move_due(i: int, holder: int) -> Dictionary:
+	if _moments.is_empty():
+		return {}
+	var due := director.dispose_due(i) if i == holder else director.catch_due(i)
+	if due.is_empty():
+		return {}
+	var how := str(due["how"])
+	var clip := _move_clip(i, how, float(due.get("h", 2.4)) > 1.8)
+	if clip == "":
+		return {}
+	var m: Dictionary = _moments[clip]
+	if float(due["left"]) > float(m["contact"]) - float(m["start"]):
+		return {}
+	_start_move(i, clip, float(due["left"]), due.get("aim", Vector2.INF), false, due.get("from", Vector2.INF))
+	return _once[i]
+
+
+## Start a move clip `left` seconds before its contact. A kick or handball keeps his hips on the
+## line he is running (where he will be at the contact), turned so the swing goes at `aim`; a
+## mark puts his hands where the ball comes down (`aim`), facing back up its flight (`from`).
+## His hips start where they are and ease onto the clip's own line by the contact (as a scoop).
+func _start_move(i: int, clip: String, left: float, aim: Vector2, late: bool, from := Vector2.INF) -> void:
+	var p: Dictionary = players[i]
+	var m: Dictionary = _moments[clip]
+	var node: Node3D = p["node"]
+	var c := float(m["contact"])
+	var t0 := c if late else clampf(c - left, float(m["start"]), c)
+	var here := Vector2(node.position.x, node.position.z)
+	var how := "mark" if str(m["kind"]) == "mark" else str(m["kind"])
+	var yaw := node.rotation.y
+	var spot := here
+	if how == "mark":
+		var land: Vector2 = aim if aim != Vector2.INF else here
+		var back: Vector2 = (from - land) if from != Vector2.INF else Vector2.ZERO
+		if back.length() > 0.5:
+			yaw = atan2(back.x, back.y) - float(m["aim"])
+		var at: Vector3 = m["at"]
+		spot = land - Vector2(at.x, at.z).rotated(-yaw)
+	else:
+		var meet := here + (_pace[i] as Vector2) * left
+		var to: Vector2 = (aim - meet) if aim != Vector2.INF else Vector2.ZERO
+		if to.length() > 1.0:
+			yaw = atan2(to.x, to.y) - float(m["aim"])
+		spot = meet - (m["hips_c"] as Vector2).rotated(-yaw)
+	var ap: AnimationPlayer = p["anim"]
+	var h0 := _clip_hips(ap, clip, t0).origin
+	var hips_now := _hips_world(p).origin
+	var off := Vector2(hips_now.x, hips_now.z) - (spot + Vector2(h0.x, h0.z).rotated(-yaw))
+	_snap(i, p)
+	_once[i] = {"anim": clip, "t": t0, "t0": t0, "touch": c, "end": float(m["end"]), "yaw": yaw,
+			"at": spot, "off": off if t0 < c else Vector2.ZERO, "how": how, "rate": 1.0,
+			"arrived": false, "kind": str(m["kind"])}
+
+
+## Before the touch, the clip's rate steers its contact onto the director's latest estimate.
+func _steer(i: int, o: Dictionary) -> void:
+	var due := director.dispose_due(i) if str(o["how"]) != "mark" else director.catch_due(i)
+	if due.is_empty():
+		return
+	var to_go := float(o["touch"]) - float(o["t"])
+	o["rate"] = clampf(to_go / maxf(float(due["left"]), 0.02), MOVE_RATE_MIN, MOVE_RATE_MAX)
+
+
+## Where the ball is drawn while his kick or handball has it (Oval3D draws it there), INF while
+## it is simply between his palms. A handball sits on the palm that holds it until the fist goes
+## through it. A kick's ball leaves both hands as late as it can still fall to the boot by the
+## contact, and falls (gravity, from his palms to the top of his boot) to meet it.
+func ball_at(i: int) -> Vector3:
+	if i < 0 or i >= _once.size():
+		return Vector3.INF
+	var o: Dictionary = _once[i]
+	if o.is_empty() or not str(o.get("kind", "")) in ["kick", "handball"]:
+		return Vector3.INF
+	var p: Dictionary = players[i]
+	var m: Dictionary = _moments[str(o["anim"])]
+	var node: Node3D = p["node"]
+	var t := float(o["t"])
+	var c := float(o["touch"])
+	var xf := node.transform
+	if t >= c:
+		return xf * _limb(p, str(m["limb"]))
+	if str(o["kind"]) == "handball":
+		var palms := _palms(p)
+		var hold: Vector3 = palms[1] if str(m["limb"]) == "hand_l" else palms[0]
+		return xf * hold + Vector3.UP * ON_PALM
+	var at: Vector3 = m["at"]
+	var fall := sqrt(2.0 * maxf(float(m["palm_h"]) - at.y, 0.05) / GRAVITY)
+	var rel := c - fall
+	if t < rel:
+		return Vector3.INF
+	if not o.has("drop"):
+		var palms := _palms(p)
+		o["drop"] = xf * ((palms[0] + palms[1]) * 0.5)
+		o["drop_t"] = t
+	var from: Vector3 = o["drop"]
+	var to := xf * at
+	var span := maxf(c - float(o["drop_t"]), 0.01)
+	var tau := t - float(o["drop_t"])
+	var u := clampf(tau / span, 0.0, 1.0)
+	var v0 := (to.y - from.y + 0.5 * GRAVITY * span * span) / span
+	return Vector3(lerpf(from.x, to.x, u), from.y + v0 * tau - 0.5 * GRAVITY * tau * tau, lerpf(from.z, to.z, u))
+
+
+## The man who has marked the ball before the director gives it to him (see _step_once): the
+## ball is drawn in his hands. -1 when there is none.
+func caught() -> int:
+	for i in range(_once.size()):
+		var o: Dictionary = _once[i]
+		if not o.is_empty() and o.has("caught") and o.get("keep", true):
+			return i
+	return -1
+
+
+## A mark's last CATCH_EASE before its contact: the ball comes the rest of the way into his
+## hands. {} when nobody's mark is that close. {to: between his palms, w: 0..1 of the way}.
+func catch_at() -> Dictionary:
+	for i in range(_once.size()):
+		var o: Dictionary = _once[i]
+		if o.is_empty() or str(o.get("kind", "")) != "mark" or o.get("arrived", false):
+			continue
+		var to_go := float(o["touch"]) - float(o["t"])
+		if to_go > CATCH_EASE:
+			continue
+		var p: Dictionary = players[i]
+		var palms := _palms(p)
+		return {"to": (p["node"] as Node3D).transform * ((palms[0] + palms[1]) * 0.5),
+				"w": 1.0 - clampf(to_go / CATCH_EASE, 0.0, 1.0)}
+	return {}
+
+
+## The director's touch for his move: a clip still short of its contact plays out at its fastest
+## (a mark's at once: the ball is in his hands), whatever is left past CATCH_UP_MAX is cut.
+func _arrive(i: int, o: Dictionary) -> void:
+	o["arrived"] = true
+	var to_go := float(o["touch"]) - float(o["t"])
+	if to_go <= 0.0:
+		o["rate"] = 1.0
+		return
+	if str(o["how"]) == "mark" or to_go > CATCH_UP_MAX:
+		_snap(i, players[i])
+		o["t"] = float(o["touch"]) - (0.0 if str(o["how"]) == "mark" else CATCH_UP_MAX)
+	o["rate"] = MOVE_RATE_MAX
+	if str(o["how"]) != "mark":
+		_launching = i
+
+
+## The man whose kick or handball the director has already let go but whose clip has not reached
+## its contact yet: where the ball is drawn until it does (on his palm, or falling to his boot).
+## INF when there is none.
+func launch_pending() -> Vector3:
+	if _launching < 0:
+		return Vector3.INF
+	var o: Dictionary = _once[_launching]
+	if o.is_empty() or not str(o.get("kind", "")) in ["kick", "handball"] or o.get("launched", false):
+		_launching = -1
+		return Vector3.INF
+	if float(o["t"]) >= float(o["touch"]):
+		# The contact frame itself: on the boot or fist, then the flight takes it.
+		o["launched"] = true
+	var at := ball_at(_launching)
+	if at == Vector3.INF:
+		# Still between his palms (a cut clip short of its drop).
+		var palms := _palms(players[_launching])
+		at = (players[_launching]["node"] as Node3D).transform * ((palms[0] + palms[1]) * 0.5)
+	return at
+

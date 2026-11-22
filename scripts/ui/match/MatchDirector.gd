@@ -877,11 +877,20 @@ func _hold(k: int, who: int) -> Dictionary:
 		dur = 0.12 + _rng.randf_range(0.0, 0.08)
 	var nk := _next_real(k)
 	var carry := Vector2.INF
+	var how := ""
 	if nk >= 0 and who >= 0:
 		var nev: Dictionary = events[nk]
 		var nkind := str(nev.get("kind", ""))
 		if nkind == "tackle" or nkind == "pressure":
 			return {"t": "hold", "who": who, "dur": 0.05}
+		if _restart(nk) == "open" and _loc(k).distance_to(_loc(nk)) >= FLIGHT_MIN:
+			# The next beat opens with the ball off his boot or fist (_possession_phases: a
+			# handball when this event is one, else a kick). The 3D view starts his kick or
+			# handball ahead of it (Oval3DAnim), so the hold lasts at least the move's own
+			# wind-up: a real footballer takes the ball and gets it on his boot in about half a
+			# second, never in the tenth of a second the hold had.
+			how = "handball" if kind == "handball" else "kick"
+			dur = maxf(dur, (HANDBALL_LEAD if how == "handball" else KICK_LEAD) * TEMPO)
 		if (DISPOSALS.has(nkind) or nkind == "inside50" or nkind == "clanger") \
 				and _restart(nk) == "open" and int(nev.get("side", -1)) == int((events[k] as Dictionary).get("side", -2)):
 			# The carrier runs on toward the next contest before disposing,
@@ -894,9 +903,68 @@ func _hold(k: int, who: int) -> Dictionary:
 				# 30 m flick drawn as a kick.
 				var dish := there + (here - there).normalized() * HANDBALL_DISH
 				return {"t": "hold", "who": who, "dur": dur, "carry": dish, "run": true,
-						"max": (gap - HANDBALL_DISH) / float(tokens[who]["top"]) * 1.6 + 0.5}
+						"max": (gap - HANDBALL_DISH) / float(tokens[who]["top"]) * 1.6 + 0.5, "how": how,
+						"aim": there}
 			carry = here + (there - here).limit_length(minf(10.0, gap * 0.3))
-	return {"t": "hold", "who": who, "dur": dur, "carry": carry, "pause": kind == "mark"}
+	return {"t": "hold", "who": who, "dur": dur, "carry": carry, "pause": kind == "mark", "how": how,
+			"aim": _loc(nk) if how != "" else Vector2.INF}
+
+
+## The kick or handball the ball's holder is about to make, and how long until the ball leaves
+## him, in seconds of the picture (the director's clock runs TEMPO times faster). {} when the
+## current phase is not his hold before a disposal (_hold's "how"). A running hold ends when
+## he reaches his spot (or its time runs out); a standing one when its time does.
+func dispose_due(who: int) -> Dictionary:
+	if _pi >= _phases.size():
+		return {}
+	var p: Dictionary = _phases[_pi]
+	if str(p.get("t", "")) != "hold" or int(p.get("who", -1)) != who or str(p.get("how", "")) == "":
+		return _flight_ahead(who)
+	var left := maxf(0.0, float(p.get("dur", 0.0)) - _pt)
+	if p.get("run", false):
+		var t: Dictionary = tokens[who]
+		var d := maxf(0.0, (t["pos"] as Vector2).distance_to(p["carry"]) - 1.5)
+		var pace := maxf((t["vel"] as Vector2).length(), 0.5 * float(t.get("top", 7.0)))
+		left = d / maxf(pace, 1.0)
+		if p.has("max"):
+			left = minf(left, maxf(0.0, float(p["max"]) - _pt))
+	return {"how": str(p["how"]), "left": left / TEMPO, "aim": p.get("aim", Vector2.INF)}
+
+
+## The same for a kick or handball later in this beat (a free kick's or kick-in's taker, who
+## holds or waits with the ball before it): the phases up to the flight are only waits and holds
+## with their own times.
+func _flight_ahead(who: int) -> Dictionary:
+	if str(ball.get("mode", "")) != "held" or int(ball.get("holder", -1)) != who:
+		return {}
+	var left := 0.0
+	for k in range(_pi, _phases.size()):
+		var q: Dictionary = _phases[k]
+		var t := str(q.get("t", ""))
+		var own := maxf(0.0, float(q.get("dur", 0.0)) - (_pt if k == _pi else 0.0))
+		if t == "flight":
+			var how := str(q.get("how", "kick"))
+			if (how != "kick" and how != "handball") or int(q.get("recv", -1)) == who:
+				return {}
+			return {"how": how, "left": left / TEMPO, "aim": q["to"]}
+		if t not in ["wait", "hold"] or q.get("run", false) or int(q.get("who", who)) != who:
+			return {}
+		left += own
+	return {}
+
+
+## A mark coming to `who`: the ball in flight to him in a beat he marks, how long until it
+## reaches him (picture seconds), where it comes down, where it is now and how it comes (a high
+## or contested ball is taken overhead, a flatter one on the chest). {} otherwise.
+func catch_due(who: int) -> Dictionary:
+	if _pi >= _phases.size() or str(_beat.get("kind", "")) != "mark":
+		return {}
+	var p: Dictionary = _phases[_pi]
+	if str(p.get("t", "")) != "flight" or int(p.get("recv", -1)) != who:
+		return {}
+	var high: bool = float(p.get("apex", 0.0)) >= MARK_HIGH_APEX or bool(p.get("contest", false))
+	return {"how": "mark", "left": maxf(0.0, float(p["dur"]) - _pt) / TEMPO, "aim": p["to"],
+			"from": ball["pos"], "h": 2.4 if high else 1.3}
 
 
 func _centre_phases(k: int, a: int, loc: Vector2) -> Array:
@@ -2182,6 +2250,14 @@ const KICK_HANG_MAX := 3.0
 const FLIGHT_MIN := 1.0
 ## A handball stays flat: it never hangs more than this much longer.
 const HANDBALL_HANG_MAX := 1.8
+## Picture seconds a kick and a handball take from the ball in both hands to its leaving him
+## (assets/oval3d/clip_moments.json: contact minus start of the clips the 3D view plays, the
+## longest of them, so every one fits).
+const KICK_LEAD := 0.67
+## A kick to a mark that goes this high (m at its top) or is contested is taken overhead; a
+## flatter one is a chest mark.
+const MARK_HIGH_APEX := 9.0
+const HANDBALL_LEAD := 0.3
 ## A receiver still short of a ball this close gets one bobble toward him.
 const ROLL_REACH := 8.0
 ## The share of the gap that bobble covers: it is aimed once, at release, and
@@ -2622,6 +2698,10 @@ func _touch(p: Dictionary) -> void:
 			var who := int(ball["holder"]) if str(ball["mode"]) == "held" else -1
 			if how == &"ruck_tap":
 				who = _nearest_ruck(ball["pos"])
+			if who >= 0 and int(p.get("recv", -1)) == who:
+				# The ball moved to its own holder (a free kick paid to the man with it, the ball
+				# set where the free is): nobody kicks it.
+				who = -1
 			_last_how = how if who >= 0 else &""
 			if who >= 0:
 				_contact(who, how, p["to"])

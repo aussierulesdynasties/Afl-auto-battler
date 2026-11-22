@@ -87,6 +87,9 @@ var _turf_mat: ShaderMaterial  # the turf's paint (oval3d_ground.gdshader)
 var _crowd_t := 0.0           # s of match the crowd has run (its idle and cheer clock)
 var _goal_on := false          # the director was showing a goal last frame
 var _look := Vector3.ZERO
+var _launch_from := Vector3.ZERO  # where the ball left a boot or fist
+var _launch_t := -1.0             # s since it did, -1 once it has joined the flight's line
+const LAUNCH_EASE := 0.12         # s: from boot or fist onto the director's flight
 var _in_hands := false         # the ball was drawn in a man's hands last frame
 var _drop_from := Vector3.ZERO # where it left his hands
 var _drop_t := -1.0            # s into its fall to the turf; -1 when not falling
@@ -210,12 +213,30 @@ func sync(dt: float) -> void:
 	if _ump_ball:
 		# An umpire has it: never a player standing within a metre of it.
 		holder = -1
+	var pending := anim.launch_pending()
 	if _umpire_ball(dt):
 		_in_hands = true
 		_on_turf = false
 		_drop_t = -1.0
+	elif pending != Vector3.INF:
+		# Let go by the director a moment before his boot or fist gets there: still his.
+		ball.position = pending
+		_in_hands = true
+		_on_turf = false
+		_drop_t = -1.0
+	elif holder < 0 and anim.caught() >= 0:
+		# Marked: in his hands while the director still has him running onto it.
+		_hold_ball(players[anim.caught()])
+		_in_hands = true
+		_on_turf = false
+		_drop_t = -1.0
 	elif holder >= 0 and holder < players.size():
-		_hold_ball(players[holder])
+		var on_him := anim.ball_at(holder)
+		if on_him != Vector3.INF:
+			# His kick or handball has it: on the holding palm, or dropped to his boot.
+			ball.position = on_him
+		else:
+			_hold_ball(players[holder])
 		_in_hands = true
 		_on_turf = false
 		_drop_t = -1.0
@@ -223,6 +244,21 @@ func sync(dt: float) -> void:
 		var to := Vector3(bp.x, BALL_R if resting else maxf(BALL_R, h), bp.y)
 		if mode == "flight":
 			_drop_t = -1.0
+			if _in_hands:
+				# Off his boot or fist: the flight starts where the ball met it and joins the
+				# director's line over LAUNCH_EASE (the line starts at his token, hand height).
+				_launch_from = ball.position
+				_launch_t = 0.0
+			if _launch_t >= 0.0 and dt > 0.0:
+				_launch_t += dt
+				var w := smoothstep(0.0, LAUNCH_EASE, _launch_t)
+				to = _launch_from.lerp(to, w)
+				if w >= 1.0:
+					_launch_t = -1.0
+			var catch := anim.catch_at()
+			if not catch.is_empty():
+				# The last of its flight into the marking hands.
+				to = to.lerp(catch["to"], float(catch["w"]))
 		elif _in_hands and dt > 0.0 and ball.position.distance_to(to) > DROP_SNAP:
 			# Out of his hands onto the turf (a spill from a tackle, a fumble, a man walking off a
 			# dead ball): it falls from where his hands had it, never jumps there in one frame.
@@ -666,6 +702,7 @@ func _dress(p: Dictionary, t: Dictionary) -> void:
 	p["pid"] = pid
 	_number(p, int(t.get("num", -1)))
 	var who = GameDB.player_by_id(pid) if pid != "" else null
+	p["foot"] = str((who as Dictionary).get("foot", "R")) if who is Dictionary else "R"
 	look(p, GameDB.figure_look(who) if who != null else StoppageVignette.UMPIRE_LOOK)
 	# His own Tripo head, where the director made one (rule 2.99): the MetaHuman head comes off.
 	_head(p, pid)

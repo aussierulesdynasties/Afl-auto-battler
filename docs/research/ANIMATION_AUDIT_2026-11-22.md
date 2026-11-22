@@ -1,0 +1,92 @@
+# Animation audit, 2026-11-22 (row 198)
+
+Every clip the 3D match can play, where it came from, and how it compares with the real footage it was
+made from. Each rating comes from comparing the clip side by side with its source footage. The
+comparison sheets are the director's own `retargeted/videos/*.mp4`, stills at the same moments. The
+Wired column says whether a match plays the clip yet.
+
+Ratings:
+
+- **Good:** reads as the real move at game distance.
+- **Fair:** the right move, with a visible flaw.
+- **Poor:** a viewer would notice something wrong.
+- **Out:** not fit to play.
+
+## Where the motion comes from
+
+| Source | Clips | Licence position |
+| --- | --- | --- |
+| Rokoko Vision, from broadcast and Getty training footage (the director's footage, bible rule 2.74) | 21 AFL clips in `player_mh.glb`, 3 more on the PC (`rokoko new 2026-11-15`) | Rokoko claims no ownership of output. The footage's own rights are the grey area. The director accepted that risk on 2026-11-22. |
+| Epic GASP (Game Animation Sample) | `jog`, `carry` and `idle` (every running and standing frame), plus 12 tackle pairs | Fab's GASP listing reads "UE-Only Content". Never add more. The removal of the tackles is held until the director's final call. The jog and idle need replacing before GASP can go. |
+| Mixamo | 57 FBX on the PC (injuries, get-ups, cheering), none in the game | Mixamo allows use in games. Redistributing the standalone FBX is not allowed, so a clip ships only baked into our own GLB. |
+
+## Clips matches play
+
+| Clip | Use | Rating | Notes |
+| --- | --- | --- | --- |
+| `jog`, `carry` (GASP) | every run | Good | Generic Unreal motion. Reads well, but nothing about it is AFL. |
+| `idle` (GASP) | every stand | Good | Generic. |
+| `ground_ball_run_01`, `ground_ball_run_grimes_01` | scoops | Good | Already timed to the touch (#1989 and others). |
+| 12 GASP tackle pairs | tackles | Fair | Two-man takes with real contact. They are soccer and NFL-style grabs, not an AFL wrap-and-sling. |
+| `umpire_bounce_01` | centre bounce | Fair | The hips stay above 0.89 m all the way through (measured), so the umpire does not lie down. He leans far over in the follow-through. |
+| `kick_on_run_03` | right-foot kick, on the run **(wired today)** | Fair | The body follows the source well. The follow-through leg stops lower than the real kicker's. |
+| `kick_on_run_02_run` | left-foot kick **(wired today)** | Fair | Same: a short follow-through. |
+| `drop_punt_02` | set-up kick, walking in **(wired today)** | Good | A high follow-through, matching the source. |
+| `handball_on_run_01` | handball **(wired today)** | Poor | The punching fist barely travels. The source's punch is a hard drive, but the retarget turns it into a push. Needs a remake. |
+| `chest_mark_02` | chest mark **(wired today)** | Fair | The arms and body match. The fingers are not modelled, so the hands look flat round the ball. |
+| `overhead_mark_01` | overhead mark **(wired today)** | Good | Hands overhead, a good stretch. |
+
+## Clips not wired yet
+
+| Clip | Rating against source | Next step |
+| --- | --- | --- |
+| `ruck_jump_01` | Fair: feet 0.7 m off the turf | Wire to the ruck tap (needs a two-ruck contest, not one man) |
+| `ruck_centre_nicnat_01`, `ruck_ump_nicnat_01` (PC) | Poor: the source is a wide broadcast shot, the leap barely leaves the ground | Remake from a closer source |
+| `spoil_rance_01`, `spoil_rance_02` | Fair: the fist goes up and through | Wire to the spoil contact |
+| `bump_contest_01`, `bump_finals_01` | Fair: shoulder-in, low centre | Wire as one-man shepherds and bumps |
+| `dive_finals_01` | Poor: wide shot, the body twists oddly at the ground | Remake |
+| `banana_ablett_01/02`, `snap_ablett_01` | Fair | Goal-kick variants: wire after kicks settle |
+| `run_bounce_01`, `run_with_ball_01/03` | Fair | Run-and-bounce needs a ball path off the turf |
+| `dribble_ablett_01`, `ground_ball_01/04`, `dont_argue_01`, `mark_and_kick_jog_01`, `drop_punt_ablett_side`, `kick_on_run_01/02/04` | Fair to Poor | `kick_on_run_04` starts with his hands apart, so the ball would hover. Keep it out. |
+
+## What wiring did today
+
+`tools/oval3d/clip_markers.py` reads each move's contact frame off the motion: the fastest boot, the
+palms closest together, or the hands highest. The match then starts the clip so that this frame lands
+on the director's touch. Measured with `tools/visual/measure_oval3d_moves.gd` over 120 s, seed 31:
+
+| Move | With the clip | Ball to boot or palms at the touch | Picture behind the touch |
+| --- | --- | --- | --- |
+| Kick | 40 of 40 | 0.000 m | median 0.017 s |
+| Handball | 12 of 12 | 0.000 m | median 0.017 s |
+| Mark | 9 of 11 | 0.000 m | median 0.017 s |
+
+The 2 marks without a clip are one taken inside a ground-ball scoop (correct as drawn) and one mark
+the director gives with no warning. A no-warning mark needs a catch-up clip; that is open.
+
+Faults found and fixed on the way:
+
+- A tackle cut a kick off mid-swing, and the ball left with no boot on it. A tackle now waits until
+  the contact.
+- A free kick paid to the man already holding the ball was drawn as a kick. It is no longer a kick.
+- A marker whose director run-in was late stood frozen with his hands up for up to 1.2 s. He now takes
+  the ball as it arrives and keeps it.
+
+## Sourcing plan for the gaps
+
+The director ruled out filming (2026-11-22: "yeah nah, thats not feasible"). Every route below needs
+nothing physical from him. Licences were checked first. The terms are quoted from each source's own
+page, as read on 2026-11-22.
+
+| Gap | Route | Licence (quoted) | Cost |
+| --- | --- | --- | --- |
+| AFL moves: remakes (handball, ruck), new tackles, umpire signals, the helped-off injury | Broadcast clip → Rokoko Vision → MetaHuman retarget (the existing pipeline) | Rokoko terms 3.1/6.3: "we do not claim ownership over any User Content". Footage risk accepted by the director. | Free tier 30 s a month. Basic is $12 a month for 600 s, which needs the director's yes. |
+| The same, without the per-second limit | Our own video-to-motion: MediaPipe pose → MetaHuman skeleton bake, in the cloud. Proved by a round trip on our own rendered clips before it is trusted. | MediaPipe: Apache-2.0 | None |
+| Replacing the GASP jog, carry and idle (so Epic can leave the repo) | 100STYLE locomotion dataset | CC BY 4.0: "For creative or commercial work please credit" | None (credit in the game) |
+| Extra general motion | CMU motion capture database | CMU FAQ: "may be copied, modified, or redistributed without permission" | None |
+| Injuries, get-ups, crowd and bench reactions | Mixamo, baked into our own GLB | "royalty free for personal, commercial, and non-profit projects including... Create video games". No standalone FBX in the repo. | None |
+
+Ruled out:
+
+- Move One: its EULA 7.1.2 makes Move AI the owner of the output.
+- GVHMR, the SMPL-based models and opencap-monocular: non-commercial licences.
