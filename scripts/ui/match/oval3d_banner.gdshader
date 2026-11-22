@@ -1,8 +1,8 @@
 shader_type spatial;
 render_mode cull_disabled, depth_draw_opaque;
 // The run-through banner's crepe paper (Oval3DBanner): one piece of the printed face per
-// instance. INSTANCE_CUSTOM.xy: its corner of the face; .z: 1 while it is still held up, when
-// the breeze ripples it; .w: which of its edges are torn (1 left, 2 right, 4 bottom, 8 top) and
+// instance (Oval3DBannerCloth lays each cell between its points). INSTANCE_CUSTOM.xy: its corner
+// of the face; .z: 1 to ripple it in the shader (unused: the cloth has its own breeze); .w: which of its edges are torn (1 left, 2 right, 4 bottom, 8 top) and
 // 16 once it lies crumpled on the grass. A torn edge is ragged, never the piece's straight cut;
 // crepe shows its fine crinkle, the joins between its strips, and lets light through from behind.
 
@@ -38,7 +38,7 @@ float noise1(float x) {
 
 // How far in from a torn edge the paper is gone here (a share of the piece).
 float bite(float along, float seed) {
-	return 0.03 + 0.20 * noise1(along * 9.0 + seed) + 0.08 * noise1(along * 31.0 + seed * 1.7);
+	return 0.02 + 0.13 * noise1(along * 9.0 + seed) + 0.06 * noise1(along * 31.0 + seed * 1.7);
 }
 
 void fragment() {
@@ -49,8 +49,8 @@ void fragment() {
 		float gy = face_uv.y * cells.y;
 		if ((m & 1) != 0 && quad_uv.x < bite(gy, floor(gx + 0.5) * 3.1)) { discard; }
 		if ((m & 2) != 0 && 1.0 - quad_uv.x < bite(gy, floor(gx + 0.5) * 3.1)) { discard; }
-		if ((m & 4) != 0 && 1.0 - quad_uv.y < bite(gx, floor(gy + 0.5) * 5.3 + 11.0) * 1.3) { discard; }
-		if ((m & 8) != 0 && quad_uv.y < bite(gx, floor(gy + 0.5) * 5.3 + 11.0) * 1.3) { discard; }
+		if ((m & 4) != 0 && 1.0 - quad_uv.y < bite(gx, floor(gy + 0.5) * 5.3 + 11.0)) { discard; }
+		if ((m & 8) != 0 && quad_uv.y < bite(gx, floor(gy + 0.5) * 5.3 + 11.0)) { discard; }
 	}
 	vec3 col = texture(face, face_uv).rgb;
 	// The crinkle: fine ridges across each strip, faded out where they'd shimmer.

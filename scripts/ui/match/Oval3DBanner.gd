@@ -17,8 +17,9 @@ signal done
 const W := 18.0
 const LOW := 0.5               # m: the paper's bottom edge
 const TOP := 7.0               # m: the rope
-const COLS := 40               # strips across (0.45 m each)
-const ROWS := 16               # pieces down each strip
+## The squad hold the bottom corners this far out from the middle (the paper's own grid is
+## Oval3DBannerCloth's).
+const HELD_FROM := 6.2
 ## Where it stands: this far inside the boundary on the far wing (the camera's wing is +z, rule
 ## 2.93), BANNER_X up the ground, the printed face toward the middle of the ground.
 const IN_FROM_BOUNDARY := 13.0
@@ -31,10 +32,8 @@ const ROW_GAP := 0.32          # s: each rank of the pack behind the one in fron
 ## The cuts, from the moment the first man is through: the wide until CUT_FRONT before it,
 ## front-on until CUT_BACK after it, then from the race behind them until the end.
 const CUT_FRONT := 1.1
-const CUT_BACK := 1.5
-const LAST_SHOT := 2.6
-const GRAVITY := 9.8
-const PAPER_DRAG := 3.2        # 1/s: crepe drifts down (about 3 m/s at most)
+const CUT_BACK := 2.0
+const LAST_SHOT := 2.4
 const PAPER_FACE := "res://scripts/ui/match/oval3d_banner.gdshader"
 
 var oval: Oval3D
@@ -46,10 +45,7 @@ var _runners: Array = []       # [{p, i, path: [a, b, c], go, len, cross}]
 var _others: Array = []        # every other body on the ground: their stand loop runs on
 var _squad: Array = []         # the cheer squad: [{p, pose}]
 var _paper: MultiMeshInstance3D
-var _pieces: Array = []        # per piece: {c, r, rest: Transform3D, state, ...}
-var _col_tear := PackedFloat32Array()   # s: when each strip is torn (INF: held)
-var _col_break := PackedInt32Array()    # the row a torn strip breaks at (rows from it down fall)
-var _col_swing := PackedFloat32Array()  # the hanging part's push (radians)
+var cloth: Oval3DBannerCloth   # the paper (it tears as the men go through)
 var _burst_at := INF
 var cut_front := 0.0           # s: the cuts (CUT_FRONT, CUT_BACK), worked out from the first man through
 var cut_back := 0.0
@@ -151,7 +147,6 @@ func _face(text: String, cols: Array) -> void:
 	_mat = ShaderMaterial.new()
 	_mat.shader = load(PAPER_FACE)
 	_mat.set_shader_parameter("face", _face_vp.get_texture())
-	_mat.set_shader_parameter("cells", Vector2(COLS, ROWS))
 	_mat.set_shader_parameter("paper_w", W)
 	_keep_face.call_deferred()
 
@@ -173,28 +168,17 @@ func _keep_face() -> void:
 # ---------------------------------------------------------------------------
 # The paper, the poles and the rope
 # ---------------------------------------------------------------------------
-func _cell() -> Vector2:
-	return Vector2(W / COLS, (TOP - LOW) / ROWS)
-
-
 func _build_paper() -> void:
-	var cell := _cell()
-	var qm := QuadMesh.new()
-	qm.size = cell
+	cloth = Oval3DBannerCloth.new(W, LOW, TOP, HELD_FROM, _rng.randi())
+	if oval.quality == Oval3DQuality.LOW:
+		cloth.substeps = 1     # Graphics: Low: half the work, a little stiffer
 	var mm := MultiMesh.new()
 	mm.transform_format = MultiMesh.TRANSFORM_3D
 	mm.use_custom_data = true
-	mm.mesh = qm
-	mm.instance_count = COLS * ROWS
-	for c in range(COLS):
-		for r in range(ROWS):
-			var k := c * ROWS + r
-			var rest := Transform3D(Basis.IDENTITY, Vector3(-W * 0.5 + (c + 0.5) * cell.x, LOW + (r + 0.5) * cell.y, 0.0))
-			_pieces.append({"c": c, "r": r, "rest": rest, "state": 0, "x": rest, "v": Vector3.ZERO,
-					"spin": Vector3.ZERO, "w": 0.0})
-			mm.set_instance_transform(k, rest)
-			# The piece's corner of the printed face (row 0 is the bottom), and 1: still held up.
-			mm.set_instance_custom_data(k, Color(float(c) / COLS, float(ROWS - 1 - r) / ROWS, 1.0, 0.0))
+	mm.mesh = QuadMesh.new()   # 1 x 1: each cell's own transform stretches it between its points
+	mm.instance_count = Oval3DBannerCloth.NX * Oval3DBannerCloth.NY
+	_mat.set_shader_parameter("cells", Vector2(Oval3DBannerCloth.NX, Oval3DBannerCloth.NY))
+	cloth.draw(mm)
 	_paper = MultiMeshInstance3D.new()
 	_paper.multimesh = mm
 	_paper.material_override = _mat
@@ -389,38 +373,27 @@ func _runner_at(r: Dictionary, at: float) -> Array:
 	return [pos, ahead - pos, s]
 
 
-# ---------------------------------------------------------------------------
-# The tear: each strip goes when a man reaches it, those in his path first, the burst spreading
-# from the first man out; the end strips, held by the squad, stay up. A torn strip breaks at a
-# row near the top: the part above hangs from the rope and swings, the part below goes with the
-# runners and drifts down to the grass. Some strips come away whole.
-# ---------------------------------------------------------------------------
+## When the first man reaches the paper, and the cuts from it.
 func _plan_tear() -> void:
-	_col_tear.resize(COLS)
-	_col_break.resize(COLS)
-	_col_swing.resize(COLS)
-	var cell := _cell()
 	var first := INF
-	var first_x := 0.0
 	for r in _runners:
-		if float(r["cross"]) < first:
-			first = float(r["cross"])
-			first_x = float(r["x"])
-	for c in range(COLS):
-		var x := -W * 0.5 + (c + 0.5) * cell.x
-		var when := INF
-		if absf(x) < W * 0.5 - 1.6:
-			# The first man's burst splits the paper out from where he hit it.
-			when = first + absf(x - first_x) * 0.11 if absf(x - first_x) < 5.0 else INF
-			for r in _runners:
-				var dx := absf(x - float(r["x"]))
-				if dx < 1.0:
-					when = minf(when, float(r["cross"]) - 0.04 + dx * 0.05)
-		_col_tear[c] = when
-		var whole := _rng.randf() < 0.3
-		_col_break[c] = ROWS if whole else _rng.randi_range(int(ROWS * 0.5), ROWS - 2)
-		_col_swing[c] = _rng.randf_range(0.5, 1.1)
+		first = minf(first, float(r["cross"]))
 	_burst_at = first
+	# Each man's own tear up from where he hits it; the first man's splits the sheet open.
+	# A few long tears, not a shredding: a man where the paper has already gone goes through the gap.
+	var order := _runners.duplicate()
+	order.sort_custom(func(a, b): return float(a["cross"]) < float(b["cross"]))
+	var lines := []
+	for r in order:
+		var x := float(r["x"]) + _rng.randf_range(-0.25, 0.25)
+		var clear := true
+		for l in lines:
+			if absf(x - float(l)) < 1.6:
+				clear = false
+		if not clear:
+			continue
+		lines.append(x)
+		cloth.rip(x, float(r["cross"]) - 0.05, _rng.randf_range(0.55, 0.95), lines.size() == 1)
 	cut_front = first - CUT_FRONT
 	cut_back = first + CUT_BACK
 	length = cut_back + LAST_SHOT
@@ -476,109 +449,18 @@ func _move_runners(dt: float) -> void:
 
 
 func _move_paper(dt: float) -> void:
-	var mm := _paper.multimesh
-	var cell := _cell()
-	for k in range(_pieces.size()):
-		var pc: Dictionary = _pieces[k]
-		var c := int(pc["c"])
-		var r := int(pc["r"])
-		var tear := float(_col_tear[c])
-		var xf: Transform3D = pc["rest"]
-		var state := int(pc["state"])
-		if t < tear or tear == INF:
-			if state != 0:
-				continue
-			mm.set_instance_transform(k, xf)
-			# Still held: ragged where the strip beside it has gone.
-			var side := (1 if c > 0 and t >= float(_col_tear[c - 1]) else 0) \
-					| (2 if c < COLS - 1 and t >= float(_col_tear[c + 1]) else 0)
-			_mark(pc, k, 1.0, side)
+	# The men at the paper, in its own frame: where each one's chest is and which way he runs.
+	var men := []
+	var inv := global_transform.affine_inverse()
+	for r in _runners:
+		if t < float(r["go"]):
 			continue
-		var since := t - tear
-		var brk := int(_col_break[c])
-		if r >= brk:
-			# Above the break: hangs from the rope and swings, pushed out toward the ground side.
-			var swing := float(_col_swing[c]) * exp(-since * 1.1) * sin(since * 3.4 + 0.9) + 0.05 * sin(t * 1.7 + c)
-			var hinge := Vector3(xf.origin.x, TOP, 0.0)
-			var b := Basis(Vector3.RIGHT, swing)
-			var pos := hinge + b * (xf.origin - hinge)
-			mm.set_instance_transform(k, Transform3D(b, pos))
-			if state == 0:
-				pc["state"] = 1
-				# Torn down both sides, and along the bottom where the strip broke.
-				_mark(pc, k, 0.0, 3 | (4 if r == brk else 0))
-			continue
-		if state < 2:
-			pc["state"] = 2
-			pc["crum"] = Vector3(_rng.randf_range(-0.12, 0.12), 0.0, _rng.randf_range(-0.08, 0.08))
-			pc["loose"] = _rng.randf() < 0.15
-			if bool(pc["loose"]):
-				# A scrap torn off on its own: up a little with the men, then fluttering down.
-				pc["x"] = xf
-				pc["v"] = Vector3(_rng.randf_range(-1.2, 1.2), _rng.randf_range(0.6, 2.2), _rng.randf_range(2.0, 4.8))
-				pc["spin"] = Vector3(_rng.randf_range(-1, 1), _rng.randf_range(-1, 1), _rng.randf_range(-1, 1)).normalized() * _rng.randf_range(3.0, 8.0)
-			_mark(pc, k, 0.0, 15 if bool(pc["loose"]) else (3 | (8 if r == brk - 1 else 0)))
-		if bool(pc.get("loose", false)):
-			_flutter(pc, k, dt)
-			continue
-		# The strip below the break goes as a sheet: its torn top carried forward with the men and
-		# dropping, the rest of it folding forward under it, until it lies on the grass.
-		var push := float(_col_swing[c])
-		var drag := (1.0 - exp(-1.6 * since)) / 1.6
-		var top := Vector3(xf.origin.x + sin(c * 1.7) * 0.6 * drag, LOW + brk * cell.y, (2.4 + 2.2 * push) * drag)
-		var y0 := top.y
-		top.y = maxf(0.02, y0 + 0.9 * since - 2.4 * since * since)
-		# It folds over as it comes down: flat on the grass as its top lands.
-		var fold := clampf(0.35 * push * minf(1.0, since * 4.0) + (1.0 - top.y / y0) * PI * 0.5, 0.0, PI * 0.5)
-		var d := (brk - r - 0.5) * cell.y
-		var pos := top + Vector3(0.0, -d * cos(fold), d * sin(fold))
-		var crum: Vector3 = pc["crum"]
-		# A strip twists a little as it goes (its own turn), each piece crumpled a touch.
-		var twist := sin(c * 2.3) * 0.35 * minf(1.0, since * 2.0)
-		pos = top + Basis(Vector3.UP, twist) * (pos - top)
-		var bb := Basis(Vector3.UP, twist) * Basis(Vector3.RIGHT, -fold) * Basis.from_euler(crum * minf(1.0, since * 1.5))
-		if pos.y < 0.015 or top.y <= 0.021:
-			pos.y = 0.012 + 0.004 * float(r % 3)
-			bb = Basis(Vector3.UP, twist) * Basis(Vector3.RIGHT, -PI * 0.5) * Basis.from_euler(crum * 0.3)
-			_mark(pc, k, 0.0, int(pc.get("mask", 0)) | 16)
-		mm.set_instance_transform(k, Transform3D(bb, pos))
-
-
-## A piece's flags for the paper shader: held (the breeze ripples it) and its torn edges
-## (oval3d_banner.gdshader: 1 left, 2 right, 4 bottom, 8 top, 16 on the grass). Sent on change only.
-func _mark(pc: Dictionary, k: int, held: float, mask: int) -> void:
-	if int(pc.get("mask", -1)) == mask and float(pc.get("held", -1.0)) == held:
-		return
-	pc["mask"] = mask
-	pc["held"] = held
-	_paper.multimesh.set_instance_custom_data(k, Color(float(pc["c"]) / COLS, float(ROWS - 1 - int(pc["r"])) / ROWS, held, float(mask)))
-
-
-## A loose scrap in the air: drifting down, turning over, then flat on the grass.
-func _flutter(pc: Dictionary, k: int, dt: float) -> void:
-	var mm := _paper.multimesh
-	if int(pc["state"]) == 3:
-		return
-	var x: Transform3D = pc["x"]
-	var v: Vector3 = pc["v"]
-	v.y -= GRAVITY * dt
-	v *= exp(-PAPER_DRAG * dt)
-	# Paper drifts: a sideways flutter as it falls.
-	v.x += sin(t * 5.0 + k) * 1.2 * dt
-	var sp: Vector3 = pc["spin"]
-	var b := x.basis
-	if sp.length() > 0.01:
-		b = Basis(sp.normalized(), sp.length() * dt) * b
-	var o := x.origin + v * dt
-	if o.y <= 0.012:
-		o.y = 0.012 + _rng.randf() * 0.004
-		b = Basis(Vector3.UP, _rng.randf() * TAU) * Basis(Vector3.RIGHT, -PI * 0.5)
-		pc["state"] = 3
-		_mark(pc, k, 0.0, 31)
-	pc["x"] = Transform3D(b.orthonormalized(), o)
-	pc["v"] = v
-	pc["spin"] = sp * exp(-0.6 * dt)
-	mm.set_instance_transform(k, pc["x"])
+		var at := _runner_at(r, t)
+		var c: Vector3 = inv * (at[0] as Vector3)
+		if c.z > -1.5 and c.z < 3.0:
+			men.append([c, inv.basis * (at[1] as Vector3)])
+	cloth.step(dt, men, t)
+	cloth.draw(_paper.multimesh)
 
 
 # ---------------------------------------------------------------------------

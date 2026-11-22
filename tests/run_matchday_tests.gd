@@ -2547,18 +2547,22 @@ func _test_banner_3d() -> void:
 	_check(m.find_child("CoachBox", true, false) == null, "The pre-match calls wait for the run-through")
 	var face = banner.get("_mat") if banner != null else null
 	_check(banner != null and face != null and want != "", "The banner carries this match's words (%s)" % want.replace("\n", " / "))
-	# The paper tears where the men go through, and stays up where the squad holds it.
+	# The paper tears where the men go through, and stays up on the rope and the poles.
 	if banner != null:
-		var torn := 0
-		var held := 0
-		for c in (banner.get("_col_tear") as PackedFloat32Array):
-			if c == INF:
-				held += 1
-			else:
-				torn += 1
-		_check(torn >= 10 and held >= 6, "The middle tears and the ends stay held (%d torn, %d held)" % [torn, held])
-		_check(float(banner.get("length")) > float(banner.get("_burst_at")) + 2.0 and float(banner.get("_burst_at")) < 5.0,
-				"Through within five seconds, the scene a few seconds more (%.1f s, %.1f s)" % [float(banner.get("_burst_at")), float(banner.get("length"))])
+		var burst_at := float(banner.get("_burst_at"))
+		_check(float(banner.get("length")) > burst_at + 2.0 and burst_at < 5.0,
+				"Through within five seconds, the scene a few seconds more (%.1f s, %.1f s)" % [burst_at, float(banner.get("length"))])
+		while float(banner.get("t")) < burst_at + 1.0:
+			banner.call("frame", 1.0 / 30.0)
+		var cloth = banner.get("cloth")
+		var torn: int = cloth.call("cells_torn")
+		var whole := 0
+		for j in range(Oval3DBannerCloth.NY):
+			if cloth.call("_cell_whole", 0, j) and cloth.call("_cell_whole", Oval3DBannerCloth.NX - 1, j):
+				whole += 1
+		_check(torn >= 8 and torn < Oval3DBannerCloth.NX * Oval3DBannerCloth.NY / 2 and whole == Oval3DBannerCloth.NY,
+				"The paper tears where they go through and stays up at the poles (%d cells torn, %d of %d rows whole at the poles)"
+				% [torn, whole, Oval3DBannerCloth.NY])
 	var why: String = await Tap.tap_at(pitch, pitch.size * 0.5, false)
 	await _settle()
 	_check(why == "" and not bool(pitch.call("banner_running")) and m.find_child("CoachBox", true, false) != null,

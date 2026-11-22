@@ -52,8 +52,8 @@ func _run() -> void:
 	for i in 40:
 		await process_frame
 	var b0: float = banner._burst_at
-	var stills := {int(0.6 * FPS): "wide", int((b0 - 0.3) * FPS): "front_hit", int((b0 + 0.35) * FPS): "front_burst",
-			int((b0 + 1.2) * FPS): "front_after", int((b0 + 2.0) * FPS): "race", int((b0 + 3.6) * FPS): "race_end"}
+	var stills := {int(0.6 * FPS): "wide", int((b0 + 0.05) * FPS): "front_hit", int((b0 + 0.4) * FPS): "front_burst",
+			int((b0 + 1.7) * FPS): "front_after", int((b0 + 2.4) * FPS): "race", int((b0 + 4.2) * FPS): "race_end"}
 	print("BURST at %.2f s, cuts %.2f %.2f, end %.2f" % [b0, banner.cut_front, banner.cut_back, banner.length])
 	# The squad close up first (the QA check on their arms and hands), from the ground side.
 	for spot in [[Vector3(-13.5, 1.6, 6.0), Vector3(-8.0, 1.5, -0.4), "squad_left"], [Vector3(-11.0, 1.8, -6.5), Vector3(-8.0, 1.5, -0.4), "squad_behind"]]:
