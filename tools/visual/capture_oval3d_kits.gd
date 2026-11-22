@@ -26,6 +26,12 @@ func _run() -> void:
 	root.add_child(oval)
 	oval._environment()
 	oval._ground()
+	# WEATHER=wet: the day's look on the men (a wet day's soaked guernseys and wet skin), no rain drawn.
+	if OS.get_environment("WEATHER") != "":
+		oval.turf.apply(OS.get_environment("WEATHER"), "day")
+		if oval.turf.rain != null:
+			oval.turf.rain.free()
+			oval.turf.rain = null
 	var scene: PackedScene = load(oval.PLAYER_GLB)
 	var figs := []
 	for i in range(CLUBS.size()):
