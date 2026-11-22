@@ -16,3 +16,12 @@ Run them in this order:
 5. `offsets.py`: checks how far each ring is from an exact offset of the wall curve.
 
 **Pass rule:** a segment's median is 1.0 m or less, and at least 90% of its samples are within 2 m.
+
+## Angled 3D check (2026-11-22)
+
+Google Earth's status bar gives the latitude, longitude and height of the mesh point under the mouse. So any
+angled view becomes a 3D measuring tool with no camera fit: `pick.js` hovers a grid of screen points and
+saves each status-bar crop, `ocr.py` reads them (tesseract), `anal.py` turns them into the model frame
+(`surrounds.xy`, height minus 2.6 m: Google Earth's field is 8 m above sea level, the model's 5.4) and measures
+each point's distance to the model, and `detail.py`/`bowl.py` split the results by height and section.
+Heights come in 1 m steps; positions to about 0.3 m. Nothing from Google Earth is committed.
