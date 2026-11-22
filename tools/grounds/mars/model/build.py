@@ -224,11 +224,17 @@ def single(S, mb, mr):
         rf, ri, ro, rs0, rb = geo(b); zb = zr1 - 0.6 - (zr1 - zr0) * (S['back_in'] / (ro - ri))
         # front wall up, seats up the rake, back wall of the bowl up to the roof, cap, facade down
         if S.get('nose'):  # open undercroft (2026 ground-floor photo): rake underside is the ceiling, blockwork wall set deep
-            N = S['nose']; rw = rb - N.get('deep', 8.0); zw = zs0 + (zs1 - zs0) * (rw - rs0) / (rb - 0.4 - rs0) - 0.8
-            return [(rs0, 0.0), (rs0, zs0), (rb - 0.4, zs1), (rb - 0.4, zb), (rb, zb), (rb, N['under']), (rw, zw), (rw, 0.0)]
-        return [(rs0, 0.0), (rs0, zs0), (rb - 0.4, zs1), (rb - 0.4, zb), (rb, zb), (rb, 0.0)]
+            N = S['nose']; rw = rb - N.get('deep', 8.0); re_ = rc(rs0, rb)
+            zw = (zs0 + (zs1 - zs0) * (rw - rs0) / (re_ - rs0) if rw < re_ else zs1) - 0.8
+            P = [(rs0, 0.0), (rs0, zs0)] + conc(rs0, rb) + [(rb - 0.4, zs1), (rb - 0.4, zb), (rb, zb), (rb, N['under']), (rw, zw), (rw, 0.0)]
+            return P
+        return [(rs0, 0.0), (rs0, zs0)] + conc(rs0, rb) + [(rb - 0.4, zs1), (rb - 0.4, zb), (rb, zb), (rb, 0.0)]
+    # 'rows' (photos: the west stand ~18 rows, north 8, east 10) ends the rake early; a flat concourse runs back to the wall
+    def rc(rs0, rb): return min(rs0 + S['rows'] * ROW, rb - 0.6) if S.get('rows') else rb - 0.4
+    def conc(rs0, rb): return [(rc(rs0, rb), zs1)] if S.get('rows') else []
     tail = ['conc_wall', 'roof_soffit', 'conc_block'] if S.get('nose') else [M['back']]
-    n = nrows(prof, bs, 1); tp, tm = terrace(prof, [M['front'], M['seat'], 'conc_wall', 'conc_wall'] + tail, [(1, n)])
+    cm = ['paving'] if S.get('rows') else []
+    n = nrows(prof, bs, 1); tp, tm = terrace(prof, [M['front'], M['seat']] + cm + [M.get('concback', 'conc_wall'), 'conc_wall'] + tail, [(1, n)])
     strip(mb, bs, tp, tm, -1); seat_rows(bs, prof, 1, n, pal=S.get('pal', 'mix'))
     for b, sg in ((bs[0], -1), (bs[-1], 1)):
         endcap(mb, b, tp(b), 'conc_wall', sg)

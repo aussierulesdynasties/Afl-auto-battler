@@ -27,6 +27,13 @@ def tube(mb, p, q, r, m, n=10):
         B.oriented(mb, [P[k], P[j], Q[j], Q[k]], m, mid)
 
 
+def up0(S, rs0, rb):
+    """front of the upper tier: behind the lower tier and its 1.8 m cross-aisle, or further back where the stand is deep, so the
+    upper tier keeps 'upper_rows' rows (2026 aerial: ~10 lower rows, ~13 upper; the two stands seat 5,000) and the
+    cross-aisle widens into a mid concourse"""
+    return max(rs0 + S['lower_back'] + 1.8, rb - 0.4 - S.get('upper_rows', 99) * B.ROW)
+
+
 def shell(S, mb, mr):
     bs = B.brange(S); b0, b1 = bs[0], bs[-1]; M = S['mats']
     zs0, zs1 = S['z_seat']; zu0, zu1 = S['z_upper']; LB = S['lower_back']; WL = S['wall_in']
@@ -37,9 +44,9 @@ def shell(S, mb, mr):
         return rf, ri, ro, rs0, rb
 
     def prof(b):
-        rf, ri, ro, rs0, rb = geo(b); rl = rs0 + LB
+        rf, ri, ro, rs0, rb = geo(b); rl = rs0 + LB; ru = up0(S, rs0, rb)
         # front wall, lower rake, the cross-aisle step up, upper rake, parapet over the back
-        return [(rs0, 0.0), (rs0, zs0), (rl, zs1), (rl, zs1 + 0.2), (rl + 1.8, zs1 + 0.2), (rl + 1.8, zu0), (rb - 0.4, zu1),
+        return [(rs0, 0.0), (rs0, zs0), (rl, zs1), (rl, zs1 + 0.2), (ru, zs1 + 0.2), (ru, zu0), (rb - 0.4, zu1),
                 (rb - 0.4, zu1 + 1.1), (rb, zu1 + 1.1), (rb, zu1 - 1.4)]
 
     n1, n5 = B.nrows(prof, bs, 1), B.nrows(prof, bs, 5)
@@ -48,8 +55,8 @@ def shell(S, mb, mr):
     B.strip(mb, bs, tp, tm, -1)
     B.seat_rows(bs, prof, 1, n1, pal='blue'); B.seat_rows(bs, prof, 5, n5, pal=S.get('pal', 'mtn'))
     for b, sg in ((b0, -1), (b1, 1)):
-        P = tp(b); rf, ri, ro, rs0, rb = geo(b); rl = rs0 + LB
-        B.endcap(mb, b, P + [(rb - 0.9, zu1 - 2.0), (rl + 1.8, zu0 - 0.45), (rl + 1.8, 0.0)], 'conc_wall', sg)
+        P = tp(b); rf, ri, ro, rs0, rb = geo(b); ru = up0(S, rs0, rb)
+        B.endcap(mb, b, P + [(rb - 0.9, zu1 - 2.0), (ru, zu0 - 0.45), (ru, 0.0)], 'conc_wall', sg)
     underside(S, bs, geo, n5, mb, mr)
     ground_floor(S, bs, geo, mb)
     roof(S, bs, geo, mr)
@@ -64,7 +71,7 @@ def underside(S, bs, geo, n5, mb, mr):
     for i in range(len(bs) - 1):
         ba, bb = bs[i], bs[i + 1]
         def steps(b):
-            rf, ri, ro, rs0, rb = geo(b); r0 = rs0 + LB + 1.8; r1 = rb - 0.4; pts = [(r1 - 0.5, zu1 - 2.0)]
+            rf, ri, ro, rs0, rb = geo(b); r0 = up0(S, rs0, rb); r1 = rb - 0.4; pts = [(r1 - 0.5, zu1 - 2.0)]
             for k in range(n5 - 1, -1, -1):   # each tread's underside, back to front
                 zk = zu0 + (zu1 - zu0) * k / max(1, n5 - 1) - th; rk = r0 + (r1 - r0) * k / n5
                 pts.append((pts[-1][0], zk)); pts.append((rk, zk))
@@ -78,7 +85,7 @@ def underside(S, bs, geo, n5, mb, mr):
     bay = S['bay']; b = bs[0] + math.degrees(0.5 * bay / geo(bs[0])[4])
     cols = []
     while b < bs[-1] - 0.2:
-        rf, ri, ro, rs0, rb = geo(b); r0 = rs0 + LB + 1.8
+        rf, ri, ro, rs0, rb = geo(b); r0 = up0(S, rs0, rb)
         zf = lambda r: zu0 + (zu1 - zu0) * (r - r0) / (rb - 0.4 - r0) - 0.75
         mr.beam(B.P3(b, r0 + 0.5, zf(r0 + 0.5)), B.P3(b, rb - 0.2, zf(rb - 0.2)), 0.45, 0.9, 'steel_galv')   # raker
         rc = rb - 3.5; cols.append((b, rc, zf(rc) - 0.45))
