@@ -3,7 +3,9 @@ extends SceneTree
 ## built at that ground and filmed from a few fixed cameras, so one run checks that all of them
 ## load, sit on the turf and meet the boundary fence.
 ##   godot --path . --script tools/visual/capture_grounds3d.gd -- OUTDIR [W H] [GROUND ...]
-## Saves OUTDIR/<slug>_<shot>.png; prints LOAD ms per ground.
+## A GROUND is its name ("MCG") or its model folder ("mcg").
+## Saves OUTDIR/<slug>_<shot>.png; prints LOAD ms per ground. The nightly ground shots
+## (.github/workflows/ground-shots.yml, tools/ground_shots.py) compare these against the night before.
 
 const SHOTS := [
 	["high", Vector3(60, 170, 150), Vector3(0, 0, 0), 50.0],
@@ -38,7 +40,15 @@ func _run() -> void:
 	var Squad_ = load("res://scripts/sim/Squad.gd")
 	var res: Dictionary = load("res://scripts/sim/MatchSim.gd").new(Squad_.new("FRE", gdb.club_list("FRE"), true, "FRE"),
 			Squad_.new("STK", gdb.club_list("STK"), false, "STK"), 31).run()
-	var grounds: Array = only if not only.is_empty() else GroundModels.grounds()
+	var grounds: Array = GroundModels.grounds()
+	if not only.is_empty():
+		grounds = []
+		for want in only:
+			var name := str(want)
+			for g in GroundModels.grounds():
+				if GroundModels.GROUNDS[g] == name:
+					name = str(g)
+			grounds.append(name)
 	for g in grounds:
 		var d = load("res://scripts/ui/match/MatchDirector.gd").new()
 		d.setup(res, res["events"])
@@ -50,6 +60,9 @@ func _run() -> void:
 		var slug := GroundModels.slug_for(str(g))
 		print("GROUND %s (%s) LOAD ms %d" % [g, slug, Time.get_ticks_msec() - t0])
 		oval.set_process(false)
+		# A new sky's light map takes about 30 frames to fill; filmed sooner, the first shot is dark.
+		for i in 30:
+			await process_frame
 		var cam: Camera3D = oval.camera
 		for s in SHOTS:
 			cam.global_position = s[1]
