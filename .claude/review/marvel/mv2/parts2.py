@@ -93,14 +93,18 @@ def arc(pts,sgn,n=97):
     sp=UnivariateSpline(ph[o],r[o],k=3,s=len(p)*0.8);q=np.linspace(ph[o][0],ph[o][-1],n);rr=sp(q)
     out=np.stack([c[0]+sgn*rr*np.cos(q),rr*np.sin(q)],1);out[0]=p[o][0];out[-1]=p[o][-1];return out
 ARC_N=np.array(_circ('N',-1,97))[::-1];ARC_S=np.array(_circ('S',1,97))  # the fitted circles exactly (arc() smoothed hand-picked points)
+# Side roofs' top, from Google Earth's mesh heights (status bar, 2026-11-22; field 8 m): 36-37 m above the
+# field at the opening's edge, 38-39 m from v 60 out, i.e. nearly flat. It had sloped down to ZO (32.6 m above
+# the field) at the edge, and the shut roof sat 5 m low with it (published: 38 m). ZI is the edge's height.
+ZI=G('ZI',42.4)
 def slab_z(av):  # side roof top height at |v|
-    return np.where(av>=66,ZS,ZO+(np.clip(av,51,66)-51)/15*(ZS-ZO))
+    return np.where(av>=60,ZS,ZI+(np.clip(av,51,60)-51)/9*(ZS-ZI))
 def end_prof(s):return ZG+(ZO-ZG)*(1-s**1.6)
 UE=84.0
 # ---------------- side roofs (slabs) with fascia, soffit, panel stack
 def slab(name,vin,vout,u0,u1):
     sg=np.sign(vout)
-    sec=[(vout,ZS),(sg*66,ZS),(vin,ZO),(vin,ZO-1.1),(sg*66,ZS-1.1),(vout,ZS-1.1)]  # (v,z)
+    sec=[(vout,ZS),(sg*60,ZS),(vin,ZI),(vin,ZI-1.1),(sg*60,ZS-1.1),(vout,ZS-1.1)]  # (v,z)
     mats=['deck','deck','fascia','soffit','soffit','fascia']
     V=[(u0,v,z) for v,z in sec]+[(u1,v,z) for v,z in sec];n=len(sec);F=[];M=[]
     for i in range(n):F.append([i,(i+1)%n,n+(i+1)%n,n+i]);M.append(mats[i])
@@ -109,14 +113,14 @@ def slab(name,vin,vout,u0,u1):
     # retracted roof panels stacked along the opening edge (v ~50..60): three plates, each a step higher
     for k in range(3):
         a=vin+sg*0.0;b=vin+sg*(9.5-2.2*k);zz=lambda v:float(slab_z(np.array(abs(v))))+0.35*(k+1)
-        q=[(u0+1,a,ZO+0.35*(k+1)),(u1-1,a,ZO+0.35*(k+1)),(u1-1,b,zz(b)),(u0+1,b,zz(b))]
+        q=[(u0+1,a,ZI+0.35*(k+1)),(u1-1,a,ZI+0.35*(k+1)),(u1-1,b,zz(b)),(u0+1,b,zz(b))]
         q2=[(x,y,z-0.3) for x,y,z in q];V=q+q2;F=[[0,1,2,3],[4,7,6,5],[0,4,5,1],[1,5,6,2],[2,6,7,3],[3,7,4,0]]
         add('roofopen_%s_%d'%(name[-1],k),V,F,['deck2','soffit','fascia','fascia','fascia','fascia'])
     # the same three plates run out over the opening when the roof is shut (the game shows one state or
     # the other, GroundModels.ROOFS): each covers a third of the half-span, the outer plate highest, so
     # the two halves meet at the centreline v=0
     for k in range(3):
-        a=sg*(0.15+vin*sg*k/3-(0.4 if k else 0.0));b=sg*(abs(vin)*(k+1)/3+0.4);z=ZO+0.35*(k+1)
+        a=sg*(0.15+vin*sg*k/3-(0.4 if k else 0.0));b=sg*(abs(vin)*(k+1)/3+0.4);z=ZS+0.35*(k+1)  # over the slabs' top (38-39 m above the field)
         q=[(u0+1,a,z),(u1-1,a,z),(u1-1,b,z),(u0+1,b,z)]
         q2=[(x,y,zq-0.3) for x,y,zq in q];V=q+q2;F=[[0,1,2,3],[4,7,6,5],[0,4,5,1],[1,5,6,2],[2,6,7,3],[3,7,4,0]]
         add('roofshut_%s_%d'%(name[-1],k),V,F,['deck2','soffit','fascia','fascia','fascia','fascia'])
@@ -323,7 +327,7 @@ under_slab(1,VW_IN,-84.3,84.0);under_slab(-1,VE_IN,-84.1,84.6)
 # the shut roof's three plates each side: the same grid under each (group roofshut, so it goes when the roof opens)
 for sg,vin in((1,VW_IN),(-1,-VE_IN)):
     for k in range(3):
-        a=0.15+vin*k/3+(0.6 if k else 0.4);b=vin*(k+1)/3-0.2;zb=ZO+0.35*(k+1)-0.3
+        a=0.15+vin*k/3+(0.6 if k else 0.4);b=vin*(k+1)/3-0.2;zb=ZS+0.35*(k+1)-0.3
         grid('roofshut_under_%s%d'%('w' if sg>0 else 'e',k),np.linspace(-83.0,83.0,17),[sg*a,sg*(a+b)/2,sg*b],lambda u,v,zb=zb:zb,w=0.34,drop=0.32)
 # end roofs: radial ribs under the channels, three rings across them
 def under_end(nm,ARC,sgn):
@@ -358,7 +362,7 @@ def gantry(nm,a,b,ztop,inward):
     for i in range(k):
         p=a+t*(1.0+i*2.0)
         for w in(-0.55,0.55):LAMPS.append((p[0]+n[0]*w,p[1]+n[1]*w,ztop-2.4,n))
-gantry('gantry_w',(-83.6,VW_IN+0.6),(83.3,VW_IN+0.6),ZO-1.2,(0,-1));gantry('gantry_e',(-83.4,VE_IN-0.6),(83.9,VE_IN-0.6),ZO-1.2,(0,1))
+gantry('gantry_w',(-83.6,VW_IN+0.6),(83.3,VW_IN+0.6),ZI-1.2,(0,-1));gantry('gantry_e',(-83.4,VE_IN-0.6),(83.9,VE_IN-0.6),ZI-1.2,(0,1))
 gantry('gantry_n',(-UE-0.6,VE_IN+2.2),(-UE-0.6,VW_IN-1.4),ZO-0.3,(1,0));gantry('gantry_s',(UE+0.6,VE_IN+1.6),(UE+0.6,VW_IN-0.6),ZO-0.3,(-1,0))
 # each floodlight: a housing tipped 30 deg towards the pitch, lens on its lower face
 V=[];F=[];M=[]
@@ -382,7 +386,7 @@ def screen(nm,c,facing,w,h,ztop,d=1.0):
 zg=ZO-0.3-2.4-0.6
 screen('screen_n',(-UE+0.6,20.0),(1,0),19.0,7.0,zg);screen('screen_s',(UE-0.6,-20.0),(-1,0),19.0,7.0,zg)
 for i,(cu,cv) in enumerate(((-81.0,VW_IN-2.5),(81.0,VW_IN-2.5),(-81.0,VE_IN+2.7),(81.0,VE_IN+2.7))):
-    screen('screen_c%d'%i,(cu,cv),(-np.sign(cu),-np.sign(cv)),9.0,4.6,ZO-1.2-2.4-0.6)
+    screen('screen_c%d'%i,(cu,cv),(-np.sign(cu),-np.sign(cv)),9.0,4.6,ZI-1.2-2.4-0.6)
 from shapely.geometry import Polygon,Point
 def vent_block(nm,f,z0,z1,zb0,zb1,bay=7.0,pier=1.6,depth=0.45,wall='bluepanel',top='concrete'):
     # the blue service blocks (Google Earth c_ne): solid blue cladding with big louvred vent openings cut
