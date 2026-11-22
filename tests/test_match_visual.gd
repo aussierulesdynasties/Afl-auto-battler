@@ -67,8 +67,10 @@ func run() -> void:
 	_t("_test_plan_tint_every_quarter")
 	_t("_test_three_d_view", [res])
 	_t("_test_three_d_hair", [res])
+	_t("_test_three_d_numbers")
 	await _t("_test_three_d_cameras", [res])
 	_t("_test_contacts", [res])
+	_t("_test_feet_planted", [res])
 	_t("_test_umpire_stoppages", [res])
 	_t("_test_free_taker_kicks")
 	GameState.replay_seed = 0
@@ -2231,6 +2233,29 @@ func _test_ground_models() -> void:
 	oval.queue_free()
 
 
+## Guernsey numbers on the 3D player (row 202 2d): the digits are read from one padded layer each,
+## with mipmaps, so a number a dozen pixels tall on the main camera holds its shape instead of
+## breaking into stray texels (tools/visual/capture_oval3d_numbers.gd shows each shot and level).
+func _test_three_d_numbers() -> void:
+	var layers := Oval3D.digit_layers()
+	var sized := layers.size() == 10
+	for im: Image in layers:
+		sized = sized and im.get_size() == Vector2i(96, 128) and im.has_mipmaps()
+	_check(sized, "The 3D numbers' digits: ten padded layers with mipmaps")
+	var inked := Rect2i()
+	var four: Image = layers[4]
+	for y in range(four.get_height()):
+		for x in range(four.get_width()):
+			if four.get_pixel(x, y).g > 0.0:
+				inked = Rect2i(x, y, 1, 1) if inked.size == Vector2i.ZERO else inked.expand(Vector2i(x, y))
+	_check(inked.size.x > 40 and Rect2i(16, 16, 65, 97).encloses(inked),
+			"A digit's layer is inked inside a clear margin (%s)" % inked)
+	var oval := Oval3D.new()
+	var m: ShaderMaterial = oval._kit(GameDB.club_guernsey("RIC"))
+	_check(m.get_shader_parameter("digits_arr") == Oval3D.digits_3d(), "Every kit reads its numbers from the mipmapped digits")
+	oval.free()
+
+
 ## Settings > Graphics (Oval3DQuality): High is the look as built; Low draws every supporter as a
 ## card (no 3D people built), takes the seats' own shadows and the blades away, and draws the
 ## picture at three-quarter size. At every level the seats are drawn in slices round the bowl, so
@@ -3476,6 +3501,53 @@ func _scalp(p: Dictionary) -> int:
 
 ## The 3D figures' clips start at the moment of contact (row 198): the director records
 ## each touch of the ball with who, what and where the ball goes, and only when asked.
+## Planted feet (row 198, "no skating"): the run plays at the pace the man is drawn moving (the
+## picture runs MatchDirector.TEMPO times the movement clock), its stride read off the loop, and a
+## foot on the turf is held there until the clip lifts it. Before, 60% of planted-foot frames slid
+## faster than 0.5 m/s (tools/visual/measure_oval3d_feet.gd, seed 31: 2.6 m/s on average).
+func _test_feet_planted(res: Dictionary) -> void:
+	var d := MatchDirector.new()
+	d.setup(res, res["events"])
+	var oval := Oval3D.new()
+	(Engine.get_main_loop() as SceneTree).root.add_child(oval)
+	oval.build(d, str(res.get("home", "")), str(res.get("away", "")))
+	var anim: Oval3DAnim = oval.anim
+	var jog := anim.loop_speed("jog")
+	_check(jog > 4.5 and jog < 7.5, "The run loop's stride is read off the loop itself (%.2f m/s at rate 1)" % jog)
+	var skel0: Skeleton3D = oval.players[0]["skel"]
+	var feet := [skel0.find_bone("ball_l"), skel0.find_bone("ball_r")]
+	var lo: float = minf(float(anim._floor[0]), float(anim._floor[1]))
+	var last := {}
+	var n := 0
+	var skate := 0
+	var dt := 1.0 / 60.0
+	for k in range(1200):
+		d.advance(dt)
+		oval.sync(dt)
+		for j in range(oval.players.size()):
+			var pj: Dictionary = oval.players[j]
+			if not (anim._in[j] as Dictionary).is_empty() or not (anim._once[j] as Dictionary).is_empty():
+				last.erase(j)
+				continue
+			var sk: Skeleton3D = pj["skel"]
+			var now := []
+			for f in feet:
+				now.append(sk.global_transform * sk.get_bone_global_pose(f).origin)
+			if last.has(j):
+				var floor_y := lo * float(pj.get("leg", 1.0)) + Oval3DAnim.FOOT_DOWN
+				for f in range(2):
+					var a: Vector3 = last[j][f]
+					var b: Vector3 = now[f]
+					if a.y < floor_y and b.y < floor_y:
+						n += 1
+						skate += 1 if Vector2(b.x - a.x, b.z - a.z).length() / dt > 0.5 else 0
+			last[j] = now
+	var share := 100.0 * skate / maxf(1.0, n)
+	_check(n > 1000 and share < 25.0,
+			"A foot on the turf stays put: %.1f%% of %d planted-foot frames slide over 0.5 m/s (was 60%%)" % [share, n])
+	oval.queue_free()
+
+
 func _test_contacts(res: Dictionary) -> void:
 	var off := MatchDirector.new()
 	off.setup(res, res["events"])
