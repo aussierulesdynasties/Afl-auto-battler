@@ -121,16 +121,10 @@ const PARTS := {
 ## it mirrored the blue sky and read white-blue where the real roof reads warm grey; the tints bring
 ## its sunlit tops to Google Earth's colours (north 189,188,181, east 148,150,145).
 const MATERIAL_FIX := {
-	# GMHBA (Google Earth 3D, 2026-11-22): the seats under the roofs were painted dark ("_d") and then shaded
-	# again by the real roof, so they read near-black where the real rows read mid grey-blue; the shade
-	# is the renderer's job, so they take the sunlit tones back. Roof sheeting matte, as at the MCG.
+	# GMHBA (Google Earth 3D, 2026-11-22): the treads under the roofs were painted dark ("_d") and then shaded
+	# again by the real roof, so they read near-black where the real rows read mid grey; the shade is the
+	# renderer's job, so they take the sunlit tones back. Roof sheeting matte, as at the MCG.
 	"gmhba": {
-		# The seat shells were cut out by alpha (glTF MASK); in a match that path drew every seat black
-		# (2026-11-22, lavapipe and the Mobile renderer). Drawn solid, the 1 cm gaps between shells are lost.
-		"seatback": {"albedo_color": Color(0.8, 0.82, 0.86), "transparency": BaseMaterial3D.TRANSPARENCY_DISABLED},
-		"seatpan": {"albedo_color": Color(0.8, 0.82, 0.86), "transparency": BaseMaterial3D.TRANSPARENCY_DISABLED},
-		"seatback_d": {"albedo_color": Color(1.3, 1.32, 1.38), "transparency": BaseMaterial3D.TRANSPARENCY_DISABLED},
-		"seatpan_d": {"albedo_color": Color(1.3, 1.32, 1.38), "transparency": BaseMaterial3D.TRANSPARENCY_DISABLED},
 		# Solar panels: near-black in Google Earth, not a sky mirror.
 		"solar": {"roughness": 0.85},
 		"tread_d": {"albedo_color": Color(1.9, 1.9, 1.9)},
@@ -159,6 +153,8 @@ const VERTEX_COLOURED := ["adelaide"]
 const SEAT_COLOURS := {
 	# Accor: aqua lower bowl (seat_teal there keeps the value already here).
 	"seat_aqua": Color(0.527, 0.719, 0.757),
+	# GMHBA, from photo p12: blue and white shells in pairs (tools/grounds/gmhba/post/post.py).
+	"seat_gmhba_blue": Color8(36, 54, 86), "seat_gmhba_white": Color8(178, 182, 186),
 	# MCG, by tier from Street View on the ground and Google Earth: white and light grey lower and
 	# middle tiers, a blue band along the front of the middle tier, teal-blue top tier
 	# (grey-green in the Members' north-west).
