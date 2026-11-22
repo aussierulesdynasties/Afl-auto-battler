@@ -37,7 +37,7 @@ S.MODEL_R = 0.0
 # Google Earth's Bellerive in summer: dry yellow-olive grass, grey-brown house blocks with green gardens.
 S.BASE = (128, 128, 86)
 S.LAWN = (112, 126, 74)
-S.PITCH = (92, 126, 64)
+S.PITCH = (100, 118, 70)   # Google Earth: the training ovals are duller than the main ground
 S.URBAN = (120, 123, 100)
 S.PARKING = (110, 108, 104)
 S.ASPHALT = (84, 84, 86)
@@ -151,6 +151,81 @@ def garden_trees(im, trees, ways, foot):
     return out
 
 
+# Trees near the ground from aerial imagery: OpenStreetMap lists few of Bellerive's trees (the tall gums and
+# pines east and south of the ground are missing), so within IMG_R the canopy is found in Esri World Imagery
+# (zoom 17, about 0.9 m a pixel: green, darker than lawn and rough-textured) and a tree stood on it every
+# 7 m or so, its crown as wide as the patch. The tiles are cached in IMG_DIR. Beyond IMG_R the gardens keep
+# their random trees.
+IMG_R = 700.0
+IMG_Z = 17
+IMG_DIR = os.environ.get("BELLERIVE_IMG", "/tmp/bellerive_img")
+
+
+def ortho(r=IMG_R + 50.0):
+    """Esri World Imagery resampled to model metres, 1 m a pixel, north up, the origin in the middle."""
+    os.makedirs(IMG_DIR, exist_ok=True)
+    n = 2 ** IMG_Z
+
+    def txy(lat, lon):
+        return ((lon + 180) / 360 * n,
+                (1 - np.log(np.tan(np.radians(lat)) + 1 / np.cos(np.radians(lat))) / math.pi) / 2 * n)
+    dlat, dlon = r / 110574.0, r / (111320.0 * math.cos(math.radians(S.LAT0)))
+    x0, y0 = txy(S.LAT0 + dlat, S.LON0 - dlon)
+    x1, y1 = txy(S.LAT0 - dlat, S.LON0 + dlon)
+    X0, Y0 = int(x0), int(y0)
+    M = np.zeros(((int(y1) - Y0 + 1) * 256, (int(x1) - X0 + 1) * 256, 3), np.uint8)
+    for i in range(X0, int(x1) + 1):
+        for j in range(Y0, int(y1) + 1):
+            p = os.path.join(IMG_DIR, "%d_%d_%d.jpg" % (IMG_Z, i, j))
+            if not os.path.exists(p):
+                urllib.request.urlretrieve("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/"
+                                           "MapServer/tile/%d/%d/%d" % (IMG_Z, j, i), p)
+            M[(j - Y0) * 256:(j - Y0 + 1) * 256, (i - X0) * 256:(i - X0 + 1) * 256] = \
+                np.asarray(Image.open(p).convert("RGB"))
+    e = np.arange(-r, r) + 0.5
+    E, N = np.meshgrid(e, -e)
+    x, y = txy(S.LAT0 + N / 110574.0, S.LON0 + E / (111320.0 * math.cos(math.radians(S.LAT0))))
+    px = np.clip(((x - X0) * 256).astype(int), 0, M.shape[1] - 1)
+    py = np.clip(((y - Y0) * 256).astype(int), 0, M.shape[0] - 1)
+    return M[py, px].astype(float), r
+
+
+def imagery_trees(existing, blocked):
+    """(x, z, height, crown radius, shade) rows for the canopy within IMG_R, clear of `existing` (x, z)
+    trees by 5 m and of `blocked(x, z)` (the stadium, the sea)."""
+    from scipy import ndimage
+    a, r = ortho()
+    R_, G_, B_ = a[..., 0], a[..., 1], a[..., 2]
+    L = (R_ + G_ + B_) / 3
+    m = ndimage.uniform_filter(L, 5)
+    tex = np.sqrt(np.maximum(ndimage.uniform_filter(L * L, 5) - m * m, 0))
+    can = (2 * G_ - R_ - B_ > 13) & (L < 95) & (tex > 9) & (G_ > R_ + 4)
+    can = ndimage.binary_closing(ndimage.binary_opening(can), iterations=2)
+    lab, n = ndimage.label(can)
+    can &= np.isin(lab, 1 + np.nonzero(ndimage.sum(can, lab, range(1, n + 1)) >= 16)[0])
+    dist = ndimage.distance_transform_edt(can)
+    ys, xs = np.nonzero(can)
+    order = np.argsort(-dist[ys, xs], kind="stable")
+    rng = np.random.default_rng(23)
+    cell = {}
+    for x, z in existing:
+        cell.setdefault((int(x // 10), int(z // 10)), []).append((x, z, 2.5))
+    out = []
+    for k in order:
+        x, z = xs[k] - r + 0.5, ys[k] - r + 0.5           # image rows run north to south: z is south
+        if math.hypot(x, z) > IMG_R or blocked(x, z):
+            continue
+        rad = float(np.clip(dist[ys[k], xs[k]] * 1.3, 2.8, 7.0))
+        cx, cz = int(x // 10), int(z // 10)
+        near = [q for i in (-1, 0, 1) for j in (-1, 0, 1) for q in cell.get((cx + i, cz + j), [])]
+        if any(math.hypot(qx - x, qz - z) < max(5.5, 0.85 * (rad + qr)) for qx, qz, qr in near):
+            continue
+        cell.setdefault((cx, cz), []).append((x, z, rad))
+        h = float(np.clip(rad * 1.6 + rng.uniform(1.5, 3.0), 5.5, 16.0))   # crown low on a short trunk, as yard trees are
+        out.append((x, z, h, rad, rng.uniform(0.0, 1.0)))
+    return np.array(out, "<f4").reshape(-1, 5)
+
+
 def main():
     paths = sys.argv[1:]
     if not paths:
@@ -204,7 +279,9 @@ def main():
     arr = np.where(sea[..., None], water, arr)
     arr[foot] = (118, 116, 110)
     trees = [e for e in trees if not sea[tuple(int(c) for c in S.px(*e)[::-1])]]
-    trees += [(x + S.PITCH_E, -z + S.PITCH_N) for x, z in garden_trees(Image.fromarray(arr.astype(np.uint8)), trees, ways, foot | sea)]
+    gardens = [(x, z) for x, z in garden_trees(Image.fromarray(arr.astype(np.uint8)), trees, ways, foot | sea)
+               if math.hypot(x, z) > IMG_R]
+    trees += [(x + S.PITCH_E, -z + S.PITCH_N) for x, z in gardens]
     im = Image.fromarray(np.clip(arr, 0, 255).astype(np.uint8))
     im.save(os.path.join(OUT, "surrounds.webp"), quality=88, method=6)
     t = S.tree_list(trees)
@@ -212,6 +289,12 @@ def main():
         keep = [not foot[int(np.clip(z + S.SIZE / 2, 0, S.SIZE - 1)), int(np.clip(x + S.SIZE / 2, 0, S.SIZE - 1))]
                 for x, z in t[:, :2]]
         t = t[keep]
+    def blocked(x, z):
+        i, j = int(np.clip(z + S.SIZE / 2, 0, S.SIZE - 1)), int(np.clip(x + S.SIZE / 2, 0, S.SIZE - 1))
+        return bool(foot[i, j] or sea[i, j] or math.hypot(x, z) < 105.0)
+    img = imagery_trees([tuple(q) for q in t[:, :2]], blocked)
+    t = np.concatenate([t.reshape(-1, 5), img]).astype("<f4")
+    print("imagery trees", len(img))
     t.astype("<f4").tofile(os.path.join(OUT, "trees.bin"))
     b = building_list(ways, in_foot)
     b.tofile(os.path.join(OUT, "buildings.bin"))
