@@ -64,6 +64,17 @@ The map data is © OpenStreetMap contributors and is available under the Open Da
 (ODbL). Any release credits must carry that line. No aerial imagery is shipped: Google Earth and
 Esri imagery are used only to check the look by eye.
 
+### Bellerive Oval (tools/grounds/bellerive/surrounds.py, backdrop.py)
+
+- Streets, beach, buildings and mapped trees: OpenStreetMap (© OpenStreetMap contributors, ODbL).
+- Buildings OpenStreetMap lacks: Microsoft Global ML Building Footprints (ODbL), the Hobart tile.
+- Trees within 700 m and their heights: Meta and WRI's global canopy height map (1 m; CC BY 4.0).
+  Release credits must name it: "Canopy height: Meta and World Resources Institute, CC BY 4.0".
+- Hills out to kunanyi: Terrarium elevation tiles (Mapzen / AWS open data; SRTM and other public
+  sources, credited per the tiles' attribution).
+- Not used for data: Esri World Imagery and the LIST's aerial photos (Tasmania, CC BY-NC-ND) do not
+  allow derived data. They and Google Earth are used only to check the look by eye.
+
 ## What we have vs wishlist
 
 Base: `data/players_2026.csv` — 669 players, season totals only:

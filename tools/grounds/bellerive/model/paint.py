@@ -168,6 +168,11 @@ t.a[:t.h // 3] *= 1.35
 for _ in range(40):
     u, z = R.uniform(0, 3.8), R.uniform(0, 1.8); t.rect(u, u + 0.5, z, z + 0.5, mul=R.uniform(0.6, 1.6))
 t.save('screen')
+# the north-east video board (GE in_W, out_W): an LED face showing a blue screen, no words; 0.5 m modules
+t = T(4.0, 2.0, (44, 92, 168), n=3, bl=(1, 4))
+for u in np.arange(0, 4, 0.5): t.vl(u, 0.02, mul=0.75)
+for z in np.arange(0, 2, 0.5): t.hl(z, 0.02, mul=0.75)
+t.a[:t.h // 2] *= 1.12; t.save('screen_blue')
 t = T(3.0, 6.0, (220, 222, 220), n=3, bl=(1.5, 7)); t.hl(3.0, 0.04, mul=0.85); t.streaks(12, 0, 6); t.grime_bottom(1.0); t.save('tower')
 t = T(6.8, 3.8, (60, 64, 70), n=3, bl=None)
 for i in range(6):
@@ -258,5 +263,27 @@ if __name__ == '__main__':
     t = T(8.0, 6.0, (224, 224, 218), n=3, bl=(2, 7)); t.streaks(14, 0, 6, mul=0.9); t.grime_bottom(1.0)
     t.save('render_white')
     t = T(1.2, 1.2, (40, 50, 60), n=3, bl=(0.5, 4)); t.a[:t.h // 2] *= 1.3; t.save('win_dark')
+    # the indoor centre's curtain wall (GE cf_240, out_W): pale blue-grey glass, the sky in its upper half
+    t = T(1.5, 2.2, (146, 174, 190), n=2.5, bl=(1.0, 4)); t.a[:t.h // 2] *= 1.08; t.save('cw_glass')
+    t = T(1.5, 1.6, (64, 86, 100), n=2.5, bl=(1.0, 4)); t.a[:t.h // 3] *= 1.2; t.save('cw_glass_dk')   # the band under it
+    # the practice nets west of the Ponting (GE out_NW, cf_270): grey twine on a 0.1 m square mesh. Seen
+    # from a match camera the twine is far finer than a pixel, so the net is a grey veil, a little denser
+    # along the twine; cut out line by line it sparkled and read as a black cage.
+    n = int(PPM); a = np.zeros((n, n, 4), np.uint8); a[..., :3] = (128, 130, 126); a[..., 3] = 70
+    st = int(round(0.1 * PPM))
+    for k in range(0, n, st):
+        a[k:k + 2, :, 3] = 130; a[:, k:k + 2, 3] = 130
+    Image.fromarray(a, 'RGBA').save(OUT + 'mesh.png'); TILE['mesh'] = (1.0, 1.0)
+    t = T(3.0, 4.0, (138, 150, 132), n=4, bl=(1.0, 4)); t.vl(0.05, 0.05, col=(214, 216, 210)); t.vl(2.95, 0.05, col=(214, 216, 210))
+    t.save('syn_pitch')                                  # synthetic practice wicket, white edge lines
+    # the forecourt at the indoor centre's west end: pale concrete pavers 0.6 x 0.3 m, staggered
+    t = T(2.4, 2.4, (176, 172, 164), n=4, bl=(1.0, 5))
+    for k, z in enumerate(np.arange(0, 2.4, 0.3)):
+        t.hl(z, 0.015, mul=0.82)
+        for u in np.arange(0.3 * (k % 2), 2.4, 0.6): t.vl(u, 0.015, z0=z, z1=z + 0.3, mul=0.82)
+    t.save('pavers')
+    # the service yard beside the wing: asphalt with white bay lines every 2.6 m
+    t = T(5.2, 5.2, (74, 74, 76), n=4, bl=(1.0, 5)); t.vl(0.05, 0.1, z0=0.0, z1=5.0, col=(206, 206, 200))
+    t.vl(2.65, 0.1, z0=0.0, z1=5.0, col=(206, 206, 200)); t.save('yard')
     json.dump(TILE, open(OUT + 'tiles.json', 'w', newline=''), indent=0)
     for k in sorted(TILE): print(f'{k:16s} stddev {sd(k):5.1f}')
