@@ -143,3 +143,35 @@ def club_front(S, bs, geo, mb, mr, zs1, zb_of):
             slab(mr, a, c, zs1, zs1 + 3.0, 0.0, 0.12, 'steel_galv')
         slab(mr, pa + (qa - pa) * f, qa, zs1 + 2.2, zs1 + 2.28, 0.0, 0.12, 'steel_galv')         # door-head transom
         b = b2
+
+
+def corporate(S, geo, mb, mr, rc_fn, zs1, zb_of):
+    """the west stand's glazed corporate and media block at its north end (2022 Commons photo, PTA 2017): two
+    storeys of glass over the top rows, a dark frame, a slab edge between the floors, glass returns at the ends"""
+    C = S['boxes']; b0, b1 = C['b']; fwd = C.get('fwd', 2.0)
+    bs = list(np.linspace(b0, b1, max(2, int((b1 - b0) / 1.0) + 1)))
+    def r_front(b):
+        rf, ri, ro, rs0, rb = geo(b); return rc_fn(rs0, rb) - fwd
+    for ba, bb in zip(bs[:-1], bs[1:]):
+        p, q = np.array(B.pol(ba, r_front(ba))), np.array(B.pol(bb, r_front(bb)))   # clockwise: normal to the pitch
+        zt = min(zb_of(ba), zb_of(bb)) - 0.2
+        mb.wall(tuple(p), tuple(q), zs1, zt, 'glass_dark')
+        L = np.linalg.norm(q - p)
+        for f in np.arange(0.0, 1.0, 1.5 / max(L, 1.5)):
+            a = p + (q - p) * f; c = p + (q - p) * min(1.0, f + 0.08 / L)
+            slab(mr, a, c, zs1, zt, 0.0, 0.12, 'steel_galv')
+        zm = zs1 + 0.5 * (zt - zs1)
+        slab(mb, p, q, zm - 0.25, zm + 0.35, 0.0, 0.3, 'fascia_dark')      # floor edge
+        slab(mb, p, q, zt - 0.5, zt, 0.0, 0.3, 'fascia_dark')              # head beam
+        slab(mb, p, q, zs1, zs1 + 1.0, 0.0, 0.08, 'fascia_dark')           # balustrade upstand
+    for b, sg in ((b0, -1), (b1, 1)):   # glass end returns back to the stand's rear wall
+        rf, ri, ro, rs0, rb = geo(b); zt = zb_of(b) - 0.2
+        p, q = np.array(B.pol(b, r_front(b))), np.array(B.pol(b, rb - 0.4))
+        if sg < 0: p, q = q, p   # outward along the stand: the south return faces south, the north return north
+        mb.wall(tuple(p), tuple(q), zs1, zt, 'glass_dark')
+        slab(mb, p, q, zt - 0.5, zt, 0.0, 0.3, 'fascia_dark')
+    # the block's floor over the top rows it stands on, and its ceiling
+    for ba, bb in zip(bs[:-1], bs[1:]):
+        for z, nrm in ((zs1, -up), (zb_of(ba) - 0.2, -up)):
+            ra, rb_ = r_front(ba), r_front(bb); ea, eb = geo(ba)[4] - 0.4, geo(bb)[4] - 0.4
+            B.oriented(mb, [B.P3(ba, ra, z), B.P3(bb, rb_, z), B.P3(bb, eb, z), B.P3(ba, ea, z)], 'fascia_dark', nrm)

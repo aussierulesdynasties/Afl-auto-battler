@@ -52,17 +52,18 @@
     8.0
    ],
    "z_roof": [
-    12.0,
-    14.2
+    15.0,
+    16.4
    ],
    "back_in": 1.5,
    "mats": {
     "seat": "seats_green",
     "roof": "roof_skylit",
     "back": "facade_tri",
-    "front": "conc_wall"
+    "front": "conc_wall",
+    "concback": "fascia_dark"
    },
-   "rib": 0,
+   "rib": 6.5,
    "solar": [],
    "rib_under": 1,
    "nose": {
@@ -76,7 +77,14 @@
     "fold": 0.35,
     "dark": 0.4
    },
-   "rows": 18
+   "rows": 18,
+   "boxes": {
+    "b": [
+     290.0,
+     303.5
+    ],
+    "fwd": 3.2
+   }
   },
   {
    "name": "north",

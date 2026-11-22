@@ -248,6 +248,9 @@ def single(S, mb, mr):
         for b in ribs:
             rf, ri, ro, rs0, rb = geo(b); r = rc(rs0, rb) + 0.5
             mr.cyl(pol(b, r), 0.2, zs1, zr0 + (zr1 - zr0) * (r - ri) / (ro - ri) - 0.5, 'steel_white', n=16)
+    if S.get('boxes'):
+        import club
+        club.corporate(S, geo, mb, mr, rc, zs1, zb_of)
     if S.get('nose'): nose(S, bs, geo, mr, mb)
     if S.get('brace'): bracing(S, ribs, geo, mr)
 
