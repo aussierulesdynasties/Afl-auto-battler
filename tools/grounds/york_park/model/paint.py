@@ -205,6 +205,33 @@ def _sw(a, pu, pv, h, w):      # SW corner building, one tile = full 9 m height:
 
 
 facade('facade_sw', (218, 218, 214), _sw, (6.0, 9.0), 1024, 1536); facade('facade_pav', (214, 214, 208), _pav); facade('panel_blue', (54, 84, 96), _panel)
+# ---- walls for the modelled facades (facades.py): only the detail too small to model (ribs, joints, render,
+# brick coursing); every window, louvre, pier and band is geometry now. Colours as the painted facades above.
+def _plain(a, pu, pv, h, w): pass
+def _ribs(step, dark):
+    def f(a, pu, pv, h, w):
+        for k in range(int(6 / step)): a[:, int(k * step * pu):int(k * step * pu) + 3] *= dark
+    return f
+def _brick(a, pu, pv, h, w):
+    a[:] = np.array((142, 72, 58)) + fine(h, w, 6)[:, :, None]
+    for k in range(int(3.6 / 0.086)): a[int(k * 0.086 * pv):int(k * 0.086 * pv) + 2] *= 0.8
+    for k in range(int(3.6 / 0.086)):
+        o = 0.0 if k % 2 else 0.115
+        for j in range(int(6 / 0.23) + 1):
+            x = int((o + j * 0.23) * pu); a[int(k * 0.086 * pv):int((k + 1) * 0.086 * pv), x:x + 2] *= 0.82
+def _joints(a, pu, pv, h, w):
+    for k in range(4): a[:, int(k * 1.5 * pu):int(k * 1.5 * pu) + 4] *= 0.78
+    for k in range(3): a[int(k * 1.2 * pv):int(k * 1.2 * pv) + 4] *= 0.78
+facade('render_grey', (176, 178, 176), _plain); facade('brick_red', (142, 72, 58), _brick)
+facade('clad_teal', (74, 107, 116), _ribs(0.25, 0.86)); facade('clad_grey', (168, 176, 178), _ribs(0.5, 0.9))
+facade('clad_pale', (196, 198, 198), _ribs(0.5, 0.84)); facade('panel_gunns', (110, 132, 146), _joints)
+facade('render_white', (220, 220, 216), _plain); facade('panel_light', (206, 208, 206), _joints)
+for nm, col, rough in (('glass_dark', (40, 48, 58), 4), ('plenum', (34, 36, 40), 3), ('louvre', (150, 156, 160), 6),
+                       ('sill', (196, 196, 192), 6), ('frame_alu', (186, 190, 192), 4)):
+    a = base(256, 256, col, 2, rough)
+    if nm == 'glass_dark': a += noise(256, 256, 4, 14)[:, :, None]          # sky and room reflections, soft
+    save(nm, a, (2.0, 2.0))
+
 a = base(512, 512, (24, 26, 30), 4, 14)
 for k in range(0, 512, 16): a[:, k:k + 2] *= 0.6; a[k:k + 2] *= 0.6        # LED module joints
 a[:10] = (60, 62, 66); a[-10:] = (60, 62, 66); a[:, :10] = (60, 62, 66); a[:, -10:] = (60, 62, 66)
@@ -260,14 +287,32 @@ dr.ellipse([L_(0.17, 0.12), L_(0.22, 0.15)], fill=blk)                          
 for (u0, v0, u1, v1) in ((0.02, 0.29, 0.10, 0.31), (0.05, 0.55, 0.12, 0.53), (0.50, 0.97, 0.62, 0.97), (0.24, 0.83, 0.34, 0.82)):
     dr.line([L_(u0, v0), L_(u1, v1)], fill=blk, width=6)                                      # claws
 dr.line([L_(0.40, 0.50), L_(0.52, 0.66)], fill=blk, width=6); dr.line([L_(0.58, 0.60), L_(0.56, 0.82)], fill=blk, width=6)   # haunch, leg
-F1 = ImageFont.truetype('C:/Windows/Fonts/georgia.ttf', 150); F2 = ImageFont.truetype('C:/Windows/Fonts/georgia.ttf', 96)
+GEORGIA = 'C:/Windows/Fonts/georgia.ttf'
+
+
+def shipped_image(name):
+    """The texture as it ships in the game's glb (for machines without the sign's font, Georgia)."""
+    import struct, io
+    b = open(os.path.join(os.path.dirname(OUT[:-1]), '..', '..', '..', '..', 'assets', 'grounds', 'york_park', 'york_park.glb'), 'rb').read()
+    n = struct.unpack('<I', b[12:16])[0]; js = json.loads(b[20:20 + n]); bin0 = 20 + n + 8
+    for im_ in js['images']:
+        if im_.get('name') == name:
+            v = js['bufferViews'][im_['bufferView']]; o = bin0 + v.get('byteOffset', 0)
+            return Image.open(io.BytesIO(b[o:o + v['byteLength']])).convert('RGB')
+
+
+if not os.path.exists(GEORGIA):
+    save('sign_utas', np.asarray(shipped_image('sign_utas').resize((SW_, SH_)), float), (7.0, 1.75)); F1 = None
+else:
+    F1 = ImageFont.truetype(GEORGIA, 150); F2 = ImageFont.truetype(GEORGIA, 96)
 def spaced(y, txt, f, x=560, sp=14):
     for ch in txt:
         dr.text((x, y), ch, font=f, fill=(66, 66, 72)); x += dr.textlength(ch, font=f) + sp
     return x
-x = spaced(70, 'UNIVERSITY', F1, 440); spaced(118, 'of', F2, x + 30, 4)
-spaced(270, 'TASMANIA', F1, 440, 40)
-a = np.asarray(im, float) + noise(SH_, SW_, 10, 6)[:, :, None]; save('sign_utas', a, (7.0, 1.75))
+if F1:
+    x = spaced(70, 'UNIVERSITY', F1, 440); spaced(118, 'of', F2, x + 30, 4)
+    spaced(270, 'TASMANIA', F1, 440, 40)
+    a = np.asarray(im, float) + noise(SH_, SW_, 10, 6)[:, :, None]; save('sign_utas', a, (7.0, 1.75))
 
 json.dump(TILE, open(OUT + 'tiles.json', 'w', newline=''), indent=0)
 for nm in sorted(TILE):

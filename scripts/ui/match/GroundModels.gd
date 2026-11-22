@@ -106,6 +106,18 @@ const SURROUNDS := {
 			# Geelong's walls in Google Earth: red and brown brick, cream render, grey block, weatherboard.
 			"walls": [Color(0.62, 0.42, 0.34), Color(0.74, 0.7, 0.62), Color(0.55, 0.53, 0.5), Color(0.68, 0.5, 0.4),
 					Color(0.8, 0.78, 0.72), Color(0.6, 0.6, 0.6), Color(0.52, 0.36, 0.3)]},
+	# York Park: Invermay and the Inveresk precinct, the North Esk and the Tamar's east bank
+	# (tools/grounds/york_park/surrounds.py), laid on the model's origin (the OSM pitch's centroid). It starts
+	# past the fence everywhere, under the model's concourse.
+	"york_park": {"y": -0.04, "inner": 92.0, "colour": Color(0.52, 0.51, 0.36),
+			"map": "surrounds.webp", "span": 2048.0, "trees": "trees.bin", "buildings": "buildings.bin",
+			# Invermay in Google Earth: white and cream weatherboard, red and brown brick, grey render,
+			# pale showroom cladding.
+			"walls": [Color(0.86, 0.85, 0.8), Color(0.62, 0.42, 0.34), Color(0.78, 0.74, 0.64), Color(0.56, 0.55, 0.52),
+					Color(0.9, 0.9, 0.88), Color(0.66, 0.5, 0.4), Color(0.74, 0.76, 0.76)],
+			# Its roofs from above: red and terracotta, charcoal, grey and white Colorbond, teal.
+			"roofs": [Color(0.66, 0.3, 0.24), Color(0.36, 0.36, 0.38), Color(0.62, 0.62, 0.6), Color(0.8, 0.8, 0.78),
+					Color(0.34, 0.5, 0.5), Color(0.56, 0.3, 0.24), Color(0.46, 0.48, 0.5), Color(0.72, 0.4, 0.3)]},
 	"mcg": {"y": -0.03, "inner": 140.0, "colour": Color(0.45, 0.55, 0.27),
 			"map": "surrounds.webp", "span": 2048.0, "trees": "trees.bin", "buildings": "buildings.bin"},
 }
@@ -785,8 +797,9 @@ static func _pick(src, used: PackedInt32Array):
 ## the hills. Without them the match view stops at 900 m.
 const BACKDROP_FAR := 7000.0
 ## Grounds whose backdrop runs further, [camera far, haze end] in m: Bellerive's reaches kunanyi /
-## Mount Wellington, 11 km across the Derwent, which a Hobart crowd sees clearly, blue with the distance.
-const BACKDROP_RANGE := {"bellerive": [20000.0, 60000.0]}
+## Mount Wellington, 11 km across the Derwent, which a Hobart crowd sees clearly, blue with the distance;
+## York Park's the hills round Launceston out to Mount Barrow and Ben Lomond's foothills, 25 km east.
+const BACKDROP_RANGE := {"bellerive": [20000.0, 60000.0], "york_park": [26000.0, 70000.0]}
 
 
 static func backdrop_far(slug: String) -> float:
