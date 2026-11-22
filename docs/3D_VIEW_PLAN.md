@@ -220,7 +220,7 @@ _Update this section whenever 3D work merges. It is the one place 3D progress is
 | 2b. The 37 grounds | 202 | 23 of 37 have a model merged, 2 more in open PRs, 4 under way locally (table below) | land Victoria Park, Riverway, Mars and Accor; confirm the other 8; background scenes (#1878 #1892 #1897) |
 | 2c. Crowd | 202 | chosen: 3D people within 55 m, cards beyond (2.92), built; seated on the MCG model's own seats (he chose "Seat the crowd in the MCG", 2026-11-20, #1929) | measure its cost on a phone; each other ground gets it once it loads in a match |
 | 2d. Players' look | 202 | body: MetaHuman (2.85, 2.89); builds by height and weight (2.97, 2.98); faces ruled (2.99) | the Tripo heads (director generates) and the features for everyone else |
-| 2e. Cameras | 202 | main camera, goal replay, set shots, ball-up close-ups, tap to skip, TV framing, picture layout, stat bars, score bug all ruled and built (2.93-2.111, #1818); after a mark it stays on the main camera (2.113); through the banner before the first bounce, cut wide, front-on and from the race (2.114, Oval3DBanner) | the other cameras and cuts in play (free kicks, tackles, injuries) |
+| 2e. Cameras | 202 | main camera, goal replay, set shots, ball-up close-ups, tap to skip, TV framing, picture layout, stat bars, score bug all ruled and built (2.93-2.111, #1818); after a mark it stays on the main camera (2.113); holding-the-ball and dropped-ball frees now show the tackle, and a tackle that stops play cuts close from a wing camera (B, chosen 2026-11-21); through the banner before the first bounce, cut wide, front-on and from the race (2.114, Oval3DBanner) | umpire free-kick signals and injuries need new clips (art freeze) |
 | Broadcast popups | 207 | stat card ruled (2.94, 2.95) | ask: when a card shows and for how long; the journalists' posts |
 | 3. Asset and animation plan | 203 | done (#1707), docs/3D_ASSET_PLAN.md | |
 | 4a. Proof passage | 197 | runtime in the match screen (#1601 and on); waits on 201 and 203 | after step 1 passes |
@@ -275,6 +275,6 @@ fly-through review like the rest of the ground: curators cut a new pattern each 
 ### Open questions for the director (3D only)
 
 - Row 207: when a stat card appears and for how long; the journalists' posts (who, what, when, where).
-- Row 202 2e: the other cameras and cuts in play (after a mark answered, 2.113; free kicks, tackles and injuries still open).
+- Row 202 2e: the other cameras and cuts in play (after a mark answered, 2.113). Tackles that stop play cut close (B, chosen 2026-11-21). Free-kick umpire signals and injuries (down, trainers, helped off) wait on the art freeze: no clip exists for them.
 - Design bible: how weather affects a match (its look is settled; its effect on play is not).
 
