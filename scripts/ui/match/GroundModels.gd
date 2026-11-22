@@ -792,7 +792,9 @@ static func _pick(src, used: PackedInt32Array):
 const BACKDROP_FAR := 7000.0
 ## Grounds whose backdrop runs further, [camera far, haze end] in m: Bellerive's reaches kunanyi /
 ## Mount Wellington, 11 km across the Derwent, which a Hobart crowd sees clearly, blue with the distance.
-const BACKDROP_RANGE := {"bellerive": [20000.0, 60000.0]}
+const BACKDROP_RANGE := {"bellerive": [20000.0, 60000.0],
+		# Manuka: the Brindabellas stand on Canberra's western skyline 25 km out, Black Mountain's tower 5.4 km.
+		"manuka": [32000.0, 70000.0]}
 
 
 static func backdrop_far(slug: String) -> float:
