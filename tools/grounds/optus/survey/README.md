@@ -32,8 +32,9 @@ roof edge as a sustained brightness drop, at sub-pixel precision. The shots are 
 | hover_res.json | Roof-edge height hovers | |
 | fac_rows.npy, fac_coef.npy | 1,025 facade hovers on 12 oblique views: [view, u, v, θ, offset d, h]. Fit d(θ,h) uses hat functions in h × Fourier NH=3 | 0.55 m rms |
 | bronze_top.json | Top of the bronze cladding, 60 readings, 5 harmonics (facade.json `top`) | 0.98 m rms |
-| pod_d.npy | Podium deck edge as an offset of the roof edge. It came from OpenStreetMap, smoothed. It is being replaced by the podium hover survey because it is 4-7 m too far in on the south | 0.55 m rms vs OSM |
 | halo.json | HALO rooftop platform, digitised off the straight-down shot g_-75_+0 (0.20 m a pixel) | about ±1 m |
+| pavilions.json | The two riverside pavilions on the west podium. Outlines traced on a 0.1 m orthophoto at roof height (`ortho.py`); the shaded east edges come from roof hovers. Roof heights come from each hover's camera ray (north 11.4 m, south 11.8 m). Storeys, slots, windows and columns come from two low river-side views (bn3, bs3; 68 hovers, cameras solved to 3-4 px) | faces 0.3 m median |
+| west_volume.json `storey_in_by_bearing` | How far the storey under the bronze sits back, by bearing: 0 to 2.4 m (hovers at 8-11 m) | |
 
 ## Checks against the build
 

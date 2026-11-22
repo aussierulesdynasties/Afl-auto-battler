@@ -204,6 +204,7 @@ wall(RF,lambda i:ZS_[i],lambda i:ZF_[i],MW,1e6,1e6)
 # edge between 12.5 m and its flat top at 24.2 m, white canopy round the top edge, a glazed storey 2.5 m back below
 WJ=json.load(open(os.path.join(me_dir,'survey','west_volume.json')))
 _wf=per({k:v for k,v in WJ['face'].items()});_wk=sorted(float(k) for k in WJ['face'])
+_wsi=per({k:v for k,v in WJ['storey_in_by_bearing'].items()})   # the storey's set-back, measured by bearing
 ZW0,ZW1=WJ['z_storey'],WJ['z_top']
 WSEL=[CIN(c,_wk[-1],_wk[0]) and _wf(c)>FAC(i,18.0)+0.3 for i,c in enumerate(CP)]
 WV=[i for i in ARC(_wk[-1],_wk[0]) if WSEL[i]]
@@ -213,9 +214,9 @@ for k,(a,b) in enumerate(zip(WV,WV[1:])):
     da,db=_wf(CP[a]),_wf(CP[b]);ua,ub=_ws[k]/BH,_ws[k+1]/BH   # bronze texture: square metres, as the facade's
     n_=OUT(a)
     face([P(_wp(a,da,0),ZW0),P(_wp(b,db,0),ZW0),P(_wp(b,db,0),ZW1),P(_wp(a,da,0),ZW1)],MB,[(ua,0),(ub,0),(ub,(ZW1-ZW0)/BH),(ua,(ZW1-ZW0)/BH)],n_)
-    si=WJ['storey_in'];za,zb=ZD[a],ZD[b]
-    face([P(_wp(a,da-si,0),za),P(_wp(b,db-si,0),zb),P(_wp(b,db-si,0),ZW0),P(_wp(a,da-si,0),ZW0)],MXG,[(ua,0),(ub,0),(ub,1),(ua,1)],n_)
-    face([P(_wp(a,da-si,0),ZW0),P(_wp(b,db-si,0),ZW0),P(_wp(b,db,0),ZW0),P(_wp(a,da,0),ZW0)],MX,[(0,0),(1,0),(1,1),(0,1)],Vector((0,0,-1)))
+    sa,sb=_wsi(CP[a]),_wsi(CP[b]);za,zb=ZD[a],ZD[b]
+    face([P(_wp(a,da-sa,0),za),P(_wp(b,db-sb,0),zb),P(_wp(b,db-sb,0),ZW0),P(_wp(a,da-sa,0),ZW0)],MXG,[(ua,0),(ub,0),(ub,1),(ua,1)],n_)
+    face([P(_wp(a,da-sa,0),ZW0),P(_wp(b,db-sb,0),ZW0),P(_wp(b,db,0),ZW0),P(_wp(a,da,0),ZW0)],MX,[(0,0),(1,0),(1,1),(0,1)],Vector((0,0,-1)))
     fa,fb=FP(a,ZW1),FP(b,ZW1)
     face([P(fa,ZW1),P(_wp(a,da,0),ZW1),P(_wp(b,db,0),ZW1),P(fb,ZW1)],MD,[(0,0),(1,0),(1,1),(0,1)],Vector((0,0,1)))
     co,ct=WJ['canopy_out'],WJ['canopy_t']
@@ -227,6 +228,171 @@ for e in (WV[0],WV[-1]):   # end returns back to the facade
     d=_wf(CP[e]);f0=FAC(e,18.0);t=Vector((-EN[e][1],EN[e][0],0))
     face([P(_wp(e,f0,0),ZW0),P(_wp(e,d,0),ZW0),P(_wp(e,d,0),ZW1),P(_wp(e,f0,0),ZW1)],MB,[(0,0),(1,0),(1,1),(0,1)],t)
 print('west volume',len(WV),'vertices, bearings %.1f-%.1f'%(CP[WV[0]],CP[WV[-1]]))
+# --- the two riverside pavilions on the west podium (survey/pavilions.json): outlines traced straight down off Google
+# Earth and checked against 180 roof hovers, faces standing vertical from 0 m (river-side hovers), a white roof rim,
+# storeys and openings from the low river-side views. Every opening is cut back into the wall, not painted.
+PVJ=json.load(open(os.path.join(me_dir,'survey','pavilions.json')))
+MPVG=mat('pav_glass',0.12,0.2);MPVD=mat('pav_dark',0.7);MPVB=mat('pav_base',0.8)   # flat colours: every frame and slot is geometry
+def _chaikin(L,n=3):
+    for _ in range(n):
+        M=[]
+        for k in range(len(L)):
+            a=L[k];b=L[(k+1)%len(L)]
+            M+=[(0.75*a[0]+0.25*b[0],0.75*a[1]+0.25*b[1]),(0.25*a[0]+0.75*b[0],0.25*a[1]+0.75*b[1])]
+        L=M
+    return L
+def _resample(L,step,cuts=()):
+    """Split every segment longer than step into equal pieces, and add a vertex at each arclength in cuts."""
+    out=[]
+    for k in range(len(L)):
+        a=L[k];b=L[(k+1)%len(L)];m=max(1,int(math.ceil(math.hypot(b[0]-a[0],b[1]-a[1])/step)))
+        out+=[(a[0]+(b[0]-a[0])*q/m,a[1]+(b[1]-a[1])*q/m) for q in range(m)]
+    if cuts:
+        S=[0.0]
+        for k in range(len(out)):a=out[k];b=out[(k+1)%len(out)];S.append(S[-1]+math.hypot(b[0]-a[0],b[1]-a[1]))
+        res=[];cs=sorted(cuts);ci=0
+        for k in range(len(out)):
+            res.append(out[k]);a=out[k];b=out[(k+1)%len(out)]
+            while ci<len(cs) and cs[ci]<S[k+1]:
+                if cs[ci]>S[k]+0.02 and cs[ci]<S[k+1]-0.02:
+                    f=(cs[ci]-S[k])/(S[k+1]-S[k]);res.append((a[0]+f*(b[0]-a[0]),a[1]+f*(b[1]-a[1])))
+                ci+=1
+        out=res
+    return out
+def _ccw(L):
+    a=sum(L[k][0]*L[(k+1)%len(L)][1]-L[(k+1)%len(L)][0]*L[k][1] for k in range(len(L)))
+    return L if a>0 else L[::-1]
+def _vn(L):   # outward vertex normals of a counter-clockwise loop
+    out=[]
+    for k in range(len(L)):
+        a=L[k-1];b=L[(k+1)%len(L)];t=(b[0]-a[0],b[1]-a[1]);l=math.hypot(*t);out.append((t[1]/l,-t[0]/l))
+    return out
+def _off(L,d):return [(p[0]+d*n[0],p[1]+d*n[1]) for p,n in zip(L,_vn(L))]
+def _clip(L,a,b):   # the part of loop L left of the line a->b (Sutherland-Hodgman)
+    s=lambda p:(b[0]-a[0])*(p[1]-a[1])-(b[1]-a[1])*(p[0]-a[0]);out=[]
+    for k in range(len(L)):
+        p=L[k];q=L[(k+1)%len(L)];sp,sq=s(p),s(q)
+        if sp>=0:out.append(p)
+        if (sp>=0)!=(sq>=0):t=sp/(sp-sq);out.append((p[0]+t*(q[0]-p[0]),p[1]+t*(q[1]-p[1])))
+    return out
+def _fill(L,z,mi,up=True,sc=4.0):
+    vs=[bm.verts.new((x,y,z)) for x,y in L];es=[bm.edges.new((vs[k],vs[(k+1)%len(vs)])) for k in range(len(vs))]
+    r=bmesh.ops.triangle_fill(bm,use_beauty=True,use_dissolve=False,edges=es)
+    for f in r['geom']:
+        if isinstance(f,bmesh.types.BMFace):
+            f.material_index=mi;f.normal_update()
+            if (f.normal.z<0)==up:f.normal_flip()
+            for l in f.loops:l[uv].uv=(l.vert.co.x/sc,l.vert.co.y/sc)
+def _q(a,b,z0,z1,mi,n,s0=0.0,um=4.0):
+    l=math.hypot(b[0]-a[0],b[1]-a[1])
+    face([bm.verts.new((a[0],a[1],z0)),bm.verts.new((b[0],b[1],z0)),bm.verts.new((b[0],b[1],z1)),bm.verts.new((a[0],a[1],z1))],mi,
+         [(s0/um,z0/um),((s0+l)/um,z0/um),((s0+l)/um,z1/um),(s0/um,z1/um)],n)
+def _pband(L,z0,z1,mi,sel=None,inset=0.0,solid=None,mull=None,only=None):
+    """One horizontal band of a pavilion's wall over the segments only(k) picks (all by default). Segments that sel(k)
+    picks are cut back by inset, with a soffit, a sill, side jambs and mullions every mull metres; the rest stay flush."""
+    n=len(L);Li=_off(L,-inset) if inset else L;S=[0.0]
+    for k in range(n):a=L[k];b=L[(k+1)%n];S.append(S[-1]+math.hypot(b[0]-a[0],b[1]-a[1]))
+    on=[bool(only(k)) if only else True for k in range(n)]
+    rec=[on[k] and inset>0 and (bool(sel(k)) if sel else True) for k in range(n)]
+    for k in range(n):
+        if not on[k]:continue
+        j=(k+1)%n;nn=Vector((L[j][1]-L[k][1],-(L[j][0]-L[k][0]),0)).normalized();tg=Vector((L[j][0]-L[k][0],L[j][1]-L[k][1],0)).normalized()
+        if not rec[k]:_q(L[k],L[j],z0,z1,solid if (solid is not None and sel is not None) else mi,nn,S[k]);continue
+        _q(Li[k],Li[j],z0,z1,mi,nn,S[k])
+        face([bm.verts.new((L[k][0],L[k][1],z1)),bm.verts.new((L[j][0],L[j][1],z1)),bm.verts.new((Li[j][0],Li[j][1],z1)),bm.verts.new((Li[k][0],Li[k][1],z1))],MPVD,[(0,0),(1,0),(1,1),(0,1)],Vector((0,0,-1)))
+        face([bm.verts.new((L[k][0],L[k][1],z0)),bm.verts.new((L[j][0],L[j][1],z0)),bm.verts.new((Li[j][0],Li[j][1],z0)),bm.verts.new((Li[k][0],Li[k][1],z0))],MC,[(0,0),(1,0),(1,1),(0,1)],Vector((0,0,1)))
+        if not rec[k-1]:_q(L[k],Li[k],z0,z1,solid if solid is not None else MPVD,tg)
+        if not rec[j]:_q(L[j],Li[j],z0,z1,solid if solid is not None else MPVD,-tg)
+        if mull:
+            for m in range(int(S[k]//mull)+1,int(S[k+1]//mull)+1):
+                f=(m*mull-S[k])/max(1e-9,S[k+1]-S[k]);p=(Li[k][0]+f*(Li[j][0]-Li[k][0]),Li[k][1]+f*(Li[j][1]-Li[k][1]))
+                tube(Vector((p[0]+0.06*nn.x,p[1]+0.06*nn.y,z0)),Vector((p[0]+0.06*nn.x,p[1]+0.06*nn.y,z1)),0.05,MST)
+    return S
+def _rim(L,z0,z1,out=0.15):
+    Lo=_off(L,out);n=len(L)
+    for k in range(n):
+        j=(k+1)%n;nn=Vector((L[j][1]-L[k][1],-(L[j][0]-L[k][0]),0)).normalized();_q(Lo[k],Lo[j],z0,z1,MW,nn)
+        face([bm.verts.new((L[k][0],L[k][1],z0)),bm.verts.new((L[j][0],L[j][1],z0)),bm.verts.new((Lo[j][0],Lo[j][1],z0)),bm.verts.new((Lo[k][0],Lo[k][1],z0))],MW,[(0,0),(1,0),(1,1),(0,1)],Vector((0,0,-1)))
+    return Lo
+def _lines(L,p0,d,offs):   # chords of loop L along direction d through p0+o*perp(d), for each offset o
+    pr=(-d[1],d[0]);out=[]
+    for o in offs:
+        c=(p0[0]+o*pr[0],p0[1]+o*pr[1]);ts=[]
+        for k in range(len(L)):
+            a=L[k];b=L[(k+1)%len(L)];e=(b[0]-a[0],b[1]-a[1]);den=d[0]*e[1]-d[1]*e[0]
+            if abs(den)<1e-12:continue
+            w=(a[0]-c[0],a[1]-c[1]);t=(w[0]*e[1]-w[1]*e[0])/den;u_=(w[0]*d[1]-w[1]*d[0])/den
+            if 0<=u_<1:ts.append(t)
+        ts.sort()
+        for q in range(0,len(ts)-1,2):out.append(((c[0]+ts[q]*d[0],c[1]+ts[q]*d[1]),(c[0]+ts[q+1]*d[0],c[1]+ts[q+1]*d[1])))
+    return out
+# north pavilion: solid walls; on the river face south of y 15, a glazed band and two dark slots cut 0.3-0.6 m back
+_pn=PVJ['north'];LN=_ccw(_resample(_chaikin([tuple(p) for p in _pn['outline']]),1.0));ZNT=_pn['roof'];ZNR=ZNT-_pn['rim']
+_sl=_pn['slots'];_mid=lambda L,k:((L[k][0]+L[(k+1)%len(L)][0])/2,(L[k][1]+L[(k+1)%len(L)][1])/2)
+def _nsel(yf):   # segments of the river face south of y yf
+    def f(k):
+        a=LN[k];b=LN[(k+1)%len(LN)];return (b[1]-a[1])<0 and abs(b[1]-a[1])>0.7*math.hypot(b[0]-a[0],b[1]-a[1]) and _mid(LN,k)[1]<yf
+    return f
+_sg,(_s1,_s0)=_sl['glass'],sorted(_sl['bands'],key=lambda d:d['z'][0])
+_pband(LN,0.0,_pn['base'],MC)
+_pband(LN,_sg['z'][0],_sg['z'][1],MPVG,_nsel(_sg['y_from']),0.3,MPW,_sl['pitch'])
+_pband(LN,_sg['z'][1],_s1['z'][0],MPW)
+_pband(LN,_s1['z'][0],_s1['z'][1],MPVD,_nsel(_s1['y_from']),0.6,MPW)
+_pband(LN,_s1['z'][1],_s0['z'][0],MPW)
+_pband(LN,_s0['z'][0],_s0['z'][1],MPVD,_nsel(_s0['y_from']),0.6,MPW)
+_pband(LN,_s0['z'][1],ZNR,MPW)
+LNo=_rim(LN,ZNR,ZNT)
+_la=_pn['lattice'];_A,_B=tuple(_la['a']),tuple(_la['b'])
+_fill(_clip(LNo,_B,_A),ZNT,MD)                        # the open roof deck, south of the lattice
+_LL=_clip(LNo,_A,_B);_fill(_LL,ZNT-0.25,MPVG)           # the glazed north end, under a grid of steel beams
+_d=(_B[0]-_A[0],_B[1]-_A[1]);_dl=math.hypot(*_d);_d=(_d[0]/_dl,_d[1]/_dl);_pr=(-_d[1],_d[0])
+_ext=max(((p[0]-_A[0])*_pr[0]+(p[1]-_A[1])*_pr[1]) for p in _LL)
+_bw,_bl=_la['bays']
+for (_pa,_pb) in _lines(_LL,_A,_d,[_ext*q/_bl for q in range(1,_bl)])+_lines(_LL,_A,_pr,[-_dl*q/_bw for q in range(1,_bw)]):
+    tube(Vector((_pa[0],_pa[1],ZNT-0.1)),Vector((_pb[0],_pb[1],ZNT-0.1)),0.15,MST)
+_pband(_LL,ZNT-0.25,ZNT,MW)
+# south pavilion: a dark ground storey with paired windows, a concrete slab band, an upper storey glazed 0.6 m back
+# from the rim (solid with three louvre slots at the north-west end), the white rim
+_ps=PVJ['south'];LS=_ccw(_resample(_chaikin([tuple(p) for p in _ps['outline']]),1.0));ZST=_ps['roof'];ZSR=ZST-_ps['rim']
+_a0,_a1=_ps['axis'];_t=((_a1[0]-_a0[0]),(_a1[1]-_a0[1]));_tl=math.hypot(*_t);_t=(_t[0]/_tl,_t[1]/_tl);_nsw=(-_t[1],_t[0]) if (-_t[1])<0 else (_t[1],-_t[0])
+_Up=lambda p:(p[0]-_a0[0])*_t[0]+(p[1]-_a0[1])*_t[1]
+def _snrm(k,L=None):
+    L=L or LS;a=L[k];b=L[(k+1)%len(L)];l=math.hypot(b[0]-a[0],b[1]-a[1]);return ((b[1]-a[1])/l,-(b[0]-a[0])/l)
+_sw=lambda k,L=None:_snrm(k,L)[0]*_nsw[0]+_snrm(k,L)[1]*_nsw[1]
+def _river_at(us,L):   # (segment, fraction, arclength) where the river face crosses each axis position in us
+    S=[0.0]
+    for k in range(len(L)):a=L[k];b=L[(k+1)%len(L)];S.append(S[-1]+math.hypot(b[0]-a[0],b[1]-a[1]))
+    out=[]
+    for u in us:
+        for k in range(len(L)):
+            ua,ub=_Up(L[k]),_Up(L[(k+1)%len(L)])
+            if _sw(k,L)>0.7 and min(ua,ub)<=u<max(ua,ub):f=(u-ua)/(ub-ua);out.append((k,f,S[k]+f*(S[k+1]-S[k])));break
+    return out
+_gw=_ps['ground_windows'];_cp=_ps['column_pitch'];_cu=[_ps['column_u0']+m*_cp for m in range(-4,6)]
+_wu=[];_h0=_gw['pair_gap']/2
+for _c in _cu:_wu+=[(_c+_cp/2-_h0-_gw['w'],_c+_cp/2-_h0),(_c+_cp/2+_h0,_c+_cp/2+_h0+_gw['w'])]
+LS=_resample(LS,1.0,[r[2] for r in _river_at([u for w in _wu for u in w],LS)])
+_U=lambda k:_Up(_mid(LS,k))
+_sout=lambda k:_sw(k)>-0.3   # every face but the one against the podium
+def _win(k):return _sw(k)>0.7 and any(a<_U(k)<b for a,b in _wu)
+_pband(LS,0.0,_gw['z'][0],MPVB)
+_pband(LS,_gw['z'][0],_gw['z'][1],MPVG,_win,0.25,MPVB)
+_pband(LS,_gw['z'][1],_ps['slab'][0],MPVB)
+_pband(LS,_ps['slab'][0],_ps['slab'][1],MC)
+_gsel=lambda k:_sout(k) and _U(k)>_ps['glass_from_u']
+_z7,_z11=_ps['upper']
+_pband(LS,_z7,_z11,MPVG,None,0.6,MPW,_ps['mullion_pitch'],only=_gsel)
+for _k,_f,_ in _river_at([u for u in _cu if u>_ps['glass_from_u']],LS):   # columns standing in front of the glass
+    _j=(_k+1)%len(LS);_p=(LS[_k][0]+_f*(LS[_j][0]-LS[_k][0]),LS[_k][1]+_f*(LS[_j][1]-LS[_k][1]));_nn=_snrm(_k)
+    tube(Vector((_p[0]-0.3*_nn[0],_p[1]-0.3*_nn[1],_z7)),Vector((_p[0]-0.3*_nn[0],_p[1]-0.3*_nn[1],_z11)),0.18,MW)
+_lsel=lambda k:_sout(k) and _U(k)<=_ps['glass_from_u']
+_pband(LS,_z7,_z11,MPW,only=lambda k:not _gsel(k) and not _lsel(k))   # the face against the podium
+_zz=[_z7]+[z for zs in _ps['louvre_slots'] for z in zs]+[_z11]
+for _qq in range(len(_zz)-1):   # the north-west end: solid, with three louvre slots cut 0.4 m in
+    _pband(LS,_zz[_qq],_zz[_qq+1],MPVD if _qq%2 else MPW,(lambda k:True) if _qq%2 else None,0.4 if _qq%2 else 0.0,MPW,only=_lsel)
+LSo=_rim(LS,ZSR,ZST);_fill(LSo,ZST,MD)
+_fill(LN,0.05,MC,False);_fill(LS,0.05,MC,False)
+print('pavilions: north',len(LN),'south',len(LS),'segments')
 # --- roof: the inner edge is its own measured curve (survey/inner_c.json), met by each truss line square to the edge
 _IC=_np0.array(json.load(open(os.path.join(me_dir,'survey','inner_c.json'))));IZ=float(json.load(open(os.path.join(me_dir,'survey','inner_z.json')))['z'])
 def _inner_hit(i):
@@ -423,7 +589,7 @@ def prism(pts,h,roofmi,wallmi,glassband=False,louvre_from=None):
         f.material_index=roofmi
         if louvre_from is not None and f.calc_center_median().y>louvre_from:f.material_index=MLV
         for l in f.loops:l[uv].uv=((l.vert.co.x-cc.x)/TI['proof_span_m']+0.5,(l.vert.co.y-cc.y)/TI['proof_span_m']+0.5)
-# the two orange-roof pavilions are left out: they stand apart from the bowl (director: stadium only)
+# (the two orange-roof riverside pavilions are modelled from survey/pavilions.json, after the west volume above)
 S=J['stair'];T1,T2,B1,B2=[Vector((S[k][0],S[k][1],0)) for k in ('T1','T2','B1','B2')]
 # True frame (camL on o2, checked on Esri z19): the head is on the deck at 6.4 m to the south, the foot on the plaza
 # to the north. T1-B1 is the lift side (east), T2-B2 the curved-building side (west).

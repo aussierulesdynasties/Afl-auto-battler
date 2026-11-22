@@ -1,7 +1,7 @@
 import json,math,numpy as np,trimesh,sys
 glb=sys.argv[1] if len(sys.argv)>1 else '/home/user/Afl-auto-battler/assets/grounds/optus/optus.glb'
 F=360/math.tan(math.radians(25.58/2))
-sc=trimesh.load(glb,force='scene');m=sc.dump(concatenate=True)
+sc=trimesh.load(glb,force='scene');m=sc.to_geometry()
 V=m.vertices.copy();m.vertices=np.stack([V[:,0],-V[:,2],V[:,1]],1)  # glTF (x,y up,z) -> model (x, y north, z up)
 # ground plane at z=0 so rays that miss the stadium still land somewhere
 g=trimesh.Trimesh([[-2000,-2000,0],[2000,-2000,0],[2000,2000,0],[-2000,2000,0]],[[0,1,2],[0,2,3]])
@@ -12,6 +12,7 @@ rows=[]
 for nm,c in cams.items():
     C=np.array(c['cam']);z=np.array(c['tgt'])-C;z/=np.linalg.norm(z);x=np.cross(z,[0,0,1.0]);x/=np.linalg.norm(x);y=np.cross(z,x)
     pts=[(k,v) for k,v in P.items() if v and k.startswith(nm+'_')]
+    if not pts:continue
     D=np.array([((v[0]-640)/F)*x+((v[1]-360)/F)*y+z for k,v in pts]);D/=np.linalg.norm(D,axis=1)[:,None]
     loc,ir,_=I.intersects_location(np.repeat(C[None],len(D),0),D,multiple_hits=False)
     hit={int(i):l for i,l in zip(ir,loc)}
