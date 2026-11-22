@@ -39,26 +39,29 @@ MODEL_R = 150.0
 
 # Colours: Google Earth's over Moore Park in summer, for the same match light as Marvel's map
 # (GroundModels SURROUNDS tint): dry yellow-brown parkland, greener irrigated ovals, dark gum canopies.
-BASE = (150, 150, 128)         # Paddington and Moore Park's streets of houses between mapped areas
-LAWN = (150, 146, 96)          # Moore Park's open grass, dry in summer
-GOLF = (118, 140, 78)          # the golf course's fairways
-PITCH = (112, 146, 70)         # irrigated ovals and fields (Tramway Oval, the Showground)
+# Round 5 (2026-11-22): each colour below marked 'cal' is the old one times colour_cal.py's factor (linear light),
+# measured on PC graphics-card renders against Google Earth through the same cameras (GE's mean in brackets).
+BASE = (123, 128, 109)         # cal (107, 109, 101): Paddington and Moore Park's streets of houses between mapped areas
+LAWN = (158, 154, 109)         # cal (140, 134, 100): Moore Park's open grass, dry in summer
+GOLF = (157, 151, 112)         # cal (145, 140, 111): the golf course's fairways, as dry as the park
+PITCH = (140, 144, 97)         # cal (129, 130, 93): ovals and fields (Tramway Oval, the Showground)
 SCRUB = (137, 137, 100)
 WETLAND = (105, 119, 82)
 SAND = (221, 220, 176)
 SHOWRING_WAY = "212255119"     # OpenStreetMap's outline of the Entertainment Quarter's Showring
 SHOWRING_RING = 6
-ASPHALT = (140, 134, 124)      # Google Earth's roads here are warm light grey (150, 142, 132): the match light cools and darkens the map about a tenth
-PARKING = (138, 134, 126)
-PATH = (172, 164, 148)         # Moore Park's paths in Google Earth (145, 135, 128), a touch lighter than the roads
-PAVED = (156, 147, 138)        # concrete plazas and forecourts: Google Earth's (155-161, 144-148, 130-138)
+ASPHALT = (123, 125, 111)      # cal (109, 111, 108)
+PARKING = (121, 126, 113)      # cal (109, 112, 108)
+PATH = (168, 157, 130)         # cal (146, 136, 120): Moore Park's paths, lighter than the roads
+PAVED = (156, 147, 138)        # concrete plazas and forecourts: Google Earth's (155-161, 144-148, 130-138); not
+                               # calibrated: its GE sample (98, 106, 99) is mostly the stands' shadows
 PLAZA = (190, 160, 140)
-CONCOURSE = (150, 140, 126)    # the SCG's concourse and forecourts: warm grey concrete in Google Earth
+CONCOURSE = (153, 150, 128)    # cal (137, 138, 128): the SCG's concourse and forecourts
 BALLAST = (126, 128, 118)
 RAIL = (80, 76, 70)
 ROOF = (140, 142, 138)
 WATER = (62, 79, 76)
-URBAN = (150, 150, 128)
+URBAN = (123, 128, 109)        # cal, as BASE
 WOOD = (72, 92, 54)
 
 WIDTH = {"motorway": 15, "trunk": 14, "primary": 13, "secondary": 11, "tertiary": 9,
