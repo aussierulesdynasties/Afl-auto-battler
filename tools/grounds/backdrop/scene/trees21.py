@@ -28,11 +28,32 @@ G = {k: ([], [], []) for k in _names}   # verts, faces, cols
 def _put(k, V, F, c):
     v, f, cl = G[k]; o = len(v); v += V.tolist(); f += [tuple(o + q for q in fc) for fc in F]; cl += [c] * sum(len(fc) for fc in F)
 def _rot(V, a): c, s = math.cos(a), math.sin(a); return np.stack([V[:, 0] * c - V[:, 1] * s, V[:, 0] * s + V[:, 1] * c, V[:, 2]], 1)
+ICO0, ICO0F = _ico(0)
+# distance detail (a tree 500 m out is a few pixels on a phone): near trees as built; from LOD_MID their crown is its
+# 3 biggest clumps as 20-face blobs; from LOD_FAR one blob the size of the whole crown and no trunk. The budget then
+# keeps every tree instead of thinning the canopy.
+LOD_MID, LOD_FAR = spec.get('tree_lod_m', (450.0, 1100.0))
+_LOD = 0; _BUF = []
 def _blob(k, x, y, z, rx, rz, a, col):
+    if _LOD:
+        _BUF.append((k, x, y, z, rx, rz, a, col)); return
     V = (ICO1 + rng.normal(0, 0.13, ICO1.shape)) * [rx, rx * rng.uniform(0.8, 1.2), rz]; _put(k, _rot(V, a) + [x, y, z], ICO1F, col)
+def _flush():
+    global _BUF
+    if not _BUF: return
+    if _LOD == 1:
+        for k, x, y, z, rx, rz, a, col in sorted(_BUF, key=lambda b: -b[4])[:3]:
+            V = (ICO0 + rng.normal(0, 0.08, ICO0.shape)) * [rx * 1.12, rx * 1.12, rz * 1.12]; _put(k, _rot(V, a) + [x, y, z], ICO0F, col)
+    else:
+        B = np.array([[b[1], b[2], b[3], b[4], b[5]] for b in _BUF]); k = _BUF[0][0]; col = _BUF[0][7]
+        lo = np.min(B[:, :3] - B[:, [3, 3, 4]], 0); hi = np.max(B[:, :3] + B[:, [3, 3, 4]], 0); c = (lo + hi) / 2; r = (hi - lo) / 2 * 0.9
+        V = (ICO0 + rng.normal(0, 0.06, ICO0.shape)) * r; _put(k, _rot(V, _BUF[0][6]) + c, ICO0F, col)
+    _BUF = []
 def _trunk(k, x, y, z, r, h, col, lean=(0, 0)):
+    if _LOD == 2: return
     V = TRK * [r, r, h]; V[6:, :] = V[6:, :]; V[1::2, 0] += lean[0]; V[1::2, 1] += lean[1]; _put(k, V + [x, y, z], TRKF, col)
 for (x, y, _k), si in zip(TR, _pick):
+    _flush(); _d = math.hypot(x, y); _LOD = 0 if _d < LOD_MID else (1 if _d < LOD_FAR else 2)
     k = _names[si]; _, (s0, s1), cc, bc = SPECIES[k]; s = rng.uniform(s0, s1); z0 = float(height(x, y)) - 0.2; a = rng.uniform(0, 2 * math.pi)
     jit = rng.uniform(0.86, 1.14); hue = rng.uniform(-0.05, 0.05)
     col = lin(cc) * jit * np.array([1 + hue, 1, 1 - hue], np.float32); bark = lin(bc) * rng.uniform(0.9, 1.1)
@@ -64,6 +85,7 @@ for (x, y, _k), si in zip(TR, _pick):
     else:   # shrub
         for i in range(rng.integers(1, 4)):
             o = rng.normal(0, 0.8 * s, 2); _blob(k, x + o[0], y + o[1], z0 + 1.1 * s, rng.uniform(1.1, 1.8) * s, rng.uniform(0.8, 1.2) * s, a + i, col)
+_flush()
 for k, (verts, faces, cols) in G.items():
     if not faces: continue
     tm = mat_vcol('tree_' + k, 0.9); nt = tm.node_tree; b = nt.nodes['Principled BSDF']; vc = b.inputs['Base Color'].links[0].from_socket

@@ -266,6 +266,8 @@ var rain: Oval3DRain
 func _wet_world(wet: bool) -> void:
 	RenderingServer.global_shader_parameter_set("oval_wet", 1.0 if wet else 0.0)
 	Oval3DRain.haze(env, wet)
+	if not wet and oval.get("_far_view") == true:   # dry again: the surroundings' haze, not none
+		oval.call("_backdrop_haze")
 	var level := str(oval.get("quality")) if oval.get("quality") != null else ""
 	var drops := int(Oval3DQuality.preset(level)["rain"])
 	if rain != null and (not wet or rain.amount != drops):

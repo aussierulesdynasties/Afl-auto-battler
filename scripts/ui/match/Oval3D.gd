@@ -560,6 +560,14 @@ func _backdrop_view() -> void:
 	_far_view = true
 	if camera != null:
 		camera.far = GroundModels.BACKDROP_FAR
+	_backdrop_haze()
+	if turf != null:
+		turf._sky_view()
+
+
+## The depth haze over the surroundings. The day's weather resets the fog (Oval3DRain.haze), so a
+## dry day lays this one again.
+func _backdrop_haze() -> void:
 	if _env == null:   # a bare view (the ground inspector's test) has no sky to haze into
 		return
 	_env.fog_enabled = true
@@ -571,8 +579,6 @@ func _backdrop_view() -> void:
 	_env.fog_aerial_perspective = 0.0
 	_env.fog_sky_affect = 0.0
 	_env.fog_light_color = Color(0.68, 0.78, 0.88)
-	if turf != null:
-		turf._sky_view()
 
 
 ## How far past the match's fence the apron skirt runs, and how far under the turf it lies (under
