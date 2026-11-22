@@ -17,7 +17,7 @@ Ratings:
 | Source | Clips | Licence position |
 | --- | --- | --- |
 | Rokoko Vision, from broadcast and Getty training footage (the director's footage, bible rule 2.74) | 21 AFL clips in `player_mh.glb`, 3 more on the PC (`rokoko new 2026-11-15`) | Rokoko claims no ownership of output. The footage's own rights are the grey area. The director accepted that risk on 2026-11-22. |
-| Epic GASP (Game Animation Sample) | `jog`, `carry` and `idle` (every running and standing frame), plus 12 tackle pairs | Fab's GASP listing reads "UE-Only Content". Never add more. The removal of the tackles is held until the director's final call. The jog and idle need replacing before GASP can go. |
+| Epic GASP (Game Animation Sample) | `jog`, `carry` and `idle` (every running and standing frame), plus 12 tackle pairs | Kept by the director's choice (2026-11-22). No replacement work. Never add new Epic animation. |
 | Mixamo | 57 FBX on the PC (injuries, get-ups, cheering), none in the game | Mixamo allows use in games. Redistributing the standalone FBX is not allowed, so a clip ships only baked into our own GLB. |
 
 ## Clips matches play
@@ -82,7 +82,6 @@ page, as read on 2026-11-22.
 | --- | --- | --- | --- |
 | AFL moves: remakes (handball, ruck), new tackles, umpire signals, the helped-off injury | Broadcast clip → Rokoko Vision → MetaHuman retarget (the existing pipeline) | Rokoko terms 3.1/6.3: "we do not claim ownership over any User Content". Footage risk accepted by the director. | Free tier 30 s a month. Basic is $12 a month for 600 s, which needs the director's yes. |
 | The same, without the per-second limit | Our own video-to-motion: MediaPipe pose → MetaHuman skeleton bake, in the cloud. Proved by a round trip on our own rendered clips before it is trusted. | MediaPipe: Apache-2.0 | None |
-| Replacing the GASP jog, carry and idle (so Epic can leave the repo) | 100STYLE locomotion dataset | CC BY 4.0: "For creative or commercial work please credit" | None (credit in the game) |
 | Extra general motion | CMU motion capture database | CMU FAQ: "may be copied, modified, or redistributed without permission" | None |
 | Injuries, get-ups, crowd and bench reactions | Mixamo, baked into our own GLB | "royalty free for personal, commercial, and non-profit projects including... Create video games". No standalone FBX in the repo. | None |
 
