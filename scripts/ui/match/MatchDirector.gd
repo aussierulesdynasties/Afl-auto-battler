@@ -169,6 +169,8 @@ func setup(result: Dictionary, p_events: Array) -> void:
 	_timeline = result.get("timeline", [])
 	_tl_i = 0
 	_tac = [{}, {}]
+	# The ground at its own size (row 202 2b): every spot below is set on it.
+	MatchMotion.use_field(GroundModels.field_for(VignetteGround.ground_of(result)))
 	# Presentation stream: seeded from the fixture, never from MatchSim.
 	_rng.seed = hash("%s|%s|%s|view" % [result.get("home", ""), result.get("away", ""),
 			result.get("label", "")])
@@ -271,7 +273,8 @@ func _build_tokens(roster: Array) -> void:
 					slot = "X%d" % extra
 					base = EXTRA_SLOTS[extra % EXTRA_SLOTS.size()]
 					extra += 1
-				tokens.append(_make_token(p, side, role, slot, base))
+				# A spot set by the width of the ground moves in or out with it.
+				tokens.append(_make_token(p, side, role, slot, Vector2(base.x, base.y * MatchMotion.wy())))
 	for id in range(tokens.size()):
 		var t: Dictionary = tokens[id]
 		t["id"] = id
@@ -383,7 +386,7 @@ func _mark_meant(p: Dictionary) -> void:
 ## start the tackle clip a moment early: {who, victim, left} with `left` the director seconds
 ## before the chase gives up and the tackle lands anyway; {} otherwise. Read-only.
 func tackle_ahead() -> Dictionary:
-	if str(_beat.get("kind", "")) != "tackle" or _pi >= _phases.size():
+	if not str(_beat.get("kind", "")) in ["tackle", "free"] or _pi >= _phases.size():
 		return {}
 	var p: Dictionary = _phases[_pi]
 	if str(p.get("t", "")) != "chase" or not p.get("_entered", false):
@@ -941,7 +944,7 @@ func _kickin_phases(k: int, kicker: int, g: Vector2) -> Array:
 			var pts: Array = ZONE.get(grp, ZONE["MID"])
 			var i := int(used.get(grp, 0))
 			used[grp] = i + 1
-			var p: Vector2 = pts[i] if i < pts.size() else Vector2(12, -20 + 10 * (i - pts.size()))
+			var p := MatchMotion.on_ground(pts[i] if i < pts.size() else Vector2(12, -20 + 10 * (i - pts.size())))
 			layout[id] = Vector2(p.x * _dir(zone_side), p.y) + (t["jitter"] as Vector2) * 0.4
 		else:
 			layout[id] = _structure_spot(t, g, kside)
@@ -1252,7 +1255,7 @@ func _pack_phases(k: int) -> Array:
 	var kicker := int(ball["holder"])
 	if kicker < 0 and outcome == "through":
 		kicker = _actor_id(ev)
-	var at := Vector2(clampf(float(ev.get("fp", 0.0)), -MatchMotion.GOAL_X, MatchMotion.GOAL_X), 0.0)
+	var at := Vector2(_fp_x(ev), 0.0)
 	var named := {}
 	for key in ["marker_id", "spoiler_id", "crumber_id", "defender_id"]:
 		var t := _token_by_pid(str(ev.get(key, "")))
@@ -1313,15 +1316,40 @@ func _free_phases(k: int) -> Array:
 	var out := []
 	var pk := _prev_real(k)
 	var pkind := "" if pk < 0 else str((events[pk] as Dictionary).get("kind", ""))
+	var tk := _actor_id(events[k])
+	var victim := _tackled_for(k)
 	if pkind in ["kick", "handball"]:
 		var loc := _loc(k)
 		var d := (ball["pos"] as Vector2).distance_to(loc)
 		if d > 1.0:
 			var shape := _flight_shape("handball" if pkind == "handball" and d < 18.0 else "kick", d)
-			out.append({"t": "flight", "to": loc, "dur": shape.x, "apex": shape.y, "recv": _actor_id(events[k])})
+			out.append({"t": "flight", "to": loc, "dur": shape.x, "apex": shape.y,
+					"recv": victim if victim >= 0 else tk})
+	if victim >= 0:
+		# Holding the ball and incorrect disposal are paid off a tackle, as in real footy: the
+		# man caught has it, the man paid the free runs him down and tackles him (the tackle
+		# clips), the umpire pays it, and the tackler gets up and takes the ball.
+		return out + [{"t": "possess", "who": victim, "quiet": true},
+				{"t": "chase", "who": tk, "victim": victim, "max": 1.6},
+				{"t": "down", "who": tk, "victim": victim, "dur": 0.55},
+				{"t": "emit"}, {"t": "wait", "dur": TAKE_UP}] + _take_free(tk) \
+				+ [{"t": "wait", "dur": 0.5, "ease": true}]
 	# The umpire pays it, and the man it is paid to takes the ball: it never
 	# rolls on through the free with nobody's hands on it.
 	return out + [{"t": "emit"}] + _take_free(_actor_id(events[k])) + [{"t": "wait", "dur": 0.5, "ease": true}]
+
+
+## The man caught holding the ball (or dropping it) in tackled free `k`: -1 when the free
+## is not paid off a tackle, or either man is not on the ground.
+func _tackled_for(k: int) -> int:
+	var ev: Dictionary = events[k]
+	if not str(ev.get("free_cause", "")) in ["holding_ball", "incorrect_disposal"]:
+		return -1
+	var tk := _actor_id(ev)
+	var v := _token_by_pid(str(ev.get("against_id", "")))
+	if tk < 0 or v < 0 or v == tk or int(tokens[v]["side"]) == int(tokens[tk]["side"]):
+		return -1
+	return v
 
 
 ## The free's taker goes to the ball and has it in his hands (nothing when he
@@ -1475,7 +1503,8 @@ func _rest_spot(j: int) -> Vector2:
 		return _rests[j]
 	var ev: Dictionary = events[j]
 	var at := _loc(j)
-	var x := clampf(float(ev.get("loose_to", at.x)), -MatchMotion.GOAL_X, MatchMotion.GOAL_X)
+	var x := MatchMotion.gx(clampf(float(ev["loose_to"]), -MatchMotion.STD_GOAL_X, MatchMotion.STD_GOAL_X)) \
+			if ev.has("loose_to") else clampf(at.x, -MatchMotion.GOAL_X, MatchMotion.GOAL_X)
 	var ymax := (MatchMotion.HALF_WID - 4.0) * sqrt(maxf(0.0,
 			1.0 - pow(x / (MatchMotion.HALF_LEN - 1.0), 2.0)))
 	var r := Vector2(x, clampf(at.y + float(ev.get("loose_across", 0.0)), -ymax, ymax))
@@ -1499,6 +1528,12 @@ func _rest_from_ball(j: int) -> void:
 	_rests[j] = Vector2(r.x, clampf(b.y + float((events[j] as Dictionary).get("loose_across", 0.0)), -ymax, ymax))
 
 
+## Where event `ev` is up this ground: MatchSim's field position (metres from the middle, on
+## its standard oval) put on the ground the match is at (MatchMotion.gx).
+static func _fp_x(ev: Dictionary) -> float:
+	return MatchMotion.gx(clampf(float(ev.get("fp", 0.0)), -MatchMotion.STD_GOAL_X, MatchMotion.STD_GOAL_X))
+
+
 func _loc(k: int) -> Vector2:
 	if _locs.has(k):
 		return _locs[k]
@@ -1511,7 +1546,7 @@ func _loc(k: int) -> Vector2:
 		return _locs[k]
 	var ev: Dictionary = events[k]
 	var kind := str(ev.get("kind", ""))
-	var x := clampf(float(ev.get("fp", 0.0)), -MatchMotion.GOAL_X, MatchMotion.GOAL_X)
+	var x := _fp_x(ev)
 	var pk := _prev_real(k)
 	var src: Vector2 = _locs[pk] if pk >= 0 and _locs.has(pk) else (ball["pos"] as Vector2)
 	var a := _actor_id(ev)
@@ -1566,7 +1601,7 @@ func _loc(k: int) -> Vector2:
 			# from his slot, up his lane, never across to the ball, so the
 			# receivers never converge on one column.
 			y = float(_lane[a]) + _rng.randf_range(-1.0, 1.0)
-		elif x * _dir(side) < -45.0:
+		elif x * _dir(side) < MatchMotion.gx(-45.0):
 			y *= 1.15   # clearing from defence: toward the boundary, away from the corridor
 		p = Vector2(x, y)
 		if hb and p.distance_to(src) < 3.0:
@@ -1574,7 +1609,7 @@ func _loc(k: int) -> Vector2:
 	if kind in ["throwin", "last_disposal", "out_on_full"]:
 		_locs[k] = p
 		return p
-	if absf(p.x) > 62.0:
+	if absf(p.x) > MatchMotion.gx(62.0):
 		p.y = clampf(p.y, -26.0, 26.0)
 	var ymax := (MatchMotion.HALF_WID - 4.0) * sqrt(maxf(0.0,
 			1.0 - pow(p.x / (MatchMotion.HALF_LEN - 1.0), 2.0)))
@@ -2851,7 +2886,7 @@ func _boundary_point(x: float, source_y: float) -> Vector2:
 func _log_arrival(k: int) -> void:
 	var ev: Dictionary = events[k]
 	var kind := str(ev.get("kind", ""))
-	var want := float(ev.get("fp", 0.0))
+	var want := MatchMotion.gx(float(ev.get("fp", 0.0)))
 	if kind == "goal" or kind == "behind":
 		want = MatchMotion.GOAL_X * _dir(int(ev.get("side", 0)))
 	elif (ev.has("band") or _short_set_shot(k)) and _locs.has(k):
@@ -3331,8 +3366,9 @@ func _structure_limits(side: int, spots: Dictionary, ball_p: Vector2, crash: boo
 ## sit on the line or under the bench's tab on a phone.
 static func _keep_in(p: Vector2) -> Vector2:
 	p = MatchMotion.clamp_to_oval(p, STRUCT_MARGIN)
-	if absf(p.y) > POCKET_Y and absf(p.x) > POCKET_X:
-		p.x = POCKET_X * signf(p.x)
+	var pocket := MatchMotion.gx(POCKET_X)
+	if absf(p.y) > POCKET_Y and absf(p.x) > pocket:
+		p.x = pocket * signf(p.x)
 	return p
 
 
@@ -3349,7 +3385,10 @@ func _structure_spot(t: Dictionary, ball_p: Vector2, poss: int) -> Vector2:
 	# up and down the ground, and its lines close up to the team's real length,
 	# by phase (with the ball, without it, loose, at a stoppage).
 	var ph := _shape_state if _shape_state != "" else ("att" if has else "def")
-	var x := _shape_at(SHAPE_CEN[ph], bx) + base.x * _shape_at(SHAPE_LEN[ph], bx) / SHAPE_BASE_LEN
+	# The centre is set by the ground (where the ball is on it, on the standard oval, and back);
+	# the length is the team's own, in metres, on every ground.
+	var bxs := MatchMotion.sx(bx)
+	var x := MatchMotion.gx(_shape_at(SHAPE_CEN[ph], bxs)) + base.x * _shape_at(SHAPE_LEN[ph], bxs) / SHAPE_BASE_LEN
 	var width := ATTACK_BASE_WIDTH if has else 0.86
 	var pull := 0.12 if slot.begins_with("W") else (0.3 if role == "MID" or role == "RUCK" else 0.2)
 	if ph == "con" or ph == "stp":
@@ -3409,7 +3448,7 @@ func _structure_spot(t: Dictionary, ball_p: Vector2, poss: int) -> Vector2:
 				# length from the backs: a press with the ball at its own end
 				# draws its forwards back toward the ball.
 				var deep := slot == "FF" or slot == "FPL" or slot == "FPR"
-				var line := PRESS_LAST_LINE + (PRESS_DEEP_EXTRA if deep else 0.0)
+				var line := MatchMotion.gx(PRESS_LAST_LINE) + (PRESS_DEEP_EXTRA if deep else 0.0)
 				x = minf(minf(line, bx - PRESS_BACK_BEHIND - 8.0 + PRESS_SPAN), MatchMotion.GOAL_X - 12.0)
 			"DEF":
 				var half_back := slot == "CHB" or slot == "HBL" or slot == "HBR"
@@ -3425,7 +3464,7 @@ func _structure_spot(t: Dictionary, ball_p: Vector2, poss: int) -> Vector2:
 		if slot.begins_with("W"):
 			# ...the wings a little up the ground from the midfield, so they share
 			# the outside lanes with the followers without standing on them.
-			world.x = minf(world.x * dir + WING_AHEAD, WING_FURTHEST) * dir
+			world.x = minf(world.x * dir + WING_AHEAD, MatchMotion.gx(WING_FURTHEST)) * dir
 	var shadowing := plan == "contest" and not _stoppage_on() and (_shadow[side] as Array).has(int(t["id"]))
 	if plan == "contest" and (mid or shadowing):
 		# Win Contest: the midfield stays on the ball, each on his own side of
@@ -3449,7 +3488,7 @@ func _structure_spot(t: Dictionary, ball_p: Vector2, poss: int) -> Vector2:
 	elif _stoppage_on() and STACK_HOLD.has(slot) and _burst_on(side, "stack") and _centre_stoppage():
 		# ...and its keys and pockets hold up on the arcs, where the bounce set them.
 		var ax := world.x * dir
-		world.x = signf(ax) * minf(absf(ax), STACK_HOLD_X) * dir
+		world.x = signf(ax) * minf(absf(ax), MatchMotion.gx(STACK_HOLD_X)) * dir
 	var flooding := not has and _flooding(side)
 	if has and bool(t.get("tagging", false)) and int(t["match"]) >= 0:
 		# With the ball too: the tag is permanent, so he stays on his man (rule 2.58).
@@ -3609,6 +3648,7 @@ static func press_zone_strength(x_side: float) -> float:
 ## PRESS_ZONE_FEATHER metres either side of the edge, never a step.
 const PRESS_ZONE_FEATHER := 14.0
 static func press_zone_field(x_side: float) -> float:
+	x_side = MatchMotion.sx(x_side)   # the sim's zones are on its standard oval
 	var e := MatchSim.PRESS_ZONE_EDGE
 	var back := smoothstep(e - PRESS_ZONE_FEATHER, e + PRESS_ZONE_FEATHER, x_side)
 	var fwd := smoothstep(-e - PRESS_ZONE_FEATHER, -e + PRESS_ZONE_FEATHER, x_side)
@@ -3630,8 +3670,16 @@ static func press_zone_field(x_side: float) -> float:
 #   contest spot from the moment it is called until the clearance; in open play,
 #   the ring its midfield keeps round the ball (CONTEST_MID_RING) while the ball
 #   is live.
-const CORRIDOR_FROM := -35.0     # the side's defensive 50, from the centre (x up the ground)
-const CORRIDOR_TO := 76.0        # the front of the goal square (GOAL_X less its 9 m)
+## The side's defensive 50, from the centre (x up the ground)...
+static func corridor_from() -> float:
+	return -(MatchMotion.GOAL_X - 50.0)
+
+
+## ...to the front of the goal square (GOAL_X less its 9 m).
+static func corridor_to() -> float:
+	return MatchMotion.GOAL_X - 9.0
+
+
 const CORRIDOR_HALF := 14.25     # the outermost lane (LANE_TABLE)
 
 
@@ -3699,7 +3747,7 @@ static var debug_no_press_shape := false
 func _pressing(side: int, bx: float) -> bool:
 	if debug_no_press_shape:
 		return false
-	return str((_tac[side] as Dictionary).get("plan", "")) == "defensive" and bx > PRESS_FROM
+	return str((_tac[side] as Dictionary).get("plan", "")) == "defensive" and MatchMotion.sx(bx) > PRESS_FROM
 
 
 ## How far back from the ball a flooding midfield sits (share of the way to
@@ -4207,14 +4255,14 @@ func _ball_zone(ball_p: Vector2) -> void:
 func _centre_spot(t: Dictionary, carrier: int) -> Vector2:
 	var side := int(t["side"])
 	var slot := str(t["slot"])
-	var spot: Vector2 = CENTRE.get(slot, Vector2(-25, 15 if int(t["id"]) % 2 == 0 else -15))
+	var spot := MatchMotion.on_ground(CENTRE.get(slot, Vector2(-25, 15 if int(t["id"]) % 2 == 0 else -15)))
 	if carrier >= 0 and int(tokens[carrier]["side"]) == side:
 		var cslot := str(tokens[carrier]["slot"])
 		var swap := "C" if not SQUARE.has(cslot) else ""
 		if int(t["id"]) == carrier:
 			spot = Vector2(-3, 5 if spot.y >= 0.0 else -5) if SQUARE.has(cslot) else Vector2(-3, -5)
 		elif swap != "" and slot == swap:
-			spot = CENTRE.get(cslot, spot)
+			spot = MatchMotion.on_ground(CENTRE[cslot]) if CENTRE.has(cslot) else spot
 	# The side's centre ball-up call, as the match recorded it (2026 rules:
 	# a ball-up, 6-6-6 still holds, so the wings stay outside the square and
 	# the forwards inside their arc until the ball is up).
@@ -4233,9 +4281,9 @@ func _centre_spot(t: Dictionary, carrier: int) -> Vector2:
 					# side 4.0 m front to back, too little to see).
 					spot = _on_arc(float(STACK_ARC[slot]), spot.x >= 0.0)
 				elif slot == "CHF" or slot == "HFL" or slot == "HFR":
-					spot.x = ARC_EDGE
+					spot.x = _arc_edge()
 				elif slot == "CHB" or slot == "HBL" or slot == "HBR":
-					spot.x = -ARC_EDGE
+					spot.x = -_arc_edge()
 			"flood":
 				# Defensive: the wings goal-side of the square, and the
 				# centreman at its back edge, behind the ball.
@@ -4252,14 +4300,15 @@ func _centre_spot(t: Dictionary, carrier: int) -> Vector2:
 				elif slot == "C":
 					spot = Vector2(14.0, -4.0)
 				elif slot == "CHF" or slot == "HFL" or slot == "HFR":
-					spot.x = ARC_EDGE
+					spot.x = _arc_edge()
 				elif slot == "CHB" or slot == "HBL" or slot == "HBR":
-					spot.x = -ARC_EDGE
+					spot.x = -_arc_edge()
 	return Vector2(spot.x * _dir(side), spot.y)
 
 
 ## Just inside the forward 50 arc, in a side's attacking frame.
-const ARC_EDGE := 37.0   # MatchMotion.GOAL_X (85) - 48
+static func _arc_edge() -> float:
+	return MatchMotion.GOAL_X - 48.0
 ## Stack the stoppage at a centre bounce: each line's six on its arc, at this
 ## distance across the ground (forward frame; a back line mirrors it), from the
 ## key in the middle to the pockets on the flanks.
@@ -4313,7 +4362,7 @@ func flush() -> Array:
 	for i in range(events.size() - 1, -1, -1):
 		var ev2: Dictionary = events[i]
 		if not ["quarter", "final", "sub", "moment", "injury"].has(str(ev2.get("kind", ""))):
-			last = Vector2(clampf(float(ev2.get("fp", 0.0)), -MatchMotion.GOAL_X, MatchMotion.GOAL_X), 0.0)
+			last = Vector2(_fp_x(ev2), 0.0)
 			break
 	ball["mode"] = "dead"
 	ball["holder"] = -1

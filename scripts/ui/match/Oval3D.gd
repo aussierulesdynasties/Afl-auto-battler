@@ -17,7 +17,8 @@ const LOOPS_GLB := "res://assets/oval3d/player_loops.glb"
 ## candidate body (row 202 2d: the MetaHuman footballer, which carries its own loops).
 static var player_glb := PLAYER_GLB
 static var loops_glb := LOOPS_GLB
-## m/s the jog loop covers at rate 1 (14.6 m in its 2.5 s): the rate scales from this.
+## m/s the old body's jog loop was taken to cover at rate 1; the rate now scales from the pace
+## measured off each body's own loop (Oval3DAnim.loop_speed), this only when it cannot be read.
 const LOOP_SPEED := 5.83
 ## Club Forge's hair styles on the same rig, one mesh per style on the head bone
 ## (tools/oval3d/export_hair_glb.py: the pipeline's own procedural shells, hair_lib.py).
@@ -38,17 +39,22 @@ const BOOT_MATERIAL := "ARD_boot_real"
 ## The eyes' material name in the GLB (a MetaHuman body's eyeballs, coloured by their vertex
 ## colour): drawn as modelled, never in the kit.
 const EYE_MATERIAL := "ARD_eye"
-const HALF_LEN := MatchMotion.HALF_LEN
-const HALF_WID := MatchMotion.HALF_WID
-const GOAL_X := MatchMotion.GOAL_X
 const GOAL_GAP := 6.4
 const GOAL_H := 12.0
 const BEHIND_H := 6.5
 const FENCE := 6.0
 const STAND_DEPTH := 34.0
 const STAND_RISE := 24.0
-const LOOK_X := 78.0           # m: the camera follows the ball this far towards each goal
-const LOOK_Z := 55.0           # ...and this far out to each wing (the man on the ball stays in view)
+## The camera follows the ball to 7 m short of each goal line, and to 12.4 m inside each
+## wing's boundary (the man on the ball stays in view): 78 m and 55 m on the standard oval.
+static func look_x() -> float:
+	return MatchMotion.GOAL_X - 7.0
+
+
+static func look_z() -> float:
+	return MatchMotion.HALF_WID - 12.4
+
+
 const BODY_GAP := 0.6         # m between two players' centres, drawn
 const UMP_BODY_GAP := 0.7     # m from an umpire's hips to a player's centre, drawn
 ## The digits the vignettes print numbers with (R fill, G outline), shared so both read alike.
@@ -92,6 +98,9 @@ var _settle_t := 0.0           # s since it came out of his hands or the air
 
 func build(p_director: MatchDirector, home: String, away: String) -> void:
 	director = p_director
+	# The ground at its own size (MatchDirector.setup sets the same for a match's own ground).
+	if ground != "":
+		MatchMotion.use_field(GroundModels.field_for(ground))
 	_environment()
 	_ground()
 	_posts()
@@ -102,7 +111,7 @@ func build(p_director: MatchDirector, home: String, away: String) -> void:
 		_stands(home, away)
 	screens = Oval3DScreens.new()
 	add_child(screens)
-	screens.build(self, get_node_or_null("Ground"), Vector2(HALF_LEN + FENCE, HALF_WID + FENCE), home, away)
+	screens.build(self, get_node_or_null("Ground"), GroundModels.match_fence(), home, away)
 	var scene: PackedScene = load(player_glb)
 	# Each club in its home guernsey, as the vignettes dress them (StoppageVignette._dress).
 	var kits := [_kit(GameDB.club_guernsey(home)), _kit(GameDB.club_guernsey(away))]
@@ -238,7 +247,7 @@ func sync(dt: float) -> void:
 	_umpire_let_go(dt)
 	# Followed to within a few metres of each goal line: a kick-in or a shot at the camera's own
 	# end stays in view (aim_end stops looking ahead there).
-	var target := Vector3(clampf(bp.x, -LOOK_X, LOOK_X), 0.0, clampf(bp.y, -LOOK_Z, LOOK_Z))
+	var target := Vector3(clampf(bp.x, -look_x(), look_x()), 0.0, clampf(bp.y, -look_z(), look_z()))
 	_look = target if dt <= 0.0 else _look.lerp(target, clampf(dt * 1.5, 0.0, 1.0))
 
 
@@ -381,7 +390,7 @@ func aim_end(height: float, back: float) -> void:
 	# behind-the-goals angle: from the usual height the goal posts stand in front of the play;
 	# from above they are short uprights at its edge. (A wing camera loses the ball off a
 	# portrait screen's narrow width.)
-	var near := clampf((-at.x - (LOOK_X - 20.0)) / 20.0, 0.0, 1.0)
+	var near := clampf((-at.x - (look_x() - 20.0)) / 20.0, 0.0, 1.0)
 	camera.global_position = Vector3(at.x - back * lerpf(1.0, 0.55, near),
 			height * lerpf(1.0, 2.4, near), at.z * 0.6)
 	# 12 m ahead of the ball up the ground; none from the high angle.
@@ -434,12 +443,12 @@ func _environment() -> void:
 func _ground() -> void:
 	var mi := MeshInstance3D.new()
 	var pm := PlaneMesh.new()
-	pm.size = Vector2(2.0 * (HALF_LEN + FENCE + 1.0), 2.0 * (HALF_WID + FENCE + 1.0))
+	pm.size = Vector2(2.0 * (MatchMotion.HALF_LEN + FENCE + 1.0), 2.0 * (MatchMotion.HALF_WID + FENCE + 1.0))
 	mi.mesh = pm
 	var sm := ShaderMaterial.new()
 	sm.shader = load("res://scripts/ui/match/oval3d_ground.gdshader")
-	sm.set_shader_parameter("half_size", Vector2(HALF_LEN, HALF_WID))
-	sm.set_shader_parameter("goal_x", GOAL_X)
+	sm.set_shader_parameter("half_size", Vector2(MatchMotion.HALF_LEN, MatchMotion.HALF_WID))
+	sm.set_shader_parameter("goal_x", MatchMotion.GOAL_X)
 	mi.material_override = sm
 	add_child(mi)
 	_turf_mat = sm
@@ -463,7 +472,7 @@ func _posts() -> void:
 			cm.height = GOAL_H if goal else BEHIND_H
 			post.mesh = cm
 			post.material_override = white
-			post.position = Vector3(end * GOAL_X, cm.height * 0.5, k * GOAL_GAP)
+			post.position = Vector3(end * MatchMotion.GOAL_X, cm.height * 0.5, k * GOAL_GAP)
 			add_child(post)
 			var p := MeshInstance3D.new()
 			var pc := CylinderMesh.new()
@@ -472,7 +481,7 @@ func _posts() -> void:
 			pc.height = 2.8
 			p.mesh = pc
 			p.material_override = pad
-			p.position = Vector3(end * GOAL_X, 1.4, k * GOAL_GAP)
+			p.position = Vector3(end * MatchMotion.GOAL_X, 1.4, k * GOAL_GAP)
 			add_child(p)
 
 
@@ -483,7 +492,7 @@ func _stands(home: String, away: String) -> void:
 	crowd.name = "Crowd"
 	crowd.mix_d = float(Oval3DQuality.preset(quality)["people_d"])
 	add_child(crowd)
-	crowd.build(HALF_LEN + FENCE, HALF_WID + FENCE, STAND_DEPTH, STAND_RISE,
+	crowd.build(MatchMotion.HALF_LEN + FENCE, MatchMotion.HALF_WID + FENCE, STAND_DEPTH, STAND_RISE,
 			GameDB.club_colours(home), GameDB.club_colours(away))
 	# The fence: a low white wall at the foot of the stand.
 	var fence := MeshInstance3D.new()
@@ -495,7 +504,7 @@ func _stands(home: String, away: String) -> void:
 	fm.cap_top = false
 	fm.cap_bottom = false
 	fence.mesh = fm
-	fence.scale = Vector3(HALF_LEN + FENCE, 1.0, HALF_WID + FENCE)
+	fence.scale = Vector3(MatchMotion.HALF_LEN + FENCE, 1.0, MatchMotion.HALF_WID + FENCE)
 	fence.position.y = 0.6
 	var fmat := StandardMaterial3D.new()
 	fmat.albedo_color = Color(0.92, 0.92, 0.9)
@@ -516,7 +525,7 @@ func _ground_model(slug: String, base := "", home := "", away := "") -> void:
 	add_child(root)
 	Oval3DQuality.apply_model(quality, root)
 	turf.set_ground(slug)
-	_turf_mat.set_shader_parameter("fence_clip", GroundModels.MATCH_FENCE)
+	_turf_mat.set_shader_parameter("fence_clip", GroundModels.match_fence())
 	_apron_skirt()
 	if home == "":
 		return
@@ -542,7 +551,7 @@ const SKIRT_DROP := 0.3
 ## as a white strip at the foot of the fence. A ring of the turf's apron, from just inside the
 ## match's fence to SKIRT_OUT past it, lies under the model's ground and fills that gap with grass.
 func _apron_skirt() -> void:
-	var f := GroundModels.MATCH_FENCE
+	var f := GroundModels.match_fence()
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
 	st.set_normal(Vector3.UP)
@@ -588,7 +597,7 @@ func _kit(kit: Dictionary) -> ShaderMaterial:
 	m.set_shader_parameter("kit_design", [float(100 + cell) if cell >= 0
 			else float(maxi(0, GameDB.GUERNSEY_DESIGNS.find(str(kit.get("design", "plain")))))])
 	m.set_shader_parameter("shorts", kit.get("shorts", Color(0.94, 0.94, 0.92)))
-	m.set_shader_parameter("digits_tex", DIGITS)
+	m.set_shader_parameter("digits_arr", digits_3d())
 	for part in ["body", "head"]:
 		for map in [["col", "Basecolor"], ["nrm", "Normal"], ["srmf", "SRMF"]]:
 			m.set_shader_parameter("skin_%s_%s" % [part, map[0]],
@@ -612,6 +621,33 @@ func _kit(kit: Dictionary) -> ShaderMaterial:
 		if (today.get("shorts", Color(0, 0, 0, 0)) as Color).a > 0.0:
 			m.set_shader_parameter("shorts", today["shorts"])
 	return m
+
+
+## The vignettes' digits for the 3D guernsey: one layer per digit, its 64 x 96 glyph in a 96 x 128
+## layer with a clear margin, and mipmaps, so a number a dozen pixels tall on the main camera is
+## read from a sheet its own size (oval3d_player.gdshader, DIGIT_CELL). Built once.
+static var _digits_3d: Texture2DArray
+static func digits_3d() -> Texture2DArray:
+	if _digits_3d == null:
+		_digits_3d = Texture2DArray.new()
+		_digits_3d.create_from_images(digit_layers())
+	return _digits_3d
+
+
+## The ten layers digits_3d is made of.
+static func digit_layers() -> Array[Image]:
+	var sheet: Image = DIGITS.get_image()
+	if sheet.is_compressed():
+		sheet.decompress()
+	sheet.convert(Image.FORMAT_RGBA8)
+	var w := sheet.get_width() / 10
+	var layers: Array[Image] = []
+	for k in range(10):
+		var cell := Image.create_empty(96, 128, false, Image.FORMAT_RGBA8)
+		cell.blit_rect(sheet, Rect2i(k * w, 0, w, sheet.get_height()), Vector2i(16, 16))
+		cell.generate_mipmaps()
+		layers.append(cell)
+	return layers
 
 
 ## His number on the back of his guernsey (0-99; -1 for none), per figure.
@@ -1842,8 +1878,8 @@ func _add_umpires(scene: PackedScene) -> void:
 ## along the ground and y across it, so the axes swap and scale to MatchMotion's half-lengths.
 func _umpire_spots() -> Array:
 	var bp: Vector2 = director.ball["pos"]
-	var sx := HALF_LEN / VignetteGround.L
-	var sy := HALF_WID / VignetteGround.A
+	var sx := MatchMotion.HALF_LEN / VignetteGround.L
+	var sy := MatchMotion.HALF_WID / VignetteGround.A
 	var out := []
 	for u in VignetteExtras.umpires(Vector2(bp.y / sy, bp.x / sx)):
 		var v: Vector2 = u["oval"]
@@ -1884,8 +1920,12 @@ const UMP_LIFT_RATE := 2.0
 const UMP_SET := 0.3
 const UMP_TAKE := 2.5
 ## The ball goes from where it was to his hands (picked up) over UMP_PICK seconds, and from his
-## hands onto the director's flight (let go) over UMP_LET_GO.
+## hands onto the director's flight (let go) over UMP_LET_GO. Picked up, it moves with his hands
+## while the gap closes: blended from where it lay, a ball-up's ball lagged his hands as the lift
+## clip started and jumped up to 0.66 m in a frame (test_match_visual, 2026-11-21).
 const UMP_PICK := 0.3
+## ...or longer for a ball further off: the gap closes at most this many metres a match second.
+const UMP_PICK_RATE := 3.0
 const UMP_LET_GO := 0.2
 ## From the end of a clip to his stand.
 const UMP_BLEND_OUT := 0.4
@@ -1898,7 +1938,8 @@ var _ump_time := -1.0         # the director's time last frame
 var _ump_step := 1.0 / 30.0   # the director seconds of the last frame that moved
 var _ump_ball := false        # the ball is in his hands this frame
 var _ump_pick := -1.0         # seconds since he took it (the pick-up blend)
-var _ump_from := Vector3.ZERO # where the ball was when he took it
+var _ump_pick_len := UMP_PICK # ...and how long it takes
+var _ump_from := Vector3.ZERO # the ball's gap from his hands when he took it
 var _ump_off := Vector3.ZERO  # let go: his hands less the director's ball, easing out
 var _ump_off_t := -1.0
 var _ump_hit_from := Vector3.ZERO  # a bounce: where the ball left his hands
@@ -1938,7 +1979,7 @@ func _stoppage_mark(st: Dictionary) -> Array:
 		"throwup":
 			return [at - Vector2(0.0, 0.6), Vector2(0.0, 1.0)]
 		_:
-			var out := Vector2(at.x / (HALF_LEN * HALF_LEN), at.y / (HALF_WID * HALF_WID))
+			var out := Vector2(at.x / (MatchMotion.HALF_LEN * MatchMotion.HALF_LEN), at.y / (MatchMotion.HALF_WID * MatchMotion.HALF_WID))
 			out = out.normalized() if out.length() > 0.0 else Vector2(0.0, 1.0)
 			return [at + out * 0.6, out]
 
@@ -2007,7 +2048,7 @@ func _move_umpires(frame_dt: float) -> void:
 		if speed > UMP_RUN_FROM and not on_mark:
 			node.rotation.y = rotate_toward(node.rotation.y, atan2(vel.x, vel.y), turn)
 			clip = "jog"
-			rate = clampf(speed / LOOP_SPEED, 0.45, 2.3)
+			rate = clampf(speed / anim.loop_speed("jog", u), Oval3DAnim.RATE_MIN, Oval3DAnim.RATE_MAX)
 		else:
 			var to := face if face != Vector2.ZERO else bp - at
 			if to.length() > 0.5 or face != Vector2.ZERO:
@@ -2141,7 +2182,12 @@ func _umpire_ball_state(held: bool) -> void:
 	if held and not _ump_ball:
 		# Just after a cut he has it already; in play he takes it over UMP_PICK.
 		_ump_pick = -1.0 if _ump_snapped else 0.0
-		_ump_from = ball.global_position if ball != null else Vector3.ZERO
+		_ump_from = Vector3.ZERO
+		_ump_pick_len = UMP_PICK
+		if _ump_job >= 0 and ball != null:
+			var hands := _umpire_hands(umpires[_ump_job])
+			_ump_from = ball.global_position - hands  # the gap from his hands
+			_ump_pick_len = maxf(UMP_PICK, _ump_from.length() / UMP_PICK_RATE)
 	if not held and _ump_ball and ball != null:
 		_ump_off_t = 0.0
 		_ump_off = ball.global_position
@@ -2182,8 +2228,10 @@ func _umpire_ball(dt: float) -> bool:
 		_ump_pick = -1.0
 	if _ump_pick >= 0.0 and dt > 0.0:
 		_ump_pick += dt
-		var f := clampf(_ump_pick / UMP_PICK, 0.0, 1.0)
-		want = _ump_from.lerp(want, f * f * (3.0 - 2.0 * f))
+		var f := clampf(_ump_pick / _ump_pick_len, 0.0, 1.0)
+		# The gap it started at eases shut while it moves with his hands: a hand moving fast
+		# as the clip starts never leaves the ball behind.
+		want += _ump_from * (1.0 - f * f * (3.0 - 2.0 * f))
 		if f >= 1.0:
 			_ump_pick = -1.0
 	ball.global_position = want

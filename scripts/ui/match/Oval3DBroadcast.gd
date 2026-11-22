@@ -37,6 +37,12 @@ extends RefCounted
 ## (skip_replay) brings the picture back live at once. A behind gets none, except the deciding
 ## one (it is the last score and wins or levels the game), replayed after the siren.
 ##
+## As real TV does (Seven's and Fox Footy's replay stings), the picture goes into the replay and
+## back out of it behind a sting: a band sweeps across the picture in the scoring club's colours,
+## and the cut happens while the band covers it, so live and replay never meet in a bare cut.
+## The sting is WIPE_S of real time, at any match speed; PitchView draws it (sting()). A tap
+## skips at once, with no sting (rule 2.110).
+##
 ## Times are match seconds as the view plays them (the speed the coach picked applied), so at 4x
 ## the picture is the 1x picture played four times as fast.
 
@@ -53,13 +59,19 @@ const CLOSE_WIDTH := 3.2      # m across the picture at a ruckman, close
 const CLOSE_SMOOTH := 0.3     # s
 const CLOSE_AIM_Y := 1.2      # m: his chest
 const CLOSE_FROM := [2.15, 3.63, 4.95]  # director s into the pack: ruck one, ruck two, back wide
-const WING_50 := MatchMotion.HALF_LEN - 50.0  # m along the wing to the 50 m line cameras
+## m along the wing to the 50 m line cameras.
+static func wing_50() -> float:
+	return MatchMotion.HALF_LEN - 50.0
+
 const CLEAR := 0.5            # m: a man nearer the sight line than this blocks the close-up
 const REPLAY_RATE := 0.5      # the replay plays at half real speed
 const REPLAY_BEFORE := 0.58   # director s of the replay before the kick
 const REPLAY_AFTER := 0.23    # ...and after the ball reaches the goals
+const WIPE_S := 0.5           # real s of a sting: the band covers the picture at its middle
 const LONG_KICK := 40.0       # m: a kick at least this long is watched on the wide shot
 const ZOOM_S := 0.5           # real s a zoom takes, in or out
+const INCIDENT_WIDTH := 8.0  # m across the picture at a tackle that stops play (incident_cuts)
+const INCIDENT_WARP := 3.0   # m: the most a tackle clip may carry its tackler for a close cut
 const CUT := 8.0              # m: a ball moved further than this in one frame was put back (a
                               # bounce after a goal, the change of ends); the camera goes straight there
 
@@ -84,9 +96,23 @@ var _replay_end := 0.0        # its last record's time (director time)
 var _replay_x := 0.0          # the goal line it was kicked at
 var _replay_t := 0.0          # where the replay is (director time)
 var _after_siren: Array = []  # the deciding behind's clip, for after the siren
+var _after_side := 0          # ...and the side that kicked it
 var replaying := false        # the picture shows a replay
+var _wipe := -1.0             # real s into a sting; -1 none
+var _out := false             # the sting is taking the picture out of the replay
+var _wipe_clip: Array = []    # the replay the sting is covering the cut to; [] a sting back to live
+var replay_side := 0          # the side that scored the goal being replayed (the sting's colours)
 var _kick_wide := false       # a long kick's zoom out still running (rule 2.111)
 var _zoom := 1.0              # 0 the normal TV-height shot, 1 the wide shot (rule 2.111)
+## Chosen 2026-11-21 ("B: close cut", row 202, 2e): a tackle that stops play (held to a
+## ball-up, or a holding-the-ball or dropped-ball free) cuts to the nearest clear wing camera,
+## INCIDENT_WIDTH across on the two men, from the moment it lands until they are back on their
+## feet (MatchDirector.TAKE_UP), then back to the main camera. A tackle that spills the ball
+## free stays on the main camera: real TV does not cut away from live play.
+var incident_cuts := true
+var _inc := {}                # {who, victim, t0}: the tackle the picture is on; {} none
+var _inc_eye := Vector3.ZERO
+var _inc_trail: Array = []
 
 
 func _init(p_oval: Oval3D) -> void:
@@ -107,6 +133,7 @@ static func main_eye() -> Vector3:
 func frame(dt: float, wall := 0.0) -> void:
 	_t += dt
 	_record()
+	_step_wipe(wall)
 	if replaying:
 		_play_replay(wall)
 		return
@@ -121,9 +148,16 @@ func frame(dt: float, wall := 0.0) -> void:
 		_play_replay(0.0)
 		return
 	_set_close()
+	_set_incident()
 	if _close_who >= 0:
 		var gp := ((oval.players[_close_who] as Dictionary)["node"] as Node3D).global_position
 		_shoot(_close_eye, _smooth(_close_trail, Vector3(gp.x, CLOSE_AIM_Y, gp.z), CLOSE_SMOOTH), CLOSE_WIDTH)
+	elif not _inc.is_empty() and shot == "main":
+		# The hips as drawn: a tackle clip carries the bodies off their nodes (root motion).
+		var a := oval.global_transform * oval.anim._hips_world(oval.players[int(_inc["who"])]).origin
+		var b := oval.global_transform * oval.anim._hips_world(oval.players[int(_inc["victim"])]).origin
+		var mid := (a + b) * 0.5
+		_shoot(_inc_eye, _smooth(_inc_trail, Vector3(mid.x, 0.6, mid.z), CLOSE_SMOOTH), INCIDENT_WIDTH)
 	elif shot == "goals":
 		_goals_shot(signf((oval.global_transform * Vector3(_end_x, 0.0, 0.0)).x))
 	else:
@@ -215,14 +249,54 @@ func _set_close() -> void:
 	_close_who = who
 
 
+## The tackle the picture cuts to (incident_cuts): it lands (the director's "down") on a free
+## paid off it, or a tackle held to a ball-up; it holds until both men are up.
+func _set_incident() -> void:
+	var d = oval.director
+	if not incident_cuts:
+		_inc = {}
+		return
+	if not _inc.is_empty() and (d.time - float(_inc["t0"]) >= d.TAKE_UP
+			or not _paired(int(_inc["who"]), int(_inc["victim"]))):
+		_inc = {}
+	if d._beat.is_empty() or d._pi >= d._phases.size():
+		return
+	var p: Dictionary = d._phases[d._pi]
+	if str(p.get("t", "")) != "down" or not p.get("_entered", false):
+		return
+	var k := int(d._beat["k"])
+	if not _inc.is_empty() and int(_inc["k"]) == k:
+		return
+	var kind := str(d._beat.get("kind", ""))
+	var stops := kind == "free"
+	if kind == "tackle":
+		var nk: int = d._next_real(k)
+		stops = nk >= 0 and str((d.events[nk] as Dictionary).get("kind", "")) == "ballup"
+	if not stops or not _paired(int(p["who"]), int(p["victim"])):
+		return
+	_inc = {"k": k, "who": int(p["who"]), "victim": int(p["victim"]), "t0": d.time}
+	_inc_eye = _clear_eye(int(p["victim"]))
+	_inc_trail.clear()
+
+
+## Both men are in the same tackle clip, drawn where the director has them (a tackle the
+## clip had to carry its tackler far to reach is not one to look at close).
+func _paired(who: int, victim: int) -> bool:
+	var a: Array = oval.anim._in
+	var pr: Dictionary = a[who]
+	if pr.is_empty() or a[victim] != pr:
+		return false
+	return float((pr["rec"] as Dictionary).get("warp_m", 0.0)) <= INCIDENT_WARP
+
+
 ## The first wing camera (the centre one, then the nearer 50 m one, then the other) with a clear
 ## line to `who`: nobody else nearer that line than CLEAR between the lens and him.
 func _clear_eye(who: int) -> Vector3:
 	var at: Vector3 = ((oval.players[who] as Dictionary)["node"] as Node3D).global_position
 	var a2 := Vector2(at.x, at.z)
 	var side := signf(at.x) if at.x != 0.0 else 1.0
-	var eyes := [main_eye(), main_eye() + Vector3(side * WING_50, 0.0, 0.0),
-			main_eye() - Vector3(side * WING_50, 0.0, 0.0)]
+	var eyes := [main_eye(), main_eye() + Vector3(side * wing_50(), 0.0, 0.0),
+			main_eye() - Vector3(side * wing_50(), 0.0, 0.0)]
 	for eye in eyes:
 		var e2 := Vector2((eye as Vector3).x, (eye as Vector3).z)
 		var clear := true
@@ -287,19 +361,56 @@ func _after_score() -> void:
 	_score_t = -1.0
 	if clip.size() < 2:
 		return
+	replay_side = int((oval.director.events[k] as Dictionary).get("side", 0))
 	if str((oval.director.events[k] as Dictionary).get("kind", "")) == "goal":
-		_start_replay(clip)
+		_sting_in(clip)
 	elif oval.director.deciding_behind(k):
 		_after_siren = clip
+		_after_side = replay_side
 
 
 ## The deciding behind's replay, once the siren has gone (rule 2.96). False when there is none.
 func replay_after_siren() -> bool:
 	if _after_siren.is_empty():
 		return false
-	_start_replay(_after_siren)
+	replay_side = _after_side
+	_sting_in(_after_siren)
 	_after_siren = []
 	return true
+
+
+## The replay is on the picture, or a sting is taking the picture into or out of it.
+func on_replay() -> bool:
+	return replaying or _wipe >= 0.0
+
+
+## Where the sting is: 0 starting, 0.5 covering the picture (the cut), 1 gone; -1 none.
+func sting() -> float:
+	return _wipe / WIPE_S if _wipe >= 0.0 else -1.0
+
+
+## The sting into a replay: live play goes on under the band until it covers the picture.
+func _sting_in(clip: Array) -> void:
+	_wipe_clip = clip
+	_wipe = 0.0
+
+
+## The sting runs on `wall` real seconds: at its middle the picture cuts, into the replay or
+## back to live.
+func _step_wipe(wall: float) -> void:
+	if _wipe < 0.0:
+		return
+	var was := _wipe
+	_wipe += wall
+	if was < WIPE_S * 0.5 and _wipe >= WIPE_S * 0.5:
+		if not _wipe_clip.is_empty():
+			_start_replay(_wipe_clip)
+			_wipe_clip = []
+		elif replaying:
+			_cut_live()
+	if _wipe >= WIPE_S:
+		_wipe = -1.0
+		_out = false
 
 
 func _start_replay(clip: Array) -> void:
@@ -311,10 +422,17 @@ func _start_replay(clip: Array) -> void:
 	shot = "goals"
 
 
-## Back to the live picture: the replay is over, or the coach skipped it.
+## The coach skipped the replay (rule 2.110): the picture is live again at once, no sting.
 func skip_replay() -> void:
-	if not replaying:
-		return
+	_wipe_clip = []
+	_wipe = -1.0
+	_out = false
+	if replaying:
+		_cut_live()
+
+
+## Back to the live picture.
+func _cut_live() -> void:
 	replaying = false
 	_replay = []
 	# Off the live picture for the replay: the umpires go to where the live play has them now
@@ -328,11 +446,14 @@ func skip_replay() -> void:
 ## One frame of the replay, `wall` real seconds on: every recorded man, umpire and the ball put
 ## where they were (between the two nearest records), over the live picture's.
 func _play_replay(wall: float) -> void:
-	_replay_t += wall * REPLAY_RATE
+	if not _out:
+		_replay_t += wall * REPLAY_RATE
 	if _replay_t > _replay_end:
-		skip_replay()
-		frame(0.0)
-		return
+		# Over: the last moment holds under the sting back to live.
+		_replay_t = _replay_end
+		if not _out:
+			_out = true
+			_wipe = 0.0
 	var j := 0
 	while j < _replay.size() - 2 and float(_replay[j + 1]["t"]) < _replay_t:
 		j += 1
