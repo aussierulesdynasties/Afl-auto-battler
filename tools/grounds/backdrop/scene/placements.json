@@ -190,5 +190,13 @@
   ],
   "yaw": 0.0,
   "how": "stands on OSM buildings, oval on OSM pitch"
+ },
+ "optus": {
+  "origin": [
+   -31.951075784871815,
+   115.88931398789981
+  ],
+  "yaw": 0.0,
+  "how": "Optus model's own 0,0 (survey/README on PR #1993: model (-30.38,-8.78) = -31.95115518870997, 115.88899235343283), model north-up"
  }
 }
