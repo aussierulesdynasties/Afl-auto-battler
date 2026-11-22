@@ -161,6 +161,19 @@ _shore = WV & ~_nb(WV, 'all'); _sand = ~WV & _nb(WV, 'any')
 vc = vc.copy(); vc[WV.ravel()] = lin((34, 58, 82))[:3]; vc[_shore.ravel()] = lin((60, 92, 110))[:3]; vc[_sand.ravel()] = lin((172, 164, 134))[:3]
 pass   # terrain keeps its heights; the sea plane cuts the shoreline along the contour
 print('far water cells', int(WV.sum()), 'sea z', ZSEA)
+# near ground never dips under the water plane except on mapped water: the DEM's low parks and pits (Queens Gardens,
+# the WACA's own surrounds) drew the river's water through the grass
+from PIL import Image
+_gimg = np.asarray(Image.open(os.path.join(D, 'ground.png')).convert('RGB')).astype(np.float32)
+_wc = np.array(spec['palette']['water'], np.float32); _gn = _gimg.shape[0]
+_nm = bpy.data.objects['bg_near_ground'].data; _co = np.zeros(len(_nm.vertices) * 3); _nm.vertices.foreach_get('co', _co); _co = _co.reshape(-1, 3)
+_pi = np.clip(((NE - _co[:, 1]) / (2 * NE) * _gn).astype(int), 0, _gn - 1); _pj = np.clip(((_co[:, 0] + NE) / (2 * NE) * _gn).astype(int), 0, _gn - 1)
+_isw = np.abs(_gimg[_pi, _pj] - _wc[None]).max(1) < 28
+_wmp = os.path.join(D, 'water_mask.npy')
+if os.path.exists(_wmp): _WM = np.load(_wmp); _isw = _WM[np.clip(_pi * _WM.shape[0] // _gn, 0, _WM.shape[0] - 1), np.clip(_pj * _WM.shape[1] // _gn, 0, _WM.shape[1] - 1)]
+_low = (~_isw) & (_co[:, 2] < ZSEA + 3.2)
+_co[_low, 2] = ZSEA + 3.2; _nm.vertices.foreach_set('co', _co.ravel()); _nm.update()
+print('near ground lifted over the water plane', int(_low.sum()))
 d = np.hypot(VF[:, 0], VF[:, 1])
 hz = (1 - np.exp(-d / spec.get('haze_m', 22000)))[:, None] * 0.85
 vc = vc * (1 - hz) + lin(PAL['haze'])[None] * hz
@@ -509,6 +522,7 @@ for b in BL:   # towers over 1 km out: distant city facade (texture pass)
     if b['c'] == 'tower' and float(np.hypot(*np.array(b['p'], float).mean(0))) > 1000: b['c'] = 'tower_far'
 PAL['walls_tower_far'] = PAL['walls_tower']
 PAL['walls_tower'] = list(PAL['walls_tower']) + [[150, 146, 138], [118, 124, 132], [176, 170, 158], [92, 104, 112], [196, 190, 176], [138, 120, 104]]; PAL['walls_tower_far'] = PAL['walls_tower']
+if spec.get('real'): exec(open(os.path.join(HERE, 'towers_real.py'), encoding='utf-8').read())   # modelled storeys, no painted windows
 for _v in range(6): build_class('tower', 'fac/t%d.png' % _v, 3.6, 3.2, (_v, 6), 0.32); build_class('tower_far', 'fac/t%d.png' % _v, 3.6, 3.2, (_v, 6), 0.32)
 print('buildings built')
 
@@ -749,5 +763,6 @@ if os.path.exists(OJ):
         print('afl oval', round(cx), round(cy), 'length', round(L_, 1), 'width', round(W_, 1))
     if OLV: mk_obj('bg_oval_lines', OLV, OLF, wm)
     if PV: mk_obj('bg_oval_posts', PV, PF, pm)
+exec(open(os.path.join(HERE, 'real_lm.py'), encoding='utf-8').read())   # landmarks of the real place
 bpy.ops.wm.save_as_mainfile(filepath=os.path.join(OUT, 'scene.blend'))
 print('SAVED', OUT)
