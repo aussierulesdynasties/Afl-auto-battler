@@ -30,7 +30,13 @@ and renders are rebuilt on demand and git-ignored.
   Riverway polar kinds `single`, `two_tier`, `open` (optional `front_tab`, `no_seats`), `block`, and `bank` (grass hill).
   Seat colours per stand: `row_cols` (front to back) or `seat_mix`.
 - `towers`, `extras` (`polys`, `boxes`, `buildings`, `sails`, `shelters`, `screen`), `rings` (a running track),
-  `dome` (a whole-ground translucent roof on ribs), `outer_r` (number or [b, r] table), `mats_ground`.
+  `dome` (a whole-ground translucent roof on ribs), `outer_r` (number or [b, r] table), `path_w` (number or [b, w]
+  table), `mats_ground`.
+- Optional: `fence_fourier` {c, a0, ab} (the fence as one smooth polar Fourier curve fitted to a trace, in place of the
+  ellipse); `terrain` {b, dr, z} (ground heights at distances `dr` beyond the fence on bearings `b`: the bank and path
+  follow it); per stand `open_back` (no back walls: an open colonnade, modelled in the ground's own file) and
+  `end_skew` {b, deg, ramp} (a stand end cut on a line that isn't radial); `custom` (a file in `model/` whose
+  `build(kit, col)` adds the ground's own pieces, e.g. `blacktown/model/detail.py`).
 - `paint`: the ground's own textures by kind (see `kit/paint.py`). Every texture is painted in code: no photo pixels.
 
 6. Copy the GLB and seat files into `assets/grounds/<slug>/`, re-import (`godot --headless --import`), then hold the seats

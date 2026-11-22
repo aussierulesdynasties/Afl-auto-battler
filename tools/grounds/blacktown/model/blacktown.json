@@ -125,81 +125,161 @@
    "row_cols": [
     "seat_bt"
    ],
-   "seat_depth": 8.8
+   "seat_depth": 8.8,
+   "open_back": true,
+   "end_skew": {
+    "b": 293.0,
+    "deg": -2.3,
+    "ramp": 12.0,
+    "how": "Google Earth top view: the north end runs from the front corner at b 293.3 to the back corner at b 291.0"
+   }
   }
  ],
- "outer_r": 96,
+ "outer_r": [
+  [
+   0,
+   98.96
+  ],
+  [
+   30,
+   90.79
+  ],
+  [
+   45,
+   86.08
+  ],
+  [
+   60,
+   86.34
+  ],
+  [
+   75,
+   85.37
+  ],
+  [
+   90,
+   87.36
+  ],
+  [
+   105,
+   90.15
+  ],
+  [
+   120,
+   92.14
+  ],
+  [
+   140,
+   98.07
+  ],
+  [
+   160,
+   102.91
+  ],
+  [
+   180,
+   103.89
+  ],
+  [
+   200,
+   101.56
+  ],
+  [
+   222,
+   99.68
+  ],
+  [
+   228,
+   82.15
+  ],
+  [
+   296,
+   86.13
+  ],
+  [
+   305,
+   98.44
+  ],
+  [
+   330,
+   101.47
+  ],
+  [
+   345,
+   101.93
+  ]
+ ],
  "towers": [
   {
    "xy": [
-    -81.9,
-    82.1
+    -83.3,
+    84.3
    ],
-   "top": 40.0,
-   "head_h": 3.5,
-   "head_w": 6.0,
-   "r_base": 0.5,
-   "r_top": 0.28,
+   "top": 44.5,
+   "head_h": 4.0,
+   "head_w": 5.0,
+   "r_base": 0.55,
+   "r_top": 0.3,
    "tilt": 15
   },
   {
    "xy": [
-    51.3,
-    82.1
+    38.3,
+    100.8
    ],
-   "top": 40.0,
-   "head_h": 3.5,
-   "head_w": 6.0,
-   "r_base": 0.5,
-   "r_top": 0.28,
+   "top": 44.5,
+   "head_h": 4.0,
+   "head_w": 5.0,
+   "r_base": 0.55,
+   "r_top": 0.3,
    "tilt": 15
   },
   {
    "xy": [
-    104.7,
-    19.2
+    104.0,
+    20.6
    ],
-   "top": 40.0,
-   "head_h": 3.5,
-   "head_w": 6.0,
-   "r_base": 0.5,
-   "r_top": 0.28,
+   "top": 44.5,
+   "head_h": 4.0,
+   "head_w": 5.0,
+   "r_base": 0.55,
+   "r_top": 0.3,
    "tilt": 15
   },
   {
    "xy": [
-    71.9,
-    -83.0
+    70.8,
+    -78.0
    ],
-   "top": 40.0,
-   "head_h": 3.5,
-   "head_w": 6.0,
-   "r_base": 0.5,
-   "r_top": 0.28,
+   "top": 44.5,
+   "head_h": 4.0,
+   "head_w": 5.0,
+   "r_base": 0.55,
+   "r_top": 0.3,
    "tilt": 15
   },
   {
    "xy": [
-    -38.8,
-    -104.6
+    -39.3,
+    -100.6
    ],
-   "top": 40.0,
-   "head_h": 3.5,
-   "head_w": 6.0,
-   "r_base": 0.5,
-   "r_top": 0.28,
+   "top": 44.5,
+   "head_h": 4.0,
+   "head_w": 5.0,
+   "r_base": 0.55,
+   "r_top": 0.3,
    "tilt": 15
   },
   {
    "xy": [
-    -130.7,
-    -38.7
+    -126.2,
+    -26.2
    ],
-   "top": 40.0,
-   "head_h": 3.5,
-   "head_w": 6.0,
-   "r_base": 0.5,
-   "r_top": 0.28,
+   "top": 44.5,
+   "head_h": 4.0,
+   "head_w": 5.0,
+   "r_base": 0.55,
+   "r_top": 0.3,
    "tilt": 15
   }
  ],
@@ -208,68 +288,93 @@
   "path": "track_dirt",
   "outside": "ground_grass"
  },
- "_note": "Blacktown International Sportspark, Oval 1 (Rooty Hill, Sydney). Stage 1 of the rebuild (2026-11-22): the boundary fence is one smooth curve (fence_fourier) fitted to the NSW 7.5 cm aerial; the grandstand's roof footprint and 11 m height come from Google Earth's 3D mesh (straight-down shots, roof front 0.3 m over the fence, 24.5 m deep). Seat rows (11, 1.0-5.4 m) are estimated from the published 1,600 seats, not measured. Still the first draft's: rooftop masts (missing), the south wing, the indoor centre, light tower positions and heights, surrounds.",
+ "_note": "Blacktown International Sportspark, Oval 1 (Rooty Hill, Sydney). Stage 1 (2026-11-22): the boundary fence is one smooth curve (fence_fourier) fitted to the NSW 7.5 cm aerial; the grandstand's roof footprint and 11 m height come from Google Earth's 3D mesh (straight-down shots, roof front 0.3 m over the fence, 24.5 m deep). Seat rows (11, 1.0-5.4 m) are estimated from the published 1,600 seats, not measured. Stage 2 (2026-11-22): heights read off Google Earth's status bar on a 3 m grid and on radial lines round the bank (whole metres); detail.py models the open gallery and columns on the stand's back, the roof masts (16 m tops), the floodlights under the roof, the 8 m south wing and its raised walkway, the indoor centre (roof 6-7 m, monitors 8 m) and two stairs up the bank; the north roof end is cut on its real line (end_skew); light towers stand at Google Earth's head positions (44.5 m); the bank and the dirt path on its top follow the measured terrain table. Not yet built: the surroundings beyond the bank (stage 3); the ground beyond 35 m out from the fence is held at the last measured height.",
  "fence_mat": "pickets",
  "fence_cap": "paint_white",
  "step": 0.5,
- "path_w": 5,
- "extras": {
-  "polys": [
-   {
-    "p": [
-     [
-      -160,
-      32
-     ],
-     [
-      -117,
-      32
-     ],
-     [
-      -117,
-      -24
-     ],
-     [
-      -160,
-      -24
-     ]
-    ],
-    "h": 9.0,
-    "mat": "clad_bt",
-    "top": "roof_bt"
-   }
+ "path_w": [
+  [
+   0,
+   3.0
+  ],
+  [
+   30,
+   3.4
+  ],
+  [
+   45,
+   4.5
+  ],
+  [
+   60,
+   4.5
+  ],
+  [
+   75,
+   8.0
+  ],
+  [
+   90,
+   8.0
+  ],
+  [
+   105,
+   6.0
+  ],
+  [
+   120,
+   6.0
+  ],
+  [
+   140,
+   4.0
+  ],
+  [
+   160,
+   4.0
+  ],
+  [
+   180,
+   5.0
+  ],
+  [
+   200,
+   6.0
+  ],
+  [
+   222,
+   5.0
+  ],
+  [
+   228,
+   0.1
+  ],
+  [
+   296,
+   0.1
+  ],
+  [
+   305,
+   3.0
+  ],
+  [
+   330,
+   3.0
+  ],
+  [
+   345,
+   3.0
   ]
- },
+ ],
+ "extras": {},
  "paint": {
   "seat_bt": {
    "kind": "seat",
    "col": [
-    36,
-    52,
-    92
+    44,
+    46,
+    50
    ]
-  },
-  "clad_bt": {
-   "kind": "windows",
-   "col": [
-    214,
-    204,
-    186
-   ],
-   "every": 3.0,
-   "floor": 3.6,
-   "win": 1.6,
-   "sill": 1.0,
-   "head": 2.6
-  },
-  "glass": {
-   "kind": "glass",
-   "col": [
-    52,
-    70,
-    82
-   ],
-   "mull": 1.5
   },
   "roof_bt": {
    "kind": "deck",
@@ -293,6 +398,27 @@
     150,
     112,
     82
+   ]
+  },
+  "render_bt": {
+   "kind": "render",
+   "col": [
+    214,
+    204,
+    186
+   ]
+  },
+  "glass_bt": {
+   "kind": "flat",
+   "col": [
+    46,
+    56,
+    64
+   ],
+   "noise": 4,
+   "tile": [
+    3.0,
+    3.0
    ]
   }
  },
@@ -354,5 +480,463 @@
   ],
   "K": 12,
   "how": "K=12 polar Fourier about c (x east, y north, model metres) fitted to the boundary thread's seen fence-rail trace plus the grass edge (+0.3 m to the rail line) traced on the NSW 7.5 cm aerial in front of the grandstand"
- }
+ },
+ "custom": "detail.py",
+ "terrain": {
+  "b": [
+   0.0,
+   15.0,
+   20.0,
+   25.0,
+   30.0,
+   45.0,
+   50.0,
+   55.0,
+   60.0,
+   65.0,
+   82.5,
+   97.5,
+   112.5,
+   127.5,
+   142.5,
+   157.5,
+   172.5,
+   187.5,
+   202.5,
+   217.5,
+   231.0,
+   291.5,
+   293.0,
+   307.5,
+   322.5,
+   337.5,
+   345.0,
+   350.0,
+   355.0
+  ],
+  "dr": [
+   2,
+   5,
+   8,
+   11,
+   14,
+   17,
+   20,
+   23,
+   26,
+   29,
+   32,
+   35
+  ],
+  "z": [
+   [
+    0.0,
+    0.23,
+    1.0,
+    2.0,
+    2.96,
+    3.0,
+    1.0,
+    -1.0,
+    -1.0,
+    -1.0,
+    -1.0,
+    -1.0
+   ],
+   [
+    0.0,
+    0.23,
+    1.0,
+    2.0,
+    2.96,
+    3.0,
+    1.0,
+    -1.0,
+    -1.0,
+    -1.0,
+    -1.0,
+    -1.0
+   ],
+   [
+    0.0,
+    0.23,
+    1.0,
+    2.0,
+    2.96,
+    3.0,
+    3.0,
+    -1.0,
+    -1.0,
+    -1.0,
+    -1.0,
+    -1.0
+   ],
+   [
+    0.0,
+    0.23,
+    1.0,
+    2.0,
+    2.96,
+    3.0,
+    1.0,
+    -1.0,
+    -1.0,
+    -1.0,
+    -1.0,
+    -1.0
+   ],
+   [
+    0.0,
+    0.23,
+    1.0,
+    2.0,
+    2.96,
+    3.0,
+    3.0,
+    1.0,
+    -1.0,
+    -1.0,
+    -1.0,
+    -1.0
+   ],
+   [
+    0.0,
+    0.23,
+    1.0,
+    2.0,
+    2.96,
+    3.0,
+    2.0,
+    -1.0,
+    0.0,
+    -1.0,
+    -1.0,
+    -1.0
+   ],
+   [
+    0.0,
+    0.23,
+    1.0,
+    2.0,
+    2.96,
+    3.0,
+    1.0,
+    -1.0,
+    -1.0,
+    -1.0,
+    -1.0,
+    -1.0
+   ],
+   [
+    0.0,
+    0.23,
+    1.0,
+    2.0,
+    2.96,
+    3.0,
+    2.0,
+    0.0,
+    -1.0,
+    -1.0,
+    -1.0,
+    -1.0
+   ],
+   [
+    0.0,
+    0.23,
+    1.0,
+    2.0,
+    2.96,
+    3.0,
+    3.0,
+    0.0,
+    -1.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   [
+    0.0,
+    0.23,
+    1.0,
+    2.0,
+    2.96,
+    3.0,
+    3.0,
+    2.0,
+    0.0,
+    -1.0,
+    0.0,
+    0.0
+   ],
+   [
+    0.0,
+    0.23,
+    1.0,
+    2.0,
+    2.96,
+    3.0,
+    2.0,
+    2.0,
+    2.0,
+    2.0,
+    1.0,
+    0.0
+   ],
+   [
+    0.0,
+    0.23,
+    1.0,
+    2.0,
+    2.96,
+    3.0,
+    2.0,
+    2.0,
+    2.0,
+    1.0,
+    1.0,
+    1.0
+   ],
+   [
+    0.0,
+    0.23,
+    1.0,
+    2.0,
+    2.96,
+    3.0,
+    2.0,
+    1.0,
+    1.0,
+    1.0,
+    1.0,
+    1.0
+   ],
+   [
+    0.0,
+    0.23,
+    1.0,
+    2.0,
+    2.96,
+    3.0,
+    2.0,
+    0.0,
+    0.0,
+    0.0,
+    -1.0,
+    -1.0
+   ],
+   [
+    0.0,
+    0.23,
+    1.0,
+    2.0,
+    2.96,
+    3.0,
+    1.0,
+    0.0,
+    0.0,
+    -1.0,
+    -1.0,
+    -1.0
+   ],
+   [
+    0.0,
+    0.23,
+    1.0,
+    2.0,
+    2.96,
+    3.0,
+    2.0,
+    0.0,
+    0.0,
+    0.0,
+    -1.0,
+    -1.0
+   ],
+   [
+    0.0,
+    0.23,
+    1.0,
+    2.0,
+    2.96,
+    3.0,
+    3.0,
+    1.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   [
+    0.0,
+    0.23,
+    1.0,
+    2.0,
+    2.96,
+    3.0,
+    2.0,
+    2.0,
+    1.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   [
+    0.0,
+    0.23,
+    1.0,
+    2.0,
+    2.96,
+    3.0,
+    2.0,
+    1.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   [
+    0.0,
+    0.23,
+    1.0,
+    2.0,
+    2.96,
+    3.0,
+    2.0,
+    1.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   [
+    0.0,
+    0.23,
+    1.0,
+    2.0,
+    2.96,
+    3.0,
+    3.0,
+    2.0,
+    0.0,
+    -1.0,
+    -1.0,
+    -1.0
+   ],
+   [
+    0.0,
+    0.23,
+    1.0,
+    2.0,
+    2.96,
+    3.0,
+    3.0,
+    2.0,
+    0.0,
+    -1.0,
+    -1.0,
+    -1.0
+   ],
+   [
+    0.0,
+    0.23,
+    1.0,
+    2.0,
+    2.96,
+    3.0,
+    2.0,
+    0.0,
+    -1.0,
+    -1.0,
+    -1.0,
+    -1.0
+   ],
+   [
+    0.0,
+    0.23,
+    1.0,
+    2.0,
+    2.96,
+    3.0,
+    1.0,
+    0.0,
+    -1.0,
+    -1.0,
+    -1.0,
+    -1.0
+   ],
+   [
+    0.0,
+    0.23,
+    1.0,
+    2.0,
+    2.96,
+    3.0,
+    1.0,
+    0.0,
+    -1.0,
+    -1.0,
+    -1.0,
+    -1.0
+   ],
+   [
+    0.0,
+    0.23,
+    1.0,
+    2.0,
+    2.96,
+    3.0,
+    1.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   [
+    0.0,
+    0.23,
+    1.0,
+    2.0,
+    2.96,
+    3.0,
+    2.0,
+    -1.0,
+    -1.0,
+    -1.0,
+    -1.0,
+    -1.0
+   ]
+  ],
+  "how": "Google Earth status-bar heights (whole metres above the turf, 2026-11-22) on radial lines every 7.5-15 deg, 2-35 m beyond the fence; up to the bank top the mean of all bearings, beyond it each bearing, tree canopy left out. Held at the last value further out (not measured there yet). The bank meets the stand's north end at b 293 (Google Earth reads 3-4 m beside it)."
+ },
+ "_path_how": "outer_r/path_w: the dirt path on the bank top traced from Google Earth straight-down shots (imagery 2025-07-24); none in front of the grandstand (b 228-296)"
 }
