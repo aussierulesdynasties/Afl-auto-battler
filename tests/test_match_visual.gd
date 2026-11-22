@@ -2308,7 +2308,8 @@ func _test_graphics_levels(res: Dictionary) -> void:
 		else:
 			var first: MultiMeshInstance3D = oval.crowd._chunks[0]["cards"]
 			_check(people == 0 and first.visibility_range_begin == 0.0 and seat_casting == 0
-					and vp.scaling_3d_scale < 1.0 and not oval.turf.blades_on and vp.msaa_3d == Viewport.MSAA_DISABLED,
+					and vp.scaling_3d_scale < 1.0 and not oval.turf.blades_on and vp.msaa_3d == Viewport.MSAA_DISABLED
+					and vp.scaling_3d_mode == Viewport.SCALING_3D_MODE_FSR,
 					"Low: every supporter a card, no seat shadows, no blades, a smaller picture (%d casting)" % seat_casting)
 		# A wet day (rule 2.83): rain falls at every level, fewer drops lower down; the far stands
 		# grey in it, the men look wet, the towers are on by day. A dry day after it takes all that away.
