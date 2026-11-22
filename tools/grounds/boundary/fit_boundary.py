@@ -172,6 +172,11 @@ def main():
             entry["centre_vs_goals_mid_m"] = [round(float(c[0]), 3), round(float(c[1]), 3)]
         if d.get("fence"):
             fence = frame(d["fence"])
+            if "fence_seen" in d:
+                fence = fence[np.array(d["fence_seen"], bool)]
+            if largest_gap_deg(fence) > MAX_UNSEEN_DEG:
+                report.append("%-10s HELD: %.0f deg of the fence unseen in one stretch" % (slug, largest_gap_deg(fence)))
+                continue
             fcoef, _, fstats = fit(fence)
             entry["fence"] = [round(float(c), 4) for c in fcoef]
             entry["fence_fit"] = fstats | {"largest_gap_deg": largest_gap_deg(fence)}

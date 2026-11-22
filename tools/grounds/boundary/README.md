@@ -10,7 +10,8 @@ The match plays on a ground's traced boundary line, not an ellipse, once it has 
   fence and south stand sit up to ~4 m off the real fence, so the turf drawn to the real fence overlaps the stand: it
   waits for the model to be rebuilt to Google Earth. People First's trace has no fence, and laid on its goals the
   model's north seats come to the line (the goals' midpoint is 3.7 m from the model's fitted fence centre): held
-  until its frame is confirmed against the model and the fence is traced.
+  until its frame is confirmed against the model and the fence is traced. The re-drop (shifted +2.72, -0.49 onto the
+  model as built, in pending/) sees only 70% of the fence, 66 degrees unseen in one stretch, so it is still held.
 - `python3 tools/grounds/boundary/fit_boundary.py` fits each trace (polar Fourier radius about the goals' midpoint,
   x through the goals) and writes `data/ground_boundaries.json` with the fit error per ground.
 - Check in a match: `godot --path . --rendering-method mobile --script tools/grounds/boundary/topdown.gd -- OUT "<ground>"`
