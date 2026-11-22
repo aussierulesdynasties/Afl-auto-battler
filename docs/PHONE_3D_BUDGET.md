@@ -62,7 +62,7 @@ the renderer's time against the plain stand on High (software GPU, so ratios onl
 | optus | 3839 / 2985 / 1948 | 311 / 261 / 238 | 1.31 / 0.95 / 0.73 | 878 / 843 |
 | mcg | 3593 / 2559 / 1880 | 237 / 219 / 206 | 1.36 / 1.02 / 0.76 | 821 / 785 |
 | scg | 3446 / 2538 / 2181 | 216 / 201 / 209 | 1.37 / 1.04 / 0.85 | 887 / 853 |
-| marvel | 2575 / 2220 / 1528 | 260 / 245 / 219 | (2026-11-21, after the rebuild: seats instanced, crowd seated, surroundings) | 657 / 622 |
+| marvel | 2599 / 2586 / 2038 | 271 / 273 / 251 | (2026-11-22: modelled east offices and vents, landmark buildings, harbour edge, rail gantries; the landmarks alone +25k triangles, +10 draws, +4 MB) | 665 / 641 |
 | macpoint | 2859 / 1985 / 1683 | 386 / 371 / 376 | 1.15 / 0.96 / 0.72 | 783 / 750 |
 | york_park | 2257 / 1795 / 1592 | 300 / 292 / 300 | 0.95 / 0.77 / 0.65 | 836 / 803 |
 | moorabbin | 2227 / 2015 / 1793 | 239 / 235 / 243 | 0.98 / 0.83 / 0.68 | 794 / 762 |

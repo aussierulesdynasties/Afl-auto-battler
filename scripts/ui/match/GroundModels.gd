@@ -101,7 +101,7 @@ const SURROUNDS := {
 	# deck in 3D (tools/grounds/marvel/bridges.py). Painted for the same match light as Optus's map.
 	"marvel": {"y": -0.03, "inner": 120.0, "colour": Color(0.55, 0.56, 0.52),
 			"map": "surrounds.webp", "span": 2048.0, "trees": "trees.bin", "buildings": "buildings.bin",
-			"models": ["bridges.glb"], "tint": Color(0.86, 0.84, 0.82), "building_tint": Color.WHITE, "building_style": "towers"},
+			"models": ["bridges.glb", "landmarks.glb"], "tint": Color(0.86, 0.84, 0.82), "building_tint": Color.WHITE, "building_style": "towers"},
 }
 
 ## Parts of a model drawn again from a build tool's own mesh (per vertex x, y, z, normal, colour;
@@ -480,7 +480,13 @@ static func _add_trees(root: Node3D, buf: PackedFloat32Array, y: float) -> void:
 			var at := Vector3(buf[i], y, buf[i + 1])
 			var turn := Basis(Vector3.UP, buf[i + 4] * TAU)
 			var crown := h - r * 1.1
-			leaves.set_instance_transform(j, Transform3D(turn.scaled(Vector3(r, r * 0.85, r)), at + Vector3(0, crown, 0)))
+			var tall := r * 0.85
+			# A tree listed more than four times as tall as its crown is wide (Harbour Esplanade's
+			# slim street trees, Google Earth ge_ferry_b) gets a narrow upright crown.
+			if h > r * 4.0:
+				tall = h * 0.34
+				crown = h - tall
+			leaves.set_instance_transform(j, Transform3D(turn.scaled(Vector3(r, tall, r)), at + Vector3(0, crown, 0)))
 			# Eucalypt grey-green to elm green, a little lighter or darker tree to tree.
 			var shade: float = buf[i + 4]
 			leaves.set_instance_color(j, Color(0.92, 0.95, 0.9).lerp(Color(1.1, 1.08, 0.95), shade) * (0.85 + 0.3 * fposmod(shade * 7.3, 1.0)))
@@ -530,7 +536,7 @@ static func _add_buildings(root: Node3D, buf: PackedFloat32Array, y: float, tint
 			var glassy := (pick % 100) < (75 if h > 30.0 else 30)
 			wall = GLASS[pick % GLASS.size()] if glassy else CONCRETE[pick % CONCRETE.size()]
 			wall.a = 1.0 if glassy else 0.5
-			roof = Color8(92, 94, 96) if glassy else wall.darkened(0.38)
+			roof = Color8(128, 128, 124) if glassy else wall.darkened(0.25)  # Google Earth's grey roofs (top view)
 		# Walls face out whichever way round the footprint was drawn.
 		var ccw := 0.0
 		for k in n:
@@ -612,7 +618,12 @@ uniform vec4 tint : source_color = vec4(1.0);
 float hash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
 
 void fragment() {
-	vec3 base = COLOR.rgb * tint.rgb;
+	// The palette is written as sRGB colours (Color8); vertex colours reach the shader unconverted, so
+	// without this the walls and roofs rendered far paler than the colours picked (2026-11-22: roofs
+	// (92, 94, 96) rendered near white from above, against Google Earth's mid grey).
+	vec3 c = COLOR.rgb;
+	vec3 lin = mix(c / 12.92, pow((c + 0.055) / 1.055, vec3(2.4)), step(0.04045, c));
+	vec3 base = lin * tint.rgb;
 	float style = COLOR.a;
 	if (style < 0.25) {
 		ALBEDO = base;
