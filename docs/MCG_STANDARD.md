@@ -61,6 +61,14 @@ width set by that material's metres per u (measured from the model's UVs). The d
 - **Glass:** mullions every 1.5 m and transoms every 3.6 m, a sky reflection at the top of each run,
   and a slab shadow under each floor.
 
+- **No painted-on geometry (director, 2026-11-22).** Arches, doorways, recesses, struts, window reveals,
+  frames, sills, pilasters and mouldings are always modelled with real depth: an opening is cut through the
+  wall with reveals and something behind it, and a frame or trim stands proud with its own top, underside
+  and ends. A dark shape or a coloured strip laid a few centimetres off a wall is never an arch or a window.
+  A texture may only carry detail too small to see in depth from the stands or the broadcast camera (brick
+  coursing, panel joints, mullions on flat curtain glass). Adelaide's arcade, its scoreboard door, windows and
+  louvres were rebuilt to this rule on 2026-11-22.
+
 ## Materials
 
 A ground's named materials can be corrected without rebuilding the model, through

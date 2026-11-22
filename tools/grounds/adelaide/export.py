@@ -11,10 +11,11 @@ REPO = os.path.dirname(os.path.dirname(os.path.dirname(HERE)))
 SRC = os.path.join(REPO, '.claude', 'review', 'adelaide', 'model')
 TEX = os.path.join(HERE, 'tex'); TILES = {int(k): v for k, v in json.load(open(os.path.join(TEX, 'tiles.json'))).items()}
 out = os.path.abspath(sys.argv[sys.argv.index('--') + 1]); os.makedirs(out, exist_ok=True)
-ROUGH = {0: 0.8, 1: 0.85, 2: 0.9, 3: 0.9, 4: 0.6, 5: 0.15, 6: 0.85, 7: 0.9, 8: 0.5, 9: 0.7, 10: 0.42, 11: 0.85, 12: 0.92, 13: 0.6}
+ROUGH = {0: 0.8, 1: 0.85, 2: 0.9, 3: 0.9, 4: 0.6, 5: 0.15, 6: 0.85, 7: 0.9, 8: 0.5, 9: 0.7, 10: 0.42, 11: 0.85, 12: 0.92, 13: 0.6, 14: 0.8}
 METAL = {4: 0.1, 5: 0.3, 10: 0.5}   # painted steel and the membrane matte: glossier, they mirrored the sky purple-blue (2026-11-22)
 NAMES = {0: 'paint', 1: 'paving', 2: 'concrete', 3: 'membrane', 4: 'steel', 5: 'glass', 6: 'brick', 7: 'grass', 8: 'fins',
-         9: 'timber', 10: 'copper', 11: 'stone', 12: 'turf', 13: 'scoreboard'}
+         9: 'timber', 10: 'copper', 11: 'stone', 12: 'turf', 13: 'scoreboard', 14: 'ivy'}
+PART_KIND = {'ivy': 14}   # a part that is one material whatever its alpha says (the alpha byte holds kinds up to 12)
 bpy.ops.wm.read_factory_settings(use_empty=True)
 MATS = {}
 
@@ -43,6 +44,8 @@ for f in sorted(glob.glob(os.path.join(SRC, '*.ply'))):
     lin = ca.data_type == 'FLOAT_COLOR'
     a = col[:, 3] if not lin else col[:, 3]   # alpha is never colour-managed
     kind = np.rint(a * 255 / 20).astype(int)
+    pk_ = PART_KIND.get(os.path.splitext(os.path.basename(f))[0])
+    if pk_ is not None: kind[:] = pk_
     if ca.domain == 'POINT':
         vk = kind
     col[:, 3] = 1.0; ca.data.foreach_set('color', col.ravel())   # alpha back to opaque: it only carried the kind

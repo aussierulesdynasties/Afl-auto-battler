@@ -33,9 +33,23 @@ next to the stands is a second map at 4 pixels a metre out to 254 m (`surrounds_
 concourse): the 1 m map smeared the concourse and paths seen from the stands. The flat deck behind the west upper
 tier is concrete grey, not near-white. The east stand's back walls and north end exterior are grey precast.
 
-Still short of Google Earth (2026-11-22 pass, 16 views): the Western Grandstand's arches have no ivy panels and its
-middle (between the brick towers) is plainer than the real glass pavilion; the roof petals' valleys read softer than
-the real scalloped membrane; parkland canopy is thinner; OSM's roof colours paint some nearby buildings salmon pink.
+The director's west-face notes (2026-11-22, from the Google Earth sheet): "are the dark archways painted on or not?
+they shouldnt be"; "make the archways covered in green plants like in the Earth view"; the main entrance "isnt
+accurate to real life at all". The arches were dark shapes 7 cm off the wall. Fixed (gen.py `arcade`): the brick face
+up to the string course has real openings cut through it, 4 m wide, crowned at 6.4 m, with brick reveals 1.8 m deep,
+a dark passage behind, stairs climbing inside and a sandstone beam across each opening (west_2019.jpg); the string
+course is a moulding 0.18 m proud. Climbing plants cover the arcade face up to a ragged line about 10.6 m up, the
+openings clear (their own part, `ivy.ply`, with a leaf texture, kind 14). The entrance between the towers (`entrance`,
+spec `south_block.entrance`) is now a glazed ground floor standing 5 m out with a terrace on its roof inside an
+orange-brick rim, three pale canopies leaning back from the rim to the facade, and a dark round-topped pod at each
+end; planted stair cores stand out beside both towers (`green_walls`). The base wall's brick no longer stands in front
+of the entrance building's recessed glass floor. The heritage scoreboard's arched door is cut 0.35 m into its brick
+base, and its sash windows, pilasters, trim and louvres stand proud with real depth (hill.py); they were flat strips.
+
+Still short of Google Earth (2026-11-22): the lettering in the entrance's glass band is too blurred in Google Earth to
+read, so the band is plain glass (no text invented); the brick and ivy read darker in the game's light than in Google
+Earth's; the roof petals' valleys read softer than the real scalloped membrane; parkland canopy is thinner; OSM's roof
+colours paint some nearby buildings salmon pink.
 
 Found in the Google Earth pass (2026-11-21) and fixed: the Riverbank Stand's back was a dark navy drum (now storeys:
 stone and glass at the street, a maroon band, glass, pale louvres with white struts to the roof); the lower bowl and
