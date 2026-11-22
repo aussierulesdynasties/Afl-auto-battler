@@ -152,6 +152,10 @@ def building_list(ways, in_foot):
     return np.array(out, "<f4")
 
 
+DILLON_PARK = [(-169.5, -18.6), (-159.4, -15.6), (-137.3, -14.6), (-129.0, -35.0), (-117.0, -37.0), (-110.0, -45.0),
+               (-101.0, -62.0), (-91.0, -80.0), (-90.0, -128.0), (-109.0, -126.4), (-129.0, -81.0), (-145.0, -55.0)]
+
+
 def main():
     paths = sorted(glob.glob(os.path.join(sys.argv[1], "*.osm")))
     trees, ways, seen = [], [], set()
@@ -189,6 +193,12 @@ def main():
     bank &= ~wat & ~road
     arr[bank] = np.array(S.WOOD, float) * (0.85 + 0.3 * n1[bank])
     arr[wat] = np.array(S.WATER, float) * (0.9 + 0.2 * n1[wat])
+    # The Dillon St car park west of the stand and bldg_w is not mapped in OSM: traced on the Esri z19 aerial
+    # (2.25 m registration, sat/gridm.py, 2026-11-22) and checked against GE 3D (view gs_w), asphalt to the creek path.
+    lot = Image.new("L", (S.SIZE, S.SIZE), 0)
+    ImageDraw.Draw(lot).polygon([S.px(*q) for q in DILLON_PARK], fill=255)
+    lot = (np.asarray(lot) > 0) & ~wat
+    arr[lot] = np.array(S.PARKING, float) * (0.94 + 0.08 * n1[lot])
     arr[foot] = (118, 116, 110)
     def block(x, z):
         i, j = int(np.clip(z + S.SIZE / 2, 0, S.SIZE - 1)), int(np.clip(x + S.SIZE / 2, 0, S.SIZE - 1))
