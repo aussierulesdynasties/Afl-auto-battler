@@ -46,16 +46,28 @@ def _blob(k, x, y, z, rx, rz, a, col):
 def _flush():
     global _BUF
     if not _BUF: return
-    if _LOD == 1:
-        for k, x, y, z, rx, rz, a, col in sorted(_BUF, key=lambda b: -b[4])[:3]:
-            V = (ICO0 + rng.normal(0, 0.08, ICO0.shape)) * [rx * 1.12, rx * 1.12, rz * 1.12]; _put(k, _rot(V, a) + [x, y, z], ICO0F, col)
-    else:
-        B = np.array([[b[1], b[2], b[3], b[4], b[5]] for b in _BUF]); k = _BUF[0][0]; col = _BUF[0][7]
-        lo = np.min(B[:, :3] - B[:, [3, 3, 4]], 0); hi = np.max(B[:, :3] + B[:, [3, 3, 4]], 0); c = (lo + hi) / 2; r = (hi - lo) / 2 * 0.9
-        V = (OCT + rng.normal(0, 0.05, OCT.shape)) * r; _put(k, _rot(V, _BUF[0][6]) + c, OCTF, col)
+    B = np.array([[b[1], b[2], b[3], b[4], b[5]] for b in _BUF]); k = _BUF[0][0]; col = _BUF[0][7]
+    lo = np.min(B[:, :3] - B[:, [3, 3, 4]], 0); hi = np.max(B[:, :3] + B[:, [3, 3, 4]], 0)
+    if _LOD == 1:   # the whole crown as one 20-face blob
+        c = (lo + hi) / 2; r = (hi - lo) / 2 * 0.92
+        V = (ICO0 + rng.normal(0, 0.06, ICO0.shape)) * r; _put(k, _rot(V, _BUF[0][6]) + c, ICO0F, col)
+    else:   # far: crowns merged by cell, one 8-face blob over the cell's canopy (every tree's cover kept)
+        _cs = 30.0 if math.hypot(lo[0] + hi[0], lo[1] + hi[1]) < 2 * 1100 else 48.0   # 30 m cells, 48 m past 1.1 km
+        key = ('elm' if 'elm' in G else k, int(math.floor((lo[0] + hi[0]) / 2 / _cs)), int(math.floor((lo[1] + hi[1]) / 2 / _cs)))
+        m = _FAR.get(key)
+        _ca = (hi[0] - lo[0]) * (hi[1] - lo[1]) * 0.78
+        if m is None: _FAR[key] = [lo.copy(), hi.copy(), np.array(col, float), 1, _BUF[0][6], _ca]
+        else: m[0] = np.minimum(m[0], lo); m[1] = np.maximum(m[1], hi); m[2] += col; m[3] += 1; m[5] += _ca
     _BUF = []
+_FAR = {}
+def _far_flush():
+    for (k, _, _), (lo, hi, cs, n, a, ca) in _FAR.items():
+        c = (lo + hi) / 2; r = (hi - lo) / 2 * 0.9
+        f = min(1.0, math.sqrt(ca / max(1.0, 0.78 * (hi[0] - lo[0]) * (hi[1] - lo[1]))))   # the blob covers what the crowns covered
+        r = np.array([r[0] * f, r[1] * f, r[2]])
+        V = (OCT + rng.normal(0, 0.05, OCT.shape)) * r; _put(k, _rot(V, a) + c, OCTF, tuple(cs / n))
 def _trunk(k, x, y, z, r, h, col, lean=(0, 0)):
-    if _LOD == 2: return
+    if _LOD: return
     V = TRK * [r, r, h]; V[6:, :] = V[6:, :]; V[1::2, 0] += lean[0]; V[1::2, 1] += lean[1]; _put(k, V + [x, y, z], TRKF, col)
 for _t, si in zip(TR, _pick):
     x, y = _t[0], _t[1]
@@ -92,7 +104,7 @@ for _t, si in zip(TR, _pick):
     else:   # shrub
         for i in range(rng.integers(1, 4)):
             o = rng.normal(0, 0.8 * s, 2); _blob(k, x + o[0], y + o[1], z0 + 1.1 * s, rng.uniform(1.1, 1.8) * s, rng.uniform(0.8, 1.2) * s, a + i, col)
-_flush()
+_flush(); _far_flush()
 for k, (verts, faces, cols) in G.items():
     if not faces: continue
     tm = mat_vcol('tree_' + k, 0.9); nt = tm.node_tree; b = nt.nodes['Principled BSDF']; vc = b.inputs['Base Color'].links[0].from_socket
