@@ -31,10 +31,22 @@ What Google Earth showed and what changed:
   Stand's south end was one flat wall carrying a painted picture of the building, sky included, now cut to the
   building's own stepped outline. Left painted, being flat: windows, louvres, panel joints, signs, roof ribs. Still
   painted and small: the `fins` screen (24 m2) and the `plant` grille on the south-east corner.
+- Later passes, from Google Earth close-ups (`qa/detail.json`): the south-east corner was a grass yard and is a
+  14-row stand of 812 pale seats with the screen at its back; the scoreboard's red casing is modelled round a plain
+  screen; the four light towers carry rows of 487 modelled floodlights (were three boxes each); the `fins` screen is
+  18 modelled fins over a dark backing; the Premiership Stand's Cats wall is silver-grey cladding, not cream.
+- Cats emblem: the source's was a crude drawing (square-eared cat, a star for a nose). `post/trace_emblem.py`
+  traces the real emblem from Google Earth's close view (flat navy, white and pale blue only; GEELONG and CATS set
+  in type at the traced size) into `post/tex_src_cats_emblem.png`; `mktex.py` erases the old one and puts it where
+  Google Earth has it (0.17 of the wall wide, centred 0.31 across). The screenshot itself is never committed.
+- Match fit: `GroundModels.FIT` is the largest ellipse every front-row seat stands outside (the seat rule), and the
+  land ring starts 4 m past it (`fence_margin`) so nothing pokes through the fence. Trees are gum crowns.
+- After every `post.py` run: `godot --headless --path . --script tools/grounds/seat_check.gd -- --write gmhba`
+  (the seat rule's headroom and floor fix), then `tools/run_tests.sh ground_seats`.
 - Surrounds: Kardinia Park's ovals and pools, the streets, about 1,360 trees and Geelong's houses (single storey,
   hipped roofs in tile and Colorbond colours) from OpenStreetMap, as at the MCG.
 
-Known gaps, not fixed here: the Cats sign block (below); a straight-down camera shows bands of light across the west
+Known gaps, not fixed here: the Cats sign block's position (below); a straight-down camera shows bands of light across the west
 seats (no match camera looks straight down); the town fades to plain ground past 1 km (the background scene covers
 the horizon); the `fins` and `plant` screens above.
 
