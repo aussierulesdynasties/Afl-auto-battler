@@ -25,7 +25,7 @@ const LEVELS := [LOW, MEDIUM, HIGH]
 ##   people_d      m from the camera within which a supporter is a 3D person, cards beyond; 0
 ##                 every supporter a card (no 3D people built)
 ##   lod           mesh detail threshold (Viewport.mesh_lod_threshold): higher drops detail sooner
-##   scale         share of the screen's pixels the 3D picture is drawn at (stretched to fit)
+##   scale         share of the screen's pixels the 3D picture is drawn at (stretched to fit, by FSR)
 ##   blades        the standing grass blades round the ball
 ##   msaa          edge smoothing (Viewport.msaa_3d): each pixel's edge sampled 4 or 2 times, so a
 ##                 player's outline, a line or a post is not a staircase. Multisampling, not FXAA:
@@ -69,7 +69,9 @@ static func apply_viewport(level: String, vp: Viewport) -> void:
 	var p := preset(level)
 	vp.mesh_lod_threshold = float(p["lod"])
 	var s := float(p["scale"])
-	vp.scaling_3d_mode = Viewport.SCALING_3D_MODE_BILINEAR
+	# A smaller picture is stretched back up with FSR 1, which sharpens edges as it stretches;
+	# plain bilinear stretching left Low's players and lines soft (about 1% more GPU time).
+	vp.scaling_3d_mode = Viewport.SCALING_3D_MODE_FSR if s < 1.0 else Viewport.SCALING_3D_MODE_BILINEAR
 	vp.scaling_3d_scale = s
 	vp.msaa_3d = int(p["msaa"]) as Viewport.MSAA
 	vp.screen_space_aa = Viewport.SCREEN_SPACE_AA_DISABLED

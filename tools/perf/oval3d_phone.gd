@@ -8,7 +8,7 @@ extends Node
 ## table stays on screen (screenshot it). On a PC or in the cloud (a software GPU there: only the
 ## counts, memory and the ratios of the times carry over to a phone):
 ##   godot --path . --rendering-method mobile tools/perf/Oval3DPhone.tscn -- [grounds=mcg,marvel]
-##       [levels=high,low] [size=1080x1240] [measure=5] [out=rows.json] [shots=DIR] [aa=msaa2] [quit]
+##       [levels=high,low] [size=1012x1242] [measure=5] [out=rows.json] [shots=DIR] [aa=msaa2] [quit]
 ## shots=DIR saves each ground and level's last measured frame as DIR/<ground>_<level>.png.
 ## Columns: frame = wall time a frame (mean, then the worst 5%); proc = the whole frame's process
 ## time; cpu / gpu = the renderer's own measured time; draws and ktris = what the frame drew;
@@ -17,6 +17,10 @@ extends Node
 const WARM := 2.0
 var MEASURE := 5.0
 const SPEED := 4.0
+## The oval's share of the match screen on a 1080 x 2400 phone (PitchView._fit_3d; measured in
+## tools/visual/capture_look3d.gd).
+const VIEW := Vector2i(1012, 1242)
+var _view: SubViewport
 
 var label: Label
 var rows: Array = []
@@ -68,15 +72,24 @@ func _run() -> void:
 				or GroundModels.GROUNDS.get(k, "") in want.split(","))
 	var levels := _arg("levels", "high,medium,low").split(",")
 	MEASURE = float(_arg("measure", str(MEASURE)))
-	var sz := _arg("size", "")
-	if sz != "":
-		get_tree().root.content_scale_mode = Window.CONTENT_SCALE_MODE_DISABLED
-		DisplayServer.window_set_size(Vector2i(int(sz.split("x")[0]), int(sz.split("x")[1])))
-		await get_tree().process_frame
-	var vp := get_viewport()
+	# The oval is drawn into its own picture the size of its share of the match screen, as
+	# PitchView draws it (1012 x 1242 on a 1080 x 2400 phone), whatever the window is.
+	var sz := _arg("size", "%dx%d" % [VIEW.x, VIEW.y])
+	var vp := SubViewport.new()
+	vp.size = Vector2i(int(sz.split("x")[0]), int(sz.split("x")[1]))
+	vp.own_world_3d = true
+	vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	add_child(vp)
+	var show := TextureRect.new()
+	show.texture = vp.get_texture()
+	show.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	show.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	show.set_anchors_preset(Control.PRESET_FULL_RECT)
+	add_child(show)
+	move_child(show, 0)
+	_view = vp
 	RenderingServer.viewport_set_measure_render_time(vp.get_viewport_rid(), true)
-	var win := DisplayServer.window_get_size()
-	head = "%s | %s | 3D %dx%d\n" % [OS.get_model_name(), RenderingServer.get_video_adapter_name(), win.x, win.y]
+	head = "%s | %s | 3D %dx%d\n" % [OS.get_model_name(), RenderingServer.get_video_adapter_name(), vp.size.x, vp.size.y]
 	var f := FileAccess.open("user://oval3d_phone.txt", FileAccess.WRITE)
 	if f:
 		f.store_line(head + COLS)
@@ -91,7 +104,7 @@ func _run() -> void:
 			oval.quality = level
 			oval.ground = "" if g == "(stand)" else g
 			Oval3DQuality.apply_viewport(level, vp)
-			add_child(oval)
+			vp.add_child(oval)
 			oval.build(director, "FRE", "STK")
 			oval.turf.apply("", VignetteKickoff.DAY)
 			var tv := Oval3DBroadcast.new(oval)
@@ -159,7 +172,7 @@ func _aa(vp: Viewport) -> void:
 
 func _play(secs: float, acc, director, oval: Oval3D, tv: Oval3DBroadcast) -> void:
 	var t := 0.0
-	var vp := get_viewport().get_viewport_rid()
+	var vp := _view.get_viewport_rid()
 	while t < secs:
 		await get_tree().process_frame
 		var wall := minf(get_process_delta_time(), 0.1)
