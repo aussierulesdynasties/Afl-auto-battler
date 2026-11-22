@@ -200,17 +200,33 @@ for b in range(NB):
     tube(Vector((q.x,q.y,ZGT_[i])),Vector((q2.x,q2.y,ZS_[i])),0.22,MW)
 wall(RF,lambda i:ZS_[i],lambda i:ZF_[i],MW,1e6,1e6)
 # --- west canopy (Google Earth views 180/210: a white ledge at ~25 m over a terrace, bearings 238-280)
-CZ=25.0;CAN=[CIN(cc,280.0,238.0) for cc in CP]
-csel=lambda i:CAN[i] and CAN[(i+1)%N] and HB[i]<CZ-0.5
-CO=[FP(i,CZ,2.5) for i in range(N)];CIi=[FP(i,CZ,0.0) for i in range(N)]
-for i in range(N):
-    if not csel(i):continue
-    j=(i+1)%N
-    face([P(CIi[i],CZ),P(CIi[j],CZ),P(CO[j],CZ),P(CO[i],CZ)],MW,[(0,0),(1,0),(1,1),(0,1)],Vector((0,0,1)))
-    face([P(CIi[i],CZ-0.35),P(CIi[j],CZ-0.35),P(CO[j],CZ-0.35),P(CO[i],CZ-0.35)],MW,[(0,0),(1,0),(1,1),(0,1)],Vector((0,0,-1)))
-    face([P(CO[i],CZ-0.35),P(CO[j],CZ-0.35),P(CO[j],CZ),P(CO[i],CZ)],MW,[(0,0),(1,0),(1,1),(0,1)],OUT(i))
-for i in range(0,N,K//2):
-    if csel(i):q=CO[i]-Vector((EN[i][0],EN[i][1],0))*0.4;tube(Vector((q.x,q.y,HB[i])),Vector((q.x,q.y,CZ-0.35)),0.12,MW)
+# --- the west bronze volume (survey/west_volume.json, 720 Google Earth hovers): bronze face out to 16 m from the roof
+# edge between 12.5 m and its flat top at 24.2 m, white canopy round the top edge, a glazed storey 2.5 m back below
+WJ=json.load(open(os.path.join(me_dir,'survey','west_volume.json')))
+_wf=per({k:v for k,v in WJ['face'].items()});_wk=sorted(float(k) for k in WJ['face'])
+ZW0,ZW1=WJ['z_storey'],WJ['z_top']
+WSEL=[CIN(c,_wk[-1],_wk[0]) and _wf(c)>FAC(i,18.0)+0.3 for i,c in enumerate(CP)]
+WV=[i for i in ARC(_wk[-1],_wk[0]) if WSEL[i]]
+def _wp(i,d,z):return Vector((EP[i][0]+d*EN[i][0],EP[i][1]+d*EN[i][1],z))
+_ws=_np0.concatenate([[0.0],_np0.cumsum([(_wp(a,_wf(CP[a]),0)-_wp(b,_wf(CP[b]),0)).length for a,b in zip(WV,WV[1:])])])
+for k,(a,b) in enumerate(zip(WV,WV[1:])):
+    da,db=_wf(CP[a]),_wf(CP[b]);ua,ub=_ws[k]/BH,_ws[k+1]/BH   # bronze texture: square metres, as the facade's
+    n_=OUT(a)
+    face([P(_wp(a,da,0),ZW0),P(_wp(b,db,0),ZW0),P(_wp(b,db,0),ZW1),P(_wp(a,da,0),ZW1)],MB,[(ua,0),(ub,0),(ub,(ZW1-ZW0)/BH),(ua,(ZW1-ZW0)/BH)],n_)
+    si=WJ['storey_in'];za,zb=ZD[a],ZD[b]
+    face([P(_wp(a,da-si,0),za),P(_wp(b,db-si,0),zb),P(_wp(b,db-si,0),ZW0),P(_wp(a,da-si,0),ZW0)],MXG,[(ua,0),(ub,0),(ub,1),(ua,1)],n_)
+    face([P(_wp(a,da-si,0),ZW0),P(_wp(b,db-si,0),ZW0),P(_wp(b,db,0),ZW0),P(_wp(a,da,0),ZW0)],MX,[(0,0),(1,0),(1,1),(0,1)],Vector((0,0,-1)))
+    fa,fb=FP(a,ZW1),FP(b,ZW1)
+    face([P(fa,ZW1),P(_wp(a,da,0),ZW1),P(_wp(b,db,0),ZW1),P(fb,ZW1)],MD,[(0,0),(1,0),(1,1),(0,1)],Vector((0,0,1)))
+    co,ct=WJ['canopy_out'],WJ['canopy_t']
+    A0,B0,A1,B1=_wp(a,da-0.3,0),_wp(b,db-0.3,0),_wp(a,da+co,0),_wp(b,db+co,0)
+    face([P(A0,ZW1+ct),P(B0,ZW1+ct),P(B1,ZW1+ct),P(A1,ZW1+ct)],MW,[(0,0),(1,0),(1,1),(0,1)],Vector((0,0,1)))
+    face([P(A1,ZW1-0.1),P(B1,ZW1-0.1),P(B0,ZW1-0.1),P(A0,ZW1-0.1)],MW,[(0,0),(1,0),(1,1),(0,1)],Vector((0,0,-1)))
+    face([P(A1,ZW1-0.1),P(B1,ZW1-0.1),P(B1,ZW1+ct),P(A1,ZW1+ct)],MW,[(0,0),(1,0),(1,1),(0,1)],n_)
+for e in (WV[0],WV[-1]):   # end returns back to the facade
+    d=_wf(CP[e]);f0=FAC(e,18.0);t=Vector((-EN[e][1],EN[e][0],0))
+    face([P(_wp(e,f0,0),ZW0),P(_wp(e,d,0),ZW0),P(_wp(e,d,0),ZW1),P(_wp(e,f0,0),ZW1)],MB,[(0,0),(1,0),(1,1),(0,1)],t)
+print('west volume',len(WV),'vertices, bearings %.1f-%.1f'%(CP[WV[0]],CP[WV[-1]]))
 # --- roof: the inner edge is its own measured curve (survey/inner_c.json), met by each truss line square to the edge
 _IC=_np0.array(json.load(open(os.path.join(me_dir,'survey','inner_c.json'))));IZ=float(json.load(open(os.path.join(me_dir,'survey','inner_z.json')))['z'])
 def _inner_hit(i):
