@@ -46,10 +46,26 @@ end; planted stair cores stand out beside both towers (`green_walls`). The base 
 of the entrance building's recessed glass floor. The heritage scoreboard's arched door is cut 0.35 m into its brick
 base, and its sash windows, pilasters, trim and louvres stand proud with real depth (hill.py); they were flat strips.
 
-Still short of Google Earth (2026-11-22): the lettering in the entrance's glass band is too blurred in Google Earth to
-read, so the band is plain glass (no text invented); the brick and ivy read darker in the game's light than in Google
-Earth's; the roof petals' valleys read softer than the real scalloped membrane; parkland canopy is thinner; OSM's roof
-colours paint some nearby buildings salmon pink.
+The stands' pitch-facing storeys and names (2026-11-22, from the 2026 photos chappell, edwinsmith, bradman, riverbank,
+wanganeen_oatey and west_stands_2023; rows counted, heights in the photos' proportions under the fitted roofs): the west
+is three tiers as built, a 7-row bottom tier, the brick wall, an 8-row middle tier, a glazed level with white columns,
+the pale fascia with navy LED panels either side (blank: no ads), a 25-row upper tier and a panelled back wall up to the
+roof (it was two even tiers with the whole upper tier red). The Bradman Pavilion is its own section: cream wall, red
+middle tier, the cream facade with real window openings, a timber door and fanlight, cornice, the balcony with its
+clock, the green glazed level, the ledge carrying the letters, red upper tier and the glass box under the roof. The east
+and Riverbank stands have their stacked levels: LED ribbon, red middle tier, glazed level with columns, balcony slab
+with its LED ribbon and glass rail, upper glazed level, fascia. Every name is solid raised letters (DejaVu Sans, spacing
+and weight matched to each photo): CHAPPELL STAND, SIR EDWIN SMITH STAND, SIR DONALD BRADMAN PAVILION, GAVIN WANGANEEN
+STAND, JACK OATEY STAND, MAX BASHEER STAND, FOS WILLIAMS STAND, RIVERBANK STAND (gen.py `tier_parts`, spec `fronts`,
+`zones`). The west roof's back band keeps its old base (spec `back_z0`).
+
+Still short (2026-11-22): the entrance glass band's lettering is unreadable in Google Earth (plain glass, nothing
+invented); the camera and media boxes cut into the upper tiers, the player benches in front of the Bradman, and the
+V struts under the Riverbank's middle tier are not built yet; the east names' places along the stand are read from one
+oblique photo (to within a few metres); the stands hold 38,200 seats plus the Hill's 2,900, short of the real ground,
+and the photos' widths suggest the west stand may stand taller than its fitted roof allows (unresolved: Google Earth
+views from the pitch do not frame like ours yet); the roof petals' valleys read softer than the real membrane;
+parkland canopy is thinner; OSM's roof colours paint some nearby buildings salmon pink.
 
 Found in the Google Earth pass (2026-11-21) and fixed: the Riverbank Stand's back was a dark navy drum (now storeys:
 stone and glass at the street, a maroon band, glass, pale louvres with white struts to the roof); the lower bowl and

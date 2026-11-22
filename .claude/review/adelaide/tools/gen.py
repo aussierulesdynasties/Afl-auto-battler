@@ -430,7 +430,10 @@ def stand_poly(st):
 def stand_z(st, V):
     """seat height from the depth profile; a 'low_end' (east stand north tip, satellite + c07) keeps the Hill seats' low
     rake on the far side of a plan line, stepping up to the full stand within 'blend' metres"""
-    z = interp(st['profile'], seg_dist(V, PITCH))
+    dd = seg_dist(V, PITCH); z = interp(st['profile'], dd)
+    for zn in st.get('zones', []):   # a section with its own storeys (the Bradman Pavilion): its own profile inside its sweep
+        k = in_sweep(pt_ang(V), zn['ang'])
+        if k.any(): z[k] = interp(zn['profile'], dd[k])
     le = st.get('low_end')
     if le:
         a, b = np.array(le['line'], float); n = np.array([-(b - a)[1], (b - a)[0]]) / np.linalg.norm(b - a)
@@ -633,7 +636,7 @@ def seat_shell():
 def seat_rows(m, P, zfn, bands):
     """rows along lines at fixed distances from the pitch (the stand's rake), clipped to the outline P"""
     from shapely.geometry import Polygon, LineString
-    inner = Polygon(P).buffer(-0.3); pitch = Polygon(PITCH)
+    inner = (P if hasattr(P, 'geom_type') else Polygon(P)).buffer(-0.3); pitch = Polygon(PITCH)
     lo = 0.0; ivs = []
     for b in bands:
         if (b[2] if len(b) > 2 else 'seats') == 'seats': ivs.append((lo, b[0], b[1]))
@@ -683,6 +686,211 @@ def seat_rows(m, P, zfn, bands):
                     m.add(V, F, [TREAD] * len(V), UV, 'concrete')
             dk += ROW
 
+# ---------------------------------------------------------------- tier fronts (2026 photos: chappell, edwinsmith, bradman,
+# riverbank, wanganeen_oatey, west_stands_2023). Each stand's pitch-facing storeys are built as solid parts along the lines
+# at fixed distances from the pitch: brick walls, glazed levels with columns, fascias with the stand's name in raised
+# letters, balcony slabs, the Bradman Pavilion's cream facade with real window openings. Nothing is painted on.
+def _rel(a, c): return (a - c + 180.0) % 360.0 - 180.0
+
+def in_sweep(ang, rng):
+    """angles (deg) inside the sweep rng = [a0, a1] (deg, a0 < a1, may cross 0)"""
+    c = (rng[0] + rng[1]) / 2; return np.abs(_rel(ang, c)) <= (rng[1] - rng[0]) / 2
+
+def pt_ang(V): return np.degrees(np.arctan2(V[:, 1] - PC[1], V[:, 0] - PC[0])) % 360.0
+
+class Run:
+    """a line at distance d from the pitch, clockwise round the ground (so +s reads left to right for someone on the
+    ground facing the stand); at(s) -> point, outward normal (away from the pitch), tangent"""
+    def __init__(s, Q):
+        s.Q = Q; s.L = np.r_[0, np.cumsum(np.linalg.norm(np.diff(Q, axis=0), axis=1))]
+        s.A = np.unwrap(np.radians(pt_ang(Q)))
+    def at(s, sv):
+        sv = np.atleast_1d(np.asarray(sv, float)); q = np.c_[np.interp(sv, s.L, s.Q[:, 0]), np.interp(sv, s.L, s.Q[:, 1])]
+        e = 0.05; qa = np.c_[np.interp(sv - e, s.L, s.Q[:, 0]), np.interp(sv - e, s.L, s.Q[:, 1])]
+        qb = np.c_[np.interp(sv + e, s.L, s.Q[:, 0]), np.interp(sv + e, s.L, s.Q[:, 1])]
+        t = qb - qa; t /= np.linalg.norm(t, axis=1)[:, None] + 1e-12
+        n = q - PC; n /= np.linalg.norm(n, axis=1)[:, None]
+        n = n - t * (n * t).sum(1)[:, None]; n /= np.linalg.norm(n, axis=1)[:, None] + 1e-12
+        return q, n, t
+    def s_of(s, ang):
+        """arc length where the line passes the angle ang (deg from the pitch centre)"""
+        A = np.degrees(s.A); a = A[0] + _rel(ang, A[0] % 360.0)
+        if not (min(A[0], A[-1]) <= a <= max(A[0], A[-1])): return None   # this run does not pass that angle
+        return float(np.interp(a, A[::-1], s.L[::-1])) if A[-1] < A[0] else float(np.interp(a, A, s.L))
+
+def runs_at(G_, d, rng=None, step=0.5):
+    """the runs of the line at distance d inside geometry G_ (shapely), optionally only within the sweep rng"""
+    from shapely.geometry import Polygon
+    from shapely.ops import linemerge
+    part = Polygon(PITCH).buffer(d, 256).exterior.intersection(G_)
+    if part.geom_type == 'MultiLineString': part = linemerge(part)
+    out = []
+    for ln in getattr(part, 'geoms', [part]):
+        if ln.geom_type != 'LineString' or ln.length < 1.0: continue
+        n = max(2, int(ln.length / step)); Q = np.array([ln.interpolate(x).coords[0] for x in np.linspace(0, ln.length, n + 1)])
+        a = np.unwrap(np.radians(pt_ang(Q)))
+        if a[-1] > a[0]: Q = Q[::-1]
+        if rng is not None:
+            k = in_sweep(pt_ang(Q), rng); i = 0
+            while i < len(Q):
+                if not k[i]: i += 1; continue
+                j = i
+                while j < len(Q) and k[j]: j += 1
+                if j - i > 2: out.append(Run(Q[i:j]))
+                i = j
+        else: out.append(Run(Q))
+    return out
+
+def quad(m, p, want, col, kind, uv=None):
+    """one quad, wound so its front faces the direction `want`"""
+    p = [np.asarray(x, float) for x in p]; nrm = np.cross(p[1] - p[0], p[3] - p[0])
+    if nrm @ np.asarray(want, float) < 0: p = p[::-1]; uv = uv[::-1] if uv else uv
+    m.add(p, [(0, 1, 2, 3)], [col] * 4, uv or [(0, 0), (1, 0), (1, 1), (0, 1)], kind)
+
+def prism(m, run, s0, s1, e0, e1, z0, z1, col, kind, faces='fbtuel', step=1.0, top_col=None):
+    """a solid along the run from s0 to s1: e0..e1 metres out from the line (e0 nearer the pitch), z0..z1 high"""
+    n = max(1, int(math.ceil((s1 - s0) / step))); S_ = np.linspace(s0, s1, n + 1); q, nv, t = run.at(S_)
+    P3 = lambda i, e, z: (q[i, 0] + nv[i, 0] * e, q[i, 1] + nv[i, 1] * e, z)
+    for i in range(n):
+        a, b = S_[i], S_[i + 1]; N0 = np.r_[-(nv[i] + nv[i + 1]) / 2, 0]
+        if 'f' in faces: quad(m, [P3(i, e0, z0), P3(i + 1, e0, z0), P3(i + 1, e0, z1), P3(i, e0, z1)], N0, col, kind, [(a, z0), (b, z0), (b, z1), (a, z1)])
+        if 'b' in faces: quad(m, [P3(i, e1, z0), P3(i + 1, e1, z0), P3(i + 1, e1, z1), P3(i, e1, z1)], -N0, col, kind, [(a, z0), (b, z0), (b, z1), (a, z1)])
+        if 't' in faces: quad(m, [P3(i, e0, z1), P3(i + 1, e0, z1), P3(i + 1, e1, z1), P3(i, e1, z1)], (0, 0, 1), top_col or col, kind, [(a, e0), (b, e0), (b, e1), (a, e1)])
+        if 'u' in faces: quad(m, [P3(i, e0, z0), P3(i + 1, e0, z0), P3(i + 1, e1, z0), P3(i, e1, z0)], (0, 0, -1), col, kind, [(a, e0), (b, e0), (b, e1), (a, e1)])
+    for i, sg in ((0, -1), (n, 1)):
+        if ('e' if sg < 0 else 'l') in faces:
+            quad(m, [P3(i, e0, z0), P3(i, e1, z0), P3(i, e1, z1), P3(i, e0, z1)], np.r_[t[i] * sg, 0], col, kind, [(e0, z0), (e1, z0), (e1, z1), (e0, z1)])
+
+def _cyl(m, a, b, r, col, kind, n=12):
+    a, b = np.array(a, float), np.array(b, float); d = b - a; L = np.linalg.norm(d); d /= L
+    u = np.cross(d, [1.0, 0, 0]) if abs(d[0]) < 0.9 else np.cross(d, [0, 1.0, 0]); u /= np.linalg.norm(u); v = np.cross(d, u)
+    V = []; UV = []
+    for k in range(n + 1):
+        th = 2 * math.pi * k / n; e = math.cos(th) * u + math.sin(th) * v; V += [a + r * e, b + r * e]; UV += [(r * th, 0), (r * th, L)]
+    F = [(2 * k, 2 * k + 1, 2 * k + 3, 2 * k + 2) for k in range(n)]
+    nrm = np.cross(V[1] - V[0], V[2] - V[0]); out = (V[0] + V[2]) / 2 - a; out -= d * (out @ d)
+    if nrm @ out < 0: F = [f[::-1] for f in F]
+    m.add(V, F, [col] * len(V), UV, kind)
+
+def tracked(text, weight, track):
+    """the word with extra space between letters (track: a fraction of the cap height), as the stand signs are set"""
+    from shapely.affinity import translate
+    from shapely.ops import unary_union
+    from matplotlib.textpath import TextPath
+    from letters import glyph_polys, FONTS
+    ext = lambda s: TextPath((0, 0), s, size=10, prop=FONTS[weight]).get_extents().width
+    bar = ext('||'); cap = 7.29; x = 0.0; parts = []   # DejaVu's cap height at size 10; advance = ink between two bars
+    for ch in text:
+        if ch.strip(): parts.append(translate(glyph_polys(ch, weight), x, 0))
+        x += ext('|' + ch + '|') - bar + track * cap
+    return unary_union(parts)
+
+def raised_text(m, run, text, s_mid, width, z0, cap, e_front, depth, col, weight='bold', back=False, track=0.0):
+    """the word as solid letters: faces toward the pitch at e_front, `depth` thick, sides on every outline edge"""
+    import shapely
+    from letters import glyph_polys
+    g = tracked(text, weight, track) if track else glyph_polys(text, weight)
+    x0, y0, x1, y1 = g.bounds; sz = cap / (y1 - y0); sx = width / (x1 - x0)
+    def P3(X, Y, e):
+        s = s_mid - width / 2 + (X - x0) * sx; q, nv, _ = run.at(s); return (q[0, 0] + nv[0, 0] * e, q[0, 1] + nv[0, 1] * e, z0 + (Y - y0) * sz)
+    eb = e_front + depth
+    for p in (g.geoms if hasattr(g, 'geoms') else [g]):
+        for tri in shapely.constrained_delaunay_triangles(p).geoms:
+            c = np.array(tri.exterior.coords)[:3]; F = [P3(x, y, e_front) for x, y in c]
+            q, nv, _ = run.at(s_mid - width / 2 + (c[:, 0].mean() - x0) * sx); want = np.r_[-nv[0], 0]
+            n0 = np.cross(np.subtract(F[1], F[0]), np.subtract(F[2], F[0]))
+            if n0 @ want < 0: F = F[::-1]
+            m.add(F, [(0, 1, 2)], [col] * 3, [(x, y) for x, y in c], 'plain')
+            if back:
+                B = [P3(x, y, eb) for x, y in c]
+                if np.cross(np.subtract(B[1], B[0]), np.subtract(B[2], B[0])) @ want > 0: B = B[::-1]
+                m.add(B, [(0, 1, 2)], [col] * 3, [(x, y) for x, y in c], 'plain')
+        for ring in [p.exterior] + list(p.interiors):
+            R = np.array(ring.coords)
+            for k in range(len(R) - 1):
+                (xa, ya), (xb, yb) = R[k], R[k + 1]; mx, my = (xa + xb) / 2, (ya + yb) / 2
+                nx, ny = yb - ya, -(xb - xa); ln = math.hypot(nx, ny) + 1e-12; nx, ny = nx / ln, ny / ln
+                if p.contains(shapely.geometry.Point(mx + nx * 1e-3, my + ny * 1e-3)): nx, ny = -nx, -ny   # outward in glyph space
+                c0 = np.array(P3(mx, my, e_front)); c1 = np.array(P3(mx + nx * 0.5, my + ny * 0.5, e_front))
+                quad(m, [P3(xa, ya, e_front), P3(xb, yb, e_front), P3(xb, yb, eb), P3(xa, ya, eb)], c1 - c0, col, 'plain',
+                     [(0, 0), (1, 0), (1, depth), (0, depth)])
+
+def window_facade(m, run, s0, s1, e, z0, z1, f, col, pane):
+    """a rendered facade with real openings: piers and spandrels at e, panes set back f['recess'], reveals between,
+    a timber door (fanlight above) at f['door'] degrees, sills and a cornice proud of the face"""
+    bay, ww, wz0, wz1, rc = f['bay'], f['win'], f['wz'][0], f['wz'][1], f['recess']
+    sd = run.s_of(f['door']) if f.get('door') is not None else None; dw = f.get('door_w', 1.6); dz1 = f.get('door_z', z0 + 2.9)
+    n = max(1, int(round((s1 - s0) / bay))); bw = (s1 - s0) / n; ops = []
+    for k in range(n):
+        c = s0 + (k + 0.5) * bw
+        if sd is not None and abs(c - sd) < bw / 2: ops.append((sd - dw / 2, sd + dw / 2, z0, dz1, 'door')); continue
+        ops.append((c - ww / 2, c + ww / 2, wz0, wz1, 'win'))
+    edges = [s0] + [x for o in ops for x in o[:2]] + [s1]
+    for i in range(0, len(edges), 2):   # piers between openings, full height
+        if edges[i + 1] - edges[i] > 0.01: prism(m, run, edges[i], edges[i + 1], e, e + 0.3, z0, z1, col, 'concrete', 'f')
+    for a, b, oz0, oz1, kd in ops:
+        if oz0 > z0: prism(m, run, a, b, e, e + 0.3, z0, oz0, col, 'concrete', 'f')     # below the sill
+        prism(m, run, a, b, e, e + 0.3, oz1, z1, col, 'concrete', 'f')                     # above the head
+        prism(m, run, a, b, e, e + rc, oz0, oz1, col, 'concrete', 'tu')                    # head and sill reveals
+        prism(m, run, a, b, e, e + rc, oz0, oz1, col, 'concrete', 'el')                    # jambs
+        if kd == 'door':
+            prism(m, run, a, b, e + rc, e + rc + 0.05, oz0, oz1 - 0.7, f.get('door_col', (120, 64, 40)), 'timber', 'f')
+            prism(m, run, a, b, e + rc, e + rc + 0.05, oz1 - 0.62, oz1, pane, 'glass', 'f')
+            prism(m, run, a, b, e + rc - 0.04, e + rc, oz1 - 0.7, oz1 - 0.62, f.get('door_col', (120, 64, 40)), 'timber', 'ftu')
+        else:
+            prism(m, run, a, b, e + rc, e + rc + 0.05, oz0, oz1, pane, 'glass', 'f')
+            prism(m, run, a - 0.1, b + 0.1, e - 0.08, e, oz0 - 0.12, oz0, f.get('sill', col), 'stone', 'ftuel')
+    prism(m, run, s0, s1, e - f.get('cornice', 0.35), e, z1 - 0.35, z1, f.get('cornice_col', col), 'stone', 'ftuel')
+
+def tier_parts(m, G_, parts, rng=None):
+    """build each part along the line at its distance d, inside geometry G_ (and the sweep rng, if any)"""
+    for pt in parts:
+        prng = pt.get('ang', rng); t = pt['t']
+        d0 = pt['d'][0] if isinstance(pt['d'], list) else pt['d']; d1 = pt['d'][1] if isinstance(pt['d'], list) else d0 + 0.05
+        for run in runs_at(G_, d0, prng):
+            L = run.L[-1]; e1 = d1 - d0
+            if t == 'slab':
+                prism(m, run, 0, L, 0, e1, pt['z'][0], pt['z'][1], pt['col'], pt.get('kind', 'concrete'), pt.get('faces', 'ftuel'), top_col=pt.get('top'))
+            elif t == 'glass':
+                prism(m, run, 0, L, 0, 0.05, pt['z'][0], pt['z'][1], pt['col'], 'glass', 'f')
+                mc = pt.get('mull_col', (58, 60, 64))
+                for s in np.arange(pt['mull'] / 2, L, pt['mull']): prism(m, run, s - 0.05, s + 0.05, -0.07, 0, pt['z'][0], pt['z'][1], mc, 'steel', 'fel')
+                for z in pt.get('transoms', []): prism(m, run, 0, L, -0.06, 0, z - 0.04, z + 0.04, mc, 'steel', 'ftu')
+            elif t == 'rail':   # glass balustrade with a steel top rail
+                prism(m, run, 0, L, 0, 0.03, pt['z'][0], pt['z'][1] - 0.05, pt.get('col', (150, 170, 176)), 'glass', 'fb')
+                prism(m, run, 0, L, -0.03, 0.06, pt['z'][1] - 0.05, pt['z'][1], (190, 192, 194), 'steel', 'ftu')
+            elif t == 'cols':
+                for s in np.arange(pt['every'] / 2 + pt.get('phase', 0.0), L - 0.3, pt['every']):
+                    q, nv, _ = run.at(s); _cyl(m, (*q[0], pt['z'][0]), (*q[0], pt['z'][1]), pt['r'], pt['col'], 'concrete')
+            elif t == 'facade':
+                window_facade(m, run, 0, L, 0, pt['z'][0], pt['z'][1], pt, pt['col'], pt['pane'])
+            elif t == 'clock':
+                s = run.s_of(pt['at'])
+                if s is None: continue
+                q, nv, tg = run.at(s); c = np.r_[q[0], pt['z']]; n3 = np.r_[nv[0], 0]
+                _cyl(m, c - n3 * 0.02, c - n3 * 0.14, pt['r'] + 0.06, (40, 42, 46), 'steel', 24)
+                face = [c - n3 * 0.15 + pt['r'] * (math.cos(a) * np.r_[tg[0], 0] + math.sin(a) * np.r_[0, 0, 1]) for a in np.linspace(0, 2 * math.pi, 25)[:-1]]
+                cc = c - n3 * 0.15; m.add([cc] + face, [(0, 1 + k, 1 + (k + 1) % 24) for k in range(24)] if np.cross(face[0] - cc, face[1] - cc) @ -n3 > 0 else
+                                       [(0, 1 + (k + 1) % 24, 1 + k) for k in range(24)], [(244, 242, 236)] * 25, None, 'plain')
+                for ang_, ln_ in ((math.radians(pt.get('h', 60)), 0.55), (math.radians(pt.get('mn', -30)), 0.8)):   # hands
+                    tip = cc - n3 * 0.01 + pt['r'] * ln_ * (math.sin(ang_) * np.r_[tg[0], 0] + math.cos(ang_) * np.r_[0, 0, 1])
+                    box(m, cc - n3 * 0.01, tip, 0.03, (30, 30, 32), 'steel')
+            elif t == 'backwall':
+                BACK_JOBS.append((run, pt))
+            elif t == 'name':
+                s = run.s_of(pt['at'])
+                if s is not None and 0 < s - pt['w'] / 2 and s + pt['w'] / 2 < L:
+                    raised_text(m, run, pt['text'], s, pt['w'], pt['z0'], pt['cap'], -pt.get('depth', 0.06), pt.get('depth', 0.06),
+                                pt['col'], pt.get('weight', 'bold'), pt.get('back', False), pt.get('track', 0.0))
+                    NAMES_DONE.append(pt['text'])
+
+NAMES_DONE = []
+def zone_wedge(rng):
+    from shapely.geometry import Polygon
+    A = np.radians(np.linspace(rng[0], rng[1], 60))
+    return Polygon([tuple(PC)] + [tuple(PC + 500 * np.array([math.cos(a), math.sin(a)])) for a in A])
+BACK_JOBS = []   # back walls that rise to the roof's underside: built once the roofs are known
+
 # ---------------------------------------------------------------- build
 ground = Mesh()
 S = SPEC
@@ -720,13 +928,32 @@ for st in S['stands']:
         P, PL = cut_low(P, st['low_end']); low_parts.append((st, PL, st['low_end']))
         st = {k: v for k, v in st.items() if k != 'low_end'}
     ds = [k for k, _ in st['profile']] + [x for b in st['bands'] for x in (b[0] - 0.05, b[0] + 0.05)]
-    V, T = fill(P, st.get('step', 2.0), iso_rings(P, ds, st.get('step', 2.0)))
+    for zn in st.get('zones', []): ds += [k for k, _ in zn['profile']] + [x for b in zn['bands'] for x in (b[0] - 0.05, b[0] + 0.05)]
+    cr = iso_rings(P, sorted(set(ds)), st.get('step', 2.0))
+    for zn in st.get('zones', []):   # the zone's side walls: two radial lines 8 cm apart at each end of its sweep
+        rr = np.linalg.norm(P - PC, axis=1); rs = np.arange(rr.min() - 2, rr.max() + 2, 0.5)
+        for a_ in zn['ang']:
+            for da in (-0.04, 0.04):
+                ang = math.radians(a_) + da / rs; cr = np.r_[cr, PC + np.c_[np.cos(ang) * rs, np.sin(ang) * rs]]
+    V, T = fill(P, st.get('step', 2.0), cr)
     d = seg_dist(V, PITCH)
     z = stand_z(st, V)
-    C = band_colour(st['bands'], d)
+    C = band_colour(st['bands'], d); K = band_kind(st['bands'], d)
+    for zn in st.get('zones', []):
+        k = in_sweep(pt_ang(V), zn['ang'])
+        if k.any():
+            C[k] = band_colour(zn['bands'], d[k]); kz = band_kind(zn['bands'], d[k]); ki = np.nonzero(k)[0]
+            for i, kk in zip(ki, kz): K[i] = kk
     # faces upward: Delaunay order is ccw in plan -> upward normal
-    stands.add(np.c_[V, z], T, C, arc_uv(V, d), ['concrete' if k == 'seats' else k for k in band_kind(st['bands'], d)])  # under the stepped treads
-    seat_jobs.append((P, lambda B, st=st: stand_z(st, B[:, :2]), st['bands']))
+    stands.add(np.c_[V, z], T, C, arc_uv(V, d), ['concrete' if k == 'seats' else k for k in K])  # under the stepped treads
+    from shapely.geometry import Polygon as _Pg
+    G_all = _Pg(P).buffer(0); G_base = G_all
+    for zn in st.get('zones', []):
+        W_ = zone_wedge(zn['ang']); G_z = G_all.intersection(W_); G_base = G_base.difference(W_)
+        seat_jobs.append((G_z, lambda B, st=st: stand_z(st, B[:, :2]), zn['bands']))
+        if zn.get('fronts'): tier_parts(stands, G_z, zn['fronts'])
+    seat_jobs.append((G_base, lambda B, st=st: stand_z(st, B[:, :2]), st['bands']))
+    if st.get('fronts'): tier_parts(stands, G_base, st['fronts'])
     zf = lambda B, st=st: stand_z(st, B[:, :2])
     parapet(stands, P, zf); front_skin(stands, P, zf)
     wb = st.get('wall_h')
@@ -897,7 +1124,7 @@ for rf in S['roofs']:
         sp = {x.get('way'): x for x in S['stands']}[rf['stand']]; SP = stand_poly(sp); spath = Path(SP)
         B = densify(P, 1.5); B = np.r_[B, B[:1]]; zt = roofz(B[:, :2])
         inside = spath.contains_points(B)
-        ztop = max(z for _, z in sp['profile'])
+        ztop = rf.get('back_z0', max(z for _, z in sp['profile']))   # the deck behind the top rows, where it is lower
         # where the roof's back edge overhangs the stand, the wall starts at the stand's top: the gap between the top
         # rows and the roof is closed from inside (back_west_2023: a white panel band under the roof's back edge)
         zb = np.where(inside, interp(sp['profile'], seg_dist(B, PITCH)), 0.0 if rf.get('back_ground', True) else ztop)
@@ -954,6 +1181,22 @@ for rf in S['roofs']:
     ROOF_GUARD.append((_Poly(P).buffer(0), roofz, (eb['inset'] + 0.6, 0.3 + eb['tube'] + eb['glass'] + eb['band']) if eb else None))
     m.save('roof_' + rf['name'])
 
+from shapely.geometry import Point
+backs = Mesh()
+for run, pt in BACK_JOBS:   # walls from a deck up to the roof's underside (the panelled wall behind a top row of seats)
+    S_ = np.arange(0, run.L[-1] + 0.5, 1.0); S_[-1] = min(S_[-1], run.L[-1]); q, nv, _ = run.at(S_)
+    top = []
+    for x in q:
+        zz = pt.get('z1', 30.0)
+        for poly, rz, hang in ROOF_GUARD:
+            if poly.contains(Point(x[0], x[1])): zz = min(zz, rz(np.array([x]))[0] - 0.35)
+        top.append(zz)
+    for i in range(len(S_) - 1):
+        for e, sg in ((0.0, -1), (pt.get('thick', 0.3), 1)):
+            p = [(*(q[i] + nv[i] * e), pt['z0']), (*(q[i + 1] + nv[i + 1] * e), pt['z0']), (*(q[i + 1] + nv[i + 1] * e), top[i + 1]), (*(q[i] + nv[i] * e), top[i])]
+            quad(backs, p, np.r_[nv[i] * sg, 0], pt['col'], 'concrete', [(S_[i], pt['z0']), (S_[i + 1], pt['z0']), (S_[i + 1], top[i + 1]), (S_[i], top[i])])
+if backs.f: backs.save('stands_back')
+print('names built:', NAMES_DONE)
 for i_, (P_, zfn_, bands_) in enumerate(seat_jobs):   # one file per stand (and the Hill's low seats), each well under 50 MB
     seats = Mesh(); n0 = len(SEAT_INST); seat_rows(seats, P_, zfn_, bands_)
     print('job', i_, 'faces', len(seats.f)); seats.save_bin('seats_%d' % i_) if seats.f else None; print('seats_%d' % i_, len(seats.f), 'tread faces', len(SEAT_INST) - n0, 'seats')
