@@ -104,6 +104,14 @@ WHITE, SAGE = (0.72, 0.69, 0.565), (0.42, 0.46, 0.38)
 # from the obliques against a 10 m scale). Event marquees and domes on the Showring are left out: they are
 # put up for shows and taken down.
 UNMAPPED = os.path.join(ROOT, "unmapped.json")
+import relief                                     # noqa: E402  (the land's height, relief.py)
+LAND = np.fromfile(relief.OUT, "<f4")[2:].reshape(relief.N, relief.N) if os.path.exists(relief.OUT) else None
+# Measured, not judged (round 5, 2026-11-22): measured.json (tools/grounds/scg/measured.py) gives each nearby
+# building Google Earth's own numbers, read off its status bar with the mouse on the roof and the ground
+# (hover.py): the eave and ridge over the ground beside it, and its outline with each long wall moved to
+# where the roof really ends. And its roof's colour, measured on graphics-card renders against Google Earth
+# (colour_cal.py). Where it has a building, its numbers replace SPEC's and the mapped outline.
+MEASURED = os.path.join(ROOT, "measured.json")
 
 tris = []
 
@@ -148,6 +156,50 @@ def strip_box(a, c, out, y0, y1, d0, d1, col, ends=True, front_only=False):
     if ends:
         quad(P(a, d0, y0), P(a, d1, y0), P(a, d1, y1), P(a, d0, y1), (-t[0], 0, -t[1]), col)
         quad(P(c, d0, y0), P(c, d1, y0), P(c, d1, y1), P(c, d0, y1), (t[0], 0, t[1]), col)
+
+
+def smooth(foot, corner=45.0, step=2.0):
+    """Curved walls as true curves: OpenStreetMap traces a curved wall as chords with 10-35 degree kinks every
+    25-35 m (the Showring grandstand, the Hordern), which read as facets. Each run of three or more vertices
+    between real corners (turns of `corner` degrees or more) whose kinks are all small is replaced by the
+    circle fitted through its vertices (least squares), every `step` metres, its ends kept. Only runs of 40 m
+    or more: shorter jogs are a building's real corners. Checked against Google Earth's overhead view."""
+    n = len(foot)
+    if n < 5:
+        return foot
+    e = np.roll(foot, -1, 0) - foot
+    a = np.degrees(np.arctan2(e[:, 1], e[:, 0]))
+    turn = np.abs((a - np.roll(a, 1) + 180) % 360 - 180)        # the turn at each vertex
+    corners = [k for k in range(n) if turn[k] >= corner]
+    if not corners:
+        return foot
+    out = []
+    for ci, k0 in enumerate(corners):
+        k1 = corners[(ci + 1) % len(corners)]
+        run = [foot[(k0 + j) % n] for j in range(((k1 - k0) % n or n) + 1)]
+        inner = [turn[(k0 + j) % n] for j in range(1, len(run) - 1)]
+        out.append(run[0])
+        span = sum(float(np.linalg.norm(run[j + 1] - run[j])) for j in range(len(run) - 1))
+        if len(run) >= 4 and span >= 40.0 and max(inner) < corner and np.mean(inner) >= 6.0 and min(inner) >= 0.5:
+            q = np.array(run)
+            A = np.c_[2 * q, np.ones(len(q))]
+            cx, cz, c = np.linalg.lstsq(A, (q ** 2).sum(1), rcond=None)[0]
+            R = math.sqrt(c + cx * cx + cz * cz)
+            t0 = math.atan2(q[0, 1] - cz, q[0, 0] - cx)
+            t1 = math.atan2(q[-1, 1] - cz, q[-1, 0] - cx)
+            tm = math.atan2(q[len(q) // 2, 1] - cz, q[len(q) // 2, 0] - cx)
+            # go the way round that passes the run's middle vertex
+            d = (t1 - t0 + math.pi) % (2 * math.pi) - math.pi
+            dm = (tm - t0 + math.pi) % (2 * math.pi) - math.pi
+            if dm * d < 0 or abs(dm) > abs(d):
+                d = d - math.copysign(2 * math.pi, d)
+            m = max(2, int(abs(d) * R / step))
+            for j in range(1, m):
+                t = t0 + d * j / m
+                out.append(np.array((cx + R * math.cos(t), cz + R * math.sin(t))))
+        else:
+            out.extend(run[1:-1])
+    return np.array(out)
 
 
 def frame(foot):
@@ -314,10 +366,27 @@ def box(m, r, y0, y1, col, cap=0.0):
 
 
 def building(rec, b, far=False):
+    """The building, stood on the land (relief.py): raised to the land's mean height under its corners,
+    its walls carried down to the lowest so no side floats where the ground falls away."""
+    start = len(tris)
+    _building(rec, b, far)
+    n = int(rec[0])
+    foot = rec[2:2 + 2 * n].reshape(-1, 2)
+    hs = [relief.relief_at(float(x), float(z), LAND) for x, z in foot] if LAND is not None else [0.0]
+    base, low = float(np.mean(hs)), float(min(hs))
+    if abs(base) < 0.01 and abs(low) < 0.01:
+        return
+    for i in range(start + 1, len(tris), 9):
+        tris[i] = low - 0.3 if tris[i] < 0.05 else tris[i] + base
+
+
+def _building(rec, b, far=False):
     n, h = int(rec[0]), float(rec[1])
     foot = rec[2:2 + 2 * n].reshape(-1, 2).astype(float)
     if np.allclose(foot[0], foot[-1]):
         foot = foot[:-1]
+    if not far:
+        foot = smooth(foot)
     wall = tuple(w * t for w, t in zip(WALLS[(b + 1) % len(WALLS)], TINT))
     area = abs(sum(foot[k, 0] * foot[(k + 1) % len(foot), 1] - foot[k, 1] * foot[(k + 1) % len(foot), 0]
                    for k in range(len(foot)))) / 2
@@ -442,17 +511,35 @@ def main():
         b, n = int(raw[i]), int(raw[i + 1])
         near.append((b, raw[i + 1:i + 3 + 2 * n]))
         i += 3 + 2 * n
+    meas = json.load(open(MEASURED)) if os.path.exists(MEASURED) else {}
+
+    def measured(key, b, r):
+        """r and SPEC[b] with key's measured outline, eave, rise and roof colour, where measured."""
+        m = meas.get(key)
+        if not m or b not in SPEC:
+            return r
+        h, kind, rise, wall, roof, solid = SPEC[b]
+        if m.get("eave") is not None:
+            h = m["eave"]
+            rise = max(m["ridge"] - m["eave"], 0.0) if kind != "flat" and m.get("ridge") is not None else rise
+        if m.get("roof_colour"):
+            roof = tuple(m["roof_colour"])
+        SPEC[b] = (h, kind, rise, wall, roof, solid)
+        if m.get("outline"):
+            foot = np.array(m["outline"], float)[:-1]
+            return np.r_[len(foot), h, foot.ravel()].astype("<f4")
+        return r
     for b, r in near:
         n = int(r[0])
         if inside(ALLIANZ, r[2:2 + 2 * n].reshape(-1, 2)):
             continue        # OpenStreetMap's outline of Allianz Stadium: allianz.py builds the stadium itself
-        building(r, b)
+        building(measured(str(b), b, r), b)
     extra = json.load(open(UNMAPPED)) if os.path.exists(UNMAPPED) else []
     for k, e in enumerate(extra):
         foot = np.array(e["footprint"], float)
         b = 100000 + k
         SPEC[b] = (float(e["eave"]), e["roof"], float(e["rise"]), globals()[e["walls"]], globals()[e["roof_colour"]], e["solid"])
-        building(np.r_[len(foot), e["eave"], foot.ravel()].astype("<f4"), b)
+        building(measured("u%d" % e["ge_blob"], b, np.r_[len(foot), e["eave"], foot.ravel()].astype("<f4")), b)
     arr = np.array(tris, "<f4")
     arr.tofile(os.path.join(DIR, "facades.bin"))
     tris.clear()
