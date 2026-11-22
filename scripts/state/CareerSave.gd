@@ -398,6 +398,10 @@ static func review_result(res: Dictionary) -> Dictionary:
 	var evs := []
 	for e in res.get("events", []):
 		if REVIEW_EVENT_KINDS.has(str((e as Dictionary).get("kind", ""))):
+			# A goal's TV stat card (row 207) is for the live picture only: not saved.
+			if (e as Dictionary).has("card"):
+				e = (e as Dictionary).duplicate()
+				e.erase("card")
 			evs.append(e)
 	out["events"] = evs
 	return out
