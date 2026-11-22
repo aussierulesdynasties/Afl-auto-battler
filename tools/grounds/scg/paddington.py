@@ -84,6 +84,10 @@ def footprints():
             n = int(b[i])
             out.append(b[i + 2:i + 2 + 2 * n].reshape(-1, 2))
             i += 2 + 2 * n
+    import json
+    f = os.path.join(ROOT, "unmapped.json")       # the buildings traced from Google Earth (facades.py)
+    if os.path.exists(f):
+        out += [np.array(e["footprint"]) for e in json.load(open(f))]
     return out
 
 

@@ -1,0 +1,299 @@
+[
+ {
+  "ge_blob": 14,
+  "footprint": [
+   [
+    333.41,
+    -158.71
+   ],
+   [
+    345.85,
+    -180.49
+   ],
+   [
+    337.07,
+    -185.51
+   ],
+   [
+    324.62,
+    -163.73
+   ]
+  ],
+  "eave": 6,
+  "roof": "gable",
+  "rise": 1.5,
+  "walls": "CREAM",
+  "roof_colour": "METAL",
+  "solid": true
+ },
+ {
+  "ge_blob": 36,
+  "footprint": [
+   [
+    195.63,
+    -147.2
+   ],
+   [
+    184.0,
+    -156.7
+   ],
+   [
+    175.35,
+    -146.13
+   ],
+   [
+    186.97,
+    -136.61
+   ]
+  ],
+  "eave": 5,
+  "roof": "gable",
+  "rise": 1.5,
+  "walls": "CREAM",
+  "roof_colour": "BEIGE",
+  "solid": true
+ },
+ {
+  "ge_blob": 37,
+  "footprint": [
+   [
+    324.69,
+    -142.6
+   ],
+   [
+    365.1,
+    -103.16
+   ],
+   [
+    380.72,
+    -119.17
+   ],
+   [
+    340.32,
+    -158.61
+   ]
+  ],
+  "eave": 8,
+  "roof": "gable",
+  "rise": 2,
+  "walls": "CREAM",
+  "roof_colour": "METAL",
+  "solid": true
+ },
+ {
+  "ge_blob": 49,
+  "footprint": [
+   [
+    -118.57,
+    -106.41
+   ],
+   [
+    -116.28,
+    -78.95
+   ],
+   [
+    -105.64,
+    -79.84
+   ],
+   [
+    -107.93,
+    -107.29
+   ]
+  ],
+  "eave": 5,
+  "roof": "flat",
+  "rise": 0,
+  "walls": "OFFICE",
+  "roof_colour": "GREY",
+  "solid": false
+ },
+ {
+  "ge_blob": 52,
+  "footprint": [
+   [
+    167.88,
+    -83.98
+   ],
+   [
+    191.5,
+    -83.07
+   ],
+   [
+    192.15,
+    -100.23
+   ],
+   [
+    168.54,
+    -101.13
+   ]
+  ],
+  "eave": 4,
+  "roof": "flat",
+  "rise": 0,
+  "walls": "OFFICE",
+  "roof_colour": "GREY",
+  "solid": false
+ },
+ {
+  "ge_blob": 65,
+  "footprint": [
+   [
+    241.78,
+    -41.88
+   ],
+   [
+    230.13,
+    -30.24
+   ],
+   [
+    238.87,
+    -21.5
+   ],
+   [
+    250.52,
+    -33.14
+   ]
+  ],
+  "eave": 6,
+  "roof": "gable",
+  "rise": 2,
+  "walls": "CREAM",
+  "roof_colour": "GREY",
+  "solid": true
+ },
+ {
+  "ge_blob": 71,
+  "footprint": [
+   [
+    149.58,
+    9.52
+   ],
+   [
+    148.59,
+    33.18
+   ],
+   [
+    159.9,
+    33.66
+   ],
+   [
+    160.89,
+    9.98
+   ]
+  ],
+  "eave": 6,
+  "roof": "hip",
+  "rise": 2,
+  "walls": "CREAM",
+  "roof_colour": "GREY",
+  "solid": false
+ },
+ {
+  "ge_blob": 72,
+  "footprint": [
+   [
+    277.87,
+    17.82
+   ],
+   [
+    292.45,
+    32.39
+   ],
+   [
+    302.93,
+    21.9
+   ],
+   [
+    288.37,
+    7.32
+   ]
+  ],
+  "eave": 5,
+  "roof": "gable",
+  "rise": 2,
+  "walls": "BRICK",
+  "roof_colour": "TERRACOTTA",
+  "solid": false
+ },
+ {
+  "ge_blob": 76,
+  "footprint": [
+   [
+    248.28,
+    26.23
+   ],
+   [
+    225.61,
+    48.89
+   ],
+   [
+    252.92,
+    76.21
+   ],
+   [
+    275.59,
+    53.55
+   ]
+  ],
+  "eave": 7,
+  "roof": "vault",
+  "rise": 3,
+  "walls": "CREAM",
+  "roof_colour": "WHITE",
+  "solid": true
+ },
+ {
+  "ge_blob": 94,
+  "footprint": [
+   [
+    -95.67,
+    140.92
+   ],
+   [
+    -100.44,
+    124.24
+   ],
+   [
+    -106.39,
+    125.94
+   ],
+   [
+    -101.61,
+    142.61
+   ]
+  ],
+  "eave": 4,
+  "roof": "flat",
+  "rise": 0,
+  "walls": "OFFICE",
+  "roof_colour": "GREY",
+  "solid": false
+ },
+ {
+  "ge_blob": 110,
+  "footprint": [
+   [
+    -94.2,
+    175.79
+   ],
+   [
+    -80.72,
+    171.29
+   ],
+   [
+    -85.16,
+    157.99
+   ],
+   [
+    -98.64,
+    162.48
+   ]
+  ],
+  "eave": 4,
+  "roof": "hip",
+  "rise": 2,
+  "walls": "CREAM",
+  "roof_colour": "SAGE",
+  "solid": false
+ }
+]
