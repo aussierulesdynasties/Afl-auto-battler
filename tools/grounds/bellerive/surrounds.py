@@ -86,7 +86,24 @@ def footprint():
     np.maximum.at(rmax, bins[a], rr[a])
     rmax = np.maximum(rmax, np.roll(rmax, 1))
     rmax = np.maximum(rmax, np.roll(rmax, -1))
-    return a | (rr <= rmax[bins])
+    out = a | (rr <= rmax[bins])
+    # The indoor centre west of the Ponting and its forecourt stand outside that circle; their own plans
+    # join the footprint.
+    return out | plan_of(sc, ("indoor_centre", "forecourt"))
+
+
+def plan_of(sc, names):
+    """The plan of the model's meshes whose names start with one of `names`, as a 1 m mask, holes filled."""
+    from scipy import ndimage
+    out = np.zeros((S.SIZE, S.SIZE), bool)
+    for name, g in sc.geometry.items():
+        if name.startswith(names):
+            w = np.asarray(g.vertices)
+            b = np.zeros((S.SIZE, S.SIZE), bool)
+            b[np.clip((w[:, 2] + S.SIZE / 2).astype(int), 0, S.SIZE - 1),
+              np.clip((w[:, 0] + S.SIZE / 2).astype(int), 0, S.SIZE - 1)] = True
+            out |= ndimage.binary_fill_holes(ndimage.binary_dilation(b, iterations=2))
+    return out
 
 
 def sea_mask(ways):
@@ -151,59 +168,68 @@ def garden_trees(im, trees, ways, foot):
     return out
 
 
-# Trees near the ground from aerial imagery: OpenStreetMap lists few of Bellerive's trees (the tall gums and
-# pines east and south of the ground are missing), so within IMG_R the canopy is found in Esri World Imagery
-# (zoom 17, about 0.9 m a pixel: green, darker than lawn and rough-textured) and a tree stood on it every
-# 7 m or so, its crown as wide as the patch. The tiles are cached in IMG_DIR. Beyond IMG_R the gardens keep
-# their random trees.
+# Trees near the ground: OpenStreetMap lists few of Bellerive's trees (the beach park's pines and gums, the
+# yards' trees), so within IMG_R every tree is stood where Meta and WRI's canopy height map has canopy
+# 2 m or more, a tree every 6 m or so, as tall as the canopy it stands in and as wide as its patch.
+# The map is open data (CC BY 4.0, cached in IMG_DIR); no aerial photo is used (the ones that show
+# Bellerive best, Esri's and the LIST's, do not allow derived data).
 IMG_R = 700.0
-IMG_Z = 17
 IMG_DIR = os.environ.get("BELLERIVE_IMG", "/tmp/bellerive_img")
 
 
-def ortho(r=IMG_R + 50.0):
-    """Esri World Imagery resampled to model metres, 1 m a pixel, north up, the origin in the middle."""
-    os.makedirs(IMG_DIR, exist_ok=True)
-    n = 2 ** IMG_Z
+# Tree heights: Meta and WRI's global canopy height map (1 m, from aerial and satellite imagery with
+# GEDI lidar; AWS open data, CC BY 4.0), read as a window round the ground and cached in IMG_DIR. A tree
+# takes the tallest canopy within its crown. Tall and narrow means a pine or cypress (the beach park's and
+# the yards' conifers in Google Earth); the rest are gums and garden trees.
+CHM_URL = ("/vsicurl/https://dataforgood-fb-data.s3.amazonaws.com/forests/v1/alsgedi_global_v6_float/chm/"
+           "313010023.tif")
 
-    def txy(lat, lon):
-        return ((lon + 180) / 360 * n,
-                (1 - np.log(np.tan(np.radians(lat)) + 1 / np.cos(np.radians(lat))) / math.pi) / 2 * n)
+
+def canopy_height(r=IMG_R + 60.0):
+    """(heights, to_px): the canopy height map in metres and a function from model (x, z) to its pixel."""
+    cache = os.path.join(IMG_DIR, "chm.npz")
+    class tf:                                      # lon, lat -> web mercator metres (EPSG:3857)
+        @staticmethod
+        def transform(lon, lat):
+            return (np.radians(lon) * 6378137.0,
+                    np.log(np.tan(np.pi / 4 + np.radians(lat) / 2)) * 6378137.0)
     dlat, dlon = r / 110574.0, r / (111320.0 * math.cos(math.radians(S.LAT0)))
-    x0, y0 = txy(S.LAT0 + dlat, S.LON0 - dlon)
-    x1, y1 = txy(S.LAT0 - dlat, S.LON0 + dlon)
-    X0, Y0 = int(x0), int(y0)
-    M = np.zeros(((int(y1) - Y0 + 1) * 256, (int(x1) - X0 + 1) * 256, 3), np.uint8)
-    for i in range(X0, int(x1) + 1):
-        for j in range(Y0, int(y1) + 1):
-            p = os.path.join(IMG_DIR, "%d_%d_%d.jpg" % (IMG_Z, i, j))
-            if not os.path.exists(p):
-                urllib.request.urlretrieve("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/"
-                                           "MapServer/tile/%d/%d/%d" % (IMG_Z, j, i), p)
-            M[(j - Y0) * 256:(j - Y0 + 1) * 256, (i - X0) * 256:(i - X0 + 1) * 256] = \
-                np.asarray(Image.open(p).convert("RGB"))
-    e = np.arange(-r, r) + 0.5
-    E, N = np.meshgrid(e, -e)
-    x, y = txy(S.LAT0 + N / 110574.0, S.LON0 + E / (111320.0 * math.cos(math.radians(S.LAT0))))
-    px = np.clip(((x - X0) * 256).astype(int), 0, M.shape[1] - 1)
-    py = np.clip(((y - Y0) * 256).astype(int), 0, M.shape[0] - 1)
-    return M[py, px].astype(float), r
+    if not os.path.exists(cache):
+        import rasterio
+        from rasterio.windows import from_bounds
+        with rasterio.open(CHM_URL) as src:
+            x0, y0 = tf.transform(S.LON0 - dlon, S.LAT0 - dlat)
+            x1, y1 = tf.transform(S.LON0 + dlon, S.LAT0 + dlat)
+            w = from_bounds(x0, y0, x1, y1, src.transform)
+            a = src.read(1, window=w).astype(np.float32)
+            t = src.window_transform(w)
+            np.savez(cache, a=a, t=np.array([t.c, t.a, t.f, t.e]))
+    z = np.load(cache)
+    a, (c, sx, f, sy) = z["a"], z["t"]
+
+    def to_px(x, zz):
+        lon = S.LON0 + x / (111320.0 * math.cos(math.radians(S.LAT0)))
+        lat = S.LAT0 - zz / 110574.0
+        mx, my = tf.transform(lon, lat)
+        return (my - f) / sy, (mx - c) / sx
+    return a, to_px
 
 
-def imagery_trees(existing, blocked):
+def canopy_trees(existing, blocked):
     """(x, z, height, crown radius, shade) rows for the canopy within IMG_R, clear of `existing` (x, z)
-    trees by 5 m and of `blocked(x, z)` (the stadium, the sea)."""
+    trees and of `blocked(x, z)` (the stadium, the sea). Shade 2 and up marks a pine or cypress."""
     from scipy import ndimage
-    a, r = ortho()
-    R_, G_, B_ = a[..., 0], a[..., 1], a[..., 2]
-    L = (R_ + G_ + B_) / 3
-    m = ndimage.uniform_filter(L, 5)
-    tex = np.sqrt(np.maximum(ndimage.uniform_filter(L * L, 5) - m * m, 0))
-    can = (2 * G_ - R_ - B_ > 13) & (L < 95) & (tex > 9) & (G_ > R_ + 4)
-    can = ndimage.binary_closing(ndimage.binary_opening(can), iterations=2)
+    chm, to_px = canopy_height()
+    r = IMG_R + 20.0
+    e = np.arange(-r, r) + 0.5
+    X, Z = np.meshgrid(e, e)                      # model metres, rows north to south (z is south)
+    py, px = to_px(X, Z)
+    H = chm[np.clip(py.astype(int), 0, chm.shape[0] - 1), np.clip(px.astype(int), 0, chm.shape[1] - 1)]
+    can = ndimage.binary_opening(H >= 2.0)
     lab, n = ndimage.label(can)
-    can &= np.isin(lab, 1 + np.nonzero(ndimage.sum(can, lab, range(1, n + 1)) >= 16)[0])
+    can &= np.isin(lab, 1 + np.nonzero(ndimage.sum(can, lab, range(1, n + 1)) >= 8)[0])
     dist = ndimage.distance_transform_edt(can)
+    top = ndimage.maximum_filter(H, size=7)
     ys, xs = np.nonzero(can)
     order = np.argsort(-dist[ys, xs], kind="stable")
     rng = np.random.default_rng(23)
@@ -212,17 +238,22 @@ def imagery_trees(existing, blocked):
         cell.setdefault((int(x // 10), int(z // 10)), []).append((x, z, 2.5))
     out = []
     for k in order:
-        x, z = xs[k] - r + 0.5, ys[k] - r + 0.5           # image rows run north to south: z is south
+        x, z = xs[k] - r + 0.5, ys[k] - r + 0.5
         if math.hypot(x, z) > IMG_R or blocked(x, z):
             continue
-        rad = float(np.clip(dist[ys[k], xs[k]] * 1.3, 2.8, 7.0))
+        rad = float(np.clip(dist[ys[k], xs[k]] * 1.3, 2.6, 7.0))
         cx, cz = int(x // 10), int(z // 10)
         near = [q for i in (-1, 0, 1) for j in (-1, 0, 1) for q in cell.get((cx + i, cz + j), [])]
         if any(math.hypot(qx - x, qz - z) < max(5.5, 0.85 * (rad + qr)) for qx, qz, qr in near):
             continue
         cell.setdefault((cx, cz), []).append((x, z, rad))
-        h = float(np.clip(rad * 1.6 + rng.uniform(1.5, 3.0), 5.5, 16.0))   # crown low on a short trunk, as yard trees are
-        out.append((x, z, h, rad, rng.uniform(0.0, 1.0)))
+        # The map's heights run low on small crowns (its 1 m cells average them): never shorter than the
+        # crown is wide.
+        h = float(np.clip(top[ys[k], xs[k]], max(4.5, rad * 1.4), 32.0))
+        shade = rng.uniform(0.0, 1.0)
+        if h >= 11.0 and h > 3.0 * rad:            # tall and narrow: a pine or cypress
+            rad = float(np.clip(h * 0.2, 2.2, rad)); shade += 2.0
+        out.append((x, z, h, rad, shade))
     return np.array(out, "<f4").reshape(-1, 5)
 
 
@@ -243,8 +274,14 @@ def main():
             if e not in seen:
                 seen.add(e)
                 trees.append(e)
-        ways += w
+        for e in w:   # a way crossing a tile's edge comes back with both tiles: keep it once
+            k = (tuple(sorted(e[0].items())), tuple(map(tuple, e[1])))
+            if k not in seen:
+                seen.add(k)
+                ways.append(e)
     foot = footprint()
+    import trimesh
+    nets = plan_of(trimesh.load(GLB), ("practice_nets",))   # no trees in the nets; the lawn stays
 
     def in_foot(pts):
         return any(foot[int(np.clip(z + S.SIZE / 2, 0, S.SIZE - 1)), int(np.clip(x + S.SIZE / 2, 0, S.SIZE - 1))]
@@ -286,17 +323,18 @@ def main():
     im.save(os.path.join(OUT, "surrounds.webp"), quality=88, method=6)
     t = S.tree_list(trees)
     if len(t):
-        keep = [not foot[int(np.clip(z + S.SIZE / 2, 0, S.SIZE - 1)), int(np.clip(x + S.SIZE / 2, 0, S.SIZE - 1))]
+        keep = [not (foot | nets)[int(np.clip(z + S.SIZE / 2, 0, S.SIZE - 1)), int(np.clip(x + S.SIZE / 2, 0, S.SIZE - 1))]
                 for x, z in t[:, :2]]
         t = t[keep]
     def blocked(x, z):
         i, j = int(np.clip(z + S.SIZE / 2, 0, S.SIZE - 1)), int(np.clip(x + S.SIZE / 2, 0, S.SIZE - 1))
-        return bool(foot[i, j] or sea[i, j] or math.hypot(x, z) < 105.0)
-    img = imagery_trees([tuple(q) for q in t[:, :2]], blocked)
+        return bool(foot[i, j] or nets[i, j] or sea[i, j] or math.hypot(x, z) < 105.0)
+    img = canopy_trees([tuple(q) for q in t[:, :2]], blocked)
     t = np.concatenate([t.reshape(-1, 5), img]).astype("<f4")
-    print("imagery trees", len(img))
+    print("canopy trees", len(img))
     t.astype("<f4").tofile(os.path.join(OUT, "trees.bin"))
     b = building_list(ways, in_foot)
+    b = np.concatenate([b, ms_buildings(ways, in_foot, sea)]).astype("<f4")
     b.tofile(os.path.join(OUT, "buildings.bin"))
     print("surrounds.webp", im.size, "trees", len(t), "building floats", len(b), "sea px", int(sea.sum()))
 
@@ -325,6 +363,63 @@ def building_list(ways, in_foot):
         out.append(h)
         for x, z in pts:
             out += [x, z]
+    return np.array(out, "<f4")
+
+
+# OpenStreetMap has drawn about a third of Bellerive's houses. The rest come from Microsoft's Global ML
+# Building Footprints (ODbL, like OpenStreetMap; footprints traced by machine from aerial photos, each with
+# an estimated height), the tile round Hobart, cached in IMG_DIR. A footprint is kept only where no
+# OpenStreetMap building already stands.
+MSB_URL = ("https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/"
+           "RegionName=Australia/quadkey=313010023/part-00065-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz")
+
+
+def ms_buildings(ways, in_foot, sea):
+    import gzip
+    import json
+    path = os.path.join(IMG_DIR, "msb_313010023.csv.gz")
+    if not os.path.exists(path):
+        os.makedirs(IMG_DIR, exist_ok=True)
+        urllib.request.urlretrieve(MSB_URL, path)
+    taken = Image.new("L", (S.SIZE, S.SIZE), 0)
+    td = ImageDraw.Draw(taken)
+    for t, p in ways:
+        if "building" in t and len(p) > 2:
+            td.polygon([S.px(*q) for q in p], fill=255)
+    taken = np.asarray(taken.filter(ImageFilter.MaxFilter(3))) > 0
+    lat_r, lon_r = 1000.0 / 110574.0, 1000.0 / (111320.0 * math.cos(math.radians(S.LAT0)))
+    out, n = [], 0
+    with gzip.open(path, "rt") as f:
+        for line in f:
+            g = json.loads(line)
+            ring = g["geometry"]["coordinates"][0]
+            lon, lat = ring[0]
+            if abs(lat - S.LAT0) > lat_r or abs(lon - S.LON0) > lon_r:
+                continue
+            en = [S.en(la, lo) for lo, la in ring[:-1]]
+            pts = [S.model_xz(*q) for q in en]
+            if len(pts) < 3 or max(max(abs(x), abs(z)) for x, z in pts) > 950 or in_foot(en):
+                continue
+            cx = int(np.clip(np.mean([x for x, _ in pts]) + S.SIZE / 2, 0, S.SIZE - 1))
+            cz = int(np.clip(np.mean([z for _, z in pts]) + S.SIZE / 2, 0, S.SIZE - 1))
+            if taken[cz, cx] or sea[cz, cx]:
+                continue
+            a = abs(S._area(np.array(pts + pts[:1])))
+            if a < 12.0:                           # sheds and cars under the trace's noise
+                continue
+            hm = float(g["properties"].get("height") or -1.0)
+            if a < 40.0:
+                h = 2.8                            # garages and sheds
+            elif a < 400.0:
+                h = -3.0 if hm < 5.5 else -6.0     # a house: one storey, or two where the trace is tall
+            else:
+                h = float(np.clip(hm if hm > 2.5 else 7.0, 3.0, 30.0))
+            out.append(float(len(pts)))
+            out.append(h)
+            for x, z in pts:
+                out += [x, z]
+            n += 1
+    print("microsoft buildings", n)
     return np.array(out, "<f4")
 
 
