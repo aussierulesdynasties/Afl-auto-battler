@@ -95,6 +95,13 @@ func _t(test: String, args := []) -> Variant:
 	return await Ran.one(self, test, args)
 
 
+## The wet look's global shader setting is what it should be. A headless run (the test runner)
+## has no renderer to hold global shader settings and reads none: nothing to check there.
+func _wet_is(v: float) -> bool:
+	var got: Variant = RenderingServer.global_shader_parameter_get("oval_wet")
+	return got == null or is_equal_approx(float(got), v)
+
+
 func _sim(seed: int, a := "RIC", b := "SYD") -> MatchSim:
 	return MatchSim.new(Squad.new(a, GameDB.club_list(a), true, a),
 			Squad.new(b, GameDB.club_list(b), false, b), seed)
@@ -2399,20 +2406,36 @@ func _test_graphics_levels(res: Dictionary) -> void:
 					"Low: every supporter a card, no seat shadows, no blades, a smaller picture (%d casting)" % seat_casting)
 		# A wet day (rule 2.83): rain falls at every level, fewer drops lower down; the far stands
 		# grey in it, the men look wet, the towers are on by day. A dry day after it takes all that away.
-		_check(oval.turf.rain == null and float(RenderingServer.global_shader_parameter_get("oval_wet")) == 0.0,
+		_check(oval.turf.rain == null and _wet_is(0.0),
 				"%s: no rain and dry kit on a fine day" % level)
 		oval.turf.apply(VignetteWeather.WET, VignetteKickoff.DAY)
 		var rain: Oval3DRain = oval.turf.rain
 		_check(rain != null and rain.amount == int(Oval3DQuality.preset(level)["rain"]) and rain.get_parent() == oval
-				and oval._env.fog_enabled and float(RenderingServer.global_shader_parameter_get("oval_wet")) == 1.0
+				and oval._env.fog_enabled and _wet_is(1.0)
 				and oval.turf.fill.visible,
 				"%s wet: %d drops falling, haze, wet kit, the towers on" % [level, rain.amount if rain else -1])
 		_check(((rain.draw_pass_1 as QuadMesh).material as BaseMaterial3D).render_priority == Material.RENDER_PRIORITY_MAX,
 				"%s wet: the rain is drawn over the match film, not wiped by it" % level)
 		oval.turf.apply("", VignetteKickoff.DAY)
-		_check(oval.turf.rain == null and not oval._env.fog_enabled
-				and float(RenderingServer.global_shader_parameter_get("oval_wet")) == 0.0 and not oval.turf.fill.visible,
-				"%s: a fine day after a wet one has no rain, haze or wet kit" % level)
+		var env: Environment = oval._env
+		var rain_haze := env.fog_enabled and env.fog_mode == Environment.FOG_MODE_DEPTH
+		_check(oval.turf.rain == null and not rain_haze
+				and _wet_is(0.0) and not oval.turf.fill.visible,
+				"%s: a fine day after a wet one has no rain, rain haze or wet kit" % level)
+		# The air's own thin haze on a dry day (Oval3DTurf._haze): the seen sky's horizon colour,
+		# thin enough to leave the ground itself clear; none at night.
+		var sm: ShaderMaterial = env.sky.sky_material
+		var hc: Color = sm.get_shader_parameter("seen_horizon")
+		_check(env.fog_enabled and env.fog_mode == Environment.FOG_MODE_EXPONENTIAL
+				and is_equal_approx(env.fog_density, Oval3DTurf.HAZE_DENSITY) and env.fog_density * 150.0 < 0.01
+				and env.fog_light_color.is_equal_approx(Color(hc, 1.0)) and env.fog_sky_affect == 0.0,
+				"%s fine day: a thin haze in the sky's horizon colour (density %.6f)" % [level, env.fog_density])
+		_check(sm.get_shader_parameter("zenith") == Oval3DTurf.DAY_LIGHT_ZENITH
+				and (sm.get_shader_parameter("seen_zenith") as Color).b > Oval3DTurf.DAY_LIGHT_ZENITH.b,
+				"%s fine day: the sky's light a paler blue than the deep blue sky you see" % level)
+		oval.turf.apply("", VignetteKickoff.NIGHT)
+		_check(not env.fog_enabled, "%s night: no haze" % level)
+		oval.turf.apply("", VignetteKickoff.DAY)
 		vp.queue_free()
 
 

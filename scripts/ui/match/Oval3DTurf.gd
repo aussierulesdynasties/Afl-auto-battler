@@ -264,6 +264,7 @@ func apply(p_weather: String, p_slot: String) -> void:
 	_light_stands()
 	_quality()
 	_wet_world(wet)
+	_haze()
 
 
 ## Drops in the air at each level (Oval3DQuality "rain"); the node drawing them while it rains.
@@ -290,6 +291,38 @@ func _wet_world(wet: bool) -> void:
 		fill.rotation_degrees = Vector3(-58.0, 150.0, 0.0)
 		fill.light_color = Color(0.92, 0.95, 1.0)
 		fill.light_energy = WET_DAY_TOWERS
+
+
+## The air's own haze on a dry day (the York Park QA, 2026-11-22: far hills stayed as dark as
+## near ones). Real air thins the far land toward the sky at the horizon. Here, on screen, a dark
+## hill goes about a fifth of the way to the sky by 3 km, near half by 10 km and two thirds by
+## 25 km (a clear winter's day; tools/visual/measure_day_tint3d.gd), and the ground itself (150 m
+## across) about one part in a hundred. The haze is the seen sky's own horizon colour at its own
+## brightness, so the far land meets the sky behind it, and it follows the sky as the clock moves
+## it (warm at a late game, gone at night). A wet day keeps the rain's grey (Oval3DRain.haze).
+## Cheap on a phone: one exponential per pixel.
+const HAZE_DENSITY := 3.0e-5
+
+
+func _haze() -> void:
+	if weather == VignetteWeather.WET:
+		return
+	var sm: ShaderMaterial = env.sky.sky_material if env.sky != null else null
+	if sm == null or env.background_mode != Environment.BG_SKY:
+		env.fog_enabled = false
+		return
+	var hc = _sky_param(sm, "seen_horizon")
+	if hc == null or (hc as Color).a == 0.0:
+		hc = _sky_param(sm, "horizon")
+	env.fog_enabled = true
+	env.fog_mode = Environment.FOG_MODE_EXPONENTIAL
+	env.fog_density = HAZE_DENSITY
+	env.fog_light_color = Color(hc as Color, 1.0)
+	env.fog_light_energy = float(_sky_param(sm, "energy")) * float(_sky_param(sm, "view"))
+	env.fog_sun_scatter = 0.0
+	env.fog_aerial_perspective = 0.0
+	env.fog_sky_affect = 0.0
+	env.fog_height_density = 0.0
 
 
 ## The graphics level's cuts to this look (Oval3DQuality): the sun's shadow bands, whether a
@@ -427,6 +460,17 @@ func _ground_name() -> String:
 	return ""
 
 
+## The colour of the sky's light on a fine day, apart from the sky you see (the York Park and SCG
+## QA, 2026-11-22: shaded concrete read lavender). The seen sky's deep blue overhead, lighting a
+## shaded wall, made its grey a strong blue (saturation 0.66 on screen after the broadcast tone,
+## measured with tools/visual/measure_day_tint3d.gd on a real GPU); a TV camera balanced for the
+## sun sees shade only a little cool. This light keeps shade cool (about 0.3) and sunlit grey
+## near neutral, and leaves the turf's green as it was.
+const DAY_LIGHT_ZENITH := Color(0.42, 0.48, 0.57)
+const DAY_LIGHT_HORIZON := Color(0.74, 0.78, 0.82)
+const HOT_LIGHT_ZENITH := Color(0.47, 0.54, 0.64)
+
+
 ## Rule 2.80, sky light: the sky lights the ground and the men (ambient and reflections from it),
 ## the grass bounces light up and the stands round the ground darken the sides. Rule 2.84: the
 ## sky you see for the weather. Values copied from the approved prototype (capture_look3d.gd).
@@ -446,7 +490,7 @@ func _sky_light(hot: bool) -> void:
 		# The sun high and hard, the sky pale with glare, cloudless.
 		sun.basis = _real_sun(68.0)
 		sm.set_shader_parameter("energy", 1.2)
-		sm.set_shader_parameter("zenith", Color(0.35, 0.55, 0.85))
+		sm.set_shader_parameter("zenith", HOT_LIGHT_ZENITH)
 		sm.set_shader_parameter("horizon", Color(0.82, 0.86, 0.9))
 		sun.light_energy = 1.6
 		sun.light_color = Color(1.0, 0.96, 0.88)
@@ -458,6 +502,11 @@ func _sky_light(hot: bool) -> void:
 		sm.set_shader_parameter("energy", 1.4)
 		sun.light_energy = 1.15
 		sun.light_color = Color(1.0, 0.95, 0.86)
+		# The seen sky as approved (rule 2.84); its light a paler, greyer blue (DAY_LIGHT_ZENITH).
+		sm.set_shader_parameter("zenith", DAY_LIGHT_ZENITH)
+		sm.set_shader_parameter("horizon", DAY_LIGHT_HORIZON)
+		sm.set_shader_parameter("seen_zenith", Color(0.22, 0.43, 0.78, 1.0))
+		sm.set_shader_parameter("seen_horizon", Color(0.68, 0.78, 0.88, 1.0))
 		_sky_look({"cover": 0.32, "cloud_lit": Color(1.0, 1.0, 1.0), "cloud_dark": Color(0.62, 0.66, 0.74),
 				"sun_halo": 0.35})
 
@@ -579,7 +628,16 @@ func stand_light(sm: ShaderMaterial, scale := 1.0, green := 1.0) -> Array:
 ## A sky shader setting, or the shader's own default when the look leaves it unset.
 func _sky_param(sm: ShaderMaterial, key: String) -> Variant:
 	var v: Variant = sm.get_shader_parameter(key)
-	return v if v != null else RenderingServer.shader_get_parameter_default(sm.shader.get_rid(), key)
+	if v == null:
+		v = RenderingServer.shader_get_parameter_default(sm.shader.get_rid(), key)
+	return v if v != null else SKY_DEFAULTS.get(key)
+
+
+## oval3d_sky.gdshader's defaults for the settings read here, for a headless run (the tests), where
+## no renderer gives them.
+const SKY_DEFAULTS := {"zenith": Color(0.22, 0.43, 0.78), "horizon": Color(0.68, 0.78, 0.88),
+		"bowl": Color(0.22, 0.21, 0.23), "grass": Color(0.22, 0.38, 0.14), "bowl_top": 0.21,
+		"energy": 1.0, "grass_energy": 1.0, "view": 1.0}
 
 
 ## A wet day (rule 2.83): the sky is cloud, grey light from all round, the sun only a soft
@@ -993,6 +1051,7 @@ func _write(a: Dictionary, b: Dictionary, t: float, alt: float) -> void:
 	env.adjustment_enabled = true
 	env.tonemap_exposure = exposure
 	_tone_to_film()
+	_haze()
 
 
 ## The sun of a day look, at the real sun's height (kept between SUN_LOW and SUN_HIGH) and
