@@ -967,5 +967,11 @@ func event(i: int, kind: StringName, at: Vector2, other := -1) -> void:
 		(pr["rec"] as Dictionary)["event_t"] = _clock
 		(pr["rec"] as Dictionary)["at"] = at
 		return
-	if not (_in[i] as Dictionary).is_empty():
+	var pr2: Dictionary = _in[i]
+	if not pr2.is_empty() and int(pr2["victim"]) == i and kind in [&"mark", &"handball_receive", &"gather"] \
+			and float(pr2["c"]) < float(pr2["cs"]):
+		# He takes the ball as the tackle closes on him (caught holding it): the touch arrives
+		# just after the clip started, and he stays in it to be tackled.
+		return
+	if not pr2.is_empty():
 		_leave(i)

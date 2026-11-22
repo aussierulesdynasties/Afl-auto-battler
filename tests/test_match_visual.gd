@@ -73,6 +73,8 @@ func run() -> void:
 	_t("_test_feet_planted", [res])
 	_t("_test_umpire_stoppages", [res])
 	_t("_test_free_taker_kicks")
+	_t("_test_tackled_frees")
+	_t("_test_tackle_cuts", [res])
 	GameState.replay_seed = 0
 	print(Ran.line("Match visual", self))
 
@@ -3323,6 +3325,8 @@ func _test_three_d_cameras(res: Dictionary) -> void:
 				var t: Dictionary = pv.director.tokens[tv._close_who]
 				close_ok += 1 if str(t["role"]) == "RUCK" and is_equal_approx(tv._close_eye.y, 15.0) else 0
 			continue
+		if not tv._inc.is_empty() and tv.shot == "main":
+			continue  # close on a tackle that stopped play (_test_tackle_cuts)
 		if tv.shot != last:
 			if tv.shot == "goals":
 				cuts += 1
@@ -3764,6 +3768,7 @@ func _test_umpire_stoppages(res: Dictionary) -> void:
 			if oval._ump_pick < 0.0:
 				gap = maxf(gap, hands.distance_to(now))
 			jump = maxf(jump, (now - last).distance_to(hands - last_hands))
+			if (now - last).distance_to(hands - last_hands) > 0.3: print("JUMPDBG t=%.2f k=%s kind=%s clip=%s pick=%.2f ph=%s" % [d.time, d._beat.get("k", -1), kind, str(c.get("kind", "")), oval._ump_pick, str((d._phases[d._pi] as Dictionary).get("t","")) if d._pi < d._phases.size() else ""])
 		last = now
 		last_hands = hands
 		held_prev = oval._ump_ball and live
@@ -3858,3 +3863,97 @@ func _test_free_taker_kicks() -> void:
 	_check(frees > 10 and taken > 10, "Seed 31 pays frees and their takers kick them (%d paid, %d taken)" % [frees, taken])
 	_check(not_taken.is_empty(), "Every free's taker has the ball and kicks it himself (%d not: %s)" % [not_taken.size(), not_taken.slice(0, 5)])
 	_check(far.is_empty(), "No kick leaves with its kicker more than 1.5 m from the ball (%d: %s)" % [far.size(), far.slice(0, 5)])
+
+
+## Holding the ball and dropping it are paid off a tackle (row 202, 2e, 2026-11-21): the man
+## paid the free runs down the man caught (the director's chase), the tackle lands on him
+## (a "tackle" contact, so the 3D tackle clips play), and the tackler then has the ball.
+func _test_tackled_frees() -> void:
+	var res := MatchSim.new(Squad.new("FRE", GameDB.club_list("FRE"), true, "FRE"),
+			Squad.new("STK", GameDB.club_list("STK"), false, "STK"), 31).run()
+	var evs: Array = res["events"]
+	var d := MatchDirector.new()
+	d.setup(res, evs)
+	d.want_contacts = true
+	var tackled := 0
+	var right := 0
+	var hit := 0
+	var got := 0
+	var last_k := -1
+	var want := {}   # the tackled free being played: {k, who, victim}
+	var guard := 0
+	while not d.idle() and guard < 200000:
+		guard += 1
+		d.advance(0.05)
+		var k := int(d._beat.get("k", -1))
+		if k == last_k:
+			for c in d.contacts:
+				if not want.is_empty() and str(c["kind"]) == "tackle" and int(c["who"]) == int(want["who"]) \
+						and int(c["other"]) == int(want["victim"]):
+					hit += 1
+			d.contacts.clear()
+			continue
+		if not want.is_empty():
+			got += 1 if str(d.ball["mode"]) == "held" and int(d.ball["holder"]) == int(want["who"]) else 0
+			want = {}
+		last_k = k
+		var ev: Dictionary = evs[k]
+		if str(ev.get("kind", "")) != "free" or not str(ev.get("free_cause", "")) in ["holding_ball", "incorrect_disposal"]:
+			continue
+		var v := d._tackled_for(k)
+		if v < 0:
+			continue
+		tackled += 1
+		var ts := (d._phases as Array).map(func(q): return str((q as Dictionary).get("t", "")))
+		right += 1 if ts.has("chase") and ts.has("down") and ts.find("down") < ts.find("emit") else 0
+		want = {"k": k, "who": d._actor_id(ev), "victim": v}
+		# The beat can start and land its tackle within one step.
+		for c in d.contacts:
+			if str(c["kind"]) == "tackle" and int(c["who"]) == int(want["who"]) and int(c["other"]) == v:
+				hit += 1
+		d.contacts.clear()
+	_check(tackled >= 5 and right == tackled,
+			"A holding-the-ball or dropped-ball free is run down and tackled before it is paid (%d of %d)" % [right, tackled])
+	_check(hit == tackled, "Each tackled free lands its tackle on the man caught (%d of %d)" % [hit, tackled])
+	_check(got >= tackled - 1, "...and the man paid it has the ball before play goes on (%d of %d)" % [got, tackled])
+
+
+## The close cut on a tackle that stops play (Oval3DBroadcast.incident_cuts, chosen
+## 2026-11-21): only with both men in one tackle clip, from a wing camera, and only on a
+## tackle held to a ball-up or paid as a free; never on one that spills the ball free.
+func _test_tackle_cuts(res: Dictionary) -> void:
+	var pv := PitchView.new()
+	pv.size = Vector2(360, 480)
+	pv.three_d = true
+	(Engine.get_main_loop() as SceneTree).root.add_child(pv)
+	pv.setup(res)
+	var tv: Oval3DBroadcast = pv._tv
+	_check(tv.incident_cuts, "Tackles that stop play cut close (chosen 2026-11-21: B, close cut)")
+	pv.set_speed(4.0)
+	pv.play()
+	var frames := 0
+	var ok := 0
+	var cut_ks := {}
+	var wrong := []
+	for i in range(9000):
+		pv._process(1.0 / 60.0)
+		if not pv.playing:
+			break
+		if tv._inc.is_empty() or tv.replaying or tv._close_who >= 0 or tv.shot != "main":
+			continue
+		frames += 1
+		var k := int(tv._inc["k"])
+		cut_ks[k] = true
+		var ev: Dictionary = pv.director.events[k]
+		var kind := str(ev.get("kind", ""))
+		var nk: int = pv.director._next_real(k)
+		var stops := kind == "free" or (kind == "tackle" and nk >= 0
+				and str((pv.director.events[nk] as Dictionary).get("kind", "")) == "ballup")
+		if stops and tv._paired(int(tv._inc["who"]), int(tv._inc["victim"])) \
+				and is_equal_approx(pv._oval3d.camera.global_position.y, Oval3DBroadcast.EYE_UP):
+			ok += 1
+		elif wrong.size() < 3:
+			wrong.append(k)
+	_check(cut_ks.size() >= 2 and frames > 0 and ok == frames,
+			"Tackles that stop play cut close from a wing camera, both men in the clip (%d tackles, %d of %d frames; wrong: %s)" % [cut_ks.size(), ok, frames, wrong])
+	pv.free()
