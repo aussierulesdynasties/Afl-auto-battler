@@ -1420,6 +1420,20 @@ func _effective(side: int, player) -> void:
 	_p(player, "effective_disposals")
 
 
+## The numbers a TV stat card can show (rule 2.95), for one player as they stand now,
+## with his role in this match: {role, disposals, effective_disposals, goals, ...} as ints.
+const CARD_KEYS := ["disposals", "effective_disposals", "goals", "score_involvements", "marks",
+		"tackles", "clearances", "contested_possessions", "inside50", "intercepts", "rebounds",
+		"spoils", "contested_marks", "hitouts"]
+
+func card_line(player: Dictionary) -> Dictionary:
+	var st: Dictionary = player_stats.get(str(player.get("id", "")), {})
+	var out := {"role": str(player.get("role", "MID"))}
+	for k in CARD_KEYS:
+		out[k] = int(round(float(st.get(k, 0.0))))
+	return out
+
+
 ## Disposal efficiency, 0-100: the share of disposals that kept the ball.
 static func disposal_efficiency(st: Dictionary) -> int:
 	var d := float(st.get("disposals", 0.0))
@@ -1522,6 +1536,11 @@ func _emit(kind: String, side: int, fp: float, actor, text: String) -> void:
 			for k in ["passer_id", "to_id"]:
 				if _set_choice.has(k):
 					events[events.size() - 1][k] = str(_set_choice[k])
+	# A goal carries its kicker's numbers as they stand at that goal, for the TV
+	# stat card over the 3D picture (row 207, rules 2.94-2.95). Read only: it
+	# draws nothing and changes nothing in the match.
+	if kind == "goal" and actor != null:
+		events[events.size() - 1]["card"] = card_line(actor)
 	# A score from a turnover: whose intercept it came from.
 	if (kind == "goal" or kind == "behind") and not _chain_from.is_empty() \
 			and int(_chain_from["side"]) == side:
@@ -2623,8 +2642,23 @@ const D50_TACKLE_RETAIN := 4.0
 ## 0.35: defensive-50 possessions 48 -> 66 a game, disposals 390 (club range to 391).
 const D50_CHIP := 0.35
 const D50_CHIP_MARK := 2.8
+## Controlled tempo and Slow it down keep the ball between the 50s (rule 2.45:
+## "wide, slower"; row 201 gap 8): this share of kicks goes square or back
+## (metres gained between KEEP_MIN and KEEP_MAX) and is marked as a chip is.
+const KEEP_CONTROLLED := 0.07
+const KEEP_HOLD := 0.15
+const KEEP_MIN := -10.0
+const KEEP_MAX := 5.0
+const KEEP_PRESSURE := 0.3
 const D50_CHIP_MIN := -3.0
 const D50_CHIP_MAX := 6.0
+## Ground gained by a kick and by a handball, against the chain's mean gain (row 201
+## gap 6). Every disposal gained the same, so a handball went as far as a kick and the
+## kicks averaged 18 m (real 25, Spencer 2019). With these, and the shorter run of
+## chains in Ratings.FLOW, kicks average about 24 m and a side's kicks and disposals
+## a game come back inside real AFL (217 and 351 on a 200-match screen; real 212, 367).
+const KICK_GAIN := 2.2
+const HANDBALL_GAIN := 0.2
 
 
 ## A named constant, or its audit override (tune).
@@ -3638,11 +3672,19 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 		# so the ball stays in defence for another possession. Its own dice.
 		var chip := in_d50 and not (from_kick_in and touches == 1) \
 				and chip_rng.randf() < _tv("D50_CHIP", D50_CHIP)
+		# Controlled tempo and Slow it down (rule 2.45, row 201 gap 8): between the
+		# 50s the side keeps it, a kick square or back to a loose teammate, who
+		# marks it. Its own dice, rolled only under those calls.
+		var keep := not chip and not in_d50 and not (from_kick_in and touches == 1) \
+				and (fp if side == 0 else -fp) < f50 \
+				and (_plan(side) == "controlled" or _burst(side, "hold")) \
+				and chip_rng.randf() < (_tv("KEEP_HOLD", KEEP_HOLD) if _burst(side, "hold") \
+						else _tv("KEEP_CONTROLLED", KEEP_CONTROLLED))
 		# A kick-in is kicked: no handball roll for its first disposal.
 		var hb_roll := not (from_kick_in and touches == 1) \
 				and rng.randf() < float(T["handball_share"]) * hb_bias \
 				* (_tv("D50_HANDBALL", D50_HANDBALL) if in_d50 else 1.0)
-		if hb_roll and not chip:
+		if hb_roll and not chip and not keep:
 			_t(side, "handballs")
 			_p(carrier, "handballs")
 			_emit("handball", side, fp, carrier, "%s handballs" % GameDB.player_display_name(carrier))
@@ -3656,7 +3698,7 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 				_p(carrier, "kicks")
 			var mark_p: float = (float(T["mark_share_of_kicks"])
 					* (0.75 + 0.50 * _a(carrier, "uncontested_marking") / 100.0))
-			if chip:
+			if chip or keep:
 				mark_p = minf(0.95, mark_p * _tv("D50_CHIP_MARK", D50_CHIP_MARK))
 			marked = false if is_kick_in else rng.randf() < mark_p
 			if marked:
@@ -3682,6 +3724,9 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 		pressure *= 1.10 if atk_fp < 0.0 else 0.95
 		if in_d50:
 			pressure *= _tv("D50_PRESSURE", D50_PRESSURE)
+		if keep:
+			# Kept to a loose man away from the ball: little pressure on it.
+			pressure *= _tv("KEEP_PRESSURE", KEEP_PRESSURE)
 		if is_kick_in:
 			# The conservative exit buys space; playing on gains ground but
 			# exposes the taker to more immediate pressure.
@@ -3872,11 +3917,17 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 		if _burst(side, "push"):
 			gain *= PUSH_GAIN
 		gain *= rng.randf_range(0.45, 1.75)
+		# A kick goes further than a handball (row 201 gap 6).
+		gain *= _tv("KICK_GAIN", KICK_GAIN) if disposal_kind == "kick" else _tv("HANDBALL_GAIN", HANDBALL_GAIN)
 		if disposal_kind == "kick":
 			if chip:
 				# Short and square: it stays in defence.
 				gain = chip_rng.randf_range(_tv("D50_CHIP_MIN", D50_CHIP_MIN), _tv("D50_CHIP_MAX", D50_CHIP_MAX))
 				_t(side, "d50_chips")
+			elif keep:
+				gain = chip_rng.randf_range(_tv("KEEP_MIN", KEEP_MIN), _tv("KEEP_MAX", KEEP_MAX))
+				# Keeping it is the point: it does not use up the chain.
+				max_touches += 1
 			elif in_d50:
 				gain *= _tv("D50_KICK_GAIN", D50_KICK_GAIN)
 			gain = minf(gain, kick_range(carrier))
