@@ -165,17 +165,31 @@ BROWS=14
 BR=[[P(FP(i,ZV[i]+(HB[i]-ZV[i])*k/BROWS),ZV[i]+(HB[i]-ZV[i])*k/BROWS) for i in range(N)] for k in range(BROWS+1)]
 BR[0]=BF
 _inside=lambda a0,a1,i:(a0<=i<a1) or (a0<=i+N<a1)
-for i in range(N):
-    j=(i+1)%N;w=OUT(i);sg=[k for k,(a0,a1) in SG.items() if _inside(a0,a1,i)]
-    zi=lambda k,q:ZV[q]+(HB[q]-ZV[q])*k/BROWS
-    for k in range(BROWS):
-        vs=[BR[k][i],BR[k][j],BR[k+1][j],BR[k+1][i]]
-        if sg:
-            a0,a1=SG[sg[0]];ii=i if i>=a0 else i+N;u0,u1=(ii-a0)/(a1-a0),(ii+1-a0)/(a1-a0)
-            vz=lambda z,q:1-(HB[q]-z)/FJ['sign_drop_m']
-            face(vs,SMA,[(u0,vz(zi(k,i),i)),(u1,vz(zi(k,j),j)),(u1,vz(zi(k+1,j),j)),(u0,vz(zi(k+1,i),i))],w)
-        else:
-            face(vs,MB,[(sF[i]/BAY2,1-(HB[i]-zi(k,i))/BH),(sF[i+1]/BAY2,1-(HB[j]-zi(k,j))/BH),(sF[i+1]/BAY2,1-(HB[j]-zi(k+1,j))/BH),(sF[i]/BAY2,1-(HB[i]-zi(k+1,i))/BH)],w)
+# The bronze's horizontal anodised fins, as geometry: one fin every FIN_P down from the bronze's top (the texture's
+# rows, bronze.py ROWS), each a blade leaning FIN_D out to its top edge with a level ledge back to the wall, so every
+# fin throws its own shadow line. Every second facade vertex (3.1 m chords, 9 mm sag on the drum), plus the signs' ends.
+FIN_P=BH/66;FIN_D=0.07
+_fi=sorted(set(range(0,N,2))|{a%N for ab in SG.values() for a in ab})
+NFR=int(math.ceil(max(HB[i]-ZV[i] for i in range(N))/FIN_P))+1
+_fz=lambda m,i:max(ZV[i],HB[i]-m*FIN_P)
+FIN=[{i:(P(FP(i,_fz(m,i)),_fz(m,i)),P(FP(i,_fz(m,i),FIN_D),_fz(m,i))) for i in _fi} for m in range(NFR+1)]
+def _fuv(i,z,sg):
+    if not sg:return (sF[i]/BAY2 if i or sg else 0.0,1-(HB[i]-z)/BH)
+    a0,a1=SG[sg];ii=i if i>=a0 else i+N;return ((ii-a0)/(a1-a0),1-(HB[i]-z)/FJ['sign_drop_m'])
+for q in range(len(_fi)):
+    i=_fi[q];j=_fi[(q+1)%len(_fi)];jn=j if j>i else N   # arclength index for the wrap
+    sg=[k for k,(a0,a1) in SG.items() if _inside(a0,a1,i)];sg=sg[0] if sg else None
+    w=OUT(i);mi=SMA if sg else MB
+    def uv_(ix,z):
+        u,v=_fuv(ix%N,z,sg)
+        if not sg and ix==N:u=sF[N]/BAY2
+        return (u,v)
+    for m in range(NFR):
+        zli,zlj,zhi,zhj=_fz(m+1,i),_fz(m+1,j),_fz(m,i),_fz(m,j)
+        if zhi-zli<1e-4 and zhj-zlj<1e-4:continue
+        lo,hi=FIN[m+1],FIN[m]
+        face([lo[i][0],lo[j][0],hi[j][1],hi[i][1]],mi,[uv_(i,zli),uv_(jn,zlj),uv_(jn,zhj),uv_(i,zhi)],w)
+        face([hi[i][1],hi[j][1],hi[j][0],hi[i][0]],mi,[uv_(i,zhi),uv_(jn,zhj),uv_(jn,zhj),uv_(i,zhi)],Vector((0,0,1)))
 # --- glass band from the bronze's top to the glass head, on the same surface
 GROWS=10
 GR=[BR[BROWS]]+[[P(FP(i,HB[i]+(ZGT_[i]-HB[i])*k/GROWS),HB[i]+(ZGT_[i]-HB[i])*k/GROWS) for i in range(N)] for k in range(1,GROWS+1)]
