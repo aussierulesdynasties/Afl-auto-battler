@@ -23,7 +23,13 @@
    0
   ],
   "label": "the south sheds, straight down",
-  "solve": "none"
+  "solve": "xy",
+  "search_m": [
+   4,
+   2.5,
+   1.5,
+   1
+  ]
  },
  {
   "name": "c_board",
@@ -49,5 +55,17 @@
    0
   ],
   "label": "the grandstand from the field"
+ },
+ {
+  "name": "s_top",
+  "h": 0,
+  "t": 0,
+  "d": 420,
+  "at": [
+   -5,
+   -75,
+   0
+  ],
+  "label": "the oval's south half and the sheds, straight down"
  }
 ]

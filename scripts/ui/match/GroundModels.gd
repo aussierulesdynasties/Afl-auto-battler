@@ -68,9 +68,10 @@ const FIT := {
 	"north_hobart": [-6.71, 0.91, 0.0, -43.8, 81.59, 60.47],
 	"bruce": [21.36, -39.57, 0.4, -56.7, 104.51, 64.28],
 	"riverway": [-0.41, 1.12, 0.0, -89.9, 86.05, 72.72],
-	# Traeger Park's fence is no full ring (none along the stand), so this is fitted to its
-	# boundary from the satellite (tools/grounds/traeger/ring_sat.json), not by fit_fence.py.
-	"traeger": [3.62, -8.97, -0.05, -90.9, 93.26, 73.2],
+	# Traeger Park's fence is no full ring (none along the stand), so this is fitted to its turf
+	# edge traced off Google Earth (tools/grounds/traeger/measure/outline_model.json), which the
+	# fence follows (fix_r15.py), not by fit_fence.py.
+	"traeger": [4.17, -8.65, -0.05, -91.82, 91.8, 73.94],
 	# The seven first drafts (#1930) are built round their fence: centre at the origin (Summit
 	# 2 m off), floor 0. Jiangwan is a running-track stadium; its boundary was placed by judgement.
 	"barossa": [0.0, 0.0, 0.0, 72.7, 85.63, 65.98],
