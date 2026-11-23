@@ -43,7 +43,7 @@ for name, e in P.items():
             kind = 'hip'
     ridge = c - g
     # storeys from the ridge and the sides together (a tree over the ridge reads high only at one point)
-    eave = 5.6 if ridge >= 6.5 and np.mean(sides) - g >= 4.5 else 2.7
+    eave = 5.6 if ridge >= 6.0 and np.mean(sides) - g >= 4.5 else 2.7
     res[e['key']] = {'kind': kind, 'eave': eave, 'ridge': round(float(ridge), 2), 'v': v}
     stats[str(kind)] = stats.get(str(kind), 0) + 1; stats['2st'] = stats.get('2st', 0) + (eave > 3)
 json.dump(ocr, open(cache, 'w'))

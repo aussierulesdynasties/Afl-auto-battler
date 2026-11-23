@@ -230,7 +230,9 @@ def ge_tree_rows(ge, blocked):
             h = rad * 2.0 * rng.uniform(1.3, 1.8)
         h = float(np.clip(h, max(4.5, rad * 1.4), 30.0))
         shade = rng.uniform(0.0, 1.0)
-        if h >= 11.0 and h > 3.0 * rad:
+        # A pine or cypress only when far taller than wide: Bellerive's tall trees are mostly gums
+        # (Google Earth fac_100, fac_200), which the 11 m / three-crowns rule turned into cones.
+        if h >= 14.0 and h > 4.0 * rad:
             rad = float(np.clip(h * 0.2, 2.2, rad)); shade += 2.0
         out.append((x, z, h, rad, shade))
     return np.array(out, "<f4").reshape(-1, 5)
@@ -280,6 +282,7 @@ def main():
     im, trees = S.paint(trees + [(e, n) for e, n, _ in ge], ways)
     arr = np.asarray(im).astype(float)
     sea = sea_mask(ways)
+    arr = ge_ground(arr, ways, sea, foot)
     # Beach: OpenStreetMap's sand, then the water over it, a lighter band in the shallows.
     sand = Image.new("L", (S.SIZE, S.SIZE), 0)
     sd = ImageDraw.Draw(sand)
@@ -319,6 +322,41 @@ def main():
     b.tofile(os.path.join(OUT, "buildings.bin"))
     rgb.tofile(os.path.join(OUT, "roofs.bin"))
     print("surrounds.webp", im.size, "trees", len(t), "building floats", len(b), "sea px", int(sea.sum()))
+
+
+def ge_ground(arr, ways, sea, foot):
+    """The open ground as Google Earth shows it (ge_ground.py, ge_ground.npz): lawn, dry grass, bare earth,
+    paving and courts each in its own measured colour, keeping the painter's mottle and the shade under each tree. Roads,
+    buildings, car parks, the sea and the stadium keep the map's own paint; under the canopy and on roofs or
+    shadow the ground takes the nearest class round it."""
+    from scipy import ndimage
+    f = os.path.join(HERE, "ge_ground.npz")
+    if not os.path.exists(f):
+        return arr
+    cls = np.load(f)["cls"]
+    info = json.load(open(os.path.join(HERE, "ge_ground.json")))
+    pal = np.zeros((len(info["names"]), 3))
+    for k, name in enumerate(info["names"]):
+        if name in info["colour"]:
+            pal[k] = info["colour"][name]
+    known = np.isin(cls, [k for k, n in enumerate(info["names"]) if n in info["colour"]])
+    _, (ii, jj) = ndimage.distance_transform_edt(~known, return_indices=True)
+    fill = cls[ii, jj]
+    seen = ndimage.distance_transform_edt(cls == 255) < 40          # the tip box's strips (32 m) take the class beside them
+    mapped = Image.new("L", (S.SIZE, S.SIZE)); d = ImageDraw.Draw(mapped)
+    for t, p in ways:
+        if len(p) < 2:
+            continue
+        if ("building" in t or t.get("amenity") == "parking") and len(p) > 2:
+            d.polygon([S.px(*q) for q in p], fill=1)
+        elif t.get("highway") in S.WIDTH and t.get("tunnel") != "yes":
+            d.line([S.px(*q) for q in p], fill=1, width=max(1, int(round(S.WIDTH[t["highway"]]))))
+    open_ = seen & ~np.asarray(mapped, bool) & ~sea & ~foot
+    lum = lambda a: 0.3 * a[..., 0] + 0.59 * a[..., 1] + 0.11 * a[..., 2]
+    mott = np.clip(lum(arr) / lum(np.array(S.BASE, float)), 0.55, 1.3)
+    out = arr.copy()
+    out[open_] = pal[fill[open_]] * mott[open_][:, None]
+    return out
 
 
 def from_google_earth(buf):
