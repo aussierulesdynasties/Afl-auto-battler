@@ -68,6 +68,15 @@ class SelectionTests(unittest.TestCase):
         # Deep.gd is called by Alpha.gd, which suite a names; suite a does not name Deep.gd itself.
         self.assertEqual(self.pick("scripts/sim/Deep.gd"), (["smoke"], ""))
 
+    def test_a_grounds_seats_or_model_selects_the_seat_check(self):
+        # ground_seats finds the seat files by listing assets/grounds/, so no path names them (#2018).
+        root = self.repo()
+        for name in ("tests/run_ground_seats_tests.gd", "assets/grounds/oval/seats_blue.bin", "assets/grounds/oval/oval.glb"):
+            (root / name).parent.mkdir(parents=True, exist_ok=True)
+            (root / name).write_text("")
+        for changed in ("assets/grounds/oval/seats_blue.bin", "assets/grounds/oval/oval.glb"):
+            self.assertEqual(select([changed], root=root, smoke=("smoke",))[0], ["ground_seats", "smoke"])
+
     def test_a_test_file_selects_its_own_suite(self):
         self.assertEqual(self.pick("tests/test_b.gd")[0], ["b", "smoke"])
         self.assertEqual(self.pick("tests/run_a_tests.gd.uid")[0], ["a", "smoke"])
