@@ -178,6 +178,14 @@ var DEPARTURES_CSV := "res://data/departures_2026.csv"
 ## (GameState.begin_real_lists).
 var club_moves := {}
 var CLUB_MOVES_CSV := "res://data/club_moves_2026.csv"
+## The real 2026 National Draft (19-20 November 2026), every selection in pick
+## order: {"pick", "first", "last", "dob", "club", "kind", ...} as the rows of
+## data/national_draft_2026.csv. An "After the draft" real-lists start puts each
+## man on the club that took him (GameState.begin_real_lists); the draft
+## class's unranked rows are rated from their pick (_load_draftees).
+var national_draft := []
+var NATIONAL_DRAFT_CSV := "res://data/national_draft_2026.csv"
+var _national_keys := {}
 var late_draftees := []    # generated future classes registered at runtime
 ## The launch lists at their peak and the other 2012-2026 seasons, for "Plays like"
 ## (PlaysLike.build_pool, add_past_seasons): the lists taken at
@@ -286,6 +294,7 @@ func reload(dataset := Datasets.DEFAULT) -> void:
 		players_by_club[p["club"]].append(p)
 	Prospects.forget_cache()
 	_rate_few_games(players)
+	national_draft = _load_national_draft()
 	draftees = _load_draftees()
 	list_additions = _load_list_additions()
 	_apply_indigenous(players, list_additions, draftees)
@@ -340,6 +349,7 @@ func _use_dataset(id: String, row: Dictionary) -> void:
 	LIST_TYPES_CSV = str(row.get("list_types", ""))
 	DEPARTURES_CSV = str(row.get("departures", ""))
 	CLUB_MOVES_CSV = str(row.get("club_moves", ""))
+	NATIONAL_DRAFT_CSV = str(row.get("national_draft", ""))
 	LADDER_PATH = str(row.get("ladder", ""))
 	OVR_CSV = str(row.get("ovr_overrides", ""))
 	POTENTIAL_CSV = str(row.get("potential_overrides", ""))
@@ -707,6 +717,14 @@ func _load_draftees() -> Array:
 		p["note"] = _cell_str(cells, idx, "note")
 		p["data_src"] = _cell_str(cells, idx, "data_src")
 		p["draft_class"] = true  # a draft class: rated on Prospects.DRAFT_NIGHT_SCALE (row 65)
+		# A man the pre-draft rankings missed and a club took at the real
+		# National Draft: rated from the pick he went at, the public verdict
+		# on him, and not said to be ranked (Prospects.pedigree).
+		if p["data_src"] == "afl-draft-nov26":
+			var row := national_pick(p)
+			if not row.is_empty():
+				p["draft_rank"] = int(row["pick"])
+				p["unranked"] = true
 		Prospects.project(p)
 		out.append(p)
 	_assign_fictional_names(out)
@@ -949,6 +967,49 @@ func _load_club_moves() -> Dictionary:
 		out[key] = {"from": _cell_str(cells, idx, "from_club"), "to": _cell_str(cells, idx, "to_club"),
 				"kind": _cell_str(cells, idx, "kind"), "list": _cell_str(cells, idx, "list")}
 	return out
+
+
+func _load_national_draft() -> Array:
+	var out := []
+	_national_keys = {}
+	if NATIONAL_DRAFT_CSV == "" or not FileAccess.file_exists(NATIONAL_DRAFT_CSV):
+		return out
+	var rows := _read_rows(NATIONAL_DRAFT_CSV)
+	if rows.size() < 2:
+		return out
+	var header: Array = rows[0]
+	for i in range(1, rows.size()):
+		var cells: Array = rows[i]
+		if cells.size() < header.size():
+			continue
+		var r := {}
+		for j in range(header.size()):
+			r[str(header[j])] = str(cells[j])
+		r["pick"] = int(r.get("pick", "0"))
+		out.append(r)
+		for k in _national_match_keys(r):
+			_national_keys[k] = r
+	out.sort_custom(func(a, b): return int(a["pick"]) < int(b["pick"]))
+	return out
+
+
+## A drafted man is found by name and birth date, or, where the game's data
+## spells him differently (Lochie for Lachlan) or the sources differ on his
+## birth date, by surname and birth date or by full name.
+static func _national_match_keys(p: Dictionary) -> Array:
+	var first := str(p.get("first", "")).to_lower().replace("'", "")
+	var last := str(p.get("last", "")).to_lower().replace("'", "").replace(" ", "")
+	var dob := str(p.get("dob", ""))
+	return ["%s|%s|%s" % [first, last, dob], "*|%s|%s" % [last, dob], "%s|%s|*" % [first, last]]
+
+
+## This player's selection at the real 2026 National Draft, as its
+## data/national_draft_2026.csv row ({} if he was not drafted there).
+func national_pick(p: Dictionary) -> Dictionary:
+	for k in _national_match_keys(p):
+		if _national_keys.has(k):
+			return _national_keys[k]
+	return {}
 
 
 ## The club this player joined in the 2026 trade period or free agency, as
