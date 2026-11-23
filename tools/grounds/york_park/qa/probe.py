@@ -141,3 +141,30 @@ if __name__ == "__main__" and sys.argv[1] in ("plan_fine", "read_fine"):
         plan_stand(sys.argv[2], bearings=FINE, r0=80.0, r1=118.0, step=1.0)
     else:
         read_stand(sys.argv[2], "stand_probe_fine.json" if len(sys.argv) < 4 else "stand_probe_fine_%s.json" % sys.argv[3])
+
+
+def plan_grid(work, ce, cn, half=36.0, step=1.5, d=250.0, name="grid"):
+    """A square of spots round (ce, cn), `step` m apart, read in one straight-down view: a building's measured
+    outline (where the readout stands above the ground) and its roof heights."""
+    pxm = 1000.0 / (2 * d * math.tan(math.radians(G.GE_FOV / 2)))
+    px, sp = [], []
+    k = int(half / step)
+    for i in range(-k, k + 1):
+        for j in range(-k, k + 1):
+            e, n = ce + i * step, cn + j * step
+            x, y = 640 + (e - ce) * pxm, 500 - (n - cn) * pxm
+            assert 150 <= y <= 940 and 0 <= x <= 1280, (x, y)
+            px.append([x, y]); sp.append([0, 0, e, n])
+    lat, lon = G.latlon(g, ce, cn)
+    jobs = [{"name": name, "spots": sp, "px": px,
+             "url": "https://earth.google.com/web/@%.7f,%.7f,%.1fa,%.0fd,%gy,0h,0t,0r" % (lat, lon, g["ge_alt"], d, G.GE_FOV)}]
+    json.dump(jobs, open(os.path.join(work, "probe.json"), "w"))
+    print(len(px), "spots")
+
+
+if __name__ == "__main__" and sys.argv[1] in ("plan_grid", "read_grid"):
+    # python3 probe.py plan_grid <work> <east> <north> [half]; read_grid <work> <out.json>
+    if sys.argv[1] == "plan_grid":
+        plan_grid(sys.argv[2], float(sys.argv[3]), float(sys.argv[4]), *(float(a) for a in sys.argv[5:6]))
+    else:
+        read_stand(sys.argv[2], sys.argv[3])
