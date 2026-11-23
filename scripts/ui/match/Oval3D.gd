@@ -148,7 +148,7 @@ func build(p_director: MatchDirector, home: String, away: String) -> void:
 	add_child(ball)
 	camera = Camera3D.new()
 	camera.fov = 30.0
-	camera.far = 900.0
+	camera.far = GroundModels.view_far(GroundModels.slug_for(ground) if ground != "" else "")
 	# Placed in world space, so turning the ground for a change of ends (set_ends) leaves
 	# the camera where the broadcast puts it.
 	camera.top_level = true
