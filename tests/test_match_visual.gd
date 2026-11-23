@@ -3463,19 +3463,12 @@ func _test_three_d_cameras(res: Dictionary) -> void:
 ## hair_styles.glb on his head bone, and a look chosen in Club Forge is the one he wears.
 func _test_three_d_hair(res: Dictionary) -> void:
 	var shells := Oval3D.hair_shells()
-	# The styles in the hair file. On the MetaHuman body each shell is refitted to his head
-	# (Oval3D._refit_hair, #1976), so it is a new mesh made from the file's, not the file's own.
-	var in_file := {}
-	var hair_root: Node = (load(Oval3D.HAIR_GLB) as PackedScene).instantiate()
-	for n in hair_root.find_children("hair_*", "MeshInstance3D", true, false):
-		in_file[str(n.name).trim_prefix("hair_")] = true
-	hair_root.free()
 	var meshes := {}
 	var real := 0
 	for st in shells:
 		var m: Mesh = shells[st]["mesh"]
 		meshes[m] = true
-		if in_file.has(st) and str(shells[st]["bone"]) == "head" and m != null:
+		if m.resource_path.begins_with(Oval3D.HAIR_GLB) and str(shells[st]["bone"]) == "head":
 			real += 1
 	_check(shells.size() == real and real == meshes.size() and real > 0,
 			"Each 3D hair style is its own mesh from %s, on the head bone (%d of %d)" % [Oval3D.HAIR_GLB, real, shells.size()])
@@ -3517,9 +3510,7 @@ func _test_three_d_hair(res: Dictionary) -> void:
 	oval.look(p0, {"skin": 2, "hair": 1, "hair_style": "bald"})
 	_check(not p0.has("hair_node") and _scalp(p0) == 1, "Bald on the 3D oval: no hair, bare scalp")
 	oval.look(p0, {"skin": 2, "hair": 1, "hair_style": "buzz"})
-	# Clippered: 2, or on the MetaHuman 4 (bare at the forehead's hairline, clippered behind it).
-	var clip := Oval3D.SCALP_CLIPPERED_MH if Oval3D.player_glb != Oval3D.HAIR_FIT_GLB else 2
-	_check(not p0.has("hair_node") and _scalp(p0) == clip, "A buzz cut on the 3D oval: clippered scalp (%d)" % _scalp(p0))
+	_check(not p0.has("hair_node") and _scalp(p0) == 2, "A buzz cut on the 3D oval: clippered scalp")
 	if had == null:
 		who.erase("look")
 	else:
