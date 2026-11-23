@@ -85,6 +85,9 @@ LOT_POLES = [((-182.3, -83.9), 10.1), ((-179.1, -109.1), 9.6), ((-175.8, -133.7)
 # aerial, the path at turf level and the ground south-east of it 1 m lower on Google Earth's status bar (15 readings),
 # a 1.0-1.2 m face by its shadow, so it stands about 0.15 m proud of the path; no rail on it
 EDGE_WALL = [(-148.2, -69.6), (-134.2, -57.0), (-130.6, -58.8)]; EDGE_UP = 0.15; EDGE_DROP = 1.0
+# the low concrete slab south-west of the car park (the map and Overture have a 7 m building there): its edges on the
+# NSW aerial, 1 m above the grass on Google Earth's status bar (5 readings on it, 0 round it) and 1.1 m by its shadow
+SLAB = [(-218.5, -196.0), (-196.0, -192.0), (-191.5, -212.7), (-215.0, -215.8)]; SLAB_H = 1.1
 PATHS_FAR = 2   # PATHS from this one on go in detail_far
 PATHS = [([(-121.0, -55.0), (-117.0, -62.0), (-109.0, -77.0), (-101.0, -90.0), (-97.5, -97.5)], 4.5),
          ([(-100.0, -99.0), (-82.5, -84.0), (-78.0, -80.0)], 3.5),
@@ -239,6 +242,7 @@ def grounds(k, mb, mf):
             a0, b0 = a - t * w / 2, b + t * w / 2
             drape(k, mf if i >= PATHS_FAR else mb, [tuple(a0 + q), tuple(b0 + q), tuple(b0 - q), tuple(a0 - q)], m[0] if m else 'concrete_bt', 0.06 + 0.004 * n); n += 1
     carpark(k, mf)
+    z = min(ground_z(k, x, y) for x, y in SLAB); mf.prism(SLAB, z - 0.3, z + SLAB_H, 'concrete_bt', top='concrete_bt')
     for (x, y), h in LOT_POLES:
         z = ground_z(k, x, y)
         mf.cyl((x, y), 0.09, z, z + h, 'steel_galv', n=8)
