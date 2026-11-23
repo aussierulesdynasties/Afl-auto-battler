@@ -30,6 +30,17 @@ extends RefCounted
 
 ## The last real season before the game begins.
 const BEFORE_GAME := 2025
+## The last real season before this career's start: BEFORE_GAME for today's
+## start, the season before a Legacy start (1989 for 1990). GameDB sets it
+## when it loads a dataset. A real player's record runs to it, and every
+## season after it is the career's own to count (bug bash 2026-11-23: a 1990
+## career's records stopped at 1989 for good, as if 1990-2025 were counted).
+static var last_real := BEFORE_GAME
+
+
+## The last real season before this career's start (see last_real).
+static func before_game() -> int:
+	return last_real
 
 
 static func fresh() -> Dictionary:
@@ -45,13 +56,15 @@ static func of(p: Dictionary) -> Dictionary:
 
 
 ## The dataset's career column: "CLUB:first:last:games:goals;..." for AFL
-## seasons to 2025, "" for no senior games yet, "?" when unknown.
-static func from_source(text: String) -> Dictionary:
+## seasons to the last real season (last_real), "" for no senior games yet, "?" when unknown.
+## `through`: the last season the text covers (-1: last_real).
+static func from_source(text: String, through := -1) -> Dictionary:
+	var to := last_real if through < 0 else through
 	var c := fresh()
-	c["through"] = BEFORE_GAME
+	c["through"] = to
 	var t := text.strip_edges()
 	if t == "?":
-		c["unknown"] = [[0, BEFORE_GAME]]
+		c["unknown"] = [[0, to]]
 		return c
 	for chunk in t.split(";", false):
 		var parts := chunk.split(":")
