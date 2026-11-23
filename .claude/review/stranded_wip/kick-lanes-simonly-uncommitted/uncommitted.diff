@@ -1,0 +1,80 @@
+diff --git a/scripts/ui/match/MatchDirector.gd b/scripts/ui/match/MatchDirector.gd
+index 4494a1636..607a12fec 100644
+--- a/scripts/ui/match/MatchDirector.gd
++++ b/scripts/ui/match/MatchDirector.gd
+@@ -1053,7 +1053,7 @@ func _loc(k: int) -> Vector2:
+ 			# and logged on the kick). A replay from before lanes has none and
+ 			# keeps the old random switch. (The roll is made either way, so the
+ 			# stream is unchanged.)
+-			var lane := str((events[pk] as Dictionary).get("lane", "")) if pk >= 0 else ""
++			var lane := ""
+ 			var roll := _rng.randf()
+ 			var wing := signf(src.y) if absf(src.y) > 4.0 else (signf(ry) if ry != 0.0 else 1.0)
+ 			match lane:
+@@ -1068,9 +1068,13 @@ func _loc(k: int) -> Vector2:
+ 				_:
+ 					if absf(src.y) > 22.0 and roll < 0.1 and _plan_of(int(ev.get("side", 0))) != "attacking":
+ 						dy = -src.y * 1.3 + _rng.randf_range(-5.0, 5.0)   # a switch of play
++			if lane != "" and a >= 0:
++				# The lane aims the kick; it still lands within LANE_REACH of
++				# the player the log says wins it, so play never waits on him.
++				dy = clampf(src.y + dy, ry - LANE_REACH, ry + LANE_REACH) - src.y
+ 		var y := src.y + dy
+ 		var side := int(ev.get("side", 0))
+-		var kick_lane := str((events[pk] as Dictionary).get("lane", "")) if pk >= 0 and not hb else ""
++		var kick_lane := ""
+ 		if _plan_of(side) == "attacking" and kick_lane in ["", "corridor"] and a >= 0 				and int(tokens[a]["side"]) == side and _lane.has(a) and absf(float(_lane[a])) < 16.0:
+ 			# Attack Corridor: the ball goes to the receiver's lane. He leads
+ 			# from his slot, up his lane, never across to the ball, so the
+@@ -1206,6 +1210,9 @@ func _scrap(p: Dictionary, who: int) -> void:
+ 	ball["h"] = 0.3
+ 
+ 
++## How far across the ground a kick's lane (MatchSim, row T2.25) may put the
++## ball from the player who wins it next: the lane aims it, he is within reach.
++const LANE_REACH := 12.0
+ ## The longest a player is left collecting before the ball is his.
+ const COLLECT_LIMIT := 6.0
+ ## How much longer than its flat flight a kick may hang so its receiver gets
+diff --git a/tests/test_match_game.gd b/tests/test_match_game.gd
+index f7f7747b5..4284df01a 100644
+--- a/tests/test_match_game.gd
++++ b/tests/test_match_game.gd
+@@ -4088,21 +4088,32 @@ func _test_six_plans() -> void:
+ func _test_kick_lanes() -> void:
+ 	var seeds := [3101, 3102, 3103, 3104]
+ 	_check(seeds.size() == 4, "Four paired seeds")
+-	# Recorded: every kick and kicked mark carries a lane; no handball does.
++	# Recorded: every kick carries a lane (a marked kick logs as "mark"; a
++	# receiver's mark at the end of a kick is not a kick and has none); the
++	# lane log counts exactly the tagged disposals; no handball has a lane.
+ 	var sim := _sim(3101)
+ 	var r := sim.run()
+ 	var kicks := 0
++	var tagged_kicks := 0
+ 	var tagged := 0
+ 	var hb_clean := true
+ 	for e in r["events"]:
+ 		var kind := str(e.get("kind", ""))
+-		if kind == "kick" or kind == "mark":
++		var has_lane := MatchSim.LANES.has(str(e.get("lane", "")))
++		if has_lane:
++			tagged += 1
++		if kind == "kick":
+ 			kicks += 1
+-			if MatchSim.LANES.has(str(e.get("lane", ""))):
+-				tagged += 1
++			if has_lane:
++				tagged_kicks += 1
+ 		elif kind == "handball":
+ 			hb_clean = hb_clean and not e.has("lane")
+-	_check(kicks > 50 and tagged == kicks, "Every kick logs its lane (%d of %d)" % [tagged, kicks])
++	var logged := 0
++	for side in 2:
++		for lane in MatchSim.LANES:
++			logged += int((sim.lane_log[side] as Dictionary).get(lane, 0))
++	_check(kicks > 50 and tagged_kicks == kicks, "Every kick logs its lane (%d of %d)" % [tagged_kicks, kicks])
++	_check(tagged == logged, "The lane log counts every laned kick (%d logged, %d tagged)" % [logged, tagged])
+ 	_check(hb_clean, "A handball has no lane")
+ 	# Chosen by the plan: the same seeds, side 0 on each plan.
+ 	var share := {}
