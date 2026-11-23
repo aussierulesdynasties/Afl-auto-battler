@@ -23,6 +23,16 @@ IC_ROOF = [(-147.6, -19.6), (-122.5, -21.4), (-117.0, 31.9), (-140.9, 33.7)]
 WALK_B = (235.0, 255.5); WALK_R = (2.5, 7.0); WALK_Z = (2.5, 3.5)
 # concrete stairs straight up the bank from the fence to the path on top (Google Earth top view, 2025-07-24)
 BANK_STAIRS = (100.0, 154.0); STAIR_W = 2.4
+# near things no map has, from Google Earth's straight-down shots (2025-07-24): five water tanks 10 m across in a row
+# north of the indoor centre and two containers beside them (Google Earth's status bar: tank tops and container roofs
+# 2 m above the turf, the yard round them 1 m below it); two small white sheds south of it (OpenStreetMap outlines, 2.6 m by eye);
+# the netted training field west of the indoor centre (corners from the top view, a 4 m fence, 6 m netting on the
+# practice-net side) with its white wicket cover
+TANKS = [(-142.9, 46.6), (-132.4, 47.6), (-121.9, 48.7), (-111.4, 49.9), (-100.9, 51.0)]; TANK_R = 5.05; TANK_H = 3.0; YARD_Z = -1.0
+CONTAINERS = [((-156.1, 49.2), 2.44), ((-153.1, 49.6), 2.44)]   # centre, width; 12.2 m long, 2.6 m high, along the row
+SHEDS = [[(-126.3, -35.0), (-129.0, -35.9), (-126.8, -42.9), (-124.1, -42.0)], [(-118.7, -55.3), (-121.1, -56.6), (-117.1, -63.6), (-114.7, -62.2)]]
+NETS = [(-198.9, 38.2), (-143.9, 30.7), (-147.4, -16.6), (-203.6, -9.4)]; NET_H = 4.0; NET_W = ((-200.6, 15.8), (-203.6, -8.4), 6.0)
+COVER = [(-165.4, 11.8), (-150.2, 10.5), (-151.1, -14.1), (-167.8, -12.4)]
 IC_W = 25.0; IC_ZW, IC_ZE = 5.6, 6.8; IC_OVER = 0.6; IC_PLINTH = 0.8; IC_BASE = -1.0
 IC_ENDS = (2.5, 3.5, 3.3)              # south strip depth, north strip depth, their height
 IC_EXT_S = 1.0                          # the south strip reaches 1 m past the roof corners seen from above (3 m readings)
@@ -78,6 +88,7 @@ def build(k, col):
     wing(k, mb, S, geo, rad, up)
     walkway(k, mb, geo, rad, up)
     for b in BANK_STAIRS: bank_stair(k, mb, b)
+    yard(k, mb, up)
     indoor(k, mb, up)
     mb.build(col)
 
@@ -143,6 +154,31 @@ def bank_stair(k, mb, b):
     for j in range(0, n, 6):   # handrail posts, then the rail along their tops
         mb.box(tuple(k.pol(b, r0 + (r1 - r0) * j / n)), 0.06, 0.06, 0.95, ang, 'steel_galv', z0=zs[j])
     mb.beam(k.P3(b, r0, zs[0] + 0.95), k.P3(b, r1, zs[-1] + 0.95), 0.05, 0.05, 'steel_galv')
+
+
+def yard(k, mb, up):
+    for c in TANKS:   # tank wall, a shallow cone roof with a hatch
+        mb.cyl(c, TANK_R, YARD_Z, YARD_Z + TANK_H, 'tank_bt', n=40)
+        top = (c[0], c[1], YARD_Z + TANK_H + 0.5); ring = [(c[0] + TANK_R * math.cos(2 * math.pi * j / 40), c[1] + TANK_R * math.sin(2 * math.pi * j / 40)) for j in range(41)]
+        for j in range(40):
+            k.oriented(mb, [(*ring[j], YARD_Z + TANK_H), (*ring[j + 1], YARD_Z + TANK_H), top], 'tank_roof_bt', up)
+        mb.box((c[0] - 2.0, c[1] + 1.0), 0.7, 0.7, 0.35, 0, 'steel_galv', z0=YARD_Z + TANK_H + 0.2)
+    ang = 90 + 6.0   # the row runs about 6 deg north of east; containers stand across it
+    for c, w in CONTAINERS:
+        mb.box(c, 12.2, w, 2.6, ang, 'container_bt', z0=YARD_Z, mtop='container_roof_bt')
+    for P in SHEDS:
+        mb.prism(P, YARD_Z + 1.0, 2.6, 'render_white_bt', top='roof_white_bt')
+    # the training field: chain-link round it, netting on the practice-net side, the wicket cover
+    n = len(NETS)
+    for i in range(n):
+        a, b = np.array(NETS[i]), np.array(NETS[(i + 1) % n]); d = b - a; L = np.linalg.norm(d); t = d / L; nn = np.array([t[1], -t[0], 0.0])
+        for sg in (1, -1): k.oriented(mb, [(*a, 0), (*b, 0), (*b, NET_H), (*a, NET_H)], 'mesh', sg * nn)
+        for j in range(int(L / 3.0) + 1):
+            mb.cyl(tuple(a + t * min(L, j * 3.0)), 0.04, 0, NET_H + 0.05, 'steel_galv', n=6)
+    a, b, h = np.array(NET_W[0]), np.array(NET_W[1]), NET_W[2]; t = (b - a) / np.linalg.norm(b - a); nn = np.array([t[1], -t[0], 0.0])
+    for sg in (1, -1): k.oriented(mb, [(*a, 0), (*b, 0), (*b, h), (*a, h)], 'mesh', sg * nn)
+    for q in (a, b, (a + b) / 2): mb.cyl(tuple(q), 0.08, 0, h + 0.1, 'steel_galv', n=8)
+    mb.prism(COVER, 0.0, 0.25, 'cover_bt', top='cover_bt')
 
 
 def indoor(k, mb, up):

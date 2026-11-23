@@ -509,13 +509,15 @@ def terrain_z(b, r):
 
 
 def concourse(col):
-    """grass bank from the fence out to the outer path ring (outer_r), a path ring beyond it (path_w a number or a [b, w] table); with a 'terrain' table
+    """grass bank from the fence out to the outer path ring (outer_r), a path ring beyond it (path_w a number or a [b, w] table; ground_r, where the ground disc ends, likewise); with a 'terrain' table
     {b: [bearings], dr: [distances beyond the fence], z: [[height per dr] per bearing]} the bank and path follow the
     measured ground (held at the last measured height beyond the table), otherwise they are flat"""
     mb = MB('concourse'); bs = np.arange(0, 360.001, 1.0); RO = D['outer_r']
     Ro = (lambda b: float(np.interp(b % 360, *zip(*RO), period=360))) if isinstance(RO, list) else (lambda b: RO)
     PWt = D.get('path_w', 3.0); T = D.get('terrain')
-    pw = (lambda b: float(np.interp(b % 360, *zip(*PWt), period=360))) if isinstance(PWt, list) else (lambda b: PWt); Rg = D.get('ground_r', 240)
+    pw = (lambda b: float(np.interp(b % 360, *zip(*PWt), period=360))) if isinstance(PWt, list) else (lambda b: PWt)
+    RG = D.get('ground_r', 240)   # where the ground disc ends: a number or a [b, r] table
+    Rg = (lambda b: float(np.interp(b % 360, *zip(*RG), period=360))) if isinstance(RG, list) else (lambda b: RG)
     def band2(ra, rb, ra2, rb2, step):   # radii across a band on both edges of a 1-degree slice, split every 'step' m
         n = max(1, int(math.ceil(max(rb - ra, rb2 - ra2) / step))) if T else 1
         return [ra + (rb - ra) * j / n for j in range(n + 1)], [ra2 + (rb2 - ra2) * j / n for j in range(n + 1)]
@@ -536,11 +538,11 @@ def concourse(col):
             oriented(mb, q, m, np.array([0, 0, 1.0]), uv=[(p[0] / TILE.get(m, (1, 1))[0], p[1] / TILE.get(m, (1, 1))[1]) for p in q])
     # field-level floor inside the fence (the game lays its field on top) and a ground disc under everything beyond the path,
     # so nothing stands over sky (Bruce gate fix, 2026-11-19)
-    gm = D['mats_ground'].get('field', 'ground_grass'); om = D['mats_ground'].get('outside', 'ground_grass'); Rg = D.get('ground_r', 240)
+    gm = D['mats_ground'].get('field', 'ground_grass'); om = D['mats_ground'].get('outside', 'ground_grass')
     for i in range(len(bs) - 1):
         ba, bb = bs[i], bs[i + 1]
         Q = [([P3(ba, 0, -0.05), P3(bb, fence_r(bb % 360) + 0.2, -0.05), P3(ba, fence_r(ba % 360) + 0.2, -0.05)], gm)]
-        A, B = band2(Ro(ba) + pw(ba) - 0.2, Rg, Ro(bb) + pw(bb) - 0.2, Rg, 4.0)
+        A, B = band2(Ro(ba) + pw(ba) - 0.2, Rg(ba), Ro(bb) + pw(bb) - 0.2, Rg(bb), 4.0)
         for j in range(len(A) - 1):
             Q.append(([P3(ba, A[j], terrain_z(ba, A[j]) - 0.04), P3(bb, B[j], terrain_z(bb, B[j]) - 0.04),
                        P3(bb, B[j + 1], terrain_z(bb, B[j + 1]) - 0.04), P3(ba, A[j + 1], terrain_z(ba, A[j + 1]) - 0.04)], om))

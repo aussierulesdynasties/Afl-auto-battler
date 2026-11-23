@@ -420,6 +420,76 @@
     3.0,
     3.0
    ]
+  },
+  "tank_bt": {
+   "kind": "clad",
+   "col": [
+    120,
+    138,
+    112
+   ],
+   "rib": 0.6,
+   "tile": [
+    3.0,
+    3.0
+   ]
+  },
+  "tank_roof_bt": {
+   "kind": "flat",
+   "col": [
+    96,
+    104,
+    98
+   ],
+   "noise": 6
+  },
+  "container_bt": {
+   "kind": "clad",
+   "col": [
+    150,
+    140,
+    124
+   ],
+   "rib": 0.3,
+   "tile": [
+    3.0,
+    3.0
+   ]
+  },
+  "container_roof_bt": {
+   "kind": "flat",
+   "col": [
+    176,
+    112,
+    72
+   ],
+   "noise": 8
+  },
+  "render_white_bt": {
+   "kind": "render",
+   "col": [
+    226,
+    226,
+    220
+   ]
+  },
+  "roof_white_bt": {
+   "kind": "flat",
+   "col": [
+    214,
+    214,
+    208
+   ],
+   "noise": 4
+  },
+  "cover_bt": {
+   "kind": "flat",
+   "col": [
+    222,
+    224,
+    222
+   ],
+   "noise": 5
   }
  },
  "fence_fourier": {
@@ -938,5 +1008,296 @@
   ],
   "how": "Google Earth status-bar heights (whole metres above the turf, 2026-11-22) on radial lines every 7.5-15 deg, 2-35 m beyond the fence; up to the bank top the mean of all bearings, beyond it each bearing, tree canopy left out. Held at the last value further out (not measured there yet). The bank meets the stand's north end at b 293 (Google Earth reads 3-4 m beside it)."
  },
- "_path_how": "outer_r/path_w: the dirt path on the bank top traced from Google Earth straight-down shots (imagery 2025-07-24); none in front of the grandstand (b 228-296)"
+ "_path_how": "outer_r/path_w: the dirt path on the bank top traced from Google Earth straight-down shots (imagery 2025-07-24); none in front of the grandstand (b 228-296)",
+ "ground_r": [
+  [
+   0,
+   126.5
+  ],
+  [
+   5,
+   125.6
+  ],
+  [
+   10,
+   124.5
+  ],
+  [
+   15,
+   123.3
+  ],
+  [
+   20,
+   121.8
+  ],
+  [
+   25,
+   120.3
+  ],
+  [
+   30,
+   118.8
+  ],
+  [
+   35,
+   117.4
+  ],
+  [
+   40,
+   116.2
+  ],
+  [
+   45,
+   115.1
+  ],
+  [
+   50,
+   114.0
+  ],
+  [
+   55,
+   113.1
+  ],
+  [
+   60,
+   112.3
+  ],
+  [
+   65,
+   111.7
+  ],
+  [
+   70,
+   111.3
+  ],
+  [
+   75,
+   110.9
+  ],
+  [
+   80,
+   110.6
+  ],
+  [
+   85,
+   110.4
+  ],
+  [
+   90,
+   110.4
+  ],
+  [
+   95,
+   110.5
+  ],
+  [
+   100,
+   110.8
+  ],
+  [
+   105,
+   111.2
+  ],
+  [
+   110,
+   111.6
+  ],
+  [
+   115,
+   112.3
+  ],
+  [
+   120,
+   113.1
+  ],
+  [
+   125,
+   114.2
+  ],
+  [
+   130,
+   115.2
+  ],
+  [
+   135,
+   116.2
+  ],
+  [
+   140,
+   117.1
+  ],
+  [
+   145,
+   117.8
+  ],
+  [
+   150,
+   118.7
+  ],
+  [
+   155,
+   119.7
+  ],
+  [
+   160,
+   120.9
+  ],
+  [
+   165,
+   122.0
+  ],
+  [
+   170,
+   122.8
+  ],
+  [
+   175,
+   123.1
+  ],
+  [
+   180,
+   122.9
+  ],
+  [
+   185,
+   122.4
+  ],
+  [
+   190,
+   122.0
+  ],
+  [
+   195,
+   121.7
+  ],
+  [
+   200,
+   121.6
+  ],
+  [
+   205,
+   121.4
+  ],
+  [
+   210,
+   121.0
+  ],
+  [
+   215,
+   120.5
+  ],
+  [
+   220,
+   119.9
+  ],
+  [
+   225,
+   119.4
+  ],
+  [
+   230,
+   119.0
+  ],
+  [
+   235,
+   118.8
+  ],
+  [
+   240,
+   118.7
+  ],
+  [
+   245,
+   118.7
+  ],
+  [
+   250,
+   118.7
+  ],
+  [
+   255,
+   118.9
+  ],
+  [
+   260,
+   119.2
+  ],
+  [
+   265,
+   119.7
+  ],
+  [
+   270,
+   120.4
+  ],
+  [
+   275,
+   121.1
+  ],
+  [
+   280,
+   121.7
+  ],
+  [
+   285,
+   122.1
+  ],
+  [
+   290,
+   122.5
+  ],
+  [
+   295,
+   123.0
+  ],
+  [
+   300,
+   123.8
+  ],
+  [
+   305,
+   124.9
+  ],
+  [
+   310,
+   126.1
+  ],
+  [
+   315,
+   127.1
+  ],
+  [
+   320,
+   127.8
+  ],
+  [
+   325,
+   128.2
+  ],
+  [
+   330,
+   128.5
+  ],
+  [
+   335,
+   128.7
+  ],
+  [
+   340,
+   128.7
+  ],
+  [
+   345,
+   128.4
+  ],
+  [
+   350,
+   127.9
+  ],
+  [
+   355,
+   127.2
+  ]
+ ],
+ "_ground_r_how": "the ground kit draws the measured bank 40 m past the fence; the background scene draws the ground beyond it (tools/grounds/backdrop, hull of the concourse only)"
 }
