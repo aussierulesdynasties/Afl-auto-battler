@@ -21,8 +21,26 @@ any changed between 1992 and 2003 cannot be told from these. Reference only.
 The turf edge is 12 m longer and 15 m wider than the published 150 x 105 m. The north end of the turf is shaded by
 the stand in several frames; the median rides through that, but the fence line itself has not been traced yet.
 
+## Google Earth 3D today (2026-11-23)
+
+Straight down from 700 m (`LAT=-42.86777 LON=147.31571`), 2,664 points on rays every 5 deg 65-145 m out plus 159 on
+a grid over the field (`measure/ge3d/`; the browser fell over once, so the rays are in two runs, `rall2.json` holds
+both; profiles from `prof2.py` -> `prof.txt`).
+
+- **The turf reads 43-45 m above sea level**, falling about 2 m from west to east across the grid.
+- North-east (bearings 35-45): the stand's roof at **16-17 m** above the turf from 97 to 110 m out.
+- South (265-285): a roof at 11-12 m from 78 to 90 m out.
+- West (125-245): the ground itself rises 8-15 m within 70 m of the centre, and the west stands sit on that rise,
+  reaching 17-28 m above the turf from 75 to 145 m out. Which part is bank and which is stand is not yet separated.
+- East and south-east (290-360): open, 0-6 m below the turf (falling ground), apart from one 26 m point at 345 deg,
+  110 m out (a light pole?, one point only).
+
+This is today's ground; whether these stands stood in 1991-1992 is not yet checked.
+
 Bearings are degrees counter-clockwise from east round the field centre (0 east, 90 north).
 
 ## Not done yet
 
-- The fence line, and stand heights from Google Earth 3D (the stands round the ground still stand).
+- The fence line.
+- Separate the west bank from the west stands (a closer 3D sweep or an oblique view), and check which stands date from
+  before 1992.
