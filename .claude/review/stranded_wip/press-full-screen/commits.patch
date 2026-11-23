@@ -1,0 +1,890 @@
+From ce74f3f2149eb0070ccf23dfdb000f66c51b5217 Mon Sep 17 00:00:00 2001
+From: gabebartolo-spec <gabebartolo@gmail.com>
+Date: Mon, 19 Oct 2026 20:19:47 +1100
+Subject: [PATCH] Press conference is its own full-screen scene (Router press),
+ results in the same scene, Back skips
+
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+---
+ scenes/MediaConferenceScene.tscn              |  12 ++
+ scripts/core/Router.gd                        |   1 +
+ scripts/ui/HubScene.gd                        | 162 +-----------------
+ scripts/ui/MediaConferenceScene.gd            | 158 +++++++++++++++++
+ .../floor_deltas/claude-press-full-screen.txt |   1 +
+ tests/run_back_nav_tests.gd                   |   4 +
+ tests/run_career_ui_tests.gd                  |  18 +-
+ tests/run_matchday_tests.gd                   |  82 +++++++--
+ tests/run_matchup_tests.gd                    |   3 +
+ tools/visual/capture_press_scene.gd           |  72 ++++++++
+ 10 files changed, 336 insertions(+), 177 deletions(-)
+ create mode 100644 scenes/MediaConferenceScene.tscn
+ create mode 100644 scripts/ui/MediaConferenceScene.gd
+ create mode 100644 tests/floor_deltas/claude-press-full-screen.txt
+ create mode 100644 tools/visual/capture_press_scene.gd
+
+diff --git a/scenes/MediaConferenceScene.tscn b/scenes/MediaConferenceScene.tscn
+new file mode 100644
+index 000000000..d3e58a06d
+--- /dev/null
++++ b/scenes/MediaConferenceScene.tscn
+@@ -0,0 +1,12 @@
++[gd_scene load_steps=2 format=3]
++
++[ext_resource type="Script" path="res://scripts/ui/MediaConferenceScene.gd" id="1_root"]
++
++[node name="MediaConferenceScene" type="Control"]
++layout_mode = 3
++anchors_preset = 15
++anchor_right = 1.0
++anchor_bottom = 1.0
++grow_horizontal = 2
++grow_vertical = 2
++script = ExtResource("1_root")
+diff --git a/scripts/core/Router.gd b/scripts/core/Router.gd
+index bcf009846..07aec9ee0 100644
+--- a/scripts/core/Router.gd
++++ b/scripts/core/Router.gd
+@@ -17,6 +17,7 @@ const SCENES := {
+ 	"season_review": "res://scenes/SeasonReviewScene.tscn",
+ 	"forge": "res://scenes/ClubForgeScene.tscn",
+ 	"preseason": "res://scenes/PreSeasonScene.tscn",
++	"press": "res://scenes/MediaConferenceScene.tscn",
+ }
+ 
+ var stack: Array = []
+diff --git a/scripts/ui/HubScene.gd b/scripts/ui/HubScene.gd
+index 9edc6e0c7..b7041eadd 100644
+--- a/scripts/ui/HubScene.gd
++++ b/scripts/ui/HubScene.gd
+@@ -10,7 +10,6 @@ var _finals_overlay: Control = null
+ var _settings: Control
+ var _root: VBoxContainer
+ var _results_overlay: Control
+-var _media_overlay: Control
+ var _talk_overlay: Control
+ var _news_overlay: Control
+ var _rule_overlay: Control
+@@ -77,7 +76,8 @@ func _show_week_ask() -> void:
+ 	if GameState.backing_talk_pending():
+ 		_show_backing_talk()
+ 	elif GameState.media_conference_pending():
+-		_show_media_conference()
++		# Its own full screen (director, 2026-10-19); Done or Back returns here.
++		Router.go("press")
+ 
+ 
+ ## A short first-hub orientation, shown where the weekly loop actually lives
+@@ -1026,6 +1026,8 @@ func _regular_bye(season: Season) -> bool:
+ ## While the hub sits idle, paint what the banner scene will need on its first frame
+ ## (the crowd), so Play match doesn't freeze for it. Looks the same; nothing is drawn.
+ func _warm_pre_match() -> void:
++	if not is_inside_tree():
++		return   # on the way to another screen (the press room)
+ 	await get_tree().create_timer(1.2).timeout
+ 	if not is_inside_tree() or not GameState.vignettes_on():
+ 		return
+@@ -1327,14 +1329,6 @@ func handle_back() -> bool:
+ 	if _talk_overlay != null and is_instance_valid(_talk_overlay):
+ 		_close_backing_talk()
+ 		return true
+-	# Back skips the press conference, as its Skip button does (natural
+-	# Android Back); an overlay opened over it closes first.
+-	if _media_overlay != null and is_instance_valid(_media_overlay):
+-		GameState.skip_media_conference()
+-		_media_overlay.queue_free()
+-		_media_overlay = null
+-		_build()
+-		return true
+ 	return false
+ 
+ 
+@@ -1374,154 +1368,6 @@ func _close_backing_talk() -> void:
+ 	_build()
+ 
+ 
+-## How the answer landed (the bible: "the effect is visible afterwards"):
+-## one line, and Done (or Back) closes it.
+-func _show_press_outcome(landed: Dictionary) -> void:
+-	if landed.is_empty():
+-		return
+-	var box := UiKit.modal_box(self, 520.0, 0.0)
+-	_media_overlay = box["overlay"]
+-	_media_overlay.name = "MediaOutcome"
+-	var v: VBoxContainer = box["body"]
+-	v.add_child(UiKit.heading("After the press conference", UiKit.TITLE))
+-	var l := UiKit.lbl(str(landed.get("line", "")), 15, UiKit.TEXT)
+-	l.name = "MediaOutcomeLine"
+-	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+-	v.add_child(l)
+-	var ok := UiKit.btn("Done", UiKit.NAME, true)
+-	ok.name = "MediaOutcomeDone"
+-	ok.custom_minimum_size = Vector2(0, 48)
+-	ok.pressed.connect(func():
+-		if _media_overlay != null and is_instance_valid(_media_overlay):
+-			_media_overlay.queue_free()
+-		_media_overlay = null
+-		_build())
+-	(box["footer"] as VBoxContainer).add_child(ok)
+-
+-
+-func _show_media_conference() -> void:
+-	if not GameState.media_conference_pending():
+-		return
+-	if _media_overlay != null and is_instance_valid(_media_overlay):
+-		return
+-	# A PC (director, 2026-10-14: "post match interview screen is so small"): the
+-	# sheet takes most of the screen, the press room on the left, the question and
+-	# the answers in a column on the right. A phone keeps the stacked sheet.
+-	var vw := UiKit.view_width(self)
+-	var vh := UiKit.view_height(self)
+-	var wide := ScreenLayout.roomy(vw, vh)
+-	var box := UiKit.modal_box(self, vw * 0.88 if wide else 560.0, vh * 0.88 if wide else 0.0)
+-	_media_overlay = box["overlay"]
+-	_media_overlay.name = "MediaConference"
+-	var v: VBoxContainer = box["body"]
+-	var footer: VBoxContainer = box["footer"]
+-	# The room's picture keeps its proportions: a fixed ratio on a PC, the
+-	# phone's strip otherwise.
+-	var stage: Control = null
+-	var scene: MediaConferenceVignette = null
+-	var answers: VBoxContainer = footer
+-	var prompt := UiKit.vbox(10 if wide else 6)
+-	var row: HBoxContainer = null
+-	if wide:
+-		row = UiKit.hbox(24)
+-		row.name = "MediaRow"
+-		v.add_child(row)
+-		answers = UiKit.vbox(16)
+-		answers.name = "MediaAnswers"
+-		answers.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+-		answers.add_child(prompt)
+-		# Vignettes off (Settings): no stage, the column fills the sheet.
+-		if GameState.vignettes_on():
+-			var stage_w := minf(vw * 0.88 * 0.56, (vh * 0.88 - 60.0) * 1.6)
+-			stage = Control.new()
+-			stage.name = "MediaConferenceStage"
+-			stage.custom_minimum_size = Vector2(stage_w, stage_w / 1.6)
+-			stage.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+-			stage.clip_contents = true
+-			row.add_child(stage)
+-			scene = MediaConferenceVignette.open(stage, GameState.my_club)
+-		row.add_child(answers)
+-		footer.visible = false
+-	elif GameState.vignettes_on():
+-		stage = Control.new()
+-		stage.name = "MediaConferenceStage"
+-		stage.custom_minimum_size = Vector2(0, minf(300.0, vh * 0.38))
+-		v.add_child(stage)
+-		scene = MediaConferenceVignette.open(stage, GameState.my_club)
+-	if not wide:
+-		v.add_child(prompt)
+-	prompt.visible = scene == null
+-	var by := UiKit.lbl(str(GameState.media_conference.get("by", "Journalist")),
+-			UiKit.H2 if wide else UiKit.SMALL, UiKit.MUTED, true)
+-	by.name = "MediaByline"
+-	prompt.add_child(by)
+-	var q := NameInk.label(str(GameState.media_conference.get("question", "")), _league_names(), UiKit.H1 if wide else 16, UiKit.TEXT, wide)
+-	q.name = "MediaQuestion"
+-	q.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+-	prompt.add_child(q)
+-	var opts: Array = GameState.media_conference.get("options", [])
+-	# Each answer and its line are one group, clearly apart from the next.
+-	var group_gap := 16 if wide else 15
+-	if wide:
+-		answers.add_theme_constant_override("separation", group_gap)
+-	else:
+-		footer.add_theme_constant_override("separation", group_gap)
+-		footer.visible = false
+-	var shown_items: Array = [prompt]
+-	for i in range(opts.size()):
+-		var group := UiKit.vbox(4 if wide else 3)
+-		group.name = "MediaAnswerGroup_%d" % i
+-		group.visible = scene == null
+-		answers.add_child(group)
+-		shown_items.append(group)
+-		var b := UiKit.btn(str((opts[i] as Dictionary).get("label", "")), UiKit.H2 if wide else 15)
+-		b.name = "MediaAnswer_%d" % i
+-		b.custom_minimum_size = Vector2(0, 56 if wide else 48)
+-		b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+-		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+-		NameInk.dress_button(b, _league_names())
+-		var choice := i
+-		b.pressed.connect(func():
+-			var landed := GameState.resolve_media_conference(choice)
+-			_media_overlay.queue_free()
+-			_media_overlay = null
+-			_build()
+-			_show_press_outcome(landed))
+-		group.add_child(b)
+-		# What the answer can do, under it: both ways it can land, their odds and
+-		# sizes (bible §4). In the page's own ink, not faint grey: the coach is
+-		# deciding on it.
+-		var effect := NameInk.label(MediaConference.odds_line(MediaConference.kind_of(opts[i], i), GameState.press_chance(i)),
+-				_league_names(), UiKit.BODY if wide else UiKit.SMALL, UiKit.TEXT)
+-		effect.name = "MediaAnswerLine_%d" % i
+-		effect.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+-		group.add_child(effect)
+-	var skip := UiKit.btn("Skip press conference", 14)
+-	skip.name = "MediaSkip"
+-	if wide:
+-		skip.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+-		skip.custom_minimum_size = Vector2(240, 44)
+-		skip.visible = scene == null
+-		answers.add_child(skip)
+-		shown_items.append(skip)
+-	else:
+-		skip.flat = true
+-		skip.custom_minimum_size = Vector2(0, 44)
+-		footer.add_child(skip)
+-	skip.pressed.connect(func():
+-		GameState.skip_media_conference()
+-		_media_overlay.queue_free()
+-		_media_overlay = null
+-		_build())
+-	if scene == null:
+-		footer.visible = not wide
+-		return
+-	scene.ready_for_question.connect(func():
+-		for it in shown_items:
+-			(it as Control).visible = true
+-		footer.visible = not wide)
+-
+-
+ func _show_results(results: Array) -> void:
+ 	if _results_overlay != null and is_instance_valid(_results_overlay):
+ 		_results_overlay.queue_free()
+diff --git a/scripts/ui/MediaConferenceScene.gd b/scripts/ui/MediaConferenceScene.gd
+new file mode 100644
+index 000000000..8a4093e64
+--- /dev/null
++++ b/scripts/ui/MediaConferenceScene.gd
+@@ -0,0 +1,158 @@
++extends Control
++## The post-match press conference as its own full screen (director, 2026-10-19:
++## "why is press conference still not a full screen scene?"). The press room
++## picture, the journalist and outlet, the question, the answers each with both
++## ways it can land and the odds, then how it landed. Done, Skip and Back all
++## return to where the coach came from (the hub). The rules and odds are
++## GameState's; nothing here changes them.
++
++var _name_index := {}
++var _root: VBoxContainer
++var _stage: Control = null
++var _scene: MediaConferenceVignette = null
++var _column: VBoxContainer         # question and answers, then the result
++var _revealed := false
++var _wide := false
++
++
++func _ready() -> void:
++	set_anchors_preset(Control.PRESET_FULL_RECT)
++	if GameState.season == null:
++		Router.replace("main")
++		return
++	# Nothing to answer (a stale route): straight back.
++	if not GameState.media_conference_pending():
++		Router.back.call_deferred()
++		return
++	add_child(ClubBackdrop.new().setup(GameState.my_club).live())
++	var margin := MarginContainer.new()
++	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
++	UiKit.apply_insets(margin, 12)
++	add_child(margin)
++	_root = UiKit.vbox(10)
++	margin.add_child(_root)
++	_build()
++
++
++## Back is the Skip button: saying nothing is an answer the game remembers.
++func handle_back() -> bool:
++	_skip()
++	return false
++
++
++func _skip() -> bool:
++	if GameState.media_conference_pending():
++		GameState.skip_media_conference()
++	return false
++
++
++func _names() -> Dictionary:
++	if _name_index.is_empty() and GameState.season != null:
++		_name_index = NameInk.from_lists(GameState.season.lists)
++	return _name_index
++
++
++func _build() -> void:
++	UiKit.clear(_root)
++	var vw := UiKit.view_width(self)
++	var vh := UiKit.view_height(self)
++	_wide = ScreenLayout.roomy(vw, vh)
++	_root.add_child(UiKit.top_bar("Press conference", true, null, _skip))
++	_stage = null
++	_scene = null
++	var holder: BoxContainer = UiKit.hbox(28) if _wide else UiKit.vbox(10)
++	holder.name = "PressLayout"
++	holder.size_flags_vertical = Control.SIZE_EXPAND_FILL
++	_root.add_child(holder)
++	if GameState.vignettes_on():
++		_stage = Control.new()
++		_stage.name = "MediaConferenceStage"
++		_stage.clip_contents = true
++		if _wide:
++			var w := minf(vw * 0.55, (vh - 90.0) * 1.6)
++			_stage.custom_minimum_size = Vector2(w, w / 1.6)
++			_stage.size_flags_vertical = Control.SIZE_SHRINK_CENTER
++		else:
++			_stage.custom_minimum_size = Vector2(0, minf(280.0, vh * 0.34))
++		holder.add_child(_stage)
++		_scene = MediaConferenceVignette.open(_stage, GameState.my_club)
++	_column = UiKit.vbox(16 if _wide else 12)
++	_column.name = "MediaAnswers"
++	_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
++	if _wide:
++		_column.size_flags_vertical = Control.SIZE_SHRINK_CENTER
++		holder.add_child(_column)
++	else:
++		holder.add_child(UiKit.scroll(_column))
++	_show_question()
++	if _scene != null and not _revealed:
++		_column.visible = false
++		_scene.ready_for_question.connect(func():
++			_revealed = true
++			if is_instance_valid(_column):
++				_column.visible = true)
++
++
++func _show_question() -> void:
++	UiKit.clear(_column)
++	var by := UiKit.lbl(str(GameState.media_conference.get("by", "Journalist")),
++			UiKit.H2 if _wide else UiKit.BODY, UiKit.MUTED, true)
++	by.name = "MediaByline"
++	_column.add_child(by)
++	var q := NameInk.label(str(GameState.media_conference.get("question", "")), _names(),
++			UiKit.H1 if _wide else 18, UiKit.TEXT, true)
++	q.name = "MediaQuestion"
++	q.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
++	_column.add_child(q)
++	var opts: Array = GameState.media_conference.get("options", [])
++	for i in range(opts.size()):
++		var group := UiKit.vbox(4)
++		group.name = "MediaAnswerGroup_%d" % i
++		_column.add_child(group)
++		var b := UiKit.btn(str((opts[i] as Dictionary).get("label", "")), UiKit.H2 if _wide else 16)
++		b.name = "MediaAnswer_%d" % i
++		b.custom_minimum_size = Vector2(0, 56)
++		b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
++		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
++		NameInk.dress_button(b, _names())
++		var choice := i
++		b.pressed.connect(func(): _answer(choice))
++		group.add_child(b)
++		# Both ways it can land, with odds and sizes (bible s.4), in the page's
++		# own ink: the coach is deciding on it.
++		var effect := NameInk.label(MediaConference.odds_line(MediaConference.kind_of(opts[i], i),
++				GameState.press_chance(i)), _names(), UiKit.BODY if _wide else UiKit.SMALL, UiKit.TEXT)
++		effect.name = "MediaAnswerLine_%d" % i
++		effect.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
++		group.add_child(effect)
++	var skip := UiKit.btn("Skip press conference", 14)
++	skip.name = "MediaSkip"
++	skip.flat = not _wide
++	skip.custom_minimum_size = Vector2(240 if _wide else 0, 44)
++	skip.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN if _wide else Control.SIZE_EXPAND_FILL
++	skip.pressed.connect(func():
++		_skip()
++		Router.back())
++	_column.add_child(skip)
++
++
++func _answer(choice: int) -> void:
++	var landed := GameState.resolve_media_conference(choice)
++	_show_result(landed)
++
++
++## How the answer landed (the bible: "the effect is visible afterwards").
++func _show_result(landed: Dictionary) -> void:
++	UiKit.clear(_column)
++	_column.visible = true
++	_column.add_child(UiKit.heading("After the press conference", UiKit.TITLE if _wide else UiKit.H1))
++	var l := UiKit.lbl(str(landed.get("line", "")), UiKit.H2 if _wide else 17, UiKit.TEXT)
++	l.name = "MediaOutcomeLine"
++	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
++	_column.add_child(l)
++	var ok := UiKit.btn("Done", UiKit.NAME, true)
++	ok.name = "MediaOutcomeDone"
++	ok.custom_minimum_size = Vector2(240 if _wide else 0, 52)
++	ok.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN if _wide else Control.SIZE_EXPAND_FILL
++	ok.pressed.connect(func(): Router.back())
++	_column.add_child(ok)
+diff --git a/tests/floor_deltas/claude-press-full-screen.txt b/tests/floor_deltas/claude-press-full-screen.txt
+new file mode 100644
+index 000000000..4b2ae91ea
+--- /dev/null
++++ b/tests/floor_deltas/claude-press-full-screen.txt
+@@ -0,0 +1 @@
++matchday +4
+diff --git a/tests/run_back_nav_tests.gd b/tests/run_back_nav_tests.gd
+index 7da9096af..680dda51d 100644
+--- a/tests/run_back_nav_tests.gd
++++ b/tests/run_back_nav_tests.gd
+@@ -307,6 +307,9 @@ func _overlay_case(label: String, key: String, opener: Callable, prep := Callabl
+ 		if not opened:
+ 			_table.append("%s | %s | did not open" % [label, way])
+ 			continue
++		# Continue on the results goes to the press room when a question waits (its own
++		# screen, tested in matchday); these cases are about the hub.
++		_state.media_conference = {}
+ 		var before := _fingerprint()
+ 		var closer := _closer(roots)
+ 		if way == "click":
+@@ -541,6 +544,7 @@ func _match() -> void:
+ 			# A tap skips a farewell; then Continue is clear.
+ 			await _click(vignette as Control)
+ 			await _settle(30)
++		_state.media_conference = {}   # Continue would go to the press room; that is tested in matchday
+ 		var why3: String = await _leave(way, cont)
+ 		await _settle(10)
+ 		var left_over: bool = root.find_child("FarewellVignette", true, false) != null and _router.current() == "hub"
+diff --git a/tests/run_career_ui_tests.gd b/tests/run_career_ui_tests.gd
+index f4b0509c3..52cce20db 100644
+--- a/tests/run_career_ui_tests.gd
++++ b/tests/run_career_ui_tests.gd
+@@ -1124,6 +1124,12 @@ Your career stays on this device.",
+ 	if ft_cont != null:
+ 		ft_cont.emit_signal("pressed")
+ 		await _settle()
++	# A press question waiting takes the coach to the press room (its own screen);
++	# Back skips it and lands on the hub.
++	if _router.current() == "press":
++		_router.handle_back(true)
++		await _settle()
++		await _settle()
+ 	var xp_after := 0
+ 	for p in _state.my_list:
+ 		xp_after += int(p.get("xp", 0))
+@@ -1136,6 +1142,7 @@ Your career stays on this device.",
+ 	# It survives a save and reload.
+ 	_state.save_career()
+ 	_state.load_career()
++	_state.media_conference = {}
+ 	_router.replace("hub")
+ 	await _settle()
+ 	again = current_scene.find_child("ReviewLastMatch", true, false)
+@@ -1471,7 +1478,15 @@ Your career stays on this device.",
+ 	_check(_state.pending_match.is_empty(), "Skip still finishes the match")
+ 	_router.handle_back(true)
+ 	await _settle()
+-	_check(_router.current() == "hub", "After full time, back returns to the hub")
++	await _settle()
++	# A press question the match raised opens its own screen first; Back skips it.
++	var via_press: bool = _router.current() == "press"
++	if via_press:
++		_router.handle_back(true)
++		await _settle()
++		await _settle()
++	_check(_router.current() == "hub" and not _state.media_conference_pending(),
++			"After full time, back returns to the hub (by the press room when one waits: %s)" % via_press)
+ 	_check(not (_state.last_match.get("moments", []) as Array).is_empty(),
+ 			"The played match keeps its calls for the readout")
+ 
+@@ -1786,6 +1801,7 @@ Your career stays on this device.",
+ 	_state.set_confirm_sim_round(true)
+ 
+ 	# --- Settings from the hub: speed, the menu, and deleting the career ----
++	_state.skip_media_conference()
+ 	_router.go("hub")
+ 	await _settle()
+ 	var hub_settings: Button = current_scene.find_child("HubSettings", true, false)
+diff --git a/tests/run_matchday_tests.gd b/tests/run_matchday_tests.gd
+index de675c953..ebe5b7c71 100644
+--- a/tests/run_matchday_tests.gd
++++ b/tests/run_matchday_tests.gd
+@@ -7,6 +7,7 @@ extends SceneTree
+ const Tap := preload("res://tests/tap.gd")
+ const SUITE_SEED := 2027
+ 
++var Router: Node
+ var _state: Node
+ var _checks := 0
+ var _failures: Array[String] = []
+@@ -19,6 +20,7 @@ func _initialize() -> void:
+ func _run() -> void:
+ 	await process_frame
+ 	_state = root.get_node("GameState")
++	Router = root.get_node("Router")
+ 	_state.autosave_enabled = false
+ 	_state.save_path = "user://test_career.save"
+ 	_state.settings_path = "user://test_settings.cfg"
+@@ -2498,39 +2500,84 @@ func _test_press_effects_shown(db) -> void:
+ 	_state.board["confidence"] = 50
+ 	var who: Dictionary = _state.my_list[0]
+ 	who["morale"] = 50
+-	var hub = load("res://scenes/HubScene.tscn").instantiate()
+-	root.add_child(hub)
+-	await _settle()
+-	if hub.find_child("MediaConference", true, false) == null:
+-		hub.call("_show_media_conference")
+-		await _settle()
++	# The way a coach arrives: the hub opens, sees the press waiting and goes to
++	# its own screen (Router "press"), not a card over the hub.
++	Router.stack.clear()
++	Router.go("hub")
++	await _settle()
++	await _settle()
++	var hub = current_scene
++	_check(hub != null and hub.name == "MediaConferenceScene" and Router.current() == "press",
++			"A waiting press conference opens as its own screen from the hub (%s)" % ("none" if hub == null else hub.name))
++	_check(hub.find_child("MediaByline", true, false) != null
++			and str((hub.find_child("MediaByline", true, false) as Label).text).contains(","),
++			"The journalist and the outlet are named")
+ 	var shown := opts.size() == 3
+ 	for i in range(opts.size()):
+ 		var line: Label = hub.find_child("MediaAnswerLine_%d" % i, true, false)
+ 		var kind: String = MC.kind_of(opts[i], i)
+ 		var c: int = _state.press_chance(i)
+ 		var text := "" if line == null else line.text
+-		shown = shown and line != null and line.is_visible_in_tree() and text == MC.odds_line(kind, c) 				and text.contains("%d%%" % c) and text.contains("%d%%" % (100 - c))
++		shown = shown and line != null and text == MC.odds_line(kind, c) 				and text.contains("%d%%" % c) and text.contains("%d%%" % (100 - c))
+ 	_check(shown, "Every press answer shows both ways it can land, with the odds and the sizes")
+ 	var c0: int = _state.press_chance(0)
+ 	var landed := "a" if MC.roll(_state.career_seed, _state.season_year, int(_state.media_conference.get("round", 0)),
+ 			str(_state.media_conference.get("key", "")), 0) <= c0 else "b"
+ 	var out: Dictionary = MC.ANSWERS["criticise"][landed]
+ 	var answer: Button = hub.find_child("MediaAnswer_0", true, false)
++	# The answers wait for the room's introduction (a tap on the room skips it).
++	if answer != null and not answer.is_visible_in_tree():
++		var room = hub.find_child("MediaConferenceVignette", true, false)
++		if room != null:
++			room.call("finish_now")
++		await _settle()
+ 	var tapped: String = await Tap.tap(answer) if answer != null else "missing"
+ 	await _settle()
+ 	var after: Label = hub.find_child("MediaOutcomeLine", true, false)
+ 	_check(tapped == "" and _state.board_confidence() == 50 + int(out["board"])
+ 			and int(who["morale"]) == 50 + int(out["morale"]) and after != null and after.is_visible_in_tree()
+ 			and after.text == MC.after_line("criticise", landed),
+-			"A real tap on the first answer applies the outcome the press stream drew, and the sheet after says how it landed (%s, %s)" % [tapped, landed])
++			"A real tap on the first answer applies the outcome the press stream drew, and the result says how it landed (%s, %s)" % [tapped, landed])
+ 	var done: Button = hub.find_child("MediaOutcomeDone", true, false)
+ 	var closed: String = await Tap.tap(done) if done != null else "missing"
+ 	await _settle()
+-	_check(closed == "" and hub.find_child("MediaOutcome", true, false) == null,
+-			"A real tap on Done closes the press outcome (%s)" % closed)
+-	if is_instance_valid(hub):
+-		hub.queue_free()
++	await _settle()
++	_check(closed == "" and Router.current() == "hub" and current_scene != null and current_scene.name == "HubScene",
++			"A real tap on Done returns to the hub (%s, %s)" % [closed, Router.current()])
++	_check(not _state.media_conference_pending() and current_scene.find_child("MediaConference", true, false) == null,
++			"The hub does not ask again")
++	# Back is Skip: nothing answered, the question is gone, the hub is where it ends.
++	_state.media_conference = MC.pick({"club": "COL", "opponent_name": "Carlton", "round": 9,
++			"result": {"home": "COL", "away": "CAR", "score": [55, 101]}}, {})
++	Router.stack.clear()
++	Router.go("hub")
++	await _settle()
++	await _settle()
++	var on_press: bool = current_scene != null and current_scene.name == "MediaConferenceScene"
++	var morale_before := int(who["morale"])
++	Router.handle_back(true)
++	await _settle()
++	await _settle()
++	_check(on_press and Router.current() == "hub" and current_scene.name == "HubScene" and not _state.media_conference_pending()
++			and int(who["morale"]) == morale_before,
++			"Android Back on the press screen skips it and returns to the hub, no effect applied")
++	# Its Skip button, by a real tap, does the same.
++	_state.media_conference = MC.pick({"club": "COL", "opponent_name": "Carlton", "round": 10,
++			"result": {"home": "COL", "away": "CAR", "score": [55, 101]}}, {})
++	Router.stack.clear()
++	Router.go("hub")
++	await _settle()
++	await _settle()
++	var room2 = current_scene.find_child("MediaConferenceVignette", true, false)
++	if room2 != null:
++		room2.call("finish_now")
++		await _settle()
++	var skip: Button = current_scene.find_child("MediaSkip", true, false)
++	var st: String = await Tap.tap(skip) if skip != null else "missing"
++	await _settle()
++	await _settle()
++	_check(st == "" and Router.current() == "hub" and not _state.media_conference_pending(),
++			"A real tap on Skip returns to the hub (%s)" % st)
+ 	_state.media_conference = {}
+ 	await _settle()
+ 
+@@ -2874,18 +2921,17 @@ func _vignettes_off_match() -> void:
+ 	_state.reset()
+ 	_state.start_season("COL", db.club_list("COL"))
+ 	_state.media_conference = {"question": "How do you rate the win?", "options": [{"label": "Proud of them"}]}
+-	hub = load("res://scenes/HubScene.tscn").instantiate()
+-	root.add_child(hub)
++	Router.stack.clear()
++	Router.go("hub")
+ 	await _settle()
+-	if hub.find_child("MediaConference", true, false) == null:
+-		hub.call("_show_media_conference")
+-		await _settle()
++	await _settle()
++	hub = current_scene
+ 	var q: Label = hub.find_child("MediaQuestion", true, false)
+ 	var answer: Button = hub.find_child("MediaAnswer_0", true, false)
+ 	_check(q != null and q.is_visible_in_tree() and answer != null and answer.is_visible_in_tree()
+ 			and hub.find_child("MediaConferenceStage", true, false) == null and seen[0] == 0,
+ 			"The press conference asks straight away, without its stage")
+-	hub.queue_free()
++	Router.stack.clear()
+ 	_state.media_conference = {}
+ 	await _settle()
+ 	await _test_press_effects_shown(db)
+diff --git a/tests/run_matchup_tests.gd b/tests/run_matchup_tests.gd
+index 83949cae8..84d8005ab 100644
+--- a/tests/run_matchup_tests.gd
++++ b/tests/run_matchup_tests.gd
+@@ -1160,6 +1160,9 @@ func _finals_cup() -> void:
+ 
+ 
+ func _open_hub() -> Control:
++	# A press question waiting would take the coach to the press room (its own
++	# screen); these tests are about the hub, so it is skipped first.
++	_state.skip_media_conference()
+ 	var hub: Control = load("res://scenes/HubScene.tscn").instantiate()
+ 	root.add_child(hub)
+ 	await _settle()
+diff --git a/tools/visual/capture_press_scene.gd b/tools/visual/capture_press_scene.gd
+new file mode 100644
+index 000000000..24adc8b56
+--- /dev/null
++++ b/tools/visual/capture_press_scene.gd
+@@ -0,0 +1,72 @@
++extends SceneTree
++## Visual review tool for the press conference as its own screen:
++##   godot --path . --script tools/visual/capture_press_scene.gd -- --out /tmp/pscene --club MEL
++## Writes <out>_phone_{question,result}.png (390x844) and <out>_pc_{question,result}.png (1280x720 logical),
++## each reached through the real route (hub -> Router "press").
++
++func _initialize() -> void:
++	_run.call_deferred()
++
++
++func _shot(n := 8) -> Image:
++	for i in range(n):
++		await process_frame
++	var img := root.get_viewport().get_texture().get_image()
++	img.convert(Image.FORMAT_RGBA8)
++	return img
++
++
++func _run() -> void:
++	var out := "/tmp/pscene"
++	var club := "MEL"
++	var a := OS.get_cmdline_user_args()
++	for i in range(a.size() - 1):
++		if str(a[i]) == "--out":
++			out = str(a[i + 1])
++		if str(a[i]) == "--club":
++			club = str(a[i + 1])
++	await process_frame
++	var state = root.get_node("GameState")
++	var db = root.get_node("GameDB")
++	var router = root.get_node("Router")
++	var MC = load("res://scripts/sim/MediaConference.gd")
++	state.autosave_enabled = false
++	state.save_path = "user://capture.save"
++	state.settings_path = "user://capture_settings.cfg"
++	state.reset()
++	state.set_setting("seen_weekly_loop_intro", true)
++	state.start_season(club, db.club_list(club))
++	for mode in [["phone", Vector2i(390, 844)], ["pc", Vector2i(1600, 900)]]:
++		# mode[1] is the LOGICAL canvas; the window is that times the OS scaling (as the
++		# director's 4K at 300% shows 1280x720).
++		var logical: Vector2i = Vector2i(1280, 720) if mode[0] == "pc" else mode[1]
++		var dens := maxf(1.0, float(DisplayServer.screen_get_dpi()) / 96.0) if mode[0] == "pc" else 1.0
++		var px := Vector2i(roundi(logical.x * dens), roundi(logical.y * dens))
++		root.size = px
++		DisplayServer.window_set_size(px)
++		for i in range(6):
++			await process_frame
++		var got: Vector2i = root.content_scale_size
++		if mode[0] == "pc" and got != logical and got.x > 0:
++			var k: float = float(px.x) / float(got.x)
++			px = Vector2i(roundi(logical.x * k), roundi(logical.y * k))
++			root.size = px
++			DisplayServer.window_set_size(px)
++			for i in range(6):
++				await process_frame
++		state.media_conference = MC.pick({"club": club, "opponent_name": "Carlton", "round": 8,
++				"result": {"home": club, "away": "CAR", "score": [55, 101]}}, {})
++		router.stack.clear()
++		router.go("hub")
++		for i in range(30):
++			await process_frame
++		var room = current_scene.find_child("MediaConferenceVignette", true, false)
++		if room != null:
++			room.call("finish_now")
++		(await _shot()).save_png("%s_%s_question.png" % [out, mode[0]])
++		var b = current_scene.find_child("MediaAnswer_0", true, false)
++		if b != null:
++			b.emit_signal("pressed")
++		(await _shot()).save_png("%s_%s_result.png" % [out, mode[0]])
++		router.stack.clear()
++	quit(0)
+-- 
+2.55.0.windows.5
+
+From 7d94a3525aacb5b4f9e0bb729f83d3b1bf69913f Mon Sep 17 00:00:00 2001
+From: gabebartolo-spec <gabebartolo@gmail.com>
+Date: Mon, 19 Oct 2026 20:19:50 +1100
+Subject: [PATCH] Add uid files for the press scene and its capture tool
+
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+---
+ scripts/ui/MediaConferenceScene.gd.uid  | 1 +
+ tools/visual/capture_press_scene.gd.uid | 1 +
+ 2 files changed, 2 insertions(+)
+ create mode 100644 scripts/ui/MediaConferenceScene.gd.uid
+ create mode 100644 tools/visual/capture_press_scene.gd.uid
+
+diff --git a/scripts/ui/MediaConferenceScene.gd.uid b/scripts/ui/MediaConferenceScene.gd.uid
+new file mode 100644
+index 000000000..fcdd40f6e
+--- /dev/null
++++ b/scripts/ui/MediaConferenceScene.gd.uid
+@@ -0,0 +1 @@
++uid://bbvomy2glpsd7
+diff --git a/tools/visual/capture_press_scene.gd.uid b/tools/visual/capture_press_scene.gd.uid
+new file mode 100644
+index 000000000..394278c07
+--- /dev/null
++++ b/tools/visual/capture_press_scene.gd.uid
+@@ -0,0 +1 @@
++uid://bihiwedqsw6cc
+-- 
+2.55.0.windows.5
+
+From ae16c4c72150c4ae38337481b140e9a3faf696a8 Mon Sep 17 00:00:00 2001
+From: gabebartolo-spec <gabebartolo@gmail.com>
+Date: Mon, 19 Oct 2026 20:24:36 +1100
+Subject: [PATCH] Press scene: phone fits without scrolling, PC top-aligned
+ with a larger room
+
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+---
+ scripts/ui/MediaConferenceScene.gd  | 18 ++++++++---------
+ tools/visual/capture_press_scene.gd | 30 +++++++++++++++++++++++++++++
+ 2 files changed, 39 insertions(+), 9 deletions(-)
+
+diff --git a/scripts/ui/MediaConferenceScene.gd b/scripts/ui/MediaConferenceScene.gd
+index 8a4093e64..d5ec47295 100644
+--- a/scripts/ui/MediaConferenceScene.gd
++++ b/scripts/ui/MediaConferenceScene.gd
+@@ -69,18 +69,18 @@ func _build() -> void:
+ 		_stage.name = "MediaConferenceStage"
+ 		_stage.clip_contents = true
+ 		if _wide:
+-			var w := minf(vw * 0.55, (vh - 90.0) * 1.6)
++			var w := minf(vw * 0.6, (vh - 90.0) * 1.6)
+ 			_stage.custom_minimum_size = Vector2(w, w / 1.6)
+-			_stage.size_flags_vertical = Control.SIZE_SHRINK_CENTER
++			_stage.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+ 		else:
+-			_stage.custom_minimum_size = Vector2(0, minf(280.0, vh * 0.34))
++			_stage.custom_minimum_size = Vector2(0, minf(170.0, vh * 0.21))
+ 		holder.add_child(_stage)
+ 		_scene = MediaConferenceVignette.open(_stage, GameState.my_club)
+-	_column = UiKit.vbox(16 if _wide else 12)
++	_column = UiKit.vbox(16 if _wide else 6)
+ 	_column.name = "MediaAnswers"
+ 	_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+ 	if _wide:
+-		_column.size_flags_vertical = Control.SIZE_SHRINK_CENTER
++		_column.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+ 		holder.add_child(_column)
+ 	else:
+ 		holder.add_child(UiKit.scroll(_column))
+@@ -100,18 +100,18 @@ func _show_question() -> void:
+ 	by.name = "MediaByline"
+ 	_column.add_child(by)
+ 	var q := NameInk.label(str(GameState.media_conference.get("question", "")), _names(),
+-			UiKit.H1 if _wide else 18, UiKit.TEXT, true)
++			UiKit.H1 if _wide else 17, UiKit.TEXT, true)
+ 	q.name = "MediaQuestion"
+ 	q.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+ 	_column.add_child(q)
+ 	var opts: Array = GameState.media_conference.get("options", [])
+ 	for i in range(opts.size()):
+-		var group := UiKit.vbox(4)
++		var group := UiKit.vbox(4 if _wide else 2)
+ 		group.name = "MediaAnswerGroup_%d" % i
+ 		_column.add_child(group)
+-		var b := UiKit.btn(str((opts[i] as Dictionary).get("label", "")), UiKit.H2 if _wide else 16)
++		var b := UiKit.btn(str((opts[i] as Dictionary).get("label", "")), UiKit.H2 if _wide else 15)
+ 		b.name = "MediaAnswer_%d" % i
+-		b.custom_minimum_size = Vector2(0, 56)
++		b.custom_minimum_size = Vector2(0, 56 if _wide else 46)
+ 		b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+ 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+ 		NameInk.dress_button(b, _names())
+diff --git a/tools/visual/capture_press_scene.gd b/tools/visual/capture_press_scene.gd
+index 24adc8b56..1b621e307 100644
+--- a/tools/visual/capture_press_scene.gd
++++ b/tools/visual/capture_press_scene.gd
+@@ -69,4 +69,34 @@ func _run() -> void:
+ 			b.emit_signal("pressed")
+ 		(await _shot()).save_png("%s_%s_result.png" % [out, mode[0]])
+ 		router.stack.clear()
++	# The longest questions on a phone: does the screen fit without scrolling?
++	root.size = Vector2i(390, 844)
++	DisplayServer.window_set_size(Vector2i(390, 844))
++	var cases := {
++		"bigwin": {"result": {"home": club, "away": "GWS", "score": [140, 60]}, "opponent_name": "Greater Western Sydney", "round": 8},
++		"loss": {"result": {"home": club, "away": "GWS", "score": [40, 140]}, "opponent_name": "Greater Western Sydney", "round": 8},
++		"injury": {"result": {"home": club, "away": "CAR", "score": [80, 70]}, "opponent_name": "Port Adelaide", "round": 9,
++				"injuries": [{"name": "Christian Petracca-Williamson"}]},
++	}
++	for k in cases:
++		var d: Dictionary = cases[k]
++		d["club"] = club
++		state.media_conference = MC.pick(d, {})
++		if state.media_conference.is_empty():
++			print("case ", k, " no question")
++			continue
++		router.stack.clear()
++		router.go("hub")
++		for i in range(30):
++			await process_frame
++		var rm = current_scene.find_child("MediaConferenceVignette", true, false)
++		if rm != null:
++			rm.call("finish_now")
++		(await _shot()).save_png("%s_phone_%s.png" % [out, k])
++		var sc = current_scene.find_children("*", "ScrollContainer", true, false)
++		var need := false
++		for c in sc:
++			var bar = (c as ScrollContainer).get_v_scroll_bar()
++			need = need or bar.max_value > bar.page + 1.0
++		print("case ", k, " scroll needed: ", need)
+ 	quit(0)
+-- 
+2.55.0.windows.5
+
+From 5885b2c91c803adccd4c1a255f70198b8b1b326e Mon Sep 17 00:00:00 2001
+From: gabebartolo-spec <gabebartolo@gmail.com>
+Date: Mon, 19 Oct 2026 23:04:08 +1100
+Subject: [PATCH] Drop the floor delta file (floors are gone on main)
+
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+---
+ tests/floor_deltas/claude-press-full-screen.txt | 1 -
+ 1 file changed, 1 deletion(-)
+ delete mode 100644 tests/floor_deltas/claude-press-full-screen.txt
+
+diff --git a/tests/floor_deltas/claude-press-full-screen.txt b/tests/floor_deltas/claude-press-full-screen.txt
+deleted file mode 100644
+index 4b2ae91ea..000000000
+--- a/tests/floor_deltas/claude-press-full-screen.txt
++++ /dev/null
+@@ -1 +0,0 @@
+-matchday +4
+-- 
+2.55.0.windows.5
+
