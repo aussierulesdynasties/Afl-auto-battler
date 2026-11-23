@@ -173,8 +173,10 @@ func _test_every_ground_size(res: Dictionary) -> void:
 		at["venue"] = g
 		at["events"] = half
 		_full_playback(at, " at %s" % g, 400)
-		_check(is_equal_approx(MatchMotion.HALF_LEN, GroundModels.field_for(g).x),
-				"The match at %s is played at its own size (%.0f x %.0f m)" % [g, MatchMotion.HALF_LEN * 2.0, MatchMotion.HALF_WID * 2.0])
+		# A traced ground plays on its real line (it ends just beyond the goal lines); else on the model's size.
+		var own := (MatchMotion.HALF_LEN >= MatchMotion.GOAL_X and MatchMotion.HALF_LEN < MatchMotion.GOAL_X + 3.0) \
+				if MatchMotion.shaped() else is_equal_approx(MatchMotion.HALF_LEN, GroundModels.field_for(g).x)
+		_check(own, "The match at %s is played at its own size (%.0f x %.0f m)" % [g, MatchMotion.HALF_LEN * 2.0, MatchMotion.HALF_WID * 2.0])
 	MatchMotion.use_field(GroundModels.field_for(VignetteGround.ground_of(res)))
 
 

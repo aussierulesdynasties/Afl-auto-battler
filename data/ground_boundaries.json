@@ -227,6 +227,178 @@
     "min": 4.88,
     "max": 7.38
    }
+  },
+  "north_hobart": {
+   "frame": [
+    -5.135,
+    0.89,
+    -35.427
+   ],
+   "goal_x": 75.75,
+   "boundary": [
+    64.414,
+    0.7043,
+    0.706,
+    10.3726,
+    -0.23,
+    -0.0196,
+    0.2584,
+    -0.2053,
+    -0.1817,
+    -0.5246,
+    0.2405,
+    0.5299,
+    -0.1526,
+    -0.118,
+    -0.0714,
+    0.521,
+    -0.0245,
+    -0.0719,
+    0.0521,
+    0.0518,
+    0.0523,
+    -0.0685,
+    0.0341
+   ],
+   "boundary_fit": {
+    "n": 1125,
+    "order": 11,
+    "rms_m": 0.218,
+    "p95_m": 0.461,
+    "max_m": 0.864,
+    "largest_gap_deg": 11.44
+   },
+   "ends_vs_goal_lines_m": [
+    -0.164,
+    0.032
+   ],
+   "source": "Google Earth web historical imagery: aerials of 8 Feb 2022 (anchor) and 2 Oct 2024, straight-down captures at 0.132 m a pixel. Each date's painted line traced along 1440 rays; 2024 lined up on 2022 by the line itself (shift [3.535, 2.05] m) and the median taken. Goals: 50 m arc then the goal square (north-east goal on both dates, 0.49 m apart; south-west goal 2022 only).",
+   "trace_error": {
+    "seen_share": 0.781,
+    "longest_unseen_arc_deg": 11.4,
+    "placement": "Google Earth places the 2022 and 2024 aerials 4.1 m apart, so the frame is the 2022 aerial's (line, goals and fence all from it). Checked against main's model (a first draft by eye) in a match top-down render: model fence edge minus traced fence median -0.32 m, p5-p95 -1.6 to +2.3 m; painted line in the match vs trace rms 0.40 m."
+   },
+   "fence": [
+    69.8245,
+    -0.3652,
+    0.8287,
+    10.2398,
+    0.2618,
+    -0.3483,
+    0.9076,
+    -0.3611,
+    0.1537,
+    -0.147,
+    0.597,
+    1.2105,
+    0.0055,
+    0.2411,
+    0.0841,
+    0.6885,
+    -0.1025,
+    0.0472,
+    -0.1018,
+    0.2628,
+    -0.0581,
+    -0.1724,
+    -0.0099
+   ],
+   "fence_fit": {
+    "n": 1356,
+    "order": 11,
+    "rms_m": 0.33,
+    "p95_m": 0.665,
+    "max_m": 1.26,
+    "largest_gap_deg": 7.15
+   },
+   "runoff_m": {
+    "min": 1.16,
+    "max": 6.83
+   }
+  },
+  "riverway": {
+   "frame": [
+    -1.78,
+    0.145,
+    -89.899
+   ],
+   "goal_x": 79.225,
+   "boundary": [
+    73.7443,
+    0.1202,
+    1.0008,
+    6.9482,
+    0.0877,
+    0.0213,
+    -0.3415,
+    0.1244,
+    0.0343,
+    -0.0104,
+    0.1765,
+    -0.1855,
+    -0.0018,
+    0.0081,
+    0.0751,
+    -0.1259,
+    0.0181,
+    0.0442,
+    -0.1673,
+    -0.2632,
+    -0.0118,
+    -0.0044,
+    0.0704,
+    -0.0686,
+    -0.013
+   ],
+   "boundary_fit": {
+    "n": 1434,
+    "order": 12,
+    "rms_m": 0.14,
+    "p95_m": 0.322,
+    "max_m": 0.598,
+    "largest_gap_deg": 0.51
+   },
+   "ends_vs_goal_lines_m": [
+    1.128,
+    0.77
+   ],
+   "source": "Google Earth web historical imagery: aerials of 6 Jun 2024 (anchor) and 22 Apr 2023, straight-down captures at 0.132 m a pixel. Each date's painted line traced along 1440 rays; 2023 lined up on 2024 by the line itself (shift -1.08, +2.21 m, rms 0.34 m) and the median taken. Goals: 50 m arc then the goal square (south goal on both dates, 0.25 m apart; north goal 2023 only).",
+   "trace_error": {
+    "seen_share": 0.996,
+    "longest_unseen_arc_deg": 0.5,
+    "placement": "Checked against the model on main in a match top-down render: traced fence vs the model's fence edge median -0.24 m; on the open side (east, north, south) within +0.6 m; on the grandstand side the model's sign rail sits 1.1-1.9 m inside the real fence (the concourse wall), like GMHBA's sign ring."
+   },
+   "fence": [
+    79.5904,
+    -0.3178,
+    0.2996,
+    6.5326,
+    -0.0702,
+    0.052,
+    0.0469,
+    0.478,
+    -0.0516,
+    0.0158,
+    -0.063,
+    -0.1204,
+    -0.0928,
+    0.0389,
+    -0.0044,
+    -0.1206,
+    -0.0309
+   ],
+   "fence_fit": {
+    "n": 1347,
+    "order": 8,
+    "rms_m": 0.121,
+    "p95_m": 0.25,
+    "max_m": 0.481,
+    "largest_gap_deg": 2.27
+   },
+   "runoff_m": {
+    "min": 4.44,
+    "max": 7.78
+   }
   }
  }
 }
