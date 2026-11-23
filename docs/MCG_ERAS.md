@@ -144,3 +144,12 @@ Measuring from imagery is allowed; raw imagery is never committed or baked into 
   2.35 m and 3.3 m) over 86 bearings. The worst remaining misses are block edges that fall between
   the 1 degree samples, the light tower at 182 degrees and the stair towers at 118-125 degrees (up to
   4-8 m, sparse data there).
+- 2026-11-23, why main's seat check broke after #2052: the model ran the top tier's back row 8 m
+  inside the roof's outer line, so measuring the roof's back edge in (by up to 8 m) also steepened
+  the top tier's rake, a change nobody measured, and 1,883 seats built on the old rake had no floor.
+  The top tier now keeps its own back line (`tier_back`: the roof's outer line as it was when the
+  seats were made). With that, 87 seats still fail the seat rule and are taken out: about 30 under
+  the screen boxes' new ends (the box underside sits 1-1.5 m over them), about 40 that were sitting
+  on roof surfaces at 161-164 and 236-240 degrees (they passed before only because the roof was
+  their "floor"), and 8 front-row seats at 249-287 degrees that sit 1.99 m under the tier above
+  against the rule's 2.0 m.

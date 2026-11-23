@@ -116,7 +116,7 @@ def step_sections(s):
     """the two solid cross-sections of a section's upper stand at its own bearing, in (r, z): the top tier and the
     wall behind it up to the roof soffit, and the roof itself (inner fascia, top, outer fascia, soffit)"""
     S = s['S']; z1 = s['h'] - s['ed'][1]
-    wa = backr(s['b'], min(s['rfp'], s['rout']) - 1.5)
+    wa = backr(s['b'], max(min(s['rfp'], s['rout']) - 1.5, S[12][0]))
     bowl = [S[10][:2], S[11][:2], S[12][:2], (wa, z1), (wa, S[10][1])]
     FI = D.get('roof_fascia_in', 1.0)
     roof = [(s['rin'], s['h'] - FI), (s['rin'], s['h']), (s['rout'], s['h'] - s['ed'][0]), (s['rout'], z1)]
@@ -283,6 +283,9 @@ def seats3d(seatq, D, col):
 
 def bowl_all(col):
     STEP = D.get('step', 0.5); bs = np.arange(0, 360, STEP)
+    # the top tier's back runs 8 m inside tier_back (the roof's outer line before the roof's back edge was measured
+    # in from Google Earth, 7b343ff): the tiers were not remeasured, so moving the roof edge must not move them
+    tb_ = periodic(D.get('tier_back', D['roof_outer']))
     fb = periodic(D['fence']); ri = periodic(D['roof_inner']); ro = periodic(D['roof_outer']); rh = periodic(D['roof_h'])
     tiers = periodic(D['tiers']); mats = D['mats']; tw_ = periodic(D['roof_teal_w'])
     def matat(key, b):
@@ -294,7 +297,7 @@ def bowl_all(col):
         r = polar_of_poly(D['osm'][k], bs); fp = np.fmax(fp, r)
     secs = []
     for i, b in enumerate(bs):
-        rf = fb(b)[0]; rin = ri(b)[0]; rout = ro(b)[0]; h = rh(b)[0]
+        rf = fb(b)[0]; rin = ri(b)[0]; rout = ro(b)[0]; h = rh(b)[0]; rtb = tb_(b)[0] - 8  # top tier's back row
         d1, z1, d2, zb2, zt2, e2, z2, d3, zb3, zt3, zback, zfac = tiers(b)
         fseg = facseg(b); zfac = fseg[2]
         fasc = matat('fascia', b) if 'fascia' in mats else 'tier_fascia'  # tier-front band per sector (white at the MCC)
@@ -304,8 +307,8 @@ def bowl_all(col):
         S = [(rf, -5.3, None), (rf, -4.2, 'fence'), (rf + 1.5, -4.2, 'conc_grey'), (rf + d1, z1, matat('t1', b)),
              (rf + d2, z1, 'conc_grey'), (rf + d2, zb2, 'tier_wall'), (rf + d2 - 0.4, zt2, fasc),
              (rf + e2, z2, matat('t2', b)), (rf + d3, z2, 'conc_grey'), (rf + d3, zb3, 'tier_wall'),
-             (rf + d3 - 0.4, zt3, fasc), (rout - 8, zback, matat('t3', b)), (rout - 8, h - edge(b)[1], 'conc_grey'),
-             (min(rfp, rout, screen_rb(b) - 0.3), h - edge(b)[1], 'roof_soffit')]
+             (rf + d3 - 0.4, zt3, fasc), (rtb, zback, matat('t3', b)), (rtb, h - edge(b)[1], 'conc_grey'),
+             (max(rtb, min(rfp, rout, screen_rb(b) - 0.3)), h - edge(b)[1], 'roof_soffit')]
         secs.append(dict(b=b, S=S, ed=edge(b), dk=matat('deck', b) if 'deck' in mats else 'conc_light', rin=rin, rout=rout, h=h, rfp=rfp, zfac=zfac, tw=tw_(b)[0], fm=fseg[3], fs0=fseg[0], fend=fseg[4] if len(fseg) > 4 else fseg[3]))
     mb = MB('bowl')
     n = len(secs); seatq = []
@@ -333,7 +336,7 @@ def bowl_all(col):
         if cap:
             step_end_walls(mb, A, Bs); continue
         # upper back wall: deck up to the roof's outer fascia, set 1.5 m in from the roof edge
-        wa = min(A['rfp'], A['rout']) - 1.5; wb = min(Bs['rfp'], Bs['rout']) - 1.5
+        wa = max(min(A['rfp'], A['rout']) - 1.5, A['S'][12][0]); wb = max(min(Bs['rfp'], Bs['rout']) - 1.5, Bs['S'][12][0])
         wa = backr(A['b'], wa); wb = backr(Bs['b'], wb)  # set-back stand wall (north gate terrace)
         fz = A['zfac']
         for za, zb, m in back_bands(A['b'], fz, A['h'] - A['ed'][1]):
