@@ -30,6 +30,11 @@ var dataset := Datasets.DEFAULT
 var challenge := {}
 ## The 2026 National Draft of a real-lists career is under way (no season yet).
 var opening_draft := false
+## A real-lists career that starts after the real 2026 National Draft (the
+## person, 2026-11-21: "Both, chosen at New career"): every man drafted on 19
+## and 20 November 2026 starts on the club that took him, and the opening draft
+## is left with the prospects nobody took. Set before begin_real_lists.
+var real_after_draft := false
 ## Your dual-ruck call (ARD-M5-001): off until you make it, kept across
 ## seasons; copied into each season's selection for your club (_sync_dual).
 var user_dual_ruck := false
@@ -1037,6 +1042,7 @@ func _save_state() -> Dictionary:
 		"names_real": 1,   # no generated name of a real player is written (RealNamesSwap)
 		"challenge": challenge,
 		"opening_draft": opening_draft,
+		"real_after_draft": real_after_draft,
 		"custom_club": custom_club,
 		"best23": best23,
 		"shortlist": shortlist,
@@ -1356,6 +1362,7 @@ func _restore_career(state: Dictionary) -> bool:
 	var ch = state.get("challenge", {})
 	challenge = ch if ch is Dictionary else {}
 	opening_draft = bool(state.get("opening_draft", false))
+	real_after_draft = bool(state.get("real_after_draft", false))
 	user_dual_ruck = bool(state.get("user_dual_ruck", false))
 	_sync_dual()
 	_recompute_ratings()
@@ -1934,6 +1941,7 @@ func reset(next_dataset := Datasets.DEFAULT) -> void:
 	start_mode = "redraft"
 	challenge = {}
 	opening_draft = false
+	real_after_draft = false
 	season_year = GameDB.START_YEAR
 	drafted_draftees = {}
 	midseason = {}
@@ -2108,6 +2116,8 @@ func begin_real_lists() -> void:
 		else:
 			open_pool.append(p)
 	draftee_pool = draftee_pool.filter(func(q): return str(q.get("id", "")) != custom_prospect_id)
+	if real_after_draft:
+		open_pool = _place_real_draft(open_pool)
 	# Your Club Forge club plays the first season as a new club, on the
 	# new-club package: state-league signings, a guest's seat at this draft
 	# holding the extra picks, and sign-on money (TODO row 172).
@@ -2144,6 +2154,64 @@ func begin_real_lists() -> void:
 	draft.user_max_age = Challenge.max_age(self)
 	OwnProspect.check(self)
 	mark_dirty()
+
+
+## "After the draft": every selection of the real 2026 National Draft
+## (GameDB.national_draft) on the club that made it, in pick order, with his
+## real pick. A prospect comes out of `pool`; a delisted man redrafted
+## (Mitch Knevitt, Jamarra Ugle-Hagan) comes off the free agents; a man the
+## lists already hold where he was redrafted stays. Returns what is left of
+## the pool: the prospects nobody took, for the opening draft.
+func _place_real_draft(pool: Array) -> Array:
+	var left := pool.duplicate()
+	for row in GameDB.national_draft:
+		var code := str(row["club"])
+		if not league_lists.has(code):
+			continue
+		var pick := int(row["pick"])
+		var p := _find_drafted(left, row)
+		if not p.is_empty():
+			left.erase(p)
+			_assign_draftee(code, p, "pick %d" % pick)
+			_real_pick(p, row, code)
+			continue
+		p = _find_drafted(free_agents, row)
+		if not p.is_empty():
+			free_agents.erase(p)
+			p.erase("released_by")
+			p.erase("comp_eligible")
+			p["club"] = code
+			p["num"] = _next_jumper_number(league_lists[code])
+			p.erase("list_type")
+			(league_lists[code] as Array).append(p)
+			_real_pick(p, row, code)
+			intake_assignments.append({"club": code, "player_id": str(p["id"]),
+					"player_name": GameDB.player_display_name(p), "kind": "pick %d" % pick,
+					"overall": int(p["overall"])})
+			continue
+		# A tied prospect is already on his club's list; give him his pick.
+		for c in league_lists:
+			p = _find_drafted(league_lists[c], row)
+			if not p.is_empty():
+				if int(p.get("draft_year", 0)) == season_year:
+					_real_pick(p, row, code, str(p.get("drafted_type", "national")))
+				break
+	return left
+
+
+## His real pick, round and rookie deal, as finish_intake_draft gives a pick.
+func _real_pick(p: Dictionary, row: Dictionary, code: String, kind := "national") -> void:
+	p["draft_pick"] = int(row["pick"])
+	p["draft_round"] = int(row.get("round", "0"))
+	_mark_drafted(p, kind, int(row["pick"]), code, season_year)
+	Contracts.draftee_deal(p, season_year + 1)
+
+
+func _find_drafted(arr: Array, row: Dictionary) -> Dictionary:
+	for p in arr:
+		if not bool(p.get("generated", false)) and GameDB.national_pick(p) == row:
+			return p
+	return {}
 
 
 ## Your Club Forge club, when this real-lists career has it in the league; "".
@@ -10147,6 +10215,11 @@ func _decide_fa(p: Dictionary) -> String:
 			continue
 		var code := str(o["club"])
 		var list: Array = season.lists.get(code, [])
+		# The opening draft's picks a club has already made count toward its
+		# 44: a rival picking ahead of your first pick drafts before the first
+		# off-season's signings (choose_real_club, close_first_offseason).
+		if draft != null and draft.intake_mode:
+			list = list + (draft.club_lists.get(code, []) as Array)
 		var why_not := RookieList.add_block(list, "senior")
 		var no_spot := why_not != ""
 		if no_spot or int(o["salary"]) > _cap_room_of(code):
