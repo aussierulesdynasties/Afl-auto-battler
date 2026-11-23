@@ -42,8 +42,10 @@ LANDMARK_WAYS = {"33261083", "221441430", "33261092", "44158938", "1246185747", 
                  "1507403839", "1507403840"}  # HOME Docklands' two towers (101 m): OpenStreetMap has no height for them
 # City of Melbourne structures modelled in landmarks.py instead (round 10 audit: plain boxes within 250 m), and the
 # stadium's own structure (8392), whose upper parts fell outside its outline and floated over the east offices.
-LANDMARK_SIDS = {10757, 16888, 3046}
-DROP_SIDS = {8392}
+LANDMARK_SIDS = {10757, 16888, 3046, 6153, 9966, 9967}  # round 12: 6153, 9966, 9967 modelled in landmarks.py (c_nw, c_sw roofs)
+# 8392: the stadium's own floating parts. 1044-1055: Central Pier's sheds and kiosks over the harbour; the pier was
+# closed in 2023 and its sheds are gone from Google Earth (PC check of round 11, top and obl_se).
+DROP_SIDS = {8392} | set(range(1044, 1056))
 
 # Colours: Google Earth's over Docklands, painted through the match light's measured response (GroundModels
 # SURROUNDS tint 2.0, 1.4, 0.95, then about R 0.95x - 10, G 0.84x, B 0.85x on screen), so each renders as
@@ -330,8 +332,8 @@ def tree_list(trees, st):
         x, z = model_xz(e, n)
         if (st and _inside((e, n), st)) or abs(x) > 950 or abs(z) > 950:
             continue
-        if 130.0 < e < 165.0 and 0.0 < n < 75.0:
-            # mapped along Wurundjeri Way under the east offices, but Google Earth (c_e, ext_270) shows the strip bare
+        if 115.0 < e < 165.0 and 0.0 < n < 100.0:
+            # mapped along Wurundjeri Way under the east offices, but Google Earth (c_e, c_ne, ext_270) shows the strip bare
             continue
         h = rng.uniform(7.0, 15.0)
         r = h * rng.uniform(0.3, 0.4)
@@ -365,6 +367,22 @@ COM_URL = ("https://data.melbourne.vic.gov.au/api/explore/v2.1/catalog/datasets/
 COM_CACHE = "/tmp/marvel_com_2023.geojson"
 
 
+# Round 12: the model's z 0 is 2.6 m above sea level (Google Earth reads the turf at 8 m above sea level, our turf sits at
+# z 5.4). The city's massing gives each part's heights above sea level; the ground rises from about 2 m by the harbour to
+# 15-25 m in the city to the east, and the parts had been stood on z 0 with their heights above their own ground, so
+# buildings on the rise were 6-20 m too low (ext_000: Google Earth's camera at 74 m above sea level looks level over a
+# roof at 69.5 m, ours sat at 49.5 m). The model has no terrain yet, so a part that starts at its ground still starts at
+# z 0 and runs up to its true top.
+SEA_TO_MODEL = -2.6
+
+
+def model_heights(q, rel_base):
+    """(base, top) in the model's z for a City of Melbourne massing part."""
+    top = q["footprint_max_elevation"] + SEA_TO_MODEL
+    base = 0.0 if rel_base < 0.5 else max(0.0, q["footprint_min_elevation"] + SEA_TO_MODEL)
+    return base, max(top, base + 0.6)
+
+
 def com_massing(st, skip_polys):
     """Records for buildings.bin's stacked form: -n, top, base, structure id, then x, z per point.
     Leaves out the stadium and the hand-modelled landmarks (any part whose middle falls in them)."""
@@ -383,6 +401,7 @@ def com_massing(st, skip_polys):
         top = q["footprint_max_elevation"] - q["structure_min_elevation"]
         if top - base < 0.6 or top < 2.0:
             continue
+        base, top = model_heights(q, base)
         sid = float(int(q["structure_id"]) % 100000)
         if int(sid) in LANDMARK_SIDS or int(sid) in DROP_SIDS:
             continue
@@ -419,6 +438,7 @@ def com_parts(sids, skip_polys=()):
         top = q["footprint_max_elevation"] - q["structure_min_elevation"]
         if top - base < 0.6 or top < 2.0:
             continue
+        base, top = model_heights(q, base)
         g = f["geometry"]
         for poly in ([g["coordinates"]] if g["type"] == "Polygon" else g["coordinates"]):
             ring = [xy(lat, lon) for lon, lat in poly[0]][:-1]

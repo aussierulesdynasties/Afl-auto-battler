@@ -53,7 +53,7 @@ def curtain(name, glass, frame, bay=1.5, floor=3.6, px=24, slab=0.35, noise=8.0,
     _save(name, img)
 
 
-def panels(name, colour, joint, w=1.5, h=1.2, px=24, noise=5.0, holes=None):
+def panels(name, colour, joint, w=1.5, h=1.2, px=24, noise=5.0, holes=None, hole_size=0.6, hole_p=0.5):
     """Flat cladding panels with dark joints. One tile is 4 by 4 panels."""
     W, H = int(4 * w * px), int(4 * h * px)
     img = np.zeros((H, W, 3), float)
@@ -69,11 +69,50 @@ def panels(name, colour, joint, w=1.5, h=1.2, px=24, noise=5.0, holes=None):
         # small dark triangular openings in about half the panels (NAB's silver sections, ge c_e)
         for j in range(4):
             for i in range(4):
-                if RNG.random() < 0.5:
-                    x0, y0 = int((i + 0.3) * w * px), int((j + 0.2) * h * px)
-                    for r in range(int(0.6 * h * px)):
-                        img[y0 + r, x0:x0 + int((0.6 * h * px - r) * 0.5)] = holes
+                if RNG.random() < hole_p:
+                    x0, y0 = int((i + 0.5 * (1 - hole_size)) * w * px), int((j + 0.5 * (1 - hole_size)) * h * px)
+                    hh = int(hole_size * h * px)
+                    for r in range(hh):
+                        # point down in one panel, up in the next, as the real screen's folded triangles
+                        k = r if (i + j) % 2 == 0 else hh - 1 - r
+                        ww = int((hh - k) / hh * hole_size * w * px)
+                        xs = x0 + (int(hole_size * w * px) - ww) // 2
+                        img[y0 + r, xs:xs + ww] = holes
     _save(name, img)
+
+
+def solar_roof(name, px=16):
+    """A roof under solar arrays: dark grey-navy membrane, panel rows 1.0 m deep in runs, 0.6 m pale walkways every
+    4 rows. 8 m by 8 m a tile."""
+    W = H = 8 * px
+    rng = np.random.default_rng(31)
+    img = np.zeros((H, W, 3), float) + (88, 94, 104) + rng.normal(0, 3.0, (H, W, 3))
+    y = (np.arange(H) + 0.5) / px
+    x = (np.arange(W) + 0.5) / px
+    for k in range(8):
+        if k % 4 == 3:
+            img[(y >= k) & (y < k + 0.6)] = (150, 152, 150)
+            continue
+        rows = (y >= k + 0.05) & (y < k + 0.95)
+        img[np.ix_(rows, (x % 2.0) < 1.94)] = (40, 48, 64)
+        img[np.ix_(rows, (x % 2.0) >= 1.94)] = (120, 124, 128)
+    _save(name, img)
+    TILE[name] = (8.0, 8.0)
+
+
+def stripe_roof(name, px=16):
+    """A white roof membrane with long runs of blue solar panels, 2.4 m of panels to 2.0 m of white, as Google Earth's
+    c_nw foreground roof shows. 8.8 m by 8.8 m a tile."""
+    W = H = int(8.8 * px)
+    rng = np.random.default_rng(37)
+    img = np.zeros((H, W, 3), float) + (214, 216, 214) + rng.normal(0, 3.0, (H, W, 3))
+    y = (np.arange(H) + 0.5) / px
+    x = (np.arange(W) + 0.5) / px
+    rows = (y % 4.4) < 2.4
+    img[np.ix_(rows, (x % 1.1) < 1.04)] = (58, 76, 112)
+    img[np.ix_(rows, (x % 1.1) >= 1.04)] = (150, 160, 176)
+    _save(name, img)
+    TILE[name] = (8.8, 8.8)
 
 
 def flat(name, colour, noise=4.0):
@@ -97,20 +136,25 @@ def make_textures():
     # own angle, and the panes vary pane to pane), and the pane grid shows: one glass a block, a lighter frame
     # and a larger tile (8 bays by 4 floors) so the per-pane tones do not repeat every 6 m.
     # Round 11 (PC check of round 10): blocks 1-2 read B-R +48 against Google Earth's +21, too blue: grey-navy
-    for nm, gl in (("nab_glass_a", (46, 60, 70)), ("nab_glass_b", (54, 68, 78)), ("nab_glass_c", (42, 54, 64)),
-                   ("nab_glass_d", (62, 76, 86)), ("nab_glass_w", (50, 63, 73))):
-        curtain(nm, gl, (84, 96, 106), bay=1.5, floor=3.9, noise=10.0, nb=8, nf=4)
+    # Round 12 (PC check of round 11): the east glass overshot to grey, (68, 88, 104) B-R 36 against Google Earth's
+    # (56, 83, 109) B-R 52: about 10 less red and 6 more blue
+    for nm, gl in (("nab_glass_a", (36, 58, 78)), ("nab_glass_b", (44, 66, 86)), ("nab_glass_c", (32, 52, 72)),
+                   ("nab_glass_d", (52, 74, 94)), ("nab_glass_w", (40, 61, 81))):
+        curtain(nm, gl, (74, 92, 110), bay=1.5, floor=3.9, noise=10.0, nb=8, nf=4)
         TILE[nm] = (12.0, 15.6)
     # the roof (Google Earth obl_e, nabroof1): dark grey membrane under a grid of solar panels and glazing
-    panels("nab_roof", (72, 78, 90), (54, 58, 66), w=2.0, h=1.0, noise=6.0)  # round 11: PC read it too pale
-    TILE["nab_roof"] = (8.0, 4.0)
-    flat("nab_rooflight", (58, 68, 80), noise=5.0)
+    # round 12 (Google Earth obl_e close up): dark grey-navy roof covered in rows of dark solar panels with pale
+    # walkways between them
+    solar_roof("nab_roof")
+    flat("nab_rooflight", (68, 94, 100), noise=5.0)  # teal glass pyramids (ge12b nab_top); round 12 self-check: greyer, it read a teal block
     flat("roof_garden", (92, 104, 70), noise=12.0)
     # PC check round 2: the north tip's panels rendered (88, 105, 136) against GE (60, 87, 113): greyer, darker
-    panels("nab_silver", (150, 166, 178), (118, 130, 142), w=1.5, h=1.3, holes=(52, 58, 66))
+    # round 12 (PC check: dots, where Google Earth shows dark triangular openings): big triangles in most panels
+    panels("nab_silver", (160, 174, 184), (128, 138, 148), w=1.5, h=1.3, holes=(46, 54, 64), hole_size=0.85, hole_p=0.85)
     TILE["nab_silver"] = (6.0, 5.2)
     flat("fin_white", (232, 234, 236))
-    flat("corner_red", (176, 104, 88))  # copper red-brown: GE in sun (184, 113, 94); (206, 118, 90) rendered orange
+    flat("corner_red", (176, 104, 88))
+    flat("nab_terra", (150, 74, 54), noise=8.0)  # the roof's folded plates: darker brick-red than the slots (PC round 11)  # copper red-brown: GE in sun (184, 113, 94); (206, 118, 90) rendered orange
     flat("roof_grey", (138, 138, 134), noise=6.0)
     flat("roof_dark", (78, 82, 88), noise=6.0)
     # Southern Cross's roof: pale weathered metal, the valleys' glazing grey-blue, the sides' louvres
@@ -127,31 +171,52 @@ def make_textures():
     TILE["dark_glass"] = (7.2, 4.8)
     # the two sawtooth towers north-east of the ground (PC check round 7, like for like with the sun where Google Earth's
     # was): Google Earth reads their glass bands (88, 110, 124) and their pale bands (153, 167, 173), a blue-grey tower
-    curtain("grey_glass", (84, 98, 108), (110, 116, 120), bay=1.8, floor=2.4, slab=0.0, noise=6.0)  # round 11: PC read the towers too dark
-    panels("band_panel", (222, 224, 224), (196, 198, 200), w=1.8, h=1.4)
+    curtain("grey_glass", (46, 54, 62), (70, 76, 82), bay=1.8, floor=2.4, slab=0.0, noise=4.0)  # round 12: the balconies' dark recesses
+    # round 12 (PC check of round 11): they read white-grey; Google Earth shows grey walls with dark balconies
+    panels("band_panel", (166, 170, 172), (150, 154, 156), w=1.8, h=1.4)
     TILE["band_panel"] = (7.2, 5.6)
     TILE["grey_glass"] = (7.2, 4.8)
     # round 10: the round office reads dark glass in Google Earth (ext_090, c_w): dark panes, grey frames
     curtain("office_glass", (50, 64, 78), (110, 118, 124), bay=1.5, floor=2.7, slab=0.0, noise=8.0)
     TILE["office_glass"] = (6.0, 5.4)
     flat("white_band", (226, 228, 228))
+    # round 12 (own audit of the round 11 PC renders): the round office read light blue-grey bands; Google Earth
+    # (ext_045, c_sw) shows dark glass bands with thin pale rails
+    flat("round_glass", (40, 52, 64), noise=3.0)
+    flat("seven_glass", (66, 94, 124), noise=4.0)
+    stripe_roof("stripe_roof")
+    flat("roof_white", (214, 216, 212), noise=4.0)  # the former Seven building's blue curtain wall (seven_w, c_nw)
+    # round 12 (PC check of round 11): Victoria Point's glass is blue under its white slab edges, not green-grey
+    curtain("vp_glass", (60, 84, 110), (88, 104, 120), bay=1.5, floor=3.05, slab=0.0, noise=3.0)
+    TILE["vp_glass"] = (6.0, 6.1)
+    # round 12 (PC check of round 11): 720 Bourke still read blue mottling; Google Earth shows crisp white wavy
+    # balcony bands over dark glass, and a glass atrium roof. One flat dark glass (no pane-to-pane tone to mottle)
+    flat("bourke_glass", (40, 50, 60), noise=2.0)
+    panels("atrium_glass", (140, 150, 156), (176, 180, 182), w=3.0, h=1.5, noise=4.0)  # self-check: (118,138,150) read a blue lid
+    TILE["atrium_glass"] = (6.0, 3.0)
     # round 10: HOME Docklands' two towers north-west of the ground (Google Earth obl_n, obl_nw, ext_135): dark
     # navy glass in a white frame grid, about 1.4 m windows every 1.6 m
     flat("home_frame", (214, 216, 214))
-    flat("home_glass", (76, 84, 90), noise=5.0)  # round 11: read lilac in sun
+    # round 11 read lilac in sun at (76, 84, 90); round 12 (PC check of round 11): far too light, Google Earth is dark
+    # navy glass in the white grid
+    flat("home_glass", (40, 52, 70), noise=3.0)
     flat("near_wall", (200, 202, 200))
     panels("plaza_red", (186, 128, 112), (164, 116, 102), w=1.2, h=0.6, noise=8.0)
     TILE["plaza_red"] = (4.8, 2.4)
     flat("tree_leaf", (70, 88, 52), noise=10.0)
     # 720 Bourke's slab edges (round 11, PC check: far too pale, mottled): off-white over a mid-grey balustrade, low
     # contrast, so the sub-pixel bands at range average to Google Earth's grey instead of a moire of white on dark
-    flat("bourke_edge", (184, 188, 188), noise=2.0)
+    # round 12 (PC check of round 11): white wavy bands, crisp (the grey of round 11 lost them)
+    flat("bourke_edge", (226, 228, 228), noise=2.0)
     graffiti("graffiti")
-    TILE["graffiti"] = (24.0, 4.0)  # the low offices south of Bourke Street: white-grey walls (obl_s)
+    TILE["graffiti"] = (48.0, 4.0)
+    ivy("ivy")
+    TILE["ivy"] = (6.0, 4.0)  # the low offices south of Bourke Street: white-grey walls (obl_s)
     # PC check round 2: Google Earth reads the two curved towers west of the ground as green-grey glass
     curtain("tower_glass", (84, 102, 98), (120, 132, 128), bay=1.5, floor=3.05, slab=0.0, noise=9.0)
     TILE["tower_glass"] = (6.0, 6.1)
-    flat("balustrade", (128, 138, 144), noise=2.0)  # round 11: PC read 720 Bourke far too pale, mottled
+    # round 12 self-check (obl_s): the bands must read about half the face: the balustrades are solid white upstands
+    flat("balustrade", (212, 214, 214), noise=2.0)
     flat("steel", (196, 198, 200))
     flat("steel_dark", (196, 200, 198))  # galvanised, light in Google Earth
     flat("rock_a", (156, 150, 138), noise=10.0)
@@ -160,7 +225,7 @@ def make_textures():
     flat("timber", (74, 64, 52))
     flat("concrete_deck", (170, 168, 160))
     for n in ("bourke_edge", "home_frame", "home_glass", "near_wall", "tree_leaf", "fin_white", "corner_red", "roof_grey", "roof_dark", "sx_glass", "podium_glass", "white_band", "steel", "rock_a", "rock_b",
-              "timber", "concrete_deck", "balustrade", "slab_grey", "steel_dark"):
+              "timber", "concrete_deck", "balustrade", "slab_grey", "steel_dark", "round_glass", "bourke_glass", "seven_glass", "roof_white"):
         TILE[n] = (4.0, 4.0)
 
 
@@ -409,7 +474,9 @@ def nab(g, ring, h=72.0):
                 n = outward(p0, p1)
                 f = ((s0 + (j + 0.5) * (s1 - s0) / k) / L)
                 if name == "west":
-                    mat = "nab_glass_w"
+                    # round 12 (Google Earth nab_nw, PC check obl_nw: ours read dark navy): the west face is tall bands
+                    # of light grey panels with dark triangular openings alternating with dark glass under white shades
+                    mat = "nab_silver" if j % 2 == 0 else "nab_glass_w"
                 elif name == "east":
                     mat = "nab_silver" if f > 0.88 else ("nab_glass_a", "nab_glass_b", "nab_glass_c", "nab_glass_d")[bi // 2]
                 else:
@@ -451,13 +518,16 @@ def nab(g, ring, h=72.0):
                     # Round 8: the east face's shades read 28% of it on the PC against Google Earth's 10.6%: 2.4 m by 3.9 m.
                     # Round 9: Google Earth's east shades are slim (about 1.7 m by 3.5 m), every 4.5 m, and the rows are
                     # uneven, about a third of the places empty: PC measured ours 19.6% white against its 10.6%.
-                    sw, sp, sh, st = (4.2, 4.8, 7.0, 1.6) if name == "west" else (1.7, 4.5, 3.5, 2.2)
+                    # Round 12 (PC check: the east shades sat on a regular grid; Google Earth's run in staggered
+                    # diagonals rising to the right, about 60 degrees, some places empty): one every 9 m along a row,
+                    # each floor's row stepped 2.2 m on, about one in six left out, a little jitter
+                    # Round 12 (nab_nw): the west face's glass bands carry them as the east's do, a little larger
+                    sw, sp, sh, st = (2.4, 6.0, 4.0, 2.2) if name == "west" else (1.7, 9.0, 3.5, 2.2)
                     for r, z in enumerate(np.arange(base + 1.0, top - sh - 0.9, 3.9)):
                         for s_ in np.arange((r * st - u) % sp, w - sw - 0.2, sp):
-                            if name != "west":
-                                if rng.random() > 0.45:  # round 10: PC 15% white against GE 11%
-                                    continue
-                                s_ = float(np.clip(s_ + rng.uniform(-0.5, 0.5), 0.0, w - sw - 0.2))
+                            if rng.random() < 0.16:
+                                continue
+                            s_ = float(np.clip(s_ + rng.uniform(-0.3, 0.3), 0.0, w - sw - 0.2))
                             s_ = float(s_) + 0.2  # clear of the facet edge
                             lean = (lean0 + (lean1 - lean0) * (s_ / w)) * ((z - base) / (top - base))
                             shade(g, "fin_white", p0 + t * s_ + lean + n * 0.6, t, n, sw, sh, 0.35, z)  # 0.6 m clears the folded facet, which is not flat
@@ -512,10 +582,10 @@ def _clip_line(p, d, tri):
 
 
 def nab_roof(g, rim, P, top):
-    """NAB's roof as Google Earth's obl_e shows it (nabroof1, 2026-11-23), replacing the round 1-9 pyramid: a flat
-    dark grey roof under a grid of solar panels inside the parapet; rows of sawtooth rooflights over its southern
-    half; a cluster of round cooling towers and a plant room towards the north; and over the middle of the east
-    face, between the second and third blocks, a sunken roof garden ringed by red-orange folded plates."""
+    """NAB's roof as Google Earth's straight-down shot shows it (ge12b nab_top, 2026-11-23): a flat dark grey roof
+    under solar arrays with walkways; a field of small teal pyramid rooflights over the middle; round cooling
+    towers and a plant room towards the north; a garden strip with a kerb along the east parapet (0.27-0.62 of the
+    east face); and two short runs of brick-red folded plates inside it. No sawtooth rows."""
     z = top + 0.3
     g.cap("nab_roof", rim, z)
     tri = [np.array(q) for q in ccw([tuple(q) for q in (P[0], P[1], P[2])])]
@@ -525,68 +595,56 @@ def nab_roof(g, rim, P, top):
     in_e = -outward(B, C)
     Le = float(np.linalg.norm(C - B))
     inner = [np.array(q) for q in inset([tuple(q) for q in tri], 6.0)]
-    # sawtooth rooflights: rows square to the east face every 5 m over its southern half, each a glass slope 2 m
-    # deep rising 1 m, its upright back in roof grey
-    for s0 in np.arange(0.06, 0.26, 0.05):
-        pa = B + te * (s0 * Le)
-        seg = _clip_line(pa, in_e, inner)
-        if seg is None:
-            continue
-        a, b = seg
-        a = a + in_e * 2.0
-        g.poly("nab_rooflight", [(*a, z), (*b, z), (*(b + te * 2.0), z + 1.0), (*(a + te * 2.0), z + 1.0)])
-        g.poly("roof_grey", [(*(a + te * 2.0), z), (*(a + te * 2.0), z + 1.0), (*(b + te * 2.0), z + 1.0), (*(b + te * 2.0), z)])
-    # the west part's rooflights: rows parallel to the west face (C to A), over the half nearest it
     tw = (A - C) / np.linalg.norm(A - C)
     in_w = -outward(C, A)
-    for d in (10.0, 15.0, 20.0):
-        seg = _clip_line(C + in_w * d, tw, inner)
-        if seg is None:
-            continue
-        a, b = seg
-        a = a + tw * 8.0
-        b = b - tw * 8.0
-        if np.dot(b - a, tw) < 4.0:
-            continue
-        g.poly("nab_rooflight", [(*a, z), (*b, z), (*(b + in_w * 2.0), z + 1.0), (*(a + in_w * 2.0), z + 1.0)])
-        g.poly("roof_grey", [(*(a + in_w * 2.0), z), (*(a + in_w * 2.0), z + 1.0), (*(b + in_w * 2.0), z + 1.0), (*(b + in_w * 2.0), z)])
-    # the roof garden: sunken 1 m, 0.34 to 0.56 of the east face, 3 to 13 m in
-    g0, g1, d0, d1 = 0.34 * Le, 0.56 * Le, 3.0, 13.0
+    # Round 12 (Google Earth obl_e close up, ge12): no sawtooth rows (the roof is solar arrays edge to edge, in
+    # nab_roof's texture); the garden sits right behind the east parapet over the second block, 0.29 to 0.48 of the
+    # face, sunken 1 m; the folded brick-red plates are one patch: a band behind the garden and, over the third
+    # block, right up to the parapet. Round 11's strip along the whole parapet and three stepped rows were too much.
+    # Round 12 (Google Earth straight down on the roof, ge12b nab_top): the garden runs along the east parapet from
+    # 0.27 to 0.62 of the east face, about 12 m deep; inside it a zigzag strip of brick-red folded plates from 0.33 to
+    # 0.87, 12 to 26 m in; south-west of those a field of small glass pyramids (rooflights) in staggered rows; the rest
+    # of the roof is solar arrays (nab_roof's texture). No sawtooth rows.
+    # (the cap is one polygon, so the garden is laid on it inside a 0.6 m planter kerb, not sunk through it)
+    g0, g1, d0, d1 = 0.27 * Le, 0.62 * Le, 0.8, 12.0
     q = [B + te * g0 + in_e * d0, B + te * g1 + in_e * d0, B + te * g1 + in_e * d1, B + te * g0 + in_e * d1]
-    g.poly("roof_garden", [(*x, z - 1.0) for x in ccw([tuple(x) for x in q])])
+    g.poly("roof_garden", [(*x, z + 0.05) for x in ccw([tuple(x) for x in q])])
     for i in range(4):
-        a, b = q[i], q[(i + 1) % 4]
-        g.poly("roof_grey", [(*a, z - 1.0), (*b, z - 1.0), (*b, z), (*a, z)])
-        g.poly("roof_grey", [(*b, z - 1.0), (*a, z - 1.0), (*a, z), (*b, z)])
-    for k in range(7):  # planter shrubs
-        c = B + te * (g0 + (g1 - g0) * (k + 0.5) / 7) + in_e * (d0 + 2.0 + 6.0 * (k % 2))
-        r = cylinder_ring(c, 1.1, 6)
-        g.prism(r, z - 1.0, z + 0.4, "roof_garden", top="roof_garden")
-    # the red-orange folded plates: a strip from 0.27 to 0.63 of the face, from the parapet in to 18 m behind the
-    # garden, folded as a zigzag of triangles rising 2.6 m (Google Earth: terracotta triangles round the garden)
-    def folded(p0, p1, w_dir, width, n, zb=0.0):
-        zz = z + zb
+        a_, b_ = q[i], q[(i + 1) % 4]
+        g.poly("roof_grey", [(*a_, z), (*b_, z), (*b_, z + 0.6), (*a_, z + 0.6)])
+        g.poly("roof_grey", [(*b_, z), (*a_, z), (*a_, z + 0.6), (*b_, z + 0.6)])
+    rng = np.random.default_rng(71)
+    for k in range(16):  # shrubs and small trees along the garden
+        c = B + te * (g0 + (g1 - g0) * (k + 0.5) / 16) + in_e * rng.uniform(d0 + 1.5, d1 - 1.5)
+        if k % 4 == 1:
+            tree(g, c, z, 4.5, 1.8)
+        else:
+            g.prism(cylinder_ring(c, 1.0, 6), z, z + 1.0, "roof_garden", top="roof_garden")
+
+    def folded(p0, p1, w_dir, width, n, rise=2.4):
+        """A zigzag of folded plates: n diamonds along p0-p1, each ridge rising `rise` at its middle."""
         L = float(np.linalg.norm(p1 - p0)); t = (p1 - p0) / L
-        row0 = [p0 + t * L * i / n for i in range(n + 1)]
         for i in range(n):
-            a0, a1 = row0[i], row0[i + 1]
-            b0, b1 = a0 + w_dir * width, a1 + w_dir * width
-            h0 = zz + (2.6 if i % 2 == 0 else 0.0)
-            h1 = zz + (0.0 if i % 2 == 0 else 2.6)
-            g.poly("corner_red", [(*a0, zz), (*a1, h1), (*b1, zz)])
-            g.poly("corner_red", [(*a0, zz), (*b1, zz), (*b0, h0)])
-            g.poly("corner_red", [(*a0, zz), (*b0, h0), (*a1, h1)][::-1])
-            if zb > 0:  # the step's riser down to the roof
-                g.poly("corner_red", [(*a0, z), (*a1, z), (*a1, zz), (*a0, zz)])
-    # Round 11 (PC check of round 10, against Google Earth obl_e / nabroof1): the terracotta is a large stepped area of
-    # folded plates over the middle east blocks, not a thin strip: the front strip along the parapet, the two sides of
-    # the garden, and three stepped rows behind it, each 1.2 m higher than the last
-    s0, s1 = B + te * (0.27 * Le), B + te * (0.63 * Le)
-    folded(s0 + in_e * 0.6, s1 + in_e * 0.6, in_e, 2.4, 10)
-    folded(B + te * (0.27 * Le) + in_e * 3.0, B + te * (0.33 * Le) + in_e * 3.0, in_e, 10.0, 2, 0.6)
-    folded(B + te * (0.57 * Le) + in_e * 3.0, B + te * (0.63 * Le) + in_e * 3.0, in_e, 10.0, 2, 0.6)
-    for k in range(3):
-        folded(s0 + in_e * (13.0 + 5.0 * k), s1 + in_e * (13.0 + 5.0 * k), in_e, 5.0, 10, 1.2 * (k + 1))
+            a0 = p0 + t * L * i / n
+            a1 = p0 + t * L * (i + 1) / n
+            m = (a0 + a1) / 2 + w_dir * width / 2
+            peak = np.r_[m, z + rise]
+            for x0, x1 in ((a0, a1), (a1, a1 + w_dir * width), (a1 + w_dir * width, a0 + w_dir * width), (a0 + w_dir * width, a0)):
+                g.poly("nab_terra", [(*x0, z), (*x1, z), tuple(peak)])
+    folded(B + te * (0.33 * Le) + in_e * 12.5, B + te * (0.87 * Le) + in_e * 12.5, in_e, 7.0, 9)
+    folded(B + te * (0.40 * Le) + in_e * 19.5, B + te * (0.80 * Le) + in_e * 19.5, in_e, 6.5, 6)
+    # the rooflight pyramids: teal glass in staggered rows, about 4.5 m square in nab_top (20 px at 0.26 m a pixel)
+    for r in range(6):
+        for c_ in range(9):
+            f_ = 0.10 + 0.042 * c_ + 0.021 * (r % 2)
+            d_ = 15.0 + 5.5 * r
+            ctr = B + te * (f_ * Le) + in_e * d_
+            if not _inside(tuple(ctr), [tuple(x) for x in inner]):
+                continue
+            sq = [ctr + (te * sx + in_e * sy) * 2.2 for sx, sy in ((-1, -1), (1, -1), (1, 1), (-1, 1))]
+            for i in range(4):
+                g.poly("nab_rooflight", [(*sq[i], z), (*sq[(i + 1) % 4], z), (*ctr, z + 2.0)])
+
     # plant: six round cooling towers and a plant room, north of the middle (Google Earth's white drums)
     cen = (A + B + C) / 3.0
     pc = cen + (C - cen) * 0.25 + in_e * 0.0
@@ -640,10 +698,18 @@ def seven(g, ring):
     # OpenStreetMap draws the drum as the arc of the footprint's first points; the block takes the chord
     arc = [q for q in ring if math.hypot(q[0] + 147.5, q[1] - 40.5) < 11.0]
     block = [q for q in ring if q not in arc[1:-1]]
-    banded(g, block, 0.0, 16.8, 4.2, 1.1, 3.5, 0.35, "pale_panel", "dark_glass")
+    # round 12 (PC check of round 11, c_nw; Google Earth seven_w, seven_nw close up): its walls are a blue glass
+    # curtain wall with thin pale spandrels, not pale panels with ribbon windows
+    banded(g, block, 0.0, 16.8, 4.2, 0.45, 4.0, 0.35, "pale_panel", "seven_glass")
     c = np.mean(np.array(block), 0)
     g.prism([tuple(c + (np.array(q) - c) * 0.4) for q in block], 16.8, 20.2, "pale_panel", top="roof_grey")
-    lattice_mast(g, "steel", (c[0] + 14.0, c[1] + 12.0), 20.2, 24.0)
+    # the mast is a slim lattice column standing against the west face, by Harbour Esplanade, from the ground to about
+    # 34 m (triangulated from seven_w: 0.82 of the way along the west wall from its south end); round 11 had it on the
+    # roof's east half, about 340 px left of Google Earth's in c_nw
+    a_, b_ = np.array((-168.6, 54.3)), np.array((-180.0, 87.7))
+    mp = a_ + (b_ - a_) * 0.82 - outward(tuple(a_), tuple(b_)) * 1.2  # the map draws this edge clockwise: minus is west
+    assert mp[0] < -178.5
+    lattice_mast(g, "steel", tuple(mp), 0.0, 28.0, w0=1.4, w1=0.9, bay=2.5)  # with its 6 m spike, 34 m
     d = (-147.5, 40.5)
     banded(g, cylinder_ring(d, 10.4, 28), 0.0, 12.6, 4.2, 1.0, 3.6, 0.3, "pale_panel", "dark_glass", parapet=0.6)
     banded(g, cylinder_ring(d, 8.2, 24), 12.6, 16.8, 4.2, 1.0, 3.6, 0.3, "pale_panel", "dark_glass", parapet=0.6)
@@ -653,7 +719,7 @@ def seven(g, ring):
 def round_office(g, ring, h=29.0):
     """The curved glass office south-west of the stadium on Harbour Esplanade (Google Earth
     ge_aflhouse_b, c_sw): eight floors of glass, each floor's slab edge a white band standing out."""
-    banded(g, ring, 0.0, h, h / 6, 0.55, 3.25, 0.3, "white_band", "office_glass", parapet=1.2)
+    banded(g, ring, 0.0, h, h / 6, 0.3, 3.4, 0.3, "white_band", "round_glass", parapet=1.2)  # round 12: thin pale rails
 
 
 def ferry(g, ring):
@@ -752,7 +818,7 @@ def jetty(g, ring, z=0.5):
     g.prism(ring, 0.0, z, "concrete_deck", top="concrete_deck")
 
 
-def balconies(g, ring, z0, z1, floor, depth, wave=0.0, seed=0):
+def balconies(g, ring, z0, z1, floor, depth, wave=0.0, seed=0, glass="tower_glass", roof="roof_grey"):
     """A residential tower of balconies: each floor a white slab edge on the footprint (pushed out by
     up to `wave` metres in a slow ripple that drifts floor to floor, as 720 Bourke's are), glass set
     back `depth` behind it, a glass balustrade at the slab edge."""
@@ -764,7 +830,7 @@ def balconies(g, ring, z0, z1, floor, depth, wave=0.0, seed=0):
     u = 0.0
     for i in range(len(core)):
         j = (i + 1) % len(core)
-        u += g.wall("tower_glass", core[i], core[j], z0, z1, u)
+        u += g.wall(glass, core[i], core[j], z0, z1, u)
     for f in range(nf + 1):
         z = z0 + f * fl
         if wave:
@@ -774,7 +840,7 @@ def balconies(g, ring, z0, z1, floor, depth, wave=0.0, seed=0):
                     for q, pp in zip(out, push)]
         else:
             edge = out
-        th = 0.3
+        th = 0.7  # round 12: crisp white bands that hold at range (0.45 still read grey in obl_e)
         for i in range(len(edge)):
             j = (i + 1) % len(edge)
             g.wall("bourke_edge", edge[i], edge[j], z - th, z)
@@ -782,7 +848,7 @@ def balconies(g, ring, z0, z1, floor, depth, wave=0.0, seed=0):
                 g.wall("balustrade", edge[i], edge[j], z, z + 1.05)
             g.poly("slab_grey", [(*edge[i], z), (*edge[j], z), (*core[j], z), (*core[i], z)][::-1])
             g.poly("slab_grey", [(*edge[i], z - th), (*edge[j], z - th), (*core[j], z - th), (*core[i], z - th)])
-    g.cap("roof_grey", out, z1)
+    g.cap(roof, out, z1)
 
 
 def gantries(g, W, step=55.0, reach=450.0):
@@ -908,6 +974,29 @@ def southern_cross(g, ring):
         g.poly("roof_grey", [(*a_, 6.4), (*b_, 6.4), (*b_, 7.0), (*a_, 7.0)])
 
 
+def sawtooth(g, ring, z, pitch=6.0, h=1.8):
+    """Rows of sawtooth rooflights over a roof's middle: each a white slope rising `h` over `pitch` to a glazed upright
+    face, the rows along the roof's longer side; solar panels on every other slope."""
+    rr = np.array(ring, float)
+    c0 = rr.mean(0)
+    ev, evec = np.linalg.eigh(np.cov((rr - c0).T))
+    ax = evec[:, 1]
+    cr = np.array([-ax[1], ax[0]])
+    pa, pc = (rr - c0) @ ax, (rr - c0) @ cr
+    poly = [tuple(q) for q in ring]
+    for k, s0 in enumerate(np.arange(pc.min() * 0.6, pc.max() * 0.6 - pitch, pitch)):
+        a0, a1 = pa.min() * 0.7, pa.max() * 0.7
+        p00, p10 = c0 + ax * a0 + cr * s0, c0 + ax * a1 + cr * s0
+        p01, p11 = c0 + ax * a0 + cr * (s0 + pitch), c0 + ax * a1 + cr * (s0 + pitch)
+        if not all(_inside(tuple(q), poly) for q in (p00, p10, p01, p11)):
+            continue
+        slope = "nab_roof" if k % 2 else "roof_white"
+        g.poly(slope, [(*p00, z), (*p10, z), (*p11, z + h), (*p01, z + h)])
+        g.poly("sx_glass", [(*p11, z), (*p01, z), (*p01, z + h), (*p11, z + h)])
+        g.poly("roof_white", [(*p00, z), (*p01, z + h), (*p01, z)])
+        g.poly("roof_white", [(*p10, z), (*p11, z), (*p11, z + h)])
+
+
 def near_buildings(g, W):
     """The buildings within about 250 m that were plain boxes (round 10 audit), each with its own look from Google Earth.
     - HOME Docklands, 685 La Trobe Street (2024): two towers north-west of the ground, 101 m and 28 floors (CTBUH;
@@ -918,10 +1007,15 @@ def near_buildings(g, W):
     for wid in ("1507403839", "1507403840"):
         # round 10 check: 1.4 m windows left the frame too thin and the towers read navy against Google Earth's
         # grey-white grid; the frame is 0.5 m and the glass a lighter blue-grey
-        banded(g, W[wid][1], 0.0, 101.0, 3.6, 0.5, 3.1, 0.0, "home_frame", "home_glass", top="roof_grey",
-               parapet=1.2, win=(1.1, 1.6))
+        # round 12 self-check (c_nw): still read white with dark windows; Google Earth's is dark glass in a thin white grid
+        banded(g, W[wid][1], 0.0, 101.0, 3.6, 0.25, 3.35, 0.0, "home_frame", "home_glass", top="roof_grey",
+               parapet=1.2, win=(1.4, 1.6))
+    # Round 12 (PC check of round 11): the city's massing for the two foreground roofs of c_nw and c_sw, which Google
+    # Earth shows in detail: 6153 (north-west, c_nw) blue glass under a white roof striped with solar panels; 9966 and
+    # 9967 (south-west, c_sw) white roofs with rows of sawtooth glazed rooflights and solar panels.
     looks = {10757: ("near_wall", "dark_glass", "roof_grey"), 16888: ("pale_panel", "dark_glass", "roof_grey"),
-             3046: ("pale_panel", "dark_glass", "roof_grey")}
+             3046: ("pale_panel", "dark_glass", "roof_grey"), 6153: ("pale_panel", "seven_glass", "stripe_roof"),
+             9966: ("near_wall", "dark_glass", "sawtooth"), 9967: ("near_wall", "dark_glass", "sawtooth")}
     skip = [p for t, p in W.values() if t.get("_id") in S.LANDMARK_WAYS and len(p) > 3]
     for sid, parts in S.com_parts(set(looks), skip).items():
         wall, glass, roof = looks[sid]
@@ -929,21 +1023,33 @@ def near_buildings(g, W):
             # Victoria Point's forecourt deck (10757's 0-9.5 m part): Google Earth (obl_s) shows its top as the
             # red-orange paved plaza between the tower and the stadium, (179, 128, 118), with planted beds and trees
             deck = sid == 10757 and base < 0.5
-            r_ = "plaza_red" if deck else roof
+            highest = top >= max(t_ for _, t_, _ in parts) - 0.01
+            r_ = "plaza_red" if deck else (roof if highest else "roof_grey")
+            if r_ == "sawtooth":
+                r_ = "roof_white"
+                sawtooth(g, ring, top)
             if top - base >= 3.0:
                 banded(g, ring, base, top, 3.6, 0.9, 2.9, 0.0, wall, glass, top=r_, parapet=0.0)
             else:
                 g.prism(ring, base, top, wall, top=r_)
             # roof plant on the offices (Google Earth ext_000: white plant boxes and ducts on light grey roofs)
-            if not deck and top > 20.0 and len(ring) >= 4:
+            if not deck and top > 20.0 and len(ring) >= 4 and sid in (10757, 16888, 3046):
                 rr = np.array(ring); c0 = rr.mean(0); ext = rr.max(0) - rr.min(0)
                 if min(ext) > 10.0:
-                    for dx, dy, w_, d_ in ((-0.2, -0.15, 5.0, 3.5), (0.15, 0.1, 4.0, 4.0), (0.0, 0.25, 6.0, 2.5)):
+                    # round 12 (PC check of round 11, ext_000): Google Earth's roofs carry a big plant room and several
+                    # white air-handling boxes; round 11's three small steel boxes read blue and too few
+                    rr_ = [tuple(q) for q in ring]
+                    pr = min(14.0, 0.3 * min(ext))
+                    if _inside(tuple(c0), rr_):
+                        g.prism([(c0[0] - pr, c0[1] - pr * 0.7), (c0[0] + pr, c0[1] - pr * 0.7), (c0[0] + pr, c0[1] + pr * 0.7),
+                                 (c0[0] - pr, c0[1] + pr * 0.7)], top, top + 4.5, "near_wall", top="roof_grey")
+                    for dx, dy, w_, d_ in ((-0.32, -0.25, 5.0, 3.5), (0.3, 0.22, 4.0, 4.0), (-0.05, 0.33, 6.0, 2.5),
+                                           (0.3, -0.3, 3.5, 3.5), (-0.33, 0.2, 4.5, 3.0)):
                         cc = c0 + np.array([dx * ext[0], dy * ext[1]])
-                        if _inside(tuple(cc), [tuple(q) for q in ring]):
+                        if _inside(tuple(cc), rr_):
                             g.prism([(cc[0] - w_ / 2, cc[1] - d_ / 2), (cc[0] + w_ / 2, cc[1] - d_ / 2),
-                                     (cc[0] + w_ / 2, cc[1] + d_ / 2), (cc[0] - w_ / 2, cc[1] + d_ / 2)], top, top + 2.2,
-                                    "steel", top="roof_grey")
+                                     (cc[0] + w_ / 2, cc[1] + d_ / 2), (cc[0] - w_ / 2, cc[1] + d_ / 2)], top, top + 2.4,
+                                    "near_wall", top="near_wall")
             if deck:
                 for gid in ("1507400706", "1507400707", "1507400708", "1507400709", "1507400710", "1507400711"):
                     bed = W[gid][1]
@@ -954,14 +1060,15 @@ def near_buildings(g, W):
                 rng_ = np.random.default_rng(31)
                 blk = [r2 for b2, t2, r2 in parts if b2 > 0.5] + skip
                 rr = np.array(ring)
-                for x_ in np.arange(rr[:, 0].min() + 6, rr[:, 0].max() - 6, 11.0):
-                    for y_ in np.arange(rr[:, 1].min() + 6, rr[:, 1].max() - 6, 11.0):
+                # round 12 (PC check of round 11): still too sparse; Google Earth's plaza reads half green: every 7.5 m
+                for x_ in np.arange(rr[:, 0].min() + 5, rr[:, 0].max() - 5, 7.5):
+                    for y_ in np.arange(rr[:, 1].min() + 5, rr[:, 1].max() - 5, 7.5):
                         q = (x_ + rng_.uniform(-3, 3), y_ + rng_.uniform(-3, 3))
                         if not _inside(q, [tuple(p_) for p_ in ring]) or any(_inside(q, [tuple(p_) for p_ in b_]) for b_ in blk):
                             continue
                         if any(_inside(q, [tuple(p_) for p_ in inset(b_, -4.0)]) for b_ in blk if len(b_) > 2):
                             continue
-                        g.prism(cylinder_ring(q, 2.2, 8), top, top + 0.45, "near_wall", top="roof_garden")
+                        g.prism(cylinder_ring(q, 2.9, 10), top, top + 0.45, "near_wall", top="roof_garden")
                         tree(g, q, top + 0.45, rng_.uniform(6.0, 9.0), rng_.uniform(2.2, 3.2))
 
 
@@ -978,21 +1085,117 @@ def tree(g, c, z, h, r):
 
 
 def graffiti(name, px=24):
-    """The concrete wall along Wurundjeri Way's rail side (Google Earth c_e, c_ne): pale grey concrete under dense
-    painted tags and pieces, mostly whites, greys and blacks with flecks of pale blue, pink and yellow, thickest at
-    eye height. 24 m by 4 m a tile."""
-    W, H = 24 * px, 4 * px
-    img = np.zeros((H, W, 3), float) + (184, 182, 174) + RNG.normal(0, 5.0, (H, W, 3))
-    cols = [(235, 235, 230), (60, 60, 66), (150, 150, 150), (130, 170, 196), (214, 150, 176), (220, 204, 120),
-            (110, 140, 190), (200, 200, 196), (90, 90, 96)]
+    """The concrete wall along Wurundjeri Way (Google Earth c_e, c_ne; PC zoom_wall of round 11): pale grey precast
+    panels with separate painted pieces and bare stretches between them, not an even confetti. A piece is either
+    big bubble lettering (blue or white fill, dark outline), a cluster of dark tags, or a smaller coloured throw-up.
+    48 m by 4 m a tile, so the pieces do not repeat often."""
+    from PIL import ImageDraw, ImageFont, ImageFilter
+    W, H = 48 * px, 4 * px
+    rng = np.random.default_rng(48)
+    base = np.zeros((H, W, 3), float) + (196, 194, 186) + rng.normal(0, 3.5, (H, W, 3))
+    x = (np.arange(W) + 0.5) / px
+    base[:, (x % 2.4) < 0.03] *= 0.82                     # precast panel joints
+    base[: int(0.25 * px)] *= 0.93                        # the coping's shadow line
+    base[int(H * 0.9):] *= 0.9                            # dirt at the foot
+    im = Image.fromarray(np.clip(base, 0, 255).astype(np.uint8), "RGB")
+    d = ImageDraw.Draw(im)
+    font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", int(1.7 * px))
+    letters = "ABCDEKMORSTWZ"
+    pos = 1.0
+    while pos < 46.0:
+        # round 12 self-check against Google Earth offices_ne / c_e: most of the wall is painted, the bare stretches short
+        kind = rng.choice(["piece", "piece", "tags", "throw", "bare"])
+        span = float(rng.uniform(2.5, 6.5))
+        if kind == "bare":
+            pos += span
+            continue
+        x0, y0 = int(pos * px), int(rng.uniform(0.6, 1.4) * px)
+        if kind == "piece":
+            fill = [(96, 132, 196), (232, 234, 236), (120, 160, 210), (210, 214, 222)][rng.integers(4)]
+            # each piece on its own painted ground, as Google Earth's read as coloured blocks from the road
+            bg = [(70, 96, 150), (150, 120, 168), (96, 150, 140), (200, 170, 96), (180, 96, 96)][rng.integers(5)]
+            d.rounded_rectangle((x0 - int(0.3 * px), int(0.35 * px), x0 + int((span + 0.3) * px), int(3.2 * px)),
+                                radius=int(0.6 * px), fill=bg)
+            word = "".join(rng.choice(list(letters), int(span / 1.3)))
+            for k, ch in enumerate(word):
+                cx = x0 + int(k * 1.25 * px)
+                d.text((cx, y0), ch, font=font, fill=(34, 36, 46), stroke_width=int(0.12 * px), stroke_fill=(34, 36, 46))
+                d.text((cx, y0), ch, font=font, fill=fill)
+        elif kind == "throw":
+            fill = [(214, 150, 176), (220, 204, 120), (150, 196, 170), (236, 236, 232)][rng.integers(4)]
+            for k in range(int(span / 1.6)):
+                cx, cy = x0 + int(k * 1.5 * px), y0 + int(0.4 * px)
+                d.ellipse((cx, cy, cx + int(1.3 * px), cy + int(1.4 * px)), fill=fill, outline=(40, 40, 46), width=int(0.08 * px))
+        else:   # dark tags: thin scribbled strokes
+            for _ in range(int(span * 3)):
+                cx, cy = x0 + rng.uniform(0, span * px), y0 + rng.uniform(0, 1.6 * px)
+                pts = [(cx + rng.uniform(-0.4, 0.4) * px, cy + rng.uniform(-0.3, 0.3) * px) for _ in range(5)]
+                d.line(pts, fill=(38, 38, 44), width=max(2, int(0.06 * px)))
+        pos += span + float(rng.uniform(0.3, 1.2))
+    im = im.filter(ImageFilter.GaussianBlur(0.6))
+    _save(name, np.asarray(im, float))
+
+
+def ivy(name, px=24):
+    """Ivy over the wall's NAB end (Google Earth c_e): dark and mid greens in leaf clumps. 6 m by 4 m a tile."""
+    from PIL import ImageFilter
+    W, H = 6 * px, 4 * px
+    rng = np.random.default_rng(6)
+    img = np.zeros((H, W, 3), float) + (62, 84, 48)
     yy, xx = np.mgrid[0:H, 0:W]
-    for _ in range(420):
-        cx, cy = RNG.uniform(0, W), RNG.uniform(H * 0.2, H * 0.98)
-        rx, ry = RNG.uniform(0.15, 0.7) * px, RNG.uniform(0.08, 0.35) * px
-        m = ((xx - cx) / rx) ** 2 + ((yy - cy) / ry) ** 2 < 1.0
-        m |= ((xx - cx + W) / rx) ** 2 + ((yy - cy) / ry) ** 2 < 1.0
-        img[m] = img[m] * 0.25 + np.array(cols[RNG.integers(len(cols))]) * 0.75
+    for _ in range(900):
+        cx, cy, r = rng.uniform(0, W), rng.uniform(0, H), rng.uniform(0.05, 0.18) * px
+        m = (xx - cx) ** 2 + (yy - cy) ** 2 < r * r
+        img[m] = [(48, 70, 38), (78, 104, 56), (96, 120, 66), (40, 58, 34)][rng.integers(4)]
+    _save(name, np.asarray(Image.fromarray(img.astype(np.uint8)).filter(ImageFilter.GaussianBlur(0.5)), float))
+
+
+def road(name, lanes, px=24, shoulder=0.8, lane=3.3, tile=12.0):
+    """A carriageway's surface, across its width and 12 m along: dark asphalt with solid edge lines and dashed lane
+    lines (3 m line, 9 m gap), as Google Earth shows Wurundjeri Way (round 11 PC: ours read pale grey)."""
+    Wm = lanes * lane + 2 * shoulder
+    W, H = int(Wm * px), int(tile * px)
+    rng = np.random.default_rng(lanes)
+    img = np.zeros((H, W, 3), float) + (70, 73, 75) + rng.normal(0, 4.0, (H, W, 3))
+    x = (np.arange(W) + 0.5) / px
+    y = (np.arange(H) + 0.5) / px
+    line = (206, 206, 200)
+    for e in (shoulder, Wm - shoulder):
+        img[:, np.abs(x - e) < 0.08] = line
+    for k in range(1, lanes):
+        e = shoulder + k * lane
+        m = np.abs(x - e) < 0.06
+        img[np.ix_(y < 3.0, m)] = line
+    # wheel tracks a shade darker down each lane
+    for k in range(lanes):
+        for f in (0.28, 0.72):
+            img[:, np.abs(x - (shoulder + (k + f) * lane)) < 0.35] *= 0.94
     _save(name, img)
+    TILE[name] = (Wm, tile)
+
+
+def road_strips(g, W):
+    """Wurundjeri Way's carriageways beside the stadium and the NAB as their own surface over the map (the map is
+    1 m a pixel and cannot carry lane lines): each OpenStreetMap way, as wide as its lanes, 4 cm over the ground."""
+    for wid in ("580628688", "580628689", "580628690", "580628691", "787871246", "790397545"):
+        t, p = W[wid]
+        lanes = int(t.get("lanes", "3"))
+        mat = "road%d" % lanes
+        if mat not in TILE:
+            road(mat, lanes)
+        Wm = TILE[mat][0]
+        pts = np.array(p, float)
+        v = 0.0
+        for i in range(len(pts) - 1):
+            a, b = pts[i], pts[i + 1]
+            L = float(np.linalg.norm(b - a))
+            if L < 0.1:
+                continue
+            tdir = (b - a) / L
+            n = np.array([-tdir[1], tdir[0]]) * Wm / 2
+            g.poly(mat, [(*(a - n), 0.04), (*(a + n), 0.04), (*(b + n), 0.04), (*(b - n), 0.04)][::-1],
+                   [(0.0, v), (Wm, v), (Wm, v + L), (0.0, v + L)][::-1])
+            v += L
 
 
 def graffiti_wall(g, W, h=3.4):
@@ -1013,6 +1216,13 @@ def graffiti_wall(g, W, h=3.4):
         for a, b in zip(line[:-1], line[1:]):
             g.wall(mat, a, b, -0.5, h, u)
             u += g.wall(mat, b, a, -0.5, h, u)
+        if mat == "graffiti":
+            # ivy over the painted wall's first 9 m at the NAB end, on its road face (Google Earth c_e)
+            a, b = line[0], line[1]
+            t = (b - a) / np.linalg.norm(b - a)
+            nrm = np.array([t[1], -t[0]])          # east, to the road
+            a2, b2 = a + nrm * 0.06, a + t * 9.0 + nrm * 0.06
+            g.wall("ivy", b2, a2, -0.5, h - 0.2) if np.dot(nrm, [1, 0]) > 0 else g.wall("ivy", a2, b2, -0.5, h - 0.2)
 
 
 def build():
@@ -1024,6 +1234,7 @@ def build():
     nab(g, W["221441430"][1], h=60.0)
     near_buildings(g, W)
     graffiti_wall(g, W)
+    road_strips(g, W)
     seven(g, W["33261092"][1])
     round_office(g, W["44158938"][1], h=21.6)  # six floors in Google Earth's ge_vicpoint_b
     ferry(g, W["1246185747"][1])
@@ -1031,12 +1242,16 @@ def build():
     # Round 11 (PC check): it read a plain grey slab; Google Earth shows white slab edges and balustrades a floor
     # (about a third of each floor) over blue-grey glass, and a crown stepped back over planted terraces
     vp = W["296368687"][1]
-    banded(g, vp, 0.0, 116.0, 3.05, 0.65, 2.6, 0.45, "white_band", "tower_glass", parapet=1.2, top="roof_garden")
-    banded(g, inset(vp, 3.5), 116.0, 128.0, 3.05, 0.65, 2.6, 0.45, "white_band", "tower_glass", parapet=1.5)
-    for k, q in enumerate(inset(vp, 1.7)[::3]):
-        tree(g, q, 117.2, 3.0, 1.2)
+    # Round 12 (PC check of round 11): crisper white edges over blue glass, and the crown stepped twice over planted
+    # terraces
+    banded(g, vp, 0.0, 110.0, 3.05, 0.75, 2.6, 0.45, "white_band", "vp_glass", parapet=1.2, top="roof_garden")
+    banded(g, inset(vp, 3.5), 110.0, 119.0, 3.05, 0.75, 2.6, 0.45, "white_band", "vp_glass", parapet=1.2, top="roof_garden")
+    banded(g, inset(vp, 7.0), 119.0, 128.0, 3.05, 0.75, 2.6, 0.45, "white_band", "vp_glass", parapet=1.5)
+    for zt, ring_ in ((111.2, inset(vp, 1.7)), (120.2, inset(vp, 5.2))):
+        for k, q in enumerate(ring_[::2]):
+            tree(g, q, zt, 3.0, 1.2)
     # 720 Bourke (109 m, 2014): rippling white balcony slabs, planted (ge_nab_b)
-    balconies(g, W["332358301"][1], 6.0, 109.0, 3.2, 1.6, wave=1.4)
+    balconies(g, W["332358301"][1], 6.0, 109.0, 3.2, 1.6, wave=1.4, glass="bourke_glass", roof="atrium_glass")
     g.prism(W["332358301"][1], 0.0, 6.0, "podium_glass", top=None)
     # the two sawtooth towers north of the stadium (ge_north65_b): white frames, grey glass
     # Round 10: Google Earth close up (ext_135) shows white panel walls with dark punched windows, not ribbons

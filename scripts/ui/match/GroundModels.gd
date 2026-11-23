@@ -521,10 +521,15 @@ static func _add_buildings(root: Node3D, buf: PackedFloat32Array, y: float, tint
 	const WALLS := [Color(0.86, 0.84, 0.8), Color(0.78, 0.76, 0.72), Color(0.72, 0.6, 0.5), Color(0.9, 0.88, 0.84),
 			Color(0.66, 0.66, 0.66)]
 	# Google Earth's Docklands: blue-grey and green-grey glass, pale and mid concrete, a little brick.
-	const GLASS := [Color8(68, 86, 102), Color8(58, 74, 90), Color8(82, 98, 110), Color8(48, 62, 78),
-			Color8(90, 104, 116), Color8(64, 82, 86)]
-	const CONCRETE := [Color8(190, 188, 182), Color8(165, 165, 160), Color8(200, 196, 186), Color8(150, 136, 122),
-			Color8(176, 180, 182), Color8(140, 142, 142)]
+	# Round 12 self-check (obl_s): with more of the towers glass, the darkest glass read navy where Google Earth's north
+	# towers are mid grey; the palette's floor raised.
+	const GLASS := [Color8(84, 100, 114), Color8(76, 92, 106), Color8(96, 110, 120), Color8(70, 84, 98),
+			Color8(104, 116, 126), Color8(80, 96, 100)]
+	# Marvel round 12 (own audit of the round 11 PC renders): the concrete towers read near-white with punched
+	# windows from every side (ext_180, obl_s, obl_se, obl_e), where Google Earth's read mid grey-blue: darker
+	# concrete, and more of the towers glass.
+	const CONCRETE := [Color8(150, 152, 150), Color8(132, 134, 134), Color8(160, 158, 150), Color8(128, 118, 108),
+			Color8(142, 148, 152), Color8(116, 120, 122)]
 	var i := 0
 	var b := 0
 	while i + 1 < buf.size():
@@ -551,7 +556,7 @@ static func _add_buildings(root: Node3D, buf: PackedFloat32Array, y: float, tint
 		if towers:
 			# The same building gets the same look every match: its pick hangs on its own corner.
 			var pick := absi(int(foot[0].x * 7.0) * 31 + int(foot[0].y * 3.0) * 17 + b) if id < 0 else id * 7919 % 100003
-			var glassy := (pick % 100) < ((75 if h > 30.0 else 30) if id < 0 else 60)
+			var glassy := (pick % 100) < ((85 if h > 30.0 else 40) if id < 0 else 70)
 			wall = GLASS[pick % GLASS.size()] if glassy else CONCRETE[pick % CONCRETE.size()]
 			wall.a = 1.0 if glassy else 0.5
 			roof = Color8(128, 128, 124) if glassy else wall.darkened(0.25)  # Google Earth's grey roofs (top view)
