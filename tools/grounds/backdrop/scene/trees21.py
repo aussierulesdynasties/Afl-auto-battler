@@ -57,18 +57,30 @@ def _flush():
         m = _FAR.get(key)
         _ca = (hi[0] - lo[0]) * (hi[1] - lo[1]) * 0.78
         _zc, _zr = (lo[2] + hi[2]) / 2, (hi[2] - lo[2]) / 2   # this tree's crown: its middle height and half its depth
-        if m is None: _FAR[key] = [lo.copy(), hi.copy(), np.array(col, float), 1, _BUF[0][6], _ca, _zc, _zr]
-        else: m[0] = np.minimum(m[0], lo); m[1] = np.maximum(m[1], hi); m[2] += col; m[3] += 1; m[5] += _ca; m[6] += _zc; m[7] += _zr
+        _xc, _yc = (lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2
+        _sm = np.array([1, _xc, _yc, _zc, _xc * _xc, _xc * _yc, _yc * _yc, _xc * _zc, _yc * _zc])   # for the slope's plane
+        if m is None: _FAR[key] = [lo.copy(), hi.copy(), np.array(col, float), 1, _BUF[0][6], _ca, _zc, _zr, _sm]
+        else: m[0] = np.minimum(m[0], lo); m[1] = np.maximum(m[1], hi); m[2] += col; m[3] += 1; m[5] += _ca; m[6] += _zc; m[7] += _zr; m[8] = m[8] + _sm
     _BUF = []
 _FAR = {}
 def _far_flush():
-    for (k, _, _), (lo, hi, cs, n, a, ca, zc, zr) in _FAR.items():
+    for (k, _, _), (lo, hi, cs, n, a, ca, zc, zr, sm) in _FAR.items():
         c = (lo + hi) / 2; r = (hi - lo) / 2 * 0.9
         f = min(1.0, math.sqrt(ca / max(1.0, 0.78 * (hi[0] - lo[0]) * (hi[1] - lo[1]))))   # the blob covers what the crowns covered
         # its height is the crowns' own depth at their mean height, not the cell's whole height range: on a hillside
         # that range takes in the slope and the blob stood up as a spike, so ridges read as a sawtooth
         c[2] = zc / n; r = np.array([r[0] * f, r[1] * f, min(r[2], 1.15 * zr / n)])
-        V = (OCT + rng.normal(0, 0.05, OCT.shape)) * r; _put(k, _rot(V, a) + c, OCTF, tuple(cs / n))
+        V = _rot((OCT + rng.normal(0, 0.05, OCT.shape)) * r, a)
+        # laid along the slope: the plane through the crowns' middles (a flat blob on a steep town belt stood out of the
+        # hill as a dark shelf, shards on the skyline)
+        N_, X_, Y_, Z_, XX, XY, YY, XZ, YZ = sm; gx_ = gy_ = 0.0
+        if N_ >= 3:
+            A_ = np.array([[XX - X_ * X_ / N_, XY - X_ * Y_ / N_], [XY - X_ * Y_ / N_, YY - Y_ * Y_ / N_]])
+            b_ = np.array([XZ - X_ * Z_ / N_, YZ - Y_ * Z_ / N_])
+            if abs(np.linalg.det(A_)) > 1e-3 * max(1.0, A_.trace()) ** 2: gx_, gy_ = np.clip(np.linalg.solve(A_, b_), -1.5, 1.5)
+        c[0], c[1] = X_ / N_, Y_ / N_
+        V[:, 2] += gx_ * V[:, 0] + gy_ * V[:, 1]
+        _put(k, V + c, OCTF, tuple(cs / n))
 def _trunk(k, x, y, z, r, h, col, lean=(0, 0)):
     if _LOD: return
     V = TRK * [r, r, h]; V[6:, :] = V[6:, :]; V[1::2, 0] += lean[0]; V[1::2, 1] += lean[1]; _put(k, V + [x, y, z], TRKF, col)
