@@ -490,6 +490,49 @@ def houses(sat, ways, th, keep_out, m):
     return n
 
 
+# The newest houses in the south-west estate, in neither OpenStreetMap nor Microsoft's footprints: traced on the
+# 2026 mosaic (work/z18.png) as (e0, n0, e1, n1), with the aerial's lean for a 4.5 m roof taken off (lean_view.LEAN).
+TRACED_HOUSES = [
+    (-979.3, -895.9, -960.3, -871.9), (-946.3, -902.9, -925.3, -879.9), (-973.3, -922.9, -951.3, -895.4),
+    (-960.3, -941.9, -937.3, -913.9), (-937.3, -934.9, -907.3, -903.9), (-888.3, -906.9, -865.3, -892.9),
+    (-885.3, -923.9, -860.3, -906.9), (-883.3, -966.9, -853.3, -937.9), (-855.3, -953.9, -835.3, -929.9),
+    (-792.8, -898.9, -775.3, -882.9), (-828.8, -917.9, -821.3, -909.9), (-925.3, -962.9, -902.8, -946.4),
+    (-919.3, -981.4, -900.3, -962.9), (-923.3, -995.9, -887.3, -979.9), (-945.3, -1008.9, -925.3, -982.9),
+    (-1000.3, -968.9, -965.3, -953.9), (-999.3, -992.9, -976.3, -968.9), (-1022.3, -1015.9, -1000.3, -991.9),
+    (-867.3, -1004.9, -841.3, -978.9), (-850.3, -1003.9, -832.3, -976.4), (-835.3, -1002.9, -816.3, -976.4),
+    (-974.3, -1026.9, -951.3, -1005.9),
+]
+
+
+def ms_buildings(ways):
+    """Microsoft's Global ML Building Footprints (ODbL; 2026-02 release, quadkey 311220301, cut to the land by
+    work/msbuildings.geojsonl, see README) for the houses OpenStreetMap lacks: the newer streets west of the ground
+    above all. A footprint is added when under a fifth of it overlaps a mapped building. Checked on the 2026 mosaic:
+    they sit on the roofs."""
+    import json
+    from shapely.geometry import Polygon
+    from shapely.strtree import STRtree
+    path = os.path.join(WORK, "msbuildings.geojsonl")
+    if not os.path.exists(path):
+        raise SystemExit("work/msbuildings.geojsonl missing (README: Microsoft building footprints)")
+    osm = [Polygon(p).buffer(0) for t, p in ways if "building" in t and len(p) >= 4]
+    tree = STRtree(osm)
+    out = []
+    for line in open(path):
+        f = json.loads(line)
+        pts = [en(la, lo) for lo, la in f["geometry"]["coordinates"][0]]
+        poly = Polygon(pts).buffer(0)
+        if poly.geom_type != "Polygon" or poly.area < 12:
+            continue
+        if any(poly.intersection(osm[i]).area > 0.2 * poly.area for i in tree.query(poly)):
+            continue
+        out.append(({"building": "yes", "source": "microsoft"}, list(poly.exterior.coords)))
+    print("Microsoft footprints added", len(out))
+    for e0, n0, e1, n1 in TRACED_HOUSES:
+        out.append(({"building": "house", "source": "traced"}, [(e0, n0), (e1, n0), (e1, n1), (e0, n1), (e0, n0)]))
+    return out
+
+
 def _roof_colour(rc):
     if rc is None:
         return (150, 150, 146)
@@ -654,7 +697,7 @@ def main():
     vm = Mesh()
     nv = vines(sat, ways, th, keep_out, vm)
     hm = Mesh()
-    nh = houses(sat, ways, th, lambda e, n: abs(e) < HOLE and abs(n) < HOLE, hm)
+    nh = houses(sat, ways + ms_buildings(ways), th, lambda e, n: abs(e) < HOLE and abs(n) < HOLE, hm)
     print("trees", len(tr), "vine segments", nv, "houses", nh, "land tris", land.tris(), "vine tris", vm.tris(),
           "house tris", hm.tris())
     from PIL import Image as _I

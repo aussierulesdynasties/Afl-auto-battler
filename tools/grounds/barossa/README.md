@@ -35,6 +35,7 @@ match ground plays at FIT["barossa"] in scripts/ui/match/GroundModels.gd (the bo
     python3 satmosaic.py 18 1600 0.5 work/z18.png    # measuring only (see Licences)
     python3 satmosaic.py 15 16000 10 work/z15.png
     python3 build.py      # assets/grounds/barossa/barossa.glb, seats, seat template
+    python3 msbuildings.py   # work/msbuildings.geojsonl (Microsoft building footprints)
     python3 land.py       # assets/grounds/barossa/barossa_land.glb, trees.bin
     python3 trees.py      # assets/grounds/barossa/barossa_gums.glb
     python3 far.py        # assets/grounds/barossa/barossa_far.glb
@@ -73,6 +74,7 @@ compare: the clubrooms, the three stands and the towers were re-placed with it (
 ## Licences
 
 - OpenStreetMap data © OpenStreetMap contributors, ODbL (building footprints, roads, the railway, land use).
+- Microsoft Global ML Building Footprints, ODbL: the houses OpenStreetMap lacks (msbuildings.py).
 - Terrarium elevation tiles (AWS Open Data, Mapzen terrain): open data with attribution.
 - Satellite imagery and photographs are used only to measure and compare. No pixel of them is in any texture: every
   texture is painted in code (paint.py, land.py), and none of these images is committed.
