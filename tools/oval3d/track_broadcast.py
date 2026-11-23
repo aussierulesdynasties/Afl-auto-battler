@@ -32,8 +32,10 @@ import numpy as np
 
 # mp_fit.py's joint order, and the COCO-17 index of each.
 J = ["shoulder_l", "shoulder_r", "elbow_l", "elbow_r", "wrist_l", "wrist_r",
-     "hip_l", "hip_r", "knee_l", "knee_r", "ankle_l", "ankle_r"]
-COCO = [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
+     "hip_l", "hip_r", "knee_l", "knee_r", "ankle_l", "ankle_r",
+     "nose", "ear_l", "ear_r", "toe_l", "heel_l", "toe_r", "heel_r"]
+# COCO-WholeBody: 0-16 the body, 17-22 the feet (big toe, small toe, heel; left then right).
+COCO = [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 0, 3, 4, 17, 19, 20, 22]
 TRUNK_M = 0.50     # shoulders' middle to hips' middle on our body, metres: sets the 3D guess's size
 Z_SCALE = 1.0      # RTMW3D's depth against its picture coordinates (calibrated: see roundtrip)
 
@@ -52,9 +54,9 @@ def detect(frames_dir, out, first=None, last=None):
     res = {}
     for i in range(a, b):
         k3, s, _, k2 = model(cv2.imread(files[i]))
-        k3 = np.asarray(k3)[:, :17]
-        res[i] = {"k2": np.asarray(k2)[:, :17].tolist(), "k3": k3.tolist(),
-                  "s": np.asarray(s)[:, :17].tolist()}
+        k3 = np.asarray(k3)[:, :23]
+        res[i] = {"k2": np.asarray(k2)[:, :23].tolist(), "k3": k3.tolist(),
+                  "s": np.asarray(s)[:, :23].tolist()}
         print(f"DETECT {i}: {len(k3)} people", flush=True)
     json.dump({"frames_dir": frames_dir, "det": res}, open(out, "w"))
 
@@ -119,7 +121,14 @@ def follow(det_path, out, hz, seeds):
     print(f"FOLLOW {len(got)} frames ({got[0] if got else '-'}..{got[-1] if got else '-'}) -> {out}")
 
 
-RTMPOSE_X = "rtmpose-x_simcc-body7_pt-body7_700e-384x288-71d7b7e9_20230629.onnx"
+RTMW3D_X = "rtmw3d-x_8xb64_cocktail14-384x288-b0a0eab7_20240626.onnx"
+
+
+def _reader():
+    """RTMW3D's pose model on its own, to read a man in a box we choose (whole body: feet, face)."""
+    from rtmlib.tools.pose_estimation.rtmpose3d import RTMPose3d
+    return RTMPose3d(os.path.join(os.path.expanduser("~/.cache/rtmlib/hub/checkpoints"), RTMW3D_X),
+                     model_input_size=(288, 384), backend="onnxruntime", device="cpu")
 
 
 def _upright_pose(model, img, c, side, ang):
@@ -131,7 +140,8 @@ def _upright_pose(model, img, c, side, ang):
     rot = cv2.warpAffine(img, M, (img.shape[1], img.shape[0]), flags=cv2.INTER_LINEAR,
                          borderMode=cv2.BORDER_CONSTANT)
     box = [c[0] - side * 0.5, c[1] - side * 0.5, c[0] + side * 0.5, c[1] + side * 0.5]
-    k, sc = model(rot, bboxes=[box])
+    r = model(rot, bboxes=[box])
+    k, sc = (r[3], r[1]) if len(r) == 4 else r
     Mi = cv2.invertAffineTransform(M)
     k = k[0] @ Mi[:, :2].T + Mi[:, 2]
     return k, sc[0]
@@ -151,7 +161,6 @@ def corridor(frames_dir, det_path, out, hz, seeds):
     a box on the path, turned upright by the trunk angle of the frames either side. Self-driven
     boxes drift onto other players (tried, 2026-11-23); a path set by eye does not."""
     import cv2
-    from rtmlib import RTMPose
     D = json.load(open(det_path))
     det = {int(k): v for k, v in D["det"].items()}
     files = frame_files(frames_dir)
@@ -178,8 +187,7 @@ def corridor(frames_dir, det_path, out, hz, seeds):
                 best = (d, k2, np.asarray(s))
         if best:
             got[i] = (best[1], best[2])
-    model = RTMPose(os.path.join(os.path.expanduser("~/.cache/rtmlib/hub/checkpoints"), RTMPOSE_X),
-                    model_input_size=(288, 384), backend="onnxruntime", device="cpu")
+    model = _reader()
     reread = 0
     for i in range(first, last + 1):
         if i in got:
@@ -198,7 +206,7 @@ def corridor(frames_dir, det_path, out, hz, seeds):
         reread += 1
     for i, (k2, s) in got.items():
         p2 = np.stack([k2[COCO, 0], -k2[COCO, 1]], 1)
-        frames[i] = {"p2": p2.tolist(), "p3": np.zeros((12, 3)).tolist(),
+        frames[i] = {"p2": p2.tolist(), "p3": np.zeros((len(J), 3)).tolist(),
                      "vis": np.clip(np.asarray(s)[COCO] / 10.0, 0.05, 1.0).tolist()}
     json.dump({"hz": float(hz), "size": [w, h], "frames": frames}, open(out, "w"))
     print(f"CORRIDOR {last - first + 1} frames ({first}..{last}), {reread} read again in a box -> {out}")
@@ -271,9 +279,7 @@ def refine(frames_dir, track, out, seeds):
     to the last: holds him where the detector loses him (horizontal, or tangled with the
     stepladder). Seeds FRAME:X,Y put the box on him (after a cut, or where it drifted)."""
     import cv2
-    from rtmlib import RTMPose
-    model = RTMPose(os.path.join(os.path.expanduser("~/.cache/rtmlib/hub/checkpoints"), RTMPOSE_X),
-                    model_input_size=(288, 384), backend="onnxruntime", device="cpu")
+    model = _reader()
     T = json.load(open(track))
     files = frame_files(frames_dir)
     seeds = {int(f): np.array([float(v) for v in xy.split(",")]) for f, xy in (s.split(":") for s in seeds)}
@@ -315,7 +321,7 @@ def refine(frames_dir, track, out, seeds):
             T["frames"].append(None)
         p2 = np.stack([k[COCO, 0], -k[COCO, 1]], 1)
         old = T["frames"][i] or {}
-        T["frames"][i] = {"p2": p2.tolist(), "p3": old.get("p3", np.zeros((12, 3)).tolist()),
+        T["frames"][i] = {"p2": p2.tolist(), "p3": old.get("p3", np.zeros((len(J), 3)).tolist()),
                           "vis": np.clip(sc[COCO] / 10.0, 0.05, 1.0).tolist(), "refined": True}
         n_out += 1
     # Frames outside the seeded span are dropped: the refined span is the clip.
@@ -338,7 +344,7 @@ def lift(frames_dir, track, model_path):
         base_options=mp.tasks.BaseOptions(model_asset_path=model_path),
         running_mode=mp.tasks.vision.RunningMode.IMAGE, num_poses=3,
         min_pose_detection_confidence=0.2, min_pose_presence_confidence=0.2)
-    MPI = [11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28]
+    MPI = [11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28, 0, 7, 8, 31, 29, 32, 30]
     got = 0
     with mp.tasks.vision.PoseLandmarker.create_from_options(opts) as lm:
         for i, f in enumerate(T["frames"]):

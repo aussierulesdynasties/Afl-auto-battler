@@ -30,16 +30,22 @@ from scipy.optimize import least_squares
 from scipy.sparse import lil_matrix
 
 J = ["shoulder_l", "shoulder_r", "elbow_l", "elbow_r", "wrist_l", "wrist_r",
-     "hip_l", "hip_r", "knee_l", "knee_r", "ankle_l", "ankle_r"]
+     "hip_l", "hip_r", "knee_l", "knee_r", "ankle_l", "ankle_r",
+     "nose", "ear_l", "ear_r", "toe_l", "heel_l", "toe_r", "heel_r"]
 MP = {"shoulder_l": 11, "shoulder_r": 12, "elbow_l": 13, "elbow_r": 14, "wrist_l": 15, "wrist_r": 16,
-      "hip_l": 23, "hip_r": 24, "knee_l": 25, "knee_r": 26, "ankle_l": 27, "ankle_r": 28}
+      "hip_l": 23, "hip_r": 24, "knee_l": 25, "knee_r": 26, "ankle_l": 27, "ankle_r": 28,
+      "nose": 0, "ear_l": 7, "ear_r": 8, "toe_l": 31, "heel_l": 29, "toe_r": 32, "heel_r": 30}
 MH = {"shoulder_l": "upperarm_l", "shoulder_r": "upperarm_r", "elbow_l": "lowerarm_l",
       "elbow_r": "lowerarm_r", "wrist_l": "hand_l", "wrist_r": "hand_r", "hip_l": "thigh_l",
       "hip_r": "thigh_r", "knee_l": "calf_l", "knee_r": "calf_r", "ankle_l": "foot_l", "ankle_r": "foot_r"}
 BONES = [("shoulder_l", "elbow_l"), ("elbow_l", "wrist_l"), ("shoulder_r", "elbow_r"),
          ("elbow_r", "wrist_r"), ("hip_l", "knee_l"), ("knee_l", "ankle_l"), ("hip_r", "knee_r"),
          ("knee_r", "ankle_r"), ("shoulder_l", "shoulder_r"), ("hip_l", "hip_r"),
-         ("shoulder_l", "hip_l"), ("shoulder_r", "hip_r")]
+         ("shoulder_l", "hip_l"), ("shoulder_r", "hip_r"),
+         # The head and the feet are rigid: they give the head's turn and the feet's point.
+         ("ear_l", "ear_r"), ("nose", "ear_l"), ("nose", "ear_r"),
+         ("ankle_l", "heel_l"), ("ankle_l", "toe_l"), ("heel_l", "toe_l"),
+         ("ankle_r", "heel_r"), ("ankle_r", "toe_r"), ("heel_r", "toe_r")]
 W_PRIOR = 0.15    # pull of the tracker's 3D guess, against 1.0 for the picture
 W_SMOOTH = 0.5    # frame-to-frame steadiness (on acceleration)
 W_BONE = 4.0      # bone lengths held
@@ -50,6 +56,8 @@ def bones_from_truth(joints_json):
     t = json.load(open(joints_json))
     out = {}
     for a, b in BONES:
+        if a not in MH or b not in MH:
+            continue
         ls = [np.linalg.norm(np.array(f[MH[a]]) - np.array(f[MH[b]])) for f in t["frames"]]
         out[f"{a}-{b}"] = float(np.median(ls))
     return out
@@ -120,7 +128,7 @@ def fit(p2, p3, vis, bones, contact=None, multi=False, stable=False):
     # Overall size: the picture cannot tell a big man far off from a small one near, and the
     # steadiness terms favour shrinking him, so each man's bones together are held to our body's
     # (BONES.json) or, without it, to the 3D guess's.
-    ref = np.array([bones[f"{a}-{b}"] for a, b in BONES]) if bones else bl0[:nb]
+    ref = np.array([bones.get(f"{a}-{b}", bl0[q]) for q, (a, b) in enumerate(BONES)]) if bones else bl0[:nb]
     bl0 = np.concatenate([bl0[k * nb:(k + 1) * nb] * (ref.sum() / max(1e-6, bl0[k * nb:(k + 1) * nb].sum())) for k in range(Pn)])
     x0 = np.concatenate([X0.reshape(-1), s0, t0.reshape(-1), bl0])
     px = float(np.median(s0))   # pixels per metre, to put the picture's error in metres
@@ -240,6 +248,25 @@ def main():
         # Both men in one solve, sharing the camera; FIRST:LAST: frames where his knee is in the
         # other's back.
         a, b = from_track(sys.argv[2]), from_track(sys.argv[3])
+        # Where both tracks took the same man (they cross at the contact), the one who jumped
+        # furthest from his own neighbouring frames is the wrong one: his frame is filled from
+        # those neighbours and trusted little.
+        for i in range(1, len(a[0]) - 1):
+            pa, pb = a[0][i], b[0][i]
+            if pa is None or pb is None:
+                continue
+            trunk = np.linalg.norm(pa[[0, 1]].mean(0) - pa[[6, 7]].mean(0))
+            if np.median(np.linalg.norm(pa[:12] - pb[:12], axis=1)) > 0.25 * trunk:
+                continue
+            for m in (a, b):
+                if m[0][i - 1] is None or m[0][i + 1] is None:
+                    continue
+            jump = [np.linalg.norm(m[0][i][6:8].mean(0) - (m[0][i - 1][6:8].mean(0) + m[0][i + 1][6:8].mean(0)) / 2)
+                    if m[0][i - 1] is not None and m[0][i + 1] is not None else 0.0 for m in (a, b)]
+            m = (a, b)[int(np.argmax(jump))]
+            m[0][i] = (m[0][i - 1] + m[0][i + 1]) / 2
+            m[2][i] = np.full(len(J), 0.05)
+            print(f"FIT pair: frame {i}, both tracks on one man; {'jumper' if m is a else 'stepladder'} filled in")
         contact = None
         if len(sys.argv) > 5:
             c0, c1 = map(int, sys.argv[5].split(":"))

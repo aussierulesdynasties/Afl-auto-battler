@@ -4,7 +4,8 @@ extends SceneTree
 ## Each frame: the pelvis turned and placed so his hips and the line up his trunk match the fit's,
 ## the three spine bones sharing the turn from hips to shoulders, then the upper arms, forearms,
 ## thighs and shins each swung (shortest arc, so their twist stays the rest pose's) to point where
-## the fit's joints do. Hands, feet, neck and head keep the rest pose. The match holds the result
+## the fit's joints do; the head and neck turned to the fit's ears and nose, the feet to its heels
+## and toes. Hands keep the rest pose. The match holds the result
 ## inside a real body's limits as it loads it (ClipLimits).
 ## BAKE_FLOOR=y: the ground's height in the fit's units; he is set on it (or above it by the fit's
 ## leap) frame by frame.
@@ -17,6 +18,14 @@ const LIMBS := [["upperarm_l", "shoulder_l", "elbow_l"], ["lowerarm_l", "elbow_l
 		["thigh_l", "hip_l", "knee_l"], ["calf_l", "knee_l", "ankle_l"],
 		["thigh_r", "hip_r", "knee_r"], ["calf_r", "knee_r", "ankle_r"]]
 const SPINE := ["spine_01", "spine_02", "spine_03"]
+# Where the tracker's ears and nose sit against our head bone, and its heel and toe against our
+# foot bone (as a turn from the bone's frame, built the same way from bone positions, to the
+# landmarks' frame). Measured on our own body standing in its rest pose, filmed from in front and
+# from 35 deg (tools/oval3d/render_clip.gd, track_broadcast.py, mp_fit.py, 2026-11-23): the head's
+# two readings agree within 4 deg; the feet's within 30 (the tracker reads a foot's depth poorly),
+# so the feet take their mean and the match's joint limits (ClipLimits) hold them in.
+const HEAD_C := Quaternion(0.60129, 0.02535, 0.0235, 0.79828)
+const FOOT_C := Quaternion(-0.09665, -0.03503, -0.02746, 0.99432)
 var sk: Skeleton3D
 
 
@@ -71,12 +80,23 @@ func _run() -> void:
 	var spine0 := {}
 	for n in SPINE:
 		spine0[n] = sk.get_bone_global_pose(sk.find_bone(n)).basis
+	var ineck := sk.find_bone("neck_01")
+	var ihead := sk.find_bone("head")
+	var head_rest := _frame(_gpos(sl) - _gpos(sr), _gpos(ihead) - _gpos(ineck))
+	var neck_g0 := sk.get_bone_global_pose(ineck).basis
+	var head_g0 := sk.get_bone_global_pose(ihead).basis
+	var foot_rest := {}
+	var foot_g0 := {}
+	for side in ["l", "r"]:
+		var f_b := sk.find_bone("foot_" + side)
+		foot_rest[side] = _frame(_gpos(sk.find_bone("calf_" + side)) - _gpos(f_b), _gpos(sk.find_bone("ball_" + side)) - _gpos(f_b))
+		foot_g0[side] = sk.get_bone_global_pose(f_b).basis
 	var hz := float(fit["hz"])
 	var frames: Array = fit["frames"]
 	var anim := Animation.new()
 	anim.length = (frames.size() - 1) / hz
 	var rot_tracks := {}
-	for n in ["pelvis"] + SPINE + LIMBS.map(func(l): return l[0]):
+	for n in ["pelvis"] + SPINE + LIMBS.map(func(l): return l[0]) + ["neck_01", "head", "foot_l", "foot_r"]:
 		var t := anim.add_track(Animation.TYPE_ROTATION_3D)
 		anim.track_set_path(t, "%s:%s" % [skpath, n])
 		rot_tracks[n] = t
@@ -138,6 +158,20 @@ func _run() -> void:
 			if axis.length() > 1e-6:
 				q = Quaternion(axis.normalized(), now.angle_to(want))
 			_set_global_basis(b, Basis(q) * g)
+		# The head turned as the fit's ears and nose are, the neck taking half the turn from his
+		# chest; each foot pointed as the fit's heel and toe are.
+		if J.has("nose") and J.has("ear_l") and J.has("ear_r"):
+			var em: Vector3 = (J["ear_l"] + J["ear_r"]) * 0.5
+			var lh := _frame(J["ear_l"] - J["ear_r"], J["nose"] - em)
+			var dq := (lh * Basis(HEAD_C).inverse() * head_rest.inverse()).get_rotation_quaternion()
+			_set_global_basis(ineck, Basis(qc.slerp(dq, 0.5)) * neck_g0)
+			_set_global_basis(ihead, Basis(dq) * head_g0)
+		for side in ["l", "r"]:
+			if not (J.has("toe_" + side) and J.has("heel_" + side)):
+				continue
+			var lf := _frame(J["knee_" + side] - J["ankle_" + side], J["toe_" + side] - J["heel_" + side])
+			var fq := (lf * Basis(FOOT_C).inverse() * (foot_rest[side] as Basis).inverse()).get_rotation_quaternion()
+			_set_global_basis(sk.find_bone("foot_" + side), Basis(fq) * (foot_g0[side] as Basis))
 		# BAKE_FLOOR=y (the fit's units, its ground under him): put him on the ground. The fit's
 		# hips cannot place him by height (a runner's bent knees lift our straight-legged rest
 		# pose's feet), so his lowest point is set to the height the fit gives his lowest joint
