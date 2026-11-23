@@ -532,6 +532,20 @@ for el in js:
     OV.append([_obox(pts[:-1]), [[round(float(x), 2), round(float(y), 2)] for x, y in Q]])
 json.dump(OV, open(os.path.join(OUT, 'ovals.json'), 'w'))
 print('afl ovals', [o[0] for o in OV])
+# softball (a spec's softball_list: home plate, facing, measured on a straight-down Google Earth shot): an all-dirt
+# infield (a circle round the middle of the diamond, and the base square out to home) and dirt strips along both foul
+# lines to the fence. Pitches within 75 m of one of these homes are drawn this way and not as baseball
+_SB = spec.get('softball_list', [])
+for sb in _SB:
+    H_ = np.array(sb['home'], float); a_ = math.radians(sb['dir']); u_ = np.array([math.cos(a_), math.sin(a_)])
+    def _p(r, da): return tuple(H_ + r * np.array([math.cos(a_ + da), math.sin(a_ + da)]))
+    C_ = H_ + u_ * sb.get('off', 25.6); R_ = sb.get('r', 17.4)
+    dr.polygon(P([_p(0, 0), _p(18.3, -math.pi / 4), _p(18.3 * 1.414, 0), _p(18.3, math.pi / 4)]), fill=tuple(PAL['infield']))
+    dr.ellipse([((C_[0] - R_ + NEAR) / PX, (NEAR - C_[1] - R_) / PX), ((C_[0] + R_ + NEAR) / PX, (NEAR - C_[1] + R_) / PX)], fill=tuple(PAL['infield']))
+    for da in (-math.pi / 4, math.pi / 4):
+        L_, w_ = sb.get('lines', 76.0), sb.get('line_w', 3.2) / 2; d_ = np.array([math.cos(a_ + da), math.sin(a_ + da)]); q_ = np.array([-d_[1], d_[0]]) * w_
+        dr.polygon(P([tuple(H_ + q_), tuple(H_ + d_ * L_ + q_), tuple(H_ + d_ * L_ - q_), tuple(H_ - q_)]), fill=tuple(PAL['infield']))
+    print('softball home', H_.round(1), 'dir', sb['dir'])
 # baseball: dirt infield drawn from home plate (the pitch outline's sharpest corner, foul lines along its two edges)
 for el in js:
     t = el.get('tags', {})
@@ -543,9 +557,10 @@ for el in js:
         u = Q[i - 1] - Q[i]; w = Q[(i + 1) % n_] - Q[i]
         ang = math.acos(np.clip(np.dot(u, w) / (np.linalg.norm(u) * np.linalg.norm(w) + 1e-9), -1, 1))
         if best is None or ang < best[0]: best = (ang, i)
+    if any(np.hypot(*(Q.mean(0) - np.array(sb['home']))) < 75 for sb in _SB): continue   # a softball field (drawn above)
     H = Q[best[1]]; d_ = Q.mean(0) - H; a0 = math.atan2(d_[1], d_[0])
     _bl = spec.get('baseball_list') or ([spec['baseball']] if spec.get('baseball') else [])
-    _bl = [bb for bb in _bl if np.hypot(*(Q.mean(0) - np.array(bb['home']))) < 120]
+    _bl = sorted([bb for bb in _bl if np.hypot(*(Q.mean(0) - np.array(bb['home']))) < 80], key=lambda bb: np.hypot(*(Q.mean(0) - np.array(bb['home']))))   # the nearest home, and within 80 m (a home sits 50-65 m from its field's middle): two diamonds 100 m apart were both within the old 120 m
     if _bl:   # home plate and facing read off the reference photo (or, real place, a straight-down Google Earth shot)
         bb = _bl[0]; H = np.array(bb['home'], float); a0 = math.radians(bb['dir'])
         if bb.get('track'):   # the dirt warning track inside the fence, all round the field
