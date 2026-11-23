@@ -1205,6 +1205,10 @@ GROUND_NAMES = [
      "In June 2017 naming rights for the venue were granted to Mars Confectionery Australian division"),
     ("eureka", "Mars Stadium", 2017, None, "Mars_Stadium",
      "In June 2017 naming rights for the venue were granted to Mars Confectionery Australian division"),
+    ("marrara", "Marrara Oval", None, 2005, "https://www.insurancenews.com.au/the-professional/tio-extends-naming-rights-for-darwin-stadium",
+     "has sponsored TIO Stadium since 2006"),
+    ("marrara", "TIO Stadium", 2006, 2025, "https://www.insurancenews.com.au/the-professional/tio-extends-naming-rights-for-darwin-stadium",
+     "has sponsored TIO Stadium since 2006"),
     ("wellington", "Westpac Stadium", 2002, 2019, "Sky_Stadium", "That arrangement continued for twenty years until 31 December 2019."),
     ("wellington", "Sky Stadium", 2020, 2025, "Sky_Stadium",
      "six-year agreement to take over as the naming sponsor of the stadium from 1 January 2020"),
@@ -1222,7 +1226,7 @@ def build_ground_names(cache: str) -> list[dict]:
         if not page_has(cache, page, words):
             raise SystemExit(f"ground name {ground} {name}: '{words}' not found on {page}")
         rows.append({"ground": ground, "name": name, "from_year": a or "", "to_year": b or "", "quote": words,
-                     "source_url": WIKI + page, "checked": CHECKED})
+                     "source_url": page if page.startswith("https://") else WIKI + page, "checked": CHECKED})
     for ground, name in PLAIN_NAME.items():
         rows.append({"ground": ground, "name": name, "from_year": "", "to_year": "",
                      "quote": "no naming-rights name in the VFL/AFL seasons it hosted",

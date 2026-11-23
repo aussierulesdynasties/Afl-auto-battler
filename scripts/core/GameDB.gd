@@ -1393,7 +1393,8 @@ const GROUND_KEYS := {"docklands": "Marvel Stadium", "kardinia_park": "GMHBA Sta
 		"western_oval": "Whitten Oval", "waverley_park": "Waverley Park", "stadium_australia": "Accor Stadium",
 		"carrara": "People First Stadium", "mcg": "MCG", "scg": "SCG", "waca": "WACA", "gabba": "The Gabba",
 		"york_park": "York Park", "bellerive": "Bellerive Oval", "showground": "Engie Stadium",
-		"manuka_oval": "Manuka Oval", "eureka": "Mars Stadium", "wellington": "Sky Stadium"}
+		"manuka_oval": "Manuka Oval", "eureka": "Mars Stadium", "wellington": "Sky Stadium",
+		"marrara": "Marrara Oval"}
 ## Names the club and rules tables use for a ground that are none of its
 ## recorded names.
 const GROUND_ALIASES := {"Carrara": "People First Stadium"}

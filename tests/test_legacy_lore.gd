@@ -51,12 +51,13 @@ func _test_ground_names() -> void:
 			["Engie Stadium", 2016, "Spotless Stadium"], ["Engie Stadium", 2020, "GIANTS Stadium"],
 			["Engie Stadium", 2024, "Engie Stadium"], ["Manuka Oval", 2012, "Manuka Oval"],
 			["Manuka Oval", 2014, "StarTrack Oval"], ["Manuka Oval", 2018, "UNSW Canberra Oval"],
-			["Sky Stadium", 2014, "Westpac Stadium"], ["Mars Stadium", 2019, "Mars Stadium"]]
+			["Sky Stadium", 2014, "Westpac Stadium"], ["Mars Stadium", 2019, "Mars Stadium"],
+			["Marrara Oval", 2004, "Marrara Oval"], ["Marrara Oval", 2006, "TIO Stadium"], ["Marrara Oval", 2025, "TIO Stadium"]]
 	for w in want:
 		var got := GameDB.ground_name(str(w[0]), int(w[1]))
 		_check(got == str(w[2]), "%s in %d is %s, not %s" % [w[0], w[1], w[2], got])
 	# Today's league keeps the game's own names.
-	for g in ["York Park", "Bellerive Oval", "Engie Stadium", "Manuka Oval", "Mars Stadium"]:
+	for g in ["York Park", "Bellerive Oval", "Engie Stadium", "Manuka Oval", "Mars Stadium", "Marrara Oval"]:
 		_check(GameDB.ground_name(g, 2026) == g, "%s keeps its name in 2026 (%s)" % [g, GameDB.ground_name(g, 2026)])
 	_check(GameDB.ground_renamed_from("York Park", 2004) == "York Park"
 			and GameDB.ground_renamed_from("Manuka Oval", 2013) == "Manuka Oval",
