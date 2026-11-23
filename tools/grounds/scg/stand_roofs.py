@@ -66,7 +66,15 @@ CUT = 1.5
 THICK_FRONT, THICK_BACK = 1.1, 1.8
 GLAZED = {"N": 6.5}           # m of glazing along the front edge
 TOP = (0.70, 0.70, 0.66)      # linear: Google Earth's roofs read about (220, 220, 212)
-UNDER = (0.24, 0.27, 0.25)    # roof undersides: grey with a faint green tint (director, 2026-11-21)
+# Roof undersides: grey with a faint green tint (director, 2026-11-21), about (85, 90, 82) on screen. They
+# face down, where the match light is a dim blue-violet: on the PC's GPU a (0.24, 0.27, 0.25) underside
+# rendered (49, 48, 78), slate violet. So they are painted warm and green, as Marvel's are
+# (docs/MCG_STANDARD.md), by that render's light per channel.
+UNDER = (0.71, 0.93, 0.28)
+RAFTER = (0.52, 0.68, 0.22)   # the steel under them, a shade darker so it reads against the sheet
+RAFTER_EVERY = 7.5            # m along the front edge between rafters
+RAFTER_W, RAFTER_D = 0.35, 0.9   # width, depth under the sheet (m)
+PURLIN_D = 0.35               # the two runs along the roof, at a third and two thirds of its depth
 FASCIA = (0.55, 0.55, 0.52)
 GLASS = (0.10, 0.14, 0.17)
 CLAD = (0.42, 0.44, 0.44)
@@ -162,6 +170,34 @@ def build_roof(name, bb, fs, ks, h, wall_top):
             r0, r1 = k0 - 0.8, k1 - 0.8
             quad(at(b0, r0, min(w0, top_y) - 0.2), at(b1, r1, min(w1, top_y) - 0.2), at(b1, r1, top_y), at(b0, r0, top_y), CLAD)
             quad(at(b1, r1, min(w1, top_y) - 0.2), at(b0, r0, min(w0, top_y) - 0.2), at(b0, r0, top_y), at(b1, r1, top_y), CLAD)
+    # the steel under the sheet: radial rafters every RAFTER_EVERY m of the front edge, two purlins along it
+    def under_y(r, f, k):
+        return h - th(min(max((r - f) / max(k - f, 1e-6), 0.0), 1.0))
+
+    def beam(b0, b1, r0, r1, f0, f1, k0, k1, depth):
+        # a box hung under the sheet from (b0, r0) to (b1, r1): two sides and a bottom
+        ya, yb = under_y(r0, f0, k0), under_y(r1, f1, k1)
+        rad = np.radians
+        da = np.array([np.sin(rad(b1)) * r1 - np.sin(rad(b0)) * r0, -np.cos(rad(b1)) * r1 + np.cos(rad(b0)) * r0])
+        side = np.array([-da[1], da[0]]) / max(np.linalg.norm(da), 1e-6) * (RAFTER_W / 2)
+        p0, p1 = np.array(at(b0, r0, 0.0)), np.array(at(b1, r1, 0.0))
+        def pt(p, sgn, y):
+            return (p[0] + sgn * side[0], y, p[2] + sgn * side[1])
+        for sgn in (-1, 1):
+            quad(pt(p0, sgn, ya), pt(p1, sgn, yb), pt(p1, sgn, yb - depth), pt(p0, sgn, ya - depth), RAFTER)
+        quad(pt(p0, -1, ya - depth), pt(p1, -1, yb - depth), pt(p1, 1, yb - depth), pt(p0, 1, ya - depth), RAFTER)
+
+    arc = np.concatenate([[0.0], np.cumsum(np.radians(np.diff(bb)) * (fs[:-1] + fs[1:]) / 2)])
+    n_r = max(int(arc[-1] // RAFTER_EVERY), 1)
+    for s_ in np.linspace(arc[-1] / (2 * n_r), arc[-1] - arc[-1] / (2 * n_r), n_r):
+        b = float(np.interp(s_, arc, bb))
+        f, k = float(np.interp(b, bb, fs)), float(np.interp(b, bb, ks))
+        beam(b, b, f + 0.3, k - 0.3, f, f, k, k, RAFTER_D)
+    for t in (1 / 3, 2 / 3):
+        for i in range(len(bb) - 1):
+            r0 = fs[i] + (ks[i] - fs[i]) * t
+            r1 = fs[i + 1] + (ks[i + 1] - fs[i + 1]) * t
+            beam(bb[i], bb[i + 1], r0, r1, fs[i], fs[i + 1], ks[i], ks[i + 1], PURLIN_D)
     # end caps
     for i, s in ((0, 1), (len(bb) - 1, -1)):
         b, f, k = bb[i], fs[i], ks[i]
