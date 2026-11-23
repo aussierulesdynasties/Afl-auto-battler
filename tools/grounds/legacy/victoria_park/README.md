@@ -22,4 +22,4 @@ Google Earth web historical imagery (`tools/grounds/legacy/ge_history.js`, `LAT=
 - **Size against the published one.** 176 x 143 m is 15 and 13 m more than 160-161 x 128-130; the published figure is
   probably the field inside the boundary line, which the aerials don't show. A period photo is needed for where the
   fence stood against the turf.
-- **Stands and heights:** not measured; the stands (Ryder, Sherrin, the social club and outer terraces) need photos.
+- **Stands and heights:** not measured; the stands and terraces need period photos (none fetched yet).
