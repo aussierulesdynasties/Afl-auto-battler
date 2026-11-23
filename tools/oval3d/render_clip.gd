@@ -3,6 +3,7 @@ extends SceneTree
 ## every frame beside it: the ground truth for proving a video-to-motion tracker
 ## (tools/oval3d/mp_roundtrip.py) on our own motion before it is trusted on broadcast footage.
 ##   godot --path . --rendering-method mobile --script tools/oval3d/render_clip.gd -- OUT_DIR CLIP [YAW_DEG] [HZ]
+## (RENDER_ANIM=<file.res> films a baked animation under the name CLIP.)
 ## Writes OUT_DIR/f_<n>.png (720 x 960) and OUT_DIR/joints.json: per frame, each joint's world
 ## position (metres, y up). The camera stands 6 m off at YAW degrees round him (0: in front of
 ## him as the clip starts, 90: his right side), at hip height, panning with his hips.
@@ -41,6 +42,13 @@ func _run() -> void:
 	root.add_child(scene)
 	var ap: AnimationPlayer = scene.find_children("*", "AnimationPlayer", true, false)[0]
 	var sk: Skeleton3D = scene.find_children("*", "Skeleton3D", true, false)[0]
+	# RENDER_ANIM=<file.res>: film that animation (tools/oval3d/bake_fit.gd) instead, the CLIP
+	# argument naming it.
+	if OS.get_environment("RENDER_ANIM") != "":
+		var lib := AnimationLibrary.new()
+		lib.add_animation(clip, load(OS.get_environment("RENDER_ANIM")))
+		ap.add_animation_library("fit", lib)
+		clip = "fit/" + clip
 	var cam := Camera3D.new()
 	cam.fov = 34.0
 	root.add_child(cam)

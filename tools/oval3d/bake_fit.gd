@@ -1,0 +1,134 @@
+extends SceneTree
+## Bake a fitted film (tools/oval3d/mp_fit.py) onto the match body as an animation.
+##   godot --headless --path . --script tools/oval3d/bake_fit.gd -- FIT.json OUT.res
+## Each frame: the pelvis turned and placed so his hips and the line up his trunk match the fit's,
+## the three spine bones sharing the turn from hips to shoulders, then the upper arms, forearms,
+## thighs and shins each swung (shortest arc, so their twist stays the rest pose's) to point where
+## the fit's joints do. Hands, feet, neck and head keep the rest pose. The match holds the result
+## inside a real body's limits as it loads it (ClipLimits).
+
+const GLB := "res://assets/oval3d/player_mh.glb"
+const LIMBS := [["upperarm_l", "shoulder_l", "elbow_l"], ["lowerarm_l", "elbow_l", "wrist_l"],
+		["upperarm_r", "shoulder_r", "elbow_r"], ["lowerarm_r", "elbow_r", "wrist_r"],
+		["thigh_l", "hip_l", "knee_l"], ["calf_l", "knee_l", "ankle_l"],
+		["thigh_r", "hip_r", "knee_r"], ["calf_r", "knee_r", "ankle_r"]]
+const SPINE := ["spine_01", "spine_02", "spine_03"]
+var sk: Skeleton3D
+
+
+func _initialize() -> void:
+	_run.call_deferred()
+
+
+func _v(a) -> Vector3:
+	return Vector3(float(a[0]), float(a[1]), float(a[2]))
+
+
+## A frame from a left-to-right line and an up line (up kept, the across made square to it).
+func _frame(across: Vector3, up: Vector3) -> Basis:
+	var y := up.normalized()
+	var x := (across - y * across.dot(y)).normalized()
+	return Basis(x, y, x.cross(y))
+
+
+func _gpos(b: int) -> Vector3:
+	return sk.get_bone_global_pose(b).origin
+
+
+func _set_global_basis(b: int, want: Basis) -> void:
+	var p := sk.get_bone_parent(b)
+	var pb := sk.get_bone_global_pose(p).basis if p >= 0 else Basis.IDENTITY
+	sk.set_bone_pose_rotation(b, (pb.inverse() * want).get_rotation_quaternion())
+
+
+func _run() -> void:
+	await process_frame
+	var args := OS.get_cmdline_user_args()
+	var fit: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(str(args[0])))
+	var out := str(args[1])
+	var scene: Node3D = (load(GLB) as PackedScene).instantiate()
+	root.add_child(scene)
+	sk = scene.find_children("*", "Skeleton3D", true, false)[0]
+	var ap: AnimationPlayer = scene.find_children("*", "AnimationPlayer", true, false)[0]
+	var skpath := str(ap.get_node(ap.root_node).get_path_to(sk))
+	# The fit is in the world (y up); the skeleton's own space may be turned (the GLB's root).
+	var to_sk := sk.global_transform.basis.inverse()
+	sk.reset_bone_poses()
+	var ip := sk.find_bone("pelvis")
+	var hl := sk.find_bone("thigh_l")
+	var hr := sk.find_bone("thigh_r")
+	var sl := sk.find_bone("upperarm_l")
+	var sr := sk.find_bone("upperarm_r")
+	var hip0 := (_gpos(hl) + _gpos(hr)) * 0.5
+	var sho0 := (_gpos(sl) + _gpos(sr)) * 0.5
+	var F0 := _frame(_gpos(hl) - _gpos(hr), sho0 - hip0)
+	var C0 := _frame(_gpos(sl) - _gpos(sr), sho0 - hip0)
+	var pelvis0 := sk.get_bone_global_pose(ip)
+	var spine0 := {}
+	for n in SPINE:
+		spine0[n] = sk.get_bone_global_pose(sk.find_bone(n)).basis
+	var hz := float(fit["hz"])
+	var frames: Array = fit["frames"]
+	var anim := Animation.new()
+	anim.length = (frames.size() - 1) / hz
+	var rot_tracks := {}
+	for n in ["pelvis"] + SPINE + LIMBS.map(func(l): return l[0]):
+		var t := anim.add_track(Animation.TYPE_ROTATION_3D)
+		anim.track_set_path(t, "%s:%s" % [skpath, n])
+		rot_tracks[n] = t
+	var pos_track := anim.add_track(Animation.TYPE_POSITION_3D)
+	anim.track_set_path(pos_track, "%s:pelvis" % skpath)
+	var start := Vector3.INF
+	for k in range(frames.size()):
+		var f = frames[k]
+		if f == null:
+			continue
+		var J := {}
+		for key in (f as Dictionary):
+			J[key] = to_sk * _v(f[key])
+		sk.reset_bone_poses()
+		var hip: Vector3 = (J["hip_l"] + J["hip_r"]) * 0.5
+		var sho: Vector3 = (J["shoulder_l"] + J["shoulder_r"]) * 0.5
+		var F1 := _frame(J["hip_l"] - J["hip_r"], sho - hip)
+		var C1 := _frame(J["shoulder_l"] - J["shoulder_r"], sho - hip)
+		var Rp := F1 * F0.inverse()
+		var Rc := C1 * C0.inverse()
+		# The pelvis: turned as his hips are, placed by them (from the first frame's spot, so the
+		# clip carries him as the film does).
+		if start == Vector3.INF:
+			start = hip
+		var pg := Transform3D(Rp * pelvis0.basis, pelvis0.origin + Rp * (pelvis0.origin - hip0) - (pelvis0.origin - hip0) + (hip - start))
+		var parent := sk.get_bone_parent(ip)
+		var parent_g := sk.get_bone_global_pose(parent) if parent >= 0 else Transform3D.IDENTITY
+		var local := parent_g.affine_inverse() * pg
+		sk.set_bone_pose_rotation(ip, local.basis.get_rotation_quaternion())
+		sk.set_bone_pose_position(ip, local.origin)
+		# The spine shares the turn from his hips to his shoulders.
+		var qp := Rp.get_rotation_quaternion()
+		var qc := Rc.get_rotation_quaternion()
+		for i in range(SPINE.size()):
+			var q := qp.slerp(qc, float(i + 1) / SPINE.size())
+			_set_global_basis(sk.find_bone(SPINE[i]), Basis(q) * spine0[SPINE[i]])
+		# The limbs, each pointed where the fit's next joint is.
+		for l in LIMBS:
+			var b := sk.find_bone(l[0])
+			var c := b + 1
+			for ch in range(sk.get_bone_count()):
+				if sk.get_bone_parent(ch) == b:
+					c = ch
+					break
+			var now := (_gpos(c) - _gpos(b)).normalized()
+			var want: Vector3 = (J[l[2]] - J[l[1]]).normalized()
+			var g := sk.get_bone_global_pose(b).basis
+			var axis := now.cross(want)
+			var q := Quaternion.IDENTITY
+			if axis.length() > 1e-6:
+				q = Quaternion(axis.normalized(), now.angle_to(want))
+			_set_global_basis(b, Basis(q) * g)
+		var t := k / hz
+		for n in rot_tracks:
+			anim.rotation_track_insert_key(rot_tracks[n], t, sk.get_bone_pose_rotation(sk.find_bone(n)))
+		anim.position_track_insert_key(pos_track, t, sk.get_bone_pose_position(ip))
+	var err := ResourceSaver.save(anim, out)
+	print("BAKED %d frames -> %s (%s)" % [frames.size(), out, error_string(err)])
+	quit()
