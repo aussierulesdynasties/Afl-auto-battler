@@ -85,6 +85,10 @@ rewrites history and force-pushes main and every branch, which cannot be undone.
    every branch (not GitHub's `refs/pull/*`), strips exactly the 43 blob ids in `tools/epic_blobs.txt`
    (every version of every Epic file on any branch), keeps every commit and message, and checks that no
    listed blob is left and that no branch tip changed except by losing an Epic file.
+   Every commit id changes, back to the first (filter-repo drops GitHub's signatures on its squash
+   merges), but every tree, message, author and date stays. Dry run 2026-11-23 on a copy of all 410
+   branches: 43 s; 3,786 commits before and after; no Epic blob left; 214 tips differ from before only
+   by the Epic files; the push test refused a branch moved after the clone and left it untouched.
 3. **Push:** `tools/epic_purge.sh push WORKDIR`, signed in as a repository admin (main's ruleset lets an
    admin bypass; otherwise switch the rule off for the push). Each branch is pushed with a lease on the
    value it had when cloned, so a branch pushed to since then is refused and listed, never lost. Open

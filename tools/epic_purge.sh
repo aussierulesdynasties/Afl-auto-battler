@@ -27,10 +27,13 @@ rewrite)
 	git clone --bare "$REPO" "$WORK"
 	grep -oE '^[0-9a-f]{40}' "$ROOT/tools/epic_blobs.txt" > "$WORK/epic_ids.txt"
 	echo "$(wc -l < "$WORK/epic_ids.txt") blob ids to strip"
-	# Before: each branch's tip and tree, and whether its tip holds an Epic blob.
-	git -C "$WORK" for-each-ref --format='%(refname) %(objectname) %(objectname)^{tree}' refs/heads \
-		| while read -r ref sha tree; do
-			echo "$ref $sha $(git -C "$WORK" rev-parse "$tree")"
+	# Before: each branch's tip, its tree, and whether that tree holds an Epic blob (1/0).
+	git -C "$WORK" for-each-ref --format='%(refname) %(objectname)' refs/heads \
+		| while read -r ref sha; do
+			held=0
+			# grep -c, not -q: -q closes the pipe early and pipefail would read that as "not held".
+			[ "$(git -C "$WORK" ls-tree -r "$sha" | grep -cFf "$WORK/epic_ids.txt" || true)" = 0 ] || held=1
+			echo "$ref $sha $(git -C "$WORK" rev-parse "$sha^{tree}") $held"
 		done > "$WORK/before.txt"
 	git -C "$WORK" filter-repo --strip-blobs-with-ids "$WORK/epic_ids.txt" \
 		--prune-empty never --prune-degenerate never --force
@@ -39,11 +42,11 @@ rewrite)
 	[ "$left" = 0 ] || { echo "FAIL: $left Epic blob(s) still reachable" >&2; exit 1; }
 	# Check 2: a tip's tree changes only where the tip itself held an Epic file.
 	changed=0 bad=0
-	while read -r ref old tree; do
+	while read -r ref _old tree held; do
 		new_tree="$(git -C "$WORK" rev-parse "$ref^{tree}")"
 		[ "$new_tree" = "$tree" ] && continue
 		changed=$((changed + 1))
-		if ! git -C "$WORK" ls-tree -r "$old" 2>/dev/null | grep -qFf "$WORK/epic_ids.txt"; then
+		if [ "$held" != 1 ]; then
 			echo "FAIL: $ref tree changed though its tip held no Epic file" >&2; bad=$((bad + 1))
 		fi
 	done < "$WORK/before.txt"
@@ -63,7 +66,7 @@ push)
 		grep -E '^!' "$WORK/push.log" || true
 		args=()
 	}
-	while read -r ref old _tree; do
+	while read -r ref old _tree _held; do
 		new="$(git -C "$WORK" rev-parse "$ref")"
 		[ "$new" = "$old" ] && continue  # the branch never held an Epic file
 		args+=("--force-with-lease=$ref:$old" "$new:$ref")  # no "+": it would override the lease
@@ -71,7 +74,7 @@ push)
 		[ ${#args[@]} -ge 60 ] && flush  # stay under Windows' command-line limit
 	done < "$WORK/before.txt"
 	flush
-	echo "$n branch(es) pushed"
+	echo "$n branch(es) sent"
 	[ "$failed" = 0 ] || { echo "Some pushes were refused (lines starting with !): those branches moved since the clone; re-run rewrite for them." >&2; exit 1; }
 	;;
 *) sed -n '2,15p' "$0"; exit 2 ;;
