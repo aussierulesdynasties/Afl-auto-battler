@@ -88,10 +88,11 @@ TILE = {}
 def make_textures():
     # NAB, 700 Bourke Street (Google Earth ge_nab_a/b): dark blue reflective glass in 1.5 m panes with
     # thin dark mullions; the light sections silver-white panels with a few slot windows; roof plant grey.
-    # PC check 2026-11-23: (46, 50, 57) rendered (13, 22, 46) on the shaded east face against Google
-    # Earth's (62, 86, 110); its silver panels there render at (0.44, 0.51, 0.65) of their colour, so
-    # the glass is a mid grey-blue that the sky in it and the shade bring down to Google Earth's.
-    curtain("nab_glass", (110, 128, 150), (80, 90, 104), bay=1.5, floor=3.9, noise=10.0)
+    # Colour set like for like (PC check round 7): Google Earth's east faces are in sun (NAB's white fins read
+    # (218, 225, 230)), the game's are in shade (the sun is in the south-west), so the shaded render cannot be
+    # matched pixel for pixel. Rendered with the sun where Google Earth's was (preinspect PREINSPECT_SUN=60,45,1.45,
+    # the fins then at 204), the glass between the fins must read Google Earth's (54, 79, 103): dark blue glass.
+    curtain("nab_glass", (22, 42, 66), (48, 56, 68), bay=1.5, floor=3.9, noise=8.0)
     TILE["nab_glass"] = (6.0, 7.8)
     # PC check round 2: the north tip's panels rendered (88, 105, 136) against GE (60, 87, 113): greyer, darker
     panels("nab_silver", (150, 166, 178), (118, 130, 142), w=1.5, h=1.3, holes=(52, 58, 66))
@@ -112,11 +113,11 @@ def make_textures():
     TILE["pale_panel"] = (7.2, 5.6)
     curtain("dark_glass", (58, 70, 84), (46, 52, 60), bay=1.8, floor=2.4, slab=0.0, noise=7.0)
     TILE["dark_glass"] = (7.2, 4.8)
-    # the two sawtooth towers north-east of the ground read light grey in Google Earth from the east (PC check
-    # round 3: "dark_glass" rendered them deep blue, 39-44 darker); their glass is a pale grey
-    # round 4: east-facing walls render about (0.57, 0.62, 0.73) of their colour (NAB's glass and these towers measured
-    # on the PC), so Google Earth's (122, 140, 149) needs a light grey: the glass behind the pale bands reads light
-    curtain("grey_glass", (176, 184, 186), (150, 156, 160), bay=1.8, floor=2.4, slab=0.0, noise=6.0)
+    # the two sawtooth towers north-east of the ground (PC check round 7, like for like with the sun where Google Earth's
+    # was): Google Earth reads their glass bands (88, 110, 124) and their pale bands (153, 167, 173), a blue-grey tower
+    curtain("grey_glass", (88, 112, 130), (124, 132, 138), bay=1.8, floor=2.4, slab=0.0, noise=6.0)
+    panels("band_panel", (176, 190, 196), (150, 162, 168), w=1.8, h=1.4)
+    TILE["band_panel"] = (7.2, 5.6)
     TILE["grey_glass"] = (7.2, 4.8)
     curtain("office_glass", (78, 98, 116), (180, 186, 190), bay=1.5, floor=2.7, slab=0.0, noise=8.0)
     TILE["office_glass"] = (6.0, 5.4)
@@ -762,8 +763,8 @@ def build():
     balconies(g, W["332358301"][1], 6.0, 109.0, 3.2, 1.6, wave=1.4)
     g.prism(W["332358301"][1], 0.0, 6.0, "podium_glass", top=None)
     # the two sawtooth towers north of the stadium (ge_north65_b): white frames, grey glass
-    banded(g, W["221441428"][1], 0.0, 65.0, 3.1, 0.9, 2.8, 0.45, "pale_panel", "grey_glass", parapet=1.5)
-    banded(g, W["992236548"][1], 0.0, 70.0, 3.1, 0.9, 2.8, 0.45, "pale_panel", "grey_glass", parapet=1.5)
+    banded(g, W["221441428"][1], 0.0, 65.0, 3.1, 0.9, 2.8, 0.45, "band_panel", "grey_glass", parapet=1.5)
+    banded(g, W["992236548"][1], 0.0, 70.0, 3.1, 0.9, 2.8, 0.45, "band_panel", "grey_glass", parapet=1.5)
     for wid in ("711957749", "711957750"):
         jetty(g, W[wid][1])
         gangway(g, W[wid][1], [(-198.1, -34.0), (-223.8, -42.3), (-220.1, -53.6), (-206.7, -92.3), (-202.4, -104.2)])
