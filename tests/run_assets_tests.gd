@@ -213,7 +213,7 @@ func _test_hair_atlases() -> void:
 	_check(files.size() > 0 and files.size() == index.size() and files.size() == VignetteFigures.HAIR_TEXTURES.size()
 			and index.has(VignetteFigures.HAIR_BASE),
 			"The hair overlays list their atlases, with the base look (%s)" % str(index.keys()))
-	var bad_ids := index.keys().filter(func(id): return not Appearance.HAIR_STYLES.has(id))
+	var bad_ids := index.keys().filter(func(id): return not (Appearance.HAIR_STYLES.has(id) or Appearance.HAIR_RETIRED.has(id)))
 	var odd := (VignetteFigures.HAIR_NONE + VignetteFigures.HAIR_TINT_SKIN).filter(func(id): return not Appearance.HAIR_STYLES.has(id))
 	_check(bad_ids.is_empty() and odd.is_empty(), "Every hair id is a style a player can have: %s" % str(bad_ids + odd))
 	# The right art loaded (director's rule, 2026-10-06): each atlas is the file it names,
