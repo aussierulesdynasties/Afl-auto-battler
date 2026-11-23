@@ -33,6 +33,7 @@ func run() -> void:
 	_t("_test_custom_prospect")
 	_t("_test_panel_fit")
 	_t("_test_real_lists_start")
+	_t("_test_real_lists_after_draft")
 	_t("_test_rebuild_walkouts_sign")
 	_t("_test_gen_traits_rates")
 	_t("_test_copied_from_2012_on")
@@ -102,9 +103,12 @@ func _test_draft_class_data() -> void:
 		_check(not aliases.has(str(p["generic_name"])),
 				"Prospect aliases do not collide with the season pool")
 		aliases[str(p["generic_name"])] = true
+		# A man the rankings missed is rated from his real pick
+		# (GameDB._load_draftees), which may equal a ranked man's rank.
 		var rank := int(p["draft_rank"])
-		_check(not ranks.has(rank), "Draft ranks are unique (%d)" % rank)
-		ranks[rank] = true
+		if not bool(p.get("unranked", false)):
+			_check(not ranks.has(rank), "Draft ranks are unique (%d)" % rank)
+			ranks[rank] = true
 		_check(str(p["role"]) in ["RUCK", "MID", "DEF", "FWD"], "Role is one of the four")
 		_check(bool(p.get("projected", false)), "Prospects are flagged as projections")
 		var ov := int(p["overall"])
@@ -135,7 +139,7 @@ func _test_draft_class_data() -> void:
 			first = p
 	var last: Dictionary = pool[0]
 	for p in pool:
-		if int(p["draft_rank"]) == pool.size():
+		if not bool(p.get("unranked", false)) and int(p["draft_rank"]) == ranks.size():
 			last = p
 	_check(int(first["overall"]) >= int(last["overall"]),
 			"The consensus number one out-rates the last-ranked prospect")
@@ -1356,11 +1360,12 @@ func _test_real_lists_start() -> void:
 		for q in GameState.season.lists[code]:
 			if int(q.get("drafted_year", 0)) == GameDB.DATA_SEASON and str(q.get("drafted_type", "")) in ["FS", "NGA"]:
 				opening_ties.append(int(q.get("contract_years", 0)))
-	# Seven are tied in the class; West Coast, at 43 of the 44, has room for
-	# one of its three (RookieList.add_block), so five are listed as ties and
-	# its other two go through the open draft.
-	_check(opening_ties.size() == 5 and opening_ties.all(func(y): return y == Contracts.ROOKIE_YEARS),
-			"The 2026 class's five listed father-son and NGA picks start 2027 with two seasons left (%s)" % str(opening_ties))
+	# Ten are tied in the class (three of them, McCartney, Hodge and Boi, added
+	# from the real draft); West Coast, at 43 of the 44, has room for one of its
+	# three (RookieList.add_block), so eight are listed as ties and its other
+	# two go through the open draft.
+	_check(opening_ties.size() == 8 and opening_ties.all(func(y): return y == Contracts.ROOKIE_YEARS),
+			"The 2026 class's eight listed father-son and NGA picks start 2027 with two seasons left (%s)" % str(opening_ties))
 	var same_vet: Dictionary = {}
 	for q in GameState.my_list:
 		if str(q["id"]) == str(vet["id"]):
@@ -1376,6 +1381,69 @@ func _test_real_lists_start() -> void:
 ## 2012 to 2026 ("they arent based on players pre-2012", "every other year"), and each
 ## copied skill is moved by its own roll of up to 5% ("10% different ... to give a
 ## fingerprint", then "5%").
+## "After the draft" (the person, 2026-11-21): every man taken at the real
+## 2026 National Draft opens on the club that took him, with his real pick,
+## and the opening draft is left with the prospects nobody took.
+func _test_real_lists_after_draft() -> void:
+	_check(GameDB.national_draft.size() == 65, "The real 2026 National Draft is loaded: 65 picks (%d)" % GameDB.national_draft.size())
+	var missing := []
+	for row in GameDB.national_draft:
+		if str(row["kind"]) == "redrafted" or str(row["last"]) == "Knevitt":
+			continue
+		var found := false
+		for q in GameDB.draftees:
+			if GameDB.national_pick(q) == row:
+				found = true
+		if not found:
+			missing.append("%s %s" % [row["first"], row["last"]])
+	_check(missing.is_empty(), "Every real draftee is in the 2026 class (missing: %s)" % str(missing))
+	GameState.reset()
+	GameState.replay_seed = 4243
+	GameState.real_after_draft = true
+	GameState.begin_real_lists()
+	var placed := 0
+	var wrong := []
+	var picks_seen := {}
+	for code in GameState.league_lists:
+		for q in GameState.league_lists[code] as Array:
+			var row: Dictionary = GameDB.national_pick(q)
+			if row.is_empty() or bool(q.get("generated", false)):
+				continue
+			placed += 1
+			picks_seen[int(row["pick"])] = true
+			if str(code) != str(row["club"]) or str(q["club"]) != str(row["club"]) \
+					or int(q.get("drafted_pick", 0)) != int(row["pick"]):
+				wrong.append("%s %s at %s pick %d" % [row["first"], row["last"], code, int(q.get("drafted_pick", 0))])
+	_check(placed == 65 and picks_seen.size() == 65 and wrong.is_empty(),
+			"All 65 real picks open on the club that took them, once, with their pick (%d placed, wrong: %s)" % [placed, str(wrong)])
+	var left_drafted := GameState.draft.pool.filter(func(q): return not GameDB.national_pick(q).is_empty())
+	_check(left_drafted.is_empty() and GameState.free_agents.all(func(q): return GameDB.national_pick(q).is_empty()),
+			"No real draftee is left in the opening draft's pool or among the free agents")
+	var who := {}
+	for code in GameState.league_lists:
+		for q in GameState.league_lists[code] as Array:
+			if str(q.get("last", "")) in ["Knevitt", "Ugle-Hagan", "Cochrane", "Burrows"]:
+				who[str(q["last"])] = str(code)
+	_check(who.get("Knevitt", "") == "SYD" and who.get("Ugle-Hagan", "") == "GCS"
+			and who.get("Cochrane", "") == "PAD" and who.get("Burrows", "") == "MEL",
+			"Knevitt (delisted by Geelong) is a Swan, Ugle-Hagan back at Gold Coast, Cochrane at Port, Burrows at Melbourne (%s)" % str(who))
+	var nums_ok := true
+	for code in GameState.league_lists:
+		var seen := {}
+		for q in GameState.league_lists[code] as Array:
+			var n := int(q.get("num", 0))
+			if n <= 0 or seen.has(n):
+				nums_ok = false
+			seen[n] = true
+	_check(nums_ok, "Every list still has one guernsey number per player")
+	GameState.choose_real_club("MEL")
+	_check(GameState.my_club == "MEL" and GameState.draft.user_club == "MEL" and GameState.save_career()
+			and GameState.load_career() and GameState.real_after_draft,
+			"An after-the-draft career saves and resumes with the choice kept")
+	GameState.real_after_draft = false
+	GameState.replay_seed = 0
+
+
 func _test_copied_from_2012_on() -> void:
 	var pool: Dictionary = Prospects._copy_pool()
 	var years := {}

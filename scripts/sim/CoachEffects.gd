@@ -143,6 +143,9 @@ static func row(staff: Dictionary, mine: bool) -> Dictionary:
 	t["assistant"] = mine
 	var sc: Dictionary = staff.get("SC", {})
 	t["style"] = Coaches.style_of(sc) if not mine and not sc.is_empty() else "balanced"
+	# The man-manager at a quarter-break talk (BreakTalks): you have no grades of
+	# your own, so at your club it is your senior assistant's, as with tactics.
+	t["manage"] = _skill(staff, "SA" if mine else "SC", "manage")
 	return t
 
 
@@ -207,6 +210,9 @@ static func apply_row(sq: Squad, t: Dictionary) -> void:
 			"" if bool(t["ai"]) else str((my_arch.get("held", {}) as Dictionary).get("s", "")),
 			str(t.get("arch_p", ""))]
 	sq.arch = Archetypes.levers(str(ids[0]), str(ids[1]))
+	sq.talk_manage = float(t.get("manage", AVERAGE))
+	sq.talk_arch = str(ids[1])
+	sq.talk_trust = not bool(t["ai"])
 	sq.tactics_exec *= float(sq.arch.get("exec", 1.0))
 
 
