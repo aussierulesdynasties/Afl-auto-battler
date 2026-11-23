@@ -16,5 +16,4 @@ traced from these aerials the way the other grounds' are.
 - The stadium still stands, so the roof, stands and arches come from Google Earth's 3D mesh (status-bar readout, as
   at Ikon Park and Waverley).
 - The fence: from oblique Google Earth 3D views solved on the painted field lines (`tools/grounds/ge/ge_solve.py`),
-  or from period broadcast-angle photos. Note the lower tiers were moved after 2015, so today's mesh shows the
-  current seating, not the 2002-2015 oval mode, below the roof.
+  or from period broadcast-angle photos. Whether today's lower seating (the mesh) matches the 2002-2015 oval mode is not yet checked.
