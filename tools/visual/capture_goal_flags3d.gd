@@ -157,6 +157,13 @@ func _run() -> void:
 			if not u.has("routine") or film_n > MOST:
 				print("FLAGS filmed %s: %d frames" % [film_tag, film_n])
 				film_tag = ""
+		if OS.get_environment("FLAGS_PROBE") != "" and int(d.time * 30.0) % 900 == 0:
+			for u in goal_umps:
+				var on: BoneAttachment3D = u["flags"]["l"]["on"]
+				var sk: Skeleton3D = u["skel"]
+				print("PROBE k%d t %.0f on %s idx %d bone %s skel_vis %s in_tree %s ext %s" % [u["k"], d.time, on.global_position,
+						on.bone_idx, sk.to_global(sk.get_bone_global_pose(sk.find_bone("hand_l")).origin), sk.is_visible_in_tree(),
+						on.is_inside_tree(), on.use_external_skeleton])
 		if want.is_empty():
 			# Unfilmed: still a frame of the engine's own each step, so the hands' attachments
 			# are bound and follow as they do in a match.

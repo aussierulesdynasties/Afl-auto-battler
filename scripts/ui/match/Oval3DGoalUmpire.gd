@@ -32,8 +32,10 @@ const AIR_ALOFT := Vector2(1.9, 2.4)
 const SETTLE := 0.25
 ## A frame longer than this (a hitch) is taken as this long: his routine never jumps ahead.
 const DT_MAX := 0.1
-## Back in a behind's wave to put the flag away (Oval3DCrew.BEHIND_FLAG, its last swing).
-const BEHIND_PUT_BACK := 3.38
+## Back in a behind's wave to put the flag away (Oval3DCrew.BEHIND_FLAG, past its last swing, the
+## flag coming down to the padding), blended in from where he is over BLEND_IN.
+const BEHIND_PUT_BACK := 3.6
+const BLEND_IN := 0.45
 
 
 ## His flags, stowed in the padding of one post at his end (each man his own post, as the
@@ -276,7 +278,7 @@ static func _clip(oval: Node3D, u: Dictionary, clip: String, dt: float, first: b
 	var near := str(f["near"])
 	var far := _other(near)
 	if first:
-		ap.play(clip, 0.2)
+		ap.play(clip, BLEND_IN if from > 0.0 else 0.2)
 		ap.seek(from, true)
 		r["t"] = from
 	var before := float(r["t"])
@@ -337,6 +339,8 @@ static func _hold(u: Dictionary, which: String, hand: String, pair: bool) -> voi
 		if n.get_parent() != null:
 			n.get_parent().remove_child(n)
 		on.add_child(n)
+	# (Out of a replay's hold on it, if one was showing it put away.)
+	n.top_level = false
 	n.transform = held
 	if from_hand and on.is_inside_tree():
 		# From the other hand: it slides into this fist from where it was.
@@ -366,6 +370,7 @@ static func _stow(oval: Node3D, u: Dictionary, which: String) -> void:
 		if n.get_parent() != null:
 			n.get_parent().remove_child(n)
 		oval.add_child(n)
+	n.top_level = false
 	n.transform = (f["stowed"] as Dictionary)[which]
 	for s in ["r", "l"]:
 		(fl[s]["grip"] as Oval3DGrip).active = _in_hand(u, s)

@@ -867,6 +867,7 @@ def _measure(t, nm):
 
 # Keying straight into a named action each time.
 made = []
+LAST_Q = {}
 for name, keys in CLIPS.items():
     act = bpy.data.actions.new(name)
     arm.animation_data_create()
@@ -888,12 +889,33 @@ for name, keys in CLIPS.items():
         arm.animation_data.action = act
         f = 1 + t * FPS
         for pb in pose:
+            # Each turn on the same side of the sphere as the last key's, so the keys between
+            # go the short way round (q and -q are one turn; blended, they swing the long way).
+            q = pb.rotation_quaternion.copy()
+            last = LAST_Q.get((name, pb.name))
+            if last is not None and q.dot(last) < 0.0:
+                q.negate()
+                pb.rotation_quaternion = q
+            LAST_Q[(name, pb.name)] = q.copy()
             pb.keyframe_insert("rotation_quaternion", frame=f, group=pb.name)
             if pb.name in ("pelvis", "Root"):
                 pb.keyframe_insert("location", frame=f, group=pb.name)
     act.use_fake_user = True
     made.append(act)
     print("CLIP", name, act.frame_range[:])
+
+if os.environ.get("CREW_TRACE"):
+    # Each frame of one clip as exported (Blender's own in-betweens): the stick tips, for a jump.
+    act = bpy.data.actions[os.environ["CREW_TRACE"]]
+    arm.animation_data.action = act
+    prev = None
+    for fr in range(int(act.frame_range[0]), int(act.frame_range[1]) + 1):
+        scene.frame_set(fr)
+        at = {s_: stick_tip(s_)[1].copy() for s_ in ("r", "l")}
+        if prev:
+            sp = max((at[s_] - prev[s_]).length for s_ in at) * FPS
+            print("TRACE %s f%03d t %.2f fastest stick tip %.1f m/s" % (act.name, fr, (fr - 1) / FPS, sp))
+        prev = at
 
 if PREVIEW:
     os.makedirs(PREVIEW, exist_ok=True)
