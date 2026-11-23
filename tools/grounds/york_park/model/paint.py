@@ -103,8 +103,10 @@ def deck(name, col, pitch=0.3, tile=(6.0, 6.0), grime=18):
 
 deck('roof_white', (214, 216, 216)); deck('roof_grey', (170, 174, 176)); deck('roof_soffit', (190, 194, 198), grime=14)
 deck('roof_flat', (150, 152, 152), pitch=0.6, grime=22)
-# solar panels: 1.0 x 1.7 m modules, dark blue cells, silver frames, row gaps
-a = np.ones((N, N, 3)) * np.array((38, 48, 72), float); mu, mv = N / 4.0, N / (1.7 * 2 / 1.7 * 1.7 * 2 / 1.7) / 1.0
+# solar panels: 1.0 x 1.7 m modules, cells, silver frames, row gaps. The cells' colour is the aerial's own:
+# over the Gunns array the Esri tile reads a median (151, 158, 157) (roof_colours-style sample, 2026-11-23),
+# the panels mirroring a pale sky; the old dark navy read as a blue band in every Google Earth pair.
+a = np.ones((N, N, 3)) * np.array((148, 155, 156), float); mu, mv = N / 4.0, N / (1.7 * 2 / 1.7 * 1.7 * 2 / 1.7) / 1.0
 mv = N / 3.4
 for i in range(4): a[:, int(i * mu):int(i * mu) + 8] = (170, 176, 182)
 for j in range(2): a[int(j * 1.7 * mv):int(j * 1.7 * mv) + 10] = (170, 176, 182)
