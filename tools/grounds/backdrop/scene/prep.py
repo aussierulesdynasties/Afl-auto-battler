@@ -186,6 +186,23 @@ if spec.get('real'):
         _cf = _real.colour_field(_SAr, _hr, _mr, [q for q in _bp if len(q) > 2], _tm)
         _HARD = [k for k in ('paved', 'parking', 'ballast', 'water', 'track', 'court_blue', 'court_navy', 'court_green', 'pool',
                              'infield', 'turf_blue', 'turf_runoff', 'road', 'path', 'netball') if k in PAL]
+        # water OSM leaves unmapped here (an estuary's own area polygon is often missing): where Sentinel-2's clear looks
+        # mostly saw water (s2far.py, 80 m) and the close aerial itself is dark water, the cover is water (crisp shore at 1 m)
+        _S2W = os.path.join(os.environ.get('WORK', '/home/user/work'), 's2', spec['name'] + '_far_water.npy')
+        if os.path.exists(_S2W):
+            from scipy.ndimage import map_coordinates as _mcw, binary_dilation as _bdw, binary_opening as _bow
+            _W2 = np.nan_to_num(np.load(_S2W), nan=0.0); _wj = json.load(open(_S2W.replace('_far_water.npy', '_far.json')))
+            _wh2, _ws2 = _wj['half_m'], _wj['m_per_px']
+            _gc_ = (np.arange(N) + 0.5) * PX - NEAR; _GXw, _GYw = np.meshgrid(_gc_, -_gc_)
+            _s2w = _mcw(_W2, [(_wh2 - _GYw) / _ws2 - 0.5, (_GXw + _wh2) / _ws2 - 0.5], order=1, mode='constant', cval=0.0) > 0.5
+            _s2w = _bdw(_s2w, iterations=max(1, int(60 / PX)))
+            _ai_ = np.clip(((_hr - (NEAR - (np.arange(N) + 0.5) * PX)) / _mr).astype(int), 0, _SAr.shape[0] - 1)
+            _aj_ = np.clip(((_gc_ + _hr) / _mr).astype(int), 0, _SAr.shape[1] - 1)
+            _Aw = _SAr[_ai_[:, None], _aj_[None, :]].astype(np.int16)
+            _dkw = (_Aw.mean(-1) < 95) & (_Aw[..., 2] >= _Aw[..., 0] - 4)
+            _new = _bow(_s2w & _dkw, iterations=2)
+            _ia = np.asarray(img).copy(); _ia[_new] = PAL['water']; img = Image.fromarray(_ia); dr = ImageDraw.Draw(img)
+            print('near water from Sentinel-2 and the aerial', int(_new.sum()), 'px')
         _a0 = np.asarray(img).astype(np.int16); _hard = np.zeros(_a0.shape[:2], bool)
         for k in _HARD: _hard |= np.all(_a0 == np.array(PAL[k], np.int16)[None, None], -1)
         # mapped water, for scene.py's lift (the aerial's dark lawns come close to the water colour)
