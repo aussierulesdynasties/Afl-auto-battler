@@ -45,6 +45,15 @@ field centre.
 | South (250-305) | buildings at 9-15 m from about 100 m out |
 | East (330-50) | open: 0-3 m (banks) to 140 m, a 9-12 m building at 130-135 m (20-50) |
 
+## Against the existing TIO model (`tools/grounds/tio_darwin`)
+
+- Fence: the model uses the OpenStreetMap pitch outline, which measures 179.4 x 143.8 m (axis 2 deg off north),
+  within 0.2 m and 1.4 m of the fence here.
+- Centre roof: the model's 17.5 m at the front falling to 15.5 m agrees with the 3D mesh (15-17 m at the front).
+- Wing roofs: the model has 13.8, 13.0 and 12.2 m in three steps toward each end; the mesh reads 15-17 m at the front
+  of the curved ends (bearings 135-160 and 200-230) and 13-14 m further back, so the model's wings may sit 1-3 m low.
+  Not yet checked whether the mesh's front points there are the roof edge or the fascia.
+
 Bearings are degrees counter-clockwise from east round the field centre (0 east, 90 north).
 
 ## Not done yet
