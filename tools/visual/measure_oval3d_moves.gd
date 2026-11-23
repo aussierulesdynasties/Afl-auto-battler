@@ -50,7 +50,9 @@ func _run() -> void:
 	var chase_from := -1.0
 	var chases := []     # s each chase-down ran
 	var drifts := []     # m the carrier ran in each chase-down (the ball off the sim's spot)
-	var chase_spot := Vector2.INF
+	var chase_spot := Vector2.INF  # the tackle's spot (the director's _loc)
+	var chase_from_at := Vector2.INF
+	var runs := []       # m the carrier ran in each
 	var chase_v := -1
 	var chase_k := -1
 	var ends := []       # m from tackler to carrier as each chase-down ended
@@ -84,12 +86,15 @@ func _run() -> void:
 		if cd and chase_from < 0.0:
 			chase_from = t
 			var ah0: Dictionary = anim.director.tackle_ahead()
-			chase_spot = anim.director.tokens[int(ah0["victim"])]["pos"] if not ah0.is_empty() else Vector2.INF
+			var ph1: Dictionary = anim.director._phases[anim.director._pi]
+			chase_spot = ph1.get("to", Vector2.INF)
+			chase_from_at = anim.director.tokens[int(ah0["victim"])]["pos"] if not ah0.is_empty() else Vector2.INF
 			chase_v = int(ah0["victim"]) if not ah0.is_empty() else -1
 			chase_k = int(ah0["who"]) if not ah0.is_empty() else -1
 		elif not cd and chase_from >= 0.0:
 			chases.append(t - chase_from)
 			if chase_v >= 0:
+				runs.append(snappedf((anim.director.tokens[chase_v]["pos"] as Vector2).distance_to(chase_from_at), 0.1))
 				drifts.append(snappedf((anim.director.tokens[chase_v]["pos"] as Vector2).distance_to(chase_spot), 0.1))
 				ends.append(snappedf((anim.director.tokens[chase_v]["pos"] as Vector2).distance_to(anim.director.tokens[chase_k]["pos"]), 0.1))
 			if OS.get_environment("MOVES_EACH") != "":
@@ -179,7 +184,8 @@ func _run() -> void:
 				gs[gs.size() / 2], gs[int(gs.size() * 0.1)], gs[int(gs.size() * 0.9)]])
 	print("MOVES chase-downs run: %s s" % str(chases.map(func(c): return snappedf(c, 0.01))))
 	print("MOVES chase-down gap tackler to carrier as it ended (m; the director's reach is 1.6): %s" % str(ends))
-	print("MOVES chase-down carrier ran (m, the ball off its logged spot): %s" % str(drifts))
+	print("MOVES chase-down carrier ran (m): %s" % str(runs))
+	print("MOVES chase-down ball off the tackle's spot as it ended (m): %s" % str(drifts))
 	print("MOVES chase-down tackles from behind: %d of %d takes %s" % [run_downs.size(), idle.size(),
 			str(run_downs.map(func(r): return "t=%.1f %d on %d at %.1f vs %.1f m/s" % r))])
 	idle.sort()

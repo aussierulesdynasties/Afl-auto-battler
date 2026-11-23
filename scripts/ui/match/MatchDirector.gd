@@ -1124,21 +1124,44 @@ func _fifty_phases(k: int) -> Array:
 	return out
 
 
-## Chase-downs are off: no tackle phase sets "run_down". A run long enough to read as a
-## chase-down carried the ball up to 27 m from the spot MatchSim logged for the tackle (seed 31,
-## 1,000 s; test_match_visual's release checks allow 3 m), and the sim logs every tackle within
-## ~1 m of where the carrier got the ball, so there is no room for one in the picture alone.
-## They come back when the sim logs a run before a tackle. The mechanism below is kept for that.
-## A chase-down tackle (_enter "chase"): the tackler is RUN_DOWN_GAP to RUN_DOWN_FAR m behind the
-## carrier, within ~50 deg of the carrier's line to his own goal. The carrier takes off for it at
-## RUN_DOWN_CARRIER of the tackler's top pace, both near flat out, so the gap closes slowly (a
-## 2.5 m start runs ~2 s), and he is run down within RUN_DOWN_MAX s. Over 1,200 s of seed 31 the
-## tacklers start 1.8-4.3 m off (26 of 30), so this is the gap a run-down starts from.
-const RUN_DOWN_GAP := 2.2
-const RUN_DOWN_FAR := 10.0
-const RUN_DOWN_BEHIND := 0.65
-const RUN_DOWN_CARRIER := 0.85
-const RUN_DOWN_MAX := 4.5
+## A run-down (director, 2026-11-23: chase-downs from behind, the engine giving some tackles a
+## run): MatchSim tags a held tackle with "run" metres (MatchSim._run_down). Its spot is that far
+## across the ground from where the carrier got the ball, away from the tackler (_loc), at the
+## sim's own field position. The carrier runs there and the tackler runs him down from behind:
+## the carrier's pace is set every frame so that the tackler reaches him as he reaches the spot
+## (no slower than RUN_DOWN_SLOW, no faster than RUN_DOWN_FAST of his top), and the take comes
+## when the carrier is within RUN_DOWN_AT of it with the tackler at his back (RUN_DOWN_REACH).
+const RUN_DOWN_SLOW := 0.55
+const RUN_DOWN_FAST := 0.95
+const RUN_DOWN_AT := 0.8
+const RUN_DOWN_REACH := 1.8
+const RUN_DOWN_MAX := 6.0
+
+
+## One step of a run-down (_done "chase"): the carrier's pace for the tackler to reach him at the
+## spot, the tackler flat out at his back. True when the take comes.
+func _run_down_step(p: Dictionary, tk: Dictionary, v: Dictionary) -> bool:
+	var to: Vector2 = p["to"]
+	var vp: Vector2 = v["pos"]
+	var gap := vp.distance_to(tk["pos"])
+	var left := vp.distance_to(to)
+	if (left <= RUN_DOWN_AT and gap <= RUN_DOWN_REACH) or _pt >= float(p["max"]):
+		return true
+	if left <= RUN_DOWN_AT:
+		# There before the tackler: he holds the spot, the tackler comes on.
+		MatchMotion.set_goal(v, to, 0.2, true)
+	else:
+		var catch_t := maxf(0.0, (to.distance_to(tk["pos"]) - RUN_DOWN_REACH * 0.5)) / maxf(float(tk["top"]), 0.1)
+		var want := clampf(left / maxf(catch_t, 0.05) / maxf(float(v["top"]), 0.1), RUN_DOWN_SLOW, RUN_DOWN_FAST)
+		var u := clampf((want - MatchMotion.JOG_SHARE) / (1.0 - MatchMotion.JOG_SHARE), 0.0, 1.0)
+		# Aimed past the spot, so he runs through it rather than braking into it.
+		var dir := (to - vp) / maxf(left, 0.01)
+		MatchMotion.set_goal(v, to + dir * 4.0, u, true)
+	# The tackler aims through him (aimed at him, arrive braking held him to the carrier's pace).
+	var on: Vector2 = vp - (tk["pos"] as Vector2)
+	var aim := vp + on.normalized() * 6.0 if gap > RUN_DOWN_REACH else vp
+	MatchMotion.set_goal(tk, aim, 1.0, true)
+	return false
 
 
 ## Whether the tackle being run down now is a chase-down from behind (the crowd calls "Ball!").
@@ -1161,7 +1184,10 @@ func _tackle_phases(k: int) -> Array:
 			victim = _actor_id(events[pk])
 	if tk < 0 or victim < 0:
 		return [{"t": "emit", "log": true}]
-	return [{"t": "chase", "who": tk, "victim": victim, "max": 1.6},
+	var chase := {"t": "chase", "who": tk, "victim": victim, "max": 1.6}
+	if float(ev.get("run", 0.0)) > 0.0:
+		chase.merge({"run_down": true, "to": _loc(k), "max": RUN_DOWN_MAX}, true)
+	return [chase,
 			{"t": "emit", "log": true},
 			{"t": "down", "who": tk, "victim": victim, "dur": 0.55}]
 
@@ -1627,6 +1653,23 @@ static func _fp_x(ev: Dictionary) -> float:
 	return MatchMotion.gx(clampf(float(ev.get("fp", 0.0)), -MatchMotion.STD_GOAL_X, MatchMotion.STD_GOAL_X))
 
 
+## Where a run-down's tackle lands (_loc): "run" metres across the ground from where the carrier
+## got it (src), away from the tackler, kept a few metres inside the boundary.
+func _run_spot(ev: Dictionary, x: float, src: Vector2) -> Vector2:
+	var run := float(ev.get("run", 0.0))
+	var a := _actor_id(ev)
+	var sgn := -signf(src.y) if src.y != 0.0 else 1.0
+	if a >= 0:
+		var dy: float = src.y - (tokens[a]["pos"] as Vector2).y
+		if absf(dy) > 0.5:
+			sgn = signf(dy)
+	for s in [sgn, -sgn]:
+		var q := Vector2(x, src.y + s * run)
+		if MatchMotion.inside_oval(q, 4.0):
+			return q
+	return Vector2(x, src.y)
+
+
 func _loc(k: int) -> Vector2:
 	if _locs.has(k):
 		return _locs[k]
@@ -1654,6 +1697,8 @@ func _loc(k: int) -> Vector2:
 	var p: Vector2
 	if kind in ["throwin", "last_disposal", "out_on_full"]:
 		p = _boundary_point(x, src.y)
+	elif kind == "tackle" and float(ev.get("run", 0.0)) > 0.0:
+		p = _run_spot(ev, x, src)
 	elif kind in ["goal", "behind", "rebound", "tackle", "pressure", "free", "fifty", "ballup"]:
 		p = Vector2(x, src.y)
 	elif _possession(kind) and _restart(k) == "centre":
@@ -2601,23 +2646,11 @@ func _enter(p: Dictionary) -> void:
 		"chase":
 			var vt: Dictionary = tokens[int(p["victim"])]
 			var tk0: Dictionary = tokens[int(p["who"])]
-			var gap: Vector2 = (vt["pos"] as Vector2) - (tk0["pos"] as Vector2)
-			# A chase-down (director 2026-11-22: "really cool chase down tackles from behind"):
-			# the tackler is behind the carrier, as the carrier looks at his own goal, so the
-			# carrier takes off for it and the tackler sprints him down. Otherwise the carrier is
-			# caught where he stands. The tackle itself is the sim's, either way.
-			var att := Vector2(MatchMotion.GOAL_X * _dir(int(vt["side"])), 0.0) - (vt["pos"] as Vector2)
-			var behind := gap.normalized().dot(att.normalized()) if gap.length() > 0.01 and att.length() > 0.01 else 0.0
-			p["_geo"] = [gap.length(), behind]
-			if p.get("run_down", false) and gap.length() > RUN_DOWN_GAP and gap.length() < RUN_DOWN_FAR and behind > RUN_DOWN_BEHIND:
-				p["chasing"] = true
-				p["max"] = RUN_DOWN_MAX
-				# His urgency for RUN_DOWN_CARRIER of the tackler's top (MatchMotion.step's pace).
-				var want := RUN_DOWN_CARRIER * float(tk0["top"]) / maxf(float(vt["top"]), 0.1)
-				var u := clampf((want - MatchMotion.JOG_SHARE) / (1.0 - MatchMotion.JOG_SHARE), 0.0, 1.0)
-				MatchMotion.set_goal(vt, (vt["pos"] as Vector2) + att.normalized() * 30.0, u, true)
+			p["chasing"] = p.get("run_down", false) and p.has("to")
+			if p["chasing"]:
+				# A run-down: the carrier runs to the tackle's spot (_done sets his pace).
+				MatchMotion.set_goal(vt, p["to"], 0.5, true)
 			else:
-				p["chasing"] = false
 				MatchMotion.set_goal(vt, vt["pos"], 0.2, true)
 			MatchMotion.set_goal(tk0, vt["pos"], 1.0, true)
 			_busy[int(p["who"])] = true
@@ -2922,14 +2955,9 @@ func _done(p: Dictionary) -> bool:
 		"chase":
 			var tk: Dictionary = tokens[int(p["who"])]
 			var v: Dictionary = tokens[int(p["victim"])]
-			var aim: Vector2 = v["pos"]
 			if p.get("chasing", false):
-				# Running a man down he aims through him, flat out: aimed at him, the arrive
-				# braking held him to the carrier's pace and the gap never closed (seed 31).
-				var on: Vector2 = (v["pos"] as Vector2) - (tk["pos"] as Vector2)
-				if on.length() > 0.01:
-					aim = (v["pos"] as Vector2) + on.normalized() * 10.0
-			MatchMotion.set_goal(tk, aim, 1.0, true)
+				return _run_down_step(p, tk, v)
+			MatchMotion.set_goal(tk, v["pos"], 1.0, true)
 			return (tk["pos"] as Vector2).distance_to(v["pos"]) <= 1.6 or _pt >= float(p["max"])
 		"emit", "possess":
 			return true
