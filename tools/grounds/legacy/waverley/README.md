@@ -15,6 +15,7 @@ a ring of dark rows round it; by 4 Mar 2006 the new, smaller oval has been laid.
 | --- | --- | --- |
 | Scale | 0.2791 m a pixel (sides of the square 178.6-179.6 px) | the painted 50 m centre square, 31 Jan 2014 (`measure/sq.py`); the 2005 frame matches the 2014 one to 0.4-0.7 % in scale on road features west and north of the ground, so its scale is good to about 0.7 % |
 | Old oval, 6 Apr 2005 | turf edge as a polar Fourier curve, K = 10, 1.9 px (0.5 m) rms on 673 of 720 rays; **188 m long (axis 29 deg north of east, NE-SW) x 163 m wide** | 8 points placed by eye on the light turf edge, then the strongest light-to-dark step within 25, 12 and 6 px of the smoothed curve (`measure/hand00.py`, `measure/oval_2005.json`, pixel frame of the 2005 capture) |
+| Members' stand (still standing) | seats rise from the turf about 66 m from the centre to 8 m up at 96-100 m; the roof front is a step at 22 m, 98-106 m out, and the roof top reads 34 m above the turf from 100 to 123 m out, with its back edge at 25 m, 124-132 m out (bearings 130-155) | Google Earth's 3D mesh (as at Ikon Park): 828 status-bar readouts on radial lines 5 deg apart round lat -37.925465, lon 145.188687, 2 m apart (`measure/ge3d/`). Heights in whole metres above today's turf (86 m above sea level); 24 readouts could not be read. The oval kept its level when it was reduced (heritage listed), but that is an assumption until a photo checks it |
 
 ## Not settled
 
@@ -23,6 +24,5 @@ a ring of dark rows round it; by 4 Mar 2006 the new, smaller oval has been laid.
   published 200 x 160; neither the turf edge nor the outside of the band (about 198 x 173 m) matches both numbers.
   A period photo has to settle where the fence stood. Until then the fence is not fixed.
 - **The north-west.** The curve runs onto the members' stand's concrete apron there (about 3-5 m too far out).
-- **Heights.** The members' stand still stands, so Google Earth's 3D mesh can give its heights (as at Ikon Park).
-  The public stands, light towers and scoreboard come from period photos only; downloads of Commons photos are
+- **Heights.** The public stands, light towers and scoreboard come from period photos only; downloads of Commons photos are
   refused from the cloud at the moment.
