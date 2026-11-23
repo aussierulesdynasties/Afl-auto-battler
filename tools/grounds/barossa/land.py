@@ -187,21 +187,38 @@ def paint_ground(ways, rels, sat_cls, half=R, px=TEX):
     d = ImageDraw.Draw(im)
     order = ["farmland", "meadow", "grass", "orchard", "residential", "recreation_ground", "vineyard", "quarry",
              "cemetery", "industrial"]
-    col = {"farmland": C["stubble"], "meadow": C["meadow"], "grass": C["lawn"], "orchard": C["orchard"],
-           "residential": C["town"], "recreation_ground": C["lawn"], "vineyard": C["vine_soil"], "quarry": C["quarry"],
-           "cemetery": C["lawn"], "industrial": C["yard"]}
+    # mapped grass, parks and the cemetery are watered only in places: they take a dry colour here, and the lawns the
+    # satellite measures show through below (as in town)
+    col = {"farmland": C["stubble"], "meadow": C["meadow"], "grass": C["meadow"], "orchard": C["orchard"],
+           "residential": C["town"], "recreation_ground": C["meadow"], "vineyard": C["vine_soil"], "quarry": C["quarry"],
+           "cemetery": C["yard"], "industrial": C["yard"]}
+    see_through = ("residential", "grass", "recreation_ground", "cemetery")
     polys = []
     for t, pts in ways:
         lu = t.get("landuse") or t.get("leisure")
         if lu in col and len(pts) > 2 and not (lu == "vineyard" and oval2.stale_vineyard(pts)):
-            polys.append((order.index(lu) if lu in order else 0, col[lu], pts))
+            polys.append((order.index(lu) if lu in order else 0, col[lu], pts, lu))
     for t, outer in rels:
         lu = t.get("landuse") or t.get("leisure")
         if lu in col:
             for pts in outer:
-                polys.append((order.index(lu) if lu in order else 0, col[lu], pts))
-    for _, c, pts in sorted(polys, key=lambda x: x[0]):
+                polys.append((order.index(lu) if lu in order else 0, col[lu], pts, lu))
+    for _, c, pts, _lu in sorted(polys, key=lambda x: x[0]):
         d.polygon([P(p) for p in pts], fill=tuple(int(x) for x in c))
+    # in town, the lawns and garden trees measured on the satellite show through the residential colour (the
+    # town was a flat dry colour between the houses where Google Earth shows lawns, gardens and trees)
+    town = Image.new("L", (W, W), 0)
+    dt = ImageDraw.Draw(town)
+    for _, c, pts, lu in polys:
+        if lu in see_through:
+            dt.polygon([P(p) for p in pts], fill=255)
+    tm = np.array(town).astype(np.float32)[..., None] / 255.0
+    arr = np.array(im).astype(np.float32)
+    garden = arr * (1 - w - g)[..., None] + np.array(C["wood"], np.float32) * w[..., None] \
+        + np.array(C["lawn"], np.float32) * g[..., None]
+    arr = arr * (1 - tm) + garden * tm
+    im = Image.fromarray(arr.astype(np.uint8))
+    d = ImageDraw.Draw(im)
     for t, pts in ways:
         if t.get("natural") == "water" and len(pts) > 2:
             d.polygon([P(p) for p in pts], fill=C["water"])
@@ -697,7 +714,17 @@ def main():
     vm = Mesh()
     nv = vines(sat, ways, th, keep_out, vm)
     hm = Mesh()
-    nh = houses(sat, ways + ms_buildings(ways), th, lambda e, n: abs(e) < HOLE and abs(n) < HOLE, hm)
+    # inside the precinct square, only the buildings build.py models are left out (the temporary stands too): the
+    # town's houses and sheds in the square's corners stay
+    from plan import TEMP_STANDS
+    def seg_d(e, n, a, b):
+        a, b, p = np.array(a), np.array(b), np.array((e, n))
+        t = np.clip(np.dot(p - a, b - a) / np.dot(b - a, b - a), 0, 1)
+        return float(np.hypot(*(p - a - t * (b - a))))
+    def house_out(e, n):
+        return keep_out(e, n) or any(seg_d(e, n, st["a"], st["b"]) < 16 for st in TEMP_STANDS) \
+            or math.hypot(e - 88, n + 52) < 8
+    nh = houses(sat, ways + ms_buildings(ways), th, house_out, hm)
     print("trees", len(tr), "vine segments", nv, "houses", nh, "land tris", land.tris(), "vine tris", vm.tris(),
           "house tris", hm.tris())
     from PIL import Image as _I

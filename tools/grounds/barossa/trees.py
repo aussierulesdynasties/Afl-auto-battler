@@ -85,17 +85,17 @@ def gum(seed):
         clump(far, frng, mid + np.array((0, 0.03, 0)), 0.42, 0.28, 0.42, OCT)
         # the leaves hang in three to five clumps along, round and below the end of the limb, overlapping so the
         # crown reads as one open, uneven mass with sky through its gaps
-        for j in range(int(rng.integers(3, 6))):
+        for j in range(int(rng.integers(4, 7))):
             f = 1.0 if j == 0 else rng.uniform(0.5, 1.05)
             at = top + (end - top) * f + np.array((rng.uniform(-0.2, 0.2), rng.uniform(-0.25, 0.15) * Y / 2.6,
                                                    rng.uniform(-0.2, 0.2)))
-            s = rng.uniform(0.22, 0.32) * (1.0 if j == 0 else 0.85)
+            s = rng.uniform(0.32, 0.44) * (1.0 if j == 0 else 0.85)
             clump(m, rng, at, s * rng.uniform(1.0, 1.3), s * rng.uniform(0.6, 0.85), s * rng.uniform(1.0, 1.3))
     # a leader through the middle with the crown's top clump
     tip = top + np.array((rng.uniform(-0.1, 0.1), (1.0 - fork - 0.18) * Y, rng.uniform(-0.1, 0.1)))
     m.tube("wood", top, tip, 0.026, 0.012, seg=4, caps=False)
-    clump(m, rng, tip, 0.3, 0.22, 0.3)
-    clump(m, rng, tip + np.array((rng.uniform(-0.2, 0.2), -0.25, rng.uniform(-0.2, 0.2))), 0.28, 0.2, 0.28)
+    clump(m, rng, tip, 0.4, 0.28, 0.4)
+    clump(m, rng, tip + np.array((rng.uniform(-0.2, 0.2), -0.25, rng.uniform(-0.2, 0.2))), 0.38, 0.26, 0.38)
     clump(far, frng, tip, 0.36, 0.22, 0.36, OCT)
     far.tube("wood", (0, -0.02, 0), top, 0.05, 0.036, seg=3, caps=False)
     # fit: crown reaches 1 m from the trunk and 1 m up
