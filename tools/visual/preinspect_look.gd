@@ -6,6 +6,8 @@ extends SceneTree
 ## PREINSPECT_NEAR=m clips as the broadcast cameras do (Oval3DBroadcast.NEAR, 20 m). PREINSPECT_ROOF=open|shut sets a ground's opening roof (GroundModels.ROOFS; a match shows it shut).
 ## PREINSPECT_MODEL_FRAME=1 reads positions in the model's own frame instead (x east, y north, z up, metres), the frame
 ## Google Earth views are worked out in (docs/MCG_STANDARD.md); PREINSPECT_SIZE=WxH sets the picture (default 960x540).
+## PREINSPECT_SUN=bearing,elevation[,energy] puts the sun where it was when a reference photo was taken (degrees, model frame,
+## bearing from north towards east), so a face lit in the photo is lit in the picture and colours compare like for like.
 
 
 func _initialize() -> void:
@@ -47,6 +49,21 @@ func _run() -> void:
 	var cam: Camera3D = oval.camera
 	var model_frame := OS.get_environment("PREINSPECT_MODEL_FRAME") != ""
 	var ground := oval.find_child("Ground", true, false) as Node3D
+	if OS.get_environment("PREINSPECT_SUN") != "" and ground != null:
+		var sv := OS.get_environment("PREINSPECT_SUN").split_floats(",")
+		var b := deg_to_rad(sv[0])
+		var e := deg_to_rad(sv[1])
+		var to_sun := Vector3(sin(b) * cos(e), cos(b) * cos(e), sin(e))    # model frame: x east, y north, z up
+		var sun_d := (ground.global_basis * Vector3(to_sun.x, to_sun.z, -to_sun.y)).normalized()
+		var sun: DirectionalLight3D = null
+		for l: DirectionalLight3D in oval.find_children("*", "DirectionalLight3D", true, false):
+			if l.visible and (sun == null or l.light_energy > sun.light_energy):
+				sun = l
+		if sun != null:
+			sun.global_basis = Basis.looking_at(-sun_d, Vector3.UP)
+			sun.directional_shadow_max_distance = 1500.0
+			if sv.size() > 2:
+				sun.light_energy = sv[2]
 	cam.far = 3000.0
 	cam.near = float(OS.get_environment("PREINSPECT_NEAR")) if OS.get_environment("PREINSPECT_NEAR") != "" else 0.05
 	for spec in args.slice(2):
