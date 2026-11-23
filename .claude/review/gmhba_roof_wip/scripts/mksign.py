@@ -1,0 +1,15 @@
+from PIL import Image,ImageDraw,ImageFont
+BG=(38,40,44)
+# block cladding: dark grey with vertical standing seams every 0.5 m (tile 4 m = 512 px)
+im=Image.new('RGB',(512,512),BG);d=ImageDraw.Draw(im)
+for k in range(8):x=k*64;d.line([(x,0),(x,511)],fill=(58,61,66),width=3);d.line([(x+3,0),(x+3,511)],fill=(28,29,32),width=2)
+im.save('jss_block.png')
+# sign 10 x 5.4 m -> 1000 x 540 px
+s=Image.new('RGB',(1000,540),BG);d=ImageDraw.Draw(s)
+for k in range(0,1000,50):d.line([(k,0),(k,539)],fill=(50,53,58),width=2)
+F=ImageFont.truetype('C:/Windows/Fonts/arialbd.ttf',150)
+d.rounded_rectangle((20,40,170,190),18,fill=(40,140,220))
+d.rectangle((80,62,110,168),fill='white');d.rectangle((42,100,148,130),fill='white')
+d.text((190,30),'GMHBA',font=F,fill=(240,244,248))
+d.text((150,290),'STADIUM',font=F,fill=(240,244,248))
+s.save('jss_sign.png')
