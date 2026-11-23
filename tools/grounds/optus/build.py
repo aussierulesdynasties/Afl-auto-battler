@@ -29,7 +29,7 @@ def mat(name,rough=0.8,metal=0.0,mr=None):
 MB=mat('bronze',0.55,0.3,'bronze_mr');MG=mat('glass',0.3,0.0);MS=mat('seats');MR=mat('roof',0.6);MW=mat('white',0.5);MU=mat('under')
 MC=mat('concrete');MT=mat('terrace');MP=mat('plaza');MD=mat('deck');MK=mat('clad',0.4,0.4);MKL=mat('clad',0.85,0.0);MX=mat('dark')
 MPW=mat('podwall');MLV=mat('louvre',0.5);MBN=mat('bench');MAI=mat('aisle');MRS=mat('riser')
-bm=bmesh.new();uv=bm.loops.layers.uv.new('UVMap')
+bm=bmesh.new();uv=bm.loops.layers.uv.new('UVMap');LEDGE=bm.faces.layers.int.new('ledge')   # fin ledges: shaded as the facade (below)
 
 import shape as SH
 V2=lambda p:Vector((p[0],p[1],0))
@@ -194,7 +194,10 @@ for q in range(len(_fi)):
         if zhi-zli<1e-4 and zhj-zlj<1e-4:continue
         lo,hi=FIN[m+1],FIN[m]
         face([lo[i][0],lo[j][0],hi[j][1],hi[i][1]],mi,[uv_(i,zli),uv_(jn,zlj),uv_(jn,zhj),uv_(i,zhi)],w)
-        face([hi[i][1],hi[j][1],hi[j][0],hi[i][0]],mi,[uv_(i,zhi),uv_(jn,zhj),uv_(jn,zhj),uv_(i,zhi)],Vector((0,0,1)))
+        # The ledge's UVs sit inside its own fin's row (not on the row boundary, where half its pixels took the row
+        # above), with a real height so the texture's mip level is chosen right.
+        _l=face([hi[i][1],hi[j][1],hi[j][0],hi[i][0]],mi,[uv_(i,zhi-0.06*FIN_P),uv_(jn,zhj-0.06*FIN_P),uv_(jn,zhj-0.25*FIN_P),uv_(i,zhi-0.25*FIN_P)],Vector((0,0,1)))
+        _l[LEDGE]=i+1   # which facade segment, for its outward normal
 # --- glass band from the bronze's top to the glass head, on the same surface
 GROWS=10
 GR=[BR[BROWS]]+[[P(FP(i,HB[i]+(ZGT_[i]-HB[i])*k/GROWS),HB[i]+(ZGT_[i]-HB[i])*k/GROWS) for i in range(N)] for k in range(1,GROWS+1)]
@@ -821,6 +824,18 @@ rp=[R0.lerp(R1,k/nr) for k in range(nr+1)]
 for zz in (0.12,0.95,1.86):sweep(rp,zz,zz+0.05,0.05,MRL)
 for p in rp:boxp(p,0.035,0.0,1.91,MRL)
 bm.to_mesh(me);bm.free()
+# The fins' 7 cm ledges face the sky; at range each is under a pixel, and their bright rows against the darker blades
+# shimmered into moire rings (2x supersampling removes them; the texture alone does not cause them). They keep their
+# shape (silhouette, shadow) but are lit as the facade face beside them: their normal is the facade's, out and level.
+_la=me.attributes.get('ledge')
+if _la is not None:
+    _ln=[]
+    for _p in me.polygons:
+        if _la.data[_p.index].value:_n=OUT(_la.data[_p.index].value-1)
+        else:_n=_p.normal
+        _ln+=[tuple(_n)]*_p.loop_total
+    me.normals_split_custom_set(_ln)
+    me.attributes.remove(me.attributes['ledge'])
 # ---------- real seats: pan + back per seat (0.44 m wide, 0.5 m pitch, 6 cm gap), on every row of both tiers.
 # Aisles and the vomitory stay where the stand texture paints them (bay metres 0 and 7.4, upper tier offset 3.7).
 # Colours: paint_tex's tier colours, each seat pushed toward grey-blue or tan, half each (Commons 032, 005).
