@@ -13,6 +13,7 @@ points into the screen:
 - joints move smoothly from frame to frame.
 
     python3 tools/oval3d/mp_fit.py FRAMES_DIR MODEL.task BONES.json OUT.json
+    python3 tools/oval3d/mp_fit.py --track TRACK.json BONES.json OUT.json   (broadcast footage)
 
 BONES.json: {"bone": length_m} for the pairs in BONES below (render_clip.gd's joints.json can give
 them: tools/oval3d/mp_fit.py --bones joints.json). OUT.json: {"hz", "frames": [{joint: [x, y, z]}]}
@@ -82,7 +83,11 @@ def fit(p2, p3, vis, bones):
     F = len(keep)
     n = len(J)
     P2 = np.stack([p2[i] for i in keep])
-    P3 = np.stack([p3[i] for i in keep])
+    # Frames with no 3D guess (the broadcast lift can miss) start from the nearest frame's guess
+    # and get no pull from it: their depth comes from their neighbours and the bone lengths.
+    has3 = [i for i in keep if p3[i] is not None]
+    P3 = np.stack([p3[i] if p3[i] is not None else p3[min(has3, key=lambda h: abs(h - i))] for i in keep])
+    M3 = np.array([1.0 if p3[i] is not None else 0.0 for i in keep])
     V = np.stack([vis[i] for i in keep])
     # Scale and offset of each frame's picture (orthographic camera), from the 2D points' spread
     # against the 3D guess's: a start the solve refines.
@@ -109,14 +114,43 @@ def fit(p2, p3, vis, bones):
         # The guess pulls each joint's place about his hips, not his place on the screen.
         Xc = X - X[:, 6:8].mean(1, keepdims=True)
         Pc = P3 - P3[:, 6:8].mean(1, keepdims=True)
-        r_pri = (Xc - Pc) * W_PRIOR
+        r_pri = (Xc - Pc) * W_PRIOR * M3[:, None, None]
         r_bone = np.stack([np.linalg.norm(X[:, a] - X[:, b], axis=1) - bl[k] for k, (a, b) in enumerate(bi)], 1) * W_BONE
         r_sm = (X[1:] - X[:-1]) * W_SMOOTH if F > 1 else np.zeros((0, n, 3))
         # The camera's zoom changes slowly.
         r_s = np.diff(s) / px * 5.0
         return np.concatenate([r_img.ravel(), r_pri.ravel(), r_bone.ravel(), r_sm.ravel(), r_s])
 
-    sol = least_squares(res, x0, method="trf", x_scale="jac", max_nfev=200)
+    # Which unknowns each residual touches: without it the solver differences every unknown for
+    # every residual, and a 70-frame broadcast clip takes over ten minutes.
+    nX = F * n * 3
+    xi = lambda f, j, c: (f * n + j) * 3 + c
+    si = lambda f: nX + f
+    ti = lambda f, c: nX + F + f * 2 + c
+    bli = lambda k: nX + 3 * F + k
+    rows = []
+    for f in range(F):
+        for j in range(n):
+            for c in range(2):
+                rows.append([xi(f, j, c), si(f), ti(f, c)])
+    for f in range(F):
+        for j in range(n):
+            for c in range(3):
+                rows.append([xi(f, j, c), xi(f, 6, c), xi(f, 7, c)])
+    for f in range(F):
+        for k, (a, b) in enumerate(bi):
+            rows.append([xi(f, a, c) for c in range(3)] + [xi(f, b, c) for c in range(3)] + [bli(k)])
+    for f in range(F - 1):
+        for j in range(n):
+            for c in range(3):
+                rows.append([xi(f, j, c), xi(f + 1, j, c)])
+    for f in range(F - 1):
+        rows.append([si(f), si(f + 1)])
+    sp = lil_matrix((len(rows), len(x0)), dtype=int)
+    for r, cols in enumerate(rows):
+        for c in cols:
+            sp[r, c] = 1
+    sol = least_squares(res, x0, method="trf", x_scale="jac", max_nfev=200, jac_sparsity=sp)
     X, s, t, bl = unpack(sol.x)
     out = [None] * len(p2)
     for k, i in enumerate(keep):
@@ -124,9 +158,27 @@ def fit(p2, p3, vis, bones):
     return out
 
 
+def from_track(path):
+    """A track from tools/oval3d/track_broadcast.py (follow, then lift) in track()'s form."""
+    T = json.load(open(path))
+    p2, p3, vis = [], [], []
+    for f in T["frames"]:
+        p2.append(np.array(f["p2"]) if f else None)
+        p3.append(np.array(f["p3"]) if f and f.get("lift", 1.0) is not None else None)
+        vis.append(np.array(f["vis"]) if f else None)
+    return p2, p3, vis, float(T["hz"])
+
+
 def main():
     if sys.argv[1] == "--bones":
         print(json.dumps(bones_from_truth(sys.argv[2]), indent=1))
+        return
+    if sys.argv[1] == "--track":
+        # python3 tools/oval3d/mp_fit.py --track TRACK.json BONES.json OUT.json
+        p2, p3, vis, hz = from_track(sys.argv[2])
+        frames = fit(p2, p3, vis, json.load(open(sys.argv[3])))
+        json.dump({"hz": hz, "frames": frames}, open(sys.argv[4], "w"))
+        print(f"FIT {len([f for f in frames if f])} of {len(frames)} frames -> {sys.argv[4]}")
         return
     frames_dir, model, bones_path, out_path = sys.argv[1:5]
     hz = 30.0
