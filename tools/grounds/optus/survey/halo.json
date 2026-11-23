@@ -1,0 +1,6 @@
+{"note": "HALO rooftop platform, digitised 2026-11-22 from the calibrated straight-down Google Earth shot g_-75_+0 (0.20 m a pixel at roof height). Model metres. A ring that leans out past the west roof edge (open centre), a deck running in along the bay to a half-round lookout over the seats, an oval opening in the deck, a lift/stair drum.",
+ "ring": {"c": [-162.3, -32.3], "r_out": 8.1, "r_in": 6.3},
+ "end": {"c": [-122.6, -25.2], "r": 7.0},
+ "opening": {"a": [-141.8, -28.0], "b": [-129.6, -27.6], "r": 6.0},
+ "drum": {"c": [-151.2, -29.7], "r": 1.8, "h": 2.4},
+ "deck_top": 43.0, "deck_thick": 0.9, "rail_h": 1.2}

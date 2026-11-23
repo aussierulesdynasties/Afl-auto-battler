@@ -2512,14 +2512,26 @@ func _test_mixed_packages() -> void:
 	var year := GameState.season_year
 	var invariant := true
 	var tried := 0
+	var valued := 0
 	for rival in ["COL", "WCE", "SYD", "NTH"]:
 		var theirs := (GameState.season.lists[rival] as Array).duplicate()
 		theirs.sort_custom(func(a, b): return int(a["overall"]) > int(b["overall"]))
 		var mine := GameState.my_list.duplicate()
 		mine.sort_custom(func(a, b): return int(a["overall"]) > int(b["overall"]))
+		# A package the club can deal in (no retiring man, a pick it still holds), so what is
+		# compared is its valuation, not which fault it finds first.
+		mine = mine.filter(func(q): return not GameState.retiring_now(q))
+		theirs = theirs.filter(func(q): return not GameState.retiring_now(q))
+		var their_pick := ""
+		for y in [year, year + 1]:
+			for rd in [1, 2]:
+				var pid := GameState.pick_id(y, rd, rival)
+				if their_pick == "" and str(GameState.pick_asset(pid).get("owner", "")) == rival:
+					their_pick = pid
 		var give := [str(mine[8]["id"]), GameState.pick_id(year, 2, me), str(mine[20]["id"]), GameState.pick_id(year + 1, 1, me)]
-		var take := [str(theirs[10]["id"]), GameState.pick_id(year, 1, rival), str(theirs[25]["id"])]
+		var take := [str(theirs[10]["id"]), their_pick, str(theirs[25]["id"])]
 		var base := GameState.evaluate_trade(rival, give, take)
+		valued += 1 if base.has("in") else 0
 		var g2 := give.duplicate()
 		g2.reverse()
 		var t2 := take.duplicate()
@@ -2527,7 +2539,15 @@ func _test_mixed_packages() -> void:
 		var flipped := GameState.evaluate_trade(rival, g2, t2)
 		invariant = invariant and str(base) == str(flipped)
 		tried += 1
-	_check(tried == 4 and invariant, "Players and picks on both sides: the order they go in changes nothing")
+	_check(tried == 4 and invariant and valued == 4,
+			"Players and picks on both sides: the order they go in changes nothing (%d of 4 valued)" % valued)
+	# A package with two faults gets the same answer whichever way round it goes.
+	var own_man := str(GameState.my_list[0]["id"])
+	var own_pick := GameState.pick_id(year, 1, me)
+	var two_ways := [GameState.evaluate_trade("COL", [own_man], [own_man, own_pick]),
+			GameState.evaluate_trade("COL", [own_man], [own_pick, own_man])]
+	_check(not bool(two_ways[0]["ok"]) and str(two_ways[0]) == str(two_ways[1]),
+			"A package with two faults gives one answer whatever its order (%s)" % str(two_ways[0].get("code", "")))
 	# Five lesser pieces - three fringe players and two late picks - for a star.
 	var refused := true
 	var judged := 0
