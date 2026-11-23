@@ -14,6 +14,14 @@ extends RefCounted
 ## game's own league: 24 rounds, ten finalists with the wildcard round, the
 ## Grand Final at the MCG, a Gather Round, extra time.
 ## Every decade loads the same way: one table, keyed by year, read by Season.
+##
+## vic_finals: where a Victorian club hosts a final in a real season (bug bash
+## 2026-11-23). Finals were never played at Victoria Park, Windy Hill,
+## Princes Park, Moorabbin, the Western Oval, Kardinia Park or Docklands: a
+## Victorian club's home final was at the MCG. In 2020 the Victorian clubs'
+## finals went to Queensland (the Gabba hosted most of them) and in 2021 to
+## the other states (Optus Stadium, the Grand Final ground, hosted the most
+## of theirs). Empty: the host's own ground (the game's league).
 
 const PATH := "res://data/season_rules.csv"
 ## The game's own league starts here: a real season in the table, drawn in
@@ -24,7 +32,7 @@ const GAME_LEAGUE_YEAR := 2026
 ## even club count, two at an odd one).
 const DEFAULT := {
 	"year": 0, "rounds": 24, "games": 0, "finalists": 10, "finals": "wildcard10",
-	"gf_venue": "MCG", "gather_round": true, "drawn_finals": "extra_time",
+	"gf_venue": "MCG", "gather_round": true, "drawn_finals": "extra_time", "vic_finals": "",
 }
 
 ## The finals brackets. Each is its weeks in order; each week its matches as
@@ -113,7 +121,7 @@ static func for_year(year: int) -> Dictionary:
 	out["year"] = year
 	for row in rows():
 		if year >= int(row["from_year"]) and year <= int(row["to_year"]):
-			for k in ["rounds", "games", "finalists", "finals", "gf_venue", "gather_round", "drawn_finals"]:
+			for k in ["rounds", "games", "finalists", "finals", "gf_venue", "gather_round", "drawn_finals", "vic_finals"]:
 				out[k] = row[k]
 			break
 	return out

@@ -1372,6 +1372,7 @@ func _restore_career(state: Dictionary) -> bool:
 		_migrate_careers()
 	if saved_version < 2:
 		_migrate_player_clubs()
+	_repair_legacy_careers()
 	_migrate_train_plans()
 	_migrate_injury_logs()
 	_mark_unicorns()
@@ -1471,6 +1472,41 @@ func _restamp_backed(p: Dictionary, club: String) -> void:
 			e["club"] = club
 
 
+## A Legacy save made before the bug bash of 2026-11-23: its real players'
+## records said they were counted to 2025, so not one season of the career was
+## added. Each such record now runs to the season before the start, and the
+## seasons this save has already closed are marked unknown: their games and
+## goals were never kept, so they are not guessed.
+func _repair_legacy_careers() -> void:
+	var real_to := Career.before_game()
+	if real_to >= Career.BEFORE_GAME:
+		return
+	var closed := season != null and (offseason_year == season_year
+			or int(season_awards.get("year", 0)) == season_year)
+	var last := season_year if closed else season_year - 1
+	var groups: Array = [my_list, free_agents, draftee_pool]
+	if season != null:
+		for code in season.lists:
+			groups.append(season.lists[code])
+	for code in league_lists:
+		groups.append(league_lists[code])
+	for arr in groups:
+		for p in arr:
+			if not (p is Dictionary) or not ((p as Dictionary).get("career") is Dictionary):
+				continue
+			var c: Dictionary = p["career"]
+			if int(c.get("through", 0)) != Career.BEFORE_GAME:
+				continue
+			c["through"] = maxi(real_to, last)
+			var unknown: Array = c.get("unknown", [])
+			for span in unknown:
+				if int(span[1]) == Career.BEFORE_GAME:
+					span[1] = real_to
+			if last > real_to:
+				unknown.append([real_to + 1, last])
+			c["unknown"] = unknown
+
+
 ## A save from before career records: every player gets his dataset career
 ## (AFL seasons to 2025, or nothing for a generated player), and the seasons
 ## this save already played are marked unknown - their games and goals were
@@ -1494,7 +1530,7 @@ func _migrate_careers() -> void:
 		var group: Array = played if pass_i == 0 else others
 		# Only players who could have played were on a list or a free agent;
 		# a prospect still in the pool has missed nothing.
-		var gap_to := last if pass_i == 0 else Career.BEFORE_GAME
+		var gap_to := last if pass_i == 0 else Career.before_game()
 		for arr in group:
 			for p in arr:
 				if not (p is Dictionary) or (p as Dictionary).has("career"):
@@ -1504,7 +1540,7 @@ func _migrate_careers() -> void:
 				if orig is Dictionary and (orig as Dictionary).get("career") is Dictionary \
 						and not is_same(orig, p):
 					base = orig["career"]
-				Career.migrate(p, base, Career.BEFORE_GAME + 1, gap_to)
+				Career.migrate(p, base, Career.before_game() + 1, gap_to)
 
 
 ## Overall is derived data: rebuild it from the attributes on load, so a
@@ -7851,7 +7887,7 @@ func _count_finals(results: Array) -> void:
 func save_saw_every_game(p: Dictionary) -> bool:
 	if not Career.complete(p):
 		return false
-	var from := maxi(Career.BEFORE_GAME + 1, finals_counted_since)
+	var from := maxi(Career.before_game() + 1, finals_counted_since)
 	for st in (Career.of(p).get("stints", []) as Array):
 		if int((st as Array)[1]) < from:
 			return false
@@ -10269,7 +10305,11 @@ func _sign_fa(p: Dictionary, code: String, salary: int, years: int) -> void:
 				else "%s tested free agency and leaves for %s: %s for %d season%s.") % [GameDB.player_display_name(p),
 				GameDB.club_name(code), Contracts.money(salary), years, "" if years == 1 else "s"])
 	elif code == my_club or int(p.get("overall", 0)) >= NEWS_MIN_OVR:
-		add_news("contract", "%s sign free agent %s (OVR %d): %s for %d season%s." % [GameDB.club_name(code),
+		# Before free agency (2012) a delisted player came back through the
+		# pre-season draft, as the season wrap says (_build_season_wrap).
+		var signed_line := "%s sign free agent %s (OVR %d): %s for %d season%s." if EraRules.on("free_agency") \
+				else "%s take delisted %s (OVR %d) in the pre-season draft: %s for %d season%s."
+		add_news("contract", signed_line % [GameDB.club_name(code),
 				GameDB.player_display_name(p), int(p["overall"]), Contracts.money(salary), years, "" if years == 1 else "s"])
 
 
@@ -14100,6 +14140,54 @@ func _ground_rename_news() -> void:
 			text += ", home of %s" % " and ".join(names)
 		add_news("ground", text + ".", "Pre-season", {"club": str(clubs[0]) if clubs.size() > 0 else "",
 				"old": old, "new": now})
+	_club_change_news()
+
+
+## A past season's club that moves its home ground or takes a new name gets one
+## story before Round 1 (bug bash 2026-11-23: Hawthorn went to Waverley Park in
+## 1992, Essendon, St Kilda, North and the Bulldogs to Docklands in 2000, and
+## Footscray became the Western Bulldogs in 1997, all without a word). A year
+## event that already tells the move (Fitzroy to the Western Oval, Adelaide
+## Oval, Perth Stadium) or the name (North as the Kangaroos) keeps it.
+func _club_change_news() -> void:
+	if season == null or not (EraRules.is_era(season_year) or season_year == EraRules.GAME_FROM):
+		return
+	var before_clubs: Array = GameDB.active_clubs(season_year - 1)
+	for c in season.clubs:
+		var code := str(c)
+		if not before_clubs.has(code):
+			continue
+		var was: Dictionary = GameDB.club_era(code, season_year - 1)
+		var now: Dictionary = GameDB.club_era(code, season_year)
+		var g0 := GameDB.ground_key(str(was.get("ground", "")))
+		var g1 := GameDB.ground_key(str(now.get("ground", "")))
+		var shown := GameDB.ground_name(g1, season_year)
+		if (g0 != "" and g1 != "" and g0 != g1 and not _year_event_tells(code, ["move", shown])
+				and Milestones.tell_once(self, "home|%s|%d" % [code, season_year])):
+			add_news("ground", "%s have a new home: from %s they play at %s, leaving %s." % [str(now.get("name", code)),
+					season.round_name(0), shown, GameDB.ground_name(g0, season_year - 1)], "Pre-season",
+					{"club": code, "old": GameDB.ground_name(g0, season_year - 1), "new": shown})
+		var n0 := str(was.get("name", ""))
+		var n1 := str(now.get("name", ""))
+		if (n0 != "" and n1 != "" and n0 != n1 and not _year_event_tells(code, [n1])
+				and Milestones.tell_once(self, "name|%s|%d" % [code, season_year])):
+			add_news("club", "%s take a new name: from %s they are %s%s." % [n0, season.round_name(0),
+					"the " if n1.ends_with("s") else "", n1], "Pre-season", {"club": code})
+
+
+## Whether a year event opening this season (round 0) about `code` says any of `words`.
+func _year_event_tells(code: String, words: Array) -> bool:
+	for e in YearEvents.all():
+		if int(e.get("season", 0)) != season_year or int(e.get("round", 0)) != 0:
+			continue
+		var cl = e.get("clubs", [])
+		if not (cl is Array and (cl as Array).has(code)):
+			continue
+		var text := (str(e.get("headline", "")) + " " + " ".join(PackedStringArray(e.get("beats", [])))).to_lower()
+		for w in words:
+			if str(w) != "" and text.find(str(w).to_lower()) >= 0:
+				return true
+	return false
 
 
 ## Around halfway through the home-and-away season, recruiting has seen

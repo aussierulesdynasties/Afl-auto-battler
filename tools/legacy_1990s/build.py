@@ -1172,11 +1172,47 @@ GROUND_NAMES = [
     ("carrara", "People First Stadium", 2024, None, "Carrara_Stadium",
      "the stadium was renamed People First Stadium in March 2024"),
     ("bruce_stadium", "Bruce Stadium", None, None, "Canberra_Stadium", "Former names Bruce Stadium"),
+    # Grounds the AFL came to later, each under its name of the season (bug bash 2026-11-23). Their
+    # names after 2025 are the game's own (GameDB.GROUND_KEYS), so the rows stop at 2025 or run open
+    # where today's name is the game's.
+    ("york_park", "York Park", None, 2003, "York_Park",
+     "In 2004, the ground became known as Aurora Stadium as the result of six-year naming rights sponsorship deal"),
+    ("york_park", "Aurora Stadium", 2004, 2016, "York_Park", "bringing an end to a 13-year partnership with Aurora Energy"),
+    ("york_park", "UTAS Stadium", 2017, 2025, "York_Park",
+     "bought the naming rights to the stadium for a five-year contract that would take effect on 1 January"),
+    ("bellerive", "Bellerive Oval", None, 2010, "Bellerive_Oval",
+     "A naming rights agreement with Blundstone Footwear resulted in the oval being renamed Blundstone Arena"),
+    ("bellerive", "Blundstone Arena", 2011, 2024, "Bellerive_Oval",
+     "A naming rights agreement with Blundstone Footwear resulted in the oval being renamed Blundstone Arena"),
+    ("bellerive", "Ninja Stadium", 2025, 2025, "Bellerive_Oval",
+     "In October 2024, SharkNinja commenced a four-year naming rights deal, with the venue being renamed Ninja Stadium."),
+    ("showground", "Škoda Stadium", 2012, 2013, "Sydney_Showground_Stadium",
+     "the venue was known as Škoda Stadium from 2012 until 2013"),
+    ("showground", "Spotless Stadium", 2014, 2018, "Sydney_Showground_Stadium", "then as Spotless Stadium from 2014 until 2018"),
+    ("showground", "GIANTS Stadium", 2019, 2023, "Sydney_Showground_Stadium",
+     "From 2019 to 2024, it was known as Giants Stadium in a deal with its primary AFL tenant"),
+    ("showground", "Engie Stadium", 2024, None, "Sydney_Showground_Stadium",
+     "In March 2024, the venue became known as Engie Stadium under a three-year naming rights deal"),
+    ("manuka_oval", "Manuka Oval", None, 2012, "Manuka_Oval",
+     "For three seasons beginning with the 2013 AFL season, Manuka Oval was branded as StarTrack Oval"),
+    ("manuka_oval", "StarTrack Oval", 2013, 2015, "Manuka_Oval",
+     "For three seasons beginning with the 2013 AFL season, Manuka Oval was branded as StarTrack Oval"),
+    ("manuka_oval", "Manuka Oval", 2016, 2016, "Manuka_Oval",
+     "Since 2017 until 2020 the venue has commercially been known as the UNSW Canberra Oval"),
+    ("manuka_oval", "UNSW Canberra Oval", 2017, 2020, "Manuka_Oval",
+     "Since 2017 until 2020 the venue has commercially been known as the UNSW Canberra Oval"),
+    ("eureka", "Eureka Stadium", None, 2016, "Mars_Stadium",
+     "In June 2017 naming rights for the venue were granted to Mars Confectionery Australian division"),
+    ("eureka", "Mars Stadium", 2017, None, "Mars_Stadium",
+     "In June 2017 naming rights for the venue were granted to Mars Confectionery Australian division"),
+    ("wellington", "Westpac Stadium", 2002, 2019, "Sky_Stadium", "That arrangement continued for twenty years until 31 December 2019."),
+    ("wellington", "Sky Stadium", 2020, 2025, "Sky_Stadium",
+     "six-year agreement to take over as the naming sponsor of the stadium from 1 January 2020"),
 ]
 # Grounds the era's VFL/AFL knew by one name: the name, and the article that holds it.
 PLAIN_NAME = {"mcg": "M.C.G.", "scg": "S.C.G.", "waca": "W.A.C.A.", "gabba": "The Gabba",
               "windy_hill": "Windy Hill", "moorabbin_oval": "Moorabbin Oval", "victoria_park": "Victoria Park",
-              "north_hobart": "North Hobart Oval", "manuka_oval": "Manuka Oval", "junction_oval": "Junction Oval",
+              "north_hobart": "North Hobart Oval", "junction_oval": "Junction Oval",
               "arden_st": "Arden Street Oval", "glenferrie_oval": "Glenferrie Oval"}
 
 

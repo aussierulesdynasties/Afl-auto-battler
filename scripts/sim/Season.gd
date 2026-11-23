@@ -1237,7 +1237,13 @@ func finals_seed(i: int) -> int:
 func finals_venue(m: Dictionary) -> String:
 	if str(m.get("tag", "")) == "GF":
 		return grand_final_venue()
-	return home_ground(str(m.get("home", "")))
+	var host := str(m.get("home", ""))
+	# A real season's Victorian host plays at that year's Victorian finals
+	# ground (SeasonRules vic_finals), never its suburban home.
+	var vic := str(rules.get("vic_finals", ""))
+	if vic != "" and str(VIC_CLUBS.get(host, "")) == "VIC":
+		return vic
+	return home_ground(host)
 
 
 ## Which of a final's clubs plays at its own home ground (the engine's
@@ -1246,10 +1252,19 @@ func finals_venue(m: Dictionary) -> String:
 ## its home ground, whichever slot it is listed in: two MCG clubs, or none,
 ## and neither side has an edge.
 func finals_at_home(m: Dictionary) -> Array:
-	if str(m.get("tag", "")) != "GF":
+	if str(m.get("tag", "")) != "GF" and finals_venue(m) == home_ground(str(m.get("home", ""))):
 		return [true, false]
+	if str(m.get("tag", "")) != "GF":
+		# Moved to a shared finals ground: a club has its edge only at its own ground.
+		var v := finals_venue(m)
+		return [home_ground(str(m.get("home", ""))) == v, home_ground(str(m.get("away", ""))) == v]
 	return [home_ground(str(m.get("home", ""))) == grand_final_venue(),
 			home_ground(str(m.get("away", ""))) == grand_final_venue()]
+
+
+## The Victorian clubs, past and present (vic_finals).
+const VIC_CLUBS := {"CAR": "VIC", "COL": "VIC", "ESS": "VIC", "FIT": "VIC", "GEE": "VIC", "HAW": "VIC",
+		"MEL": "VIC", "NTH": "VIC", "RIC": "VIC", "STK": "VIC", "WBD": "VIC"}
 
 
 func home_ground(code: String) -> String:
