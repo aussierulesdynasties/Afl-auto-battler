@@ -180,8 +180,8 @@ const SEAT_COLOURS := {
 	# Accor: aqua lower bowl (seat_teal there keeps the value already here).
 	"seat_aqua": Color(0.527, 0.719, 0.757),
 	# Bellerive: pale grey-blue plastic all round the Boon and Ponting stands, the sunlit seats'
-	# median in Google Earth from the field (PC seat check 2026-11-23: 72, 108, 146 read saturated).
-	"seat_bel_blue": Color8(100, 130, 158),
+	# median in Google Earth from the field (PC seat checks 2026-11-23: 72,108,146 and 100,130,158 read too blue).
+	"seat_bel_blue": Color8(108, 142, 160),
 	# The Members' front rows dark grey; the Northern Stand's and the east terrace's benches white.
 	"seat_bel_pale": Color8(150, 168, 186), "seat_bel_dark": Color8(58, 62, 70), "seat_bel_white": Color8(214, 216, 214),
 	# MCG, by tier from Street View on the ground and Google Earth: white and light grey lower and

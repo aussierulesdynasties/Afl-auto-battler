@@ -238,10 +238,12 @@ fac_ponting()
 
 
 if __name__ == '__main__':
-    # ---- stepped rows (2026-11-22 rebuild): the treads and risers the 3D seats stand on. Precast grey concrete,
-    # the tread worn paler along its front edge, the riser darker with a drip line under the nosing.
-    t = T(4.0, 1.0, (150, 152, 150), n=3, bl=(1.0, 6)); t.vl(0.02, 0.03, mul=0.8); t.save('tread')
-    t = T(4.0, 1.0, (112, 116, 118), n=3, bl=(1.0, 6)); t.vl(0.02, 0.03, mul=0.8); t.streaks(10, 0, 1, mul=0.85)
+    # ---- stepped rows (2026-11-22 rebuild): the treads and risers the 3D seats stand on. Pale precast concrete
+    # (Google Earth from the field reads it near white between the rows and down the aisles; the PC seat check of
+    # 2026-11-23 showed 150/112 grey turning each seat into a speck and the rows into moire), the riser a shade
+    # darker with a drip line under the nosing.
+    t = T(4.0, 1.0, (198, 200, 198), n=3, bl=(1.0, 6)); t.vl(0.02, 0.03, mul=0.9); t.save('tread')
+    t = T(4.0, 1.0, (172, 176, 178), n=3, bl=(1.0, 6)); t.vl(0.02, 0.03, mul=0.9); t.streaks(10, 0, 1, mul=0.92)
     t.save('riser')
     # vomitory portals: pale precast concrete, and the tunnel's own dark painted inside
     t = T(3.0, 3.0, (176, 178, 176), n=3, bl=(1.0, 7)); t.streaks(8, 0, 3, mul=0.88); t.save('vom_conc')
