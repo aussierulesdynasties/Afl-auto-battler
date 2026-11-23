@@ -124,6 +124,11 @@ func _notification(what: int) -> void:
 
 func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
+	# The game boots onto this scene directly, not through the Router: put the
+	# menu at the bottom of the stack so a screen opened from it (Club Forge)
+	# can step back to it with its on-screen Back.
+	if Router.stack.is_empty():
+		Router.stack.append("main")
 	if GameState.new_career_setup_requested:
 		GameState.new_career_setup_requested = false
 		# Back from Choose your club: the options again, for the season picked.
