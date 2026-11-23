@@ -172,6 +172,10 @@ const VERTEX_COLOURED := ["adelaide"]
 
 ## Grounds whose seats throw no shadows (see _instances).
 const SEATS_NO_SHADOW := ["bellerive"]
+## Grounds whose seats turn into far rows (_seat_far_mesh) between SEAT_FAR_FROM and SEAT_FAR_TO m.
+const SEAT_FAR := ["bellerive"]
+const SEAT_FAR_FROM := 40.0
+const SEAT_FAR_TO := 55.0
 
 ## Each seat colour as the model paints it (the mean of its seat texture; sRGB).
 const SEAT_COLOURS := {
@@ -1112,6 +1116,8 @@ static func _add_seats(root: Node3D, dir: String, mid: Vector2) -> void:
 		if seat == null:
 			continue
 		_instances(root, seat, dir + f, colour, mid)
+		if SEAT_FAR.has(dir.get_base_dir().get_file()):
+			_instances(root, _seat_far_mesh(), dir + f, colour, mid, _seat_far_material(colour))
 	if FileAccess.file_exists(dir + "leg_tmpl.bin"):
 		var leg := _seat_mesh(dir + "leg_tmpl.bin")
 		for f in DirAccess.get_files_at(dir):
@@ -1122,14 +1128,23 @@ static func _add_seats(root: Node3D, dir: String, mid: Vector2) -> void:
 ## Batches of `mesh` at every transform in the .bin at `path`, flat in SEAT_COLOURS[colour], added
 ## to `root`: one batch a slice of the bowl (SEAT_SECTORS round it, by bearing from `mid`), so the
 ## camera draws only the slices in its view, not every seat in the ground.
-static func _instances(root: Node3D, mesh: Mesh, path: String, colour: String, mid: Vector2) -> void:
+static func _instances(root: Node3D, mesh: Mesh, path: String, colour: String, mid: Vector2,
+		far: StandardMaterial3D = null) -> void:
 	var buf := FileAccess.get_file_as_bytes(path).to_float32_array()
-	var mat := StandardMaterial3D.new()
-	mat.albedo_color = SEAT_COLOURS.get(colour, Color.GRAY)
-	# A seat drawn as one open sheet (the ground kit's moulded shell, wound the other way to
-	# Godot's front face) is seen from both sides; a closed seat keeps back faces culled.
-	if _is_sheet(mesh):
-		mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	var ground := path.get_base_dir().get_file()
+	var mat := far
+	if mat == null:
+		mat = StandardMaterial3D.new()
+		mat.albedo_color = SEAT_COLOURS.get(colour, Color.GRAY)
+		# A seat drawn as one open sheet (the ground kit's moulded shell, wound the other way to
+		# Godot's front face) is seen from both sides; a closed seat keeps back faces culled.
+		if _is_sheet(mesh):
+			mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+		if SEAT_FAR.has(ground):
+			# the shells give way to the far rows (_seat_far_material) pixel by pixel
+			mat.distance_fade_mode = BaseMaterial3D.DISTANCE_FADE_PIXEL_DITHER
+			mat.distance_fade_min_distance = SEAT_FAR_TO
+			mat.distance_fade_max_distance = SEAT_FAR_FROM
 	var per := []
 	for i in range(SEAT_SECTORS):
 		per.append(PackedFloat32Array())
@@ -1149,12 +1164,62 @@ static func _instances(root: Node3D, mesh: Mesh, path: String, colour: String, m
 		mi.name = "%s_%d" % [path.get_file().get_basename(), k]
 		mi.multimesh = mm
 		mi.material_override = mat
+		if far != null:
+			mi.name += "_far"
+			mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			root.add_child(mi)
+			continue
 		mi.set_meta("seats", true)
 		# Grounds whose rows read striped when every seat throws its own shadow on the tread behind it
 		# (a dark band a row, aliased into moire from the broadcast camera): their seats cast none.
-		if SEATS_NO_SHADOW.has(path.get_base_dir().get_file()):
+		if SEATS_NO_SHADOW.has(ground):
 			mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		root.add_child(mi)
+
+
+## The far rows: past SEAT_FAR_FROM m a seat shell is under a few pixels and its 6 cm gaps and thin
+## back alias into speckle and moire (PC seat checks, Bellerive 2026-11-23). There each seat is one
+## quad over its own row, back top to tread front (0.52 m wide on a 0.5 m pitch, a 0.9 m row rising 0.4 m), so the
+## quads of a row meet edge to edge, painted as the shell looks from the field: back, pan, the gap
+## each side and the tread in front. The texture's mipmaps average all that into one smooth colour
+## as the seat shrinks, the way a photo of a stand reads. Same transforms as the shells.
+static func _seat_far_mesh() -> Mesh:
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var top_l := Vector3(-0.26, 0.87, -0.05)
+	var top_r := Vector3(0.26, 0.87, -0.05)
+	var bot_l := Vector3(-0.26, 0.0, 0.6)
+	var bot_r := Vector3(0.26, 0.0, 0.6)
+	st.set_normal(Vector3(0.0, 0.65, 0.87).normalized())
+	for q: Array in [[top_l, Vector2(0, 0)], [top_r, Vector2(1, 0)], [bot_r, Vector2(1, 1)],
+			[top_l, Vector2(0, 0)], [bot_r, Vector2(1, 1)], [bot_l, Vector2(0, 1)]]:
+		st.set_uv(q[1])
+		st.add_vertex(q[0])
+	return st.commit()
+
+
+static func _seat_far_material(colour: String) -> StandardMaterial3D:
+	var c: Color = SEAT_COLOURS.get(colour, Color.GRAY)
+	var tread := Color8(198, 200, 198)       # the stepped rows' concrete (tools/grounds/bellerive/model/paint.py)
+	var gap := Color8(180, 183, 184)         # the riser behind, seen between two seats
+	var img := Image.create(64, 64, false, Image.FORMAT_RGB8)
+	for y in range(64):
+		for x in range(64):
+			var v := (y + 0.5) / 64.0
+			var u := (x + 0.5) / 64.0
+			var p := tread
+			if v < 0.79:
+				p = gap if (u < 0.06 or u > 0.94) else (c.darkened(0.08) if v < 0.42 else c)
+			img.set_pixel(x, y, p)
+	img.generate_mipmaps()
+	var mat := StandardMaterial3D.new()
+	mat.albedo_texture = ImageTexture.create_from_image(img)
+	mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
+	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	mat.distance_fade_mode = BaseMaterial3D.DISTANCE_FADE_PIXEL_DITHER
+	mat.distance_fade_min_distance = SEAT_FAR_FROM
+	mat.distance_fade_max_distance = SEAT_FAR_TO
+	return mat
 
 
 ## MATERIAL_FIX: each named material on `model` gets its own copy with the listed values.
