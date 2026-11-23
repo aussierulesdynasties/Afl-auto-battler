@@ -1,19 +1,7 @@
 [remap]
 
-importer="csv_translation"
-type="Translation"
-uid="uid://ck3f077gypk2w"
+importer="keep"
 
 [deps]
 
-files=["res://data/legacy/finals.week.translation", "res://data/legacy/finals.kind.translation", "res://data/legacy/finals.label.translation", "res://data/legacy/finals.home.translation", "res://data/legacy/finals.away.translation", "res://data/legacy/finals.ground.translation", "res://data/legacy/finals.date.translation", "res://data/legacy/finals.own.translation", "res://data/legacy/finals.id.translation"]
-
 source_file="res://data/legacy/finals.csv"
-dest_files=["res://data/legacy/finals.week.translation", "res://data/legacy/finals.kind.translation", "res://data/legacy/finals.label.translation", "res://data/legacy/finals.home.translation", "res://data/legacy/finals.away.translation", "res://data/legacy/finals.ground.translation", "res://data/legacy/finals.date.translation", "res://data/legacy/finals.own.translation", "res://data/legacy/finals.id.translation"]
-
-[params]
-
-compress=1
-delimiter=0
-unescape_keys=false
-unescape_translations=true
