@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://65tces78eu7g"
-path="res://.godot/imported/marvel.glb-553d1931edd99b08ad22bda1932375ed.scn"
+uid="uid://bw6myy0uaa8qq"
+path="res://.godot/imported/marvel_part2.glb-7d7c67367373b6964f97448bfcbc1b24.scn"
 
 [deps]
 
-source_file="res://assets/grounds/marvel/marvel.glb"
-dest_files=["res://.godot/imported/marvel.glb-553d1931edd99b08ad22bda1932375ed.scn"]
+source_file="res://assets/grounds/marvel/marvel_part2.glb"
+dest_files=["res://.godot/imported/marvel_part2.glb-7d7c67367373b6964f97448bfcbc1b24.scn"]
 
 [params]
 

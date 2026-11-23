@@ -29,7 +29,7 @@ def mat(name):
 def tile(n):return TILE.get(ALIAS.get(n,n),[4,4])
 # ---------- meshes (one object per group so crops and the GLB stay tidy)
 def group(n):
-    for g in('roofopen','roofshut','slab','end_','truss','arch','bowl','col','bracket','plinth','tier','podium','canopy','tank','tower','sign'):
+    for g in('slab','end_','truss','arch','bowl','col','bracket','plinth','tier','podium','canopy','tank','tower','sign'):
         if n.startswith(g):return g.rstrip('_')
     return 'misc'
 G={}
@@ -57,7 +57,7 @@ _BF=[[0,3,2,1],[4,5,6,7],[0,1,5,4],[1,2,6,5],[2,3,7,6],[3,0,4,7]]
 _T=np.array(_bx(-0.22,0.22,-0.22,0.20,0.40,0.46)+_bx(-0.22,0.22,-0.30,-0.24,0.46,0.86)+_bx(-0.025,0.025,-0.12,-0.04,0.0,0.40))
 _TF=[[f+o for f in ff] for o in (0,8,16) for ff in _BF]
 SE=np.array(J.get('seats',[]),float)
-if len(SE) and not os.environ.get('NO_SEATS3D'):  # the game draws them instanced (tools/grounds/marvel/seats.py)
+if len(SE):
     fwd=np.c_[SE[:,3:5],np.zeros(len(SE))];side=np.c_[fwd[:,1],-fwd[:,0],np.zeros(len(SE))]
     base=SE[:,:3]-C0
     V=(base[:,None,:]+_T[None,:,0,None]*side[:,None,:]+_T[None,:,1,None]*fwd[:,None,:]+_T[None,:,2,None]*np.array([0,0,1.0])).reshape(-1,3)
@@ -120,13 +120,9 @@ elif MODE=='top':
     cam.matrix_world=mw;sc.render.resolution_x=1200;sc.render.resolution_y=1200;sc.render.resolution_percentage=100
     sun.rotation_euler=(math.radians(30),0,math.radians(160));render(os.path.join(HERE,'r_top.png'))
 elif MODE=='glb':
-    # GLB: origin at the pitch centre, x east, +Y north.
-    # The world frame here is already x east, y north (OpenStreetMap metres round the pitch, mv/osm/geo.json):
-    # the stadium's long axis runs at bearing 160 as the real one does (OSM pitch 158). The first build turned
-    # it onto north-south, which put the ground 20 degrees off its surroundings (2026-11-21, against Google
-    # Earth); the game lays any model on its field through GroundModels.FIT, so no turn is needed here.
-    ang=0.0
+    # GLB: origin at the pitch centre, north = +Y. World x,y here are the local frame axes; rotate so u (south) = -Y.
+    U=np.array([0.336,-0.942]);ang=math.atan2(-U[0],-U[1])  # rotate u-direction onto -Y
     for ob in OBJ:ob.matrix_world=Matrix.Rotation(ang,4,'Z')@ob.matrix_world
     for ob in OBJ:ob.select_set(True)
-    bpy.ops.export_scene.gltf(filepath=os.environ.get('GLB_OUT',os.path.join(HERE,'marvel2.glb')),export_format='GLB',use_selection=True,export_apply=True,export_yup=True)
+    bpy.ops.export_scene.gltf(filepath=os.path.join(HERE,'marvel2.glb'),export_format='GLB',use_selection=True,export_apply=True,export_yup=True)
 print('DONE',MODE)
