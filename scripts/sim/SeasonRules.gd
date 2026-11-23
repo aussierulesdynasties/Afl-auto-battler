@@ -14,6 +14,10 @@ extends RefCounted
 ## game's own league: 24 rounds, ten finalists with the wildcard round, the
 ## Grand Final at the MCG, a Gather Round, extra time.
 ## Every decade loads the same way: one table, keyed by year, read by Season.
+##
+## real_finals: a real season's finals go where that week's real finals went
+## (RealFinals, data/legacy/finals.csv; bug bash 2026-11-23), not to each
+## host's own ground. Off in the game's league.
 
 const PATH := "res://data/season_rules.csv"
 ## The game's own league starts here: a real season in the table, drawn in
@@ -24,9 +28,8 @@ const GAME_LEAGUE_YEAR := 2026
 ## even club count, two at an odd one).
 const DEFAULT := {
 	"year": 0, "rounds": 24, "games": 0, "finalists": 10, "finals": "wildcard10",
-	"gf_venue": "MCG", "gather_round": true, "drawn_finals": "extra_time",
+	"gf_venue": "MCG", "gather_round": true, "drawn_finals": "extra_time", "real_finals": false,
 }
-
 ## The finals brackets. Each is its weeks in order; each week its matches as
 ## [tag, label, home side, away side, order by ladder]. A side is a slot:
 ##   "S3"     the club that finished 3rd
@@ -103,6 +106,16 @@ const WEEK_NAMES := {
 	"mcintyre5": ["Qualifying and Elimination Finals", "Semi Finals", "Preliminary Final", "Grand Final"],
 }
 
+## How each finals system works, in a line, for the how-to-play page.
+const HOW := {
+	"wildcard10": "Finish in the top 10 to play finals. The top four start in the qualifying finals, 5-10 in the wildcards and eliminations.",
+	"afl8": "Finish in the top 8 to play finals. The top four start in the qualifying finals with a second chance, 5-8 in the elimination finals.",
+	"mcintyre8": "Finish in the top 8 to play finals. Week one pairs 1st v 8th through to 4th v 5th; the two lowest-placed losers go out and the two highest-placed winners rest a week.",
+	"final6": "Finish in the top 6 to play finals. 1st plays 2nd in the qualifying final and both go on; 3rd v 6th and 4th v 5th are elimination finals.",
+	"final6_1991": "Finish in the top 6 to play finals. 1st plays 2nd in the qualifying final and both go on; 3rd v 4th and 5th v 6th are elimination finals.",
+	"mcintyre5": "Finish in the top 5 to play finals. The minor premiers wait a week; 2nd v 3rd is the qualifying final and 4th v 5th the elimination final.",
+}
+
 static var _rows: Array = []
 static var _loaded := false
 
@@ -116,6 +129,7 @@ static func for_year(year: int) -> Dictionary:
 			for k in ["rounds", "games", "finalists", "finals", "gf_venue", "gather_round", "drawn_finals"]:
 				out[k] = row[k]
 			break
+	out["real_finals"] = EraRules.is_era(year) and RealFinals.has_year(year)
 	return out
 
 
@@ -180,3 +194,8 @@ static func replays_draw(drawn_finals: String, tag: String) -> bool:
 	if drawn_finals == "replay_all":
 		return true
 	return drawn_finals == "replay_gf" and tag == "GF"
+
+
+## How a finals system works, in a line (HOW; DEFAULT's when unknown).
+static func how_finals_work(format: String) -> String:
+	return str(HOW.get(format, HOW[DEFAULT["finals"]]))
