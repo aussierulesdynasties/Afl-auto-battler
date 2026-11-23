@@ -25,3 +25,11 @@ Best frames: 18 May 2008 (sharp near-vertical aerial, winter sun from the north,
 | North roof front edge | 16.3-19.7 m above the turf, 15 points from x = 700 to 1240 px, rising gently to the east | its shadow on the turf, 18 May 2008 (`nshadow.py`): height = shadow offset / 1.292 |
 
 Bearings are degrees counter-clockwise from east round the field centre at pixel (941, 1021) of the captures.
+
+## Tried and rejected
+
+- **Height from satellite parallax** (2008 against six 2013-2017 satellite frames, each registered to 2008 on the
+  painted field lines, then matched along the lean direction): rejected. Along the north roof, where the shadow
+  heights are known, the parallax per metre changes threefold from west to east in the 2016 frame and disagrees
+  between frames. The matches lock onto shadow edges, which move with the sun between dates. Heights now come from
+  period photos (camera solved on field lines and the 65 m towers) and seat-row counts.
