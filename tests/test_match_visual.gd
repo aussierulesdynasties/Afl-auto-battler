@@ -73,6 +73,7 @@ func run() -> void:
 	_t("_test_contacts", [res])
 	_t("_test_feet_planted", [res])
 	_t("_test_umpire_stoppages", [res])
+	_t("_test_match_crew", [res])
 	_t("_test_free_taker_kicks")
 	_t("_test_tackled_frees")
 	_t("_test_tackle_cuts", [res])
@@ -3746,6 +3747,92 @@ func _test_contacts(res: Dictionary) -> void:
 	_check(int(kinds.get(&"kick", 0)) > int(kinds.get(&"goal_celebrate", 0)) and int(kinds.get(&"goal_celebrate", 0)) > 0,
 			"Goals are celebrated, and fewer times than the ball is kicked (%s)" % [kinds])
 
+
+## The match crew on the 3D oval (row 202): a 2026 AFL match's officials (four field umpires, four
+## boundary, two goal; the round 1 appointments) in their own clothes (Oval3DCrew: the shirt on
+## every umpire, the goal umpire's trousers, belt and cap, a real number on each field umpire's
+## back, four different), each club's four trainers at the 50-metre arcs against the fence and its
+## runner at the bench. Through a match: a trainer is on the ground only in a break (a set shot
+## being lined up, or after a goal), a runner only after a goal (Regulation 12.13), and both are
+## back off before play goes on.
+func _test_match_crew(res: Dictionary) -> void:
+	var pv := PitchView.new()
+	pv.size = Vector2(360, 640)
+	pv.three_d = true
+	(Engine.get_main_loop() as SceneTree).root.add_child(pv)
+	var at := res.duplicate()
+	at["venue"] = "Alan Ray Oval"
+	pv.setup(at)
+	var oval: Oval3D = pv._oval3d
+	var d: MatchDirector = pv.director
+	var roles := {}
+	var dressed := true
+	var numbers := {}
+	for u in oval.umpires:
+		var r := str(u["role"])
+		roles[r] = int(roles.get(r, 0)) + 1
+		for piece in Oval3DCrew.OUTFITS[r]:
+			dressed = dressed and (u.get("crew", {}) as Dictionary).has(piece)
+		if r == "field":
+			for mi in (u["node"] as Node3D).find_children("crew_shirt", "MeshInstance3D", true, false):
+				numbers[(mi as GeometryInstance3D).get_instance_shader_parameter("number")] = true
+	_check(int(roles.get("field", 0)) == 4 and int(roles.get("boundary", 0)) == 4 and int(roles.get("goal", 0)) == 2,
+			"A match has 4 field, 4 boundary and 2 goal umpires: %s" % roles)
+	_check(dressed, "Every umpire wears his role's clothes (Oval3DCrew.OUTFITS)")
+	_check(numbers.size() == 4 and not numbers.has(-1), "Each field umpire wears his own real number: %s" % [numbers.keys()])
+	var trainers := 0
+	var runners := 0
+	var at_fence := true
+	for c in oval.crew.crew:
+		var home: Vector2 = c["home"]
+		var e := pow(home.x / MatchMotion.HALF_LEN, 2.0) + pow(home.y / MatchMotion.HALF_WID, 2.0)
+		at_fence = at_fence and e > 1.0
+		if str(c["role"]) == "trainer":
+			trainers += 1
+			at_fence = at_fence and absf(Oval3DCrewMotion.arc_spot(signf(home.x), signf(home.y), 0.0).distance_to(
+					Vector2(signf(home.x) * MatchMotion.GOAL_X, 0.0)) - 50.0) < 0.5
+		else:
+			runners += 1
+	_check(trainers == 8 and runners == 2, "Each club has four trainers and a runner (%d trainers, %d runners)" % [trainers, runners])
+	_check(at_fence, "Trainers wait outside the boundary where the 50-metre arcs meet it; runners at the benches")
+	pv.set_speed(1.0)
+	pv.play()
+	var dt := 1.0 / 30.0
+	var frames := 0
+	var drinks := 0
+	var runs := 0
+	var wrong := []
+	var was_drinks := false
+	var was_runner := false
+	while d.time < 600.0 and frames < 40000 and pv.playing:
+		pv._process(dt)
+		frames += 1
+		var shot := d.shot_now()
+		var set_break := not shot.is_empty() and bool(shot.get("set", false))
+		var goal := not shot.is_empty() and bool(shot.get("goal", false))
+		var st := d.stoppage_now()
+		var t_on := false
+		var r_on := false
+		for c in oval.crew.crew:
+			if int(c["job"]) < 0:
+				continue
+			if str(c["role"]) == "trainer":
+				t_on = true
+				if not set_break and not goal and str(st.get("kind", "")) != "bounce":
+					wrong.append("trainer on at %.0f s with no set shot or goal" % d.time)
+			else:
+				r_on = true
+				if not goal and str(st.get("kind", "")) != "bounce":
+					wrong.append("runner on at %.0f s with no goal" % d.time)
+		if t_on and not was_drinks:
+			drinks += 1
+		if r_on and not was_runner:
+			runs += 1
+		was_drinks = t_on
+		was_runner = r_on
+	_check(drinks > 0 and runs > 0, "Drinks go out before set shots (%d) and runners after goals (%d)" % [drinks, runs])
+	_check(wrong.is_empty(), "Trainers and runners are on the ground only when the rules let them: %s" % [wrong.slice(0, 4)])
+	pv.queue_free()
 
 ## The umpires at stoppages on the 3D oval (row 197; the field umpire passed, rule 2.75): at a
 ## centre bounce the field umpire has the ball and bounces it with his clip, the ball leaving his

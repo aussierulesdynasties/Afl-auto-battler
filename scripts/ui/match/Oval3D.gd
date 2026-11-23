@@ -83,6 +83,7 @@ var camera: Camera3D
 var film: MeshInstance3D  # the broadcast film look (_film)
 var anim: Oval3DAnim          # the animation session's controller (row 198)
 var umpires: Array = []        # [{node, anim, ring, role, k}]: the vignettes' umpire set
+var crew: Oval3DCrewMotion     # the clubs' trainers and runners
 var crowd: Oval3DCrowd
 ## The ground's big screens and fence signs (Oval3DScreens): live score, GOAL card, replay.
 var screens: Oval3DScreens
@@ -134,7 +135,10 @@ func build(p_director: MatchDirector, home: String, away: String) -> void:
 		(_spares[side] as Array).append(_spare(side))
 	anim = Oval3DAnim.new(director, players)
 	director.want_contacts = true
+	_crew_seed = hash(home + "|" + away)
 	_add_umpires(scene)
+	crew = Oval3DCrewMotion.new(self)
+	crew.build(scene, kits, [home, away])
 	ball = MeshInstance3D.new()
 	var bm := SphereMesh.new()
 	bm.radius = BALL_R
@@ -206,6 +210,8 @@ func sync(dt: float) -> void:
 	_move_leavers(dt)
 	# The umpires first: the players are drawn clear of where they are this frame (_spaced).
 	_move_umpires(dt)
+	if crew != null:
+		crew.step(dt)
 	var at := _spaced()
 	for i in range(players.size()):
 		var t: Dictionary = director.tokens[i]
@@ -1937,34 +1943,80 @@ func _player(scene: PackedScene, kit: ShaderMaterial, cols: Array, club := "") -
 	return {"node": node, "anim": ap, "ring": ring, "skel": skel, "hands": hands, "hand_len": hand_len}
 
 
-## The umpires, as the vignettes place them (VignetteExtras.umpires): three field umpires,
-## a boundary umpire on each wing, a goal umpire on each goal line, in the umpires' lime
-## (StoppageVignette.UMPIRE_GEAR). No club ring: they belong to neither side.
+## The umpires of a 2026 AFL match (the round 1 appointments: four field, four boundary and two
+## goal umpires), placed as the vignettes place theirs (VignetteExtras.umpires) plus the fourth
+## field umpire and the boundary umpires of the other half (_umpire_spots). Each wears his own
+## clothes over the body (Oval3DCrew): the field and boundary umpires the lime short-sleeved
+## shirt over charcoal shorts and lime socks, a field umpire's number on his back; the goal
+## umpires the lime shirt tucked into charcoal trousers, a black belt and a lime cap. No club
+## ring: they belong to neither side.
 func _add_umpires(scene: PackedScene) -> void:
 	var kit := _kit(StoppageVignette.UMPIRE_GEAR)
 	var spots := _umpire_spots()
+	var fields := 0
 	for k in range(spots.size()):
 		var u := _player(scene, kit, [StoppageVignette.UMPIRE])
-		look(u, StoppageVignette.UMPIRE_LOOK)
+		var role := str(spots[k][0])
+		Oval3DCrew.dress(u, role, player_glb, kit)
+		look(u, _crew_look(k))
 		(u["ring"] as Node3D).visible = false
-		u["role"] = str(spots[k][0])
+		u["role"] = role
 		u["k"] = k
+		if role == "field":
+			_number(u, Oval3DCrew.field_number(_crew_seed, fields))
+			fields += 1
 		var at: Vector2 = spots[k][1]
 		(u["node"] as Node3D).position = Vector3(at.x, 0.0, at.y)
 		umpires.append(u)
 
 
+var _crew_seed := 0
+
+
+## Crew member k's skin and hair: the league's officials are not one man.
+func _crew_look(k: int) -> Dictionary:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = _crew_seed + k * 7919
+	return {"skin": rng.randi_range(0, 3), "hair": rng.randi_range(0, Appearance.HAIR.size() - 1)}
+
+
 ## [role, director metres] for each umpire with the ball at its current spot. VignetteExtras
 ## works in the vignette ground (x across, y along, half-lengths A x L); the director's x runs
 ## along the ground and y across it, so the axes swap and scale to MatchMotion's half-lengths.
+## The vignettes draw three field and two boundary umpires; a match has four of each: the fourth
+## field umpire across the play from the nearest, and two boundary umpires a wing, each with his
+## own half of it: the one in the ball's half runs with the play, the other waits halfway up his
+## half, ready for the ball to come to him.
 func _umpire_spots() -> Array:
 	var bp: Vector2 = director.ball["pos"]
 	var sx := MatchMotion.HALF_LEN / VignetteGround.L
 	var sy := MatchMotion.HALF_WID / VignetteGround.A
+	var focus := Vector2(bp.y / sy, bp.x / sx)
 	var out := []
-	for u in VignetteExtras.umpires(Vector2(bp.y / sy, bp.x / sx)):
+	var wings := []
+	for u in VignetteExtras.umpires(focus):
 		var v: Vector2 = u["oval"]
+		if str(u["ump"]) == "boundary":
+			wings.append(1.0 if v.x > 0.0 else -1.0)
 		out.append([u["ump"], Vector2(v.y * sx, v.x * sy)])
+	var f := VignetteExtras.keep_in(focus + Vector2(-18.0, -5.0))
+	out.append(["field", Vector2(f.y * sx, f.x * sy)])
+	for w in wings:
+		out.append(["boundary", Vector2.ZERO])
+	# The boundary umpires: the vignettes' two cover the far (+y) half of their wings, ours the near.
+	var b := 0
+	for i in range(out.size()):
+		if str(out[i][0]) != "boundary":
+			continue
+		var wing: float = wings[b % wings.size()]
+		var end := 1.0 if b < wings.size() else -1.0
+		b += 1
+		var y := VignetteGround.L * 0.4 * end
+		if focus.y * end > 0.0:
+			y = clampf(focus.y + 9.0 * wing, -VignetteGround.L * 0.8, VignetteGround.L * 0.8)
+			y = maxf(y, 2.0) if end > 0.0 else minf(y, -2.0)
+		var reach := (VignetteGround.A + 0.9) * sqrt(maxf(0.0, 1.0 - pow(y / VignetteGround.L, 2.0)))
+		out[i][1] = Vector2(y * sx, reach * wing * sy)
 	return out
 
 
