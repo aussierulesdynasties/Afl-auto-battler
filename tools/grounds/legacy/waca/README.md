@@ -19,7 +19,9 @@ cut; the winter frames of 2005-2008 have the six towers' shadows across the turf
 
 - **Only one usable date.** The 22 Sep 2000 trace agrees with 3 Mar 2001 within 4 px on only 185 of 720 rays and
   is 2-3 m off in most sectors (it locks onto seating and mowing rings). So this edge is good to about 1-3 m.
-- **Fence or turf edge**, and the published length: none found. The 2002 cut of 31 m east-west fits a long axis
-  running east-west, as measured.
+- **Fence or turf edge.** No published length was found. The 2002 cut ("31 metres at the eastern and western
+  boundaries") does not check out: on 7 Jul 2006 the new inner fence spans about 152 m east-west by eye (+-2 m),
+  22 m less than the 2001 edge, not 31. Either the 1990s fence stood about 4-5 m beyond the turf edge traced here at
+  each end, or the 31 m is counted differently. A period photo has to settle it before the model is built.
 - **Heights.** The towers (70 m published) cast long shadows in the winter frames; the stands' heights need those
   shadows and period photos.
