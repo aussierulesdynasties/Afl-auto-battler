@@ -4,7 +4,7 @@ An auto-battler where the battles are **simulated AFL matches**. The
 completed **2026 AFL season** is the foundation: 669 players rated from their
 real 2026 statistics, their real careers through 2026, and the 2026 draft
 class. A career takes over for the **2027 season**: all 18 founding clubs
-re-draft that league - the 669 players plus the 56 prospects of the 2026
+re-draft that league - the 669 players plus the 77 prospects of the 2026
 class - in the 2027 League Draft (40-player lists), then play a 24-round
 home-and-away season and a 10-finalist wildcard finals series, watching every
 match on an animated top-down oval. When the season ends, the **national
@@ -21,7 +21,7 @@ Godot **4.7** / GDScript — targeting **PC and mobile**.
 
 ```
 data/players_2026.csv      669 players, all 18 clubs, real 2026 season stats
-data/draftees_2026.csv     the 2026 national-draft class - 56 prospects with
+data/draftees_2026.csv     the 2026 national-draft class - 77 prospects with
                            heights, ages, positions and reported U18 numbers
 data/clubs.csv             club names, guernsey colours, home grounds
 scripts/sim/               ratings model, match engine, squad, season, draft
