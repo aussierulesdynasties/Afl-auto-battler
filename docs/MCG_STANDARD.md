@@ -142,4 +142,13 @@ Optus went through the same gate. What it added to the method:
   thin bright streaks, and the "white Y columns" were slim posts in a dark strip under the roof. The glass
   band, street glazing and the north's glazed storey are drawn by `bronze.py` (`glass`, `entrance`, `storey`).
 
-Open at Optus: seat colours from Street View (stage 4), on top of the seat fix (#1991).
+- **Match colour under Google Earth's own sun (2026-11-23).** `PREINSPECT_SUN=az,el` puts the capture's sun
+  where Google Earth's photos had it (Optus: 67.6, 45.5, from 42 shadow pairs, `survey/sun.json`). Colour is then
+  compared patch for patch on a PC GPU render, never the cloud's software renderer. At cdff0fe: roof membrane
+  (228,232,244) vs Google Earth (229,237,244), bronze brightness 1.00, sunlit seats (142,157,166) vs (130,151,158).
+- **Shading is the renderer's job.** A grey strip painted along the roof's inner edge read as a 3-4 m band at
+  0.8x Google Earth's brightness and threw the inner-edge trace 4 m off; removed, the edge measures median
+  +0.05 m, rms 1.05 m against Google Earth over 358 bearings (Google Earth's own trace scatters 0.85 m).
+
+Open at Optus: shadows read too blue on every ground (truss shadow on the roof blue/red 1.37 vs Google Earth's
+1.10); that is the match sky light, shared by all grounds.
