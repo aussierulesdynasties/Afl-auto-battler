@@ -56,15 +56,16 @@ hn, hf = sampler(14), sampler(12)
 # rows south -> north. Cells the measured grid lacks keep the terrain tiles.
 def _tool():
     import importlib.util
-    for d in (os.environ.get('TERRAIN_DIR'), os.path.join(HERE, '..', '..', 'terrain'), '/home/user/Afl-auto-battler/tools/grounds/terrain'):
+    for d in (os.environ.get('TERRAIN_DIR'), os.path.join(HERE, '..', '..', 'terrain'), '/home/user/Afl-auto-battler/tools/grounds/terrain', '/home/user/work/terrain/tools/grounds/terrain'):
         if d and os.path.exists(os.path.join(d, 'terrain.py')) and os.path.exists(os.path.join(d, 'grids', spec['name'] + '.npz')):
             sp = importlib.util.spec_from_file_location('terrain', os.path.join(d, 'terrain.py')); m = importlib.util.module_from_spec(sp); sp.loader.exec_module(m)
             return m
     return None
+_DAT = []   # the measured grid's turf height above its datum (AHD, NZVD...): the sea sits at minus this
 def grid_sampler(name):
     TT = _tool()
     if TT is not None:
-        G_ = TT.load(spec['name'], far=(name == 'far')); print('terrain', name, 'from measured DEM', G_.meta.get('source'), G_.meta.get('licence', ''))
+        G_ = TT.load(spec['name'], far=(name == 'far')); _DAT.append(float(G_.meta.get('datum_source_m', 'nan'))); print('terrain', name, 'from measured DEM', G_.meta.get('source'), G_.meta.get('licence', ''))
         return G_.height
     DEMD = spec.get('dem_dir') or os.path.join(D, 'dem')
     P_, J_ = os.path.join(DEMD, name + '.npy'), os.path.join(DEMD, name + '.json')
@@ -100,7 +101,9 @@ r = np.hypot(X, Y); R0 = spec['clear_r_m']; BK = float(spec.get('pad_bank_m', 25
 _fp = os.path.join(OUT, 'footprint.json')
 def _fp_fill(a):   # bins the outline probe missed (radius ~0) take the circular interpolation of their neighbours
     a = np.asarray(a, float); ok = a > 20
-    if ok.sum() < 0.5 * len(a): raise SystemExit('footprint.json has too few outline bins (%d of %d): re-run probe_outline' % (ok.sum(), len(a)))
+    if ok.sum() < 0.5 * len(a):   # a model that covers one side only (Whitten): the open side is the oval, level to its fence
+        print('footprint: %d of %d bins hold the model; the rest take outline_fill_m' % (ok.sum(), len(a)))
+        return np.where(ok, a, float(spec.get('outline_fill_m', 95.0)))
     k = np.arange(len(a)); n = len(a)
     return np.interp(k, np.concatenate([k[ok] - n, k[ok], k[ok] + n]), np.tile(a[ok], 3))
 RK = _fp_fill(json.load(open(_fp)))[((np.degrees(np.arctan2(Y, X)) % 360) // 2).astype(int)] if os.path.exists(_fp) else R0
@@ -761,6 +764,7 @@ if spec.get('real'):
     print('overture-only buildings', len(OVB))
 import collections as _col
 _HSRC = _col.Counter(); _BH = _real.raster_heights(D) if spec.get('real') else None
+_GEP = os.path.join(D, 'ge_heights.json'); _GEH = json.load(open(_GEP)) if spec.get('real') and os.path.exists(_GEP) else {}
 skip_r = spec["clear_r_m"]; _FPP = os.path.join(OUT, "footprint.json"); _FPR = np.array(json.load(open(_FPP))) if os.path.exists(_FPP) else None
 for el in js + PARTS + OVB:
     t = el.get('tags', {})
@@ -783,6 +787,8 @@ for el in js + PARTS + OVB:
     if _BH is not None and (_BH[1] or h is None):   # LiDAR heights are measured and beat every tag; a height map fills gaps
         _hb = _BH[0](pts)
         if _hb is not None: h = _hb; _src = 'lidar' if _BH[1] else 'height map'
+    if _GEH and _src != 'lidar' and str(el.get('id')) in _GEH:   # rooftop minus bare earth, read off Google Earth's 3D (ge_heights.py)
+        h = _GEH[str(el.get('id'))]; _src = 'google earth'
     if h is None and _OVH is not None:
         h = _OVH(cx, cy, pts); _src = 'overture' if h is not None else None
     if h is None: h = LV.get(kind, LV['*']); _src = 'GUESSED'
@@ -791,7 +797,7 @@ for el in js + PARTS + OVB:
     A = abs(area(pts))
     if A < 12: continue
     cls = 'tower' if h >= 25 else ('house' if (A < 350 and h < 9) else 'block')
-    BLD.append(dict(p=[[round(x, 2), round(y, 2)] for x, y in pts], h=round(h, 1), c=cls,
+    BLD.append(dict(p=[[round(x, 2), round(y, 2)] for x, y in pts], h=round(h, 1), c=cls, id=str(el.get('id')), hs=_src,
                     roof=int(rng.integers(0, len(PAL['roofs_' + ('house' if cls == 'house' else 'flat')]))),
                     wall=int(rng.integers(0, len(PAL['walls_' + cls])))))
     if spec.get('real') and cls == 'tower':   # real place: Perth/Hobart/Sydney towers read light; flats and hotels cream, offices pale glass
@@ -938,5 +944,5 @@ if spec.get('real') and CAN is not None:   # real place: each crown takes the ae
         c_ = np.median(_SAt[i_ - _r:i_ + _r + 1, j_ - _r:j_ + _r + 1][cm], 0) * 1.3   # the aerial's crowns sit in their own shade
         q += [int(min(200, v)) for v in c_]
 json.dump(TR, open(os.path.join(OUT, 'trees.json'), 'w'))
-json.dump(dict(base=base, near=NEAR, near_step=NS, far=FAR, far_step=FS), open(os.path.join(OUT, 'meta.json'), 'w'))
+json.dump(dict(base=base, near=NEAR, near_step=NS, far=FAR, far_step=FS, sea_z=(-_DAT[0] if _DAT and np.isfinite(_DAT[0]) else None)), open(os.path.join(OUT, 'meta.json'), 'w'))
 print('trees', len(TR))
