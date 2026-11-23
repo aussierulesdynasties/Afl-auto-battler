@@ -37,7 +37,15 @@ def meshes():
     for f in ("scg_part1.glb", "scg_part2.glb"):
         s = trimesh.load(os.path.join(DIR, f))
         for g in s.geometry.values():
-            out.append((g.visual.material.name, g))
+            if len(g.faces):
+                out.append((g.visual.material.name, g))
+    # the four big roofs are rebuilt from Google Earth by stand_roofs.py (roofs.bin: 9 floats a vertex)
+    rb = os.path.join(DIR, "roofs.bin")
+    if os.path.exists(rb):
+        v = np.fromfile(rb, "<f4").reshape(-1, 9)[:, :3]
+        t = trimesh.Trimesh(v, np.arange(len(v)).reshape(-1, 3))
+        t.update_faces(t.nondegenerate_faces())
+        out.append(("roof", t))
     return out
 
 
