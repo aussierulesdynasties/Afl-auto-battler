@@ -95,6 +95,7 @@ class Forest:
         # Clusters big enough to close the crown to Google Earth's fill (QA 2026-11-22: at 0.26-0.36 of the
         # crown's radius the gums read as lollipops on sticks against Google Earth's wall of canopy); gaps
         # stay inside each spray (the leaf atlas is a third leaf), so the crown is still open up close.
+        self._cap(e, n, y + h - rad * 0.6, rad, rng)
         for end, a in tips:
             nc = 3 if near else 2
             for k in range(nc):
@@ -132,6 +133,28 @@ class Forest:
         yc = y + h * 0.82
         c, s_ = math.cos(yaw), math.sin(yaw)
         corners = [(-ht, -ht), (ht, -ht), (ht, ht), (-ht, ht)]      # picture west-east, north-south
+        b.P += [(e + c * x - s_ * z, yc, -n + s_ * x + c * z) for x, z in corners]
+        b.N += [(0.0, 1.0, 0.0)] * 4
+        b.C += [tint] * 4
+        b.UV += [(u0, 0.5), (u1, 0.5), (u1, 1.0), (u0, 1.0)]
+        k0 = b.n
+        b.F += [(k0, k0 + 2, k0 + 1), (k0, k0 + 3, k0 + 2)]          # facing up
+        b.n += 4
+
+    def _cap(self, e, n, yc, rad, rng):
+        """Inside a near gum's crown, a level card of impostor.py's picture of a gum from straight above (the
+        far atlas' bottom row), as wide as the crown. Edge on from the ground, so the clusters make the crown
+        there; from above it closes the gaps the sprays leave, as Google Earth's top-down views show the
+        crowns (QA 2026-11-23: near crowns from above read as a third as dense as Google Earth's)."""
+        k = int(rng.integers(4))
+        u0, u1 = k / 4.0, (k + 1) / 4.0
+        ht = rad * 1.03
+        yaw = rng.uniform(0, 2 * math.pi)
+        c, s_ = math.cos(yaw), math.sin(yaw)
+        f = rng.uniform(0.88, 1.0)
+        tint = tuple(int(255 * f * q) for q in (1.0, 1.0, 0.98)) + (255,)
+        b = self.far
+        corners = [(-ht, -ht), (ht, -ht), (ht, ht), (-ht, ht)]
         b.P += [(e + c * x - s_ * z, yc, -n + s_ * x + c * z) for x, z in corners]
         b.N += [(0.0, 1.0, 0.0)] * 4
         b.C += [tint] * 4
