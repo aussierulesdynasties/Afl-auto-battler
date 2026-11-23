@@ -48,17 +48,18 @@ def to_gltf(p: np.ndarray) -> np.ndarray:
 
 
 def tier_of(z: float) -> str:
-    # tier1 rows sit at 5.4..16 m, tier2 19..27 m, tier3 30.5 m up (parts2.py tier()).
-    return "lo" if z < 17.5 else ("mid" if z < 28.5 else "up")
+    # tier1 rows sit at 5.4..12.1 m, tier2 12.4..15.9 m, tier3 from 20.9 m up (parts2.py tier(), measured 2026-11-23).
+    return "lo" if z < 12.25 else ("mid" if z < 18.5 else "up")
 
 
 # MARVEL in red and white seats on the east wing's lower tier. Placed by a camera solved from the centre
 # square in the "Marvel Stadium during curtain raiser" photo (Wikimedia Commons), its rays cast onto this
-# model's tier: M's left edge at u -44.4 (north), L's right edge at u 36.5, rows 0.9-5.1 m above the
-# field. The 2026 Ed Sheeran stage photo (NAB House behind that stand) puts it on the east wing. White
+# model's tier: M's left edge at u -44.4 (north, re-checked at -40 to -43 after the tiers were lowered on
+# 2026-11-23), L's right edge at u 36.5. Rows: the photo shows the letters filling the lower tier from the
+# front rows up to the middle tier's overhang, which from that seat hides the lower tier above about 3.3 m. The 2026 Ed Sheeran stage photo (NAB House behind that stand) puts it on the east wing. White
 # block capitals on a red block, read from the west stand.
 U_AX = np.array([0.33632, -0.94215]); V_AX = np.array([-0.94215, -0.33632]); FIELD_Z = 5.4
-LET_U = (-44.4, 36.5); LET_Z = (FIELD_Z + 0.7, FIELD_Z + 5.3)
+LET_U = (-44.4, 36.5); LET_Z = (FIELD_Z + 0.3, FIELD_Z + 3.4)
 
 
 def _letter_mask():

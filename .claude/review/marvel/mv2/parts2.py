@@ -290,9 +290,23 @@ def tier(name,f0,f1,zf,zb,lip=1.1,front='concrete'):
         rs=rr(i)+(rr(i+1)-rr(i))*0.55;seat_row(P(rs,zz(i)),AA)
     rings+=[P(b,np.asarray(zb)-1.0),P(a,zf-lip-0.6)];mats+=['concrete','soffit']
     loft(name,rings,mats)
-# the middle and top tiers' fronts carry the ribbon screens that run right round the bowl
-tier('tier1',0.0,0.62,FL+1.4,FL+12.0);tier('tier2',0.40,0.80,FL+15.0,FL+23.0,front='ribbon');_b3=rp+D*1.0;_rt=np.array([roof_top(r*math.cos(t),r*math.sin(t)) for r,t in zip(_b3,TH)])
-tier('tier3',0.62,1.0,FL+26.5,np.minimum(FL+37.0,_rt-1.5),front='ribbon')  # back row stays under the roof (ends at 33-38 m)
+# the middle and top tiers' fronts carry the ribbon screens that run right round the bowl.
+# Heights and depths measured 2026-11-23 (row 202) from three sources that agree, not guessed:
+# - two match photos with their cameras solved from the centre square (Wikimedia Commons curtain raiser and Hawthorn v
+#   Brisbane 2024; the boundary fence lands within about 5 px in both): the middle tier's ribbon, 198 points round
+#   the bowl, fits a centre 6 m above the field (median miss 5 px); the top tier's front 15 m (6 points, 4 px);
+#   the top tier's back row about 26-27 m, and the curtain-raiser photographer's eye 22.5 m up about 20 m past the
+#   fence, a few rows into the top tier (so the top tier rakes about 35 degrees, not steeper);
+# - Google Earth's 3D mesh over each end (bowl picks, tools/grounds/marvel/fit): 6-7.5 m at 3-6 m past the fence
+#   (the middle tier's overhanging front), 13-16 m at 10-11 m (the top tier's front), 20-24 m at 15-20 m.
+# The middle tier hangs out over the lower tier close to the field and the top tier over a level of glazed boxes,
+# which is why Marvel's stands read so steep and close. (The first build had them 7 and 10 m higher.)
+tier('tier1',0.0,0.55,FL+1.4,FL+8.1)
+tier('tier2',0.13,0.36,FL+8.4,FL+11.9,front='ribbon');_b3=rp+D*1.0;_rt=np.array([roof_top(r*math.cos(t),r*math.sin(t)) for r,t in zip(_b3,TH)])
+tier('tier3',0.42,1.0,FL+16.9,np.minimum(FL+27.4,_rt-1.5),front='ribbon')
+# the boxes' glass front between the middle tier's back row and the top tier's underside, and the boxes' floor
+_bx=rp+D*0.40;_bP=lambda r,z:np.stack([r*np.cos(TH),r*np.sin(TH),np.full(K,z)],1)
+loft('boxes',[_bP(rp+D*0.36,FL+11.9),_bP(_bx,FL+11.9),_bP(_bx,FL+15.2)],['concrete','glass'])
 # ---------------- under the roof (photos of the bowl, Wikimedia Commons: Docklands_Stadium_Dec2022, Marvel_Stadium_
 # during_curtain_raiser, Marvel_Stadium_before_Hawthorn_Hawks_vs_Brisbane_Lions_-_26_May_2024; looked at, not copied).
 # The roof's underside is a grid of pale steel: cross girders every 10.5 m, purlins along, and a diagonal in every
@@ -388,7 +402,7 @@ def screen(nm,c,facing,w,h,ztop,d=1.0,hang=2.6,label=0.0):
     fr=[c-s_*(w/2-0.35)+f*0.02,c+s_*(w/2-0.35)+f*0.02]
     add(nm,[(fr[0][0],fr[0][1],ztop-h-0.15),(fr[1][0],fr[1][1],ztop-h-0.15),(fr[1][0],fr[1][1],ztop-0.65),(fr[0][0],fr[0][1],ztop-0.65)],[[0,1,2,3]],'screen',[[(0,0),(1,0),(1,1),(0,1)]])
     if hang>0:
-        for k in(-1,1):beams(nm+'_hang%d'%(k>0),[((*(c+s_*k*w/3-f*0.5),ztop),(*(c+s_*k*w/3-f*0.5),ztop+hang))],0.12,'silver')
+        for k in(-1,1):beams(nm+'_hang%d'%(k>0),[((*(c+s_*k*w/3-f*0.5),ztop+label),(*(c+s_*k*w/3-f*0.5),ztop+label+hang))],0.12,'silver')
     if label>0:  # the MARVEL STADIUM name board on top (white lettering on black, tex sign_mvst)
         prism(nm+'_labelbox',[tuple(x) for x in q],ztop,ztop+label,'signblack','signblack')
         lw=min(w*0.8,label*8.5);fl=[c-s_*lw/2+f*0.02,c+s_*lw/2+f*0.02]
@@ -398,12 +412,14 @@ zg=ZO-1.3-2.4-0.6
 # the field: Google Earth's angled views show both boxes centred in the opening, and the camera solved from the centre
 # square in the 2024 Hawthorn v Brisbane photo puts the far one at v 0, 27 m wide, centre 29 m up (2026-11-23)
 screen('screen_n',(-UO+1.4,0.0),(1,0),27.0,8.5,39.05,hang=0.4);screen('screen_s',(UO-1.4,0.0),(-1,0),27.0,8.5,39.05,hang=0.4)
-# the small scoreboards stand at the front of the top tier at the corners, 13.5 x 7 m, face centre 25.2 m above the
-# field, each with a MARVEL STADIUM name board on top: rays from the camera solved from the curtain-raiser photo meet
-# this model's top-tier front at u -83.5, v +-65..66.5, 24-27 m up; the Hawthorn v Brisbane photo shows one at a far corner the same size. The
-# south pair is by the stadium's symmetry (no photo of those corners yet).
-for i,(cu,cv) in enumerate(((-83.0,65.6),(83.0,65.6),(-83.0,-65.6),(83.0,-65.6))):
-    fc=np.array([-cu,-cv]);screen('screen_c%d'%i,(cu,cv),fc,13.5,7.0,5.4+25.2+3.9,hang=0,label=1.6)
+# the small scoreboards hang over the top tier's front rows at the corners, 13.5 x 7 m, face centre 25.2 m above the
+# field, each with a MARVEL STADIUM name board on top. The curtain-raiser photo's solved camera fixes the ray to each
+# north board; where along it is set by the photo showing the board in front of the top tier's seats, so it sits where
+# the ray first clears those seats by 2.5 m (u -77.3, v +-64.5; re-measured 2026-11-23 after the tiers were lowered).
+# Hangers to the roof's underside. The south pair is by the stadium's symmetry (no photo of those corners yet).
+for i,(cu,cv) in enumerate(((-77.3,64.5),(77.3,64.5),(-77.3,-64.5),(77.3,-64.5))):
+    fc=np.array([-cu,-cv]);zt=5.4+25.2+3.5+1.6
+    screen('screen_c%d'%i,(cu,cv),fc,13.5,7.0,5.4+25.2+3.5,hang=max(0.0,roof_top(cu,cv)-1.2-zt),label=1.6)
 from shapely.geometry import Polygon,Point
 def vent_block(nm,f,z0,z1,zb0,zb1,bay=7.0,pier=1.6,depth=0.45,wall='bluepanel',top='concrete'):
     # the blue service blocks (Google Earth c_ne): solid blue cladding with big louvred vent openings cut

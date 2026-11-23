@@ -91,9 +91,10 @@ def make_textures():
     # PC check 2026-11-23: (46, 50, 57) rendered (13, 22, 46) on the shaded east face against Google
     # Earth's (62, 86, 110); its silver panels there render at (0.44, 0.51, 0.65) of their colour, so
     # the glass is a mid grey-blue that the sky in it and the shade bring down to Google Earth's.
-    curtain("nab_glass", (124, 150, 156), (86, 96, 104), bay=1.5, floor=3.9, noise=10.0)
+    curtain("nab_glass", (110, 128, 150), (80, 90, 104), bay=1.5, floor=3.9, noise=10.0)
     TILE["nab_glass"] = (6.0, 7.8)
-    panels("nab_silver", (205, 210, 214), (150, 156, 162), w=1.5, h=1.3, holes=(52, 58, 66))
+    # PC check round 2: the north tip's panels rendered (88, 105, 136) against GE (60, 87, 113): greyer, darker
+    panels("nab_silver", (150, 166, 178), (118, 130, 142), w=1.5, h=1.3, holes=(52, 58, 66))
     TILE["nab_silver"] = (6.0, 5.2)
     flat("fin_white", (232, 234, 236))
     flat("corner_red", (206, 118, 90))  # copper orange-red: GE c_e reads (108, 77, 86) in shade
@@ -114,14 +115,15 @@ def make_textures():
     curtain("office_glass", (78, 98, 116), (180, 186, 190), bay=1.5, floor=2.7, slab=0.0, noise=8.0)
     TILE["office_glass"] = (6.0, 5.4)
     flat("white_band", (226, 228, 228))
-    curtain("tower_glass", (74, 92, 110), (150, 160, 170), bay=1.5, floor=3.05, slab=0.0, noise=9.0)
+    # PC check round 2: Google Earth reads the two curved towers west of the ground as green-grey glass
+    curtain("tower_glass", (84, 102, 98), (120, 132, 128), bay=1.5, floor=3.05, slab=0.0, noise=9.0)
     TILE["tower_glass"] = (6.0, 6.1)
     flat("balustrade", (120, 140, 150))
     flat("steel", (196, 198, 200))
     flat("steel_dark", (196, 200, 198))  # galvanised, light in Google Earth
     flat("rock_a", (156, 150, 138), noise=10.0)
     flat("rock_b", (128, 122, 112), noise=10.0)
-    flat("slab_grey", (176, 184, 192))
+    flat("slab_grey", (150, 160, 156))  # slab edges: grey-green, not white (PC check round 2)
     flat("timber", (74, 64, 52))
     flat("concrete_deck", (170, 168, 160))
     for n in ("fin_white", "corner_red", "roof_grey", "roof_dark", "sx_glass", "podium_glass", "white_band", "steel", "rock_a", "rock_b",
@@ -304,7 +306,7 @@ def nab(g, ring, h=72.0):
     - The south and east faces are grey-blue glass with white triangular shades climbing in diagonal
       rows. The east face is four glass blocks and a silver-white north tip, split by three slanting
       slots clad orange-red; the south face has red-orange strips down two folds.
-    - The west face, to the stadium, alternates dark glass and silver panel facets.
+    - The west face, to the stadium, is glass under close-set white shades that leave diagonal dark bands.
     - It stands on a 7 m glazed ground storey set back behind white V struts (c_e's white zigzag)."""
     ring = ccw(ring)
     P = [np.array(q) for q in ring]
@@ -334,7 +336,7 @@ def nab(g, ring, h=72.0):
                 n = outward(p0, p1)
                 f = ((s0 + (j + 0.5) * (s1 - s0) / k) / L)
                 if name == "west":
-                    mat = "nab_silver" if j % 2 else "nab_glass"
+                    mat = "nab_glass"
                 elif name == "east":
                     mat = "nab_silver" if f > 0.88 else "nab_glass"
                 else:
@@ -370,11 +372,15 @@ def nab(g, ring, h=72.0):
                     # white shades, one row a floor (3.9 m), one every 6.5 m along a row, each row stepped
                     # 2.2 m on so they climb in diagonals: about five a row on a 30 m block and eleven rows,
                     # 3.4 m wide and 5.6 m tall, as counted on Google Earth's c_e (2026-11-23)
-                    for r, z in enumerate(np.arange(base + 1.0, top - 6.5, 3.9)):
-                        for s_ in np.arange((r * 2.2 - u) % 6.5, w - 3.6, 6.5):
+                    # The west face, to the stadium, carries them far closer (Google Earth from the west, PC check
+                    # round 2): 4.2 m wide every 4.8 m, so the face reads pale with the dark glass left in
+                    # diagonal bands between them.
+                    sw, sp, sh, st = (4.2, 4.8, 7.0, 1.6) if name == "west" else (3.4, 6.5, 5.6, 2.2)
+                    for r, z in enumerate(np.arange(base + 1.0, top - sh - 0.9, 3.9)):
+                        for s_ in np.arange((r * st - u) % sp, w - sw - 0.2, sp):
                             s_ = float(s_) + 0.2  # clear of the facet edge
                             lean = (lean0 + (lean1 - lean0) * (s_ / w)) * ((z - base) / (top - base))
-                            shade(g, "fin_white", p0 + t * s_ + lean + n * 0.05, t, n, 3.4, 5.6, 0.9, z)
+                            shade(g, "fin_white", p0 + t * s_ + lean + n * 0.6, t, n, sw, sh, 0.35, z)  # 0.6 m clears the folded facet, which is not flat
                 u += w
             if bi + 2 < len(edges):
                 # the slot to the next block: two side walls and a back wall 3.5 m in, all orange-red,

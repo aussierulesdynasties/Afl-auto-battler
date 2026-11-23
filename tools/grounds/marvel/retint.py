@@ -23,11 +23,11 @@ TARGET = {
     "teal": (196, 208, 202),
     "endroof": (196, 196, 190),
     "deck": (206, 206, 199),
-    "navy": (108, 120, 138),
+    "navy": (128, 140, 154),  # PC check round 2: the east podium rendered (85, 101, 126) against GE (114, 130, 142)
     "slate": (130, 138, 150),
-    # PC check 2026-11-23: (150, 146, 136) rendered a cool (160, 164, 156) on the plaza against Google
-    # Earth's warm tan (171, 161, 151); lit ground there renders about (1.07, 1.12, 1.15) of its colour.
-    "paving": (160, 144, 131),
+    # PC checks 2026-11-23: (150, 146, 136) read a little cool against Google Earth's (171, 161, 151);
+    # (160, 144, 131) read tan in the west forecourt, where Google Earth is grey. A light warm grey.
+    "paving": (158, 152, 144),
     # Undersides face down, where the match light is a dim blue-violet (measured under the shut roof:
     # a (118, 122, 116) map rendered (49, 49, 69)). Painted warm and green so they render the grey with
     # a faint green the director set for roof undersides (2026-11-21), about (85, 90, 82).
@@ -124,7 +124,7 @@ def main():
     # Glazing: the dark glass rendered black in shade (Google Earth's office glass reads (96, 114, 132),
     # its shopfronts (84, 104, 121), sky in them included). Lighter, so it reads as glass, not holes.
     retint("glass", (74, 90, 108))
-    retint("shopglass", (68, 84, 102))
+    retint("shopglass", (52, 74, 98))
     retint("tread", (146, 146, 142), src="concrete", out="tread")
     ribbon()
     grille()
@@ -137,7 +137,8 @@ def main():
     # PC check 2026-11-23: (126, 136, 148) rendered (118, 128, 142) against Google Earth's darker blue
     # (74, 103, 129); the west face renders about 0.94 of its colour.
     CONTRAST["podiumpanel"] = 0.5
-    retint("podiumpanel", (80, 109, 134), src="slate", out="podiumpanel")
+    # round 2: (80, 109, 134) still rendered a light lavender (103, 116, 139) in the sun against (73, 102, 129)
+    retint("podiumpanel", (52, 92, 124), src="slate", out="podiumpanel")
     # the forecourt plinth's street front: blue-grey glass (PC check: Google Earth (76, 102, 118))
     retint("fcglass", (81, 108, 124), src="curtain", out="fcglass")
     tiles = os.path.join(TEX, "tiles.json")
