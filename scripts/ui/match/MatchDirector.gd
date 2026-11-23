@@ -1226,6 +1226,12 @@ func _pass_phases(k: int) -> Array:
 		return out
 	var nev: Dictionary = events[nk]
 	var r := _actor_id(nev)
+	var to_r := _token_by_pid(str(events[k].get("to_id", "")))
+	if r < 0 and to_r >= 0:
+		# The log names who it goes to, and the next event (a ball-up off his chance) doesn't
+		# name him: it goes to him, where he is (it stayed in the kicker's hands, no kick at all).
+		r = to_r
+		nev = {}
 	if r < 0:
 		return out
 	# A pass marked on the lead, or cut off by the other side (a rebound), comes down where the

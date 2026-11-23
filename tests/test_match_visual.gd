@@ -1556,6 +1556,9 @@ func _test_set_shot_calls() -> void:
 				pass_seen += 1
 				var nk := d._next_real(k)
 				var want := d._actor_id(evs[nk]) if nk >= 0 else -1
+				if want < 0:
+					# The next event names nobody (a ball-up off his chance): the man it is kicked to.
+					want = d._token_by_pid(str(ev.get("to_id", "")))
 				for ph in d._pass_phases(k):
 					if str(ph["t"]) == "flight" and int(ph.get("recv", -1)) == want and want >= 0:
 						pass_ok += 1
@@ -3135,8 +3138,10 @@ func _check_turf3d(oval: Oval3D) -> void:
 		_check(g.g > g.r and g.g > g.b and wet == (1.0 if look[0] == VignetteWeather.WET else 0.0)
 				and turf.env.tonemap_exposure >= 1.0,
 				"%s %s: the turf is green and the weather's sheen is set (%s, wet %.0f)" % [look[1], look[0], str(g), wet])
-	# Rule 2.114: the broadcast colour, the turf's colour read once and the film's white balance.
-	var film_ok := turf.film == null or turf.film.get_shader_parameter("balance") == Oval3DTurf.BALANCE[VignetteKickoff.NIGHT]
+	# Rule 2.114: the broadcast colour, the turf's colour read once and the film's white balance
+	# (at night: the loop above ends on a hot day, whose balance is the day's).
+	turf.apply("", VignetteKickoff.NIGHT)
+	var film_ok: bool = turf.film == null or turf.film.get_shader_parameter("balance") == Oval3DTurf.BALANCE[VignetteKickoff.NIGHT]
 	_check(turf.broadcast == 1.0 and float(turf.mat.get_shader_parameter("true_colour")) == 1.0 and film_ok,
 			"The 3D picture is in broadcast colour: turf colour read once, the night's white balance on the film")
 	turf.apply("", VignetteKickoff.DAY)
