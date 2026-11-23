@@ -37,6 +37,14 @@ if g in ('blacktown',):
     s['baseball_list'] = [{'home': [-298.5, -62.8], 'dir': -43.5, 'track': 5.0}, {'home': [-342.7, -212.7], 'dir': -40.0, 'track': 5.0},
                           {'home': [-421.6, -90.0], 'dir': -54.5, 'track': 5.0}]
     if os.environ.get('BG_REAL'): s['palette']['infield'] = [188, 120, 86]
+# the four softball diamonds in the cloverleaf south-west (OSM maps them as baseball): homes and facings off a
+# straight-down Google Earth shot (2026-11-23, 3.17 px a metre); the dirt circle 17.4 m round a point 25.6 m out
+if g in ('blacktown',):
+    s['softball_list'] = [{'home': [-492.1, -305.7], 'dir': 45}, {'home': [-537.8, -303.8], 'dir': 135},
+                          {'home': [-536.2, -350.5], 'dir': 225}, {'home': [-491.5, -351.1], 'dir': 315}]
+# map buildings within 450 m with no height in the map (7 m by default): roof and ground on Google Earth's status bar
+# (2026-11-23, 3 roof and 2 ground readings each, whole metres)
+if g in ('blacktown',): s['bld_h'] = [[-172.0, -325.5, 6], [-48.0, -245.4, 5], [-77.4, -261.6, 6], [211.5, 175.4, 3], [173.7, 248.3, 4], [249.8, 304.0, 3]]
 # the path from the car park north-west past the baseball fields: mapped as a service road, a 3 m concrete footpath on the
 # NSW aerial and Google Earth 2025
 if g in ('blacktown',): s['osm_retag'] = {'979754558': {'highway': 'footway', 'surface': 'concrete'}}
@@ -45,7 +53,8 @@ if g in ('blacktown',) and os.environ.get('BG_REAL'): s['dem_nsw'] = True
 # the small trees on the model's own ground south of the stand (crown centres on the NSW aerial, 2026-11-23)
 if g in ('blacktown',): s['extra_trees'] = [[-120.8, -76.0], [-114.8, -87.6], [-108.1, -95.7], [-82.6, -117.8], [-74.3, -123.2]]
 if g in ('blacktown',): s['drop_buildings'] = [[(-125, -97), (-98, -99), (-60, -128), (-80, -156), (-112, -140), (-125, -126)],
-                                                [(-241, -154), (-198, -154), (-198, -186), (-241, -186)]]   # the shade sails (map: two roofed buildings)
+                                                [(-241, -154), (-198, -154), (-198, -186), (-241, -186)],   # the shade sails (map: two roofed buildings)
+                                                [(-221, -193), (-194, -189), (-189, -215), (-217, -219)]]   # a 1 m concrete slab (the model's SLAB), not a 7 m block
 s.update(name=g, lat=F['origin'][0], lon=F['origin'][1], glb=glb, landmarks=[], yaw=F['yaw'])
 json.dump(s, open('spec/%s.json' % g, 'w'), indent=1)
 print(g, s['lat'], s['lon'], 'yaw', F['yaw'])
