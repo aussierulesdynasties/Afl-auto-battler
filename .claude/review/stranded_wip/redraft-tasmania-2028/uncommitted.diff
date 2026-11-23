@@ -1,0 +1,509 @@
+diff --git a/scripts/state/GameState.gd b/scripts/state/GameState.gd
+index cb78fed07..66754cff2 100644
+--- a/scripts/state/GameState.gd
++++ b/scripts/state/GameState.gd
+@@ -184,9 +184,10 @@ var expansion := {}
+ ## without it); a career saved before the choice existed keeps Canberra.
+ var canberra_on := true
+ ## The year the new clubs (Tasmania, and Canberra while the career has it)
+-## enter instead of their data years; 0 keeps the data years. A League
+-## redraft takes them into the 2027 draft as equals (director, 2026-11-08):
+-## no list build, no priority picks, no cap relief. Saved only when set.
++## enter instead of their data years; 0 keeps the data years. Only a League
++## redraft saved before 2026-11-12 sets it (2027: they drafted with everyone).
++## A redraft now keeps the data years like the real lists (director,
++## 2026-11-12: the Devils "Join in 2028"). Saved only when set.
+ var expansion_from := 0
+ ## Real 2026 lists with Canberra (director, 2026-11-08): 2027-2029 are played
+ ## without you, every club run by its own staff, and you choose your club at
+@@ -2212,9 +2213,19 @@ func _hold_years_without_you(first_season: int) -> void:
+ ## 2027 start with Canberra on; any other real-lists start with Canberra plays
+ ## 2027-2029 without you first (row T5.Q25).
+ func waiting_clubs() -> Array:
+-	if not opening_draft or my_club != "" or sim_ahead:
++	if my_club != "" or sim_ahead:
+ 		return []
+ 	var out := []
++	if _redraft_unclaimed():
++		# A League redraft (director, 2026-11-12): every club that joins after
++		# 2027, Tasmania and Canberra when the career has them.
++		for code in GameDB.club_order:
++			var y := GameDB.enter_year(str(code))
++			if y > GameDB.START_YEAR and y < Expansion.NEVER:
++				out.append(str(code))
++		return out
++	if not opening_draft:
++		return []
+ 	if GameDB.enter_year("TAS") == GameDB.START_YEAR + 1:
+ 		out.append("TAS")
+ 	if Challenge.kind(self) == "rebuild" and GameDB.enter_year("CANB") == SIM_AHEAD_TO:
+@@ -2222,6 +2233,11 @@ func waiting_clubs() -> Array:
+ 	return out
+ 
+ 
++## The 2027 League redraft is open and no club is yours yet.
++func _redraft_unclaimed() -> bool:
++	return season == null and draft != null and draft.league_mode and not draft.intake_mode 			and draft.user_club == "" and not opening_draft
++
++
+ ## The first of waiting_clubs(), or "".
+ func waiting_club() -> String:
+ 	var w := waiting_clubs()
+@@ -2256,6 +2272,13 @@ func choosing_club() -> bool:
+ func sim_ahead_step() -> String:
+ 	if not sim_ahead or my_club != "" or choosing_club():
+ 		return ""
++	if season == null and draft != null and draft.league_mode and not draft.intake_mode:
++		# The 2027 League redraft, every club's staff picking (a club that
++		# joins later was taken): then 2027 starts with its pre-season.
++		draft.start_for_user("")
++		start_season("", [])
++		open_preseason(false)
++		return "Starting the %d season..." % season_year
+ 	if draft != null and draft.intake_mode:
+ 		# A draft between seasons (the 2026 one first): every club picks.
+ 		draft.start_for_user("")
+@@ -2351,11 +2374,10 @@ func begin_draft() -> void:
+ 	# drafted before the 2027 season.
+ 	var pool: Array = GameDB.all_players_sorted() + GameDB.all_draftees_sorted()
+ 	pool.sort_custom(func(a, b): return a["overall"] > b["overall"])
+-	# Every club drafts as an equal (director, 2026-11-08): Tasmania, and
+-	# Canberra when the career has it, are in the 2027 redraft with the
+-	# founding eighteen and a created club, with no new-club concessions.
+-	expansion_from = GameDB.START_YEAR
+-	_apply_entry_years()
++	# The founding eighteen and a created club draft for 2027. Tasmania join
++	# in 2028 and Canberra (when the career has them) in 2030, each building
++	# its first list as on the real lists (director, 2026-11-12: "Join in
++	# 2028"); taking one plays the years before it without you.
+ 	var clubs: Array = GameDB.active_clubs(GameDB.START_YEAR)
+ 	var short: int = Ratings.LIST_SIZE * clubs.size() - pool.size()
+ 	if short > 0:
+diff --git a/scripts/ui/DraftScene.gd b/scripts/ui/DraftScene.gd
+index c51b3cd69..440741539 100644
+--- a/scripts/ui/DraftScene.gd
++++ b/scripts/ui/DraftScene.gd
+@@ -316,8 +316,11 @@ func _show_club_select() -> void:
+ 		_root.add_child(UiKit.subtitle("Your first pick in the 2026 National Draft is shown on each card." if waiting == ""
+ 				else "Your first pick in the 2026 National Draft is shown on each card. %s join in %d." % [
+ 					GameDB.club_name(waiting), GameDB.enter_year(waiting)]))
+-	else:
++	elif waiting == "":
+ 		_root.add_child(UiKit.subtitle("Every club drafts %d players. Your first pick is shown on each card." % _draft.target_size))
++	else:
++		_root.add_child(UiKit.subtitle("Every club drafts %d players. Your first pick is shown on each card. %s join in %d." % [
++				_draft.target_size, GameDB.club_name(waiting), GameDB.enter_year(waiting)]))
+ 
+ 
+ 
+@@ -369,7 +372,9 @@ func _wait_for_club(code: String) -> void:
+ 	var playing := "%d" % (first_season - 1) if first_season - 1 == GameDB.START_YEAR else "%d to %d" % [GameDB.START_YEAR, first_season - 1]
+ 	ScreenTransition.run("Playing %s..." % playing, func():
+ 		await ScreenTransition.drawn()
+-		if GameState.begin_from_history(first_season):
++		# Shipped histories are real-lists careers: a League redraft plays its
++		# years live.
++		if GameState.opening_draft and GameState.begin_from_history(first_season):
+ 			GameState.choose_sim_ahead_club(code)
+ 			Router.go("draft")
+ 			return
+diff --git a/scripts/ui/Main.gd b/scripts/ui/Main.gd
+index f07c04072..9e9fd82ee 100644
+--- a/scripts/ui/Main.gd
++++ b/scripts/ui/Main.gd
+@@ -557,16 +557,16 @@ func _forged_joins() -> bool:
+ 
+ 
+ ## The Canberra question's rule, for the start picked (director, 2026-11-08):
+-## a redraft takes Tasmania, and Canberra on Yes, into the 2027 draft as
+-## equals; the real lists with Canberra play 2027-2029 without you and start
++## a redraft drafts the founding clubs for 2027, Tasmania join in 2028 and
++## Canberra on Yes in 2030 (director, 2026-11-12); the real lists with Canberra play 2027-2029 without you and start
+ ## in 2030; Rebuild keeps its 2027 start.
+ func _canberra_line(k: String) -> String:
+ 	var fixed := " It cannot be changed once the career starts."
+ 	if _pick_start != "real" and _pick_challenge != "rebuild":
+-		var n := 19 + (1 if k == "yes" else 0) + (1 if _forged_joins() else 0)
++		var n := 18 + (1 if _forged_joins() else 0)
+ 		if k == "yes":
+-			return ("Tasmania and Canberra draft in the 2027 League redraft as equals: no priority picks and no extra cap room. %d clubs from 2027, and either new club can be yours." % n) + fixed
+-		return ("Tasmania drafts in the 2027 League redraft as an equal and can be yours. %d clubs from 2027; Canberra never join." % n) + fixed
++			return ("%d clubs draft for 2027. Tasmania join in 2028 and Canberra in 2030, each building its first list with the picks and cap room every new club gets. Take either and the seasons before it play out without you." % n) + fixed
++		return ("%d clubs draft for 2027. Tasmania join in 2028, building their first list with the picks and cap room every new club gets; take them and 2027 plays out without you. Canberra never join." % n) + fixed
+ 	if _pick_challenge == "rebuild":
+ 		if k == "yes":
+ 			return "Rebuild starts in 2027, or take Tasmania (2028) or Canberra (2030) and build from nothing. 20 clubs from 2030." + fixed
+diff --git a/tests/run_career_ui_tests.gd b/tests/run_career_ui_tests.gd
+index fe9fabe73..aef52e21a 100644
+--- a/tests/run_career_ui_tests.gd
++++ b/tests/run_career_ui_tests.gd
+@@ -4098,8 +4098,9 @@ func _find_named(n: Node, named: String, out: Array) -> void:
+ 
+ 
+ ## The Canberra question on New career (director, 2026-11-08): "Canberra
+-## joins?" answers No by default, and a real tap on Yes puts Canberra in the
+-## League redraft with Tasmania, both as equals.
++## joins?" answers No by default. A League redraft drafts the founding
++## eighteen for 2027 either way (director, 2026-11-12: Tasmania "Join in
++## 2028"); a real tap on Yes brings Canberra in for 2030.
+ func _test_new_career_canberra_choice() -> void:
+ 	_state.delete_saved_career()
+ 	for pick_it in [false, true]:
+@@ -4120,12 +4121,15 @@ func _test_new_career_canberra_choice() -> void:
+ 		await _settle()
+ 		await _settle()
+ 		var clubs: Array = _state.draft.clubs if _state.draft != null else []
++		var waits: Array = _state.waiting_clubs()
+ 		_check(both_there and t1 == "" and t2 == "" and _router.current() == "draft"
+-				and bool(_state.canberra_on) == pick_it and clubs.has("CANB") == pick_it and clubs.has("TAS")
+-				and clubs.size() == (20 if pick_it else 19),
+-				("A tap on Yes puts Canberra and Tasmania in the 2027 League redraft (%s %s, %d clubs)" if pick_it
+-				else "Left at No, the 2027 League redraft has Tasmania and no Canberra (%s %s, %d clubs)") % [
+-					t1, t2, clubs.size()])
++				and bool(_state.canberra_on) == pick_it and not clubs.has("CANB") and not clubs.has("TAS")
++				and clubs.size() == 18 and int(_db.enter_year("TAS")) == 2028
++				and (int(_db.enter_year("CANB")) == 2030 if pick_it else int(_db.enter_year("CANB")) > 2100)
++				and waits == (["TAS", "CANB"] if pick_it else ["TAS"]),
++				("A tap on Yes: 18 clubs draft for 2027, Tasmania 2028 and Canberra 2030 wait (%s %s, %d clubs, %s)" if pick_it
++				else "Left at No: 18 clubs draft for 2027, Tasmania wait for 2028, no Canberra (%s %s, %d clubs, %s)") % [
++					t1, t2, clubs.size(), str(waits)])
+ 	_state.reset()
+ 	_router.stack = []
+ 
+@@ -4341,7 +4345,9 @@ func _test_every_start_reaches_interview() -> void:
+ 			await process_frame
+ 		await _settle()
+ 		_check(_router.current() != "interview" and _router.current() != "draft" and not _state.interview_due,
+-				"%s: after the draft the career goes on without a second interview (at %s)" % [label, _router.current()])
++				"%s: after the draft the career goes on without a second interview (at %s; draft finished %s, valid %s, %d of %d, %d clubs, guard %d)" % [
++					label, _router.current(), str(d != null and d.is_finished()), str(d != null and d.is_valid()),
++					d.count() if d != null else -1, d.target_size if d != null else -1, d.clubs.size() if d != null else -1, guard])
+ 	_state.replay_seed = seed_was
+ 	_state.delete_saved_career()
+ 	_state.reset()
+diff --git a/tests/test_chronology.gd b/tests/test_chronology.gd
+index 140796ccc..70679f0de 100644
+--- a/tests/test_chronology.gd
++++ b/tests/test_chronology.gd
+@@ -77,9 +77,9 @@ func _test_league_draft_pool() -> void:
+ 	_check(players_in and not dup, "Every 2026 player is in the League Draft pool once")
+ 	_check(class_in == GameDB.draftees.size() and class_in > 40,
+ 			"The 2026 draft class is in the 2027 League Draft (%d prospects)" % class_in)
+-	# Tasmania drafts with the founding eighteen (director, 2026-11-08).
+-	_check(d.clubs.size() == 19 and d.clubs.has("TAS") and d.target_size == mini(Ratings.LIST_SIZE, d.pool.size() / 19),
+-			"Nineteen clubs, Tasmania with them, draft %d-player lists" % d.target_size)
++	# The founding eighteen draft; Tasmania join in 2028 (director, 2026-11-12).
++	_check(d.clubs.size() == 18 and not d.clubs.has("TAS") and d.target_size == mini(Ratings.LIST_SIZE, d.pool.size() / 18),
++			"Eighteen clubs, Tasmania not yet, draft %d-player lists" % d.target_size)
+ 	_check(d.target_size == Ratings.LIST_SIZE, "State-leaguers fill the pool so every club drafts a full list (%d)" % d.target_size)
+ 	var later := false
+ 	for p in d.pool:
+diff --git a/tests/test_expansion.gd b/tests/test_expansion.gd
+index 4067f0892..e0221e828 100644
+--- a/tests/test_expansion.gd
++++ b/tests/test_expansion.gd
+@@ -32,7 +32,7 @@ func run() -> void:
+ 	_t("_test_created_club_rules")
+ 	_t("_test_created_club_career")
+ 	_t("_test_club_count_defaults")
+-	_t("_test_redraft_equal_entry")
++	_t("_test_redraft_tasmania_2028")
+ 	_t("_test_redraft_entry_saved")
+ 	_t("_test_real_lists_play_to_2030")
+ 	_t("_test_real_lists_tasmania_2028")
+@@ -247,15 +247,17 @@ func _test_entry_gates() -> void:
+ 		_check((GameDB.club_list(code) as Array).is_empty(),
+ 				"%s has no 2026-data players (its list is generated at entry)" % code)
+ 
+-	# A League redraft without Canberra: Tasmania drafts in 2027 with the
+-	# founding eighteen (director, 2026-11-08); Canberra never join.
++	# A League redraft without Canberra: the founding eighteen draft for 2027
++	# and Tasmania join in 2028 (director, 2026-11-12: "Join in 2028");
++	# Canberra never join.
+ 	GameState.reset()
+ 	GameState.begin_draft()
+-	_check(GameState.draft.clubs.size() == 19
+-			and GameState.draft.clubs.has("TAS")
++	_check(GameState.draft.clubs.size() == 18
++			and not GameState.draft.clubs.has("TAS")
+ 			and not GameState.draft.clubs.has("CANB")
++			and GameDB.enter_year("TAS") == 2028
+ 			and GameDB.enter_year("CANB") == Expansion.NEVER,
+-			"A League redraft with Canberra No: 19 clubs from 2027, Tasmania in, no Canberra")
++			"A League redraft with Canberra No: 18 clubs in 2027, Tasmania from 2028, no Canberra")
+ 	# Real 2026 lists without Canberra: unchanged, Tasmania join in 2028.
+ 	GameState.reset()
+ 	GameState.begin_real_lists()
+@@ -602,9 +604,9 @@ func _test_created_club_career() -> void:
+ 	GameState.reset()
+ 	_check(GameState.create_club(_forge_spec()) == "", "The club is created for a new career")
+ 	GameState.begin_draft()
+-	_check(GameState.draft.clubs.size() == 20 and GameState.draft.clubs.has("PMB")
+-			and GameState.draft.clubs.has("TAS"),
+-			"The created club and Tasmania take part in the League Draft")
++	_check(GameState.draft.clubs.size() == 19 and GameState.draft.clubs.has("PMB")
++			and not GameState.draft.clubs.has("TAS"),
++			"The created club takes part in the League Draft; Tasmania join in 2028")
+ 	GameState.draft.start_for_user("PMB")
+ 	var draft: Draft = GameState.draft
+ 	var guard := 0
+@@ -613,11 +615,11 @@ func _test_created_club_career() -> void:
+ 		var cand := draft._best_ai_pick(draft.current_club())
+ 		if cand.is_empty() or not draft._draft_pick(draft.current_club(), cand):
+ 			draft._skip_current_pick()
+-	_check(draft.is_finished(), "The twenty-club League Draft completes")
++	_check(draft.is_finished(), "The nineteen-club League Draft completes")
+ 	GameState.start_season("PMB", draft.list())
+ 	var season: Season = GameState.season
+-	_check(GameState.my_club == "PMB" and season.ladder.size() == 20 and season.ladder.has("PMB"),
+-			"You coach the created club on a twenty-club ladder")
++	_check(GameState.my_club == "PMB" and season.ladder.size() == 19 and season.ladder.has("PMB"),
++			"You coach the created club on a nineteen-club ladder")
+ 	# The director's PC playtest (2026-10-07): a created club started with
+ 	# every coaching job vacant. It hires before its first season, from
+ 	# coaches out of work; you are its senior coach.
+@@ -742,82 +744,130 @@ func _saved_state() -> Dictionary:
+ 	return CareerSave.read(GameState.save_path)
+ 
+ 
+-## League redraft with Canberra Yes and a created club: 21 clubs draft in
+-## 2027 as equals (no priority picks, no cap room), and Tasmania or Canberra
+-## can be yours.
+-func _test_redraft_equal_entry() -> void:
++## A League redraft (director, 2026-11-12: the Devils "Join in 2028"): the
++## founding eighteen and a created club draft for 2027; Tasmania join in 2028
++## and Canberra (Yes) in 2030, each building its list as on the real lists.
++## Tasmania stay yours to take: 2027 plays without you and you take over at
++## the 2027 National Draft with the deal their own staff would have had.
++func _test_redraft_tasmania_2028() -> void:
+ 	GameState.reset()
+ 	GameState.set_canberra(true)
+ 	_check(GameState.create_club(_forge_spec()) == "", "The club is created for a new career")
+ 	GameState.begin_draft()
+ 	var draft: Draft = GameState.draft
+-	_check(draft.clubs.size() == 21 and ["TAS", "CANB", "PMB"].all(func(c): return draft.clubs.has(c))
+-			and GameDB.active_clubs(2027).size() == 21,
+-			"League redraft, Canberra Yes, your club: 21 clubs from 2027 (%d)" % draft.clubs.size())
+-	var picks := {}
+-	for code in draft.pick_sequence:
+-		picks[str(code)] = int(picks.get(str(code), 0)) + 1
+-	var same := true
+-	for code in draft.clubs:
+-		same = same and int(picks.get(str(code), 0)) == int(picks.get("COL", 0))
+-	_check(same and draft.guests.is_empty() and GameState.expansion.is_empty(),
+-			"Every club has the same picks: no priority picks or new-club build (%s)" % str(picks))
+-	_check(not ExpansionBuild.has_package(GameState, "TAS") and not ExpansionBuild.has_package(GameState, "CANB"),
+-			"No new-club package (cap room) for Tasmania or Canberra in a redraft")
+-	_check(draft.target_size >= Prospects.MIN_LIST,
+-			"21 clubs still draft a playable list each (%d players)" % draft.target_size)
+-	draft.start_for_user("CANB")
++	_check(draft.clubs.size() == 19 and draft.clubs.has("PMB") and not draft.clubs.has("TAS")
++			and not draft.clubs.has("CANB") and GameState.expansion_from == 0
++			and GameDB.enter_year("TAS") == 2028 and GameDB.enter_year("CANB") == 2030,
++			"League redraft, Canberra Yes, your club: 19 clubs in 2027, Tasmania 2028, Canberra 2030 (%d)" % draft.clubs.size())
++	_check(GameState.waiting_clubs() == ["TAS", "CANB"],
++			"Both new clubs can be waited for (%s)" % str(GameState.waiting_clubs()))
++	GameState.reset()
++	GameState.set_canberra(false)
++	GameState.challenge = {"kind": "youth"}
++	GameState.begin_draft()
++	_check(GameState.waiting_clubs() == ["TAS"] and GameState.draft.clubs.size() == 18,
++			"Canberra No: 18 clubs draft, Tasmania can be waited for (%s)" % str(GameState.waiting_clubs()))
++	_check(not GameState.begin_wait_for_club("COL"), "Only a club that joins later can be waited for")
++	_check(GameState.begin_wait_for_club("TAS") and GameState.sim_ahead and not GameState.has_career()
++			and not GameState.save_career() and GameState.challenge.is_empty() and GameState.sim_ahead_to == 2028,
++			"Waiting is not a career yet: nothing is saved, and the challenge is held")
++	_check(GameState.waiting_clubs().is_empty(), "Once waiting, nothing else is offered")
++	var steps := 0
++	var lines := []
++	var ladder_2027 := -1
++	while steps < 200:
++		steps += 1
++		var line := GameState.sim_ahead_step()
++		if ladder_2027 < 0 and GameState.season != null:
++			ladder_2027 = GameState.season.ladder.size()
++		if line == "":
++			break
++		lines.append(line)
++	_check(ladder_2027 == 18 and lines.size() > 0 and str(lines[0]) == "Starting the 2027 season...",
++			"The redraft is made by every club's staff and 2027 starts with 18 clubs (%d, %s)" % [
++				ladder_2027, str(lines[0]) if lines.size() > 0 else ""])
++	_check(GameState.choosing_club() and GameState.season_year == 2027 and GameState.season.is_season_over()
++			and GameState.season.ladder.size() == 18 and not GameState.season.ladder.has("TAS"),
++			"2027 is played on an 18-club ladder and the 2027 National Draft waits (%d steps)" % steps)
++	_check(lines.has("Playing 2027: the Grand Final...") and GameState.draft.user_club == "" and GameState.draft.pick_index == 0,
++			"The cover names the weeks, and no pick is made before you take over")
++	draft = GameState.draft
++	_check(draft.clubs.has("TAS") and draft.clubs.size() == 19, "All 19 clubs are in this draft (%d)" % draft.clubs.size())
++	_check(ExpansionBuild.has_package(GameState, "TAS"), "Tasmania have their new-club build")
++	var tas_picks := draft.upcoming_picks("TAS", 0)
++	var col_picks := draft.upcoming_picks("COL", 0)
++	_check(tas_picks.size() > col_picks.size(), "Tasmania have their priority picks (%s; Collingwood %s)" % [str(tas_picks), str(col_picks)])
++	_check(GameState.choose_sim_ahead_club("TAS") and GameState.my_club == "TAS" and not GameState.sim_ahead
++			and GameState.has_career() and draft.user_club == "TAS" and str(GameState.challenge.get("kind", "")) == "youth",
++			"Tasmania are yours, and your challenge starts now")
++	_check(draft.upcoming_picks("TAS", 0) == tas_picks, "Taken by you, Tasmania keep the same picks")
++	_check(GameState.save_career(), "Their first draft saves")
++	GameState.reset()
++	_check(GameState.load_career() and GameState.club_yet_to_play() and GameState.draft != null
++			and GameState.draft.user_club == "TAS" and GameDB.enter_year("TAS") == 2028,
++			"It reloads at that draft, Tasmania still joining in 2028")
++	draft = GameState.draft
+ 	_ai_finish(draft)
+-	_check(draft.is_finished(), "The 21-club League Draft completes")
+-	GameState.start_season("CANB", draft.list())
+-	var season: Season = GameState.season
+-	_check(GameState.my_club == "CANB" and season.ladder.size() == 21 and GameState.season_year == 2027,
+-			"You coach Canberra in 2027 on a 21-club ladder")
+-	_check(ExpansionBuild.relief(GameState, "CANB") == 0 and ExpansionBuild.relief(GameState, "TAS") == 0,
+-			"No cap room for Tasmania or Canberra in the 2027 season")
++	_check(GameState.finish_intake_draft() and GameState.season_year == 2028
++			and GameState.season.ladder.size() == 19 and GameState.season.ladder.has("TAS")
++			and GameState.my_club == "TAS" and GameState.my_first_season == 2028,
++			"2028: you coach Tasmania on a 19-club ladder (%d clubs, first season %d)" % [
++				GameState.season.ladder.size(), GameState.my_first_season])
+ 	var games := {}
+-	for rnd in season.fixture:
++	for rnd in GameState.season.fixture:
+ 		for m in rnd:
+ 			for code in [str(m["home"]), str(m["away"])]:
+ 				games[code] = int(games.get(code, 0)) + 1
+ 	var even := true
+-	for code in season.ladder:
+-		even = even and int(games.get(str(code), 0)) == int(games.get("CANB", 0))
+-	_check(season.fixture.size() == Season.REGULAR_ROUNDS and even,
+-			"A 21-club fixture: %d rounds, the same games for every club (byes)" % season.fixture.size())
+-	var staff := Coaches.staff(GameState.coaches, "TAS")
+-	_check(staff.size() == 6, "Tasmania, run by the AI, has its six coaches (%s)" % str(staff.keys()))
+-	_check(not Coaches.staff(GameState.coaches, "CANB").has("SC"), "You are Canberra's senior coach")
+-	GameState.reset()
+-	# Canberra No: Tasmania can be yours from 2027.
+-	GameState.begin_draft()
+-	GameState.draft.start_for_user("TAS")
+-	_ai_finish(GameState.draft)
+-	GameState.start_season("TAS", GameState.draft.list())
+-	_check(GameState.my_club == "TAS" and GameState.season.ladder.size() == 19,
+-			"Canberra No: you can coach Tasmania from 2027 on a 19-club ladder")
++	for code in GameState.season.ladder:
++		even = even and int(games.get(str(code), 0)) == int(games.get("TAS", 0))
++	_check(even and int(games.get("TAS", 0)) > 0, "A 19-club fixture: the same games for every club (%d)" % int(games.get("TAS", 0)))
++	_check((GameState.season.lists["TAS"] as Array).size() >= Prospects.MIN_LIST,
++			"Tasmania field the list they built (%d)" % (GameState.season.lists["TAS"] as Array).size())
+ 	GameState.reset()
+ 
+ 
+-## A redraft career's 2027 entries survive a save and load; a save without
+-## the field (a real-lists career, or one from before it) keeps the data years.
++## A redraft saved before 2026-11-12 had Tasmania (and Canberra on Yes) in from
++## 2027: mid-2027 it still loads with them on the ladder, and plays on. A new
++## redraft saves no entry year and loads with the data years.
+ func _test_redraft_entry_saved() -> void:
+ 	GameState.reset()
+ 	GameState.set_canberra(true)
++	# The old redraft: every club entered in 2027.
++	GameState.expansion_from = 2027
++	GameState._apply_entry_years()
+ 	GameState.begin_draft()
++	_check(GameState.draft.clubs.size() == 20, "(an old 20-club redraft)")
+ 	GameState.draft.start_for_user("FRE")
+ 	_ai_finish(GameState.draft)
+ 	GameState.start_season("FRE", GameState.draft.list())
+-	_check(GameState.save_career(), "A redraft career saves")
++	for i in range(3):
++		GameState.advance()
++	var round_was: int = GameState.season.round_index
++	_check(GameState.save_career(), "An old redraft career saves mid-2027")
+ 	_check(int(_saved_state().get("expansion_from", 0)) == 2027, "The save records the 2027 entry")
+ 	GameState.reset()
+ 	_check(GameDB.enter_year("CANB") == Expansion.NEVER and GameDB.enter_year("TAS") == 2028,
+-			"A reset undoes the redraft's entry years (TAS %d, CANB %d)" % [GameDB.enter_year("TAS"), GameDB.enter_year("CANB")])
++			"A reset undoes the old entry years (TAS %d, CANB %d)" % [GameDB.enter_year("TAS"), GameDB.enter_year("CANB")])
+ 	_check(GameState.load_career() and GameState.expansion_from == 2027
+ 			and GameDB.enter_year("TAS") == 2027 and GameDB.enter_year("CANB") == 2027
+-			and GameState.season.ladder.size() == 20,
+-			"Loaded, Tasmania and Canberra are in from 2027 (TAS %d, CANB %d)" % [
+-				GameDB.enter_year("TAS"), GameDB.enter_year("CANB")])
++			and GameState.season.ladder.size() == 20 and GameState.season.ladder.has("TAS")
++			and GameState.season.round_index == round_was and GameState.season_year == 2027,
++			"The old save loads mid-2027 with Tasmania and Canberra on its ladder (TAS %d, CANB %d, round %d)" % [
++				GameDB.enter_year("TAS"), GameDB.enter_year("CANB"), GameState.season.round_index])
++	GameState.advance()
++	_check(GameState.season.round_index == round_was + 1, "and plays on (round %d)" % GameState.season.round_index)
++	GameState.reset()
++	GameState.begin_draft()
++	GameState.draft.start_for_user("FRE")
++	_ai_finish(GameState.draft)
++	GameState.start_season("FRE", GameState.draft.list())
++	_check(GameState.save_career(), "A new redraft career saves")
++	var fresh := _saved_state()
++	GameState.reset()
++	_check(not fresh.has("expansion_from") and GameState.load_career() and GameState.expansion_from == 0
++			and GameDB.enter_year("TAS") == 2028 and GameState.season.ladder.size() == 18,
++			"A new redraft saves no entry year and loads with 18 clubs, Tasmania from 2028")
+ 	GameState.reset()
+ 	GameState.begin_real_lists()
+ 	GameState.choose_real_club("FRE")
+diff --git a/tools/visual/capture_tasmania_2028.gd b/tools/visual/capture_tasmania_2028.gd
+index 9197e05f3..4709ac2be 100644
+--- a/tools/visual/capture_tasmania_2028.gd
++++ b/tools/visual/capture_tasmania_2028.gd
+@@ -1,9 +1,13 @@
+ extends SceneTree
+ ## Take Tasmania from the real 2026 lists (director, 2026-11-09). Needs a real renderer:
+-##   godot --path . --resolution 390x844 --windowed --script tools/visual/capture_tasmania_2028.gd -- --out <dir>
++##   godot --path . --resolution 390x844 --windowed --script tools/visual/capture_tasmania_2028.gd -- --out <dir> [--size WxH] [--redraft]
+ ## Writes tas_1_choose, tas_2_sheet, tas_3_before_draft, tas_4_board.
++## --redraft: the 2027 League redraft instead (director, 2026-11-12: Tasmania
++## "Join in 2028"), its Choose your club and the sheet only.
+ 
+ var out := "C:/Users/DANTE/Documents/GitHub/afl-wt/caps/tas-2028"
++var W := 390
++var H := 844
+ 
+ 
+ func _initialize() -> void:
+@@ -15,6 +19,11 @@ func _run() -> void:
+ 	for i in range(a.size()):
+ 		if str(a[i]) == "--out" and i + 1 < a.size():
+ 			out = str(a[i + 1])
++		if str(a[i]) == "--size" and i + 1 < a.size():
++			var wh := str(a[i + 1]).split("x")
++			W = int(wh[0])
++			H = int(wh[1])
++	var redraft := a.has("--redraft")
+ 	DirAccess.make_dir_recursive_absolute(out)
+ 	await process_frame
+ 	var state = root.get_node("GameState")
+@@ -22,10 +31,13 @@ func _run() -> void:
+ 	state.save_path = "user://capture.save"
+ 	state.settings_path = "user://capture_settings.cfg"
+ 	state.reset()
+-	root.size = Vector2i(390, 844)
+-	DisplayServer.window_set_size(Vector2i(390, 844))
++	root.size = Vector2i(W, H)
++	DisplayServer.window_set_size(Vector2i(W, H))
+ 	state.set_canberra(false)
+-	state.begin_real_lists()
++	if redraft:
++		state.begin_draft()
++	else:
++		state.begin_real_lists()
+ 	state.set_setting("seen_draft_intro", true)
+ 	var ui: Control = load("res://scenes/DraftScene.tscn").instantiate()
+ 	root.add_child(ui)
+@@ -45,6 +57,9 @@ func _run() -> void:
+ 	await _frames(4)
+ 	ui.queue_free()
+ 	await _frames(2)
++	if redraft:
++		quit(0)
++		return
+ 	var t0 := Time.get_ticks_msec()
+ 	state.begin_wait_for_club("TAS")
+ 	while state.sim_ahead_step() != "":
+@@ -74,4 +89,4 @@ func _frames(n: int) -> void:
+ func _shot(name: String) -> void:
+ 	await process_frame
+ 	await process_frame
+-	root.get_texture().get_image().save_png("%s/%s_390x844.png" % [out, name])
++	root.get_texture().get_image().save_png("%s/%s_%dx%d.png" % [out, name, W, H])
