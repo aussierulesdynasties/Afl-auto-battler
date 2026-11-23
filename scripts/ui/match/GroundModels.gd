@@ -137,7 +137,10 @@ const PARTS := {
 			# (tools/grounds/scg/facades.py; they are out of buildings.bin).
 			{"mesh": "facades.bin", "name": "Facades"},
 			# Moore Park's footbridges over Anzac Parade (tools/grounds/scg/bridges.py).
-			{"mesh": "bridges.bin", "name": "Bridges"}],
+			{"mesh": "bridges.bin", "name": "Bridges"},
+			# The four big roofs (north, east, south, west), rebuilt on the front and back edges and the
+			# heights measured on Google Earth (tools/grounds/scg/stand_roofs.py, qa/roof_ge.json).
+			{"mesh": "roofs.bin", "name": "Roofs"}],
 }
 
 ## Per-ground corrections to a model's materials, by material name, checked against Google Earth
