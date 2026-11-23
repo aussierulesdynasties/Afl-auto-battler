@@ -268,8 +268,9 @@ def storey():
 
 def roof():
     """The roof membrane, one bay across (u) and fascia (image top) to inner edge (image bottom), Google Earth roof_S and
-    roof_top: white PTFE pillows, shaded toward the valleys where a grey cable line runs, two faint cross cables, a grey
-    translucent strip along the inner edge (the seats' shadow through it) and a white rim."""
+    roof_top: white PTFE pillows, shaded toward the valleys where a grey cable line runs, two faint cross cables and a white
+    rim. No grey strip along the inner edge: Google Earth's straight-down shots under the 2026 sun keep the membrane
+    white to within a metre of the edge (PC render at 4f6c463 showed a painted strip 3-4 m wide reading 0.8x GE there)."""
     w, h = 256, 1024
     u = (np.arange(w)[None, :] + 0.5) / w * np.ones((h, 1))
     v = (np.arange(h)[:, None] + 0.5) / h * np.ones((1, w))
@@ -278,7 +279,6 @@ def roof():
     for c in (0.36, 0.68):
         img[np.abs(v - c) < 0.0025] *= 0.9
     img[(u < 0.012) | (u > 0.988)] = (150, 154, 158)
-    img[v > 0.9] = np.array((168, 174, 178), float) * (1.0 + 0.04 * _noise(h, w, (8, 4), 7))[v > 0.9][:, None]
     img[v > 0.985] = (238, 238, 236)
     img[v < 0.012] = (236, 236, 234)
     return Image.fromarray(img.clip(0, 255).astype(np.uint8), "RGB")

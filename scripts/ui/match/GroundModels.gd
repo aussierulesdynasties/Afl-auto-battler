@@ -163,11 +163,11 @@ const SEAT_COLOURS := {
 	"s_blue": Color(0.211, 0.28, 0.448), "s_orange": Color(0.785, 0.426, 0.158),
 	"s_grey": Color(0.64, 0.648, 0.663), "s_maroon": Color(0.443, 0.129, 0.16),
 	"s_gold": Color(0.863, 0.649, 0.129), "s_teal": Color(0.135, 0.479, 0.456),
-	# Optus: each tier's colour pushed grey-blue or tan (optus build.py), the whole bowl then scaled so the
+	# Optus: each tier's colour pushed grey-blue or tan (optus build.py), the whole bowl then scaled (two passes) so the
 	# sunlit west seats match Google Earth's colour on a PC render under the same sun (tools/grounds/optus).
-	"seat_lo_blue": Color(0.532, 0.628, 0.658), "seat_lo_tan": Color(0.593, 0.641, 0.587),
-	"seat_mid_blue": Color(0.613, 0.668, 0.621), "seat_mid_tan": Color(0.667, 0.682, 0.549),
-	"seat_up_blue": Color(0.430, 0.547, 0.611), "seat_up_tan": Color(0.491, 0.560, 0.541),
+	"seat_lo_blue": Color(0.411, 0.544, 0.550), "seat_lo_tan": Color(0.459, 0.556, 0.489),
+	"seat_mid_blue": Color(0.475, 0.580, 0.518), "seat_mid_tan": Color(0.518, 0.592, 0.457),
+	"seat_up_blue": Color(0.330, 0.473, 0.510), "seat_up_tan": Color(0.378, 0.485, 0.450),
 	# York Park's teal-green plastic (york_park/model/paint.py), the SCG's two seat colours
 	# (their glb material colours, linear -> sRGB).
 	"seat_plastic": Color(0.255, 0.365, 0.33),
