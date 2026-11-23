@@ -89,4 +89,56 @@ Earth reads a roof, a tree or a car are excluded and listed. See `proof/` for ea
 
 | Ground | Spots | Ours - GE: mean, RMS, worst | Result |
 |---|---|---|---|
-| Norwood | 26 of 36 | +0.43, 0.54, 1.01 m | PASS |
+| norwood | 26 of 36 (Norwood thread's grid) | +0.43, 0.54, 1.01 m | PASS |
+| mcg | 6 of 9 | -0.17, 0.55, 0.80 m | PASS |
+| marvel | 8 of 10 | +0.56, 0.60, 0.82 m | PASS |
+| adelaide | 8 of 10 | -0.66, 0.77, 1.20 m | PASS |
+| optus | 6 of 6 | +0.03, 0.24, 0.42 m | PASS |
+| gmhba | 10 of 10 | +0.22, 0.35, 0.57 m | PASS |
+| people_first | 6 of 6 | -0.00, 0.37, 0.50 m | PASS |
+| mars | 7 of 7 | -0.00, 0.51, 0.85 m | PASS |
+| traeger | 10 of 10 | +0.31, 0.47, 1.10 m | PASS |
+| cazalys | 9 of 10 | +0.52, 0.56, 0.97 m | PASS |
+| riverway | 8 of 8 | +0.49, 0.52, 0.77 m | PASS |
+| accor | 9 of 10 | -0.31, 0.80, 1.63 m | FAIL |
+| tio_darwin | 10 of 10 | +0.15, 0.27, 0.43 m | PASS |
+| victoria_park | 9 of 10 | +0.48, 0.57, 1.00 m | PASS |
+| scg | 8 of 9 | +0.07, 0.26, 0.38 m | PASS |
+| engie | 8 of 10 | -0.49, 0.62, 0.90 m | PASS |
+| bellerive | 8 of 8 | +0.06, 0.28, 0.70 m | PASS |
+| manuka | 8 of 10 | -0.35, 0.45, 0.68 m | PASS |
+| waverley_park | 9 of 10 | +0.69, 1.12, 2.56 m | FAIL |
+| windy_hill | 9 of 10 | +0.35, 0.49, 0.72 m | PASS |
+| moorabbin | 10 of 10 | -0.32, 0.40, 0.82 m | PASS |
+| ikon_park | 9 of 9 | +1.85, 2.07, 3.28 m | FAIL |
+| whitten | 10 of 10 | +0.92, 1.04, 2.20 m | FAIL |
+| football_park | 9 of 10 | -0.06, 0.28, 0.65 m | PASS |
+| subiaco | 8 of 10 | -0.44, 0.54, 0.78 m | PASS |
+| waca | 8 of 9 | +0.15, 0.32, 0.55 m | PASS |
+| york_park | 6 of 6 | +0.41, 0.48, 0.82 m | PASS |
+| north_hobart | 10 of 10 | -0.21, 0.73, 2.15 m | FAIL |
+| bruce | 4 of 4 | +0.45, 0.46, 0.57 m | PASS |
+| barossa | 7 of 7 | +0.34, 0.68, 1.47 m | PASS |
+| sky | 7 of 7 | -0.12, 0.25, 0.49 m | PASS |
+| jiangwan | 6 of 10 | -1.01, 1.30, 2.52 m | FAIL |
+| hands | 9 of 10 | +0.87, 0.91, 1.25 m | PASS |
+| blacktown | 4 of 5 | -0.26, 0.40, 0.59 m | PASS |
+| summit | 5 of 5 | -0.11, 0.87, 1.42 m | PASS |
+| macpoint | 5 of 6 | -1.97, 2.00, 2.37 m | FAIL |
+| gabba | 9 of 10 | -0.58, 0.64, 0.91 m | PASS |
+
+**30 of 37 pass, 7 fail.** The fails are reported as measured; nothing was tuned to pass them.
+
+- **Optus passes only after a fitted offset**: the LiDAR predates the stadium, and its six spots read a
+  steady +2.0 m, so `turf_above_data_m` is 2.0. The offset came from the same six spots, so Optus's
+  PASS is not an independent check.
+- **Ikon Park** (+1.85 m mean, worst 3.3 m), **Whitten** (worst 2.2 m) and **Waverley Park** (worst 2.6 m):
+  open, gently sloped roads (grade under 6 %) where Google Earth reads 2 to 3 m lower than the
+  LiDAR; the LiDAR is self-consistent (Mapterhorn z12 and z14 agree) and Google Earth gives whole
+  metres from its own, coarser terrain model. Which is wrong is not proven: a third source (the
+  GA service by hand, or a surveyed mark) would settle it.
+- **North Hobart**: one spot 2.15 m out on a 16 % slope (a few metres of position error is a metre or two there).
+- **Accor**: one spot 1.63 m out on a smooth slope.
+- **Mac Point**: a construction site; every spot reads 2 m low against its centre. The stadium's turf
+  level is not set by the land survey; the Mac Point thread sets `turf_above_data_m` from the design.
+- **Jiangwan**: FABDEM 30 m (no LiDAR); worst 2.5 m.

@@ -15,7 +15,8 @@ slug, js, work = sys.argv[1], sys.argv[2], sys.argv[3]
 g = terrain.grounds()[slug]; T = terrain.load(slug)
 pts = ge_spots.spots(slug, 10)
 out = os.path.join(work, slug); os.makedirs(out, exist_ok=True)
-subprocess.run(['node', js, json.dumps(pts), str(g['lat']), str(g['lon']), out, str(T.meta['datum_source_m'])], timeout=1800)
+if not os.environ.get('GE_RESCORE'):  # GE_RESCORE=1: re-read the saved readings only
+    subprocess.run(['node', js, json.dumps(pts), str(g['lat']), str(g['lon']), out, str(T.meta['datum_source_m'])], timeout=1800)
 def ocr(name):
     p = os.path.join(out, name + '.png')
     if not os.path.exists(p): return None
