@@ -18,6 +18,11 @@ any changed between 1992 and 2003 cannot be told from these. Reference only.
 | Centre square, 9 Sep 2012 | **45.3 m** a side at that scale (154.2 px, the four sides within 0.7 px) | each painted side fitted (0.2-0.4 px rms, `whitten/measure/sq2.py`). It is not the 50 m AFL square: at 50 m the scale would be 0.324 m a pixel, 11 % off the readout, which the readout method has never been off by (0.3-0.9 % at Ikon and Whitten). So the scale above comes from the readout, not from this square |
 | Turf edge, 2003-2016 | polar Fourier curve, K = 10, 0.3 m rms on the median of 22 dates; **162.1 m long (axis 36 deg, north-east to south-west) x 120.0 m wide**; single dates scatter 0.9-1.6 m (median per 30 deg sector) about the median | each date registered to 14 Oct 2003 on 25-115 template matches (1.0-1.3 px rms; `measure/reg2.py` adds a coarse phase-correlation shift first, because later frames sit up to 120 px off), traced from an 8-point hand prior to the steepest drop in greenness (`whitten/measure/trace.py`), median per 0.5 deg (`marrara/measure/med.py`; `measure/turf_2003_2016_fit_px.json`: pixels of the 14 Oct 2003 frame) |
 
+**Against the existing 1992 model** (`tools/grounds/northhobart1992`, built from the Land Tasmania aerial 1182_185 of
+16 Feb 1992 and photos): its fence (`world.json`, 144 points) measures 163.5 x 118.8 m, within 1.4 m and 1.2 m of the
+2003-2016 turf edge here, so the size held from 1992 to 2016 to about that. Its axis is in the model's own frame and
+was not compared.
+
 The turf edge is 12 m longer and 15 m wider than the published 150 x 105 m. The north end of the turf is shaded by
 the stand in several frames; the median rides through that, but the fence line itself has not been traced yet.
 
