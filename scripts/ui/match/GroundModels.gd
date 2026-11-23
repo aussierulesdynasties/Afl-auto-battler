@@ -592,14 +592,14 @@ static func _add_trees(root: Node3D, buf: PackedFloat32Array, y: float, deep := 
 			far.buffer = leaves.buffer
 			sets = [[leaves, leaf, "Trees", 0.0, TREE_NEAR], [stems, bark, "Trunks", 0.0, TREE_NEAR],
 					[far, leaf, "TreesFar", TREE_NEAR, 0.0]]
-		for set: Array in sets:
+		for tree_set: Array in sets:
 			var mi := MultiMeshInstance3D.new()
-			mi.name = "%s_%d_%d" % [set[2], key.x, key.y]
-			mi.multimesh = set[0]
-			mi.material_override = set[1]
+			mi.name = "%s_%d_%d" % [tree_set[2], key.x, key.y]
+			mi.multimesh = tree_set[0]
+			mi.material_override = tree_set[1]
 			mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-			mi.visibility_range_begin = set[3]
-			mi.visibility_range_end = set[4]
+			mi.visibility_range_begin = tree_set[3]
+			mi.visibility_range_end = tree_set[4]
 			root.add_child(mi)
 
 
