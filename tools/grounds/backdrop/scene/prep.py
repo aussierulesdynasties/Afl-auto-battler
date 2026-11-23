@@ -51,15 +51,60 @@ def sampler(z):
         return (M[j, i] * (1 - fx) * (1 - fy) + M[j, i + 1] * fx * (1 - fy) + M[j + 1, i] * (1 - fx) * fy + M[j + 1, i + 1] * fx * fy)
     return h
 hn, hf = sampler(14), sampler(12)
+# measured bare-earth land from the shared terrain tool (tools/grounds/terrain: Geoscience Australia 5 m LiDAR DEM, LIST 2 m,
+# LINZ 1 m ...), or a grid in data/<g>/dem/{near,far}.npy + .json; frame: x east, y north from the centre circle, turf = 0,
+# rows south -> north. Cells the measured grid lacks keep the terrain tiles.
+def _tool():
+    import importlib.util
+    for d in (os.environ.get('TERRAIN_DIR'), os.path.join(HERE, '..', '..', 'terrain'), '/home/user/Afl-auto-battler/tools/grounds/terrain'):
+        if d and os.path.exists(os.path.join(d, 'terrain.py')) and os.path.exists(os.path.join(d, 'grids', spec['name'] + '.npz')):
+            sp = importlib.util.spec_from_file_location('terrain', os.path.join(d, 'terrain.py')); m = importlib.util.module_from_spec(sp); sp.loader.exec_module(m)
+            return m
+    return None
+def grid_sampler(name):
+    TT = _tool()
+    if TT is not None:
+        G_ = TT.load(spec['name'], far=(name == 'far')); print('terrain', name, 'from measured DEM', G_.meta.get('source'), G_.meta.get('licence', ''))
+        return G_.height
+    DEMD = spec.get('dem_dir') or os.path.join(D, 'dem')
+    P_, J_ = os.path.join(DEMD, name + '.npy'), os.path.join(DEMD, name + '.json')
+    if not (os.path.exists(P_) and os.path.exists(J_)): return None
+    A_ = np.load(P_).astype(np.float64); m_ = json.load(open(J_)); st, hh = float(m_['step_m']), float(m_['half_m'])
+    def h(X, Y):
+        px = (X + hh) / st; py = (Y + hh) / st; ok = (px >= 0) & (py >= 0) & (px < A_.shape[1] - 1) & (py < A_.shape[0] - 1)
+        px = np.clip(px, 0, A_.shape[1] - 1.001); py = np.clip(py, 0, A_.shape[0] - 1.001)
+        i = np.floor(px).astype(int); j = np.floor(py).astype(int); fx = px - i; fy = py - j
+        v = (A_[j, i] * (1 - fx) * (1 - fy) + A_[j, i + 1] * fx * (1 - fy) + A_[j + 1, i] * (1 - fx) * fy + A_[j + 1, i + 1] * fx * fy)
+        return np.where(ok, v, np.nan)
+    print('terrain', name, 'from measured DEM', m_.get('source', '?'))
+    return h
+_mn, _mf = grid_sampler('near'), grid_sampler('far')
+MEASURED = _mn is not None
+_base_t = float(hn(np.array([0.0]), np.array([0.0]))[0])
+def _blend(meas, tile):   # measured land, turf = 0, put on the tiles' datum; where it has no cell the tiles fill in
+    def h(X, Y):
+        v = meas(X, Y); return np.where(np.isfinite(v), v + _base_t, tile(X, Y))
+    return h
+if _mn is not None: hn = _blend(_mn, hn)
+if _mf is not None: hf = _blend(_mf, hf)
 NEAR = spec['near_half_m']; NS = spec['near_step_m']
 g = np.arange(-NEAR, NEAR + 1e-6, NS)
 X, Y = np.meshgrid(g, g)
 base = float(hn(np.array([0.0]), np.array([0.0]))[0])
 near = hn(X, Y) - base
 np.save(os.path.join(OUT, 'near_raw.npy'), near.astype(np.float32))
-# flatten the stadium pad: 0 inside the clear ring, blend to real terrain over 250 m
-r = np.hypot(X, Y); R0 = spec['clear_r_m']
-w = np.clip((r - R0) / 250.0, 0, 1); w = w * w * (3 - 2 * w)
+# the land is the real land right up to the ground model's own outline: the model sits on a level pad (turf = 0) and the
+# real ground banks up or down to it over pad_bank_m (default 25 m) outside its outline, nothing wider (person, 2026-11-23:
+# "copy the shit exactly" includes the land; a 150 m flat pad + 250 m blend removed up to 29 m of real slope)
+r = np.hypot(X, Y); R0 = spec['clear_r_m']; BK = float(spec.get('pad_bank_m', 25.0))
+_fp = os.path.join(OUT, 'footprint.json')
+def _fp_fill(a):   # bins the outline probe missed (radius ~0) take the circular interpolation of their neighbours
+    a = np.asarray(a, float); ok = a > 20
+    if ok.sum() < 0.5 * len(a): raise SystemExit('footprint.json has too few outline bins (%d of %d): re-run probe_outline' % (ok.sum(), len(a)))
+    k = np.arange(len(a)); n = len(a)
+    return np.interp(k, np.concatenate([k[ok] - n, k[ok], k[ok] + n]), np.tile(a[ok], 3))
+RK = _fp_fill(json.load(open(_fp)))[((np.degrees(np.arctan2(Y, X)) % 360) // 2).astype(int)] if os.path.exists(_fp) else R0
+w = np.clip((r - RK - 2.0) / BK, 0, 1); w = w * w * (3 - 2 * w)
 near = near * w
 BANK = None
 if spec.get('rail_cut'):
@@ -714,6 +759,8 @@ if spec.get('real'):
             if hh: tg['height'] = str(round(float(hh), 1))
             OVB.append({'type': 'way', 'id': 'ov' + str(r['id']), 'tags': tg, 'geometry': [{'lat': y, 'lon': x} for x, y in ll]})
     print('overture-only buildings', len(OVB))
+import collections as _col
+_HSRC = _col.Counter(); _BH = _real.raster_heights(D) if spec.get('real') else None
 skip_r = spec["clear_r_m"]; _FPP = os.path.join(OUT, "footprint.json"); _FPR = np.array(json.load(open(_FPP))) if os.path.exists(_FPP) else None
 for el in js + PARTS + OVB:
     t = el.get('tags', {})
@@ -732,8 +779,14 @@ for el in js + PARTS + OVB:
         try: h = float(t['building:levels']) * 3.4 + 1.0
         except Exception: pass
     kind = t['building']
-    if h is None and _OVH is not None: h = _OVH(cx, cy, pts)
-    if h is None: h = LV.get(kind, LV['*'])
+    _src = 'osm' if h is not None else None
+    if _BH is not None and (_BH[1] or h is None):   # LiDAR heights are measured and beat every tag; a height map fills gaps
+        _hb = _BH[0](pts)
+        if _hb is not None: h = _hb; _src = 'lidar' if _BH[1] else 'height map'
+    if h is None and _OVH is not None:
+        h = _OVH(cx, cy, pts); _src = 'overture' if h is not None else None
+    if h is None: h = LV.get(kind, LV['*']); _src = 'GUESSED'
+    _HSRC[_src] += 1
     if area(pts) < 0: pts = pts[::-1]
     A = abs(area(pts))
     if A < 12: continue
@@ -787,6 +840,7 @@ if os.path.exists(_SP):
             if not (md[1] > md[0] + 6 and md[1] >= md[2]): b['roof_c'] = [int(v * min(1.0, _cap / max(md))) for v in md]   # tree-covered roofs keep the palette
 json.dump(BLD, open(os.path.join(OUT, 'buildings.json'), 'w'))
 print('buildings', len(BLD), 'towers', sum(b['c'] == 'tower' for b in BLD))
+print('building heights from', dict(_HSRC))
 
 # trees: OSM trees + scatter over tree-bearing cover + street trees
 TR = []
