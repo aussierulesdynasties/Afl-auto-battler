@@ -72,7 +72,7 @@ unmatched player whose past is unknown (none today). Built by
 `tools/build_history.py` from one AFL Tables page per season, not one per
 player.
 
-`data/draftees_2026.csv` - the 2026 national-draft class (56 prospects).
+`data/draftees_2026.csv` - the 2026 national-draft class (77 prospects: 56 ranked before the draft, 21 more taken at the real draft). `data/national_draft_2026.csv` - the real 2026 National Draft, all 65 picks.
 Columns: `rank,first,last,pos,pos2,pos_detail,height_cm,dob,state,team,league,`
 `tied_club,tied_type,u18_gm,u18_di,u18_gl,u18_mk,u18_tk,u18_if50,u18_ho,note,`
 `data_src`. `rank` is the consensus board (Rookie Me Central's August-2026 top
@@ -880,7 +880,7 @@ project.godot          Godot 4.7 project (PC + mobile), four autoloads
 icon.svg
 data/
   players_2026.csv     real 2026 player season stats - 669 players, 18 clubs
-  draftees_2026.csv    the 2026 national-draft class - 56 projected prospects
+  draftees_2026.csv    the 2026 national-draft class - 77 projected prospects
   clubs.csv            clubs, guernsey colours, home grounds
   *.csv.import         pins Godot's csv importer to "Keep File"
 scripts/

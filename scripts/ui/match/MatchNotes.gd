@@ -686,6 +686,44 @@ static func focus_effect_text(role: String) -> String:
 	return str(FOCUS_ROLES[role][1])
 
 
+## Your quarter-break talks that lifted quarter q (BreakTalks), and what
+## followed: the man you sat down with, his disposals and goals in it; the
+## speech, the quarter's scoreboard. Facts only.
+static func talk_lines(res: Dictionary, my_side: int, q: int) -> Array:
+	var out: Array = []
+	var snaps: Array = res.get("quarter_teams", [])
+	if q < 1 or snaps.size() < q:
+		return out
+	var now: Dictionary = (snaps[q - 1] as Dictionary).get("players", {})
+	var was: Dictionary = (snaps[q - 2] as Dictionary).get("players", {}) if q >= 2 else {}
+	var words := {"big": "a big lift", "lift": "a lift", "small": "a small lift", "none": "no change",
+			"backfire": "it backfired"}
+	for t in res.get("talks", []):
+		if int(t.get("side", -1)) != my_side or int(t.get("q", 0)) != q:
+			continue
+		var band := str(words.get(str(t.get("band", "")), ""))
+		if str(t.get("kind", "")) == "sit":
+			var id := str(t.get("id", ""))
+			var d := int(float((now.get(id, {}) as Dictionary).get("disposals", 0.0))) \
+					- int(float((was.get(id, {}) as Dictionary).get("disposals", 0.0)))
+			var g := int(float((now.get(id, {}) as Dictionary).get("goals", 0.0))) \
+					- int(float((was.get(id, {}) as Dictionary).get("goals", 0.0)))
+			var who := GameDB.player_display_name_by_id(id, "Our player")
+			var line := "Sat down with %s (%s): %d disposal%s" % [who, band, d, "" if d == 1 else "s"]
+			if g > 0:
+				line += ", %d goal%s" % [g, "" if g == 1 else "s"]
+			out.append(line + " in the quarter.")
+		else:
+			var sc_now: Array = (snaps[q - 1] as Dictionary).get("score", [0, 0])
+			var sc_was: Array = (snaps[q - 2] as Dictionary).get("score", [0, 0]) if q >= 2 else [0, 0]
+			var ours := int(sc_now[my_side]) - int(sc_was[my_side])
+			var theirs := int(sc_now[1 - my_side]) - int(sc_was[1 - my_side])
+			var how := "won the quarter by %d" % (ours - theirs) if ours > theirs else \
+					("lost the quarter by %d" % (theirs - ours) if theirs > ours else "drew the quarter")
+			out.append("Half-time speech (%s): we %s." % [band, how])
+	return out
+
+
 ## Your tag that ended in quarter q because the man was no longer a
 ## midfielder (a rotation put him in another line): one plain line each.
 static func tag_drop_lines(res: Dictionary, my_side: int, q: int) -> Array:
