@@ -193,7 +193,8 @@ for q in range(len(_fi)):
         zli,zlj,zhi,zhj=_fz(m+1,i),_fz(m+1,j),_fz(m,i),_fz(m,j)
         if zhi-zli<1e-4 and zhj-zlj<1e-4:continue
         lo,hi=FIN[m+1],FIN[m]
-        face([lo[i][0],lo[j][0],hi[j][1],hi[i][1]],mi,[uv_(i,zli),uv_(jn,zlj),uv_(jn,zhj),uv_(i,zhi)],w)
+        _b=face([lo[i][0],lo[j][0],hi[j][1],hi[i][1]],mi,[uv_(i,zli),uv_(jn,zlj),uv_(jn,zhj),uv_(i,zhi)],w)
+        _b[LEDGE]=i+1
         # The ledge's UVs sit inside its own fin's row (not on the row boundary, where half its pixels took the row
         # above), with a real height so the texture's mip level is chosen right.
         _l=face([hi[i][1],hi[j][1],hi[j][0],hi[i][0]],mi,[uv_(i,zhi-0.06*FIN_P),uv_(jn,zhj-0.06*FIN_P),uv_(jn,zhj-0.25*FIN_P),uv_(i,zhi-0.25*FIN_P)],Vector((0,0,1)))
@@ -824,9 +825,10 @@ rp=[R0.lerp(R1,k/nr) for k in range(nr+1)]
 for zz in (0.12,0.95,1.86):sweep(rp,zz,zz+0.05,0.05,MRL)
 for p in rp:boxp(p,0.035,0.0,1.91,MRL)
 bm.to_mesh(me);bm.free()
-# The fins' 7 cm ledges face the sky; at range each is under a pixel, and their bright rows against the darker blades
-# shimmered into moire rings (2x supersampling removes them; the texture alone does not cause them). They keep their
-# shape (silhouette, shadow) but are lit as the facade face beside them: their normal is the facade's, out and level.
+# The fins' 7 cm ledges face the sky and their blades lean 13 degrees down; at range a fin is a few pixels, and the
+# rows of bright ledges and darker blades shimmered into moire rings (2x supersampling removes them; the texture alone
+# does not cause them). Ledges first (175b3d4c), then the blades too (rings left in the north view's low sun): both keep
+# their shape (silhouette, shadow) but are lit with the facade's own outward, level normal.
 _la=me.attributes.get('ledge')
 if _la is not None:
     _ln=[]
