@@ -3254,10 +3254,14 @@ func _fill_short_lists() -> void:
 		# Still short in a Legacy season (the 1990 start has no free agents and
 		# no earlier draft): state-league players, as the real clubs signed
 		# them (bug bash 4, L3). Generated, so no real man is listed twice.
+		# Rated as the state-leaguers who fill out a League redraft are
+		# (Prospects.DEPTH_FIRST_RANK, as Expansion.foundation_list rates a
+		# Forge club's): ranked from 1 they came in as a class's top picks,
+		# 70-74 and a 17-year-old at 67 (bug bash, 2026-11-23).
 		var still := Contracts.min_list() - list.size()
 		if still > 0 and EraRules.is_era(season_year):
 			var local := Prospects.generate_expansion_list(str(code), season_year, still,
-					"SL%d_%04d" % [season_year, posmod(career_seed, 10000)])
+					"SL%d_%04d" % [season_year, posmod(career_seed, 10000)], Prospects.DEPTH_FIRST_RANK)
 			GameDB.register_draftees(local)
 			for p in local:
 				p["note"] = "State-league signing, %d" % season_year
