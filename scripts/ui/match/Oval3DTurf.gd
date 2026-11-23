@@ -152,7 +152,7 @@ func _copy_look() -> void:
 				f.set_shader_parameter(u["name"], mat.get_shader_parameter(u["name"]))
 	if _bmat == null:
 		return
-	for k in ["grass_a", "grass_b", "wet", "hot", "wind", "wind_dir"]:
+	for k in ["grass_a", "grass_b", "wet", "hot", "wind", "wind_dir", "true_colour", "turf_gain"]:
 		_bmat.set_shader_parameter(k, mat.get_shader_parameter(k))
 
 
@@ -246,7 +246,13 @@ func apply(p_weather: String, p_slot: String) -> void:
 	var exposure: float = EXPOSURE[slot]
 	if wet:
 		exposure *= EXPOSURE_WET[slot]
+	# The broadcast colour's turf is lighter under the towers than by day; brought back to a
+	# fine day's open grass, as the rule above asks.
+	exposure *= lerpf(1.0, float(EXPOSURE_BROADCAST.get(slot, 1.0)), broadcast)
 	env.tonemap_exposure = exposure
+	mat.set_shader_parameter("true_colour", broadcast)
+	mat.set_shader_parameter("turf_gain", turf_gain)
+	_copy_look()
 	_sky_view()
 	_tone_to_film()
 	_light_stands()
@@ -317,14 +323,45 @@ func _tone_to_film() -> void:
 	var adj := env.adjustment_enabled
 	film.set_shader_parameter("grade", Vector3(env.adjustment_brightness if adj else 1.0,
 			env.adjustment_contrast if adj else 1.0, env.adjustment_saturation if adj else 1.0))
+	film.set_shader_parameter("balance", BALANCE.get(slot, Vector3.ONE))
+	film.set_shader_parameter("broadcast", broadcast)
+	_sky_tint()
 	env.tonemap_mode = Environment.TONE_MAPPER_LINEAR
 	env.tonemap_exposure = 1.0
 	env.adjustment_enabled = false
 
 
+## The broadcast camera's white balance for each time of day (oval3d_film.gdshader): red, green
+## and blue gains on the drawn light, found by tools/visual/capture_tv_colour.gd calibrate so a grey
+## card lying on the open turf comes out grey. The sky light, the grass's bounce and the towers
+## otherwise leave the whole picture blue-green (grass near (2, 49, 4), the card (21, 55, 57)).
+const BALANCE := {"day": Vector3(0.948, 1.0, 1.052), "twilight": Vector3(0.926, 1.0, 0.978), "night": Vector3(1.229, 1.0, 0.931)}
+## How bright the turf is drawn once its colour is read right (oval3d_ground.gdshader's
+## true_colour): the grass's colour was turned to linear twice, which made it near black-green;
+## read once it is several times lighter, and this brings open grass to a broadcast's brightness.
+var turf_gain := 0.65
+## 0 is rule 2.81's look as approved; 1 the broadcast colour: the turf's colour read right
+## (turf_gain) and the camera's white balance (BALANCE). The director's pick, rule 2.114.
+var broadcast := 1.0:
+	set(v):
+		broadcast = v
+		if _applied:
+			apply(weather, slot)
+
+
+## How much of the sky's colour its light keeps in the broadcast colour (oval3d_sky.gdshader).
+const SKY_LIGHT_TINT := 0.5
+
+
+func _sky_tint() -> void:
+	if env != null and env.sky != null and env.sky.sky_material is ShaderMaterial:
+		(env.sky.sky_material as ShaderMaterial).set_shader_parameter("light_tint", lerpf(1.0, SKY_LIGHT_TINT, broadcast))
+
+
 ## AgX exposure for each time of day, and the factor a wet day adds (measured with
 ## tools/visual/capture_turf3d.gd: open grass in each look against the fine day's).
 const EXPOSURE := {"day": 1.0, "twilight": 2.81, "night": 1.91}
+const EXPOSURE_BROADCAST := {"night": 0.72}
 ## The towers' light on a wet day or twilight, lit early under the cloud (the night's are 1.6 and 0.5).
 const WET_DAY_TOWERS := 0.35
 const EXPOSURE_WET := {"day": 1.83, "twilight": 1.83, "night": 1.84}

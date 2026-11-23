@@ -183,6 +183,18 @@ func play(from: int, count: int, out: String, weather: String,
 		for ci in range(args.size() - 1):
 			if str(args[ci]) == "--through":
 				through_rec = _set_through(sim, i % 2, str(args[ci + 1]))
+		# --talks off|one|all (quarter-break talks, BreakTalks): "off" no side
+		# talks; "one" only side i % 2 (sits down with its best player at every
+		# break, speaks at half time), the rival none; "all" (the game's way, and
+		# the default) both. The match line carries "talks" with side i % 2's margin.
+		var talks := ""
+		for ci in range(args.size() - 1):
+			if str(args[ci]) == "--talks":
+				talks = str(args[ci + 1])
+		if talks == "off":
+			sim.talks_off = [true, true]
+		elif talks == "one":
+			sim.talks_off = [i % 2 != 0, i % 2 != 1]
 		for k in sets:
 			if not str(k) in sim:
 				push_error("balance: MatchSim has no var " + str(k))
@@ -327,6 +339,13 @@ func play(from: int, count: int, out: String, weather: String,
 					"end": sim.weather, "after": sim.weather_turned_after, "chance": sim.weather_odds}
 		if tag != "":
 			row["tag"] = _tag_record(tag_rec, r)
+		if talks != "":
+			var me := i % 2
+			var lifts := {}
+			for tk in r.get("talks", []):
+				var key := "%s_%s_%d" % [str(tk["kind"]), str(tk["band"]), int(tk["side"])]
+				lifts[key] = int(lifts.get(key, 0)) + 1
+			row["talks"] = {"side": me, "margin": int(r["score"][me]) - int(r["score"][1 - me]), "bands": lifts}
 		if not through_rec.is_empty():
 			for slot in through_rec:
 				var st: Dictionary = (r["players"] as Dictionary).get(str(through_rec[slot]), {})
