@@ -223,7 +223,10 @@ def load_class(quiet=False):
                 errors.append("implausible height %d for %s %s" % (h, r["first"], r["last"]))
             if r["dob"]:
                 d = date(*map(int, r["dob"].split("-")))
-                if not (date(2006, 1, 1) <= d <= date(2009, 6, 30)):
+                # A mature-age man taken at the real draft (afl-draft-nov26:
+                # Wright, Johnston, Riding) is older than an U18 class.
+                oldest = date(1998, 1, 1) if r.get("data_src") == "afl-draft-nov26" else date(2006, 1, 1)
+                if not (oldest <= d <= date(2009, 6, 30)):
                     errors.append("dob out of class range: %s" % r["dob"])
             for k in ("u18_di", "u18_gl", "u18_mk", "u18_tk", "u18_if50", "u18_ho"):
                 v = float(r[k])
