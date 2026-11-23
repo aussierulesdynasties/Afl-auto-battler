@@ -48,13 +48,14 @@ OLD_SIGN = (37.28464798665914, 32.0)   # #1867's sign_a in metres (its letters a
 # pale grey-white ones and terracotta copper-red ones. No mid-tone runs and no blue: the earlier passes drew short runs
 # across the whole tone scale, which read as brickwork (PC GPU capture 2026-11-22).
 BASE = np.array([(105, 110, 117), (117, 120, 123), (127, 127, 127), (120, 113, 110)], float)
-PALE = np.array([(185, 187, 187), (202, 202, 200), (165, 167, 169)], float)
-# 2026-11-23: the base lifted 1.1x more after 175b3d4c (12 views 0.70-0.94 of Google Earth, median 0.85), and before
+PALE = np.array([(213, 215, 215), (232, 232, 230), (190, 192, 194)], float)
+# 2026-11-23: the streaks lifted 1.15x after 648fc441 (lit views' p90/p50 1.23-1.37 against Google Earth's 1.48-1.53;
+# the occlusion keeps them at 1.1x the base in shade). The base lifted 1.1x more after 175b3d4c (12 views 0.70-0.94 of Google Earth, median 0.85), and before
 # that another 1.2x once the streaks' occlusion reached the match (shaded views 0.68-0.80 of
 # Google Earth's brightness, lit 0.80-0.87). Before that: the tile lifted 1.32x overall (base 1.46x, streaks 1.1x, since our streaks already stood out more than
 # Google Earth's), Google Earth's brightness over our capture's at 236 facade hovers 18-30 m up
 # on the 12 matched views, both lit by Google Earth's sun (survey/sun.json); the hue gap is Google Earth's haze.
-COPPER_RED = np.array([(165, 101, 88), (178, 114, 99), (147, 92, 81)], float)
+COPPER_RED = np.array([(190, 116, 101), (205, 131, 114), (169, 106, 93)], float)
 BASE_RM = (0.55, 0.3)   # (roughness, metalness), the whole bronze
 SHADE_K = 1.1           # a streak in shade, over the base (Google Earth's shaded views: p90/p50 1.08-1.14)
 P_PALE, P_RED = 0.13, 0.08   # the share of each fin row's length that is a streak of each kind
