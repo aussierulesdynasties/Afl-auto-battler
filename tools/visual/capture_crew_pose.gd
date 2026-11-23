@@ -52,7 +52,8 @@ func _run() -> void:
 	oval.add_child(cam)
 	for i in range(10):
 		pv._process(DT)
-	pv.pause() if pv.has_method("pause") else null
+	if pv.has_method("pause"):
+		pv.pause()
 	var u: Dictionary = {}
 	for x in oval.umpires:
 		if str(x["role"]) == "goal":
