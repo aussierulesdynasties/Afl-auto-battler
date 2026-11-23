@@ -121,5 +121,14 @@ Measuring from imagery is allowed; raw imagery is never committed or baked into 
   back edge about 125-127 m from the centre. These were first read as raised end roofs; they are the
   two video screens (46 m above the turf is the screen boxes' top, and Google Earth shows no roof in
   front of them). The raised-roof change is withdrawn. The screen boxes themselves sit wrong: the
-  east box ends at 65.5 degrees where Google Earth's runs to about 68, and both boxes reach 134 m
-  where the top ends at about 126. Being remeasured at 0.5 degree steps.
+  east box ended at 65.5 degrees where Google Earth's runs to about 69, and both boxes reached 134 m
+  where the top ends at about 127. Remeasured at 0.5 degree and 2.5 m steps (495 points,
+  `ge3d_screens.json`): east screen 54.25-69 degrees, west 234.75-249.75 (each end to about 0.25
+  degrees, 0.5-1 m at that radius); front 110.5 m (east) and 109 m (west) from the centre; flat top
+  46 m above the turf out to 127 m, then a clad back sloping down to about 30 m by 131.5 m (to about
+  1-1.5 m). Google Earth shows no roof in front of either screen. The roof height now steps at the
+  screens' ends (`roof_steps`) with vertical end walls, not a ramp hidden in the old box: northern
+  stand 38.9 m above the plaza (43 m above the turf) beside the east screen's north end and 38.3 m
+  beside the west screen's north end, Great Southern Stand 31.2-31.5 m. Not yet measured: what sits
+  under each screen's sloped back (the model leaves the box's underside open where the stand's back
+  wall stops short of it, at the west screen).
