@@ -10656,19 +10656,23 @@ func trade_pick_rounds(year: int) -> int:
 ## Players and picks for a trade, by id: {"assets": [...], "error": ""}.
 ## Every asset must belong to `owner`, and none may appear twice.
 func _trade_assets(ids: Array, owner: String) -> Dictionary:
-	var out := []
-	var seen := {}
+	# Checked in a fixed order (by id), so a package with two faults gives the same answer
+	# whatever order its pieces were added in; the assets come back in the caller's order.
+	var keys := []
 	for id in ids:
-		var key := str(id)
-		if seen.has(key):
+		keys.append(str(id))
+	var checked := keys.duplicate()
+	checked.sort()
+	var found_by := {}
+	for key in checked:
+		if found_by.has(key):
 			return {"assets": [], "error": AiReasons.line("trade_twice"), "code": "trade_twice"}
-		seen[key] = true
 		if key.begins_with("pick:"):
 			var pk := pick_asset(key)
 			if pk.is_empty() or str(pk["owner"]) != owner:
 				var pc := "trade_not_their_pick" if owner != my_club else "trade_not_your_pick"
 				return {"assets": [], "error": AiReasons.line(pc), "code": pc}
-			out.append(pk)
+			found_by[key] = pk
 		else:
 			var found := {}
 			for p in season.lists.get(owner, []):
@@ -10680,7 +10684,10 @@ func _trade_assets(ids: Array, owner: String) -> Dictionary:
 			if retiring_now(found):
 				# His career ends at the rollover: there is nobody to trade.
 				return {"assets": [], "error": AiReasons.line("trade_retiring"), "code": "trade_retiring"}
-			out.append(found)
+			found_by[key] = found
+	var out := []
+	for key in keys:
+		out.append(found_by[key])
 	return {"assets": out, "error": "", "code": ""}
 
 
