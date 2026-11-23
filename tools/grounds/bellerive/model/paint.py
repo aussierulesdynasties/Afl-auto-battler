@@ -105,8 +105,9 @@ for u in np.arange(0, 7.2, 1.8): t.vl(u, 0.1, 1.0, 5.2, (200, 204, 206))
 t.hl(5.2, 0.25, (200, 204, 206)); t.hl(1.0, 0.15, (170, 174, 176)); t.streaks(20, 5.3, 14); t.grime_bottom(1.0)
 t.save('fac_boon')
 
-# ---- Members / north building (GE i330, x330): two glazed levels, white slab edges, dark tinted glass, mullions 1.5 m
-t = T(6.0, 11.0, (40, 52, 62), n=3, bl=(1.5, 6))
+# ---- Members / north building (GE i330, x330): two glazed levels, white slab edges, tinted glass, mullions 1.5 m.
+# The glass reads slate grey-blue from the field (GE in_S median 37,63,85; 40,52,62 rendered navy at half that)
+t = T(6.0, 11.0, (66, 86, 98), n=3, bl=(1.5, 6))
 for z0, z1 in ((0.0, 4.6), (5.6, 10.2)):
     t.a[t.Y(z1):t.Y(z0)] *= np.linspace(1.25, 0.85, t.Y(z0) - t.Y(z1))[:, None, None]
     for u in np.arange(0, 6, 1.5): t.vl(u, 0.08, z0, z1, (150, 158, 164))

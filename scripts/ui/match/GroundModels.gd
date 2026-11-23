@@ -98,6 +98,8 @@ const SURROUNDS := {
 					Color(0.9, 0.9, 0.88), Color(0.66, 0.5, 0.4), Color(0.72, 0.76, 0.78)],
 			# Each roof's own colour from above (Google Earth, tools/grounds/bellerive/houses_ge.py), linear.
 			"roof_colours": "roofs.bin",
+			# Its gums' crowns hang deep (Google Earth fac_200, out_SE): see _add_trees.
+			"deep_crowns": true,
 			# Its roofs from above: Colorbond teal and green, terracotta, charcoal, grey, white and blue.
 			"roofs": [Color(0.32, 0.52, 0.5), Color(0.66, 0.34, 0.26), Color(0.36, 0.36, 0.38), Color(0.6, 0.6, 0.58),
 					Color(0.4, 0.56, 0.44), Color(0.82, 0.82, 0.8), Color(0.44, 0.52, 0.62), Color(0.56, 0.3, 0.24)]},
@@ -173,9 +175,10 @@ const VERTEX_COLOURED := ["adelaide"]
 ## Grounds whose seats throw no shadows (see _instances).
 const SEATS_NO_SHADOW := ["bellerive"]
 ## Grounds whose seats turn into far rows (_seat_far_mesh) between SEAT_FAR_FROM and SEAT_FAR_TO m.
+const SEAT_FAR_SHADER := preload("res://scripts/ui/match/seat_far.gdshader")
 const SEAT_FAR := ["bellerive"]
 const SEAT_FAR_FROM := 40.0
-const SEAT_FAR_TO := 55.0
+const SEAT_FAR_TO := 70.0
 
 ## Each seat colour as the model paints it (the mean of its seat texture; sRGB).
 const SEAT_COLOURS := {
@@ -422,7 +425,8 @@ static func _add_surrounds(root: Node3D, s: Dictionary, dir := "") -> void:
 		g.set_meta("open_ground", true)
 		root.add_child(g)
 		if s.has("trees") and FileAccess.file_exists(dir + str(s["trees"])):
-			_add_trees(root, FileAccess.get_file_as_bytes(dir + str(s["trees"])).to_float32_array(), y)
+			_add_trees(root, FileAccess.get_file_as_bytes(dir + str(s["trees"])).to_float32_array(), y,
+					bool(s.get("deep_crowns", false)))
 		if s.has("buildings") and FileAccess.file_exists(dir + str(s["buildings"])):
 			var rgb := PackedFloat32Array()
 			if s.has("roof_colours") and FileAccess.file_exists(dir + str(s["roof_colours"])):
@@ -464,7 +468,9 @@ const TREE_BLOCK := 250.0
 
 ## Every tree of the map (x, z, height, canopy radius, shade; model metres) as a trunk and a rounded
 ## canopy, one batch a block of the park. Unlit by their own shadows (the map paints their shade).
-static func _add_trees(root: Node3D, buf: PackedFloat32Array, y: float) -> void:
+## deep: a broad tree's crown hangs down to a few metres off the ground (eucalypts seen from the side in
+## Google Earth: one deep mass, not a ball on a bare trunk); it stays as wide as measured.
+static func _add_trees(root: Node3D, buf: PackedFloat32Array, y: float, deep := false) -> void:
 	var canopy := _canopy_mesh()
 	var trunk := CylinderMesh.new()
 	trunk.top_radius = 0.022
@@ -519,7 +525,11 @@ static func _add_trees(root: Node3D, buf: PackedFloat32Array, y: float) -> void:
 				leaves.set_instance_transform(j, Transform3D(turn.scaled(Vector3(r, half, r)), at + Vector3(0, crown, 0)))
 				leaves.set_instance_color(j, Color(0.62, 0.72, 0.62) * (0.85 + 0.3 * fposmod(shade * 7.3, 1.0)))
 			else:
-				leaves.set_instance_transform(j, Transform3D(turn.scaled(Vector3(r, r * 0.85, r)), at + Vector3(0, crown, 0)))
+				var half := r * 0.85
+				if deep:
+					half = maxf(half, 0.5 * (h - clampf(0.25 * h, 2.0, 4.0)))
+					crown = h - half
+				leaves.set_instance_transform(j, Transform3D(turn.scaled(Vector3(r, half, r)), at + Vector3(0, crown, 0)))
 				# Eucalypt grey-green to elm green, a little lighter or darker tree to tree.
 				leaves.set_instance_color(j, Color(0.92, 0.95, 0.9).lerp(Color(1.1, 1.08, 0.95), shade) * (0.85 + 0.3 * fposmod(shade * 7.3, 1.0)))
 			stems.set_instance_transform(j, Transform3D(Basis().scaled(Vector3(h, crown, h)), at + Vector3(0, crown * 0.5, 0)))
@@ -1129,22 +1139,23 @@ static func _add_seats(root: Node3D, dir: String, mid: Vector2) -> void:
 ## to `root`: one batch a slice of the bowl (SEAT_SECTORS round it, by bearing from `mid`), so the
 ## camera draws only the slices in its view, not every seat in the ground.
 static func _instances(root: Node3D, mesh: Mesh, path: String, colour: String, mid: Vector2,
-		far: StandardMaterial3D = null) -> void:
+		far: Material = null) -> void:
 	var buf := FileAccess.get_file_as_bytes(path).to_float32_array()
 	var ground := path.get_base_dir().get_file()
-	var mat := far
+	var mat: Material = far
 	if mat == null:
-		mat = StandardMaterial3D.new()
-		mat.albedo_color = SEAT_COLOURS.get(colour, Color.GRAY)
+		var sm := StandardMaterial3D.new()
+		sm.albedo_color = SEAT_COLOURS.get(colour, Color.GRAY)
 		# A seat drawn as one open sheet (the ground kit's moulded shell, wound the other way to
 		# Godot's front face) is seen from both sides; a closed seat keeps back faces culled.
 		if _is_sheet(mesh):
-			mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+			sm.cull_mode = BaseMaterial3D.CULL_DISABLED
 		if SEAT_FAR.has(ground):
 			# the shells give way to the far rows (_seat_far_material) pixel by pixel
-			mat.distance_fade_mode = BaseMaterial3D.DISTANCE_FADE_PIXEL_DITHER
-			mat.distance_fade_min_distance = SEAT_FAR_TO
-			mat.distance_fade_max_distance = SEAT_FAR_FROM
+			sm.distance_fade_mode = BaseMaterial3D.DISTANCE_FADE_PIXEL_DITHER
+			sm.distance_fade_min_distance = SEAT_FAR_TO
+			sm.distance_fade_max_distance = SEAT_FAR_FROM
+		mat = sm
 	var per := []
 	for i in range(SEAT_SECTORS):
 		per.append(PackedFloat32Array())
@@ -1177,48 +1188,50 @@ static func _instances(root: Node3D, mesh: Mesh, path: String, colour: String, m
 		root.add_child(mi)
 
 
-## The far rows: past SEAT_FAR_FROM m a seat shell is under a few pixels and its 6 cm gaps and thin
-## back alias into speckle and moire (PC seat checks, Bellerive 2026-11-23). There each seat is one
-## quad over its own row, back top to tread front (0.52 m wide on a 0.5 m pitch, a 0.9 m row rising 0.4 m), so the
-## quads of a row meet edge to edge, painted as the shell looks from the field: back, pan, the gap
-## each side and the tread in front. The texture's mipmaps average all that into one smooth colour
-## as the seat shrinks, the way a photo of a stand reads. Same transforms as the shells.
+## The far rows: past SEAT_FAR_FROM m a seat shell is under a few pixels and its 6 cm gaps and its rows
+## alias into speckle and moire (PC seat checks, Bellerive 2026-11-23). There each seat is one quad the
+## full 0.52 m width (on a 0.5 m pitch, so a row's quads meet edge to edge), from the top of its back
+## to the front of its tread (a 0.9 m row rising 0.4 m), painted as the shell looks from the field:
+## back and pan, the gaps either side, a strip of tread and the riser's shadow line under it. The
+## texture's mipmaps average the gaps and the row lines away as the seat shrinks, as a photo of a
+## stand does; seat_far.gdshader lights it as the shell's back and pan would be lit, so the far rows
+## take the near shells' tone. Same transforms as the shells.
 static func _seat_far_mesh() -> Mesh:
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
-	var top_l := Vector3(-0.26, 0.87, -0.05)
-	var top_r := Vector3(0.26, 0.87, -0.05)
-	var bot_l := Vector3(-0.26, 0.0, 0.6)
-	var bot_r := Vector3(0.26, 0.0, 0.6)
-	st.set_normal(Vector3(0.0, 0.65, 0.87).normalized())
-	for q: Array in [[top_l, Vector2(0, 0)], [top_r, Vector2(1, 0)], [bot_r, Vector2(1, 1)],
-			[top_l, Vector2(0, 0)], [bot_r, Vector2(1, 1)], [bot_l, Vector2(0, 1)]]:
-		st.set_uv(q[1])
-		st.add_vertex(q[0])
+	var w := 0.26
+	var q := [Vector3(-w, 0.87, -0.05), Vector3(w, 0.87, -0.05), Vector3(w, 0.0, 0.6), Vector3(-w, 0.0, 0.6)]
+	var uv := [Vector2(0, 0), Vector2(1, 0), Vector2(1, 1), Vector2(0, 1)]
+	st.set_normal(Vector3(0.0, 0.325, 0.49).normalized())   # the back's and the pan's normals, mixed as lit
+	for i: int in [0, 1, 2, 0, 2, 3]:
+		st.set_uv(uv[i])
+		st.add_vertex(q[i])
 	return st.commit()
 
 
-static func _seat_far_material(colour: String) -> StandardMaterial3D:
+static func _seat_far_material(colour: String) -> ShaderMaterial:
 	var c: Color = SEAT_COLOURS.get(colour, Color.GRAY)
 	var tread := Color8(198, 200, 198)       # the stepped rows' concrete (tools/grounds/bellerive/model/paint.py)
-	var gap := Color8(180, 183, 184)         # the riser behind, seen between two seats
+	var gap := tread.darkened(0.35)          # between two seats: the concrete behind, in their shade
 	var img := Image.create(64, 64, false, Image.FORMAT_RGB8)
 	for y in range(64):
 		for x in range(64):
-			var v := (y + 0.5) / 64.0
 			var u := (x + 0.5) / 64.0
-			var p := tread
-			if v < 0.79:
-				p = gap if (u < 0.06 or u > 0.94) else (c.darkened(0.08) if v < 0.42 else c)
+			var v := (y + 0.5) / 64.0
+			var p := c
+			if v > 0.92:
+				p = tread.darkened(0.6)      # the riser's shadow line: the row's edge
+			elif v > 0.87:
+				p = tread
+			elif u < 0.06 or u > 0.94:
+				p = gap
 			img.set_pixel(x, y, p)
 	img.generate_mipmaps()
-	var mat := StandardMaterial3D.new()
-	mat.albedo_texture = ImageTexture.create_from_image(img)
-	mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
-	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
-	mat.distance_fade_mode = BaseMaterial3D.DISTANCE_FADE_PIXEL_DITHER
-	mat.distance_fade_min_distance = SEAT_FAR_FROM
-	mat.distance_fade_max_distance = SEAT_FAR_TO
+	var mat := ShaderMaterial.new()
+	mat.shader = SEAT_FAR_SHADER
+	mat.set_shader_parameter("tex", ImageTexture.create_from_image(img))
+	mat.set_shader_parameter("fade_from", SEAT_FAR_FROM)
+	mat.set_shader_parameter("fade_to", SEAT_FAR_TO)
 	return mat
 
 
