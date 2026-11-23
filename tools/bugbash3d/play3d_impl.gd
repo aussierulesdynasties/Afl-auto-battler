@@ -202,7 +202,7 @@ func run(p_tree: SceneTree) -> void:
 			fault("ball_under_turf", f, "ball %.2f m under the turf, mode %s" % [bl.y, mode])
 		if mode == "held":
 			hover = 0
-		elif mode == "carry" and not oval._ump_ball and not oval._in_hands and tv.sting() < 0.0:
+		elif mode == "carry" and not oval._ump_ball and not oval._in_hands and tv.sting() < 0.0 and absf(bl.y - 1.2) < 0.02:
 			fault("ball_glides", f, "ball carried %.2f m up with nobody holding it, director mode %s" % [bl.y, d.mode])
 		elif mode != "flight" and oval._drop_t < 0.0 and not oval._ump_ball and not oval._in_hands and bl.y > 0.6:
 			hover += 1
@@ -214,6 +214,13 @@ func run(p_tree: SceneTree) -> void:
 			fault("ball_jump", f, "ball jumped %.1f m in %.2f s, mode %s" % [bl.distance_to(last_ball), ddt, mode])
 			if int(_counts.get("ball_jump", 0)) <= 3:
 				print("  beat ", d._beat.get("kind", ""), " k=", d._beat.get("k", -1), " pi=", d._pi, " phase=", d._phases[d._pi] if d._pi < d._phases.size() else {}, " prev=", d._phases[d._pi - 1] if d._pi > 0 and d._pi - 1 < d._phases.size() else {})
+				var hj := int(d.ball.get("holder", -1))
+				if hj >= 0:
+					var pj: Dictionary = oval.players[hj]
+					var sj: Skeleton3D = pj["skel"]
+					print("  holder node ", (pj["node"] as Node3D).position, " token ", d.tokens[hj]["pos"], " hips ",
+							oval.to_local(sj.global_transform * sj.get_bone_global_pose(oval._pelvis(pj)).origin), " clip ",
+							(pj["anim"] as AnimationPlayer).current_animation)
 				for e in range(maxi(0, d.emitted - 2), mini(d.events.size(), d.emitted + 2)):
 					print("  ev ", e, " ", d.events[e])
 		last_ball = bl

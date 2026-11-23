@@ -1972,7 +1972,7 @@ var _ump_step := 1.0 / 30.0   # the director seconds of the last frame that move
 var _ump_ball := false        # the ball is in his hands this frame
 var _ump_pick := -1.0         # seconds since he took it (the pick-up blend)
 var _ump_pick_len := UMP_PICK # ...and how long it takes
-var _ump_from := Vector3.ZERO # where the ball was (in the world) when he went to take it
+var _ump_from := Vector3.ZERO # the ball's gap from his hands when he took it
 var _ump_off := Vector3.ZERO  # let go: his hands less the director's ball, easing out
 var _ump_off_t := -1.0
 var _ump_hit_from := Vector3.ZERO  # a bounce: where the ball left his hands
@@ -2231,8 +2231,8 @@ func _umpire_ball_state(held: bool) -> void:
 		_ump_pick_len = UMP_PICK
 		if _ump_job >= 0 and ball != null:
 			var hands := _umpire_hands(umpires[_ump_job])
-			_ump_from = ball.global_position
-			_ump_pick_len = maxf(UMP_PICK, (_ump_from - hands).length() / UMP_PICK_RATE)
+			_ump_from = ball.global_position - hands  # the gap from his hands
+			_ump_pick_len = maxf(UMP_PICK, _ump_from.length() / UMP_PICK_RATE)
 	if not held and _ump_ball and ball != null:
 		_ump_off_t = 0.0
 		_ump_off = ball.global_position
@@ -2278,11 +2278,11 @@ func _umpire_ball(dt: float) -> bool:
 		if dt > 0.0:
 			_ump_pick += dt
 		var f := clampf(_ump_pick / _ump_pick_len, 0.0, 1.0)
-		# He takes it from where it was, into his hands as they move: eased from that spot to his
-		# hands, so a hand moving fast as the clip starts never leaves the ball behind. (It eased a
-		# fixed gap shut along with his hands, which took the ball through the turf when he bent to
-		# a ball lying on it: bug bash 2026-11-23.)
-		want = _ump_from.lerp(want, f * f * (3.0 - 2.0 * f))
+		# The gap it started at eases shut while it moves with his hands: a hand moving fast
+		# as the clip starts never leaves the ball behind. Never through the turf: as he bends to
+		# a ball lying on it his hands drop, and the gap carried it under (bug bash 2026-11-23).
+		want += _ump_from * (1.0 - f * f * (3.0 - 2.0 * f))
+		want.y = maxf(want.y, global_position.y + BALL_R)
 		if f >= 1.0:
 			_ump_pick = -1.0
 	ball.global_position = want
