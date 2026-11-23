@@ -1,0 +1,14 @@
+# Far land paddock patchwork (exec'd by scene.py after bg_far_terrain when spec['horizon_v2']): a second UV map 'Macro'
+# spans the whole far terrain; the hand-made paddocks.png multiplies the near-field detail tile, gain 1/its mean.
+_uvm = ob.data.uv_layers.new(name='Macro'); _lp = np.array([l.vertex_index for l in ob.data.loops])
+_uvm.data.foreach_set('uv', np.stack([(VF[_lp, 0] + FA) / (2 * FA), (VF[_lp, 1] + FA) / (2 * FA)], 1).ravel())
+_nt = _fm.node_tree; _mu = [n for n in _nt.nodes if n.type == 'MIX' and n.blend_type == 'MULTIPLY'][0]
+_un = _nt.nodes.new('ShaderNodeUVMap'); _un.uv_map = 'Macro'
+_pt = _nt.nodes.new('ShaderNodeTexImage'); _pt.image = bpy.data.images.load(os.path.join(HERE, 'tex', 'mt', 'paddocks.png')); _pt.interpolation = 'Cubic'
+_nt.links.new(_un.outputs['UV'], _pt.inputs['Vector'])
+_src = _mu.inputs[7].links[0].from_socket
+_pm = _nt.nodes.new('ShaderNodeMix'); _pm.data_type = 'RGBA'; _pm.blend_type = 'MULTIPLY'; _pm.inputs[0].default_value = 0.55
+_nt.links.new(_src, _pm.inputs[6]); _nt.links.new(_pt.outputs['Color'], _pm.inputs[7])
+_pg = _nt.nodes.new('ShaderNodeVectorMath'); _pg.operation = 'SCALE'; _pg.inputs['Scale'].default_value = 1 / (0.45 + 0.55 * float(open(os.path.join(HERE, 'tex', 'mt', 'paddocks.mean')).read()))
+_nt.links.new(_pm.outputs[2], _pg.inputs[0]); _nt.links.new(_pg.outputs[0], _mu.inputs[7])
+print('horizon paddocks on', len(_lp), 'loops')
