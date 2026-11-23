@@ -586,17 +586,19 @@ func _tick(h: float) -> void:
 	# Motion limits (MatchMotion.SPRINT, WALK): whatever moved a token this
 	# step, it moved no faster than a sprint.
 	var from := []
+	var lying := {}
 	MatchMotion.avoid(tokens, _meant_now())
 	for t in tokens:
 		from.append(t["pos"])
 		if not _on_feet(int(t["id"])):
+			lying[from.size() - 1] = true
 			# Still in his tackle's take (down, then back up): his body is where the take put
 			# him, so whatever the play asks of him waits until he is up.
 			t["down"] = maxf(0.0, float(t["down"]) - h)
 			t["vel"] = Vector2.ZERO
 			continue
 		MatchMotion.step(t, h)
-	MatchMotion.separate(tokens, h)
+	MatchMotion.separate(tokens, h, lying)
 	MatchMotion.hold_apart(tokens, from, _meant_now())
 	for i in range(tokens.size()):
 		MatchMotion.limit_step(tokens[i], from[i], h)

@@ -54,6 +54,19 @@ const HURRY := 2.0             # how fast the get-up plays once the play has mov
 ## lets him move from then).
 const UP_IN := 1.5
 const UP_LATE := 0.25           # s: the get-up never squeezed into less than this
+## The pair is slid, as one, toward where the director has the two men: the clip's own
+## travel (a fall carried on, a get-up stepping off) left the picture metres off the play
+## (3D bug bash, 2026-11-23: 5-10 m). It follows over about FOLLOW_S, never faster than SLIDE.
+## It turns, too, about the middle of the two, so the line from tackler to tackled runs the
+## way the director has it (TURN_S, never faster than SWING).
+const FOLLOW_S := 0.05
+const SLIDE := 12.0            # m/s, on their feet (the run-in, the standing tail)
+const TURN_S := 0.12
+const SWING := 2.0             # rad/s, on their feet
+## Down on the turf, between the contact and up_s, a slide reads as skating: it creeps.
+const SLIDE_DOWN := 3.0        # m/s
+const SWING_DOWN := 1.2        # rad/s
+const GO_IN := 0.4             # s
 const FAR := 5.0               # m: his token this far from him = the play has moved on
 const MOVE_OFF := 0.3          # m/s: his token moving this fast = the play wants him (a take ends at up_s)
 const KNOCK_UP := 0.2           # s of a scoop's clip past the touch before a ball off his hands ends it
@@ -330,6 +343,7 @@ func _advance(pr: Dictionary, dt: float) -> void:
 	if pr["fresh"]:
 		pr["fresh"] = false
 		return
+	_follow(pr, dt)
 	var cs := float(pr["cs"])
 	var c := float(pr["c"])
 	var rate := 1.0
@@ -355,12 +369,71 @@ func _advance(pr: Dictionary, dt: float) -> void:
 				rate = maxf(rate, (float(pr["up"]) - c) / maxf(left, UP_LATE))
 		# The get-up hurries when the play has gone on without them.
 		for i in [int(pr["who"]), int(pr["victim"])]:
-			if _in[i] == pr and _drawn(i).distance_to(director.tokens[i]["pos"]) > FAR:
+			if _in[i] != pr:
+				continue
+			if _drawn(i).distance_to(director.tokens[i]["pos"]) > FAR:
 				rate = maxf(rate, HURRY)
+			# The director has him running again while the clip still has him getting up: he
+			# is up and away within GO_IN.
+			if c >= cs and c < float(pr["up"]) \
+					and (director.tokens[i]["vel"] as Vector2).length() * MatchDirector.TEMPO > RUN_FROM:
+				rate = maxf(rate, (float(pr["up"]) - c) / GO_IN)
 	var nc := c + dt * rate
 	if c < cs and nc >= cs:
 		_hit(pr)
 	pr["c"] = nc
+
+
+## Keep the pair and the director together. A man the director has down in this take (from
+## the contact until MatchDirector.TAKE_UP after it) lies where the take puts him: his token is
+## moved there, as the director's "his body is where the take put him" means. The fall carries
+## the two of them 2-4 m, which the director does not know (3D bug bash, 2026-11-23: the picture
+## 5-10 m off the play, or, when the picture chased the tokens, the pile skating at 3-7 m/s).
+## While both are on their feet (the run-in, the standing tail) the pair is turned and slid,
+## as one, toward the director's places: the line between them to the director's, then the
+## mean of how far each is drawn from his token (each is then off by half the difference
+## between the clip's spacing and the director's). The run masks that slide.
+func _follow(pr: Dictionary, dt: float) -> void:
+	if dt <= 0.0:
+		return
+	var who := int(pr["who"])
+	var v := int(pr["victim"])
+	var adj: Transform3D = pr["adj"]
+	var down := float(pr["c"]) >= float(pr["cs"]) and float(pr["c"]) < float(pr["up"])
+	var swing := SWING_DOWN if down else SWING
+	var slide := SLIDE_DOWN if down else SLIDE
+	var free: Array = []
+	for i in [who, v]:
+		if _in[i] != pr:
+			continue
+		if float(pr["c"]) >= float(pr["cs"]) and not director._on_feet(i):
+			director.tokens[i]["pos"] = _drawn(i)
+		else:
+			free.append(i)
+	if free.size() == 2:
+		var dk := _drawn(who)
+		var dv := _drawn(v)
+		var drawn := dv - dk
+		var want: Vector2 = (director.tokens[v]["pos"] as Vector2) - (director.tokens[who]["pos"] as Vector2)
+		if drawn.length() > 0.4 and want.length() > 0.4:
+			# A turn about UP by phi takes a line at angle a on the turf to a - phi.
+			var phi := wrapf(drawn.angle() - want.angle(), -PI, PI)
+			phi = clampf(phi * (1.0 - exp(-dt / TURN_S)), -swing * dt, swing * dt)
+			var mid := (dk + dv) * 0.5
+			var m3 := Vector3(mid.x, 0.0, mid.y)
+			adj = Transform3D(Basis(Vector3.UP, phi), m3 - Basis(Vector3.UP, phi) * m3) * adj
+	# Only when neither is down: one lying where the take put him holds the pair still.
+	if free.size() == _count_in(pr) and not free.is_empty():
+		var err := Vector2.ZERO
+		for i in free:
+			err += (director.tokens[i]["pos"] as Vector2) - _drawn(i)
+		var mv := (err / free.size() * (1.0 - exp(-dt / FOLLOW_S))).limit_length(slide * dt)
+		adj.origin += Vector3(mv.x, 0.0, mv.y)
+	pr["adj"] = adj
+
+
+func _count_in(pr: Dictionary) -> int:
+	return int(_in[int(pr["who"])] == pr) + int(_in[int(pr["victim"])] == pr)
 
 
 ## The arms meet in the clip: where, and when, against the director's tackle.
@@ -368,7 +441,7 @@ func _hit(pr: Dictionary) -> void:
 	var rec: Dictionary = pr["rec"]
 	rec["hit_t"] = _clock
 	var e: Dictionary = _pairs[pr["name"]]
-	var cp: Transform3D = pr["P"]
+	var cp: Transform3D = (pr["adj"] as Transform3D) * (pr["P"] as Transform3D)
 	var at := cp * Vector3(float(e["contact"]["x"]), 0.0, float(e["contact"]["z"]))
 	rec["contact"] = Vector2(at.x, at.z)
 	var v := int(pr["victim"])
@@ -448,6 +521,7 @@ func _start(who: int, v: int, arrived: bool, at := Vector2.INF) -> void:
 		rec["event_t"] = _clock
 	tackles.append(rec)
 	var pr := {"id": tackles.size(), "name": name, "who": who, "victim": v, "P": P,
+			"adj": Transform3D.IDENTITY,
 			"c0": float(best["c0"]), "c": float(best["c0"]), "cs": float(best["cs"]),
 			"len": float(_pairs[name]["length_s"]), "arrived": arrived, "rec": rec,
 			"up": float(_pairs[name].get("up_s", _pairs[name]["length_s"])),
@@ -618,7 +692,7 @@ func _step_pair(i: int, p: Dictionary, dt: float, vel := Vector2.ZERO) -> void:
 	var warp := Transform3D(Basis(Vector3.UP, float(role["dy"]) * f), pivot + (role["w"] as Vector3) * f) \
 			* Transform3D(Basis.IDENTITY, -pivot)
 	var node: Node3D = p["node"]
-	node.transform = warp * (pr["P"] as Transform3D)
+	node.transform = (pr["adj"] as Transform3D) * warp * (pr["P"] as Transform3D)
 	_ease(i, p, dt)
 	var hips := _rig * (p["skel"] as Skeleton3D).get_bone_global_pose(_pelvis)
 	(p["ring"] as Node3D).position = Vector3(hips.origin.x, 0.03, hips.origin.z)

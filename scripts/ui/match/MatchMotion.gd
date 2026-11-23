@@ -210,7 +210,10 @@ static func step(t: Dictionary, dt: float) -> void:
 ## Ease overlapping bodies apart over `dt` seconds (positions only, half each
 ## way): each body moves at most WALK * dt, so a pile parts at a walk and
 ## never jumps.
-static func separate(tokens: Array, dt: float) -> void:
+## `fixed` (token index -> true): men down in a tackle's take. The take has their bodies
+## where they lie, so a man crowding one gets the whole push himself (3D bug bash,
+## 2026-11-23: a pack at a tackled free shoved the tackler 2 m off the take).
+static func separate(tokens: Array, dt: float, fixed: Dictionary = {}) -> void:
 	var n := tokens.size()
 	var pos := PackedVector2Array()
 	pos.resize(n)
@@ -230,9 +233,18 @@ static func separate(tokens: Array, dt: float) -> void:
 				continue
 			# Two on the very same spot part along a line of their own.
 			var u := d / l if l > 0.001 else Vector2.RIGHT.rotated(float(i * 7 + j))
-			var half := u * (MIN_SEP - l) * 0.5
-			push[i] -= half
-			push[j] += half
+			var fi := fixed.has(i)
+			var fj := fixed.has(j)
+			if fi and fj:
+				continue
+			var gap := u * (MIN_SEP - l)
+			if fi:
+				push[j] += gap
+			elif fj:
+				push[i] -= gap
+			else:
+				push[i] -= gap * 0.5
+				push[j] += gap * 0.5
 			any = true
 	if not any:
 		return
