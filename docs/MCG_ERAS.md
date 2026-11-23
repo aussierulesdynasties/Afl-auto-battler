@@ -109,3 +109,12 @@ Measuring from imagery is allowed; raw imagery is never committed or baked into 
     it were 35.6-36.6 m above the turf (fit rms 0.2 m). Today's model has it 35.7 m above the turf
     (31.5 m above its plaza datum, turf at -4.2 m): it agrees. Google Earth's 3D readout across the
     east stand agrees too (turf 8 m, roof 42-46 m above sea level).
+- 2026-11-23, today's model checked against Google Earth's 3D heights (pointer readout, 1,045 points
+  every 10 degrees, then 1,008 points at 1 m steps every 5 degrees across the roof's back edge;
+  `tools/grounds/mcg_eras/measure/ge3d_*.json`). Roof heights agree within Google Earth's 1 m readout:
+  Great Southern Stand 36 m above the turf (model 35.4-35.7), northern stand 42-43 m (model 42.7-43.7).
+  The Great Southern Stand's roof back edge was too far out: by 1.6-4.4 m at 95-115 degrees and up
+  to 7 m at 125-140 degrees (Google Earth shows the 36 m roof ending there, with a 24-30 m deck behind
+  it). `roof_outer` corrected from 65 to 222 degrees (each point within about 1.5 m). Bearings on a
+  truss line are left out (the masts read as roof). Still to look at: the two ends of the northern
+  stand read 46 m in Google Earth (60 and 235-240 degrees) against 38-44 m in the model.
