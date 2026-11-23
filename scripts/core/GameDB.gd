@@ -337,6 +337,9 @@ func _use_dataset(id: String, row: Dictionary) -> void:
 	DATA_SEASON = int(row["data_season"])
 	Potential.peak_from_year = DATA_SEASON - 3
 	START_YEAR = int(row["start_year"])
+	# A real player's record runs to the season before a Legacy start; today's
+	# start keeps its records to 2025 (Career.last_real).
+	Career.last_real = DATA_SEASON if EraRules.is_era(START_YEAR) else Career.BEFORE_GAME
 	START_DATE = str(row["start_date"])
 	PLAYERS_ENRICHED_CSV = str(row.get("players", ""))
 	DRAFTEES_CSV = str(row.get("draftees", ""))
@@ -1388,7 +1391,10 @@ const GROUND_NAMES_CSV := "res://data/legacy/ground_names.csv"
 const GROUND_KEYS := {"docklands": "Marvel Stadium", "kardinia_park": "GMHBA Stadium",
 		"football_park": "Football Park", "subiaco": "Subiaco Oval", "princes_park": "Ikon Park",
 		"western_oval": "Whitten Oval", "waverley_park": "Waverley Park", "stadium_australia": "Accor Stadium",
-		"carrara": "People First Stadium", "mcg": "MCG", "scg": "SCG", "waca": "WACA", "gabba": "The Gabba"}
+		"carrara": "People First Stadium", "mcg": "MCG", "scg": "SCG", "waca": "WACA", "gabba": "The Gabba",
+		"york_park": "York Park", "bellerive": "Bellerive Oval", "showground": "Engie Stadium",
+		"manuka_oval": "Manuka Oval", "eureka": "Mars Stadium", "wellington": "Sky Stadium",
+		"marrara": "Marrara Oval"}
 ## Names the club and rules tables use for a ground that are none of its
 ## recorded names.
 const GROUND_ALIASES := {"Carrara": "People First Stadium"}
