@@ -78,6 +78,7 @@ func run() -> void:
 	_t("_test_tackled_frees")
 	_t("_test_tackle_cuts", [res])
 	_t("_test_frees_and_subs", [res])
+	_t("_test_injury_staging")
 	GameState.replay_seed = 0
 	print(Ran.line("Match visual", self))
 
@@ -3133,7 +3134,7 @@ func _check_turf3d(oval: Oval3D) -> void:
 				and turf.env.tonemap_exposure >= 1.0,
 				"%s %s: the turf is green and the weather's sheen is set (%s, wet %.0f)" % [look[1], look[0], str(g), wet])
 	# Rule 2.114: the broadcast colour, the turf's colour read once and the film's white balance.
-	var film_ok := turf.film == null or turf.film.get_shader_parameter("balance") == Oval3DTurf.BALANCE[VignetteKickoff.NIGHT]
+	var film_ok: bool = turf.film == null or turf.film.get_shader_parameter("balance") == Oval3DTurf.BALANCE[VignetteKickoff.NIGHT]
 	_check(turf.broadcast == 1.0 and float(turf.mat.get_shader_parameter("true_colour")) == 1.0 and film_ok,
 			"The 3D picture is in broadcast colour: turf colour read once, the night's white balance on the film")
 	turf.apply("", VignetteKickoff.DAY)
@@ -4189,3 +4190,78 @@ func _test_tackle_cuts(res: Dictionary) -> void:
 	_check(cut_ks.size() >= 2 and frames > 0 and ok == frames,
 			"Tackles that stop play cut close from a wing camera, both men in the clip (%d tackles, %d of %d frames; wrong: %s)" % [cut_ks.size(), ok, frames, wrong])
 	pv.free()
+
+
+## In-match injuries (row 202 2e, MatchDirector.hurt): a hurt man with a replacement goes down after
+## his last part in the play and before his interchange; from then no event released names him,
+## the ball never comes to his token, he stays down for his time (at least until his trainers
+## could reach him) and then only walks, at his pace, toward the interchange gate; his
+## replacement takes the slot at the logged interchange; and the match plays out unchanged.
+func _test_injury_staging() -> void:
+	var seen := 0
+	var with_sub := 0
+	var named_after := 0
+	var held := 0
+	var early_walk := 0
+	var wrong_way := 0
+	var too_fast := 0
+	var off_by_swap := 0
+	var reached := 0
+	for seed in range(1, 9):
+		var res := _result(seed)
+		var evs: Array = res["events"]
+		var d := MatchDirector.new()
+		d.setup(res, evs.duplicate())
+		var out := []
+		var watch := {}        # token id -> {pid, t0, down, prev}
+		var guard := 0
+		while not d.idle() and guard < 300000:
+			guard += 1
+			var t_was := d.time
+			var rel := d.advance(1.0 / 30.0)
+			out.append_array(rel)
+			for id in d.hurt:
+				if not watch.has(id):
+					var r: Dictionary = d.hurt[id]
+					watch[id] = {"pid": r["pid"], "t0": float(r["t0"]), "down": float(r["down"]),
+							"prev": d.tokens[id]["pos"], "swapped": false, "eta": MatchDirector.trainers_eta(r["at"]) if MatchDirector.waits_for_trainers(str(r["kind"])) else 0.0}
+					seen += 1
+			for id in watch:
+				var w: Dictionary = watch[id]
+				if bool(w["swapped"]):
+					continue
+				for e in rel:
+					if MatchDirector._names(e, str(w["pid"])):
+						named_after += 1
+				if not d.hurt.has(id):
+					w["swapped"] = true
+					with_sub += 1
+					if str(d.tokens[id]["pid"]) == str(w["pid"]):
+						off_by_swap += 1
+					if (d.tokens[id]["pos"] as Vector2).distance_to(d.gate) < 1.0:
+						reached += 1
+					continue
+				if int(d.ball.get("holder", -1)) == id and str(d.ball.get("mode", "")) == "held":
+					held += 1
+				var now: Vector2 = d.tokens[id]["pos"]
+				var step := now.distance_to(w["prev"] as Vector2)
+				# (His first PULL_UP seconds he is still pulling up from his run.)
+				if step > 0.0001 and d.time - float(w["t0"]) > MatchDirector.PULL_UP + 0.05:
+					if d.time - float(w["t0"]) < float(w["down"]) - 0.05:
+						early_walk += 1
+					if now.distance_to(d.gate) > (w["prev"] as Vector2).distance_to(d.gate):
+						wrong_way += 1
+					if step > MatchDirector.HURT_WALK_DEFAULT * (d.time - t_was) + 0.01:
+						too_fast += 1
+				w["prev"] = now
+		_check(out.size() == evs.size(), "Injury staging: seed %d plays every event (%d/%d)" % [seed, out.size(), evs.size()])
+		_check(float(watch.values().map(func(w): return float(w["down"]) - float(w["eta"])).min() if not watch.is_empty() else 1.0) > 0.0,
+				"Injury staging: seed %d, every hurt man is down until his trainers could reach him" % seed)
+	_check(seen >= 4, "Injury staging: hurt men seen over 8 matches (%d)" % seen)
+	_check(with_sub == seen, "Injury staging: every hurt man is replaced at his interchange (%d of %d)" % [with_sub, seen])
+	_check(named_after == 0, "Injury staging: no event names a man once he is down hurt (%d)" % named_after)
+	_check(held == 0, "Injury staging: the ball never in a hurt man's hands (%d frames)" % held)
+	_check(early_walk == 0, "Injury staging: nobody walks before his time down is up (%d frames)" % early_walk)
+	_check(wrong_way == 0 and too_fast == 0, "Injury staging: a hurt man only walks toward the gate, at a walk (%d away, %d fast)" % [wrong_way, too_fast])
+	_check(off_by_swap == 0, "Injury staging: the slot is his replacement's after the interchange (%d)" % off_by_swap)
+	print("Injury staging: %d hurt men, %d at the gate by their interchange" % [seen, reached])
