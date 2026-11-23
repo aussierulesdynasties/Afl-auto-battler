@@ -59,7 +59,10 @@ void fragment() {
 	// mirrors the grass below as much as it scatters it (Schlick's share, dulled by roughness).
 	vec3 f0 = mix(vec3(0.04), a.rgb, metallic_v);
 	float nv = clamp(dot(NORMAL, v), 0.0, 1.0);
-	vec3 f = f0 + (1.0 - f0) * pow(1.0 - nv, 5.0);
+	// Schlick with roughness, as the renderer's own sky reflection is weighted: a rough face at a grazing angle mirrors
+	// far less than a smooth one. The plain Schlick share took out more green than the sky had put in, and a white
+	// face seen edge-on (Optus's roof fascia from above) turned purple.
+	vec3 f = f0 + (max(vec3(1.0 - roughness_v), f0) - f0) * pow(1.0 - nv, 5.0);
 	fix += f * sky_fix(r_y) * ref_scale * (1.0 - roughness_v * 0.6);
 	EMISSION = fix * ao;
 }
