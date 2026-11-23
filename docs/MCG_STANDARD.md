@@ -157,9 +157,9 @@ Optus went through the same gate. What it added to the method:
 - **Signature material first.** The bronze fins (`tools/grounds/optus/bronze.py`) are drawn from the
   director's photo: 0.31 m fins in runs of 1 to 7 m, bronze to sand with the odd copper-red, thin
   pale-blue slivers, a soft drift of tone, metal sheen through `MATERIAL_FIX`.
-- **The match light cools the map.** A painted map under the match light lost most of its red. Optus's
-  map takes a `tint` (2.0, 1.4, 0.95) and colours worked back from the measured response, so lawns, river
-  and paving render as Google Earth shows them.
+- **Check the map under the current light.** A painted map once needed a `tint` to survive the match
+  light; after the stand lighting changed on main (2026-11-22) the same tint washed it yellow, so Optus's
+  `tint` and `building_tint` are white now. Re-check a map's colours whenever the lighting changes.
 - **Bridges are models.** `SURROUNDS[...]["models"]` loads extra glbs into the ground (Optus:
   `bridges.glb`, Matagarup's two 72 m arches and the river bridges on piers).
 
@@ -168,7 +168,16 @@ Optus went through the same gate. What it added to the method:
   thin bright streaks, and the "white Y columns" were slim posts in a dark strip under the roof. The glass
   band, street glazing and the north's glazed storey are drawn by `bronze.py` (`glass`, `entrance`, `storey`).
 
-Open at Optus: seat colours from Street View (stage 4), on top of the seat fix (#1991).
+- **Match colour under Google Earth's own sun (2026-11-23).** `PREINSPECT_SUN=az,el` puts the capture's sun
+  where Google Earth's photos had it (Optus: 67.6, 45.5, from 42 shadow pairs, `survey/sun.json`). Colour is then
+  compared patch for patch on a PC GPU render, never the cloud's software renderer. At cdff0fe: roof membrane
+  (228,232,244) vs Google Earth (229,237,244), bronze brightness 1.00, sunlit seats (142,157,166) vs (130,151,158).
+- **Shading is the renderer's job.** A grey strip painted along the roof's inner edge read as a 3-4 m band at
+  0.8x Google Earth's brightness and threw the inner-edge trace 4 m off; removed, the edge measures median
+  +0.05 m, rms 1.05 m against Google Earth over 358 bearings (Google Earth's own trace scatters 0.85 m).
+
+Open at Optus: shadows read too blue on every ground (truss shadow on the roof blue/red 1.37 vs Google Earth's
+1.10); that is the match sky light, shared by all grounds.
 
 ## Adelaide Oval (third ground to the standard, 2026-11-21)
 
