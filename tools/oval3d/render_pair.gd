@@ -2,9 +2,11 @@ extends SceneTree
 ## Film two baked animations played together on two match bodies (a speccy's jumper and his
 ## stepladder, from one pair fit: tools/oval3d/mp_fit.py --pair, then bake_fit.gd with a shared
 ## BAKE_ORIGIN and BAKE_SCALE), from a fixed side, to check the pair by eye beside the footage.
-##   godot --path . --rendering-method mobile --script tools/oval3d/render_pair.gd -- OUT_DIR A.res B.res [YAW_DEG] [HZ] [DIST]
+##   godot --path . --rendering-method mobile --script tools/oval3d/render_pair.gd -- OUT_DIR A.res B.res [YAW_DEG] [HZ] [DIST] [hands|pair] [CATCH_S]
 ## Writes OUT_DIR/f_<n>.png (960 x 720). YAW 0 looks along the fit's own camera (the footage's).
-## The second man's kit is darkened so the two read apart.
+## The second man's kit is darkened so the two read apart. "hands" frames the first man's hands up
+## close (a mark's catch) instead of the pair. CATCH_S: from then on a ball sits between the first
+## man's palms (60% along each hand bone, as the match holds one), to check his hands are on it.
 
 const GLB := "res://assets/oval3d/player_mh.glb"
 
@@ -21,6 +23,8 @@ func _body(res_path: String, tint: Color) -> Array:
 	var lib := AnimationLibrary.new()
 	lib.add_animation("clip", load(res_path))
 	ap.add_animation_library("pair", lib)
+	# Held inside a real body's joint limits, as the match plays it.
+	ClipLimits.apply(ap, sk)
 	ap.play("pair/clip")
 	if tint != Color.WHITE:
 		for m in scene.find_children("*", "MeshInstance3D", true, false):
@@ -48,6 +52,18 @@ func _run() -> void:
 	var yaw := float(args[3]) if args.size() > 3 else 0.0
 	var hz := float(args[4]) if args.size() > 4 else 25.0
 	var dist := float(args[5]) if args.size() > 5 else 9.0
+	var on_hands := args.size() > 6 and str(args[6]) == "hands"
+	var catch_s := float(args[7]) if args.size() > 7 else INF
+	var ball := MeshInstance3D.new()
+	var bm := SphereMesh.new()
+	bm.radius = 0.5
+	bm.height = 1.0
+	ball.mesh = bm
+	var bmat := StandardMaterial3D.new()
+	bmat.albedo_color = Color(0.95, 0.8, 0.1)
+	ball.material_override = bmat
+	ball.visible = false
+	root.add_child(ball)
 	root.size = Vector2i(960, 720)
 	var env := WorldEnvironment.new()
 	env.environment = Environment.new()
@@ -90,6 +106,27 @@ func _run() -> void:
 		var mid := (ha + hb) * 0.5
 		# The camera pans with the pair across the ground, but holds its height, so a leap shows.
 		var aim := Vector3(mid.x, 1.2, mid.z)
+		if on_hands:
+			aim = (ska.global_transform * ska.get_bone_global_pose(ska.find_bone("hand_l")).origin
+					+ ska.global_transform * ska.get_bone_global_pose(ska.find_bone("hand_r")).origin) * 0.5
+		if t >= catch_s - 1e-4:
+			var pa: Array = []
+			for side in ["l", "r"]:
+				var hbn := ska.find_bone("hand_" + side)
+				var g := ska.global_transform * ska.get_bone_global_pose(hbn)
+				var hl := 0.0
+				for c in ska.get_bone_children(hbn):
+					hl += ska.get_bone_rest(c).origin.length()
+				hl /= maxf(1.0, ska.get_bone_children(hbn).size())
+				pa.append(g.origin + g.basis.y.normalized() * hl * 0.6 * ska.global_transform.basis.get_scale().x)
+			var across: Vector3 = (pa[0] - pa[1]).normalized()
+			var fore: Vector3 = ((pa[0] + pa[1]) * 0.5 - (ska.global_transform * ska.get_bone_global_pose(ska.find_bone("lowerarm_l")).origin)).normalized()
+			var long := across.cross(fore).cross(across).normalized()
+			var bx := across
+			var by := long.cross(bx).normalized()
+			# An AFL ball: about 29 cm long, 18 cm across the middle.
+			ball.transform = Transform3D(Basis(bx * 0.18, by * 0.18, long * 0.29), (pa[0] + pa[1]) * 0.5)
+			ball.visible = true
 		cam.position = aim + d * dist
 		cam.look_at(aim, Vector3.UP)
 		await process_frame

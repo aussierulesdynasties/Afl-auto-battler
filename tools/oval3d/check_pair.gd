@@ -27,6 +27,8 @@ func _body(res_path: String) -> Array:
 	var lib := AnimationLibrary.new()
 	lib.add_animation("clip", load(res_path))
 	ap.add_animation_library("pair", lib)
+	# Held inside a real body's joint limits, as the match plays it.
+	ClipLimits.apply(ap, sk)
 	ap.play("pair/clip")
 	return [ap, sk]
 

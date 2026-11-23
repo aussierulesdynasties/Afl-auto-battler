@@ -5,11 +5,15 @@ extends SceneTree
 ## the three spine bones sharing the turn from hips to shoulders, then the upper arms, forearms,
 ## thighs and shins each swung (shortest arc, so their twist stays the rest pose's) to point where
 ## the fit's joints do; the head and neck turned to the fit's ears and nose, the feet to its heels
-## and toes. Hands keep the rest pose. The match holds the result
+## and toes. The match holds the result
 ## inside a real body's limits as it loads it (ClipLimits).
 ## BAKE_FLOOR=y: the ground's height in the fit's units; he is set on it (or above it by the fit's
 ## leap) frame by frame.
 ## BAKE_SCALE=k: his travel times k (our body's size over the fit's).
+## BAKE_HANDS=CLIP:CONTACT:CATCH: the hands and fingers (turned against the forearm) from one of
+## the body's own captured clips (its hands are filmed, a broadcast's are a few pixels), timed so
+## the clip's CONTACT (s) falls on this film's CATCH (s): reaching open before it, closed on the
+## ball after. CATCH -1: reaching open throughout (a man who goes for it and misses).
 ## BAKE_ORIGIN=x,y,z: the spot (fit units) his travel is measured from; a pair's two bakes share it.
 
 const GLB := "res://assets/oval3d/player_mh.glb"
@@ -26,7 +30,12 @@ const SPINE := ["spine_01", "spine_02", "spine_03"]
 # so the feet take their mean and the match's joint limits (ClipLimits) hold them in.
 const HEAD_C := Quaternion(0.60129, 0.02535, 0.0235, 0.79828)
 const FOOT_C := Quaternion(-0.09665, -0.03503, -0.02746, 0.99432)
+const HOLD_HALF := 0.11    # m from the ball's middle to each palm (the ball's girth, the palm's flesh)
+const HOLD_EASE := 0.08    # s before the catch the hands close onto it
 var sk: Skeleton3D
+var joints := {}
+var palm_n := {}
+var held_last := []
 
 
 func _initialize() -> void:
@@ -54,6 +63,151 @@ func _set_global_basis(b: int, want: Basis) -> void:
 	sk.set_bone_pose_rotation(b, (pb.inverse() * want).get_rotation_quaternion())
 
 
+## The palm's middle (60% along the hand bone, where the match puts a held ball) and the way out
+## of the palm (the thumb's side of the knuckle line), in the skeleton's space.
+func _palm(side: String) -> Array:
+	var h := sk.find_bone("hand_" + side)
+	var g := sk.get_bone_global_pose(h)
+	if not palm_n.has(side):
+		# Out of the palm in the hand's own frame, from the rest pose (fingers straight, as
+		# Oval3DGrip reads it): the thumb sits on the palm side of the knuckle line.
+		var inv := sk.get_bone_global_rest(h).affine_inverse()
+		var rp := func(n: String) -> Vector3:
+			return inv * sk.get_bone_global_rest(sk.find_bone(n + "_" + side)).origin
+		var across: Vector3 = rp.call("index_01") - rp.call("pinky_01")
+		var along: Vector3 = rp.call("middle_02") - rp.call("middle_01")
+		var n := across.cross(along).normalized()
+		if (rp.call("thumb_02") - rp.call("middle_01")).dot(n) < 0.0:
+			n = -n
+		palm_n[side] = n
+	var kids := sk.get_bone_children(h)
+	var hl := 0.0
+	for c in kids:
+		hl += sk.get_bone_rest(c).origin.length()
+	hl /= maxf(1.0, kids.size())
+	var at := g.origin + g.basis.y.normalized() * hl * 0.6
+	return [at, (g.basis * (palm_n[side] as Vector3)).normalized()]
+
+
+## Turn bone b (in the skeleton's space) by q about its own head.
+func _turn(b: int, q: Quaternion) -> void:
+	_set_global_basis(b, Basis(q) * sk.get_bone_global_pose(b).basis)
+
+
+## Every limited joint (ClipLimits, as the match loads a clip) held inside its limits now.
+func _limit_all() -> void:
+	for bone in joints:
+		var b := sk.find_bone(bone)
+		var j: Dictionary = joints[bone]
+		var rest: Quaternion = j["rest"]
+		sk.set_bone_pose_rotation(b, rest * ClipLimits.limit(rest.inverse() * sk.get_bone_pose_rotation(b), j))
+
+
+## Both palms onto a ball between them, weight w (0 leaves the arms as they are). Reached a few
+## times over, each inside the joint limits, so what the match plays still has them on it.
+func _hold(w: float) -> void:
+	if w <= 0.0:
+		return
+	# The limits can pull a reach back and forth between tries: the try that holds the ball best
+	# is kept.
+	var arm := []
+	for side in ["l", "r"]:
+		for n in ["upperarm_", "lowerarm_", "hand_"]:
+			arm.append(sk.find_bone(n + side))
+	var best := INF
+	var keep := []
+	# Two starts: the arms as the film has them, and as the last frame's hold left them (so the
+	# hands stay steady on the ball from one frame to the next).
+	var film: Array = arm.map(func(b): return sk.get_bone_pose_rotation(b))
+	for start in [film, held_last]:
+		if start.size() != arm.size():
+			continue
+		for q in arm.size():
+			sk.set_bone_pose_rotation(arm[q], start[q])
+		for it in 8:
+			_hold_once(w)
+			_limit_all()
+			var e := _hold_miss()
+			if e < best:
+				best = e
+				keep = arm.map(func(b): return sk.get_bone_pose_rotation(b))
+	for q in arm.size():
+		sk.set_bone_pose_rotation(arm[q], keep[q])
+	held_last = keep
+
+
+## How far the hands are off holding a ball: each palm's angle off facing it (deg), plus their
+## spacing's error (cm).
+func _hold_miss() -> float:
+	var pl := _palm("l")
+	var pr := _palm("r")
+	var c: Vector3 = (pl[0] + pr[0]) * 0.5
+	var al := rad_to_deg((pl[1] as Vector3).angle_to(c - pl[0]))
+	var ar := rad_to_deg((pr[1] as Vector3).angle_to(c - pr[0]))
+	return maxf(al, ar) + absf((pl[0] as Vector3).distance_to(pr[0]) - 2.0 * HOLD_HALF) * 100.0
+
+
+func _hold_once(w: float) -> void:
+	var pl := _palm("l")
+	var pr := _palm("r")
+	var c: Vector3 = (pl[0] + pr[0]) * 0.5
+	var ax: Vector3 = (pl[0] - pr[0]).normalized()
+	for side in ["l", "r"]:
+		var sg := 1.0 if side == "l" else -1.0
+		var ua := sk.find_bone("upperarm_" + side)
+		var la := sk.find_bone("lowerarm_" + side)
+		var ha := sk.find_bone("hand_" + side)
+		var p: Array = _palm(side)
+		var want: Vector3 = (p[0] as Vector3).lerp(c + ax * HOLD_HALF * sg, w)
+		# Reach: the elbow bent on its hinge to the wrist's new distance from the shoulder, then the
+		# upper arm swung to point it there.
+		var s0 := _gpos(ua)
+		var w0 := _gpos(ha)
+		var wt := w0 + (want - (p[0] as Vector3))
+		var e0 := _gpos(la)
+		var a := s0.distance_to(e0)
+		var bl := e0.distance_to(w0)
+		var d := clampf(s0.distance_to(wt), absf(a - bl) + 1e-3, a + bl - 1e-3)
+		var gam := acos(clampf((a * a + bl * bl - d * d) / (2.0 * a * bl), -1.0, 1.0))
+		var gam0 := (s0 - e0).angle_to(w0 - e0)
+		var hinge := (sk.get_bone_global_pose(la).basis * ClipLimits.HINGE).normalized()
+		var g0 := sk.get_bone_global_pose(la).basis
+		var best := INF
+		var pick := Basis()
+		for sgn in [1.0, -1.0]:
+			var bb := Basis(Quaternion(hinge, sgn * (gam0 - gam))) * g0
+			_set_global_basis(la, bb)
+			var miss := absf(s0.distance_to(_gpos(ha)) - d)
+			if miss < best:
+				best = miss
+				pick = bb
+		_set_global_basis(la, pick)
+		_turn(ua, Quaternion((_gpos(ha) - s0).normalized(), (wt - s0).normalized()))
+		# Face the palm to the ball: the turn about the forearm, the forearm and the wrist each
+		# taking up to 60 deg (inside the match's joint limits, ClipLimits) and the shoulder the rest.
+		p = _palm(side)
+		var fa := (_gpos(ha) - _gpos(la)).normalized()
+		var to_c: Vector3 = (c - (p[0] as Vector3))
+		var n0: Vector3 = (p[1] as Vector3) - fa * (p[1] as Vector3).dot(fa)
+		var n1 := to_c - fa * to_c.dot(fa)
+		if n0.length() < 1e-4 or n1.length() < 1e-4:
+			continue
+		var ang := n0.normalized().signed_angle_to(n1.normalized(), fa) * w
+		var fore := clampf(ang, -deg_to_rad(60.0), deg_to_rad(60.0))
+		var wrist := clampf(ang - fore, -deg_to_rad(60.0), deg_to_rad(60.0))
+		# Past what the forearm and wrist turn, the upper arm turns in the shoulder (arms high and
+		# near straight, it turns the hand much as the forearm does).
+		var ux := (_gpos(la) - _gpos(ua)).normalized()
+		_turn(ua, Quaternion(ux, ang - fore - wrist))
+		_turn(la, Quaternion((_gpos(ha) - _gpos(la)).normalized(), fore))
+		_turn(ha, Quaternion((_gpos(ha) - _gpos(la)).normalized(), wrist))
+		# Then the hand bent at the wrist so the palm looks straight at the ball.
+		p = _palm(side)
+		to_c = c - (p[0] as Vector3)
+		var bend := Quaternion((p[1] as Vector3).normalized(), to_c.normalized())
+		_turn(ha, Quaternion.IDENTITY.slerp(bend, w))
+
+
 func _run() -> void:
 	await process_frame
 	var args := OS.get_cmdline_user_args()
@@ -62,6 +216,7 @@ func _run() -> void:
 	var scene: Node3D = (load(GLB) as PackedScene).instantiate()
 	root.add_child(scene)
 	sk = scene.find_children("*", "Skeleton3D", true, false)[0]
+	joints = ClipLimits._joints(sk)
 	var ap: AnimationPlayer = scene.find_children("*", "AnimationPlayer", true, false)[0]
 	var skpath := str(ap.get_node(ap.root_node).get_path_to(sk))
 	# The fit is in the world (y up); the skeleton's own space may be turned (the GLB's root).
@@ -93,10 +248,34 @@ func _run() -> void:
 		foot_g0[side] = sk.get_bone_global_pose(f_b).basis
 	var hz := float(fit["hz"])
 	var frames: Array = fit["frames"]
+	# BAKE_HANDS: each hand bone and finger bone, and that clip's track for it.
+	var hand_src: Animation = null
+	var hand_tracks := {}
+	var h_contact := 0.0
+	var h_catch := -1.0
+	if OS.get_environment("BAKE_HANDS") != "":
+		var hp := OS.get_environment("BAKE_HANDS").split(":")
+		hand_src = ap.get_animation(hp[0])
+		h_contact = float(hp[1])
+		h_catch = float(hp[2])
+		for side in ["l", "r"]:
+			var stack := [sk.find_bone("hand_" + side)]
+			while not stack.is_empty():
+				var b: int = stack.pop_back()
+				for t in hand_src.get_track_count():
+					if hand_src.track_get_type(t) == Animation.TYPE_ROTATION_3D \
+							and str(hand_src.track_get_path(t)).get_slice(":", 1) == sk.get_bone_name(b):
+						hand_tracks[sk.get_bone_name(b)] = t
+				stack.append_array(sk.get_bone_children(b))
+		print("HANDS from %s: %d bones" % [hp[0], hand_tracks.size()])
 	var anim := Animation.new()
 	anim.length = (frames.size() - 1) / hz
 	var rot_tracks := {}
-	for n in ["pelvis"] + SPINE + LIMBS.map(func(l): return l[0]) + ["neck_01", "head", "foot_l", "foot_r"]:
+	var tracked: Array = ["pelvis"] + SPINE + LIMBS.map(func(l): return l[0]) + ["neck_01", "head", "foot_l", "foot_r"]
+	for n in hand_tracks.keys():
+		if not n in tracked:
+			tracked.append(n)
+	for n in tracked:
 		var t := anim.add_track(Animation.TYPE_ROTATION_3D)
 		anim.track_set_path(t, "%s:%s" % [skpath, n])
 		rot_tracks[n] = t
@@ -194,6 +373,21 @@ func _run() -> void:
 			var pb := sk.get_bone_global_pose(par).basis if par >= 0 else Basis.IDENTITY
 			sk.set_bone_pose_position(ip, sk.get_bone_pose_position(ip) + pb.inverse() * lift)
 		var t := k / hz
+		if hand_src != null:
+			# The clip's time: CONTACT at CATCH, held at its start before it and its end after.
+			var ts := h_contact - 0.12 if h_catch < 0.0 else h_contact + (t - h_catch)
+			ts = clampf(ts, 0.0, hand_src.length)
+			for n in hand_tracks:
+				sk.set_bone_pose_rotation(sk.find_bone(n), hand_src.rotation_track_interpolate(hand_tracks[n], ts))
+			if h_catch >= 0.0:
+				_hold(clampf((t - (h_catch - HOLD_EASE)) / HOLD_EASE, 0.0, 1.0))
+				if t >= h_catch:
+					# How squarely each palm faces the ball (0 deg: straight at it), and how far apart.
+					var pl := _palm("l")
+					var pr := _palm("r")
+					var c: Vector3 = (pl[0] + pr[0]) * 0.5
+					print("HOLD %d palms %.2f m apart, facing it %.0f / %.0f deg" % [k, (pl[0] as Vector3).distance_to(pr[0]),
+							rad_to_deg((pl[1] as Vector3).angle_to(c - pl[0])), rad_to_deg((pr[1] as Vector3).angle_to(c - pr[0]))])
 		for n in rot_tracks:
 			anim.rotation_track_insert_key(rot_tracks[n], t, sk.get_bone_pose_rotation(sk.find_bone(n)))
 		anim.position_track_insert_key(pos_track, t, sk.get_bone_pose_position(ip))
