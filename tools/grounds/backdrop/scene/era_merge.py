@@ -21,6 +21,10 @@ for e in OLD:   # tagging since retired: a riverbank or reservoir area is water 
 sj = json.load(open(os.path.join(PD, 'sat.json'))); hm, mp = sj['half_m'], sj['m_per_px']
 SA_OLD = np.asarray(Image.open(os.path.join(PD, 'sat_%s.png' % tag)).convert('RGB')).astype(np.float32)
 SA_NOW = np.asarray(Image.open(os.path.join(PD, 'sat_now.png')).convert('RGB')).astype(np.float32)
+# the two aerials differ in colour cast (Ikon's 2013 release is green-tinted: grey roofs read as plants), so the era's
+# is matched to today's per channel (mean and spread over the whole frame) before any colour test
+_m = SA_OLD.reshape(-1, 3); _n = SA_NOW.reshape(-1, 3)
+SA_OLD = np.clip((SA_OLD - _m.mean(0)) / (_m.std(0) + 1e-6) * _n.std(0) + _n.mean(0), 0, 255)
 def poly(el):
     pts = [((p['lon'] - lon0) * KX, (p['lat'] - lat0) * KY) for p in el.get('geometry') or [] if p]
     if len(pts) < 4: return None
@@ -38,7 +42,7 @@ def med(SA, q):
     mk = Image.new('L', (x1 - x0, y1 - y0)); ImageDraw.Draw(mk).polygon([(u - x0, v - y0) for u, v in zip(U, V)], fill=1)
     px = SA[y0:y1, x0:x1][np.asarray(mk) > 0]
     return np.median(px, 0) if len(px) >= 6 else None
-def frac(SA, q):
+def frac(SA, q, paved):
     xs, ys = q.exterior.xy
     U = [(x + hm) / mp for x in xs]; V = [(hm - y) / mp for y in ys]
     x0, y0, x1, y1 = int(min(U)), int(min(V)), int(max(U)) + 1, int(max(V)) + 1
@@ -49,7 +53,8 @@ def frac(SA, q):
     R, G, B = px[:, 0], px[:, 1], px[:, 2]; Vv = px.max(1)
     veg = (2 * G - R - B > 12) & (Vv < 170)
     bare = (R - B > 25) & (R - G < 28) & (Vv > 100)
-    return float((veg | bare).mean())
+    asph = (px.max(1) - px.min(1) < 18) & (Vv > 55) & (Vv < 135)
+    return float((veg | bare | (asph & paved)).mean())
 oldids = {e['id'] for e, _ in OB}
 keep, drop, late = 0, 0, 0
 add = []
@@ -57,13 +62,17 @@ for e, q in bld(NOW):
     if e['id'] in oldids or q is None: continue
     hit = any(OB[i][1].intersection(q).area > 0.3 * min(q.area, OB[i][1].area) for i in tree.query(q))
     if hit: continue   # redrawn since: the era's outline stands
-    a, b = med(SA_OLD, q), med(SA_NOW, q)
-    same = a is not None and b is not None and np.abs(a - b).mean() < 28
-    # a house-sized outline stands unless the era's aerial shows plants or bare sand where it is (a new house on
-    # an empty or garden lot); a big new block must match today's roof (the college on the old car park)
-    fr = frac(SA_OLD, q)
-    stood = fr is not None and q.area < 1500 and fr < 0.6
-    if same or stood: add.append(e); late += 1
+    big = q.area >= 1500   # asphalt counts as open ground only under a big block: a house's iron roof reads as asphalt
+    fr, fn = frac(SA_OLD, q, big), frac(SA_NOW, q, big)
+    if fr is None or fn is None: add.append(e); late += 1; continue   # beyond the era's aerial: nothing to check it against, so it stands
+    # built since = open ground then (plants, bare sand, or car-park asphalt under a big block, over 60% of the outline) and not now (under
+    # 40%): a new house on a garden lot, the college on the old car park. Open in both years (a shed under backyard
+    # trees, a grey roof that reads as asphalt) or roofed in both (a centre rebuilt on its old site) says it stood.
+    # House-sized ones always stand: at 0.5 m the two aerials' colour casts and lean flip iron and tiled roofs into
+    # "plants" or "sand" one house in ten (checked by eye at Ikon Park, 2013 vs 2026), far more often than a house
+    # really went up. A new block on a garden or car park is what changes the skyline, and that test holds.
+    stood = not big or not (fr >= 0.6 and fn < 0.4)
+    if stood: add.append(e); late += 1
     else: drop += 1
 out = OLD + add
 json.dump({'elements': out}, open(os.path.join(D, 'osm.json'), 'w'))
