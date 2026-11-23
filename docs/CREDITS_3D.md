@@ -7,7 +7,7 @@ These lines go on the game's credits screen before 1.0.
 
 - Streets, beach, buildings and mapped trees: © OpenStreetMap contributors (ODbL).
 - Buildings OpenStreetMap lacks: Microsoft Global ML Building Footprints (ODbL).
-- Tree positions: traced from Google Earth by eye-checked measurement (positions only; no imagery shipped).
+- Tree positions: traced from Google Earth (positions only; no imagery is shipped).
 - Tree heights where measured: "Canopy height: Meta and World Resources Institute, CC BY 4.0".
 - Hills out to kunanyi: AWS Terrain Tiles (Terrarium); sources: SRTM (NASA), GMTED2010 (USGS),
   ETOPO1 (NOAA) and the other sources listed in the tiles' attribution.

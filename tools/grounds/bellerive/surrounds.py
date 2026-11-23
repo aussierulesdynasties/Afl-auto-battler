@@ -14,6 +14,7 @@ assets/grounds/bellerive/surrounds.webp, trees.bin and buildings.bin (the MCG's 
 metres: x east, z south, the model's origin (the OSM pitch's centre) at 0, 0.
 Map data (c) OpenStreetMap contributors, ODbL.
 """
+import json
 import math
 import os
 import sys
@@ -49,8 +50,6 @@ SHALLOW = (74, 130, 136)
 SEA_SEEDS = [(0.0, -900.0), (-950.0, -300.0), (-600.0, 640.0)]
 TILES = 3   # 3 x 3 OpenStreetMap tiles over 2.2 km
 SPAN = 2200.0
-# Gardens: Bellerive's yards carry a tree every 28 m or so in Google Earth, smaller than the parks'.
-GARDEN_DENSITY = 1.0 / 420.0
 
 
 def fetch(i, j, path):
@@ -136,51 +135,11 @@ def sea_mask(ways):
     return sea
 
 
-def garden_trees(im, trees, ways, foot):
-    """Trees in Bellerive's back yards: on residential land that is clear of every road, roof and path
-    by 3 m, at GARDEN_DENSITY, never nearer than 8 m to another."""
-    a = np.asarray(im, int)
-    res = Image.new("L", (S.SIZE, S.SIZE), 0)
-    rd = ImageDraw.Draw(res)
-    for t, p in ways:
-        if t.get("landuse") == "residential" and len(p) > 3:
-            rd.polygon([S.px(*q) for q in p], fill=255)
-    ok = (np.asarray(res) > 0) & (np.abs(a - np.array(S.URBAN)).sum(-1) < 40) & ~foot
-    ok = np.asarray(Image.fromarray((~ok * 255).astype(np.uint8)).filter(ImageFilter.MaxFilter(7))) == 0
-    ys, xs = np.nonzero(ok)
-    rng = np.random.default_rng(31)
-    want = int(len(xs) * GARDEN_DENSITY)
-    cell, out = {}, []
-    for e, n in trees:
-        x, z = S.model_xz(e, n)
-        cell.setdefault((int(x // 8), int(z // 8)), []).append((x, z))
-    for _ in range(want * 6):
-        if len(out) >= want:
-            break
-        k = rng.integers(len(xs))
-        x, z = xs[k] - S.SIZE / 2 + rng.random(), ys[k] - S.SIZE / 2 + rng.random()
-        cx, cz = int(x // 8), int(z // 8)
-        near = [q for i in (-1, 0, 1) for j in (-1, 0, 1) for q in cell.get((cx + i, cz + j), [])]
-        if any((qx - x) ** 2 + (qz - z) ** 2 < 64 for qx, qz in near):
-            continue
-        cell.setdefault((cx, cz), []).append((x, z))
-        out.append((x, z))
-    return out
-
-
-# Trees near the ground: OpenStreetMap lists few of Bellerive's trees (the beach park's pines and gums, the
-# yards' trees), so within IMG_R every tree is stood where Meta and WRI's canopy height map has canopy
-# 2 m or more, a tree every 6 m or so, as tall as the canopy it stands in and as wide as its patch.
-# The map is open data (CC BY 4.0, cached in IMG_DIR); no aerial photo is used (the ones that show
-# Bellerive best, Esri's and the LIST's, do not allow derived data).
+# Tree heights: Meta and WRI's global canopy height map (1 m, from aerial and satellite imagery with GEDI
+# lidar; AWS open data, CC BY 4.0), read as a window round the ground and cached in IMG_DIR. A traced tree
+# takes the tallest canopy within its crown where the map has one.
 IMG_R = 700.0
 IMG_DIR = os.environ.get("BELLERIVE_IMG", "/tmp/bellerive_img")
-
-
-# Tree heights: Meta and WRI's global canopy height map (1 m, from aerial and satellite imagery with
-# GEDI lidar; AWS open data, CC BY 4.0), read as a window round the ground and cached in IMG_DIR. A tree
-# takes the tallest canopy within its crown. Tall and narrow means a pine or cypress (the beach park's and
-# the yards' conifers in Google Earth); the rest are gums and garden trees.
 CHM_URL = ("/vsicurl/https://dataforgood-fb-data.s3.amazonaws.com/forests/v1/alsgedi_global_v6_float/chm/"
            "313010023.tif")
 
@@ -215,43 +174,63 @@ def canopy_height(r=IMG_R + 60.0):
     return a, to_px
 
 
-def canopy_trees(existing, blocked):
-    """(x, z, height, crown radius, shade) rows for the canopy within IMG_R, clear of `existing` (x, z)
-    trees and of `blocked(x, z)` (the stadium, the sea). Shade 2 and up marks a pine or cypress."""
-    from scipy import ndimage
-    chm, to_px = canopy_height()
-    r = IMG_R + 20.0
-    e = np.arange(-r, r) + 0.5
-    X, Z = np.meshgrid(e, e)                      # model metres, rows north to south (z is south)
-    py, px = to_px(X, Z)
-    H = chm[np.clip(py.astype(int), 0, chm.shape[0] - 1), np.clip(px.astype(int), 0, chm.shape[1] - 1)]
-    can = ndimage.binary_opening(H >= 2.0)
-    lab, n = ndimage.label(can)
-    can &= np.isin(lab, 1 + np.nonzero(ndimage.sum(can, lab, range(1, n + 1)) >= 8)[0])
-    dist = ndimage.distance_transform_edt(can)
-    top = ndimage.maximum_filter(H, size=7)
-    ys, xs = np.nonzero(can)
-    order = np.argsort(-dist[ys, xs], kind="stable")
-    rng = np.random.default_rng(23)
+# The fence's ellipse (GroundModels.FIT["bellerive"]: centre x, z, long axis deg, half length, half width)
+# and the apron behind it. Trees stay out of it; past it the stadium's own plan (footprint) blocks them.
+# A plain 105 m circle stood here before and cut the tall gums along the east side's grass bank, which
+# Google Earth shows 85-105 m from the centre (measured 2026-11-23: canopy 13% there in Google Earth, 5% ours).
+FIELD = (0.31, -0.64, 68.7, 86.9, 66.77)
+APRON = 9.0
+
+
+def in_field(x, z):
+    cx, cz, ang, hl, hw = FIELD
+    a = math.radians(ang)
+    u = (x - cx) * math.cos(a) + (z - cz) * math.sin(a)
+    v = -(x - cx) * math.sin(a) + (z - cz) * math.cos(a)
+    return (u / (hl + APRON)) ** 2 + (v / (hw + APRON)) ** 2 < 1.0
+
+
+def ge_trees(osm):
+    """[(east, north, crown radius)] traced off Google Earth (ge_trees.json, ge_trees.py), less any within 4 m of a
+    tree OpenStreetMap maps (that one is kept)."""
+    pts = json.load(open(os.path.join(HERE, "ge_trees.json")))
     cell = {}
-    for x, z in existing:
-        cell.setdefault((int(x // 10), int(z // 10)), []).append((x, z, 2.5))
+    for e, n in osm:
+        cell.setdefault((int(e // 8), int(n // 8)), []).append((e, n))
     out = []
-    for k in order:
-        x, z = xs[k] - r + 0.5, ys[k] - r + 0.5
-        if math.hypot(x, z) > IMG_R or blocked(x, z):
+    for e, n, c in pts:
+        near = [q for i in (-1, 0, 1) for j in (-1, 0, 1) for q in cell.get((int(e // 8) + i, int(n // 8) + j), [])]
+        if not any((qe - e) ** 2 + (qn - n) ** 2 < 16.0 for qe, qn in near):
+            out.append((e, n, c))
+    return out
+
+
+def ge_tree_rows(ge, blocked):
+    """(x, z, height, crown radius, shade) rows for the traced trees, clear of `blocked(x, z)`. Each stands on
+    the crown as wide as Google Earth's canopy round it, the height the canopy height map's tallest within the
+    crown where it has one (Meta and WRI, CC BY 4.0), else one and a half crowns' width or so.
+    Tall and narrow means a pine or cypress."""
+    chm, to_px = canopy_height(r=S.SIZE / 2 + 40.0)
+    top = None
+    from scipy import ndimage
+    top = ndimage.maximum_filter(chm, size=7)
+    rng = np.random.default_rng(23)
+    out = []
+    for e, n, c in ge:
+        x, z = e, -n
+        # The painted map fades to plain town from 1,000 m (the MCG painter); no trees on the fade.
+        if blocked(x, z) or math.hypot(x, z) > 1000.0:
             continue
-        rad = float(np.clip(dist[ys[k], xs[k]] * 1.3, 2.6, 7.0))
-        cx, cz = int(x // 10), int(z // 10)
-        near = [q for i in (-1, 0, 1) for j in (-1, 0, 1) for q in cell.get((cx + i, cz + j), [])]
-        if any(math.hypot(qx - x, qz - z) < max(5.5, 0.85 * (rad + qr)) for qx, qz, qr in near):
-            continue
-        cell.setdefault((cx, cz), []).append((x, z, rad))
-        # The map's heights run low on small crowns (its 1 m cells average them): never shorter than the
-        # crown is wide.
-        h = float(np.clip(top[ys[k], xs[k]], max(4.5, rad * 1.4), 32.0))
+        rad = float(c)
+        py, px = to_px(x, z)
+        h = 0.0
+        if 0 <= int(py) < top.shape[0] and 0 <= int(px) < top.shape[1]:
+            h = float(top[int(py), int(px)])
+        if h < 3.0:
+            h = rad * 2.0 * rng.uniform(1.3, 1.8)
+        h = float(np.clip(h, max(4.5, rad * 1.4), 30.0))
         shade = rng.uniform(0.0, 1.0)
-        if h >= 11.0 and h > 3.0 * rad:            # tall and narrow: a pine or cypress
+        if h >= 11.0 and h > 3.0 * rad:
             rad = float(np.clip(h * 0.2, 2.2, rad)); shade += 2.0
         out.append((x, z, h, rad, shade))
     return np.array(out, "<f4").reshape(-1, 5)
@@ -294,7 +273,11 @@ def main():
         if t.get("leisure") == "nature_reserve" or t.get("natural") == "wood":
             t.setdefault("leisure", "park")
     trees = [e for e in trees if not in_foot([e])]
-    im, trees = S.paint(trees, ways)
+    # Every other tree is one traced off Google Earth (ge_trees.py): no park or garden fill.
+    ge = ge_trees(trees)
+    S.PARK_DENSITY = 0.0
+    n_osm = len(trees)
+    im, trees = S.paint(trees + [(e, n) for e, n, _ in ge], ways)
     arr = np.asarray(im).astype(float)
     sea = sea_mask(ways)
     # Beach: OpenStreetMap's sand, then the water over it, a lighter band in the shallows.
@@ -315,12 +298,9 @@ def main():
     water = water * (1 + ripple * 0.08)
     arr = np.where(sea[..., None], water, arr)
     arr[foot] = (118, 116, 110)
-    trees = [e for e in trees if not sea[tuple(int(c) for c in S.px(*e)[::-1])]]
-    gardens = [(x, z) for x, z in garden_trees(Image.fromarray(arr.astype(np.uint8)), trees, ways, foot | sea)
-               if math.hypot(x, z) > IMG_R]
-    trees += [(x + S.PITCH_E, -z + S.PITCH_N) for x, z in gardens]
     im = Image.fromarray(np.clip(arr, 0, 255).astype(np.uint8))
     im.save(os.path.join(OUT, "surrounds.webp"), quality=88, method=6)
+    trees = [e for e in trees[:n_osm] if not sea[tuple(int(c) for c in S.px(*e)[::-1])]]
     t = S.tree_list(trees)
     if len(t):
         keep = [not (foot | nets)[int(np.clip(z + S.SIZE / 2, 0, S.SIZE - 1)), int(np.clip(x + S.SIZE / 2, 0, S.SIZE - 1))]
@@ -328,10 +308,10 @@ def main():
         t = t[keep]
     def blocked(x, z):
         i, j = int(np.clip(z + S.SIZE / 2, 0, S.SIZE - 1)), int(np.clip(x + S.SIZE / 2, 0, S.SIZE - 1))
-        return bool(foot[i, j] or nets[i, j] or sea[i, j] or math.hypot(x, z) < 105.0)
-    img = canopy_trees([tuple(q) for q in t[:, :2]], blocked)
+        return bool(foot[i, j] or nets[i, j] or sea[i, j] or in_field(x, z))
+    img = ge_tree_rows(ge, blocked)
     t = np.concatenate([t.reshape(-1, 5), img]).astype("<f4")
-    print("canopy trees", len(img))
+    print("OpenStreetMap trees", len(t) - len(img), "Google Earth trees", len(img))
     t.astype("<f4").tofile(os.path.join(OUT, "trees.bin"))
     b = building_list(ways, in_foot)
     b = np.concatenate([b, ms_buildings(ways, in_foot, sea)]).astype("<f4")
