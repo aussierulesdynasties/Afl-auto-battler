@@ -210,15 +210,18 @@ for L in np.arange(2,per[-1],8.0):
     cu,cv=r*np.cos(th),r*np.sin(th)
     if -40<cu<46 and cv>0:continue
     cyl('col%03d'%k,(cu,cv),0.4,ZP,13.2,'white','white',12);k+=1
-# teal V-braces in the upper recess (27.7..33.9), every 8 m round the bowl
-segs=[]
-for L in np.arange(0,per[-1],8.0):
-    i=np.searchsorted(per,L)-1;th=TH[max(i,0)];th2=th+8.0/per[-1]*2*np.pi*0.5
+# braces in the upper recess (27.7..33.9): a pale grey-green post from the band up to the roof's fascia every 19 m, each
+# with one raking strut in the face's plane from the post's top down to the band 6 m along, alternate ones mirrored
+# (Wikimedia Commons Marvel_Stadium_2019, west side: braces about two fascia panels apart, about 19 m taking the recess
+# as 6.2 m tall; the first build had a V every 8 m, which read as a continuous white zigzag against Google Earth's dark band)
+segs=[];posts=[];BR=19.0
+for k,L in enumerate(np.arange(4.0,per[-1]-4.0,BR)):
+    i=np.searchsorted(per,L)-1;th=TH[max(i,0)];sg=1 if k%2==0 else -1;th2=th+sg*6.0/per[-1]*2*np.pi
     def P3(t_,o,z):r=se_r(t_,OA,OB,ON)+o;return (r*np.cos(t_),r*np.sin(t_),z)
     zt=min(33.9,float(roof_top(*P3(th,-5,0)[:2]))-1.6)
     if zt<29:continue
-    segs+=[(P3(th,-1.0,27.8),P3(th2,-1.0,zt)),(P3(th2,-1.0,zt),P3(th+8.0/per[-1]*2*np.pi,-1.0,27.8))]
-beams('recess_braces',segs,0.35,'teal')
+    posts+=[(P3(th,-1.0,27.8),P3(th,-1.0,zt))];segs+=[(P3(th,-1.0,zt-0.4),P3(th2,-1.0,27.8))]
+beams('recess_posts',posts,0.45,'teal');beams('recess_braces',segs,0.35,'teal')
 # ---------------- concourse plinth: ring 3 m outside the face, 0..6.5 m; west deck out to the measured balustrade
 def se_poly(o,n=K):return np.stack([(se_r(TH,OA,OB,ON)+o)*np.cos(TH),(se_r(TH,OA,OB,ON)+o)*np.sin(TH)],1)
 def z3(P,z):return np.c_[P,np.full(len(P),z)]
@@ -528,9 +531,16 @@ def stair(name,u0,u1,v0,v1,zt):
     V=[(u0,v0,zt),(u0,v1,zt),(u1,v1,0.0),(u1,v0,0.0),(u0,v0,0.0),(u0,v1,0.0)]
     add(name,V,[[0,1,2,3],[4,0,3],[5,2,1],[0,4,5,1]],['paving','concrete','concrete','concrete'])
 stair('plinth_stairN',FU0,-62.0,124.0,137.0,ZP);stair('plinth_stairS',FU1,60.5,126.0,137.0,ZP)
-# ---------------- sign box on the wall top under the roof red MARVEL panel + black STADIUM panel; lettering on the outward face only (ground's own sign, director 2026-11-19)
-prism('sign_red',[(-16,104.5),(-2.5,104.5),(-2.5,105.5),(-16,105.5)],36.5,41.2,'signred','signred',side_m=['signred','signred','sign_marvel','signred'])
-prism('sign_black',[(-2.5,104.5),(17.4,104.5),(17.4,105.5),(-2.5,105.5)],36.5,41.2,'signblack','signblack',side_m=['signblack','signblack','sign_stadium','signblack'])
+# ---------------- the MARVEL STADIUM sign stands on the roof over the west side, on short posts above the fascia: red MARVEL
+# panel + black STADIUM panel, lettering on the outward face only (ground's own sign, director 2026-11-19). Placed
+# 2026-11-23 from Google Earth's 3D picks (the sign's face at v 96-97, its top 49.4 m) and the Marvel_Stadium_2019 photo
+# (Wikimedia Commons: the sign clear above the roof's edge, posts under it); it had been tucked under the roof's edge.
+# Height from the sign's own proportions, which need no camera: 4.2 wide to 1 tall in the 2019 photo and 4.3 in Google
+# Earth's view from the west, so about 7.6 m on its 33.4 m width (Google Earth's mesh, which smooths thin tops, reads 4.7).
+SV0,SZ0,SZ1=97.0,45.6,53.2  # 45.6 = 6 tiles of 7.6 m, so the lettering texture starts at the panel's foot
+prism('sign_red',[(-16,SV0),(-2.5,SV0),(-2.5,SV0+1.0),(-16,SV0+1.0)],SZ0,SZ1,'signred','signred',side_m=['signred','signred','sign_marvel','signred'],bottom='signred')
+prism('sign_black',[(-2.5,SV0),(17.4,SV0),(17.4,SV0+1.0),(-2.5,SV0+1.0)],SZ0,SZ1,'signblack','signblack',side_m=['signblack','signblack','sign_stadium','signblack'],bottom='signblack')
+beams('sign_posts',[((u_,SV0+0.5,roof_top(u_,SV0+0.5)-0.2),(u_,SV0+0.5,SZ0)) for u_ in(-14.0,-6.0,2.0,10.0,16.0)],0.3,'silver')
 from shapely.geometry import Polygon,MultiPoint
 from shapely.ops import unary_union
 _S=np.array([uvw(u,v,0.0)[:2] for u,v in((0,0),(1,0),(0,1))]);_A=np.linalg.inv(np.stack([_S[1]-_S[0],_S[2]-_S[0]],1))
