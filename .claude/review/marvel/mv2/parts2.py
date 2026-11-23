@@ -381,17 +381,29 @@ for x,y,z,n in LAMPS:
 add('gantry_lamps',V,F,M)
 # screens: the two big ones hang from the end gantries, one off each side of the axis (diagonally opposite); four
 # smaller ones hang at the opening's corners, angled to the centre. Face material 'screen' (Oval3DScreens draws on it).
-def screen(nm,c,facing,w,h,ztop,d=1.0):
+def screen(nm,c,facing,w,h,ztop,d=1.0,hang=2.6,label=0.0):
     c=np.asarray(c,float);f=np.asarray(facing,float);f/=np.linalg.norm(f);s_=np.array([-f[1],f[0]])
     q=[c-s_*w/2-f*d,c+s_*w/2-f*d,c+s_*w/2,c-s_*w/2]
     prism(nm+'_box',[tuple(x) for x in q],ztop-h-0.5,ztop,'signblack','signblack',bottom='signblack')
     fr=[c-s_*(w/2-0.35)+f*0.02,c+s_*(w/2-0.35)+f*0.02]
     add(nm,[(fr[0][0],fr[0][1],ztop-h-0.15),(fr[1][0],fr[1][1],ztop-h-0.15),(fr[1][0],fr[1][1],ztop-0.65),(fr[0][0],fr[0][1],ztop-0.65)],[[0,1,2,3]],'screen',[[(0,0),(1,0),(1,1),(0,1)]])
-    for k in(-1,1):beams(nm+'_hang%d'%(k>0),[((*(c+s_*k*w/3-f*0.5),ztop),(*(c+s_*k*w/3-f*0.5),ztop+2.6))],0.12,'silver')
+    if hang>0:
+        for k in(-1,1):beams(nm+'_hang%d'%(k>0),[((*(c+s_*k*w/3-f*0.5),ztop),(*(c+s_*k*w/3-f*0.5),ztop+hang))],0.12,'silver')
+    if label>0:  # the MARVEL STADIUM name board on top (white lettering on black, tex sign_mvst)
+        prism(nm+'_labelbox',[tuple(x) for x in q],ztop,ztop+label,'signblack','signblack')
+        lw=min(w*0.8,label*8.5);fl=[c-s_*lw/2+f*0.02,c+s_*lw/2+f*0.02]
+        add(nm+'_label',[(fl[0][0],fl[0][1],ztop+0.1),(fl[1][0],fl[1][1],ztop+0.1),(fl[1][0],fl[1][1],ztop+label-0.1),(fl[0][0],fl[0][1],ztop+label-0.1)],[[0,1,2,3]],'sign_mvst',[[(0,0),(1,0),(1,1),(0,1)]])
 zg=ZO-1.3-2.4-0.6
-screen('screen_n',(-UO+0.6,20.0),(1,0),19.0,7.0,zg);screen('screen_s',(UO-0.6,-20.0),(-1,0),19.0,7.0,zg)
-for i,(cu,cv) in enumerate(((-UO+1.5,VW_IN-2.5),(UO-1.5,VW_IN-2.5),(-UO+1.5,VE_IN+2.7),(UO-1.5,VE_IN+2.7))):
-    screen('screen_c%d'%i,(cu,cv),(-np.sign(cu),-np.sign(cv)),9.0,4.6,ZI-1.2-2.4-0.6)
+# the two big screens hang centred on the long axis in front of the end girders, 27 x 8.5 m, face centre 29 m above
+# the field: Google Earth's angled views show both boxes centred in the opening, and the camera solved from the centre
+# square in the 2024 Hawthorn v Brisbane photo puts the far one at v 0, 27 m wide, centre 29 m up (2026-11-23)
+screen('screen_n',(-UO+1.4,0.0),(1,0),27.0,8.5,39.05,hang=0.4);screen('screen_s',(UO-1.4,0.0),(-1,0),27.0,8.5,39.05,hang=0.4)
+# the small scoreboards stand at the front of the top tier at the corners, 13.5 x 7 m, face centre 25.2 m above the
+# field, each with a MARVEL STADIUM name board on top: rays from the camera solved from the curtain-raiser photo meet
+# this model's top-tier front at u -83.5, v +-65..66.5, 24-27 m up; the Hawthorn v Brisbane photo shows one at a far corner the same size. The
+# south pair is by the stadium's symmetry (no photo of those corners yet).
+for i,(cu,cv) in enumerate(((-83.0,65.6),(83.0,65.6),(-83.0,-65.6),(83.0,-65.6))):
+    fc=np.array([-cu,-cv]);screen('screen_c%d'%i,(cu,cv),fc,13.5,7.0,5.4+25.2+3.9,hang=0,label=1.6)
 from shapely.geometry import Polygon,Point
 def vent_block(nm,f,z0,z1,zb0,zb1,bay=7.0,pier=1.6,depth=0.45,wall='bluepanel',top='concrete'):
     # the blue service blocks (Google Earth c_ne): solid blue cladding with big louvred vent openings cut
@@ -494,7 +506,8 @@ prism('eastC_walk',lean([(-21.0,-107.0),(-21.0,-116.0),(10.0,-116.0),(10.0,-107.
 # ---------------- west forecourt: glazed hall under the terrace, front v 139.4, roof = deck 6.5; stairs down at both ends
 FU0,FU1,FV=-47.0,46.5,139.4
 fb=[(u,v) for u,v in bal if FU0<u<FU1]
-prism('plinth_forecourt',[(FU0,120.5),(FU0,FV),(FU1,FV),(FU1,125.0)]+sorted(fb,key=lambda t:-t[0]),0.0,ZP,'curtain','paving')
+# its street front is blue-grey glass behind posts, darker than the south curtain wall (PC check 2026-11-23: GE (76, 102, 118))
+prism('plinth_forecourt',[(FU0,120.5),(FU0,FV),(FU1,FV),(FU1,125.0)]+sorted(fb,key=lambda t:-t[0]),0.0,ZP,'fcglass','paving')
 def stair(name,u0,u1,v0,v1,zt):
     V=[(u0,v0,zt),(u0,v1,zt),(u1,v1,0.0),(u1,v0,0.0),(u0,v0,0.0),(u0,v1,0.0)]
     add(name,V,[[0,1,2,3],[4,0,3],[5,2,1],[0,4,5,1]],['paving','concrete','concrete','concrete'])
