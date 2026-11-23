@@ -1,0 +1,95 @@
+# Keeps the repository tidy so dead branches and runs don't pile up or hold runners
+# (bro, 2026-11-23: "i tell you constantly to maintain it"). Every 6 hours, and on demand:
+#
+# Branches. Deletes a branch only when its tip is exactly what a closed PR last had, so no
+# commit is lost that the PR page can't give back ("Restore branch" on a closed PR):
+#   - the branch of a merged PR,
+#   - a roadmap-close/* notes branch whose PR is closed (the notes action remakes them),
+#   - a gh-readonly-queue/* branch left behind for a PR that is no longer open.
+# A branch with an open PR, or one with no PR at all, is never touched; this lists them.
+#
+# Runs. Cancels pull_request runs that test a commit the PR has already moved past, or a PR
+# that is closed, and force-cancels any run still queued after 24 hours (runs from 11 Nov
+# sat "queued" for 12 days and a normal cancel refuses them).
+#
+# DRY_RUN=1 (workflow_dispatch input) only prints what it would do.
+name: Repo hygiene
+on:
+  schedule:
+    - cron: "17 */6 * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Only print what would be deleted or cancelled"
+        type: boolean
+        default: false
+concurrency:
+  group: repo-hygiene
+  cancel-in-progress: false
+permissions:
+  contents: write
+  actions: write
+  pull-requests: read
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Sweep branches and runs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          DRY_RUN: ${{ inputs.dry_run && '1' || '0' }}
+        run: |
+          set -euo pipefail
+          act() { if [ "$DRY_RUN" = 1 ]; then echo "would: $*"; else "$@" >/dev/null || echo "failed: $*"; fi; }
+
+          gh api --paginate "repos/$GH_REPO/pulls?state=open&per_page=100" \
+            --jq '.[] | [.number, .head.ref, .head.sha] | @tsv' > open.tsv
+          gh api --paginate "repos/$GH_REPO/pulls?state=closed&per_page=100" \
+            --jq '.[] | select(.head.repo.full_name == "'"$GH_REPO"'") | [.number, .head.ref, .head.sha, (.merged_at != null)] | @tsv' > closed.tsv
+          gh api --paginate "repos/$GH_REPO/branches?per_page=100" \
+            --jq '.[] | [.name, .commit.sha] | @tsv' > branches.tsv
+          echo "$(wc -l < open.tsv) open PRs, $(wc -l < closed.tsv) closed, $(wc -l < branches.tsv) branches"
+
+          deleted=0; kept_nopr=0; kept_newer=0
+          while IFS=$'\t' read -r name sha; do
+            case "$name" in main) continue;; esac
+            cut -f2 open.tsv | grep -qxF "$name" && continue
+            if [[ "$name" == gh-readonly-queue/* ]]; then
+              n=$(echo "$name" | sed -n 's#^gh-readonly-queue/[^/]*/pr-\([0-9]*\)-.*#\1#p')
+              if [ -n "$n" ] && ! cut -f1 open.tsv | grep -qxF "$n"; then
+                act gh api -X DELETE "repos/$GH_REPO/git/refs/heads/$name"; deleted=$((deleted+1))
+              fi
+              continue
+            fi
+            rows=$(awk -F'\t' -v b="$name" '$2 == b' closed.tsv)
+            if [ -z "$rows" ]; then kept_nopr=$((kept_nopr+1)); continue; fi
+            same=$(echo "$rows" | awk -F'\t' -v s="$sha" '$3 == s')
+            if [ -z "$same" ]; then kept_newer=$((kept_newer+1)); echo "kept $name: commits after its PR closed"; continue; fi
+            if echo "$same" | awk -F'\t' '$4 == "true"' | grep -q . || [[ "$name" == roadmap-close/* ]]; then
+              act gh api -X DELETE "repos/$GH_REPO/git/refs/heads/$name"; deleted=$((deleted+1))
+            fi
+          done < branches.tsv
+
+          cancelled=0
+          for st in queued in_progress waiting; do
+            gh api --paginate "repos/$GH_REPO/actions/runs?status=$st&per_page=100" \
+              --jq '.workflow_runs[] | [.id, .event, .head_branch, .head_sha, .created_at] | @tsv'
+          done > runs.tsv
+          day_ago=$(date -u -d '24 hours ago' +%Y-%m-%dT%H:%M:%SZ)
+          while IFS=$'\t' read -r id event branch sha created; do
+            if [[ "$created" < "$day_ago" ]]; then
+              act gh api -X POST "repos/$GH_REPO/actions/runs/$id/force-cancel"; cancelled=$((cancelled+1)); continue
+            fi
+            [ "$event" = pull_request ] || continue
+            cur=$(awk -F'\t' -v b="$branch" '$2 == b {print $3}' open.tsv | head -1)
+            if [ -z "$cur" ] || [ "$cur" != "$sha" ]; then
+              act gh api -X POST "repos/$GH_REPO/actions/runs/$id/cancel"; cancelled=$((cancelled+1))
+            fi
+          done < runs.tsv
+
+          summary="Branches deleted: $deleted. Kept: $kept_nopr with no PR, $kept_newer with commits after their PR closed. Runs cancelled: $cancelled."
+          [ "$DRY_RUN" = 1 ] && summary="(dry run) $summary"
+          echo "$summary"
+          echo "$summary" >> "$GITHUB_STEP_SUMMARY"
