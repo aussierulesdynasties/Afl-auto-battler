@@ -77,6 +77,9 @@ env:
 jobs:
   # Decides whether the game tests run, and lays out the shards.
   plan:
+    # A draft runs nothing but the final "test" check, which stays red until the PR is
+    # marked ready (that event starts the real run), so a draft never queues runners.
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: ${{ fromJSON(((github.event_name == 'merge_group' || github.event_name == 'push') && vars.QUEUE_RUNNER == 'pc') && '["self-hosted","Linux","X64","afl-queue"]' || '"ubuntu-latest"') }}
     timeout-minutes: 10
     outputs:
@@ -258,6 +261,7 @@ jobs:
   # suite starts instead of when its shard reaches the suite that used to check it. Pull
   # requests and pushes to main both run gdlint on every file, so a PR sees what main will.
   lint:
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: ${{ fromJSON(((github.event_name == 'merge_group' || github.event_name == 'push') && vars.QUEUE_RUNNER == 'pc') && '["self-hosted","Linux","X64","afl-queue"]' || '"ubuntu-latest"') }}
     timeout-minutes: 10
     steps:
@@ -525,6 +529,12 @@ jobs:
           EXTRAS: ${{ needs.extras.result }}
         run: |
           echo "plan=$PLAN lint=$LINT code=$CODE shards=$SHARDS extras=$EXTRAS"
+          # A draft skips every other job, and its check must never pass: auto-merge would fire
+          # on it the moment the PR is marked ready, before the real run starts (#1359).
+          if [ "${{ github.event_name }}" = pull_request ] && [ "${{ github.event.pull_request.draft }}" = true ]; then
+            echo "::error::draft pull request: nothing has run, so this check does not pass. Mark it ready for review to run the tests."
+            exit 1
+          fi
           if [ "$LINT" != success ]; then
             echo "::error::the lint job failed: a static rule, gdlint or a data check (tools/lint/README.md); its log names each file and line"
             exit 1
