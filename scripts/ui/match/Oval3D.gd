@@ -742,7 +742,7 @@ static func hair_shells() -> Dictionary:
 			continue
 		var style := str(mi.name).trim_prefix("hair_")
 		var bone := (parent as BoneAttachment3D).bone_name
-		_shells[style] = {"mesh": _refit_hair(mi.mesh, mi.transform, bone), "bone": bone, "at": mi.transform}
+		_shells[style] = {"mesh": _lodded(_refit_hair(mi.mesh, mi.transform, bone)), "bone": bone, "at": mi.transform}
 		var tex := hair_glb.get_base_dir().path_join("hair_tex/%s.png" % style)
 		if ResourceLoader.exists(tex):
 			_shells[style]["tex"] = load(tex)
