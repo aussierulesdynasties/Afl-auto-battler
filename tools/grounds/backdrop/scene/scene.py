@@ -235,8 +235,10 @@ if spec.get('coast_v2'): exec(open(os.path.join(HERE, 'water21.py'), encoding='u
 else:
   _wo = mk_obj('bg_far_water', _wq.tolist(), _wf4.tolist(), mat_vcol('far_water', 0.9)); _wo.active_material.node_tree.nodes['Principled BSDF'].inputs['Specular IOR Level'].default_value = 0.15
   _wh = (1 - np.exp(-np.hypot(_wq[:, 0], _wq[:, 1]) / spec.get('haze_m', 22000)))[:, None] * 0.85
-  _wrj = os.path.join(D, 'water_rgb.json')
-  _wrgb = tuple(json.load(open(_wrj))['water_rgb']) if spec.get('real') and os.path.exists(_wrj) else (30, 54, 76)
+  # real place: the far water in the near water's own colour, so a river or harbour is one colour out to the horizon
+  # (per-place colours from the aerial or Sentinel-2 were tried: the aerial reads the Swan and the Derwent near-black
+  # and West Lakes glare-white, Sentinel-2's turbid medians read them as grey land)
+  _wrgb = tuple(PAL['water']) if spec.get('real') else (30, 54, 76)
   if _S2ON: _wh = _wh * 0   # real colours: the game's day haze does the distance
   _wc = np.array(lin(_wrgb))[None, :3] * (1 - _wh) + np.array(lin(PAL['haze']))[None, :3] * _wh
   set_corner_col(_wo.data, np.concatenate([_wc[_wf4.ravel()], np.ones((_wf4.size, 1))], 1))

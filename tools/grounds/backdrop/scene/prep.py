@@ -191,7 +191,6 @@ if spec.get('real'):
         _S2W = os.path.join(os.environ.get('WORK', '/home/user/work'), 's2', spec['name'] + '_far_water.npy')
         for _f in ('sea_mask.npy', 'water_rgb.json'):
             if os.path.exists(os.path.join(OUT, _f)): os.remove(os.path.join(OUT, _f))
-        _WRGB = None
         if os.path.exists(_S2W):
             from scipy.ndimage import map_coordinates as _mcw, binary_dilation as _bdw, binary_opening as _bow
             _W2 = np.nan_to_num(np.load(_S2W), nan=0.0); _wj = json.load(open(_S2W.replace('_far_water.npy', '_far.json')))
@@ -225,13 +224,6 @@ if spec.get('real'):
             np.save(os.path.join(OUT, 'sea_mask.npy'), _bow(_sea, iterations=2)[::SS, ::SS])
             _ia = np.asarray(img).copy(); _ia[_new] = PAL['water']; img = Image.fromarray(_ia); dr = ImageDraw.Draw(img)
             print('near water from Sentinel-2 and the aerial', int(_new.sum()), 'px')
-            # the water's own colour: the aerial's median over open water (or over the water found here), for the near
-            # ground and for scene.py's far water, so the harbour is one colour out to the horizon
-            _ow = _sea if _sea.sum() > 20000 else _new
-            if _ow.sum() > 2000:
-                _WRGB = [int(round(float(np.median(_Aw[..., k][_ow])))) for k in range(3)]
-                json.dump({'water_rgb': _WRGB, 'px': int(_ow.sum())}, open(os.path.join(OUT, 'water_rgb.json'), 'w'))
-                print('water colour from the aerial', _WRGB)
         _a0 = np.asarray(img).astype(np.int16); _hard = np.zeros(_a0.shape[:2], bool)
         for k in _HARD: _hard |= np.all(_a0 == np.array(PAL[k], np.int16)[None, None], -1)
         # mapped water, for scene.py's lift (the aerial's dark lawns come close to the water colour)
@@ -619,7 +611,6 @@ _a *= (1 + 0.26 * _s * _g)[..., None]
 img = Image.fromarray(np.clip(_a, 0, 255).astype(np.uint8))
 # hand-made grain: per-pixel value noise, never photo pixels
 a = np.asarray(img).astype(np.float32)
-if spec.get('real') and globals().get('_WRGB') is not None: a[_wm] = _WRGB   # mapped and found water in its own colour
 n1 = np.asarray(Image.fromarray((rng.random((N // 16 + 1, N // 16 + 1)) * 255).astype(np.uint8)).resize((N, N), Image.BICUBIC)).astype(np.float32) / 255 - 0.5
 n2 = rng.random((N, N)).astype(np.float32) - 0.5
 a *= (1 + 0.09 * n1 + 0.03 * n2)[..., None]
