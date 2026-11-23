@@ -481,6 +481,9 @@ func light_stands(model: Node) -> void:
 				own.set_shader_parameter("metallic_v", m.metallic)
 				own.set_shader_parameter("uv_scale", m.uv1_scale)
 				own.set_shader_parameter("uv_offset", m.uv1_offset)
+				if m.ao_enabled and m.ao_texture != null:
+					own.set_shader_parameter("use_ao", true)
+					own.set_shader_parameter("ao_tex", m.ao_texture)
 				seen[m] = own
 				_stand_mats.append(own)
 			mi.set_surface_override_material(i, seen[m])
