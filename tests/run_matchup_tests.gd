@@ -1472,8 +1472,8 @@ func _test_finals_screen_each_era() -> void:
 		var guard := 0
 		while guard < 8:
 			guard += 1
-			var done := s.is_season_over()
-			var name := SeasonRules.week_name(s.finals_format(), int(s.finals.get("week", 1)))
+			var done: bool = s.is_season_over()
+			var name: String = SeasonRules.week_name(s.finals_format(), int(s.finals.get("week", 1)))
 			if not done and (s.finals.get("replay", []) as Array).is_empty():
 				_check(str(hub.finals_words(s)[1]).begins_with(name.substr(0, 4)),
 						"%d week %d: the hub heads the week %s (%s)" % [y, int(s.finals["week"]), name, hub.finals_words(s)[1]])

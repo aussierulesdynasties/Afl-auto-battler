@@ -94,7 +94,10 @@ func _routes() -> Array:
 				if code == "":
 					continue
 				var kind := "L" if side.begins_with("RL") else "W"
-				for pm in weeks[w - 1][2]:
+				# Ranked slots rank week one's results (the McIntyre eight) or
+				# the week before's (the final six's elimination finals).
+				var from: Array = weeks[0 if side.begins_with("R") else w - 1][2]
+				for pm in from:
 					if str(slots.get(kind + "_" + str(pm[0]), "")) == code:
 						out.append([str(pm[0]), str(m[0]), kind])
 	return out
