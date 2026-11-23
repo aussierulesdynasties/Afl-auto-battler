@@ -136,7 +136,7 @@ func build(p_director: MatchDirector, home: String, away: String) -> void:
 	add_child(ball)
 	camera = Camera3D.new()
 	camera.fov = 30.0
-	camera.far = GroundModels.BACKDROP_FAR if _far_view else 900.0
+	camera.far = _far_m if _far_view else 900.0
 	# Placed in world space, so turning the ground for a change of ends (set_ends) leaves
 	# the camera where the broadcast puts it.
 	camera.top_level = true
@@ -525,6 +525,7 @@ func _ground_model(slug: String, base := "", home := "", away := "") -> void:
 	add_child(root)
 	Oval3DQuality.apply_model(quality, root)
 	if GroundModels.has_backdrop(slug, base):
+		_far_m = GroundModels.backdrop_far(slug)
 		_backdrop_view()
 	if turf == null:   # a bare view (the ground inspector's test): the model alone
 		return
@@ -554,12 +555,13 @@ const HAZE_TO := 9000.0
 
 
 var _far_view := false
+var _far_m := GroundModels.BACKDROP_FAR
 
 
 func _backdrop_view() -> void:
 	_far_view = true
 	if camera != null:
-		camera.far = GroundModels.BACKDROP_FAR
+		camera.far = _far_m
 	_backdrop_haze()
 	if turf != null:
 		turf._sky_view()

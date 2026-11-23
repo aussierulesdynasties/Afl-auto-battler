@@ -15,6 +15,8 @@ if g in ('barossa', 'summit', 'bruce'): s['palette']['ground_default'] = [124, 1
 if os.environ.get('BG_REAL'): s['cover'].append(['leisure', 'track', 'sand'])
 if os.environ.get('BG_REAL'):   # building sites: bare sand or fill, coloured from the aerial, not paving
     s['cover'] = [[k, v.replace('|construction', ''), c] if k == 'landuse' else [k, v, c] for k, v, c in s['cover']] + [['landuse', 'construction', 'park_dry']]   # race and trotting tracks: their own patch, coloured from the aerial
+# real place: how far out the city's towers (30 m and up, Overture) still stand on the skyline; the CBD is in view from these
+s['city_r_m'] = {'ikon_park': 5500, 'whitten': 8000, 'windy_hill': 8500}.get(g, 4000)
 if os.environ.get('BG_REAL'): s['tree_lod_m'] = [300.0, 700.0]   # real place: every crown kept, simpler sooner
 if os.environ.get('BG_REAL'): s['real'] = True   # real place: aerial colours, Sentinel-2, canopy, Overture heights (real.py)
 _lmj = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'real_lm.json')

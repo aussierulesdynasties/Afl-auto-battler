@@ -657,8 +657,14 @@ static func _pick(src, used: PackedInt32Array):
 
 
 ## How far a camera sees when the ground has its surroundings (backdrop()): the city skyline and
-## the hills. Without them the match view stops at 900 m.
+## the hills. Without them the match view stops at 900 m. Grounds whose CBD skyline stands further
+## off than that see further (Whitten Oval and Windy Hill: the city towers 7 to 8.5 km away).
 const BACKDROP_FAR := 7000.0
+const BACKDROP_FAR_AT := {"whitten": 9000.0, "windy_hill": 9500.0}
+
+
+static func backdrop_far(slug: String) -> float:
+	return float(BACKDROP_FAR_AT.get(slug, BACKDROP_FAR))
 
 
 ## The ground's surroundings past its own street (row 202 2b, the background scenes): the park,
@@ -692,7 +698,7 @@ static func backdrop(slug: String, base := "") -> Node3D:
 ## Adelaide's model carries a 6 km grass plane; the ground kit's first drafts (#1930) a 240 m concourse disc;
 ## the WACA, Bruce and North Hobart a flat plate round the stands (tools/grounds/backdrop/scene: run1.sh SKIP).
 const BACKDROP_HIDES := {"adelaide": ["ao_ground"], "barossa": ["concourse"], "sky": ["concourse"],
-	"jiangwan": ["concourse"], "hands": ["concourse"], "blacktown": ["concourse"], "summit": ["concourse"],
+	"jiangwan": ["concourse"], "hands": ["concourse"], "summit": ["concourse"],
 	"macpoint": ["concourse"], "waca": ["land", "road", "brick"], "bruce": ["g_ground"], "north_hobart": ["ground"]}
 
 const BACKDROP_SHADER := preload("res://scripts/ui/match/oval3d_backdrop.gdshader")
@@ -721,6 +727,8 @@ static func _backdrop_materials(model: Node) -> void:
 				(mi as MeshInstance3D).set_surface_override_material(i, made[key])
 			else:
 				mat.vertex_color_use_as_albedo = true
+				if key.begins_with("headstone"):   # each stone is one face, seen from both sides
+					mat.cull_mode = BaseMaterial3D.CULL_DISABLED
 				mat.disable_receive_shadows = true   # past the shadow map's reach it reads blue-grey
 				if mat.roughness >= 0.7:
 					# matte ground (grass, paving, roads, roofs of far blocks): seen at a low angle its sky

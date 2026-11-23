@@ -452,6 +452,11 @@ for el in js:
     print('baseball home', H.round(1), 'dir', round(math.degrees(a0)))
 # under the stadium model: grass, so any gap in the model's surface shows grass, never park dirt
 pass  # pad lawn moved above paint_at
+# cemeteries (real place): their aisle paths are not painted as paths
+from shapely.geometry import Polygon as _SPo, Point as _SPt
+from shapely.ops import unary_union as _SUu
+_CEMP = [_SPo(ring(el)) for el in js if el['type'] == 'way' and (el.get('tags', {}).get('landuse') == 'cemetery' or el.get('tags', {}).get('amenity') == 'grave_yard') and len(ring(el)) >= 4]
+_CEMP = _SUu([q if q.is_valid else q.buffer(0) for q in _CEMP]) if _CEMP else None
 # linear features
 for el in js:
     t = el.get('tags', {})
@@ -466,6 +471,7 @@ for el in js:
     hw = t.get('highway')
     if hw and t.get('bridge') and t.get('bridge') != 'no': hw = None
     if hw == 'service' and t.get('service') == 'parking_aisle' and spec.get('real'): hw = None   # a lot's aisles are its own asphalt (cars.py, pools.py)
+    if hw in ('path', 'footway') and spec.get('real') and _CEMP is not None and _CEMP.contains(_SPt(*np.mean(pts, 0))): hw = None   # a cemetery's grave aisles: not paved paths (pools.py stands the headstone rows on them)
     if hw:
         wd = {'motorway': 22, 'trunk': 18, 'primary': 16, 'secondary': 13, 'tertiary': 11, 'residential': 8,
               'unclassified': 8, 'service': 5, 'footway': 2.5, 'path': 2, 'cycleway': 2.5, 'pedestrian': 6}.get(hw)
