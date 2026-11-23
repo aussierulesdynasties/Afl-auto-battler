@@ -1,0 +1,4 @@
+{"note": "Roof membrane below the straight line from the outer edge to the inner edge, by t = fraction of the way in (0 outer edge, 1 inner edge). valley: along the trusses; mid: mid-bay. From 260 straight-down Google Earth hovers on 13 bays at d -1 to -36 m (roof_jobs.py, 2026-11-22; 1 m readouts, 13 per point, so about +-0.3 m), lightly smoothed.",
+ "t": [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0],
+ "valley": [0.0, 1.0, 2.2, 2.1, 2.1, 2.1, 2.0, 1.5, 0.8, 0.2, 0.0],
+ "mid": [0.0, 0.7, 1.9, 1.8, 1.6, 1.1, 0.9, 0.6, 0.3, 0.1, 0.0]}
