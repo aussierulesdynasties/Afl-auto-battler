@@ -159,11 +159,14 @@ class Sat:
 
 # ------------------------------------------------------------------ painting the land
 
+# Dry ground matched to Google Earth on the PC render (2026-11-23, straight-down view, median of open paddock and
+# town patches): GE's paddocks are about (152, 127, 103) and its town (107, 97, 80) with roofs and trees; the first
+# palette rendered 20-30% brighter and yellower.
 C = {
-    "paddock": (184, 164, 116), "stubble": (198, 180, 132), "meadow": (160, 150, 98), "vine_soil": (150, 128, 98),
-    "vine_grass": (138, 132, 88), "town": (150, 144, 108), "lawn": (112, 128, 70), "road": (88, 88, 90),
-    "track": (178, 158, 120), "water": (70, 84, 78), "creek": (118, 104, 82), "wood": (122, 112, 80),
-    "orchard": (130, 128, 86), "quarry": (210, 196, 170), "rail": (124, 110, 96), "yard": (140, 132, 100),
+    "paddock": (155, 133, 110), "stubble": (152, 126, 101), "meadow": (138, 126, 100), "vine_soil": (140, 118, 94),
+    "vine_grass": (128, 122, 86), "town": (130, 120, 98), "lawn": (112, 128, 70), "road": (88, 88, 90),
+    "track": (160, 140, 112), "water": (70, 84, 78), "creek": (112, 98, 78), "wood": (108, 96, 74),
+    "orchard": (124, 120, 84), "quarry": (196, 182, 158), "rail": (118, 104, 90), "yard": (128, 118, 98),
 }
 ROAD_W = {"primary": 10.0, "secondary": 9.0, "tertiary": 8.0, "residential": 7.0, "unclassified": 6.5,
           "service": 4.0, "track": 3.5, "living_street": 5.0, "cycleway": 2.5, "footway": 2.0, "path": 1.8}
