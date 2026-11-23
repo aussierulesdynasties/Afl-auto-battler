@@ -930,8 +930,16 @@ func _test_truth(res: Dictionary) -> Array:
 ## the ball is being played, so that time is not counted against the collect.
 ## Main has no such man (its scrap moved the ball with nobody on it): its 110 is
 ## unchanged. On main 739db4b22: 91; the spilled-ball scrap: 116, 1 after pressure.
+## Set from the spread (2026-11-23, #2080): main 354ceeb9 read 118 and #2005 with
+## #2080 read 123 with no real shift. Paired over 44 seeds (1-44) the change is
+## -0.07 pauses a match (standard error 0.63); a match averages 25.7 with a
+## spread of 5.5 to 5.8, so the four seeds sum to about 103 give or take 11.5.
+## 120 sat 1.5 spreads above that and failed about one redraw in fourteen. 130 is
+## 2.3 spreads up (about 1 in 100 at random). The price: a rise of 7 pauses a
+## match (a quarter more, 28 on the four seeds) trips it more often than not;
+## a smaller rise needs the paired seeds to see it.
 const PAUSE_S := 1.5
-const PAUSE_MAX := 120
+const PAUSE_MAX := 130
 const PAUSE_PRESSURE_MAX := 4
 
 
