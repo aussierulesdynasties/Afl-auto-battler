@@ -489,6 +489,7 @@ func _test_preliminary_finals_crossover() -> void:
 			"PF1 should be W_QF1 v W_SF2, got %s" % [pf])
 	_check(pf.size() == 2 and pf[1]["home"] == "Q2" and pf[1]["away"] == "S1",
 			"PF2 should be W_QF2 v W_SF1, got %s" % [pf])
-	var ui: Array = FinalsBracket.WEEKS[3][2]
+	var ui: Array = FinalsBracket.weeks_for("wildcard10")[3][2]
 	_check(ui[0][2] == "W_QF1" and ui[0][3] == "W_SF2" and ui[1][2] == "W_QF2" 			and ui[1][3] == "W_SF1", "Bracket PF wiring should cross over, got %s" % [ui])
-	_check(FinalsBracket.ROUTES.has(["SF2", "PF1", "W"]) 			and FinalsBracket.ROUTES.has(["SF1", "PF2", "W"]), "Bracket routes should cross over")
+	var routes := FinalsBracket.routes_for("wildcard10")
+	_check(routes.has(["SF2", "PF1", "W"]) and routes.has(["SF1", "PF2", "W"]), "Bracket routes should cross over")
