@@ -74,7 +74,9 @@ The model is the stadium as it stood, so its surroundings are the place as it wa
 3. `python3 era_merge.py <g> <year>`: the era's map, plus today's buildings that were only mapped later. A big
    block (1,500 m² and up) is dropped as built since when the era's aerial shows plants, sand or asphalt under it and
    today's shows a roof; house-sized ones always stay (roof colour tests flip one house in ten between releases).
-   Anything beyond the era's aerial stays. Check the release's capture date first (Wayback metadata layer): the
+   Anything beyond the era's aerial stays. Every block and tower mapped after the snapshot is judged by eye from
+   contact sheets (era aerial beside today's) and recorded in `era_review.json` (built since / a lower building then /
+   stood); anything mapped since on the era map's golf courses, water or building sites is left out. Check the release's capture date first (Wayback metadata layer): the
    oldest Esri imagery is 2013 (Ikon Park and Whitten, release 11509 = 31 Aug 2013; Football Park = 5 Feb 2013).
 4. `SAT_RELEASE=<id> BG_REAL=1 bash run1.sh <g>`.
 

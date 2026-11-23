@@ -56,13 +56,33 @@ def frac(SA, q, paved):
     asph = (px.max(1) - px.min(1) < 18) & (Vv > 55) & (Vv < 135)
     return float((veg | bare | (asph & paved)).mean())
 oldids = {e['id'] for e, _ in OB}
+# verdicts by eye on every block and tower OSM mapped after the snapshot (era_review.json, from contact sheets of the
+# era aerial beside today's): the colour tests below only decide ids nobody has looked at
+_rv = json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'era_review.json'))).get(g, {})
+REV, GONE, LOW = set(_rv.get('reviewed', [])), set(_rv.get('built_since', [])), set(_rv.get('low', []))
+# open land in the era's own map (a golf course, water, a building site): anything mapped on it since was built since
+# (not parks or woods: the zoo, pavilions and colleges stand inside them)
+OPEN = [q for e, q in ((e, poly(e)) for e in OLD if e['type'] == 'way' and (e.get('tags', {}).get('leisure') == 'golf_course'
+        or e.get('tags', {}).get('natural') == 'water'
+        or e.get('tags', {}).get('landuse') in ('construction', 'brownfield', 'greenfield'))) if q is not None and q.area > 2000]
+otree = STRtree(OPEN) if OPEN else None
 keep, drop, late = 0, 0, 0
 add = []
 for e, q in bld(NOW):
     if e['id'] in oldids or q is None: continue
     hit = any(OB[i][1].intersection(q).area > 0.3 * min(q.area, OB[i][1].area) for i in tree.query(q))
     if hit: continue   # redrawn since: the era's outline stands
-    big = q.area >= 1500   # asphalt counts as open ground only under a big block: a house's iron roof reads as asphalt
+    if e['id'] in REV:
+        if e['id'] in GONE: drop += 1; continue
+        if e['id'] in LOW:   # a lower building stood there: today's outline at one storey
+            e = dict(e, tags={k: v for k, v in e['tags'].items() if k not in ('height', 'building:levels', 'min_height')}); e['tags'].update(height='6', era='low')
+        add.append(e); late += 1; continue
+    c = q.representative_point()
+    if otree is not None and any(OPEN[i].contains(c) for i in otree.query(c)): drop += 1; continue
+    t = e.get('tags', {})
+    try: tall = float(t.get('building:levels') or 0) >= 4 or float(str(t.get('height') or 0).split()[0]) >= 12
+    except ValueError: tall = False
+    big = q.area >= 1500 or tall   # a block or a tower; asphalt counts as open ground only under one (a house's iron roof reads as asphalt)
     fr, fn = frac(SA_OLD, q, big), frac(SA_NOW, q, big)
     if fr is None or fn is None: add.append(e); late += 1; continue   # beyond the era's aerial: nothing to check it against, so it stands
     # built since = open ground then (plants, bare sand, or car-park asphalt under a big block, over 60% of the outline) and not now (under
@@ -71,7 +91,11 @@ for e, q in bld(NOW):
     # House-sized ones always stand: at 0.5 m the two aerials' colour casts and lean flip iron and tiled roofs into
     # "plants" or "sand" one house in ten (checked by eye at Ikon Park, 2013 vs 2026), far more often than a house
     # really went up. A new block on a garden or car park is what changes the skyline, and that test holds.
-    stood = not big or not (fr >= 0.6 and fn < 0.4)
+    # A block or tower must also show today's roof in the era's aerial (median colour within 28 after the cast match):
+    # a construction site or the older building that stood there reads differently (Crown Towers, Queens Riverside).
+    a, b = med(SA_OLD, q), med(SA_NOW, q)
+    same = a is not None and b is not None and float(np.abs(a - b).mean()) < 28
+    stood = not big or (same and not (fr >= 0.6 and fn < 0.4))
     if stood: add.append(e); late += 1
     else: drop += 1
 out = OLD + add
