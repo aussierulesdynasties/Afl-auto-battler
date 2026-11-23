@@ -7,6 +7,10 @@
 #   - has auto-merge turned on (the author asked for it to land),
 #   - is labelled "roadmap" or changes only *.md files,
 #   - has no conflict, and every check on its head has passed (or skipped).
+# It waits while any PR is in the merge queue (director, 2026-11-22: "yes" to docs notes
+# waiting until the queue is empty). A merge straight onto main makes the queue throw away
+# and restart every group it is testing; one roadmap note cost the front five PRs 45 minutes.
+# If the queue can't be read, it waits too.
 # It merges with --admin using the MERGE_TOKEN secret, an admin's token: the "main merge
 # queue" ruleset lets Repository admins bypass it, and the GitHub Actions app cannot be
 # added there. Without the secret it tries the workflow token, which the ruleset refuses;
@@ -41,6 +45,16 @@ jobs:
         run: |
           set -u
           merged=0
+          queued=$(gh api graphql -f owner="${GH_REPO%%/*}" -f name="${GH_REPO##*/}" -f query='
+            query($owner: String!, $name: String!) {
+              repository(owner: $owner, name: $name) {
+                mergeQueue(branch: "main") { entries { totalCount } }
+              }
+            }' --jq '.data.repository.mergeQueue.entries.totalCount' 2>/dev/null) || queued=""
+          if [ "$queued" != "0" ]; then
+            echo "Merge queue holds ${queued:-an unknown number of} PR(s); docs and roadmap PRs wait until it is empty."
+            exit 0
+          fi
           prs=$(gh pr list --state open --limit 200 --json number,isDraft,autoMergeRequest \
             --jq '.[] | select(.isDraft | not) | select(.autoMergeRequest != null) | .number')
           [ -z "$prs" ] && { echo "No open PR has auto-merge on."; exit 0; }
