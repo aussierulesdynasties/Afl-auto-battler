@@ -31,8 +31,8 @@ extends RefCounted
 ## TV OP-33): the shot comes from the first of them with a clear line to the ruckman, so no other
 ## man stands in front of him.
 ##
-## After a goal (rule 2.96) one replay: the last moments of the kick, from the same camera and
-## framing as a set shot's (behind the far goals, on the posts), at half real speed (a 1.7 s kick and flight shows over 3.4 s), while play goes on
+## After a goal (rule 2.96) one replay: the last moments of the kick, from the camera behind the
+## goals he kicked at, looking back at him with the posts in front (_replay_shot), at half real speed (a 1.7 s kick and flight shows over 3.4 s), while play goes on
 ## underneath and the players walk back; the centre bounce waits for the replay to end. A skip
 ## (skip_replay) brings the picture back live at once. A behind gets none, except the deciding
 ## one (it is the last score and wins or levels the game), replayed after the siren.
@@ -65,8 +65,15 @@ static func wing_50() -> float:
 
 const CLEAR := 0.5            # m: a man nearer the sight line than this blocks the close-up
 const REPLAY_RATE := 0.5      # the replay plays at half real speed
-const REPLAY_BEFORE := 0.58   # director s of the replay before the kick
+const REPLAY_BEFORE := 1.2    # director s of the replay before the kick: him gathering and kicking
 const REPLAY_AFTER := 0.23    # ...and after the ball reaches the goals
+const REPLAY_TIGHT := 9.0     # m across the replay's picture at the kicker as he kicks
+const REPLAY_OPEN := 0.55     # ...and wider by this per metre the ball has gone
+const REPLAY_AIM_Y := 1.3     # m: the replay aims no lower than this over the ball
+const REPLAY_WIDE := 16.0     # m: it widens no further than after the ball has gone this far
+const REPLAY_HOLD := 12.0     # m out from the goal line the replay stops following the ball...
+const REPLAY_HOLD_Y := 5.0    # ...and aims at least this high there, both posts in the picture
+const REPLAY_FOLLOW := 6.0    # 1/s: how quickly the replay's operator follows the ball (real time)
 const WIPE_S := 0.5           # real s of a sting: the band covers the picture at its middle
 const LONG_KICK := 40.0       # m: a kick at least this long is watched on the wide shot
 const ZOOM_S := 0.5           # real s a zoom takes, in or out
@@ -89,6 +96,7 @@ var _close_who := -1          # the ruckman the close-up is on; -1 none
 var _close_trail: Array = []
 var _rec: Array = []          # [{t, men: [[xform, rots, hip]], ball, x}] for a replay; director time
 var _rec_k := -1              # the shot being recorded (its event); -1 none
+var _rec_x := 0.0             # ...and the goal line it is kicked at
 var _kick_t := -1.0           # director time the ball left his boot; -1 not yet
 var _score_t := -1.0          # ...and reached the goals
 var _replay: Array = []       # the clip being replayed (a slice of _rec); empty when live
@@ -98,6 +106,8 @@ var _replay_t := 0.0          # where the replay is (director time)
 var _after_siren: Array = []  # the deciding behind's clip, for after the siren
 var _after_side := 0          # ...and the side that kicked it
 var replaying := false        # the picture shows a replay
+var _r_aim := Vector3.INF     # where the replay's camera aims (followed in real time)
+var _r_width := 0.0           # ...and m across the picture there
 var _wipe := -1.0             # real s into a sting; -1 none
 var _out := false             # the sting is taking the picture out of the replay
 var _wipe_clip: Array = []    # the replay the sting is covering the cut to; [] a sting back to live
@@ -317,26 +327,37 @@ func _clear_eye(who: int) -> Vector3:
 ## Rule 2.96: while a shot at goal is on, every man's place and pose, the umpires' and the
 ## ball's, each frame (director time), for its replay.
 func _record() -> void:
-	var s := oval.director.shot_now()
+	var d = oval.director
+	var now: float = d.time
+	if not _rec.is_empty() and now < float(_rec[-1]["t"]) - 0.5:
+		_rec.clear()  # the clock went back: a new period
+	if not _rec.is_empty() and now <= float(_rec[-1]["t"]):
+		return  # paused
+	var s: Dictionary = d.shot_now()
 	if s.is_empty():
+		if _score_t >= 0.0 and now > _score_t + REPLAY_AFTER + SHOT_TAIL + 0.5:
+			_score_t = -1.0  # a score with no replay (a behind): done with
 		if _score_t < 0.0:
 			_rec_k = -1
-			_rec.clear()
-		return
-	var k := int(s["k"])
-	if k != _rec_k:
-		_rec_k = k
-		_rec.clear()
-		_kick_t = -1.0
-		_score_t = -1.0
-	var phase := str(s["phase"])
-	var now := oval.director.time
-	if phase == "flight" and _kick_t < 0.0:
-		_kick_t = now
-	if (phase == "emit" or phase == "celebrate") and _score_t < 0.0:
-		_score_t = now
+			_kick_t = -1.0
+	else:
+		var k := int(s["k"])
+		if k != _rec_k:
+			_rec_k = k
+			_kick_t = -1.0
+			_score_t = -1.0
+			_rec_x = (s["to"] as Vector2).x
+		var phase := str(s["phase"])
+		if phase == "flight" and _kick_t < 0.0:
+			_kick_t = now
+		if (phase == "emit" or phase == "celebrate") and _score_t < 0.0:
+			_score_t = now
 	if _score_t >= 0.0 and now > _score_t + REPLAY_AFTER + 0.1:
 		return
+	# Outside a shot only the last moments are kept: a shot's replay starts before its kick.
+	if _rec_k < 0:
+		while not _rec.is_empty() and now - float(_rec[0]["t"]) > REPLAY_BEFORE + 0.2:
+			_rec.pop_front()
 	var men := []
 	for f in oval.players + oval.umpires:
 		var skel: Skeleton3D = (f as Dictionary)["skel"]
@@ -344,7 +365,7 @@ func _record() -> void:
 		for b in range(skel.get_bone_count()):
 			rots.append(skel.get_bone_pose_rotation(b))
 		men.append([((f as Dictionary)["node"] as Node3D).transform, rots, skel.get_bone_pose_position(0)])
-	_rec.append({"t": now, "men": men, "ball": oval.ball.transform, "x": (s["to"] as Vector2).x})
+	_rec.append({"t": now, "men": men, "ball": oval.ball.transform})
 
 
 ## The ball has reached the goals: a goal's replay now; the deciding behind's after the siren.
@@ -353,14 +374,22 @@ func _after_score() -> void:
 	if k < 0 or _kick_t < 0.0 or _score_t < 0.0:
 		return
 	var clip := []
+	var kick := Vector3.INF  # where the ball was as it left his boot (the record nearest the kick)
 	for r in _rec:
 		if float(r["t"]) >= _kick_t - REPLAY_BEFORE and float(r["t"]) <= _score_t + REPLAY_AFTER:
 			clip.append(r)
+		if kick == Vector3.INF or float(r["t"]) < _kick_t:
+			kick = (r["ball"] as Transform3D).origin
 	_rec_k = -1
 	_rec.clear()
+	var kick_t := _kick_t
 	_score_t = -1.0
+	_kick_t = -1.0
 	if clip.size() < 2:
 		return
+	clip[0]["kick_t"] = kick_t
+	clip[0]["kick"] = kick
+	clip[0]["x"] = _rec_x
 	replay_side = int((oval.director.events[k] as Dictionary).get("side", 0))
 	if str((oval.director.events[k] as Dictionary).get("kind", "")) == "goal":
 		_sting_in(clip)
@@ -418,6 +447,8 @@ func _start_replay(clip: Array) -> void:
 	_replay_t = float(clip[0]["t"])
 	_replay_end = float(clip[-1]["t"])
 	_replay_x = float(clip[0]["x"])
+	_r_aim = Vector3.INF
+	_r_width = 0.0
 	replaying = true
 	shot = "goals"
 
@@ -474,7 +505,40 @@ func _play_replay(wall: float) -> void:
 			skel.set_bone_pose_rotation(b, (q0[b] as Quaternion).slerp(q1[b], u))
 		skel.set_bone_pose_position(0, (m0[2] as Vector3).lerp(m1[2], u))
 	oval.ball.transform = (r0["ball"] as Transform3D).interpolate_with(r1["ball"], u)
-	_goals_shot(signf((oval.global_transform * Vector3(_replay_x, 0.0, 0.0)).x))
+	_replay_shot(wall)
+
+
+## The replay's camera: the one behind the goals he kicked at (15 m up, 25 m back), looking back
+## up the ground at him, as TV replays a goal (the director, 2026-11-22, of a replay shot from the
+## far end: "idk what the replay was even of"). Its operator follows the ball: tight on the kicker
+## (REPLAY_TIGHT across) as he kicks, widening as the ball comes in (REPLAY_OPEN per metre it has
+## travelled), so it comes at the lens through the posts with both posts in the picture.
+## `wall` real seconds since the last frame; 0 places the camera at once.
+func _kick_at() -> float:
+	return float(_replay[0]["kick_t"])
+
+
+func _replay_shot(wall: float) -> void:
+	var end := signf((oval.global_transform * Vector3(_replay_x, 0.0, 0.0)).x)
+	var eye := Vector3(end * (MatchMotion.HALF_LEN + EYE_BACK), EYE_UP, 0.0)
+	var from := oval.global_transform * (_replay[0]["kick"] as Vector3)
+	var bp := oval.ball.global_position
+	var gone := 0.0
+	if _replay_t > _kick_at():
+		gone = Vector2(bp.x - from.x, bp.z - from.z).length()
+	# The operator stops panning REPLAY_HOLD out from the goal line: the ball comes on at the lens
+	# through the posts, and the picture never tips down into the stand he stands in.
+	var line := end * MatchMotion.HALF_LEN
+	var hold := line - end * REPLAY_HOLD
+	var held := (bp.x - hold) * end > 0.0
+	var want := Vector3(hold if held else bp.x, clampf(bp.y, REPLAY_AIM_Y, 8.0), bp.z)
+	if held:
+		want.y = maxf(want.y, REPLAY_HOLD_Y)
+	gone = minf(gone, REPLAY_WIDE)
+	var k := 1.0 - exp(-wall * REPLAY_FOLLOW) if wall > 0.0 else 1.0
+	_r_aim = want if _r_aim == Vector3.INF else _r_aim.lerp(want, k)
+	_r_width = lerpf(_r_width if _r_width > 0.0 else REPLAY_TIGHT, REPLAY_TIGHT + gone * REPLAY_OPEN, k)
+	_shoot(eye, _r_aim, _r_width)
 
 
 ## The goals camera for a kick at the goals at world end `end` (+1 or -1): it stands behind the

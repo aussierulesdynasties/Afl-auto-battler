@@ -10,6 +10,10 @@ uniform vec2 centre = vec2(0.0);        // the square's centre, ground metres
 uniform float span = 16.0;              // the square's side, metres
 uniform vec3 grass_a : source_color = vec3(0.16, 0.39, 0.17);
 uniform vec3 grass_b : source_color = vec3(0.18, 0.43, 0.19);
+// As the turf (oval3d_ground.gdshader): 1 reads the source_color grass as linear, once.
+uniform float true_colour = 0.0;
+uniform float turf_gain = 1.0;
+uniform vec3 turf_warm = vec3(1.08, 1.0, 0.76);
 uniform float wet = 0.0;
 uniform float hot = 0.0;
 uniform float wind = 0.0;
@@ -72,7 +76,11 @@ void vertex() {
 	VERTEX = vec3(at.x, 0.0, at.y) + v;
 	float hue = hash1(seed * 11.0);
 	tint = mix(grass_a, grass_b, hue);
+	if (true_colour > 0.5) {
+		tint = pow(max(tint, vec3(0.0)), vec3(1.0 / 2.2));
+	}
 	tint = mix(vec3(dot(tint, vec3(0.3, 0.59, 0.11))), tint, 0.72);
+	tint *= mix(vec3(1.0), turf_warm, true_colour);
 	tint *= hue < 0.08 ? vec3(1.5, 1.2, 0.7) : vec3(0.85 + 0.35 * hash1(seed * 13.0));
 	tint = mix(tint, tint * vec3(1.3, 1.2, 0.75), hot * step(0.6, hash1(seed * 17.0)));
 }
@@ -82,7 +90,7 @@ void fragment() {
 	// blade's own face would flip dark from behind.
 	NORMAL = normalize((VIEW_MATRIX * vec4(0.0, 1.0, 0.0, 0.0)).xyz);
 	vec3 c = tint * mix(0.75, 1.3, tip);
-	ALBEDO = pow(c, vec3(2.2));
+	ALBEDO = pow(c, vec3(2.2)) * mix(1.0, turf_gain, true_colour);
 	// Matte even in the wet: a glinting blade reads as a white fleck, like rain.
 	ROUGHNESS = 0.8;
 	SPECULAR = 0.05;

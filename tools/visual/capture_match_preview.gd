@@ -4,7 +4,7 @@ extends SceneTree
 ##   godot --path . --script tools/visual/capture_match_preview.gd -- --out /tmp/prev [--club COL] [--rounds N] [--size 390x844]
 ## Needs a real renderer and a window (keep it off screen with an override.cfg).
 ## Writes <out>_1_top.png (the page as it opens), <out>_2_bottom.png (scrolled to
-## the end, Continue under it), <out>_3_synergies.png (the synergy guide over it)
+## the end, Continue under it), <out>_tips.png (scrolled to the papers' tips), <out>_3_synergies.png (the synergy guide over it)
 ## and <out>_4_report.png (the Assistant's report over it). Nothing touches a save.
 
 var W := 390
@@ -66,6 +66,11 @@ func _run() -> void:
 	root.add_child(ui)
 	await _save(out + "_1_top.png")
 	var sc: ScrollContainer = ui.find_child("PreviewScroll", true, false)
+	# The papers' tips (Tipping): scrolled so the panel's heading is near the top.
+	var tips: Control = ui.find_child("Tips", true, false)
+	if sc != null and tips != null:
+		sc.scroll_vertical = int(tips.global_position.y - sc.global_position.y) - 120
+		await _save(out + "_tips.png")
 	if sc != null:
 		sc.scroll_vertical = 100000
 	await _save(out + "_2_bottom.png")
