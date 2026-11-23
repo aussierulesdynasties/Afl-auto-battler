@@ -3478,12 +3478,16 @@ func _test_three_d_hair(res: Dictionary) -> void:
 	var shells := Oval3D.hair_shells()
 	var meshes := {}
 	var real := 0
+	# On the MetaHuman each shell is refitted to his skull (#1976): a new mesh made from the
+	# file's, so it has no path of its own; on the old body it is the file's mesh itself.
+	var refit := Oval3D.player_glb != Oval3D.HAIR_FIT_GLB
 	for st in shells:
 		var m: Mesh = shells[st]["mesh"]
 		meshes[m] = true
-		if m.resource_path.begins_with(Oval3D.HAIR_GLB) and str(shells[st]["bone"]) == "head":
+		var from_file := m.resource_path == "" if refit else m.resource_path.begins_with(Oval3D.HAIR_GLB)
+		if from_file and str(shells[st]["bone"]) == "head":
 			real += 1
-	_check(shells.size() == real and real == meshes.size() and real > 0,
+	_check(Oval3D.hair_glb == Oval3D.HAIR_GLB and shells.size() == real and real == meshes.size() and real > 0,
 			"Each 3D hair style is its own mesh from %s, on the head bone (%d of %d)" % [Oval3D.HAIR_GLB, real, shells.size()])
 	var none := []
 	for st in Appearance.HAIR_STYLES:
@@ -3523,7 +3527,10 @@ func _test_three_d_hair(res: Dictionary) -> void:
 	oval.look(p0, {"skin": 2, "hair": 1, "hair_style": "bald"})
 	_check(not p0.has("hair_node") and _scalp(p0) == 1, "Bald on the 3D oval: no hair, bare scalp")
 	oval.look(p0, {"skin": 2, "hair": 1, "hair_style": "buzz"})
-	_check(not p0.has("hair_node") and _scalp(p0) == 2, "A buzz cut on the 3D oval: clippered scalp")
+	# Clippered is 2 on the old body and 4 on the MetaHuman (bare at his hairline, #1976).
+	var clippered := Oval3D.SCALP_CLIPPERED_MH if Oval3D.player_glb != Oval3D.HAIR_FIT_GLB else 2
+	_check(not p0.has("hair_node") and _scalp(p0) == clippered,
+			"A buzz cut on the 3D oval: clippered scalp (%d, want %d)" % [_scalp(p0), clippered])
 	if had == null:
 		who.erase("look")
 	else:
