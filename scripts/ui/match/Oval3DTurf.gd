@@ -502,10 +502,13 @@ func _ground_name() -> String:
 ## shaded wall, made its grey a strong blue (saturation 0.66 on screen after the broadcast tone,
 ## measured with tools/visual/measure_day_tint3d.gd on a real GPU); a TV camera balanced for the
 ## sun sees shade only a little cool. This light keeps shade cool (about 0.3) and sunlit grey
-## near neutral, and leaves the turf's green as it was.
-const DAY_LIGHT_ZENITH := Color(0.42, 0.48, 0.57)
-const DAY_LIGHT_HORIZON := Color(0.74, 0.78, 0.82)
-const HOT_LIGHT_ZENITH := Color(0.47, 0.54, 0.64)
+## near neutral, and leaves the turf's green as it was. Checked against Google Earth's nadir of
+## Optus (2026-11-23): the truss shadow on the white roof, blue over red 1.13 here against 1.10
+## (it was 1.37), and the shaded bronze cladding, 54 64 85 against 48 63 79 (it was 72 98 156).
+## The zenith, which lights a roof, is the greyer; the horizon, which lights a wall, the bluer.
+const DAY_LIGHT_ZENITH := Color(0.46, 0.49, 0.53)
+const DAY_LIGHT_HORIZON := Color(0.72, 0.78, 0.86)
+const HOT_LIGHT_ZENITH := Color(0.515, 0.55, 0.595)
 
 
 ## Rule 2.80, sky light: the sky lights the ground and the men (ambient and reflections from it),

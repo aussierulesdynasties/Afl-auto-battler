@@ -7,7 +7,8 @@ extends SceneTree
 ##   godot --path . --rendering-method mobile --script tools/visual/measure_day_tint3d.gd -- [GROUND] [SLOT] [OUT.png]
 
 const SIZE := Vector2i(1280, 720)
-## Each card: [name, albedo, distance m, bearing from the camera's view in degrees, faces the sun].
+## Each card: [name, albedo, distance m, bearing from the camera's view in degrees, faces the sun,
+## and optionally: lies flat facing the sky, roughness, metal].
 const CARDS := [
 	["grey lit 60 m", Color(0.5, 0.5, 0.5), 60.0, -24.0, true],
 	["grey shade 60 m", Color(0.5, 0.5, 0.5), 60.0, -12.0, false],
@@ -17,6 +18,13 @@ const CARDS := [
 	["hill green 3 km", Color(0.16, 0.24, 0.1), 3000.0, -6.0, true],
 	["hill green 10 km", Color(0.16, 0.24, 0.1), 10000.0, 6.0, true],
 	["hill green 25 km", Color(0.16, 0.24, 0.1), 25000.0, 16.0, true],
+	# A white roof seen from above, in the sun and under a beam's shadow (Optus's membrane and
+	# truss shadow against Google Earth's nadir: lit 229 237 244, shade 168 177 185).
+	["roof white lit", Color(0.85, 0.85, 0.85), 45.0, -36.0, true, true],
+	# Optus's bronze cladding in shade (vertical; its base colour, roughness 0.55, metal 0.3, from
+	# tools/grounds/optus/bronze.py): Google Earth's shaded bronze reads 48 63 79.
+	["bronze shade", Color8(128, 130, 132), 60.0, 4.0, false, false, 0.55, 0.3],
+	["roof white shade", Color(0.85, 0.85, 0.85), 45.0, -18.0, false, true],
 ]
 
 
@@ -67,6 +75,7 @@ func _run() -> void:
 	var cards := Node3D.new()
 	root.add_child(cards)
 	var pts := []
+	var slabs := []
 	for c in CARDS:
 		var dir := look.rotated(Vector3.UP, deg_to_rad(-float(c[3])))
 		var dist := float(c[2])
@@ -77,12 +86,23 @@ func _run() -> void:
 		mi.mesh = bm
 		var m := StandardMaterial3D.new()
 		m.albedo_color = c[1]
-		m.roughness = 0.9
+		m.roughness = float(c[6]) if c.size() > 6 else 0.9
+		m.metallic = float(c[7]) if c.size() > 7 else 0.0
 		mi.material_override = m
 		cards.add_child(mi)
 		var at: Vector3 = cam.global_position + dir * dist
 		at.y = cam.global_position.y - dist * 0.02
 		mi.global_position = at
+		if c.size() > 5 and bool(c[5]):
+			# Flat, facing the sky, well below the eye so it is seen from above; the shaded one
+			# under a slab high between it and the sun.
+			at.y = cam.global_position.y - 25.0
+			mi.global_position = at
+			mi.look_at(at + Vector3.UP, Vector3.FORWARD)
+			if not bool(c[4]):
+				slabs.append([at + (sun_dir.normalized() if sun_dir.y > 0.0 else -sun_dir.normalized()) * 6.0, size * 1.6])
+			pts.append(at)
+			continue
 		# Face the camera, turned 50 degrees towards the sun (lit) or away from it (its own shade).
 		var flat_sun := Vector3(sun_dir.x, 0.0, sun_dir.z).normalized()
 		var face := (-dir).rotated(Vector3.UP, deg_to_rad(50.0))
@@ -91,6 +111,16 @@ func _run() -> void:
 		mi.look_at(at - face, Vector3.UP)
 		pts.append(at)
 	_lit_like_stands(oval, cards)
+	# The slabs that shade the flat cards cast shadow only (added after the stand shader, which
+	# turns a model's own shadow casting off).
+	for sl in slabs:
+		var slab := MeshInstance3D.new()
+		var sb := BoxMesh.new()
+		sb.size = Vector3(sl[1], 0.5, sl[1])
+		slab.mesh = sb
+		slab.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_SHADOWS_ONLY
+		root.add_child(slab)
+		slab.global_position = sl[0]
 	var sky_set := OS.get_environment("SKY")
 	if sky_set != "":
 		var sm: ShaderMaterial = oval.turf.env.sky.sky_material
@@ -120,6 +150,8 @@ func _run() -> void:
 func _lit_like_stands(oval: Node, cards: Node3D) -> void:
 	for mi: MeshInstance3D in cards.get_children():
 		var m: StandardMaterial3D = mi.material_override
+		if m == null:
+			continue
 		mi.material_override = null
 		mi.mesh.surface_set_material(0, m)
 	oval.turf.light_stands(cards)
