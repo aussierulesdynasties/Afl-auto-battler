@@ -566,10 +566,7 @@ func _tick(h: float) -> void:
 	for i in range(tokens.size()):
 		MatchMotion.limit_step(tokens[i], from[i], h)
 	_update_ball(h)
-	_keep_off_ball()
-	# Stepping round the ball is still a step: never faster than a sprint (match_motion: 17 m/s).
-	for i in range(tokens.size()):
-		MatchMotion.limit_step(tokens[i], from[i], h)
+	_keep_off_ball(from, h)
 	if not flash.is_empty():
 		flash["left"] = float(flash["left"]) - h
 		if float(flash["left"]) <= 0.0:
@@ -1840,7 +1837,7 @@ func _pass_line(lines: Dictionary, id: int, rest: Vector2, through := false, dow
 const KEEP_OFF := 0.8
 
 
-func _keep_off_ball() -> void:
+func _keep_off_ball(from: Array = [], h := 0.0) -> void:
 	if int(ball.get("holder", -1)) >= 0 or not str(ball["mode"]) in ["loose", "dead"] or _pi >= _phases.size():
 		return
 	var p: Dictionary = _phases[_pi]
@@ -1852,7 +1849,8 @@ func _keep_off_ball() -> void:
 	# came off) is in the scrap like the rest once it is loose: he is not let run over it
 	# (suite match, 408 s: a spoiler crossed it at 2.9 m/s).
 	var his := [int(p.get("who", -1)) if st != "fumble" else -1, int(p.get("scoop", -1))]
-	for t in tokens:
+	for i in range(tokens.size()):
+		var t: Dictionary = tokens[i]
 		var id := int(t["id"])
 		if id in his or not _on_feet(id) or time - float(t.get("scoop_at", -99.0)) < 1.5 * TEMPO:
 			continue
@@ -1867,8 +1865,19 @@ func _keep_off_ball() -> void:
 		var side := out.orthogonal()
 		if v.dot(side) < 0.0:
 			side = -side
-		t["vel"] = side * v.length()
-		t["pos"] = bp + out * KEEP_OFF
+		var to := bp + out * KEEP_OFF
+		if not from.is_empty():
+			# Still a step: no faster than a sprint from where he began it (a jump out to
+			# KEEP_OFF was 0.5 m in a 0.01 s step, 17 m/s in match_motion). What is left he steps
+			# out over the next steps, his run turned round it and a touch away from it.
+			var f: Vector2 = from[i]
+			to = f + (to - f).limit_length(MatchMotion.SPRINT * h)
+			var w2: Vector2 = to - bp
+			if w2.length() > 0.001:
+				out = w2.normalized()
+				side = out.orthogonal() if out.orthogonal().dot(side) >= 0.0 else -out.orthogonal()
+		t["vel"] = (side + out * 0.1).normalized() * v.length()
+		t["pos"] = to
 
 
 ## He goes down for the loose ball on the run (Oval3DAnim plays SCOOP_CLIP on his
