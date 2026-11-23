@@ -76,6 +76,15 @@ CONCRETE = [[(-148.5, -21.0), (-128.5, -23.0), (-110.5, -27.5), (-108.3, -30.0),
 # centre's 6-7 m wall and its shadow agree with (ratio about 1.2)
 FENCE_S = [(-81.4, -107.1), (-72.4, -114.3), (-62.2, -120.6), (-52.2, -126.9), (-41.8, -132.2), (-30.6, -136.2),
            (-19.4, -139.4), (-3.0, -143.0)]; FENCE_S_H = 3.0
+# the car park's light poles: their bases where their shadows start on the NSW aerial, heights from the shadows' length
+# (11.3-12.6 m) over 1.25, the ratio the kiosk (3 m on Google Earth's status bar) and its shadow give on the same
+# picture; one lamp head on top of each
+LOT_POLES = [((-182.3, -83.9), 10.1), ((-179.1, -109.1), 9.6), ((-175.8, -133.7), 9.9), ((-166.4, -66.7), 9.6),
+             ((-146.3, -79.3), 9.1), ((-142.9, -104.6), 9.0), ((-136.7, -154.1), 9.1), ((-133.4, -179.1), 9.3)]
+# the concrete edge where the path to the car park crosses the drain (OpenStreetMap: a bridge): its line on the NSW
+# aerial, the path at turf level and the ground south-east of it 1 m lower on Google Earth's status bar (15 readings),
+# a 1.0-1.2 m face by its shadow, so it stands about 0.15 m proud of the path; no rail on it
+EDGE_WALL = [(-148.2, -69.6), (-134.2, -57.0), (-130.6, -58.8)]; EDGE_UP = 0.15; EDGE_DROP = 1.0
 PATHS_FAR = 2   # PATHS from this one on go in detail_far
 PATHS = [([(-121.0, -55.0), (-117.0, -62.0), (-109.0, -77.0), (-101.0, -90.0), (-97.5, -97.5)], 4.5),
          ([(-100.0, -99.0), (-82.5, -84.0), (-78.0, -80.0)], 3.5),
@@ -230,6 +239,17 @@ def grounds(k, mb, mf):
             a0, b0 = a - t * w / 2, b + t * w / 2
             drape(k, mf if i >= PATHS_FAR else mb, [tuple(a0 + q), tuple(b0 + q), tuple(b0 - q), tuple(a0 - q)], m[0] if m else 'concrete_bt', 0.06 + 0.004 * n); n += 1
     carpark(k, mf)
+    for (x, y), h in LOT_POLES:
+        z = ground_z(k, x, y)
+        mf.cyl((x, y), 0.09, z, z + h, 'steel_galv', n=8)
+        mf.box((x, y), 0.75, 0.4, 0.16, 0, 'steel_galv', z0=z + h - 0.16)
+    for a, b in zip(EDGE_WALL, EDGE_WALL[1:]):   # 0.3 m thick, its top at the path's height plus EDGE_UP
+        a, b = np.array(a, float), np.array(b, float); t = (b - a) / np.linalg.norm(b - a); q = np.array([t[1], -t[0]]) * 0.15
+        za, zb = ground_z(k, *(a - q * 4)) + EDGE_UP, ground_z(k, *(b - q * 4)) + EDGE_UP
+        P_ = [a - q, b - q, b + q, a + q]; Z_ = [za, zb, zb, za]
+        k.oriented(mf, [(*P_[i], Z_[i]) for i in range(4)], 'concrete_bt', np.array([0, 0, 1.0]))
+        for i, j, nn in ((0, 1, -q), (2, 3, q), (1, 2, t), (3, 0, -t)):
+            k.oriented(mf, [(*P_[i], Z_[i] - EDGE_DROP - 0.4), (*P_[j], Z_[j] - EDGE_DROP - 0.4), (*P_[j], Z_[j]), (*P_[i], Z_[i])], 'concrete_bt', np.array([*nn, 0.0]))
     for x, y in LAMPS:
         z = ground_z(k, x, y)
         mb.cyl((x, y), 0.06, z, z + LAMP_H, 'steel_galv', n=8)
