@@ -51,6 +51,23 @@ def retint(name, target, src=None, out=None):
     print(out or name, m.round(), "->", target)
 
 
+def officeglass():
+    """The east office boxes' curtain wall (Google Earth from the east, sun on it): dark blue-grey glass
+    behind slim pale vertical mullions every 1.5 m, a thin transom every 3 m. 6 m by 6 m a tile."""
+    W = H = 1024
+    rng = np.random.default_rng(8)
+    x = (np.arange(W) + 0.5) / W * 6.0
+    y = (np.arange(H) + 0.5) / H * 6.0
+    img = np.zeros((H, W, 3), float)
+    img[:] = (78, 98, 116)
+    # each pane its own faint tone, as glass reflects a little differently pane to pane
+    pane = rng.normal(0.0, 5.0, (4, 4))
+    img += pane[(y[:, None] // 1.5).astype(int).clip(0, 3), (x[None, :] // 1.5).astype(int).clip(0, 3)][..., None]
+    img[:, (x % 1.5) < 0.14] = (196, 200, 202)
+    img[(y % 3.0) < 0.08, :] = (170, 176, 180)
+    Image.fromarray(np.clip(img, 0, 255).astype(np.uint8), "RGB").save(os.path.join(TEX, "officeglass.png"))
+
+
 def grille():
     """The louvres behind the blue blocks' vent openings (Google Earth c_ne): pale grey-blue slats every
     15 cm, dark gaps between, a mullion every 1.5 m. The opening itself is modelled (vent_block); the
@@ -144,7 +161,10 @@ def main():
     # the east office boxes' ribbon glass: light grey (PC check round 3: Google Earth's east boxes are pale grey/white)
     # round 4: (138, 146, 152) still rendered (85, 100, 126) against (117, 132, 142); east-facing walls render
     # about 0.57-0.73 of their colour, so a light grey
-    retint("officeglass", (180, 188, 192), src="glass", out="officeglass")
+    # round 8 (PC sun-on check, like for like): the light grey read (156, 159, 162) against Google Earth's
+    # (117, 132, 142). Google Earth shows the boxes' faces as dark blue-grey glass behind slim pale vertical
+    # mullions: officeglass() paints that.
+    officeglass()
     tiles = os.path.join(TEX, "tiles.json")
     j = json.load(open(tiles))
     j["endrib"] = j["endroof"]
@@ -161,7 +181,7 @@ def main():
     j["bluepanel"] = j["slate"]
     j["podiumpanel"] = j["slate"]
     j["fcglass"] = j["curtain"]
-    j["officeglass"] = j["glass"]
+    j["officeglass"] = [6, 6]
     for gone in ("office", "undercroft", "louvre"):
         j.pop(gone, None)
     json.dump(j, open(tiles, "w"))
