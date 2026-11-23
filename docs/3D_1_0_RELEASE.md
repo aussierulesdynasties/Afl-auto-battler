@@ -49,7 +49,7 @@ the machine pre-inspection clean, then his fly-through.
 
 | Ground | State 2026-11-22 | PR | Owner |
 |---|---|---|---|
-| MCG | Rebuilt to the standard (#1987 merged); last 405 bad seats in #2027; Yarra Park from OSM; horizon past 2 km empty; not yet flown through by him | #2027 | Make the MCG look like the real MCG (closed); seats: Fix the shared seat generator |
+| MCG | Rebuilt to the standard (#1987 merged); the last 405 seats under the tiers removed (#2027, merged); Yarra Park from OSM; horizon past 2 km empty; not yet flown through by him | #2027 | Make the MCG look like the real MCG (closed); seats: Fix the shared seat generator |
 | Marvel Stadium | Rebuild open: true bearing, instanced seats, shut roof, Docklands; roofs from above read pale | #2011 | Make Marvel Stadium look real |
 | Adelaide Oval | Rebuild open (Riverbank, Torrens, footbridge, St Peter's) and his 11 faults; arches with ivy and main entrance in #2015 | #2010 #2015 | Fix Adelaide Oval's saved faults |
 | Optus Stadium | Roof, bronze facade, surrounds open | #1993 | Make Optus Stadium look real |
@@ -181,4 +181,4 @@ What this says: the big grounds draw 2.3-4.4 million triangles a frame on High a
 - 2026-11-22: first version, built from the plan, the open PRs, the threads and project memory.
 - 2026-11-22: the director chose all 37 grounds for 1.0.
 - 2026-11-22: the data-source rule for grounds written into MCG_STANDARD.md and sent to every ground thread; softened the same day (fidelity first; only raw imagery in the repo or textures is out).
-- 2026-11-22 evening: stat card (#1990), goal replay (#2022), siren and crowd (#2012) and broadcast colour (#2014) on main; owners and PRs for ENGIE, Manuka, Norwood, Barossa, Mars, guernseys, umpires and trainers, kick clips and night lights.
+- 2026-11-22 evening: stat card (#1990), goal replay (#2022), siren and crowd (#2012) and broadcast colour (#2014) and the MCG seat fix (#2027) on main; owners and PRs for ENGIE, Manuka, Norwood, Barossa, Mars, guernseys, umpires and trainers, kick clips and night lights.
