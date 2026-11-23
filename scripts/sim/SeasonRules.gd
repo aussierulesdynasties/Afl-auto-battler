@@ -106,6 +106,16 @@ const WEEK_NAMES := {
 	"mcintyre5": ["Qualifying and Elimination Finals", "Semi Finals", "Preliminary Final", "Grand Final"],
 }
 
+## How each finals system works, in a line, for the how-to-play page.
+const HOW := {
+	"wildcard10": "Finish in the top 10 to play finals. The top four start in the qualifying finals, 5-10 in the wildcards and eliminations.",
+	"afl8": "Finish in the top 8 to play finals. The top four start in the qualifying finals with a second chance, 5-8 in the elimination finals.",
+	"mcintyre8": "Finish in the top 8 to play finals. Week one pairs 1st v 8th through to 4th v 5th; the two lowest-placed losers go out and the two highest-placed winners rest a week.",
+	"final6": "Finish in the top 6 to play finals. 1st plays 2nd in the qualifying final and both go on; 3rd v 6th and 4th v 5th are elimination finals.",
+	"final6_1991": "Finish in the top 6 to play finals. 1st plays 2nd in the qualifying final and both go on; 3rd v 4th and 5th v 6th are elimination finals.",
+	"mcintyre5": "Finish in the top 5 to play finals. The minor premiers wait a week; 2nd v 3rd is the qualifying final and 4th v 5th the elimination final.",
+}
+
 static var _rows: Array = []
 static var _loaded := false
 
@@ -184,3 +194,8 @@ static func replays_draw(drawn_finals: String, tag: String) -> bool:
 	if drawn_finals == "replay_all":
 		return true
 	return drawn_finals == "replay_gf" and tag == "GF"
+
+
+## How a finals system works, in a line (HOW; DEFAULT's when unknown).
+static func how_finals_work(format: String) -> String:
+	return str(HOW.get(format, HOW[DEFAULT["finals"]]))
