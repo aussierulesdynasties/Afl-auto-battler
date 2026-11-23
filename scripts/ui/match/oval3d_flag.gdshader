@@ -16,6 +16,8 @@ uniform bool stick = false;
 
 const float STICK_R = 0.012;
 const float WIDTH = 0.54;
+const float WOUND_R0 = 0.013;
+const float WOUND_GROW = 0.007;
 
 float a_fold(float d, float s) {
 	return d * 40.0 + s;
@@ -35,13 +37,18 @@ vec3 cloth_at(float u, float y, vec3 down, float t) {
 	vec3 c = cross(g, vec3(0.0, 1.0, 0.0));
 	float spread = length(c);
 	vec3 side = c / max(spread, 1e-3);
+	// Soft folds running down the drop (two sizes, deeper toward the fly, varying along the
+	// stick so they never line up like pleats), and a slow sway as it hangs.
+	float folds = 0.034 * sin(d * 17.0 + y * 5.0 + seed) + 0.014 * sin(d * 41.0 - y * 11.0 + seed * 2.3);
+	float sway = 0.03 * sin(t * 0.17 + y * 2.0) * u;
 	vec3 hang = vec3(STICK_R, y, 0.0) + g * d * 0.8 + vec3(0.06, 0.0, 0.0) * u * spread
-			+ side * 0.022 * spread * sin(d * 21.0 + seed) * smoothstep(0.0, 0.15, u)
+			+ side * spread * (folds * smoothstep(0.0, 0.2, u) + sway)
 			+ vec3(0.0, 0.0, 0.012) * (1.0 - spread) * sin(a_fold(d, seed));
 	vec3 loose = mix(hang, open, smoothstep(0.0, 1.0, air));
-	// Furled: wound round the stick, about one and a half turns, snug.
-	float a = u * 9.4 + seed;
-	float r = STICK_R + 0.003 + 0.004 * u;
+	// Furled: wound tight round the stick, a spiral whose turns each add the cloth's thickness:
+	// the whole 54 cm makes about five and a half turns, a roll some 4 cm across.
+	float r = WOUND_R0 + WOUND_GROW * u;
+	float a = WIDTH / WOUND_GROW * log(r / WOUND_R0) + seed;
 	vec3 wound = vec3(r * cos(a), y, r * sin(a));
 	return mix(wound, loose, furl);
 }

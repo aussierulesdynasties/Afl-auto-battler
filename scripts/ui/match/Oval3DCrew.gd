@@ -297,7 +297,8 @@ static func clips(skel_path: NodePath) -> Dictionary:
 				if bone == "":
 					bone = str(path.get_name(path.get_name_count() - 1))
 				a.track_set_path(t, NodePath(key + ":" + bone))
-			a.loop_mode = Animation.LOOP_NONE
+			# The walks loop; everything else plays once.
+			a.loop_mode = Animation.LOOP_LINEAR if str(name).begins_with("crew_walk") else Animation.LOOP_NONE
 			out[str(name)] = a
 	n.free()
 	return out
@@ -321,9 +322,11 @@ const FLAG_SHADER := preload("res://scripts/ui/match/oval3d_flag.gdshader")
 const FLAG_STICK := Color(0.9, 0.9, 0.88)
 
 
-## A goal umpire's two flags, one in each hand (crew_flag_stick + crew_flag_cloth), each closed
-## in his fist by an Oval3DGrip; hidden, with the grips off, until he draws them. Returns
-## {"r": {"node", "cloth", "grip", "on"}, "l": ...}; cloth carries the flag shader (furl, air).
+## A goal umpire's two flags, one for each hand (crew_flag_stick + crew_flag_cloth), each closed
+## in its fist by an Oval3DGrip (off until it holds one). Returns {"r": {"node", "cloth", "grip",
+## "on"}, "l": ...}: node the flag (its origin the grip, the stick up +Y), parented to nothing
+## until it is stowed or held; on the BoneAttachment3D of that hand; cloth carries the flag shader
+## (furl, air).
 static func flags(skel: Skeleton3D, glb: String) -> Dictionary:
 	var all := pieces(glb)
 	if not all.has("crew_flag_stick") or not all.has("crew_flag_cloth"):
@@ -340,13 +343,11 @@ static func flags(skel: Skeleton3D, glb: String) -> Dictionary:
 		grip.active = false
 		skel.add_child(grip)
 		var on := BoneAttachment3D.new()
+		on.name = "flag_hand_" + side
 		on.bone_name = "hand_" + side
 		skel.add_child(on)
 		var flag := Node3D.new()
 		flag.name = "flag_" + side
-		flag.transform = grip.held_at(skel)
-		flag.visible = false
-		on.add_child(flag)
 		var stick := MeshInstance3D.new()
 		stick.mesh = (all["crew_flag_stick"] as Dictionary)["mesh"]
 		stick.material_override = stick_m
@@ -356,9 +357,39 @@ static func flags(skel: Skeleton3D, glb: String) -> Dictionary:
 		var m := ShaderMaterial.new()
 		m.shader = FLAG_SHADER
 		m.set_shader_parameter("seed", 3.1 if side == "r" else 0.7)
+		m.set_shader_parameter("furl", 0.0)
 		cloth.material_override = m
 		# The vertex shader moves the cloth well off its flat rest: keep it from being culled.
 		cloth.extra_cull_margin = 0.6
 		flag.add_child(cloth)
 		out[side] = {"node": flag, "cloth": m, "grip": grip, "on": on}
 	return out
+
+
+## The goal umpire's flag clips (tools/oval3d/crew/key_crew_clips.py, from 2025 broadcasts): a walk,
+## and the same with his flags; drawing both from the padding of the post on his near hand's side
+## (_r or _l), the goal wave, winding the cloths and putting them back, and the behind's wave of
+## one flag.
+const WALK := "crew_walk"
+const WALK_FLAGS := "crew_walk_flags"
+const WALK_SPEED := 1.5 / 1.1
+const FLAGS_DRAW := "flags_draw_"
+const GOAL_WAVE := "goal_wave"
+const FLAGS_FURL := "flags_furl_"
+const BEHIND_FLAG := "behind_flag_"
+## Their moments, as keyed: the near fist closes on both stowed sticks (DRAW_GRAB) and the other
+## hand takes one (DRAW_TAKE); the cloths open on the first low swing (DRAW_OPEN).
+const DRAW_GRAB := 0.4
+const DRAW_TAKE := 1.2
+const DRAW_OPEN := Vector2(1.5, 1.85)
+## The other flag handed over (FURL_GIVE), each cloth wound round its stick in turn (FURL_WIND),
+## both wedged back (FURL_STOW).
+const FURL_GIVE := 0.4
+const FURL_WIND := [Vector2(0.7, 3.2), Vector2(3.2, 5.7)]
+const FURL_STOW := 6.25
+## The behind: drawn, opened on the raise, put back.
+const BEHIND_GRAB := 0.35
+const BEHIND_OPEN := Vector2(0.6, 1.0)
+const BEHIND_STOW := 3.9
+## The second stick in the same fist sits beside the first, nearer the palm.
+const PAIR_GAP := Vector3(-0.022, 0.0, 0.0)

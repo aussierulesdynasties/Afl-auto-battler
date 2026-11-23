@@ -445,6 +445,369 @@ def p_ti_land(t):
         curl(s_, RELAX)
 
 
+# A walk (the goal umpire to and from his flags at the post; none of the footballers' clips
+# walks): a loop of two steps, WALK_STRIDE metres in WALK_CYCLE seconds, in place (the match
+# moves him at WALK_SPEED); each foot flat on the turf through its stance, sliding back under him,
+# lifted and brought through in its swing; the hips dip at each heel strike, the arms swing
+# against the legs.
+WALK_CYCLE = 1.1
+WALK_STRIDE = 1.5                      # m, one full cycle (two steps of 0.75 m)
+WALK_SPEED = WALK_STRIDE / WALK_CYCLE  # about 1.36 m/s
+STANCE = 0.62                          # of the cycle each foot is down
+
+
+def _walk_foot(ph):
+    """(forward offset (m, + ahead), lift (m)) of a foot at phase ph of its own cycle, heel
+    strike at 0."""
+    half = WALK_STRIDE * 0.5
+    if ph < STANCE:
+        f = ph / STANCE
+        return half * 0.5 - half * f, 0.0
+    f = (ph - STANCE) / (1.0 - STANCE)
+    ease = f * f * (3 - 2 * f)
+    return -half * 0.5 + half * ease, 0.09 * math.sin(math.pi * f)
+
+
+def p_walk(t, flags=False):
+    set_idle(0.0)
+    feet = _rest_feet()
+    ph = (t / WALK_CYCLE) % 1.0
+    # The hips: lowest just after each heel strike, highest at mid-stance.
+    bob = 0.018 * math.cos(4 * math.pi * (ph - 0.1))
+    hips(drop=0.025 - bob, pitch=3)
+    for s_, off in (("l", 0.0), ("r", 0.5)):
+        fwd, lift = _walk_foot((ph + off) % 1.0)
+        at, rot = feet[s_]
+        # The toe a little down as the foot lifts behind, up as it reaches ahead.
+        pitch_ = 0.0 if lift == 0.0 else math.copysign(min(25.0, lift * 260.0), fwd)
+        rot2 = Matrix.Rotation(math.radians(pitch_), 3, Vector((1, 0, 0))) @ rot
+        leg(s_, at + Vector((0, -fwd, lift)), rot2)
+        # The other arm hangs nearly straight and swings against this leg: furthest forward
+        # (about 17 cm, the elbow a little bent) as this heel strikes, 13 cm back half a cycle on.
+        a_ = "r" if s_ == "l" else "l"
+        sx = -1.0 if a_ == "r" else 1.0
+        sw = math.cos(2 * math.pi * (((ph + off) % 1.0) - 0.04))
+        ahead = 0.02 + 0.15 * sw
+        sh = pose["upperarm_" + a_].head.copy()
+        r_ = 0.56 - 0.05 * max(0.0, sw)
+        out = 0.06
+        down = math.sqrt(max(0.01, r_ * r_ - out * out - ahead * ahead))
+        reach(a_, sh + Vector((sx * out, -ahead, -down)), Vector((sx * 0.25, 1, -0.2)),
+              Vector((0, -0.25 * max(0.0, sw), -1)), palm=Vector((-sx, 0.15, 0)))
+        curl(a_, RELAX)
+        if flags:
+            # Carried, each stick down and forward from his fist, a little out.
+            stick(a_, Vector((sx * 0.2, -0.62, -0.76)))
+    turn("spine_02", UP, 4 * math.sin(2 * math.pi * ph))
+
+
+def p_walk_flags(t):
+    p_walk(t, True)
+
+
+# The goal umpire's flags (2025 broadcasts, a2-a11; the AFL umpiring coaching video). Both are
+# stowed furled in one goal post's padding, the sticks wedged in its lacing about 0.9 to 1.5 m up
+# on the side facing the goal. For a goal he walks to that post, draws both with the hand nearer
+# it (0.4 s), brings them level in front of him and his other hand takes one (0.4 s), the cloths
+# open on the first low swing (0.3 s); he walks 2-3 m back toward the middle and, facing the
+# ground, feet set, waves: low, up and out to a V, wrists crossed over his cap, the sticks out
+# level, up and crossed, apart, a V, a W, straight up, down. Back at the post he gathers both in
+# the near hand and winds the cloths round their sticks (about 6 s both), and wedges them back.
+# For a behind he draws one with the near hand, raises it on a diagonal, holds it level, swings
+# it overhead twice and puts it back, staying by the post.
+#
+# The stick goes through his closed fist along the knuckle line, the butt out past the little
+# finger (Oval3DGrip.held_at, crew_flag_stick: grip 8 cm up a 62 cm stick).
+FIST = {"index": (70, 80, 45), "middle": (72, 82, 45), "ring": (74, 82, 45), "pinky": (76, 82, 45),
+        "thumb": (30, 40, 35)}
+STICK_LEN, STICK_BUTT = 0.62, 0.08
+# Where the near hand closes on the stowed sticks, in his frame standing by the post (beside and a
+# little ahead of his hip, the forearm near level as a fist on an upright stick wants it); the
+# match stands him so (Oval3DCrew.FLAG_STOW). n: the near hand.
+STOW_REACH = Vector((0.30, -0.24, 1.02))
+
+
+def stow_at(n):
+    return Vector((side_x(n) * STOW_REACH.x, STOW_REACH.y, STOW_REACH.z))
+
+
+def p_stow(n):
+    """At the stowed sticks: the near fist closed on them, leaning a little to the post. The one
+    pose for drawing and putting back, so the sticks are where the match left them."""
+    def fn(t):
+        set_idle(t)
+        hips(drop=0.02, feet=_rest_feet())
+        turn("spine_01", FWD, side_x(n) * -4)
+        hand(n, stow_at(n), Vector((0, 0, 1)), pole(n, ARM_BACK))
+        idle_hand(other(n))
+    fn.__name__ = "p_stow"
+    return fn
+
+
+def _grip_frame(s):
+    """(across, along, palm sign) of hand s in its bone's own frame: the knuckle line little
+    finger to index, the fingers' line, and the sign that makes across x along the palm."""
+    B = bones
+    inv = B["hand_" + s].matrix_local.to_3x3().inverted()
+    across = inv @ (B["index_01_" + s].head_local - B["pinky_01_" + s].head_local).normalized()
+    along = inv @ (B["middle_02_" + s].head_local - B["middle_01_" + s].head_local).normalized()
+    sign = 1.0 if across.cross(along).dot(_rest_palm(s)) > 0 else -1.0
+    return across.normalized(), along.normalized(), sign
+
+
+WRIST = {}
+
+
+def stick(s, d):
+    """Turns hand s (already reached where it goes) so the stick in its fist points along d: the
+    hand keeps as near the forearm's line as the stick allows (the wrist's bend is logged), the
+    fingers closed round it."""
+    d = Vector(d).normalized()
+    fore = pose["lowerarm_" + s].matrix.to_3x3().col[1].normalized()
+    h = fore - d * fore.dot(d)
+    if h.length < 1e-4:
+        h = FWD - d * FWD.dot(d)
+    h.normalize()
+    across, along, sign = _grip_frame(s)
+    # The hand bone's own line is its y; its knuckle line goes along d.
+    rest = bones["hand_" + s].matrix_local.to_3x3()
+    head = pose["hand_" + s].head.copy()
+    # Solve the hand's turn: map (along, across) in the bone frame to (h', d) in armature space,
+    # where h' is the bone's y. along and the bone's y are near each other; use the frame.
+    bx = Vector((1, 0, 0)); by = Vector((0, 1, 0))
+    # Orthonormal frames: F_bone = [across, a2, across x a2] with a2 = by orthogonal to across.
+    a2 = (by - across * by.dot(across)).normalized()
+    F_b = Matrix((across, a2, across.cross(a2))).transposed()
+    F_w = Matrix((d, h, d.cross(h))).transposed()
+    R = F_w @ F_b.inverted()
+    pose["hand_" + s].matrix = Matrix.Translation(head) @ R.to_4x4()
+    update()
+    curl(s, FIST)
+    WRIST.setdefault(s, []).append(round(math.degrees(fore.angle(h)), 0))
+
+
+def stick_tip(s):
+    """The stick's two ends in hand s's fist (as Oval3DGrip holds it), armature space."""
+    across, along, sign = _grip_frame(s)
+    m = pose["hand_" + s].matrix.to_3x3()
+    k1 = pose["middle_01_" + s].head
+    k2 = pose["middle_02_" + s].head
+    palm = palm_normal(s)
+    grip = k1.lerp(k2, 0.35) + palm * 0.042
+    d = (m @ across).normalized()
+    return grip, grip + d * (STICK_LEN - STICK_BUTT), grip - d * STICK_BUTT
+
+
+def hand(s, at, d, pole):
+    """Hand s at `at` with its stick along d, the elbow toward pole."""
+    reach(s, at, pole, (Vector(at) - shoulder(s)).normalized())
+    stick(s, d)
+
+
+def o(s, x, y, z):
+    """A point or direction written with x out to hand s's side (his right is -X)."""
+    return Vector((side_x(s) * x, y, z))
+
+
+def other(s):
+    return "l" if s == "r" else "r"
+
+
+ARM_OUT = (0.35, 0.25, -1.0)   # an elbow pole: out, back and down
+ARM_UP = (0.9, 0.3, -0.2)      # ...out to the side, for the hands overhead
+ARM_BACK = (0.3, 1.0, -0.4)    # ...back, the forearm forward
+
+
+def pole(s, p_):
+    return o(s, *p_)
+
+
+def idle_hand(s):
+    reach(s, shoulder(s) + o(s, 0.06, -0.02, -0.55), pole(s, ARM_OUT), Vector((0, 0, -1)),
+          palm=o(s, -1, 0.15, 0))
+    curl(s, RELAX)
+
+
+def carry(s):
+    """Hand s down by his side with its flag, the stick down and forward, a little out."""
+    hand(s, shoulder(s) + o(s, 0.06, -0.03, -0.56), o(s, 0.15, -0.85, -0.5), pole(s, ARM_OUT))
+
+
+# The draw, with n the hand nearer the post: the stowed sticks at STOW_REACH beside him.
+def draw_poses(n):
+    f = other(n)
+
+    reach_down = p_stow(n)
+
+    def pulled(t):
+        set_idle(t)
+        hand(n, o(n, 0.30, -0.14, 1.30), Vector((0, -0.1, 1)), pole(n, ARM_OUT))
+        idle_hand(f)
+
+    def level(t):
+        # Brought level in front of his chest, the sticks across him toward the other hand.
+        set_idle(t)
+        hand(n, o(n, 0.10, -0.36, 1.18), o(n, -0.9, -0.3, 0.3), pole(n, ARM_OUT))
+        reach(f, o(f, 0.12, -0.34, 1.05), pole(f, ARM_OUT), Vector((0, -1, 0.2)), palm=Vector((0, 0, 1)))
+        curl(f, RELAX)
+
+    def taken(t):
+        # His other hand closes on the second stick beside the first.
+        set_idle(t)
+        hand(n, o(n, 0.10, -0.36, 1.18), o(n, -0.9, -0.3, 0.3), pole(n, ARM_OUT))
+        # A fist's width along the sticks from the near fist, toward the cloth.
+        d = o(n, -0.9, -0.3, 0.3).normalized()
+        hand(f, o(n, 0.10, -0.36, 1.18) + d * 0.10, d, pole(f, ARM_OUT))
+
+    def apart(t):
+        set_idle(t)
+        for s_ in (n, f):
+            hand(s_, o(s_, 0.20, -0.36, 1.12), o(s_, 0.6, -0.6, 0.5), pole(s_, ARM_OUT))
+
+    def swing(t):
+        # The first low swing, down and out, that opens the cloths.
+        set_idle(t)
+        for s_ in (n, f):
+            hand(s_, o(s_, 0.30, -0.28, 0.98), o(s_, 0.8, -0.3, -0.35), pole(s_, ARM_OUT))
+
+    def carried(t):
+        set_idle(t)
+        carry(n)
+        carry(f)
+
+    return [(0.0, p_stand), (0.35, reach_down), (0.45, reach_down), (0.75, pulled), (1.0, level),
+            (1.15, taken), (1.3, taken), (1.55, apart), (1.85, swing), (2.2, carried)]
+
+
+# Draw times (Oval3D): the near hand closes on both sticks, the other takes one, the cloths open.
+DRAW_GRAB, DRAW_TAKE, DRAW_OPEN = 0.4, 1.2, (1.5, 1.85)
+
+
+def both(t, at, d, pole_=ARM_OUT, feet=True):
+    """Both hands, written for the right (at, d) and mirrored for the left."""
+    set_idle(t)
+    for s_ in ("r", "l"):
+        hand(s_, shoulder(s_) + o(s_, *at), o(s_, *d), pole(s_, pole_))
+
+
+def w_carry(t):
+    set_idle(t)
+    carry("r")
+    carry("l")
+
+
+def w_low(t):
+    both(t, (0.08, -0.30, -0.46), (0.8, -0.3, -0.35))
+
+
+def w_v(t):
+    # Up and out, the arms near straight, the sticks out and forward of them.
+    both(t, (0.24, -0.08, 0.49), (0.75, -0.45, 0.48), ARM_UP)
+
+
+def w_cross(t):
+    # Wrists crossed 15-20 cm over his cap, the sticks up and out across each other.
+    set_idle(t)
+    for s_, dx in (("r", -0.05), ("l", 0.05)):
+        hand(s_, o(s_, dx, -0.12, 2.06), o(s_, -0.3, -0.75, 0.55), pole(s_, ARM_UP))
+
+
+def w_level(t):
+    # Hands up and out above his shoulders, the sticks out level to each side.
+    both(t, (0.30, -0.06, 0.30), (1.0, -0.12, 0.04), ARM_UP)
+
+
+def w_upcross(t):
+    # Wrists crossed overhead, the sticks straight up.
+    set_idle(t)
+    for s_, dx in (("r", -0.04), ("l", 0.04)):
+        hand(s_, o(s_, dx, -0.14, 2.0), Vector((0, -0.55, 0.85)), pole(s_, ARM_UP))
+
+
+def w_apart(t):
+    # Apart above his head, the sticks up and parallel.
+    both(t, (0.04, -0.12, 0.45), (0.15, -0.75, 0.65), ARM_UP)
+
+
+def w_w(t):
+    # A W: elbows at shoulder height out to the side, the hands up by his head, the sticks down
+    # and out.
+    both(t, (0.30, -0.08, 0.28), (0.8, -0.15, -0.58), (1.0, 0.1, -0.6))
+
+
+GOAL_WAVE = [(0.0, w_carry), (0.5, w_low), (1.0, w_v), (1.6, w_v), (2.0, w_cross), (2.5, w_level),
+             (2.9, w_upcross), (3.1, w_apart), (3.3, w_v), (3.7, w_w), (4.2, w_apart), (4.4, w_low),
+             (4.9, w_carry)]
+
+
+# The behind, with the near hand n; the other arm hangs.
+def behind_poses(n):
+    f = other(n)
+
+    def k(at, d, pole_=ARM_OUT, lean=0.0):
+        def fn(t):
+            set_idle(t)
+            if lean:
+                turn("spine_01", FWD, side_x(n) * -lean)
+            hand(n, at if isinstance(at, Vector) else shoulder(n) + o(n, *at), o(n, *d), pole(n, pole_))
+            idle_hand(f)
+        return fn
+
+    down = p_stow(n)
+    pulled = k(o(n, 0.30, -0.14, 1.30), (0, -0.1, 1))
+    # Everything away from the post he stands by (its padding is a hand's breadth from his near
+    # shoulder): raised on a diagonal forward, held level across in front of him, swung overhead
+    # between upright and out over his other shoulder.
+    diag = k((0.10, -0.42, 0.30), (-0.5, -0.2, 0.85), ARM_UP)
+    level = k((0.02, -0.42, -0.28), (-0.85, -0.5, 0.05), ARM_OUT)
+    over_n = k((-0.12, -0.16, 0.46), (0.3, -0.75, 0.6), ARM_UP)
+    over_f = k((-0.04, -0.12, 0.48), (-0.85, -0.4, 0.3), ARM_UP)
+    return [(0.0, p_stand), (0.3, down), (0.4, down), (0.6, pulled), (1.0, diag), (1.25, level),
+            (2.1, level), (2.4, over_n), (2.72, over_f), (3.05, over_n), (3.38, over_f),
+            (3.7, pulled), (3.85, down), (3.95, down), (4.3, p_stand)]
+
+
+BEHIND_GRAB, BEHIND_OPEN, BEHIND_STOW = 0.35, (0.6, 1.0), 3.9
+
+
+# The furl, by the post, n the near hand: the other flag handed over (0.4 s); the near fist holds
+# both sticks up in front of him while the other hand winds each cloth round them, one then the
+# other; both wedged back in the padding.
+FURL_GIVE, FURL_WIND, FURL_STOW = 0.4, ((0.7, 3.2), (3.2, 5.7)), 6.25
+
+
+def furl_poses(n):
+    f = other(n)
+    held = o(n, 0.08, -0.32, 1.08)
+
+    def give(t):
+        set_idle(t)
+        hand(n, held, Vector((0, -0.1, 1)), pole(n, ARM_OUT))
+        hand(f, held + o(n, -0.06, -0.02, 0.02), Vector((0, -0.1, 1)), pole(f, ARM_OUT))
+
+    def wind(ph):
+        def fn(t):
+            set_idle(t)
+            hand(n, held, Vector((0, -0.1, 1)), pole(n, ARM_OUT))
+            # Round the sticks, 22-38 cm up them, the fingers wrapping the cloth.
+            a = 2 * math.pi * ph
+            at = held + Vector((0, 0.0, 0.30)) + o(n, -0.07 * math.cos(a), -0.07 * math.sin(a), 0.0)
+            reach(f, at, pole(f, ARM_OUT), (held + Vector((0, 0, 0.3)) - at + Vector((0, 0, 0.02))).normalized())
+            curl(f, BALL_GRIP)
+        return fn
+
+    stowing = p_stow(n)
+
+    keys = [(0.0, w_carry), (FURL_GIVE, give), (0.6, wind(0.0))]
+    # Four turns a cloth, a key every quarter turn.
+    for (a, b) in FURL_WIND:
+        for i in range(17):
+            keys.append((round(a + (b - a) * i / 16, 4), wind(i / 4)))
+    keys = sorted({k_[0]: k_ for k_ in keys}.values(), key=lambda k_: k_[0])
+    keys += [(6.0, stowing), (6.3, stowing), (6.7, p_stand)]
+    return keys
+
+
 CLIPS = {
     # name: [(seconds, pose)], from the idle's stand and back to it. The goal is formed in
     # 0.6 s, a tenth of a second a step (a3 f_011-017); held 1.6 s (the broadcasts cut away
@@ -461,6 +824,13 @@ CLIPS = {
                  (2.05, p_stand)],
 }
 THROW_REL = 1.45
+CLIPS["crew_walk"] = [(round(i * WALK_CYCLE / 10, 4), p_walk) for i in range(11)]
+CLIPS["crew_walk_flags"] = [(round(i * WALK_CYCLE / 10, 4), p_walk_flags) for i in range(11)]
+CLIPS["goal_wave"] = GOAL_WAVE
+for n_ in ("r", "l"):
+    CLIPS["flags_draw_" + n_] = draw_poses(n_)
+    CLIPS["flags_furl_" + n_] = furl_poses(n_)
+    CLIPS["behind_flag_" + n_] = behind_poses(n_)
 ONLY = os.environ.get("CREW_ONLY", "")
 
 
@@ -504,9 +874,17 @@ for name, keys in CLIPS.items():
     for t, fn in keys:
         # Pose with no action driving, then key into act.
         arm.animation_data.action = None
+        WRIST.clear()
         fn(t)
         if name == "throw_in":
             _measure(t, fn.__name__)
+        if WRIST and not name.startswith("crew_walk"):
+            msg = []
+            for s_ in WRIST:
+                g, tip, butt = stick_tip(s_)
+                msg.append("%s wrist %3.0f grip (%.2f %.2f %.2f) tip (%.2f %.2f %.2f)" % (
+                    s_, WRIST[s_][-1], g.x, g.y, g.z, tip.x, tip.y, tip.z))
+            print("FLAG %-15s %5.2f %-10s %s" % (name, t, fn.__name__, " | ".join(msg)))
         arm.animation_data.action = act
         f = 1 + t * FPS
         for pb in pose:

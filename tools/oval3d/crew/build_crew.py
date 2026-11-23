@@ -1048,7 +1048,8 @@ def flag():
     stick = bpy.context.active_object
     stick.name = "crew_flag_stick"
     cl = bmesh.new()
-    nu, nv = 12, 8
+    # Fine across: furled, the cloth winds about five and a half times round the stick.
+    nu, nv = 48, 8
     vs = [[cl.verts.new((0.012 + 0.54 * i / nu, 0.0, 0.62 - 0.08 - 0.42 + 0.42 * j / nv)) for j in range(nv + 1)]
           for i in range(nu + 1)]
     uvl = cl.loops.layers.uv.new("UVMap")

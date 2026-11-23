@@ -3820,6 +3820,9 @@ func _test_match_crew(res: Dictionary) -> void:
 				if scores[k] == "":
 					scores[k] = given
 					var want := Oval3DCrew.GOAL_SIGNAL if bool(shot["goal"]) else Oval3DCrew.BEHIND_SIGNAL
+					# A goal while he still has both flags out from the last score is waved.
+					if bool(shot["goal"]) and given == Oval3DCrew.GOAL_WAVE:
+						want = given
 					if given != want or signf((u["node"] as Node3D).position.x) != signf((shot["to"] as Vector2).x):
 						signal_wrong.append("%s at %.0f s for a %s" % [given, d.time, "goal" if shot["goal"] else "behind"])
 		var set_break := not shot.is_empty() and bool(shot.get("set", false))

@@ -68,8 +68,10 @@ func _run() -> void:
 		var fa := fl.split(",")
 		var crew = load("res://scripts/ui/match/Oval3DCrew.gd")
 		var flags: Dictionary = crew.flags(u["skel"], crew.glb_for(oval.player_glb))
-		for s in flags.values():
-			(s["node"] as Node3D).visible = true
+		for side in flags:
+			var s: Dictionary = flags[side]
+			(s["on"] as Node3D).add_child(s["node"])
+			(s["node"] as Node3D).transform = s["grip"].held_at(u["skel"])
 			s["grip"].active = true
 			(s["cloth"] as ShaderMaterial).set_shader_parameter("furl", float(fa[0]))
 			(s["cloth"] as ShaderMaterial).set_shader_parameter("air", float(fa[1]))

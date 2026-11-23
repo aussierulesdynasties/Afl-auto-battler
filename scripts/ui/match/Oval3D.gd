@@ -2360,6 +2360,9 @@ func _add_umpires(scene: PackedScene) -> void:
 					lib.add_animation(n, own[n])
 		var at: Vector2 = spots[k][1]
 		(u["node"] as Node3D).position = Vector3(at.x, 0.0, at.y)
+		if role == "goal":
+			# His flags, stowed in a post's padding at his end (Oval3DGoalUmpire).
+			Oval3DGoalUmpire.setup(self, u, signf(at.x), _crew_seed + k)
 		umpires.append(u)
 
 
@@ -2552,13 +2555,23 @@ func _move_umpires(frame_dt: float) -> void:
 		var node: Node3D = u["node"]
 		var ap: AnimationPlayer = u["anim"]
 		var k := int(u["k"])
+		if u.has("routine"):
+			# A goal umpire's flags after his signal: his own, in real time.
+			Oval3DGoalUmpire.step(self, u, frame_dt)
+			continue
 		if u.has("clip"):
 			# A score's signal and a throw-in keep real time: they are the umpire's own, not the
 			# play's, and the pauses run at double speed (rule 2.93); the throw is timed to the
 			# director's in real seconds (_ump_tempo).
 			var own_dt := frame_dt if str((u["clip"] as Dictionary).get("kind", "")) in ["signal", "throw"] else dt
 			held = _umpire_clip(u, st, own_dt) or held
+			if u.has("flag"):
+				# Flags still out from the last score as he signals this one.
+				Oval3DGoalUmpire.cloth(u, frame_dt)
 			continue
+		if u.has("flag") and signf((spots[k][1] as Vector2).x) != float(u["flag"]["end"]):
+			# The goal umpires have changed ends: his flags are kept at this end's post now.
+			Oval3DGoalUmpire.set_end(self, u, signf((spots[k][1] as Vector2).x))
 		if u.has("out") and _umpire_blend_out(u, dt):
 			continue
 		var at := Vector2(node.position.x, node.position.z)
@@ -2661,16 +2674,25 @@ func _goal_signals() -> void:
 		if signf(node.position.x) != signf(to.x):
 			continue
 		u["signalled"] = int(shot["k"])
+		# Still at his flags from the last score: he leaves off and signals this one where he is.
+		# With both flags still out a goal is waved with them (his hands are full for the
+		# signal); a behind's one arm points with its flag.
+		Oval3DGoalUmpire.stop(u)
+		if not u.has("home"):
+			u["home"] = Vector2(node.position.x, node.position.z)
 		var ap: AnimationPlayer = u["anim"]
 		var clip := Oval3DCrew.GOAL_SIGNAL if bool(shot["goal"]) else Oval3DCrew.BEHIND_SIGNAL
+		if bool(shot["goal"]) and Oval3DGoalUmpire.holding(u) == 2:
+			clip = Oval3DCrew.GOAL_WAVE
 		if not ap.has_animation(clip):
 			return
 		u.erase("out")
-		# Facing up the ground, to the field umpires.
-		node.rotation.y = atan2(-node.position.x, -node.position.z)
-		ap.play(clip, 0.15)
+		# Out of his stand; out of a wave with his flags (they come down at a hand's pace).
+		ap.play(clip, 0.45 if Oval3DGoalUmpire.holding(u) > 0 else 0.15)
 		ap.seek(0.0, false)
-		u["clip"] = {"kind": "signal", "t": 0.0, "rate": 1.0, "end": ap.current_animation_length}
+		# Facing up the ground, to the field umpires: turned to it as he signals (_umpire_clip).
+		u["clip"] = {"kind": "signal", "t": 0.0, "rate": 1.0, "end": ap.current_animation_length,
+				"goal": bool(shot["goal"]), "yaw": atan2(-node.position.x, -node.position.z)}
 
 
 ## One frame of an umpire's one-off clip (a bounce, or the lift of a ball-up or throw-in). True
@@ -2704,7 +2726,15 @@ func _umpire_clip(u: Dictionary, st: Dictionary, dt: float) -> bool:
 	elif throwing:
 		rate = 1.0
 	c["t"] = before + dt * rate
+	if c.has("yaw"):
+		var n: Node3D = u["node"]
+		n.rotation.y = rotate_toward(n.rotation.y, float(c["yaw"]), Oval3DGoalUmpire.TURN_RATE * dt)
 	if float(c["t"]) >= float(c["end"]):
+		if str(c["kind"]) == "signal" and u.has("flag"):
+			# Signalled: on to his flags (Oval3DGoalUmpire), from where the signal left him.
+			u.erase("clip")
+			Oval3DGoalUmpire.start(u, bool(c.get("goal", true)), u["home"])
+			return false
 		_end_umpire_clip(u)
 		return false
 	# Advanced, never sought: a seek would leave the blend in from his stand where it was.
