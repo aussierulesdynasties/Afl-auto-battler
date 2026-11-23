@@ -498,6 +498,20 @@ def rebind_weights(ob):
 rebind_weights(shirt)
 rebind_weights(vest)
 thicken(vest, 0.003)
+
+
+# The vest's own print coordinates (its first UV; a plain purple vest has no guernsey design to
+# draw): metres on the wearer, (0.5 + x, z - 1), so the kit shader places the AFL back print
+# (sponsor patch, number, TRAINER) at measured heights on any build (oval3d_player.gdshader,
+# vest_back).
+def print_uv(ob):
+    me_ = ob.data
+    for lp in me_.loops:
+        co = me_.vertices[lp.vertex_index].co
+        me_.uv_layers[0].data[lp.index].uv = (0.5 + co.x, co.z - 1.0)
+
+
+print_uv(vest)
 thicken(shirt)
 
 # The trousers' reach: from the shorts' waistband down to the top of the boot.

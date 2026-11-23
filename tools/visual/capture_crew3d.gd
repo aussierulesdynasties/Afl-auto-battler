@@ -71,11 +71,21 @@ func _run() -> void:
 		var fw := n.global_transform.basis.z
 		var side := fw.cross(Vector3.UP).normalized()
 		var mid := n.global_position + Vector3(0, 1.0, 0)
-		for v in [["front", fw], ["side", side], ["back", -fw]]:
+		for v in [["front", fw], ["side", side], ["back", fw]]:
+			# His back from the ground side: he is turned round for it (behind a trainer or a
+			# boundary umpire is the fence).
+			if v[0] == "back":
+				n.rotate_y(PI)
 			cam.global_position = mid + (v[1] as Vector3) * 3.6 + Vector3(0, 0.15, 0)
 			cam.look_at(mid, Vector3.UP)
 			cam.current = true
 			await _shot(pv, out, "role_%s_%s" % [key, v[0]])
+			if v[0] == "back":
+				# And his back close, for its print (a trainer's vest).
+				cam.global_position = mid + fw * 1.5 + Vector3(0, 0.35, 0)
+				cam.look_at(mid + Vector3(0, 0.3, 0), Vector3.UP)
+				await _shot(pv, out, "role_%s_back_close" % key)
+				n.rotate_y(PI)
 		# His head and shoulders, three-quarter.
 		cam.global_position = mid + (fw + side * 0.6).normalized() * 1.4 + Vector3(0, 0.55, 0)
 		cam.look_at(mid + Vector3(0, 0.5, 0), Vector3.UP)
