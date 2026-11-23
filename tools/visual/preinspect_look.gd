@@ -6,8 +6,9 @@ extends SceneTree
 ## PREINSPECT_NEAR=m clips as the broadcast cameras do (Oval3DBroadcast.NEAR, 20 m). PREINSPECT_ROOF=open|shut sets a ground's opening roof (GroundModels.ROOFS; a match shows it shut).
 ## PREINSPECT_MODEL_FRAME=1 reads positions in the model's own frame instead (x east, y north, z up, metres), the frame
 ## Google Earth views are worked out in (docs/MCG_STANDARD.md); PREINSPECT_SIZE=WxH sets the picture (default 960x540).
-## PREINSPECT_SUN=bearing,elevation[,energy] puts the sun where it was when a reference photo was taken (degrees, model frame,
-## bearing from north towards east), so a face lit in the photo is lit in the picture and colours compare like for like.
+## PREINSPECT_SUN=az,el puts the sun where it was in the Google Earth imagery (compass bearing from the model's north
+## and elevation, degrees, and optionally the sun's energy; needs PREINSPECT_MODEL_FRAME), so colours compare under the same light, with its shadows
+## drawn out to 1500 m.
 
 
 func _initialize() -> void:
@@ -49,21 +50,6 @@ func _run() -> void:
 	var cam: Camera3D = oval.camera
 	var model_frame := OS.get_environment("PREINSPECT_MODEL_FRAME") != ""
 	var ground := oval.find_child("Ground", true, false) as Node3D
-	if OS.get_environment("PREINSPECT_SUN") != "" and ground != null:
-		var sv := OS.get_environment("PREINSPECT_SUN").split_floats(",")
-		var b := deg_to_rad(sv[0])
-		var e := deg_to_rad(sv[1])
-		var to_sun := Vector3(sin(b) * cos(e), cos(b) * cos(e), sin(e))    # model frame: x east, y north, z up
-		var sun_d := (ground.global_basis * Vector3(to_sun.x, to_sun.z, -to_sun.y)).normalized()
-		var sun: DirectionalLight3D = null
-		for l: DirectionalLight3D in oval.find_children("*", "DirectionalLight3D", true, false):
-			if l.visible and (sun == null or l.light_energy > sun.light_energy):
-				sun = l
-		if sun != null:
-			sun.global_basis = Basis.looking_at(-sun_d, Vector3.UP)
-			sun.directional_shadow_max_distance = 1500.0
-			if sv.size() > 2:
-				sun.light_energy = sv[2]
 	cam.far = 3000.0
 	cam.near = float(OS.get_environment("PREINSPECT_NEAR")) if OS.get_environment("PREINSPECT_NEAR") != "" else 0.05
 	for spec in args.slice(2):
@@ -75,12 +61,32 @@ func _run() -> void:
 			pos = ground.global_transform * Vector3(pos.x, pos.z, -pos.y)
 			tgt = ground.global_transform * Vector3(tgt.x, tgt.z, -tgt.y)
 		cam.global_position = pos
-		# Straight down: screen-up is true north in the model frame (the ground is turned in the game's world, so
-		# the world's FORWARD put Marvel's top view 90 degrees round from Google Earth's, PC check 2026-11-23)
-		var down_up := (ground.global_basis * Vector3(0.0, 0.0, -1.0)).normalized() if model_frame and ground != null else Vector3.FORWARD
-		cam.look_at(tgt, Vector3.UP if absf((tgt - pos).normalized().y) < 0.999 else down_up)
+		# Straight down: model frame keeps the model's north (+y) at the top of the picture, as Google Earth does.
+		var north := (ground.global_transform.basis * Vector3.FORWARD).normalized() if model_frame and ground != null else Vector3.FORWARD
+		cam.look_at(tgt, Vector3.UP if absf((tgt - pos).normalized().y) < 0.999 else north)
 		cam.fov = v[6] if v.size() > 6 else 60.0
 		for i in 8:
+			_place_sun(oval, ground, model_frame)
 			await process_frame
 		root.get_viewport().get_texture().get_image().save_png(out.path_join("%s_%s.png" % [GroundModels.slug_for(g), parts[0]]))
 	quit(0)
+
+
+## PREINSPECT_SUN: the sun's light along the bearing and elevation given in the model frame (x east, y north, z up).
+func _place_sun(oval: Node, ground: Node3D, model_frame: bool) -> void:
+	var sv := OS.get_environment("PREINSPECT_SUN").split_floats(",")
+	if sv.size() < 2 or not model_frame or ground == null:
+		return
+	var sun := oval.get("_sun") as DirectionalLight3D
+	if sun == null:
+		return
+	var az := deg_to_rad(sv[0])
+	var el := deg_to_rad(sv[1])
+	var m := Vector3(sin(az) * cos(el), cos(az) * cos(el), sin(el))   # towards the sun, model frame
+	var to_sun := (ground.global_transform.basis * Vector3(m.x, m.z, -m.y)).normalized()
+	sun.global_basis = Basis.looking_at(-to_sun, Vector3.UP if absf(to_sun.y) < 0.999 else Vector3.FORWARD)
+	# The match draws shadows only 160-320 m out; a Google Earth camera 360 m up would see none (the bowl lit, the
+	# roof's shade on the field missing), so the comparison shots draw them as far as the camera sees.
+	sun.directional_shadow_max_distance = maxf(sun.directional_shadow_max_distance, 1500.0)
+	if sv.size() > 2:
+		sun.light_energy = sv[2]
