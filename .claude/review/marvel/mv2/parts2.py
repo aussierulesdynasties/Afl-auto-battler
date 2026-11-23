@@ -449,7 +449,8 @@ def office_box(nm,q,z0=9.0,z1=24.0,storey=3.75):
     f=lean(q,z1);P=Polygon(f)
     core=list(P.buffer(-0.35,join_style=2).exterior.coords)[:-1];lobby=list(P.buffer(-2.5,join_style=2).exterior.coords)[:-1]
     prism(nm+'_lobby',lobby,0.0,z0,'shopglass','concrete')
-    prism(nm,core,z0,z1-0.8,'glass','concrete',bottom='concrete')
+    # its glass a light grey: the east boxes read pale grey/white in Google Earth, and blue 'glass' rendered them 33 darker (PC check round 3)
+    prism(nm,core,z0,z1-0.8,'officeglass','concrete',bottom='concrete')
     prism(nm+'_soffit',f,z0-0.45,z0,'panel_lt','panel_lt',bottom='concrete')
     z=z0
     while z<z1-1.0:
@@ -521,7 +522,7 @@ for nm,q,z in(('eastB_plant',[(-54.0,-109.0),(-54.0,-117.0),(-47.0,-117.0),(-47.
     vent_block(nm,lean(q,z+2.0),z,z+2.0,z+0.25,z+1.75,bay=3.0,pier=0.8,depth=0.25,wall='silver',top='silver')
 # C: car deck between B and D (roof u -21..10, v -116..-124, z 7) and the white walkway strip beside the wall (v -107..-116, z 10)
 prism('eastC_deck',lean([(-21.0,-116.0),(-21.0,-124.0),(10.0,-124.0),(10.0,-116.0)],7.0),0.0,7.0,'navy','paving')
-prism('eastC_walk',lean([(-21.0,-107.0),(-21.0,-116.0),(10.0,-116.0),(10.0,-107.0)],10.0),0.0,10.0,'glass','white')
+prism('eastC_walk',lean([(-21.0,-107.0),(-21.0,-116.0),(10.0,-116.0),(10.0,-107.0)],10.0),0.0,10.0,'officeglass','white')
 # ---------------- west forecourt: glazed hall under the terrace, front v 139.4, roof = deck 6.5; stairs down at both ends
 FU0,FU1,FV=-47.0,46.5,139.4
 fb=[(u,v) for u,v in bal if FU0<u<FU1]

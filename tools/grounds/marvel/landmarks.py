@@ -112,6 +112,10 @@ def make_textures():
     TILE["pale_panel"] = (7.2, 5.6)
     curtain("dark_glass", (58, 70, 84), (46, 52, 60), bay=1.8, floor=2.4, slab=0.0, noise=7.0)
     TILE["dark_glass"] = (7.2, 4.8)
+    # the two sawtooth towers north-east of the ground read light grey in Google Earth from the east (PC check
+    # round 3: "dark_glass" rendered them deep blue, 39-44 darker); their glass is a pale grey
+    curtain("grey_glass", (122, 130, 134), (100, 106, 110), bay=1.8, floor=2.4, slab=0.0, noise=6.0)
+    TILE["grey_glass"] = (7.2, 4.8)
     curtain("office_glass", (78, 98, 116), (180, 186, 190), bay=1.5, floor=2.7, slab=0.0, noise=8.0)
     TILE["office_glass"] = (6.0, 5.4)
     flat("white_band", (226, 228, 228))
@@ -398,6 +402,21 @@ def nab(g, ring, h=72.0):
                 g.poly("fin_white", [(*(a0 - n * 2.0), base - 0.6), (*(b0 - n * 2.0), base - 0.6),
                                      (*b0, base), (*a0, base)])
                 g.poly("corner_red", [(*(ai + sa), top), (*(bi_ + sb), top), (*(b0 + sb), top), (*(a0 + sa), top)])
+                # the slot is not a plain stripe: folded orange-red panels zigzag out of it across the bays' edges,
+                # each a triangle from one side of the slot reaching 3.5 m onto the next bay, its point folded 0.9 m
+                # out, so the red reads in irregular folded shapes between the bays (Google Earth c_e, PC check
+                # round 3); five folds up the height, alternate ones mirrored
+                nf = 5
+                for kf in range(nf):
+                    z0, z1 = base + (top - base) * kf / nf, base + (top - base) * (kf + 1) / nf
+                    zm = (z0 + z1) / 2 + (top - base) / nf * (0.18 if kf % 2 else -0.15)
+                    f0, f1, fm = (z0 - base) / (top - base), (z1 - base) / (top - base), (zm - base) / (top - base)
+                    if kf % 2 == 0:
+                        g.poly("corner_red", [(*(a0 + sa * f0 + n * 0.15), z0), (*(b0 + t * 3.5 + sb * fm + n * 0.9), zm),
+                                              (*(a0 + sa * f1 + n * 0.15), z1)])
+                    else:
+                        g.poly("corner_red", [(*(b0 + sb * f0 + n * 0.15), z0), (*(a0 - t * 3.5 + sa * fm + n * 0.9), zm),
+                                              (*(b0 + sb * f1 + n * 0.15), z1)])
                 u += float(np.linalg.norm(b0 - a0))
     # parapet and roof over the facets' tops, plant set back on the roof
     rim = ccw([tuple(q) for q in outline])
@@ -740,9 +759,9 @@ def build():
     # 720 Bourke (109 m, 2014): rippling white balcony slabs, planted (ge_nab_b)
     balconies(g, W["332358301"][1], 6.0, 109.0, 3.2, 1.6, wave=1.4)
     g.prism(W["332358301"][1], 0.0, 6.0, "podium_glass", top=None)
-    # the two sawtooth towers north of the stadium (ge_north65_b): white frames, dark glass
-    banded(g, W["221441428"][1], 0.0, 65.0, 3.1, 0.9, 2.8, 0.45, "pale_panel", "dark_glass", parapet=1.5)
-    banded(g, W["992236548"][1], 0.0, 70.0, 3.1, 0.9, 2.8, 0.45, "pale_panel", "dark_glass", parapet=1.5)
+    # the two sawtooth towers north of the stadium (ge_north65_b): white frames, grey glass
+    banded(g, W["221441428"][1], 0.0, 65.0, 3.1, 0.9, 2.8, 0.45, "pale_panel", "grey_glass", parapet=1.5)
+    banded(g, W["992236548"][1], 0.0, 70.0, 3.1, 0.9, 2.8, 0.45, "pale_panel", "grey_glass", parapet=1.5)
     for wid in ("711957749", "711957750"):
         jetty(g, W[wid][1])
         gangway(g, W[wid][1], [(-198.1, -34.0), (-223.8, -42.3), (-220.1, -53.6), (-206.7, -92.3), (-202.4, -104.2)])
@@ -783,7 +802,8 @@ def build():
         tx = nt.nodes.new("ShaderNodeTexImage")
         tx.image = bpy.data.images.load(os.path.join(TEX, mat + ".png"))
         nt.links.new(tx.outputs["Color"], b.inputs["Base Color"])
-        b.inputs["Roughness"].default_value = 0.35 if "glass" in mat else 0.85
+        # grey_glass: matt enough that the sky does not turn the towers blue (PC check round 3)
+        b.inputs["Roughness"].default_value = 0.7 if mat == "grey_glass" else (0.35 if "glass" in mat else 0.85)
         me.materials.append(m)
         ob = bpy.data.objects.new(mat, me)
         sc.collection.objects.link(ob)
