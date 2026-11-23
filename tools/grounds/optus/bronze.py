@@ -47,9 +47,10 @@ OLD_SIGN = (37.28464798665914, 32.0)   # #1867's sign_a in metres (its letters a
 # (f270, shade): a dark charcoal-slate base, nearly uniform, crossed by long thin streaks one fin high, 6-13 m long:
 # pale grey-white ones and terracotta copper-red ones. No mid-tone runs and no blue: the earlier passes drew short runs
 # across the whole tone scale, which read as brickwork (PC GPU capture 2026-11-22).
-BASE = np.array([(79, 83, 88), (88, 91, 93), (96, 96, 96), (91, 86, 83)], float)
+BASE = np.array([(95, 100, 106), (106, 109, 112), (115, 115, 115), (109, 103, 100)], float)
 PALE = np.array([(185, 187, 187), (202, 202, 200), (165, 167, 169)], float)
-# 2026-11-23: the tile lifted 1.32x overall (base 1.46x, streaks 1.1x, since our streaks already stood out more than
+# 2026-11-23: the base lifted another 1.2x once the streaks' occlusion reached the match (shaded views 0.68-0.80 of
+# Google Earth's brightness, lit 0.80-0.87). Before that: the tile lifted 1.32x overall (base 1.46x, streaks 1.1x, since our streaks already stood out more than
 # Google Earth's), Google Earth's brightness over our capture's at 236 facade hovers 18-30 m up
 # on the 12 matched views, both lit by Google Earth's sun (survey/sun.json); the hue gap is Google Earth's haze.
 COPPER_RED = np.array([(165, 101, 88), (178, 114, 99), (147, 92, 81)], float)

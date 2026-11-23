@@ -269,7 +269,7 @@ WV=[i for i in ARC(_wk[-1],_wk[0]) if WSEL[i]]
 def _wp(i,d,z):return Vector((EP[i][0]+d*EN[i][0],EP[i][1]+d*EN[i][1],z))
 _ws=_np0.concatenate([[0.0],_np0.cumsum([(_wp(a,_wf(CP[a]),0)-_wp(b,_wf(CP[b]),0)).length for a,b in zip(WV,WV[1:])])])
 for k,(a,b) in enumerate(zip(WV,WV[1:])):
-    da,db=_wf(CP[a]),_wf(CP[b]);ua,ub=_ws[k]/BH,_ws[k+1]/BH   # bronze texture: square metres, as the facade's
+    da,db=_wf(CP[a]),_wf(CP[b]);ua,ub=_ws[k]/BAY2,_ws[k+1]/BAY2   # bronze texture at the facade's scale (BAY2 wide, BH high)
     n_=OUT(a)
     face([P(_wp(a,da,0),ZW0),P(_wp(b,db,0),ZW0),P(_wp(b,db,0),ZW1),P(_wp(a,da,0),ZW1)],MB,[(ua,0),(ub,0),(ub,(ZW1-ZW0)/BH),(ua,(ZW1-ZW0)/BH)],n_)
     sa,sb=_wsi(CP[a]),_wsi(CP[b]);za,zb=ZD[a],ZD[b]
@@ -291,6 +291,8 @@ print('west volume',len(WV),'vertices, bearings %.1f-%.1f'%(CP[WV[0]],CP[WV[-1]]
 # storeys and openings from the low river-side views. Every opening is cut back into the wall, not painted.
 PVJ=json.load(open(os.path.join(me_dir,'survey','pavilions.json')))
 MPVG=mat('pav_glass',0.12,0.2);MPVD=mat('pav_dark',0.7);MPVB=mat('pav_base',0.8)   # flat colours: every frame and slot is geometry
+# the roofs: pale blue-grey with orange paint (Google Earth straight down, lit: roof 126,147,153, paint 177,123,90)
+MPVR=mat('pav_roof',0.85);MPVP=mat('pav_paint',0.8)
 def _chaikin(L,n=3):
     for _ in range(n):
         M=[]
@@ -401,7 +403,8 @@ _pband(LN,_s0['z'][0],_s0['z'][1],MPVD,_nsel(_s0['y_from']),0.6,MPW)
 _pband(LN,_s0['z'][1],ZNR,MPW)
 LNo=_rim(LN,ZNR,ZNT)
 _la=_pn['lattice'];_A,_B=tuple(_la['a']),tuple(_la['b'])
-_fill(_clip(LNo,_B,_A),ZNT,MD)                        # the open roof deck, south of the lattice
+_fill(_clip(LNo,_B,_A),ZNT,MPVR)                      # the open roof deck, south of the lattice
+for _pp in _pn.get('roof_paint',[]):_fill([tuple(q) for q in _pp],ZNT+0.02,MPVP)   # its orange paint (survey/roof_paint.py)
 _LL=_clip(LNo,_A,_B);_fill(_LL,ZNT-0.25,MPVG)           # the glazed north end, under a grid of steel beams
 _d=(_B[0]-_A[0],_B[1]-_A[1]);_dl=math.hypot(*_d);_d=(_d[0]/_dl,_d[1]/_dl);_pr=(-_d[1],_d[0])
 _ext=max(((p[0]-_A[0])*_pr[0]+(p[1]-_A[1])*_pr[1]) for p in _LL)
@@ -448,7 +451,8 @@ _pband(LS,_z7,_z11,MPW,only=lambda k:not _gsel(k) and not _lsel(k))   # the face
 _zz=[_z7]+[z for zs in _ps['louvre_slots'] for z in zs]+[_z11]
 for _qq in range(len(_zz)-1):   # the north-west end: solid, with three louvre slots cut 0.4 m in
     _pband(LS,_zz[_qq],_zz[_qq+1],MPVD if _qq%2 else MPW,(lambda k:True) if _qq%2 else None,0.4 if _qq%2 else 0.0,MPW,only=_lsel)
-LSo=_rim(LS,ZSR,ZST);_fill(LSo,ZST,MD)
+LSo=_rim(LS,ZSR,ZST);_fill(LSo,ZST,MPVR)
+for _pp in _ps.get('roof_paint',[]):_fill([tuple(q) for q in _pp],ZST+0.02,MPVP)
 _fill(LN,0.05,MC,False);_fill(LS,0.05,MC,False)
 print('pavilions: north',len(LN),'south',len(LS),'segments')
 # --- roof: the inner edge is its own measured curve (survey/inner_c.json), met by each truss line square to the edge
