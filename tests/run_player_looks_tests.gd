@@ -23,6 +23,7 @@ func _run() -> void:
 	_t("_test_atlases")
 	_t("_test_cells")
 	_t("_test_brows")
+	_t("_test_retired_cuts")
 	await _t("_test_looks")
 	print(Ran.line("Player looks", self))
 	for f in _failures:
@@ -60,8 +61,9 @@ func _test_atlases() -> void:
 		sizes[s] = t.resource_path
 	_check(sizes.size() - 1 <= 32, "The shader holds every overlay size (32)")
 	for id in VignetteLooks.HAIR_STYLES:
-		_check(Appearance.HAIR_STYLES.has(id) and not VignetteFigures.HAIR_STYLE_INDEX.has(id)
-				and not VignetteFigures.HAIR_NONE.has(id), "%s is a new style a player can have" % id)
+		# A cut folded into its twin (Appearance.HAIR_RETIRED) keeps its 2D art until the sheets are rebuilt.
+		_check((Appearance.HAIR_STYLES.has(id) or Appearance.HAIR_RETIRED.has(id)) and not VignetteFigures.HAIR_STYLE_INDEX.has(id)
+				and not VignetteFigures.HAIR_NONE.has(id), "%s is a style a player can have, or a retired one" % id)
 
 
 ## Every new style and every face has art on the strips a match shows most.
@@ -92,6 +94,19 @@ func _test_brows() -> void:
 	_check(seen.size() == 5, "All five brows are worn (%d)" % seen.size())
 	var look := Appearance.full({"skin": 2, "hair": 1}, "p1", true)
 	_check(int(look.get("brows", -1)) == Appearance.brows_for("p1"), "A look carries his brows")
+
+
+## Director 2026-11-21 ("consolidate the options and remove the weaker ones"): 31 cuts became 20.
+## A save or Forge creation wearing a retired cut loads in its twin; nobody generated wears one.
+func _test_retired_cuts() -> void:
+	_check(Appearance.HAIR_STYLES.size() == 20, "The Forge offers 20 cuts (%d)" % Appearance.HAIR_STYLES.size())
+	for old in Appearance.HAIR_RETIRED:
+		var twin: String = Appearance.HAIR_RETIRED[old]
+		_check(not Appearance.HAIR_STYLES.has(old) and Appearance.HAIR_STYLES.has(twin), "%s folds into a cut on offer (%s)" % [old, twin])
+		var look := Appearance.full({"skin": 1, "hair": 1}, "old_save", false, {"hair_style": old})
+		_check(str(look["hair_style"]) == twin, "A save in %s loads in %s (got %s)" % [old, twin, look["hair_style"]])
+	for k in Appearance.HAIR_STYLE_MIX:
+		_check(Appearance.HAIR_STYLES.has(k), "Generated players wear only cuts on offer (%s)" % k)
 
 
 class Fig extends Control:
