@@ -8,9 +8,9 @@ extends SceneTree
 ## Seeded by design: it measures the seat files against the models, nothing random runs.
 
 const SeatRule := preload("res://tools/grounds/seat_rule.gd")
-## Grounds whose own pull request is still taking their bad seats out (the MCG, #1987);
+## Grounds whose own pull request is still taking their bad seats out;
 ## each leaves this list when that lands and seat_check has been run on it.
-const PENDING := ["mcg"]
+const PENDING := []
 
 var _checks := 0
 var _failures: Array[String] = []
@@ -42,8 +42,8 @@ func _test_every_ground() -> void:
 		await process_frame
 
 
-## The rule is not vacuous: a pending ground still carrying its bad seats is caught on each count
-## it is known for (the MCG's rows past its south stand, its seats under the tiers).
+## The rule is not vacuous: the MCG, once full of seats past its south stand and under its tiers,
+## still has its seats after they were taken out, and the rule's limits stay a real stand's.
 func _test_rule_catches() -> void:
 	var r: Dictionary = SeatRule.new().check("mcg", root)
 	var why: Dictionary = r["why"]
