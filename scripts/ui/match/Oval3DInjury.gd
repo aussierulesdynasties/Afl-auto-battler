@@ -29,11 +29,23 @@ const PLAN := {
 ## leg limped on. Its pace in m/s at rate 1 is read off the clip (_walk_speed).
 ## A concussed man is walked off steady on his feet, the doctor beside him (no limp): the match
 ## crew's plain walk (Oval3DCrew's crew_walk) where the figures have it.
-const WALK := {"shoulder": "injured_arm_walk", "hand": "injured_arm_walk", "concussion": "crew_walk"}
+## A knee, an ankle or a foot is helped off between two trainers, an arm over each one's shoulders,
+## hopping on his good leg (helped_off, with helped_off_l / _r for the trainers on his left and
+## right: one cycle made together on our rig, tools/oval3d/injury/bake_helped_off.py).
+const WALK := {"shoulder": "injured_arm_walk", "hand": "injured_arm_walk", "concussion": "crew_walk",
+		"knee": "helped_off", "ankle": "helped_off", "foot": "helped_off"}
+const HELPED := "helped_off"
+const HELPERS := ["helped_off_l", "helped_off_r"]
+## Where the two trainers walk in his frame (as the cycle was made): beside him and a little ahead,
+## so his arms reach over their shoulders behind their necks.
+const HELP_GAP := 0.5
+const HELP_AHEAD := 0.24
+## m/s (picture) a trainer closes on his place beside him when the help-off starts.
+const HELP_CLOSE := 0.8
 const WALK_DEFAULT := "injured_walk"
 ## Clips that loop (the rest play once and hold their last pose).
 const LOOPS := ["writhing", "injured_walk", "injured_arm_walk", "kneeling", "fallen_idle", "injured_idle",
-		"injured_hurting_idle", "injured_stumble_idle", "sitting_dazed"]
+		"injured_hurting_idle", "injured_stumble_idle", "sitting_dazed", "helped_off", "helped_off_l", "helped_off_r"]
 ## Seconds of clip a change of clip blends over, when the two poses already match (_entry).
 const BLEND := 0.25
 ## Seconds short of a played-once clip's end that it holds at.
@@ -136,6 +148,8 @@ func _kind_plan(kind: String) -> Dictionary:
 
 func _walk_clip(kind: String) -> String:
 	var w := str(WALK.get(kind, WALK_DEFAULT))
+	if w == HELPED and not (HELPERS[0] in _clips and HELPERS[1] in _clips):
+		w = WALK_DEFAULT
 	if _clips.has(w) or (oval.players[0]["anim"] as AnimationPlayer).has_animation(w):
 		return w
 	return WALK_DEFAULT if _clips.has(WALK_DEFAULT) else ""
@@ -287,6 +301,7 @@ func _step_scene(s: Dictionary, dt: float) -> void:
 			# player never stops (a stopped player has no pose to blend the next clip from).
 			adv = clampf(float(_len[clip]) - HOLD_SHORT - float(s["ct"]), 0.0, adv)
 		s["ct"] = float(s["ct"]) + adv
+		s["adv"] = adv
 		ap.advance(adv)
 		if s.has("to_tf"):
 			s["blend_e"] = float(s["blend_e"]) + adv
@@ -469,6 +484,9 @@ func _trainers(s: Dictionary, dt: float, ddt: float) -> void:
 	var side := Vector2(axis.y, -axis.x)
 	var go := d.time - float(s["t0"]) >= REACT
 	var walking := stage == "walk"
+	if walking and str(s["clip"]) == HELPED and tr.size() >= 2:
+		_help_off(s, tr, dt)
+		return
 	for j in range(tr.size()):
 		var c: Dictionary = tr[j]
 		var sgn := 1.0 if j == 0 else -1.0
@@ -505,3 +523,23 @@ func _trainers(s: Dictionary, dt: float, ddt: float) -> void:
 		oval.crew.move_to(c, want, at, pace, ddt, walking, pose)
 
 
+## The help-off: his two trainers hold him up, one either side, posed with him frame for frame
+## (their cycle and his were made together). As it starts they close on their places from where
+## they stood while he got up.
+func _help_off(s: Dictionary, tr: Array, dt: float) -> void:
+	var p: Dictionary = s["p"]
+	var node: Node3D = p["node"]
+	var ap: AnimationPlayer = p["anim"]
+	for j in range(2):
+		var c: Dictionary = tr[j]
+		var n3: Node3D = c["node"]
+		var local := Vector3(HELP_GAP * (1.0 if j == 0 else -1.0), 0.0, HELP_AHEAD)
+		var xf := node.transform * Transform3D(Basis(), local)
+		if not c.has("help_off"):
+			c["help_off"] = n3.position - xf.origin
+			c["kpose"] = ""
+		var off: Vector3 = c["help_off"]
+		off -= off.limit_length(HELP_CLOSE * dt)
+		c["help_off"] = off
+		xf.origin += off
+		oval.crew.carry(c, xf, str(HELPERS[j]), ap.current_animation_position, float(s.get("adv", 0.0)))
