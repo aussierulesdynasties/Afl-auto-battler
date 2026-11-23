@@ -493,7 +493,8 @@ def fill_line(name,L,z0,z1,off,side,top):
     return q
 for sg in(1,-1):
     tw='w' if sg>0 else 'e';m=lambda u,v:(sg*u,sg*v)
-    prism('cornerN_tower_'+tw,[m(*c) for c in TWN],0.0,33.0,'bluepanel','concrete')
+    # round 10 audit: the north-west one is the Seven studios block, white-grey cladding in Google Earth (ext_135, obl_nw), not navy
+    prism('cornerN_tower_'+tw,[m(*c) for c in TWN],0.0,33.0,'silver' if sg>0 else 'bluepanel','concrete')
     if sg>0:prism('cornerS_tower_'+tw,[m(*c) for c in TWS],0.0,33.0,'bluepanel','concrete')
     for uc,vc in((-54.2,107.2),(54.3,108.4)):
         cu,cv=m(uc,vc);box('beige_%s_%d'%(tw,int(uc)),cu-6,cu+6,cv-5,cv+5,0.0,27.4,'slate','glass' if (sg<0 and cu<0) else 'canvas')

@@ -38,7 +38,12 @@ SUNSET_PLAZA = [(-198.1, -34.0), (-223.8, -42.3), (-220.1, -53.6), (-206.7, -92.
 # Buildings modelled one by one from Google Earth in tools/grounds/marvel/landmarks.py (landmarks.glb):
 # left out of buildings.bin so they are not drawn twice.
 LANDMARK_WAYS = {"33261083", "221441430", "33261092", "44158938", "1246185747", "296368687", "332358301", "221441428", "992236548",
-                 "57019580"}  # AFL House: a 2 m strip along the stadium's own west building, which the model has
+                 "57019580",  # AFL House: a 2 m strip along the stadium's own west building, which the model has
+                 "1507403839", "1507403840"}  # HOME Docklands' two towers (101 m): OpenStreetMap has no height for them
+# City of Melbourne structures modelled in landmarks.py instead (round 10 audit: plain boxes within 250 m), and the
+# stadium's own structure (8392), whose upper parts fell outside its outline and floated over the east offices.
+LANDMARK_SIDS = {10757, 16888, 3046}
+DROP_SIDS = {8392}
 
 # Colours: Google Earth's over Docklands, painted through the match light's measured response (GroundModels
 # SURROUNDS tint 2.0, 1.4, 0.95, then about R 0.95x - 10, G 0.84x, B 0.85x on screen), so each renders as
@@ -54,10 +59,10 @@ PARKING = (132, 137, 132)
 PATH = (216, 220, 194)
 PAVED = (184, 190, 176)        # concrete plazas, promenades and the stadium's concourse
 PLAZA = (218, 186, 170)        # the promenades' pavers (Harbour Esplanade, Docklands Park): pale salmon-tan; (206, 150, 128) rendered terracotta against GE (203, 165, 149) (PC check 2026-11-23)
-BALLAST = (136, 126, 112)       # the Southern Cross yards: grey-brown ballast in Google Earth (top, c_e)
-RAIL = (80, 76, 70)
+BALLAST = (128, 126, 122)       # the Southern Cross yards: grey ballast, Google Earth top-down (118, 120, 123); round 10, was brown
+RAIL = (84, 82, 80)             # a track: sleepers and rails together, 2.6 m wide (drawn smoothed)
 ROOF = (168, 179, 174)
-WATER = (62, 79, 76)
+WATER = (36, 68, 82)            # round 10: Google Earth's harbour reads navy (32, 64, 82); (62, 79, 76) rendered grey-green
 URBAN = (160, 164, 152)
 WOOD = (84, 101, 59)
 
@@ -236,9 +241,17 @@ def paint(trees, ways):
     for t, p in ways:
         if t.get("railway") in ("rail", "light_rail", "tram") and len(p) > 1 and t.get("tunnel") != "yes":
             d.line(poly(p), fill=BALLAST, width=5, joint="curve")
+    # Each track drawn 4 times finer and shrunk, so it is a smooth dark band, not a 1-pixel line that stair-steps
+    # (round 10: the yard's tracks shimmered as wavy lines from the broadcast's distance).
+    K = 4
+    mask = Image.new("L", (SIZE * K, SIZE * K), 0)
+    dm = ImageDraw.Draw(mask)
     for t, p in ways:
         if t.get("railway") in ("rail", "light_rail", "tram") and len(p) > 1 and t.get("tunnel") != "yes":
-            d.line(poly(p), fill=RAIL, width=1)
+            dm.line([(x * K + K / 2, y * K + K / 2) for x, y in poly(p)], fill=255, width=int(2.6 * K), joint="curve")
+    mask = mask.resize((SIZE, SIZE), Image.BOX)
+    im.paste(Image.new("RGB", (SIZE, SIZE), RAIL), (0, 0), mask)
+    d = ImageDraw.Draw(im)
     # Roads and paths; bridges are drawn in 3D (bridges.glb), so the river shows under them.
     order = sorted([(WIDTH.get(t.get("highway"), 0), t, p) for t, p in ways
                     if t.get("highway") in WIDTH and len(p) > 1 and t.get("tunnel") != "yes"
@@ -361,6 +374,8 @@ def com_massing(st, skip_polys):
         if top - base < 0.6 or top < 2.0:
             continue
         sid = float(int(q["structure_id"]) % 100000)
+        if int(sid) in LANDMARK_SIDS or int(sid) in DROP_SIDS:
+            continue
         for poly in polys:
             ring = [xy(lat, lon) for lon, lat in poly[0]]
             if len(ring) < 4:
@@ -376,6 +391,30 @@ def com_massing(st, skip_polys):
             for x, z in pts:
                 out += [x, z]
     return out, covered
+
+
+def com_parts(sids, skip_polys=()):
+    """The City of Melbourne massing parts of the structures `sids`: {sid: [(base, top, [(east, north), ...]), ...]},
+    less any part whose middle falls in skip_polys (the hand-modelled landmarks)."""
+    import json
+    out = {}
+    for f in json.load(open(COM_CACHE))["features"]:
+        q = f["properties"]
+        if q.get("footprint_type") != "Structure" or q.get("footprint_max_elevation") is None:
+            continue
+        sid = int(q["structure_id"]) % 100000
+        if sid not in sids:
+            continue
+        base = q["footprint_min_elevation"] - q["structure_min_elevation"]
+        top = q["footprint_max_elevation"] - q["structure_min_elevation"]
+        if top - base < 0.6 or top < 2.0:
+            continue
+        g = f["geometry"]
+        for poly in ([g["coordinates"]] if g["type"] == "Polygon" else g["coordinates"]):
+            ring = [xy(lat, lon) for lon, lat in poly[0]][:-1]
+            if len(ring) >= 3 and not any(_inside(tuple(np.array(ring).mean(0)), sp) for sp in skip_polys):
+                out.setdefault(sid, []).append((base, top, ring))
+    return out
 
 
 def building_list(ways, st):
@@ -429,6 +468,11 @@ def main():
     im = paint(trees, ways)
     im.save(os.path.join(OUT, "surrounds.webp"), quality=88, method=6)
     t = tree_list(trees, st)
+    # trees under Victoria Point's forecourt deck (9.5 m, drawn in landmarks.py with its own planted beds) are buried
+    deck = [r for b, _, r in com_parts({10757}).get(10757, []) if b < 0.5]
+    if deck:
+        t = t.reshape(-1, 5)
+        t = t[[not any(_inside((x, -z), d) for d in deck) for x, z in t[:, :2]]].reshape(-1)
     t.tofile(os.path.join(OUT, "trees.bin"))
     b = building_list(ways, st)
     b.tofile(os.path.join(OUT, "buildings.bin"))

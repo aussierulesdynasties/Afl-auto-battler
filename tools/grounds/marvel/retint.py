@@ -23,8 +23,10 @@ TARGET = {
     "teal": (196, 208, 202),
     "endroof": (196, 196, 190),
     "deck": (206, 206, 199),
-    "navy": (128, 140, 154),  # PC check round 2: the east podium rendered (85, 101, 126) against GE (114, 130, 142)
-    "slate": (130, 138, 150),
+    "navy": (130, 137, 146),  # round 10: greyer (lilac in the audit); PC check round 2: the east podium rendered (85, 101, 126) against GE (114, 130, 142)
+    # round 10 (full audit): the cladding read lilac in both lights. The 2019 street photo (overcast, so near its true
+    # colour) shows neutral greys: light grey cladding, near-black navy stair blocks, a dark grey upper band.
+    "slate": (140, 144, 148),
     # PC checks 2026-11-23: (150, 146, 136) read a little cool against Google Earth's (171, 161, 151);
     # (160, 144, 131) read tan in the west forecourt, where Google Earth is grey. A light warm grey.
     "paving": (158, 152, 144),
@@ -136,7 +138,7 @@ def main():
     # a roof and so read khaki out here).
     # 2026-11-22: (56, 68, 96) rendered near-black navy on the shaded east face, (1, 27, 70) against
     # Google Earth's (105, 119, 136); a greyer, lighter blue keeps the letters' dark ground in the sun too.
-    retint("upperwall", (80, 92, 114), src="soffit", out="upperwall")
+    retint("upperwall", (62, 68, 82), src="soffit", out="upperwall")  # round 10: dark grey-navy, not blue
     # Glazing: the dark glass rendered black in shade (Google Earth's office glass reads (96, 114, 132),
     # its shopfronts (84, 104, 121), sky in them included). Lighter, so it reads as glass, not holes.
     retint("glass", (74, 90, 108))
@@ -148,13 +150,15 @@ def main():
     label()
     # the blue blocks' plain cladding: the panel joints of the slate texture, a mid blue (Google Earth c_ne)
     CONTRAST["bluepanel"] = 0.5
-    retint("bluepanel", (96, 112, 140), src="slate", out="bluepanel")
+    retint("bluepanel", (52, 58, 74), src="slate", out="bluepanel")  # round 10: the photo's stair blocks (42, 47, 61) by white 207
     # the west podium's piers and spandrels: grey-blue panels, not white (Google Earth c_w, ferry_b).
     # PC check 2026-11-23: (126, 136, 148) rendered (118, 128, 142) against Google Earth's darker blue
     # (74, 103, 129); the west face renders about 0.94 of its colour.
     CONTRAST["podiumpanel"] = 0.5
     # round 2: (80, 109, 134) still rendered a light lavender (103, 116, 139) in the sun against (73, 102, 129)
-    retint("podiumpanel", (52, 92, 124), src="slate", out="podiumpanel")
+    # round 10: (52, 92, 124) read saturated blue from every side; the photo shows the podium's piers light grey and its
+    # glazing dark, Google Earth's darker blue was its glass and shade together
+    retint("podiumpanel", (150, 156, 162), src="slate", out="podiumpanel")
     # the forecourt plinth's street front: blue-grey glass (PC check: Google Earth (76, 102, 118))
     retint("fcglass", (81, 108, 124), src="curtain", out="fcglass")
     # the east office boxes' ribbon glass: light grey (PC check round 3: Google Earth's east boxes are pale grey/white)

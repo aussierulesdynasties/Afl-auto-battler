@@ -2,19 +2,19 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://csnqqnis6fcas"
-path="res://.godot/imported/landmarks_nab_glass.png-9ea64cddb24e6cbf4cdccba2b6d7a84c.ctex"
+uid="uid://dweypfvq850yf"
+path="res://.godot/imported/landmarks_nab_glass_b.png-3bc3d36518185fa1487c0ba88ec04e66.ctex"
 metadata={
 "vram_texture": false
 }
 generator_parameters={
-"md5": "693536601fb049fea7d66847f13fc977"
+"md5": "ba6ce310a84d4a90c68852143d6baeb9"
 }
 
 [deps]
 
-source_file="res://assets/grounds/marvel/landmarks_nab_glass.png"
-dest_files=["res://.godot/imported/landmarks_nab_glass.png-9ea64cddb24e6cbf4cdccba2b6d7a84c.ctex"]
+source_file="res://assets/grounds/marvel/landmarks_nab_glass_b.png"
+dest_files=["res://.godot/imported/landmarks_nab_glass_b.png-3bc3d36518185fa1487c0ba88ec04e66.ctex"]
 
 [params]
 
