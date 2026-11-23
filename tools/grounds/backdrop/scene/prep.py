@@ -632,8 +632,43 @@ if spec.get('real'):   # industrial land: an untagged building there is a shed o
                 try: _ip.append(_SPoly(_r).buffer(0))
                 except Exception: pass
     _IND = _SU(_ip) if _ip else None
+# real place: buildings OSM has not mapped yet (whole suburbs in places) from Overture's other sources (Microsoft and
+# Google footprints traced from imagery, Esri community maps), where no OSM outline covers them
+OVB = []
+if spec.get('real'):
+    _ovp = os.path.join(os.environ.get('WORK', '/home/user/work'), 'overture', spec['name'] + '.json')
+    if os.path.exists(_ovp):
+        from shapely import wkt as _OW
+        from shapely.strtree import STRtree as _STR
+        from shapely.geometry import Polygon as _OPo
+        _op = []
+        for el in js + PARTS:
+            if el['type'] == 'way' and 'building' in el.get('tags', {}):
+                _r = ring(el)
+                if len(_r) >= 4:
+                    try: _op.append(_OPo(_r).buffer(0))
+                    except Exception: pass
+        _otree = _STR(_op) if _op else None
+        for r in json.load(open(_ovp)):
+            if r['src'] == 'OpenStreetMap': continue
+            try: g_ = _OW.loads(r['wkt'])
+            except Exception: continue
+            if g_.geom_type == 'MultiPolygon': g_ = max(g_.geoms, key=lambda q: q.area)
+            if g_.geom_type != 'Polygon': continue
+            ll = list(g_.exterior.coords)
+            loc = [xy(y, x) for x, y in ll]
+            cx_ = sum(q[0] for q in loc) / len(loc); cy_ = sum(q[1] for q in loc) / len(loc)
+            if abs(cx_) > NEAR or abs(cy_) > NEAR: continue
+            qp = _OPo(loc).buffer(0)
+            if qp.area < 12: continue
+            if _otree is not None and any(_op[i].intersection(qp).area > 0.3 * qp.area for i in _otree.query(qp)): continue
+            tg = {'building': 'yes', 'source': 'overture:' + str(r['src'])}
+            hh = r['height'] or (r['num_floors'] * 3.4 + 1.0 if r['num_floors'] else None)
+            if hh: tg['height'] = str(round(float(hh), 1))
+            OVB.append({'type': 'way', 'id': 'ov' + str(r['id']), 'tags': tg, 'geometry': [{'lat': y, 'lon': x} for x, y in ll]})
+    print('overture-only buildings', len(OVB))
 skip_r = spec["clear_r_m"]; _FPP = os.path.join(OUT, "footprint.json"); _FPR = np.array(json.load(open(_FPP))) if os.path.exists(_FPP) else None
-for el in js + PARTS:
+for el in js + PARTS + OVB:
     t = el.get('tags', {})
     if el['type'] != 'way' or 'building' not in t: continue
     pts = ring(el)

@@ -698,7 +698,7 @@ static func backdrop(slug: String, base := "") -> Node3D:
 ## Adelaide's model carries a 6 km grass plane; the ground kit's first drafts (#1930) a 240 m concourse disc;
 ## the WACA, Bruce and North Hobart a flat plate round the stands (tools/grounds/backdrop/scene: run1.sh SKIP).
 const BACKDROP_HIDES := {"adelaide": ["ao_ground"], "barossa": ["concourse"], "sky": ["concourse"],
-	"jiangwan": ["concourse"], "hands": ["concourse"], "summit": ["concourse"],
+	"jiangwan": ["concourse"], "hands": ["concourse"], "blacktown": ["concourse_far"], "summit": ["concourse"],
 	"macpoint": ["concourse"], "waca": ["land", "road", "brick"], "bruce": ["g_ground"], "north_hobart": ["ground"]}
 
 const BACKDROP_SHADER := preload("res://scripts/ui/match/oval3d_backdrop.gdshader")
