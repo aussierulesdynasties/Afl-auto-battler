@@ -31,12 +31,17 @@ static var GOAL_X := 85.0
 ## Play on a ground whose boundary has these half-axes (metres); Vector2.ZERO is the
 ## standard oval.
 static func use_field(half: Vector2) -> void:
-	if half.x <= 0.0 or half.y <= 0.0:
-		half = Vector2(STD_HALF_LEN, STD_HALF_WID)
+	# A Vector2 holds 32-bit floats: the standard oval's 86.3 came back 86.3000031 and missed
+	# the exact standard values, so gx was no longer the identity there. The standard oval
+	# (no size, or its own size) takes the constants themselves.
+	if half.x <= 0.0 or half.y <= 0.0 or half.is_equal_approx(Vector2(STD_HALF_LEN, STD_HALF_WID)):
+		HALF_LEN = STD_HALF_LEN
+		HALF_WID = STD_HALF_WID
+		GOAL_X = STD_GOAL_X
+		return
 	HALF_LEN = half.x
 	HALF_WID = half.y
-	# The standard oval's own goal line exactly, so every spot on it is as it always was (gx).
-	GOAL_X = STD_GOAL_X if half.x == STD_HALF_LEN else half.x - GOAL_IN
+	GOAL_X = half.x - GOAL_IN
 
 
 ## The standard oval's x (MatchSim's field position, a set-up spot) on this ground.
