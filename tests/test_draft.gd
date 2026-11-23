@@ -41,6 +41,7 @@ func run() -> void:
 	_t("_test_draft_reasons_change_nothing")
 	_t("_test_real_drafts_reasons_change_nothing")
 	_t("_test_rival_pick_reads_whole_pool")
+	_t("_test_rivals_step_same_picks")
 	GameState.replay_seed = 0
 	GameDB.skip_ovr_overrides = false
 	GameDB.reload()
@@ -1337,3 +1338,54 @@ func _test_rival_pick_reads_whole_pool() -> void:
 	var kept := saved.keys().filter(func(k): return str(k) in ["_terms", "_terms_on", "_terms_code",
 			"_rival_views", "_run_memo", "_run_memo_on", "_worths"])
 	_check(kept.is_empty(), "What the rival AI keeps between picks is not written to a save (%s)" % str(kept))
+
+
+## The rival picks after yours made a slice at a time (rivals_step, the draft
+## screen's few milliseconds a frame) are the same picks, in the same order, as
+## made all at once: a League Draft from the real pool and a National Draft
+## class, with the slices cut mid-pick (100 microseconds) and your picks made
+## the same way in both.
+func _test_rivals_step_same_picks() -> void:
+	var clubs: Array = GameDB.active_clubs(2026).duplicate()
+	for kind in ["league", "intake"]:
+		var runs := []
+		for sliced in [false, true]:
+			var d: Draft
+			if kind == "league":
+				d = Draft.new(GameDB.all_players_sorted(), clubs.duplicate(), 4321)
+			else:
+				var sizes := {}
+				var counts := {}
+				for c in clubs:
+					sizes[c] = 40
+					counts[c] = {"RUCK": 2, "MID": 14, "DEF": 12, "FWD": 12}
+				d = Draft.build_intake(GameDB.all_draftees_sorted(), clubs.duplicate(), clubs.duplicate(), 4321,
+						sizes, counts)
+			Draft.hold_rivals = sliced
+			d.start_for_user(str(clubs[5]))
+			Draft.hold_rivals = false
+			var guard := 0
+			var slices := 0
+			while not d.is_finished() and guard < 2000:
+				guard += 1
+				if d.rivals_due():
+					if sliced:
+						while not d.rivals_step(100):
+							slices += 1
+					else:
+						d.auto_until_user_turn()
+					continue
+				# Stop on the user's turn, once both runs have landed the same rival picks.
+				if d.pick_history.size() > 150 and kind == "league":
+					break
+				var board: Array = d.board("", "", "", "overall", true).filter(func(q): return d.can_pick_player(q))
+				Draft.hold_rivals = sliced
+				var ok: bool = d.pick(board[0]) if not board.is_empty() else d.user_pass()
+				Draft.hold_rivals = false
+				if not ok:
+					break
+			runs.append(JSON.stringify(d.pick_history))
+			if sliced:
+				_check(slices > 10, "%s: the sliced run stopped part way through picks (%d slices)" % [kind, slices])
+		_check(runs[0] == runs[1] and runs[0].length() > 100,
+				"%s Draft: rival picks made a slice at a time are the picks made at once" % kind)
