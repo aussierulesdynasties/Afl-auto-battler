@@ -168,6 +168,9 @@ const MATERIAL_FIX := {
 ## Godot's glTF reader keeps the colours but does not paint with them, so the loader turns that on.
 const VERTEX_COLOURED := ["adelaide"]
 
+## Grounds whose seats throw no shadows (see _instances).
+const SEATS_NO_SHADOW := ["bellerive"]
+
 ## Each seat colour as the model paints it (the mean of its seat texture; sRGB).
 const SEAT_COLOURS := {
 	# Mars Stadium (seat_blue and seat_greyblue there keep the values already here).
@@ -176,8 +179,9 @@ const SEAT_COLOURS := {
 	"seat_slategrey": Color(0.361, 0.392, 0.447),
 	# Accor: aqua lower bowl (seat_teal there keeps the value already here).
 	"seat_aqua": Color(0.527, 0.719, 0.757),
-	# Bellerive: mid-blue plastic all round the Boon and Ponting stands (Google Earth from the field).
-	"seat_bel_blue": Color8(72, 108, 146),
+	# Bellerive: pale grey-blue plastic all round the Boon and Ponting stands, the sunlit seats'
+	# median in Google Earth from the field (PC seat check 2026-11-23: 72, 108, 146 read saturated).
+	"seat_bel_blue": Color8(100, 130, 158),
 	# The Members' front rows dark grey; the Northern Stand's and the east terrace's benches white.
 	"seat_bel_pale": Color8(150, 168, 186), "seat_bel_dark": Color8(58, 62, 70), "seat_bel_white": Color8(214, 216, 214),
 	# MCG, by tier from Street View on the ground and Google Earth: white and light grey lower and
@@ -1069,6 +1073,10 @@ static func _instances(root: Node3D, mesh: Mesh, path: String, colour: String, m
 		mi.multimesh = mm
 		mi.material_override = mat
 		mi.set_meta("seats", true)
+		# Grounds whose rows read striped when every seat throws its own shadow on the tread behind it
+		# (a dark band a row, aliased into moire from the broadcast camera): their seats cast none.
+		if SEATS_NO_SHADOW.has(path.get_base_dir().get_file()):
+			mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		root.add_child(mi)
 
 
