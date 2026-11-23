@@ -62,6 +62,7 @@ const DIGITS := preload("res://assets/vignette/figures_digits.png")
 ## A Sherrin is about 0.29 m end to end and 0.18 m across.
 const BALL_R := 0.09
 const BALL_LONG := 1.6
+const DEAD_HANDS := 2.0       # m: a dead ball higher than this is at the top of a bounce or throw-up
 const DROP_T := 0.35          # s: a ball out of a man's hands takes this to reach where it lies
 const DROP_SNAP := 0.25       # m: a smaller gap than this is drawn straight away
 const ROLL_TURN := 8.0         # rad/s: a rolling ball's long axis turns across its way at most this fast
@@ -189,8 +190,12 @@ func sync(dt: float) -> void:
 		# A dead ball (a free kick or mark being set up) has no holder in the director but
 		# keeps its hand height; drawn as it is, it would hang in the air. Within a metre of
 		# a player it is in his hands; otherwise it lies on the turf.
-		holder = _nearest(director.ball["pos"], 1.0)
-		resting = holder < 0
+		# Above any man's hands it is the top of a bounce or a throw-up, held there for the
+		# ruckmen's tap: drawn where it is, not dropped to the turf (or into a man's hands) for
+		# that frame and thrown back up by the tap (bug bash 2026-11-23).
+		var up := float(director.ball.get("h", 0.0)) > DEAD_HANDS
+		holder = -1 if up else _nearest(director.ball["pos"], 1.0)
+		resting = holder < 0 and not up
 	# The umpires first: the players are drawn clear of where they are this frame (_spaced).
 	_move_umpires(dt)
 	var at := _spaced()
@@ -337,10 +342,13 @@ func _hold_ball(p: Dictionary) -> void:
 		palms.append(gt * (pose.origin + pose.basis.y.normalized() * float(p["hand_len"][k]) * 0.6))
 	var l: Vector3 = palms[0]
 	var r: Vector3 = palms[1]
-	ball.position = (l + r) * 0.5
+	# The palms are in the world: the ground turns half a turn when the sides change ends
+	# (set_ends), so in the second and fourth quarters the ball's own (ground) position is not
+	# the world's. Set in ground terms it was drawn mirrored, at the far end of the ground.
+	ball.global_position = (l + r) * 0.5
 	var across := r - l
 	if across.length() > 0.01:
-		ball.look_at(ball.position + across, Vector3.UP)
+		ball.look_at(ball.global_position + across, Vector3.UP)
 
 
 ## The crowd's clock, and a goal the moment the director shows one: the scoring side's
@@ -1940,10 +1948,11 @@ var _ump_step := 1.0 / 30.0   # the director seconds of the last frame that move
 var _ump_ball := false        # the ball is in his hands this frame
 var _ump_pick := -1.0         # seconds since he took it (the pick-up blend)
 var _ump_pick_len := UMP_PICK # ...and how long it takes
-var _ump_from := Vector3.ZERO # the ball's gap from his hands when he took it
+var _ump_from := Vector3.ZERO # where the ball was (in the world) when he went to take it
 var _ump_off := Vector3.ZERO  # let go: his hands less the director's ball, easing out
 var _ump_off_t := -1.0
 var _ump_hit_from := Vector3.ZERO  # a bounce: where the ball left his hands
+var _ump_gone := Vector2.INF  # the stoppage (its spot) whose ball he has put in play; INF none
 
 
 ## The umpire who takes stoppage `st` (director.stoppage_now), -1 for none. Kept for the whole
@@ -2000,6 +2009,8 @@ func _move_umpires(frame_dt: float) -> void:
 	var flying := str(director.ball.get("mode", "")) == "flight"
 	if st.is_empty() and (_ump_job < 0 or not (umpires[_ump_job] as Dictionary).has("clip")):
 		_ump_job = -1
+	if st.is_empty() or (st["at"] as Vector2) != _ump_gone:
+		_ump_gone = Vector2.INF
 	if not st.is_empty():
 		_ump_job = _stoppage_umpire(st)
 	var held := false
@@ -2055,7 +2066,11 @@ func _move_umpires(frame_dt: float) -> void:
 			if to.length() > 0.5 or face != Vector2.ZERO:
 				node.rotation.y = rotate_toward(node.rotation.y, atan2(to.x, to.y), turn)
 		var ball_near := bp.distance_to(st["at"]) < UMP_TAKE if job else false
-		if on_mark and ball_near and not flying:
+		# Once he has put this stoppage's ball in play it is the ruckmen's: at the top of a bounce
+		# or a throw-up the director holds it dead at their hands' height for the tap, right over
+		# his mark, and he must not take it back (bug bash 2026-11-23: it was drawn back in his
+		# hands, or on the turf mid-bounce, for a frame before the tap).
+		if on_mark and ball_near and not flying and _ump_gone == Vector2.INF:
 			# On his mark with the ball: it is in his hands, held at his chest (the clip's
 			# first frame) until he puts it in play.
 			held = true
@@ -2118,8 +2133,13 @@ func _umpire_clip(u: Dictionary, st: Dictionary, dt: float) -> bool:
 	if before < UMP_T_REL:
 		_ump_hit_from = _umpire_hands(u)
 	# Out of his hands and onto the turf where the director bounces it, and there until the
-	# director's bounce takes it up (a frame or two when his clip runs ahead of it).
-	return str(director.ball.get("mode", "")) != "flight"
+	# director's bounce takes it up (a frame or two when his clip runs ahead of it). Once it has
+	# gone up it is never his again in this clip: at the top of the bounce the director holds it
+	# dead at the ruckmen's hands for the tap, and it was pulled back to the turf for a frame
+	# (bug bash 2026-11-23).
+	if str(director.ball.get("mode", "")) == "flight":
+		c["up"] = true
+	return not bool(c.get("up", false))
 
 
 ## Director seconds to the bounce of stoppage `st` for the umpire's clip to keep time with, less
@@ -2187,11 +2207,14 @@ func _umpire_ball_state(held: bool) -> void:
 		_ump_pick_len = UMP_PICK
 		if _ump_job >= 0 and ball != null:
 			var hands := _umpire_hands(umpires[_ump_job])
-			_ump_from = ball.global_position - hands  # the gap from his hands
-			_ump_pick_len = maxf(UMP_PICK, _ump_from.length() / UMP_PICK_RATE)
+			_ump_from = ball.global_position
+			_ump_pick_len = maxf(UMP_PICK, (_ump_from - hands).length() / UMP_PICK_RATE)
 	if not held and _ump_ball and ball != null:
 		_ump_off_t = 0.0
 		_ump_off = ball.global_position
+		var st: Dictionary = director.stoppage_now()
+		if not st.is_empty():
+			_ump_gone = st["at"]
 	_ump_ball = held
 
 
@@ -2227,12 +2250,15 @@ func _umpire_ball(dt: float) -> bool:
 			f = 1.0
 		want = _ump_hit_from.lerp(turf, f)
 		_ump_pick = -1.0
-	if _ump_pick >= 0.0 and dt > 0.0:
-		_ump_pick += dt
+	if _ump_pick >= 0.0:
+		if dt > 0.0:
+			_ump_pick += dt
 		var f := clampf(_ump_pick / _ump_pick_len, 0.0, 1.0)
-		# The gap it started at eases shut while it moves with his hands: a hand moving fast
-		# as the clip starts never leaves the ball behind.
-		want += _ump_from * (1.0 - f * f * (3.0 - 2.0 * f))
+		# He takes it from where it was, into his hands as they move: eased from that spot to his
+		# hands, so a hand moving fast as the clip starts never leaves the ball behind. (It eased a
+		# fixed gap shut along with his hands, which took the ball through the turf when he bent to
+		# a ball lying on it: bug bash 2026-11-23.)
+		want = _ump_from.lerp(want, f * f * (3.0 - 2.0 * f))
 		if f >= 1.0:
 			_ump_pick = -1.0
 	ball.global_position = want
