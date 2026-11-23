@@ -238,7 +238,7 @@ _Update this section whenever 3D work merges. It is the one place 3D progress is
 | MCG | model, instanced seats | #1843; background scene (Yarra Park, the city) plays in matches (not yet reviewed) |
 | Marvel Stadium | model | #1911 |
 | Adelaide Oval | model, 3D seats; plays in a match (exported for the game by tools/grounds/adelaide) | #1856 |
-| Optus Stadium | model, roof, seats; background scene (not in a match) | #1867 #1880 #1897 |
+| Optus Stadium | being rebuilt to the MCG standard: every ring an offset of the roof edge traced from Google Earth, bowl, podium and roof measured in metres (tools/grounds/optus/survey); seats; background scene (not in a match) | #1867 #1880 #1897; #1993 |
 | SCG | model | #1909 |
 | GMHBA Stadium | exterior model; background scene (not in a match) | #1903 #1878; open: Selwood Stand roof #1924 |
 | People First Stadium | model, roof; background scene (not in a match) | #1853 #1860 #1868 #1889 #1892 |
