@@ -906,8 +906,11 @@ func _centre_phases(k: int, a: int, loc: Vector2) -> Array:
 	for t in tokens:
 		layout[int(t["id"])] = _centre_spot(t, a)
 	return [
+		# At the start of a quarter the ball is with the umpire in the centre already (the break
+		# is off the picture): it is put there, never sent sliding from where the last quarter
+		# ended (bug bash 2026-11-23). After a goal it goes back while the replay is on.
 		{"t": "setup", "layout": layout, "ball_to": Vector2.ZERO, "mode": "centre", "keep": a,
-			"min": 1.1 if after_goal else 0.8, "max": 4.0},
+			"min": 1.1 if after_goal else 0.8, "max": 4.0, "place": not after_goal},
 		{"t": "wait", "dur": 0.3},
 		{"t": "bounce", "at": Vector2.ZERO, "recv": a, "loc": loc},
 		{"t": "flight", "to": loc, "dur": 0.3, "apex": 0.6, "h0": 3.5, "recv": a, "how": "ruck_tap"},
@@ -948,10 +951,16 @@ func _kickin_phases(k: int, kicker: int, g: Vector2) -> Array:
 			layout[id] = Vector2(p.x * _dir(zone_side), p.y) + (t["jitter"] as Vector2) * 0.4
 		else:
 			layout[id] = _structure_spot(t, g, kside)
+	# The ball is not sent to the goal square on its own (it slid there at chest height with
+	# nobody holding it: bug bash 2026-11-23). As a full back does, the kicker fetches it from
+	# where it went over, then runs it to the square with it in his hands.
+	var spot: Vector2 = layout.get(kicker, g) if kicker >= 0 else g
 	return [
-		{"t": "setup", "layout": layout, "ball_to": g, "mode": "kickin", "min": 0.9, "max": 4.0, "keep": kicker},
+		{"t": "setup", "layout": layout, "ball_to": g, "mode": "kickin", "min": 0.9, "max": 4.0, "keep": kicker,
+			"fetch": kicker},
 		{"t": "collect", "who": kicker},
 		{"t": "possess", "who": kicker, "quiet": true},
+		{"t": "hold", "who": kicker, "carry": spot, "run": true, "max": KICKIN_RUN_MAX},
 		{"t": "wait", "dur": 0.3},
 	]
 
@@ -2397,11 +2406,24 @@ func _enter(p: Dictionary) -> void:
 				if not _lead.has(id) or id == int(p.get("keep", -1)):
 					layout[id] = p["layout"][id]
 			p["layout"] = layout
+			var fetch := int(p.get("fetch", -1))
+			if layout.has(fetch) and str(ball["mode"]) in ["dead", "loose"]:
+				# A kick-in: the kicker goes to the ball where it lies (collect, hold), and the ball
+				# stays there until he has it.
+				layout[fetch] = ball["pos"]
+			else:
+				fetch = -1
 			for id in layout:
 				MatchMotion.set_goal(tokens[id], layout[id], 0.45, true)
 				tokens[id]["reset"] = SETUP_PACE
 				_busy[id] = true
-			_ball_carry(p["ball_to"])
+			if p.get("place", false):
+				ball["pos"] = p["ball_to"]
+				ball["mode"] = "dead"
+				ball["holder"] = -1
+				ball["h"] = 0.0
+			elif fetch < 0:
+				_ball_carry(p["ball_to"])
 			_struct_ball = p["ball_to"]
 		"wait":
 			if p.has("drop"):
@@ -2685,6 +2707,8 @@ func _nearest_ruck(at: Vector2) -> int:
 ## in play (a real reset takes 20-40 s), and play resumes once all but
 ## SETUP_STRAGGLERS are within SETUP_NEAR metres of their spots.
 const SETUP_PACE := 1.5
+## s at most for a kick-in's kicker to run the ball from where he fetched it to the goal square.
+const KICKIN_RUN_MAX := 4.0
 const SETUP_NEAR := 5.0
 const SETUP_STRAGGLERS := 3
 

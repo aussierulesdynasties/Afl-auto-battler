@@ -413,6 +413,14 @@ func on_replay() -> bool:
 	return replaying or _wipe >= 0.0
 
 
+## A sting is taking the picture into a replay and has not cut yet. The play under it waits
+## (PitchView): after a goal the ball goes back to the centre on its own, which real TV never
+## shows; held until the cut, it goes back under the replay (bug bash 2026-11-23: at 2x and over
+## it slid there at chest height under the band).
+func stinging_in() -> bool:
+	return _wipe >= 0.0 and not _wipe_clip.is_empty()
+
+
 ## Where the sting is: 0 starting, 0.5 covering the picture (the cut), 1 gone; -1 none.
 func sting() -> float:
 	return _wipe / WIPE_S if _wipe >= 0.0 else -1.0

@@ -754,9 +754,10 @@ func _process(delta: float) -> void:
 			_nudge_h += delta * speed * MatchDirector.TEMPO
 		# Real footy's pauses (a ball-up waiting for the players, a player
 		# after a mark) play at double the watching speed (rule 2.93). The centre
-		# bounce waits for a goal's replay to end (rule 2.96).
+		# bounce waits for a goal's replay to end (rule 2.96), and play waits
+		# while a sting takes the picture into a replay (_tv.stinging_in).
 		var out := []
-		if not (_tv != null and _tv.on_replay() and director.bounce_next()):
+		if not (_tv != null and ((_tv.on_replay() and director.bounce_next()) or _tv.stinging_in())):
 			out = director.advance(delta * speed * (MatchDirector.PAUSE_PLAY if director.pausing() else 1.0))
 		for ev in out:
 			_track_quarter(ev)
