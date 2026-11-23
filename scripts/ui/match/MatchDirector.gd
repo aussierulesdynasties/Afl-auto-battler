@@ -1129,7 +1129,7 @@ func _fifty_phases(k: int) -> Array:
 
 
 ## A run-down (director, 2026-11-23: chase-downs from behind, the engine giving some tackles a
-## run): MatchSim tags a held tackle with "run" metres (MatchSim._run_down). Its spot is that far
+## run): MatchSim tags a held tackle with "run_down" metres (MatchSim._run_down). Its spot is that far
 ## across the ground from where the carrier got the ball, away from the tackler (_loc), at the
 ## sim's own field position. The carrier runs there and the tackler runs him down from behind:
 ## the carrier's pace is set every frame so that the tackler reaches him as he reaches the spot
@@ -1206,7 +1206,7 @@ func _tackle_phases(k: int) -> Array:
 	if tk < 0 or victim < 0:
 		return [{"t": "emit", "log": true}]
 	var chase := {"t": "chase", "who": tk, "victim": victim, "max": 1.6}
-	if float(ev.get("run", 0.0)) > 0.0:
+	if float(ev.get("run_down", 0.0)) > 0.0:
 		chase.merge({"run_down": true, "to": _loc(k), "max": RUN_DOWN_MAX}, true)
 	return [chase,
 			{"t": "emit", "log": true},
@@ -1674,10 +1674,10 @@ static func _fp_x(ev: Dictionary) -> float:
 	return MatchMotion.gx(clampf(float(ev.get("fp", 0.0)), -MatchMotion.STD_GOAL_X, MatchMotion.STD_GOAL_X))
 
 
-## Where a run-down's tackle lands (_loc): "run" metres across the ground from where the carrier
+## Where a run-down's tackle lands (_loc): "run_down" metres across the ground from where the carrier
 ## got it (src), away from the tackler, kept a few metres inside the boundary.
 func _run_spot(ev: Dictionary, x: float, src: Vector2) -> Vector2:
-	var run := float(ev.get("run", 0.0))
+	var run := float(ev.get("run_down", 0.0))
 	var a := _actor_id(ev)
 	var sgn := -signf(src.y) if src.y != 0.0 else 1.0
 	if a >= 0:
@@ -1718,7 +1718,7 @@ func _loc(k: int) -> Vector2:
 	var p: Vector2
 	if kind in ["throwin", "last_disposal", "out_on_full"]:
 		p = _boundary_point(x, src.y)
-	elif kind == "tackle" and float(ev.get("run", 0.0)) > 0.0:
+	elif kind == "tackle" and float(ev.get("run_down", 0.0)) > 0.0:
 		p = _run_spot(ev, x, src)
 	elif kind in ["goal", "behind", "rebound", "tackle", "pressure", "free", "fifty", "ballup"]:
 		p = Vector2(x, src.y)

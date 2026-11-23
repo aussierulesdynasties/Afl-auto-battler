@@ -4662,7 +4662,7 @@ func _run_and_carry(side: int, carrier, gained: float, pressed: bool, is_kick_in
 ## he chose to have the engine give some tackles a run). A carrier who took the ball in space
 ## sometimes runs with it before the tackler catches him. As with _run_and_carry, the run is
 ## ground covered across the field, not gained: the tackle's field position is unchanged and the
-## match plays exactly as before. The tackle event carries "run" (metres) for the pitch, which
+## match plays exactly as before. The tackle event carries "run_down" (metres; not "run", which is a carrier's run and his bounces) for the pitch, which
 ## draws the carrier running that far before he is caught from behind.
 const RUN_DOWN_P := 0.25
 const RUN_DOWN_MIN := 8.0
@@ -4673,7 +4673,7 @@ func _run_down(got: String) -> void:
 		return
 	if rundown_rng.randf() >= RUN_DOWN_P:
 		return
-	(events[events.size() - 1] as Dictionary)["run"] = snappedf(rundown_rng.randf_range(RUN_DOWN_MIN, RUN_DOWN_MAX), 0.1)
+	(events[events.size() - 1] as Dictionary)["run_down"] = snappedf(rundown_rng.randf_range(RUN_DOWN_MIN, RUN_DOWN_MAX), 0.1)
 
 
 ## A kick at goal: shots, and set shots apart. `result` is "goal", "behind"
