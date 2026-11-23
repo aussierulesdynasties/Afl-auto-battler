@@ -141,6 +141,8 @@ def main():
     retint("podiumpanel", (52, 92, 124), src="slate", out="podiumpanel")
     # the forecourt plinth's street front: blue-grey glass (PC check: Google Earth (76, 102, 118))
     retint("fcglass", (81, 108, 124), src="curtain", out="fcglass")
+    # the east office boxes' ribbon glass: light grey (PC check round 3: Google Earth's east boxes are pale grey/white)
+    retint("officeglass", (138, 146, 152), src="glass", out="officeglass")
     tiles = os.path.join(TEX, "tiles.json")
     j = json.load(open(tiles))
     j["endrib"] = j["endroof"]
@@ -157,6 +159,7 @@ def main():
     j["bluepanel"] = j["slate"]
     j["podiumpanel"] = j["slate"]
     j["fcglass"] = j["curtain"]
+    j["officeglass"] = j["glass"]
     for gone in ("office", "undercroft", "louvre"):
         j.pop(gone, None)
     json.dump(j, open(tiles, "w"))
