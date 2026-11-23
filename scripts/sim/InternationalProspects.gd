@@ -78,6 +78,13 @@ static func apply(cls: Array, year: int) -> void:
 	var min_rank := int(d.get("min_rank", 11))
 	var used_countries := {}
 	var used_slots := {}
+	# The full names earlier classes gave out (a career registers each class,
+	# GameDB.register_draftees, and saves them), so no international repeats
+	# one from another year.
+	var given := {}
+	for q in GameDB.late_draftees:
+		if int(q.get("draft_year", 0)) != year:
+			given[str(q.get("generic_name", ""))] = true
 	for _i in range(n):
 		var c := _pick_weighted(all, rng, used_countries)
 		if c.is_empty():
@@ -92,7 +99,7 @@ static func apply(cls: Array, year: int) -> void:
 			if j != slot:
 				var nm := str(cls[j].get("generic_name", ""))
 				taken[nm.substr(nm.find(" ") + 1)] = true
-		_make(cls[slot], c, year, rng, taken)
+		_make(cls[slot], c, year, rng, taken, given)
 
 
 static func _pick_weighted(list: Array, rng: RandomNumberGenerator, skip := {}) -> Dictionary:
@@ -133,7 +140,7 @@ static func _span(r: Array, rng: RandomNumberGenerator) -> int:
 
 ## Turns a generated prospect into the country's: who he is, where from, how he
 ## plays. The slot (draft rank, id, class shifts) stays his.
-static func _make(p: Dictionary, c: Dictionary, year: int, rng: RandomNumberGenerator, taken := {}) -> void:
+static func _make(p: Dictionary, c: Dictionary, year: int, rng: RandomNumberGenerator, taken := {}, given := {}) -> void:
 	var group := _pick_weighted(c["groups"], rng)
 	var first := str(group["first"][rng.randi_range(0, (group["first"] as Array).size() - 1)])
 	var last := str(group["last"][rng.randi_range(0, (group["last"] as Array).size() - 1)])
@@ -141,6 +148,10 @@ static func _make(p: Dictionary, c: Dictionary, year: int, rng: RandomNumberGene
 		if not taken.has(last):
 			break
 		last = str(group["last"][rng.randi_range(0, (group["last"] as Array).size() - 1)])
+	for _t in range(30):   # nor does he share a full name with an earlier class's man
+		if not given.has("%s %s" % [first, last]):
+			break
+		first = str(group["first"][rng.randi_range(0, (group["first"] as Array).size() - 1)])
 	var role := _pick_role(c["roles"], rng)
 	var h := float(_span(c["height"], rng))
 	match role:
