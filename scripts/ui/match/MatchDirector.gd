@@ -1238,6 +1238,13 @@ func _pass_phases(k: int) -> Array:
 	if r < 0:
 		return out
 	var to: Vector2 = _loc(nk) if str(nev.get("kind", "")) == "receive" else (tokens[r]["pos"] as Vector2)
+	# To the man where he stands, but never far up or down the ground from where the log has him
+	# take it: a rebound's pass went to a man 18 m behind the logged spot and the rebound was kicked
+	# from there (bug bash 2026-11-23, seed 3 k1046). Sending every pass to the logged spot itself
+	# left more collectors running to it (pauses 118 -> 126 over four seeds); 12 m keeps them at 118
+	# and the worst release at 12 m (14.3 before).
+	var want_x := _loc(nk).x
+	to.x = clampf(to.x, want_x - PASS_X_SLACK, want_x + PASS_X_SLACK)
 	var d := (ball["pos"] as Vector2).distance_to(to)
 	var shape := _flight_shape("handball" if bool(events[k].get("hand", false)) else "kick", d)
 	out.append({"t": "flight", "to": to, "dur": shape.x, "apex": shape.y, "recv": r,
@@ -2709,6 +2716,8 @@ func _nearest_ruck(at: Vector2) -> int:
 const SETUP_PACE := 1.5
 ## s at most for a kick-in's kicker to run the ball from where he fetched it to the goal square.
 const KICKIN_RUN_MAX := 4.0
+## m up or down the ground a pass may land from where the log has its receiver take it.
+const PASS_X_SLACK := 12.0
 const SETUP_NEAR := 5.0
 const SETUP_STRAGGLERS := 3
 
