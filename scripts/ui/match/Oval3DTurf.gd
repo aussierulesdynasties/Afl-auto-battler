@@ -646,7 +646,7 @@ func stand_light(sm: ShaderMaterial, scale := 1.0, green := 1.0) -> Array:
 	var energy: float = _sky_param(sm, "energy")
 	var g_energy: float = _sky_param(sm, "grass_energy")
 	var gl := grass.get_luminance()
-	var grey := Color(gl, gl, gl).lerp(grass, green)
+	var grey := (Color(gl, gl, gl) * _bounce_tint(green)).lerp(grass, green)
 	var out := []
 	for ny in [-1.0, -0.5, 0.0, 0.5, 1.0]:
 		var n := Vector3(sqrt(1.0 - ny * ny), ny, 0.0)
@@ -670,6 +670,22 @@ func stand_light(sm: ShaderMaterial, scale := 1.0, green := 1.0) -> Array:
 		var e := sum / wsum * energy * scale
 		out.append(Vector3(e.r, e.g, e.b))
 	return out
+
+
+## The colour of the light the ground throws up onto a stand: sunlit ground, so the sun's colour at
+## the grass's brightness, not a neutral grey (Marvel QA on the PC GPU, 2026-11-23: a white wall
+## facing away from the sun read clearly blue, NAB's fins 96 112 142, where a real shaded white wall
+## in daylight is near-neutral grey). Only the stands' grey bounce takes it (green < 1). A stand
+## sees more sunlit ground than the centre square's grass (seats, concourses, the far stands lit
+## by the sun): STAND_BOUNCE. Measured with tools/visual/measure_day_tint3d.gd at Optus: a shaded
+## white wall from blue over red 1.16 to 1.12 and shaded concrete 1.18 to 1.12, shade 5% brighter.
+const STAND_BOUNCE := 1.3
+func _bounce_tint(green: float) -> Color:
+	if green >= 1.0 or sun == null or not sun.visible:
+		return Color(1, 1, 1)
+	var c := sun.light_color
+	var l := c.get_luminance()
+	return Color(c.r / l, c.g / l, c.b / l) * STAND_BOUNCE if l > 0.001 else Color(1, 1, 1)
 
 
 ## A sky shader setting, or the shader's own default when the look leaves it unset.

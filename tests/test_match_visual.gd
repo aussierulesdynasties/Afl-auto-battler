@@ -2465,8 +2465,12 @@ func _test_stand_light() -> void:
 	var grey: Array = oval.turf.stand_light(sm, 1.0, Oval3DTurf.STAND_GREEN)
 	var sky: Array = oval.turf.stand_light(sm, 1.0, 1.0)
 	_check((grey[4] - sky[4]).length() < 0.002, "A face turned up is lit as before (%s)" % (grey[4] - sky[4]))
-	var down: Vector3 = grey[0] - sky[0]
-	_check(down.y < -0.02 and down.x > 0.0, "A face turned down loses the grass's green (%s)" % down)
+	# Turned down, a stand sees sunlit ground in the sun's colour, not the grass's green
+	# (Oval3DTurf._bounce_tint): much less green over red than the centre square's light.
+	var gd: Vector3 = grey[0]
+	var sd: Vector3 = sky[0]
+	_check(gd.y / gd.x < 1.15 and gd.y / gd.x < sd.y / sd.x - 0.3 and gd.z <= gd.x * 1.05,
+			"A face turned down loses the grass's green and is not blue (%s against %s)" % [gd, sd])
 	oval.turf.apply("", VignetteKickoff.NIGHT)
 	var m0: ShaderMaterial = oval.turf._stand_mats[0]
 	_check(m0.get_shader_parameter("amb_down") == Vector3.ZERO, "At night the stands' light is unchanged")

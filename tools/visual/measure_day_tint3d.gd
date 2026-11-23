@@ -24,6 +24,9 @@ const CARDS := [
 	# Optus's bronze cladding in shade (vertical; its base colour, roughness 0.55, metal 0.3, from
 	# tools/grounds/optus/bronze.py): Google Earth's shaded bronze reads 48 63 79.
 	["bronze shade", Color8(128, 130, 132), 60.0, 4.0, false, false, 0.55, 0.3],
+	# A white wall facing away from the sun (Marvel's NAB fins on the PC GPU: 96 112 142; a real
+	# shaded white wall in daylight reads near-neutral grey).
+	["wall white shade", Color(0.85, 0.85, 0.85), 45.0, 14.0, false],
 	["roof white shade", Color(0.85, 0.85, 0.85), 45.0, -18.0, false, true],
 ]
 
