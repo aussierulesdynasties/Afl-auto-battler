@@ -396,7 +396,7 @@ def build_club(m):
     folds = [0.6, 10.3, 19.3, 31.8, L]
     pitch = math.tan(math.radians(29.0))
     v0, v1 = WEST - 1.2, DECK_EDGE + 0.4
-    ubox(m, "roof_white", -0.6, folds[0], v0, v1, EAVE - 0.6, EAVE - 0.38, mats={"bottom": "roof_soffit"})
+    # (no eave box south of the first fold: the aerial puts the roof's south edge on the first fold)
     for k in range(len(folds) - 1):
         u0, u1 = folds[k], folds[k + 1]
         um, ridge = (u0 + u1) / 2, EAVE + (u1 - u0) / 2 * pitch
@@ -498,7 +498,7 @@ def _south_end(m):
     for v in (S_V1 + 0.6, DECK_EDGE - 0.35):
         ubox(m, "steel_maroon", S_VER + 0.05, S_VER + 0.25, v - 0.1, v + 0.1, DECK, VER_H)
     ubox(m, "steel_maroon", S_VER + 0.05, S_VER + 0.25, S_V1 + 0.5, DECK_EDGE - 0.25, VER_H - 0.25, VER_H)
-    _balustrade(m, [(S_VER, S_V1 + 0.1), (S_VER, DECK_EDGE - 0.05)], DECK, 1.1, along_v=True)
+    _balustrade(m, [(S_VER, S_V1 + 1.2), (S_VER, DECK_EDGE - 0.05)], DECK, 1.1, along_v=True)
     _balustrade(m, [(S_VER, DECK_EDGE - 0.05), (0.0, DECK_EDGE - 0.05)], DECK, 1.1)
 
 
@@ -573,8 +573,9 @@ def _balustrade(m, line, h0, hgt, slope=None, along_v=False):
 def build_terraces(m):
     """concrete terraces stepping up from the concourse to the upper level: 7 steps, 1 m treads, 0.43 m risers, from
     11 m to 18 m outside the fence between bearings 262 and 283 (photos: the aerials and the clubrooms from the south),
-    with a stair and handrails every 7 m and concrete end walls."""
-    b0, b1 = 262.0, 283.0
+    with a stair and handrails every 7 m and concrete end walls. The north end stops short of the clubroom's stone base
+    to leave the stair that climbs beside it to the deck (_deck_stair; photo Barossa-Park-62)."""
+    b0, b1 = 262.0, 281.8
     o0, n = 11.0, 7
     tread, rise = 1.0, 0.43
     bs = np.linspace(b0, b1, 40)
@@ -587,13 +588,18 @@ def build_terraces(m):
             pa1, pb1 = polar(ba, r1), polar(bb, r1)
             box_pts(m, "concrete_step", [pa0, pb0, pb1, pa1], h - rise - 0.4, h, skip=("bottom", ("side", 1), ("side", 3)))
     # end walls
-    for bb_, sgn in ((b0, -1), (b1, 1)):
-        for i in range(n):
-            pass
-        q0 = polar(bb_, o0 - 0.3)
-        q1 = polar(bb_, o0 + n * tread + 0.3)
-        d = _n(np.array(polar(bb_ + sgn * 1, o0)) - np.array(q0)) * 0.3
-        box_pts(m, "concrete", [q0, q1, tuple(np.array(q1) + d), tuple(np.array(q0) + d)], -0.2, 0.15 + rise * n + 0.9)
+    q0 = polar(b0, o0 - 0.3)
+    q1 = polar(b0, o0 + n * tread + 0.3)
+    d = _n(np.array(polar(b0 - 1, o0)) - np.array(q0)) * 0.3
+    box_pts(m, "concrete", [q0, q1, tuple(np.array(q1) + d), tuple(np.array(q0) + d)], -0.2, 0.15 + rise * n + 0.9)
+    # the north end wall steps with the treads (a 0.1 m upstand), so the stair beside it is open to the terraces
+    d = _n(np.array(polar(b1 + 1, o0)) - np.array(polar(b1, o0))) * 0.3
+    for i in range(n):
+        r0 = o0 - 0.3 if i == 0 else o0 + i * tread
+        r1 = o0 + n * tread + 0.3 if i == n - 1 else o0 + (i + 1) * tread
+        a0, a1 = np.array(polar(b1, r0)), np.array(polar(b1, r1))
+        box_pts(m, "concrete", [tuple(a0), tuple(a1), tuple(a1 + d), tuple(a0 + d)], -0.2, 0.15 + rise * (i + 1) + 0.1)
+    _deck_stair(m, b1, o0, o0 + n * tread, d)
     # handrails down the terraces (stainless, posts at each tread)
     for bb_ in np.arange(b0 + 3.5, b1 - 1, 5.2):
         pts = []
@@ -604,6 +610,45 @@ def build_terraces(m):
             m.tube("steel_galv", P3(*polar(bb_, r), h), P3(*polar(bb_, r), h + 0.95), 0.025, seg=6, caps=False)
         for a, b in zip(pts[:-1], pts[1:]):
             m.tube("steel_galv", a, b, 0.024, seg=6, caps=False)
+
+
+def _club_uv(e, n):
+    """plan -> clubroom frame (the inverse of plan.club)"""
+    e0, n0 = club(0, 0)
+    eu, nu = np.array(club(1, 0)) - (e0, n0)
+    ev, nv = np.array(club(0, 1)) - (e0, n0)
+    de, dn = e - e0, n - n0
+    return de * eu + dn * nu, de * ev + dn * nv
+
+
+def _deck_stair(m, b1, r_lo, r_hi, d):
+    """the stair from the concourse up to the south deck (photo Barossa-Park-62: it climbs west between the terraces'
+    north end and the clubroom's stone base, rails both sides, onto the paving beside the plant enclosure). 24 risers
+    of 0.17 m, 0.28 m goings; its north side is the stone base (u = S_VER), its south side the terraces' end wall,
+    which runs out from the oval, so the stair widens a little as it climbs. A landing at deck level at the top."""
+    top0 = 0.15
+    nr = 24
+    rise = (DECK - top0) / (nr + 1)
+    v_land = S_V1 + 1.1
+    v_foot = v_land + nr * 0.28
+    # the end wall's outer face in the clubroom frame: u at a given v
+    pa = _club_uv(*(np.array(polar(b1, r_lo - 0.3)) + d))
+    pb = _club_uv(*(np.array(polar(b1, r_hi + 0.3)) + d))
+    def u_wall(v):
+        f = (v - pa[1]) / (pb[1] - pa[1])
+        return pa[0] + (pb[0] - pa[0]) * f
+    def pts(va, vb):   # plan corners between v = va and vb, wall side to base side
+        return [club(u_wall(va), va), club(S_VER, va), club(S_VER, vb), club(u_wall(vb), vb)]
+    for i in range(nr):
+        vb, va = v_foot - i * 0.28, v_foot - (i + 1) * 0.28
+        box_pts(m, "concrete_step", pts(va, vb), -0.2, top0 + rise * (i + 1))
+    box_pts(m, "concrete", pts(S_V1, v_land), -0.2, DECK, mats={"top": "concrete_step"})
+    # rails: the deck's balustrade along the stone base above it is the north rail at the top; a sloped one on each side
+    for side in ("wall", "base"):
+        ua = (u_wall(v_foot) + 0.08) if side == "wall" else S_VER - 0.08
+        ub = (u_wall(v_land) + 0.08) if side == "wall" else S_VER - 0.08
+        _balustrade(m, [(ua, v_foot - 0.1), (ub, v_land)], None, 1.0, slope=(top0, DECK, v_foot, v_land), along_v=True)
+    _balustrade(m, [(u_wall(S_V1 + 0.05) + 0.08, S_V1 + 0.05), (u_wall(v_land) + 0.08, v_land)], DECK, 1.1, along_v=True)
 
 
 # ------------------------------------------------------------------ viewing pavilion (south-west)
