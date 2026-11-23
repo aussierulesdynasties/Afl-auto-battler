@@ -1357,6 +1357,16 @@ func _tackled_for(k: int) -> int:
 	var v := _token_by_pid(str(ev.get("against_id", "")))
 	if tk < 0 or v < 0 or v == tk or int(tokens[v]["side"]) == int(tokens[tk]["side"]):
 		return -1
+	# Only a man near enough to run him down tackles him: a free paid to a man 50 m off
+	# (the log names whoever took the free) gave up the chase, tackled thin air and then
+	# walked the 50 m with the ball dead on the grass for 6 s (seed 2027, picture truth).
+	# (Where the man caught has it: the kick or handball's landing spot, else where he is.)
+	var pk := _prev_real(k)
+	var spot: Vector2 = tokens[v]["pos"]
+	if pk >= 0 and str((events[pk] as Dictionary).get("kind", "")) in ["kick", "handball"]:
+		spot = _loc(k)
+	if (tokens[tk]["pos"] as Vector2).distance_to(spot) > TACKLE_FREE_REACH:
+		return -1
 	return v
 
 
@@ -1745,6 +1755,9 @@ const SCRAP_REACH := 15.0
 ## only out of a take). Held to the clip's end (3.74 s), a man the play wanted next left the
 ## ball lying for 4 s and more (8 collects on the suite match, 16 over seeds 42 and 1-3).
 const TAKE_UP := 1.5 * TEMPO
+## How far off the man paid a holding-the-ball free can be and still run the man caught
+## down and tackle him; further off, the umpire pays it and he comes to the ball.
+const TACKLE_FREE_REACH := 15.0
 
 
 ## Whether he is back on his feet from his last tackle (either man of it).
