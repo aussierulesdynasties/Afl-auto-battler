@@ -13753,9 +13753,9 @@ func development_state(p: Dictionary) -> String:
 ## Spend his two banks (Growth, the director's design 2026-11-17): match XP
 ## (p["xp_match"]) on his position's rating stats, training XP (p["xp"]) on
 ## `train_weights` (his focus or his plan). While he learns a position
-## (`learning`), both banks split four ways (_learn_split). No ceiling: he
-## keeps buying past his potential, and what he buys there is noted for the
-## summer (Growth.summer).
+## (`learning`), both banks split four ways (_learn_split). His potential is
+## the ceiling (director 2026-11-23, "Gains stop at potential"): _buy stops
+## there and the rest stays banked.
 func _spend_banks(p: Dictionary, train_weights: Dictionary, learning := false) -> Dictionary:
 	var gains := {}
 	var split: Dictionary = p.get("xp_split", {})
@@ -13809,8 +13809,8 @@ static func _top_two(w: Dictionary) -> Array:
 
 
 ## Buy stat points from one bank (holder[bank]) while it lasts, each one going
-## to the best weight per XP (Growth.cost). Adds to `gains`; notes every point
-## in season_gains, and those bought at or past his potential in over_gains.
+## to the best weight per XP (Growth.cost), until his rating reaches his
+## potential. Adds to `gains`; notes every point in season_gains.
 func _buy(p: Dictionary, holder: Dictionary, bank: String, weights: Dictionary, gains: Dictionary) -> void:
 	var games := float(p.get("gm", 18.0))
 	var attr: Dictionary = p.get("attr", {})
@@ -13830,17 +13830,17 @@ func _buy(p: Dictionary, holder: Dictionary, bank: String, weights: Dictionary, 
 				best_cost = c
 		if best_key == "" or float(holder.get(bank, 0.0)) < float(best_cost):
 			break
-		var past := pot > 0 and int(p.get("overall", 0)) >= pot
+		# Gains stop at his potential (director 2026-11-23, "Gains stop at
+		# potential": stars climbed to 99 in a season, 90+ from 10 to 44 in
+		# three). The XP stays in his bank; a breakout can still pass it.
+		if pot > 0 and int(p.get("overall", 0)) >= pot:
+			break
 		holder[bank] = float(holder[bank]) - float(best_cost)
 		attr[best_key] = int(attr[best_key]) + 1
 		gains[best_key] = int(gains.get(best_key, 0)) + 1
 		var sg: Dictionary = p.get("season_gains", {})
 		sg[best_key] = int(sg.get(best_key, 0)) + 1
 		p["season_gains"] = sg
-		if past:
-			var og: Dictionary = p.get("over_gains", {})
-			og[best_key] = int(og.get(best_key, 0)) + 1
-			p["over_gains"] = og
 		_recalc_player_overall(p)
 		if pot > 0 and not p.has("peak_year") and int(p["overall"]) >= pot:
 			p["peak_year"] = season_year
