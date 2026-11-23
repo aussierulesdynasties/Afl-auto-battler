@@ -1,26 +1,49 @@
 class_name FinalsBracket
 extends VBoxContainer
 ## The finals series as an event (director, 2026-10-07: a bespoke Finals hub,
-## wildcard included): the ten finalists' road from the Wildcard Round to the
-## Grand Final, read from the season's own bracket (Season.finals) - results
-## where played, this week's matches, and later matches named by the slot
-## they wait on ("Winner of Wildcard Final 1"), never a simulated outcome.
+## wildcard included): the finalists' road to the Grand Final in the season's
+## own finals system (SeasonRules.BRACKETS: the wildcard round from 2026, the
+## AFL final eight 2000-2025, the McIntyre final eight, the final six or the
+## McIntyre final five before that), read from the season's own bracket
+## (Season.finals) - results where played, this week's matches, and later
+## matches named by the slot they wait on ("Winner of Semi Final 1"), never a
+## simulated outcome.
 ## A wide screen shows every stage side by side, the cup at the end; a phone
 ## shows one stage at a time. A tap on a match calls `on_match` with it.
 ## Reads; changes nothing.
 
-## Each week's matches: [tag, label, home slot, away slot]. A slot is a seed
-## ("S1".."S10") or a bracket result ("W_WC1", "L_QF1"), as Season fills them.
-const WEEKS := [
-	["Wildcard Round", "Wildcard", [["WC1", "Wildcard Final 1", "S7", "S10"], ["WC2", "Wildcard Final 2", "S8", "S9"]]],
-	["Qualifying and Elimination Finals", "Qualifying", [["QF1", "Qualifying Final 1", "S1", "S4"],
-			["QF2", "Qualifying Final 2", "S2", "S3"], ["EF1", "Elimination Final 1", "S5", "W_WC2"],
-			["EF2", "Elimination Final 2", "S6", "W_WC1"]]],
-	["Semi Finals", "Semis", [["SF1", "Semi Final 1", "L_QF1", "W_EF1"], ["SF2", "Semi Final 2", "L_QF2", "W_EF2"]]],
-	["Preliminary Finals", "Prelims", [["PF1", "Preliminary Final 1", "W_QF1", "W_SF2"],
-			["PF2", "Preliminary Final 2", "W_QF2", "W_SF1"]]],
-	["Grand Final", "Grand Final", [["GF", "Grand Final", "W_PF1", "W_PF2"]]],
-]
+## Each week's short name for the phone's stage tabs, by its full name.
+const SHORT := {"Wildcard Round": "Wildcard", "Qualifying and Elimination Finals": "Qualifying",
+		"Qualifying Finals": "Qualifying", "Semi Finals": "Semis", "Preliminary Finals": "Prelims",
+		"Preliminary Final": "Prelim", "Grand Final": "Grand Final"}
+
+
+## A finals system's weeks as the screen draws them: [name, short name,
+## [[tag, label, home slot, away slot, order by ladder], ...]]. A slot is a
+## seed ("S1"), a result ("W_WC1", "L_QF1") or a ranked one ("HI_EF", "RW1"),
+## as Season fills them.
+static func weeks_for(format: String) -> Array:
+	var out := []
+	var spec := SeasonRules.bracket(format)
+	for w in range(spec.size()):
+		var name := SeasonRules.week_name(format, w + 1)
+		out.append([name, str(SHORT.get(name, name)), spec[w]])
+	return out
+
+
+## Where each result goes in a finals system, as far as the draw fixes it:
+## [from tag, to tag, "W" winner / "L" loser]. A ranked slot ("HI_EF", "RW1")
+## is joined once its club is known (_routes).
+static func routes_for(format: String) -> Array:
+	var out := []
+	for week in SeasonRules.bracket(format):
+		for m in week:
+			for side in [str(m[2]), str(m[3])]:
+				if side.begins_with("W_") or side.begins_with("L_"):
+					out.append([side.substr(2), str(m[0]), side.substr(0, 1)])
+	return out
+
+
 const WIDE := 900.0
 const NODE_W := 168.0
 const NODE_H := 70.0
@@ -51,6 +74,35 @@ func _week() -> int:
 	return int(_season.finals.get("week", 1)) if not _season.finals.is_empty() else 1
 
 
+## This season's finals weeks (weeks_for its format).
+func _weeks() -> Array:
+	return weeks_for(_season.finals_format())
+
+
+## The routes results take this season: the draw's own, and each ranked slot
+## joined to the final its club came from once that club is known.
+func _routes() -> Array:
+	var out := routes_for(_season.finals_format())
+	var slots: Dictionary = _season.finals.get("slots", {})
+	var weeks := _weeks()
+	for w in range(1, weeks.size()):
+		for m in weeks[w][2]:
+			for side in [str(m[2]), str(m[3])]:
+				if not (side.begins_with("HI_") or side.begins_with("LO_") or side.begins_with("RW") or side.begins_with("RL")):
+					continue
+				var code := _season.finals_slot(side)
+				if code == "":
+					continue
+				var kind := "L" if side.begins_with("RL") else "W"
+				# Ranked slots rank week one's results (the McIntyre eight) or
+				# the week before's (the final six's elimination finals).
+				var from: Array = weeks[0 if side.begins_with("R") else w - 1][2]
+				for pm in from:
+					if str(slots.get(kind + "_" + str(pm[0]), "")) == code:
+						out.append([str(pm[0]), str(m[0]), kind])
+	return out
+
+
 func _build() -> void:
 	UiKit.clear(self)
 	if _season == null or _season.finals.is_empty():
@@ -78,12 +130,12 @@ func _status() -> Control:
 		words = "You missed the top %d." % _season.finalists() + ("" if done else " The series plays on week by week.")
 	else:
 		var out_in := ""
-		for w in range(WEEKS.size()):
-			for m in WEEKS[w][2]:
-				# A qualifying final's loser plays on (the double chance): only the others end a season.
-				if str(m[0]).begins_with("QF"):
-					continue
-				if str(f["slots"].get("L_" + str(m[0]), "")) == _me:
+		for week in _weeks():
+			for m in week[2]:
+				# A loser with a second chance plays on (a qualifying final's
+				# double chance): only the others end a season.
+				if str(f["slots"].get("L_" + str(m[0]), "")) == _me \
+						and not _season.loser_goes_on(str(m[0]), _me):
 					out_in = str(m[1])
 		if bool(f.get("done", false)) and str(f.get("premier", "")) == _me:
 			words = ""   # the cup over this line already says it
@@ -264,8 +316,9 @@ func _stage_cup() -> Control:
 	var c := CenterContainer.new()
 	c.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	c.add_child(cup)
-	var home := _slot("W_PF1")
-	var away := _slot("W_PF2")
+	var gf: Array = _weeks()[-1][2][0]
+	var home := _slot(str(gf[2]))
+	var away := _slot(str(gf[3]))
 	if home == "" or away == "":
 		return c
 	var band := ClubDuel.band(home, away, c, 10, 0.35)
@@ -274,17 +327,11 @@ func _stage_cup() -> Control:
 	return band
 
 
-## Where each result goes: [from tag, to tag, "W" winner / "L" loser].
-const ROUTES := [
-	["WC1", "EF2", "W"], ["WC2", "EF1", "W"], ["QF1", "PF1", "W"], ["QF1", "SF1", "L"],
-	["QF2", "PF2", "W"], ["QF2", "SF2", "L"], ["EF1", "SF1", "W"], ["EF2", "SF2", "W"],
-	["SF2", "PF1", "W"], ["SF1", "PF2", "W"], ["PF1", "GF", "W"], ["PF2", "GF", "W"],
-]
 const GF_H := 92.0
 const CUP_H := 130.0
 
 
-## Every stage side by side, wildcard to the Grand Final, centred on the
+## Every stage side by side, the first week to the Grand Final, centred on the
 ## screen, joined by the routes results take; the premiers' road drawn in
 ## their colour.
 func _wide() -> Control:
@@ -298,20 +345,24 @@ class BracketCanvas extends Control:
 	var _fb: FinalsBracket
 	var _nodes := {}        # tag -> Button
 	var _heads: Array = []  # stage headings
+	var _weeks: Array = []  # FinalsBracket._weeks()
+	var _last := 0          # the Grand Final's column
 
 	func setup(fb: FinalsBracket) -> void:
 		_fb = fb
 		size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		custom_minimum_size = Vector2(0, 4.0 * (FinalsBracket.NODE_H + 18.0) + 70.0)
-		for w in range(FinalsBracket.WEEKS.size()):
+		_weeks = _fb._weeks()
+		_last = _weeks.size() - 1
+		for w in range(_weeks.size()):
 			var cur := w + 1 == _fb._week()
-			var h := UiKit.heading(str(FinalsBracket.WEEKS[w][0]), UiKit.H2 if w == 4 else UiKit.BODY)
-			h.add_theme_color_override("font_color", UiKit.TEXT if cur or w == 4 else UiKit.MUTED)
+			var h := UiKit.heading(str(_weeks[w][0]), UiKit.H2 if w == _last else UiKit.BODY)
+			h.add_theme_color_override("font_color", UiKit.TEXT if cur or w == _last else UiKit.MUTED)
 			h.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 			h.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			add_child(h)
 			_heads.append(h)
-			for m in FinalsBracket.WEEKS[w][2]:
+			for m in _weeks[w][2]:
 				var n := _fb._node(w + 1, m)
 				_nodes[str(m[0])] = n
 				add_child(n)
@@ -328,11 +379,12 @@ class BracketCanvas extends Control:
 	func _cols() -> Array:
 		var w := size.x
 		var gap := 28.0
-		var nw := clampf((w - 4.0 * gap) / 5.0, 150.0, 230.0)
-		var total := 5.0 * nw + 4.0 * gap
+		var cols := float(_weeks.size())
+		var nw := clampf((w - (cols - 1.0) * gap) / cols, 150.0, 230.0)
+		var total := cols * nw + (cols - 1.0) * gap
 		var left := maxf(0.0, (w - total) / 2.0)
 		var out := []
-		for i in range(5):
+		for i in range(_weeks.size()):
 			out.append(left + float(i) * (nw + gap))
 		return [out, nw]
 
@@ -344,12 +396,12 @@ class BracketCanvas extends Control:
 		var nw: float = cw[1]
 		var top := 44.0
 		var body := size.y - top
-		for w in range(FinalsBracket.WEEKS.size()):
+		for w in range(_weeks.size()):
 			var head: Control = _heads[w]
 			head.position = Vector2(xs[w], 0)
 			head.size = Vector2(nw, 40)
-			var ms: Array = FinalsBracket.WEEKS[w][2]
-			var nh := FinalsBracket.GF_H if w == 4 else FinalsBracket.NODE_H
+			var ms: Array = _weeks[w][2]
+			var nh := FinalsBracket.GF_H if w == _last else FinalsBracket.NODE_H
 			for i in range(ms.size()):
 				var n: Control = _nodes[str(ms[i][0])]
 				var cy := top + body * (float(i) + 0.5) / float(ms.size())
@@ -359,14 +411,14 @@ class BracketCanvas extends Control:
 		if _nodes.has("_cup"):
 			var cup: Control = _nodes["_cup"]
 			var gf: Control = _nodes["GF"]
-			cup.position = Vector2(xs[4] + (nw - cup.get_combined_minimum_size().x) / 2.0,
+			cup.position = Vector2(xs[_last] + (nw - cup.get_combined_minimum_size().x) / 2.0,
 					gf.position.y - FinalsBracket.CUP_H - 10.0)
 		queue_redraw()
 
 	func _draw() -> void:
 		var slots: Dictionary = _fb._season.finals.get("slots", {})
 		var prem := str(_fb._season.finals.get("premier", ""))
-		for r in FinalsBracket.ROUTES:
+		for r in _fb._routes():
 			var a: Control = _nodes.get(str(r[0]))
 			var b: Control = _nodes.get(str(r[1]))
 			if a == null or b == null:
@@ -393,19 +445,20 @@ class BracketCanvas extends Control:
 func _narrow() -> Control:
 	var v := UiKit.vbox(UiKit.GAP)
 	var opts := []
-	for w in range(WEEKS.size()):
-		opts.append([str(w + 1), str(WEEKS[w][1])])
-	var shown := _stage if _stage > 0 else mini(_week(), WEEKS.size())
+	var weeks := _weeks()
+	for w in range(weeks.size()):
+		opts.append([str(w + 1), str(weeks[w][1])])
+	var shown := mini(_stage, weeks.size()) if _stage > 0 else mini(_week(), weeks.size())
 	# The weeks as one line of underline tabs (audit §8 Phase 1.3); the week
 	# shown is named in full underneath.
 	var pick := UiKit.segmented("FinalsStage", opts, str(shown), func(k):
 		_stage = int(k)
 		_build.call_deferred())
 	v.add_child(UiKit.strip(pick))
-	v.add_child(UiKit.lbl(str(WEEKS[shown - 1][0]), UiKit.NAME, UiKit.TEXT, true))
-	if shown == WEEKS.size() and not bool(_season.finals.get("done", false)):
+	v.add_child(UiKit.lbl(str(weeks[shown - 1][0]), UiKit.NAME, UiKit.TEXT, true))
+	if shown == weeks.size() and not bool(_season.finals.get("done", false)):
 		v.add_child(_stage_cup())
-	for m in WEEKS[shown - 1][2]:
+	for m in weeks[shown - 1][2]:
 		var n := _node(shown, m)
 		n.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		v.add_child(n)
@@ -421,6 +474,16 @@ func _node(week: int, m: Array) -> Control:
 	var res := _result(week, tag)
 	var home := _slot(str(m[2]))
 	var away := _slot(str(m[3]))
+	var home_slot := str(m[2])
+	var away_slot := str(m[3])
+	# A final ordered by the ladder (a past year's preliminary or Grand Final)
+	# lists the higher-placed club first, as Season plays it.
+	if m.size() > 4 and bool(m[4]) and home != "" and away != "" and _season._seed_of(away) < _season._seed_of(home):
+		var t := home
+		home = away
+		away = t
+		home_slot = str(m[3])
+		away_slot = str(m[2])
 	var b := Button.new()
 	b.name = "Final_" + tag
 	b.custom_minimum_size = Vector2(NODE_W, NODE_H)
@@ -432,14 +495,14 @@ func _node(week: int, m: Array) -> Control:
 		b.add_theme_stylebox_override(st, sb)
 	var v := UiKit.vbox(3)
 	v.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 8)
-	var venue := GameDB.ground_shown(_season.finals_venue({"tag": tag, "home": home}), _season.year) if home != "" else ""
+	var venue := GameDB.ground_shown(_season.finals_venue({"tag": tag, "home": home, "away": away}), _season.year) if home != "" else ""
 	v.add_child(UiKit.ellipsis(str(m[1]) + (("  ·  " + venue) if venue != "" else ""), UiKit.SMALL, UiKit.MUTED))
 	var win := str(_season.finals["slots"].get("W_" + tag, ""))
 	for side in [0, 1]:
 		var code := home if side == 0 else away
 		var h := UiKit.hbox(8)
 		if code == "":
-			h.add_child(UiKit.ellipsis(_waiting(str(m[2 + side])), UiKit.SMALL, UiKit.FAINT))
+			h.add_child(UiKit.ellipsis(_waiting(home_slot if side == 0 else away_slot), UiKit.SMALL, UiKit.FAINT))
 		else:
 			var out := win != "" and win != code
 			var strip := ColorRect.new()
@@ -466,29 +529,36 @@ func _node(week: int, m: Array) -> Control:
 
 
 func _slot(slot: String) -> String:
-	if slot.begins_with("S"):
-		var top: Array = _season.finals.get("top", [])
-		var i := int(slot.substr(1)) - 1
-		return str(top[i]) if i >= 0 and i < top.size() else ""
-	return str(_season.finals["slots"].get(slot, ""))
+	return _season.finals_slot(slot)
+
+
+## What an undecided slot waits on, in a coach's words.
+const RANKED := {"HI_EF": "Higher-placed elimination final winner", "LO_EF": "Lower-placed elimination final winner",
+		"RW1": "Highest-placed qualifying final winner", "RW2": "2nd-highest qualifying final winner",
+		"RW3": "3rd-highest qualifying final winner", "RW4": "Lowest-placed qualifying final winner",
+		"RL1": "Highest-placed qualifying final loser", "RL2": "2nd-highest qualifying final loser"}
 
 
 func _waiting(slot: String) -> String:
+	if RANKED.has(slot):
+		return str(RANKED[slot])
 	var tag := slot.substr(2)
-	for w in WEEKS:
+	for w in _weeks():
 		for m in w[2]:
 			if str(m[0]) == tag:
 				return ("Winner of " if slot.begins_with("W_") else "Loser of ") + str(m[1])
 	return "To be decided"
 
 
-func _result(week: int, tag: String) -> Dictionary:
-	var weeks: Array = _season.finals.get("weeks", [])
-	if week - 1 < weeks.size():
-		for r in weeks[week - 1]:
+## Final `tag`'s result: the last time it was played, so a drawn final shows
+## its replay (a replay is a week of its own in Season.finals["weeks"]).
+func _result(_week: int, tag: String) -> Dictionary:
+	var out := {}
+	for wk in _season.finals.get("weeks", []):
+		for r in wk:
 			if str(r.get("tag", "")) == tag:
-				return r
-	return {}
+				out = r
+	return out
 
 
 static func _ordinal(n: int) -> String:

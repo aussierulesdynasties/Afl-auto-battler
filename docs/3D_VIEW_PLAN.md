@@ -217,6 +217,7 @@ _Update this section whenever 3D work merges. It is the one place 3D progress is
 | Freeze (no new player art, no one-incident patches) | | in force since 2026-11-16 | lifts when steps 2 and 3 are done |
 | 1. Football proof | 201 | harness built (#1695), spec checked (2.86), gap list of 14 written | fix the systems on the gap list; none fixed yet |
 | 2a. Light, tone, weather, skies | 202 | chosen and built (2.80-2.84, #1693 #1694 #1696 #1701); film look over the picture (2.112, #1839) | phone costing: every ground measured at three graphics levels in the cloud ([PHONE_3D_BUDGET.md](PHONE_3D_BUDGET.md), Settings > Graphics); the real phone run (the "Android 3D probe" APK) is next |
+| 1.0 release checklist | | [3D_1_0_RELEASE.md](3D_1_0_RELEASE.md): what must be finished before 3D goes to itch (all four: grounds, players, animations, presentation; all 37 grounds) | kept current by the release thread |
 | 2b. The 37 grounds | 202 | 32 have a model that plays in a match; Accor (#1921) and Traeger (#1919) merged as WIP models; Mars, TIO and Victoria Park in open PRs; background scenes built for 11 grounds, none in a match yet (full list: [3D_INVENTORY.md](3D_INVENTORY.md)) | land the open PRs; wire background scenes into matches |
 | 2c. Crowd | 202 | chosen: 3D people within 55 m, cards beyond (2.92), built; seated on the MCG model's own seats (he chose "Seat the crowd in the MCG", 2026-11-20, #1929) | measure its cost on a phone; each other ground gets it once it loads in a match |
 | 2d. Players' look | 202 | body: MetaHuman (2.85, 2.89); builds by height and weight (2.97, 2.98); faces ruled (2.99) | the Tripo heads (director generates) and the features for everyone else |
@@ -237,7 +238,7 @@ _Update this section whenever 3D work merges. It is the one place 3D progress is
 | MCG | model, instanced seats | #1843 |
 | Marvel Stadium | model | #1911 |
 | Adelaide Oval | model, 3D seats; plays in a match (exported for the game by tools/grounds/adelaide) | #1856 |
-| Optus Stadium | model, roof, seats; background scene (not in a match) | #1867 #1880 #1897 |
+| Optus Stadium | being rebuilt to the MCG standard: every ring an offset of the roof edge traced from Google Earth, bowl, podium and roof measured in metres (tools/grounds/optus/survey); seats; background scene (not in a match) | #1867 #1880 #1897; #1993 |
 | SCG | model | #1909 |
 | GMHBA Stadium | exterior model; background scene (not in a match) | #1903 #1878; open: Selwood Stand roof #1924 |
 | People First Stadium | model, roof; background scene (not in a match) | #1853 #1860 #1868 #1889 #1892 |

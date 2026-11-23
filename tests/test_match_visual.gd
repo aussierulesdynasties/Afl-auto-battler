@@ -2211,8 +2211,9 @@ func _test_ground_models() -> void:
 	MatchMotion.use_field(Vector2.ZERO)
 	_check(MatchMotion.HALF_LEN == MatchMotion.STD_HALF_LEN and MatchMotion.gx(37.3) == 37.3,
 			"A ground with no size of its own plays on the standard oval, every spot as before")
-	_check(GroundModels.field_for("Adelaide Oval").is_equal_approx(Vector2(83.5, 62.0)),
-			"A ground with no model plays at its published size (Adelaide Oval 167 x 124)")
+	# (Adelaide Oval has had a model in matches since #1948; Victoria Park has none.)
+	_check(GroundModels.field_for("Victoria Park").is_equal_approx(Vector2(80.0, 65.0)),
+			"A ground with no model plays at its published size (Victoria Park 160 x 130)")
 	for code in GameDB.clubs.keys():
 		var home := VignetteGround.ground_of({"home": code})
 		if GroundModels.GROUNDS.has(GameDB.ground_key(home)):
@@ -2305,19 +2306,19 @@ func _test_graphics_levels(res: Dictionary) -> void:
 					"Low: every supporter a card, no seat shadows, no blades, a smaller picture (%d casting)" % seat_casting)
 		# A wet day (rule 2.83): rain falls at every level, fewer drops lower down; the far stands
 		# grey in it, the men look wet, the towers are on by day. A dry day after it takes all that away.
-		_check(oval.turf.rain == null and float(RenderingServer.global_shader_parameter_get("oval_wet")) == 0.0,
+		_check(oval.turf.rain == null and oval.turf.wet_kit == 0.0,
 				"%s: no rain and dry kit on a fine day" % level)
 		oval.turf.apply(VignetteWeather.WET, VignetteKickoff.DAY)
 		var rain: Oval3DRain = oval.turf.rain
 		_check(rain != null and rain.amount == int(Oval3DQuality.preset(level)["rain"]) and rain.get_parent() == oval
-				and oval._env.fog_enabled and float(RenderingServer.global_shader_parameter_get("oval_wet")) == 1.0
+				and oval._env.fog_enabled and oval.turf.wet_kit == 1.0
 				and oval.turf.fill.visible,
 				"%s wet: %d drops falling, haze, wet kit, the towers on" % [level, rain.amount if rain else -1])
 		_check(((rain.draw_pass_1 as QuadMesh).material as BaseMaterial3D).render_priority == Material.RENDER_PRIORITY_MAX,
 				"%s wet: the rain is drawn over the match film, not wiped by it" % level)
 		oval.turf.apply("", VignetteKickoff.DAY)
 		_check(oval.turf.rain == null and not oval._env.fog_enabled
-				and float(RenderingServer.global_shader_parameter_get("oval_wet")) == 0.0 and not oval.turf.fill.visible,
+				and oval.turf.wet_kit == 0.0 and not oval.turf.fill.visible,
 				"%s: a fine day after a wet one has no rain, haze or wet kit" % level)
 		vp.queue_free()
 
@@ -2393,6 +2394,9 @@ func _test_ground_screens() -> void:
 			"Only a screen's face is taken for a screen, not its legs or a glass screen")
 	var plain := Oval3D.new()
 	(Engine.get_main_loop() as SceneTree).root.add_child(plain)
+	# As the ground inspector builds it (tools/inspect): the match's world first, then the model.
+	plain._environment()
+	plain._ground()
 	plain._ground_model("mcg")
 	var none := Oval3DScreens.new()
 	plain.add_child(none)
@@ -3181,11 +3185,17 @@ func _wear_total(turf: Oval3DTurf) -> float:
 ## and releases the feed exactly as the flat oval does, a footballer for every token, the
 ## ground turning at each change of ends, and the flat oval back when the setting is off.
 func _test_three_d_view(res: Dictionary) -> void:
+	# At a ground with no model (one the game has no look for), so the stand and its crowd are built and
+	# checked; the grounds with models are _test_ground_models'. The ground never changes the match,
+	# but its size sets how far the men run and the ball flies (MatchMotion.use_field), so the flat
+	# oval it is held to plays the same ground.
+	var at_stand := res.duplicate()
+	at_stand["venue"] = "Alan Ray Oval"
 	var flat := PitchView.new()
 	flat.size = Vector2(360, 480)
 	var flat_seen := []
 	flat.event_played.connect(func(ev): flat_seen.append(ev))
-	flat.setup(res)
+	flat.setup(at_stand)
 	flat.set_speed(8.0)
 	flat.play()
 	for i in range(300):
@@ -3196,10 +3206,6 @@ func _test_three_d_view(res: Dictionary) -> void:
 	(Engine.get_main_loop() as SceneTree).root.add_child(pv)
 	var seen := []
 	pv.event_played.connect(func(ev): seen.append(ev))
-	# At a ground with no model (one the game has no look for), so the stand and its crowd are built and
-	# checked; the grounds with models are _test_ground_models'. The ground never changes the match.
-	var at_stand := res.duplicate()
-	at_stand["venue"] = "Alan Ray Oval"
 	pv.setup(at_stand)
 	var oval: Oval3D = pv._oval3d
 	_check(oval != null and oval.players.size() == pv.director.tokens.size(),
