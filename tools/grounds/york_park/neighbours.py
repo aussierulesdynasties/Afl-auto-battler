@@ -303,8 +303,16 @@ def measured(c):
     return q(0.25), q(0.9), q(0.5)
 
 
+ROOFS = json.load(open(os.path.join(HERE, 'neighbours_roofs.json'))) if os.path.exists(
+    os.path.join(HERE, 'neighbours_roofs.json')) else {}
+
+
 def build_one(mb, b, sty, H, roof):
     P = ccw(b['pts'])
+    rs = ROOFS.get('b_%d_%d' % (round(b['c'][0]), round(b['c'][1])))
+    if rs:                   # the roof sheet nearest the colour the aerial measures (roof_colours.py)
+        k = 4 if roof[0] in ('saw', 'gables') else 1
+        roof = tuple(roof[:k]) + (rs['sheet'],) + tuple(roof[k + 1:])
     kind = roof[0]
     m = measured(b['c'])
     if m:                    # Google Earth's measured heights win over the eye's

@@ -10,3 +10,10 @@ These lines go on the game's credits screen before 1.0.
 - Tree positions and heights within 700 m: "Canopy height: Meta and World Resources Institute, CC BY 4.0".
 - Hills out to kunanyi: AWS Terrain Tiles (Terrarium); sources: SRTM (NASA), GMTED2010 (USGS),
   ETOPO1 (NOAA) and the other sources listed in the tiles' attribution.
+
+## York Park (UTAS Stadium)
+
+- Streets, the river, building footprints and mapped trees: © OpenStreetMap contributors (ODbL).
+- Land cover out to 25 km: ESA WorldCover 2021 v200 (CC BY 4.0; contains modified Copernicus Sentinel data).
+- Hills: AWS Terrain Tiles (Terrarium); sources: SRTM (NASA), GMTED2010 (USGS), ETOPO1 (NOAA).
+- Stand and neighbour outlines and heights are measured from Google Earth (no imagery is shipped).
