@@ -11,11 +11,12 @@ extends RefCounted
 ##       eight players followed for the whole career: in each age band at the start, the best and
 ##       the middle-rated; "next" start comes from the following season's line
 ## Args after the impl name: seeds (comma list) club seasons
-## godot --headless --path . --script tools/audit/run_audit.gd -- league_growth_impl 1,2 MEL 10
+## godot --headless --path . --script tools/audit/run_audit.gd -- league_growth_impl 1,2 MEL 10 [2010]
 
 const BANDS := [[17, 22, "22 and under"], [23, 27, "23-27"], [28, 30, "28-30"], [31, 45, "31+"]]
 
 var seed_n := 1
+var dataset := ""
 var traced: Array = []
 
 
@@ -144,18 +145,35 @@ func _trace(year: int, start: Dictionary) -> void:
 				float(p.get("career_last", 0.0)), int(over)])
 
 
+## TOP|seed|year|name OVR/POT ...: the league's ten best at the season's end.
+func _top(year: int) -> void:
+	var all: Array = []
+	for code in GameState.season.lists:
+		all += GameState.season.lists[code]
+	all.sort_custom(func(a, b): return int(a["overall"]) > int(b["overall"]))
+	var bits := PackedStringArray()
+	for i in range(mini(10, all.size())):
+		bits.append("%s %s %d/%d" % [all[i].get("first", ""), all[i].get("last", ""), int(all[i]["overall"]), int(all[i].get("potential", 0))])
+	print("TOP|%d|%d|%s" % [seed_n, year, ", ".join(bits)])
+
+
 func run() -> void:
 	var args := OS.get_cmdline_user_args()
 	var seeds := str(args[1]).split(",") if args.size() > 1 else PackedStringArray(["1"])
 	var club := str(args[2]) if args.size() > 2 else "MEL"
 	var seasons := int(args[3]) if args.size() > 3 else 10
+	# A Legacy start ("1990", "2000", "2010", "2020"); today's lists without one.
+	dataset = str(args[4]) if args.size() > 4 else ""
 	for sd in seeds:
 		seed_n = int(sd)
 		_career(club, seasons)
 
 
 func _career(club: String, seasons: int) -> void:
-	GameState.reset()
+	if dataset == "":
+		GameState.reset()
+	else:
+		GameState.reset(dataset)
 	GameState.autosave_enabled = false
 	GameState.career_seed = seed_n
 	GameState.replay_seed = seed_n
@@ -170,6 +188,7 @@ func _career(club: String, seasons: int) -> void:
 		while not GameState.season.is_season_over():
 			GameState.advance()
 		var end := _snap(year, "E")
+		_top(year)
 		_trace(year, start)
 		_change("GROW", year, start, end, true)
 		if s == seasons - 1:

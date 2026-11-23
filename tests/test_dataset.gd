@@ -731,6 +731,28 @@ func _test_real_1990() -> void:
 				own_rating += 1
 	_check(on_honours > 0, "An honoured player rated under his floor rates on his honours (%d)" % on_honours)
 	_check(own_rating > 0, "A star already above his floor keeps his own rating (%d)" % own_rating)
+	# One honour is worth 80 (bug bash 2026-11-23: 1989's All-Australians and
+	# club champions sat on a wall of 77).
+	_check(Ratings.honours_floor(1.0) == 80, "One honour sets a floor of 80 (%d)" % Ratings.honours_floor(1.0))
+	# Back from injury, the 1990 Brownlow medallist starts at his rehab level,
+	# not on his one 1989 game (bug bash 2026-11-23).
+	var lib := {}
+	for p in GameDB.players:
+		if str(p.get("first", "")) == "Tony" and str(p.get("last", "")) == "Liberatore":
+			lib = p
+	_check(not lib.is_empty() and bool(lib.get("rated_on_rehab", false)) and int(lib["overall"]) >= 80
+			and not lib.has("rehab"),
+			"Tony Liberatore starts 1990 back from injury (%d)" % int(lib.get("overall", 0)))
+	# A real peak is his level at his best, not one freak season: an
+	# established man with no honours and a fringe rating has no 99 peak (a
+	# teenager may: Wayne Carey, 18 in 1990).
+	var freak := true
+	for p in GameDB.players:
+		if float(p.get("age", 0.0)) < 25.0 or float(p.get("real_peak", 0)) <= 0.0:
+			continue
+		if float(p.get("real_peak", 0)) >= 99.0 and float(p.get("honours", 0.0)) <= 0.0 and int(p["overall"]) < 70:
+			freak = false
+	_check(freak, "No unhonoured fringe player carries a 99 real peak")
 	GameDB.reload()
 	var none := true
 	for p in GameDB.players:
