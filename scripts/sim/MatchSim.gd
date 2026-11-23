@@ -181,6 +181,16 @@ var _loose_was := [{}, {}]
 ## moment_side gets them, and they draw from their own RNG, so simulated
 ## matches (moment_side -1) never see one.
 var moment_side := -1
+## Quarter-break talks (BreakTalks, director 2026-11-21): every talk so far,
+## oldest first: {kind "sit"|"speech", side, q (the quarter it lifts), id ("" for
+## a speech), dice [a, b], edge, band, lift}. A side that has nobody at the
+## break (an AI club; your club in a match you sim) has its talks made for it
+## at the siren (_auto_talks); the coach makes his own (sit_down, give_speech).
+var talk_log: Array = []
+## Each player's lift for the quarter in play, from the talks (id -> fit).
+var _talk_lift := {}
+## Sides that make no talks (a balance arm's switch; never set in the game).
+var talks_off := [false, false]
 var moment_rng := RandomNumberGenerator.new()
 ## Stat credits that must not disturb the match's own random sequence (who a
 ## free kick was paid to): results are identical with or without them.
@@ -1420,6 +1430,20 @@ func _effective(side: int, player) -> void:
 	_p(player, "effective_disposals")
 
 
+## The numbers a TV stat card can show (rule 2.95), for one player as they stand now,
+## with his role in this match: {role, disposals, effective_disposals, goals, ...} as ints.
+const CARD_KEYS := ["disposals", "effective_disposals", "goals", "score_involvements", "marks",
+		"tackles", "clearances", "contested_possessions", "inside50", "intercepts", "rebounds",
+		"spoils", "contested_marks", "hitouts"]
+
+func card_line(player: Dictionary) -> Dictionary:
+	var st: Dictionary = player_stats.get(str(player.get("id", "")), {})
+	var out := {"role": str(player.get("role", "MID"))}
+	for k in CARD_KEYS:
+		out[k] = int(round(float(st.get(k, 0.0))))
+	return out
+
+
 ## Disposal efficiency, 0-100: the share of disposals that kept the ball.
 static func disposal_efficiency(st: Dictionary) -> int:
 	var d := float(st.get("disposals", 0.0))
@@ -1522,6 +1546,11 @@ func _emit(kind: String, side: int, fp: float, actor, text: String) -> void:
 			for k in ["passer_id", "to_id"]:
 				if _set_choice.has(k):
 					events[events.size() - 1][k] = str(_set_choice[k])
+	# A goal carries its kicker's numbers as they stand at that goal, for the TV
+	# stat card over the 3D picture (row 207, rules 2.94-2.95). Read only: it
+	# draws nothing and changes nothing in the match.
+	if kind == "goal" and actor != null:
+		events[events.size() - 1]["card"] = card_line(actor)
 	# A score from a turnover: whose intercept it came from.
 	if (kind == "goal" or kind == "behind") and not _chain_from.is_empty() \
 			and int(_chain_from["side"]) == side:
@@ -2623,8 +2652,23 @@ const D50_TACKLE_RETAIN := 4.0
 ## 0.35: defensive-50 possessions 48 -> 66 a game, disposals 390 (club range to 391).
 const D50_CHIP := 0.35
 const D50_CHIP_MARK := 2.8
+## Controlled tempo and Slow it down keep the ball between the 50s (rule 2.45:
+## "wide, slower"; row 201 gap 8): this share of kicks goes square or back
+## (metres gained between KEEP_MIN and KEEP_MAX) and is marked as a chip is.
+const KEEP_CONTROLLED := 0.07
+const KEEP_HOLD := 0.15
+const KEEP_MIN := -10.0
+const KEEP_MAX := 5.0
+const KEEP_PRESSURE := 0.3
 const D50_CHIP_MIN := -3.0
 const D50_CHIP_MAX := 6.0
+## Ground gained by a kick and by a handball, against the chain's mean gain (row 201
+## gap 6). Every disposal gained the same, so a handball went as far as a kick and the
+## kicks averaged 18 m (real 25, Spencer 2019). With these, and the shorter run of
+## chains in Ratings.FLOW, kicks average about 24 m and a side's kicks and disposals
+## a game come back inside real AFL (217 and 351 on a 200-match screen; real 212, 367).
+const KICK_GAIN := 2.2
+const HANDBALL_GAIN := 0.2
 
 
 ## A named constant, or its audit override (tune).
@@ -3638,11 +3682,19 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 		# so the ball stays in defence for another possession. Its own dice.
 		var chip := in_d50 and not (from_kick_in and touches == 1) \
 				and chip_rng.randf() < _tv("D50_CHIP", D50_CHIP)
+		# Controlled tempo and Slow it down (rule 2.45, row 201 gap 8): between the
+		# 50s the side keeps it, a kick square or back to a loose teammate, who
+		# marks it. Its own dice, rolled only under those calls.
+		var keep := not chip and not in_d50 and not (from_kick_in and touches == 1) \
+				and (fp if side == 0 else -fp) < f50 \
+				and (_plan(side) == "controlled" or _burst(side, "hold")) \
+				and chip_rng.randf() < (_tv("KEEP_HOLD", KEEP_HOLD) if _burst(side, "hold") \
+						else _tv("KEEP_CONTROLLED", KEEP_CONTROLLED))
 		# A kick-in is kicked: no handball roll for its first disposal.
 		var hb_roll := not (from_kick_in and touches == 1) \
 				and rng.randf() < float(T["handball_share"]) * hb_bias \
 				* (_tv("D50_HANDBALL", D50_HANDBALL) if in_d50 else 1.0)
-		if hb_roll and not chip:
+		if hb_roll and not chip and not keep:
 			_t(side, "handballs")
 			_p(carrier, "handballs")
 			_emit("handball", side, fp, carrier, "%s handballs" % GameDB.player_display_name(carrier))
@@ -3656,7 +3708,7 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 				_p(carrier, "kicks")
 			var mark_p: float = (float(T["mark_share_of_kicks"])
 					* (0.75 + 0.50 * _a(carrier, "uncontested_marking") / 100.0))
-			if chip:
+			if chip or keep:
 				mark_p = minf(0.95, mark_p * _tv("D50_CHIP_MARK", D50_CHIP_MARK))
 			marked = false if is_kick_in else rng.randf() < mark_p
 			if marked:
@@ -3682,6 +3734,9 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 		pressure *= 1.10 if atk_fp < 0.0 else 0.95
 		if in_d50:
 			pressure *= _tv("D50_PRESSURE", D50_PRESSURE)
+		if keep:
+			# Kept to a loose man away from the ball: little pressure on it.
+			pressure *= _tv("KEEP_PRESSURE", KEEP_PRESSURE)
 		if is_kick_in:
 			# The conservative exit buys space; playing on gains ground but
 			# exposes the taker to more immediate pressure.
@@ -3872,11 +3927,17 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 		if _burst(side, "push"):
 			gain *= PUSH_GAIN
 		gain *= rng.randf_range(0.45, 1.75)
+		# A kick goes further than a handball (row 201 gap 6).
+		gain *= _tv("KICK_GAIN", KICK_GAIN) if disposal_kind == "kick" else _tv("HANDBALL_GAIN", HANDBALL_GAIN)
 		if disposal_kind == "kick":
 			if chip:
 				# Short and square: it stays in defence.
 				gain = chip_rng.randf_range(_tv("D50_CHIP_MIN", D50_CHIP_MIN), _tv("D50_CHIP_MAX", D50_CHIP_MAX))
 				_t(side, "d50_chips")
+			elif keep:
+				gain = chip_rng.randf_range(_tv("KEEP_MIN", KEEP_MIN), _tv("KEEP_MAX", KEEP_MAX))
+				# Keeping it is the point: it does not use up the chain.
+				max_touches += 1
 			elif in_d50:
 				gain *= _tv("D50_KICK_GAIN", D50_KICK_GAIN)
 			gain = minf(gain, kick_range(carrier))
@@ -4924,9 +4985,16 @@ func end_quarter() -> Dictionary:
 	_emit("quarter", -1, fp, null, "End of Q%d · %s %d.%d (%d) · %s %d.%d (%d)" % [
 		quarter, squads[0].name, goals(0), behinds(0), score(0),
 		squads[1].name, goals(1), behinds(1), score(1)])
+	# A talk lifts one quarter only.
+	_talk_lift.clear()
+	_fit_cache.clear()
 	current_quarter += 1
 	if quarter == 3:
 		_three_quarter_sub()
+	if quarter < 4:
+		for side in range(2):
+			if moment_side != side and not bool(talks_off[side]):
+				_auto_talks(side)
 	if quarter < 4:
 		for side in range(2):
 			if _assisted(side):
@@ -4939,6 +5007,119 @@ func end_quarter() -> Dictionary:
 		else:
 			_emit_full_time("Full time")
 	return result()
+
+
+# ---------------------------------------------------------------------------
+# Quarter-break talks (BreakTalks, director 2026-11-21)
+# ---------------------------------------------------------------------------
+## True at a break the coach can still sit down with a player: quarter, half
+## and three-quarter time, once each.
+func can_sit_down(side: int) -> bool:
+	return _at_talk_break() and _talk_at(side, "sit").is_empty()
+
+
+## True at half time before the side's speech.
+func can_speak(side: int) -> bool:
+	return _at_talk_break() and current_quarter == 3 and _talk_at(side, "speech").is_empty()
+
+
+func _at_talk_break() -> bool:
+	return not _q_active and current_quarter >= 2 and current_quarter <= 4
+
+
+## This break's talk of a kind for a side, {} before it is made.
+func talk_now(side: int, kind: String) -> Dictionary:
+	return _talk_at(side, kind)
+
+
+func _talk_at(side: int, kind: String) -> Dictionary:
+	for t in talk_log:
+		if int(t["side"]) == side and str(t["kind"]) == kind and int(t["q"]) == current_quarter:
+			return t
+	return {}
+
+
+## The edge a talk has (BreakTalks.edge): a sit-down with `id`, or the speech
+## when `id` is "".
+func talk_edge(side: int, kind: String, id := "") -> int:
+	var sq: Squad = squads[side]
+	return BreakTalks.edge(kind, sq.talk_manage, sq.talk_arch, talk_trust(side, id))
+
+
+## His trust in his coach (Trust.gd), or the group's average for "": your club's
+## players only; a rival's are neutral to theirs.
+func talk_trust(side: int, id := "") -> int:
+	var sq: Squad = squads[side]
+	if not sq.talk_trust or CoachEffects.relations.is_empty():
+		return 0
+	if id != "":
+		return Trust.value(CoachEffects.relations, Trust.player_key(id))
+	var total := 0
+	var n := 0
+	for p in sq.ground + sq.bench:
+		total += Trust.value(CoachEffects.relations, Trust.player_key(str(p["id"])))
+		n += 1
+	return roundi(float(total) / float(n)) if n > 0 else 0
+
+
+## Who can be sat down with: anyone of the side still in the match.
+func talk_ok(side: int, id: String) -> bool:
+	for p in (squads[side] as Squad).ground + (squads[side] as Squad).bench:
+		if str(p["id"]) == id:
+			return true
+	return false
+
+
+## Sit down with one player: the dice roll now, and the lift is his for the
+## next quarter. {} when the break has had its sit-down or he is not there.
+func sit_down(side: int, id: String) -> Dictionary:
+	if not can_sit_down(side) or not talk_ok(side, id):
+		return {}
+	return _talk(side, "sit", id)
+
+
+## The half-time speech: the dice roll now, and the lift is everyone's.
+func give_speech(side: int) -> Dictionary:
+	if not can_speak(side):
+		return {}
+	return _talk(side, "speech", "")
+
+
+func _talk(side: int, kind: String, id: String) -> Dictionary:
+	# Its own dice, seeded by the match, the break, the side and the kind: the
+	# match's own streams draw nothing, and a replay rolls the same.
+	var dice_rng := RandomNumberGenerator.new()
+	dice_rng.seed = hash("talk|%d|%d|%d|%s" % [_clanger_seed, current_quarter, side, kind])
+	var dice := [dice_rng.randi_range(1, 6), dice_rng.randi_range(1, 6)]
+	var e := talk_edge(side, kind, id)
+	var key := BreakTalks.band(dice, e)
+	var lift := BreakTalks.lift(kind, key)
+	var t := {"kind": kind, "side": side, "q": current_quarter, "id": id, "dice": dice,
+			"edge": e, "band": key, "lift": lift}
+	talk_log.append(t)
+	var who: Array = []
+	if kind == "sit":
+		who = [id]
+	else:
+		for p in (squads[side] as Squad).ground + (squads[side] as Squad).bench:
+			who.append(str(p["id"]))
+	for pid in who:
+		_talk_lift[pid] = float(_talk_lift.get(pid, 0.0)) + lift
+	_fit_cache.clear()
+	return t
+
+
+## A side with nobody at the break: its coach sits down with his best player on
+## the ground (by rating) and speaks at half time. Every club gets the same.
+func _auto_talks(side: int) -> void:
+	var best := {}
+	for p in (squads[side] as Squad).ground:
+		if best.is_empty() or int(p.get("overall", 0)) > int(best.get("overall", 0)):
+			best = p
+	if not best.is_empty():
+		sit_down(side, str(best["id"]))
+	if can_speak(side):
+		give_speech(side)
 
 
 ## True once a finals match is level after four quarters and extra time has
@@ -5345,6 +5526,7 @@ func result() -> Dictionary:
 		"home": squads[0].code,
 		"away": squads[1].code,
 		"tactics_history": tactics_history.duplicate(true),
+		"talks": talk_log.duplicate(true),
 		"weather": weather,
 		# The day's turn at a break, once played (row 160): where it started and
 		# which break it turned at; "" and 0 for a day that held.
@@ -5428,7 +5610,7 @@ func fit(p: Dictionary) -> float:
 	var f := FIT_BASE + FIT_SLOPE * e / 100.0
 	if (current_quarter >= 4 or finals_mode) and _trait(p, "big_game"):
 		f += 0.05
-	f += ClubLife.form(p) + float(_arch_form.get(id, 0.0))
+	f += ClubLife.form(p) + float(_arch_form.get(id, 0.0)) + float(_talk_lift.get(id, 0.0))
 	f -= float(_fam_cut.get(id, 0.0))
 	_fit_cache[id] = [e, f]
 	return f

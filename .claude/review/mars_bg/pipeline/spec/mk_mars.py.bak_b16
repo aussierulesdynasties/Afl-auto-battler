@@ -1,0 +1,29 @@
+import json
+m=json.load(open('spec/mcg.json'))
+s={k:m[k] for k in m if k not in ('rail_cut','rail_geo','landmarks')}
+s.update(name='mars',lat=-37.539307,lon=143.848166,seed=11,clear_r_m=130,near_half_m=1500,tree_r_m=1500,street_trees=12,glb='ground/mars.glb',haze_m=18000,road_mesh=True)
+P=s['palette']
+P.update(ground_default=[128,136,92],lawn=[104,136,66],yard=[118,138,84],sand=[196,184,156],water=[64,88,92],
+ road=[80,80,80],path=[190,186,176],paved=[150,148,140],fairway=[62,96,46],parking=[98,98,96],
+ walls_house=[[176,96,72],[226,222,212],[196,170,136],[150,84,64]],
+ walls_block=[[232,230,222],[204,198,184],[176,104,80],[214,206,190]],
+ walls_tower=[[226,228,226],[150,176,190],[96,124,140],[206,200,188]],
+ roofs_house=[[176,96,66],[108,112,112],[196,198,192],[146,80,58],[78,84,90]],
+ roofs_flat=[[214,216,212],[176,178,176],[150,152,150],[78,82,86],[140,78,56]],
+ far_flat=[132,140,96],far_veg=[66,92,58],far_steep=[60,84,56],haze=[190,204,216],sky_top=[64,124,192],sky_hor=[196,212,226])
+s['cover']=m['cover']+[['natural','wetland','reeds'],['landuse','island_fill','reeds'],['leisure','golf_course','fairway']]
+s['tree_kinds']=['red_gum','ghost_gum','paperbark']
+s['levels_default'].update({'*':5,'house':4.5,'residential':4.5,'detached':4.5,'apartments':10,'commercial':7,'office':10,'retail':7,'industrial':8,'warehouse':9,'school':7,'stadium':20})
+json.dump(s,open('spec/mars.json','w'),indent=1)
+# traced from the satellite (reference only): sand quarry east of the rail, its two pit ponds
+P['quarry']=[208,192,160]; P['reeds']=[108,80,62]; P['pit_water']=[150,180,150]
+s['skip_buildings']=[55226532]; P['athletics']=[176,84,66]
+s['concourse_from_aerial']=True
+# traced 2026-11-20 on the ALIGNED aerial (sat.png = sat_raw shifted 6 m W / 35 m N to match the scene, measured by
+# ortho edge correlation), metre grid gridcrop 1.87 px/m: sand pit + dirt haul corridor, the tree strip between them, two ponds
+s['paint_poly']=[
+ ['quarry',[[441.4,306.4],[666.0,277.0],[652.7,25.7],[620.6,-1.1],[457.5,31.0],[428.1,15.0],[374.6,-81.3],[321.1,-188.2],[305.1,-215.0],[294.4,-134.8],[283.7,-17.1],[257.0,31.0],[326.5,57.7],[347.9,223.5],[401.3,266.3]]],
+ ['spinifex',[[438.8,97.9],[428.1,31.0],[401.3,-6.4],[363.9,4.3],[379.9,79.1]]],
+ ['pit_water',[[470.9,148.7],[524.3,148.7],[537.7,100.5],[519.0,57.8],[476.2,57.8],[468.2,100.5]]],
+ ['pit_water',[[438.8,15.0],[465.5,4.3],[449.5,-81.3],[433.4,-140.1],[379.9,-134.8],[374.6,-102.7],[401.3,-38.5]]]]
+json.dump(s,open('spec/mars.json','w'),indent=1)

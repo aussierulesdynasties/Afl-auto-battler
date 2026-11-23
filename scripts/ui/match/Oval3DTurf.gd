@@ -152,7 +152,7 @@ func _copy_look() -> void:
 				f.set_shader_parameter(u["name"], mat.get_shader_parameter(u["name"]))
 	if _bmat == null:
 		return
-	for k in ["grass_a", "grass_b", "wet", "hot", "wind", "wind_dir"]:
+	for k in ["grass_a", "grass_b", "wet", "hot", "wind", "wind_dir", "true_colour", "turf_gain"]:
 		_bmat.set_shader_parameter(k, mat.get_shader_parameter(k))
 
 
@@ -246,10 +246,44 @@ func apply(p_weather: String, p_slot: String) -> void:
 	var exposure: float = EXPOSURE[slot]
 	if wet:
 		exposure *= EXPOSURE_WET[slot]
+	# The broadcast colour's turf is lighter under the towers than by day; brought back to a
+	# fine day's open grass, as the rule above asks.
+	exposure *= lerpf(1.0, float(EXPOSURE_BROADCAST.get(slot, 1.0)), broadcast)
 	env.tonemap_exposure = exposure
+	mat.set_shader_parameter("true_colour", broadcast)
+	mat.set_shader_parameter("turf_gain", turf_gain)
+	_copy_look()
 	_sky_view()
 	_tone_to_film()
+	_light_stands()
 	_quality()
+	_wet_world(wet)
+
+
+## Drops in the air at each level (Oval3DQuality "rain"); the node drawing them while it rains.
+var rain: Oval3DRain
+
+
+## A wet day beyond the turf and sky (rule 2.83): rain falls on screen and the far stands grey in
+## it, the men's guernseys, hair and skin look wet (oval_wet, read by the player and head shaders),
+## and by day the towers are on early, their light a second faint shadow and the glint in the wet
+## turf. The graphics level sets how many drops fall (Oval3DQuality "rain").
+func _wet_world(wet: bool) -> void:
+	RenderingServer.global_shader_parameter_set("oval_wet", 1.0 if wet else 0.0)
+	Oval3DRain.haze(env, wet)
+	var level := str(oval.get("quality")) if oval.get("quality") != null else ""
+	var drops := int(Oval3DQuality.preset(level)["rain"])
+	if rain != null and (not wet or rain.amount != drops):
+		rain.queue_free()
+		rain = null
+	if wet and drops > 0 and rain == null:
+		rain = Oval3DRain.new(oval, drops)
+		oval.add_child(rain)
+	if wet and slot != VignetteKickoff.NIGHT:
+		fill.visible = true
+		fill.rotation_degrees = Vector3(-58.0, 150.0, 0.0)
+		fill.light_color = Color(0.92, 0.95, 1.0)
+		fill.light_energy = WET_DAY_TOWERS
 
 
 ## The graphics level's cuts to this look (Oval3DQuality): the sun's shadow bands, whether a
@@ -289,14 +323,47 @@ func _tone_to_film() -> void:
 	var adj := env.adjustment_enabled
 	film.set_shader_parameter("grade", Vector3(env.adjustment_brightness if adj else 1.0,
 			env.adjustment_contrast if adj else 1.0, env.adjustment_saturation if adj else 1.0))
+	film.set_shader_parameter("balance", BALANCE.get(slot, Vector3.ONE))
+	film.set_shader_parameter("broadcast", broadcast)
+	_sky_tint()
 	env.tonemap_mode = Environment.TONE_MAPPER_LINEAR
 	env.tonemap_exposure = 1.0
 	env.adjustment_enabled = false
 
 
+## The broadcast camera's white balance for each time of day (oval3d_film.gdshader): red, green
+## and blue gains on the drawn light, found by tools/visual/capture_tv_colour.gd calibrate so a grey
+## card lying on the open turf comes out grey. The sky light, the grass's bounce and the towers
+## otherwise leave the whole picture blue-green (grass near (2, 49, 4), the card (21, 55, 57)).
+const BALANCE := {"day": Vector3(0.948, 1.0, 1.052), "twilight": Vector3(0.926, 1.0, 0.978), "night": Vector3(1.229, 1.0, 0.931)}
+## How bright the turf is drawn once its colour is read right (oval3d_ground.gdshader's
+## true_colour): the grass's colour was turned to linear twice, which made it near black-green;
+## read once it is several times lighter, and this brings open grass to a broadcast's brightness.
+var turf_gain := 0.65
+## 0 is rule 2.81's look as approved; 1 the broadcast colour: the turf's colour read right
+## (turf_gain) and the camera's white balance (BALANCE). The director's pick, rule 2.114.
+var broadcast := 1.0:
+	set(v):
+		broadcast = v
+		if _applied:
+			apply(weather, slot)
+
+
+## How much of the sky's colour its light keeps in the broadcast colour (oval3d_sky.gdshader).
+const SKY_LIGHT_TINT := 0.5
+
+
+func _sky_tint() -> void:
+	if env != null and env.sky != null and env.sky.sky_material is ShaderMaterial:
+		(env.sky.sky_material as ShaderMaterial).set_shader_parameter("light_tint", lerpf(1.0, SKY_LIGHT_TINT, broadcast))
+
+
 ## AgX exposure for each time of day, and the factor a wet day adds (measured with
 ## tools/visual/capture_turf3d.gd: open grass in each look against the fine day's).
 const EXPOSURE := {"day": 1.0, "twilight": 2.81, "night": 1.91}
+const EXPOSURE_BROADCAST := {"night": 0.72}
+## The towers' light on a wet day or twilight, lit early under the cloud (the night's are 1.6 and 0.5).
+const WET_DAY_TOWERS := 0.35
 const EXPOSURE_WET := {"day": 1.83, "twilight": 1.83, "night": 1.84}
 
 
@@ -375,6 +442,111 @@ func _late_game() -> void:
 	_stand_shade(true)
 	_sky_look({"cover": 0.4, "cloud_lit": Color(1.0, 0.93, 0.82), "cloud_dark": Color(0.56, 0.57, 0.64), "sun_halo": 0.55,
 			"cloud_sun": 0.8, "target": 0.8})
+
+
+## The light on a ground's model (director, 2026-11-21: roof undersides "grey, a faint green
+## tint"). The sky's light map is the view from the centre square: below the horizon it is all
+## sunlit grass, right for the men and the turf. A stand is not on the grass: a roof's underside, a
+## tier's soffit or a canopy outside the ground faces seats, concrete and paving, yet took the full
+## grass green. So the model's surfaces (oval3d_stand.gdshader) take the sky's light as if that
+## grass were grey, keeping STAND_GREEN of its colour: faces turned up are lit as before, faces
+## turned down go grey. At night the light is one colour already, so nothing changes. The men, the
+## turf, the goalposts and the seats keep the sky's own light, and so does the land round a ground
+## (GroundModels' surrounds, meta open_ground): it lies in the open under the sky like the turf.
+const STAND_GREEN := 0.15    # how much of the grass's colour the stands' grey keeps
+const STAND_SHADER := preload("res://scripts/ui/match/oval3d_stand.gdshader")
+const AMB_KEYS := ["amb_down", "amb_low", "amb_level", "amb_high", "amb_up"]
+var _stand_mats: Array[ShaderMaterial] = []
+
+
+## Gives a ground model's surfaces the stands' light (called once the model is built). Surfaces the
+## stand shader does not cover (see-through or glowing ones) keep their own.
+func light_stands(model: Node) -> void:
+	var seen := {}
+	for mi: MeshInstance3D in model.find_children("*", "MeshInstance3D", true, false):
+		if mi.mesh == null or mi.has_meta("open_ground"):
+			continue
+		for i in mi.mesh.get_surface_count():
+			var m := mi.get_active_material(i) as StandardMaterial3D
+			if m == null or m.transparency != BaseMaterial3D.TRANSPARENCY_DISABLED or m.emission_enabled:
+				continue
+			if not seen.has(m):
+				var own := ShaderMaterial.new()
+				own.shader = STAND_SHADER
+				own.resource_name = m.resource_name    # its name still tells what it is (a screen's face)
+				own.set_shader_parameter("albedo_tex", m.albedo_texture)
+				own.set_shader_parameter("use_vcol", m.vertex_color_use_as_albedo)
+				own.set_shader_parameter("albedo_col", m.albedo_color)
+				own.set_shader_parameter("roughness_v", m.roughness)
+				own.set_shader_parameter("metallic_v", m.metallic)
+				own.set_shader_parameter("uv_scale", m.uv1_scale)
+				own.set_shader_parameter("uv_offset", m.uv1_offset)
+				seen[m] = own
+				_stand_mats.append(own)
+			mi.set_surface_override_material(i, seen[m])
+	_light_stands()
+
+
+func _light_stands() -> void:
+	if _stand_mats.is_empty():
+		return
+	var amb: Array = [Vector3.ZERO, Vector3.ZERO, Vector3.ZERO, Vector3.ZERO, Vector3.ZERO]
+	if env.ambient_light_source == Environment.AMBIENT_SOURCE_SKY and env.sky != null:
+		var sm: ShaderMaterial = env.sky.sky_material
+		var e := env.ambient_light_energy * env.ambient_light_sky_contribution
+		var grey := stand_light(sm, e, STAND_GREEN)
+		var sky := stand_light(sm, e, 1.0)
+		for k in amb.size():
+			amb[k] = grey[k] - sky[k]
+	var e_amb := env.ambient_light_energy * env.ambient_light_sky_contribution
+	for m in _stand_mats:
+		for k in AMB_KEYS.size():
+			m.set_shader_parameter(AMB_KEYS[k], amb[k])
+		m.set_shader_parameter("ref_scale", 1.0 / e_amb if e_amb > 0.001 else 0.0)
+
+
+## The sky's light (its cosine-weighted mean, as the engine lights a face from the sky) for a face
+## turned straight down, half down, level, half up and straight up, with the grass below the
+## horizon keeping `green` of its colour (1 as it is). The sky as oval3d_sky.gdshader draws its light map.
+func stand_light(sm: ShaderMaterial, scale := 1.0, green := 1.0) -> Array:
+	var zenith: Color = _sky_param(sm, "zenith")
+	var horizon: Color = _sky_param(sm, "horizon")
+	var bowl: Color = _sky_param(sm, "bowl")
+	var grass: Color = _sky_param(sm, "grass")
+	var bowl_top: float = _sky_param(sm, "bowl_top")
+	var energy: float = _sky_param(sm, "energy")
+	var g_energy: float = _sky_param(sm, "grass_energy")
+	var gl := grass.get_luminance()
+	var grey := Color(gl, gl, gl).lerp(grass, green)
+	var out := []
+	for ny in [-1.0, -0.5, 0.0, 0.5, 1.0]:
+		var n := Vector3(sqrt(1.0 - ny * ny), ny, 0.0)
+		var sum := Color(0, 0, 0)
+		var wsum := 0.0
+		# Directions over the sphere on an even grid of height and bearing (area-even in height).
+		for iy in 48:
+			var y := -1.0 + (iy + 0.5) * 2.0 / 48.0
+			var r := sqrt(1.0 - y * y)
+			for ia in 48:
+				var az := TAU * (ia + 0.5) / 48.0
+				var d := Vector3(r * cos(az), y, r * sin(az))
+				var w := d.dot(n)
+				if w <= 0.0:
+					continue
+				var up := horizon.lerp(zenith, smoothstep(bowl_top, 0.75, y))
+				var c := bowl.lerp(up, smoothstep(bowl_top - 0.02, bowl_top + 0.02, y))
+				c = (grey * g_energy).lerp(c, smoothstep(-0.02, 0.02, y))
+				sum += c * w
+				wsum += w
+		var e := sum / wsum * energy * scale
+		out.append(Vector3(e.r, e.g, e.b))
+	return out
+
+
+## A sky shader setting, or the shader's own default when the look leaves it unset.
+func _sky_param(sm: ShaderMaterial, key: String) -> Variant:
+	var v: Variant = sm.get_shader_parameter(key)
+	return v if v != null else RenderingServer.shader_get_parameter_default(sm.shader.get_rid(), key)
 
 
 ## A wet day (rule 2.83): the sky is cloud, grey light from all round, the sun only a soft

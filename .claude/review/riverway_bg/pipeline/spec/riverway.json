@@ -1,0 +1,588 @@
+{
+ "name": "riverway",
+ "lat": -19.317618,
+ "lon": 146.731873,
+ "seed": 11,
+ "clear_r_m": 102,
+ "near_half_m": 1500,
+ "near_step_m": 7.5,
+ "far_half_m": 30000,
+ "far_step_m": 250,
+ "ground_m_per_px": 1.5,
+ "tree_r_m": 1500,
+ "street_trees": 12,
+ "rivers_dry": false,
+ "glb": "ground/riverway.glb",
+ "seat_dir": "riverway_seats",
+ "palette": {
+  "ground_default": [
+   110,
+   114,
+   78
+  ],
+  "spinifex": [
+   96,
+   108,
+   66
+  ],
+  "lawn": [
+   93,
+   110,
+   56
+  ],
+  "yard": [
+   104,
+   112,
+   70
+  ],
+  "rock": [
+   120,
+   116,
+   108
+  ],
+  "sand": [
+   214,
+   200,
+   166
+  ],
+  "water": [
+   44,
+   50,
+   44
+  ],
+  "road": [
+   78,
+   80,
+   80
+  ],
+  "path": [
+   196,
+   190,
+   176
+  ],
+  "ballast": [
+   128,
+   118,
+   104
+  ],
+  "paved": [
+   184,
+   182,
+   174
+  ],
+  "parking": [
+   96,
+   96,
+   94
+  ],
+  "walls_house": [
+   [
+    236,
+    232,
+    220
+   ],
+   [
+    214,
+    204,
+    182
+   ],
+   [
+    196,
+    170,
+    136
+   ],
+   [
+    226,
+    222,
+    212
+   ]
+  ],
+  "walls_block": [
+   [
+    232,
+    230,
+    222
+   ],
+   [
+    204,
+    198,
+    184
+   ],
+   [
+    184,
+    190,
+    196
+   ],
+   [
+    214,
+    206,
+    190
+   ]
+  ],
+  "walls_tower": [
+   [
+    226,
+    228,
+    226
+   ],
+   [
+    150,
+    176,
+    190
+   ],
+   [
+    96,
+    124,
+    140
+   ],
+   [
+    206,
+    200,
+    188
+   ]
+  ],
+  "roofs_house": [
+   [
+    232,
+    232,
+    226
+   ],
+   [
+    190,
+    190,
+    184
+   ],
+   [
+    136,
+    140,
+    138
+   ],
+   [
+    90,
+    94,
+    88
+   ],
+   [
+    234,
+    224,
+    196
+   ],
+   [
+    110,
+    112,
+    112
+   ],
+   [
+    232,
+    232,
+    226
+   ],
+   [
+    150,
+    72,
+    58
+   ]
+  ],
+  "roofs_flat": [
+   [
+    232,
+    232,
+    226
+   ],
+   [
+    204,
+    206,
+    204
+   ],
+   [
+    176,
+    178,
+    176
+   ],
+   [
+    190,
+    190,
+    184
+   ]
+  ],
+  "far_flat": [
+   128,
+   132,
+   92
+  ],
+  "far_veg": [
+   84,
+   100,
+   62
+  ],
+  "far_steep": [
+   104,
+   100,
+   78
+  ],
+  "haze": [
+   190,
+   204,
+   216
+  ],
+  "sky_top": [
+   64,
+   124,
+   192
+  ],
+  "sky_hor": [
+   196,
+   212,
+   226
+  ],
+  "track": [
+   70,
+   64,
+   60
+  ],
+  "lagoon": [
+   112,
+   196,
+   188
+  ],
+  "river_paint": [
+   70,
+   72,
+   55
+  ]
+ },
+ "cover": [
+  [
+   "landuse",
+   "residential",
+   "yard"
+  ],
+  [
+   "landuse",
+   "commercial|retail|industrial|construction",
+   "paved"
+  ],
+  [
+   "landuse",
+   "railway",
+   "ballast"
+  ],
+  [
+   "amenity",
+   "parking",
+   "parking"
+  ],
+  [
+   "leisure",
+   "park|pitch|golf_course|garden|recreation_ground|common",
+   "lawn"
+  ],
+  [
+   "landuse",
+   "grass|recreation_ground|cemetery",
+   "lawn"
+  ],
+  [
+   "natural",
+   "wood|scrub",
+   "spinifex"
+  ],
+  [
+   "natural",
+   "water",
+   "water"
+  ],
+  [
+   "leisure",
+   "pitch",
+   "lawn"
+  ],
+  [
+   "natural",
+   "wetland",
+   "spinifex"
+  ],
+  [
+   "leisure",
+   "golf_course",
+   "lawn"
+  ],
+  [
+   "landuse",
+   "island_fill",
+   "yard"
+  ]
+ ],
+ "tree_fill": [
+  [
+   "leisure",
+   "park|garden|common",
+   420
+  ],
+  [
+   "landuse",
+   "grass",
+   800
+  ],
+  [
+   "natural",
+   "wood",
+   60
+  ],
+  [
+   "landuse",
+   "residential",
+   1700
+  ],
+  [
+   "leisure",
+   "pitch",
+   0
+  ],
+  [
+   "leisure",
+   "stadium",
+   0
+  ]
+ ],
+ "tree_kinds": [
+  "rain_tree",
+  "mango",
+  "mango",
+  "paperbark",
+  "rain_tree",
+  "red_gum"
+ ],
+ "levels_default": {
+  "*": 5,
+  "house": 4.5,
+  "residential": 4.5,
+  "detached": 4.5,
+  "terrace": 7,
+  "semidetached_house": 6,
+  "apartments": 12,
+  "commercial": 8,
+  "office": 14,
+  "retail": 7,
+  "industrial": 8,
+  "warehouse": 9,
+  "school": 7,
+  "university": 14,
+  "hospital": 20,
+  "stadium": 24,
+  "train_station": 10
+ },
+ "haze_m": 22000,
+ "road_mesh": true,
+ "rw_bigroof": [
+  222,
+  212,
+  203
+ ],
+ "paint_poly": [
+  [
+   "parking",
+   [
+    [
+     -300,
+     -40
+    ],
+    [
+     -225,
+     -30
+    ],
+    [
+     -215,
+     -150
+    ],
+    [
+     -305,
+     -160
+    ]
+   ]
+  ],
+  [
+   "paved",
+   [
+    [
+     -140,
+     -200
+    ],
+    [
+     -92,
+     -182
+    ],
+    [
+     -42,
+     -168
+    ],
+    [
+     -30,
+     -198
+    ],
+    [
+     -54,
+     -244
+    ],
+    [
+     -108,
+     -234
+    ]
+   ]
+  ],
+  [
+   "lagoon",
+   [
+    [
+     -132,
+     -206
+    ],
+    [
+     -92,
+     -190
+    ],
+    [
+     -46,
+     -176
+    ],
+    [
+     -38,
+     -196
+    ],
+    [
+     -58,
+     -236
+    ],
+    [
+     -104,
+     -226
+    ]
+   ]
+  ]
+ ],
+ "tree_kinds_extra": {
+  "rain_tree": [
+   8.0,
+   8.5,
+   0.55,
+   4.0,
+   0.5,
+   [
+    52,
+    76,
+    42
+   ],
+   [
+    110,
+    100,
+    88
+   ],
+   1
+  ],
+  "mango": [
+   4.8,
+   5.6,
+   0.85,
+   2.4,
+   0.35,
+   [
+    44,
+    68,
+    38
+   ],
+   [
+    96,
+    84,
+    72
+   ],
+   1
+  ]
+ },
+ "rw_facades": true,
+ "rw_water": true,
+ "all_metal_roofs": true,
+ "carport_box": [
+  -900,
+  -60,
+  -300,
+  480
+ ],
+ "park_zones": [
+  [
+   [
+    -760,
+    410
+   ],
+   [
+    -440,
+    410
+   ],
+   [
+    -440,
+    -130
+   ],
+   [
+    -760,
+    -130
+   ]
+  ],
+  [
+   [
+    -440,
+    410
+   ],
+   [
+    -395,
+    410
+   ],
+   [
+    -395,
+    300
+   ],
+   [
+    -440,
+    300
+   ]
+  ],
+  [
+   [
+    -440,
+    170
+   ],
+   [
+    -400,
+    170
+   ],
+   [
+    -400,
+    -130
+   ],
+   [
+    -440,
+    -130
+   ]
+  ]
+ ],
+ "deck_zone": [
+  [
+   -715,
+   405
+  ],
+  [
+   -505,
+   405
+  ],
+  [
+   -505,
+   265
+  ],
+  [
+   -560,
+   295
+  ],
+  [
+   -700,
+   250
+  ]
+ ]
+}

@@ -1,0 +1,17 @@
+TEX city_far                       256x256   std   54.4 mean  124.3
+TEX city_far.001                   256x256   std   70.0 mean  206.7
+TEX ground                        2000x2000  std   35.3 mean  133.1
+TEX leaf_clumps                    512x512   std   25.6 mean  162.0
+TEX leaf_normal                    512x512   std   47.2 mean  136.2
+TEX lm_crown_glass                 384x499   std   20.8 mean  110.3
+TEX lm_metropol                    204x220   std   67.3 mean  194.1
+TEX lm_white                        64x256   std   13.1 mean  209.5
+TEX perth_limestone                256x256   std   15.0 mean  200.5
+TEX perth_swan_water               512x512   std   10.5 mean   72.9
+TEX road_asphalt_v2                512x512   std   36.1 mean  169.4
+TEX roof_metal                     512x512   std   19.4 mean  207.1
+TEX roof_tile                      512x512   std   21.4 mean  206.6
+TEX tower                          256x256   std   63.8 mean   88.6
+TEX tower.001                      256x256   std   67.5 mean  212.5
+TEX wall                           256x256   std   82.6 mean  210.8
+TEX wall.001                       256x256   std   60.6 mean  136.3

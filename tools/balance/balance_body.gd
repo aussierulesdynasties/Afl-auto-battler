@@ -183,6 +183,18 @@ func play(from: int, count: int, out: String, weather: String,
 		for ci in range(args.size() - 1):
 			if str(args[ci]) == "--through":
 				through_rec = _set_through(sim, i % 2, str(args[ci + 1]))
+		# --talks off|one|all (quarter-break talks, BreakTalks): "off" no side
+		# talks; "one" only side i % 2 (sits down with its best player at every
+		# break, speaks at half time), the rival none; "all" (the game's way, and
+		# the default) both. The match line carries "talks" with side i % 2's margin.
+		var talks := ""
+		for ci in range(args.size() - 1):
+			if str(args[ci]) == "--talks":
+				talks = str(args[ci + 1])
+		if talks == "off":
+			sim.talks_off = [true, true]
+		elif talks == "one":
+			sim.talks_off = [i % 2 != 0, i % 2 != 1]
 		for k in sets:
 			if not str(k) in sim:
 				push_error("balance: MatchSim has no var " + str(k))
@@ -228,6 +240,8 @@ func play(from: int, count: int, out: String, weather: String,
 		# (or a lead mark played on to) taken inside that side's forward 50, and
 		# a forward's mark in the goal-square pack.
 		var mi50 := [0, 0]
+		# Where those marks come from: a kicked mark, a lead or pass taken ("receive"), a pack.
+		var mi50_by := {"mark": [0, 0], "receive": [0, 0], "pack": [0, 0]}
 		# Goals off a pass inside 50 in general play (MatchSim._i50_give: its
 		# pass events carry "hand"), each side's: the goal's previous events
 		# are that pass, or the pass and the lead mark it found.
@@ -250,6 +264,7 @@ func play(from: int, count: int, out: String, weather: String,
 				var s := int(ev.get("side", 0))
 				if float(ev.get("fp", 0.0)) * (1.0 if s == 0 else -1.0) >= f50:
 					mi50[s] += 1
+					(mi50_by[kind] as Array)[s] += 1
 		var teams := []
 		var rosters: Array = sim.rosters()
 		var stats: Dictionary = r["players"]
@@ -262,6 +277,8 @@ func play(from: int, count: int, out: String, weather: String,
 			t["stoppages"] = ball_ups + throw_ins
 			t["marks_inside_50"] = mi50[side]
 			t["i50_pass_goals"] = i50_pass_goals[side]
+			for src in mi50_by:
+				t["mi50_" + str(src)] = (mi50_by[src] as Array)[side]
 			_shot_counts(t, sim.shot_log, side)
 			t["strength"] = snappedf((sq_h if side == 0 else sq_a).strength(), 0.01)
 			q_score[side][3] = int(r["score"][side])
@@ -322,6 +339,13 @@ func play(from: int, count: int, out: String, weather: String,
 					"end": sim.weather, "after": sim.weather_turned_after, "chance": sim.weather_odds}
 		if tag != "":
 			row["tag"] = _tag_record(tag_rec, r)
+		if talks != "":
+			var me := i % 2
+			var lifts := {}
+			for tk in r.get("talks", []):
+				var key := "%s_%s_%d" % [str(tk["kind"]), str(tk["band"]), int(tk["side"])]
+				lifts[key] = int(lifts.get(key, 0)) + 1
+			row["talks"] = {"side": me, "margin": int(r["score"][me]) - int(r["score"][1 - me]), "bands": lifts}
 		if not through_rec.is_empty():
 			for slot in through_rec:
 				var st: Dictionary = (r["players"] as Dictionary).get(str(through_rec[slot]), {})
