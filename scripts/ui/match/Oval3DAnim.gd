@@ -334,20 +334,19 @@ func frame(dt: float) -> void:
 			var d := _drawn(who).distance_to(_drawn(v))
 			for name in _pairs:
 				need = maxf(need, _lead(name, d))
-			if director.chasing_down():
-				# The takes' carriers stand or walk into them: a carrier running flat out stays in
-				# his own run until the last CHASE_LEAD, then the take has him.
-				need = minf(need, CHASE_LEAD)
+			var run_down: bool = director.chasing_down()
+			if run_down:
+				# The takes' carriers stand or walk into them: in a run-down the carrier runs on in
+				# his own stride until the last CHASE_LEAD before the director's take
+				# (run_down_due: he is at the tackle's spot with the tackler at his back).
+				need = CHASE_LEAD
+				due = director.run_down_due()
 			# A tackler the director has slowed as he arrives would stand (under RUN_FROM) and
 			# wait for the take: the take starts then instead, its run-in carrying him in
 			# (director 2026-11-22: "the tackler is standing by idly waiting for the tackle").
-			# Not in a chase-down: there he sets off from a stand and runs the carrier down.
 			var slowing := (_pace[who] as Vector2).length() < RUN_FROM and due <= need + CLOSE_EARLY \
-					and not director.chasing_down()
-			# A chase-down's tackler is still getting going: the take waits until he is running
-			# (the carrier is getting away from him, so the reach estimate from a stand is early).
-			var setting_off := director.chasing_down() and (_pace[who] as Vector2).length() < RUN_FROM
-			if (due <= need or slowing) and not setting_off:
+					and not run_down
+			if due <= need or slowing:
 				_start(who, v, false)
 	var seen := {}
 	for pr in _in:
@@ -384,6 +383,8 @@ func _advance(pr: Dictionary, dt: float) -> void:
 			var due := 0.05
 			if not ahead.is_empty() and int(ahead["who"]) == int(pr["who"]):
 				due = _due(int(pr["who"]), int(pr["victim"]), float(ahead["left"]))
+				if director.chasing_down():
+					due = minf(due, director.run_down_due())
 			rate = clampf((cs - c) / maxf(due, 0.05), SLOW, LEAD_RATE)
 	else:
 		# Down and back up in UP_IN; then the take's standing tail at its own pace.

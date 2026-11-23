@@ -1168,6 +1168,23 @@ func _run_down_step(p: Dictionary, tk: Dictionary, v: Dictionary) -> bool:
 	return false
 
 
+## Animation seconds until a run-down's take comes (_run_down_step): the carrier at his spot and
+## the tackler at his back, whichever is later. INF when no run-down is running.
+func run_down_due() -> float:
+	if not chasing_down():
+		return INF
+	var p: Dictionary = _phases[_pi]
+	var tk: Dictionary = tokens[int(p["who"])]
+	var v: Dictionary = tokens[int(p["victim"])]
+	var vp: Vector2 = v["pos"]
+	var left := maxf(0.0, vp.distance_to(p["to"]) - RUN_DOWN_AT)
+	var t_spot := left / maxf((v["vel"] as Vector2).length() * TEMPO, 0.5)
+	var gap: Vector2 = vp - (tk["pos"] as Vector2)
+	var closing := ((tk["vel"] as Vector2) - (v["vel"] as Vector2)).dot(gap.normalized()) * TEMPO
+	var t_reach := maxf(0.0, gap.length() - RUN_DOWN_REACH) / maxf(closing, 0.5)
+	return maxf(t_spot, t_reach)
+
+
 ## Whether the tackle being run down now is a chase-down from behind (the crowd calls "Ball!").
 func chasing_down() -> bool:
 	if not str(_beat.get("kind", "")) in ["tackle", "free"] or _pi >= _phases.size():
