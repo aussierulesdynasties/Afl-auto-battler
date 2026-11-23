@@ -25,7 +25,9 @@ TARGET = {
     "deck": (206, 206, 199),
     "navy": (108, 120, 138),
     "slate": (130, 138, 150),
-    "paving": (150, 146, 136),
+    # PC check 2026-11-23: (150, 146, 136) rendered a cool (160, 164, 156) on the plaza against Google
+    # Earth's warm tan (171, 161, 151); lit ground there renders about (1.07, 1.12, 1.15) of its colour.
+    "paving": (160, 144, 131),
     # Undersides face down, where the match light is a dim blue-violet (measured under the shut roof:
     # a (118, 122, 116) map rendered (49, 49, 69)). Painted warm and green so they render the grey with
     # a faint green the director set for roof undersides (2026-11-21), about (85, 90, 82).
@@ -96,6 +98,19 @@ def flat():
         Image.fromarray(np.full((16, 16, 3), c, np.uint8), "RGB").save(os.path.join(TEX, "%s.png" % n))
 
 
+def label():
+    """MARVEL STADIUM in white on black, the label over each small corner scoreboard (photos: Hawthorn v
+    Brisbane 2024, the curtain raiser, Ed Sheeran's stage 2026). Lettering on a flat sign, as the real one."""
+    from PIL import ImageDraw, ImageFont
+    w, h = 1024, 120
+    im = Image.new("RGB", (w, h), (14, 14, 16))
+    f = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 84)
+    d = ImageDraw.Draw(im)
+    tb = d.textbbox((0, 0), "MARVEL STADIUM", font=f)
+    d.text(((w - (tb[2] - tb[0])) / 2 - tb[0], (h - (tb[3] - tb[1])) / 2 - tb[1]), "MARVEL STADIUM", font=f, fill=(238, 238, 236))
+    im.save(os.path.join(TEX, "sign_mvst.png"))
+
+
 def main():
     for n, t in TARGET.items():
         retint(n, t)
@@ -114,12 +129,17 @@ def main():
     ribbon()
     grille()
     flat()
+    label()
     # the blue blocks' plain cladding: the panel joints of the slate texture, a mid blue (Google Earth c_ne)
     CONTRAST["bluepanel"] = 0.5
     retint("bluepanel", (96, 112, 140), src="slate", out="bluepanel")
-    # the west podium's piers and spandrels: grey-blue panels, not white (Google Earth c_w, ferry_b)
+    # the west podium's piers and spandrels: grey-blue panels, not white (Google Earth c_w, ferry_b).
+    # PC check 2026-11-23: (126, 136, 148) rendered (118, 128, 142) against Google Earth's darker blue
+    # (74, 103, 129); the west face renders about 0.94 of its colour.
     CONTRAST["podiumpanel"] = 0.5
-    retint("podiumpanel", (126, 136, 148), src="slate", out="podiumpanel")
+    retint("podiumpanel", (80, 109, 134), src="slate", out="podiumpanel")
+    # the forecourt plinth's street front: blue-grey glass (PC check: Google Earth (76, 102, 118))
+    retint("fcglass", (81, 108, 124), src="curtain", out="fcglass")
     tiles = os.path.join(TEX, "tiles.json")
     j = json.load(open(tiles))
     j["endrib"] = j["endroof"]
@@ -129,8 +149,10 @@ def main():
     j["grille"] = [3, 3]
     j["lamp"] = [1, 1]
     j["screen"] = [1, 1]
+    j["sign_mvst"] = [1, 1]
     j["bluepanel"] = j["slate"]
     j["podiumpanel"] = j["slate"]
+    j["fcglass"] = j["curtain"]
     for gone in ("office", "undercroft", "louvre"):
         j.pop(gone, None)
     json.dump(j, open(tiles, "w"))

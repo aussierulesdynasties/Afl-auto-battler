@@ -88,12 +88,15 @@ TILE = {}
 def make_textures():
     # NAB, 700 Bourke Street (Google Earth ge_nab_a/b): dark blue reflective glass in 1.5 m panes with
     # thin dark mullions; the light sections silver-white panels with a few slot windows; roof plant grey.
-    curtain("nab_glass", (46, 50, 57), (32, 35, 40), bay=1.5, floor=3.9, noise=10.0)
+    # PC check 2026-11-23: (46, 50, 57) rendered (13, 22, 46) on the shaded east face against Google
+    # Earth's (62, 86, 110); its silver panels there render at (0.44, 0.51, 0.65) of their colour, so
+    # the glass is a mid grey-blue that the sky in it and the shade bring down to Google Earth's.
+    curtain("nab_glass", (124, 150, 156), (86, 96, 104), bay=1.5, floor=3.9, noise=10.0)
     TILE["nab_glass"] = (6.0, 7.8)
     panels("nab_silver", (205, 210, 214), (150, 156, 162), w=1.5, h=1.3, holes=(52, 58, 66))
     TILE["nab_silver"] = (6.0, 5.2)
     flat("fin_white", (232, 234, 236))
-    flat("corner_red", (196, 84, 52))
+    flat("corner_red", (206, 118, 90))  # copper orange-red: GE c_e reads (108, 77, 86) in shade
     flat("roof_grey", (138, 138, 134), noise=6.0)
     flat("roof_dark", (78, 82, 88), noise=6.0)
     # Southern Cross's roof: pale weathered metal, the valleys' glazing grey-blue, the sides' louvres
@@ -187,21 +190,6 @@ def outward(a, b):
     return np.array([d[1], -d[0]])
 
 
-def wedge(g, mat, p, t, n, size, depth, z):
-    """A triangular sun-shade fin standing off the wall at plan point p: a slim right triangle `size`
-    tall in the wall's plane (t along the wall, n out of it), its 0.42-size base along the top and
-    its point at the bottom, `depth` deep at the top, tapering to the wall at the point (Google Earth
-    NAB: white downward-pointing triangles in diagonal rows)."""
-    p = np.array(p, float)
-    A = np.r_[p, z + size]
-    B = np.r_[p + t * size * 0.42, z + size]
-    C = np.r_[p, z]
-    o = np.r_[n * depth, 0.0]
-    g.poly(mat, [A + o, B, C])                  # the slanted outer face
-    g.poly(mat, [A, A + o, C][::-1])
-    g.poly(mat, [A, B, A + o])                  # its underside
-
-
 def inset(ring, d):
     """The counter-clockwise footprint `ring` moved `d` inward with mitred corners (vertex for vertex)."""
     ring = [np.array(q, float) for q in ccw(ring)]
@@ -286,6 +274,20 @@ def osm_ways():
     return {t.get("_id"): (t, p) for t, p in ways if t.get("_id")}
 
 
+def shade(g, mat, p, t, n, w, size, depth, z):
+    """NAB's white sun-shade: a downward-pointing triangle `w` wide and `size` tall on the wall, its top
+    edge standing `depth` off the wall at the middle and its point on the wall, so it reads as a white
+    triangle with its two halves lit differently (Google Earth c_e, 2026-11-23). p is the top-left corner."""
+    p = np.array(p, float)
+    A = np.r_[p, z + size]
+    B = np.r_[p + t * w, z + size]
+    C = np.r_[p + t * w / 2, z]
+    M = np.r_[p + t * w / 2 + n * depth, z + size]
+    g.poly(mat, [A, C, M])
+    g.poly(mat, [M, C, B])
+    g.poly(mat, [A, M, B])
+
+
 def polyline_points(pts, n):
     """n+1 points spaced evenly by length along the polyline pts."""
     pts = np.array(pts, float)
@@ -299,63 +301,98 @@ def nab(g, ring, h=72.0):
     Wurundjeri Way and Bourke Street (Google Earth ge_nab_a, ge_nab_b, c_e).
     - Its faces are folded into tall facets about 14 m wide, each leaning out 2.2 m at alternate
       edges, so the light breaks across them as Google Earth shows.
-    - The south and east faces are dark blue glass with white triangular shades climbing in diagonal
-      rows and red-orange strips down some folds; the east face's north tip is silver-white panels.
+    - The south and east faces are grey-blue glass with white triangular shades climbing in diagonal
+      rows. The east face is four glass blocks and a silver-white north tip, split by three slanting
+      slots clad orange-red; the south face has red-orange strips down two folds.
     - The west face, to the stadium, alternates dark glass and silver panel facets.
     - It stands on a 7 m glazed ground storey set back behind white V struts (c_e's white zigzag)."""
     ring = ccw(ring)
     P = [np.array(q) for q in ring]
     faces = [("south", [P[0], P[1]]), ("east", [P[1], P[2]]), ("west", P[2:] + [P[0]])]
     base, top, fold = 7.0, h, 2.2
+    # The east face (Google Earth c_e, PC check of 2026-11-23) is four glass blocks and a silver end, split
+    # by three slots clad orange-red that run the full height on a slant: (centre along the face from its
+    # south corner, width, how far the slot's top sits along from its foot), read off the 119 m face.
+    slots = {"east": ((0.27, 4.5, 3.0), (0.53, 3.0, -2.5), (0.69, 4.0, 3.0))}
+    depth = 3.5
     outline = []
     for name, pl in faces:
-        pts, L = polyline_points(pl, max(1, int(round(polyline_length(pl) / 14.0))))
-        k = len(pts) - 1
+        L = polyline_length(pl)
+        cuts = [(c * L - w / 2, c * L + w / 2, sh) for c, w, sh in slots.get(name, ())]
+        edges = [0.0] + [x for c in cuts for x in c[:2]] + [L]
+        shift = [0.0] + [c[2] for c in cuts for _ in (0, 1)] + [0.0]
         u = 0.0
-        for j in range(k):
-            p0, p1 = pts[j], pts[j + 1]
-            w = float(np.linalg.norm(p1 - p0))
-            t = (p1 - p0) / w
-            n = outward(p0, p1)
-            f = (j + 0.5) / k
-            if name == "west":
-                mat = "nab_silver" if j % 2 else "nab_glass"
-            elif name == "east":
-                mat = "nab_silver" if f > 0.88 else "nab_glass"
-            else:
-                mat = "nab_glass"
-            lean0 = n * fold * (j % 2 == 0)
-            lean1 = n * fold * (j % 2 == 1)
-            # the facet, from the top of the ground storey to the roof
-            g.poly(mat, [(*p0, base), (*p1, base), (*(p1 + lean1), top), (*(p0 + lean0), top)],
-                   [(u, base), (u + w, base), (u + w, top), (u, top)])
-            outline.append(p0 + lean0)
-            outline.append(p1 + lean1)
-            # the leaning edge leaves a triangular gap to its neighbour: a narrow fold wall closes it
-            if j + 1 < k:
-                nn = outward(pts[j + 1], pts[min(j + 2, k)])
-                q = pts[j + 1]
-                g.poly(mat, [(*q, base), (*(q + lean1), top), (*(q + nn * fold * ((j + 1) % 2 == 0)), top)])
-            # the ground storey: glass set back 2 m, a white V strut pair per facet in front of it
-            g.wall("podium_glass", p0 - n * 2.0, p1 - n * 2.0, 0.0, base)
-            g.poly("fin_white", [(*(p0 - n * 2.0), base - 0.6), (*(p1 - n * 2.0), base - 0.6),
-                                 (*p1, base), (*p0, base)])
-            for a_, b_ in ((p0, p0 + t * w / 2), (p0 + t * w / 2, p1)):
-                strut(g, "fin_white", np.r_[a_ + (b_ - a_) * 0.0, base], np.r_[(a_ + b_) / 2 - n * 0.6, 0.0], 0.45)
-                strut(g, "fin_white", np.r_[b_, base], np.r_[(a_ + b_) / 2 - n * 0.6, 0.0], 0.45)
-            # red-orange strips down some folds (south face's thirds, the east face's quarter)
-            if (name == "south" and j in (k // 3, 2 * k // 3)) or (name == "east" and j == max(1, k // 4)):
-                g.poly("corner_red", [(*p0, base), (*(p0 + t * 2.4), base), (*(p0 + t * 2.4 + lean0), top),
-                                      (*(p0 + lean0), top)])
-            if mat == "nab_glass":
-                # white shades in diagonal rows: one every two floors (7.8 m), stepping 3.2 m along,
-                # two to a facet, offset half a row, as counted on Google Earth's c_e and nab_b
-                for r, z in enumerate(np.arange(base + 1.0, top - 6.0, 3.9)):
-                    s_ = (((r // 2) * 3.2 + (w / 2 if r % 2 else 0.0)) % (w - 3.0)) + 0.6
-                    lean = (lean0 + (lean1 - lean0) * (s_ / w)) * ((z - base) / (top - base))
-                    if r % 2 == 0 or w > 10.0:
-                        wedge(g, "fin_white", p0 + t * s_ + lean + n * 0.05, t, n, 5.2, 0.9, z)
-            u += w
+        for bi in range(0, len(edges), 2):
+            s0, s1 = edges[bi], edges[bi + 1]
+            sub = _sub_polyline(pl, s0, s1)
+            k = max(1, int(round((s1 - s0) / 14.0)))
+            pts, _ = polyline_points(sub, k)
+            for j in range(k):
+                p0, p1 = pts[j], pts[j + 1]
+                w = float(np.linalg.norm(p1 - p0))
+                t = (p1 - p0) / w
+                n = outward(p0, p1)
+                f = ((s0 + (j + 0.5) * (s1 - s0) / k) / L)
+                if name == "west":
+                    mat = "nab_silver" if j % 2 else "nab_glass"
+                elif name == "east":
+                    mat = "nab_silver" if f > 0.88 else "nab_glass"
+                else:
+                    mat = "nab_glass"
+                # alternate edges lean out (a block's two ends stay plumb, so its slots' walls are flat)
+                lean0 = n * fold * (j % 2 == 1)
+                lean1 = n * fold * ((j + 1) % 2 == 1 and j + 1 < k)
+                if j == 0:
+                    lean0 = lean0 + t * shift[bi]
+                if j == k - 1:
+                    lean1 = lean1 + t * shift[bi + 1]
+                g.poly(mat, [(*p0, base), (*p1, base), (*(p1 + lean1), top), (*(p0 + lean0), top)],
+                       [(u, base), (u + w, base), (u + w, top), (u, top)])
+                outline.append(p0 + lean0)
+                outline.append(p1 + lean1)
+                # the leaning edge leaves a triangular gap to its neighbour: a narrow fold wall closes it
+                if j + 1 < k:
+                    nn = outward(pts[j + 1], pts[min(j + 2, k)])
+                    q = pts[j + 1]
+                    g.poly(mat, [(*q, base), (*(q + lean1), top), (*(q + nn * fold * ((j + 1) % 2 == 1)), top)])
+                # the ground storey: glass set back 2 m, a white V strut pair per facet in front of it
+                g.wall("podium_glass", p0 - n * 2.0, p1 - n * 2.0, 0.0, base)
+                g.poly("fin_white", [(*(p0 - n * 2.0), base - 0.6), (*(p1 - n * 2.0), base - 0.6),
+                                     (*p1, base), (*p0, base)])
+                for a_, b_ in ((p0, p0 + t * w / 2), (p0 + t * w / 2, p1)):
+                    strut(g, "fin_white", np.r_[a_, base], np.r_[(a_ + b_) / 2 - n * 0.6, 0.0], 0.45)
+                    strut(g, "fin_white", np.r_[b_, base], np.r_[(a_ + b_) / 2 - n * 0.6, 0.0], 0.45)
+                # red-orange strips down the south face's folds at its thirds
+                if name == "south" and k > 2 and j in (k // 3, 2 * k // 3):
+                    g.poly("corner_red", [(*p0, base), (*(p0 + t * 3.2), base), (*(p0 + t * 3.2 + lean0), top),
+                                          (*(p0 + lean0), top)])
+                if mat == "nab_glass":
+                    # white shades, one row a floor (3.9 m), one every 6.5 m along a row, each row stepped
+                    # 2.2 m on so they climb in diagonals: about five a row on a 30 m block and eleven rows,
+                    # 3.4 m wide and 5.6 m tall, as counted on Google Earth's c_e (2026-11-23)
+                    for r, z in enumerate(np.arange(base + 1.0, top - 6.5, 3.9)):
+                        for s_ in np.arange((r * 2.2 - u) % 6.5, w - 3.6, 6.5):
+                            s_ = float(s_) + 0.2  # clear of the facet edge
+                            lean = (lean0 + (lean1 - lean0) * (s_ / w)) * ((z - base) / (top - base))
+                            shade(g, "fin_white", p0 + t * s_ + lean + n * 0.05, t, n, 3.4, 5.6, 0.9, z)
+                u += w
+            if bi + 2 < len(edges):
+                # the slot to the next block: two side walls and a back wall 3.5 m in, all orange-red,
+                # leaning along the face as the blocks' edges do; glass ground storey carried across
+                a0 = _at(pl, s1)
+                b0 = _at(pl, edges[bi + 2])
+                t = (b0 - a0) / np.linalg.norm(b0 - a0)
+                n = outward(a0, b0)
+                sa, sb = t * shift[bi + 1], t * shift[bi + 2]
+                ai, bi_ = a0 - n * depth, b0 - n * depth
+                g.poly("corner_red", [(*a0, base), (*ai, base), (*(ai + sa), top), (*(a0 + sa), top)])
+                g.poly("corner_red", [(*ai, base), (*bi_, base), (*(bi_ + sb), top), (*(ai + sa), top)])
+                g.poly("corner_red", [(*bi_, base), (*b0, base), (*(b0 + sb), top), (*(bi_ + sb), top)])
+                g.wall("podium_glass", a0 - n * 2.0, b0 - n * 2.0, 0.0, base)
+                g.poly("fin_white", [(*(a0 - n * 2.0), base - 0.6), (*(b0 - n * 2.0), base - 0.6),
+                                     (*b0, base), (*a0, base)])
+                g.poly("corner_red", [(*(ai + sa), top), (*(bi_ + sb), top), (*(b0 + sb), top), (*(a0 + sa), top)])
+                u += float(np.linalg.norm(b0 - a0))
     # parapet and roof over the facets' tops, plant set back on the roof
     rim = ccw([tuple(q) for q in outline])
     g.cap("roof_grey", rim, top)
@@ -370,6 +407,20 @@ def nab(g, ring, h=72.0):
         g.poly("roof_dark", [np.r_[a, top + 1.4], np.r_[b, top + 1.4], apex])
     # the ground storey's soffit
     g.cap("roof_grey", [tuple(q) for q in ring], base - 0.6, up=False)
+
+
+def _at(pl, s):
+    """The plan point s metres along the polyline pl."""
+    pl = np.array(pl, float)
+    d = np.r_[0, np.cumsum(np.linalg.norm(np.diff(pl, axis=0), axis=1))]
+    return np.array([np.interp(s, d, pl[:, 0]), np.interp(s, d, pl[:, 1])])
+
+
+def _sub_polyline(pl, s0, s1):
+    """The part of polyline pl from s0 to s1 metres along it, its corners kept."""
+    pl = np.array(pl, float)
+    d = np.r_[0, np.cumsum(np.linalg.norm(np.diff(pl, axis=0), axis=1))]
+    return [_at(pl, s0)] + [pl[i] for i in range(len(pl)) if s0 < d[i] < s1] + [_at(pl, s1)]
 
 
 def polyline_length(pl):
