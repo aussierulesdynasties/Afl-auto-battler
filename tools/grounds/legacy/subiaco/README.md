@@ -24,6 +24,8 @@ Best frames: 18 May 2008 (sharp near-vertical aerial, winter sun from the north,
 | Photo lean, 18 May 2008 | a point 1 m up shows 0.032 m east and 0.013 m north of its footprint (both north towers agree within 0.01 m/m) | each tower's head against its head's shadow on the turf, 65 m towers (heritage record) |
 | North roof front edge | 16.3-19.7 m above the turf, 15 points from x = 700 to 1240 px, rising gently to the east | its shadow on the turf, 18 May 2008 (`nshadow.py`): height = shadow offset / 1.292 |
 
+| South roof front | **18.5 m** above the turf (18.2-18.8 m as the rugby posts' assumed try line moves 47-53 m); fascia 17.6 m, glass boxes 14.0-16.9 m | camera of `Subiaco_Oval.jpg` (Commons, CC BY-SA 3.0, reference only) solved on the near fence, the SW tower (65 m) and the rugby posts, with lens distortion: 1-5 px residuals; camera 15.7 m behind the north fence, 5.3 m up; ray met with the roof front's plane from the 2008 aerial (`measure/photo`) |
+
 Bearings are degrees counter-clockwise from east round the field centre at pixel (941, 1021) of the captures.
 
 ## Tried and rejected
