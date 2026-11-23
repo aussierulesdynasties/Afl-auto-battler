@@ -14,6 +14,10 @@ extends RefCounted
 ## game's own league: 24 rounds, ten finalists with the wildcard round, the
 ## Grand Final at the MCG, a Gather Round, extra time.
 ## Every decade loads the same way: one table, keyed by year, read by Season.
+##
+## real_finals: a real season's finals go where that week's real finals went
+## (RealFinals, data/legacy/finals.csv; bug bash 2026-11-23), not to each
+## host's own ground. Off in the game's league.
 
 const PATH := "res://data/season_rules.csv"
 ## The game's own league starts here: a real season in the table, drawn in
@@ -24,9 +28,8 @@ const GAME_LEAGUE_YEAR := 2026
 ## even club count, two at an odd one).
 const DEFAULT := {
 	"year": 0, "rounds": 24, "games": 0, "finalists": 10, "finals": "wildcard10",
-	"gf_venue": "MCG", "gather_round": true, "drawn_finals": "extra_time",
+	"gf_venue": "MCG", "gather_round": true, "drawn_finals": "extra_time", "real_finals": false,
 }
-
 ## The finals brackets. Each is its weeks in order; each week its matches as
 ## [tag, label, home side, away side, order by ladder]. A side is a slot:
 ##   "S3"     the club that finished 3rd
@@ -116,6 +119,7 @@ static func for_year(year: int) -> Dictionary:
 			for k in ["rounds", "games", "finalists", "finals", "gf_venue", "gather_round", "drawn_finals"]:
 				out[k] = row[k]
 			break
+	out["real_finals"] = EraRules.is_era(year) and RealFinals.has_year(year)
 	return out
 
 

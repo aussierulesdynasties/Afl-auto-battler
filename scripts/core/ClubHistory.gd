@@ -100,6 +100,16 @@ static func before_career(code: String) -> Dictionary:
 	var d: Dictionary = table().get(code, {})
 	if d.is_empty():
 		return {"known": false, "years": [], "also": {}}
-	var years: Array = (d["years"] as Array).duplicate()
-	var also: Dictionary = (d.get("also", {}) as Dictionary).duplicate(true)
-	return {"known": not years.is_empty() or not also.is_empty() or bool(d["none"]), "years": years, "also": also}
+	# Only the flags before the career's first season: a 1990 start's Hawthorn
+	# has not yet won 1991 or 2008 (bug bash 2026-11-23).
+	var db = (Engine.get_main_loop() as SceneTree).root.get_node("GameDB")
+	var start := int(db.START_YEAR)
+	var years: Array = (d["years"] as Array).filter(func(y): return int(y) < start)
+	var also: Dictionary = {}
+	for label in (d.get("also", {}) as Dictionary):
+		var ys: Array = (d["also"][label] as Array).filter(func(y): return int(y) < start)
+		if not ys.is_empty():
+			also[label] = ys
+	# A club the file lists is on record, even when every flag it lists is still to come.
+	var listed := not (d["years"] as Array).is_empty() or not (d.get("also", {}) as Dictionary).is_empty() or bool(d["none"])
+	return {"known": listed, "years": years, "also": also}
