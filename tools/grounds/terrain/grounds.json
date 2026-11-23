@@ -125,12 +125,13 @@
   "licence": "Geoscience Australia, DEM of Australia derived from LiDAR 5 Metre Grid, CC BY 4.0"
  },
  "bellerive": {
-  "lat": -42.8773,
-  "lon": 147.3737,
+  "lat": -42.8773034,
+  "lon": 147.3737403,
   "zoom": 15,
   "far_zoom": 12,
   "step": 2.5,
-  "licence": "LIST (State of Tasmania), Tasmanian 2 metre DEM, CC BY 3.0"
+  "licence": "LIST (State of Tasmania), Tasmanian 2 metre DEM, CC BY 3.0",
+  "centre_note": "Centre circle from the Bellerive model (#2018): OSM pitch centre plus the model offset x 0.31 east, z -0.64."
  },
  "manuka": {
   "lat": -35.318,
