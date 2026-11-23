@@ -85,6 +85,20 @@ func _test_levels() -> void:
 			"A home behind lifts the crowd more than an away behind")
 	home.queue_free()
 	visitors.queue_free()
+	# BALL: the tackler's supporters, louder at home; the banner roar is a goal's.
+	var ball_home := CrowdSound.new()
+	root.add_child(ball_home)
+	ball_home.event("ball", 0)
+	var ball_away := CrowdSound.new()
+	root.add_child(ball_away)
+	ball_away.event("ball", 1)
+	_check(ball_home.cue() == "crowd_ball.wav" and float((ball_home.heard[0] as Dictionary)["db"]) > float((ball_away.heard[0] as Dictionary)["db"]),
+			"A tackle paid as holding the ball gets BALL!, louder from the home crowd")
+	ball_home.run_through(true)
+	_check(ball_home.cue() == "crowd_goal.wav" and str((ball_home.heard[-1] as Dictionary)["kind"]) == "run_through",
+			"Running through the banner gets the roar, over anything playing")
+	ball_home.queue_free()
+	ball_away.queue_free()
 
 
 ## One siren a quarter, and extra time gets its own at the end.
@@ -182,6 +196,20 @@ func _test_watched_match() -> void:
 	if not home_first.is_empty() and not away_first.is_empty():
 		_check(float(home_first.min()) > float(away_first.max()),
 				"A home goal is louder than an away goal (home %.1f dB, away %.1f dB)" % [float(home_first.min()), float(away_first.max())])
+	# Every holding-the-ball free reaches the crowd as a "BALL!": yelled, or held
+	# back because a roar or the siren was still sounding (which of the two
+	# depends on how fast this machine plays the match against the audio clock).
+	var holding := 0
+	for ev in res.get("events", []):
+		holding += 1 if str((ev as Dictionary).get("kind", "")) == "free" and str((ev as Dictionary).get("free_cause", "")) == "holding_ball" else 0
+	var balls := 0
+	for h in crowd.heard:
+		balls += 1 if str((h as Dictionary)["kind"]) == "ball" else 0
+	var held_balls := 0
+	for h in crowd.held:
+		held_balls += 1 if str((h as Dictionary)["kind"]) == "ball" else 0
+	_check(holding >= 1 and balls + held_balls == holding,
+			"Every holding-the-ball free is a BALL! for the crowd (%d yelled, %d under a roar, %d frees)" % [balls, held_balls, holding])
 	_check(quarters == [1, 2, 3, 4], "The match has four quarter ends (%s)" % str(quarters))
 	_check(_sirens(crowd) == [1, 2, 3, 4], "A siren at the end of each of the four quarters, and no other (%s)" % str(_sirens(crowd)))
 
