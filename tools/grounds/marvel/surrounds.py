@@ -43,7 +43,7 @@ LANDMARK_WAYS = {"33261083", "221441430", "33261092", "44158938", "1246185747", 
                  "1507403839", "1507403840"}  # HOME Docklands' two towers (101 m): OpenStreetMap has no height for them
 # City of Melbourne structures modelled in landmarks.py instead (round 10 audit: plain boxes within 250 m), and the
 # stadium's own structure (8392), whose upper parts fell outside its outline and floated over the east offices.
-LANDMARK_SIDS = {10757, 16888, 3046, 6153, 9966, 9967, 15419}  # 15419: ext_000's foreground office (round 12 self-check)  # round 12: 6153, 9966, 9967 modelled in landmarks.py (c_nw, c_sw roofs)
+LANDMARK_SIDS = {10757, 16888, 3046, 6153, 9966, 9967, 15419, 11459}  # 15419: ext_000's foreground office, 11459: c_se's (round 12 self-check)  # round 12: 6153, 9966, 9967 modelled in landmarks.py (c_nw, c_sw roofs)
 # 8392: the stadium's own floating parts. 1044-1055: Central Pier's sheds and kiosks over the harbour; the pier was
 # closed in 2023 and its sheds are gone from Google Earth (PC check of round 11, top and obl_se).
 DROP_SIDS = {8392} | set(range(1044, 1056))
