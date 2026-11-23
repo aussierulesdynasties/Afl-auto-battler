@@ -1,0 +1,57 @@
+# Models and textures under assets/oval3d/ that are NOT Epic's, each with where it came from.
+# tools/check_epic_files.py fails CI on any model or texture there that is not listed here, so a
+# new body part, head, garment or skin is a deliberate, sourced decision (docs/EPIC_ASSETS.md).
+# MetaHuman files, and anything made from them (cut from the MetaHuman body, fitted on its
+# surface, painted from its maps), never go here: publish them with tools/epic_assets.sh.
+#
+# path                                                     source
+
+# MPFB (MakeHuman, CC0) body and what is cut from it
+assets/oval3d/player_average.glb                            MPFB average footballer, MakeHuman CC0 (tools/oval3d/export_player_glb.py)
+assets/oval3d/crew_average.glb                              crew clothes cut from the MPFB body (tools/oval3d/crew/build_crew.py)
+assets/oval3d/player_average_soccer_cleat_3d_model_basecolor.jpg   Tripo boot texture, made by us from a prompt
+assets/oval3d/player_mh_soccer_cleat_3d_model_basecolor.jpg        the same Tripo boot texture, Godot-extracted from the MetaHuman body file's import
+
+# Animation loops (no mesh): Epic Game Animation Sample clips, kept by the director's decision of 2026-11-23
+assets/oval3d/player_loops.glb                              run, carry and stand loops (#1689)
+
+# Crowd: Mixamo bodies baked to vertex animation (tools/oval3d/build_crowd_set.gd)
+assets/oval3d/crowd_set.res                                 Mixamo crowd bodies, baked
+
+# Hair: assets/oval3d/HAIR-LICENSE.txt (VincentFreelance CC BY 4.0; MakeHuman CC0)
+assets/oval3d/hair_styles.glb                               HAIR-LICENSE.txt
+assets/oval3d/hair_tex/afro.png                             HAIR-LICENSE.txt
+assets/oval3d/hair_tex/curly_medium.png                     HAIR-LICENSE.txt
+assets/oval3d/hair_tex/messy_medium.png                     HAIR-LICENSE.txt
+assets/oval3d/hair_tex/short_crop.png                       HAIR-LICENSE.txt
+assets/oval3d/hair_tex/side_part.png                        HAIR-LICENSE.txt
+assets/oval3d/hair_tex/swept_back.png                       HAIR-LICENSE.txt
+assets/oval3d/hair_tex/textured_short.png                   HAIR-LICENSE.txt
+
+# Our own art
+assets/oval3d/kits_today.png                                guernseys drawn from each club's shop photo (tools/kits/guernsey3d, #1777)
+assets/oval3d/kits_clash.png                                clash guernseys, same pipeline (#2038)
+assets/oval3d/turf/blades.png                               generated turf blades (#1658)
+assets/oval3d/turf/blades_n.png                             generated turf blade normals (#1658)
+assets/oval3d/turf/patches.png                              generated turf patches (#1658)
+
+# Tripo heads made from player portraits (row 202 2d); MEL_11, MEL_37 and MEL_41 are MetaHuman heads and are private
+assets/oval3d/heads/MEL_4.glb                               Tripo head
+assets/oval3d/heads/MEL_4_tripo_image_a68ec594-76d9-41ea-ae60-a0a0e99e37ba_0_0.jpg   Tripo head texture
+assets/oval3d/heads/MEL_10.glb                              Tripo head
+assets/oval3d/heads/MEL_10_f01bdf6d-d77c-448e-aab6-c842f69e89cd_basecolor.jpg        Tripo head texture
+assets/oval3d/heads/MEL_11_tripo_rgb_3d257f14-93c5-42e6-b563-5619372ec14d.jpg        Tripo head texture (the earlier Tripo head)
+assets/oval3d/heads/MEL_12.glb                              Tripo head
+assets/oval3d/heads/MEL_12_tripo_image_3be51599-7726-4e8d-88a9-c044a79997fe_0_0.jpg  Tripo head texture
+assets/oval3d/heads/MEL_14.glb                              Tripo head
+assets/oval3d/heads/MEL_14_man_portrait_3d_model_basecolor.jpg                       Tripo head texture
+assets/oval3d/heads/MEL_15.glb                              Tripo head
+assets/oval3d/heads/MEL_15_man_head_3d_model_basecolor.jpg                           Tripo head texture
+assets/oval3d/heads/MEL_17.glb                              Tripo head
+assets/oval3d/heads/MEL_17_tripo_image_8c1fc958-3481-41e6-874c-a10efee20c80_0_0.jpg  Tripo head texture
+assets/oval3d/heads/MEL_32.glb                              Tripo head
+assets/oval3d/heads/MEL_32_tripo_image_dafe9a0a-6ce0-41a6-be87-8ec18b5dfdce_0_0.jpg  Tripo head texture
+assets/oval3d/heads/MEL_36.glb                              Tripo head
+assets/oval3d/heads/MEL_36_tripo_image_e523be64-f406-41cc-8551-5ca6a7f2fc41_0_0.jpg  Tripo head texture
+assets/oval3d/heads/MEL_37_tripo_image_a0b3eaaa-3956-47fd-8e36-d9f9636ffc90_0_0.jpg  Tripo head texture (the earlier Tripo head)
+assets/oval3d/heads/MEL_41_tripo_image_9fd5d519-68e9-4623-a09a-0926b859d6d8_0_0.jpg  Tripo head texture (the earlier Tripo head)

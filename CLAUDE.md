@@ -5,7 +5,8 @@ read it when you pick or close work, not otherwise (a brief that names your row 
 `docs/DIRECTOR_BIBLE.md` (513 KB: search it, never read it whole). Must-read files stay under 60 KB (CI: `tools/check_doc_sizes.py`).
 
 Godot 4 / GDScript. Run `tools/run_tests.sh` (or `tools/run_tests.sh draft_ui`
-for one suite) before pushing.
+for one suite) before pushing. MetaHuman files (and anything made from them) never go in this public
+repo: they live in a private repo and `tools/epic_assets.sh fetch` copies them in (docs/EPIC_ASSETS.md).
 
 ## Always loaded
 

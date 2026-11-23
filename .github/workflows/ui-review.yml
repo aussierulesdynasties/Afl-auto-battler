@@ -72,6 +72,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Epic/MetaHuman files (private repo, docs/EPIC_ASSETS.md)
+        uses: ./.github/actions/epic-assets
+        with:
+          token: ${{ secrets.EPIC_ASSETS_TOKEN || secrets.MERGE_TOKEN }}
+
       - name: Virtual display, software GL and Pillow
         id: setup
         run: |
@@ -222,6 +227,11 @@ jobs:
       GODOT_VERSION: "4.7.2"
     steps:
       - uses: actions/checkout@v4
+
+      - name: Epic/MetaHuman files (private repo, docs/EPIC_ASSETS.md)
+        uses: ./.github/actions/epic-assets
+        with:
+          token: ${{ secrets.EPIC_ASSETS_TOKEN || secrets.MERGE_TOKEN }}
 
       - name: Virtual display and software GL
         id: setup

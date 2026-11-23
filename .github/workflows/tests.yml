@@ -283,6 +283,10 @@ jobs:
         if: success() || failure()
         run: python3 tools/intake_harness.py --quiet
 
+      - name: No Epic/MetaHuman files in this public repo (docs/EPIC_ASSETS.md)
+        if: success() || failure()
+        run: python3 -I tools/check_epic_files.py
+
       - name: Offline promise (the Android preset requests vibrate only)
         if: success() || failure()
         run: |
@@ -299,6 +303,11 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+
+      - name: Epic/MetaHuman files (private repo, docs/EPIC_ASSETS.md)
+        uses: ./.github/actions/epic-assets
+        with:
+          token: ${{ secrets.EPIC_ASSETS_TOKEN || secrets.MERGE_TOKEN }}
 
       - name: Cache Godot
         id: godot-cache
@@ -337,6 +346,11 @@ jobs:
       matrix: ${{ fromJSON(needs.plan.outputs.shards) }}
     steps:
       - uses: actions/checkout@v4
+
+      - name: Epic/MetaHuman files (private repo, docs/EPIC_ASSETS.md)
+        uses: ./.github/actions/epic-assets
+        with:
+          token: ${{ secrets.EPIC_ASSETS_TOKEN || secrets.MERGE_TOKEN }}
 
       - name: Cache Godot
         id: godot-cache
@@ -425,6 +439,11 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+
+      - name: Epic/MetaHuman files (private repo, docs/EPIC_ASSETS.md)
+        uses: ./.github/actions/epic-assets
+        with:
+          token: ${{ secrets.EPIC_ASSETS_TOKEN || secrets.MERGE_TOKEN }}
 
       - uses: actions/setup-python@v5
         with:
