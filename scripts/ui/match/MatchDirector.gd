@@ -1809,7 +1809,10 @@ func _pass_line(lines: Dictionary, id: int, rest: Vector2, through := false) -> 
 		aim = rest + side * PASS_SIDE
 		if pos.distance_to(aim) > 0.01:
 			dir = (aim - pos).normalized()
-	var goal := aim + dir * RUN_THROUGH
+	# Held to the ground as set_goal holds it: by the boundary, his line's end past the fence was
+	# never reached, so the line held and he stood 1.7 m off the ball at its clamped end (suite
+	# match, 1277 s, bug bash 2026-11-23). Now he reaches it, turns and comes again.
+	var goal := MatchMotion.clamp_to_oval(aim + dir * RUN_THROUGH, 2.0)
 	lines[id] = [goal, rest, through]
 	return goal
 
