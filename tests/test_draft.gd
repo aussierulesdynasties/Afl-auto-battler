@@ -307,6 +307,7 @@ func _test_real_player_names() -> void:
 ## across a long career, no real player's name, no invented words.
 func _test_plausible_names() -> void:
 	var saved_next: int = GameDB._alias_next
+	var saved_late: Array = GameDB.late_draftees.duplicate()
 	var seen := {}
 	var real := {}
 	for person in GameDB.players + GameDB.draftees:
@@ -320,6 +321,7 @@ func _test_plausible_names() -> void:
 	var drafted := 0
 	for i in range(20):
 		var cls: Array = Prospects.generate_class(2027 + i, 4242)
+		GameDB.register_draftees(cls)   # as a career registers each class
 		for person in cls:
 			mix[str(person["role"])] = int(mix.get(str(person["role"]), 0)) + 1
 			drafted += 1
@@ -338,6 +340,7 @@ func _test_plausible_names() -> void:
 			if label.length() > longest.length():
 				longest = label
 	GameDB._alias_next = saved_next
+	GameDB.late_draftees = saved_late
 	# The real lists' position mix (director: "Match real lists"): DEF 34%,
 	# FWD 30%, MID 28%, RUCK 7%, each within 5 points over twenty classes.
 	var mix_ok := true
