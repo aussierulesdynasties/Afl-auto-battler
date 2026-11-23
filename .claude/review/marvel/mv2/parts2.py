@@ -449,12 +449,12 @@ def office_box(nm,q,z0=9.0,z1=24.0,storey=3.75):
     f=lean(q,z1);P=Polygon(f)
     core=list(P.buffer(-0.35,join_style=2).exterior.coords)[:-1];lobby=list(P.buffer(-2.5,join_style=2).exterior.coords)[:-1]
     prism(nm+'_lobby',lobby,0.0,z0,'shopglass','concrete')
-    # its glass a light grey: the east boxes read pale grey/white in Google Earth, and blue 'glass' rendered them 33 darker (PC check round 3)
+    # its glass dark blue-grey (round 8, measured with the sun where Google Earth's was; round 3's light grey chased the shade)
     prism(nm,core,z0,z1-0.8,'officeglass','concrete',bottom='concrete')
     prism(nm+'_soffit',f,z0-0.45,z0,'panel_lt','panel_lt',bottom='concrete')
     z=z0
     while z<z1-1.0:
-        prism(nm+'_band%d'%int(z*10),f,z,z+1.2,'panel_lt','panel_lt',bottom='panel_lt');z+=storey
+        prism(nm+'_band%d'%int(z*10),f,z,z+0.6,'panel_lt','panel_lt',bottom='panel_lt');z+=storey
     prism(nm+'_parapet',f,z1-0.8,z1,'panel_lt','concrete',bottom='panel_lt')
     # the edges that face out (the one along the stadium wall, v -107, has no fins or columns)
     V=[];F=[];UV=[];n=len(q)
@@ -462,9 +462,11 @@ def office_box(nm,q,z0=9.0,z1=24.0,storey=3.75):
         if abs(q[i][1]+107.0)<0.01 and abs(q[(i+1)%n][1]+107.0)<0.01:continue
         a=np.array(f[i]);b=np.array(f[(i+1)%n]);L=np.linalg.norm(b-a);d=(b-a)/L;out=np.array([d[1],-d[0]])
         if P.contains(Point(*(0.5*(a+b)+out*0.5))):out=-out
-        for t in np.arange(0.6,L-0.3,0.75):
+        # round 8 (PC sun-on check): Google Earth shows mostly dark glass, pale mullions about 1.5 m apart and thin
+        # spandrels; fins every 0.75 m and 1.2 m bands left the face mid-grey (its median 19 lighter than Google Earth's)
+        for t in np.arange(0.6,L-0.3,1.5):
             c=a+d*t-out*0.18
-            for zz0,zz1 in [(z0+1.2+k*storey,min(z0+(k+1)*storey,z1-0.8)) for k in range(int((z1-z0)/storey)+1)]:
+            for zz0,zz1 in [(z0+0.6+k*storey,min(z0+(k+1)*storey,z1-0.8)) for k in range(int((z1-z0)/storey)+1)]:
                 if zz1-zz0<0.2:continue
                 cc,ff,uu=beamV(np.r_[c,zz0],np.r_[c,zz1],0.0);o=len(V)
                 pts=[np.r_[c+d*sx*0.05+out*sy*0.17,zz] for zz in (zz0,zz1) for sx,sy in((-1,-1),(1,-1),(1,1),(-1,1))]
@@ -472,7 +474,7 @@ def office_box(nm,q,z0=9.0,z1=24.0,storey=3.75):
                 UV+=[[(0,zz0),(0.1,zz0),(0.1,zz1),(0,zz1)]]*4
         for t in np.arange(3.0,L-1.0,7.5):
             c=a+d*t-out*0.6;cyl(nm+'_col%d_%d'%(i,int(t)),tuple(c),0.32,0.0,z0-0.45,'white','white',12)
-    if V:add(nm+'_fins',V,F,'silver',UV)
+    if V:add(nm+'_fins',V,F,'white',UV)
 # ---------------- corner complexes (west measured: satellite lean + aerial, mv/sz.py, mv/vert.py); east = 180-degree twin
 def face_v(u,o=0.0):
     vv=np.linspace(0,130,2600);thv=np.arctan2(vv,u);j=np.where(np.hypot(u,vv)<=se_r(thv,OA,OB,ON)+o)[0];return vv[j[-1]] if len(j) else 0.0
