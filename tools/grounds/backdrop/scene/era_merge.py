@@ -75,5 +75,23 @@ for e, q in bld(NOW):
     if stood: add.append(e); late += 1
     else: drop += 1
 out = OLD + add
+# Overture's Microsoft and Google footprints (traced from recent imagery) fill gaps in prep.py: the same test runs on
+# each big one, and those built since are listed in era_drop.json for prep to leave out
+ovd = []
+_ovp = os.path.join(W, 'overture', g + '.json')
+if os.path.exists(_ovp):
+    from shapely import wkt as _OW
+    for r in json.load(open(_ovp)):
+        if r.get('src') == 'OpenStreetMap': continue
+        try: q = _OW.loads(r['wkt'])
+        except Exception: continue
+        if q.geom_type == 'MultiPolygon': q = max(q.geoms, key=lambda z: z.area)
+        if q.geom_type != 'Polygon': continue
+        q = Polygon([((x - lon0) * KX, (y - lat0) * KY) for x, y in q.exterior.coords]).buffer(0)
+        if q.is_empty or q.area < 1500: continue
+        fr, fn = frac(SA_OLD, q, True), frac(SA_NOW, q, True)
+        if fr is not None and fn is not None and fr >= 0.6 and fn < 0.4: ovd.append('ov' + str(r['id']))
+json.dump({'overture_ids': ovd}, open(os.path.join(D, 'era_drop.json'), 'w'))
+print('era', tag, 'overture footprints built since', len(ovd))
 json.dump({'elements': out}, open(os.path.join(D, 'osm.json'), 'w'))
 print('era', tag, 'old buildings', len(OB), 'late-mapped kept', late, 'built since dropped', drop)
