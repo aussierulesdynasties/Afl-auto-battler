@@ -76,6 +76,10 @@ class Surfaces:
         tex = np.sqrt(np.maximum(ndimage.uniform_filter(L * L, 5) - m * m, 0))
         # what stands up: canopies, shade, roofs
         shadow = (L < 58) & (np.max(a, -1) - np.min(a, -1) < 40)
+        # Alice Springs' shade mostly falls on grass and reads dark teal (median 46, 72, 71), too coloured for
+        # the grey test: anything well below the ground round it is shade or canopy too. Painted as a surface
+        # it left dark blue-green blots in the yards (QA 2026-11-23); the game paints its own shade.
+        shadow |= (L < 90) & (ndimage.gaussian_filter(L, 10) - L > 14)
         shadow = ndimage.binary_opening(shadow)
         shadow = ndimage.binary_dilation(shadow, iterations=1)
         self.standing = ndimage.binary_dilation(can, iterations=2) | shadow | roofm | ~mos.valid
