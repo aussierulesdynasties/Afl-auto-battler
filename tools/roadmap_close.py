@@ -3,7 +3,8 @@
 PRs never edit docs/TODO.md themselves (parallel PRs conflicted there). The PR body
 names its row on a line of its own:
   "Closes row 54" / "Closes rows 22, 27" / "Closes row T5.Q24": the row is deleted;
-  "Part of row 142" / "Part of rows 131, 132": the row gains "Merged #N: title.";
+  "Part of row 142" / "Part of rows 131, 132": docs/TODO_MERGED.md gains "- 142: Merged #N: title."
+  (once per row and PR; the row itself is untouched, so TODO.md stays under its 60 KB budget);
   "No row: <why>": the PR is outside the list (CI, a hotfix of a closed row).
 The roadmap_close workflow runs this after the merge, and the Tests plan job runs
 --check on every pull request, so a PR that names no row (or a row that does not
@@ -12,7 +13,7 @@ A row matches when its first table cell equals the id exactly. Only matching lin
 change; the BOM, line endings and every other byte stay as they were. Stdlib only.
 
     python3 tools/roadmap_close.py --body-file body.txt [--todo docs/TODO.md] [--dry-run]
-        [--pr N --title "PR title"]
+        [--pr N --title "PR title"] [--log docs/TODO_MERGED.md]
     python3 tools/roadmap_close.py --check --body-file body.txt [--todo docs/TODO.md]
 Prints the changed ids (comma-separated) on stdout; warnings go to stderr.
 """
@@ -93,25 +94,27 @@ def close_rows(text, ids):
     return "".join(out), closed
 
 
-def note_rows(text, ids, pr, title):
-    """Return (new_text, noted_ids): each row named gains "Merged #pr: title." at the
-    end of its second cell (the "What" column), so the row says what has landed."""
-    want = set(ids)
-    note = f" Merged #{pr}: {title.strip().rstrip('.')}."
-    out, noted = [], []
-    for line in text.splitlines(keepends=True):
-        cell = first_cell(line)
-        if _is_row(cell, want):
-            body = line.rstrip("\r\n")
-            end = line[len(body):]
-            first = body.index("|", body.index("|") + 1)
-            second = body.find(" |", first + 1)
-            if second != -1:
-                line = body[:second] + note + body[second:] + end
-                if cell not in noted:
-                    noted.append(cell)
-        out.append(line)
-    return "".join(out), noted
+LOG_HEAD = ("# Merged toward open rows\n\n"
+            "What has landed toward each open row of docs/TODO.md and docs/TODO_RULINGS.md, one line per "
+            "merged PR, oldest first. tools/roadmap_close.py writes it from a PR's \"Part of row N\" line "
+            "after the merge. A reference, not a must-read: read a row's lines when you pick that row up.\n\n")
+
+
+def note_log(log, ids, pr, title):
+    """Return (new_log, noted_ids): each row named gains a line "- id: Merged #pr: title."
+    in the merge log. A row that already has #pr's line is left alone, so a rebuild of an
+    old notes PR finds nothing to change. The rows themselves never grow (TODO.md has a
+    60 KB budget, tools/check_doc_sizes.py)."""
+    log = log or LOG_HEAD
+    if not log.endswith("\n"):
+        log += "\n"
+    noted = []
+    for i in ids:
+        if i in noted or re.search(rf"(?m)^- {re.escape(i)}: Merged #{re.escape(str(pr))}:", log):
+            continue
+        log += f"- {i}: Merged #{pr}: {title.strip().rstrip('.')}.\n"
+        noted.append(i)
+    return log, noted
 
 
 def check(body, text):
@@ -136,6 +139,8 @@ def main(argv=None):
     ap.add_argument("--body-file", required=True)
     ap.add_argument("--todo", action="append",
                     help="a list file to read; repeat it for several (default docs/TODO.md)")
+    ap.add_argument("--log", default="",
+                    help="the merge log for 'Part of row N' (default TODO_MERGED.md beside the first --todo)")
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--check", action="store_true", help="fail when the body names no row")
     ap.add_argument("--pr", default="")
@@ -154,18 +159,24 @@ def main(argv=None):
     if not ids and not parts:
         print("warning: PR body names no 'Closes row N' or 'Part of row N'; nothing to do", file=sys.stderr)
         return 0
-    closed, noted = [], []
+    closed, keep = [], []
     for path, text in zip(paths, texts):
         new, shut = close_rows(text, resolve(text, ids))
-        marked = []
         if parts and a.pr:
-            keep = [i for i in resolve(new, parts) if i not in shut]
-            new, marked = note_rows(new, keep, a.pr, a.title)
+            cells = {first_cell(l) for l in new.splitlines()}
+            keep += [i for i in resolve(new, parts) if i in cells and i not in shut and i not in keep]
         closed += [i for i in shut if i not in closed]
-        noted += [i for i in marked if i not in noted]
         if new != text and not a.dry_run:
             with open(path, "w", encoding="utf-8", newline="") as f:
                 f.write(new)
+    noted = []
+    if keep:
+        log_path = pathlib.Path(a.log) if a.log else paths[0].with_name("TODO_MERGED.md")
+        log = log_path.read_text(encoding="utf-8") if log_path.exists() else ""
+        new_log, noted = note_log(log, keep, a.pr, a.title)
+        if new_log != log and not a.dry_run:
+            with open(log_path, "w", encoding="utf-8", newline="") as f:
+                f.write(new_log)
     changed = closed + noted
     if not changed:
         print(f"warning: no TODO row matches {'; '.join(', '.join(g) for g in ids + parts)}", file=sys.stderr)
