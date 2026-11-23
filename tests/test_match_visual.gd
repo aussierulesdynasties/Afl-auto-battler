@@ -2352,6 +2352,12 @@ func _test_stand_light() -> void:
 	var sm: ShaderMaterial = oval.turf.env.sky.sky_material
 	var grey: Array = oval.turf.stand_light(sm, 1.0, Oval3DTurf.STAND_GREEN)
 	var sky: Array = oval.turf.stand_light(sm, 1.0, 1.0)
+	if grey.is_empty() and DisplayServer.get_name() == "headless":
+		# Headless: no renderer holds the sky shader's colours, so there is no light to share
+		# out; stand_light says so instead of erroring. The light itself is checked on a GPU run.
+		_check(sky.is_empty(), "Headless, the stands take no light share and log no error")
+		oval.queue_free()
+		return
 	_check((grey[4] - sky[4]).length() < 0.002, "A face turned up is lit as before (%s)" % (grey[4] - sky[4]))
 	var down: Vector3 = grey[0] - sky[0]
 	_check(down.y < -0.02 and down.x > 0.0, "A face turned down loses the grass's green (%s)" % down)
