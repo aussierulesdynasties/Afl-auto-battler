@@ -50,6 +50,9 @@ W_PRIOR = 0.15    # pull of the tracker's 3D guess, against 1.0 for the picture
 W_SMOOTH = 0.5    # frame-to-frame steadiness (on acceleration)
 W_BONE = 4.0      # bone lengths held
 W_SIZE = float(os.environ.get("FIT_W_SIZE", "0"))
+LAST_BONES = None
+W_BORROWED = 0.5   # pull of a borrowed 3D guess (the nearest frame's) against a frame's own
+W_GROUND = 2.0    # a man whose feet are hidden held standing on the floor
 W_PEN = 6.0       # two men's limbs kept from passing through each other
 FIT_UNIT = float(os.environ.get("FIT_UNIT", "1.29"))   # metres per fit unit (the bake's BAKE_SCALE)
 # Each man's body as capsules for the pair's no-passing-through term: (joint ends, radius in
@@ -99,11 +102,14 @@ def track(frames_dir, model, hz):
     return p2, p3, vis, size
 
 
-def fit(p2, p3, vis, bones, contact=None, multi=False, stable=False):
+def fit(p2, p3, vis, bones, contact=None, multi=False, stable=False, ground=None, keep_bones=None):
     """Fit one man (p2, p3, vis: per frame, or None) or several filmed together (lists of those,
     one per man): the men share each frame's camera, so where they stand against each other comes
     from the picture. contact: (frames, weight) pulling the first man's knees to the depth of the
-    second man's trunk in those frames (a speccy's knee in the back)."""
+    second man's trunk in those frames (a speccy's knee in the back). ground: per man, None or
+    (floor height, frames): in those frames (where his feet were not seen) both ankles are held
+    to the floor, as he stood there. keep_bones: bone lengths (fit's own order) to hold, from
+    an earlier solve, so the floor pull cannot stretch his legs to reach it."""
     men = list(zip(p2, p3, vis)) if multi else [(p2, p3, vis)]
     Pn = len(men)
     nfr = len(men[0][0])
@@ -112,13 +118,16 @@ def fit(p2, p3, vis, bones, contact=None, multi=False, stable=False):
     n = len(J)
     N = Pn * n
     P2 = np.concatenate([np.stack([m[0][i] for i in keep]) for m in men], 1)
-    # Frames with no 3D guess (the broadcast lift can miss) start from the nearest frame's guess
-    # and get no pull from it: their depth comes from their neighbours and the bone lengths.
+    # Frames with no 3D guess (the broadcast lift can miss, a hidden man has none) start from the
+    # nearest frame's guess; their depth comes from their neighbours, the bone lengths and that guess.
     P3s, M3s = [], []
     for m in men:
         has3 = [i for i in keep if m[1][i] is not None]
         P3s.append(np.stack([m[1][i] if m[1][i] is not None else m[1][min(has3, key=lambda h: abs(h - i))] for i in keep]))
-        M3s.append(np.array([1.0 if m[1][i] is not None else 0.0 for i in keep]))
+        # A frame with no 3D guess of its own leans on the nearest one's, lightly: a man hidden for
+        # seconds (under the jumper, below the picture) otherwise has nothing to hold his limbs
+        # to, and a free leg drifts into a kick.
+        M3s.append(np.array([1.0 if m[1][i] is not None else W_BORROWED for i in keep]))
     V = np.concatenate([np.stack([m[2][i] for i in keep]) for m in men], 1)
     # Scale and offset of each frame's picture (orthographic camera), from the first man's 2D
     # spread against his 3D guess's: a start the solve refines.
@@ -153,6 +162,12 @@ def fit(p2, p3, vis, bones, contact=None, multi=False, stable=False):
             if i in frs:
                 cf[k] = wc
 
+    # Ground frames, per man, as weights over the kept frames.
+    gnd = []
+    for k in range(Pn):
+        g = ground[k] if ground else None
+        gnd.append(None if g is None else (g[0], np.array([1.0 if i in g[1] else 0.0 for i in keep])))
+
     def unpack(x):
         X = x[:F * N * 3].reshape(F, N, 3)
         s = x[F * N * 3:F * N * 3 + F]
@@ -179,6 +194,14 @@ def fit(p2, p3, vis, bones, contact=None, multi=False, stable=False):
             r_s = np.concatenate([np.diff(s) / px * 200.0, np.diff(t, axis=0).ravel() / px * 200.0])
         r_size = np.array([bl[k * nb:(k + 1) * nb].sum() - ref.sum() for k in range(Pn)]) * W_SIZE
         out = [r_img.ravel(), r_pri.ravel(), r_bone.ravel(), r_sm.ravel(), r_s, r_size]
+        if keep_bones is not None:
+            out.append((bl - keep_bones) * 20.0)
+        for k, g in enumerate(gnd):
+            if g is not None:
+                # Both feet: a man standing under a jumper on his shoulders has both down (one
+                # held alone left the other free to drift up into a kick).
+                for j in (10, 11):
+                    out.append((X[:, k * n + j, 1] - g[0]) * g[1] * W_GROUND)
         if Pn > 1:
             # No limb of one man through the other's (capsules, sampled along each).
             ends = lambda k, e: X[:, [k * n + J.index(j) for j in e]].mean(1)
@@ -231,6 +254,14 @@ def fit(p2, p3, vis, bones, contact=None, multi=False, stable=False):
                 rows.append([ti(f, c), ti(f + 1, c)])
     for k in range(Pn):
         rows.append([bli(k * nb + q) for q in range(nb)])
+    if keep_bones is not None:
+        for q in range(len(keep_bones)):
+            rows.append([bli(q)])
+    for k, g in enumerate(gnd):
+        if g is not None:
+            for j in (10, 11):
+                for f in range(F):
+                    rows.append([xi(f, k * n + j, 1)])
     if Pn > 1:
         jl = lambda k, e: [xi(f, k * n + J.index(j), c) for j in e for c in range(3)]
         for (a, b), _ in CAPS:
@@ -245,6 +276,8 @@ def fit(p2, p3, vis, bones, contact=None, multi=False, stable=False):
             sp[r, c] = 1
     sol = least_squares(res, x0, method="trf", x_scale="jac", max_nfev=200, jac_sparsity=sp)
     X, s, t, bl = unpack(sol.x)
+    global LAST_BONES
+    LAST_BONES = bl.copy()
     outs = []
     for k in range(Pn):
         out = [None] * nfr
@@ -261,7 +294,15 @@ def from_track(path):
     for f in T["frames"]:
         p2.append(np.array(f["p2"]) if f else None)
         p3.append(np.array(f["p3"]) if f and f.get("lift", 1.0) is not None else None)
-        vis.append(np.array(f["vis"]) if f else None)
+        v = np.array(f["vis"]) if f else None
+        if f and "p2_screen" in f and T.get("size"):
+            # A point off the edge of the picture (the camera tilted up with the leap and left his
+            # legs below the frame) is the tracker's guess, not a sighting: no weight.
+            w, h = T["size"]
+            ps = np.array(f["p2_screen"])
+            out = (ps[:, 0] < 2) | (ps[:, 0] > w - 2) | (-ps[:, 1] < 2) | (-ps[:, 1] > h - 2)
+            v = np.where(out, 0.0, v)
+        vis.append(v)
     return p2, p3, vis, float(T["hz"])
 
 
@@ -303,6 +344,21 @@ def main():
             contact = (set(range(c0, c1 + 1)), 2.0)
         stable = json.load(open(sys.argv[2])).get("stable", False)
         fj, fs = fit((a[0], b[0]), (a[1], b[1]), (a[2], b[2]), BONES_BODY, contact=contact, multi=True, stable=stable)
+        if os.environ.get("FIT_GROUND"):
+            # FIT_GROUND=FIRST:LAST (frames where both stand): the floor read off them, then each
+            # man whose feet were not seen in a frame (hidden, or below the picture) held on it there:
+            # the fit has nothing else to say how high he stood, and the other man's knee pulls him up.
+            g0, g1 = map(int, os.environ["FIT_GROUND"].split(":"))
+            ground = []
+            for m, F_ in ((a, fj), (b, fs)):
+                fl = float(np.median([min(F_[i]["ankle_l"][1], F_[i]["ankle_r"][1]) for i in range(g0, g1) if F_[i]]))
+                blind = {i for i, v in enumerate(m[2]) if v is not None and max(v[10], v[11]) < 0.01}
+                ground.append((fl, blind) if blind else None)
+                print(f"FIT ground {fl:.3f}: {len(blind)} frames with his feet unseen held on it")
+            # The jumper's unseen feet may be in the air: only the stepladder is held.
+            ground[0] = None
+            fj, fs = fit((a[0], b[0]), (a[1], b[1]), (a[2], b[2]), BONES_BODY, contact=contact, multi=True,
+                         stable=stable, ground=ground, keep_bones=LAST_BONES)
         json.dump({"hz": a[3], "frames": fj, "stepladder": fs}, open(sys.argv[4], "w"))
         print(f"FIT pair {len([f for f in fj if f])} frames -> {sys.argv[4]}")
         return

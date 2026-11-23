@@ -1,0 +1,14 @@
+{
+ "about": "Liam Jurrah's 2010 Mark of the Year over a Port Adelaide pack; the climb is over his Melbourne teammate (the blond in front), filmed from behind (the replay in 'Every Mark of the Year since 2001', 4:23.5-4:32, frames at 25 fps from t=263.5). The teammate is under Jurrah or below the picture for frames 87-162: there he is held standing (FIT_GROUND), not tracked.",
+ "hz": 25,
+ "frames": [52, 211],
+ "jumper_seeds": "52:1800,420 56:1708,342 64:1573,250 68:1517,246 72:1459,285 76:1408,335 80:1355,394 86:1306,494 94:1247,609 104:1175,669 116:1083,658 128:974,705 140:882,802 150:880,775 160:893,858 170:882,817 180:916,680 190:830,740 200:747,795 211:708,772",
+ "stepladder_seeds": "52:1195,555 56:1178,561 64:1194,595 68:1187,608 72:1190,651 76:1219,716 80:1214,771 86:1213,863 94:1152,825 104:1106,987 116:1076,1003 128:1000,1040 140:960,900 150:980,800 160:1000,650 170:1017,539 180:1075,329 190:1047,278 200:1028,272 211:980,231",
+ "jumper_hidden": ["160:178"],
+ "stepladder_hidden": ["87:162"],
+ "contact": "72:140",
+ "floor_frames": "185:212",
+ "ground": "185:212",
+ "hands": "overhead_mark_01:0.567",
+ "catch_s": 2.72
+}

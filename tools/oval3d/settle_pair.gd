@@ -4,8 +4,9 @@ extends SceneTree
 ## our body's limbs are a little longer than the fit's (about 12% in the legs), so the bake can put
 ## a shin inside a back. Each frame, the deepest overlap is undone half by each man, by the part
 ## that overlaps: a leg is swung at the hip and an arm at the shoulder (ball joints, which the
-## match's joint limits leave free), so a knee slides along the back it rests on; a trunk or head
-## moves the whole man across the ground. The turns and moves are then smoothed over time and the
+## match's joint limits leave free, up to MAX_TURN), so a knee slides along the back it rests on;
+## a trunk or head, or a limb past that, moves the whole man across the ground, and the jumper
+## pushed up off the other man's back or shoulders is lifted (he sits on him). The turns and moves are then smoothed over time and the
 ## parting repeated, so a contact stays a touch and nothing jumps. Capsules as check_pair.gd.
 ##   godot --headless --path . --script tools/oval3d/settle_pair.gd -- A.res B.res A_OUT.res B_OUT.res [HZ]
 
@@ -18,6 +19,7 @@ const SWING := {"thigh_l": "thigh_l", "calf_l": "thigh_l", "foot_l": "thigh_l",
 		"upperarm_l": "upperarm_l", "lowerarm_l": "upperarm_l",
 		"upperarm_r": "upperarm_r", "lowerarm_r": "upperarm_r"}
 const JOINTS := ["thigh_l", "thigh_r", "upperarm_l", "upperarm_r"]
+const MAX_TURN := 30.0   # deg a limb may be swung from the film's pose
 
 
 func _initialize() -> void:
@@ -105,7 +107,11 @@ func _deepest(a: Skeleton3D, b: Skeleton3D) -> Array:
 
 ## Move one man's touching point by v: by swinging the limb that holds it, or, for his trunk or
 ## head, by moving him across the ground.
-func _give(sk: Skeleton3D, part: String, at: Vector3, v: Vector3, off: Array, turns: Array, k: int) -> void:
+func _give(sk: Skeleton3D, part: String, at: Vector3, v: Vector3, off: Array, turns: Array, k: int, lift := false) -> void:
+	# The jumper on the other man's shoulders or back, pushed upward: he is held up by him.
+	if lift and v.y > 0.3 * v.length():
+		off[k] += v
+		return
 	if SWING.has(part):
 		var j: String = SWING[part]
 		var pivot := Check._p(sk, j)
@@ -113,16 +119,20 @@ func _give(sk: Skeleton3D, part: String, at: Vector3, v: Vector3, off: Array, tu
 		var ax := r.cross(v)
 		if ax.length() > 1e-6 and r.length() > 0.05:
 			var rv := ax.normalized() * (v.length() / r.length())
-			# Compose with this frame's turn so far (small turns: rotation vectors add).
-			turns[k][j] = (turns[k][j] as Vector3) + rv
-			return
+			# Compose with this frame's turn so far (small turns: rotation vectors add), up to
+			# MAX_TURN; past it the whole man gives way instead (a limb swung further than that
+			# reads as a different movement from the film's).
+			var tot: Vector3 = (turns[k][j] as Vector3) + rv
+			if tot.length() <= deg_to_rad(MAX_TURN):
+				turns[k][j] = tot
+				return
 	off[k] += Vector3(v.x, 0.0, v.z)
 
 
 func _part(a: Array, b: Array, times: Array, oa: Array, ob: Array, ta: Array, tb: Array) -> float:
 	var worst := INF
 	for k in times.size():
-		for it in 40:
+		for it in 100:
 			_pose(a, times[k], oa[k], ta[k])
 			_pose(b, times[k], ob[k], tb[k])
 			var r := _deepest(a[1], b[1])
@@ -130,7 +140,7 @@ func _part(a: Array, b: Array, times: Array, oa: Array, ob: Array, ta: Array, tb
 				break
 			var push: float = (GAP - r[0]) * 0.5 + 0.002
 			var n: Vector3 = r[1]
-			_give(a[1], r[4], r[2], n * push, oa, ta, k)
+			_give(a[1], r[4], r[2], n * push, oa, ta, k, r[5] in ["pelvis", "head", "upperarm_l", "upperarm_r"])
 			_give(b[1], r[5], r[3], -n * push, ob, tb, k)
 		_pose(a, times[k], oa[k], ta[k])
 		_pose(b, times[k], ob[k], tb[k])

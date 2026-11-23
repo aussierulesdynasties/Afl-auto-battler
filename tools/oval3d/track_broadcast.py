@@ -223,8 +223,14 @@ def stabilize(frames_dir, tracks, first, last):
     files = frame_files(frames_dir)
     T = [json.load(open(t)) for t in tracks]
     first, last = int(first), int(last)
-    orb = cv2.ORB_create(4000)
-    bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
+
+    # Whatever sits still on the screen while the camera moves (the score bug, a channel logo,
+    # wherever the broadcaster put them) would tie the picture to the screen: found as the pixels
+    # that barely change over the clip, and masked.
+    sample = [cv2.cvtColor(cv2.imread(files[i]), cv2.COLOR_BGR2GRAY).astype(np.float32)
+              for i in np.linspace(first, last, 12).astype(int)]
+    still = (np.std(np.stack(sample), 0) < 4.0).astype(np.uint8)
+    still = cv2.dilate(still, np.ones((15, 15), np.uint8))
 
     def mask_for(i, shape):
         m = np.full(shape[:2], 255, np.uint8)
@@ -232,31 +238,38 @@ def stabilize(frames_dir, tracks, first, last):
         # The score bug and the picture-in-picture box sit still on the screen.
         m[int(hh * 0.82):, :] = 0
         m[:, int(ww * 0.75):][int(hh * 0.6):] = 0
+        m[still > 0] = 0
         for t in T:
             f = t["frames"][i] if i < len(t["frames"]) else None
             if f:
                 p = np.array([(x, -y) for x, y in f.get("p2_screen", f["p2"])])
                 lo, hi = p.min(0), p.max(0)
-                pad = 0.5 * max(hi - lo)
+                # A little past his limbs (a big man in a close shot must not hide the whole picture).
+                pad = 0.2 * max(hi - lo) + 20
                 cv2.rectangle(m, (int(lo[0] - pad), int(lo[1] - pad)), (int(hi[0] + pad), int(hi[1] + pad)), 0, -1)
         return m
 
     A = {first: np.eye(3)}   # frame i's picture -> first frame's picture
     prev = cv2.cvtColor(cv2.imread(files[first]), cv2.COLOR_BGR2GRAY)
-    kp0, d0 = orb.detectAndCompute(prev, mask_for(first, prev.shape))
     worst = 0.0
     for i in range(first + 1, last + 1):
         cur = cv2.cvtColor(cv2.imread(files[i]), cv2.COLOR_BGR2GRAY)
-        kp1, d1 = orb.detectAndCompute(cur, mask_for(i, cur.shape))
-        ms = sorted(bf.match(d1, d0), key=lambda m: m.distance)[:800]
-        src = np.float32([kp1[m.queryIdx].pt for m in ms])
-        dst = np.float32([kp0[m.trainIdx].pt for m in ms])
-        M, inl = cv2.estimateAffinePartial2D(src, dst, method=cv2.RANSAC, ransacReprojThreshold=2.0)
+        # Corners on the ground and the crowd (grass has little contrast, so a low threshold),
+        # followed into the next frame by optical flow; both frames' players masked.
+        m = mask_for(i - 1, prev.shape) & mask_for(i, cur.shape)
+        dst = cv2.goodFeaturesToTrack(prev, 3000, 0.001, 8, mask=m)
+        src = None
+        if dst is not None and len(dst) >= 30:
+            src, st, _ = cv2.calcOpticalFlowPyrLK(prev, cur, dst, None, winSize=(31, 31), maxLevel=4)
+            ok = st[:, 0] == 1
+            src, dst = src[ok].reshape(-1, 2), dst[ok].reshape(-1, 2)
+        M, inl = (None, None) if src is None or len(src) < 30 else \
+            cv2.estimateAffinePartial2D(src, dst, method=cv2.RANSAC, ransacReprojThreshold=1.5)
         if M is None or inl.sum() < 30:
             raise SystemExit(f"STABILIZE failed at frame {i}: the camera cut or whipped; split the clip there")
         worst = max(worst, float(np.median(np.linalg.norm((src[inl[:, 0] > 0] @ M[:, :2].T + M[:, 2]) - dst[inl[:, 0] > 0], axis=1))))
         A[i] = A[i - 1] @ np.vstack([M, [0, 0, 1]])
-        kp0, d0 = kp1, d1
+        prev = cur
     for t, path in zip(T, tracks):
         for i, f in enumerate(t["frames"]):
             if not f or i not in A:
