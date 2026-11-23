@@ -77,6 +77,7 @@ const _TABLE := {
 		"list_types": "res://data/list_types_2026.csv",
 		"departures": "res://data/departures_2026.csv",
 		"club_moves": "res://data/club_moves_2026.csv",
+		"national_draft": "res://data/national_draft_2026.csv",
 		"ladder": "res://data/ladder_2026.csv",
 		"ovr_overrides": "res://data/ovr_overrides.csv",
 		"potential_overrides": "res://data/potential_overrides.csv",

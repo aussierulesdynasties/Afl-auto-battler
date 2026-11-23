@@ -31,6 +31,13 @@ var tactics_exec := 1.0
 var tactics_read := 0.0
 ## The senior coach's archetype levers (Archetypes.levers, row 119); {} = none.
 var arch := {}
+## Quarter-break talks (BreakTalks): the club's man-management (your senior
+## assistant's, a rival's senior coach's; 70 = Good, no edge), its senior
+## coach's Philosophical archetype ("" for none), and whether the trust your
+## players hold in you counts (your club only). Set by CoachEffects.apply_row.
+var talk_manage := 70.0
+var talk_arch := ""
+var talk_trust := false
 ## How much of each plan's upside the side keeps for how well it knows the plan
 ## (plan familiarity, from the pre-season): plan -> 0..1. Empty = every
 ## plan as written. Worked out before the match starts (CoachEffects.apply).
