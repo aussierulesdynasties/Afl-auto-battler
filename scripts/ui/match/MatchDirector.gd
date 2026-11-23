@@ -2961,6 +2961,13 @@ func _sub(ev: Dictionary) -> void:
 # ---------------------------------------------------------------------------
 # Ball
 # ---------------------------------------------------------------------------
+## m/s a dead ball goes back to the centre after a goal (under the replay, never on the picture).
+const CARRY_SPEED := 32.0
+## m/s a ball tossed back to a ball-up's spot by the man who had it: a lob, not a throw (it went
+## at the centre's 32 m/s, 3 m in a frame, bug bash 2026-11-23).
+const TOSS_SPEED := 8.0
+
+
 func _ball_flight(from: Vector2, to: Vector2, h0: float, h1: float, apex: float, dur: float) -> void:
 	ball["mode"] = "flight"
 	ball["holder"] = -1
@@ -2973,7 +2980,8 @@ func _ball_flight(from: Vector2, to: Vector2, h0: float, h1: float, apex: float,
 	ball["t"] = 0.0
 
 
-func _ball_carry(to: Vector2) -> void:
+func _ball_carry(to: Vector2, speed := CARRY_SPEED) -> void:
+	ball["speed"] = speed
 	if (ball["pos"] as Vector2).distance_to(to) < 0.5:
 		ball["pos"] = to
 		ball["mode"] = "dead"
@@ -2991,7 +2999,7 @@ func _ball_carry(to: Vector2) -> void:
 func _drop_held(at: Vector2) -> void:
 	if str(ball["mode"]) != "held":
 		return
-	_ball_carry(at)
+	_ball_carry(at, TOSS_SPEED)
 
 
 func _update_ball(h: float) -> void:
@@ -3013,7 +3021,7 @@ func _update_ball(h: float) -> void:
 		"carry":
 			var to: Vector2 = ball["to"]
 			var pos: Vector2 = ball["pos"]
-			var step := 32.0 * h
+			var step := float(ball.get("speed", CARRY_SPEED)) * h
 			if pos.distance_to(to) <= step:
 				ball["pos"] = to
 				ball["mode"] = "dead"

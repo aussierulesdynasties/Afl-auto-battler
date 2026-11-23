@@ -63,6 +63,7 @@ const DIGITS := preload("res://assets/vignette/figures_digits.png")
 const BALL_R := 0.09
 const BALL_LONG := 1.6
 const DEAD_HANDS := 2.0       # m: a dead ball higher than this is at the top of a bounce or throw-up
+const TOSS_APEX := 0.6        # m a ball tossed back to a ball-up's spot rises over its line
 const DROP_T := 0.35          # s: a ball out of a man's hands takes this to reach where it lies
 const DROP_SNAP := 0.25       # m: a smaller gap than this is drawn straight away
 const ROLL_TURN := 8.0         # rad/s: a rolling ball's long axis turns across its way at most this fast
@@ -94,6 +95,8 @@ var _drop_t := -1.0            # s into its fall to the turf; -1 when not fallin
 var _roll_yaw := 0.0           # the rolling ball's long axis, as a turn about UP
 var _roll := 0.0               # how far it has turned over about that axis
 var _on_turf := false          # it was rolling (or lying) last frame
+var _carry_from := Vector3.INF # where a carried ball (_carried) set off; INF none
+var _carry_to := Vector2.ZERO
 var _settle_t := 0.0           # s since it came out of his hands or the air
 
 
@@ -226,9 +229,13 @@ func sync(dt: float) -> void:
 		_drop_t = -1.0
 	else:
 		var to := Vector3(bp.x, BALL_R if resting else maxf(BALL_R, h), bp.y)
+		if mode == "carry":
+			to = _carried(bp)
+		else:
+			_carry_from = Vector3.INF
 		if mode == "flight":
 			_drop_t = -1.0
-		elif _in_hands and dt > 0.0 and ball.position.distance_to(to) > DROP_SNAP:
+		elif _in_hands and dt > 0.0 and ball.position.distance_to(to) > DROP_SNAP and mode != "carry":
 			# Out of his hands onto the turf (a spill from a tackle, a fumble, a man walking off a
 			# dead ball): it falls from where his hands had it, never jumps there in one frame.
 			_drop_from = ball.position
@@ -330,6 +337,23 @@ func _roll_ball(moved: Vector2, dt: float) -> void:
 		_roll = fmod(_roll + signf(spin.dot(axis)) * absf(spin.dot(axis)) * d / BALL_R, TAU)
 	var target := Quaternion(Basis(Vector3.UP, _roll_yaw) * Basis(Vector3.BACK, _roll))
 	ball.quaternion = target if settle >= 1.0 else ball.quaternion.slerp(target, settle)
+
+
+## The director sends a dead ball somewhere on its own ("carry", at chest height): a ball-up's
+## ball given back to the umpire's spot, or after a goal the ball back to the centre. Drawn as
+## it really goes (bug bash 2026-11-23: it slid there at 1.2 m with nobody holding it): a ball-up's
+## is tossed, out of his hands in a low arc to the turf at the umpire's spot; after a goal it lies
+## where it was until the play has cut to the replay (Oval3DBroadcast.stinging_in holds the play
+## while the sting runs), and is in the centre when the picture comes back.
+func _carried(bp: Vector2) -> Vector3:
+	if _carry_from == Vector3.INF:
+		_carry_from = ball.position
+		_carry_to = director.ball.get("to", bp)
+	if director.mode == "centre":
+		return Vector3(_carry_from.x, BALL_R, _carry_from.z)
+	var whole := Vector2(_carry_from.x, _carry_from.z).distance_to(_carry_to)
+	var u := 1.0 - clampf(bp.distance_to(_carry_to) / maxf(whole, 0.01), 0.0, 1.0)
+	return Vector3(bp.x, lerpf(maxf(_carry_from.y, BALL_R), BALL_R, u) + 4.0 * TOSS_APEX * u * (1.0 - u), bp.y)
 
 
 func _hold_ball(p: Dictionary) -> void:
