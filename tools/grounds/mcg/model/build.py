@@ -65,6 +65,81 @@ def build_all():
 
 
 # ---------------- bowl, roof, facade (polar sections, 0.5 deg) ----------------
+def step_pairs(secs):
+    """(A, B, cap) for each pair of neighbouring sections. Where a roof step (mcg.json roof_steps: a bearing
+    between two sections whose roof heights differ, e.g. at a video screen's end) falls between them, the pair
+    is split at the step bearing: A's profile up to it, a vertical end wall there (cap=True: both profiles at the
+    one bearing), then B's profile on from it, instead of one leaning loft between the two."""
+    steps = D.get('roof_steps', []); n = len(secs)
+    for i in range(n):
+        A = secs[i]; B = secs[(i + 1) % n]; a, b = A['b'], B['b'] if B['b'] > A['b'] else B['b'] + 360
+        s = next((t for t in steps if a < t < b or a < t + 360 < b), None)
+        if s is None:
+            yield A, B, False; continue
+        As = dict(A, b=s); Bs_ = dict(B, b=s)
+        yield A, As, False
+        yield As, Bs_, True
+        yield Bs_, B, False
+
+
+def _clip(P, a, b, left):
+    """P (convex, list of (r, z)) clipped to the left (or right) of the line a->b"""
+    def side(p): return (b[0] - a[0]) * (p[1] - a[1]) - (b[1] - a[1]) * (p[0] - a[0])
+    out = []
+    for i in range(len(P)):
+        p, q = P[i], P[(i + 1) % len(P)]; sp, sq = side(p), side(q)
+        if not left: sp, sq = -sp, -sq
+        if sp >= 0: out.append(p)
+        if (sp >= 0) != (sq >= 0):
+            t = sp / (sp - sq); out.append((p[0] + t * (q[0] - p[0]), p[1] + t * (q[1] - p[1])))
+    return out
+
+
+def _area(P):
+    return 0.5 * sum(P[i][0] * P[(i + 1) % len(P)][1] - P[(i + 1) % len(P)][0] * P[i][1] for i in range(len(P)))
+
+
+def _minus(P, Q):
+    """convex P minus convex Q, as non-overlapping convex pieces"""
+    if _area(Q) < 0: Q = Q[::-1]
+    pieces = []; rem = P
+    for i in range(len(Q)):
+        a, b = Q[i], Q[(i + 1) % len(Q)]
+        out = _clip(rem, a, b, False)
+        if len(out) >= 3 and abs(_area(out)) > 1e-3: pieces.append(out)
+        rem = _clip(rem, a, b, True)
+        if len(rem) < 3 or abs(_area(rem)) < 1e-3: break
+    return pieces
+
+
+def step_sections(s):
+    """the two solid cross-sections of a section's upper stand at its own bearing, in (r, z): the top tier and the
+    wall behind it up to the roof soffit, and the roof itself (inner fascia, top, outer fascia, soffit)"""
+    S = s['S']; z1 = s['h'] - s['ed'][1]
+    wa = backr(s['b'], min(s['rfp'], s['rout']) - 1.5)
+    bowl = [S[10][:2], S[11][:2], S[12][:2], (wa, z1), (wa, S[10][1])]
+    FI = D.get('roof_fascia_in', 1.0)
+    roof = [(s['rin'], s['h'] - FI), (s['rin'], s['h']), (s['rout'], s['h'] - s['ed'][0]), (s['rout'], z1)]
+    return [(bowl, 'conc_grey'), (roof, 'roof_fascia')]
+
+
+def step_end_walls(mb, A, B):
+    """the vertical end wall at a roof step: what each side's upper stand and roof has that the other side's
+    doesn't, as flat faces in the step's radial plane, seen from both sides (no overlapping faces). A video
+    screen box that ends at the step has its own end face there, so that part is left to it."""
+    SA, SB = step_sections(A), step_sections(B)
+    box = [[(S['rf'], S['zf']), (S['rb'], S['zbk']), (S.get('rtb', S['rb']), S['zt']), (S['rf'], S['zt'])]
+           for S in D.get('screens', []) if abs(S['b0'] - A['b']) < 1e-6 or abs(S['b1'] - A['b']) < 1e-6]
+    for own, other, s in ((SA, SB, A), (SB, SA, B)):
+        for P, m in own:
+            pieces = [P]
+            for Q in [q for q, _ in other] + box:
+                pieces = [x for p in pieces for x in _minus(p, Q)]
+            for p in pieces:
+                pts = [(*pol(s['b'], r), z) for r, z in p]
+                mb.face(pts, m); mb.face(pts[::-1], m)
+
+
 def polar_of_poly(P, bs):
     """outermost radius where each bearing's ray crosses polygon P (list of xy); nan if none"""
     P = np.array(P, float); out = np.full(len(bs), np.nan)
@@ -238,11 +313,12 @@ def bowl_all(col):
         dep = np.array([A['S'][k][0] - A['S'][k - 1][0] for A in secs]); w = int(round(5 / STEP))
         sm_ = np.array([dep[[(i + d) % n for d in range(-w, w + 1)]].mean() for i in range(n)])
         for A, v in zip(secs, sm_): A.setdefault('nrow', {})[k] = max(1, int(round(v / ROW)))
-    for i in range(n):
-        A = secs[i]; Bs = secs[(i + 1) % n]
+    for A, Bs, cap in step_pairs(secs):
         for k in range(1, len(A['S'])):
             m = A['S'][k][2]
-            if k in SEATK:  # stepped concrete rows; the seats themselves are real meshes (seats3d)
+            if cap and (k > 10 or (A['S'][k][:2] == Bs['S'][k][:2] and A['S'][k - 1][:2] == Bs['S'][k - 1][:2])):
+                continue  # same either side of the step, or part of the upper stand (step_end_walls below)
+            if k in SEATK and not cap:  # stepped concrete rows; the seats themselves are real meshes (seats3d)
                 seat_steps(mb, A, Bs, k, SEATK[k], m, seatq); continue
             p0 = (*pol(A['b'], A['S'][k - 1][0]), A['S'][k - 1][1]); p1 = (*pol(A['b'], A['S'][k][0]), A['S'][k][1])
             q0 = (*pol(Bs['b'], Bs['S'][k - 1][0]), Bs['S'][k - 1][1]); q1 = (*pol(Bs['b'], Bs['S'][k][0]), Bs['S'][k][1])
@@ -252,6 +328,10 @@ def bowl_all(col):
             L = math.hypot(A['S'][k][0] - A['S'][k - 1][0], A['S'][k][1] - A['S'][k - 1][1])
             ua = A['b'] * kk * rm / tu; ub = ua + ((Bs['b'] - A['b']) % 360) * kk * rm / tu
             mb.face([p0, q0, q1, p1], m, uv=[(ua, 0), (ub, 0), (ub, L / tv), (ua, L / tv)])
+            if cap:  # the end wall is seen from both sides of the step
+                mb.face([p1, q1, q0, p0], m, uv=[(ua, L / tv), (ub, L / tv), (ub, 0), (ua, 0)])
+        if cap:
+            step_end_walls(mb, A, Bs); continue
         # upper back wall: deck up to the roof's outer fascia, set 1.5 m in from the roof edge
         wa = min(A['rfp'], A['rout']) - 1.5; wb = min(Bs['rfp'], Bs['rout']) - 1.5
         wa = backr(A['b'], wa); wb = backr(Bs['b'], wb)  # set-back stand wall (north gate terrace)
@@ -328,9 +408,8 @@ def bowl_all(col):
     mp.build(col)
     # roof
     mr = MB('roof')
-    for i in range(n):
-        A = secs[i]; Bs = secs[(i + 1) % n]
-        if in_screen(A['b']) and in_screen(Bs['b']): continue  # the screen box replaces the roof here
+    for A, Bs, cap in step_pairs(secs):
+        if cap or (in_screen(A['b']) and in_screen(Bs['b'])): continue  # a step's end wall: step_end_walls  # the screen box replaces the roof here
         def ring(s, r, z): return (*pol(s['b'], r), z)
         mclear = D.get('roof_clear_w', 0.0)
         FI = D.get('roof_fascia_in', 1.0)  # inner roof edge depth: a slim ~1 m beam (ground photo s10), not a 3 m band
@@ -652,20 +731,22 @@ def screens_all(col):
     mb = MB('screens'); P3 = lambda b, r, z: (*pol(b, r), z)
     for S in D['screens']:
         bs = np.linspace(S['b0'], S['b1'], 9)
+        rtb = S.get('rtb', S['rb'])  # back edge of the flat top; the clad back slopes from there down to rb (GE 3D)
         for b0, b1 in zip(bs, bs[1:]):
             mb.face([P3(b0, S['rf'], S['zf']), P3(b0, S['rf'], S['zt']), P3(b1, S['rf'], S['zt']), P3(b1, S['rf'], S['zf'])], 'screen')
-            mb.face([P3(b1, S['rb'], S['zbk']), P3(b1, S['rb'], S['zt']), P3(b0, S['rb'], S['zt']), P3(b0, S['rb'], S['zbk'])], 'fac_blue')
-            mb.face([P3(b0, S['rf'], S['zt']), P3(b0, S['rb'], S['zt']), P3(b1, S['rb'], S['zt']), P3(b1, S['rf'], S['zt'])], 'steel_dark')
+            mb.face([P3(b1, S['rb'], S['zbk']), P3(b1, rtb, S['zt']), P3(b0, rtb, S['zt']), P3(b0, S['rb'], S['zbk'])], 'fac_blue')
+            mb.face([P3(b0, S['rf'], S['zt']), P3(b0, rtb, S['zt']), P3(b1, rtb, S['zt']), P3(b1, S['rf'], S['zt'])], 'steel_dark')
             mb.face([P3(b0, S['rb'], S['zbk']), P3(b0, S['rf'], S['zf']), P3(b1, S['rf'], S['zf']), P3(b1, S['rb'], S['zbk'])], 'steel_dark')
         for b, sg in ((S['b0'], 1), (S['b1'], -1)):
-            q = [P3(b, S['rf'], S['zf']), P3(b, S['rb'], S['zbk']), P3(b, S['rb'], S['zt']), P3(b, S['rf'], S['zt'])]
+            q = [P3(b, S['rf'], S['zf']), P3(b, S['rb'], S['zbk']), P3(b, rtb, S['zt']), P3(b, S['rf'], S['zt'])]
             mb.face(q if sg > 0 else q[::-1], 'glass')
         if S.get('flagpoles'):  # the SW box carries the five flagpoles at their surveyed spots
             pts = [(x, y) for x, y in D['flagpoles']]
         else:
-            pts = [pol(S['b0'] + (S['b1'] - S['b0']) * (0.15 + 0.7 * k / (S['posts'] - 1)), S['rb'] - 1.0) for k in range(S['posts'])]
+            pts = [pol(S['b0'] + (S['b1'] - S['b0']) * (0.15 + 0.7 * k / (S['posts'] - 1)), rtb - 1.0) for k in range(S['posts'])]
         for x, y in pts:
-            mb.beam((x, y, S['zt']), (x, y, S['post_top']), 0.25, 0.25, 'steel_galv')  # poles: GE f045 (NE), f225 (SW)
+            r = math.hypot(x, y); z0 = S['zt'] - max(0.0, r - rtb) / max(S['rb'] - rtb, 1e-6) * (S['zt'] - S['zbk'])
+            mb.beam((x, y, z0), (x, y, S['post_top']), 0.25, 0.25, 'steel_galv')  # from the top, or the sloped back behind it  # poles: GE f045 (NE), f225 (SW)
     mb.build(col)
 
 
