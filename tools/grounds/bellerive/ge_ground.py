@@ -1,15 +1,17 @@
-"""What covers the ground round Bellerive Oval, read off the same 24 straight-down
-Google Earth shots as the trees (ge_trees.py plan; 800 m, 0.5 m a pixel). Only classes, measured colours and
-outlines are kept, never imagery (docs/MCG_STANDARD.md: sampled colours are fine).
+"""What covers the ground round Bellerive Oval, read off straight-down Google Earth shots (ge_trees.py plan; 800 m,
+0.5 m a pixel: the 24 the trees came from, and 24 more 181 m north of them, which see the strips Google Earth's tip
+box hides in the first). Only classes, measured colours and outlines are kept, never imagery (docs/MCG_STANDARD.md:
+sampled colours are fine).
 
-  python3 ge_ground.py <workdir>     # writes ge_ground.npz + ge_ground.json beside this file
+  python3 ge_ground.py <workdir> [<workdir> ...]     # writes ge_ground.npz + ge_ground.json beside this file
 
-Each pixel is one of: lawn (green, smooth), dry grass (tan), bare earth or mulch (red-brown), paving or gravel
-(grey), courts (near-white, flat), canopy (Adelaide's tree thresholds), or other (roofs, asphalt, shadow). They are voted onto the map's
-1 m grid (each shot owns the cells nearest its centre; where the owner's tip box hid a cell, every other shot that saw
-it votes). surrounds.py paints the ground in each class's own median
-colour where nothing is mapped (roads, buildings, the sea and the stadium keep theirs); under the canopy and on
-'other' it takes the nearest class round it.
+Each pixel is one of: lawn (green, smooth), dry grass (tan), bare earth or mulch (red-brown), paving, tar or gravel
+(grey), courts (near-white, flat), canopy (Adelaide's tree thresholds), or other (roofs, shadow). They are voted onto
+the map's 1 m grid and onto a 0.375 m grid 768 m a side round the ground (the near map, surrounds_near.webp): each
+shot owns the cells nearest its centre; where the owner's tip box hid a cell, every other shot that saw it votes.
+surrounds.py paints the ground in each class's own median colour where nothing is mapped (roads, buildings, the sea
+and the stadium keep theirs); under the canopy and on 'other' it takes the nearest class round it, and the trees
+fill the canopy (surrounds.canopy_trees).
 
 (A pass that also turned unmapped roof-coloured blobs into buildings was tried and dropped, 2026-11-23: the maps
 already hold nearly every roof, and the blobs it found were mostly bare earth, scrub and shadow.)"""
@@ -25,6 +27,12 @@ K = 360.0 / (R * math.tan(math.radians(12.79)))
 HALF = S.SIZE / 2.0
 NAMES = ["other", "lawn", "dry", "earth", "paving", "canopy", "court"]
 MEASURED = (1, 2, 3, 4, 6)
+NC = len(NAMES)
+# The fine grid close to the ground (surrounds_near.webp): FINE_SPAN m a side at FINE_STEP m a cell, Google
+# Earth's own 0.5 m shots voted straight onto it.
+FINE_SPAN = 768.0
+FINE_N = 2048
+FINE_STEP = FINE_SPAN / FINE_N
 
 
 def classify(im):
@@ -35,27 +43,32 @@ def classify(im):
     tex = np.sqrt(np.maximum(ndimage.uniform_filter(lum * lum, 5) - m1 * m1, 0))
     sat = im.max(2) - im.min(2)
     canopy = (tex > 4) & (lum > 38) & (lum < 112) & (g - r > 8) & (g - r < 32) & (b < g + 5)
-    lawn = (g - r > 6) & (g > b + 8) & ~canopy & (lum > 70)
-    dry = (r >= g - 6) & (r > b + 18) & (lum >= 105) & (r - g < 22) & ~lawn
+    # Lawn and dry grass down into the shade of a yard (PC check r5: with lawn above 70 and dry grass above 105,
+    # most yards fell to 'other' and took the paving beside them: a beige wash with no lawns)
+    lawn = (g - r > 4) & (g > b + 4) & ~canopy & (lum > 50)
+    dry = (r >= g - 8) & (r > b + 12) & (lum >= 70) & (r - g < 24) & ~lawn
     earth = (r > g + 10) & (r > b + 25) & (lum < 150) & ~dry
-    pave = (sat < 22) & (lum > 70) & (lum < 205)
+    pave = (sat < 22) & (lum > 70) & (lum < 205)                  # Bellerive's tar reads here too, in the sun
     court = (sat < 26) & (lum >= 190) & (lum < 250)
     c = np.zeros(lum.shape, np.uint8)
     c[pave] = 4; c[court] = 6; c[earth] = 3; c[dry] = 2; c[lawn] = 1; c[canopy] = 5
     return c, lum
 
 
-def main(work):
+def main(works):
     from PIL import Image
-    C = np.array(json.load(open(os.path.join(work, "centres.json"))))
-    votes = np.zeros((S.SIZE, S.SIZE, 7), np.uint16)
-    spare = np.zeros((S.SIZE, S.SIZE, 7), np.uint16)                # every shot, for cells the owner's tip box hid
+    shots = []                                   # (picture, its centre east, north) from every workdir
+    for work in works:
+        for i, c in enumerate(json.load(open(os.path.join(work, "centres.json")))):
+            shots.append((os.path.join(work, "ge", "t%02d.png" % i), c))
+    shots = [(f, c) for f, c in shots if os.path.exists(f) or print("missing", f)]
+    C = np.array([c for _, c in shots])
+    votes = np.zeros((S.SIZE, S.SIZE, NC), np.uint16)
+    fine = np.zeros((FINE_N, FINE_N, NC), np.uint8)
+    spare = np.zeros((S.SIZE, S.SIZE, NC), np.uint16)                # every shot, for cells the owner's tip box hid
     cols = {k: [] for k in MEASURED}
     rng = np.random.default_rng(3)
-    for i, (ce, cn) in enumerate(C):
-        f = os.path.join(work, "ge", "t%02d.png" % i)
-        if not os.path.exists(f):
-            print("missing", f); continue
+    for i, (f, (ce, cn)) in enumerate(shots):
         im = np.asarray(Image.open(f).convert("RGB")).astype(float)
         cls, lum = classify(im)
         cls[:64, 640:1140] = 255                                 # Google Earth's tip box
@@ -71,6 +84,11 @@ def main(work):
         ys, xs, px, pz = ys[ok], xs[ok], px[ok], pz[ok]
         k = cls[ys, xs]
         np.add.at(votes, (pz, px, k), 1)
+        fx = ((E[ok] + FINE_SPAN / 2) / FINE_STEP).astype(int); fz = ((-N[ok] + FINE_SPAN / 2) / FINE_STEP).astype(int)
+        f_ok = (fx >= 0) & (fx < FINE_N) & (fz >= 0) & (fz < FINE_N)
+        fv = np.zeros((FINE_N, FINE_N, NC), np.uint16)
+        np.add.at(fv, (fz[f_ok], fx[f_ok], k[f_ok]), 1)
+        fine = np.minimum(fine.astype(np.uint16) + fv, 255).astype(np.uint8)
         for c in MEASURED:
             sel = np.nonzero(k == c)[0]
             if len(sel):
@@ -83,13 +101,26 @@ def main(work):
     from scipy import ndimage
     court = grid == 6                                            # a court is a big flat block; small white bits
     grid[court & ~ndimage.binary_opening(court, np.ones((6, 6)))] = 4   # are cars, sheds and sun on paving
+    # The fine grid: each cell the class most shots' pixels in it say; a cell no pixel landed in (0.375 m cells
+    # under 0.5 m pixels) or the tip box hid takes the nearest that has one, then the 1 m grid's where none is near.
+    fg = fine.argmax(2).astype(np.uint8)
+    empty = fine.sum(2) == 0
+    _, (ii, jj) = ndimage.distance_transform_edt(empty, return_indices=True)
+    far = ndimage.distance_transform_edt(empty) * FINE_STEP > 3.0
+    fg = fg[ii, jj]
+    yy, xx = np.mgrid[0:FINE_N, 0:FINE_N]
+    gx = np.clip(((xx + 0.5) * FINE_STEP - FINE_SPAN / 2 + HALF).astype(int), 0, S.SIZE - 1)
+    gz = np.clip(((yy + 0.5) * FINE_STEP - FINE_SPAN / 2 + HALF).astype(int), 0, S.SIZE - 1)
+    fg[far] = grid[gz, gx][far]
+    fc = fg == 6
+    fg[fc & ~ndimage.binary_opening(fc, np.ones((16, 16)))] = 4
     haze = lambda c: [int(v) for v in np.clip((np.median(np.concatenate(c), 0) - 14.0) * 1.08, 0, 255)]
     colour = {NAMES[c]: haze(cols[c]) for c in MEASURED}
-    np.savez_compressed(os.path.join(HERE, "ge_ground.npz"), cls=grid)
-    json.dump({"names": NAMES, "colour": colour}, open(os.path.join(HERE, "ge_ground.json"), "w"),
+    np.savez_compressed(os.path.join(HERE, "ge_ground.npz"), cls=grid, fine=fg)
+    json.dump({"names": NAMES, "colour": colour, "fine_span": FINE_SPAN}, open(os.path.join(HERE, "ge_ground.json"), "w"),
               separators=(",", ":"))
-    print("classes", {NAMES[c]: int((grid == c).sum()) for c in range(7)}, "colours", colour)
+    print("classes", {NAMES[c]: int((grid == c).sum()) for c in range(NC)}, "colours", colour)
 
 
 if __name__ == "__main__":
-    main(sys.argv[1])
+    main(sys.argv[1:])

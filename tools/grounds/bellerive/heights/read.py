@@ -44,6 +44,12 @@ for name, e in P.items():
     ridge = c - g
     # storeys from the ridge and the sides together (a tree over the ridge reads high only at one point)
     eave = 5.6 if ridge >= 6.0 and np.mean(sides) - g >= 4.5 else 2.7
+    # A flat roof: all five points within a metre of each other, the whole roof as high as two storeys. Bellerive's
+    # newer townhouses (Google Earth st_house: nos. 2, 4, 6 and 31) read so; they had stood as hipped cottages.
+    allv = [c] + ends + sides
+    top = float(np.mean(allv)) - g
+    if kind is None and max(allv) - min(allv) <= 1 and top >= 5.0:
+        kind, eave = 'flat', round(min(top, 9.0), 1)
     res[e['key']] = {'kind': kind, 'eave': eave, 'ridge': round(float(ridge), 2), 'v': v}
     stats[str(kind)] = stats.get(str(kind), 0) + 1; stats['2st'] = stats.get('2st', 0) + (eave > 3)
 json.dump(ocr, open(cache, 'w'))

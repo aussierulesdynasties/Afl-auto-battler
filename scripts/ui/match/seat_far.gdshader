@@ -1,8 +1,8 @@
 // The far rows of a ground's seats (GroundModels._seat_far_mesh): one quad a seat, back top to tread
 // front, painted as the shell looks from the field, its mipmaps averaging the gaps and rows away.
 // Lit as the shell it stands for: the shell's back (leaning 12 degrees) and pan (flat) each take the
-// sun by their own normal; the sky comes in by the mesh normal, the two faces' mix. Distance fades it in where
-// the shells' own material fades them out (pixel dither, as Godot's PIXEL_DITHER).
+// sun by their own normal; the sky comes in by the mesh normal, the two faces' mix. Each seat takes over
+// from its shell (seat_near.gdshader) as a whole, at the distance the same hash of the seat picks.
 shader_type spatial;
 render_mode cull_disabled;
 
@@ -16,6 +16,11 @@ varying vec3 np;
 void vertex() {
 	nb = normalize((MODELVIEW_MATRIX * vec4(0.0, 0.2085, 0.978, 0.0)).xyz);
 	np = normalize((MODELVIEW_MATRIX * vec4(0.0, 1.0, 0.0, 0.0)).xyz);
+	float d = length((MODELVIEW_MATRIX * vec4(0.0, 0.0, 0.0, 1.0)).xyz);
+	float h = fract(sin(float(INSTANCE_ID) * 12.9898 + 78.233) * 43758.5453);
+	if ((d - fade_from) / (fade_to - fade_from) <= h) {
+		VERTEX = vec3(0.0);   // still drawn by its shell
+	}
 }
 
 void fragment() {
@@ -23,11 +28,6 @@ void fragment() {
 	ROUGHNESS = 1.0;
 	AO = 0.85;
 	AO_LIGHT_AFFECT = 0.0;
-	float f = clamp((length(VERTEX) - fade_from) / (fade_to - fade_from), 0.0, 1.0);
-	float t = fract(52.9829189 * fract(dot(FRAGCOORD.xy, vec2(0.06711056, 0.00583715))));
-	if (f < t) {
-		discard;
-	}
 }
 
 void light() {

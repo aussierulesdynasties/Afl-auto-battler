@@ -93,6 +93,9 @@ const SURROUNDS := {
 	# apron (88 m, past the fence everywhere): under the turf it z-fought from a blimp's height (grey bars).
 	"bellerive": {"y": -0.04, "inner": 88.0, "colour": Color(0.5, 0.5, 0.34),
 			"map": "surrounds.webp", "span": 2048.0, "trees": "trees.bin", "buildings": "buildings.bin",
+			# The ground close round it at 0.375 m a pixel, 768 m a side (surrounds_near.webp): at 1 m a pixel
+			# the yards and verges read as mush in close views (PC check r5).
+			"near_map": "surrounds_near.webp", "near_span": 768.0,
 			# Bellerive in Google Earth: white and cream weatherboard, red and brown brick, grey render.
 			"walls": [Color(0.86, 0.85, 0.8), Color(0.62, 0.42, 0.34), Color(0.78, 0.74, 0.64), Color(0.56, 0.55, 0.52),
 					Color(0.9, 0.9, 0.88), Color(0.66, 0.5, 0.4), Color(0.72, 0.76, 0.78)],
@@ -100,6 +103,8 @@ const SURROUNDS := {
 			"roof_colours": "roofs.bin",
 			# Its gums' crowns hang deep (Google Earth fac_200, out_SE): see _add_trees.
 			"deep_crowns": true,
+			# Its trees fill Google Earth's canopy (13,000 crowns): the far blocks draw a ball a crown (_add_trees).
+			"tree_lod": true,
 			# Its roofs from above: Colorbond teal and green, terracotta, charcoal, grey, white and blue.
 			"roofs": [Color(0.32, 0.52, 0.5), Color(0.66, 0.34, 0.26), Color(0.36, 0.36, 0.38), Color(0.6, 0.6, 0.58),
 					Color(0.4, 0.56, 0.44), Color(0.82, 0.82, 0.8), Color(0.44, 0.52, 0.62), Color(0.56, 0.3, 0.24)]},
@@ -176,6 +181,8 @@ const VERTEX_COLOURED := ["adelaide"]
 const SEATS_NO_SHADOW := ["bellerive"]
 ## Grounds whose seats turn into far rows (_seat_far_mesh) between SEAT_FAR_FROM and SEAT_FAR_TO m.
 const SEAT_FAR_SHADER := preload("res://scripts/ui/match/seat_far.gdshader")
+const SEAT_NEAR_SHADER := preload("res://scripts/ui/match/seat_near.gdshader")
+const SURROUNDS_SHADER := preload("res://scripts/ui/match/surrounds_ground.gdshader")
 const SEAT_FAR := ["bellerive"]
 const SEAT_FAR_FROM := 40.0
 const SEAT_FAR_TO := 70.0
@@ -189,8 +196,9 @@ const SEAT_COLOURS := {
 	# Accor: aqua lower bowl (seat_teal there keeps the value already here).
 	"seat_aqua": Color(0.527, 0.719, 0.757),
 	# Bellerive: pale grey-blue plastic all round the Boon and Ponting stands, the sunlit seats'
-	# median in Google Earth from the field (PC seat checks 2026-11-23: 72,108,146 and 100,130,158 read too blue).
-	"seat_bel_blue": Color8(108, 142, 160),
+	# median in Google Earth from the field (PC seat checks 2026-11-23: 72,108,146 and 100,130,158 read too blue;
+	# 108,142,160 read N 77,108,129 against GE 91,129,140 and E 56,94,123 against 58,97,113: red and green up a ninth).
+	"seat_bel_blue": Color8(120, 158, 160),
 	# The Members' front rows dark grey; the Northern Stand's and the east terrace's benches white.
 	"seat_bel_pale": Color8(150, 168, 186), "seat_bel_dark": Color8(58, 62, 70), "seat_bel_white": Color8(214, 216, 214),
 	# MCG, by tier from Street View on the ground and Google Earth: white and light grey lower and
@@ -417,16 +425,26 @@ static func _add_surrounds(root: Node3D, s: Dictionary, dir := "") -> void:
 		mm.disable_receive_shadows = true
 		mm.texture_repeat = false
 		mm.roughness = 1.0
+		var mat: Material = mm
+		if s.has("near_map") and ResourceLoader.exists(dir + str(s["near_map"])):
+			var sm := ShaderMaterial.new()
+			sm.shader = SURROUNDS_SHADER
+			sm.resource_name = "surrounds"
+			sm.set_shader_parameter("far_map", map)
+			sm.set_shader_parameter("near_map", load(dir + str(s["near_map"])))
+			sm.set_shader_parameter("span", span)
+			sm.set_shader_parameter("near_span", float(s.get("near_span", 768.0)))
+			mat = sm
 		var g := MeshInstance3D.new()
 		g.name = "Surrounds"
 		g.mesh = mesh
-		g.material_override = mm
+		g.material_override = mat
 		g.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		g.set_meta("open_ground", true)
 		root.add_child(g)
 		if s.has("trees") and FileAccess.file_exists(dir + str(s["trees"])):
 			_add_trees(root, FileAccess.get_file_as_bytes(dir + str(s["trees"])).to_float32_array(), y,
-					bool(s.get("deep_crowns", false)))
+					bool(s.get("deep_crowns", false)), bool(s.get("tree_lod", false)))
 		if s.has("buildings") and FileAccess.file_exists(dir + str(s["buildings"])):
 			var rgb := PackedFloat32Array()
 			if s.has("roof_colours") and FileAccess.file_exists(dir + str(s["roof_colours"])):
@@ -464,13 +482,15 @@ static func _add_surrounds(root: Node3D, s: Dictionary, dir := "") -> void:
 const RINGS := [0.0, 250.0, 400.0, 600.0, 850.0, 1100.0]
 ## Trees are drawn in square blocks this many metres a side, so the camera draws only those in view.
 const TREE_BLOCK := 250.0
+## Past this many metres from a tree block's middle a ground with "tree_lod" draws its crowns plain (_canopy_far_mesh).
+const TREE_NEAR := 320.0
 
 
 ## Every tree of the map (x, z, height, canopy radius, shade; model metres) as a trunk and a rounded
 ## canopy, one batch a block of the park. Unlit by their own shadows (the map paints their shade).
 ## deep: a broad tree's crown hangs down to a few metres off the ground (eucalypts seen from the side in
 ## Google Earth: one deep mass, not a ball on a bare trunk); it stays as wide as measured.
-static func _add_trees(root: Node3D, buf: PackedFloat32Array, y: float, deep := false) -> void:
+static func _add_trees(root: Node3D, buf: PackedFloat32Array, y: float, deep := false, lod := false) -> void:
 	var canopy := _canopy_mesh()
 	var trunk := CylinderMesh.new()
 	trunk.top_radius = 0.022
@@ -533,12 +553,26 @@ static func _add_trees(root: Node3D, buf: PackedFloat32Array, y: float, deep := 
 				# Eucalypt grey-green to elm green, a little lighter or darker tree to tree.
 				leaves.set_instance_color(j, Color(0.92, 0.95, 0.9).lerp(Color(1.1, 1.08, 0.95), shade) * (0.85 + 0.3 * fposmod(shade * 7.3, 1.0)))
 			stems.set_instance_transform(j, Transform3D(Basis().scaled(Vector3(h, crown, h)), at + Vector3(0, crown * 0.5, 0)))
-		for pair in [[leaves, leaf, "Trees"], [stems, bark, "Trunks"]]:
+		var sets := [[leaves, leaf, "Trees", 0.0, 0.0], [stems, bark, "Trunks", 0.0, 0.0]]
+		if lod:
+			# A ground whose trees fill Google Earth's canopy crown by crown (Bellerive: 13,000) draws a block
+			# whose middle is past TREE_NEAR m in one ball a crown and no trunks, about a sixth of the triangles.
+			var far := MultiMesh.new()
+			far.transform_format = MultiMesh.TRANSFORM_3D
+			far.use_colors = true
+			far.mesh = _canopy_far_mesh()
+			far.instance_count = ids.size()
+			far.buffer = leaves.buffer
+			sets = [[leaves, leaf, "Trees", 0.0, TREE_NEAR], [stems, bark, "Trunks", 0.0, TREE_NEAR],
+					[far, leaf, "TreesFar", TREE_NEAR, 0.0]]
+		for set: Array in sets:
 			var mi := MultiMeshInstance3D.new()
-			mi.name = "%s_%d_%d" % [pair[2], key.x, key.y]
-			mi.multimesh = pair[0]
-			mi.material_override = pair[1]
+			mi.name = "%s_%d_%d" % [set[2], key.x, key.y]
+			mi.multimesh = set[0]
+			mi.material_override = set[1]
 			mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			mi.visibility_range_begin = set[3]
+			mi.visibility_range_end = set[4]
 			root.add_child(mi)
 
 
@@ -849,6 +883,25 @@ static func _hip_roof(foot: PackedVector2Array, eave: float, roof: Color, v: Pac
 
 ## A canopy of about radius 1: two lumpy lobes, one high and one off to the side, so a park of them
 ## reads as gums and elms rather than balls on sticks.
+## A far crown: one plain ball, 6 sides and 3 rings, flat underneath like _canopy_mesh's lobes.
+static func _canopy_far_mesh() -> ArrayMesh:
+	var sphere := SphereMesh.new()
+	sphere.radius = 0.9
+	sphere.height = 1.8
+	sphere.radial_segments = 6
+	sphere.rings = 3
+	var arr := sphere.get_mesh_arrays()
+	var v: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
+	for k in v.size():
+		v[k] = Vector3(v[k].x, maxf(v[k].y, -0.45), v[k].z)
+	arr[Mesh.ARRAY_VERTEX] = v
+	arr[Mesh.ARRAY_TEX_UV] = null
+	arr[Mesh.ARRAY_TANGENT] = null
+	var mesh := ArrayMesh.new()
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
+	return mesh
+
+
 static func _canopy_mesh() -> ArrayMesh:
 	var sphere := SphereMesh.new()
 	sphere.radius = 1.0
@@ -1150,12 +1203,15 @@ static func _instances(root: Node3D, mesh: Mesh, path: String, colour: String, m
 		# Godot's front face) is seen from both sides; a closed seat keeps back faces culled.
 		if _is_sheet(mesh):
 			sm.cull_mode = BaseMaterial3D.CULL_DISABLED
-		if SEAT_FAR.has(ground):
-			# the shells give way to the far rows (_seat_far_material) pixel by pixel
-			sm.distance_fade_mode = BaseMaterial3D.DISTANCE_FADE_PIXEL_DITHER
-			sm.distance_fade_min_distance = SEAT_FAR_TO
-			sm.distance_fade_max_distance = SEAT_FAR_FROM
 		mat = sm
+		if SEAT_FAR.has(ground):
+			# the shells give way to the far rows (_seat_far_material) seat by seat (seat_near.gdshader)
+			var nm := ShaderMaterial.new()
+			nm.shader = SEAT_NEAR_SHADER
+			nm.set_shader_parameter("albedo", sm.albedo_color)
+			nm.set_shader_parameter("fade_from", SEAT_FAR_FROM)
+			nm.set_shader_parameter("fade_to", SEAT_FAR_TO)
+			mat = nm
 	var per := []
 	for i in range(SEAT_SECTORS):
 		per.append(PackedFloat32Array())
@@ -1219,10 +1275,10 @@ static func _seat_far_material(colour: String) -> ShaderMaterial:
 			var u := (x + 0.5) / 64.0
 			var v := (y + 0.5) / 64.0
 			var p := c
-			if v > 0.92:
-				p = tread.darkened(0.6)      # the riser's shadow line: the row's edge
-			elif v > 0.87:
-				p = tread
+			if v > 0.9:
+				p = tread.darkened(0.7)      # the riser's shadow line: the row's edge, bold enough to
+			elif v > 0.8:                    # stay a line in the far mips (PC check r5: a flat sheet)
+				p = tread.darkened(0.45)
 			elif u < 0.06 or u > 0.94:
 				p = gap
 			img.set_pixel(x, y, p)
