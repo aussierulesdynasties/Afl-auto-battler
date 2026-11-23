@@ -46,7 +46,14 @@ const BALL_R := 0.09          # m: the ball on the turf (Oval3D.BALL_R)
 ## stands, the take turned about him so its tackler comes from where ours is.
 const PAIRS := "res://assets/oval3d/tackle_pairs.json"
 const LEAD := 0.3              # clip s: the run-in starts at least this long before the contact
-const CHASE_LEAD := 0.35       # s: the most of a take a chase-down plays before its contact
+const CHASE_LEAD := 0.12       # s: the most of a take a chase-down plays before its contact
+## The takes were captured standing: their tacklee waits for the hit and their tackler walks in.
+## Joined by a man running flat out, the take stopped him dead (a 15 m/s carrier stood still for
+## the 0.4 s before the arms met). A chase-down joins the take at the hit instead, and both men
+## carry the carrier's run into the fall: the whole take slides along his line, its speed dying
+## away over SLIDE_T (bodies driven to the turf, as a run-down tackle looks on the broadcast).
+const SLIDE_T := 0.8           # s: the run-down's momentum spent
+const SLIDE_MAX := 16.0        # m/s: the most of the carrier's drawn pace carried into it
 const LEAD_MIN := 0.12         # the least run-in, when the tackle comes without warning
 const LEAD_RATE := 1.5         # fastest the run-in plays to fit a short warning
 const SLOW := 0.6              # slowest it plays while the contact is still to come
@@ -449,6 +456,8 @@ func _start(who: int, v: int, arrived: bool, at := Vector2.INF) -> void:
 		var lead := _lead(name, (K - V).length())
 		if arrived:
 			lead = minf(lead, LEAD_MIN)
+		elif director.chasing_down():
+			lead = minf(lead, CHASE_LEAD)
 		var c0 := cs - lead
 		var ce := _clip_hips(ap, name + "_tacklee", c0)
 		var ck := _clip_hips(ap, name + "_tackler", c0)
@@ -488,6 +497,9 @@ func _start(who: int, v: int, arrived: bool, at := Vector2.INF) -> void:
 			"c0": float(best["c0"]), "c": float(best["c0"]), "cs": float(best["cs"]),
 			"len": float(_pairs[name]["length_s"]), "arrived": arrived, "rec": rec,
 			"up": float(_pairs[name].get("up_s", _pairs[name]["length_s"])),
+			# A chase-down's momentum (SLIDE_T): the carrier's drawn velocity as the take starts.
+			"slide": (_pace[v] as Vector2).limit_length(SLIDE_MAX) if director.chasing_down() else Vector2.ZERO,
+			"t0": _clock,
 			# Started by frame() this frame: its clock has already been stepped past.
 			"fresh": not arrived,
 			"roles": {
@@ -697,6 +709,11 @@ func _step_pair(i: int, p: Dictionary, dt: float, vel := Vector2.ZERO) -> void:
 			* Transform3D(Basis.IDENTITY, -pivot)
 	var node: Node3D = p["node"]
 	node.transform = warp * (pr["P"] as Transform3D)
+	var sv: Vector2 = pr.get("slide", Vector2.ZERO)
+	if sv != Vector2.ZERO:
+		var u := clampf((_clock - float(pr["t0"])) / SLIDE_T, 0.0, 1.0)
+		var s := sv * (SLIDE_T / 3.0) * (1.0 - pow(1.0 - u, 3.0))
+		node.transform.origin += Vector3(s.x, 0.0, s.y)
 	_ease(i, p, dt)
 	var hips := _rig * (p["skel"] as Skeleton3D).get_bone_global_pose(_pelvis)
 	(p["ring"] as Node3D).position = Vector3(hips.origin.x, 0.03, hips.origin.z)
