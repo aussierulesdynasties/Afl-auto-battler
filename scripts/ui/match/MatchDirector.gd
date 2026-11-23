@@ -1124,6 +1124,11 @@ func _fifty_phases(k: int) -> Array:
 	return out
 
 
+## Chase-downs are off: no tackle phase sets "run_down". A run long enough to read as a
+## chase-down carried the ball up to 27 m from the spot MatchSim logged for the tackle (seed 31,
+## 1,000 s; test_match_visual's release checks allow 3 m), and the sim logs every tackle within
+## ~1 m of where the carrier got the ball, so there is no room for one in the picture alone.
+## They come back when the sim logs a run before a tackle. The mechanism below is kept for that.
 ## A chase-down tackle (_enter "chase"): the tackler is RUN_DOWN_GAP to RUN_DOWN_FAR m behind the
 ## carrier, within ~50 deg of the carrier's line to his own goal. The carrier takes off for it at
 ## RUN_DOWN_CARRIER of the tackler's top pace, both near flat out, so the gap closes slowly (a
@@ -1156,7 +1161,7 @@ func _tackle_phases(k: int) -> Array:
 			victim = _actor_id(events[pk])
 	if tk < 0 or victim < 0:
 		return [{"t": "emit", "log": true}]
-	return [{"t": "chase", "who": tk, "victim": victim, "max": 1.6, "run_down": true},
+	return [{"t": "chase", "who": tk, "victim": victim, "max": 1.6},
 			{"t": "emit", "log": true},
 			{"t": "down", "who": tk, "victim": victim, "dur": 0.55}]
 
@@ -1418,7 +1423,7 @@ func _free_phases(k: int) -> Array:
 		# man caught has it, the man paid the free runs him down and tackles him (the tackle
 		# clips), the umpire pays it, and the tackler gets up and takes the ball.
 		return out + [{"t": "possess", "who": victim, "quiet": true},
-				{"t": "chase", "who": tk, "victim": victim, "max": 1.6, "run_down": true},
+				{"t": "chase", "who": tk, "victim": victim, "max": 1.6},
 				{"t": "down", "who": tk, "victim": victim, "dur": 0.55},
 				{"t": "emit"}, {"t": "wait", "dur": TAKE_UP}] + _take_free(tk) \
 				+ [{"t": "wait", "dur": 0.5, "ease": true}]
