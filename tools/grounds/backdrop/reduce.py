@@ -74,6 +74,25 @@ def under_stadium(x, y):
         if (b_[0] - a_[0]) * (y - a_[1]) - (b_[1] - a_[1]) * (x - a_[0]) < 0: return False
     return True
 
+# a model whose own ground ends on a measured line (ground kit ground_r table) carries the flat ground beyond it as
+# 'concourse_far' (hidden by the game under the backdrop): its inner edge is that line, with the ground's height on it.
+# The scene's near ground then meets the model exactly there, instead of sinking under a convex hull.
+EDGE = None
+_cf = [o for o in bpy.data.objects if o.type == 'MESH' and o.name.startswith('concourse_far')]
+if _cf:
+    o = _cf[0]; co = np.zeros(len(o.data.vertices) * 3); o.data.vertices.foreach_get('co', co); co = co.reshape(-1, 3)
+    W_ = np.array(o.matrix_world); co = co @ W_[:3, :3].T + W_[:3, 3]
+    b_ = np.round(np.degrees(np.arctan2(co[:, 0], co[:, 1])) % 360, 3) % 360; r_ = np.hypot(co[:, 0], co[:, 1])
+    EB, ER, EZ = [], [], []
+    for bv in np.unique(b_):
+        k = np.where(b_ == bv)[0]; i = k[np.argmin(r_[k])]
+        EB.append(bv); ER.append(r_[i] + 0.2); EZ.append(co[i, 2])   # the kit draws it from 0.2 m inside the line
+    EDGE = (np.array(EB), np.array(ER), np.array(EZ))
+    print('model ground edge from concourse_far:', len(EB), 'bearings, r', round(min(ER), 1), '-', round(max(ER), 1))
+def edge_at(x, y):
+    b = np.degrees(np.arctan2(x, y)) % 360
+    return float(np.interp(b, EDGE[0], EDGE[1], period=360)), float(np.interp(b, EDGE[0], EDGE[2], period=360))
+
 for o in [o for o in bpy.data.objects if not o.name.startswith('bg_')]:
     bpy.data.objects.remove(o, do_unlink=True)
 
@@ -92,6 +111,20 @@ if INNER > 0.0:   # the game draws its own ground, trees and buildings in here: 
         bpy.data.objects.remove(o, do_unlink=True)
 
 g = bpy.data.objects['bg_near_ground']
+if EDGE is not None:   # cut on the model's own ground edge: drop cells wholly inside it, pull inside corners out onto it
+    bm = bmesh.new(); bm.from_mesh(g.data); M = g.matrix_world; Mi = M.inverted()
+    def inside(w): return math.hypot(w.x, w.y) < edge_at(w.x, w.y)[0]
+    kill = [f for f in bm.faces if all(inside(M @ v.co) for v in f.verts)]
+    bmesh.ops.delete(bm, geom=kill, context='FACES')
+    moved = 0
+    for v in bm.verts:
+        w = M @ v.co
+        if v.link_faces and inside(w):
+            r, z = edge_at(w.x, w.y); L = math.hypot(w.x, w.y)
+            w.x, w.y, w.z = w.x * r / L, w.y * r / L, z; v.co = Mi @ w; moved += 1
+    bm.to_mesh(g.data); bm.free()
+    print('ground faces cut inside the model edge', len(kill), 'corners moved onto it', moved)
+    HULL = None
 bm = bmesh.new(); bm.from_mesh(g.data); M = g.matrix_world
 kill = [f for f in bm.faces if under_stadium(*(M @ f.calc_center_median()).xy)]
 bmesh.ops.delete(bm, geom=kill, context='FACES'); bm.to_mesh(g.data); bm.free()
