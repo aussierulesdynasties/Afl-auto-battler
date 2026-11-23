@@ -180,9 +180,9 @@ func _run() -> void:
 	var bend := float(args[5]) if args.size() > 5 else 35.0
 	var hz := float(args[6]) if args.size() > 6 else 25.0
 	var aj: Animation = (load(str(args[0])) as Animation).duplicate(true)
-	var as_: Animation = (load(str(args[1])) as Animation).duplicate(true)
+	var anim_s: Animation = (load(str(args[1])) as Animation).duplicate(true)
 	var j := _body(aj)
-	var s := _body(as_)
+	var s := _body(anim_s)
 	var skj: Skeleton3D = j[1]
 	var sks: Skeleton3D = s[1]
 	var n := int(round(aj.length * hz)) + 1
@@ -315,7 +315,7 @@ func _run() -> void:
 		row["j_pelvis"] = skj.get_bone_pose_position(ip)
 		print("F %d w %.2f moved %.2f m (+%.2f off him), knee off target %.2f m, ankles off %.2f / %.2f m, deepest %.3f" % [k, w, move.length(), body.length(), _wp(skj, "calf_" + near).distance_to(knee_t), miss, miss2, deep])
 		rows.append(row)
-	for pr in [[aj, "j_", str(args[2])], [as_, "s_", str(args[3])]]:
+	for pr in [[aj, "j_", str(args[2])], [anim_s, "s_", str(args[3])]]:
 		var anim: Animation = pr[0]
 		for k in n:
 			var row: Dictionary = rows[k]

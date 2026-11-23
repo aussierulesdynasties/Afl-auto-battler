@@ -147,8 +147,8 @@ static func _frame(yaw: float, pitch: float, roll: float) -> Basis:
 
 
 # Body-frame [right, up, forward] to a world direction (the rest body faces +z, its left is +x).
-static func _dir(R: Basis, v: Array) -> Vector3:
-	return R * Vector3(-float(v[0]), float(v[1]), float(v[2]))
+static func _dir(basis: Basis, v: Array) -> Vector3:
+	return basis * Vector3(-float(v[0]), float(v[1]), float(v[2]))
 
 
 func _place(p, who: String) -> Vector3:
@@ -237,9 +237,9 @@ static func _reach(sk: Skeleton3D, upper: String, lower: String, end: String, ta
 
 
 # +1 if turning the lower bone by +theta about its hinge bends the joint further.
-static func _flex_sign(M0: Quaternion, d0: Vector3, h0: Vector3, e0: Vector3) -> float:
+static func _flex_sign(rest_q: Quaternion, d0: Vector3, h0: Vector3, e0: Vector3) -> float:
 	var straight := func(th: float) -> float:
-		var dl: Vector3 = Quaternion(h0, th) * (M0 * e0)
+		var dl: Vector3 = Quaternion(h0, th) * (rest_q * e0)
 		return d0.angle_to(dl)
 	return 1.0 if straight.call(0.2) > straight.call(-0.2) else -1.0
 
