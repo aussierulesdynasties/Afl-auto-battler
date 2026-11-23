@@ -338,10 +338,12 @@ def main():
     if near is not None:
         near.save(os.path.join(OUT, "surrounds_near.webp"), quality=88, method=6)
     print("OpenStreetMap trees", n_map, "canopy trees", len(can))
+    t = t[~under_traced(t[:, :2])]                     # no crown through a traced roof
     t.astype("<f4").tofile(os.path.join(OUT, "trees.bin"))
     b = building_list(ways, in_foot)
     b = np.concatenate([b, ms_buildings(ways, in_foot, sea)]).astype("<f4")
     b, rgb = from_google_earth(b)
+    b, rgb = with_traced(b, rgb)
     b.tofile(os.path.join(OUT, "buildings.bin"))
     rgb.tofile(os.path.join(OUT, "roofs.bin"))
     print("surrounds.webp", im.size, "trees", len(t), "building floats", len(b), "sea px", int(sea.sum()))
@@ -501,6 +503,41 @@ def from_google_earth(buf):
                 out[i + 1] = eave                    # a flat roof that high (heights/read.py: townhouses)
         i += 2 + 2 * n
     return out, np.array(rgb, "<f4")
+
+
+def under_traced(xz):
+    """Which of these points stand inside a house traced off Google Earth (houses_traced.json)."""
+    from shapely import contains_xy
+    from shapely.geometry import Polygon
+    from shapely.ops import unary_union
+    cover = unary_union([Polygon(t["pts"]) for t in json.load(open(os.path.join(HERE, "houses_traced.json")))])
+    return contains_xy(cover, xz[:, 0], xz[:, 1])
+
+
+def with_traced(buf, rgb):
+    """The houses traced off Google Earth by eye (houses_traced.py, houses_traced.json) in place of the machine
+    footprints they cover: any footprint a quarter or more under a traced outline, or centred inside one, goes."""
+    from shapely.geometry import Polygon, Point
+    from shapely.ops import unary_union
+    traced = json.load(open(os.path.join(HERE, "houses_traced.json")))
+    cover = unary_union([Polygon(t["pts"]) for t in traced])
+    near = cover.buffer(1.0)
+    out, col = [], []
+    i = j = 0
+    while i + 1 < len(buf):
+        n = int(buf[i])
+        pts = buf[i + 2:i + 2 + 2 * n].reshape(-1, 2).astype(float)
+        p = Polygon(pts).buffer(0)
+        gone = p.area > 0 and (p.intersection(cover).area >= 0.25 * p.area or near.contains(Point(pts.mean(axis=0))))
+        if not gone:
+            out += list(buf[i:i + 2 + 2 * n])
+            col += list(rgb[3 * j:3 * j + 3])
+        i += 2 + 2 * n
+        j += 1
+    for t in traced:
+        out += [float(len(t["pts"])), float(t["h"])] + [v for q in t["pts"] for v in q]
+        col += t["rgb"]
+    return np.array(out, "<f4"), np.array(col, "<f4")
 
 
 def building_list(ways, in_foot):

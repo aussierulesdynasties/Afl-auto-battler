@@ -25,8 +25,8 @@ S = B.S
 R = 800.0
 K = 360.0 / (R * math.tan(math.radians(12.79)))
 HALF = S.SIZE / 2.0
-NAMES = ["other", "lawn", "dry", "earth", "paving", "canopy", "court"]
-MEASURED = (1, 2, 3, 4, 6)
+NAMES = ["other", "lawn", "dry", "earth", "paving", "canopy", "court", "field"]
+MEASURED = (1, 2, 3, 4, 6, 7)
 NC = len(NAMES)
 # The fine grid close to the ground (surrounds_near.webp): FINE_SPAN m a side at FINE_STEP m a cell, Google
 # Earth's own 0.5 m shots voted straight onto it.
@@ -51,7 +51,10 @@ def classify(im):
     pave = (sat < 22) & (lum > 70) & (lum < 205)                  # Bellerive's tar reads here too, in the sun
     court = (sat < 26) & (lum >= 190) & (lum < 250)
     c = np.zeros(lum.shape, np.uint8)
-    c[pave] = 4; c[court] = 6; c[earth] = 3; c[dry] = 2; c[lawn] = 1; c[canopy] = 5
+    # Sunlit open grass (sports fields, the park, the oval's banks) apart from a yard's lawn: one median for both
+    # read the fields as a yard's grey-green (PC check r5: the east fields missing; GE fields 146,168,122)
+    field = lawn & (lum >= 125) & (g - b > 20)
+    c[pave] = 4; c[court] = 6; c[earth] = 3; c[dry] = 2; c[lawn] = 1; c[field] = 7; c[canopy] = 5
     return c, lum
 
 
@@ -99,8 +102,11 @@ def main(works):
     grid[hid] = spare.argmax(2)[hid]
     grid[hid & (spare.sum(2) == 0)] = 255
     from scipy import ndimage
-    court = grid == 6                                            # a court is a big flat block; small white bits
-    grid[court & ~ndimage.binary_opening(court, np.ones((6, 6)))] = 4   # are cars, sheds and sun on paving
+    # A court is a big flat block; small white bits are cars, sheds and sun on paving. Its lines and the grass
+    # through its surface are holes to fill first (PC check r5: the east court was opened away to paving).
+    court = ndimage.binary_fill_holes(ndimage.binary_closing(grid == 6, np.ones((3, 3))))
+    grid[court] = 6
+    grid[(grid == 6) & ~ndimage.binary_opening(court, np.ones((6, 6)))] = 4   # are cars, sheds and sun on paving
     # The fine grid: each cell the class most shots' pixels in it say; a cell no pixel landed in (0.375 m cells
     # under 0.5 m pixels) or the tip box hid takes the nearest that has one, then the 1 m grid's where none is near.
     fg = fine.argmax(2).astype(np.uint8)
@@ -112,8 +118,9 @@ def main(works):
     gx = np.clip(((xx + 0.5) * FINE_STEP - FINE_SPAN / 2 + HALF).astype(int), 0, S.SIZE - 1)
     gz = np.clip(((yy + 0.5) * FINE_STEP - FINE_SPAN / 2 + HALF).astype(int), 0, S.SIZE - 1)
     fg[far] = grid[gz, gx][far]
-    fc = fg == 6
-    fg[fc & ~ndimage.binary_opening(fc, np.ones((16, 16)))] = 4
+    fc = ndimage.binary_fill_holes(ndimage.binary_closing(fg == 6, np.ones((7, 7))))
+    fg[fc] = 6
+    fg[(fg == 6) & ~ndimage.binary_opening(fc, np.ones((16, 16)))] = 4
     haze = lambda c: [int(v) for v in np.clip((np.median(np.concatenate(c), 0) - 14.0) * 1.08, 0, 255)]
     colour = {NAMES[c]: haze(cols[c]) for c in MEASURED}
     np.savez_compressed(os.path.join(HERE, "ge_ground.npz"), cls=grid, fine=fg)
