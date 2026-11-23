@@ -56,15 +56,18 @@ def _flush():
         key = ('elm' if 'elm' in G else k, int(math.floor((lo[0] + hi[0]) / 2 / _cs)), int(math.floor((lo[1] + hi[1]) / 2 / _cs)))
         m = _FAR.get(key)
         _ca = (hi[0] - lo[0]) * (hi[1] - lo[1]) * 0.78
-        if m is None: _FAR[key] = [lo.copy(), hi.copy(), np.array(col, float), 1, _BUF[0][6], _ca]
-        else: m[0] = np.minimum(m[0], lo); m[1] = np.maximum(m[1], hi); m[2] += col; m[3] += 1; m[5] += _ca
+        _zc, _zr = (lo[2] + hi[2]) / 2, (hi[2] - lo[2]) / 2   # this tree's crown: its middle height and half its depth
+        if m is None: _FAR[key] = [lo.copy(), hi.copy(), np.array(col, float), 1, _BUF[0][6], _ca, _zc, _zr]
+        else: m[0] = np.minimum(m[0], lo); m[1] = np.maximum(m[1], hi); m[2] += col; m[3] += 1; m[5] += _ca; m[6] += _zc; m[7] += _zr
     _BUF = []
 _FAR = {}
 def _far_flush():
-    for (k, _, _), (lo, hi, cs, n, a, ca) in _FAR.items():
+    for (k, _, _), (lo, hi, cs, n, a, ca, zc, zr) in _FAR.items():
         c = (lo + hi) / 2; r = (hi - lo) / 2 * 0.9
         f = min(1.0, math.sqrt(ca / max(1.0, 0.78 * (hi[0] - lo[0]) * (hi[1] - lo[1]))))   # the blob covers what the crowns covered
-        r = np.array([r[0] * f, r[1] * f, r[2]])
+        # its height is the crowns' own depth at their mean height, not the cell's whole height range: on a hillside
+        # that range takes in the slope and the blob stood up as a spike, so ridges read as a sawtooth
+        c[2] = zc / n; r = np.array([r[0] * f, r[1] * f, min(r[2], 1.15 * zr / n)])
         V = (OCT + rng.normal(0, 0.05, OCT.shape)) * r; _put(k, _rot(V, a) + c, OCTF, tuple(cs / n))
 def _trunk(k, x, y, z, r, h, col, lean=(0, 0)):
     if _LOD: return

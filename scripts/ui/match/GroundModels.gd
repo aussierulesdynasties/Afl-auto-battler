@@ -658,9 +658,10 @@ static func _pick(src, used: PackedInt32Array):
 
 ## How far a camera sees when the ground has its surroundings (backdrop()): the city skyline and
 ## the hills. Without them the match view stops at 900 m. Grounds whose CBD skyline stands further
-## off than that see further (Whitten Oval and Windy Hill: the city towers 7 to 8.5 km away).
+## off than that see further (Whitten Oval and Windy Hill: the city towers 7 to 8.5 km away; North
+## Hobart and Macquarie Point: kunanyi / Mount Wellington, its summit 7 km off and its slopes beyond).
 const BACKDROP_FAR := 7000.0
-const BACKDROP_FAR_AT := {"whitten": 9000.0, "windy_hill": 9500.0}
+const BACKDROP_FAR_AT := {"whitten": 9000.0, "windy_hill": 9500.0, "north_hobart": 14000.0, "macpoint": 14000.0}
 
 
 static func backdrop_far(slug: String) -> float:
