@@ -82,7 +82,7 @@ Stadium (all first drafts on main), and Accor Stadium, Marrara Oval (TIO Darwin)
 | Crowd on every ground's seats | Seated on any ground with seat files; 19 grounds had none (pre-inspection, 2026-11-21) | Each ground's thread (seat rule) |
 | Live big screens | Built (#1947); 11 grounds have no screen face in their model | Each ground's thread |
 | Night lights from each ground's own towers | MCG only (#1996 open); others keep the old two-light night | Make MCG night matches look right (MCG); Light matches like the real grounds (the rest) |
-| Turf cut and colour | Per-ground mowing on main; broadcast colour #2014 open | Make the turf colour look like TV (closed; PR open) |
+| Turf cut and colour | Per-ground mowing and broadcast colour (#2014) on main | Make the turf colour look like TV |
 
 ## 2. Players
 
@@ -130,7 +130,7 @@ Stadium (all first drafts on main), and Accor Stadium, Marrara Oval (TIO Darwin)
 | Sun moves with the match clock | Built | #1928 (carried by #1996) | Make MCG night matches look right |
 | Night matches | MCG built | #1996 | Make MCG night matches look right |
 | Wet matches | On main (#2003) | | |
-| Turf and picture in broadcast colour | Built | #2014 | Make the turf colour look like TV |
+| Turf and picture in broadcast colour | On main | #2014 | Make the turf colour look like TV |
 | Graphics levels in Settings | On main (#1953) | | |
 
 ## Release gates (across all four)
@@ -181,4 +181,4 @@ What this says: the big grounds draw 2.3-4.4 million triangles a frame on High a
 - 2026-11-22: first version, built from the plan, the open PRs, the threads and project memory.
 - 2026-11-22: the director chose all 37 grounds for 1.0.
 - 2026-11-22: the data-source rule for grounds written into MCG_STANDARD.md and sent to every ground thread; softened the same day (fidelity first; only raw imagery in the repo or textures is out).
-- 2026-11-22 evening: stat card (#1990), goal replay (#2022) and siren and crowd (#2012) on main; owners and PRs for ENGIE, Manuka, Norwood, Barossa, Mars, guernseys, umpires and trainers, kick clips and night lights.
+- 2026-11-22 evening: stat card (#1990), goal replay (#2022), siren and crowd (#2012) and broadcast colour (#2014) on main; owners and PRs for ENGIE, Manuka, Norwood, Barossa, Mars, guernseys, umpires and trainers, kick clips and night lights.
