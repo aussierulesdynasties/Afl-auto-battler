@@ -23,13 +23,16 @@ name: UI review sheets
 # Since 2026-11-12 the sheets run only when someone will read them: on a PR with
 # the label "ui-review" (adding the label starts them) or by dispatch. Visual work
 # goes straight to the director (2026-11-05), and the sheets cost up to 40 runner
-# minutes a push. The sweep still runs on every ready PR that touches the paths
-# below, because it fails on a measured regression. When the runner's apt mirror
+# minutes a push. Since 2026-11-23 the sweep runs on the same label, and every night
+# on main so a regression still shows within a day: GitHub gives this repo a handful
+# of runners at a time, and a sweep on every push held up the merge queue. When the runner's apt mirror
 # is down after 3 tries, a job warns and skips its steps instead of going red:
 # an infra fault says nothing about the PR.
 #
 #   gh run download <run-id> -n ui-review-sheets
 on:
+  schedule:
+    - cron: "30 17 * * *"   # 04:30 Melbourne (AEDT), the sweep on main
   workflow_dispatch:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review, labeled]
@@ -215,7 +218,12 @@ jobs:
   # P-77 "One sweep of every screen": the numbers behind the sheets.
   sweep:
     # Every ready PR on the paths above; a label event never re-runs it.
-    if: github.event_name == 'workflow_dispatch' || (github.event.pull_request.draft == false && github.event.action != 'labeled')
+    # Nightly on main, dispatch, or a ready PR labelled "ui-review" (a label event only when that label was added).
+    if: >-
+      github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' ||
+      (github.event.pull_request.draft == false &&
+       contains(github.event.pull_request.labels.*.name, 'ui-review') &&
+       (github.event.action != 'labeled' || github.event.label.name == 'ui-review'))
     runs-on: ubuntu-latest
     timeout-minutes: 40
     env:
