@@ -153,11 +153,18 @@ func _test_ages() -> void:
 			dawson = p
 	_check(not dawson.is_empty() and float(dawson["age"]) > 29.5 and float(dawson["age"]) < 30.8,
 			"Jordan Dawson starts 2027 aged 30 (he was 29 in 2026)")
+	# The men the real 2026 National Draft took from outside the rankings
+	# include mature-age picks (Riding, born 2000); they keep their real age.
 	var young := true
+	var mature := true
 	for p in GameDB.draftees:
-		if float(p["age"]) < 17.5 or float(p["age"]) > 20.5:
+		if str(p.get("data_src", "")) == "afl-draft-nov26":
+			if float(p["age"]) < 17.5 or float(p["age"]) > 30.0:
+				mature = false
+		elif float(p["age"]) < 17.5 or float(p["age"]) > 20.5:
 			young = false
 	_check(young, "The 2026 class starts 2027 aged 17.5 to 20.5")
+	_check(mature, "The real draft's mature-age picks start 2027 aged 17.5 to 30")
 	GameState.reset()
 	GameState.start_season("GEE", GameDB.club_list("GEE"))
 	var carried := true
