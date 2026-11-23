@@ -87,5 +87,11 @@ Measuring from imagery is allowed; raw imagery is never committed or baked into 
 
 ## Status
 
-- 2026-11-23: eras settled from published history; Google Earth historical aerials found for
-  2000-2004; capture of every dated aerial under way.
+- 2026-11-23: eras settled from published history. Every dated Google Earth aerial of the MCG
+  captured (11, March 2000 to November 2004; none in 2003 or 2005, so those seasons rely on
+  photos). Captures pinned to map coordinates at 0.3019 m a pixel from Google Earth's own pointer
+  readout. Arena edge fitted in the three sharpest (23 Mar 2000: rms 0.46 m; 29 Apr 2002: 0.64 m;
+  15 Nov 2000: 1.14 m); the others are too soft or shadowed for a clean fit. Roof edges of the old
+  stands shift between dates by up to about 13 m (each flight leaned differently), so plan
+  positions and heights are solved together from several dates, not traced from one. Tools in
+  `tools/grounds/mcg_eras/`.
