@@ -71,8 +71,11 @@ The model is the stadium as it stood, so its surroundings are the place as it wa
 2. `SAT_RELEASE=<id> python3 sat_fetch.py spec/<g>.json 1500 1.0` then copy `sat.png` to `sat_<year>.png` (today's
    copied first to `sat_now.png`): an Esri World Imagery Wayback release from the era
    (waybackconfig.json lists them; 8249 = 2018-06-06). Sampled for colours only, never shipped.
-3. `python3 era_merge.py <g> <year>`: the era's map, plus today's buildings that were only mapped later. A
-   house-sized one stays unless the era's aerial shows plants or bare sand there; a big one must match today's roof.
+3. `python3 era_merge.py <g> <year>`: the era's map, plus today's buildings that were only mapped later. A big
+   block (1,500 m² and up) is dropped as built since when the era's aerial shows plants, sand or asphalt under it and
+   today's shows a roof; house-sized ones always stay (roof colour tests flip one house in ten between releases).
+   Anything beyond the era's aerial stays. Check the release's capture date first (Wayback metadata layer): the
+   oldest Esri imagery is 2013 (Ikon Park and Whitten, release 11509 = 31 Aug 2013; Football Park = 5 Feb 2013).
 4. `SAT_RELEASE=<id> BG_REAL=1 bash run1.sh <g>`.
 
 Check from straight above against the era's aerial with `capture_backdrop.gd ... nofog "shot=top:0.01,560,0:0,0,0:94"`.

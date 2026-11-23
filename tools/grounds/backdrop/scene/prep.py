@@ -744,8 +744,10 @@ if spec.get('real'):
                     try: _op.append(_OPo(_r).buffer(0))
                     except Exception: pass
         _otree = _STR(_op) if _op else None
+        _ed = os.path.join(os.environ.get('WORK', '/home/user/work'), 'data', spec['name'], 'era_drop.json')
+        _edrop = set(json.load(open(_ed))['overture_ids']) if os.path.exists(_ed) else set()   # built after a closed ground's era (era_merge.py)
         for r in json.load(open(_ovp)):
-            if r['src'] == 'OpenStreetMap': continue
+            if r['src'] == 'OpenStreetMap' or 'ov' + str(r['id']) in _edrop: continue
             try: g_ = _OW.loads(r['wkt'])
             except Exception: continue
             if g_.geom_type == 'MultiPolygon': g_ = max(g_.geoms, key=lambda q: q.area)
