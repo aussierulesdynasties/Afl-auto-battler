@@ -45,7 +45,7 @@ const GROUNDS := {
 ## stand up to 20 m inside Bellerive's boundary and Windy Hill's turned 6 degrees off.
 const FIT := {
 	"mcg": [0.53, 0.39, -4.2, -3.3, 87.19, 73.39],
-	"marvel": [-0.02, -0.03, 5.4, 70.6, 90.45, 75.93],
+	"marvel": [-0.03, -0.02, 5.4, -89.8, 90.45, 75.93],
 	"optus": [-27.32, 5.16, 0.0, -11.07, 88.91, 69.92],   # bowl front ring from Google Earth (tools/grounds/optus/survey)
 	"scg": [0.34, 6.68, 0.05, 85.8, 84.43, 72.25],
 	"gmhba": [-8.89, 11.85, 0.02, -69.8, 94.3, 66.01],
@@ -97,15 +97,9 @@ const SURROUNDS := {
 	"optus": {"y": -0.03, "inner": 100.0, "colour": Color(0.45, 0.55, 0.27),
 			"map": "surrounds.webp", "span": 2048.0, "trees": "trees.bin", "buildings": "buildings.bin",
 			"models": ["bridges.glb"], "tint": Color.WHITE, "building_tint": Color.WHITE},
-	# Marvel Stadium in Docklands: Victoria Harbour, the Southern Cross rail yards, the streets and towers
-	# round it from OpenStreetMap (tools/grounds/marvel/surrounds.py), and the Bolte Bridge's towers and
-	# deck in 3D (tools/grounds/marvel/bridges.py). Painted for the same match light as Optus's map.
-	"marvel": {"y": -0.03, "inner": 120.0, "colour": Color(0.55, 0.56, 0.52),
-			"map": "surrounds.webp", "span": 2048.0, "trees": "trees.bin", "buildings": "buildings.bin",
-			"models": ["bridges.glb"], "tint": Color(0.86, 0.84, 0.82), "building_tint": Color.WHITE, "building_style": "towers"},
 	# The SCG in Moore Park: the park's dry grass and avenues of figs, Tramway Oval, the Entertainment
 	# Quarter, Paddington's streets and Allianz Stadium's concourse from OpenStreetMap
-	# (tools/grounds/scg/surrounds.py), and Allianz Stadium itself in 3D (tools/grounds/scg/allianz.py). Painted for the same match light as Marvel's map.
+	# (tools/grounds/scg/surrounds.py), and Allianz Stadium itself in 3D (tools/grounds/scg/allianz.py). Painted for the same match light as Optus's map.
 	# inner 100: the stands' backs reach in to 100-110 m from the middle; at 120 the sky showed through
 	# a gap between them and the land, a pale blue ring round the ground from above.
 	"scg": {"y": -0.03, "inner": 100.0, "colour": Color(0.55, 0.56, 0.48),
@@ -190,12 +184,6 @@ const MATERIAL_FIX := {
 	},
 }
 
-## Grounds with a roof that opens: the model's node for the roof shut over the field and the node for
-## it slid back, of which instantiate() shows one. Marvel Stadium plays AFL with its roof shut (as the
-## match scenes draw it, data/grounds.json "roof": "closed"); the fly-through can open it (set_roof).
-## Shut, the stadium casts no sun shadow: under it the ground is lit by the roof's own lights. Looks only.
-const ROOFS := {"marvel": {"shut": "roofshut", "open": "roofopen"}}
-
 ## Models that carry their colours on the vertices (glTF COLOR_0) under a tiling detail texture.
 ## Godot's glTF reader keeps the colours but does not paint with them, so the loader turns that on.
 const VERTEX_COLOURED := ["adelaide"]
@@ -214,8 +202,6 @@ const SEAT_COLOURS := {
 	"seat_mcg_white": Color(0.96, 0.88, 0.80), "seat_mcg_grey": Color(0.76, 0.70, 0.64),
 	"seat_mcg_blue": Color(0.18, 0.32, 0.52), "seat_mcg_teal": Color(0.42, 0.64, 0.66),
 	"seat_mcg_sage": Color(0.50, 0.58, 0.56),
-	# Marvel Stadium by level (tools/grounds/marvel/seats.py), from Google Earth and Street View.
-	"seat_marvel_lo": Color8(62, 80, 104), "seat_marvel_mid": Color8(62, 80, 104), "seat_marvel_up": Color8(62, 80, 104),
 	# The front of the lower tier from the Members' round to the north: green (a photo sphere on the ground).
 	"seat_mcg_green": Color(0.46, 0.70, 0.58),
 	"seat_green": Color(0.314, 0.549, 0.455), "seat_teal": Color(0.384, 0.620, 0.541),
@@ -377,8 +363,6 @@ static func instantiate(slug: String, base := "") -> Node3D:
 	slice_big_meshes(root)
 	var fit: Array = FIT.get(slug, [0.0, 0.0])
 	_add_seats(root, dir, Vector2(float(fit[0]), float(fit[1])))
-	if ROOFS.has(slug):
-		set_roof(root, slug, true)
 	if SURROUNDS.has(slug):
 		_add_surrounds(root, SURROUNDS[slug], dir)
 	return root
@@ -463,7 +447,7 @@ static func _add_surrounds(root: Node3D, s: Dictionary, dir := "") -> void:
 			_add_trees(root, FileAccess.get_file_as_bytes(dir + str(s["trees"])).to_float32_array(), y, relief)
 		if s.has("buildings") and FileAccess.file_exists(dir + str(s["buildings"])):
 			_add_buildings(root, FileAccess.get_file_as_bytes(dir + str(s["buildings"])).to_float32_array(), y,
-					s.get("building_tint", s.get("tint", Color.WHITE)), str(s.get("building_style", "")))
+					s.get("building_tint", s.get("tint", Color.WHITE)))
 		for m in s.get("models", []):
 			var extra := load_glb(dir + str(m))
 			if extra != null:
@@ -593,22 +577,13 @@ static func _add_trees(root: Node3D, buf: PackedFloat32Array, y: float, relief :
 
 ## The map's buildings round the ground (point count, height, then the footprint's x, z): plain
 ## walls in a pale render or brick and a flat roof each, as one mesh. Seen past the stands and
-## from a fly-through, they set the MCG in its city rather than on a plain. `style` "towers" draws a
-## city of glass and concrete instead (Docklands): blue-grey curtain walls with a mullion every
-## 1.5 m and a slab at every floor, or concrete with rows of windows, from TOWER_SHADER.
-static func _add_buildings(root: Node3D, buf: PackedFloat32Array, y: float, tint := Color.WHITE, style := "") -> void:
+## from a fly-through, they set the MCG in its city rather than on a plain.
+static func _add_buildings(root: Node3D, buf: PackedFloat32Array, y: float, tint := Color.WHITE) -> void:
 	var v := PackedVector3Array()
 	var nrm := PackedVector3Array()
 	var col := PackedColorArray()
-	var uv := PackedVector2Array()
-	var towers := style == "towers"
 	const WALLS := [Color(0.86, 0.84, 0.8), Color(0.78, 0.76, 0.72), Color(0.72, 0.6, 0.5), Color(0.9, 0.88, 0.84),
 			Color(0.66, 0.66, 0.66)]
-	# Google Earth's Docklands: blue-grey and green-grey glass, pale and mid concrete, a little brick.
-	const GLASS := [Color8(68, 86, 102), Color8(58, 74, 90), Color8(82, 98, 110), Color8(48, 62, 78),
-			Color8(90, 104, 116), Color8(64, 82, 86)]
-	const CONCRETE := [Color8(190, 188, 182), Color8(165, 165, 160), Color8(200, 196, 186), Color8(150, 136, 122),
-			Color8(176, 180, 182), Color8(140, 142, 142)]
 	var i := 0
 	var b := 0
 	while i + 1 < buf.size():
@@ -621,39 +596,25 @@ static func _add_buildings(root: Node3D, buf: PackedFloat32Array, y: float, tint
 		b += 1
 		var wall: Color = WALLS[b % WALLS.size()]
 		var roof := wall.darkened(0.18)
-		if towers:
-			# The same building gets the same look every match: its pick hangs on its own corner.
-			var pick := absi(int(foot[0].x * 7.0) * 31 + int(foot[0].y * 3.0) * 17 + b)
-			var glassy := (pick % 100) < (75 if h > 30.0 else 30)
-			wall = GLASS[pick % GLASS.size()] if glassy else CONCRETE[pick % CONCRETE.size()]
-			wall.a = 1.0 if glassy else 0.5
-			roof = Color8(92, 94, 96) if glassy else wall.darkened(0.38)
 		# Walls face out whichever way round the footprint was drawn.
 		var ccw := 0.0
 		for k in n:
 			ccw += foot[k].cross(foot[(k + 1) % n])
-		var run := 0.0
 		for k in n:
 			var a := foot[k]
 			var c := foot[(k + 1) % n]
 			var out := Vector3(c.y - a.y, 0.0, a.x - c.x).normalized() * (1.0 if ccw > 0.0 else -1.0)
 			var shade := wall * (0.92 + 0.08 * absf(out.x))
-			shade.a = wall.a
-			var side := a.distance_to(c)
-			for q: Array in [[Vector3(a.x, y, a.y), Vector2(run, 0.0)], [Vector3(c.x, y, c.y), Vector2(run + side, 0.0)],
-					[Vector3(c.x, y + h, c.y), Vector2(run + side, h)], [Vector3(a.x, y, a.y), Vector2(run, 0.0)],
-					[Vector3(c.x, y + h, c.y), Vector2(run + side, h)], [Vector3(a.x, y + h, a.y), Vector2(run, h)]]:
-				v.append(q[0])
+			for p: Vector3 in [Vector3(a.x, y, a.y), Vector3(c.x, y, c.y), Vector3(c.x, y + h, c.y),
+					Vector3(a.x, y, a.y), Vector3(c.x, y + h, c.y), Vector3(a.x, y + h, a.y)]:
+				v.append(p)
 				nrm.append(out)
 				col.append(shade)
-				uv.append(q[1])
-			run += side
 		var tri := Geometry2D.triangulate_polygon(foot)
 		for k in tri:
 			v.append(Vector3(foot[k].x, y + h, foot[k].y))
 			nrm.append(Vector3.UP)
-			col.append(Color(roof, 0.0))
-			uv.append(Vector2(0.0, -1.0))
+			col.append(roof)
 	if v.is_empty():
 		return
 	var arr := []
@@ -661,25 +622,15 @@ static func _add_buildings(root: Node3D, buf: PackedFloat32Array, y: float, tint
 	arr[Mesh.ARRAY_VERTEX] = v
 	arr[Mesh.ARRAY_NORMAL] = nrm
 	arr[Mesh.ARRAY_COLOR] = col
-	if towers:
-		arr[Mesh.ARRAY_TEX_UV] = uv
 	var mesh := ArrayMesh.new()
 	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
-	var mat: Material
-	if towers:
-		var sm := ShaderMaterial.new()
-		sm.shader = _tower_shader()
-		sm.set_shader_parameter("tint", tint)
-		mat = sm
-	else:
-		var m := StandardMaterial3D.new()
-		m.vertex_color_use_as_albedo = true
-		m.albedo_color = tint
-		m.cull_mode = BaseMaterial3D.CULL_DISABLED
-		m.roughness = 0.95
-		m.disable_receive_shadows = true
-		mat = m
+	var mat := StandardMaterial3D.new()
 	mat.resource_name = "city"
+	mat.vertex_color_use_as_albedo = true
+	mat.albedo_color = tint
+	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	mat.roughness = 0.95
+	mat.disable_receive_shadows = true
 	var mi := MeshInstance3D.new()
 	mi.name = "Buildings"
 	mi.mesh = mesh
@@ -687,61 +638,6 @@ static func _add_buildings(root: Node3D, buf: PackedFloat32Array, y: float, tint
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	mi.set_meta("open_ground", true)
 	root.add_child(mi)
-
-
-static var _tower_sh: Shader
-
-## The towers' walls: UV is (metres round the footprint, metres up), COLOR.a picks the wall (1 glass
-## curtain wall, 0.5 concrete with windows, 0 a roof). Past a few hundred metres the pattern fades to
-## its own average colour, so it never shimmers.
-static func _tower_shader() -> Shader:
-	if _tower_sh == null:
-		_tower_sh = Shader.new()
-		_tower_sh.code = TOWER_SHADER
-	return _tower_sh
-
-
-const TOWER_SHADER := """
-shader_type spatial;
-render_mode cull_disabled, shadows_disabled;
-uniform vec4 tint : source_color = vec4(1.0);
-
-float hash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
-
-void fragment() {
-	vec3 base = COLOR.rgb * tint.rgb;
-	float style = COLOR.a;
-	if (style < 0.25) {
-		ALBEDO = base;
-		ROUGHNESS = 0.95;
-	} else if (style > 0.75) {
-		vec2 cell = vec2(UV.x / 1.5, UV.y / 3.4);
-		vec2 f = fract(cell);
-		vec2 w = fwidth(cell);
-		float fade = clamp(1.6 - max(w.x, w.y) * 2.5, 0.0, 1.0);
-		float h = hash(floor(cell));
-		float frame = max(step(f.x, 0.07), step(f.y, 0.17));
-		vec3 glass = base * (0.82 + 0.3 * h);
-		vec3 detail = mix(glass, base * 1.45 + vec3(0.04), frame);
-		vec3 avg = base * 1.08;
-		ALBEDO = mix(avg, detail, fade);
-		ROUGHNESS = mix(0.9, mix(0.3, 0.8, frame), fade);
-		SPECULAR = 0.6;
-	} else {
-		vec2 cell = vec2(UV.x / 3.0, UV.y / 3.4);
-		vec2 f = fract(cell);
-		vec2 w = fwidth(cell);
-		float fade = clamp(1.6 - max(w.x, w.y) * 2.5, 0.0, 1.0);
-		float h = hash(floor(cell));
-		float win = step(0.18, f.x) * step(f.x, 0.82) * step(0.3, f.y) * step(f.y, 0.86);
-		vec3 pane = vec3(0.05, 0.07, 0.09) * (0.7 + 0.6 * h);
-		vec3 detail = mix(base, pane, win);
-		vec3 avg = mix(base, vec3(0.06, 0.08, 0.1), 0.36);
-		ALBEDO = mix(avg, detail, fade);
-		ROUGHNESS = 0.9;
-	}
-}
-"""
 
 
 ## A canopy of about radius 1: two lumpy lobes, one high and one off to the side, so a park of them
@@ -871,37 +767,6 @@ static func _pick(src, used: PackedInt32Array):
 	for j in range(used.size()):
 		dst[j] = src[used[j]]
 	return dst
-
-
-## Shows ground `slug`'s roof shut or open (ROOFS) on `root`, a ground instantiate() built.
-static func set_roof(root: Node, slug: String, shut: bool) -> void:
-	var r: Dictionary = ROOFS.get(slug, {})
-	if r.is_empty():
-		return
-	for n in root.find_children(str(r["shut"]) + "*", "", true, false):
-		if n is Node3D:
-			n.visible = shut
-	for n in root.find_children(str(r["open"]) + "*", "", true, false):
-		if n is Node3D:
-			n.visible = not shut
-	# Under the shut roof no sun reaches the ground: the roof's lights light it evenly, so nothing of
-	# the stadium throws a sun shadow on the field or the stands. Open, its shadows come back.
-	for n in root.find_children("*", "GeometryInstance3D", true, false):
-		var g := n as GeometryInstance3D
-		if not g.has_meta("roof_cast"):
-			g.set_meta("roof_cast", g.cast_shadow)
-		g.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF if shut else g.get_meta("roof_cast")
-
-
-## Is ground `slug`'s roof shut on `root`?
-static func roof_shut(root: Node, slug: String) -> bool:
-	var r: Dictionary = ROOFS.get(slug, {})
-	if r.is_empty():
-		return false
-	for n in root.find_children(str(r["shut"]) + "*", "", true, false):
-		if n is Node3D:
-			return n.visible
-	return false
 
 
 ## Every seat in the model's own metres (seats_*.bin), for the crowd to sit on (Oval3DCrowd).
