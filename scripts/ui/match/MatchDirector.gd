@@ -567,6 +567,10 @@ func _tick(h: float) -> void:
 		MatchMotion.limit_step(tokens[i], from[i], h)
 	_update_ball(h)
 	_keep_off_ball()
+	# Rounding a loose ball puts him at its edge: held to a sprint too (test_match_motion's
+	# 1x pass caught 16.8 m/s in a fumble there).
+	for i in range(tokens.size()):
+		MatchMotion.limit_step(tokens[i], from[i], h)
 	if not flash.is_empty():
 		flash["left"] = float(flash["left"]) - h
 		if float(flash["left"]) <= 0.0:
