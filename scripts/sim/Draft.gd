@@ -592,11 +592,11 @@ func rivals_step(budget_usec: int) -> bool:
 			_rival_pass["sig"] = _pass_sig()
 		if not _pass_run(_rival_pass, until):
 			break
-		var pass_ := _rival_pass
+		var scan := _rival_pass
 		_rival_pass = {}
-		var code := str(pass_["code"])
-		var why: Dictionary = pass_["why"]
-		if not _ai_pick_made(code, _pass_end(pass_), why):
+		var code := str(scan["code"])
+		var why: Dictionary = scan["why"]
+		if not _ai_pick_made(code, _pass_end(scan), why):
 			_skip_current_pick()
 		if Time.get_ticks_usec() >= until:
 			break
@@ -1006,9 +1006,9 @@ func _reserve_per_spot() -> float:
 ## `wanted` it passed on, or took (P-18): the branch below that ruled him
 ## out, or what his score lost on against the pick (_why_scored).
 func _best_ai_pick(code: String, why := {}) -> Dictionary:
-	var pass_ := _pass_begin(code, why)
-	_pass_run(pass_, -1)
-	return _pass_end(pass_)
+	var scan := _pass_begin(code, why)
+	_pass_run(scan, -1)
+	return _pass_end(scan)
 
 
 # A club weighing the pool for one pick, as a pass that can stop part way and
@@ -1025,10 +1025,10 @@ func _pass_begin(code: String, why: Dictionary) -> Dictionary:
 			"best_score": -INF, "k": 0, "terms": {}}
 
 
-func _terms_in(pass_: Dictionary) -> void:
+func _terms_in(scan: Dictionary) -> void:
 	_refresh_ai_cache()
-	_terms = pass_["terms"]
-	_terms_code = str(pass_["code"])
+	_terms = scan["terms"]
+	_terms_code = str(scan["code"])
 	_terms_on = true
 
 
@@ -1039,21 +1039,21 @@ func _terms_out() -> void:
 
 ## Weigh the pool on from the pass's place until it is all read (true) or
 ## the clock passes `until_usec` (false; -1: no limit).
-func _pass_run(pass_: Dictionary, until_usec: int) -> bool:
-	_terms_in(pass_)
-	var code := str(pass_["code"])
-	var why: Dictionary = pass_["why"]
-	var scored: Dictionary = pass_["scored"]
-	var usable := int(pass_["usable"])
-	var forced_role := str(pass_["forced"])
-	var watch := bool(pass_["watch"])
-	var mine := bool(pass_["mine"])
-	var best: Dictionary = pass_["best"]
-	var best_score := float(pass_["best_score"])
-	var k := int(pass_["k"])
+func _pass_run(scan: Dictionary, until_usec: int) -> bool:
+	_terms_in(scan)
+	var code := str(scan["code"])
+	var why: Dictionary = scan["why"]
+	var scored: Dictionary = scan["scored"]
+	var usable := int(scan["usable"])
+	var forced_role := str(scan["forced"])
+	var watch := bool(scan["watch"])
+	var mine := bool(scan["mine"])
+	var best: Dictionary = scan["best"]
+	var best_score := float(scan["best_score"])
+	var k := int(scan["k"])
 	var n := pool.size()
 	while k < n:
-		if until_usec >= 0 and k % 16 == 0 and k > int(pass_["k"]) and Time.get_ticks_usec() >= until_usec:
+		if until_usec >= 0 and k % 16 == 0 and k > int(scan["k"]) and Time.get_ticks_usec() >= until_usec:
 			break
 		var p: Dictionary = pool[k]
 		k += 1
@@ -1084,24 +1084,24 @@ func _pass_run(pass_: Dictionary, until_usec: int) -> bool:
 		if score > best_score:
 			best_score = score
 			best = p
-	pass_["best"] = best
-	pass_["best_score"] = best_score
-	pass_["k"] = k
+	scan["best"] = best
+	scan["best_score"] = best_score
+	scan["k"] = k
 	_terms_out()
 	return k >= n
 
 
 ## The pass's pick once the pool is read ({} when nobody fits).
-func _pass_end(pass_: Dictionary) -> Dictionary:
-	_terms_in(pass_)
-	var code := str(pass_["code"])
-	var why: Dictionary = pass_["why"]
-	var scored: Dictionary = pass_["scored"]
-	var watch := bool(pass_["watch"])
-	var mine := bool(pass_["mine"])
-	var forced_role := str(pass_["forced"])
-	var best: Dictionary = pass_["best"]
-	var best_score := float(pass_["best_score"])
+func _pass_end(scan: Dictionary) -> Dictionary:
+	_terms_in(scan)
+	var code := str(scan["code"])
+	var why: Dictionary = scan["why"]
+	var scored: Dictionary = scan["scored"]
+	var watch := bool(scan["watch"])
+	var mine := bool(scan["mine"])
+	var forced_role := str(scan["forced"])
+	var best: Dictionary = scan["best"]
+	var best_score := float(scan["best_score"])
 	# If a forced role cannot be filled, keep the draft moving with the best
 	# affordable player. This should be rare, but protects small custom datasets.
 	if best.is_empty() and forced_role != "":
