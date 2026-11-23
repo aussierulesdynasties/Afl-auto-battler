@@ -1,9 +1,8 @@
 """Optus Stadium's bronze cladding, redrawn (Optus rebuild to the MCG standard, stage 3).
 
-The facade's signature: horizontal anodised-aluminium fins in mixed bronze, copper, chocolate and
-sand tones, in runs of 1 to 6 m, with the odd deep copper-red run and thin pale-blue slivers lit
-through the gaps; soft diagonal drifts of lighter and darker tone across the whole drum (the
-director's sunset photo, /mnt/project-files/optus-rebuild/ref_facade_sunset.jpg, and Google Earth).
+The facade's signature: horizontal anodised-aluminium fins (geometry, build.py) over a dark charcoal-slate base,
+crossed by long thin streaks one fin high, 6-13 m long, in pale grey-white and terracotta copper-red (measured on
+Google Earth's east and south views, 2026-11-23).
 
 Draws one pattern in metres round the drum (s, along the facade from segment 0) and down from the
 bronze's top (d), so the plain bronze and the two name signs join without a seam, and writes them
@@ -15,7 +14,8 @@ into assets/grounds/optus/optus.glb:
   from the bronze's top), with the letters lifted from #1867's sign (white OPTUS STADIUM, yellow "yes") set
   6 m under the top, as on the real drum.
 - `glass`: the glass band over the bronze (no white Y columns outside, Google Earth) `entrance`: the street glazing,
-  and `storey`: the glazed storey under the bronze round the north and west (also saved as tex/storey.png for build.py).
+  and `storey`: the glazed storey under the bronze round the north and west (also saved as tex/storey.png for build.py);
+  `roof` (one bay a tile, build.py) and `steel` (the trusses), also saved to tex/ for build.py.
 
     python3 tools/grounds/optus/bronze.py [--old-sign sign_a.png] [--preview out.png]
 """
@@ -29,7 +29,7 @@ from PIL import Image, ImageFilter
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-from glb_images import read_glb, replace_images, _view_bytes  # noqa: E402
+from glb_images import read_glb, replace_images, write_glb, _view_bytes  # noqa: E402
 
 REPO = os.path.join(HERE, "..", "..", "..")
 GLB = os.path.join(REPO, "assets", "grounds", "optus", "optus.glb")
@@ -43,42 +43,62 @@ SIGN_DROP = 32.0
 LETTERS_D = 6.0            # the letters' middle, metres under the bronze's top
 OLD_SIGN = (37.28464798665914, 32.0)   # #1867's sign_a in metres (its letters are lifted from it)
 
-# The fin colours (sRGB) and how often each is drawn; the low-frequency drift picks lighter or darker.
-# Google Earth's north and east close views (2026-11-21): a dark chocolate base with long, thin, high-contrast runs of
-# copper, salmon and pale pinkish sand, so the fins still read as streaks from across the river.
-TONES = np.array([
-    (64, 52, 48), (78, 60, 54), (94, 68, 56), (98, 66, 52), (118, 78, 60),
-    (140, 92, 70), (162, 108, 84), (184, 130, 106), (204, 160, 140),
-], float)
-COPPER_RED = np.array([(170, 96, 78), (186, 112, 92), (150, 80, 62)], float)
-BLUE = np.array((128, 190, 222), float)
+# The fin colours (sRGB). Measured 2026-11-23 on Google Earth's east view (f000, lit, 0.066 m a pixel) and south view
+# (f270, shade): a dark charcoal-slate base, nearly uniform, crossed by long thin streaks one fin high, 6-13 m long:
+# pale grey-white ones and terracotta copper-red ones. No mid-tone runs and no blue: the earlier passes drew short runs
+# across the whole tone scale, which read as brickwork (PC GPU capture 2026-11-22).
+BASE = np.array([(105, 110, 117), (117, 120, 123), (127, 127, 127), (120, 113, 110)], float)
+PALE = np.array([(213, 215, 215), (232, 232, 230), (190, 192, 194)], float)
+# 2026-11-23: the streaks lifted 1.15x after 648fc441 (lit views' p90/p50 1.23-1.37 against Google Earth's 1.48-1.53;
+# the occlusion keeps them at 1.1x the base in shade). The base lifted 1.1x more after 175b3d4c (12 views 0.70-0.94 of Google Earth, median 0.85), and before
+# that another 1.2x once the streaks' occlusion reached the match (shaded views 0.68-0.80 of
+# Google Earth's brightness, lit 0.80-0.87). Before that: the tile lifted 1.32x overall (base 1.46x, streaks 1.1x, since our streaks already stood out more than
+# Google Earth's), Google Earth's brightness over our capture's at 236 facade hovers 18-30 m up
+# on the 12 matched views, both lit by Google Earth's sun (survey/sun.json); the hue gap is Google Earth's haze.
+COPPER_RED = np.array([(190, 116, 101), (205, 131, 114), (169, 106, 93)], float)
+BASE_RM = (0.55, 0.3)   # (roughness, metalness), the whole bronze
+SHADE_K = 1.1           # a streak in shade, over the base (Google Earth's shaded views: p90/p50 1.08-1.14)
+P_PALE, P_RED = 0.13, 0.08   # the share of each fin row's length that is a streak of each kind
 
 
 def _layout(seed=5):
-    """Per row: run boundaries in s over one tile (periodic), and each run's tone, red and blue flags."""
+    """Per row: run boundaries in s over one tile (periodic), and each run's kind (0 base, 1 pale, 2 red) and tone."""
     rng = np.random.default_rng(seed)
     rows = []
     for _ in range(ROWS):
-        cuts = [rng.uniform(0, 3)]
-        while cuts[-1] < BAY2 + cuts[0]:
-            cuts.append(cuts[-1] + rng.choice([rng.uniform(0.8, 2.2), rng.uniform(2.0, 4.5), rng.uniform(4.0, 7.0)],
-                                              p=[0.45, 0.4, 0.15]))
-        # The last run wraps round to meet the first.
-        cuts = np.array(cuts[:-1] + [cuts[0] + BAY2])
+        cuts = [rng.uniform(0, 6)]
+        kinds = []
+        while True:
+            # Base runs between streaks; a streak mostly 6-13 m long (Google Earth), now and then a short one.
+            # Run odds chosen so the streaks cover P_PALE and P_RED of the length (checked by shares()).
+            kind = int(rng.choice(3, p=[0.748, 0.156, 0.096]))
+            kinds.append(kind)
+            ln = rng.uniform(6.0, 13.0) if kind and rng.random() < 0.75 else (rng.uniform(1.5, 5.0) if kind else rng.uniform(4.0, 16.0))
+            nxt = cuts[-1] + ln
+            if nxt >= BAY2 + cuts[0]:
+                break
+            cuts.append(nxt)
+        cuts = np.array(cuts + [cuts[0] + BAY2])   # the last run wraps round to meet the first
         n = len(cuts) - 1
         rows.append({
             "cuts": cuts,
-            # Most runs sit back in the dark base; under half catch the light as copper, salmon or sand streaks.
-            "jit": np.where(rng.random(n) < 0.58, rng.normal(-2.4, 0.6, n), rng.normal(1.9, 1.3, n)),           # each run's own step up or down the tone scale
-            "red": rng.random(n) < 0.08,
-            "red_i": rng.integers(0, len(COPPER_RED), n),
-            "blue": rng.random(n) < 0.015,
-            "shine": rng.uniform(-0.05, 0.05, n),
+            "kind": np.array(kinds[:n]),
+            "tone": rng.integers(0, 3, n),
+            "base": rng.integers(0, len(BASE), n),
+            "shine": rng.uniform(-0.04, 0.04, n),
         })
     return rows
 
 
 ROWS_L = _layout()
+
+
+def shares():
+    """The share of fin length that is base, pale and red streak, over one tile."""
+    t = np.zeros(3)
+    for L in ROWS_L:
+        np.add.at(t, L["kind"], np.diff(L["cuts"]))
+    return t / t.sum()
 
 
 def drift(s, d):
@@ -88,14 +108,15 @@ def drift(s, d):
     return (0.55 * np.sin(a + 2 * b + 0.7) + 0.3 * np.sin(2 * a - b + 2.1) + 0.25 * np.sin(3 * a + 3 * b + 4.0)) / 1.1
 
 
-def colour(s, d):
-    """sRGB (H, W, 3) for arrays s (W) and d (H) in metres."""
+def colour(s, d, finish=False):
+    """sRGB (H, W, 3) for arrays s (W) and d (H) in metres; finish=True gives the metal-roughness map instead."""
     s = np.mod(s, BAY2)
     S, D = np.meshgrid(s, np.mod(d, BH))
     pitch = BH / ROWS
     r = (D // pitch).astype(int) % ROWS
     t = (D % pitch) / pitch                      # 0 at the fin's top edge, 1 at its foot
     out = np.zeros(S.shape + (3,), float)
+    kinds = np.zeros(S.shape, int)
     rng = np.random.default_rng(9)
     for ri in range(ROWS):
         m = r == ri
@@ -104,43 +125,46 @@ def colour(s, d):
         L = ROWS_L[ri]
         ss = S[m]
         ss = np.where(ss < L["cuts"][0], ss + BAY2, ss)
-        k = np.clip(np.searchsorted(L["cuts"], ss, side="right") - 1, 0, len(L["jit"]) - 1)
-        level = 3.0 + 1.1 * drift(ss, D[m]) + L["jit"][k]
-        lo = np.clip(np.floor(level).astype(int), 0, len(TONES) - 2)
-        f = np.clip(level - lo, 0, 1)[:, None]
-        c = TONES[lo] * (1 - f) + TONES[lo + 1] * f
-        c = np.where(L["red"][k][:, None], COPPER_RED[L["red_i"][k]], c)
+        k = np.clip(np.searchsorted(L["cuts"], ss, side="right") - 1, 0, len(L["kind"]) - 1)
+        kind = L["kind"][k][:, None]
+        c = BASE[L["base"][k]] * (1.0 + 0.06 * drift(ss, D[m]))[:, None]
+        c = np.where(kind == 1, PALE[L["tone"][k]], c)
+        c = np.where(kind == 2, COPPER_RED[L["tone"][k]], c)
         c = c * (1.0 + L["shine"][k][:, None])
         # Along each run a slight fall-off from its middle (the fin's curvature catching the light).
-        a0 = L["cuts"][k]
-        a1 = L["cuts"][k + 1]
-        u = (ss - a0) / np.maximum(a1 - a0, 1e-3)
-        c = c * (1.0 + 0.05 * np.sin(np.pi * u))[:, None]
+        u = (ss - L["cuts"][k]) / np.maximum(L["cuts"][k + 1] - L["cuts"][k], 1e-3)
+        c = c * (1.0 + 0.04 * np.sin(np.pi * u))[:, None]
+        # Fin profile, gentle: the fins are geometry (build.py), so the texture only darkens the gap under each.
         tt = t[m][:, None]
-        # Fin profile: a bright lip, the face, and the dark gap under it.
-        prof = np.where(tt < 0.07, 1.16, np.where(tt > 0.86, 0.38, 1.0 - 0.10 * tt))
-        # A lit run catches the light on its upper face only; its lower half falls back to the dark base, so each
-        # streak reads thin, as on the drum.
-        lit = (L["jit"][k] > 0) & (tt[:, 0] > 0.5) & ~L["red"][k]
-        c = np.where(lit[:, None], TONES[1] * (1.0 + L["shine"][k][:, None]), c)
-        c = c * prof
-        # Pale-blue slivers: the light strip in the gap, thin and short.
-        blue = L["blue"][k] & (tt[:, 0] > 0.64) & (tt[:, 0] < 0.9) & (u > 0.1) & (u < 0.9)
-        c = np.where(blue[:, None], BLUE, c)
+        c = c * np.where(tt > 0.86, 0.75, 1.0)
         out[m] = c
+        kinds[m] = kind[:, 0]
     # Brushed grain along the fins.
     grain = rng.normal(0, 1, (S.shape[0], max(8, S.shape[1] // 24)))
     grain = np.asarray(Image.fromarray(((grain * 20) + 128).clip(0, 255).astype(np.uint8)).resize(
         (S.shape[1], S.shape[0]), Image.BILINEAR), float) / 128.0 - 1.0
-    out *= (1.0 + 0.035 * grain)[..., None]
+    out *= (1.0 + 0.03 * grain)[..., None]
+    if finish:
+        # glTF occlusion-metal-roughness (red occlusion, green roughness, blue metalness). Google Earth's streaks stand
+        # out on the lit side (p90/p50 1.5) and all but vanish in shade (1.1); a plain streak keeps its 1.6 in shade.
+        # Occlusion dims only the sky's light, never the sun's, so each streak pixel gets the occlusion that brings it
+        # to 1.1x the base in shade, and keeps its full brightness in sun. (Metal streaks, tried first, changed nothing.)
+        lin = lambda x: (np.clip(x, 0, 255) / 255.0) ** 2.2
+        lum = lambda x: (lin(x) * np.array([0.2126, 0.7152, 0.0722])).sum(-1)
+        lb = float(lum(BASE.mean(0)))
+        mr = np.zeros(S.shape + (3,), np.uint8)
+        mr[..., 0] = np.where(kinds > 0, np.clip(SHADE_K * lb / np.maximum(lum(out), 1e-4), 0, 1), 1.0) * 255
+        mr[..., 1] = BASE_RM[0] * 255
+        mr[..., 2] = BASE_RM[1] * 255
+        return mr
     return np.clip(out, 0, 255).astype(np.uint8)
 
 
-def tile():
+def tile(finish=False):
     w, h = int(round(BAY2 * PX)), int(round(BH * PX))
     s = (np.arange(w) + 0.5) / w * BAY2
     d = (np.arange(h) + 0.5) / h * BH
-    return Image.fromarray(colour(s, d), "RGB")
+    return Image.fromarray(colour(s, d, finish), "RGB")
 
 
 def letters(old):
@@ -159,6 +183,21 @@ def letters(old):
     mi = mi.resize(size, Image.LANCZOS).filter(ImageFilter.GaussianBlur(0.6))
     ci = ci.resize(size, Image.LANCZOS)
     return np.asarray(mi, float)[..., None] / 255.0, np.asarray(ci, float)
+
+
+def sign_finish(old):
+    """The finish map under the name sign; the letters take no occlusion (placed as in sign())."""
+    w, h = int(round(SIGN_W * PX)), int(round(SIGN_DROP * PX))
+    s = 7.3 + (np.arange(w) + 0.5) / w * SIGN_W
+    d = (np.arange(h) + 0.5) / h * SIGN_DROP
+    mr = colour(s, d, True).astype(float)
+    alpha, _ = letters(old)
+    lh, lw = alpha.shape[:2]
+    y0 = int(round(LETTERS_D * PX - lh / 2))
+    x0 = (w - lw) // 2
+    sub = mr[y0:y0 + lh, x0:x0 + lw, 0]
+    mr[y0:y0 + lh, x0:x0 + lw, 0] = sub * (1 - alpha[..., 0]) + 255 * alpha[..., 0]
+    return Image.fromarray(mr.clip(0, 255).astype(np.uint8), "RGB")
 
 
 def sign(old):
@@ -187,56 +226,68 @@ def _noise(h, w, cells, seed):
 
 def glass():
     """The glass band over the bronze, one tile 2 bays wide (u) and GLASS_H down from the soffit (Google Earth 060/000):
-    a dark open strip 4.2 m deep with a slim white post each bay under the roof's fascia, a white head rail, then pale
-    grey-green glazing in 2.2 m floors, each with a bright louvre band at its foot and faint mullions every 1.55 m."""
+    pale blue-teal grey glazing in 2.2 m floors under the 3.4 m glass head (frames are geometry, build.py)."""
     w, h = 1024, int(GLASS_H * 32)
     d = (np.arange(h)[:, None] + 0.5) / 32.0 * np.ones((1, w))
     u = (np.arange(w)[None, :] + 0.5) / w * np.ones((h, 1))
     img = np.zeros((h, w, 3))
-    base = np.array((150, 172, 160), float)
-    f = ((d - 4.6) % 2.2) / 2.2                                 # 0 at a floor's top, 1 at its foot
+    base = np.array((86, 109, 118), float)   # 2026-11-23: (100,128,138) / 1.17, our capture's brightness over Google Earth's at 128 glass-band hovers
+    f = ((d - 3.8) % 2.2) / 2.2                                 # 0 at a floor's top, 1 at its foot
     img[:] = base * (1.08 - 0.22 * f)[..., None]
-    img = np.where((f > 0.8)[..., None], np.array((230, 236, 230), float), img)           # louvre band
-    img = np.where((f > 0.95)[..., None], np.array((112, 128, 122), float), img)          # its shadow
-    mull = (np.abs(((u * 20) % 1) - 0.5) > 0.47)
-    img = np.where(mull[..., None], img * 0.9 + 18, img)
     img *= (1.0 + 0.05 * _noise(h, w, (12, 40), 3))[..., None]
-    strip = d < 4.2
-    img[strip] = np.array((44, 50, 54), float) * (1.0 + 0.25 * (d[strip] / 4.2))[..., None]
-    post = strip & ((np.abs(((u * 2) % 1) - 0.5) > 0.5 - 0.35 / 32.5))
-    img[post] = (226, 228, 226)
-    img[(d >= 4.2) & (d < 4.6)] = (224, 226, 224)                                          # head rail
+    # The head rail, the louvre band at each floor's foot and the mullions are geometry now (build.py); the dark
+    # strip and its posts above the glass head are modelled too, so the glass carries only its own tone.
     return Image.fromarray(img.clip(0, 255).astype(np.uint8), "RGB")
 
 
 def entrance():
     """The street-level glazing, one entrance bay wide, ENTRANCE_H tall from the ground (Google Earth 060, 090): pale
-    green glass in 2.5 m transoms with slim white mullions every quarter bay, doors darker at the foot."""
+    green glass, doors darker at the foot (its transoms and posts are geometry, build.py)."""
     w, h = 512, int(ENTRANCE_H * 32)
     z = (ENTRANCE_H - (np.arange(h)[:, None] + 0.5) / 32.0) * np.ones((1, w))   # image bottom is the ground
     u = (np.arange(w)[None, :] + 0.5) / w * np.ones((h, 1))
     t = (z % 2.5) / 2.5
-    img = np.array((128, 154, 150), float) * (0.94 + 0.12 * t)[..., None]
+    img = np.array((104, 132, 140), float) * (0.94 + 0.12 * t)[..., None]
     img = np.where((z < 2.6)[..., None], np.array((84, 100, 100), float), img)            # doors in shade
-    img = np.where((t < 0.04)[..., None] & (z > 0.3)[..., None], np.array((210, 214, 212), float), img)
-    mull = np.abs(((u * 4) % 1) - 0.5) > 0.5 - 0.12 / 3.6
-    img[mull] = (222, 224, 222)
+    # transoms and the posts between bays are geometry (build.py)
     img *= (1.0 + 0.05 * _noise(h, w, (8, 12), 4))[..., None]
     return Image.fromarray(img.clip(0, 255).astype(np.uint8), "RGB")
 
 
 def storey():
     """The glazed storey under the bronze round the north and west (Google Earth 000, 330): dark blue glass with sky
-    caught low, slim white posts four to a tile (2 bays, about 8 m apart), a white head rail; image top at 13.5 m, 6 m."""
+    caught low (its posts, mullions and head rail are geometry, build.py); image top at 13.5 m, 6 m."""
     w, h = 1024, 192
     d = (np.arange(h)[:, None] + 0.5) / h * 6.0 * np.ones((1, w))
     u = (np.arange(w)[None, :] + 0.5) / w * np.ones((h, 1))
     img = np.array((44, 58, 78), float) * (0.9 + 0.35 * (d / 6.0))[..., None]
     img *= (1.0 + 0.06 * _noise(h, w, (4, 24), 5))[..., None]
-    img[np.abs(((u * 16) % 1) - 0.5) > 0.5 - 0.05 / 2.0] = (70, 86, 104)        # mullions
-    img[np.abs(((u * 4) % 1) - 0.5) > 0.5 - 0.3 / 8.1] = (226, 228, 226)        # posts
-    img[d < 0.25] = (222, 224, 222)
+    # mullions, posts and the head rail are geometry (build.py)
     return Image.fromarray(img.clip(0, 255).astype(np.uint8), "RGB")
+
+
+def roof():
+    """The roof membrane, one bay across (u) and fascia (image top) to inner edge (image bottom), Google Earth roof_S and
+    roof_top: white PTFE pillows, shaded toward the valleys where a grey cable line runs, two faint cross cables and a white
+    rim. No grey strip along the inner edge: Google Earth's straight-down shots under the 2026 sun keep the membrane
+    white to within a metre of the edge (PC render at 4f6c463 showed a painted strip 3-4 m wide reading 0.8x GE there)."""
+    w, h = 256, 1024
+    u = (np.arange(w)[None, :] + 0.5) / w * np.ones((h, 1))
+    v = (np.arange(h)[:, None] + 0.5) / h * np.ones((1, w))
+    img = np.array((246, 246, 243), float) * (0.88 + 0.12 * np.sin(np.pi * u) ** 0.6)[..., None]
+    img *= (1.0 + 0.025 * _noise(h, w, (16, 4), 6))[..., None]
+    for c in (0.36, 0.68):
+        img[np.abs(v - c) < 0.0025] *= 0.9
+    img[(u < 0.012) | (u > 0.988)] = (150, 154, 158)
+    img[v > 0.985] = (238, 238, 236)
+    img[v < 0.012] = (236, 236, 234)
+    return Image.fromarray(img.clip(0, 255).astype(np.uint8), "RGB")
+
+
+def steel():
+    """The roof trusses' steel: light grey, so they read as Google Earth's grey spines along the valleys."""
+    g = np.array((212, 214, 216), float) * (1.0 + 0.03 * _noise(64, 64, (4, 4), 8))[..., None]
+    return Image.fromarray(g.clip(0, 255).astype(np.uint8), "RGB")
 
 
 def png(im):
@@ -251,13 +302,24 @@ def main():
     src = sys.argv[sys.argv.index("--old-sign") + 1] if "--old-sign" in sys.argv else None
     old = Image.open(src) if src else Image.open(io.BytesIO(_view_bytes(
         js, bn, next(im for im in js["images"] if im["name"] == "sign_a")["bufferView"])))
-    new = {"bronze": tile(), "sign_a": sign(old), "glass": glass(), "entrance": entrance(), "storey": storey()}
+    new = {"bronze": tile(), "sign_a": sign(old), "glass": glass(), "entrance": entrance(), "storey": storey(), "roof": roof(), "steel": steel(),
+           "bronze_mr": tile(True), "sign_a_mr": sign_finish(old)}
     if "--preview" in sys.argv:
         p = sys.argv[sys.argv.index("--preview") + 1]
         for n, im in new.items():
             im.save(p.replace(".png", "_%s.png" % n))
         return
+    # build.py reads the finish maps from tex/ (it needs them to give the materials their metal-roughness texture).
+    for n in ("bronze_mr", "sign_a_mr"):
+        new[n].save(os.path.join(REPO, ".claude", "review", "optus", "tex", n + ".png"))
     replace_images(GLB, {n: png(im) for n, im in new.items() if n in names})
+    # The finish maps' red channel is the occlusion: point each bronze material's occlusion at its own map.
+    js, bn = read_glb(GLB)
+    for m in js["materials"]:
+        mrt = m.get("pbrMetallicRoughness", {}).get("metallicRoughnessTexture")
+        if m.get("name") in ("bronze", "sign_a") and mrt:
+            m["occlusionTexture"] = {"index": mrt["index"]}
+    write_glb(GLB, js, bn)
     print({n: im.size for n, im in new.items()})
 
 

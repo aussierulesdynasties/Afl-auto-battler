@@ -5,6 +5,7 @@
 // concrete. amb_* is the difference between the sky's light with that grass greyed and with it as
 // it is, for a face turned straight down, half down, level, half up and straight up: added to the
 // sky's own light it greys what a face took from the grass. A face turned up changes by nothing.
+// A model's occlusion map (Optus's bronze) dims the sky's light, the correction included.
 shader_type spatial;
 render_mode cull_disabled;
 
@@ -12,6 +13,9 @@ uniform sampler2D albedo_tex : source_color, hint_default_white, filter_linear_m
 uniform bool use_vcol = false;   // the model paints with its vertex colours (Adelaide)
 uniform vec4 albedo_col : source_color = vec4(1.0);
 uniform float roughness_v = 0.85;
+// The model's occlusion map, when it has one (glTF occlusion, red): it dims the sky's light and not the sun's.
+uniform bool use_ao = false;
+uniform sampler2D ao_tex : hint_default_white, filter_linear_mipmap, repeat_enable;
 uniform float metallic_v = 0.0;
 uniform vec3 uv_scale = vec3(1.0);
 uniform vec3 uv_offset = vec3(0.0);
@@ -44,6 +48,10 @@ void fragment() {
 	}
 	ALBEDO = a.rgb;
 	ROUGHNESS = roughness_v;
+	float ao = use_ao ? texture(ao_tex, UV * uv_scale.xy + uv_offset.xy).r : 1.0;
+	if (use_ao) {
+		AO = ao;
+	}
 	METALLIC = metallic_v;
 	vec3 v = normalize(-VERTEX);
 	float n_y = (INV_VIEW_MATRIX * vec4(NORMAL, 0.0)).y;
@@ -54,11 +62,10 @@ void fragment() {
 	// mirrors the grass below as much as it scatters it (Schlick's share, dulled by roughness).
 	vec3 f0 = mix(vec3(0.04), a.rgb, metallic_v);
 	float nv = clamp(dot(NORMAL, v), 0.0, 1.0);
-	// Schlick's share as a rough face takes it (Lagarde's form: the glancing rise only reaches 1 - roughness).
-	// The plain form let a dark face at a glancing angle mirror the whole correction: its grass taken out
-	// and grey put back on a face that had mirrored little grass, and it read purple (Adelaide's big screen,
-	// its scoreboard's window frames, 2026-11-22).
+	// Schlick with roughness, as the renderer's own sky reflection is weighted: a rough face at a grazing angle mirrors
+	// far less than a smooth one. The plain Schlick share took out more green than the sky had put in, and a white
+	// face seen edge-on (Optus's roof fascia from above) turned purple.
 	vec3 f = f0 + (max(vec3(1.0 - roughness_v), f0) - f0) * pow(1.0 - nv, 5.0);
 	fix += f * sky_fix(r_y) * ref_scale * (1.0 - roughness_v * 0.6);
-	EMISSION = fix + a.rgb * through * step(n_y, 0.0);
+	EMISSION = fix * ao + a.rgb * through * step(n_y, 0.0);
 }
