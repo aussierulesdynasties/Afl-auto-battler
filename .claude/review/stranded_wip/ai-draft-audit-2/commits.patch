@@ -1,0 +1,130 @@
+From adbf4c67a0283c7e3e94bc6c44790d28cc52cf7a Mon Sep 17 00:00:00 2001
+From: gabebartolo-spec <gabebartolo@gmail.com>
+Date: Wed, 4 Nov 2026 02:26:36 +1100
+Subject: [PATCH] Audit: draft_strategy_impl prints a ROLE line per club per
+ snapshot; aggregator adds the roles table (row 37)
+
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+---
+ tools/audit/draft_strategy_agg.py  | 43 +++++++++++++++++++++++++++++-
+ tools/audit/draft_strategy_impl.gd | 24 +++++++++++++++++
+ 2 files changed, 66 insertions(+), 1 deletion(-)
+
+diff --git a/tools/audit/draft_strategy_agg.py b/tools/audit/draft_strategy_agg.py
+index 1e709eac5..d910d0458 100644
+--- a/tools/audit/draft_strategy_agg.py
++++ b/tools/audit/draft_strategy_agg.py
+@@ -13,7 +13,7 @@ import re
+ import sys
+ from collections import defaultdict
+ 
+-LINE = re.compile(r"(?:^|\s)(LIST|POOL|DP|DC|AGE|DA)\|(.*)$")
++LINE = re.compile(r"(?:^|\s)(LIST|POOL|DP|DC|AGE|DA|ROLE)\|(.*)$")
+ M = ["best", "depth", "u23", "mid", "old", "potu", "ovru", "sq", "d32"]
+ 
+ 
+@@ -70,6 +70,46 @@ def rank_corr(x, y):
+     return num / den if den else float("nan")
+ 
+ 
++def role_tables(rec, users):
++    """E. Roles: list make-up by role, AI clubs only, against the real 2026 lists."""
++    snaps = defaultdict(lambda: defaultdict(list))  # (mode, tag, year) -> role -> [(n, ovr, top)] per club-seed
++    for r in rec["ROLE"]:
++        mode, seed, tag, year, code = r[0], int(r[1]), r[2], int(r[3]), r[4]
++        if tag != "pre" and users.get((mode, seed)) == code:
++            continue
++        have = {}
++        for part in r[5].split(","):
++            role, vals = part.split("=")
++            n, ovr, top = vals.split("/")
++            have[role] = (int(n), float(ovr), int(top))
++        snaps[(mode, tag, year)]
++        for role in ROLES:
++            n, ovr, top = have.get(role, (0, float("nan"), 0))
++            snaps[(mode, tag, year)][role].append((n, ovr, top))
++    if not snaps:
++        return
++    cols = [("real", "pre", 2026, "Real 2026 (pre-draft)")]
++    for mode in ("real", "redraft"):
++        ends = sorted(k for k in snaps if k[0] == mode and k[1] == "end")
++        if ends:
++            cols.append((mode, "end", ends[-1][2], "%s end S%d" % (mode, len(ends))))
++    cols = [c for c in cols if c[:3] in snaps]
++    print("### E. Roles: per list, AI clubs (players on the list / mean OVR of them / in the best 23)")
++    print("| Role | " + " | ".join(c[3] for c in cols) + " |")
++    print("|---|" + "---|" * len(cols))
++    for role in ROLES:
++        cells = []
++        for c in cols:
++            xs = snaps[c[:3]][role]
++            ovs = [x[1] for x in xs if x[0] > 0]
++            cells.append("%.1f / %.1f / %.1f" % (mean(x[0] for x in xs), mean(ovs), mean(x[2] for x in xs)))
++        print("| %s | %s |" % (role, " | ".join(cells)))
++    print()
++
++
++ROLES = ["KEY_FWD", "KEY_DEF", "RUCK", "MID", "WING", "SMALL_FWD", "SMALL_DEF", "GEN"]
++
++
+ def main():
+     rec = load(sys.argv[1:])
+     users = {}
+@@ -300,6 +340,7 @@ def main():
+             lo, hi if hi < 999 else "end", len(xs), 100 * len(on) / len(xs), mean(d["ovr0"] for d in on),
+             mean(d["ovr"] for d in on), mean(d["pot0"] for d in on), mean(d["ovr"] - d["ovr0"] for d in on)))
+     print()
++    role_tables(rec, users)
+     if bench:
+         print("Real 2026 lists by age (players, OVR, POT): " + "; ".join("%d: %d, %.1f, %.1f" % ((a,) + bench[a]) for a in sorted(bench)))
+ 
+diff --git a/tools/audit/draft_strategy_impl.gd b/tools/audit/draft_strategy_impl.gd
+index 2f233aae2..1deca52f2 100644
+--- a/tools/audit/draft_strategy_impl.gd
++++ b/tools/audit/draft_strategy_impl.gd
+@@ -12,6 +12,7 @@ extends RefCounted
+ ##   POOL  the players the start draws on (the redraft pool differs from the
+ ##         real lists: it holds no untried listed players)
+ ##   DP    one line per AI draft pick: the pick against the best still available
++##   ROLE  per club per snapshot: players, mean OVR and best-23 count by role
+ ##   DC    each draft pick followed one and three seasons on
+ ## Args after the impl name: mode seed club seasons (default redraft 1 MEL 10).
+ ## godot --headless --path . --script tools/audit/run_audit.gd -- draft_strategy_impl real 11 MEL 10
+@@ -71,11 +72,34 @@ func _measures(list: Array, code: String, tag: String, year: int) -> void:
+ 			list.size(), best, depth, u23.size(), mid, old, _mean(pots), _mean(ovs), sq.strength(), depth32])
+ 
+ 
++## ROLE line: per club per snapshot, for each role: players on the list, their
++## mean OVR, and how many are in the club's best 23 (by OVR).
++func _roles(list: Array, code: String, tag: String, year: int) -> void:
++	var sorted_list: Array = list.duplicate()
++	sorted_list.sort_custom(func(a, b): return float(a["overall"]) > float(b["overall"]))
++	var n := {}
++	var ov := {}
++	var top := {}
++	for i in sorted_list.size():
++		var r := str(sorted_list[i].get("role", "?"))
++		n[r] = int(n.get(r, 0)) + 1
++		ov[r] = float(ov.get(r, 0.0)) + float(sorted_list[i]["overall"])
++		if i < 23:
++			top[r] = int(top.get(r, 0)) + 1
++	var parts: Array = []
++	var keys: Array = n.keys()
++	keys.sort()
++	for r in keys:
++		parts.append("%s=%d/%.1f/%d" % [r, int(n[r]), float(ov[r]) / int(n[r]), int(top.get(r, 0))])
++	print("ROLE|%s|%d|%s|%d|%s|%s" % [mode, seed_n, tag, year, code, ",".join(parts)])
++
++
+ func _snapshot(tag: String, year: int, lists: Dictionary) -> void:
+ 	var by_age := {}
+ 	for code in GameDB.active_clubs(GameState.season_year):
+ 		if lists.has(code):
+ 			_measures(lists[code], str(code), tag, year)
++			_roles(lists[code], str(code), tag, year)
+ 			for p in lists[code]:
+ 				var a := clampi(int(float(p.get("age", 25.0))), 17, 26)
+ 				if not by_age.has(a):
+-- 
+2.55.0.windows.5
+
