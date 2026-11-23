@@ -115,7 +115,10 @@ if os.path.exists(_ovp):
         if q.is_empty or q.area < 1500: continue
         fr, fn = frac(SA_OLD, q, True), frac(SA_NOW, q, True)
         if fr is not None and fn is not None and fr >= 0.6 and fn < 0.4: ovd.append('ov' + str(r['id']))
-json.dump({'overture_ids': ovd}, open(os.path.join(D, 'era_drop.json'), 'w'))
+# today's measured heights (LiDAR, Google Earth, Overture) fit only buildings that are still the same building today
+nowids = {e['id'] for e in NOW}
+today = [e['id'] for e in out if e['type'] == 'way' and 'building' in e.get('tags', {}) and e['id'] in nowids and e['tags'].get('era') != 'low']
+json.dump({'overture_ids': ovd, 'today_ids': today}, open(os.path.join(D, 'era_drop.json'), 'w'))
 print('era', tag, 'overture footprints built since', len(ovd))
 json.dump({'elements': out}, open(os.path.join(D, 'osm.json'), 'w'))
 print('era', tag, 'old buildings', len(OB), 'late-mapped kept', late, 'built since dropped', drop)
