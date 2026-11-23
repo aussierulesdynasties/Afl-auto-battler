@@ -14165,7 +14165,7 @@ func _club_change_news() -> void:
 		if (g0 != "" and g1 != "" and g0 != g1 and not _year_event_tells(code, ["move", shown])
 				and Milestones.tell_once(self, "home|%s|%d" % [code, season_year])):
 			add_news("ground", "%s have a new home: from %s they play at %s, leaving %s." % [str(now.get("name", code)),
-					season.round_name(0), shown, GameDB.ground_name(g0, season_year - 1)], "Pre-season",
+					season.round_name(0), _the_ground(shown), _the_ground(GameDB.ground_name(g0, season_year - 1))], "Pre-season",
 					{"club": code, "old": GameDB.ground_name(g0, season_year - 1), "new": shown})
 		var n0 := str(was.get("name", ""))
 		var n1 := str(now.get("name", ""))
@@ -14173,6 +14173,11 @@ func _club_change_news() -> void:
 				and Milestones.tell_once(self, "name|%s|%d" % [code, season_year])):
 			add_news("club", "%s take a new name: from %s they are %s%s." % [n0, season.round_name(0),
 					"the " if n1.ends_with("s") else "", n1], "Pre-season", {"club": code})
+
+
+## A ground as a sentence names it: "the MCG", "Princes Park".
+static func _the_ground(name: String) -> String:
+	return "the " + name if name in ["MCG", "SCG", "WACA"] else name
 
 
 ## Whether a year event opening this season (round 0) about `code` says any of `words`.

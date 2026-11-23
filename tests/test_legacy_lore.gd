@@ -8,6 +8,7 @@ extends RefCounted
 ##     the start, so every season of the career counts (it stopped at 1989)
 ##   - a club moving home or taking a new name gets one story before Round 1
 ##   - a new club's first senior coach is its real one when he is free
+##   - a club's flags "before you" stop at the start (no 1991 flag in 1990)
 ##   - a save made before the fix gets its records repaired, the missed
 ##     seasons marked unknown rather than guessed
 ## Run through tests/run_legacy_lore_tests.gd.
@@ -27,6 +28,7 @@ func run() -> void:
 	_t("_test_old_save_repaired")
 	_t("_test_club_change_news")
 	_t("_test_foundation_coaches")
+	_t("_test_flags_before_the_start")
 	GameState.reset()
 	print(Ran.line("Legacy lore", self))
 
@@ -165,3 +167,14 @@ func _test_foundation_coaches() -> void:
 	coaches = {}
 	CoachMarket.staff_new_clubs(coaches, ["TAS"], "WBD", 2027, 7)
 	_check(not Coaches.staff(coaches, "TAS").is_empty(), "The game's own new clubs hire from the market as before")
+
+
+func _test_flags_before_the_start() -> void:
+	GameState.reset("1990")
+	var haw: Dictionary = ClubHistory.before_career("HAW")
+	_check(bool(haw["known"]) and (haw["years"] as Array).has(1989) and not (haw["years"] as Array).has(1991)
+			and not (haw["years"] as Array).has(2008), "1990: Hawthorn's flags stop at 1989 (%s)" % str(haw["years"]))
+	var wce: Dictionary = ClubHistory.before_career("WCE")
+	_check(bool(wce["known"]) and (wce["years"] as Array).is_empty(), "1990: West Coast have no flag yet, and that is known")
+	GameState.reset()
+	_check((ClubHistory.before_career("HAW")["years"] as Array).has(2015), "Today's start keeps every flag to 2025")

@@ -34,6 +34,9 @@ const DEFAULT := {
 	"year": 0, "rounds": 24, "games": 0, "finalists": 10, "finals": "wildcard10",
 	"gf_venue": "MCG", "gather_round": true, "drawn_finals": "extra_time", "vic_finals": "",
 }
+## Where a Victorian club's home final is played in a real season (vic_finals
+## below): the MCG, except these years.
+const VIC_FINALS_YEARS := {2020: "The Gabba", 2021: "Optus Stadium"}
 
 ## The finals brackets. Each is its weeks in order; each week its matches as
 ## [tag, label, home side, away side, order by ladder]. A side is a slot:
@@ -121,9 +124,11 @@ static func for_year(year: int) -> Dictionary:
 	out["year"] = year
 	for row in rows():
 		if year >= int(row["from_year"]) and year <= int(row["to_year"]):
-			for k in ["rounds", "games", "finalists", "finals", "gf_venue", "gather_round", "drawn_finals", "vic_finals"]:
+			for k in ["rounds", "games", "finalists", "finals", "gf_venue", "gather_round", "drawn_finals"]:
 				out[k] = row[k]
 			break
+	if EraRules.is_era(year):
+		out["vic_finals"] = str(VIC_FINALS_YEARS.get(year, "MCG"))
 	return out
 
 
