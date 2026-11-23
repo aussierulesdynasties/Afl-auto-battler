@@ -219,6 +219,7 @@ func take_trainers(side: int, at: Vector2, n: int) -> Array:
 func release_trainers(cs: Array) -> void:
 	for c in cs:
 		_caring.erase(int((c as Dictionary)["k"]))
+		(c as Dictionary).erase("help_off")
 
 
 func _by_k(k: int) -> Dictionary:
@@ -269,6 +270,20 @@ func move_to(c: Dictionary, want: Vector2, man: Vector2, pace: float, ddt: float
 		ap.play(clip, 0.2)
 	c["posed"] = true
 	ap.advance(maxf(ddt * rate, 1e-4))
+
+
+## A trainer holding a hurt man up (Oval3DInjury's help-off): placed where his frame says, in the
+## clip made with the hurt man's, at the hurt man's clip time t (adv: the time his clip moved on).
+func carry(c: Dictionary, xf: Transform3D, clip: String, t: float, adv: float) -> void:
+	var n: Node3D = c["node"]
+	var ap: AnimationPlayer = c["anim"]
+	n.transform = xf
+	if ap.current_animation != clip:
+		ap.play(clip, 0.3)
+		ap.seek(t, true)
+	else:
+		ap.advance(maxf(adv, 1e-4))
+	c["posed"] = true
 
 
 ## The plain walk a trainer walks a hurt man off at: the match crew's own walk (Oval3DCrew's

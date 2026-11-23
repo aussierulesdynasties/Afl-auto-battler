@@ -401,13 +401,19 @@ func _record() -> void:
 		while not _rec.is_empty() and now - float(_rec[0]["t"]) > REPLAY_BEFORE + 0.2:
 			_rec.pop_front()
 	var men := []
-	for f in oval.players + oval.umpires:
+	for f in _figs():
 		var skel: Skeleton3D = (f as Dictionary)["skel"]
 		var rots := []
 		for b in range(skel.get_bone_count()):
 			rots.append(skel.get_bone_pose_rotation(b))
 		men.append([((f as Dictionary)["node"] as Node3D).transform, rots, skel.get_bone_pose_position(0)])
 	_rec.append({"t": now, "men": men, "ball": oval.ball.transform})
+
+
+## Every figure a replay redraws: the players, the umpires and the clubs' trainers and runners
+## (a trainer walking a hurt man off is with him in the replay, not walking on live without him).
+func _figs() -> Array:
+	return oval.players + oval.umpires + (oval.crew.crew if oval.crew != null else [])
 
 
 ## The ball has reached the goals: a goal's replay now; the deciding behind's after the siren.
@@ -534,7 +540,7 @@ func _play_replay(wall: float) -> void:
 	var r1: Dictionary = _replay[j + 1]
 	var span := float(r1["t"]) - float(r0["t"])
 	var u := clampf((_replay_t - float(r0["t"])) / span, 0.0, 1.0) if span > 0.0 else 0.0
-	var figs: Array = oval.players + oval.umpires
+	var figs: Array = _figs()
 	for i in range(mini(figs.size(), (r0["men"] as Array).size())):
 		var f: Dictionary = figs[i]
 		var m0: Array = r0["men"][i]
