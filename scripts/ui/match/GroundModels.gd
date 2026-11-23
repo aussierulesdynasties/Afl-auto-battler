@@ -89,24 +89,6 @@ const FIT := {
 ## its ground painted from OpenStreetMap (tools/grounds/mcg/surrounds.py), `span` m a side round the
 ## model's middle, and `trees` the park's trees from the same map (x, z, height, canopy, shade).
 const SURROUNDS := {
-	# Bellerive: its streets and houses, Bellerive Beach, Kangaroo Bay and the Derwent
-	# (tools/grounds/bellerive/surrounds.py), laid on the model's origin (the OSM pitch's centre). It starts under the
-	# apron (88 m, past the fence everywhere): under the turf it z-fought from a blimp's height (grey bars).
-	"bellerive": {"y": -0.04, "inner": 88.0, "colour": Color(0.5, 0.5, 0.34),
-			"map": "surrounds.webp", "span": 2048.0, "trees": "trees.bin", "buildings": "buildings.bin",
-			# Bellerive in Google Earth: white and cream weatherboard, red and brown brick, grey render.
-			"walls": [Color(0.86, 0.85, 0.8), Color(0.62, 0.42, 0.34), Color(0.78, 0.74, 0.64), Color(0.56, 0.55, 0.52),
-					Color(0.9, 0.9, 0.88), Color(0.66, 0.5, 0.4), Color(0.72, 0.76, 0.78)],
-			# Its roofs from above: Colorbond teal and green, terracotta, charcoal, grey, white and blue.
-			"roofs": [Color(0.32, 0.52, 0.5), Color(0.66, 0.34, 0.26), Color(0.36, 0.36, 0.38), Color(0.6, 0.6, 0.58),
-					Color(0.4, 0.56, 0.44), Color(0.82, 0.82, 0.8), Color(0.44, 0.52, 0.62), Color(0.56, 0.3, 0.24)]},
-	# GMHBA: Kardinia Park and Geelong's streets and houses (tools/grounds/gmhba/surrounds.py); the map is
-	# laid on the model's origin, the stadium's own footprint painted plain under the model.
-	"gmhba": {"y": -0.04, "inner": 60.0, "colour": Color(0.48, 0.49, 0.33),
-			"map": "surrounds.webp", "span": 2048.0, "trees": "trees.bin", "buildings": "buildings.bin",
-			# Geelong's walls in Google Earth: red and brown brick, cream render, grey block, weatherboard.
-			"walls": [Color(0.62, 0.42, 0.34), Color(0.74, 0.7, 0.62), Color(0.55, 0.53, 0.5), Color(0.68, 0.5, 0.4),
-					Color(0.8, 0.78, 0.72), Color(0.6, 0.6, 0.6), Color(0.52, 0.36, 0.3)]},
 	# York Park: Invermay and the Inveresk precinct, the North Esk and the Tamar's east bank
 	# (tools/grounds/york_park/surrounds.py), laid on the model's origin (the OSM pitch's centroid). It starts
 	# past the fence everywhere, under the model's concourse.
@@ -144,33 +126,6 @@ const PARTS := {
 ## it mirrored the blue sky and read white-blue where the real roof reads warm grey; the tints bring
 ## its sunlit tops to Google Earth's colours (north 189,188,181, east 148,150,145).
 const MATERIAL_FIX := {
-	# Bellerive: the roof's underside and the stands' soffits read purple once the grass's green is taken
-	# out of their light (the stand shader); Google Earth shows them a neutral dark grey. Roof sheeting matte.
-	"bellerive": {
-		"roof_soffit": {"albedo_color": Color(1.06, 0.98, 0.9)},
-		"roof_white": {"metallic": 0.0, "roughness": 0.9},
-		# The practice nets' veil is matte: glossy, it mirrored the sky and the roof net read as a sheet
-		# of blue from above.
-		"mesh": {"roughness": 1.0, "metallic_specular": 0.0},
-	},
-	# GMHBA (Google Earth 3D, 2026-11-22): the seats under the roofs were painted dark ("_d") and then shaded
-	# again by the real roof, so they read near-black where the real rows read mid grey-blue; the shade
-	# is the renderer's job, so they take the sunlit tones back. Roof sheeting matte, as at the MCG.
-	"gmhba": {
-		# The seat shells were cut out by alpha (glTF MASK); in a match that path drew every seat black
-		# (2026-11-22, lavapipe and the Mobile renderer). Drawn solid, the 1 cm gaps between shells are lost.
-		"seatback": {"albedo_color": Color(0.8, 0.82, 0.86), "transparency": BaseMaterial3D.TRANSPARENCY_DISABLED},
-		"seatpan": {"albedo_color": Color(0.8, 0.82, 0.86), "transparency": BaseMaterial3D.TRANSPARENCY_DISABLED},
-		"seatback_d": {"albedo_color": Color(1.3, 1.32, 1.38), "transparency": BaseMaterial3D.TRANSPARENCY_DISABLED},
-		"seatpan_d": {"albedo_color": Color(1.3, 1.32, 1.38), "transparency": BaseMaterial3D.TRANSPARENCY_DISABLED},
-		# Solar panels: near-black in Google Earth, not a sky mirror.
-		"solar": {"roughness": 0.85},
-		"tread_d": {"albedo_color": Color(1.9, 1.9, 1.9)},
-		"aisle_d": {"albedo_color": Color(1.6, 1.6, 1.6)},
-		"tread": {"albedo_color": Color(1.15, 1.15, 1.12)},
-		"roof": {"metallic": 0.0, "roughness": 0.9},
-		"roofg": {"metallic": 0.0, "roughness": 0.9},
-	},
 	"mcg": {
 		"roof_white": {"metallic": 0.0, "roughness": 0.9, "albedo_color": Color(0.84, 0.84, 0.8)},
 		"roof_grey": {"metallic": 0.0, "roughness": 0.9, "albedo_color": Color(0.8, 0.8, 0.76)},
@@ -206,10 +161,6 @@ const SEAT_COLOURS := {
 	"seat_slategrey": Color(0.361, 0.392, 0.447),
 	# Accor: aqua lower bowl (seat_teal there keeps the value already here).
 	"seat_aqua": Color(0.527, 0.719, 0.757),
-	# Bellerive: mid-blue plastic all round the Boon and Ponting stands (Google Earth from the field).
-	"seat_bel_blue": Color8(72, 108, 146),
-	# The Members' front rows dark grey; the Northern Stand's and the east terrace's benches white.
-	"seat_bel_pale": Color8(150, 168, 186), "seat_bel_dark": Color8(58, 62, 70), "seat_bel_white": Color8(214, 216, 214),
 	# MCG, by tier from Street View on the ground and Google Earth: white and light grey lower and
 	# middle tiers, a blue band along the front of the middle tier, teal-blue top tier
 	# (grey-green in the Members' north-west).
@@ -925,10 +876,8 @@ static func _pick(src, used: PackedInt32Array):
 ## How far a camera sees when the ground has its surroundings (backdrop()): the city skyline and
 ## the hills. Without them the match view stops at 900 m.
 const BACKDROP_FAR := 7000.0
-## Grounds whose backdrop runs further, [camera far, haze end] in m: Bellerive's reaches kunanyi /
-## Mount Wellington, 11 km across the Derwent, which a Hobart crowd sees clearly, blue with the distance;
-## York Park's the hills round Launceston out to Mount Barrow and Ben Lomond's foothills, 25 km east.
-const BACKDROP_RANGE := {"bellerive": [20000.0, 60000.0], "york_park": [26000.0, 70000.0]}
+## Grounds whose backdrop runs further, [camera far, haze end] in m: York Park's reaches the hills round Launceston out to Mount Barrow and Ben Lomond's foothills, 25 km east.
+const BACKDROP_RANGE := {"york_park": [26000.0, 70000.0]}
 
 
 static func backdrop_far(slug: String) -> float:
@@ -1173,8 +1122,8 @@ static func _add_part(model: Node, dir: String, part: Dictionary) -> void:
 
 ## Paving and practice wickets a model lays on the land outside the bowl, by mesh name: lit like the
 ## land round them (the surrounds), not like a stand. Under a stand's light and its shade they read a
-## saturated blue beside sunlit grass (Bellerive's practice nets, 2026-11-22).
-const OPEN_GROUND := {"bellerive": ["nets_ground", "forecourt"]}
+## saturated blue beside sunlit grass (seen on Bellerive's practice nets, 2026-11-22). No ground lists any yet.
+const OPEN_GROUND := {}
 
 
 static func _open_ground(model: Node, names: Array) -> void:

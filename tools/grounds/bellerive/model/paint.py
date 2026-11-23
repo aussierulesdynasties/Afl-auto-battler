@@ -144,13 +144,10 @@ t = T(5.0, 0.95, (178, 176, 166), n=5, bl=(0.8, 9))
 for u in (0.0, 2.5): t.vl(u + 0.02, 0.04, mul=0.7)
 t.hl(0.9, 0.06, mul=0.82); t.save('terrace')
 # grass hill (GE f135, gate 2026-11-19): green grass with dry straw patches, faint mower stripes
-# 2026-11-22 (GE cs_090, summer): mostly dry olive-tan, green only in patches
-t = T(10.0, 10.0, (124, 126, 82), n=10, bl=(2.5, 16))
-for u in np.arange(0, 10, 2.5): t.rect(u, u + 1.25, 0, 10, mul=np.array([1.04, 1.04, 1.02]))
-for _ in range(30):
-    u, z, r = R.uniform(0, 10), R.uniform(0, 10), R.uniform(0.8, 2.6); t.rect(u, u + r, z, z + r * 0.6, mul=np.array([1.18, 1.1, 1.12]))
-for _ in range(10):
-    u, z, r = R.uniform(0, 10), R.uniform(0, 10), R.uniform(0.8, 2.0); t.rect(u, u + r, z, z + r * 0.7, mul=np.array([0.82, 0.98, 0.82]))
+t = T(10.0, 10.0, (100, 134, 80), n=10, bl=(2.5, 16))
+for u in np.arange(0, 10, 2.5): t.rect(u, u + 1.25, 0, 10, mul=np.array([1.06, 1.06, 1.02]))
+for _ in range(14):
+    u, z, r = R.uniform(0, 10), R.uniform(0, 10), R.uniform(0.4, 1.4); t.rect(u, u + r, z, z + r * 0.6, mul=np.array([1.38, 1.14, 1.3]))
 t.save('grass_hill')
 # concourse apron: concrete slabs 3 m with saw joints, oil stains
 t = T(6.0, 6.0, (158, 156, 150), n=5, bl=(1.5, 10))
@@ -168,26 +165,18 @@ t.a[:t.h // 3] *= 1.35
 for _ in range(40):
     u, z = R.uniform(0, 3.8), R.uniform(0, 1.8); t.rect(u, u + 0.5, z, z + 0.5, mul=R.uniform(0.6, 1.6))
 t.save('screen')
-# the north-east video board (GE in_W, out_W): an LED face showing a blue screen, no words; 0.5 m modules
-t = T(4.0, 2.0, (44, 92, 168), n=3, bl=(1, 4))
-for u in np.arange(0, 4, 0.5): t.vl(u, 0.02, mul=0.75)
-for z in np.arange(0, 2, 0.5): t.hl(z, 0.02, mul=0.75)
-t.a[:t.h // 2] *= 1.12; t.save('screen_blue')
 t = T(3.0, 6.0, (220, 222, 220), n=3, bl=(1.5, 7)); t.hl(3.0, 0.04, mul=0.85); t.streaks(12, 0, 6); t.grime_bottom(1.0); t.save('tower')
 t = T(6.8, 3.8, (60, 64, 70), n=3, bl=None)
 for i in range(6):
     for j in range(3):
         u, z = 0.35 + i * 1.06, 0.3 + j * 1.15; t.rect(u, u + 0.9, z, z + 0.95, (226, 230, 232)); t.rect(u + 0.2, u + 0.7, z + 0.2, z + 0.75, (250, 250, 244))
 t.save('lamps')
-t = T(1.0, 1.0, (238, 240, 236), n=3, bl=(0.5, 5)); t.save('lamp_face')   # the modelled lamps' glass
 
 # ---- NINJA STADIUM tower sign (GE x330, hand-lettered): two vertical panels reading bottom to top.
 # North face: white panel, black regular capitals. West face: navy panel, white bold capitals.
 from PIL import ImageDraw, ImageFont
 def sign(name, bg, fg, font, W=1.8, H=15.0):
     w, h = int(H * PPM), int(W * PPM); im = Image.new('RGB', (w, h), bg); d = ImageDraw.Draw(im)
-    if not os.path.exists(font):   # off Windows: Liberation Sans has Arial's metrics
-        font = '/usr/share/fonts/truetype/liberation/LiberationSans-%s.ttf' % ('Bold' if 'bd' in font else 'Regular')
     f = ImageFont.truetype(font, int(h * 0.62)); txt = 'NINJA STADIUM'
     # GE x330: lettering on the lower three quarters; above it the white cap carries a round navy emblem (ring + stroke),
     # and the navy panel stops below the cap (left of the strip = bottom once rotated)
@@ -238,52 +227,5 @@ fac_ponting()
 
 
 if __name__ == '__main__':
-    # ---- stepped rows (2026-11-22 rebuild): the treads and risers the 3D seats stand on. Precast grey concrete,
-    # the tread worn paler along its front edge, the riser darker with a drip line under the nosing.
-    t = T(4.0, 1.0, (150, 152, 150), n=3, bl=(1.0, 6)); t.vl(0.02, 0.03, mul=0.8); t.save('tread')
-    t = T(4.0, 1.0, (112, 116, 118), n=3, bl=(1.0, 6)); t.vl(0.02, 0.03, mul=0.8); t.streaks(10, 0, 1, mul=0.85)
-    t.save('riser')
-    # vomitory portals: pale precast concrete, and the tunnel's own dark painted inside
-    t = T(3.0, 3.0, (176, 178, 176), n=3, bl=(1.0, 7)); t.streaks(8, 0, 3, mul=0.88); t.save('vom_conc')
-    t = T(2.0, 2.0, (34, 36, 40), n=3, bl=(1.0, 4)); t.save('vom_dark')
-    # the tier front between the Ponting's tiers: a dark LED ribbon board (blank: no sponsors), a pale capping
-    t = T(6.0, 3.6, (28, 30, 36), n=3, bl=(1.0, 3))
-    for u in np.arange(0, 6, 0.6): t.vl(u, 0.02, mul=0.7)
-    t.rect(0, 6, 3.4, 3.6, (180, 182, 180)); t.hl(2.6, 0.04, mul=0.6); t.save('ribbon')
-    # modelled facades (2026-11-22): each panel is its own face, so the textures are plain finishes only
-    for name, col in (('skin_silver', (220, 226, 230)), ('skin_silver2', (196, 206, 214)), ('skin_pale', (184, 194, 202)),
-                      ('skin_blue', (80, 113, 150)), ('skin_sky', (117, 154, 197)), ('skin_grey', (123, 141, 167))):
-        t = T(4.0, 4.0, col, n=2.5, bl=(1.5, 5)); t.vl(0.02, 0.03, mul=0.86); t.hl(0.02, 0.03, mul=0.86)
-        if 'silver' in name or 'pale' in name:
-            t.streaks(8, 0, 4, mul=0.93)
-        t.save(name)
-    t = T(3.6, 6.6, (204, 210, 212), n=3, bl=(2, 6)); t.hl(3.3, 0.04, mul=0.85); t.vl(0.02, 0.04, mul=0.85)
-    t.streaks(12, 0, 6.6, mul=0.9); t.save('boon_band')
-    t = T(1.8, 5.6, (48, 62, 76), n=3, bl=(1.5, 5)); t.a[:t.h // 3] *= 1.25; t.save('boon_glass')
-    t = T(8.0, 6.0, (224, 224, 218), n=3, bl=(2, 7)); t.streaks(14, 0, 6, mul=0.9); t.grime_bottom(1.0)
-    t.save('render_white')
-    t = T(1.2, 1.2, (40, 50, 60), n=3, bl=(0.5, 4)); t.a[:t.h // 2] *= 1.3; t.save('win_dark')
-    # the indoor centre's curtain wall (GE cf_240, out_W): pale blue-grey glass, the sky in its upper half
-    t = T(1.5, 2.2, (146, 174, 190), n=2.5, bl=(1.0, 4)); t.a[:t.h // 2] *= 1.08; t.save('cw_glass')
-    t = T(1.5, 1.6, (64, 86, 100), n=2.5, bl=(1.0, 4)); t.a[:t.h // 3] *= 1.2; t.save('cw_glass_dk')   # the band under it
-    # the practice nets west of the Ponting (GE out_NW, cf_270): grey twine on a 0.1 m square mesh. Seen
-    # from a match camera the twine is far finer than a pixel, so the net is a grey veil, a little denser
-    # along the twine; cut out line by line it sparkled and read as a black cage.
-    n = int(PPM); a = np.zeros((n, n, 4), np.uint8); a[..., :3] = (128, 130, 126); a[..., 3] = 70
-    st = int(round(0.1 * PPM))
-    for k in range(0, n, st):
-        a[k:k + 2, :, 3] = 130; a[:, k:k + 2, 3] = 130
-    Image.fromarray(a, 'RGBA').save(OUT + 'mesh.png'); TILE['mesh'] = (1.0, 1.0)
-    t = T(3.0, 4.0, (138, 150, 132), n=4, bl=(1.0, 4)); t.vl(0.05, 0.05, col=(214, 216, 210)); t.vl(2.95, 0.05, col=(214, 216, 210))
-    t.save('syn_pitch')                                  # synthetic practice wicket, white edge lines
-    # the forecourt at the indoor centre's west end: pale concrete pavers 0.6 x 0.3 m, staggered
-    t = T(2.4, 2.4, (176, 172, 164), n=4, bl=(1.0, 5))
-    for k, z in enumerate(np.arange(0, 2.4, 0.3)):
-        t.hl(z, 0.015, mul=0.82)
-        for u in np.arange(0.3 * (k % 2), 2.4, 0.6): t.vl(u, 0.015, z0=z, z1=z + 0.3, mul=0.82)
-    t.save('pavers')
-    # the service yard beside the wing: asphalt with white bay lines every 2.6 m
-    t = T(5.2, 5.2, (74, 74, 76), n=4, bl=(1.0, 5)); t.vl(0.05, 0.1, z0=0.0, z1=5.0, col=(206, 206, 200))
-    t.vl(2.65, 0.1, z0=0.0, z1=5.0, col=(206, 206, 200)); t.save('yard')
     json.dump(TILE, open(OUT + 'tiles.json', 'w', newline=''), indent=0)
     for k in sorted(TILE): print(f'{k:16s} stddev {sd(k):5.1f}')

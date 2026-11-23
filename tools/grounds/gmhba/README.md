@@ -1,37 +1,5 @@
 # GMHBA Stadium (Kardinia Park) exterior model
 
-The match model is `assets/grounds/gmhba/gmhba.glb`: this folder's `gmhba.glb` (below) after the post pass
-(`post/`, 2026-11-22), with Kardinia Park and Geelong round it (`surrounds.py`). Both are checked against Google
-Earth 3D from the same cameras (`qa/`), the MCG standard's gate (docs/MCG_STANDARD.md).
-
-## Post pass and surrounds (MCG standard, 2026-11-22)
-
-    python3 tools/grounds/gmhba/post/mktex.py tools/grounds/gmhba/post/tex
-    python3 -c "import runpy,sys; sys.argv=['post','tools/grounds/gmhba/gmhba.glb','assets/grounds/gmhba/gmhba.glb','tools/grounds/gmhba/post/tex']; runpy.run_path('tools/grounds/gmhba/post/post.py')"
-    python3 tools/grounds/gmhba/surrounds.py        # fetches four OpenStreetMap tiles
-
-After a Godot import, put back any other ground's extracted textures the import rewrote (git checkout).
-
-What Google Earth showed and what changed:
-- The Joel Selwood Stand roof (below) had never reached matches: the game still loaded the exterior without it. It is in now.
-- North stands' roof: the outer half of every folded plate carries a field of near-black solar panels (Google Earth,
-  every view from the north). The gate-2 note had made both faces plain sheeting from photo p1; Google Earth's
-  current imagery wins. Panels: `post/tex/solar.png`, on the `roof`/`roofg` faces 25-125 degrees round from east.
-- North stands' outside wall: white fluted cladding, a white band, a dark glazed band behind white V struts
-  (`fac_north.png`). East (Reg Hickey Stand, Moorabool Street): pale grey panels, white pilasters 7.5 m apart, three
-  window strips (`fac_east.png`). Both were plain `wall` concrete.
-- Seats: drawn black in every match. The seat shells' alpha cut-out (glTF MASK) renders black on the Mobile renderer;
-  `GroundModels.MATERIAL_FIX` draws them solid, and takes back the darkening painted into the `_d` (under the roof)
-  seats and treads, which the renderer's own shade then doubled.
-- Surrounds: Kardinia Park's ovals and pools, the streets, about 1,360 trees and Geelong's houses (single storey,
-  hipped roofs in tile and Colorbond colours) from OpenStreetMap, as at the MCG.
-
-Known gaps, not fixed here: the Cats sign block (below); a straight-down camera shows bands of light across the west
-seats (no match camera looks straight down); the town fades to plain ground past 1 km (the background scene covers
-the horizon); the V struts under the north roof are painted, not modelled.
-
-## The exterior
-
 `gmhba.glb` is the exterior that passed the gate at commit ff1fdabab (md5 2a5040de694f1afe4bf9c26f0d14db3e), with the Joel Selwood Stand (JSS) roof rebuilt on top of it (below).
 
 - Exterior build scripts: `src/` (from .claude/review/gmhba/build at ff1fdabab; renamed from build/, which the repo .gitignore excludes).
