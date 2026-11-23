@@ -1690,6 +1690,7 @@ func _run() -> void:
 	await _t("_test_forge_on_every_start")
 	await _t("_test_new_career_challenge_taps")
 	await _t("_test_canberra_2030_warning")
+	await _t("_test_after_draft_taps")
 	await _t("_test_every_start_reaches_interview")
 	await _t("_test_year_step_taps")
 	await _t("_test_year_step_new_clubs")
@@ -4823,6 +4824,42 @@ func _test_new_career_forged_row_every_start() -> void:
 	_check(row.is_visible_in_tree() and note.text.ends_with("You coach against it."),
 			"Rebuild keeps the row; you coach against your club (%s)" % note.text)
 	_state.set_forge_club({})
+	_state.reset()
+	_router.stack = []
+
+
+## Real 2026 lists after the real draft (the person, 2026-11-21: "Both,
+## chosen at New career"), by real taps: the row shows on the real lists only,
+## and After the draft opens with Cochrane already at Port Adelaide.
+func _test_after_draft_taps() -> void:
+	_state.delete_saved_career()
+	_state.reset()
+	_router.stack = []
+	_router.go("main")
+	await _settle()
+	await Tap.tap(current_scene.find_child("NewCareer", true, false))
+	await _settle()
+	await _pick_year()
+	var row := current_scene.find_child("DraftTiming", true, false) as Control
+	await Tap.tap(current_scene.find_child("StartMode_redraft", true, false))
+	await _settle()
+	_check(row != null and not row.is_visible_in_tree(), "A League redraft has no before-or-after-the-draft row")
+	await Tap.tap(current_scene.find_child("StartMode_real", true, false))
+	await _settle()
+	_check(row != null and row.is_visible_in_tree(), "Real 2026 lists show the before-or-after-the-draft row")
+	var t1: String = await Tap.tap(current_scene.find_child("DraftTiming_after", true, false))
+	await _settle()
+	_check(t1 == "" and bool(current_scene.get("_pick_after_draft")), "After the draft takes a real tap (%s)" % t1)
+	var t2: String = await Tap.tap(current_scene.find_child("StartCareer", true, false))
+	await _settle()
+	var at := ""
+	for code in _state.league_lists:
+		for q in _state.league_lists[code]:
+			if str(q.get("real_name", "")) == "Dougie Cochrane":
+				at = str(code)
+	_check(t2 == "" and _state.real_after_draft and _state.opening_draft and at == "PAD",
+			"After the draft opens with the real picks on their clubs: Cochrane at %s (%s)" % [at, t2])
+	_state.real_after_draft = false
 	_state.reset()
 	_router.stack = []
 
