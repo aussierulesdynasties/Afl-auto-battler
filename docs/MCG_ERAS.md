@@ -95,3 +95,15 @@ Measuring from imagery is allowed; raw imagery is never committed or baked into 
   stands shift between dates by up to about 13 m (each flight leaned differently), so plan
   positions and heights are solved together from several dates, not traced from one. Tools in
   `tools/grounds/mcg_eras/`.
+- 2026-11-23, later: heights from shadows. The sun in each aerial is fixed from a light tower's
+  shadow (direction), with the elevation from the date; in March 2000 the tower's head shadow gives
+  the same elevation to 0.2 degrees. Roof fronts of the old northern stands traced from March 2000
+  (Ponsford about 104-108 m from the field centre, Members' a curve from 101 to 93 m, Olympic 116-123
+  m). Results (`tools/grounds/mcg_eras/measure/heights_2026-11-23.json`):
+  - Olympic Stand roof front: 24-25 m above the turf from 20 June 2001, 21-23 m from 4 July 2001
+    (fit rms 3.5 m). The two dates disagree by about 2.5 m; not settled yet.
+  - Ponsford Stand roof back: about 26 m (25-28), from its shadow in March 2000 (fit rms 1.5 m).
+  - Members' Pavilion: not measurable from these shadows (they fall on the west seats); needs photos.
+  - Check on today's model: the Great Southern Stand's roof front casts its March 2000 shadow as if
+    it were 35.6-36.6 m above the turf (fit rms 0.2 m). Today's model has it at 31.2-31.5 m. The
+    builder gives the stand as 45 m high (no datum). Reported to the MCG thread, not changed here.

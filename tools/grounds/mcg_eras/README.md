@@ -21,3 +21,14 @@ shipped texture.
 Dates available at the MCG (Google Earth web, 2026-11-23): 23 Mar 2000, 15 Nov 2000, 18 Nov 2000,
 19 Feb 2001, 20 Jun 2001, 4 Jul 2001, 29 Apr 2002, 11 Oct 2002, 16 Aug 2004, 21 Oct 2004,
 12 Nov 2004, then 2006 on. Nothing between 1985 (Landsat) and 2000, and nothing in 2003 or 2005.
+
+Heights from shadows (2026-11-23):
+
+- `sun.py`: sun elevation from the date and a measured azimuth (`python3 sun.py <day of year> <azimuth>`).
+- `regfix.py`: registers a capture by fitting March 2000's arena ellipse to its sunlit edge only.
+- `shadow.py` (`F=<capture>`): radial brightness steps (roof edges, shadow edges); `tedge.py`: sustained
+  shadow edge on the turf; `pview.py` / `pover.py`: polar strips with a labelled grid and traced points.
+- `fwd.py`: draws the roof front's shadow on the turf for given heights and fits the heights to the
+  traced shadow edge; `hsolve.py`: the simpler per-bearing version (only valid where the sun shines
+  straight across the stand).
+- `measure/`: traced edges, registered centres and the results (`heights_2026-11-23.json`).
