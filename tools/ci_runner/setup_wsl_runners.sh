@@ -6,13 +6,13 @@
 #
 # REG_TOKEN is a repository registration token (valid one hour):
 #   gh api -X POST repos/aussierulesdynasties/Afl-auto-battler/actions/runners/registration-token -q .token
-# Every runner gets the label "afl-queue"; tests.yml sends only merge-queue groups and pushes
-# to main there (never pull requests), and only while the repo variable QUEUE_RUNNER is "pc".
+# Every runner gets the label "afl-queue"; tests.yml sends its jobs there while the repo variable
+# QUEUE_RUNNER is "pc", except pull requests from forks.
 # The runner is github.com/actions/runner (MIT licence); it updates itself.
 set -euo pipefail
 N="${1:-6}"
 REPO_URL="https://github.com/aussierulesdynasties/Afl-auto-battler"
-VER="2.321.0"
+VER="2.338.2"   # GitHub refuses runners older than 2.329.0; they update themselves after
 : "${REG_TOKEN:?set REG_TOKEN to a registration token}"
 [ "$(id -u)" = 0 ] || { echo "run as root (sudo)"; exit 1; }
 grep -q '^systemd=true' /etc/wsl.conf 2>/dev/null || {

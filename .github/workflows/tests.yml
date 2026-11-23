@@ -54,11 +54,12 @@ on:
         required: false
         default: ""
 
-# Where the jobs run: GitHub's hosted runners, except that merge-queue groups and pushes to main
-# go to the self-hosted runners labelled "afl-queue" (the director's PC, in WSL) while the repo
-# variable QUEUE_RUNNER is "pc". Pull requests never do: their code is untested and the repo is
-# public. With the PC off, set QUEUE_RUNNER to anything else (Settings > Secrets and variables >
-# Actions > Variables) and the queue goes back to GitHub's runners. docs/CI_RUNNER.md has the setup.
+# Where the jobs run: while the repo variable QUEUE_RUNNER is "pc", on the self-hosted runners
+# labelled "afl-queue" (the director's PC, in WSL): merge-queue groups, pushes to main, dispatches,
+# and pull requests from branches of this repository. A pull request from a fork always runs on
+# GitHub's runners (the repo is public), and a fork's runs need approval first (repo setting).
+# With the PC off, set QUEUE_RUNNER to anything else (Settings > Secrets and variables > Actions >
+# Variables) and everything goes back to GitHub's runners. docs/CI_RUNNER.md has the setup.
 #
 # A newer push to a PR supersedes its older run. Every push to main gets its own
 # group (its sha) and is never cancelled, so back-to-back merges each get a verdict.
@@ -80,7 +81,7 @@ jobs:
     # A draft runs nothing but the final "test" check, which stays red until the PR is
     # marked ready (that event starts the real run), so a draft never queues runners.
     if: github.event_name != 'pull_request' || !github.event.pull_request.draft
-    runs-on: ${{ fromJSON(((github.event_name == 'merge_group' || github.event_name == 'push') && vars.QUEUE_RUNNER == 'pc') && '["self-hosted","Linux","X64","afl-queue"]' || '"ubuntu-latest"') }}
+    runs-on: ${{ fromJSON((vars.QUEUE_RUNNER == 'pc' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)) && '["self-hosted","Linux","X64","afl-queue"]' || '"ubuntu-latest"') }}
     timeout-minutes: 10
     outputs:
       code: ${{ steps.changes.outputs.code }}
@@ -262,7 +263,7 @@ jobs:
   # requests and pushes to main both run gdlint on every file, so a PR sees what main will.
   lint:
     if: github.event_name != 'pull_request' || !github.event.pull_request.draft
-    runs-on: ${{ fromJSON(((github.event_name == 'merge_group' || github.event_name == 'push') && vars.QUEUE_RUNNER == 'pc') && '["self-hosted","Linux","X64","afl-queue"]' || '"ubuntu-latest"') }}
+    runs-on: ${{ fromJSON((vars.QUEUE_RUNNER == 'pc' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)) && '["self-hosted","Linux","X64","afl-queue"]' || '"ubuntu-latest"') }}
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
@@ -313,7 +314,7 @@ jobs:
   preflight:
     needs: plan
     if: needs.plan.outputs.code == 'true' && (github.event_name == 'pull_request' || github.event_name == 'merge_group')
-    runs-on: ${{ fromJSON(((github.event_name == 'merge_group' || github.event_name == 'push') && vars.QUEUE_RUNNER == 'pc') && '["self-hosted","Linux","X64","afl-queue"]' || '"ubuntu-latest"') }}
+    runs-on: ${{ fromJSON((vars.QUEUE_RUNNER == 'pc' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)) && '["self-hosted","Linux","X64","afl-queue"]' || '"ubuntu-latest"') }}
     timeout-minutes: 25   # the first import of every ground's 3D model and background scene takes up to 20 min on a runner
     steps:
       - uses: actions/checkout@v4
@@ -347,7 +348,7 @@ jobs:
     name: shard ${{ matrix.shard }}
     needs: [plan, lint, preflight]
     if: always() && needs.plan.result == 'success' && needs.lint.result == 'success' && needs.plan.outputs.code == 'true' && (needs.preflight.result == 'success' || needs.preflight.result == 'skipped')
-    runs-on: ${{ fromJSON(((github.event_name == 'merge_group' || github.event_name == 'push') && vars.QUEUE_RUNNER == 'pc') && '["self-hosted","Linux","X64","afl-queue"]' || '"ubuntu-latest"') }}
+    runs-on: ${{ fromJSON((vars.QUEUE_RUNNER == 'pc' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)) && '["self-hosted","Linux","X64","afl-queue"]' || '"ubuntu-latest"') }}
     timeout-minutes: 40   # a shard plans ~240 s; 40 still covers a 900 s suite timeout run twice
     strategy:
       # PRs release runner slots promptly; main/manual diagnostics collect all failures.
@@ -439,7 +440,7 @@ jobs:
     name: dataset and harness checks
     needs: [plan, lint, preflight]
     if: always() && needs.plan.result == 'success' && needs.lint.result == 'success' && needs.plan.outputs.code == 'true' && (needs.preflight.result == 'success' || needs.preflight.result == 'skipped') && github.event_name != 'schedule'
-    runs-on: ${{ fromJSON(((github.event_name == 'merge_group' || github.event_name == 'push') && vars.QUEUE_RUNNER == 'pc') && '["self-hosted","Linux","X64","afl-queue"]' || '"ubuntu-latest"') }}
+    runs-on: ${{ fromJSON((vars.QUEUE_RUNNER == 'pc' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)) && '["self-hosted","Linux","X64","afl-queue"]' || '"ubuntu-latest"') }}
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
@@ -482,7 +483,7 @@ jobs:
   test:
     needs: [plan, lint, preflight, shard, extras]
     if: always()
-    runs-on: ${{ fromJSON(((github.event_name == 'merge_group' || github.event_name == 'push') && vars.QUEUE_RUNNER == 'pc') && '["self-hosted","Linux","X64","afl-queue"]' || '"ubuntu-latest"') }}
+    runs-on: ${{ fromJSON((vars.QUEUE_RUNNER == 'pc' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)) && '["self-hosted","Linux","X64","afl-queue"]' || '"ubuntu-latest"') }}
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4

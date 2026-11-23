@@ -3,13 +3,16 @@
 The merge queue spent most of its time waiting for GitHub's free runners (2026-11-22: median
 128 minutes from a group's start to its verdict, with about 9 jobs running at once across every
 PR). Merge-queue groups and pushes to main can run on runners on the director's PC instead
-(Ryzen 7 9700X, Windows, in WSL Ubuntu). Pull requests always stay on GitHub's runners.
+(Ryzen 7 9700X, Windows, in WSL Ubuntu), and so can pull requests from this repository's own
+branches. Pull requests from forks always stay on GitHub's runners.
 
 ## Safety
 
-- The repo is public. Only `merge_group` and `push` (to main) jobs go to the PC. Both run code that
-  someone with write access already queued or merged. A pull request's jobs, including a fork's, never
-  reach the PC (`runs-on` in `.github/workflows/tests.yml`).
+- The repo is public. Jobs go to the PC only for code pushed by someone with write access: merge-queue
+  groups, pushes to main, dispatches, and pull requests whose branch is in this repository
+  (`runs-on` in `.github/workflows/tests.yml` checks `head.repo`). A fork's pull request runs on
+  GitHub's runners. A fork's workflow file comes from the fork, so the approval setting below is
+  what stops a fork from pointing itself at the PC: never loosen it.
 - Settings > Actions > General > "Approval for running fork pull request workflows from contributors":
   "Require approval for all external contributors".
 - Each runner is a systemd service in WSL, running as the unprivileged Linux user `runner`, not as a
@@ -24,8 +27,9 @@ PR). Merge-queue groups and pushes to main can run on runners on the director's 
 2. In Ubuntu: add `[boot]` / `systemd=true` to `/etc/wsl.conf`; in Windows, `wsl --shutdown`.
 3. `%UserProfile%\.wslconfig`: `[wsl2]`, `vmIdleTimeout=-1` and `memory=` about 70% of the PC's RAM,
    so WSL stays up with nobody logged in to it. Then `wsl --shutdown` again.
-4. Task Scheduler: at log on, run `wsl.exe -d Ubuntu --exec sleep infinity` (hidden), which starts WSL
-   and its runner services when Windows starts.
+4. Task Scheduler: a task "WSL Ubuntu keepalive (AFL runners)" that runs at log on:
+   `wsl.exe -d Ubuntu --exec /bin/sleep infinity` (hidden). It starts WSL and its runner services
+   when Windows starts, and keeps the WSL VM up.
 5. In Ubuntu, in a clone of this repo: get a registration token
    (`gh api -X POST repos/aussierulesdynasties/Afl-auto-battler/actions/runners/registration-token -q .token`,
    needs a repo admin) and run `sudo REG_TOKEN=<token> bash tools/ci_runner/setup_wsl_runners.sh 6`.
