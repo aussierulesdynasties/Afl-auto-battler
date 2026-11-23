@@ -36,14 +36,14 @@ def _save(name, img):
     Image.fromarray(np.clip(img, 0, 255).astype(np.uint8), "RGB").save(os.path.join(TEX, name + ".png"))
 
 
-def curtain(name, glass, frame, bay=1.5, floor=3.6, px=24, slab=0.35, noise=8.0):
+def curtain(name, glass, frame, bay=1.5, floor=3.6, px=24, slab=0.35, noise=8.0, nb=4, nf=2):
     """A glass curtain wall: panes `bay` wide and `floor` tall, thin mullions, a spandrel at each
-    floor. One tile is 4 bays by 2 floors."""
-    W, H = int(4 * bay * px), int(2 * floor * px)
+    floor. One tile is `nb` bays by `nf` floors."""
+    W, H = int(nb * bay * px), int(nf * floor * px)
     img = np.zeros((H, W, 3), float)
     img[:] = glass
-    for j in range(2):
-        for i in range(4):
+    for j in range(nf):
+        for i in range(nb):
             y0, x0 = int(j * floor * px), int(i * bay * px)
             img[y0:y0 + int(floor * px), x0:x0 + int(bay * px)] += RNG.normal(0, noise)
     x = (np.arange(W) + 0.5) / px
@@ -93,8 +93,18 @@ def make_textures():
     # matched pixel for pixel. Rendered with the sun where Google Earth's was (preinspect PREINSPECT_SUN=60,45,1.45,
     # the fins then at 204), the glass between the fins must read Google Earth's (54, 79, 103): dark blue glass.
     # Round 8: the PC read it about 18 too red (the sun's warm sheen on it), so its red is taken out: a teal-navy.
-    curtain("nab_glass", (30, 58, 80), (50, 62, 72), bay=1.5, floor=3.9, noise=8.0)
-    TILE["nab_glass"] = (6.0, 7.8)
+    # Round 10 audit: Google Earth's east blocks each read their own tone (the glass of each block is set at its
+    # own angle, and the panes vary pane to pane), and the pane grid shows: one glass a block, a lighter frame
+    # and a larger tile (8 bays by 4 floors) so the per-pane tones do not repeat every 6 m.
+    for nm, gl in (("nab_glass_a", (30, 58, 80)), ("nab_glass_b", (38, 66, 88)), ("nab_glass_c", (26, 50, 72)),
+                   ("nab_glass_d", (46, 74, 96)), ("nab_glass_w", (34, 60, 82))):
+        curtain(nm, gl, (84, 96, 106), bay=1.5, floor=3.9, noise=10.0, nb=8, nf=4)
+        TILE[nm] = (12.0, 15.6)
+    # the roof (Google Earth obl_e, nabroof1): dark grey membrane under a grid of solar panels and glazing
+    panels("nab_roof", (96, 102, 110), (66, 72, 80), w=2.0, h=1.0, noise=6.0)
+    TILE["nab_roof"] = (8.0, 4.0)
+    flat("nab_rooflight", (58, 68, 80), noise=5.0)
+    flat("roof_garden", (92, 104, 70), noise=12.0)
     # PC check round 2: the north tip's panels rendered (88, 105, 136) against GE (60, 87, 113): greyer, darker
     panels("nab_silver", (150, 166, 178), (118, 130, 142), w=1.5, h=1.3, holes=(52, 58, 66))
     TILE["nab_silver"] = (6.0, 5.2)
@@ -116,13 +126,22 @@ def make_textures():
     TILE["dark_glass"] = (7.2, 4.8)
     # the two sawtooth towers north-east of the ground (PC check round 7, like for like with the sun where Google Earth's
     # was): Google Earth reads their glass bands (88, 110, 124) and their pale bands (153, 167, 173), a blue-grey tower
-    curtain("grey_glass", (88, 112, 130), (124, 132, 138), bay=1.8, floor=2.4, slab=0.0, noise=6.0)
-    panels("band_panel", (176, 190, 196), (150, 162, 168), w=1.8, h=1.4)
+    curtain("grey_glass", (58, 74, 88), (96, 104, 110), bay=1.8, floor=2.4, slab=0.0, noise=6.0)
+    panels("band_panel", (206, 210, 212), (178, 182, 186), w=1.8, h=1.4)
     TILE["band_panel"] = (7.2, 5.6)
     TILE["grey_glass"] = (7.2, 4.8)
-    curtain("office_glass", (78, 98, 116), (180, 186, 190), bay=1.5, floor=2.7, slab=0.0, noise=8.0)
+    # round 10: the round office reads dark glass in Google Earth (ext_090, c_w): dark panes, grey frames
+    curtain("office_glass", (50, 64, 78), (110, 118, 124), bay=1.5, floor=2.7, slab=0.0, noise=8.0)
     TILE["office_glass"] = (6.0, 5.4)
     flat("white_band", (226, 228, 228))
+    # round 10: HOME Docklands' two towers north-west of the ground (Google Earth obl_n, obl_nw, ext_135): dark
+    # navy glass in a white frame grid, about 1.4 m windows every 1.6 m
+    flat("home_frame", (214, 216, 214))
+    flat("home_glass", (66, 84, 100), noise=5.0)
+    flat("near_wall", (200, 202, 200))
+    panels("plaza_red", (186, 128, 112), (164, 116, 102), w=1.2, h=0.6, noise=8.0)
+    TILE["plaza_red"] = (4.8, 2.4)
+    flat("tree_leaf", (70, 88, 52), noise=10.0)  # the low offices south of Bourke Street: white-grey walls (obl_s)
     # PC check round 2: Google Earth reads the two curved towers west of the ground as green-grey glass
     curtain("tower_glass", (84, 102, 98), (120, 132, 128), bay=1.5, floor=3.05, slab=0.0, noise=9.0)
     TILE["tower_glass"] = (6.0, 6.1)
@@ -134,7 +153,7 @@ def make_textures():
     flat("slab_grey", (150, 160, 156))  # slab edges: grey-green, not white (PC check round 2)
     flat("timber", (74, 64, 52))
     flat("concrete_deck", (170, 168, 160))
-    for n in ("fin_white", "corner_red", "roof_grey", "roof_dark", "sx_glass", "podium_glass", "white_band", "steel", "rock_a", "rock_b",
+    for n in ("home_frame", "home_glass", "near_wall", "tree_leaf", "fin_white", "corner_red", "roof_grey", "roof_dark", "sx_glass", "podium_glass", "white_band", "steel", "rock_a", "rock_b",
               "timber", "concrete_deck", "balustrade", "slab_grey", "steel_dark"):
         TILE[n] = (4.0, 4.0)
 
@@ -213,28 +232,51 @@ def inset(ring, d):
     return out
 
 
-def banded(g, ring, z0, z1, floor, sill, head, recess, wall, glass, top="roof_grey", parapet=1.0, reveal=None):
-    """Floors of ribbon windows: from each floor's level a solid band `sill` high on the face, then
-    glass `recess` back from it up to `head`, then solid to the next floor. The window reveals (sill,
-    head) are modelled; a negative recess makes the solid bands stand out as balconies instead. `reveal` is the
-    reveals' material (the wall's by default)."""
-    reveal = reveal or wall
+_FAC = {}
+
+
+def facade_tex(wall, glass, floor, sill, head, phase, win=None):
+    """A floor-high facade texture for banded(): the wall's band from the floor to `sill`, glass to `head` with a
+    mullion every 1.5 m (or, with win=(width, spacing), punched windows `width` wide every `spacing` m), wall again
+    to the next floor. Round 9 (PC check): modelled 0.3-1 m sills and reveals are under a pixel at broadcast range and
+    shimmered as wavy stripes; as a texture the engine's mipmaps average them. Returns the texture's name."""
+    key = (wall, glass, round(floor, 3), round(sill, 3), round(head, 3), round(phase % floor, 3), win)
+    if key in _FAC:
+        return _FAC[key]
+    name = "fac%d" % len(_FAC)
+    px = 24
+    wc = np.asarray(Image.open(os.path.join(TEX, wall + ".png")).convert("RGB"), float).reshape(-1, 3).mean(0)
+    gc = np.asarray(Image.open(os.path.join(TEX, glass + ".png")).convert("RGB"), float).reshape(-1, 3).mean(0)
+    span = 6.0 if win is None else win[1] * max(1, round(6.0 / win[1]))
+    W, H = int(round(span * px)), int(round(floor * px))
+    x = (np.arange(W) + 0.5) / px
+    y = ((np.arange(H)[::-1] + 0.5) / px + phase) % floor   # image rows run top-down, v (height) runs up
+    img = np.zeros((H, W, 3), float) + wc + RNG.normal(0, 3.0, (H, W, 3))
+    band = (y >= sill) & (y < head)
+    if win is None:
+        cols = (x % 1.5) >= 0.08
+    else:
+        cols = (x % win[1]) < win[0]
+    m = band[:, None] & cols[None, :]
+    img[m] = gc + RNG.normal(0, 4.0, (int(m.sum()), 3))
+    _save(name, img)
+    TILE[name] = (span, floor)
+    _FAC[key] = name
+    return name
+
+
+def banded(g, ring, z0, z1, floor, sill, head, recess, wall, glass, top="roof_grey", parapet=1.0, reveal=None, win=None):
+    """Floors of ribbon windows: from each floor's level a solid band `sill` high on the face, then glass up to
+    `head`, then solid to the next floor. Round 9: drawn as one flat face per edge carrying a floor-high texture
+    (facade_tex), not modelled sills and reveals, which shimmered at range; `recess` and `reveal` are kept for the
+    callers' record. win=(width, spacing) gives punched windows instead of ribbons."""
     out = ccw(ring)
-    inn = inset(out, recess)
     nf = max(1, int(round((z1 - z0) / floor)))
     fl = (z1 - z0) / nf
-    for f in range(nf):
-        z = z0 + f * fl
-        a, b = z + sill * fl / floor, z + head * fl / floor
-        u = 0.0
-        for i in range(len(out)):
-            j = (i + 1) % len(out)
-            g.wall(wall, out[i], out[j], z, a, u)
-            g.wall(glass, inn[i], inn[j], a, b, u)
-            u += g.wall(wall, out[i], out[j], b, z + fl, u)
-            # sill (faces up) and head (faces down) between the face and the glass
-            g.poly(reveal, [(*out[i], a), (*out[j], a), (*inn[j], a), (*inn[i], a)][::-1])
-            g.poly(reveal, [(*out[i], b), (*out[j], b), (*inn[j], b), (*inn[i], b)])
+    tex = facade_tex(wall, glass, fl, sill * fl / floor, head * fl / floor, z0, win)
+    u = 0.0
+    for i in range(len(out)):
+        u += g.wall(tex, out[i], out[(i + 1) % len(out)], z0, z1, u)
     if parapet:
         g.prism(out, z1, z1 + parapet, wall, top=None)
         g.prism(inset(out, 0.3), z1, z1 + parapet, wall, top=None)
@@ -361,11 +403,11 @@ def nab(g, ring, h=72.0):
                 n = outward(p0, p1)
                 f = ((s0 + (j + 0.5) * (s1 - s0) / k) / L)
                 if name == "west":
-                    mat = "nab_glass"
+                    mat = "nab_glass_w"
                 elif name == "east":
-                    mat = "nab_silver" if f > 0.88 else "nab_glass"
+                    mat = "nab_silver" if f > 0.88 else ("nab_glass_a", "nab_glass_b", "nab_glass_c", "nab_glass_d")[bi // 2]
                 else:
-                    mat = "nab_glass"
+                    mat = ("nab_glass_b", "nab_glass_a", "nab_glass_c")[min(2, j * 3 // k)]
                 # alternate edges lean out (a block's two ends stay plumb, so its slots' walls are flat)
                 lean0 = n * fold * (j % 2 == 1) * (yw is None)
                 lean1 = n * fold * ((j + 1) % 2 == 1 and j + 1 < k) * (yw is None)
@@ -393,7 +435,7 @@ def nab(g, ring, h=72.0):
                 if name == "south" and k > 2 and j in (k // 3, 2 * k // 3):
                     g.poly("corner_red", [(*p0, base), (*(p0 + t * 3.2), base), (*(p0 + t * 3.2 + lean0), top),
                                           (*(p0 + lean0), top)])
-                if mat == "nab_glass":
+                if mat.startswith("nab_glass"):
                     # white shades, one row a floor (3.9 m), one every 6.5 m along a row, each row stepped
                     # 2.2 m on so they climb in diagonals: about five a row on a 30 m block and eleven rows,
                     # 3.4 m wide and 5.6 m tall, as counted on Google Earth's c_e (2026-11-23)
@@ -407,7 +449,7 @@ def nab(g, ring, h=72.0):
                     for r, z in enumerate(np.arange(base + 1.0, top - sh - 0.9, 3.9)):
                         for s_ in np.arange((r * st - u) % sp, w - sw - 0.2, sp):
                             if name != "west":
-                                if rng.random() > 0.62:
+                                if rng.random() > 0.45:  # round 10: PC 15% white against GE 11%
                                     continue
                                 s_ = float(np.clip(s_ + rng.uniform(-0.5, 0.5), 0.0, w - sw - 0.2))
                             s_ = float(s_) + 0.2  # clear of the facet edge
@@ -435,18 +477,110 @@ def nab(g, ring, h=72.0):
                 u += float(np.linalg.norm(b0 - a0))
     # parapet and roof over the facets' tops, plant set back on the roof
     rim = ccw([tuple(q) for q in outline])
-    g.cap("roof_grey", rim, top)
     for i in range(len(rim)):
         g.wall("nab_silver", rim[i], rim[(i + 1) % len(rim)], top, top + 1.4)
     # the roof: folded dark glass planes rising from the parapet to a ridge point over the middle, as
     # Google Earth's obl_e and obl_sw show it (not flat)
-    T = [np.array(q) for q in ccw([tuple(q) for q in (P[0], P[1], P[2])])]
-    apex = np.r_[np.mean(np.array(T), 0), top + 9.0]
-    for i in range(3):
-        a, b = T[i], T[(i + 1) % 3]
-        g.poly("roof_dark", [np.r_[a, top + 1.4], np.r_[b, top + 1.4], apex])
+    nab_roof(g, rim, P, top)
     # the ground storey's soffit
     g.cap("roof_grey", [tuple(q) for q in ring], base - 0.6, up=False)
+
+
+def _clip_line(p, d, tri):
+    """The segment of the line p + s d inside the convex counter-clockwise triangle tri, or None."""
+    lo, hi = -1e9, 1e9
+    for i in range(3):
+        a, b = np.array(tri[i]), np.array(tri[(i + 1) % 3])
+        n = -outward(a, b)  # inward
+        den = float(np.dot(d, n)); num = float(np.dot(p - a, n))
+        if abs(den) < 1e-9:
+            if num < 0:
+                return None
+            continue
+        s_ = -num / den
+        if den > 0:
+            lo = max(lo, s_)
+        else:
+            hi = min(hi, s_)
+    return (p + d * lo, p + d * hi) if hi - lo > 1.0 else None
+
+
+def nab_roof(g, rim, P, top):
+    """NAB's roof as Google Earth's obl_e shows it (nabroof1, 2026-11-23), replacing the round 1-9 pyramid: a flat
+    dark grey roof under a grid of solar panels inside the parapet; rows of sawtooth rooflights over its southern
+    half; a cluster of round cooling towers and a plant room towards the north; and over the middle of the east
+    face, between the second and third blocks, a sunken roof garden ringed by red-orange folded plates."""
+    z = top + 0.3
+    g.cap("nab_roof", rim, z)
+    tri = [np.array(q) for q in ccw([tuple(q) for q in (P[0], P[1], P[2])])]
+    A, B, C = np.array(P[0], float), np.array(P[1], float), np.array(P[2], float)
+    # east face runs B (south) to C (north); in_e points into the roof from it
+    te = (C - B) / np.linalg.norm(C - B)
+    in_e = -outward(B, C)
+    Le = float(np.linalg.norm(C - B))
+    inner = [np.array(q) for q in inset([tuple(q) for q in tri], 6.0)]
+    # sawtooth rooflights: rows square to the east face every 5 m over its southern half, each a glass slope 2 m
+    # deep rising 1 m, its upright back in roof grey
+    for s0 in np.arange(0.06, 0.26, 0.05):
+        pa = B + te * (s0 * Le)
+        seg = _clip_line(pa, in_e, inner)
+        if seg is None:
+            continue
+        a, b = seg
+        a = a + in_e * 2.0
+        g.poly("nab_rooflight", [(*a, z), (*b, z), (*(b + te * 2.0), z + 1.0), (*(a + te * 2.0), z + 1.0)])
+        g.poly("roof_grey", [(*(a + te * 2.0), z), (*(a + te * 2.0), z + 1.0), (*(b + te * 2.0), z + 1.0), (*(b + te * 2.0), z)])
+    # the west part's rooflights: rows parallel to the west face (C to A), over the half nearest it
+    tw = (A - C) / np.linalg.norm(A - C)
+    in_w = -outward(C, A)
+    for d in (10.0, 15.0, 20.0):
+        seg = _clip_line(C + in_w * d, tw, inner)
+        if seg is None:
+            continue
+        a, b = seg
+        a = a + tw * 8.0
+        b = b - tw * 8.0
+        if np.dot(b - a, tw) < 4.0:
+            continue
+        g.poly("nab_rooflight", [(*a, z), (*b, z), (*(b + in_w * 2.0), z + 1.0), (*(a + in_w * 2.0), z + 1.0)])
+        g.poly("roof_grey", [(*(a + in_w * 2.0), z), (*(a + in_w * 2.0), z + 1.0), (*(b + in_w * 2.0), z + 1.0), (*(b + in_w * 2.0), z)])
+    # the roof garden: sunken 1 m, 0.34 to 0.56 of the east face, 3 to 13 m in
+    g0, g1, d0, d1 = 0.34 * Le, 0.56 * Le, 3.0, 13.0
+    q = [B + te * g0 + in_e * d0, B + te * g1 + in_e * d0, B + te * g1 + in_e * d1, B + te * g0 + in_e * d1]
+    g.poly("roof_garden", [(*x, z - 1.0) for x in ccw([tuple(x) for x in q])])
+    for i in range(4):
+        a, b = q[i], q[(i + 1) % 4]
+        g.poly("roof_grey", [(*a, z - 1.0), (*b, z - 1.0), (*b, z), (*a, z)])
+        g.poly("roof_grey", [(*b, z - 1.0), (*a, z - 1.0), (*a, z), (*b, z)])
+    for k in range(7):  # planter shrubs
+        c = B + te * (g0 + (g1 - g0) * (k + 0.5) / 7) + in_e * (d0 + 2.0 + 6.0 * (k % 2))
+        r = cylinder_ring(c, 1.1, 6)
+        g.prism(r, z - 1.0, z + 0.4, "roof_garden", top="roof_garden")
+    # the red-orange folded plates: a strip from 0.27 to 0.63 of the face, from the parapet in to 18 m behind the
+    # garden, folded as a zigzag of triangles rising 2.6 m (Google Earth: terracotta triangles round the garden)
+    def folded(p0, p1, w_dir, width, n):
+        L = float(np.linalg.norm(p1 - p0)); t = (p1 - p0) / L
+        row0 = [p0 + t * L * i / n for i in range(n + 1)]
+        for i in range(n):
+            a0, a1 = row0[i], row0[i + 1]
+            b0, b1 = a0 + w_dir * width, a1 + w_dir * width
+            h0 = z + (2.6 if i % 2 == 0 else 0.0)
+            h1 = z + (0.0 if i % 2 == 0 else 2.6)
+            g.poly("corner_red", [(*a0, z), (*a1, h1), (*b1, z)])
+            g.poly("corner_red", [(*a0, z), (*b1, z), (*b0, h0)])
+            g.poly("corner_red", [(*a0, z), (*b0, h0), (*a1, h1)][::-1])
+    # round 10 check: a ring of plates round the garden read as a red box from above; Google Earth's red is the strip
+    # along the east parapet, the garden open behind it
+    folded(B + te * (0.27 * Le) + in_e * 0.6, B + te * (0.63 * Le) + in_e * 0.6, in_e, 2.4, 10)
+    # plant: six round cooling towers and a plant room, north of the middle (Google Earth's white drums)
+    cen = (A + B + C) / 3.0
+    pc = cen + (C - cen) * 0.25 + in_e * 0.0
+    for i in range(6):
+        c = pc + te * (3.6 * (i % 3)) + tw * (3.6 * (i // 3))
+        g.prism(cylinder_ring(c, 1.5, 10), z, z + 2.4, "steel", top="roof_grey")
+    pr = pc - te * 6.0 - tw * 2.0
+    room = [pr, pr + te * 8.0, pr + te * 8.0 + in_w * 5.0, pr + in_w * 5.0]
+    g.prism([tuple(x) for x in room], z, z + 3.2, "roof_grey", top="roof_grey")
 
 
 def _at(pl, s):
@@ -759,6 +893,52 @@ def southern_cross(g, ring):
         g.poly("roof_grey", [(*a_, 6.4), (*b_, 6.4), (*b_, 7.0), (*a_, 7.0)])
 
 
+def near_buildings(g, W):
+    """The buildings within about 250 m that were plain boxes (round 10 audit), each with its own look from Google Earth.
+    - HOME Docklands, 685 La Trobe Street (2024): two towers north-west of the ground, 101 m and 28 floors (CTBUH;
+      OpenStreetMap gives none, the 2023 city massing predates them), dark glass in a white frame grid.
+    - The City of Melbourne's 2023 massing for the offices south of Bourke Street (10757: white-grey walls, dark ribbon
+      glazing, dark grey roofs with white parapets, obl_s), the podium under Lacrosse north of the ground (16888) and the
+      low building north-west (3046), each part from its own base to its own top."""
+    for wid in ("1507403839", "1507403840"):
+        # round 10 check: 1.4 m windows left the frame too thin and the towers read navy against Google Earth's
+        # grey-white grid; the frame is 0.5 m and the glass a lighter blue-grey
+        banded(g, W[wid][1], 0.0, 101.0, 3.6, 0.5, 3.1, 0.0, "home_frame", "home_glass", top="roof_grey",
+               parapet=1.2, win=(1.1, 1.6))
+    looks = {10757: ("near_wall", "dark_glass", "roof_dark"), 16888: ("pale_panel", "dark_glass", "roof_grey"),
+             3046: ("pale_panel", "dark_glass", "roof_grey")}
+    skip = [p for t, p in W.values() if t.get("_id") in S.LANDMARK_WAYS and len(p) > 3]
+    for sid, parts in S.com_parts(set(looks), skip).items():
+        wall, glass, roof = looks[sid]
+        for base, top, ring in parts:
+            # Victoria Point's forecourt deck (10757's 0-9.5 m part): Google Earth (obl_s) shows its top as the
+            # red-orange paved plaza between the tower and the stadium, (179, 128, 118), with planted beds and trees
+            deck = sid == 10757 and base < 0.5
+            r_ = "plaza_red" if deck else roof
+            if top - base >= 3.0:
+                banded(g, ring, base, top, 3.6, 0.9, 2.9, 0.0, wall, glass, top=r_, parapet=0.0)
+            else:
+                g.prism(ring, base, top, wall, top=r_)
+            if deck:
+                for gid in ("1507400706", "1507400707", "1507400708", "1507400709", "1507400710", "1507400711"):
+                    bed = W[gid][1]
+                    g.prism(bed, top, top + 0.5, "near_wall", top="roof_garden")
+                    c = np.array(bed[:-1] if tuple(bed[0]) == tuple(bed[-1]) else bed).mean(0)
+                    tree(g, c, top + 0.5, 7.0, 2.6)
+
+
+def tree(g, c, z, h, r):
+    """A plaza tree: a dark trunk and a lumpy eight-sided canopy (Google Earth's planted beds on the forecourt)."""
+    g.prism(cylinder_ring(c, 0.25, 6), z, z + h * 0.45, "timber", top=None)
+    mid = z + h * 0.65
+    ring = [(c[0] + r * (1.0 + 0.12 * math.sin(3 * k)) * math.cos(k * math.pi / 4),
+             c[1] + r * (1.0 + 0.12 * math.sin(3 * k)) * math.sin(k * math.pi / 4)) for k in range(8)]
+    for k in range(8):
+        a, b = ring[k], ring[(k + 1) % 8]
+        g.poly("tree_leaf", [(*a, mid), (*b, mid), (c[0], c[1], z + h)])
+        g.poly("tree_leaf", [(*b, mid), (*a, mid), (c[0], c[1], z + h * 0.4)])
+
+
 def build():
     import bpy
     import bmesh  # noqa: F401
@@ -766,6 +946,7 @@ def build():
     W = osm_ways()
     g = Geo()
     nab(g, W["221441430"][1], h=60.0)
+    near_buildings(g, W)
     seven(g, W["33261092"][1])
     round_office(g, W["44158938"][1], h=21.6)  # six floors in Google Earth's ge_vicpoint_b
     ferry(g, W["1246185747"][1])
@@ -775,10 +956,9 @@ def build():
     balconies(g, W["332358301"][1], 6.0, 109.0, 3.2, 1.6, wave=1.4)
     g.prism(W["332358301"][1], 0.0, 6.0, "podium_glass", top=None)
     # the two sawtooth towers north of the stadium (ge_north65_b): white frames, grey glass
-    # Round 9: in the game's light the sky-lit sills sparkled as fine white dashes, sub-pixel at broadcast range
-    # (PC: "fine horizontal banding"); the reveals are dark metal flashing (roof_dark), the glass's frame
-    banded(g, W["221441428"][1], 0.0, 65.0, 3.1, 0.9, 2.8, 0.45, "band_panel", "grey_glass", parapet=1.5, reveal="roof_dark")
-    banded(g, W["992236548"][1], 0.0, 70.0, 3.1, 0.9, 2.8, 0.45, "band_panel", "grey_glass", parapet=1.5, reveal="roof_dark")
+    # Round 10: Google Earth close up (ext_135) shows white panel walls with dark punched windows, not ribbons
+    banded(g, W["221441428"][1], 0.0, 65.0, 3.1, 0.9, 2.8, 0.45, "band_panel", "grey_glass", parapet=1.5, win=(1.8, 3.0))
+    banded(g, W["992236548"][1], 0.0, 70.0, 3.1, 0.9, 2.8, 0.45, "band_panel", "grey_glass", parapet=1.5, win=(1.8, 3.0))
     for wid in ("711957749", "711957750"):
         jetty(g, W[wid][1])
         gangway(g, W[wid][1], [(-198.1, -34.0), (-223.8, -42.3), (-220.1, -53.6), (-206.7, -92.3), (-202.4, -104.2)])
