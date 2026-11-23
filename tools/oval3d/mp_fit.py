@@ -49,7 +49,19 @@ BONES = [("shoulder_l", "elbow_l"), ("elbow_l", "wrist_l"), ("shoulder_r", "elbo
 W_PRIOR = 0.15    # pull of the tracker's 3D guess, against 1.0 for the picture
 W_SMOOTH = 0.5    # frame-to-frame steadiness (on acceleration)
 W_BONE = 4.0      # bone lengths held
-W_SIZE = float(os.environ.get("FIT_W_SIZE", "0"))   # each man's bones together held to BONES.json
+W_SIZE = float(os.environ.get("FIT_W_SIZE", "0"))
+W_PEN = 6.0       # two men's limbs kept from passing through each other
+FIT_UNIT = float(os.environ.get("FIT_UNIT", "1.29"))   # metres per fit unit (the bake's BAKE_SCALE)
+# Each man's body as capsules for the pair's no-passing-through term: (joint ends, radius in
+# metres). The trunk runs from the shoulders' middle to the hips'; the head is a ball at the ears'
+# middle. Radii are a footballer's flesh, kit included.
+CAPS = [((("shoulder_l", "shoulder_r"), ("hip_l", "hip_r")), 0.14),
+        ((("ear_l", "ear_r"), ("ear_l", "ear_r")), 0.11),
+        ((("hip_l",), ("knee_l",)), 0.08), ((("hip_r",), ("knee_r",)), 0.08),
+        ((("knee_l",), ("ankle_l",)), 0.055), ((("knee_r",), ("ankle_r",)), 0.055),
+        ((("shoulder_l",), ("elbow_l",)), 0.05), ((("shoulder_r",), ("elbow_r",)), 0.05),
+        ((("elbow_l",), ("wrist_l",)), 0.04), ((("elbow_r",), ("wrist_r",)), 0.04)]
+KNEE_ON_BACK = 0.02   # metres of kit squashed where the knee rests on the back   # each man's bones together held to BONES.json
 
 
 def bones_from_truth(joints_json):
@@ -168,9 +180,22 @@ def fit(p2, p3, vis, bones, contact=None, multi=False, stable=False):
         r_size = np.array([bl[k * nb:(k + 1) * nb].sum() - ref.sum() for k in range(Pn)]) * W_SIZE
         out = [r_img.ravel(), r_pri.ravel(), r_bone.ravel(), r_sm.ravel(), r_s, r_size]
         if Pn > 1:
-            # His knees at the depth of the other man's back (shoulders and hips' middle).
-            back = X[:, n:n + 8][:, [0, 1, 6, 7]].mean(1)[:, 2]
-            out.append(((X[:, 8, 2] + X[:, 9, 2]) * 0.5 - back) * cf)
+            # No limb of one man through the other's (capsules, sampled along each).
+            ends = lambda k, e: X[:, [k * n + J.index(j) for j in e]].mean(1)
+            seg = [[(ends(k, a), ends(k, b), r / FIT_UNIT) for (a, b), r in CAPS] for k in range(2)]
+            u = np.linspace(0.0, 1.0, 5)[None, :, None]
+            for a0, a1, ra in seg[0]:
+                pa = a0[:, None] + (a1 - a0)[:, None] * u
+                for b0, b1, rb in seg[1]:
+                    pb = b0[:, None] + (b1 - b0)[:, None] * u
+                    d = np.linalg.norm(pa[:, :, None] - pb[:, None], axis=3).min((1, 2))
+                    out.append(np.maximum(0.0, ra + rb - d) * W_PEN)
+            # In the contact frames his nearer knee rests on the other man's back: on the trunk's
+            # skin, not in it.
+            t0_, t1_, rt = seg[1][0]
+            ax = t1_ - t0_
+            dk = [np.linalg.norm((X[:, kn] - t0_) - ax * np.clip(((X[:, kn] - t0_) * ax).sum(1) / np.maximum(1e-9, (ax * ax).sum(1)), 0, 1)[:, None], axis=1) for kn in (8, 9)]
+            out.append((np.minimum(dk[0], dk[1]) - (rt + (0.055 - KNEE_ON_BACK) / FIT_UNIT)) * cf)
         return np.concatenate(out)
 
     # Which unknowns each residual touches: without it the solver differences every unknown for
@@ -207,8 +232,13 @@ def fit(p2, p3, vis, bones, contact=None, multi=False, stable=False):
     for k in range(Pn):
         rows.append([bli(k * nb + q) for q in range(nb)])
     if Pn > 1:
+        jl = lambda k, e: [xi(f, k * n + J.index(j), c) for j in e for c in range(3)]
+        for (a, b), _ in CAPS:
+            for (c_, d_), _ in CAPS:
+                for f in range(F):
+                    rows.append(jl(0, a) + jl(0, b) + jl(1, c_) + jl(1, d_))
         for f in range(F):
-            rows.append([xi(f, 8, 2), xi(f, 9, 2)] + [xi(f, n + j, 2) for j in (0, 1, 6, 7)])
+            rows.append([xi(f, kn, c) for kn in (8, 9) for c in range(3)] + jl(1, ("shoulder_l", "shoulder_r", "hip_l", "hip_r")))
     sp = lil_matrix((len(rows), len(x0)), dtype=int)
     for r, cols in enumerate(rows):
         for c in cols:
