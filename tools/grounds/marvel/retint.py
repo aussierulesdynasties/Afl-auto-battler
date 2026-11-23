@@ -144,8 +144,11 @@ def sign_panels():
     """The roof sign's panels (round 12, PC check of round 11: the sign read a loud red block, 36% red pixels against
     Google Earth's 0.7%; Google Earth shows white letters on a muted dark maroon-grey ground, the STADIUM half dark
     grey). Each panel's background is moved to that colour, keeping its texture; the white letters stay."""
-    for name, target in (("sign_marvel", (104, 54, 58)), ("signred", (104, 54, 58)),
-                         ("sign_stadium", (62, 60, 64)), ("signblack", (62, 60, 64))):
+    # Round 12 self-check (ext_270, sun on, ground between the letters): (104, 54, 58) rendered (139, 101, 103) against
+    # Google Earth's (117, 107, 106), still a red block; (62, 60, 64) rendered (102, 101, 108) against (103, 115, 123).
+    # Scaled by those ratios:
+    for name, target in (("sign_marvel", (88, 57, 60)), ("signred", (88, 57, 60)),
+                         ("sign_stadium", (62, 68, 73)), ("signblack", (62, 68, 73))):
         orig = os.path.join(TEX, "%s_orig.png" % name)
         path = os.path.join(TEX, "%s.png" % name)
         if not os.path.exists(orig):
@@ -173,6 +176,8 @@ def main():
     # Google Earth's (105, 119, 136); a greyer, lighter blue keeps the letters' dark ground in the sun too.
     # round 12 (item 6.4): (62, 68, 82) rendered (6, 25, 56) on the shaded faces against Google Earth's (47, 72, 107)
     retint("upperwall", (96, 106, 122), src="soffit", out="upperwall")
+    # the east offices' lobby walls, dark in the void under the boxes: the band's old dark grey-navy
+    retint("lobbydark", (62, 68, 82), src="soffit", out="lobbydark")
     # Glazing: the dark glass rendered black in shade (Google Earth's office glass reads (96, 114, 132),
     # its shopfronts (84, 104, 121), sky in them included). Lighter, so it reads as glass, not holes.
     retint("glass", (74, 90, 108))
@@ -213,6 +218,7 @@ def main():
     j = json.load(open(tiles))
     j["endrib"] = j["endroof"]
     j["upperwall"] = j["soffit"]
+    j["lobbydark"] = j["soffit"]
     j["tread"] = j["concrete"]
     j["ribbon"] = [12, 1.7]
     j["grille"] = [3, 3]

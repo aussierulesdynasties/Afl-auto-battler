@@ -33,12 +33,16 @@ xy = _mod("marvel_surrounds", os.path.join(HERE, "surrounds.py")).xy
 # Optus's helpers (box, slab, piers, material); its own `from surrounds import xy` needs its folder.
 sys.path.insert(0, os.path.join(HERE, "..", "optus"))
 ob = _mod("optus_bridges", os.path.join(HERE, "..", "optus", "bridges.py"))
+land = _mod("marvel_land", os.path.join(HERE, "land.py"))
 
 OUT = os.path.join(HERE, "..", "..", "..", "assets", "grounds", "marvel", "bridges.glb")
 BOLTE_DECK = "205197533"
 BOLTE_TOWERS = ["45442788", "45442805"]
-BOLTE_Z = 25.0
-TOWER_H = 140.0
+# Round 12 (real land, land.py): the water is at sea level, model z -2.6 (it had been the flat ground's z 0); heights
+# over the water count from there, and footbridges' decks from the higher of their landings and 4 m over the water.
+WATER_Z = -2.6
+BOLTE_Z = WATER_Z + 25.0
+TOWER_H = WATER_Z + 140.0
 SMALL_DECK = 4.0
 REACH = 1600.0     # m from the model's middle: the Bolte Bridge is 1.35 km west
 
@@ -85,10 +89,18 @@ def main():
             continue
         if np.abs(np.array(ring)).max() > (REACH if wid == BOLTE_DECK else 950):
             continue
-        z = BOLTE_Z if wid == BOLTE_DECK else SMALL_DECK
+        if wid == BOLTE_DECK:
+            z = BOLTE_Z
+        else:
+            pts = np.array(ring, float)
+            z = max(float(np.max(land.z(pts[:, 0], pts[:, 1]))), WATER_Z + SMALL_DECK)
         ob.slab(deck, ring, z - 2.5, z)
         ob.piers(deck, ring, z, step=60.0 if wid == BOLTE_DECK else 38.0)
     for name, (mat, bm) in parts.items():
+        # piers and tower feet (made from -2 m) run down under the water
+        for v in bm.verts:
+            if v.co.z <= -1.99:
+                v.co.z = WATER_Z - 2.0
         me = bpy.data.meshes.new(name)
         bm.to_mesh(me)
         me.materials.append(mat)

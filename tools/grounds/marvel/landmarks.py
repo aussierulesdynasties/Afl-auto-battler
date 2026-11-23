@@ -24,6 +24,7 @@ from PIL import Image
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import surrounds as S  # noqa: E402
+import land  # noqa: E402
 
 OUT = os.path.join(HERE, "..", "..", "..", "assets", "grounds", "marvel", "landmarks.glb")
 TEX = os.path.join(HERE, "landmark_tex")
@@ -209,6 +210,7 @@ def make_textures():
     curtain("louvre_grey", (120, 124, 128), (176, 178, 180), bay=0.9, floor=0.5, slab=0.12, noise=3.0)
     TILE["louvre_grey"] = (3.6, 1.0)
     flat("pool_blue", (96, 170, 206), noise=3.0)
+    flat("solar", (38, 48, 66), noise=3.0)   # dark solar arrays on 9966/9967's white roofs (Google Earth c_sw)
     flat("roof_white", (214, 216, 212), noise=4.0)  # the former Seven building's blue curtain wall (seven_w, c_nw)
     # round 12 (PC check of round 11): Victoria Point's glass is blue under its white slab edges, not green-grey
     curtain("vp_glass", (60, 84, 110), (88, 104, 120), bay=1.5, floor=3.05, slab=0.0, noise=3.0)
@@ -249,7 +251,7 @@ def make_textures():
     flat("timber", (74, 64, 52))
     flat("concrete_deck", (170, 168, 160))
     for n in ("bourke_edge", "home_frame", "home_glass", "near_wall", "tree_leaf", "fin_white", "corner_red", "roof_grey", "roof_dark", "sx_glass", "podium_glass", "white_band", "steel", "rock_a", "rock_b",
-              "timber", "concrete_deck", "balustrade", "slab_grey", "steel_dark", "round_glass", "bourke_glass", "seven_glass", "roof_white", "navy_wall", "pool_blue"):
+              "timber", "concrete_deck", "balustrade", "slab_grey", "steel_dark", "round_glass", "bourke_glass", "seven_glass", "roof_white", "navy_wall", "pool_blue", "solar"):
         TILE[n] = (4.0, 4.0)
 
 
@@ -259,9 +261,12 @@ class Geo:
 
     def __init__(self):
         self.parts = {}
+        # Round 12 (real land): every z handed in is raised by `lift`, set per building to the land under its foot
+        # (land.py). Heights read off Google Earth's 3D are already above sea level and keep lift 0.
+        self.lift = 0.0
 
     def poly(self, mat, pts, uvs=None):
-        pts = [tuple(map(float, p)) for p in pts]
+        pts = [(float(p[0]), float(p[1]), float(p[2]) + self.lift) for p in pts]
         if uvs is None:
             uvs = _auto_uv(pts)
         self.parts.setdefault(mat, []).append((pts, [tuple(map(float, u)) for u in uvs]))
@@ -466,7 +471,12 @@ def nab(g, ring, h=72.0):
             if not (abs(q[0] - 145.40) < 0.1 and abs(q[1] + 16.71) < 0.1)]
     P = [np.array(q) for q in ring]
     faces = [("south", [P[0], P[1]]), ("east", [P[1], P[2]]), ("west", P[2:] + [P[0]])]
-    base, top, fold = 7.0, h, 2.2
+    # Round 12 (real land): the land falls from 4.4 m along the east face (Google Earth: 7 m above sea level at its foot)
+    # to 1 m on the west, by the stadium. The 7 m glazed ground storey is read on the east face (c_e, c_ne), so it
+    # stands on that face's land; the west's podium glass runs on down to its lower ground. The top, picked in Google
+    # Earth at 60.4 m, stays where it was measured.
+    east_land = float(np.mean([land.z(*(np.array(P[1]) + (np.array(P[2]) - np.array(P[1])) * f)) for f in (0.1, 0.5, 0.9)]))
+    base, top, fold = east_land + 7.0, h, 2.2
     # The east face (Google Earth c_e, PC check of 2026-11-23) is four glass blocks and a silver end, split
     # by three slots clad orange-red that run the full height on a slant: (centre along the face from its
     # south corner, width, how far the slot's top sits along from its foot), read off the 119 m face.
@@ -807,7 +817,9 @@ def rocks(g, shore, water, width=4.5, seed=5):
             ang = rng.uniform(0, 2 * math.pi)
             base = [(p[0] + r * math.cos(ang + 2 * math.pi * m / k) * rng.uniform(0.75, 1.15),
                      p[1] + r * math.sin(ang + 2 * math.pi * m / k) * rng.uniform(0.75, 1.15)) for m in range(k)]
-            tip = (p[0] + rng.normal(0, 0.12), p[1] + rng.normal(0, 0.12), hgt)
+            # round 12 (real land): the water is at sea level (model -2.6) and the promenade 1.6-1.8 m above it, so the
+            # armour stands from the water up the sea wall, its tips reaching to about 0.5 m under the promenade
+            tip = (p[0] + rng.normal(0, 0.12), p[1] + rng.normal(0, 0.12), hgt * 1.6)
             mat = ("rock_a", "rock_b")[int(rng.integers(0, 2))]
             for m in range(k):
                 g.poly(mat, [(*base[m], 0.0), (*base[(m + 1) % k], 0.0), tip])
@@ -819,7 +831,7 @@ def piles(g, start, along, out, rows, per_row, step=2.8, gap=3.0, h=1.1):
     for r in range(rows):
         for k in range(per_row):
             c = start + along * r * step + out * (1.5 + k * gap)
-            g.prism(cylinder_ring(c, 0.28, 6), 0.0, h, "timber", top="timber")
+            g.prism(cylinder_ring(c, 0.28, 6), WATER_Z - 0.5 - g.lift, WATER_Z + h - g.lift, "timber", top="timber")
 
 
 def gangway(g, ring, edge):
@@ -840,14 +852,20 @@ def gangway(g, ring, edge):
         return
     t = (q - p) / d
     n = np.array([-t[1], t[0]]) * 1.1
-    g.poly("concrete_deck", [(*(p - n), 0.35), (*(p + n), 0.35), (*(q + n), 0.5), (*(q - n), 0.5)][::-1])
+    # round 12 (real land): from the promenade's edge down to the pontoon riding on the water (sea level, model -2.6)
+    zp, zq = float(land.z(*p)) - 0.05 - g.lift, WATER_Z + 0.5 - g.lift
+    g.poly("concrete_deck", [(*(p - n), zp), (*(p + n), zp), (*(q + n), zq), (*(q - n), zq)][::-1])
     for sgn in (-1, 1):
-        strut(g, "steel", np.r_[p + n * sgn, 1.35], np.r_[q + n * sgn, 1.5], 0.06)
+        strut(g, "steel", np.r_[p + n * sgn, zp + 1.0], np.r_[q + n * sgn, zq + 1.0], 0.06)
+
+
+# the harbour's water: sea level in the model (land.py; the LiDAR reads 0 m above sea level over Victoria Harbour)
+WATER_Z = -2.6
 
 
 def jetty(g, ring, z=0.5):
     """A floating jetty or pontoon from its OpenStreetMap outline: a concrete deck with its edge."""
-    g.prism(ring, 0.0, z, "concrete_deck", top="concrete_deck")
+    g.prism(ring, WATER_Z - 0.3 - g.lift, WATER_Z + z - g.lift, "concrete_deck", top="concrete_deck")
 
 
 def balconies(g, ring, z0, z1, floor, depth, wave=0.0, seed=0, glass="tower_glass", roof="roof_grey"):
@@ -928,6 +946,7 @@ def gantries(g, W, step=55.0, reach=450.0):
             p0, p1 = o + n * k0, o + n * k1
             if np.linalg.norm(p0) < 150 or np.linalg.norm(p1) < 150:
                 continue
+            g.lift = float(min(land.z(*p0), land.z(*p1)))   # masts on the yard's own land
             if len(gr) == 1:
                 strut(g, "steel_dark", np.r_[p0, 0.0], np.r_[p0, 7.6], 0.3)
                 strut(g, "steel_dark", np.r_[p0, 7.0], np.r_[o + n * (gr[0] + 1.0), 7.0], 0.12)
@@ -1006,7 +1025,7 @@ def southern_cross(g, ring):
         g.poly("roof_grey", [(*a_, 6.4), (*b_, 6.4), (*b_, 7.0), (*a_, 7.0)])
 
 
-def sawtooth(g, ring, z, pitch=6.0, h=1.8):
+def sawtooth(g, ring, z, pitch=6.0, h=1.8, cover=(0.6, 0.7)):
     """Rows of sawtooth rooflights over a roof's middle: each a white slope rising `h` over `pitch` to a glazed upright
     face, the rows along the roof's longer side; solar panels on every other slope."""
     rr = np.array(ring, float)
@@ -1016,8 +1035,8 @@ def sawtooth(g, ring, z, pitch=6.0, h=1.8):
     cr = np.array([-ax[1], ax[0]])
     pa, pc = (rr - c0) @ ax, (rr - c0) @ cr
     poly = [tuple(q) for q in ring]
-    for k, s0 in enumerate(np.arange(pc.min() * 0.6, pc.max() * 0.6 - pitch, pitch)):
-        a0, a1 = pa.min() * 0.7, pa.max() * 0.7
+    for k, s0 in enumerate(np.arange(pc.min() * cover[0], pc.max() * cover[0] - pitch, pitch)):
+        a0, a1 = pa.min() * cover[1], pa.max() * cover[1]
         p00, p10 = c0 + ax * a0 + cr * s0, c0 + ax * a1 + cr * s0
         p01, p11 = c0 + ax * a0 + cr * (s0 + pitch), c0 + ax * a1 + cr * (s0 + pitch)
         if not all(_inside(tuple(q), poly) for q in (p00, p10, p01, p11)):
@@ -1027,6 +1046,44 @@ def sawtooth(g, ring, z, pitch=6.0, h=1.8):
         g.poly("sx_glass", [(*p11, z), (*p01, z), (*p01, z + h), (*p11, z + h)])
         g.poly("roof_white", [(*p00, z), (*p01, z + h), (*p01, z)])
         g.poly("roof_white", [(*p10, z), (*p11, z), (*p11, z + h)])
+
+
+def sawtooth_rows(g, ring, z, pitch, h, flip=False):
+    """Big sawtooth roof over a whole (possibly L- or U-shaped) footprint: rows `pitch` apart stepping along its longer
+    side, each ridge across the building (Google Earth c_sw: five or six gables down the long side), a white slope rising
+    `h` to a glazed upright face, cut to the footprint 1 m in from its edge (shapely)."""
+    from shapely.geometry import LineString, Polygon
+    rr = np.array(ring, float)
+    c0 = rr.mean(0)
+    ev, evec = np.linalg.eigh(np.cov((rr - c0).T))
+    cr = -evec[:, 1] if flip else evec[:, 1]
+    ax = np.array([-cr[1], cr[0]])
+    pa, pc = (rr - c0) @ ax, (rr - c0) @ cr
+    P = Polygon([tuple(q) for q in ring]).buffer(-1.0)
+    n = 0
+    for s0 in np.arange(pc.min(), pc.max() - pitch + 0.01, pitch):
+        segs = []
+        for s_ in (s0 + 0.5, s0 + pitch - 0.5):
+            L = LineString([tuple(c0 + ax * (pa.min() - 5) + cr * s_), tuple(c0 + ax * (pa.max() + 5) + cr * s_)])
+            cut = L.intersection(P)
+            parts_ = [cut] if cut.geom_type == "LineString" else list(getattr(cut, "geoms", []))
+            segs.append([q for q in parts_ if q.geom_type == "LineString" and not q.is_empty and len(q.coords) >= 2])
+        # keep the stretch both edges of the row share
+        for la in segs[0]:
+            a0, a1 = sorted(float((np.array(q) - c0) @ ax) for q in la.coords)
+            for lb in segs[1]:
+                b0, b1 = sorted(float((np.array(q) - c0) @ ax) for q in lb.coords)
+                u0, u1 = max(a0, b0), min(a1, b1)
+                if u1 - u0 < 4.0:
+                    continue
+                p00, p10 = c0 + ax * u0 + cr * s0, c0 + ax * u1 + cr * s0
+                p01, p11 = c0 + ax * u0 + cr * (s0 + pitch), c0 + ax * u1 + cr * (s0 + pitch)
+                g.poly("roof_white", [(*p00, z), (*p10, z), (*p11, z + h), (*p01, z + h)])
+                g.poly("sx_glass", [(*p11, z), (*p01, z), (*p01, z + h), (*p11, z + h)])
+                g.poly("roof_white", [(*p00, z), (*p01, z + h), (*p01, z)])
+                g.poly("roof_white", [(*p10, z), (*p11, z), (*p11, z + h)])
+                n += 1
+    return n
 
 
 def near_buildings(g, W):
@@ -1040,14 +1097,17 @@ def near_buildings(g, W):
         # round 10 check: 1.4 m windows left the frame too thin and the towers read navy against Google Earth's
         # grey-white grid; the frame is 0.5 m and the glass a lighter blue-grey
         # round 12 self-check (c_nw): still read white with dark windows; Google Earth's is dark glass in a thin white grid
+        g.lift = land.base(W[wid][1])   # 101 m above its own ground (CTBUH)
         banded(g, W[wid][1], 0.0, 101.0, 3.6, 0.25, 3.35, 0.0, "home_frame", "home_glass", top="roof_grey",
                parapet=1.2, win=(1.4, 1.6))
+    g.lift = 0.0
     # Round 12 (PC check of round 11): the city's massing for the two foreground roofs of c_nw and c_sw, which Google
     # Earth shows in detail: 6153 (north-west, c_nw) blue glass under a white roof striped with solar panels; 9966 and
     # 9967 (south-west, c_sw) white roofs with rows of sawtooth glazed rooflights and solar panels.
     looks = {10757: ("near_wall", "dark_glass", "roof_grey"), 16888: ("navy_wall", "louvre_grey", "roof_grey"),
              3046: ("pale_panel", "dark_glass", "roof_grey"), 6153: ("pale_panel", "seven_glass", "stripe_roof"),
-             9966: ("near_wall", "dark_glass", "sawtooth"), 9967: ("near_wall", "dark_glass", "sawtooth")}
+             9966: ("near_wall", "dark_glass", "sawtooth"), 9967: ("near_wall", "dark_glass", "sawtooth"),
+             15419: ("near_wall", "dark_glass", "roof_grey")}
     skip = [p for t, p in W.values() if t.get("_id") in S.LANDMARK_WAYS and len(p) > 3]
     for sid, parts in S.com_parts(set(looks), skip).items():
         wall, glass, roof = looks[sid]
@@ -1057,6 +1117,47 @@ def near_buildings(g, W):
             deck = sid == 10757 and base < 0.5
             highest = top >= max(t_ for _, t_, _ in parts) - 0.01
             r_ = "plaza_red" if deck else (roof if highest else "roof_grey")
+            if sid in (9966, 9967):
+                # (OpenStreetMap's 46 m outline of these had hidden them all: surrounds.com_massing)
+                # Round 12 self-check, points picked in Google Earth's c_sw (2026-11-23): the flat roof at the frame's foot,
+                # white with blocks of dark solar arrays, reads 39.4 m at (-206, -243) and (-195, -252): the top of the
+                # massing's 32.4-39.4 m part. The glazed gables stand on it over the 39.4-43.4 m part (a glazed face picked
+                # at 41.4 m at (-195, -244)), five or so across, their glass toward the west. 9967 under the camera is the
+                # same white roof with solar arrays.
+                hi = top >= max(t_ for _, t_, _ in parts) - 0.01
+                if base < 0.5:
+                    banded(g, ring, base, top, 3.6, 0.9, 2.9, 0.0, wall, glass, top="roof_white", parapet=0.0)
+                elif sid == 9966 and hi:
+                    rows = sawtooth_rows(g, ring, base, 9.0, top - base)
+                    assert rows >= 3, (sid, rows)
+                else:
+                    g.prism(ring, base, top, "near_wall", top="roof_white")
+                    if not hi:
+                        rr = np.array(ring); c0 = rr.mean(0)
+                        for q in rr:
+                            for f_ in (0.45, 0.75):
+                                cc = c0 + (q - c0) * f_
+                                if _inside(tuple(cc), [tuple(x) for x in ring]):
+                                    g.poly("solar", [(cc[0] - 4.0, cc[1] - 2.5, top + 0.08), (cc[0] + 4.0, cc[1] - 2.5, top + 0.08),
+                                                     (cc[0] + 4.0, cc[1] + 2.5, top + 0.08), (cc[0] - 4.0, cc[1] + 2.5, top + 0.08)])
+                continue
+            if sid == 15419:
+                # Round 12 self-check (ext_000: this office is the foreground right under the camera, not 10757): its
+                # massing's upper parts are a big plant room and a lift overrun, plain pale cladding; white
+                # air-handling boxes stand round them on the roof (Google Earth ext_000)
+                if base > 0.5:
+                    g.prism(ring, base, top, "pale_panel", top="roof_grey")
+                    continue
+                banded(g, ring, base, top, 3.6, 0.9, 2.9, 0.0, wall, glass, top="roof_grey", parapet=0.0)
+                plant = [r2 for b2, _, r2 in parts if b2 > 0.5]
+                rr = np.array(ring); c0 = rr.mean(0)
+                for f_ in (0.62, 0.78):
+                    for q in rr[::max(1, len(rr) // 10)]:
+                        cc = c0 + (q - c0) * f_
+                        if _inside(tuple(cc), [tuple(x) for x in ring]) and not any(_inside(tuple(cc), [tuple(x) for x in r2]) for r2 in plant):
+                            g.prism([(cc[0] - 2.2, cc[1] - 1.6), (cc[0] + 2.2, cc[1] - 1.6), (cc[0] + 2.2, cc[1] + 1.6),
+                                     (cc[0] - 2.2, cc[1] + 1.6)], top, top + 2.4, "roof_white", top="roof_white")
+                continue
             if r_ == "sawtooth":
                 r_ = "roof_white"
                 sawtooth(g, ring, top)
@@ -1226,6 +1327,12 @@ def road_strips(g, W):
             road(mat, lanes)
         Wm = TILE[mat][0]
         pts = np.array(p, float)
+        # round 12 (real land): cut into pieces of 5 m at most, each corner 4 cm over the land (land.py)
+        fine = [pts[0]]
+        for a, b in zip(pts[:-1], pts[1:]):
+            k = max(1, int(math.ceil(np.linalg.norm(b - a) / 5.0)))
+            fine += [a + (b - a) * (i / k) for i in range(1, k + 1)]
+        pts = np.array(fine)
         v = 0.0
         for i in range(len(pts) - 1):
             a, b = pts[i], pts[i + 1]
@@ -1234,7 +1341,8 @@ def road_strips(g, W):
                 continue
             tdir = (b - a) / L
             n = np.array([-tdir[1], tdir[0]]) * Wm / 2
-            g.poly(mat, [(*(a - n), 0.04), (*(a + n), 0.04), (*(b + n), 0.04), (*(b - n), 0.04)][::-1],
+            za, zb = float(land.z(*a)) + 0.04, float(land.z(*b)) + 0.04
+            g.poly(mat, [(*(a - n), za), (*(a + n), za), (*(b + n), zb), (*(b - n), zb)][::-1],
                    [(0.0, v), (Wm, v), (Wm, v + L), (0.0, v + L)][::-1])
             v += L
 
@@ -1255,11 +1363,13 @@ def graffiti_wall(g, W, h=3.4):
             line.append(pts[i] + np.array([-d[1], d[0]]) * off)    # left of a northbound way is west
         assert line[0][0] < pts[0][0], "the wall must sit west of the carriageway"
         for a, b in zip(line[:-1], line[1:]):
+            g.lift = float(min(land.z(*a), land.z(*b)))   # round 12: on the road's land
             g.wall(mat, a, b, -0.5, h, u)
             u += g.wall(mat, b, a, -0.5, h, u)
         if mat == "graffiti":
             # ivy over the painted wall's first 9 m at the NAB end, on its road face (Google Earth c_e)
             a, b = line[0], line[1]
+            g.lift = float(land.z(*a))
             t = (b - a) / np.linalg.norm(b - a)
             nrm = np.array([t[1], -t[0]])          # east, to the road
             a2, b2 = a + nrm * 0.06, a + t * 9.0 + nrm * 0.06
@@ -1272,11 +1382,17 @@ def build():
     make_textures()
     W = osm_ways()
     g = Geo()
+    # Round 12 (real land, land.py): heights read off Google Earth's 3D (NAB's top, the mural, the city massing's tops)
+    # are above sea level and keep lift 0, their feet running down into the land; heights given above the ground
+    # (OpenStreetMap, CTBUH, floor counts) stand on the lowest land under their footprint.
     nab(g, W["221441430"][1], h=60.0)
     near_buildings(g, W)
     graffiti_wall(g, W)
+    g.lift = 0.0
     road_strips(g, W)
+    g.lift = land.base(W["33261092"][1])
     seven(g, W["33261092"][1])
+    g.lift = 0.0
     # round 12 (PC check of round 11: "the red/white mural building next to the Seven block is missing"): a navy block
     # against the north end of the Seven fin with a pale box on top; its north wall carries a red and white mural.
     # The mural's position and heights were picked in Google Earth from two views (c_ne and c_nw agree): a north-facing
@@ -1286,12 +1402,15 @@ def build():
     g.prism([(-100.5, 90.6), (-91.0, 90.6), (-91.0, 92.5), (-100.5, 92.5)], 22.0, 26.0, "pale_panel", top="roof_grey")
     g.poly("mural", [(-89.0, 92.85, 9.5), (-95.0, 92.85, 9.5), (-95.0, 92.85, 24.5), (-89.0, 92.85, 24.5)],
            [(0.0, 0.0), (6.0, 0.0), (6.0, 15.0), (0.0, 15.0)])
+    g.lift = land.base(W["44158938"][1])
     round_office(g, W["44158938"][1], h=21.6)  # six floors in Google Earth's ge_vicpoint_b
+    g.lift = land.base(W["1246185747"][1])
     ferry(g, W["1246185747"][1])
     # Victoria Point (128 m, 2006): a curved glass tower, recessed balconies behind white slab edges
     # Round 11 (PC check): it read a plain grey slab; Google Earth shows white slab edges and balustrades a floor
     # (about a third of each floor) over blue-grey glass, and a crown stepped back over planted terraces
     vp = W["296368687"][1]
+    g.lift = land.base(vp)
     # Round 12 (PC check of round 11): crisper white edges over blue glass, and the crown stepped twice over planted
     # terraces
     banded(g, vp, 0.0, 110.0, 3.05, 0.75, 2.6, 0.45, "white_band", "vp_glass", parapet=1.2, top="roof_garden")
@@ -1301,17 +1420,23 @@ def build():
         for k, q in enumerate(ring_[::2]):
             tree(g, q, zt, 3.0, 1.2)
     # 720 Bourke (109 m, 2014): rippling white balcony slabs, planted (ge_nab_b)
+    g.lift = land.base(W["332358301"][1])
     balconies(g, W["332358301"][1], 6.0, 109.0, 3.2, 1.6, wave=1.4, glass="bourke_glass", roof="atrium_glass")
     g.prism(W["332358301"][1], 0.0, 6.0, "podium_glass", top=None)
     # the two sawtooth towers north of the stadium (ge_north65_b): white frames, grey glass
     # Round 10: Google Earth close up (ext_135) shows white panel walls with dark punched windows, not ribbons
+    g.lift = land.base(W["221441428"][1])
     banded(g, W["221441428"][1], 0.0, 65.0, 3.1, 0.9, 2.8, 0.45, "band_panel", "grey_glass", parapet=1.5, win=(1.8, 3.0))
+    g.lift = land.base(W["992236548"][1])
     banded(g, W["992236548"][1], 0.0, 70.0, 3.1, 0.9, 2.8, 0.45, "band_panel", "grey_glass", parapet=1.5, win=(1.8, 3.0))
+    g.lift = 0.0
     for wid in ("711957749", "711957750"):
         jetty(g, W[wid][1])
         gangway(g, W[wid][1], [(-198.1, -34.0), (-223.8, -42.3), (-220.1, -53.6), (-206.7, -92.3), (-202.4, -104.2)])
     gantries(g, W)
+    g.lift = land.base(W["33261083"][1])
     southern_cross(g, W["33261083"][1])
+    g.lift = WATER_Z
     water_ring = [tuple(q) for q in W["23368547"][1]]
     def in_water(pt):
         return _inside(pt, water_ring)
@@ -1319,6 +1444,7 @@ def build():
     rocks(g, [(-176.7, -95.2), (-157.4, -152.8)], in_water, seed=6)
     # pile rows either side of the plaza, square to the shore
     t = np.array([-198.1 + 254.2, -34.0 - 128.7]); t /= np.linalg.norm(t)
+    g.lift = 0.0
     piles(g, (-206.0, -12.0), -t, np.array([-t[1], t[0]]) * -1, 22, 9, step=2.6, gap=2.4)
     t2 = np.array([-157.4 + 176.7, -152.8 + 95.2]); t2 /= np.linalg.norm(t2)
     piles(g, (-178.0, -108.0), t2, np.array([-t2[1], t2[0]]) * -1, 12, 9, step=2.6, gap=2.4)  # 12 storeys: from Google Earth's c_e it tops 50 m, from obl_ne well under OSM's 72 m
