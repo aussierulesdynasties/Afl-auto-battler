@@ -142,7 +142,9 @@ def main():
     # the forecourt plinth's street front: blue-grey glass (PC check: Google Earth (76, 102, 118))
     retint("fcglass", (81, 108, 124), src="curtain", out="fcglass")
     # the east office boxes' ribbon glass: light grey (PC check round 3: Google Earth's east boxes are pale grey/white)
-    retint("officeglass", (138, 146, 152), src="glass", out="officeglass")
+    # round 4: (138, 146, 152) still rendered (85, 100, 126) against (117, 132, 142); east-facing walls render
+    # about 0.57-0.73 of their colour, so a light grey
+    retint("officeglass", (180, 188, 192), src="glass", out="officeglass")
     tiles = os.path.join(TEX, "tiles.json")
     j = json.load(open(tiles))
     j["endrib"] = j["endroof"]
