@@ -1556,15 +1556,9 @@ func _test_set_shot_calls() -> void:
 				pass_seen += 1
 				var nk := d._next_real(k)
 				var want := d._actor_id(evs[nk]) if nk >= 0 else -1
-				var hit := false
 				for ph in d._pass_phases(k):
 					if str(ph["t"]) == "flight" and int(ph.get("recv", -1)) == want and want >= 0:
-						hit = true
-				# Nobody takes it and the umpire balls it up where the log has it: the
-				# ball-up's own flight carries the kick there (MatchDirector._ballup_phases).
-				if want < 0 and nk >= 0 and str(evs[nk].get("kind", "")) == "ballup":
-					hit = true
-				pass_ok += 1 if hit else 0
+						pass_ok += 1
 			elif kind == "pack":
 				pack_seen += 1
 				var out := str(ev.get("outcome", ""))
@@ -1592,7 +1586,7 @@ func _test_set_shot_calls() -> void:
 		if key == "bomb" and outcomes.size() < 2 and runs.size() < 4:
 			runs.append(["bomb", int(res["seed_i"]) + 1])
 	_check(pass_seen > 0 and pass_ok == pass_seen,
-			"Playing on is a kick to the teammate leading up, to the man who cuts it off, or to the ball-up when nobody takes it (%d of %d)" % [pass_ok, pass_seen])
+			"Playing on is a kick to the teammate leading up, or to the man who cuts it off (%d of %d)" % [pass_ok, pass_seen])
 	_check(pack_seen > 0 and pack_ok == pack_seen and outcomes.size() >= 2,
 			"A bomb goes up into a pack of the players the log names, and ends as logged (%d of %d, %s)" % [
 					pack_ok, pack_seen, str(outcomes.keys())])
@@ -3141,10 +3135,8 @@ func _check_turf3d(oval: Oval3D) -> void:
 		_check(g.g > g.r and g.g > g.b and wet == (1.0 if look[0] == VignetteWeather.WET else 0.0)
 				and turf.env.tonemap_exposure >= 1.0,
 				"%s %s: the turf is green and the weather's sheen is set (%s, wet %.0f)" % [look[1], look[0], str(g), wet])
-	# Rule 2.114: the broadcast colour, the turf's colour read once and the film's white balance
-	# (read at night: the loop above ends on a day look).
-	turf.apply("", VignetteKickoff.NIGHT)
-	var film_ok: bool = turf.film == null or turf.film.get_shader_parameter("balance") == Oval3DTurf.BALANCE[VignetteKickoff.NIGHT]
+	# Rule 2.114: the broadcast colour, the turf's colour read once and the film's white balance.
+	var film_ok := turf.film == null or turf.film.get_shader_parameter("balance") == Oval3DTurf.BALANCE[VignetteKickoff.NIGHT]
 	_check(turf.broadcast == 1.0 and float(turf.mat.get_shader_parameter("true_colour")) == 1.0 and film_ok,
 			"The 3D picture is in broadcast colour: turf colour read once, the night's white balance on the film")
 	turf.apply("", VignetteKickoff.DAY)
