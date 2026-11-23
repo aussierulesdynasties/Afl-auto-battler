@@ -29,7 +29,9 @@
   "zoom": 14,
   "far_zoom": 12,
   "step": 5.0,
-  "licence": "Geoscience Australia, DEM of Australia derived from LiDAR 5 Metre Grid, CC BY 4.0"
+  "licence": "Geoscience Australia, DEM of Australia derived from LiDAR 5 Metre Grid, CC BY 4.0",
+  "turf_above_data_m": 2.0,
+  "turf_note": "The LiDAR predates the stadium (built 2014-17 on raised Burswood land). Six open-road spots read a steady 2.0 m offset against Google Earth (proof/optus.md), so the turf is set 2.0 m above the data at the centre circle."
  },
  "gmhba": {
   "lat": -38.15788,

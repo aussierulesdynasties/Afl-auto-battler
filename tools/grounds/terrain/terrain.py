@@ -216,7 +216,10 @@ def build(slug, far=False):
     half, step = (FAR_HALF, FAR_STEP) if far else (NEAR_HALF, g.get('step', 5.0))
     r = np.arange(-half, half + step / 2, step)
     X, Y = np.meshgrid(r, r)                       # rows south -> north
-    datum = float(source_heights(g, np.array([0.0]), np.array([0.0]))[0])
+    # The turf's height in the source's datum: the data at the centre circle, unless the survey is
+    # older than the ground and the turf was built up since (grounds.json turf_above_data_m,
+    # measured against Google Earth: proof/).
+    datum = float(source_heights(g, np.array([0.0]), np.array([0.0]))[0]) + g.get('turf_above_data_m', 0.0)
     H = source_heights(g, X, Y, far=far) - datum
     meta = {'ground': slug, 'lat': g['lat'], 'lon': g['lon'], 'half_m': half, 'step_m': step,
             'rows': 'south to north', 'cols': 'west to east', 'datum': 'turf at the centre circle = 0',

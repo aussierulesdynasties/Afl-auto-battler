@@ -1,0 +1,68 @@
+{
+ "ground": "optus",
+ "source": "mapterhorn",
+ "licence": "Geoscience Australia, DEM of Australia derived from LiDAR 5 Metre Grid, CC BY 4.0",
+ "ge_centre_m": 5.0,
+ "judged": 6,
+ "spots": 6,
+ "mean": 2.03,
+ "rms": 2.04,
+ "worst": 2.42,
+ "passed": false,
+ "rows": [
+  [
+   "s00",
+   275.2,
+   5.9,
+   2.0,
+   3.62,
+   1.62,
+   "judged"
+  ],
+  [
+   "s01",
+   145.2,
+   412.0,
+   -1.0,
+   1.05,
+   2.05,
+   "judged"
+  ],
+  [
+   "s02",
+   82.0,
+   431.2,
+   -1.0,
+   1.11,
+   2.11,
+   "judged"
+  ],
+  [
+   "s07",
+   91.3,
+   -291.0,
+   1.0,
+   2.96,
+   1.96,
+   "judged"
+  ],
+  [
+   "s08",
+   103.5,
+   -267.3,
+   1.0,
+   3.01,
+   2.01,
+   "judged"
+  ],
+  [
+   "s09",
+   304.5,
+   -204.4,
+   -2.0,
+   0.42,
+   2.42,
+   "judged"
+  ]
+ ]
+}
