@@ -3133,7 +3133,7 @@ func _check_turf3d(oval: Oval3D) -> void:
 				and turf.env.tonemap_exposure >= 1.0,
 				"%s %s: the turf is green and the weather's sheen is set (%s, wet %.0f)" % [look[1], look[0], str(g), wet])
 	# Rule 2.114: the broadcast colour, the turf's colour read once and the film's white balance.
-	var film_ok: bool = turf.film == null or turf.film.get_shader_parameter("balance") == Oval3DTurf.BALANCE[VignetteKickoff.NIGHT]
+	var film_ok := turf.film == null or turf.film.get_shader_parameter("balance") == Oval3DTurf.BALANCE[VignetteKickoff.NIGHT]
 	_check(turf.broadcast == 1.0 and float(turf.mat.get_shader_parameter("true_colour")) == 1.0 and film_ok,
 			"The 3D picture is in broadcast colour: turf colour read once, the night's white balance on the film")
 	turf.apply("", VignetteKickoff.DAY)
