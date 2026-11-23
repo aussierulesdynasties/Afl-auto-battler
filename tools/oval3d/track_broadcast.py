@@ -430,6 +430,24 @@ def sheet(frames_dir, out, rng, tracks):
     sh.save(out)
 
 
+def hide(track, spans):
+    """hide TRACK FIRST:LAST...: frames where the man is hidden behind another (checked by eye on
+    the sheet: the tracker then reads the man in front). His points there are kept but given no
+    weight and no 3D guess, so the fit carries him through from the frames either side."""
+    T = json.load(open(track))
+    for sp in spans:
+        a, b = map(int, sp.split(":"))
+        for i in range(a, b + 1):
+            f = T["frames"][i]
+            if f:
+                f["vis"] = [0.0] * len(f["vis"])
+                f["p3"] = None
+                f["lift"] = None
+                f["hidden"] = True
+    json.dump(T, open(track, "w"))
+    print(f"HIDE {track}: {' '.join(spans)}")
+
+
 def main():
     cmd = sys.argv[1]
     if cmd == "detect":
@@ -444,6 +462,8 @@ def main():
         refine(sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5:])
     elif cmd == "lift":
         lift(*sys.argv[2:5])
+    elif cmd == "hide":
+        hide(sys.argv[2], sys.argv[3:])
     elif cmd == "sheet":
         sheet(sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5:])
 

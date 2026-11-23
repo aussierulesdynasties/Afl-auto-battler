@@ -1,0 +1,12 @@
+{
+ "about": "Kozzy Pickett's Mark of the Year speccy over Richmond #50 (MCG broadcast replay; the person's clip, seconds 28-40, frames at 25 fps from t=28). Wide continuous replay: frames 20-86. Seeds are each man's trunk centre on the screen, read by eye off the contact sheet (track_broadcast.py corridor).",
+ "hz": 25,
+ "frames": [20, 86],
+ "jumper_seeds": "20:1770,630 32:1640,580 38:1320,600 44:1090,610 47:1020,530 50:960,470 53:960,410 56:990,390 59:1000,330 62:1090,330 65:1060,390 68:980,420 71:920,510 74:940,600 77:940,680 80:900,680 83:960,700 86:1000,740",
+ "stepladder_seeds": "20:1300,555 32:1100,570 38:980,580 44:920,610 47:910,590 50:910,580 53:890,590 56:910,570 59:900,550 62:940,530 65:847,646 66:825,630 67:815,721 68:760,760 71:680,760 74:660,680 77:620,640 80:600,640 83:620,640 86:620,700",
+ "stepladder_hidden": ["62:64"],
+ "contact": "50:60",
+ "floor_frames": "20:45",
+ "hands": "overhead_mark_01:0.567",
+ "catch_s": 1.72
+}

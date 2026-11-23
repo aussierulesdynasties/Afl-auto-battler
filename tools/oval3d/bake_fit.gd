@@ -351,6 +351,25 @@ func _run() -> void:
 			var lf := _frame(J["knee_" + side] - J["ankle_" + side], J["toe_" + side] - J["heel_" + side])
 			var fq := (lf * Basis(FOOT_C).inverse() * (foot_rest[side] as Basis).inverse()).get_rotation_quaternion()
 			_set_global_basis(sk.find_bone("foot_" + side), Basis(fq) * (foot_g0[side] as Basis))
+		var t := k / hz
+		if hand_src != null:
+			# The clip's time: CONTACT at CATCH, held at its start before it and its end after.
+			var ts := h_contact - 0.12 if h_catch < 0.0 else h_contact + (t - h_catch)
+			ts = clampf(ts, 0.0, hand_src.length)
+			for n in hand_tracks:
+				sk.set_bone_pose_rotation(sk.find_bone(n), hand_src.rotation_track_interpolate(hand_tracks[n], ts))
+			if h_catch >= 0.0:
+				_hold(clampf((t - (h_catch - HOLD_EASE)) / HOLD_EASE, 0.0, 1.0))
+				if t >= h_catch:
+					# How squarely each palm faces the ball (0 deg: straight at it), and how far apart.
+					var pl := _palm("l")
+					var pr := _palm("r")
+					var c: Vector3 = (pl[0] + pr[0]) * 0.5
+					print("HOLD %d palms %.2f m apart, facing it %.0f / %.0f deg" % [k, (pl[0] as Vector3).distance_to(pr[0]),
+							rad_to_deg((pl[1] as Vector3).angle_to(c - pl[0])), rad_to_deg((pr[1] as Vector3).angle_to(c - pr[0]))])
+		# Held inside a real body's joint limits here, as the match would hold it, so the ground
+		# is set under the pose the match will show.
+		_limit_all()
 		# BAKE_FLOOR=y (the fit's units, its ground under him): put him on the ground. The fit's
 		# hips cannot place him by height (a runner's bent knees lift our straight-legged rest
 		# pose's feet), so his lowest point is set to the height the fit gives his lowest joint
@@ -372,22 +391,6 @@ func _run() -> void:
 			var par := sk.get_bone_parent(ip)
 			var pb := sk.get_bone_global_pose(par).basis if par >= 0 else Basis.IDENTITY
 			sk.set_bone_pose_position(ip, sk.get_bone_pose_position(ip) + pb.inverse() * lift)
-		var t := k / hz
-		if hand_src != null:
-			# The clip's time: CONTACT at CATCH, held at its start before it and its end after.
-			var ts := h_contact - 0.12 if h_catch < 0.0 else h_contact + (t - h_catch)
-			ts = clampf(ts, 0.0, hand_src.length)
-			for n in hand_tracks:
-				sk.set_bone_pose_rotation(sk.find_bone(n), hand_src.rotation_track_interpolate(hand_tracks[n], ts))
-			if h_catch >= 0.0:
-				_hold(clampf((t - (h_catch - HOLD_EASE)) / HOLD_EASE, 0.0, 1.0))
-				if t >= h_catch:
-					# How squarely each palm faces the ball (0 deg: straight at it), and how far apart.
-					var pl := _palm("l")
-					var pr := _palm("r")
-					var c: Vector3 = (pl[0] + pr[0]) * 0.5
-					print("HOLD %d palms %.2f m apart, facing it %.0f / %.0f deg" % [k, (pl[0] as Vector3).distance_to(pr[0]),
-							rad_to_deg((pl[1] as Vector3).angle_to(c - pl[0])), rad_to_deg((pr[1] as Vector3).angle_to(c - pr[0]))])
 		for n in rot_tracks:
 			anim.rotation_track_insert_key(rot_tracks[n], t, sk.get_bone_pose_rotation(sk.find_bone(n)))
 		anim.position_track_insert_key(pos_track, t, sk.get_bone_pose_position(ip))

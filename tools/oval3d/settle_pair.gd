@@ -1,16 +1,23 @@
 extends SceneTree
 ## Part two baked animations that pass through each other (a speccy's jumper and his stepladder,
 ## baked from one pair fit with tools/oval3d/bake_fit.gd). The fit keeps the two men apart, but
-## our body's limbs are a little longer than the fit's, so the bake can put a knee inside a back.
-## Each frame the two are moved apart by the overlap, half each, along the line between the
-## deepest touching parts: the stepladder only across the ground, the jumper also upward (never
-## down). The moves are then smoothed over time and the parting repeated, so a contact stays a
-## touch and nothing jumps. Capsules as tools/oval3d/check_pair.gd.
+## our body's limbs are a little longer than the fit's (about 12% in the legs), so the bake can put
+## a shin inside a back. Each frame, the deepest overlap is undone half by each man, by the part
+## that overlaps: a leg is swung at the hip and an arm at the shoulder (ball joints, which the
+## match's joint limits leave free), so a knee slides along the back it rests on; a trunk or head
+## moves the whole man across the ground. The turns and moves are then smoothed over time and the
+## parting repeated, so a contact stays a touch and nothing jumps. Capsules as check_pair.gd.
 ##   godot --headless --path . --script tools/oval3d/settle_pair.gd -- A.res B.res A_OUT.res B_OUT.res [HZ]
 
 const Check := preload("res://tools/oval3d/check_pair.gd")
 const GLB := "res://assets/oval3d/player_mh.glb"
 const GAP := 0.005    # metres left between kit at a touch
+# Which ball joint swings each capsule (check_pair.gd's parts, named by their first bone).
+const SWING := {"thigh_l": "thigh_l", "calf_l": "thigh_l", "foot_l": "thigh_l",
+		"thigh_r": "thigh_r", "calf_r": "thigh_r", "foot_r": "thigh_r",
+		"upperarm_l": "upperarm_l", "lowerarm_l": "upperarm_l",
+		"upperarm_r": "upperarm_r", "lowerarm_r": "upperarm_r"}
+const JOINTS := ["thigh_l", "thigh_r", "upperarm_l", "upperarm_r"]
 
 
 func _initialize() -> void:
@@ -31,9 +38,9 @@ func _body(anim: Animation) -> Array:
 	return [ap, sk, anim]
 
 
-func _pos_track(anim: Animation) -> int:
+func _track(anim: Animation, bone: String, type: int) -> int:
 	for t in anim.get_track_count():
-		if anim.track_get_type(t) == Animation.TYPE_POSITION_3D and str(anim.track_get_path(t)).ends_with(":pelvis"):
+		if anim.track_get_type(t) == type and str(anim.track_get_path(t)).get_slice(":", 1) == bone:
 			return t
 	return -1
 
@@ -46,19 +53,32 @@ func _local(sk: Skeleton3D, world: Vector3) -> Vector3:
 	return (sk.global_transform.basis * pb).inverse() * world
 
 
-func _pose(p: Array, t: float, off: Vector3) -> void:
+## One man posed at t, moved by off (world) and each swing joint turned by its rotation vector
+## (world axis times angle) about its head.
+func _pose(p: Array, t: float, off: Vector3, turns: Dictionary) -> void:
 	(p[0] as AnimationPlayer).seek(t, true)
 	var sk: Skeleton3D = p[1]
 	var ip := sk.find_bone("pelvis")
 	sk.set_bone_pose_position(ip, sk.get_bone_pose_position(ip) + _local(sk, off))
+	var wb := sk.global_transform.basis.orthonormalized()
+	for j in turns:
+		var rv: Vector3 = turns[j]
+		if rv.length() < 1e-6:
+			continue
+		var b := sk.find_bone(j)
+		var q := Quaternion((wb.inverse() * rv).normalized(), rv.length())
+		var par := sk.get_bone_parent(b)
+		var pb := sk.get_bone_global_pose(par).basis if par >= 0 else Basis.IDENTITY
+		var g := Basis(q) * sk.get_bone_global_pose(b).basis
+		sk.set_bone_pose_rotation(b, (pb.inverse() * g).get_rotation_quaternion())
 
 
-# The deepest overlap between the two bodies: [clearance, direction from B's part to A's].
-func _deepest(ck, a: Skeleton3D, b: Skeleton3D) -> Array:
-	var best := INF
-	var dir := Vector3.ZERO
-	for x in ck._caps(a):
-		for y in ck._caps(b):
+# The deepest overlap between the two bodies: [clearance, direction from B's part to A's,
+# A's touching point, B's, A's part, B's part].
+func _deepest(a: Skeleton3D, b: Skeleton3D) -> Array:
+	var best := [INF, Vector3.UP, Vector3.ZERO, Vector3.ZERO, "", ""]
+	for x in Check._caps(a):
+		for y in Check._caps(b):
 			var pa: Vector3 = x[0]
 			var pb: Vector3 = y[0]
 			var d := INF
@@ -77,41 +97,50 @@ func _deepest(ck, a: Skeleton3D, b: Skeleton3D) -> Array:
 					pa = c
 					pb = q
 			var cl: float = d - x[2] - y[2]
-			if cl < best:
-				best = cl
-				dir = (pa - pb).normalized() if d > 1e-4 else Vector3(0, 1, 0)
-	return [best, dir]
+			if cl < best[0]:
+				var n := (pa - pb).normalized() if d > 1e-4 else Vector3.UP
+				best = [cl, n, pa, pb, x[3], y[3]]
+	return best
 
 
-func _part(ck, a: Array, b: Array, times: Array, oa: Array, ob: Array) -> float:
+## Move one man's touching point by v: by swinging the limb that holds it, or, for his trunk or
+## head, by moving him across the ground.
+func _give(sk: Skeleton3D, part: String, at: Vector3, v: Vector3, off: Array, turns: Array, k: int) -> void:
+	if SWING.has(part):
+		var j: String = SWING[part]
+		var pivot := Check._p(sk, j)
+		var r := at - pivot
+		var ax := r.cross(v)
+		if ax.length() > 1e-6 and r.length() > 0.05:
+			var rv := ax.normalized() * (v.length() / r.length())
+			# Compose with this frame's turn so far (small turns: rotation vectors add).
+			turns[k][j] = (turns[k][j] as Vector3) + rv
+			return
+	off[k] += Vector3(v.x, 0.0, v.z)
+
+
+func _part(a: Array, b: Array, times: Array, oa: Array, ob: Array, ta: Array, tb: Array) -> float:
 	var worst := INF
 	for k in times.size():
-		for it in 30:
-			_pose(a, times[k], oa[k])
-			_pose(b, times[k], ob[k])
-			var r := _deepest(ck, a[1], b[1])
+		for it in 40:
+			_pose(a, times[k], oa[k], ta[k])
+			_pose(b, times[k], ob[k], tb[k])
+			var r := _deepest(a[1], b[1])
 			if r[0] >= GAP - 1e-4:
 				break
 			var push: float = (GAP - r[0]) * 0.5 + 0.002
 			var n: Vector3 = r[1]
-			var nh := Vector3(n.x, 0.0, n.z)
-			# The stepladder stays on the ground; the jumper may be lifted, never pushed down.
-			var ma := Vector3(n.x, maxf(0.0, n.y), n.z)
-			if nh.length() > 0.2:
-				oa[k] += ma.normalized() * push
-				ob[k] -= nh.normalized() * push
-			else:
-				# Straight down onto him: the jumper is lifted the whole way.
-				oa[k] += Vector3(0, 1, 0) * push * 2.0
-		_pose(a, times[k], oa[k])
-		_pose(b, times[k], ob[k])
-		worst = minf(worst, _deepest(ck, a[1], b[1])[0])
+			_give(a[1], r[4], r[2], n * push, oa, ta, k)
+			_give(b[1], r[5], r[3], -n * push, ob, tb, k)
+		_pose(a, times[k], oa[k], ta[k])
+		_pose(b, times[k], ob[k], tb[k])
+		worst = minf(worst, _deepest(a[1], b[1])[0])
 	return worst
 
 
-func _smooth(o: Array) -> Array:
-	# Gaussian over neighbouring frames (sigma 1.5), keeping each frame at least its own push's
-	# size along the same line, so smoothing never brings an overlap back.
+# Gaussian over neighbouring frames (sigma 1.5), keeping each frame at least its own size along
+# its own line, so smoothing never brings an overlap back.
+func _smooth_v(o: Array) -> Array:
 	var out := []
 	for k in o.size():
 		var s := Vector3.ZERO
@@ -128,11 +157,24 @@ func _smooth(o: Array) -> Array:
 	return out
 
 
+func _smooth_t(t: Array) -> Array:
+	var out := []
+	for k in t.size():
+		out.append({})
+	for j in JOINTS:
+		var col := []
+		for k in t.size():
+			col.append(t[k][j])
+		col = _smooth_v(col)
+		for k in t.size():
+			out[k][j] = col[k]
+	return out
+
+
 func _run() -> void:
 	await process_frame
 	var args := OS.get_cmdline_user_args()
 	var hz := float(args[4]) if args.size() > 4 else 25.0
-	var ck = Check
 	var aa: Animation = (load(str(args[0])) as Animation).duplicate(true)
 	var ab: Animation = (load(str(args[1])) as Animation).duplicate(true)
 	var a := _body(aa)
@@ -144,31 +186,62 @@ func _run() -> void:
 		t += 1.0 / hz
 	var oa := []
 	var ob := []
+	var ta := []
+	var tb := []
 	for k in times.size():
 		oa.append(Vector3.ZERO)
 		ob.append(Vector3.ZERO)
+		var za := {}
+		var zb := {}
+		for j in JOINTS:
+			za[j] = Vector3.ZERO
+			zb[j] = Vector3.ZERO
+		ta.append(za)
+		tb.append(zb)
 	var worst := 0.0
 	for round in 4:
-		worst = _part(ck, a, b, times, oa, ob)
+		worst = _part(a, b, times, oa, ob, ta, tb)
 		print("ROUND %d worst clearance %.3f" % [round, worst])
-		oa = _smooth(oa)
-		ob = _smooth(ob)
-	worst = _part(ck, a, b, times, oa, ob)
+		oa = _smooth_v(oa)
+		ob = _smooth_v(ob)
+		ta = _smooth_t(ta)
+		tb = _smooth_t(tb)
+	worst = _part(a, b, times, oa, ob, ta, tb)
 	var most := 0.0
+	var turn := 0.0
+	var big := ""
 	for k in times.size():
 		most = maxf(most, maxf((oa[k] as Vector3).length(), (ob[k] as Vector3).length()))
-	print("FINAL worst clearance %.3f, largest move %.3f m" % [worst, most])
-	# Write the moves into each pelvis track's keys (one key per frame, as bake_fit.gd writes).
-	for pr in [[a, oa, str(args[2])], [b, ob, str(args[3])]]:
+		var tk := 0.0
+		for j in JOINTS:
+			tk = maxf(tk, maxf((ta[k][j] as Vector3).length(), (tb[k][j] as Vector3).length()))
+		turn = maxf(turn, tk)
+		if (oa[k] as Vector3).length() > 0.1 or (ob[k] as Vector3).length() > 0.1 or tk > deg_to_rad(15.0):
+			big += "%d:%.2f/%.2fm,%.0fdeg " % [k, (oa[k] as Vector3).length(), (ob[k] as Vector3).length(), rad_to_deg(tk)]
+	print("FINAL worst clearance %.3f, largest move %.3f m, largest turn %.0f deg" % [worst, most, rad_to_deg(turn)])
+	print("MOVES over 10 cm or 15 deg (frame: jumper/stepladder move, turn): ", big)
+	# Write each frame's posed pelvis place and swing joints' turns into the keys (one key per
+	# frame, as bake_fit.gd writes).
+	for pr in [[a, oa, ta, str(args[2])], [b, ob, tb, str(args[3])]]:
 		var p: Array = pr[0]
 		var anim: Animation = p[2]
 		var sk: Skeleton3D = p[1]
-		var tr := _pos_track(anim)
-		for key in anim.track_get_key_count(tr):
-			var kt := anim.track_get_key_time(tr, key)
-			var k := clampi(int(round(kt * hz)), 0, times.size() - 1)
-			(p[0] as AnimationPlayer).seek(kt, true)
-			var v: Vector3 = anim.track_get_key_value(tr, key)
-			anim.track_set_key_value(tr, key, v + _local(sk, pr[1][k]))
-		print("SAVED %s %s" % [pr[2], error_string(ResourceSaver.save(anim, pr[2]))])
+		var tp := _track(anim, "pelvis", Animation.TYPE_POSITION_3D)
+		var tr := {}
+		for j in JOINTS:
+			tr[j] = _track(anim, j, Animation.TYPE_ROTATION_3D)
+		var poses := []
+		for k in times.size():
+			_pose(p, times[k], pr[1][k], pr[2][k])
+			var row := {"pelvis": sk.get_bone_pose_position(sk.find_bone("pelvis"))}
+			for j in JOINTS:
+				row[j] = sk.get_bone_pose_rotation(sk.find_bone(j))
+			poses.append(row)
+		for k in times.size():
+			var key := anim.track_find_key(tp, times[k], Animation.FIND_MODE_APPROX)
+			anim.track_set_key_value(tp, key, poses[k]["pelvis"])
+			for j in JOINTS:
+				var kj := anim.track_find_key(tr[j], times[k], Animation.FIND_MODE_APPROX)
+				anim.track_set_key_value(tr[j], kj, poses[k][j])
+		print("SAVED %s %s" % [pr[3], error_string(ResourceSaver.save(anim, pr[3]))])
 	quit()
