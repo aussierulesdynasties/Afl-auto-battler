@@ -37,14 +37,15 @@ want work to begin before the 3d stuff is polished and release quality".
 4. **The MCG only exists as it is today.** A real 1990s MCG had the old Southern Stand (the Great
    Southern Stand opened in 1992) and the old Ponsford, Members' and Olympic stands (rebuilt
    2003-2006). Wiping from 1990 to 2026 at today's MCG would put 1990 guernseys in a 2006 stadium.
-   Which way to go is the director's call (decision card in the thread; options under Act 3).
+   The director chose on 2026-11-22 to build the MCG of each era (option A under Act 4).
 5. **Most Club Forge home grounds have no 3D model.** Of the 53 Forge places, only the ones whose
    ground is also a 3D ground (Bellerive, York Park, North Hobart, Norwood, Traeger Park, Cazaly's,
    Marrara/TIO) can be filmed at home. The Forge shots use one of those, or the Forge club away at
    a big ground.
 6. **Faces are not in a match yet.** Close-ups (ruck at the bounce, the celebration) wait on the
    faces work reaching matches.
-7. **Music is not chosen.** Options and their terms are below; the pick is his.
+7. **The music is his own original track** (his choice, 2026-11-22). It can only be written once the
+   edit is locked, so the cut is timed to a guide beat first.
 8. **Sound is judged by ears, his.** A machine can check levels, peaks and sync; it cannot say the
    mix sounds right. No audio is ever played aloud on his PC by us.
 9. **Real players and stadium names in an advert.** A trailer is advertising, which is a different
@@ -117,7 +118,7 @@ below). No result is staged.
 | 21 | 1:10-1:22 | **The decade wipe.** One scene, one locked camera: two clubs lined up at the centre bounce at the MCG. The picture wipes left to right through 1990, 2000, 2010 and 2026, each about 3 s: the guernseys of that year, the scoreboard's ground name and year, the crowd's clothes | Locked camera; the same seed in four Legacy starts; the wipe edge follows a goalpost or a light tower so it reads as one place in four times | Crowd bed only; one siren blast on the last wipe | Players: Legacy guernseys on the MetaHuman body (1990-2025 designs exist, not yet checked on the new body); Grounds: the MCG of each era (see below) |
 | 22 | 1:22-1:26 | The old grounds: two 2 s glimpses, Waverley Park in the 1990s and Victoria Park | Fly-in on each | | Grounds: the 24 Legacy grounds (no owner for Waverley Park and Victoria Park yet) |
 
-**The MCG through the decades (his call).** Options:
+**The MCG through the decades.** The director chose **A** on 2026-11-22. The options were:
 
 - **A. Build the MCG of each era.** 1990s (old Southern Stand before 1992; old Ponsford, Members'
   and Olympic stands) and the early 2000s (Great Southern Stand, old northern stands); 2006 on is
@@ -212,6 +213,8 @@ the game draws the TV picture on a phone, end card in portrait.
 
 ### Music
 
+**Chosen 2026-11-22: his own original track.** The options below are kept for the record.
+
 The trailer needs one piece about 1 min 50 s long, cut to the picture: a quiet start, a lift at
 the grounds, a drive through the game, a drop for Legacy, a build for Club Forge, a big final hit.
 Options, with terms (read 2026-11-22; not legal advice):
@@ -236,7 +239,7 @@ broadcaster theme or "Up There Cazaly" recording.
 4. The event finder run; candidate moments sent to him as short clips to pick from.
 5. Fly-through paths keyed and checked against Google Earth.
 6. Every shot rendered on his PC; each checked frame by frame for art faults before he sees it.
-7. Music: his chosen route.
+7. Music: he writes his track to the locked cut.
 8. Edit, grade, titles, sound mix.
 9. He reviews the full cut; fixes; exports (4K, 1080p, 9:16).
 
