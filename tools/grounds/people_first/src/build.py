@@ -226,10 +226,14 @@ if os.environ.get('FARRIBS'):
     keep=[r for r in R if not lo<r<hi];RI=sorted(keep+[p[0] for p in FR]);RO=sorted(keep+[p[1] for p in FR])
     print('FARRIBS',FR)
 def ribat(i,s):return RI[i]+(RO[i]-RI[i])*s
+_LASTW=None  # RIBFIT: width the last (part) bay's lobe is drawn on
+def _bw(i,s):
+    if _LASTW and i==len(RI)-2:return _LASTW
+    return ribat(i+1,s)-ribat(i,s)
 def phase(a,s=0.0):
     for i in range(len(RI)-1):
         r0,r1=ribat(i,s),ribat(i+1,s)
-        if r0<=a<=r1:return (a-r0)/(r1-r0)
+        if r0<=a<=r1:return (a-r0)/_bw(i,s)
     return 0.0
 # Far roof outer edge from the photo (lead 2026-11-19: deep round scallops, sharp valleys), plan from the satellite.
 # FARVR=file.json [[photo valley deg, satellite notch radius m],...]: the plan V at each photo outer valley sits on the
@@ -266,12 +270,35 @@ MEMB=float(os.environ.get('MEMB',0))  # MEMB=k: one membrane per bay (lead 2026-
 def _bay(a,s):
     for i in range(len(RI)-1):
         r0,r1=ribat(i,s),ribat(i+1,s)
-        if r0<=a<=r1:return i,(a-r0)/(r1-r0)
+        if r0<=a<=r1:return i,(a-r0)/_bw(i,s)
     return None,0.0
 def _hr(a,s):return hin(a)+(hout(a)-hin(a))*s
-if os.environ.get('EVEN'):  # every bay the same width (director 2026-11-20 photo: every bay the same puffed dome)
+if os.environ.get('EVEN') and not os.environ.get('RIBFIT'):  # every bay the same width (director 2026-11-20 photo: every bay the same puffed dome)
     _n=len(RI)-1;RI=[RI[0]+(RI[-1]-RI[0])*k/_n for k in range(_n+1)];RO=[RO[0]+(RO[-1]-RO[0])*k/_n for k in range(_n+1)]
 SCAL=float(os.environ.get('SCAL',2.0))
+# RIBFIT=ribfit.json (2026-11-23, shape first): the roof plan from one fitted construction instead of the raw traces
+# (measure/roof_edge_fit.py). Ribs at the 38 measured valleys, regularised along the outline; valley radius and lobe depth
+# are smooth curves; each bay is one lobe r = V + depth*sin(pi*t)^P; the inner line is a smooth curve. The last bay runs
+# past its rib to the roof's north-east end on the previous bay's width (the roof stops part-way up a lobe there).
+ROUT_RAW=rout  # the entry pods keep the positions they were placed on
+if os.environ.get('RIBFIT'):
+    _RF=json.load(open(os.environ['RIBFIT']))
+    def _fv(c,a):
+        t=math.radians(a);return c[0]+sum(c[2*k-1]*math.cos(k*t)+c[2*k]*math.sin(k*t) for k in range(1,(len(c)-1)//2+1))
+    RI=list(_RF['ribs'])+([A1] if A1-_RF['ribs'][-1]>0.05 else []);RI[0]=A0;RO=list(RI)
+    _LASTW=RI[-2]-RI[-3] if len(RI)>2 else None
+    _RFP=_RF['P']
+    def rout(a):
+        a=A0+((a-A0)%360)
+        if a>A1:a=A1
+        for i in range(len(RO)-1):
+            if RO[i]<=a<=RO[i+1]:
+                w=RO[i+1]-RO[i] if i<len(RO)-2 or _LASTW is None else _LASTW
+                t=min(1.0,(a-RO[i])/w);v0=_fv(_RF['V'],RO[i]);v1=_fv(_RF['V'],RO[i]+w);v=v0+(v1-v0)*t
+                return v+_fv(_RF['depth'],RO[i]+w/2)*max(0.0,math.sin(math.pi*t))**_RFP
+        return _fv(_RF['V'],a)
+    rin=lambda a:_fv(_RF['rin'],a)
+    print('RIBFIT',len(RI)-1,'bays, ribs',[round(x,2) for x in RI])
 _ang=arange(A0,A1,1.0);HIN_M=sum(hin(x) for x in _ang)/len(_ang);HOUT_M=sum(hout(x) for x in _ang)/len(_ang)
 BAYW=sum(math.radians(RO[k+1]-RO[k])*rout((RO[k]+RO[k+1])/2) for k in range(len(RO)-1))/(len(RO)-1)
 print('MEMB bays',len(RO)-1,'width',round(BAYW,2),'hin',round(HIN_M,2),'hout',round(HOUT_M,2))
@@ -280,8 +307,10 @@ def rp_m(a,s,dz):
     if i is None:return None
     a0,a1=ribat(i,s),ribat(i+1,s);ri=rin(a)-NAVYW+0.8-SAG*math.sin(math.pi*phase(a))
     # plan: one smooth scallop per bay between the two rib-end radii
-    e0,e1=rout(RO[i]),rout(RO[i+1])
-    v=e0+(e1-e0)*ph;ro=v+SCAL*math.sqrt(max(0.0,math.sin(math.pi*ph)))  # same scallop depth on every bay
+    if os.environ.get('RIBFIT'):ro=rout(a)  # the fitted lobe (above)
+    else:
+        e0,e1=rout(RO[i]),rout(RO[i+1])
+        v=e0+(e1-e0)*ph;ro=v+SCAL*math.sqrt(max(0.0,math.sin(math.pi*ph)))  # same scallop depth on every bay
     r=ri+(ro-ri)*s
     # height: straight between the two rib heights (no per-angle steps), plus one even fabric dome per bay, zero at each rib
     z=HIN_M+(HOUT_M-HIN_M)*s  # one edge height all round: every crest level, as in the photo
@@ -597,7 +626,7 @@ for _b in json.load(open('precinct.json')):
 # side of the sign). 14 m along the wall, 9 m deep, 6.5 m high; the window band is set 0.35 m into the wall.
 PODG=mat('podgrey',(200,198,190),None,0.8);PODW=mat('podglass',(30,34,42),None,0.2,0.4)
 def _pod(a,drum=0):
-    t=math.radians(a);r=rout(a)-3.0;n=Vector((math.cos(t),math.sin(t),0));tg=Vector((-math.sin(t),math.cos(t),0))
+    t=math.radians(a);r=ROUT_RAW(a)-3.0;n=Vector((math.cos(t),math.sin(t),0));tg=Vector((-math.sin(t),math.cos(t),0))
     c=Vector((SH[0],SH[1],0))+n*r
     obox((c.x,c.y,1.6),7.0,4.5,1.6,t,PODG)                     # ground storey
     obox((c.x,c.y,4.3),6.65,4.15,1.1,t,PODW)                   # window band, set in 0.35 m

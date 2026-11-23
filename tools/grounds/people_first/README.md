@@ -16,6 +16,13 @@ and the ground set in its surroundings. Looks only: nothing here reads back into
   Its hand-made textures stay in `.claude/review/peoplefirst/build/htex` (no photo pixels).
 - `src/precinct.json`: 24 sheds, halls, marquees and portables round the ground, plan and roof colour read off the
   reference satellite (kept in the project files, never committed; surrounds.py reads it from PF_SAT), heights from Google Earth.
+- `measure/roof_edge_fit.py` (r38, 2026-11-23): measures the roof's outer edge on the reference satellite and fits one
+  construction to it: 38 ribs at the measured valleys (regular along the outline, valleys a median 1.1 m off the fit), a
+  smooth valley-radius curve (median 0.24 m off), a lobe depth of 3.5-4.0 m (median 0.21 m off), lobes
+  `r = V + depth*sin(pi*t)^1.35`, and a smooth inner line. Writes `src/ribfit.json`; `build.sh` reads it (`RIBFIT`).
+  `measure/edge_check.py` scores an outline against the satellite's edges: r37 had 78% of the roof edge within 2 m
+  (its scallops were 2 m deep against the real 4 m, on 40 even ribs against 38 real ones); r38 has 95% within 2 m,
+  88% within 1 m. Board: project files `people-first-rebuild/r38_roof_outline_plan.jpg`.
 - `qa/`: `ge_compare.py` and `ge_shoot.js` (copies of GMHBA's, with People First added), `views.json` (13 wide views)
   and `close.json` (12 close-ups). See the docstring for the four commands.
 
