@@ -3,6 +3,7 @@
 # systemd service running as the unprivileged user "runner". Run as root inside WSL:
 #
 #   sudo REG_TOKEN=<token> bash tools/ci_runner/setup_wsl_runners.sh [N]
+#   sudo bash tools/ci_runner/setup_wsl_runners.sh deps   # only (re)install the tools the jobs use
 #
 # REG_TOKEN is a repository registration token (valid one hour):
 #   gh api -X POST repos/aussierulesdynasties/Afl-auto-battler/actions/runners/registration-token -q .token
@@ -13,12 +14,15 @@ set -euo pipefail
 N="${1:-6}"
 REPO_URL="https://github.com/aussierulesdynasties/Afl-auto-battler"
 VER="2.338.2"   # GitHub refuses runners older than 2.329.0; they update themselves after
-: "${REG_TOKEN:?set REG_TOKEN to a registration token}"
 [ "$(id -u)" = 0 ] || { echo "run as root (sudo)"; exit 1; }
+# What tests.yml's steps call that GitHub's ubuntu-latest image has and plain Ubuntu lacks:
+# gh (PR labels and body), jq, zip/unzip (Godot download, artifacts), libfontconfig1 (Godot).
+apt-get update -qq
+apt-get install -y -qq curl unzip zip jq gh git python3 zstd ca-certificates libicu-dev libfontconfig1 >/dev/null
+[ "$N" = deps ] && { echo "Tools installed"; exit 0; }
+: "${REG_TOKEN:?set REG_TOKEN to a registration token}"
 grep -q '^systemd=true' /etc/wsl.conf 2>/dev/null || {
 	echo "WSL needs systemd: add '[boot]' and 'systemd=true' to /etc/wsl.conf, run 'wsl --shutdown' in Windows, then run this again"; exit 1; }
-apt-get update -qq
-apt-get install -y -qq curl unzip git python3 zstd ca-certificates libicu-dev >/dev/null
 id runner >/dev/null 2>&1 || useradd -m -s /bin/bash runner
 cd /home/runner
 [ -f "runner-$VER.tar.gz" ] || curl -sSL -o "runner-$VER.tar.gz" \
