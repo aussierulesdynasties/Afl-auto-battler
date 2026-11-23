@@ -132,3 +132,15 @@ Measuring from imagery is allowed; raw imagery is never committed or baked into 
   beside the west screen's north end, Great Southern Stand 31.2-31.5 m. Not yet measured: what sits
   under each screen's sloped back (the model leaves the box's underside open where the stand's back
   wall stops short of it, at the west screen).
+- 2026-11-23, the rear of the Great Southern Stand against Google Earth 3D (1,960 points,
+  `ge3d_gss_rear.json`). The "gaps" the PC flagged were places where the model dropped to the plaza
+  behind the roof or stuck out where Google Earth has nothing. Stair and balcony blocks at 158-168 and
+  198-208 degrees reached 132-135 m from the centre where the real structure ends at 126-129 m, at
+  the wrong heights (Google Earth: 23 m balconies and 10-11 m podiums above the turf); they are
+  re-placed. The plant deck at 131-149 degrees is 29 m above the turf out to 131 m (was 31 m to
+  128.5 m). From 210 to 228 degrees a lower outer band of roof, 31-34 m above the turf, runs past the
+  36 m roof's back edge out to 126-128 m; the model had nothing there (`roof_skirt`). The outer edge
+  of everything behind the roof now agrees with Google Earth to a median of 1.35 m (mean 1.8 m, was
+  2.35 m and 3.3 m) over 86 bearings. The worst remaining misses are block edges that fall between
+  the 1 degree samples, the light tower at 182 degrees and the stair towers at 118-125 degrees (up to
+  4-8 m, sparse data there).

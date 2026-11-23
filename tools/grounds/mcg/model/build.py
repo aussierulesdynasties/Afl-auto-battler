@@ -421,6 +421,15 @@ def bowl_all(col):
                                      (lambda s: s['rout'], lambda s: s['h'] - s['ed'][0], lambda s: s['rout'], lambda s: s['h'] - s['ed'][1], 'roof_fascia'),
                                      (lambda s: s['rout'], lambda s: s['h'] - s['ed'][1], lambda s: s['rin'], lambda s: s['h'] - FI, 'roof_soffit')]:
             mr.face([ring(A, ra(A), za(A)), ring(A, rb(A), zb_(A)), ring(Bs, rb(Bs), zb_(Bs)), ring(Bs, ra(Bs), za(Bs))][::-1], m)
+        ka, kb = skirt(A['b']), skirt(Bs['b'])
+        if ka and kb:  # lower outer band past the roof's back edge (GE 3D: 31-34 m out to ~128 m, 210-228 deg)
+            ta, tb_ = ring(A, A['rout'], A['h'] - A['ed'][0]), ring(Bs, Bs['rout'], Bs['h'] - Bs['ed'][0])
+            oa, ob = ring(A, ka[0], ka[1]), ring(Bs, kb[0], kb[1])
+            ua, ub = ring(A, ka[0], ka[1] - SKIRT_T), ring(Bs, kb[0], kb[1] - SKIRT_T)
+            ba, bb = ring(A, A['rout'], A['h'] - A['ed'][1]), ring(Bs, Bs['rout'], Bs['h'] - Bs['ed'][1])
+            mr.face([ta, oa, ob, tb_][::-1], matat('roof', A['b']))
+            mr.face([oa, ua, ub, ob][::-1], 'roof_fascia')
+            mr.face([ua, ba, bb, ub][::-1], 'roof_soffit')
     # dark gutter walkway along each truss line, inner teal edge to the outer fascia (GE n_n: ~0.9 m wide)
     STEP = D.get('step', 0.5)
     for tb in list(D['trusses']['b']) + mast_bearings():
@@ -720,6 +729,18 @@ def backr(b, r):
 def screen_rb(b):
     """Back face radius of the screen box at bearing b (inf outside the screens): the bowl soffit stops behind it."""
     return min([S['rb'] for S in D.get('screens', []) if S['b0'] <= b % 360 <= S['b1']] or [1e9])
+
+
+SKIRT_T = 0.6  # depth of the outer band's edge
+
+
+def skirt(b):
+    """(r, z) of the outer band's edge at bearing b, or None (mcg.json roof_skirt: runs of [b, r, z above the plaza],
+    interpolated along each run)"""
+    for run in D.get('roof_skirt', []):
+        bb, rr, zz = zip(*run)
+        if bb[0] <= b % 360 <= bb[-1]: return float(np.interp(b % 360, bb, rr)), float(np.interp(b % 360, bb, zz))
+    return None
 
 
 def in_screen(b):
