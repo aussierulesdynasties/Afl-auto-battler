@@ -53,17 +53,16 @@ def retint(name, target, src=None, out=None):
 
 def officeglass():
     """The east office boxes' curtain wall (Google Earth from the east, sun on it): dark blue-grey glass
-    behind slim pale vertical mullions every 1.5 m, a thin transom every 3 m. 6 m by 6 m a tile."""
+    with a thin transom every 3 m. Its pale mullions are modelled (parts2.py office_box). 6 m by 6 m a tile."""
     W = H = 1024
     rng = np.random.default_rng(8)
     x = (np.arange(W) + 0.5) / W * 6.0
     y = (np.arange(H) + 0.5) / H * 6.0
     img = np.zeros((H, W, 3), float)
-    img[:] = (78, 98, 116)
+    img[:] = (70, 90, 108)
     # each pane its own faint tone, as glass reflects a little differently pane to pane
     pane = rng.normal(0.0, 5.0, (4, 4))
     img += pane[(y[:, None] // 1.5).astype(int).clip(0, 3), (x[None, :] // 1.5).astype(int).clip(0, 3)][..., None]
-    img[:, (x % 1.5) < 0.14] = (196, 200, 202)
     img[(y % 3.0) < 0.08, :] = (170, 176, 180)
     Image.fromarray(np.clip(img, 0, 255).astype(np.uint8), "RGB").save(os.path.join(TEX, "officeglass.png"))
 
@@ -163,7 +162,7 @@ def main():
     # about 0.57-0.73 of their colour, so a light grey
     # round 8 (PC sun-on check, like for like): the light grey read (156, 159, 162) against Google Earth's
     # (117, 132, 142). Google Earth shows the boxes' faces as dark blue-grey glass behind slim pale vertical
-    # mullions: officeglass() paints that.
+    # mullions: officeglass() paints the glass, parts2.py models the mullions.
     officeglass()
     tiles = os.path.join(TEX, "tiles.json")
     j = json.load(open(tiles))
