@@ -153,6 +153,7 @@ def last_seasons():
 
 
 def build(by_year, rated):
+    ids = B.career_ids(B.all_list_rows())
     hon = B.honours(by_year, rated, DATA_SEASON)
     lists = load_lists()
     match_ids(lists, by_year)
@@ -167,14 +168,9 @@ def build(by_year, rated):
             got = rated.get(y, {}).get(pid) if pid else None
             if got and got[1] >= B.PEAK_GAMES:
                 seasons.append("%d:%d:%d" % (y, got[0], got[1]))
-        # Informed potential (director 2026-11-11): his best real season from
-        # the data season on sets his ceiling.
-        peak = 0
-        for y in rated:
-            if y >= DATA_SEASON and pid:
-                got = rated[y].get(pid)
-                if got and got[1] >= B.PEAK_GAMES:
-                    peak = max(peak, got[0])
+        # Informed potential (director 2026-11-11): his real peak from the
+        # data season on sets his ceiling (B.real_peak).
+        peak = B.real_peak(by_year, rated, pid or ids.get(L["draftguru_id"], ""), DATA_SEASON)
         first_year = min((r["year"] for r in before.get(pid, [])), default=None)
         debut = "01-04-%d" % first_year if first_year else ""
         dtype, dpick, dyear = first_drafted(L["first_drafted"])
