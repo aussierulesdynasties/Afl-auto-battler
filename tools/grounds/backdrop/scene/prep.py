@@ -766,6 +766,9 @@ if spec.get('real'):
     print('overture-only buildings', len(OVB))
 import collections as _col
 _HSRC = _col.Counter(); _BH = _real.raster_heights(D) if spec.get('real') else None
+# a closed ground in its era (era_merge.py): today's measured heights only for buildings that are still the same one
+_edp = os.path.join(os.environ.get('WORK', '/home/user/work'), 'data', spec['name'], 'era_drop.json')
+_TODAY = set(str(i) for i in json.load(open(_edp)).get('today_ids', [])) if os.path.exists(_edp) else None
 _GEP = os.path.join(D, 'ge_heights.json'); _GEH = json.load(open(_GEP)) if spec.get('real') and os.path.exists(_GEP) else {}
 skip_r = spec["clear_r_m"]; _FPP = os.path.join(OUT, "footprint.json"); _FPR = np.array(json.load(open(_FPP))) if os.path.exists(_FPP) else None
 for el in js + PARTS + OVB:
@@ -786,12 +789,13 @@ for el in js + PARTS + OVB:
         except Exception: pass
     kind = t['building']
     _src = 'osm' if h is not None else None
-    if _BH is not None and (_BH[1] or h is None):   # LiDAR heights are measured and beat every tag; a height map fills gaps
+    _now_ok = _TODAY is None or str(el.get('id')).startswith('ov') or str(el.get('id')) in _TODAY
+    if _BH is not None and _now_ok and (_BH[1] or h is None):   # LiDAR heights are measured and beat every tag; a height map fills gaps
         _hb = _BH[0](pts)
         if _hb is not None: h = _hb; _src = 'lidar' if _BH[1] else 'height map'
-    if _GEH and _src != 'lidar' and str(el.get('id')) in _GEH:   # rooftop minus bare earth, read off Google Earth's 3D (ge_heights.py)
+    if _GEH and _now_ok and _src != 'lidar' and str(el.get('id')) in _GEH:   # rooftop minus bare earth, read off Google Earth's 3D (ge_heights.py)
         h = _GEH[str(el.get('id'))]; _src = 'google earth'
-    if h is None and _OVH is not None:
+    if h is None and _OVH is not None and _now_ok:
         h = _OVH(cx, cy, pts); _src = 'overture' if h is not None else None
     if h is None: h = LV.get(kind, LV['*']); _src = 'GUESSED'
     _HSRC[_src] += 1
@@ -817,6 +821,7 @@ for el in js + PARTS + OVB:
 for _e in spec.get('real_lm', []):
     if _e[0] != 'split': continue
     _bi = min(range(len(BLD)), key=lambda i: math.hypot(*(np.mean(BLD[i]['p'], 0) - np.array(_e[1]))))
+    if math.hypot(*(np.mean(BLD[_bi]['p'], 0) - np.array(_e[1]))) > 25: continue   # that lot is not in this era's map
     _b = BLD.pop(_bi); _P = np.array(_b['p'], float); _c = _P.mean(0)
     _cv = np.cov((_P - _c).T); _w, _vv = np.linalg.eigh(_cv); _U = _vv[:, 1]; _U = _U if _U[0] >= 0 else -_U; _Vn = np.array([-_U[1], _U[0]])
     if _Vn[1] < 0: _Vn = -_Vn
