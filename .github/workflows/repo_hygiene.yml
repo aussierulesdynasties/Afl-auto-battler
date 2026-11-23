@@ -12,6 +12,12 @@
 # that is closed, and force-cancels any run still queued after 24 hours (runs from 11 Nov
 # sat "queued" for 12 days and a normal cancel refuses them).
 #
+# Retire list. .github/hygiene/retire_branches.tsv names branches with no PR that were sorted
+# by hand (docs in project files, github-hygiene/no-pr-branches-2026-11-23.md): name, tip SHA,
+# and a (already in main) or b (superseded or throwaway). A branch goes only while its tip is
+# still that SHA; a b branch is first kept as the tag archive/<name>, so
+# "git checkout -b <name> archive/<name>" brings it back. Lines can be removed once done.
+#
 # DRY_RUN=1 (workflow_dispatch input) only prints what it would do.
 name: Repo hygiene
 on:
@@ -35,6 +41,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: .github/hygiene
       - name: Sweep branches and runs
         env:
           GH_TOKEN: ${{ github.token }}
@@ -52,10 +61,33 @@ jobs:
             --jq '.[] | [.name, .commit.sha] | @tsv' > branches.tsv
           echo "$(wc -l < open.tsv) open PRs, $(wc -l < closed.tsv) closed, $(wc -l < branches.tsv) branches"
 
-          deleted=0; kept_nopr=0; kept_newer=0
+          deleted=0; kept_nopr=0; kept_newer=0; archived=0
+          retire=.github/hygiene/retire_branches.tsv
+          if [ -f "$retire" ]; then
+            while IFS=$'\t' read -r name want cat; do
+              [ -z "$name" ] && continue
+              tip=$(awk -F'\t' -v b="$name" '$1 == b {print $2}' branches.tsv)
+              [ -z "$tip" ] && continue
+              if [ "$tip" != "$want" ]; then echo "kept $name: tip moved since it was sorted"; continue; fi
+              cut -f2 open.tsv | grep -qxF "$name" && continue
+              if [ "$cat" = b ]; then
+                if ! gh api "repos/$GH_REPO/git/ref/tags/archive/$name" >/dev/null 2>&1; then
+                  act gh api -X POST "repos/$GH_REPO/git/refs" -f ref="refs/tags/archive/$name" -f sha="$want"
+                  archived=$((archived+1))
+                fi
+                if [ "$DRY_RUN" != 1 ] && ! gh api "repos/$GH_REPO/git/ref/tags/archive/$name" >/dev/null 2>&1; then
+                  echo "kept $name: archive tag could not be made"; continue
+                fi
+              fi
+              act gh api -X DELETE "repos/$GH_REPO/git/refs/heads/$name"; deleted=$((deleted+1))
+              printf '%s\t%s\n' "$name" "gone" >> retired.tsv
+            done < "$retire"
+          fi
+          touch retired.tsv
           while IFS=$'\t' read -r name sha; do
             case "$name" in main) continue;; esac
             cut -f2 open.tsv | grep -qxF "$name" && continue
+            cut -f1 retired.tsv | grep -qxF "$name" && continue
             if [[ "$name" == gh-readonly-queue/* ]]; then
               n=$(echo "$name" | sed -n 's#^gh-readonly-queue/[^/]*/pr-\([0-9]*\)-.*#\1#p')
               if [ -n "$n" ] && ! cut -f1 open.tsv | grep -qxF "$n"; then
@@ -89,7 +121,7 @@ jobs:
             fi
           done < runs.tsv
 
-          summary="Branches deleted: $deleted. Kept: $kept_nopr with no PR, $kept_newer with commits after their PR closed. Runs cancelled: $cancelled."
+          summary="Branches deleted: $deleted ($archived archived as tags first). Kept: $kept_nopr with no PR, $kept_newer with commits after their PR closed. Runs cancelled: $cancelled."
           [ "$DRY_RUN" = 1 ] && summary="(dry run) $summary"
           echo "$summary"
           echo "$summary" >> "$GITHUB_STEP_SUMMARY"
