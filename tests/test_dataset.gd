@@ -25,8 +25,10 @@ const GOLDEN_LOAD := "490f9cee806122afc1502cd7c8c79b58"  # moved with Canberra's
 ## opening draft closes with the rivals signing free agents, so the lists differ;
 ## the level ladder going A-Z by club (#1633) then changed the order the clubs
 ## trade and sign in during it. Both prints were redrawn by the director's
-## ratings (row 200, 2026-11-16) on top of row 199.
-const GOLDEN_REAL := "c6a8e9fff158f886ff4340d1032968eb"
+## ratings (row 200, 2026-11-16) on top of row 199. First contracts fitting
+## each club's cap (#2065: Geelong, Hawthorn and Gold Coast opened over it)
+## redrew it again.
+const GOLDEN_REAL := "f45597be894d17ff3955f68dffc2c30e"
 ## A played match's floating point differs between Windows and Linux builds of
 ## Godot, so the season has one fingerprint per platform; each was taken on
 ## main before the change (Linux: run_on_github run 43024085570). Removing
