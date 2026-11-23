@@ -61,6 +61,17 @@ func _run() -> void:
 						s, signf(n.position.x), Vector2(n.position.x, n.position.z).distance_to(Vector2(post.x, post.z)),
 						n.position.y, f["near"]])
 	print("FLAGS goal umpires with flags: %d" % goal_umps.size())
+	# FLAGS_CLOTH=<grey> and FLAGS_BACK=<0..1> try another cloth colour / backlight (colour checks on a GPU).
+	for u in goal_umps:
+		for s in ["r", "l"]:
+			var m: ShaderMaterial = u["flags"][s]["cloth"]
+			if OS.get_environment("FLAGS_CLOTH") != "":
+				var g := float(OS.get_environment("FLAGS_CLOTH"))
+				m.set_shader_parameter("cloth_colour", Color(g, g, g * 0.98))
+			if OS.get_environment("FLAGS_BACK") != "":
+				m.set_shader_parameter("backlight", float(OS.get_environment("FLAGS_BACK")))
+	if OS.get_environment("FLAGS_CLOTH") != "" or OS.get_environment("FLAGS_BACK") != "":
+		print("FLAGS cloth %s backlight %s" % [OS.get_environment("FLAGS_CLOTH"), OS.get_environment("FLAGS_BACK")])
 	var want := {"goal": 1, "behind": 1}
 	if OS.get_environment("FLAGS_NOFILM") != "":
 		want = {}

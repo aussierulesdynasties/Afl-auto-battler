@@ -11,6 +11,8 @@ uniform float furl : hint_range(0.0, 1.0) = 1.0;
 uniform float air : hint_range(0.0, 1.0) = 0.0;
 uniform float seed = 0.0;
 uniform vec3 cloth_colour : source_color = vec3(0.93, 0.93, 0.91);
+// How much light the thin cloth lets through from behind.
+uniform float backlight : hint_range(0.0, 1.0) = 0.6;
 // The stick draws with this shader too (stick = true): plain white-painted dowel, not moved.
 uniform bool stick = false;
 
@@ -74,5 +76,5 @@ void fragment() {
 	ALBEDO = cloth_colour;
 	ROUGHNESS = 0.85;
 	// Thin white sailcloth glows with the light behind it.
-	BACKLIGHT = vec3(0.6);
+	BACKLIGHT = vec3(backlight);
 }
