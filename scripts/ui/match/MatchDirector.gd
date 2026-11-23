@@ -2414,7 +2414,9 @@ func _enter(p: Dictionary) -> void:
 			else:
 				fetch = -1
 			for id in layout:
-				MatchMotion.set_goal(tokens[id], layout[id], 0.45, true)
+				# The kick-in's man runs to the ball (the umpire calls play on if he dawdles); at the
+				# others' walk it lay 6 s with nobody on it (picture truth, bug bash 2026-11-23).
+				MatchMotion.set_goal(tokens[id], layout[id], 1.0 if id == fetch else 0.45, true)
 				tokens[id]["reset"] = SETUP_PACE
 				_busy[id] = true
 			if p.get("place", false):
