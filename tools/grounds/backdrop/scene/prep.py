@@ -829,6 +829,9 @@ for el in js + PARTS + OVB:
     if h is None and _OVH is not None and _now_ok:
         h = _OVH(cx, cy, pts); _src = 'overture' if h is not None else None
     if h is None: h = LV.get(kind, LV['*']); _src = 'GUESSED'
+    # bld_h: [x, y, h] heights measured on Google Earth's status bar for map buildings with none (or a wrong one)
+    for _bx, _by, _bh in spec.get('bld_h', []):
+        if math.hypot(cx - _bx, cy - _by) < 4.0: h = float(_bh); _src = 'google earth'
     _HSRC[_src] += 1
     if area(pts) < 0: pts = pts[::-1]
     A = abs(area(pts))
