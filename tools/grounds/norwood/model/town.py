@@ -135,17 +135,17 @@ def villa_ne():
 
 
 def townhouses_ne():
-    """43: the newer two-storey townhouses at the north-east corner, red brick and grey roofs, gables to the
-    ground, solar panels on their north slopes."""
+    """The big two-storey building at the north-east corner, beside the school's courts: two parallel hipped
+    wings with a gabled wing between them, pale grey roofs. Its footprint is traced from Google Earth's
+    top-down mosaic (lean taken out for 9 m, 2026-11-23); its walls and windows are not yet checked against
+    oblique photos."""
     part = P + "_ne43"
-    for k, x in enumerate((60.0, 67.5, 75.0)):
-        gable_building(part, (x, 98.0), math.pi / 2, 18.0, 7.2, 6.0, 8.6, "brick_terrace", "roof_slate_grey",
-                       over=0.35, windows=[(1.2, 1.0, 2.6, 3.0), (1.2, 3.8, 5.4, 3.0)], gable_mat="render_white")
-        # the solar array: a framed panel standing off the roof
-        z = 7.0
-        obox(part, (x - 1.6, 98.0), math.pi / 2, 9.0, 2.4, z, z + 0.08, "window_dark", top="window_dark")
-    gable_building(part, (68.0, 108.0), 0.0, 22.0, 6.0, 5.6, 7.6, "brick_terrace", "roof_slate_grey", over=0.35,
-                   windows=[(1.2, 1.0, 2.6, 3.2), (1.2, 3.8, 5.2, 3.2)], hip=True)
+    for x0, x1 in ((55.3, 64.2), (71.5, 79.0)):
+        gable_building(part, ((x0 + x1) / 2 + 0.0, 95.75), math.pi / 2, 24.1 - 1.0, x1 - x0 - 1.0, 7.0, 10.0,
+                       "render_cream", "roof_slate_grey", over=0.5,
+                       windows=[(1.2, 1.0, 2.8, 3.2), (1.2, 4.0, 5.8, 3.2)], hip=True)
+    gable_building(part, (67.85, 95.0), math.pi / 2, 21.0, 7.3 - 0.6, 6.4, 9.2, "render_cream", "roof_slate_grey",
+                   over=0.3, windows=[(1.2, 1.0, 2.8, 3.2), (1.2, 4.0, 5.6, 3.2)], gable_mat="render_cream")
 
 
 def south_east():
