@@ -21,7 +21,7 @@ capture; north is up in the captures.
 
 - **Fence before 2006.** The 2000-2005 frames are soft and lack painted lines. Of 29 May 2002, 4 Mar 2004 and
   24 Jan 2005 only 4 Mar 2004 registers, and it comes out 6 % short in one axis, so it cannot confirm the 2009-2014
-  fence to better than 2-3 m. Its turf edge lies within that of the fitted curve. The two western stands came down after
+  fence to better than 2-3 m; by eye its turf edge follows the fitted curve. The two western stands came down after
   2005; the fitted fence is used for 1997-2005 until a period photo pins the west side.
 - **1990-1996.** No aerial predates 2000; the east end before the Legends Stand (1995-97) comes from photos only.
 - No published field size was found (see FACTS.md), so the fence has no published cross-check yet.
