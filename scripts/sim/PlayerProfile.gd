@@ -345,7 +345,7 @@ static func pedigree(p: Dictionary) -> String:
 	if not bool(p.get("projected", false)):
 		return ""
 	var bits: PackedStringArray = []
-	if int(p.get("draft_rank", 0)) > 0:
+	if int(p.get("draft_rank", 0)) > 0 and not bool(p.get("unranked", false)):
 		bits.append("Ranked #%d in the %d class" % [int(p["draft_rank"]), int(p.get("draft_year", 2026))])
 	var team := str(p.get("draft_team", ""))
 	if team != "":
