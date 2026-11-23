@@ -32,7 +32,7 @@ stay public. The Tripo heads, MPFB body and crew, hair, guernsey art and turf ar
   The files are never cached or uploaded raw by CI; only built games carry them.
 - Changed one (a new guernsey cut, a rebuilt body)? `tools/epic_assets.sh publish "why"` commits the
   working copies to the private repo, pushes and updates the pin; commit `tools/epic_assets.lock`.
-  A new Epic-derived file: `tools/epic_assets.sh publish "why" PATH...` also adds it to `.gitignore`.
+  A new Epic-derived file: `tools/epic_assets.sh publish "why" PATH...` also adds it to `assets/oval3d/.gitignore` (or the root one for a path elsewhere).
 - `tools/check_epic_files.py` (CI lint job) fails if a pinned path, anything in `cuts/` or `skin/`, a
   MetaHuman-named model, a glb naming MetaHuman parts inside, a byte-for-byte copy of any Epic file this
   repo ever held (`tools/epic_blobs.txt`) or an undeclared model or texture under `assets/oval3d/` is

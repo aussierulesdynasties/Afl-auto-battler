@@ -1,0 +1,35 @@
+# Epic/MetaHuman files: kept in a private repo, copied in by tools/epic_assets.sh fetch
+# (docs/EPIC_ASSETS.md). Never commit them here; tools/check_epic_files.py fails CI if you do.
+/player_mh.glb
+/crew_mh.glb
+/heads/MEL_11.glb
+/heads/MEL_11_MEL_11_tex.jpg
+/heads/MEL_37.glb
+/heads/MEL_37_MEL_37_tex.jpg
+/heads/MEL_41.glb
+/heads/MEL_41_MEL_41_tex.jpg
+/cuts/ADE.res
+/cuts/BRL.res
+/cuts/CAR.res
+/cuts/COL.res
+/cuts/ESS.res
+/cuts/FRE.res
+/cuts/GCS.res
+/cuts/GEE.res
+/cuts/GWS.res
+/cuts/HAW.res
+/cuts/MEL.res
+/cuts/NTH.res
+/cuts/PAD.res
+/cuts/RIC.res
+/cuts/STK.res
+/cuts/SYD.res
+/cuts/TAS.res
+/cuts/WBD.res
+/cuts/WCE.res
+/skin/Body_Basecolor.png
+/skin/Body_Normal.png
+/skin/Body_SRMF.png
+/skin/Head_Basecolor.png
+/skin/Head_Normal.png
+/skin/Head_SRMF.png

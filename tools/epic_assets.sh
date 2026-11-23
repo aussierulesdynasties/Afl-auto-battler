@@ -8,7 +8,7 @@
 #                                            # PATHs) to the private repo, push, and update the pin
 #
 # The pin is tools/epic_assets.lock: the private repo, its branch, one commit, and a sha256 per
-# file. Every pinned path is in .gitignore, and tools/check_epic_files.py fails CI if one is
+# file. Every pinned path is in a .gitignore (assets/oval3d/.gitignore), and tools/check_epic_files.py fails CI if one is
 # committed here. Access: EPIC_ASSETS_TOKEN (a GitHub token that can read the private repo; CI
 # passes it from a repo secret), else your own git credentials for github.com.
 # EPIC_ASSETS_CACHE (default ~/.cache/ard-epic-assets) holds the private repo's git objects.
@@ -128,7 +128,12 @@ cmd_publish() {
 	} > "$LOCK.new"
 	mv "$LOCK.new" "$LOCK"
 	for p in "${new[@]}"; do
-		grep -qxF "/$p" "$ROOT/.gitignore" || echo "/$p" >> "$ROOT/.gitignore"
+		# assets/oval3d/.gitignore holds the oval's Epic paths; anything else goes in the root one.
+		if [ "${p#assets/oval3d/}" != "$p" ]; then
+			grep -qxF "/${p#assets/oval3d/}" "$ROOT/assets/oval3d/.gitignore" || echo "/${p#assets/oval3d/}" >> "$ROOT/assets/oval3d/.gitignore"
+		else
+			grep -qxF "/$p" "$ROOT/.gitignore" || echo "/$p" >> "$ROOT/.gitignore"
+		fi
 		git -C "$ROOT" rm -q --cached --ignore-unmatch -- "$p"
 	done
 	echo "epic assets: pinned $head; commit tools/epic_assets.lock (and .gitignore if it changed)"
