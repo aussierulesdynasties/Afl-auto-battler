@@ -3132,7 +3132,7 @@ func _check_turf3d(oval: Oval3D) -> void:
 				and turf.env.tonemap_exposure >= 1.0,
 				"%s %s: the turf is green and the weather's sheen is set (%s, wet %.0f)" % [look[1], look[0], str(g), wet])
 	# Rule 2.114: the broadcast colour, the turf's colour read once and the film's white balance.
-	var film_ok := turf.film == null or turf.film.get_shader_parameter("balance") == Oval3DTurf.BALANCE[VignetteKickoff.NIGHT]
+	var film_ok: bool = turf.film == null or turf.film.get_shader_parameter("balance") == Oval3DTurf.BALANCE[VignetteKickoff.NIGHT]
 	_check(turf.broadcast == 1.0 and float(turf.mat.get_shader_parameter("true_colour")) == 1.0 and film_ok,
 			"The 3D picture is in broadcast colour: turf colour read once, the night's white balance on the film")
 	turf.apply("", VignetteKickoff.DAY)
@@ -3441,9 +3441,9 @@ func _test_three_d_cameras(res: Dictionary) -> void:
 				tv._ball_trail.pop_back()
 				if bv.length() > 2.0:
 					lead_n += 1
-					var mid := cam.unproject_position(oval._world(oval._look) + Vector3(0.0, Oval3DBroadcast.AIM_Y, 0.0))
+					var centre := cam.unproject_position(oval._world(oval._look) + Vector3(0.0, Oval3DBroadcast.AIM_Y, 0.0))
 					var bx := cam.unproject_position(bp + bv) - at
-					lead_ok += 1 if (at - mid).dot(bx) <= 0.0 else 0
+					lead_ok += 1 if (at - centre).dot(bx) <= 0.0 else 0
 		elif absf(w - 57.0) < 0.5:
 			at_wide += 1
 			var ph: Array = pv.director._phases
