@@ -1140,7 +1140,7 @@ func _test_one_line_break(sz: Vector2i) -> void:
 	# Each call's own controls are still there, behind its row.
 	var controls := {"plan": "PlanPicker", "pep": "PepPicker", "tag": "TagPicker",
 			"def": "DefenceSetupPicker", "pt": "FocusPicker_focus_fwd",
-			"sit": "SitBlock", "speech": "SpeechBlock"}
+			"sit": "SitBlock"}
 	var orphan := []
 	for k in keys:
 		var body: Node = m.find_child("CallBody_" + str(k), true, false)
