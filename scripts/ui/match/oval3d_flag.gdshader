@@ -10,7 +10,9 @@ render_mode cull_disabled, depth_draw_opaque;
 uniform float furl : hint_range(0.0, 1.0) = 1.0;
 uniform float air : hint_range(0.0, 1.0) = 0.0;
 uniform float seed = 0.0;
-uniform vec3 cloth_colour : source_color = vec3(0.93, 0.93, 0.91);
+// Set from RTX 4070 renders (2026-11-23): at 0.93 the sunlit face clipped to pure white over
+// half the flag; at 0.80 it peaks about 240, just above the painted boundary line (232), folds kept.
+uniform vec3 cloth_colour : source_color = vec3(0.80, 0.80, 0.784);
 // How much light the thin cloth lets through from behind.
 uniform float backlight : hint_range(0.0, 1.0) = 0.6;
 // The stick draws with this shader too (stick = true): plain white-painted dowel, not moved.
