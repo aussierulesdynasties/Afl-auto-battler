@@ -66,7 +66,7 @@ static func against(opp_list: Array, my_club: String, year: int, wrap: Dictionar
 			goals += int(st[4])
 			first = int(st[1]) if first == 0 else mini(first, int(st[1]))
 			last = maxi(last, int(st[2]))
-			if int(st[2]) > Career.BEFORE_GAME:
+			if int(st[2]) > Career.before_game():
 				in_career = true
 		if games <= 0 or not in_career:
 			continue
