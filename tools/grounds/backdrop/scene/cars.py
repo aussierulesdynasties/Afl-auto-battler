@@ -15,6 +15,12 @@ _a19.setup(spec, D); from aerial19 import aerial, S, KX, KY, NEAR, lat0, lon0
 def area(A): return 0.5 * np.sum(A[:, 0] * np.roll(A[:, 1], -1) - A[:, 1] * np.roll(A[:, 0], -1))
 BLD = [np.array(b['p'], float) for b in json.load(open(os.path.join(D, 'prep', 'buildings.json')))]   # prep's buildings (OSM + Overture)
 BB = np.array([[*b.min(0), *b.max(0)] for b in BLD])
+def _pip(x, y, q):   # point in polygon (even-odd)
+    c = False
+    for i in range(len(q)):
+        (x1, y1), (x2, y2) = q[i], q[i - 1]
+        if (y1 > y) != (y2 > y) and x < x1 + (y - y1) * (x2 - x1) / (y2 - y1): c = not c
+    return c
 out = {}
 for el in json.load(open(os.path.join(D, 'osm.json'), encoding='utf-8'))['elements']:
     t = el.get('tags', {})
@@ -23,6 +29,9 @@ for el in json.load(open(os.path.join(D, 'osm.json'), encoding='utf-8'))['elemen
     if p[0] == p[-1]: p = p[:-1]
     if len(p) < 3 or max(max(abs(a), abs(b)) for a, b in p) > NEAR - 10: continue
     A = np.array(p, float)
+    # own_lots: lots the ground model builds itself from measurement (local metres): no cars or lines of the scene's there
+    _cx, _cy = A.mean(0)
+    if any(_pip(_cx, _cy, q) for q in spec.get('own_lots', [])): continue
     if abs(area(A)) < 60 or abs(area(A)) > 200000: continue
     x0, y0 = A.min(0) - 2; x1, y1 = A.max(0) + 2
     img, xs, ys = aerial(x0, y0, x1, y1)
