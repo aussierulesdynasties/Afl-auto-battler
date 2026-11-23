@@ -8,7 +8,7 @@ while IFS='|' read -r club seed ground weather time quality speed; do
 	[ -z "$club" ] && continue
 	n=$((n+1))
 	echo "$n|$club|$seed|$ground|$weather|$time|$quality|$speed"
-done < "$PLAN" | xargs -P "$JOBS" -I{} bash -c '
+done < "$PLAN" | xargs -d "\n" -P "$JOBS" -I{} bash -c '
 	IFS="|" read -r n club seed ground weather time quality speed <<< "{}"
 	args=(--club "$club" --seed "$seed" --speed "$speed" --quality "$quality")
 	[ -n "$ground" ] && args+=(--ground "$ground")

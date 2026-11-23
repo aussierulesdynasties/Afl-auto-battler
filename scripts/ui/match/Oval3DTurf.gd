@@ -496,8 +496,9 @@ func _light_stands() -> void:
 		var e := env.ambient_light_energy * env.ambient_light_sky_contribution
 		var grey := stand_light(sm, e, STAND_GREEN)
 		var sky := stand_light(sm, e, 1.0)
-		for k in amb.size():
-			amb[k] = grey[k] - sky[k]
+		if grey.size() == amb.size() and sky.size() == amb.size():
+			for k in amb.size():
+				amb[k] = grey[k] - sky[k]
 	var e_amb := env.ambient_light_energy * env.ambient_light_sky_contribution
 	for m in _stand_mats:
 		for k in AMB_KEYS.size():
@@ -509,6 +510,12 @@ func _light_stands() -> void:
 ## turned straight down, half down, level, half up and straight up, with the grass below the
 ## horizon keeping `green` of its colour (1 as it is). The sky as oval3d_sky.gdshader draws its light map.
 func stand_light(sm: ShaderMaterial, scale := 1.0, green := 1.0) -> Array:
+	for key in ["zenith", "horizon", "bowl", "grass", "bowl_top", "energy", "grass_energy"]:
+		if _sky_param(sm, key) == null:
+			# No renderer to read the sky shader's defaults from (a headless run: tests, tools):
+			# nothing is drawn, so there is no light to share out. (Every headless 3D match logged
+			# script errors here: bug bash 2026-11-23.)
+			return []
 	var zenith: Color = _sky_param(sm, "zenith")
 	var horizon: Color = _sky_param(sm, "horizon")
 	var bowl: Color = _sky_param(sm, "bowl")
