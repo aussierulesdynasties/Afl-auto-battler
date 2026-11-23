@@ -40,6 +40,7 @@ func run() -> void:
 	_t("_test_rival_says_why")
 	_t("_test_draft_reasons_change_nothing")
 	_t("_test_real_drafts_reasons_change_nothing")
+	_t("_test_rival_pick_reads_whole_pool")
 	GameState.replay_seed = 0
 	GameDB.skip_ovr_overrides = false
 	GameDB.reload()
@@ -1297,3 +1298,42 @@ func _test_pick_for_me_matches_rival() -> void:
 		if int(e[0]) < rival_ids.size() and str(e[1]) != rival_ids[int(e[0])]:
 			ok = false
 	_check(ok, "Pick for me picks what a rival in the same slot picks (%s vs %s)" % [user_ids, rival_ids])
+
+
+## The draft hang on a phone (2026-11-23): a rival weighs each position once a
+## pick (need, replacement, the edge's weight) and each player's worth, its
+## opinion and his price once a draft or a run of picks, not once a player.
+## Its pick is still the best player on the whole pool by _ai_score read the
+## slow way, pick after pick, through a League Draft's opening rounds; and
+## nothing it keeps is written to a save.
+func _test_rival_pick_reads_whole_pool() -> void:
+	var d := Draft.new(GameDB.all_players_sorted(), GameDB.active_clubs(2026).duplicate(), 2468)
+	var same := 0
+	var picks := 0
+	while picks < 90 and not d.is_finished():
+		var code := d.current_club()
+		var usable := d.usable_cap_for(code)
+		var forced := d._forced_role(code)
+		var want := {}
+		var want_score := -INF
+		for p in d.pool:
+			if d.picked.has(str(p["id"])) or d.price_for(code, p) > usable:
+				continue
+			if forced != "" and not Ratings.plays_role(p, forced):
+				continue
+			var s := d._ai_score(code, p)
+			if s > want_score:
+				want_score = s
+				want = p
+		var got := d._best_ai_pick(code)
+		if not want.is_empty() and str(got.get("id", "")) == str(want["id"]):
+			same += 1
+		if got.is_empty() or not d._draft_pick(code, got):
+			break
+		picks += 1
+	_check(picks == 90 and same == picks,
+			"A rival's pick is the best on the whole pool, read the slow way, %d of %d picks" % [same, picks])
+	var saved := CareerSave.object_vars(d)
+	var kept := saved.keys().filter(func(k): return str(k) in ["_terms", "_terms_on", "_terms_code",
+			"_rival_views", "_run_memo", "_run_memo_on", "_worths"])
+	_check(kept.is_empty(), "What the rival AI keeps between picks is not written to a save (%s)" % str(kept))

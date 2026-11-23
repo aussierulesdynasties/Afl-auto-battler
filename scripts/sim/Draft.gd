@@ -549,6 +549,22 @@ func pick_for_me_passes() -> bool:
 func auto_until_user_turn() -> void:
 	if not league_mode:
 		return
+	# A run of rival picks prices each player and each salary once (_run_memo).
+	_run_memo_on = true
+	_run_memo.clear()
+	_auto_until_user_turn()
+	_run_memo_on = false
+	_run_memo.clear()
+
+
+## Prices (by player id) and cap scores (by salary) during one run of rival
+## picks, when neither can change; empty otherwise, and static, so a save
+## never holds it.
+static var _run_memo := {}
+static var _run_memo_on := false
+
+
+func _auto_until_user_turn() -> void:
 	while not is_finished():
 		var code := current_club()
 		if passed_clubs.has(code):
@@ -909,6 +925,21 @@ func _reserve_per_spot() -> float:
 ## `wanted` it passed on, or took (P-18): the branch below that ruled him
 ## out, or what his score lost on against the pick (_why_scored).
 func _best_ai_pick(code: String, why := {}) -> Dictionary:
+	# One club's view of each position (need, replacement, the edge's weight)
+	# does not change while it weighs the pool, so it is worked out once per
+	# position, not once per player (a 5-second freeze on a phone otherwise).
+	_refresh_ai_cache()   # the terms read it: brought up to this pick first
+	_terms_on = true
+	_terms_code = code
+	_terms.clear()
+	var best := _best_ai_pick_scored(code, why)
+	_terms_on = false
+	_terms.clear()
+	return best
+
+
+func _best_ai_pick_scored(code: String, why: Dictionary) -> Dictionary:
+	var usable := usable_cap_for(code)
 	var forced_role := _forced_role(code)
 	var best := {}
 	var best_score := -INF
@@ -925,7 +956,8 @@ func _best_ai_pick(code: String, why := {}) -> Dictionary:
 			if watch and wanted().has(id):
 				why[id] = "draft_must_ruck"
 			continue
-		if not _can_afford_for(code, p):
+		var salary := price_for(code, p)
+		if salary > usable:
 			if watch and wanted().has(id):
 				why[id] = "draft_cap"
 			continue
@@ -933,9 +965,11 @@ func _best_ai_pick(code: String, why := {}) -> Dictionary:
 			if watch and wanted().has(id):
 				why[id] = "draft_ruck_full"
 			continue   # a fourth ruck: no use to this club
-		var detail := {}
-		var score := _ai_score(code, p, detail)
-		if watch and wanted().has(id):
+		# The parts of his score only for a prospect you opened (P-18 reasons;
+		# _why_scored works out the pick's own).
+		var detail = {} if watch and wanted().has(id) else null
+		var score := _ai_score(code, p, detail, salary)
+		if detail != null:
 			scored[id] = [score, detail]
 		if score > best_score:
 			best_score = score
@@ -963,6 +997,24 @@ func _best_ai_pick(code: String, why := {}) -> Dictionary:
 	if watch and not best.is_empty():
 		_why_scored(code, best, best_score, scored, why)
 	return best
+
+
+## Each pool player's _worth, by his index in the pool (League Draft: it does
+## not change during the draft, and the rival AI reads it at every pick).
+## Static and kept per draft, so a save never holds it.
+func _pool_worths() -> PackedFloat64Array:
+	if _worths_of != get_instance_id() or _worths.size() != pool.size() or _worths_horizon != horizon_value:
+		_worths_of = get_instance_id()
+		_worths_horizon = horizon_value
+		_worths = PackedFloat64Array()
+		for p in pool:
+			_worths.append(_worth(p))
+	return _worths
+
+
+static var _worths := PackedFloat64Array()
+static var _worths_of := 0
+static var _worths_horizon := true
 
 
 ## Reason codes for the wanted prospects that were scored: the pick itself
@@ -1102,23 +1154,31 @@ func scouting_mult_for(code: String) -> float:
 
 ## `detail`, when given, is filled with the parts of the winning position's
 ## score: {"role", "need", "second_star", "penalty"} (P-18 reasons).
-func _ai_score(code: String, p: Dictionary, detail = null) -> float:
+func _ai_score(code: String, p: Dictionary, detail = null, salary := -1) -> float:
 	_refresh_ai_cache()
-	var base := DraftScouting.scouted_worth(p, code, seed, AI_POT_WEIGHT_INTAKE,
-			scouting_mult_for(code)) if intake_mode else _club_worth(code, p)
-	var err := _eval_error(code, p)
+	var base: float
+	var err: float
+	if league_mode and not intake_mode and code != user_club:
+		var view := _rival_view(code, p)
+		base = view[0]
+		err = view[1]
+	else:
+		base = DraftScouting.scouted_worth(p, code, seed, AI_POT_WEIGHT_INTAKE,
+				scouting_mult_for(code)) if intake_mode else _club_worth(code, p)
+		err = _eval_error(code, p)
 	var best := -INF
-	var roles := [[str(p["role"]), 1.0]]
+	var role1 := str(p["role"])
 	var role2 := str(p.get("role2", ""))
-	if role2 != "" and role2 != str(p["role"]):
-		roles.append([role2, 0.85])
-	for entry in roles:
-		var role: String = entry[0]
-		var need := _need_weight(code, role)
+	var cap := _vorp_cap(code)
+	# His position, then his second one at 0.85.
+	for j in (2 if role2 != "" and role2 != role1 else 1):
+		var role := role1 if j == 0 else role2
+		var t := _role_terms(code, role)
+		var need: float = t[0]
 		if role == "RUCK" and intake_mode:
 			need = _intake_ruck_need(code, p)
 		var second_star := false
-		if role == "RUCK" and _has_first_ruck(code) and int(p["overall"]) >= RUCK_FIRST_CHOICE:
+		if role == "RUCK" and bool(t[4]) and int(p["overall"]) >= RUCK_FIRST_CHOICE:
 			# One ruck plays at a time: a club with its first-choice ruck
 			# looks for a second, not another star to sit behind him.
 			need *= SECOND_STAR_RUCK
@@ -1126,18 +1186,59 @@ func _ai_score(code: String, p: Dictionary, detail = null) -> float:
 		# A club's own opinion counts in full for a starting spot it is
 		# filling; for depth and surplus picks it leans on the consensus.
 		var worth := base + err * need
-		var over := minf(_vorp_cap(code), worth - _replacement(code, role))
-		var s := (worth + _vorp_weight(code, role) * over) * need * float(entry[1])
+		var over := minf(cap, worth - float(t[1]))
+		var s := (worth + float(t[2]) * over) * need * (1.0 if j == 0 else 0.85)
 		if s > best and detail is Dictionary:
 			detail["role"] = role
 			detail["need"] = need
-			detail["need_list"] = _need_by_count(code, role)
+			detail["need_list"] = float(t[3])
 			detail["second_star"] = second_star
 		best = maxf(best, s)
-	var penalty := _cap_penalty(code, p)
+	var penalty := _cap_penalty(code, p, salary)
 	if detail is Dictionary:
 		detail["penalty"] = penalty
 	return best - penalty
+
+
+## A rival club's worth of a player and its opinion of him (_club_worth,
+## _eval_error) in the League Draft: both fixed for the whole draft by its seed,
+## the club and the player, so worked out once, not at every one of its picks.
+## Static and kept per draft, so a save never holds it.
+func _rival_view(code: String, p: Dictionary) -> Array:
+	if _views_of != get_instance_id() or _views_horizon != horizon_value:
+		_views_of = get_instance_id()
+		_views_horizon = horizon_value
+		_rival_views.clear()
+	var key := code + "|" + str(p["id"])
+	var v: Array = _rival_views.get(key, [])
+	if v.is_empty():
+		v = [_club_worth(code, p), _eval_error(code, p)]
+		_rival_views[key] = v
+	return v
+
+
+static var _rival_views := {}
+static var _views_of := 0
+static var _views_horizon := true
+
+
+## While a club weighs the pool (_best_ai_pick): its terms for each position,
+## role -> [need, replacement, edge weight, need by count, has a first-choice
+## ruck] for club _terms_code. Empty and off otherwise; static, so a save never
+## holds it.
+static var _terms := {}
+static var _terms_on := false
+static var _terms_code := ""
+
+
+func _role_terms(code: String, role: String) -> Array:
+	if _terms_on and code == _terms_code and _terms.has(role):
+		return _terms[role]
+	var t := [_need_weight(code, role), _replacement(code, role), _vorp_weight(code, role),
+			_need_by_count(code, role), _has_first_ruck(code)]
+	if _terms_on and code == _terms_code:
+		_terms[role] = t
+	return t
 
 
 # ---------------------------------------------------------------------------
@@ -1265,7 +1366,12 @@ func user_view(p: Dictionary) -> Dictionary:
 ## clear"). Row T1.R26 L1 (everything follows the read) still moves what you
 ## see of his ratings, traits and Pick for me; never his salary.
 func price_for(_code: String, p: Dictionary) -> int:
-	return cost_of(p)
+	if not _run_memo_on:
+		return cost_of(p)
+	var id := str(p["id"])
+	if not _run_memo.has(id):
+		_run_memo[id] = cost_of(p)
+	return int(_run_memo[id])
 
 
 ## His salary in the opening season's dollars (the budget's year,
@@ -1380,7 +1486,7 @@ func club_horizon(code: String) -> String:
 
 
 func horizon_worth(p: Dictionary, horizon: String) -> float:
-	var key := "%s|%s" % [str(p["id"]), horizon]
+	var key := str(p["id"]) + "|" + horizon   # "%s|%s", without the format's cost
 	if _horizon_cache.has(key):
 		return float(_horizon_cache[key])
 	var weights: Array = HORIZON_WEIGHTS[horizon]
@@ -1514,19 +1620,29 @@ func _replacement(code: String, role: String) -> float:
 	return float(avail[mini(depth, avail.size() - 1)])
 
 
+## Contracts.salary_score, read once per salary in a run of rival picks.
+func _salary_score(salary: int) -> float:
+	if not _run_memo_on:
+		return Contracts.salary_score(salary)
+	if not _run_memo.has(salary):
+		_run_memo[salary] = Contracts.salary_score(salary)
+	return float(_run_memo[salary])
+
+
 ## Stars are where the cap goes, so price only bites when buying this player
 ## would leave less than AI_CAP_FLOOR a spot for the rest of the list.
-func _cap_penalty(code: String, p: Dictionary) -> float:
+func _cap_penalty(code: String, p: Dictionary, salary := -1) -> float:
 	if intake_mode:
 		return 0.0
-	var salary := price_for(code, p)
-	var value := Contracts.salary_score(salary)
+	if salary < 0:
+		salary = price_for(code, p)
+	var value := _salary_score(salary)
 	var spots_after := target_size - count_for(code) - 1
 	if spots_after <= 0:
 		return value * 0.3
 	var left := float(budget - int(club_spend.get(code, 0)) - salary)
 	var per_spot := int(left / float(spots_after))
-	var per_spot_score := Contracts.salary_score(per_spot)
+	var per_spot_score := _salary_score(per_spot)
 	return maxf(0.0, AI_CAP_FLOOR - per_spot_score) * 12.0 + value * 0.3
 
 
@@ -1537,10 +1653,13 @@ func _refresh_ai_cache() -> void:
 		return
 	_ai_cache_at = pick_index
 	_ai_avail = {"RUCK": [], "MID": [], "DEF": [], "FWD": []}
-	for p in pool:
+	# League Draft: each player's worth is read, not worked out again at every pick.
+	var worths := _pool_worths() if league_mode and not intake_mode else PackedFloat64Array()
+	for k in range(pool.size()):
+		var p: Dictionary = pool[k]
 		if picked.has(str(p["id"])):
 			continue
-		var w := _worth(p)
+		var w: float = _worth(p) if worths.is_empty() else worths[k]
 		(_ai_avail[str(p["role"])] as Array).append(w)
 		var role2 := str(p.get("role2", ""))
 		if role2 != "" and role2 != str(p["role"]) and _ai_avail.has(role2):

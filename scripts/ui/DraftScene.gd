@@ -44,6 +44,8 @@ var _side_tabs: HBoxContainer
 var _pool_panel: PanelContainer
 var _activity_panel: PanelContainer
 var _history_view: VBoxContainer
+var _history_stale := false   # the pick log missed a pick while out of view
+var _keep_rows := false       # _refresh_board keeps rows still on the board (a pick)
 var _squad_view: VBoxContainer
 var _order_view: VBoxContainer
 var _all_button: Button
@@ -918,7 +920,7 @@ func _on_pick_for_me() -> void:
 	if _draft.pick_for_me():
 		GameState.mark_dirty()
 		_last_batch_start = before
-		_refresh()
+		_refresh_after_pick()
 		_after_my_pick(before)
 
 
@@ -928,7 +930,7 @@ func _on_pass() -> void:
 	if _draft.user_pass():
 		GameState.mark_dirty()
 		_last_batch_start = before
-		_refresh()
+		_refresh_after_pick()
 		_start_replay(before)
 
 
@@ -947,8 +949,8 @@ func _update_visibility() -> void:
 	_squad_view.visible = active == "squad"
 	_order_view.visible = active == "order"
 	_refresh_tabs()
-	# The pick log is only rebuilt while in view during a replay: catch it up.
-	if replaying() and _history_view.visible:
+	# The pick log is only rebuilt while in view: catch it up.
+	if (replaying() or _history_stale) and _history_view.is_visible_in_tree():
 		_refresh_history()
 	if is_instance_valid(_recent_box):
 		_recent_box.visible = _recent_wanted()
@@ -1114,14 +1116,32 @@ func _hidden_in_filter() -> int:
 func _refresh_board(reset_scroll := false) -> void:
 	if _phase != "board" or not is_instance_valid(_board_box):
 		return
-	UiKit.clear(_board_box)
 	var rows := _board_rows()
+	var shown := mini(_shown, rows.size())
+	# After a pick most of the board is the same players as before: their rows
+	# stay, with the pick button brought up to date, and only the new ones are
+	# built (60 rows rebuilt at every pick froze a phone).
+	var keep := {}
+	if _keep_rows:
+		var wanted := {}
+		for i in range(shown):
+			wanted["Player_" + str(rows[i]["id"])] = true
+		for child in _board_box.get_children():
+			if wanted.has(str(child.name)) and (child as CanvasItem).visible:
+				keep[str(child.name)] = child
+	_clear_except(_board_box, keep)
 	_pool_total.text = "%d available" % (_draft.pool.size() - _draft.picked.size())
 	_pool_rows_n = rows.size()
 	_refresh_pool_info()
-	var shown := mini(_shown, rows.size())
 	for i in range(shown):
-		_board_box.add_child(_player_row(rows[i]))
+		var p: Dictionary = rows[i]
+		var row: Control = keep.get("Player_" + str(p["id"]))
+		if row == null:
+			row = _player_row(p)
+			_board_box.add_child(row)
+		else:
+			_set_pick_state(row, row.find_child("Pick_" + str(p["id"]), true, false), p)
+		_board_box.move_child(row, i)
 	if rows.is_empty():
 		_board_box.add_child(UiKit.lbl("No players match these filters.", UiKit.NAME, UiKit.TEXT, true))
 		_board_box.add_child(UiKit.lbl("Try another position or player name.", 14, UiKit.MUTED))
@@ -1137,6 +1157,24 @@ func _refresh_board(reset_scroll := false) -> void:
 		_board_box.add_child(more)
 	if reset_scroll:
 		_board_scroll.set_deferred("scroll_vertical", 0)
+
+
+## UiKit.clear, but the children in `keep` (name -> node) stay where they are.
+func _clear_except(box: Node, keep: Dictionary) -> void:
+	if keep.is_empty():
+		UiKit.clear(box)
+		return
+	var under: Control = box.get_viewport().gui_get_hovered_control() if box.is_inside_tree() else null
+	for child in box.get_children():
+		if keep.has(str(child.name)):
+			continue
+		if under != null and child is CanvasItem and (child == under or child.is_ancestor_of(under)):
+			child.name = "Leaving_%d" % child.get_instance_id()
+			(child as CanvasItem).hide()
+			child.queue_free()
+			continue
+		box.remove_child(child)
+		child.queue_free()
 
 
 func _clear_filters() -> void:
@@ -1258,6 +1296,25 @@ func _player_row(p: Dictionary) -> Control:
 	# The face is laid over the button, so the button takes its height.
 	face.minimum_size_changed.connect(func():
 		inspect.custom_minimum_size.y = maxf(66.0, face.get_combined_minimum_size().y))
+	var b := UiKit.btn("", UiKit.SECONDARY)
+	b.name = "Pick_" + str(p["id"])
+	b.custom_minimum_size = Vector2(66, 44)
+	# Its own height, centred: a taller row (wrapped facts) does not stretch it.
+	b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	b.pressed.connect(_on_pick.bind(p))
+	# Its outline, for when a kept row's button closes again (_set_pick_state).
+	b.set_meta("outline", b.get_theme_stylebox("normal"))
+	h.add_child(b)
+	_set_pick_state(row, b, p)
+	return row
+
+
+## The row's pick button and tip as the draft stands: his own, taken, wait or
+## the reason he cannot be picked. A row kept across a pick (_refresh_board)
+## is brought up to date here; the rest of it does not change with a pick.
+func _set_pick_state(row: Control, b: Button, p: Dictionary) -> void:
+	var role := str(p["role"])
+	var taken := _draft.has(str(p["id"]))
 	var can_pick := _draft.can_pick_player(p)
 	var text := "+ " + role
 	var reason := "Draft %s for %s" % [GameDB.player_display_name(p), Contracts.money(_draft.price(p))]
@@ -1273,18 +1330,14 @@ func _player_row(p: Dictionary) -> Control:
 	elif not can_pick:
 		reason = _draft.pick_block_reason(p)
 		text = "Rucks" if reason.contains("rucks") else ("Full" if reason.contains("full") else ("Cap" if reason.contains("cap") else "No"))
-	var b := UiKit.btn(text, UiKit.SECONDARY)
-	b.name = "Pick_" + str(p["id"])
-	b.custom_minimum_size = Vector2(66, 44)
-	# Its own height, centred: a taller row (wrapped facts) does not stretch it.
-	b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	b.text = text
 	b.disabled = not can_pick
 	b.tooltip_text = reason
 	if can_pick:
 		b.add_theme_color_override("font_color", UiKit.TEXT)
 		b.add_theme_stylebox_override("normal", UiKit.style(UiKit.PANEL, 6, 5, Color("6c5142")))
-	b.pressed.connect(_on_pick.bind(p))
-	h.add_child(b)
+	else:
+		b.add_theme_stylebox_override("normal", b.get_meta("outline"))
 	if bool(p.get("projected", false)) and _draft.intake_mode:
 		var production := PlayerProfile.production(p)
 		row.tooltip_text = "%s · %s\n%s\n%s" % [
@@ -1294,7 +1347,6 @@ func _player_row(p: Dictionary) -> Control:
 		row.tooltip_text = "%s · %s\n%d games · %.1f disposals/game · %d goals\n%s" % [
 			GameDB.player_display_name(p), GameDB.club_name(str(p["club"])), int(p["gm"]),
 			float(p["di"]) / maxf(1.0, float(p["gm"])), int(p["gl"]), reason]
-	return row
 
 
 func _on_pick(player: Dictionary) -> void:
@@ -1306,8 +1358,15 @@ func _on_pick(player: Dictionary) -> void:
 	_last_batch_start = before
 	if _draft.pick(player):
 		GameState.mark_dirty()
-		_refresh()
+		_refresh_after_pick()
 		_after_my_pick(before)
+
+
+## _refresh after a pick: the board keeps the rows of the players still on it.
+func _refresh_after_pick() -> void:
+	_keep_rows = true
+	_refresh()
+	_keep_rows = false
 
 
 ## Your pick made (entry `at` of the pick history): at the National Draft, his
@@ -2049,6 +2108,7 @@ func _night_events(upto: int) -> Array:
 
 
 func _refresh_history() -> void:
+	_history_stale = false
 	UiKit.clear(_history_box)
 	var entries := []
 	var picks_n := 0
@@ -2366,7 +2426,12 @@ func _refresh() -> void:
 	_refresh_tabs()
 	_refresh_status()
 	_refresh_board()
-	_refresh_history()
+	# The pick log out of view (a phone on another tab) is rebuilt when it is
+	# opened, not at every pick: it grows by 30-odd rows a round.
+	if is_instance_valid(_history_view) and not _history_view.is_visible_in_tree():
+		_history_stale = true
+	else:
+		_refresh_history()
 	_refresh_mine()
 	_refresh_order()
 
