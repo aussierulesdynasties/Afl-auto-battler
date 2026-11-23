@@ -13,23 +13,26 @@ extends RefCounted
 
 const CLIPS_GLB := "res://assets/oval3d/injury_clips.glb"
 ## What each kind of injury plays: the fall (from a run or a contest), and the get-up. A kind not
-## here plays "soft". Real AFL broadcasts (2018-2025, timed frame by frame): a concussed man drops
+## here plays "soft"; "lie" is the loop he lies hurt in once the fall is over (a knee: on his back,
+## clutching it), and "up_max" the picture seconds his get-up may take. Real AFL broadcasts (2018-2025, timed frame by frame): a concussed man drops
 ## and lies still face down; a knee or an ankle goes down at once and stays down; a hamstring or
 ## other strain is on the turf within a second or two and back up within a few seconds.
 const PLAN := {
-	"concussion": {"fall": "knocked_out", "up": "getting_up"},
-	"knee": {"fall": "falling_down", "up": "getting_up"},
-	"ankle": {"fall": "falling_down", "up": "getting_up"},
-	"foot": {"fall": "falling_down", "up": "getting_up"},
+	"concussion": {"fall": "collapse_forward", "up": "getup_front", "up_max": 6.0},
+	"knee": {"fall": "falling_down", "lie": "writhing", "up": "getting_up"},
+	"ankle": {"fall": "falling_down", "lie": "writhing", "up": "getting_up"},
+	"foot": {"fall": "falling_down", "lie": "writhing", "up": "getting_up"},
 	"shoulder": {"fall": "falling_down", "up": "getting_up"},
 	"soft": {"fall": "falling_down", "up": "getting_up"},
 }
 ## The walk off, by kind (the loop he walks off on): a hurt arm carried against the body, a hurt
 ## leg limped on. Its pace in m/s at rate 1 is read off the clip (_walk_speed).
-const WALK := {"shoulder": "injured_arm_walk", "hand": "injured_arm_walk"}
+## A concussed man is walked off steady on his feet, the doctor beside him (no limp): the match
+## crew's plain walk (Oval3DCrew's crew_walk) where the figures have it.
+const WALK := {"shoulder": "injured_arm_walk", "hand": "injured_arm_walk", "concussion": "crew_walk"}
 const WALK_DEFAULT := "injured_walk"
 ## Clips that loop (the rest play once and hold their last pose).
-const LOOPS := ["injured_walk", "injured_arm_walk", "kneeling", "fallen_idle", "injured_idle",
+const LOOPS := ["writhing", "injured_walk", "injured_arm_walk", "kneeling", "fallen_idle", "injured_idle",
 		"injured_hurting_idle", "injured_stumble_idle", "sitting_dazed"]
 ## Seconds of clip a change of clip blends over, when the two poses already match (_entry).
 const BLEND := 0.25
@@ -133,7 +136,9 @@ func _kind_plan(kind: String) -> Dictionary:
 
 func _walk_clip(kind: String) -> String:
 	var w := str(WALK.get(kind, WALK_DEFAULT))
-	return w if _clips.has(w) else ""
+	if _clips.has(w) or (oval.players[0]["anim"] as AnimationPlayer).has_animation(w):
+		return w
+	return WALK_DEFAULT if _clips.has(WALK_DEFAULT) else ""
 
 
 ## A frame: new hurt men from the director, then each scene's stage, pose and place.
@@ -225,9 +230,14 @@ func _step_scene(s: Dictionary, dt: float) -> void:
 	var up := str(plan["up"])
 	var walk := _walk_clip(str(s["kind"]))
 	# The get-up starts so that he is on his feet as the director has him walk (down_s).
+	# Once the fall is over, he lies hurt in his kind's loop (if it has one).
+	var lie := str(plan.get("lie", ""))
+	if stage == "fall" and lie != "" and has(lie) and str(s["clip"]) != lie \
+			and float(s["ct"]) >= float(_len[str(s["clip"])]) - HOLD_SHORT - 0.01:
+		_switch(s, lie, _entry_t(str(s["clip"]), lie))
 	var up_len := 0.0
 	if up != "":
-		up_len = minf(UP_MAX, float(_len[up]) - _entry_t(str(plan["fall"]), up))
+		up_len = minf(float(plan.get("up_max", UP_MAX)), float(_len[up]) - _entry_t(str(s["clip"]), up))
 	if stage == "fall" and e >= down - up_len * MatchDirector.TEMPO:
 		if up != "":
 			_switch(s, up, _entry_t(str(s["clip"]), up))
