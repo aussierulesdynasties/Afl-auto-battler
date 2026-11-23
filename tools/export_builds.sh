@@ -107,4 +107,16 @@ done
 echo
 echo "Version: $version-$sha"
 for line in "${report[@]}"; do echo "  $line"; done
+# The size budget (docs/ITCH_BUILDS.md, "What each build carries"): past it, the ground models
+# move to per-ground packs before the build ships.
+over_budget() {
+	local f="$1" limit_mb="$2" mb
+	[ -f "$f" ] || return 0
+	mb=$(( $(stat -c %s "$f" 2>/dev/null || wc -c < "$f") / 1000000 ))
+	if [ "$mb" -gt "$limit_mb" ]; then
+		echo "WARNING: $f is $mb MB, over its $limit_mb MB budget: move the ground models to per-ground packs (docs/ITCH_BUILDS.md)" >&2
+	fi
+}
+over_budget builds/android/aussie-rules-dynasties.apk 1000
+over_budget builds/windows/AussieRulesDynasties.exe 2000
 exit $failed

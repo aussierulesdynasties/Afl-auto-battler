@@ -106,6 +106,12 @@ func build(p_director: MatchDirector, home: String, away: String) -> void:
 	_ground()
 	_posts()
 	var slug := GroundModels.slug_for(ground) if ground != "" else ""
+	# A build that leaves the ground's model out (the Web build: docs/ITCH_BUILDS.md, "What each
+	# build carries") plays in the stands every ground without a model has, never in a ring of
+	# seats with no stadium under them.
+	if slug != "" and GroundModels.files(slug).is_empty():
+		push_warning("Oval3D: %s has no ground model in this build; playing in the plain stands" % slug)
+		slug = ""
 	if slug != "":
 		_ground_model(slug, "", home, away)
 	else:

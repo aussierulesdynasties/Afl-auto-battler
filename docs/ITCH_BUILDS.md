@@ -31,3 +31,19 @@ Every upload goes to all three channels with the same `--userversion` (`<config/
 - The price is set on the itch dashboard (Edit game: Pricing "No payments"); butler can't set it. The `windows` and `android` channel names give each upload its platform tag by themselves.
 - `tools/export_builds.sh` refuses a tree with uncommitted changes, because the build label names HEAD; an upload is always exported from a clean commit (best: main after the version bump merged).
 - **Itch only when he says (2026-11-09).** "we dont need to push to itch after every day or every update / just whenever I say / and the build needs to climb sequentially". No upload, version bump or devlog without his word. Each build he calls gets the next number, with its own new devlog post; a post is never retitled to cover a later build. Overrules any earlier rule to refresh itch unprompted or edit the last post for a follow-up build.
+
+## What each build carries, and the size budget
+
+Measured 2026-11-23 (Godot 4.7.2 exports of main plus PR #2058 and this change, 33 ground models).
+
+| Build | Carries | Size | Budget |
+|---|---|---|---|
+| `android` APK | the game, the 3D players (bodies, MetaHuman body and crew, moves, hair, the 11 own heads), every ground's model and seats | 913 MB (grounds 586, players 226, engine 50) | the whole APK under 1 GB; past it the ground models move to per-ground packs and the APK keeps the rest, under 500 MB |
+| `windows` exe | the same as the APK | 1.0 GB exe (793 MB zipped) | under 2 GB for the one exe; past it the pack ships beside the exe (`binary_format/embed_pck=false`) |
+| `html5` | the game and the 3D players; **no ground models** | 409 MB pack (398 MB before the players) | no ground models until per-ground packs: a browser holds the whole pack in memory |
+| Android 3D probe | the same as the APK, plus `tools/` (the phone test scene) | 916 MB | none: a test build only |
+
+- **Why the Web build has no grounds.** The browser loads the whole pack into memory; 409 MB is already heavy for a phone's browser, and the ground models would take it past 1 GB. A Web match plays in the plain stands every ground without a model has (`Oval3D.build`), never in a ring of seats with no stadium. Grounds come to the Web build only as per-ground packs fetched from beside `index.html` (same origin: GitHub release files send no CORS header, measured 2026-11-23).
+- **Why the budget is 1 GB for the APK.** The ground models grow with every rebuild (Football Park's real surroundings alone are about 40 MB of glb; at that rate 37 grounds with their surroundings come to about 2 GB, an estimate). A sideloaded APK of that size is a long download and doubles on the phone while it installs. Past 1 GB the plan is: each ground's model exported as its own pack (`--export-pack` with a filter on `assets/grounds/<slug>/`), loaded with `ProjectSettings.load_resource_pack` before `GroundModels.instantiate`, downloaded the first time a match is played there (with a "download every ground" choice in Settings). The base APK stays under 500 MB, Google Play's base-module limit, so a Play release stays possible as an app bundle with one asset pack per ground (Play: 1.5 GB a pack, 30 GB of on-demand packs; a plain APK on Play is capped at 100 MB, so today's APK already could not go there as an APK).
+- **Licences.** The MetaHuman bodies (`player_mh.glb`, `crew_mh.glb`) may ship inside the game: Epic's MetaHuman licence allows them in any engine, royalty-free under US$1M a year in revenue, never used to train AI. The 11 own heads are Tripo on a paid plan (owned). Hair: `assets/oval3d/HAIR-LICENSE.txt` (CC BY 4.0 credits and CC0). The ground models are our own.
+- `tools/check_export_data.sh` exports a pack with the Android preset's filters and fails if any ground's model, the players' files or the MCG's stadium and seats are missing from it.
