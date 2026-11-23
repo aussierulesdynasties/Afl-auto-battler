@@ -25,11 +25,23 @@ The 2000-2006 turf edge is bounded by a thin dark line all round (the fence and 
 between it and the west stand. It is 13 m longer and 12 m wider than the published 159 x 128 m, about what a boundary
 line some 6 m inside the fence gives, but the aerials show no boundary line to check that.
 
+## Google Earth 3D today (2026-11-23)
+
+Straight down from 700 m (`LAT=-37.93797 LON=145.04370`), 1,073 points on rays every 5 deg from bearing 80 to 220,
+65-145 m out (`measure/ge3d/`, all read; turf 31 m above sea level):
+
+- Bearings 80-165 (north to west-north-west): a roof at **9-11 m** above the turf from 81-95 m out to 120-140 m.
+- Bearings 170-215 (west to south-west): a roof at **9-10 m** from 72-86 m out, about 20 m deep.
+
+This is today's ground. The 1990-1992 west and south-west stand was gone by Feb 2010, so the 170-215 roof is a later
+building and says nothing about it. Whether the 80-165 roof is the stand seen there in Nov 2000 is not yet checked
+(footprints still to be compared against the 2000 frame), so neither height is used for the 1990-1992 model yet.
+
 Bearings are degrees counter-clockwise from east round the field centre (0 east, 90 north).
 
 ## Not done yet
 
-- Heights of the north-west stand and building (still standing) from Google Earth 3D: running.
+- Compare the 80-165 roof's footprint today with the Nov 2000 frame.
 - The west and south-west stand (gone by 2009): the Nov 2000 frame is a morning one (its shadow falls west onto the
   road outside); a height from that shadow needs the sun's azimuth from a pole or mast in the same frame. The 30 Jun 2009 frame
   has the stripped stand's shadow on the turf, which may give the frame's height the way Subiaco's roof was measured. Photos from
