@@ -235,6 +235,57 @@ if os.path.exists(_RPJ) and spec.get('real'):
             _F.append(tuple(o + i for i in q)); _C.extend([k] * 4)
     if _F:
         _ob = mk_obj('bg_roof_plant', _V, _F, mat_vcol('roof_plant', 0.6)); set_corner_col(_ob.data, np.array(_C, np.float32)); print('roof plant', len(_F) // 5)
+# cemeteries (landuse=cemetery; real place): the mapped paths are the aisles between the grave rows (close aerial: graves
+# lie across the aisle, two rows head to head between neighbouring aisles, ~6 m apart, a plot every ~1.3 m). Each aisle
+# side gets its row of plots 2.6 m out; six plots in ten carry an upright headstone (the rest a flat ledger slab, which
+# the ground's colour already shows): 0.55-0.75 m wide, 0.6-1.1 m high, the odd obelisk to 1.6 m, of grey or dark
+# granite, marble or sandstone. A stone is one double-sided face; none on the cemetery's own drives.
+if spec.get('real'):
+    from shapely.geometry import Polygon as _SPo, LineString as _SLs, Point as _SPt
+    from shapely.ops import unary_union as _SUu
+    from shapely.prepared import prep as _SPr
+    _cem, _drv, _ais = [], [], []
+    for _el in json.load(open(os.path.join(HERE, 'data', name, 'osm.json'), encoding='utf-8'))['elements']:
+        _t = _el.get('tags', {})
+        if _el['type'] != 'way' or not _el.get('geometry'): continue
+        _p = [((g['lon'] - _lon0) * _KX, (g['lat'] - _lat0) * 110540) for g in _el['geometry'] if g]
+        if len(_p) < 2 or max(max(abs(a), abs(b)) for a, b in _p) > meta['near'] - 10: continue
+        if _t.get('landuse') == 'cemetery' or _t.get('amenity') == 'grave_yard':
+            if len(_p) >= 4:
+                _q = _SPo(_p); _cem.append(_q if _q.is_valid else _q.buffer(0))
+        elif _t.get('highway') in ('path', 'footway'): _ais.append(_p)
+        elif _t.get('highway'): _drv.append(_SLs(_p).buffer(3.2))
+    if _cem:
+        _CU = _SPr(_SUu(_cem)); _DU = _SPr(_SUu(_drv)) if _drv else None
+        _rng = np.random.default_rng(17)
+        _STONE = [[150, 150, 148], [176, 174, 168], [196, 194, 188], [92, 92, 96], [128, 122, 116], [210, 206, 198], [168, 150, 120]]
+        _sx, _sy, _su, _sw, _sh, _sc = [], [], [], [], [], []
+        for _p in _ais:
+            _l = _SLs(_p)
+            if _l.length < 2 or not _CU.intersects(_l): continue
+            _n = int(_l.length // 1.3)
+            for i in range(_n):
+                a = _l.interpolate(i * 1.3 + 0.65); b = _l.interpolate(min(_l.length, i * 1.3 + 0.75))
+                d = np.array([b.x - a.x, b.y - a.y]); L = float(np.hypot(*d))
+                if L < 1e-6: continue
+                u = d / L
+                for s in (1, -1):
+                    if _rng.random() > 0.6: continue
+                    m = np.array([a.x, a.y]) + np.array([-u[1], u[0]]) * s * 2.6
+                    pt = _SPt(*m)
+                    if not _CU.contains(pt) or (_DU is not None and _DU.contains(pt)): continue
+                    _sx.append(m[0]); _sy.append(m[1]); _su.append(u)
+                    _sw.append(_rng.uniform(0.55, 0.75)); _sh.append(1.6 if _rng.random() < 0.05 else _rng.uniform(0.6, 1.1))
+                    _sc.append(_STONE[int(_rng.integers(0, len(_STONE)))])
+        if _sx:
+            _gz = height(np.array(_sx), np.array(_sy))
+            _V, _F, _C = [], [], []
+            for x, y, u, w, h, c, z in zip(_sx, _sy, _su, _sw, _sh, _sc, _gz):
+                o = len(_V); hw_ = u * w / 2; z = float(z)
+                _V += [(x - hw_[0], y - hw_[1], z - 0.1), (x + hw_[0], y + hw_[1], z - 0.1), (x + hw_[0], y + hw_[1], z + h), (x - hw_[0], y - hw_[1], z + h)]
+                _F.append((o, o + 1, o + 2, o + 3)); _C.extend([[*srgb(c), 1.0]] * 4)
+            _mh = mat_vcol('headstone', 0.7); _mh.use_backface_culling = False
+            _ob = mk_obj('bg_headstones', _V, _F, _mh); set_corner_col(_ob.data, np.array(_C, np.float32)); print('headstones', len(_F))
 # shade canopies on the lawn between the 50 m pools (satellite: 4 square pyramid canopies, ~9.5 m, orange/blue/yellow/sage)
 _SH = []
 for _cx, _cy, _col in () if name != 'gmhba' else ((265, 175, (225, 110, 75)), (205, 330, (45, 60, 170)), (145, 515, (225, 205, 60)), (85, 680, (175, 195, 175))):

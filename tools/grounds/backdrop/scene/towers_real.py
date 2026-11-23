@@ -15,7 +15,7 @@ _TV, _TF, _TC = [], [], []
 _GV, _GF, _GC = [], [], []
 _nt = 0
 # the city past the near ground (a CBD 2-3 km off): Overture towers of 30 m and up beyond the near box, as tall
-# parts where the building is mapped in parts (a tower on its podium), out to 4 km
+# parts where the building is mapped in parts (a tower on its podium), out to spec city_r_m (4 km unless the CBD is in view further off)
 _xtra = []
 _ovp = os.path.join(os.environ.get('WORK', '/home/user/work'), 'overture', name + '.json')
 if os.path.exists(_ovp):
@@ -34,7 +34,7 @@ if os.path.exists(_ovp):
         except Exception: continue
         if g_.geom_type == 'MultiPolygon': g_ = max(g_.geoms, key=lambda q: q.area)
         c_ = _loc(g_); cx_ = np.mean([q[0] for q in c_]); cy_ = np.mean([q[1] for q in c_])
-        if max(abs(cx_), abs(cy_)) <= _NB - 20 or np.hypot(cx_, cy_) > 4000: continue
+        if max(abs(cx_), abs(cy_)) <= _NB - 20 or np.hypot(cx_, cy_) > spec.get('city_r_m', 4000): continue
         ps = [q for q in _parts.get(r['id'], []) if q['height']]
         if ps:
             for q in ps:
@@ -64,6 +64,13 @@ for b in list(BL) + _xtra:
     glass = np.array([0.035, 0.05, 0.065]) * (1 + 0.2 * (rng.random() - 0.5)) + wc * 0.08   # dark glass between the slabs
     rc = lin(b['roof_c']) if b.get('roof_c') else wc * 0.9
     g4 = (*glass, 1.0); w4 = (*wc, 1.0); r4 = (*rc, 1.0)
+    if _city and float(np.hypot(*cxy)) > 2500:
+        # a city tower 2.5 km and more off: a storey's slab is under a fifth of a pixel there, so the face takes the
+        # tone that its glass and slabs blend to at that distance (the glass catching the sky lightens it), with its
+        # parapet band and roof
+        _ring(P, base, top, _GV, _GF, _GC, (*(glass * 0.6 + wc * 0.4), 1.0))
+        _ring(O, top - 1.2, top, _TV, _TF, _TC, w4); _capf(P, top - 0.05, _TV, _TF, _TC, r4); _nt += 1; b['c'] = 'tower_done'
+        continue
     _ring(P, base, top, _GV, _GF, _GC, g4)
     step = 13.6 if _city else 6.8 if _far else 3.4; z = base + 1.0 + 4.5   # podium storey, then a slab every storey
     while z < top - 1.0:

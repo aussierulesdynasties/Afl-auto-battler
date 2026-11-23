@@ -161,11 +161,11 @@
  },
  "blacktown": {
   "origin": [
-   -33.7693073,
-   150.8593034
+   -33.7692997,
+   150.8593847
   ],
   "yaw": 0.0,
-  "how": "Oval 1 centre"
+  "how": "the Blacktown thread's measured model frame (GE tools grounds.json origin)"
  },
  "summit": {
   "origin": [

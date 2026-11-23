@@ -196,14 +196,14 @@ for o, bm, comps in scans:
 if BUDGET:   # the rest: big flat meshes decimated (buildings stay whole: boxes do not decimate well)
     meshes_ = [o for o in bpy.data.objects if o.type == 'MESH']
     rest = [o for o in meshes_ if not o.name.startswith('bg_trees')]
-    flat = [o for o in rest if not re.match(r'bg_(bld|roof|clad|flash|lm_)', o.name) and tris(o) > 3000]
+    flat = [o for o in rest if not re.match(r'bg_(bld|roof|clad|flash|lm_|cars|headstones)', o.name) and tris(o) > 3000]
     room = BUDGET - _tris_all(tree_objs) - _tris_all([o for o in rest if o not in flat])
     have = _tris_all(flat)
     if have > room > 0:
         g = max(0.08, room / have)
         for o in flat: decimate(o.name, g)
         print('budget: flat meshes decimated to', round(g, 3))
-    blds = [o for o in rest if o not in flat]
+    blds = [o for o in rest if o not in flat and re.match(r'bg_(bld|roof|clad|flash)', o.name) and not o.name.startswith('bg_roof_plant')]   # houses and towers; cars, headstones and roof plant are not thinned
     if _tris_all(blds) > 0.35 * BUDGET:   # too many houses: far ones go, each wall with its own roof
         from mathutils.kdtree import KDTree
         def comps_of(o):
