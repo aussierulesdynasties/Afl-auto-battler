@@ -1,4 +1,4 @@
-# Git blob ids of every version of every Epic/MetaHuman file this repo ever held (main's history).
+# Git blob ids of every version of every Epic/MetaHuman file this repo ever held (every branch, 2026-11-23).
 # tools/check_epic_files.py fails on any tracked file with one of these ids, whatever its path;
 # docs/EPIC_ASSETS.md uses the same list to purge them from history.
 02707a13ead9a2dcad9a3e303e23aa41494bf5b4  assets/oval3d/skin/Head_Normal.png
@@ -7,6 +7,7 @@
 07149de0ec705347118b0aee6b82a6ebdaa7eff0  assets/oval3d/skin/Body_Normal.png
 1619580c8d413316304eb7d6fc28bf8fa94c4d9c  assets/oval3d/cuts/NTH.res
 25b3480e75715bcf022a5f4626509c0af8dd7454  assets/oval3d/cuts/STK.res
+29964bf881afa760d3656e1f71c995e5b8785335  assets/oval3d/cuts/GCS.res
 2c1c45ea7ea5c3a75614534735cfa1589ffd557c  assets/oval3d/cuts/WBD.res
 2e060ab0993e582a6048ae2af15a5d6f4e64f9cf  assets/oval3d/cuts/GWS.res
 3982dedabb1e9a76b3f00fac3c178d7eea5e4a92  assets/oval3d/cuts/WCE.res

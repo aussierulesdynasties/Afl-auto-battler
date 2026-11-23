@@ -76,30 +76,26 @@ question. Our face fit reads player photos, not MetaHuman files.
 ## The old copies in git history
 
 Moving the files out stops new copies; every commit since #1722 (2026-11-16) still holds them, and
-anyone can download them from those commits. Removing them means rewriting history and force-pushing
-main and every branch, which cannot be undone. It is the director's call; nothing below has run.
-
-The plan, step by step:
+anyone can download them from those commits. The director chose to purge them (2026-11-23). It
+rewrites history and force-pushes main and every branch, which cannot be undone.
 
 1. **Freeze.** Every Claude thread and PC worktree pushes its work (or saves a patch); the merge queue
-   is emptied; no thread pushes until step 7.
-2. **Rewrite** on the director's PC (his credentials), in a fresh mirror clone:
-   `git clone --mirror https://github.com/aussierulesdynasties/Afl-auto-battler purge.git`, then
-   `grep -oE '^[0-9a-f]{40}' tools/epic_blobs.txt > ids.txt` and
-   `git -C purge.git filter-repo --strip-blobs-with-ids ../ids.txt` (pip `git-filter-repo`). Only those
-   45 file versions go; every other file and every commit message stays. Check: `git -C purge.git
-   rev-list --objects --all | grep -Ff ids.txt` prints nothing.
-3. **Allow the force-push:** in the ruleset "main merge queue" (id 27075439) add a bypass for the push, or
-   switch it off for the minutes of step 4 (only the director can).
-4. **Push:** `git -C purge.git push --force origin 'refs/heads/*:refs/heads/*'` (405 branches; open PRs
-   follow their rewritten branches). Restore the ruleset.
-5. **GitHub Support:** the 2,029 `refs/pull/*` refs are GitHub's and cannot be pushed; about 360 of them
-   (PRs from #1722 on) still point at old commits. Ask Support ("Removing sensitive data from a
-   repository") to dereference them and run garbage collection, listing the affected PRs.
-6. **CI:** turn on the history check in the lint job (`python3 -I tools/check_epic_files.py --commits
+   is emptied; nobody pushes until step 6.
+2. **Rewrite:** `tools/epic_purge.sh rewrite WORKDIR` (needs `pip install git-filter-repo`). It clones
+   every branch (not GitHub's `refs/pull/*`), strips exactly the 43 blob ids in `tools/epic_blobs.txt`
+   (every version of every Epic file on any branch), keeps every commit and message, and checks that no
+   listed blob is left and that no branch tip changed except by losing an Epic file.
+3. **Push:** `tools/epic_purge.sh push WORKDIR`, signed in as a repository admin (main's ruleset lets an
+   admin bypass; otherwise switch the rule off for the push). Each branch is pushed with a lease on the
+   value it had when cloned, so a branch pushed to since then is refused and listed, never lost. Open
+   PRs follow their rewritten branches.
+4. **GitHub Support:** the `refs/pull/*` refs are GitHub's and cannot be pushed; the ones from #1722 on
+   still point at old commits. Ask Support ("Removing sensitive data from a repository") to dereference
+   them and run garbage collection, listing the affected PRs.
+5. **CI:** turn on the history check in the lint job (`python3 -I tools/check_epic_files.py --commits
    origin/main..HEAD`, with `fetch-depth: 0`), so a branch that still carries the old history fails.
-7. **Every clone starts again:** each PC worktree and cloud thread re-clones (or `git fetch` and
-   rebases its own commits onto the new main: trees are identical, only commit ids changed). A stale
-   branch merged and pushed would put the files back.
+6. **Every clone starts again:** each PC worktree and cloud thread re-clones (or fetches and rebases its
+   own commits onto the new main: trees are identical, only commit ids changed). A stale branch merged
+   and pushed would put the files back.
 
 The repo has no forks (checked 2026-11-23).
