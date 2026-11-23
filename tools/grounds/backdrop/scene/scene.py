@@ -235,7 +235,10 @@ if spec.get('coast_v2'): exec(open(os.path.join(HERE, 'water21.py'), encoding='u
 else:
   _wo = mk_obj('bg_far_water', _wq.tolist(), _wf4.tolist(), mat_vcol('far_water', 0.9)); _wo.active_material.node_tree.nodes['Principled BSDF'].inputs['Specular IOR Level'].default_value = 0.15
   _wh = (1 - np.exp(-np.hypot(_wq[:, 0], _wq[:, 1]) / spec.get('haze_m', 22000)))[:, None] * 0.85
-  _wc = np.array(lin((30, 54, 76)))[None, :3] * (1 - _wh) + np.array(lin(PAL['haze']))[None, :3] * _wh
+  _wrj = os.path.join(D, 'water_rgb.json')
+  _wrgb = tuple(json.load(open(_wrj))['water_rgb']) if spec.get('real') and os.path.exists(_wrj) else (30, 54, 76)
+  if _S2ON: _wh = _wh * 0   # real colours: the game's day haze does the distance
+  _wc = np.array(lin(_wrgb))[None, :3] * (1 - _wh) + np.array(lin(PAL['haze']))[None, :3] * _wh
   set_corner_col(_wo.data, np.concatenate([_wc[_wf4.ravel()], np.ones((_wf4.size, 1))], 1))
 for _nm, _sel, _mt in (('bg_far_suburb', _sub, mat_mul('far_suburb', os.path.join(HERE, 'tex', 'mt', 'far_suburb.png'), 0.9, 1 / float(open(os.path.join(HERE, 'tex', 'mt', 'far_suburb.mean')).read()))),):
     _nt = _mt.node_tree; _t = [n for n in _nt.nodes if n.type == 'TEX_IMAGE'][0]; _mu = [n for n in _nt.nodes if n.type == 'MIX'][0]

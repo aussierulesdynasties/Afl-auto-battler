@@ -189,6 +189,9 @@ if spec.get('real'):
         # water OSM leaves unmapped here (an estuary's own area polygon is often missing): where Sentinel-2's clear looks
         # mostly saw water (s2far.py, 80 m) and the close aerial itself is dark water, the cover is water (crisp shore at 1 m)
         _S2W = os.path.join(os.environ.get('WORK', '/home/user/work'), 's2', spec['name'] + '_far_water.npy')
+        for _f in ('sea_mask.npy', 'water_rgb.json'):
+            if os.path.exists(os.path.join(OUT, _f)): os.remove(os.path.join(OUT, _f))
+        _WRGB = None
         if os.path.exists(_S2W):
             from scipy.ndimage import map_coordinates as _mcw, binary_dilation as _bdw, binary_opening as _bow
             _W2 = np.nan_to_num(np.load(_S2W), nan=0.0); _wj = json.load(open(_S2W.replace('_far_water.npy', '_far.json')))
@@ -200,9 +203,35 @@ if spec.get('real'):
             _aj_ = np.clip(((_gc_ + _hr) / _mr).astype(int), 0, _SAr.shape[1] - 1)
             _Aw = _SAr[_ai_[:, None], _aj_[None, :]].astype(np.int16)
             _dkw = (_Aw.mean(-1) < 95) & (_Aw[..., 2] >= _Aw[..., 0] - 4)
-            _new = _bow(_s2w & _dkw, iterations=2)
+            # open sea: where nearly every clear look saw water the aerial's own tone doesn't matter (a choppy harbour is
+            # lighter and greener than a river), 40 m in from the 80 m cells' edge so the shore stays the aerial's
+            _sea = _mcw(_W2, [(_wh2 - _GYw) / _ws2 - 0.5, (_GXw + _wh2) / _ws2 - 0.5], order=1, mode='constant', cval=0.0) > 0.85
+            # mapped land stays land: wharves, piers, car parks, buildings and the roads on them are dark and flat
+            # beside the water, like the water itself (Wellington's waterfront came out as harbour)
+            _lm = Image.new('L', (N, N), 0); _ld = ImageDraw.Draw(_lm)
+            for el in js:
+                t_ = el.get('tags', {})
+                if el['type'] != 'way' or 'geometry' not in el: continue
+                if t_.get('natural') in ('water', 'bay', 'strait', 'wetland') or t_.get('waterway') or t_.get('landuse') in ('basin', 'reservoir') or t_.get('leisure') == 'marina': continue
+                pts_ = ring(el)
+                if len(pts_) < 2: continue
+                if t_.get('highway') or t_.get('railway'):
+                    _ld.line(P(pts_), fill=255, width=max(1, int(8 / PX)))
+                elif len(pts_) > 3 and pts_[0] == pts_[-1] and any(k in t_ for k in ('landuse', 'man_made', 'amenity', 'leisure', 'building', 'place')):
+                    _ld.polygon(P(pts_), fill=255)
+            _land = np.asarray(_lm) > 0
+            _new = _bow(((_s2w & _dkw) | _sea) & ~_land, iterations=2)
+            _sea = _sea & ~_land
+            np.save(os.path.join(OUT, 'sea_mask.npy'), _bow(_sea, iterations=2)[::SS, ::SS])
             _ia = np.asarray(img).copy(); _ia[_new] = PAL['water']; img = Image.fromarray(_ia); dr = ImageDraw.Draw(img)
             print('near water from Sentinel-2 and the aerial', int(_new.sum()), 'px')
+            # the water's own colour: the aerial's median over open water (or over the water found here), for the near
+            # ground and for scene.py's far water, so the harbour is one colour out to the horizon
+            _ow = _sea if _sea.sum() > 20000 else _new
+            if _ow.sum() > 2000:
+                _WRGB = [int(round(float(np.median(_Aw[..., k][_ow])))) for k in range(3)]
+                json.dump({'water_rgb': _WRGB, 'px': int(_ow.sum())}, open(os.path.join(OUT, 'water_rgb.json'), 'w'))
+                print('water colour from the aerial', _WRGB)
         _a0 = np.asarray(img).astype(np.int16); _hard = np.zeros(_a0.shape[:2], bool)
         for k in _HARD: _hard |= np.all(_a0 == np.array(PAL[k], np.int16)[None, None], -1)
         # mapped water, for scene.py's lift (the aerial's dark lawns come close to the water colour)
@@ -590,6 +619,7 @@ _a *= (1 + 0.26 * _s * _g)[..., None]
 img = Image.fromarray(np.clip(_a, 0, 255).astype(np.uint8))
 # hand-made grain: per-pixel value noise, never photo pixels
 a = np.asarray(img).astype(np.float32)
+if spec.get('real') and globals().get('_WRGB') is not None: a[_wm] = _WRGB   # mapped and found water in its own colour
 n1 = np.asarray(Image.fromarray((rng.random((N // 16 + 1, N // 16 + 1)) * 255).astype(np.uint8)).resize((N, N), Image.BICUBIC)).astype(np.float32) / 255 - 0.5
 n2 = rng.random((N, N)).astype(np.float32) - 0.5
 a *= (1 + 0.09 * n1 + 0.03 * n2)[..., None]
@@ -822,6 +852,13 @@ if CAN is not None:   # inside the satellite's extent a tree stands where the tr
     _ft = 0.3 if spec.get('real') else 0.45   # real place: a garden tree's 5 m crown fills a third of its 6 m cell
     keep = np.where(_in, (_frac > _ft) & (v > 0) & (np.hypot(GX, GY) > skip_r), keep)
     print('canopy trees', int((_in & keep).sum()))
+_WMP = os.path.join(OUT, 'sea_mask.npy')
+if os.path.exists(_WMP):   # no tree stands out on open water (a choppy harbour can pass the aerial's crown test); wetlands,
+    # where Sentinel-2's 80 m cells see trees and water mixed, keep the aerial's crowns
+    _WM = np.load(_WMP); _ss = N / _WM.shape[0]
+    from scipy.ndimage import binary_erosion as _bew   # 6 m in from the shore: a bank's crowns lean over the water
+    _WM = _bew(_WM, iterations=max(1, int(round(6.0 / (PX * _ss)))))
+    keep &= ~_WM[np.clip((iy / _ss).astype(int), 0, _WM.shape[0] - 1), np.clip((ix / _ss).astype(int), 0, _WM.shape[1] - 1)]
 for x, y in zip(GX[keep], GY[keep]): TR.append([round(float(x), 1), round(float(y), 1)])
 # street trees along residential streets
 if spec.get('street_trees'):
