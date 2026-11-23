@@ -329,6 +329,15 @@ if spec.get('real'):
         # ground where the aerial shows each, blended over ~2 m, each in its median colour on this land. One median
         # for the whole patch painted a plaza that is grey on one side and terracotta on the other one beige.
         _opn = _soft & _use & (np.asarray(_RI) == 0) & ~_town
+        # big parkland (park, grass, meadow, reserve, heath or scrub over 2 ha; not a sports pitch or oval): one median
+        # painted a whole parkland one muddy grey-brown where the aerial shows dry tan grass round greener fields, so it
+        # takes the same classes, lawn and dry ground where the aerial shows each
+        _PK = np.zeros(len(_ar) + 1, bool)
+        for k_, (a_, q, tg_) in enumerate(sorted(_ar, key=lambda t: -t[0])):
+            _PK[k_ + 1] = a_ > 20000 and tg_.get('leisure') not in ('pitch', 'stadium', 'track', 'sports_centre', 'golf_course') and (
+                tg_.get('leisure') in ('park', 'nature_reserve', 'common', 'recreation_ground') or tg_.get('landuse') in ('grass', 'meadow', 'village_green', 'recreation_ground')
+                or tg_.get('natural') in ('grassland', 'heath', 'scrub'))
+        _opn = _opn | (_soft & _use & _PK[np.asarray(_RI)])
         if _opn.sum() > 500:
             _Ai = _AS.astype(np.int16); _R_, _G_, _B_ = _Ai[..., 0], _Ai[..., 1], _Ai[..., 2]
             _cl = np.where((_G_ > _R_ + 5) & (_G_ > _B_ + 5), 0, np.where((_R_ > _G_ + 16) & (_R_ > _B_ + 24), 1, np.where(_R_ > _B_ + 14, 2, 3)))
