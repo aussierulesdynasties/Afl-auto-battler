@@ -1086,6 +1086,97 @@ def sawtooth_rows(g, ring, z, pitch, h, flip=False):
     return n
 
 
+# 11459 (c_se's foreground, the office tower south-east of the ground): its roof furniture traced from Google Earth's
+# straight-down view (ge_detail/b11459_top.png, 250 m range, heading 0; the massing's outline projects onto it within a
+# metre). Coordinates are metres in the frame of its 65.9-72.4 m top part: origin (x, y), u along (ux, uy) (its long
+# north-west side, running south-east), v at right angles toward the north-east.
+B11459_FRAME = (240.934, -234.231, 0.575, -0.818, -31.509, -32.944)
+# the dark solar arrays, (u0, u1, v0, v1) in 1 m cells; the plant enclosure, the dish's base and the white boxes
+B11459_SOLAR = [(5, 6, 18, 23), (6, 7, 18, 25), (9, 10, 10, 27), (10, 12, 7, 30), (12, 13, 23, 30), (12, 13, 7, 20),
+                (13, 14, 24, 30), (13, 14, 7, 19), (14, 15, 13, 19), (14, 15, 26, 30), (15, 17, 14, 19), (15, 18, 27, 30),
+                (17, 18, 15, 19), (18, 19, 27, 28), (18, 19, 15, 20), (19, 20, 16, 20), (19, 20, 26, 29), (19, 20, 30, 31),
+                (20, 21, 26, 31), (20, 21, 17, 21), (21, 22, 26, 32), (21, 22, 19, 21), (14, 25, 7, 12), (24, 25, 25, 33),
+                (25, 26, 27, 33), (24, 27, 34, 40), (25, 27, 7, 10), (26, 27, 25, 33), (28, 30, 7, 24), (30, 31, 10, 16),
+                (30, 31, 18, 24), (27, 32, 30, 32), (32, 33, 26, 32), (31, 32, 9, 18), (32, 34, 9, 25), (33, 34, 26, 31),
+                (34, 35, 27, 31), (35, 36, 29, 31), (35, 36, 27, 28), (36, 37, 27, 31), (34, 40, 8, 25), (37, 40, 29, 32),
+                (40, 41, 29, 31), (40, 41, 9, 25), (41, 44, 29, 32), (43, 44, 22, 26), (43, 44, 17, 21), (44, 45, 12, 26)]
+B11459_PLANT = [(-0.8, 36.4), (1.6, 50.6), (19.9, 49.9), (19.0, 34.8)]
+B11459_DISH = (16.4, 22.1)
+B11459_DISHBASE = [(17.0, 16.6), (19.0, 23.4), (25.8, 21.3), (23.8, 14.6)]
+B11459_BOXES = [(1.6, 16.1), (1.3, 21.9), (2.0, 29.0), (5.2, 6.8), (29.5, 27.9), (39.2, 26.8), (50.0, 13.2), (48.5, 3.9),
+                (49.1, 16.7), (22.5, 5.1), (13.5, 33.6), (23.5, 37.4)]
+# in the notch at the tower's east corner (the 65.9 m roof): a glazed slope against the tower, high on its north-west
+# edge, and a red-brown terrace beside it
+B11459_GLASS = [(28.0, 34.2), (29.1, 46.9), (41.5, 44.3), (41.1, 32.5)]
+B11459_TERRACE = [(29.1, 48.0), (32.4, 55.8), (43.1, 52.5), (40.7, 44.9)]
+
+
+def b11459(g, base, top, ring, parts, wall, glass):
+    """11459, c_se's foreground (Round 12 self-check: our roof was a plain grey slab; Google Earth's c_se and its
+    close-ups show a white roof with blocks of solar arrays, a satellite dish on a pole, a screened plant enclosure,
+    white boxes, and a glazed slope with a terrace in the notch at the east corner). Walls: dark glass behind white
+    fins, the top storey a white band (b11459.png)."""
+    x0, y0, ux, uy, U0, V0 = B11459_FRAME
+    ax, cr = np.array([ux, uy]), np.array([-uy, ux])
+    o = np.array([x0, y0]) + ax * U0 + cr * V0
+
+    def P(u, v):
+        return tuple(o + ax * u + cr * v)
+
+    hi = max(t_ for _, t_, _ in parts)
+    if top < hi - 0.01:
+        if top - base >= 3.0:
+            banded(g, ring, base, top, 3.6, 0.9, 2.9, 0.0, wall, glass, top="roof_white", parapet=0.0)
+        else:
+            g.prism(ring, base, top, wall, top="roof_white")
+        if abs(top - 65.9) < 0.2 and base > 10:
+            gl = [P(*q) for q in B11459_GLASS]
+            zl, zh = top + 0.6, hi - 1.0
+            g.poly("sx_glass", [(*gl[0], zh), (*gl[1], zh), (*gl[2], zl), (*gl[3], zl)])
+            g.poly("sx_glass", [(*gl[0], top), (*gl[0], zh), (*gl[3], zl), (*gl[3], top)])
+            g.poly("sx_glass", [(*gl[1], top), (*gl[2], top), (*gl[2], zl), (*gl[1], zh)])
+            g.poly("sx_glass", [(*gl[2], top), (*gl[3], top), (*gl[3], zl), (*gl[2], zl)])
+            g.poly("nab_terra", [(*P(*q), top + 0.06) for q in B11459_TERRACE])
+        return
+    # the top storey: a white plant band (b11459.png), its roof white with the furniture on it
+    g.prism(ring, base, top, "white_band", top="roof_white")
+    z = top + 0.12
+    # each block laid as separate panels about 1 x 1.7 m with white roof showing between them, as Google Earth's c_se
+    # shows them close up
+    for u0, u1, v0, v1 in B11459_SOLAR:
+        for u in np.arange(u0, u1 - 0.01, 1.0):
+            nv = max(1, int(round((v1 - v0) / 1.7)))
+            for k in range(nv):
+                a = v0 + (v1 - v0) * k / nv
+                b = v0 + (v1 - v0) * (k + 1) / nv
+                g.poly("solar", [(*P(u + 0.12, a + 0.12), z + 0.3), (*P(u + 0.88, a + 0.12), z + 0.3),
+                                 (*P(u + 0.88, b - 0.12), z + 0.3), (*P(u + 0.12, b - 0.12), z + 0.3)])
+    # the plant enclosure: a low pale screen round dark plant and fans (b11459.png)
+    g.prism([P(*q) for q in B11459_PLANT], top, top + 2.4, "steel", top="roof_grey")
+    for du, dv in ((4.5, 4.0), (4.5, 9.0), (10.5, 4.0), (10.5, 9.0), (15.5, 6.5)):
+        c = np.array(P(B11459_PLANT[0][0] + du + 1.0, B11459_PLANT[0][1] + dv + 1.0))
+        g.prism(cylinder_ring(c, 1.4, 12), top + 2.4, top + 3.0, "steel", top="roof_dark")
+    g.prism([P(*q) for q in B11459_DISHBASE], top, top + 1.4, "roof_white", top="roof_white")
+    for u, v in B11459_BOXES:
+        g.prism([P(u - 1.2, v - 0.9), P(u + 1.2, v - 0.9), P(u + 1.2, v + 0.9), P(u - 1.2, v + 0.9)], top, top + 1.3,
+                "roof_white", top="roof_white")
+    # the dish: about 9 m across (its outline in the straight-down view), on a pole about 5 m tall; Google Earth's c_se
+    # sees it obliquely: it faces north-north-east, raised about 32 degrees (b11459.png)
+    dc = np.array(P(*B11459_DISH))
+    g.prism(cylinder_ring(dc, 0.4, 8), top, top + 5.6, "steel", top="steel")
+    el, az = math.radians(32), math.radians(20)
+    n = np.array([math.cos(el) * math.sin(az), math.cos(el) * math.cos(az), math.sin(el)])
+    e1 = np.array([math.cos(az), -math.sin(az), 0.0]); e2 = np.cross(n, e1)
+    ctr = np.array([dc[0], dc[1], top + 6.4])
+    rim = [ctr + 4.5 * (math.cos(a) * e1 + math.sin(a) * e2) for a in np.linspace(0, 2 * math.pi, 25)[:-1]]
+    back = ctr - n * 1.0
+    for i in range(len(rim)):
+        a_, b_ = rim[i], rim[(i + 1) % len(rim)]
+        g.poly("roof_white", [tuple(ctr + n * 0.05), tuple(a_), tuple(b_)][::-1])
+        g.poly("roof_white", [tuple(ctr + n * 0.05), tuple(a_), tuple(b_)])
+        g.poly("steel", [tuple(back), tuple(b_), tuple(a_)])
+
+
 def near_buildings(g, W):
     """The buildings within about 250 m that were plain boxes (round 10 audit), each with its own look from Google Earth.
     - HOME Docklands, 685 La Trobe Street (2024): two towers north-west of the ground, 101 m and 28 floors (CTBUH;
@@ -1107,7 +1198,7 @@ def near_buildings(g, W):
     looks = {10757: ("near_wall", "dark_glass", "roof_grey"), 16888: ("navy_wall", "louvre_grey", "roof_grey"),
              3046: ("pale_panel", "dark_glass", "roof_grey"), 6153: ("pale_panel", "seven_glass", "stripe_roof"),
              9966: ("near_wall", "dark_glass", "sawtooth"), 9967: ("near_wall", "dark_glass", "sawtooth"),
-             15419: ("near_wall", "dark_glass", "roof_grey")}
+             15419: ("near_wall", "dark_glass", "roof_grey"), 11459: ("near_wall", "dark_glass", "roof_white")}
     skip = [p for t, p in W.values() if t.get("_id") in S.LANDMARK_WAYS and len(p) > 3]
     for sid, parts in S.com_parts(set(looks), skip).items():
         wall, glass, roof = looks[sid]
@@ -1140,6 +1231,9 @@ def near_buildings(g, W):
                                 if _inside(tuple(cc), [tuple(x) for x in ring]):
                                     g.poly("solar", [(cc[0] - 4.0, cc[1] - 2.5, top + 0.08), (cc[0] + 4.0, cc[1] - 2.5, top + 0.08),
                                                      (cc[0] + 4.0, cc[1] + 2.5, top + 0.08), (cc[0] - 4.0, cc[1] + 2.5, top + 0.08)])
+                continue
+            if sid == 11459:
+                b11459(g, base, top, ring, parts, wall, glass)
                 continue
             if sid == 15419:
                 # Round 12 self-check (ext_000: this office is the foreground right under the camera, not 10757): its
