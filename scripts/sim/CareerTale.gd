@@ -159,7 +159,7 @@ static func _facts(p: Dictionary, ctx: Dictionary) -> Array:
 	if deb is Dictionary and not skip.has("debut"):
 		beats.append(_beat("debut_us", int(deb.get("year", 0)),
 				{"when": Firsts.when_text(deb), "year": int(deb.get("year", 0)), "label": str(deb.get("label", ""))}, "debut"))
-	elif complete and not stints.is_empty() and not skip.has("debut") and int(stints[0][1]) > Career.BEFORE_GAME:
+	elif complete and not stints.is_empty() and not skip.has("debut") and int(stints[0][1]) > Career.before_game():
 		var c0 := str(stints[0][0])
 		var y0 := int(stints[0][1])
 		if not _coached(ctx, y0, c0):

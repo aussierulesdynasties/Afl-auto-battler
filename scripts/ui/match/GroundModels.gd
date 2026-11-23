@@ -74,7 +74,8 @@ const FIT := {
 	"sky": [0.0, 0.0, 0.0, -77.7, 81.66, 63.74],
 	"jiangwan": [0.0, 0.0, 0.0, 63.0, 84.0, 63.0],
 	"hands": [0.0, 0.0, 0.0, -61.7, 92.51, 78.09],
-	"blacktown": [0.0, 0.0, 0.0, 79.9, 86.29, 72.12],
+	# Blacktown: the ellipse closest to its traced fence curve (tools/grounds/blacktown, 2026-11-22).
+	"blacktown": [-4.86, -2.37, 0.0, 78.5, 85.15, 74.82],
 	"summit": [-1.9, 0.75, 0.0, -83.5, 86.34, 76.17],
 	"macpoint": [0.0, 0.0, 0.0, 35.0, 85.0, 72.0],
 	# Adelaide Oval's model (#1856) exported for the game by tools/grounds/adelaide/export.py, and the
