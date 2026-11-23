@@ -213,10 +213,12 @@ def inset(ring, d):
     return out
 
 
-def banded(g, ring, z0, z1, floor, sill, head, recess, wall, glass, top="roof_grey", parapet=1.0):
+def banded(g, ring, z0, z1, floor, sill, head, recess, wall, glass, top="roof_grey", parapet=1.0, reveal=None):
     """Floors of ribbon windows: from each floor's level a solid band `sill` high on the face, then
     glass `recess` back from it up to `head`, then solid to the next floor. The window reveals (sill,
-    head) are modelled; a negative recess makes the solid bands stand out as balconies instead."""
+    head) are modelled; a negative recess makes the solid bands stand out as balconies instead. `reveal` is the
+    reveals' material (the wall's by default)."""
+    reveal = reveal or wall
     out = ccw(ring)
     inn = inset(out, recess)
     nf = max(1, int(round((z1 - z0) / floor)))
@@ -231,8 +233,8 @@ def banded(g, ring, z0, z1, floor, sill, head, recess, wall, glass, top="roof_gr
             g.wall(glass, inn[i], inn[j], a, b, u)
             u += g.wall(wall, out[i], out[j], b, z + fl, u)
             # sill (faces up) and head (faces down) between the face and the glass
-            g.poly(wall, [(*out[i], a), (*out[j], a), (*inn[j], a), (*inn[i], a)][::-1])
-            g.poly(wall, [(*out[i], b), (*out[j], b), (*inn[j], b), (*inn[i], b)])
+            g.poly(reveal, [(*out[i], a), (*out[j], a), (*inn[j], a), (*inn[i], a)][::-1])
+            g.poly(reveal, [(*out[i], b), (*out[j], b), (*inn[j], b), (*inn[i], b)])
     if parapet:
         g.prism(out, z1, z1 + parapet, wall, top=None)
         g.prism(inset(out, 0.3), z1, z1 + parapet, wall, top=None)
@@ -327,8 +329,14 @@ def nab(g, ring, h=72.0):
     # flat wall where Google Earth shows four blocks with angled joins. Each slot is a V notch 6 m wide at the face:
     # its two sides angled glass, which catch the light differently from the blocks, and only a 1 m red strip at
     # the back, 4 m in.
-    slots = {"east": ((0.27, 6.0, 3.0), (0.53, 6.0, -2.5), (0.69, 6.0, 3.0))}
-    depth, back = 4.0, 1.0
+    # Round 9 (PC: "the four blocks are coplanar, the same shading, no fold depth"): each east block is one flat
+    # plane turned a few degrees from the next, its ends standing out from the face line by these (start, end)
+    # metres, so one block's end stands proud of its neighbour and shows its red return wall, as Google Earth's
+    # do; the notches between are 3.5 m wide at the face, all red inside.
+    slots = {"east": ((0.27, 3.5, 3.0), (0.53, 3.5, -2.5), (0.69, 3.5, 3.0))}
+    yaw = {"east": ((0.0, 6.0), (6.0, 0.5), (0.5, 6.0), (5.0, 0.0))}
+    depth, back = 3.0, 1.0
+    rng = np.random.default_rng(700)
     outline = []
     for name, pl in faces:
         L = polyline_length(pl)
@@ -336,11 +344,16 @@ def nab(g, ring, h=72.0):
         edges = [0.0] + [x for c in cuts for x in c[:2]] + [L]
         shift = [0.0] + [c[2] for c in cuts for _ in (0, 1)] + [0.0]
         u = 0.0
+        yw = yaw.get(name)
+        nF = outward(pl[0], pl[-1])
         for bi in range(0, len(edges), 2):
             s0, s1 = edges[bi], edges[bi + 1]
             sub = _sub_polyline(pl, s0, s1)
             k = max(1, int(round((s1 - s0) / 14.0)))
             pts, _ = polyline_points(sub, k)
+            if yw:
+                y0_, y1_ = yw[bi // 2]
+                pts = pts + nF[None, :] * np.linspace(y0_, y1_, k + 1)[:, None]
             for j in range(k):
                 p0, p1 = pts[j], pts[j + 1]
                 w = float(np.linalg.norm(p1 - p0))
@@ -354,8 +367,8 @@ def nab(g, ring, h=72.0):
                 else:
                     mat = "nab_glass"
                 # alternate edges lean out (a block's two ends stay plumb, so its slots' walls are flat)
-                lean0 = n * fold * (j % 2 == 1)
-                lean1 = n * fold * ((j + 1) % 2 == 1 and j + 1 < k)
+                lean0 = n * fold * (j % 2 == 1) * (yw is None)
+                lean1 = n * fold * ((j + 1) % 2 == 1 and j + 1 < k) * (yw is None)
                 if j == 0:
                     lean0 = lean0 + t * shift[bi]
                 if j == k - 1:
@@ -365,7 +378,7 @@ def nab(g, ring, h=72.0):
                 outline.append(p0 + lean0)
                 outline.append(p1 + lean1)
                 # the leaning edge leaves a triangular gap to its neighbour: a narrow fold wall closes it
-                if j + 1 < k:
+                if j + 1 < k and yw is None:
                     nn = outward(pts[j + 1], pts[min(j + 2, k)])
                     q = pts[j + 1]
                     g.poly(mat, [(*q, base), (*(q + lean1), top), (*(q + nn * fold * ((j + 1) % 2 == 1)), top)])
@@ -388,9 +401,15 @@ def nab(g, ring, h=72.0):
                     # round 2): 4.2 m wide every 4.8 m, so the face reads pale with the dark glass left in
                     # diagonal bands between them.
                     # Round 8: the east face's shades read 28% of it on the PC against Google Earth's 10.6%: 2.4 m by 3.9 m.
-                    sw, sp, sh, st = (4.2, 4.8, 7.0, 1.6) if name == "west" else (2.4, 6.5, 3.9, 2.2)
+                    # Round 9: Google Earth's east shades are slim (about 1.7 m by 3.5 m), every 4.5 m, and the rows are
+                    # uneven, about a third of the places empty: PC measured ours 19.6% white against its 10.6%.
+                    sw, sp, sh, st = (4.2, 4.8, 7.0, 1.6) if name == "west" else (1.7, 4.5, 3.5, 2.2)
                     for r, z in enumerate(np.arange(base + 1.0, top - sh - 0.9, 3.9)):
                         for s_ in np.arange((r * st - u) % sp, w - sw - 0.2, sp):
+                            if name != "west":
+                                if rng.random() > 0.62:
+                                    continue
+                                s_ = float(np.clip(s_ + rng.uniform(-0.5, 0.5), 0.0, w - sw - 0.2))
                             s_ = float(s_) + 0.2  # clear of the facet edge
                             lean = (lean0 + (lean1 - lean0) * (s_ / w)) * ((z - base) / (top - base))
                             shade(g, "fin_white", p0 + t * s_ + lean + n * 0.6, t, n, sw, sh, 0.35, z)  # 0.6 m clears the folded facet, which is not flat
@@ -398,17 +417,17 @@ def nab(g, ring, h=72.0):
             if bi + 2 < len(edges):
                 # the slot to the next block: a V notch, its sides angled glass and a red strip at its back, leaning
                 # along the face as the blocks' edges do; glass ground storey carried across
-                a0 = _at(pl, s1)
-                b0 = _at(pl, edges[bi + 2])
+                a0 = _at(pl, s1) + (nF * yw[bi // 2][1] if yw else 0.0)
+                b0 = _at(pl, edges[bi + 2]) + (nF * yw[bi // 2 + 1][0] if yw else 0.0)
                 t = (b0 - a0) / np.linalg.norm(b0 - a0)
                 n = outward(a0, b0)
                 sa, sb = t * shift[bi + 1], t * shift[bi + 2]
-                mid = (a0 + b0) / 2 - n * depth
+                mid = (_at(pl, s1) + _at(pl, edges[bi + 2])) / 2 - nF * depth
                 ai, bi_ = mid - t * back / 2, mid + t * back / 2
                 sm = (sa + sb) / 2
-                g.poly("nab_glass", [(*a0, base), (*ai, base), (*(ai + sm), top), (*(a0 + sa), top)])
+                g.poly("corner_red", [(*a0, base), (*ai, base), (*(ai + sm), top), (*(a0 + sa), top)])
                 g.poly("corner_red", [(*ai, base), (*bi_, base), (*(bi_ + sm), top), (*(ai + sm), top)])
-                g.poly("nab_glass", [(*bi_, base), (*b0, base), (*(b0 + sb), top), (*(bi_ + sm), top)])
+                g.poly("corner_red", [(*bi_, base), (*b0, base), (*(b0 + sb), top), (*(bi_ + sm), top)])
                 g.wall("podium_glass", a0 - n * 2.0, b0 - n * 2.0, 0.0, base)
                 g.poly("fin_white", [(*(a0 - n * 2.0), base - 0.6), (*(b0 - n * 2.0), base - 0.6),
                                      (*b0, base), (*a0, base)])
@@ -756,8 +775,10 @@ def build():
     balconies(g, W["332358301"][1], 6.0, 109.0, 3.2, 1.6, wave=1.4)
     g.prism(W["332358301"][1], 0.0, 6.0, "podium_glass", top=None)
     # the two sawtooth towers north of the stadium (ge_north65_b): white frames, grey glass
-    banded(g, W["221441428"][1], 0.0, 65.0, 3.1, 0.9, 2.8, 0.45, "band_panel", "grey_glass", parapet=1.5)
-    banded(g, W["992236548"][1], 0.0, 70.0, 3.1, 0.9, 2.8, 0.45, "band_panel", "grey_glass", parapet=1.5)
+    # Round 9: in the game's light the sky-lit sills sparkled as fine white dashes, sub-pixel at broadcast range
+    # (PC: "fine horizontal banding"); the reveals are dark metal flashing (roof_dark), the glass's frame
+    banded(g, W["221441428"][1], 0.0, 65.0, 3.1, 0.9, 2.8, 0.45, "band_panel", "grey_glass", parapet=1.5, reveal="roof_dark")
+    banded(g, W["992236548"][1], 0.0, 70.0, 3.1, 0.9, 2.8, 0.45, "band_panel", "grey_glass", parapet=1.5, reveal="roof_dark")
     for wid in ("711957749", "711957750"):
         jetty(g, W[wid][1])
         gangway(g, W[wid][1], [(-198.1, -34.0), (-223.8, -42.3), (-220.1, -53.6), (-206.7, -92.3), (-202.4, -104.2)])
