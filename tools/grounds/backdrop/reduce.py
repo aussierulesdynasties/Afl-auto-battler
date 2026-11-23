@@ -6,7 +6,7 @@ ground under the stadium. Big meshes are decimated, the trees thinned with dista
 bake scaled to tex_px, and everything cut into wedges round the ground (see SECTORS).
 Needs the scene's textures where the .blend points (//../../tex, //../../data/<ground>/prep).
 """
-import bpy, bmesh, sys, os, re, numpy as np, math
+import bpy, bmesh, sys, os, re, json, numpy as np, math
 a = sys.argv[sys.argv.index('--') + 1:]
 SRC, OUT = a[0], a[1]
 TEX = int(a[2]) if len(a) > 2 else 4096
@@ -96,12 +96,10 @@ def edge_at(x, y):
 for o in [o for o in bpy.data.objects if not o.name.startswith('bg_')]:
     bpy.data.objects.remove(o, do_unlink=True)
 
-# trees standing inside the stadium belong to the ground's own model (its thread draws what grows there): a scene tree
-# in there stands in the concourse or the stand, and a broadcast camera on the stand looks out through its crown
-def _in_model(x, y):
-    if EDGE is not None: return math.hypot(x, y) < edge_at(x, y)[0]
-    return under_stadium(x, y)
-if HULL is not None or EDGE is not None:
+# the broadcast cameras' mounts (BG_CAMS: a JSON list of [x, y, z] in this scene's metres, from the game's
+# Oval3DBroadcast cameras for this ground): no tree crown within 25 m of one, or the camera looks out through it
+CAMS = np.array(json.loads(os.environ['BG_CAMS'])) if os.environ.get('BG_CAMS') else None
+if CAMS is not None:
     gone = 0
     for o in [o for o in bpy.data.objects if o.type == 'MESH' and o.name.startswith('bg_trees')]:
         bm = bmesh.new(); bm.from_mesh(o.data); M = o.matrix_world; bm.verts.ensure_lookup_table(); seen = set(); kill = []
@@ -113,12 +111,12 @@ if HULL is not None or EDGE is not None:
                 for e in x.link_edges:
                     y = e.other_vert(x)
                     if y.index not in seen: seen.add(y.index); st.append(y)
-            w = M @ (sum((q.co for q in c), c[0].co * 0) / len(c))
-            if _in_model(w.x, w.y): kill += c; gone += 1
+            P_ = np.array([tuple(M @ q.co) for q in c])
+            if (np.linalg.norm(P_[:, None, :] - CAMS[None], axis=2) < 25.0).any(): kill += c; gone += 1
         if kill:
             bmesh.ops.delete(bm, geom=kill, context='VERTS'); bm.to_mesh(o.data)
         bm.free()
-    print('trees inside the stadium left to its model', gone)
+    print('trees taken from in front of the broadcast cameras', gone)
 
 SEAMED = ('bg_near_ground', 'bg_far_terrain')
 if INNER > 0.0:   # the game draws its own ground, trees and buildings in here: nothing twice
