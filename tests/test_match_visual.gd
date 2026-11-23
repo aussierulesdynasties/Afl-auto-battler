@@ -55,6 +55,7 @@ func run() -> void:
 	_t("_test_farewell")
 	_t("_test_match_ground")
 	_t("_test_ground_models")
+	_t("_test_ground_terrain")
 	_t("_test_ground_screens")
 	_t("_test_stand_light")
 	_t("_test_mcg_crowd", [res])
@@ -2235,6 +2236,44 @@ func _test_ground_models() -> void:
 			and GroundModels.stretch("engie").is_equal_approx(Vector2.ONE),
 			"The turf stops at the model's fence")
 	oval.queue_free()
+
+
+## The real land round a ground (tools/grounds/terrain): a ground whose surrounds the game draws
+## itself lays its ring on the measured bare-earth heights, not flat. At Norwood the land falls about
+## 2 m from the ground to Beulah Road (Google Earth and Geoscience Australia's LiDAR agree); the
+## ring never rises above the model's street where it meets the model; trees and buildings stand
+## on the land.
+func _test_ground_terrain() -> void:
+	var fit: Array = GroundModels.FIT["norwood"]
+	var land := GroundTerrain.load_for("res://assets/grounds/norwood/", fit)
+	_check(land != null, "Norwood's land is in the game (assets/grounds/norwood/terrain.bin)")
+	if land == null:
+		return
+	# Model metres: x east, z south. Beulah Road is about 165 m north, 10 m west of the centre circle.
+	var turf := land.height(float(fit[0]), float(fit[1]))
+	var beulah := land.height(float(fit[0]) - 10.0, float(fit[1]) - 165.0)
+	_check(absf(turf - float(fit[2])) < 0.05, "The land at the centre circle is the turf (%.2f)" % turf)
+	_check(absf(beulah - turf + 2.0) < 0.3, "Beulah Road is about 2 m below the turf (%.2f)" % (beulah - turf))
+	var mcg := GroundModels.instantiate("mcg")
+	var ring: MeshInstance3D = mcg.get_node_or_null("Surrounds")
+	var mland := GroundTerrain.load_for("res://assets/grounds/mcg/", GroundModels.FIT["mcg"])
+	var s: Dictionary = GroundModels.SURROUNDS["mcg"]
+	var off := 0.0
+	var above := 0.0
+	var count := 0
+	if ring != null and mland != null:
+		var v: PackedVector3Array = ring.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+		for p in v:
+			var r := Vector2(p.x, p.z).length()
+			if r > float(s["inner"]) + GroundModels.LAND_BANK + 1.0 and r < 900.0:
+				off = maxf(off, absf(p.y - (mland.height(p.x, p.z) - 0.03)))
+				count += 1
+			if r < float(s["inner"]) + 0.5:
+				above = maxf(above, p.y - float(s["y"]))
+	_check(ring != null and mland != null and count > 1000 and off < 0.01,
+			"The MCG's Yarra Park ring lies on the real land (%d points, worst %.3f m)" % [count, off])
+	_check(above <= 0.001, "Where it meets the model the ring is never above the MCG's street (%.3f)" % above)
+	mcg.free()
 
 
 ## Guernsey numbers on the 3D player (row 202 2d): the digits are read from one padded layer each,

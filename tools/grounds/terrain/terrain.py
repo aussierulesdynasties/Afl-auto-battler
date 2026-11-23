@@ -17,6 +17,7 @@ in grounds.json names its own source (see README: Mars, Traeger, Jiangwan).
     python3 tools/grounds/terrain/terrain.py build <slug>|all     # writes grids/<slug>.npz
     python3 tools/grounds/terrain/terrain.py far <slug>           # ±30 km grid into the cache
     python3 tools/grounds/terrain/terrain.py at <slug> x y ...    # heights at points
+    python3 tools/grounds/terrain/terrain.py godot <slug>         # assets/grounds/<slug>/terrain.bin
 
 From Python (any build tool):
 
@@ -105,7 +106,63 @@ def source_heights(g, x, y, far=False):
     if src == 'mapterhorn':
         z = g['far_zoom'] if far else g['zoom']
         return sample_mapterhorn(lat, lon, z)
+    if src == 'fabdem':
+        return sample_fabdem(lat, lon)
     raise SystemExit(f"source {src!r} has no reader yet (README: grounds without 5 m LiDAR)")
+
+
+# ---- FABDEM v1-2 (30 m, buildings and forest removed; CC BY-NC-SA 4.0; University of Bristol) ----
+
+FABDEM = 'https://data.bris.ac.uk/datasets/s5hqmjcdj8yo2ibzi9b4ew3sn/'
+
+
+def _fabdem_tile(la, lo):
+    """The 1-degree tile holding (la, lo), read out of its 10-degree zip by HTTP ranges."""
+    import io, zipfile, requests
+    name = f"{'N' if la >= 0 else 'S'}{abs(math.floor(la)):02d}{'E' if lo >= 0 else 'W'}{abs(math.floor(lo)):03d}_FABDEM_V1-2.tif"
+    d = os.path.join(CACHE, 'fabdem'); os.makedirs(d, exist_ok=True)
+    p = os.path.join(d, name)
+    if os.path.exists(p):
+        return p
+    a = math.floor(la / 10) * 10; b = math.floor(lo / 10) * 10
+    def tag(v, pos, neg, w): return f"{pos if v >= 0 else neg}{abs(v):0{w}d}"
+    z = f"{tag(a, 'N', 'S', 2)}{tag(b, 'E', 'W', 3)}-{tag(a + 10, 'N', 'S', 2)}{tag(b + 10, 'E', 'W', 3)}_FABDEM_V1-2.zip"
+
+    class R(io.RawIOBase):
+        def __init__(s, u):
+            s.u = u; s.p = 0; s.ses = requests.Session()
+            s.n = int(s.ses.head(u, timeout=60).headers['Content-Length'])
+        def seekable(s): return True
+        def readable(s): return True
+        def tell(s): return s.p
+        def seek(s, o, w=0):
+            s.p = o if w == 0 else (s.p + o if w == 1 else s.n + o); return s.p
+        def readinto(s, buf):
+            if s.p >= s.n: return 0
+            e = min(s.n, s.p + len(buf)) - 1
+            data = s.ses.get(s.u, headers={'Range': f'bytes={s.p}-{e}'}, timeout=120).content
+            buf[:len(data)] = data; s.p += len(data); return len(data)
+    zf = zipfile.ZipFile(io.BufferedReader(R(FABDEM + z), 1 << 20))
+    member = [m for m in zf.namelist() if m.endswith(name)][0]
+    open(p, 'wb').write(zf.read(member))
+    return p
+
+
+def sample_fabdem(lat, lon):
+    import rasterio
+    out = np.full(np.shape(lat), np.nan)
+    keys = np.floor(lat).astype(int) * 1000 + np.floor(lon).astype(int)
+    for k in np.unique(keys):
+        m = keys == k
+        with rasterio.open(_fabdem_tile(float(lat[m].flat[0]), float(lon[m].flat[0]))) as ds:
+            A = ds.read(1).astype(np.float64); inv = ~ds.transform
+            c, r = inv * (lon[m], lat[m])
+            c = np.asarray(c) - 0.5; r = np.asarray(r) - 0.5
+            i = np.clip(np.floor(c).astype(int), 0, A.shape[1] - 2); j = np.clip(np.floor(r).astype(int), 0, A.shape[0] - 2)
+            fx = np.clip(c - i, 0, 1); fy = np.clip(r - j, 0, 1)
+            out[m] = (A[j, i] * (1 - fx) * (1 - fy) + A[j, i + 1] * fx * (1 - fy)
+                      + A[j + 1, i] * (1 - fx) * fy + A[j + 1, i + 1] * fx * fy)
+    return out
 
 
 # ---- grids --------------------------------------------------------------------------------------
@@ -202,16 +259,45 @@ def export_npy(slug, out_dir):
     json.dump(T.meta, open(os.path.join(out_dir, f'{slug}_near.json'), 'w'), indent=1)
 
 
+def export_godot(slug, root=None):
+    """assets/grounds/<slug>/terrain.bin for the game (GroundTerrain.gd). Header: 8 float32 (fine half,
+    step, cells a side; coarse half, step, cells a side; 0, 0), then each grid as int16 centimetres
+    above the turf, rows south to north. Fine: the near grid's 5 m cells to ±1 km; coarse: 20 m to
+    ±3 km, so a surrounds ring running out to the horizon stays on real land. Only grounds whose
+    surrounds the game draws itself (GroundModels.SURROUNDS) need it."""
+    T = load(slug)
+    g = grounds()[slug]
+    FH, FS = 1000.0, 5.0
+    CH, CS = 3000.0, 20.0
+    r = np.arange(-FH, FH + FS / 2, FS); X, Y = np.meshgrid(r, r)
+    fine = T.height(X, Y)
+    r = np.arange(-CH, CH + CS / 2, CS); X, Y = np.meshgrid(r, r)
+    coarse = source_heights(g, X, Y) - T.meta['datum_source_m']
+    root = root or os.path.join(HERE, '..', '..', '..', 'assets', 'grounds', slug)
+    os.makedirs(root, exist_ok=True)
+    out = os.path.join(root, 'terrain.bin')
+    with open(out, 'wb') as f:
+        f.write(np.array([FH, FS, fine.shape[0], CH, CS, coarse.shape[0], 0, 0], np.float32).tobytes())
+        for G in (fine, coarse):
+            G = np.nan_to_num(G, nan=0.0)
+            if np.abs(G).max() > 327:
+                raise SystemExit(f'{slug}: land beyond the int16 centimetre range')
+            f.write(np.round(G * 100).astype('<i2').tobytes())
+    return os.path.normpath(out)
+
+
 if __name__ == '__main__':
     cmd, slug = sys.argv[1], sys.argv[2]
     if cmd == 'build':
-        todo = [s for s, g in grounds().items() if g.get('source', 'mapterhorn') == 'mapterhorn'] if slug == 'all' else [slug]
+        todo = [s for s, g in grounds().items() if g.get('source', 'mapterhorn') != 'pending'] if slug == 'all' else [slug]
         for s in todo:
             t = time.time(); p = build(s); T = load(s)
             print(f'{s}: {p} {T.h.shape} {np.nanmin(T.h):+.1f}..{np.nanmax(T.h):+.1f} m, '
                   f'missing {T.meta["missing_cells"]}, {time.time() - t:.0f} s')
     elif cmd == 'far':
         print(build(slug, far=True))
+    elif cmd == 'godot':
+        print(export_godot(slug))
     elif cmd == 'npy':
         export_npy(slug, sys.argv[3])
     elif cmd == 'at':

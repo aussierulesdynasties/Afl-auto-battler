@@ -16,8 +16,8 @@
   "licence": "Geoscience Australia, DEM of Australia derived from LiDAR 5 Metre Grid, CC BY 4.0"
  },
  "adelaide": {
-  "lat": -34.91553,
-  "lon": 138.59617,
+  "lat": -34.915489777922076,
+  "lon": 138.59627692467532,
   "zoom": 14,
   "far_zoom": 12,
   "step": 5.0,
@@ -50,14 +50,21 @@
  "mars": {
   "lat": -37.539307,
   "lon": 143.848166,
-  "source": "pending",
-  "note": "no 5 m or finer bare-earth tile in Mapterhorn; see README"
+  "source": "fabdem",
+  "step": 5.0,
+  "zoom": 0,
+  "far_zoom": 12,
+  "licence": "FABDEM V1-2, University of Bristol / Fathom, CC BY-NC-SA 4.0 (30 m; buildings and forest removed from Copernicus GLO-30)",
+  "better": "Victorian Government 1 m DEM (Ballarat 2019 LiDAR, CC BY 4.0) exists in ELVIS but only by an emailed order; its S3 tiles refuse direct download"
  },
  "traeger": {
   "lat": -23.70947,
   "lon": 133.87414,
-  "source": "pending",
-  "note": "no 5 m or finer bare-earth tile in Mapterhorn; see README"
+  "source": "fabdem",
+  "step": 5.0,
+  "zoom": 0,
+  "far_zoom": 12,
+  "licence": "FABDEM V1-2, University of Bristol / Fathom, CC BY-NC-SA 4.0 (30 m; buildings and forest removed from Copernicus GLO-30)"
  },
  "cazalys": {
   "lat": -16.935653,
@@ -246,8 +253,11 @@
  "jiangwan": {
   "lat": 31.3084171,
   "lon": 121.5110962,
-  "source": "pending",
-  "note": "no 5 m or finer bare-earth tile in Mapterhorn; see README"
+  "source": "fabdem",
+  "step": 5.0,
+  "zoom": 0,
+  "far_zoom": 12,
+  "licence": "FABDEM V1-2, University of Bristol / Fathom, CC BY-NC-SA 4.0 (30 m; buildings and forest removed from Copernicus GLO-30)"
  },
  "hands": {
   "lat": -33.3463,

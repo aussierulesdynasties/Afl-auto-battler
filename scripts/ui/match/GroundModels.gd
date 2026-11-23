@@ -296,17 +296,28 @@ static func instantiate(slug: String, base := "") -> Node3D:
 	var fit: Array = FIT.get(slug, [0.0, 0.0])
 	_add_seats(root, dir, Vector2(float(fit[0]), float(fit[1])))
 	if SURROUNDS.has(slug):
-		_add_surrounds(root, SURROUNDS[slug], dir)
+		_add_surrounds(root, SURROUNDS[slug], dir, GroundTerrain.load_for(dir, FIT.get(slug, [])))
 	return root
 
 
-## A flat ring of parkland round the model (SURROUNDS): grass with a broad mottle, unlit by
-## nothing it would not be lit by (it takes the sun, the sky and the stands' shade).
-static func _add_surrounds(root: Node3D, s: Dictionary, dir := "") -> void:
+## A ring of parkland round the model (SURROUNDS): grass with a broad mottle, unlit by
+## nothing it would not be lit by (it takes the sun, the sky and the stands' shade). With the
+## ground's real land (`land`, tools/grounds/terrain) the ring follows it, a dense ring every
+## LAND_STEP m, and its trees and buildings stand on it; it never rises above the model's street
+## at `inner`, banking up to the real land over LAND_BANK m.
+static func _add_surrounds(root: Node3D, s: Dictionary, dir := "", land: GroundTerrain = null) -> void:
 	var inner: float = s["inner"]
 	var outer: float = s.get("outer", 2500.0)
 	var y: float = s["y"]
-	var n := 96
+	var n := 96 if land == null else 360
+	var radii: Array = RINGS.map(func(f): return f if f > 0.0 else inner) + [outer]
+	if land != null:
+		radii = []
+		var r := inner
+		while r < outer:
+			radii.append(r)
+			r += LAND_STEP if r < inner + 300.0 else (LAND_STEP * 3.0 if r < inner + 900.0 else LAND_STEP * 10.0)
+		radii.append(outer)
 	var map: Texture2D = null
 	if s.has("map") and ResourceLoader.exists(dir + str(s["map"])):
 		map = load(dir + str(s["map"]))
@@ -318,13 +329,17 @@ static func _add_surrounds(root: Node3D, s: Dictionary, dir := "") -> void:
 	for i in n + 1:
 		var a := TAU * i / n
 		var d := Vector3(cos(a), 0.0, sin(a))
-		for r: float in RINGS.map(func(f): return f if f > 0.0 else inner) + [outer]:
+		for r: float in radii:
 			var p := d * r + Vector3(0.0, y, 0.0)
+			if land != null:
+				var real := land.height(p.x, p.z) - 0.03
+				var w := smoothstep(inner, inner + LAND_BANK, r)
+				p.y = lerpf(minf(real, y), real, w)
 			v.append(p)
 			# The painted map clamps at its edge (painted plain there); the mottle tiles.
 			uv.append(Vector2(p.x, p.z) / span + Vector2(0.5, 0.5) if map != null else Vector2(p.x, p.z) / 60.0)
 			nrm.append(Vector3.UP)
-	var per := RINGS.size() + 1
+	var per := radii.size()
 	for i in n:
 		for k in per - 1:
 			var a0 := i * per + k
@@ -337,7 +352,13 @@ static func _add_surrounds(root: Node3D, s: Dictionary, dir := "") -> void:
 	arr[Mesh.ARRAY_NORMAL] = nrm
 	arr[Mesh.ARRAY_INDEX] = idx
 	var mesh := ArrayMesh.new()
-	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
+	if land != null:
+		var st := SurfaceTool.new()
+		st.create_from_arrays(arr)
+		st.generate_normals()
+		mesh = st.commit()
+	else:
+		mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
 	if map != null:
 		var mm := StandardMaterial3D.new()
 		mm.resource_name = "surrounds"
@@ -355,9 +376,9 @@ static func _add_surrounds(root: Node3D, s: Dictionary, dir := "") -> void:
 		g.set_meta("open_ground", true)
 		root.add_child(g)
 		if s.has("trees") and FileAccess.file_exists(dir + str(s["trees"])):
-			_add_trees(root, FileAccess.get_file_as_bytes(dir + str(s["trees"])).to_float32_array(), y)
+			_add_trees(root, FileAccess.get_file_as_bytes(dir + str(s["trees"])).to_float32_array(), y, land)
 		if s.has("buildings") and FileAccess.file_exists(dir + str(s["buildings"])):
-			_add_buildings(root, FileAccess.get_file_as_bytes(dir + str(s["buildings"])).to_float32_array(), y)
+			_add_buildings(root, FileAccess.get_file_as_bytes(dir + str(s["buildings"])).to_float32_array(), y, land)
 		return
 	var noise := FastNoiseLite.new()
 	noise.frequency = 0.02
@@ -387,13 +408,17 @@ static func _add_surrounds(root: Node3D, s: Dictionary, dir := "") -> void:
 ## The ring's radii, m from the model's middle (0 is `inner`): close rings keep the painted map's
 ## roads straight where it is seen, the last runs out past the horizon.
 const RINGS := [0.0, 250.0, 400.0, 600.0, 850.0, 1100.0]
+## On real land: a ring every LAND_STEP m for the first 300 m (the data's own 5 m), 15 m to 900 m
+## and 50 m past it; the ring banks from the model's street up to the real land over LAND_BANK m.
+const LAND_STEP := 5.0
+const LAND_BANK := 20.0
 ## Trees are drawn in square blocks this many metres a side, so the camera draws only those in view.
 const TREE_BLOCK := 250.0
 
 
 ## Every tree of the map (x, z, height, canopy radius, shade; model metres) as a trunk and a rounded
 ## canopy, one batch a block of the park. Unlit by their own shadows (the map paints their shade).
-static func _add_trees(root: Node3D, buf: PackedFloat32Array, y: float) -> void:
+static func _add_trees(root: Node3D, buf: PackedFloat32Array, y: float, land: GroundTerrain = null) -> void:
 	var canopy := _canopy_mesh()
 	var trunk := CylinderMesh.new()
 	trunk.top_radius = 0.022
@@ -435,7 +460,7 @@ static func _add_trees(root: Node3D, buf: PackedFloat32Array, y: float) -> void:
 			var i: int = ids[j]
 			var h: float = buf[i + 2]
 			var r: float = buf[i + 3]
-			var at := Vector3(buf[i], y, buf[i + 1])
+			var at := Vector3(buf[i], y if land == null else land.height(buf[i], buf[i + 1]) - 0.1, buf[i + 1])
 			var turn := Basis(Vector3.UP, buf[i + 4] * TAU)
 			var crown := h - r * 1.1
 			leaves.set_instance_transform(j, Transform3D(turn.scaled(Vector3(r, r * 0.85, r)), at + Vector3(0, crown, 0)))
@@ -455,7 +480,7 @@ static func _add_trees(root: Node3D, buf: PackedFloat32Array, y: float) -> void:
 ## The map's buildings round the ground (point count, height, then the footprint's x, z): plain
 ## walls in a pale render or brick and a flat roof each, as one mesh. Seen past the stands and
 ## from a fly-through, they set the MCG in its city rather than on a plain.
-static func _add_buildings(root: Node3D, buf: PackedFloat32Array, y: float) -> void:
+static func _add_buildings(root: Node3D, buf: PackedFloat32Array, y0: float, land: GroundTerrain = null) -> void:
 	var v := PackedVector3Array()
 	var nrm := PackedVector3Array()
 	var col := PackedColorArray()
@@ -471,6 +496,8 @@ static func _add_buildings(root: Node3D, buf: PackedFloat32Array, y: float) -> v
 			foot.append(Vector2(buf[i + 2 + k * 2], buf[i + 3 + k * 2]))
 		i += 2 + n * 2
 		b += 1
+		# On real land the ground floor sits at the lowest land under it (dug in on the high side).
+		var y := y0 if land == null else land.base(foot) - 0.1
 		var wall: Color = WALLS[b % WALLS.size()]
 		var roof := wall.darkened(0.18)
 		# Walls face out whichever way round the footprint was drawn.
