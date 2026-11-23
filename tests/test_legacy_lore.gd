@@ -64,16 +64,49 @@ func _test_ground_names() -> void:
 
 
 func _test_finals_grounds() -> void:
-	var cases := [[1995, "COL", "MCG"], [1995, "GEE", "MCG"], [1995, "STK", "MCG"], [1995, "WCE", "Subiaco Oval"],
-			[2010, "GEE", "MCG"], [2010, "STK", "MCG"], [2010, "ADE", "Football Park"], [2020, "COL", "The Gabba"],
-			[2020, "WCE", "Optus Stadium"], [2021, "MEL", "Optus Stadium"]]
+	# [year, tag, host, away, ground]: where history sent that final (data/legacy/finals.csv).
+	var cases := [
+		[1990, "SF1", "WCE", "MEL", "Waverley Park"],   # West Coast's semi in Melbourne
+		[1990, "EF", "STK", "HAW", "MCG"],
+		[1995, "QF1", "COL", "SYD", "MCG"],
+		[1995, "QF2", "COL", "SYD", "Waverley Park"],   # Essendon v West Coast at Waverley
+		[2000, "EF1", "ESS", "WBD", "Marvel Stadium"],  # Geelong's elimination final at Docklands
+		[2004, "PF2", "BRL", "GEE", "MCG"],             # Brisbane brought to the MCG
+		[2010, "SF1", "STK", "WBD", "MCG"],
+		[2013, "QF2", "GEE", "FRE", "GMHBA Stadium"],   # Geelong at Kardinia Park
+		[2013, "QF2", "COL", "FRE", "MCG"],             # only Geelong goes to Geelong's ground
+		[2020, "EF1", "STK", "WBD", "The Gabba"],
+		[2020, "SF1", "RIC", "STK", "People First Stadium"],
+		[2021, "EF1", "SYD", "GWS", "York Park"],       # Sydney's final in Launceston
+		[2021, "EF2", "WBD", "ESS", "York Park"],
+		[2021, "PF1", "MEL", "GEE", "Optus Stadium"],
+	]
 	for c in cases:
 		GameDB.apply_era(int(c[0]))
 		var s := Season.new(GameDB.active_clubs(int(c[0])), {}, 7, int(c[0]))
-		var m := {"tag": "SF1", "home": str(c[1]), "away": "ESS"}
-		_check(s.finals_venue(m) == str(c[2]), "%d: %s host their final at %s, not %s" % [c[0], c[1], c[2], s.finals_venue(m)])
-		_check(s.finals_at_home(m) == [s.home_ground(str(c[1])) == str(c[2]), s.home_ground("ESS") == str(c[2])],
-				"%d: only a club at its own ground has the edge" % c[0])
+		var m := {"tag": str(c[1]), "home": str(c[2]), "away": str(c[3])}
+		_check(s.finals_venue(m) == str(c[4]), "%d %s: %s host at %s, not %s" % [c[0], c[1], c[2], c[4], s.finals_venue(m)])
+		_check(s.finals_at_home(m) == [s.home_ground(str(c[2])) == str(c[4]), s.home_ground(str(c[3])) == str(c[4])],
+				"%d %s: only a club at its own ground has the edge" % [c[0], c[1]])
+	# An interstate host at home whenever its real final was at home.
+	for c in [[1995, "QF2", "WCE", "ESS"], [2010, "SF1", "ADE", "GEE"], [2004, "PF1", "PAD", "STK"],
+			[2020, "QF1", "PAD", "GEE"]]:
+		GameDB.apply_era(int(c[0]))
+		var s := Season.new(GameDB.active_clubs(int(c[0])), {}, 7, int(c[0]))
+		var v := s.finals_venue({"tag": str(c[1]), "home": str(c[2]), "away": str(c[3])})
+		_check(v == s.home_ground(str(c[2])), "%d %s: %s host at home (%s), not %s" % [c[0], c[1], c[2], s.home_ground(str(c[2])), v])
+	# No Victorian club ever hosts at its suburban ground in a real season.
+	for y in range(1990, 2026):
+		GameDB.apply_era(y)
+		var s := Season.new(GameDB.active_clubs(y), {}, 7, y)
+		for tag in SeasonRules.tags(s.finals_format()):
+			if tag == "GF":
+				continue
+			for host in ["COL", "ESS", "STK", "WBD", "HAW", "CAR", "NTH"]:
+				var v := s.finals_venue({"tag": tag, "home": host, "away": "SYD"})
+				_check(v in ["MCG", "Waverley Park", "Marvel Stadium", "The Gabba", "People First Stadium",
+						"Adelaide Oval", "Optus Stadium", "York Park"],
+						"%d %s: %s never host at %s" % [y, tag, host, v])
 	GameDB.apply_era(2026)
 	var today := Season.new(GameDB.active_clubs(2026), {}, 7, 2026)
 	_check(today.finals_venue({"tag": "QF1", "home": "STK", "away": "ESS"}) == today.home_ground("STK"),

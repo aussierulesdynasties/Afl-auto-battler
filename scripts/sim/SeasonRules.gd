@@ -15,13 +15,9 @@ extends RefCounted
 ## Grand Final at the MCG, a Gather Round, extra time.
 ## Every decade loads the same way: one table, keyed by year, read by Season.
 ##
-## vic_finals: where a Victorian club hosts a final in a real season (bug bash
-## 2026-11-23). Finals were never played at Victoria Park, Windy Hill,
-## Princes Park, Moorabbin, the Western Oval, Kardinia Park or Docklands: a
-## Victorian club's home final was at the MCG. In 2020 the Victorian clubs'
-## finals went to Queensland (the Gabba hosted most of them) and in 2021 to
-## the other states (Optus Stadium, the Grand Final ground, hosted the most
-## of theirs). Empty: the host's own ground (the game's league).
+## real_finals: a real season's finals go where that week's real finals went
+## (RealFinals, data/legacy/finals.csv; bug bash 2026-11-23), not to each
+## host's own ground. Off in the game's league.
 
 const PATH := "res://data/season_rules.csv"
 ## The game's own league starts here: a real season in the table, drawn in
@@ -32,12 +28,8 @@ const GAME_LEAGUE_YEAR := 2026
 ## even club count, two at an odd one).
 const DEFAULT := {
 	"year": 0, "rounds": 24, "games": 0, "finalists": 10, "finals": "wildcard10",
-	"gf_venue": "MCG", "gather_round": true, "drawn_finals": "extra_time", "vic_finals": "",
+	"gf_venue": "MCG", "gather_round": true, "drawn_finals": "extra_time", "real_finals": false,
 }
-## Where a Victorian club's home final is played in a real season (vic_finals
-## below): the MCG, except these years.
-const VIC_FINALS_YEARS := {2020: "The Gabba", 2021: "Optus Stadium"}
-
 ## The finals brackets. Each is its weeks in order; each week its matches as
 ## [tag, label, home side, away side, order by ladder]. A side is a slot:
 ##   "S3"     the club that finished 3rd
@@ -127,8 +119,7 @@ static func for_year(year: int) -> Dictionary:
 			for k in ["rounds", "games", "finalists", "finals", "gf_venue", "gather_round", "drawn_finals"]:
 				out[k] = row[k]
 			break
-	if EraRules.is_era(year):
-		out["vic_finals"] = str(VIC_FINALS_YEARS.get(year, "MCG"))
+	out["real_finals"] = EraRules.is_era(year) and RealFinals.has_year(year)
 	return out
 
 
