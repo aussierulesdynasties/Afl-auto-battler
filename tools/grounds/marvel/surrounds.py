@@ -21,6 +21,7 @@ import xml.etree.ElementTree as ET
 
 import numpy as np
 from PIL import Image, ImageDraw, ImageFilter
+import land  # noqa: E402  (tools/grounds/marvel/land.py: the real land under each building)
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(ROOT, "..", "..", "..", "assets", "grounds", "marvel")
@@ -42,7 +43,7 @@ LANDMARK_WAYS = {"33261083", "221441430", "33261092", "44158938", "1246185747", 
                  "1507403839", "1507403840"}  # HOME Docklands' two towers (101 m): OpenStreetMap has no height for them
 # City of Melbourne structures modelled in landmarks.py instead (round 10 audit: plain boxes within 250 m), and the
 # stadium's own structure (8392), whose upper parts fell outside its outline and floated over the east offices.
-LANDMARK_SIDS = {10757, 16888, 3046, 6153, 9966, 9967}  # round 12: 6153, 9966, 9967 modelled in landmarks.py (c_nw, c_sw roofs)
+LANDMARK_SIDS = {10757, 16888, 3046, 6153, 9966, 9967, 15419}  # 15419: ext_000's foreground office (round 12 self-check)  # round 12: 6153, 9966, 9967 modelled in landmarks.py (c_nw, c_sw roofs)
 # 8392: the stadium's own floating parts. 1044-1055: Central Pier's sheds and kiosks over the harbour; the pier was
 # closed in 2023 and its sheds are gone from Google Earth (PC check of round 11, top and obl_se).
 DROP_SIDS = {8392} | set(range(1044, 1056))
@@ -371,8 +372,8 @@ COM_CACHE = "/tmp/marvel_com_2023.geojson"
 # z 5.4). The city's massing gives each part's heights above sea level; the ground rises from about 2 m by the harbour to
 # 15-25 m in the city to the east, and the parts had been stood on z 0 with their heights above their own ground, so
 # buildings on the rise were 6-20 m too low (ext_000: Google Earth's camera at 74 m above sea level looks level over a
-# roof at 69.5 m, ours sat at 49.5 m). The model has no terrain yet, so a part that starts at its ground still starts at
-# z 0 and runs up to its true top.
+# roof at 69.5 m, ours sat at 49.5 m). A part that starts at its ground starts at z 0 and runs up to its true top;
+# com_massing then refers it to the real land under it (land.py), which the game stands it on.
 SEA_TO_MODEL = -2.6
 
 
@@ -404,6 +405,9 @@ def com_massing(st, skip_polys):
         base, top = model_heights(q, base)
         sid = float(int(q["structure_id"]) % 100000)
         if int(sid) in LANDMARK_SIDS or int(sid) in DROP_SIDS:
+            # round 12 self-check (c_sw): left out, but still counted as covered, or OpenStreetMap's outline of the same
+            # building filled in as a 46 m box over landmarks.py's sawtooth roofs (and over the sheds taken away)
+            covered += [[xy(lat, lon) for lon, lat in poly[0]] for poly in polys]
             continue
         for poly in polys:
             ring = [xy(lat, lon) for lon, lat in poly[0]]
@@ -416,7 +420,11 @@ def com_massing(st, skip_polys):
             if max(max(abs(x), abs(z)) for x, z in pts) > 950:
                 continue
             covered.append(ring)
-            out += [-float(len(pts)), top, base, sid]
+            # Round 12 (real land): the game stands each part on the lowest land under it (GroundTerrain.base, the
+            # same rule as land.base), so the record carries the part's heights above that land, its top still at
+            # the height above sea level the city measured
+            lb = land.base(ring[:-1])
+            out += [-float(len(pts)), top - lb, 0.0 if base <= 0.0 else base - lb, sid]
             for x, z in pts:
                 out += [x, z]
     return out, covered

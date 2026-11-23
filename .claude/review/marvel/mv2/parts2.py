@@ -16,9 +16,20 @@ def auto_uv(P):
     n=n/(np.linalg.norm(n)+1e-12)
     if abs(n[2])>0.7:return P[:,:2].tolist()
     t=np.array([-n[1],n[0]]);t/=np.linalg.norm(t)+1e-12;return np.stack([P[:,:2]@t,P[:,2]],1).tolist()
+_LAND=None
 def add(name,V,F,M,UV=None):
     V=np.asarray(V,float);M=[M]*len(F) if isinstance(M,str) else M
     if UV is None:UV=[auto_uv(V[f]) for f in F]
+    # round 12 (real land, tools/grounds/marvel/land.py): a foot at z 0 runs down to the land where the land is lower (by
+    # the harbour, to -0.9); where it is higher the land buries it
+    global _LAND
+    if _LAND is None:
+        sys.path.insert(0,os.path.join(os.path.dirname(os.path.abspath(__file__)),'..','..','..','..','tools','grounds','marvel'))
+        import land as _LAND
+    g0=np.abs(V[:,2])<1e-6
+    if g0.any():
+        W_=np.array([wv(p)[:2] for p in V[g0]])-np.array([2.32,0.64])
+        V=V.copy();V[g0,2]=np.minimum(0.0,_LAND.z(W_[:,0],W_[:,1]))
     PARTS.append(dict(name=name,V=[wv(p) for p in V],F=[list(map(int,f)) for f in F],M=M,UV=UV))
 # ---------------- primitives (all in u,v,z)
 def prism(name,q,z0,z1,side,top,bottom=None,side_m=None):
@@ -446,9 +457,11 @@ def vent_block(nm,f,z0,z1,zb0,zb1,bay=7.0,pier=1.6,depth=0.45,wall='bluepanel',t
             t0=j*(w+pier);c0=a+d*t0;c1=a+d*(t0+pier)
             q4=[tuple(c0),tuple(c1),tuple(c1-out*depth),tuple(c0-out*depth)]
             prism(nm+'_pier%d_%d'%(i,j),q4,zb0,zb1,wall,wall)
-def office_box(nm,q,z0=9.5,z1=24.0,storey=4.83):
-    # round 12 (Google Earth offices_e close up, measured): glass box 1.5 times the open storey under it, so 14.5 m of glass
-    # over 9.5 m pilotis; a white plant storey sits on top, set back (below)
+def office_box(nm,q,z0=12.2,z1=24.0,storey=3.93):
+    # round 12 (Google Earth offices_e close up, measured): glass box 1.5 times the open storey under it. On the real land
+    # (the plaza under the boxes reads 7 m above sea level in Google Earth, model z 4.4, where the flat model had 0) that
+    # is 7.8 m of pilotis and 11.8 m of glass, three storeys of 3.9 m, to the 24 m top Google Earth's picks give;
+    # a white plant storey sits on top, set back (below)
     # modelled, not painted: an open ground floor (slim round columns every 7.5 m on the outer line, the
     # glazed lobby wall set 2.5 m back under the box's soffit); above, the glazing set 0.35 m back behind a
     # proud pale spandrel band at the foot of every storey and a parapet, with slim pale fins every 0.75 m
@@ -456,7 +469,7 @@ def office_box(nm,q,z0=9.5,z1=24.0,storey=4.83):
     core=list(P.buffer(-0.35,join_style=2).exterior.coords)[:-1];lobby=list(P.buffer(-4.0,join_style=2).exterior.coords)[:-1]
     # round 12 (Google Earth c_e, PC check of round 11): under each box a dark void between thin pilotis, not a lit
     # shopfront; the lobby wall sits 4 m back in the soffit's shadow, dark grey-navy
-    prism(nm+'_lobby',lobby,0.0,z0,'upperwall','concrete')
+    prism(nm+'_lobby',lobby,0.0,z0,'lobbydark','concrete')  # its own dark map: the bowl's top band (upperwall) went lighter
     # its glass dark blue-grey (round 8, measured with the sun where Google Earth's was; round 3's light grey chased the shade)
     prism(nm,core,z0,z1-0.8,'officeglass','concrete',bottom='concrete')
     # round 12 (Google Earth c_e): glass boxes in a white frame (a pale band at the foot and the top), thin slab
@@ -580,7 +593,16 @@ _ex=np.array(_U.exterior.coords)[:-1];_ang=np.arctan2(_ex[:,1],_ex[:,0])
 # radial ring with the same angles for the hole (plinth inner edge), so the pad is one loft band (top) plus an outer skirt
 _r=np.hypot(_ex[:,0],_ex[:,1]);_hole=np.stack([(se_r(_ang,OA,OB,ON)-6.0)*np.cos(_ang),(se_r(_ang,OA,OB,ON)-6.0)*np.sin(_ang)],1)
 ZB0=-1.0;ZB1=0.05
-loft('site_base',[z3(_ex,ZB0),z3(_ex,ZB1),z3(_hole,ZB1)],['concrete','paving'])
+# round 12 (real land, tools/grounds/marvel/land.py): the pad follows the land, which the game's surrounding ring
+# follows too: from about -0.9 by the harbour to 4.4 on the east plaza (Google Earth: 7 m above sea level there)
+sys.path.insert(0,os.path.join(os.path.dirname(os.path.abspath(__file__)),'..','..','..','..','tools','grounds','marvel'))
+import land as _land
+_C0=np.array([2.32,0.64])
+def _lz(P):
+    W_=np.array([wv((u,v,0.0))[:2] for u,v in P])-_C0
+    return _land.z(W_[:,0],W_[:,1])
+def z3l(P,dz):return np.c_[P,_lz(P)+dz]
+loft('site_base',[z3l(_ex,ZB0),z3l(_ex,ZB1),z3l(_hole,ZB1)],['concrete','paving'])
 
 # ---------------- round 11 (PC check of round 10): the MARVEL STADIUM sign on the east facade (Google Earth c_e, c_ne:
 # red MARVEL + black STADIUM, the same board as the west one, on the upper wall above the walkway between offices B and D,
