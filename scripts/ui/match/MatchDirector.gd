@@ -1241,9 +1241,11 @@ func _pass_phases(k: int) -> Array:
 	# To the man where he stands, but never far up or down the ground from where the log has him
 	# take it: a rebound's pass went to a man 18 m behind the logged spot and the rebound was kicked
 	# from there (bug bash 2026-11-23, seed 3 k1046). Sending every pass to the logged spot itself
-	# left more collectors running to it (pauses 118 -> 126 over four seeds); 12 m keeps them at 118
-	# and the worst release at 12 m (14.3 before).
-	var want_x := _loc(nk).x
+	# left more collectors running to it (pauses 118 -> 126 over four seeds). The logged spot is
+	# where he has it (fp), not _loc's: a clanger's _loc is where it lands, leaning to the man who
+	# wins it, and clamped there his team-mate's pass went to the opponent (clanger pauses 12 -> 32
+	# over ten seeds).
+	var want_x := _fp_x(nev)
 	to.x = clampf(to.x, want_x - PASS_X_SLACK, want_x + PASS_X_SLACK)
 	var d := (ball["pos"] as Vector2).distance_to(to)
 	var shape := _flight_shape("handball" if bool(events[k].get("hand", false)) else "kick", d)
@@ -2810,6 +2812,12 @@ func _done(p: Dictionary) -> bool:
 			else:
 				MatchMotion.set_goal(t, ball["pos"], 1.0, true)
 				if d <= 1.4:
+					return true
+				# Over the line (a kick-in's ball where it went through) his goal is held inside the
+				# ground, short of it: there, it is his as soon as he reaches it, not after the 1.5 s
+				# below (a kick-in's fetch stood 1.5 m off it for a second: bug bash 2026-11-23).
+				var reach := MatchMotion.clamp_to_oval(ball["pos"], 2.0)
+				if reach.distance_to(ball["pos"]) > 0.05 and (t["pos"] as Vector2).distance_to(reach) <= 0.5 and d <= 3.0:
 					return true
 			if p.has("max") and _pt >= float(p["max"]):
 				return true
