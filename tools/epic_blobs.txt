@@ -44,3 +44,7 @@ d4b9095e88e39babc33c106b0d6be1cf68996d2a  assets/oval3d/heads/MEL_37_MEL_37_tex.
 e1b080ba84e27f66b9a6776b62876b46a89ee5bb  assets/oval3d/skin/Head_Basecolor.png
 f1e6695bbac912af2efc50780ca0db4fd2276b16  assets/oval3d/player_mh.glb
 f5ed070e8503e1726e1b2fcb9365c562024cb765  assets/oval3d/cuts/ADE.res
+22ca3806dd14d0ebbbd8e305b84c566b545d5458  assets/oval3d/crew_mh.glb
+2a2646938cd0c417660b472acb4684415b6f273a  assets/oval3d/crew_mh.glb
+51e9aacc7678d6f587722798ded783543d7616fa  assets/oval3d/crew_mh.glb
+e8cdf8c6e42c20c4c6452e9cd877d81fabd03600  assets/oval3d/crew_mh.glb

@@ -82,8 +82,9 @@ rewrites history and force-pushes main and every branch, which cannot be undone.
 1. **Freeze.** Every Claude thread and PC worktree pushes its work (or saves a patch); the merge queue
    is emptied; nobody pushes until step 6.
 2. **Rewrite:** `tools/epic_purge.sh rewrite WORKDIR` (needs `pip install git-filter-repo`). It clones
-   every branch (not GitHub's `refs/pull/*`), strips exactly the 43 blob ids in `tools/epic_blobs.txt`
-   (every version of every Epic file on any branch), keeps every commit and message, and checks that no
+   every branch (not GitHub's `refs/pull/*`), strips the blob ids in `tools/epic_blobs.txt` (47 today)
+   plus any other version of a pinned file, or of a file in `cuts/` or `skin/`, found on any branch at
+   the time (a branch opened since the list was written; it names them for the list), keeps every commit and message, and checks that no
    listed blob is left and that no branch tip changed except by losing an Epic file.
    Every commit id changes, back to the first (filter-repo drops GitHub's signatures on its squash
    merges), but every tree, message, author and date stays. Dry run 2026-11-23 on a copy of all 410

@@ -5,8 +5,9 @@
 #   tools/epic_purge.sh rewrite WORKDIR     # fresh bare clone of every branch, strip the blobs, verify
 #   tools/epic_purge.sh push WORKDIR        # force-push every rewritten branch (with leases)
 #
-# rewrite: clones every branch (not GitHub's refs/pull/*), removes exactly the blob ids in
-# tools/epic_blobs.txt with git filter-repo (pip install git-filter-repo), keeps every commit
+# rewrite: clones every branch (not GitHub's refs/pull/*), removes the blob ids in
+# tools/epic_blobs.txt plus every version on any branch of a pinned path (or cuts/, skin/),
+# with git filter-repo (pip install git-filter-repo), keeps every commit
 # (even one left empty) and every message, then checks: no listed blob is left, and every
 # branch tip's tree is unchanged unless it held one of the files.
 # push: pushes each rewritten branch with --force-with-lease set to the value it had when
@@ -25,7 +26,21 @@ rewrite)
 	command -v git-filter-repo >/dev/null 2>&1 || git filter-repo --version >/dev/null 2>&1 \
 		|| { echo "FAIL: git filter-repo is not installed (pip install git-filter-repo)" >&2; exit 1; }
 	git clone --bare "$REPO" "$WORK"
-	grep -oE '^[0-9a-f]{40}' "$ROOT/tools/epic_blobs.txt" > "$WORK/epic_ids.txt"
+	grep -oE '^[0-9a-f]{40}' "$ROOT/tools/epic_blobs.txt" | sort -u > "$WORK/listed_ids.txt"
+	# Also every version, on any branch, of a pinned path or anything in cuts/ or skin/: a branch
+	# opened after tools/epic_blobs.txt was written may hold a newer cut or body.
+	sed -n 's/^[0-9a-f]\{64\}  //p' "$ROOT/tools/epic_assets.lock" > "$WORK/epic_paths.txt"
+	echo assets/oval3d/cuts/ >> "$WORK/epic_paths.txt"
+	echo assets/oval3d/skin/ >> "$WORK/epic_paths.txt"
+	xargs -a "$WORK/epic_paths.txt" -d '\n' git -C "$WORK" log --all --format= --raw --no-abbrev -- \
+		| awk '{print $3, $6; print $4, $6}' | grep -vE '^0{40} |\.(import|uid)$' | sort -u > "$WORK/found.txt"
+	# (.import/.uid are Godot's settings for the file, not the file: they stay.)
+	cut -d' ' -f1 "$WORK/found.txt" | sort -u | sort -u - "$WORK/listed_ids.txt" > "$WORK/epic_ids.txt"
+	extra="$(comm -13 "$WORK/listed_ids.txt" "$WORK/epic_ids.txt")"
+	if [ -n "$extra" ]; then
+		echo "Not yet in tools/epic_blobs.txt (stripped too; add them there afterwards):"
+		grep -F "$extra" "$WORK/found.txt" | sed 's/ /  /'
+	fi
 	echo "$(wc -l < "$WORK/epic_ids.txt") blob ids to strip"
 	# Before: each branch's tip, its tree, and whether that tree holds an Epic blob (1/0).
 	git -C "$WORK" for-each-ref --format='%(refname) %(objectname)' refs/heads \
