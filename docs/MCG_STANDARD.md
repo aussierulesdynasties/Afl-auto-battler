@@ -27,6 +27,24 @@ camera. Use Google Earth 3D for outside and overhead views, and Street View on t
   - into the bowl from each end;
   - Street View from the centre square.
 
+## Where shipped data may come from (every ground)
+
+Fidelity comes first: a ground is copied as closely as it can be from Google Earth, Street View and
+real photos. The director accepts the risk on grey-area sources (2026-11-22: "if Channel 7 comes
+knocking I'll remove the anims, until then let me eat cake").
+
+- **Measuring and copying from Google Earth is fine.** Heights, positions, tree counts, colours and
+  shapes may be read off it, by eye or by script, whatever makes the ground most accurate.
+- **Prefer open data where it is as good:** OpenStreetMap (ODbL), Microsoft building footprints
+  (ODbL), the Meta and WRI canopy map (CC BY 4.0), government LiDAR and open data (CC BY). Never take
+  a less accurate result to use it, and never redo finished work for this rule.
+- **The one hard line: no raw imagery in the repo or the game.** Esri tiles, Google Earth or Street
+  View captures, satellite crops and downloaded press photos are not committed to the repo (it is
+  public) and not baked into a shipped texture (for example a satellite photo as a ground map). Keep
+  them, and QA sheets made from them, in the project's private files.
+- Credits for every open source used go in `docs/CREDITS_3D.md` and the game's credits screen
+  before 1.0.
+
 ## Seats
 
 A seat goes only on a sloped row with a floor under it. It must be either in the open or under a roof
