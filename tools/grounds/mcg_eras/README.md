@@ -32,3 +32,10 @@ Heights from shadows (2026-11-23):
   traced shadow edge; `hsolve.py`: the simpler per-bearing version (only valid where the sun shines
   straight across the stand).
 - `measure/`: traced edges, registered centres and the results (`heights_2026-11-23.json`).
+- `cam85b.py` / `cam85c.py`: camera of the MCC Museum's 1985 night aerial, solved from the six light-tower
+  heads, four shaft lines and the arena edge (today's arena ellipse fits it to a few pixels, so the arena
+  has not moved since 1985). Result in `measure/cam_1985.json`: camera about 1.5 km north-north-east,
+  500 m up, 3.8 px rms (about 1.5 m at the ground). The tower heads come out 74.7 m above the turf.
+- `ge_elev_probe.js` + `ge_elev_ocr.py`: hover points in Google Earth web's 3D view and read the
+  pointer's latitude, longitude and height from the status bar (tesseract), mapped to the model frame.
+  Heights are whole metres above sea level; the turf reads 8 m.
