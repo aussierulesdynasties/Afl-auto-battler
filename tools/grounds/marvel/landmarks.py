@@ -114,7 +114,9 @@ def make_textures():
     TILE["dark_glass"] = (7.2, 4.8)
     # the two sawtooth towers north-east of the ground read light grey in Google Earth from the east (PC check
     # round 3: "dark_glass" rendered them deep blue, 39-44 darker); their glass is a pale grey
-    curtain("grey_glass", (122, 130, 134), (100, 106, 110), bay=1.8, floor=2.4, slab=0.0, noise=6.0)
+    # round 4: east-facing walls render about (0.57, 0.62, 0.73) of their colour (NAB's glass and these towers measured
+    # on the PC), so Google Earth's (122, 140, 149) needs a light grey: the glass behind the pale bands reads light
+    curtain("grey_glass", (176, 184, 186), (150, 156, 160), bay=1.8, floor=2.4, slab=0.0, noise=6.0)
     TILE["grey_glass"] = (7.2, 4.8)
     curtain("office_glass", (78, 98, 116), (180, 186, 190), bay=1.5, floor=2.7, slab=0.0, noise=8.0)
     TILE["office_glass"] = (6.0, 5.4)
