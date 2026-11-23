@@ -6,7 +6,8 @@ extends SceneTree
 ## PREINSPECT_MODEL_FRAME=1 reads positions in the model's own frame instead (x east, y north, z up, metres), the frame
 ## Google Earth views are worked out in (docs/MCG_STANDARD.md); PREINSPECT_SIZE=WxH sets the picture (default 960x540).
 ## PREINSPECT_SUN=az,el puts the sun where it was in the Google Earth imagery (compass bearing from the model's north
-## and elevation, degrees; needs PREINSPECT_MODEL_FRAME), so colours compare under the same light.
+## and elevation, degrees; needs PREINSPECT_MODEL_FRAME), so colours compare under the same light, with its shadows
+## drawn out to 800 m.
 
 
 func _initialize() -> void:
@@ -79,3 +80,6 @@ func _place_sun(oval: Node, ground: Node3D, model_frame: bool) -> void:
 	var m := Vector3(sin(az) * cos(el), cos(az) * cos(el), sin(el))   # towards the sun, model frame
 	var to_sun := (ground.global_transform.basis * Vector3(m.x, m.z, -m.y)).normalized()
 	sun.global_basis = Basis.looking_at(-to_sun, Vector3.UP if absf(to_sun.y) < 0.999 else Vector3.FORWARD)
+	# The match draws shadows only 160-320 m out; a Google Earth camera 360 m up would see none (the bowl lit, the
+	# roof's shade on the field missing), so the comparison shots draw them as far as the camera sees.
+	sun.directional_shadow_max_distance = maxf(sun.directional_shadow_max_distance, 800.0)
