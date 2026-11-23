@@ -41,8 +41,9 @@ BONES = [("shoulder_l", "elbow_l"), ("elbow_l", "wrist_l"), ("shoulder_r", "elbo
          ("knee_r", "ankle_r"), ("shoulder_l", "shoulder_r"), ("hip_l", "hip_r"),
          ("shoulder_l", "hip_l"), ("shoulder_r", "hip_r")]
 W_PRIOR = 0.15    # pull of the tracker's 3D guess, against 1.0 for the picture
-W_SMOOTH = 0.5    # frame-to-frame steadiness
+W_SMOOTH = 0.5    # frame-to-frame steadiness (on acceleration)
 W_BONE = 4.0      # bone lengths held
+W_SIZE = float(os.environ.get("FIT_W_SIZE", "0"))   # each man's bones together held to BONES.json
 
 
 def bones_from_truth(joints_json):
@@ -78,84 +79,141 @@ def track(frames_dir, model, hz):
     return p2, p3, vis, size
 
 
-def fit(p2, p3, vis, bones):
-    keep = [i for i, x in enumerate(p2) if x is not None]
+def fit(p2, p3, vis, bones, contact=None, multi=False, stable=False):
+    """Fit one man (p2, p3, vis: per frame, or None) or several filmed together (lists of those,
+    one per man): the men share each frame's camera, so where they stand against each other comes
+    from the picture. contact: (frames, weight) pulling the first man's knees to the depth of the
+    second man's trunk in those frames (a speccy's knee in the back)."""
+    men = list(zip(p2, p3, vis)) if multi else [(p2, p3, vis)]
+    Pn = len(men)
+    nfr = len(men[0][0])
+    keep = [i for i in range(nfr) if all(m[0][i] is not None for m in men)]
     F = len(keep)
     n = len(J)
-    P2 = np.stack([p2[i] for i in keep])
+    N = Pn * n
+    P2 = np.concatenate([np.stack([m[0][i] for i in keep]) for m in men], 1)
     # Frames with no 3D guess (the broadcast lift can miss) start from the nearest frame's guess
     # and get no pull from it: their depth comes from their neighbours and the bone lengths.
-    has3 = [i for i in keep if p3[i] is not None]
-    P3 = np.stack([p3[i] if p3[i] is not None else p3[min(has3, key=lambda h: abs(h - i))] for i in keep])
-    M3 = np.array([1.0 if p3[i] is not None else 0.0 for i in keep])
-    V = np.stack([vis[i] for i in keep])
-    # Scale and offset of each frame's picture (orthographic camera), from the 2D points' spread
-    # against the 3D guess's: a start the solve refines.
-    s0 = np.array([np.linalg.norm(P2[f] - P2[f].mean(0)) / max(1e-6, np.linalg.norm(P3[f, :, :2] - P3[f, :, :2].mean(0))) for f in range(F)])
-    t0 = P2.mean(1) - s0[:, None] * P3[:, :, :2].mean(1)
+    P3s, M3s = [], []
+    for m in men:
+        has3 = [i for i in keep if m[1][i] is not None]
+        P3s.append(np.stack([m[1][i] if m[1][i] is not None else m[1][min(has3, key=lambda h: abs(h - i))] for i in keep]))
+        M3s.append(np.array([1.0 if m[1][i] is not None else 0.0 for i in keep]))
+    V = np.concatenate([np.stack([m[2][i] for i in keep]) for m in men], 1)
+    # Scale and offset of each frame's picture (orthographic camera), from the first man's 2D
+    # spread against his 3D guess's: a start the solve refines.
+    A2, A3 = P2[:, :n], P3s[0]
+    s0 = np.array([np.linalg.norm(A2[f] - A2[f].mean(0)) / max(1e-6, np.linalg.norm(A3[f, :, :2] - A3[f, :, :2].mean(0))) for f in range(F)])
+    # Each man starts where the picture puts his hips, at the same depth.
+    X0 = []
+    for k, P3 in enumerate(P3s):
+        hip2 = P2[:, k * n + 6:k * n + 8].mean(1)
+        X0.append(P3 - P3[:, 6:8].mean(1, keepdims=True) + np.concatenate([hip2 / s0[:, None], np.zeros((F, 1))], 1)[:, None, :])
+    X0 = np.concatenate(X0, 1)
+    t0 = np.zeros((F, 2))
     bi = [(J.index(a), J.index(b)) for a, b in BONES]
+    nb = len(bi)
     # The tracker's points are not the skeleton's joints (its shoulder sits on the skin, ours in
-    # the socket), so the clip finds its own bone lengths, one set for all its frames, started
+    # the socket), so each man finds his own bone lengths, one set for all his frames, started
     # from the 3D guess. Held fixed to the skeleton's they bent his knees 30-40 deg too far.
-    bl0 = np.array([np.median(np.linalg.norm(P3[:, a] - P3[:, b], axis=1)) for a, b in bi])
-    x0 = np.concatenate([P3.reshape(-1), s0, t0.reshape(-1), bl0])
+    bl0 = np.concatenate([[np.median(np.linalg.norm(P3[:, a] - P3[:, b], axis=1)) for a, b in bi] for P3 in P3s])
+    # Overall size: the picture cannot tell a big man far off from a small one near, and the
+    # steadiness terms favour shrinking him, so each man's bones together are held to our body's
+    # (BONES.json) or, without it, to the 3D guess's.
+    ref = np.array([bones[f"{a}-{b}"] for a, b in BONES]) if bones else bl0[:nb]
+    bl0 = np.concatenate([bl0[k * nb:(k + 1) * nb] * (ref.sum() / max(1e-6, bl0[k * nb:(k + 1) * nb].sum())) for k in range(Pn)])
+    x0 = np.concatenate([X0.reshape(-1), s0, t0.reshape(-1), bl0])
     px = float(np.median(s0))   # pixels per metre, to put the picture's error in metres
+    Pc = np.concatenate([P3 - P3[:, 6:8].mean(1, keepdims=True) for P3 in P3s], 1)
+    M3 = np.stack(M3s, 1)     # (F, men)
+    cf = np.zeros(F)
+    if contact:
+        frs, wc = contact
+        for k, i in enumerate(keep):
+            if i in frs:
+                cf[k] = wc
 
     def unpack(x):
-        X = x[:F * n * 3].reshape(F, n, 3)
-        s = x[F * n * 3:F * n * 3 + F]
-        t = x[F * n * 3 + F:F * n * 3 + 3 * F].reshape(F, 2)
-        bl = x[F * n * 3 + 3 * F:]
+        X = x[:F * N * 3].reshape(F, N, 3)
+        s = x[F * N * 3:F * N * 3 + F]
+        t = x[F * N * 3 + F:F * N * 3 + 3 * F].reshape(F, 2)
+        bl = x[F * N * 3 + 3 * F:]
         return X, s, t, bl
 
     def res(x):
         X, s, t, bl = unpack(x)
         r_img = ((s[:, None, None] * X[:, :, :2] + t[:, None, :] - P2) / px) * np.sqrt(V)[:, :, None]
-        # The guess pulls each joint's place about his hips, not his place on the screen.
-        Xc = X - X[:, 6:8].mean(1, keepdims=True)
-        Pc = P3 - P3[:, 6:8].mean(1, keepdims=True)
-        r_pri = (Xc - Pc) * W_PRIOR * M3[:, None, None]
-        r_bone = np.stack([np.linalg.norm(X[:, a] - X[:, b], axis=1) - bl[k] for k, (a, b) in enumerate(bi)], 1) * W_BONE
-        r_sm = (X[1:] - X[:-1]) * W_SMOOTH if F > 1 else np.zeros((0, n, 3))
+        # The guess pulls each joint's place about his own hips, not his place on the screen.
+        Xc = np.concatenate([X[:, k * n:(k + 1) * n] - X[:, k * n + 6:k * n + 8].mean(1, keepdims=True) for k in range(Pn)], 1)
+        r_pri = (Xc - Pc) * W_PRIOR * np.repeat(M3, n, 1)[:, :, None]
+        r_bone = np.stack([np.linalg.norm(X[:, k * n + a] - X[:, k * n + b], axis=1) - bl[k * nb + q]
+                           for k in range(Pn) for q, (a, b) in enumerate(bi)], 1) * W_BONE
+        # Steadiness on acceleration, not speed: a pull on speed holds him still and shrinks
+        # him (a smaller man moves less), which bent his limbs into the screen to keep their length.
+        r_sm = (X[2:] - 2 * X[1:-1] + X[:-2]) * W_SMOOTH if F > 2 else np.zeros((0, N, 3))
         # The camera's zoom changes slowly.
         r_s = np.diff(s) / px * 5.0
-        return np.concatenate([r_img.ravel(), r_pri.ravel(), r_bone.ravel(), r_sm.ravel(), r_s])
+        if stable:
+            # Picture already steadied (track_broadcast.py stabilize): one camera for the clip,
+            # so his travel and his leap stay his, not the camera's.
+            r_s = np.concatenate([np.diff(s) / px * 200.0, np.diff(t, axis=0).ravel() / px * 200.0])
+        r_size = np.array([bl[k * nb:(k + 1) * nb].sum() - ref.sum() for k in range(Pn)]) * W_SIZE
+        out = [r_img.ravel(), r_pri.ravel(), r_bone.ravel(), r_sm.ravel(), r_s, r_size]
+        if Pn > 1:
+            # His knees at the depth of the other man's back (shoulders and hips' middle).
+            back = X[:, n:n + 8][:, [0, 1, 6, 7]].mean(1)[:, 2]
+            out.append(((X[:, 8, 2] + X[:, 9, 2]) * 0.5 - back) * cf)
+        return np.concatenate(out)
 
     # Which unknowns each residual touches: without it the solver differences every unknown for
     # every residual, and a 70-frame broadcast clip takes over ten minutes.
-    nX = F * n * 3
-    xi = lambda f, j, c: (f * n + j) * 3 + c
+    nX = F * N * 3
+    xi = lambda f, j, c: (f * N + j) * 3 + c
     si = lambda f: nX + f
     ti = lambda f, c: nX + F + f * 2 + c
     bli = lambda k: nX + 3 * F + k
     rows = []
     for f in range(F):
-        for j in range(n):
+        for j in range(N):
             for c in range(2):
                 rows.append([xi(f, j, c), si(f), ti(f, c)])
     for f in range(F):
-        for j in range(n):
+        for j in range(N):
+            h = (j // n) * n
             for c in range(3):
-                rows.append([xi(f, j, c), xi(f, 6, c), xi(f, 7, c)])
+                rows.append([xi(f, j, c), xi(f, h + 6, c), xi(f, h + 7, c)])
     for f in range(F):
-        for k, (a, b) in enumerate(bi):
-            rows.append([xi(f, a, c) for c in range(3)] + [xi(f, b, c) for c in range(3)] + [bli(k)])
-    for f in range(F - 1):
-        for j in range(n):
+        for k in range(Pn):
+            for q, (a, b) in enumerate(bi):
+                rows.append([xi(f, k * n + a, c) for c in range(3)] + [xi(f, k * n + b, c) for c in range(3)] + [bli(k * nb + q)])
+    for f in range(F - 2):
+        for j in range(N):
             for c in range(3):
-                rows.append([xi(f, j, c), xi(f + 1, j, c)])
+                rows.append([xi(f, j, c), xi(f + 1, j, c), xi(f + 2, j, c)])
     for f in range(F - 1):
         rows.append([si(f), si(f + 1)])
+    if stable:
+        for f in range(F - 1):
+            for c in range(2):
+                rows.append([ti(f, c), ti(f + 1, c)])
+    for k in range(Pn):
+        rows.append([bli(k * nb + q) for q in range(nb)])
+    if Pn > 1:
+        for f in range(F):
+            rows.append([xi(f, 8, 2), xi(f, 9, 2)] + [xi(f, n + j, 2) for j in (0, 1, 6, 7)])
     sp = lil_matrix((len(rows), len(x0)), dtype=int)
     for r, cols in enumerate(rows):
         for c in cols:
             sp[r, c] = 1
     sol = least_squares(res, x0, method="trf", x_scale="jac", max_nfev=200, jac_sparsity=sp)
     X, s, t, bl = unpack(sol.x)
-    out = [None] * len(p2)
-    for k, i in enumerate(keep):
-        out[i] = {j: X[k, m].tolist() for m, j in enumerate(J)}
-    return out
+    outs = []
+    for k in range(Pn):
+        out = [None] * nfr
+        for q, i in enumerate(keep):
+            out[i] = {j: X[q, k * n + m].tolist() for m, j in enumerate(J)}
+        outs.append(out)
+    return outs[0] if not multi else outs
 
 
 def from_track(path):
@@ -172,6 +230,24 @@ def from_track(path):
 def main():
     if sys.argv[1] == "--bones":
         print(json.dumps(bones_from_truth(sys.argv[2]), indent=1))
+        return
+    global BONES_BODY
+    BONES_BODY = None
+    if sys.argv[1] == "--pair" and os.environ.get("FIT_BONES"):
+        BONES_BODY = json.load(open(os.environ["FIT_BONES"]))
+    if sys.argv[1] == "--pair":
+        # FIT_BONES=BONES.json python3 tools/oval3d/mp_fit.py --pair JUMPER.json STEPLADDER.json OUT.json [FIRST:LAST]
+        # Both men in one solve, sharing the camera; FIRST:LAST: frames where his knee is in the
+        # other's back.
+        a, b = from_track(sys.argv[2]), from_track(sys.argv[3])
+        contact = None
+        if len(sys.argv) > 5:
+            c0, c1 = map(int, sys.argv[5].split(":"))
+            contact = (set(range(c0, c1 + 1)), 2.0)
+        stable = json.load(open(sys.argv[2])).get("stable", False)
+        fj, fs = fit((a[0], b[0]), (a[1], b[1]), (a[2], b[2]), BONES_BODY, contact=contact, multi=True, stable=stable)
+        json.dump({"hz": a[3], "frames": fj, "stepladder": fs}, open(sys.argv[4], "w"))
+        print(f"FIT pair {len([f for f in fj if f])} frames -> {sys.argv[4]}")
         return
     if sys.argv[1] == "--track":
         # python3 tools/oval3d/mp_fit.py --track TRACK.json BONES.json OUT.json

@@ -6,6 +6,10 @@ extends SceneTree
 ## thighs and shins each swung (shortest arc, so their twist stays the rest pose's) to point where
 ## the fit's joints do. Hands, feet, neck and head keep the rest pose. The match holds the result
 ## inside a real body's limits as it loads it (ClipLimits).
+## BAKE_FLOOR=y: the ground's height in the fit's units; he is set on it (or above it by the fit's
+## leap) frame by frame.
+## BAKE_SCALE=k: his travel times k (our body's size over the fit's).
+## BAKE_ORIGIN=x,y,z: the spot (fit units) his travel is measured from; a pair's two bakes share it.
 
 const GLB := "res://assets/oval3d/player_mh.glb"
 const LIMBS := [["upperarm_l", "shoulder_l", "elbow_l"], ["lowerarm_l", "elbow_l", "wrist_l"],
@@ -79,6 +83,10 @@ func _run() -> void:
 	var pos_track := anim.add_track(Animation.TYPE_POSITION_3D)
 	anim.track_set_path(pos_track, "%s:pelvis" % skpath)
 	var start := Vector3.INF
+	# BAKE_SCALE: our body's size against the fit's (broadcast fits come out smaller than life;
+	# a pair shares one scale so they keep their places).
+	var floor_y := float(OS.get_environment("BAKE_FLOOR")) if OS.get_environment("BAKE_FLOOR") != "" else INF
+	var travel := float(OS.get_environment("BAKE_SCALE")) if OS.get_environment("BAKE_SCALE") != "" else 1.0
 	for k in range(frames.size()):
 		var f = frames[k]
 		if f == null:
@@ -97,7 +105,12 @@ func _run() -> void:
 		# clip carries him as the film does).
 		if start == Vector3.INF:
 			start = hip
-		var pg := Transform3D(Rp * pelvis0.basis, pelvis0.origin + Rp * (pelvis0.origin - hip0) - (pelvis0.origin - hip0) + (hip - start))
+			# BAKE_ORIGIN=x,y,z (the fit's own units): carry him from that spot instead, so two men
+			# baked from one pair fit (mp_fit.py --pair) keep where they stand against each other.
+			if OS.get_environment("BAKE_ORIGIN") != "":
+				var o := OS.get_environment("BAKE_ORIGIN").split(",")
+				start = to_sk * Vector3(float(o[0]), float(o[1]), float(o[2]))
+		var pg := Transform3D(Rp * pelvis0.basis, pelvis0.origin + Rp * (pelvis0.origin - hip0) - (pelvis0.origin - hip0) + (hip - start) * travel)
 		var parent := sk.get_bone_parent(ip)
 		var parent_g := sk.get_bone_global_pose(parent) if parent >= 0 else Transform3D.IDENTITY
 		var local := parent_g.affine_inverse() * pg
@@ -125,6 +138,27 @@ func _run() -> void:
 			if axis.length() > 1e-6:
 				q = Quaternion(axis.normalized(), now.angle_to(want))
 			_set_global_basis(b, Basis(q) * g)
+		# BAKE_FLOOR=y (the fit's units, its ground under him): put him on the ground. The fit's
+		# hips cannot place him by height (a runner's bent knees lift our straight-legged rest
+		# pose's feet), so his lowest point is set to the height the fit gives his lowest joint
+		# above that floor: 0 standing or lying, the leap's height in the air.
+		if floor_y != INF:
+			var fit_low := INF
+			for key in J:
+				fit_low = minf(fit_low, (sk.global_transform.basis * J[key]).y)
+			var want := maxf(0.0, (fit_low - floor_y) * travel)
+			var low := INF
+			for b in sk.get_bone_count():
+				if sk.get_bone_parent(b) < 0:
+					continue
+				var nm := sk.get_bone_name(b)
+				# Skin below the bone: a foot's sole is close, a back or a hip is not.
+				var skin := 0.04 if (nm.begins_with("foot") or nm.begins_with("ball")) else 0.10
+				low = minf(low, (sk.global_transform * sk.get_bone_global_pose(b).origin).y - skin)
+			var lift := sk.global_transform.basis.inverse() * Vector3(0, want - low, 0)
+			var par := sk.get_bone_parent(ip)
+			var pb := sk.get_bone_global_pose(par).basis if par >= 0 else Basis.IDENTITY
+			sk.set_bone_pose_position(ip, sk.get_bone_pose_position(ip) + pb.inverse() * lift)
 		var t := k / hz
 		for n in rot_tracks:
 			anim.rotation_track_insert_key(rot_tracks[n], t, sk.get_bone_pose_rotation(sk.find_bone(n)))

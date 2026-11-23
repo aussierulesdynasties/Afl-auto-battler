@@ -9,6 +9,7 @@ reads each one in his own box, so it holds a jumper through the climb and the fa
     python3 tools/oval3d/track_broadcast.py detect FRAMES_DIR DET.json [FIRST LAST]
     python3 tools/oval3d/track_broadcast.py follow DET.json TRACK.json HZ FRAME:X,Y [FRAME:X,Y ...]
     python3 tools/oval3d/track_broadcast.py corridor FRAMES_DIR DET.json TRACK.json HZ FRAME:X,Y [...]
+    python3 tools/oval3d/track_broadcast.py stabilize FRAMES_DIR FIRST LAST TRACK.json [...]
     python3 tools/oval3d/track_broadcast.py refine FRAMES_DIR TRACK.json OUT.json FRAME:X,Y [...]
     python3 tools/oval3d/track_broadcast.py lift FRAMES_DIR TRACK.json MODEL.task
     python3 tools/oval3d/track_broadcast.py sheet FRAMES_DIR SHEET.png FIRST:LAST:STEP TRACK.json [...]
@@ -203,6 +204,68 @@ def corridor(frames_dir, det_path, out, hz, seeds):
     print(f"CORRIDOR {last - first + 1} frames ({first}..{last}), {reread} read again in a box -> {out}")
 
 
+def stabilize(frames_dir, tracks, first, last):
+    """Take the camera's pan and zoom out of the tracks. A broadcast camera turns and zooms to
+    follow the ball, so a man's place on the screen is not his place on the ground: without
+    this the fit puts all his travel (the leap too) into the camera. The camera's motion is read
+    from the crowd and the ground with everyone tracked masked out (a turning camera moves near
+    and far things alike), each frame against the one before, and chained back to the first.
+    Writes p2 in the first frame's picture ("p2" kept; the original moves to "p2_screen")."""
+    import cv2
+    files = frame_files(frames_dir)
+    T = [json.load(open(t)) for t in tracks]
+    first, last = int(first), int(last)
+    orb = cv2.ORB_create(4000)
+    bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
+
+    def mask_for(i, shape):
+        m = np.full(shape[:2], 255, np.uint8)
+        hh, ww = shape[:2]
+        # The score bug and the picture-in-picture box sit still on the screen.
+        m[int(hh * 0.82):, :] = 0
+        m[:, int(ww * 0.75):][int(hh * 0.6):] = 0
+        for t in T:
+            f = t["frames"][i] if i < len(t["frames"]) else None
+            if f:
+                p = np.array([(x, -y) for x, y in f.get("p2_screen", f["p2"])])
+                lo, hi = p.min(0), p.max(0)
+                pad = 0.5 * max(hi - lo)
+                cv2.rectangle(m, (int(lo[0] - pad), int(lo[1] - pad)), (int(hi[0] + pad), int(hi[1] + pad)), 0, -1)
+        return m
+
+    A = {first: np.eye(3)}   # frame i's picture -> first frame's picture
+    prev = cv2.cvtColor(cv2.imread(files[first]), cv2.COLOR_BGR2GRAY)
+    kp0, d0 = orb.detectAndCompute(prev, mask_for(first, prev.shape))
+    worst = 0.0
+    for i in range(first + 1, last + 1):
+        cur = cv2.cvtColor(cv2.imread(files[i]), cv2.COLOR_BGR2GRAY)
+        kp1, d1 = orb.detectAndCompute(cur, mask_for(i, cur.shape))
+        ms = sorted(bf.match(d1, d0), key=lambda m: m.distance)[:800]
+        src = np.float32([kp1[m.queryIdx].pt for m in ms])
+        dst = np.float32([kp0[m.trainIdx].pt for m in ms])
+        M, inl = cv2.estimateAffinePartial2D(src, dst, method=cv2.RANSAC, ransacReprojThreshold=2.0)
+        if M is None or inl.sum() < 30:
+            raise SystemExit(f"STABILIZE failed at frame {i}: the camera cut or whipped; split the clip there")
+        worst = max(worst, float(np.median(np.linalg.norm((src[inl[:, 0] > 0] @ M[:, :2].T + M[:, 2]) - dst[inl[:, 0] > 0], axis=1))))
+        A[i] = A[i - 1] @ np.vstack([M, [0, 0, 1]])
+        kp0, d0 = kp1, d1
+    for t, path in zip(T, tracks):
+        for i, f in enumerate(t["frames"]):
+            if not f or i not in A:
+                if f and i not in A:
+                    t["frames"][i] = None
+                continue
+            ps = np.array(f.get("p2_screen", f["p2"]))
+            q = np.stack([ps[:, 0], -ps[:, 1], np.ones(len(ps))], 1) @ A[i].T
+            f["p2_screen"] = ps.tolist()
+            f["p2"] = np.stack([q[:, 0], -q[:, 1]], 1).tolist()
+        t["stable"] = True
+        json.dump(t, open(path, "w"))
+    zoom = [float(np.sqrt(abs(np.linalg.det(A[i][:2, :2])))) for i in A]
+    print(f"STABILIZE {last - first + 1} frames: zoom {min(zoom):.2f}-{max(zoom):.2f} of the first, "
+          f"background matched within {worst:.2f} px")
+
+
 def refine(frames_dir, track, out, seeds):
     """Read him again in a box that follows him, turned upright, every frame from the first seed
     to the last: holds him where the detector loses him (horizontal, or tangled with the
@@ -369,6 +432,8 @@ def main():
         follow(sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5:])
     elif cmd == "corridor":
         corridor(sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5], sys.argv[6:])
+    elif cmd == "stabilize":
+        stabilize(sys.argv[2], sys.argv[5:], sys.argv[3], sys.argv[4])
     elif cmd == "refine":
         refine(sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5:])
     elif cmd == "lift":
