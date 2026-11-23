@@ -117,7 +117,9 @@ Measuring from imagery is allowed; raw imagery is never committed or baked into 
   to 7 m at 125-140 degrees (Google Earth shows the 36 m roof ending there, with a 24-30 m deck behind
   it). `roof_outer` corrected from 65 to 222 degrees (each point within about 1.5 m). Bearings on a
   truss line are left out (the masts read as roof). A second sweep (2.5 degrees, 2.5 m steps) over the
-  northern stand's ends found raised end roofs 46 m above the turf, 55-67.5 and 235-247.5 degrees,
-  front edge 107-111 m and back edge about 127 m from the centre; the model had a ramp from 43 m down
-  to 35 m there. `roof_h`, `roof_inner`, `roof_outer` and `roof_edge` now carry them (steps placed
-  half-way between samples, so to about 1.25 degrees and 1.25 m).
+  northern stand's ends found 46 m tops at 55-67.5 and 235-247.5 degrees, front edge 107-111 m and
+  back edge about 125-127 m from the centre. These were first read as raised end roofs; they are the
+  two video screens (46 m above the turf is the screen boxes' top, and Google Earth shows no roof in
+  front of them). The raised-roof change is withdrawn. The screen boxes themselves sit wrong: the
+  east box ends at 65.5 degrees where Google Earth's runs to about 68, and both boxes reach 134 m
+  where the top ends at about 126. Being remeasured at 0.5 degree steps.
