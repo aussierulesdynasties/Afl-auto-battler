@@ -151,6 +151,9 @@ def main():
     j["lamp"] = [1, 1]
     j["screen"] = [1, 1]
     j["sign_mvst"] = [1, 1]
+    # the roof sign's panels are 7.6 m tall (parts2.py, measured 2026-11-23): one tile of lettering each
+    j["sign_marvel"] = [13.5, 7.6]
+    j["sign_stadium"] = [19.9, 7.6]
     j["bluepanel"] = j["slate"]
     j["podiumpanel"] = j["slate"]
     j["fcglass"] = j["curtain"]
