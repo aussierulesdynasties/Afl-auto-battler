@@ -995,20 +995,25 @@ def graffiti(name, px=24):
     _save(name, img)
 
 
-def graffiti_wall(g, W, h=3.4, off=8.5):
-    """The painted wall on the rail side of Wurundjeri Way's southbound carriageway (OpenStreetMap ways 580628689 and
-    580628690, east edge 8.5 m off the centre line), from the stadium's north-east corner to the NAB (Google Earth c_e:
-    the wall stands at the road's edge, the rail yards beyond)."""
-    pts = np.array(W["580628689"][1] + W["580628690"][1][1:], float)
-    line = []
-    for i in range(len(pts)):
-        d = pts[min(i + 1, len(pts) - 1)] - pts[max(i - 1, 0)]
-        d /= np.linalg.norm(d)
-        line.append(pts[i] + np.array([-d[1], d[0]]) * off)
+def graffiti_wall(g, W, h=3.4):
+    """The painted wall along the stadium side of Wurundjeri Way: the west edge of the northbound carriageway
+    (OpenStreetMap ways 580628691, four lanes, then 580628688, three lanes), from the NAB's corner to the stadium's
+    north-east corner. Google Earth c_e: rail yards, both carriageways, then the wall under the stadium's east
+    offices; the stretch beside the NAB is bare grey concrete, the rest painted (round 11 had it on the rail side)."""
     u = 0.0
-    for a, b in zip(line[:-1], line[1:]):
-        g.wall("graffiti", a, b, -0.5, h, u)
-        u += g.wall("graffiti", b, a, -0.5, h, u)
+    for wid, lanes, mat in (("580628691", 4, "concrete_deck"), ("580628688", 3, "graffiti")):
+        pts = np.array(W[wid][1], float)
+        off = lanes * 3.3 / 2 + 1.0
+        line = []
+        for i in range(len(pts)):
+            d = pts[min(i + 1, len(pts) - 1)] - pts[max(i - 1, 0)]
+            d /= np.linalg.norm(d)
+            line.append(pts[i] + np.array([-d[1], d[0]]) * off)    # left of a northbound way is west
+        assert line[0][0] < pts[0][0], "the wall must sit west of the carriageway"
+        for a, b in zip(line[:-1], line[1:]):
+            g.wall(mat, a, b, -0.5, h, u)
+            u += g.wall(mat, b, a, -0.5, h, u)
+
 
 def build():
     import bpy
