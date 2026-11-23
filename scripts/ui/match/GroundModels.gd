@@ -46,7 +46,7 @@ const GROUNDS := {
 const FIT := {
 	"mcg": [0.53, 0.39, -4.2, -3.3, 87.19, 73.39],
 	"marvel": [-0.03, -0.02, 5.4, -89.8, 90.45, 75.93],
-	"optus": [-30.38, 8.77, 0.0, -14.3, 88.5, 69.68],
+	"optus": [-27.32, 5.16, 0.0, -11.07, 88.91, 69.92],   # bowl front ring from Google Earth (tools/grounds/optus/survey)
 	"scg": [0.34, 6.68, 0.05, 85.8, 84.43, 72.25],
 	"gmhba": [-8.89, 11.85, 0.02, -69.8, 94.3, 66.01],
 	"people_first": [-0.72, 0.04, 0.02, -72.6, 89.11, 72.26],
@@ -118,6 +118,12 @@ const SURROUNDS := {
 					Color(0.32, 0.42, 0.35), Color(0.52, 0.27, 0.22), Color(0.72, 0.72, 0.69), Color(0.36, 0.42, 0.52)]},
 	"mcg": {"y": -0.03, "inner": 140.0, "colour": Color(0.45, 0.55, 0.27),
 			"map": "surrounds.webp", "span": 2048.0, "trees": "trees.bin", "buildings": "buildings.bin"},
+	# Optus Stadium on the Burswood peninsula: the Swan River, Perth Water, the parks and plaza from
+	# OpenStreetMap (tools/grounds/optus/surrounds.py), and its bridges in 3D, Matagarup's arches
+	# included (`models`, tools/grounds/optus/bridges.py).
+	"optus": {"y": -0.03, "inner": 100.0, "colour": Color(0.45, 0.55, 0.27),
+			"map": "surrounds.webp", "span": 2048.0, "trees": "trees.bin", "buildings": "buildings.bin",
+			"models": ["bridges.glb"], "tint": Color.WHITE, "building_tint": Color.WHITE},
 }
 
 ## Parts of a model drawn again from a build tool's own mesh (per vertex x, y, z, normal, colour;
@@ -169,6 +175,17 @@ const MATERIAL_FIX := {
 		# parapet over a thin dark ribbon, not the near-black band the texture paints.
 		"tier_fascia": {"albedo_color": Color(2.2, 2.2, 2.1)},
 	},
+	# Optus (2026-11-21, against Google Earth): the white PTFE roof is matte; built at roughness 0.6 it
+	# took the sky's blue from every angle. The bronze fins (tools/grounds/optus/bronze.py) carry the slate
+	# and warm streaks they show from the air; with no sky to mirror (the stand shader lights them), a
+	# metal only turned them black in shade (2026-11-22), so they stay nearly matte.
+	"optus": {
+		"roof": {"metallic": 0.0, "roughness": 0.95, "albedo_color": Color(0.97, 0.96, 0.93)},
+		"bronze": {"metallic": 0.1, "roughness": 0.5},
+		"sign_a": {"metallic": 0.1, "roughness": 0.5},
+		# The glass storeys read blue-teal grey from outside in daylight (bronze.py glass), not sky blue.
+		"glass": {"metallic": 0.1, "roughness": 0.3},
+	},
 }
 
 ## Models that carry their colours on the vertices (glTF COLOR_0) under a tiling detail texture.
@@ -202,10 +219,11 @@ const SEAT_COLOURS := {
 	"s_blue": Color(0.211, 0.28, 0.448), "s_orange": Color(0.785, 0.426, 0.158),
 	"s_grey": Color(0.64, 0.648, 0.663), "s_maroon": Color(0.443, 0.129, 0.16),
 	"s_gold": Color(0.863, 0.649, 0.129), "s_teal": Color(0.135, 0.479, 0.456),
-	# Optus: each tier's colour pushed grey-blue or tan, from the reference photos (optus_model/build.py).
-	"seat_lo_blue": Color(0.802, 0.807, 0.841), "seat_lo_tan": Color(0.892, 0.824, 0.751),
-	"seat_mid_blue": Color(0.920, 0.858, 0.794), "seat_mid_tan": Color(1.0, 0.875, 0.704),
-	"seat_up_blue": Color(0.653, 0.705, 0.782), "seat_up_tan": Color(0.743, 0.722, 0.693),
+	# Optus: each tier's colour pushed grey-blue or tan (optus build.py), the whole bowl then scaled (two passes) so the
+	# sunlit west seats match Google Earth's colour on a PC render under the same sun (tools/grounds/optus).
+	"seat_lo_blue": Color(0.411, 0.544, 0.550), "seat_lo_tan": Color(0.459, 0.556, 0.489),
+	"seat_mid_blue": Color(0.475, 0.580, 0.518), "seat_mid_tan": Color(0.518, 0.592, 0.457),
+	"seat_up_blue": Color(0.330, 0.473, 0.510), "seat_up_tan": Color(0.378, 0.485, 0.450),
 	# York Park's teal-green plastic (york_park/model/paint.py), the SCG's two seat colours
 	# (their glb material colours, linear -> sRGB).
 	"seat_plastic": Color(0.255, 0.365, 0.33),
@@ -409,6 +427,8 @@ static func _add_surrounds(root: Node3D, s: Dictionary, dir := "") -> void:
 		mm.disable_receive_shadows = true
 		mm.texture_repeat = false
 		mm.roughness = 1.0
+		# `tint` brings the painted map to Google Earth's colours under the match light (Optus).
+		mm.albedo_color = s.get("tint", Color.WHITE)
 		var g := MeshInstance3D.new()
 		g.name = "Surrounds"
 		g.mesh = mesh
@@ -420,7 +440,14 @@ static func _add_surrounds(root: Node3D, s: Dictionary, dir := "") -> void:
 			_add_trees(root, FileAccess.get_file_as_bytes(dir + str(s["trees"])).to_float32_array(), y)
 		if s.has("buildings") and FileAccess.file_exists(dir + str(s["buildings"])):
 			_add_buildings(root, FileAccess.get_file_as_bytes(dir + str(s["buildings"])).to_float32_array(), y,
-					s.get("walls", []), s.get("roofs", []))
+					s.get("walls", []), s.get("roofs", []), s.get("building_tint", s.get("tint", Color.WHITE)))
+		for m in s.get("models", []):
+			var extra := load_glb(dir + str(m))
+			if extra != null:
+				extra.name = str(m).get_basename()
+				for gi in extra.find_children("*", "GeometryInstance3D", true, false):
+					(gi as GeometryInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+				root.add_child(extra)
 		return
 	var noise := FastNoiseLite.new()
 	noise.frequency = 0.02
@@ -519,7 +546,7 @@ static func _add_trees(root: Node3D, buf: PackedFloat32Array, y: float) -> void:
 ## walls in a pale render or brick and a flat roof each, as one mesh. Seen past the stands and
 ## from a fly-through, they set the MCG in its city rather than on a plain.
 static func _add_buildings(root: Node3D, buf: PackedFloat32Array, y: float, walls: Array = [],
-		roofs: Array = []) -> void:
+		roofs: Array = [], tint := Color.WHITE) -> void:
 	var v := PackedVector3Array()
 	var nrm := PackedVector3Array()
 	var col := PackedColorArray()
@@ -574,6 +601,7 @@ static func _add_buildings(root: Node3D, buf: PackedFloat32Array, y: float, wall
 	var mat := StandardMaterial3D.new()
 	mat.resource_name = "city"
 	mat.vertex_color_use_as_albedo = true
+	mat.albedo_color = tint
 	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
 	mat.roughness = 0.95
 	mat.disable_receive_shadows = true
