@@ -77,7 +77,7 @@ static func upsert(gs: Object, p: Dictionary) -> Dictionary:
 	# the game began is the club's history, not yours (ruling 118).
 	var in_career := false
 	for sp in spells:
-		if int(sp[1]) > Career.BEFORE_GAME:
+		if int(sp[1]) > Career.before_game():
 			in_career = true
 	if not in_career and not store.has(id):
 		return {}
