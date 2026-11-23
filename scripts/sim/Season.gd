@@ -1233,11 +1233,31 @@ func finals_seed(i: int) -> int:
 
 ## Where a final is played. The club listed first hosts every final at its
 ## home ground, except the Grand Final, which is at the season's Grand Final
-## ground (the MCG; Waverley Park in 1991) whoever makes it.
+## ground (the MCG; Waverley Park in 1991) whoever makes it. In a real season
+## (SeasonRules real_finals) a final goes where that week's real finals went
+## (RealFinals): a Victorian host to the MCG, Waverley Park or Docklands, never
+## its suburban ground; an interstate host to Melbourne the weeks one went.
 func finals_venue(m: Dictionary) -> String:
-	if str(m.get("tag", "")) == "GF":
+	var tag := str(m.get("tag", ""))
+	if tag == "GF":
 		return grand_final_venue()
-	return home_ground(str(m.get("home", "")))
+	var host := str(m.get("home", ""))
+	var own := home_ground(host)
+	if bool(rules.get("real_finals", false)):
+		var real: String = RealFinals.venue(year, _finals_week_of(tag), tag, host, str(m.get("away", "")), own)
+		if real != "":
+			return real
+	return own
+
+
+## The finals week (1-based) the bracket plays final `tag` in; 0 if none.
+func _finals_week_of(tag: String) -> int:
+	var spec := SeasonRules.bracket(finals_format())
+	for w in range(spec.size()):
+		for e in spec[w]:
+			if str(e[0]) == tag:
+				return w + 1
+	return 0
 
 
 ## Which of a final's clubs plays at its own home ground (the engine's
@@ -1246,8 +1266,14 @@ func finals_venue(m: Dictionary) -> String:
 ## its home ground, whichever slot it is listed in: two MCG clubs, or none,
 ## and neither side has an edge.
 func finals_at_home(m: Dictionary) -> Array:
-	if str(m.get("tag", "")) != "GF":
+	if (str(m.get("tag", "")) != "GF" and not bool(rules.get("real_finals", false))
+			and finals_venue(m) == home_ground(str(m.get("home", "")))):
 		return [true, false]
+	if str(m.get("tag", "")) != "GF":
+		# A real season's finals ground, or a shared one: a club has its edge
+		# only at its own ground (both, when both call it home).
+		var v := finals_venue(m)
+		return [home_ground(str(m.get("home", ""))) == v, home_ground(str(m.get("away", ""))) == v]
 	return [home_ground(str(m.get("home", ""))) == grand_final_venue(),
 			home_ground(str(m.get("away", ""))) == grand_final_venue()]
 
