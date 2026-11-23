@@ -33,6 +33,7 @@ def mat(name):
 def tile(n):return TILE.get(ALIAS.get(n,n),[4,4])
 # ---------- meshes (one object per group so crops and the GLB stay tidy)
 def group(n):
+    if n.endswith('_web') and n.startswith(('truss','arch')):return 'nocast_web'  # no shadow (GroundModels)
     for g in('roofopen','roofshut','slab','end_','truss','arch','bowl','col','bracket','plinth','tier','podium','canopy','tank','tower','sign'):
         if n.startswith(g):return g.rstrip('_')
     return 'misc'

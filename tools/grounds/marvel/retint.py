@@ -61,7 +61,7 @@ def officeglass():
     x = (np.arange(W) + 0.5) / W * 6.0
     y = (np.arange(H) + 0.5) / H * 6.0
     img = np.zeros((H, W, 3), float)
-    img[:] = (70, 90, 108)
+    img[:] = (46, 54, 64)  # round 11 (PC check): Google Earth reads dark glass bands between grey concrete
     # each pane its own faint tone, as glass reflects a little differently pane to pane
     pane = rng.normal(0.0, 5.0, (4, 4))
     img += pane[(y[:, None] // 1.5).astype(int).clip(0, 3), (x[None, :] // 1.5).astype(int).clip(0, 3)][..., None]

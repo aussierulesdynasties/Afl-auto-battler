@@ -451,11 +451,12 @@ def office_box(nm,q,z0=9.0,z1=24.0,storey=3.75):
     prism(nm+'_lobby',lobby,0.0,z0,'shopglass','concrete')
     # its glass dark blue-grey (round 8, measured with the sun where Google Earth's was; round 3's light grey chased the shade)
     prism(nm,core,z0,z1-0.8,'officeglass','concrete',bottom='concrete')
-    prism(nm+'_soffit',f,z0-0.45,z0,'panel_lt','panel_lt',bottom='concrete')
+    prism(nm+'_soffit',f,z0-0.45,z0,'slate','slate',bottom='concrete')
     z=z0
     while z<z1-1.0:
-        prism(nm+'_band%d'%int(z*10),f,z,z+0.6,'panel_lt','panel_lt',bottom='panel_lt');z+=storey
-    prism(nm+'_parapet',f,z1-0.8,z1,'panel_lt','concrete',bottom='panel_lt')
+        prism(nm+'_band%d'%int(z*10),f,z,z+0.6,'slate','slate',bottom='slate');z+=storey
+    # round 11 (PC check): grey concrete frames over dark glass in Google Earth, not pale blue-white panels
+    prism(nm+'_parapet',f,z1-0.8,z1,'slate','concrete',bottom='slate')
     # the edges that face out (the one along the stadium wall, v -107, has no fins or columns)
     V=[];F=[];UV=[];n=len(q)
     for i in range(n):
@@ -474,7 +475,7 @@ def office_box(nm,q,z0=9.0,z1=24.0,storey=3.75):
                 UV+=[[(0,zz0),(0.1,zz0),(0.1,zz1),(0,zz1)]]*4
         for t in np.arange(3.0,L-1.0,7.5):
             c=a+d*t-out*0.6;cyl(nm+'_col%d_%d'%(i,int(t)),tuple(c),0.32,0.0,z0-0.45,'white','white',12)
-    if V:add(nm+'_fins',V,F,'white',UV)
+    if V:add(nm+'_fins',V,F,'slate',UV)  # round 11: grey concrete, as the bands
 # ---------------- corner complexes (west measured: satellite lean + aerial, mv/sz.py, mv/vert.py); east = 180-degree twin
 def face_v(u,o=0.0):
     vv=np.linspace(0,130,2600);thv=np.arctan2(vv,u);j=np.where(np.hypot(u,vv)<=se_r(thv,OA,OB,ON)+o)[0];return vv[j[-1]] if len(j) else 0.0
@@ -493,8 +494,10 @@ def fill_line(name,L,z0,z1,off,side,top):
     return q
 for sg in(1,-1):
     tw='w' if sg>0 else 'e';m=lambda u,v:(sg*u,sg*v)
-    # round 10 audit: the north-west one is the Seven studios block, white-grey cladding in Google Earth (ext_135, obl_nw), not navy
-    prism('cornerN_tower_'+tw,[m(*c) for c in TWN],0.0,33.0,'silver' if sg>0 else 'bluepanel','concrete')
+    # the north-west one is the Seven studios block: navy panels under a pale top band (PC check of round 10 against
+    # Google Earth ext_135; round 10 had made it all white), the red 7 on its north-west face (below)
+    prism('cornerN_tower_'+tw,[m(*c) for c in TWN],0.0,26.0 if sg>0 else 33.0,'bluepanel','concrete')
+    if sg>0:prism('cornerN_tower_'+tw+'_top',[m(*c) for c in TWN],26.0,33.0,'silver','concrete')
     if sg>0:prism('cornerS_tower_'+tw,[m(*c) for c in TWS],0.0,33.0,'bluepanel','concrete')
     for uc,vc in((-54.2,107.2),(54.3,108.4)):
         cu,cv=m(uc,vc);box('beige_%s_%d'%(tw,int(uc)),cu-6,cu+6,cv-5,cv+5,0.0,27.4,'slate','glass' if (sg<0 and cu<0) else 'canvas')
@@ -562,5 +565,41 @@ _ex=np.array(_U.exterior.coords)[:-1];_ang=np.arctan2(_ex[:,1],_ex[:,0])
 _r=np.hypot(_ex[:,0],_ex[:,1]);_hole=np.stack([(se_r(_ang,OA,OB,ON)-6.0)*np.cos(_ang),(se_r(_ang,OA,OB,ON)-6.0)*np.sin(_ang)],1)
 ZB0=-1.0;ZB1=0.05
 loft('site_base',[z3(_ex,ZB0),z3(_ex,ZB1),z3(_hole,ZB1)],['concrete','paving'])
+
+# ---------------- round 11 (PC check of round 10): the MARVEL STADIUM sign on the east facade (Google Earth c_e, c_ne:
+# red MARVEL + black STADIUM, the same board as the west one, on the upper wall above the walkway between offices B and D,
+# its foot above the offices' 24 m roofs). The west board turned half round (keeps the lettering reading from outside),
+# moved 9 m north; its foot at 30.4 m (4 tiles of 7.6 m, so the lettering starts at the panel's foot).
+EV0,EZ0=-108.2,30.4
+# boxes, then the lettered faces drawn on their own with UVs from each panel's left edge (round 11 check: the boxes'
+# own UVs ran from the stadium's axis, so the lettering came out split, "EL MARV DIUM STA")
+prism('sign_red_e',[(-u_-9.0,v_) for u_,v_ in [(-16,EV0),(-2.5,EV0),(-2.5,EV0-1.0),(-16,EV0-1.0)]],EZ0,EZ0+7.6,'signred','signred',bottom='signred')
+prism('sign_black_e',[(-u_-9.0,v_) for u_,v_ in [(-2.5,EV0),(17.4,EV0),(17.4,EV0-1.0),(-2.5,EV0-1.0)]],EZ0,EZ0+7.6,'signblack','signblack',bottom='signblack')
+# the lettered faces: the west board's own faces turned half round, with the west board's own UVs (the lettering
+# textures are authored for those UVs, mirrored and offset), stood 0.05 m proud of the east boxes' faces
+_W0=np.array(wv((0.0,0.0,0.0)))
+for _pn,_mt in(('sign_red','sign_marvel'),('sign_black','sign_stadium')):
+    _pp=[q for q in PARTS if q['name']==_pn][0]
+    for _f,_m,_uv in zip(_pp['F'],_pp['M'],_pp['UV']):
+        if _m!=_mt:continue
+        _Q=[]
+        for _i in _f:
+            _x=np.array(_pp['V'][_i]);_u,_v=to_uv(_x);_z=_x[2]-_W0[2]
+            _Q.append((-_u-9.0,EV0-(_v-SV0)-0.05*np.sign(_v-SV0-0.5)-(0.0),_z-(SZ0-EZ0)))
+        add(_pn+'_e_face',_Q,[list(range(len(_Q)))],_mt,[_uv])
+print('east sign roof over it', [round(roof_top(u_,-106.0),1) for u_ in (-26.0,-9.0,7.0)])
+# the red 7 on the Seven block's north-west face (Google Earth ext_135): a top bar and a slanting stem, 12 m tall
+_a,_b=np.array(TWN[3]),np.array(TWN[0])
+_t=(_b-_a)/np.linalg.norm(_b-_a);_n=np.array([_t[1],-_t[0]])
+if np.dot(_n,np.array([-1.0,1.0]))<0:_n=-_n
+# which way is the viewer's right on this face, worked in the model frame (u,v,z is left-handed)
+_pa,_pb=np.array(wv((*_a,0.0))),np.array(wv((*_b,0.0)));_pn=np.array(wv((*(_a+_n),0.0)))-_pa
+_right=np.cross(-_pn,[0,0,1.0])
+_s0=_a if np.dot(_pb-_pa,_right)>0 else _b;_dir=_t if np.dot(_pb-_pa,_right)>0 else -_t
+_L=float(np.linalg.norm(_b-_a));_o=_s0+_dir*(_L/2-4.5)+_n*0.15
+def _g(sx,z):return (*(_o+_dir*sx),z)
+z7=19.5
+add('sign_seven',[_g(0,z7+12),_g(9,z7+12),_g(9,z7+9.6),_g(0,z7+9.6)],[[0,1,2,3]],'signred')
+add('sign_seven_stem',[_g(6.4,z7+9.6),_g(9,z7+9.6),_g(5.2,z7),_g(2.6,z7)],[[0,1,2,3]],'signred')
 json.dump(dict(parts=PARTS,seats=SEATS,cam=P('c5.json')),open(os.path.join(os.path.dirname(os.path.abspath(__file__)),'parts2.json'),'w'))
 print(len(SEATS),'seats',len(PARTS),'parts',sum(len(p['F']) for p in PARTS),'faces')
