@@ -739,6 +739,13 @@ static func staff_new_clubs(coaches: Dictionary, clubs: Array, my_club: String, 
 		for job in FILL_ORDER:
 			if job == "SC" and club == my_club:
 				continue
+			if job == "SC":
+				var first := _foundation_coach(coaches, str(club), year)
+				if not first.is_empty():
+					ensure_fields(first, year + 1)
+					_appoint(first, club, job, year, seed)
+					filled.append({"club": club, "job": job, "cid": str(first["cid"])})
+					continue
 			var best := {}
 			var best_score := -INF
 			for cid in coaches:
@@ -757,6 +764,39 @@ static func staff_new_clubs(coaches: Dictionary, clubs: Array, my_club: String, 
 			_appoint(best, club, job, year, seed)
 			filled.append({"club": club, "job": job, "cid": str(best["cid"])})
 	return filled
+
+
+## A new club's real first senior coach, in a past season (bug bash 2026-11-23:
+## the Crows' first coach was Graham Cornes, not whoever the market offered).
+## Season the club first played -> its coach, from each club's Wikipedia page.
+const FOUNDATION_SC := {
+	"ADE|1991": "Graham Cornes", "FRE|1995": "Gerard Neesham", "PAD|1997": "John Cahill",
+	"GCS|2011": "Guy McKenna", "GWS|2012": "Kevin Sheedy",
+}
+
+
+## The real first coach of `club`, entering after season `year`, when he is
+## free to take the job: his record from the pool, or a new one at the era
+## senior coaches' skills. {} when the club has none on record, or he holds a
+## senior job in this career (the market then chooses, as for any club).
+static func _foundation_coach(coaches: Dictionary, club: String, year: int) -> Dictionary:
+	var name := str(FOUNDATION_SC.get("%s|%d" % [club, year + 1], ""))
+	if name == "" or not EraRules.is_era(year + 1):
+		return {}
+	for cid in coaches:
+		var c: Dictionary = coaches[cid]
+		if str(c.get("real_name", "")) == name:
+			if str(c.get("status", "")) == "club" and str(c.get("job", "")) == "SC":
+				return {}
+			return c
+	var cid := "C_" + name.to_lower().replace(" ", "_")
+	var c := {
+		"cid": cid, "real_name": name, "generic_name": _gen_name(cid, 0), "former_player_id": "",
+		"skills": Coaches.ERA_SC_SKILLS.duplicate(), "spec": "", "status": "free", "club": "", "job": "",
+		"free_from": 0, "stints": [], "former_sc": false, "note": "", "origin": "seed", "played": {},
+	}
+	coaches[cid] = c
+	return c
 
 
 ## Every job nobody holds at `clubs` (your senior job aside) taken by a new
