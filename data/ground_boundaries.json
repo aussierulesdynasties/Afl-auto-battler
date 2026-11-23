@@ -1,6 +1,97 @@
 {
  "_about": "Each traced ground's boundary line as the match plays it (tools/grounds/boundary/fit_boundary.py). frame: [x, z, degrees] in the model's glb metres: the goals' midpoint and the line through them. boundary/fence: r(t) = a0 + sum(a_k cos kt + b_k sin kt) about that midpoint, t from the +x goal towards +y (the glb's +z after the turn).",
  "grounds": {
+  "blacktown": {
+   "frame": [
+    -4.73,
+    -2.555,
+    78.773
+   ],
+   "goal_x": 79.099,
+   "boundary": [
+    74.1427,
+    0.0779,
+    -0.8054,
+    5.435,
+    0.0414,
+    -0.0329,
+    0.0071,
+    0.3995,
+    0.0437,
+    -0.0636,
+    0.1538,
+    -0.1784,
+    0.0248,
+    -0.0191,
+    0.0419,
+    -0.078,
+    0.0084
+   ],
+   "boundary_fit": {
+    "n": 333,
+    "order": 8,
+    "rms_m": 0.032,
+    "p95_m": 0.062,
+    "max_m": 0.093,
+    "largest_gap_deg": 6.76
+   },
+   "ends_vs_goal_lines_m": [
+    0.585,
+    0.66
+   ],
+   "source": "NSW Spatial Services aerial (SIX Maps, CC BY 4.0), current; tile set nsw (date not given by the service), 0.075 m pixels. AFL markings visible. Painted line traced as the ridge of a thin bright line with lit grass 1.5 m either side, along 1440 rays, then a 12-term Fourier radius about the centre fitted to the points seen. Goals: middle of the goal line from a 6.4 x 9 m goal-square template; checked against the 50 m arcs (arc50_check_m: radius at which each arc is found round its goal). Placed on Google Earth by matching ground-level edges 110-280 m from the centre against the audit's 600 m straight-down GE shot (shift east +0.09, north -0.12 m).",
+   "trace_error": {
+    "line_rms_to_fit": 0.06,
+    "line_rms_to_smooth_K6": 0.09,
+    "seen_share": 0.86,
+    "longest_unseen_arc_deg": 6.2,
+    "placement_on_google_earth": "about 1 m: the government aerial and Google Earth agree to 0.15 m overall (two of four quarters within 0.5 m)",
+    "source_pixel": 0.075
+   },
+   "centre_vs_goals_mid_m": [
+    0.005,
+    0.001
+   ],
+   "fence": [
+    79.7327,
+    0.1402,
+    0.177,
+    5.143,
+    -0.0476,
+    0.1986,
+    -0.0362,
+    0.4286,
+    0.0493,
+    0.0528,
+    0.0262,
+    -0.0189,
+    -0.0691,
+    0.2081,
+    0.0262,
+    0.0486,
+    0.0462,
+    0.1016,
+    -0.0513,
+    0.163,
+    0.0007,
+    0.0375,
+    0.0434,
+    0.057,
+    -0.0407
+   ],
+   "fence_fit": {
+    "n": 360,
+    "order": 12,
+    "rms_m": 0.001,
+    "p95_m": 0.002,
+    "max_m": 0.002,
+    "largest_gap_deg": 1.0
+   },
+   "runoff_m": {
+    "min": 4.78,
+    "max": 7.32
+   }
+  },
   "cazalys": {
    "frame": [
     -1.465,
