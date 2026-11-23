@@ -92,13 +92,14 @@ def make_textures():
     # (218, 225, 230)), the game's are in shade (the sun is in the south-west), so the shaded render cannot be
     # matched pixel for pixel. Rendered with the sun where Google Earth's was (preinspect PREINSPECT_SUN=60,45,1.45,
     # the fins then at 204), the glass between the fins must read Google Earth's (54, 79, 103): dark blue glass.
-    curtain("nab_glass", (22, 42, 66), (48, 56, 68), bay=1.5, floor=3.9, noise=8.0)
+    # Round 8: the PC read it about 18 too red (the sun's warm sheen on it), so its red is taken out: a teal-navy.
+    curtain("nab_glass", (30, 58, 80), (50, 62, 72), bay=1.5, floor=3.9, noise=8.0)
     TILE["nab_glass"] = (6.0, 7.8)
     # PC check round 2: the north tip's panels rendered (88, 105, 136) against GE (60, 87, 113): greyer, darker
     panels("nab_silver", (150, 166, 178), (118, 130, 142), w=1.5, h=1.3, holes=(52, 58, 66))
     TILE["nab_silver"] = (6.0, 5.2)
     flat("fin_white", (232, 234, 236))
-    flat("corner_red", (206, 118, 90))  # copper orange-red: GE c_e reads (108, 77, 86) in shade
+    flat("corner_red", (176, 104, 88))  # copper red-brown: GE in sun (184, 113, 94); (206, 118, 90) rendered orange
     flat("roof_grey", (138, 138, 134), noise=6.0)
     flat("roof_dark", (78, 82, 88), noise=6.0)
     # Southern Cross's roof: pale weathered metal, the valleys' glazing grey-blue, the sides' louvres
@@ -322,8 +323,12 @@ def nab(g, ring, h=72.0):
     # The east face (Google Earth c_e, PC check of 2026-11-23) is four glass blocks and a silver end, split
     # by three slots clad orange-red that run the full height on a slant: (centre along the face from its
     # south corner, width, how far the slot's top sits along from its foot), read off the 119 m face.
-    slots = {"east": ((0.27, 4.5, 3.0), (0.53, 3.0, -2.5), (0.69, 4.0, 3.0))}
-    depth = 3.5
+    # Round 8 (PC sun-on check): the red read as 10% of the face against Google Earth's 1.3%, and the face as one
+    # flat wall where Google Earth shows four blocks with angled joins. Each slot is a V notch 6 m wide at the face:
+    # its two sides angled glass, which catch the light differently from the blocks, and only a 1 m red strip at
+    # the back, 4 m in.
+    slots = {"east": ((0.27, 6.0, 3.0), (0.53, 6.0, -2.5), (0.69, 6.0, 3.0))}
+    depth, back = 4.0, 1.0
     outline = []
     for name, pl in faces:
         L = polyline_length(pl)
@@ -382,7 +387,8 @@ def nab(g, ring, h=72.0):
                     # The west face, to the stadium, carries them far closer (Google Earth from the west, PC check
                     # round 2): 4.2 m wide every 4.8 m, so the face reads pale with the dark glass left in
                     # diagonal bands between them.
-                    sw, sp, sh, st = (4.2, 4.8, 7.0, 1.6) if name == "west" else (3.4, 6.5, 5.6, 2.2)
+                    # Round 8: the east face's shades read 28% of it on the PC against Google Earth's 10.6%: 2.4 m by 3.9 m.
+                    sw, sp, sh, st = (4.2, 4.8, 7.0, 1.6) if name == "west" else (2.4, 6.5, 3.9, 2.2)
                     for r, z in enumerate(np.arange(base + 1.0, top - sh - 0.9, 3.9)):
                         for s_ in np.arange((r * st - u) % sp, w - sw - 0.2, sp):
                             s_ = float(s_) + 0.2  # clear of the facet edge
@@ -390,36 +396,23 @@ def nab(g, ring, h=72.0):
                             shade(g, "fin_white", p0 + t * s_ + lean + n * 0.6, t, n, sw, sh, 0.35, z)  # 0.6 m clears the folded facet, which is not flat
                 u += w
             if bi + 2 < len(edges):
-                # the slot to the next block: two side walls and a back wall 3.5 m in, all orange-red,
-                # leaning along the face as the blocks' edges do; glass ground storey carried across
+                # the slot to the next block: a V notch, its sides angled glass and a red strip at its back, leaning
+                # along the face as the blocks' edges do; glass ground storey carried across
                 a0 = _at(pl, s1)
                 b0 = _at(pl, edges[bi + 2])
                 t = (b0 - a0) / np.linalg.norm(b0 - a0)
                 n = outward(a0, b0)
                 sa, sb = t * shift[bi + 1], t * shift[bi + 2]
-                ai, bi_ = a0 - n * depth, b0 - n * depth
-                g.poly("corner_red", [(*a0, base), (*ai, base), (*(ai + sa), top), (*(a0 + sa), top)])
-                g.poly("corner_red", [(*ai, base), (*bi_, base), (*(bi_ + sb), top), (*(ai + sa), top)])
-                g.poly("corner_red", [(*bi_, base), (*b0, base), (*(b0 + sb), top), (*(bi_ + sb), top)])
+                mid = (a0 + b0) / 2 - n * depth
+                ai, bi_ = mid - t * back / 2, mid + t * back / 2
+                sm = (sa + sb) / 2
+                g.poly("nab_glass", [(*a0, base), (*ai, base), (*(ai + sm), top), (*(a0 + sa), top)])
+                g.poly("corner_red", [(*ai, base), (*bi_, base), (*(bi_ + sm), top), (*(ai + sm), top)])
+                g.poly("nab_glass", [(*bi_, base), (*b0, base), (*(b0 + sb), top), (*(bi_ + sm), top)])
                 g.wall("podium_glass", a0 - n * 2.0, b0 - n * 2.0, 0.0, base)
                 g.poly("fin_white", [(*(a0 - n * 2.0), base - 0.6), (*(b0 - n * 2.0), base - 0.6),
                                      (*b0, base), (*a0, base)])
-                g.poly("corner_red", [(*(ai + sa), top), (*(bi_ + sb), top), (*(b0 + sb), top), (*(a0 + sa), top)])
-                # the slot is not a plain stripe: folded orange-red panels zigzag out of it across the bays' edges,
-                # each a triangle from one side of the slot reaching 3.5 m onto the next bay, its point folded 0.9 m
-                # out, so the red reads in irregular folded shapes between the bays (Google Earth c_e, PC check
-                # round 3); five folds up the height, alternate ones mirrored
-                nf = 5
-                for kf in range(nf):
-                    z0, z1 = base + (top - base) * kf / nf, base + (top - base) * (kf + 1) / nf
-                    zm = (z0 + z1) / 2 + (top - base) / nf * (0.18 if kf % 2 else -0.15)
-                    f0, f1, fm = (z0 - base) / (top - base), (z1 - base) / (top - base), (zm - base) / (top - base)
-                    if kf % 2 == 0:
-                        g.poly("corner_red", [(*(a0 + sa * f0 + n * 0.15), z0), (*(b0 + t * 3.5 + sb * fm + n * 0.9), zm),
-                                              (*(a0 + sa * f1 + n * 0.15), z1)])
-                    else:
-                        g.poly("corner_red", [(*(b0 + sb * f0 + n * 0.15), z0), (*(a0 - t * 3.5 + sa * fm + n * 0.9), zm),
-                                              (*(b0 + sb * f1 + n * 0.15), z1)])
+                g.poly("roof_grey", [(*(ai + sm), top), (*(bi_ + sm), top), (*(b0 + sb), top), (*(a0 + sa), top)])
                 u += float(np.linalg.norm(b0 - a0))
     # parapet and roof over the facets' tops, plant set back on the roof
     rim = ccw([tuple(q) for q in outline])
