@@ -115,6 +115,25 @@ def stripe_roof(name, px=16):
     TILE[name] = (8.8, 8.8)
 
 
+def mural(name, px=24):
+    """The red and white mural on the block north of the Seven fin (Google Earth c_ne, c_nw, seven_nw): a red ground
+    with large white figure shapes and a few dark lines. 6 m wide by 15 m tall, one tile."""
+    from PIL import ImageDraw
+    W, H = 6 * px, 15 * px
+    im = Image.new("RGB", (W, H), (192, 44, 46))
+    d = ImageDraw.Draw(im)
+    rng = np.random.default_rng(57)
+    for _ in range(9):
+        x, y = rng.uniform(0, W), rng.uniform(0, H)
+        r = rng.uniform(0.6, 1.8) * px
+        d.ellipse((x - r, y - r * 1.6, x + r, y + r * 1.6), fill=(236, 232, 228))
+    for _ in range(6):
+        x0, y0 = rng.uniform(0, W), rng.uniform(0, H)
+        d.line((x0, y0, x0 + rng.uniform(-2, 2) * px, y0 + rng.uniform(1, 4) * px), fill=(40, 36, 40), width=int(0.15 * px))
+    _save(name, np.asarray(im, float))
+    TILE[name] = (6.0, 15.0)
+
+
 def flat(name, colour, noise=4.0):
     img = np.zeros((32, 32, 3), float) + colour + RNG.normal(0, noise, (32, 32, 3))
     _save(name, img)
@@ -185,6 +204,11 @@ def make_textures():
     flat("round_glass", (40, 52, 64), noise=3.0)
     flat("seven_glass", (66, 94, 124), noise=4.0)
     stripe_roof("stripe_roof")
+    mural("mural")
+    flat("navy_wall", (46, 56, 74), noise=4.0)  # 16888's dark navy cladding (Google Earth c_ne)
+    curtain("louvre_grey", (120, 124, 128), (176, 178, 180), bay=0.9, floor=0.5, slab=0.12, noise=3.0)
+    TILE["louvre_grey"] = (3.6, 1.0)
+    flat("pool_blue", (96, 170, 206), noise=3.0)
     flat("roof_white", (214, 216, 212), noise=4.0)  # the former Seven building's blue curtain wall (seven_w, c_nw)
     # round 12 (PC check of round 11): Victoria Point's glass is blue under its white slab edges, not green-grey
     curtain("vp_glass", (60, 84, 110), (88, 104, 120), bay=1.5, floor=3.05, slab=0.0, noise=3.0)
@@ -225,7 +249,7 @@ def make_textures():
     flat("timber", (74, 64, 52))
     flat("concrete_deck", (170, 168, 160))
     for n in ("bourke_edge", "home_frame", "home_glass", "near_wall", "tree_leaf", "fin_white", "corner_red", "roof_grey", "roof_dark", "sx_glass", "podium_glass", "white_band", "steel", "rock_a", "rock_b",
-              "timber", "concrete_deck", "balustrade", "slab_grey", "steel_dark", "round_glass", "bourke_glass", "seven_glass", "roof_white"):
+              "timber", "concrete_deck", "balustrade", "slab_grey", "steel_dark", "round_glass", "bourke_glass", "seven_glass", "roof_white", "navy_wall", "pool_blue"):
         TILE[n] = (4.0, 4.0)
 
 
@@ -432,6 +456,14 @@ def nab(g, ring, h=72.0):
     - The west face, to the stadium, is glass under close-set white shades that leave diagonal dark bands.
     - It stands on a 7 m glazed ground storey set back behind white V struts (c_e's white zigzag)."""
     ring = ccw(ring)
+    # Round 12 (Google Earth point picks in c_e and c_ne, 2026-11-23): OpenStreetMap's north tip (147.1, -11.0) stops
+    # 15-18 m short. Google Earth puts the tip's foot at (157, -0.5) and its top at (153.3, 7.5): the tip leans out
+    # over the rail yard. Walls here stand plumb, so the tip goes midway, (155.2, 3.5), and the OSM kink just south
+    # of it on the west face (145.4, -16.7) is dropped.
+    tip = min(range(len(ring)), key=lambda i: (ring[i][0] - 147.11) ** 2 + (ring[i][1] + 10.96) ** 2)
+    assert abs(ring[tip][1] + 10.96) < 0.1, "the OSM north tip moved; re-pick it"
+    ring = [(155.2, 3.5) if i == tip else q for i, q in enumerate(ring)
+            if not (abs(q[0] - 145.40) < 0.1 and abs(q[1] + 16.71) < 0.1)]
     P = [np.array(q) for q in ring]
     faces = [("south", [P[0], P[1]]), ("east", [P[1], P[2]]), ("west", P[2:] + [P[0]])]
     base, top, fold = 7.0, h, 2.2
@@ -1013,7 +1045,7 @@ def near_buildings(g, W):
     # Round 12 (PC check of round 11): the city's massing for the two foreground roofs of c_nw and c_sw, which Google
     # Earth shows in detail: 6153 (north-west, c_nw) blue glass under a white roof striped with solar panels; 9966 and
     # 9967 (south-west, c_sw) white roofs with rows of sawtooth glazed rooflights and solar panels.
-    looks = {10757: ("near_wall", "dark_glass", "roof_grey"), 16888: ("pale_panel", "dark_glass", "roof_grey"),
+    looks = {10757: ("near_wall", "dark_glass", "roof_grey"), 16888: ("navy_wall", "louvre_grey", "roof_grey"),
              3046: ("pale_panel", "dark_glass", "roof_grey"), 6153: ("pale_panel", "seven_glass", "stripe_roof"),
              9966: ("near_wall", "dark_glass", "sawtooth"), 9967: ("near_wall", "dark_glass", "sawtooth")}
     skip = [p for t, p in W.values() if t.get("_id") in S.LANDMARK_WAYS and len(p) > 3]
@@ -1028,7 +1060,16 @@ def near_buildings(g, W):
             if r_ == "sawtooth":
                 r_ = "roof_white"
                 sawtooth(g, ring, top)
-            if top - base >= 3.0:
+            if sid == 16888 and top - base >= 3.0:
+                # round 12 (Google Earth c_ne, points picked at 50-63 E, 153 N): a dark navy clad box with a grey louvre
+                # band under its parapet, not a pale office with ribbon windows; a light blue strip on its roof
+                h_ = top - base
+                banded(g, ring, base, top, h_, h_ - 2.6, h_ - 0.4, 0.0, wall, glass, top=r_, parapet=0.0)
+                rr_ = np.array(ring); c_ = rr_.mean(0)
+                if _inside(tuple(c_), [tuple(q) for q in ring]):
+                    g.poly("pool_blue", [(c_[0] - 9, c_[1] - 2, top + 0.05), (c_[0] + 9, c_[1] - 2, top + 0.05),
+                                         (c_[0] + 9, c_[1] + 2, top + 0.05), (c_[0] - 9, c_[1] + 2, top + 0.05)])
+            elif top - base >= 3.0:
                 banded(g, ring, base, top, 3.6, 0.9, 2.9, 0.0, wall, glass, top=r_, parapet=0.0)
             else:
                 g.prism(ring, base, top, wall, top=r_)
@@ -1236,6 +1277,15 @@ def build():
     graffiti_wall(g, W)
     road_strips(g, W)
     seven(g, W["33261092"][1])
+    # round 12 (PC check of round 11: "the red/white mural building next to the Seven block is missing"): a navy block
+    # against the north end of the Seven fin with a pale box on top; its north wall carries a red and white mural.
+    # The mural's position and heights were picked in Google Earth from two views (c_ne and c_nw agree): a north-facing
+    # wall at 92.8 m north, from 94.5 to 90 m west of the centre, 10-25 m up.
+    mb = [(-101.5, 90.3), (-88.5, 90.3), (-88.5, 92.8), (-101.5, 92.8)]
+    g.prism(mb, 0.0, 22.0, "navy_wall", top="roof_grey")
+    g.prism([(-100.5, 90.6), (-91.0, 90.6), (-91.0, 92.5), (-100.5, 92.5)], 22.0, 26.0, "pale_panel", top="roof_grey")
+    g.poly("mural", [(-89.0, 92.85, 9.5), (-95.0, 92.85, 9.5), (-95.0, 92.85, 24.5), (-89.0, 92.85, 24.5)],
+           [(0.0, 0.0), (6.0, 0.0), (6.0, 15.0), (0.0, 15.0)])
     round_office(g, W["44158938"][1], h=21.6)  # six floors in Google Earth's ge_vicpoint_b
     ferry(g, W["1246185747"][1])
     # Victoria Point (128 m, 2006): a curved glass tower, recessed balconies behind white slab edges
