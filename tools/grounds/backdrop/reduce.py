@@ -136,14 +136,29 @@ g = bpy.data.objects['bg_near_ground']
 if EDGE is not None:   # cut on the model's own ground edge: drop cells wholly inside it, pull inside corners out onto it
     bm = bmesh.new(); bm.from_mesh(g.data); M = g.matrix_world; Mi = M.inverted()
     def inside(w): return math.hypot(w.x, w.y) < edge_at(w.x, w.y)[0]
+    # cells across the edge are split down to under half a metre first: pulling a coarse cell's inside corners onto
+    # the line leaves its straight side short of a bend in the line (gaps up to 1 m at Blacktown's yard corners)
+    for _ in range(5):
+        strad = [f for f in bm.faces if len(set(inside(M @ v.co) for v in f.verts)) == 2]
+        es = list({e for f in strad for e in f.edges if (M @ e.verts[0].co - M @ e.verts[1].co).xy.length > 0.5})
+        if not es: break
+        bmesh.ops.subdivide_edges(bm, edges=es, cuts=1, use_grid_fill=True)
+        bmesh.ops.triangulate(bm, faces=[f for f in bm.faces if len(f.verts) > 4])
     kill = [f for f in bm.faces if all(inside(M @ v.co) for v in f.verts)]
     bmesh.ops.delete(bm, geom=kill, context='FACES')
+    _b = np.radians(EDGE[0]); EP = np.stack([EDGE[1] * np.sin(_b), EDGE[1] * np.cos(_b)], 1)
+    EA = EP; ED = np.roll(EP, -1, 0) - EP; EL2 = np.maximum((ED ** 2).sum(1), 1e-9); EZA = EDGE[2]; EZB = np.roll(EDGE[2], -1)
     moved = 0
     for v in bm.verts:
         w = M @ v.co
         if v.link_faces and inside(w):
-            r, z = edge_at(w.x, w.y); L = math.hypot(w.x, w.y)
-            w.x, w.y, w.z = w.x * r / L, w.y * r / L, z; v.co = Mi @ w; moved += 1
+            # onto the nearest point of the line, not along the radius: where the line itself runs nearly radial (a yard
+            # corner) a radial move goes metres and folds the cells; then 10 cm in and 2 cm under the model's ground,
+            # so no hairline crack shows
+            t = np.clip(((w.x - EA[:, 0]) * ED[:, 0] + (w.y - EA[:, 1]) * ED[:, 1]) / EL2, 0.0, 1.0)
+            px, py = EA[:, 0] + t * ED[:, 0], EA[:, 1] + t * ED[:, 1]; i = int(np.argmin((px - w.x) ** 2 + (py - w.y) ** 2))
+            qx, qy = float(px[i]), float(py[i]); L = math.hypot(qx, qy); z = float(EZA[i] + t[i] * (EZB[i] - EZA[i]))
+            w.x, w.y, w.z = qx * (L - 0.1) / L, qy * (L - 0.1) / L, z - 0.02; v.co = Mi @ w; moved += 1
     bm.to_mesh(g.data); bm.free()
     print('ground faces cut inside the model edge', len(kill), 'corners moved onto it', moved)
     HULL = None

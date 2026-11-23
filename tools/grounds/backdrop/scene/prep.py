@@ -51,6 +51,19 @@ def sampler(z):
         return (M[j, i] * (1 - fx) * (1 - fy) + M[j, i + 1] * fx * (1 - fy) + M[j + 1, i] * (1 - fx) * fy + M[j + 1, i + 1] * fx * fy)
     return h
 hn, hf = sampler(14), sampler(12)
+if spec.get('dem_nsw'):   # NSW's 5 m ground model in place of the terrarium tiles (dem_nsw.py): heights of the ground, not the trees
+    def _dsampler(name):
+        A = np.load(os.path.join(D, name + '.npy')); m = json.load(open(os.path.join(D, name + '.json'))); b = m['bbox']; n = m['n']
+        A = np.where(np.isnan(A), np.nanmedian(A), A)
+        def h(X, Y):
+            lat = lat0 + Y / KY; lon = lon0 + X / KX
+            px = (lon - b[0]) / (b[2] - b[0]) * (n - 1); py = (b[3] - lat) / (b[3] - b[1]) * (n - 1)
+            i = np.clip(np.floor(px).astype(int), 0, n - 2); j = np.clip(np.floor(py).astype(int), 0, n - 2)
+            fx = np.clip(px - i, 0, 1); fy = np.clip(py - j, 0, 1)
+            return A[j, i] * (1 - fx) * (1 - fy) + A[j, i + 1] * fx * (1 - fy) + A[j + 1, i] * (1 - fx) * fy + A[j + 1, i + 1] * fx * fy
+        return h
+    hn, hf = _dsampler('dem_nsw_near'), _dsampler('dem_nsw_far')
+    print('terrain: NSW 5 m elevation')
 # measured bare-earth land from the shared terrain tool (tools/grounds/terrain: Geoscience Australia 5 m LiDAR DEM, LIST 2 m,
 # LINZ 1 m ...), or a grid in data/<g>/dem/{near,far}.npy + .json; frame: x east, y north from the centre circle, turf = 0,
 # rows south -> north. Cells the measured grid lacks keep the terrain tiles.
@@ -157,6 +170,8 @@ print('terrain', near.shape, far.shape, 'near range', near.min(), near.max(), 'f
 
 # ---------------- OSM ----------------
 js = json.load(open(os.path.join(D, 'osm.json'), encoding='utf-8'))['elements']
+for _e in js:   # osm_retag: ways the map tags wrong for what stands there today (checked on the aerial), by id
+    if str(_e.get('id')) in spec.get('osm_retag', {}): _e['tags'] = dict(_e.get('tags', {}), **spec['osm_retag'][str(_e['id'])])
 def ring(el):
     g = el.get('geometry') or []
     return [xy(p['lat'], p['lon']) for p in g if p]
@@ -529,11 +544,18 @@ for el in js:
         ang = math.acos(np.clip(np.dot(u, w) / (np.linalg.norm(u) * np.linalg.norm(w) + 1e-9), -1, 1))
         if best is None or ang < best[0]: best = (ang, i)
     H = Q[best[1]]; d_ = Q.mean(0) - H; a0 = math.atan2(d_[1], d_[0])
-    if spec.get('baseball'):   # home plate and facing read off the reference photo
-        bb = spec['baseball']
-        if np.hypot(*(Q.mean(0) - np.array(bb['home']))) > 120: continue
-        H = np.array(bb['home'], float); a0 = math.radians(bb['dir'])
-    elif np.hypot(*Q.mean(0)) < 600: continue   # no photo for this field: leave it plain grass
+    _bl = spec.get('baseball_list') or ([spec['baseball']] if spec.get('baseball') else [])
+    _bl = [bb for bb in _bl if np.hypot(*(Q.mean(0) - np.array(bb['home']))) < 120]
+    if _bl:   # home plate and facing read off the reference photo (or, real place, a straight-down Google Earth shot)
+        bb = _bl[0]; H = np.array(bb['home'], float); a0 = math.radians(bb['dir'])
+        if bb.get('track'):   # the dirt warning track inside the fence, all round the field
+            from shapely.geometry import Polygon as _BP
+            _in = _BP([tuple(q) for q in Q]).buffer(-bb['track'])
+            _rm = Image.new('L', img.size, 0); _rd = ImageDraw.Draw(_rm); _rd.polygon(P([tuple(q) for q in Q]), fill=255)
+            if not _in.is_empty:
+                for _g in getattr(_in, 'geoms', [_in]): _rd.polygon(P(list(_g.exterior.coords)), fill=0)
+            img.paste(tuple(PAL['infield']), (0, 0), _rm)   # the ring only: the field's own grass stays as drawn
+    elif spec.get('baseball') or np.hypot(*Q.mean(0)) < 600: continue   # no photo for this field: leave it plain grass
     def pol(r, a): return (H[0] + r * math.cos(a), H[1] + r * math.sin(a))
     skin = [tuple(H)] + [pol(18.44 * math.cos(math.radians(x)) + math.sqrt(29.0 ** 2 - (18.44 * math.sin(math.radians(x))) ** 2), a0 + math.radians(x)) for x in np.linspace(-45, 45, 31)]   # grass line: 29 m arc round the mound, out to the foul lines
     dr.polygon(P(skin), fill=tuple(PAL['infield']))
@@ -770,6 +792,12 @@ _HSRC = _col.Counter(); _BH = _real.raster_heights(D) if spec.get('real') else N
 _edp = os.path.join(os.environ.get('WORK', '/home/user/work'), 'data', spec['name'], 'era_drop.json')
 _TODAY = set(str(i) for i in json.load(open(_edp)).get('today_ids', [])) if os.path.exists(_edp) else None
 _GEP = os.path.join(D, 'ge_heights.json'); _GEH = json.load(open(_GEP)) if spec.get('real') and os.path.exists(_GEP) else {}
+def _pip(x, y, q):   # point in polygon (even-odd)
+    c = False
+    for i in range(len(q)):
+        (x1, y1), (x2, y2) = q[i], q[i - 1]
+        if (y1 > y) != (y2 > y) and x < x1 + (y - y1) * (x2 - x1) / (y2 - y1): c = not c
+    return c
 skip_r = spec["clear_r_m"]; _FPP = os.path.join(OUT, "footprint.json"); _FPR = np.array(json.load(open(_FPP))) if os.path.exists(_FPP) else None
 for el in js + PARTS + OVB:
     t = el.get('tags', {})
@@ -781,6 +809,9 @@ for el in js + PARTS + OVB:
     if abs(cx) > NEAR or abs(cy) > NEAR: continue
     if ((any(math.hypot(px_, py_) < _FPR[int((math.degrees(math.atan2(py_, px_)) % 360) // 2)] + 2 for px_, py_ in pts)) if _FPR is not None else math.hypot(cx, cy) < skip_r) or t.get("building") in ("grandstand", "stadium"): continue
     if t.get('layer', '0').startswith('-') or t.get('location') == 'underground': continue
+    # drop_buildings: outlines the ground model builds itself, measured (its own polygons, local metres); the map's
+    # version of the same building is left out so the two never stand inside each other
+    if any(_pip(cx, cy, q) for q in spec.get('drop_buildings', [])): continue
     h = None
     try: h = float(str(t.get('height', '')).split()[0])
     except Exception: pass
@@ -857,10 +888,18 @@ print('building heights from', dict(_HSRC))
 
 # trees: OSM trees + scatter over tree-bearing cover + street trees
 TR = []
+# trees_to_footprint (real place, a ground model with its own measured surrounds): trees stand right up to the
+# model's outline (footprint.json + 2 m), not only beyond the clear radius
+if spec.get('trees_to_footprint') and _FPR is not None:
+    def _clear(x, y):
+        x = np.asarray(x, float); y = np.asarray(y, float)
+        return np.hypot(x, y) > _FPR[((np.degrees(np.arctan2(y, x)) % 360) // 2).astype(int) % 180] + 2
+else:
+    def _clear(x, y): return np.hypot(x, y) > skip_r
 for el in js:
     if el['type'] == 'node' and el.get('tags', {}).get('natural') == 'tree':
         x, y = xy(el['lat'], el['lon'])
-        if math.hypot(x, y) > skip_r: TR.append([round(x, 1), round(y, 1)])
+        if _clear(x, y): TR.append([round(x, 1), round(y, 1)])
 _td = spec.get('tree_default', 0)   # m^2 per tree on land OSM leaves untagged (satellite shows scattered trees)
 _CN = os.path.join(OUT, 'canopy.npy'); CAN = np.load(_CN) if os.path.exists(_CN) else None   # trees traced from the satellite
 if CAN is not None: _td = _td or 40000   # canopy mode: every untagged spot may hold a tree; the trace decides
@@ -874,11 +913,14 @@ for k, v, dens in spec['tree_fill']:  # dens = m^2 per tree, 0 = clear (carves o
 for pk, poly in spec.get('paint_poly', []): md.polygon(P([tuple(q) for q in poly]), fill=0)
 for el in js:
     t = el.get('tags', {})
-    if el['type'] == 'way' and (t.get('amenity') == 'parking' or t.get('leisure') in ('pitch', 'swimming_pool', 'sports_centre')):
+    # real place: a sports centre's grounds keep their trees (the canopy trace places them); only its pitches and pools are clear
+    if el['type'] == 'way' and (t.get('amenity') == 'parking' or t.get('leisure') in (('pitch', 'swimming_pool') if CAN is not None and spec.get('real') else ('pitch', 'swimming_pool', 'sports_centre'))):
         pts = ring(el)
         if len(pts) > 2: md.polygon(P(pts), fill=0)
 # keep trees off roads, rails, buildings and water
 rdm = Image.new('L', (N, N), 0); rd = ImageDraw.Draw(rdm)
+for _q in spec.get('own_roofs', []):   # roofs the ground model builds itself: crowns clear of them too
+    md.polygon(P(_q), fill=0); md.line(P(_q + _q[:1]), fill=0, width=max(1, int(3 / PX))); rd.polygon(P(_q), fill=255)
 for el in js:
     t = el.get('tags', {})
     if el['type'] != 'way': continue
@@ -900,7 +942,7 @@ GX = GX + rng.uniform(-cell / 2, cell / 2, GX.shape); GY = GY + rng.uniform(-cel
 ix = np.clip(((GX + NEAR) / PX).astype(int), 0, N - 1); iy = np.clip(((NEAR - GY) / PX).astype(int), 0, N - 1)
 v = mv[iy, ix]
 prob = np.where(v > 0, cell * cell * v / 40000.0, 0)   # cell area / (m^2 per tree)
-keep = (rng.random(GX.shape) < np.clip(prob, 0, 1)) & (np.hypot(GX, GY) > skip_r) & (np.hypot(GX, GY) < spec['tree_r_m'])
+keep = (rng.random(GX.shape) < np.clip(prob, 0, 1)) & _clear(GX, GY) & (np.hypot(GX, GY) < spec['tree_r_m'])
 if CAN is not None:   # inside the satellite's extent a tree stands where the trace shows crown in this 6 m cell
     _sj = json.load(open(os.path.join(HERE, 'data', spec['name'], 'sat.json'))); _h, _m = _sj['half_m'], _sj['m_per_px']
     _ci = ((_h - GY) / _m).astype(int); _cj = ((GX + _h) / _m).astype(int); _in = (np.abs(GX) < _h - 3) & (np.abs(GY) < _h - 3)
@@ -908,7 +950,7 @@ if CAN is not None:   # inside the satellite's extent a tree stands where the tr
     _i0 = np.clip(_ci - _r, 0, CAN.shape[0]); _i1 = np.clip(_ci + _r, 0, CAN.shape[0]); _j0 = np.clip(_cj - _r, 0, CAN.shape[1]); _j1 = np.clip(_cj + _r, 0, CAN.shape[1])
     _frac = (_cs[_i1, _j1] - _cs[_i0, _j1] - _cs[_i1, _j0] + _cs[_i0, _j0]) / np.maximum(1, (_i1 - _i0) * (_j1 - _j0))
     _ft = 0.3 if spec.get('real') else 0.45   # real place: a garden tree's 5 m crown fills a third of its 6 m cell
-    keep = np.where(_in, (_frac > _ft) & (v > 0) & (np.hypot(GX, GY) > skip_r), keep)
+    keep = np.where(_in, (_frac > _ft) & (v > 0) & _clear(GX, GY), keep)
     print('canopy trees', int((_in & keep).sum()))
 _WMP = os.path.join(OUT, 'sea_mask.npy')
 if os.path.exists(_WMP):   # no tree stands out on open water (a choppy harbour can pass the aerial's crown test); wetlands,
@@ -934,11 +976,12 @@ if spec.get('street_trees'):
                 px, py = x1 + (x2 - x1) * s / L, y1 + (y2 - y1) * s / L
                 for sd in (-1, 1):
                     qx, qy = px + sd * nx * _ow, py + sd * ny * _ow
-                    if spec['tree_r_m'] > math.hypot(qx, qy) > skip_r and rng.random() < 0.8:
+                    if spec['tree_r_m'] > math.hypot(qx, qy) and _clear(qx, qy) and rng.random() < 0.8:
                         TR.append([round(qx, 1), round(qy, 1)])
 _RD = np.asarray(rdm); _n0 = len(TR)
 TR = [q for q in TR if not (abs(q[0]) < NEAR and abs(q[1]) < NEAR and _RD[min(N - 1, int((NEAR - q[1]) / PX)), min(N - 1, int((q[0] + NEAR) / PX))])]
 print('mapped trees on roads removed', _n0 - len(TR))
+TR += [[float(x), float(y)] for x, y in spec.get('extra_trees', [])]   # trees on the ground model's own ground, placed by hand from the aerial
 TR = [[x, y, int(rng.integers(0, len(spec['tree_kinds'])))] for x, y in TR if abs(x) < NEAR and abs(y) < NEAR]
 if spec.get('real') and CAN is not None:   # real place: each crown takes the aerial's colour where it stands
     _SAt = np.asarray(Image.open(os.path.join(HERE, 'data', spec['name'], 'sat.png')).convert('RGB')).astype(np.float32)
