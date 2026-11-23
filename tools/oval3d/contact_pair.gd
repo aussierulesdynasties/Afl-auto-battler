@@ -15,7 +15,8 @@ const Check := preload("res://tools/oval3d/check_pair.gd")
 const GLB := "res://assets/oval3d/player_mh.glb"
 const SPINE := ["spine_01", "spine_02", "spine_03"]
 const HINGE := Vector3(1.0, 0.0, 0.0)
-const MOVE_MAX := 0.35   # m the jumper may be moved to bring his knee to the back
+# m the jumper may be moved to bring his knee to the back (CONTACT_MOVE; Jurrah sits on his man).
+var MOVE_MAX := float(OS.get_environment("CONTACT_MOVE")) if OS.get_environment("CONTACT_MOVE") != "" else 0.35
 const KNEE_OFF := 0.22   # m from the stepladder's spine line to the knee's centre (trunk + knee)
 # The stepladder's legs through the contact: the camera loses them behind the pack and the fit
 # throws one up in a kick; in the footage he stays braced on both feet. They are held at their
@@ -235,7 +236,8 @@ func _run() -> void:
 		var out_n := (back - up_s * back.dot(up_s)).normalized()
 		# The knee high on the back, at the shoulders, and the shin down and out from it.
 		var knee_t := sp.lerp(nk, 0.85) + out_n * KNEE_OFF
-		var ankle_t := knee_t + (-up_s * 0.7 + out_n * 0.7).normalized() * 0.44
+		# (Down the world, not down his spine: a crouched man's spine runs to his hips.)
+		var ankle_t := knee_t + (-Vector3.UP * 0.7 + out_n * 0.7).normalized() * 0.44
 		# The jumper moved, if need be, so his hip is a thigh's length from that knee.
 		var hip := _wp(skj, "thigh_" + near)
 		var thigh := hip.distance_to(_wp(skj, "calf_" + near))
@@ -285,8 +287,6 @@ func _run() -> void:
 					skj.set_bone_pose_rotation(ib, (orig[b] as Quaternion).slerp(skj.get_bone_pose_rotation(ib), wr))
 				skj.force_update_all_bone_transforms()
 			var d := _deepest(skj, sks)
-			if OS.get_environment("CDEBUG") != "":
-				print("  it %d %.3f %s %s" % [it, d[0], d[4], d[5]])
 			deep = d[0]
 			if d[0] >= -0.005:
 				break

@@ -19,7 +19,11 @@ const SWING := {"thigh_l": "thigh_l", "calf_l": "thigh_l", "foot_l": "thigh_l",
 		"upperarm_l": "upperarm_l", "lowerarm_l": "upperarm_l",
 		"upperarm_r": "upperarm_r", "lowerarm_r": "upperarm_r"}
 const JOINTS := ["thigh_l", "thigh_r", "upperarm_l", "upperarm_r"]
-const MAX_TURN := 30.0   # deg a limb may be swung from the film's pose
+# deg a limb may be swung from the film's pose. SETTLE_TURN=0 moves only whole men (a limb swung
+# off the film read as a different movement in Kozzy's bakes 2 and 3).
+var MAX_TURN := float(OS.get_environment("SETTLE_TURN")) if OS.get_environment("SETTLE_TURN") != "" else 30.0
+# SETTLE_FROM=k: leave frames before k as they are (a contact keyed by hand, contact_pair.gd).
+var FROM := int(OS.get_environment("SETTLE_FROM")) if OS.get_environment("SETTLE_FROM") != "" else 0
 
 
 func _initialize() -> void:
@@ -132,6 +136,8 @@ func _give(sk: Skeleton3D, part: String, at: Vector3, v: Vector3, off: Array, tu
 func _part(a: Array, b: Array, times: Array, oa: Array, ob: Array, ta: Array, tb: Array) -> float:
 	var worst := INF
 	for k in times.size():
+		if k < FROM:
+			continue
 		for it in 100:
 			_pose(a, times[k], oa[k], ta[k])
 			_pose(b, times[k], ob[k], tb[k])
@@ -153,6 +159,9 @@ func _part(a: Array, b: Array, times: Array, oa: Array, ob: Array, ta: Array, tb
 func _smooth_v(o: Array) -> Array:
 	var out := []
 	for k in o.size():
+		if k < FROM:
+			out.append(o[k])
+			continue
 		var s := Vector3.ZERO
 		var w := 0.0
 		for j in range(maxi(0, k - 5), mini(o.size(), k + 6)):
