@@ -23,5 +23,7 @@ from about 2007. Reference only, never committed.
   of the other grounds.
 - **Turf edge or fence.** 189 m long is more than today's published 160 x 130 m (undated, and the field was later
   re-sized). Whether the 1990s fence sat on this turf edge needs a period photo.
-- **Stands and heights.** Not measured yet. The 1990s stands are gone; the aerials are near-vertical and morning,
-  so shadows on the turf are the first thing to try, then period photos.
+- **Stands and heights.** Not measured. The 1990s stands are gone. In the 2000-2005 frames their shadows fall
+  west, away from the turf, onto ground behind them, and are 10-15 px (3-4.5 m) long on soft images with no tall
+  pole to fix the sun's direction or the photo's lean, so a shadow height would carry 1-2 m of error. Heights wait for
+  period photos (requested). The stands' plan outlines are clear in the 1 Feb 2001 frame and will be traced for the model.
