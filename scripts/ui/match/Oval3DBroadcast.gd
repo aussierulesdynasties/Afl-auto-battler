@@ -551,6 +551,8 @@ func skip_replay() -> void:
 func _cut_live() -> void:
 	replaying = false
 	_replay = []
+	for f in oval.umpires:
+		Oval3DGoalUmpire.in_replay(oval, f, false)
 	# Off the live picture for the replay: the umpires go to where the live play has them now
 	# (the field umpire on his mark for the centre bounce the play held for).
 	oval.umpires_after_cut()
@@ -590,6 +592,9 @@ func _play_replay(wall: float) -> void:
 		for b in range(q0.size()):
 			skel.set_bone_pose_rotation(b, (q0[b] as Quaternion).slerp(q1[b], u))
 		skel.set_bone_pose_position(0, (m0[2] as Vector3).lerp(m1[2], u))
+	for f in oval.umpires:
+		# A goal umpire's flags back where they were kept before the score (Oval3DGoalUmpire).
+		Oval3DGoalUmpire.in_replay(oval, f, true)
 	oval.ball.transform = (r0["ball"] as Transform3D).interpolate_with(r1["ball"], u)
 	_replay_shot(wall)
 

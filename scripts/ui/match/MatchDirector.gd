@@ -450,7 +450,19 @@ func stoppage_now() -> Dictionary:
 			return {"kind": "bounce" if t == "bounce" else "throwup", "at": p["at"], "in": left,
 					"sure": j <= _pi + 1}
 		if t == "pack" and kind == "throwin":
-			return {"kind": "throwin", "at": p.get("line", p["at"]), "in": INF}
+			# `in`: seconds until the pack is done and the ball goes in, as _done will judge it:
+			# its least wait once the pack has formed ("sure"), its longest before then.
+			# `soonest`: the least it can be (the pack's least wait).
+			var tin := INF
+			var soonest := INF
+			var sure := false
+			if j == _pi:
+				tin = maxf(float(p["max"]) - _pt, 0.0)
+				soonest = maxf(float(p["min"]) - _pt, 0.0)
+				if _throwin_formed(p):
+					tin = soonest
+					sure = true
+			return {"kind": "throwin", "at": p.get("line", p["at"]), "in": tin, "soonest": soonest, "sure": sure}
 	# A goal kicked, or a quarter's break: a centre bounce comes next, and the umpires head
 	# back for it as the players celebrate or rest.
 	if kind == "quarter" or (kind == "goal" and _phases.slice(0, _pi + 1).any(
@@ -477,6 +489,15 @@ func _setup_left(p: Dictionary) -> float:
 	var slow := float(etas[etas.size() - 1 - SETUP_STRAGGLERS]) if etas.size() > SETUP_STRAGGLERS else 0.0
 	var cap := maxf(0.0, float(p["max"]) - _pt)
 	return minf(maxf(maxf(0.0, float(p["min"]) - _pt), slow), cap)
+
+
+## A throw-in's pack (no ring of spots) formed, by _done's own count. Read-only.
+func _throwin_formed(p: Dictionary) -> bool:
+	var n := 0
+	for id in p["members"]:
+		if (tokens[id]["pos"] as Vector2).distance_to(p["at"]) < 5.0:
+			n += 1
+	return n >= mini(int(p.get("need", 4)), (p["members"] as Array).size())
 
 
 ## The ball-up being set right now, for the TV picture (rule 2.103: a close-up on each ruckman
