@@ -116,5 +116,8 @@ Measuring from imagery is allowed; raw imagery is never committed or baked into 
   The Great Southern Stand's roof back edge was too far out: by 1.6-4.4 m at 95-115 degrees and up
   to 7 m at 125-140 degrees (Google Earth shows the 36 m roof ending there, with a 24-30 m deck behind
   it). `roof_outer` corrected from 65 to 222 degrees (each point within about 1.5 m). Bearings on a
-  truss line are left out (the masts read as roof). Still to look at: the two ends of the northern
-  stand read 46 m in Google Earth (60 and 235-240 degrees) against 38-44 m in the model.
+  truss line are left out (the masts read as roof). A second sweep (2.5 degrees, 2.5 m steps) over the
+  northern stand's ends found raised end roofs 46 m above the turf, 55-67.5 and 235-247.5 degrees,
+  front edge 107-111 m and back edge about 127 m from the centre; the model had a ramp from 43 m down
+  to 35 m there. `roof_h`, `roof_inner`, `roof_outer` and `roof_edge` now carry them (steps placed
+  half-way between samples, so to about 1.25 degrees and 1.25 m).
