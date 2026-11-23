@@ -337,6 +337,9 @@ jobs:
 
       - name: Cache Godot
         id: godot-cache
+        # GitHub's runners only: the cache stores ~/godot relative to the workspace, which puts it
+        # in the wrong folder on a PC runner. A PC runner keeps its own ~/godot between jobs.
+        if: runner.environment == 'github-hosted'
         uses: actions/cache@v4
         with:
           path: ~/godot
@@ -345,14 +348,19 @@ jobs:
       - name: Download Godot ${{ env.GODOT_VERSION }}
         if: steps.godot-cache.outputs.cache-hit != 'true'
         run: |
-          mkdir -p ~/godot && cd ~/godot
+          if [ -x ~/godot/godot ] && [ "$(cat ~/godot/VERSION 2>/dev/null)" = "$GODOT_VERSION" ]; then
+            echo "Godot $GODOT_VERSION is already on this runner"; exit 0
+          fi
+          tmp=$(mktemp -d) && cd "$tmp"
           name="Godot_v${GODOT_VERSION}-stable_linux.x86_64"
           curl -fsSL --retry 3 -o godot.zip \
             "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/${name}.zip" \
           || curl -fsSL --retry 3 -o godot.zip \
             "https://downloads.godotengine.org/?version=${GODOT_VERSION}&flavor=stable&slug=linux.x86_64.zip&platform=linux.64"
-          unzip -q godot.zip && rm godot.zip
-          mv "${name}" godot && chmod +x godot
+          unzip -q godot.zip && chmod +x "${name}"
+          # A rename, so PC runners sharing ~/godot never see a half-written file.
+          mkdir -p ~/godot && mv "${name}" ~/godot/godot.$$ && mv -f ~/godot/godot.$$ ~/godot/godot
+          echo "$GODOT_VERSION" > ~/godot/VERSION && cd / && rm -rf "$tmp"
 
       # Every test runner must compile, and its load must not hang, before the
       # shards start: a runner naming a class whose load chain reaches an autoload
@@ -381,6 +389,9 @@ jobs:
 
       - name: Cache Godot
         id: godot-cache
+        # GitHub's runners only: the cache stores ~/godot relative to the workspace, which puts it
+        # in the wrong folder on a PC runner. A PC runner keeps its own ~/godot between jobs.
+        if: runner.environment == 'github-hosted'
         uses: actions/cache@v4
         with:
           path: ~/godot
@@ -389,14 +400,19 @@ jobs:
       - name: Download Godot ${{ env.GODOT_VERSION }}
         if: steps.godot-cache.outputs.cache-hit != 'true'
         run: |
-          mkdir -p ~/godot && cd ~/godot
+          if [ -x ~/godot/godot ] && [ "$(cat ~/godot/VERSION 2>/dev/null)" = "$GODOT_VERSION" ]; then
+            echo "Godot $GODOT_VERSION is already on this runner"; exit 0
+          fi
+          tmp=$(mktemp -d) && cd "$tmp"
           name="Godot_v${GODOT_VERSION}-stable_linux.x86_64"
           curl -fsSL --retry 3 -o godot.zip \
             "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/${name}.zip" \
           || curl -fsSL --retry 3 -o godot.zip \
             "https://downloads.godotengine.org/?version=${GODOT_VERSION}&flavor=stable&slug=linux.x86_64.zip&platform=linux.64"
-          unzip -q godot.zip && rm godot.zip
-          mv "${name}" godot && chmod +x godot
+          unzip -q godot.zip && chmod +x "${name}"
+          # A rename, so PC runners sharing ~/godot never see a half-written file.
+          mkdir -p ~/godot && mv "${name}" ~/godot/godot.$$ && mv -f ~/godot/godot.$$ ~/godot/godot
+          echo "$GODOT_VERSION" > ~/godot/VERSION && cd / && rm -rf "$tmp"
 
       - name: Run the suites in this shard
         env:
@@ -479,6 +495,9 @@ jobs:
 
       - name: Cache Godot
         id: godot-cache
+        # GitHub's runners only: the cache stores ~/godot relative to the workspace, which puts it
+        # in the wrong folder on a PC runner. A PC runner keeps its own ~/godot between jobs.
+        if: runner.environment == 'github-hosted'
         uses: actions/cache@v4
         with:
           path: ~/godot
@@ -487,14 +506,19 @@ jobs:
       - name: Download Godot ${{ env.GODOT_VERSION }}
         if: steps.godot-cache.outputs.cache-hit != 'true'
         run: |
-          mkdir -p ~/godot && cd ~/godot
+          if [ -x ~/godot/godot ] && [ "$(cat ~/godot/VERSION 2>/dev/null)" = "$GODOT_VERSION" ]; then
+            echo "Godot $GODOT_VERSION is already on this runner"; exit 0
+          fi
+          tmp=$(mktemp -d) && cd "$tmp"
           name="Godot_v${GODOT_VERSION}-stable_linux.x86_64"
           curl -fsSL --retry 3 -o godot.zip \
             "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/${name}.zip" \
           || curl -fsSL --retry 3 -o godot.zip \
             "https://downloads.godotengine.org/?version=${GODOT_VERSION}&flavor=stable&slug=linux.x86_64.zip&platform=linux.64"
-          unzip -q godot.zip && rm godot.zip
-          mv "${name}" godot && chmod +x godot
+          unzip -q godot.zip && chmod +x "${name}"
+          # A rename, so PC runners sharing ~/godot never see a half-written file.
+          mkdir -p ~/godot && mv "${name}" ~/godot/godot.$$ && mv -f ~/godot/godot.$$ ~/godot/godot
+          echo "$GODOT_VERSION" > ~/godot/VERSION && cd / && rm -rf "$tmp"
 
       - name: Run the dataset, export and harness checks
         run: SKIP_STATIC=1 SKIP_VERSION_CHECK=1 EXTRAS_ONLY=1 GODOT="$HOME/godot/godot" LOG_DIR="$RUNNER_TEMP/test-logs" tools/run_tests.sh
