@@ -315,8 +315,35 @@ def main():
     t.astype("<f4").tofile(os.path.join(OUT, "trees.bin"))
     b = building_list(ways, in_foot)
     b = np.concatenate([b, ms_buildings(ways, in_foot, sea)]).astype("<f4")
+    b, rgb = from_google_earth(b)
     b.tofile(os.path.join(OUT, "buildings.bin"))
+    rgb.tofile(os.path.join(OUT, "roofs.bin"))
     print("surrounds.webp", im.size, "trees", len(t), "building floats", len(b), "sea px", int(sea.sum()))
+
+
+def from_google_earth(buf):
+    """Each building as Google Earth shows it (houses_ge.py, houses_ge.json): its roof's own colour (roofs.bin,
+    linear RGB, one triple a building; a building the shots missed takes the median of the measured roofs), a
+    gable where its roof is one (height -100 - eave: GroundModels._add_buildings), and a house's eave height
+    where Google Earth's heights were read (heights/read.py: one storey 2.7 m, two 5.6 m, within 450 m)."""
+    import houses_ge as H
+    got = json.load(open(os.path.join(HERE, "houses_ge.json")))
+    med = np.median([e["rgb"] for e in got.values()], axis=0)
+    out = buf.copy()
+    rgb = []
+    i = 0
+    while i + 1 < len(out):
+        n = int(out[i])
+        pts = out[i + 2:i + 2 + 2 * n].reshape(-1, 2).astype(float)
+        e = got.get(H.key(pts), {})
+        rgb += list(e.get("rgb", med))
+        if out[i + 1] < 0:
+            eave = -float(out[i + 1])
+            if "eave" in e:
+                eave = float(e["eave"])
+            out[i + 1] = -eave - (100.0 if e.get("kind") == "gable" else 0.0)
+        i += 2 + 2 * n
+    return out, np.array(rgb, "<f4")
 
 
 def building_list(ways, in_foot):
