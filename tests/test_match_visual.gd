@@ -4044,7 +4044,7 @@ func _test_frees_and_subs(res: Dictionary) -> void:
 	var cur := -1
 	var best := INF
 	var held := 0.0
-	var seen := {}            # leaver figure -> [slot, director time it left, gap it ran on with]
+	var seen := {}            # leaver figure -> [slot, director time it left, gap it ran on with, least gap since]
 	var off := 0              # men who reached the gate and were gone
 	var on := 0               # men coming on who were on their spot within 20 director seconds
 	var subs := 0
@@ -4079,19 +4079,21 @@ func _test_frees_and_subs(res: Dictionary) -> void:
 			var q: Dictionary = l["p"]
 			if not seen.has(q["node"]) or (seen[q["node"]] as Array).is_empty():
 				var i := int(l["slot"])
-				seen[q["node"]] = [i, d.time, (oval.anim._gap[i] as Vector2).length()]
+				seen[q["node"]] = [i, d.time, (oval.anim._gap[i] as Vector2).length(), INF]
 				subs += 1
 		for n in seen:
 			var s: Array = seen[n]
 			if s.is_empty():
 				continue
+			# His closest to his spot so far: once there, a later tackle's get-up may draw him off
+			# it again before the man going off is gone.
+			s[3] = minf(float(s[3]), (oval.anim._gap[int(s[0])] as Vector2).length())
 			var gone := not (n as Node3D).visible
 			if gone and not oval._leavers.any(func(l): return (l["p"] as Dictionary)["node"] == n):
 				var np: Vector3 = (n as Node3D).position
 				# (A cut away, the ends changing at a break, ends the interchange off screen.)
 				off += 1 if Vector2(np.x, np.z).distance_to(oval._gate()) < 1.0 or cut_now else 0
-				var g: float = (oval.anim._gap[int(s[0])] as Vector2).length()
-				on += 1 if float(s[2]) > 10.0 and g < 1.0 else 0
+				on += 1 if float(s[2]) > 10.0 and float(s[3]) < 1.0 else 0
 				seen[n] = []
 	# Men still on their way when the watch ends are not counted.
 	subs -= seen.values().filter(func(v): return not (v as Array).is_empty()).size()

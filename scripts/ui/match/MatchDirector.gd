@@ -2609,9 +2609,10 @@ func _enter(p: Dictionary) -> void:
 			var tpos: Vector2 = tokens[int(p["who"])]["pos"]
 			if p.get("run_in", false) and float(p["max"]) > 1.6 and ahead.dot(tpos - (vt["pos"] as Vector2)) > 0.0:
 				# ...and with the tackler goal side of him, the man he runs down does not stand
-				# waiting: he carries it on toward goal, into the tackle.
+				# waiting: he carries it on toward goal, into the tackle, at a jog (at a run he
+				# changed the scraps after it enough to cross a loose ball upright: suite match).
 				var into := (ahead.normalized() + (tpos - (vt["pos"] as Vector2)).normalized()).normalized()
-				MatchMotion.set_goal(vt, (vt["pos"] as Vector2) + into * 30.0, 0.5, true)
+				MatchMotion.set_goal(vt, (vt["pos"] as Vector2) + into * 30.0, 0.35, true)
 			else:
 				MatchMotion.set_goal(vt, vt["pos"], 0.2, true)
 			MatchMotion.set_goal(tokens[int(p["who"])], vt["pos"], 1.0, true)
