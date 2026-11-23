@@ -161,6 +161,8 @@ if spec.get('real') and os.path.exists(_S2F) and os.path.exists(os.path.join(HER
     print('far land from Sentinel-2', int(_in.sum()), 'vertices, gain', np.round(_gain, 6)); _S2ON = True
 _zr = np.round(ZF * 2) / 2; _vals, _cnt = np.unique(_zr[ZF < np.percentile(ZF, 60)], return_counts=True); ZSEA = float(_vals[np.argmax(_cnt)])
 if spec.get('inland_check', True) and name not in ('gmhba', 'mcg', 'traeger') and ZSEA + meta['base'] > 8.0: ZSEA = -meta['base']   # inland: the commonest low height is a plain, not the sea; the sea plane goes to real sea level
+if meta.get('sea_z') is not None and ZSEA + meta['base'] <= 8.0 and abs(ZSEA - meta['sea_z']) > 0.25:   # measured land: the sea is at its datum's zero
+    print('sea plane from the measured datum', meta['sea_z'], 'not the commonest low height', ZSEA); ZSEA = float(meta['sea_z'])
 WV = (np.abs(ZF - ZSEA) < 1.0) & (slope < 0.004)
 def _nb(M_, op):   # 4-neighbour erosion (all) / dilation (any), numpy only
     P_ = np.pad(M_, 1, constant_values=(op == 'all'))
