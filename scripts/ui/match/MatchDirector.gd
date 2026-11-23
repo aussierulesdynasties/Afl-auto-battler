@@ -76,6 +76,9 @@ const ZONE := {
 
 var events: Array = []
 var tokens: Array = []          # every token; ids index this array
+## Where the men lying in a tackle's take have a body part on the turf (the 3D view fills it each
+## frame, Oval3DAnim._lying; empty in the flat view): runners keep off them (MatchMotion.keep_off).
+var lying_spots := PackedVector2Array()
 var ball := {}
 ## Who is off the ground now, per side: [{num, pid, name}], from the result's
 ## opening bench (MatchSim.result "bench") and every interchange since. A player
@@ -598,8 +601,9 @@ func _tick(h: float) -> void:
 			t["vel"] = Vector2.ZERO
 			continue
 		MatchMotion.step(t, h)
-	MatchMotion.separate(tokens, h, lying)
+	MatchMotion.separate(tokens, h)
 	MatchMotion.hold_apart(tokens, from, _meant_now())
+	MatchMotion.keep_off(tokens, from, lying_spots, lying, h)
 	for i in range(tokens.size()):
 		MatchMotion.limit_step(tokens[i], from[i], h)
 	_update_ball(h)

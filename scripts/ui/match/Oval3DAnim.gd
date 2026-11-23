@@ -32,6 +32,12 @@ const TURN_AIR := 12.0          # rad/s with both feet off the turf
 ## The carrier looks where he runs, not at the ball in his hands.
 const LOOK := [["neck_01", 35.0, 20.0, 0.5], ["head", 45.0, 25.0, 1.0]]  # bone, yaw, pitch, influence
 const LOOK_FOLLOW := 8.0       # 1/s: how fast the eyes catch a moving ball
+## A man lying in a take is all of him on the turf, not only his hips: these bones, where
+## they are near the ground, are handed to the director so runners keep off him
+## (MatchDirector.lying_spots, MatchMotion.keep_off).
+const BODY_BONES := ["pelvis", "head", "hand_l", "hand_r", "calf_l", "calf_r", "foot_l", "foot_r"]
+const SIDESTEP := 6.0           # m/s: the fastest he is drawn stepping round a man lying down
+const LIE_HIGH := 0.7          # m: a bone lower than this is lying on the turf
 const BALL_R := 0.09          # m: the ball on the turf (Oval3D.BALL_R)
 
 ## Tackles (row 197). Each pair is one motion-capture take of two men, tackler and tacklee,
@@ -66,7 +72,8 @@ const SWING := 2.0             # rad/s, on their feet
 ## Down on the turf, between the contact and up_s, a slide reads as skating: it creeps.
 const SLIDE_DOWN := 3.0        # m/s
 const SWING_DOWN := 1.2        # rad/s
-const GO_IN := 0.4             # s
+const UP_EARLY := 0.6           # clip s: this short of up_s he is standing enough to go
+const GO_IN := 0.3             # s
 const FAR := 5.0               # m: his token this far from him = the play has moved on
 const MOVE_OFF := 0.3          # m/s: his token moving this fast = the play wants him (a take ends at up_s)
 const KNOCK_UP := 0.2           # s of a scoop's clip past the touch before a ball off his hands ends it
@@ -104,6 +111,7 @@ var _pairs := {}               # take name -> its tackle_pairs.json entry
 var _clock := 0.0              # s of animation time
 var _rig := Transform3D()      # a figure's node -> its skeleton
 var _pelvis := -1
+var _body := PackedInt32Array()  # BODY_BONES' indices
 var _hips := {}                # animation name -> [pelvis position track, rotation track]
 var _in: Array = []            # per player: the pair he is in, {} for none
 var _blend: Array = []         # per player: the pose he is easing out of, {} for none
@@ -150,6 +158,10 @@ func _init(p_director: MatchDirector, p_players: Array) -> void:
 		var p: Dictionary = players[0]
 		var skel: Skeleton3D = p["skel"]
 		_pelvis = skel.find_bone("pelvis")
+		for b in BODY_BONES:
+			var bi := skel.find_bone(b)
+			if bi >= 0:
+				_body.append(bi)
 		var n: Node = skel
 		while n != null and n != p["node"]:
 			_rig = (n as Node3D).transform * _rig
@@ -289,6 +301,7 @@ func _add_look(p: Dictionary) -> void:
 ## clip starts now), and every running pair's clip time.
 func frame(dt: float) -> void:
 	_clock += dt
+	director.lying_spots.clear()
 	var ahead := director.tackle_ahead()
 	if not ahead.is_empty() and not _pairs.is_empty():
 		var who := int(ahead["who"])
@@ -408,6 +421,7 @@ func _follow(pr: Dictionary, dt: float) -> void:
 			continue
 		if float(pr["c"]) >= float(pr["cs"]) and not director._on_feet(i):
 			director.tokens[i]["pos"] = _drawn(i)
+			_lying(i)
 		else:
 			free.append(i)
 	if free.size() == 2:
@@ -430,6 +444,34 @@ func _follow(pr: Dictionary, dt: float) -> void:
 		var mv := (err / free.size() * (1.0 - exp(-dt / FOLLOW_S))).limit_length(slide * dt)
 		adj.origin += Vector3(mv.x, 0.0, mv.y)
 	pr["adj"] = adj
+
+
+## He is drawn round a man lying in a take, never through him: his token keeps off the body
+## (MatchMotion.keep_off), but where he is drawn off his token (back from a tackle, the
+## draw-apart) he could still run over it. He sidesteps at SIDESTEP at most.
+func _step_round(i: int, pos: Vector2, dt: float) -> void:
+	if director.lying_spots.is_empty():
+		return
+	var here: Vector2 = pos + (_gap[i] as Vector2)
+	var want := here
+	for sp in director.lying_spots:
+		var d := want - sp
+		if d.length() < MatchMotion.LIE_CLEAR:
+			var out := d.normalized() if d.length() > 0.001 else Vector2.RIGHT.rotated(float(i))
+			want = sp + out * MatchMotion.LIE_CLEAR
+	if want != here:
+		_gap[i] = (_gap[i] as Vector2) + (want - here).limit_length(SIDESTEP * maxf(dt, 1.0 / 60.0))
+
+
+## Hand the director the parts of man i that lie on the turf.
+func _lying(i: int) -> void:
+	var p: Dictionary = players[i]
+	var skel: Skeleton3D = p["skel"]
+	var to := (p["node"] as Node3D).transform * _rig
+	for bi in _body:
+		var at := to * skel.get_bone_global_pose(bi).origin
+		if at.y < LIE_HIGH:
+			director.lying_spots.append(Vector2(at.x, at.z))
 
 
 func _count_in(pr: Dictionary) -> int:
@@ -566,6 +608,8 @@ func step(i: int, p: Dictionary, holder: int, pos: Vector2, vel: Vector2, dt: fl
 		var back := clampf(2.0 * gap.length(), GAP_CLOSE, GAP_MAX)
 		_gap[i] = gap - gap.limit_length(back * dt)
 		_round(i, pos, gap, back * dt)
+	_step_round(i, pos, dt)
+	if gap != Vector2.ZERO or _gap[i] != Vector2.ZERO:
 		node.position = Vector3(pos.x + (_gap[i] as Vector2).x, 0.0, pos.y + (_gap[i] as Vector2).y)
 	if not o.is_empty():
 		# The clip carries him from where the scoop began (its own run): his token runs the
@@ -698,7 +742,15 @@ func _step_pair(i: int, p: Dictionary, dt: float, vel := Vector2.ZERO) -> void:
 	(p["ring"] as Node3D).position = Vector3(hips.origin.x, 0.03, hips.origin.z)
 	# Up off the ground (the pair's up_s), he goes as soon as the play wants him: the rest of
 	# the clip is the two of them standing (MatchDirector.TAKE_UP lets him move from then).
-	if float(pr["c"]) >= float(pr["len"]) or (float(pr["c"]) >= float(pr["up"]) and vel.length() > MOVE_OFF):
+	# Nearly up, with the director already sending him (MatchDirector.TAKE_UP passed), he goes
+	# now rather than finishing the clip while his man runs off (3D bug bash: 4 m behind in
+	# ball-up packs).
+	var up := float(pr["up"])
+	if not director._on_feet(i):
+		up = INF
+	elif float(pr["c"]) >= float(pr["cs"]):
+		up -= UP_EARLY
+	if float(pr["c"]) >= float(pr["len"]) or (float(pr["c"]) >= minf(up, float(pr["up"])) and vel.length() > MOVE_OFF):
 		_leave(i)
 
 

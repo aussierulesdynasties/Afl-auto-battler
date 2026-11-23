@@ -114,6 +114,7 @@ const WALK := 2.5
 ## Contact that is meant (a tackle, a smother, a pack, a ruck contest, a
 ## marking contest) is left to happen: the director names those bodies, which
 ## do not avoid each other and may close to TOUCH.
+const LIE_CLEAR := 0.6        # m: a standing man's hips this far from any part of a man lying down
 const BODY := 0.75           # hip to hip at contact: about one body wide
 const TOUCH := 0.45          # ...and when the play means them to touch: chest to chest, never one body inside another
 const AVOID_K := 1.5         # the power law's scale (Karamouzas et al.: 1.5)
@@ -210,10 +211,7 @@ static func step(t: Dictionary, dt: float) -> void:
 ## Ease overlapping bodies apart over `dt` seconds (positions only, half each
 ## way): each body moves at most WALK * dt, so a pile parts at a walk and
 ## never jumps.
-## `fixed` (token index -> true): men down in a tackle's take. The take has their bodies
-## where they lie, so a man crowding one gets the whole push himself (3D bug bash,
-## 2026-11-23: a pack at a tackled free shoved the tackler 2 m off the take).
-static func separate(tokens: Array, dt: float, fixed: Dictionary = {}) -> void:
+static func separate(tokens: Array, dt: float) -> void:
 	var n := tokens.size()
 	var pos := PackedVector2Array()
 	pos.resize(n)
@@ -233,18 +231,9 @@ static func separate(tokens: Array, dt: float, fixed: Dictionary = {}) -> void:
 				continue
 			# Two on the very same spot part along a line of their own.
 			var u := d / l if l > 0.001 else Vector2.RIGHT.rotated(float(i * 7 + j))
-			var fi := fixed.has(i)
-			var fj := fixed.has(j)
-			if fi and fj:
-				continue
-			var gap := u * (MIN_SEP - l)
-			if fi:
-				push[j] += gap
-			elif fj:
-				push[i] -= gap
-			else:
-				push[i] -= gap * 0.5
-				push[j] += gap * 0.5
+			var half := u * (MIN_SEP - l) * 0.5
+			push[i] -= half
+			push[j] += half
 			any = true
 	if not any:
 		return
@@ -322,6 +311,45 @@ static func avoid(tokens: Array, meant: Dictionary = {}) -> void:
 	for i in range(n):
 		var t: Dictionary = tokens[i]
 		t["avoid"] = Vector2.ZERO if float(t["down"]) > 0.0 else force[i].limit_length(AVOID_MAX)
+
+
+## Keep standing men off the bodies lying on the turf (`spots`, the parts of men down in a
+## tackle's take; `lying` their token indices, skipped). A move that closes on a spot inside
+## LIE_CLEAR gives back its closing part (he goes round, as in hold_apart), and a man already
+## inside is eased out at a walk (as in separate). Moves only shrink but for that walk.
+static func keep_off(tokens: Array, from: Array, spots: PackedVector2Array, lying: Dictionary, dt: float) -> void:
+	if spots.is_empty():
+		return
+	for i in range(tokens.size()):
+		if lying.has(i):
+			continue
+		var p: Vector2 = tokens[i]["pos"]
+		var f: Vector2 = from[i]
+		var moved := false
+		for s in spots:
+			var d := p - s
+			if absf(d.x) >= LIE_CLEAR + 1.0 or absf(d.y) >= LIE_CLEAR + 1.0:
+				continue
+			if d.length() >= LIE_CLEAR:
+				continue
+			var u := f - s
+			if u.length() < 0.001:
+				u = d if d.length() > 0.001 else Vector2.RIGHT.rotated(float(i))
+			u = u.normalized()
+			var m := p - f
+			var inward := m.dot(u)
+			if inward < 0.0:
+				p = f + m - u * inward
+				moved = true
+		for s in spots:
+			var d := p - s
+			var l := d.length()
+			if l < LIE_CLEAR:
+				var out := d / l if l > 0.001 else Vector2.RIGHT.rotated(float(i))
+				p += out * minf(LIE_CLEAR - l, WALK * dt)
+				moved = true
+		if moved:
+			tokens[i]["pos"] = p
 
 
 ## The contact limit: after a step, two bodies that closed inside BODY of each
