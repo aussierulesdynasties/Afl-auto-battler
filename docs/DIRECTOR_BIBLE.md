@@ -399,6 +399,8 @@ Source tags: DB = DESIGN_BIBLE; RM26/27/28/29/30/32 = roadmap chapters 26, 27, 2
 
 **2.113** After a mark in general play the picture stays on the main camera (2026-11-21; row 202, 2e). Real coverage usually cuts to a tight close-up of the man who marked while he decides (ABC News, 11 Jul 2020), a shot coaches criticise because it hides his options. Shown the same Fremantle v St Kilda marks at Optus Stadium in the game's match view at 4x and 1x (A stay on the main camera; B about 8 m around the man who marked while he holds the ball, back to the main camera as he plays on: 0.9 s at 1x, a quarter of a second at 4x), he chose "A: Stay on the main camera".
 
+**2.114** The 3D picture is drawn in real broadcast colour (2026-11-22; row 202). The MCG close-up QA found open grass from the TV camera at about RGB (2, 49, 4), against about (70, 120, 40) on a real broadcast. The cause was not rule 2.81's tone: the turf and blade shaders turned the grass colour to linear twice, which took the red out, and twilight and night also carried a blue-green cast (a grey card on the turf read (187, 188, 203) and (77, 90, 94)). Shown the TV main camera and a close-up at the MCG, Optus Stadium and Marvel Stadium by day, twilight and night, today's look against the broadcast colour (the turf's colour read once and warmed toward broadcast green, a camera white balance for each time of day calibrated on a grey card, the sky's light keeping half its colour so shaded turf stays green, night exposure trimmed so night grass sits near day's), he chose "Switch to broadcast colour". Rule 2.81's AgX tone and grade stay; the broadcast colour sits under them (Oval3DTurf.broadcast, tools/visual/capture_tv_colour.gd).
+
 ---
 
 ## 2.S Superseded and cut
