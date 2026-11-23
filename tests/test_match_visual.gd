@@ -3145,7 +3145,7 @@ func _check_turf3d(oval: Oval3D) -> void:
 				and turf.env.tonemap_exposure >= 1.0,
 				"%s %s: the turf is green and the weather's sheen is set (%s, wet %.0f)" % [look[1], look[0], str(g), wet])
 	# Rule 2.114: the broadcast colour, the turf's colour read once and the film's white balance.
-	var film_ok := turf.film == null or turf.film.get_shader_parameter("balance") == Oval3DTurf.BALANCE[VignetteKickoff.NIGHT]
+	var film_ok: bool = turf.film == null or turf.film.get_shader_parameter("balance") == Oval3DTurf.BALANCE[VignetteKickoff.NIGHT]
 	_check(turf.broadcast == 1.0 and float(turf.mat.get_shader_parameter("true_colour")) == 1.0 and film_ok,
 			"The 3D picture is in broadcast colour: turf colour read once, the night's white balance on the film")
 	turf.apply("", VignetteKickoff.DAY)
@@ -3336,7 +3336,15 @@ func _test_three_d_cameras(res: Dictionary) -> void:
 	var inside := 0
 	var wide := 0.0
 	var vs := Vector2(pv._vp3d.size)
-	var tv_w := 57.0 * 9.0 / 16.0 * vs.x / vs.y  # 16:9 TV's top and bottom on the taller picture
+	var tv_k := 9.0 / 16.0 * vs.x / vs.y  # a 16:9 TV picture's top and bottom on the taller picture
+	var tv_w := Oval3DBroadcast.TV_TIGHT * tv_k  # ...at its tightest
+	var tight_sum := 0.0  # the TV picture's width at ball-ups and in open play
+	var tight_n := 0
+	var open_sum := 0.0
+	var open_n := 0
+	var lead_ok := 0  # frames a carried or kicked ball is ahead of the picture's middle, or on it
+	var lead_n := 0
+	var was_close := false
 	var at_tv := 0
 	var at_wide := 0
 	var wide_long := 0  # wide-shot frames on a kick of 40 m or more (fully wide just after it lands)
@@ -3393,6 +3401,8 @@ func _test_three_d_cameras(res: Dictionary) -> void:
 		was_replay = tv.replaying
 		if tv.replaying:
 			continue
+		var from_close := was_close and tv._close_who < 0
+		was_close = tv._close_who >= 0
 		if tv._close_who >= 0:
 			close_frames += 1
 			if not closes.has(tv._close_who):
@@ -3432,8 +3442,23 @@ func _test_three_d_cameras(res: Dictionary) -> void:
 		var d := cam.global_position.distance_to(Vector3(look.x, Oval3DBroadcast.AIM_Y, look.z))
 		var w := 2.0 * d * tan(deg_to_rad(cam.fov) * 0.5)
 		wide = maxf(wide, maxf(tv_w - w, w - 57.0))
-		if absf(w - tv_w) < 0.5:
-			at_tv += 1
+		if tv._zoom <= 0.0:
+			if absf(w - tv.tv_width * tv_k) < 0.5:
+				at_tv += 1
+			if from_close:  # back from the ruckmen's close-ups for the throw
+				tight_sum += tv.tv_width
+				tight_n += 1
+			else:
+				if str(pv.director.ball["mode"]) in ["carry", "held"]:
+					open_sum += tv.tv_width
+					open_n += 1
+				var bv := tv._lead(bp, tv.tv_width)
+				tv._ball_trail.pop_back()
+				if bv.length() > 2.0:
+					lead_n += 1
+					var centre := cam.unproject_position(oval._world(oval._look) + Vector3(0.0, Oval3DBroadcast.AIM_Y, 0.0))
+					var bx := cam.unproject_position(bp + bv) - at
+					lead_ok += 1 if (at - centre).dot(bx) <= 0.0 else 0
 		elif absf(w - 57.0) < 0.5:
 			at_wide += 1
 			var ph: Array = pv.director._phases
@@ -3445,7 +3470,13 @@ func _test_three_d_cameras(res: Dictionary) -> void:
 			"The main camera keeps the ball in the picture (%d of %d frames; out: %s)" % [inside, frames, outs])
 	_check(wide < 0.5, "The main camera stays on its mount, %.0f to 57 m across where it aims (off by %.2f m)" % [tv_w, wide])
 	_check(at_tv > frames / 2 and at_wide > 0 and wide_long > 0 and wide_bounce > 0,
-			"Rule 2.111: mostly at TV's height (%.0f m across: %d of %d frames), wide (57 m) on long kicks (%d) and the walk back to a centre bounce (%d)" % [tv_w, at_tv, frames, wide_long, wide_bounce])
+			"Rule 2.111: mostly at TV's height (%d of %d frames), wide (57 m) on long kicks (%d) and the walk back to a centre bounce (%d)" % [at_tv, frames, wide_long, wide_bounce])
+	var tight := tight_sum / maxf(1.0, tight_n)
+	var open := open_sum / maxf(1.0, open_n)
+	_check(tight_n > 0 and open_n > 0 and tight <= 36.0 and open >= tight + 4.0,
+			"As on real TV (19-42 m across at a contest, to about 60 in open play), tight at a ball-up's throw (%.0f m across the TV picture) and wider in open play (%.0f m)" % [tight, open])
+	_check(lead_n > 50 and lead_ok >= lead_n * 0.6,
+			"The aim leads the ball: it sits behind the picture's middle, open grass ahead of it (%d of %d frames)" % [lead_ok, lead_n])
 	_check(cuts > 0 and shot_ok == cuts and back >= cuts - 1,
 			"Set shots cut live to the camera behind the goals and back (%d cuts, %d set shots, %d back)" % [cuts, shot_ok, back])
 	_check(cut_ks.size() == cuts,
