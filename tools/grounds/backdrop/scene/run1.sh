@@ -19,5 +19,5 @@ rm -f out/$g/scene.blend; $P scene.py -- spec/$g.json 2>&1 | grep -vE "unregiste
 ls -la out/$g/
 Y=$($P -c "import json;print(json.load(open('spec/$g.json'))['yaw'])")
 mkdir -p $WORK/bd/$g
-BG_KEEP_TREES=${BG_REAL:+1} BG_HULL_SKIP=${HULL_SKIP:-$(case $g in blacktown) echo detail,fence,roofs,seat,stands,towers,concourse_far;; *) echo $SKIP | tr ' ' ',';; esac)} BG_YAW=$Y BG_BUDGET=${BG_BUDGET:-$(case $g in ikon_park|whitten|windy_hill|moorabbin) echo 1600000;; *) echo 800000;; esac)} BG_VARIANTS=2 BG_SLICE=120000 $P $REPO/tools/grounds/backdrop/reduce.py -- out/$g/scene.blend $WORK/bd/$g/${g}_backdrop.glb ${TEX:-4096} ${NEAR_R:-350} ${MID_KEEP:-0.4} ${FAR_KEEP:-0.15} > $WORK/bd/$g/reduce.log 2>&1
+BG_KEEP_TREES=${BG_REAL:+1} BG_HULL_SKIP=${HULL_SKIP:-$(case $g in blacktown) echo detail,fence,roofs,seat,stands,towers,concourse_far;; *) echo $SKIP | tr ' ' ',';; esac)} BG_YAW=$Y BG_BUDGET=${BG_BUDGET:-$([ -n "$BG_REAL" ] && echo 1600000 || echo 800000)} BG_VARIANTS=2 BG_SLICE=120000 $P $REPO/tools/grounds/backdrop/reduce.py -- out/$g/scene.blend $WORK/bd/$g/${g}_backdrop.glb ${TEX:-4096} ${NEAR_R:-350} ${MID_KEEP:-0.4} ${FAR_KEEP:-0.15} > $WORK/bd/$g/reduce.log 2>&1
 tail -3 $WORK/bd/$g/reduce.log; ls -la $WORK/bd/$g

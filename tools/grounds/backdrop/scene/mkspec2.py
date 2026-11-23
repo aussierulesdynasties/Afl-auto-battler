@@ -17,6 +17,9 @@ if os.environ.get('BG_REAL'):   # building sites: bare sand or fill, coloured fr
     s['cover'] = [[k, v.replace('|construction', ''), c] if k == 'landuse' else [k, v, c] for k, v, c in s['cover']] + [['landuse', 'construction', 'park_dry']]   # race and trotting tracks: their own patch, coloured from the aerial
 # real place: how far out the city's towers (30 m and up, Overture) still stand on the skyline; the CBD is in view from these
 s['city_r_m'] = {'ikon_park': 5500, 'whitten': 8000, 'windy_hill': 8500}.get(g, 4000)
+# real place among mountains (kunanyi over Hobart, the Brindabellas, the Adelaide Hills, Wellington's ridges): the far
+# land on an 80 m grid, not 250 m, so a ridge keeps its real line instead of sawtooth facets (reduce.py thins it by shape)
+if os.environ.get('BG_REAL') and g in ('north_hobart', 'macpoint', 'bruce', 'summit', 'sky', 'bellerive', 'york_park', 'manuka'): s['far_step_m'] = 80
 if os.environ.get('BG_REAL'): s['tree_lod_m'] = [300.0, 700.0]   # real place: every crown kept, simpler sooner
 if os.environ.get('BG_REAL'): s['real'] = True   # real place: aerial colours, Sentinel-2, canopy, Overture heights (real.py)
 _lmj = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'real_lm.json')
