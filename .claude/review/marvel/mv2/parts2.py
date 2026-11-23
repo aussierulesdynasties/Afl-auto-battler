@@ -200,7 +200,9 @@ def cl(z):return np.minimum(z,RU-0.4) if np.ndim(z) else np.minimum(np.full(K,z)
 prof=[(-4,ZP),(-4,13.2),(0,13.2),(0,14.3),(-0.6,14.3),(-0.6,21.4),(0,21.4),(0,24.9),(-0.4,24.9),(-0.4,26.3),(0,26.3),(0,27.7),
       (-3,27.7),(-3,33.9),(0,33.9),(0,36.5),(-5,36.5),(-5,None)]
 mats=['glass','soffit','silver','soffit',segm('curtain','curtain'),'soffit','silver','soffit','glass','soffit','silver','soffit',
-      'glass','soffit','silver','silver','upperwall']  # the band over the braces up to the roof: dark blue (Google Earth c_ne)
+      'glass','soffit','silver','concrete','upperwall']  # the band over the braces up to the roof: dark blue (Google Earth c_ne)
+# round 12 (PC check of round 11, top view): the 5 m ledge on top of the bowl's wall at 36.5 m was metallic silver, which
+# mirrored the sky and read as a long dark-blue block from above on the west; Google Earth shows grey concourse roofs
 rings=[ring(o,RU if z is None else cl(z)) for o,z in prof]
 loft('bowl_wall',rings,mats)
 # white round columns in front of the shopfront, one every 8 m of perimeter (none behind the west podium)
@@ -442,21 +444,26 @@ def vent_block(nm,f,z0,z1,zb0,zb1,bay=7.0,pier=1.6,depth=0.45,wall='bluepanel',t
             t0=j*(w+pier);c0=a+d*t0;c1=a+d*(t0+pier)
             q4=[tuple(c0),tuple(c1),tuple(c1-out*depth),tuple(c0-out*depth)]
             prism(nm+'_pier%d_%d'%(i,j),q4,zb0,zb1,wall,wall)
-def office_box(nm,q,z0=9.0,z1=24.0,storey=3.75):
+def office_box(nm,q,z0=9.5,z1=24.0,storey=4.83):
+    # round 12 (Google Earth offices_e close up, measured): glass box 1.5 times the open storey under it, so 14.5 m of glass
+    # over 9.5 m pilotis; a white plant storey sits on top, set back (below)
     # modelled, not painted: an open ground floor (slim round columns every 7.5 m on the outer line, the
     # glazed lobby wall set 2.5 m back under the box's soffit); above, the glazing set 0.35 m back behind a
     # proud pale spandrel band at the foot of every storey and a parapet, with slim pale fins every 0.75 m
     f=lean(q,z1);P=Polygon(f)
-    core=list(P.buffer(-0.35,join_style=2).exterior.coords)[:-1];lobby=list(P.buffer(-2.5,join_style=2).exterior.coords)[:-1]
-    prism(nm+'_lobby',lobby,0.0,z0,'shopglass','concrete')
+    core=list(P.buffer(-0.35,join_style=2).exterior.coords)[:-1];lobby=list(P.buffer(-4.0,join_style=2).exterior.coords)[:-1]
+    # round 12 (Google Earth c_e, PC check of round 11): under each box a dark void between thin pilotis, not a lit
+    # shopfront; the lobby wall sits 4 m back in the soffit's shadow, dark grey-navy
+    prism(nm+'_lobby',lobby,0.0,z0,'upperwall','concrete')
     # its glass dark blue-grey (round 8, measured with the sun where Google Earth's was; round 3's light grey chased the shade)
     prism(nm,core,z0,z1-0.8,'officeglass','concrete',bottom='concrete')
-    prism(nm+'_soffit',f,z0-0.45,z0,'slate','slate',bottom='concrete')
-    z=z0
+    # round 12 (Google Earth c_e): glass boxes in a white frame (a pale band at the foot and the top), thin slab
+    # lines between storeys and pale vertical mullions; round 11's grey concrete bands read as a grey grid box
+    prism(nm+'_soffit',f,z0-0.45,z0+0.3,'white','white',bottom='concrete')
+    z=z0+storey
     while z<z1-1.0:
-        prism(nm+'_band%d'%int(z*10),f,z,z+0.6,'slate','slate',bottom='slate');z+=storey
-    # round 11 (PC check): grey concrete frames over dark glass in Google Earth, not pale blue-white panels
-    prism(nm+'_parapet',f,z1-0.8,z1,'slate','concrete',bottom='slate')
+        prism(nm+'_band%d'%int(z*10),f,z,z+0.25,'slate','slate',bottom='slate');z+=storey
+    prism(nm+'_parapet',f,z1-0.8,z1,'white','concrete',bottom='white')
     # the edges that face out (the one along the stadium wall, v -107, has no fins or columns)
     V=[];F=[];UV=[];n=len(q)
     for i in range(n):
@@ -474,8 +481,8 @@ def office_box(nm,q,z0=9.0,z1=24.0,storey=3.75):
                 V+=[tuple(p_) for p_ in pts];F+=[[o+i_ for i_ in fa] for fa in ([0,1,5,4],[1,2,6,5],[2,3,7,6],[3,0,4,7])]
                 UV+=[[(0,zz0),(0.1,zz0),(0.1,zz1),(0,zz1)]]*4
         for t in np.arange(3.0,L-1.0,7.5):
-            c=a+d*t-out*0.6;cyl(nm+'_col%d_%d'%(i,int(t)),tuple(c),0.32,0.0,z0-0.45,'white','white',12)
-    if V:add(nm+'_fins',V,F,'slate',UV)  # round 11: grey concrete, as the bands
+            c=a+d*t-out*0.6;cyl(nm+'_col%d_%d'%(i,int(t)),tuple(c),0.22,0.0,z0-0.45,'concrete','concrete',8)
+    if V:add(nm+'_fins',V,F,'white',UV)  # round 12: pale mullions, as Google Earth c_e
 # ---------------- corner complexes (west measured: satellite lean + aerial, mv/sz.py, mv/vert.py); east = 180-degree twin
 def face_v(u,o=0.0):
     vv=np.linspace(0,130,2600);thv=np.arctan2(vv,u);j=np.where(np.hypot(u,vv)<=se_r(thv,OA,OB,ON)+o)[0];return vv[j[-1]] if len(j) else 0.0
@@ -496,8 +503,7 @@ for sg in(1,-1):
     tw='w' if sg>0 else 'e';m=lambda u,v:(sg*u,sg*v)
     # the north-west one is the Seven studios block: navy panels under a pale top band (PC check of round 10 against
     # Google Earth ext_135; round 10 had made it all white), the red 7 on its north-west face (below)
-    prism('cornerN_tower_'+tw,[m(*c) for c in TWN],0.0,26.0 if sg>0 else 33.0,'bluepanel','concrete')
-    if sg>0:prism('cornerN_tower_'+tw+'_top',[m(*c) for c in TWN],26.0,33.0,'silver','concrete')
+    if sg<0:prism('cornerN_tower_'+tw,[m(*c) for c in TWN],0.0,33.0,'bluepanel','concrete')  # the west one: below, by the 7
     if sg>0:prism('cornerS_tower_'+tw,[m(*c) for c in TWS],0.0,33.0,'bluepanel','concrete')
     for uc,vc in((-54.2,107.2),(54.3,108.4)):
         cu,cv=m(uc,vc);box('beige_%s_%d'%(tw,int(uc)),cu-6,cu+6,cv-5,cv+5,0.0,27.4,'slate','glass' if (sg<0 and cu<0) else 'canvas')
@@ -525,7 +531,9 @@ office_box('eastD',[(10.0,-107.0),(10.0,-131.3),(47.5,-124.6),(47.5,-107.0)])
 # roof plant on B and D (the dark grilles in the satellite)
 for nm,q,z in(('eastB_plant',[(-54.0,-109.0),(-54.0,-117.0),(-47.0,-117.0),(-47.0,-109.0)],24.0),('eastB_plant2',[(-38.0,-108.5),(-38.0,-123.0),(-22.5,-123.0),(-22.5,-108.5)],24.0),
                 ('eastD_plant',[(11.0,-110.0),(11.0,-124.0),(28.0,-124.0),(28.0,-110.0)],24.0),('eastD_plant2',[(32.0,-107.5),(32.0,-116.0),(44.5,-116.0),(44.5,-107.5)],24.0)):
-    vent_block(nm,lean(q,z+2.0),z,z+2.0,z+0.25,z+1.75,bay=3.0,pier=0.8,depth=0.25,wall='silver',top='silver')
+    # round 12 (Google Earth offices_e, offices_ne): white plant storeys about 6 m tall with a dark louvre band, set back
+    # on the boxes' roofs; round 11's 2 m silver vents were too low and their metal top mirrored the sky
+    vent_block(nm,lean(q,z+6.0),z,z+6.0,z+3.6,z+4.8,bay=3.0,pier=0.8,depth=0.25,wall='white',top='concrete')
 # C: car deck between B and D (roof u -21..10, v -116..-124, z 7) and the white walkway strip beside the wall (v -107..-116, z 10)
 prism('eastC_deck',lean([(-21.0,-116.0),(-21.0,-124.0),(10.0,-124.0),(10.0,-116.0)],7.0),0.0,7.0,'navy','paving')
 prism('eastC_walk',lean([(-21.0,-107.0),(-21.0,-116.0),(10.0,-116.0),(10.0,-107.0)],10.0),0.0,10.0,'officeglass','white')
@@ -545,8 +553,10 @@ stair('plinth_stairN',FU0,-62.0,124.0,137.0,ZP);stair('plinth_stairS',FU1,60.5,1
 # Height from the sign's own proportions, which need no camera: 4.2 wide to 1 tall in the 2019 photo and 4.3 in Google
 # Earth's view from the west, so about 7.6 m on its 33.4 m width (Google Earth's mesh, which smooths thin tops, reads 4.7).
 SV0,SZ0,SZ1=97.0,45.6,53.2  # 45.6 = 6 tiles of 7.6 m, so the lettering texture starts at the panel's foot
-prism('sign_red',[(-16,SV0),(-2.5,SV0),(-2.5,SV0+1.0),(-16,SV0+1.0)],SZ0,SZ1,'signred','signred',side_m=['signred','signred','sign_marvel','signred'],bottom='signred')
-prism('sign_black',[(-2.5,SV0),(17.4,SV0),(17.4,SV0+1.0),(-2.5,SV0+1.0)],SZ0,SZ1,'signblack','signblack',side_m=['signblack','signblack','sign_stadium','signblack'],bottom='signblack')
+# round 12 (PC check of round 11): its red back showed over the roof as a red block from the east (obl_e), where Google
+# Earth shows a pale frame: the backs, ends, tops and undersides are the posts' silver steel, only the face is lettered
+prism('sign_red',[(-16,SV0),(-2.5,SV0),(-2.5,SV0+1.0),(-16,SV0+1.0)],SZ0,SZ1,'silver','silver',side_m=['silver','silver','sign_marvel','silver'],bottom='silver')
+prism('sign_black',[(-2.5,SV0),(17.4,SV0),(17.4,SV0+1.0),(-2.5,SV0+1.0)],SZ0,SZ1,'silver','silver',side_m=['silver','silver','sign_stadium','silver'],bottom='silver')
 beams('sign_posts',[((u_,SV0+0.5,roof_top(u_,SV0+0.5)-0.2),(u_,SV0+0.5,SZ0)) for u_ in(-14.0,-6.0,2.0,10.0,16.0)],0.3,'silver')
 from shapely.geometry import Polygon,MultiPoint
 from shapely.ops import unary_union
@@ -573,8 +583,8 @@ loft('site_base',[z3(_ex,ZB0),z3(_ex,ZB1),z3(_hole,ZB1)],['concrete','paving'])
 EV0,EZ0=-108.2,30.4
 # boxes, then the lettered faces drawn on their own with UVs from each panel's left edge (round 11 check: the boxes'
 # own UVs ran from the stadium's axis, so the lettering came out split, "EL MARV DIUM STA")
-prism('sign_red_e',[(-u_-9.0,v_) for u_,v_ in [(-16,EV0),(-2.5,EV0),(-2.5,EV0-1.0),(-16,EV0-1.0)]],EZ0,EZ0+7.6,'signred','signred',bottom='signred')
-prism('sign_black_e',[(-u_-9.0,v_) for u_,v_ in [(-2.5,EV0),(17.4,EV0),(17.4,EV0-1.0),(-2.5,EV0-1.0)]],EZ0,EZ0+7.6,'signblack','signblack',bottom='signblack')
+prism('sign_red_e',[(-u_-9.0,v_) for u_,v_ in [(-16,EV0),(-2.5,EV0),(-2.5,EV0-1.0),(-16,EV0-1.0)]],EZ0,EZ0+7.6,'silver','silver',bottom='silver')
+prism('sign_black_e',[(-u_-9.0,v_) for u_,v_ in [(-2.5,EV0),(17.4,EV0),(17.4,EV0-1.0),(-2.5,EV0-1.0)]],EZ0,EZ0+7.6,'silver','silver',bottom='silver')
 # the lettered faces: the west board's own faces turned half round, with the west board's own UVs (the lettering
 # textures are authored for those UVs, mirrored and offset), stood 0.05 m proud of the east boxes' faces
 _W0=np.array(wv((0.0,0.0,0.0)))
@@ -596,10 +606,20 @@ if np.dot(_n,np.array([-1.0,1.0]))<0:_n=-_n
 _pa,_pb=np.array(wv((*_a,0.0))),np.array(wv((*_b,0.0)));_pn=np.array(wv((*(_a+_n),0.0)))-_pa
 _right=np.cross(-_pn,[0,0,1.0])
 _s0=_a if np.dot(_pb-_pa,_right)>0 else _b;_dir=_t if np.dot(_pb-_pa,_right)>0 else -_t
-_L=float(np.linalg.norm(_b-_a));_o=_s0+_dir*(_L/2-4.5)+_n*0.15
-def _g(sx,z):return (*(_o+_dir*sx),z)
-z7=19.5
-add('sign_seven',[_g(0,z7+12),_g(9,z7+12),_g(9,z7+9.6),_g(0,z7+9.6)],[[0,1,2,3]],'signred')
-add('sign_seven_stem',[_g(6.4,z7+9.6),_g(9,z7+9.6),_g(5.2,z7),_g(2.6,z7)],[[0,1,2,3]],'signred')
+_L=float(np.linalg.norm(_b-_a))
+# round 12 (Google Earth seven_nw close up; PC check of round 11: "a narrow navy fin with a separate pale box beside it, not
+# a wide square block"): the block is two. On the viewer's left a navy fin 0.44 of the frontage wide and 33 m tall, the 7
+# near its top; on the right a pale box of light grey panels to 31 m. The back corners follow the front ones.
+_S0=np.array(TWN[3] if np.allclose(_s0,_a) else TWN[0]);_E0=np.array(TWN[0] if np.allclose(_s0,_a) else TWN[3])
+_S1=np.array(TWN[2] if np.allclose(_s0,_a) else TWN[1]);_E1=np.array(TWN[1] if np.allclose(_s0,_a) else TWN[2])
+def _cut(t0,t1):return [tuple(_S0+(_E0-_S0)*t0),tuple(_S0+(_E0-_S0)*t1),tuple(_S1+(_E1-_S1)*t1),tuple(_S1+(_E1-_S1)*t0)]
+prism('cornerN_tower_w',_cut(0.0,0.44),0.0,33.0,'bluepanel','concrete')
+prism('cornerN_tower_w_box',_cut(0.44,1.0),0.0,31.0,'podiumpanel','concrete')
+# the 7: in Google Earth about half the fin's width and 7.6 m tall (round 11's 9 m by 12 m was wider than the fin)
+_k7=0.62;_o=_s0+_dir*(_L*0.22-4.5*_k7)+_n*0.15
+def _g(sx,z):return (*(_o+_dir*sx*_k7),z)
+z7=33.0-1.5-12*_k7
+add('sign_seven',[_g(0,z7+12*_k7),_g(9,z7+12*_k7),_g(9,z7+9.6*_k7),_g(0,z7+9.6*_k7)],[[0,1,2,3]],'seven_red')
+add('sign_seven_stem',[_g(6.4,z7+9.6*_k7),_g(9,z7+9.6*_k7),_g(5.2,z7),_g(2.6,z7)],[[0,1,2,3]],'seven_red')  # round 12: its own red (the roof sign is muted)
 json.dump(dict(parts=PARTS,seats=SEATS,cam=P('c5.json')),open(os.path.join(os.path.dirname(os.path.abspath(__file__)),'parts2.json'),'w'))
 print(len(SEATS),'seats',len(PARTS),'parts',sum(len(p['F']) for p in PARTS),'faces')

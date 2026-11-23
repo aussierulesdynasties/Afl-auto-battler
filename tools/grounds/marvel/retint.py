@@ -61,7 +61,9 @@ def officeglass():
     x = (np.arange(W) + 0.5) / W * 6.0
     y = (np.arange(H) + 0.5) / H * 6.0
     img = np.zeros((H, W, 3), float)
-    img[:] = (46, 54, 64)  # round 11 (PC check): Google Earth reads dark glass bands between grey concrete
+    # round 12 (PC check of round 11): the right box rendered (62, 75, 97) against Google Earth's (73, 97, 119), about
+    # 20 too dark and too little blue; a lighter blue-grey glass
+    img[:] = (58, 74, 92)
     # each pane its own faint tone, as glass reflects a little differently pane to pane
     pane = rng.normal(0.0, 5.0, (4, 4))
     img += pane[(y[:, None] // 1.5).astype(int).clip(0, 3), (x[None, :] // 1.5).astype(int).clip(0, 3)][..., None]
@@ -112,7 +114,9 @@ def ribbon():
 def flat():
     """Flat-coloured textures: the floodlights' lenses (emissive in the build) and the screens' dark faces
     (the match draws the score over them, Oval3DScreens)."""
-    for n, c in (("lamp", (255, 250, 236)), ("screen", (16, 20, 28))):
+    # seven_red: the Seven block's red 7 (PC check of round 11: right as it was, the old signred), kept when the roof
+    # sign's panels were muted in round 12
+    for n, c in (("lamp", (255, 250, 236)), ("screen", (16, 20, 28)), ("seven_red", (178, 20, 25))):
         Image.fromarray(np.full((16, 16, 3), c, np.uint8), "RGB").save(os.path.join(TEX, "%s.png" % n))
 
 
@@ -129,7 +133,29 @@ def label():
     im.save(os.path.join(TEX, "sign_mvst.png"))
 
 
+def sign_panels():
+    """The roof sign's panels (round 12, PC check of round 11: the sign read a loud red block, 36% red pixels against
+    Google Earth's 0.7%; Google Earth shows white letters on a muted dark maroon-grey ground, the STADIUM half dark
+    grey). Each panel's background is moved to that colour, keeping its texture; the white letters stay."""
+    for name, target in (("sign_marvel", (104, 54, 58)), ("signred", (104, 54, 58)),
+                         ("sign_stadium", (62, 60, 64)), ("signblack", (62, 60, 64))):
+        orig = os.path.join(TEX, "%s_orig.png" % name)
+        path = os.path.join(TEX, "%s.png" % name)
+        if not os.path.exists(orig):
+            Image.open(path).save(orig)
+        a = np.asarray(Image.open(orig).convert("RGB"), float)
+        letter = a.min(axis=2) > 150
+        bg = ~letter
+        m = a[bg].mean(0)
+        b = a.copy()
+        b[bg] = np.clip((a[bg] - m) * 0.5 + np.array(target, float), 0, 255)
+        b[letter] = np.clip(a[letter] * 0.92, 0, 255)
+        Image.fromarray(b.astype(np.uint8), "RGB").save(path)
+        print(name, m.round(), "->", target, "letters %.1f%%" % (100 * letter.mean()))
+
+
 def main():
+    sign_panels()
     for n, t in TARGET.items():
         retint(n, t)
     retint("endroof", (168, 169, 165), out="endrib")
@@ -176,6 +202,7 @@ def main():
     j["ribbon"] = [12, 1.7]
     j["grille"] = [3, 3]
     j["lamp"] = [1, 1]
+    j["seven_red"] = [1, 1]
     j["screen"] = [1, 1]
     j["sign_mvst"] = [1, 1]
     # the roof sign's panels are 7.6 m tall (parts2.py, measured 2026-11-23): one tile of lettering each
