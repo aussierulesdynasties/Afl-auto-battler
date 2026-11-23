@@ -96,6 +96,30 @@ def edge_at(x, y):
 for o in [o for o in bpy.data.objects if not o.name.startswith('bg_')]:
     bpy.data.objects.remove(o, do_unlink=True)
 
+# trees standing inside the stadium belong to the ground's own model (its thread draws what grows there): a scene tree
+# in there stands in the concourse or the stand, and a broadcast camera on the stand looks out through its crown
+def _in_model(x, y):
+    if EDGE is not None: return math.hypot(x, y) < edge_at(x, y)[0]
+    return under_stadium(x, y)
+if HULL is not None or EDGE is not None:
+    gone = 0
+    for o in [o for o in bpy.data.objects if o.type == 'MESH' and o.name.startswith('bg_trees')]:
+        bm = bmesh.new(); bm.from_mesh(o.data); M = o.matrix_world; bm.verts.ensure_lookup_table(); seen = set(); kill = []
+        for v in bm.verts:
+            if v.index in seen: continue
+            st = [v]; c = []; seen.add(v.index)
+            while st:
+                x = st.pop(); c.append(x)
+                for e in x.link_edges:
+                    y = e.other_vert(x)
+                    if y.index not in seen: seen.add(y.index); st.append(y)
+            w = M @ (sum((q.co for q in c), c[0].co * 0) / len(c))
+            if _in_model(w.x, w.y): kill += c; gone += 1
+        if kill:
+            bmesh.ops.delete(bm, geom=kill, context='VERTS'); bm.to_mesh(o.data)
+        bm.free()
+    print('trees inside the stadium left to its model', gone)
+
 SEAMED = ('bg_near_ground', 'bg_far_terrain')
 if INNER > 0.0:   # the game draws its own ground, trees and buildings in here: nothing twice
     for o in [o for o in bpy.data.objects if o.type == 'MESH']:
