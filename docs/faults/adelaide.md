@@ -74,7 +74,7 @@ dark tower standing clear at its east end (28 m). Still open there: Google Earth
 boundary, where our top rows run to 52 m, so the real deck under the roof is about 11 m deeper and the columns lean
 further; Google Earth's heights under the roofs drape (seats there read 8 m too high and flat), so the upper tier's
 depth needs a section drawing or the centre photo sphere before the seats move. The plaza south of the stand is 3 m
-above the turf in Google Earth and flat with it here, and the white shade sail on the deck is not built. Roof
+above the turf in Google Earth and flat with it here, and the white wedge on the deck seen from the south is not a shade sail: Google Earth's position readings across it (13 points, 8.7-29.7 m east, 2026-11-23) all read the deck's own 22 m, its edge 21 m, so it is the sunlit deck floor outside the roof's shadow, which ours already has. Roof
 outlines fitted top-down to Google Earth (2026-11-22, after the shape audit flagged them; masks of the white roofs in
 matching straight-down shots, checked against Google Earth's own position readings): the Riverbank's pitch-side hem was
 0.5-4.3 m short of the real one (OSM's outline stopped it) and now sits within median 0.2 m, 1.6 m at worst; the east
