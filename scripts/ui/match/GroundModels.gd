@@ -96,6 +96,8 @@ const SURROUNDS := {
 			# Bellerive in Google Earth: white and cream weatherboard, red and brown brick, grey render.
 			"walls": [Color(0.86, 0.85, 0.8), Color(0.62, 0.42, 0.34), Color(0.78, 0.74, 0.64), Color(0.56, 0.55, 0.52),
 					Color(0.9, 0.9, 0.88), Color(0.66, 0.5, 0.4), Color(0.72, 0.76, 0.78)],
+			# Each roof's own colour from above (Google Earth, tools/grounds/bellerive/houses_ge.py), linear.
+			"roof_colours": "roofs.bin",
 			# Its roofs from above: Colorbond teal and green, terracotta, charcoal, grey, white and blue.
 			"roofs": [Color(0.32, 0.52, 0.5), Color(0.66, 0.34, 0.26), Color(0.36, 0.36, 0.38), Color(0.6, 0.6, 0.58),
 					Color(0.4, 0.56, 0.44), Color(0.82, 0.82, 0.8), Color(0.44, 0.52, 0.62), Color(0.56, 0.3, 0.24)]},
@@ -418,8 +420,11 @@ static func _add_surrounds(root: Node3D, s: Dictionary, dir := "") -> void:
 		if s.has("trees") and FileAccess.file_exists(dir + str(s["trees"])):
 			_add_trees(root, FileAccess.get_file_as_bytes(dir + str(s["trees"])).to_float32_array(), y)
 		if s.has("buildings") and FileAccess.file_exists(dir + str(s["buildings"])):
+			var rgb := PackedFloat32Array()
+			if s.has("roof_colours") and FileAccess.file_exists(dir + str(s["roof_colours"])):
+				rgb = FileAccess.get_file_as_bytes(dir + str(s["roof_colours"])).to_float32_array()
 			_add_buildings(root, FileAccess.get_file_as_bytes(dir + str(s["buildings"])).to_float32_array(), y,
-					s.get("walls", []), s.get("roofs", []))
+					s.get("walls", []), s.get("roofs", []), rgb)
 		return
 	var noise := FastNoiseLite.new()
 	noise.frequency = 0.02
@@ -527,7 +532,7 @@ static func _add_trees(root: Node3D, buf: PackedFloat32Array, y: float) -> void:
 ## walls in a pale render or brick and a flat roof each, as one mesh. Seen past the stands and
 ## from a fly-through, they set the MCG in its city rather than on a plain.
 static func _add_buildings(root: Node3D, buf: PackedFloat32Array, y: float, walls: Array = [],
-		roofs: Array = []) -> void:
+		roofs: Array = [], roof_rgb := PackedFloat32Array()) -> void:
 	var v := PackedVector3Array()
 	var nrm := PackedVector3Array()
 	var col := PackedColorArray()
@@ -539,6 +544,11 @@ static func _add_buildings(root: Node3D, buf: PackedFloat32Array, y: float, wall
 		var n := int(buf[i])
 		var h: float = buf[i + 1]
 		# A negative height is a house: walls to the eaves at -h, then a hipped roof (GMHBA's Geelong).
+		# At -100 and below it is a gable-roofed house with its eaves at -h - 100 (Bellerive's, read off
+		# Google Earth: tools/grounds/bellerive/houses_ge.py).
+		var gable := h <= -100.0
+		if gable:
+			h += 100.0
 		var hipped := h < 0.0
 		h = absf(h)
 		var foot := PackedVector2Array()
@@ -551,6 +561,9 @@ static func _add_buildings(root: Node3D, buf: PackedFloat32Array, y: float, wall
 		if hipped:
 			var hr: Array = roofs if not roofs.is_empty() else HOUSE_ROOFS
 			roof = hr[(b * 7) % hr.size()]
+		# A ground that lists each roof's own colour from above (SURROUNDS "roof_colours", linear RGB).
+		if roof_rgb.size() >= b * 3:
+			roof = Color(roof_rgb[b * 3 - 3], roof_rgb[b * 3 - 2], roof_rgb[b * 3 - 1])
 		# Walls face out whichever way round the footprint was drawn.
 		var ccw := 0.0
 		for k in n:
@@ -564,6 +577,8 @@ static func _add_buildings(root: Node3D, buf: PackedFloat32Array, y: float, wall
 			_front(v, nrm, col, Vector3(a.x, y, a.y), Vector3(c.x, y + h, c.y), Vector3(a.x, y + h, a.y), out, shade)
 			if hipped and foot[k].length() < HOUSE_DETAIL_R:
 				_house_windows(a, c, y, out, v, nrm, col)
+				if h > 5.0:                        # a two-storey house: the upper floor's windows too
+					_house_windows(a, c, y + h - 3.0, out, v, nrm, col)
 		if hipped:
 			# The roof oversails the walls by HOUSE_EAVE (a boxed eave, its soffit seen from the street).
 			var cen := Vector2.ZERO
@@ -583,7 +598,10 @@ static func _add_buildings(root: Node3D, buf: PackedFloat32Array, y: float, wall
 				sof.a = 1.0
 				_front(v, nrm, col, Vector3(a.x, y + h, a.y), Vector3(ec.x, y + h, ec.y), Vector3(c.x, y + h, c.y), Vector3.DOWN, sof)
 				_front(v, nrm, col, Vector3(a.x, y + h, a.y), Vector3(ea.x, y + h, ea.y), Vector3(ec.x, y + h, ec.y), Vector3.DOWN, sof)
-			_hip_roof(eave, y + h, roof, v, nrm, col)
+			if gable:
+				_gable_roof(eave, y + h, roof, wall, v, nrm, col)
+			else:
+				_hip_roof(eave, y + h, roof, v, nrm, col)
 			if b % 3 == 0:                         # a brick chimney through the roof on one house in three
 				var ch := cen + (foot[0] - cen) * 0.45
 				_box(Vector3(ch.x, y + h, ch.y), Vector2(0.55, 0.75), 3.6, Color(0.55, 0.32, 0.26), v, nrm, col)
@@ -702,6 +720,65 @@ const HOUSE_ROOFS := [Color(0.62, 0.36, 0.28), Color(0.34, 0.34, 0.35), Color(0.
 
 ## A hipped roof over a house's footprint: each eave rises to a ridge along the footprint's long axis,
 ## 0.45 of the house's narrow half-width high (about a 24 degree pitch). Faces lit by their slope.
+## A gable roof over `foot` (the eave line): the ridge runs the house's whole length along its longest
+## wall, each long side slopes up to it, and each end is a vertical triangle of wall (the gable) under it.
+## An edge that climbs to one point of the ridge is an end; any other edge is a slope.
+static func _gable_roof(foot: PackedVector2Array, eave: float, roof: Color, wall: Color, v: PackedVector3Array,
+		nrm: PackedVector3Array, col: PackedColorArray) -> void:
+	var c := Vector2.ZERO
+	for p in foot:
+		c += p
+	c /= foot.size()
+	var ax := Vector2.RIGHT
+	var best := 0.0
+	for k in foot.size():
+		var e := foot[(k + 1) % foot.size()] - foot[k]
+		if e.length() > best:
+			best = e.length()
+			ax = e.normalized()
+	var across := Vector2(-ax.y, ax.x)
+	var lo_a := INF
+	var hi_a := -INF
+	var lo_b := INF
+	var hi_b := -INF
+	for p in foot:
+		var q := p - c
+		lo_a = minf(lo_a, q.dot(ax))
+		hi_a = maxf(hi_a, q.dot(ax))
+		lo_b = minf(lo_b, q.dot(across))
+		hi_b = maxf(hi_b, q.dot(across))
+	var half_w := (hi_b - lo_b) * 0.5
+	var mid := c + across * (lo_b + hi_b) * 0.5
+	var rise := minf(half_w * 0.45, 3.0)
+	var top := eave + rise
+	for k in foot.size():
+		var a := foot[k]
+		var b := foot[(k + 1) % foot.size()]
+		var ra := mid + ax * clampf((a - mid).dot(ax), lo_a, hi_a)
+		var rb := mid + ax * clampf((b - mid).dot(ax), lo_a, hi_a)
+		var pa := Vector3(a.x, eave, a.y)
+		var pb := Vector3(b.x, eave, b.y)
+		if (ra - rb).length() < 0.3:
+			# the gable end: a wall triangle up to the ridge, facing out
+			var r := (ra + rb) * 0.5
+			var o := Vector3(b.y - a.y, 0.0, a.x - b.x).normalized()
+			if o.dot(Vector3(a.x - c.x, 0.0, a.y - c.y)) < 0.0:
+				o = -o
+			var sh := wall * (0.92 + 0.08 * absf(o.x))
+			sh.a = 1.0
+			_front(v, nrm, col, pa, pb, Vector3(r.x, top, r.y), o, sh)
+			continue
+		var qa := Vector3(ra.x, top, ra.y)
+		var qb := Vector3(rb.x, top, rb.y)
+		for t: Array in [[pa, pb, qb], [pa, qb, qa]]:
+			var nn: Vector3 = (t[1] - t[0]).cross(t[2] - t[0]).normalized()
+			if nn.y < 0.0:
+				nn = -nn
+			var lit := roof * (0.78 + 0.22 * clampf(nn.dot(Vector3(0.3, 0.9, -0.3).normalized()), 0.0, 1.0) / 0.95)
+			lit.a = 1.0
+			_front(v, nrm, col, t[0], t[1], t[2], nn, lit)
+
+
 static func _hip_roof(foot: PackedVector2Array, eave: float, roof: Color, v: PackedVector3Array,
 		nrm: PackedVector3Array, col: PackedColorArray) -> void:
 	var c := Vector2.ZERO
