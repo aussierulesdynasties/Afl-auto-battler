@@ -37,3 +37,9 @@ Bearings are degrees counter-clockwise from east round the field centre at pixel
   heights are known, the parallax per metre changes threefold from west to east in the 2016 frame and disagrees
   between frames. The matches lock onto shadow edges, which move with the sun between dates. Heights now come from
   period photos (camera solved on field lines and the 65 m towers) and seat-row counts.
+- **Camera of `AUSvIRE3.JPG`** (CC BY-SA 4.0, International Rules at Patersons Stadium, looking at the west end
+  from the north-east; reference only): the west goal posts and the far fence fit to 1 px (`measure/photo3/p3.py`),
+  but those are all far away, so the camera slides along its line of sight (height 2.6 to 11 m as the focal length
+  goes from 1633 to 2490 px). The near railing does not sit on the fence curve, and the south-west light tower
+  lands 200-350 px from where the 2008 aerial puts it. Not used for heights until a second photo or a near
+  feature pins the camera. The west, south-west and south stands stay unmeasured.
