@@ -3849,10 +3849,58 @@ func _test_match_crew(res: Dictionary) -> void:
 	var wrong := []
 	var was_drinks := false
 	var was_runner := false
+	var scores := {}          # shot k -> its goal umpire's signal ("" until he gives one)
+	var signal_wrong := []
+	# The goal umpires' flags (Oval3DGoalUmpire): drawn after goals, and never jumping when they
+	# go from the padding to a hand, hand to hand, or back.
+	var flag_at := {}
+	var flag_in := {}
+	var flag_jumps := []
+	var drawn := 0
+	var was_drawn := {}
 	while d.time < 600.0 and frames < 40000 and pv.playing:
 		pv._process(dt)
 		frames += 1
 		var shot := d.shot_now()
+		if not shot.is_empty() and str(shot.get("phase", "")) in ["emit", "celebrate"]:
+			var k := int(shot["k"])
+			if not scores.has(k):
+				scores[k] = ""
+			for u in oval.umpires:
+				if str(u["role"]) != "goal" or not u.has("clip") or str(u["clip"]["kind"]) != "signal":
+					continue
+				var given := str((u["anim"] as AnimationPlayer).current_animation)
+				if scores[k] == "":
+					scores[k] = given
+					var want := Oval3DCrew.GOAL_SIGNAL if bool(shot["goal"]) else Oval3DCrew.BEHIND_SIGNAL
+					# A goal while he still has both flags out from the last score is waved.
+					if bool(shot["goal"]) and given == Oval3DCrew.GOAL_WAVE:
+						want = given
+					if given != want or signf((u["node"] as Node3D).position.x) != signf((shot["to"] as Vector2).x):
+						signal_wrong.append("%s at %.0f s for a %s" % [given, d.time, "goal" if shot["goal"] else "behind"])
+		for u in oval.umpires:
+			if not u.has("flag"):
+				continue
+			var two := Oval3DGoalUmpire.holding(u) == 2
+			if two and not bool(was_drawn.get(u["k"], false)):
+				drawn += 1
+			was_drawn[u["k"]] = two
+			# A hand's attachment follows its bone when the skeleton next updates (a drawn
+			# frame); this loop draws none, so bring them up to date.
+			(u["skel"] as Skeleton3D).force_update_all_bone_transforms()
+			for side in ["r", "l"]:
+				(u["flags"][side]["on"] as BoneAttachment3D).on_skeleton_update()
+			for side in ["r", "l"]:
+				var fn: Node3D = u["flags"][side]["node"]
+				var key := "%d%s" % [u["k"], side]
+				var par := fn.get_parent()
+				if pv._tv.replaying:
+					flag_at.erase(key)
+				elif flag_at.has(key) and flag_in.get(key) != par and (flag_at[key] as Vector3).distance_to(fn.global_position) > 0.05:
+					flag_jumps.append("%.2f m at %.0f s" % [(flag_at[key] as Vector3).distance_to(fn.global_position), d.time])
+				if not pv._tv.replaying:
+					flag_at[key] = fn.global_position
+				flag_in[key] = par
 		var set_break := not shot.is_empty() and bool(shot.get("set", false))
 		var goal := not shot.is_empty() and bool(shot.get("goal", false))
 		var st := d.stoppage_now()
@@ -3877,6 +3925,12 @@ func _test_match_crew(res: Dictionary) -> void:
 		was_runner = r_on
 	_check(drinks > 0 and runs > 0, "Drinks go out before set shots (%d) and runners after goals (%d)" % [drinks, runs])
 	_check(wrong.is_empty(), "Trainers and runners are on the ground only when the rules let them: %s" % [wrong.slice(0, 4)])
+	var unsignalled := scores.keys().filter(func(k): return scores[k] == "")
+	_check(scores.size() > 0 and unsignalled.is_empty(),
+			"The goal umpire at the scoring end signals every score (%d scores, %d not signalled)" % [scores.size(), unsignalled.size()])
+	_check(signal_wrong.is_empty(), "Two hands for a goal, one for a behind, from the scoring end: %s" % [signal_wrong.slice(0, 4)])
+	_check(drawn > 0, "The goal umpire draws both flags after a goal (%d times)" % drawn)
+	_check(flag_jumps.is_empty(), "His flags never jump going in or out of his hands: %s" % [flag_jumps.slice(0, 4)])
 	pv.queue_free()
 
 ## The umpires at stoppages on the 3D oval (row 197; the field umpire passed, rule 2.75): at a
