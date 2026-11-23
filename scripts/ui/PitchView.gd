@@ -319,7 +319,13 @@ func _setup_3d() -> void:
 	if _oval3d != null:
 		_oval3d.queue_free()
 		_oval3d = null
-	if not three_d:
+	# A build that fetches each ground's model the first time a match is played there
+	# (GroundPacks): the flat oval plays on while it comes, then the 3D picture starts.
+	var ground_slug := GroundModels.slug_for(VignetteGround.ground_of(result)) if three_d else ""
+	var waiting := ground_slug != "" and not GroundPacks.ready(ground_slug)
+	if waiting:
+		_fetch_ground(ground_slug)
+	if not three_d or waiting:
 		if _vp3d != null:
 			_vp3d.queue_free()
 			_view3d.queue_free()
@@ -366,6 +372,82 @@ func _setup_3d() -> void:
 	_sync_3d(0.0)
 	_paint_ground_3d()
 	queue_redraw()
+
+
+## The ground's model on its way: {slug, name, done, total, why} while fetching or after a
+## failed fetch ("why" set); {} otherwise.
+var ground_fetch := {}
+var _packs: GroundPacks = null
+var _fetch_rect := Rect2()
+var _fetch_line: Control = null
+
+
+func _fetch_ground(slug: String) -> void:
+	if _packs != null:
+		return
+	ground_fetch = {"slug": slug, "name": VignetteGround.ground_of(result), "done": 0,
+			"total": GroundPacks.size_mb(slug) * 1000000, "why": ""}
+	_packs = GroundPacks.new()
+	_packs.name = "GroundPacks"
+	add_child(_packs)
+	_packs.progress.connect(func(_s: String, done: int, total: int) -> void:
+		ground_fetch["done"] = done
+		ground_fetch["total"] = total
+		_fetch_line.queue_redraw())
+	_packs.finished.connect(_ground_fetched)
+	_packs.fetch(slug)
+	if _fetch_line == null:
+		# Its own layer over the flat oval's figures.
+		_fetch_line = Control.new()
+		_fetch_line.name = "GroundFetchLine"
+		_fetch_line.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_fetch_line.set_anchors_preset(Control.PRESET_FULL_RECT)
+		_fetch_line.draw.connect(_draw_ground_fetch)
+		add_child(_fetch_line)
+	queue_redraw()
+
+
+func _ground_fetched(slug: String, ok: bool, why: String) -> void:
+	_packs.queue_free()
+	_packs = null
+	if not ok:
+		ground_fetch["why"] = why
+		_fetch_line.queue_redraw()
+		return
+	ground_fetch = {}
+	_fetch_line.queue_redraw()
+	if three_d and director != null and GroundModels.slug_for(VignetteGround.ground_of(result)) == slug:
+		_setup_3d()
+	queue_redraw()
+
+
+## The line over the flat oval while the ground's model comes: how far it has got, or why it
+## failed and that a tap tries again.
+func ground_fetch_text() -> String:
+	if ground_fetch.is_empty():
+		return ""
+	var where := str(ground_fetch["name"])
+	if str(ground_fetch["why"]) != "":
+		return "%s didn't download. Tap here to try again." % where
+	return "Downloading %s for the 3D view: %d of %d MB" % [where,
+			int(ground_fetch["done"]) / 1000000, maxi(1, int(ceil(float(ground_fetch["total"]) / 1e6)))]
+
+
+func _draw_ground_fetch() -> void:
+	var text := ground_fetch_text()
+	_fetch_rect = Rect2()
+	if text == "":
+		return
+	var c := _fetch_line
+	var fs := 15
+	var origin := Vector2(12, 12 + fs)
+	var w := UiKit.BOLD.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+	_fetch_rect = Rect2(Vector2(4, 4), Vector2(w + 16, fs + 20))
+	c.draw_rect(_fetch_rect, Color(0, 0, 0, 0.6))
+	c.draw_string(UiKit.BOLD, origin, text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, RING_COLOUR)
+	if str(ground_fetch["why"]) == "" and int(ground_fetch["total"]) > 0:
+		var k := clampf(float(ground_fetch["done"]) / float(ground_fetch["total"]), 0.0, 1.0)
+		c.draw_rect(Rect2(origin + Vector2(0, 5), Vector2(w * k, 3)), RING_COLOUR)
 
 
 ## The 3D picture is drawn at the screen's own pixels, not the stretched 2D canvas's
@@ -832,6 +914,13 @@ func set_marks(next: Dictionary) -> void:
 ## A long press on a marked disc says what the mark means; a tap or a drag
 ## does nothing here.
 func _gui_input(e: InputEvent) -> void:
+	if e is InputEventMouseButton and (e as InputEventMouseButton).button_index == MOUSE_BUTTON_LEFT \
+			and (e as InputEventMouseButton).pressed and str(ground_fetch.get("why", "")) != "" \
+			and _fetch_rect.has_point((e as InputEventMouseButton).position):
+		# The ground's model failed to come: a tap on the line tries again.
+		_fetch_ground(str(ground_fetch["slug"]))
+		accept_event()
+		return
 	if e is InputEventMouseButton and (e as InputEventMouseButton).button_index == MOUSE_BUTTON_LEFT:
 		if (e as InputEventMouseButton).pressed and _tv != null and _tv.on_replay():
 			# A tap anywhere on the picture skips the replay (rule 2.96).

@@ -47,3 +47,26 @@ Measured 2026-11-23 (Godot 4.7.2 exports of main plus PR #2058 and this change, 
 - **Why the budget is 1 GB for the APK.** The ground models grow with every rebuild (Football Park's real surroundings alone are about 40 MB of glb; at that rate 37 grounds with their surroundings come to about 2 GB, an estimate). A sideloaded APK of that size is a long download and doubles on the phone while it installs. Past 1 GB the plan is: each ground's model exported as its own pack (`--export-pack` with a filter on `assets/grounds/<slug>/`), loaded with `ProjectSettings.load_resource_pack` before `GroundModels.instantiate`, downloaded the first time a match is played there (with a "download every ground" choice in Settings). The base APK stays under 500 MB, Google Play's base-module limit, so a Play release stays possible as an app bundle with one asset pack per ground (Play: 1.5 GB a pack, 30 GB of on-demand packs; a plain APK on Play is capped at 100 MB, so today's APK already could not go there as an APK).
 - **Licences.** The MetaHuman bodies (`player_mh.glb`, `crew_mh.glb`) may ship inside the game: Epic's MetaHuman licence allows them in any engine, royalty-free under US$1M a year in revenue, never used to train AI. The 11 own heads are Tripo on a paid plan (owned). Hair: `assets/oval3d/HAIR-LICENSE.txt` (CC BY 4.0 credits and CC0). The ground models are our own.
 - `tools/check_export_data.sh` exports a pack with the Android preset's filters and fails if any ground's model, the players' files or the MCG's stadium and seats are missing from it.
+
+### Per-ground packs (built 2026-11-23)
+
+- `tools/ground_packs/export.sh <android|windows|web> <out>` exports one pack per ground (only that ground's files: `strip.py` takes out the game files every export adds, `pack.gd` packs the rest) and `ground_packs.json`, the list a build carries at `res://ground_packs.json` (file, bytes, sha256, and `url`, where the packs are fetched from). A pack's name carries the ground folder's git tree hash, so it changes exactly when the ground does. Sizes: MCG 25 MB, Optus 37 MB, Marvel 85 MB, Engie 2 MB.
+- `GroundPacks.gd` loads a ground's pack before the match builds it: from `user://grounds/` when it is on the device, otherwise fetched, checked against its size and sha256, kept, and loaded without replacing any of the build's own files. Packs a build no longer lists are deleted.
+- In a match, the flat oval plays on while the ground comes (the line over it: "Downloading MCG for the 3D view: 12 of 25 MB"), then the 3D picture starts. A failed fetch says so; a tap on the line tries again. Settings has "Download every ground" in a build that fetches its grounds.
+- `tools/check_ground_packs.sh [slug]` proves it end to end: a build with no ground models fetches the pack over HTTP, the next start loads the kept pack with no download, and a 3D match at the ground fails with no server, then a real tap on the line fetches it and the 3D match starts.
+- **The phone build still carries every ground** until the director answers whether the phone app may use the internet: the offline promise (Director Bible, trust rule 80, P-70) has CI refuse any internet permission (`tools/check_android_permissions.py`).
+
+### The Web build and real stadiums (measured 2026-11-23)
+
+`tools/perf/web_memory.sh` exports the Web build as the 3D probe with no ground models, puts the packs beside it, and plays grounds in headless Chromium (software GPU), reading the page's memory from the system:
+
+| Step | Page process | GPU process | Godot video memory |
+|---|---|---|---|
+| Game started, no ground | 1,450 MB | 303 MB | |
+| MCG fetched (25 MB), loaded, a match played | 1,142 MB | 941 MB | 414 MB |
+| Marvel fetched (85 MB), loaded, a match played | 1,359 MB | 954 MB | 379 MB |
+
+- **Streaming works in a browser:** both packs were fetched beside the page, loaded and built into a real stadium.
+- **It cannot ship on itch's Web page as things stand.** itch's limits for an HTML game ([docs](https://itch.io/docs/creators/html5)): 500 MB extracted in all, 200 MB for any one file, 1,000 files; higher only by asking itch. The Web build's main pack is already 409 MB (398 MB on main before this work), over the 200 MB file limit by itself, so no stadium pack fits beside it. Packs would need a host outside itch that allows the page to read them (GitHub release files send no CORS header; GitHub Pages does, but holds 1 GB a site and 100 MB a file, under the ~2 GB the grounds will reach).
+- **A phone's browser is the real limit.** The page needs about 1.75 GB before any stadium and 2.1 to 2.3 GB with one, measured on a software GPU (a phone's GPU memory is counted differently, so treat it as a guide). Phone browsers end tabs well below that. A desktop browser can hold it.
+- **So:** the Web build can carry real stadiums on a desktop browser once the packs have a host that allows it; on a phone's browser it cannot carry a real stadium reliably, and the phone app is the way to play the 3D match on a phone. Until a host is chosen, the Web build plays in the plain stands.

@@ -43,3 +43,4 @@ tests/output/
 captures/**/*.import
 docs/**/*.import
 tools/wheelo/cache/
+/ground_packs.json
