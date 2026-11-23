@@ -2203,16 +2203,38 @@ func _nav_button(text: String, cb: Callable, primary := false) -> Button:
 
 ## The button that plays the week: short enough for half a phone's width beside Team
 ## ("Play Wildcard Round" ran off the edge at 390).
+## Each kind of finals week as the hub says it: [button, heading, cover line].
+## Keyed by the week's name in the season's own finals system (SeasonRules),
+## so a past year plays its real series (no wildcard round before 2026).
+const FINALS_WORDS := {
+	"Wildcard Round": ["Play the wildcard", "Wildcard Round", "Playing the wildcard round..."],
+	"Qualifying and Elimination Finals": ["Play the finals", "Qualifying & Elimination", "Playing the first week of the finals..."],
+	"Qualifying Finals": ["Play the finals", "Qualifying Finals", "Playing the qualifying finals..."],
+	"Semi Finals": ["Play the semi-finals", "Semi Finals", "Playing the semi-finals..."],
+	"Preliminary Finals": ["Play the preliminary finals", "Preliminary Finals", "Playing the preliminary finals..."],
+	"Preliminary Final": ["Play the preliminary final", "Preliminary Final", "Playing the preliminary final..."],
+	"Grand Final": ["Play the Grand Final", "Grand Final", "Playing the Grand Final..."],
+}
+
+
+## This finals week's words (FINALS_WORDS): a week replaying a drawn final
+## is named for the final it replays.
+static func finals_words(season: Season) -> Array:
+	var w := int(season.finals.get("week", 1))
+	var name := SeasonRules.week_name(season.finals_format(), w)
+	if not (season.finals.get("replay", []) as Array).is_empty():
+		var ms := season.finals_week_matches()
+		var label := str((ms[0] as Dictionary).get("label", "Replay")) if not ms.is_empty() else "Replay"
+		return ["Play the replay", label, "Playing the replay..."]
+	return FINALS_WORDS.get(name, ["Play the finals", name if name != "" else "Finals", "Playing the finals..."])
+
+
 func _finals_play_label() -> String:
-	var w := int(GameState.season.finals.get("week", 1))
-	return ["Play the wildcard", "Play the finals", "Play the semi-finals",
-			"Play the preliminary finals", "Play the Grand Final"][clampi(w - 1, 0, 4)]
+	return str(finals_words(GameState.season)[0])
 
 
 func _finals_label() -> String:
-	var w := int(GameState.season.finals.get("week", 1))
-	return ["Wildcard Round", "Qualifying & Elimination", "Semi Finals",
-			"Preliminary Finals", "Grand Final"][clampi(w - 1, 0, 4)]
+	return str(finals_words(GameState.season)[1])
 
 
 ## A home-and-away round your club sits out: an odd club count (expansion)
@@ -2363,13 +2385,11 @@ func _sim_line() -> String:
 		return "Sim the week..."
 	if not season.is_regular_done():
 		return "Playing %s..." % season.round_label(season.round_index)
-	var w := int(season.finals.get("week", 1))
-	return ["Playing the wildcard round...", "Playing the first week of the finals...", "Playing the semi-finals...",
-			"Playing the preliminary finals...", "Playing the Grand Final..."][clampi(w - 1, 0, 4)]
+	return str(finals_words(season)[2])
 
 
 ## Router back hook: close the results popup before leaving the hub.
-## The finals series, wildcard to the Grand Final (FinalsBracket).
+## The finals series, the first week to the Grand Final (FinalsBracket).
 func _show_finals() -> void:
 	if _finals_overlay != null and is_instance_valid(_finals_overlay):
 		return
