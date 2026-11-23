@@ -102,8 +102,10 @@ Measuring from imagery is allowed; raw imagery is never committed or baked into 
   m). Results (`tools/grounds/mcg_eras/measure/heights_2026-11-23.json`):
   - Olympic Stand roof front: 24-25 m above the turf from 20 June 2001, 21-23 m from 4 July 2001
     (fit rms 3.5 m). The two dates disagree by about 2.5 m; not settled yet.
-  - Ponsford Stand roof back: about 26 m (25-28), from its shadow in March 2000 (fit rms 1.5 m).
+  - Ponsford Stand roof back: about 26 m (25-28) above the ground west of it, from its shadow in
+    March 2000 (fit rms 1.5 m); that ground is near plaza level, so about 30 m above the turf.
   - Members' Pavilion: not measurable from these shadows (they fall on the west seats); needs photos.
   - Check on today's model: the Great Southern Stand's roof front casts its March 2000 shadow as if
-    it were 35.6-36.6 m above the turf (fit rms 0.2 m). Today's model has it at 31.2-31.5 m. The
-    builder gives the stand as 45 m high (no datum). Reported to the MCG thread, not changed here.
+    it were 35.6-36.6 m above the turf (fit rms 0.2 m). Today's model has it 35.7 m above the turf
+    (31.5 m above its plaza datum, turf at -4.2 m): it agrees. Google Earth's 3D readout across the
+    east stand agrees too (turf 8 m, roof 42-46 m above sea level).
