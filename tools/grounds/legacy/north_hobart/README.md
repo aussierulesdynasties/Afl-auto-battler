@@ -7,7 +7,7 @@ Legacy mode plays 4 matches here (two in 1991, two in 1992). Published size in `
 
 Google Earth web historical imagery (`tools/grounds/legacy/ge_history.js`, `LAT=-42.86785 LON=147.31618 R=950`):
 25 dates from 14 Oct 2003 to 2 Mar 2016 (`measure/dates.txt`; 22 Mar 2005 repeats the 2003 image). Nothing older than
-2003, eleven years after the last Legacy match here. The stands round the ground look the same in every frame; whether
+2003, eleven years after the last Legacy match here. The stands round the ground look the same in the six frames checked (2003, 2005, 2008, 2012, 2014); whether
 any changed between 1992 and 2003 cannot be told from these. Reference only.
 
 ## Measured so far (2026-11-23)
