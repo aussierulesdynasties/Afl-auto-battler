@@ -330,6 +330,9 @@ def tree_list(trees, st):
         x, z = model_xz(e, n)
         if (st and _inside((e, n), st)) or abs(x) > 950 or abs(z) > 950:
             continue
+        if 130.0 < e < 165.0 and 0.0 < n < 75.0:
+            # mapped along Wurundjeri Way under the east offices, but Google Earth (c_e, ext_270) shows the strip bare
+            continue
         h = rng.uniform(7.0, 15.0)
         r = h * rng.uniform(0.3, 0.4)
         if -215.0 < e < -120.0 and -260.0 < n < 260.0:
