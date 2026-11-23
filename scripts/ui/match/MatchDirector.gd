@@ -566,7 +566,7 @@ func _tick(h: float) -> void:
 	for i in range(tokens.size()):
 		MatchMotion.limit_step(tokens[i], from[i], h)
 	_update_ball(h)
-	_keep_off_ball()
+	_keep_off_ball(from, h)
 	if not flash.is_empty():
 		flash["left"] = float(flash["left"]) - h
 		if float(flash["left"]) <= 0.0:
@@ -1228,7 +1228,11 @@ func _pass_phases(k: int) -> Array:
 	var r := _actor_id(nev)
 	if r < 0:
 		return out
-	var to: Vector2 = _loc(nk) if str(nev.get("kind", "")) == "receive" else (tokens[r]["pos"] as Vector2)
+	# A pass marked on the lead, or cut off by the other side (a rebound), comes down where the
+	# log has it, and he runs to it: at the interceptor's own feet it carried 15-21 m past the
+	# spot on a ground shorter than the standard oval (MCG, suite match).
+	var to: Vector2 = _loc(nk) if str(nev.get("kind", "")) in ["receive", "rebound"] \
+			else (tokens[r]["pos"] as Vector2)
 	var d := (ball["pos"] as Vector2).distance_to(to)
 	var shape := _flight_shape("handball" if bool(events[k].get("hand", false)) else "kick", d)
 	out.append({"t": "flight", "to": to, "dur": shape.x, "apex": shape.y, "recv": r,
@@ -1328,8 +1332,12 @@ func _free_phases(k: int) -> Array:
 	if victim >= 0:
 		# Holding the ball and incorrect disposal are paid off a tackle, as in real footy: the
 		# man caught has it, the man paid the free runs him down and tackles him (the tackle
-		# clips), the umpire pays it, and the tackler gets up and takes the ball.
-		return out + [{"t": "possess", "who": victim, "quiet": true},
+		# clips), the umpire pays it, and the tackler gets up and takes the ball. A ball still
+		# loose is his to run onto first: given him where he stood, it jumped 31 m to his hands
+		# (suite match RIC v SYD, event 658: the ball loose at the free's spot, him upfield).
+		var his := [{"t": "possess", "who": victim, "quiet": true}] if not out.is_empty() \
+				else _take_free(victim)
+		return out + his + [
 				{"t": "chase", "who": tk, "victim": victim, "max": 1.6},
 				{"t": "down", "who": tk, "victim": victim, "dur": 0.55},
 				{"t": "emit"}, {"t": "wait", "dur": TAKE_UP}] + _take_free(tk) \
@@ -1522,6 +1530,21 @@ func _rest_from_ball(j: int) -> void:
 	if absf(b.y - at.y) <= REST_ACROSS_SLACK:
 		return
 	_rests[j] = Vector2(r.x, MatchMotion.clamp_across(r.x, b.y + float((events[j] as Dictionary).get("loose_across", 0.0)), 4.0, 1.0))
+	# Every later spot already worked out from the old rest spot (the ball-up or gather it waits
+	# on, and the handball out of that ball-up) is worked out again from the new one, or the ball
+	# rolls to one spot and the play goes on at the other (suite match: a ball-up 2.5 m from where
+	# the smothered ball stopped; picture truth: the handball out of it 35 m away in a tick).
+	# They are worked out again now, in order, each from the one before it: left to be worked out
+	# when next asked, a spot took the ball's position at that moment, and the 3D view (which
+	# looks ahead for its camera) played a different match from the flat one.
+	var last := -1
+	for k in _locs.keys():
+		if int(k) > j:
+			last = maxi(last, int(k))
+			_locs.erase(k)
+	for k in range(j + 1, last + 1):
+		if not META.has(str((events[k] as Dictionary).get("kind", ""))):
+			_loc(k)
 
 
 ## Where event `ev` is up this ground: MatchSim's field position (metres from the middle, on
@@ -1754,7 +1777,7 @@ func _scrap_in(p: Dictionary, who: int, brake := false) -> void:
 			t["cap"] = sqrt(SCOOP_SPEED * SCOOP_SPEED + 2.0 * MatchMotion.BRAKE * 0.55 * maxf(r - SCOOP_LEAD, 0.0))
 		else:
 			t.erase("cap")
-		MatchMotion.set_goal(t, _pass_line(lines, id, rest, go), 1.0, true)
+		MatchMotion.set_goal(t, _pass_line(lines, id, rest, go, who), 1.0, true)
 
 
 ## A man in on a loose ball that is not his to go down for comes through flat out on his own
@@ -1766,12 +1789,12 @@ func _scrap_in(p: Dictionary, who: int, brake := false) -> void:
 const PASS_SIDE := 1.2
 
 
-func _pass_line(lines: Dictionary, id: int, rest: Vector2, through := false) -> Vector2:
+func _pass_line(lines: Dictionary, id: int, rest: Vector2, through := false, down := -1) -> Vector2:
 	var t: Dictionary = tokens[id]
 	var pos: Vector2 = t["pos"]
 	var l: Array = lines.get(id, [])
-	if l.size() == 3 and bool(l[2]) == through and (l[1] as Vector2).distance_to(rest) <= 1.5 \
-			and pos.distance_to(l[0]) > 1.0:
+	if l.size() == 4 and bool(l[2]) == through and (l[1] as Vector2).distance_to(rest) <= 1.5 \
+			and pos.distance_to(l[0]) > 1.0 and int(l[3]) == down:
 		return l[0]
 	var run := rest - pos
 	var dir := run.normalized() if run.length() > 0.01 else _line(t)
@@ -1782,11 +1805,19 @@ func _pass_line(lines: Dictionary, id: int, rest: Vector2, through := false) -> 
 		var v: Vector2 = t["vel"]
 		if (v.length() > 0.5 and v.dot(side) < 0.0) or (v.length() <= 0.5 and id % 2 == 1):
 			side = -side
+		# Never on the side the man going down for it comes in from: a line across his run met
+		# him head on a metre short of it, and he went down for it from a dead stop (suite match:
+		# 7.7 m/s to 1.2 in a step).
+		if down >= 0 and down != id and side.dot((tokens[down]["pos"] as Vector2) - rest) > 0.0:
+			side = -side
 		aim = rest + side * PASS_SIDE
 		if pos.distance_to(aim) > 0.01:
 			dir = (aim - pos).normalized()
 	var goal := aim + dir * RUN_THROUGH
-	lines[id] = [goal, rest, through]
+	# Run-through past a ball near the fence ends inside it: a line out past the fence pinned
+	# him against it, standing still beside the ball (suite match at the MCG's own size).
+	goal = MatchMotion.clamp_to_oval(goal, 2.0)
+	lines[id] = [goal, rest, through, down]
 	return goal
 
 
@@ -1798,7 +1829,7 @@ func _pass_line(lines: Dictionary, id: int, rest: Vector2, through := false) -> 
 const KEEP_OFF := 0.8
 
 
-func _keep_off_ball() -> void:
+func _keep_off_ball(from: Array = [], h := 0.0) -> void:
 	if int(ball.get("holder", -1)) >= 0 or not str(ball["mode"]) in ["loose", "dead"] or _pi >= _phases.size():
 		return
 	var p: Dictionary = _phases[_pi]
@@ -1806,8 +1837,12 @@ func _keep_off_ball() -> void:
 	if not (st == "fumble" or (st == "collect" and p.get("pace", false)) or (st == "wait" and p.has("scoop"))):
 		return
 	var bp: Vector2 = ball["pos"]
-	var his := [int(p.get("who", -1)), int(p.get("scoop", -1))]
-	for t in tokens:
+	# The gatherer and the man down for it are on it by right. A fumble's own man (the one it
+	# came off) is in the scrap like the rest once it is loose: he is not let run over it
+	# (suite match, 408 s: a spoiler crossed it at 2.9 m/s).
+	var his := [int(p.get("who", -1)) if st != "fumble" else -1, int(p.get("scoop", -1))]
+	for i in range(tokens.size()):
+		var t: Dictionary = tokens[i]
 		var id := int(t["id"])
 		if id in his or not _on_feet(id) or time - float(t.get("scoop_at", -99.0)) < 1.5 * TEMPO:
 			continue
@@ -1822,8 +1857,19 @@ func _keep_off_ball() -> void:
 		var side := out.orthogonal()
 		if v.dot(side) < 0.0:
 			side = -side
-		t["vel"] = side * v.length()
-		t["pos"] = bp + out * KEEP_OFF
+		var to := bp + out * KEEP_OFF
+		if not from.is_empty():
+			# Still a step: no faster than a sprint from where he began it (a jump out to
+			# KEEP_OFF was 0.5 m in a 0.01 s step, 17 m/s in match_motion). What is left he steps
+			# out over the next steps, his run turned round it and a touch away from it.
+			var f: Vector2 = from[i]
+			to = f + (to - f).limit_length(MatchMotion.SPRINT * h)
+			var w2: Vector2 = to - bp
+			if w2.length() > 0.001:
+				out = w2.normalized()
+				side = out.orthogonal() if out.orthogonal().dot(side) >= 0.0 else -out.orthogonal()
+		t["vel"] = (side + out * 0.1).normalized() * v.length()
+		t["pos"] = to
 
 
 ## He goes down for the loose ball on the run (Oval3DAnim plays SCOOP_CLIP on his
@@ -1838,8 +1884,8 @@ func _scoop_start(who: int) -> float:
 	var sc: Dictionary = SCOOPS[kind]
 	var yaw := scoop_yaw(to, kind) if to.length() > 0.05 else _line(st).angle()
 	var line := Vector2(sin(yaw), cos(yaw)) if to.length() > 0.05 else _line(st)
+	var pace := scoop_pace(to.length(), kind)
 	var t0 := scoop_from(to.length(), kind)
-	var pace := clampf(scoop_run(to.length(), kind) / (float(sc["touch"]) - t0), 0.0, float(sc["run"])) / TEMPO
 	st["vel"] = line * pace
 	st["cap"] = pace
 	st["line"] = line
@@ -1863,9 +1909,10 @@ func _scoop_pick(who: int) -> int:
 				< 0.85 * float(sc["run"]) * (float(sc["touch"]) - scoop_from(run.length(), kind)):
 			continue
 		var dir := run.normalized() if run.length() > 0.01 else _line(t)
-		# Only a man already near the scoop's own pace goes down for it (_scoop_start sets his
-		# pace there: one sprinting past it stopped dead in a frame).
-		if (t["vel"] as Vector2).length() > scoop_speed(kind) + SCOOP_EASE:
+		# Only a man already near the pace this scoop starts at goes down for it (_scoop_start
+		# sets his pace there: one sprinting past it stopped dead in a frame; one at 3.6 m/s a
+		# metre off took the near gather at the 0.6 m/s so short a run starts it at).
+		if (t["vel"] as Vector2).length() > minf(scoop_speed(kind), scoop_pace(run.length(), kind)) + SCOOP_EASE:
 			continue
 		if kind == SCOOP_NEAR or (t["vel"] as Vector2).dot(dir) >= SCOOP_SPEED * 0.85:
 			return kind
@@ -1897,7 +1944,11 @@ func _pace_in(who: int) -> float:
 ## heels, 3 times).
 func _ease_near(who: int, dr: float) -> void:
 	if dr <= scoop_lead(SCOOP_AT_PACE):
-		tokens[who]["cap"] = minf(float(tokens[who]["cap"]), scoop_speed(SCOOP_NEAR) + SCOOP_EASE - 0.05)
+		# To the pace the near gather starts at from where he is now (a short run starts it slow:
+		# eased only to its full pace, a man a metre off at 3.6 m/s dropped to 0.6 as it began).
+		var run := (_scoop_aim(who, SCOOP_NEAR) - (tokens[who]["pos"] as Vector2)).length()
+		var pace := minf(scoop_speed(SCOOP_NEAR), scoop_pace(run, SCOOP_NEAR))
+		tokens[who]["cap"] = minf(float(tokens[who]["cap"]), pace + SCOOP_EASE - 0.05)
 
 
 ## How fast a rolling ball slows: its speed falls by exp(-rate x seconds), so a push of `rate` x v
@@ -2123,6 +2174,13 @@ static func scoop_from(d: float, kind := SCOOP_AT_PACE) -> float:
 	var sc: Dictionary = SCOOPS[kind]
 	return clampf(float(sc["touch"]) - scoop_run(d, kind) / float(sc["run"]), float(sc["from"]),
 			float(sc["touch"]) - float(sc["min"]))
+
+
+## The pace (this clock) a scoop d metres off starts him at: what is left of its run to the touch
+## over the clip time left to it, never more than the scoop's own pace.
+static func scoop_pace(d: float, kind := SCOOP_AT_PACE) -> float:
+	var sc: Dictionary = SCOOPS[kind]
+	return clampf(scoop_run(d, kind) / (float(sc["touch"]) - scoop_from(d, kind)), 0.0, float(sc["run"])) / TEMPO
 
 
 ## How far his hips run before his hand reaches a ball d metres off.
@@ -2822,6 +2880,17 @@ func _done(p: Dictionary) -> bool:
 				if not p.has("_kt") and _pt >= float(p.get("_kout", INF)):
 					out = -1
 				_scrap_in(p, out)
+				if not p.has("_held"):
+					# With no spot from MatchSim the man it has gather it next comes in at the pace
+					# he takes it on the run at, as below, not flat out on a line past it with the
+					# rest: the ball rolled into one such line and he ran over it at 6.7 m/s (suite
+					# match, 1353 s), too fast for his gather to start.
+					var gk := _next_real(int(_beat.get("k", -1)))
+					var g := _actor_id(events[gk]) if gk >= 0 else -1
+					if g >= 0 and g != out and DISPOSALS.has(str((events[gk] as Dictionary).get("kind", ""))) \
+							and _on_feet(g):
+						_ease_near(g, _pace_in(g))
+						_busy[g] = true
 			if p.has("_held") and str(ball["mode"]) == "loose" and _pt < FUMBLE_HOLD_MAX:
 				if _knock_step(p):
 					return false
@@ -2896,6 +2965,14 @@ func _log_arrival(k: int) -> void:
 		# A set-shot mark stands on its band's spot (T2.24), and a set shot
 		# that falls short drops in front of goal from there, not at the logged fp.
 		want = (_locs[k] as Vector2).x
+	else:
+		# The disposal off a set-shot mark (a pass from the pocket) goes from where the mark
+		# stands, its band's spot, which the log gives the same fp as the mark.
+		var pk := _prev_real(k)
+		if pk >= 0 and (events[pk] as Dictionary).has("band") and _locs.has(pk) \
+				and is_equal_approx(float((events[pk] as Dictionary).get("fp", 0.0)), float(ev.get("fp", 0.0))) \
+				and int((events[pk] as Dictionary).get("side", -1)) == int(ev.get("side", -2)):
+			want = (_locs[pk] as Vector2).x
 	if arrivals.size() >= 4000:
 		arrivals.pop_front()
 	arrivals.append({"idx": k, "kind": kind, "pos": ball["pos"], "want_x": want})

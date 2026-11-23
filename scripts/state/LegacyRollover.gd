@@ -223,7 +223,8 @@ static func foundation(gs, code: String, year: int) -> Dictionary:
 				p["attr"] = Prospects.fit_attributes(p["attr"], str(p["role"]), float(ovr.to_int()), float(p["gm"]))
 			p["overall"] = Ratings.rate_overall(p["attr"], str(p["role"]), float(p["gm"]))
 			p["value"] = Ratings.salary_value(int(p["overall"]))
-			p["career"] = Career.from_source("?")
+			# Unknown up to the season he joins; every season after is counted.
+			p["career"] = Career.from_source("?", year - 1)
 			p["data_club"] = code
 			Potential.assign(p)
 	GameDB.assign_aliases(list)
