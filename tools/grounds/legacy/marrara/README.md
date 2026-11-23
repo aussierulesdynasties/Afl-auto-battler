@@ -27,8 +27,27 @@ look the same throughout.
 The published size in `data/grounds.json` (175 x 135 m, source not recorded) is 4 and 7 m less than the fence; the
 field markings inside the fence were not traced (only the goal lines).
 
+## Heights from Google Earth 3D (2026-11-23)
+
+Google Earth web 3D, straight down from 700 m (`LAT=-12.39915 LON=130.88725`, 1280 x 1000 window, 0.44 m a pixel):
+the status bar's lat, lon and height under the mouse read at 2,664 points on rays every 5 deg from 65 to 145 m out
+(`measure/ge3d/probe.js`, OCR `measure/ge3d/ocrp.py`, 6 unread; profiles `measure/ge3d/prof.py` -> `prof.txt`).
+Heights come in whole metres above the turf, which reads 28 m. The mesh is today's ground (date not shown); the west
+grandstand looks the same in every frame from 2005 on. Radii are from the screen centre, within about 6 m of the
+field centre.
+
+| Where (bearing) | What the mesh shows |
+| --- | --- |
+| West grandstand (135-230) | roof front **15-17 m** above the turf at 75 m out on the west (165-195), 80-88 m round the ends; the roof falls outward to 12-13 m at 115-120 m out (165-190) and to 13-14 m at about 100 m on the curved ends |
+| Light towers (55, 120-125, 240, 305) | single high readings of **43-44 m** at 91-97 m out (NE, NW, SW), 38 m at the south-east one; one point each, so these are the head positions, not a shape |
+| North (90-110) | the Michael Long centre: a roof at 10-11 m from 100 to 120 m out, lower parts at 6-8 m behind it |
+| North-east (60-85) | low buildings and small stands at 5-6 m from 95-150 m |
+| South (250-305) | buildings at 9-15 m from about 100 m out |
+| East (330-50) | open: 0-3 m (banks) to 140 m, a 9-12 m building at 130-135 m (20-50) |
+
 Bearings are degrees counter-clockwise from east round the field centre (0 east, 90 north).
 
 ## Not done yet
 
-- Stand, roof, light tower and building heights from Google Earth 3D (running).
+- Seat rows and the stand's section (tiers, rake) from a solved photo or a closer GE 3D sweep; light tower heads as a shape.
+- Which of the north and south buildings stood when (the north centre went up in 2014).
