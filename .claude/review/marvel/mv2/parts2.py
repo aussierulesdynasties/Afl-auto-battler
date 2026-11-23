@@ -199,8 +199,10 @@ def cl(z):return np.minimum(z,RU-0.4) if np.ndim(z) else np.minimum(np.full(K,z)
 # (offset from the face, height) read off the aerial pixel table at u 10 (mv/p2uv.py, mv/vert.py)
 prof=[(-4,ZP),(-4,13.2),(0,13.2),(0,14.3),(-0.6,14.3),(-0.6,21.4),(0,21.4),(0,24.9),(-0.4,24.9),(-0.4,26.3),(0,26.3),(0,27.7),
       (-3,27.7),(-3,33.9),(0,33.9),(0,36.5),(-5,36.5),(-5,None)]
-mats=['glass','soffit','silver','soffit',segm('curtain','curtain'),'soffit','silver','soffit','glass','soffit','silver','soffit',
-      'glass','soffit','silver','concrete','upperwall']  # the band over the braces up to the roof: dark blue (Google Earth c_ne)
+# round 12 (item 6.4): the face's glass and metal bands read near-black and lilac against Google Earth's even navy;
+# they take their own matt materials (retint.py BOWL)
+mats=['bowlglass','soffit','bowlband','soffit',segm('bowlglass','bowlglass'),'soffit','bowlband','soffit','bowlglass','soffit','bowlband','soffit',
+      'bowlglass','soffit','bowlband','concrete','upperwall']  # the band over the braces up to the roof: dark blue (Google Earth c_ne)
 # round 12 (PC check of round 11, top view): the 5 m ledge on top of the bowl's wall at 36.5 m was metallic silver, which
 # mirrored the sky and read as a long dark-blue block from above on the west; Google Earth shows grey concourse roofs
 rings=[ring(o,RU if z is None else cl(z)) for o,z in prof]
@@ -535,8 +537,12 @@ for nm,q,z in(('eastB_plant',[(-54.0,-109.0),(-54.0,-117.0),(-47.0,-117.0),(-47.
     # on the boxes' roofs; round 11's 2 m silver vents were too low and their metal top mirrored the sky
     vent_block(nm,lean(q,z+6.0),z,z+6.0,z+3.6,z+4.8,bay=3.0,pier=0.8,depth=0.25,wall='white',top='concrete')
 # C: car deck between B and D (roof u -21..10, v -116..-124, z 7) and the white walkway strip beside the wall (v -107..-116, z 10)
-prism('eastC_deck',lean([(-21.0,-116.0),(-21.0,-124.0),(10.0,-124.0),(10.0,-116.0)],7.0),0.0,7.0,'navy','paving')
-prism('eastC_walk',lean([(-21.0,-107.0),(-21.0,-116.0),(10.0,-116.0),(10.0,-107.0)],10.0),0.0,10.0,'officeglass','white')
+# round 12 (Google Earth point pick in c_ne, model (119.1, 41.3) at 22.4 m, and the offices_ne close-up): between the two
+# office boxes stands a glazed building with a bowed dark-glass front, its roof level with the boxes' glass, where round 11
+# had a 7 m car deck and a 10 m walkway. It is what made c_ne and c_e frame "differently" from Google Earth: their cameras
+# project Google Earth's picked points to within 3 px, but our view showed the stadium wall where Google Earth has this block.
+prism('eastC_hall',lean([(-21.0,-107.0),(-21.0,-122.0),(-13.0,-124.5),(-5.5,-125.2),(2.0,-124.5),(10.0,-122.0),(10.0,-107.0)],23.0),
+      0.0,23.0,'fcglass','paving')
 # ---------------- west forecourt: glazed hall under the terrace, front v 139.4, roof = deck 6.5; stairs down at both ends
 FU0,FU1,FV=-47.0,46.5,139.4
 fb=[(u,v) for u,v in bal if FU0<u<FU1]

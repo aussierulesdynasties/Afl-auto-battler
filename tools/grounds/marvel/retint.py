@@ -37,6 +37,13 @@ TARGET = {
 }
 
 
+# the bowl's outer face (round 12, item 6.4)
+# Calibration render (cloud, sun 60,45): a (60, 90, 130) map rendered (6, 44, 96) on both the east and west faces, which
+# face away from that sun and take the sky's blue light, so the red falls away fastest. Google Earth's face reads
+# (46, 71, 105). A light grey-blue map renders a mid navy there without turning mauve where the sun does fall.
+BOWL = {"band": (110, 120, 134), "glass": (110, 120, 134)}
+
+
 # How much of each texture's own variation is kept (1 = all).
 CONTRAST = {"navy": 0.5, "slate": 0.45}
 
@@ -164,7 +171,8 @@ def main():
     # a roof and so read khaki out here).
     # 2026-11-22: (56, 68, 96) rendered near-black navy on the shaded east face, (1, 27, 70) against
     # Google Earth's (105, 119, 136); a greyer, lighter blue keeps the letters' dark ground in the sun too.
-    retint("upperwall", (62, 68, 82), src="soffit", out="upperwall")  # round 10: dark grey-navy, not blue
+    # round 12 (item 6.4): (62, 68, 82) rendered (6, 25, 56) on the shaded faces against Google Earth's (47, 72, 107)
+    retint("upperwall", (96, 106, 122), src="soffit", out="upperwall")
     # Glazing: the dark glass rendered black in shade (Google Earth's office glass reads (96, 114, 132),
     # its shopfronts (84, 104, 121), sky in them included). Lighter, so it reads as glass, not holes.
     retint("glass", (74, 90, 108))
@@ -194,6 +202,13 @@ def main():
     # (117, 132, 142). Google Earth shows the boxes' faces as dark blue-grey glass behind slim pale vertical
     # mullions: officeglass() paints the glass, parts2.py models the mullions.
     officeglass()
+    # Round 12 (item 6.4, measured on the corrected ext_045 frame, sun on): the bowl's outer face read as near-black
+    # glass bands (13, 25, 57) between lilac silver bands (77, 87, 126); Google Earth's face is one even mid navy-blue,
+    # (46, 71, 105) all the way down. The face's bands get their own matt materials so the stand roofs' silver and
+    # the offices' glass keep theirs.
+    CONTRAST["bowlband"] = CONTRAST["bowlglass"] = 0.5
+    retint("bowlband", BOWL["band"], src="silver", out="bowlband")
+    retint("bowlglass", BOWL["glass"], src="glass", out="bowlglass")
     tiles = os.path.join(TEX, "tiles.json")
     j = json.load(open(tiles))
     j["endrib"] = j["endroof"]
@@ -211,6 +226,8 @@ def main():
     j["bluepanel"] = j["slate"]
     j["podiumpanel"] = j["slate"]
     j["fcglass"] = j["curtain"]
+    j["bowlband"] = j["silver"]
+    j["bowlglass"] = j["glass"]
     j["officeglass"] = [6, 6]
     for gone in ("office", "undercroft", "louvre"):
         j.pop(gone, None)

@@ -19,7 +19,7 @@ def mat(name):
     nt=m.node_tree;b=nt.nodes['Principled BSDF'];tx=nt.nodes.new('ShaderNodeTexImage')
     tx.image=bpy.data.images.load(os.path.join(HERE,'tex',src+'.png'));tx.interpolation='Cubic'
     nt.links.new(tx.outputs['Color'],b.inputs['Base Color'])
-    rough={'glass':0.15,'fcglass':0.15,'officeglass':0.6,'curtain':0.12,'silver':0.35,'teal':0.45,'tank':0.3}.get(src,0.8)
+    rough={'glass':0.15,'fcglass':0.15,'officeglass':0.6,'curtain':0.12,'silver':0.35,'teal':0.45,'tank':0.3,'bowlglass':0.5}.get(src,0.8)
     b.inputs['Roughness'].default_value=rough
     # officeglass is not metallic: as metal it mirrored the sky and read blue-purple on the shaded east (PC check round 5)
     if src in('glass','fcglass','curtain','silver','tank'):b.inputs['Metallic'].default_value=0.35 if src!='silver' else 0.5
