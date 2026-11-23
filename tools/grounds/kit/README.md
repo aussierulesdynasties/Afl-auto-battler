@@ -31,7 +31,8 @@ and renders are rebuilt on demand and git-ignored.
   Seat colours per stand: `row_cols` (front to back) or `seat_mix`.
 - `towers`, `extras` (`polys`, `boxes`, `buildings`, `sails`, `shelters`, `screen`), `rings` (a running track),
   `dome` (a whole-ground translucent roof on ribs), `outer_r` (number or [b, r] table), `path_w` (number or [b, w]
-  table), `mats_ground`.
+  table), `ground_r` (where the ground ends: number, default 240, or a [b, r] table; with a table the rest out to
+  240 m is a separate flat mesh `concourse_far`, which the game hides under a backdrop), `mats_ground`.
 - Optional: `fence_fourier` {c, a0, ab} (the fence as one smooth polar Fourier curve fitted to a trace, in place of the
   ellipse); `terrain` {b, dr, z} (ground heights at distances `dr` beyond the fence on bearings `b`: the bank and path
   follow it); per stand `open_back` (no back walls: an open colonnade, modelled in the ground's own file) and

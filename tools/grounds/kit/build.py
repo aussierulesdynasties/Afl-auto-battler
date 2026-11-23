@@ -549,6 +549,14 @@ def concourse(col):
         for q, m in Q:
             oriented(mb, q, m, np.array([0, 0, 1.0]), uv=[(p[0] / TILE.get(m, (1, 1))[0], p[1] / TILE.get(m, (1, 1))[1]) for p in q])
     mb.build(col)
+    if isinstance(RG, list):   # a ground_r table: the measured ground ends there, and a flat ring out to 240 m in its own
+        far = MB('concourse_far')   # mesh fills the rest where no backdrop is drawn (the game hides it under a backdrop)
+        for i in range(len(bs) - 1):
+            ba, bb = bs[i], bs[i + 1]
+            za, zb = terrain_z(ba, Rg(ba)) - 0.04, terrain_z(bb, Rg(bb)) - 0.04
+            q = [P3(ba, Rg(ba) - 0.2, za), P3(bb, Rg(bb) - 0.2, zb), P3(bb, max(240.0, Rg(bb) + 20), zb), P3(ba, max(240.0, Rg(ba) + 20), za)]
+            oriented(far, q, om, np.array([0, 0, 1.0]), uv=[(p[0] / TILE.get(om, (1, 1))[0], p[1] / TILE.get(om, (1, 1))[1]) for p in q])
+        far.build(col)
 
 
 def tower(mb, T):
