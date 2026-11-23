@@ -1,0 +1,2088 @@
+From 735a777130d44bee815f4f73c21faa3acaa90891 Mon Sep 17 00:00:00 2001
+From: gabebartolo-spec <gabebartolo@gmail.com>
+Date: Thu, 15 Oct 2026 00:12:30 +1100
+Subject: [PATCH] Pre-season story cards (row 39 slice 5): 11 cards, the card
+ stop after each block, culture, running and drill levers, shared card view
+
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+---
+ data/stories/contracts.json                   |  53 +++
+ data/stories/health.json                      |  53 +++
+ data/stories/leadership.json                  | 140 +++++++-
+ data/stories/members.json                     |  59 ++++
+ data/stories/selection.json                   |  58 +++
+ data/stories/training.json                    | 312 ++++++++++++++++
+ scripts/sim/PreSeason.gd                      |   3 +
+ scripts/sim/StoryDeck.gd                      |  34 +-
+ scripts/sim/StoryEngine.gd                    |  15 +-
+ scripts/state/ClubStories.gd                  |  50 ++-
+ scripts/state/GameState.gd                    |  75 +++-
+ scripts/ui/EventCardView.gd                   | 119 +++++++
+ scripts/ui/EventCardView.gd.uid               |   1 +
+ scripts/ui/HubScene.gd                        |  92 +----
+ scripts/ui/PreSeasonScene.gd                  |  24 +-
+ tests/floor_deltas/claude-preseason-cards.txt |   2 +
+ tests/test_preseason.gd                       |  69 +++-
+ tests/test_preseason_cards.gd                 | 334 ++++++++++++++++++
+ tests/test_preseason_cards.gd.uid             |   1 +
+ tests/test_story.gd                           |  10 +-
+ 20 files changed, 1397 insertions(+), 107 deletions(-)
+ create mode 100644 scripts/ui/EventCardView.gd
+ create mode 100644 scripts/ui/EventCardView.gd.uid
+ create mode 100644 tests/floor_deltas/claude-preseason-cards.txt
+ create mode 100644 tests/test_preseason_cards.gd
+ create mode 100644 tests/test_preseason_cards.gd.uid
+
+diff --git a/data/stories/contracts.json b/data/stories/contracts.json
+index b9db94e62..6102fdf88 100644
+--- a/data/stories/contracts.json
++++ b/data/stories/contracts.json
+@@ -324,5 +324,58 @@
+ 		},
+ 		"cooldown": 0,
+ 		"subject_cooldown": 0
++	},
++	{
++		"id": "pre_contract_talk",
++		"subject": {
++			"kind": "player",
++			"where": {
++				"fit": true,
++				"contract_years_max": 1,
++				"extension_ok": true,
++				"age_min": 26
++			},
++			"pick": "highest:overall"
++		},
++		"title": [
++			"{name}: the paper has him headed interstate"
++		],
++		"text": [
++			"A paper has {first} on another club's shopping list, and his manager has rung. He's out of contract at season's end and wants it sorted before Round 1."
++		],
++		"choices": [
++			{
++				"key": "extend",
++				"label": "Sign him now",
++				"effects": [
++					{
++						"op": "extend_early"
++					}
++				]
++			},
++			{
++				"key": "wait",
++				"label": "Tell him it waits until the season's under way",
++				"note": "No commitment yet. He'll ask for what he's worth then: less if his form drops, more if he improves.",
++				"effects": [
++					{
++						"op": "morale",
++						"d": -4
++					},
++					{
++						"op": "trust",
++						"d": -3,
++						"why": "You put off his contract talk with another club interested"
++					}
++				],
++				"result": "{first} isn't happy to be put off, with the paper still running the story."
++			}
++		],
++		"category": "contracts",
++		"phase": [
++			"preseason"
++		],
++		"cooldown": 20,
++		"per_season": 1
+ 	}
+ ]
+\ No newline at end of file
+diff --git a/data/stories/health.json b/data/stories/health.json
+index d514bef1d..596ff3f21 100644
+--- a/data/stories/health.json
++++ b/data/stories/health.json
+@@ -377,5 +377,58 @@
+ 				"result": "The side stays as it is. He'll be in a suit on the bench."
+ 			}
+ 		]
++	},
++	{
++		"id": "pre_knee_return",
++		"subject": {
++			"kind": "player",
++			"where": {
++				"injury_kind": "knee",
++				"injured_weeks_min": 1,
++				"injured_weeks_max": 6,
++				"rushable": true
++			},
++			"pick": "highest:overall"
++		},
++		"title": [
++			"{name}'s knee"
++		],
++		"text": [
++			"{first} is running again after his knee. The physio hasn't cleared him yet, but he is asking to join full sessions and reckons he is ready."
++		],
++		"choices": [
++			{
++				"key": "rush",
++				"label": "Clear him to play",
++				"effects": [
++					{
++						"op": "rush_back"
++					}
++				],
++				"result": ""
++			},
++			{
++				"key": "physio",
++				"label": "Follow the physio's plan",
++				"effects": [
++					{
++						"op": "trust",
++						"d": 3,
++						"why": "You kept to the physio's plan for his knee"
++					},
++					{
++						"op": "morale",
++						"d": -3
++					}
++				],
++				"result": "{first} does as the physio says, and grumbles about it."
++			}
++		],
++		"category": "health",
++		"phase": [
++			"preseason"
++		],
++		"cooldown": 20,
++		"per_season": 1
+ 	}
+ ]
+\ No newline at end of file
+diff --git a/data/stories/leadership.json b/data/stories/leadership.json
+index 77233011d..c178c6e6e 100644
+--- a/data/stories/leadership.json
++++ b/data/stories/leadership.json
+@@ -1685,5 +1685,143 @@
+ 				"result": "No farewell talk this week. He's just the captain until the siren."
+ 			}
+ 		]
++	},
++	{
++		"id": "pre_leaders_vote",
++		"subject": {
++			"kind": "club"
++		},
++		"when": {
++			"has_vice": true
++		},
++		"title": [
++			"The leaders have voted"
++		],
++		"text": [
++			"The leadership group met last night and voted for an extra morning session each week of the last block. They want to know you'll back it."
++		],
++		"choices": [
++			{
++				"key": "back",
++				"label": "Back the vote",
++				"effects": [
++					{
++						"op": "running",
++						"d": 1
++					},
++					{
++						"op": "culture",
++						"strand": "standards",
++						"d": 1,
++						"why": "You backed the leadership group's vote for extra work"
++					},
++					{
++						"op": "morale",
++						"d": -3,
++						"who": "all"
++					}
++				],
++				"result": "The extra mornings are on. The leaders are pleased, and the rest are tired."
++			},
++			{
++				"key": "overrule",
++				"label": "Overrule them",
++				"effects": [
++					{
++						"op": "morale",
++						"d": 3,
++						"who": "all"
++					},
++					{
++						"op": "culture",
++						"strand": "together",
++						"d": -1,
++						"why": "You overruled the leadership group's vote"
++					}
++				],
++				"result": "The vote doesn't stand. The group is glad of the mornings, and the leaders aren't."
++			}
++		],
++		"category": "leadership",
++		"phase": [
++			"preseason"
++		],
++		"cooldown": 20,
++		"per_season": 1
++	},
++	{
++		"id": "pre_star_last",
++		"subject": {
++			"kind": "player",
++			"where": {
++				"trial_place": "worst",
++				"overall_rank_max": 12,
++				"fit": true
++			},
++			"pick": "highest:overall"
++		},
++		"title": [
++			"{name} finished near the back"
++		],
++		"text": [
++			"{first} is one of your best and came in among the last three in the time trial. The group saw it."
++		],
++		"choices": [
++			{
++				"key": "call",
++				"label": "Call it out in front of the group",
++				"effects": [
++					{
++						"op": "culture",
++						"strand": "standards",
++						"d": 1,
++						"why": "You called out a star's slow time trial in front of the group"
++					},
++					{
++						"op": "morale",
++						"d": 3,
++						"who": "others"
++					},
++					{
++						"op": "morale",
++						"d": -4
++					},
++					{
++						"op": "trust",
++						"d": -4,
++						"why": "You called him out in front of the group"
++					}
++				],
++				"result": "{first} takes it hard. The rest of the group sits up."
++			},
++			{
++				"key": "quiet",
++				"label": "A quiet word",
++				"effects": [
++					{
++						"op": "trust",
++						"d": 4,
++						"why": "You had a quiet word with him after the time trial"
++					},
++					{
++						"op": "morale",
++						"d": 2
++					},
++					{
++						"op": "culture",
++						"strand": "standards",
++						"d": -1,
++						"why": "A star's slow time trial went unremarked"
++					}
++				],
++				"result": "A quiet word after the session. {first} knows, and the group sees nothing."
++			}
++		],
++		"category": "leadership",
++		"phase": [
++			"preseason"
++		],
++		"cooldown": 20,
++		"per_season": 1
+ 	}
+-]
++]
+\ No newline at end of file
+diff --git a/data/stories/members.json b/data/stories/members.json
+index 4579cfbe0..957a36aaf 100644
+--- a/data/stories/members.json
++++ b/data/stories/members.json
+@@ -379,5 +379,64 @@
+ 				"result": "The banner is all club. His milestone gets its moment after the siren."
+ 			}
+ 		]
++	},
++	{
++		"id": "pre_members_open",
++		"subject": {
++			"kind": "club"
++		},
++		"title": [
++			"Open training for the members"
++		],
++		"text": [
++			"The club wants to open a session to the members before Round 1."
++		],
++		"choices": [
++			{
++				"key": "open",
++				"label": "Open the gates",
++				"effects": [
++					{
++						"op": "morale",
++						"d": 3,
++						"who": "all"
++					},
++					{
++						"op": "board",
++						"d": 2
++					},
++					{
++						"op": "culture",
++						"strand": "standards",
++						"d": -1,
++						"why": "A pre-season session played to the crowd"
++					}
++				],
++				"result": "A few thousand members line the fence, and the session is a light one."
++			},
++			{
++				"key": "closed",
++				"label": "Keep it closed",
++				"effects": [
++					{
++						"op": "culture",
++						"strand": "standards",
++						"d": 1,
++						"why": "A full pre-season session behind closed gates"
++					},
++					{
++						"op": "board",
++						"d": -2
++					}
++				],
++				"result": "A full session behind closed gates. The members hear about it."
++			}
++		],
++		"category": "members",
++		"phase": [
++			"preseason"
++		],
++		"cooldown": 20,
++		"per_season": 1
+ 	}
+ ]
+\ No newline at end of file
+diff --git a/data/stories/selection.json b/data/stories/selection.json
+index e5554581f..0dbc6588b 100644
+--- a/data/stories/selection.json
++++ b/data/stories/selection.json
+@@ -595,5 +595,63 @@
+ 				"result": "{first} does the radio, the TV and the newspaper photo. He's loving every minute."
+ 			}
+ 		]
++	},
++	{
++		"id": "pre_kid_flying",
++		"subject": {
++			"kind": "player",
++			"where": {
++				"trial_place": "best",
++				"age_max": 23,
++				"games_max": 30,
++				"fit": true
++			},
++			"pick": "highest:pot_gap"
++		},
++		"title": [
++			"{name} is flying on the track"
++		],
++		"text": [
++			"{first} won the time trial from players who've been here for years. He's already asking if he's in for Round 1."
++		],
++		"choices": [
++			{
++				"key": "promise",
++				"label": "Promise him a run",
++				"effects": [
++					{
++						"op": "morale",
++						"d": 5
++					},
++					{
++						"op": "start_backing"
++					}
++				]
++			},
++			{
++				"key": "show",
++				"label": "Tell him what he has to show",
++				"effects": [
++					{
++						"op": "trust",
++						"d": 2,
++						"why": "You were straight with him about what he has to show"
++					},
++					{
++						"op": "morale",
++						"d": -2
++					},
++					{
++						"op": "explain"
++					}
++				]
++			}
++		],
++		"category": "selection",
++		"phase": [
++			"preseason"
++		],
++		"cooldown": 20,
++		"per_season": 1
+ 	}
+ ]
+\ No newline at end of file
+diff --git a/data/stories/training.json b/data/stories/training.json
+index 3548568d0..e1c0af0d1 100644
+--- a/data/stories/training.json
++++ b/data/stories/training.json
+@@ -561,5 +561,317 @@
+ 				}
+ 			}
+ 		]
++	},
++	{
++		"id": "pre_recruit_behind",
++		"subject": {
++			"kind": "player",
++			"where": {
++				"new_here": true,
++				"fit": true
++			},
++			"pick": "lowest:overall"
++		},
++		"title": [
++			"{name} is behind the group"
++		],
++		"text": [
++			"{first} came in this summer and the running group has already left him. The fitness staff want to know what you want done."
++		],
++		"choices": [
++			{
++				"key": "extra",
++				"label": "Put him on extra sessions",
++				"effects": [
++					{
++						"op": "xp",
++						"d": 8
++					},
++					{
++						"op": "morale",
++						"d": -3
++					}
++				],
++				"result": "{first} puts in the extra sessions, and feels singled out."
++			},
++			{
++				"key": "group",
++				"label": "Keep him with the group",
++				"effects": [
++					{
++						"op": "morale",
++						"d": 3
++					},
++					{
++						"op": "culture",
++						"strand": "standards",
++						"d": -1,
++						"why": "A new recruit was left to carry short in pre-season"
++					}
++				],
++				"result": "{first} stays with the group and keeps struggling to catch up."
++			}
++		],
++		"category": "training",
++		"phase": [
++			"preseason"
++		],
++		"cooldown": 20,
++		"per_season": 1
++	},
++	{
++		"id": "pre_bulking_up",
++		"subject": {
++			"kind": "player",
++			"where": {
++				"age_max": 22,
++				"pot_gap_min": 6,
++				"fit": true
++			},
++			"pick": "highest:pot_gap"
++		},
++		"title": [
++			"{name} has put on size"
++		],
++		"text": [
++			"{first} has packed on muscle over the summer and it shows in the contested work. The gym staff want to keep pushing him; the physio would rather hold the weight where it is."
++		],
++		"choices": [
++			{
++				"key": "build",
++				"label": "Keep building him up",
++				"effects": [
++					{
++						"op": "xp",
++						"d": 12
++					},
++					{
++						"op": "sore",
++						"line": "He carries the new weight sore into Round 1, and there's {sore_odds} chance he breaks down for weeks."
++					}
++				],
++				"result": "{first} keeps adding size through the last blocks."
++			},
++			{
++				"key": "hold",
++				"label": "Hold the weight where it is",
++				"effects": [
++					{
++						"op": "trust",
++						"d": 3,
++						"why": "You listened to the physio about his body"
++					}
++				],
++				"result": "{first} holds his weight and works on his speed instead."
++			}
++		],
++		"category": "training",
++		"phase": [
++			"preseason"
++		],
++		"cooldown": 20,
++		"per_season": 1
++	},
++	{
++		"id": "pre_camp",
++		"subject": {
++			"kind": "club"
++		},
++		"title": [
++			"The pre-season camp"
++		],
++		"text": [
++			"The leaders want to get the group away before the last block. There are three ways to spend it."
++		],
++		"choices": [
++			{
++				"key": "hard",
++				"label": "A hard camp",
++				"effects": [
++					{
++						"op": "running",
++						"d": 1
++					},
++					{
++						"op": "xp",
++						"d": 6,
++						"who": "all"
++					},
++					{
++						"op": "morale",
++						"d": -3,
++						"who": "all"
++					}
++				],
++				"result": "Three days of sand hills, two-a-days and sore bodies."
++			},
++			{
++				"key": "bond",
++				"label": "A bonding camp",
++				"effects": [
++					{
++						"op": "morale",
++						"d": 4,
++						"who": "all"
++					},
++					{
++						"op": "culture",
++						"strand": "together",
++						"d": 1,
++						"why": "A team camp away together in pre-season"
++					},
++					{
++						"op": "running",
++						"d": -1
++					}
++				],
++				"result": "Three days away together, with more laughs than running."
++			},
++			{
++				"key": "drill",
++				"label": "Stay home and drill the plan",
++				"effects": [
++					{
++						"op": "drill",
++						"d": 2
++					},
++					{
++						"op": "morale",
++						"d": -2,
++						"who": "all"
++					}
++				],
++				"result": "A week at the club, running the plan until it's second nature."
++			}
++		],
++		"category": "training",
++		"phase": [
++			"preseason"
++		],
++		"cooldown": 20,
++		"per_season": 1
++	},
++	{
++		"id": "pre_flag_hangover",
++		"subject": {
++			"kind": "club"
++		},
++		"when": {
++			"premiers": true
++		},
++		"title": [
++			"Premiers, and the legs know it"
++		],
++		"text": [
++			"A flag is a long night, and the list has come back soft. The fitness staff say the base is behind where it should be this time of year."
++		],
++		"choices": [
++			{
++				"key": "run",
++				"label": "Run it out of them",
++				"effects": [
++					{
++						"op": "running",
++						"d": 1
++					},
++					{
++						"op": "culture",
++						"strand": "standards",
++						"d": 1,
++						"why": "You made the premiers earn their legs back"
++					},
++					{
++						"op": "morale",
++						"d": -3,
++						"who": "all"
++					}
++				],
++				"result": "Early mornings until the flag is out of their legs."
++			},
++			{
++				"key": "ease",
++				"label": "Let them enjoy it a little longer",
++				"effects": [
++					{
++						"op": "morale",
++						"d": 3,
++						"who": "all"
++					},
++					{
++						"op": "culture",
++						"strand": "together",
++						"d": 1,
++						"why": "You let the premiers enjoy the flag a little longer"
++					},
++					{
++						"op": "running",
++						"d": -1
++					}
++				],
++				"result": "The premiers get a few more easy weeks, and the running waits."
++			}
++		],
++		"category": "training",
++		"phase": [
++			"preseason"
++		],
++		"cooldown": 20,
++		"per_season": 1
++	},
++	{
++		"id": "pre_sim_heated",
++		"subject": {
++			"kind": "club"
++		},
++		"title": [
++			"Match sim got heated"
++		],
++		"text": [
++			"Two of the boys had to be pulled apart at match sim. The assistants reckon it's the edge you've been after."
++		],
++		"choices": [
++			{
++				"key": "leave",
++				"label": "Leave it on the track",
++				"effects": [
++					{
++						"op": "morale",
++						"d": 3,
++						"who": "all"
++					},
++					{
++						"op": "culture",
++						"strand": "standards",
++						"d": -1,
++						"why": "A fight at match sim was left alone"
++					}
++				],
++				"result": "It stays on the track."
++			},
++			{
++				"key": "pull",
++				"label": "Pull the group up on it",
++				"effects": [
++					{
++						"op": "culture",
++						"strand": "standards",
++						"d": 1,
++						"why": "You pulled the group up after a fight at match sim"
++					},
++					{
++						"op": "morale",
++						"d": -3,
++						"who": "all"
++					}
++				],
++				"result": "You pull the group up. The standard is set."
++			}
++		],
++		"category": "training",
++		"phase": [
++			"preseason"
++		],
++		"cooldown": 20,
++		"per_season": 1
+ 	}
+ ]
+\ No newline at end of file
+diff --git a/scripts/sim/PreSeason.gd b/scripts/sim/PreSeason.gd
+index c74731da8..f86b8fbfc 100644
+--- a/scripts/sim/PreSeason.gd
++++ b/scripts/sim/PreSeason.gd
+@@ -72,6 +72,9 @@ const DEFAULT_BASE := "sound"
+ ## The time trial, then the intra-club match. The practice match against
+ ## another club is a later slice: it takes the week after its own block here.
+ const STOPS := {3: "trial", 5: "intra"}
++## The weeks after which a story card may stop the pre-season: the end of each
++## block (a card never comes in the quiet last week). At most one a block.
++const STORY_WEEKS := [3, 5, 7]
+ 
+ static var _data := {}
+ 
+diff --git a/scripts/sim/StoryDeck.gd b/scripts/sim/StoryDeck.gd
+index 7a5bed923..948c73d29 100644
+--- a/scripts/sim/StoryDeck.gd
++++ b/scripts/sim/StoryDeck.gd
+@@ -18,7 +18,7 @@ extends RefCounted
+ const DIR := "res://data/stories/"
+ const CATEGORIES := ["training", "health", "family", "media", "contracts", "leadership",
+ 		"community", "rivals", "board", "members", "selection"]
+-const PHASES := ["regular", "finals"]
++const PHASES := ["regular", "finals", "preseason"]
+ const BEATS := ["start", "middle", "end"]
+ 
+ ## The biggest effect one choice may carry, per lever.
+@@ -42,7 +42,16 @@ const OPS := {
+ 	# final is then lost, the side's morale falls by `d` instead of lifting; an
+ 	# injured player made available at a sore player's risk; one line to the news.
+ 	"slow_start": false, "loss_sting": false, "rush_back": true, "news": false,
++	# The pre-season cards: a step on one of the club's three culture strands
++	# (Culture.gd), weeks of running toward the fitness base, weeks of drilling the
++	# game plan (PreSeason.gd). They act on the club, not on a player.
++	"culture": false, "running": false, "drill": false,
+ }
++## The biggest step a card may give a culture strand, and the most weeks of
++## running or drilling it may add or take.
++const CULTURE_MAX := 3
++const RUNNING_MAX := 2
++const DRILL_MAX := 3
+ ## The biggest chance a "small chance" may be, in percent.
+ const RISK_MAX := 30
+ ## A role trial lasts this many of your games at most ("weeks" on the effect).
+@@ -65,7 +74,10 @@ const PLAYER_FACTS := ["name", "first", "age", "games", "fit", "selected", "over
+ 		# rating on the whole list, injury weeks to run, and whether you let the players hear
+ 		# he may retire.
+ 		"last_season", "finals_games", "save_debut", "debut_year", "milestone_next",
+-		"injured_weeks", "rushable", "overall_rank", "told_players"]
++		"injured_weeks", "rushable", "overall_rank", "told_players",
++		# The pre-season cards: arrived this summer (a recruit or a draftee), where he
++		# finished in the time trial ("best", "worst" or ""), what he is injured with.
++		"new_here", "trial_place", "injury_kind"]
+ ## Facts about the club and the week (GameState._story_club_facts).
+ const CLUB_FACTS := ["club", "opp", "round", "year", "losing_run", "winning_run", "ladder",
+ 		"board", "fit_count", "run_games", "finals_week", "captain_name", "vice_name", "vice_id",
+@@ -74,7 +86,9 @@ const CLUB_FACTS := ["club", "opp", "round", "year", "losing_run", "winning_run"
+ 		# finals, beaten in last week's final and still alive, and the Grand Final's story
+ 		# with this opponent (consecutive Grand Finals against them, last year's result, an
+ 		# established rival).
+-		"finals_math", "finals_bye", "lost_last_final", "gf_run", "gf_run_word", "gf_again", "rival"]
++		"finals_math", "finals_bye", "lost_last_final", "gf_run", "gf_run_word", "gf_again", "rival",
++		# The pre-season cards: weeks of it done (0 outside it) and the flag won last year.
++		"pre_week", "premiers"]
+ 
+ const DEFAULTS := {"weight": 1, "cooldown": 40, "subject_cooldown": 8, "per_season": 0,
+ 		"phase": ["regular"], "default": -1, "bye": false, "priority": false}
+@@ -269,6 +283,20 @@ static func _check_effect(where: String, e, player: bool) -> Array:
+ 		errs.append("%s: a trust change needs its reason" % where)
+ 	if op == "trust":
+ 		errs.append_array(_check_text(where, str(e.get("why", "")), player))
++	if op == "culture":
++		var strands := Culture.STRANDS.map(func(x): return str(x[0]))
++		if not strands.has(str(e.get("strand", ""))):
++			errs.append("%s: culture strand '%s' is not one of %s" % [where, str(e.get("strand", "")), ", ".join(strands)])
++		var cd := int(e.get("d", 0))
++		if cd == 0 or absi(cd) > CULTURE_MAX:
++			errs.append("%s: a culture step of %d is outside 1..%d" % [where, cd, CULTURE_MAX])
++		if str(e.get("why", "")) == "":
++			errs.append("%s: a culture step needs its reason" % where)
++		errs.append_array(_check_text(where, str(e.get("why", "")), player))
++	if op == "running" and (int(e.get("d", 0)) == 0 or absi(int(e.get("d", 0))) > RUNNING_MAX):
++		errs.append("%s: running of %d weeks is outside 1..%d" % [where, int(e.get("d", 0)), RUNNING_MAX])
++	if op == "drill" and (int(e.get("d", 0)) < 1 or int(e.get("d", 0)) > DRILL_MAX):
++		errs.append("%s: drilling of %d weeks is outside 1..%d" % [where, int(e.get("d", 0)), DRILL_MAX])
+ 	if op == "role_trial":
+ 		var wk := int(e.get("weeks", 0))
+ 		if wk < 1 or wk > TRIAL_GAMES_MAX:
+diff --git a/scripts/sim/StoryEngine.gd b/scripts/sim/StoryEngine.gd
+index 47e3653be..2d9ae5ed7 100644
+--- a/scripts/sim/StoryEngine.gd
++++ b/scripts/sim/StoryEngine.gd
+@@ -509,9 +509,9 @@ static func _effect_parts(e: Dictionary, facts: Dictionary) -> Array:
+ 			return [["gain", _trial_words(e)]]
+ 	var kind := ""
+ 	match op:
+-		"morale", "board", "trust":
++		"morale", "board", "trust", "culture", "running":
+ 			kind = "gain" if d > 0 else ("cost" if d < 0 else "")
+-		"xp", "fresh":
++		"xp", "fresh", "drill":
+ 			kind = "gain"
+ 		"rest", "sore", "heavy_legs", "expects_game", "start_backing", "back_kid", "slow_start", "loss_sting":
+ 			kind = "cost"
+@@ -594,6 +594,17 @@ static func _effect_words(e: Dictionary, facts: Dictionary) -> String:
+ 			return "A small chance the side's morale falls instead if you lose that final."
+ 		"role_trial":
+ 			return _trial_words(e)
++		"culture":
++			var label := "Standards"
++			for st in Culture.STRANDS:
++				if str(st[0]) == str(e.get("strand", "")):
++					label = str(st[1])
++			return "%s %s%s." % [label, "rises" if d > 0 else "falls", " a little" if absi(d) == 1 else ""]
++		"running":
++			var wk := "A week" if absi(d) == 1 else "Two weeks"
++			return "%s of hard running goes toward the fitness base." % wk if d > 0 					else "%s of running comes off the fitness base." % wk
++		"drill":
++			return "%s more week%s drilling the game plan." % [["", "One", "Two", "Three"][clampi(d, 1, 3)], "" if d == 1 else "s"]
+ 	return ""
+ 
+ 
+diff --git a/scripts/state/ClubStories.gd b/scripts/state/ClubStories.gd
+index f1a397a0e..9f53c91a5 100644
+--- a/scripts/state/ClubStories.gd
++++ b/scripts/state/ClubStories.gd
+@@ -15,12 +15,17 @@ const BROKEN_RUN_TRUST := -10
+ static func week_in_season(gs) -> int:
+ 	if gs.season == null:
+ 		return 0
++	# The pre-season's stops sit just before Round 1 on the calendar: week 3 is -5.
++	if gs.preseason_active():
++		return gs.preseason_week() - PreSeason.weeks()
+ 	if not gs.season.is_regular_done():
+ 		return gs.season.round_index + 1
+ 	return Season.REGULAR_ROUNDS + (gs.season.finals.get("weeks", []) as Array).size() + 1
+ 
+ 
+ static func phase(gs) -> String:
++	if gs.preseason_active():
++		return "preseason"
+ 	return "finals" if gs.season != null and gs.season.is_regular_done() else "regular"
+ 
+ 
+@@ -46,7 +51,7 @@ static func context(gs) -> Dictionary:
+ 	var week := week_in_season(gs)
+ 	var ph := phase(gs)
+ 	return {"seed": int(gs.season.seed), "year": int(gs.season_year), "week": week, "phase": ph,
+-			"big": ph == "finals" or week == 1 or week == Season.REGULAR_ROUNDS,
++			"big": ph == "finals" or (ph == "regular" and (week == 1 or week == Season.REGULAR_ROUNDS)),
+ 			"club": club_facts(gs, week, ph), "players": player_facts(gs)}
+ 
+ 
+@@ -55,20 +60,31 @@ static func club_facts(gs, week: int, ph: String) -> Dictionary:
+ 	for p in gs.my_list:
+ 		if int(p.get("injury_weeks", 0)) <= 0:
+ 			fit += 1
+-	var facts := {"club": GameDB.club_name(gs.my_club), "opp": _opponent_name(gs), "round": week,
++	var facts := {"club": GameDB.club_name(gs.my_club), "opp": _opponent_name(gs), "round": maxi(week, 0),
+ 			"year": int(gs.season_year), "losing_run": int(gs.losing_streak), "winning_run": _winning_run(gs),
+ 			"ladder": gs.my_position(), "board": gs.board_confidence(), "fit_count": fit,
+ 			"run_games": MatchNotes.count_word(Backing.RUN_GAMES),
+-			"finals_week": week - Season.REGULAR_ROUNDS if ph == "finals" else 0}
++			"finals_week": week - Season.REGULAR_ROUNDS if ph == "finals" else 0,
++			"pre_week": gs.preseason_week() if ph == "preseason" else 0, "premiers": _premiers_last_year(gs)}
+ 	facts.merge(_leader_facts(gs), true)
+ 	facts.merge(_finals_facts(gs, ph), true)
+ 	return facts
+ 
+ 
++## Won the flag last year, by the honour roll this save holds.
++static func _premiers_last_year(gs) -> bool:
++	if gs.honour_roll.is_empty():
++		return false
++	var last: Dictionary = gs.honour_roll[gs.honour_roll.size() - 1]
++	return int(last.get("year", 0)) == int(gs.season_year) - 1 and str(last.get("premier", "")) == gs.my_club
++
++
+ ## Where you stand in September (and on the ten before it).
+ static func _finals_facts(gs, ph: String) -> Dictionary:
+ 	var out := {"finals_math": "", "finals_bye": false, "lost_last_final": false, "gf_run": 0,
+ 			"gf_run_word": "", "gf_again": "", "rival": false}
++	if ph == "preseason":
++		return out
+ 	if ph == "regular":
+ 		out["finals_math"] = gs.season.finals_math(gs.my_club)
+ 		return out
+@@ -279,7 +295,9 @@ static func player_fact(gs, p: Dictionary, selected: bool, i: Dictionary, fit_ra
+ 			"save_debut": gs.save_saw_every_game(p), "debut_year": _debut_year(gs, p),
+ 			"milestone_next": _milestone_next(gs, p), "injured_weeks": int(p.get("injury_weeks", 0)),
+ 			"rushable": int(p.get("injury_weeks", 0)) > 0 and str(p.get("injury_kind", "")) != "concussion",
+-			"overall_rank": all_rank, "told_players": gs.story_flag_set(id, "farewell_told")}
++			"overall_rank": all_rank, "told_players": gs.story_flag_set(id, "farewell_told"),
++			"new_here": _new_here(gs, p), "trial_place": _trial_place(gs, id),
++			"injury_kind": str(p.get("injury_kind", ""))}
+ 	# The result of his role trial, for the card that reports it.
+ 	var tr: Dictionary = gs.trial_result
+ 	if not tr.is_empty() and str(tr.get("id", "")) == id:
+@@ -296,6 +314,22 @@ static func player_fact(gs, p: Dictionary, selected: bool, i: Dictionary, fit_ra
+ 
+ 
+ 
++## Arrived this summer: signed or traded in last off-season, or drafted in it.
++static func _new_here(gs, p: Dictionary) -> bool:
++	var last: int = int(gs.season_year) - 1
++	return int(p.get("joined", 0)) == last or int(p.get("drafted_year", 0)) == last
++
++
++## Where he finished in this pre-season's time trial: "best", "worst" or "".
++static func _trial_place(gs, id: String) -> String:
++	var tr: Dictionary = gs.preseason_trial()
++	if (tr.get("best", []) as Array).has(id):
++		return "best"
++	if (tr.get("worst", []) as Array).has(id):
++		return "worst"
++	return ""
++
++
+ ## The ageing rule retires him at this rollover (Retirement.intends, read-only: the
+ ## coach can still talk him round at the rollover, so a card only says "could be").
+ static func _last_season(gs, p: Dictionary) -> bool:
+@@ -443,6 +477,8 @@ static func _apply(gs, e: Dictionary, p: Dictionary, facts: Dictionary, applied:
+ 			applied["board"] = int(applied.get("board", 0)) + d
+ 		"trust":
+ 			var when := "Round %d" % int(facts.get("round", 0)) if int(facts.get("finals_week", 0)) == 0 else "Finals"
++			if int(facts.get("pre_week", 0)) > 0:
++				when = "Pre-season"
+ 			applied["trust"] = int(applied.get("trust", 0)) + Trust.change(gs.relations, Trust.player_key(str(p["id"])),
+ 					d, StoryEngine.fill(str(e.get("why", "")), facts), int(gs.season_year), when)
+ 		"rest":
+@@ -459,6 +495,12 @@ static func _apply(gs, e: Dictionary, p: Dictionary, facts: Dictionary, applied:
+ 			# Waits for the result (GameState._settle_loss_sting).
+ 			for q in _targets(gs, e, p):
+ 				q["loss_sting"] = [int(e.get("chance", 0)), int(e.get("d", 0))]
++		"culture":
++			gs._culture_move(gs.my_club, str(e.get("strand", "")), d, StoryEngine.fill(str(e.get("why", "")), facts))
++		"running":
++			gs.preseason_add_running(float(d))
++		"drill":
++			gs.preseason_add_drill(d)
+ 		"news":
+ 			gs.add_news("retirement", StoryEngine.fill(str(e.get("text", "")), facts))
+ 		"rush_back":
+diff --git a/scripts/state/GameState.gd b/scripts/state/GameState.gd
+index c20bb8952..f386c5fda 100644
+--- a/scripts/state/GameState.gd
++++ b/scripts/state/GameState.gd
+@@ -2579,6 +2579,9 @@ func preseason_stop() -> String:
+ 	if str(PreSeason.STOPS.get(w, "")) == "intra" and preseason.get("intra") is Dictionary \
+ 			and not bool((preseason["intra"] as Dictionary).get("seen", false)):
+ 		return "intra"
++	# The story cards the block threw up (data/stories, phase "preseason").
++	if bool(preseason.get("story_pending", false)):
++		return "story"
+ 	return ""
+ 
+ 
+@@ -2653,7 +2656,7 @@ func preseason_trial() -> Dictionary:
+ func preseason_step_week() -> String:
+ 	if not preseason_active():
+ 		return "done"
+-	if preseason_stop() == "trial" or preseason_stop() == "intra":
++	if ["trial", "intra", "story"].has(preseason_stop()):
+ 		return preseason_stop()
+ 	var w := preseason_week() + 1
+ 	var clubs: Dictionary = preseason.get("clubs", {})
+@@ -2859,6 +2862,10 @@ func _finish_drills() -> String:
+ 		if not plan_known.has(code):
+ 			continue
+ 		var credit: Dictionary = PreSeason.drill_credit((clubs[club] as Dictionary).get("blocks", []))
++		if code == my_club:
++			var extra: Dictionary = preseason.get("bonus_drill", {})
++			for plan in extra:
++				credit[plan] = float(credit.get(plan, 0.0)) + float(extra[plan])
+ 		for plan in credit:
+ 			var was := int((plan_known[code] as Dictionary).get(plan, 0))
+ 			var now := PreSeason.drilled_level(was, float(credit[plan]))
+@@ -2906,6 +2913,8 @@ func preseason_advance() -> String:
+ 		return "done"
+ 	if preseason_stop() == "trial":
+ 		preseason["trial_seen"] = true
++	elif preseason_stop() == "story":
++		_end_preseason_cards()
+ 	elif preseason_stop() == "intra":
+ 		if not intra_played():
+ 			# Pressed on without playing it: it is simmed on the sides and
+@@ -2918,6 +2927,12 @@ func preseason_advance() -> String:
+ 	var at := ""
+ 	while at == "":
+ 		at = preseason_step_week()
++		# The end of a block may bring a card: it stops the pre-season after
++		# the time trial or the intra-club match, if that is the week.
++		if preseason_active() and PreSeason.STORY_WEEKS.has(preseason_week()) and int(preseason.get("cards_week", 0)) != preseason_week():
++			preseason["cards_week"] = preseason_week()
++			if _preseason_cards() and at == "":
++				at = "story"
+ 	mark_dirty()
+ 	autosave()
+ 	return at
+@@ -2929,8 +2944,11 @@ func preseason_advance() -> String:
+ func preseason_sim_to_round1() -> void:
+ 	if not preseason_active():
+ 		return
++	preseason["hands_off"] = true
+ 	while preseason_active():
+ 		preseason["trial_seen"] = true
++		if preseason_stop() == "story":
++			_end_preseason_cards()
+ 		if preseason_stop() == "intra":
+ 			if not intra_played():
+ 				sim_intra_match()
+@@ -2940,6 +2958,61 @@ func preseason_sim_to_round1() -> void:
+ 	autosave()
+ 
+ 
++# ---------------------------------------------------------------------------
++# Pre-season story cards (data/stories, phase "preseason"), behind the same switch
++# ---------------------------------------------------------------------------
++## The block just finished may stop the pre-season for a card (at most one;
++## most pre-seasons two or three over the three blocks). Round 1's cards, drawn
++## when the season was made, wait aside until the pre-season is done. Returns
++## whether a card is waiting.
++func _preseason_cards() -> bool:
++	if my_club == "" or not stories_on or is_sacked():
++		return false
++	var drawn := ClubStories.pick(self)
++	if drawn.is_empty():
++		return false
++	if not preseason.has("round1"):
++		preseason["round1"] = week_events
++	week_events = drawn
++	preseason["story_pending"] = true
++	mark_dirty()
++	return true
++
++
++## The coach presses on from a card stop: what is still unanswered settles by
++## the card's own rule, and Round 1's cards come back.
++func _end_preseason_cards() -> void:
++	_settle_week_event()
++	preseason["story_pending"] = false
++	if preseason.has("round1"):
++		week_events = preseason["round1"]
++		preseason.erase("round1")
++	else:
++		week_events = []
++	mark_dirty()
++
++
++## Running done on a card, in weeks of solid running toward the fitness base.
++func preseason_add_running(weeks: float) -> void:
++	var entry: Dictionary = (preseason.get("clubs", {}) as Dictionary).get(my_club, {})
++	if entry.is_empty():
++		return
++	entry["run"] = maxf(0.0, float(entry.get("run", 0.0)) + weeks)
++
++
++## Weeks of drilling a card adds to the plan the side plays (or, for a side that
++## plays Balanced, to the plan it knows least): counted with the blocks' own
++## when the pre-season ends (_finish_drills).
++func preseason_add_drill(weeks: int) -> void:
++	var plan := club_plan
++	if not PreSeason.DRILL_PLANS.has(plan):
++		_ensure_plan_known()
++		plan = str(PreSeason.default_drill(plan, plan_known.get(my_club, {}))[0])
++	var extra: Dictionary = preseason.get("bonus_drill", {})
++	extra[plan] = float(extra.get(plan, 0.0)) + float(weeks)
++	preseason["bonus_drill"] = extra
++
++
+ # ---------------------------------------------------------------------------
+ # The intra-club match (PreSeason.gd): end of week 5, behind the same switch
+ # ---------------------------------------------------------------------------
+diff --git a/scripts/ui/EventCardView.gd b/scripts/ui/EventCardView.gd
+new file mode 100644
+index 000000000..653b12c2b
+--- /dev/null
++++ b/scripts/ui/EventCardView.gd
+@@ -0,0 +1,119 @@
++class_name EventCardView
++extends RefCounted
++## One story card as the coach answers it: title, text, a button per choice with
++## its Gain and Cost lines under it, "See the rule" where a rule exists, and the
++## outcome once answered. Shared by the hub (the week's cards) and the
++## pre-season stops. `rebuild` redraws the host after an answer; `show_rule`
++## opens the rule sheet.
++
++
++static func build(index: int, narrow: bool, rebuild: Callable, show_rule: Callable) -> Control:
++	var e: Dictionary = GameState.week_events[index]
++	var card := UiKit.panel(UiKit.PANEL, 12)
++	card.name = "WeekEvent" if index == 0 else "WeekEvent_%d" % index
++	var v := UiKit.vbox(6)
++	card.add_child(v)
++	v.add_child(UiKit.lbl(str(e.get("title", "")), UiKit.BODY, UiKit.TEXT, true))
++	if not bool(e.get("resolved", false)):
++		var t := UiKit.lbl(str(e.get("text", "")), 12, UiKit.TEXT)
++		t.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
++		v.add_child(t)
++		# What an authored stakes line adds, then what happens if he says
++		# nothing, apart from the choices. Full-strength text: it is what a
++		# coach decides on.
++		if str(e.get("stakes", "")) != "":
++			var sk := UiKit.lbl(str(e["stakes"]), UiKit.SECONDARY, UiKit.TEXT)
++			sk.name = "EventStakes_%d" % index
++			sk.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
++			v.add_child(sk)
++		var silence := str((e.get("unanswered", {}) as Dictionary).get("hint", ""))
++		if silence != "":
++			var sl := UiKit.lbl(silence, UiKit.SECONDARY, UiKit.TEXT)
++			sl.name = "EventSilence_%d" % index
++			sl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
++			v.add_child(sl)
++		var opts: Array = e.get("options", [])
++		var row: BoxContainer = UiKit.vbox(22) if narrow else UiKit.hbox(8)
++		v.add_child(row)
++		for i in range(opts.size()):
++			var o: Dictionary = opts[i]
++			var b := UiKit.btn(str(o.get("label", "")), 14, false)
++			b.name = "Event_%d" % i
++			b.custom_minimum_size = Vector2(0, 48)
++			b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
++			if not narrow:
++				# Side by side, every choice gets an equal share and wraps its own words.
++				b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
++				b.custom_minimum_size = Vector2(0, 48)
++			b.pressed.connect(func():
++				GameState.resolve_card(index, i)
++				rebuild.call())
++			# What this answer does, worded from its own effects: gains first,
++			# then costs, one plain line each (a choice that does nothing
++			# mechanical shows nothing under it). Same text, same weight on
++			# every choice.
++			var lines := StoryEngine.stakes_lines(o.get("effects", []), e.get("facts", {}))
++			var rule_text := str(o.get("rule", ""))
++			if lines.is_empty() and rule_text == "":
++				row.add_child(b)
++				continue
++			var col := UiKit.vbox(3)
++			col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
++			col.add_child(b)
++			for line in lines:
++				var mark := ""
++				var kind := "Note"
++				if line.begins_with(StoryEngine.GAIN_MARK):
++					mark = "Gain:"
++					kind = "Gain"
++				elif line.begins_with(StoryEngine.COST_MARK):
++					mark = "Cost:"
++					kind = "Cost"
++				var cl := UiKit.lbl(line.substr(mark.length()).strip_edges() if mark != "" else line, UiKit.SECONDARY, UiKit.TEXT)
++				cl.name = "Event%s_%d_%d" % [kind, index, i]
++				cl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
++				if mark == "":
++					col.add_child(cl)
++					continue
++				# The marker is bold (weight, not colour); the sentence stays regular.
++				var item := UiKit.hbox(6)
++				var mk := UiKit.lbl(mark, UiKit.SECONDARY, UiKit.TEXT, true)
++				mk.name = "Event%sMark_%d_%d" % [kind, index, i]
++
++				mk.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
++				mk.autowrap_mode = TextServer.AUTOWRAP_OFF
++				mk.custom_minimum_size = Vector2(40, 0)
++				item.add_child(mk)
++				cl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
++				item.add_child(cl)
++				col.add_child(item)
++			# The exact rule behind a line is one deliberate tap away.
++			if rule_text != "":
++				var more := UiKit.text_action("See the rule", UiKit.SMALL)
++				more.name = "EventRule_%d" % i
++				more.alignment = HORIZONTAL_ALIGNMENT_LEFT
++				more.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
++				more.pressed.connect(func(): show_rule.call(rule_text))
++				col.add_child(more)
++			row.add_child(col)
++	else:
++		v.add_child(UiKit.lbl(str(e.get("outcome", "")), 13, UiKit.GOOD))
++	return card
++
++
++## A host's rule sheet: the exact rule behind a line, closed with one tap.
++static func rule_sheet(host: Control, text: String) -> void:
++	if host.get_node_or_null("RuleSheet") != null:
++		return
++	var box := UiKit.modal_box(host, 460.0)
++	(box["overlay"] as Control).name = "RuleSheet"
++	var v: VBoxContainer = box["body"]
++	var l := UiKit.lbl(text, 15, UiKit.TEXT)
++	l.name = "RuleText"
++	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
++	v.add_child(l)
++	var ok := UiKit.btn("Close", UiKit.NAME, true)
++	ok.name = "RuleClose"
++	ok.custom_minimum_size = Vector2(0, 48)
++	ok.pressed.connect(func(): (box["overlay"] as Control).queue_free())
++	(box["footer"] as VBoxContainer).add_child(ok)
+diff --git a/scripts/ui/EventCardView.gd.uid b/scripts/ui/EventCardView.gd.uid
+new file mode 100644
+index 000000000..c720b8179
+--- /dev/null
++++ b/scripts/ui/EventCardView.gd.uid
+@@ -0,0 +1 @@
++uid://26ak5mlvtg3s
+diff --git a/scripts/ui/HubScene.gd b/scripts/ui/HubScene.gd
+index fed81a209..28ebc90e0 100644
+--- a/scripts/ui/HubScene.gd
++++ b/scripts/ui/HubScene.gd
+@@ -388,97 +388,7 @@ func _last_match_button() -> Control:
+ ## here; unanswered when the round is played, it changes nothing - or costs
+ ## what its hint says (data/stories, StoryEngine).
+ func _event_card(index: int) -> Control:
+-	var e: Dictionary = GameState.week_events[index]
+-	var card := UiKit.panel(UiKit.PANEL, 12)
+-	card.name = "WeekEvent" if index == 0 else "WeekEvent_%d" % index
+-	var v := UiKit.vbox(6)
+-	card.add_child(v)
+-	v.add_child(UiKit.lbl(str(e.get("title", "")), UiKit.BODY, UiKit.TEXT, true))
+-	if not bool(e.get("resolved", false)):
+-		var t := UiKit.lbl(str(e.get("text", "")), 12, UiKit.TEXT)
+-		t.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+-		v.add_child(t)
+-		# What an authored stakes line adds, then what happens if he says
+-		# nothing, apart from the choices. Full-strength text: it is what a
+-		# coach decides on.
+-		if str(e.get("stakes", "")) != "":
+-			var sk := UiKit.lbl(str(e["stakes"]), UiKit.SECONDARY, UiKit.TEXT)
+-			sk.name = "EventStakes_%d" % index
+-			sk.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+-			v.add_child(sk)
+-		var silence := str((e.get("unanswered", {}) as Dictionary).get("hint", ""))
+-		if silence != "":
+-			var sl := UiKit.lbl(silence, UiKit.SECONDARY, UiKit.TEXT)
+-			sl.name = "EventSilence_%d" % index
+-			sl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+-			v.add_child(sl)
+-		var opts: Array = e.get("options", [])
+-		var row: BoxContainer = UiKit.vbox(22) if _narrow() else UiKit.hbox(8)
+-		v.add_child(row)
+-		for i in range(opts.size()):
+-			var o: Dictionary = opts[i]
+-			var b := UiKit.btn(str(o.get("label", "")), 14, false)
+-			b.name = "Event_%d" % i
+-			b.custom_minimum_size = Vector2(0, 48)
+-			b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+-			if not _narrow():
+-				# Side by side, every choice gets an equal share and wraps its own words.
+-				b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+-				b.custom_minimum_size = Vector2(0, 48)
+-			b.pressed.connect(func():
+-				GameState.resolve_card(index, i)
+-				_build())
+-			# What this answer does, worded from its own effects: gains first,
+-			# then costs, one plain line each (a choice that does nothing
+-			# mechanical shows nothing under it). Same text, same weight on
+-			# every choice.
+-			var lines := StoryEngine.stakes_lines(o.get("effects", []), e.get("facts", {}))
+-			var rule_text := str(o.get("rule", ""))
+-			if lines.is_empty() and rule_text == "":
+-				row.add_child(b)
+-				continue
+-			var col := UiKit.vbox(3)
+-			col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+-			col.add_child(b)
+-			for line in lines:
+-				var mark := ""
+-				var kind := "Note"
+-				if line.begins_with(StoryEngine.GAIN_MARK):
+-					mark = "Gain:"
+-					kind = "Gain"
+-				elif line.begins_with(StoryEngine.COST_MARK):
+-					mark = "Cost:"
+-					kind = "Cost"
+-				var cl := UiKit.lbl(line.substr(mark.length()).strip_edges() if mark != "" else line, UiKit.SECONDARY, UiKit.TEXT)
+-				cl.name = "Event%s_%d_%d" % [kind, index, i]
+-				cl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+-				if mark == "":
+-					col.add_child(cl)
+-					continue
+-				# The marker is bold (weight, not colour); the sentence stays regular.
+-				var item := UiKit.hbox(6)
+-				var mk := UiKit.lbl(mark, UiKit.SECONDARY, UiKit.TEXT, true)
+-				mk.name = "Event%sMark_%d_%d" % [kind, index, i]
+-
+-				mk.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+-				mk.autowrap_mode = TextServer.AUTOWRAP_OFF
+-				mk.custom_minimum_size = Vector2(40, 0)
+-				item.add_child(mk)
+-				cl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+-				item.add_child(cl)
+-				col.add_child(item)
+-			# The exact rule behind a line is one deliberate tap away.
+-			if rule_text != "":
+-				var more := UiKit.text_action("See the rule", UiKit.SMALL)
+-				more.name = "EventRule_%d" % i
+-				more.alignment = HORIZONTAL_ALIGNMENT_LEFT
+-				more.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+-				more.pressed.connect(func(): _show_rule(rule_text))
+-				col.add_child(more)
+-			row.add_child(col)
+-	else:
+-		v.add_child(UiKit.lbl(str(e.get("outcome", "")), 13, UiKit.GOOD))
+-	return card
++	return EventCardView.build(index, _narrow(), func(): _build(), _show_rule)
+ 
+ 
+ ## The exact rule behind a choice's line, looked up on purpose.
+diff --git a/scripts/ui/PreSeasonScene.gd b/scripts/ui/PreSeasonScene.gd
+index d445f1c52..b0a596e8c 100644
+--- a/scripts/ui/PreSeasonScene.gd
++++ b/scripts/ui/PreSeasonScene.gd
+@@ -78,7 +78,11 @@ func _build() -> void:
+ 	for i in range(PreSeason.block_count()):
+ 		if not GameState.preseason_block_open(i):
+ 			first = i + 1
+-	if stop == "intra":
++	if stop == "story":
++		page.add_child(_story_cards())
++		page.add_child(_blocks_section(first, _wide()))
++		page.add_child(_base_result())
++	elif stop == "intra":
+ 		if GameState.intra_played():
+ 			page.add_child(_intra_report())
+ 			page.add_child(_blocks_section(first, _wide()))
+@@ -193,6 +197,8 @@ func _hero(stop: String) -> String:
+ 			return "The time trial"
+ 		"intra":
+ 			return "The intra-club match"
++		"story":
++			return "After week %d of %d" % [GameState.preseason_week(), PreSeason.weeks()]
+ 	return "Week %d of 8" % mini(PreSeason.weeks(), GameState.preseason_week() + 1)
+ 
+ 
+@@ -206,6 +212,8 @@ func _hero_sub(stop: String) -> String:
+ 			if GameState.intra_played():
+ 				return "End of week 5. It counts for nothing on the ladder; what it showed is below."
+ 			return "End of week 5: two sides of 23 from your own list, with prospects from this year's National Draft filling the spots. It counts for nothing on the ladder."
++		"story":
++			return "Something has come up. Answer it, or press on and nothing changes."
+ 	return "Training is under way."
+ 
+ 
+@@ -365,6 +373,16 @@ func _intra_report() -> Control:
+ 
+ 
+ ## A 2 px rule in the club's colour: the section belongs to your club.
++## The card or cards the block threw up, answered here as on the hub.
++func _story_cards() -> Control:
++	var v := UiKit.vbox(10)
++	v.name = "PreSeasonCards"
++	for i in range(GameState.week_events.size()):
++		v.add_child(EventCardView.build(i, not _wide(), func(): _build(),
++				func(t: String): EventCardView.rule_sheet(self, t)))
++	return v
++
++
+ func _club_rule() -> Control:
+ 	var r := ColorRect.new()
+ 	r.color = UiKit.club_ink(GameState.my_club)
+@@ -806,6 +824,10 @@ func handle_back() -> bool:
+ 		plan_sheet.queue_free()
+ 		_build()
+ 		return true
++	var rule := get_node_or_null("RuleSheet")
++	if rule != null and is_instance_valid(rule) and not rule.is_queued_for_deletion():
++		rule.queue_free()
++		return true
+ 	if _settings != null and is_instance_valid(_settings):
+ 		_settings.queue_free()
+ 		_settings = null
+diff --git a/tests/floor_deltas/claude-preseason-cards.txt b/tests/floor_deltas/claude-preseason-cards.txt
+new file mode 100644
+index 000000000..948b194af
+--- /dev/null
++++ b/tests/floor_deltas/claude-preseason-cards.txt
+@@ -0,0 +1,2 @@
++story +30
++preseason +8
+diff --git a/tests/test_preseason.gd b/tests/test_preseason.gd
+index 902c670b6..d93b734ee 100644
+--- a/tests/test_preseason.gd
++++ b/tests/test_preseason.gd
+@@ -30,6 +30,7 @@ func run() -> void:
+ 	_test_intra_club()
+ 	_test_old_saves()
+ 	await _test_screens()
++	await _test_story_stop()
+ 	await _test_draft_card()
+ 	await _test_switch_off()
+ 	PreSeason.reload()
+@@ -947,7 +948,13 @@ func _test_intra_club() -> void:
+ 			and str(GameState.preseason_intra()["report"]["stood"]) == str(rep["stood"])
+ 			and not GameState.sim_intra_match() and not GameState.toggle_intra_invite(str(pool[0]["id"])),
+ 			"Loaded after it is played, the report is still there and the match cannot be played again")
+-	_check(GameState.preseason_advance() == "done" and not GameState.preseason_active(),
++	# A story card may stop it at the end of a block; pressing on leaves it unanswered.
++	var at_stop: String = GameState.preseason_advance()
++	var stops := 0
++	while at_stop == "story" and stops < 4:
++		stops += 1
++		at_stop = GameState.preseason_advance()
++	_check(at_stop == "done" and not GameState.preseason_active(),
+ 			"From the report, pressing on trains weeks 6 to 8 and leaves Round 1 to play")
+ 	# Best side v the rest plays out differently, and one-sidedly.
+ 	_to_intra()
+@@ -1069,6 +1076,59 @@ func _roll() -> void:
+ 		GameState.start_next_season()
+ 
+ 
++## A story card at the end of a block, on the screen, by real taps: the stop
++## says where it is, the card answers, the outcome shows, and the way on works.
++func _test_story_stop() -> void:
++	var tree := Engine.get_main_loop() as SceneTree
++	tree.root.size = Vector2i(390, 844)
++	PreSeason.reload()
++	var found := false
++	for seed in range(SUITE_SEED, SUITE_SEED + 30):
++		GameState.reset()
++		GameState.career_seed = seed
++		GameState.replay_seed = seed
++		GameState.start_season(CLUB, GameDB.club_list(CLUB))
++		GameState.open_preseason()
++		GameState.set_setting("seen_weekly_loop_intro", true)
++		GameState.set_setting("seen_training_intro", true)
++		var guard := 0
++		while GameState.preseason_active() and GameState.preseason_stop() != "story" and guard < 10:
++			guard += 1
++			if GameState.preseason_stop() == "intra" and not GameState.intra_played():
++				GameState.sim_intra_match()
++			GameState.preseason_advance()
++		if GameState.preseason_stop() == "story":
++			found = true
++			break
++	_check(found, "A card stop turns up in thirty careers, to see on the screen")
++	if not found:
++		return
++	var week := GameState.preseason_week()
++	var scene: Control = await _open(tree)
++	_check(scene != null and scene.name == "PreSeasonScene" and _label(scene, "PreSeasonHero") == "After week %d of 8" % week,
++			"A career saved at a card stop opens on that stop, saying which week it is")
++	var card := scene.find_child("WeekEvent", true, false)
++	var first_choice := scene.find_child("Event_0", true, false) as Button
++	_check(card != null and first_choice != null and scene.find_child("PreSeasonCards", true, false) != null,
++			"The card is on the pre-season screen with its answers")
++	_check(scene.find_child("EventGain_0_0", true, false) != null or scene.find_child("EventCost_0_0", true, false) != null,
++			"...and a choice shows its Gain or Cost line under it")
++	_check(_fits(scene, 390.0), "Nothing on the card stop runs off a phone's screen")
++	var id := str(GameState.week_events[0]["tid"])
++	_check(await _tap(first_choice, "the card's first answer"), "A finger's tap answers the card")
++	_check(bool(GameState.week_events[0].get("resolved", false)) and int(GameState.week_events[0].get("choice", -1)) == 0
++			and str(GameState.week_events[0].get("tid", "")) == id,
++			"...and the answer is recorded")
++	var scene2 := tree.current_scene as Control
++	_check(scene2.find_child("Event_0", true, false) == null, "...and the card then shows what happened, not its buttons")
++	var go := scene2.find_child("PreSeasonGo", true, false) as Button
++	_check(await _tap(go, "the way on from the card"), "A finger's tap presses on from the card")
++	await _frames(tree, 4)
++	_check(GameState.preseason_stop() != "story" and not bool(GameState.preseason.get("story_pending", false)),
++			"...and the pre-season is no longer waiting on it")
++	GameState.delete_saved_career()
++
++
+ ## The draft card at the National Draft that follows the pre-season.
+ func _test_draft_card() -> void:
+ 	var tree := Engine.get_main_loop() as SceneTree
+@@ -1519,6 +1579,13 @@ func _test_screens() -> void:
+ 			"A finger's tap goes back to training")
+ 	await _frames(tree, 10)
+ 	scene = tree.current_scene as Control
++	# A card at the end of a block stops it on the way; the way on is the same button.
++	var card_stops := 0
++	while scene != null and scene.find_child("PreSeasonCards", true, false) != null and card_stops < 4:
++		card_stops += 1
++		await _tap(scene.find_child("PreSeasonGo", true, false), "the way on past a card")
++		await _frames(tree, 10)
++		scene = tree.current_scene as Control
+ 	_check(scene != null and scene.name == "HubScene" and not GameState.preseason_active()
+ 			and GameState.preseason_week() == 8 and GameState.season.round_index == 0,
+ 			"The rest of the pre-season is trained and the hub opens at Round 1")
+diff --git a/tests/test_preseason_cards.gd b/tests/test_preseason_cards.gd
+new file mode 100644
+index 000000000..0fdf34bc6
+--- /dev/null
++++ b/tests/test_preseason_cards.gd
+@@ -0,0 +1,334 @@
++extends RefCounted
++## The pre-season story cards (open requirements 39, slice 5): the deck is valid
++## and kept to the pre-season, a card stops the pre-season only at the end of a
++## block, every answer does what its Gain and Cost lines say, Round 1's own cards
++## wait aside and come back, a hands-off run draws none, the same save sees the
++## same cards, and a save made at the stop reloads at the stop. Part of the story
++## suite (tests/test_story.gd calls run()).
++
++var s   # the story suite: _check()
++
++const SEED := 6113
++const CLUB := "FRE"
++const IDS := ["pre_recruit_behind", "pre_contract_talk", "pre_bulking_up", "pre_camp", "pre_leaders_vote",
++		"pre_knee_return", "pre_flag_hangover", "pre_kid_flying", "pre_star_last", "pre_members_open", "pre_sim_heated"]
++
++
++func run(suite) -> void:
++	s = suite
++	Features.set_on("preseason", true)
++	PreSeason.reload()
++	_test_deck()
++	_test_flow()
++	_test_effects()
++	_test_facts()
++	_test_hands_off_and_save()
++	Features.clear("preseason")
++	PreSeason.reload()
++
++
++func _check(c: bool, m: String) -> void:
++	s._check(c, m)
++
++
++func _career(seed := SEED) -> void:
++	GameState.reset()
++	GameState.career_seed = seed
++	GameState.replay_seed = seed
++	GameState.start_season(CLUB, GameDB.club_list(CLUB))
++	GameState.open_preseason()
++
++
++func _ids(cards: Array) -> Array:
++	return cards.map(func(c): return str(c["tid"]))
++
++
++func _test_deck() -> void:
++	StoryDeck.reload()
++	var deck := StoryDeck.all()
++	_check(StoryDeck.validate(deck).is_empty(), "The deck with the pre-season cards in it still validates: %s" % " | ".join(PackedStringArray(StoryDeck.validate(deck).slice(0, 4))))
++	var found := 0
++	var only := true
++	for id in IDS:
++		var t := StoryDeck.by_id(deck, id)
++		if not t.is_empty():
++			found += 1
++			only = only and (t["phase"] as Array) == ["preseason"]
++	_check(found == IDS.size() and only, "All %d pre-season cards are in the deck, and they are written for the pre-season alone" % IDS.size())
++	var gates := true
++	for t in deck:
++		if not IDS.has(str(t["id"])) and (t["phase"] as Array).has("preseason"):
++			gates = false
++	_check(gates, "No older card was opened to the pre-season by accident")
++	# Not drawn in the season: the phase gate.
++	_career()
++	GameState.preseason_advance()
++	var ctx := ClubStories.context(GameState)
++	_check(str(ctx["phase"]) == "preseason" and not bool(ctx["big"]), "At a stop the cards draw in the pre-season phase, one at a time")
++	var rng := RandomNumberGenerator.new()
++	var leaked := false
++	var regular_ctx := ctx.duplicate(true)
++	regular_ctx["phase"] = "regular"
++	for id in IDS:
++		var subj := StoryEngine.eligible_subject(StoryDeck.by_id(deck, id), regular_ctx, GameState.story, 100, rng)
++		leaked = leaked or not subj.is_empty()
++	_check(not leaked, "None of them can come up in a home-and-away week")
++
++
++## Press on through a pre-season by hand, answering nothing; returns the ids met at the stops.
++func _walk(answer := -1) -> Array:
++	var met := []
++	var guard := 0
++	while GameState.preseason_active() and guard < 30:
++		guard += 1
++		if GameState.preseason_stop() == "story":
++			var n: int = GameState.week_events.size()
++			met.append([GameState.preseason_week(), _ids(GameState.week_events), n])
++			if answer >= 0:
++				GameState.resolve_week_event(answer)
++		GameState.preseason_advance()
++	return met
++
++
++func _test_flow() -> void:
++	var seen := {}
++	var one_a_block := true
++	var weeks_ok := true
++	var most := 0
++	var total := 0
++	var comes_back := true
++	var starts_with_cards := 0
++	for seed in range(SEED, SEED + 14):
++		_career(seed)
++		var round1 := _ids(GameState.week_events)
++		var met := _walk(0)
++		starts_with_cards += 1 if not met.is_empty() else 0
++		most = maxi(most, met.size())
++		for m in met:
++			total += 1
++			one_a_block = one_a_block and int(m[2]) == 1
++			weeks_ok = weeks_ok and PreSeason.STORY_WEEKS.has(int(m[0]))
++			for id in m[1]:
++				seen[id] = true
++		comes_back = comes_back and _ids(GameState.week_events) == round1
++	_check(one_a_block, "A stop holds one card")
++	_check(weeks_ok, "Cards stop the pre-season only at the end of a block (after weeks 3, 5 and 7)")
++	_check(most <= 3 and total > 0, "At most three cards in a pre-season, and some do come (%d across 14 careers)" % total)
++	_check(starts_with_cards >= 10, "Nearly every pre-season brings a card or two (%d of 14 had one, %d in all)" % [starts_with_cards, total])
++	_check(comes_back, "Round 1's own cards wait aside through the pre-season and come back as they were")
++	_check(seen.size() >= 4, "A spread of the cards comes up across careers (%d different)" % seen.size())
++	for id in seen:
++		_check(IDS.has(id), "Only pre-season cards come up at a stop (%s)" % id)
++	# Unanswered: the stop settles and nothing breaks.
++	_career(SEED + 1)
++	var met_silent := _walk(-1)
++	_check(not GameState.preseason_active() and GameState.week_events.size() <= 2, "Pressing on past a card leaves it unanswered and the pre-season finishes (%d stops)" % met_silent.size())
++	# Determinism.
++	_career(SEED + 2)
++	var a := _walk(1)
++	_career(SEED + 2)
++	var b := _walk(1)
++	_check(JSON.stringify(a) == JSON.stringify(b), "The same save meets the same cards at the same stops")
++
++
++func _first_player(where: Callable) -> Dictionary:
++	for p in GameState.my_list:
++		if where.call(p):
++			return p
++	return {}
++
++
++## Every answer does what its lines say: the strands, the base, the plan, and what a player feels.
++func _test_effects() -> void:
++	_career()
++	GameState.preseason_advance()   # week 3 stop
++	var deck := StoryDeck.all()
++	var wrong := []
++	var lines_missing := []
++	var clubs_checked := 0
++	for id in IDS:
++		var t := StoryDeck.by_id(deck, id)
++		var player := str(t["subject"].get("kind", "")) == "player"
++		for ci in range((t["choices"] as Array).size()):
++			_career()
++			GameState.preseason_advance()
++			var subj := {}
++			if player:
++				subj = _subject_for(id)
++				if subj.is_empty():
++					continue
++			var card := GameState.story_card(id, subj)
++			var opts: Array = card["options"]
++			if ci >= opts.size():
++				continue
++			var lines := StoryEngine.stakes_lines(opts[ci]["effects"], card["facts"])
++			if lines.is_empty():
++				lines_missing.append("%s/%s" % [id, opts[ci]["key"]])
++			var before := _snapshot(subj)
++			GameState.week_events = [card]
++			GameState.resolve_card(0, ci)
++			var after := _snapshot(subj)
++			for e in opts[ci]["effects"]:
++				var d := int(e.get("d", 0))
++				match str(e["op"]):
++					"culture":
++						var k: String = str(e["strand"])
++						if (int(after[k]) - int(before[k])) * d <= 0:
++							wrong.append("%s/%s %s did not move %d" % [id, opts[ci]["key"], k, d])
++						clubs_checked += 1
++					"running":
++						if absf((float(after["run"]) - float(before["run"])) - float(d)) > 0.01 and not (d < 0 and float(after["run"]) == 0.0):
++							wrong.append("%s/%s running" % [id, opts[ci]["key"]])
++						clubs_checked += 1
++					"drill":
++						if float(after["drill"]) - float(before["drill"]) != float(d):
++							wrong.append("%s/%s drill" % [id, opts[ci]["key"]])
++						clubs_checked += 1
++					"morale":
++						if str(e.get("who", "subject")) == "all" and (int(after["morale"]) - int(before["morale"])) * d <= 0:
++							wrong.append("%s/%s morale" % [id, opts[ci]["key"]])
++					"trust":
++						if (int(after["trust"]) - int(before["trust"])) * d <= 0:
++							wrong.append("%s/%s trust" % [id, opts[ci]["key"]])
++					"xp":
++						if int(after["xp"]) <= int(before["xp"]) and str(e.get("who", "subject")) == "subject":
++							pass   # spent at once on his training plan: the rating or the xp moves
++	_check(wrong.is_empty(), "Every answer moves what its lines say: %s" % " | ".join(PackedStringArray(wrong.slice(0, 6))))
++	_check(clubs_checked >= 14, "...and the strand, running and drilling steps were really exercised (%d)" % clubs_checked)
++	_check(lines_missing.is_empty(), "Every answer carries a Gain or Cost line: %s" % " | ".join(PackedStringArray(lines_missing)))
++	# Culture steps land on the culture page with their reason, dated the pre-season.
++	_career()
++	GameState.preseason_advance()
++	GameState.week_events = [GameState.story_card("pre_sim_heated")]
++	GameState.resolve_card(0, 1)
++	var rs := Culture.reasons(GameState.relations, CLUB, "standards")
++	_check(not rs.is_empty() and str(rs[0]["why"]).begins_with("You pulled the group up") and str(rs[0]["w"]) != "",
++			"A strand step is logged on the culture page with its reason")
++	# The base: Run it out of them lifts the running, Let them enjoy lowers it.
++	_career()
++	var run0 := float(GameState.preseason["clubs"][CLUB]["run"])
++	GameState.preseason_add_running(1.0)
++	GameState.preseason_add_running(-9.0)
++	_check(float(GameState.preseason["clubs"][CLUB]["run"]) == 0.0 and run0 == 0.0, "Running taken off never goes below nothing")
++	# A drilled plan counts when the pre-season ends.
++	_career()
++	GameState.club_plan = "defensive"
++	GameState.preseason_add_drill(3)
++	var was := GameState.plan_level(CLUB, "defensive")
++	_walk(-1)
++	_check(GameState.plan_level(CLUB, "defensive") >= was, "A drill added by a card is counted in with the blocks' when the pre-season ends")
++	# A card answer with the switch off has nothing to act on, and the deck never offers one.
++	var played := 0
++	Features.set_on("preseason", false)
++	GameState.reset()
++	GameState.career_seed = SEED
++	GameState.replay_seed = SEED
++	GameState.start_season(CLUB, GameDB.club_list(CLUB))
++	GameState.open_preseason()
++	_check(not GameState.preseason_active() and ClubStories.phase(GameState) == "regular", "With the switch off there is no pre-season phase and no card")
++	for e in GameState.week_events:
++		played += 1 if IDS.has(str(e["tid"])) else 0
++	_check(played == 0, "...and Round 1's cards are never pre-season ones")
++	Features.set_on("preseason", true)
++
++
++func _snapshot(subj: Dictionary) -> Dictionary:
++	var morale := 0
++	for p in GameState.my_list:
++		morale += ClubLife.morale(p)
++	var out := {"standards": Culture.value(GameState.relations, CLUB, "standards"),
++			"together": Culture.value(GameState.relations, CLUB, "together"),
++			"ambition": Culture.value(GameState.relations, CLUB, "ambition"),
++			"run": float(((GameState.preseason.get("clubs", {}) as Dictionary).get(CLUB, {}) as Dictionary).get("run", 0.0)),
++			"drill": 0.0, "morale": morale, "trust": 0, "xp": 0}
++	for v in (GameState.preseason.get("bonus_drill", {}) as Dictionary).values():
++		out["drill"] = float(out["drill"]) + float(v)
++	if not subj.is_empty():
++		out["trust"] = Trust.value(GameState.relations, Trust.player_key(str(subj["id"])))
++		out["xp"] = int(GameState.list_player(str(subj["id"])).get("xp", 0))
++	return out
++
++
++## A player the card could really be about, made so if the list has none.
++func _subject_for(id: String) -> Dictionary:
++	var p: Dictionary = GameState.my_list[3]
++	p["injury_weeks"] = 0
++	p.erase("injury_kind")
++	match id:
++		"pre_contract_talk":
++			p["contract_years"] = 1
++			p["age"] = 29.0
++		"pre_knee_return":
++			p["injury_weeks"] = 3
++			p["injury_kind"] = "knee"
++	return p
++
++
++func _test_facts() -> void:
++	_career()
++	var p: Dictionary = GameState.my_list[5]
++	p["joined"] = GameState.season_year - 1
++	_check(bool(ClubStories.player_fact(GameState, p, false, {}, 99, 0)["new_here"]), "A player signed last off-season is new here")
++	p["joined"] = GameState.season_year - 4
++	p["drafted_year"] = GameState.season_year - 1
++	_check(bool(ClubStories.player_fact(GameState, p, false, {}, 99, 0)["new_here"]), "...and so is a draftee of last year")
++	p.erase("drafted_year")
++	_check(not bool(ClubStories.player_fact(GameState, p, false, {}, 99, 0)["new_here"]), "...but not a player who has been here years")
++	GameState.preseason_advance()   # the time trial
++	var tr := GameState.preseason_trial()
++	var best := str((tr["best"] as Array)[0])
++	var last := str((tr["worst"] as Array)[0])
++	_check(ClubStories._trial_place(GameState, best) == "best" and ClubStories._trial_place(GameState, last) == "worst"
++			and ClubStories._trial_place(GameState, "nobody") == "", "The time trial's front and back are what the cards read")
++	# Premiers: the honour roll says so only for last year.
++	GameState.honour_roll = [{"year": GameState.season_year - 1, "premier": CLUB, "runner_up": "GEE"}]
++	_check(bool(ClubStories.club_facts(GameState, 3, "preseason")["premiers"]), "Won the flag last year is read from the honour roll")
++	GameState.honour_roll = [{"year": GameState.season_year - 2, "premier": CLUB, "runner_up": "GEE"}]
++	_check(not bool(ClubStories.club_facts(GameState, 3, "preseason")["premiers"]), "...and not a flag from two years ago")
++	GameState.honour_roll = [{"year": GameState.season_year - 1, "premier": "GEE", "runner_up": CLUB}]
++	_check(not bool(ClubStories.club_facts(GameState, 3, "preseason")["premiers"]), "...nor one the club lost")
++	GameState.honour_roll = []
++	# The hangover card can only come up for the premiers.
++	var t := StoryDeck.by_id(StoryDeck.all(), "pre_flag_hangover")
++	var ctx := ClubStories.context(GameState)
++	_check(StoryEngine.eligible_subject(t, ctx, GameState.story, 100, RandomNumberGenerator.new()).is_empty(), "The flag card stays away from a club that did not win one")
++	(ctx["club"] as Dictionary)["premiers"] = true
++	_check(not StoryEngine.eligible_subject(t, ctx, GameState.story, 100, RandomNumberGenerator.new()).is_empty(), "...and is there for the premiers")
++	# Words: nothing in the deck reads as engine talk.
++	var bad := []
++	for id in IDS:
++		var tt := StoryDeck.by_id(StoryDeck.all(), id)
++		var blob := JSON.stringify(tt)
++		for w in ["XP", "coefficient", "multiplier", "simulation"]:
++			if blob.contains(w):
++				bad.append("%s says %s" % [id, w])
++	_check(bad.is_empty(), "The pre-season cards read as football, not as engine: %s" % " | ".join(PackedStringArray(bad)))
++
++
++func _test_hands_off_and_save() -> void:
++	_career(SEED + 3)
++	var round1 := _ids(GameState.week_events)
++	GameState.preseason_sim_to_round1()
++	_check(not GameState.preseason_active() and _ids(GameState.week_events) == round1,
++			"Sim to Round 1 stops for no card, and Round 1's cards are exactly what they were")
++	# A save made while a card is waiting reloads with it waiting.
++	var found := false
++	for seed in range(SEED, SEED + 20):
++		_career(seed)
++		var guard := 0
++		while GameState.preseason_active() and GameState.preseason_stop() != "story" and guard < 10:
++			guard += 1
++			GameState.preseason_advance()
++		if GameState.preseason_stop() == "story":
++			found = true
++			var tid := str(GameState.week_events[0]["tid"])
++			var week := GameState.preseason_week()
++			_check(GameState.save_career() and GameState.load_career(), "A career saved at a card stop saves and loads")
++			_check(GameState.preseason_stop() == "story" and GameState.preseason_week() == week
++					and str(GameState.week_events[0]["tid"]) == tid and GameState.preseason.has("round1"),
++					"...and is still at that card, with Round 1's cards still waiting aside")
++			GameState.resolve_week_event(0)
++			GameState.preseason_advance()
++			break
++	_check(found, "A card stop turned up in twenty careers to save at")
++	GameState.delete_saved_career()
+diff --git a/tests/test_preseason_cards.gd.uid b/tests/test_preseason_cards.gd.uid
+new file mode 100644
+index 000000000..1e8f4b928
+--- /dev/null
++++ b/tests/test_preseason_cards.gd.uid
+@@ -0,0 +1 @@
++uid://c7st7faooom3i
+diff --git a/tests/test_story.gd b/tests/test_story.gd
+index 34d11f774..72e699784 100644
+--- a/tests/test_story.gd
++++ b/tests/test_story.gd
+@@ -66,6 +66,8 @@ func run() -> void:
+ 	_test_vacancy_is_filled()
+ 	var finals_cards = load("res://tests/test_finals_cards.gd").new()
+ 	finals_cards.run(self)
++	var preseason_cards = load("res://tests/test_preseason_cards.gd").new()
++	preseason_cards.run(self)
+ 	GameState.delete_saved_career()
+ 	GameState.replay_seed = 0
+ 	GameState.stories_on = true
+@@ -194,13 +196,15 @@ func _test_hints_in_words() -> void:
+ const GAIN_WORDS := {
+ 	"morale": "(?i)morale", "xp": "development", "board": "(?i)board confidence", "trust": "trusts you (a lot |a little )?more",
+ 	"fresh": "legs", "promise_win": "Win and", "extend_early": "signs on", "captaincy_swap": "takes the armband",
+-	"rush_back": "cleared to play",
++	"rush_back": "cleared to play", "culture": "(Standards|Togetherness|Ambition) rises",
++	"running": "hard running goes toward", "drill": "drilling the game plan",
+ }
+ const COST_WORDS := {
+ 	"morale": "(?i)morale", "board": "(?i)board confidence", "trust": "trusts you (a lot |a little )?less",
+ 	"rest": "misses", "heavy_legs": "Heavy legs", "sore": "breaks down", "expects_game": "expects a game",
+ 	"start_backing": "expects to be picked", "back_kid": "is promised", "promise_win": "Lose and", "extend_early": "Locked in", "captaincy_swap": "mid-season",
+ 	"rush_back": "flares", "slow_start": "slowly", "loss_sting": "falls instead",
++	"culture": "(Standards|Togetherness|Ambition) falls", "running": "comes off the fitness base",
+ }
+ const SAMPLE_FACTS := {"sore_odds": "about 1 in 6", "run_games": 3, "early_price": "$1m", "more_seasons": "two more seasons"}
+ 
+@@ -237,12 +241,12 @@ func _stakes_in(effects: Array) -> Array:
+ 		if op == "loss_sting":
+ 			costs.append_array([op, "morale"])
+ 			continue
+-		if op in ["morale", "board", "trust"]:
++		if op in ["morale", "board", "trust", "culture", "running"]:
+ 			if d > 0 and not gains.has(op):
+ 				gains.append(op)
+ 			elif d < 0 and not costs.has(op):
+ 				costs.append(op)
+-		elif op in ["xp", "fresh", "promise_win", "extend_early"] and not gains.has(op):
++		elif op in ["xp", "fresh", "drill", "promise_win", "extend_early"] and not gains.has(op):
+ 			gains.append(op)
+ 		if op in ["rest", "heavy_legs", "sore", "expects_game", "start_backing", "back_kid", "promise_win", "extend_early"] and not costs.has(op):
+ 			costs.append(op)
+-- 
+2.55.0.windows.5
+
+From cf9b2d092143515218f0492a45373b393c970313 Mon Sep 17 00:00:00 2001
+From: gabebartolo-spec <gabebartolo@gmail.com>
+Date: Thu, 15 Oct 2026 00:13:44 +1100
+Subject: [PATCH] Pre-season cards test reports its own check count
+
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+---
+ tests/test_preseason_cards.gd | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/tests/test_preseason_cards.gd b/tests/test_preseason_cards.gd
+index 0fdf34bc6..cbf6276d5 100644
+--- a/tests/test_preseason_cards.gd
++++ b/tests/test_preseason_cards.gd
+@@ -16,6 +16,7 @@ const IDS := ["pre_recruit_behind", "pre_contract_talk", "pre_bulking_up", "pre_
+ 
+ func run(suite) -> void:
+ 	s = suite
++	var before: int = s.checks
+ 	Features.set_on("preseason", true)
+ 	PreSeason.reload()
+ 	_test_deck()
+@@ -23,6 +24,7 @@ func run(suite) -> void:
+ 	_test_effects()
+ 	_test_facts()
+ 	_test_hands_off_and_save()
++	print("Pre-season cards: %d of the story suite's checks" % (s.checks - before))
+ 	Features.clear("preseason")
+ 	PreSeason.reload()
+ 
+-- 
+2.55.0.windows.5
+
+From aeabc97c5f249189c8b6f2a8fd41fdf213088e4a Mon Sep 17 00:00:00 2001
+From: gabebartolo-spec <gabebartolo@gmail.com>
+Date: Thu, 15 Oct 2026 00:21:23 +1100
+Subject: [PATCH] Pre-season cards: counted floor deltas, the card-stop capture
+ tool
+
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+---
+ tools/visual/capture_preseason_cards.gd | 84 +++++++++++++++++++++++++
+ 1 file changed, 84 insertions(+)
+ create mode 100644 tools/visual/capture_preseason_cards.gd
+
+diff --git a/tools/visual/capture_preseason_cards.gd b/tools/visual/capture_preseason_cards.gd
+new file mode 100644
+index 000000000..e460517c3
+--- /dev/null
++++ b/tools/visual/capture_preseason_cards.gd
+@@ -0,0 +1,84 @@
++extends SceneTree
++## The pre-season card stop (row 39, slice 5) for the lead's check and the director's look.
++## Needs a real renderer:
++##   godot --path . --script tools/visual/capture_preseason_cards.gd -- --out /tmp/precards --club FRE [--size 1280x720]
++## Writes <out>_recruit.png (card 1, a named player), <out>_camp.png (card 4, three choices)
++## and <out>_starlast.png (card 9, the time trial's back marker). Each stop is the real
++## pre-season screen after week 3, with the card forced so it is the one on show.
++
++var W := 390
++var H := 844
++
++
++func _initialize() -> void:
++	_run.call_deferred()
++
++
++func _frames(n: int) -> void:
++	for i in range(n):
++		await process_frame
++
++
++func _shot(path: String) -> void:
++	await _frames(40)
++	var img := root.get_viewport().get_texture().get_image()
++	img.convert(Image.FORMAT_RGBA8)
++	if W >= 760 and img.get_width() != W:
++		img.resize(W, H, Image.INTERPOLATE_LANCZOS)
++	img.save_png(path)
++	print("wrote ", path)
++
++
++func _run() -> void:
++	var out := "/tmp/precards"
++	var club := "FRE"
++	var a := OS.get_cmdline_user_args()
++	for i in range(a.size() - 1):
++		if str(a[i]) == "--out":
++			out = str(a[i + 1])
++		if str(a[i]) == "--club":
++			club = str(a[i + 1])
++		if str(a[i]) == "--size":
++			var wh := str(a[i + 1]).split("x")
++			W = int(wh[0])
++			H = int(wh[1])
++	await process_frame
++	load("res://scripts/core/Features.gd").set_on("preseason", true)
++	var state = root.get_node("GameState")
++	var db = root.get_node("GameDB")
++	state.autosave_enabled = false
++	state.save_path = "user://capture_precards.save"
++	state.settings_path = "user://capture_precards_settings.cfg"
++	state.show_real_names = true
++	state.reset()
++	state.career_seed = 4127
++	state.replay_seed = 4127
++	state.set_setting("seen_weekly_loop_intro", true)
++	state.set_setting("seen_training_intro", true)
++	DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
++	DisplayServer.window_set_size(Vector2i(W, H))
++	await _frames(10)
++	var layout = root.get_node("ScreenLayout")
++	var density: float = layout.desktop_density(Vector2(root.size), DisplayServer.screen_get_scale(),
++			DisplayServer.screen_get_dpi() if OS.get_name() == "Windows" else 0)
++	layout.ui_scale = 1.0 / maxf(1.0, density)
++	layout._update_scale()
++	await _frames(13)
++	state.start_season(club, db.club_list(club))
++	state.open_preseason()
++	state.preseason_advance()   # weeks 1 to 3: the time trial
++	state.preseason["trial_seen"] = true
++	var trial: Dictionary = state.preseason_trial()
++	var recruit: Dictionary = state.my_list[6]
++	recruit["joined"] = state.season_year - 1
++	var star: Dictionary = state.list_player(str((trial["worst"] as Array)[0]))
++	for shot in [["pre_recruit_behind", recruit, "recruit"], ["pre_camp", {}, "camp"], ["pre_star_last", star, "starlast"]]:
++		var card: Dictionary = state.story_card(str(shot[0]), shot[1])
++		print(shot[2], " card: ", card.get("title", "EMPTY"))
++		state.week_events = [card]
++		state.preseason["story_pending"] = true
++		root.get_node("Router").go("hub")
++		await _frames(12)
++		print("scene ", current_scene.name, " stop ", state.preseason_stop())
++		await _shot(out + "_" + str(shot[2]) + ".png")
++	quit()
+-- 
+2.55.0.windows.5
+
