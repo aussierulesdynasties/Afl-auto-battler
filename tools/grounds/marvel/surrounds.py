@@ -59,12 +59,14 @@ PARKING = (132, 137, 132)
 PATH = (216, 220, 194)
 PAVED = (184, 190, 176)        # concrete plazas, promenades and the stadium's concourse
 PLAZA = (218, 186, 170)        # the promenades' pavers (Harbour Esplanade, Docklands Park): pale salmon-tan; (206, 150, 128) rendered terracotta against GE (203, 165, 149) (PC check 2026-11-23)
-BALLAST = (128, 126, 122)       # the Southern Cross yards: grey ballast, Google Earth top-down (118, 120, 123); round 10, was brown
-RAIL = (84, 82, 80)             # a track: sleepers and rails together, 2.6 m wide (drawn smoothed)
+BALLAST = (144, 130, 116)       # the Southern Cross yards; round 11 (PC check): about 14 too dark and too cold against Google Earth's warm rust
+RAIL = (92, 80, 70)             # a track: sleepers and rails together, 2.6 m wide (drawn smoothed)
 ROOF = (168, 179, 174)
 WATER = (36, 68, 82)            # round 10: Google Earth's harbour reads navy (32, 64, 82); (62, 79, 76) rendered grey-green
 URBAN = (160, 164, 152)
 WOOD = (84, 101, 59)
+DRY = (148, 140, 120)           # unwatered verges by the rail yards: dry brown in Google Earth (c_e, c_ne), not green
+DRY_EAST = 50.0                 # grass east of this (metres east) is the rail-side verge
 
 WIDTH = {"motorway": 15, "trunk": 14, "primary": 13, "secondary": 11, "tertiary": 9,
          "residential": 7, "unclassified": 6, "service": 4.5, "living_street": 5,
@@ -176,6 +178,8 @@ def area_colour(t):
         return WOOD
     if t.get("natural") in ("scrub", "heath", "grassland"):
         return SCRUB
+    if t.get("landuse") == "grass" and t.get("_dry"):
+        return DRY
     if t.get("landuse") in ("grass", "recreation_ground") or t.get("natural") == "grass" \
             or t.get("leisure") in ("garden", "park"):
         return LAWN
@@ -231,6 +235,9 @@ def paint(trees, ways):
         c = np.mean(np.array(st[:-1]), axis=0)
         grown = [tuple(c + (np.array(p) - c) * (1.0 + 25.0 / max(1.0, np.hypot(*(np.array(p) - c))))) for p in st]
         d.polygon(poly(grown), fill=PAVED)
+    for t, p in ways:
+        if t.get("landuse") == "grass" and len(p) > 2 and np.array(p)[:, 0].mean() > DRY_EAST:
+            t["_dry"] = "yes"
     areas = [(t, p) for t, p in ways if len(p) > 2 and p[0] == p[-1] and (area_colour(t) or t.get("_hole"))]
     # The big ones first so the small ones sit on top; a multipolygon's holes right after their outer.
     areas.sort(key=lambda a: -abs(_area(a[1])))

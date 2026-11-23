@@ -306,6 +306,10 @@ static func instantiate(slug: String, base := "") -> Node3D:
 				_fix_materials(model, MATERIAL_FIX[slug])
 			for part: Dictionary in PARTS.get(slug, []):
 				_add_part(model, dir, part)
+			# A mesh named nocast_* (Marvel's truss webs, 0.32 m members) casts no shadow: under a texel of the
+			# sun's shadow map, its shadows broke into blue-white speckle across the roof (PC check 2026-11-23)
+			for mi in model.find_children("nocast*", "GeometryInstance3D", true, false):
+				(mi as GeometryInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 			root.add_child(model)
 	slice_big_meshes(root)
 	var fit: Array = FIT.get(slug, [0.0, 0.0])

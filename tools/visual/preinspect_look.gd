@@ -75,7 +75,10 @@ func _run() -> void:
 			pos = ground.global_transform * Vector3(pos.x, pos.z, -pos.y)
 			tgt = ground.global_transform * Vector3(tgt.x, tgt.z, -tgt.y)
 		cam.global_position = pos
-		cam.look_at(tgt, Vector3.UP if absf((tgt - pos).normalized().y) < 0.999 else Vector3.FORWARD)
+		# Straight down: screen-up is true north in the model frame (the ground is turned in the game's world, so
+		# the world's FORWARD put Marvel's top view 90 degrees round from Google Earth's, PC check 2026-11-23)
+		var down_up := (ground.global_basis * Vector3(0.0, 0.0, -1.0)).normalized() if model_frame and ground != null else Vector3.FORWARD
+		cam.look_at(tgt, Vector3.UP if absf((tgt - pos).normalized().y) < 0.999 else down_up)
 		cam.fov = v[6] if v.size() > 6 else 60.0
 		for i in 8:
 			await process_frame
