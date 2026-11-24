@@ -934,8 +934,16 @@ func _test_truth(res: Dictionary) -> Array:
 ## the ball is being played, so that time is not counted against the collect.
 ## Main has no such man (its scrap moved the ball with nobody on it): its 110 is
 ## unchanged. On main 739db4b22: 91; the spilled-ball scrap: 116, 1 after pressure.
+## Set from the spread (2026-11-23, #2080): main 354ceeb9 read 118 and #2005 with
+## #2080 read 123 with no real shift. Paired over 44 seeds (1-44) the change is
+## -0.07 pauses a match (standard error 0.63); a match averages 25.7 with a
+## spread of 5.5 to 5.8, so the four seeds sum to about 103 give or take 11.5.
+## 120 sat 1.5 spreads above that and failed about one redraw in fourteen. 130 is
+## 2.3 spreads up (about 1 in 100 at random). The price: a rise of 7 pauses a
+## match (a quarter more, 28 on the four seeds) trips it more often than not;
+## a smaller rise needs the paired seeds to see it.
 const PAUSE_S := 1.5
-const PAUSE_MAX := 120
+const PAUSE_MAX := 130
 const PAUSE_PRESSURE_MAX := 4
 
 
@@ -1560,6 +1568,9 @@ func _test_set_shot_calls() -> void:
 				pass_seen += 1
 				var nk := d._next_real(k)
 				var want := d._actor_id(evs[nk]) if nk >= 0 else -1
+				if want < 0:
+					# The next event names nobody (a ball-up off his chance): the man it is kicked to.
+					want = d._token_by_pid(str(ev.get("to_id", "")))
 				for ph in d._pass_phases(k):
 					if str(ph["t"]) == "flight" and int(ph.get("recv", -1)) == want and want >= 0:
 						pass_ok += 1
@@ -3243,7 +3254,9 @@ func _check_turf3d(oval: Oval3D) -> void:
 		_check(g.g > g.r and g.g > g.b and wet == (1.0 if look[0] == VignetteWeather.WET else 0.0)
 				and turf.env.tonemap_exposure >= 1.0,
 				"%s %s: the turf is green and the weather's sheen is set (%s, wet %.0f)" % [look[1], look[0], str(g), wet])
-	# Rule 2.114: the broadcast colour, the turf's colour read once and the film's white balance.
+	# Rule 2.114: the broadcast colour, the turf's colour read once and the film's white balance
+	# (at night: the loop above ends on a hot day, whose balance is the day's).
+	turf.apply("", VignetteKickoff.NIGHT)
 	var film_ok: bool = turf.film == null or turf.film.get_shader_parameter("balance") == Oval3DTurf.BALANCE[VignetteKickoff.NIGHT]
 	_check(turf.broadcast == 1.0 and float(turf.mat.get_shader_parameter("true_colour")) == 1.0 and film_ok,
 			"The 3D picture is in broadcast colour: turf colour read once, the night's white balance on the film")
@@ -3604,12 +3617,16 @@ func _test_three_d_hair(res: Dictionary) -> void:
 	var shells := Oval3D.hair_shells()
 	var meshes := {}
 	var real := 0
+	# On the MetaHuman each shell is refitted to his skull (#1976): a new mesh made from the
+	# file's, so it has no path of its own; on the old body it is the file's mesh itself.
+	var refit := Oval3D.player_glb != Oval3D.HAIR_FIT_GLB
 	for st in shells:
 		var m: Mesh = shells[st]["mesh"]
 		meshes[m] = true
-		if m.resource_path.begins_with(Oval3D.HAIR_GLB) and str(shells[st]["bone"]) == "head":
+		var from_file := m.resource_path == "" if refit else m.resource_path.begins_with(Oval3D.HAIR_GLB)
+		if from_file and str(shells[st]["bone"]) == "head":
 			real += 1
-	_check(shells.size() == real and real == meshes.size() and real > 0,
+	_check(Oval3D.hair_glb == Oval3D.HAIR_GLB and shells.size() == real and real == meshes.size() and real > 0,
 			"Each 3D hair style is its own mesh from %s, on the head bone (%d of %d)" % [Oval3D.HAIR_GLB, real, shells.size()])
 	var none := []
 	for st in Appearance.HAIR_STYLES:
@@ -3649,7 +3666,10 @@ func _test_three_d_hair(res: Dictionary) -> void:
 	oval.look(p0, {"skin": 2, "hair": 1, "hair_style": "bald"})
 	_check(not p0.has("hair_node") and _scalp(p0) == 1, "Bald on the 3D oval: no hair, bare scalp")
 	oval.look(p0, {"skin": 2, "hair": 1, "hair_style": "buzz"})
-	_check(not p0.has("hair_node") and _scalp(p0) == 2, "A buzz cut on the 3D oval: clippered scalp")
+	# Clippered is 2 on the old body and 4 on the MetaHuman (bare at his hairline, #1976).
+	var clippered := Oval3D.SCALP_CLIPPERED_MH if Oval3D.player_glb != Oval3D.HAIR_FIT_GLB else 2
+	_check(not p0.has("hair_node") and _scalp(p0) == clippered,
+			"A buzz cut on the 3D oval: clippered scalp (%d, want %d)" % [_scalp(p0), clippered])
 	if had == null:
 		who.erase("look")
 	else:

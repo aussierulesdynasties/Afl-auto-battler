@@ -4530,6 +4530,9 @@ func _i50_give(side: int, at_fp: float, holder: Dictionary, defender, marked: bo
 		_p(mate, "marks")
 	_emit("pass", side, at_fp, holder, ("%s kicks to %s on the lead" if kick else "%s handballs to %s") % [hn, mn])
 	events[events.size() - 1]["hand"] = not kick
+	# Who it goes to, for the replay: when he doesn't mark it, the next event may not name
+	# him (a ball-up off his chance), and the view had no one to kick it to.
+	events[events.size() - 1]["to_id"] = str(mate["id"])
 	if takes:
 		_emit("receive", side, at_fp, mate, "%s marks on the lead" % mn)
 	return {"to": mate, "marked": takes}
