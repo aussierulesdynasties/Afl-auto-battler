@@ -27,6 +27,7 @@ func run() -> void:
 	_t("_test_sim_to_round_one")
 	_t("_test_old_saves")
 	await _t("_test_screens")
+	await _t("_test_meeting_focus")
 	await _t("_test_story_stop")
 	await _t("_test_draft_card")
 	PreSeason.reload()
@@ -589,6 +590,74 @@ func _test_screens() -> void:
 	_check(scene != null and scene.name == "PreSeasonScene" and _fits(scene, 1600.0),
 			"On a PC's width the week fits")
 	tree.root.size = Vector2i(390, 844)
+	Router.stack = []
+
+
+## The stat focus picker (director, 2026-11-24): the stats a midfielder is
+## rated on are in bold TEXT, the rest regular MUTED; on a 1600x900 window the
+## choices sit in the left half and his profile on the right; a phone keeps
+## one column.
+func _test_meeting_focus() -> void:
+	PreSeason.reload()
+	var tree := Engine.get_main_loop() as SceneTree
+	tree.root.size = Vector2i(1600, 900)
+	_career()
+	GameState.set_setting("seen_weekly_loop_intro", true)
+	GameState.set_setting("seen_training_intro", true)
+	var p: Dictionary = {}
+	for q in GameState.my_list:
+		if p.is_empty() and str(q.get("role", "")) == "MID" and GameState.project_job(q) == "" 				and GameState.focus_options(q).size() >= 6:
+			p = q
+	_check(not p.is_empty(), "The club has a midfielder with a stat focus to pick")
+	if p.is_empty():
+		return
+	var pid := str(p["id"])
+	_check(PlayerProfile.rated_on(p) == ["contested", "creating"],
+			"A midfielder is rated most on contested ball and creating (%s)" % str(PlayerProfile.rated_on(p)))
+	var scene: Control = await _open(tree)
+	var row_tap := scene.find_child("MeetTap_" + pid, true, false) as Control
+	await _into_view(tree, row_tap)
+	_check(await _tap(row_tap, "a midfielder's meeting"), "A finger's tap opens a midfielder's meeting on a PC")
+	await _frames(tree, 6)
+	var bold_ok := true
+	var seen := 0
+	for key in GameState.focus_options(p):
+		var b := scene.find_child("MeetFocus_" + str(key), true, false) as Button
+		if b == null:
+			bold_ok = false
+			continue
+		seen += 1
+		var strong := PlayerProfile.rated_on(p).has(str(key))
+		var font := b.get_theme_font("font")
+		var ink := b.get_theme_color("font_color")
+		var chosen := str(key) == GameState.stat_focus(p)
+		if strong and (font != UiKit.BOLD or ink != UiKit.TEXT):
+			bold_ok = false
+		if not strong and (font != UiKit.FONT or (not chosen and ink != UiKit.MUTED)):
+			bold_ok = false
+	_check(bold_ok and seen >= 6 and _label(scene, "MeetFocusRated").contains("midfielder"),
+			"The stats his position is rated on are bold TEXT, the rest regular MUTED, with the key line (%s)"
+			% _label(scene, "MeetFocusRated"))
+	var choices := scene.find_child("MeetChoices", true, false) as Control
+	var profile := scene.find_child("MeetProfile", true, false) as Control
+	var grid := scene.find_child("MeetFocus", true, false) as Control
+	_check(choices != null and profile != null and grid != null
+			and grid.get_global_rect().end.x <= 800.0 + 0.5
+			and profile.get_global_rect().position.x >= 800.0 - 0.5
+			and profile.get_global_rect().end.x <= 1600.0 + 0.5
+			and profile.find_child("ProfileName", true, false) != null
+			and profile.find_child("ProfileAttributes", true, false) != null,
+			"On a 1600x900 window the stat buttons sit in the left half and his profile on the right (%s / %s)"
+			% [str(grid.get_global_rect()) if grid != null else "-", str(profile.get_global_rect()) if profile != null else "-"])
+	_check(_fits(scene, 1600.0), "Nothing on the PC meeting runs off the window")
+	# A phone: one column, no profile beside, still bold.
+	tree.root.size = Vector2i(390, 844)
+	await _frames(tree, 6)
+	scene = tree.current_scene as Control
+	var phone_b := scene.find_child("MeetFocus_contested", true, false) as Button
+	_check(scene.find_child("MeetProfile", true, false) == null and phone_b != null
+			and phone_b.get_theme_font("font") == UiKit.BOLD and _fits(scene, 390.0),
+			"On a phone the meeting stays one column, the rated stats still bold, nothing cut")
 	Router.stack = []
 
 
