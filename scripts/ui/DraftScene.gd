@@ -44,6 +44,11 @@ var _side_tabs: HBoxContainer
 var _pool_panel: PanelContainer
 var _activity_panel: PanelContainer
 var _history_view: VBoxContainer
+var _history_stale := false   # the pick log missed a pick while out of view
+var _mine_stale := false      # your list, likewise
+var _order_stale := false     # the order, likewise
+var _keep_rows := false       # _refresh_board keeps rows still on the board (a pick)
+var _last_rows: Array = []    # the board's players as _refresh_board last listed them
 var _squad_view: VBoxContainer
 var _order_view: VBoxContainer
 var _all_button: Button
@@ -135,6 +140,8 @@ func _ready() -> void:
 	add_child(_beat_timer)
 	get_viewport().size_changed.connect(_on_resize)
 	_build_layout()
+	if _phase == "board":
+		_run_rivals(func() -> void: pass)   # a draft saved while rivals were on the clock
 	# The draft's tip waits for the first off-season to close (row 199): it
 	# would cover the off-season's own buttons, and Start the draft shows it.
 	if _phase == "board" and GameState.first_offseason != 1 and not _meet_if_due():
@@ -418,7 +425,7 @@ func _on_club_chosen(code: String) -> void:
 	elif GameState.opening_draft:
 		GameState.choose_real_club(code)
 	else:
-		_draft.start_for_user(code)
+		_held(_draft.start_for_user.bind(code))
 	GameState.mark_dirty()
 	if GameState.interview_before_draft():
 		InterviewScene.back_to_draft = true
@@ -428,6 +435,7 @@ func _on_club_chosen(code: String) -> void:
 		return
 	_club_backdrop()
 	_show_board()
+	_run_rivals(func() -> void: pass)
 	# A club taken on this screen meets its recruiting panel here, before the
 	# first pick, not only once the draft is opened again.
 	if GameState.first_offseason != 1 and not _meet_if_due():
@@ -901,12 +909,13 @@ func _on_trade_picks() -> void:
 
 func _after_trade() -> void:
 	var before := _draft.pick_history.size()
-	_draft.auto_until_user_turn()
+	_held(_draft.auto_until_user_turn)
 	GameState.mark_dirty()
 	_last_batch_start = before
 	_refresh()
-	if _draft.pick_history.size() > before:
-		_start_replay(before)
+	_run_rivals(func() -> void:
+		if _draft.pick_history.size() > before:
+			_start_replay(before))
 
 
 func _on_pick_for_me() -> void:
@@ -915,21 +924,19 @@ func _on_pick_for_me() -> void:
 		return
 	_finish_night()
 	var before := _draft.pick_history.size()
-	if _draft.pick_for_me():
+	if _held(_draft.pick_for_me):
 		GameState.mark_dirty()
 		_last_batch_start = before
-		_refresh()
-		_after_my_pick(before)
+		_after_mine(_after_my_pick.bind(before))
 
 
 func _on_pass() -> void:
 	_finish_night()
 	var before := _draft.pick_history.size()
-	if _draft.user_pass():
+	if _held(_draft.user_pass):
 		GameState.mark_dirty()
 		_last_batch_start = before
-		_refresh()
-		_start_replay(before)
+		_after_mine(_start_replay.bind(before))
 
 
 func _select_tab(key: String) -> void:
@@ -947,9 +954,13 @@ func _update_visibility() -> void:
 	_squad_view.visible = active == "squad"
 	_order_view.visible = active == "order"
 	_refresh_tabs()
-	# The pick log is only rebuilt while in view during a replay: catch it up.
-	if replaying() and _history_view.visible:
+	# The pick log is only rebuilt while in view: catch it up.
+	if (replaying() or _history_stale) and _history_view.is_visible_in_tree():
 		_refresh_history()
+	if _mine_stale and _squad_view.is_visible_in_tree():
+		_refresh_mine()
+	if _order_stale and _order_view.is_visible_in_tree():
+		_refresh_order()
 	if is_instance_valid(_recent_box):
 		_recent_box.visible = _recent_wanted()
 
@@ -1114,14 +1125,33 @@ func _hidden_in_filter() -> int:
 func _refresh_board(reset_scroll := false) -> void:
 	if _phase != "board" or not is_instance_valid(_board_box):
 		return
-	UiKit.clear(_board_box)
 	var rows := _board_rows()
+	_last_rows = rows
+	var shown := mini(_shown, rows.size())
+	# After a pick most of the board is the same players as before: their rows
+	# stay, with the pick button brought up to date, and only the new ones are
+	# built (60 rows rebuilt at every pick froze a phone).
+	var keep := {}
+	if _keep_rows:
+		var wanted := {}
+		for i in range(shown):
+			wanted["Player_" + str(rows[i]["id"])] = true
+		for child in _board_box.get_children():
+			if wanted.has(str(child.name)) and (child as CanvasItem).visible:
+				keep[str(child.name)] = child
+	_clear_except(_board_box, keep)
 	_pool_total.text = "%d available" % (_draft.pool.size() - _draft.picked.size())
 	_pool_rows_n = rows.size()
 	_refresh_pool_info()
-	var shown := mini(_shown, rows.size())
 	for i in range(shown):
-		_board_box.add_child(_player_row(rows[i]))
+		var p: Dictionary = rows[i]
+		var row: Control = keep.get("Player_" + str(p["id"]))
+		if row == null:
+			row = _player_row(p)
+			_board_box.add_child(row)
+		else:
+			_set_pick_state(row, row.get_meta("pick"), p)
+		_board_box.move_child(row, i)
 	if rows.is_empty():
 		_board_box.add_child(UiKit.lbl("No players match these filters.", UiKit.NAME, UiKit.TEXT, true))
 		_board_box.add_child(UiKit.lbl("Try another position or player name.", 14, UiKit.MUTED))
@@ -1137,6 +1167,24 @@ func _refresh_board(reset_scroll := false) -> void:
 		_board_box.add_child(more)
 	if reset_scroll:
 		_board_scroll.set_deferred("scroll_vertical", 0)
+
+
+## UiKit.clear, but the children in `keep` (name -> node) stay where they are.
+func _clear_except(box: Node, keep: Dictionary) -> void:
+	if keep.is_empty():
+		UiKit.clear(box)
+		return
+	var under: Control = box.get_viewport().gui_get_hovered_control() if box.is_inside_tree() else null
+	for child in box.get_children():
+		if keep.has(str(child.name)):
+			continue
+		if under != null and child is CanvasItem and (child == under or child.is_ancestor_of(under)):
+			child.name = "Leaving_%d" % child.get_instance_id()
+			(child as CanvasItem).hide()
+			child.queue_free()
+			continue
+		box.remove_child(child)
+		child.queue_free()
 
 
 func _clear_filters() -> void:
@@ -1258,6 +1306,26 @@ func _player_row(p: Dictionary) -> Control:
 	# The face is laid over the button, so the button takes its height.
 	face.minimum_size_changed.connect(func():
 		inspect.custom_minimum_size.y = maxf(66.0, face.get_combined_minimum_size().y))
+	var b := UiKit.btn("", UiKit.SECONDARY)
+	b.name = "Pick_" + str(p["id"])
+	b.custom_minimum_size = Vector2(66, 44)
+	# Its own height, centred: a taller row (wrapped facts) does not stretch it.
+	b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	b.pressed.connect(_on_pick.bind(p))
+	# Its outline, for when a kept row's button closes again (_set_pick_state).
+	b.set_meta("outline", b.get_theme_stylebox("normal"))
+	row.set_meta("pick", b)
+	h.add_child(b)
+	_set_pick_state(row, b, p)
+	return row
+
+
+## The row's pick button and tip as the draft stands: his own, taken, wait or
+## the reason he cannot be picked. A row kept across a pick (_refresh_board)
+## is brought up to date here; the rest of it does not change with a pick.
+func _set_pick_state(row: Control, b: Button, p: Dictionary) -> void:
+	var role := str(p["role"])
+	var taken := _draft.has(str(p["id"]))
 	var can_pick := _draft.can_pick_player(p)
 	var text := "+ " + role
 	var reason := "Draft %s for %s" % [GameDB.player_display_name(p), Contracts.money(_draft.price(p))]
@@ -1273,18 +1341,14 @@ func _player_row(p: Dictionary) -> Control:
 	elif not can_pick:
 		reason = _draft.pick_block_reason(p)
 		text = "Rucks" if reason.contains("rucks") else ("Full" if reason.contains("full") else ("Cap" if reason.contains("cap") else "No"))
-	var b := UiKit.btn(text, UiKit.SECONDARY)
-	b.name = "Pick_" + str(p["id"])
-	b.custom_minimum_size = Vector2(66, 44)
-	# Its own height, centred: a taller row (wrapped facts) does not stretch it.
-	b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	b.text = text
 	b.disabled = not can_pick
 	b.tooltip_text = reason
 	if can_pick:
 		b.add_theme_color_override("font_color", UiKit.TEXT)
 		b.add_theme_stylebox_override("normal", UiKit.style(UiKit.PANEL, 6, 5, Color("6c5142")))
-	b.pressed.connect(_on_pick.bind(p))
-	h.add_child(b)
+	else:
+		b.add_theme_stylebox_override("normal", b.get_meta("outline"))
 	if bool(p.get("projected", false)) and _draft.intake_mode:
 		var production := PlayerProfile.production(p)
 		row.tooltip_text = "%s · %s\n%s\n%s" % [
@@ -1294,7 +1358,6 @@ func _player_row(p: Dictionary) -> Control:
 		row.tooltip_text = "%s · %s\n%d games · %.1f disposals/game · %d goals\n%s" % [
 			GameDB.player_display_name(p), GameDB.club_name(str(p["club"])), int(p["gm"]),
 			float(p["di"]) / maxf(1.0, float(p["gm"])), int(p["gl"]), reason]
-	return row
 
 
 func _on_pick(player: Dictionary) -> void:
@@ -1304,10 +1367,231 @@ func _on_pick(player: Dictionary) -> void:
 		_combine.close()
 	var before := _draft.pick_history.size()
 	_last_batch_start = before
-	if _draft.pick(player):
+	if _held(_draft.pick.bind(player)):
 		GameState.mark_dirty()
-		_refresh()
-		_after_my_pick(before)
+		_after_mine(_after_my_pick.bind(before))
+
+
+# ---------------------------------------------------------------------------
+# The rival picks after yours, a few a frame (the draft hang, 2026-11-23): up
+# to 32 rival picks follow yours at the turn of a League Draft round, and made
+# all at once they froze a phone for seconds. The draft makes them a few
+# milliseconds at a time (Draft.rivals_step), the same picks in the same order,
+# and the board takes each one as it lands. Test and capture runners (a
+# scripted main loop) see the end state at once, as before, unless a test turns
+# spread_in_runner on.
+# ---------------------------------------------------------------------------
+## Microseconds of rival picks a frame.
+const RIVAL_BUDGET_USEC := 8000
+## New board rows built a frame while the rivals pick.
+const LANDING_ROWS := 1
+static var spread_in_runner := false
+var _rivals_then := Callable()
+var _rivals_running := false
+var _rivals_phase := ""
+var _landing_rows: Array = []
+var _landing_at := 0
+
+
+func _spread_rivals() -> bool:
+	return spread_in_runner or Engine.get_main_loop().get_script() == null
+
+
+## `call` (a draft call: your pick, pass, Pick for me) with the rival picks
+## after it held back for _run_rivals when they are spread over frames.
+func _held(call: Callable) -> Variant:
+	if not _spread_rivals():
+		return call.call()
+	Draft.hold_rivals = true
+	var out = call.call()
+	Draft.hold_rivals = false
+	return out
+
+
+## After your pick, pass or Pick for me: the board as it stands, then the
+## rival picks due (a few a frame), then `then`.
+func _after_mine(then: Callable) -> void:
+	if _spread_rivals() and _draft.rivals_due() and is_instance_valid(_board_box):
+		# Only what the pick changed: his row out, every button to Wait. The
+		# rest lands as the rivals pick.
+		_landing_rows = _last_rows.duplicate()
+		_landing_at = _landing_rows.size()
+		_land_rivals()
+		for c in _board_box.get_children():
+			var b: Button = c.get_meta("pick") if c.has_meta("pick") else null
+			if b != null:
+				b.text = "Wait"
+				b.disabled = true
+				b.tooltip_text = "Waiting for our next pick."
+				b.add_theme_stylebox_override("normal", b.get_meta("outline"))
+		_refresh_tabs()
+		_run_rivals(then)
+		return
+	_refresh_after_pick()
+	_run_rivals(then)
+
+
+## Make the rival picks due now a few a frame, then `then`. At once (and
+## `then` straight away) when none are due or they are not spread.
+func _run_rivals(then: Callable) -> void:
+	if _rivals_running:
+		# Still landing the last run (a pick made from a row already up to
+		# date): the new run picks up from here.
+		_rivals_then = then
+		_rivals_phase = "picks"
+		_hold_pick_buttons(true)
+		return
+	if not _spread_rivals() or not _draft.rivals_due():
+		then.call()
+		return
+	_rivals_then = then
+	_rivals_running = true
+	_rivals_phase = "picks"
+	_landing_rows = _last_rows.duplicate()
+	_landing_at = 0
+	_hold_pick_buttons(true)
+	set_process(true)
+
+
+## True while rival picks are still being made (or landing) a few a frame.
+func rivals_running() -> bool:
+	return _rivals_running
+
+
+func _process(_delta: float) -> void:
+	if not _rivals_running:
+		set_process(false)
+		return
+	match _rivals_phase:
+		"picks":
+			var made := _draft.pick_history.size()
+			if _draft.rivals_step(RIVAL_BUDGET_USEC):
+				_rivals_phase = "rows"
+			if _draft.pick_history.size() != made:
+				_land_rivals(false)   # the new rows come once the picks are made
+		"rows":
+			# The board topped up to its page, a row a frame.
+			if _land_rivals():
+				_rivals_phase = "buttons"
+				_buttons_at = 0
+		"buttons":
+			# Each row's button as the draft now stands, a slice a frame.
+			var rows: Array = _board_box.get_children().filter(
+					func(c): return str(c.name).begins_with("Player_") and (c as CanvasItem).visible) \
+					if is_instance_valid(_board_box) else []
+			var by_id := {}
+			for p in _last_rows:
+				by_id[str(p["id"])] = p
+			var stop := mini(_buttons_at + BUTTONS_A_FRAME, rows.size())
+			for i in range(_buttons_at, stop):
+				var row: Control = rows[i]
+				var id := str(row.name).substr(7)
+				var b: Button = row.get_meta("pick") if row.has_meta("pick") else null
+				if by_id.has(id) and b != null:
+					_set_pick_state(row, b, by_id[id])
+			_buttons_at = stop
+			if stop >= rows.size():
+				_rivals_phase = "done"
+		_:
+			_rivals_running = false
+			set_process(false)
+			_land_done()
+			_landing_rows = []
+			var then := _rivals_then
+			_rivals_then = Callable()
+			if then.is_valid():
+				then.call()
+
+
+## Buttons brought up to date a frame once the rivals have picked.
+const BUTTONS_A_FRAME := 12
+var _buttons_at := 0
+
+
+## The rest of the screen once the rivals have picked: the clock, the footer,
+## the tabs and the board's counts; the pick log, list and order now if in
+## view, else when opened.
+func _land_done() -> void:
+	_refresh_tabs()
+	_refresh_status()
+	_refresh_live()
+	if is_instance_valid(_board_box):
+		_pool_total.text = "%d available" % (_draft.pool.size() - _draft.picked.size())
+		var left := 0
+		for p in _last_rows:
+			if not _draft.has(str(p["id"])):
+				left += 1
+		_pool_rows_n = left
+		_refresh_pool_info()
+		var more := _board_box.get_node_or_null("MorePlayers") as Button
+		var shown := _board_box.get_children().filter(
+				func(c): return str(c.name).begins_with("Player_") and (c as CanvasItem).visible).size()
+		if more != null:
+			if shown >= left:
+				more.queue_free()
+			else:
+				more.text = "Show more  ·  %d of %d" % [shown, left]
+	_refresh_side_views()
+
+
+## The pick log, your list and the order: rebuilt now when in view, else
+## marked to catch up when opened.
+func _refresh_side_views() -> void:
+	if is_instance_valid(_history_view) and not _history_view.is_visible_in_tree():
+		_history_stale = true
+	else:
+		_refresh_history()
+	if is_instance_valid(_squad_view) and not _squad_view.is_visible_in_tree():
+		_mine_stale = true
+	else:
+		_refresh_mine()
+	if is_instance_valid(_order_view) and not _order_view.is_visible_in_tree():
+		_order_stale = true
+	else:
+		_refresh_order()
+
+
+## The picks made so far this frame on the board: the clock, the tab's count,
+## each taken player's row out, the next players' rows in (LANDING_ROWS a frame).
+func _land_rivals(build := true) -> bool:
+	_refresh_live()
+	if not is_instance_valid(_board_box):
+		return true
+	var under: Control = get_viewport().gui_get_hovered_control()
+	var n := 0
+	for c in _board_box.get_children():
+		var name_s := str(c.name)
+		if not name_s.begins_with("Player_") or not (c as CanvasItem).visible:
+			continue
+		if not _draft.has(name_s.substr(7)):
+			n += 1
+		elif under != null and (c == under or c.is_ancestor_of(under)):
+			c.name = "Leaving_%d" % c.get_instance_id()
+			(c as CanvasItem).hide()
+			c.queue_free()
+		else:
+			_board_box.remove_child(c)
+			c.queue_free()
+	var built := 0
+	while build and n < _shown and built < LANDING_ROWS and _landing_at < _landing_rows.size():
+		var p: Dictionary = _landing_rows[_landing_at]
+		_landing_at += 1
+		var id := str(p["id"])
+		if _draft.has(id) or _board_box.has_node("Player_" + id):
+			continue
+		var row := _player_row(p)
+		_board_box.add_child(row)
+		_board_box.move_child(row, n)
+		n += 1
+		built += 1
+	return n >= _shown or _landing_at >= _landing_rows.size()
+
+
+## _refresh after a pick: the board keeps the rows of the players still on it.
+func _refresh_after_pick() -> void:
+	_keep_rows = true
+	_refresh()
+	_keep_rows = false
 
 
 ## Your pick made (entry `at` of the pick history): at the National Draft, his
@@ -2049,6 +2333,7 @@ func _night_events(upto: int) -> Array:
 
 
 func _refresh_history() -> void:
+	_history_stale = false
 	UiKit.clear(_history_box)
 	var entries := []
 	var picks_n := 0
@@ -2143,6 +2428,7 @@ func _history_row(entry: Dictionary) -> Control:
 
 
 func _refresh_mine() -> void:
+	_mine_stale = false
 	UiKit.clear(_mine_box)
 	if _draft.intake_mode:
 		if _draft.senior_cap > 0:
@@ -2276,6 +2562,7 @@ func _on_release(id: String) -> void:
 
 
 func _refresh_order() -> void:
+	_order_stale = false
 	UiKit.clear(_order_box)
 	var by_pick := {}
 	for e in _draft.pick_history:
@@ -2366,9 +2653,9 @@ func _refresh() -> void:
 	_refresh_tabs()
 	_refresh_status()
 	_refresh_board()
-	_refresh_history()
-	_refresh_mine()
-	_refresh_order()
+	# The pick log out of view (a phone on another tab) is rebuilt when it is
+	# opened, not at every pick: it grows by 30-odd rows a round.
+	_refresh_side_views()
 
 
 func _refresh_status() -> void:
