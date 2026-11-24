@@ -179,3 +179,4 @@ What has landed toward each open row of docs/TODO.md and docs/TODO_RULINGS.md, o
 - 207: Merged #1990: 3D match: the goal kicker's TV stat card over the picture (row 207).
 - 202: Merged #1945: Ground shots: film every ground nightly and flag what changed (row 202).
 - 202: Merged #1985: 3D match: holding-the-ball frees show the tackle; tackles that stop play cut close (row 202 2e, WIP).
+- 202: Merged #2038: 3D kit: clash guernseys for 17 clubs, guernseys hang from the chest, shorts lie flat (row 202 2d).
