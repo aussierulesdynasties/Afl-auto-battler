@@ -4706,13 +4706,21 @@ func _test_pc_oval_left(sz: Vector2i) -> void:
 		return ov != null and oval.grow(2.0).encloses(ov.get_global_rect()) and ov.get_global_rect().grow(2.0).encloses(oval) \
 				and not ov.get_global_rect().intersects(board.get_global_rect())
 	_check(over_oval.call(box), "The pre-match opens over the oval, the score still in view (%s: %s in %s)" % [tag, str(box.get_global_rect()), str(oval)])
-	var shots: Node = m.find_child("LiveRow_shots", true, false)
-	_check(shots != null and (shots.find_child("Home", true, false) as Label).text == "0" and m.find_child("LiveStatsWhen", true, false) == null
+	var i50_row: Node = m.find_child("LiveRow_inside50", true, false)
+	_check(i50_row != null and (i50_row.find_child("Home", true, false) as Label).text == "0" and m.find_child("LiveRow_shots", true, false) == null
+			and m.find_child("LiveStatsWhen", true, false) == null
 			and m.find_child("LiveClub_0", true, false) != null and m.find_child("LiveClub_1", true, false) != null,
 			"Before the bounce the numbers are nil-all under both clubs' names, with no break's totals yet (%s)" % tag)
+	var ctl := m.find_child("MatchControls", true, false) as Control
+	var feed_low := feed_scroll.get_global_rect().end.y
+	_check(ctl != null and not ctl.visible,
+			"Under the pre-match the play buttons step out of the column and the feed takes their room (%s: feed to %.0f, panel to %.0f)" % [
+			tag, feed_low, panel.get_global_rect().end.y])
 	var start_why: String = await Tap.tap(box.find_child("StartQuarter", true, false) as Button)
 	await _settle()
 	_check(start_why == "" and m.find_child("CoachBox", true, false) == null, "A real tap on Start begins the match (%s: %s)" % [tag, start_why])
+	_check(ctl != null and ctl.visible and ctl.modulate.a == 1.0 and feed_scroll.get_global_rect().end.y < feed_low - 40.0,
+			"Once the sheet closes the play buttons come back under the feed (%s: feed to %.0f)" % [tag, feed_scroll.get_global_rect().end.y])
 	# The first quarter, fast, the real playback path; a call takes its default.
 	pitch.set_speed(8.0)
 	var guard := 0
@@ -4741,14 +4749,12 @@ func _test_pc_oval_left(sz: Vector2i) -> void:
 	_check(over_oval.call(box), "The break opens over the oval, the score still in view (%s)" % tag)
 	# The numbers beside the oval are the stats sheet's own.
 	var team: Array = (sim.quarter_teams[0] as Dictionary).get("team", [])
-	var g: Array = m.get("_shown_goals")
-	var bh: Array = m.get("_shown_behinds")
 	var said := func(key: String) -> Array:
 		var r: Node = m.find_child("LiveRow_" + key, true, false)
 		return [(r.find_child("Home", true, false) as Label).text, (r.find_child("Away", true, false) as Label).text] if r != null else ["-", "-"]
 	var want_i50 := [str(roundi(float((team[0] as Dictionary).get("inside50", 0.0)))), str(roundi(float((team[1] as Dictionary).get("inside50", 0.0))))] if team.size() == 2 else []
-	_check(said.call("inside50") == want_i50 and said.call("shots") == [str(int(g[0]) + int(bh[0])), str(int(g[1]) + int(bh[1]))],
-			"Inside 50s counted as they were played match the stats sheet at quarter time, scoring shots the scoreboard (%s: %s v %s)" % [tag, str(said.call("inside50")), str(want_i50)])
+	_check(said.call("inside50") == want_i50,
+			"Inside 50s counted as they were played match the stats sheet at quarter time (%s: %s v %s)" % [tag, str(said.call("inside50")), str(want_i50)])
 	var when: Label = m.find_child("LiveStatsWhen", true, false)
 	var rest_ok := when != null and when.text == "At quarter time"
 	for key in ["disposals", "marks", "tackles", "clearances"]:
