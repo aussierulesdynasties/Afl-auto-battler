@@ -52,7 +52,9 @@ const GOLDEN_REAL := "f45597be894d17ff3955f68dffc2c30e"
 const BOOKKEEPING_KEYS := ["impact_by", "breeze_side"]
 ## Event keys that only feed the picture: a goal's TV stat card (row 207) copies
 ## the kicker's numbers at that goal and draws nothing, so leaving it out keeps the print.
-const EVENT_BOOKKEEPING_KEYS := ["card"]
+## "to_id" (#2080) names who a kick goes to for the replay, and "run_down" (#2040) is how
+## far a chase-down runs, drawn from its own stream: neither changes the play.
+const EVENT_BOOKKEEPING_KEYS := ["card", "to_id", "run_down"]
 ## Team counts that record where something happened, not what happened: the
 ## pressure zones (pressure acts in the defensive half, tackles inside 50,
 ## 2026-11-14) are counted without a draw, so leaving them out keeps the print.
