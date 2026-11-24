@@ -508,6 +508,7 @@ func _test_screens() -> void:
 			and _label(scene, "PreSeasonHero") == "Player meetings",
 			"With a pre-season running, the game opens on the player meetings")
 	_check(_fits(scene, 390.0), "Nothing on the meetings runs off a phone's screen")
+	_check(_one_page(scene), "The meetings fit on one phone page, two lines by two")
 	# Open a player's meeting and set his focus by taps.
 	var p: Dictionary = {}
 	for q in GameState.my_list:
@@ -525,6 +526,14 @@ func _test_screens() -> void:
 	await _frames(tree, 4)
 	_check(GameState.stat_focus(p) != key or not GameState.focus_locked(p),
 			"The pick is a draft until the meetings are done")
+	_check(scene.find_child("MeetSheet", true, false) != null,
+			"His meeting opens in a panel over the page")
+	_check(await _tap(scene.find_child("MeetClose", true, false), "Close"), "A finger's tap closes his meeting")
+	await _frames(tree, 4)
+	var said := _label(scene, "MeetSaid_" + pid)
+	_check(scene.find_child("MeetSheet", true, false) == null and scene.find_child("PreSeasonMeetings", true, false) != null
+			and said == GameState.train_stat_label(key).to_lower(),
+			"Closing it leaves the four lines, his row showing the focus picked (%s)" % said)
 	_check(await _tap(scene.find_child("PreSeasonGo", true, false), "Meetings done"), "A finger's tap finishes the meetings")
 	await _frames(tree, 6)
 	scene = tree.current_scene as Control
@@ -641,15 +650,29 @@ func _test_meeting_focus() -> void:
 	var choices := scene.find_child("MeetChoices", true, false) as Control
 	var profile := scene.find_child("MeetProfile", true, false) as Control
 	var grid := scene.find_child("MeetFocus", true, false) as Control
-	_check(choices != null and profile != null and grid != null
-			and grid.get_global_rect().end.x <= 800.0 + 0.5
-			and profile.get_global_rect().position.x >= 800.0 - 0.5
+	var sheet := scene.find_child("MeetSheet", true, false) as Control
+	var mid := 800.0
+	if sheet != null and sheet.find_child("MeetChoices", true, false) != null:
+		var shell := (choices.get_parent() as Control)
+		mid = shell.get_global_rect().get_center().x
+	_check(choices != null and profile != null and grid != null and sheet != null
+			and grid.get_global_rect().end.x <= mid + 0.5
+			and profile.get_global_rect().position.x >= mid - 0.5
 			and profile.get_global_rect().end.x <= 1600.0 + 0.5
 			and profile.find_child("ProfileName", true, false) != null
 			and profile.find_child("ProfileAttributes", true, false) != null,
-			"On a 1600x900 window the stat buttons sit in the left half and his profile on the right (%s / %s)"
+			"On a 1600x900 window his meeting opens over the page, the stat buttons on its left half and his profile on the right (%s / %s)"
 			% [str(grid.get_global_rect()) if grid != null else "-", str(profile.get_global_rect()) if profile != null else "-"])
 	_check(_fits(scene, 1600.0), "Nothing on the PC meeting runs off the window")
+	_check(await _tap(scene.find_child("MeetClose", true, false), "Close"), "A finger's tap closes his meeting on a PC")
+	await _frames(tree, 4)
+	_check(scene.find_child("MeetSheet", true, false) == null and _one_page(scene)
+			and scene.find_child("MeetLine_RUCK", true, false) != null
+			and (scene.find_child("MeetLine_MID", true, false) as Control).get_global_rect().position.y
+				== (scene.find_child("MeetLine_RUCK", true, false) as Control).get_global_rect().position.y,
+			"On a PC the four lines sit side by side on one page")
+	await _tap(scene.find_child("MeetTap_" + pid, true, false), "a midfielder's meeting")
+	await _frames(tree, 4)
 	# A phone: one column, no profile beside, still bold.
 	tree.root.size = Vector2i(390, 844)
 	await _frames(tree, 6)
@@ -799,6 +822,21 @@ func _open(tree: SceneTree) -> Control:
 func _label(scene: Node, node_name: String) -> String:
 	var l := scene.find_child(node_name, true, false) as Label if scene != null else null
 	return l.text if l != null else ""
+
+
+## The meetings need no scroll: the page's scroll container holds them whole.
+func _one_page(scene: Control) -> bool:
+	var page := scene.find_child("PreSeasonPage", true, false) as Control
+	var lines := scene.find_child("PreSeasonMeetings", true, false) as Control
+	if page == null or lines == null:
+		return false
+	var sc := page.get_parent() as ScrollContainer
+	if sc == null:
+		return false
+	var ok := lines.get_global_rect().end.y <= sc.get_global_rect().end.y + 0.5 and sc.scroll_vertical == 0
+	if not ok:
+		push_error("Meetings run past the page: %s vs %s" % [str(lines.get_global_rect()), str(sc.get_global_rect())])
+	return ok
 
 
 func _fits(scene: Control, width: float) -> bool:
