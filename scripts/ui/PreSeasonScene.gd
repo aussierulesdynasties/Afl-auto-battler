@@ -791,11 +791,41 @@ func _meeting_words(p: Dictionary) -> String:
 	return "  ·  ".join(parts)
 
 
-## His meeting: the stat focus for the season, then a position to learn.
+## What a man of each line is called in a sentence ("his rating as a midfielder").
+const LINE_NOUN := {"RUCK": "ruck", "MID": "midfielder", "DEF": "defender", "FWD": "forward"}
+const COUNT_WORD := ["none", "one", "two", "three", "four", "five", "six"]
+
+
+## His meeting: the stat focus for the season, then a position to learn. On a
+## PC the choices take the left half and his profile the right (director,
+## 2026-11-24: "shrink them to fit half the space on the left, and put the
+## player's profile on the right ... on pc anyway"); a phone keeps one column.
 func _meeting(p: Dictionary) -> Control:
 	var pid := str(p["id"])
+	var v := _meeting_choices(p)
+	if not _wide():
+		v.name = "Meeting_" + pid
+		return v
+	var cols := UiKit.hbox(28)
+	cols.name = "Meeting_" + pid
+	v.name = "MeetChoices"
+	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	v.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	cols.add_child(v)
+	var card := UiKit.panel(UiKit.PANEL)
+	card.name = "MeetProfile"
+	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	card.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	var body := UiKit.vbox(6)
+	card.add_child(body)
+	PlayerSheet.profile_body(body, p, self)
+	cols.add_child(card)
+	return cols
+
+
+func _meeting_choices(p: Dictionary) -> VBoxContainer:
+	var pid := str(p["id"])
 	var v := UiKit.vbox(8)
-	v.name = "Meeting_" + pid
 	var year := GameState.season_year
 	v.add_child(UiKit.lbl("Stat focus for %d" % year, UiKit.SECONDARY, UiKit.label_ink(), true))
 	var learning := GameState.project_job(p)
@@ -814,12 +844,26 @@ func _meeting(p: Dictionary) -> Control:
 		intro.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(intro)
 		var options := []
-		for key in GameState.focus_options(p):
+		var keys: Array = GameState.focus_options(p)
+		for key in keys:
 			options.append([key, "%s %s" % [GameState.train_stat_label(key), PlayerProfile.attr_text(p, key)]])
+		# The stats his position is rated on, in bold (director, 2026-11-24:
+		# "stats that their position is rated on should be highlighted").
+		var rated := []
+		for key in PlayerProfile.rated_on(p):
+			if keys.has(key):
+				rated.append(key)
+		if not rated.is_empty():
+			var key_line := UiKit.lbl("His rating as a %s rests most on the %s in bold." % [
+					str(LINE_NOUN.get(str(p.get("role", "MID")), "player")),
+					COUNT_WORD[mini(rated.size(), COUNT_WORD.size() - 1)]], UiKit.SECONDARY, UiKit.TEXT)
+			key_line.name = "MeetFocusRated"
+			key_line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			v.add_child(key_line)
 		v.add_child(UiKit.choice_grid("MeetFocus", options, str(_focus_draft.get(pid, GameState.stat_focus(p))), 2,
 				func(key: String):
 					_focus_draft[pid] = key
-					_build()))
+					_build(), rated))
 	var learn := _meeting_learn(p)
 	if learn != null:
 		v.add_child(learn)
