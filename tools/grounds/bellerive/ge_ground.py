@@ -33,6 +33,11 @@ NC = len(NAMES)
 FINE_SPAN = 768.0
 FINE_N = 2048
 FINE_STEP = FINE_SPAN / FINE_N
+# Each class's colour is also kept as its median over each BLOCK m square (PC check r6: one median per class over
+# the whole map flattened the parks and the lawns to its grey mean); a block with under BLOCK_MIN samples of a
+# class takes the class's whole-map median. Medians of a block are colours, not imagery.
+BLOCK = 64.0
+BLOCK_MIN = 60
 
 
 def classify(im):
@@ -70,6 +75,8 @@ def main(works):
     fine = np.zeros((FINE_N, FINE_N, NC), np.uint8)
     spare = np.zeros((S.SIZE, S.SIZE, NC), np.uint16)                # every shot, for cells the owner's tip box hid
     cols = {k: [] for k in MEASURED}
+    blk_e = {k: [] for k in MEASURED}
+    blk_n = {k: [] for k in MEASURED}
     rng = np.random.default_rng(3)
     for i, (f, (ce, cn)) in enumerate(shots):
         im = np.asarray(Image.open(f).convert("RGB")).astype(float)
@@ -97,6 +104,7 @@ def main(works):
             if len(sel):
                 sel = rng.choice(sel, min(len(sel), 4000), replace=False)
                 cols[c].append(im[ys[sel], xs[sel]])
+                blk_e[c].append(E[ok][sel]); blk_n[c].append(N[ok][sel])
     grid = votes.argmax(2).astype(np.uint8)
     hid = votes.sum(2) == 0
     grid[hid] = spare.argmax(2)[hid]
@@ -123,8 +131,19 @@ def main(works):
     fg[(fg == 6) & ~ndimage.binary_opening(fc, np.ones((16, 16)))] = 4
     haze = lambda c: [int(v) for v in np.clip((np.median(np.concatenate(c), 0) - 14.0) * 1.08, 0, 255)]
     colour = {NAMES[c]: haze(cols[c]) for c in MEASURED}
-    np.savez_compressed(os.path.join(HERE, "ge_ground.npz"), cls=grid, fine=fg)
-    json.dump({"names": NAMES, "colour": colour, "fine_span": FINE_SPAN}, open(os.path.join(HERE, "ge_ground.json"), "w"),
+    nb = int(math.ceil(S.SIZE / BLOCK))
+    blk = np.full((nb, nb, NC, 3), np.nan, np.float32)            # [row (south), col (east), class] -> rgb
+    for c in MEASURED:
+        col = np.concatenate(cols[c]); e = np.concatenate(blk_e[c]); n = np.concatenate(blk_n[c])
+        bi = np.clip(((-n + HALF) // BLOCK).astype(int), 0, nb - 1); bj = np.clip(((e + HALF) // BLOCK).astype(int), 0, nb - 1)
+        key = bi * nb + bj
+        order = np.argsort(key, kind="stable"); key, col = key[order], col[order]
+        cuts = np.flatnonzero(np.diff(key)) + 1
+        for ks, cs in zip(np.split(key, cuts), np.split(col, cuts)):
+            if len(cs) >= BLOCK_MIN:
+                blk[ks[0] // nb, ks[0] % nb, c] = np.clip((np.median(cs, 0) - 14.0) * 1.08, 0, 255)
+    np.savez_compressed(os.path.join(HERE, "ge_ground.npz"), cls=grid, fine=fg, blk=blk)
+    json.dump({"names": NAMES, "colour": colour, "fine_span": FINE_SPAN, "block": BLOCK}, open(os.path.join(HERE, "ge_ground.json"), "w"),
               separators=(",", ":"))
     print("classes", {NAMES[c]: int((grid == c).sum()) for c in range(NC)}, "colours", colour)
 

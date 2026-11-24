@@ -194,8 +194,8 @@ def canopy_trees(blocked):
     """(x, z, height, crown radius, kind) rows filling Google Earth's canopy (ge_ground.py's canopy class, 1 m) with
     crowns, as dense as Google Earth shows it: a garden's clump or the gums along the beach are one mass of
     overlapping crowns, not a tree traced at each blob's middle (PC check r5: evenly spread lollipops). Crowns go
-    in widest first, each as wide as the canopy's depth round it (1.2 to 7 m), none nearer another than 0.7 of their
-    two radii; each takes the canopy height map's tallest within it (Meta and WRI, CC BY 4.0), and a crown the map
+    in widest first, each as wide as the canopy's depth round it (1.8 to 9 m), none nearer another than 0.55 of their
+    two radii (PC check r6: at 0.78 and 7 m the clumps still read as separate lollipops); each takes the canopy height map's tallest within it (Meta and WRI, CC BY 4.0), and a crown the map
     reads under 3 m is a crown and a half's width tall (the map reads most of Bellerive's gums under it), or a
     shrub in a patch under 15 m2. Tall and narrow means a pine or cypress."""
     from scipy import ndimage
@@ -218,14 +218,14 @@ def canopy_trees(blocked):
     cell = {}
     out = []
     for k in order:
-        r = float(np.clip(depth[k] * 1.15 + 0.6, 1.8, 7.0))
+        r = float(np.clip(depth[k] * 1.15 + 0.6, 1.8, 9.0))
         a, b = float(x[k]), float(z[k])
         ci, cj = int(a // 8), int(b // 8)
         clash = False
         for i in range(ci - 2, ci + 3):
             for j in range(cj - 2, cj + 3):
                 for (qa, qb, qr) in cell.get((i, j), ()):
-                    if (qa - a) ** 2 + (qb - b) ** 2 < (0.78 * (r + qr)) ** 2:
+                    if (qa - a) ** 2 + (qb - b) ** 2 < (0.55 * (r + qr)) ** 2:
                         clash = True
                         break
                 if clash:
@@ -343,7 +343,8 @@ def main():
     b = building_list(ways, in_foot)
     b = np.concatenate([b, ms_buildings(ways, in_foot, sea)]).astype("<f4")
     b, rgb = from_google_earth(b)
-    b, rgb = with_traced(b, rgb)
+    b, rgb, det = with_traced(b, rgb)
+    det.tofile(os.path.join(OUT, "house_detail.bin"))
     b.tofile(os.path.join(OUT, "buildings.bin"))
     rgb.tofile(os.path.join(OUT, "roofs.bin"))
     print("surrounds.webp", im.size, "trees", len(t), "building floats", len(b), "sea px", int(sea.sum()))
@@ -368,6 +369,33 @@ def _ground_classes():
         _, (ii, jj) = ndimage.distance_transform_edt(~np.isin(cls, measured), return_indices=True)
         return cls[ii, jj]
     return filled(z["cls"]), filled(z["fine"]), pal, float(info["fine_span"])
+
+
+def _class_paint(cls, pal, x0, z0, step):
+    """Each pixel of the class grid `cls` (pixel (i, j) centred at model x0 + (j + 0.5) step, z0 + (i + 0.5) step)
+    in its class's colour for where it is: the 64 m block medians (ge_ground.py) eased bilinearly from block to
+    block, the class's whole-map median where a block has too few of it."""
+    from scipy import ndimage
+    z = np.load(os.path.join(HERE, "ge_ground.npz"))
+    out = pal[cls].astype(float)
+    if "blk" not in z.files:
+        return out
+    info = json.load(open(os.path.join(HERE, "ge_ground.json")))
+    blk, B = z["blk"], float(info["block"])
+    n = cls.shape[0]
+    t = (np.arange(n) + 0.5) * step
+    bj = (x0 + t + S.SIZE / 2) / B - 0.5                     # block coordinates of each column and row
+    bi = (z0 + t + S.SIZE / 2) / B - 0.5
+    BI, BJ = np.meshgrid(bi, bj, indexing="ij")
+    for k in np.unique(cls):
+        sel = cls == k
+        g = blk[:, :, k]
+        if not np.isfinite(g).any():
+            continue
+        g = np.where(np.isfinite(g), g, pal[k][None, None, :])
+        for c in range(3):
+            out[..., c][sel] = ndimage.map_coordinates(g[..., c], [BI[sel], BJ[sel]], order=1, mode="nearest")
+    return out
 
 
 def _grain(n, seed):
@@ -433,7 +461,7 @@ def ge_ground(arr, ways, sea, foot, rows):
         elif t.get("highway") in S.WIDTH and t.get("tunnel") != "yes":
             d.line([S.px(*q) for q in p], fill=1, width=max(1, int(round(S.WIDTH[t["highway"]]))))
     open_ = seen & ~np.asarray(mapped, bool) & ~sea & ~foot
-    paint = pal[cls] * _grain(S.SIZE, 11)[..., None]
+    paint = _class_paint(cls, pal, -S.SIZE / 2, -S.SIZE / 2, 1.0) * _grain(S.SIZE, 11)[..., None]
     shade = _tree_shade(S.SIZE, lambda x, z: (x + S.SIZE / 2, z + S.SIZE / 2), 1.0, rows)
     paint *= (1.0 - 0.45 * shade)[..., None]
     out = arr.copy()
@@ -468,7 +496,7 @@ def near_map(arr, ways, sea, sand, foot, rows):
     _draw_mapped(ImageDraw.Draw(mk), ways, to_px, 1.0 / step)
     mapped = np.asarray(mk).sum(2) > 0
     out = np.asarray(im, float).copy()
-    paint = pal[fine] * _grain(n, 13)[..., None]
+    paint = _class_paint(fine, pal, -span / 2, -span / 2, step) * _grain(n, 13)[..., None]
     shade = _tree_shade(n, to_px, 1.0 / step, rows)
     paint *= (1.0 - 0.45 * shade)[..., None]
     open_ = ~mapped & ~sea_n & ~sand_n & ~foot_n
@@ -534,10 +562,12 @@ def with_traced(buf, rgb):
             col += list(rgb[3 * j:3 * j + 3])
         i += 2 + 2 * n
         j += 1
+    det = []                                  # house_detail.bin: building number (from 1), wall rgb, flags
     for t in traced:
         out += [float(len(t["pts"])), float(t["h"])] + [v for q in t["pts"] for v in q]
         col += t["rgb"]
-    return np.array(out, "<f4"), np.array(col, "<f4")
+        det += [len(col) // 3] + list(t["wall"]) + [float(t["flags"])]
+    return np.array(out, "<f4"), np.array(col, "<f4"), np.array(det, "<f4")
 
 
 def building_list(ways, in_foot):
