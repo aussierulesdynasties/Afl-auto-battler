@@ -559,6 +559,12 @@ func _year_button(id: String, tall := false) -> Button:
 	for n in [pad, row, fig, text] + text.get_children():
 		(n as Control).mouse_filter = Control.MOUSE_FILTER_IGNORE
 	b.add_child(pad)
+	# The wrapped line can need more than that floor: in the browser, 2020's line
+	# wrapped to three and its last line ran below the card's edge (director's
+	# capture, 2026-11-24). Grow the button to its words.
+	var floor_h := b.custom_minimum_size.y
+	pad.minimum_size_changed.connect(func() -> void:
+		b.custom_minimum_size.y = maxf(floor_h, pad.get_combined_minimum_size().y))
 	b.pressed.connect(_on_pick_year.bind(id))
 	return b
 
