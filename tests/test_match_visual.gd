@@ -63,6 +63,7 @@ func run() -> void:
 	_t("_test_graphics_levels", [res])
 	_t("_test_discs_apart")
 	_t("_test_clash_kit")
+	_t("_test_clash_guernsey_3d")
 	_t("_test_label_overlap")
 	_t("_test_bench_strip")
 	_t("_test_ends_change_at_restart", [res])
@@ -2369,6 +2370,43 @@ func _test_three_d_numbers() -> void:
 	var m: ShaderMaterial = oval._kit(GameDB.club_guernsey("RIC"))
 	_check(m.get_shader_parameter("digits_arr") == Oval3D.digits_3d(), "Every kit reads its numbers from the mipmapped digits")
 	oval.free()
+
+
+## The 3D away side wears its club's real clash guernsey (data/kits_clash.csv, its own atlas) when the 2D
+## discs call a clash, and its home guernsey otherwise. Every club with a clash guernsey has its cell
+## painted, and each binding colour is set with its width.
+func _test_clash_guernsey_3d() -> void:
+	var g: Dictionary = Oval3D.away_guernsey("FRE", "MEL")
+	_check(bool(g["today"].get("clash", false)) and int(g["today"].get("cell", -1)) == int(GameDB.club_clash_kit("MEL")["cell"]),
+			"Melbourne at Fremantle wear their clash guernsey in 3D")
+	_check(not bool(Oval3D.away_guernsey("HAW", "WCE")["today"].get("clash", false)),
+			"West Coast at Hawthorn wear their home guernsey in 3D")
+	var oval := Oval3D.new()
+	var m: ShaderMaterial = oval._kit(g)
+	_check(m.get_shader_parameter("kit_atlas") == GameDB.kits_clash_atlas(), "A clash guernsey reads the clash atlas")
+	m = oval._kit(GameDB.club_guernsey("MEL"))
+	_check(m.get_shader_parameter("kit_atlas") == GameDB.kits_today_atlas(), "A home guernsey reads the home atlas")
+	oval.free()
+	var img: Image = GameDB.kits_clash_atlas().get_image()
+	if img.is_compressed():
+		img.decompress()
+	var painted := true
+	var bound := true
+	for code in ["ADE", "BRL", "CAR", "COL", "ESS", "FRE", "GEE", "GCS", "GWS", "HAW", "MEL", "NTH", "PAD", "RIC", "STK", "WCE", "WBD"]:
+		var k: Dictionary = GameDB.club_clash_kit(code)
+		if k.is_empty():
+			painted = false
+			continue
+		var cell := int(k["cell"])
+		var cw := img.get_width() / 8
+		var p := img.get_pixel((cell % 4) * 2 * cw + cw / 2, (cell / 4) * cw + cw * 3 / 4)
+		painted = painted and p.r + p.g + p.b > 0.05
+		var c: Color = k.get("collar", Color(0, 0, 0, 0))
+		if c.a > 0.0:
+			bound = bound and float(k.get("collar_cm", 0.0)) > 0.0
+	_check(painted, "Every club with a clash guernsey has its picture in the clash atlas")
+	_check(bound, "Every clash collar has its width")
+	_check(GameDB.club_clash_kit("SYD").is_empty(), "Sydney has no clash guernsey on file, so they wear their own")
 
 
 ## Settings > Graphics (Oval3DQuality): High is the look as built; Low draws every supporter as a
