@@ -165,3 +165,4 @@ What has landed toward each open row of docs/TODO.md and docs/TODO_RULINGS.md, o
 - 202: Merged #2084: Blacktown audit pass: roads, car park, LED screen, south buildings, south path and fence; seam and bank fixes.
 - 202: Merged #2070: 3D 1.0 plan: MetaHuman phone cost re-measured, build packaging owner (row 202).
 - 202: Merged #2036: Mars Stadium: the 2026 ground in matches, fence fitted to Google Earth, measured rings, real seat counts, Ballarat North surroundings (row 202).
+- 202: Merged #2014: 3D view: turf and picture in real broadcast colour (Director Bible 2.114).
