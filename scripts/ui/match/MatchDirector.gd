@@ -170,7 +170,7 @@ func setup(result: Dictionary, p_events: Array) -> void:
 	_tl_i = 0
 	_tac = [{}, {}]
 	# The ground at its own size (row 202 2b): every spot below is set on it.
-	MatchMotion.use_field(GroundModels.field_for(VignetteGround.ground_of(result)))
+	GroundModels.play_at(VignetteGround.ground_of(result))
 	# Presentation stream: seeded from the fixture, never from MatchSim.
 	_rng.seed = hash("%s|%s|%s|view" % [result.get("home", ""), result.get("away", ""),
 			result.get("label", "")])
@@ -1680,9 +1680,7 @@ func _rest_spot(j: int) -> Vector2:
 	var at := _loc(j)
 	var x := MatchMotion.gx(clampf(float(ev["loose_to"]), -MatchMotion.STD_GOAL_X, MatchMotion.STD_GOAL_X)) \
 			if ev.has("loose_to") else clampf(at.x, -MatchMotion.GOAL_X, MatchMotion.GOAL_X)
-	var ymax := (MatchMotion.HALF_WID - 4.0) * sqrt(maxf(0.0,
-			1.0 - pow(x / (MatchMotion.HALF_LEN - 1.0), 2.0)))
-	var r := Vector2(x, clampf(at.y + float(ev.get("loose_across", 0.0)), -ymax, ymax))
+	var r := Vector2(x, MatchMotion.clamp_across(x, at.y + float(ev.get("loose_across", 0.0)), 4.0, 1.0))
 	_rests[j] = r
 	return r
 
@@ -1698,9 +1696,7 @@ func _rest_from_ball(j: int) -> void:
 	var at := _loc(j)
 	if absf(b.y - at.y) <= REST_ACROSS_SLACK:
 		return
-	var ymax := (MatchMotion.HALF_WID - 4.0) * sqrt(maxf(0.0,
-			1.0 - pow(r.x / (MatchMotion.HALF_LEN - 1.0), 2.0)))
-	_rests[j] = Vector2(r.x, clampf(b.y + float((events[j] as Dictionary).get("loose_across", 0.0)), -ymax, ymax))
+	_rests[j] = Vector2(r.x, MatchMotion.clamp_across(r.x, b.y + float((events[j] as Dictionary).get("loose_across", 0.0)), 4.0, 1.0))
 	# Every later spot already worked out from the old rest spot (the ball-up or gather it waits
 	# on, and the handball out of that ball-up) is worked out again from the new one, or the ball
 	# rolls to one spot and the play goes on at the other (suite match: a ball-up 2.5 m from where
@@ -1828,9 +1824,7 @@ func _loc(k: int) -> Vector2:
 		return p
 	if absf(p.x) > MatchMotion.gx(62.0):
 		p.y = clampf(p.y, -26.0, 26.0)
-	var ymax := (MatchMotion.HALF_WID - 4.0) * sqrt(maxf(0.0,
-			1.0 - pow(p.x / (MatchMotion.HALF_LEN - 1.0), 2.0)))
-	p.y = clampf(p.y, -ymax, ymax)
+	p.y = MatchMotion.clamp_across(p.x, p.y, 4.0, 1.0)
 	_locs[k] = p
 	return p
 
@@ -1867,9 +1861,7 @@ func _pin_ballup(k: int) -> void:
 	if nk >= 0 and _locs.has(nk) and _restart(nk) == "ballup":
 		var q := (_locs[nk] as Vector2) + shift
 		q.x = clampf(q.x, -MatchMotion.GOAL_X, MatchMotion.GOAL_X)
-		var ymax := (MatchMotion.HALF_WID - 4.0) * sqrt(maxf(0.0,
-				1.0 - pow(q.x / (MatchMotion.HALF_LEN - 1.0), 2.0)))
-		q.y = clampf(q.y, -ymax, ymax)
+		q.y = MatchMotion.clamp_across(q.x, q.y, 4.0, 1.0)
 		_locs[nk] = q
 
 
@@ -3161,12 +3153,15 @@ func _emit(p: Dictionary) -> void:
 ## stable side of the ground when play is already near one boundary; otherwise
 ## choose one from the presentation RNG (replay deterministic, simulation-free).
 func _boundary_point(x: float, source_y: float) -> Vector2:
-	var nx := clampf(x / MatchMotion.HALF_LEN, -1.0, 1.0)
-	var y := MatchMotion.HALF_WID * sqrt(maxf(0.0, 1.0 - nx * nx))
 	var side := signf(source_y)
 	if absf(source_y) < 2.0:
 		side = -1.0 if _rng.randf() < 0.5 else 1.0
-	return Vector2(x, side * y * 0.985)
+	if not MatchMotion.shaped():
+		var nx := clampf(x / MatchMotion.HALF_LEN, -1.0, 1.0)
+		var y := MatchMotion.HALF_WID * sqrt(maxf(0.0, 1.0 - nx * nx))
+		return Vector2(x, side * y * 0.985)
+	# A traced line: on it at x, the same 1.5 % in from it as on the ellipse.
+	return Vector2(x, side * MatchMotion.edge_y(x, side) * 0.985)
 
 
 func _log_arrival(k: int) -> void:
