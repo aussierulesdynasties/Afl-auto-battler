@@ -1811,8 +1811,9 @@ func _show_coach_box() -> void:
 # ---------------------------------------------------------------------------
 ## What a call's sheet is headed, and what its row says it is.
 const CALL_TITLES := {"plan": "Game plan", "pep": "Pep talk", "tag": "Tag",
-		"def": "Defensive set-up", "pt": "Play through", "sit": "Sit down with a player",
-		"speech": "Half-time speech"}
+		"def": "Defensive set-up", "pt": "Play through", "sit": "Sit down with a player"}
+## At half time the sit-down's row also holds the speech.
+const TALKS_TITLE := "Talks"
 const CALL_ROW_LABELS := {"pt": "Play through (forward, midfield, back)"}
 
 
@@ -1877,6 +1878,10 @@ func _mount_one_line(c: Dictionary) -> void:
 	var store: VBoxContainer = c["store"]
 	var calls: Dictionary = c["calls"]
 	var wide: bool = c["wide"]
+	if not wide:
+		# A phone's half time holds seven rows (the talks share one): 6 px
+		# between its parts keeps the break on one screen.
+		v.add_theme_constant_override("separation", 6)
 	var sim: MatchSim = c["sim"]
 	var take := func(nm: String, parent := false) -> Control:
 		var n: Control = store.find_child(nm, true, false)
@@ -1963,8 +1968,18 @@ func _mount_one_line(c: Dictionary) -> void:
 		through.append(take.call("FocusPicker_" + str(slot), true))
 	body.call("pt", through)
 	body.call("def", [take.call("DefenceBlock")])
-	body.call("sit", [take.call("SitBlock")])
-	body.call("speech", [take.call("SpeechBlock")])
+	# The talks share one row (director's call via the coordinator, 2026-11-23): at
+	# half time the speech sits under the sit-down, so the phone break still fits
+	# without scrolling.
+	var speech_block: Control = take.call("SpeechBlock")
+	body.call("sit", [take.call("SitBlock"), speech_block])
+	var titles := CALL_TITLES.duplicate()
+	if speech_block != null:
+		titles["sit"] = TALKS_TITLE
+		# Under one Talks heading, each talk keeps its own.
+		var sit_h: Node = (bodies["sit"] as Node).find_child("CallHeading", true, false) if bodies.has("sit") else null
+		if sit_h != null:
+			(sit_h as Control).visible = true
 	((c["who_hook"] as Array)[0] as Callable).call()
 
 	# The rows: what each call is, and its answer now.
@@ -1972,7 +1987,7 @@ func _mount_one_line(c: Dictionary) -> void:
 	rows.name = "CallRows"
 	var row_of := {}
 	for key in order:
-		var r := _call_row(str(key), str(CALL_ROW_LABELS.get(key, CALL_TITLES[key])))
+		var r := _call_row(str(key), str(CALL_ROW_LABELS.get(key, titles[key])))
 		row_of[key] = r
 		rows.add_child(r)
 		rows.add_child(UiKit.rule())
@@ -2105,7 +2120,7 @@ func _mount_one_line(c: Dictionary) -> void:
 			_fit_break_facts(facts)
 		for key in order:
 			var k := str(key)
-			(row_of[key] as Button).pressed.connect(func(): _open_break_sheet(k, str(CALL_TITLES[k]), [bodies[k]], store))
+			(row_of[key] as Button).pressed.connect(func(): _open_break_sheet(k, str(titles[k]), [bodies[k]], store))
 		var one := UiKit.hbox(8)
 		start.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		skip.custom_minimum_size = Vector2(0, 48)
@@ -2120,7 +2135,7 @@ func _mount_one_line(c: Dictionary) -> void:
 		var chosen_sb := UiKit.style(Color.TRANSPARENT, 8, UiKit.RADIUS, UiKit.TEXT)
 		chosen_sb.set_border_width_all(2)
 		var select := func(key: String) -> void:
-			pane_title.text = str(CALL_TITLES[key])
+			pane_title.text = str(titles[key])
 			pane.set_meta("call", key)
 			for k in order:
 				(bodies[k] as Control).visible = str(k) == key
@@ -2267,16 +2282,17 @@ func _call_answer(key: String, calls: Dictionary, c: Dictionary) -> String:
 			return ", ".join(who_through) if any_through else "No one"
 		"sit":
 			var st := sim.talk_now(_my_side, "sit")
+			var sat := "Nobody yet"
 			if not st.is_empty():
-				return "%s: %s" % [named.call(str(st["id"]), "our player"), str(TALK_WORDS[str(st["band"])])]
-			if str(calls.get("sit_id", "")) != "":
-				return "%s, dice not rolled" % named.call(str(calls["sit_id"]), "our player")
-			return "Nobody yet"
-		"speech":
+				sat = "%s: %s" % [named.call(str(st["id"]), "our player"), str(TALK_WORDS[str(st["band"])])]
+			elif str(calls.get("sit_id", "")) != "":
+				sat = "%s, dice not rolled" % named.call(str(calls["sit_id"]), "our player")
+			if sim.current_quarter != 3:
+				return sat
+			# Half time: the speech shares the row.
 			var sp := sim.talk_now(_my_side, "speech")
-			if not sp.is_empty():
-				return "Given: %s" % str(TALK_WORDS[str(sp["band"])])
-			return "Not given yet"
+			var spoke := "speech %s" % str(TALK_WORDS[str(sp["band"])]) if not sp.is_empty() else "no speech yet"
+			return "%s; %s" % [sat, spoke]
 	return ""
 
 
