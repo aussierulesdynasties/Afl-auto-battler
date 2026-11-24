@@ -1043,6 +1043,11 @@ func _test_event_sheet() -> void:
 	_check(sheet != null and later != null and sheet.find_child("SheetEvent", true, false) != null
 			and bool(_state.week_events[0].get("popped", false)),
 			"A new card opens over the hub on its own")
+	# One story at a time: its copy on the hub is out of sight behind the sheet
+	# (2026-11-25: it showed through the dim, 1.6 to 1).
+	var behind: Control = current_scene.find_child("WeekEvent", true, false)
+	_check(behind == null or not behind.is_visible_in_tree(),
+			"The hub doesn't show the same card behind its own sheet")
 	var later_tap: String = (await Tap.tap(later)) if later != null else "missing"
 	await _settle()
 	var waiting: Control = current_scene.find_child("WaitingEvents", true, false)
@@ -1088,6 +1093,9 @@ func _test_event_sheet() -> void:
 	_check(answer_tap == "" and bool(_state.week_events[0].get("resolved", false)) and done != null
 			and sheet_text.contains(str(_state.week_events[0].get("outcome", "-"))) and sheet.find_child("EventLater", true, false) == null,
 			"A real tap on an answer in the sheet answers the card and shows what happened (%s)" % answer_tap)
+	behind = current_scene.find_child("WeekEvent", true, false)
+	_check(behind == null or not behind.is_visible_in_tree(),
+			"...and the hub, redrawn by the answer, still leaves it out behind the sheet")
 	var done_tap: String = (await Tap.tap(done)) if done != null else "missing"
 	await _settle()
 	week = current_scene.find_child("ThisWeek", true, false)

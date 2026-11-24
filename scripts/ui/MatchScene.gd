@@ -1222,8 +1222,14 @@ func _show_coach_box() -> void:
 	var v: VBoxContainer = box["body"]
 	var titles := {1: "Before the first ball-up", 2: "Quarter time", 3: "Half time", 4: "Three-quarter time"}
 	# The break leads with both clubs' colours (director, 2026-10-08).
-	# On a PC the title and the score share one line: the band is wide.
-	var bv: BoxContainer = UiKit.hbox(16) if wide else UiKit.vbox(2)
+	# On a PC the title and the score share one line: the band is wide. Before
+	# the bounce the title shares its line with the fixture, and the forecast
+	# takes the line under them: three across cut the fixture short at 960x540.
+	var bv: BoxContainer = UiKit.hbox(16) if wide and q != 1 else UiKit.vbox(2)
+	var head_row: BoxContainer = bv
+	if wide and q == 1:
+		head_row = UiKit.hbox(16)
+		bv.add_child(head_row)
 	var band := ClubDuel.band(str(_res["home"]), str(_res["away"]), bv, 6 if wide else 14)
 	band.name = "BreakBand"
 	(band.get_child(0) as ClubDuel).live()   # match day's atmosphere settles in (Feel)
@@ -1248,25 +1254,26 @@ func _show_coach_box() -> void:
 		title.autowrap_mode = TextServer.AUTOWRAP_OFF
 		title.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	ClubDuel.on_colour(title)
-	bv.add_child(title)
+	head_row.add_child(title)
 	if q == 1:
-		# Gather Round: the event's name stands for the round number, and the line
-		# may wrap, so the host ground is never cut short on a phone.
+		# Gather Round: the event's name stands for the round number. The line
+		# is never cut short (row 168): it may wrap, but only between its three
+		# parts, so no name is split (each part's own spaces don't break).
 		var label := str(_res.get("label", "Match"))
-		var gather := label.ends_with(GatherRound.NAME)
-		if gather:
+		if label.ends_with(GatherRound.NAME):
 			label = GatherRound.NAME
-		var where := UiKit.ellipsis("%s  ·  %s v %s  ·  %s" % [label,
-				GameDB.club_short(str(_res["home"])), GameDB.club_short(str(_res["away"])), GameDB.ground_shown(_venue())], UiKit.BODY, UiKit.TEXT, true)
+		var parts := [label, "%s v %s" % [GameDB.club_short(str(_res["home"])), GameDB.club_short(str(_res["away"]))],
+				GameDB.ground_shown(_venue())]
+		for i in parts.size():
+			parts[i] = str(parts[i]).replace(" ", "\u00A0")
+		var where := UiKit.lbl("  ·  ".join(parts), UiKit.BODY, UiKit.TEXT, true)
 		where.name = "BreakWhere"
-		if gather:
-			where.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-			where.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
+		where.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		where.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		ClubDuel.on_colour(where)
 		if wide:
-			where.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			where.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		bv.add_child(where)
+		head_row.add_child(where)
 		# The forecast, with the odds it turns at a break (row 160, director
 		# 2026-11-12: "Yes, at a break"): numbers at the gate, a fact, no advice.
 		var fc := _forecast_line(sim)
@@ -1275,11 +1282,6 @@ func _show_coach_box() -> void:
 			fcl.name = "BreakForecast"
 			fcl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			ClubDuel.on_colour(fcl)
-			if wide:
-				# Beside the venue in a row: a wrapping label needs its share of
-				# the width, or it wraps a letter a line (717 tall at 1280x720).
-				fcl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-				fcl.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 			bv.add_child(fcl)
 	else:
 		var sc := UiKit.lbl(MatchNotes.break_score(str(_res["home"]), str(_res["away"]),
