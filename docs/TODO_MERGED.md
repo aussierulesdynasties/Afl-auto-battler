@@ -162,3 +162,4 @@ What has landed toward each open row of docs/TODO.md and docs/TODO_RULINGS.md, o
 - 202: Merged #2007: 3D match: goal replays go in and out behind a TV sting in the scoring club's colours (row 202 2e).
 - 202: Merged #2088: MCG: fix main's seat check (top tier keeps its back line) and the rear of the Great Southern Stand.
 - 202: Merged #2068: Match crew in 3D, round two: goal umpire's signals and flags, throw-in, trainer vest print.
+- 202: Merged #2084: Blacktown audit pass: roads, car park, LED screen, south buildings, south path and fence; seam and bank fixes.
