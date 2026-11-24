@@ -243,6 +243,9 @@ var lockup_rng := RandomNumberGenerator.new()
 var fumble_rng := RandomNumberGenerator.new()
 ## Where a ball knocked loose comes to rest (_comes_to_rest): its own stream.
 var loose_rng := RandomNumberGenerator.new()
+## Whether a held tackle was a run-down (_run_down): its own stream, so every other roll in
+## the match draws exactly as before.
+var rundown_rng := RandomNumberGenerator.new()
 ## The last chain ended in a ball-up called in play (a tackle held, a contest
 ## locked up): the next chain starts at that stoppage.
 var _prev_locked := false
@@ -637,6 +640,7 @@ func _init(home: Squad, away: Squad, seed: int = 0) -> void:
 	gather_rng.seed = seed * 113 + 127
 	fumble_rng.seed = seed * 127 + 131
 	loose_rng.seed = seed * 181 + 191
+	rundown_rng.seed = seed * 193 + 197
 	lead_rng.seed = seed * 109 + 113
 	# Its own seed: it once shared lead_rng's, so the mid-kick intercept dice
 	# replayed the key-lead dice. Every stream here needs a seed of its own.
@@ -2667,11 +2671,20 @@ const D50_CHIP_MAX := 6.0
 ## kicks averaged 18 m (real 25, Spencer 2019). With these, and the shorter run of
 ## chains in Ratings.FLOW, kicks average about 24 m and a side's kicks and disposals
 ## a game come back inside real AFL (217 and 351 on a 200-match screen; real 212, 367).
-const KICK_GAIN := 2.2
+## Shots on goal counted as kicks (2026-11-21) moved some kicks up the ground to
+## handballs (HB_ROLL); kicks gain 2.45 so the side still gets the ball inside 50 as often.
+const KICK_GAIN := 2.45
 const HANDBALL_GAIN := 0.2
 
 
 ## A named constant, or its audit override (tune).
+## The handball roll outside the defensive 50 against Ratings.T.handball_share: shots on goal
+## count as kicks (Champion Data), so play up the ground hands off a little more for the
+## game's kicks and handballs to keep real AFL's split (212 kicks, 155 handballs a team).
+## With KICK_GAIN 2.45, 1,000 paired matches gave 227 kicks and 153 handballs (2026-11-21, #1998).
+const HB_ROLL := 1.15
+
+
 static func _tv(key: String, value: float) -> float:
 	return float(tune.get(key, value))
 const PRESS_RUSH_GAIN := 0.96
@@ -3693,7 +3706,7 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 		# A kick-in is kicked: no handball roll for its first disposal.
 		var hb_roll := not (from_kick_in and touches == 1) \
 				and rng.randf() < float(T["handball_share"]) * hb_bias \
-				* (_tv("D50_HANDBALL", D50_HANDBALL) if in_d50 else 1.0)
+				* (_tv("D50_HANDBALL", D50_HANDBALL) if in_d50 else _tv("HB_ROLL", HB_ROLL))
 		if hb_roll and not chip and not keep:
 			_t(side, "handballs")
 			_p(carrier, "handballs")
@@ -3844,9 +3857,11 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 				_emit("tackle", opp, fp, tackler,
 						"%s tackles %s - it spills free" % [GameDB.player_display_name(tackler), GameDB.player_display_name(carrier)])
 				(events[events.size() - 1] as Dictionary).merge(rest)
+				_run_down(got)
 				return {"outcome": "turnover", "fp": lands, "actor": taker}
 			_emit("tackle", opp, fp, tackler,
 					"%s tackles %s - ball up" % [GameDB.player_display_name(tackler), GameDB.player_display_name(carrier)])
+			_run_down(got)
 			return {"outcome": "stoppage", "fp": fp, "actor": carrier}
 		if press_roll < rush_cut:
 			# Closed down without a tackle: the disposal is rushed. It gains
@@ -4254,11 +4269,13 @@ func resolve_forward50(side: int, fp: float, feeder) -> Dictionary:
 	# give it off to a teammate in a better spot, a kick to a lead or a
 	# handball to a runner. The giver's Creating decides how often he looks
 	# for it; his ball use and their reading decide whether it gets there.
+	var gave := false  # the man who shoots took a teammate's give, his possession counted there
 	if not ground_lost and (marked or not spoilt):
 		var give := _i50_give(side, fp, shooter, defender, marked, crumbed)
 		if give.has("turnover"):
 			return give["turnover"]
 		if not give.is_empty():
+			gave = true
 			setter = shooter
 			shooter = give["to"]
 			marked = bool(give["marked"])
@@ -4321,6 +4338,10 @@ func resolve_forward50(side: int, fp: float, feeder) -> Dictionary:
 
 	var roll := rng.randf()
 	if roll < goal_p + behind_p or not set_shot.is_empty():
+		# His shot is a disposal (_shot), so the ball he shoots with is a possession: a
+		# mark is uncontested, the ball won at ground level contested, as a give counts them.
+		if not gave:
+			_gain(side, shooter, "up" if marked else "gb")
 		_shot(side, shooter, not set_shot.is_empty(), "goal" if roll < goal_p else ("behind" if roll < goal_p + behind_p else ""),
 				float(set_shot.get("metres", -1.0)), str(set_shot.get("key", "")))
 	if roll < goal_p:
@@ -4509,6 +4530,9 @@ func _i50_give(side: int, at_fp: float, holder: Dictionary, defender, marked: bo
 		_p(mate, "marks")
 	_emit("pass", side, at_fp, holder, ("%s kicks to %s on the lead" if kick else "%s handballs to %s") % [hn, mn])
 	events[events.size() - 1]["hand"] = not kick
+	# Who it goes to, for the replay: when he doesn't mark it, the next event may not name
+	# him (a ball-up off his chance), and the view had no one to kick it to.
+	events[events.size() - 1]["to_id"] = str(mate["id"])
 	if takes:
 		_emit("receive", side, at_fp, mate, "%s marks on the lead" % mn)
 	return {"to": mate, "marked": takes}
@@ -4652,18 +4676,53 @@ func _run_and_carry(side: int, carrier, gained: float, pressed: bool, is_kick_in
 		_p(carrier, "running_bounces", n)
 
 
+## Run-downs (director, 2026-11-23: "we need some really cool chase down tackles from behind";
+## he chose to have the engine give some tackles a run). A carrier who took the ball in space
+## sometimes runs with it before the tackler catches him. As with _run_and_carry, the run is
+## ground covered across the field, not gained: the tackle's field position is unchanged and the
+## match plays exactly as before. The tackle event carries "run_down" (metres; not "run", which is a carrier's run and his bounces) for the pitch, which
+## draws the carrier running that far before he is caught from behind.
+const RUN_DOWN_P := 0.25
+const RUN_DOWN_MIN := 8.0
+const RUN_DOWN_MAX := 18.0
+
+func _run_down(got: String) -> void:
+	if got != "up" or events.is_empty():
+		return
+	if rundown_rng.randf() >= RUN_DOWN_P:
+		return
+	(events[events.size() - 1] as Dictionary)["run_down"] = snappedf(rundown_rng.randf_range(RUN_DOWN_MIN, RUN_DOWN_MAX), 0.1)
+
+
 ## A kick at goal: shots, and set shots apart. `result` is "goal", "behind"
 ## or "" (it missed everything or fell short). `spot` is where a set shot came
 ## from, for the balance harness only: a SET_BANDS_ON key ("pocket" is the tight
 ## angle), "free" for a free kick, "lead" for a played-on mark, "" otherwise.
 ## A general-play shot is logged only when the sim plays one out: an unmarked
 ## entry that scores nothing is not told apart from no shot at all.
-func _shot(side: int, shooter, set_shot: bool, result: String, metres := -1.0, spot := "") -> void:
+## A shot on goal is a kick, so it is a disposal as Champion Data counts it, and a goal is an
+## effective one (a behind or a miss is not). `counted`: the caller already counted the kick
+## (a crumb off a pack, counted as he gathers and snaps).
+func _shot(side: int, shooter, set_shot: bool, result: String, metres := -1.0, spot := "",
+		counted := false) -> void:
 	if shooter == null:
 		return
 	shot_log.append([side, 1 if set_shot else 0, metres if set_shot else -1.0, result, spot if set_shot else ""])
 	_t(side, "shots")
 	_p(shooter, "shots")
+	if not counted:
+		_t(side, "disposals")
+		_t(side, "kicks")
+		_p(shooter, "disposals")
+		_p(shooter, "kicks")
+		# Every disposal is a possession: the ball he shoots with came from a mark or a
+		# free kick where no possession was counted, so it counts here, uncontested.
+		var st: Dictionary = player_stats[str(shooter["id"])]
+		if float(st.get("contested_possessions", 0.0)) + float(st.get("uncontested_possessions", 0.0)) \
+				< float(st.get("disposals", 0.0)):
+			_gain(side, shooter, "up")
+	if result == "goal":
+		_effective(side, shooter)
 	if set_shot:
 		_p(shooter, "set_shots")
 		if result == "goal":
@@ -6943,10 +7002,10 @@ const PASS_GAIN := 15.0
 ## A set shot's result: a goal, a behind or the defence rebounds it. Shared by
 ## the three calls; `crumb` marks a snap off the deck.
 func _set_result(side: int, kicker: Dictionary, assist, defender: Dictionary, goal_p: float,
-		behind_p: float, crumb: bool, spot := "") -> Dictionary:
+		behind_p: float, crumb: bool, spot := "", counted := false) -> Dictionary:
 	var roll := rng.randf()
 	_shot(side, kicker, not crumb, "goal" if roll < goal_p else ("behind" if roll < goal_p + behind_p else ""),
-			float(Ratings.T["goal_line"]) - (fp if side == 0 else -fp), spot)
+			float(Ratings.T["goal_line"]) - (fp if side == 0 else -fp), spot, counted)
 	if roll < goal_p:
 		_t(side, "goals")
 		_p(kicker, "goals")
@@ -7075,7 +7134,7 @@ func _bomb(side: int, shooter: Dictionary, defender: Dictionary) -> Dictionary:
 		_p(crumber, "kicks")
 		var snap := shot_chance(side, crumber, false, false) * CRUMB_SNAP
 		var bh: float = float(_rates()["inside50_behind"]) * (0.80 + 0.40 * _a(crumber, "goalkicking") / 100.0)
-		return _set_result(side, crumber, null, back, snap, bh, true)
+		return _set_result(side, crumber, null, back, snap, bh, true, "", true)
 	if rng.randf() < PACK_RUSHED:
 		# Rushed through for a behind: no one's shot.
 		_scored(side, 1, null)

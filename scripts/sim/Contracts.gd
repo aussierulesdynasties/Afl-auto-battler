@@ -172,11 +172,14 @@ static func salary_score(salary: int) -> float:
 
 
 ## First contracts for a list: younger players on longer deals. Seeded by
-## id, so the same career always gets the same contracts.
-static func assign_initial(list: Array) -> void:
+## id, so the same career always gets the same contracts. Returns the players
+## it gave a contract (fit_to_cap reads them).
+static func assign_initial(list: Array) -> Array:
+	var fresh := []
 	for p in list:
 		if p.has("contract_years"):
 			continue
+		fresh.append(p)
 		var rng := RandomNumberGenerator.new()
 		rng.seed = hash("contract|" + str(p["id"]))
 		var age := float(p.get("age", 25.0))
@@ -189,6 +192,28 @@ static func assign_initial(list: Array) -> void:
 			years = rng.randi_range(1, 2)
 		p["contract_years"] = years
 		p["salary"] = pay(int(p.get("value", 3)))
+	return fresh
+
+
+## A club's first contracts fit under its cap, as a real club's must (bug bash
+## 2026-11-23: the 2010 lists priced at rating opened Geelong at 122% of the
+## cap, Collingwood at 105%, so a strong list could keep none of its stars
+## out of contract). When `list` with the contracts in `fresh` costs more
+## than `room`, every fresh salary is cut by the same share, never under the
+## senior minimum: the best sides' players are on less than their rating
+## would fetch on the open market. A list that fits is left as it is.
+static func fit_to_cap(list: Array, fresh: Array, room: int) -> void:
+	if fresh.is_empty() or payroll(list) <= room:
+		return
+	var fresh_pay := 0
+	for p in fresh:
+		fresh_pay += int(p["salary"])
+	if fresh_pay <= 0:
+		return
+	var share := clampf(float(room - (payroll(list) - fresh_pay)) / float(fresh_pay), 0.0, 1.0)
+	var floor_pay := senior_min()
+	for p in fresh:
+		p["salary"] = maxi(mini(floor_pay, int(p["salary"])), int(floor(float(p["salary"]) * share / 1000.0)) * 1000)
 
 
 ## A first-year National Draft deal (a draftee's, on the senior list; the
@@ -620,13 +645,22 @@ const COMP_TENURE := 2
 ## outside its best 22) or "cap" (wanted, but no room for his price - he walks
 ## to free agency and can earn a pick). A club never lets a player go that it
 ## cannot replace with someone better, nor one it would pick (director
-## 2026-11-03: every club acts in its best interest).
+## 2026-11-03: every club acts in its best interest). Room is measured against
+## what the club re-signs him for (ai_price), the price it then pays: measured
+## against his full ask, Geelong let Corey Enright and Matthew Scarlett go in
+## 2010 for want of room it had (bug bash 2026-11-23).
 static func ai_release_reason(p: Dictionary, list: Array, cap: int, replacement: float = -INF) -> String:
 	if not needed(p, list) and worth(p) < replacement:
 		return "delist"
-	if asking_salary(p) > cap - payroll(list) + int(p.get("salary", 0)):
+	if ai_price(p, list) > cap - payroll(list) + int(p.get("salary", 0)):
 		return "cap"
 	return ""
+
+
+## What a rival club re-signs him for: the least he takes for its term
+## (lowest), as you can offer it to yours.
+static func ai_price(p: Dictionary, list: Array) -> int:
+	return lowest(p, ai_term(p, list))
 
 
 ## In his club's best 22: his rating clears the weakest starter picked at his

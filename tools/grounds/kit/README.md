@@ -35,7 +35,8 @@ and renders are rebuilt on demand and git-ignored.
   240 m is a separate flat mesh `concourse_far`, which the game hides under a backdrop), `mats_ground`.
 - Optional: `fence_fourier` {c, a0, ab} (the fence as one smooth polar Fourier curve fitted to a trace, in place of the
   ellipse); `terrain` {b, dr, z} (ground heights at distances `dr` beyond the fence on bearings `b`: the bank and path
-  follow it); per stand `open_back` (no back walls: an open colonnade, modelled in the ground's own file) and
+  follow it), `smooth_ground` (weld and smooth-shade the bank, path and ground: use it with `terrain`, whose cells
+  aren't flat and otherwise show as light and dark triangles); per stand `open_back` (no back walls: an open colonnade, modelled in the ground's own file) and
   `end_skew` {b, deg, ramp} (a stand end cut on a line that isn't radial); `custom` (a file in `model/` whose
   `build(kit, col)` adds the ground's own pieces, e.g. `blacktown/model/detail.py`).
 - `paint`: the ground's own textures by kind (see `kit/paint.py`). Every texture is painted in code: no photo pixels.

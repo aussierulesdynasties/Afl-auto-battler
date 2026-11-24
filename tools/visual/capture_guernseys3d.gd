@@ -1,7 +1,7 @@
 extends SceneTree
 ## Every club's home guernsey on the 3D match player (the MetaHuman body), filmed front and back at
 ## chest height, for the guernsey boards (our render beside the club's real guernsey).
-##   godot --path . --script tools/visual/capture_guernseys3d.gd -- OUTDIR [CLUB,CLUB,...|all] [rest|idle] [debug shader]
+##   godot --path . --script tools/visual/capture_guernseys3d.gd -- OUTDIR [CLUB,CLUB,...|all] [rest|idle][-clash] [debug shader]
 ## Each club gets one man in its home guernsey (number 7), standing alone. pose "rest" (default)
 ## films him in the body's rest pose, arms out from the sides as a shop photo lays a guernsey
 ## flat; "idle" films the game's standing pose. Files: <CLUB>_front.png, <CLUB>_back.png (torso,
@@ -24,6 +24,9 @@ func _run() -> void:
 	var out := str(args[0])
 	var clubs: Array = CLUBS if args.size() < 2 or str(args[1]) == "all" else Array(str(args[1]).split(","))
 	var pose := str(args[2]) if args.size() > 2 else "rest"
+	# "rest-clash" / "idle-clash": each club in its clash guernsey (data/kits_clash.csv) instead.
+	var clash := pose.ends_with("-clash")
+	pose = pose.trim_suffix("-clash")
 	DirAccess.make_dir_recursive_absolute(out)
 	OS.low_processor_usage_mode = false
 	root.content_scale_mode = Window.CONTENT_SCALE_MODE_DISABLED
@@ -50,7 +53,11 @@ func _run() -> void:
 	var men := []
 	for i in range(clubs.size()):
 		var club := str(clubs[i])
-		var km: ShaderMaterial = oval._kit(gdb.club_guernsey(club))
+		var g: Dictionary = gdb.club_guernsey(club)
+		if clash and not gdb.club_clash_kit(club).is_empty():
+			g = g.duplicate()
+			g["today"] = gdb.club_clash_kit(club)
+		var km: ShaderMaterial = oval._kit(g)
 		if args.size() > 3 and ResourceLoader.exists(str(args[3])):
 			km.shader = load(str(args[3]))   # a debug copy of the shader (my own checks)
 		var p: Dictionary = oval._player(scene, km, gdb.club_colours(club), club)
