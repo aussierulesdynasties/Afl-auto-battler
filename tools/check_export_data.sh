@@ -49,15 +49,32 @@ mkdir -p "$WORK/project" "$WORK/run"
 # Tracked and new (unignored) files as they are on disk: the same set an
 # export from this checkout would see, without .godot/ caches or builds.
 git ls-files -co --exclude-standard -z | (cd "$ROOT" && tar --null -T - -cf -) | tar -xf - -C "$WORK/project"
-cat > "$WORK/project/export_presets.cfg" <<'PRESET'
+# The Android preset's own include and exclude filters, so the pack holds what the
+# phone's build holds: an asset its filters leave out is missing here too (an
+# exclude of every *.glb once took the 3D footballer out of the phone build, and
+# Club Forge's Create a player crashed on it).
+android_filter() {
+	awk -v key="$1" '/^\[preset\.[0-9]+\]$/ {sec=$0} /^name="Android"$/ {a=sec}
+		a != "" && sec == a && index($0, key "=") == 1 {sub(key "=", ""); print; exit}' "$ROOT/export_presets.cfg"
+}
+INCLUDE="$(android_filter include_filter)"
+EXCLUDE="$(android_filter exclude_filter)"
+if [ -z "$EXCLUDE" ]; then
+	echo "FAIL: no exclude_filter found for the Android preset in export_presets.cfg"
+	exit 1
+fi
+echo "-- exported pack, with the Android preset's filters"
+echo "include: $INCLUDE"
+echo "exclude: $EXCLUDE"
+cat > "$WORK/project/export_presets.cfg" <<PRESET
 [preset.0]
 
 name="DataCheck"
 platform="Linux"
 runnable=true
 export_filter="all_resources"
-include_filter=""
-exclude_filter=""
+include_filter=$INCLUDE
+exclude_filter=$EXCLUDE
 export_path=""
 
 [preset.0.options]
@@ -78,7 +95,7 @@ if (cd "$WORK/run" && timeout 300 "$GODOT" --headless --main-pack game.pck \
 	grep "Export data check:" "$WORK/check.log"
 else
 	grep -E "Export data check|^ERROR" "$WORK/check.log" | head -20
-	echo "FAIL: the exported pack does not load complete player data"
+	echo "FAIL: the exported pack does not load complete player data, or Club Forge's Create a player fails in it"
 	fail=1
 fi
 exit "$fail"

@@ -95,7 +95,11 @@ var quality := Oval3DQuality.HIGH
 var _turf_mat: ShaderMaterial  # the turf's paint (oval3d_ground.gdshader)
 var _crowd_t := 0.0           # s of match the crowd has run (its idle and cheer clock)
 var _goal_on := false          # the director was showing a goal last frame
+var _run_down_side := -1       # the tackling side of a chase-down being run now, -1 when none
 var _look := Vector3.ZERO
+var _launch_from := Vector3.ZERO  # where the ball left a boot or fist
+var _launch_t := -1.0             # s since it did, -1 once it has joined the flight's line
+const LAUNCH_EASE := 0.12         # s: from boot or fist onto the director's flight
 var _in_hands := false         # the ball was drawn in a man's hands last frame
 var _drop_from := Vector3.ZERO # where it left his hands
 var _drop_t := -1.0            # s into its fall to the turf; -1 when not falling
@@ -107,9 +111,10 @@ var _settle_t := 0.0           # s since it came out of his hands or the air
 
 func build(p_director: MatchDirector, home: String, away: String) -> void:
 	director = p_director
-	# The ground at its own size (MatchDirector.setup sets the same for a match's own ground).
+	# The ground at its own size, on its traced boundary where it has one (MatchDirector.setup sets the
+	# same for a match's own ground).
 	if ground != "":
-		MatchMotion.use_field(GroundModels.field_for(ground))
+		GroundModels.play_at(ground)
 	_environment()
 	_ground()
 	_posts()
@@ -120,7 +125,8 @@ func build(p_director: MatchDirector, home: String, away: String) -> void:
 		_stands(home, away)
 	screens = Oval3DScreens.new()
 	add_child(screens)
-	screens.build(self, get_node_or_null("Ground"), GroundModels.match_fence(), home, away)
+	screens.build(self, get_node_or_null("Ground"), GroundModels.match_fence(), home, away,
+			GroundModels.match_fence_shape(slug))
 	var scene: PackedScene = load(player_glb)
 	# Each club in its home guernsey, as the vignettes dress them (StoppageVignette._dress).
 	var kits := [_kit(GameDB.club_guernsey(home)), _kit(GameDB.club_guernsey(away))]
@@ -148,7 +154,7 @@ func build(p_director: MatchDirector, home: String, away: String) -> void:
 	add_child(ball)
 	camera = Camera3D.new()
 	camera.fov = 30.0
-	camera.far = 900.0
+	camera.far = GroundModels.view_far(GroundModels.slug_for(ground) if ground != "" else "")
 	# Placed in world space, so turning the ground for a change of ends (set_ends) leaves
 	# the camera where the broadcast puts it.
 	camera.top_level = true
@@ -224,12 +230,33 @@ func sync(dt: float) -> void:
 	if _ump_ball:
 		# An umpire has it: never a player standing within a metre of it.
 		holder = -1
+	var pending := anim.launch_pending()
 	if _umpire_ball(dt):
 		_in_hands = true
 		_on_turf = false
 		_drop_t = -1.0
+	elif pending != Vector3.INF:
+		# Let go by the director a moment before his boot or fist gets there: still his.
+		ball.position = pending
+		_point_ball(anim.ball_axis(anim.launching()))
+		_in_hands = true
+		_on_turf = false
+		_drop_t = -1.0
+	elif holder < 0 and anim.caught() >= 0:
+		# Marked: in his hands while the director still has him running onto it.
+		_hold_ball(players[anim.caught()])
+		_in_hands = true
+		_on_turf = false
+		_drop_t = -1.0
 	elif holder >= 0 and holder < players.size():
-		_hold_ball(players[holder])
+		var on_him := anim.ball_at(holder)
+		if on_him != Vector3.INF:
+			# His kick or handball has it: on the holding palm, or dropped to his boot.
+			ball.position = on_him
+			if not _point_ball(anim.ball_axis(holder)):
+				_hold_ball(players[holder], false)
+		else:
+			_hold_ball(players[holder])
 		_in_hands = true
 		_on_turf = false
 		_drop_t = -1.0
@@ -237,6 +264,21 @@ func sync(dt: float) -> void:
 		var to := Vector3(bp.x, BALL_R if resting else maxf(BALL_R, h), bp.y)
 		if mode == "flight":
 			_drop_t = -1.0
+			if _in_hands:
+				# Off his boot or fist: the flight starts where the ball met it and joins the
+				# director's line over LAUNCH_EASE (the line starts at his token, hand height).
+				_launch_from = ball.position
+				_launch_t = 0.0
+			if _launch_t >= 0.0 and dt > 0.0:
+				_launch_t += dt
+				var w := smoothstep(0.0, LAUNCH_EASE, _launch_t)
+				to = _launch_from.lerp(to, w)
+				if w >= 1.0:
+					_launch_t = -1.0
+			var catch := anim.catch_at()
+			if not catch.is_empty():
+				# The last of its flight into the marking hands.
+				to = to.lerp(catch["to"], float(catch["w"]))
 		elif _in_hands and dt > 0.0 and ball.position.distance_to(to) > DROP_SNAP:
 			# Out of his hands onto the turf (a spill from a tackle, a fumble, a man walking off a
 			# dead ball): it falls from where his hands had it, never jumps there in one frame.
@@ -341,7 +383,18 @@ func _roll_ball(moved: Vector2, dt: float) -> void:
 	ball.quaternion = target if settle >= 1.0 else ball.quaternion.slerp(target, settle)
 
 
-func _hold_ball(p: Dictionary) -> void:
+## Turn the ball's long axis along `axis` (world). False when `axis` is ZERO (no say).
+func _point_ball(axis: Vector3) -> bool:
+	if axis.length() < 0.01:
+		return false
+	var up := Vector3.UP if absf(axis.normalized().dot(Vector3.UP)) < 0.95 else Vector3.RIGHT
+	ball.look_at(ball.position + axis, up)
+	return true
+
+
+## The ball in his hands: between his palms, its long axis across them. `place` false turns it
+## only (a kick or handball has already put it where it is).
+func _hold_ball(p: Dictionary, place := true) -> void:
 	var skel: Skeleton3D = p["skel"]
 	var hands: Array = p["hands"]
 	var gt := skel.global_transform
@@ -351,14 +404,16 @@ func _hold_ball(p: Dictionary) -> void:
 		palms.append(gt * (pose.origin + pose.basis.y.normalized() * float(p["hand_len"][k]) * 0.6))
 	var l: Vector3 = palms[0]
 	var r: Vector3 = palms[1]
-	ball.position = (l + r) * 0.5
+	if place:
+		ball.position = (l + r) * 0.5
 	var across := r - l
 	if across.length() > 0.01:
 		ball.look_at(ball.position + across, Vector3.UP)
 
 
 ## The crowd's clock, and a goal the moment the director shows one: the scoring side's
-## supporters rise.
+## supporters rise. A chase-down tackle from behind gets them up too, the tackling side's, the
+## moment he gets his man.
 func _sync_crowd(dt: float) -> void:
 	_crowd_t += dt
 	if crowd == null:
@@ -369,6 +424,13 @@ func _sync_crowd(dt: float) -> void:
 		var ev: Dictionary = director.events[director.emitted - 1]
 		crowd.cheer(int(ev.get("side", 0)), _crowd_t)
 	_goal_on = goal
+	if director.chasing_down():
+		var ahead := director.tackle_ahead()
+		if not ahead.is_empty():
+			_run_down_side = int(director.tokens[int(ahead["who"])]["side"])
+	elif _run_down_side >= 0:
+		crowd.cheer(_run_down_side, _crowd_t)
+		_run_down_side = -1
 
 
 ## The sides change ends: +1 when the home side kicks to the far end of the camera's ground
@@ -457,18 +519,42 @@ func _environment() -> void:
 func _ground() -> void:
 	var mi := MeshInstance3D.new()
 	var pm := PlaneMesh.new()
-	pm.size = Vector2(2.0 * (MatchMotion.HALF_LEN + FENCE + 1.0), 2.0 * (MatchMotion.HALF_WID + FENCE + 1.0))
+	pm.size = 2.0 * _turf_half()
 	mi.mesh = pm
 	var sm := ShaderMaterial.new()
 	sm.shader = load("res://scripts/ui/match/oval3d_ground.gdshader")
 	sm.set_shader_parameter("half_size", Vector2(MatchMotion.HALF_LEN, MatchMotion.HALF_WID))
 	sm.set_shader_parameter("goal_x", MatchMotion.GOAL_X)
+	# A traced ground's own boundary line (MatchMotion.SHAPE), the paint and the run-off following it.
+	sm.set_shader_parameter("bnd", _coefs(MatchMotion.SHAPE))
+	sm.set_shader_parameter("bnd_n", MatchMotion.SHAPE.size())
 	mi.material_override = sm
 	add_child(mi)
 	_turf_mat = sm
 	turf = Oval3DTurf.new(self, sm, _env, _sun, pm.size * 0.5)
 	add_child(turf)
 	turf.apply("", VignetteKickoff.DAY)
+
+
+## Half the turf plane's size: the field and its run-off (FENCE) and a metre, or on a traced ground the
+## furthest its fence reaches (GroundModels.match_fence_shape), so the turf meets the fence all round.
+func _turf_half() -> Vector2:
+	var half := Vector2(MatchMotion.HALF_LEN + FENCE + 1.0, MatchMotion.HALF_WID + FENCE + 1.0)
+	var f := GroundModels.match_fence_shape(GroundModels.slug_for(ground) if ground != "" else "")
+	for i in 720:
+		var t := TAU * i / 720.0
+		var r := MatchMotion.series_r(f, t) + 1.0 if not f.is_empty() else 0.0
+		half = half.max(Vector2(absf(cos(t)), absf(sin(t))) * r)
+	return half
+
+
+## A Fourier radius as the turf shader takes it: 33 floats, unused ones 0.
+static func _coefs(c: PackedFloat32Array) -> PackedFloat32Array:
+	var out := PackedFloat32Array()
+	out.resize(33)
+	for i in mini(c.size(), 33):
+		out[i] = c[i]
+	return out
 
 
 func _posts() -> void:
@@ -541,7 +627,11 @@ func _ground_model(slug: String, base := "", home := "", away := "") -> void:
 	turf.set_ground(slug)
 	turf.light_stands(root)
 	_turf_mat.set_shader_parameter("fence_clip", GroundModels.match_fence())
-	_apron_skirt()
+	var fs := GroundModels.match_fence_shape(slug)
+	_turf_mat.set_shader_parameter("fen", _coefs(fs))
+	_turf_mat.set_shader_parameter("fen_n", fs.size())
+	turf.fence_shape(fs)
+	_apron_skirt(fs)
 	if home == "":
 		return
 	var seats := GroundModels.seat_transforms(slug, base)
@@ -565,19 +655,24 @@ const SKIRT_DROP := 0.3
 ## no ground drawn between the turf's edge and its wall, and the sky under the world showed through
 ## as a white strip at the foot of the fence. A ring of the turf's apron, from just inside the
 ## match's fence to SKIRT_OUT past it, lies under the model's ground and fills that gap with grass.
-func _apron_skirt() -> void:
+func _apron_skirt(shape := PackedFloat32Array()) -> void:
 	var f := GroundModels.match_fence()
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
 	st.set_normal(Vector3.UP)
-	var n := 180
+	var n := 180 if shape.is_empty() else 720
+	# The fence's half-axes toward angle a (an ellipse's), or its traced radius there, as a scale on the
+	# unit direction: [inside edge, outside edge].
+	var ring := func(a: float) -> Array:
+		var u := Vector3(cos(a), 0.0, sin(a))
+		if shape.is_empty():
+			return [Vector3(u.x * f.x * 0.97, 0.0, u.z * f.y * 0.97), Vector3(u.x * (f.x + SKIRT_OUT), 0.0, u.z * (f.y + SKIRT_OUT))]
+		var r := MatchMotion.series_r(shape, a)
+		return [u * (r - 2.0), u * (r + SKIRT_OUT)]
 	for i in n:
-		var a0 := TAU * i / n
-		var a1 := TAU * (i + 1) / n
-		var p := [Vector3(cos(a0) * f.x * 0.97, 0.0, sin(a0) * f.y * 0.97),
-				Vector3(cos(a1) * f.x * 0.97, 0.0, sin(a1) * f.y * 0.97),
-				Vector3(cos(a1) * (f.x + SKIRT_OUT), 0.0, sin(a1) * (f.y + SKIRT_OUT)),
-				Vector3(cos(a0) * (f.x + SKIRT_OUT), 0.0, sin(a0) * (f.y + SKIRT_OUT))]
+		var r0: Array = ring.call(TAU * i / n)
+		var r1: Array = ring.call(TAU * (i + 1) / n)
+		var p := [r0[0], r1[0], r1[1], r0[1]]
 		for k in [0, 1, 2, 0, 2, 3]:
 			st.add_vertex(p[k])
 	var mi := MeshInstance3D.new()
@@ -586,6 +681,7 @@ func _apron_skirt() -> void:
 	mi.position.y = -SKIRT_DROP
 	var sm := _turf_mat.duplicate() as ShaderMaterial
 	sm.set_shader_parameter("fence_clip", Vector2.ZERO)
+	sm.set_shader_parameter("fen_n", 0)
 	mi.material_override = sm
 	add_child(mi)
 	turf.follow(sm)
@@ -680,6 +776,7 @@ func _dress(p: Dictionary, t: Dictionary) -> void:
 	p["pid"] = pid
 	_number(p, int(t.get("num", -1)))
 	var who = GameDB.player_by_id(pid) if pid != "" else null
+	p["foot"] = str((who as Dictionary).get("foot", "R")) if who is Dictionary else "R"
 	look(p, GameDB.figure_look(who) if who != null else StoppageVignette.UMPIRE_LOOK)
 	# His own Tripo head, where the director made one (rule 2.99): the MetaHuman head comes off.
 	_head(p, pid)
@@ -742,7 +839,7 @@ static func hair_shells() -> Dictionary:
 			continue
 		var style := str(mi.name).trim_prefix("hair_")
 		var bone := (parent as BoneAttachment3D).bone_name
-		_shells[style] = {"mesh": _refit_hair(mi.mesh, mi.transform, bone), "bone": bone, "at": mi.transform}
+		_shells[style] = {"mesh": _lodded(_refit_hair(mi.mesh, mi.transform, bone)), "bone": bone, "at": mi.transform}
 		var tex := hair_glb.get_base_dir().path_join("hair_tex/%s.png" % style)
 		if ResourceLoader.exists(tex):
 			_shells[style]["tex"] = load(tex)
@@ -1552,6 +1649,30 @@ static func _kit_edges(m: Mesh) -> Mesh:
 	return out
 
 
+static var _lods := {}
+## Off only for a capture that compares the players with and without their far detail levels.
+static var player_lods := true
+
+
+## `m` with its far detail levels made again. The import made them, but the body is rebuilt at
+## load (club_body, _skull, _kit_edges) and a rebuilt mesh keeps only its full detail, so every
+## player was drawn whole at any distance and in every shadow band. Same corners and attributes:
+## each level is only a shorter list of the same triangles. Once per mesh; every player shares it.
+static func _lodded(m: Mesh) -> Mesh:
+	if not player_lods:
+		return m
+	if _lods.has(m):
+		return _lods[m]
+	var am := m as ArrayMesh
+	var out: Mesh = m
+	if am != null:
+		var im := ImporterMesh.from_mesh(am)
+		im.generate_lods(60.0, 25.0, [])
+		out = im.get_mesh()
+	_lods[m] = out
+	return out
+
+
 ## The guernsey's cloth below the drawn hem line (level), which the shader paints as shorts: the
 ## mesh's hem dips up to 6 cm under that line in front and 3.6 cm behind, and the folds moulded into
 ## that strip showed as lumps under the hem (director 2026-11-17, "lumpy seams between shorts and
@@ -2281,7 +2402,7 @@ func _player(scene: PackedScene, kit: ShaderMaterial, cols: Array, club := "") -
 	# Every surface wears the kit except the boots and the eyes, which keep their own material.
 	for mi in node.find_children("*", "MeshInstance3D", true, false):
 		var m := mi as MeshInstance3D
-		m.mesh = _kit_edges(_skull(club_body(m.mesh, club)))
+		m.mesh = _lodded(_kit_edges(_skull(club_body(m.mesh, club))))
 		for s in range(m.mesh.get_surface_count()):
 			var own := m.mesh.surface_get_material(s)
 			if own == null or not own.resource_name in [BOOT_MATERIAL, EYE_MATERIAL]:
@@ -2305,6 +2426,8 @@ func _player(scene: PackedScene, kit: ShaderMaterial, cols: Array, club := "") -
 			if lib.has_animation(n):
 				lib.remove_animation(n)
 			lib.add_animation(n, loops[n])
+	# The broadcast-made clips held inside a real body's joint limits (once per clip).
+	ClipLimits.apply(ap, skel)
 	ap.callback_mode_process = AnimationMixer.ANIMATION_CALLBACK_MODE_PROCESS_MANUAL
 	ap.play("idle")
 	# The club ring at his feet: allegiance and a thumb target from any angle.
@@ -2349,8 +2472,20 @@ func _add_umpires(scene: PackedScene) -> void:
 		if role == "field":
 			_number(u, Oval3DCrew.field_number(_crew_seed, fields))
 			fields += 1
+		if role == "goal" or role == "boundary":
+			# The crew's own clips (Oval3DCrew.clips): a goal umpire's signals, a boundary
+			# umpire's throw-in.
+			var ap: AnimationPlayer = u["anim"]
+			var lib := ap.get_animation_library("")
+			var own := Oval3DCrew.clips(ap.get_node(ap.root_node).get_path_to(u["skel"]))
+			for n in own:
+				if not lib.has_animation(n):
+					lib.add_animation(n, own[n])
 		var at: Vector2 = spots[k][1]
 		(u["node"] as Node3D).position = Vector3(at.x, 0.0, at.y)
+		if role == "goal":
+			# His flags, stowed in a post's padding at his end (Oval3DGoalUmpire).
+			Oval3DGoalUmpire.setup(self, u, signf(at.x), _crew_seed + k)
 		umpires.append(u)
 
 
@@ -2401,6 +2536,21 @@ func _umpire_spots() -> Array:
 			y = maxf(y, 2.0) if end > 0.0 else minf(y, -2.0)
 		var reach := (VignetteGround.A + 0.9) * sqrt(maxf(0.0, 1.0 - pow(y / VignetteGround.L, 2.0)))
 		out[i][1] = Vector2(y * sx, reach * wing * sy)
+	if MatchMotion.shaped():
+		# On a traced boundary: a boundary umpire just over the real line at his spot along it (as the
+		# vignette's stand 0.9 m outside its ellipse), a goal umpire just behind the real goal line, a field
+		# umpire inside the real line.
+		for i in range(out.size()):
+			var at: Vector2 = out[i][1]
+			match str(out[i][0]):
+				"boundary":
+					var side := signf(at.y) if at.y != 0.0 else 1.0
+					at.y = side * (MatchMotion.edge_y(at.x, side) + 0.9)
+				"goal":
+					at.x = signf(at.x) * (MatchMotion.GOAL_X + 0.5)
+				_:
+					at = MatchMotion.clamp_to_oval(at, 3.0)
+			out[i][1] = at
 	return out
 
 
@@ -2432,6 +2582,18 @@ const UMP_SETUP_TRUST := 0.7
 const UMP_SQUARE := 3.0
 ## A ball-up or throw-in: the lift of the ball from his chest, played at UMP_LIFT_RATE.
 const UMP_T_LIFT := 0.45
+## The boundary umpire's throw-in (Oval3DCrew.THROW_IN, keyed from 2025 broadcasts): from the
+## ball at his chest he lets it go overhead at THROW_T_REL, timed to the director's throw-in (its
+## `in`, right to a frame once `sure`): he starts as soon as it could go in (`soonest`) and waits
+## at the bottom of his dip until it is going.
+const THROW_T_REL := 1.45
+## The bottom of the dip, held from THROW_T_BOTTOM to THROW_T_DRIVE in the clip.
+const THROW_T_BOTTOM := 0.75
+const THROW_T_DRIVE := 1.0
+## At most this much quicker than the broadcast's pace (a quicker throw's arms snap); a throw still
+## short of letting go keeps the ball in his hands until he does (_umpire_clip).
+const THROW_RATE_MAX := 1.6
+var _ump_tempo := 1.0
 const UMP_LIFT_RATE := 2.0
 ## On his mark within this many metres; the ball comes to his hands within UMP_TAKE of it.
 const UMP_SET := 0.3
@@ -2496,8 +2658,7 @@ func _stoppage_mark(st: Dictionary) -> Array:
 		"throwup":
 			return [at - Vector2(0.0, 0.6), Vector2(0.0, 1.0)]
 		_:
-			var out := Vector2(at.x / (MatchMotion.HALF_LEN * MatchMotion.HALF_LEN), at.y / (MatchMotion.HALF_WID * MatchMotion.HALF_WID))
-			out = out.normalized() if out.length() > 0.0 else Vector2(0.0, 1.0)
+			var out := MatchMotion.fence_normal(at) if at.length() > 0.0 else Vector2(0.0, 1.0)
 			return [at + out * 0.6, out]
 
 
@@ -2510,6 +2671,9 @@ func _move_umpires(frame_dt: float) -> void:
 	_ump_time = director.time
 	if dt > 0.0:
 		_ump_step = dt
+	# Director seconds to a real one (2 through the pauses, rule 2.93): a throw-in keeps real time.
+	if dt > 0.0 and frame_dt > 0.0:
+		_ump_tempo = dt / frame_dt
 	var spots := _umpire_spots()
 	var bp: Vector2 = director.ball["pos"]
 	var st: Dictionary = director.stoppage_now()
@@ -2523,13 +2687,28 @@ func _move_umpires(frame_dt: float) -> void:
 	_ump_placed = _ump_placed or first
 	_ump_cut = false
 	_ump_snapped = first
+	_goal_signals()
 	for u in umpires:
 		var node: Node3D = u["node"]
 		var ap: AnimationPlayer = u["anim"]
 		var k := int(u["k"])
-		if u.has("clip"):
-			held = _umpire_clip(u, st, dt) or held
+		if u.has("routine"):
+			# A goal umpire's flags after his signal: his own, in real time.
+			Oval3DGoalUmpire.step(self, u, frame_dt)
 			continue
+		if u.has("clip"):
+			# A score's signal and a throw-in keep real time: they are the umpire's own, not the
+			# play's, and the pauses run at double speed (rule 2.93); the throw is timed to the
+			# director's in real seconds (_ump_tempo).
+			var own_dt := frame_dt if str((u["clip"] as Dictionary).get("kind", "")) in ["signal", "throw"] else dt
+			held = _umpire_clip(u, st, own_dt) or held
+			if u.has("flag"):
+				# Flags still out from the last score as he signals this one.
+				Oval3DGoalUmpire.cloth(u, frame_dt)
+			continue
+		if u.has("flag") and signf((spots[k][1] as Vector2).x) != float(u["flag"]["end"]):
+			# The goal umpires have changed ends: his flags are kept at this end's post now.
+			Oval3DGoalUmpire.set_end(self, u, signf((spots[k][1] as Vector2).x))
 		if u.has("out") and _umpire_blend_out(u, dt):
 			continue
 		var at := Vector2(node.position.x, node.position.z)
@@ -2575,11 +2754,24 @@ func _move_umpires(frame_dt: float) -> void:
 			# On his mark with the ball: it is in his hands, held at his chest (the clip's
 			# first frame) until he puts it in play.
 			held = true
+			var throw := str(st["kind"]) == "throwin" and ap.has_animation(Oval3DCrew.THROW_IN)
 			if ap.current_animation != UMP_CLIP:
 				ap.play(UMP_CLIP, 0.25)
 			ap.seek(0.0, false)
 			ap.advance(maxf(dt, 1e-4))
 			var going := _bounce_in(st)
+			if throw and float(st.get("soonest", INF)) / _ump_tempo <= THROW_T_REL:
+				# The ball may go in as soon as his throw could get it away: he starts, and waits
+				# at the bottom of his dip until it is sure to (_umpire_clip keeps time with it).
+				# From his hold (the ball at his chest, as the throw starts) into the throw; when
+				# the ball goes in sooner than his whole throw takes even quickened (a quick
+				# restart late in a match), into its dip part-way, never past the bottom.
+				var real_in := float(st["in"]) / _ump_tempo if bool(st.get("sure", false)) else INF
+				var t0 := clampf(THROW_T_REL - real_in * THROW_RATE_MAX, 0.0, THROW_T_BOTTOM)
+				ap.play(Oval3DCrew.THROW_IN, 0.2 if t0 > 0.0 else 0.1)
+				ap.seek(t0, true)
+				u["clip"] = {"kind": "throw", "t": t0, "rate": 1.0, "end": ap.current_animation_length}
+				continue
 			var squared := face == Vector2.ZERO or absf(angle_difference(node.rotation.y, atan2(face.x, face.y))) < 0.3
 			if str(st["kind"]) == "bounce" and is_finite(going) and squared:
 				# The bounce is coming: the clip starts, and keeps time with it (_umpire_clip).
@@ -2603,6 +2795,43 @@ func _move_umpires(frame_dt: float) -> void:
 	_umpire_ball_state(held)
 
 
+## A score signalled: once the ball has crossed the line (the director's emit), the goal umpire
+## at that end turns to the ground and signals it, a goal with both index fingers (the right arm
+## straight out at the shoulder, the left hand at the waist) or a behind with one (2025 AFL
+## broadcasts). Once per score.
+func _goal_signals() -> void:
+	var shot := director.shot_now()
+	if shot.is_empty() or not str(shot.get("phase", "")) in ["emit", "celebrate"]:
+		return
+	var to: Vector2 = shot["to"]
+	for u in umpires:
+		if str(u.get("role", "")) != "goal" or u.has("clip") or int(u.get("signalled", -1)) == int(shot["k"]):
+			continue
+		var node: Node3D = u["node"]
+		if signf(node.position.x) != signf(to.x):
+			continue
+		u["signalled"] = int(shot["k"])
+		# Still at his flags from the last score: he leaves off and signals this one where he is.
+		# With both flags still out a goal is waved with them (his hands are full for the
+		# signal); a behind's one arm points with its flag.
+		Oval3DGoalUmpire.stop(u)
+		if not u.has("home"):
+			u["home"] = Vector2(node.position.x, node.position.z)
+		var ap: AnimationPlayer = u["anim"]
+		var clip := Oval3DCrew.GOAL_SIGNAL if bool(shot["goal"]) else Oval3DCrew.BEHIND_SIGNAL
+		if bool(shot["goal"]) and Oval3DGoalUmpire.holding(u) == 2:
+			clip = Oval3DCrew.GOAL_WAVE
+		if not ap.has_animation(clip):
+			return
+		u.erase("out")
+		# Out of his stand; out of a wave with his flags (they come down at a hand's pace).
+		ap.play(clip, 0.45 if Oval3DGoalUmpire.holding(u) > 0 else 0.15)
+		ap.seek(0.0, false)
+		# Facing up the ground, to the field umpires: turned to it as he signals (_umpire_clip).
+		u["clip"] = {"kind": "signal", "t": 0.0, "rate": 1.0, "end": ap.current_animation_length,
+				"goal": bool(shot["goal"]), "yaw": atan2(-node.position.x, -node.position.z)}
+
+
 ## One frame of an umpire's one-off clip (a bounce, or the lift of a ball-up or throw-in). True
 ## while the ball is still his (in his hands, or on its way from them to the turf at a bounce).
 func _umpire_clip(u: Dictionary, st: Dictionary, dt: float) -> bool:
@@ -2621,12 +2850,40 @@ func _umpire_clip(u: Dictionary, st: Dictionary, dt: float) -> bool:
 	elif bouncing:
 		# After the ball hits the turf, the follow-through runs at the take's own speed.
 		rate = 1.0
+	var throwing := str(c["kind"]) == "throw"
+	if throwing and before < THROW_T_REL:
+		# Keeping time with the director's throw-in: let go as the ball goes up. Once the pack
+		# has gone (the ball already in flight) he gets it away at once.
+		var going := float(st.get("in", 0.0)) if str(st.get("kind", "")) == "throwin" else 0.0
+		going = maxf(going - _ump_step, 0.0) / _ump_tempo
+		# Down into the dip at the take's pace or quicker; at the bottom (where the broadcasts'
+		# umpires pause) he waits as long as the ball needs; the drive up never stalls.
+		var lo := 1.0 if before < THROW_T_BOTTOM else (0.0 if before < THROW_T_DRIVE else 0.6)
+		rate = clampf((THROW_T_REL - before) / maxf(going, 0.02), lo, THROW_RATE_MAX)
+	elif throwing:
+		rate = 1.0
 	c["t"] = before + dt * rate
+	if c.has("yaw"):
+		var n: Node3D = u["node"]
+		n.rotation.y = rotate_toward(n.rotation.y, float(c["yaw"]), Oval3DGoalUmpire.TURN_RATE * dt)
 	if float(c["t"]) >= float(c["end"]):
+		if str(c["kind"]) == "signal" and u.has("flag"):
+			# Signalled: on to his flags (Oval3DGoalUmpire), from where the signal left him.
+			u.erase("clip")
+			Oval3DGoalUmpire.start(u, bool(c.get("goal", true)), u["home"])
+			return false
 		_end_umpire_clip(u)
 		return false
 	# Advanced, never sought: a seek would leave the blend in from his stand where it was.
 	ap.advance(float(c["t"]) - before)
+	if throwing:
+		# His until the director throws it up: on time his hands are overhead letting it go; when
+		# the throw came too soon for the whole of his (a quick restart late in a match) it leaves
+		# his hands as they drive up (_umpire_let_go eases it onto its flight), never stuck in
+		# them while it should be in the air.
+		if str(director.ball.get("mode", "")) == "flight":
+			c["flown"] = true
+		return not c.get("flown", false)
 	if not bouncing:
 		return false
 	if float(c["t"]) < UMP_T_REL:

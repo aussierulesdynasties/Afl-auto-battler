@@ -1139,7 +1139,8 @@ func _test_one_line_break(sz: Vector2i) -> void:
 	_check(lost.is_empty(), "Every call has its row at the break (%s; missing %s)" % [tag, str(lost)])
 	# Each call's own controls are still there, behind its row.
 	var controls := {"plan": "PlanPicker", "pep": "PepPicker", "tag": "TagPicker",
-			"def": "DefenceSetupPicker", "pt": "FocusPicker_focus_fwd"}
+			"def": "DefenceSetupPicker", "pt": "FocusPicker_focus_fwd",
+			"sit": "SitBlock"}
 	var orphan := []
 	for k in keys:
 		var body: Node = m.find_child("CallBody_" + str(k), true, false)

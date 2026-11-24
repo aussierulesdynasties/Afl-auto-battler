@@ -25,8 +25,10 @@ const GOLDEN_LOAD := "490f9cee806122afc1502cd7c8c79b58"  # moved with Canberra's
 ## opening draft closes with the rivals signing free agents, so the lists differ;
 ## the level ladder going A-Z by club (#1633) then changed the order the clubs
 ## trade and sign in during it. Both prints were redrawn by the director's
-## ratings (row 200, 2026-11-16) on top of row 199.
-const GOLDEN_REAL := "c6a8e9fff158f886ff4340d1032968eb"
+## ratings (row 200, 2026-11-16) on top of row 199. First contracts fitting
+## each club's cap (#2065: Geelong, Hawthorn and Gold Coast opened over it)
+## redrew it again.
+const GOLDEN_REAL := "f45597be894d17ff3955f68dffc2c30e"
 ## A played match's floating point differs between Windows and Linux builds of
 ## Godot, so the season has one fingerprint per platform; each was taken on
 ## main before the change (Linux: run_on_github run 43024085570). Removing
@@ -58,7 +60,7 @@ const TEAM_BOOKKEEPING_KEYS := ["pressure_acts_dhalf", "tackles_i50", "poss_d50"
 		"d50_tackled", "d50_rushed", "d50_chips"]
 ## Team counts named by prefix (one key per way a defensive-50 chain ends).
 const TEAM_BOOKKEEPING_PREFIXES := ["d50_end_"]
-const GOLDEN_SEASON := {"Windows": "4a60c57aa723ec9cf0c936b1592edace", "Linux": "b838f0c78e25ca2e6158f0fa91488688"}
+const GOLDEN_SEASON := {"Windows": "4a60c57aa723ec9cf0c936b1592edace", "Linux": "f07f57193c3b6633651c13351d1ba558"}
 
 ## A small league standing in for a legacy set until the 1990 files ship:
 ## 42 real players re-dated to a 1989 data season, a 1990 first season, and
@@ -731,6 +733,28 @@ func _test_real_1990() -> void:
 				own_rating += 1
 	_check(on_honours > 0, "An honoured player rated under his floor rates on his honours (%d)" % on_honours)
 	_check(own_rating > 0, "A star already above his floor keeps his own rating (%d)" % own_rating)
+	# One honour is worth 80 (bug bash 2026-11-23: 1989's All-Australians and
+	# club champions sat on a wall of 77).
+	_check(Ratings.honours_floor(1.0) == 80, "One honour sets a floor of 80 (%d)" % Ratings.honours_floor(1.0))
+	# Back from injury, the 1990 Brownlow medallist starts at his rehab level,
+	# not on his one 1989 game (bug bash 2026-11-23).
+	var lib := {}
+	for p in GameDB.players:
+		if str(p.get("first", "")) == "Tony" and str(p.get("last", "")) == "Liberatore":
+			lib = p
+	_check(not lib.is_empty() and bool(lib.get("rated_on_rehab", false)) and int(lib["overall"]) >= 80
+			and not lib.has("rehab"),
+			"Tony Liberatore starts 1990 back from injury (%d)" % int(lib.get("overall", 0)))
+	# A real peak is his level at his best, not one freak season: an
+	# established man with no honours and a fringe rating has no 99 peak (a
+	# teenager may: Wayne Carey, 18 in 1990).
+	var freak := true
+	for p in GameDB.players:
+		if float(p.get("age", 0.0)) < 25.0 or float(p.get("real_peak", 0)) <= 0.0:
+			continue
+		if float(p.get("real_peak", 0)) >= 99.0 and float(p.get("honours", 0.0)) <= 0.0 and int(p["overall"]) < 70:
+			freak = false
+	_check(freak, "No unhonoured fringe player carries a 99 real peak")
 	GameDB.reload()
 	var none := true
 	for p in GameDB.players:
