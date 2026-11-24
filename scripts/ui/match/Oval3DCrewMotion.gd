@@ -42,6 +42,9 @@ static func arc_spot(end: float, wing: float, out := FENCE) -> Vector2:
 	for i in range(721):
 		var t := PI * 0.5 * float(i) / 720.0
 		var p := Vector2(MatchMotion.HALF_LEN * cos(t) * end, MatchMotion.HALF_WID * sin(t) * wing)
+		if MatchMotion.shaped():
+			# A traced ground: the real boundary line, not the ellipse.
+			p = MatchMotion.edge_point(atan2(sin(t) * wing, cos(t) * end))
 		var d := absf(p.distance_to(goal) - 50.0)
 		if d < best_d:
 			best_d = d
@@ -51,6 +54,8 @@ static func arc_spot(end: float, wing: float, out := FENCE) -> Vector2:
 
 ## p on the boundary, moved `out` metres outward along the ellipse's normal there.
 static func _outside(p: Vector2, out: float) -> Vector2:
+	if MatchMotion.shaped():
+		return p + MatchMotion.fence_normal(p) * out
 	var n := Vector2(p.x / (MatchMotion.HALF_LEN * MatchMotion.HALF_LEN), p.y / (MatchMotion.HALF_WID * MatchMotion.HALF_WID))
 	return p + n.normalized() * out if n.length() > 0.0 else p
 
@@ -58,7 +63,7 @@ static func _outside(p: Vector2, out: float) -> Vector2:
 ## The bench of club `side` (0 home, 1 away): BENCH_OUT outside the boundary on the -y wing.
 static func bench(side: int) -> Vector2:
 	var x := BENCH_X * (-1.0 if side == 0 else 1.0)
-	var y := -MatchMotion.HALF_WID * sqrt(maxf(0.0, 1.0 - pow(x / MatchMotion.HALF_LEN, 2.0)))
+	var y := -MatchMotion.edge_y(x, -1.0)
 	return _outside(Vector2(x, y), BENCH_OUT)
 
 
