@@ -181,13 +181,8 @@ func _home(body: VBoxContainer) -> void:
 ## Beside the form on a wide screen.
 func _player_workspace(form: ScrollContainer) -> Control:
 	var wide := ScreenLayout.wide_view(UiKit.view_width(self), UiKit.view_height(self), 760.0)
-	var preview := PlayerPreview.new()
-	preview.name = "ForgePlayerPreview"
-	preview.spec = _spec
-	# The player you are making is the page's hero on a big screen.
+	# Release 1.0.21: the 3D footballer is left out of the build, so no figure here.
 	var big := wide and UiKit.view_width(self) >= 1100.0
-	# On a phone tall enough that his hair reads at a glance (the 3D footballer, ruling 2.76).
-	preview.custom_minimum_size = Vector2(420, 530) if big else (Vector2(260, 330) if wide else Vector2(190, 240))
 	var name_l := UiKit.lbl("", UiKit.H1 if wide else UiKit.H2, UiKit.TEXT, true)
 	name_l.name = "ForgePlayerPreviewName"
 	name_l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -202,7 +197,6 @@ func _player_workspace(form: ScrollContainer) -> Control:
 		var side := UiKit.vbox(10)
 		side.name = "ForgePlayerPanel"
 		side.custom_minimum_size.x = 420 if big else 260
-		side.add_child(preview)
 		side.add_child(name_l)
 		side.add_child(line)
 		out.add_child(side)
@@ -210,7 +204,6 @@ func _player_workspace(form: ScrollContainer) -> Control:
 		out = UiKit.vbox(8)
 		var strip := UiKit.hbox(10)
 		strip.name = "ForgePlayerPanel"
-		strip.add_child(preview)
 		var words := UiKit.vbox(2)
 		words.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		words.size_flags_vertical = Control.SIZE_SHRINK_CENTER

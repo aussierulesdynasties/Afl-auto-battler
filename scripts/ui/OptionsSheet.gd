@@ -81,16 +81,12 @@ static func open(host: Control, in_career: bool, quit := false) -> Control:
 			"The match-day scenes: the banner, the centre ball-up, replays, the press conference and the awards. Off skips the scenes. Every call and result stays the same.",
 			func(k): GameState.set_vignettes_on(k == "on"))
 	_row(v, "Match view", "SettingsMatchFigures",
-			[["tokens", "Tokens"], ["figures", "Figures"], ["3d", "3D oval"]],
-			"3d" if GameState.match_3d_on() else ("figures" if GameState.match_figures_on() else "tokens"),
-			"Figures draws the six players nearest the ball as small footballers on the oval. 3D oval plays the match on a 3D ground, every player a footballer. Prototypes for judging on a phone. The match plays the same either way.",
+			[["tokens", "Tokens"], ["figures", "Figures"]],
+			"figures" if GameState.match_figures_on() else "tokens",
+			"Figures draws the six players nearest the ball as small footballers on the oval. The match plays the same either way.",
 			func(k):
 				GameState.set_match_figures_on(k == "figures")
-				GameState.set_match_3d_on(k == "3d"))
-	_row(v, "Graphics", "SettingsGraphics",
-			[["low", "Low"], ["medium", "Medium"], ["high", "High"]], GameState.graphics_quality(),
-			"How much detail the 3D oval draws. Low keeps a weaker phone smooth: fewer shadows, every supporter a flat card. The match plays the same.",
-			func(k): GameState.set_graphics_quality(k))
+				GameState.set_match_3d_on(false))
 	_row(v, "Centre ball-up scene every match", "SettingsBounceScene", [["off", "Off"], ["on", "On"]],
 			"on" if GameState.bounce_scene_every_match() else "off",
 			"For playtesting. The centre ball-up call comes at the first centre ball-up of every last quarter you coach, whatever the score.",
