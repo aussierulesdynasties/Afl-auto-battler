@@ -50,7 +50,10 @@ const FIT := {
 	"scg": [0.34, 6.68, 0.05, 85.8, 84.43, 72.25],
 	"gmhba": [-8.89, 11.85, 0.02, -69.8, 94.3, 66.01],
 	"people_first": [-0.72, 0.04, 0.02, -72.6, 89.11, 72.26],
-	"engie": [20.64, -43.32, 0.0, -41.1, 92.14, 76.44],
+	# ENGIE: an ellipse through the field edge traced from Google Earth (tools/grounds/engie/fit) gives the
+	# centre and axis; its halves are a 162 x 126 m field plus FENCE, a metre inside the real 164 x 128, so
+	# the game's fence runs 0.6 m (sides) to 3.2 m (ends) outside the grass edge and clears the front rows (2026-11-22).
+	"engie": [-4.26, -3.6, 0.0, -44.0, 87.0, 69.0],
 	"bellerive": [0.31, -0.64, -0.02, 68.7, 86.9, 66.77],
 	"manuka": [5.93, 8.15, 0.03, -82.9, 85.94, 73.1],
 	"norwood": [1.96, -3.15, 0.0, 88.3, 88.73, 63.59],
@@ -97,6 +100,12 @@ const FIT := {
 ## 16 km (the Barossa Range on the skyline, tools/grounds/barossa/far.py), and `far` how far the match
 ## camera sees to show it.
 const SURROUNDS := {
+	# ENGIE: the showground, Olympic Boulevard and its plazas, the Brickpit and the parklands to Haslams Creek
+	# painted from OpenStreetMap with every mapped tree (tools/grounds/engie/surrounds/surrounds.py); its
+	# buildings are modelled in engie_part2.glb (surrounds/landmarks.py), so none are stood up here. It starts
+	# under the stands (85 m), the stadium's paved site drawn over it by the model.
+	"engie": {"y": -0.04, "inner": 85.0, "colour": Color(0.43, 0.46, 0.33),
+			"map": "surrounds.webp", "span": 2048.0, "trees": "trees.bin"},
 	"barossa": {"y": 0.0, "inner": 180.0, "land": "barossa_land.glb", "trees": "trees.bin", "trees_y": true,
 			"gums": "barossa_gums.glb", "far_land": "barossa_far.glb", "far": 16000.0},
 	"mcg": {"y": -0.03, "inner": 140.0, "colour": Color(0.45, 0.55, 0.27),
@@ -179,6 +188,10 @@ const SEAT_COLOURS := {
 	"seat_lo_blue": Color(0.411, 0.544, 0.550), "seat_lo_tan": Color(0.459, 0.556, 0.489),
 	"seat_mid_blue": Color(0.475, 0.580, 0.518), "seat_mid_tan": Color(0.518, 0.592, 0.457),
 	"seat_up_blue": Color(0.330, 0.473, 0.510), "seat_up_tan": Color(0.378, 0.485, 0.450),
+	# ENGIE Stadium: red tip-up seats on black shells with the odd orange one under the roofs, orange with
+	# some red at the open north-east end (a photo sphere in the stands, Jan 2019).
+	"seat_engie_red": Color8(206, 44, 40), "seat_engie_orange": Color8(232, 112, 36),
+	"seat_engie_shell": Color8(34, 34, 36),
 	# York Park's teal-green plastic (york_park/model/paint.py), the SCG's two seat colours
 	# (their glb material colours, linear -> sRGB).
 	"seat_plastic": Color(0.255, 0.365, 0.33),
