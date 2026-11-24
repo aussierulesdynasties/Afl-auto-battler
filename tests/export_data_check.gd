@@ -5,8 +5,7 @@ extends SceneTree
 ## importer. The game must find its player data there with real bio fields -
 ## never quietly load players without ages.
 ## The pack is exported with the Android preset's filters, so it also proves the
-## phone build carries what Club Forge's Create a player draws (the 3D footballer,
-## his moves and his hair), and a real tap on the button builds him there.
+## phone build's Create a player and Settings work without the 3D art.
 
 func _initialize() -> void:
 	_run.call_deferred()
@@ -45,13 +44,10 @@ func _run() -> void:
 	quit(0 if failures.is_empty() else 1)
 
 
-## Club Forge > Create a player in the exported pack: the files the 3D preview loads are
-## there, and a real tap on the button opens the form with both figures built.
+## Release 1.0.21 leaves the 3D art out: a real tap on Club Forge > Create a player
+## opens the form with the player's name line and no 3D figure, and Settings offers
+## no 3D oval or Graphics row.
 func _check_forge_player(failures: Array[String]) -> void:
-	var oval: GDScript = load("res://scripts/ui/match/Oval3D.gd")
-	for path in [oval.PLAYER_GLB, oval.LOOPS_GLB, oval.HAIR_GLB]:
-		if not ResourceLoader.exists(path):
-			failures.append("%s is missing from the exported pack (Club Forge's player preview loads it)" % path)
 	# tests/ is not in the pack: the tap helper comes from beside this script.
 	var tap: GDScript = load(get_script().resource_path.get_base_dir().path_join("tap.gd"))
 	var state = root.get_node("GameState")
@@ -70,12 +66,45 @@ func _check_forge_player(failures: Array[String]) -> void:
 		await process_frame
 	if why != "":
 		failures.append("a tap on Create a player did not reach it (%s)" % why)
-	var preview = scene.find_child("ForgePlayerPreview", true, false)
-	if preview == null:
-		failures.append("Create a player opened no player preview")
-	elif preview.figures.size() != 2:
-		failures.append("Create a player's preview built %d of its 2 figures" % preview.figures.size())
+	if scene.find_child("ForgePlayerPreview", true, false) != null:
+		failures.append("Create a player built a 3D figure in a build without the 3D art")
+	elif scene.find_child("ForgePlayerPreviewName", true, false) == null:
+		failures.append("Create a player opened without the player's name line")
 	else:
-		print("Export data check: Create a player opened with both 3D figures")
+		print("Export data check: Create a player opened with the name line and no 3D figure")
 	scene.queue_free()
+	await process_frame
+	await _check_settings(failures, tap)
+
+
+func _check_settings(failures: Array[String], tap: GDScript) -> void:
+	var host := Control.new()
+	host.set_anchors_preset(Control.PRESET_FULL_RECT)
+	root.add_child(host)
+	root.get_node("GameState").set_match_figures_on(false)
+	var sheet: Control = load("res://scripts/ui/OptionsSheet.gd").open(host, false)
+	for i in range(3):
+		await process_frame
+	if sheet.find_child("SettingsMatchFigures_3d", true, false) != null:
+		failures.append("Settings still offers the 3D oval")
+	if sheet.find_child("SettingsGraphics", true, false) != null:
+		failures.append("Settings still offers the Graphics row")
+	var fig := sheet.find_child("SettingsMatchFigures_figures", true, false) as Control
+	if fig == null:
+		failures.append("Settings has no Figures choice")
+	else:
+		for s in sheet.find_children("*", "ScrollContainer", true, false):
+			(s as ScrollContainer).ensure_control_visible(fig)
+		for i in range(3):
+			await process_frame
+		var why: String = await tap.tap(fig)
+		for i in range(3):
+			await process_frame
+		if why != "":
+			failures.append("a tap on Settings > Figures did not reach it (%s)" % why)
+		elif not root.get_node("GameState").match_figures_on():
+			failures.append("a tap on Settings > Figures did not turn figures on")
+		else:
+			print("Export data check: Settings has no 3D or Graphics row and Figures takes a tap")
+	host.queue_free()
 	await process_frame
