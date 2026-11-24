@@ -28,6 +28,7 @@ func run() -> void:
 	_t("_test_old_saves")
 	await _t("_test_screens")
 	await _t("_test_meeting_focus")
+	await _t("_test_meeting_group")
 	await _t("_test_story_stop")
 	await _t("_test_draft_card")
 	PreSeason.reload()
@@ -508,7 +509,8 @@ func _test_screens() -> void:
 			and _label(scene, "PreSeasonHero") == "Player meetings",
 			"With a pre-season running, the game opens on the player meetings")
 	_check(_fits(scene, 390.0), "Nothing on the meetings runs off a phone's screen")
-	_check(_one_page(scene), "The meetings fit on one phone page, two lines by two")
+	_check(scene.find_child("PreSeasonTraining", true, false) == null,
+			"The meetings have no Training button: they set the focus themselves")
 	# Open a player's meeting and set his focus by taps.
 	var p: Dictionary = {}
 	for q in GameState.my_list:
@@ -681,6 +683,104 @@ func _test_meeting_focus() -> void:
 	_check(scene.find_child("MeetProfile", true, false) == null and phone_b != null
 			and phone_b.get_theme_font("font") == UiKit.BOLD and _fits(scene, 390.0),
 			"On a phone the meeting stays one column, the rated stats still bold, nothing cut")
+	Router.stack = []
+
+
+## Ticking players and giving them one stat focus together, by a finger's taps
+## on a phone (director, 2026-11-25: "multi click players and set stat focus
+## for multiple at once"; tick boxes, and a player who can't train the stat is
+## named and keeps his own).
+func _test_meeting_group() -> void:
+	PreSeason.reload()
+	var tree := Engine.get_main_loop() as SceneTree
+	tree.root.size = Vector2i(390, 844)
+	_career()
+	GameState.set_setting("seen_weekly_loop_intro", true)
+	GameState.set_setting("seen_training_intro", true)
+	# A line that all trains one stat, and a player in another line who doesn't.
+	var mids := []
+	var key := ""
+	var g := ""
+	var d: Dictionary = {}
+	for line in PreSeason.GROUPS:
+		if key != "":
+			break
+		var members := []
+		for q in GameState.my_list:
+			if PreSeason.group_of(q) == line:
+				members.append(q)
+		for row in GameState.TRAIN_STATS:
+			var k := str(row[0])
+			var all_in := not members.is_empty()
+			for m in members:
+				if GameState.project_job(m) == "" and not GameState.focus_options(m).has(k):
+					all_in = false
+			if not all_in:
+				continue
+			for q in GameState.my_list:
+				if d.is_empty() and PreSeason.group_of(q) != line and GameState.project_job(q) == "" 						and not GameState.focus_options(q).has(k):
+					d = q
+			if not d.is_empty():
+				key = k
+				g = str(line)
+				mids = members
+				break
+	_check(key != "", "A stat one line trains and a player elsewhere doesn't (%s, %s)" % [g, key])
+	if key == "":
+		return
+	var scene: Control = await _open(tree)
+	var all_mid := scene.find_child("MeetAll_" + g, true, false) as Control
+	await _into_view(tree, all_mid)
+	_check(await _tap(all_mid, "All"), "A finger's tap ticks a whole line")
+	await _frames(tree, 4)
+	var tick := scene.find_child("MeetTick_" + str(d["id"]), true, false) as Control
+	await _into_view(tree, tick)
+	_check(await _tap(tick, "a defender's tick"), "A finger's tap ticks a player from another line")
+	await _frames(tree, 4)
+	var go := scene.find_child("PreSeasonGo", true, false) as Button
+	_check(go != null and go.text == "Set stat focus for %d" % (mids.size() + 1)
+			and scene.find_child("MeetClearTicks", true, false) != null,
+			"The way on sets the focus for the ticked players (%s)" % (go.text if go != null else "-"))
+	_check(await _tap(go, "Set stat focus"), "A finger's tap opens the stat focus for the ticked players")
+	await _frames(tree, 4)
+	var pick := scene.find_child("MeetGroupFocus_" + key, true, false) as Control
+	_check(pick != null and await _tap(pick, "a stat focus for all"), "A finger's tap picks one stat for them all")
+	await _frames(tree, 4)
+	var skip := _label(scene, "MeetGroupSkip")
+	var set_it := scene.find_child("MeetGroupSet", true, false) as Button
+	_check(skip.contains(GameDB.card_surname(d)) and set_it != null and not set_it.disabled,
+			"The player who can't train it is named before it is set (%s)" % skip)
+	_check(await _tap(set_it, "Set"), "A finger's tap sets it")
+	await _frames(tree, 6)
+	var ok := scene.find_child("MeetGroupSheet", true, false) == null
+	for m in mids:
+		if GameState.project_job(m) == "":
+			ok = ok and _label(scene, "MeetSaid_" + str(m["id"])) == GameState.train_stat_label(key).to_lower()
+	_check(ok and _label(scene, "MeetSaid_" + str(d["id"])) != GameState.train_stat_label(key).to_lower(),
+			"Every player in the line shows the focus; the other keeps his own")
+	go = scene.find_child("PreSeasonGo", true, false) as Button
+	_check(go.text == "Meetings done", "With the ticks spent, the way on is Meetings done again")
+	# Every line at once, then cleared.
+	var every := scene.find_child("MeetAllLines", true, false) as Control
+	await _into_view(tree, every)
+	_check(await _tap(every, "Select every line"), "A finger's tap ticks every line")
+	await _frames(tree, 4)
+	go = scene.find_child("PreSeasonGo", true, false) as Button
+	_check(go.text == "Set stat focus for %d" % GameState.my_list.size(),
+			"Every player on the list is ticked (%s)" % go.text)
+	_check(await _tap(scene.find_child("MeetClearTicks", true, false), "Clear"), "A finger's tap clears the ticks")
+	await _frames(tree, 4)
+	go = scene.find_child("PreSeasonGo", true, false) as Button
+	_check(go.text == "Meetings done", "Clear leaves nobody ticked")
+	# His profile from his meeting on a phone.
+	var tap := scene.find_child("MeetTap_" + str(d["id"]), true, false) as Control
+	await _into_view(tree, tap)
+	await _tap(tap, "a defender's meeting")
+	await _frames(tree, 4)
+	var prof := scene.find_child("MeetProfileOpen", true, false) as Control
+	_check(prof != null and await _tap(prof, "Profile"), "A finger's tap on Profile in his meeting")
+	await _frames(tree, 4)
+	_check(scene.find_child("PlayerProfile", true, false) != null, "His profile opens from his meeting on a phone")
 	Router.stack = []
 
 

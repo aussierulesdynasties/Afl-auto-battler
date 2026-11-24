@@ -3,8 +3,10 @@ extends SceneTree
 ## 2026-11-24): the stats his position is rated on in bold, and on a PC his
 ## profile beside the choices. Needs a real renderer:
 ##   godot --path . --script tools/visual/capture_meeting_focus.gd -- --out DIR/meeting [--size 1600x900] [--club FRE] [--seed 4127]
-## Writes <out>_<W>x<H>.png (the meeting at the top of the page) and
-## <out>_<W>x<H>_low.png (scrolled on by most of a screen). Never touches a real save.
+## Writes <out>_<W>x<H>_page.png (the four lines, nothing open) and
+## <out>_<W>x<H>.png (his meeting open over the page), <out>_<W>x<H>_ticked.png
+## (the mids and one defender ticked) and <out>_<W>x<H>_group.png (one stat
+## focus for them all, the player who can't train it named). Never touches a real save.
 
 var W := 1600
 var H := 900
@@ -89,15 +91,40 @@ func _run() -> void:
 		quit(1)
 		return
 	print("player ", db.player_display_name(pick), " ", pick["role"], " ", pick["overall"])
-	var tap := current_scene.find_child("MeetTap_" + str(pick["id"]), true, false) as Button
-	tap.emit_signal("pressed")
-	await _frames(8)
-	var row := current_scene.find_child("Meet_" + str(pick["id"]), true, false) as Control
+	var tag := "%dx%d" % [W, H]
+	await _shot("%s_%s_page.png" % [out, tag])
+	var lines := current_scene.find_child("PreSeasonMeetings", true, false) as Control
 	var page := current_scene.find_child("PreSeasonPage", true, false) as Control
 	var sc := page.get_parent() as ScrollContainer
-	sc.scroll_vertical = int(row.global_position.y - page.global_position.y)
-	var tag := "%dx%d" % [W, H]
+	print("lines ", lines.get_global_rect(), " page view ", sc.get_global_rect(), " scroll max ", sc.get_v_scroll_bar().max_value - sc.size.y)
+	var tap := current_scene.find_child("MeetTap_" + str(pick["id"]), true, false) as Button
+	tap.emit_signal("pressed")
+	await _frames(12)
 	await _shot("%s_%s.png" % [out, tag])
-	sc.scroll_vertical += int(sc.size.y * 0.8)
-	await _shot("%s_%s_low.png" % [out, tag])
+	(current_scene.find_child("MeetClose", true, false) as Button).emit_signal("pressed")
+	await _frames(8)
+	(current_scene.find_child("MeetAll_MID", true, false) as Button).emit_signal("pressed")
+	await _frames(4)
+	var defs := current_scene.find_child("MeetLine_DEF", true, false) as Node
+	for q in state.my_list:
+		var t := defs.find_child("MeetTick_" + str(q["id"]), true, false) as Button
+		if t != null:
+			t.emit_signal("pressed")
+			break
+	await _frames(6)
+	await _shot("%s_%s_ticked.png" % [out, tag])
+	(current_scene.find_child("PreSeasonGo", true, false) as Button).emit_signal("pressed")
+	await _frames(6)
+	var grid := current_scene.find_child("MeetGroupFocus", true, false) as Node
+	var names := []
+	for b in grid.get_children():
+		names.append(str(b.name))
+	for n in names:
+		var b := current_scene.find_child(n, true, false) as Button
+		b.emit_signal("pressed")
+		await _frames(3)
+		if current_scene.find_child("MeetGroupSkip", true, false) != null:
+			print("picked ", n)
+			break
+	await _shot("%s_%s_group.png" % [out, tag])
 	quit()

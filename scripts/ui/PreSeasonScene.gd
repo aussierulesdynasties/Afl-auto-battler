@@ -65,6 +65,7 @@ func _build() -> void:
 	var places: Array = UiKit.scroll_places(_root) if stop == _last_stop else []
 	if stop != _last_stop:
 		_meet_open = ""
+		_meet_sel = {}
 		_focus_draft = {}
 		_plan_draft = ""
 		_drill_group_sel = ""
@@ -181,6 +182,18 @@ func _header(stop: String) -> Control:
 		_hang_watch(stop, who, WATCH)   # at the end of the club's row, down beside the big line
 		v.add_child(hero)
 		v.add_child(sub)
+	if stop == "meetings":
+		# Every line ticked at once, top right, where the board had it.
+		var every := UiKit.btn("Select every line", UiKit.SECONDARY)
+		every.name = "MeetAllLines"
+		every.custom_minimum_size = Vector2(0, 40)
+		every.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		every.pressed.connect(func():
+			var ids := []
+			for p in GameState.my_list:
+				ids.append(str(p["id"]))
+			_tick_many(ids, true))
+		who.add_child(every)
 	v.add_child(_club_rule())
 	return v
 
@@ -233,7 +246,7 @@ func _hero(stop: String) -> String:
 func _hero_sub(stop: String) -> String:
 	match stop:
 		"meetings":
-			return "Tap a player to set his stat focus for the season. A position change starts at the practice match."
+			return "Tap a name to open his meeting, or tick players to give them one stat focus together. A position change starts at the practice match."
 		"plan":
 			return "It runs through summer and the season. Each plan books its own weeks of running. The other weeks are ours to fill."
 		"trial":
@@ -704,6 +717,7 @@ func _section_head(text: String) -> Label:
 # ---------------------------------------------------------------------------
 var _meet_open := ""        # the player whose meeting is open, or ""
 var _focus_draft := {}      # player id -> the stat focus picked this meeting
+var _meet_sel := {}         # player id -> true: ticked for one stat focus together
 var _plan_before := {}      # player id -> his own plan before a position change was set here
 
 
@@ -722,6 +736,16 @@ func _meetings_section() -> Control:
 		grid.add_theme_constant_override("v_separation", 18)
 		lines = grid
 	lines.name = "PreSeasonMeetings"
+	# A PC fills the page (director, 2026-11-25: "too small on pc too, too much
+	# empty space"): big type for a list of up to 13 a line, a step down for longer lines.
+	var longest := 0
+	for g in PreSeason.GROUPS:
+		var count := 0
+		for p in GameState.my_list:
+			if PreSeason.group_of(p) == g:
+				count += 1
+		longest = maxi(longest, count)
+	_meet_big = wide and longest <= 13
 	for g in PreSeason.GROUPS:
 		var line := []
 		for p in GameState.my_list:
@@ -734,7 +758,16 @@ func _meetings_section() -> Control:
 		col.name = "MeetLine_" + str(g)
 		col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		col.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-		col.add_child(_report_head(str(PreSeason.GROUP_LABEL[g])))
+		var ids := []
+		for q in line:
+			ids.append(str(q["id"]))
+		var head := UiKit.hbox(6)
+		var head_lbl := _report_head(str(PreSeason.GROUP_LABEL[g]))
+		head_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		head.add_child(head_lbl)
+		head.add_child(_tick_button("MeetAll_" + str(g), "All", _all_ticked(ids), func():
+			_tick_many(ids, not _all_ticked(ids))))
+		col.add_child(head)
 		col.add_child(UiKit.spacer(4))
 		for p in line:
 			col.add_child(_meeting_row(p, wide))
@@ -745,6 +778,9 @@ func _meetings_section() -> Control:
 ## One player. A PC: his name in the club's colour, where he plays and his
 ## rating, and under it what this meeting has set. A phone: his surname, and the
 ## focus word on the right. A tap opens his meeting over the page.
+var _meet_big := false   # a PC with lines of 13 or fewer: the bigger type
+
+
 func _meeting_row(p: Dictionary, wide: bool) -> Control:
 	var pid := str(p["id"])
 	var open := _meet_open == pid
@@ -756,41 +792,41 @@ func _meeting_row(p: Dictionary, wide: bool) -> Control:
 	sb.set_border_width_all(0)
 	sb.content_margin_left = 8.0 if wide else 0.0
 	sb.content_margin_right = 8.0 if wide else 0.0
-	sb.content_margin_top = 5.0 if wide else 3.0
-	sb.content_margin_bottom = 5.0 if wide else 3.0
+	sb.content_margin_top = 4.0 if _meet_big else 3.0
+	sb.content_margin_bottom = 4.0 if _meet_big else 3.0
 	row.add_theme_stylebox_override("panel", sb)
 	var top := UiKit.hbox(8)
 	top.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_child(top)
 	var ink := UiKit.club_name_colour(UiKit.club_ink(GameState.my_club))
 	var n := UiKit.name_label(GameDB.player_display_name(p) if wide else GameDB.card_surname(p),
-			UiKit.NAME if wide else UiKit.SECONDARY, ink)
+			(22 if _meet_big else 17) if wide else UiKit.SECONDARY, ink)
 	n.name = "MeetName_" + pid
 	n.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	n.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	n.clip_text = true
-	n.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	if not wide:
+		# A phone's half-width line: one line, a long surname cut with an ellipsis.
+		n.autowrap_mode = TextServer.AUTOWRAP_OFF
+		n.clip_text = true
 	var set_ink := UiKit.TEXT if _has_meeting_set(p) else UiKit.MUTED
 	if wide:
 		var left := UiKit.vbox(0)
 		left.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		left.add_child(n)
-		var said := UiKit.lbl(_meeting_words(p), UiKit.SMALL, set_ink)
+		var said := UiKit.ellipsis(_meeting_words(p), 17 if _meet_big else UiKit.SECONDARY, set_ink)
 		said.name = "MeetSaid_" + pid
 		said.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		said.clip_text = true
-		said.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		left.add_child(said)
 		top.add_child(left)
 		var role := UiKit.line("%s %d" % [str(UiKit.ROLE_SHORT.get(str(p.get("role", "")), str(p.get("role", "")))),
-				int(p.get("overall", 0))], UiKit.SMALL, UiKit.TEXT, true)
+				int(p.get("overall", 0))], 18 if _meet_big else UiKit.SECONDARY, UiKit.TEXT, true)
 		role.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		role.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 		top.add_child(role)
 	else:
 		top.add_child(n)
-		var word := UiKit.lbl(_meeting_word(p), UiKit.SMALL, set_ink)
+		var word := UiKit.line(_meeting_word(p), UiKit.SMALL, set_ink)
 		word.name = "MeetSaid_" + pid
 		word.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		word.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
@@ -810,9 +846,201 @@ func _meeting_row(p: Dictionary, wide: bool) -> Control:
 		_meet_open = pid
 		_build())
 	row.add_child(tap)
-	box.add_child(row)
+	var with_tick := UiKit.hbox(2 if not wide else 4)
+	with_tick.add_child(_tick_button("MeetTick_" + pid, "", _meet_sel.has(pid), func():
+		_tick_many([pid], not _meet_sel.has(pid))))
+	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	with_tick.add_child(row)
+	box.add_child(with_tick)
 	box.add_child(UiKit.rule())
 	return box
+
+
+## A tick box (with a word beside it, or none) that a finger can hit: the
+## whole button takes the tap, the box is drawn inside it.
+func _tick_button(node_name: String, word: String, on: bool, on_press: Callable) -> Button:
+	var b := Button.new()
+	b.name = node_name
+	b.flat = true
+	b.focus_mode = Control.FOCUS_NONE
+	b.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	var none := StyleBoxEmpty.new()
+	for st in ["normal", "hover", "pressed", "hover_pressed", "focus", "disabled"]:
+		b.add_theme_stylebox_override(st, none)
+	b.set_meta("ticked", on)
+	var h := UiKit.hbox(6)
+	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	h.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var tick := TickBox.new()
+	tick.on = on
+	tick.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	tick.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	h.add_child(tick)
+	if word != "":
+		var w := UiKit.line(word, UiKit.SMALL, UiKit.TEXT)
+		w.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		w.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		h.add_child(w)
+	b.add_child(h)
+	b.custom_minimum_size = Vector2(28.0 + (34.0 if word != "" else 0.0), 24.0 if _wide() else 20.0)
+	b.pressed.connect(on_press)
+	return b
+
+
+## The box itself: an outline, filled in the club's ink with a tick when on.
+class TickBox extends Control:
+	var on := false
+
+	func _init() -> void:
+		custom_minimum_size = Vector2(20, 20)
+
+	func _draw() -> void:
+		var r := Rect2(Vector2(1, 1), size - Vector2(2, 2))
+		if on:
+			draw_rect(r, UiKit.primary_fill(UiKit.club_ink(GameState.my_club)), true)
+			var ink := UiKit.primary_label(UiKit.primary_fill(UiKit.club_ink(GameState.my_club)))
+			draw_polyline(PackedVector2Array([Vector2(5, 10), Vector2(9, 14), Vector2(15, 6)]), ink, 2.5, true)
+		else:
+			draw_rect(r, UiKit.MUTED, false, 2.0)
+
+
+func _all_ticked(ids: Array) -> bool:
+	for id in ids:
+		if not _meet_sel.has(str(id)):
+			return false
+	return not ids.is_empty()
+
+
+func _tick_many(ids: Array, on: bool) -> void:
+	for id in ids:
+		if on:
+			_meet_sel[str(id)] = true
+		else:
+			_meet_sel.erase(str(id))
+	_build()
+
+
+# ---------------------------------------------------------------------------
+# One stat focus for every ticked player (director, 2026-11-25: "multi click
+# players and set stat focus for multiple at once"; he picked tick boxes, and
+# for mixed lines "All stats, skip some": a player who can't train the stat
+# keeps his own, and the panel names him first).
+# ---------------------------------------------------------------------------
+var _group_box := {}
+var _group_pick := ""
+
+
+func _group_sheet_open() -> bool:
+	return not _group_box.is_empty() and is_instance_valid(_group_box["overlay"]) \
+			and not (_group_box["overlay"] as Control).is_queued_for_deletion()
+
+
+func _close_group() -> void:
+	if _group_sheet_open():
+		(_group_box["overlay"] as Control).queue_free()
+	_group_box = {}
+	_group_pick = ""
+
+
+## Whether this stat can be set for him now: his role trains it, nothing is
+## locked in for the season and he is not learning a position.
+func _can_take(p: Dictionary, key: String) -> bool:
+	return not GameState.focus_locked(p) and GameState.project_job(p) == "" \
+			and GameState.focus_options(p).has(key)
+
+
+func _selected_players() -> Array:
+	var out := []
+	for p in GameState.my_list:
+		if _meet_sel.has(str(p["id"])):
+			out.append(p)
+	return out
+
+
+func _open_group_focus() -> void:
+	_close_group()
+	var picked := _selected_players()
+	if picked.is_empty():
+		return
+	_group_box = UiKit.modal_box(self, 760.0 if _wide() else 560.0)
+	var overlay: Control = _group_box["overlay"]
+	overlay.name = "MeetGroupSheet"
+	UiKit.close_on_outside_tap(_group_box, func():
+		_group_box = {}
+		_group_pick = "")
+	var cancel := UiKit.btn("Cancel", UiKit.NAME)
+	cancel.name = "MeetGroupCancel"
+	cancel.custom_minimum_size = Vector2(0, 48)
+	cancel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	cancel.pressed.connect(_close_group)
+	var set_it := _primary("Set")
+	set_it.name = "MeetGroupSet"
+	set_it.custom_minimum_size = Vector2(0, 48)
+	set_it.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	set_it.pressed.connect(_on_group_set)
+	var foot := UiKit.hbox(8)
+	foot.add_child(cancel)
+	foot.add_child(set_it)
+	_group_box["footer"].add_child(foot)
+	_fill_group_sheet()
+
+
+func _fill_group_sheet() -> void:
+	var picked := _selected_players()
+	var body: VBoxContainer = _group_box["body"]
+	UiKit.clear(body)
+	body.add_child(UiKit.lbl("Stat focus for %d players" % picked.size(), UiKit.NAME,
+			UiKit.club_name_colour(UiKit.club_ink(GameState.my_club)), true))
+	var intro := UiKit.lbl("About a third of each one's training goes into it. Locked in at Meetings done.",
+			UiKit.SECONDARY, UiKit.TEXT)
+	intro.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	body.add_child(intro)
+	var options := []
+	for row in GameState.TRAIN_STATS:
+		var key := str(row[0])
+		var n := 0
+		for p in picked:
+			if _can_take(p, key):
+				n += 1
+		if n > 0:
+			options.append([key, "%s  %d of %d" % [str(row[1]), n, picked.size()]])
+	body.add_child(UiKit.choice_grid("MeetGroupFocus", options, _group_pick, 2, func(key: String):
+		_group_pick = key
+		_fill_group_sheet()))
+	var set_it := _group_box["footer"].find_child("MeetGroupSet", true, false) as Button
+	if _group_pick == "":
+		set_it.text = "Set"
+		set_it.disabled = true
+		return
+	var takers := 0
+	var skipped := []
+	for p in picked:
+		if _can_take(p, _group_pick):
+			takers += 1
+		else:
+			skipped.append(GameDB.card_surname(p))
+	set_it.disabled = takers == 0
+	set_it.text = "Set for %d" % takers
+	if not skipped.is_empty():
+		var who := ", ".join(skipped.slice(0, skipped.size() - 1)) + " and " + str(skipped[-1]) \
+				if skipped.size() > 1 else str(skipped[0])
+		var skip := UiKit.lbl("%s can't train %s and %s their own focus." % [who,
+				GameState.train_stat_label(_group_pick).to_lower(), "keep" if skipped.size() > 1 else "keeps"],
+				UiKit.SECONDARY, UiKit.TEXT)
+		skip.name = "MeetGroupSkip"
+		skip.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		body.add_child(skip)
+
+
+func _on_group_set() -> void:
+	if _group_pick == "":
+		return
+	for p in _selected_players():
+		if _can_take(p, _group_pick):
+			_focus_draft[str(p["id"])] = _group_pick
+	_close_group()
+	_meet_sel = {}
+	_build()
 
 
 ## Whether this meeting has set him anything: a stat focus or a position.
@@ -880,8 +1108,18 @@ func _sync_meeting_sheet() -> void:
 		var who := UiKit.vbox(0)
 		who.add_child(UiKit.name_label(GameDB.player_display_name(p), UiKit.NAME,
 				UiKit.club_name_colour(UiKit.club_ink(GameState.my_club))))
-		who.add_child(UiKit.lbl("%s %d" % [str(UiKit.ROLE_SHORT.get(str(p.get("role", "")), str(p.get("role", "")))),
-				int(p.get("overall", 0))], UiKit.SECONDARY, UiKit.TEXT, true))
+		var who_row := UiKit.hbox(8)
+		var role := UiKit.lbl("%s %d" % [str(UiKit.ROLE_SHORT.get(str(p.get("role", "")), str(p.get("role", "")))),
+				int(p.get("overall", 0))], UiKit.SECONDARY, UiKit.TEXT, true)
+		role.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		role.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		who_row.add_child(role)
+		var prof := UiKit.btn("Profile", UiKit.SECONDARY)
+		prof.name = "MeetProfileOpen"
+		prof.custom_minimum_size = Vector2(0, 44)
+		prof.pressed.connect(func(): PlayerSheet.open(self, p))
+		who_row.add_child(prof)
+		who.add_child(who_row)
 		body.add_child(who)
 	body.add_child(_meeting(p))
 
@@ -1527,6 +1765,10 @@ func _actions(stop: String) -> Control:
 			if setup:
 				label = "Coach the match"
 				on_press = _on_coach_practice
+	var picking := stop == "meetings" and not _meet_sel.is_empty()
+	if picking:
+		label = "Set stat focus for %d" % _meet_sel.size()
+		on_press = _open_group_focus
 	var go := _primary(label)
 	go.name = "PreSeasonGo"
 	go.custom_minimum_size = Vector2(0, 48)
@@ -1541,13 +1783,26 @@ func _actions(stop: String) -> Control:
 		sim_it.custom_minimum_size = Vector2(0, 44)
 		sim_it.pressed.connect(_on_sim_practice)
 		quiet.add_child(sim_it)
-	if stop in ["meetings", "plan", "week"]:
+	if picking:
+		var clear := UiKit.btn("Clear", UiKit.BODY)
+		clear.name = "MeetClearTicks"
+		clear.custom_minimum_size = Vector2(0, 44)
+		clear.pressed.connect(func():
+			_meet_sel = {}
+			_build())
+		quiet.add_child(clear)
+	elif stop in ["meetings", "plan", "week"]:
 		var sim := UiKit.btn("Sim to Round 1", UiKit.BODY)
 		sim.name = "PreSeasonSim"
 		sim.custom_minimum_size = Vector2(0, 44)
 		sim.pressed.connect(_on_sim_pressed)
 		quiet.add_child(sim)
-	for nav in [["My list", "list", "PreSeasonList"], ["Training", "training", "PreSeasonTraining"]]:
+	var navs := [] if picking else [["My list", "list", "PreSeasonList"]]
+	# The meetings set each player's focus, so they need no Training button
+	# (director, 2026-11-25: "this screen replaces the need for that button here").
+	if stop != "meetings":
+		navs.append(["Training", "training", "PreSeasonTraining"])
+	for nav in navs:
 		var b := UiKit.btn(str(nav[0]), UiKit.BODY)
 		b.name = str(nav[2])
 		b.custom_minimum_size = Vector2(0, 44)
@@ -1648,6 +1903,9 @@ func _after(at: String) -> void:
 ## Android Back: an open sheet closes first; otherwise the router takes the
 ## coach to the main menu, as from the hub (the career is saved).
 func handle_back() -> bool:
+	if _group_sheet_open():
+		_close_group()
+		return true
 	if _meet_sheet_open():
 		_close_meeting()
 		return true
