@@ -160,3 +160,4 @@ What has landed toward each open row of docs/TODO.md and docs/TODO_RULINGS.md, o
 - 198: Merged #2009: 3D match: planted feet stay put, the run's pace matches the picture (row 198).
 - 202: Merged #1991: 3D grounds: one seat rule for every ground; the ground kit's rows back on their steps (row 202 2b).
 - 202: Merged #2007: 3D match: goal replays go in and out behind a TV sting in the scoring club's colours (row 202 2e).
+- 202: Merged #2088: MCG: fix main's seat check (top tier keeps its back line) and the rear of the Great Southern Stand.

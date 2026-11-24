@@ -243,6 +243,9 @@ var lockup_rng := RandomNumberGenerator.new()
 var fumble_rng := RandomNumberGenerator.new()
 ## Where a ball knocked loose comes to rest (_comes_to_rest): its own stream.
 var loose_rng := RandomNumberGenerator.new()
+## Whether a held tackle was a run-down (_run_down): its own stream, so every other roll in
+## the match draws exactly as before.
+var rundown_rng := RandomNumberGenerator.new()
 ## The last chain ended in a ball-up called in play (a tackle held, a contest
 ## locked up): the next chain starts at that stoppage.
 var _prev_locked := false
@@ -637,6 +640,7 @@ func _init(home: Squad, away: Squad, seed: int = 0) -> void:
 	gather_rng.seed = seed * 113 + 127
 	fumble_rng.seed = seed * 127 + 131
 	loose_rng.seed = seed * 181 + 191
+	rundown_rng.seed = seed * 193 + 197
 	lead_rng.seed = seed * 109 + 113
 	# Its own seed: it once shared lead_rng's, so the mid-kick intercept dice
 	# replayed the key-lead dice. Every stream here needs a seed of its own.
@@ -3853,9 +3857,11 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 				_emit("tackle", opp, fp, tackler,
 						"%s tackles %s - it spills free" % [GameDB.player_display_name(tackler), GameDB.player_display_name(carrier)])
 				(events[events.size() - 1] as Dictionary).merge(rest)
+				_run_down(got)
 				return {"outcome": "turnover", "fp": lands, "actor": taker}
 			_emit("tackle", opp, fp, tackler,
 					"%s tackles %s - ball up" % [GameDB.player_display_name(tackler), GameDB.player_display_name(carrier)])
+			_run_down(got)
 			return {"outcome": "stoppage", "fp": fp, "actor": carrier}
 		if press_roll < rush_cut:
 			# Closed down without a tackle: the disposal is rushed. It gains
@@ -4524,6 +4530,9 @@ func _i50_give(side: int, at_fp: float, holder: Dictionary, defender, marked: bo
 		_p(mate, "marks")
 	_emit("pass", side, at_fp, holder, ("%s kicks to %s on the lead" if kick else "%s handballs to %s") % [hn, mn])
 	events[events.size() - 1]["hand"] = not kick
+	# Who it goes to, for the replay: when he doesn't mark it, the next event may not name
+	# him (a ball-up off his chance), and the view had no one to kick it to.
+	events[events.size() - 1]["to_id"] = str(mate["id"])
 	if takes:
 		_emit("receive", side, at_fp, mate, "%s marks on the lead" % mn)
 	return {"to": mate, "marked": takes}
@@ -4665,6 +4674,24 @@ func _run_and_carry(side: int, carrier, gained: float, pressed: bool, is_kick_in
 	if n > 0:
 		_t(side, "running_bounces", n)
 		_p(carrier, "running_bounces", n)
+
+
+## Run-downs (director, 2026-11-23: "we need some really cool chase down tackles from behind";
+## he chose to have the engine give some tackles a run). A carrier who took the ball in space
+## sometimes runs with it before the tackler catches him. As with _run_and_carry, the run is
+## ground covered across the field, not gained: the tackle's field position is unchanged and the
+## match plays exactly as before. The tackle event carries "run_down" (metres; not "run", which is a carrier's run and his bounces) for the pitch, which
+## draws the carrier running that far before he is caught from behind.
+const RUN_DOWN_P := 0.25
+const RUN_DOWN_MIN := 8.0
+const RUN_DOWN_MAX := 18.0
+
+func _run_down(got: String) -> void:
+	if got != "up" or events.is_empty():
+		return
+	if rundown_rng.randf() >= RUN_DOWN_P:
+		return
+	(events[events.size() - 1] as Dictionary)["run_down"] = snappedf(rundown_rng.randf_range(RUN_DOWN_MIN, RUN_DOWN_MAX), 0.1)
 
 
 ## A kick at goal: shots, and set shots apart. `result` is "goal", "behind"
