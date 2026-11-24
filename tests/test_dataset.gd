@@ -25,8 +25,10 @@ const GOLDEN_LOAD := "490f9cee806122afc1502cd7c8c79b58"  # moved with Canberra's
 ## opening draft closes with the rivals signing free agents, so the lists differ;
 ## the level ladder going A-Z by club (#1633) then changed the order the clubs
 ## trade and sign in during it. Both prints were redrawn by the director's
-## ratings (row 200, 2026-11-16) on top of row 199.
-const GOLDEN_REAL := "c6a8e9fff158f886ff4340d1032968eb"
+## ratings (row 200, 2026-11-16) on top of row 199. First contracts fitting
+## each club's cap (#2065: Geelong, Hawthorn and Gold Coast opened over it)
+## redrew it again.
+const GOLDEN_REAL := "f45597be894d17ff3955f68dffc2c30e"
 ## A played match's floating point differs between Windows and Linux builds of
 ## Godot, so the season has one fingerprint per platform; each was taken on
 ## main before the change (Linux: run_on_github run 43024085570). Removing
@@ -50,7 +52,9 @@ const GOLDEN_REAL := "c6a8e9fff158f886ff4340d1032968eb"
 const BOOKKEEPING_KEYS := ["impact_by", "breeze_side"]
 ## Event keys that only feed the picture: a goal's TV stat card (row 207) copies
 ## the kicker's numbers at that goal and draws nothing, so leaving it out keeps the print.
-const EVENT_BOOKKEEPING_KEYS := ["card"]
+## "to_id" (#2080) names who a kick goes to for the replay, and "run_down" (#2040) is how
+## far a chase-down runs, drawn from its own stream: neither changes the play.
+const EVENT_BOOKKEEPING_KEYS := ["card", "to_id", "run_down"]
 ## Team counts that record where something happened, not what happened: the
 ## pressure zones (pressure acts in the defensive half, tackles inside 50,
 ## 2026-11-14) are counted without a draw, so leaving them out keeps the print.
@@ -58,7 +62,7 @@ const TEAM_BOOKKEEPING_KEYS := ["pressure_acts_dhalf", "tackles_i50", "poss_d50"
 		"d50_tackled", "d50_rushed", "d50_chips"]
 ## Team counts named by prefix (one key per way a defensive-50 chain ends).
 const TEAM_BOOKKEEPING_PREFIXES := ["d50_end_"]
-const GOLDEN_SEASON := {"Windows": "4a60c57aa723ec9cf0c936b1592edace", "Linux": "b838f0c78e25ca2e6158f0fa91488688"}
+const GOLDEN_SEASON := {"Windows": "4a60c57aa723ec9cf0c936b1592edace", "Linux": "f07f57193c3b6633651c13351d1ba558"}
 
 ## A small league standing in for a legacy set until the 1990 files ship:
 ## 42 real players re-dated to a 1989 data season, a 1990 first season, and

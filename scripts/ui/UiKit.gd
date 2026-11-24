@@ -1689,8 +1689,10 @@ static func section_link(title: String, leads_to: String, node_name: String) -> 
 ## One tap picks one: [key, label] options in a grid, the chosen one
 ## outlined. Buttons are named "<node_name>_<key>". on_pick(key) runs after
 ## the grid repaints. Short lists only; a long list wants its own sheet.
+## `strong` keys stand out by type alone: bold in TEXT ink, the rest in the
+## regular face (the stats a player's position is rated on, pre-season meetings).
 static func choice_grid(node_name: String, options: Array, current: String, columns: int,
-		on_pick: Callable = Callable()) -> GridContainer:
+		on_pick: Callable = Callable(), strong: Array = []) -> GridContainer:
 	var grid := GridContainer.new()
 	grid.name = node_name
 	grid.columns = columns
@@ -1700,7 +1702,7 @@ static func choice_grid(node_name: String, options: Array, current: String, colu
 	var buttons := {}
 	var paint := func() -> void:
 		for k in buttons:
-			paint_choice(buttons[k], str(k) == str(state["current"]))
+			paint_choice(buttons[k], str(k) == str(state["current"]), strong.has(str(k)))
 	for o in options:
 		var key := str(o[0])
 		var b := btn(str(o[1]), 14)
@@ -1709,6 +1711,8 @@ static func choice_grid(node_name: String, options: Array, current: String, colu
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		# A name on a choice ("Marcus Bontempelli") wraps rather than cuts.
 		b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		if not strong.is_empty() and not strong.has(key):
+			b.add_theme_font_override("font", FONT)
 		b.pressed.connect(func():
 			state["current"] = key
 			paint.call()
@@ -1721,11 +1725,12 @@ static func choice_grid(node_name: String, options: Array, current: String, colu
 
 
 ## A choice's look: the chosen one outlined in full text, the rest quiet.
-static func paint_choice(b: Button, on: bool) -> void:
+## `strong`: an option that stands out (choice_grid's strong keys) keeps TEXT ink.
+static func paint_choice(b: Button, on: bool, strong := false) -> void:
 	var sb := _choice_box(on)
 	for s in ["normal", "hover", "pressed", "hover_pressed", "focus"]:
 		b.add_theme_stylebox_override(s, sb)
-	b.add_theme_color_override("font_color", TEXT if on else MUTED)
+	b.add_theme_color_override("font_color", TEXT if on or strong else MUTED)
 	b.add_theme_color_override("font_hover_color", TEXT)
 	b.add_theme_color_override("font_pressed_color", TEXT)
 	feel(b, "tick")
