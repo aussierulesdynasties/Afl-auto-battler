@@ -34,6 +34,7 @@ const GROUNDS := {
 	"Jiangwan Stadium": "jiangwan", "Hands Oval": "hands",
 	"Blacktown International Sportspark": "blacktown", "Summit Park": "summit",
 	"Macquarie Point Stadium": "macpoint", "Adelaide Oval": "adelaide", "The Gabba": "gabba",
+	"Mars Stadium": "mars",
 }
 
 ## Each model's boundary fence, measured off the model (tools/grounds/fit_fence.py: an ellipse
@@ -50,7 +51,10 @@ const FIT := {
 	"scg": [0.34, 6.68, 0.05, 85.8, 84.43, 72.25],
 	"gmhba": [-8.89, 11.85, 0.02, -69.8, 94.3, 66.01],
 	"people_first": [-0.72, 0.04, 0.02, -72.6, 89.11, 72.26],
-	"engie": [20.64, -43.32, 0.0, -41.1, 92.14, 76.44],
+	# ENGIE: an ellipse through the field edge traced from Google Earth (tools/grounds/engie/fit) gives the
+	# centre and axis; its halves are a 162 x 126 m field plus FENCE, a metre inside the real 164 x 128, so
+	# the game's fence runs 0.6 m (sides) to 3.2 m (ends) outside the grass edge and clears the front rows (2026-11-22).
+	"engie": [-4.26, -3.6, 0.0, -44.0, 87.0, 69.0],
 	"bellerive": [0.31, -0.64, -0.02, 68.7, 86.9, 66.77],
 	"manuka": [5.93, 8.15, 0.03, -82.9, 85.94, 73.1],
 	"norwood": [1.96, -3.15, 0.0, 88.3, 88.73, 63.59],
@@ -83,6 +87,9 @@ const FIT := {
 	# Gabba's model (tools/grounds/gabba), measured the same way.
 	"adelaide": [-0.4, 1.37, 0.0, -102.0, 91.36, 65.7],
 	"gabba": [2.47, 3.47, 0.0, 175.0, 86.88, 73.71],
+	# Mars Stadium (tools/grounds/mars): its fence is one smooth curve fitted to Google Earth's straight-down
+	# trace (qa/fit.py, 0.22 m rms), 169.4 x 139.0 m; this ellipse fits it to 0.45 m rms.
+	"mars": [-5.4, 5.43, 0.0, -58.1, 84.07, 69.23],
 }
 
 ## The land round a model that ends at its own street (in the model's metres): the ring from
@@ -97,6 +104,16 @@ const FIT := {
 ## 16 km (the Barossa Range on the skyline, tools/grounds/barossa/far.py), and `far` how far the match
 ## camera sees to show it.
 const SURROUNDS := {
+	# Mars: Ballarat North painted from OSM (tools/grounds/mars/surrounds/data.py), the canopy model's trees; its
+	# houses, the workshops' chimney and the land out to the ranges are mars_part2.glb (build_bpy.py).
+	"mars": {"y": -0.06, "inner": 95.0, "outer": 1900.0, "colour": Color(0.48, 0.5, 0.34),
+			"map": "surrounds.webp", "span": 3840.0, "trees": "trees.bin"},
+	# ENGIE: the showground, Olympic Boulevard and its plazas, the Brickpit and the parklands to Haslams Creek
+	# painted from OpenStreetMap with every mapped tree (tools/grounds/engie/surrounds/surrounds.py); its
+	# buildings are modelled in engie_part2.glb (surrounds/landmarks.py), so none are stood up here. It starts
+	# under the stands (85 m), the stadium's paved site drawn over it by the model.
+	"engie": {"y": -0.04, "inner": 85.0, "colour": Color(0.43, 0.46, 0.33),
+			"map": "surrounds.webp", "span": 2048.0, "trees": "trees.bin"},
 	"barossa": {"y": 0.0, "inner": 180.0, "land": "barossa_land.glb", "trees": "trees.bin", "trees_y": true,
 			"gums": "barossa_gums.glb", "far_land": "barossa_far.glb", "far": 16000.0},
 	"mcg": {"y": -0.03, "inner": 140.0, "colour": Color(0.45, 0.55, 0.27),
@@ -156,7 +173,7 @@ const SEAT_COLOURS := {
 	# Mars Stadium (seat_blue and seat_greyblue there keep the values already here).
 	"seat_cream": Color(0.785, 0.747, 0.655), "seat_white": Color(0.815, 0.830, 0.845),
 	"seat_navyblue": Color(0.157, 0.235, 0.502), "seat_charcoal": Color(0.141, 0.165, 0.227),
-	"seat_slategrey": Color(0.361, 0.392, 0.447),
+	"seat_slategrey": Color(0.361, 0.392, 0.447), "seat_lightgrey": Color(0.698, 0.714, 0.737),
 	# Accor: aqua lower bowl (seat_teal there keeps the value already here).
 	"seat_aqua": Color(0.527, 0.719, 0.757),
 	# MCG, by tier from Street View on the ground and Google Earth: white and light grey lower and
@@ -179,6 +196,10 @@ const SEAT_COLOURS := {
 	"seat_lo_blue": Color(0.411, 0.544, 0.550), "seat_lo_tan": Color(0.459, 0.556, 0.489),
 	"seat_mid_blue": Color(0.475, 0.580, 0.518), "seat_mid_tan": Color(0.518, 0.592, 0.457),
 	"seat_up_blue": Color(0.330, 0.473, 0.510), "seat_up_tan": Color(0.378, 0.485, 0.450),
+	# ENGIE Stadium: red tip-up seats on black shells with the odd orange one under the roofs, orange with
+	# some red at the open north-east end (a photo sphere in the stands, Jan 2019).
+	"seat_engie_red": Color8(206, 44, 40), "seat_engie_orange": Color8(232, 112, 36),
+	"seat_engie_shell": Color8(34, 34, 36),
 	# York Park's teal-green plastic (york_park/model/paint.py), the SCG's two seat colours
 	# (their glb material colours, linear -> sRGB).
 	"seat_plastic": Color(0.255, 0.365, 0.33),
