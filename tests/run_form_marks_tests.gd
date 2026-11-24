@@ -228,7 +228,8 @@ func _test_selection_marks_taps() -> void:
 	root.size = Vector2i(390, 844)
 	var side: Dictionary = _gs.current_side()
 	var expect: Dictionary = _gs.form_marks(side)
-	_check((expect["cold"] as Dictionary).size() == 3, "Six rounds in, three in the side are below their season (%d)" % (expect["cold"] as Dictionary).size())
+	# How many are cold is the seeded career's, not the rule's (2 since #1998 made a shot a kick): up to three.
+	_check((expect["cold"] as Dictionary).size() >= 1 and (expect["cold"] as Dictionary).size() <= 3, "Six rounds in, up to three in the side are below their season (%d)" % (expect["cold"] as Dictionary).size())
 	_check((expect["hot"] as Dictionary).size() >= 1 and (expect["hot"] as Dictionary).size() <= 3, "...and up to three in the twos are marked (%d)" % (expect["hot"] as Dictionary).size())
 	_router.go("selection")
 	await _settle(10)
