@@ -166,3 +166,16 @@ What has landed toward each open row of docs/TODO.md and docs/TODO_RULINGS.md, o
 - 202: Merged #2070: 3D 1.0 plan: MetaHuman phone cost re-measured, build packaging owner (row 202).
 - 202: Merged #2036: Mars Stadium: the 2026 ground in matches, fence fitted to Google Earth, measured rings, real seat counts, Ballarat North surroundings (row 202).
 - 202: Merged #2037: ENGIE Stadium rebuilt to the MCG standard, with real Olympic Park surroundings.
+- 201: Merged #1998: Match sim: a shot on goal counts as a kick and a disposal (includes #1977).
+- 202: Merged #2052: The MCG of each era for Legacy matches: seasons, references, stands (row 202 2b, WIP).
+- 142: Merged #2059: Legacy ratings: honours worth 80, real peaks from best two seasons, Patton's ceiling, injured stars back.
+- 202: Merged #2048: Blacktown stages 1-3: fence on its real curve; stand, wing, indoor centre, bank and yard at Google Earth's sizes and heights; surroundings (row 202 2b).
+- 202: Merged #1993: Optus Stadium to the MCG standard: roof, bronze facade, surrounds.
+- 202: Merged #2033: 3D 1.0 release checklist: grounds, players, animations, presentation (row 202).
+- 202: Merged #2043: Match crew in 3D: boundary and goal umpires, trainers and runners.
+- 202: Merged #2027: MCG seats: take out the 405 still under the tiers, hold the MCG to the seat rule.
+- 202: Merged #2014: 3D view: turf and picture in real broadcast colour (Director Bible 2.114).
+- 202: Merged #2022: 3D match: the goal replay shows the kick: lead-up, kicker, ball through the posts (row 202 2e).
+- 207: Merged #1990: 3D match: the goal kicker's TV stat card over the picture (row 207).
+- 202: Merged #1945: Ground shots: film every ground nightly and flag what changed (row 202).
+- 202: Merged #1985: 3D match: holding-the-ball frees show the tackle; tackles that stop play cut close (row 202 2e, WIP).
