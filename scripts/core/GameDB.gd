@@ -280,6 +280,7 @@ func reload(dataset := Datasets.DEFAULT) -> void:
 	override_hits = {}
 	for p in players:
 		Potential.assign(p)
+		Ratings.rate_on_rehab(p)
 	_apply_ovr_overrides(players)
 	_apply_potential_overrides(players)
 	# The lists first: the prospects below borrow their shapes from these players
