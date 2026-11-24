@@ -310,7 +310,10 @@ func _fit_docked() -> void:
 ## The play, speed and skip buttons are not drawn and take no tap, click or key
 ## while a break, a call, a sheet or full time is up: they showed through the
 ## dimmed page under every sheet, as buttons that looked live and were not.
-## They keep their place, so the oval and the feed do not move when a sheet closes.
+## On a phone they keep their place, so the oval and the feed do not move when a
+## sheet closes. A PC's sheets cover only the oval, so the buttons step out of the
+## column and the feed takes their room until the sheet closes (director,
+## 2026-11-24: the hidden buttons left an empty strip under a squashed feed).
 func _sync_under_sheet() -> void:
 	if _controls_box == null or not is_instance_valid(_controls_box) or _over == null:
 		return
@@ -319,7 +322,11 @@ func _sync_under_sheet() -> void:
 		if c is Control and (c as Control).visible and not c.is_queued_for_deletion() \
 				and (c as Control).mouse_filter == Control.MOUSE_FILTER_STOP:
 			covered = true
-	_controls_box.modulate.a = 0.0 if covered else 1.0
+	if _pc:
+		_controls_box.modulate.a = 1.0
+		_controls_box.visible = not covered
+	else:
+		_controls_box.modulate.a = 0.0 if covered else 1.0
 	for b in _controls_box.find_children("*", "BaseButton", true, false):
 		(b as BaseButton).mouse_filter = Control.MOUSE_FILTER_IGNORE if covered else Control.MOUSE_FILTER_STOP
 		(b as BaseButton).focus_mode = Control.FOCUS_NONE if covered else Control.FOCUS_ALL
@@ -744,8 +751,9 @@ class MomentumMeter extends Control:
 		draw_rect(Rect2(mid - 1.0, 0, 2.0, size.y), UiKit.TEXT)
 
 
-## A PC's numbers beside the oval. Scoring shots are the scoreboard's and inside
-## 50s are counted as each is played, so both are right to the second. The rest
+## A PC's numbers beside the oval. Inside 50s are counted as each is played, so
+## they are right to the second (scoring shots left out: the scoreboard already
+## says them, director 2026-11-24 "not a useful stat"). The rest
 ## (disposals, marks, tackles, clearances) are the stats sheet's own totals at
 ## the last break, and say which break: the feed of play cannot count them.
 const LIVE_STATS := [["disposals", "Disposals"], ["marks", "Marks"], ["tackles", "Tackles"], ["clearances", "Clearances"]]
@@ -802,8 +810,6 @@ func _paint_live_stats() -> void:
 		head.add_child(club)
 	_live_stats.add_child(UiKit.rule())
 	_live_stats.add_child(head)
-	_live_stats.add_child(_live_row("shots", "Scoring shots",
-			int(_shown_goals[0]) + int(_shown_behinds[0]), int(_shown_goals[1]) + int(_shown_behinds[1])))
 	_live_stats.add_child(_live_row("inside50", "Inside 50s", int(_live_i50[0]), int(_live_i50[1])))
 	if team.size() != 2:
 		return
