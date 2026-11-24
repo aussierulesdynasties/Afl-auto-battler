@@ -66,7 +66,7 @@ the machine pre-inspection clean, then his fly-through.
 ### The 24 Legacy-mode grounds
 
 Rebuilds under way: York Park, Mars Stadium (open, #2036, now in matches), Cazaly's Stadium, Traeger Park
-(not yet in matches; #2006 wires it), Blacktown (stages 1-3 on main, #2048: fence on its real curve, stands at Google Earth's sizes, surroundings). Each has its own "Make ... look real" thread.
+(not yet in matches; #2006 wires it), Blacktown (stages 1-3 on main, #2048: fence on its real curve, stands at Google Earth's sizes, surroundings). Each has its own "Make ... look real" thread. The MCG of each era for Legacy matches (seasons, references, stands) is under way, first part on main (#2052, "Build the MCG of each era").
 
 **No owner:** Waverley Park, Windy Hill, Moorabbin Oval, Ikon Park, Whitten Oval, Football Park,
 Subiaco Oval, WACA (scoreboard legs inside the boundary), North Hobart Oval, Bruce Stadium,
@@ -90,7 +90,7 @@ Stadium (all first drafts on main), and Accor Stadium, Marrara Oval (TIO Darwin)
 |---|---|---|---|
 | MetaHuman body in every match | On main (2026-11-23) | #1976 | Improve the players' on-field look |
 | Builds by height and weight | Ruled (2.97, 2.98); on main with #1976 | #1976 | as above |
-| Far detail levels and edge smoothing for players | Built and measured (MCG High 6.2 M triangles to 2.75 M); the MetaHuman landed without them, so main draws 5.7-8.1 M at every level | #2054 | Keep stadiums smooth on phones |
+| Far detail levels and edge smoothing for players | On main (#2054): MCG High 7.1 to 2.4 M triangles, Low 6.2 to 1.6 M; video memory about 1.03-1.11 GB | #2054 | Keep stadiums smooth on phones |
 | Faces: every one of the 762 real players from his portrait, automatically | v5 board; v6 under way (MetaHuman grooms per player, cornrows, buzz cuts). Not in a match yet; how 44 different heads load in a match and what they cost on a phone is not designed | | Find a way to build real player faces |
 | Hair for real players | Epic's groom library, picked and reshaped per player from the photo (part of faces v6) | | Find a way to build real player faces |
 | Club Forge hair (20 cuts) | Refitted to MetaHuman, trimmed to 20; on main | #1976 | as #1976 |
@@ -117,7 +117,7 @@ Stadium (all first drafts on main), and Accor Stadium, Marrara Oval (TIO Darwin)
 
 | Item | State 2026-11-22 | PR | Owner |
 |---|---|---|---|
-| Main camera like AFL TV (zoom by crowding, lead on the ball) | Built | #1995 | Match the main camera to AFL TV (thread failed; PR open) |
+| Main camera like AFL TV (zoom by crowding, lead on the ball) | On main | #1995 | Match the main camera to AFL TV |
 | Set shots from behind, ruck close-ups, wide shot, after a mark stays on the main camera | On main (2.93-2.113) | | done, waits on his look |
 | Close cut on tackles that stop play | On main (#1985) | | done, waits on his look |
 | Goal replay that shows the kick, TV sting | Sting (#2007) and the replay that shows the kick on main | #2022 | Add TV-style goal replays |
@@ -194,3 +194,4 @@ and the smoothing buffers.
 - 2026-11-22: the data-source rule for grounds written into MCG_STANDARD.md and sent to every ground thread; softened the same day (fidelity first; only raw imagery in the repo or textures is out).
 - 2026-11-22 evening: stat card (#1990), goal replay (#2022), siren and crowd (#2012) and broadcast colour (#2014) and the MCG seat fix (#2027) on main; MetaHuman players (#1976) and the match crew (#2043) on main, phone cost re-measured (players' detail levels still missing, #2054); every export preset found to leave out the ground and player models (#2058); owners and PRs for ENGIE, Manuka, Norwood, Barossa, Mars, guernseys, umpires and trainers, kick clips and night lights.
 - 2026-11-23: Optus Stadium rebuild on main (#1993); Blacktown stages 1-3 on main (#2048).
+- 2026-11-24: player detail levels and edge smoothing (#2054), the TV main camera (#1995), the MCG of each era (first part, #2052) and the shared Google Earth compare tool (#2047) on main.
