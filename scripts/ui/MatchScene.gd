@@ -190,7 +190,7 @@ func _ready() -> void:
 	_crowd.name = "Crowd"
 	add_child(_crowd)
 	_build()
-	_pitch.three_d = GameState.match_3d_on()
+	_pitch.three_d = false  # Release 1.0.21: no 3D art in the build
 	_pitch.graphics = GameState.graphics_quality()
 	_pitch.setup(_res)
 	_sync_bug()

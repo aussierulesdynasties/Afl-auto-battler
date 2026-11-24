@@ -736,9 +736,8 @@ func set_match_figures_on(on: bool) -> void:
 
 
 ## The 3D oval (row 197): the match played on a real 3D ground. Off by default while it is built.
-## Release 1.0.21 leaves the 3D art out of the build, so the 3D oval is always off.
 func match_3d_on() -> bool:
-	return false
+	return bool(get_setting("match_3d", false))
 
 
 func set_match_3d_on(on: bool) -> void:
