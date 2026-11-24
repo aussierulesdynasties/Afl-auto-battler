@@ -89,6 +89,20 @@ static func grade(pct: float) -> String:
 	return ""
 
 
+## The attributes his rating rests on: those carrying at least MIN_WEIGHT of
+## his position's share in Ratings.ROLE_WEIGHTS (the line rate_overall rates
+## him on, his first role), heaviest first. A midfielder: contested ball and
+## creating. Shown in bold on the pre-season meeting's stat focus.
+static func rated_on(p: Dictionary) -> Array:
+	var core: Dictionary = Ratings.ROLE_WEIGHTS.get(str(p.get("role", "MID")), Ratings.ROLE_WEIGHTS["MID"])
+	var keys := []
+	for key in core:
+		if float(core[key]) >= MIN_WEIGHT:
+			keys.append(str(key))
+	keys.sort_custom(func(a, b): return float(core[a]) > float(core[b]))
+	return keys
+
+
 ## Up to three strengths among what his role is judged on, best first:
 ## [{"key", "label", "grade"}]. Empty when nothing stands out.
 static func strengths(p: Dictionary, limit := 3) -> Array:
