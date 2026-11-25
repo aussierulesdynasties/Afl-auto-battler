@@ -35,7 +35,7 @@ func setup(home: String, away: String) -> ScoreBug:
 	mid.custom_minimum_size = Vector2(MID_W, h)
 	var v := VBoxContainer.new()
 	v.alignment = BoxContainer.ALIGNMENT_CENTER
-	v.add_theme_constant_override("separation", -2)
+	v.add_theme_constant_override("separation", UiKit.Space.TUCK)
 	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	mid.add_child(v)
 	_top = UiKit.line("", UiKit.SECONDARY, Color.WHITE, true)
@@ -57,8 +57,8 @@ func _cell(code: String, home: bool, h: float) -> Control:
 	var r := UiKit.RADIUS
 	var sb := UiKit.style(_club_colour(code), 0, r)
 	sb.set_border_width_all(0)
-	sb.content_margin_left = 3
-	sb.content_margin_right = 3
+	sb.content_margin_left = UiKit.Space.THIN
+	sb.content_margin_right = UiKit.Space.THIN
 	# Rounded on the outside only: the clock sits flush between the two cells.
 	if home:
 		sb.corner_radius_top_right = 0
@@ -70,7 +70,7 @@ func _cell(code: String, home: bool, h: float) -> Control:
 	p.custom_minimum_size = Vector2(CELL_W, h)
 	var row := HBoxContainer.new()
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	row.add_theme_constant_override("separation", 2)
+	row.add_theme_constant_override("separation", UiKit.Space.SLIM)
 	p.add_child(row)
 	var crest := UiKit.club_marker(code, h - 4.0)
 	crest.mouse_filter = Control.MOUSE_FILTER_IGNORE

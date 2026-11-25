@@ -40,6 +40,7 @@ var _wide := false
 var _chemistry: Control           # the Team Chemistry sheet, open over the side
 var _list_host: VBoxContainer = null  # a wide screen's column for the players not picked
 var _bench_host: VBoxContainer = null  # the interchange's place in that column, under ACROSS_BELOW wide
+var _settled := false   # built once this visit: a move or a switch rebuilds without the arrival
 
 
 func _ready() -> void:
@@ -54,7 +55,7 @@ func _ready() -> void:
 	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
 	UiKit.apply_insets(margin, 12)
 	add_child(margin)
-	_root = UiKit.vbox(8)
+	_root = UiKit.vbox(UiKit.GAP)
 	margin.add_child(_root)
 	_week = WeekPreview.new(self, func(note: String, undo: Dictionary):
 		_undo = undo
@@ -65,6 +66,7 @@ func _ready() -> void:
 		if is_inside_tree() and not UiKit.keyboard_resize(self):
 			_build())
 	_build()
+	_settled = true
 	FirstVisitIntro.show_if_due.call_deferred(self, "selection")
 
 
@@ -109,7 +111,7 @@ func _build() -> void:
 	if not auto and not GameState.my_selection().has("WING"):
 		GameState.set_selection(GameState.current_side())
 	if _wide:
-		var cols := UiKit.hbox(14)
+		var cols := UiKit.hbox(UiKit.Space.LOOSE)
 		cols.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		_root.add_child(cols)
 		# The players not picked have the column beside the oval (director,
@@ -118,13 +120,13 @@ func _build() -> void:
 		# to live here. put the unselected players there"). The synergies and
 		# your own news, which move with the side, sit under them.
 		_week.with_report = false
-		_list_host = UiKit.vbox(6)
+		_list_host = UiKit.vbox(UiKit.Space.CLOSE)
 		_list_host.name = "NotPickedColumn"
 		_list_host.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		var across := UiKit.view_width(self) < ACROSS_BELOW
 		_bench_host = null
 		if across:
-			_bench_host = UiKit.vbox(6)
+			_bench_host = UiKit.vbox(UiKit.Space.CLOSE)
 			_bench_host.name = "BenchHost"
 		var side_page := _side_page(auto)
 		if across:
@@ -132,7 +134,7 @@ func _build() -> void:
 		var side := _scroller(side_page, "SelectionScroll")
 		cols.add_child(side)
 		# The week keeps a readable measure: it does not stretch with the window.
-		var right := UiKit.vbox(10)
+		var right := UiKit.vbox(UiKit.Space.ROOM)
 		right.name = "WeekColumn"
 		right.size_flags_horizontal = Control.SIZE_FILL
 		var measure := clampf(UiKit.view_width(self) * 0.4, WEEK_W_MIN, WEEK_W_MAX)
@@ -171,7 +173,7 @@ func _build() -> void:
 		_root.add_child(sc)
 	if GameState.side_from_match and GameState.match_day_setup_open():
 		# Reached from the match-day setup: the way back is the primary action.
-		var row := UiKit.hbox(8)
+		var row := UiKit.hbox(UiKit.GAP)
 		row.alignment = BoxContainer.ALIGNMENT_END
 		var back := UiKit.btn("Back to match day", UiKit.NAME, true)
 		back.name = "BackToMatchDay"
@@ -223,7 +225,7 @@ func _scroller(page: Control, node_name: String) -> ScrollContainer:
 ## The side: the oval you can look at theirs on, your 18 and the bench, and
 ## the players not picked, with what acts on the side beside the interchange.
 func _side_page(auto: bool) -> Control:
-	var page := UiKit.vbox(8)
+	var page := UiKit.vbox(UiKit.GAP)
 	page.name = "SidePage"
 	var nxt := GameState.my_next_opponent()
 	if not nxt.is_empty():
@@ -254,7 +256,7 @@ func _side_page(auto: bool) -> Control:
 		var actions := HBoxContainer.new()
 		actions.name = "SideActions"
 		actions.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		actions.add_theme_constant_override("separation", 8)
+		actions.add_theme_constant_override("separation", UiKit.GAP)
 		_fill_actions(actions)
 		builder.interchange_actions = actions
 		builder.hint_extra = "Auto-pick names our side until you move someone." if auto else ""
@@ -262,10 +264,12 @@ func _side_page(auto: bool) -> Control:
 		# why. It shares the line of the Your team / opponent switch, so the
 		# height it used goes to the players not picked.
 		var meter := ChemistryMeter.meter(_open_chemistry)
+		if not _settled:
+			ChemistryMeter.arrive(meter)
 		var tabs: Control = page.get_node_or_null("OvalView")
 		# (A larger text size, Settings, has no room for both on a phone's line.)
 		if tabs != null and (_wide or UiKit.text_scale <= 1.0):
-			var top := UiKit.hbox(12)
+			var top := UiKit.hbox(UiKit.Space.PAD)
 			top.name = "SideTop"
 			tabs.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 			page.remove_child(tabs)
@@ -461,7 +465,7 @@ func _side_ink(code: String) -> Color:
 
 
 func _side_name(code: String, fs: int, marker := 18.0) -> Control:
-	var h := UiKit.hbox(6)
+	var h := UiKit.hbox(UiKit.Space.CLOSE)
 	h.add_child(UiKit.club_marker(code, marker))
 	h.add_child(UiKit.line(GameDB.club_name(code), fs, _side_ink(code), true))
 	return h

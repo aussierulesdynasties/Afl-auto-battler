@@ -198,6 +198,13 @@ func finish_now() -> void:
 	Feel.moved.append("fw_leave")
 	done.emit()
 	var layer := get_parent()
+	# Fades out; with Reduced motion it is simply gone.
+	if not UiKit.motion_on():
+		if layer is CanvasLayer:
+			layer.queue_free()
+		else:
+			visible = false
+		return
 	var tw := create_tween()
 	tw.tween_property(self, "modulate:a", 0.0, 0.2)
 	if is_instance_valid(_footer):
