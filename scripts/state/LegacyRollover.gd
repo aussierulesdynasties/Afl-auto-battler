@@ -195,38 +195,25 @@ static func foundation(gs, code: String, year: int) -> Dictionary:
 		if str(r.get("src", "")) != "":
 			established.append([p, r])
 		list.append(p)
-	if not established.is_empty():
-		# Each data season is rated on what it recorded (director 2026-11-15,
-		# "I never okayed invented stats"): a 1997 line lacks rebound 50s, a
-		# 2005 one has them. The career's own set comes back afterwards.
-		var by_src := {}
-		for e in established:
-			var y := int((e[0] as Dictionary).get("stats_year", 0))
-			if not by_src.has(y):
-				by_src[y] = []
-			by_src[y].append(e[0])
-		var keep: Dictionary = Ratings.unrecorded.duplicate()
-		for y in by_src:
-			Ratings.set_unrecorded(Ratings.find_unrecorded(by_src[y]))
-			Ratings.derive_all(by_src[y], GameDB.players)
-		Ratings.set_unrecorded(keep)
-		for e in established:
-			var p: Dictionary = e[0]
-			var r: Dictionary = e[1]
-			var role := str(r.get("role", ""))
-			if role in ["RUCK", "MID", "DEF", "FWD"] and role != str(p["role"]):
-				p["role"] = role
-				p["role2"] = Ratings.assign_secondary(p)
-			# His rating that season on that season's own scale.
-			var ovr := str(r.get("ovr", ""))
-			if ovr != "":
-				p["attr"] = Prospects.fit_attributes(p["attr"], str(p["role"]), float(ovr.to_int()), float(p["gm"]))
-			p["overall"] = Ratings.rate_overall(p["attr"], str(p["role"]), float(p["gm"]))
-			p["value"] = Ratings.salary_value(int(Rating.ovr(p)))
-			# Unknown up to the season he joins; every season after is counted.
-			p["career"] = Career.from_source("?", year - 1)
-			p["data_club"] = code
-			Potential.assign(p)
+	# STEP 7 (rating rebuild): rate each on his src season's nearest stats
+	# (tools/wheelo/attributes.py). Until then: projected to the entry list's
+	# rating that season.
+	for e in established:
+		var p: Dictionary = e[0]
+		var r: Dictionary = e[1]
+		var role := str(r.get("role", ""))
+		if role in ["RUCK", "MID", "DEF", "FWD"]:
+			p["role"] = role
+		var ovr := str(r.get("ovr", ""))
+		if ovr != "":
+			p["fixed_target"] = float(ovr.to_int())
+		Prospects.project(p)
+		p.erase("fixed_target")
+		p.erase("projected")
+		# Unknown up to the season he joins; every season after is counted.
+		p["career"] = Career.from_source("?", year - 1)
+		p["data_club"] = code
+		Potential.assign(p)
 	GameDB.assign_aliases(list)
 	GameDB.register_draftees(list)
 	list.sort_custom(func(a, b): return int(Rating.ovr(a, 0)) > int(Rating.ovr(b, 0)))
@@ -311,7 +298,7 @@ static func _new_player(code: String, year: int, n: int, r: Dictionary) -> Dicti
 			if r.has(k) and str(r[k]) != "":
 				p[k] = float(str(r[k]))
 			else:
-				blank.append(k)   # not recorded that season (Ratings.unrecorded)
+				blank.append(k)   # not recorded that season
 		p["blank"] = blank
 		p["stats_year"] = int(src)
 		p["draft_rank"] = 0

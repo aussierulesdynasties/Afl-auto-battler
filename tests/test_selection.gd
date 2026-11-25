@@ -17,8 +17,6 @@ func run() -> void:
 	checks = 0
 	GameState.replay_seed = SUITE_SEED
 	# These fixtures (Geelong's second ruck off the 18, a club's 21st man) are about the rules, not
-	# the director's hand-set ratings (data/ovr_overrides.csv): they play on the data without them.
-	GameDB.skip_ovr_overrides = true
 	GameDB.reload()
 	_t("_test_auto_matches_select_22")
 	_t("_test_ruck_selection_integrity")
@@ -43,7 +41,6 @@ func run() -> void:
 	_t("_test_youth_no_cycle")
 	GameState.delete_saved_career()
 	GameState.replay_seed = 0
-	GameDB.skip_ovr_overrides = false
 	GameDB.reload()
 	print(Ran.line("Selection", self))
 

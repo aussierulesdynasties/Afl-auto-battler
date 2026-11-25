@@ -24,7 +24,7 @@ const REAL_RETIRE_AGE := 27.0
 ## turned tall (ARD-M3-002).
 const FWD_MIN_CM := 172
 
-const ATTR_KEYS := Skills.KEYS
+const ATTR_KEYS := Attributes.KEYS
 
 ## Consensus-rank taper: pick 1 projects as an impact rookie, the back half of
 ## the draft as fringe/development talent. Deliberately below the best 2026
@@ -303,14 +303,12 @@ static func project(p: Dictionary) -> void:
 	if _is_game_made(p):
 		_real_trait_rates(a, p, role)
 
-	a = fit_attributes(a, role, target)
+	a = fit_attributes(a, Rating.apos_of(p), target)
 	for key in a:
 		a[key] = int(a[key])
 	p["attr"] = a
 	p["projected"] = true
-	p["sample"] = 14.0  # projections skip the low-games confidence shrink
-	p["overall"] = Ratings.rate_overall(a, role, 14.0)
-	p["value"] = Ratings.salary_value(int(Rating.ovr(p)))
+	p["sample"] = 14.0
 	p.erase("potential")  # re-projection re-derives it (deterministically)
 	Potential.assign(p)
 
@@ -507,19 +505,18 @@ static func _shape_for(role: String, rng: RandomNumberGenerator, level: float) -
 	return out
 
 
-## Shift every attribute by a uniform offset so rate_overall lands on target.
+## Shift every attribute by a uniform offset so his OVR at `apos` lands on target.
 ## Bisection over a monotone function - at most ~14 cheap evaluations.
 ## Attributes outside the overall rating: a refit leaves them where they are.
 const UNRATED_KEYS := ["discipline"]
 
 
-static func fit_attributes(a: Dictionary, role: String, target: float,
-		games: float = 14.0) -> Dictionary:
+static func fit_attributes(a: Dictionary, apos: String, target: float) -> Dictionary:
 	var lo := -40.0
 	var hi := 40.0
 	for i in range(14):
 		var mid := (lo + hi) * 0.5
-		if _shifted_overall(a, role, mid, games) < target:
+		if _shifted_overall(a, apos, mid) < target:
 			lo = mid
 		else:
 			hi = mid
@@ -536,12 +533,11 @@ static func fit_attributes(a: Dictionary, role: String, target: float,
 	return out
 
 
-static func _shifted_overall(a: Dictionary, role: String, offset: float,
-		games: float) -> float:
+static func _shifted_overall(a: Dictionary, apos: String, offset: float) -> float:
 	var shifted := {}
 	for key in a:
 		shifted[key] = float(a[key]) if key in UNRATED_KEYS else clampf(float(a[key]) + offset, 1.0, 99.0)
-	return float(Ratings.rate_overall(shifted, role, games))
+	return float(Rating.of_attrs(shifted, apos))
 
 
 # ---------------------------------------------------------------------------
@@ -659,12 +655,6 @@ static func age_player(p: Dictionary, _year: int) -> float:
 		p["sample"] = 16.0
 	else:
 		p["sample"] = maxf(18.0, float(p.get("gm", 0.0)))
-	var a: Dictionary = p.get("attr", {})
-	if not a.is_empty():
-		var ov := int(Rating.ovr(p, 50))
-		p["overall"] = Ratings.rate_overall(a, str(p.get("role", "MID")), Ratings.effective_games(p))
-		p["value"] = Ratings.salary_value(int(Rating.ovr(p)))
-		return float(int(Rating.ovr(p)) - ov)
 	return 0.0
 
 
@@ -993,12 +983,10 @@ static func _shape_custom(p: Dictionary, spec: Dictionary) -> void:
 		var k: String = CUSTOM_TRAITS[str(t)]
 		a[k] = float(a[k]) - CUSTOM_TRAIT_PUSH
 	var target := float(Rating.ovr(p))
-	a = fit_attributes(a, role, target)
+	a = fit_attributes(a, Rating.apos_of(p), target)
 	for key in a:
 		a[key] = int(a[key])
 	p["attr"] = a
-	p["overall"] = Ratings.rate_overall(a, role, 14.0)
-	p["value"] = Ratings.salary_value(int(Rating.ovr(p)))
 	p["potential"] = maxi(int(p.get("potential", Rating.ovr(p))), int(Rating.ovr(p)))
 
 

@@ -1,15 +1,14 @@
 extends RefCounted
-## The one attribute list and the one OVR door (Director Bible 4.2.30a,
-## docs/RATING_REBUILD.md Phase 1): every screen's list is Attributes', each
-## attribute appears once in every list, the labels are the ones the screens
-## showed, and Rating.ovr returns a player's stored OVR exactly (Phase 1 plays
-## and shows nothing differently). Run through tests/run_attributes_tests.gd.
+## The one attribute list (Director Bible 4.2.30a, docs/RATING_REBUILD.md §2):
+## 18 attributes in four groups, every screen's list is Attributes', each
+## attribute appears once in every list, and each reads one label everywhere.
+## The OVR read from them is tests/test_ratings.gd's. Run through
+## tests/run_attributes_tests.gd.
 
 var failures: Array[String] = []
 var checks := 0
 
 const ATTRIBUTES := preload("res://scripts/sim/Attributes.gd")
-const RATING := preload("res://scripts/sim/Rating.gd")
 
 
 func run() -> void:
@@ -22,8 +21,6 @@ func run() -> void:
 	_t("_test_play_style_keys")
 	_t("_test_screens_use_the_list")
 	_t("_test_label")
-	_t("_test_ovr_returns_stored")
-	_t("_test_ovr_every_real_player")
 	print(Ran.line("Attributes", self))
 
 
@@ -59,9 +56,9 @@ func _covers_once(keys: Array, what: String) -> void:
 
 func _test_one_list() -> void:
 	var keys: Array = ATTRIBUTES.KEYS
-	_check(keys.size() == 16, "Phase 1 keeps today's 16 skills; got %d" % keys.size())
-	_check(_const("res://scripts/sim/Skills.gd", "KEYS") == keys,
-			"Skills.KEYS is Attributes.KEYS, in the same order")
+	_check(keys.size() == 18, "the rebuild's 18 attributes; got %d" % keys.size())
+	var grouped: Array = ATTRIBUTES.PHYSICAL + ATTRIBUTES.TECHNICAL + ATTRIBUTES.FOOTY_IQ + ATTRIBUTES.MENTAL
+	_covers_once(grouped, "the four groups")
 	for k in keys:
 		_check(keys.count(k) == 1, "%s is in the list once" % k)
 
@@ -74,11 +71,10 @@ func _test_card_rows() -> void:
 				"a card row is [key, label]: %s" % str(row))
 		keys.append(str(row[0]))
 	_covers_once(keys, "CARD_ROWS")
-	# The order and words the player sheet and training showed before Phase 1.
-	_check(keys.slice(0, 3) == ["kicking", "handballing", "contested"],
-			"the card starts Kicking, Handballing, Contested ball")
-	_check(ATTRIBUTES.label("contested") == "Contested ball", "contested reads Contested ball")
-	_check(ATTRIBUTES.label("star") == "Star power", "star reads Star power")
+	# Group by group, in storage order.
+	_check(keys == ATTRIBUTES.KEYS, "the card lists them group by group, Speed to Durability")
+	_check(ATTRIBUTES.label("contested_ball") == "Contested ball", "contested_ball reads Contested ball")
+	_check(ATTRIBUTES.label("reading_play") == "Reading the play", "reading_play reads Reading the play")
 
 
 func _test_prose_labels() -> void:
@@ -89,16 +85,14 @@ func _test_prose_labels() -> void:
 		if str(prose[k]) != ATTRIBUTES.label(str(k)):
 			differ.append(str(k))
 	differ.sort()
-	_check(differ == ["intercept", "ruck"],
-			"only intercept and ruck read differently in a sentence; got %s" % str(differ))
-	_check(prose["intercept"] == "Intercepting" and prose["ruck"] == "Ruck work",
-			"the sentence words are Intercepting and Ruck work")
+	_check(differ == ["ruck"], "only ruck reads differently in a sentence; got %s" % str(differ))
+	_check(prose["ruck"] == "Ruck work", "the sentence word is Ruck work")
 
 
 func _test_groups_and_callouts() -> void:
 	var keys := []
 	var groups: Array = ATTRIBUTES.GROUPS
-	_check(groups.size() == 5, "the stat guide has five groups; got %d" % groups.size())
+	_check(groups.size() == 4, "the stat guide has the four groups; got %d" % groups.size())
 	for g in groups:
 		keys.append_array(g[1])
 	_covers_once(keys, "GROUPS")
@@ -151,23 +145,3 @@ func _test_label() -> void:
 				"the stat guide names %s as the card does" % k)
 	_check(ATTRIBUTES.label("not_an_attribute") == "not_an_attribute",
 			"an unknown key reads as itself")
-
-
-## Phase 1: the door returns what p["overall"] and p.get("overall", x) gave.
-func _test_ovr_returns_stored() -> void:
-	_check(RATING.ovr({"overall": 73}) == 73, "a stored 73 reads 73")
-	_check(typeof(RATING.ovr({"overall": 73})) == TYPE_INT, "an int stays an int")
-	_check(RATING.ovr({"overall": 72.5}) == 72.5, "a float stays the same float")
-	_check(RATING.ovr({}) == null, "no OVR and no fallback reads null, as get() did")
-	_check(RATING.ovr({}, 0) == 0, "no OVR reads the fallback")
-	_check(RATING.ovr({"overall": 81}, 50) == 81, "a stored OVR wins over the fallback")
-
-
-func _test_ovr_every_real_player() -> void:
-	var players: Array = GameDB.players
-	_check(players.size() > 500, "the league has its players; got %d" % players.size())
-	var wrong := 0
-	for p in players:
-		if RATING.ovr(p) != (p as Dictionary).get("overall"):
-			wrong += 1
-	_check(wrong == 0, "every real player's OVR reads unchanged; %d differ" % wrong)

@@ -54,7 +54,7 @@ static func _value(p: Dictionary, weights: Dictionary) -> float:
 	var a: Dictionary = p.get("attr", {})
 	var v := 0.0
 	for k in weights:
-		v += float(weights[k]) * Skills.value(a, k, 0.0)
+		v += float(weights[k]) * Attributes.value(a, k, 0.0)
 	return v
 
 

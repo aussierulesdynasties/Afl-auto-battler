@@ -5,9 +5,15 @@ docs/RATING_REBUILD.md §2): each real player's attributes from his Wheelo
 season, on one scale for every position.
 
   data/attributes_2026.csv
-      club,first,last,src,apos,speed_src,<the 18 attributes>: one row per
-      listed player (data/players_enriched_2026.csv and the list additions),
-      from his 2026 season or, if he missed 2026, his last season (src).
+      club,first,last,src,apos,line2,speed_src,<the 18 attributes>: one row
+      per listed player (data/players_enriched_2026.csv and the list
+      additions), from his 2026 season or, if he missed 2026, his last season
+      (src). line2 is his second line (DEF, MID, FWD, RUCK or blank): a line
+      Champion Data rated him in for a season of 5+ games in the three seasons
+      before the data season, other than his own (director 2026-11-25,
+      question box: "Where CD rated him"); the one with more games if two.
+      Only seasons where Wheelo keeps his position count (it has none for
+      2012 and 2014-2018, nor before 2012).
 
 The scale (approved 2026-11-25). A rate: the league's 2nd percentile that
 season is 1, its 98th is 99. A count a game: zero is 1, the league's 98th
@@ -517,6 +523,36 @@ def speed_from_sprint(sec: float) -> int:
     return int(round(max(1.0, min(SPEED_HI, x))))
 
 
+# --------------------------------------------------------- second line --
+LINE_OF = {"Key Defender": "DEF", "Gen. Defender": "DEF", "Midfielder": "MID", "Mid-Forward": "MID",
+           "Gen. Forward": "FWD", "Key Forward": "FWD", "Ruck": "RUCK"}
+SECOND_LINE_SEASONS = 3
+SECOND_LINE_GAMES = 5
+_rated_in: dict = {}
+
+
+def rated_in() -> dict:
+    """{Wheelo PlayerId: [(season, position, games)]}, seasons where Wheelo
+    keeps his position."""
+    if not _rated_in:
+        for y, rows in W.seasons().items():
+            for w in rows:
+                if w["Position"]:
+                    _rated_in.setdefault(w["PlayerId"], []).append((y, w["Position"], w.get("Matches") or 0.0))
+    return _rated_in
+
+
+def second_line(pid, own_pos: str, data_season: int) -> str:
+    """See the module note (line2)."""
+    own = LINE_OF.get(own_pos, "")
+    games = defaultdict(float)
+    for y, pos, gm in rated_in().get(pid, []):
+        line = LINE_OF.get(pos, "")
+        if data_season - SECOND_LINE_SEASONS <= y < data_season and gm >= SECOND_LINE_GAMES                 and line and line != own:
+            games[line] += gm
+    return max(games, key=lambda k: (games[k], k)) if games else ""
+
+
 # -------------------------------------------------------------- build --
 def read(path):
     with open(path, newline="", encoding="utf-8") as fh:
@@ -589,6 +625,7 @@ def rate(players, missed, data_season: int, ref: dict | None = None):
         nm = W.norm(r["first"] + r["last"])
         rows.append({"r": r, "row": got.get("row"), "year": year, "pos": pos, "h": h, "kg": kg, "a01": a01,
                      "games": got["games"],
+                     "line2": second_line(got["id"], pos, data_season) if year >= W.FIRST else "",
                      "kmh": gps.get((nm, r["club"])) or gps.get(nm),
                      "sprint": sprint.get((nm, r["club"])) or sprint.get(nm)})
     wr_measured = any(p["a01"]["_wr"] is not None for p in rows)
@@ -675,7 +712,7 @@ def rate(players, missed, data_season: int, ref: dict | None = None):
             a["speed"], src = min(SPEED_EST_CAP, int(round(SPEED_BASE.get(p["pos"], 56) + bump))), "est"
         r = p["r"]
         row = {"club": r["club"], "first": r["first"], "last": r["last"], "src": p["year"], "apos": p["pos"],
-               "speed_src": src}
+               "line2": p["line2"], "speed_src": src}
         row.update({k: a[k] for k in ATTRS})
         row["_p"] = p
         out.append(row)
@@ -699,7 +736,7 @@ def rate(players, missed, data_season: int, ref: dict | None = None):
 
 def write(start: str, rows):
     path = os.path.join(DATA, STARTS[start][4])
-    cols = ["club", "first", "last", "src", "apos", "speed_src"] + ATTRS
+    cols = ["club", "first", "last", "src", "apos", "line2", "speed_src"] + ATTRS
     with open(path, "w", newline="", encoding="utf-8") as fh:
         wr = csv.DictWriter(fh, fieldnames=cols, lineterminator="\n", extrasaction="ignore")
         wr.writeheader()

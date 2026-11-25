@@ -5699,7 +5699,7 @@ func _trait(p: Dictionary, key: String) -> bool:
 
 ## A player's attribute as he is playing right now.
 func _a(p: Dictionary, key: String) -> float:
-	return Skills.engine(p, key) * fit(p)
+	return Attributes.value(p.get("attr", {}), key) * fit(p)
 
 
 ## The back zone's role weights for a pick on ball use among `group`: each
@@ -7690,7 +7690,7 @@ static func tag_give_up(p: Dictionary, ground: Array) -> float:
 			if not Roles.on_wing(q):
 				n_centre += 1
 	var a: Dictionary = p.get("attr", {})
-	var v := 0.22 * Skills.disposal_of(a, 0.0) / float(maxi(1, n_mids))
+	var v := 0.22 * Attributes.disposal_of(a, 0.0) / float(maxi(1, n_mids))
 	if not Roles.on_wing(p):
 		v += 0.42 * float(a.get("contested", 0)) / float(maxi(1, n_centre))
 	return v

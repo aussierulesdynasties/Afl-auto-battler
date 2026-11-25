@@ -126,8 +126,7 @@ GODOT=<godot console exe> tools/balance.sh match 1000 --a "--weather perfect" --
   for all players and 2025-26 by line. The mark is the strict one (IN, NEAR within mean +-2 sd,
   OUT). Then each side's top tackler a match and tackles per player-game against every 2023-25
   match line. Each team line carries `tp` (per player id [tackles, pressure acts, line]) for
-  this. The harness plays without the set ratings (data/ovr_overrides.csv), so a set-rating effect
-  (a Blicavs) shows only in `tools/audit/brownlow_impl.gd`.
+  this.
 - **Pressure.** A "Pressure a team a game" section sets pressure acts and tackles a team a game, the share of
   pressure acts in the presser's defensive half, tackles per pressure act and the share of tackles inside his
   forward 50 against Champion Data 2025-26 (36 club-seasons; `afl_pressure_rates.json`, built by
