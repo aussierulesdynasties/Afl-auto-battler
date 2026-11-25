@@ -76,6 +76,9 @@ const ZONE := {
 
 var events: Array = []
 var tokens: Array = []          # every token; ids index this array
+## Where the men lying in a tackle's take have a body part on the turf (the 3D view fills it each
+## frame, Oval3DAnim._lying; empty in the flat view): runners keep off them (MatchMotion.keep_off).
+var lying_spots := PackedVector2Array()
 var ball := {}
 ## Who is off the ground now, per side: [{num, pid, name}], from the result's
 ## opening bench (MatchSim.result "bench") and every interchange since. A player
@@ -471,6 +474,41 @@ func stoppage_now() -> Dictionary:
 	return {}
 
 
+## The free kick being taken right now, for the 3D umpires: {at, k, kind} with `at` its mark (where
+## the ball is, in the taker's hands or on its way there) and `k` the free's event. From when
+## the umpire pays it until the ball leaves the taker's boot or he plays on; {} otherwise.
+## Read-only.
+func free_now() -> Dictionary:
+	if _beat.is_empty():
+		return {}
+	var k := int(_beat["k"])
+	var kind := str(_beat["kind"])
+	if kind in FREE_KINDS:
+		if not _phases.slice(0, mini(_pi + 1, _phases.size())).any(
+				func(q): return str(q.get("t", "")) == "emit"):
+			return {}
+		return {"at": _loc(k), "k": k, "kind": kind}
+	var pk := _prev_real(k)
+	if pk < 0 or not str((events[pk] as Dictionary).get("kind", "")) in FREE_KINDS:
+		return {}
+	if str(ball["mode"]) == "flight" or not _locs.has(pk):
+		return {}
+	var at: Vector2 = _locs[pk]
+	if (ball["pos"] as Vector2).distance_to(at) > FREE_PLAY_ON:
+		return {}
+	return {"at": at, "k": pk, "kind": str((events[pk] as Dictionary).get("kind", ""))}
+
+
+## The kinds of free kick (MatchSim's log), and how far the ball may be off a free's mark
+## before the taker has played on.
+const FREE_KINDS := ["free", "last_disposal", "out_on_full", "fifty"]
+const FREE_PLAY_ON := 4.0
+## A chase is home within CHASE_REACH metres; a tackler's run in takes at most CHASE_MAX director
+## seconds (a man 50 m off: about 5 s at a footballer's top speed).
+const CHASE_REACH := 1.6
+const CHASE_MAX := 6.0
+
+
 ## About how many director seconds set-up `p` (the current phase) has left, by _done's own test:
 ## its least time, and the time the slowest man it waits for needs to get within SETUP_NEAR of his
 ## spot at his pace now (the SETUP_STRAGGLERS slowest are not waited for), at most its cap. An
@@ -572,10 +610,12 @@ func _tick(h: float) -> void:
 	# Motion limits (MatchMotion.SPRINT, WALK): whatever moved a token this
 	# step, it moved no faster than a sprint.
 	var from := []
+	var lying := {}
 	MatchMotion.avoid(tokens, _meant_now())
 	for t in tokens:
 		from.append(t["pos"])
 		if not _on_feet(int(t["id"])):
+			lying[from.size() - 1] = true
 			# Still in his tackle's take (down, then back up): his body is where the take put
 			# him, so whatever the play asks of him waits until he is up.
 			t["down"] = maxf(0.0, float(t["down"]) - h)
@@ -584,6 +624,7 @@ func _tick(h: float) -> void:
 		MatchMotion.step(t, h)
 	MatchMotion.separate(tokens, h)
 	MatchMotion.hold_apart(tokens, from, _meant_now())
+	MatchMotion.keep_off(tokens, from, lying_spots, lying, h)
 	for i in range(tokens.size()):
 		MatchMotion.limit_step(tokens[i], from[i], h)
 	_update_ball(h)
@@ -1231,7 +1272,7 @@ func _tackle_phases(k: int) -> Array:
 			victim = _actor_id(events[pk])
 	if tk < 0 or victim < 0:
 		return [{"t": "emit", "log": true}]
-	var chase := {"t": "chase", "who": tk, "victim": victim, "max": 1.6}
+	var chase := {"t": "chase", "who": tk, "victim": victim, "max": 1.6, "run_in": true}
 	if float(ev.get("run_down", 0.0)) > 0.0:
 		chase.merge({"run_down": true, "to": _loc(k), "max": RUN_DOWN_MAX}, true)
 	return [chase,
@@ -1510,7 +1551,7 @@ func _free_phases(k: int) -> Array:
 		var his := [{"t": "possess", "who": victim, "quiet": true}] if not out.is_empty() \
 				else _take_free(victim)
 		return out + his + [
-				{"t": "chase", "who": tk, "victim": victim, "max": 1.6},
+				{"t": "chase", "who": tk, "victim": victim, "max": 1.6, "run_in": true},
 				{"t": "down", "who": tk, "victim": victim, "dur": 0.55},
 				{"t": "emit"}, {"t": "wait", "dur": TAKE_UP}] + _take_free(tk) \
 				+ [{"t": "wait", "dur": 0.5, "ease": true}]
@@ -2782,7 +2823,22 @@ func _enter(p: Dictionary) -> void:
 				# A run-down: the carrier runs to the tackle's spot (_done sets his pace).
 				MatchMotion.set_goal(vt, p["to"], 0.5, true)
 			else:
-				MatchMotion.set_goal(vt, vt["pos"], 0.2, true)
+				if p.get("run_in", false):
+					# A tackler a long way off runs the whole way in (a tackle that lands with
+					# him metres short draws the tackle clip dragging him there: seed 31, 49 m),
+					# for at most CHASE_MAX.
+					var far := (tk0["pos"] as Vector2).distance_to(vt["pos"]) - CHASE_REACH
+					p["max"] = clampf(far / maxf(float(tk0["top"]), 1.0) * 1.25 + 0.3, float(p["max"]), CHASE_MAX)
+				var ahead := Vector2(MatchMotion.GOAL_X * _dir(int(vt["side"])), 0.0) - (vt["pos"] as Vector2)
+				var tpos: Vector2 = tk0["pos"]
+				if p.get("run_in", false) and float(p["max"]) > 1.6 and ahead.dot(tpos - (vt["pos"] as Vector2)) > 0.0:
+					# ...and with the tackler goal side of him, the man he runs down does not stand
+					# waiting: he carries it on toward goal, into the tackle, at a jog (at a run he
+					# changed the scraps after it enough to cross a loose ball upright: suite match).
+					var into := (ahead.normalized() + (tpos - (vt["pos"] as Vector2)).normalized()).normalized()
+					MatchMotion.set_goal(vt, (vt["pos"] as Vector2) + into * 30.0, 0.35, true)
+				else:
+					MatchMotion.set_goal(vt, vt["pos"], 0.2, true)
 			MatchMotion.set_goal(tk0, vt["pos"], 1.0, true)
 			_busy[int(p["who"])] = true
 			_busy[int(p["victim"])] = true
@@ -3097,7 +3153,7 @@ func _done(p: Dictionary) -> bool:
 			if p.get("chasing", false):
 				return _run_down_step(p, tk, v)
 			MatchMotion.set_goal(tk, v["pos"], 1.0, true)
-			return (tk["pos"] as Vector2).distance_to(v["pos"]) <= 1.6 or _pt >= float(p["max"])
+			return (tk["pos"] as Vector2).distance_to(v["pos"]) <= CHASE_REACH or _pt >= float(p["max"])
 		"emit", "possess":
 			return true
 		"hold":
