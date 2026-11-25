@@ -78,8 +78,10 @@ static func open(host: Control) -> Control:
 	var done := func() -> void:
 		GameState.season_awards["presentation_seen"] = true
 		GameState.season_awards.erase("count_at")
+		# Saved on the way out (the next screen change, or the app closing or
+		# going to the background), not on the tap: a whole season's save held
+		# Skip 0.8-1.2 s (director, 2026-11-25, bug bash batch F).
 		GameState.mark_dirty()
-		GameState.autosave()
 		overlay.queue_free()
 	var next := UiKit.btn("Reveal results", UiKit.NAME, true)
 	next.name = "AwardsNext"
