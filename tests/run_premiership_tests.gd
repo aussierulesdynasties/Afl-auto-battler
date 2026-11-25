@@ -80,6 +80,7 @@ func _run() -> void:
 	await _t("_test_casing")
 	await _t("_test_beats")
 	await _t("_test_layout_every_club")
+	await _t("_test_layout_forge_club")
 	await _t("_test_tap_elsewhere")
 	await _t("_test_continue_taps")
 	await _t("_test_back")
@@ -342,14 +343,7 @@ func _test_layout_every_club() -> void:
 	_prime_week()
 	var clubs: Array = _db.active_clubs(_state.season_year)
 	_check(clubs.size() == 18, "18 clubs to lay out (%d)" % clubs.size())
-	# The space the match gives it under the scoreboard.
-	var scene := _open_match(_gf([13, 5], [8, 5]))
-	await _settle()
-	var mc := _ceremony(scene)
-	var area := mc.size if mc != null else Vector2(390, 734)
-	_check(mc != null and area.y > 500.0, "The match's space under the scoreboard (%s)" % str(area))
-	scene.queue_free()
-	await _settle()
+	var area: Vector2 = await _match_area()
 	_state.set_reduced_motion(true)
 	var worst := 1e9
 	var worst_at := ""
@@ -359,32 +353,8 @@ func _test_layout_every_club() -> void:
 			var b: Dictionary = await _open_bare(_facts_for(str(code)), {}, area)
 			var c: Control = b["c"]
 			await process_frame
-			var top := float(c.get("_band_top"))
-			var bottom := float(c.get("_band_bottom"))
-			var cont: Control = c.get("_continue")
-			var labels: Array = [c.get("_eyebrow"), c.get("_premiers"), c.get("_club")] + (c.get("_callouts") as Array)
-			var bad: Array = []
-			for it in labels:
-				var l := it as Label
-				var r := Rect2(l.position, l.size)
-				if r.end.y > top + 0.5 and r.position.y < bottom - 0.5:
-					bad.append("%s over the band" % l.name)
-				if r.end.y > cont.position.y + 0.5:
-					bad.append("%s under Continue" % l.name)
-				if r.position.x < -0.5 or r.end.x > c.size.x + 0.5 or r.position.y < -0.5:
-					bad.append("%s off screen %s" % [l.name, str(r)])
-				if l.autowrap_mode == TextServer.AUTOWRAP_OFF and l.get_minimum_size().x > c.size.x - 31.5:
-					bad.append("%s wider than the column (%.0f)" % [l.name, l.get_minimum_size().x])
-			for it in [c.get("_trophy"), c.get("_flag")]:
-				var g := (it as Control).get_global_rect()
-				var y0 := g.position.y - c.get_global_rect().position.y
-				if y0 < top - 0.5 or y0 + g.size.y > bottom + 0.5:
-					bad.append("%s outside the band" % (it as Node).name)
-			var crest: Control = c.get("_crest")
-			if crest.position.y < bottom - 0.5:
-				bad.append("the crest over the band")
-			var last := labels[labels.size() - 1] as Label
-			var gap := cont.position.y - (last.position.y + last.size.y)
+			var bad := _layout_faults(c)
+			var gap := _gap_above_continue(c)
 			if gap < worst:
 				worst = gap
 				worst_at = "%s %s" % [code, key]
@@ -395,6 +365,103 @@ func _test_layout_every_club() -> void:
 	_state.set_text_size("standard")
 	_state.set_reduced_motion(false)
 	await _settle()
+
+
+## A Club Forge club at the Forge's longest name (ClubForge.NAME_MAX letters),
+## as the premiers and as the side beaten (in the score line and the Norm
+## Smith's club), at standard and largest text: the final frame still fits.
+## Names a coach could plausibly type, heavy in the font's widest capitals,
+## and one typed in capitals (the widest measured: 351 of 359 px at largest).
+func _test_layout_forge_club() -> void:
+	_prime_week()
+	var forge: GDScript = load("res://scripts/sim/ClubForge.gd")
+	var limit := int(forge.get_script_constant_map()["NAME_MAX"])
+	var area: Vector2 = await _match_area()
+	var made := 0
+	_state.set_reduced_motion(true)
+	for named in [["Williamstown Seagulls FC", "WSG"], ["North Warrnambool Eagles", "NWE"],
+			["Mount Waverley Wanderers", "MWW"], ["NORTH WARRNAMBOOL EAGLES", "NWA"]]:
+		var long_name: String = named[0]
+		var code: String = named[1]
+		_check(long_name.length() == limit, "%s is at the Forge's limit of %d letters (%d)" % [long_name, limit, long_name.length()])
+		var spec := {"name": long_name, "short": "Forge", "code": code,
+				"location": "williamstown", "primary": "#1B3A8C", "secondary": "#C8102E",
+				"accent": "#FFFFFF", "design": "hoops", "kit": "p/s/a"}
+		var row: Dictionary = forge.call("make_club", spec)
+		_check(not row.is_empty(), "The Forge makes %s (%s)" % [long_name, str(forge.call("club_problem", spec))])
+		if row.is_empty():
+			continue
+		made += 1
+		_db.register_club(row)
+		var beaten := _facts_for("GWS", LONG.map(func(s): return str(s).replace("Greater Western Sydney", long_name)))
+		beaten["loser"] = code
+		for key in ["standard", "largest"]:
+			_state.set_text_size(key)
+			for side in [["the premiers", _facts_for(code)], ["beaten", beaten]]:
+				var b: Dictionary = await _open_bare(side[1], {}, area)
+				var c: Control = b["c"]
+				await process_frame
+				var bad := _layout_faults(c)
+				var club := c.get("_club") as Label
+				print("  premiership forge: %s %s at %s text: club line %.0f of %.0f px, gap above Continue %.0f px" % [
+						long_name, side[0], key, club.get_minimum_size().x, c.size.x - 31.5, _gap_above_continue(c)])
+				_check(bad.is_empty(), "%s %s at %s text: the final frame fits (%s)" % [long_name, side[0], key, ", ".join(bad)])
+				(b["host"] as Node).queue_free()
+				await process_frame
+		_db.unregister_custom_clubs()
+	_check(made == 4, "Four Forge clubs laid out (%d)" % made)
+	_state.set_text_size("standard")
+	_state.set_reduced_motion(false)
+	await _settle()
+
+
+## The space the match gives the ceremony under the scoreboard.
+func _match_area() -> Vector2:
+	var scene := _open_match(_gf([13, 5], [8, 5]))
+	await _settle()
+	var mc := _ceremony(scene)
+	var area := mc.size if mc != null else Vector2(390, 734)
+	_check(mc != null and area.y > 500.0, "The match's space under the scoreboard (%s)" % str(area))
+	scene.queue_free()
+	await _settle()
+	return area
+
+
+## What doesn't fit on a ceremony's final frame (empty when it all fits):
+## nothing over the band, everything above Continue and on screen, no line
+## wider than the column.
+func _layout_faults(c: Control) -> Array:
+	var top := float(c.get("_band_top"))
+	var bottom := float(c.get("_band_bottom"))
+	var cont: Control = c.get("_continue")
+	var bad: Array = []
+	for it in [c.get("_eyebrow"), c.get("_premiers"), c.get("_club")] + (c.get("_callouts") as Array):
+		var l := it as Label
+		var r := Rect2(l.position, l.size)
+		if r.end.y > top + 0.5 and r.position.y < bottom - 0.5:
+			bad.append("%s over the band" % l.name)
+		if r.end.y > cont.position.y + 0.5:
+			bad.append("%s under Continue" % l.name)
+		if r.position.x < -0.5 or r.end.x > c.size.x + 0.5 or r.position.y < -0.5:
+			bad.append("%s off screen %s" % [l.name, str(r)])
+		if l.autowrap_mode == TextServer.AUTOWRAP_OFF and l.get_minimum_size().x > c.size.x - 31.5:
+			bad.append("%s wider than the column (%.0f)" % [l.name, l.get_minimum_size().x])
+	for it in [c.get("_trophy"), c.get("_flag")]:
+		var g := (it as Control).get_global_rect()
+		var y0 := g.position.y - c.get_global_rect().position.y
+		if y0 < top - 0.5 or y0 + g.size.y > bottom + 0.5:
+			bad.append("%s outside the band" % (it as Node).name)
+	var crest: Control = c.get("_crest")
+	if crest.position.y < bottom - 0.5:
+		bad.append("the crest over the band")
+	return bad
+
+
+## The room between the last fact and Continue.
+func _gap_above_continue(c: Control) -> float:
+	var callouts: Array = c.get("_callouts")
+	var last := (callouts[callouts.size() - 1] if not callouts.is_empty() else c.get("_club")) as Label
+	return (c.get("_continue") as Control).position.y - (last.position.y + last.size.y)
 
 
 ## A tap anywhere but Continue, mid-run: every piece to its final place, the
