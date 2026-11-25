@@ -185,3 +185,4 @@ What has landed toward each open row of docs/TODO.md and docs/TODO_RULINGS.md, o
 - 202: Merged #2019: People First Stadium to the MCG standard: finned walls, bronze podium, scoreboard lattice, entry pods, Carrara surroundings (row 202 2b, WIP).
 - 202: Merged #1992: 3D crowd fills to each match's real-world attendance (row 202 2c, WIP).
 - 197: Merged #2060: Builds carry the ground models and the 3D players; the phone app keeps every stadium offline.
+- 202: Merged #2062: MetaHuman files leave the public repo: private repo fetched at build time, CI blocks Epic files.
