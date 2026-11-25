@@ -17,18 +17,38 @@ What Google Earth showed and what changed:
 - North stands' roof: the outer half of every folded plate carries a field of near-black solar panels (Google Earth,
   every view from the north). The gate-2 note had made both faces plain sheeting from photo p1; Google Earth's
   current imagery wins. Panels: `post/tex/solar.png`, on the `roof`/`roofg` faces 25-125 degrees round from east.
-- North stands' outside wall: white fluted cladding, a white band, a dark glazed band behind white V struts
-  (`fac_north.png`). East (Reg Hickey Stand, Moorabool Street): pale grey panels, white pilasters 7.5 m apart, three
-  window strips (`fac_east.png`). Both were plain `wall` concrete.
-- Seats: drawn black in every match. The seat shells' alpha cut-out (glTF MASK) renders black on the Mobile renderer;
-  `GroundModels.MATERIAL_FIX` draws them solid, and takes back the darkening painted into the `_d` (under the roof)
-  seats and treads, which the renderer's own shade then doubled.
+- North stands' outside wall: white fluted cladding, a white band, a dark glazed band (`fac_north.png`), with
+  16 white V struts modelled in front of it (0.25 m tubes, one V between each pair of roof folds). East (Reg Hickey
+  Stand, Moorabool Street): pale grey panels and three window strips (`fac_east.png`, one tile a bay), with 9 white
+  pilasters modelled under the roof's 9 ribs. Both were plain `wall` concrete.
+- Seats: drawn black in every match (the seat shells' alpha cut-out, glTF MASK, renders black on the Mobile
+  renderer). The shells are gone: `post.py` stands 36,064 instanced 3D seats on the seatpans (one each 0.5 m, MCG
+  template, `seats_seat_gmhba_{blue,white}.bin`), slate navy, pale grey in the Reg Hickey Stand (as Google Earth), and the crowd sits on them.
+  `MATERIAL_FIX` takes back the darkening painted into the `_d` (under the roof) treads.
+- No painted-on geometry (docs/MCG_STANDARD.md). Besides the struts, pilasters and seats: the Players Stand's
+  south-west face had white slats painted on its top 71 %, now 99 modelled slats over a plain navy backing; the
+  recess under the west upper tier had its rake beams painted, now 168 modelled concrete beams; the Reg Hickey
+  Stand's south end was one flat wall carrying a painted picture of the building, sky included, now cut to the
+  building's own stepped outline. Left painted, being flat: windows, louvres, panel joints, signs, roof ribs. Still
+  painted and small: the `fins` screen (24 m2) and the `plant` grille on the south-east corner.
+- Later passes, from Google Earth close-ups (`qa/detail.json`): the south-east corner was a grass yard and is a
+  14-row stand of 812 pale seats with the screen at its back; the scoreboard's red casing is modelled round a plain
+  screen; the four light towers carry rows of 487 modelled floodlights (were three boxes each); the `fins` screen is
+  18 modelled fins over a dark backing; the Premiership Stand's Cats wall is silver-grey cladding, not cream.
+- Cats emblem: the source's was a crude drawing (square-eared cat, a star for a nose). `post/trace_emblem.py`
+  traces the real emblem from Google Earth's close view (flat navy, white and pale blue only; GEELONG and CATS set
+  in type at the traced size) into `post/tex_src_cats_emblem.png`; `mktex.py` erases the old one and puts it where
+  Google Earth has it (0.17 of the wall wide, centred 0.31 across). The screenshot itself is never committed.
+- Match fit: `GroundModels.FIT` is the largest ellipse every front-row seat stands outside (the seat rule), and the
+  land ring starts 4 m past it (`fence_margin`) so nothing pokes through the fence. Trees are gum crowns.
+- After every `post.py` run: `godot --headless --path . --script tools/grounds/seat_check.gd -- --write gmhba`
+  (the seat rule's headroom and floor fix), then `tools/run_tests.sh ground_seats`.
 - Surrounds: Kardinia Park's ovals and pools, the streets, about 1,360 trees and Geelong's houses (single storey,
   hipped roofs in tile and Colorbond colours) from OpenStreetMap, as at the MCG.
 
-Known gaps, not fixed here: the Cats sign block (below); a straight-down camera shows bands of light across the west
+Known gaps, not fixed here: the Cats sign block's position (below); a straight-down camera shows bands of light across the west
 seats (no match camera looks straight down); the town fades to plain ground past 1 km (the background scene covers
-the horizon); the V struts under the north roof are painted, not modelled.
+the horizon); the `fins` and `plant` screens above.
 
 ## The exterior
 

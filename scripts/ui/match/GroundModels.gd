@@ -43,20 +43,23 @@ const GROUNDS := {
 ## half length, half width], in the model's own metres. The MCG's floor is the 4.2 m its loader
 ## was built on (#1843); its drain line sits a metre lower. Bellerive and Windy Hill were refitted to
 ## the fence the game draws (tools/visual/preinspect_grounds.gd, 2026-11-21): the first fits left a
-## stand up to 20 m inside Bellerive's boundary and Windy Hill's turned 6 degrees off.
+## stand up to 20 m inside Bellerive's boundary and Windy Hill's turned 6 degrees off. GMHBA's is the
+## largest ellipse its front-row seats all stand outside (2026-11-22, the seat rule): the first fit ran
+## through the Reg Hickey Stand's first three rows and the first row elsewhere.
 const FIT := {
 	"mcg": [0.53, 0.39, -4.2, -3.3, 87.19, 73.39],
 	"marvel": [-0.03, -0.02, 5.4, -89.8, 90.45, 75.93],
 	"optus": [-27.32, 5.16, 0.0, -11.07, 88.91, 69.92],   # bowl front ring from Google Earth (tools/grounds/optus/survey)
 	"scg": [0.34, 6.68, 0.05, 85.8, 84.43, 72.25],
-	"gmhba": [-8.89, 11.85, 0.02, -69.8, 94.3, 66.01],
+	"gmhba": [-9.4, 11.35, 0.02, -68.3, 93.02, 64.19],
 	"people_first": [-0.72, 0.04, 0.02, -72.6, 89.11, 72.26],
 	# ENGIE: an ellipse through the field edge traced from Google Earth (tools/grounds/engie/fit) gives the
 	# centre and axis; its halves are a 162 x 126 m field plus FENCE, a metre inside the real 164 x 128, so
 	# the game's fence runs 0.6 m (sides) to 3.2 m (ends) outside the grass edge and clears the front rows (2026-11-22).
 	"engie": [-4.26, -3.6, 0.0, -44.0, 87.0, 69.0],
 	"bellerive": [0.31, -0.64, -0.02, 68.7, 86.9, 66.77],
-	"manuka": [5.93, 8.15, 0.03, -82.9, 85.94, 73.1],
+	# Manuka: rebuilt 2026-11-22 round the OSM pitch outline (tools/grounds/manuka/model); an ellipse fitted to that fence.
+	"manuka": [4.68, 5.03, 0.0, -80.0, 85.94, 72.31],
 	"norwood": [1.96, -3.15, 0.0, 88.3, 88.73, 63.59],
 	"waverley_park": [-1.08, 5.64, 0.0, -34.6, 92.9, 71.99],
 	"windy_hill": [6.01, -11.01, 0.05, 1.4, 78.42, 67.69],
@@ -67,7 +70,7 @@ const FIT := {
 	"subiaco": [0.22, -10.44, 0.0, -0.7, 94.7, 67.63],
 	"waca": [7.71, -1.58, 0.0, -3.6, 102.8, 71.36],
 	"york_park": [-2.24, 0.38, 0.0, -64.6, 86.89, 70.56],
-	"cazalys": [-0.1, 4.55, -0.01, 61.9, 87.98, 75.36],
+	"cazalys": [-1.21, 3.69, -0.01, 61.13, 87.49, 75.22],
 	"north_hobart": [-6.71, 0.91, 0.0, -43.8, 81.59, 60.47],
 	"bruce": [21.36, -39.57, 0.4, -56.7, 104.51, 64.28],
 	"riverway": [-0.41, 1.12, 0.0, -89.9, 86.05, 72.72],
@@ -124,13 +127,31 @@ const SURROUNDS := {
 			# Its roofs from above: Colorbond teal and green, terracotta, charcoal, grey, white and blue.
 			"roofs": [Color(0.32, 0.52, 0.5), Color(0.66, 0.34, 0.26), Color(0.36, 0.36, 0.38), Color(0.6, 0.6, 0.58),
 					Color(0.4, 0.56, 0.44), Color(0.82, 0.82, 0.8), Color(0.44, 0.52, 0.62), Color(0.56, 0.3, 0.24)]},
+	# Cazaly's: Westcourt and Parramatta Park, Mulgrave Road, Moody Creek (tools/grounds/cazalys/surr/surrounds.py),
+	# laid on the model's origin (the OSM pitch's centroid); the ranges and the sea are its backdrop (surr/backdrop.py).
+	"cazalys": {"y": -0.04, "inner": 95.0, "colour": Color(0.41, 0.47, 0.28),
+			"map": "surrounds.webp", "span": 2048.0, "trees": "trees.bin", "buildings": "buildings.bin",
+			# Westcourt in Google Earth: white and cream weatherboard Queenslanders, pastel and grey render, some brick.
+			"walls": [Color(0.9, 0.9, 0.86), Color(0.86, 0.82, 0.7), Color(0.74, 0.8, 0.78), Color(0.9, 0.9, 0.86),
+					Color(0.62, 0.44, 0.35), Color(0.7, 0.7, 0.68), Color(0.82, 0.78, 0.66)],
+			# Its iron roofs from above: zincalume, off-white and grey Colorbond, a few green, red and blue.
+			"roofs": [Color(0.6, 0.6, 0.58), Color(0.72, 0.72, 0.69), Color(0.42, 0.43, 0.44), Color(0.6, 0.6, 0.58),
+					Color(0.32, 0.42, 0.35), Color(0.52, 0.27, 0.22), Color(0.72, 0.72, 0.69), Color(0.36, 0.42, 0.52)]},
 	# GMHBA: Kardinia Park and Geelong's streets and houses (tools/grounds/gmhba/surrounds.py); the map is
 	# laid on the model's origin, the stadium's own footprint painted plain under the model.
-	"gmhba": {"y": -0.04, "inner": 60.0, "colour": Color(0.48, 0.49, 0.33),
-			"map": "surrounds.webp", "span": 2048.0, "trees": "trees.bin", "buildings": "buildings.bin",
+	"gmhba": {"y": -0.04, "inner": 60.0, "fence_margin": 4.0, "colour": Color(0.48, 0.49, 0.33),
+			"map": "surrounds.webp", "span": 2048.0, "trees": "trees.bin", "tree_kind": "gum", "buildings": "buildings.bin",
 			# Geelong's walls in Google Earth: red and brown brick, cream render, grey block, weatherboard.
 			"walls": [Color(0.62, 0.42, 0.34), Color(0.74, 0.7, 0.62), Color(0.55, 0.53, 0.5), Color(0.68, 0.5, 0.4),
 					Color(0.8, 0.78, 0.72), Color(0.6, 0.6, 0.6), Color(0.52, 0.36, 0.3)]},
+	# People First: the Carrara precinct, the Nerang River, its bush and the streets round it
+	# (tools/grounds/people_first/surrounds.py); the map laid on the model's origin. Drawn only while the
+	# ground has no background scene: the scene covers the same land from 98 m out, in more detail.
+	"people_first": {"fallback": true, "y": -0.04, "inner": 60.0, "colour": Color(0.41, 0.49, 0.3),
+			"map": "surrounds.webp", "span": 2048.0, "trees": "trees.bin", "buildings": "buildings.bin",
+			# Carrara's walls in Google Earth: cream and white render, pale brick, grey sheds.
+			"walls": [Color(0.82, 0.8, 0.74), Color(0.72, 0.62, 0.52), Color(0.6, 0.6, 0.58), Color(0.88, 0.86, 0.82),
+					Color(0.66, 0.5, 0.42), Color(0.74, 0.72, 0.68)]},
 	# Mars: Ballarat North painted from OSM (tools/grounds/mars/surrounds/data.py), the canopy model's trees; its
 	# houses, the workshops' chimney and the land out to the ranges are mars_part2.glb (build_bpy.py).
 	"mars": {"y": -0.06, "inner": 95.0, "outer": 1900.0, "colour": Color(0.48, 0.5, 0.34),
@@ -177,16 +198,10 @@ const MATERIAL_FIX := {
 		# of blue from above.
 		"mesh": {"roughness": 1.0, "metallic_specular": 0.0},
 	},
-	# GMHBA (Google Earth 3D, 2026-11-22): the seats under the roofs were painted dark ("_d") and then shaded
-	# again by the real roof, so they read near-black where the real rows read mid grey-blue; the shade
-	# is the renderer's job, so they take the sunlit tones back. Roof sheeting matte, as at the MCG.
+	# GMHBA (Google Earth 3D, 2026-11-22): the treads under the roofs were painted dark ("_d") and then shaded
+	# again by the real roof, so they read near-black where the real rows read mid grey; the shade is the
+	# renderer's job, so they take the sunlit tones back. Roof sheeting matte, as at the MCG.
 	"gmhba": {
-		# The seat shells were cut out by alpha (glTF MASK); in a match that path drew every seat black
-		# (2026-11-22, lavapipe and the Mobile renderer). Drawn solid, the 1 cm gaps between shells are lost.
-		"seatback": {"albedo_color": Color(0.8, 0.82, 0.86), "transparency": BaseMaterial3D.TRANSPARENCY_DISABLED},
-		"seatpan": {"albedo_color": Color(0.8, 0.82, 0.86), "transparency": BaseMaterial3D.TRANSPARENCY_DISABLED},
-		"seatback_d": {"albedo_color": Color(1.3, 1.32, 1.38), "transparency": BaseMaterial3D.TRANSPARENCY_DISABLED},
-		"seatpan_d": {"albedo_color": Color(1.3, 1.32, 1.38), "transparency": BaseMaterial3D.TRANSPARENCY_DISABLED},
 		# Solar panels: near-black in Google Earth, not a sky mirror.
 		"solar": {"roughness": 0.85},
 		"tread_d": {"albedo_color": Color(1.9, 1.9, 1.9)},
@@ -246,6 +261,13 @@ const SEAT_COLOURS := {
 	"seat_bel_blue": Color8(120, 158, 160),
 	# The Members' front rows dark grey; the Northern Stand's and the east terrace's benches white.
 	"seat_bel_pale": Color8(150, 168, 186), "seat_bel_dark": Color8(58, 62, 70), "seat_bel_white": Color8(214, 216, 214),
+	# Manuka (Google Earth from the field, 2026-11-22): pale grey front terraces, white Bradman, red east terraces,
+	# and the A-frame stands' scattered reds, oranges, blues, greys, teals and yellows.
+	"seat_mk_pale": Color8(196, 198, 196), "seat_mk_white": Color8(226, 228, 226), "seat_mk_red": Color8(176, 40, 42),
+	"seat_mk_orange": Color8(214, 108, 42), "seat_mk_blue": Color8(44, 84, 150), "seat_mk_grey": Color8(112, 116, 122),
+	"seat_mk_teal": Color8(38, 128, 138), "seat_mk_yellow": Color8(222, 182, 44),
+	# GMHBA, from photo p12: blue and white shells in pairs (tools/grounds/gmhba/post/post.py).
+	"seat_gmhba_blue": Color8(52, 60, 74), "seat_gmhba_white": Color8(172, 176, 180),
 	# MCG, by tier from Street View on the ground and Google Earth: white and light grey lower and
 	# middle tiers, a blue band along the front of the middle tier, teal-blue top tier
 	# (grey-green in the Members' north-west).
@@ -464,6 +486,7 @@ static func instantiate(slug: String, base := "") -> Node3D:
 				_paint_vertex_colours(model)
 			if MATERIAL_FIX.has(slug):
 				_fix_materials(model, MATERIAL_FIX[slug])
+			_plain_alpha(model)
 			if OPEN_GROUND.has(slug):
 				_open_ground(model, OPEN_GROUND[slug])
 			for part: Dictionary in PARTS.get(slug, []):
@@ -472,8 +495,10 @@ static func instantiate(slug: String, base := "") -> Node3D:
 	slice_big_meshes(root)
 	var fit: Array = FIT.get(slug, [0.0, 0.0])
 	_add_seats(root, dir, Vector2(float(fit[0]), float(fit[1])))
-	if SURROUNDS.has(slug):
-		_add_surrounds(root, SURROUNDS[slug], dir)
+	# A "fallback" ring stands in only until the ground's background scene (#2023) is in the game.
+	if SURROUNDS.has(slug) and not (SURROUNDS[slug].get("fallback", false)
+			and not files(slug + "_backdrop", dir).is_empty()):
+		_add_surrounds(root, SURROUNDS[slug], dir, FIT.get(slug, []))
 	var bd := backdrop(slug, dir)
 	if bd != null:
 		root.add_child(bd)
@@ -485,11 +510,15 @@ static func instantiate(slug: String, base := "") -> Node3D:
 
 ## A flat ring of parkland round the model (SURROUNDS): grass with a broad mottle, unlit by
 ## nothing it would not be lit by (it takes the sun, the sky and the stands' shade).
-static func _add_surrounds(root: Node3D, s: Dictionary, dir := "") -> void:
+static func _add_surrounds(root: Node3D, s: Dictionary, dir := "", fit: Array = []) -> void:
 	if s.has("land"):
 		_add_land(root, s, dir)
 		return
 	var inner: float = s["inner"]
+	# "fence_margin": the ring starts that far past the field's fence instead of on a circle, so it never
+	# lies under the turf (from high up the two fought in bars) yet still reaches under the model's apron
+	# where the street comes close (GMHBA's Moorabool Street side).
+	var margin: float = s.get("fence_margin", -1.0)
 	var outer: float = s.get("outer", 2500.0)
 	var y: float = s["y"]
 	var n := 96
@@ -504,7 +533,10 @@ static func _add_surrounds(root: Node3D, s: Dictionary, dir := "") -> void:
 	for i in n + 1:
 		var a := TAU * i / n
 		var d := Vector3(cos(a), 0.0, sin(a))
-		for r: float in RINGS.map(func(f): return f if f > 0.0 else inner) + [outer]:
+		var first := inner
+		if margin >= 0.0 and fit.size() >= 6:
+			first = _past_fence(d, fit, margin)
+		for r: float in RINGS.map(func(f): return f if f > 0.0 else first) + [outer]:
 			var p := d * r + Vector3(0.0, y, 0.0)
 			v.append(p)
 			# The painted map clamps at its edge (painted plain there); the mottle tiles.
@@ -554,7 +586,7 @@ static func _add_surrounds(root: Node3D, s: Dictionary, dir := "") -> void:
 		root.add_child(g)
 		if s.has("trees") and FileAccess.file_exists(dir + str(s["trees"])):
 			_add_trees(root, FileAccess.get_file_as_bytes(dir + str(s["trees"])).to_float32_array(), y, 5,
-					bool(s.get("deep_crowns", false)), bool(s.get("tree_lod", false)))
+					str(s.get("tree_kind", "")), bool(s.get("deep_crowns", false)), bool(s.get("tree_lod", false)))
 		if s.has("buildings") and FileAccess.file_exists(dir + str(s["buildings"])):
 			var rgb := PackedFloat32Array()
 			if s.has("roof_colours") and FileAccess.file_exists(dir + str(s["roof_colours"])):
@@ -594,6 +626,22 @@ static func _add_surrounds(root: Node3D, s: Dictionary, dir := "") -> void:
 	root.add_child(mi)
 
 
+## How far from the model's middle, along `d`, the field's fence (FIT: centre x, z, floor, long axis deg,
+## half length, half width) lies, plus `margin`.
+static func _past_fence(d: Vector3, fit: Array, margin: float) -> float:
+	var a := deg_to_rad(float(fit[3]))
+	var hl: float = float(fit[4]) + margin
+	var hw: float = float(fit[5]) + margin
+	var r := 0.0
+	while r < 400.0:
+		var x := d.x * r - float(fit[0])
+		var z := d.z * r - float(fit[1])
+		var rx := x * cos(a) + z * sin(a)
+		var rz := -x * sin(a) + z * cos(a)
+		if (rx / hl) * (rx / hl) + (rz / hw) * (rz / hw) > 1.0:
+			return r
+		r += 0.25
+	return r
 ## A ground's own land model (SURROUNDS `land`): drawn like the painted map, taking no sun shadow
 ## (past the shadow map's reach the Mobile renderer would draw it in shade) and casting none.
 static func _add_land(root: Node3D, s: Dictionary, dir: String) -> void:
@@ -715,9 +763,10 @@ const TREE_NEAR := 320.0
 ## canopy, one batch a block of the park. Unlit by their own shadows (the map paints their shade).
 ## deep: a broad tree's crown hangs down to a few metres off the ground (eucalypts seen from the side in
 ## Google Earth: one deep mass, not a ball on a bare trunk); it stays as wide as measured.
-static func _add_trees(root: Node3D, buf: PackedFloat32Array, y: float, stride := 5, deep := false,
+static func _add_trees(root: Node3D, buf: PackedFloat32Array, y: float, stride := 5, kind := "", deep := false,
 		lod := false) -> void:
-	var canopy := _canopy_mesh()
+	var gum := kind == "gum"
+	var canopy := _gum_canopy_mesh() if gum else _canopy_mesh()
 	var trunk := CylinderMesh.new()
 	trunk.top_radius = 0.022
 	trunk.bottom_radius = 0.035
@@ -729,12 +778,15 @@ static func _add_trees(root: Node3D, buf: PackedFloat32Array, y: float, stride :
 	var leaf := StandardMaterial3D.new()
 	leaf.resource_name = "tree_leaf"
 	leaf.vertex_color_use_as_albedo = true
-	leaf.albedo_color = Color(0.27, 0.34, 0.19)
+	# A gum's colours are on its vertices (olive leaves, pale limbs); the instance colour shades it.
+	leaf.albedo_color = Color(1, 1, 1) if gum else Color(0.27, 0.34, 0.19)
+	leaf.vertex_color_is_srgb = gum
 	leaf.roughness = 1.0
 	leaf.disable_receive_shadows = true
 	var bark := StandardMaterial3D.new()
 	bark.resource_name = "tree_bark"
-	bark.albedo_color = Color(0.33, 0.29, 0.24)
+	# River red gum and sugar gum bark in Google Earth's Kardinia Park: pale grey, not brown.
+	bark.albedo_color = Color(0.6, 0.57, 0.52) if gum else Color(0.33, 0.29, 0.24)
 	bark.roughness = 1.0
 	bark.disable_receive_shadows = true
 	var blocks := {}
@@ -763,7 +815,8 @@ static func _add_trees(root: Node3D, buf: PackedFloat32Array, y: float, stride :
 			var r: float = buf[i + 3 + o]
 			var at := Vector3(buf[i], buf[i + 1] if stride == 6 else y, buf[i + zo])
 			var turn := Basis(Vector3.UP, buf[i + 4 + o] * TAU)
-			var crown := h - r * 1.1
+			var crown := h - r * (0.75 if gum else 1.1)
+			var squash := 0.7 if gum else 0.85
 			var shade: float = buf[i + 4 + o]
 			if shade >= 2.0:
 				# A pine or cypress (shade 2 and up, from a ground's measured canopy heights): one tall dark
@@ -774,7 +827,7 @@ static func _add_trees(root: Node3D, buf: PackedFloat32Array, y: float, stride :
 				leaves.set_instance_transform(j, Transform3D(turn.scaled(Vector3(r, half, r)), at + Vector3(0, crown, 0)))
 				leaves.set_instance_color(j, Color(0.62, 0.72, 0.62) * (0.85 + 0.3 * fposmod(shade * 7.3, 1.0)))
 			else:
-				var half := r * 0.85
+				var half := r * squash
 				if deep:
 					half = maxf(half, 0.5 * (h - clampf(0.25 * h, 2.0, 4.0)))
 					crown = h - half
@@ -1132,6 +1185,70 @@ static func _canopy_far_mesh() -> ArrayMesh:
 	return mesh
 
 
+## A canopy of about radius 1: two lumpy lobes, one high and one off to the side, so a park of them
+## reads as gums and elms rather than balls on sticks.
+## A eucalypt's crown, radius about 1 round its middle: open clumps of leaves on pale limbs, gaps between
+## them (Google Earth's Kardinia Park gums are open and uneven, not one round ball). Colours on the vertices.
+static func _gum_canopy_mesh() -> ArrayMesh:
+	var sphere := SphereMesh.new()
+	sphere.radius = 1.0
+	sphere.height = 2.0
+	sphere.radial_segments = 6
+	sphere.rings = 3
+	var src := sphere.get_mesh_arrays()
+	var v := PackedVector3Array()
+	var nrm := PackedVector3Array()
+	var col := PackedColorArray()
+	var idx := PackedInt32Array()
+	var leaf := Color(0.3, 0.35, 0.22)
+	var limb := Color(0.55, 0.52, 0.47)
+	# Clumps: position in the crown and radius. Spread wide and flat-topped, as a gum is.
+	var clumps := [[Vector3(0.0, 0.35, 0.05), 0.42], [Vector3(0.55, 0.15, 0.25), 0.38], [Vector3(-0.5, 0.2, -0.3), 0.4],
+			[Vector3(0.2, -0.05, -0.62), 0.33], [Vector3(-0.3, -0.1, 0.6), 0.34], [Vector3(0.7, -0.2, -0.35), 0.28],
+			[Vector3(-0.72, -0.25, 0.2), 0.3], [Vector3(0.15, 0.6, -0.25), 0.3]]
+	for c: Array in clumps:
+		var at: Vector3 = c[0]
+		var r: float = c[1]
+		var base := v.size()
+		for k in (src[Mesh.ARRAY_VERTEX] as PackedVector3Array).size():
+			var p: Vector3 = src[Mesh.ARRAY_VERTEX][k]
+			var bump := 1.0 + 0.25 * sin(p.x * 6.3 + p.y * 4.1 + at.z * 7.0) * cos(p.z * 5.2 - p.y * 3.3 + at.x * 5.0)
+			v.append(at + Vector3(p.x, p.y * 0.75, p.z) * r * bump)
+			nrm.append(src[Mesh.ARRAY_NORMAL][k])
+			# The clump's underside a little darker.
+			col.append(leaf * (0.8 + 0.2 * clampf(p.y + 0.5, 0.0, 1.0)))
+		for k in (src[Mesh.ARRAY_INDEX] as PackedInt32Array):
+			idx.append(base + k)
+		# A limb from the top of the trunk (the crown's base, 0.75 below its middle) out to the clump.
+		var a := Vector3(0.0, -0.75, 0.0)
+		var b := at - Vector3(0.0, r * 0.4, 0.0)
+		var ax := (b - a).normalized()
+		var u := ax.cross(Vector3.FORWARD if absf(ax.dot(Vector3.FORWARD)) < 0.9 else Vector3.RIGHT).normalized()
+		var w := ax.cross(u)
+		var lb := v.size()
+		for e in 4:
+			var t := TAU * e / 4.0
+			var off := (u * cos(t) + w * sin(t))
+			v.append(a + off * 0.035)
+			v.append(b + off * 0.02)
+			nrm.append(off)
+			nrm.append(off)
+			col.append(limb)
+			col.append(limb)
+		for e in 4:
+			var e2 := (e + 1) % 4
+			idx.append_array([lb + e * 2, lb + e2 * 2, lb + e * 2 + 1, lb + e2 * 2, lb + e2 * 2 + 1, lb + e * 2 + 1])
+	var arr := []
+	arr.resize(Mesh.ARRAY_MAX)
+	arr[Mesh.ARRAY_VERTEX] = v
+	arr[Mesh.ARRAY_NORMAL] = nrm
+	arr[Mesh.ARRAY_COLOR] = col
+	arr[Mesh.ARRAY_INDEX] = idx
+	var mesh := ArrayMesh.new()
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
+	return mesh
+
+
 static func _canopy_mesh() -> ArrayMesh:
 	var sphere := SphereMesh.new()
 	sphere.radius = 1.0
@@ -1262,9 +1379,14 @@ static func _pick(src, used: PackedInt32Array):
 ## How far a camera sees when the ground has its surroundings (backdrop()): the city skyline and
 ## the hills. Without them the match view stops at 900 m.
 const BACKDROP_FAR := 7000.0
-## Grounds whose backdrop runs further, [camera far, haze end] in m: Bellerive's reaches kunanyi /
-## Mount Wellington, 11 km across the Derwent, which a Hobart crowd sees clearly, blue with the distance.
-const BACKDROP_RANGE := {"bellerive": [20000.0, 60000.0]}
+## Grounds whose backdrop runs further, [camera far, haze end] in m.
+const BACKDROP_RANGE := {
+		# Manuka: the Brindabellas stand on Canberra's western skyline 25 km out, Black Mountain's tower 5.4 km.
+		"manuka": [32000.0, 70000.0],
+		# Bellerive reaches kunanyi / Mount Wellington, 11 km across the Derwent, which a Hobart crowd sees clearly.
+		"bellerive": [20000.0, 60000.0],
+		# Cazaly's reaches the ranges behind Cairns and the sea, which the crowd sees clearly, blue with the distance.
+		"cazalys": [56000.0, 150000.0]}
 
 
 static func backdrop_far(slug: String) -> float:
@@ -1294,7 +1416,7 @@ static func backdrop(slug: String, base := "") -> Node3D:
 			continue
 		for gi in model.find_children("*", "GeometryInstance3D", true, false):
 			(gi as GeometryInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		_backdrop_materials(model)
+		_backdrop_materials(model, dir + slug + "_plain.webp")
 		root.add_child(model)
 	return root
 
@@ -1304,16 +1426,30 @@ static func backdrop(slug: String, base := "") -> Node3D:
 const BACKDROP_HIDES := {"adelaide": ["ao_ground"]}
 
 const BACKDROP_SHADER := preload("res://scripts/ui/match/oval3d_backdrop.gdshader")
+const TERRAIN_SHADER := preload("res://scripts/ui/match/oval3d_terrain.gdshader")
 
 
 ## The scene's materials as Blender drew them: the trees and everything else tinted by their
 ## vertex colours; the walls and roofs (facade_*, roof_*) through oval3d_backdrop.gdshader, which
 ## leaves their glass and frames untinted. Materials are shared, so each is made once.
-static func _backdrop_materials(model: Node) -> void:
+static func _backdrop_materials(model: Node, plain := "") -> void:
 	var made := {}
 	for mi in model.find_children("*", "MeshInstance3D", true, false):
 		var mesh: Mesh = (mi as MeshInstance3D).mesh
 		if mesh == null:
+			continue
+		# A land mesh with its light already in its vertex colours (Cazaly's ranges, hill-shaded as
+		# Google Earth shows them): drawn as coloured, so the sky's blue fill does not turn the
+		# rainforest navy.
+		if String(mi.name).begins_with("terrain_shaded"):
+			if not made.has("terrain_shaded"):
+				var tm := ShaderMaterial.new()
+				tm.shader = TERRAIN_SHADER
+				if plain != "" and ResourceLoader.exists(plain):
+					tm.set_shader_parameter("plain", load(plain))
+					tm.set_shader_parameter("has_plain", true)
+				made["terrain_shaded"] = tm
+			(mi as MeshInstance3D).material_override = made["terrain_shaded"]
 			continue
 		for i in mesh.get_surface_count():
 			var mat := mesh.surface_get_material(i) as BaseMaterial3D
@@ -1563,6 +1699,18 @@ static func _add_part(model: Node, dir: String, part: Dictionary) -> void:
 	mi.name = str(part.get("name", "Part"))
 	mi.mesh = mesh
 	model.add_child(mi)
+
+
+## Glass and other see-through materials drawn with plain alpha. The glTF importer gives a blended
+## material a depth pre-pass, and the mobile renderer draws such a surface black where it stands in
+## shade (Manuka's glass balustrades under the stand roofs, 2026-11-22).
+static func _plain_alpha(model: Node) -> void:
+	for mi in model.find_children("*", "MeshInstance3D", true, false):
+		var mesh: Mesh = (mi as MeshInstance3D).mesh
+		for i in (mesh.get_surface_count() if mesh != null else 0):
+			var mat := mesh.surface_get_material(i) as BaseMaterial3D
+			if mat != null and mat.transparency == BaseMaterial3D.TRANSPARENCY_ALPHA_DEPTH_PRE_PASS:
+				mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 
 
 ## Paving and practice wickets a model lays on the land outside the bowl, by mesh name: lit like the
