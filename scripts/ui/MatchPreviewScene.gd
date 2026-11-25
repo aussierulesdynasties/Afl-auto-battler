@@ -26,7 +26,7 @@ func _ready() -> void:
 	UiKit.apply_insets(margin, 12)
 	add_child(margin)
 	# One column, centred, never wider than a readable measure (_fit).
-	var root := UiKit.vbox(8)
+	var root := UiKit.vbox(UiKit.GAP)
 	root.name = "PreviewColumn"
 	margin.add_child(root)
 	_week = WeekPreview.new(self, func(_note: String, _undo: Dictionary): _refill())

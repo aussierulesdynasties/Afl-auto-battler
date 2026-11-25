@@ -100,7 +100,8 @@ COLOUR_CUES = {
     "TeamBuilder.gd": [
         ["start_note != \"\"", "the note in words", 1],
         ["Workload.NEEDS_BREAK", "the workload word", 1],
-        ["Ratings.available(p)", "why he is out, in words", 1]],
+        ["Ratings.available(p)", "why he is out, in words", 1],
+        ["fill.color = UiKit.BAD", "his Form figure beside the bar, well below his season's (director, 2026-11-25)", 1]],
     "TrainingScene.gd": [
         ["rise.size() > 0", "the rise mark and its words", 2],
         ["Traits.is_bad(trait_keys[0])", "the weakness mark", 1],

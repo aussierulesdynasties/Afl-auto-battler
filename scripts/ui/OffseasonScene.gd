@@ -55,7 +55,7 @@ func _ready() -> void:
 	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
 	UiKit.apply_insets(margin, 12)
 	add_child(margin)
-	_root = UiKit.vbox(8)
+	_root = UiKit.vbox(UiKit.GAP)
 	margin.add_child(_root)
 	for code in GameDB.active_clubs(GameState.season_year):
 		if code != GameState.my_club:
@@ -74,9 +74,9 @@ func _build() -> void:
 		_scroll_positions[_scroll_tab] = UiKit.scroll_place(_scroll_box)
 	UiKit.clear(_root)
 	_root.add_child(UiKit.top_bar("Off-season", true))
-	var head := UiKit.panel(UiKit.PANEL, 10, 8)
+	var head := UiKit.panel(UiKit.PANEL, UiKit.Space.ROOM, 8)
 	_root.add_child(head)
-	var hv := UiKit.vbox(4)
+	var hv := UiKit.vbox(UiKit.Space.TIGHT)
 	head.add_child(hv)
 	var room := GameState.cap_room()
 	hv.add_child(UiKit.lbl("%s of the %s salary cap  ·  %s  ·  %d on our list" % [Contracts.money(GameState.my_payroll()),
@@ -97,7 +97,7 @@ func _build() -> void:
 		hv.add_child(_para("The off-season is closed. Trades and contracts open when the season ends. They close when the national draft starts.", 13, UiKit.MUTED))
 	else:
 		# This year's list problem in three lines (P-48): the brief, no advice.
-		var brief := UiKit.vbox(2)
+		var brief := UiKit.vbox(UiKit.Space.SLIM)
 		brief.name = "ListProblem"
 		hv.add_child(brief)
 		var lines := GameState.list_problem()
@@ -112,7 +112,7 @@ func _build() -> void:
 		said.name = "OffseasonNotice"
 		hv.add_child(said)
 	_undo_row(hv)
-	var tabs := UiKit.hbox(4)
+	var tabs := UiKit.hbox(UiKit.Space.TIGHT)
 	_root.add_child(tabs)
 	for t in [["contracts", "Contracts"], ["agents", "Agents"], ["trade", "Trade"], ["budget", "Budget"]]:
 		var b := UiKit.tab(str(t[1]), _tab == str(t[0]))
@@ -128,7 +128,7 @@ func _build() -> void:
 			if _tab == "trade":
 				FirstVisitIntro.show_if_due(self, "trade"))
 		tabs.add_child(b)
-	var body := UiKit.vbox(6)
+	var body := UiKit.vbox(UiKit.Space.CLOSE)
 	_scroll_box = UiKit.scroll(body)
 	_scroll_tab = _tab
 	_root.add_child(_scroll_box)
@@ -174,7 +174,7 @@ func _undo_row(hv: VBoxContainer) -> void:
 			did = "%s signed with us." % name
 		"resign":
 			did = "%s re-signed." % name
-	var row := UiKit.hbox(8)
+	var row := UiKit.hbox(UiKit.GAP)
 	row.name = "UndoLast"
 	hv.add_child(row)
 	# Right after the action its own notice names him; the row then only says
@@ -218,16 +218,16 @@ func _budget(body: VBoxContainer) -> void:
 		var fine := _para("The league's fine takes %s off our budget this year." % ClubBudget.money_m(fine_cut, year), 13, UiKit.BAD)
 		fine.name = "BudgetFine"
 		body.add_child(fine)
-	body.add_child(UiKit.spacer(4))
+	body.add_child(UiKit.spacer(UiKit.Space.TIGHT))
 
 	for area in ClubBudget.AREA_ORDER:
 		var level := GameState.department_budget_level(area)
-		var card := UiKit.panel(UiKit.PANEL, 8, 8)
+		var card := UiKit.panel(UiKit.PANEL, UiKit.GAP, 8)
 		card.name = "Budget_" + area
 		body.add_child(card)
-		var v := UiKit.vbox(4)
+		var v := UiKit.vbox(UiKit.Space.TIGHT)
 		card.add_child(v)
-		var head := UiKit.hbox(8)
+		var head := UiKit.hbox(UiKit.GAP)
 		v.add_child(head)
 		var label := UiKit.lbl(str(ClubBudget.AREA_LABEL[area]), UiKit.BODY, UiKit.TEXT, true)
 		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -250,7 +250,7 @@ func _budget(body: VBoxContainer) -> void:
 			next_text.text = "Fully funded."
 		v.add_child(next_text)
 
-		var controls := UiKit.hbox(6)
+		var controls := UiKit.hbox(UiKit.Space.CLOSE)
 		v.add_child(controls)
 		var lower := UiKit.btn("Lower", UiKit.SECONDARY)
 		lower.name = "BudgetLower_" + area
@@ -307,7 +307,7 @@ func _contracts(body: VBoxContainer) -> void:
 				int(Rating.ovr(p)), int(p.get("potential", Rating.ovr(p))), int(p.get("age", 0)),
 				Contracts.money(int(p.get("salary", 0))), Contracts.money(int(want["salary"])), int(want["years"])])
 		body.add_child(card)
-		var row := UiKit.hbox(4)
+		var row := UiKit.hbox(UiKit.Space.TIGHT)
 		row.name = "Contract_" + str(p["id"])
 		_action_slot(card).add_child(row)
 		if bool(p.get("resigned", false)):
@@ -560,7 +560,7 @@ func _show_talks() -> void:
 		_offer_years = int(k)
 		_show_talks()))
 	v.add_child(UiKit.lbl("Salary a season", 14, UiKit.EMPH, true))
-	var srow := UiKit.hbox(8)
+	var srow := UiKit.hbox(UiKit.GAP)
 	v.add_child(srow)
 	var less := UiKit.btn("−", UiKit.HEADING)
 	less.name = "SalaryDown"
@@ -636,8 +636,8 @@ func _offers_table(v: VBoxContainer) -> void:
 		var grid := GridContainer.new()
 		grid.name = "OffersTable"
 		grid.columns = 4
-		grid.add_theme_constant_override("h_separation", 10)
-		grid.add_theme_constant_override("v_separation", 4)
+		grid.add_theme_constant_override("h_separation", UiKit.Space.ROOM)
+		grid.add_theme_constant_override("v_separation", UiKit.Space.TIGHT)
 		for h in ["Club", "Salary", "Years", "His view"]:
 			grid.add_child(UiKit.line(h, 12, UiKit.MUTED))
 		for row in rows:
@@ -709,7 +709,7 @@ func _close_talks() -> void:
 
 func _agents(body: VBoxContainer) -> void:
 	var fas := GameState.free_agents.duplicate()
-	var controls := UiKit.hbox(4)
+	var controls := UiKit.hbox(UiKit.Space.TIGHT)
 	controls.name = "FreeAgentSort"
 	for entry in [["value", "Value"], ["overall", "OVR"], ["potential", "POT"], ["age", "Age"]]:
 		var key := str(entry[0])
@@ -821,7 +821,7 @@ func _more_agents(n: int) -> void:
 				bits.append("%s %s for %d" % ["us" if bool(o["mine"]) else GameDB.club_short(str(o["club"])), Contracts.money(int(o["salary"])), int(o["years"])])
 			var line := "Offers: " + ", ".join(bits) + (" and %d more" % (offers.size() - 3) if offers.size() > 3 else "")
 			(card.get_child(0) as VBoxContainer).add_child(_para(line + ".", 12, UiKit.TEXT))
-		var row := UiKit.hbox(4)
+		var row := UiKit.hbox(UiKit.Space.TIGHT)
 		row.name = "Agent_" + str(p["id"])
 		_action_slot(card).add_child(row)
 		var talks: Dictionary = p.get("talks", {})
@@ -862,7 +862,7 @@ func _trade(body: VBoxContainer) -> void:
 		return
 	_offers(body)
 	_requests(body)
-	var who := UiKit.hbox(8)
+	var who := UiKit.hbox(UiKit.GAP)
 	who.add_child(UiKit.ellipsis("Trading with %s" % GameDB.club_name(_trade_club), UiKit.NAME, UiKit.TEXT, true))
 	who.get_child(0).size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var change := UiKit.btn("Change club", 14)
@@ -884,7 +884,7 @@ func _trade(body: VBoxContainer) -> void:
 	var cycle := _para(str(stance.get(phase, "")), 13, UiKit.MUTED)
 	cycle.name = "TradeClubPhase"
 	body.add_child(cycle)
-	body.add_child(UiKit.spacer(4))
+	body.add_child(UiKit.spacer(UiKit.Space.TIGHT))
 	_package(body, "We give", _mine, GameState.my_club, "GiveRow_",
 			"Nothing yet. Add from our list below.")
 	_package(body, "We get", _theirs, _trade_club, "GetRow_",
@@ -975,7 +975,7 @@ func _trade(body: VBoxContainer) -> void:
 			body.add_child(ask)
 	_answers(body)
 	body.add_child(UiKit.spacer(UiKit.SECTION - 6))
-	var sides := UiKit.hbox(4)
+	var sides := UiKit.hbox(UiKit.Space.TIGHT)
 	for t in [["theirs", "Their list"], ["mine", "Our list"]]:
 		var tb := UiKit.tab(str(t[1]), _trade_side == str(t[0]))
 		tb.name = "TradeSide_" + str(t[0])
@@ -1001,7 +1001,7 @@ func _answers(body: VBoxContainer) -> void:
 		_asked = []
 		return
 	var p := GameState.list_player(_asked_id)
-	var box := UiKit.vbox(6)
+	var box := UiKit.vbox(UiKit.Space.CLOSE)
 	box.name = "AskAnswers"
 	body.add_child(box)
 	var head := NameInk.label("Asked around about %s" % GameDB.player_display_name(p), _names(), UiKit.BODY, UiKit.EMPH, true)
@@ -1015,7 +1015,7 @@ func _answers(body: VBoxContainer) -> void:
 		if not keen:
 			box.add_child(line)
 			continue
-		var h := UiKit.hbox(8)
+		var h := UiKit.hbox(UiKit.GAP)
 		line.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		h.add_child(line)
 		var go := UiKit.btn("Trade with them", 13)
@@ -1045,7 +1045,7 @@ func _offers(body: VBoxContainer) -> void:
 		var text := _para(GameState.trade_offer_text(i), 14, UiKit.TEXT)
 		text.name = "Offer_%d" % i
 		body.add_child(text)
-		var row := UiKit.hbox(8)
+		var row := UiKit.hbox(UiKit.GAP)
 		var buttons := [["Accept", "OfferAccept_%d" % i, true]]
 		# A story's offer can't be turned down: none taken, the best goes
 		# through when trades close (LegacyRollover, director 2026-11-25).
@@ -1079,7 +1079,7 @@ func _requests(body: VBoxContainer) -> void:
 	body.add_child(UiKit.lbl("Asked to be traded", 15, UiKit.EMPH, true))
 	for id in ids:
 		var club := str(GameState.trade_requests[id]["club"])
-		var row := UiKit.hbox(8)
+		var row := UiKit.hbox(UiKit.GAP)
 		row.name = "Request_" + str(id)
 		var text := _para(GameState.trade_request_line(str(id)), 14, UiKit.TEXT)
 		text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -1116,7 +1116,7 @@ func _package(body: VBoxContainer, title: String, ids: Array, club: String, pref
 		body.add_child(_para(none, 13, UiKit.MUTED))
 		return
 	for id in ids.duplicate():
-		var row := UiKit.hbox(8)
+		var row := UiKit.hbox(UiKit.GAP)
 		row.name = prefix + str(id).replace(":", "_")
 		# A player wears his club's ink, as in the Ask around answers (row 174:
 		# "sanders uncoloured?"); a pick stays plain.
@@ -1267,30 +1267,30 @@ func _compact_actions(row: HBoxContainer, main: Button) -> void:
 
 func _player_card(p: Dictionary, detail: String) -> PanelContainer:
 	# An editorial row, not a tile (guide §3): no surface, a rule under it.
-	var card := UiKit.panel(UiKit.PANEL_ALT, 8, 6)
-	var quiet := UiKit.style(Color.TRANSPARENT, 8, 0)
+	var card := UiKit.panel(UiKit.PANEL_ALT, UiKit.GAP, 6)
+	var quiet := UiKit.style(Color.TRANSPARENT, UiKit.GAP, 0)
 	quiet.set_border_width_all(0)
 	quiet.border_width_bottom = 1
 	quiet.border_color = UiKit.LINE
-	quiet.content_margin_top = 10
-	quiet.content_margin_bottom = 10
+	quiet.content_margin_top = UiKit.Space.ROOM
+	quiet.content_margin_bottom = UiKit.Space.ROOM
 	card.add_theme_stylebox_override("panel", quiet)
-	var v := UiKit.vbox(3)
+	var v := UiKit.vbox(UiKit.Space.THIN)
 	card.add_child(v)
 	# A PC: who he is on the left, the actions on the same line at the right.
 	var info := v
 	if _wide():
-		var top := UiKit.hbox(12)
+		var top := UiKit.hbox(UiKit.Space.PAD)
 		v.add_child(top)
-		info = UiKit.vbox(3)
+		info = UiKit.vbox(UiKit.Space.THIN)
 		info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		top.add_child(info)
-		var slot := UiKit.hbox(4)
+		var slot := UiKit.hbox(UiKit.Space.TIGHT)
 		slot.name = "Actions"
 		slot.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		top.add_child(slot)
 		card.set_meta("actions", slot)
-	var h := UiKit.hbox(6)
+	var h := UiKit.hbox(UiKit.Space.CLOSE)
 	info.add_child(h)
 	# One width for every role so the names line up down the list.
 	var chip := UiKit.role_chip(Ratings.role_tag(p))

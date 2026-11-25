@@ -274,10 +274,10 @@ static func club_title(text: String, fs: int, code: String, surface := AUTO_COLO
 	sb.border_color = TEXT
 	sb.set_border_width_all(2)
 	sb.set_corner_radius_all(4)
-	sb.content_margin_left = 10
-	sb.content_margin_right = 10
-	sb.content_margin_top = 2
-	sb.content_margin_bottom = 4
+	sb.content_margin_left = Space.ROOM
+	sb.content_margin_right = Space.ROOM
+	sb.content_margin_top = Space.SLIM
+	sb.content_margin_bottom = Space.TIGHT
 	tag.add_theme_stylebox_override("panel", sb)
 	tag.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	tag.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -335,6 +335,33 @@ const GAP := 8          # between rows
 const SECTION := 18     # between sections
 const RADIUS := 6       # panels and buttons; nothing rounder
 
+## Every spacing the screens use, by name, so a screen can't drift off the set
+## (director, 2026-11-25: "A: name the sizes in use"). GAP and SECTION above are
+## two of them; 0 stays 0. Smallest to largest:
+class Space:
+	const TUCK := -2     # draws two lines together
+	const HAIR := 1
+	const SLIM := 2
+	const THIN := 3
+	const TIGHT := 4
+	const SNUG := 5
+	const CLOSE := 6
+	const NEAT := 7
+	# 8 is GAP
+	const EASY := 9
+	const ROOM := 10
+	const PAD := 12
+	const LOOSE := 14
+	const OPEN := 15
+	const COLUMN := 16
+	# 18 is SECTION
+	const WIDE := 20
+	const WIDER := 22
+	const GUTTER := 24
+	const SPREAD := 28
+	const BROAD := 32
+	const APART := 40
+
 const ROLE_LABEL := {"RUCK": "Ruck", "MID": "Midfield", "DEF": "Defence", "FWD": "Forward"}
 const ROLE_SHORT := {"RUCK": "RUC", "MID": "MID", "DEF": "DEF", "FWD": "FWD"}
 const ROLE_COLOUR := {
@@ -380,13 +407,13 @@ static func full_rect(c: Control) -> Control:
 	return c
 
 
-static func vbox(sep := 8) -> VBoxContainer:
+static func vbox(sep := GAP) -> VBoxContainer:
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", sep)
 	return v
 
 
-static func hbox(sep := 8) -> HBoxContainer:
+static func hbox(sep := GAP) -> HBoxContainer:
 	var h := HBoxContainer.new()
 	h.add_theme_constant_override("separation", sep)
 	return h
@@ -582,7 +609,7 @@ static func _thumb(colour: Color, width := SCROLL_THUMB) -> StyleBoxFlat:
 	return sb
 
 
-static func style(bg: Color, pad := 12, radius := RADIUS, border := AUTO_COLOUR) -> StyleBoxFlat:
+static func style(bg: Color, pad := Space.PAD, radius := RADIUS, border := AUTO_COLOUR) -> StyleBoxFlat:
 	if border == AUTO_COLOUR:
 		border = LINE
 	var sb := StyleBoxFlat.new()
@@ -595,7 +622,7 @@ static func style(bg: Color, pad := 12, radius := RADIUS, border := AUTO_COLOUR)
 
 
 ## A flat surface that groups related things: no border, small corners.
-static func panel(colour := AUTO_COLOUR, pad := 14, radius := RADIUS) -> PanelContainer:
+static func panel(colour := AUTO_COLOUR, pad := Space.LOOSE, radius := RADIUS) -> PanelContainer:
 	if colour == AUTO_COLOUR:
 		colour = PANEL
 	var p := PanelContainer.new()
@@ -604,6 +631,44 @@ static func panel(colour := AUTO_COLOUR, pad := 14, radius := RADIUS) -> PanelCo
 	sb.set_border_width_all(0)
 	p.add_theme_stylebox_override("panel", sb)
 	return p
+
+
+## Box styles more than one screen draws, made here once so the copies can't
+## drift apart (row 168, batch 4 tidy-up: nothing on screen changes).
+
+## A list row with a rule under it; lit, it is the row under a finger.
+static func line_row(lit: bool) -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(1, 1, 1, 0.04) if lit else Color.TRANSPARENT
+	sb.border_color = LINE
+	sb.border_width_bottom = 1
+	return sb
+
+
+## The shade a table row takes under a pointer.
+static func row_hover(alpha := 0.05, radius := 0) -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(TEXT, alpha)
+	sb.set_corner_radius_all(radius)
+	return sb
+
+
+## Your club's row in a table: a wash of your colour, a bar down its left edge.
+static func mark_your_row(sb: StyleBoxFlat, code: String) -> void:
+	sb.bg_color = Color(club_vivid(code), 0.22)
+	sb.border_width_left = 4
+	sb.border_color = club_vivid(code)
+
+
+## A small tag over the ground (Replay, the Bench tab and drawer): the page's dark
+## under a thin edge, the ground showing through unless it is solid.
+static func ground_tag(edge: Color, solid := false) -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = BG if solid else Color(BG, 0.92)
+	sb.border_color = edge
+	sb.set_border_width_all(1)
+	sb.set_corner_radius_all(4)
+	return sb
 
 
 ## A thin rule between sections, where spacing alone is not enough.
@@ -848,7 +913,7 @@ static func club_name_colour(ink: Color) -> Color:
 static func club_heading(code: String, right: Control = null, fs := NAME, marker := 22.0, ink := Color(0, 0, 0, 0), plain_name := false, show_name := true) -> HBoxContainer:
 	if ink.a == 0.0:
 		ink = club_ink(code)
-	var h := hbox(6)
+	var h := hbox(Space.CLOSE)
 	h.add_child(club_marker(code, marker))
 	if show_name:
 		# plain_name: white text, the club's colour kept for the bar and the
@@ -866,7 +931,7 @@ static func club_heading(code: String, right: Control = null, fs := NAME, marker
 static func club_section_body(code: String, content: Control, ink := Color(0, 0, 0, 0), bar_w := 4.0) -> HBoxContainer:
 	if ink.a == 0.0:
 		ink = club_ink(code)
-	var wrap := hbox(6)
+	var wrap := hbox(Space.CLOSE)
 	var bar := ColorRect.new()
 	bar.name = "ClubBar"
 	bar.color = ink
@@ -916,7 +981,7 @@ static func detail(text: String, fs := SECONDARY) -> Label:
 	return ellipsis(text, fs, TEXT)
 
 
-static func spacer(px := 6) -> Control:
+static func spacer(px := Space.CLOSE) -> Control:
 	var c := Control.new()
 	c.custom_minimum_size = Vector2(0, px)
 	return c
@@ -1099,10 +1164,12 @@ static func reveal(c: Control, delay := 0.0) -> void:
 			tw.tween_interval(delay)
 		tw.tween_property(c, "modulate:a", 1.0, Motion.DUR_BASE) \
 				.set_trans(Motion.TRANS_IN).set_ease(Motion.EASE_IN)
+	var start := func() -> void:
+		_in_view(c, run)
 	if c.is_inside_tree():
-		run.call()
+		start.call()
 	else:
-		c.tree_entered.connect(run, CONNECT_ONE_SHOT)
+		c.tree_entered.connect(start, CONNECT_ONE_SHOT)
 
 
 ## Count `l` up to `to` (its text set by `say` for each value on the way),
@@ -1120,10 +1187,30 @@ static func count_up(l: Label, to: int, say: Callable, dur := Motion.DUR_COUNT, 
 				.set_trans(Motion.TRANS_SETTLE).set_ease(Motion.EASE_SETTLE)
 		# A second call that stops this one still leaves the true figure first.
 		tw.tween_callback(func(): l.text = str(say.call(to)))
+	var start := func() -> void:
+		# Under the dots it waits, showing the figure it will count from.
+		if _in_view(l, run):
+			l.text = str(say.call(from))
 	if l.is_inside_tree():
-		run.call()
+		start.call()
 	else:
-		l.tree_entered.connect(run, CONNECT_ONE_SHOT)
+		l.tree_entered.connect(start, CONNECT_ONE_SHOT)
+
+
+## Run `f` once `c` is in full view: at once, or, while the dots between
+## screens (ScreenTransition) are up, as soon as they have gone, so a count or
+## a fade on an arriving screen plays where it is seen, not under the dots.
+## True when it waits.
+static func _in_view(c: Node, f: Callable) -> bool:
+	var wipe: Node = c.get_tree().root.get_node_or_null("ScreenTransition") if c.is_inside_tree() else null
+	if wipe == null or not bool(wipe.call("covering")):
+		f.call()
+		return false
+	var go := func() -> void:
+		if is_instance_valid(c):
+			f.call()
+	wipe.connect("cleared", go, CONNECT_ONE_SHOT)
+	return true
 
 
 ## A big moment lands (director, 2026-10-11: result, draft pick, ladder,
@@ -1218,12 +1305,14 @@ static func fill_bar(fill: Control, from: float, to: float) -> void:
 	if not motion_on() or is_equal_approx(from, to):
 		return
 	fill.anchor_right = clampf(from, 0.0, 1.0)
-	_after(fill, 0.0, func() -> void:
+	var run := func() -> void:
 		if not is_instance_valid(fill):
 			return
 		Feel.moved.append("fill_bar")
 		_own(fill, "bar").tween_property(fill, "anchor_right", clampf(to, 0.0, 1.0), Motion.DUR_BAR) \
-				.set_trans(Motion.TRANS_SETTLE).set_ease(Motion.EASE_SETTLE))
+				.set_trans(Motion.TRANS_SETTLE).set_ease(Motion.EASE_SETTLE)
+	# Where it is seen: after the dots between screens, as count_up waits.
+	_after(fill, 0.0, func() -> void: _in_view(fill, run))
 
 
 ## Living backgrounds (director, 2026-10-11): `apply(t)` is called with t going
@@ -1350,17 +1439,17 @@ static func style_button(b: Button, fs := 16, primary := false, danger := false)
 	var sb: StyleBoxFlat
 	var lead := team_button()
 	if primary:
-		sb = style(lead, 8, RADIUS)
+		sb = style(lead, GAP, RADIUS)
 		sb.set_border_width_all(0)
 		for k in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
 			b.add_theme_color_override(k, primary_label(lead))
 	elif danger:
-		sb = style(Color.TRANSPARENT, 8, RADIUS, BAD.darkened(0.2))
+		sb = style(Color.TRANSPARENT, GAP, RADIUS, BAD.darkened(0.2))
 	else:
 		# STYLE-01 (director 2026-11-04, "Secondary buttons are outlines"): a
 		# 1 px outline over a dark well, so it reads on the page and on a club
 		# wash alike, and never looks like the chosen option (2 px TEXT).
-		sb = style(Color(BG, OUTLINE_WELL), 8, RADIUS, OUTLINE)
+		sb = style(Color(BG, OUTLINE_WELL), GAP, RADIUS, OUTLINE)
 		sb.set_border_width_all(1)
 	b.add_theme_stylebox_override("normal", sb)
 	var hover := sb.duplicate() as StyleBoxFlat
@@ -1373,14 +1462,22 @@ static func style_button(b: Button, fs := 16, primary := false, danger := false)
 	pressed.bg_color = lead.darkened(0.12) if primary else SURFACE
 	b.add_theme_stylebox_override("pressed", pressed)
 	b.add_theme_stylebox_override("hover_pressed", pressed)
-	var off := style(Color(BG, OUTLINE_WELL), 8, RADIUS, LINE) if not primary and not danger \
-			else style(Color(SURFACE, 0.5), 8, RADIUS)
+	var off := style(Color(BG, OUTLINE_WELL), GAP, RADIUS, LINE) if not primary and not danger \
+			else style(Color(SURFACE, 0.5), GAP, RADIUS)
 	off.set_border_width_all(1 if not primary and not danger else 0)
 	b.add_theme_stylebox_override("disabled", off)
-	var focus := style(Color.TRANSPARENT, 0, RADIUS, TEXT)
-	focus.set_border_width_all(2)
-	b.add_theme_stylebox_override("focus", focus)
+	b.add_theme_stylebox_override("focus", focus_ring())
 	feel(b, "main" if primary else "soft")
+
+
+## The keyboard's place on a control (Tab on PC): a 2 px TEXT ring over the
+## control's own look. Godot draws it only for the keyboard
+## (gui/common/show_focus_state_on_pointer_event), so a tap or a click shows none.
+## Buttons, tabs, text links and choices all wear this one ring.
+static func focus_ring() -> StyleBoxFlat:
+	var ring := style(Color.TRANSPARENT, 0, RADIUS, TEXT)
+	ring.set_border_width_all(2)
+	return ring
 
 
 ## A secondary button's outline and the dark well inside it (STYLE-01): the
@@ -1402,7 +1499,7 @@ static func nav_bar(row: Control) -> PanelContainer:
 	sb.border_color = team_wash()
 	sb.corner_radius_bottom_left = RADIUS
 	sb.corner_radius_bottom_right = RADIUS
-	sb.content_margin_top = 2
+	sb.content_margin_top = Space.SLIM
 	bar.add_theme_stylebox_override("panel", sb)
 	for b in row.get_children():
 		if b is Button:
@@ -1412,11 +1509,11 @@ static func nav_bar(row: Control) -> PanelContainer:
 
 
 static func nav_word(b: Button) -> void:
-	var flat := style(Color.TRANSPARENT, 4, 0)
+	var flat := style(Color.TRANSPARENT, Space.TIGHT, 0)
 	flat.set_border_width_all(0)
 	for state in ["normal", "hover", "disabled"]:
 		b.add_theme_stylebox_override(state, flat)
-	var lit := style(SURFACE, 4, 0)
+	var lit := style(SURFACE, Space.TIGHT, 0)
 	lit.set_border_width_all(0)
 	b.add_theme_stylebox_override("pressed", lit)
 	b.add_theme_stylebox_override("hover_pressed", lit)
@@ -1431,7 +1528,7 @@ static func _choice_box(on: bool) -> StyleBoxFlat:
 	# STYLE-01: the rest of a set are outlined like any secondary button, so
 	# every option you can tap reads the same; the chosen one is the 2 px TEXT
 	# outline on the lifted surface.
-	var sb := style(SURFACE if on else Color(BG, OUTLINE_WELL), 8, RADIUS, TEXT if on else OUTLINE)
+	var sb := style(SURFACE if on else Color(BG, OUTLINE_WELL), GAP, RADIUS, TEXT if on else OUTLINE)
 	sb.set_border_width_all(2 if on else 1)
 	return sb
 
@@ -1624,13 +1721,14 @@ static func tab(text: String, active: bool) -> Button:
 ## The underline look: a 2 px TEXT rule under the current one, a 1 px LINE
 ## rule under the rest; no surface, no box.
 static func paint_tab(b: Button, active: bool) -> void:
-	var sb := style(Color.TRANSPARENT, 6, 0, TEXT if active else LINE)
+	var sb := style(Color.TRANSPARENT, Space.CLOSE, 0, TEXT if active else LINE)
 	sb.set_border_width_all(0)
 	sb.border_width_bottom = 2 if active else 1
-	sb.content_margin_left = 10
-	sb.content_margin_right = 10
-	for state in ["normal", "hover", "pressed", "hover_pressed", "focus"]:
+	sb.content_margin_left = Space.ROOM
+	sb.content_margin_right = Space.ROOM
+	for state in ["normal", "hover", "pressed", "hover_pressed"]:
 		b.add_theme_stylebox_override(state, sb)
+	b.add_theme_stylebox_override("focus", focus_ring())
 	b.add_theme_color_override("font_color", TEXT if active else MUTED)
 	b.add_theme_color_override("font_hover_color", TEXT)
 	b.add_theme_color_override("font_pressed_color", TEXT)
@@ -1690,10 +1788,11 @@ static func text_action(text: String, fs := NAME) -> Button:
 	var b := btn(text, fs)
 	b.flat = true
 	b.custom_minimum_size = Vector2(0, 44)
-	var sb := style(Color.TRANSPARENT, 8, 0)
+	var sb := style(Color.TRANSPARENT, GAP, 0)
 	sb.set_border_width_all(0)
-	for state in ["normal", "hover", "pressed", "hover_pressed", "focus"]:
+	for state in ["normal", "hover", "pressed", "hover_pressed"]:
 		b.add_theme_stylebox_override(state, sb)
+	b.add_theme_stylebox_override("focus", focus_ring())
 	b.add_theme_color_override("font_color", TEXT)
 	b.add_theme_color_override("font_hover_color", TEXT)
 	b.add_theme_color_override("font_pressed_color", MUTED)
@@ -1708,7 +1807,7 @@ static func section_link(title: String, leads_to: String, node_name: String) -> 
 	b.custom_minimum_size = Vector2(0, 48)
 	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	b.tooltip_text = leads_to
-	var h := hbox(8)
+	var h := hbox(GAP)
 	h.set_anchors_preset(Control.PRESET_FULL_RECT)
 	h.alignment = BoxContainer.ALIGNMENT_CENTER
 	# One line each (lbl wraps by default; a wrapped word here would grow the
@@ -1739,8 +1838,8 @@ static func choice_grid(node_name: String, options: Array, current: String, colu
 	var grid := GridContainer.new()
 	grid.name = node_name
 	grid.columns = columns
-	grid.add_theme_constant_override("h_separation", 6)
-	grid.add_theme_constant_override("v_separation", 6)
+	grid.add_theme_constant_override("h_separation", Space.CLOSE)
+	grid.add_theme_constant_override("v_separation", Space.CLOSE)
 	var state := {"current": current}
 	var buttons := {}
 	var paint := func() -> void:
@@ -1771,8 +1870,9 @@ static func choice_grid(node_name: String, options: Array, current: String, colu
 ## `strong`: an option that stands out (choice_grid's strong keys) keeps TEXT ink.
 static func paint_choice(b: Button, on: bool, strong := false) -> void:
 	var sb := _choice_box(on)
-	for s in ["normal", "hover", "pressed", "hover_pressed", "focus"]:
+	for s in ["normal", "hover", "pressed", "hover_pressed"]:
 		b.add_theme_stylebox_override(s, sb)
+	b.add_theme_stylebox_override("focus", focus_ring())
 	b.add_theme_color_override("font_color", TEXT if on or strong else MUTED)
 	b.add_theme_color_override("font_hover_color", TEXT)
 	b.add_theme_color_override("font_pressed_color", TEXT)
@@ -1787,7 +1887,7 @@ static func option() -> OptionButton:
 	b.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	b.get_popup().add_theme_font_override("font", FONT)
 	b.get_popup().add_theme_font_size_override("font_size", px(NAME))
-	b.get_popup().add_theme_constant_override("v_separation", 16)
+	b.get_popup().add_theme_constant_override("v_separation", Space.COLUMN)
 	return b
 
 
@@ -1802,8 +1902,8 @@ static func search_field(text: String, placeholder := "Search players...") -> Li
 	field.add_theme_color_override("font_color", TEXT)
 	field.add_theme_color_override("font_placeholder_color", MUTED)
 	field.add_theme_color_override("caret_color", TEXT)
-	field.add_theme_stylebox_override("normal", style(INK, 10, RADIUS))
-	field.add_theme_stylebox_override("focus", style(INK, 10, RADIUS, MUTED))
+	field.add_theme_stylebox_override("normal", style(INK, Space.ROOM, RADIUS))
+	field.add_theme_stylebox_override("focus", style(INK, Space.ROOM, RADIUS, MUTED))
 	field.clear_button_enabled = true
 	field.caret_blink = true
 	return field
@@ -1812,7 +1912,7 @@ static func search_field(text: String, placeholder := "Search players...") -> Li
 static func chip(text: String, colour: Color) -> PanelContainer:
 	var p := PanelContainer.new()
 	p.mouse_filter = Control.MOUSE_FILTER_PASS
-	p.add_theme_stylebox_override("panel", style(colour, 4, 4, Color.TRANSPARENT))
+	p.add_theme_stylebox_override("panel", style(colour, Space.TIGHT, 4, Color.TRANSPARENT))
 	var l := line(text, 12, readable_on(colour), true)
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	p.add_child(l)
@@ -1834,8 +1934,8 @@ static func trait_label(key: String) -> String:
 ## (TraitLink).
 static func trait_chips(p: Dictionary) -> HFlowContainer:
 	var h := HFlowContainer.new()
-	h.add_theme_constant_override("h_separation", 10)
-	h.add_theme_constant_override("v_separation", 2)
+	h.add_theme_constant_override("h_separation", Space.ROOM)
+	h.add_theme_constant_override("v_separation", Space.SLIM)
 	h.name = "Traits"
 	for t in Traits.of(p):
 		var l := line(trait_label(t), SMALL, BAD if Traits.is_bad(t) else MUTED)
@@ -1875,7 +1975,7 @@ static func readable_on(bg: Color) -> Color:
 ## otherwise the router steps back as usual.
 static func top_bar(title_text: String, back := true, right: Control = null,
 		back_cb: Callable = Callable()) -> HBoxContainer:
-	var h := hbox(10)
+	var h := hbox(Space.ROOM)
 	h.alignment = BoxContainer.ALIGNMENT_CENTER
 	if back:
 		var b := btn("‹", 26)
@@ -1902,7 +2002,7 @@ static func top_bar(title_text: String, back := true, right: Control = null,
 	# club exists, so Main and the new-career screens keep a plain title.
 	var my := my_club()
 	if my != "" and GameDB.clubs.has(my):
-		var stack := vbox(2)
+		var stack := vbox(Space.SLIM)
 		stack.name = "TopBarTitle"
 		stack.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		stack.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -1958,7 +2058,7 @@ static func colour_marker(cols: Array, size := 22.0, design := "plain", code := 
 
 
 static func club_badge(code: String, fs := 14, compact := false, shrink := false) -> HBoxContainer:
-	var h := hbox(6)
+	var h := hbox(Space.CLOSE)
 	h.alignment = BoxContainer.ALIGNMENT_CENTER
 	h.add_child(club_marker(code))
 	var name_text := code if compact else GameDB.club_short(code)
@@ -2018,7 +2118,7 @@ static func modal_box(parent: Control, max_w: float, prefer_h := 0.0, wash := AU
 		lift.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		lift.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		center.add_child(lift)
-	var shell := panel(PANEL, 16)
+	var shell := panel(PANEL, Space.COLUMN)
 	if bottom:
 		shell.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	# The sheet rises into place, which a Container would undo, so
@@ -2051,12 +2151,12 @@ static func modal_box(parent: Control, max_w: float, prefer_h := 0.0, wash := AU
 		var none := Color(lead, 0.0)
 		shell.draw_polygon(PackedVector2Array([Vector2(0, 0), Vector2(w, 0), Vector2(w, h), Vector2(0, h)]),
 				PackedColorArray([top, top, none, none])))
-	var outer := vbox(8)
+	var outer := vbox(GAP)
 	shell.add_child(outer)
-	var body := vbox(8)
+	var body := vbox(GAP)
 	var sc := scroll(body)
 	outer.add_child(sc)
-	var footer := vbox(6)
+	var footer := vbox(Space.CLOSE)
 	outer.add_child(footer)
 	# A PC: a sheet's actions sit at its right, sized to their words, not as
 	# bars across it (director, 2026-10-10: no phone UI on a PC).
@@ -2172,7 +2272,7 @@ static func ladder_table(rows: Array, mine: String, width: float, limit := 0,
 		full := false, finalists := 0) -> VBoxContainer:
 	if finalists <= 0:
 		finalists = Season.FINALISTS
-	var v := vbox(2)
+	var v := vbox(Space.SLIM)
 	var specs := ladder_specs(width, full)
 	var shown := rows.size() if limit <= 0 else mini(limit, rows.size())
 	# A fixed club column ends at the longest name it holds (plus a 12 px
@@ -2235,7 +2335,7 @@ static func ladder_specs(width: float, full: bool) -> Array:
 
 
 static func _ladder_header(specs: Array) -> HBoxContainer:
-	var h := hbox(4)
+	var h := hbox(Space.TIGHT)
 	for spec in specs:
 		var expand: bool = bool(spec.get("expand", false))
 		var head := _ladder_label(str(spec["title"]), int(spec.get("w", 0)),
@@ -2258,7 +2358,7 @@ static func _ladder_header(specs: Array) -> HBoxContainer:
 
 
 static func _ladder_data_row(r: Dictionary, pos: int, specs: Array, mine: String) -> HBoxContainer:
-	var h := hbox(4)
+	var h := hbox(Space.TIGHT)
 	var is_mine: bool = str(r["code"]) == mine
 	var col := TEXT if is_mine else MUTED
 	for spec in specs:
@@ -2302,7 +2402,7 @@ static func _ladder_label(text: String, w: int, col: Color, fs: int, bold: bool,
 ## row is named `node_name`; its sentence label is "Text".
 static func stake_row(line: String, node_name: String) -> Control:
 	var cut := line.find(": ")
-	var item := hbox(6)
+	var item := hbox(Space.CLOSE)
 	item.name = node_name
 	var mk := lbl(line.substr(0, cut + 1) if cut > 0 else "", SECONDARY, label_ink(), true)
 	mk.size_flags_vertical = Control.SIZE_SHRINK_BEGIN

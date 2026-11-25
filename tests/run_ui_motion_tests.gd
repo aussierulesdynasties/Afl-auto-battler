@@ -68,6 +68,13 @@ func _run() -> void:
 	await _t("_test_result_sheet_reduced")
 	await _t("_test_land_edge_tap")
 	await _t("_test_round_list")
+	_t("_test_every_tween_checks_reduced")
+	await _t("_test_dice_reduced")
+	await _t("_test_rows_answer_a_finger")
+	await _t("_test_count_waits_for_the_dots")
+	await _t("_test_arrival_moves_once")
+	await _t("_test_chemistry_figure_while_filling")
+	await _t("_test_review_waits_for_awards")
 	await _t("_test_land_hidden")
 	await _t("_test_fulltime_win")
 	await _t("_test_fulltime_loss_silent")
@@ -650,6 +657,241 @@ func _test_round_list() -> void:
 		_check(is_equal_approx(page_fade.modulate.a, 0.0),
 				"At the hub page's end its fade is gone too (alpha %.2f)" % page_fade.modulate.a)
 	hub.queue_free()
+	await _settle()
+
+
+## Reduced motion keeps the screen still (Settings: "no fades, counting numbers,
+## pulses, moving backgrounds or shake"), so every tween in the game's scripts sits
+## in a function that asks first (UiKit.motion_on, Feel.reduced, a screen's own
+## reduced check), or is on this list with the place that asks for it.
+const TWEEN_GUARDS := ["motion_on()", "Feel.reduced", "reduced_motion()", "_reduced()", "should_run()"]
+const TWEEN_ASKED_UPSTREAM := {
+	"scripts/ui/DraftScene.gd:_show_beat": "draft night's stage plays only when _night_on() (motion_on)",
+	"scripts/ui/DraftScene.gd:_end_beat": "fades the stage _show_beat put up",
+	"scripts/ui/DraftScene.gd:_slide_recent": "called only when motion_on (_recent_rows)",
+	"scripts/ui/UiKit.gd:_own": "the helpers' tween, made after each helper asks",
+	"scripts/ui/UiKit.gd:_after": "a helper's delay, made after the helper asks",
+}
+
+
+func _test_every_tween_checks_reduced() -> void:
+	var files: Array = []
+	var dirs: Array = ["res://scripts"]
+	while not dirs.is_empty():
+		var d: String = dirs.pop_back()
+		var da := DirAccess.open(d)
+		if da == null:
+			continue
+		for sub in da.get_directories():
+			dirs.append(d + "/" + sub)
+		for f in da.get_files():
+			if f.ends_with(".gd"):
+				files.append(d + "/" + f)
+	_check(files.size() > 100, "the scan reads the game's scripts (%d)" % files.size())
+	var seen := 0
+	var bare: Array = []
+	var used := {}
+	for path in files:
+		var lines: PackedStringArray = FileAccess.get_file_as_string(path).split("\n")
+		var start := -1
+		var fn := ""
+		for i in range(lines.size()):
+			var l: String = lines[i]
+			if l.begins_with("func ") or l.begins_with("static func "):
+				start = i
+				fn = l.trim_prefix("static ").trim_prefix("func ").get_slice("(", 0)
+			if not "create_tween(" in l or l.strip_edges().begins_with("#"):
+				continue
+			seen += 1
+			var key := "%s:%s" % [str(path).trim_prefix("res://"), fn]
+			var body := "\n".join(lines.slice(maxi(start, 0), i + 1))
+			var asks := false
+			for g in TWEEN_GUARDS:
+				asks = asks or g in body
+			if TWEEN_ASKED_UPSTREAM.has(key):
+				used[key] = true
+			elif not asks:
+				bare.append("%s line %d" % [key, i + 1])
+	_check(seen >= 20, "the scan finds the game's tweens (%d)" % seen)
+	_check(bare.is_empty(), "every tween asks Reduced motion first (not: %s)" % ", ".join(bare))
+	for k in TWEEN_ASKED_UPSTREAM:
+		_check(used.has(k), "%s still makes a tween (else take it off the list)" % k)
+
+
+## The dice at a break talk tumble; with Reduced motion they land at once.
+func _test_dice_reduced() -> void:
+	var host := Control.new()
+	host.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	root.add_child(host)
+	var dice: Control = load("res://scripts/ui/match/TalkDice.gd").new()
+	host.add_child(dice)
+	var landed := [0]
+	_state.set_reduced_motion(true)
+	_feel.clear()
+	dice.roll([3, 5], func() -> void: landed[0] += 1)
+	_check(dice.is_landed() and dice.faces == [3, 5] and landed[0] == 1 and _feel.moved.is_empty(),
+			"reduced: the dice land on the roll at once, no tumble (%s)" % str(_feel.moved))
+	_state.set_reduced_motion(false)
+	_feel.clear()
+	dice.roll([6, 2], func() -> void: landed[0] += 1)
+	_check(not dice.is_landed() and _feel.moved == ["dice"], "motion on: the dice tumble first (%s)" % str(_feel.moved))
+	await create_timer(1.6).timeout
+	_check(dice.is_landed() and dice.faces == [6, 2] and landed[0] == 2, "motion on: then land on the roll")
+	host.queue_free()
+	await _settle()
+
+
+## Every button answers a finger (director, 2026-10-11): a player row on My list
+## and a coach's row on Staff press in under a real tap, and still do their job.
+func _test_rows_answer_a_finger() -> void:
+	_prime(true, false)
+	for case in [["res://scenes/ListScene.tscn", "Row_"], ["res://scenes/StaffScene.tscn", "StaffRow_"]]:
+		var scene: Control = load(str(case[0])).instantiate()
+		# My list opens on its shape; the rows are on the Full list tab.
+		if "_pane" in scene:
+			scene.set("_pane", "list")
+		root.add_child(scene)
+		await _settle(8)
+		var row: Button = null
+		for b in scene.find_children(str(case[1]) + "*", "Button", true, false):
+			if (b as Control).is_visible_in_tree():
+				row = b
+				break
+		_check(row != null, "%s: a row is on screen" % case[0])
+		if row == null:
+			scene.queue_free()
+			continue
+		# The list's row opens a profile screen: here only its press is wanted.
+		for c in row.pressed.get_connections():
+			if (c["callable"] as Callable).get_method() == "_open_profile":
+				row.pressed.disconnect(c["callable"])
+		var hit := [false]
+		row.pressed.connect(func() -> void: hit[0] = true)
+		await Tap.steady(row)
+		_feel.clear()
+		var why: String = await Tap.tap(row)
+		_check(why == "" and hit[0], "%s: a real tap reaches %s (%s)" % [case[0], row.name, why])
+		_check("press" in _feel.moved, "%s: %s presses in under the finger (%s)" % [case[0], row.name, str(_feel.moved)])
+		_check(str(row.get_meta("feel", "")) == "soft", "%s: %s sounds as a button does" % [case[0], row.name])
+		scene.queue_free()
+		await _settle()
+
+
+## An arriving screen's count waits for the dots between screens (UI Batch 4):
+## built under the cover it shows the figure it counts from, and counts once
+## the dots have gone, where it is seen.
+func _test_count_waits_for_the_dots() -> void:
+	var wipe: Node = root.get_node("ScreenTransition")
+	var host := Control.new()
+	host.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	root.add_child(host)
+	var got := {}
+	_feel.clear()
+	wipe.call("cover", func():
+		var n: Label = _uk.lbl("", 20)
+		host.add_child(n)
+		got["label"] = n
+		_uk.count_up(n, 80, func(v): return "%d pts" % v)
+		got["under"] = n.text
+		got["moved"] = _feel.moved.duplicate())
+	await wipe.cleared
+	var n: Label = got.get("label")
+	_check(n != null and str(got.get("under", "")) == "0 pts",
+			"Under the dots the count shows where it starts (%s)" % str(got.get("under", "")))
+	_check((got.get("moved", ["x"]) as Array).is_empty(), "Under the dots it has not started (%s)" % str(got.get("moved", "")))
+	var at_clear := int(n.text.split(" ")[0]) if n != null else 99
+	_check(at_clear < 40, "It counts once the dots have gone (%s as they clear)" % (n.text if n != null else "no label"))
+	await create_timer(1.0).timeout
+	_check(n != null and n.text == "80 pts", "It ends on the true figure (%s)" % (n.text if n != null else "no label"))
+	host.queue_free()
+	await _settle()
+
+
+## Stats, Team selection and the Season review move as you arrive (counts,
+## the chemistry bar, a fade) and not again when the page is rebuilt by a
+## tab, a sort, a pick or a resize.
+func _test_arrival_moves_once() -> void:
+	var db = root.get_node("GameDB")
+	_state.start_season("COL", db.club_list("COL"))
+	for i in range(3):
+		_state.advance()
+	var paths := ["res://scenes/StatsHubScene.tscn", "res://scenes/SelectionScene.tscn",
+			"res://scenes/SeasonReviewScene.tscn"]
+	_check(paths.size() == 3, "Three screens arrive with motion")
+	for path in paths:
+		_feel.clear()
+		var scene: Control = load(path).instantiate()
+		root.add_child(scene)
+		await _settle()
+		var moved: Array = _feel.moved.duplicate()
+		_check(moved.has("count_up") or moved.has("fill_bar"), "%s: arriving, its figures move (%s)" % [path.get_file(), str(moved)])
+		_feel.clear()
+		scene.call("_build")
+		await _settle()
+		_check(_feel.moved.is_empty(), "%s: a rebuild does not move them again (%s)" % [path.get_file(), str(_feel.moved)])
+		scene.queue_free()
+		await _settle()
+
+
+## Arriving at Team selection the chemistry figure counts up with its bar and
+## sits where the meter puts that figure at every step: never to the left of
+## the bar's start, over the words beside it (the short phone bar).
+func _test_chemistry_figure_while_filling() -> void:
+	var db = root.get_node("GameDB")
+	_state.start_season("COL", db.club_list("COL"))
+	var scene: Control = load("res://scenes/SelectionScene.tscn").instantiate()
+	root.add_child(scene)
+	var fill: Control = null
+	var fig: Label = null
+	var worst := INF
+	var seen := {}
+	for i in range(30):
+		await process_frame
+		if fill == null:
+			fill = scene.find_child("ChemistryFill", true, false)
+			fig = fill.get_node_or_null("ChemistryFigure") if fill != null else null
+		if fig == null or fill.size.x <= 0.0 and fill.get_parent_control().size.x <= 0.0:
+			continue
+		seen[fig.text] = true
+		worst = minf(worst, fig.get_global_rect().position.x - fill.get_global_rect().position.x)
+	_check(fig != null, "Team selection has its chemistry figure")
+	_check(seen.size() >= 3, "The figure counts up with the bar (%d figures seen)" % seen.size())
+	_check(worst >= -0.5, "While it fills the figure never starts left of the bar (%.1f px)" % worst)
+	scene.queue_free()
+	await _settle()
+
+
+## On a first visit awards night opens over the Season review: the review's
+## figures wait under it and count once it has closed.
+func _test_review_waits_for_awards() -> void:
+	var db = root.get_node("GameDB")
+	_state.start_season("COL", db.club_list("COL"))
+	var season = _state.season
+	season.round_index = season.fixture.size()
+	_state.ensure_finals()
+	var guard := 0
+	while not season.is_season_over() and guard < 10:
+		guard += 1
+		_state.advance()
+	_check(season.is_season_over() and not _state.season_awards.is_empty(), "The season is over with its awards")
+	_state.season_awards["presentation_seen"] = false
+	var scene: Control = load("res://scenes/SeasonReviewScene.tscn").instantiate()
+	root.add_child(scene)
+	await _settle()
+	var night: Control = scene.find_child("SeasonAwards", true, false)
+	var finish: Label = scene.find_child("SeasonFinish", true, false)
+	_check(night != null and finish != null, "Awards night is up over the review")
+	_check(finish != null and not finish.has_meta("_motion_text"), "Under awards night the review's figures wait")
+	if night != null:
+		night.queue_free()
+	await _settle()
+	finish = scene.find_child("SeasonFinish", true, false)
+	_check(finish != null and finish.has_meta("_motion_text"), "Once it closes, the finish counts")
+	_feel.clear()
+	scene.call("_build")
+	await _settle()
+	_check(_feel.moved.is_empty(), "After that a rebuild moves nothing (%s)" % str(_feel.moved))
+	scene.queue_free()
 	await _settle()
 
 
