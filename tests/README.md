@@ -86,6 +86,7 @@ Pick the suites for the code you changed and run just those (`tools/run_tests.sh
 | `ui_motion` | Menu motion: tokens, hardened helpers, sheet_in, fill_bar, the result sheet on a win and a loss, Reduced motion, real taps during the rise and a land |
 | `potential` | Potential (POT) rules, rehab years, draft pedigree |
 | `ratings` | The overall rating model |
+| `attributes` | The one attribute list (scripts/sim/Attributes.gd) every screen reads, each attribute once in every list with the labels the screens show, and the one OVR door (Rating.ovr) returning every real player's stored OVR unchanged |
 | `ai` | Rival clubs' drafting and selection |
 | `training` | Training plans and the stat guide; the stat focus (row 97): once a season, the lock, unlock at rollover, old saves, a club move, real taps at 390x844 |
 | `selection` | Team selection and named sides |

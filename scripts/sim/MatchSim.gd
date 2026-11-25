@@ -5173,7 +5173,7 @@ func _talk(side: int, kind: String, id: String) -> Dictionary:
 func _auto_talks(side: int) -> void:
 	var best := {}
 	for p in (squads[side] as Squad).ground:
-		if best.is_empty() or int(p.get("overall", 0)) > int(best.get("overall", 0)):
+		if best.is_empty() or int(Rating.ovr(p, 0)) > int(Rating.ovr(best, 0)):
 			best = p
 	if not best.is_empty():
 		sit_down(side, str(best["id"]))
@@ -5535,7 +5535,7 @@ func rosters() -> Array:
 				"name": GameDB.player_display_name(p), "role": str(p["role"]),
 				# "role" is the slot he filled today; this is his own position.
 				"list_role": str(p.get("own_role", p["role"])),
-				"club": _side_club(side, p), "overall": int(p["overall"]),
+				"club": _side_club(side, p), "overall": int(Rating.ovr(p)),
 				# Presentation only: the view puts the named wings on the wings.
 				"line": str(p.get("line", "")),
 			})
@@ -6040,7 +6040,7 @@ func _auto_rotate(side: int) -> void:
 		if named_tagger != "" and str(p["id"]) == named_tagger:
 			continue
 		var e := float(energy.get(str(p["id"]), 100.0))
-		var line := float(policy["star"]) if int(p["overall"]) >= STAR_OVR else float(policy["role"])
+		var line := float(policy["star"]) if int(Rating.ovr(p)) >= STAR_OVR else float(policy["role"])
 		if e < line and e < worst_e:
 			worst = i
 			worst_e = e
@@ -6329,7 +6329,7 @@ func legs(side: int) -> Array:
 		var rows := []
 		for p in group[0]:
 			rows.append({"id": str(p["id"]), "name": GameDB.player_display_name(p),
-					"num": int(p["num"]), "role": str(p["role"]), "overall": int(p["overall"]),
+					"num": int(p["num"]), "role": str(p["role"]), "overall": int(Rating.ovr(p)),
 					"energy": float(energy.get(str(p["id"]), 100.0)), "on": bool(group[1])})
 		rows.sort_custom(func(a, b): return float(a["energy"]) < float(b["energy"]))
 		out.append_array(rows)
@@ -6641,7 +6641,7 @@ func _midfield_minder(side: int, shooter: Dictionary) -> Dictionary:
 	if minders.is_empty():
 		return {}
 	var mids := _by_roles((squads[side] as Squad).ground, ["MID"])
-	mids.sort_custom(func(a, b): return int(a["overall"]) > int(b["overall"]))
+	mids.sort_custom(func(a, b): return int(Rating.ovr(a)) > int(Rating.ovr(b)))
 	minders.sort_custom(func(a, b): return _a(a, "pressure") > _a(b, "pressure"))
 	for i in range(mini(minders.size(), mids.size())):
 		if str(mids[i]["id"]) == str(shooter.get("id", "")):
