@@ -32,7 +32,43 @@ static func open(host: Control, p: Dictionary, on_close: Callable = Callable(),
 	overlay.name = "PlayerProfile"
 	UiKit.close_on_outside_tap(box, on_close)
 	var v: VBoxContainer = box["body"]
+	var nickname_row := profile_body(v, p, host)
+	if nickname_row != null:
+		v.add_child(UiKit.spacer(10))
+		v.add_child(nickname_row)
+		v.add_child(UiKit.spacer(14))   # clear of Close
 
+	# What the host offers sits in its own block under a rule, so a line about the
+	# action is never read as the end of the scrolled sheet above it.
+	if not actions.is_empty():
+		box["footer"].add_child(UiKit.rule())
+	for a in actions:
+		var action: Dictionary = a
+		var detail := UiKit.lbl(str(action.get("detail", "")), UiKit.SMALL, UiKit.TEXT)
+		detail.name = "Detail_" + str(action.get("name", ""))
+		detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		box["footer"].add_child(detail)
+		var act := UiKit.btn(str(action.get("label", "")), 16)
+		act.name = str(action.get("name", "Action"))
+		act.custom_minimum_size = Vector2(0, 48)
+		act.disabled = bool(action.get("disabled", false))
+		act.pressed.connect(action["run"])
+		box["footer"].add_child(act)
+	var close := UiKit.btn("Close", UiKit.NAME, true)
+	close.custom_minimum_size = Vector2(0, 48)
+	close.pressed.connect(func():
+		overlay.queue_free()
+		if on_close.is_valid():
+			on_close.call())
+	box["footer"].add_child(close)
+	return overlay
+
+
+## The profile itself, into `v`: everything the sheet shows above its foot.
+## Shared by the sheet and the pre-season meeting's PC layout (director,
+## 2026-11-24: "put the player's profile on the right"). Returns the row to
+## add a first nickname (the sheet sets it at its foot), or null.
+static func profile_body(v: VBoxContainer, p: Dictionary, host: Control) -> Control:
 	# His name in his club's ink (design bible, readability): whose side he is on at a glance.
 	var name_ink := UiKit.club_name_colour(UiKit.club_ink(str(p.get("club", "")))) 			if str(p.get("club", "")) != "" else UiKit.TEXT
 	var name_l := UiKit.lbl(GameDB.player_display_name(p), 22, name_ink, true)
@@ -283,35 +319,7 @@ static func open(host: Control, p: Dictionary, on_close: Callable = Callable(),
 			blank_note.name = "ProfileUnrecordedNote"
 			blank_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			v.add_child(blank_note)
-	if nickname_row != null:
-		v.add_child(UiKit.spacer(10))
-		v.add_child(nickname_row)
-		v.add_child(UiKit.spacer(14))   # clear of Close
-
-	# What the host offers sits in its own block under a rule, so a line about the
-	# action is never read as the end of the scrolled sheet above it.
-	if not actions.is_empty():
-		box["footer"].add_child(UiKit.rule())
-	for a in actions:
-		var action: Dictionary = a
-		var detail := UiKit.lbl(str(action.get("detail", "")), UiKit.SMALL, UiKit.TEXT)
-		detail.name = "Detail_" + str(action.get("name", ""))
-		detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		box["footer"].add_child(detail)
-		var act := UiKit.btn(str(action.get("label", "")), 16)
-		act.name = str(action.get("name", "Action"))
-		act.custom_minimum_size = Vector2(0, 48)
-		act.disabled = bool(action.get("disabled", false))
-		act.pressed.connect(action["run"])
-		box["footer"].add_child(act)
-	var close := UiKit.btn("Close", UiKit.NAME, true)
-	close.custom_minimum_size = Vector2(0, 48)
-	close.pressed.connect(func():
-		overlay.queue_free()
-		if on_close.is_valid():
-			on_close.call())
-	box["footer"].add_child(close)
-	return overlay
+	return nickname_row
 
 
 ## Top attributes and the Needs work line: his

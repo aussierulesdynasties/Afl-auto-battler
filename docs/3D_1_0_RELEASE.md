@@ -52,7 +52,7 @@ the machine pre-inspection clean, then his fly-through.
 | MCG | Rebuilt to the standard (#1987 merged); the last 405 seats under the tiers removed (#2027, merged); Yarra Park from OSM; horizon past 2 km empty; not yet flown through by him | #2027 | Make the MCG look like the real MCG (closed); seats: Fix the shared seat generator |
 | Marvel Stadium | Rebuild open: true bearing, instanced seats, shut roof, Docklands; roofs from above read pale | #2011 | Make Marvel Stadium look real |
 | Adelaide Oval | Rebuild open (Riverbank, Torrens, footbridge, St Peter's) and his 11 faults; arches with ivy and main entrance in #2015 | #2010 #2015 | Fix Adelaide Oval's saved faults |
-| Optus Stadium | Roof, bronze facade, surrounds open | #1993 | Make Optus Stadium look real |
+| Optus Stadium | Roof, bronze facade, surrounds on main (#1993); the bowl's shape still has to match Google Earth | #1993 | Make Optus Stadium look real |
 | SCG | North roof and tiers, Moore Park, Allianz open (WIP) | #2017 | Make the SCG look real |
 | The Gabba | Rebuild open (v8: modelled steel, louvres, gates; Woolloongabba) | #2020 | Make the Gabba look real (thread closed; PR still open) |
 | GMHBA Stadium | Rebuild open (Selwood Stand roof, seats no longer black); fins and plant screens still painted | #2016 | Make GMHBA Stadium look real |
@@ -66,11 +66,11 @@ the machine pre-inspection clean, then his fly-through.
 ### The 24 Legacy-mode grounds
 
 Rebuilds under way: York Park, Mars Stadium (open, #2036, now in matches), Cazaly's Stadium, Traeger Park
-(not yet in matches; #2006 wires it). Each has its own "Make ... look real" thread.
+(not yet in matches; #2006 wires it), Blacktown (stages 1-3 on main, #2048: fence on its real curve, stands at Google Earth's sizes, surroundings). Each has its own "Make ... look real" thread.
 
 **No owner:** Waverley Park, Windy Hill, Moorabbin Oval, Ikon Park, Whitten Oval, Football Park,
 Subiaco Oval, WACA (scoreboard legs inside the boundary), North Hobart Oval, Bruce Stadium,
-Riverway Stadium, Sky Stadium, Jiangwan Stadium, Hands Oval, Blacktown, Summit Park, Macquarie Point
+Riverway Stadium, Sky Stadium, Jiangwan Stadium, Hands Oval, Summit Park, Macquarie Point
 Stadium (all first drafts on main), and Accor Stadium, Marrara Oval (TIO Darwin) and Victoria Park
 (models exist; none plays in a match yet).
 
@@ -193,3 +193,4 @@ and the smoothing buffers.
 - 2026-11-22: the director chose all 37 grounds for 1.0.
 - 2026-11-22: the data-source rule for grounds written into MCG_STANDARD.md and sent to every ground thread; softened the same day (fidelity first; only raw imagery in the repo or textures is out).
 - 2026-11-22 evening: stat card (#1990), goal replay (#2022), siren and crowd (#2012) and broadcast colour (#2014) and the MCG seat fix (#2027) on main; MetaHuman players (#1976) and the match crew (#2043) on main, phone cost re-measured (players' detail levels still missing, #2054); every export preset found to leave out the ground and player models (#2058); owners and PRs for ENGIE, Manuka, Norwood, Barossa, Mars, guernseys, umpires and trainers, kick clips and night lights.
+- 2026-11-23: Optus Stadium rebuild on main (#1993); Blacktown stages 1-3 on main (#2048).

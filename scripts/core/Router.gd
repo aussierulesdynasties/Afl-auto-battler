@@ -42,8 +42,12 @@ const LINES := {
 const SLOW_MS := 150
 
 var stack: Array = []
-## Tests: load the next screen as a browser build without threads does.
+## Tests: load the next screen as a browser build does.
 var test_main_thread_load := false
+## Tests: screens loaded straight away on the main thread, and whether the
+## cover's line was on screen when the last one started.
+var direct_loads := 0
+var direct_load_under_line := false
 
 
 func go(key: String) -> void:
@@ -57,9 +61,9 @@ func go(key: String) -> void:
 	# thread while the dots sweep in. A headless test run swaps at once.
 	var wipe := get_node_or_null("/root/ScreenTransition")
 	if wipe != null and bool(wipe.call("cover_on")):
-		# A browser build has no threads: the "threaded" load would run on the
-		# main thread while the dots sweep in and freeze them half way. There it
-		# starts under full cover, once the line is on screen (_covered_swap).
+		# A browser build loads on the main thread, which would freeze the dots
+		# half way through their sweep. There it starts under full cover, once
+		# the line is on screen (_covered_swap).
 		if not load_on_main_thread():
 			ResourceLoader.load_threaded_request(path)
 		wipe.call("cover", _covered_swap.bind(key, path, wipe), str(LINES.get(key, "")))
@@ -67,10 +71,13 @@ func go(key: String) -> void:
 	_swap(key, path, true)
 
 
-## True where loading a scene blocks the main thread (a browser build without
-## threads). Tests set test_main_thread_load.
+## True where the next screen loads on the main thread: every browser build.
+## In a browser the background load of the match screen sat at 0% for over a
+## minute after the warm-up (2026-11-24, first match of a fresh browser), while
+## loading it straight away takes 0.2-1.4 s; so a browser never queues a screen
+## (director, 2026-11-24: "Yes, build it"). Tests set test_main_thread_load.
 func load_on_main_thread() -> bool:
-	return test_main_thread_load or (OS.has_feature("web") and not OS.has_feature("threads"))
+	return test_main_thread_load or OS.has_feature("web")
 
 
 ## Under full cover: save, wait for the threaded load (LOADING goes up if it
@@ -85,7 +92,17 @@ func _covered_swap(key: String, path: String, wipe: Node) -> void:
 		if not bool(wipe.call("line_visible")):
 			wipe.call("show_line", ScreenTransition.LOADING)
 			await wipe.call("drawn")
-		ResourceLoader.load_threaded_request(path)
+		direct_load_under_line = bool(wipe.call("line_visible"))
+		direct_loads += 1
+		var direct := ResourceLoader.load(path) as PackedScene
+		if direct == null:
+			_swap(key, path, false)
+			return
+		if get_tree().change_scene_to_packed(direct) != OK:
+			push_error("Router: change_scene_to_packed failed for %s" % path)
+			return
+		MusicManager.set_context(key)
+		return
 	var started := Time.get_ticks_msec()
 	while ResourceLoader.load_threaded_get_status(path) == ResourceLoader.THREAD_LOAD_IN_PROGRESS:
 		if Time.get_ticks_msec() - started >= SLOW_MS and not bool(wipe.call("line_visible")):

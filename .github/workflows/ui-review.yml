@@ -7,7 +7,7 @@ name: UI review sheets
 # the sheets before anything visual goes to the director.
 #
 # The second job, "sweep" (P-77, director yes 2026-10-18), opens every screen
-# at 390x844 and 1920x1080, and on the phone again at the Larger and Largest
+# at 390x844, 1920x1080 and 960x540 (the smallest PC window), and on the phone again at the Larger and Largest
 # text sizes (row 118), and fails when one got worse than the committed
 # baseline tools/visual/screen_sweep_baseline.json: a smaller smallest font,
 # more controls off screen, more clipped text, more targets under 44 px, more
@@ -277,8 +277,9 @@ jobs:
         run: |
           mkdir -p out
           # name:window:text size. The phone runs at all three Settings text
-          # sizes (row 118); the desktop at Standard.
-          for run in phone:390x844:standard pc:1920x1080:standard phone_larger:390x844:larger phone_largest:390x844:largest; do
+          # sizes (row 118); the desktop at Standard, full size and at the
+          # smallest PC window (3.C.41: every screen is checked at 960x540).
+          for run in phone:390x844:standard pc:1920x1080:standard pc_small:960x540:standard phone_larger:390x844:larger phone_largest:390x844:largest; do
             name="${run%%:*}"; rest="${run#*:}"; wh="${rest%%:*}"; ts="${rest#*:}"
             LIBGL_ALWAYS_SOFTWARE=1 xvfb-run -a -s "-screen 0 2560x1600x24"               timeout 1200 "$HOME/godot/godot" --path . --rendering-method gl_compatibility               --script tools/visual/sweep_screens.gd -- --size "$wh" --text-size "$ts"               --out "$PWD/out/sweep_$name.json" > "out/sweep_$name.log" 2>&1 || echo "::warning::$name sweep exited non-zero"
             grep -E "^SWEEP" "out/sweep_$name.log" || tail -n 20 "out/sweep_$name.log"
@@ -289,7 +290,7 @@ jobs:
         if: steps.setup.outputs.ok == 'true'
         run: |
           set +e
-          python3 tools/screen_sweep.py --phone out/sweep_phone.json --pc out/sweep_pc.json             --phone-larger out/sweep_phone_larger.json --phone-largest out/sweep_phone_largest.json             --baseline tools/visual/screen_sweep_baseline.json             --doc out/SCREEN_SWEEP.md --date "$(date -u +%F)" | tee out/sweep_check.txt
+          python3 tools/screen_sweep.py --phone out/sweep_phone.json --pc out/sweep_pc.json --pc-small out/sweep_pc_small.json             --phone-larger out/sweep_phone_larger.json --phone-largest out/sweep_phone_largest.json             --baseline tools/visual/screen_sweep_baseline.json             --doc out/SCREEN_SWEEP.md --date "$(date -u +%F)" | tee out/sweep_check.txt
           code=${PIPESTATUS[0]}
           {
             echo "## Screen sweep"

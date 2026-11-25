@@ -9,9 +9,14 @@ extends Control
 ## Wide diagonal guernsey stripes of the club's own colours (director,
 ## 2026-10-11: "Sweep"). Each stripe is an opaque colour built in OKLCH: the
 ## club colour's hue and as much of its chroma as fits, with only its
-## lightness capped so the muted grey type (a39e93) keeps 4.5:1 wherever it
+## lightness capped so the muted grey type (UiKit.MUTED) keeps 4.5:1 wherever it
 ## sits (see stripe_top, tools/visual/measure_backdrop.gd). Blending a light
 ## colour over the dark page shifted its hue (gold went olive); this doesn't.
+## The stripes sit behind the title only (director, 2026-11-25: "A · title
+## only"): full colour down to STOP_Y - STOP_FADE, faded out by STOP_Y, the
+## plain page below. The turf bands stop there too.
+const STOP_Y := 64.0
+const STOP_FADE := 16.0
 const FOOT_MIX := 0.30        # how much of the stripe is left at the foot of the page
 const TOP_LUM := 0.034        # brightest a stripe may be (relative luminance): MUTED >= 4.5
 const SLIDE_SECS := 0.6       # the stripes sweep in from off-screen, eased out
@@ -42,6 +47,8 @@ uniform vec4 foot_b : source_color;
 uniform vec4 raw_a : source_color;
 uniform vec4 raw_b : source_color;
 uniform vec2 gold = vec2(0.0, 0.0);
+uniform float stop_y = 64.0;
+uniform float stop_fade = 16.0;
 
 vec4 stripe(bool a, float y) {
 	float g = clamp(y / area.y, 0.0, 1.0);
@@ -65,6 +72,8 @@ void fragment() {
 	// Only stripes from the page's left onward exist, so the slide enters from
 	// off screen instead of shifting a pattern that already covers it.
 	float cover = clamp(0.5 + (u + 2.0) * sw * cosine, 0.0, 1.0);
+	// Behind the title only: gone by stop_y.
+	cover *= 1.0 - smoothstep(stop_y - stop_fade, stop_y, p.y);
 	COLOR = vec4(mix(other, here, clamp(0.5 + t, 0.0, 1.0)).rgb, cover);
 }
 """
@@ -111,6 +120,8 @@ func setup(club: String) -> ClubBackdrop:
 		mat.set_shader_parameter("foot_b", lab.call(b))
 		mat.set_shader_parameter("raw_a", _raw[0])
 		mat.set_shader_parameter("raw_b", rb)
+		mat.set_shader_parameter("stop_y", STOP_Y)
+		mat.set_shader_parameter("stop_fade", STOP_FADE)
 		mat.set_shader_parameter("gold", Vector2(1.0 if _is_gold(_raw[0]) else 0.0, 1.0 if _is_gold(rb) else 0.0))
 		_resized()
 	return self
@@ -174,15 +185,16 @@ func _at(t: float) -> void:
 
 func _draw() -> void:
 	var w := size.x
-	var h := size.y
+	var h := minf(size.y, STOP_Y)
 	draw_rect(Rect2(Vector2.ZERO, size), UiKit.BG)
-	# Mown turf: wide bands across the page, a breath lighter in turn.
+	# Mown turf: wide bands across the top, a breath lighter in turn, under the stripes.
 	var band := 64.0
 	var roll := (1.0 - _settle) * band * 2.0
 	var i := -2
 	while float(i) * band + roll < h:
 		if i % 2 == 0:
-			draw_rect(Rect2(0, float(i) * band + roll, w, band), Color(1, 1, 1, 0.018))
+			var y0 := float(i) * band + roll
+			draw_rect(Rect2(0, y0, w, minf(band, h - y0)), Color(1, 1, 1, 0.018))
 		i += 1
 
 
