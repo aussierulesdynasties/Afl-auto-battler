@@ -10,6 +10,7 @@ var _finals_overlay: Control = null
 var _settings: Control
 var _root: VBoxContainer
 var _results_overlay: Control
+var _ceremony: PremiershipCeremony   # a simmed Grand Final's, before the results
 var _media_overlay: Control
 var _talk_overlay: Control
 var _midseason_overlay: Control
@@ -2405,10 +2406,27 @@ func _sim_week() -> void:
 	else:
 		GameState.sim_week()
 	_build()
-	if not GameState.last_results.is_empty():
-		_show_results(GameState.last_results)
-	else:
+	_after_sim()
+
+
+## The simmed week's results; a simmed Grand Final opens its ceremony first.
+func _after_sim() -> void:
+	if GameState.last_results.is_empty():
 		_show_week_ask()
+		return
+	# A simmed Grand Final still lands on the ceremony (design bible 161), with
+	# its own siren, before the week's results.
+	var flag := {}
+	for r in GameState.last_results:
+		if flag.is_empty():
+			flag = PremiershipCeremony.facts(r)
+	if not flag.is_empty():
+		_ceremony = PremiershipCeremony.open(self, flag, {"siren": true})
+		_ceremony.done.connect(func() -> void:
+			_ceremony = null
+			_show_results(GameState.last_results), CONNECT_ONE_SHOT)
+		return
+	_show_results(GameState.last_results)
 
 
 ## What the cover says while the week is simmed.
@@ -2451,6 +2469,9 @@ func _close_finals() -> void:
 func handle_back() -> bool:
 	if MatchKickoff.busy:
 		return true     # the side is on its way out
+	if _ceremony != null and is_instance_valid(_ceremony):
+		_ceremony.finish_now()     # Back leaves the ceremony, as Continue does
+		return true
 	if FirstVisitIntro.close_open(self):
 		return true
 	if TrainingReportSheet.close_top(self):
