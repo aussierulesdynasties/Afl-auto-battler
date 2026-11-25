@@ -131,14 +131,16 @@ reads as elite.
 ## 4. Generation, progression, economy
 
 **Draftees.** One of the 12 types each. Ranges: each attribute's 10th-90th percentile among real
-first-season players of that type, aged 18-20, Wheelo 2012-25. A draftee draws a talent percentile, takes his
+first-season players of that type, aged 18-20, Wheelo 2012-25. A first season counts toward every type he held in
+any season of his career; a ruck's counts at any debut age (director, 2026-11-25, question box: "Type he held
+later", "Any debut age"). Built by `tools/wheelo/league.py` into `data/draftee_ranges.csv`. A draftee draws a talent percentile, takes his
 type's ranges at it, ±6 noise; POT from talent plus noise (`Potential.assign`). The Forge, expansion lists,
 depth pools and state leagues use the same ranges.
 
 **Progression.** XP (2/3 matches, 1/3 training, VFL half) buys attribute points; the plan picks which; a point
 costs more the higher the attribute. No gains once derived OVR at his primary position reaches POT (11-23).
 Age curves a little each round: Endurance, Durability, technical and Footy IQ measured year on year in Wheelo
-2012-25; Discipline XP only. Speed grows to 23, holds to 26, −1.5 a season from 27, −3 from 31; Strength grows to
+2012-25 (`data/age_curves.csv`, same script); Discipline XP only. Speed grows to 23, holds to 26, −1.5 a season from 27, −3 from 31; Strength grows to
 26, holds to 31, −1 a season from 32 (director, 2026-11-25, question box: "Blueprint curves").
 Breakouts: same rate, +4 to +6 on his three most heavily weighted attributes. Types retested each season.
 
