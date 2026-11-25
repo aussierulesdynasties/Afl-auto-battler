@@ -1,0 +1,867 @@
+year,round,home,away,when,venue,att
+2023,Round 1,Richmond,Carlton,Thu 16-Mar-2023 7:20 PM (6:20 PM),M.C.G.,88084
+2023,Round 1,Geelong,Collingwood,Fri 17-Mar-2023 7:40 PM (6:40 PM),M.C.G.,86595
+2023,Round 1,North Melbourne,West Coast,Sat 18-Mar-2023 1:45 PM (12:45 PM),Docklands,21274
+2023,Round 1,Port Adelaide,Brisbane Lions,Sat 18-Mar-2023 4:05 PM (3:35 PM),Adelaide Oval,34255
+2023,Round 1,Melbourne,Western Bulldogs,Sat 18-Mar-2023 7:25 PM (6:25 PM),M.C.G.,48103
+2023,Round 1,Gold Coast,Sydney,Sat 18-Mar-2023 7:00 PM,Carrara,13648
+2023,Round 1,Greater Western Sydney,Adelaide,Sun 19-Mar-2023 1:10 PM (12:10 PM),Sydney Showground,8169
+2023,Round 1,Hawthorn,Essendon,Sun 19-Mar-2023 3:20 PM (2:20 PM),M.C.G.,68691
+2023,Round 1,St Kilda,Fremantle,Sun 19-Mar-2023 4:40 PM (3:40 PM),Docklands,23429
+2023,Round 2,Carlton,Geelong,Thu 23-Mar-2023 7:20 PM (6:20 PM),M.C.G.,55861
+2023,Round 2,Brisbane Lions,Melbourne,Fri 24-Mar-2023 6:55 PM,Gabba,30047
+2023,Round 2,Collingwood,Port Adelaide,Sat 25-Mar-2023 1:45 PM (12:45 PM),M.C.G.,60744
+2023,Round 2,Adelaide,Richmond,Sat 25-Mar-2023 4:05 PM (3:35 PM),Adelaide Oval,38492
+2023,Round 2,Western Bulldogs,St Kilda,Sat 25-Mar-2023 7:25 PM (6:25 PM),Docklands,33294
+2023,Round 2,Fremantle,North Melbourne,Sat 25-Mar-2023 4:30 PM (6:30 PM),Perth Stadium,40487
+2023,Round 2,Sydney,Hawthorn,Sun 26-Mar-2023 1:10 PM (12:10 PM),S.C.G.,37052
+2023,Round 2,Essendon,Gold Coast,Sun 26-Mar-2023 3:20 PM (2:20 PM),Docklands,32915
+2023,Round 2,West Coast,Greater Western Sydney,Sun 26-Mar-2023 3:20 PM (5:20 PM),Perth Stadium,44649
+2023,Round 3,Western Bulldogs,Brisbane Lions,Thu 30-Mar-2023 7:20 PM (6:20 PM),Docklands,23665
+2023,Round 3,Collingwood,Richmond,Fri 31-Mar-2023 7:50 PM (6:50 PM),M.C.G.,85241
+2023,Round 3,Hawthorn,North Melbourne,Sat 01-Apr-2023 1:45 PM (12:45 PM),York Park,11007
+2023,Round 3,Greater Western Sydney,Carlton,Sat 01-Apr-2023 4:35 PM (3:35 PM),Sydney Showground,9691
+2023,Round 3,St Kilda,Essendon,Sat 01-Apr-2023 7:25 PM (6:25 PM),M.C.G.,69255
+2023,Round 3,Port Adelaide,Adelaide,Sat 01-Apr-2023 7:00 PM (6:30 PM),Adelaide Oval,48962
+2023,Round 3,Gold Coast,Geelong,Sun 02-Apr-2023 2:10 PM,Carrara,13122
+2023,Round 3,Melbourne,Sydney,Sun 02-Apr-2023 3:20 PM,M.C.G.,42423
+2023,Round 3,Fremantle,West Coast,Sun 02-Apr-2023 3:20 PM (5:20 PM),Perth Stadium,56090
+2023,Round 4,Brisbane Lions,Collingwood,Thu 06-Apr-2023 7:35 PM,Gabba,33565
+2023,Round 4,North Melbourne,Carlton,Fri 07-Apr-2023 4:20 PM,Docklands,49062
+2023,Round 4,Adelaide,Fremantle,Sat 08-Apr-2023 1:15 PM (1:45 PM),Adelaide Oval,33725
+2023,Round 4,Richmond,Western Bulldogs,Sat 08-Apr-2023 4:35 PM,M.C.G.,56449
+2023,Round 4,Sydney,Port Adelaide,Sat 08-Apr-2023 7:30 PM,S.C.G.,31686
+2023,Round 4,St Kilda,Gold Coast,Sat 08-Apr-2023 7:30 PM,Docklands,21049
+2023,Round 4,Essendon,Greater Western Sydney,Sun 09-Apr-2023 2:10 PM,Docklands,28815
+2023,Round 4,West Coast,Melbourne,Sun 09-Apr-2023 3:20 PM (5:20 PM),Perth Stadium,42458
+2023,Round 4,Geelong,Hawthorn,Mon 10-Apr-2023 3:20 PM,M.C.G.,65335
+2023,Round 5,Adelaide,Carlton,Thu 13-Apr-2023 7:10 PM (7:40 PM),Adelaide Oval,47395
+2023,Round 5,Fremantle,Gold Coast,Fri 14-Apr-2023 4:40 PM (5:10 PM),Norwood Oval,9329
+2023,Round 5,Richmond,Sydney,Fri 14-Apr-2023 7:40 PM (8:10 PM),Adelaide Oval,42134
+2023,Round 5,Brisbane Lions,North Melbourne,Sat 15-Apr-2023 12:40 PM (1:10 PM),Summit Sports Park,7329
+2023,Round 5,Essendon,Melbourne,Sat 15-Apr-2023 3:40 PM (4:10 PM),Adelaide Oval,33832
+2023,Round 5,Port Adelaide,Western Bulldogs,Sat 15-Apr-2023 7:20 PM (7:50 PM),Adelaide Oval,45115
+2023,Round 5,Geelong,West Coast,Sun 16-Apr-2023 12:40 PM (1:10 PM),Adelaide Oval,30120
+2023,Round 5,Greater Western Sydney,Hawthorn,Sun 16-Apr-2023 2:50 PM (3:20 PM),Norwood Oval,9057
+2023,Round 5,Collingwood,St Kilda,Sun 16-Apr-2023 4:20 PM (4:50 PM),Adelaide Oval,43976
+2023,Round 6,Fremantle,Western Bulldogs,Fri 21-Apr-2023 6:10 PM (8:10 PM),Perth Stadium,47503
+2023,Round 6,Port Adelaide,West Coast,Sat 22-Apr-2023 1:15 PM (1:45 PM),Adelaide Oval,31638
+2023,Round 6,Greater Western Sydney,Brisbane Lions,Sat 22-Apr-2023 4:35 PM,Manuka Oval,10461
+2023,Round 6,Geelong,Sydney,Sat 22-Apr-2023 7:25 PM,Kardinia Park,23134
+2023,Round 6,Hawthorn,Adelaide,Sun 23-Apr-2023 1:10 PM,York Park,10119
+2023,Round 6,Carlton,St Kilda,Sun 23-Apr-2023 3:20 PM,Docklands,45770
+2023,Round 6,Gold Coast,North Melbourne,Sun 23-Apr-2023 4:40 PM,Carrara,9672
+2023,Round 6,Melbourne,Richmond,Mon 24-Apr-2023 7:25 PM,M.C.G.,83985
+2023,Round 6,Collingwood,Essendon,Tue 25-Apr-2023 3:20 PM,M.C.G.,95179
+2023,Round 7,St Kilda,Port Adelaide,Fri 28-Apr-2023 7:50 PM,Docklands,25845
+2023,Round 7,Brisbane Lions,Fremantle,Sat 29-Apr-2023 1:45 PM,Gabba,25528
+2023,Round 7,Sydney,Greater Western Sydney,Sat 29-Apr-2023 2:10 PM,S.C.G.,31615
+2023,Round 7,Western Bulldogs,Hawthorn,Sat 29-Apr-2023 4:35 PM,Docklands,40119
+2023,Round 7,Melbourne,North Melbourne,Sat 29-Apr-2023 7:25 PM,M.C.G.,29455
+2023,Round 7,West Coast,Carlton,Sat 29-Apr-2023 5:30 PM (7:30 PM),Perth Stadium,47940
+2023,Round 7,Essendon,Geelong,Sun 30-Apr-2023 1:10 PM,M.C.G.,67457
+2023,Round 7,Richmond,Gold Coast,Sun 30-Apr-2023 3:20 PM,Docklands,23664
+2023,Round 7,Adelaide,Collingwood,Sun 30-Apr-2023 4:10 PM (4:40 PM),Adelaide Oval,43942
+2023,Round 8,Carlton,Brisbane Lions,Fri 05-May-2023 7:50 PM,Docklands,45458
+2023,Round 8,Richmond,West Coast,Sat 06-May-2023 1:45 PM,M.C.G.,28293
+2023,Round 8,Geelong,Adelaide,Sat 06-May-2023 2:10 PM,Kardinia Park,21415
+2023,Round 8,Gold Coast,Melbourne,Sat 06-May-2023 4:35 PM,Carrara,11440
+2023,Round 8,Fremantle,Hawthorn,Sat 06-May-2023 5:30 PM (7:30 PM),Perth Stadium,37160
+2023,Round 8,Greater Western Sydney,Western Bulldogs,Sat 06-May-2023 7:30 PM,Manuka Oval,10039
+2023,Round 8,Port Adelaide,Essendon,Sun 07-May-2023 12:40 PM (1:10 PM),Adelaide Oval,36247
+2023,Round 8,Collingwood,Sydney,Sun 07-May-2023 3:20 PM,M.C.G.,71463
+2023,Round 8,North Melbourne,St Kilda,Sun 07-May-2023 4:40 PM,Docklands,22065
+2023,Round 9,Richmond,Geelong,Fri 12-May-2023 7:20 PM,M.C.G.,58141
+2023,Round 9,West Coast,Gold Coast,Fri 12-May-2023 6:40 PM (8:40 PM),Perth Stadium,36219
+2023,Round 9,Sydney,Fremantle,Sat 13-May-2023 1:45 PM,S.C.G.,28927
+2023,Round 9,North Melbourne,Port Adelaide,Sat 13-May-2023 2:10 PM,Bellerive Oval,6310
+2023,Round 9,Hawthorn,Melbourne,Sat 13-May-2023 4:35 PM,M.C.G.,39818
+2023,Round 9,Brisbane Lions,Essendon,Sat 13-May-2023 7:25 PM,Gabba,31898
+2023,Round 9,Carlton,Western Bulldogs,Sat 13-May-2023 7:30 PM,Docklands,42756
+2023,Round 9,Adelaide,St Kilda,Sun 14-May-2023 12:40 PM (1:10 PM),Adelaide Oval,33805
+2023,Round 9,Collingwood,Greater Western Sydney,Sun 14-May-2023 4:40 PM,M.C.G.,37631
+2023,Round 10,Port Adelaide,Melbourne,Fri 19-May-2023 7:20 PM (7:50 PM),Adelaide Oval,37565
+2023,Round 10,North Melbourne,Sydney,Sat 20-May-2023 1:45 PM,Docklands,21003
+2023,Round 10,Western Bulldogs,Adelaide,Sat 20-May-2023 2:10 PM,Eureka Stadium,10114
+2023,Round 10,Fremantle,Geelong,Sat 20-May-2023 2:35 PM (4:35 PM),Perth Stadium,45811
+2023,Round 10,Brisbane Lions,Gold Coast,Sat 20-May-2023 7:30 PM,Gabba,23286
+2023,Round 10,Essendon,Richmond,Sat 20-May-2023 7:40 PM,M.C.G.,78300
+2023,Round 10,Hawthorn,West Coast,Sun 21-May-2023 1:10 PM,York Park,9135
+2023,Round 10,Carlton,Collingwood,Sun 21-May-2023 3:20 PM,M.C.G.,80354
+2023,Round 10,Greater Western Sydney,St Kilda,Sun 21-May-2023 4:40 PM,Sydney Showground,7508
+2023,Round 11,Sydney,Carlton,Fri 26-May-2023 7:50 PM,S.C.G.,36310
+2023,Round 11,St Kilda,Hawthorn,Sat 27-May-2023 1:45 PM,Docklands,32022
+2023,Round 11,Melbourne,Fremantle,Sat 27-May-2023 2:10 PM,M.C.G.,29154
+2023,Round 11,Geelong,Greater Western Sydney,Sat 27-May-2023 4:35 PM,Kardinia Park,21349
+2023,Round 11,Gold Coast,Western Bulldogs,Sat 27-May-2023 6:55 PM (7:25 PM),Marrara Oval,9316
+2023,Round 11,West Coast,Essendon,Sat 27-May-2023 5:40 PM (7:40 PM),Perth Stadium,39269
+2023,Round 11,Richmond,Port Adelaide,Sun 28-May-2023 1:10 PM,M.C.G.,30357
+2023,Round 11,Collingwood,North Melbourne,Sun 28-May-2023 3:20 PM,Docklands,39467
+2023,Round 11,Adelaide,Brisbane Lions,Sun 28-May-2023 4:10 PM (4:40 PM),Adelaide Oval,33188
+2023,Round 12,Melbourne,Carlton,Fri 02-Jun-2023 7:50 PM,M.C.G.,49872
+2023,Round 12,Port Adelaide,Hawthorn,Sat 03-Jun-2023 1:15 PM (1:45 PM),Adelaide Oval,34234
+2023,Round 12,West Coast,Collingwood,Sat 03-Jun-2023 2:35 PM (4:35 PM),Perth Stadium,41713
+2023,Round 12,Western Bulldogs,Geelong,Sat 03-Jun-2023 7:25 PM,Docklands,41944
+2023,Round 12,Gold Coast,Adelaide,Sat 03-Jun-2023 7:00 PM (7:30 PM),Marrara Oval,10772
+2023,Round 12,Greater Western Sydney,Richmond,Sun 04-Jun-2023 1:10 PM,Sydney Showground,9723
+2023,Round 12,Essendon,North Melbourne,Sun 04-Jun-2023 4:40 PM,Docklands,40488
+2023,Round 13,Sydney,St Kilda,Thu 08-Jun-2023 7:10 PM,S.C.G.,30123
+2023,Round 13,Western Bulldogs,Port Adelaide,Fri 09-Jun-2023 7:50 PM,Docklands,23110
+2023,Round 13,Hawthorn,Brisbane Lions,Sat 10-Jun-2023 1:45 PM,M.C.G.,35869
+2023,Round 13,Adelaide,West Coast,Sat 10-Jun-2023 4:05 PM (4:35 PM),Adelaide Oval,39450
+2023,Round 13,Fremantle,Richmond,Sat 10-Jun-2023 5:25 PM (7:25 PM),Perth Stadium,46843
+2023,Round 13,North Melbourne,Greater Western Sydney,Sun 11-Jun-2023 3:20 PM,Bellerive Oval,5025
+2023,Round 13,Carlton,Essendon,Sun 11-Jun-2023 7:15 PM,M.C.G.,83638
+2023,Round 13,Melbourne,Collingwood,Mon 12-Jun-2023 3:20 PM,M.C.G.,83578
+2023,Round 14,Port Adelaide,Geelong,Thu 15-Jun-2023 7:10 PM (7:40 PM),Adelaide Oval,36316
+2023,Round 14,Brisbane Lions,Sydney,Fri 16-Jun-2023 7:50 PM,Gabba,28561
+2023,Round 14,Greater Western Sydney,Fremantle,Sat 17-Jun-2023 4:35 PM,Sydney Showground,8633
+2023,Round 14,Richmond,St Kilda,Sat 17-Jun-2023 7:25 PM,M.C.G.,62686
+2023,Round 14,Carlton,Gold Coast,Sun 18-Jun-2023 1:10 PM,M.C.G.,29602
+2023,Round 14,North Melbourne,Western Bulldogs,Sun 18-Jun-2023 4:40 PM,Docklands,23829
+2023,Round 15,Geelong,Melbourne,Thu 22-Jun-2023 7:20 PM,Kardinia Park,19617
+2023,Round 15,St Kilda,Brisbane Lions,Fri 23-Jun-2023 7:50 PM,Docklands,28985
+2023,Round 15,Sydney,West Coast,Sat 24-Jun-2023 4:35 PM,S.C.G.,31367
+2023,Round 15,Fremantle,Essendon,Sat 24-Jun-2023 5:25 PM (7:25 PM),Perth Stadium,43063
+2023,Round 15,Collingwood,Adelaide,Sun 25-Jun-2023 1:10 PM,M.C.G.,65930
+2023,Round 15,Gold Coast,Hawthorn,Sun 25-Jun-2023 4:40 PM,Carrara,14242
+2023,Round 16,Brisbane Lions,Richmond,Thu 29-Jun-2023 7:20 PM,Gabba,30022
+2023,Round 16,Sydney,Geelong,Fri 30-Jun-2023 7:50 PM,S.C.G.,32098
+2023,Round 16,Adelaide,North Melbourne,Sat 01-Jul-2023 1:15 PM (1:45 PM),Adelaide Oval,35226
+2023,Round 16,Western Bulldogs,Fremantle,Sat 01-Jul-2023 1:45 PM,Docklands,25412
+2023,Round 16,Gold Coast,Collingwood,Sat 01-Jul-2023 4:35 PM,Carrara,22483
+2023,Round 16,Essendon,Port Adelaide,Sat 01-Jul-2023 7:25 PM,M.C.G.,38957
+2023,Round 16,Hawthorn,Carlton,Sun 02-Jul-2023 1:10 PM,M.C.G.,66337
+2023,Round 16,Melbourne,Greater Western Sydney,Sun 02-Jul-2023 2:50 PM (3:20 PM),Traeger Park,3413
+2023,Round 16,West Coast,St Kilda,Sun 02-Jul-2023 2:40 PM (4:40 PM),Perth Stadium,35579
+2023,Round 17,Richmond,Sydney,Thu 06-Jul-2023 7:20 PM,M.C.G.,48443
+2023,Round 17,Western Bulldogs,Collingwood,Fri 07-Jul-2023 7:50 PM,Docklands,43482
+2023,Round 17,Brisbane Lions,West Coast,Sat 08-Jul-2023 1:45 PM,Gabba,24843
+2023,Round 17,Greater Western Sydney,Hawthorn,Sat 08-Jul-2023 4:35 PM,Sydney Showground,9007
+2023,Round 17,St Kilda,Melbourne,Sat 08-Jul-2023 7:25 PM,Docklands,30749
+2023,Round 17,Port Adelaide,Gold Coast,Sat 08-Jul-2023 7:10 PM (7:40 PM),Adelaide Oval,31053
+2023,Round 17,Geelong,North Melbourne,Sun 09-Jul-2023 1:10 PM,Kardinia Park,21066
+2023,Round 17,Essendon,Adelaide,Sun 09-Jul-2023 3:20 PM,Docklands,39606
+2023,Round 17,Fremantle,Carlton,Sun 09-Jul-2023 2:40 PM (4:40 PM),Perth Stadium,49469
+2023,Round 18,Sydney,Western Bulldogs,Thu 13-Jul-2023 7:20 PM,S.C.G.,26221
+2023,Round 18,Melbourne,Brisbane Lions,Fri 14-Jul-2023 7:50 PM,M.C.G.,38030
+2023,Round 18,Collingwood,Fremantle,Sat 15-Jul-2023 1:45 PM,M.C.G.,61157
+2023,Round 18,Gold Coast,St Kilda,Sat 15-Jul-2023 2:10 PM,Carrara,13015
+2023,Round 18,Carlton,Port Adelaide,Sat 15-Jul-2023 4:35 PM,Docklands,34306
+2023,Round 18,Geelong,Essendon,Sat 15-Jul-2023 7:25 PM,Kardinia Park,23185
+2023,Round 18,Adelaide,Greater Western Sydney,Sat 15-Jul-2023 7:10 PM (7:40 PM),Adelaide Oval,36674
+2023,Round 18,North Melbourne,Hawthorn,Sun 16-Jul-2023 1:10 PM,Docklands,30201
+2023,Round 18,West Coast,Richmond,Sun 16-Jul-2023 2:40 PM (4:40 PM),Perth Stadium,40501
+2023,Round 19,Essendon,Western Bulldogs,Fri 21-Jul-2023 7:50 PM,Docklands,43634
+2023,Round 19,Richmond,Hawthorn,Sat 22-Jul-2023 1:45 PM,M.C.G.,57654
+2023,Round 19,Carlton,West Coast,Sat 22-Jul-2023 2:10 PM,Docklands,34954
+2023,Round 19,Brisbane Lions,Geelong,Sat 22-Jul-2023 4:35 PM,Gabba,32586
+2023,Round 19,Fremantle,Sydney,Sat 22-Jul-2023 5:40 PM (7:40 PM),Perth Stadium,42433
+2023,Round 19,Port Adelaide,Collingwood,Sat 22-Jul-2023 7:10 PM (7:40 PM),Adelaide Oval,47965
+2023,Round 19,Greater Western Sydney,Gold Coast,Sun 23-Jul-2023 1:10 PM,Manuka Oval,10026
+2023,Round 19,Melbourne,Adelaide,Sun 23-Jul-2023 3:20 PM,M.C.G.,33122
+2023,Round 19,St Kilda,North Melbourne,Sun 23-Jul-2023 4:40 PM,Docklands,18279
+2023,Round 20,Collingwood,Carlton,Fri 28-Jul-2023 7:50 PM,M.C.G.,86785
+2023,Round 20,Western Bulldogs,Greater Western Sydney,Sat 29-Jul-2023 1:45 PM,Eureka Stadium,9080
+2023,Round 20,Geelong,Fremantle,Sat 29-Jul-2023 1:45 PM,Kardinia Park,21619
+2023,Round 20,Gold Coast,Brisbane Lions,Sat 29-Jul-2023 4:35 PM,Carrara,14097
+2023,Round 20,Essendon,Sydney,Sat 29-Jul-2023 7:25 PM,Docklands,38329
+2023,Round 20,Adelaide,Port Adelaide,Sat 29-Jul-2023 7:10 PM (7:40 PM),Adelaide Oval,50023
+2023,Round 20,Hawthorn,St Kilda,Sun 30-Jul-2023 1:10 PM,Docklands,22769
+2023,Round 20,Richmond,Melbourne,Sun 30-Jul-2023 3:20 PM,M.C.G.,52294
+2023,Round 20,West Coast,North Melbourne,Sun 30-Jul-2023 2:40 PM (4:40 PM),Perth Stadium,38231
+2023,Round 21,Western Bulldogs,Richmond,Fri 04-Aug-2023 7:50 PM,Docklands,39304
+2023,Round 21,Essendon,West Coast,Sat 05-Aug-2023 1:45 PM,Docklands,30742
+2023,Round 21,Adelaide,Gold Coast,Sat 05-Aug-2023 1:40 PM (2:10 PM),Adelaide Oval,35777
+2023,Round 21,Hawthorn,Collingwood,Sat 05-Aug-2023 4:35 PM,M.C.G.,62134
+2023,Round 21,Geelong,Port Adelaide,Sat 05-Aug-2023 7:25 PM,Kardinia Park,21279
+2023,Round 21,Greater Western Sydney,Sydney,Sat 05-Aug-2023 7:30 PM,Sydney Showground,19332
+2023,Round 21,North Melbourne,Melbourne,Sun 06-Aug-2023 1:10 PM,Bellerive Oval,8034
+2023,Round 21,St Kilda,Carlton,Sun 06-Aug-2023 3:20 PM,Docklands,42656
+2023,Round 21,Fremantle,Brisbane Lions,Sun 06-Aug-2023 2:40 PM (4:40 PM),Perth Stadium,37845
+2023,Round 22,Collingwood,Geelong,Fri 11-Aug-2023 7:50 PM,M.C.G.,78749
+2023,Round 22,North Melbourne,Essendon,Sat 12-Aug-2023 1:45 PM,Docklands,37231
+2023,Round 22,Sydney,Gold Coast,Sat 12-Aug-2023 1:45 PM,S.C.G.,33911
+2023,Round 22,Brisbane Lions,Adelaide,Sat 12-Aug-2023 4:35 PM,Gabba,30107
+2023,Round 22,Carlton,Melbourne,Sat 12-Aug-2023 7:30 PM,M.C.G.,68577
+2023,Round 22,West Coast,Fremantle,Sat 12-Aug-2023 6:10 PM (8:10 PM),Perth Stadium,51172
+2023,Round 22,Hawthorn,Western Bulldogs,Sun 13-Aug-2023 1:10 PM,York Park,12480
+2023,Round 22,St Kilda,Richmond,Sun 13-Aug-2023 3:20 PM,Docklands,31119
+2023,Round 22,Port Adelaide,Greater Western Sydney,Sun 13-Aug-2023 4:10 PM (4:40 PM),Adelaide Oval,32597
+2023,Round 23,Collingwood,Brisbane Lions,Fri 18-Aug-2023 7:50 PM,Docklands,38350
+2023,Round 23,Richmond,North Melbourne,Sat 19-Aug-2023 1:45 PM,M.C.G.,59555
+2023,Round 23,Gold Coast,Carlton,Sat 19-Aug-2023 2:10 PM,Carrara,19253
+2023,Round 23,Greater Western Sydney,Essendon,Sat 19-Aug-2023 4:35 PM,Sydney Showground,10281
+2023,Round 23,St Kilda,Geelong,Sat 19-Aug-2023 7:25 PM,Docklands,40103
+2023,Round 23,Adelaide,Sydney,Sat 19-Aug-2023 7:10 PM (7:40 PM),Adelaide Oval,44817
+2023,Round 23,Western Bulldogs,West Coast,Sun 20-Aug-2023 1:10 PM,Docklands,23965
+2023,Round 23,Melbourne,Hawthorn,Sun 20-Aug-2023 3:20 PM,M.C.G.,50142
+2023,Round 23,Fremantle,Port Adelaide,Sun 20-Aug-2023 2:40 PM (4:40 PM),Perth Stadium,38360
+2023,Round 24,Essendon,Collingwood,Fri 25-Aug-2023 7:50 PM,M.C.G.,74344
+2023,Round 24,Hawthorn,Fremantle,Sat 26-Aug-2023 1:45 PM,M.C.G.,27951
+2023,Round 24,North Melbourne,Gold Coast,Sat 26-Aug-2023 1:45 PM,Bellerive Oval,4378
+2023,Round 24,Brisbane Lions,St Kilda,Sat 26-Aug-2023 4:35 PM,Gabba,31689
+2023,Round 24,Geelong,Western Bulldogs,Sat 26-Aug-2023 7:25 PM,Kardinia Park,20533
+2023,Round 24,West Coast,Adelaide,Sat 26-Aug-2023 6:10 PM (8:10 PM),Perth Stadium,47027
+2023,Round 24,Port Adelaide,Richmond,Sun 27-Aug-2023 12:00 PM (12:30 PM),Adelaide Oval,39860
+2023,Round 24,Sydney,Melbourne,Sun 27-Aug-2023 3:20 PM,S.C.G.,41753
+2023,Round 24,Carlton,Greater Western Sydney,Sun 27-Aug-2023 6:10 PM,Docklands,44354
+2023,Qualifying Final,Collingwood,Melbourne,Thu 07-Sep-2023 7:20 PM,M.C.G.,92636
+2023,Elimination Final,Carlton,Sydney,Fri 08-Sep-2023 7:50 PM,M.C.G.,92026
+2023,Elimination Final,St Kilda,Greater Western Sydney,Sat 09-Sep-2023 3:20 PM,M.C.G.,68465
+2023,Qualifying Final,Brisbane Lions,Port Adelaide,Sat 09-Sep-2023 7:25 PM,Gabba,36020
+2023,Semi Final,Melbourne,Carlton,Fri 15-Sep-2023 7:50 PM,M.C.G.,96412
+2023,Semi Final,Port Adelaide,Greater Western Sydney,Sat 16-Sep-2023 7:10 PM (7:40 PM),Adelaide Oval,45520
+2023,Preliminary Final,Collingwood,Greater Western Sydney,Fri 22-Sep-2023 7:50 PM,M.C.G.,97665
+2023,Preliminary Final,Brisbane Lions,Carlton,Sat 23-Sep-2023 5:15 PM,Gabba,36012
+2023,Grand Final,Collingwood,Brisbane Lions,Sat 30-Sep-2023 2:30 PM,M.C.G.,100024
+2024,Round 1,Sydney,Melbourne,Thu 07-Mar-2024 7:30 PM (6:30 PM),S.C.G.,40012
+2024,Round 1,Brisbane Lions,Carlton,Fri 08-Mar-2024 6:40 PM,Gabba,33367
+2024,Round 1,Gold Coast,Richmond,Sat 09-Mar-2024 3:20 PM,Carrara,22086
+2024,Round 1,Greater Western Sydney,Collingwood,Sat 09-Mar-2024 7:30 PM (6:30 PM),Sydney Showground,21235
+2024,Round 2,Carlton,Richmond,Thu 14-Mar-2024 7:30 PM (6:30 PM),M.C.G.,83881
+2024,Round 2,Collingwood,Sydney,Fri 15-Mar-2024 7:40 PM (6:40 PM),M.C.G.,78933
+2024,Round 2,Essendon,Hawthorn,Sat 16-Mar-2024 1:45 PM (12:45 PM),M.C.G.,73805
+2024,Round 2,Greater Western Sydney,North Melbourne,Sat 16-Mar-2024 4:35 PM (3:35 PM),Sydney Showground,8034
+2024,Round 2,Geelong,St Kilda,Sat 16-Mar-2024 7:30 PM (6:30 PM),Kardinia Park,39352
+2024,Round 2,Gold Coast,Adelaide,Sat 16-Mar-2024 7:10 PM,Carrara,11466
+2024,Round 2,Melbourne,Western Bulldogs,Sun 17-Mar-2024 1:00 PM (12:00 PM),M.C.G.,44100
+2024,Round 2,Port Adelaide,West Coast,Sun 17-Mar-2024 3:30 PM (3:00 PM),Adelaide Oval,34078
+2024,Round 2,Fremantle,Brisbane Lions,Sun 17-Mar-2024 3:50 PM (5:50 PM),Perth Stadium,40604
+2024,Round 3,St Kilda,Collingwood,Thu 21-Mar-2024 7:30 PM (6:30 PM),M.C.G.,69517
+2024,Round 3,Adelaide,Geelong,Fri 22-Mar-2024 7:10 PM (6:40 PM),Adelaide Oval,44758
+2024,Round 3,North Melbourne,Fremantle,Sat 23-Mar-2024 1:45 PM (12:45 PM),Docklands,17589
+2024,Round 3,Hawthorn,Melbourne,Sat 23-Mar-2024 4:35 PM (3:35 PM),M.C.G.,43960
+2024,Round 3,Sydney,Essendon,Sat 23-Mar-2024 7:30 PM (6:30 PM),S.C.G.,34954
+2024,Round 3,Western Bulldogs,Gold Coast,Sun 24-Mar-2024 1:00 PM (12:00 PM),Eureka Stadium,9752
+2024,Round 3,Richmond,Port Adelaide,Sun 24-Mar-2024 4:00 PM (3:00 PM),M.C.G.,30254
+2024,Round 3,West Coast,Greater Western Sydney,Sun 24-Mar-2024 3:50 PM (5:50 PM),Perth Stadium,42401
+2024,Round 4,Brisbane Lions,Collingwood,Thu 28-Mar-2024 6:30 PM,Gabba,34022
+2024,Round 4,North Melbourne,Carlton,Fri 29-Mar-2024 4:20 PM (3:20 PM),Docklands,47565
+2024,Round 4,Fremantle,Adelaide,Fri 29-Mar-2024 4:30 PM (6:30 PM),Perth Stadium,51037
+2024,Round 4,Essendon,St Kilda,Sat 30-Mar-2024 4:20 PM (3:20 PM),Docklands,44412
+2024,Round 4,Port Adelaide,Melbourne,Sat 30-Mar-2024 7:00 PM (6:30 PM),Adelaide Oval,38105
+2024,Round 4,Western Bulldogs,West Coast,Sun 31-Mar-2024 1:00 PM (12:00 PM),Docklands,22991
+2024,Round 4,Richmond,Sydney,Sun 31-Mar-2024 4:00 PM (3:00 PM),M.C.G.,45112
+2024,Round 4,Hawthorn,Geelong,Mon 01-Apr-2024 3:20 PM (2:20 PM),M.C.G.,67020
+2024,Round 5,Adelaide,Melbourne,Thu 04-Apr-2024 7:10 PM (6:40 PM),Adelaide Oval,48020
+2024,Round 5,Brisbane Lions,North Melbourne,Fri 05-Apr-2024 4:40 PM (4:10 PM),Norwood Oval,9037
+2024,Round 5,Port Adelaide,Essendon,Fri 05-Apr-2024 7:40 PM (7:10 PM),Adelaide Oval,47461
+2024,Round 5,West Coast,Sydney,Sat 06-Apr-2024 1:00 PM (12:30 PM),Summit Sports Park,9225
+2024,Round 5,Fremantle,Carlton,Sat 06-Apr-2024 3:50 PM (3:20 PM),Adelaide Oval,43158
+2024,Round 5,Western Bulldogs,Geelong,Sat 06-Apr-2024 7:40 PM (7:10 PM),Adelaide Oval,45970
+2024,Round 5,Gold Coast,Greater Western Sydney,Sun 07-Apr-2024 12:00 PM (12:30 PM),Summit Sports Park,9337
+2024,Round 5,Richmond,St Kilda,Sun 07-Apr-2024 2:50 PM (3:20 PM),Norwood Oval,9425
+2024,Round 5,Collingwood,Hawthorn,Sun 07-Apr-2024 4:40 PM (5:10 PM),Adelaide Oval,43198
+2024,Round 6,Melbourne,Brisbane Lions,Thu 11-Apr-2024 7:30 PM,M.C.G.,43098
+2024,Round 6,Western Bulldogs,Essendon,Fri 12-Apr-2024 7:40 PM,Docklands,50144
+2024,Round 6,Greater Western Sydney,St Kilda,Sat 13-Apr-2024 1:45 PM,Manuka Oval,12448
+2024,Round 6,Carlton,Adelaide,Sat 13-Apr-2024 4:35 PM,Docklands,46283
+2024,Round 6,Port Adelaide,Fremantle,Sat 13-Apr-2024 7:00 PM (7:30 PM),Adelaide Oval,35658
+2024,Round 6,Gold Coast,Hawthorn,Sat 13-Apr-2024 7:30 PM,Carrara,13900
+2024,Round 6,Geelong,North Melbourne,Sun 14-Apr-2024 1:00 PM,Kardinia Park,31194
+2024,Round 6,West Coast,Richmond,Sun 14-Apr-2024 2:00 PM (4:00 PM),Perth Stadium,47665
+2024,Round 7,St Kilda,Western Bulldogs,Thu 18-Apr-2024 7:30 PM,Docklands,26719
+2024,Round 7,Adelaide,Essendon,Fri 19-Apr-2024 7:10 PM (7:40 PM),Adelaide Oval,46700
+2024,Round 7,Collingwood,Port Adelaide,Sat 20-Apr-2024 1:45 PM,M.C.G.,65834
+2024,Round 7,Carlton,Greater Western Sydney,Sat 20-Apr-2024 4:35 PM,Docklands,40474
+2024,Round 7,Brisbane Lions,Geelong,Sat 20-Apr-2024 7:30 PM,Gabba,30429
+2024,Round 7,West Coast,Fremantle,Sat 20-Apr-2024 6:10 PM (8:10 PM),Perth Stadium,54473
+2024,Round 7,Sydney,Gold Coast,Sun 21-Apr-2024 1:05 PM,S.C.G.,35649
+2024,Round 7,North Melbourne,Hawthorn,Sun 21-Apr-2024 4:05 PM,Docklands,30648
+2024,Round 8,Richmond,Melbourne,Wed 24-Apr-2024 7:25 PM,M.C.G.,72840
+2024,Round 8,Essendon,Collingwood,Thu 25-Apr-2024 3:20 PM,M.C.G.,93644
+2024,Round 8,Greater Western Sydney,Brisbane Lions,Thu 25-Apr-2024 7:35 PM,Manuka Oval,13080
+2024,Round 8,Port Adelaide,St Kilda,Fri 26-Apr-2024 7:10 PM (7:40 PM),Adelaide Oval,40306
+2024,Round 8,North Melbourne,Adelaide,Sat 27-Apr-2024 1:45 PM,Bellerive Oval,5365
+2024,Round 8,Geelong,Carlton,Sat 27-Apr-2024 4:35 PM,M.C.G.,87775
+2024,Round 8,Fremantle,Western Bulldogs,Sat 27-Apr-2024 5:40 PM (7:40 PM),Perth Stadium,45931
+2024,Round 8,Gold Coast,West Coast,Sun 28-Apr-2024 1:00 PM,Carrara,11440
+2024,Round 8,Hawthorn,Sydney,Sun 28-Apr-2024 4:00 PM,M.C.G.,38052
+2024,Round 9,Adelaide,Port Adelaide,Thu 02-May-2024 7:00 PM (7:30 PM),Adelaide Oval,52106
+2024,Round 9,Carlton,Collingwood,Fri 03-May-2024 7:40 PM,M.C.G.,88362
+2024,Round 9,Sydney,Greater Western Sydney,Sat 04-May-2024 1:45 PM,S.C.G.,40337
+2024,Round 9,St Kilda,North Melbourne,Sat 04-May-2024 4:35 PM,Docklands,27009
+2024,Round 9,Melbourne,Geelong,Sat 04-May-2024 7:30 PM,M.C.G.,51795
+2024,Round 9,West Coast,Essendon,Sat 04-May-2024 6:10 PM (8:10 PM),Perth Stadium,51751
+2024,Round 9,Richmond,Fremantle,Sun 05-May-2024 1:00 PM,M.C.G.,32252
+2024,Round 9,Western Bulldogs,Hawthorn,Sun 05-May-2024 4:00 PM,Docklands,29555
+2024,Round 9,Brisbane Lions,Gold Coast,Sun 05-May-2024 7:10 PM,Gabba,30285
+2024,Round 10,Carlton,Melbourne,Thu 09-May-2024 7:30 PM,M.C.G.,58472
+2024,Round 10,Geelong,Port Adelaide,Fri 10-May-2024 7:10 PM,Kardinia Park,29942
+2024,Round 10,Fremantle,Sydney,Fri 10-May-2024 6:30 PM (8:30 PM),Perth Stadium,46198
+2024,Round 10,Hawthorn,St Kilda,Sat 11-May-2024 1:45 PM,York Park,15112
+2024,Round 10,Essendon,Greater Western Sydney,Sat 11-May-2024 4:35 PM,Docklands,37295
+2024,Round 10,Gold Coast,North Melbourne,Sat 11-May-2024 7:00 PM (7:30 PM),Marrara Oval,7036
+2024,Round 10,Richmond,Western Bulldogs,Sat 11-May-2024 7:30 PM,M.C.G.,38007
+2024,Round 10,Collingwood,West Coast,Sun 12-May-2024 1:00 PM,Docklands,37433
+2024,Round 10,Adelaide,Brisbane Lions,Sun 12-May-2024 3:30 PM (4:00 PM),Adelaide Oval,40278
+2024,Round 11,Gold Coast,Geelong,Thu 16-May-2024 7:00 PM (7:30 PM),Marrara Oval,12112
+2024,Round 11,Sydney,Carlton,Fri 17-May-2024 7:40 PM,S.C.G.,44047
+2024,Round 11,Collingwood,Adelaide,Sat 18-May-2024 1:45 PM,M.C.G.,63925
+2024,Round 11,Greater Western Sydney,Western Bulldogs,Sat 18-May-2024 4:35 PM,Sydney Showground,7747
+2024,Round 11,St Kilda,Fremantle,Sat 18-May-2024 7:30 PM,Docklands,19265
+2024,Round 11,Brisbane Lions,Richmond,Sat 18-May-2024 7:30 PM,Gabba,27200
+2024,Round 11,Essendon,North Melbourne,Sun 19-May-2024 1:10 PM,Docklands,43125
+2024,Round 11,Port Adelaide,Hawthorn,Sun 19-May-2024 2:50 PM (3:20 PM),Adelaide Oval,36190
+2024,Round 11,West Coast,Melbourne,Sun 19-May-2024 4:20 PM (6:20 PM),Perth Stadium,43408
+2024,Round 12,Western Bulldogs,Sydney,Thu 23-May-2024 7:30 PM,Docklands,27377
+2024,Round 12,Fremantle,Collingwood,Fri 24-May-2024 6:10 PM (8:10 PM),Perth Stadium,54035
+2024,Round 12,Carlton,Gold Coast,Sat 25-May-2024 1:45 PM,Docklands,39597
+2024,Round 12,North Melbourne,Port Adelaide,Sat 25-May-2024 1:45 PM,Bellerive Oval,4705
+2024,Round 12,Geelong,Greater Western Sydney,Sat 25-May-2024 4:35 PM,Kardinia Park,30821
+2024,Round 12,Richmond,Essendon,Sat 25-May-2024 7:40 PM,M.C.G.,79359
+2024,Round 12,Hawthorn,Brisbane Lions,Sun 26-May-2024 1:10 PM,Docklands,29664
+2024,Round 12,Melbourne,St Kilda,Sun 26-May-2024 3:20 PM,M.C.G.,37403
+2024,Round 12,Adelaide,West Coast,Sun 26-May-2024 4:10 PM (4:40 PM),Adelaide Oval,40965
+2024,Round 13,Port Adelaide,Carlton,Thu 30-May-2024 7:00 PM (7:30 PM),Adelaide Oval,40532
+2024,Round 13,Collingwood,Western Bulldogs,Fri 31-May-2024 7:40 PM,Docklands,43298
+2024,Round 13,Hawthorn,Adelaide,Sat 01-Jun-2024 1:45 PM,M.C.G.,36086
+2024,Round 13,West Coast,St Kilda,Sat 01-Jun-2024 2:35 PM (4:35 PM),Perth Stadium,47526
+2024,Round 13,Geelong,Richmond,Sat 01-Jun-2024 7:30 PM,Kardinia Park,31054
+2024,Round 13,Melbourne,Fremantle,Sun 02-Jun-2024 12:30 PM (1:00 PM),Traeger Park,6109
+2024,Round 13,Gold Coast,Essendon,Sun 02-Jun-2024 4:00 PM,Carrara,21759
+2024,Round 14,Adelaide,Richmond,Thu 06-Jun-2024 7:00 PM (7:30 PM),Adelaide Oval,37342
+2024,Round 14,Western Bulldogs,Brisbane Lions,Fri 07-Jun-2024 7:40 PM,Docklands,31280
+2024,Round 14,Hawthorn,Greater Western Sydney,Sat 08-Jun-2024 1:45 PM,York Park,11568
+2024,Round 14,West Coast,North Melbourne,Sat 08-Jun-2024 2:35 PM (4:35 PM),Perth Stadium,43276
+2024,Round 14,St Kilda,Gold Coast,Sat 08-Jun-2024 7:30 PM,Docklands,17992
+2024,Round 14,Sydney,Geelong,Sun 09-Jun-2024 3:20 PM,S.C.G.,44714
+2024,Round 14,Essendon,Carlton,Sun 09-Jun-2024 7:20 PM,M.C.G.,88510
+2024,Round 14,Collingwood,Melbourne,Mon 10-Jun-2024 3:20 PM,M.C.G.,84659
+2024,Round 15,Brisbane Lions,St Kilda,Fri 14-Jun-2024 7:40 PM,Gabba,27445
+2024,Round 15,Western Bulldogs,Fremantle,Sat 15-Jun-2024 1:45 PM,Docklands,21796
+2024,Round 15,Richmond,Hawthorn,Sat 15-Jun-2024 4:35 PM,M.C.G.,92311
+2024,Round 15,Adelaide,Sydney,Sat 15-Jun-2024 7:00 PM (7:30 PM),Adelaide Oval,41535
+2024,Round 15,North Melbourne,Collingwood,Sun 16-Jun-2024 1:00 PM,Docklands,38311
+2024,Round 15,Greater Western Sydney,Port Adelaide,Sun 16-Jun-2024 4:00 PM,Sydney Showground,8914
+2024,Round 16,Carlton,Geelong,Fri 21-Jun-2024 7:40 PM,M.C.G.,75218
+2024,Round 16,Port Adelaide,Brisbane Lions,Sat 22-Jun-2024 1:15 PM (1:45 PM),Adelaide Oval,32862
+2024,Round 16,Greater Western Sydney,Sydney,Sat 22-Jun-2024 4:35 PM,Sydney Showground,19751
+2024,Round 16,Melbourne,North Melbourne,Sat 22-Jun-2024 7:30 PM,M.C.G.,28774
+2024,Round 16,Essendon,West Coast,Sun 23-Jun-2024 1:00 PM,Docklands,40840
+2024,Round 16,Fremantle,Gold Coast,Sun 23-Jun-2024 2:00 PM (4:00 PM),Perth Stadium,40637
+2024,Round 17,Brisbane Lions,Melbourne,Fri 28-Jun-2024 7:40 PM,Gabba,29617
+2024,Round 17,North Melbourne,Western Bulldogs,Sat 29-Jun-2024 1:45 PM,Docklands,27005
+2024,Round 17,Sydney,Fremantle,Sat 29-Jun-2024 1:45 PM,S.C.G.,35477
+2024,Round 17,Gold Coast,Collingwood,Sat 29-Jun-2024 4:35 PM,Carrara,23029
+2024,Round 17,Adelaide,Greater Western Sydney,Sat 29-Jun-2024 7:00 PM (7:30 PM),Adelaide Oval,29802
+2024,Round 17,Geelong,Essendon,Sat 29-Jun-2024 7:30 PM,M.C.G.,54698
+2024,Round 17,St Kilda,Port Adelaide,Sun 30-Jun-2024 1:10 PM,Docklands,18052
+2024,Round 17,Richmond,Carlton,Sun 30-Jun-2024 3:20 PM,M.C.G.,58298
+2024,Round 17,West Coast,Hawthorn,Sun 30-Jun-2024 2:40 PM (4:40 PM),Perth Stadium,49454
+2024,Round 18,Collingwood,Essendon,Fri 05-Jul-2024 7:40 PM,M.C.G.,81711
+2024,Round 18,Port Adelaide,Western Bulldogs,Sat 06-Jul-2024 1:15 PM (1:45 PM),Adelaide Oval,31590
+2024,Round 18,North Melbourne,Gold Coast,Sat 06-Jul-2024 1:45 PM,Docklands,17781
+2024,Round 18,Geelong,Hawthorn,Sat 06-Jul-2024 4:35 PM,Kardinia Park,33188
+2024,Round 18,Greater Western Sydney,Carlton,Sat 06-Jul-2024 7:30 PM,Sydney Showground,11730
+2024,Round 18,Fremantle,Richmond,Sat 06-Jul-2024 6:10 PM (8:10 PM),Perth Stadium,42690
+2024,Round 18,Melbourne,West Coast,Sun 07-Jul-2024 1:10 PM,M.C.G.,32000
+2024,Round 18,St Kilda,Sydney,Sun 07-Jul-2024 3:20 PM,Docklands,30267
+2024,Round 18,Brisbane Lions,Adelaide,Sun 07-Jul-2024 4:10 PM,Gabba,30183
+2024,Round 19,Collingwood,Geelong,Fri 12-Jul-2024 7:40 PM,M.C.G.,73435
+2024,Round 19,Hawthorn,Fremantle,Sat 13-Jul-2024 1:45 PM,York Park,11146
+2024,Round 19,Sydney,North Melbourne,Sat 13-Jul-2024 1:45 PM,S.C.G.,34663
+2024,Round 19,Western Bulldogs,Carlton,Sat 13-Jul-2024 4:35 PM,Docklands,45387
+2024,Round 19,Adelaide,St Kilda,Sat 13-Jul-2024 7:00 PM (7:30 PM),Adelaide Oval,34549
+2024,Round 19,Melbourne,Essendon,Sat 13-Jul-2024 7:30 PM,M.C.G.,52866
+2024,Round 19,Gold Coast,Port Adelaide,Sun 14-Jul-2024 1:10 PM,Carrara,14526
+2024,Round 19,Richmond,Greater Western Sydney,Sun 14-Jul-2024 3:20 PM,M.C.G.,19040
+2024,Round 19,West Coast,Brisbane Lions,Sun 14-Jul-2024 2:40 PM (4:40 PM),Perth Stadium,41489
+2024,Round 20,Essendon,Adelaide,Fri 19-Jul-2024 7:40 PM,Docklands,36020
+2024,Round 20,St Kilda,West Coast,Sat 20-Jul-2024 1:45 PM,Docklands,18251
+2024,Round 20,Greater Western Sydney,Gold Coast,Sat 20-Jul-2024 1:45 PM,Sydney Showground,8013
+2024,Round 20,Hawthorn,Collingwood,Sat 20-Jul-2024 4:35 PM,M.C.G.,74171
+2024,Round 20,Port Adelaide,Richmond,Sat 20-Jul-2024 7:00 PM (7:30 PM),Adelaide Oval,27704
+2024,Round 20,Geelong,Western Bulldogs,Sat 20-Jul-2024 7:30 PM,Kardinia Park,27967
+2024,Round 20,Brisbane Lions,Sydney,Sun 21-Jul-2024 1:10 PM,Gabba,33924
+2024,Round 20,Fremantle,Melbourne,Sun 21-Jul-2024 1:20 PM (3:20 PM),Perth Stadium,42215
+2024,Round 20,Carlton,North Melbourne,Sun 21-Jul-2024 4:40 PM,Docklands,40014
+2024,Round 21,Carlton,Port Adelaide,Fri 26-Jul-2024 7:40 PM,Docklands,40500
+2024,Round 21,North Melbourne,Geelong,Sat 27-Jul-2024 1:45 PM,Bellerive Oval,10045
+2024,Round 21,St Kilda,Essendon,Sat 27-Jul-2024 4:35 PM,Docklands,39761
+2024,Round 21,Gold Coast,Brisbane Lions,Sat 27-Jul-2024 4:35 PM,Carrara,21043
+2024,Round 21,Melbourne,Greater Western Sydney,Sat 27-Jul-2024 7:30 PM,M.C.G.,16246
+2024,Round 21,Fremantle,West Coast,Sat 27-Jul-2024 6:10 PM (8:10 PM),Perth Stadium,56536
+2024,Round 21,Collingwood,Richmond,Sun 28-Jul-2024 1:10 PM,M.C.G.,58342
+2024,Round 21,Sydney,Western Bulldogs,Sun 28-Jul-2024 3:20 PM,S.C.G.,36028
+2024,Round 21,Adelaide,Hawthorn,Sun 28-Jul-2024 3:40 PM (4:10 PM),Adelaide Oval,41823
+2024,Round 22,Western Bulldogs,Melbourne,Fri 02-Aug-2024 7:15 PM,Docklands,33000
+2024,Round 22,West Coast,Gold Coast,Fri 02-Aug-2024 6:30 PM (8:30 PM),Perth Stadium,38671
+2024,Round 22,North Melbourne,Richmond,Sat 03-Aug-2024 1:45 PM,Docklands,35861
+2024,Round 22,Geelong,Adelaide,Sat 03-Aug-2024 4:35 PM,Kardinia Park,28939
+2024,Round 22,Port Adelaide,Sydney,Sat 03-Aug-2024 7:00 PM (7:30 PM),Adelaide Oval,37501
+2024,Round 22,Collingwood,Carlton,Sat 03-Aug-2024 7:30 PM,M.C.G.,86879
+2024,Round 22,Greater Western Sydney,Hawthorn,Sun 04-Aug-2024 1:10 PM,Manuka Oval,13268
+2024,Round 22,Essendon,Fremantle,Sun 04-Aug-2024 3:20 PM,M.C.G.,34381
+2024,Round 22,St Kilda,Brisbane Lions,Sun 04-Aug-2024 4:40 PM,Docklands,23053
+2024,Round 23,Sydney,Collingwood,Fri 09-Aug-2024 7:40 PM,S.C.G.,37854
+2024,Round 23,North Melbourne,West Coast,Sat 10-Aug-2024 1:45 PM,Bellerive Oval,6619
+2024,Round 23,Brisbane Lions,Greater Western Sydney,Sat 10-Aug-2024 1:45 PM,Gabba,31364
+2024,Round 23,Fremantle,Geelong,Sat 10-Aug-2024 2:35 PM (4:35 PM),Perth Stadium,50600
+2024,Round 23,Essendon,Gold Coast,Sat 10-Aug-2024 7:30 PM,Docklands,29401
+2024,Round 23,Melbourne,Port Adelaide,Sat 10-Aug-2024 7:30 PM,M.C.G.,17867
+2024,Round 23,Carlton,Hawthorn,Sun 11-Aug-2024 1:10 PM,M.C.G.,84773
+2024,Round 23,Richmond,St Kilda,Sun 11-Aug-2024 3:20 PM,Docklands,21375
+2024,Round 23,Adelaide,Western Bulldogs,Sun 11-Aug-2024 3:40 PM (4:10 PM),Adelaide Oval,39177
+2024,Round 24,Essendon,Sydney,Fri 16-Aug-2024 7:40 PM,Docklands,33830
+2024,Round 24,Greater Western Sydney,Fremantle,Sat 17-Aug-2024 1:45 PM,Sydney Showground,10801
+2024,Round 24,Gold Coast,Melbourne,Sat 17-Aug-2024 1:45 PM,Carrara,13026
+2024,Round 24,Collingwood,Brisbane Lions,Sat 17-Aug-2024 4:35 PM,M.C.G.,61218
+2024,Round 24,Port Adelaide,Adelaide,Sat 17-Aug-2024 7:00 PM (7:30 PM),Adelaide Oval,52459
+2024,Round 24,St Kilda,Geelong,Sat 17-Aug-2024 7:30 PM,Docklands,31945
+2024,Round 24,Western Bulldogs,North Melbourne,Sun 18-Aug-2024 1:10 PM,Docklands,33182
+2024,Round 24,Hawthorn,Richmond,Sun 18-Aug-2024 3:20 PM,M.C.G.,58231
+2024,Round 24,West Coast,Carlton,Sun 18-Aug-2024 2:40 PM (4:40 PM),Perth Stadium,48455
+2024,Round 25,Melbourne,Collingwood,Fri 23-Aug-2024 7:40 PM,M.C.G.,53957
+2024,Round 25,Hawthorn,North Melbourne,Sat 24-Aug-2024 12:30 PM,York Park,11392
+2024,Round 25,Geelong,West Coast,Sat 24-Aug-2024 1:45 PM,Kardinia Park,32545
+2024,Round 25,Richmond,Gold Coast,Sat 24-Aug-2024 3:20 PM,M.C.G.,34557
+2024,Round 25,Brisbane Lions,Essendon,Sat 24-Aug-2024 7:30 PM,Gabba,31663
+2024,Round 25,Sydney,Adelaide,Sat 24-Aug-2024 7:40 PM,S.C.G.,36491
+2024,Round 25,Western Bulldogs,Greater Western Sydney,Sun 25-Aug-2024 12:30 PM,Eureka Stadium,10224
+2024,Round 25,Carlton,St Kilda,Sun 25-Aug-2024 3:20 PM,Docklands,43843
+2024,Round 25,Fremantle,Port Adelaide,Sun 25-Aug-2024 4:10 PM (6:10 PM),Perth Stadium,45322
+2024,Qualifying Final,Port Adelaide,Geelong,Thu 05-Sep-2024 7:10 PM (7:40 PM),Adelaide Oval,50342
+2024,Elimination Final,Western Bulldogs,Hawthorn,Fri 06-Sep-2024 7:40 PM,M.C.G.,97828
+2024,Qualifying Final,Sydney,Greater Western Sydney,Sat 07-Sep-2024 3:20 PM,S.C.G.,43189
+2024,Elimination Final,Brisbane Lions,Carlton,Sat 07-Sep-2024 7:30 PM,Gabba,35660
+2024,Semi Final,Port Adelaide,Hawthorn,Fri 13-Sep-2024 7:10 PM (7:40 PM),Adelaide Oval,51012
+2024,Semi Final,Greater Western Sydney,Brisbane Lions,Sat 14-Sep-2024 7:30 PM,Sydney Showground,18357
+2024,Preliminary Final,Sydney,Port Adelaide,Fri 20-Sep-2024 7:40 PM,S.C.G.,44053
+2024,Preliminary Final,Geelong,Brisbane Lions,Sat 21-Sep-2024 5:15 PM,M.C.G.,93066
+2024,Grand Final,Sydney,Brisbane Lions,Sat 28-Sep-2024 2:30 PM,M.C.G.,100013
+2025,Round 1,Sydney,Hawthorn,Fri 07-Mar-2025 7:40 PM (6:40 PM),S.C.G.,40310
+2025,Round 1,Greater Western Sydney,Collingwood,Sun 09-Mar-2025 3:20 PM (2:20 PM),Sydney Showground,19248
+2025,Round 1,Brisbane Lions,Geelong,Sat 29-Mar-2025 6:35 PM,Gabba,27966
+2025,Round 1,Gold Coast,Essendon,Wed 27-Aug-2025 7:20 PM,Carrara,16768
+2025,Round 2,Richmond,Carlton,Thu 13-Mar-2025 7:30 PM (6:30 PM),M.C.G.,80009
+2025,Round 2,Hawthorn,Essendon,Fri 14-Mar-2025 7:40 PM (6:40 PM),M.C.G.,80735
+2025,Round 2,Geelong,Fremantle,Sat 15-Mar-2025 1:20 PM (12:20 PM),Kardinia Park,25372
+2025,Round 2,Sydney,Brisbane Lions,Sat 15-Mar-2025 4:15 PM (3:15 PM),S.C.G.,34906
+2025,Round 2,Collingwood,Port Adelaide,Sat 15-Mar-2025 7:35 PM (6:35 PM),M.C.G.,63282
+2025,Round 2,Western Bulldogs,North Melbourne,Sat 15-Mar-2025 7:35 PM (6:35 PM),Docklands,34406
+2025,Round 2,Adelaide,St Kilda,Sun 16-Mar-2025 12:05 PM (11:35 AM),Adelaide Oval,42985
+2025,Round 2,Melbourne,Greater Western Sydney,Sun 16-Mar-2025 3:20 PM (2:20 PM),M.C.G.,23278
+2025,Round 2,West Coast,Gold Coast,Sun 16-Mar-2025 3:10 PM (5:10 PM),Perth Stadium,46532
+2025,Round 3,Carlton,Hawthorn,Thu 20-Mar-2025 7:30 PM (6:30 PM),M.C.G.,62735
+2025,Round 3,Western Bulldogs,Collingwood,Fri 21-Mar-2025 7:40 PM (6:40 PM),M.C.G.,78027
+2025,Round 3,Essendon,Adelaide,Sat 22-Mar-2025 1:20 PM (12:20 PM),M.C.G.,46688
+2025,Round 3,Port Adelaide,Richmond,Sat 22-Mar-2025 3:45 PM (3:15 PM),Adelaide Oval,37342
+2025,Round 3,St Kilda,Geelong,Sat 22-Mar-2025 7:35 PM (6:35 PM),Docklands,36663
+2025,Round 3,Brisbane Lions,West Coast,Sun 23-Mar-2025 12:10 PM,Gabba,30012
+2025,Round 3,North Melbourne,Melbourne,Sun 23-Mar-2025 3:20 PM (2:20 PM),Docklands,28768
+2025,Round 3,Fremantle,Sydney,Sun 23-Mar-2025 3:10 PM (5:10 PM),Perth Stadium,43882
+2025,Round 4,Essendon,Port Adelaide,Thu 27-Mar-2025 7:30 PM (6:30 PM),Docklands,25114
+2025,Round 4,Carlton,Western Bulldogs,Fri 28-Mar-2025 7:40 PM (6:40 PM),Docklands,44894
+2025,Round 4,Melbourne,Gold Coast,Sat 29-Mar-2025 1:20 PM (12:20 PM),M.C.G.,24506
+2025,Round 4,St Kilda,Richmond,Sat 29-Mar-2025 4:15 PM (3:15 PM),Docklands,41147
+2025,Round 4,Hawthorn,Greater Western Sydney,Sat 29-Mar-2025 7:35 PM (6:35 PM),York Park,14021
+2025,Round 4,Adelaide,North Melbourne,Sun 30-Mar-2025 2:50 PM (2:20 PM),Adelaide Oval,46511
+2025,Round 4,West Coast,Fremantle,Sun 30-Mar-2025 3:10 PM (5:10 PM),Perth Stadium,53289
+2025,Round 5,Collingwood,Carlton,Thu 03-Apr-2025 7:30 PM (6:30 PM),M.C.G.,82058
+2025,Round 5,Geelong,Melbourne,Fri 04-Apr-2025 7:40 PM (6:40 PM),Kardinia Park,30397
+2025,Round 5,Gold Coast,Adelaide,Sat 05-Apr-2025 12:20 PM,Carrara,16211
+2025,Round 5,Richmond,Brisbane Lions,Sat 05-Apr-2025 4:15 PM (3:15 PM),M.C.G.,42578
+2025,Round 5,North Melbourne,Sydney,Sat 05-Apr-2025 7:35 PM (6:35 PM),Docklands,31955
+2025,Round 5,Greater Western Sydney,West Coast,Sun 06-Apr-2025 1:10 PM,Sydney Showground,9231
+2025,Round 5,Port Adelaide,St Kilda,Sun 06-Apr-2025 2:50 PM (3:20 PM),Adelaide Oval,34201
+2025,Round 5,Fremantle,Western Bulldogs,Sun 06-Apr-2025 3:10 PM (5:10 PM),Perth Stadium,41491
+2025,Round 6,Adelaide,Geelong,Thu 10-Apr-2025 7:10 PM (7:40 PM),Adelaide Oval,50073
+2025,Round 6,Collingwood,Sydney,Fri 11-Apr-2025 7:10 PM (7:40 PM),Adelaide Oval,47649
+2025,Round 6,North Melbourne,Gold Coast,Sat 12-Apr-2025 12:05 PM (12:35 PM),Barossa Park,9317
+2025,Round 6,Carlton,West Coast,Sat 12-Apr-2025 12:50 PM (1:20 PM),Adelaide Oval,41252
+2025,Round 6,Western Bulldogs,Brisbane Lions,Sat 12-Apr-2025 3:45 PM (4:15 PM),Norwood Oval,9242
+2025,Round 6,Melbourne,Essendon,Sat 12-Apr-2025 7:05 PM (7:35 PM),Adelaide Oval,45039
+2025,Round 6,Richmond,Fremantle,Sun 13-Apr-2025 12:05 PM (12:35 PM),Barossa Park,10028
+2025,Round 6,St Kilda,Greater Western Sydney,Sun 13-Apr-2025 2:50 PM (3:20 PM),Norwood Oval,9235
+2025,Round 6,Port Adelaide,Hawthorn,Sun 13-Apr-2025 6:50 PM (7:20 PM),Adelaide Oval,47671
+2025,Round 7,Brisbane Lions,Collingwood,Thu 17-Apr-2025 7:30 PM,Gabba,34802
+2025,Round 7,North Melbourne,Carlton,Fri 18-Apr-2025 3:20 PM,Docklands,46373
+2025,Round 7,West Coast,Essendon,Fri 18-Apr-2025 4:10 PM (6:10 PM),Perth Stadium,46080
+2025,Round 7,Melbourne,Fremantle,Sat 19-Apr-2025 1:20 PM,M.C.G.,25202
+2025,Round 7,Adelaide,Greater Western Sydney,Sat 19-Apr-2025 3:45 PM (4:15 PM),Adelaide Oval,40062
+2025,Round 7,Richmond,Gold Coast,Sat 19-Apr-2025 7:35 PM,Docklands,18423
+2025,Round 7,Sydney,Port Adelaide,Sun 20-Apr-2025 3:20 PM,S.C.G.,36636
+2025,Round 7,Western Bulldogs,St Kilda,Sun 20-Apr-2025 7:20 PM,Docklands,35511
+2025,Round 7,Geelong,Hawthorn,Mon 21-Apr-2025 3:20 PM,M.C.G.,88746
+2025,Round 8,Melbourne,Richmond,Thu 24-Apr-2025 7:30 PM,M.C.G.,71635
+2025,Round 8,Collingwood,Essendon,Fri 25-Apr-2025 3:20 PM,M.C.G.,92044
+2025,Round 8,Fremantle,Adelaide,Fri 25-Apr-2025 6:10 PM (8:10 PM),Perth Stadium,53048
+2025,Round 8,St Kilda,Brisbane Lions,Sat 26-Apr-2025 1:20 PM,Docklands,29901
+2025,Round 8,Port Adelaide,North Melbourne,Sat 26-Apr-2025 3:45 PM (4:15 PM),Adelaide Oval,35004
+2025,Round 8,Greater Western Sydney,Western Bulldogs,Sat 26-Apr-2025 7:35 PM,Manuka Oval,12234
+2025,Round 8,Gold Coast,Sydney,Sun 27-Apr-2025 1:15 PM,Carrara,18034
+2025,Round 8,Carlton,Geelong,Sun 27-Apr-2025 3:20 PM,M.C.G.,67658
+2025,Round 8,Hawthorn,West Coast,Sun 27-Apr-2025 4:45 PM,Docklands,26425
+2025,Round 9,Essendon,North Melbourne,Thu 01-May-2025 7:30 PM,Docklands,35439
+2025,Round 9,St Kilda,Fremantle,Fri 02-May-2025 7:40 PM,Docklands,20522
+2025,Round 9,Western Bulldogs,Port Adelaide,Sat 03-May-2025 1:20 PM,Eureka Stadium,4814
+2025,Round 9,Adelaide,Carlton,Sat 03-May-2025 3:45 PM (4:15 PM),Adelaide Oval,46057
+2025,Round 9,West Coast,Melbourne,Sat 03-May-2025 5:35 PM (7:35 PM),Perth Stadium,41991
+2025,Round 9,Collingwood,Geelong,Sat 03-May-2025 7:35 PM,M.C.G.,82514
+2025,Round 9,Sydney,Greater Western Sydney,Sun 04-May-2025 1:10 PM,S.C.G.,39260
+2025,Round 9,Hawthorn,Richmond,Sun 04-May-2025 3:20 PM,M.C.G.,62321
+2025,Round 9,Brisbane Lions,Gold Coast,Sun 04-May-2025 7:20 PM,Gabba,33612
+2025,Round 10,Fremantle,Collingwood,Thu 08-May-2025 6:10 PM (8:10 PM),Perth Stadium,47780
+2025,Round 10,St Kilda,Carlton,Fri 09-May-2025 7:40 PM,M.C.G.,65680
+2025,Round 10,Melbourne,Hawthorn,Sat 10-May-2025 1:20 PM,M.C.G.,50351
+2025,Round 10,Essendon,Sydney,Sat 10-May-2025 4:15 PM,Docklands,43799
+2025,Round 10,Gold Coast,Western Bulldogs,Sat 10-May-2025 7:05 PM (7:35 PM),Marrara Oval,9816
+2025,Round 10,Port Adelaide,Adelaide,Sat 10-May-2025 7:40 PM (8:10 PM),Adelaide Oval,53117
+2025,Round 10,Richmond,West Coast,Sun 11-May-2025 1:10 PM,M.C.G.,29539
+2025,Round 10,Geelong,Greater Western Sydney,Sun 11-May-2025 3:20 PM,Kardinia Park,28407
+2025,Round 10,North Melbourne,Brisbane Lions,Sun 11-May-2025 4:40 PM,Bellerive Oval,7395
+2025,Round 11,Gold Coast,Hawthorn,Thu 15-May-2025 7:00 PM (7:30 PM),Marrara Oval,12314
+2025,Round 11,Sydney,Carlton,Fri 16-May-2025 7:40 PM,S.C.G.,39082
+2025,Round 11,Collingwood,Adelaide,Sat 17-May-2025 1:20 PM,M.C.G.,67697
+2025,Round 11,Port Adelaide,Geelong,Sat 17-May-2025 3:45 PM (4:15 PM),Adelaide Oval,35508
+2025,Round 11,Greater Western Sydney,Fremantle,Sat 17-May-2025 4:15 PM,Sydney Showground,8092
+2025,Round 11,Western Bulldogs,Essendon,Sat 17-May-2025 7:35 PM,Docklands,47266
+2025,Round 11,Richmond,North Melbourne,Sun 18-May-2025 1:10 PM,M.C.G.,54060
+2025,Round 11,Brisbane Lions,Melbourne,Sun 18-May-2025 3:20 PM,Gabba,30473
+2025,Round 11,West Coast,St Kilda,Sun 18-May-2025 2:40 PM (4:40 PM),Perth Stadium,42860
+2025,Round 12,Geelong,Western Bulldogs,Thu 22-May-2025 7:30 PM,Kardinia Park,32641
+2025,Round 12,Essendon,Richmond,Fri 23-May-2025 7:40 PM,M.C.G.,76051
+2025,Round 12,Carlton,Greater Western Sydney,Sat 24-May-2025 12:35 PM,Docklands,36468
+2025,Round 12,Hawthorn,Brisbane Lions,Sat 24-May-2025 4:15 PM,M.C.G.,57919
+2025,Round 12,North Melbourne,Collingwood,Sat 24-May-2025 7:35 PM,Docklands,40479
+2025,Round 12,Fremantle,Port Adelaide,Sat 24-May-2025 6:10 PM (8:10 PM),Perth Stadium,40466
+2025,Round 12,Adelaide,West Coast,Sun 25-May-2025 12:40 PM (1:10 PM),Adelaide Oval,39271
+2025,Round 12,Melbourne,Sydney,Sun 25-May-2025 3:20 PM,M.C.G.,38520
+2025,Round 12,St Kilda,Gold Coast,Sun 25-May-2025 4:40 PM,Docklands,13486
+2025,Round 13,Brisbane Lions,Essendon,Thu 29-May-2025 7:30 PM,Gabba,26441
+2025,Round 13,Collingwood,Hawthorn,Fri 30-May-2025 7:40 PM,M.C.G.,83706
+2025,Round 13,Gold Coast,Fremantle,Sat 31-May-2025 1:20 PM,Carrara,11750
+2025,Round 13,Greater Western Sydney,Richmond,Sat 31-May-2025 4:15 PM,Sydney Showground,9770
+2025,Round 13,Sydney,Adelaide,Sat 31-May-2025 7:35 PM,S.C.G.,35229
+2025,Round 13,Melbourne,St Kilda,Sun 01-Jun-2025 2:50 PM (3:20 PM),Traeger Park,6721
+2025,Round 13,West Coast,Geelong,Sun 01-Jun-2025 5:20 PM (7:20 PM),Perth Stadium,42501
+2025,Round 14,Western Bulldogs,Hawthorn,Thu 05-Jun-2025 7:30 PM,Docklands,35725
+2025,Round 14,Adelaide,Brisbane Lions,Fri 06-Jun-2025 7:10 PM (7:40 PM),Adelaide Oval,42921
+2025,Round 14,Richmond,Sydney,Sat 07-Jun-2025 1:20 PM,M.C.G.,41452
+2025,Round 14,Geelong,Gold Coast,Sat 07-Jun-2025 4:15 PM,Kardinia Park,29502
+2025,Round 14,Greater Western Sydney,Port Adelaide,Sat 07-Jun-2025 7:35 PM,Manuka Oval,9005
+2025,Round 14,North Melbourne,West Coast,Sun 08-Jun-2025 1:20 PM (3:20 PM),Hands Oval,12715
+2025,Round 14,Carlton,Essendon,Sun 08-Jun-2025 7:20 PM,M.C.G.,74280
+2025,Round 14,Melbourne,Collingwood,Mon 09-Jun-2025 3:20 PM,M.C.G.,77761
+2025,Round 15,St Kilda,Western Bulldogs,Thu 12-Jun-2025 7:30 PM,Docklands,20508
+2025,Round 15,Hawthorn,Adelaide,Fri 13-Jun-2025 7:40 PM,York Park,15129
+2025,Round 15,Brisbane Lions,Greater Western Sydney,Sat 14-Jun-2025 1:20 PM,Gabba,30711
+2025,Round 15,Essendon,Geelong,Sat 14-Jun-2025 4:15 PM,M.C.G.,61643
+2025,Round 15,North Melbourne,Fremantle,Sat 14-Jun-2025 5:35 PM (7:35 PM),Perth Stadium,31408
+2025,Round 15,Port Adelaide,Melbourne,Sun 15-Jun-2025 2:50 PM (3:20 PM),Adelaide Oval,30144
+2025,Round 15,West Coast,Carlton,Sun 15-Jun-2025 4:10 PM (6:10 PM),Perth Stadium,43803
+2025,Round 16,Fremantle,Essendon,Thu 19-Jun-2025 6:10 PM (8:10 PM),Perth Stadium,37570
+2025,Round 16,Geelong,Brisbane Lions,Fri 20-Jun-2025 7:40 PM,Kardinia Park,35367
+2025,Round 16,Carlton,North Melbourne,Sat 21-Jun-2025 1:20 PM,M.C.G.,56236
+2025,Round 16,Port Adelaide,Sydney,Sat 21-Jun-2025 3:45 PM (4:15 PM),Adelaide Oval,33576
+2025,Round 16,Collingwood,St Kilda,Sat 21-Jun-2025 7:35 PM,Docklands,43039
+2025,Round 16,Greater Western Sydney,Gold Coast,Sun 22-Jun-2025 1:10 PM,Sydney Showground,10504
+2025,Round 16,Western Bulldogs,Richmond,Sun 22-Jun-2025 3:20 PM,Docklands,38280
+2025,Round 17,Port Adelaide,Carlton,Thu 26-Jun-2025 7:00 PM (7:30 PM),Adelaide Oval,30381
+2025,Round 17,Sydney,Western Bulldogs,Fri 27-Jun-2025 7:40 PM,S.C.G.,29246
+2025,Round 17,Gold Coast,Melbourne,Sat 28-Jun-2025 1:20 PM,Carrara,13064
+2025,Round 17,Hawthorn,North Melbourne,Sat 28-Jun-2025 4:15 PM,York Park,13287
+2025,Round 17,Collingwood,West Coast,Sat 28-Jun-2025 7:35 PM,Docklands,38126
+2025,Round 17,Richmond,Adelaide,Sun 29-Jun-2025 3:15 PM,M.C.G.,23231
+2025,Round 17,Fremantle,St Kilda,Sun 29-Jun-2025 3:10 PM (5:10 PM),Perth Stadium,41600
+2025,Round 18,North Melbourne,Western Bulldogs,Thu 03-Jul-2025 7:30 PM,Docklands,25009
+2025,Round 18,Carlton,Collingwood,Fri 04-Jul-2025 7:20 PM,M.C.G.,75827
+2025,Round 18,West Coast,Greater Western Sydney,Fri 04-Jul-2025 6:20 PM (8:20 PM),Perth Stadium,38152
+2025,Round 18,Essendon,Gold Coast,Sat 05-Jul-2025 12:35 PM,Docklands,29672
+2025,Round 18,Geelong,Richmond,Sat 05-Jul-2025 4:15 PM,Kardinia Park,31060
+2025,Round 18,Brisbane Lions,Port Adelaide,Sat 05-Jul-2025 7:35 PM,Gabba,30017
+2025,Round 18,St Kilda,Hawthorn,Sat 05-Jul-2025 7:40 PM,Docklands,36035
+2025,Round 18,Sydney,Fremantle,Sun 06-Jul-2025 1:10 PM,S.C.G.,32007
+2025,Round 18,Adelaide,Melbourne,Sun 06-Jul-2025 2:45 PM (3:15 PM),Adelaide Oval,43306
+2025,Round 19,Carlton,Brisbane Lions,Thu 10-Jul-2025 7:30 PM,Docklands,32898
+2025,Round 19,Gold Coast,Collingwood,Fri 11-Jul-2025 7:40 PM,Carrara,22831
+2025,Round 19,Western Bulldogs,Adelaide,Sat 12-Jul-2025 1:20 PM,Docklands,41198
+2025,Round 19,Greater Western Sydney,Geelong,Sat 12-Jul-2025 4:15 PM,Sydney Showground,13349
+2025,Round 19,Richmond,Essendon,Sat 12-Jul-2025 7:35 PM,M.C.G.,52125
+2025,Round 19,Fremantle,Hawthorn,Sat 12-Jul-2025 6:10 PM (8:10 PM),Perth Stadium,49460
+2025,Round 19,Melbourne,North Melbourne,Sun 13-Jul-2025 1:10 PM,M.C.G.,35844
+2025,Round 19,St Kilda,Sydney,Sun 13-Jul-2025 3:15 PM,Docklands,29589
+2025,Round 19,Port Adelaide,West Coast,Sun 13-Jul-2025 4:10 PM (4:40 PM),Adelaide Oval,30553
+2025,Round 20,Essendon,Greater Western Sydney,Thu 17-Jul-2025 7:30 PM,Docklands,20347
+2025,Round 20,Brisbane Lions,Western Bulldogs,Fri 18-Jul-2025 7:40 PM,Gabba,29039
+2025,Round 20,Hawthorn,Port Adelaide,Sat 19-Jul-2025 1:20 PM,York Park,12772
+2025,Round 20,Sydney,North Melbourne,Sat 19-Jul-2025 4:15 PM,S.C.G.,31909
+2025,Round 20,Carlton,Melbourne,Sat 19-Jul-2025 7:35 PM,M.C.G.,40869
+2025,Round 20,West Coast,Richmond,Sat 19-Jul-2025 6:10 PM (8:10 PM),Perth Stadium,44252
+2025,Round 20,Geelong,St Kilda,Sun 20-Jul-2025 1:10 PM,Kardinia Park,29985
+2025,Round 20,Collingwood,Fremantle,Sun 20-Jul-2025 3:15 PM,M.C.G.,62198
+2025,Round 20,Adelaide,Gold Coast,Sun 20-Jul-2025 4:10 PM (4:40 PM),Adelaide Oval,44249
+2025,Round 21,Hawthorn,Carlton,Thu 24-Jul-2025 7:30 PM,M.C.G.,51271
+2025,Round 21,Essendon,Western Bulldogs,Fri 25-Jul-2025 7:20 PM,Docklands,29367
+2025,Round 21,Greater Western Sydney,Sydney,Fri 25-Jul-2025 7:50 PM,Sydney Showground,18536
+2025,Round 21,Gold Coast,Brisbane Lions,Sat 26-Jul-2025 1:20 PM,Carrara,20833
+2025,Round 21,Fremantle,West Coast,Sat 26-Jul-2025 2:15 PM (4:15 PM),Perth Stadium,54384
+2025,Round 21,North Melbourne,Geelong,Sat 26-Jul-2025 7:35 PM,Docklands,25445
+2025,Round 21,Adelaide,Port Adelaide,Sat 26-Jul-2025 7:40 PM (8:10 PM),Adelaide Oval,46018
+2025,Round 21,Richmond,Collingwood,Sun 27-Jul-2025 2:10 PM,M.C.G.,59454
+2025,Round 21,St Kilda,Melbourne,Sun 27-Jul-2025 3:15 PM,Docklands,22570
+2025,Round 22,Western Bulldogs,Greater Western Sydney,Thu 31-Jul-2025 7:30 PM,Docklands,23898
+2025,Round 22,Adelaide,Hawthorn,Fri 01-Aug-2025 7:10 PM (7:40 PM),Adelaide Oval,50654
+2025,Round 22,Melbourne,West Coast,Sat 02-Aug-2025 1:20 PM,Docklands,16394
+2025,Round 22,Gold Coast,Richmond,Sat 02-Aug-2025 4:10 PM,Carrara,14841
+2025,Round 22,Sydney,Essendon,Sat 02-Aug-2025 4:15 PM,S.C.G.,20805
+2025,Round 22,Collingwood,Brisbane Lions,Sat 02-Aug-2025 7:35 PM,M.C.G.,82326
+2025,Round 22,St Kilda,North Melbourne,Sun 03-Aug-2025 1:40 PM,Docklands,31978
+2025,Round 22,Geelong,Port Adelaide,Sun 03-Aug-2025 3:15 PM,Kardinia Park,28064
+2025,Round 22,Fremantle,Carlton,Sun 03-Aug-2025 3:10 PM (5:10 PM),Perth Stadium,39358
+2025,Round 23,Hawthorn,Collingwood,Thu 07-Aug-2025 7:30 PM,M.C.G.,68515
+2025,Round 23,Geelong,Essendon,Fri 08-Aug-2025 7:40 PM,Kardinia Park,30289
+2025,Round 23,Richmond,St Kilda,Sat 09-Aug-2025 1:20 PM,M.C.G.,41395
+2025,Round 23,Brisbane Lions,Sydney,Sat 09-Aug-2025 4:15 PM,Gabba,31424
+2025,Round 23,Carlton,Gold Coast,Sat 09-Aug-2025 7:35 PM,Docklands,24120
+2025,Round 23,Port Adelaide,Fremantle,Sat 09-Aug-2025 7:40 PM (8:10 PM),Adelaide Oval,30390
+2025,Round 23,Greater Western Sydney,North Melbourne,Sun 10-Aug-2025 1:40 PM,Manuka Oval,11753
+2025,Round 23,Melbourne,Western Bulldogs,Sun 10-Aug-2025 3:15 PM,M.C.G.,34733
+2025,Round 23,West Coast,Adelaide,Sun 10-Aug-2025 3:10 PM (5:10 PM),Perth Stadium,32845
+2025,Round 24,Essendon,St Kilda,Fri 15-Aug-2025 7:20 PM,Docklands,31107
+2025,Round 24,Fremantle,Brisbane Lions,Fri 15-Aug-2025 6:35 PM (8:35 PM),Perth Stadium,54302
+2025,Round 24,Gold Coast,Greater Western Sydney,Sat 16-Aug-2025 12:35 PM,Carrara,16007
+2025,Round 24,Carlton,Port Adelaide,Sat 16-Aug-2025 1:20 PM,Docklands,25020
+2025,Round 24,Hawthorn,Melbourne,Sat 16-Aug-2025 4:15 PM,M.C.G.,53871
+2025,Round 24,Adelaide,Collingwood,Sat 16-Aug-2025 7:05 PM (7:35 PM),Adelaide Oval,54283
+2025,Round 24,North Melbourne,Richmond,Sun 17-Aug-2025 1:10 PM,Bellerive Oval,11176
+2025,Round 24,Sydney,Geelong,Sun 17-Aug-2025 3:15 PM,S.C.G.,37656
+2025,Round 24,Western Bulldogs,West Coast,Sun 17-Aug-2025 4:40 PM,Docklands,21207
+2025,Round 25,Essendon,Carlton,Thu 21-Aug-2025 7:30 PM,M.C.G.,41150
+2025,Round 25,Collingwood,Melbourne,Fri 22-Aug-2025 7:10 PM,M.C.G.,60611
+2025,Round 25,Port Adelaide,Gold Coast,Fri 22-Aug-2025 7:40 PM (8:10 PM),Adelaide Oval,40897
+2025,Round 25,North Melbourne,Adelaide,Sat 23-Aug-2025 1:20 PM,Docklands,17494
+2025,Round 25,Richmond,Geelong,Sat 23-Aug-2025 4:15 PM,M.C.G.,46109
+2025,Round 25,West Coast,Sydney,Sat 23-Aug-2025 5:35 PM (7:35 PM),Perth Stadium,36029
+2025,Round 25,Greater Western Sydney,St Kilda,Sun 24-Aug-2025 12:20 PM,Sydney Showground,10563
+2025,Round 25,Western Bulldogs,Fremantle,Sun 24-Aug-2025 3:15 PM,Docklands,44069
+2025,Round 25,Brisbane Lions,Hawthorn,Sun 24-Aug-2025 7:20 PM,Gabba,32086
+2025,Qualifying Final,Adelaide,Collingwood,Thu 04-Sep-2025 7:10 PM (7:40 PM),Adelaide Oval,52187
+2025,Qualifying Final,Geelong,Brisbane Lions,Fri 05-Sep-2025 7:40 PM,M.C.G.,86364
+2025,Elimination Final,Greater Western Sydney,Hawthorn,Sat 06-Sep-2025 3:15 PM,Sydney Showground,20634
+2025,Elimination Final,Fremantle,Gold Coast,Sat 06-Sep-2025 5:35 PM (7:35 PM),Perth Stadium,57507
+2025,Semi Final,Adelaide,Hawthorn,Fri 12-Sep-2025 7:10 PM (7:40 PM),Adelaide Oval,52005
+2025,Semi Final,Brisbane Lions,Gold Coast,Sat 13-Sep-2025 7:35 PM,Gabba,36628
+2025,Preliminary Final,Geelong,Hawthorn,Fri 19-Sep-2025 7:40 PM,M.C.G.,99567
+2025,Preliminary Final,Collingwood,Brisbane Lions,Sat 20-Sep-2025 5:15 PM,M.C.G.,96023
+2025,Grand Final,Geelong,Brisbane Lions,Sat 27-Sep-2025 2:30 PM,M.C.G.,100022
+2026,Round 1,Sydney,Carlton,Thu 05-Mar-2026 7:30 PM (6:30 PM),S.C.G.,40372
+2026,Round 1,Gold Coast,Geelong,Fri 06-Mar-2026 7:05 PM,Carrara,19859
+2026,Round 1,Greater Western Sydney,Hawthorn,Sat 07-Mar-2026 4:15 PM (3:15 PM),Sydney Showground,16157
+2026,Round 1,Brisbane Lions,Western Bulldogs,Sat 07-Mar-2026 6:35 PM,Gabba,31606
+2026,Round 1,St Kilda,Collingwood,Sun 08-Mar-2026 7:20 PM (6:20 PM),M.C.G.,82528
+2026,Round 2,Carlton,Richmond,Thu 12-Mar-2026 7:30 PM (6:30 PM),M.C.G.,74313
+2026,Round 2,Essendon,Hawthorn,Fri 13-Mar-2026 7:40 PM (6:40 PM),M.C.G.,71384
+2026,Round 2,Western Bulldogs,Greater Western Sydney,Sat 14-Mar-2026 1:15 PM (12:15 PM),Docklands,28318
+2026,Round 2,Geelong,Fremantle,Sat 14-Mar-2026 4:15 PM (3:15 PM),Kardinia Park,28715
+2026,Round 2,Sydney,Brisbane Lions,Sat 14-Mar-2026 7:10 PM (6:10 PM),S.C.G.,38128
+2026,Round 2,Collingwood,Adelaide,Sat 14-Mar-2026 7:35 PM (6:35 PM),M.C.G.,62482
+2026,Round 2,North Melbourne,Port Adelaide,Sun 15-Mar-2026 1:10 PM (12:10 PM),Docklands,23318
+2026,Round 2,Melbourne,St Kilda,Sun 15-Mar-2026 3:15 PM (2:15 PM),M.C.G.,44577
+2026,Round 2,Gold Coast,West Coast,Sun 15-Mar-2026 5:10 PM,Carrara,13309
+2026,Round 3,Hawthorn,Sydney,Thu 19-Mar-2026 7:30 PM (6:30 PM),M.C.G.,47945
+2026,Round 3,Adelaide,Western Bulldogs,Fri 20-Mar-2026 7:10 PM (6:40 PM),Adelaide Oval,49185
+2026,Round 3,Richmond,Gold Coast,Sat 21-Mar-2026 1:15 PM (12:15 PM),M.C.G.,30468
+2026,Round 3,Greater Western Sydney,St Kilda,Sat 21-Mar-2026 4:15 PM (3:15 PM),Sydney Showground,9149
+2026,Round 3,Fremantle,Melbourne,Sat 21-Mar-2026 4:35 PM (6:35 PM),Perth Stadium,44736
+2026,Round 3,Port Adelaide,Essendon,Sun 22-Mar-2026 2:45 PM (2:15 PM),Adelaide Oval,36049
+2026,Round 3,West Coast,North Melbourne,Sun 22-Mar-2026 3:10 PM (5:10 PM),Perth Stadium,47083
+2026,Round 4,Geelong,Adelaide,Thu 26-Mar-2026 7:30 PM (6:30 PM),Kardinia Park,20403
+2026,Round 4,Collingwood,Greater Western Sydney,Fri 27-Mar-2026 7:40 PM (6:40 PM),Docklands,41607
+2026,Round 4,St Kilda,Brisbane Lions,Sat 28-Mar-2026 12:35 PM (11:35 AM),Docklands,31854
+2026,Round 4,Fremantle,Richmond,Sat 28-Mar-2026 1:15 PM (3:15 PM),Perth Stadium,35245
+2026,Round 4,Essendon,North Melbourne,Sat 28-Mar-2026 7:35 PM (6:35 PM),Docklands,40154
+2026,Round 4,Port Adelaide,West Coast,Sun 29-Mar-2026 12:00 PM (11:30 AM),Adelaide Oval,33754
+2026,Round 4,Carlton,Melbourne,Sun 29-Mar-2026 3:15 PM (2:15 PM),M.C.G.,67763
+2026,Round 5,Brisbane Lions,Collingwood,Thu 02-Apr-2026 6:30 PM,Gabba,34648
+2026,Round 5,North Melbourne,Carlton,Fri 03-Apr-2026 3:15 PM (2:15 PM),Docklands,45919
+2026,Round 5,Adelaide,Fremantle,Fri 03-Apr-2026 6:45 PM (6:15 PM),Adelaide Oval,48627
+2026,Round 5,Richmond,Port Adelaide,Sat 04-Apr-2026 4:15 PM (3:15 PM),M.C.G.,34471
+2026,Round 5,West Coast,Sydney,Sat 04-Apr-2026 4:35 PM (6:35 PM),Perth Stadium,50723
+2026,Round 5,Melbourne,Gold Coast,Sun 05-Apr-2026 3:15 PM,M.C.G.,24287
+2026,Round 5,Western Bulldogs,Essendon,Sun 05-Apr-2026 7:20 PM,Docklands,38786
+2026,Round 5,Hawthorn,Geelong,Mon 06-Apr-2026 3:15 PM,M.C.G.,84712
+2026,Round 6,Adelaide,Carlton,Thu 09-Apr-2026 7:10 PM (7:40 PM),Adelaide Oval,49184
+2026,Round 6,Collingwood,Fremantle,Fri 10-Apr-2026 7:10 PM (7:40 PM),Adelaide Oval,47275
+2026,Round 6,North Melbourne,Brisbane Lions,Sat 11-Apr-2026 12:05 PM (12:35 PM),Barossa Park,10613
+2026,Round 6,Essendon,Melbourne,Sat 11-Apr-2026 12:45 PM (1:15 PM),Adelaide Oval,38006
+2026,Round 6,Sydney,Gold Coast,Sat 11-Apr-2026 3:45 PM (4:15 PM),Norwood Oval,9228
+2026,Round 6,Hawthorn,Western Bulldogs,Sat 11-Apr-2026 7:05 PM (7:35 PM),Adelaide Oval,48451
+2026,Round 6,Geelong,West Coast,Sun 12-Apr-2026 12:00 PM (12:30 PM),Norwood Oval,9434
+2026,Round 6,Greater Western Sydney,Richmond,Sun 12-Apr-2026 2:45 PM (3:15 PM),Barossa Park,10508
+2026,Round 6,Port Adelaide,St Kilda,Sun 12-Apr-2026 6:45 PM (7:15 PM),Adelaide Oval,47319
+2026,Round 7,Carlton,Collingwood,Thu 16-Apr-2026 7:30 PM,M.C.G.,78058
+2026,Round 7,Geelong,Western Bulldogs,Fri 17-Apr-2026 7:20 PM,Kardinia Park,33200
+2026,Round 7,Sydney,Greater Western Sydney,Fri 17-Apr-2026 7:50 PM,S.C.G.,43986
+2026,Round 7,Gold Coast,Essendon,Sat 18-Apr-2026 1:15 PM,Carrara,19039
+2026,Round 7,Hawthorn,Port Adelaide,Sat 18-Apr-2026 4:15 PM,Docklands,37070
+2026,Round 7,Adelaide,St Kilda,Sat 18-Apr-2026 7:05 PM (7:35 PM),Adelaide Oval,45854
+2026,Round 7,North Melbourne,Richmond,Sun 19-Apr-2026 1:10 PM,Docklands,36584
+2026,Round 7,Melbourne,Brisbane Lions,Sun 19-Apr-2026 3:15 PM,M.C.G.,41629
+2026,Round 7,West Coast,Fremantle,Sun 19-Apr-2026 3:10 PM (5:10 PM),Perth Stadium,54232
+2026,Round 8,Western Bulldogs,Sydney,Thu 23-Apr-2026 7:30 PM,Docklands,29523
+2026,Round 8,Richmond,Melbourne,Fri 24-Apr-2026 7:40 PM,M.C.G.,67364
+2026,Round 8,Hawthorn,Gold Coast,Sat 25-Apr-2026 12:30 PM,York Park,8263
+2026,Round 8,Essendon,Collingwood,Sat 25-Apr-2026 3:20 PM,M.C.G.,92231
+2026,Round 8,Port Adelaide,Geelong,Sat 25-Apr-2026 6:05 PM (6:35 PM),Adelaide Oval,41164
+2026,Round 8,Fremantle,Carlton,Sat 25-Apr-2026 6:15 PM (8:15 PM),Perth Stadium,54100
+2026,Round 8,St Kilda,West Coast,Sun 26-Apr-2026 1:10 PM,Docklands,29070
+2026,Round 8,Brisbane Lions,Adelaide,Sun 26-Apr-2026 3:15 PM,Gabba,32629
+2026,Round 8,Greater Western Sydney,North Melbourne,Sun 26-Apr-2026 4:40 PM,Manuka Oval,12597
+2026,Round 9,Collingwood,Hawthorn,Thu 30-Apr-2026 7:30 PM,M.C.G.,76632
+2026,Round 9,Western Bulldogs,Fremantle,Fri 01-May-2026 7:30 PM,Docklands,23071
+2026,Round 9,Adelaide,Port Adelaide,Fri 01-May-2026 7:40 PM (8:10 PM),Adelaide Oval,53045
+2026,Round 9,Essendon,Brisbane Lions,Sat 02-May-2026 12:35 PM,Docklands,31595
+2026,Round 9,West Coast,Richmond,Sat 02-May-2026 2:15 PM (4:15 PM),Perth Stadium,46350
+2026,Round 9,Geelong,North Melbourne,Sat 02-May-2026 4:35 PM,Kardinia Park,32485
+2026,Round 9,Carlton,St Kilda,Sat 02-May-2026 7:35 PM,Docklands,41062
+2026,Round 9,Sydney,Melbourne,Sun 03-May-2026 3:15 PM,S.C.G.,40673
+2026,Round 9,Gold Coast,Greater Western Sydney,Sun 03-May-2026 7:20 PM,Carrara,13537
+2026,Round 10,Fremantle,Hawthorn,Thu 07-May-2026 6:10 PM (8:10 PM),Perth Stadium,54140
+2026,Round 10,Brisbane Lions,Carlton,Fri 08-May-2026 7:30 PM,Gabba,31147
+2026,Round 10,Port Adelaide,Western Bulldogs,Fri 08-May-2026 7:40 PM (8:10 PM),Adelaide Oval,33883
+2026,Round 10,North Melbourne,Sydney,Sat 09-May-2026 1:15 PM,Docklands,28156
+2026,Round 10,Greater Western Sydney,Essendon,Sat 09-May-2026 4:15 PM,Sydney Showground,9416
+2026,Round 10,Gold Coast,St Kilda,Sat 09-May-2026 6:40 PM (7:10 PM),Marrara Oval,10672
+2026,Round 10,Geelong,Collingwood,Sat 09-May-2026 7:35 PM,M.C.G.,83166
+2026,Round 10,Melbourne,West Coast,Sun 10-May-2026 1:10 PM,Docklands,16650
+2026,Round 10,Richmond,Adelaide,Sun 10-May-2026 3:15 PM,M.C.G.,22123
+2026,Round 11,Brisbane Lions,Geelong,Thu 14-May-2026 7:30 PM,Gabba,29221
+2026,Round 11,Sydney,Collingwood,Fri 15-May-2026 7:30 PM,S.C.G.,40627
+2026,Round 11,Gold Coast,Port Adelaide,Fri 15-May-2026 7:40 PM (8:10 PM),Marrara Oval,11974
+2026,Round 11,Adelaide,North Melbourne,Sat 16-May-2026 12:45 PM (1:15 PM),Adelaide Oval,41313
+2026,Round 11,Melbourne,Hawthorn,Sat 16-May-2026 4:15 PM,M.C.G.,68557
+2026,Round 11,Carlton,Western Bulldogs,Sat 16-May-2026 7:35 PM,Docklands,39217
+2026,Round 11,Essendon,Fremantle,Sun 17-May-2026 1:10 PM,M.C.G.,25100
+2026,Round 11,St Kilda,Richmond,Sun 17-May-2026 3:15 PM,Docklands,31230
+2026,Round 11,West Coast,Greater Western Sydney,Sun 17-May-2026 4:15 PM (6:15 PM),Perth Stadium,36781
+2026,Round 12,Hawthorn,Adelaide,Thu 21-May-2026 7:30 PM,York Park,8312
+2026,Round 12,Richmond,Essendon,Fri 22-May-2026 7:45 PM,M.C.G.,78815
+2026,Round 12,Fremantle,St Kilda,Fri 22-May-2026 6:30 PM (8:30 PM),Perth Stadium,53707
+2026,Round 12,North Melbourne,Gold Coast,Sat 23-May-2026 1:15 PM,Docklands,16260
+2026,Round 12,Geelong,Sydney,Sat 23-May-2026 4:15 PM,Kardinia Park,35869
+2026,Round 12,Collingwood,West Coast,Sat 23-May-2026 4:35 PM,M.C.G.,90028
+2026,Round 12,Port Adelaide,Carlton,Sat 23-May-2026 7:05 PM (7:35 PM),Adelaide Oval,40597
+2026,Round 12,Greater Western Sydney,Brisbane Lions,Sun 24-May-2026 12:30 PM,Sydney Showground,8394
+2026,Round 12,Western Bulldogs,Melbourne,Sun 24-May-2026 3:15 PM,Docklands,29708
+2026,Round 13,St Kilda,Hawthorn,Thu 28-May-2026 7:30 PM,Docklands,33476
+2026,Round 13,Carlton,Geelong,Fri 29-May-2026 7:40 PM,M.C.G.,61081
+2026,Round 13,Sydney,Richmond,Sat 30-May-2026 1:15 PM,S.C.G.,38013
+2026,Round 13,Brisbane Lions,Fremantle,Sat 30-May-2026 4:15 PM,Gabba,32423
+2026,Round 13,Western Bulldogs,Collingwood,Sat 30-May-2026 7:35 PM,Docklands,43430
+2026,Round 13,Melbourne,Greater Western Sydney,Sun 31-May-2026 2:45 PM (3:15 PM),Traeger Park,6374
+2026,Round 13,West Coast,Essendon,Sun 31-May-2026 5:20 PM (7:20 PM),Perth Stadium,37623
+2026,Round 14,Adelaide,Geelong,Thu 04-Jun-2026 7:00 PM (7:30 PM),Adelaide Oval,42340
+2026,Round 14,Hawthorn,Western Bulldogs,Fri 05-Jun-2026 7:40 PM,M.C.G.,59556
+2026,Round 14,North Melbourne,Fremantle,Sat 06-Jun-2026 12:15 PM (2:15 PM),Hands Oval,13331
+2026,Round 14,Gold Coast,Brisbane Lions,Sat 06-Jun-2026 5:15 PM,Carrara,21139
+2026,Round 14,West Coast,Port Adelaide,Sat 06-Jun-2026 6:15 PM (8:15 PM),Perth Stadium,47479
+2026,Round 14,Sydney,St Kilda,Sun 07-Jun-2026 3:15 PM,S.C.G.,42143
+2026,Round 14,Essendon,Carlton,Sun 07-Jun-2026 7:20 PM,M.C.G.,76745
+2026,Round 14,Collingwood,Melbourne,Mon 08-Jun-2026 3:15 PM,M.C.G.,88019
+2026,Round 15,Western Bulldogs,Adelaide,Thu 11-Jun-2026 7:30 PM,Docklands,22761
+2026,Round 15,Geelong,Gold Coast,Fri 12-Jun-2026 7:40 PM,Kardinia Park,30276
+2026,Round 15,Melbourne,Essendon,Sat 13-Jun-2026 1:15 PM,M.C.G.,41438
+2026,Round 15,North Melbourne,West Coast,Sat 13-Jun-2026 2:15 PM (4:15 PM),Perth Stadium,42409
+2026,Round 15,Port Adelaide,Sydney,Sat 13-Jun-2026 7:05 PM (7:35 PM),Adelaide Oval,31350
+2026,Round 15,Richmond,Brisbane Lions,Sun 14-Jun-2026 1:10 PM,Bellerive Oval,10200
+2026,Round 15,St Kilda,Greater Western Sydney,Sun 14-Jun-2026 3:15 PM,Docklands,17748
+2026,Round 16,Fremantle,Geelong,Thu 18-Jun-2026 6:10 PM (8:10 PM),Perth Stadium,55201
+2026,Round 16,Gold Coast,Hawthorn,Fri 19-Jun-2026 7:40 PM,Carrara,19576
+2026,Round 16,Adelaide,Melbourne,Sat 20-Jun-2026 12:45 PM (1:15 PM),Adelaide Oval,46337
+2026,Round 16,Greater Western Sydney,Carlton,Sat 20-Jun-2026 4:15 PM,Sydney Showground,13709
+2026,Round 16,Collingwood,Port Adelaide,Sat 20-Jun-2026 7:35 PM,M.C.G.,40860
+2026,Round 16,Richmond,North Melbourne,Sun 21-Jun-2026 1:10 PM,M.C.G.,41806
+2026,Round 16,St Kilda,Western Bulldogs,Sun 21-Jun-2026 3:15 PM,Docklands,30194
+2026,Round 17,Brisbane Lions,Sydney,Thu 25-Jun-2026 7:30 PM,Gabba,29700
+2026,Round 17,Hawthorn,Greater Western Sydney,Fri 26-Jun-2026 7:40 PM,M.C.G.,35238
+2026,Round 17,Carlton,West Coast,Sat 27-Jun-2026 1:15 PM,Docklands,41861
+2026,Round 17,Collingwood,Richmond,Sat 27-Jun-2026 4:15 PM,M.C.G.,62117
+2026,Round 17,Port Adelaide,Adelaide,Sat 27-Jun-2026 7:05 PM (7:35 PM),Adelaide Oval,50087
+2026,Round 17,North Melbourne,Essendon,Sun 28-Jun-2026 3:15 PM,Docklands,37054
+2026,Round 17,Fremantle,Gold Coast,Sun 28-Jun-2026 3:10 PM (5:10 PM),Perth Stadium,50602
+2026,Round 18,Geelong,Brisbane Lions,Thu 02-Jul-2026 7:30 PM,Kardinia Park,26757
+2026,Round 18,Sydney,Western Bulldogs,Fri 03-Jul-2026 7:40 PM,S.C.G.,35227
+2026,Round 18,West Coast,Adelaide,Fri 03-Jul-2026 6:10 PM (8:10 PM),Perth Stadium,40770
+2026,Round 18,Hawthorn,Melbourne,Sat 04-Jul-2026 1:15 PM,York Park,9377
+2026,Round 18,Greater Western Sydney,Fremantle,Sat 04-Jul-2026 1:35 PM,Manuka Oval,11856
+2026,Round 18,Gold Coast,Collingwood,Sat 04-Jul-2026 4:15 PM,Carrara,21072
+2026,Round 18,Richmond,Carlton,Sat 04-Jul-2026 7:35 PM,M.C.G.,54923
+2026,Round 18,Essendon,St Kilda,Sun 05-Jul-2026 3:15 PM,Docklands,34713
+2026,Round 18,Port Adelaide,North Melbourne,Sun 05-Jul-2026 4:10 PM (4:40 PM),Adelaide Oval,33105
+2026,Round 19,Fremantle,Sydney,Thu 09-Jul-2026 6:10 PM (8:10 PM),Perth Stadium,55966
+2026,Round 19,Collingwood,North Melbourne,Fri 10-Jul-2026 7:40 PM,Docklands,48369
+2026,Round 19,St Kilda,Port Adelaide,Sat 11-Jul-2026 1:15 PM,Docklands,22074
+2026,Round 19,Greater Western Sydney,Geelong,Sat 11-Jul-2026 4:15 PM,Sydney Showground,13281
+2026,Round 19,Carlton,Hawthorn,Sat 11-Jul-2026 7:35 PM,M.C.G.,70314
+2026,Round 19,Adelaide,Gold Coast,Sat 11-Jul-2026 7:40 PM (8:10 PM),Adelaide Oval,40165
+2026,Round 19,Western Bulldogs,West Coast,Sun 12-Jul-2026 1:10 PM,Docklands,25909
+2026,Round 19,Melbourne,Richmond,Sun 12-Jul-2026 3:15 PM,M.C.G.,32893
+2026,Round 19,Brisbane Lions,Essendon,Sun 12-Jul-2026 4:40 PM,Gabba,30505
+2026,Round 20,Geelong,St Kilda,Thu 16-Jul-2026 7:30 PM,Kardinia Park,23737
+2026,Round 20,Sydney,Adelaide,Fri 17-Jul-2026 7:40 PM,S.C.G.,33413
+2026,Round 20,Port Adelaide,Fremantle,Sat 18-Jul-2026 12:45 PM (1:15 PM),Adelaide Oval,28727
+2026,Round 20,North Melbourne,Melbourne,Sat 18-Jul-2026 4:15 PM,Docklands,25025
+2026,Round 20,Collingwood,Carlton,Sat 18-Jul-2026 7:35 PM,M.C.G.,83885
+2026,Round 20,West Coast,Brisbane Lions,Sat 18-Jul-2026 6:10 PM (8:10 PM),Perth Stadium,41560
+2026,Round 20,Richmond,Hawthorn,Sun 19-Jul-2026 1:10 PM,M.C.G.,49127
+2026,Round 20,Gold Coast,Western Bulldogs,Sun 19-Jul-2026 3:15 PM,Carrara,14809
+2026,Round 20,Essendon,Greater Western Sydney,Sun 19-Jul-2026 4:40 PM,Docklands,14601
+2026,Round 21,Adelaide,Collingwood,Thu 23-Jul-2026 7:00 PM (7:30 PM),Adelaide Oval,50109
+2026,Round 21,Melbourne,Geelong,Fri 24-Jul-2026 7:40 PM,M.C.G.,49292
+2026,Round 21,Fremantle,West Coast,Fri 24-Jul-2026 6:10 PM (8:10 PM),Perth Stadium,56616
+2026,Round 21,Carlton,Gold Coast,Sat 25-Jul-2026 1:05 PM,Docklands,26945
+2026,Round 21,Hawthorn,Essendon,Sat 25-Jul-2026 4:15 PM,M.C.G.,42509
+2026,Round 21,Greater Western Sydney,Sydney,Sat 25-Jul-2026 4:35 PM,Sydney Showground,20141
+2026,Round 21,Western Bulldogs,Richmond,Sat 25-Jul-2026 7:40 PM,Docklands,25154
+2026,Round 21,Brisbane Lions,Port Adelaide,Sun 26-Jul-2026 1:10 PM,Gabba,30722
+2026,Round 21,North Melbourne,St Kilda,Sun 26-Jul-2026 3:15 PM,Docklands,25523
+2026,Round 22,Collingwood,Geelong,Thu 30-Jul-2026 7:30 PM,M.C.G.,60023
+2026,Round 22,Fremantle,Western Bulldogs,Fri 31-Jul-2026 6:10 PM (8:10 PM),Perth Stadium,53524
+2026,Round 22,St Kilda,Sydney,Sat 01-Aug-2026 1:05 PM,Docklands,32512
+2026,Round 22,Hawthorn,North Melbourne,Sat 01-Aug-2026 1:35 PM,York Park,9420
+2026,Round 22,Port Adelaide,Greater Western Sydney,Sat 01-Aug-2026 6:05 PM (6:35 PM),Adelaide Oval,30758
+2026,Round 22,Carlton,Brisbane Lions,Sat 01-Aug-2026 7:40 PM,Docklands,40988
+2026,Round 22,Richmond,West Coast,Sun 02-Aug-2026 1:10 PM,M.C.G.,33737
+2026,Round 22,Gold Coast,Melbourne,Sun 02-Aug-2026 3:15 PM,Carrara,14963
+2026,Round 22,Essendon,Adelaide,Sun 02-Aug-2026 4:40 PM,Docklands,20518
+2026,Round 23,Western Bulldogs,North Melbourne,Thu 06-Aug-2026 7:30 PM,Docklands,25052
+2026,Round 23,Brisbane Lions,Hawthorn,Fri 07-Aug-2026 7:40 PM,Gabba,33003
+2026,Round 23,Melbourne,Fremantle,Sat 08-Aug-2026 1:15 PM,M.C.G.,40938
+2026,Round 23,Sydney,Port Adelaide,Sat 08-Aug-2026 4:15 PM,S.C.G.,40014
+2026,Round 23,Geelong,Essendon,Sat 08-Aug-2026 4:35 PM,Kardinia Park,33379
+2026,Round 23,Adelaide,Richmond,Sat 08-Aug-2026 7:05 PM (7:35 PM),Adelaide Oval,42762
+2026,Round 23,Greater Western Sydney,Gold Coast,Sun 09-Aug-2026 1:10 PM,Manuka Oval,5814
+2026,Round 23,West Coast,Collingwood,Sun 09-Aug-2026 2:10 PM (4:10 PM),Perth Stadium,47609
+2026,Round 23,St Kilda,Carlton,Sun 09-Aug-2026 7:20 PM,Docklands,43434
+2026,Round 24,Fremantle,Adelaide,Fri 14-Aug-2026 6:10 PM (8:10 PM),Perth Stadium,55010
+2026,Round 24,Richmond,St Kilda,Sat 15-Aug-2026 12:35 PM,M.C.G.,35850
+2026,Round 24,North Melbourne,Geelong,Sat 15-Aug-2026 3:45 PM,Docklands,35529
+2026,Round 24,Brisbane Lions,Gold Coast,Sat 15-Aug-2026 4:15 PM,Gabba,30413
+2026,Round 24,Hawthorn,Collingwood,Sat 15-Aug-2026 7:40 PM,M.C.G.,76186
+2026,Round 24,Port Adelaide,Melbourne,Sat 15-Aug-2026 7:40 PM (8:10 PM),Adelaide Oval,28417
+2026,Round 24,Greater Western Sydney,West Coast,Sun 16-Aug-2026 1:40 PM,Sydney Showground,7345
+2026,Round 24,Western Bulldogs,Carlton,Sun 16-Aug-2026 3:15 PM,Docklands,44106
+2026,Round 24,Essendon,Sydney,Sun 16-Aug-2026 4:40 PM,M.C.G.,24767
+2026,Round 25,St Kilda,Gold Coast,Thu 20-Aug-2026 7:30 PM,Docklands,14429
+2026,Round 25,Collingwood,Brisbane Lions,Fri 21-Aug-2026 7:40 PM,M.C.G.,66846
+2026,Round 25,Carlton,Fremantle,Sat 22-Aug-2026 1:15 PM,Docklands,42020
+2026,Round 25,Melbourne,Western Bulldogs,Sat 22-Aug-2026 4:15 PM,M.C.G.,44258
+2026,Round 25,Geelong,Richmond,Sat 22-Aug-2026 7:45 PM,Kardinia Park,29194
+2026,Round 25,Adelaide,Greater Western Sydney,Sat 22-Aug-2026 7:40 PM (8:10 PM),Adelaide Oval,52332
+2026,Round 25,Essendon,Port Adelaide,Sun 23-Aug-2026 12:20 PM,Docklands,29200
+2026,Round 25,Sydney,North Melbourne,Sun 23-Aug-2026 3:20 PM,S.C.G.,30058
+2026,Round 25,West Coast,Hawthorn,Sun 23-Aug-2026 5:20 PM (7:20 PM),Perth Stadium,43066
+2026,Round 25,Western Bulldogs,Collingwood,Fri 28-Aug-2026 7:40 PM,M.C.G.,81036
+2026,Round 25,Melbourne,Carlton,Sat 29-Aug-2026 7:35 PM,M.C.G.,91733
+2026,Qualifying Final,Fremantle,Hawthorn,Thu 03-Sep-2026 6:10 PM (8:10 PM),Perth Stadium,59446
+2026,Elimination Final,Geelong,Carlton,Fri 04-Sep-2026 7:40 PM,M.C.G.,96680
+2026,Qualifying Final,Sydney,Brisbane Lions,Sat 05-Sep-2026 3:15 PM,S.C.G.,37261
+2026,Elimination Final,Adelaide,Western Bulldogs,Sat 05-Sep-2026 7:05 PM (7:35 PM),Adelaide Oval,51370
+2026,Semi Final,Fremantle,Geelong,Fri 11-Sep-2026 6:10 PM (8:10 PM),Perth Stadium,59725
+2026,Semi Final,Brisbane Lions,Adelaide,Sat 12-Sep-2026 7:35 PM,Gabba,36026
+2026,Preliminary Final,Sydney,Fremantle,Fri 18-Sep-2026 7:40 PM,S.C.G.,45129
+2026,Preliminary Final,Hawthorn,Brisbane Lions,Sat 19-Sep-2026 5:15 PM,M.C.G.,97835
+2026,Grand Final,Fremantle,Brisbane Lions,Sat 26-Sep-2026 2:30 PM,M.C.G.,100023
