@@ -323,6 +323,11 @@ func _list_and_cap() -> Control:
 	var l := _wrapped(line)
 	l.name = "CapLine"
 	v.add_child(l)
+	var cut := Contracts.pay_cut_note(Contracts.money_year)
+	if cut != "":
+		var n := _wrapped(cut, UiKit.SECONDARY)
+		n.name = "PayCutNote"
+		v.add_child(n)
 	var b := UiKit.btn("My list", UiKit.BODY)
 	b.name = "OpenList"
 	b.custom_minimum_size = Vector2(0, 44)
