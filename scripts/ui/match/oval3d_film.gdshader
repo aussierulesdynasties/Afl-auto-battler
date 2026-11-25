@@ -1,6 +1,6 @@
 // The broadcast film look over the 3D oval (director's pick "A Broadcast film", 2026-11-19).
 // A full-screen quad in front of the match camera reads the drawn picture (linear, before
-// tone mapping) and redraws it: a slight lens softening, highlights bloom gently, warm highs
+// tone mapping) and redraws it (no lens softening since 2026-11-22): highlights bloom gently, warm highs
 // and cool lows, lifted blacks, a faint vignette and fine grain that changes every frame.
 shader_type spatial;
 render_mode unshaded, fog_disabled, depth_test_disabled, depth_draw_never, cull_disabled;
@@ -83,9 +83,11 @@ void fragment() {
 	float scale = max(VIEWPORT_SIZE.x / 1080.0, 1.0);
 	float frame = floor(TIME * 30.0);
 	vec3 c = texture(screen_tex, uv).rgb;
-	vec3 soft = textureLod(screen_tex, uv, 1.2 * scale).rgb;
 	vec3 bloom = textureLod(screen_tex, uv, 4.5).rgb;
-	vec3 p = to_p(mix(c, soft, 0.55));
+	// No lens softening (director 2026-11-22, "Drop the blur, keep the rest"): at the phone's
+	// size, players about 35 px tall, mixing in a blurred copy smeared their outlines and left a
+	// skin-coloured halo on the grass round each one.
+	vec3 p = to_p(c);
 	p += max(to_p(bloom) - 0.62, vec3(0.0)) * 0.55;
 	float l = luma(p);
 	p += mix(vec3(-0.012, 0.0, 0.02), vec3(0.025, 0.012, -0.02), smoothstep(0.2, 0.8, l));
