@@ -49,6 +49,14 @@ mkdir -p "$WORK/project" "$WORK/run"
 # Tracked and new (unignored) files as they are on disk: the same set an
 # export from this checkout would see, without .godot/ caches or builds.
 git ls-files -co --exclude-standard -z | (cd "$ROOT" && tar --null -T - -cf -) | tar -xf - -C "$WORK/project"
+# The Epic/MetaHuman files are ignored (docs/EPIC_ASSETS.md), so ls-files leaves them out; an export
+# fetches them first (tools/export_builds.sh), so copy the ones the lock pins in as well.
+awk '$1 ~ /^[0-9a-f]+$/ && length($1) == 64 {print $2}' "$ROOT/tools/epic_assets.lock" | while read -r f; do
+	if [ -f "$ROOT/$f" ]; then
+		mkdir -p "$WORK/project/$(dirname "$f")"
+		cp "$ROOT/$f" "$WORK/project/$f"
+	fi
+done
 # The Android preset's own include and exclude filters, so the pack holds what the
 # phone's build holds: an asset its filters leave out is missing here too (an
 # exclude of every *.glb once took the 3D footballer out of the phone build, and
