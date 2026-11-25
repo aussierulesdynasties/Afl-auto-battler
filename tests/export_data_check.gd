@@ -6,7 +6,9 @@ extends SceneTree
 ## never quietly load players without ages.
 ## The pack is exported with the Android preset's filters, so it also proves the
 ## phone build carries what Club Forge's Create a player draws (the 3D footballer,
-## his moves and his hair), and a real tap on the button builds him there.
+## his moves and his hair), and a real tap on the button builds him there, and
+## every ground's model the 3D match plays in (docs/ITCH_BUILDS.md, "What each
+## build carries").
 
 func _initialize() -> void:
 	_run.call_deferred()
@@ -39,6 +41,7 @@ func _run() -> void:
 	elif (load("res://scripts/sim/Coaches.gd").seed("CAR") as Dictionary).size() < 100:
 		failures.append("the coaching seed loaded too few coaches from the exported pack")
 	await _check_forge_player(failures)
+	_check_grounds(failures)
 	for f in failures:
 		push_error("Export data check: " + f)
 	print("Export data check: %d players, %d failures" % [db.players.size(), failures.size()])
@@ -79,3 +82,30 @@ func _check_forge_player(failures: Array[String]) -> void:
 		print("Export data check: Create a player opened with both 3D figures")
 	scene.queue_free()
 	await process_frame
+
+
+## Every ground the 3D match has a model for is in the pack, and one of them builds with its
+## stadium and its seats: the phone build once shipped seats with no stadium under them.
+func _check_grounds(failures: Array[String]) -> void:
+	var gm: GDScript = load("res://scripts/ui/match/GroundModels.gd")
+	var missing: Array[String] = []
+	var slugs := {}
+	for g in gm.grounds():
+		slugs[gm.slug_for(g)] = true
+	for slug: String in slugs:
+		if gm.files(slug).is_empty():
+			missing.append(slug)
+	if not missing.is_empty():
+		failures.append("%d grounds have no model in the exported pack: %s" % [missing.size(), ", ".join(missing)])
+	var oval: GDScript = load("res://scripts/ui/match/Oval3D.gd")
+	for path in [oval.PLAYER_GLB, "res://assets/oval3d/player_mh.glb", "res://assets/oval3d/crew_mh.glb"]:
+		if not ResourceLoader.exists(path):
+			failures.append("%s is missing from the exported pack (the 3D match draws it)" % path)
+	var mcg: Node3D = gm.instantiate("mcg")
+	var meshes := mcg.find_children("*", "MeshInstance3D", true, false).size()
+	var seats := mcg.find_children("*", "MultiMeshInstance3D", true, false).size()
+	mcg.free()
+	if meshes == 0 or seats == 0:
+		failures.append("the MCG built from the pack with %d stadium meshes and %d seat sets" % [meshes, seats])
+	else:
+		print("Export data check: %d grounds in the pack; the MCG built with %d meshes and %d seat sets" % [slugs.size(), meshes, seats])
