@@ -1,0 +1,537 @@
+club,first,last,src,apos,speed_src,speed,endurance,strength,work_rate,kicking,handballing,marking,contested_marking,one_on_one,contested_ball,goalkicking,ruck,vision,reading_play,pressure,forward_craft,discipline,durability
+ADE,Brad,Moran,2009,Ruck,20m,93,9,41,39,25,48,46,30,31,39,52,66,24,29,35,11,33,30
+ADE,Brent,Reilly,2009,Gen. Defender,est,67,55,50,55,65,58,65,14,27,30,1,9,55,63,43,9,56,83
+ADE,Kurt,Tippett,2009,Key Forward,est,45,70,61,26,43,27,40,94,23,53,72,37,43,14,38,86,19,99
+ADE,Scott,Thompson,2009,Midfielder,est,58,57,70,38,68,93,68,20,21,75,38,25,59,38,67,19,29,95
+ADE,Jonathon,Griffin,2009,Key Forward,est,46,59,55,43,43,28,48,84,24,39,45,24,36,14,31,51,41,9
+ADE,Nathan,van Berlo,2009,Midfielder,est,60,65,49,36,52,86,69,15,34,41,37,11,40,38,49,10,50,87
+ADE,Myke,Cook,2009,Mid-Forward,est,59,31,24,38,51,44,48,25,20,40,23,12,46,29,43,18,56,13
+ADE,Tyson,Edwards,2009,Midfielder,est,63,57,67,77,78,76,79,10,18,60,12,20,75,38,62,13,22,91
+ADE,Michael,Doughty,2009,Midfielder,est,58,66,62,28,66,71,75,9,34,41,93,13,42,38,59,10,60,99
+ADE,Taylor,Walker,2009,Key Forward,est,45,32,62,27,42,16,58,38,15,26,45,6,24,14,29,69,47,58
+ADE,David,Mackay,2009,Midfielder,est,66,48,41,88,59,71,56,6,24,45,59,15,54,38,48,12,67,83
+ADE,Brad,Symes,2009,Midfielder,est,57,41,42,28,58,77,73,13,29,37,14,15,42,38,55,7,36,83
+ADE,Bernie,Vince,2009,Midfielder,est,60,44,59,69,83,84,81,15,23,64,51,23,59,38,47,19,45,99
+ADE,Graham,Johncock,2009,Gen. Defender,est,68,82,74,69,69,61,82,15,53,27,32,4,24,63,40,5,51,91
+ADE,Ivan,Maric,2009,Ruck,est,32,13,50,32,23,43,35,40,32,47,51,69,22,29,39,13,13,83
+ADE,Chris,Knights,2009,Gen. Forward,est,65,61,49,60,57,51,63,31,16,40,70,10,67,20,50,70,27,83
+ADE,Andy,Otten,2009,Gen. Defender,est,68,77,41,54,45,74,76,36,56,22,33,3,35,63,32,3,69,99
+ADE,Andrew,McLeod,2009,Mid-Forward,est,60,65,47,83,76,56,48,8,21,33,29,9,82,29,42,16,47,99
+ADE,Brett,Burton,2009,Key Forward,est,45,39,38,28,46,20,47,73,14,37,99,9,32,14,27,78,40,30
+ADE,Ben,Rutten,2009,Key Defender,est,48,99,63,45,43,53,80,27,71,16,57,2,7,77,22,3,71,99
+ADE,Richard,Douglas,2009,Gen. Forward,est,65,45,46,44,48,49,57,24,20,43,32,10,54,20,55,28,44,74
+ADE,Scott,Stevens,2009,Key Defender,est,49,80,24,56,52,40,69,52,44,32,47,6,30,77,28,21,50,91
+ADE,James,Sellar,2009,Gen. Defender,est,64,1,43,1,32,42,41,21,30,25,32,25,16,63,26,9,55,46
+ADE,Rory,Sloane,2009,Gen. Forward,est,64,36,46,33,46,43,52,22,20,37,61,9,53,20,59,38,50,5
+ADE,Patrick,Dangerfield,2009,Gen. Forward,20m,74,34,74,26,36,50,40,28,16,58,39,13,47,20,39,42,57,87
+ADE,Jared,Petrenko,2009,Mid-Forward,est,61,33,54,38,42,40,41,11,33,31,50,7,38,29,44,21,46,38
+ADE,Shaun,McKernan,2009,Gen. Forward,est,64,42,50,41,50,41,55,22,20,40,45,8,64,20,49,40,49,5
+ADE,Simon,Goodwin,2009,Midfielder,est,59,71,53,57,65,95,77,19,36,37,58,10,47,38,40,9,70,87
+ADE,Trent,Hentschel,2009,Gen. Forward,est,64,54,41,34,53,32,45,31,24,39,77,7,60,20,35,49,69,30
+ADE,Jason,Porplyzia,2009,Gen. Forward,est,64,82,64,22,54,38,46,47,29,52,99,8,57,20,57,77,52,99
+ADE,Brodie,Martin,2009,Midfielder,est,61,41,58,51,64,65,71,11,31,48,58,16,51,38,52,15,32,9
+ADE,Nathan,Bock,2009,Gen. Defender,est,68,93,44,99,79,64,88,45,69,21,52,3,27,63,26,7,37,58
+BRL,Mitch,Clark,2009,Ruck,est,34,46,58,76,47,52,72,49,36,55,40,85,38,29,59,15,8,99
+BRL,Albert,Proud,2009,Mid-Forward,est,58,32,52,12,41,46,43,15,19,34,23,8,47,29,48,17,50,54
+BRL,Sam,Sheldon,2009,Mid-Forward,est,58,44,32,16,42,38,45,9,23,27,23,5,26,29,38,9,49,79
+BRL,Travis,Johnstone,2009,Midfielder,est,57,59,55,24,70,58,57,4,23,62,36,18,65,38,46,15,41,66
+BRL,Brendan,Fevola,2009,Key Forward,est,45,92,75,33,64,16,66,99,14,38,63,6,57,14,34,99,38,99
+BRL,Luke,Power,2009,Midfielder,est,60,73,54,64,77,81,58,11,27,64,36,20,71,38,77,10,41,99
+BRL,Jed,Adcock,2009,Gen. Defender,20m,69,51,42,43,62,59,72,11,40,32,61,9,51,63,61,8,63,66
+BRL,Matt,Austin,2009,Mid-Forward,est,57,24,17,16,46,31,56,7,26,25,33,6,38,29,36,18,72,34
+BRL,Ashley,McGrath,2009,Gen. Defender,est,68,60,57,84,65,42,82,16,46,28,43,5,44,63,36,9,43,99
+BRL,Daniel,Rich,2009,Midfielder,est,57,39,69,24,64,50,45,15,21,67,19,21,67,38,68,17,61,99
+BRL,Justin,Sherman,2009,Mid-Forward,est,66,77,65,99,63,63,49,14,15,34,48,8,56,29,62,36,62,99
+BRL,James,Hawksley,2009,Gen. Defender,est,64,48,31,14,48,47,55,19,45,21,35,4,27,63,28,5,76,30
+BRL,Brent,Staker,2009,Gen. Forward,est,64,43,53,33,48,35,47,23,19,43,73,11,52,20,48,38,49,28
+BRL,Jonathan,Brown,2009,Key Forward,est,45,96,81,48,68,29,89,99,18,46,67,9,65,14,20,99,41,99
+BRL,Jared,Brennan,2009,Midfielder,20m,86,51,60,37,64,57,59,43,28,69,28,32,36,38,68,19,31,83
+BRL,Jamie,Charman,2009,Ruck,est,32,1,42,38,29,39,35,23,24,50,56,66,22,29,32,10,34,13
+BRL,Simon,Black,2009,Midfielder,est,58,65,57,37,68,88,46,6,25,85,52,28,70,38,74,16,24,95
+BRL,Daniel,Merrett,2009,Key Defender,20m,69,81,66,33,35,41,56,45,99,30,57,6,9,77,24,4,49,79
+BRL,Tom,Collier,2009,Gen. Defender,est,64,47,18,12,46,41,49,15,46,24,35,4,17,63,38,5,63,26
+BRL,Matthew,Leuenberger,2009,Ruck,est,32,5,44,41,29,40,35,23,33,50,42,71,30,29,36,10,28,13
+BRL,Joel,Patfull,2009,Key Defender,est,48,89,42,52,41,42,56,43,91,26,42,4,15,77,33,2,66,83
+BRL,Troy,Selwood,2009,Midfielder,est,57,36,38,1,44,52,46,21,23,50,75,13,35,38,45,13,58,42
+BRL,Andrew,Raines,2009,Mid-Forward,est,59,53,41,40,54,51,44,18,16,32,47,9,34,29,41,16,38,14
+BRL,Jack,Redden,2009,Midfielder,est,57,35,36,14,53,52,55,13,23,43,52,12,48,38,57,17,45,42
+BRL,James,Polkinghorne,2009,Gen. Forward,est,63,58,54,15,39,36,58,29,13,36,65,6,55,20,41,34,49,83
+BRL,Cheynee,Stiller,2009,Midfielder,est,58,53,38,7,50,52,55,8,36,39,65,10,24,38,57,9,72,91
+BRL,Amon,Buchanan,2009,Midfielder,est,60,41,68,24,47,72,53,11,20,56,31,16,46,38,68,15,41,37
+BRL,Michael,Rischitelli,2009,Mid-Forward,est,57,55,50,20,50,49,53,14,23,48,49,13,54,29,72,22,49,99
+BRL,Tom,Rockliff,2009,Mid-Forward,est,59,38,45,29,51,45,49,23,18,36,47,9,42,29,44,23,50,5
+BRL,Josh,Drummond,2009,Gen. Defender,est,68,48,42,72,73,40,69,42,58,27,15,4,42,63,30,8,64,83
+BRL,Pearce,Hanley,2009,Midfielder,est,60,51,58,37,59,67,52,13,25,57,46,18,45,38,50,13,50,5
+BRL,Aaron,Cornelius,2009,Key Forward,est,45,62,32,36,45,30,61,70,22,34,78,13,39,14,28,68,49,5
+CAR,Andrew,Walker,2009,Gen. Defender,est,66,51,36,45,64,52,75,15,35,19,22,4,22,63,28,10,37,27
+CAR,Jordan,Russell,2009,Gen. Defender,20m,78,68,37,17,52,55,71,19,39,27,45,6,21,63,57,12,60,86
+CAR,Marc,Murphy,2009,Midfielder,est,62,62,65,75,75,82,68,8,23,72,70,22,76,38,61,35,55,99
+CAR,Bryce,Gibbs,2009,Midfielder,est,60,66,48,72,82,80,84,16,24,66,67,22,73,38,63,21,43,99
+CAR,Chris,Judd,2009,Midfielder,est,58,60,69,60,82,79,36,20,21,94,2,30,96,38,69,18,37,99
+CAR,Kade,Simpson,2009,Gen. Defender,est,68,56,29,67,74,56,77,25,32,34,41,7,72,63,54,20,47,99
+CAR,Brock,McLean,2009,Midfielder,est,59,41,63,33,69,68,59,6,18,69,88,22,47,38,66,13,37,86
+CAR,Matthew,Kreuzer,2009,Ruck,est,33,19,52,54,33,54,38,46,51,52,45,68,37,29,48,18,63,99
+CAR,Chris,Johnson,2009,Gen. Defender,est,65,51,38,31,61,38,56,34,43,22,33,4,44,63,41,6,45,44
+CAR,Richard,Hadley,2009,Midfielder,est,57,25,58,5,52,74,59,16,16,66,50,20,30,38,64,11,29,48
+CAR,Mitch,Robinson,2009,Midfielder,est,59,35,64,22,52,47,58,17,24,43,37,11,45,38,50,17,47,44
+CAR,Chris,Yarran,2009,Gen. Forward,est,65,32,51,42,46,32,52,12,14,36,46,7,48,20,47,32,53,27
+CAR,Brad,Fisher,2009,Key Forward,est,45,61,28,38,47,34,71,83,21,31,90,7,42,14,27,53,64,31
+CAR,Steven,Browne,2009,Midfielder,est,57,54,46,13,54,63,64,21,27,48,58,13,40,38,50,12,52,31
+CAR,Shaun,Grigg,2009,Midfielder,20m,74,40,40,41,61,68,51,10,24,55,22,17,47,38,51,13,35,44
+CAR,Setanta,Ó hAilpín,2009,Key Forward,est,45,57,45,40,35,37,44,59,34,31,60,8,48,14,22,44,70,52
+CAR,Paul,Bower,2009,Key Defender,est,47,89,44,55,52,65,79,24,99,25,42,5,7,77,30,2,46,90
+CAR,Eddie,Betts,2009,Gen. Forward,est,63,57,54,9,46,34,38,23,16,50,73,9,81,20,55,54,52,95
+CAR,Mark,Austin,2009,Key Defender,est,46,79,40,26,31,40,45,31,76,30,43,3,6,77,34,5,45,39
+CAR,Shaun,Hampson,2009,Key Forward,est,45,10,56,28,24,36,38,36,23,38,39,53,20,14,33,25,62,65
+CAR,Lachie,Henderson,2009,Key Defender,est,47,75,45,39,42,39,71,31,66,21,42,3,14,77,28,3,65,30
+CAR,Joe,Anderson,2009,Gen. Defender,est,66,67,39,33,48,55,51,20,48,28,35,4,31,63,38,6,55,14
+CAR,Dennis,Armfield,2009,Mid-Forward,est,59,68,40,22,39,53,39,12,43,30,23,6,22,29,45,8,53,73
+CAR,Heath,Scotland,2009,Midfielder,est,58,58,52,42,67,81,71,4,23,46,76,14,51,38,50,12,49,73
+CAR,Jarrad,Waite,2009,Key Defender,est,49,72,50,80,74,38,88,39,66,26,92,4,21,77,23,23,57,39
+CAR,Bret,Thornton,2009,Key Defender,est,51,94,52,85,66,49,98,52,76,26,66,3,11,77,22,4,50,90
+CAR,Ryan,Houlihan,2009,Midfielder,est,59,59,52,38,64,65,53,20,29,55,79,16,50,38,45,22,28,86
+CAR,Simon,Wiggins,2009,Gen. Defender,20m,69,52,47,1,45,55,73,45,35,35,1,7,34,63,47,14,45,56
+CAR,Jeff,Garlett,2009,Gen. Forward,est,64,32,20,26,48,24,54,9,20,30,53,5,52,20,41,41,60,44
+CAR,Sam,Jacobs,2009,Ruck,est,32,1,42,36,24,43,45,21,29,46,66,66,17,29,30,12,24,18
+CAR,Michael,Jamison,2009,Key Defender,est,47,79,49,24,35,30,55,27,61,20,42,2,6,77,27,2,45,56
+CAR,Andrew,Carrazzo,2009,Midfielder,est,57,64,48,38,72,74,58,10,24,50,55,16,56,38,53,24,48,65
+CAR,Aaron,Joseph,2009,Mid-Forward,20m,75,57,40,9,36,42,38,10,40,36,7,5,24,29,61,9,56,99
+COL,Leon,Davis,2009,Gen. Forward,est,68,57,62,95,87,36,64,26,23,48,58,12,56,20,63,50,40,91
+COL,John,McCarthy,2009,Midfielder,est,59,40,31,40,58,60,53,20,24,53,58,18,43,38,48,17,46,9
+COL,Alan,Didak,2009,Mid-Forward,est,64,51,54,99,99,50,68,18,23,50,59,17,65,29,34,30,51,79
+COL,Nick,Maxwell,2009,Key Defender,est,53,94,48,99,53,56,77,59,95,33,50,6,15,77,39,6,63,91
+COL,Tyson,Goldsack,2009,Key Defender,est,47,78,44,38,39,38,47,36,86,32,57,4,20,77,41,4,56,48
+COL,Paul,Medhurst,2009,Key Forward,est,45,34,57,40,52,27,69,49,16,27,43,6,70,14,26,59,51,72
+COL,Heritier,Lumumba,2009,Gen. Defender,est,68,97,53,49,58,46,62,16,48,28,80,5,14,63,31,7,52,99
+COL,John,Anthony,2009,Key Forward,est,46,66,43,34,42,28,64,69,33,30,73,5,36,14,33,83,45,95
+COL,Scott,Pendlebury,2009,Midfielder,est,61,28,61,67,77,81,72,8,25,76,64,26,67,38,54,16,47,83
+COL,Shane,O'Bree,2009,Midfielder,est,58,37,60,20,64,73,43,5,30,78,1,26,39,38,74,10,35,99
+COL,Luke,Ball,2009,Midfielder,20m,83,21,64,4,59,68,47,11,25,80,7,26,41,38,86,10,45,79
+COL,Dale,Thomas,2009,Gen. Forward,20m,73,36,50,74,59,48,69,23,23,36,63,9,70,20,47,32,62,87
+COL,Anthony,Corrie,2009,Mid-Forward,est,59,43,50,34,54,44,52,18,29,39,33,8,38,29,45,24,63,13
+COL,Leigh,Brown,2009,Key Forward,est,45,49,64,38,37,34,45,42,49,35,5,16,37,14,44,32,39,91
+COL,Nathan,Brown,2009,Key Defender,20m,75,76,51,19,29,39,43,35,75,24,41,3,13,77,30,7,51,56
+COL,Dayne,Beams,2009,Mid-Forward,est,58,24,53,33,51,60,64,14,22,39,42,11,43,29,40,27,70,72
+COL,Darren,Jolly,2009,Ruck,est,33,33,69,50,37,39,52,39,33,51,52,83,46,29,44,27,25,99
+COL,Cameron,Wood,2009,Ruck,est,32,28,53,55,38,44,49,52,50,45,54,65,35,29,37,15,44,52
+COL,Ben,Reid,2009,Gen. Defender,20m,73,59,51,29,53,42,60,15,35,27,33,5,28,63,37,11,58,9
+COL,Sharrod,Wellingham,2009,Midfielder,est,60,42,52,33,54,62,51,13,23,50,52,15,46,38,45,15,45,64
+COL,Steele,Sidebottom,2009,Gen. Defender,est,66,32,59,23,51,51,61,11,36,32,31,8,35,63,56,14,62,44
+COL,Tarkyn,Lockyer,2009,Mid-Forward,est,58,61,59,36,68,52,89,23,26,40,73,9,62,29,51,42,42,99
+COL,Josh,Fraser,2009,Ruck,est,33,35,45,66,53,52,60,35,36,61,32,74,27,29,34,18,29,68
+COL,Ben,Johnson,2009,Gen. Defender,est,68,41,45,83,69,56,54,6,25,27,47,8,37,63,29,10,52,56
+COL,Ryan,Cook,2009,Midfielder,est,58,54,59,30,60,70,64,11,21,52,46,17,44,38,54,12,30,9
+COL,Brent,Macaffer,2009,Gen. Forward,est,65,55,57,36,47,40,51,42,17,44,46,9,62,20,61,40,63,21
+COL,Chris,Dawes,2009,Key Forward,est,45,53,74,32,41,40,60,66,30,40,63,19,28,14,35,59,52,17
+COL,Travis,Cloke,2009,Key Forward,est,45,71,74,63,66,25,81,82,27,35,20,11,81,14,38,52,43,87
+COL,Brad,Dick,2009,Gen. Forward,est,65,38,28,35,48,33,41,12,25,35,50,5,71,20,53,47,55,64
+COL,Alan,Toovey,2009,Gen. Defender,20m,71,81,50,7,46,47,40,20,56,47,32,11,26,63,56,5,66,95
+COL,Simon,Prestigiacomo,2009,Key Defender,est,48,93,46,25,23,34,41,13,84,25,20,3,9,77,31,3,62,99
+COL,Dane,Swan,2009,Midfielder,est,61,54,94,89,99,81,83,34,26,78,7,24,82,38,51,26,55,99
+COL,Heath,Shaw,2009,Gen. Defender,est,68,74,54,99,82,56,72,42,55,31,22,6,18,63,34,7,42,83
+COL,Simon,Buckley,2009,Gen. Defender,est,66,58,38,52,61,50,67,17,38,24,35,6,30,63,35,8,60,5
+COL,Jaxson,Barham,2009,Midfielder,est,64,59,37,68,62,63,59,8,22,44,44,12,55,38,65,11,15,25
+ESS,Jay,Neagle,2009,Key Forward,est,45,75,61,32,38,17,47,76,18,31,99,5,47,14,25,60,62,52
+ESS,Ricky,Dyson,2009,Midfielder,20m,69,62,58,52,70,52,53,8,27,42,34,11,50,38,42,11,52,99
+ESS,Jobe,Watson,2009,Midfielder,est,58,46,75,35,63,90,51,8,21,85,33,26,58,38,69,16,54,95
+ESS,Brent,Stanton,2009,Midfielder,20m,77,56,42,98,84,69,83,14,25,46,40,15,64,38,60,24,42,99
+ESS,Angus,Monfries,2009,Gen. Forward,est,63,68,29,25,51,49,76,19,9,34,66,4,62,20,41,49,55,90
+ESS,Leroy,Jetta,2009,Gen. Forward,est,65,42,28,45,45,42,44,12,16,32,31,9,56,20,44,26,58,27
+ESS,Jason,Winderlich,2009,Gen. Forward,est,66,57,31,73,61,62,84,25,18,37,78,10,73,20,64,35,67,82
+ESS,Brent,Prismall,2009,Midfielder,est,58,35,43,39,74,69,78,8,24,50,46,17,61,38,58,17,64,56
+ESS,Mark,McVeigh,2009,Midfielder,est,57,52,53,14,60,52,46,12,27,46,55,14,32,38,51,17,39,52
+ESS,David,Zaharakis,2009,Mid-Forward,20m,71,50,25,43,55,39,61,21,23,29,23,7,46,29,43,30,61,44
+ESS,Andrew,Welsh,2009,Midfielder,est,58,49,52,24,60,73,57,13,18,58,22,18,49,38,87,11,44,48
+ESS,Sam,Lonergan,2009,Gen. Forward,est,63,46,48,25,42,52,48,28,28,45,32,10,53,20,56,29,55,73
+ESS,Courtenay,Dempsey,2009,Gen. Defender,est,67,47,25,40,50,54,53,14,53,29,36,4,28,63,37,12,63,86
+ESS,Tayte,Pears,2009,Gen. Defender,20m,74,79,42,41,46,54,48,19,65,24,33,3,18,63,34,3,54,99
+ESS,Michael,Hurley,2009,Key Defender,est,47,77,41,43,49,42,71,63,56,27,66,3,23,77,26,31,63,44
+ESS,David,Hille,2009,Ruck,est,32,23,62,47,32,45,40,36,30,43,28,62,53,29,27,12,31,22
+ESS,Henry,Slattery,2009,Gen. Defender,est,63,73,45,1,44,46,54,18,50,26,22,5,15,63,56,6,44,90
+ESS,David,Myers,2009,Mid-Forward,est,58,32,36,31,47,41,49,13,20,29,13,7,32,29,34,17,62,27
+ESS,Cale,Hooker,2009,Key Defender,est,46,45,64,33,32,64,61,40,66,39,39,18,16,77,48,8,35,69
+ESS,Darcy,Daniher,2009,Key Defender,est,46,77,40,45,49,39,71,31,75,27,42,4,9,77,19,4,61,14
+ESS,Alwyn,Davey,2009,Gen. Forward,est,64,64,44,30,46,43,40,13,13,49,40,12,62,20,65,29,56,86
+ESS,Paddy,Ryder,2009,Ruck,est,32,47,43,39,35,44,41,45,40,65,52,80,27,29,68,21,40,90
+ESS,Dustin,Fletcher,2009,Key Defender,est,46,71,28,49,68,39,66,27,98,32,43,6,6,77,28,3,59,78
+ESS,Mark,Williams,2009,Gen. Forward,est,64,64,65,34,52,30,65,30,21,25,81,5,53,20,35,47,49,59
+ESS,Kyle,Reimers,2009,Gen. Forward,est,65,42,55,61,59,39,55,22,26,33,45,6,50,20,46,41,63,39
+ESS,Jarrod,Atkinson,2009,Gen. Defender,est,68,65,31,65,54,54,66,17,43,25,56,4,20,63,50,10,45,22
+ESS,Heath,Hocking,2009,Midfielder,est,58,59,57,16,51,69,59,21,33,51,78,14,42,38,62,13,29,82
+ESS,Michael,Quinn,2009,Midfielder,est,59,51,27,15,52,58,62,8,25,43,31,11,38,38,44,19,33,27
+ESS,Nathan,Lovett-Murray,2009,Gen. Defender,est,66,56,41,35,51,68,65,30,46,41,63,12,51,63,51,20,26,61
+ESS,Bachar,Houli,2009,Gen. Defender,est,65,55,55,46,60,70,69,14,39,32,22,8,23,63,38,5,42,31
+ESS,Tom,Bellchambers,2009,Key Forward,est,45,4,57,28,29,28,48,44,25,35,43,27,23,14,26,37,46,27
+FRE,Hayden,Ballantyne,2009,Gen. Forward,est,66,55,57,37,52,29,49,24,21,41,44,7,51,20,36,46,51,37
+FRE,Byron,Schammer,2009,Midfielder,20m,66,42,64,35,68,68,62,9,20,49,48,16,45,38,65,15,29,86
+FRE,Paul,Hasleby,2009,Midfielder,est,58,46,81,24,59,91,59,23,17,78,61,25,46,38,43,16,42,99
+FRE,Garrick,Ibbotson,2009,Gen. Defender,est,64,67,41,30,65,51,72,15,40,36,6,11,46,63,34,8,62,99
+FRE,Greg,Broughton,2009,Gen. Defender,est,68,71,41,66,63,74,85,23,57,37,32,6,20,63,47,6,57,68
+FRE,Nick,Suban,2009,Midfielder,est,59,35,62,21,56,34,39,19,31,43,22,11,39,38,50,14,43,99
+FRE,Adam,McPhee,2009,Key Forward,est,47,73,51,77,59,46,78,68,40,32,75,7,41,14,40,35,31,90
+FRE,Rhys,Palmer,2009,Mid-Forward,est,58,34,57,26,56,64,52,14,13,46,53,13,37,29,56,22,40,23
+FRE,Des,Headland,2009,Gen. Forward,est,64,42,63,53,63,33,74,43,23,37,64,7,63,20,47,53,45,41
+FRE,Antoni,Grover,2009,Key Defender,est,46,89,72,26,46,43,67,61,64,30,65,4,11,77,34,10,55,95
+FRE,Ryan,Crowley,2009,Midfielder,est,57,52,49,3,57,46,53,28,17,46,48,14,36,38,51,23,31,28
+FRE,David,Mundy,2009,Midfielder,est,58,61,57,25,62,60,67,27,26,46,35,15,47,38,52,24,52,99
+FRE,Luke,McPharlin,2009,Key Defender,est,47,82,43,38,50,35,70,51,47,33,36,6,36,77,24,36,35,81
+FRE,Clayton,Hinkley,2009,Gen. Forward,20m,79,12,19,47,41,41,48,15,17,30,42,8,52,20,42,21,54,37
+FRE,Chris,Tarrant,2009,Key Defender,est,46,96,45,28,41,41,55,31,95,28,50,4,23,77,32,7,58,99
+FRE,Scott,Thornton,2009,Gen. Defender,est,65,72,35,17,43,45,58,17,37,22,94,4,36,63,23,23,71,68
+FRE,Chris,Mayne,2009,Key Forward,est,46,57,33,32,41,30,58,54,29,36,81,9,33,14,37,72,70,23
+FRE,Steven,Dodd,2009,Gen. Defender,est,64,82,23,17,46,61,63,19,58,27,41,4,15,63,36,7,45,99
+FRE,Kepler,Bradley,2009,Key Forward,est,45,34,56,45,46,44,61,62,14,48,52,24,49,14,25,40,49,68
+FRE,Ryan,Murphy,2009,Gen. Forward,est,63,52,37,13,37,26,44,26,12,34,95,7,46,20,38,45,66,32
+FRE,Matthew,Pavlich,2009,Gen. Forward,est,65,62,82,84,72,56,51,49,26,65,70,18,68,20,58,49,44,86
+FRE,Zac,Clarke,2009,Gen. Forward,est,63,28,25,24,34,45,38,31,22,45,61,21,38,20,41,23,69,23
+FRE,Aaron,Sandilands,2009,Ruck,est,33,69,83,51,42,62,42,68,31,89,62,96,31,29,30,26,20,90
+FRE,Stephen,Hill,2009,Midfielder,20m,86,53,52,21,48,54,47,16,33,51,47,12,42,38,47,13,51,99
+FRE,Tim,Ruffles,2009,Gen. Forward,est,63,45,19,22,46,30,51,17,17,29,51,6,50,20,41,39,68,14
+FRE,Michael,Johnson,2009,Gen. Defender,est,65,74,39,31,71,38,67,34,43,38,35,11,53,63,32,25,66,46
+FRE,Michael,Walters,2009,Gen. Forward,est,63,50,47,31,51,36,62,24,21,33,64,8,71,20,41,44,54,14
+FRE,Matt,de Boer,2009,Midfielder,est,58,49,54,1,41,53,46,28,33,52,46,12,47,38,60,14,42,77
+FRE,Paul,Duffield,2009,Gen. Defender,est,68,81,43,95,90,46,66,22,37,40,15,12,40,63,54,10,38,95
+FRE,Roger,Hayden,2009,Gen. Defender,est,66,50,45,28,54,44,60,22,35,30,41,6,37,63,41,12,23,37
+FRE,Clancee,Pearce,2009,Mid-Forward,est,58,30,52,27,53,38,53,25,17,30,46,7,44,29,36,25,61,37
+FRE,Jay,van Berlo,2009,Gen. Defender,est,64,58,41,5,46,38,49,18,39,28,41,6,27,63,48,18,71,19
+GEE,Jimmy,Bartel,2009,Midfielder,est,57,70,61,46,85,79,83,29,42,62,18,21,66,38,80,17,17,95
+GEE,Andrew,Mackie,2009,Gen. Defender,est,64,77,23,50,70,59,88,22,52,28,50,6,42,63,34,11,44,95
+GEE,Travis,Varcoe,2009,Gen. Forward,est,66,52,58,45,43,49,45,16,23,33,63,6,82,20,53,37,63,87
+GEE,Brad,Ottens,2009,Ruck,est,32,9,68,31,30,43,41,49,30,61,19,67,33,29,49,18,29,25
+GEE,Harry,Taylor,2009,Key Defender,est,48,75,51,50,43,64,67,57,95,32,50,5,12,77,23,5,61,87
+GEE,James,Kelly,2009,Gen. Defender,20m,73,66,57,27,66,71,70,18,39,40,32,10,31,63,47,6,67,72
+GEE,Joel,Corey,2009,Midfielder,est,58,68,63,60,79,94,62,26,30,81,59,29,57,38,76,12,20,91
+GEE,Trent,West,2009,Gen. Forward,est,64,41,56,37,46,36,50,22,25,32,61,16,53,20,41,38,50,5
+GEE,Tom,Lonergan,2009,Key Defender,est,46,81,33,30,34,47,56,39,61,20,53,3,12,77,34,10,26,36
+GEE,Joel,Selwood,2009,Midfielder,est,58,58,75,41,73,94,62,19,30,77,38,23,57,38,73,15,20,99
+GEE,Ryan,Gamble,2009,Gen. Forward,est,63,39,40,20,43,43,59,33,15,30,32,6,39,20,39,48,54,32
+GEE,Shannon,Byrnes,2009,Gen. Forward,est,66,53,56,64,55,59,72,12,24,40,99,9,54,20,47,46,60,87
+GEE,Nathan,Djerrkura,2009,Mid-Forward,20m,77,34,52,20,43,48,39,18,25,41,23,10,44,29,60,16,55,13
+GEE,Steve,Johnson,2009,Gen. Forward,est,63,70,70,61,80,39,81,26,24,41,33,8,90,20,41,78,20,72
+GEE,Cameron,Mooney,2009,Key Forward,est,46,75,56,52,56,27,85,86,26,30,35,5,76,14,21,85,60,95
+GEE,Marcus,Drum,2009,Gen. Defender,est,65,64,42,27,54,48,65,22,55,28,35,5,19,63,42,5,62,23
+GEE,Mark,Blake,2009,Ruck,est,32,3,51,29,18,46,34,14,26,47,57,81,25,29,24,9,36,83
+GEE,Tom,Gillies,2009,Key Defender,est,48,71,28,43,33,43,44,28,58,17,42,3,8,77,21,3,66,25
+GEE,Tom,Hawkins,2009,Key Forward,est,45,62,65,31,40,34,64,74,25,38,79,8,55,14,36,64,55,95
+GEE,Mathew,Stokes,2009,Gen. Forward,est,63,57,47,26,52,48,56,23,20,32,61,6,70,20,47,54,66,75
+GEE,Gary,Ablett,2009,Midfielder,est,62,75,88,80,80,99,52,48,24,87,31,27,67,38,65,39,33,87
+GEE,Matthew,Scarlett,2009,Key Defender,est,48,84,45,62,61,50,75,35,74,17,32,3,19,77,25,2,34,87
+GEE,Max,Rooke,2009,Gen. Forward,est,63,53,56,16,41,34,57,37,21,34,64,5,52,20,54,44,63,87
+GEE,Simon,Hogan,2009,Midfielder,20m,75,34,55,21,49,73,52,10,23,44,68,11,50,38,46,20,49,40
+GEE,Paul,Chapman,2009,Mid-Forward,est,59,55,81,77,95,60,82,29,12,57,80,18,86,29,44,59,58,79
+GEE,Jeremy,Laidler,2009,Gen. Defender,est,66,64,49,33,55,50,57,17,38,26,35,5,26,63,38,8,60,5
+GEE,Darren,Milburn,2009,Gen. Defender,est,67,59,56,54,77,59,85,22,76,27,41,5,28,63,28,7,70,83
+GEE,David,Wojcinski,2009,Midfielder,est,64,43,50,65,49,63,43,13,28,41,30,10,52,38,51,7,43,83
+GEE,Corey,Enright,2009,Gen. Defender,est,63,76,57,48,81,70,74,39,44,31,50,8,45,63,44,6,49,99
+GEE,Cameron,Ling,2009,Midfielder,est,57,65,61,27,66,76,65,12,19,52,35,18,46,38,73,13,18,87
+HAW,Max,Bailey,2009,Ruck,est,32,1,40,34,26,38,34,27,28,46,56,65,20,29,43,12,24,10
+HAW,Jarryd,Roughead,2009,Key Forward,est,45,90,64,31,49,31,55,66,20,42,77,12,31,14,33,92,41,86
+HAW,Jordan,Lewis,2009,Midfielder,est,58,64,62,46,76,83,80,18,23,68,47,22,64,38,43,19,17,86
+HAW,Rick,Ladson,2009,Gen. Defender,est,65,46,55,23,54,54,55,13,39,32,46,6,24,63,40,9,42,14
+HAW,Sam,Mitchell,2009,Midfielder,est,57,82,79,57,91,86,71,12,23,77,68,28,65,38,50,12,28,99
+HAW,Josh,Gibson,2009,Key Defender,est,47,84,59,52,56,50,65,25,88,34,31,7,20,77,48,4,36,99
+HAW,Michael,Osborne,2009,Gen. Forward,est,64,51,52,44,54,44,62,14,21,30,62,8,64,20,45,37,45,77
+HAW,Xavier,Ellis,2009,Gen. Defender,est,63,33,25,21,53,59,66,7,29,29,65,10,29,63,47,11,56,50
+HAW,Shaun,Burgoyne,2009,Midfielder,20m,71,56,68,33,68,60,55,14,35,68,1,22,66,38,61,16,57,41
+HAW,Chance,Bateman,2009,Midfielder,est,59,50,49,46,73,70,74,8,19,39,27,13,85,38,44,20,35,99
+HAW,Clinton,Young,2009,Midfielder,20m,67,41,44,39,58,57,65,8,24,39,1,13,43,38,65,8,35,23
+HAW,Brad,Sewell,2009,Midfielder,est,57,64,85,36,68,90,63,11,18,88,48,29,69,38,94,11,37,86
+HAW,Simon,Taylor,2009,Ruck,est,32,6,57,23,19,43,34,24,36,48,39,81,12,29,42,8,4,81
+HAW,Grant,Birchall,2009,Gen. Defender,20m,73,64,29,62,64,66,72,15,37,20,22,4,27,63,32,3,63,86
+HAW,Luke,Hodge,2009,Midfielder,20m,70,68,79,25,74,66,51,28,48,60,66,18,33,38,58,16,15,86
+HAW,Beau,Dowler,2009,Gen. Defender,est,65,58,36,22,54,44,72,16,36,22,55,5,38,63,39,22,47,59
+HAW,Beau,Muston,2009,Midfielder,est,58,48,40,32,64,60,67,11,25,39,31,11,36,38,48,11,36,37
+HAW,Brent,Guerra,2009,Gen. Defender,est,65,47,65,39,65,55,61,25,45,22,57,6,33,63,40,10,38,72
+HAW,Jarryd,Morton,2009,Midfielder,est,59,55,37,29,62,59,75,10,30,43,29,12,40,38,46,19,43,41
+HAW,Rhan,Hooper,2009,Gen. Forward,est,63,43,46,15,42,27,43,14,23,34,77,6,45,20,47,43,49,38
+HAW,Shane,Savage,2009,Midfielder,est,60,49,57,41,53,66,51,17,23,47,21,14,42,38,58,10,59,14
+HAW,Travis,Tuck,2009,Midfielder,est,57,50,59,19,53,79,63,6,18,52,46,19,46,38,40,6,39,50
+HAW,Lance,Franklin,2009,Key Forward,est,47,94,78,55,54,38,55,96,20,42,58,8,39,14,36,97,1,95
+HAW,Ryan,Schoenmakers,2009,Gen. Defender,est,64,64,36,5,40,38,46,10,30,24,46,5,22,63,45,5,35,59
+HAW,Liam,Shiels,2009,Midfielder,est,58,36,53,6,46,57,43,6,18,51,21,15,40,38,67,8,45,50
+HAW,Stephen,Gilham,2009,Key Defender,est,47,80,26,26,37,55,60,21,71,25,42,3,5,77,34,3,66,46
+HAW,Garry,Moss,2009,Gen. Forward,est,64,42,24,47,58,42,71,14,14,34,76,9,72,20,34,41,54,41
+HAW,Tom,Murphy,2009,Gen. Defender,est,63,84,27,1,46,49,69,15,61,24,35,4,11,63,48,3,53,86
+HAW,Campbell,Brown,2009,Gen. Defender,est,66,81,55,19,48,43,60,20,47,28,9,5,38,63,43,12,38,95
+HAW,Matt,Suckling,2009,Gen. Defender,est,66,56,37,36,57,53,62,17,44,25,35,5,27,63,32,8,53,5
+HAW,Riley,Milne,2009,Gen. Defender,est,65,57,39,33,55,48,64,15,38,27,35,6,25,63,28,7,65,10
+HAW,Cyril,Rioli,2009,Gen. Forward,est,65,60,64,55,55,44,56,18,15,51,32,10,79,20,69,38,32,86
+HAW,Brent,Renouf,2009,Ruck,est,32,7,37,28,18,44,30,24,45,47,18,59,17,29,48,8,7,68
+HAW,Brendan,Whitecross,2009,Gen. Defender,20m,75,54,48,27,57,56,90,10,49,16,46,3,23,63,31,5,62,59
+HAW,Cameron,Stokes,2009,Mid-Forward,est,57,28,40,1,33,42,40,6,26,27,14,6,46,29,35,14,58,46
+MEL,Matthew,Warnock,2009,Key Defender,est,46,88,47,27,34,42,57,33,93,26,42,3,11,77,24,2,45,77
+MEL,Nathan,Jones,2009,Midfielder,est,58,52,75,38,65,74,57,11,21,53,17,17,63,38,39,15,38,90
+MEL,Clint,Bartram,2009,Gen. Defender,est,65,67,52,17,49,55,60,12,34,31,12,6,26,63,43,6,50,68
+MEL,Jack,Watts,2009,Gen. Forward,20m,87,44,25,30,47,36,53,24,17,38,51,6,50,20,33,41,27,14
+MEL,Matthew,Bate,2009,Gen. Forward,est,63,73,54,42,56,48,71,43,20,40,80,6,79,20,49,48,50,90
+MEL,Brad,Miller,2009,Key Forward,est,45,74,48,42,48,32,83,41,17,29,26,8,33,14,18,59,50,77
+MEL,James,Frawley,2009,Key Defender,est,46,76,50,36,47,41,65,18,73,22,43,3,11,77,31,3,54,90
+MEL,Cale,Morton,2009,Gen. Defender,est,68,68,26,75,74,63,92,27,39,24,81,6,22,63,32,15,56,95
+MEL,Paul,Johnson,2009,Ruck,est,33,42,54,59,45,41,55,14,28,39,41,60,30,29,36,13,18,81
+MEL,Colin,Sylvia,2009,Midfielder,est,61,65,55,65,74,66,83,41,24,47,63,15,81,38,52,30,39,77
+MEL,Jordie,McKenzie,2009,Gen. Forward,est,64,50,34,40,48,47,53,17,21,36,61,8,59,20,53,30,66,14
+MEL,Lynden,Dunn,2009,Gen. Defender,est,66,52,74,31,59,47,68,10,53,38,86,12,36,63,48,17,59,59
+MEL,Ricky,Petterd,2009,Gen. Forward,est,63,52,47,34,55,36,75,29,24,39,85,9,41,20,33,46,55,81
+MEL,Jack,Grimes,2009,Gen. Defender,est,64,62,32,35,71,53,99,43,47,30,43,5,23,63,36,9,72,50
+MEL,Brad,Green,2009,Gen. Forward,est,64,61,55,69,71,54,80,18,25,35,97,8,41,20,34,39,56,54
+MEL,Addam,Maric,2009,Gen. Forward,est,63,51,46,25,49,40,48,28,14,31,63,5,52,20,37,38,47,28
+MEL,Colin,Garland,2009,Gen. Defender,est,66,69,47,46,64,51,70,17,46,28,35,6,27,63,40,8,53,5
+MEL,Daniel,Bell,2009,Gen. Defender,20m,74,45,40,17,47,55,60,20,39,26,35,5,28,63,40,6,60,14
+MEL,Brent,Moloney,2009,Midfielder,est,60,48,82,55,67,84,68,6,27,76,68,25,38,38,59,11,39,95
+MEL,James,McDonald,2009,Midfielder,est,61,48,37,48,62,64,67,7,35,54,42,17,36,38,73,7,16,81
+MEL,Liam,Jurrah,2009,Key Forward,est,46,49,40,37,47,30,53,71,23,36,71,8,51,14,30,76,63,41
+MEL,Kyle,Cheney,2009,Gen. Defender,est,64,55,55,9,51,54,74,20,41,27,35,6,18,63,31,4,76,54
+MEL,John,Meesen,2009,Ruck,est,32,24,46,39,26,50,43,34,42,52,56,65,20,29,34,11,54,19
+MEL,Jared,Rivers,2009,Key Defender,est,47,71,48,34,37,37,61,24,96,29,42,3,13,77,46,2,51,90
+MEL,Joel,Macdonald,2009,Gen. Defender,est,68,75,46,61,57,59,70,22,50,28,35,5,20,63,36,3,51,91
+MEL,Michael,Newton,2009,Key Forward,est,45,70,39,41,52,25,63,59,22,34,16,10,44,14,52,63,52,23
+MEL,Tom,McNamara,2009,Gen. Defender,est,65,57,41,34,59,45,64,13,39,26,46,5,25,63,40,12,60,14
+MEL,Cameron,Bruce,2009,Midfielder,est,61,71,48,73,69,86,76,35,31,50,40,13,39,38,51,20,40,86
+MEL,Stefan,Martin,2009,Ruck,est,32,51,61,31,27,40,38,42,51,39,41,35,21,29,24,18,57,86
+MEL,Aaron,Davey,2009,Midfielder,est,64,47,44,84,94,49,43,10,22,41,40,12,63,38,64,13,48,99
+MEL,Neville,Jetta,2009,Gen. Forward,est,63,52,55,25,50,32,47,10,19,37,34,7,55,20,44,26,60,68
+MEL,Mark,Jamar,2009,Ruck,est,32,40,57,28,26,49,43,59,26,51,83,77,18,29,36,28,21,32
+MEL,Jake,Spencer,2009,Ruck,est,32,33,38,31,23,39,45,17,33,35,42,56,19,29,35,10,35,28
+MEL,Jamie,Bennell,2009,Gen. Defender,est,65,43,38,13,48,40,55,17,34,24,56,4,24,63,31,5,63,72
+MEL,Rohan,Bail,2009,Gen. Forward,est,64,22,42,31,47,36,50,22,17,33,61,8,53,20,41,38,59,5
+NTH,Hamish,McIntosh,2009,Ruck,est,33,39,50,59,46,53,58,56,28,51,99,82,33,29,35,22,50,99
+NTH,Ed,Lower,2009,Gen. Forward,est,63,55,29,26,40,46,47,10,17,47,13,13,41,20,46,24,51,41
+NTH,Brady,Rawlings,2009,Midfielder,est,58,70,46,29,60,79,62,4,27,41,54,10,28,38,54,6,56,90
+NTH,Liam,Anthony,2009,Midfielder,est,57,43,49,43,73,81,72,17,17,59,12,18,49,38,63,8,58,46
+NTH,Ben,Warren,2009,Key Forward,est,46,40,48,41,47,22,69,39,17,23,62,7,30,14,19,57,52,41
+NTH,Lachlan,Hansen,2009,Key Defender,est,45,69,43,28,53,31,70,56,55,24,39,4,19,77,26,18,53,72
+NTH,Jack,Ziebell,2009,Midfielder,est,58,27,53,17,67,44,59,17,28,45,42,13,35,38,50,12,41,46
+NTH,Daniel,Wells,2009,Midfielder,20m,69,62,47,53,76,52,62,12,24,49,70,14,79,38,43,18,53,32
+NTH,Andrew,Swallow,2009,Midfielder,20m,74,45,59,3,55,67,55,19,21,85,74,27,39,38,99,23,45,99
+NTH,Michael,Firrito,2009,Midfielder,est,58,61,69,23,52,60,51,27,29,67,54,20,38,38,71,14,29,99
+NTH,Lindsay,Thomas,2009,Gen. Forward,est,64,57,42,36,55,27,49,23,18,34,26,6,66,20,51,41,26,86
+NTH,Leigh,Adams,2009,Mid-Forward,est,58,44,60,25,56,52,56,8,20,44,75,10,57,29,60,29,61,28
+NTH,Gavin,Urquhart,2009,Gen. Defender,est,65,53,48,34,62,47,73,10,27,25,1,6,24,63,39,4,56,81
+NTH,Ben,Ross,2009,Mid-Forward,20m,71,54,32,50,56,53,52,7,14,37,1,10,55,29,49,13,49,41
+NTH,Scott,Thompson,2009,Key Defender,est,47,90,58,52,47,51,62,35,68,36,42,4,7,77,40,2,58,99
+NTH,Nathan,Grima,2009,Key Defender,est,46,90,50,37,55,43,64,43,91,27,42,4,6,77,41,2,60,59
+NTH,Josh,Smith,2009,Gen. Forward,est,63,55,73,30,49,37,63,25,24,35,30,6,52,20,45,33,37,23
+NTH,Sam,Wright,2009,Gen. Forward,est,63,40,37,27,51,32,54,28,21,38,30,8,61,20,33,39,71,19
+NTH,Drew,Petrie,2009,Key Forward,est,46,80,63,57,60,32,75,82,52,46,49,19,57,14,58,51,44,99
+NTH,Corey,Jones,2009,Gen. Forward,est,63,61,50,24,50,39,58,36,22,41,45,6,62,20,51,49,41,46
+NTH,Todd,Goldstein,2009,Key Forward,est,45,4,48,25,30,30,44,40,33,41,76,42,16,14,25,36,55,59
+NTH,Levi,Greenwood,2009,Mid-Forward,est,58,47,62,17,47,35,37,6,32,36,23,8,25,29,63,10,39,50
+NTH,Aaron,Edwards,2009,Key Forward,est,45,76,69,31,51,23,67,86,18,32,81,6,41,14,27,62,60,46
+NTH,Brent,Harvey,2009,Mid-Forward,est,64,59,77,83,74,59,58,13,15,42,50,10,55,29,37,28,47,68
+NTH,Daniel,Pratt,2009,Gen. Defender,est,65,58,54,36,68,42,80,18,41,29,10,6,26,63,30,4,62,63
+NTH,David,Hale,2009,Key Forward,est,45,64,44,29,40,21,57,75,17,30,67,13,30,14,24,61,52,72
+NTH,Cruize,Garlett,2009,Midfielder,est,58,57,53,7,53,58,47,14,25,52,32,14,47,38,65,14,33,23
+NTH,Matt,Campbell,2009,Gen. Forward,est,64,36,49,26,42,32,40,8,17,32,62,6,45,20,49,35,75,54
+NTH,Leigh,Harding,2009,Gen. Forward,est,66,50,63,61,61,45,76,39,19,47,98,12,48,20,51,36,51,81
+NTH,Alan,Obst,2009,Key Defender,est,46,75,40,27,42,37,62,36,81,29,42,4,11,77,47,4,58,10
+NTH,Scott,McMahon,2009,Gen. Defender,est,66,88,54,38,68,40,71,17,72,25,50,5,14,63,48,8,63,99
+PAD,Domenic,Cassisi,2009,Midfielder,est,58,59,59,10,58,83,50,4,28,81,41,26,35,38,99,13,24,95
+PAD,Josh,Carr,2009,Midfielder,est,58,27,56,3,45,60,47,19,22,53,70,14,41,38,60,13,52,54
+PAD,Steven,Salopek,2009,Gen. Defender,est,66,65,39,60,86,51,78,22,32,26,31,6,39,63,29,7,50,72
+PAD,Daniel,Motlop,2009,Gen. Forward,est,64,61,70,41,59,30,51,45,22,34,32,6,67,20,35,67,40,50
+PAD,Matthew,Broadbent,2009,Midfielder,est,59,38,57,29,59,59,45,24,25,56,75,16,38,38,48,21,58,14
+PAD,Danyle,Pearce,2009,Midfielder,20m,91,58,53,68,76,55,55,6,19,41,18,11,73,38,43,18,48,99
+PAD,Nathan,Krakouer,2009,Gen. Defender,20m,86,48,32,55,75,45,55,15,46,26,22,6,24,63,23,6,71,86
+PAD,Hamish,Hartlett,2009,Gen. Defender,est,65,39,37,33,64,41,69,14,43,27,57,7,23,63,27,13,68,50
+PAD,Jacob,Surjan,2009,Gen. Defender,20m,77,67,60,18,47,53,53,20,66,29,33,5,23,63,40,4,56,95
+PAD,Travis,Boak,2009,Midfielder,20m,69,51,64,34,74,73,65,9,21,63,50,21,55,38,64,13,35,81
+PAD,Marlon,Motlop,2009,Gen. Forward,est,64,45,47,41,52,39,53,24,15,39,69,9,87,20,37,33,60,14
+PAD,Paul,Stewart,2009,Key Defender,est,46,66,37,31,39,45,58,21,67,22,32,4,8,77,33,3,47,32
+PAD,David,Rodan,2009,Midfielder,20m,82,45,90,69,52,73,38,9,21,85,65,29,54,38,54,19,55,86
+PAD,Warren,Tredrea,2009,Key Forward,est,45,77,52,44,54,29,79,76,16,32,77,4,67,14,26,94,52,95
+PAD,Robbie,Gray,2009,Gen. Forward,est,63,53,63,29,50,52,55,22,16,68,63,16,80,20,49,60,52,90
+PAD,Kane,Cornes,2009,Midfielder,est,58,78,40,45,78,87,70,6,21,50,59,15,54,38,56,12,29,99
+PAD,Nick,Salter,2009,Key Forward,est,45,63,54,38,50,24,58,65,22,30,76,9,44,14,34,69,59,23
+PAD,Dean,Brogan,2009,Ruck,est,33,24,49,42,31,46,47,31,42,62,99,85,33,29,41,15,14,90
+PAD,Matt,Thomas,2009,Midfielder,est,57,43,58,1,42,73,61,19,27,61,22,18,45,38,57,15,33,54
+PAD,Jay,Nash,2009,Key Defender,est,46,71,35,36,43,46,59,28,69,22,42,4,20,77,31,4,36,10
+PAD,Alipate,Carlile,2009,Key Defender,est,46,90,56,33,36,48,71,19,87,18,66,3,9,77,25,4,51,95
+PAD,Jay,Schulz,2009,Gen. Forward,est,64,58,48,35,50,34,62,28,25,37,39,7,74,20,43,39,66,19
+PAD,Troy,Chaplin,2009,Key Defender,est,47,88,50,54,54,55,83,20,92,29,53,6,15,77,33,4,52,90
+PAD,Brett,Ebert,2009,Key Forward,20m,66,74,60,37,54,22,71,52,16,30,55,4,53,14,30,63,48,90
+PAD,Chad,Cornes,2009,Gen. Defender,est,64,72,62,37,72,58,83,65,56,37,29,9,38,63,41,18,34,81
+PAD,Michael,Pettigrew,2009,Key Defender,20m,83,75,26,45,43,41,50,29,86,25,32,4,11,77,33,2,43,63
+PAD,Wade,Thompson,2009,Gen. Forward,est,64,44,48,32,48,43,56,19,17,38,61,8,57,20,38,33,58,10
+PAD,Scott,Harding,2009,Mid-Forward,est,58,15,48,15,37,45,35,13,14,42,38,11,46,29,45,18,54,62
+PAD,Justin,Westhoff,2009,Key Forward,est,46,55,31,52,51,26,67,53,22,27,88,10,39,14,26,61,56,59
+PAD,Matthew,Westhoff,2009,Gen. Forward,est,63,56,43,34,49,37,53,17,19,33,64,6,51,20,41,35,47,14
+PAD,Jason,Davenport,2009,Mid-Forward,est,58,40,38,42,53,55,68,10,20,38,37,10,56,29,65,22,56,46
+PAD,Danny,Meyer,2009,Midfielder,est,59,51,37,31,60,63,45,10,29,48,46,14,35,38,54,10,28,14
+PAD,Tom,Logan,2009,Gen. Defender,est,64,55,44,9,48,47,63,14,34,32,36,7,23,63,32,16,64,68
+PAD,Cameron,Cloke,2009,Key Forward,est,45,54,57,40,49,29,74,78,26,37,55,22,35,14,32,48,60,44
+RIC,Will,Thursfield,2009,Key Defender,est,46,67,16,10,25,34,38,34,84,22,42,3,6,77,23,2,64,59
+RIC,Brett,Deledio,2009,Midfielder,20m,77,74,63,76,70,80,67,44,31,68,49,21,60,38,57,31,59,99
+RIC,Troy,Simmonds,2009,Ruck,est,32,28,50,38,38,44,43,37,23,42,55,60,18,29,38,21,29,50
+RIC,Graham,Polak,2009,Gen. Defender,20m,69,64,41,27,50,44,58,15,45,27,46,5,25,63,37,11,65,10
+RIC,Jack,Riewoldt,2009,Key Forward,est,46,76,38,48,56,25,73,79,28,36,43,6,42,14,37,73,62,90
+RIC,Trent,Cotchin,2009,Midfielder,est,58,32,56,22,58,63,56,21,18,53,50,17,49,38,43,13,57,46
+RIC,Shane,Edwards,2009,Midfielder,est,61,48,45,27,44,51,37,22,27,46,55,10,36,38,39,12,62,68
+RIC,Matthew,Richardson,2009,Key Forward,est,46,67,55,57,65,32,86,99,28,40,17,11,58,14,18,77,39,28
+RIC,Jordan,McMahon,2009,Gen. Defender,est,68,57,34,86,72,48,70,7,24,22,22,7,42,63,41,11,69,54
+RIC,Dean,Polo,2009,Key Defender,est,48,80,40,52,46,60,66,39,62,41,57,7,13,77,34,8,47,95
+RIC,Luke,McGuane,2009,Key Defender,est,51,88,35,73,41,45,74,44,71,23,30,3,10,77,28,5,34,99
+RIC,Chris,Newman,2009,Gen. Defender,20m,70,75,42,65,76,51,64,9,55,32,14,6,47,63,49,7,53,95
+RIC,Alex,Rance,2009,Gen. Defender,est,65,48,50,18,37,57,52,9,50,32,22,8,22,63,44,4,42,68
+RIC,Daniel,Connors,2009,Gen. Forward,est,64,50,38,34,47,37,58,27,17,32,69,7,67,20,38,38,63,10
+RIC,Mitch,Morton,2009,Key Forward,est,47,75,42,55,54,36,67,72,12,37,63,8,59,14,40,79,61,95
+RIC,Shane,Tuck,2009,Midfielder,est,57,37,81,25,69,98,66,18,25,87,73,31,41,38,54,14,36,86
+RIC,Daniel,Jackson,2009,Midfielder,est,57,55,64,33,78,66,69,10,20,60,15,22,45,38,74,9,3,99
+RIC,Andrew,Collins,2009,Midfielder,est,59,36,25,36,56,71,62,13,21,39,83,12,43,38,51,22,52,46
+RIC,Angus,Graham,2009,Ruck,est,32,18,55,31,22,43,47,23,26,35,61,56,21,29,45,15,32,72
+RIC,Robin,Nahas,2009,Gen. Forward,est,67,66,36,53,53,38,59,9,11,39,32,8,64,20,60,42,52,86
+RIC,Tom,Hislop,2009,Midfielder,est,57,52,48,1,43,48,50,15,30,45,61,11,57,38,50,24,21,54
+RIC,Jake,King,2009,Key Defender,est,47,65,58,33,48,46,70,15,45,35,45,7,22,77,34,14,6,37
+RIC,Ty,Vickery,2009,Gen. Forward,est,63,35,42,14,30,42,42,22,19,38,85,27,25,20,37,31,56,41
+RIC,Richard,Tambling,2009,Midfielder,20m,81,66,54,49,73,63,82,31,19,50,17,15,67,38,52,18,54,90
+RIC,Adam,Thomson,2009,Midfielder,est,58,49,56,23,56,69,47,11,31,62,46,20,42,38,70,12,50,10
+RIC,Ben,Cousins,2009,Midfielder,est,60,26,56,43,64,83,47,5,20,63,55,20,54,38,51,12,58,68
+RIC,Andrew,Browne,2009,Gen. Defender,est,66,43,47,38,52,48,57,17,41,25,35,7,26,63,35,8,51,5
+RIC,Matt,White,2009,Midfielder,est,59,48,56,17,55,49,48,4,32,49,59,14,45,38,62,16,21,72
+RIC,Jayden,Post,2009,Key Forward,est,47,70,34,55,42,30,60,50,30,24,13,8,29,14,26,41,71,32
+RIC,Kelvin,Moore,2009,Key Defender,est,48,84,21,36,38,39,60,21,68,20,12,3,15,77,35,7,62,86
+RIC,Nathan,Foley,2009,Midfielder,est,63,45,71,65,62,94,49,5,19,83,58,27,39,38,62,11,27,63
+STK,Jason,Gram,2009,Midfielder,est,62,71,57,97,86,62,68,17,30,42,1,13,64,38,44,17,48,95
+STK,Steven,King,2009,Ruck,est,32,1,48,31,28,33,33,23,25,38,69,60,19,29,37,8,44,75
+STK,Jack,Steven,2009,Midfielder,est,59,50,63,31,66,64,62,13,28,52,58,16,47,38,61,17,47,5
+STK,Clinton,Jones,2009,Midfielder,est,58,57,56,11,52,69,42,4,30,66,78,21,44,38,74,13,55,95
+STK,Ben,McEvoy,2009,Gen. Defender,est,63,1,44,1,32,36,47,18,30,32,41,26,17,63,32,11,81,44
+STK,Zac,Dawson,2009,Key Defender,est,47,95,31,27,36,45,78,34,95,20,53,2,9,77,28,5,50,91
+STK,Lenny,Hayes,2009,Midfielder,est,61,39,62,74,83,86,63,8,23,87,29,36,70,38,93,9,34,87
+STK,Steven,Baker,2009,Gen. Defender,est,64,77,59,1,45,45,69,6,43,24,10,5,14,63,53,3,62,95
+STK,Leigh,Montagna,2009,Midfielder,est,62,57,57,94,96,72,74,7,31,67,1,21,80,38,92,14,24,95
+STK,Nick,Riewoldt,2009,Key Forward,20m,74,84,49,61,76,27,99,99,22,37,68,7,68,14,34,99,53,95
+STK,Adam,Schneider,2009,Gen. Forward,est,64,41,58,30,55,37,62,25,23,36,72,8,53,20,71,45,49,95
+STK,Jarryn,Geary,2009,Gen. Defender,est,64,42,41,22,60,49,67,20,42,30,43,7,38,63,50,14,43,60
+STK,Michael,Gardiner,2009,Key Forward,est,45,10,54,31,36,31,53,50,28,43,74,65,19,14,12,33,58,79
+STK,Raphael,Clarke,2009,Gen. Defender,est,65,50,27,21,46,53,53,22,67,29,22,5,27,63,45,5,61,64
+STK,Brendon,Goddard,2009,Midfielder,20m,69,70,73,77,88,77,81,31,33,56,61,19,70,38,53,22,43,95
+STK,Sam,Gilbert,2009,Gen. Defender,est,67,89,40,57,77,53,91,39,52,34,46,5,25,63,50,3,36,87
+STK,David,Armitage,2009,Midfielder,est,58,41,73,18,65,59,54,10,21,67,62,20,48,38,89,20,40,13
+STK,Farren,Ray,2009,Midfielder,est,61,51,46,52,68,72,66,36,26,49,22,14,30,38,65,8,49,99
+STK,Justin,Koschitzke,2009,Key Forward,est,45,69,36,36,50,21,71,99,19,35,65,7,31,14,23,86,56,91
+STK,Sean,Dempster,2009,Gen. Defender,20m,75,58,30,5,47,39,63,16,35,32,22,7,24,63,50,14,44,36
+STK,Sam,Fisher,2009,Gen. Defender,est,65,97,54,55,79,60,99,24,80,24,50,5,28,63,27,8,61,95
+STK,Nick,Dal Santo,2009,Midfielder,est,65,66,66,99,93,75,55,9,27,80,90,29,73,38,64,21,56,95
+STK,Jason,Blake,2009,Key Defender,est,47,92,45,37,56,53,99,28,83,22,20,5,11,77,29,3,42,99
+STK,Brett,Peake,2009,Midfielder,est,64,46,45,59,57,48,49,27,17,35,91,10,48,38,48,26,35,81
+STK,Andrew,McQualter,2009,Gen. Forward,est,62,49,37,13,36,57,40,15,26,46,99,9,65,20,70,32,68,95
+STK,James,Gwilt,2009,Gen. Forward,est,63,61,68,24,44,43,51,30,28,31,54,5,59,20,44,26,57,60
+STK,Adam,Pattison,2009,Ruck,est,34,17,44,48,29,47,57,24,39,45,38,52,25,29,36,14,60,37
+STK,Robert,Eddy,2009,Gen. Forward,est,63,34,47,23,43,39,51,17,29,33,56,7,65,20,54,26,52,40
+STK,Stephen,Milne,2009,Gen. Forward,est,64,69,69,28,57,30,64,24,12,39,66,7,61,20,46,67,28,91
+STK,Andrew,Lovett,2009,Midfielder,est,65,60,55,93,79,53,51,12,29,46,44,14,72,38,44,27,47,95
+SYD,Mark,Seaby,2009,Ruck,est,32,12,50,35,27,45,45,19,41,48,42,63,18,29,37,10,33,23
+SYD,Rhyce,Shaw,2009,Gen. Defender,est,68,69,43,99,96,48,57,9,29,25,31,7,32,63,42,8,46,99
+SYD,Jarrad,McVeigh,2009,Mid-Forward,20m,62,64,51,43,63,64,55,12,19,66,47,22,57,29,50,24,66,81
+SYD,Dan,Hannebery,2009,Mid-Forward,est,58,25,42,19,47,44,52,12,15,36,34,9,49,29,31,14,58,32
+SYD,Ryan,O'Keefe,2009,Midfielder,est,58,75,71,38,78,70,56,36,27,81,65,24,55,38,80,22,29,99
+SYD,Craig,Bolton,2009,Key Defender,est,49,91,37,75,55,45,73,13,81,24,42,4,14,77,26,2,53,90
+SYD,Brett,Meredith,2009,Gen. Forward,est,64,32,44,24,41,37,45,11,12,36,63,8,65,20,33,34,61,32
+SYD,Nick,Malceski,2009,Gen. Defender,est,64,52,32,31,59,42,50,20,24,20,30,6,39,63,27,14,47,54
+SYD,Ed,Barlow,2009,Gen. Defender,est,65,54,50,38,64,39,59,21,29,25,18,6,29,63,33,23,45,63
+SYD,Josh,Kennedy,2009,Midfielder,est,58,48,88,11,49,79,50,10,17,70,30,20,53,38,65,15,39,46
+SYD,Patrick,Veszpremi,2009,Gen. Forward,est,64,35,48,30,48,32,52,34,12,36,48,6,56,20,42,38,58,19
+SYD,Craig,Bird,2009,Mid-Forward,est,58,15,66,14,48,55,41,16,16,53,48,16,28,29,51,16,63,68
+SYD,Kieren,Jack,2009,Mid-Forward,est,57,57,60,14,51,45,40,6,18,48,43,11,44,29,59,19,44,99
+SYD,Jesse,White,2009,Key Forward,est,46,27,58,31,34,23,51,56,20,33,61,24,32,14,21,54,52,81
+SYD,Daniel,Bradshaw,2009,Key Forward,est,45,86,60,30,54,19,71,98,14,33,99,7,39,14,19,99,65,87
+SYD,Ben,McGlynn,2009,Gen. Forward,est,64,66,65,47,63,50,79,12,19,43,3,11,61,20,58,28,51,72
+SYD,Jude,Bolton,2009,Midfielder,est,57,58,77,14,64,71,47,16,31,89,55,29,56,38,99,18,42,99
+SYD,Ted,Richards,2009,Key Defender,est,47,86,52,53,49,52,73,51,78,30,11,5,25,77,35,5,59,72
+SYD,Kristin,Thornton,2009,Gen. Forward,est,63,16,34,18,40,27,47,33,17,28,67,5,37,20,40,30,56,37
+SYD,Martin,Mattner,2009,Gen. Defender,20m,69,74,37,66,59,47,58,26,49,25,86,5,26,63,63,16,30,99
+SYD,Lewis,Roberts-Thomson,2009,Key Defender,est,46,83,37,40,50,48,85,50,63,26,66,7,15,77,24,5,40,95
+SYD,Brett,Kirk,2009,Midfielder,est,57,59,55,3,52,83,35,8,22,86,64,28,36,38,99,12,25,99
+SYD,Jarred,Moore,2009,Gen. Forward,20m,63,38,72,16,41,43,34,26,14,49,45,10,53,20,43,34,67,72
+SYD,Adam,Goodes,2009,Gen. Forward,est,64,86,91,72,77,50,67,80,28,71,86,21,83,20,52,57,49,99
+SYD,Mike,Pyke,2009,Key Defender,est,46,1,49,7,21,37,27,24,45,42,32,32,12,77,27,4,41,37
+SYD,Heath,Grundy,2009,Key Defender,est,48,81,69,47,50,48,69,61,48,23,52,3,20,77,31,12,65,99
+SYD,Nick,Smith,2009,Gen. Defender,est,64,48,45,2,47,47,49,14,40,33,33,6,32,63,43,6,63,50
+SYD,Shane,Mumford,2009,Ruck,est,32,1,67,21,17,46,31,24,36,55,69,62,14,29,58,10,38,72
+SYD,Paul,Bevan,2009,Gen. Defender,est,63,72,38,3,47,48,73,19,46,25,22,6,27,63,43,6,57,86
+SYD,Matthew,O'Dwyer,2009,Gen. Defender,est,68,48,45,52,55,43,60,18,28,25,33,5,39,63,32,10,60,19
+WCE,Mitch,Brown,2009,Gen. Defender,est,63,47,33,16,40,58,65,19,47,19,61,4,29,63,30,9,74,86
+WCE,Mark,LeCras,2009,Gen. Forward,est,65,78,48,37,57,33,54,39,18,44,88,7,57,20,39,83,50,95
+WCE,Daniel,Kerr,2009,Midfielder,est,60,49,76,20,50,78,23,16,23,87,68,25,38,38,49,17,30,50
+WCE,Brad,Ebert,2009,Midfielder,est,58,44,54,24,55,58,61,20,31,48,29,13,41,38,64,13,46,77
+WCE,Mark,Nicoski,2009,Gen. Defender,est,65,61,33,38,56,43,47,10,36,25,1,5,28,63,30,3,35,59
+WCE,Chris,Masten,2009,Midfielder,est,59,34,48,38,59,71,37,6,13,39,1,10,58,38,48,10,37,86
+WCE,Nic,Naitanui,2009,Ruck,est,33,27,77,38,17,51,20,32,40,57,46,65,31,29,55,12,20,46
+WCE,Scott,Selwood,2009,Midfielder,est,57,47,46,3,49,56,50,14,41,44,54,12,32,38,49,8,44,63
+WCE,Matt,Priddis,2009,Midfielder,est,58,59,87,28,63,94,46,4,20,95,22,31,45,38,92,11,44,90
+WCE,Tom,Swift,2009,Midfielder,20m,78,28,41,27,55,66,59,6,21,50,48,14,25,38,55,13,33,46
+WCE,Eric,Mackenzie,2009,Key Defender,est,47,77,52,37,36,44,58,23,97,24,42,4,5,77,21,2,57,72
+WCE,Josh,Kennedy,2009,Key Forward,est,45,73,62,44,56,23,78,81,25,31,73,6,51,14,29,72,46,72
+WCE,Bradd,Dalziell,2009,Midfielder,est,58,43,44,31,65,72,74,7,16,39,62,11,43,38,51,14,60,34
+WCE,Tim,Houlihan,2009,Midfielder,est,59,53,60,45,66,75,59,7,25,50,1,16,46,38,54,11,58,32
+WCE,Dean,Cox,2009,Key Forward,est,46,57,61,78,61,60,69,65,23,65,47,82,65,14,29,36,21,59
+WCE,Quinten,Lynch,2009,Gen. Forward,est,63,68,84,57,74,45,72,46,21,61,13,34,61,20,33,36,40,99
+WCE,Darren,Glass,2009,Key Defender,est,46,89,50,14,23,58,45,50,98,33,42,2,7,77,29,2,57,99
+WCE,Matt,Rosa,2009,Midfielder,est,61,58,31,60,68,71,62,16,30,45,37,14,49,38,44,10,45,99
+WCE,Shannon,Hurn,2009,Gen. Defender,est,66,74,71,56,76,48,68,22,42,29,40,5,29,63,22,6,52,99
+WCE,Sam,Butler,2009,Gen. Defender,est,63,51,44,4,54,51,56,19,38,36,33,8,25,63,38,5,57,72
+WCE,Ben,McKinley,2009,Gen. Forward,est,64,64,44,27,49,29,61,35,19,31,38,4,51,20,25,63,61,77
+WCE,Ashley,Hansen,2009,Key Forward,est,45,51,31,41,49,24,56,79,26,30,54,6,50,14,26,59,51,41
+WCE,Matthew,Spangher,2009,Key Defender,est,47,71,46,42,42,46,54,34,80,29,53,5,14,77,35,6,45,50
+WCE,Will,Schofield,2009,Key Defender,est,46,70,28,28,39,37,58,24,69,28,32,6,28,77,31,5,41,14
+WCE,Andrew,Embley,2009,Midfielder,est,59,55,60,57,82,58,70,8,28,47,49,13,55,38,44,23,39,95
+WCE,Patrick,McGinnity,2009,Gen. Defender,est,64,55,47,11,44,58,53,19,32,35,33,6,41,63,53,7,56,32
+WCE,Callum,Wilson,2009,Key Forward,est,45,63,52,36,44,27,70,59,23,32,53,10,44,14,21,62,59,19
+WCE,Adam,Selwood,2009,Midfielder,est,58,58,50,38,68,84,55,24,23,73,41,21,50,38,58,13,29,95
+WCE,Brett,Jones,2009,Gen. Defender,20m,69,49,50,12,48,42,56,20,38,25,56,5,19,63,29,8,55,41
+WCE,Beau,Maister,2009,Key Defender,est,46,81,54,30,42,47,67,53,81,26,42,6,17,77,27,5,47,14
+WCE,Jarrad,Oakley-Nicholls,2009,Gen. Defender,est,66,48,33,25,53,38,77,25,39,21,46,4,30,63,34,15,51,19
+WCE,Adam,Cockie,2009,Midfielder,est,60,33,55,20,43,62,48,12,20,54,30,17,36,38,73,14,44,32
+WBD,Jarrad,Grant,2009,Gen. Forward,20m,78,49,27,39,47,44,55,22,20,40,45,8,54,20,44,38,42,5
+WBD,Robert,Murphy,2009,Gen. Defender,est,66,34,24,40,69,39,98,44,30,21,4,4,75,63,25,25,69,64
+WBD,Andrejs,Everitt,2009,Gen. Defender,est,66,48,29,30,52,43,63,23,43,22,22,4,40,63,34,8,61,28
+WBD,Daniel,Cross,2009,Midfielder,est,57,69,65,12,48,99,73,30,33,72,65,26,38,38,68,12,48,91
+WBD,Matthew,Boyd,2009,Midfielder,est,59,70,83,54,78,96,69,9,28,91,87,32,57,38,58,18,52,99
+WBD,Brad,Johnson,2009,Gen. Forward,est,66,74,64,74,82,47,87,51,20,30,56,4,89,20,43,55,33,99
+WBD,Shaun,Higgins,2009,Mid-Forward,est,59,42,66,62,68,60,67,32,18,44,66,12,80,29,43,48,46,79
+WBD,Mitch,Hahn,2009,Mid-Forward,est,58,59,76,22,51,43,51,36,26,43,92,9,58,29,54,50,58,99
+WBD,Lindsay,Gilbee,2009,Gen. Defender,est,68,63,52,91,83,47,69,12,40,25,70,6,47,63,32,28,66,95
+WBD,Nathan,Eagleton,2009,Midfielder,est,58,49,56,39,68,57,76,11,20,30,42,9,69,38,42,23,63,99
+WBD,Sam,Reid,2009,Gen. Defender,20m,74,50,40,13,46,54,59,12,35,36,46,8,28,63,57,8,62,17
+WBD,Tom,Williams,2009,Key Defender,est,46,64,45,26,39,34,56,20,63,18,42,3,11,77,19,2,61,56
+WBD,Daniel,Giansiracusa,2009,Gen. Forward,est,64,38,52,56,70,50,72,14,23,43,69,13,89,20,44,43,57,72
+WBD,Callan,Ward,2009,Mid-Forward,est,59,39,50,38,51,54,44,23,24,49,48,11,40,29,60,25,46,87
+WBD,Ben,Hudson,2009,Ruck,est,32,11,71,32,19,63,36,27,29,67,49,71,17,29,52,6,17,95
+WBD,Ryan,Griffen,2009,Midfielder,est,64,46,57,88,74,64,49,10,19,61,68,20,66,38,58,22,40,87
+WBD,Adam,Cooney,2009,Midfielder,est,59,47,62,53,73,91,54,8,19,83,27,27,50,38,44,20,50,91
+WBD,Brennan,Stack,2009,Gen. Forward,est,64,36,33,28,46,39,49,24,26,36,67,8,50,20,39,43,50,13
+WBD,Josh,Hill,2009,Key Forward,est,46,60,49,51,54,37,58,67,25,36,60,6,63,14,50,61,54,91
+WBD,Jason,Akermanis,2009,Gen. Forward,est,65,54,74,63,69,50,71,21,22,42,45,11,83,20,56,61,35,95
+WBD,Dylan,Addison,2009,Gen. Defender,est,65,48,38,6,43,43,53,20,37,25,61,5,27,63,37,12,45,48
+WBD,Ryan,Hargrave,2009,Gen. Defender,est,63,79,39,56,90,54,97,17,56,32,12,7,28,63,33,4,55,91
+WBD,Will,Minson,2009,Ruck,est,33,30,73,44,35,43,42,49,23,56,99,62,40,29,44,23,7,99
+WBD,Barry,Hall,2009,Key Forward,est,45,80,72,25,47,21,61,98,23,36,89,7,39,14,27,99,4,50
+WBD,Easton,Wood,2009,Gen. Defender,est,67,49,44,39,54,46,54,23,45,29,10,5,27,63,32,9,64,9
+WBD,Tim,Callan,2009,Gen. Defender,est,65,55,46,19,57,49,60,20,46,27,35,6,22,63,38,6,61,13
+WBD,Stephen,Tiller,2009,Key Defender,est,46,78,39,37,49,38,72,31,80,25,42,4,10,77,28,3,64,21
+WBD,Brian,Lake,2009,Key Defender,est,49,92,56,76,67,47,92,95,85,27,4,4,11,77,24,5,57,99
+WBD,Dale,Morris,2009,Key Defender,est,45,98,46,13,31,48,61,53,98,30,31,4,7,77,37,3,71,99
+WBD,Jarrod,Harbrow,2009,Gen. Defender,est,68,67,32,73,76,52,65,15,61,29,3,5,26,63,35,3,59,91
+WBD,Liam,Picken,2009,Midfielder,est,57,65,50,1,39,57,37,12,27,46,83,10,33,38,66,13,43,91
+ADE,Jarrhan,Jacky,2008,Mid-Forward,20m,73,12,49,29,57,42,48,19,21,38,66,8,57,29,50,21,60,14
+ADE,Chris,Schmidt,2007,Mid-Forward,est,59,32,44,29,47,45,52,14,24,33,47,8,48,29,48,18,49,10
+BRL,Xavier,Clarke,2008,Midfielder,20m,71,35,51,43,62,48,57,13,27,41,48,12,68,38,54,20,51,32
+BRL,Matt,Maguire,2008,Key Defender,est,47,78,35,29,41,36,49,21,62,23,42,3,9,77,26,4,58,17
+CAR,Robert,Warnock,2008,Ruck,est,32,1,53,49,34,47,39,19,22,59,52,58,27,29,28,6,43,41
+CAR,David,Ellard,2008,Mid-Forward,est,59,33,52,34,62,42,52,16,19,42,66,11,52,29,42,26,60,5
+COL,Sean,Rusling,2008,Gen. Forward,est,64,39,47,32,51,34,51,20,18,39,61,7,50,20,42,33,61,5
+ESS,Scott,Gumbleton,2007,Gen. Forward,est,63,49,37,22,38,34,59,27,21,28,75,6,37,20,30,29,56,23
+ESS,John,Williams,2008,Gen. Forward,est,64,53,45,35,52,34,51,28,18,35,61,7,52,20,42,34,60,5
+ESS,Jason,Laycock,2008,Key Forward,est,45,36,52,34,39,28,40,45,19,52,64,38,28,14,27,41,57,72
+FRE,Brock,O'Brien,2008,Midfielder,20m,74,29,60,27,64,52,53,9,28,51,49,14,44,38,49,14,52,10
+GEE,Josh,Hunt,2008,Gen. Defender,est,63,67,46,15,60,58,50,34,44,28,31,5,23,63,32,6,59,91
+HAW,Trent,Croad,2008,Key Defender,est,46,73,27,24,40,35,55,32,66,16,42,2,8,77,17,2,51,79
+HAW,Wayde,Skipper,2008,Mid-Forward,est,59,39,57,43,62,48,52,16,19,47,47,18,51,29,45,22,59,5
+MEL,Austin,Wonaeamirri,2008,Gen. Forward,est,64,56,40,25,47,34,59,8,14,29,99,4,49,20,59,41,61,81
+RIC,Mitch,Farmer,2008,Gen. Defender,est,65,53,38,23,52,47,58,11,36,27,35,6,23,63,38,6,63,14
+STK,Leigh,Fisher,2008,Gen. Defender,est,63,64,34,1,41,39,49,18,29,26,32,5,31,63,39,6,62,36
+STK,Jarryd,Allen,2008,Gen. Forward,est,63,24,36,25,41,31,44,19,22,27,53,5,44,20,36,23,64,17
+SYD,Tadhg,Kennelly,2008,Gen. Defender,est,67,66,43,66,71,56,52,15,31,28,1,6,20,63,32,3,59,91
+SYD,Henry,Playfair,2008,Key Forward,est,45,46,46,41,47,31,63,46,21,34,49,6,44,14,21,48,64,46
+WCE,Beau,Waters,2008,Gen. Defender,est,65,66,39,35,70,45,64,19,45,23,56,5,22,63,49,13,34,37
+WCE,Tony,Notte,2008,Gen. Forward,est,63,45,48,29,47,34,44,17,18,41,61,7,44,20,33,28,49,10
