@@ -1,0 +1,158 @@
+[
+ {
+  "name": "top",
+  "h": 0,
+  "t": 0,
+  "d": 520,
+  "at": [
+   -0.72,
+   -0.04,
+   0
+  ],
+  "label": "straight down"
+ },
+ {
+  "name": "out_N",
+  "h": 180,
+  "t": 62,
+  "d": 430,
+  "at": [
+   -0.72,
+   -0.04,
+   0
+  ],
+  "label": "from the N"
+ },
+ {
+  "name": "out_NE",
+  "h": 225,
+  "t": 62,
+  "d": 430,
+  "at": [
+   -0.72,
+   -0.04,
+   0
+  ],
+  "label": "from the NE"
+ },
+ {
+  "name": "out_E",
+  "h": 270,
+  "t": 62,
+  "d": 430,
+  "at": [
+   -0.72,
+   -0.04,
+   0
+  ],
+  "label": "from the E"
+ },
+ {
+  "name": "out_SE",
+  "h": 315,
+  "t": 62,
+  "d": 430,
+  "at": [
+   -0.72,
+   -0.04,
+   0
+  ],
+  "label": "from the SE"
+ },
+ {
+  "name": "out_S",
+  "h": 0,
+  "t": 62,
+  "d": 430,
+  "at": [
+   -0.72,
+   -0.04,
+   0
+  ],
+  "label": "from the S"
+ },
+ {
+  "name": "out_SW",
+  "h": 45,
+  "t": 62,
+  "d": 430,
+  "at": [
+   -0.72,
+   -0.04,
+   0
+  ],
+  "label": "from the SW"
+ },
+ {
+  "name": "out_W",
+  "h": 90,
+  "t": 62,
+  "d": 430,
+  "at": [
+   -0.72,
+   -0.04,
+   0
+  ],
+  "label": "from the W"
+ },
+ {
+  "name": "out_NW",
+  "h": 135,
+  "t": 62,
+  "d": 430,
+  "at": [
+   -0.72,
+   -0.04,
+   0
+  ],
+  "label": "from the NW"
+ },
+ {
+  "name": "low_W",
+  "h": 90,
+  "t": 80,
+  "d": 330,
+  "at": [
+   -0.72,
+   -0.04,
+   0
+  ],
+  "label": "low from the W"
+ },
+ {
+  "name": "low_E",
+  "h": 270,
+  "t": 80,
+  "d": 330,
+  "at": [
+   -0.72,
+   -0.04,
+   0
+  ],
+  "label": "low from the E"
+ },
+ {
+  "name": "bowl_N",
+  "h": 197,
+  "t": 72,
+  "d": 200,
+  "at": [
+   -0.72,
+   -0.04,
+   0
+  ],
+  "label": "into the bowl from the N"
+ },
+ {
+  "name": "bowl_S",
+  "h": 17,
+  "t": 72,
+  "d": 200,
+  "at": [
+   -0.72,
+   -0.04,
+   0
+  ],
+  "label": "into the bowl from the S"
+ }
+]
