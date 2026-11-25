@@ -18,6 +18,8 @@ instance uniform vec4 skin : source_color = vec4(0.76, 0.57, 0.45, 1.0);
 // 0,0 there (the eyeballs) means no map. The normal map is DirectX (green down the image, +v).
 uniform sampler2D skin_head_nrm : hint_normal, filter_linear_mipmap_anisotropic, repeat_disable;
 uniform sampler2D skin_head_srmf : filter_linear_mipmap, repeat_disable;
+// The same grass-bounce cut as the body (oval3d_player.gdshader), so his head and neck shade like his body.
+const float GROUND_GREEN_CUT = 0.72;
 global uniform float oval_wet;   // Oval3DTurf.apply: 0 dry .. 1 raining
 
 #include "res://scripts/ui/match/oval3d_skin_light.gdshaderinc"
@@ -56,12 +58,20 @@ void fragment() {
 		vec3 m = vec3(mxy, sqrt(max(0.0, 1.0 - dot(mxy, mxy))));
 		NORMAL = normalize(t * k * m.x + b * k * m.y + n * m.z);
 	}
+	// As the body (oval3d_player.gdshader): skin stays warm in its own shade (a little of its own colour, warmed),
+	// and skin facing the ground gives back less of the grass's green bounce. Without these his jaw and neck
+	// read olive green beside the body's skin.
+	EMISSION = ALBEDO * vec3(0.12, 0.05, 0.03);
+	vec3 wn = (INV_VIEW_MATRIX * vec4(NORMAL, 0.0)).xyz;
+	float down = clamp(-wn.y * 1.5 + 0.2, 0.0, 1.0);
+	ALBEDO *= mix(vec3(1.0), vec3(1.05, GROUND_GREEN_CUT, 0.95), down);
 	SSS_STRENGTH = sss;
 	// His head is skin and hair in one texture: all of it takes the soft skin light; a beard card's back does not.
 	skin_wrap = 1.0;
 	spec_amt = 0.5;
 	if (!FRONT_FACING && bend < 0.5) {
 		ALBEDO = beard_dark;
+		EMISSION = vec3(0.0);
 		ROUGHNESS = 1.0;
 		SPECULAR = 0.0;
 		skin_wrap = 0.0;

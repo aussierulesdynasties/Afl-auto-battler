@@ -66,6 +66,9 @@ folder has a `MANIFEST.txt` with the md5 of every big file left behind. Session 
 ## Stranded or local-only work
 
 - Background scenes for 8 grounds lived only in session scratchpads; now copied to `.claude/review/<g>_bg` (this PR) and the archive folder.
+- MCG model textures: `tools/grounds/mcg/model/tex` is git-ignored, and `build.py` / `ship_mcg.py` need it to rebuild
+  `mcg.glb`. The full set (141 files, 126,555,198 bytes: hand-painted PNGs plus tiles.json, wallcols.json,
+  winspans.json) is in `C:/Users/DANTE/Documents/AFL3D_archive/mcg_tex/`; copy it into `model/tex` before a build.
 - Texture work in progress (Adelaide es2, GMHBA tex2, Optus roof 11 and h50 build): `.claude/review/texture_wip`.
 - Stadium lead gate boards: `.claude/review/stadium_lead_gates`.
 - Player heads WIP: PR #1967. Large local data stays on the PC: `D:/AflMH` and the session scratchpad (21.6 GB).

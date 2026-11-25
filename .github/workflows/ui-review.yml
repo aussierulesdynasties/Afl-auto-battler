@@ -7,7 +7,7 @@ name: UI review sheets
 # the sheets before anything visual goes to the director.
 #
 # The second job, "sweep" (P-77, director yes 2026-10-18), opens every screen
-# at 390x844 and 1920x1080, and on the phone again at the Larger and Largest
+# at 390x844, 1920x1080 and 960x540 (the smallest PC window), and on the phone again at the Larger and Largest
 # text sizes (row 118), and fails when one got worse than the committed
 # baseline tools/visual/screen_sweep_baseline.json: a smaller smallest font,
 # more controls off screen, more clipped text, more targets under 44 px, more
@@ -23,13 +23,16 @@ name: UI review sheets
 # Since 2026-11-12 the sheets run only when someone will read them: on a PR with
 # the label "ui-review" (adding the label starts them) or by dispatch. Visual work
 # goes straight to the director (2026-11-05), and the sheets cost up to 40 runner
-# minutes a push. The sweep still runs on every ready PR that touches the paths
-# below, because it fails on a measured regression. When the runner's apt mirror
+# minutes a push. Since 2026-11-23 the sweep runs on the same label, and every night
+# on main so a regression still shows within a day: GitHub gives this repo a handful
+# of runners at a time, and a sweep on every push held up the merge queue. When the runner's apt mirror
 # is down after 3 tries, a job warns and skips its steps instead of going red:
 # an infra fault says nothing about the PR.
 #
 #   gh run download <run-id> -n ui-review-sheets
 on:
+  schedule:
+    - cron: "30 17 * * *"   # 04:30 Melbourne (AEDT), the sweep on main
   workflow_dispatch:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review, labeled]
@@ -220,7 +223,12 @@ jobs:
   # P-77 "One sweep of every screen": the numbers behind the sheets.
   sweep:
     # Every ready PR on the paths above; a label event never re-runs it.
-    if: github.event_name == 'workflow_dispatch' || (github.event.pull_request.draft == false && github.event.action != 'labeled')
+    # Nightly on main, dispatch, or a ready PR labelled "ui-review" (a label event only when that label was added).
+    if: >-
+      github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' ||
+      (github.event.pull_request.draft == false &&
+       contains(github.event.pull_request.labels.*.name, 'ui-review') &&
+       (github.event.action != 'labeled' || github.event.label.name == 'ui-review'))
     runs-on: ubuntu-latest
     timeout-minutes: 40
     env:
@@ -279,8 +287,9 @@ jobs:
         run: |
           mkdir -p out
           # name:window:text size. The phone runs at all three Settings text
-          # sizes (row 118); the desktop at Standard.
-          for run in phone:390x844:standard pc:1920x1080:standard phone_larger:390x844:larger phone_largest:390x844:largest; do
+          # sizes (row 118); the desktop at Standard, full size and at the
+          # smallest PC window (3.C.41: every screen is checked at 960x540).
+          for run in phone:390x844:standard pc:1920x1080:standard pc_small:960x540:standard phone_larger:390x844:larger phone_largest:390x844:largest; do
             name="${run%%:*}"; rest="${run#*:}"; wh="${rest%%:*}"; ts="${rest#*:}"
             LIBGL_ALWAYS_SOFTWARE=1 xvfb-run -a -s "-screen 0 2560x1600x24"               timeout 1200 "$HOME/godot/godot" --path . --rendering-method gl_compatibility               --script tools/visual/sweep_screens.gd -- --size "$wh" --text-size "$ts"               --out "$PWD/out/sweep_$name.json" > "out/sweep_$name.log" 2>&1 || echo "::warning::$name sweep exited non-zero"
             grep -E "^SWEEP" "out/sweep_$name.log" || tail -n 20 "out/sweep_$name.log"
@@ -291,7 +300,7 @@ jobs:
         if: steps.setup.outputs.ok == 'true'
         run: |
           set +e
-          python3 tools/screen_sweep.py --phone out/sweep_phone.json --pc out/sweep_pc.json             --phone-larger out/sweep_phone_larger.json --phone-largest out/sweep_phone_largest.json             --baseline tools/visual/screen_sweep_baseline.json             --doc out/SCREEN_SWEEP.md --date "$(date -u +%F)" | tee out/sweep_check.txt
+          python3 tools/screen_sweep.py --phone out/sweep_phone.json --pc out/sweep_pc.json --pc-small out/sweep_pc_small.json             --phone-larger out/sweep_phone_larger.json --phone-largest out/sweep_phone_largest.json             --baseline tools/visual/screen_sweep_baseline.json             --doc out/SCREEN_SWEEP.md --date "$(date -u +%F)" | tee out/sweep_check.txt
           code=${PIPESTATUS[0]}
           {
             echo "## Screen sweep"

@@ -60,6 +60,10 @@ parks and trees, the roads, the Jolimont rail yards and the buildings' footprint
 script fetches about 2 km round the ground from the OpenStreetMap API, then paints
 `assets/grounds/mcg/surrounds.webp` and writes `trees.bin` and `buildings.bin`.
 
+Optus Stadium's surroundings come the same way (`tools/grounds/optus/surrounds.py`): the Swan River and
+Perth Water, the Burswood peninsula's parks and the plaza, with its bridges built in 3D from their
+OpenStreetMap outlines (`tools/grounds/optus/bridges.py`, Matagarup Bridge's arches included).
+
 The map data is © OpenStreetMap contributors and is available under the Open Database Licence
 (ODbL). Any release credits must carry that line. No aerial imagery is shipped: Google Earth and
 Esri imagery are used only to check the look by eye.

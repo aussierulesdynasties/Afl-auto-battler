@@ -180,6 +180,7 @@ The answers are recorded in the Director Bible and summarised here.
 - 2e skipping a replay (rule 2.110): "B: Tap the picture": a tap anywhere on the 3D picture skips a goal's replay; a "Replay: tap to skip" tag sits top left while it plays.
 - 2e after a mark (rule 2.113): "A: Stay on the main camera": no close-up on the man who marked in general play.
 - 2e TV framing (rule 2.111): "B: real TV top/bottom": the main camera keeps a 16:9 TV picture's top and bottom on the tall phone picture; the wide shot (with sky) on "Long kicks, After a goal, Start of each quarter"; "zoom needs to be quick but not jarringly so". Set shots are filmed from behind the kicker, as real TV does.
+- 2e the main camera's operator (2026-11-21, copying real TV under rule 2.111, no new ruling): inside the TV picture the zoom follows the play as Seven's and Fox's do (2.111's measurements: 19-42 m across at a contest, up to about 60 m in open play): 34 m across the TV picture while seven or more men crowd the ball (9 m), at a ball-up and at the bounce, out to 50 m as play spreads, wide enough for a short kick's whole flight; it moves like an operator's hand, eased, about 0.6 s. The aim leads the ball (0.6 s ahead, at most 30% of the picture), so play has room to run into instead of the camera trailing it. Measured with `tools/visual/measure_main_camera.gd`.
 - 2e the picture on the phone (rule 2.105): "A but the stats part is very ugly": the main picture fills the screen between the scoreboard and the controls, taller than a TV picture at the same zoom; team stats under it as split bars in club colours (rule 2.106: "A: bars"): disposals, marks, clearances and hit-outs ("Keep those four"). The scoreboard panel goes (rule 2.107): "we can put an on screen scoreboard like in ss2" (a TV score bug on the picture), "use the extra new space for more 3d view", and "the momentum bar stays, make it unobtrusive": a thin line along the bottom edge of the picture ("C: bottom of picture").
 
 The freeze allows only the
@@ -217,6 +218,7 @@ _Update this section whenever 3D work merges. It is the one place 3D progress is
 | Freeze (no new player art, no one-incident patches) | | in force since 2026-11-16 | lifts when steps 2 and 3 are done |
 | 1. Football proof | 201 | harness built (#1695), spec checked (2.86), gap list of 14 written | fix the systems on the gap list; none fixed yet |
 | 2a. Light, tone, weather, skies | 202 | chosen and built (2.80-2.84, #1693 #1694 #1696 #1701); film look over the picture (2.112, #1839) | phone costing: every ground measured at three graphics levels in the cloud ([PHONE_3D_BUDGET.md](PHONE_3D_BUDGET.md), Settings > Graphics); the real phone run (the "Android 3D probe" APK) is next |
+| 1.0 release checklist | | [3D_1_0_RELEASE.md](3D_1_0_RELEASE.md): what must be finished before 3D goes to itch (all four: grounds, players, animations, presentation; all 37 grounds) | kept current by the release thread |
 | 2b. The 37 grounds | 202 | 32 have a model that plays in a match; Accor (#1921) and Traeger (#1919) merged as WIP models; Mars, TIO and Victoria Park in open PRs; background scenes built for 11 grounds, none in a match yet (full list: [3D_INVENTORY.md](3D_INVENTORY.md)) | land the open PRs; wire background scenes into matches |
 | 2c. Crowd | 202 | chosen: 3D people within 55 m, cards beyond (2.92), built; seated on the MCG model's own seats (he chose "Seat the crowd in the MCG", 2026-11-20, #1929) | measure its cost on a phone; each other ground gets it once it loads in a match |
 | 2d. Players' look | 202 | body: MetaHuman (2.85, 2.89); builds by height and weight (2.97, 2.98); faces ruled (2.99) | the Tripo heads (director generates) and the features for everyone else |
@@ -237,7 +239,7 @@ _Update this section whenever 3D work merges. It is the one place 3D progress is
 | MCG | model, instanced seats | #1843 |
 | Marvel Stadium | model | #1911 |
 | Adelaide Oval | model, 3D seats; plays in a match (exported for the game by tools/grounds/adelaide) | #1856 |
-| Optus Stadium | model, roof, seats; background scene (not in a match) | #1867 #1880 #1897 |
+| Optus Stadium | being rebuilt to the MCG standard: every ring an offset of the roof edge traced from Google Earth, bowl, podium and roof measured in metres (tools/grounds/optus/survey); seats; background scene (not in a match) | #1867 #1880 #1897; #1993 |
 | SCG | model | #1909 |
 | GMHBA Stadium | exterior model; background scene (not in a match) | #1903 #1878; open: Selwood Stand roof #1924 |
 | People First Stadium | model, roof; background scene (not in a match) | #1853 #1860 #1868 #1889 #1892 |
@@ -264,7 +266,8 @@ _Update this section whenever 3D work merges. It is the one place 3D progress is
 | Marrara Oval (TIO Darwin) | model open | #1918 |
 | Traeger Park | model open | #1919 |
 | The Gabba | model, 3D seats; plays in a match (built 2026-11-19/20 on a branch that never merged; brought in from the PC) | |
-| Barossa Park, Sky Stadium, Jiangwan Stadium, Hands Oval, Blacktown, Summit Park, Macquarie Point | model; plays in a match (`tools/grounds/<g>/model`) | |
+| Barossa Park | rebuilt to the MCG standard: clubrooms (with the south end), terraces, Gather Round stands with 3D seats, courts fitted on the satellite's lines, second oval, land and Lyndoch out to 1 km, gum trees, far country to 16 km (tools/grounds/barossa); open: clubroom roof outline, stair to the south deck, far ranges | #2041 |
+| Sky Stadium, Jiangwan Stadium, Hands Oval, Blacktown, Summit Park, Macquarie Point | model; plays in a match (`tools/grounds/<g>/model`) | |
 
 Machine pre-inspection of the 30 match grounds, before the director's fly-through (2026-11-21, #1950):
 [3D_PREINSPECTION.md](3D_PREINSPECTION.md). Its fixes are in; its open faults are listed there.

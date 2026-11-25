@@ -10,7 +10,7 @@ config_version=5
 
 config/name="Aussie Rules Dynasties"
 config/description="Build an Australian rules football dynasty: shape your list, coach the season and carry the club through the years."
-config/version="1.0.20"
+config/version="1.0.21"
 run/main_scene="res://scenes/Main.tscn"
 run/main_scene.perf_probe="res://tools/perf/Oval3DPhone.tscn"
 config/features=PackedStringArray("4.7")

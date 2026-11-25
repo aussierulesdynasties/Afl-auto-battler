@@ -29,14 +29,197 @@ static var GOAL_X := 85.0
 
 
 ## Play on a ground whose boundary has these half-axes (metres); Vector2.ZERO is the
-## standard oval.
+## standard oval. The boundary is the ellipse with those half-axes (any traced shape is dropped:
+## use_shape after this to play on one).
 static func use_field(half: Vector2) -> void:
-	if half.x <= 0.0 or half.y <= 0.0:
-		half = Vector2(STD_HALF_LEN, STD_HALF_WID)
+	# A Vector2 holds 32-bit floats: the standard oval's 86.3 came back 86.3000031 and missed
+	# the exact standard values, so gx was no longer the identity there. The standard oval
+	# (no size, or its own size) takes the constants themselves.
+	if half.x <= 0.0 or half.y <= 0.0 or half.is_equal_approx(Vector2(STD_HALF_LEN, STD_HALF_WID)):
+		HALF_LEN = STD_HALF_LEN
+		HALF_WID = STD_HALF_WID
+		GOAL_X = STD_GOAL_X
+		SHAPE = PackedFloat32Array()
+		return
 	HALF_LEN = half.x
 	HALF_WID = half.y
-	# The standard oval's own goal line exactly, so every spot on it is as it always was (gx).
-	GOAL_X = STD_GOAL_X if half.x == STD_HALF_LEN else half.x - GOAL_IN
+	GOAL_X = half.x - GOAL_IN
+	SHAPE = PackedFloat32Array()
+
+
+## The boundary line's real shape, where the ground's has been traced (use_shape; data/ground_boundaries.json):
+## r(t) = a0 + sum over k of (a_k cos kt + b_k sin kt), about the midpoint of the goals, t from the +x goal
+## towards +y. Empty: the boundary is the ellipse HALF_LEN x HALF_WID. A real boundary is no ellipse (Norwood
+## is squarer, its pockets 5 to 12 m outside the best one) and need not be the same both ends or both sides.
+static var SHAPE := PackedFloat32Array()
+## The shape sampled round the ground (_shape_tables): radius, the outward normal, and how much further than
+## a margin measured square to the line the same margin reaches along the ray from the middle (1 / cos).
+const SHAPE_N := 1440
+static var _r := PackedFloat32Array()
+static var _nrm := PackedVector2Array()
+static var _sec := PackedFloat32Array()
+## The boundary's y at x (every WID_STEP m from -_wid_x0), on the +y side (_wid_pos) and the -y side (_wid_neg,
+## kept positive); and each end's x on the line through the goals (_end_pos, _end_neg).
+const WID_STEP := 0.25
+static var _wid_pos := PackedFloat32Array()
+static var _wid_neg := PackedFloat32Array()
+static var _wid_x0 := 0.0
+static var _end_pos := 0.0
+static var _end_neg := 0.0
+
+
+## Play on a traced boundary: `coef` its Fourier radius (SHAPE), `goal_x` half the distance between the middles
+## of the goal lines (the goals stand at +-goal_x on the x axis). HALF_LEN and HALF_WID become the shape's
+## half-extents, so whatever sizes a picture by them still takes in the whole ground.
+static func use_shape(coef: PackedFloat32Array, goal_x: float) -> void:
+	if coef.size() < 3 or coef.size() % 2 == 0 or goal_x <= 0.0:
+		return
+	SHAPE = coef
+	GOAL_X = goal_x
+	_shape_tables()
+
+
+static func shaped() -> bool:
+	return not SHAPE.is_empty()
+
+
+## The Fourier radius and its rate of change with t, at t.
+static func _series(coef: PackedFloat32Array, t: float) -> Vector2:
+	var r := coef[0]
+	var dr := 0.0
+	var k := 1
+	while 2 * k < coef.size():
+		var c := cos(k * t)
+		var s := sin(k * t)
+		r += coef[2 * k - 1] * c + coef[2 * k] * s
+		dr += k * (coef[2 * k] * c - coef[2 * k - 1] * s)
+		k += 1
+	return Vector2(r, dr)
+
+
+## A traced radius `coef` (as SHAPE) at angle t: the shape's own evaluation, for any other curve (a fence).
+static func series_r(coef: PackedFloat32Array, t: float) -> float:
+	return _series(coef, t).x
+
+
+static func _shape_tables() -> void:
+	_r.resize(SHAPE_N)
+	_nrm.resize(SHAPE_N)
+	_sec.resize(SHAPE_N)
+	var max_x := 0.0
+	var max_y := 0.0
+	for i in SHAPE_N:
+		var t := TAU * i / SHAPE_N
+		var v := _series(SHAPE, t)
+		var u := Vector2(cos(t), sin(t))
+		# The tangent is dr u + r u_perp; the outward normal is square to it, away from the middle.
+		var tg := u * v.y + u.orthogonal() * -v.x
+		var n := Vector2(tg.y, -tg.x).normalized()
+		if n.dot(u) < 0.0:
+			n = -n
+		_r[i] = v.x
+		_nrm[i] = n
+		_sec[i] = 1.0 / maxf(n.dot(u), 0.3)
+		max_x = maxf(max_x, absf(v.x * u.x))
+		max_y = maxf(max_y, absf(v.x * u.y))
+	HALF_LEN = max_x
+	HALF_WID = max_y
+	_end_pos = _r[0]
+	_end_neg = _r[SHAPE_N / 2]
+	# The width tables: every segment of the sampled line lays its y on the x bins it spans.
+	_wid_x0 = ceilf(max_x) + 1.0
+	var bins := int(2.0 * _wid_x0 / WID_STEP) + 1
+	_wid_pos.resize(bins)
+	_wid_neg.resize(bins)
+	_wid_pos.fill(0.0)
+	_wid_neg.fill(0.0)
+	for i in SHAPE_N:
+		var a := edge_point(TAU * i / SHAPE_N)
+		var b := edge_point(TAU * (i + 1) / SHAPE_N)
+		var lo := int(ceilf((minf(a.x, b.x) + _wid_x0) / WID_STEP))
+		var hi := int(floorf((maxf(a.x, b.x) + _wid_x0) / WID_STEP))
+		for j in range(maxi(lo, 0), mini(hi, bins - 1) + 1):
+			var x := j * WID_STEP - _wid_x0
+			var f := 0.0 if is_equal_approx(a.x, b.x) else (x - a.x) / (b.x - a.x)
+			var y := lerpf(a.y, b.y, f)
+			if y >= 0.0:
+				_wid_pos[j] = maxf(_wid_pos[j], y)
+			else:
+				_wid_neg[j] = maxf(_wid_neg[j], -y)
+
+
+## The sampled table at angle t, interpolated.
+static func _at(table, t: float):
+	var f := fposmod(t, TAU) / TAU * SHAPE_N
+	var i := int(f) % SHAPE_N
+	return lerp(table[i], table[(i + 1) % SHAPE_N], f - floorf(f))
+
+
+## The boundary's distance from the middle of the goals at angle t (from the +x goal towards +y).
+static func edge_r(t: float) -> float:
+	if SHAPE.is_empty():
+		var c := cos(t)
+		var s := sin(t)
+		return 1.0 / sqrt(c * c / (HALF_LEN * HALF_LEN) + s * s / (HALF_WID * HALF_WID))
+	return _at(_r, t)
+
+
+## The point on the boundary line at angle t.
+static func edge_point(t: float) -> Vector2:
+	return Vector2(cos(t), sin(t)) * edge_r(t)
+
+
+## How far across the ground the boundary is at `x` along it, on the `side` (+1 or -1) of the line through the
+## goals, less `margin_y`; with `margin_x` the ground is taken as that much shorter at the end (as the old
+## ellipse sums shrank its half-length). Always >= 0. On an untraced ground it is exactly the ellipse's
+## (HALF_WID - margin_y) sqrt(1 - (x / (HALF_LEN - margin_x))^2), as every caller used to work it out.
+static func edge_y(x: float, side := 1.0, margin_y := 0.0, margin_x := 0.0) -> float:
+	if SHAPE.is_empty():
+		return (HALF_WID - margin_y) * sqrt(maxf(0.0, 1.0 - pow(x / (HALF_LEN - margin_x), 2.0)))
+	var end := _end_pos if x >= 0.0 else _end_neg
+	var xx := x * end / maxf(end - margin_x, 1.0)
+	var f := (xx + _wid_x0) / WID_STEP
+	var table := _wid_pos if side >= 0.0 else _wid_neg
+	var i := clampi(int(f), 0, table.size() - 2)
+	var y := lerpf(table[i], table[i + 1], clampf(f - i, 0.0, 1.0))
+	return maxf(0.0, y - margin_y)
+
+
+## The y on the boundary at `x` toward `y` clamped to the ground less those margins: a spot kept across the
+## ground (where the old sums clamped to -ymax..ymax of the ellipse).
+static func clamp_across(x: float, y: float, margin_y := 0.0, margin_x := 0.0) -> float:
+	if SHAPE.is_empty():
+		var ymax := edge_y(x, 1.0, margin_y, margin_x)
+		return clampf(y, -ymax, ymax)
+	return clampf(y, -edge_y(x, -1.0, margin_y, margin_x), edge_y(x, 1.0, margin_y, margin_x))
+
+
+## A point `out` metres beyond the boundary line toward angle t: on the ellipse, its half-axes each `out`
+## longer (as the flat view's rings were always drawn); on a traced line, `out` square to the line.
+static func ring_point(t: float, out := 0.0) -> Vector2:
+	if SHAPE.is_empty():
+		return Vector2(cos(t) * (HALF_LEN + out), sin(t) * (HALF_WID + out))
+	return edge_point(t) + _at(_nrm, t).normalized() * out
+
+
+## The boundary `out` metres out (ring_point), `n` pieces round, closed (n + 1 points).
+static func ring(n: int, out := 0.0) -> PackedVector2Array:
+	var pts := PackedVector2Array()
+	for i in n + 1:
+		pts.append(ring_point(TAU * float(i) / float(n), out))
+	return pts
+
+
+## What sets the field's shape, for a cache that is built for one ground: its size, and its traced line.
+static func field_key() -> String:
+	return "%s|%s|%s" % [HALF_LEN, HALF_WID, hash(SHAPE)]
+
+
+## The end of the ground at the `end` (+1 or -1) goal, on the line through the goals.
+static func end_x(end: float) -> float:
+	if SHAPE.is_empty():
+		return HALF_LEN
+	return _end_pos if end >= 0.0 else _end_neg
 
 
 ## The standard oval's x (MatchSim's field position, a set-up spot) on this ground.
@@ -397,13 +580,19 @@ static func eta(t: Dictionary, p: Vector2) -> float:
 
 
 static func inside_oval(p: Vector2, margin := 0.0) -> bool:
+	if not SHAPE.is_empty():
+		var t := p.angle()
+		return p.length() <= _at(_r, t) - margin * _at(_sec, t)
 	var ax := HALF_LEN - margin
 	var ay := HALF_WID - margin
 	return (p.x * p.x) / (ax * ax) + (p.y * p.y) / (ay * ay) <= 1.0
 
 
-## The outward normal of the fence's ellipse nearest `p`.
+## The outward normal of the boundary nearest `p`.
 static func fence_normal(p: Vector2) -> Vector2:
+	if not SHAPE.is_empty():
+		var m: Vector2 = _at(_nrm, p.angle())
+		return m.normalized() if m.length_squared() > 0.0 else Vector2.RIGHT
 	var n := Vector2(p.x / (HALF_LEN * HALF_LEN), p.y / (HALF_WID * HALF_WID))
 	return n.normalized() if n.length_squared() > 0.0 else Vector2.RIGHT
 
@@ -418,9 +607,16 @@ static func _fence_brake(pos: Vector2, vel: Vector2, reset: float) -> Vector2:
 	if out <= 0.0:
 		return vel
 	# Distance to the fence (less the margin) along the normal, near enough for an ellipse this round.
-	var k := sqrt((pos.x * pos.x) / ((HALF_LEN - 1.0) * (HALF_LEN - 1.0))
-			+ (pos.y * pos.y) / ((HALF_WID - 1.0) * (HALF_WID - 1.0)))
-	var gap := (1.0 - k) * pos.length() / maxf(k, 0.001)
+	var gap: float
+	if not SHAPE.is_empty():
+		# A traced line: the gap along the ray from the middle, brought square to the line.
+		var t := pos.angle()
+		var sec: float = _at(_sec, t)
+		gap = (_at(_r, t) - sec - pos.length()) / sec
+	else:
+		var k := sqrt((pos.x * pos.x) / ((HALF_LEN - 1.0) * (HALF_LEN - 1.0))
+				+ (pos.y * pos.y) / ((HALF_WID - 1.0) * (HALF_WID - 1.0)))
+		gap = (1.0 - k) * pos.length() / maxf(k, 0.001)
 	if gap > FENCE_LOOK:
 		return vel
 	var top := sqrt(2.0 * BRAKE * reset * maxf(0.0, gap))
@@ -429,6 +625,10 @@ static func _fence_brake(pos: Vector2, vel: Vector2, reset: float) -> Vector2:
 
 ## Pull `p` back inside the oval shrunk by `margin` metres.
 static func clamp_to_oval(p: Vector2, margin := 0.0) -> Vector2:
+	if not SHAPE.is_empty():
+		var t := p.angle()
+		var most: float = _at(_r, t) - margin * _at(_sec, t)
+		return p if p.length() <= most else p * (most / p.length())
 	var ax := HALF_LEN - margin
 	var ay := HALF_WID - margin
 	var k := (p.x * p.x) / (ax * ax) + (p.y * p.y) / (ay * ay)
