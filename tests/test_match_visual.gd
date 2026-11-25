@@ -78,6 +78,7 @@ func run() -> void:
 	await _t("_test_three_d_cameras", [res])
 	_t("_test_contacts", [res])
 	_t("_test_feet_planted", [res])
+	_t("_test_held_ball_after_ends_change", [res])
 	_t("_test_umpire_stoppages", [res])
 	_t("_test_match_crew", [res])
 	_t("_test_free_taker_kicks")
@@ -3948,6 +3949,37 @@ func _test_feet_planted(res: Dictionary) -> void:
 	var share := 100.0 * skate / maxf(1.0, n)
 	_check(n > 1000 and share < 25.0,
 			"A foot on the turf stays put: %.1f%% of %d planted-foot frames slide over 0.5 m/s (was 60%%)" % [share, n])
+	oval.queue_free()
+
+
+## The ball in a man's hands is in his hands at either end (bug bash 2026-11-23): in the second
+## and fourth quarters the ground turns half a turn (set_ends) and the held ball was drawn at the
+## mirror spot, at the far end of the ground, with the main camera chasing it there.
+func _test_held_ball_after_ends_change(res: Dictionary) -> void:
+	var d := MatchDirector.new()
+	d.setup(res, res["events"])
+	var oval := Oval3D.new()
+	(Engine.get_main_loop() as SceneTree).root.add_child(oval)
+	oval.build(d, str(res.get("home", "")), str(res.get("away", "")))
+	var dt := 1.0 / 30.0
+	var held := {-1.0: 0, 1.0: 0}
+	var near := {-1.0: 0, 1.0: 0}
+	for sign in [1.0, -1.0]:
+		oval.set_ends(sign)
+		for k in range(900):
+			d.advance(dt)
+			oval.sync(dt)
+			var h := int(d.ball.get("holder", -1)) if str(d.ball.get("mode", "")) == "held" else -1
+			if h < 0 or oval._ump_ball:
+				continue
+			held[sign] += 1
+			var hips: Vector3 = oval.global_transform * oval.anim._hips_world(oval.players[h]).origin
+			var b := oval.ball.global_position
+			if Vector2(b.x - hips.x, b.z - hips.z).length() < 1.2:
+				near[sign] += 1
+	_check(held[1.0] > 50 and near[1.0] == held[1.0] and held[-1.0] > 50 and near[-1.0] == held[-1.0],
+			"A held ball is in its holder's hands at either end (%d of %d frames, ends changed %d of %d)"
+			% [near[1.0], held[1.0], near[-1.0], held[-1.0]])
 	oval.queue_free()
 
 

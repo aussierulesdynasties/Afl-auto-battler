@@ -52,8 +52,8 @@ folder has a `MANIFEST.txt` with the md5 of every big file left behind. Session 
 | Area | What exists | Where |
 |---|---|---|
 | Crowd | 3D people near, cards beyond; seated on the MCG's own seats | `Oval3DCrowd.gd`, `Oval3DCrowdSet.gd`, `assets/oval3d/crowd_set.res`, `supporters/` (#1929) |
-| Players' bodies | MetaHuman body, builds by height and weight | `assets/oval3d/player_mh.glb`, `player_mh_builds.json`, `Oval3DBuild.gd` |
-| Players' heads | fitted heads, skin light; newest work saved | `assets/oval3d/heads/`; PR #1967 (not gated); review films `.claude/review/player_heads_wip` |
+| Players' bodies | MetaHuman body, builds by height and weight | `assets/oval3d/player_mh.glb` (private: [EPIC_ASSETS.md](EPIC_ASSETS.md)), `player_mh_builds.json`, `Oval3DBuild.gd` |
+| Players' heads | fitted heads, skin light; newest work saved | `assets/oval3d/heads/` (MetaHuman heads private: [EPIC_ASSETS.md](EPIC_ASSETS.md)); PR #1967 (not gated); review films `.claude/review/player_heads_wip` |
 | Hair | hair styles model and textures | `assets/oval3d/hair_styles.glb`, `hair_tex/` |
 | Turf | per-ground mowing cut and grass, markings from the ground's size | `Oval3DTurf.gd`, `assets/oval3d/turf/`; Adelaide and Gabba turf PR #1962 |
 | Cameras and broadcast | main camera, replays, set shots, score bug, stat bars | `Oval3D.gd`, `Oval3DBroadcast.gd`, `ScoreBug.gd` |
