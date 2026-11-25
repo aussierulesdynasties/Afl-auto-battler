@@ -593,6 +593,37 @@ func _test_selection_pages_tests() -> void:
 					"PC: a real tap on a player not picked picks him up (%s %s)" % [ptag, tl])
 			ui.queue_free()
 			await _settle()
+		# The smallest PC window (960x540, 3.C.41): the week column gives way,
+		# so Auto-pick and the players not picked stay on the screen.
+		root.size = Vector2i(960, 540)
+		_state.set_selection({})
+		ui = await _open(false)
+		var edge := ui.get_viewport().get_visible_rect().size.x
+		var past: Array = []
+		for c in ui.find_children("*", "Control", true, false):
+			if (c as Control).is_visible_in_tree() and (c as Control).get_global_rect().end.x > edge + 0.5:
+				past.append(str(c.name))
+		_check(ui.find_child("WeekColumn", true, false) != null and past.is_empty(),
+				"PC 960x540: nothing runs past the right edge (%s, %d past: %s)" % [club, past.size(), str(past.slice(0, 5))])
+		# ...and a finger reaches them there: Auto-pick opens its menu, a player
+		# not picked is picked up (both sat past the edge before 2026-11-25).
+		var ap: MenuButton = ui.find_child("AutoPick", true, false)
+		var tap_ap: String = await Tap.tap(ap)
+		await _settle()
+		_check(tap_ap == "" and ap != null and ap.get_popup().visible,
+				"PC 960x540: a real tap on Auto-pick opens its menu (%s: %s)" % [club, tap_ap])
+		if ap != null:
+			ap.get_popup().hide()
+			await _settle()
+		var grid9: GridContainer = ui.find_child("NotSelected", true, false)
+		var tap_np: String = "no player not picked"
+		if grid9 != null and grid9.get_child_count() > 0:
+			tap_np = await Tap.tap(grid9.get_child(0))
+		await _settle()
+		_check(tap_np == "" and ui.find_child("PickedBar", true, false) != null,
+				"PC 960x540: a real tap on a player not picked picks him up (%s: %s)" % [club, tap_np])
+		ui.queue_free()
+		await _settle()
 	root.size = Vector2i(420, 860)
 	_state.set_selection({})
 

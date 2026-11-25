@@ -17,6 +17,11 @@ var _news_overlay: Control
 var _rule_overlay: Control
 var _tribunal_overlay: Control
 var _event_overlay: Control
+## The card whose sheet is open over the hub (-1 when none) and its copy on the
+## hub: the hub leaves that card out while its sheet shows it, so one story is
+## never shown twice, the second through the dim behind the first.
+var _sheet_index := -1
+var _sheet_under: Control
 var _sim_confirm: Control
 var _skip_confirm: Control
 var _onboarding_overlay: Control
@@ -629,7 +634,7 @@ func _event_card(index: int) -> Control:
 func _waiting_events() -> Control:
 	var box: VBoxContainer = null
 	for i in range(GameState.week_events.size()):
-		if bool((GameState.week_events[i] as Dictionary).get("resolved", false)):
+		if bool((GameState.week_events[i] as Dictionary).get("resolved", false)) or _on_sheet(i):
 			continue
 		if box == null:
 			box = UiKit.vbox(UiKit.SECTION)
@@ -661,7 +666,17 @@ func _show_new_event() -> bool:
 	return false
 
 
+## True while card `i` is open in its sheet over the hub.
+func _on_sheet(i: int) -> bool:
+	return i == _sheet_index and _event_overlay != null and is_instance_valid(_event_overlay)
+
+
 func _open_event_sheet(index: int, why := "") -> void:
+	# The hub's copy of this card steps out while the sheet shows it.
+	_sheet_index = index
+	_sheet_under = find_child("WeekEvent" if index == 0 else "WeekEvent_%d" % index, true, false) as Control
+	if _sheet_under != null:
+		_sheet_under.visible = false
 	var box := UiKit.modal_box(self, 520.0, 0.0)
 	_event_overlay = box["overlay"]
 	_event_overlay.name = "EventSheet"
@@ -705,12 +720,21 @@ func _open_event_sheet(index: int, why := "") -> void:
 	footer.add_child(later)
 
 
-## Close an open card sheet without moving on to the week's next ask.
+## Close an open card sheet without moving on to the week's next ask. The card
+## comes back on the hub.
 func _close_event_sheet_quiet() -> void:
 	if _event_overlay != null and is_instance_valid(_event_overlay):
 		_event_overlay.name = "EventSheetGone"
 		_event_overlay.queue_free()
 	_event_overlay = null
+	if _sheet_index >= 0:
+		_sheet_index = -1
+		if _sheet_under != null and is_instance_valid(_sheet_under):
+			_sheet_under.visible = true
+		else:
+			# The hub was redrawn while the sheet was open (an answer): draw it again.
+			_build()
+	_sheet_under = null
 
 
 func _close_event_sheet() -> void:
@@ -719,6 +743,8 @@ func _close_event_sheet() -> void:
 		_event_overlay.name = "EventSheetGone"
 		_event_overlay.queue_free()
 	_event_overlay = null
+	_sheet_index = -1
+	_sheet_under = null
 	_build()
 	_show_week_ask()
 
@@ -1118,7 +1144,7 @@ func _week_section(season: Season) -> Control:
 	# An answered card shows what happened here; one still waiting leads the
 	# page (_waiting_events).
 	for i in range(GameState.week_events.size()):
-		if not bool((GameState.week_events[i] as Dictionary).get("resolved", false)):
+		if not bool((GameState.week_events[i] as Dictionary).get("resolved", false)) or _on_sheet(i):
 			continue
 		nv.add_child(UiKit.spacer(4))
 		nv.add_child(_event_card(i))
