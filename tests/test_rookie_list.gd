@@ -54,6 +54,7 @@ func run(tree: SceneTree) -> void:
 	_t("_test_release_and_resign")
 	_t("_test_entering_club_seat")
 	_t("_test_midseason_fills_rookie_spots")
+	_t("_test_drafts_check_the_cap")
 	_t("_test_midseason_pool_after_offseason")
 	_t("_test_real_lists_start")
 	_t("_test_real_lists_open_spots")
@@ -996,6 +997,9 @@ func _shape(code: String, s: int, a: int, b: int) -> Array:
 		if i >= model.size():
 			q["id"] = "%s_shape%d" % [str(q["id"]), i]
 		q.erase("rookie_list")
+		# Nobody on a shaped list retires, so its counts are the ones asked
+		# for (a retiree's place opens a draft spot: Draft.leaving_44).
+		q.erase("retiring")
 		if i >= s:
 			q["rookie_list"] = "A" if i < s + a else "B"
 		q["club"] = code
@@ -1006,6 +1010,10 @@ func _shape(code: String, s: int, a: int, b: int) -> Array:
 
 func _test_the_44_rule() -> void:
 	_new_career()
+	# The lists are shaped past their real size with copied players: room
+	# under the cap, so the 44 is what each check meets (every upgrade and
+	# draft pick is also checked against the cap: _test_drafts_check_the_cap).
+	gs.salary_cap += 50000000
 	var over := _shape("GEE", 36, 10, 2)
 	var under_s := _shape("COL", 37, 6, 2)
 	var under_r := _shape("MEL", 38, 5, 0)
@@ -1161,7 +1169,7 @@ func _test_the_44_national_draft() -> void:
 	_check(gs.ties_without_a_spot(CLUB).size() == 1 and gs.news.any(func(n): return str(n.get("text", n)).contains("No list spot for")),
 			"Your own tied player with no spot is named in the news (%s)" % str(gs.ties_without_a_spot(CLUB)))
 	_check(draft.open_spots("GEE") == 0 and draft.open_spots(CLUB) == 0 and draft.open_spots("COL") == 0,
-			"Clubs at 46, 46 and 44 have no open spot (%d, %d, %d)" % [draft.open_spots("GEE"), draft.open_spots(CLUB), draft.open_spots("COL")])
+			"Clubs at 46, 46 and 44 have no open spot (%d, %d, %d; retiring %s)" % [draft.open_spots("GEE"), draft.open_spots(CLUB), draft.open_spots("COL"), str(draft.leaving_44)])
 	_check(draft.full_at_44(CLUB) and draft.full_words(CLUB).contains("holds 46") and draft.full_words(CLUB).contains("limit is 44"),
 			"Your club is told why its picks pass (%s)" % draft.full_words(CLUB))
 	while not draft.is_finished():
@@ -1267,3 +1275,64 @@ func _test_three_category_b_head() -> void:
 	_check(bh != null and bh.text.contains("2 / 2"), "Two Category B rookies show their two spots (%s)" % (bh.text if bh else "none"))
 	scene.queue_free()
 	await _settle()
+
+
+## Every list addition is checked against the cap (director, 2026-11-25, "Hold
+## room"): a club short of a rookie's wage makes no Rookie Draft pick (ours
+## says so in the news), sits the mid-season draft out, and cannot upgrade a
+## rookie whose pay rise would take it over.
+func _test_drafts_check_the_cap() -> void:
+	_new_career()
+	var year: int = gs.season_year
+	var cls: Array = gs.draftee_pool.filter(func(q): return int(q.get("draft_year", year)) == year)
+	_check(cls.size() >= 30, "(setup) a class to pass over (%d)" % cls.size())
+	for i in mini(30, cls.size()):
+		(cls[i] as Dictionary)["draft_year"] = year - 1
+	gs.salary_cap += 5000000
+	for code in ["COL", "CAR", gs.my_club]:
+		var l: Array = gs.season.lists[code]
+		while l.size() >= Contracts.MAX_LIST:
+			l.pop_back()
+	var wage: int = RookieList.wage(year)
+	# Dead cap that leaves `code` `room` once the room it holds is kept.
+	var set_room := func(code: String, room: int) -> void:
+		gs.dead_cap.erase(code)
+		var l: Array = gs.season.lists[code]
+		var free: int = gs._trade_cap(code) - Contracts.payroll(l) - gs.held_room(Contracts.next_size(l) + 1)
+		gs.dead_cap[code] = {"year": year, "amount": free - room}
+	set_room.call("CAR", wage - 1000)
+	set_room.call(gs.my_club, wage - 1000)
+	_check(RookieList.rookie_spot_free(gs.season.lists["CAR"]) and RookieList.rookie_spot_free(gs.season.lists["COL"]),
+			"(setup) Carlton and Collingwood have a rookie spot")
+	var rec := {"passed": {}}
+	_check(not RookieList._can_pick(gs, rec, "CAR") and RookieList._can_pick(gs, rec, "COL"),
+			"Rookie Draft: Carlton, 1,000 short of a rookie's wage, cannot pick; Collingwood can")
+	_check(not RookieList._can_pick(gs, rec, gs.my_club) and bool(rec.get("no_room", false)),
+			"Rookie Draft: nor can we, and the draft notes why")
+	gs.rookie_draft = {"year": year, "picks": [], "no_room": true, "done": false}
+	gs.news.clear()
+	RookieList._finish(gs)
+	_check(gs.news.any(func(e): return str(e.get("text", "")) == RookieList.NO_ROOM_NEWS), "The news says we had no room: %s" % RookieList.NO_ROOM_NEWS)
+	MidseasonDraft._record(gs)
+	MidseasonDraft._open_draft(gs)
+	var order: Array = gs.midseason.get("order", [])
+	_check(not order.has("CAR") and order.has("COL"), "Mid-season draft: Carlton sits out for room, Collingwood is in (%s)" % str(order))
+	# An upgrade: the rise to the senior wage must fit. A fresh career has no
+	# rookies yet, so Carlton's last player is made a Category A rookie.
+	var l: Array = gs.season.lists["CAR"]
+	var r: Dictionary = l[l.size() - 1]
+	r["rookie_list"] = "A"
+	r["salary"] = RookieList.wage(year)
+	_check(RookieList.is_rookie(r) and RookieList.wage(year) < RookieList.senior_wage(year),
+			"(setup) Carlton has a rookie on the rookie wage (%d, senior %d)" % [RookieList.wage(year), RookieList.senior_wage(year)])
+	var rise: int = RookieList.senior_wage(year) - int(r.get("salary", 0))
+	gs.dead_cap.erase("CAR")
+	var free: int = gs._trade_cap("CAR") - Contracts.payroll(l) - gs.held_room(Contracts.next_size(l))
+	gs.dead_cap["CAR"] = {"year": year, "amount": free - rise + 1000}
+	var why: String = RookieList.upgrade_block(gs, "CAR", str(r["id"]))
+	_check(why == "We have no cap room to upgrade him.\nHis pay would rise to %s." % Contracts.money(RookieList.senior_wage(year)),
+			"An upgrade 1,000 short is refused in words (%s)" % why)
+	gs.dead_cap["CAR"] = {"year": year, "amount": free - rise}
+	_check(not RookieList.upgrade_block(gs, "CAR", str(r["id"])).contains("cap room"), "With the room it is not refused for room")
+	gs.dead_cap.erase("CAR")
+	gs.dead_cap.erase(gs.my_club)

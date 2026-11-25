@@ -181,7 +181,14 @@ static func _open_draft(gs) -> void:
 		# retirement left on a list now under the minimum (director, 2026-11-11).
 		# Before the rookie list (Legacy, the mid-season drafts to 1993) a
 		# pick fills an open senior spot.
-		if RookieList.rookie_spot_free(list) or _short(list) 				or (not RookieList.in_force() and RookieList.senior_spot_free(list)):
+		if not (RookieList.rookie_spot_free(list) or _short(list) \
+				or (not RookieList.in_force() and RookieList.senior_spot_free(list))):
+			continue
+		# Every pick is checked against the cap (director, 2026-11-25, "Hold
+		# room"): a club with no room for the wage sits this draft out.
+		var pay := Contracts.indexed_money_2027(Contracts.ROOKIE_MIN_2027, gs.season_year) \
+				if RookieList.rookie_spot_free(list) else RookieList.senior_wage(gs.season_year)
+		if gs.fits_cap(code, list, pay, Contracts.next_size(list) + 1):
 			order.append(code)
 	rec["order"] = order
 	rec["next"] = 0

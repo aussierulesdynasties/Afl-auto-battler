@@ -74,9 +74,16 @@ func _test_era_caps() -> void:
 	var years := range(1990, 2026)
 	_check(years.size() == 36, "36 seasons from 1990 to 2025")
 	for y in years:
-		_check(EraRules.has("salary_cap", y)
-				and Contracts.salary_cap_for_year(y) == int(GameDB.era_rule("salary_cap", y)),
+		# 2020's cap on record is the total after its 29.17% pay cut; its
+		# contracts count against the cap before the cut (Contracts.contract_cap).
+		_check(EraRules.has("salary_cap", y) and Contracts.era_cap(y) == int(GameDB.era_rule("salary_cap", y))
+				and Contracts.salary_cap_for_year(y) == Contracts.contract_cap(y)
+				and (y == 2020 or Contracts.contract_cap(y) == Contracts.era_cap(y)),
 				"%d uses its own cap (%d)" % [y, Contracts.salary_cap_for_year(y)])
+	_check(Contracts.salary_cap_for_year(2020) == 12786000
+			and is_equal_approx(Contracts.pay_scale(2020) * (1.0 - 0.2917),
+			float(9056000) / float(Contracts.CAP_2027) * float(Contracts.MAX_LIST) / float(EraRules.list_max(2020))),
+			"2020: 9,056,000 after the 29.17% pay cut; contracts written and counted against 12,786,000")
 	_check(Contracts.salary_cap_for_year(2024) == 15788222 and Contracts.salary_cap_for_year(2025) == 17761999,
 			"2024 and 2025 caps from the CBA's Schedule 2A")
 	_check(Contracts.salary_cap_for_year(2026) == Contracts.CAP_2027
@@ -249,8 +256,8 @@ func _test_campaign_rolls_through_the_eras() -> void:
 		_check(y == from + 1 and Contracts.money_year == y and GameState.salary_cap == cap,
 				"%d: the cap is %s and money is in %d dollars" % [y, Contracts.money(GameState.salary_cap), Contracts.money_year])
 		if y < 2026:
-			_check(EraRules.has("salary_cap", y) and cap == int(GameDB.era_rule("salary_cap", y)),
-					"%d has its own cap on record" % y)
+			_check(EraRules.has("salary_cap", y) and Contracts.era_cap(y) == int(GameDB.era_rule("salary_cap", y))
+					and cap == Contracts.contract_cap(y), "%d has its own cap on record" % y)
 			var want_min: int = int(GameDB.era_rule("senior_min", y)) if EraRules.has("senior_min", y) 					else _scaled(Contracts.SENIOR_MIN_2027, cap, EraRules.list_max(y))
 			_check(Contracts.senior_min() == want_min, "%d minimum %s" % [y, Contracts.money(Contracts.senior_min())])
 			var star := {"overall": 99, "age": 25.0}

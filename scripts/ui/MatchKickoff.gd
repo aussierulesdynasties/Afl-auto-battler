@@ -63,9 +63,10 @@ static func start(tree: SceneTree, replace := false) -> bool:
 		return false
 	busy = true
 	var way := GameState.match_way()
-	if not GameState.vignettes_on() or way == "skip":
+	if not GameState.vignettes_on() or way == "skip" or GameState.match_3d_on():
 		# Vignettes off (Settings), or Skip chosen: no banner scene, straight
-		# to the match.
+		# to the match. On the 3D picture the run-through plays on the match's
+		# own ground before the first bounce (MatchScene._banner_first).
 		# The set-up takes a moment on a phone: the cover and its line go up
 		# first (ScreenTransition); the match screen joins the cover.
 		var ok := [false]
