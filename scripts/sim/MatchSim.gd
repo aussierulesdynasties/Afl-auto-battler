@@ -38,6 +38,12 @@ const BOUNDARY_EXIT_P := 0.008
 const BOUNDARY_RUSHED_BONUS := 0.004
 const OUT_ON_FULL_SHARE := 0.12
 const BOUNDARY_TOUCHED_SHARE := 0.28
+## Before 2026 an untouched kick or handball over the line between the arcs
+## was a throw-in unless the umpire paid a free for insufficient intent. The
+## AFL's 2025 count: of the 3.25 a game that are last-disposal frees from
+## 2026, 0.3 were already insufficient-intent frees, so 1 in 11 (director,
+## 2026-11-26: "1 in 11 a free"; afl.com.au/news/1464391).
+const INSUFFICIENT_INTENT_SHARE := 0.3 / 3.25
 var tactics := [{}, {}]      # per side: gameplan, focus_mid/fwd/def (focus_id), tag_id, tagger_id, pep
 ## Tags dropped because the man was no longer a midfielder: {side, id, q}.
 var tag_drops: Array = []
@@ -84,6 +90,9 @@ var _duel_tag := ""
 ## [{"side", "id", "q", "min", "weeks", "kind"}]; each happens when its
 ## time comes and he is on the ground (_check_injuries).
 var injury_rng := RandomNumberGenerator.new()
+## The substitute's injury roll (2011-15, 2021-25): its own dice, so every
+## other roll in the match draws as before (bug bash P3-8).
+var sub_injury_rng := RandomNumberGenerator.new()
 var _injury_plan: Array = []
 ## The injuries that happened: [{"side", "id", "q", "min", "weeks", "kind",
 ## "on"}] ("on": who came on for him, "" for none).
@@ -235,6 +244,9 @@ var _speccies := 0
 ## tuning boundary frequency therefore does not silently re-roll ordinary
 ## disposals in chains that stay in play.
 var boundary_rng := RandomNumberGenerator.new()
+## Whether an umpire before 2026 paid insufficient intent: its own dice, drawn
+## only in an era season, so every other roll in the match draws as before.
+var intent_rng := RandomNumberGenerator.new()
 ## A contest that locks up into a ball-up (match flow, 2026-10-10): its own
 ## stream, so the calibrated play RNG is not re-rolled by it.
 var lockup_rng := RandomNumberGenerator.new()
@@ -636,6 +648,7 @@ func _init(home: Squad, away: Squad, seed: int = 0) -> void:
 	break_rng.seed = seed * 101 + 103
 	_speccy_quota = speccy_quota(seed)
 	boundary_rng.seed = seed * 17 + 19
+	intent_rng.seed = seed * 199 + 211
 	lockup_rng.seed = seed * 107 + 109
 	gather_rng.seed = seed * 113 + 127
 	fumble_rng.seed = seed * 127 + 131
@@ -650,6 +663,7 @@ func _init(home: Squad, away: Squad, seed: int = 0) -> void:
 	i50_rng.seed = seed * 179 + 181
 	chip_rng.seed = seed * 173 + 179
 	injury_rng.seed = seed * 13 + 7
+	sub_injury_rng.seed = seed * 223 + 227
 	breeze_side = posmod(hash("breeze|%d" % seed), 2)
 	arch_rng.seed = seed * 151 + 157
 	for side in range(2):
@@ -3522,13 +3536,15 @@ func _stoppage(side: int, opp: int, from_bounce: bool, in_f50 := false):
 ## 2026 AFL last-disposal rule: a kick or handball that crosses the boundary
 ## between the 50m arcs is a free to the opposition. If it was touched or the
 ## exit was otherwise contested, it remains a throw-in. Out on the full is a
-## free anywhere on the ground.
+## free anywhere on the ground. Before 2026 (`last_disposal` false, EraRules)
+## the same exit is "intent": a throw-in unless the umpire pays insufficient
+## intent, which _boundary_exit rolls (bug bash P1-7).
 static func boundary_restart(cross_fp: float, f50: float, disposal_kind: String,
-		out_on_full: bool, touched: bool) -> String:
+		out_on_full: bool, touched: bool, last_disposal := true) -> String:
 	if out_on_full:
 		return "free"
 	if absf(cross_fp) < f50 and ["kick", "handball"].has(disposal_kind) and not touched:
-		return "free"
+		return "free" if last_disposal else "intent"
 	return "throwin"
 
 
@@ -3545,7 +3561,11 @@ func _boundary_exit(side: int, cross_fp: float, carrier, disposal_kind: String,
 	var out_on_full := disposal_kind == "kick" and boundary_rng.randf() < OUT_ON_FULL_SHARE
 	var touched := not out_on_full and boundary_rng.randf() < BOUNDARY_TOUCHED_SHARE
 	var restart := boundary_restart(cross_fp, float(Ratings.T["forward50_line"]),
-			disposal_kind, out_on_full, touched)
+			disposal_kind, out_on_full, touched, EraRules.on("last_disposal"))
+	var intent := false
+	if restart == "intent":
+		intent = intent_rng.randf() < INSUFFICIENT_INTENT_SHARE
+		restart = "free" if intent else "throwin"
 	if restart == "throwin":
 		_emit("throwin", -1, cross_fp, null, "Boundary throw-in")
 		var bev: Dictionary = events[events.size() - 1]
@@ -3562,12 +3582,13 @@ func _boundary_exit(side: int, cross_fp: float, carrier, disposal_kind: String,
 	_p(carrier, "frees_against")
 	var kind := "out_on_full" if out_on_full else "last_disposal"
 	var who := GameDB.player_display_name(recipient) if recipient != null else "the opposition"
-	var why := "Out on the full" if out_on_full else "Last disposal out"
+	var why := "Out on the full" if out_on_full else ("Insufficient intent" if intent else "Last disposal out")
 	_emit(kind, opp, cross_fp, recipient, "%s · free kick to %s" % [why, who])
 	var fev: Dictionary = events[events.size() - 1]
 	fev["against_id"] = "" if carrier == null else str(carrier.get("id", ""))
 	fev["against_name"] = "" if carrier == null else GameDB.player_display_name(carrier)
 	fev["disposal_kind"] = disposal_kind
+	fev["intent"] = intent
 	var restart_fp := _maybe_fifty(opp, cross_fp, carrier, recipient)
 	return {"outcome": "free", "fp": restart_fp, "actor": recipient}
 
@@ -3989,7 +4010,10 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 			if not aerial.is_empty():
 				match str(aerial["outcome"]):
 					"mark":
-						_effective(side, carrier)
+						# Only a disposal can be an effective one: a kick-in he
+						# did not play on from is the team's (bug bash P1-5).
+						if counts_disposal:
+							_effective(side, carrier)
 						pending = null
 						next_gain = "cp"  # a contested mark
 						continue
@@ -4037,7 +4061,7 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 			var effective_entry := str(entry["outcome"]) != "turnover"
 			if str(entry["outcome"]) == "free" and int(entry.get("free_side", side)) != side:
 				effective_entry = false
-			if effective_entry:
+			if effective_entry and counts_disposal:
 				_effective(side, carrier)
 			return entry
 
@@ -5882,6 +5906,22 @@ func _plan_injuries() -> void:
 			inj["id"] = str(p["id"])
 			inj["at"] = injury_rng.randi_range(2, 118)
 			_injury_plan.append(inj)
+	# The substitute gets the same roll and minute as everyone, and is hurt
+	# only if he is on by that minute: his share of the match (on at
+	# three-quarter time, about a quarter of the chance) (director,
+	# 2026-11-26: "His share of the match"; bug bash P3-8).
+	for side in range(2):
+		for p in (squads[side] as Squad).sub:
+			var inj := Injuries.roll(sub_injury_rng, p)
+			if inj.is_empty() and _ar(side, "inj") > 1.0 and sub_injury_rng.randf() < _ar(side, "inj") - 1.0:
+				inj = Injuries.roll(sub_injury_rng, p)
+			if inj.is_empty():
+				continue
+			inj["side"] = side
+			inj["id"] = str(p["id"])
+			inj["at"] = sub_injury_rng.randi_range(2, 118)
+			inj["sub"] = true
+			_injury_plan.append(inj)
 
 
 ## An injury whose time has come: on the ground, he goes off for good and
@@ -5889,6 +5929,12 @@ func _plan_injuries() -> void:
 ## hurt). One resting on the bench who has played takes no further part; one
 ## yet to come on is hurt when he does.
 func _check_injuries() -> void:
+	# A substitute whose minute came before he did is not hurt (P3-8): checked
+	# first, so a man going off hurt at the same moment doesn't bring him on to it.
+	for inj in _injury_plan.duplicate():
+		var on_yet: bool = _played[int(inj["side"])].has(str(inj["id"]))
+		if bool(inj.get("sub", false)) and current_minute >= int(inj["at"]) and not on_yet:
+			_injury_plan.erase(inj)
 	for inj in _injury_plan.duplicate():
 		if current_minute < int(inj["at"]):
 			continue

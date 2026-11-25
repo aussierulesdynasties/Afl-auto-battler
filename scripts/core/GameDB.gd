@@ -252,6 +252,8 @@ func reload(dataset := Datasets.DEFAULT) -> void:
 		push_error("GameDB: no dataset '%s'; nothing reloaded." % dataset)
 		return
 	reloads += 1
+	# Graded against this dataset's players, as after a fresh launch (P1-6).
+	PlayerProfile.forget_cache()
 	_use_dataset(dataset, row)
 	clubs = _load_clubs()
 	club_order = CLUB_ORDER.duplicate()

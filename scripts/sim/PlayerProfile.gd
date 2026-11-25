@@ -48,6 +48,13 @@ static func _values(role: String, key: String) -> Array:
 	return _sorted[k]
 
 
+## Forget the graded scales: GameDB.reload calls it, so a career on another
+## dataset (a 2026 career after a 1990 one) grades against its own players,
+## as it would after a fresh launch (bug bash P1-6).
+static func forget_cache() -> void:
+	_sorted = {}
+
+
 static func _game_db() -> Node:
 	if _db == null:
 		_db = Engine.get_main_loop().root.get_node("GameDB")
