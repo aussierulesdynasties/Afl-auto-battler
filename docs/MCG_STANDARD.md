@@ -9,23 +9,44 @@ starts from the same rules. It covers looks only: nothing here reads back into p
 Nothing goes to the director until it has passed a side-by-side against real imagery from the same
 camera. Use Google Earth 3D for outside and overhead views, and Street View on the ground for inside.
 
-- **Google Earth in a headless browser.** Run Playwright Chromium with
-  `--use-gl=angle --use-angle=swiftshader --enable-unsafe-swiftshader --ignore-gpu-blocklist` and a
-  1280x1000 viewport, then crop rows 140 to 860. Open a fresh page for each view, or Google Earth
-  sometimes shows the globe. The URL is `earth.google.com/web/@lat,lon,alt a,range d,35y,heading h,tilt t,0r`.
+- **Use the shared tool.** Use `tools/grounds/ge/` (README there) for every ground: `ge_compare.py plan`,
+  `ge_shoot.js`, then `register` and `outline` for numbers. Its `grounds.json` holds each model's origin and
+  Google Earth's turf height.
+  - The URL's `35y` is the vertical fov of the whole 1000 px window. The 720-row crop is **25.58 deg**, not 23.5.
+  - Read the turf height and every camera height from Google Earth's status bar. GE lifts low cameras 15-30 m.
+  - Open a fresh page per shot.
+  - Line the model up with `register` before measuring anything. Pass is 1 m and 0.5 deg.
+  - Judge by numbers, never by eye: `outline` for plan, published dimensions for heights, and `ge_solve.py`
+    for an oblique's true camera.
 - **Our camera for the same view.** `tools/visual/preinspect_look.gd` takes `name:px,py,pz,tx,ty,tz,fov`.
   - Model axes: x is east, -z is north.
-  - The field centre is lat -37.81977, lon 144.98316. Google Earth's field level is about 8 m.
+  - The MCG field centre is lat -37.81977, lon 144.98316, and Google Earth's turf is 8 m.
   - The camera sits at `target - range * dir`, with
     `dir = (sin t sin h east, sin t cos h north, -cos t up)`.
-  - Use a vertical fov of 23.5 to match a 16:9 crop.
-  - Close views straight into the bowl never line up exactly, so judge those by eye.
 - **The views.** Check every one before a stage is called done:
   - the director's four reference angles (from the south, east, north-east and north-west);
   - straight down;
   - the eight compass points outside;
   - into the bowl from each end;
   - Street View from the centre square.
+
+## Where shipped data may come from (every ground)
+
+Fidelity comes first: a ground is copied as closely as it can be from Google Earth, Street View and
+real photos. The director accepts the risk on grey-area sources (2026-11-22: "if Channel 7 comes
+knocking I'll remove the anims, until then let me eat cake").
+
+- **Measuring and copying from Google Earth is fine.** Heights, positions, tree counts, colours and
+  shapes may be read off it, by eye or by script, whatever makes the ground most accurate.
+- **Prefer open data where it is as good:** OpenStreetMap (ODbL), Microsoft building footprints
+  (ODbL), the Meta and WRI canopy map (CC BY 4.0), government LiDAR and open data (CC BY). Never take
+  a less accurate result to use it, and never redo finished work for this rule.
+- **The one hard line: no raw imagery in the repo or the game.** Esri tiles, Google Earth or Street
+  View captures, satellite crops and downloaded press photos are not committed to the repo (it is
+  public) and not baked into a shipped texture (for example a satellite photo as a ground map). Keep
+  them, and QA sheets made from them, in the project's private files.
+- Credits for every open source used go in `docs/CREDITS_3D.md` and the game's credits screen
+  before 1.0.
 
 ## Seats
 
@@ -113,3 +134,42 @@ the new mesh instead. The MCG has two:
 4. Seating.
 5. Textures and materials.
 6. Surrounds (Yarra Park, the rail yards) and screens.
+
+## Optus Stadium, the second ground (2026-11-21)
+
+Optus went through the same gate. What it added to the method:
+
+- **Cameras in the model's own frame.** `PREINSPECT_MODEL_FRAME=1` makes `preinspect_look.gd` read
+  `x east, y north, z up` positions, so a Google Earth view's camera goes in unchanged
+  (`PREINSPECT_SIZE=1280x720`). Optus's model 0, 0 is lat -31.9510758, lon 115.8893142 (its drum lines
+  up with OpenStreetMap way 695799456); the field's centre is at -30.38, -8.78.
+- **Rendering in the cloud.** The mobile renderer runs on Mesa's software Vulkan (`mesa-vulkan-drivers`,
+  `VK_ICD_FILENAMES=.../lvp_icd.json`) under `xvfb-run`, about a minute a ground plus seconds a view.
+- **Read the facade close.** Twelve views every 30 degrees, 260 m out at tilt 80, found what the four
+  wide views hid: #1867 had the bronze low from the south-east to the west, where the real ribbon is tall
+  in the north and south and dips over the east lobby and the west. Its profile is
+  `tools/grounds/optus/facade.json`; `tools/grounds/optus/build.py` rebuilds the model from it.
+- **Signature material first.** The bronze fins (`tools/grounds/optus/bronze.py`) are drawn from the
+  director's photo: 0.31 m fins in runs of 1 to 7 m, bronze to sand with the odd copper-red, thin
+  pale-blue slivers, a soft drift of tone, metal sheen through `MATERIAL_FIX`.
+- **Check the map under the current light.** A painted map once needed a `tint` to survive the match
+  light; after the stand lighting changed on main (2026-11-22) the same tint washed it yellow, so Optus's
+  `tint` and `building_tint` are white now. Re-check a map's colours whenever the lighting changes.
+- **Bridges are models.** `SURROUNDS[...]["models"]` loads extra glbs into the ground (Optus:
+  `bridges.glb`, Matagarup's two 72 m arches and the river bridges on piers).
+
+- **Second facade pass (close views).** Zoom Google Earth's facade views to a third of the frame before
+  judging a material: at full frame the Optus bronze read as brown noise, close up it is a dark base with
+  thin bright streaks, and the "white Y columns" were slim posts in a dark strip under the roof. The glass
+  band, street glazing and the north's glazed storey are drawn by `bronze.py` (`glass`, `entrance`, `storey`).
+
+- **Match colour under Google Earth's own sun (2026-11-23).** `PREINSPECT_SUN=az,el` puts the capture's sun
+  where Google Earth's photos had it (Optus: 67.6, 45.5, from 42 shadow pairs, `survey/sun.json`). Colour is then
+  compared patch for patch on a PC GPU render, never the cloud's software renderer. At cdff0fe: roof membrane
+  (228,232,244) vs Google Earth (229,237,244), bronze brightness 1.00, sunlit seats (142,157,166) vs (130,151,158).
+- **Shading is the renderer's job.** A grey strip painted along the roof's inner edge read as a 3-4 m band at
+  0.8x Google Earth's brightness and threw the inner-edge trace 4 m off; removed, the edge measures median
+  +0.05 m, rms 1.05 m against Google Earth over 358 bearings (Google Earth's own trace scatters 0.85 m).
+
+Open at Optus: shadows read too blue on every ground (truss shadow on the roof blue/red 1.37 vs Google Earth's
+1.10); that is the match sky light, shared by all grounds.

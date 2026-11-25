@@ -18,7 +18,7 @@ Outputs (data/legacy/):
                    Rookie Draft. `club` is the club that really took him
                    (shown nowhere: the sim's clubs pick, an alternative
                    history; director 2026-11-10). `tie` is father-son.
-                   `peak` is his best real season (8+ games), the "Informed"
+                   `peak` is his real peak (build_start.real_peak), the "Informed"
                    potential (director 2026-11-11); blank if he never had one.
                    `last_season` is his last year on a real list (blank if
                    still listed in 2025 or never listed): he retires about then.
@@ -112,24 +112,30 @@ def tie_of(r):
 
 
 def peak_of(pid, rated, from_year):
-    peak = 0
-    for y in rated:
-        if y >= from_year and pid:
-            got = rated[y].get(pid)
-            if got and got[1] >= B.PEAK_GAMES:
-                peak = max(peak, got[0])
+    """His real peak (build_start.real_peak: his two best seasons, his
+    honours), "" when he never played a full enough season."""
+    peak = B.real_peak(_by_year, rated, pid, from_year)
     return str(peak) if peak else ""
+
+
+_by_year: dict = {}
 
 
 def main():
     by_year = B.load_seasons()
+    _by_year.update(by_year)
     rated = B.rate_seasons(by_year)
     lists = B.with_heights(all_rows("lists.csv"))
     # draftguru id -> the latest list row we know (dob, height, AFL Tables id)
     bio = {}
     for r in sorted(lists, key=lambda r: int(r["year"])):
         if r["draftguru_id"]:
-            bio[r["draftguru_id"]] = r
+            # A season he played no AFL game leaves his AFL Tables id blank
+            # (Jonathon Patton's 2021 list row): keep the id any row has, or
+            # his class row loses his real peak and position (bug bash
+            # 2026-11-23: "jon patton 99 pot is INSANE").
+            pid = r["afltables_id"] or bio.get(r["draftguru_id"], {}).get("afltables_id", "")
+            bio[r["draftguru_id"]] = dict(r, afltables_id=pid)
     seen = set(r["draftguru_id"] for r in read(os.path.join(LEG, "1990s", "lists_1990_opening.csv"))
                if r["draftguru_id"])
     seen_names = set()

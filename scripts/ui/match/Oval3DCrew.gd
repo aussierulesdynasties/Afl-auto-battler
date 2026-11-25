@@ -15,6 +15,13 @@ extends RefCounted
 
 const AVERAGE_GLB := "res://assets/oval3d/crew_average.glb"
 const MH_GLB := "res://assets/oval3d/crew_mh.glb"
+## The crew's own clips, keyed on the footballers' skeleton from broadcast reference
+## (tools/oval3d/crew/key_crew_clips.py): the goal umpire's signals.
+const CLIPS_GLB := "res://assets/oval3d/crew_clips.glb"
+const GOAL_SIGNAL := "goal_signal"
+const BEHIND_SIGNAL := "behind_signal"
+## The boundary umpire's throw-in.
+const THROW_IN := "throw_in"
 
 ## What each crew role wears over the body.
 const OUTFITS := {
@@ -46,6 +53,7 @@ const FIELD_NUMBERS := [1, 2, 3, 4, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 
 const LEG_BONES := ["pelvis", "thigh_l", "thigh_r", "calf_l", "calf_r"]
 
 static var _pieces := {}
+static var _clips := {}
 static var _covered := {}
 
 
@@ -258,6 +266,44 @@ static func covered(mi: MeshInstance3D, hide: Array) -> Mesh:
 	return out
 
 
+## CLIPS_GLB's clips, played once, their tracks pointed at the skeleton at skel_path (from the
+## AnimationPlayer's root) by bone name. Loaded once per path; every umpire shares them.
+static func clips(skel_path: NodePath) -> Dictionary:
+	var key := str(skel_path)
+	if _clips.has(key):
+		return _clips[key]
+	var out := {}
+	_clips[key] = out
+	if not ResourceLoader.exists(CLIPS_GLB):
+		return out
+	var ps := load(CLIPS_GLB) as PackedScene
+	if ps == null:
+		return out
+	var n := ps.instantiate()
+	for src in n.find_children("*", "AnimationPlayer", true, false):
+		for name in (src as AnimationPlayer).get_animation_list():
+			var a: Animation = (src as AnimationPlayer).get_animation(name).duplicate(true)
+			# Turns only, and where his hips are: the clip's bone lengths are the body it was
+			# keyed on, and each man keeps his own (the file keeps every track, so a bone
+			# held still through a clip still holds its pose).
+			for t in range(a.get_track_count() - 1, -1, -1):
+				var bn := a.track_get_path(t).get_concatenated_subnames()
+				if a.track_get_type(t) == Animation.TYPE_SCALE_3D \
+						or (a.track_get_type(t) == Animation.TYPE_POSITION_3D and bn != "pelvis"):
+					a.remove_track(t)
+			for t in range(a.get_track_count()):
+				var path := a.track_get_path(t)
+				var bone := path.get_concatenated_subnames()
+				if bone == "":
+					bone = str(path.get_name(path.get_name_count() - 1))
+				a.track_set_path(t, NodePath(key + ":" + bone))
+			# The walks loop; everything else plays once.
+			a.loop_mode = Animation.LOOP_LINEAR if str(name).begins_with("crew_walk") else Animation.LOOP_NONE
+			out[str(name)] = a
+	n.free()
+	return out
+
+
 ## A field umpire's number for umpire k of a match seeded `seed`: four different real numbers.
 static func field_number(seed: int, k: int) -> int:
 	var pool := FIELD_NUMBERS.duplicate()
@@ -269,3 +315,81 @@ static func field_number(seed: int, k: int) -> int:
 		pool[i] = pool[j]
 		pool[j] = t
 	return int(pool[k % pool.size()])
+
+
+const FLAG_SHADER := preload("res://scripts/ui/match/oval3d_flag.gdshader")
+## The flag stick: plain white-painted dowel.
+const FLAG_STICK := Color(0.9, 0.9, 0.88)
+
+
+## A goal umpire's two flags, one for each hand (crew_flag_stick + crew_flag_cloth), each closed
+## in its fist by an Oval3DGrip (off until it holds one). Returns {"r": {"node", "cloth", "grip",
+## "on"}, "l": ...}: node the flag (its origin the grip, the stick up +Y), parented to nothing
+## until it is stowed or held; on the BoneAttachment3D of that hand; cloth carries the flag shader
+## (furl, air).
+static func flags(skel: Skeleton3D, glb: String) -> Dictionary:
+	var all := pieces(glb)
+	if not all.has("crew_flag_stick") or not all.has("crew_flag_cloth"):
+		return {}
+	var out := {}
+	var stick_m := ShaderMaterial.new()
+	stick_m.shader = FLAG_SHADER
+	stick_m.set_shader_parameter("stick", true)
+	stick_m.set_shader_parameter("cloth_colour", FLAG_STICK)
+	for side in ["r", "l"]:
+		var grip := Oval3DGrip.new()
+		grip.name = "flag_grip_" + side
+		grip.side = side
+		grip.active = false
+		skel.add_child(grip)
+		var on := BoneAttachment3D.new()
+		on.name = "flag_hand_" + side
+		on.bone_name = "hand_" + side
+		skel.add_child(on)
+		var flag := Node3D.new()
+		flag.name = "flag_" + side
+		var stick := MeshInstance3D.new()
+		stick.mesh = (all["crew_flag_stick"] as Dictionary)["mesh"]
+		stick.material_override = stick_m
+		flag.add_child(stick)
+		var cloth := MeshInstance3D.new()
+		cloth.mesh = (all["crew_flag_cloth"] as Dictionary)["mesh"]
+		var m := ShaderMaterial.new()
+		m.shader = FLAG_SHADER
+		m.set_shader_parameter("seed", 3.1 if side == "r" else 0.7)
+		m.set_shader_parameter("furl", 0.0)
+		cloth.material_override = m
+		# The vertex shader moves the cloth well off its flat rest: keep it from being culled.
+		cloth.extra_cull_margin = 0.6
+		flag.add_child(cloth)
+		out[side] = {"node": flag, "cloth": m, "grip": grip, "on": on}
+	return out
+
+
+## The goal umpire's flag clips (tools/oval3d/crew/key_crew_clips.py, from 2025 broadcasts): a walk,
+## and the same with his flags; drawing both from the padding of the post on his near hand's side
+## (_r or _l), the goal wave, winding the cloths and putting them back, and the behind's wave of
+## one flag.
+const WALK := "crew_walk"
+const WALK_FLAGS := "crew_walk_flags"
+const WALK_SPEED := 1.5 / 1.1
+const FLAGS_DRAW := "flags_draw_"
+const GOAL_WAVE := "goal_wave"
+const FLAGS_FURL := "flags_furl_"
+const BEHIND_FLAG := "behind_flag_"
+## Their moments, as keyed: the near fist closes on both stowed sticks (DRAW_GRAB) and the other
+## hand takes one (DRAW_TAKE); the cloths open on the first low swing (DRAW_OPEN).
+const DRAW_GRAB := 0.4
+const DRAW_TAKE := 1.2
+const DRAW_OPEN := Vector2(1.5, 1.85)
+## The other flag handed over (FURL_GIVE), each cloth wound round its stick in turn (FURL_WIND),
+## both wedged back (FURL_STOW).
+const FURL_GIVE := 0.4
+const FURL_WIND := [Vector2(0.7, 3.2), Vector2(3.2, 5.7)]
+const FURL_STOW := 6.25
+## The behind: drawn, opened on the raise, put back.
+const BEHIND_GRAB := 0.35
+const BEHIND_OPEN := Vector2(0.6, 1.0)
+const BEHIND_STOW := 3.9
+## The second stick in the same fist sits beside the first, nearer the palm.
+const PAIR_GAP := Vector3(-0.022, 0.0, 0.0)

@@ -95,6 +95,12 @@ func _test_class_rows() -> void:
 	var peaked := cls.filter(func(p): return int(p.get("real_peak", 0)) > 0)
 	_check(not peaked.is_empty() and peaked.all(func(p): return int(p["potential"]) >= int(p["overall"])),
 			"A draftee with a real best season has his ceiling from it (%d)" % peaked.size())
+	# The 2011 first pick's ceiling is his real career, not pick 1's (bug bash
+	# 2026-11-23: "jon patton 99 pot is INSANE"; his class row had lost his
+	# AFL Tables id).
+	var patton := LegacyRollover.real_class(2011).filter(func(p): return str(p["real_name"]) == "Jonathon Patton")
+	_check(patton.size() == 1 and int(patton[0].get("real_peak", 0)) > 0 and int(patton[0]["potential"]) <= 70,
+			"Jonathon Patton's ceiling is his real peak (%s)" % (str(patton[0].get("potential", "")) if patton.size() == 1 else "missing"))
 
 
 ## The talks give the odds for each of Fitzroy's records.
