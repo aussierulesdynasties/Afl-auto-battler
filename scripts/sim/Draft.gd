@@ -50,6 +50,12 @@ var passed_clubs := {}
 ## [{"pick": overall pick number, "why": "list_full"}]. Saved with the draft;
 ## the draft screen and the draft-night news say each one.
 var user_passed: Array = []
+## Intake: every pick that passed, any club, in order: [{"pick": overall pick
+## number, "round", "club", "why": "list_full" | "passed" | "no_pick"}]. The
+## pick log shows each one as a row, so no pick number goes missing.
+var passed_picks: Array = []
+## Intake: why each passed club stopped drafting (code -> "why" as above).
+var _pass_why := {}
 ## Intake: how many slots the planned rounds hold (the extra rounds come after).
 var _planned_len := 0
 ## Intake: code -> the cap room the club had as the draft opened (GameState).
@@ -191,6 +197,8 @@ func _init_league_draft() -> void:
 	picked = {}
 	order = []
 	pick_history = []
+	passed_picks = []
+	_pass_why = {}
 	_pick_by_player = {}
 	club_lists = {}
 	club_spend = {}
@@ -471,11 +479,18 @@ func _note_user_pass(code: String) -> void:
 		user_passed.append({"pick": pick_index + 1, "why": "list_full"})
 
 
-func _skip_current_pick() -> void:
+func _skip_current_pick(why := "no_pick") -> void:
 	if intake_mode and pick_index < pick_sequence.size():
+		var code := str(pick_sequence[pick_index])
+		# Why this pick passed: the reason the club stopped drafting, else a
+		# full list, else `why` (a rival with nobody it would take, by default).
+		if not _pass_why.has(code):
+			_pass_why[code] = "list_full" if _list_full(code) else why
+		passed_picks.append({"pick": pick_index + 1, "round": current_round(),
+				"club": code, "why": str(_pass_why[code])})
 		# A club that passes (or has no pick it can take) is out of the rest of
 		# the draft, so the extra rounds always end.
-		passed_clubs[str(pick_sequence[pick_index])] = true
+		passed_clubs[code] = true
 	pick_index += 1
 	_extend_if_needed()
 
@@ -521,8 +536,9 @@ func pass_block_reason() -> String:
 func user_pass() -> bool:
 	if pass_block_reason() != "":
 		return false
+	_pass_why[user_club] = "passed"
 	passed_clubs[user_club] = true
-	_skip_current_pick()
+	_skip_current_pick("passed")
 	auto_until_user_turn()
 	return true
 
