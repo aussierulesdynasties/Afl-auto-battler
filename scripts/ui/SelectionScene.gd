@@ -18,6 +18,13 @@ extends Control
 
 const WEEK_W_MIN := 460.0
 const WEEK_W_MAX := 600.0
+## Under this width (a 960x540 PC window) the oval and the interchange under it
+## don't both fit the height: the six centre cards overlapped and the bench was
+## cut at the foot. The oval takes the full height on the left, this wide, and
+## the interchange goes to the top of the right-hand column (director,
+## 2026-11-25: "A · ground across"). Wider windows keep the interchange under the oval.
+const ACROSS_BELOW := 1000.0
+const ACROSS_OVAL_W := 586.0
 
 var _root: VBoxContainer
 var _notice := ""
@@ -32,6 +39,7 @@ var _line_cache := {}      # the other clubs' lines, built once a visit
 var _wide := false
 var _chemistry: Control           # the Team Chemistry sheet, open over the side
 var _list_host: VBoxContainer = null  # a wide screen's column for the players not picked
+var _bench_host: VBoxContainer = null  # the interchange's place in that column, under ACROSS_BELOW wide
 
 
 func _ready() -> void:
@@ -113,7 +121,15 @@ func _build() -> void:
 		_list_host = UiKit.vbox(6)
 		_list_host.name = "NotPickedColumn"
 		_list_host.size_flags_vertical = Control.SIZE_EXPAND_FILL
-		var side := _scroller(_side_page(auto), "SelectionScroll")
+		var across := UiKit.view_width(self) < ACROSS_BELOW
+		_bench_host = null
+		if across:
+			_bench_host = UiKit.vbox(6)
+			_bench_host.name = "BenchHost"
+		var side_page := _side_page(auto)
+		if across:
+			side_page.custom_minimum_size.x = ACROSS_OVAL_W
+		var side := _scroller(side_page, "SelectionScroll")
 		cols.add_child(side)
 		# The week keeps a readable measure: it does not stretch with the window.
 		var right := UiKit.vbox(10)
@@ -139,11 +155,14 @@ func _build() -> void:
 		week_page.minimum_size_changed.connect(fit)
 		right.resized.connect(fit)
 		fit.call_deferred()
+		if _bench_host != null:
+			right.add_child(_bench_host)
 		right.add_child(_list_host)
 		right.add_child(week)
 		cols.add_child(right)
 	else:
 		_list_host = null
+		_bench_host = null
 		# A phone scrolls the page by drag, with no bar (as Training): the bar's
 		# strip pushed the page 20 px past a 390 px screen, and the Auto-pick
 		# button's right border with it.
@@ -218,6 +237,7 @@ func _side_page(auto: bool) -> Control:
 	builder.name = "TeamBuilder"
 	builder.stacked = true
 	builder.rest_host = _list_host if _wide else null
+	builder.bench_host = _bench_host if _wide else null
 	builder.pull_up = not _wide
 	builder.condition = true
 	builder.size_flags_horizontal = Control.SIZE_EXPAND_FILL
