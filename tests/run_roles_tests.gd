@@ -42,6 +42,7 @@ func _run() -> void:
 	_failures.append_array(suite.failures)
 	await _t("_test_selection_tests")
 	await _t("_test_selection_pages_tests")
+	await _t("_test_selection_narrow_phones")
 	await _t("_test_skip_match_tests")
 	await _t("_test_week_ink_tests")
 	await _t("_test_team_changes_tests")
@@ -399,6 +400,154 @@ func _test_selection_tests() -> void:
 	await _selection_profile_tests()
 
 
+## Team selection on a phone (director, 2026-11-25): every card on the oval
+## one size and all 18 inside the boundary line, 8 px apart; a long surname
+## drawn narrower to fit its card; on a phone narrower than 390 the key line
+## and the interchange go up with the list and the ground runs off the sides;
+## a picked player's line takes the filter row's place at rest, so the oval
+## never moves, and sits above the filter row when the list is pulled up.
+func _test_selection_narrow_phones() -> void:
+	var db = root.get_node("GameDB")
+	_state.reset()
+	_state.start_season("MEL", db.club_list("MEL"))
+	_state.set_selection({})
+	var sizes := [Vector2i(360, 740), Vector2i(360, 800), Vector2i(384, 832), Vector2i(390, 844), Vector2i(412, 915)]
+	_check(sizes.size() == 5, "Five phone sizes checked")
+	for sz in sizes:
+		var tag := "%dx%d" % [sz.x, sz.y]
+		root.size = sz
+		var ui := await _open(false)
+		for i in range(20):
+			await process_frame
+		var tb: Node = ui.find_child("TeamBuilder", true, false)
+		var pitch: Control = ui.find_child("Pitch", true, false)
+		var sheet: Control = ui.find_child("ListSheet", true, false)
+		var consts: Dictionary = tb.get_script().get_script_constant_map()
+		var narrow: bool = tb._narrow
+		_check(narrow == (sz.x < 390), "%s: the narrow layout is on only under 390 wide (%s)" % [tag, str(narrow)])
+		var cards: Array = ui.find_children("Spot_*", "Button", true, false)
+		_check(cards.size() == 18, "%s: 18 cards on the oval (%d)" % [tag, cards.size()])
+		var one: Vector2 = (cards[0] as Control).size if not cards.is_empty() else Vector2.ZERO
+		var odd := cards.filter(func(c): return not (c as Control).size.is_equal_approx(one))
+		_check(odd.is_empty(), "%s: every card on the oval is one size, %s (%d differ)" % [tag, str(one), odd.size()])
+		# The white line as _draw_pitch draws it.
+		var line := Rect2(Vector2.ZERO, pitch.size).grow(-2.0)
+		if narrow:
+			var out: float = pitch.size.x * (float(consts["NARROW_GROUND"]) - 1.0) * 0.5
+			line = line.grow_individual(out, 0.0, out, 0.0)
+		var c := line.get_center()
+		var half := line.size * 0.5
+		var over := []
+		for card in cards:
+			var p: Vector2 = (card as Control).position
+			var s: Vector2 = (card as Control).size
+			for corner in [p, p + Vector2(s.x, 0), p + Vector2(0, s.y), p + s]:
+				if ((corner - c) / half).length_squared() > 1.0001:
+					over.append(str(card.name))
+					break
+		_check(over.is_empty(), "%s: all 18 cards inside the boundary line (over: %s)" % [tag, str(over)])
+		var gap := 1e9
+		var pair := ""
+		for i in range(cards.size()):
+			for j in range(i + 1, cards.size()):
+				var a := (cards[i] as Control).get_rect()
+				var b := (cards[j] as Control).get_rect()
+				var g := maxf(maxf(b.position.x - a.end.x, a.position.x - b.end.x), maxf(b.position.y - a.end.y, a.position.y - b.end.y))
+				if g < gap:
+					gap = g
+					pair = "%s-%s" % [cards[i].name, cards[j].name]
+		_check(gap >= float(consts["TOKEN_GAP"]) - 0.05, "%s: every card at least 8 px from the next (%.1f, %s)" % [tag, gap, pair])
+		# A long surname is drawn narrower, still inside its card.
+		var spilt := []
+		for card in cards:
+			var nf := (card as Node).find_child("NameFit", true, false) as Control
+			if nf == null or nf.get_child_count() == 0:
+				continue
+			var l := nf.get_child(0) as Label
+			var drawn := Rect2(l.global_position, Vector2(l.size.x * l.scale.x, l.size.y))
+			if not (card as Control).get_global_rect().grow(0.5).encloses(drawn):
+				spilt.append(l.text)
+		_check(spilt.is_empty(), "%s: every name sits inside its card (%s)" % [tag, str(spilt)])
+		# Under 390 the key line and the interchange wait in the list.
+		var bench := ui.find_children("BenchSpot_*", "Button", true, false)
+		var word: Control = ui.find_child("InterchangeWord", true, false)
+		_check(not bench.is_empty() and word != null and sheet.is_ancestor_of(bench[0]) == narrow and sheet.is_ancestor_of(word) == narrow,
+				"%s: the interchange is %s" % [tag, "in the list" if narrow else "by the oval"])
+		var save: Control = ui.find_child("SaveBest23", true, false)
+		var confirm: Control = ui.find_child("ConfirmSide", true, false)
+		_check(save != null and not sheet.is_ancestor_of(save) and (confirm == null or not sheet.is_ancestor_of(confirm)),
+				"%s: Save as my Best 23 and Confirm side stay by the oval" % tag)
+		_check(_no_scroll(ui.find_child("SelectionScroll", true, false)), "%s: the page does not scroll" % tag)
+		# A real tap on a card: his line takes the filter row's place.
+		var row: Control = ui.find_child("BuilderControls", true, false)
+		var row_y := (row.get_child(0) as Control).global_position.y
+		var oval_at := pitch.get_global_rect()
+		var why: String = await Tap.tap(ui.find_child("Spot_RUCK", true, false))
+		for i in range(20):
+			await process_frame
+		pitch = ui.find_child("Pitch", true, false)
+		var bar: Control = ui.find_child("PickedBar", true, false)
+		_check(why == "" and bar != null and bar.is_visible_in_tree() and absf(bar.global_position.y - row_y) < 1.5,
+				"%s: a real tap picks him and his line takes the filter row's place (%s, bar y %.0f, row y %.0f)" % [tag, why, bar.global_position.y if bar else -1.0, row_y])
+		_check(pitch.get_global_rect().is_equal_approx(oval_at), "%s: the oval does not move when you pick" % tag)
+		_check(_no_scroll(ui.find_child("SelectionScroll", true, false)), "%s: the page does not scroll with a player picked" % tag)
+		# Pulled up with a real tap: his line on top, the filter row under it.
+		sheet = ui.find_child("ListSheet", true, false)
+		var pull: Control = ui.find_child("ListPull", true, false)
+		var why_up: String = await Tap.tap(pull) if pull != null else "no pull"
+		await Tap.steady(sheet)
+		tb = ui.find_child("TeamBuilder", true, false)
+		row = ui.find_child("BuilderControls", true, false)
+		bar = ui.find_child("PickedBar", true, false)
+		_check(why_up == "" and tb.is_raised() and bar != null and row != null and bar.global_position.y < row.global_position.y,
+				"%s: pulled up, his line sits above the filter row (%s)" % [tag, why_up])
+		tb.set_raised(false, false)
+		await Tap.steady(sheet)
+		var why_c: String = await Tap.tap(ui.find_child("PickedCancel", true, false))
+		for i in range(20):
+			await process_frame
+		row = ui.find_child("BuilderControls", true, false)
+		bar = ui.find_child("PickedBar", true, false)
+		_check(why_c == "" and (bar == null or not bar.is_visible_in_tree()) and row != null
+				and absf((row.get_child(0) as Control).global_position.y - row_y) < 1.5,
+				"%s: Cancel brings the filter row back (%s)" % [tag, why_c])
+		# A swap from the list by real taps: his note rests in the filter row's
+		# place (director, 2026-11-25), the oval does not move, and the next
+		# tap on a player brings the filter row back.
+		var why_s: String = await Tap.tap(ui.find_child("Spot_FF", true, false))
+		await _settle()
+		sheet = ui.find_child("ListSheet", true, false)
+		why_s += await Tap.tap(ui.find_child("ListPull", true, false))
+		await Tap.steady(sheet)
+		var grid: Node = ui.find_child("NotSelected", true, false)
+		var first: Control = grid.get_child(0) as Control if grid != null and grid.get_child_count() > 0 else null
+		if first != null:
+			(ui.find_child("NotSelectedScroll", true, false) as ScrollContainer).ensure_control_visible(first)
+			await _settle()
+		why_s += await Tap.tap(first) if first != null else "no card"
+		for i in range(20):
+			await process_frame
+		tb = ui.find_child("TeamBuilder", true, false)
+		var note := ui.find_child("BuilderHint", true, false) as Label
+		var slot := ui.find_child("ListSlot", true, false) as Control
+		_check(why_s == "" and not tb.is_raised() and note != null and note.text.contains(" comes in")
+				and absf(note.global_position.y - row_y) < 1.5 and slot.get_global_rect().grow(0.5).encloses(note.get_global_rect()),
+				"%s: after a swap his note rests in the filter row's place (%s, %s)" % [tag, why_s, note.text if note != null else "none"])
+		_check(note != null and note.get_theme_color("font_color").is_equal_approx(load("res://scripts/ui/UiKit.gd").GOOD), "%s: the note in green" % tag)
+		pitch = ui.find_child("Pitch", true, false)
+		_check(pitch.get_global_rect().is_equal_approx(oval_at), "%s: the oval does not move with the note up" % tag)
+		var why_n: String = await Tap.tap(ui.find_child("Spot_RUCK", true, false))
+		await _settle()
+		why_n += await Tap.tap(ui.find_child("PickedCancel", true, false))
+		for i in range(20):
+			await process_frame
+		row = ui.find_child("BuilderControls", true, false)
+		_check(why_n == "" and row != null and absf((row.get_child(0) as Control).global_position.y - row_y) < 1.5,
+				"%s: the next tap on a player brings the filter row back (%s)" % [tag, why_n])
+		ui.queue_free()
+		await _settle()
+
+
 ## Gap between two controls' boxes across the page, 0 when they overlap in x.
 func _gap_x(a: Control, b: Control) -> float:
 	var ra := a.get_global_rect()
@@ -465,7 +614,11 @@ func _test_selection_pages_tests() -> void:
 		_check(inter != null and save != null and _gap_x(inter.get_child(0), save) < 48.0 and save.size.y >= 44,
 				"Phone: Save as my Best 23 sits beside the interchange it saves (%s)" % tag)
 		var list_h := (ui.find_child("NotSelectedScroll", true, false) as Control).size.y
-		_check(list_h >= 90.0, "Phone: the not-picked list keeps at least %d px (%s)" % [int(list_h), tag])
+		var rest_slot: Control = ui.find_child("ListSlot", true, false)
+		var rest_row: Control = ui.find_child("BuilderControls", true, false)
+		_check(rest_slot != null and rest_row != null and rest_row.get_child_count() > 0
+				and rest_slot.get_global_rect().grow(0.5).encloses((rest_row.get_child(0) as Control).get_global_rect()),
+				"Phone: at rest the list shows its filter buttons (%s)" % tag)
 		# The list pulls up over the bottom half of the oval (director, 2026-11-11).
 		var tb_p: Node = ui.find_child("TeamBuilder", true, false)
 		var pull: Control = ui.find_child("ListPull", true, false)
@@ -1401,8 +1554,12 @@ func _test_top_three_on_compact_cards() -> void:
 			and absf(cards[0].global_position.y - cards[1].global_position.y) < 0.5
 			and cards[1].global_position.x > cards[0].global_position.x + cards[0].size.x - 0.5,
 			"Team builder: the phone's list is still two cards across (%s columns)" % (str(grid.get("columns")) if grid != null else "no grid"))
-	# The list scrolls inside its own short window: a finger's scroll brings the
-	# first card's top three whole into it.
+	# At rest the phone's list shows its filter row (director, 2026-11-25): a
+	# real tap pulls it up, then a finger's scroll brings the first card's top
+	# three whole into its window.
+	var pull: Control = ui.find_child("ListPull", true, false)
+	_check(pull != null and (await Tap.tap(pull)) == "", "Team builder: a real tap pulls the phone's list up")
+	await Tap.steady(ui.find_child("ListSheet", true, false))
 	var window: ScrollContainer = ui.find_child("NotSelectedScroll", true, false)
 	if window != null and three != null:
 		window.ensure_control_visible(three)

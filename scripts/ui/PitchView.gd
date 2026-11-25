@@ -2036,10 +2036,16 @@ func _draw_role_labels(tr: float) -> void:
 		draw_string(UiKit.BOLD, origin, text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(1, 1, 1, 0.85))
 
 
+## A caption's size on discs of radius tr, at the chosen text size: a turnover
+## is a cue, a size up; a name is quieter.
+static func caption_size(tr: float, turnover: bool) -> int:
+	return UiKit.px(clampi(int(tr * (2.1 if turnover else 1.6)), 15 if turnover else 11, 20 if turnover else 15))
+
+
 ## The surnames' size: never under the 13 px floor (row T3.R9), and a little
 ## bigger under the bigger discs of a PC, where there is room for it.
 static func role_label_size(tr: float) -> int:
-	return clampi(int(tr * 0.85), UiKit.FINE, 16)
+	return UiKit.px(clampi(int(tr * 0.85), UiKit.FINE, 16))
 
 
 ## The jumper number's size on a disc of radius tr: it grows and shrinks with the
@@ -2157,7 +2163,7 @@ func _draw_press_banner() -> void:
 	if _press_banner.is_empty():
 		return
 	var text := str(_press_banner["text"])
-	var fs := 20
+	var fs := UiKit.px(20)
 	var font := UiKit.BOLD
 	var width := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
 	var origin := Vector2(clampf((size.x - width) * 0.5, 4.0, maxf(4.0, size.x - width - 4.0)), float(fs) + 10.0)
@@ -2186,7 +2192,7 @@ func _draw_caption(tr: float) -> void:
 		return
 	var turnover := bool(_caption.get("turnover", false))
 	# A turnover is a cue, not a name: a size up, so it reads at a glance.
-	var fs := clampi(int(tr * (2.1 if turnover else 1.6)), 15 if turnover else 11, 20 if turnover else 15)
+	var fs := caption_size(tr, turnover)
 	var width := UiKit.BOLD.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
 	var p := _disc_at(tok)
 	if not _caption_on_view(p):
@@ -2264,7 +2270,7 @@ func caption_box() -> Rect2:
 		return Rect2()
 	var tr := token_radius()
 	var turnover := bool(_caption.get("turnover", false))
-	var fs := clampi(int(tr * (2.1 if turnover else 1.6)), 15 if turnover else 11, 20 if turnover else 15)
+	var fs := caption_size(tr, turnover)
 	var width := UiKit.BOLD.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
 	if not _caption_on_view(_disc_at(tok)):
 		return Rect2()
@@ -2665,7 +2671,7 @@ func _draw_tip() -> void:
 	if tip.is_empty():
 		return
 	draw_set_transform(Vector2.ZERO)
-	var fs := 14
+	var fs := UiKit.px(14)
 	var who := str(tip.get("name", ""))
 	var text := str(tip["text"])
 	var nw := UiKit.BOLD.get_string_size(who, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x

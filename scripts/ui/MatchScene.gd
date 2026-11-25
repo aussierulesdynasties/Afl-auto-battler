@@ -1053,7 +1053,7 @@ func _on_skip_to_break() -> void:
 
 func _close_moment() -> void:
 	if _moment_overlay != null and is_instance_valid(_moment_overlay):
-		if _moment_overlay.has_meta("scene") and not _skipping:
+		if _moment_overlay.has_meta("scene") and not _skipping and UiKit.motion_on():
 			# Cut back to the match: the scene fades out over play resuming.
 			var leaving := _moment_overlay
 			leaving.name = "MomentLeaving"
@@ -3154,6 +3154,11 @@ func _show_bounce_moment(m: Dictionary) -> void:
 		panel.modulate.a = 1.0
 		call_up[0] = true
 		tell_room.call()
+		# With Reduced motion the call is simply up; otherwise it rises into place.
+		if not UiKit.motion_on():
+			margin.add_theme_constant_override("margin_bottom", 0)
+			return
+		Feel.moved.append("call")
 		var tw := margin.create_tween().set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 		tw.tween_method(func(v: float) -> void: margin.add_theme_constant_override("margin_bottom", int(v)),
 				-600.0, 0.0, 0.3))
@@ -4072,8 +4077,9 @@ func _goal_row(ev: Dictionary, stamp: String) -> Control:
 ## The scoring side's score swells for a moment on a goal.
 func _flash_score(side: int) -> void:
 	var l: Label = _score_home if side == 0 else _score_away
-	if l == null or not is_instance_valid(l) or _skipping:
+	if l == null or not is_instance_valid(l) or _skipping or not UiKit.motion_on():
 		return
+	Feel.moved.append("score")
 	l.pivot_offset = l.size / 2.0
 	l.scale = Vector2(1.35, 1.35)
 	var tw := create_tween()

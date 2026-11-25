@@ -124,6 +124,22 @@ static func meter(on_tap: Callable) -> Button:
 	return b
 
 
+## Arriving at the screen: the bar fills from empty and its figure counts up
+## with it (Reduced motion: both are simply there).
+static func arrive(b: Button) -> void:
+	var share := float(b.get_meta("share", 0.0))
+	var fill: Control = b.find_child("ChemistryFill", true, false)
+	var fig: Label = fill.get_node_or_null("ChemistryFigure") if fill != null else null
+	UiKit.fill_bar(fill, 0.0, share)
+	if fig != null:
+		# On the way up the figure sits where the meter puts that figure: past a
+		# short fill, inside a long one, never over the words beside the bar.
+		var say := func(n: int) -> String:
+			_set_figure(fill, n / 100.0)
+			return fig.text
+		UiKit.count_up(fig, percent(share), say, UiKit.Motion.DUR_BAR)
+
+
 ## The side changed: the bar moves to where it now stands.
 static func refresh(b: Button) -> void:
 	var share := _share()

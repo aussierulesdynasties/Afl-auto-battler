@@ -21,6 +21,10 @@ const FILL_MIN_CONTRAST := 2.0
 var _root: VBoxContainer
 var _settings: Control
 var _last_stop := ""
+# The results already shown this visit (the practice match, the time trial,
+# the papers' ladder): each fades in the first time it is built, not on a
+# rebuild after a tap.
+var _shown := {}
 
 
 func _ready() -> void:
@@ -95,7 +99,9 @@ func _build() -> void:
 			page.add_child(_summer_strip())
 		"practice":
 			if GameState.practice_played():
-				page.add_child(_match_report(GameState.preseason_practice().get("report", {}), "Practice", GameState.draftee_pool))
+				var report := _match_report(GameState.preseason_practice().get("report", {}), "Practice", GameState.draftee_pool)
+				page.add_child(report)
+				_arrive(report, "practice")
 			else:
 				page.add_child(_practice_setup())
 		"trial":
@@ -103,6 +109,7 @@ func _build() -> void:
 				# A PC: the time trial on the left, the summer so far beside it.
 				var cols := UiKit.hbox(28)
 				var left := _trial_section()
+				_arrive(left, "trial")
 				left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 				left.size_flags_stretch_ratio = 0.5
 				cols.add_child(left)
@@ -112,7 +119,9 @@ func _build() -> void:
 				cols.add_child(right)
 				page.add_child(cols)
 			else:
-				page.add_child(_trial_section())
+				var trial := _trial_section()
+				page.add_child(trial)
+				_arrive(trial, "trial")
 				page.add_child(_summer_strip())
 		"papers":
 			if _wide():
@@ -126,6 +135,7 @@ func _build() -> void:
 				pl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 				pcols.add_child(pl)
 				var pr := _papers_ladder()
+				_arrive(pr, "papers")
 				pr.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 				# Three columns of six clubs, each with its whole blurb under it: the
 				# ladder takes the wider share.
@@ -134,7 +144,9 @@ func _build() -> void:
 				page.add_child(pcols)
 			else:
 				page.add_child(_papers_story())
-				page.add_child(_papers_ladder())
+				var ladder := _papers_ladder()
+				page.add_child(ladder)
+				_arrive(ladder, "papers")
 	if not _wide():
 		# Air under the last row, so the page never ends hard against the footer.
 		page.add_child(UiKit.spacer(12))
@@ -143,6 +155,15 @@ func _build() -> void:
 	_root.add_child(_actions(stop))
 	if not places.is_empty():
 		UiKit.restore_places(_root, places)
+
+
+## A result fades in the first time it is on the page this visit (Reduced
+## motion: it is simply there).
+func _arrive(c: Control, key: String) -> void:
+	if _shown.has(key):
+		return
+	_shown[key] = true
+	UiKit.reveal(c)
 
 
 ## Whose pre-season it is and where it stands: the club's marker and colour,

@@ -2792,7 +2792,14 @@ func _test_menu_and_career() -> void:
 		if c is Button and load("res://scripts/sim/Ratings.gd").available(_state.list_player(str(c.get_meta("id")))):
 			grid_card = c
 			break
-	var tap_in: String = await Tap.tap(grid_card) if grid_card != null else "missing"
+	# At rest the phone's list shows one line (director, 2026-11-25): a real
+	# tap on its pull brings the cards up first.
+	var tap_in: String = await Tap.tap(current_scene.find_child("ListPull", true, false))
+	await Tap.steady(current_scene.find_child("ListSheet", true, false))
+	if grid_card != null:
+		(current_scene.find_child("NotSelectedScroll", true, false) as ScrollContainer).ensure_control_visible(grid_card)
+		await _settle()
+	tap_in += await Tap.tap(grid_card) if grid_card != null else "missing"
 	await _settle()
 	var tap_c: String = await Tap.tap(current_scene.find_child("Spot_C", true, false))
 	await _settle()

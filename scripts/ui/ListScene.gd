@@ -336,6 +336,8 @@ func _list_row(p: Dictionary) -> Control:
 		sb.border_width_bottom = 1
 		row.add_theme_stylebox_override(state, sb)
 	row.pressed.connect(_open_profile.bind(str(p["id"])))
+	# It answers a finger as every button does: it presses in, sounds and buzzes.
+	UiKit.feel(row, "soft")
 	var h := UiKit.hbox(8)
 	h.set_anchors_preset(Control.PRESET_FULL_RECT)
 	h.offset_left = 2

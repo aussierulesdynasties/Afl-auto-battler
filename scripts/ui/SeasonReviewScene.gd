@@ -6,6 +6,10 @@ var _root: VBoxContainer
 var _awards_overlay: Control
 var _awards_program: Control = null   # the Awards program sheet, while it is open
 var _awards_reveal := 0
+# The page has been seen once this visit: a resize rebuilds it without its
+# arrival. While awards night is up the arrival waits for it to close.
+var _settled := false
+var _awards_up := false
 
 
 func _ready() -> void:
@@ -29,9 +33,12 @@ func _ready() -> void:
 			var places := UiKit.scroll_places(_root)
 			_build()
 			UiKit.restore_places(_root, places))
+	var awards_due := not GameState.season_awards.is_empty() and GameState.season.is_season_over() \
+			and not bool(GameState.season_awards.get("presentation_seen", false))
+	_awards_up = awards_due
 	_build()
-	if not GameState.season_awards.is_empty() and GameState.season.is_season_over() \
-			and not bool(GameState.season_awards.get("presentation_seen", false)):
+	_settled = not awards_due
+	if awards_due:
 		_awards_overlay = SeasonAwards.open(self)
 		# Awards night meets him first; the screen's tip follows once the night
 		# is done (left mid-count, it waits for the next visit).
@@ -41,7 +48,16 @@ func _ready() -> void:
 
 
 func _after_awards() -> void:
-	if is_inside_tree() and not is_queued_for_deletion() and bool(GameState.season_awards.get("presentation_seen", false)):
+	if not is_inside_tree() or is_queued_for_deletion():
+		return
+	_awards_up = false
+	if not _settled:
+		# Awards night closed: the review arrives now, where it is seen.
+		var places := UiKit.scroll_places(_root)
+		_build()
+		UiKit.restore_places(_root, places)
+		_settled = true
+	if bool(GameState.season_awards.get("presentation_seen", false)):
 		FirstVisitIntro.show_if_due(self, "season_review")
 
 
@@ -68,6 +84,12 @@ func handle_back() -> bool:
 			skip.emit_signal("pressed")
 		return true
 	return false
+
+
+## The first build of this visit, with awards night out of the way: its
+## figures count up and its results fade in (Reduced motion: all at once).
+func arriving() -> bool:
+	return not _settled and not _awards_up
 
 
 func _content_width() -> float:
@@ -103,6 +125,8 @@ func _build() -> void:
 	cv.add_child(UiKit.lbl("Grand Final: %s" % _gf_line(season), UiKit.BODY, UiKit.TEXT, true))
 	cv.add_child(UiKit.lbl(summary_text(premier, mine_won, _ordinal(GameState.my_position())),
 			UiKit.SMALL, UiKit.GOOD if mine_won else UiKit.TEXT))
+	if arriving():
+		UiKit.reveal(champ)
 
 	# --- your season --------------------------------------------------------
 	var narrow := _content_width() < 720.0
@@ -135,10 +159,21 @@ func _build() -> void:
 	var mine_badge := UiKit.club_badge(GameState.my_club, 20)
 	StatsSide.badge(mine_badge, GameState.my_club, true)
 	lv.add_child(mine_badge)
-	lv.add_child(UiKit.lbl("Finished %s" % _ordinal(GameState.my_position()),
-			24, StatsSide.mine_ink(), true))
-	lv.add_child(UiKit.lbl("%s   -   %d pts" % [GameState.my_record(),
-			int(GameState.my_ladder_row().get("pts", 0))], 14, UiKit.TEXT))
+	var finish := UiKit.lbl("Finished %s" % _ordinal(GameState.my_position()),
+			24, StatsSide.mine_ink(), true)
+	finish.name = "SeasonFinish"
+	lv.add_child(finish)
+	var record := GameState.my_record()
+	var pts := int(GameState.my_ladder_row().get("pts", 0))
+	var rec := UiKit.lbl("%s   -   %d pts" % [record, pts], 14, UiKit.TEXT)
+	rec.name = "SeasonRecord"
+	lv.add_child(rec)
+	if arriving():
+		# Coming in, your finish climbs from the foot of the ladder and your
+		# points count up, as the hub's and the ladder's do.
+		UiKit.count_up(finish, GameState.my_position(), func(n): return "Finished %s" % _ordinal(n),
+				UiKit.Motion.DUR_COUNT, season.ladder.size())
+		UiKit.count_up(rec, pts, func(n): return "%s   -   %d pts" % [record, n])
 	lv.add_child(UiKit.spacer(4))
 	# Every fact below is the ladder's season, finals left out (bug-bash 4,
 	# 2026-11-10): said once, as the game-by-game strip's label is.
@@ -154,16 +189,21 @@ func _build() -> void:
 	facts.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	lv.add_child(facts)
 	for row in [
-			["Points for", str(stats["pf"])],
-			["Points against", str(stats["pa"])],
-			["Percentage", "%.1f%%" % stats["pct"]],
+			["Points for", str(stats["pf"]), int(stats["pf"]), func(n): return str(n)],
+			["Points against", str(stats["pa"]), int(stats["pa"]), func(n): return str(n)],
+			["Percentage", "%.1f%%" % stats["pct"], roundi(float(stats["pct"]) * 10.0),
+					func(n): return "%.1f%%" % (n / 10.0)],
 			["Best win", "No wins" if str(stats["best_opp"]) == "-" else "%d pt%s (%s)" % [stats["best_margin"], "" if int(stats["best_margin"]) == 1 else "s", stats["best_opp"]]],
 			["Worst loss", "No losses" if str(stats["worst_opp"]) == "-" else "%d pt%s (%s)" % [stats["worst_margin"], "" if int(stats["worst_margin"]) == 1 else "s", stats["worst_opp"]]],
 			["Longest win streak", "%d %s" % [stats["streak"], "game" if int(stats["streak"]) == 1 else "games"]],
-			["Goals kicked", str(stats["goals"])],
+			["Goals kicked", str(stats["goals"]), int(stats["goals"]), func(n): return str(n)],
 	]:
 		facts.add_child(UiKit.line(row[0], 12, UiKit.MUTED))
-		facts.add_child(UiKit.line(row[1], UiKit.SECONDARY, UiKit.TEXT, true))
+		var fig := UiKit.line(row[1], UiKit.SECONDARY, UiKit.TEXT, true)
+		facts.add_child(fig)
+		if arriving() and row.size() > 2:
+			# The season's totals count up (a margin or a streak is simply there).
+			UiKit.count_up(fig, int(row[2]), row[3])
 	var fl := finals_line(stats)
 	if fl != "":
 		lv.add_child(UiKit.spacer(2))
@@ -202,6 +242,8 @@ func _build() -> void:
 		bv.add_child(UiKit.lbl("Goal: %s  -  %s  -  the board is %s" % [str(last.get("goal", "")),
 				"met" if bool(last.get("met", false)) else "missed", GameState.board_state().to_lower()], 13, UiKit.MUTED))
 		page.add_child(bp)
+		if arriving():
+			UiKit.reveal(bp)
 
 	# --- awards -------------------------------------------------------------
 	if not GameState.season_awards.is_empty():

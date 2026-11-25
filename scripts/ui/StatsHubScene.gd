@@ -19,6 +19,9 @@ var _body: VBoxContainer
 ## The sheets over a section (a match's box score, a club's side and a player
 ## opened from it), the last on top.
 var _sheets: Array = []
+## The page has been built once this visit: a tab, a sort or a filter rebuilds
+## it without its arrival (the numbers count up only as you come in).
+var _settled := false
 
 
 func _ready() -> void:
@@ -37,6 +40,7 @@ func _ready() -> void:
 	margin.add_child(_root)
 	get_viewport().size_changed.connect(_on_resize)
 	_build()
+	_settled = true
 	if GameState.intro_due("season_stats"):
 		_show_intro.call_deferred()
 
@@ -163,6 +167,10 @@ func _hero() -> Control:
 		row.alignment = BoxContainer.ALIGNMENT_CENTER
 	var pos := UiKit.figure(GameState.ordinal(GameState.my_position()), UiKit.HERO, UiKit.club_vivid(GameState.my_club))
 	pos.name = "StatsHeroPosition"
+	if arriving():
+		# Coming in, your spot climbs from the foot of the ladder, as the hub's does.
+		UiKit.count_up(pos, GameState.my_position(), func(n): return GameState.ordinal(n),
+				UiKit.Motion.DUR_COUNT, season.ladder.size())
 	row.add_child(pos)
 	var when := "Home and away complete" if season.is_regular_done() 			else ("Before " + season.round_name(0) if season.round_index == 0 else "After " + season.round_progress(season.round_index - 1))
 	var lr := GameState.my_ladder_row()
@@ -173,6 +181,11 @@ func _hero() -> Control:
 	txt.add_child(UiKit.line(when, UiKit.SMALL, UiKit.MUTED))
 	row.add_child(txt)
 	return row
+
+
+## The first build of this visit, when the page's numbers count up.
+func arriving() -> bool:
+	return not _settled
 
 
 func _section(key: String) -> Control:

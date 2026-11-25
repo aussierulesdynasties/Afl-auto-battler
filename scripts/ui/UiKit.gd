@@ -1080,10 +1080,12 @@ static func reveal(c: Control, delay := 0.0) -> void:
 			tw.tween_interval(delay)
 		tw.tween_property(c, "modulate:a", 1.0, Motion.DUR_BASE) \
 				.set_trans(Motion.TRANS_IN).set_ease(Motion.EASE_IN)
+	var start := func() -> void:
+		_in_view(c, run)
 	if c.is_inside_tree():
-		run.call()
+		start.call()
 	else:
-		c.tree_entered.connect(run, CONNECT_ONE_SHOT)
+		c.tree_entered.connect(start, CONNECT_ONE_SHOT)
 
 
 ## Count `l` up to `to` (its text set by `say` for each value on the way),
@@ -1101,10 +1103,30 @@ static func count_up(l: Label, to: int, say: Callable, dur := Motion.DUR_COUNT, 
 				.set_trans(Motion.TRANS_SETTLE).set_ease(Motion.EASE_SETTLE)
 		# A second call that stops this one still leaves the true figure first.
 		tw.tween_callback(func(): l.text = str(say.call(to)))
+	var start := func() -> void:
+		# Under the dots it waits, showing the figure it will count from.
+		if _in_view(l, run):
+			l.text = str(say.call(from))
 	if l.is_inside_tree():
-		run.call()
+		start.call()
 	else:
-		l.tree_entered.connect(run, CONNECT_ONE_SHOT)
+		l.tree_entered.connect(start, CONNECT_ONE_SHOT)
+
+
+## Run `f` once `c` is in full view: at once, or, while the dots between
+## screens (ScreenTransition) are up, as soon as they have gone, so a count or
+## a fade on an arriving screen plays where it is seen, not under the dots.
+## True when it waits.
+static func _in_view(c: Node, f: Callable) -> bool:
+	var wipe: Node = c.get_tree().root.get_node_or_null("ScreenTransition") if c.is_inside_tree() else null
+	if wipe == null or not bool(wipe.call("covering")):
+		f.call()
+		return false
+	var go := func() -> void:
+		if is_instance_valid(c):
+			f.call()
+	wipe.connect("cleared", go, CONNECT_ONE_SHOT)
+	return true
 
 
 ## A big moment lands (director, 2026-10-11: result, draft pick, ladder,
@@ -1182,12 +1204,14 @@ static func fill_bar(fill: Control, from: float, to: float) -> void:
 	if not motion_on() or is_equal_approx(from, to):
 		return
 	fill.anchor_right = clampf(from, 0.0, 1.0)
-	_after(fill, 0.0, func() -> void:
+	var run := func() -> void:
 		if not is_instance_valid(fill):
 			return
 		Feel.moved.append("fill_bar")
 		_own(fill, "bar").tween_property(fill, "anchor_right", clampf(to, 0.0, 1.0), Motion.DUR_BAR) \
-				.set_trans(Motion.TRANS_SETTLE).set_ease(Motion.EASE_SETTLE))
+				.set_trans(Motion.TRANS_SETTLE).set_ease(Motion.EASE_SETTLE)
+	# Where it is seen: after the dots between screens, as count_up waits.
+	_after(fill, 0.0, func() -> void: _in_view(fill, run))
 
 
 ## Living backgrounds (director, 2026-10-11): `apply(t)` is called with t going
@@ -1341,10 +1365,18 @@ static func style_button(b: Button, fs := 16, primary := false, danger := false)
 			else style(Color(SURFACE, 0.5), 8, RADIUS)
 	off.set_border_width_all(1 if not primary and not danger else 0)
 	b.add_theme_stylebox_override("disabled", off)
-	var focus := style(Color.TRANSPARENT, 0, RADIUS, TEXT)
-	focus.set_border_width_all(2)
-	b.add_theme_stylebox_override("focus", focus)
+	b.add_theme_stylebox_override("focus", focus_ring())
 	feel(b, "main" if primary else "soft")
+
+
+## The keyboard's place on a control (Tab on PC): a 2 px TEXT ring over the
+## control's own look. Godot draws it only for the keyboard
+## (gui/common/show_focus_state_on_pointer_event), so a tap or a click shows none.
+## Buttons, tabs, text links and choices all wear this one ring.
+static func focus_ring() -> StyleBoxFlat:
+	var ring := style(Color.TRANSPARENT, 0, RADIUS, TEXT)
+	ring.set_border_width_all(2)
+	return ring
 
 
 ## A secondary button's outline and the dark well inside it (STYLE-01): the
@@ -1593,8 +1625,9 @@ static func paint_tab(b: Button, active: bool) -> void:
 	sb.border_width_bottom = 2 if active else 1
 	sb.content_margin_left = 10
 	sb.content_margin_right = 10
-	for state in ["normal", "hover", "pressed", "hover_pressed", "focus"]:
+	for state in ["normal", "hover", "pressed", "hover_pressed"]:
 		b.add_theme_stylebox_override(state, sb)
+	b.add_theme_stylebox_override("focus", focus_ring())
 	b.add_theme_color_override("font_color", TEXT if active else MUTED)
 	b.add_theme_color_override("font_hover_color", TEXT)
 	b.add_theme_color_override("font_pressed_color", TEXT)
@@ -1656,8 +1689,9 @@ static func text_action(text: String, fs := NAME) -> Button:
 	b.custom_minimum_size = Vector2(0, 44)
 	var sb := style(Color.TRANSPARENT, 8, 0)
 	sb.set_border_width_all(0)
-	for state in ["normal", "hover", "pressed", "hover_pressed", "focus"]:
+	for state in ["normal", "hover", "pressed", "hover_pressed"]:
 		b.add_theme_stylebox_override(state, sb)
+	b.add_theme_stylebox_override("focus", focus_ring())
 	b.add_theme_color_override("font_color", TEXT)
 	b.add_theme_color_override("font_hover_color", TEXT)
 	b.add_theme_color_override("font_pressed_color", MUTED)
@@ -1735,8 +1769,9 @@ static func choice_grid(node_name: String, options: Array, current: String, colu
 ## `strong`: an option that stands out (choice_grid's strong keys) keeps TEXT ink.
 static func paint_choice(b: Button, on: bool, strong := false) -> void:
 	var sb := _choice_box(on)
-	for s in ["normal", "hover", "pressed", "hover_pressed", "focus"]:
+	for s in ["normal", "hover", "pressed", "hover_pressed"]:
 		b.add_theme_stylebox_override(s, sb)
+	b.add_theme_stylebox_override("focus", focus_ring())
 	b.add_theme_color_override("font_color", TEXT if on or strong else MUTED)
 	b.add_theme_color_override("font_hover_color", TEXT)
 	b.add_theme_color_override("font_pressed_color", TEXT)

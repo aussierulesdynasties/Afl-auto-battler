@@ -103,8 +103,19 @@ var bench_host: Control = null
 ## oval, or picking a player, drops it back. Set before setup().
 var pull_up := false
 var _raised := false
+# A swap's note is on show in the filter row's place on a phone, until
+# the next tap on a player (director, 2026-11-25).
+var _note_up := false
 var _lift := 0.0
 var _slot: Control = null
+## A phone narrower than 390 (at the text size Settings asks for): the key
+## line and the interchange go up with the list and the ground is drawn
+## wider than the screen, so all 18 cards sit inside the line (director,
+## 2026-11-25, option C).
+var _narrow := false
+const NARROW_W := 390.0
+const NARROW_GROUND := 1.2
+const NARROW_SEP := 4
 var _sheet: PanelContainer = null
 var _pull: Control = null
 var _pull_from := 0.0
@@ -169,6 +180,12 @@ func _build() -> void:
 	UiKit.clear(self)
 	_marks =GameState.form_marks(_side) if not (_read_only or _rival or field_only) \
 			else {"cold": {}, "hot": {}}
+	_narrow = _wants_narrow()
+	# A narrow phone gives the oval the room above the filter row: on a
+	# 360 x 740 phone the middle column (full-forward to full-back, eight
+	# deep) needs 488 px to keep its cards 8 px apart (director, 2026-11-25).
+	add_theme_constant_override("separation", NARROW_SEP if _narrow else 14)
+	var up_with_list: Array[Control] = []
 	var field := UiKit.vbox(4 if stacked else 8)
 	field.name = "BuilderField"
 	field.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -189,6 +206,8 @@ func _build() -> void:
 		_pitch.custom_minimum_size = Vector2(0, UiKit.px(300 if _wide else 392))
 		_pitch.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_pitch.mouse_filter = Control.MOUSE_FILTER_PASS
+	# The ground drawn wider than the screen runs off its sides.
+	_pitch.clip_contents = _narrow
 	_pitch.draw.connect(_draw_pitch)
 	_pitch.gui_input.connect(func(ev: InputEvent):
 		if _raised and ev is InputEventMouseButton and ev.pressed and (ev as InputEventMouseButton).button_index == MOUSE_BUTTON_LEFT:
@@ -206,11 +225,15 @@ func _build() -> void:
 			card.set_meta("spot", str(keys[i]))
 			_pitch.add_child(card)
 	if _shows_condition():
-		field.add_child(_condition_key())
+		var key := _condition_key()
+		field.add_child(key)
+		up_with_list.append(key)
 	# The interchange sits under the oval, or in the screen's own place for it.
 	var ihost: Control = bench_host if bench_host != null else field
 	var inter := UiKit.lbl("Interchange", UiKit.SMALL, UiKit.MUTED, true)
+	inter.name = "InterchangeWord"
 	inter.autowrap_mode = TextServer.AUTOWRAP_OFF
+	up_with_list.append(inter)
 	if interchange_actions != null:
 		# The word and what acts on the side, side by side (no stretch between).
 		var irow := UiKit.hbox(12)
@@ -244,6 +267,7 @@ func _build() -> void:
 	bench.add_theme_constant_override("h_separation", 6)
 	bench.add_theme_constant_override("v_separation", 6)
 	ihost.add_child(bench)
+	up_with_list.append(bench)
 	var bench_ids: Array = _side["BENCH"]
 	for i in range(maxi(Ratings.bench(), bench_ids.size())):
 		var bid := str(bench_ids[i]) if i < bench_ids.size() else ""
@@ -319,6 +343,18 @@ func _build() -> void:
 		var pad := _search_field.get_theme_stylebox("normal").get_minimum_size().x
 		_search_field.custom_minimum_size = Vector2(maxf(90.0, ceilf(hint_w + pad) + 2.0), 44)
 	controls.add_child(_search_field)
+	if _narrow:
+		# Under the filter row, seen when the list is pulled up (director,
+		# 2026-11-25): Save as my Best 23 and Confirm side stay by the oval.
+		var at := controls.get_index() + 1
+		for n in up_with_list:
+			var was := n.get_parent()
+			was.remove_child(n)
+			if was is HBoxContainer and was.get_child_count() == 0:
+				(was as Control).visible = false
+			rest.add_child(n)
+			rest.move_child(n, at)
+			at += 1
 	if _read_only:
 		var ro := UiKit.lbl("Their side as it would take the field: tap a player to see him.", UiKit.SMALL, UiKit.MUTED)
 		ro.name = "ReadOnlyHint"
@@ -353,6 +389,10 @@ func _build() -> void:
 			_build())
 		bar.add_child(cancel)
 		rest.add_child(bar)
+		if pull_up and stacked and rest_host == null:
+			# At rest the list shows one line: while a player is picked, his
+			# line takes the filter row's place (director, 2026-11-25).
+			rest.move_child(bar, 0)
 	else:
 		var tap_hint := ("Tap" if (ScreenLayout.is_touch() or not _wide) else "Click") + " two of our players to swap them. Or drag one onto the other."
 		if hint_extra != "":
@@ -362,6 +402,13 @@ func _build() -> void:
 		hint.name = "BuilderHint"
 		hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		rest.add_child(hint)
+		if _note_up and start_note != "" and pull_up and stacked and rest_host == null:
+			# Just after a swap the list rests as his note, in the filter row's
+			# place and height, so the oval does not move; pulled up, the note
+			# sits above the filter row (director, 2026-11-25).
+			hint.custom_minimum_size.y = tabs.get_combined_minimum_size().y
+			hint.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+			rest.move_child(hint, 0)
 		if memory_note != "" and start_note != "":
 			# A fact, not a state: plain text, not the note's green.
 			var mem := UiKit.lbl(memory_note, UiKit.SMALL, UiKit.TEXT)
@@ -400,8 +447,9 @@ func _list_slot(rest: Control) -> Control:
 	_slot = Control.new()
 	_slot.name = "ListSlot"
 	_slot.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_slot.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_slot.size_flags_stretch_ratio = rest.size_flags_stretch_ratio
+	# At rest the list shows as its filter row and the oval takes the rest of
+	# the page (director, 2026-11-25); the list still pulls up over the oval.
+	_slot.size_flags_vertical = Control.SIZE_FILL
 	rest.custom_minimum_size.y = 0
 	_sheet = PanelContainer.new()
 	_sheet.name = "ListSheet"
@@ -425,7 +473,13 @@ func _list_slot(rest: Control) -> Control:
 	var sheet := _sheet
 	var fit := func():
 		var need := sheet.get_combined_minimum_size()
-		slot.custom_minimum_size = Vector2(need.x, maxf(120.0, need.y))
+		# One line at rest, the filter buttons' height: where the search can't
+		# sit beside them it waits in the list, and a picked player's line
+		# takes their place, so the oval never moves when you pick.
+		var row := rest.get_node_or_null("BuilderControls") as Control
+		var line: Control = row.get_child(0) as Control if row != null and row.get_child_count() > 0 else null
+		var gap := float(rest.get_theme_constant("separation"))
+		slot.custom_minimum_size = Vector2(need.x, line.get_combined_minimum_size().y + gap if line != null else need.y)
 	_sheet.minimum_size_changed.connect(fit)
 	fit.call()
 	_pull = Control.new()
@@ -627,7 +681,9 @@ func _card(id: String, on_field: bool, place: String) -> Button:
 	elif on_field:
 		var top := UiKit.ellipsis(GameDB.card_surname(p), 13, UiKit.TEXT, true)
 		top.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		face.add_child(top)
+		# A surname wider than the card is drawn narrower to fit (director,
+		# 2026-11-25): never cut, never wrapped, and the card keeps its size.
+		face.add_child(_name_fit(top))
 		# A man who plays several positions shows his main one on the oval (the
 		# full list is on his profile): four tags don't fit a card.
 		var tag := Ratings.role_tag(p)
@@ -657,10 +713,14 @@ func _card(id: String, on_field: bool, place: String) -> Button:
 			sub.autowrap_mode = TextServer.AUTOWRAP_OFF
 			sub.clip_text = true
 		face.add_child(sub)
-		# As wide as the text size (Settings) needs: a surname is never cut short.
-		b.custom_minimum_size = Vector2(UiKit.px(84 if _wide else 70), 44)
-		# A surname longer than the tile ("Moniz-Wakefield") widens it to fit.
-		b.set_meta("name_w", ceilf(UiKit.BOLD.get_string_size(top.text, HORIZONTAL_ALIGNMENT_LEFT, -1, UiKit.px(13)).x + 12.0))
+		# Team selection's oval: every card one size (director, 2026-11-25:
+		# "different sized cards looks terrible"), 85 wide on a phone, 84 on a PC,
+		# at the text size Settings asks for. The other ovals (a club's page, the
+		# Best 22 board, the All-Australian side) are as they were.
+		b.custom_minimum_size = Vector2(UiKit.px((84 if _wide else 85) if stacked else (84 if _wide else 70)), 44)
+		if not stacked:
+			# A surname longer than the tile ("Moniz-Wakefield") widens it to fit.
+			b.set_meta("name_w", ceilf(UiKit.BOLD.get_string_size(top.text, HORIZONTAL_ALIGNMENT_LEFT, -1, UiKit.px(13)).x + 12.0))
 		if not on and not _rival:
 			# Your club's ink across the top of each of your players, on every oval
 			# (STYLE-04: My list's Best 23 matches Team selection). The readable ink,
@@ -682,7 +742,7 @@ func _card(id: String, on_field: bool, place: String) -> Button:
 			strip.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 			strip.custom_minimum_size.x = UiKit.px(58)
 			face.add_child(strip)
-			b.custom_minimum_size.y = 60
+			b.custom_minimum_size.y = UiKit.px(54)
 			b.tooltip_text += "\n" + PlayerCondition.tooltip(PlayerCondition.read(p, GameState.form_log, GameState.reserves_log))
 		elif not field_only and not _rival and Workload.value(p) >= Workload.CARRYING:
 			# How fresh he is, on the card: no profile needed to see it.
@@ -693,15 +753,18 @@ func _card(id: String, on_field: bool, place: String) -> Button:
 			face.add_child(ready)
 			b.custom_minimum_size.y = 58
 		if (_marks["cold"] as Dictionary).has(id):
-			# Among the three furthest below their own season: the gap on the
-			# tile, both numbers in the tooltip and on his profile.
+			# Among the three furthest below their own season: his Form figure and
+			# its bar turn red (director, 2026-11-25), as a figure well below his
+			# season already does; no extra line, so his card stays the side's size.
+			# Both numbers are in the tooltip and on his profile.
 			var r: Dictionary = _marks["cold"][id]
-			var cold := UiKit.lbl(ReservesForm.cold_short(r), UiKit.TINY, UiKit.BAD, true)
-			cold.name = "FormCold_" + id
-			cold.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-			cold.autowrap_mode = TextServer.AUTOWRAP_OFF
-			face.add_child(cold)
-			b.custom_minimum_size.y += 14.0
+			var fig := face.find_child("Form_" + id, true, false) as Label
+			if fig != null:
+				fig.add_theme_color_override("font_color", UiKit.BAD)
+				fig.set_meta("form_cold", true)
+				var fill := fig.get_parent().get_parent().find_child("Fill", true, false) as ColorRect
+				if fill != null:
+					fill.color = UiKit.BAD
 			b.tooltip_text += "\n" + ReservesForm.cold_full(r)
 	else:
 		var row := UiKit.hbox(6)
@@ -862,6 +925,7 @@ func _why_out(p: Dictionary) -> String:
 ## First tap picks a player; the second swaps him with that player or spot.
 ## Tapping him again lets him go.
 func _tap(id: String, place: String) -> void:
+	_note_up = false
 	# A raised list has done its job once a player is tapped: the whole side shows again.
 	if _raised:
 		set_raised(false, false)
@@ -943,6 +1007,7 @@ func _swap(a: String, b: String, place: String) -> void:
 	memory_note = drop_memory(dropped)
 	# The note is on screen from this build, so the line under it is too.
 	start_note = note
+	_note_up = true
 	_build()
 	changed.emit(note)
 
@@ -967,10 +1032,22 @@ func _place_spots() -> void:
 	# seconds before the screen could draw (director, 2026-11-06).
 	if not is_instance_valid(_pitch) or _pitch.size == _placed_for or _pitch.size.x <= 0.0 or _pitch.size.y <= 0.0:
 		return
+	# Built before it was on screen (the width read as a PC's), or the
+	# window changed: the narrow phone's layout is decided again.
+	if _wants_narrow() != _narrow:
+		_build.call_deferred()
+		return
 	_placed_for = _pitch.size
 	layouts += 1
 	var r := Rect2(Vector2.ZERO, _pitch.size).grow(-8.0)
 	_across = _wide and r.size.x >= ACROSS_MIN_W
+	# Every card on the oval one size: the width for this ground, and the
+	# height of the tallest (director, 2026-11-25).
+	var one := Vector2.ZERO
+	for c in _pitch.get_children():
+		if c.has_meta("spot") and stacked:
+			(c as Control).custom_minimum_size.x = UiKit.px(84 if _across else 85)
+			one = one.max((c as Control).get_combined_minimum_size())
 	for c in _pitch.get_children():
 		if not c.has_meta("spot"):
 			continue
@@ -988,8 +1065,10 @@ func _place_spots() -> void:
 			at = Vector2(-at.x, at.y)
 		var u := Vector2(at.x, at.y) if _across else Vector2(at.y, -at.x)
 		var centre := r.get_center() + Vector2(u.x * r.size.x * 0.5, u.y * r.size.y * 0.5)
-		(c as Control).custom_minimum_size.x = maxf(UiKit.px(84 if _across else 70), float(c.get_meta("name_w", 0.0)))
-		var sz: Vector2 = (c as Control).get_combined_minimum_size()
+		var sz := one
+		if not stacked:
+			(c as Control).custom_minimum_size.x = maxf(UiKit.px(84 if _across else 70), float(c.get_meta("name_w", 0.0)))
+			sz = (c as Control).get_combined_minimum_size()
 		(c as Control).size = sz
 		(c as Control).position = (centre - sz * 0.5).clamp(r.position, r.end - sz)
 	if not _across and not stacked:
@@ -1007,6 +1086,9 @@ func _place_spots() -> void:
 		_sz.append((c as Control).size)
 	var start := _pos.duplicate()
 	_ground = Rect2(Vector2.ZERO, _pitch.size).grow(-GROUND_INSET)
+	if _narrow:
+		var out := _pitch.size.x * (NARROW_GROUND - 1.0) * 0.5
+		_ground = _ground.grow_individual(out, 0.0, out, 0.0)
 	for _round in range(12):
 		_keep_on_ground(r)
 		_spread_tokens(r, true)
@@ -1017,6 +1099,11 @@ func _place_spots() -> void:
 	for i in range(cards.size()):
 		(cards[i] as Control).position = _pos[i]
 	_pitch.queue_redraw()
+
+
+func _wants_narrow() -> bool:
+	return stacked and not _wide and pull_up and rest_host == null and bench_host == null \
+			and not field_only and is_inside_tree() and UiKit.view_width(self) < UiKit.px(NARROW_W)
 
 
 ## A resize lays the cards out once, when the frame's resizes have settled,
@@ -1183,6 +1270,9 @@ func _draw_pitch() -> void:
 	# Not boring (director, 2026-10-08): the ground itself, mown turf and white
 	# lines, as on your list's formation, not a faint outline.
 	var r := Rect2(Vector2.ZERO, _pitch.size).grow(-2.0)
+	if _narrow:
+		var out := _pitch.size.x * (NARROW_GROUND - 1.0) * 0.5
+		r = r.grow_individual(out, 0.0, out, 0.0)
 	var c := r.get_center()
 	var oval := PackedVector2Array()
 	for i in range(96):
@@ -1234,3 +1324,28 @@ func _ignore_mouse(n: Node) -> void:
 		(n as Control).mouse_filter = Control.MOUSE_FILTER_IGNORE
 	for ch in n.get_children():
 		_ignore_mouse(ch)
+
+
+## A surname that fits its card's width: drawn narrower where it is wider than
+## the room (a TV graphic's squeeze), the same height, never cut or wrapped.
+static func _name_fit(l: Label) -> Control:
+	var holder := Control.new()
+	holder.name = "NameFit"
+	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	holder.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	l.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
+	l.size_flags_horizontal = Control.SIZE_FILL
+	holder.add_child(l)
+	var fit := func():
+		var fs := l.get_theme_font_size("font_size")
+		var w := l.get_theme_font("font").get_string_size(l.text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x + 2.0
+		var room := holder.size.x
+		var k := minf(1.0, room / maxf(1.0, w))
+		holder.custom_minimum_size.y = l.get_combined_minimum_size().y
+		l.size = Vector2(w, holder.size.y)
+		l.scale = Vector2(k, 1.0)
+		l.position = Vector2((room - w * k) * 0.5, 0.0)
+	holder.resized.connect(fit)
+	l.theme_changed.connect(fit)
+	holder.custom_minimum_size.y = 18
+	return holder

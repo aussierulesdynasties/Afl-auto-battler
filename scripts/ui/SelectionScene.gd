@@ -40,6 +40,7 @@ var _wide := false
 var _chemistry: Control           # the Team Chemistry sheet, open over the side
 var _list_host: VBoxContainer = null  # a wide screen's column for the players not picked
 var _bench_host: VBoxContainer = null  # the interchange's place in that column, under ACROSS_BELOW wide
+var _settled := false   # built once this visit: a move or a switch rebuilds without the arrival
 
 
 func _ready() -> void:
@@ -65,6 +66,7 @@ func _ready() -> void:
 		if is_inside_tree() and not UiKit.keyboard_resize(self):
 			_build())
 	_build()
+	_settled = true
 	FirstVisitIntro.show_if_due.call_deferred(self, "selection")
 
 
@@ -265,6 +267,8 @@ func _side_page(auto: bool) -> Control:
 		# why. It shares the line of the Your team / opponent switch, so the
 		# height it used goes to the players not picked.
 		var meter := ChemistryMeter.meter(_open_chemistry)
+		if not _settled:
+			ChemistryMeter.arrive(meter)
 		var tabs: Control = page.get_node_or_null("OvalView")
 		# (A larger text size, Settings, has no room for both on a phone's line.)
 		if tabs != null and (_wide or UiKit.text_scale <= 1.0):

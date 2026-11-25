@@ -164,6 +164,8 @@ func _coach_row(job: String, c: Dictionary, releasable := false) -> Control:
 	if word != null:
 		v.add_child(word)
 	b.pressed.connect(func(): _sheet = CoachSheet.open(self, c))
+	# It answers a finger as every button does: it presses in, sounds and buzzes.
+	UiKit.feel(b, "soft")
 	var expiring := releasable and GameState.expiring_staff().has(c)
 	if expiring:
 		var stance := CoachMarket.assistant_stance(c, GameState.season_year)

@@ -466,6 +466,9 @@ static func _row(host: Control, r: Dictionary, specs: Array, width: float, band 
 		var l := UiKit.line(text, UiKit.FINE, ink, mine or key == "pts")
 		l.custom_minimum_size = Vector2(w, 0)
 		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		if key == "pts" and host.has_method("arriving") and bool(host.call("arriving")):
+			# Coming in, every club's points count up from nothing (Reduced motion: at once).
+			UiKit.count_up(l, int(r["pts"]), func(n): return str(n))
 		if c == specs[-1] and not _all_fixed(specs):
 			# Off the band's edge, as the header's last label is (_header).
 			var pad := StyleBoxEmpty.new()
