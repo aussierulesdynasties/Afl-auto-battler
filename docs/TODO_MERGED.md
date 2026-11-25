@@ -182,3 +182,6 @@ What has landed toward each open row of docs/TODO.md and docs/TODO_RULINGS.md, o
 - 202: Merged #2038: 3D kit: clash guernseys for 17 clubs, guernseys hang from the chest, shorts lie flat (row 202 2d).
 - 204: Merged #2086: Training: gains stop at potential (director 2026-11-23).
 - 168: Merged #2112: UI Batches 2 and 3: team selection ground across at 960, stripes behind the title only, text floor 13, brighter grey.
+- 202: Merged #2019: People First Stadium to the MCG standard: finned walls, bronze podium, scoreboard lattice, entry pods, Carrara surroundings (row 202 2b, WIP).
+- 202: Merged #1992: 3D crowd fills to each match's real-world attendance (row 202 2c, WIP).
+- 197: Merged #2060: Builds carry the ground models and the 3D players; the phone app keeps every stadium offline.

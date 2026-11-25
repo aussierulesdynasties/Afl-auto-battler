@@ -361,10 +361,12 @@ func _setup_3d() -> void:
 	_vp3d.add_child(_oval3d)
 	# The ground the match is at: its real model where one is in the game (GroundModels.GROUNDS).
 	_oval3d.ground = VignetteGround.ground_of(result)
+	var weather := str(result.get("weather", ""))
+	# How many came (MatchAttendance: fitted to real AFL crowds); the stands fill to it.
+	_oval3d.attendance = MatchAttendance.of_match(result, _oval3d.ground, time_of_day(weather))
 	_oval3d.build(director, home_code, away_code)
 	_tv = Oval3DBroadcast.new(_oval3d)
 	# The turf and light for the day, as the flat oval and the vignettes draw it.
-	var weather := str(result.get("weather", ""))
 	_oval3d.turf.apply(weather, time_of_day(weather))
 	_make_paint_3d()
 	_oval3d.set_ends(end_sign(period))
@@ -835,9 +837,10 @@ func _process(delta: float) -> void:
 			_nudge_h += delta * speed * MatchDirector.TEMPO
 		# Real footy's pauses (a ball-up waiting for the players, a player
 		# after a mark) play at double the watching speed (rule 2.93). The centre
-		# bounce waits for a goal's replay to end (rule 2.96).
+		# bounce waits for a goal's replay to end (rule 2.96), and play waits
+		# while a sting takes the picture into a replay (_tv.stinging_in).
 		var out := []
-		if not (_tv != null and _tv.on_replay() and director.bounce_next()):
+		if not (_tv != null and ((_tv.on_replay() and director.bounce_next()) or _tv.stinging_in())):
 			out = director.advance(delta * speed * (MatchDirector.PAUSE_PLAY if director.pausing() else 1.0))
 		for ev in out:
 			_track_quarter(ev)
