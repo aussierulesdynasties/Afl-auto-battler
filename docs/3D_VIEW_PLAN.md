@@ -237,12 +237,12 @@ _Update this section whenever 3D work merges. It is the one place 3D progress is
 | Ground | State | PRs |
 |---|---|---|
 | MCG | model, instanced seats | #1843 |
-| Marvel Stadium | model | #1911 |
+| Marvel Stadium | rebuilt to the MCG standard (true bearing, instanced seats, shut roof, Docklands surrounds) | #1911, this PR |
 | Adelaide Oval | model, 3D seats; plays in a match (exported for the game by tools/grounds/adelaide) | #1856 |
 | Optus Stadium | being rebuilt to the MCG standard: every ring an offset of the roof edge traced from Google Earth, bowl, podium and roof measured in metres (tools/grounds/optus/survey); seats; background scene (not in a match) | #1867 #1880 #1897; #1993 |
 | SCG | model | #1909 |
 | GMHBA Stadium | exterior model; background scene (not in a match) | #1903 #1878; open: Selwood Stand roof #1924 |
-| People First Stadium | model, roof; background scene (not in a match) | #1853 #1860 #1868 #1889 #1892 |
+| People First Stadium | model, roof; MCG standard r37 (fins, podium, scoreboard lattice, pods, glazed band, Carrara surroundings: tools/grounds/people_first); background scene (not in a match) | #1853 #1860 #1868 #1889 #1892 #2019 |
 | ENGIE Stadium | texture pass | #1866 |
 | Bellerive Oval | model | #1900 |
 | Manuka Oval | model | #1865 |
@@ -265,7 +265,7 @@ _Update this section whenever 3D work merges. It is the one place 3D progress is
 | Accor Stadium | model open | #1921 |
 | Marrara Oval (TIO Darwin) | model open | #1918 |
 | Traeger Park | model open | #1919 |
-| The Gabba | model, 3D seats; plays in a match (built 2026-11-19/20 on a branch that never merged; brought in from the PC) | |
+| The Gabba | model, 3D seats; plays in a match; to the MCG standard 2026-11-22 (modelled steel and roof, real seat colours, Woolloongabba from OpenStreetMap); roof, tiers and screen at heights measured in Google Earth (tools/grounds/gabba/README.md) | #2020 |
 | Barossa Park | rebuilt to the MCG standard: clubrooms (with the south end), terraces, Gather Round stands with 3D seats, courts fitted on the satellite's lines, second oval, land and Lyndoch out to 1 km, gum trees, far country to 16 km (tools/grounds/barossa); open: clubroom roof outline, stair to the south deck, far ranges | #2041 |
 | Sky Stadium, Jiangwan Stadium, Hands Oval, Blacktown, Summit Park, Macquarie Point | model; plays in a match (`tools/grounds/<g>/model`) | |
 

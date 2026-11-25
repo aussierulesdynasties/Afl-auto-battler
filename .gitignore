@@ -51,6 +51,10 @@ assets/grounds/*/*_backdrop_part*_*.png
 assets/grounds/*/*_backdrop_part*_*.png.import
 assets/grounds/*/*_backdrop_part*_*.jpg
 assets/grounds/*/*_backdrop_part*_*.jpg.import
+# Aerial imagery is never committed (docs/MCG_STANDARD.md); the private copy is in the project files (adelaide-standard/private-imagery)
+.claude/review/adelaide/esri/
+.claude/review/adelaide/hill/plan_*.jpg
+.claude/review/adelaide/proof/topdown_overlay.png
 
 # Blender autosave backups, editor/script backups and tool run logs: never source.
 *.blend[0-9]
