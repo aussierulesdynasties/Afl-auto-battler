@@ -1101,6 +1101,7 @@ class Motion:
 	const RISE := 6.0            ## px a sheet rises as it comes in
 	const STAGGER := 0.04        ## s per row
 	const LAND_FROM := 1.22      ## the one overshoot: Verdict, the cup
+	const DUR_LAND_FADE := 0.12  ## land(hidden): the fade up as it lands
 	const PRESS_IN := 0.05
 	const PRESS_HOLD := 0.08
 	const PRESS_OUT := 0.12
@@ -1198,25 +1199,42 @@ static func _in_view(c: Node, f: Callable) -> bool:
 ## premiership): `c` drops into place with weight, the sting sounds and a
 ## phone gives one firm buzz, `delay` seconds after it is shown. Then it
 ## stops. Without motion only the sound and the buzz come. `sound` false for
-## a second thing landing on the same moment.
-static func land(c: Control, delay := 0.0, sound := true) -> void:
+## a second thing landing on the same moment. `hidden`: `c` is invisible from
+## this call until its beat and fades up as it lands, so it never sits on screen
+## at rest and then pops (the full-time verdict, director 2026-11-25). Without it
+## (the hub's result sheet, whose text is solid from frame 0) only scale moves.
+static func land(c: Control, delay := 0.0, sound := true, hidden := false) -> void:
 	if c == null:
 		return
+	var hid := hidden and motion_on()
+	if hid:
+		c.modulate.a = 0.0
 	var hit := func() -> void:
 		if sound:
 			Feel.press("land")
-		if not motion_on() or not is_instance_valid(c):
+		if not is_instance_valid(c):
+			return
+		if not motion_on():
+			if hid:
+				c.modulate.a = 1.0
 			return
 		# The pivot reads the size, so it waits for the first layout.
 		if c.size.x < 1.0 and c.is_inside_tree():
 			await c.get_tree().process_frame
-			if not is_instance_valid(c) or not motion_on():
+			if not is_instance_valid(c):
+				return
+			if not motion_on():
+				if hid:
+					c.modulate.a = 1.0
 				return
 		Feel.moved.append("land")
 		c.pivot_offset = _pivot(c)
 		c.scale = Vector2(Motion.LAND_FROM, Motion.LAND_FROM)
 		_own(c, "scale").tween_property(c, "scale", Vector2.ONE, Motion.DUR_HERO) \
 				.set_trans(Motion.TRANS_STAMP).set_ease(Motion.EASE_STAMP)
+		if hid:
+			_own(c, "mod").tween_property(c, "modulate:a", 1.0, Motion.DUR_LAND_FADE) \
+					.set_trans(Motion.TRANS_IN).set_ease(Motion.EASE_IN)
 	_after(c, delay if motion_on() else 0.0, hit)
 
 

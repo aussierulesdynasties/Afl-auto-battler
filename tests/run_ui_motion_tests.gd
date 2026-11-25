@@ -75,6 +75,13 @@ func _run() -> void:
 	await _t("_test_arrival_moves_once")
 	await _t("_test_chemistry_figure_while_filling")
 	await _t("_test_review_waits_for_awards")
+	await _t("_test_land_hidden")
+	await _t("_test_fulltime_win")
+	await _t("_test_fulltime_loss_silent")
+	await _t("_test_fulltime_close_win")
+	await _t("_test_fulltime_big_loss")
+	await _t("_test_fulltime_reduced")
+	await _t("_test_fulltime_continue_frame1")
 
 	_feel.test_motion = false
 	_feel.force_phone = false
@@ -91,6 +98,7 @@ func _run() -> void:
 ## once, and each sheet starts from a fresh copy of that round's results (a
 ## career and a round per sheet only replayed the same seeded week).
 var _week: Dictionary = {}
+var _ladder_beats: Dictionary = {}   ## _see_ladder: frame of the count's last number, frame of the pop
 
 
 func _prime(win: bool, hurt := true) -> void:
@@ -880,3 +888,288 @@ func _test_review_waits_for_awards() -> void:
 	_check(_feel.moved.is_empty(), "After that a rebuild moves nothing (%s)" % str(_feel.moved))
 	scene.queue_free()
 	await _settle()
+
+
+# ---------------------------------------------------------------------------
+# Full time (director, 2026-11-25): the result lands, then the ladder move
+# (FullTimeMotion).
+
+## land(hidden) (the full-time verdict): invisible from the call until its beat,
+## then it fades up as it lands. Without `hidden` (the hub's sheet) the text is
+## solid throughout; with Reduced motion it is there at once.
+func _test_land_hidden() -> void:
+	var host := Control.new()
+	host.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	root.add_child(host)
+	var l: Label = _uk.lbl("Won by 23", 30, _uk.TEXT, true)
+	host.add_child(l)
+	await _settle(2)
+	_feel.clear()
+	_uk.land(l, 0.4, true, true)
+	_check(is_equal_approx(l.modulate.a, 0.0), "land(hidden): invisible from the call (alpha %.2f)" % l.modulate.a)
+	await create_timer(0.15).timeout
+	_check(is_equal_approx(l.modulate.a, 0.0) and _feel.moved.is_empty() and not _feel.heard.has("land"),
+			"land(hidden): still invisible, still and silent before its beat (alpha %.2f, %s)" % [l.modulate.a, str(_feel.moved)])
+	await create_timer(1.0).timeout
+	_check(is_equal_approx(l.modulate.a, 1.0) and is_equal_approx(l.scale.x, 1.0) and _feel.moved == ["land"] and _feel.heard.has("land"),
+			"land(hidden): after its beat it has landed, solid and at rest, with the sting (alpha %.2f, scale %.2f, %s)"
+			% [l.modulate.a, l.scale.x, str(_feel.moved)])
+	var m: Label = _uk.lbl("Won by 9", 30, _uk.TEXT, true)
+	host.add_child(m)
+	await _settle(2)
+	_uk.land(m, 0.3)
+	_check(is_equal_approx(m.modulate.a, 1.0), "land without hidden leaves the text solid from the call (the hub's sheet)")
+	_state.set_reduced_motion(true)
+	var r: Label = _uk.lbl("Won by 4", 30, _uk.TEXT, true)
+	host.add_child(r)
+	_uk.land(r, 0.3, true, true)
+	_check(is_equal_approx(r.modulate.a, 1.0), "Reduced motion: land(hidden) leaves it visible from the call")
+	_state.set_reduced_motion(false)
+	host.queue_free()
+	await _settle()
+
+
+## Full time as Review match opens it, your score and theirs forced as [goals,
+## behinds]. The ladder spot before is forced four places away, so the ladder
+## line has a count to make.
+func _open_fulltime(mine: Array, theirs: Array) -> Control:
+	_prime(true, false)
+	var res: Dictionary = _state.last_match
+	var me := 0 if str(res["home"]) == _state.my_club else 1
+	var goals := [0, 0]
+	var behinds := [0, 0]
+	goals[me] = int(mine[0])
+	behinds[me] = int(mine[1])
+	goals[1 - me] = int(theirs[0])
+	behinds[1 - me] = int(theirs[1])
+	res["goals"] = goals
+	res["behinds"] = behinds
+	res["score"] = [goals[0] * 6 + behinds[0], goals[1] * 6 + behinds[1]]
+	_state.last_match = res
+	var now: int = _state.my_position()
+	_state.last_pos_before = now + 4 if now <= 14 else now - 4
+	_state.review_requested = true
+	_feel.clear()
+	var scene: Control = load("res://scenes/MatchScene.tscn").instantiate()
+	root.add_child(scene)
+	return scene
+
+
+func _ft_shell(scene: Node) -> Control:
+	var rise := scene.find_child("SheetRise", true, false)
+	return rise.get_child(0) as Control if rise != null and rise.get_child_count() > 0 else null
+
+
+func _ft_rows(scene: Node) -> Array:
+	return [scene.find_child("FinalScore_0", true, false), scene.find_child("FinalScore_1", true, false)]
+
+
+## Watch full time for `secs`, sampling every frame: the verdict's largest scale
+## and drop, the flash's brightest, and the sheet's widest sideways move.
+func _watch_fulltime(scene: Node, secs: float) -> Dictionary:
+	var v: Control = scene.find_child("Verdict", true, false)
+	var shell := _ft_shell(scene)
+	var x0 := shell.position.x if shell != null else 0.0
+	var out := {"max_s": 0.0, "max_dy": 0.0, "flash": 0.0, "max_dx": 0.0}
+	var timer := create_timer(secs)
+	while timer.time_left > 0.0:
+		await process_frame
+		if is_instance_valid(v):
+			out["max_s"] = maxf(float(out["max_s"]), v.scale.x)
+			if v.has_meta("_ft_pose"):
+				out["max_dy"] = maxf(float(out["max_dy"]), absf(float((v.get_meta("_ft_pose") as Dictionary)["dy"])))
+		if shell != null and is_instance_valid(shell):
+			if shell.has_meta("_ft_flash"):
+				out["flash"] = maxf(float(out["flash"]), float((shell.get_meta("_ft_flash") as Dictionary)["a"]))
+			out["max_dx"] = maxf(float(out["max_dx"]), absf(shell.position.x - x0))
+	return out
+
+
+## The verdict and both score rows are solid, at scale 1 and back in their places.
+func _ft_at_rest(scene: Node) -> bool:
+	var v: Control = scene.find_child("Verdict", true, false)
+	if v == null or not is_equal_approx(_alpha_chain(v), 1.0) or not is_equal_approx(v.scale.x, 1.0) or v.has_meta("_ft_pose"):
+		return false
+	for r in _ft_rows(scene):
+		if r == null or not is_equal_approx((r as Control).modulate.a, 1.0) or (r as Node).has_meta("_ft_pose"):
+			return false
+	return true
+
+
+## The ladder line counts the first time it is in view: on a phone, once it is
+## scrolled up into the sheet's window. Returns the line once it has had time.
+func _see_ladder(scene: Node, want: String) -> Label:
+	var l: Label = scene.find_child("LadderMove", true, false)
+	_check(l != null and l.text == want, "The ladder line holds the true words from the first frame (%s)" % (l.text if l != null else "missing"))
+	if l == null:
+		return null
+	var sc := scene.find_child("FullTime", true, false).find_children("*", "ScrollContainer", true, false)[0] as ScrollContainer
+	var mid := l.get_global_rect().get_center().y
+	var view := sc.get_global_rect()
+	if mid < view.position.y or mid > view.end.y:
+		_check(is_equal_approx(l.modulate.a, 0.0) and not _feel.moved.has("count_up"),
+				"Below the fold the ladder line waits, hidden, uncounted (alpha %.2f)" % l.modulate.a)
+		sc.scroll_vertical += int(mid - view.get_center().y)
+	else:
+		_check(_feel.moved.has("count_up"), "In view, the ladder line counted at its beat (%s)" % str(_feel.moved))
+	# Frame by frame: when the count's last number shows, and when the pop starts.
+	_ladder_beats = {"last": -1, "pop": -1}
+	var counted := false
+	var frame := 0
+	var t := create_timer(1.6)
+	while t.time_left > 0.0:
+		await process_frame
+		frame += 1
+		if l.text != want:
+			counted = true
+		elif counted and int(_ladder_beats["last"]) < 0:
+			_ladder_beats["last"] = frame
+		if _feel.moved.has("ft_pop") and int(_ladder_beats["pop"]) < 0:
+			_ladder_beats["pop"] = frame
+	_check(_feel.moved.has("count_up") and is_equal_approx(l.modulate.a, 1.0) and l.text == want and is_equal_approx(l.scale.x, 1.0),
+			"Seen, the ladder line counts to the true spot and rests solid (%s, alpha %.2f)" % [l.text, l.modulate.a])
+	return l
+
+
+## A 30-point win: the verdict winds up and slams, the sheet flashes your club's
+## colour, the rows snap in under it, and the ladder count ends on the pop.
+func _test_fulltime_win() -> void:
+	var scene := _open_fulltime([13, 5], [8, 5])
+	var v: Label = scene.find_child("Verdict", true, false)
+	var rows := _ft_rows(scene)
+	var cont: Control = scene.find_child("FullTimeContinue", true, false)
+	_check(v != null and v.text == "Won by 30", "Full time: the verdict says Won by 30 from the first frame (%s)" % (v.text if v != null else "missing"))
+	_check(v != null and is_equal_approx(v.modulate.a, 0.0) and rows[0] != null and is_equal_approx((rows[0] as Control).modulate.a, 0.0)
+			and is_equal_approx((rows[1] as Control).modulate.a, 0.0),
+			"The verdict and the score rows are hidden until their beat, never at rest and then popping")
+	_check(cont != null and is_equal_approx(_alpha_chain(cont), 1.0), "Continue is solid from the first frame")
+	var want: String = _state.ladder_move_line(_state.last_pos_before)
+	var w: Dictionary = await _watch_fulltime(scene, 1.3)
+	_check(_feel.moved.has("ft_slam") and _feel.moved.has("ft_flash") and _feel.moved.count("ft_snap") == 2
+			and not _feel.moved.has("ft_slam_heavy") and not _feel.moved.has("ft_shake") and not _feel.moved.has("land"),
+			"A 30-point win: wind-up and slam, the flash, both rows snap in; no heavy slam or shake (%s)" % str(_feel.moved))
+	_check(_feel.heard.has("land"), "A win: the sting on the impact")
+	_check(float(w["max_s"]) > 1.3 and float(w["max_s"]) <= 1.361, "A win winds up toward 1.36 (largest %.3f)" % float(w["max_s"]))
+	_check(float(w["flash"]) > 0.2 and float(w["flash"]) <= 0.301 and is_zero_approx(float(w["max_dx"])),
+			"A win: the winner's colour flashes to 0.30 (%.2f); the sheet stays still" % float(w["flash"]))
+	var shell := _ft_shell(scene)
+	_check(_ft_at_rest(scene) and shell != null and is_zero_approx(float((shell.get_meta("_ft_flash") as Dictionary)["a"])),
+			"A win: by 1.3 s everything is at rest and the flash gone")
+	var ink: Color = _uk.club_ink(_state.my_club)
+	_check(shell != null and (shell.get_meta("_ft_flash") as Dictionary)["col"] == Color(ink, 1.0),
+			"A win: the flash is your club's name colour, which reads on the dark sheet (%s)" % str(ink))
+	var l := await _see_ladder(scene, want)
+	_check(_feel.moved.has("ft_pop") and l != null and l.get_theme_color("font_color") == Color("cfcabe"),
+			"The ladder count ends on the pop and its colour comes back (%s)" % str(_feel.moved))
+	var last := int(_ladder_beats.get("last", -1))
+	var pop := int(_ladder_beats.get("pop", -1))
+	_check(last > 0 and pop >= last and pop - last <= 1,
+			"The pop lands with the count's last number (number on frame %d, pop on frame %d)" % [last, pop])
+	_check(_all_text_solid(scene.find_child("FullTime", true, false)), "Every line of full time ends solid")
+	scene.queue_free()
+	await _settle()
+
+
+## A 30-point loss: the plain slam, silent and without a flash (director,
+## 2026-11-25: no celebratory sting on a loss, and no flash).
+func _test_fulltime_loss_silent() -> void:
+	var scene := _open_fulltime([8, 5], [13, 5])
+	var v: Label = scene.find_child("Verdict", true, false)
+	_check(v != null and v.text == "Lost by 30", "Loss: the verdict says Lost by 30 (%s)" % (v.text if v != null else "missing"))
+	var w: Dictionary = await _watch_fulltime(scene, 1.2)
+	_check(_feel.moved.has("ft_slam") and not _feel.moved.has("ft_slam_heavy") and not _feel.moved.has("ft_flash")
+			and not _feel.moved.has("ft_shake") and not _feel.heard.has("land"),
+			"A 30-point loss: the plain slam, no flash, no shake, no sting (%s, %s)" % [str(_feel.moved), str(_feel.heard)])
+	_check(is_zero_approx(float(w["flash"])), "A loss: the sheet never flashes (%.2f)" % float(w["flash"]))
+	_check(_ft_at_rest(scene), "A 30-point loss: it ends solid and at rest")
+	scene.queue_free()
+	await _settle()
+
+
+## A close win (under 12): the heavy slam and the shake; Screen shake Off keeps
+## the sheet still.
+func _test_fulltime_close_win() -> void:
+	_state.set_screen_shake_on(true)
+	var scene := _open_fulltime([10, 5], [10, 0])
+	var w: Dictionary = await _watch_fulltime(scene, 1.4)
+	_check(_feel.moved.has("ft_slam_heavy") and _feel.moved.has("ft_shake") and _feel.moved.has("ft_flash"),
+			"A 5-point win: the heavy slam, the shake, the flash (%s)" % str(_feel.moved))
+	_check(float(w["max_s"]) > 1.4 and float(w["max_s"]) <= 1.481 and float(w["max_dx"]) > 1.5 and float(w["max_dx"]) <= 3.01,
+			"A close win winds up toward 1.48 (%.3f) and shakes up to 3 px (%.2f)" % [float(w["max_s"]), float(w["max_dx"])])
+	var shell := _ft_shell(scene)
+	_check(_ft_at_rest(scene) and shell != null and is_zero_approx(shell.position.x), "A close win ends at rest, the sheet back in place")
+	scene.queue_free()
+	await _settle()
+	_state.set_screen_shake_on(false)
+	scene = _open_fulltime([10, 5], [10, 0])
+	w = await _watch_fulltime(scene, 1.2)
+	_check(_feel.moved.has("ft_slam_heavy") and not _feel.moved.has("ft_shake") and is_zero_approx(float(w["max_dx"])),
+			"Screen shake Off: the heavy slam without the shake (%s)" % str(_feel.moved))
+	scene.queue_free()
+	await _settle()
+	_state.set_screen_shake_on(true)
+
+
+## A big loss (40 or more): the verdict sinks into place, silent, and the rows
+## fade up.
+func _test_fulltime_big_loss() -> void:
+	_state.set_screen_shake_on(true)
+	var scene := _open_fulltime([6, 5], [13, 8])
+	var v: Label = scene.find_child("Verdict", true, false)
+	_check(v != null and v.text == "Lost by 45", "Big loss: Lost by 45 (%s)" % (v.text if v != null else "missing"))
+	var w: Dictionary = await _watch_fulltime(scene, 1.4)
+	_check(_feel.moved.has("ft_sink") and not _feel.moved.has("ft_slam") and not _feel.moved.has("ft_flash")
+			and not _feel.moved.has("ft_shake") and not _feel.heard.has("land") and _feel.moved.count("reveal") >= 2,
+			"A 45-point loss: it sinks and the rows fade up; no slam, flash, shake or sting (%s, %s)" % [str(_feel.moved), str(_feel.heard)])
+	_check(float(w["max_dy"]) >= 7.9 and float(w["max_dy"]) <= 8.01 and float(w["max_s"]) <= 1.001,
+			"Big loss: it falls from 8 px above, clear of the line over it, without scaling (%.1f px)" % float(w["max_dy"]))
+	_check(_ft_at_rest(scene), "Big loss: it ends solid and in its place")
+	scene.queue_free()
+	await _settle()
+
+
+## Reduced motion (the director's rule): full time is all there at once, nothing
+## moves, only the sting sounds on a win.
+func _test_fulltime_reduced() -> void:
+	_state.set_reduced_motion(true)
+	var scene := _open_fulltime([10, 5], [10, 0])
+	var l: Label = scene.find_child("LadderMove", true, false)
+	var want: String = _state.ladder_move_line(_state.last_pos_before)
+	_check(_ft_at_rest(scene) and l != null and is_equal_approx(l.modulate.a, 1.0) and l.text == want,
+			"Reduced motion: the verdict, the rows and the ladder line are all there on the first frame")
+	await create_timer(1.2).timeout
+	_check(_feel.moved.is_empty(), "Reduced motion: nothing moves (%s)" % str(_feel.moved))
+	_check(_feel.heard.has("land"), "Reduced motion: the win's sting still sounds")
+	scene.queue_free()
+	await _settle()
+	scene = _open_fulltime([8, 5], [13, 5])
+	await create_timer(0.6).timeout
+	_check(not _feel.heard.has("land") and _feel.moved.is_empty(), "Reduced motion, a loss: silent and still (%s)" % str(_feel.heard))
+	scene.queue_free()
+	await _settle()
+	_state.set_reduced_motion(false)
+
+
+## A real finger on Continue from the first frame and mid-slam, on a close win
+## (the heavy slam and the shake): nothing the motion draws takes the touch.
+func _test_fulltime_continue_frame1() -> void:
+	var router := root.get_node("Router")
+	var stack: Array = (router.get("stack") as Array).duplicate()
+	router.set("stack", [])   # Back has nowhere to go: the scene stays to be checked
+	var scene := _open_fulltime([10, 5], [10, 0])
+	var v: Control = scene.find_child("Verdict", true, false)
+	var hidden := is_equal_approx(v.modulate.a, 0.0)
+	var why: String = await Tap.tap(scene.find_child("FullTimeContinue", true, false))
+	_check(why == "" and hidden, "A real tap on Continue at frame 1, the verdict still to come, reaches it (%s)" % why)
+	await create_timer(0.3).timeout
+	var mid := v.scale.x > 1.01 or v.modulate.a < 0.99
+	var why2: String = await Tap.tap(scene.find_child("FullTimeContinue", true, false))
+	_check(why2 == "" and mid, "...and mid-slam (scale %.2f) it still reaches it (%s)" % [v.scale.x, why2])
+	var ok := true
+	for n in scene.find_child("FullTime", true, false).find_children("*", "Control", true, false):
+		if n is Label and (n as Control).mouse_filter != Control.MOUSE_FILTER_IGNORE and str(n.name).begins_with("Ft"):
+			ok = false
+	_check(ok, "Nothing full time's motion adds takes a touch")
+	scene.queue_free()
+	await _settle()
+	router.set("stack", stack)

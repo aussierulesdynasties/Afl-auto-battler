@@ -142,6 +142,9 @@ var _report_overlay: Control
 var _ft_box := {}               # the full-time review: overlay, body, footer
 var _ft_tabs: HBoxContainer
 var _ft_tab := "summary"        # summary (home), stats or report
+## Full time's motion (director, 2026-11-25; FullTimeMotion says what it does).
+const FullTimeMotion := preload("res://scripts/ui/match/FullTimeMotion.gd")
+var _ft_pending := {}           # full time's motion, waiting on the farewell to end
 var _run_side := -1            # who kicked the last goal, and how many in a row
 var _run_len := 0
 var _press_said := [false, false]  # the High Press line, once a side
@@ -209,6 +212,8 @@ func _ready() -> void:
 		# as Skip to full time before the first bounce.
 		GameState.match_way_live = "watch"
 		_on_skip.call_deferred()
+	elif _interactive and _banner_first():
+		pass
 	elif _interactive:
 		_show_coach_box()
 	elif _review:
@@ -219,6 +224,32 @@ func _ready() -> void:
 			if not _finished:
 				_pitch.play()
 				_sync_controls())
+
+
+## Through the banner on the 3D ground before the first bounce (Oval3DBanner), once a match: on
+## the 3D picture the run-through plays here, on the match's own ground, instead of the flat
+## pre-match vignette (MatchKickoff). The calls open when it ends. False when it doesn't play.
+static var _banner_played := ""
+
+
+func _banner_first() -> bool:
+	if not _pitch.three_d or not GameState.vignettes_on():
+		return false
+	var m: Dictionary = GameState.pending_match
+	var key := "%d|%s|%s|%s" % [GameState.season_year, str(m.get("label", "")), str(m.get("home", "")), str(m.get("away", ""))]
+	if key == _banner_played:
+		return false     # back from Change the side: it has run already
+	var opp := str(m["away"]) if str(m["home"]) == GameState.my_club else str(m["home"])
+	var text := PreMatchVignette.banner_text(GameState.my_club, opp, str(m.get("label", "")), GameState.banner_context(m))
+	if not _pitch.run_banner(text, _my_side):
+		return false
+	_banner_played = key
+	_set_clock_word("pre")
+	_pitch.banner_burst.connect(func(): _crowd.run_out(_my_side), CONNECT_ONE_SHOT)
+	_pitch.banner_done.connect(func():
+		if _interactive and not _finished:
+			_show_coach_box(), CONNECT_ONE_SHOT)
+	return true
 
 
 func _build() -> void:
@@ -4369,8 +4400,8 @@ func _on_finished() -> void:
 	_sync_controls()
 	# Full time is built at once (its controls exist and work the moment the siren goes);
 	# a milestone game's farewell plays over it on its own layer, and a tap or its end
-	# shows full time underneath.
-	_show_fulltime()
+	# shows full time underneath. Its motion waits for the farewell to end.
+	_show_fulltime(_farewell.is_empty())
 	if not _farewell.is_empty():
 		var v := FarewellVignette.open(get_tree().root, _farewell["ms"], _farewell["man"],
 				GameState.my_club, str(_farewell["opp"]), _farewell["mine"], _farewell["theirs"],
@@ -4378,6 +4409,9 @@ func _on_finished() -> void:
 		v.offset_top = _over.offset_top   # under the scoreboard, as every scene (T3.R42)
 		v.clip_contents = true            # its stand's roof stays off the scoreboard
 		_farewell = {}
+		# Its end (or a tap) lets the result land; so does it going any other way.
+		v.done.connect(_ft_play_pending, CONNECT_ONE_SHOT)
+		v.tree_exiting.connect(_ft_play_pending, CONNECT_ONE_SHOT)
 		var wv: WeakRef = weakref(v)   # not the node: it frees itself when it ends
 		tree_exiting.connect(func():            # Back out of the match: it goes too
 			var n = wv.get_ref()
@@ -4422,8 +4456,9 @@ func _farewell_for(match: Dictionary) -> Dictionary:
 # ---------------------------------------------------------------------------
 ## Full time is one review with two tabs - the Summary (the one coaching
 ## report) and Stats - and one way out: Continue. Back on Stats returns to
-## Summary. Review match (Sim round) opens the same screen.
-func _show_fulltime() -> void:
+## Summary. Review match (Sim round) opens the same screen. `play_now` false:
+## the result's motion waits (_ft_play_pending) while the farewell plays over it.
+func _show_fulltime(play_now := true) -> void:
 	# A PC's Stats tab holds the score and the team numbers side by side, so the
 	# sheet is wider there; the Summary keeps its own reading width inside it.
 	var box := UiKit.modal_box(_over, SHEET_MAX_W if _stats_wide() else 640.0, 0.0, _wash())
@@ -4470,8 +4505,74 @@ func _show_fulltime() -> void:
 	UiKit.feel(leave, "end")     # the end of the match: the siren
 	actions.add_child(leave)
 	_render_ft()
-	UiKit.land(overlay.find_child("Verdict", true, false) as Control, 0.3)   # the result lands (Feel)
-	UiKit.land(overlay.find_child("LadderMove", true, false) as Control, 1.0, false)   # then the ladder move
+	# The result lands, then the ladder move (FullTimeMotion). What is still to
+	# come is hidden now, so it never shows at rest and then pops.
+	var f := _ft_motion_facts()
+	FullTimeMotion.prepare(f)
+	if play_now:
+		FullTimeMotion.play(f)
+	else:
+		_ft_pending = f
+
+
+func _ft_play_pending() -> void:
+	if _ft_pending.is_empty():
+		return
+	var f := _ft_pending
+	_ft_pending = {}
+	FullTimeMotion.play(f)
+
+
+## What full time's motion moves, and the result it tells (FullTimeMotion.play).
+func _ft_motion_facts() -> Dictionary:
+	if _ft_box.is_empty() or not is_instance_valid(_ft_box["overlay"]):
+		return {}
+	var overlay: Control = _ft_box["overlay"]
+	var s: Array = _res["score"]
+	var home := str(_res["home"])
+	var away := str(_res["away"])
+	var mine := GameState.my_club != "" and (home == GameState.my_club or away == GameState.my_club)
+	var me := 0 if home == GameState.my_club else 1
+	var diff := int(s[0]) - int(s[1])
+	var winner := -1 if diff == 0 else (0 if diff > 0 else 1)
+	var result := "draw"
+	if winner >= 0:
+		result = ("win" if winner == me else "loss") if mine else "neutral"
+	# The flash is the winner's colour as their name is written (club_ink reads on
+	# the dark sheet; Collingwood's black wash flashed 6 levels, unseen): yours
+	# on a win, none on a loss or a draw.
+	var flash := Color(0, 0, 0, 0)
+	if result == "win":
+		flash = UiKit.club_ink(GameState.my_club)
+	elif result == "neutral":
+		flash = UiKit.club_ink(home if winner == 0 else away)
+	var rows := []
+	for side in [0, 1]:
+		var r := overlay.find_child("FinalScore_%d" % side, true, false)
+		if r != null:
+			rows.append(r)
+	var f := {
+		"verdict": overlay.find_child("Verdict", true, false),
+		"rows": rows,
+		"finals": overlay.find_child("FinalsOutcome", true, false),
+		"shell": _ft_box["shell"],
+		"scroll": (_ft_box["body"] as Control).get_parent() as ScrollContainer,
+		"result": result,
+		"margin": absi(diff),
+		"final": str(_res.get("tag", "")) != "",
+		"flash": flash,
+	}
+	# The ladder line counts only when the spot changed ("Still 5th" stays still).
+	var ladder := overlay.find_child("LadderMove", true, false)
+	var now := GameState.my_position()
+	if ladder != null and _pos_before > 0 and now > 0 and now != _pos_before:
+		var line := GameState.ladder_move_line(_pos_before)
+		var at := GameState.ordinal(now)
+		f["ladder"] = ladder
+		f["from"] = _pos_before
+		f["to"] = now
+		f["say"] = func(p: int) -> String: return line.replace(at, GameState.ordinal(p))
+	return f
 
 
 func _ft_tab_list() -> Array:
@@ -4683,6 +4784,8 @@ func _ft_summary(v: VBoxContainer) -> void:
 			var ol := UiKit.lbl(outlook, 20 if tag_now == "GF" else UiKit.BODY,
 					UiKit.EMPH if through else UiKit.MUTED, true)
 			ol.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			ol.name = "FinalsOutcome"
+			ol.set_meta("through", through)   # it stamps when you go through (FullTimeMotion)
 			v.add_child(ol)
 		# A debut is said once, here, in the fuller words ("kicked a goal on
 		# debut"); the payoff lines below leave it out (director, 2026-11-06).
