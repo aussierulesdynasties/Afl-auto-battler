@@ -5,7 +5,8 @@ import numpy as np
 HERE = os.path.dirname(os.path.abspath(__file__))
 TILE = json.load(open(os.path.join(HERE, 'tex', 'tiles.json')))
 MATS = {}
-SPECIAL = {'glass': dict(rough=0.08, metal=0.0), 'steel_galv': dict(rough=0.35, metal=0.6),
+SPECIAL = {'glass': dict(rough=0.08, metal=0.0), 'skin_blue': dict(rough=0.3), 'skin_sky': dict(rough=0.3),
+           'skin_grey': dict(rough=0.3), 'boon_glass': dict(rough=0.3), 'win_dark': dict(rough=0.3), 'cw_glass': dict(rough=0.2), 'cw_glass_dk': dict(rough=0.2), 'syn_pitch': dict(rough=1.0), 'yard': dict(rough=1.0), 'pavers': dict(rough=1.0), 'steel_galv': dict(rough=0.35, metal=0.6),
            'steel_white': dict(rough=0.4), 'roof_grey': dict(rough=0.45, metal=0.35),
            'roof_tan': dict(rough=0.5, metal=0.2), 'roof_white': dict(rough=0.45, metal=0.25),
            'roof_dkgrey': dict(rough=0.45, metal=0.35), 'roof_deck': dict(rough=0.5, metal=0.2)}

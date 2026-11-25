@@ -8,9 +8,9 @@ extends SceneTree
 ## Seeded by design: it measures the seat files against the models, nothing random runs.
 
 const SeatRule := preload("res://tools/grounds/seat_rule.gd")
-## Grounds whose own pull request is still taking their bad seats out;
-## each leaves this list when that lands and seat_check has been run on it.
-const PENDING := []
+## Grounds whose own pull request is still taking their bad seats out (Optus #1993: its rebuilt model has
+## 207 seats under 2 m of roof); each leaves this list when that lands and seat_check has been run on it.
+const PENDING := ["optus"]
 
 var _checks := 0
 var _failures: Array[String] = []
