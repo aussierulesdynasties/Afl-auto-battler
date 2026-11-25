@@ -131,6 +131,15 @@ func fit() -> float:
 	var stage_w := minf(view.x - 64.0, 300.0)
 	var stage_h := roundf(minf(stage_w * 0.68, view.y * 0.3))
 	stage_w = roundf(stage_h / 0.68)
+	# A short window (a PC's at 960x540): the logo and the shot shrink together,
+	# just enough that the line fits under them (director, 2026-11-25).
+	var room := view.y - 16.0 - 20.0 - 24.0 - 64.0
+	if logo_h + stage_h > room and room > 0.0:
+		var k := room / (logo_h + stage_h)
+		logo_w = floorf(logo_w * k)
+		logo_h = floorf(logo_w * GameLogo.aspect())
+		stage_h = floorf(stage_h * k)
+		stage_w = roundf(stage_h / 0.68)
 	var total := logo_h + 20.0 + stage_h + 24.0 + 64.0
 	var top := roundf(maxf(16.0, (view.y - total) * 0.46))
 	_logo.position = Vector2(roundf((view.x - logo_w) * 0.5), top)

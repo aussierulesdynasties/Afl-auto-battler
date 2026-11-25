@@ -68,6 +68,12 @@ static var layouts := 0
 const ACROSS_MIN_W := 560.0
 var _across := false
 var _grid: GridContainer
+## The interchange's cards, the line under it (the tap hint, the move just
+## made or the player picked) and the role filter's buttons: a tap changes
+## these in place (_refresh) rather than building the whole builder again.
+var _bench: GridContainer
+var _note_box: VBoxContainer
+var _role_tabs: Array = []
 var _search_field: LineEdit
 ## Another club's side to look at, not edit (the opposition view): taps open
 ## a profile, nothing moves, and the oval is mirrored - they kick the other way.
@@ -197,14 +203,9 @@ func _build() -> void:
 	_placed_for = Vector2(-1, -1)
 	field.add_child(_pitch)
 	for line in ["RUCK", "MID", "WING", "DEF", "FWD"]:
-		var ids: Array = _side[line]
 		var keys: Array = SPOTS[line]
 		for i in range(keys.size()):
-			var id := str(ids[i]) if i < ids.size() else ""
-			var card := _card(id, true, "%s:%d" % [line, i])
-			card.name = "Spot_" + str(keys[i])
-			card.set_meta("spot", str(keys[i]))
-			_pitch.add_child(card)
+			_pitch.add_child(_spot_card(str(keys[i]), "%s:%d" % [line, i]))
 	if _shows_condition():
 		field.add_child(_condition_key())
 	# The interchange sits under the oval, or in the screen's own place for it.
@@ -244,16 +245,9 @@ func _build() -> void:
 	bench.add_theme_constant_override("h_separation", 6)
 	bench.add_theme_constant_override("v_separation", 6)
 	ihost.add_child(bench)
-	var bench_ids: Array = _side["BENCH"]
-	for i in range(maxi(Ratings.bench(), bench_ids.size())):
-		var bid := str(bench_ids[i]) if i < bench_ids.size() else ""
-		var bc := _card(bid, true, "BENCH:%d" % i)
-		bc.name = "BenchSpot_%d" % i
-		if stacked:
-			# Five across a phone: the cards share the width, names cut short.
-			bc.custom_minimum_size.x = 0.0
-		bc.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		bench.add_child(bc)
+	_bench = bench
+	for i in range(_bench_spots()):
+		bench.add_child(_bench_card(i))
 	if after_bench != null:
 		field.add_child(after_bench)
 	_queue_place()
@@ -291,6 +285,7 @@ func _build() -> void:
 	if stacked:
 		tabs.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	controls.add_child(tabs)
+	_role_tabs = []
 	for t in ROLE_TABS:
 		var tb := UiKit.btn(str(t[1]), 13)
 		tb.name = "BuilderRole_" + (str(t[0]) if str(t[0]) != "" else "ALL")
@@ -299,12 +294,11 @@ func _build() -> void:
 			tb.custom_minimum_size.x = 44
 		else:
 			tb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		tb.set_meta("role", str(t[0]))
 		UiKit.paint_choice(tb, _role == str(t[0]))
-		var key := str(t[0])
-		tb.pressed.connect(func():
-			_role = key
-			_build())
+		tb.pressed.connect(_set_role.bind(str(t[0])))
 		tabs.add_child(tb)
+		_role_tabs.append(tb)
 	_search_field = UiKit.search_field(_search)
 	_search_field.name = "BuilderSearch"
 	_search_field.text_changed.connect(func(t: String):
@@ -319,55 +313,12 @@ func _build() -> void:
 		var pad := _search_field.get_theme_stylebox("normal").get_minimum_size().x
 		_search_field.custom_minimum_size = Vector2(maxf(90.0, ceilf(hint_w + pad) + 2.0), 44)
 	controls.add_child(_search_field)
-	if _read_only:
-		var ro := UiKit.lbl("Their side as it would take the field: tap a player to see him.", UiKit.SMALL, UiKit.MUTED)
-		ro.name = "ReadOnlyHint"
-		ro.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		rest.add_child(ro)
-	elif _picked != "":
-		# The player you picked: swap him by tapping another, or look at him.
-		var bar := UiKit.hbox(6)
-		bar.name = "PickedBar"
-		# His name whole: the line wraps rather than cut it.
-		var who := UiKit.lbl("%s picked: tap who he swaps with." % GameDB.player_display_name(_player(_picked)),
-				UiKit.SMALL, UiKit.TEXT, true)
-		who.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		who.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		who.name = "PickedName"
-		bar.add_child(NameLink.tappable(who, _picked))
-		var prof := UiKit.btn("Profile", 13)
-		prof.name = "PickedProfile"
-		prof.custom_minimum_size = Vector2(80, 44)
-		var pid := _picked
-		prof.pressed.connect(func():
-			_picked = ""
-			_build()
-			inspect.emit(pid))
-		bar.add_child(prof)
-		var cancel := UiKit.btn("Cancel", 13)
-		cancel.name = "PickedCancel"
-		cancel.flat = true
-		cancel.custom_minimum_size = Vector2(72, 44)
-		cancel.pressed.connect(func():
-			_picked = ""
-			_build())
-		bar.add_child(cancel)
-		rest.add_child(bar)
-	else:
-		var tap_hint := ("Tap" if (ScreenLayout.is_touch() or not _wide) else "Click") + " two of our players to swap them. Or drag one onto the other."
-		if hint_extra != "":
-			tap_hint = hint_extra + " " + tap_hint
-		var hint := UiKit.lbl(start_note if start_note != "" else tap_hint, UiKit.SMALL,
-				UiKit.GOOD if start_note != "" else UiKit.MUTED)
-		hint.name = "BuilderHint"
-		hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		rest.add_child(hint)
-		if memory_note != "" and start_note != "":
-			# A fact, not a state: plain text, not the note's green.
-			var mem := UiKit.lbl(memory_note, UiKit.SMALL, UiKit.TEXT)
-			mem.name = "BuilderRemembered"
-			mem.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-			rest.add_child(mem)
+	# The line under the controls, in a box of its own so a tap can change it
+	# alone; the box spaces its lines as the list's column did.
+	_note_box = UiKit.vbox(6)
+	_note_box.name = "BuilderNote"
+	rest.add_child(_note_box)
+	_fill_note()
 	_grid = GridContainer.new()
 	_grid.name = "NotSelected"
 	# Two abreast on a phone at the standard text size; a larger one (Settings)
@@ -392,6 +343,64 @@ func _build() -> void:
 	else:
 		rest.add_child(_grid)
 	_fill_grid()
+
+
+## The line under the role filter and search: what the last move did (and what
+## the club remembers about who it left out), the player picked, or the tap hint.
+func _fill_note() -> void:
+	if not is_instance_valid(_note_box):
+		return
+	UiKit.clear(_note_box)
+	var rest := _note_box
+	if _read_only:
+		var ro := UiKit.lbl("Their side as it would take the field: tap a player to see him.", UiKit.SMALL, UiKit.MUTED)
+		ro.name = "ReadOnlyHint"
+		ro.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		rest.add_child(ro)
+	elif _picked != "":
+		# The player you picked: swap him by tapping another, or look at him.
+		var bar := UiKit.hbox(6)
+		bar.name = "PickedBar"
+		# His name whole: the line wraps rather than cut it.
+		var who := UiKit.lbl("%s picked: tap who he swaps with." % GameDB.player_display_name(_player(_picked)),
+				UiKit.SMALL, UiKit.TEXT, true)
+		who.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		who.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		who.name = "PickedName"
+		bar.add_child(NameLink.tappable(who, _picked))
+		var prof := UiKit.btn("Profile", 13)
+		prof.name = "PickedProfile"
+		prof.custom_minimum_size = Vector2(80, 44)
+		var pid := _picked
+		prof.pressed.connect(func():
+			_picked = ""
+			_refresh()
+			inspect.emit(pid))
+		bar.add_child(prof)
+		var cancel := UiKit.btn("Cancel", 13)
+		cancel.name = "PickedCancel"
+		cancel.flat = true
+		cancel.custom_minimum_size = Vector2(72, 44)
+		cancel.pressed.connect(func():
+			_picked = ""
+			_refresh())
+		bar.add_child(cancel)
+		rest.add_child(bar)
+	else:
+		var tap_hint := ("Tap" if (ScreenLayout.is_touch() or not _wide) else "Click") + " two of our players to swap them. Or drag one onto the other."
+		if hint_extra != "":
+			tap_hint = hint_extra + " " + tap_hint
+		var hint := UiKit.lbl(start_note if start_note != "" else tap_hint, UiKit.SMALL,
+				UiKit.GOOD if start_note != "" else UiKit.MUTED)
+		hint.name = "BuilderHint"
+		hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		rest.add_child(hint)
+		if memory_note != "" and start_note != "":
+			# A fact, not a state: plain text, not the note's green.
+			var mem := UiKit.lbl(memory_note, UiKit.SMALL, UiKit.TEXT)
+			mem.name = "BuilderRemembered"
+			mem.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			rest.add_child(mem)
 
 
 ## The list in a sheet that can rise: the slot keeps the list's place in the
@@ -544,7 +553,6 @@ func _on_pull(ev: InputEvent) -> void:
 func _fill_grid() -> void:
 	if not is_instance_valid(_grid):
 		return
-	UiKit.clear(_grid)
 	var in_side := {}
 	for line in LINES:
 		for id in _side[line]:
@@ -559,6 +567,22 @@ func _fill_grid() -> void:
 		if q != "" and not GameDB.player_display_name(p).to_lower().contains(q):
 			continue
 		out.append(p)
+	# A card already in the list that would be built the same stays: only the
+	# players who came into the list, or whose pick or form mark changed, are
+	# built (bug bash 2026-11-25, M-2: building all 52 again took 90 ms a tap).
+	var want := {}
+	for w in out:
+		want[str(w["id"])] = true
+	var keep := {}
+	for c in _grid.get_children():
+		if str(c.name).begins_with("Leaving_"):
+			continue
+		var cid := str(c.get_meta("id", ""))
+		if c.has_meta("sig") and want.has(cid) and not keep.has(cid) and str(c.get_meta("sig")) == _card_sig(cid):
+			keep[cid] = c
+		else:
+			UiKit.drop(c)
+	var at := 0
 	# The three in the best form in the twos lead the list, where their mark is
 	# seen without a scroll; the rest by OVR.
 	var hot: Dictionary = _marks["hot"]
@@ -568,14 +592,159 @@ func _fill_grid() -> void:
 			return ha
 		return int(Rating.ovr(a)) > int(Rating.ovr(b)))
 	for p in out:
-		var c := _card(str(p["id"]), false, "")
-		c.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		# Two columns share the width: the cards shrink (their lines cut short)
-		# rather than push a phone's screen wider than itself.
-		c.custom_minimum_size.x = 0.0
-		_grid.add_child(c)
+		var id := str(p["id"])
+		var c: Control = keep.get(id)
+		if c == null:
+			c = _list_card(id)
+			_grid.add_child(c)
+		_grid.move_child(c, at)
+		at += 1
 	if out.is_empty():
 		_grid.add_child(UiKit.lbl("Nobody else here.", UiKit.SMALL, UiKit.MUTED))
+
+
+## A card in the list of players not picked.
+func _list_card(id: String) -> Button:
+	var c := _card(id, false, "")
+	c.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	# Two columns share the width: the cards shrink (their lines cut short)
+	# rather than push a phone's screen wider than itself.
+	c.custom_minimum_size.x = 0.0
+	return c
+
+
+## A spot on the oval (`key`, FormationView.SLOTS) and its place in the side
+## ("MID:1"), with whoever the side has there.
+func _spot_card(key: String, place: String) -> Button:
+	var card := _card(_id_at(place), true, place)
+	card.name = "Spot_" + key
+	card.set_meta("spot", key)
+	return card
+
+
+## How many interchange spots show: the bench's size, or more for a side
+## that has more.
+func _bench_spots() -> int:
+	return maxi(Ratings.bench(), (_side["BENCH"] as Array).size())
+
+
+func _bench_card(i: int) -> Button:
+	var bc := _card(_id_at("BENCH:%d" % i), true, "BENCH:%d" % i)
+	bc.name = "BenchSpot_%d" % i
+	if stacked:
+		# Five across a phone: the cards share the width, names cut short.
+		bc.custom_minimum_size.x = 0.0
+	bc.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	return bc
+
+
+## Who the side has at a place ("FWD:2"), or "" for nobody.
+func _id_at(place: String) -> String:
+	var parts := place.split(":")
+	var ids: Array = _side.get(parts[0], [])
+	var i := int(parts[1])
+	return str(ids[i]) if i < ids.size() else ""
+
+
+## What a card shows that a tap can change: who, whether he is the one picked,
+## and his form mark. Two cards with the same are drawn the same.
+func _card_sig(id: String) -> String:
+	if id == "":
+		return ""
+	return "%s|%s|%s|%s" % [id, str(id == _picked), str((_marks["cold"] as Dictionary).get(id, "")),
+			str((_marks["hot"] as Dictionary).get(id, ""))]
+
+
+## After a tap: only the cards whose player, pick or form mark changed are
+## built again, and the line under the controls; the oval, the bench, the
+## filter and the list keep everything else (bug bash 2026-11-25, M-2: building
+## the whole builder again froze every tap 250-565 ms).
+func _refresh() -> void:
+	if not is_instance_valid(_pitch) or not is_instance_valid(_bench):
+		_build()
+		return
+	var spots := 0
+	for c in _bench.get_children():
+		if not str(c.name).begins_with("Leaving_"):
+			spots += 1
+	if spots != _bench_spots():
+		# A side with more on the bench than it has spots for: built whole.
+		_build()
+		return
+	_marks = GameState.form_marks(_side) if not (_read_only or _rival or field_only) \
+			else {"cold": {}, "hot": {}}
+	var moved := false
+	for c in _pitch.get_children():
+		if not c.has_meta("spot"):
+			continue
+		var place := str(c.get_meta("place"))
+		if str(c.get_meta("sig", "")) == _card_sig(_id_at(place)):
+			continue
+		var at := c.get_index()
+		var key := str(c.get_meta("spot"))
+		var was := Rect2((c as Control).position, (c as Control).size)
+		# The card going out is no longer a spot to lay out.
+		c.remove_meta("spot")
+		UiKit.drop(c)
+		var card := _spot_card(key, place)
+		_pitch.add_child(card)
+		_pitch.move_child(card, at)
+		# A card the same size as the one it replaces (the same man picked or
+		# put down, a name no wider) takes its place: laid out again, the oval
+		# would come out the same, and laying it out costs 260-460 ms a tap.
+		card.custom_minimum_size.x = maxf(UiKit.px(84 if _across else 70), float(card.get_meta("name_w", 0.0)))
+		if _placed_for == _pitch.size and card.get_combined_minimum_size() == was.size:
+			card.size = was.size
+			card.position = was.position
+		else:
+			moved = true
+	for c in _bench.get_children():
+		if str(c.name).begins_with("Leaving_"):
+			continue
+		var place := str(c.get_meta("place"))
+		if str(c.get_meta("sig", "")) == _card_sig(_id_at(place)):
+			continue
+		var at := c.get_index()
+		UiKit.drop(c)
+		var bc := _bench_card(int(place.split(":")[1]))
+		_bench.add_child(bc)
+		_bench.move_child(bc, at)
+	if moved:
+		# A new name may be wider or narrower: the oval's cards are laid out again.
+		_placed_for = Vector2(-1, -1)
+		_queue_place()
+	_fill_note()
+	_fill_grid()
+
+
+## The role filter: its buttons repainted and the list refilled; nothing else moves.
+func _set_role(key: String) -> void:
+	_role = key
+	for tb in _role_tabs:
+		if is_instance_valid(tb):
+			UiKit.paint_choice(tb, str(tb.get_meta("role")) == _role)
+	_fill_grid()
+
+
+## A line from the screen in place of the tap hint ("Saved as your Best 23"),
+## as building the page again would say it: the player picked is let go and the
+## list drops back.
+func show_note(note: String) -> void:
+	start_note = note
+	memory_note = ""
+	_picked = ""
+	if _raised:
+		set_raised(false, false)
+	_refresh()
+
+
+## The side changed from outside the builder (Undo): the cards follow it.
+func set_side(side: Dictionary) -> void:
+	_side = side.duplicate(true)
+	for line in LINES:
+		if not _side.has(line):
+			_side[line] = []
+	_refresh()
 
 
 ## Fatigue, morale and form show on your own players' cards, never a rival's
@@ -613,6 +782,7 @@ func _card(id: String, on_field: bool, place: String) -> Button:
 	b.name = "Card_" + id if id != "" else "Empty"
 	b.set_meta("id", id)
 	b.set_meta("place", place)
+	b.set_meta("sig", _card_sig(id))
 	var on := id != "" and id == _picked
 	UiKit.paint_choice(b, on)
 	var face := UiKit.vbox(0)
@@ -869,11 +1039,11 @@ func _tap(id: String, place: String) -> void:
 		if id == "":
 			return
 		_picked = id
-		_build()
+		_refresh()
 		return
 	if id == _picked:
 		_picked = ""
-		_build()
+		_refresh()
 		return
 	var a := _picked
 	_picked = ""
@@ -892,7 +1062,7 @@ func _where(id: String) -> Array:
 func _swap(a: String, b: String, place: String) -> void:
 	memory_note = ""
 	if a == b:
-		_build()
+		_refresh()
 		return
 	var wa := _where(a)
 	var wb := _where(b) if b != "" else []
@@ -904,15 +1074,15 @@ func _swap(a: String, b: String, place: String) -> void:
 	# Coming into the side, a player must be able to play.
 	if wa.is_empty() and not wb.is_empty() and not Ratings.available(pa):
 		changed.emit("%s can't play this week: %s." % [GameDB.player_display_name(pa), _why_out(pa).to_lower()])
-		_build()
+		_refresh()
 		return
 	if wb.is_empty() and not wa.is_empty() and b != "" and not Ratings.available(pb):
 		changed.emit("%s can't play this week: %s." % [GameDB.player_display_name(pb), _why_out(pb).to_lower()])
-		_build()
+		_refresh()
 		return
 	if wa.is_empty() and wb.is_empty():
 		_picked = b
-		_build()
+		_refresh()
 		return
 	var note := ""
 	var dropped := {}
@@ -943,7 +1113,7 @@ func _swap(a: String, b: String, place: String) -> void:
 	memory_note = drop_memory(dropped)
 	# The note is on screen from this build, so the line under it is too.
 	start_note = note
-	_build()
+	_refresh()
 	changed.emit(note)
 
 
