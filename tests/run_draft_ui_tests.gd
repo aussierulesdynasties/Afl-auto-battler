@@ -45,6 +45,7 @@ func _run() -> void:
 	await _t("_test_rivals_land_a_few_a_frame")
 	await _t("_test_take_tasmania")
 	await _t("_test_first_offseason")
+	await _t("_test_forge_signings_cost_picks")
 	await _t("_test_rival_why")
 	await _t("_test_draft_fit")
 	await _t("_test_redraft_wears_club")
@@ -1587,6 +1588,143 @@ func _test_first_offseason() -> void:
 			short += 1
 	_check(short == 0, "Every Geelong contract still runs into 2027")
 	draft_ui.queue_free()
+	await _settle()
+
+
+## A Forge club signs in the opening off-season (director, 2026-11-25: "WEIRD
+## draft stuff going on when i play as a club forge team"; "Yes, I signed
+## some"). Each signing counts at once ("Live count + warning"): the brief
+## names the picks that will pass, the offer sheet names the pick the next
+## signing costs, the draft passes exactly those picks, and the pick log shows
+## each pass as a row ("Show passes as rows"), counted in its tab.
+func _test_forge_signings_cost_picks() -> void:
+	_state.reset("2026")
+	var err = _state.create_club({"name": "Darwin", "short": "Darwin", "code": "DAR",
+			"location": "darwin", "primary": "#F2B705", "secondary": "#7A1F2B",
+			"accent": "#FFFFFF", "design": "sash", "kit": "p/s/a"})
+	_check(str(err) == "", "The Forge club is made (%s)" % str(err))
+	_state.interview_due = false
+	_state.begin_real_lists()
+	root.size = Vector2i(390, 844)
+	var ui: Control = load("res://scenes/DraftScene.tscn").instantiate()
+	root.add_child(ui)
+	await _settle()
+	ui.call("_on_club_chosen", "DAR")
+	await _settle()
+	var d = _state.draft
+	var spots: Dictionary = _state.draft_list_spots()
+	var picks: Array = spots["picks"]
+	_check(_state.first_offseason == 1 and picks.size() >= 2 and int(spots["open"]) > 0,
+			"Darwin opens its off-season with spots and picks (%s)" % str(spots))
+	# Sign free agents one by one until a pick will pass, checking each step.
+	var signed := 0
+	var warned := ""
+	for p in _state.free_agents.duplicate():
+		var before: Dictionary = _state.draft_list_spots()
+		if not (before["passing"] as Array).is_empty() or int(before["open"]) <= 0:
+			break
+		var line: String = _state.signing_costs_pick_line()
+		var r: Dictionary = _state.sign_free_agent(str(p["id"]), 1)
+		for k in 8:
+			if str(r.get("answer", "")) == "counter":
+				r = _state.offer_free_agent(str(p["id"]), int(r["salary"]), 1)
+			elif str(r.get("answer", "")) == "table":
+				r = _state.offer_free_agent(str(p["id"]), int(r["salary"]) + 20000, 1)
+			else:
+				break
+		if str(r.get("answer", "")) != "signed":
+			continue
+		signed += 1
+		var after: Dictionary = _state.draft_list_spots()
+		_check(int(after["open"]) == int(before["open"]) - 1,
+				"Signing %d counts at once: %d spots, then %d" % [signed, int(before["open"]), int(after["open"])])
+		if int(before["open"]) <= (before["picks"] as Array).size():
+			var lost := int((before["picks"] as Array)[int(before["open"]) - 1])
+			warned = line
+			_check(line == "Signing him means pick %d passes." % lost and (after["passing"] as Array).has(lost),
+					"The warning named the pick he cost (%s; passing now %s)" % [line, str(after["passing"])])
+	var plan: Dictionary = _state.draft_list_spots()
+	var passing: Array = plan["passing"]
+	_check(signed > 0 and warned != "" and not passing.is_empty(),
+			"Signings took Darwin past its spots (%d signed, passing %s)" % [signed, str(passing)])
+	var brief: String = _state.draft_spots_line()
+	_check(brief.contains("will pass unless you delist before it starts")
+			and brief.contains(d.picks_words(passing)),
+			"The brief names the picks that will pass: %s" % brief)
+	# The offer sheet says it too, with "too" once a pick already passes.
+	var off: Control = load("res://scenes/OffseasonScene.tscn").instantiate()
+	root.add_child(off)
+	await _settle()
+	var fa_id := ""
+	for p in _state.free_agents:
+		fa_id = str(p["id"])
+		break
+	if int(plan["open"]) > 0 and fa_id != "":
+		off.call("_open_talks", fa_id, true)
+		await _settle()
+		var cost := off.find_child("FaPickCost", true, false) as Label
+		var want := "Signing him means pick %d passes too." % int((plan["picks"] as Array)[int(plan["open"]) - 1])
+		_check(cost != null and cost.text == want and cost.is_visible_in_tree(),
+				"The offer sheet warns: %s (wanted %s)" % [cost.text if cost != null else "no line", want])
+	off.queue_free()
+	await _settle()
+	# The draft passes exactly the picks the brief named.
+	ui.call("_end_first_offseason")
+	await _settle()
+	# The recruiters' meeting opens the draft: Done, as a coach would.
+	var done := ui.find_child("MeetingDone", true, false) as Button
+	var met: String = await Tap.tap(done) if done != null else ""
+	await _settle()
+	_check(met == "" and ui.find_child("DraftMeeting", true, false) == null,
+			"Done closes the recruiters' meeting (%s)" % met)
+	d = _state.draft
+	var guard := 0
+	while not d.is_finished() and guard < 200:
+		guard += 1
+		if d.is_user_turn():
+			var chosen := {}
+			for q in d.pool:
+				if d.can_pick_player(q):
+					chosen = q
+					break
+			if chosen.is_empty():
+				break
+			d.pick(chosen)
+		d.auto_until_user_turn()
+	var passed_mine := []
+	for e in d.user_passed:
+		passed_mine.append(int(e["pick"]))
+	_check(passed_mine == passing, "The draft passed the picks the brief named (%s, named %s)" % [str(passed_mine), str(passing)])
+	# The pick log: a row for every passed pick, counted in its tab. The
+	# picks above ran on the draft itself: refresh as the screen does after one.
+	ui.call("_refresh")
+	await _settle()
+	var tab := ui.find_child("Tab_picks", true, false) as Button
+	var why: String = await Tap.tap(tab) if tab != null else "no Picks tab"
+	await _settle()
+	var called: int = d.pick_history.size() + d.passed_picks.size()
+	tab = ui.find_child("Tab_picks", true, false) as Button   # the tabs are rebuilt on a tap
+	_check(why == "" and tab != null and tab.text.contains("(%d)" % called),
+			"The Picks tab counts the passes too: %s, %d called (%s)" % [tab.text if tab != null else "-", called, why])
+	var mine_rows := 0
+	for n in passing:
+		var row := ui.find_child("HistoryPassWhy_%d" % int(n), true, false) as Label
+		if row != null and row.text == "passed: list full":
+			mine_rows += 1
+	# The log pages its rows: the newest come first, so look at every page.
+	var more := ui.find_child("EarlierPicks", true, false)
+	while more != null and mine_rows < passing.size():
+		(more as Button).emit_signal("pressed")
+		await _settle()
+		mine_rows = 0
+		for n in passing:
+			var row := ui.find_child("HistoryPassWhy_%d" % int(n), true, false) as Label
+			if row != null and row.text == "passed: list full":
+				mine_rows += 1
+		more = ui.find_child("EarlierPicks", true, false)
+	_check(mine_rows == passing.size(),
+			"Each of Darwin's passed picks has its row: %d of %d" % [mine_rows, passing.size()])
+	ui.queue_free()
 	await _settle()
 
 
