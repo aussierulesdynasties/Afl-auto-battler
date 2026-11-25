@@ -124,8 +124,8 @@ static func _line_facts(opp: String, squads: Dictionary) -> Array:
 static func _missing(list: Array) -> Dictionary:
 	var by_ovr := list.duplicate()
 	by_ovr.sort_custom(func(a, b):
-		if int(a["overall"]) != int(b["overall"]):
-			return int(a["overall"]) > int(b["overall"])
+		if int(Rating.ovr(a)) != int(Rating.ovr(b)):
+			return int(Rating.ovr(a)) > int(Rating.ovr(b))
 		return str(a["id"]) < str(b["id"]))
 	for i in range(mini(MISSING_TOP, by_ovr.size())):
 		var p: Dictionary = by_ovr[i]
@@ -141,15 +141,15 @@ static func _missing(list: Array) -> Dictionary:
 static func _danger(opp: String, squad: Squad, lists: Dictionary) -> Dictionary:
 	var best := {}
 	for p in squad.ground:
-		if best.is_empty() or int(p["overall"]) > int(best["overall"]) \
-				or (int(p["overall"]) == int(best["overall"]) and str(p["id"]) < str(best["id"])):
+		if best.is_empty() or int(Rating.ovr(p)) > int(Rating.ovr(best)) \
+				or (int(Rating.ovr(p)) == int(Rating.ovr(best)) and str(p["id"]) < str(best["id"])):
 			best = p
 	if best.is_empty():
 		return {}
 	var better := 0
 	for code in lists:
 		for p in lists[code]:
-			if Ratings.available(p) and int(p["overall"]) > int(best["overall"]):
+			if Ratings.available(p) and int(Rating.ovr(p)) > int(Rating.ovr(best)):
 				better += 1
 	if better >= DANGER_RANK:
 		return {}
@@ -376,8 +376,8 @@ static func own_notes(list: Array, limit := 2) -> Array:
 	var out := []
 	var by_ovr := list.duplicate()
 	by_ovr.sort_custom(func(a, b):
-		if int(a["overall"]) != int(b["overall"]):
-			return int(a["overall"]) > int(b["overall"])
+		if int(Rating.ovr(a)) != int(Rating.ovr(b)):
+			return int(Rating.ovr(a)) > int(Rating.ovr(b))
 		return str(a["id"]) < str(b["id"]))
 	for i in range(mini(MISSING_TOP, by_ovr.size())):
 		var p: Dictionary = by_ovr[i]

@@ -1257,7 +1257,7 @@ func _player_row(p: Dictionary) -> Control:
 				read = "projected %s OVR · %s POT" % [DraftScouting.range_text(proj_view["overall"]),
 						DraftScouting.range_text(proj_view["potential"])]
 			else:
-				read = "projected %d OVR · %d POT" % [int(p["overall"]), int(p.get("potential", p["overall"]))]
+				read = "projected %d OVR · %d POT" % [int(Rating.ovr(p)), int(p.get("potential", Rating.ovr(p)))]
 	else:
 		where = GameDB.club_short(str(p["club"]))
 		var view := _draft.user_view(p)
@@ -1265,7 +1265,7 @@ func _player_row(p: Dictionary) -> Control:
 			read = "%s OVR · %s POT" % [DraftScouting.range_text(view["overall"]),
 					DraftScouting.range_text(view["potential"])]
 		else:
-			read = "%d OVR · %d POT" % [int(p["overall"]), int(p.get("potential", p["overall"]))]
+			read = "%d OVR · %d POT" % [int(Rating.ovr(p)), int(p.get("potential", Rating.ovr(p)))]
 		read += " · " + Contracts.money(_draft.price(p))
 	var facts := read
 	if float(p.get("age", 0.0)) > 0.0:
@@ -1275,7 +1275,7 @@ func _player_row(p: Dictionary) -> Control:
 		facts = "Pick %d to %s" % [int(entry.get("pick", 0)),
 				GameDB.club_short(_draft.drafted_by(str(p["id"])))]
 		if not bool(_draft.user_view(p)["scouted"]):
-			facts += " · %d OVR" % int(p["overall"])
+			facts += " · %d OVR" % int(Rating.ovr(p))
 	# Every fact on these lines decides a pick (his price is last): they wrap
 	# rather than cut on a phone, and the row grows to fit them.
 	face.add_child(_row_line(facts, UiKit.TEXT))
@@ -2031,8 +2031,8 @@ func _open_player(id: String) -> void:
 		nums.add_child(_big_range(view["overall"], "Projected OVR" if projected else "OVR", "DetailOVR"))
 		nums.add_child(_big_range(view["potential"], "POT", "DetailPOT"))
 	else:
-		nums.add_child(_big_number(int(p["overall"]), "Projected OVR" if projected else "OVR", "DetailOVR"))
-		nums.add_child(_big_number(int(p.get("potential", p["overall"])), "POT", "DetailPOT"))
+		nums.add_child(_big_number(int(Rating.ovr(p)), "Projected OVR" if projected else "OVR", "DetailOVR"))
+		nums.add_child(_big_number(int(p.get("potential", Rating.ovr(p))), "POT", "DetailPOT"))
 	var room := UiKit.lbl("Scouting estimate" if read else GameState.development_state(p), 14,
 			UiKit.MUTED if read else UiKit.TEXT)
 	room.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -2589,7 +2589,7 @@ func _refresh_mine() -> void:
 							12, UiKit.MUTED))
 				else:
 					v.add_child(UiKit.lbl("Pick %d · %d OVR · %s" % [
-							int(entry.get("pick", 0)), int(player["overall"]), Contracts.money(_draft.price(player))],
+							int(entry.get("pick", 0)), int(Rating.ovr(player)), Contracts.money(_draft.price(player))],
 							12, UiKit.MUTED))
 				var like := PlaysLikeLine.make(player)
 				if like != null:
