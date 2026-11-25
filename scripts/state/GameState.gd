@@ -9003,6 +9003,10 @@ func open_offseason(keep_staff := false) -> void:
 		else:
 			_career_over(p, "delisted")
 	free_agents = carried
+	# A Legacy career's story moves play out first (LegacyRollover, director
+	# 2026-11-25): a story free agent goes into this market, a new club's
+	# story man is set to join it.
+	LegacyRollover.canon_offseason(self)
 	# A new club's approaches are settled first: it had first call.
 	ExpansionBuild.resolve(self)
 	# No rating or injury moves while rivals re-sign: each list's best 22 only
@@ -9087,6 +9091,7 @@ func open_offseason(keep_staff := false) -> void:
 	trade_offers = []
 	trade_table = []
 	_collect_trade_requests()
+	LegacyRollover.canon_requests(self)
 	Season.beat()
 	_open_trade_market()
 	Season.beat()
@@ -10195,6 +10200,9 @@ func offer_free_agent(player_id: String, salary: int, years: int) -> Dictionary:
 	var p := free_agent(player_id)
 	if p.is_empty():
 		return {"ok": false, "answer": "", "reason": "He has already signed elsewhere."}
+	if str(p.get("released_by", "")) == my_club and int(p.get("story_left", -1)) == season_year:
+		return {"ok": false, "answer": "", "code": "story_left",
+				"reason": "%s left to test free agency. He won't come back this off-season." % GameDB.player_display_name(p)}
 	var barred := Challenge.block_reason(self, p)
 	if barred != "":
 		return {"ok": false, "answer": "", "code": "challenge", "reason": barred}
@@ -11767,6 +11775,8 @@ func trade_request_line(id: String) -> String:
 ## "Jack Smith (Carlton) has asked to be traded home: Adelaide or Port
 ## Adelaide." / "... has asked for a trade to get a game: ..."
 func _request_line(p: Dictionary, ask: Dictionary) -> String:
+	if str(ask["why"]) == "story":
+		return LegacyRollover.request_line(self, p, ask)
 	var who := GameDB.player_display_name(p)
 	var at := GameDB.club_name(str(ask["club"]))
 	var names: Array = (ask["to"] as Array).map(func(c): return GameDB.club_name(str(c)))
@@ -11795,9 +11805,17 @@ func _wont_go(assets: Array, to: String) -> String:
 func _requested_trades(prospects: Dictionary) -> void:
 	var ids := trade_requests.keys()
 	ids.sort()
+	# The story requests go first (LegacyRollover): the club that values him
+	# most and fits his pay gets him.
+	var stories := ids.filter(func(id): return str(trade_requests[id]["why"]) == "story")
+	for id in stories:
+		var ask: Dictionary = trade_requests[id]
+		var seller := str(ask["club"])
+		if seller != my_club:
+			_story_trade(seller, _find_player(str(id)), ask, prospects)
 	for id in ids:
-		if not trade_requests.has(id):
-			continue  # met already
+		if not trade_requests.has(id) or stories.has(id):
+			continue  # met already, or a story's
 		var ask: Dictionary = trade_requests[id]
 		var seller := str(ask["club"])
 		if seller == my_club or _deals(seller) >= DEALS_PER_CLUB:
@@ -11817,6 +11835,126 @@ func _requested_trades(prospects: Dictionary) -> void:
 				continue
 			_log_ai_trade(str(buyer), seller, target, pkg, str(ask["why"]))
 			break
+
+
+## A story request's bids (LegacyRollover, director 2026-11-25): each club he
+## named that values him and has something to offer bids as a suitor at the
+## trade table does: the more suitors, the closer each goes to the most it
+## would pay. A sole suitor makes a fair offer ("the same value it would offer
+## in an open market"). The keenest first: [[club, package], ...].
+func _story_bids(seller: String, target: Dictionary, to: Array, prospects: Dictionary) -> Array:
+	var margin := float(difficulty_rules()["trade_margin"]) if seller == my_club else Contracts.TRADE_MARGIN
+	var keen := []
+	for c in to:
+		var club := str(c)
+		if club == seller or club == my_club or not season.lists.has(club):
+			continue
+		var v := _worth_to(club, target, prospects, true)
+		if v > 0.0 and not _bids(club, v / (1.0 + margin), prospects, seller).is_empty():
+			keen.append([club, v])
+	keen.sort_custom(func(a, b):
+		if float(a[1]) != float(b[1]):
+			return float(a[1]) > float(b[1])
+		return str(a[0]) < str(b[0]))
+	var shade := UNASKED_BID + 0.1 * float(mini(keen.size(), 3) - 1)
+	var out := []
+	for row in keen:
+		var pkg := _bid(str(row[0]), target, float(row[1]), shade, prospects, seller, margin)
+		if pkg.is_empty() or _trade_ban_breaks(str(row[0]), seller, pkg, [target]):
+			continue
+		out.append([str(row[0]), pkg])
+	return out
+
+
+## A rival's story request: the keenest club that can pay gets him, and his
+## club must take the bid ("Same dice, best bid"). If none can and he named
+## your club, he waits for you until the close of trades (_story_close);
+## otherwise he stays.
+func _story_trade(seller: String, target: Dictionary, ask: Dictionary, prospects: Dictionary) -> void:
+	if target.is_empty() or not (season.lists.get(seller, []) as Array).has(target):
+		trade_requests.erase(str(target.get("id", "")))
+		return
+	var bids := _story_bids(seller, target, ask["to"], prospects)
+	if not bids.is_empty():
+		_log_ai_trade(str(bids[0][0]), seller, target, bids[0][1], "story")
+		return
+	if (ask["to"] as Array).has(my_club):
+		return
+	trade_requests.erase(str(target["id"]))
+	add_news("trade", LegacyRollover.story_stays_line(target, seller))
+
+
+## Your story requests: insisting, he goes to his real club for its bid at
+## once; otherwise every club he named that can pay makes an offer, and you
+## pick one (none taken by the close of trades, the best goes through:
+## _story_close). Players in ids. Returns the ids dealt with.
+func _story_offers(ids: Array, prospects: Dictionary) -> Dictionary:
+	var done := {}
+	for id in ids:
+		var ask: Dictionary = trade_requests[id]
+		var p := _find_player(str(id))
+		if str(ask["why"]) != "story" or str(ask["club"]) != my_club or p.is_empty():
+			continue
+		done[str(id)] = true
+		var bids := _story_bids(my_club, p, ask["to"], prospects)
+		if bids.is_empty():
+			trade_requests.erase(str(id))
+			add_news("trade", LegacyRollover.story_stays_line(p, my_club))
+			continue
+		if bool(ask.get("insist", false)):
+			var r := make_trade(str(bids[0][0]), [str(id)], (bids[0][1] as Array).map(func(a): return str(a["id"])))
+			if not bool(r["ok"]):
+				trade_requests.erase(str(id))
+				add_news("trade", LegacyRollover.story_stays_line(p, my_club))
+			continue
+		for b in bids:
+			trade_offers.append({"club": str(b[0]), "give": (b[1] as Array).map(func(a): return str(a["id"])),
+					"take": [str(id)], "status": "open", "request": true, "canon": str(ask["canon"])})
+			add_news("trade", "%s have made an offer for %s." % [GameDB.club_name(str(b[0])), _names([p])])
+	return done
+
+
+## Trades close (_close_free_agency): your story request with offers still on
+## the table takes the one worth most to you, by the trade rules ("Best offer
+## goes through"); one no club can still make, he stays. A rival's that named
+## you and you didn't meet: he stays.
+func _story_close() -> void:
+	var ids := trade_requests.keys()
+	ids.sort()
+	var prospects := {}
+	for id in ids:
+		if not trade_requests.has(id) or str(trade_requests[id]["why"]) != "story":
+			continue
+		var ask: Dictionary = trade_requests[id]
+		var p := _find_player(str(id))
+		var from := str(ask["club"])
+		if from != my_club:
+			trade_requests.erase(id)
+			if not p.is_empty():
+				add_news("trade", LegacyRollover.story_stays_line(p, from))
+			continue
+		if prospects.is_empty():
+			prospects = trade_prospects()
+		var open := []
+		for i in open_trade_offers():
+			var o: Dictionary = trade_offers[i]
+			if str(o.get("canon", "")) == "" or not (o["take"] as Array).has(str(id)):
+				continue
+			var gets: Array = _trade_assets(o["give"], str(o["club"]))["assets"]
+			open.append([i, TradeValue.package(gets.map(func(a): return _worth_to(my_club, a, prospects)))])
+		open.sort_custom(func(a, b):
+			if float(a[1]) != float(b[1]):
+				return float(a[1]) > float(b[1])
+			return int(a[0]) < int(b[0]))
+		var taken := false
+		for row in open:
+			if bool(accept_trade_offer(int(row[0]))["ok"]):
+				taken = true
+				break
+		if not taken:
+			trade_requests.erase(id)
+			if not p.is_empty():
+				add_news("trade", LegacyRollover.story_stays_line(p, from))
 
 
 ## Who `buyer` may go after at `seller`: the players outside its starting
@@ -11887,12 +12025,15 @@ func _negotiate(buyer: String, seller: String, target: Dictionary, bids: Array, 
 ## an offer can be well under it. At most MAX_OFFERS; an offer you turned
 ## down isn't made again the next year.
 func _make_trade_offers(prospects: Dictionary) -> void:
-	var asked := {}
 	# Your players who have asked out: the first club he named that can
-	# make an offer does. These don't count against MAX_OFFERS.
+	# make an offer does. These don't count against MAX_OFFERS. A story's
+	# request gets an offer from every club that can make one.
 	var ids := trade_requests.keys()
 	ids.sort()
+	var asked := _story_offers(ids, prospects)
 	for id in ids:
+		if not trade_requests.has(id) or asked.has(str(id)):
+			continue
 		var ask: Dictionary = trade_requests[id]
 		var p := _find_player(str(id))
 		if str(ask["club"]) != my_club or p.is_empty():
@@ -12435,6 +12576,8 @@ func decline_trade_offer(i: int) -> void:
 	if not open_trade_offers().has(i):
 		return
 	var o: Dictionary = trade_offers[i]
+	if str(o.get("canon", "")) != "":
+		return   # a story's offers stay until trades close (_story_close)
 	o["status"] = "declined"
 	for id in o["take"]:
 		trade_declined["%s|%s" % [str(o["club"]), str(id)]] = season_year
@@ -12504,6 +12647,7 @@ func _close_free_agency() -> void:
 		return
 	open_offseason()
 	fa_closed_year = season_year
+	_story_close()
 	var testing := []
 	for step in _fa_close_plan():
 		var p: Dictionary = step[0]
