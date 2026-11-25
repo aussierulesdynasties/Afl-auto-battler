@@ -189,3 +189,4 @@ What has landed toward each open row of docs/TODO.md and docs/TODO_RULINGS.md, o
 - 202: Merged #2004: 3D match: through the banner before the first bounce; banner words are milestones only (row 202).
 - 202: Merged #2034: Cazaly's Stadium to the MCG standard: stand, club, towers, solar car park, ranges and Westcourt (row 202 2b).
 - 202: Merged #2035: Manuka Oval to the MCG standard: stands, seats, scoreboard, towers, the town round it and Canberra to 30 km (row 202 2b).
+- 202: Merged #2025: 3D match: interchanges jog off and run on, the free's umpire stands off the mark, far tackles run in (row 202 2e, WIP).
