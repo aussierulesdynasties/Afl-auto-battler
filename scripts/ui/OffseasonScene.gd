@@ -1528,9 +1528,6 @@ func _contracts_pc(body: VBoxContainer) -> void:
 		# A short window can't hold the whole card: Contract and Ratings take turns beside his name.
 		var ratings := _short_pc() and _card_stage == "ratings"
 		if _short_pc():
-			var push := Control.new()
-			push.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			head.add_child(push)
 			head.add_child(UiKit.segmented("CardStage", [["contract", "Contract"], ["ratings", "Ratings"]], _card_stage,
 					func(k):
 						_card_stage = str(k)
