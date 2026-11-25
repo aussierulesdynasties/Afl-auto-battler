@@ -513,19 +513,27 @@ def concourse(col):
     {b: [bearings], dr: [distances beyond the fence], z: [[height per dr] per bearing]} the bank and path follow the
     measured ground (held at the last measured height beyond the table), otherwise they are flat"""
     mb = MB('concourse'); bs = np.arange(0, 360.001, 1.0); RO = D['outer_r']
+    # a measured bank's cells are not flat (heights differ on each corner): smooth_ground welds and smooth-shades them,
+    # else each cell shows as two flat triangles of different shade, the thin one dark against the sun
+    mb.smooth = bool(D.get('smooth_ground'))
     Ro = (lambda b: float(np.interp(b % 360, *zip(*RO), period=360))) if isinstance(RO, list) else (lambda b: RO)
     PWt = D.get('path_w', 3.0); T = D.get('terrain')
     pw = (lambda b: float(np.interp(b % 360, *zip(*PWt), period=360))) if isinstance(PWt, list) else (lambda b: PWt)
     RG = D.get('ground_r', 240)   # where the ground disc ends: a number or a [b, r] table
     Rg = (lambda b: float(np.interp(b % 360, *zip(*RG), period=360))) if isinstance(RG, list) else (lambda b: RG)
-    def band2(ra, rb, ra2, rb2, step):   # radii across a band on both edges of a 1-degree slice, split every 'step' m
-        n = max(1, int(math.ceil(max(rb - ra, rb2 - ra2) / step))) if T else 1
+    def band2(ra, rb, ra2, rb2, step, n=None):   # radii across a band on both edges of a 1-degree slice, split every 'step' m
+        if n is None: n = max(1, int(math.ceil(max(rb - ra, rb2 - ra2) / step))) if T else 1
         return [ra + (rb - ra) * j / n for j in range(n + 1)], [ra2 + (rb2 - ra2) * j / n for j in range(n + 1)]
+    # one split count all round each band, so neighbouring slices share the vertices on their common edge: a count per
+    # slice left T-junctions whose cracks showed the layer below as dark slashes (Blacktown's west bank, 2026-11-23)
+    _N = lambda f, step: max(1, int(math.ceil(max(f(b) for b in bs) / step))) if T else 1
+    NB = _N(lambda b: Ro(b) - fence_r(b % 360) - 0.12, 1.5); NP = _N(pw, 1.5)
+    NO = _N(lambda b: Rg(b) - Ro(b) - pw(b) + 0.2, 4.0)
     for i in range(len(bs) - 1):
         ba, bb = bs[i], bs[i + 1]
-        for r0a, r0b, r1a, r1b, m in ((fence_r(ba % 360) + 0.12, fence_r(bb % 360) + 0.12, Ro(ba), Ro(bb), D['mats_ground']['concourse']),
-                                      (Ro(ba), Ro(bb), Ro(ba) + pw(ba), Ro(bb) + pw(bb), D['mats_ground'].get('path', 'paving'))):
-            A, B = band2(r0a, r1a, r0b, r1b, 1.5)
+        for r0a, r0b, r1a, r1b, m, nn in ((fence_r(ba % 360) + 0.12, fence_r(bb % 360) + 0.12, Ro(ba), Ro(bb), D['mats_ground']['concourse'], NB),
+                                          (Ro(ba), Ro(bb), Ro(ba) + pw(ba), Ro(bb) + pw(bb), D['mats_ground'].get('path', 'paving'), NP)):
+            A, B = band2(r0a, r1a, r0b, r1b, 1.5, nn)
             for j in range(len(A) - 1):
                 q = [P3(ba, A[j], terrain_z(ba, A[j]) - 0.02), P3(bb, B[j], terrain_z(bb, B[j]) - 0.02),
                      P3(bb, B[j + 1], terrain_z(bb, B[j + 1]) - 0.02), P3(ba, A[j + 1], terrain_z(ba, A[j + 1]) - 0.02)]
@@ -542,7 +550,7 @@ def concourse(col):
     for i in range(len(bs) - 1):
         ba, bb = bs[i], bs[i + 1]
         Q = [([P3(ba, 0, -0.05), P3(bb, fence_r(bb % 360) + 0.2, -0.05), P3(ba, fence_r(ba % 360) + 0.2, -0.05)], gm)]
-        A, B = band2(Ro(ba) + pw(ba) - 0.2, Rg(ba), Ro(bb) + pw(bb) - 0.2, Rg(bb), 4.0)
+        A, B = band2(Ro(ba) + pw(ba) - 0.2, Rg(ba), Ro(bb) + pw(bb) - 0.2, Rg(bb), 4.0, NO)
         for j in range(len(A) - 1):
             Q.append(([P3(ba, A[j], terrain_z(ba, A[j]) - 0.04), P3(bb, B[j], terrain_z(bb, B[j]) - 0.04),
                        P3(bb, B[j + 1], terrain_z(bb, B[j + 1]) - 0.04), P3(ba, A[j + 1], terrain_z(ba, A[j + 1]) - 0.04)], om))

@@ -310,16 +310,25 @@ func _test_rivals_train() -> void:
 	var rival: Array = GameState.season.lists["COL"]
 	var before := {}
 	for p in rival:
-		before[str(p["id"])] = (p["attr"] as Dictionary).duplicate()
+		# Gains stop at potential (director 2026-11-23): only a rival with room
+		# to grow is expected to train.
+		if int(p.get("overall", 0)) < int(p.get("potential", 0)):
+			before[str(p["id"])] = (p["attr"] as Dictionary).duplicate()
 	# Eight rounds: rivals bank XP after every game and spend it as they go.
 	# His pace (director 2026-11-17) buys a stat point every few games.
 	for i in range(8):
 		GameState.advance()
 	var trained := 0
 	for p in rival:
-		if p["attr"] != before[str(p["id"])]:
+		var id := str(p["id"])
+		if before.has(id) and p["attr"] != before[id]:
 			trained += 1
-	_check(trained > rival.size() / 2, "Rival players train after games (%d of %d)" % [trained, rival.size()])
+	# A quarter, not a half: in eight rounds a young player with a light
+	# match load banks about 20 XP, short of his next point (seed 1: 5 of 16
+	# on the 2026 Collingwood list). On the old rule the half was met by
+	# seniors buying past their potential.
+	_check(before.size() > 0 and trained * 4 >= before.size(),
+			"Rival players with room to grow train after games (%d of %d)" % [trained, before.size()])
 	# The rivals' round pays and spends only theirs: a rival game leaves your
 	# players' banks and attributes as they were.
 	var mine_attr := {}
@@ -345,14 +354,15 @@ func _test_rivals_train() -> void:
 	# (tested in test_training).
 	for k in ["project", "project_year"]:
 		p0.erase(k)
-	# No stop at POT for a rival either (director 2026-11-17).
+	# Gains stop at potential for a rival too (director 2026-11-23, "Gains
+	# stop at potential"; it was no stop, 2026-11-17): the XP stays banked.
 	var at_pot := p0.duplicate(true)
 	at_pot["xp"] = 100000
 	at_pot["potential"] = int(at_pot["overall"])
 	at_pot["season_start_ov"] = int(at_pot["overall"])
 	GameState.ai_spend_xp(at_pot)
-	_check(int(at_pot["overall"]) > int(at_pot["potential"]),
-			"With XP to burn, a rival can train past his POT")
+	_check(int(at_pot["overall"]) == int(at_pot["potential"]),
+			"With XP to burn, a rival at his POT trains no further")
 	# No season limit for anyone (director 2026-11-17): the pace is the XP.
 	var mine: Dictionary = GameState.my_list[0]
 	mine["xp"] = 100000
