@@ -1,5 +1,13 @@
 {
  "pc": {
+  "almanac": {
+   "built": true,
+   "clipped": 0,
+   "min_font": 21.0,
+   "offscreen": 0,
+   "overlap": 0,
+   "small": 0
+  },
   "coaching": {
    "built": true,
    "clipped": 0,
@@ -7,11 +15,27 @@
    "offscreen": 0,
    "small": 0
   },
+  "combine": {
+   "built": true,
+   "clipped": 0,
+   "min_font": 19.5,
+   "offscreen": 0,
+   "overlap": 0,
+   "small": 0
+  },
   "draft": {
    "built": true,
    "clipped": 0,
    "min_font": 18.0,
    "offscreen": 0,
+   "small": 0
+  },
+  "draft_night": {
+   "built": true,
+   "clipped": 0,
+   "min_font": 19.5,
+   "offscreen": 0,
+   "overlap": 0,
    "small": 0
   },
   "forge": {
@@ -26,6 +50,22 @@
    "clipped": 0,
    "min_font": 18.0,
    "offscreen": 0,
+   "small": 0
+  },
+  "interview": {
+   "built": true,
+   "clipped": 0,
+   "min_font": 22.5,
+   "offscreen": 0,
+   "overlap": 0,
+   "small": 0
+  },
+  "interview_question": {
+   "built": true,
+   "clipped": 0,
+   "min_font": 19.5,
+   "offscreen": 0,
+   "overlap": 0,
    "small": 0
   },
   "list": {
@@ -49,10 +89,18 @@
    "offscreen": 0,
    "small": 0
   },
+  "merger_cut": {
+   "built": true,
+   "clipped": 0,
+   "min_font": 19.5,
+   "offscreen": 0,
+   "overlap": 0,
+   "small": 0
+  },
   "offseason": {
    "built": true,
    "clipped": 0,
-   "min_font": 18.0,
+   "min_font": 19.5,
    "offscreen": 0,
    "small": 0
   },
@@ -61,6 +109,30 @@
    "clipped": 0,
    "min_font": 19.5,
    "offscreen": 0,
+   "small": 41
+  },
+  "press": {
+   "built": true,
+   "clipped": 0,
+   "min_font": 19.5,
+   "offscreen": 0,
+   "overlap": 0,
+   "small": 0
+  },
+  "preview": {
+   "built": true,
+   "clipped": 0,
+   "min_font": 19.5,
+   "offscreen": 0,
+   "overlap": 0,
+   "small": 0
+  },
+  "scouting": {
+   "built": true,
+   "clipped": 0,
+   "min_font": 21.0,
+   "offscreen": 0,
+   "overlap": 0,
    "small": 0
   },
   "season_review": {
@@ -100,6 +172,14 @@
   }
  },
  "pc_small": {
+  "almanac": {
+   "built": true,
+   "clipped": 0,
+   "min_font": 14.0,
+   "offscreen": 0,
+   "overlap": 0,
+   "small": 0
+  },
   "coaching": {
    "built": true,
    "clipped": 0,
@@ -108,7 +188,23 @@
    "overlap": 0,
    "small": 0
   },
+  "combine": {
+   "built": true,
+   "clipped": 0,
+   "min_font": 13.0,
+   "offscreen": 0,
+   "overlap": 0,
+   "small": 0
+  },
   "draft": {
+   "built": true,
+   "clipped": 0,
+   "min_font": 13.0,
+   "offscreen": 0,
+   "overlap": 0,
+   "small": 0
+  },
+  "draft_night": {
    "built": true,
    "clipped": 0,
    "min_font": 13.0,
@@ -125,6 +221,22 @@
    "small": 0
   },
   "hub": {
+   "built": true,
+   "clipped": 0,
+   "min_font": 13.0,
+   "offscreen": 0,
+   "overlap": 0,
+   "small": 0
+  },
+  "interview": {
+   "built": true,
+   "clipped": 0,
+   "min_font": 15.0,
+   "offscreen": 0,
+   "overlap": 0,
+   "small": 0
+  },
+  "interview_question": {
    "built": true,
    "clipped": 0,
    "min_font": 13.0,
@@ -156,10 +268,18 @@
    "overlap": 0,
    "small": 0
   },
+  "merger_cut": {
+   "built": true,
+   "clipped": 0,
+   "min_font": 13.0,
+   "offscreen": 0,
+   "overlap": 0,
+   "small": 0
+  },
   "offseason": {
    "built": true,
    "clipped": 0,
-   "min_font": 12.0,
+   "min_font": 13.0,
    "offscreen": 0,
    "overlap": 0,
    "small": 0
@@ -171,6 +291,30 @@
    "offscreen": 0,
    "overlap": 0,
    "small": 61
+  },
+  "press": {
+   "built": true,
+   "clipped": 0,
+   "min_font": 13.0,
+   "offscreen": 0,
+   "overlap": 0,
+   "small": 0
+  },
+  "preview": {
+   "built": true,
+   "clipped": 0,
+   "min_font": 13.0,
+   "offscreen": 0,
+   "overlap": 0,
+   "small": 0
+  },
+  "scouting": {
+   "built": true,
+   "clipped": 0,
+   "min_font": 14.0,
+   "offscreen": 0,
+   "overlap": 0,
+   "small": 0
   },
   "season_review": {
    "built": true,
@@ -214,6 +358,14 @@
   }
  },
  "phone": {
+  "almanac": {
+   "built": true,
+   "clipped": 0,
+   "min_font": 14.0,
+   "offscreen": 0,
+   "overlap": 0,
+   "small": 0
+  },
   "coaching": {
    "built": true,
    "clipped": 0,
@@ -221,11 +373,27 @@
    "offscreen": 0,
    "small": 0
   },
+  "combine": {
+   "built": true,
+   "clipped": 0,
+   "min_font": 13.0,
+   "offscreen": 0,
+   "overlap": 0,
+   "small": 0
+  },
   "draft": {
    "built": true,
    "clipped": 0,
    "min_font": 12.0,
    "offscreen": 0,
+   "small": 0
+  },
+  "draft_night": {
+   "built": true,
+   "clipped": 0,
+   "min_font": 13.0,
+   "offscreen": 0,
+   "overlap": 0,
    "small": 0
   },
   "forge": {
@@ -240,6 +408,22 @@
    "clipped": 0,
    "min_font": 12.0,
    "offscreen": 0,
+   "small": 0
+  },
+  "interview": {
+   "built": true,
+   "clipped": 0,
+   "min_font": 15.0,
+   "offscreen": 0,
+   "overlap": 0,
+   "small": 0
+  },
+  "interview_question": {
+   "built": true,
+   "clipped": 0,
+   "min_font": 13.0,
+   "offscreen": 0,
+   "overlap": 0,
    "small": 0
   },
   "list": {
@@ -263,10 +447,18 @@
    "offscreen": 0,
    "small": 6
   },
+  "merger_cut": {
+   "built": true,
+   "clipped": 0,
+   "min_font": 13.0,
+   "offscreen": 0,
+   "overlap": 0,
+   "small": 0
+  },
   "offseason": {
    "built": true,
    "clipped": 0,
-   "min_font": 12.0,
+   "min_font": 13.0,
    "offscreen": 0,
    "small": 0
   },
@@ -275,6 +467,30 @@
    "clipped": 0,
    "min_font": 13.0,
    "offscreen": 0,
+   "small": 79
+  },
+  "press": {
+   "built": true,
+   "clipped": 0,
+   "min_font": 13.0,
+   "offscreen": 0,
+   "overlap": 0,
+   "small": 0
+  },
+  "preview": {
+   "built": true,
+   "clipped": 0,
+   "min_font": 13.0,
+   "offscreen": 0,
+   "overlap": 0,
+   "small": 0
+  },
+  "scouting": {
+   "built": true,
+   "clipped": 0,
+   "min_font": 14.0,
+   "offscreen": 0,
+   "overlap": 0,
    "small": 0
   },
   "season_review": {
@@ -314,6 +530,14 @@
   }
  },
  "phone_larger": {
+  "almanac": {
+   "built": true,
+   "clipped": 0,
+   "min_font": 16.0,
+   "offscreen": 0,
+   "overlap": 0,
+   "small": 0
+  },
   "coaching": {
    "built": true,
    "clipped": 0,
@@ -322,7 +546,23 @@
    "overlap": 0,
    "small": 0
   },
+  "combine": {
+   "built": true,
+   "clipped": 0,
+   "min_font": 15.0,
+   "offscreen": 0,
+   "overlap": 0,
+   "small": 0
+  },
   "draft": {
+   "built": true,
+   "clipped": 0,
+   "min_font": 15.0,
+   "offscreen": 0,
+   "overlap": 0,
+   "small": 0
+  },
+  "draft_night": {
    "built": true,
    "clipped": 0,
    "min_font": 15.0,
@@ -342,6 +582,22 @@
    "built": true,
    "clipped": 0,
    "min_font": 14.0,
+   "offscreen": 0,
+   "overlap": 0,
+   "small": 0
+  },
+  "interview": {
+   "built": true,
+   "clipped": 0,
+   "min_font": 17.0,
+   "offscreen": 0,
+   "overlap": 0,
+   "small": 0
+  },
+  "interview_question": {
+   "built": true,
+   "clipped": 0,
+   "min_font": 15.0,
    "offscreen": 0,
    "overlap": 0,
    "small": 0
@@ -370,18 +626,50 @@
    "overlap": 0,
    "small": 0
   },
+  "merger_cut": {
+   "built": true,
+   "clipped": 0,
+   "min_font": 15.0,
+   "offscreen": 0,
+   "overlap": 0,
+   "small": 0
+  },
   "offseason": {
    "built": true,
    "clipped": 0,
-   "min_font": 14.0,
+   "min_font": 15.0,
    "offscreen": 0,
    "overlap": 0,
    "small": 0
   },
   "preseason": {
    "built": true,
+   "clipped": 1,
+   "min_font": 15.0,
+   "offscreen": 0,
+   "overlap": 0,
+   "small": 79
+  },
+  "press": {
+   "built": true,
    "clipped": 0,
    "min_font": 15.0,
+   "offscreen": 0,
+   "overlap": 0,
+   "small": 0
+  },
+  "preview": {
+   "built": true,
+   "clipped": 0,
+   "min_font": 15.0,
+   "offscreen": 0,
+   "overlap": 0,
+   "small": 0
+  },
+  "scouting": {
+   "built": true,
+   "clipped": 0,
+   "min_font": 16.0,
    "offscreen": 0,
    "overlap": 0,
    "small": 0
@@ -428,6 +716,14 @@
   }
  },
  "phone_largest": {
+  "almanac": {
+   "built": true,
+   "clipped": 0,
+   "min_font": 18.0,
+   "offscreen": 0,
+   "overlap": 0,
+   "small": 0
+  },
   "coaching": {
    "built": true,
    "clipped": 0,
@@ -436,7 +732,23 @@
    "overlap": 0,
    "small": 0
   },
+  "combine": {
+   "built": true,
+   "clipped": 0,
+   "min_font": 17.0,
+   "offscreen": 0,
+   "overlap": 0,
+   "small": 0
+  },
   "draft": {
+   "built": true,
+   "clipped": 0,
+   "min_font": 17.0,
+   "offscreen": 0,
+   "overlap": 0,
+   "small": 0
+  },
+  "draft_night": {
    "built": true,
    "clipped": 0,
    "min_font": 17.0,
@@ -456,6 +768,22 @@
    "built": true,
    "clipped": 0,
    "min_font": 16.0,
+   "offscreen": 0,
+   "overlap": 0,
+   "small": 0
+  },
+  "interview": {
+   "built": true,
+   "clipped": 0,
+   "min_font": 20.0,
+   "offscreen": 0,
+   "overlap": 0,
+   "small": 0
+  },
+  "interview_question": {
+   "built": true,
+   "clipped": 0,
+   "min_font": 17.0,
    "offscreen": 0,
    "overlap": 0,
    "small": 0
@@ -484,18 +812,50 @@
    "overlap": 0,
    "small": 0
   },
+  "merger_cut": {
+   "built": true,
+   "clipped": 0,
+   "min_font": 17.0,
+   "offscreen": 0,
+   "overlap": 0,
+   "small": 0
+  },
   "offseason": {
    "built": true,
    "clipped": 0,
-   "min_font": 16.0,
+   "min_font": 17.0,
    "offscreen": 0,
    "overlap": 0,
    "small": 0
   },
   "preseason": {
    "built": true,
+   "clipped": 2,
+   "min_font": 17.0,
+   "offscreen": 0,
+   "overlap": 0,
+   "small": 79
+  },
+  "press": {
+   "built": true,
    "clipped": 0,
    "min_font": 17.0,
+   "offscreen": 0,
+   "overlap": 0,
+   "small": 0
+  },
+  "preview": {
+   "built": true,
+   "clipped": 0,
+   "min_font": 17.0,
+   "offscreen": 0,
+   "overlap": 0,
+   "small": 0
+  },
+  "scouting": {
+   "built": true,
+   "clipped": 0,
+   "min_font": 18.0,
    "offscreen": 0,
    "overlap": 0,
    "small": 0

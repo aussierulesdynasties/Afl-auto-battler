@@ -2,6 +2,9 @@
 
 python -I build_crew.py BODY.glb OUT.glb          (pip bpy 5.x; or blender -b -P build_crew.py -- BODY OUT)
 
+A crew file built on the MetaHuman body (crew_mh.glb) is made from Epic's mesh, so it is private:
+publish it with tools/epic_assets.sh, never git add (docs/EPIC_ASSETS.md).
+
 BODY is the footballer the match draws (assets/oval3d/player_mh.glb or player_average.glb). Every
 garment is cut from that body's own surface, smoothed, pushed out to sit off it and given a
 cloth thickness, and keeps the body's bone weights, so it moves with him exactly and never sinks
