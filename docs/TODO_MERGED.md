@@ -187,3 +187,4 @@ What has landed toward each open row of docs/TODO.md and docs/TODO_RULINGS.md, o
 - 197: Merged #2060: Builds carry the ground models and the 3D players; the phone app keeps every stadium offline.
 - 202: Merged #2062: MetaHuman files leave the public repo: private repo fetched at build time, CI blocks Epic files.
 - 202: Merged #2004: 3D match: through the banner before the first bounce; banner words are milestones only (row 202).
+- 202: Merged #2034: Cazaly's Stadium to the MCG standard: stand, club, towers, solar car park, ranges and Westcourt (row 202 2b).
