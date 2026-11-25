@@ -316,8 +316,8 @@ static func ai_upgrades(gs) -> Array:
 		var list: Array = _list_of(gs, str(code))
 		var rk := rookies(list)
 		rk.sort_custom(func(a, b):
-			if int(a.get("overall", 0)) != int(b.get("overall", 0)):
-				return int(a.get("overall", 0)) > int(b.get("overall", 0))
+			if int(Rating.ovr(a, 0)) != int(Rating.ovr(b, 0)):
+				return int(Rating.ovr(a, 0)) > int(Rating.ovr(b, 0))
 			return str(a["id"]) < str(b["id"]))
 		for p in rk:
 			if senior_count(list) >= senior_spots():

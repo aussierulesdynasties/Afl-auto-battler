@@ -410,14 +410,7 @@ var intake_summary := {}        # last rollover: retirements and growth
 var last_training_report: Dictionary = {}
 var _xp_grant_key := ""
 
-const TRAIN_STATS := [
-	["kicking", "Kicking"], ["handballing", "Handballing"], ["contested", "Contested ball"],
-	["contested_marking", "Contested marking"], ["uncontested_marking", "Uncontested marking"],
-	["pressure", "Pressure"], ["intercept", "Intercept"], ["speed", "Speed"], ["carry", "Carry"],
-	["goalkicking", "Goalkicking"], ["accuracy", "Accuracy"],
-	["creating", "Creating"], ["ruck", "Ruck"], ["discipline", "Discipline"],
-	["durability", "Durability"], ["star", "Star power"],
-]
+const TRAIN_STATS := Attributes.CARD_ROWS
 ## Match XP sizes: how good a game was. Growth turns a game into rating points
 ## at his potential's pace (an ordinary game, XP_SENIOR_GAME, is one game of
 ## it); these only set how a good game compares with a quiet one.
@@ -1563,7 +1556,7 @@ func _recompute_ratings() -> void:
 		for p in arr:
 			if not (p is Dictionary) or not (p as Dictionary).has("attr") or not (p as Dictionary).has("role"):
 				continue
-			var old := int(p.get("overall", 0))
+			var old := int(Rating.ovr(p, 0))
 			var ov := Ratings.rate_overall(p["attr"], str(p["role"]), Ratings.effective_games(p))
 			# Salary value is derived data too. Always refresh it so old saves
 			# cannot retain the retired 1-10 cap-point scale when OVR itself
@@ -1595,8 +1588,8 @@ func _backfill_potential() -> void:
 				continue
 			var orig = GameDB.player_by_id(str(p["id"]))
 			if orig is Dictionary and (orig as Dictionary).has("potential") and not is_same(orig, p):
-				p["potential"] = maxi(int(orig["potential"]), int(p["overall"]))
-				if bool(orig.get("rehab", false)) and int(p["overall"]) <= int(orig["overall"]):
+				p["potential"] = maxi(int(orig["potential"]), int(Rating.ovr(p)))
+				if bool(orig.get("rehab", false)) and int(Rating.ovr(p)) <= int(Rating.ovr(orig)):
 					p["rehab"] = true
 			else:
 				Potential.assign(p)
@@ -1634,7 +1627,7 @@ func _migrate_money_units() -> void:
 				continue
 			seen[token] = true
 			if p.has("overall"):
-				p["value"] = Ratings.salary_value(int(p["overall"]))
+				p["value"] = Ratings.salary_value(int(Rating.ovr(p)))
 			if old_units and int(p.get("salary", 0)) > 0 and int(p.get("salary", 0)) < 1000:
 				p["salary"] = Contracts.old_points_to_salary(int(p["salary"]))
 			var talks: Dictionary = p.get("talks", {})
@@ -1658,7 +1651,7 @@ func _migrate_money_units() -> void:
 			for code in draft.club_lists:
 				draft.club_spend[code] = 0
 				for p in draft.club_lists[code]:
-					draft.club_spend[code] = int(draft.club_spend[code]) + int(p.get("value", Ratings.salary_value(int(p.get("overall", 50)))))
+					draft.club_spend[code] = int(draft.club_spend[code]) + int(p.get("value", Ratings.salary_value(int(Rating.ovr(p, 50)))))
 			for entry in draft.pick_history:
 				entry["value"] = Ratings.salary_value(int(entry.get("overall", 50)))
 
@@ -2223,7 +2216,7 @@ func _place_real_draft(pool: Array) -> Array:
 			_real_pick(p, row, code)
 			intake_assignments.append({"club": code, "player_id": str(p["id"]),
 					"player_name": GameDB.player_display_name(p), "kind": "pick %d" % pick,
-					"overall": int(p["overall"])})
+					"overall": int(Rating.ovr(p))})
 			continue
 		# A tied prospect is already on his club's list; give him his pick.
 		for c in league_lists:
@@ -2661,7 +2654,7 @@ func begin_draft() -> void:
 	# league 2026 left behind: every listed player plus the 2026 draft class,
 	# drafted before the 2027 season.
 	var pool: Array = GameDB.all_players_sorted() + GameDB.all_draftees_sorted()
-	pool.sort_custom(func(a, b): return a["overall"] > b["overall"])
+	pool.sort_custom(func(a, b): return Rating.ovr(a) > Rating.ovr(b))
 	# The redraft is the first season's clubs only (director, 2026-11-12:
 	# "Join in 2028"): Tasmania join in 2028 and Canberra, when the career
 	# has them, in 2030, each with the debut list and new-club package every
@@ -3160,7 +3153,7 @@ func _start_next_season(next_year: int, signed: int) -> void:
 	for code in GameDB.club_order:
 		lists[code] = league_lists.get(code, [])
 		for p in lists[code]:
-			p["season_start_ov"] = int(p["overall"])
+			p["season_start_ov"] = int(Rating.ovr(p))
 			# The summer (Growth.summer, in age_league) has read the season.
 			p.erase("season_gains")
 			p.erase("over_gains")
@@ -3237,8 +3230,8 @@ func _fill_short_lists() -> void:
 			continue
 		var pool := free_agents.filter(func(q): return not bool(q.get("retired", false)))
 		pool.sort_custom(func(a, b):
-			if int(a.get("overall", 0)) != int(b.get("overall", 0)):
-				return int(a.get("overall", 0)) > int(b.get("overall", 0))
+			if int(Rating.ovr(a, 0)) != int(Rating.ovr(b, 0)):
+				return int(Rating.ovr(a, 0)) > int(Rating.ovr(b, 0))
 			return str(a["id"]) < str(b["id"]))
 		var names: PackedStringArray = []
 		for p in pool.slice(0, short):
@@ -3282,8 +3275,8 @@ func _fill_short_lists() -> void:
 func _passed_over_prospects() -> Array:
 	var out := draftee_pool.filter(func(q): return not drafted_draftees.has(str(q["id"])) 			and int(q.get("draft_year", 0)) < season_year)
 	out.sort_custom(func(a, b):
-		if int(a.get("overall", 0)) != int(b.get("overall", 0)):
-			return int(a.get("overall", 0)) > int(b.get("overall", 0))
+		if int(Rating.ovr(a, 0)) != int(Rating.ovr(b, 0)):
+			return int(Rating.ovr(a, 0)) > int(Rating.ovr(b, 0))
 		return str(a["id"]) < str(b["id"]))
 	return out
 
@@ -3540,7 +3533,7 @@ func _assign_draftee(code: String, p: Dictionary, kind: String) -> void:
 	intake_assignments.append({
 		"club": code, "player_id": str(p["id"]),
 		"player_name": str(p.get("generic_name", p.get("name", "Player"))),
-		"kind": kind, "overall": int(p["overall"]),
+		"kind": kind, "overall": int(Rating.ovr(p)),
 	})
 
 
@@ -4704,8 +4697,8 @@ func _papers_breakout() -> String:
 			continue
 		if int(p.get("injury_weeks", 0)) > 0 or not Backing.can_back(p, games_played(p)):
 			continue
-		var pot := int(p.get("potential", p.get("overall", 0)))
-		var best_pot := int(best.get("potential", best.get("overall", 0)))
+		var pot := int(p.get("potential", Rating.ovr(p, 0)))
+		var best_pot := int(best.get("potential", Rating.ovr(best, 0)))
 		if best.is_empty() or pot > best_pot or (pot == best_pot and str(p["id"]) < str(best["id"])):
 			best = p
 	return str(best.get("id", ""))
@@ -4758,11 +4751,11 @@ func papers_facts() -> Dictionary:
 		var mine := {}
 		for r in depth:
 			var ps: Array = by_role.get(r, [])
-			ps.sort_custom(func(a, b): return int(a.get("overall", 0)) > int(b.get("overall", 0)))
+			ps.sort_custom(func(a, b): return int(Rating.ovr(a, 0)) > int(Rating.ovr(b, 0)))
 			var top := ps.slice(0, int(depth[r]))
 			var sum := 0
 			for p in top:
-				sum += int(p.get("overall", 0))
+				sum += int(Rating.ovr(p, 0))
 			mine[r] = {"value": float(sum) / float(maxi(1, int(depth[r]))),
 					"lead": GameDB.player_display_name(top[0]) if not top.is_empty() else ""}
 		lines[str(code)] = mine
@@ -4778,7 +4771,7 @@ func papers_facts() -> Dictionary:
 	for i in range(order.size()):
 		var code := str(order[i])
 		var list: Array = (season.lists[code] as Array).duplicate()
-		list.sort_custom(func(a, b): return int(a.get("overall", 0)) > int(b.get("overall", 0)))
+		list.sort_custom(func(a, b): return int(Rating.ovr(a, 0)) > int(Rating.ovr(b, 0)))
 		var fit := list.filter(func(p): return int(p.get("injury_weeks", 0)) <= 0)
 		var f := {"name": GameDB.club_name(code), "pos": i + 1, "clubs": order.size(),
 				"last": last_finish_of(code), "move": papers_move_line(code)}
@@ -5423,8 +5416,8 @@ func prospect_read_seed() -> int:
 
 ## Best first; ties go to the id, so the same list gives the same order.
 func _better_rated(a: Dictionary, b: Dictionary) -> bool:
-	if int(a["overall"]) != int(b["overall"]):
-		return int(a["overall"]) > int(b["overall"])
+	if int(Rating.ovr(a)) != int(Rating.ovr(b)):
+		return int(Rating.ovr(a)) > int(Rating.ovr(b))
 	return str(a["id"]) < str(b["id"])
 
 
@@ -5533,7 +5526,7 @@ func _practice_squad(code: String, is_home: bool, invites: Array) -> Dictionary:
 			for i in range(sq.ground.size()):
 				if replaced.has(i) or (pass_same and str(sq.ground[i]["role"]) != str(g.get("role", ""))):
 					continue
-				if at < 0 or float(sq.ground[i]["overall"]) < float(sq.ground[at]["overall"]):
+				if at < 0 or float(Rating.ovr(sq.ground[i])) < float(Rating.ovr(sq.ground[at])):
 					at = i
 			if at >= 0:
 				break
@@ -5576,16 +5569,16 @@ func practice_trial_gap_pct(invites: Array) -> int:
 			for i in range(sq.ground.size()):
 				if pass_same and str(sq.ground[i]["role"]) != str(g.get("role", "")):
 					continue
-				if at < 0 or float(sq.ground[i]["overall"]) < float(sq.ground[at]["overall"]):
+				if at < 0 or float(Rating.ovr(sq.ground[i])) < float(Rating.ovr(sq.ground[at])):
 					at = i
 			if at >= 0:
 				break
 		if at < 0:
 			continue
-		var starter := float(sq.ground[at]["overall"])
+		var starter := float(Rating.ovr(sq.ground[at]))
 		var slot := Ratings._for_slot(g, str(sq.ground[at]["role"]))
 		if starter > 0.0:
-			total += maxf(0.0, (starter - float(slot["overall"])) / starter * 100.0)
+			total += maxf(0.0, (starter - float(Rating.ovr(slot))) / starter * 100.0)
 			n += 1
 	return roundi(total / float(n)) if n > 0 else 0
 
@@ -6954,7 +6947,7 @@ func season_player_name(player_id: String) -> String:
 ## recruiters' range for anyone else (DraftScouting.pot_read). {"mid",
 ## "range", "exact"}; "text" is ready to show ("82" or "78-84").
 func pot_view(p: Dictionary) -> Dictionary:
-	var pot := maxi(int(p.get("overall", 50)), int(p.get("potential", p.get("overall", 50))))
+	var pot := maxi(int(Rating.ovr(p, 50)), int(p.get("potential", Rating.ovr(p, 50))))
 	if not list_player(str(p.get("id", ""))).is_empty():
 		return {"mid": pot, "range": [pot, pot], "exact": true, "text": str(pot)}
 	var r := DraftScouting.pot_read(p, my_club, career_seed,
@@ -7351,7 +7344,7 @@ func _may_project(p: Dictionary) -> bool:
 	if int(p.get("project_year", 0)) == season_year:
 		return false
 	var need := learn_pot_needed(p)
-	return need >= 0 and int(p.get("potential", p.get("overall", 0))) >= need
+	return need >= 0 and int(p.get("potential", Rating.ovr(p, 0))) >= need
 
 
 ## The jobs open to him by his own gates (POT, size, how far the move is, one
@@ -7361,7 +7354,7 @@ func _jobs_open(p: Dictionary) -> Array:
 	if not _may_project(p):
 		return out
 	var have := Ratings.positions(p)
-	var own := int(p.get("overall", 0))
+	var own := int(Rating.ovr(p, 0))
 	for role in ["MID", "FWD", "DEF", "RUCK"]:
 		if have.has(role):
 			continue
@@ -7381,7 +7374,7 @@ func project_progress(p: Dictionary) -> String:
 func _start_project(p: Dictionary, job: String) -> void:
 	var role := str(LEARN_JOBS[job]["role"])
 	p["project"] = {"job": job, "weeks": 0, "year": season_year,
-			"start_own": int(p.get("overall", 0)), "start_there": rating_as(p, role)}
+			"start_own": int(Rating.ovr(p, 0)), "start_there": rating_as(p, role)}
 	p["project_year"] = season_year
 
 
@@ -7406,7 +7399,7 @@ func _project_week(p: Dictionary, announce := true) -> Dictionary:
 func _finish_project(p: Dictionary, announce := true, at := "Season end") -> Dictionary:
 	var job := project_job(p)
 	var role := project_role(p)
-	var own := int(p.get("overall", 0))
+	var own := int(Rating.ovr(p, 0))
 	var there := rating_as(p, role)
 	var learned := there >= own - PROJECT_PASS
 	if learned and Ratings.positions(p).has(role):
@@ -7507,7 +7500,7 @@ func take_odds(p: Dictionary) -> String:
 	if role == "":
 		return ""
 	var w := clampi(int((p["project"] as Dictionary).get("weeks", 1)), 1, DEV_TALK_WEEKS)
-	var gap := clampi(int(p.get("overall", 0)) - rating_as(p, role), 0, TAKE_GAP_MAX)
+	var gap := clampi(int(Rating.ovr(p, 0)) - rating_as(p, role), 0, TAKE_GAP_MAX)
 	return odds_in_ten(int(TAKE_PCT[w - 1][gap]))
 
 
@@ -7683,7 +7676,7 @@ func _ai_project_choice(list: Array) -> Dictionary:
 			if not FILL_SHARE.has(role):
 				continue
 			var thin := float(counts.get(role, 0)) / float(FILL_SHARE[role])
-			var gap := int(p.get("overall", 0)) - rating_as(p, role)
+			var gap := int(Rating.ovr(p, 0)) - rating_as(p, role)
 			var key := [thin, gap, str(p["id"]), str(j)]
 			if best.is_empty() or _key_less(key, best_key):
 				best = {"player": p, "job": str(j)}
@@ -8350,7 +8343,7 @@ func _medical_panel(id: String, club: String, at: String) -> void:
 		return
 	var ok := MedicalPanel.cleared(career_seed, id, season_year, MedicalPanel.count_ever(career_facts, id))
 	var row := {"id": id, "club": club, "name": GameDB.player_display_name(p),
-			"overall": int(p.get("overall", 0)), "count": n, "cleared": ok, "pct": MedicalPanel.clear_pct(),
+			"overall": int(Rating.ovr(p, 0)), "count": n, "cleared": ok, "pct": MedicalPanel.clear_pct(),
 			"year": season_year, "at": at}
 	last_medical.append(row)
 	if not ok:
@@ -8400,7 +8393,7 @@ func _medical_retire(club: String, p: Dictionary) -> void:
 	var id := str(p.get("id", ""))
 	Career.close_season({id: p}, season_tally, season_year, season_stats, season_stats_from)
 	medical_retired.append({"id": id, "club": club, "name": GameDB.player_display_name(p),
-			"age": float(p.get("age", 0.0)), "overall": int(p.get("overall", 0)), "year": season_year, "player": p})
+			"age": float(p.get("age", 0.0)), "overall": int(Rating.ovr(p, 0)), "year": season_year, "player": p})
 	if season != null and season.lists.has(club):
 		(season.lists[club] as Array).erase(p)
 	if league_lists.has(club):
@@ -9360,7 +9353,7 @@ func _decide_retirements() -> void:
 				continue
 			var res := Retirement.answer(p, season_year, season_games(str(p["id"])), career_facts)
 			Retirement.apply(p, res, year)
-			if bool(res["stays"]) and int(p.get("overall", 0)) >= NEWS_MIN_OVR:
+			if bool(res["stays"]) and int(Rating.ovr(p, 0)) >= NEWS_MIN_OVR:
 				add_news("retirement", "%s (%s) has decided to play on in %d." % [
 						GameDB.player_display_name(p), GameDB.club_name(str(code)), year])
 
@@ -9444,7 +9437,7 @@ func retiring_players() -> Array:
 	for p in my_list:
 		if int(p.get("play_on", 0)) == year:
 			out.append({"p": p, "can_ask": false, "talk": p.get("retire_talk", {})})
-	out.sort_custom(func(a, b): return int(a["p"].get("overall", 0)) > int(b["p"].get("overall", 0)))
+	out.sort_custom(func(a, b): return int(Rating.ovr(a["p"], 0)) > int(Rating.ovr(b["p"], 0)))
 	return out
 
 
@@ -9504,11 +9497,11 @@ func _release(code: String, p: Dictionary, wanted := false, announce := true) ->
 	free_agents.append(p)
 	offseason_log.append({"kind": "released", "club": code, "id": str(p["id"]), "wanted": wanted,
 			"eligible": bool(p["comp_eligible"])})
-	if announce and int(p.get("overall", 0)) >= NEWS_MIN_OVR:
+	if announce and int(Rating.ovr(p, 0)) >= NEWS_MIN_OVR:
 		# Before free agency (Legacy, to 2011) a released player is delisted:
 		# any club may still sign him, as the pre-season draft allowed.
 		var line := "%s let %s (OVR %d) go to free agency." if EraRules.on("free_agency") 				else "%s delisted %s (OVR %d)."
-		add_news("contract", line % [GameDB.club_name(code), GameDB.player_display_name(p), int(p["overall"])])
+		add_news("contract", line % [GameDB.club_name(code), GameDB.player_display_name(p), int(Rating.ovr(p))])
 
 
 ## Your expiring player at his asking price for `years` seasons. It is
@@ -9695,7 +9688,7 @@ func fa_role(p: Dictionary, code: String) -> String:
 	if not _bars.has(code):
 		_bars[code] = _selection_bars(season.lists.get(code, []))
 	var bars: Dictionary = _bars[code]
-	var ovr := int(p.get("overall", 0))
+	var ovr := int(Rating.ovr(p, 0))
 	for r in [str(p.get("role", "")), str(p.get("role2", ""))]:
 		if r != "" and ovr > int(bars.get(r, 0)):
 			return "ground"
@@ -9707,10 +9700,10 @@ func _selection_bars(list: Array) -> Dictionary:
 	var bars := {}
 	for q in side["ground"]:
 		var r := str(q["role"])
-		bars[r] = mini(int(bars.get(r, 999)), int(q["overall"]))
+		bars[r] = mini(int(bars.get(r, 999)), int(Rating.ovr(q)))
 	var bench := 999
 	for q in side["bench"]:
-		bench = mini(bench, int(q["overall"]))
+		bench = mini(bench, int(Rating.ovr(q)))
 	bars["bench"] = bench if bench < 999 else 0
 	return bars
 
@@ -9828,8 +9821,8 @@ func _open_market(players: Array) -> void:
 			held[str(o["club"])] = int(held.get(str(o["club"]), 0)) + 1
 	var ranked := players.duplicate()
 	ranked.sort_custom(func(a, b):
-		if int(a["overall"]) != int(b["overall"]):
-			return int(a["overall"]) > int(b["overall"])
+		if int(Rating.ovr(a)) != int(Rating.ovr(b)):
+			return int(Rating.ovr(a)) > int(Rating.ovr(b))
 		if float(a.get("age", 25.0)) != float(b.get("age", 25.0)):
 			return float(a.get("age", 25.0)) < float(b.get("age", 25.0))
 		return str(a["id"]) < str(b["id"]))
@@ -9999,7 +9992,7 @@ func _filler_choice(code: String, ranked: Array, targeted: Dictionary, counts: D
 ## adds to its side.
 func _gain(p: Dictionary, code: String) -> int:
 	var bars: Dictionary = _bars.get(code, {})
-	var ovr := int(p.get("overall", 0))
+	var ovr := int(Rating.ovr(p, 0))
 	var best := ovr - int(bars.get("bench", 0))
 	for r in [str(p.get("role", "")), str(p.get("role2", ""))]:
 		if r != "" and bars.has(r):
@@ -10327,13 +10320,13 @@ func _sign_fa(p: Dictionary, code: String, salary: int, years: int) -> void:
 		add_news("contract", ("%s tested free agency and re-signs with %s: %s for %d season%s." if stayed
 				else "%s tested free agency and leaves for %s: %s for %d season%s.") % [GameDB.player_display_name(p),
 				GameDB.club_name(code), Contracts.money(salary), years, "" if years == 1 else "s"])
-	elif code == my_club or int(p.get("overall", 0)) >= NEWS_MIN_OVR:
+	elif code == my_club or int(Rating.ovr(p, 0)) >= NEWS_MIN_OVR:
 		# Before free agency (2012) a delisted player came back through the
 		# pre-season draft, as the season wrap says (_build_season_wrap).
 		var signed_line := "%s sign free agent %s (OVR %d): %s for %d season%s." if EraRules.on("free_agency") \
 				else "%s take delisted %s (OVR %d) in the pre-season draft: %s for %d season%s."
 		add_news("contract", signed_line % [GameDB.club_name(code),
-				GameDB.player_display_name(p), int(p["overall"]), Contracts.money(salary), years, "" if years == 1 else "s"])
+				GameDB.player_display_name(p), int(Rating.ovr(p)), Contracts.money(salary), years, "" if years == 1 else "s"])
 
 
 func _join(code: String, p: Dictionary) -> void:
@@ -10883,7 +10876,7 @@ func _league_fingerprint() -> String:
 	for code in season.lists:
 		var h := 0
 		for q in season.lists[code]:
-			h = hash([h, str(q["id"]), int(q.get("overall", 0)), int(q.get("potential", 0)), snappedf(float(q.get("age", 0.0)), 0.01)])
+			h = hash([h, str(q["id"]), int(Rating.ovr(q, 0)), int(q.get("potential", 0)), snappedf(float(q.get("age", 0.0)), 0.01)])
 		parts.append("%s:%d:%d" % [code, (season.lists[code] as Array).size(), h])
 	for code in season.ladder:
 		var row: Dictionary = season.ladder[code]
@@ -11408,8 +11401,8 @@ func _bids(buyer: String, most: float, prospects: Dictionary, to := "") -> Array
 	var night := draft_night_open()
 	var list: Array = (season.lists[buyer] as Array).duplicate() if not night else []
 	list.sort_custom(func(a, b):
-		if int(a["overall"]) != int(b["overall"]):
-			return int(a["overall"]) > int(b["overall"])
+		if int(Rating.ovr(a)) != int(Rating.ovr(b)):
+			return int(Rating.ovr(a)) > int(Rating.ovr(b))
 		return str(a["id"]) < str(b["id"]))
 	for k in range(10, list.size()):
 		var q: Dictionary = list[k]
@@ -11929,8 +11922,8 @@ func list_problem() -> Array:
 		return []
 	var side: Array = my_list.duplicate()
 	side.sort_custom(func(a, b):
-		if int(a["overall"]) != int(b["overall"]):
-			return int(a["overall"]) > int(b["overall"])
+		if int(Rating.ovr(a)) != int(Rating.ovr(b)):
+			return int(Rating.ovr(a)) > int(Rating.ovr(b))
 		return str(a["id"]) < str(b["id"]))
 	var best22 := {}
 	for q in side.slice(0, 22):
@@ -12498,8 +12491,8 @@ func _fa_staying() -> Array:
 		if float(p.get("age", 30.0)) < FA_STAYS_UNDER and not retiring_now(p):
 			young.append(p)
 	young.sort_custom(func(a, b):
-		if int(a.get("overall", 0)) != int(b.get("overall", 0)):
-			return int(a.get("overall", 0)) > int(b.get("overall", 0))
+		if int(Rating.ovr(a, 0)) != int(Rating.ovr(b, 0)):
+			return int(Rating.ovr(a, 0)) > int(Rating.ovr(b, 0))
 		if float(a.get("age", 25.0)) != float(b.get("age", 25.0)):
 			return float(a.get("age", 25.0)) < float(b.get("age", 25.0))
 		return str(a["id"]) < str(b["id"]))
@@ -12589,8 +12582,8 @@ func _resolve_market() -> void:
 	for _pass in range(40):
 		var order := free_agents.duplicate()
 		order.sort_custom(func(a, b):
-			if int(a["overall"]) != int(b["overall"]):
-				return int(a["overall"]) > int(b["overall"])
+			if int(Rating.ovr(a)) != int(Rating.ovr(b)):
+				return int(Rating.ovr(a)) > int(Rating.ovr(b))
 			if float(a.get("age", 25.0)) != float(b.get("age", 25.0)):
 				return float(a.get("age", 25.0)) < float(b.get("age", 25.0))
 			return str(a["id"]) < str(b["id"]))
@@ -13024,7 +13017,7 @@ func _auto_pick(strategy: String) -> Dictionary:
 					for q in pool:
 						if used3.has(str(q["id"])) or (line != "BENCH" and not Ratings.plays_role(q, role3)):
 							continue
-						if best3 == null or int(q["overall"]) > int(best3["overall"]):
+						if best3 == null or int(Rating.ovr(q)) > int(Rating.ovr(best3)):
 							best3 = q
 					if best3 != null:
 						arr3[i] = str(best3["id"])
@@ -13059,7 +13052,7 @@ func blood_youth(side_in: Dictionary, pool: Array) -> Dictionary:
 				var w = by_id.get(str(id))
 				if w == null or brought.has(str(id)) or is_young(w) or _keeps_place(w):
 					continue
-				if weakest == "" or int(w["overall"]) < int(by_id[weakest]["overall"]):
+				if weakest == "" or int(Rating.ovr(w)) < int(Rating.ovr(by_id[weakest])):
 					weakest = str(id)
 			if weakest == "":
 				continue
@@ -13069,8 +13062,8 @@ func blood_youth(side_in: Dictionary, pool: Array) -> Dictionary:
 				if used.has(pid) or brought.has(pid) or dropped.has(pid) or not is_young(p) \
 						or not Ratings.plays_role(p, role):
 					continue
-				var gap := int(by_id[weakest]["overall"]) - int(p["overall"])
-				if gap <= YOUTH_GAP and (best_swap.is_empty() or int(p["overall"]) > int(by_id[str(best_swap[2])]["overall"])):
+				var gap := int(Rating.ovr(by_id[weakest])) - int(Rating.ovr(p))
+				if gap <= YOUTH_GAP and (best_swap.is_empty() or int(Rating.ovr(p)) > int(Rating.ovr(by_id[str(best_swap[2])]))):
 					best_swap = [line, weakest, pid]
 		if best_swap.is_empty():
 			break
@@ -13192,7 +13185,7 @@ func complete_synergy(key: String, side: Dictionary) -> Dictionary:
 				continue
 			if line != "" and not Ratings.plays_role(p, line):
 				continue
-			if cand == null or int(p["overall"]) > int(cand["overall"]):
+			if cand == null or int(Rating.ovr(p)) > int(Rating.ovr(cand)):
 				cand = p
 		if cand == null:
 			var plural := str(Traits.PLURALS.get(need_t, Traits.label(need_t) + "s"))
@@ -13210,7 +13203,7 @@ func complete_synergy(key: String, side: Dictionary) -> Dictionary:
 						continue
 					if pass_n == 0 and protect.has(str(id)):
 						continue
-					if victim == "" or int(vp["overall"]) < int(by_id[victim]["overall"]):
+					if victim == "" or int(Rating.ovr(vp)) < int(Rating.ovr(by_id[victim])):
 						victim = str(id)
 			if victim != "":
 				break
@@ -13647,7 +13640,7 @@ func _closest_plan(p: Dictionary) -> String:
 func apply_train_plans() -> Dictionary:
 	var out := {"points": 0, "players": 0, "by_player": {}, "rises": [], "traits": [], "lost": [], "at_pot": []}
 	for p in my_list:
-		var ov := int(p.get("overall", 0))
+		var ov := int(Rating.ovr(p, 0))
 		var had: Array = Traits.of(p)
 		var gains := apply_plan_to(p)
 		if gains.is_empty():
@@ -13658,7 +13651,7 @@ func apply_train_plans() -> Dictionary:
 		out["points"] = int(out["points"]) + pts
 		out["players"] = int(out["players"]) + 1
 		out["by_player"][str(p["id"])] = gains
-		var now := int(p["overall"])
+		var now := int(Rating.ovr(p))
 		if now > ov:
 			(out["rises"] as Array).append([str(p["id"]), ov, now])
 			var pot := int(p.get("potential", 0))
@@ -13825,7 +13818,7 @@ static func stat_useful_for_role(role: String, key: String) -> bool:
 func development_state(p: Dictionary) -> String:
 	if bool(p.get("rehab", false)):
 		return "Rehab year"
-	var gap := int(p.get("potential", p.get("overall", 0))) - int(p.get("overall", 0))
+	var gap := int(p.get("potential", Rating.ovr(p, 0))) - int(Rating.ovr(p, 0))
 	if gap >= 3:
 		return "Developing"
 	if gap >= 1:
@@ -13918,7 +13911,7 @@ func _buy(p: Dictionary, holder: Dictionary, bank: String, weights: Dictionary, 
 		# Gains stop at his potential (director 2026-11-23, "Gains stop at
 		# potential": stars climbed to 99 in a season, 90+ from 10 to 44 in
 		# three). The XP stays in his bank; a breakout can still pass it.
-		if pot > 0 and int(p.get("overall", 0)) >= pot:
+		if pot > 0 and int(Rating.ovr(p, 0)) >= pot:
 			break
 		holder[bank] = float(holder[bank]) - float(best_cost)
 		attr[best_key] = int(attr[best_key]) + 1
@@ -13927,7 +13920,7 @@ func _buy(p: Dictionary, holder: Dictionary, bank: String, weights: Dictionary, 
 		sg[best_key] = int(sg.get(best_key, 0)) + 1
 		p["season_gains"] = sg
 		_recalc_player_overall(p)
-		if pot > 0 and not p.has("peak_year") and int(p["overall"]) >= pot:
+		if pot > 0 and not p.has("peak_year") and int(Rating.ovr(p)) >= pot:
 			p["peak_year"] = season_year
 
 
@@ -13958,7 +13951,7 @@ func _train_rivals(results: Array) -> void:
 		var start := int(bp["season_start_ov"])
 		add_news("development", "%s (%s) has lifted to OVR %d, up %d this season." % [
 				GameDB.player_display_name(bp), GameDB.club_name(str(best["code"])),
-				int(bp["overall"]), int(bp["overall"]) - start])
+				int(Rating.ovr(bp)), int(Rating.ovr(bp)) - start])
 
 
 ## Spend a rival player's XP: his position, or the stat a trait needs
@@ -14007,7 +14000,7 @@ func _cost_for(cur: int, games: float) -> int:
 func _recalc_player_overall(p: Dictionary) -> void:
 	p["overall"] = Ratings.rate_overall(p["attr"], str(p["role"]),
 			Ratings.effective_games(p))
-	p["value"] = Ratings.salary_value(int(p["overall"]))
+	p["value"] = Ratings.salary_value(int(Rating.ovr(p)))
 
 
 # ---------------------------------------------------------------------------
@@ -14446,7 +14439,7 @@ func _round_news(results: Array) -> void:
 				"beats": st["beats"], "club": st["club"], "weight": st["weight"], "angle": st["angle"]})
 	for inj in last_injuries:
 		var p := _find_player(str(inj.get("id", "")))
-		if p.is_empty() or int(inj.get("weeks", 0)) < 4 or int(p.get("overall", 0)) < NEWS_MIN_OVR 				or told.has(str(inj.get("id", ""))):
+		if p.is_empty() or int(inj.get("weeks", 0)) < 4 or int(Rating.ovr(p, 0)) < NEWS_MIN_OVR 				or told.has(str(inj.get("id", ""))):
 			continue
 		add_news("injury", "%s (%s) is out for %s with %s." % [GameDB.player_display_name(p),
 				GameDB.club_name(str(inj.get("club", ""))), _weeks_text(int(inj["weeks"])),
@@ -14474,12 +14467,12 @@ func _round_news(results: Array) -> void:
 ## A rival who has trained as far as he can this season is a news candidate
 ## (once a season). Returns the better of him and `best`.
 func _development_pick(code: String, p: Dictionary, best: Dictionary) -> Dictionary:
-	var start := int(p.get("season_start_ov", p.get("overall", 0)))
-	var ov := int(p.get("overall", 0))
+	var start := int(p.get("season_start_ov", Rating.ovr(p, 0)))
+	var ov := int(Rating.ovr(p, 0))
 	if ov < NEWS_MIN_OVR or ov - start < 2 \
 			or int(p.get("news_year", 0)) == season_year:
 		return best
-	if not best.is_empty() and int((best["p"] as Dictionary)["overall"]) >= ov:
+	if not best.is_empty() and int(Rating.ovr(best["p"])) >= ov:
 		return best
 	return {"code": code, "p": p}
 
@@ -15398,8 +15391,8 @@ func _skip_back_kids(to := "season") -> void:
 		elif can_back(p):
 			kids.append(p)
 	kids.sort_custom(func(a, b):
-		if int(a["overall"]) != int(b["overall"]):
-			return int(a["overall"]) > int(b["overall"])
+		if int(Rating.ovr(a)) != int(Rating.ovr(b)):
+			return int(Rating.ovr(a)) > int(Rating.ovr(b))
 		return str(a["id"]) < str(b["id"]))
 	for p in kids:
 		if on >= SkipOrders.YOUTH_RUNS:
@@ -15668,7 +15661,7 @@ func _swap_in(sel: Dictionary, p: Dictionary) -> Dictionary:
 				if _keeps_place(q):
 					continue
 				# Out this week anyway first; then the lowest rated.
-				var rank := float(q.get("overall", 0)) - (1000.0 if not Ratings.available(q) else 0.0)
+				var rank := float(Rating.ovr(q, 0)) - (1000.0 if not Ratings.available(q) else 0.0)
 				if rank < best_rank:
 					best_rank = rank
 					best = q
@@ -16926,7 +16919,7 @@ func _culture_season() -> void:
 	var age_sum := 0.0
 	for code in season.lists:
 		var best: Array = (season.lists[code] as Array).duplicate()
-		best.sort_custom(func(x, y): return int(x.get("overall", 0)) > int(y.get("overall", 0)))
+		best.sort_custom(func(x, y): return int(Rating.ovr(x, 0)) > int(Rating.ovr(y, 0)))
 		var age := 0.0
 		var count := mini(22, best.size())
 		for j in range(count):

@@ -298,7 +298,7 @@ func _contracts(body: VBoxContainer) -> void:
 	for p in expiring:
 		var want := Contracts.wants(p)
 		var card := _player_card(p, "%d OVR  ·  %d POT  ·  age %d  ·  on %s  ·  wants %s for %d seasons" % [
-				int(p["overall"]), int(p.get("potential", p["overall"])), int(p.get("age", 0)),
+				int(Rating.ovr(p)), int(p.get("potential", Rating.ovr(p))), int(p.get("age", 0)),
 				Contracts.money(int(p.get("salary", 0))), Contracts.money(int(want["salary"])), int(want["years"])])
 		body.add_child(card)
 		var row := UiKit.hbox(4)
@@ -352,7 +352,7 @@ func _contracts(body: VBoxContainer) -> void:
 		var left := int(p.get("contract_years", 1)) - 1
 		var term := "out of contract" if left <= 0 else "%d season%s left" % [left, "" if left == 1 else "s"]
 		body.add_child(_para("%s  ·  %d OVR  ·  %s  ·  %s" % [
-				GameDB.player_display_name(p), int(p["overall"]), Contracts.money(int(p.get("salary", 0))),
+				GameDB.player_display_name(p), int(Rating.ovr(p)), Contracts.money(int(p.get("salary", 0))),
 				term], 12, UiKit.TEXT))
 
 
@@ -367,7 +367,7 @@ func _retiring(body: VBoxContainer) -> void:
 		var p: Dictionary = r["p"]
 		var g := GameState.season_games(str(p["id"]))
 		var card := _player_card(p, "%d OVR  ·  age %d  ·  %s this year" % [
-				int(p["overall"]), int(p.get("age", 0)), "1 game" if g == 1 else "%d games" % g])
+				int(Rating.ovr(p)), int(p.get("age", 0)), "1 game" if g == 1 else "%d games" % g])
 		card.name = "Retiring_" + str(p["id"])
 		body.add_child(card)
 		var v := card.get_child(0) as VBoxContainer
@@ -498,7 +498,7 @@ func _show_talks() -> void:
 	var talk_name := _para(GameDB.player_display_name(p), 20, UiKit.TEXT)
 	talk_name.name = "TalkPlayerName"
 	v.add_child(NameLink.tappable(talk_name, str(p["id"])))
-	v.add_child(_para("Age %d  ·  %d OVR  ·  %s POT  ·  on %s now" % [int(p.get("age", 0)), int(p["overall"]),
+	v.add_child(_para("Age %d  ·  %d OVR  ·  %s POT  ·  on %s now" % [int(p.get("age", 0)), int(Rating.ovr(p)),
 			str(GameState.pot_view(p)["text"]), Contracts.money(int(p.get("salary", 0)))], 13, UiKit.MUTED))
 	# For a free agent his terms include what his options add.
 	var meet_salary := int(want["salary"]) + int(terms.get("premium", 0))
@@ -730,8 +730,8 @@ func _agents(body: VBoxContainer) -> void:
 		var bv: float
 		match _fa_sort:
 			"overall":
-				av = float(a.get("overall", 0))
-				bv = float(b.get("overall", 0))
+				av = float(Rating.ovr(a, 0))
+				bv = float(Rating.ovr(b, 0))
 			"potential":
 				av = float(GameState.pot_view(a)["mid"])
 				bv = float(GameState.pot_view(b)["mid"])
@@ -749,7 +749,7 @@ func _agents(body: VBoxContainer) -> void:
 	for p in fas:
 		var want := Contracts.wants(p)
 		var card := _player_card(p, "%d OVR  ·  %s POT  ·  age %d  ·  wants %s for %d seasons  ·  from %s" % [
-				int(p["overall"]), str(GameState.pot_view(p)["text"]), int(p.get("age", 0)),
+				int(Rating.ovr(p)), str(GameState.pot_view(p)["text"]), int(p.get("age", 0)),
 				Contracts.money(int(want["salary"])), int(want["years"]),
 				GameDB.club_short(str(p.get("released_by", "")))])
 		PlayerSheet.synergy_fit_block(card.get_child(0) as VBoxContainer, p, 12)
@@ -1084,7 +1084,7 @@ func _asset_line(id: String, club: String) -> String:
 		return _pick_label(pk) if not pk.is_empty() else "-"
 	for p in GameState.season.lists.get(club, []):
 		if str(p["id"]) == id:
-			return "%s, %s %d" % [GameDB.player_display_name(p), Ratings.role_tag(p), int(p["overall"])]
+			return "%s, %s %d" % [GameDB.player_display_name(p), Ratings.role_tag(p), int(Rating.ovr(p))]
 	return "-"
 
 
@@ -1130,8 +1130,8 @@ func _pick_grid(body: VBoxContainer, list: Array, chosen: Array, prefix: String)
 	body.add_child(UiKit.lbl("Players", 14, UiKit.MUTED, true))
 	var sorted := list.duplicate()
 	sorted.sort_custom(func(a, b):
-		if int(a["overall"]) != int(b["overall"]):
-			return int(a["overall"]) > int(b["overall"])
+		if int(Rating.ovr(a)) != int(Rating.ovr(b)):
+			return int(Rating.ovr(a)) > int(Rating.ovr(b))
 		return str(a["id"]) < str(b["id"]))
 	for p in sorted:
 		var id := str(p["id"])
@@ -1143,7 +1143,7 @@ func _pick_grid(body: VBoxContainer, list: Array, chosen: Array, prefix: String)
 		# never cuts them off.
 		var head := "%s%s%s  ·  %s" % [GameDB.player_display_name(p), "  ·  " + tag if tag != "" else "",
 				"  ·  Untouchable" if GameState.is_untouchable(id) else "", Ratings.role_tag(p)]
-		var facts := "Age %d  ·  %d OVR  ·  %s POT" % [int(p.get("age", 0)), int(p["overall"]),
+		var facts := "Age %d  ·  %d OVR  ·  %s POT" % [int(p.get("age", 0)), int(Rating.ovr(p)),
 				str(GameState.pot_view(p)["text"])]
 		var b := _asset_button(head + ("  ·  " if _wide() else "\n") + facts, chosen.has(id))
 		b.name = prefix + id

@@ -228,7 +228,7 @@ const RECORD_SHORT := 14.0
 ## `season` is the data season (GameDB.DATA_SEASON): the one his numbers are from.
 static func record_level(p: Dictionary, season := 2026) -> float:
 	var gm := float(p.get("gm", 0.0))
-	var num := float(p.get("overall", 0)) * gm * float(RECORD_W[0])
+	var num := float(Rating.ovr(p, 0)) * gm * float(RECORD_W[0])
 	var den := gm * float(RECORD_W[0])
 	var seen := false
 	for h in p.get("history", []):
@@ -244,15 +244,15 @@ static func rate_on_record(p: Dictionary, season := 2026) -> void:
 	if bool(p.get("generated", false)) or bool(p.get("projected", false)) or not p.has("attr"):
 		return
 	var level := record_level(p, season)
-	if level < 0.0 or absf(level - float(p.get("overall", 0))) < 0.5:
+	if level < 0.0 or absf(level - float(Rating.ovr(p, 0))) < 0.5:
 		return
 	var role := str(p.get("role", "MID"))
-	p["season_overall"] = int(p.get("overall", 0))   # what the data season alone said
+	p["season_overall"] = int(Rating.ovr(p, 0))   # what the data season alone said
 	var games := maxf(RECORD_SHORT, effective_games(p))
 	p["attr"] = Prospects.fit_attributes(p["attr"], role, level, games)
 	p["sample"] = games
 	p["overall"] = rate_overall(p["attr"], role, games)
-	p["value"] = salary_value(p["overall"])
+	p["value"] = salary_value(Rating.ovr(p))
 	p["rated_on_record"] = true
 
 
@@ -287,11 +287,11 @@ static func rate_on_honours(p: Dictionary) -> void:
 	if score <= 0.0 or bool(p.get("generated", false)) or bool(p.get("projected", false)) 			or not p.has("attr"):
 		return
 	var floor_ovr := honours_floor(score)
-	if int(p.get("overall", 0)) >= floor_ovr:
+	if int(Rating.ovr(p, 0)) >= floor_ovr:
 		return
 	var role := str(p.get("role", "MID"))
 	if not p.has("season_overall"):
-		p["season_overall"] = int(p.get("overall", 0))   # what the data season alone said
+		p["season_overall"] = int(Rating.ovr(p, 0))   # what the data season alone said
 	# Honours speak for a full season, as the record does (rate_on_record).
 	var games := maxf(RECORD_SHORT, effective_games(p))
 	var fitted := Prospects.fit_attributes(p["attr"], role, float(floor_ovr), games)
@@ -300,7 +300,7 @@ static func rate_on_honours(p: Dictionary) -> void:
 	# His overall is what his skills say, as on every load (GameState.
 	# _recompute_ratings): a label lifted over his skills fell a point on load.
 	p["overall"] = rate_overall(p["attr"], role, games)
-	p["value"] = salary_value(p["overall"])
+	p["value"] = salary_value(Rating.ovr(p))
 	p["rated_on_honours"] = true
 
 
@@ -341,7 +341,7 @@ static func rate_on_rehab(p: Dictionary) -> void:
 	# real peak comes through growth (REHAB_FROM_AGE).
 	if float(p.get("age", 0.0)) < REHAB_FROM_AGE:
 		return
-	var ovr := float(p.get("overall", 0))
+	var ovr := float(Rating.ovr(p, 0))
 	var gap := float(p.get("potential", ovr)) - ovr
 	if gap <= 0.0:
 		return
@@ -353,7 +353,7 @@ static func rate_on_rehab(p: Dictionary) -> void:
 	p["attr"] = Prospects.fit_attributes(p["attr"], role, target, games)
 	p["sample"] = games
 	p["overall"] = mini(int(p.get("potential", 99)), maxi(int(ovr), rate_overall(p["attr"], role, games)))
-	p["value"] = salary_value(p["overall"])
+	p["value"] = salary_value(Rating.ovr(p))
 	p["rated_on_rehab"] = true
 	p.erase("rehab")
 
@@ -598,7 +598,7 @@ static func derive_all(players: Array, reference: Array = []) -> Array:
 
 		# ---- overall + draft value ----------------------------------------
 		p["overall"] = rate_overall(a, str(p["role"]), float(p["gm"]))
-		p["value"] = salary_value(p["overall"])
+		p["value"] = salary_value(Rating.ovr(p))
 
 	return players
 
@@ -860,7 +860,7 @@ static func select_22(list_players: Array, dual := -1) -> Dictionary:
 		var pa: bool = promised.has(a["id"])
 		if pa != promised.has(b["id"]):
 			return pa
-		return float(a["overall"]) * Workload.selection_factor(a) > float(b["overall"]) * Workload.selection_factor(b))
+		return float(Rating.ovr(a)) * Workload.selection_factor(a) > float(Rating.ovr(b)) * Workload.selection_factor(b))
 
 	var ground: Array = []
 	var used := {}
@@ -958,7 +958,7 @@ static func select_22(list_players: Array, dual := -1) -> Dictionary:
 	if dual == -1 and bench_rules and not spare_ruck.is_empty() and not used.has(spare_ruck["id"]) \
 			and bench.size() >= bench() and bench() > BENCH_COVER.size():
 		var last: Dictionary = bench[bench.size() - 1]
-		if float(spare_ruck["overall"]) >= float(last["overall"]) - DUAL_RUCK_MARGIN:
+		if float(Rating.ovr(spare_ruck)) >= float(Rating.ovr(last)) - DUAL_RUCK_MARGIN:
 			used.erase(last["id"])
 			bench[bench.size() - 1] = spare_ruck
 			used[spare_ruck["id"]] = true
@@ -1028,7 +1028,7 @@ static func select_side(list_players: Array, selection: Dictionary = {}) -> Dict
 			pool = _with_trial(pool, trial)
 		return select_22(pool, dual)
 	pool.sort_custom(func(a, b):
-		return float(a["overall"]) * Workload.selection_factor(a) > float(b["overall"]) * Workload.selection_factor(b))
+		return float(Rating.ovr(a)) * Workload.selection_factor(a) > float(Rating.ovr(b)) * Workload.selection_factor(b))
 	var by_id := {}
 	for p in pool:
 		by_id[str(p["id"])] = p
@@ -1138,7 +1138,7 @@ static func select_on_form(list_players: Array, form: Dictionary) -> Dictionary:
 				promised[str(p["id"])] = true
 	var score := func(p: Dictionary) -> float:
 		var v := float(form.get(str(p["id"]), -1))
-		return v if v >= 0.0 else -1000.0 + float(p.get("overall", 0))
+		return v if v >= 0.0 else -1000.0 + float(Rating.ovr(p, 0))
 	pool.sort_custom(func(a, b):
 		var pa := promised.has(str(a["id"]))
 		if pa != promised.has(str(b["id"])):
@@ -1176,7 +1176,7 @@ static func select_on_form(list_players: Array, form: Dictionary) -> Dictionary:
 ## attributes make him there.
 static func line_rating(p: Dictionary, line: String) -> float:
 	if str(p.get("role", "")) == line or (p.get("attr", {}) as Dictionary).is_empty():
-		return float(p.get("overall", 0))
+		return float(Rating.ovr(p, 0))
 	return float(rate_overall(p["attr"], line, effective_games(p)))
 
 
@@ -1238,7 +1238,7 @@ static func by_ruck(players: Array) -> Array:
 		var rb := float(b["attr"]["ruck"])
 		if ra != rb:
 			return ra > rb
-		return int(a["overall"]) > int(b["overall"]))
+		return int(Rating.ovr(a)) > int(Rating.ovr(b)))
 	return out
 
 
