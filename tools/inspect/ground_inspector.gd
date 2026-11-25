@@ -370,6 +370,12 @@ func _load(i: int) -> void:
 	GroundModels.play_on(str(g.get("dir", "")) if g["kind"] in ["match", "seated"] else "", own)
 	oval = OVAL3D.new()
 	oval.name = "Oval"
+	# The ground's name, so the sun stands over it where it really does (its place and bearing,
+	# data/ground_places.json), as in a match there.
+	if g["kind"] in ["match", "seated"]:
+		for gname in GroundModels.GROUNDS:
+			if GroundModels.GROUNDS[gname] == str(g.get("dir", "")):
+				oval.ground = gname
 	stage.add_child(oval)
 	oval._environment()
 	oval._ground()

@@ -47,6 +47,7 @@ Every level plays the same match; only the picture changes (scripts/ui/match/Ova
 | Picture drawn at | full size | full size | three-quarter size, stretched |
 | Grass blades round the ball | yes | yes | no |
 | A late game's plain stand shades the wing | yes | yes | no |
+| Light towers throwing the men's shadows at night | 4 | 2 | 1 |
 
 Low keeps the soft shadow filter: the hard filter was tried first and lost the roof's shade on the
 stands, so Marvel's seats showed bright under the roof. Low keeps the ground's own shadows for the
@@ -92,6 +93,22 @@ the renderer's time against the plain stand on High (software GPU, so ratios onl
 | subiaco | 1087 / 1075 / 1054 | 204 / 206 / 213 | 0.70 / 0.63 / 0.46 | 738 / 707 |
 | north_hobart | 1063 / 1051 / 1042 | 246 / 248 / 259 | 0.69 / 0.61 / 0.51 | 805 / 773 |
 | manuka | 1057 / 1045 / 1035 | 248 / 249 / 259 | 0.71 / 0.63 / 0.48 | 761 / 729 |
+
+## A night game under the towers
+
+At night a ground's own towers light it (scripts/ui/match/Oval3DTowers.gd, rule 2.82): a spotlight
+from every tower (no shadow), and from the 4, 2 or 1 towers the level allows a light that throws
+only the players', umpires' and ball's shadows (never the stadium's). The MCG, 1080 x 1240, a
+measured 5 s at 4x, the same match by day and by night (`slot=night`, 2026-11-21, software GPU):
+
+| MCG | Triangles (H / M / L) | Draw calls (H / M / L) | Renderer time, night against day (H / M / L) |
+|---|---|---|---|
+| Day | 3072 / 2436 / 1995 | 220 / 211 / 208 | |
+| Night | 2465 / 1988 / 1513 | 158 / 159 / 158 | 1.37 / 1.08 / 0.98 |
+
+Night draws less (the day sun draws the whole stadium into its shadow bands; the towers draw only
+the men), but every pixel takes six more lights: High costs about a third more by night, Medium a
+twelfth, Low the same. On a phone that struggles at night, Medium is the step down.
 
 ## What the numbers say
 

@@ -152,8 +152,14 @@ The answers are recorded in the Director Bible and summarised here.
   stands' shade across the ground. Prototype: `tools/visual/capture_look3d.gd`.
 - 2a post-processing, tone (rule 2.81): AgX tonemapping with a footy-TV grade (contrast 1.1,
   saturation 1.2), exposure set by the brightness of open grass; club rings keep their exact colour.
-- 2a lighting, night (rule 2.82): four light towers, one to each corner, each casting a shadow;
+- 2a lighting, night (rule 2.82): the ground's light towers, each casting a shadow;
   a roofed venue's lighting is settled with the stadium (2b). The crowd needs almost no shine.
+  Built (2026-11-21, `scripts/ui/match/Oval3DTowers.gd`): the towers come from the ground model's own
+  lamp banks, so the MCG has its real six; each lights the ground (a little brighter on its own
+  side), its head glows against the sky, the roof's front edge carries a row of lights, and the
+  men throw a star of faint shadows (4, 2 or 1 by graphics level; the stadium throws none). They are
+  on at twilight too, the sun keeping the shadows until it sets. Grounds whose model has no lamps,
+  and Marvel and Optus (2.91), keep the old two-light night. Check: `tools/visual/capture_night3d.gd`.
 - 2a weather, wet (rule 2.83): cloud light (no sun, soft shadows) and rain falling on screen
   (fine streaks from 15 m out). A distance haze barely shows at the match cameras' range.
 - 2a skies (rule 2.84): the world has designed skies, one for each weather and time of day ("i 100% want skies"; "a world design decision"); the seven prototype skies approved ("Theyre gorgeous").
