@@ -55,6 +55,13 @@ uniform vec2 wear_half = vec2(93.3, 74.4);
 // length and width here, so the plane's square corners never show over the model's own
 // ground. (0, 0): the plane is drawn whole.
 uniform vec2 fence_clip = vec2(0.0);
+// A ground whose boundary was traced (MatchMotion.SHAPE): the line's Fourier radius about the middle of the goals,
+// r(t) = c0 + sum over k of (c[2k-1] cos kt + c[2k] sin kt), in bnd_n coefficients (0: the ellipse half_size);
+// and its fence's the same way (fen_n 0: fence_clip's ellipse).
+uniform float bnd[33];
+uniform int bnd_n = 0;
+uniform float fen[33];
+uniform int fen_n = 0;
 
 // The ground's own metres (the oval turns half a turn when the sides change ends; the
 // stripes and the wear turn with it) and the camera in the same frame.
@@ -81,6 +88,30 @@ float paint(float d, float w) {
 
 vec3 lin(vec3 c) { return pow(c, vec3(2.2)); }
 
+// The traced boundary's radius toward unit direction u, and its rate of change round the ground (dr/dt).
+// cos kt and sin kt by the angle-sum recurrence: no trig per term.
+vec2 bnd_r(vec2 u) {
+	float r = bnd[0];
+	float dr = 0.0;
+	vec2 cs = u;
+	for (int k = 1; 2 * k < bnd_n; k++) {
+		r += bnd[2 * k - 1] * cs.x + bnd[2 * k] * cs.y;
+		dr += float(k) * (bnd[2 * k] * cs.x - bnd[2 * k - 1] * cs.y);
+		cs = vec2(cs.x * u.x - cs.y * u.y, cs.y * u.x + cs.x * u.y);
+	}
+	return vec2(r, dr);
+}
+
+float fen_r(vec2 u) {
+	float r = fen[0];
+	vec2 cs = u;
+	for (int k = 1; 2 * k < fen_n; k++) {
+		r += fen[2 * k - 1] * cs.x + fen[2 * k] * cs.y;
+		cs = vec2(cs.x * u.x - cs.y * u.y, cs.y * u.x + cs.x * u.y);
+	}
+	return r;
+}
+
 // The blade tile's own frame: u across the band (n), v along the mower's run (d).
 vec2 blade_uv(vec2 p, vec2 n, vec2 d, float lean, float tile) {
 	return vec2(dot(p, n), dot(p, d) * lean) / tile;
@@ -99,10 +130,29 @@ vec2 mow_pass(vec2 p, vec2 n, vec2 d, vec2 look, float w) {
 
 void fragment() {
 	vec2 p = wpos.xz;
-	if (fence_clip.x > 0.0 && length(p / fence_clip) > 1.0) {
+	float pl = max(length(p), 1e-4);
+	vec2 pu = p / pl;
+	if (fen_n > 0) {
+		if (pl > fen_r(pu)) {
+			discard;
+		}
+	} else if (fence_clip.x > 0.0 && length(p / fence_clip) > 1.0) {
 		discard;
 	}
-	float e = length(p / half_size);
+	// e: inside the boundary below 1; db: the distance past the boundary line, in metres.
+	float e;
+	float db;
+	if (bnd_n > 0) {
+		vec2 b = bnd_r(pu);
+		e = pl / b.x;
+		// Along the ray, brought square to the line by the angle between the ray and the line's normal.
+		db = (pl - b.x) * b.x / sqrt(b.x * b.x + b.y * b.y);
+	} else {
+		e = length(p / half_size);
+		// The ellipse's distance, approximately, in metres.
+		vec2 g = 2.0 * p / (half_size * half_size);
+		db = (dot(p / half_size, p / half_size) - 1.0) / max(length(g), 1e-4);
+	}
 	// Which way you look across the ground, flat.
 	vec3 view_w = normalize(wpos - cam_local);
 	vec2 look = normalize(view_w.xz + vec2(1e-4));
@@ -177,9 +227,7 @@ void fragment() {
 	col = mix(col, to_srgb(mud_col) * (0.8 + 0.2 * speck), clamp(churn * wet, 0.0, 0.8));
 
 	float ink = 0.0;
-	// Boundary: the ellipse's distance, approximately, in metres.
-	vec2 g = 2.0 * p / (half_size * half_size);
-	float db = (dot(p / half_size, p / half_size) - 1.0) / max(length(g), 1e-4);
+	// Boundary: db, its distance (above).
 	// Between the behind posts the boundary is the straight goal line (drawn below), as on every
 	// AFL ground: the curve stops at the behind posts, so it never runs a second line behind it.
 	bool mouth = abs(p.y) < 9.6 && abs(p.x) > goal_x - 3.0;
