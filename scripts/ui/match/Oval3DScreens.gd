@@ -59,8 +59,10 @@ var _replaying := false
 
 ## Lays the faces over `ground`'s screens (a node already in the tree, under `oval`) and the
 ## ring of boards inside `fence` (half length and width of the boundary fence, m). With no
-## clubs (the ground inspector) nothing is built: the model shows its own screens.
-func build(oval: Node3D, ground: Node3D, fence: Vector2, p_home: String, p_away: String) -> void:
+## clubs (the ground inspector) nothing is built: the model shows its own screens. On a traced ground
+## `fence_shape` is its fence's Fourier radius (GroundModels.match_fence_shape) and the boards follow that.
+func build(oval: Node3D, ground: Node3D, fence: Vector2, p_home: String, p_away: String,
+		fence_shape := PackedFloat32Array()) -> void:
 	home = p_home
 	away = p_away
 	name = "Screens"
@@ -69,7 +71,7 @@ func build(oval: Node3D, ground: Node3D, fence: Vector2, p_home: String, p_away:
 	if ground != null:
 		for f in find_faces(oval, ground):
 			_add_face(f)
-	_make_signs(fence)
+	_make_signs(fence, fence_shape)
 
 
 ## Every screen face under `ground`, in `oval`'s own space: [{centre, normal, right, up, w, h}],
@@ -299,7 +301,7 @@ func _make_replay() -> void:
 
 # --- Fence signs ---------------------------------------------------------------------------
 
-func _make_signs(fence: Vector2) -> void:
+func _make_signs(fence: Vector2, shape := PackedFloat32Array()) -> void:
 	_sign_vp = SubViewport.new()
 	_sign_vp.name = "SignPicture"
 	_sign_vp.size = Vector2i(SIGN_PX.x * 2, SIGN_PX.y)
@@ -313,13 +315,16 @@ func _make_signs(fence: Vector2) -> void:
 	_sign_vp.add_child(art)
 	var a := fence.x - SIGN_INSET
 	var b := fence.y - SIGN_INSET
-	# Board ends spaced evenly along the ellipse (by arc length).
+	# Board ends spaced evenly along the ellipse, or the traced fence SIGN_INSET in (by arc length).
 	var ring := PackedVector2Array()
 	var steps := 2048
 	var lens := PackedFloat32Array([0.0])
 	for i in steps + 1:
 		var t := TAU * float(i) / steps
-		ring.append(Vector2(a * cos(t), b * sin(t)))
+		if shape.is_empty():
+			ring.append(Vector2(a * cos(t), b * sin(t)))
+		else:
+			ring.append(Vector2(cos(t), sin(t)) * (MatchMotion.series_r(shape, t) - SIGN_INSET))
 		if i > 0:
 			lens.append(lens[i - 1] + ring[i].distance_to(ring[i - 1]))
 	var total := lens[steps]

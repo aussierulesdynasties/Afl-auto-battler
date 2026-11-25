@@ -180,6 +180,7 @@ The answers are recorded in the Director Bible and summarised here.
 - 2e skipping a replay (rule 2.110): "B: Tap the picture": a tap anywhere on the 3D picture skips a goal's replay; a "Replay: tap to skip" tag sits top left while it plays.
 - 2e after a mark (rule 2.113): "A: Stay on the main camera": no close-up on the man who marked in general play.
 - 2e TV framing (rule 2.111): "B: real TV top/bottom": the main camera keeps a 16:9 TV picture's top and bottom on the tall phone picture; the wide shot (with sky) on "Long kicks, After a goal, Start of each quarter"; "zoom needs to be quick but not jarringly so". Set shots are filmed from behind the kicker, as real TV does.
+- 2e the main camera's operator (2026-11-21, copying real TV under rule 2.111, no new ruling): inside the TV picture the zoom follows the play as Seven's and Fox's do (2.111's measurements: 19-42 m across at a contest, up to about 60 m in open play): 34 m across the TV picture while seven or more men crowd the ball (9 m), at a ball-up and at the bounce, out to 50 m as play spreads, wide enough for a short kick's whole flight; it moves like an operator's hand, eased, about 0.6 s. The aim leads the ball (0.6 s ahead, at most 30% of the picture), so play has room to run into instead of the camera trailing it. Measured with `tools/visual/measure_main_camera.gd`.
 - 2e the picture on the phone (rule 2.105): "A but the stats part is very ugly": the main picture fills the screen between the scoreboard and the controls, taller than a TV picture at the same zoom; team stats under it as split bars in club colours (rule 2.106: "A: bars"): disposals, marks, clearances and hit-outs ("Keep those four"). The scoreboard panel goes (rule 2.107): "we can put an on screen scoreboard like in ss2" (a TV score bug on the picture), "use the extra new space for more 3d view", and "the momentum bar stays, make it unobtrusive": a thin line along the bottom edge of the picture ("C: bottom of picture").
 
 The freeze allows only the
@@ -265,7 +266,8 @@ _Update this section whenever 3D work merges. It is the one place 3D progress is
 | Marrara Oval (TIO Darwin) | model open | #1918 |
 | Traeger Park | model open | #1919 |
 | The Gabba | model, 3D seats; plays in a match; to the MCG standard 2026-11-22 (modelled steel and roof, real seat colours, Woolloongabba from OpenStreetMap); roof, tiers and screen at heights measured in Google Earth (tools/grounds/gabba/README.md) | #2020 |
-| Barossa Park, Sky Stadium, Jiangwan Stadium, Hands Oval, Blacktown, Summit Park, Macquarie Point | model; plays in a match (`tools/grounds/<g>/model`) | |
+| Barossa Park | rebuilt to the MCG standard: clubrooms (with the south end), terraces, Gather Round stands with 3D seats, courts fitted on the satellite's lines, second oval, land and Lyndoch out to 1 km, gum trees, far country to 16 km (tools/grounds/barossa); open: clubroom roof outline, stair to the south deck, far ranges | #2041 |
+| Sky Stadium, Jiangwan Stadium, Hands Oval, Blacktown, Summit Park, Macquarie Point | model; plays in a match (`tools/grounds/<g>/model`) | |
 
 Machine pre-inspection of the 30 match grounds, before the director's fly-through (2026-11-21, #1950):
 [3D_PREINSPECTION.md](3D_PREINSPECTION.md). Its fixes are in; its open faults are listed there.

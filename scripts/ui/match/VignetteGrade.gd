@@ -28,7 +28,10 @@ static func attach(host: Control, weather: String, ui_draw: Callable) -> Control
 	var mat := ShaderMaterial.new()
 	mat.shader = SHADER
 	var reduced := false
-	var gs = host.get_node_or_null("/root/GameState")
+	# Through the tree, not host: a vignette is often set up before it joins the tree, and an
+	# absolute path from a node outside it is an error.
+	var tree := Engine.get_main_loop() as SceneTree
+	var gs = tree.root.get_node_or_null("GameState") if tree != null else null
 	if gs != null and gs.has_method("reduced_motion"):
 		reduced = bool(gs.reduced_motion())
 	mat.set_shader_parameter("grain_speed", 0.0 if reduced else 1.0)

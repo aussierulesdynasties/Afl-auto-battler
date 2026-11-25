@@ -1,0 +1,495 @@
+{
+ "_about": "Each traced ground's boundary line as the match plays it (tools/grounds/boundary/fit_boundary.py). frame: [x, z, degrees] in the model's glb metres: the goals' midpoint and the line through them. boundary/fence: r(t) = a0 + sum(a_k cos kt + b_k sin kt) about that midpoint, t from the +x goal towards +y (the glb's +z after the turn).",
+ "grounds": {
+  "blacktown": {
+   "frame": [
+    -4.73,
+    -2.555,
+    78.773
+   ],
+   "goal_x": 79.099,
+   "boundary": [
+    74.1427,
+    0.0779,
+    -0.8054,
+    5.435,
+    0.0414,
+    -0.0329,
+    0.0071,
+    0.3995,
+    0.0437,
+    -0.0636,
+    0.1538,
+    -0.1784,
+    0.0248,
+    -0.0191,
+    0.0419,
+    -0.078,
+    0.0084
+   ],
+   "boundary_fit": {
+    "n": 333,
+    "order": 8,
+    "rms_m": 0.032,
+    "p95_m": 0.062,
+    "max_m": 0.093,
+    "largest_gap_deg": 6.76
+   },
+   "ends_vs_goal_lines_m": [
+    0.585,
+    0.66
+   ],
+   "source": "NSW Spatial Services aerial (SIX Maps, CC BY 4.0), current; tile set nsw (date not given by the service), 0.075 m pixels. AFL markings visible. Painted line traced as the ridge of a thin bright line with lit grass 1.5 m either side, along 1440 rays, then a 12-term Fourier radius about the centre fitted to the points seen. Goals: middle of the goal line from a 6.4 x 9 m goal-square template; checked against the 50 m arcs (arc50_check_m: radius at which each arc is found round its goal). Placed on Google Earth by matching ground-level edges 110-280 m from the centre against the audit's 600 m straight-down GE shot (shift east +0.09, north -0.12 m).",
+   "trace_error": {
+    "line_rms_to_fit": 0.06,
+    "line_rms_to_smooth_K6": 0.09,
+    "seen_share": 0.86,
+    "longest_unseen_arc_deg": 6.2,
+    "placement_on_google_earth": "about 1 m: the government aerial and Google Earth agree to 0.15 m overall (two of four quarters within 0.5 m)",
+    "source_pixel": 0.075
+   },
+   "centre_vs_goals_mid_m": [
+    0.005,
+    0.001
+   ],
+   "fence": [
+    79.7327,
+    0.1402,
+    0.177,
+    5.143,
+    -0.0476,
+    0.1986,
+    -0.0362,
+    0.4286,
+    0.0493,
+    0.0528,
+    0.0262,
+    -0.0189,
+    -0.0691,
+    0.2081,
+    0.0262,
+    0.0486,
+    0.0462,
+    0.1016,
+    -0.0513,
+    0.163,
+    0.0007,
+    0.0375,
+    0.0434,
+    0.057,
+    -0.0407
+   ],
+   "fence_fit": {
+    "n": 360,
+    "order": 12,
+    "rms_m": 0.001,
+    "p95_m": 0.002,
+    "max_m": 0.002,
+    "largest_gap_deg": 1.0
+   },
+   "runoff_m": {
+    "min": 4.78,
+    "max": 7.32
+   }
+  },
+  "cazalys": {
+   "frame": [
+    -1.465,
+    4.01,
+    60.855
+   ],
+   "goal_x": 81.773,
+   "boundary": [
+    75.8915,
+    -0.1438,
+    -0.3576,
+    6.4113,
+    -0.0105,
+    0.0136,
+    0.0993,
+    0.1123,
+    -0.0107,
+    0.0117,
+    -0.0443,
+    -0.1102,
+    -0.0008,
+    0.0193,
+    0.0107,
+    0.0022,
+    -0.0005,
+    0.0029,
+    0.0305,
+    0.0136,
+    -0.0216,
+    0.0073,
+    -0.0087,
+    0.0057,
+    -0.0409,
+    0.0071,
+    0.0111,
+    -0.0704,
+    0.0025
+   ],
+   "boundary_fit": {
+    "n": 319,
+    "order": 14,
+    "rms_m": 0.101,
+    "p95_m": 0.23,
+    "max_m": 0.378,
+    "left_out": [
+     {
+      "at": [
+       -7.0,
+       70.9
+      ],
+      "off_m": 1.8
+     }
+    ],
+    "largest_gap_deg": 1.6
+   },
+   "ends_vs_goal_lines_m": [
+    0.401,
+    0.565
+   ],
+   "source": "Google Earth 3D top-down captures (2026-11-22), GE pinhole geometry calibrated on the 50 m centre square (50.0 m). line: centre of the painted boundary ridge, one point per 2 m window, 320 windows on 16 tiles round the ground. goals: middle of each goal line between the goal-post bases (shadow roots) on two d=95 m top-downs. centre: midpoint of the two goals, NOT a measured centre circle. fence: fence base, 2 m windows (shadow-corrected), kept points of the 0.32 m rms ellipse fit.",
+   "trace_error": {
+    "line_rms_to_smooth_ellipse": 0.29,
+    "line_p95": 0.55,
+    "registration": 0.3,
+    "goals": 0.4
+   },
+   "centre_vs_goals_mid_m": [
+    -0.002,
+    0.004
+   ],
+   "fence": [
+    80.9781,
+    -0.1165,
+    -0.4613,
+    6.1535,
+    0.0535,
+    -0.0134,
+    -0.0037,
+    0.1148,
+    -0.0245,
+    0.0894,
+    0.0671,
+    -0.1801,
+    0.03
+   ],
+   "fence_fit": {
+    "n": 281,
+    "order": 6,
+    "rms_m": 0.205,
+    "p95_m": 0.407,
+    "max_m": 1.037,
+    "left_out": [
+     {
+      "at": [
+       -69.7,
+       -44.9
+      ],
+      "off_m": 1.08
+     }
+    ],
+    "largest_gap_deg": 20.18
+   },
+   "runoff_m": {
+    "min": 4.59,
+    "max": 5.63
+   }
+  },
+  "gmhba": {
+   "frame": [
+    -6.1,
+    12.85,
+    -69.77
+   ],
+   "goal_x": 84.098,
+   "boundary": [
+    70.3931,
+    0.3988,
+    -1.0774,
+    14.3928,
+    0.3453,
+    -0.2407,
+    1.1939,
+    0.6753,
+    0.0824,
+    -0.0956,
+    0.0955,
+    -0.4534,
+    0.0413,
+    -0.0255,
+    -0.2761,
+    -0.1438,
+    -0.0473,
+    0.0001,
+    -0.0489,
+    0.0141,
+    -0.0625,
+    -0.0192,
+    0.0468,
+    -0.0296,
+    -0.0606
+   ],
+   "boundary_fit": {
+    "n": 340,
+    "order": 12,
+    "rms_m": 0.011,
+    "p95_m": 0.018,
+    "max_m": 0.025,
+    "largest_gap_deg": 11.02
+   },
+   "ends_vs_goal_lines_m": [
+    0.769,
+    0.733
+   ],
+   "source": "Google Earth 3D, close straight-down shots (130 m camera) stitched; tile set gem (Google Earth's current 3D imagery, viewed 2026-11-22), about 0.08 m pixels. AFL markings visible. Ten straight-down Google Earth shots from a ~130 m camera round the boundary, stitched into one east/north picture at 0.08 m. Painted line traced as the ridge of a thin bright line with lit grass 1.5 m either side, along 1440 rays, then a 12-term Fourier radius about the centre fitted to the points seen. Goals: middle of the goal line from a 6.4 x 9 m goal-square template, checked against the 50 m arcs. Centre: 50 m centre square + 10 m circle template.",
+   "trace_error": {
+    "line_rms_to_fit": 0.08,
+    "line_rms_to_smooth_K6": 0.28,
+    "seen_share": 0.92,
+    "longest_unseen_arc_deg": 10.8,
+    "placement_on_google_earth": "Google Earth itself (the frame the GMHBA origin was solved in from 7 GE wall-foot points); camera heights read off GE's status bar to 1 m (about 0.7% in scale); the 50 m arcs come out at 49.7 and 50.2 m",
+    "source_pixel": "about 0.08"
+   },
+   "centre_vs_goals_mid_m": [
+    0.579,
+    -0.107
+   ],
+   "fence": [
+    76.2277,
+    0.5246,
+    -1.1347,
+    14.5987,
+    0.1438,
+    -0.3054,
+    1.5054,
+    0.7746,
+    0.221,
+    0.0602,
+    -0.0614,
+    -0.5775,
+    -0.0649,
+    -0.1409,
+    -0.1378,
+    0.0644,
+    0.1358,
+    0.2016,
+    -0.0468,
+    0.0938,
+    -0.1115,
+    -0.1525,
+    0.1754
+   ],
+   "fence_fit": {
+    "n": 325,
+    "order": 11,
+    "rms_m": 0.301,
+    "p95_m": 0.608,
+    "max_m": 2.042,
+    "left_out": [
+     {
+      "at": [
+       34.3,
+       55.8
+      ],
+      "off_m": 1.51
+     },
+     {
+      "at": [
+       32.9,
+       55.8
+      ],
+      "off_m": 1.69
+     },
+     {
+      "at": [
+       31.6,
+       55.8
+      ],
+      "off_m": 1.87
+     }
+    ],
+    "largest_gap_deg": 5.25
+   },
+   "runoff_m": {
+    "min": 4.88,
+    "max": 7.38
+   }
+  },
+  "north_hobart": {
+   "frame": [
+    -5.135,
+    0.89,
+    -35.427
+   ],
+   "goal_x": 75.75,
+   "boundary": [
+    64.414,
+    0.7043,
+    0.706,
+    10.3726,
+    -0.23,
+    -0.0196,
+    0.2584,
+    -0.2053,
+    -0.1817,
+    -0.5246,
+    0.2405,
+    0.5299,
+    -0.1526,
+    -0.118,
+    -0.0714,
+    0.521,
+    -0.0245,
+    -0.0719,
+    0.0521,
+    0.0518,
+    0.0523,
+    -0.0685,
+    0.0341
+   ],
+   "boundary_fit": {
+    "n": 1125,
+    "order": 11,
+    "rms_m": 0.218,
+    "p95_m": 0.461,
+    "max_m": 0.864,
+    "largest_gap_deg": 11.44
+   },
+   "ends_vs_goal_lines_m": [
+    -0.164,
+    0.032
+   ],
+   "source": "Google Earth web historical imagery: aerials of 8 Feb 2022 (anchor) and 2 Oct 2024, straight-down captures at 0.132 m a pixel. Each date's painted line traced along 1440 rays; 2024 lined up on 2022 by the line itself (shift [3.535, 2.05] m) and the median taken. Goals: 50 m arc then the goal square (north-east goal on both dates, 0.49 m apart; south-west goal 2022 only).",
+   "trace_error": {
+    "seen_share": 0.781,
+    "longest_unseen_arc_deg": 11.4,
+    "placement": "Google Earth places the 2022 and 2024 aerials 4.1 m apart, so the frame is the 2022 aerial's (line, goals and fence all from it). Checked against main's model (a first draft by eye) in a match top-down render: model fence edge minus traced fence median -0.32 m, p5-p95 -1.6 to +2.3 m; painted line in the match vs trace rms 0.40 m."
+   },
+   "fence": [
+    69.8245,
+    -0.3652,
+    0.8287,
+    10.2398,
+    0.2618,
+    -0.3483,
+    0.9076,
+    -0.3611,
+    0.1537,
+    -0.147,
+    0.597,
+    1.2105,
+    0.0055,
+    0.2411,
+    0.0841,
+    0.6885,
+    -0.1025,
+    0.0472,
+    -0.1018,
+    0.2628,
+    -0.0581,
+    -0.1724,
+    -0.0099
+   ],
+   "fence_fit": {
+    "n": 1356,
+    "order": 11,
+    "rms_m": 0.33,
+    "p95_m": 0.665,
+    "max_m": 1.26,
+    "largest_gap_deg": 7.15
+   },
+   "runoff_m": {
+    "min": 1.16,
+    "max": 6.83
+   }
+  },
+  "riverway": {
+   "frame": [
+    -1.78,
+    0.145,
+    -89.899
+   ],
+   "goal_x": 79.225,
+   "boundary": [
+    73.7443,
+    0.1202,
+    1.0008,
+    6.9482,
+    0.0877,
+    0.0213,
+    -0.3415,
+    0.1244,
+    0.0343,
+    -0.0104,
+    0.1765,
+    -0.1855,
+    -0.0018,
+    0.0081,
+    0.0751,
+    -0.1259,
+    0.0181,
+    0.0442,
+    -0.1673,
+    -0.2632,
+    -0.0118,
+    -0.0044,
+    0.0704,
+    -0.0686,
+    -0.013
+   ],
+   "boundary_fit": {
+    "n": 1434,
+    "order": 12,
+    "rms_m": 0.14,
+    "p95_m": 0.322,
+    "max_m": 0.598,
+    "largest_gap_deg": 0.51
+   },
+   "ends_vs_goal_lines_m": [
+    1.128,
+    0.77
+   ],
+   "source": "Google Earth web historical imagery: aerials of 6 Jun 2024 (anchor) and 22 Apr 2023, straight-down captures at 0.132 m a pixel. Each date's painted line traced along 1440 rays; 2023 lined up on 2024 by the line itself (shift -1.08, +2.21 m, rms 0.34 m) and the median taken. Goals: 50 m arc then the goal square (south goal on both dates, 0.25 m apart; north goal 2023 only).",
+   "trace_error": {
+    "seen_share": 0.996,
+    "longest_unseen_arc_deg": 0.5,
+    "placement": "Checked against the model on main in a match top-down render: traced fence vs the model's fence edge median -0.24 m; on the open side (east, north, south) within +0.6 m; on the grandstand side the model's sign rail sits 1.1-1.9 m inside the real fence (the concourse wall), like GMHBA's sign ring."
+   },
+   "fence": [
+    79.5904,
+    -0.3178,
+    0.2996,
+    6.5326,
+    -0.0702,
+    0.052,
+    0.0469,
+    0.478,
+    -0.0516,
+    0.0158,
+    -0.063,
+    -0.1204,
+    -0.0928,
+    0.0389,
+    -0.0044,
+    -0.1206,
+    -0.0309
+   ],
+   "fence_fit": {
+    "n": 1347,
+    "order": 8,
+    "rms_m": 0.121,
+    "p95_m": 0.25,
+    "max_m": 0.481,
+    "largest_gap_deg": 2.27
+   },
+   "runoff_m": {
+    "min": 4.44,
+    "max": 7.78
+   }
+  }
+ }
+}

@@ -3,7 +3,7 @@
 check them against the committed baseline.
 
   python3 tools/screen_sweep.py --phone out/sweep_phone.json --pc out/sweep_pc.json \
-      [--phone-larger out/sweep_phone_larger.json --phone-largest out/sweep_phone_largest.json] \
+      [--pc-small out/sweep_pc_small.json] [--phone-larger out/sweep_phone_larger.json --phone-largest out/sweep_phone_largest.json] \
       --baseline tools/visual/screen_sweep_baseline.json \
       --doc docs/research/SCREEN_SWEEP_2026-10-18.md [--write-baseline] [--tighten]
 
@@ -20,7 +20,7 @@ import argparse
 import json
 import sys
 
-SIZES = ["phone", "pc", "phone_larger", "phone_largest"]
+SIZES = ["phone", "pc", "pc_small", "phone_larger", "phone_largest"]
 COUNTS = ["offscreen", "clipped", "small", "overlap"]
 LABELS = {"offscreen": "Off screen", "clipped": "Clipped text", "small": "Targets under 44 px",
           "overlap": "Text over text"}
@@ -105,7 +105,8 @@ def write_doc(path, date, shots, regressions, baseline_note):
     L.append("# Screen sweep, %s" % date)
     L.append("")
     L.append("P-77 \"One sweep of every screen\" (director yes 2026-10-18). Every screen in `Router.SCENES`, opened on one "
-             "seeded Melbourne career (seed 2031), dark theme, at the Android phone reference and the wide desktop, "
+             "seeded Melbourne career (seed 2031), dark theme, at the Android phone reference, the wide desktop and the "
+             "smallest PC window (960x540, one unit a pixel), "
              "and on the phone again at the Larger and Largest text sizes (row 118). "
              "Made by `tools/visual/sweep_screens.gd` and `tools/screen_sweep.py`; the check against the committed "
              "baseline (`tools/visual/screen_sweep_baseline.json`) runs in the UI review sheets workflow.")
@@ -203,6 +204,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--phone", required=True)
     ap.add_argument("--pc", required=True)
+    ap.add_argument("--pc-small", default="")
     ap.add_argument("--phone-larger", default="")
     ap.add_argument("--phone-largest", default="")
     ap.add_argument("--baseline", required=True)
@@ -213,6 +215,8 @@ def main():
     a = ap.parse_args()
 
     shots = {"phone": load(a.phone), "pc": load(a.pc)}
+    if a.pc_small:
+        shots["pc_small"] = load(a.pc_small)
     if a.phone_larger:
         shots["phone_larger"] = load(a.phone_larger)
     if a.phone_largest:
