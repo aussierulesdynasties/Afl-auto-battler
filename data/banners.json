@@ -1,5 +1,5 @@
 {
-  "about": "PLACEHOLDERS: every banner text is the club's name on one line ({us}), or the day's name for ANZAC Day, ANZAC Eve and Dreamtime, until the director writes the originals (director, 2026-10-18: banner text is the clearest AI tell in the game). The old rhymes are archived outside the game as agent-handoffs/lead/banners_old_2026-10-18.json. The structure is kept as it was, so his texts drop in with no code change: the sets (general, club, rivalry, marquee, final, spoon, first_game, premiers, premiers_opposition, milestone, must_win) and every rivalry pair and marquee name. Fill-ins a text may use: {us}/{them} = club nicknames, {player} = a surname, {display_name} = a full name, {games} = a game count, {year}. Picked by Banners.pick.",
+  "about": "Banner text is milestones only, with no jokes and no rhymes (bro, 2026-11-21: \"the plan for banner text is simply milestone stuff / no jokes for now, no rhymes\"). The milestone set holds plain words for a debut, a round milestone (50 to 350 games, the director's approved 200th-game copy \"200 games. Take a bow, {display_name}.\"), a club milestone and a last game. Every other set stays a placeholder: the club's name on one line ({us}), or the day's name for ANZAC Day, ANZAC Eve and Dreamtime (director, 2026-10-18: rhyming banner text is the clearest AI tell in the game). The old rhymes are archived outside the game as agent-handoffs/lead/banners_old_2026-10-18.json. The structure is kept, so new texts drop in with no code change. Fill-ins a text may use: {us}/{them} = club nicknames, {player} = a surname, {display_name} = a full name, {games} = a game count, {year}. Picked by Banners.pick. At most 28 characters a line, 2-4 lines.",
   "general": [
     "{us}",
     "{us}",
@@ -328,39 +328,34 @@
   ],
   "milestone": {
     "debut": [
-      "{us}",
-      "{us}"
+      "Welcome\n{display_name}\nGame one"
     ],
     "50": [
-      "{us}",
-      "{us}"
+      "50 games.\nTake a bow,\n{display_name}."
     ],
     "100": [
-      "{us}",
-      "{us}"
+      "100 games.\nTake a bow,\n{display_name}."
     ],
     "150": [
-      "{us}"
+      "150 games.\nTake a bow,\n{display_name}."
     ],
     "200": [
-      "{us}"
+      "200 games.\nTake a bow,\n{display_name}."
     ],
     "250": [
-      "{us}"
+      "250 games.\nTake a bow,\n{display_name}."
     ],
     "300": [
-      "{us}",
-      "{us}"
+      "300 games.\nTake a bow,\n{display_name}."
     ],
     "350": [
-      "{us}"
+      "350 games.\nTake a bow,\n{display_name}."
     ],
     "farewell": [
-      "{us}",
-      "{us}"
+      "Thank you\n{display_name}"
     ],
     "club": [
-      "{us}"
+      "{games} games for the club\n{display_name}"
     ]
   },
   "must_win": [
