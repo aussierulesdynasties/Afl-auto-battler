@@ -2519,7 +2519,7 @@ func _test_ground_backdrop() -> void:
 		_check(oval._env.fog_enabled and oval._env.fog_depth_begin >= 500.0,
 				"The haze starts well past the stadium (%.0f m)" % oval._env.fog_depth_begin)
 		var over := 0
-		var fence := GroundModels.MATCH_FENCE * 1.15
+		var fence := GroundModels.match_fence() * 1.15
 		for n in geo:
 			var mi := n as MeshInstance3D
 			if mi == null or not str(mi.name).begins_with("bg_near_ground"):
