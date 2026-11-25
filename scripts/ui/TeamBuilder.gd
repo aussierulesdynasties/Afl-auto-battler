@@ -566,7 +566,7 @@ func _fill_grid() -> void:
 		var ha := hot.has(str(a["id"]))
 		if ha != hot.has(str(b["id"])):
 			return ha
-		return int(a["overall"]) > int(b["overall"]))
+		return int(Rating.ovr(a)) > int(Rating.ovr(b)))
 	for p in out:
 		var c := _card(str(p["id"]), false, "")
 		c.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -633,13 +633,13 @@ func _card(id: String, on_field: bool, place: String) -> Button:
 		var tag := Ratings.role_tag(p)
 		if stacked and tag.length() > 8:
 			tag = str(p.get("role", tag))
-		var nums := "%d" % int(p["overall"])
+		var nums := "%d" % int(Rating.ovr(p))
 		if _shows_condition():
 			# His potential beside his rating (director, 2026-11-15: "a lot of
 			# players just want to play the highest upside team for development
 			# purposes"), as OVR/POT, named in the key under the oval. A second
 			# position gives way to his main one when both won't fit the tile.
-			nums = "%d/%d" % [int(p["overall"]), pot(p)]
+			nums = "%d/%d" % [int(Rating.ovr(p)), pot(p)]
 			var room := UiKit.px(70) - 12.0
 			if UiKit.FONT.get_string_size("%s %s" % [tag, nums], HORIZONTAL_ALIGNMENT_LEFT, -1, UiKit.px(11)).x > room:
 				tag = str(p.get("role", tag))
@@ -715,7 +715,7 @@ func _card(id: String, on_field: bool, place: String) -> Button:
 		# the surname, never a name cut short (the full name stays the tooltip).
 		n.resized.connect(func():
 			n.text = BenchDrawer._fit_name(full_name, n.size.x, n.get_theme_font_size("font_size")))
-		var ovr := UiKit.lbl("%d" % int(p["overall"]), 14, UiKit.TEXT, true)
+		var ovr := UiKit.lbl("%d" % int(Rating.ovr(p)), 14, UiKit.TEXT, true)
 		ovr.autowrap_mode = TextServer.AUTOWRAP_OFF
 		ovr.custom_minimum_size.x = 26
 		ovr.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT

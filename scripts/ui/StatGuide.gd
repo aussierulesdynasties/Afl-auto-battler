@@ -27,13 +27,7 @@ const STATS := {
 }
 
 ## [heading, [stat keys]] in the order they read.
-const GROUPS := [
-	["Ball winning", ["contested", "contested_marking", "uncontested_marking", "ruck"]],
-	["Ball use", ["kicking", "handballing", "carry", "creating"]],
-	["Scoring", ["goalkicking", "accuracy"]],
-	["Defence", ["pressure", "intercept", "speed"]],
-	["Body and class", ["discipline", "durability", "star"]],
-]
+const GROUPS := Attributes.GROUPS
 
 const TOPICS := [
 	["Overall (OVR)", "A player's rating, mostly from the stats his position relies on. Clubs value players by it at the draft and the trade table."],
@@ -51,10 +45,7 @@ static func short(key: String) -> String:
 
 
 static func _label_for(key: String) -> String:
-	for row in GameState.TRAIN_STATS:
-		if str(row[0]) == key:
-			return str(row[1])
-	return key
+	return Attributes.label(key)
 
 
 ## One line under each topic tile so a coach knows what's behind it.

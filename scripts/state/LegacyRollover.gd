@@ -222,14 +222,14 @@ static func foundation(gs, code: String, year: int) -> Dictionary:
 			if ovr != "":
 				p["attr"] = Prospects.fit_attributes(p["attr"], str(p["role"]), float(ovr.to_int()), float(p["gm"]))
 			p["overall"] = Ratings.rate_overall(p["attr"], str(p["role"]), float(p["gm"]))
-			p["value"] = Ratings.salary_value(int(p["overall"]))
+			p["value"] = Ratings.salary_value(int(Rating.ovr(p)))
 			# Unknown up to the season he joins; every season after is counted.
 			p["career"] = Career.from_source("?", year - 1)
 			p["data_club"] = code
 			Potential.assign(p)
 	GameDB.assign_aliases(list)
 	GameDB.register_draftees(list)
-	list.sort_custom(func(a, b): return int(a.get("overall", 0)) > int(b.get("overall", 0)))
+	list.sort_custom(func(a, b): return int(Rating.ovr(a, 0)) > int(Rating.ovr(b, 0)))
 	var pool := []
 	var size := Expansion.foundation_size(code)
 	while list.size() > size:
@@ -478,7 +478,7 @@ static func _merge(gs, to_draft: bool) -> void:
 				gs._career_over(p, "retired")
 	else:
 		ranked = fit.duplicate()
-	ranked.sort_custom(func(a, b): return int(a.get("overall", 0)) > int(b.get("overall", 0)))
+	ranked.sort_custom(func(a, b): return int(Rating.ovr(a, 0)) > int(Rating.ovr(b, 0)))
 	var lions: Array = gs.league_lists.get(MERGED_INTO, [])
 	var taken := []
 	for i in range(ranked.size()):

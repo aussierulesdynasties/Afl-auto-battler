@@ -127,7 +127,7 @@ static func foundation_list(code: String, year: int, career_seed: int) -> Array:
 			p["draft_state"] = home
 			p["state"] = home
 	for p in out:
-		var ovr := int(p.get("overall", 50))
+		var ovr := int(Rating.ovr(p, 50))
 		var room := 1
 		for band in FOUNDATION_ROOM:
 			if float(p.get("age", 25.0)) <= float(band[0]):
