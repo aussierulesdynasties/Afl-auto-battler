@@ -166,7 +166,8 @@ The bodies (2d's choice) are licensed for us too. Our MPFB average body: MakeHum
 ([licence page](https://static.makehumancommunity.org/about/license.html)). The MetaHuman body:
 Epic's [licence page](https://www.metahuman.com/license?lang=en-US), read 2026-11-17, says "MetaHumans can be used
 with any engine or creative software"; outside Unreal they are Non-Engine Products, so a Godot game pays no royalty;
-free under US$1M a year in revenue, an Unreal seat licence above it; never used to train AI. Unreal's own mannequins
+free under US$1M a year in revenue, an Unreal seat licence above it; never used to train AI. The raw MetaHuman files may leave our hands only inside a built game, so they live in a private
+repo, never this public one ([EPIC_ASSETS.md](EPIC_ASSETS.md), 2026-11-23). Unreal's own mannequins
 (Manny and Quinn, which GASP plays on) are Unreal-only and were never in our game.
 
 | GASP group | Replacement (Mixamo clip names, searched on mixamo.com) | Covered |
