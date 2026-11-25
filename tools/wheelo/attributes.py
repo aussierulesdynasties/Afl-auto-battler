@@ -211,7 +211,7 @@ class Season:
         if w is None:
             return None
         return {"id": w["PlayerId"], "m": self.m[id(w)], "pos": w["pos"], "games": w.get("Matches") or 0.0,
-                "club": w["club"], "club_games": self.club_games.get(w["club"]) or 0.0}
+                "club": w["club"], "club_games": self.club_games.get(w["club"]) or 0.0, "row": w}
 
     def keeps(self, k) -> bool:
         return bool(k) and k in self.scale
@@ -563,8 +563,13 @@ UNKEPT = "unkept"   # a stat the season never kept: left out, not averaged in
 def build(start: str, ref: dict | None = None):
     """The start's rows, and info. ref: 2026's position averages (0..1), for an
     attribute none of the start's seasons recorded."""
-    data_season = STARTS[start][0]
     players, missed = listed_players(start)
+    return rate(players, missed, STARTS[start][0], ref)
+
+
+def rate(players, missed, data_season: int, ref: dict | None = None):
+    """Rows of the 18 attributes for [(list row, body row, season, found)],
+    and info; data_season is the last season a speed record may come from."""
     names = defaultdict(int)
     for r, _b, _y, _g in players:
         names[W.norm(r["first"] + r["last"])] += 1
@@ -582,7 +587,8 @@ def build(start: str, ref: dict | None = None):
         cg = got["club_games"]
         a01["durability"] = min(1.0, got["games"] / cg) if cg else None
         nm = W.norm(r["first"] + r["last"])
-        rows.append({"r": r, "year": year, "pos": pos, "h": h, "kg": kg, "a01": a01, "games": got["games"],
+        rows.append({"r": r, "row": got.get("row"), "year": year, "pos": pos, "h": h, "kg": kg, "a01": a01,
+                     "games": got["games"],
                      "kmh": gps.get((nm, r["club"])) or gps.get(nm),
                      "sprint": sprint.get((nm, r["club"])) or sprint.get(nm)})
     wr_measured = any(p["a01"]["_wr"] is not None for p in rows)
