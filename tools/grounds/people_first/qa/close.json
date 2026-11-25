@@ -1,0 +1,146 @@
+[
+ {
+  "name": "c_east",
+  "at": [
+   95,
+   -30,
+   0
+  ],
+  "h": 270,
+  "t": 62,
+  "d": 260,
+  "label": "east facade"
+ },
+ {
+  "name": "c_westpod",
+  "at": [
+   -115,
+   0,
+   0
+  ],
+  "h": 90,
+  "t": 62,
+  "d": 260,
+  "label": "west podium"
+ },
+ {
+  "name": "c_north",
+  "at": [
+   25,
+   105,
+   0
+  ],
+  "h": 197,
+  "t": 60,
+  "d": 260,
+  "label": "north end, scoreboard"
+ },
+ {
+  "name": "c_south",
+  "at": [
+   -35,
+   -115,
+   0
+  ],
+  "h": 17,
+  "t": 62,
+  "d": 260,
+  "label": "south end, sign"
+ },
+ {
+  "name": "c_se",
+  "at": [
+   75,
+   -85,
+   0
+  ],
+  "h": 315,
+  "t": 62,
+  "d": 260,
+  "label": "south-east"
+ },
+ {
+  "name": "c_ne",
+  "at": [
+   80,
+   75,
+   0
+  ],
+  "h": 225,
+  "t": 62,
+  "d": 260,
+  "label": "north-east"
+ },
+ {
+  "name": "c_nw",
+  "at": [
+   -85,
+   60,
+   0
+  ],
+  "h": 135,
+  "t": 62,
+  "d": 260,
+  "label": "north-west block"
+ },
+ {
+  "name": "c_sw",
+  "at": [
+   -85,
+   -75,
+   0
+  ],
+  "h": 45,
+  "t": 62,
+  "d": 260,
+  "label": "south-west"
+ },
+ {
+  "name": "c_seatsE",
+  "at": [
+   50,
+   -10,
+   8
+  ],
+  "h": 270,
+  "t": 50,
+  "d": 170,
+  "label": "east stand seats, from the west"
+ },
+ {
+  "name": "c_seatsW",
+  "at": [
+   -50,
+   5,
+   8
+  ],
+  "h": 90,
+  "t": 50,
+  "d": 170,
+  "label": "west stand seats, from the east"
+ },
+ {
+  "name": "c_seatsS",
+  "at": [
+   -20,
+   -65,
+   8
+  ],
+  "h": 17,
+  "t": 50,
+  "d": 170,
+  "label": "south stand seats, from the north"
+ },
+ {
+  "name": "c_seatsN",
+  "at": [
+   15,
+   60,
+   4
+  ],
+  "h": 197,
+  "t": 50,
+  "d": 170,
+  "label": "north seats, from the south"
+ }
+]

@@ -1,0 +1,8 @@
+[
+ {"name": "d_towerSE", "at": [26, -120, 62], "h": 162, "t": 75, "d": 70, "label": "SE tower lamps"},
+ {"name": "d_towerNW", "at": [-57, 108, 62], "h": 338, "t": 75, "d": 70, "label": "NW tower lamps"},
+ {"name": "d_board", "at": [25, -112, 9], "h": 162, "t": 80, "d": 80, "label": "scoreboard"},
+ {"name": "d_fins", "at": [-125.6, 35, 8], "h": 90, "t": 80, "d": 60, "label": "west fins"},
+ {"name": "d_cats", "at": [-121, -26, 12], "h": 90, "t": 75, "d": 130, "label": "Cats block, west"},
+ {"name": "d_catsTop", "at": [-121, -26, 20], "h": 0, "t": 25, "d": 220, "label": "Cats block, above"}
+]
