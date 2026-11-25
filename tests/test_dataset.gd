@@ -727,13 +727,20 @@ func _test_real_1990() -> void:
 	# 200), so the rule is checked both ways rather than on two names.
 	var on_honours := 0
 	var own_rating := 0
+	var on_skills := 0
 	for p in GameDB.players:
 		if float(p.get("honours", 0.0)) > 0.0:
 			if bool(p.get("rated_on_honours", false)):
 				on_honours += 1
+				if int(p["overall"]) == Ratings.rate_overall(p["attr"], str(p["role"]), Ratings.effective_games(p)):
+					on_skills += 1
 			elif int(p["overall"]) >= Ratings.honours_floor(float(p["honours"])):
 				own_rating += 1
 	_check(on_honours > 0, "An honoured player rated under his floor rates on his honours (%d)" % on_honours)
+	# His rating is what his skills say, so a load (which re-rates from the
+	# skills) keeps it: 30 here sat a point over their skills and lost it at
+	# the first load (bug bash 2026-11-25; director: "Top up his skills").
+	_check(on_skills == on_honours, "Every player rated on his honours has the skills for that rating (%d of %d)" % [on_skills, on_honours])
 	_check(own_rating > 0, "A star already above his floor keeps his own rating (%d)" % own_rating)
 	# One honour is worth 80 (bug bash 2026-11-23: 1989's All-Australians and
 	# club champions sat on a wall of 77).

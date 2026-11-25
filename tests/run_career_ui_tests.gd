@@ -1669,6 +1669,7 @@ func _run() -> void:
 	await _t("_test_event_sheet_flows")
 	await _t("_test_event_sheet_fits_every_card")
 	await _t("_test_sacked_job_choice_taps")
+	await _t("_test_season_review_keeps_the_save")
 	await _t("_test_rival_letter_taps")
 	await _t("_test_sim_asks_only_before_your_match")
 	await _t("_test_skip_long_press")
@@ -5314,6 +5315,33 @@ func _check_record_only(why: String) -> void:
 		_check(current_scene.find_child(gone, true, false) == null, "%s: the hub shows no %s" % [why, gone])
 	_check(current_scene.find_child("HubSettings", true, false) != null and current_scene.find_child("SackedCard", true, false) != null,
 			"%s: Settings and the card stay" % why)
+
+
+## Season Review has no New Career (director, 2026-11-25: "Remove the
+## button"): it started a 2026 career on the spot and replaced the save
+## without asking. A finger on Main Menu reaches the menu with the career
+## still saved; a new one starts there, which asks first.
+func _test_season_review_keeps_the_save() -> void:
+	var size_before := root.size
+	root.size = Vector2i(390, 844)
+	_state.reset()
+	_state.start_season("SYD", _db.club_list("SYD"))
+	_state.advance()
+	_check(_state.save_career(), "A Sydney career saves before Season Review")
+	_router.stack = ["main", "hub"]
+	_router.go("season_review")
+	await _settle()
+	_check(_router.current() == "season_review" and current_scene.find_child("NewCareer", true, false) == null,
+			"Season Review has no New Career button")
+	var menu: Button = current_scene.find_child("MainMenu", true, false)
+	var why: String = await Tap.tap(menu) if menu != null else "missing"
+	await _settle()
+	var meta: Dictionary = _state.saved_career_meta()
+	_check(why == "" and _router.current() == "main" and _state.has_saved_career() and str(meta.get("club", "")) == "SYD"
+			and current_scene.find_child("ContinueCareer", true, false) != null,
+			"A finger on Main Menu reaches the menu and the Sydney career is still saved to continue (%s; %s)" % [why, str(meta)])
+	_state.delete_saved_career()
+	root.size = size_before
 
 
 func _test_sacked_job_choice_taps() -> void:
