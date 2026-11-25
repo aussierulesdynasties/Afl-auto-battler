@@ -85,6 +85,23 @@ Esri World Imagery and Google Earth 3D were used only to measure: each roof's co
 matched to a roofing colour) and the storeys of 176 buildings read by eye (`storeys.json`). No imagery is
 committed or baked into a texture.
 
+## Cazaly's Stadium, Cairns (tools/grounds/cazalys)
+
+- Map data © OpenStreetMap contributors, ODbL (the surroundings, the plain, the land-use classes).
+- Terrain: Mapzen/Tilezen Terrarium elevation tiles (SRTM and other public sources, see the tiles' own
+  attribution) for the ranges and the backdrop out to 55 km.
+- Trees: Meta and WRI High Resolution Canopy Height Maps, CC BY 4.0 ("Meta and World Resources Institute (WRI),
+  2024, High Resolution Canopy Height Maps").
+- Ground photos used as reference only (nothing copied into textures): Wikimedia Commons, Cazalys Stadium 2022
+  set by DaHuzyBru (CC BY-SA 4.0), and the photos listed in tools/grounds/cazalys/ref/sources.json.
+- Google Earth 3D and Esri World Imagery were used to measure and trace plans by eye. No imagery is committed
+  or baked into any texture; the car park west of the stand, missing from OSM, was traced this way.
+People First Stadium (tools/grounds/people_first/surrounds.py) is painted the same way from OpenStreetMap, with
+the precinct's sheds and halls that OpenStreetMap lacks taken from Microsoft's Global ML Building Footprints
+(© Microsoft, Open Database Licence, ODbL). Its paving classes are read from a reference satellite image that
+stays in the project files and is never committed or shipped. The Gold Coast skyline handed to the background
+scene (people_first_skyline.json) is OpenStreetMap data (© OpenStreetMap contributors, ODbL).
+
 ## What we have vs wishlist
 
 Base: `data/players_2026.csv` — 669 players, season totals only:

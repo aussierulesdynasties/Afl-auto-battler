@@ -242,7 +242,7 @@ _Update this section whenever 3D work merges. It is the one place 3D progress is
 | Optus Stadium | being rebuilt to the MCG standard: every ring an offset of the roof edge traced from Google Earth, bowl, podium and roof measured in metres (tools/grounds/optus/survey); seats; background scene (not in a match) | #1867 #1880 #1897; #1993 |
 | SCG | model | #1909 |
 | GMHBA Stadium | exterior model; background scene (not in a match) | #1903 #1878; open: Selwood Stand roof #1924 |
-| People First Stadium | model, roof; background scene (not in a match) | #1853 #1860 #1868 #1889 #1892 |
+| People First Stadium | model, roof; MCG standard r37 (fins, podium, scoreboard lattice, pods, glazed band, Carrara surroundings: tools/grounds/people_first); background scene (not in a match) | #1853 #1860 #1868 #1889 #1892 #2019 |
 | ENGIE Stadium | texture pass | #1866 |
 | Bellerive Oval | model | #1900 |
 | Manuka Oval | model | #1865 |
