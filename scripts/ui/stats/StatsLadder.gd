@@ -20,8 +20,10 @@ const END_PAD := 8
 ## The ladder's columns, phone first; a wide screen adds the rest.
 ## {key, title, w}; on a phone the club column takes what is left (0). On a
 ## wide screen the table is as wide as its columns and sits at the left, the
-## club right beside its numbers (WIDE_CLUB).
-const WIDE_CLUB := 190
+## club right beside its numbers (WIDE_CLUB). Every column a wide screen sorts
+## by is at least 44 wide, a finger's width at 960x540 (one unit a pixel
+## there); the club column gives up the room, so the table still fits its 880.
+const WIDE_CLUB := 140
 ## "Rating": the club's best side as the match preview ranks it
 ## (GameState.club_strength: the best 23, or 22 in a four-man-bench season), to
 ## one decimal so the order reads as the preview's (row 177). A tap on a club
@@ -35,9 +37,9 @@ const LADDER_PHONE := [["pos", "#", 24], ["club", "Club", 0], ["p", "P", 26], ["
 		["l", "L", 26], ["d", "D", 24], ["pct", "%", 42], ["pts", "Pts", 34], ["rating", "Rating", 46]]
 ## The phone's "Sort by" words, two lines of them: "#" is the true order.
 const SORT_LINES := [["pos", "p", "w", "l", "d"], ["pct", "pts", "club", "rating"]]
-const LADDER_WIDE := [["pos", "#", 44], ["club", "Club", WIDE_CLUB], ["p", "P", 32], ["w", "W", 32],
-		["l", "L", 32], ["d", "D", 30], ["pf", "PF", 50], ["pa", "PA", 50], ["pct", "%", 50],
-		["pts", "Pts", 40], ["home", "Home", 68], ["away", "Away", 68], ["form", "Form", 76],
+const LADDER_WIDE := [["pos", "#", 44], ["club", "Club", WIDE_CLUB], ["p", "P", 44], ["w", "W", 44],
+		["l", "L", 44], ["d", "D", 44], ["pf", "PF", 50], ["pa", "PA", 50], ["pct", "%", 50],
+		["pts", "Pts", 44], ["home", "Home", 68], ["away", "Away", 68], ["form", "Form", 76],
 		["rating", "Rating", 52]]
 ## A small phone (under PHONE_TIGHT units of content, e.g. 320 units on a
 ## scaled desktop window) keeps every phone column at tighter widths, so the
@@ -334,9 +336,9 @@ static func _header(host: Control, specs: Array, width: float, wide := false) ->
 			sb.content_margin_right = END_PAD
 		for state in ["normal", "hover", "pressed", "hover_pressed", "focus"]:
 			b.add_theme_stylebox_override(state, sb)
-		# A thumb-high header on a phone (44 px, CLAUDE.md "Mobile first"); the
-		# columns keep their widths. A wide screen keeps 40.
-		b.custom_minimum_size = Vector2(int(c[2]), 40 if wide else 44)
+		# A thumb-high header (44 px, CLAUDE.md "Mobile first"), a wide screen's
+		# too: at 960x540 one unit is one pixel.
+		b.custom_minimum_size = Vector2(int(c[2]), 44)
 		if int(c[2]) == 0:
 			b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			b.custom_minimum_size.x = CLUB_MIN_NARROW

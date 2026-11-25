@@ -459,9 +459,10 @@ func _test_tap_after_cover() -> void:
 	sim.queue_free()
 
 
-## A browser build has no threads, so loading the next screen blocks: it must
-## not start while the dots sweep in (they would freeze half way), only once
-## the cover and a line are on screen.
+## A browser build loads the next screen straight away on the main thread (it
+## never queues it: the queued match screen sat at 0% for over a minute in a
+## browser, 2026-11-24). That blocks, so it must not start while the dots sweep
+## in (they would freeze half way), only once the cover and a line are on screen.
 func _test_browser_loads_under_the_line() -> void:
 	var path := "res://scenes/StatsHubScene.tscn"
 	await _down()   # no cover left over from the tests before
@@ -471,21 +472,25 @@ func _test_browser_loads_under_the_line() -> void:
 	feel.test_motion = true
 	_router.set("test_main_thread_load", true)
 	_wipe.set("test_cover", true)
+	var loads_before := int(_router.get("direct_loads"))
 	_router.go("stats")
 	var during_sweep := ResourceLoader.load_threaded_get_status(path)
+	var loads_then := int(_router.get("direct_loads"))
 	var phase_then := int(_wipe.get("_phase"))
-	var seen := {"line": false}
 	var t0 := Time.get_ticks_msec()
-	while ResourceLoader.load_threaded_get_status(path) == ResourceLoader.THREAD_LOAD_INVALID_RESOURCE 			and Time.get_ticks_msec() - t0 < 10000:
-		seen["line"] = bool(_wipe.call("line_visible"))
-		seen["drawn"] = int(_wipe.get("drawn_count"))
+	while int(_router.get("direct_loads")) == loads_before and Time.get_ticks_msec() - t0 < 10000:
 		await process_frame
+	await process_frame
+	var under_line := bool(_router.get("direct_load_under_line"))
+	var loads_after := int(_router.get("direct_loads"))
+	var queued := ResourceLoader.load_threaded_get_status(path)
 	await _down()
 	feel.test_motion = false
 	_router.set("test_main_thread_load", false)
 	_wipe.set("test_cover", false)
-	_check(phase_then == 1 and during_sweep == ResourceLoader.THREAD_LOAD_INVALID_RESOURCE,
-			"no load while the dots sweep in (phase %d, status %d)" % [phase_then, during_sweep])
-	_check(seen.get("line", false), "the line is up before the load starts")
+	_check(phase_then == 1 and loads_then == loads_before and during_sweep == ResourceLoader.THREAD_LOAD_INVALID_RESOURCE,
+			"no load while the dots sweep in (phase %d, loads %d, status %d)" % [phase_then, loads_then - loads_before, during_sweep])
+	_check(loads_after == loads_before + 1 and under_line, "the line is up before the load starts (loads %d, line %s)" % [loads_after - loads_before, under_line])
+	_check(queued == ResourceLoader.THREAD_LOAD_INVALID_RESOURCE, "the screen is loaded straight away, never queued (status %d)" % queued)
 	_check(current_scene != null and current_scene.scene_file_path == path,
 			"and the screen still opens (%s)" % (current_scene.scene_file_path if current_scene else "none"))

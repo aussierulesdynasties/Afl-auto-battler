@@ -92,6 +92,12 @@ var hint_extra := ""
 ## PC's Team selection puts them under the week); null keeps them under the
 ## interchange. Set before setup().
 var rest_host: Control = null
+## Where the interchange (its word, what acts on the side and the bench) goes
+## when the screen puts it beside the oval rather than under it: a 960-wide PC's
+## Team selection gives the oval the full height and the interchange the top of
+## the right-hand column (director, 2026-11-25: "A · ground across"). null keeps
+## it under the oval. Set before setup().
+var bench_host: Control = null
 ## A phone's list pulls up (director, 2026-11-11: "List pulls up"): tap or drag
 ## its top edge and it rises over the bottom half of the oval; a tap on the
 ## oval, or picking a player, drops it back. Set before setup().
@@ -158,8 +164,10 @@ func _build() -> void:
 		interchange_actions.get_parent().remove_child(interchange_actions)
 	if after_bench != null and after_bench.get_parent() != null:
 		after_bench.get_parent().remove_child(after_bench)
+	if bench_host != null:
+		UiKit.clear(bench_host)
 	UiKit.clear(self)
-	_marks = GameState.form_marks(_side) if not (_read_only or _rival or field_only) \
+	_marks =GameState.form_marks(_side) if not (_read_only or _rival or field_only) \
 			else {"cold": {}, "hot": {}}
 	var field := UiKit.vbox(4 if stacked else 8)
 	field.name = "BuilderField"
@@ -199,6 +207,8 @@ func _build() -> void:
 			_pitch.add_child(card)
 	if _shows_condition():
 		field.add_child(_condition_key())
+	# The interchange sits under the oval, or in the screen's own place for it.
+	var ihost: Control = bench_host if bench_host != null else field
 	var inter := UiKit.lbl("Interchange", UiKit.SMALL, UiKit.MUTED, true)
 	inter.autowrap_mode = TextServer.AUTOWRAP_OFF
 	if interchange_actions != null:
@@ -213,18 +223,18 @@ func _build() -> void:
 		# (Measured before the labels are themed, the need reads short: any
 		# text size above standard wraps on a phone.)
 		if not _wide and (UiKit.text_scale > 1.0 or need > UiKit.view_width(self) - 40.0):
-			field.add_child(irow)
+			ihost.add_child(irow)
 			var arow := UiKit.hbox(8)
 			arow.name = "InterchangeActionsRow"
 			arow.add_child(interchange_actions)
-			field.add_child(arow)
+			ihost.add_child(arow)
 		else:
 			irow.add_child(interchange_actions)
-			field.add_child(irow)
+			ihost.add_child(irow)
 			if not _wide:
 				_wrap_actions_if_wide.call_deferred(irow, field)
 	else:
-		field.add_child(inter)
+		ihost.add_child(inter)
 	# A row of five on a PC; on a phone it wraps rather than widen the screen.
 	var bench := GridContainer.new()
 	bench.name = "Bench"
@@ -233,7 +243,7 @@ func _build() -> void:
 	bench.columns = 5 if (_wide or (stacked and UiKit.text_scale <= 1.0)) else 3
 	bench.add_theme_constant_override("h_separation", 6)
 	bench.add_theme_constant_override("v_separation", 6)
-	field.add_child(bench)
+	ihost.add_child(bench)
 	var bench_ids: Array = _side["BENCH"]
 	for i in range(maxi(Ratings.bench(), bench_ids.size())):
 		var bid := str(bench_ids[i]) if i < bench_ids.size() else ""

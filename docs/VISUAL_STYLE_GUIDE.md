@@ -36,7 +36,7 @@ this game? If it could belong to any sports-management app, it has drifted.
 | INK | `#0d0c0b` | inputs and wells |
 | LINE | `#363229` | rules and outlines |
 | TEXT | `#f1eee6` | every ordinary word and figure |
-| MUTED | `#a39e93` | the line under a name, metadata, inactive tabs |
+| MUTED | `#b4afa4` | the line under a name, metadata, inactive tabs (director, 2026-11-25; was `#a39e93`) |
 | FAINT | `#6e695f` | disabled only |
 | GOOD / BAD | `#8cc49a` / `#e38b73` | a genuine state (form, injury, over the cap); never information, never decoration |
 | ACCENT | red | the primary action when no club colour applies (main menu, Settings). Red is no longer the only primary fill (director, 2026-11-04): see 2.2 |
@@ -48,7 +48,8 @@ Light mode is maintained, not designed for. It uses dedicated pairs, never inver
 ### 2.2 Where colour goes
 
 - **Atmosphere:** the club's colour as a wash (ClubDuel, MatchPoster, the match scoreboard), a
-  gradient from the club colour to the page at the head of a screen, a 2 px club rule under a
+  gradient from the club colour to the page at the head of a screen, the guernsey stripes behind
+  the title only (ClubBackdrop: full colour to 48, gone by 64; director, 2026-11-25), a 2 px club rule under a
   heading, the club's guernsey marker. Both clubs on match day. This is where "not boring" lives.
 - **The primary action:** one button per screen, filled in the club colour (ACCENT when there is
   no club), white or near-black ink by luminance. Never two filled buttons on one screen.
@@ -93,7 +94,8 @@ only sizes a screen may use; literal sizes are a defect and a test fails them.
 
 Small sizes: ARD Signwriter is a sign face and thins out under 14 px. ARD Regular stays for small
 body text, no Barlow pairing and no A/B (director, 2026-11-04). SECONDARY is 14 and nothing the
-player decides on is set in FINE.
+player decides on is set in FINE. Nothing renders under 13 at Standard: `UiKit.px()` lifts any
+smaller size to `MIN_TEXT` (director, 2026-11-25).
 
 Rules: sentence case always, except AFL conventions (OVR, POT, Grand Final, club codes); no
 letter-spacing; no all-caps labels; digits in tables are tabular; the Display cut is for scores,
