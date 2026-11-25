@@ -1064,6 +1064,8 @@ func _close_moment() -> void:
 			tw.tween_property(leaving, "modulate:a", 0.0, 0.3)
 			tw.tween_callback(leaving.queue_free)
 		else:
+			# Without the fade it goes at once, and is no longer the call on screen.
+			_moment_overlay.name = "MomentLeaving"
 			_moment_overlay.queue_free()
 	_moment_overlay = null
 
