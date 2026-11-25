@@ -1649,7 +1649,7 @@ func _test_forge_signings_cost_picks() -> void:
 			"Signings took Darwin past its spots (%d signed, passing %s)" % [signed, str(passing)])
 	var brief: String = _state.draft_spots_line()
 	_check(brief.contains("will pass unless you delist before it starts")
-			and brief.contains(Draft.picks_words(passing)),
+			and brief.contains(d.picks_words(passing)),
 			"The brief names the picks that will pass: %s" % brief)
 	# The offer sheet says it too, with "too" once a pick already passes.
 	var off: Control = load("res://scenes/OffseasonScene.tscn").instantiate()
