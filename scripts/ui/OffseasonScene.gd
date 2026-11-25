@@ -752,6 +752,10 @@ func _agents(body: VBoxContainer) -> void:
 	_agent_queue = fas
 	_agent_built = 0
 	_more_agents(_agents_shown)
+	# Built straight onto a box (the trade screen's familiarity line, a test), the
+	# tab has no scroll of its own to watch.
+	if not is_instance_valid(_scroll_box):
+		return
 	var bar := _scroll_box.get_v_scroll_bar()
 	bar.value_changed.connect(func(_v: float) -> void: _check_agents_end())
 	bar.changed.connect(_check_agents_end)
