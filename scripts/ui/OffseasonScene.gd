@@ -82,6 +82,12 @@ func _build() -> void:
 	hv.add_child(UiKit.lbl("%s of the %s salary cap  ·  %s  ·  %d on our list" % [Contracts.money(GameState.my_payroll()),
 			Contracts.money(GameState.cap_for(GameState.my_club)), cap_room_words(room), GameState.my_list.size()], 15,
 			UiKit.GOOD if room >= 0 else UiKit.BAD, true))
+	# A season that paid every player less (2020): said under the cap it changes.
+	var cut := Contracts.pay_cut_note(Contracts.money_year)
+	if cut != "":
+		var cut_l := _para(cut, 13, UiKit.TEXT)
+		cut_l.name = "PayCutNote"
+		hv.add_child(cut_l)
 	# Your challenge's rule, said where it bites: who you may bring in.
 	if Challenge.kind(GameState) in ["youth", "rebuild"]:
 		var rule := _para(Challenge.stated_line(GameState), 13, UiKit.EMPH)

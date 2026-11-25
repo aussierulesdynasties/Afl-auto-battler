@@ -2,6 +2,7 @@
 	"_note": "Why a rival club said no, passed or outbid you (P-18). One sentence per reason code; the code is chosen where the club's decision is made (Contracts.evaluate_trade, GameState._wont_go and _trade_assets, Contracts.prefers_why, Draft._best_ai_pick), never worked out afterwards. Placeholders: {club} the rival, {player} the player, {other} the player it took instead, {pos} a position in words, {age} his age, {to} the clubs he asked for, {n} a list size, {gap} how far ahead of your pick (\"two picks before yours\"). No percentages, values or hidden ratings.",
 	"reasons": {
 		"trade_empty": "Put a player or a pick on each side.",
+		"trade_own_club": "You can't trade with your own club.",
 		"trade_closed": "Trades are open in the off-season and on draft night.",
 		"trade_night_picks_only": "On draft night only picks change hands: the lists are closed.",
 		"trade_twice": "Each player or pick can only go in once.",
@@ -16,6 +17,8 @@
 		"trade_list_under": "That would take a list below {n} players.",
 		"trade_their_cap": "{club} said no: they can't fit the salary under their cap.",
 		"trade_your_cap": "You can't fit the salary under your cap.",
+		"trade_their_room": "{club} said no: it leaves them too little cap room to fill their list.",
+		"trade_your_room": "That leaves us too little cap room to fill our list.",
 		"trade_rebuild_future": "{club} said no: they are rebuilding, and {player} is part of their future.",
 		"trade_no_game": "{club} said no: {player} wouldn't get a game in their side.",
 		"trade_value_close": "{club} said no: your offer is a little short of what they give up.",

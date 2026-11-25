@@ -1,9 +1,11 @@
 extends Control
-## After the Fitzroy merger your list is over the era's spots: you pick who
-## goes (director 2026-11-15: "I pick, delist screen"). Rival clubs cut by
-## their own rule (GameState._era_trim_rivals). The hub opens this screen until
-## the list fits; a career that reaches Round 1 without it has the club delist
-## the rest by that rule (GameState._merger_cut_by_club).
+## Your list is over the season's spots: you pick who goes. It began with
+## the Fitzroy merger (director 2026-11-15: "I pick, delist screen") and opens
+## whenever a Legacy season has fewer spots than your list (director
+## 2026-11-25, "You pick"). Rival clubs cut by their own rule
+## (GameState._era_trim_rivals). The hub opens this screen until the list
+## fits; a career that reaches Round 1 without it has the club delist the rest
+## by that rule (GameState._merger_cut_by_club).
 
 var _root: VBoxContainer
 var _going: Array = []   # ids you marked to go
@@ -54,7 +56,7 @@ func _build() -> void:
 		return
 	UiKit.clear(_root)
 	# No way round it: Back leaves for the title, as the hub's does.
-	_root.add_child(UiKit.top_bar("After the merger", false))
+	_root.add_child(UiKit.top_bar("After the merger" if GameState.list_cut_after_merger() else "List cut", false))
 	var needs := GameState.merger_cut_needs()
 	var body := UiKit.vbox(UiKit.Space.CLOSE)
 	body.name = "MergerRows"
@@ -103,13 +105,25 @@ func _hero() -> Control:
 
 func _lead(needs: Dictionary) -> Control:
 	var list := _list()
-	var from_fit := list.filter(func(q): return str(q.get("merged_from", "")) != "").size()
-	var text := "%d of %s's players have joined our list. A club can list %d senior players in %d, and we have %d." % [
-			from_fit, GameDB.club_name(LegacyRollover.MERGED),
-			RookieList.senior_spots(), GameState.season_year, RookieList.senior_count(list)]
-	if needs.has("A"):
-		text += " We have %d Category A rookies for %d spots." % [RookieList.cat_a_count(list), RookieList.cat_a_spots()]
-	text += " The ones we delist are free to sign with any club."
+	var text := ""
+	if GameState.list_cut_after_merger():
+		var from_fit := list.filter(func(q): return str(q.get("merged_from", "")) != "").size()
+		text = "%d of %s's players have joined our list. A club can list %d senior players in %d, and we have %d." % [
+				from_fit, GameDB.club_name(LegacyRollover.MERGED),
+				RookieList.senior_spots(), GameState.season_year, RookieList.senior_count(list)]
+		if needs.has("A"):
+			text += " We have %d Category A rookies for %d spots." % [RookieList.cat_a_count(list), RookieList.cat_a_spots()]
+		text += " The ones we delist are free to sign with any club."
+	else:
+		# One fact a line (the list, the rookies, what happens to them).
+		var lines: PackedStringArray = []
+		if needs.has(""):
+			lines.append("A club can list %d senior players in %d, and we have %d." % [
+					RookieList.senior_spots(), GameState.season_year, RookieList.senior_count(list)])
+		if needs.has("A"):
+			lines.append("We have %d Category A rookies for %d spots." % [RookieList.cat_a_count(list), RookieList.cat_a_spots()])
+		lines.append("The ones we delist are free to sign with any club.")
+		text = "\n".join(lines)
 	var l := _para(text, UiKit.BODY, UiKit.TEXT)
 	l.name = "MergerLead"
 	return l

@@ -61,6 +61,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Epic/MetaHuman files (private repo, docs/EPIC_ASSETS.md)
+        uses: ./.github/actions/epic-assets
+        with:
+          token: ${{ secrets.EPIC_ASSETS_TOKEN || secrets.MERGE_TOKEN }}
+
       - name: Check the inputs
         run: |
           if ! [[ "$TOOL" =~ ^[A-Za-z0-9_]+$ ]]; then
