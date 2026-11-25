@@ -4385,7 +4385,7 @@ func _open_ceremony(flag: Dictionary) -> void:
 	var ov: Variant = _ft_box.get("overlay")
 	if is_instance_valid(ov) and ov is Control:
 		(ov as Control).visible = false
-	_ceremony = PremiershipCeremony.open(_over, flag, {"crowd": _crowd, "pulse": [_score_home, _score_away]})
+	_ceremony = PremiershipCeremony.open(_over, flag, {"pulse": [_score_home, _score_away]})
 	_ceremony.done.connect(_after_ceremony, CONNECT_ONE_SHOT)
 
 

@@ -50,9 +50,6 @@ var _extra_time := false    # play went past the fourth quarter
 var _full_time_done := false
 var _run_side := -1         # who kicked the last goal, and how many in a row
 var _run_len := 0
-var _bed_db := BED_DB       # the murmur's level before a duck
-var _ducked := false
-var _duck_tw: Tween
 
 
 func _ready() -> void:
@@ -138,47 +135,6 @@ func full_time(shown_usec: int = -1) -> void:
 ## scene; `home` false when your side is the visitors).
 func run_through(home := true) -> void:
 	_play("run_through", "crowd_goal.wav", ROAR_DB + (0.0 if home else AWAY_DB), true, HOME if home else 1 - HOME, 0, -1)
-
-
-## The premiership ceremony's held breath (Concept 3, director 2026-11-25):
-## the murmur dips `db` over `secs`, and comes back with unduck().
-func duck(db := -12.0, secs := 0.4) -> void:
-	if _bed == null:
-		return
-	if not _ducked:
-		_bed_db = _bed.volume_db
-		_ducked = true
-	_duck_to(_bed_db + db, secs)
-
-
-## The murmur back to where it was before duck(), over `secs` (0: at once).
-func unduck(secs := 0.4) -> void:
-	if _bed == null or not _ducked:
-		return
-	_ducked = false
-	if secs <= 0.0:
-		_duck_to(_bed_db, 0.0)
-		return
-	_duck_to(_bed_db, secs)
-
-
-## One dip at a time; no UiKit here, so `godot --script` suites can still name
-## this class before the autoloads exist (tools/lint/autoload_reach.py).
-func _duck_to(db: float, secs: float) -> void:
-	if _duck_tw != null and _duck_tw.is_valid():
-		_duck_tw.kill()
-	_duck_tw = null
-	if secs <= 0.0:
-		_bed.volume_db = db
-		return
-	_duck_tw = create_tween()
-	_duck_tw.tween_property(_bed, "volume_db", db, secs) \
-			.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)
-
-
-## Is the murmur dipped (tests)?
-func ducked() -> bool:
-	return _ducked
 
 
 ## What's playing now (tests): the cue's file, or "".

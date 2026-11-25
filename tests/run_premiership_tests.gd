@@ -1,9 +1,9 @@
 extends SceneTree
 ## godot --headless --path . --script tests/run_premiership_tests.gd
-## The premiership ceremony prototype (director, 2026-11-25; design bible 161):
-## the Grand Final's siren opens a stage in the premiers' colours before full
-## time, in three concepts he will pick from. Proves: who gets a ceremony and
-## what it says, each concept's beats and its time to the final frame, the
+## The premiership ceremony (director, 2026-11-25; design bible 161): the Grand
+## Final's siren opens a stage in the premiers' colours before full time (his
+## pick: Full goosebumps, no crowd dip). Proves: who gets a ceremony and what
+## it says, its beats and its time to the final frame, the
 ## final frame fits a phone for all 18 clubs at every text size, a tap anywhere
 ## jumps to the final frame, a real finger reaches Continue at any moment,
 ## Android Back leaves, Reduced motion shows the final frame at once, the cup
@@ -27,7 +27,6 @@ var _db: Node
 var _uk: Object
 var _feel: Object
 var _pc: Object
-var _crowd_script: Object
 var _checks := 0
 var _failures: Array[String] = []
 var _week := {}
@@ -64,7 +63,6 @@ func _run() -> void:
 	_uk = load("res://scripts/ui/UiKit.gd")
 	_feel = load("res://scripts/ui/Feel.gd")
 	_pc = load("res://scripts/ui/match/PremiershipCeremony.gd")
-	_crowd_script = load("res://scripts/ui/match/CrowdSound.gd")
 	_state.autosave_enabled = false
 	_state.save_path = "user://test_premiership.save"
 	_state.settings_path = "user://test_premiership.cfg"
@@ -80,7 +78,7 @@ func _run() -> void:
 
 	await _t("_test_facts")
 	await _t("_test_casing")
-	await _t("_test_concepts")
+	await _t("_test_beats")
 	await _t("_test_layout_every_club")
 	await _t("_test_tap_elsewhere")
 	await _t("_test_continue_taps")
@@ -91,9 +89,7 @@ func _run() -> void:
 	await _t("_test_other_club_flag")
 	await _t("_test_hub_sim_path")
 	await _t("_test_gf_draw_none")
-	await _t("_test_f7")
 
-	_pc.concept = 0
 	_feel.test_motion = false
 	_feel.force_phone = false
 	_state.set_reduced_motion(false)
@@ -150,8 +146,7 @@ func _opp(res: Dictionary) -> String:
 
 
 ## Review match on a Grand Final: the ceremony opens as the scene does.
-func _open_match(res: Dictionary, concept: int, farewell := {}) -> Control:
-	_pc.concept = concept
+func _open_match(res: Dictionary, farewell := {}) -> Control:
 	_state.last_match = res
 	_state.last_pos_before = _state.my_position()
 	_state.review_requested = true
@@ -164,28 +159,24 @@ func _open_match(res: Dictionary, concept: int, farewell := {}) -> Control:
 
 
 ## A bare stage: the ceremony over a host the size of the match's space under
-## the scoreboard, with a crowd to dip and two score labels to beat.
-func _open_bare(f: Dictionary, concept: int, opts := {}, area := Vector2(390, 734)) -> Dictionary:
-	_pc.concept = concept
+## the scoreboard, with two score labels to beat.
+func _open_bare(f: Dictionary, opts := {}, area := Vector2(390, 734)) -> Dictionary:
 	var host := Control.new()
 	host.name = "CeremonyHost"
 	host.position = Vector2(0, 844.0 - area.y)
 	host.size = area
 	root.add_child(host)
-	var crowd: Node = _crowd_script.new()
-	crowd.name = "Crowd"
-	host.add_child(crowd)
 	var pulse: Array = [Label.new(), Label.new()]
 	for l in pulse:
 		(l as Label).text = "88"
 		host.add_child(l)
-	var o := {"crowd": crowd, "pulse": pulse}
+	var o := {"pulse": pulse}
 	o.merge(opts, true)
 	await process_frame
 	_feel.clear()
 	var t0 := Time.get_ticks_usec()
 	var c: Control = _pc.open(host, f, o)
-	return {"host": host, "c": c, "t0": t0, "crowd": crowd, "pulse": pulse}
+	return {"host": host, "c": c, "t0": t0, "pulse": pulse}
 
 
 func _facts_for(premier: String, callouts: Array = LONG) -> Dictionary:
@@ -314,42 +305,34 @@ func _test_casing() -> void:
 	_check(now == want, "This format: %s (%s)" % [want, now])
 
 
-## Each concept on a bare stage: its beats, its sounds, the time to the final
-## frame, the flash, and the final frame itself.
-func _test_concepts() -> void:
+## On a bare stage: the beats in order, the sounds, the time to the final
+## frame, the flash, the scorebug's beat, and the final frame itself.
+func _test_beats() -> void:
 	_prime_week()
-	var want := {1: 3.58, 2: 2.28, 3: 6.27}
-	var tags := {
-		1: {"has": ["pc_wipe", "pc_settle", "pc_settled"], "not": ["pc_slam", "pc_flash", "pc_streamers", "pc_duck", "pc_sweep"]},
-		2: {"has": ["pc_wipe", "pc_settle", "pc_slam", "pc_flash", "pc_shake", "pc_streamers", "pc_settled"], "not": ["pc_duck", "pc_sweep", "pc_unfurl"]},
-		3: {"has": ["pc_pulse", "pc_duck", "pc_unduck", "pc_sweep", "pc_settle", "pc_tint", "pc_unfurl", "pc_flash", "pc_shake", "pc_streamers", "pc_settled"], "not": ["pc_wipe", "pc_slam"]},
-	}
-	for k in [1, 2, 3]:
-		var b: Dictionary = await _open_bare(_facts_for("COL"), k)
-		var c: Control = b["c"]
-		_check((c.get("_callouts") as Array).size() == 4, "Concept %d: four facts to stage" % k)
-		var watch: Dictionary = await _run_to_rest(c, int(b["t0"]), 9.0, b["pulse"])
-		var secs := float(watch["secs"])
-		_check(absf(secs - float(want[k])) <= 0.15, "Concept %d: the final frame at %.2f s (%.2f s)" % [k, float(want[k]), secs])
-		for tag in tags[k]["has"]:
-			_check(_feel.moved.has(tag), "Concept %d plays %s (%s)" % [k, tag, str(_feel.moved)])
-		for tag in tags[k]["not"]:
-			_check(not _feel.moved.has(tag), "Concept %d has no %s" % [k, tag])
-		_check(c.get("heard") == ["roar"], "Concept %d: the crowd roars once, no siren (%s)" % [k, str(c.get("heard"))])
-		_check(_feel.heard.has("land"), "Concept %d: the sting sounds (%s)" % [k, str(_feel.heard)])
-		if k == 1:
-			_check(float(watch["flash"]) < 0.001, "Concept 1: no flash (%.2f)" % float(watch["flash"]))
-		else:
-			_check(absf(float(watch["flash"]) - 0.30) <= 0.03, "Concept %d: the flash peaks at 0.30 in the club's colour (%.2f)" % [k, float(watch["flash"])])
-		if k == 3:
-			_check(float(watch["pulse"]) > 1.03 and float(watch["pulse"]) <= 1.061, "Concept 3: the scorebug beats once to 1.06 (%.3f)" % float(watch["pulse"]))
-		await _wait(0.6)   # the last tweens finish
-		var why := _at_rest_ok(c)
-		_check(why == "", "Concept %d: the final frame is solid, full size and still (%s)" % [k, why])
-		_check(not (b["crowd"] as Node).call("ducked"), "Concept %d: the crowd is back to its murmur" % k)
-		_check(is_instance_valid(c) and c.is_inside_tree(), "Concept %d waits for Continue at the final frame" % k)
-		(b["host"] as Node).queue_free()
-		await _settle()
+	var b: Dictionary = await _open_bare(_facts_for("COL"))
+	var c: Control = b["c"]
+	_check((c.get("_callouts") as Array).size() == 4, "Four facts to stage")
+	var watch: Dictionary = await _run_to_rest(c, int(b["t0"]), 9.0, b["pulse"])
+	var secs := float(watch["secs"])
+	_check(absf(secs - 6.27) <= 0.15, "The final frame at 6.27 s (%.2f s)" % secs)
+	var beats := ["pc_pulse", "pc_sweep", "pc_settle", "pc_tint", "pc_unfurl", "pc_flash", "pc_shake", "pc_streamers", "pc_settled"]
+	var last := -1
+	for tag in beats:
+		var at: int = (_feel.moved as Array).find(tag)
+		_check(at > last, "%s plays, after the beat before it (%s)" % [tag, str(_feel.moved)])
+		last = maxi(last, at)
+	_check(c.get("heard") == ["roar"], "The crowd roars once, no siren on the match (%s)" % str(c.get("heard")))
+	_check(_feel.heard.has("land"), "The sting sounds (%s)" % str(_feel.heard))
+	_check(absf(float(watch["flash"]) - 0.30) <= 0.03, "The flash peaks at 0.30 in the club's colour (%.2f)" % float(watch["flash"]))
+	_check(float(watch["pulse"]) > 1.03 and float(watch["pulse"]) <= 1.061, "The scorebug beats once to 1.06 (%.3f)" % float(watch["pulse"]))
+	await _wait(0.6)   # the last tweens finish
+	var why := _at_rest_ok(c)
+	_check(why == "", "The final frame is solid, full size and still (%s)" % why)
+	for l in b["pulse"]:
+		_check((l as Control).scale.is_equal_approx(Vector2.ONE), "The scorebug back to its size")
+	_check(is_instance_valid(c) and c.is_inside_tree(), "It waits for Continue at the final frame")
+	(b["host"] as Node).queue_free()
+	await _settle()
 
 
 ## The final frame on a phone, for every club, at standard and largest text,
@@ -360,7 +343,7 @@ func _test_layout_every_club() -> void:
 	var clubs: Array = _db.active_clubs(_state.season_year)
 	_check(clubs.size() == 18, "18 clubs to lay out (%d)" % clubs.size())
 	# The space the match gives it under the scoreboard.
-	var scene := _open_match(_gf([13, 5], [8, 5]), 1)
+	var scene := _open_match(_gf([13, 5], [8, 5]))
 	await _settle()
 	var mc := _ceremony(scene)
 	var area := mc.size if mc != null else Vector2(390, 734)
@@ -373,7 +356,7 @@ func _test_layout_every_club() -> void:
 	for key in ["standard", "largest"]:
 		_state.set_text_size(key)
 		for code in clubs:
-			var b: Dictionary = await _open_bare(_facts_for(str(code)), 1, {}, area)
+			var b: Dictionary = await _open_bare(_facts_for(str(code)), {}, area)
 			var c: Control = b["c"]
 			await process_frame
 			var top := float(c.get("_band_top"))
@@ -415,21 +398,24 @@ func _test_layout_every_club() -> void:
 
 
 ## A tap anywhere but Continue, mid-run: every piece to its final place, the
-## crowd back, the streamers gone, and the ceremony waits.
+## scorebug back, the streamers gone, and the ceremony waits.
 func _test_tap_elsewhere() -> void:
-	var b: Dictionary = await _open_bare(_facts_for("RIC"), 3)
+	var b: Dictionary = await _open_bare(_facts_for("RIC"))
 	var c: Control = b["c"]
-	await _wait(0.6)
-	_check(bool((b["crowd"] as Node).call("ducked")), "Concept 3 at 0.6 s: the crowd holds its breath")
+	await _wait(1.6)
+	_check(bool(c.get("_sweeping")), "At 1.6 s the light is sweeping")
 	var why: String = await Tap.tap_at(c, Vector2(c.size.x / 2.0, 60.0), true)
 	await _settle()
 	_check(why == "" and _feel.moved.has("pc_rest"), "A real tap on the stage reaches it (%s)" % why)
 	_check(_at_rest_ok(c) == "", "...and jumps to the final frame (%s)" % _at_rest_ok(c))
-	_check(not bool((b["crowd"] as Node).call("ducked")), "...with the crowd back at once")
+	_check(not bool(c.get("_sweeping")) and float(c.get("_settle_k")) == 1.0, "...the light gone, the stripes in the band")
 	_check(is_instance_valid(c) and c.is_inside_tree() and not _feel.moved.has("pc_leave"), "...and it waits for Continue")
-	c.call("replay")
+	(b["host"] as Node).queue_free()
+	await _settle()
+	b = await _open_bare(_facts_for("RIC"))
+	c = b["c"]
 	await _wait(4.1)
-	_check(is_instance_valid(c.get("_streamers")), "Concept 3 at 4.1 s: the streamers are falling")
+	_check(is_instance_valid(c.get("_streamers")), "At 4.1 s the streamers are falling")
 	why = await Tap.tap_at(c, Vector2(c.size.x / 2.0, 60.0), true)
 	await _settle()
 	_check(why == "" and c.get("_streamers") == null and c.find_child("PremiershipStreamers", true, false) == null,
@@ -438,11 +424,12 @@ func _test_tap_elsewhere() -> void:
 	await _settle()
 
 
-## A real finger on Continue at the first frame, mid-impact (Concept 2's slam)
-## and at the final frame: the ceremony goes and full time opens, still.
+## A real finger on Continue at the first frame, mid-impact (the stamp's flash
+## at 3.8 s) and at the final frame: the ceremony goes and full time opens,
+## still.
 func _test_continue_taps() -> void:
-	for when in [0.0, 0.55, -1.0]:
-		var scene := _open_match(_gf([13, 5], [8, 5]), 2)
+	for when in [0.0, 3.85, -1.0]:
+		var scene := _open_match(_gf([13, 5], [8, 5]))
 		var c := _ceremony(scene)
 		_check(c != null, "A Grand Final opens the ceremony (at %.2f)" % when)
 		if c == null:
@@ -454,8 +441,12 @@ func _test_continue_taps() -> void:
 		if when > 0.0:
 			await _wait(when)
 		elif when < 0.0:
-			await _wait(2.6)
-		var mid: bool = when > 0.0 and not bool(c.get("at_rest"))
+			await _wait(6.6)
+		var mid: bool = when > 0.0 and not bool(c.get("at_rest")) and float(c.get("_flash_a")) > 0.0
+		if when > 0.0:
+			_check(mid, "At 3.85 s the stamp's flash is on (%.2f)" % float(c.get("_flash_a")))
+		elif when < 0.0:
+			_check(bool(c.get("at_rest")), "At 6.6 s it is at the final frame")
 		var why: String = await Tap.tap(c.find_child("CeremonyContinue", true, false))
 		await _settle()
 		# Sounds from here on are full time's (the ceremony's own tags are pc_).
@@ -480,14 +471,18 @@ func _test_continue_taps() -> void:
 
 ## Android Back leaves the ceremony, as Continue does, and stays on the match.
 func _test_back() -> void:
-	var scene := _open_match(_gf([13, 5], [8, 5]), 3)
-	await _wait(1.0)
+	var scene := _open_match(_gf([13, 5], [8, 5]))
+	await _wait(0.15)
 	var took: bool = scene.call("handle_back")
 	await _settle()
 	_check(took and _ceremony(scene) == null and _feel.moved.has("pc_leave"), "Back on the match leaves the ceremony")
 	var ft: Control = scene.find_child("FullTime", true, false)
 	_check(ft != null and ft.is_visible_in_tree() and scene.is_inside_tree(), "...onto full time, on the match")
-	_check(not (scene.get("_crowd") as Node).call("ducked"), "...with the crowd's murmur back")
+	var beat: Array = []
+	for v in ["_score_home", "_score_away"]:
+		var l := scene.get(v) as Control
+		beat.append(l.scale.x if l != null else -1.0)
+	_check(beat == [1.0, 1.0], "...with the scorebug back to its size, left mid-beat (%s)" % str(beat))
 	scene.queue_free()
 	await _settle()
 
@@ -495,23 +490,23 @@ func _test_back() -> void:
 ## Reduced motion: the final frame at once, the sting alone, nothing moves.
 func _test_reduced() -> void:
 	_state.set_reduced_motion(true)
-	var b: Dictionary = await _open_bare(_facts_for("CAR"), 3)
+	var b: Dictionary = await _open_bare(_facts_for("CAR"))
 	var c: Control = b["c"]
 	_check(_at_rest_ok(c) == "", "Reduced motion: the final frame on the first frame (%s)" % _at_rest_ok(c))
 	await _wait(0.5)
 	_check(_feel.moved.is_empty(), "...nothing moves (%s)" % str(_feel.moved))
 	_check(_feel.heard.has("land") and (c.get("heard") as Array).is_empty(), "...the sting alone (%s, %s)" % [str(_feel.heard), str(c.get("heard"))])
-	_check(c.get("_streamers") == null and not bool((b["crowd"] as Node).call("ducked")), "...no streamers, no dip")
+	_check(c.get("_streamers") == null, "...no streamers")
 	(b["host"] as Node).queue_free()
 	await _settle()
 	_state.set_reduced_motion(false)
 
 
-## Screen shake off: Concept 2's slam flashes but does not shake.
+## Screen shake off: the stamp at 3.8 s flashes but does not shake.
 func _test_shake_off() -> void:
 	_state.set_screen_shake_on(false)
-	var b: Dictionary = await _open_bare(_facts_for("HAW"), 2)
-	await _wait(1.2)
+	var b: Dictionary = await _open_bare(_facts_for("HAW"))
+	await _wait(4.0)
 	_check(_feel.moved.has("pc_flash") and not _feel.moved.has("pc_shake"), "Shake off: a flash, no shake (%s)" % str(_feel.moved))
 	(b["host"] as Node).queue_free()
 	await _settle()
@@ -526,7 +521,7 @@ func _test_cup_before_farewell() -> void:
 	var man: Dictionary = mine[0]
 	var fw := {"ms": {"player": "Smith", "games": 200, "id": str(man["id"])}, "man": man,
 			"opp": _opp(res), "mine": mine, "theirs": []}
-	var scene := _open_match(res, 1, fw)
+	var scene := _open_match(res, fw)
 	await _settle()
 	var c := _ceremony(scene)
 	_check(c != null and root.find_child("FarewellVignette", true, false) == null, "The cup comes first; the farewell waits")
@@ -556,8 +551,8 @@ func _test_cup_before_farewell() -> void:
 func _test_other_club_flag() -> void:
 	var res := _gf([8, 5], [13, 5])
 	var opp := _opp(res)
-	var scene := _open_match(res, 1)
-	await _wait(1.6)
+	var scene := _open_match(res)
+	await _wait(2.4)
 	var c := _ceremony(scene)
 	_check(c != null and str(c.get("_premier")) == opp, "Another club's flag gets the ceremony too (%s)" % (str(c.get("_premier")) if c != null else "none"))
 	if c != null:
@@ -567,7 +562,7 @@ func _test_other_club_flag() -> void:
 				"...in %s's colours" % opp)
 		var club: Label = c.find_child("CeremonyClub", true, false)
 		_check(club != null and club.text == _db.club_name(opp), "...with their name (%s)" % (club.text if club != null else "missing"))
-		_check(_feel.moved.has("pc_wipe") and _feel.moved.has("pc_settle"), "...played in full (%s)" % str(_feel.moved))
+		_check(_feel.moved.has("pc_sweep") and _feel.moved.has("pc_settle"), "...played in full (%s)" % str(_feel.moved))
 	scene.queue_free()
 	await _settle()
 
@@ -579,7 +574,6 @@ func _test_hub_sim_path() -> void:
 	var hub: Control = load("res://scenes/HubScene.tscn").instantiate()
 	root.add_child(hub)
 	await _settle()
-	_pc.concept = 2
 	_feel.clear()
 	hub.call("_after_sim")
 	await _settle()
@@ -607,7 +601,7 @@ func _test_hub_sim_path() -> void:
 
 ## A Grand Final draw to be replayed: no ceremony, full time as ever.
 func _test_gf_draw_none() -> void:
-	var scene := _open_match(_gf([10, 5], [10, 5], {"replay_due": true}), 1)
+	var scene := _open_match(_gf([10, 5], [10, 5], {"replay_due": true}))
 	await _wait(1.2)
 	var ft: Control = scene.find_child("FullTime", true, false)
 	var played := false
@@ -617,22 +611,4 @@ func _test_gf_draw_none() -> void:
 	_check(_ceremony(scene) == null and ft != null and ft.is_visible_in_tree(), "A drawn Grand Final: no ceremony, full time")
 	_check(played and not _feel.moved.has("ft_still"), "...with its own motion (%s)" % str(_feel.moved))
 	scene.queue_free()
-	await _settle()
-
-
-## F7 (debug builds) cycles 1 -> 2 -> 3 -> 1 and plays again.
-func _test_f7() -> void:
-	var b: Dictionary = await _open_bare(_facts_for("COL"), 1)
-	var c: Control = b["c"]
-	for want in [2, 3, 1]:
-		_feel.clear()
-		var ev := InputEventKey.new()
-		ev.keycode = KEY_F7
-		ev.pressed = true
-		root.push_input(ev)
-		await _wait(0.8)   # Concept 1's first beat is at 0.6 s
-		var first := {2: "pc_slam", 3: "pc_pulse", 1: "pc_wipe"}
-		_check(int(_pc.concept) == want and int(c.get("_concept")) == want and _feel.moved.has(first[want]),
-				"F7 plays Concept %d (%d, %s)" % [want, int(_pc.concept), str(_feel.moved)])
-	(b["host"] as Node).queue_free()
 	await _settle()
