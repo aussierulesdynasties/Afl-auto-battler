@@ -205,7 +205,7 @@ survive a save (older saves get POT filled in).
 The AI suite runs all-AI career drafts (every club two or three rucks, no
 club hoarding good rucks while another has none, the best ruck and an elite
 player in round one), checks the national-draft AI prefers potential, and
-plays rounds to check rivals train after games, never well past potential,
+plays rounds to check rivals with room to grow train after games, never past potential,
 and never with your players' XP.
 
 The training suite checks the Position plan trains most of the list after a

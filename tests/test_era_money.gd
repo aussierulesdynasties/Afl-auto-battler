@@ -122,14 +122,18 @@ func _test_1990_contracts() -> void:
 		# A player on a real contract carries only its term; payroll counts his
 		# worth in the season's dollars (Contracts.payroll).
 		var salary := int(p["salary"]) if p.has("salary") else Contracts.payroll([p])
-		if int(p["value"]) == model and salary != _scaled(model, 1500000, 52):
+		# Priced at his rating, or under it where his club's first contracts
+		# were cut to fit its cap (Contracts.fit_to_cap: Geelong opens 1990
+		# over it at rating prices).
+		if int(p["value"]) == model and (salary > _scaled(model, 1500000, 52)
+				or salary < mini(Contracts.senior_min(), _scaled(model, 1500000, 52))):
 			bad.append("%s salary %d" % [str(p["id"]), salary])
 		if Contracts.asking_salary(p) < _scaled(model, 1500000, 52):
 			bad.append("%s ask %d" % [str(p["id"]), Contracts.asking_salary(p)])
 	_check(bad.is_empty(), "Every 1990 contract and asking price is in 1990 dollars: %s" % str(bad.slice(0, 5)))
 	var payroll := GameState.my_payroll()
-	_check(payroll > 0 and payroll <= int(GameState.salary_cap * 1.2),
-			"A 1990 payroll sits near a 1990 cap: %s of %s" % [Contracts.money(payroll), Contracts.money(GameState.salary_cap)])
+	_check(payroll > 0 and payroll <= GameState.salary_cap,
+			"A 1990 payroll fits a 1990 cap: %s of %s" % [Contracts.money(payroll), Contracts.money(GameState.salary_cap)])
 	var star := {"overall": 99, "age": 25.0}
 	_check(Contracts.asking_salary(star) == _scaled(1250000, 1500000, 52),
 			"A 1990 star asks %s, not $1.25m" % Contracts.money(Contracts.asking_salary(star)))
