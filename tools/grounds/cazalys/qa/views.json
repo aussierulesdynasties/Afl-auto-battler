@@ -1,0 +1,254 @@
+[
+ {
+  "name": "top",
+  "h": 0,
+  "t": 0,
+  "d": 420,
+  "at": [
+   0,
+   0,
+   0
+  ],
+  "label": "straight down"
+ },
+ {
+  "name": "out_N",
+  "h": 180,
+  "t": 62,
+  "d": 330,
+  "at": [
+   0,
+   0,
+   0
+  ],
+  "label": "from the N"
+ },
+ {
+  "name": "out_NE",
+  "h": 225,
+  "t": 62,
+  "d": 330,
+  "at": [
+   0,
+   0,
+   0
+  ],
+  "label": "from the NE"
+ },
+ {
+  "name": "out_E",
+  "h": 270,
+  "t": 62,
+  "d": 330,
+  "at": [
+   0,
+   0,
+   0
+  ],
+  "label": "from the E"
+ },
+ {
+  "name": "out_SE",
+  "h": 315,
+  "t": 62,
+  "d": 330,
+  "at": [
+   0,
+   0,
+   0
+  ],
+  "label": "from the SE"
+ },
+ {
+  "name": "out_S",
+  "h": 0,
+  "t": 62,
+  "d": 330,
+  "at": [
+   0,
+   0,
+   0
+  ],
+  "label": "from the S"
+ },
+ {
+  "name": "out_SW",
+  "h": 45,
+  "t": 62,
+  "d": 330,
+  "at": [
+   0,
+   0,
+   0
+  ],
+  "label": "from the SW"
+ },
+ {
+  "name": "out_W",
+  "h": 90,
+  "t": 62,
+  "d": 330,
+  "at": [
+   0,
+   0,
+   0
+  ],
+  "label": "from the W"
+ },
+ {
+  "name": "out_NW",
+  "h": 135,
+  "t": 62,
+  "d": 330,
+  "at": [
+   0,
+   0,
+   0
+  ],
+  "label": "from the NW"
+ },
+ {
+  "name": "in_N",
+  "h": 180,
+  "t": 72,
+  "d": 170,
+  "at": [
+   0,
+   0,
+   6
+  ],
+  "label": "into the ground from the N"
+ },
+ {
+  "name": "in_E",
+  "h": 270,
+  "t": 72,
+  "d": 170,
+  "at": [
+   0,
+   0,
+   6
+  ],
+  "label": "into the ground from the E"
+ },
+ {
+  "name": "in_S",
+  "h": 0,
+  "t": 72,
+  "d": 170,
+  "at": [
+   0,
+   0,
+   6
+  ],
+  "label": "into the ground from the S"
+ },
+ {
+  "name": "in_W",
+  "h": 90,
+  "t": 72,
+  "d": 170,
+  "at": [
+   0,
+   0,
+   6
+  ],
+  "label": "into the ground from the W"
+ },
+ {
+  "name": "gs_w",
+  "h": 270,
+  "t": 70,
+  "d": 150,
+  "at": [
+   -95,
+   0,
+   6
+  ],
+  "label": "grandstand and west building from the field"
+ },
+ {
+  "name": "club_s",
+  "h": 180,
+  "t": 70,
+  "d": 150,
+  "at": [
+   0,
+   -110,
+   4
+  ],
+  "label": "club building from the field"
+ },
+ {
+  "name": "club_out",
+  "h": 330,
+  "t": 70,
+  "d": 170,
+  "at": [
+   10,
+   -140,
+   4
+  ],
+  "label": "club building from Mulgrave Rd"
+ },
+ {
+  "name": "gs_back",
+  "h": 80,
+  "t": 70,
+  "d": 170,
+  "at": [
+   -110,
+   -10,
+   6
+  ],
+  "label": "behind the west building"
+ },
+ {
+  "name": "board_n",
+  "h": 20,
+  "t": 72,
+  "d": 140,
+  "at": [
+   25,
+   85,
+   6
+  ],
+  "label": "scoreboard and north gate"
+ },
+ {
+  "name": "bd_W",
+  "h": 270,
+  "t": 84,
+  "d": 900,
+  "at": [
+   -200,
+   0,
+   120
+  ],
+  "label": "west to the ranges"
+ },
+ {
+  "name": "bd_E",
+  "h": 90,
+  "t": 84,
+  "d": 900,
+  "at": [
+   200,
+   0,
+   60
+  ],
+  "label": "east to Trinity Inlet"
+ },
+ {
+  "name": "bd_N",
+  "h": 0,
+  "t": 82,
+  "d": 900,
+  "at": [
+   0,
+   200,
+   60
+  ],
+  "label": "north over Westcourt"
+ }
+]
