@@ -101,6 +101,18 @@ func _run() -> void:
 		for level in levels:
 			label.text = "%s%s\n%s\nLoading %s, %s..." % [head, COLS, "\n".join(rows), g, level]
 			await get_tree().process_frame
+			# A build without the ground models fetches the ground's pack first (GroundPacks).
+			var g_slug: String = "" if g == "(stand)" else str(GroundModels.GROUNDS[g])
+			if not GroundPacks.ready(g_slug):
+				var packs := GroundPacks.new()
+				add_child(packs)
+				packs.progress.connect(func(_s, done, total):
+					label.text = "%s%s\n%s\nFetching %s: %d of %d MB" % [head, COLS, "\n".join(rows), g,
+							done / 1000000, total / 1000000])
+				packs.fetch(g_slug)
+				var got: Array = await packs.finished
+				packs.queue_free()
+				print("fetched %s: %s %s" % [g_slug, got[1], got[2]])
 			var t0 := Time.get_ticks_usec()
 			var director = load("res://scripts/ui/match/MatchDirector.gd").new()
 			director.setup(res, res["events"])
