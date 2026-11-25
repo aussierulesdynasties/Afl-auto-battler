@@ -29,7 +29,7 @@ static func rating(list: Array) -> int:
 		return 0
 	var total := 0.0
 	for p in picked:
-		total += float(p.get("overall", 0))
+		total += float(Rating.ovr(p, 0))
 	return int(round(total / float(picked.size())))
 
 

@@ -31,7 +31,7 @@ static func curve(rating: float) -> float:
 ## his POT at the next rollover, by the rule every club's players follow
 ## (Potential.REHAB_PULL): judge him on that, not on the season he missed.
 static func rating(p: Dictionary) -> float:
-	var ovr := float(p.get("overall", 50))
+	var ovr := float(Rating.ovr(p, 50))
 	if bool(p.get("rehab", false)):
 		ovr += maxf(0.0, float(p.get("potential", ovr)) - ovr) * Potential.REHAB_PULL
 	return ovr
@@ -102,7 +102,7 @@ static func selection_bars(list: Array, projected := false) -> Dictionary:
 		return _selection_bars(list, projected)
 	var key := PackedStringArray(["1" if projected else "0"])
 	for q in list:
-		key.append("%s:%d" % [str(q["id"]), int(q.get("overall", 0))])
+		key.append("%s:%d" % [str(q["id"]), int(Rating.ovr(q, 0))])
 	var k := ",".join(key)
 	if not _bars_memo.has(k):
 		_bars_memo[k] = _selection_bars(list, projected)
@@ -274,9 +274,9 @@ static func _held(p: Dictionary) -> Dictionary:
 	if drop <= 0.0:
 		return p
 	var h: Dictionary = p.duplicate()
-	h["overall"] = int(p.get("overall", 50)) + int(round(drop))
+	h["overall"] = int(Rating.ovr(p, 50)) + int(round(drop))
 	if h.has("salary"):
-		h["salary"] = Ratings.salary_value(int(h["overall"]))
+		h["salary"] = Ratings.salary_value(int(Rating.ovr(h)))
 	return h
 
 

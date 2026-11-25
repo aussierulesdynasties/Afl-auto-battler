@@ -310,7 +310,7 @@ static func project(p: Dictionary) -> void:
 	p["projected"] = true
 	p["sample"] = 14.0  # projections skip the low-games confidence shrink
 	p["overall"] = Ratings.rate_overall(a, role, 14.0)
-	p["value"] = Ratings.salary_value(int(p["overall"]))
+	p["value"] = Ratings.salary_value(int(Rating.ovr(p)))
 	p.erase("potential")  # re-projection re-derives it (deterministically)
 	Potential.assign(p)
 
@@ -491,8 +491,8 @@ static func _shape_for(role: String, rng: RandomNumberGenerator, level: float) -
 						continue
 					var d := {}
 					for key in ATTR_KEYS:
-						d[key] = float(at.get(key, 0)) - float(q.get("overall", 0))
-					d["_ovr"] = float(q.get("overall", 0))
+						d[key] = float(at.get(key, 0)) - float(Rating.ovr(q, 0))
+					d["_ovr"] = float(Rating.ovr(q, 0))
 					var r := str(q.get("role", "MID"))
 					if not _shapes.has(r):
 						_shapes[r] = []
@@ -590,7 +590,7 @@ static func age_league(lists: Dictionary, year: int, min_left := 0) -> Dictionar
 				dropped += 1
 				retired.append({"id": str(p["id"]), "name": str(p.get("generic_name", p.get("name", "Player"))),
 						"club": str(code), "age": float(p.get("age", 26.0)),
-						"overall": int(p.get("overall", 40))})
+						"overall": int(Rating.ovr(p, 40))})
 				p["retired"] = true
 			else:
 				# Held back by the cap on retirements or the list size: he
@@ -605,7 +605,7 @@ static func age_league(lists: Dictionary, year: int, min_left := 0) -> Dictionar
 
 static func should_retire(p: Dictionary, year: int) -> bool:
 	var age := Potential.retire_age(p)   # Fine Wine: three years later
-	var ov := int(p.get("overall", 50))
+	var ov := int(Rating.ovr(p, 50))
 	# A real player of a Legacy start retires about when he did (director,
 	# 2026-11-13: "make all historical players retirement start roughly when
 	# it did irl"), a year either side, whatever his age or rating; a coach
@@ -661,10 +661,10 @@ static func age_player(p: Dictionary, _year: int) -> float:
 		p["sample"] = maxf(18.0, float(p.get("gm", 0.0)))
 	var a: Dictionary = p.get("attr", {})
 	if not a.is_empty():
-		var ov := int(p.get("overall", 50))
+		var ov := int(Rating.ovr(p, 50))
 		p["overall"] = Ratings.rate_overall(a, str(p.get("role", "MID")), Ratings.effective_games(p))
-		p["value"] = Ratings.salary_value(int(p["overall"]))
-		return float(int(p["overall"]) - ov)
+		p["value"] = Ratings.salary_value(int(Rating.ovr(p)))
+		return float(int(Rating.ovr(p)) - ov)
 	return 0.0
 
 
@@ -992,14 +992,14 @@ static func _shape_custom(p: Dictionary, spec: Dictionary) -> void:
 	for t in spec.get("weaknesses", []):
 		var k: String = CUSTOM_TRAITS[str(t)]
 		a[k] = float(a[k]) - CUSTOM_TRAIT_PUSH
-	var target := float(p["overall"])
+	var target := float(Rating.ovr(p))
 	a = fit_attributes(a, role, target)
 	for key in a:
 		a[key] = int(a[key])
 	p["attr"] = a
 	p["overall"] = Ratings.rate_overall(a, role, 14.0)
-	p["value"] = Ratings.salary_value(int(p["overall"]))
-	p["potential"] = maxi(int(p.get("potential", p["overall"])), int(p["overall"]))
+	p["value"] = Ratings.salary_value(int(Rating.ovr(p)))
+	p["potential"] = maxi(int(p.get("potential", Rating.ovr(p))), int(Rating.ovr(p)))
 
 
 static func _weighted_index(roll: float, weights: Array) -> int:

@@ -774,7 +774,7 @@ func _meetings_section() -> Control:
 				line.append(p)
 		if line.is_empty():
 			continue
-		line.sort_custom(func(a, b): return int(a.get("overall", 0)) > int(b.get("overall", 0)))
+		line.sort_custom(func(a, b): return int(Rating.ovr(a, 0)) > int(Rating.ovr(b, 0)))
 		var col := UiKit.vbox(0)
 		col.name = "MeetLine_" + str(g)
 		col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -841,7 +841,7 @@ func _meeting_row(p: Dictionary, wide: bool) -> Control:
 		left.add_child(said)
 		top.add_child(left)
 		var role := UiKit.line("%s %d" % [str(UiKit.ROLE_SHORT.get(str(p.get("role", "")), str(p.get("role", "")))),
-				int(p.get("overall", 0))], 18 if _meet_big else UiKit.SECONDARY, UiKit.TEXT, true)
+				int(Rating.ovr(p, 0))], 18 if _meet_big else UiKit.SECONDARY, UiKit.TEXT, true)
 		role.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		role.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 		top.add_child(role)
@@ -1131,7 +1131,7 @@ func _sync_meeting_sheet() -> void:
 				UiKit.club_name_colour(UiKit.club_ink(GameState.my_club))))
 		var who_row := UiKit.hbox(UiKit.GAP)
 		var role := UiKit.lbl("%s %d" % [str(UiKit.ROLE_SHORT.get(str(p.get("role", "")), str(p.get("role", "")))),
-				int(p.get("overall", 0))], UiKit.SECONDARY, UiKit.TEXT, true)
+				int(Rating.ovr(p, 0))], UiKit.SECONDARY, UiKit.TEXT, true)
 		role.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		role.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		who_row.add_child(role)

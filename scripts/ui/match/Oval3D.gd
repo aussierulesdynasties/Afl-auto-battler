@@ -97,6 +97,8 @@ var crew: Oval3DCrewMotion     # the clubs' trainers and runners
 var crowd: Oval3DCrowd
 ## The ground's big screens and fence signs (Oval3DScreens): live score, GOAL card, replay.
 var screens: Oval3DScreens
+## The ground's light towers at night (Oval3DTowers; null at the game's own oval).
+var towers: Oval3DTowers
 ## The ground the match is at (VignetteGround.ground_of), set before build(): its model when it
 ## has one (GroundModels), else the stand and crowd.
 var ground := ""
@@ -177,6 +179,11 @@ func build(p_director: MatchDirector, home: String, away: String) -> void:
 	mat.roughness = 0.6
 	ball.material_override = mat
 	add_child(ball)
+	if towers != null:
+		# The men, the umpires and the ball throw the towers' shadows (the stadium does not).
+		for p in players + umpires:
+			Oval3DTowers.throws_shadow(p["node"])
+		Oval3DTowers.throws_shadow(ball)
 	camera = Camera3D.new()
 	camera.fov = 30.0
 	camera.far = maxf(_far_view, GroundModels.view_far(GroundModels.slug_for(ground) if ground != "" else ""))
@@ -701,6 +708,10 @@ func _ground_model(slug: String, base := "", home := "", away := "") -> void:
 	Oval3DQuality.apply_model(quality, root)
 	if GroundModels.has_backdrop(slug, base):
 		_backdrop_view(slug)
+	towers = Oval3DTowers.new()
+	add_child(towers)
+	towers.build(slug, root, self)
+	towers.set_shadows(int(Oval3DQuality.preset(quality)["tower_shadows"]))
 	if turf == null:   # a bare view (the ground inspector's test): the model alone
 		return
 	turf.set_ground(slug)
