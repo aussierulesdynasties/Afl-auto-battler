@@ -99,10 +99,10 @@ static func open(host: Control) -> Control:
 		skip.add_theme_color_override("font_color", UiKit.MUTED)
 		skip.pressed.connect(done)
 		footer.add_child(skip)
-		var controls := UiKit.vbox(6)
+		var controls := UiKit.vbox(UiKit.Space.CLOSE)
 		controls.name = "CountControls"
-		var top := UiKit.hbox(6)
-		var bottom := UiKit.hbox(6)
+		var top := UiKit.hbox(UiKit.Space.CLOSE)
+		var bottom := UiKit.hbox(UiKit.Space.CLOSE)
 		controls.add_child(top)
 		controls.add_child(bottom)
 		for pair in [[top, watch], [top, skip_round], [bottom, skip_all], [bottom, next]]:
@@ -209,13 +209,13 @@ static func open(host: Control) -> Control:
 			if metric == "votes":
 				var story := _medallist_story(code, str(winner.get("id", "")))
 				if story != "":
-					body.add_child(UiKit.spacer(4))
+					body.add_child(UiKit.spacer(UiKit.Space.TIGHT))
 					var sl := _words(story, UiKit.TEXT)
 					sl.name = "WinnerStory"
 					var sb := UiKit.club_section_body(code, sl, StatsSide.ink(code))
 					sb.name = "WinnerStoryBox"
 					body.add_child(sb)
-					body.add_child(UiKit.spacer(6))
+					body.add_child(UiKit.spacer(UiKit.Space.CLOSE))
 			# A counted award has just shown its final count; the placings
 			# follow only the winner-by-winner reveal.
 			if metric != "goals" and rows.size() > 1 and count == "":

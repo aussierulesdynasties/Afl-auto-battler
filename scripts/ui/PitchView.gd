@@ -504,12 +504,7 @@ func replay_tag_rect() -> Rect2:
 ## "Replay: tap to skip" on a dark pill, as the Bench pill is drawn.
 func _draw_replay_tag() -> void:
 	var pill := replay_tag_rect()
-	var box := StyleBoxFlat.new()
-	box.bg_color = Color(UiKit.BG, 0.92)
-	box.border_color = Color(RING_COLOUR, 0.55)
-	box.set_border_width_all(1)
-	box.set_corner_radius_all(4)
-	draw_style_box(box, pill)
+	draw_style_box(UiKit.ground_tag(Color(RING_COLOUR, 0.55)), pill)
 	var fs := UiKit.px(UiKit.SECONDARY)
 	var w := UiKit.BOLD.get_string_size(REPLAY_TAG, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
 	draw_string(UiKit.BOLD, Vector2(pill.position.x + (pill.size.x - w) * 0.5,

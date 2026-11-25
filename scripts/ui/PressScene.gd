@@ -57,7 +57,7 @@ func _ready() -> void:
 	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	UiKit.apply_insets(margin, 16)
 	add_child(margin)
-	_root = UiKit.vbox(8)
+	_root = UiKit.vbox(UiKit.GAP)
 	_root.name = "MediaConference"
 	margin.add_child(_root)
 	_build()
@@ -74,15 +74,15 @@ func _build() -> void:
 		w.name = "MediaWhere"
 		w.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		_root.add_child(w)
-	var page := UiKit.vbox(14)
+	var page := UiKit.vbox(UiKit.Space.LOOSE)
 	page.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_root.add_child(UiKit.scroll(page))
-	_column = UiKit.vbox(16 if wide else 15)
+	_column = UiKit.vbox(UiKit.Space.COLUMN if wide else UiKit.Space.OPEN)
 	_column.name = "MediaAnswers"
 	_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var scene: MediaConferenceVignette = null
 	if wide:
-		var row := UiKit.hbox(24)
+		var row := UiKit.hbox(UiKit.Space.GUTTER)
 		row.name = "MediaRow"
 		page.add_child(row)
 		if GameState.vignettes_on():
@@ -119,7 +119,7 @@ func _build() -> void:
 ## Skip on the left (a word, not an arrow: it says what leaving does), the
 ## title in the middle.
 func _bar() -> HBoxContainer:
-	var h := UiKit.hbox(8)
+	var h := UiKit.hbox(UiKit.GAP)
 	h.name = "MediaBar"
 	h.alignment = BoxContainer.ALIGNMENT_CENTER
 	_top_skip = UiKit.btn("Skip", UiKit.BODY)
@@ -157,7 +157,7 @@ static func where_text(conf: Dictionary) -> String:
 ## The question and its answers; returns what the room reveals when it is
 ## ready.
 func _question(wide: bool) -> Array:
-	var prompt := UiKit.vbox(10 if wide else 6)
+	var prompt := UiKit.vbox(UiKit.Space.ROOM if wide else UiKit.Space.CLOSE)
 	prompt.name = "MediaPrompt"
 	_column.add_child(prompt)
 	var j := str(GameState.media_conference.get("journalist", ""))
@@ -165,7 +165,7 @@ func _question(wide: bool) -> Array:
 	# Who asks, in bold, his outlet beside it.
 	var who := HFlowContainer.new()
 	who.name = "MediaByline"
-	who.add_theme_constant_override("h_separation", 6)
+	who.add_theme_constant_override("h_separation", UiKit.Space.CLOSE)
 	prompt.add_child(who)
 	if jd.is_empty():
 		who.add_child(UiKit.lbl(str(GameState.media_conference.get("by", "Journalist")), UiKit.H2, UiKit.TEXT, true))
@@ -211,7 +211,7 @@ func _question(wide: bool) -> Array:
 	var shown: Array = [prompt]
 	var opts: Array = GameState.media_conference.get("options", [])
 	for i in range(opts.size()):
-		var group := UiKit.vbox(4 if wide else 3)
+		var group := UiKit.vbox(UiKit.Space.TIGHT if wide else UiKit.Space.THIN)
 		group.name = "MediaAnswerGroup_%d" % i
 		_column.add_child(group)
 		shown.append(group)
@@ -272,7 +272,7 @@ func _answer(i: int) -> void:
 		_top_skip.disabled = true
 		_top_skip.modulate.a = 0.0
 		_top_skip.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var out := UiKit.vbox(8)
+	var out := UiKit.vbox(UiKit.GAP)
 	out.name = "MediaOutcome"
 	_column.add_child(out)
 	var quote := NameInk.label("You said: “%s”" % said, _league_names(), UiKit.BODY, UiKit.TEXT)

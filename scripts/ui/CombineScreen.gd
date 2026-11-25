@@ -49,7 +49,7 @@ func _ready() -> void:
 	_margin = MarginContainer.new()
 	_margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(_margin)
-	_root = UiKit.vbox(8)
+	_root = UiKit.vbox(UiKit.GAP)
 	_margin.add_child(_root)
 	resized.connect(_fit)
 	_fit()
@@ -127,7 +127,7 @@ func _build() -> void:
 		b.custom_minimum_size.y = 44
 		b.pressed.connect(_open_view.bind(key), CONNECT_DEFERRED)
 		tabs.add_child(b)
-	_body = UiKit.vbox(8)
+	_body = UiKit.vbox(UiKit.GAP)
 	_body.name = "CombineBody"
 	_scroll = UiKit.scroll(_body)
 	_scroll.name = "CombineScroll"
@@ -173,7 +173,7 @@ func _headline(t: Array) -> void:
 	var key := str(t[0])
 	var rows: Array = _ranked[key]
 	_body.add_child(UiKit.rule())
-	var head := UiKit.hbox(8)
+	var head := UiKit.hbox(UiKit.GAP)
 	head.name = "Headline_" + key
 	_body.add_child(head)
 	var name_l := UiKit.lbl(str(t[1]), UiKit.HEADING, StatsSide.mine_ink(), true)
@@ -329,7 +329,7 @@ func _tap_row(p: Dictionary, under: String, figure: String, standing: String, ra
 	var id := str(p.get("id", ""))
 	b.set_meta("prospect_id", id)
 	b.pressed.connect(func(): inspect.emit(id))
-	var face := UiKit.hbox(8)
+	var face := UiKit.hbox(UiKit.GAP)
 	face.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	b.add_child(face)
 	if rank >= 0:
@@ -338,11 +338,11 @@ func _tap_row(p: Dictionary, under: String, figure: String, standing: String, ra
 		ranks.custom_minimum_size.x = 28
 		ranks.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		face.add_child(ranks)
-	var who := UiKit.vbox(2)
+	var who := UiKit.vbox(UiKit.Space.SLIM)
 	who.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	who.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	face.add_child(who)
-	var top := UiKit.hbox(6)
+	var top := UiKit.hbox(UiKit.Space.CLOSE)
 	who.add_child(top)
 	var chip := UiKit.role_chip_for(p)
 	chip.size_flags_vertical = Control.SIZE_SHRINK_CENTER

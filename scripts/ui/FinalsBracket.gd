@@ -117,7 +117,7 @@ func _build() -> void:
 
 ## Where you stand, in a line; the premiers once it's decided.
 func _status() -> Control:
-	var v := UiKit.vbox(4)
+	var v := UiKit.vbox(UiKit.Space.TIGHT)
 	v.name = "FinalsStatus"
 	v.alignment = BoxContainer.ALIGNMENT_CENTER
 	var f: Dictionary = _season.finals
@@ -186,7 +186,7 @@ func _premiers(prem: String) -> Control:
 	for e in ["left", "right", "top", "bottom"]:
 		m.add_theme_constant_override("margin_" + e, 14)
 	p.add_child(m)
-	var row: BoxContainer = UiKit.hbox(20) if wide else UiKit.vbox(14)
+	var row: BoxContainer = UiKit.hbox(UiKit.Space.WIDE) if wide else UiKit.vbox(UiKit.Space.LOOSE)
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
 	m.add_child(row)
 	var cup := _cup(HERO_CUP_WIDE if wide else HERO_CUP_NARROW)
@@ -493,14 +493,14 @@ func _node(week: int, m: Array) -> Control:
 			UiKit.TEXT if mine else UiKit.AUTO_COLOUR)
 	for st in ["normal", "hover", "pressed", "disabled", "focus"]:
 		b.add_theme_stylebox_override(st, sb)
-	var v := UiKit.vbox(3)
+	var v := UiKit.vbox(UiKit.Space.THIN)
 	v.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 8)
 	var venue := GameDB.ground_shown(_season.finals_venue({"tag": tag, "home": home, "away": away}), _season.year) if home != "" else ""
 	v.add_child(UiKit.ellipsis(str(m[1]) + (("  ·  " + venue) if venue != "" else ""), UiKit.SMALL, UiKit.MUTED))
 	var win := str(_season.finals["slots"].get("W_" + tag, ""))
 	for side in [0, 1]:
 		var code := home if side == 0 else away
-		var h := UiKit.hbox(8)
+		var h := UiKit.hbox(UiKit.GAP)
 		if code == "":
 			h.add_child(UiKit.ellipsis(_waiting(home_slot if side == 0 else away_slot), UiKit.SMALL, UiKit.FAINT))
 		else:

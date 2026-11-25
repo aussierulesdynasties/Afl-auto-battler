@@ -26,7 +26,7 @@ func _ready() -> void:
 	UiKit.apply_insets(margin, 12)
 	add_child(margin)
 
-	_root = UiKit.vbox(9)
+	_root = UiKit.vbox(UiKit.Space.EASY)
 	margin.add_child(_root)
 	get_viewport().size_changed.connect(func():
 		if is_inside_tree() and GameState.season != null and not UiKit.keyboard_resize(self):
@@ -102,19 +102,19 @@ func _build() -> void:
 	_root.add_child(UiKit.top_bar("Season Review", true))
 	# Everything under the top bar scrolls: on a phone the review runs well
 	# past one screen, and its actions sit at the bottom.
-	var page := UiKit.vbox(9)
+	var page := UiKit.vbox(UiKit.Space.EASY)
 	page.name = "ReviewPage"
 	_root.add_child(UiKit.scroll(page))
 
 	# --- premiership --------------------------------------------------------
-	var champ := UiKit.panel(UiKit.PANEL_ALT, 18, 12)
+	var champ := UiKit.panel(UiKit.PANEL_ALT, UiKit.SECTION, 12)
 	page.add_child(champ)
-	var cv := UiKit.vbox(4)
+	var cv := UiKit.vbox(UiKit.Space.TIGHT)
 	champ.add_child(cv)
 	var premier := str(season.finals.get("premier", ""))
 	var runner := str(season.finals.get("runner_up", ""))
 	cv.add_child(UiKit.lbl("%d Premiers" % GameState.season_year, 14, UiKit.TEXT, true))
-	var champ_row := UiKit.hbox(10)
+	var champ_row := UiKit.hbox(UiKit.Space.ROOM)
 	champ_row.alignment = BoxContainer.ALIGNMENT_CENTER
 	cv.add_child(champ_row)
 	if premier != "":
@@ -132,16 +132,16 @@ func _build() -> void:
 	var narrow := _content_width() < 720.0
 	var body: BoxContainer
 	if narrow:
-		body = UiKit.vbox(10)
+		body = UiKit.vbox(UiKit.Space.ROOM)
 	else:
-		body = UiKit.hbox(10)
+		body = UiKit.hbox(UiKit.Space.ROOM)
 	body.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	page.add_child(body)
 
 	var mine := _my_results()
 	var stats := _season_stats(mine)
 
-	var left := UiKit.panel(UiKit.PANEL, 14)
+	var left := UiKit.panel(UiKit.PANEL, UiKit.Space.LOOSE)
 	left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	left.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	body.add_child(left)
@@ -154,7 +154,7 @@ func _build() -> void:
 	lsb.corner_radius_top_left = 0
 	lsb.corner_radius_bottom_left = 0
 	left.add_theme_stylebox_override("panel", lsb)
-	var lv := UiKit.vbox(5)
+	var lv := UiKit.vbox(UiKit.Space.SNUG)
 	left.add_child(lv)
 	var mine_badge := UiKit.club_badge(GameState.my_club, 20)
 	StatsSide.badge(mine_badge, GameState.my_club, true)
@@ -174,7 +174,7 @@ func _build() -> void:
 		UiKit.count_up(finish, GameState.my_position(), func(n): return "Finished %s" % _ordinal(n),
 				UiKit.Motion.DUR_COUNT, season.ladder.size())
 		UiKit.count_up(rec, pts, func(n): return "%s   -   %d pts" % [record, n])
-	lv.add_child(UiKit.spacer(4))
+	lv.add_child(UiKit.spacer(UiKit.Space.TIGHT))
 	# Every fact below is the ladder's season, finals left out (bug-bash 4,
 	# 2026-11-10): said once, as the game-by-game strip's label is.
 	var ha := UiKit.lbl("Home and away", 12, UiKit.MUTED, true)
@@ -184,8 +184,8 @@ func _build() -> void:
 	var facts := GridContainer.new()
 	facts.name = "SeasonFacts"
 	facts.columns = 2
-	facts.add_theme_constant_override("h_separation", 20)
-	facts.add_theme_constant_override("v_separation", 5)
+	facts.add_theme_constant_override("h_separation", UiKit.Space.WIDE)
+	facts.add_theme_constant_override("v_separation", UiKit.Space.SNUG)
 	facts.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	lv.add_child(facts)
 	for row in [
@@ -206,21 +206,21 @@ func _build() -> void:
 			UiKit.count_up(fig, int(row[2]), row[3])
 	var fl := finals_line(stats)
 	if fl != "":
-		lv.add_child(UiKit.spacer(2))
+		lv.add_child(UiKit.spacer(UiKit.Space.SLIM))
 		var fin_lbl := UiKit.lbl(fl, 12, UiKit.TEXT)
 		fin_lbl.name = "SeasonFinalsLine"
 		lv.add_child(fin_lbl)
 
-	lv.add_child(UiKit.spacer(6))
+	lv.add_child(UiKit.spacer(UiKit.Space.CLOSE))
 	lv.add_child(UiKit.lbl("Game by game", 12, UiKit.MUTED, true))
 	lv.add_child(_form_strip(mine))
 
 	# --- final ladder -------------------------------------------------------
-	var right := UiKit.panel(UiKit.PANEL, 14)
+	var right := UiKit.panel(UiKit.PANEL, UiKit.Space.LOOSE)
 	right.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	right.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	body.add_child(right)
-	var rv := UiKit.vbox(4)
+	var rv := UiKit.vbox(UiKit.Space.TIGHT)
 	right.add_child(rv)
 	rv.add_child(UiKit.lbl("Final Ladder", UiKit.NAME, StatsSide.mine_ink(), true))
 	var ladder_w := _content_width() - 24.0 if narrow else (_content_width() * 0.5)
@@ -231,9 +231,9 @@ func _build() -> void:
 	# --- the board -----------------------------------------------------------
 	var verdict := str(GameState.board.get("verdict", ""))
 	if verdict != "" and season.is_season_over():
-		var bp := UiKit.panel(UiKit.PANEL, 10, 8)
+		var bp := UiKit.panel(UiKit.PANEL, UiKit.Space.ROOM, 8)
 		bp.name = "BoardVerdict"
-		var bv := UiKit.vbox(3)
+		var bv := UiKit.vbox(UiKit.Space.THIN)
 		bp.add_child(bv)
 		var hist: Array = GameState.board.get("history", [])
 		var last: Dictionary = hist[hist.size() - 1] if not hist.is_empty() else {}
@@ -254,16 +254,16 @@ func _build() -> void:
 	var history_lines := GameState.history_record_lines()
 	var honours := GameState.recent_honours(5)
 	if not history_lines.is_empty() or not honours.is_empty():
-		var hp := UiKit.panel(UiKit.PANEL, 14)
+		var hp := UiKit.panel(UiKit.PANEL, UiKit.Space.LOOSE)
 		hp.name = "HistoryRecords"
 		page.add_child(hp)
-		var hv := UiKit.vbox(5)
+		var hv := UiKit.vbox(UiKit.Space.SNUG)
 		hp.add_child(hv)
 		hv.add_child(UiKit.lbl("History & records", UiKit.NAME, StatsSide.mine_ink(), true))
 		for line in history_lines:
 			hv.add_child(UiKit.lbl(str(line), UiKit.SECONDARY, UiKit.TEXT))
 		if not honours.is_empty():
-			hv.add_child(UiKit.spacer(4))
+			hv.add_child(UiKit.spacer(UiKit.Space.TIGHT))
 			hv.add_child(UiKit.lbl("Recent premiers", 12, UiKit.TEXT, true))
 			for h in honours:
 				var premier_code := str((h as Dictionary).get("premier", ""))
@@ -278,9 +278,9 @@ func _build() -> void:
 	# --- actions ------------------------------------------------------------
 	var ctrl: BoxContainer
 	if _content_width() < 460.0:
-		ctrl = UiKit.vbox(8)
+		ctrl = UiKit.vbox(UiKit.GAP)
 	else:
-		ctrl = UiKit.hbox(8)
+		ctrl = UiKit.hbox(UiKit.GAP)
 	page.add_child(ctrl)
 
 	# The season ends the way the real AFL year does: with the national draft.
@@ -433,8 +433,8 @@ static func finals_line(stats: Dictionary) -> String:
 func _form_strip(mine: Array) -> Control:
 	var grid := GridContainer.new()
 	grid.columns = 8 if _content_width() < 420.0 else 12
-	grid.add_theme_constant_override("h_separation", 3)
-	grid.add_theme_constant_override("v_separation", 3)
+	grid.add_theme_constant_override("h_separation", UiKit.Space.THIN)
+	grid.add_theme_constant_override("v_separation", UiKit.Space.THIN)
 	for res in mine:
 		var home_is_me: bool = str(res["home"]) == GameState.my_club
 		var s: Array = res["score"]
@@ -497,9 +497,9 @@ func _start_intake_draft() -> void:
 # ---------------------------------------------------------------------------
 func _awards_panel() -> Control:
 	var aw: Dictionary = GameState.season_awards
-	var panel := UiKit.panel(UiKit.PANEL, 14)
+	var panel := UiKit.panel(UiKit.PANEL, UiKit.Space.LOOSE)
 	panel.name = "AwardsPanel"
-	var v := UiKit.vbox(5)
+	var v := UiKit.vbox(UiKit.Space.SNUG)
 	panel.add_child(v)
 	var awards_head := UiKit.heading("%d awards" % int(aw.get("year", GameState.season_year)), 22)
 	awards_head.add_theme_color_override("font_color", StatsSide.mine_ink())
@@ -617,9 +617,9 @@ func _award_line(title: String, row: Dictionary, detail: String, big: bool) -> C
 ## club's two that are still to come.
 func _achievements_panel() -> Control:
 	var unlocked: Dictionary = GameState.achievements
-	var panel := UiKit.panel(UiKit.PANEL, 14)
+	var panel := UiKit.panel(UiKit.PANEL, UiKit.Space.LOOSE)
 	panel.name = "AchievementsPanel"
-	var v := UiKit.vbox(5)
+	var v := UiKit.vbox(UiKit.Space.SNUG)
 	panel.add_child(v)
 	var ach_head := UiKit.heading("Achievements", 22)
 	ach_head.add_theme_color_override("font_color", StatsSide.mine_ink())

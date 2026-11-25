@@ -152,7 +152,7 @@ func setup(side: Dictionary, wide: bool, list: Array = [], read_only := false) -
 			_side[line] = []
 	_wide = wide
 	vertical = stacked or not wide
-	add_theme_constant_override("separation", 14)
+	add_theme_constant_override("separation", UiKit.Space.LOOSE)
 	for s in FormationView.SLOTS:
 		_spot_at[str(s["key"])] = s["at"]
 	# The spine (centre half-back, centre, ruck, centre half-forward) is
@@ -184,9 +184,9 @@ func _build() -> void:
 	# A narrow phone gives the oval the room above the filter row: on a
 	# 360 x 740 phone the middle column (full-forward to full-back, eight
 	# deep) needs 488 px to keep its cards 8 px apart (director, 2026-11-25).
-	add_theme_constant_override("separation", NARROW_SEP if _narrow else 14)
+	add_theme_constant_override("separation", NARROW_SEP if _narrow else UiKit.Space.LOOSE)
 	var up_with_list: Array[Control] = []
-	var field := UiKit.vbox(4 if stacked else 8)
+	var field := UiKit.vbox(UiKit.Space.TIGHT if stacked else UiKit.GAP)
 	field.name = "BuilderField"
 	field.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	field.size_flags_stretch_ratio = 1.15
@@ -236,7 +236,7 @@ func _build() -> void:
 	up_with_list.append(inter)
 	if interchange_actions != null:
 		# The word and what acts on the side, side by side (no stretch between).
-		var irow := UiKit.hbox(12)
+		var irow := UiKit.hbox(UiKit.Space.PAD)
 		irow.name = "InterchangeRow"
 		inter.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		irow.add_child(inter)
@@ -247,7 +247,7 @@ func _build() -> void:
 		# text size above standard wraps on a phone.)
 		if not _wide and (UiKit.text_scale > 1.0 or need > UiKit.view_width(self) - 40.0):
 			ihost.add_child(irow)
-			var arow := UiKit.hbox(8)
+			var arow := UiKit.hbox(UiKit.GAP)
 			arow.name = "InterchangeActionsRow"
 			arow.add_child(interchange_actions)
 			ihost.add_child(arow)
@@ -264,8 +264,8 @@ func _build() -> void:
 	# Five across a stacked phone holds a surname at the standard text size; a
 	# larger one (Settings) wraps the bench in threes, every name whole.
 	bench.columns = 5 if (_wide or (stacked and UiKit.text_scale <= 1.0)) else 3
-	bench.add_theme_constant_override("h_separation", 6)
-	bench.add_theme_constant_override("v_separation", 6)
+	bench.add_theme_constant_override("h_separation", UiKit.Space.CLOSE)
+	bench.add_theme_constant_override("v_separation", UiKit.Space.CLOSE)
 	ihost.add_child(bench)
 	up_with_list.append(bench)
 	var bench_ids: Array = _side["BENCH"]
@@ -284,7 +284,7 @@ func _build() -> void:
 	if field_only:
 		return
 
-	var rest := UiKit.vbox(6)
+	var rest := UiKit.vbox(UiKit.Space.CLOSE)
 	rest.name = "BuilderRest"
 	rest.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	if stacked:
@@ -305,13 +305,13 @@ func _build() -> void:
 	var controls: Container = rest
 	if stacked:
 		var flow := HFlowContainer.new()
-		flow.add_theme_constant_override("h_separation", 6)
-		flow.add_theme_constant_override("v_separation", 6)
+		flow.add_theme_constant_override("h_separation", UiKit.Space.CLOSE)
+		flow.add_theme_constant_override("v_separation", UiKit.Space.CLOSE)
 		controls = flow
 		controls.name = "BuilderControls"
 		rest.add_child(controls)
 	var tabs := HBoxContainer.new()
-	tabs.add_theme_constant_override("separation", 4)
+	tabs.add_theme_constant_override("separation", UiKit.Space.TIGHT)
 	if stacked:
 		tabs.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	controls.add_child(tabs)
@@ -362,7 +362,7 @@ func _build() -> void:
 		rest.add_child(ro)
 	elif _picked != "":
 		# The player you picked: swap him by tapping another, or look at him.
-		var bar := UiKit.hbox(6)
+		var bar := UiKit.hbox(UiKit.Space.CLOSE)
 		bar.name = "PickedBar"
 		# His name whole: the line wraps rather than cut it.
 		var who := UiKit.lbl("%s picked: tap who he swaps with." % GameDB.player_display_name(_player(_picked)),
@@ -429,8 +429,8 @@ func _build() -> void:
 				_grid.columns = want)
 	if stacked and _wide:
 		_grid.columns = 2 if rest_host != null else clampi(int(UiKit.view_width(self) / 400.0), 3, 8)
-	_grid.add_theme_constant_override("h_separation", 6)
-	_grid.add_theme_constant_override("v_separation", 6)
+	_grid.add_theme_constant_override("h_separation", UiKit.Space.CLOSE)
+	_grid.add_theme_constant_override("v_separation", UiKit.Space.CLOSE)
 	_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	if stacked:
 		var gs := UiKit.scroll(_grid)
@@ -516,7 +516,7 @@ func _wrap_actions_if_wide(irow: HBoxContainer, field: Control) -> void:
 	if irow.get_combined_minimum_size().x <= UiKit.view_width(self) - 24.0:
 		return
 	irow.remove_child(interchange_actions)
-	var arow := UiKit.hbox(8)
+	var arow := UiKit.hbox(UiKit.GAP)
 	arow.name = "InterchangeActionsRow"
 	arow.add_child(interchange_actions)
 	field.add_child(arow)
@@ -647,7 +647,7 @@ static func pot(p: Dictionary) -> int:
 
 ## What the numbers under each name are, in their order.
 func _condition_key() -> Control:
-	var key := UiKit.hbox(6)
+	var key := UiKit.hbox(UiKit.Space.CLOSE)
 	key.name = "ConditionKey"
 	key.add_child(UiKit.lbl("Under each name:", UiKit.FINE, UiKit.MUTED))
 	key.add_child(UiKit.lbl("OVR/POT · Fatigue · Morale · Form", UiKit.FINE, UiKit.TEXT, true))
@@ -767,7 +767,7 @@ func _card(id: String, on_field: bool, place: String) -> Button:
 					fill.color = UiKit.BAD
 			b.tooltip_text += "\n" + ReservesForm.cold_full(r)
 	else:
-		var row := UiKit.hbox(6)
+		var row := UiKit.hbox(UiKit.Space.CLOSE)
 		face.add_child(row)
 		var full_name := GameDB.player_display_name(p)
 		var n := UiKit.ellipsis(full_name, 14, UiKit.TEXT, true)

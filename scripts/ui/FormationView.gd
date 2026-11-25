@@ -169,12 +169,12 @@ static func _midfield_order(mids: Array, chosen := false) -> Array:
 func _ensure_callout() -> void:
 	if _callout != null:
 		return
-	_callout = UiKit.panel(UiKit.INK, 8, 8)
+	_callout = UiKit.panel(UiKit.INK, UiKit.GAP, 8)
 	_callout.visible = false
 	_callout.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_callout.custom_minimum_size = Vector2(168, 0)
 	add_child(_callout)
-	_callout_box = UiKit.vbox(2)
+	_callout_box = UiKit.vbox(UiKit.Space.SLIM)
 	_callout.add_child(_callout_box)
 
 

@@ -38,7 +38,7 @@ static func open(host: Control, on_done: Callable, pass_line := PASS_PRESEASON) 
 	var shown := MidseasonDraft.pool(GameState).slice(0, SHOWN)
 	for p in shown:
 		var row := HBoxContainer.new()
-		row.add_theme_constant_override("separation", 12)
+		row.add_theme_constant_override("separation", UiKit.Space.PAD)
 		var txt := UiKit.lbl("%s  %d\n%s, %d, %s" % [GameDB.player_display_name(p), int(p.get("overall", 0)),
 				DraftNight.position_words(p), int(p.get("age", 0)), MidseasonDraft.from_word(GameState, p)], 14, UiKit.TEXT)
 		txt.size_flags_horizontal = Control.SIZE_EXPAND_FILL

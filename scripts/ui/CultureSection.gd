@@ -34,35 +34,35 @@ static func build(wide: bool) -> VBoxContainer:
 	var ink := _ink(club)
 	var sec := UiKit.vbox(0)
 	sec.name = "CaptaincyCulture"
-	sec.add_child(UiKit.spacer(18))
+	sec.add_child(UiKit.spacer(UiKit.SECTION))
 	sec.add_child(_rule(lead))
-	sec.add_child(UiKit.spacer(10))
-	var mark := UiKit.hbox(8)
+	sec.add_child(UiKit.spacer(UiKit.Space.ROOM))
+	var mark := UiKit.hbox(UiKit.GAP)
 	mark.add_child(UiKit.club_marker(club, 28.0))
 	var mark_name := UiKit.lbl("%s culture" % _short(club), 22, UiKit.TEXT, true)
 	mark_name.name = "CultureTitle"
 	mark_name.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	mark.add_child(mark_name)
 	sec.add_child(mark)
-	sec.add_child(UiKit.spacer(4))
+	sec.add_child(UiKit.spacer(UiKit.Space.TIGHT))
 	# What it costs and what it buys, in one line (P-63).
 	var plain := UiKit.lbl(TRADE_OFF_LINE, UiKit.SECONDARY, UiKit.TEXT)
 	plain.name = "CultureTradeOff"
 	plain.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	sec.add_child(plain)
-	sec.add_child(UiKit.spacer(14))
+	sec.add_child(UiKit.spacer(UiKit.Space.LOOSE))
 	# The statement: three phrases as one, the strand's name small beside each.
-	var statement := UiKit.vbox(28 if wide else 20)
+	var statement := UiKit.vbox(UiKit.Space.SPREAD if wide else UiKit.Space.WIDE)
 	for d in data:
 		statement.add_child(_strand_row(d, club, ink, wide))
 	var reasons := _dated_list(data, ink, lead)
 	var how := UiKit.lbl("How we got here", UiKit.HEADING, UiKit.TEXT, true)
 	how.name = "CultureHowWeGotHere"
 	if wide:
-		var cols := UiKit.hbox(40)
+		var cols := UiKit.hbox(UiKit.Space.APART)
 		statement.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		cols.add_child(statement)
-		var right := UiKit.vbox(10)
+		var right := UiKit.vbox(UiKit.Space.ROOM)
 		right.custom_minimum_size.x = 320.0
 		right.add_child(how)
 		right.add_child(_rule(lead))
@@ -71,11 +71,11 @@ static func build(wide: bool) -> VBoxContainer:
 		sec.add_child(cols)
 	else:
 		sec.add_child(statement)
-		sec.add_child(UiKit.spacer(22))
+		sec.add_child(UiKit.spacer(UiKit.Space.WIDER))
 		sec.add_child(how)
-		sec.add_child(UiKit.spacer(4))
+		sec.add_child(UiKit.spacer(UiKit.Space.TIGHT))
 		sec.add_child(_rule(lead))
-		sec.add_child(UiKit.spacer(8))
+		sec.add_child(UiKit.spacer(UiKit.GAP))
 		sec.add_child(reasons)
 	return sec
 
@@ -182,7 +182,7 @@ static func _what_it_does(d: Dictionary, parent: Control) -> void:
 # --- the section ---------------------------------------------------------
 
 static func _strand_row(d: Dictionary, club: String, ink: Color, wide: bool) -> HBoxContainer:
-	var row := UiKit.hbox(14)
+	var row := UiKit.hbox(UiKit.Space.LOOSE)
 	row.name = "Strand_" + str(d["id"])
 	var icon := _icon(str(d["id"]), club)
 	var name := UiKit.lbl(str(d["label"]), UiKit.SECONDARY, ink, true)
@@ -193,7 +193,7 @@ static func _strand_row(d: Dictionary, club: String, ink: Color, wide: bool) -> 
 		# words keep the width and the place they have without it. The name is
 		# centred under it (director, 2026-10-14: "centre the text beneath the
 		# emblem so it doesnt look odd"): one centre line for the two.
-		var tag := UiKit.vbox(4)
+		var tag := UiKit.vbox(UiKit.Space.TIGHT)
 		tag.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 		icon.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 		name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -202,7 +202,7 @@ static func _strand_row(d: Dictionary, club: String, ink: Color, wide: bool) -> 
 		row.add_child(tag)
 	else:
 		row.add_child(name)
-	var cell := UiKit.vbox(4)
+	var cell := UiKit.vbox(UiKit.Space.TIGHT)
 	cell.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var words := UiKit.heading(str(d["words"]), 28 if wide else 24)
 	words.name = "StrandWords"
@@ -221,13 +221,13 @@ static func _dated_list(data: Array, ink: Color, lead: Color) -> VBoxContainer:
 	var order := range(items.size())
 	order.sort_custom(func(a, b): return int(items[a]["y"]) > int(items[b]["y"]) \
 			or (int(items[a]["y"]) == int(items[b]["y"]) and a < b))
-	var v := UiKit.vbox(16)
+	var v := UiKit.vbox(UiKit.Space.COLUMN)
 	v.name = "CultureReasons"
 	if items.is_empty():
 		v.add_child(UiKit.lbl("Nothing has moved it yet.", UiKit.BODY, UiKit.TEXT))
 	for i in order:
 		var it: Dictionary = items[i]
-		var row := UiKit.hbox(12)
+		var row := UiKit.hbox(UiKit.Space.PAD)
 		var tick := ColorRect.new()
 		tick.color = _lift(lead)
 		tick.custom_minimum_size = Vector2(3, 0)
@@ -236,7 +236,7 @@ static func _dated_list(data: Array, ink: Color, lead: Color) -> VBoxContainer:
 		yr.custom_minimum_size.x = 48.0
 		yr.autowrap_mode = TextServer.AUTOWRAP_OFF
 		row.add_child(yr)
-		var col := UiKit.vbox(2)
+		var col := UiKit.vbox(UiKit.Space.SLIM)
 		col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		col.add_child(UiKit.lbl(str(it["label"]), UiKit.SECONDARY, ink, true))
 		col.add_child(UiKit.lbl(str(it["text"]), UiKit.BODY, UiKit.TEXT))

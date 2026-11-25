@@ -36,7 +36,7 @@ func _ready() -> void:
 	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
 	UiKit.apply_insets(margin, 12)
 	add_child(margin)
-	_root = UiKit.vbox(8)
+	_root = UiKit.vbox(UiKit.GAP)
 	margin.add_child(_root)
 	get_viewport().size_changed.connect(_on_resize)
 	_build()
@@ -86,7 +86,7 @@ func _build() -> void:
 	# fit does the row scroll sideways.
 	var tabs := HBoxContainer.new()
 	tabs.name = "StatsSections"
-	tabs.add_theme_constant_override("separation", 2)
+	tabs.add_theme_constant_override("separation", UiKit.Space.SLIM)
 	for s in SECTIONS:
 		var key := str(s[0])
 		var t := UiKit.tab(str(s[1]), key == current)
@@ -112,7 +112,7 @@ func _build() -> void:
 		strip.custom_minimum_size.y = 46
 		strip.add_child(tabs)
 		_root.add_child(strip)
-	_body = UiKit.vbox(10)
+	_body = UiKit.vbox(UiKit.Space.ROOM)
 	_body.name = "SectionBody"
 	_body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var sc := UiKit.scroll(_body)
@@ -161,7 +161,7 @@ func _tabs_width(tabs: HBoxContainer, pad: int, fs: int) -> float:
 ## your colour, the round and your record beside it.
 func _hero() -> Control:
 	var season: Season = GameState.season
-	var row := UiKit.hbox(12)
+	var row := UiKit.hbox(UiKit.Space.PAD)
 	row.name = "StatsHero"
 	if wide():
 		row.alignment = BoxContainer.ALIGNMENT_CENTER

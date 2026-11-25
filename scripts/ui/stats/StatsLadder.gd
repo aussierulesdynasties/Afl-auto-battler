@@ -109,7 +109,7 @@ static func reset() -> void:
 
 static func build(host: Control) -> Control:
 	var season: Season = GameState.season
-	var v := UiKit.vbox(10)
+	var v := UiKit.vbox(UiKit.Space.ROOM)
 	v.name = "StatsLadder"
 	# The round is in the page's headline now (StatsHubScene._hero).
 	var wide := bool(host.call("wide"))
@@ -121,7 +121,7 @@ static func build(host: Control) -> Control:
 		_sort = ""
 		host.call("refresh"))
 	views.name = "Views"
-	var filters := UiKit.hbox(6)
+	var filters := UiKit.hbox(UiKit.Space.CLOSE)
 	filters.name = "Filters"
 	for o in FILTERS:
 		var key := str(o[0])
@@ -144,7 +144,7 @@ static func build(host: Control) -> Control:
 		for b in filters.get_children():
 			b.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 			b.custom_minimum_size.x = 120
-		var both := UiKit.hbox(28)
+		var both := UiKit.hbox(UiKit.Space.SPREAD)
 		both.name = "Controls"
 		both.add_child(views)
 		both.add_child(filters)
@@ -235,7 +235,7 @@ static func table_width(specs: Array) -> float:
 
 ## One line that says what is on show, with the way back to the plain ladder.
 static func _status(host: Control, count: int) -> Control:
-	var h := UiKit.hbox(8)
+	var h := UiKit.hbox(UiKit.GAP)
 	h.name = "LadderStatus"
 	var shown := ""
 	for o in FILTERS:
@@ -364,7 +364,7 @@ static func _sort_row(host: Control, specs: Array) -> Control:
 	v.name = "SortBy"
 	var first := true
 	for keys in SORT_LINES:
-		var h := UiKit.hbox(4)
+		var h := UiKit.hbox(UiKit.Space.TIGHT)
 		h.name = "SortLine"
 		var lead := UiKit.line("Sort by" if first else "", UiKit.SMALL, UiKit.MUTED)
 		lead.name = "SortByTitle" if first else "SortByIndent"
@@ -433,11 +433,8 @@ static func _row(host: Control, r: Dictionary, specs: Array, width: float, band 
 	flat.bg_color = UiKit.PANEL if band else Color.TRANSPARENT
 	if mine:
 		# Your club's row in your colour, as the hub's ladder marks it.
-		flat.bg_color = Color(UiKit.club_vivid(code), 0.22)
-		flat.border_width_left = 4
-		flat.border_color = UiKit.club_vivid(code)
-	var hover := StyleBoxFlat.new()
-	hover.bg_color = Color(UiKit.TEXT, 0.05)
+		UiKit.mark_your_row(flat, code)
+	var hover := UiKit.row_hover()
 	for state in ["normal", "focus"]:
 		b.add_theme_stylebox_override(state, flat)
 	for state in ["hover", "pressed", "hover_pressed"]:
@@ -505,7 +502,7 @@ static func _ignore(n: Node) -> void:
 ## The picker (each view's three facts under its name), then every club ranked
 ## on the chosen fact, a game.
 static func _team_board(host: Control, season: Season, wide: bool) -> Control:
-	var v := UiKit.vbox(8)
+	var v := UiKit.vbox(UiKit.GAP)
 	v.name = "TeamBoard"
 	var pick := UiKit.option()
 	pick.name = "TeamStat"
@@ -658,11 +655,8 @@ static func _team_row(host: Control, r: Dictionary, rank: int, best: float, bar_
 	var flat := StyleBoxFlat.new()
 	flat.bg_color = Color.TRANSPARENT
 	if mine:
-		flat.bg_color = Color(UiKit.club_vivid(code), 0.22)
-		flat.border_width_left = 4
-		flat.border_color = UiKit.club_vivid(code)
-	var hover := StyleBoxFlat.new()
-	hover.bg_color = Color(UiKit.TEXT, 0.05)
+		UiKit.mark_your_row(flat, code)
+	var hover := UiKit.row_hover()
 	for state in ["normal", "focus"]:
 		b.add_theme_stylebox_override(state, flat)
 	for state in ["hover", "pressed", "hover_pressed"]:
@@ -674,7 +668,7 @@ static func _team_row(host: Control, r: Dictionary, rank: int, best: float, bar_
 	for side in ["margin_top", "margin_bottom"]:
 		m.add_theme_constant_override(side, 6)
 	b.add_child(m)
-	var row := UiKit.hbox(10)
+	var row := UiKit.hbox(UiKit.Space.ROOM)
 	m.add_child(row)
 	var pos := UiKit.line(str(rank), UiKit.SECONDARY, UiKit.MUTED)
 	pos.name = "Rank"
@@ -685,7 +679,7 @@ static func _team_row(host: Control, r: Dictionary, rank: int, best: float, bar_
 	var marker := UiKit.club_marker(code, 22.0)
 	marker.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	row.add_child(marker)
-	var mid := UiKit.vbox(2)
+	var mid := UiKit.vbox(UiKit.Space.SLIM)
 	mid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	mid.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	row.add_child(mid)
@@ -726,7 +720,7 @@ static func _team_row(host: Control, r: Dictionary, rank: int, best: float, bar_
 	# 2 px from the bar, not the row's 10: the figure's shade and side bearing
 	# make up the rest, so its ink starts about 10 px past the bar (critic,
 	# 2026-11-04: 18 px).
-	var tail := UiKit.hbox(2)
+	var tail := UiKit.hbox(UiKit.Space.SLIM)
 	tail.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.remove_child(mid)
 	tail.add_child(mid)
