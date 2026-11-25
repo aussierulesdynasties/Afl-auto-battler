@@ -104,7 +104,7 @@ func _run() -> void:
 				await _frames()
 				if q == 3:
 					var sp: Control = m.find_child("GiveSpeech", true, false)
-					await Tap.tap(m.find_child("CallRow_speech", true, false))
+					await Tap.tap(m.find_child("CallRow_sit", true, false))
 					await _frames()
 					await _scroll_to(sp)
 					await _shot("%s/talks_ht_speech_gate.png" % dir)

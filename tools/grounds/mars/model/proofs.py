@@ -52,7 +52,7 @@ if 'glb' in jobs:   # Blender +Y (north) becomes glTF -Z
     # from seats_seat_plastic.bin (row-major 3x4 per seat), the MCG format Oval3D._ground_model reads
     import numpy as np
     for ob in sc.objects: ob.select_set(ob.type == 'MESH' and ob.name != 'seats')
-    bpy.ops.export_scene.gltf(filepath=os.path.join(out, 'mars.glb'), export_format='GLB',
+    bpy.ops.export_scene.gltf(filepath=os.path.join(out, 'mars_part1.glb'), export_format='GLB',
                               use_selection=True, export_cameras=False, export_lights=False)
     C = np.array([[1, 0, 0], [0, 0, 1], [0, -1, 0.0]])          # Blender (x, y, z) -> glTF (x, z, -y)
     tm = build.MB('tmpl'); build.seat((0.0, 0.0), (1.0, 0.0), (0.0, 1.0), 0.0, shell=tm)
@@ -70,7 +70,7 @@ if 'ship' in jobs:   # later jobs film what ships: the exported GLB plus the sea
     import numpy as np
     C = np.array([[1, 0, 0], [0, 0, 1], [0, -1, 0.0]])
     for ob in [o for o in sc.objects if o.type == 'MESH']: bpy.data.objects.remove(ob)
-    bpy.ops.import_scene.gltf(filepath=os.path.join(out, 'mars.glb'))
+    bpy.ops.import_scene.gltf(filepath=os.path.join(out, 'mars_part1.glb'))
     T = np.fromfile(os.path.join(out, 'seat_tmpl.bin'), '<f4').reshape(-1, 3)
     me = None
     for f in sorted(os.listdir(out)):   # one mesh per seats_<colour>.bin, drawn in that texture's mean colour as the game does

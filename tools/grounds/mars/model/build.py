@@ -1,14 +1,31 @@
 # Mars Stadium, Ballarat (finished 2026 ground), built from model/mars.json.
 # Runs inside Blender: import build; build.build_all(). Local frame: x east, y north, z up from the field, metres.
-# Each stand is a run of polar sections (every 0.5 deg) between its bearings; the fence is the ellipse fitted to the
-# grass edge on the Esri tile (work/fence.json).
+# Each stand is a run of sections (every 0.5 deg) between its bearings. The fence is one smooth curve fitted to
+# Google Earth's straight-down trace (qa/trace.py, qa/fit.py -> qa/fence_curve.json), and every ring is an exact
+# offset of it: pol(b, r) is the fence point on bearing b moved r - fence_r(b) along the fence's outward normal.
 import bpy, math, json, os, sys
 import numpy as np
 HERE = os.path.dirname(os.path.abspath(__file__)); SP = os.path.dirname(HERE)
 sys.path.insert(0, HERE)
 from mb import MB, TILE
 D = json.load(open(os.path.join(HERE, 'mars.json')))
-FR = np.array(json.load(open(os.path.join(SP, 'work', 'fence.json')))['fr'] + [json.load(open(os.path.join(SP, 'work', 'fence.json')))['fr'][0]])
+
+
+def _fence():
+    """the fence curve, densely, by bearing from the model origin: radius and outward normal angle"""
+    C = json.load(open(os.path.join(SP, 'qa', 'fence_curve.json'))); c = np.array(C['coef']); fc = C['centre']
+    t = np.radians(np.arange(0, 360, 0.02)); k = (len(c) - 1) // 2
+    r = c[0] + sum(c[2 * j - 1] * np.cos(j * t) + c[2 * j] * np.sin(j * t) for j in range(1, k + 1))
+    x, y = fc[0] + r * np.sin(t), fc[1] + r * np.cos(t)
+    dx, dy = np.gradient(np.concatenate([x[-1:], x, x[:1]]))[1:-1], np.gradient(np.concatenate([y[-1:], y, y[:1]]))[1:-1]
+    nang = np.arctan2(-dy, dx)                       # clockwise curve: (-dy, dx) points out; angle from north = atan2(e, n)
+    b = np.degrees(np.arctan2(x, y)) % 360; o = np.argsort(b); b, R = b[o], np.hypot(x, y)[o]; nang = np.unwrap(nang[o])
+    b = np.concatenate([b[-1:] - 360, b, b[:1] + 360]); R = np.concatenate([R[-1:], R, R[:1]])
+    nang = np.concatenate([nang[-1:] - 2 * np.pi, nang, nang[:1] + 2 * np.pi])
+    return b, R, nang
+
+
+FB, FR, FN = _fence()
 OSM = json.load(open(os.path.join(SP, 'work', 'osm_xy.json')))
 
 
@@ -45,16 +62,51 @@ def clear():
 
 
 def pol(b, r):
-    a = math.radians(b); return (r * math.sin(a), r * math.cos(a))
+    """the point r - fence_r(b) out from the fence along its normal, starting at the fence's point on bearing b: so a
+    ring at a fixed distance from the fence (r = fence_r(b) + d) is an exact offset of the fence curve"""
+    b = b % 360; a = math.radians(b); rf = float(np.interp(b, FB, FR)); n = float(np.interp(b, FB, FN)); d = r - rf
+    return (rf * math.sin(a) + d * math.sin(n), rf * math.cos(a) + d * math.cos(n))
 
 
 def fence_r(b):
-    """radius from the origin to the fence along bearing b (traced grass edge, one value per degree)"""
-    return float(np.interp(b % 360, np.arange(361), FR))
+    """radius from the origin to the fence along bearing b (the fitted Google Earth curve)"""
+    return float(np.interp(b % 360, FB, FR))
+
+
+def _rings():
+    """a stand with 'ring': [front, back] has its roof's front and back edges at those distances out from the fence
+    (measured in Google Earth's straight-down tiles, qa/rings.py), replacing its traced 'roof' table, over the
+    table's own bearings: exact offsets of the fence curve"""
+    for S in D['stands']:
+        if 'ring' not in S: continue
+        b0, b1 = S['roof'][0][0], S['roof'][-1][0]; f, k = S['ring'][:2]; t = S['roof']
+        # back None: the back edge cannot be read straight down (the north roof runs into the clubrooms' roof), so
+        # the traced table's back is kept
+        S['roof'] = [[float(b), fence_r(b) + f, fence_r(b) + k if k is not None else interp(t, b)[1]]
+                     for b in np.arange(b0, b1 + 1e-6, 0.5)]
 
 
 def interp(tab, b):
     t = np.array(tab, float); return [float(np.interp(b, t[:, 0], t[:, k])) for k in range(1, t.shape[1])]
+
+
+def _smooth():
+    """a stand with 'smooth': n has its measured 'roof' and 'back' tables (offsets read every 2 deg or so,
+    qa/newstands.py) replaced by one polynomial of degree n in bearing per edge, as offsets from the fence, sampled every
+    0.5 deg: straight-line steps between the read points left a 3 deg kink at each of them"""
+    for S in D['stands']:
+        if 'smooth' not in S: continue
+        for key in ('roof', 'back'):
+            T = np.array(S[key], float); b = T[:, 0]; t = (b - b[0]) / (b[-1] - b[0]) * 2 - 1
+            bs = np.arange(b[0], b[-1] + 1e-6, 0.5); ts = (bs - b[0]) / (b[-1] - b[0]) * 2 - 1
+            rf = np.array([fence_r(x) for x in b]); rfs = np.array([fence_r(x) for x in bs]); cols = []
+            for c in range(1, T.shape[1]):
+                cols.append(rfs + np.polyval(np.polyfit(t, T[:, c] - rf, S['smooth']), ts))
+            S[key] = [[float(x)] + [float(col[i]) for col in cols] for i, x in enumerate(bs)]
+
+
+_rings()
+_smooth()
 
 
 def oriented(mb, q, m, out, uv=None):
@@ -153,13 +205,23 @@ def seat(P, t, o, z, shell=None):
 SEAT_COL = ['seat_navyblue']
 
 
+def mountain(b, j, n):
+    """the 2026 stands' seat pattern (Premier's release: the seating bowl panels draw on Mount Buninyong and Mount
+    Warrenheip; the Sept 2026 aerial): two pale peaks rising out of the navy, a slate band along their slopes"""
+    h = sum(max(0.0, 1 - abs(b - c) / w) * a for c, w, a in ((112, 14, 0.8), (128, 9, 0.55), (158, 16, 0.85), (176, 10, 0.5)))
+    f = j / max(1, n - 1)   # 0 at the front row
+    return 'seat_white' if f < h - 0.12 else ('seat_slategrey' if f < h else 'seat_navyblue')
+
+
 def seat_colour(pal, j, n, b):
     """seat colours from the finished-ground aerial press/gi/ta_aerial.jpg (sampled) and the 2017 Commons photo
     press/wm/20170707_141248: 'blue' = the new lower banks (navy blue); 'fade' = the new upper tiers (dark charcoal navy);
     'mix' = the old stands, navy blue and slate grey scattered about half and half"""
     h = (math.sin(j * 12.9898 + b * 78.233) * 43758.5453) % 1.0
     if pal == 'blue': return 'seat_navyblue'
-    if pal == 'mix': return 'seat_slategrey' if h < 0.5 else 'seat_navyblue'
+    if pal == 'mtn': return mountain(b, j, n)
+    if pal == 'mix':   # the old stands (Commons 2022 photos from the Eastern and Eureka stands): mostly white and light
+        return 'seat_white' if h < 0.38 else 'seat_lightgrey' if h < 0.6 else 'seat_paleblue' if h < 0.8 else 'seat_navyblue'   # grey, some pale blue and navy
     return 'seat_charcoal'
 
 
@@ -208,21 +270,39 @@ def brange(S):
 def single(S, mb, mr):
     bs = brange(S); M = S['mats']; zs0, zs1 = S['z_seat']; zr0, zr1 = S['z_roof']
     def geo(b):
-        rf = fence_r(b % 360); ri, ro = interp(S['roof'], b); rs0 = rf + S['seat_front']; rb = ro - S['back_in']
+        rf = fence_r(b % 360); ri, ro = interp(S['roof'], b); rs0 = rf + S['seat_front']
+        rb = rf + S['back_rel'] if 'back_rel' in S else ro - S['back_in']   # back_rel: the clubroom wall, measured from the fence
         return rf, ri, ro, rs0, rb
+    def zb_of(b):   # roof soffit height over the back wall
+        rf, ri, ro, rs0, rb = geo(b); return zr0 + (zr1 - zr0) * (rb - ri) / (ro - ri) - 0.6
     def prof(b):
-        rf, ri, ro, rs0, rb = geo(b); zb = zr1 - 0.6 - (zr1 - zr0) * (S['back_in'] / (ro - ri))
+        rf, ri, ro, rs0, rb = geo(b); zb = zb_of(b)
         # front wall up, seats up the rake, back wall of the bowl up to the roof, cap, facade down
         if S.get('nose'):  # open undercroft (2026 ground-floor photo): rake underside is the ceiling, blockwork wall set deep
-            N = S['nose']; rw = rb - N.get('deep', 8.0); zw = zs0 + (zs1 - zs0) * (rw - rs0) / (rb - 0.4 - rs0) - 0.8
-            return [(rs0, 0.0), (rs0, zs0), (rb - 0.4, zs1), (rb - 0.4, zb), (rb, zb), (rb, N['under']), (rw, zw), (rw, 0.0)]
-        return [(rs0, 0.0), (rs0, zs0), (rb - 0.4, zs1), (rb - 0.4, zb), (rb, zb), (rb, 0.0)]
+            N = S['nose']; rw = rb - N.get('deep', 8.0); re_ = rc(rs0, rb)
+            zw = (zs0 + (zs1 - zs0) * (rw - rs0) / (re_ - rs0) if rw < re_ else zs1) - 0.8
+            P = [(rs0, 0.0), (rs0, zs0)] + conc(rs0, rb) + [(rb - 0.4, zs1), (rb - 0.4, zb), (rb, zb), (rb, N['under']), (rw, zw), (rw, 0.0)]
+            return P
+        return [(rs0, 0.0), (rs0, zs0)] + conc(rs0, rb) + [(rb - 0.4, zs1), (rb - 0.4, zb), (rb, zb), (rb, 0.0)]
+    # 'rows' (photos: the west stand ~18 rows, north 8, east 10) ends the rake early; a flat concourse runs back to the wall
+    def rc(rs0, rb): return min(rs0 + S['rows'] * ROW, rb - 0.6) if S.get('rows') else rb - 0.4
+    def conc(rs0, rb): return [(rc(rs0, rb), zs1)] if S.get('rows') else []
     tail = ['conc_wall', 'roof_soffit', 'conc_block'] if S.get('nose') else [M['back']]
-    n = nrows(prof, bs, 1); tp, tm = terrace(prof, [M['front'], M['seat'], 'conc_wall', 'conc_wall'] + tail, [(1, n)])
+    cm = ['paving'] if S.get('rows') else []
+    n = nrows(prof, bs, 1); tp, tm = terrace(prof, [M['front'], M['seat']] + cm + [M.get('concback', 'conc_wall'), 'conc_wall'] + tail, [(1, n)])
     strip(mb, bs, tp, tm, -1); seat_rows(bs, prof, 1, n, pal=S.get('pal', 'mix'))
     for b, sg in ((bs[0], -1), (bs[-1], 1)):
         endcap(mb, b, tp(b), 'conc_wall', sg)
     ribs = roof_strip(S, bs, geo, mr)
+    if S.get('club'):   # north stand (2022 photo): clubroom wall behind the concourse, roof columns at the top row
+        import club
+        club.club_front(S, bs, geo, mb, mr, zs1, zb_of)
+        for b in ribs:
+            rf, ri, ro, rs0, rb = geo(b); r = rc(rs0, rb) + 0.5
+            mr.cyl(pol(b, r), 0.2, zs1, zr0 + (zr1 - zr0) * (r - ri) / (ro - ri) - 0.5, 'steel_white', n=16)
+    if S.get('boxes'):
+        import club
+        club.corporate(S, geo, mb, mr, rc, zs1, zb_of)
     if S.get('nose'): nose(S, bs, geo, mr, mb)
     if S.get('brace'): bracing(S, ribs, geo, mr)
 
@@ -330,7 +410,7 @@ def roof_strip(S, bs, geo, mr):
         z = lambda r: zr0 + (zr1 - zr0) * (r - ri) / (ro - ri)
         pk = ri + 0.4 * (ro - ri); H = 2.4; o = 0.15
         if S.get('rib_under'): H, o = -2.4, -th - 0.15   # aerial: the old roofs are flat white on top, trusses hang underneath
-        re_ = (ro - S.get('back_in', 0) - 0.4) if S.get('rib_under') else ro - 0.2   # under-trusses stop inside the back wall
+        re_ = (geo(b)[4] - 0.4) if S.get('rib_under') else ro - 0.2   # under-trusses stop inside the back wall
         A = P3(b, ri + 0.2, z(ri + 0.2) + o); K = P3(b, pk, z(pk) + o + H); Bp = P3(b, re_, z(re_) + o)
         mr.beam(A, K, 0.35, 0.35, 'steel_white'); mr.beam(K, Bp, 0.35, 0.35, 'steel_white')
         mr.beam(A, Bp, 0.25, 0.25, 'steel_white')
@@ -499,7 +579,9 @@ def concourse(col):
             if abs(np.linalg.det(M)) < 1e-9: continue
             t, s = np.linalg.solve(M, a)
             if t > 0 and 0 <= s <= 1: best = t if best is None else max(best, t)
-        return best or fence_r(b) + 20
+        # the model paves only the ring round the stands; past it the surroundings map (surrounds/data.py) paints the
+        # precinct's real car parks, roads and lawns from OSM
+        return min(best or fence_r(b) + 20, fence_r(b) + 30.0)
     for i in range(len(bs) - 1):
         ba, bb = bs[i], bs[i + 1]
         q = [P3(ba, fence_r(ba % 360), -0.02), P3(bb, fence_r(bb % 360), -0.02), P3(bb, outer(bb), -0.02), P3(ba, outer(ba), -0.02)]
@@ -509,23 +591,53 @@ def concourse(col):
 
 
 def tower(mb, T):
+    """light tower (GE Dec 2025, n300 and n060): a tapered round mast and a head of 'tiers' lamp banks stacked one over
+    another, each its own steel frame with a gap between, tilted down toward the centre"""
     x, y = T['xy']; zt = T['top']; hh = T.get('head_h', 6.0); w = T.get('head_w', 7.0); zb = zt - hh
     n = 12; r0, r1 = T.get('r_base', 0.9), T.get('r_top', 0.45)
     for k in range(n):
         a0, a1 = 2 * math.pi * k / n, 2 * math.pi * (k + 1) / n
         p = lambda a, r, z: (x + r * math.cos(a), y + r * math.sin(a), z)
-        oriented(mb, [p(a0, r0, 0), p(a1, r0, 0), p(a1, r1, zb + 1), p(a0, r1, zb + 1)], 'steel_galv',
+        oriented(mb, [p(a0, r0, 0), p(a1, r0, 0), p(a1, r1, zt - 1.0), p(a0, r1, zt - 1.0)], 'steel_galv',
                  np.array([math.cos(0.5 * (a0 + a1)), math.sin(0.5 * (a0 + a1)), 0]))
     f = np.array([-x, -y, 0.0]); f /= np.linalg.norm(f); s = np.array([-f[1], f[0], 0.0])
     tl = math.radians(T.get('tilt', 15)); up = np.array([0, 0, 1.0]) * math.cos(tl) - f * math.sin(tl); nr = np.cross(s, up)
     if np.dot(nr, f) < 0: nr = -nr
-    c0 = np.array([x, y, zb]) + f * 0.6
-    Q = lambda u, v, d=0.0: c0 + s * u * w / 2 + up * v + nr * d
-    oriented(mb, [Q(-1, 0), Q(1, 0), Q(1, hh), Q(-1, hh)], 'lamps', nr, [(0, 0), (1, 0), (1, 1), (0, 1)])
-    oriented(mb, [Q(-1, 0, -0.8), Q(1, 0, -0.8), Q(1, hh, -0.8), Q(-1, hh, -0.8)], 'steel_galv', -nr)
-    for (a, b_) in (((-1, 0), (1, 0)), ((1, 0), (1, hh)), ((1, hh), (-1, hh)), ((-1, hh), (-1, 0))):
-        q = [Q(*a), Q(*b_), Q(*b_, -0.8), Q(*a, -0.8)]; cen = Q(0, hh / 2, -0.4)
-        oriented(mb, q, 'steel_galv', np.mean(q, 0) - cen)
+    nt = T.get('tiers', 1); gap = 0.5; th = (hh - gap * (nt - 1)) / nt
+    for t in range(nt):
+        c0 = np.array([x, y, zb + t * (th + gap)]) + f * 0.9
+        Q = lambda u, v, d=0.0: c0 + s * u * w / 2 + up * v + nr * d
+        oriented(mb, [Q(-1, 0), Q(1, 0), Q(1, th), Q(-1, th)], 'lamps', nr, [(0, 0), (1, 0), (1, 1), (0, 1)])
+        oriented(mb, [Q(-1, 0, -0.7), Q(1, 0, -0.7), Q(1, th, -0.7), Q(-1, th, -0.7)], 'steel_galv', -nr)
+        for (a, b_) in (((-1, 0), (1, 0)), ((1, 0), (1, th)), ((1, th), (-1, th)), ((-1, th), (-1, 0))):
+            q = [Q(*a), Q(*b_), Q(*b_, -0.7), Q(*a, -0.7)]; cen = Q(0, th / 2, -0.35)
+            oriented(mb, q, 'steel_galv', np.mean(q, 0) - cen)
+        mb.beam(np.array([x, y, zb + t * (th + gap) + th / 2]), Q(0, th / 2, -0.7), 0.3, 0.3, 'steel_galv')   # arm to the mast
+    mb.beam(np.array([x, y, zb - 0.5]), np.array([x, y, zt + 0.3]), 0.5, 0.5, 'steel_galv')   # mast top through the head
+
+
+def videoboard(mb, B_):
+    """the 2026 south-end videoboard (Premier's release: 100 m2; Sept 2026 aerial: on its own blue steel frame behind the
+    southern goals): a screen box on two lattice legs braced to each other"""
+    c = np.array(B_['c'], float); a = math.radians(B_['a']); u = np.array([math.cos(a), math.sin(a)]); n = np.array([-u[1], u[0]])
+    if np.dot(n, -c) < 0: n = -n
+    W, H, z0, D = B_['w'], B_['h'], B_['z0'], B_['depth']; ang = B_['a']
+    mb.box(tuple(c), W + 0.6, D, H + 0.6, ang, 'board_frame', z0=z0 - 0.3)
+    f = c + n * (D / 2 + 0.02)
+    oriented(mb, [(*(f - u * W / 2), z0), (*(f + u * W / 2), z0), (*(f + u * W / 2), z0 + H), (*(f - u * W / 2), z0 + H)], 'screen_off',
+             np.array([*n, 0.0]), [(0, 0), (W / 2.0, 0), (W / 2.0, H / 2.0), (0, H / 2.0)])
+    for k in (-1, 1):   # lattice legs: four chords and zig-zag lacing, painted blue
+        lc = c - n * (D / 2 + 0.8) + u * k * (W / 2 - 2.0)
+        ch = [lc + u * du + n * dn for du in (-0.6, 0.6) for dn in (-0.6, 0.6)]
+        for p in ch: mb.beam((*p, 0.0), (*p, z0 + H), 0.18, 0.18, 'steel_blue')
+        z = 0.0; j = 0
+        while z < z0 + H - 0.1:
+            p, q = ch[j % 2], ch[(j + 1) % 2]; z2 = min(z + 1.2, z0 + H)
+            mb.beam((*p, z), (*q, z2), 0.1, 0.1, 'steel_blue'); mb.beam((*ch[2 + j % 2], z), (*ch[2 + (j + 1) % 2], z2), 0.1, 0.1, 'steel_blue')
+            z = z2; j += 1
+        mb.box(tuple(lc), 1.8, 1.8, 0.4, ang, 'conc_wall')
+    for z in (z0 - 0.3, z0 + H * 0.5):   # ties between the legs, behind the board
+        mb.beam((*(c - n * (D / 2 + 0.8) - u * (W / 2 - 2.0)), z), (*(c - n * (D / 2 + 0.8) + u * (W / 2 - 2.0)), z), 0.25, 0.25, 'steel_blue')
 
 
 def scoreboard(mb, L, R, inset, z0, z1, depth, frame, back, faces, rim, back_rim=None):
@@ -616,6 +728,8 @@ def buildings(col):
     """club buildings traced from the GE top view: prism walls, flat roof, rooftop plant, round drums"""
     mb = MB('buildings')
     for B in D.get('buildings', []):
+        if B['name'] == 'nbsc':
+            import club; club.nbsc(col, B); continue
         mb.prism([tuple(q) for q in B['poly']], 0.0, B['z'], B['wall'], top=B['roof'])
         for c, L, W, h, a in B.get('plant', []):
             mb.box(tuple(c), L, W, h, a, 'paint_white', z0=B['z'])
@@ -623,16 +737,23 @@ def buildings(col):
             mb.cyl(tuple(c), r, 0.0, z, B.get('drum', 'conc_wall'), n=36, top=B['roof'])
     mb.build(col)
 
+import newstand
+
+
 def build_all():
     clear(); col = bpy.context.scene.collection
     global SEATS, POSTS
     mb = MB('stands'); mr = MB('roofs'); SEATS = MB('seats'); SEATS.smooth = True; POSTS = MB('seat_posts'); SEAT_XF.clear()
+    only = os.environ.get('STANDS')
     for S in D['stands']:
+        if only and S['name'] not in only.split(','): continue
         {'bank': lambda: bank(S, mb), 'single': lambda: single(S, mb, mr), 'two_tier': lambda: two_tier(S, mb, mr),
-         'open': lambda: open_stand(S, mb), 'block': lambda: block(S, mb, mr)}[S['kind']]()
+         'open': lambda: open_stand(S, mb), 'block': lambda: block(S, mb, mr), 'shell': lambda: newstand.shell(S, mb, mr)}[S['kind']]()
     mb.build(col); mr.build(col)
     fence(col); extras(col); buildings(col); SEATS.build(col); POSTS.build(col)
     if not os.environ.get('NOCONC'): concourse(col)
+    if D.get('videoboard'):
+        mv = MB('videoboard'); videoboard(mv, D['videoboard']); mv.build(col)
     if D['towers']:
         mt = MB('towers')
         for T in D['towers']:

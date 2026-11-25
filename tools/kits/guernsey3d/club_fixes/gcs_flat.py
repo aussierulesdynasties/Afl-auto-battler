@@ -9,7 +9,9 @@
 import json, shutil, numpy as np
 from PIL import Image
 from scipy import ndimage as nd
-BASE, SUN = (235, 72, 54), (249, 82, 47)
+# SUN: the photo's sun stands 15 L* lighter than its red (and a touch more orange); kept at that step above our
+# base (2026-11-22; it was 4 L*, and read as plain red on the 3D player).
+BASE, SUN = (235, 72, 54), (255, 108, 72)
 xf = json.load(open('norm_GCS.json'))
 def hp(a, w):
     g = a[:, :, 1] + 1.0
