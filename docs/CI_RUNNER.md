@@ -35,8 +35,8 @@ set `QUEUE_RUNNER` to anything but `pc` to send everything to GitHub.
   4.8 GB) and a shard (about 2.5 GB) ran at once and went over it; the director raised the cap to
   8 GB (31 GB in the PC).
 - WSL's `/tmp` is a RAM disk (4 GB at the 8 GB cap) that counts against the cap. The dataset
-  check's exported pack filled it on 2026-11-25, so each runner's jobs use their own temp folder
-  on the disk (`/home/runner/tmp-<runner>`, set by the setup script as a systemd drop-in).
+  check's exported pack filled it on 2026-11-25, so the setup script puts `/tmp` on the disk
+  (it masks `tmp.mount`). A per-runner `TMPDIR` was tried first and made Godot's import crash.
 
 ## Setup (once)
 

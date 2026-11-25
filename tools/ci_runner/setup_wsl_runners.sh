@@ -28,17 +28,10 @@ id runner >/dev/null 2>&1 || useradd -m -s /bin/bash runner
 cd /home/runner
 [ -f "runner-$VER.tar.gz" ] || curl -sSL -o "runner-$VER.tar.gz" \
 	"https://github.com/actions/runner/releases/download/v$VER/actions-runner-linux-x64-$VER.tar.gz"
-# WSL's /tmp is a RAM disk half the cap's size (4 GB at 8 GB), shared by every runner; the dataset
-# check's exported pack filled it on 2026-11-25 ("Save PCK: Failed to export"). Each runner gets its
-# own temp folder on the real disk instead (a systemd drop-in, so every job inherits TMPDIR).
-disk_tmp() {
-	local t="/home/runner/tmp-$(basename "$1")" u; u=$(cat "$1/.service")
-	mkdir -p "$t" && chown runner:runner "$t" && mkdir -p "/etc/systemd/system/$u.d"
-	printf '[Service]
-Environment=TMPDIR=%s
-' "$t" > "/etc/systemd/system/$u.d/tmpdir.conf"
-	systemctl daemon-reload
-}
+# WSL's /tmp is a RAM disk half the cap's size (4 GB at 8 GB), shared by every runner and counted
+# against the cap; the dataset check's exported pack filled it on 2026-11-25 ("Save PCK: Failed to
+# export"). /tmp goes on the real disk instead (a per-runner TMPDIR made Godot's import crash).
+if findmnt -n -T /tmp -o FSTYPE | grep -q tmpfs; then systemctl mask tmp.mount; umount -l /tmp && chmod 1777 /tmp; fi
 # The planning runner: tests.yml's plan job only (a git checkout and a few API calls, a few MB), so a
 # run plans within seconds instead of waiting in GitHub's queue. It never takes the heavy jobs.
 if [ "$N" = plan ]; then
@@ -46,7 +39,7 @@ if [ "$N" = plan ]; then
 	if [ -f "$d/.runner" ]; then echo "rplan already configured"; exit 0; fi
 	mkdir -p "$d" && tar -xzf "runner-$VER.tar.gz" -C "$d" && chown -R runner:runner "$d"
 	sudo -u runner "$d/config.sh" --unattended --url "$REPO_URL" --token "$REG_TOKEN" --name "$(hostname)-afl-plan" --labels afl-plan --work _work --replace
-	(cd "$d" && ./svc.sh install runner) && disk_tmp "$d" && (cd "$d" && ./svc.sh start)
+	(cd "$d" && ./svc.sh install runner && ./svc.sh start)
 	echo "Done: planning runner"; exit 0
 fi
 for i in $(seq 1 "$N"); do
@@ -55,6 +48,6 @@ for i in $(seq 1 "$N"); do
 	mkdir -p "$d" && tar -xzf "runner-$VER.tar.gz" -C "$d" && chown -R runner:runner "$d"
 	sudo -u runner "$d/config.sh" --unattended --url "$REPO_URL" --token "$REG_TOKEN" \
 		--name "$(hostname)-afl-$i" --labels afl-queue --work _work --replace
-	(cd "$d" && ./svc.sh install runner) && disk_tmp "$d" && (cd "$d" && ./svc.sh start)
+	(cd "$d" && ./svc.sh install runner && ./svc.sh start)
 done
 echo "Done: $N runners. Check them at $REPO_URL/settings/actions/runners"
