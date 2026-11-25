@@ -558,6 +558,9 @@ func _test_selection_pages_tests() -> void:
 			var inter2 := ui.find_child("InterchangeRow", true, false)
 			_check(_gap_x(inter2.get_child(0), ui.find_child("SaveBest23", true, false)) < 48.0,
 					"PC: Save as my Best 23 is beside the interchange (%s)" % ptag)
+			_check(ui.find_child("BenchHost", true, false) == null
+					and ui.find_child("BuilderField", true, false).is_ancestor_of(inter2),
+					"PC: from 1280 wide the interchange stays under the ground (%s)" % ptag)
 			# A real swap on the left updates the right at once.
 			var sline_before := ui.find_child("SynergyLine", true, false).get_instance_id()
 			var s0: Dictionary = _state.current_side()
@@ -605,6 +608,32 @@ func _test_selection_pages_tests() -> void:
 				past.append(str(c.name))
 		_check(ui.find_child("WeekColumn", true, false) != null and past.is_empty(),
 				"PC 960x540: nothing runs past the right edge (%s, %d past: %s)" % [club, past.size(), str(past.slice(0, 5))])
+		# Ground across (director, 2026-11-25): the oval takes the full height on
+		# the left, the interchange heads the right-hand column, and no two of the
+		# 18 on the ground cover each other.
+		var bhost: Control = ui.find_child("BenchHost", true, false)
+		var wcol: Control = ui.find_child("WeekColumn", true, false)
+		var irow9: Control = ui.find_child("InterchangeRow", true, false)
+		var bench9: Control = ui.find_child("Bench", true, false)
+		_check(bhost != null and wcol != null and wcol.is_ancestor_of(bhost) and irow9 != null and bhost.is_ancestor_of(irow9)
+				and bench9 != null and bhost.is_ancestor_of(bench9),
+				"PC 960x540: the interchange heads the right-hand column (%s)" % club)
+		var bottom := ui.get_viewport().get_visible_rect().size.y
+		var low: Array = []
+		for n in [ui.find_child("BuilderField", true, false), irow9, bench9]:
+			if n == null or (n as Control).get_global_rect().end.y > bottom + 0.5:
+				low.append(str(n.name) if n != null else "missing")
+		_check(low.is_empty() and _no_scroll(ui.find_child("SelectionScroll", true, false)),
+				"PC 960x540: the ground and the interchange are all on the screen, no scroll (%s: %s)" % [club, str(low)])
+		var spots9 := ui.find_children("Spot_*", "Button", true, false)
+		var hits: Array = []
+		for i in range(spots9.size()):
+			for j in range(i + 1, spots9.size()):
+				var ra: Rect2 = (spots9[i] as Control).get_global_rect().grow(-0.5)
+				if ra.intersects((spots9[j] as Control).get_global_rect().grow(-0.5)):
+					hits.append("%s/%s" % [spots9[i].name, spots9[j].name])
+		_check(spots9.size() == 18 and hits.is_empty(),
+				"PC 960x540: no two of the 18 on the ground cover each other (%s, %d on the ground, %s)" % [club, spots9.size(), str(hits)])
 		# ...and a finger reaches them there: Auto-pick opens its menu, a player
 		# not picked is picked up (both sat past the edge before 2026-11-25).
 		var ap: MenuButton = ui.find_child("AutoPick", true, false)

@@ -36,7 +36,9 @@ static var SURFACE := Color("2a2823")
 const ELEVATION := ["INK", "BG", "PANEL", "PANEL_ALT", "SURFACE"]
 static var LINE := Color("363229")        # rules and outlines
 static var TEXT := Color("f1eee6")
-static var MUTED := Color("a39e93")
+## The line under a name, metadata (director, 2026-11-25: "#B4AFA4", a step
+## brighter than a39e93: 8.6:1 on the page, 5.7:1 on the brightest stripe).
+static var MUTED := Color("b4afa4")
 static var FAINT := Color("6e695f")       # disabled
 static var EMPH := Color("f1eee6")        # emphasis is weight, not a colour
 ## Section headings and titles: a shade off the body text so a heading never
@@ -74,7 +76,7 @@ static func apply_appearance(mode: String) -> void:
 		INK = Color("0d0c0b")
 		LINE = Color("363229")
 		TEXT = Color("f1eee6")
-		MUTED = Color("a39e93")
+		MUTED = Color("b4afa4")
 		FAINT = Color("6e695f")
 		EMPH = TEXT
 		HEAD = HEAD_DARK
@@ -115,9 +117,14 @@ static func text_size() -> String:
 	return _text_size
 
 
-## A type size as it renders at the chosen text size.
+## The smallest any words render at Standard (director, 2026-11-25: "13"): a
+## size asked for under it (TINY, the 12s still on some screens) renders at it.
+const MIN_TEXT := 13.0
+
+
+## A type size as it renders at the chosen text size, never under MIN_TEXT.
 static func px(fs: float) -> int:
-	return roundi(fs * text_scale)
+	return roundi((maxf(fs, MIN_TEXT) if fs > 0.0 else fs) * text_scale)
 
 
 ## The one way a font size reaches a control outside UiKit's own builders:
@@ -293,7 +300,7 @@ const H1 := 24      # screen title / the one big fact on a screen
 const H2 := 18      # section heading
 const BODY := 15
 const SMALL := 13   # secondary lines
-const TINY := 11    # stamps and fine print only
+const TINY := 11    # stamps and fine print only; renders at MIN_TEXT (13)
 
 ## Type roles (STYLE-02 prep): what a piece of text is, at today's sizes
 ## exactly. Screens use these rather than a number, so the director's typeface
