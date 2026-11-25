@@ -18,6 +18,10 @@ lab, _ = nd.label(a.min(-1) > 245)
 edge = set(np.unique(np.r_[lab[0], lab[-1], lab[:, 0], lab[:, -1]])) - {0}
 bg = np.isin(lab, list(edge))
 bg = nd.binary_dilation(bg, iterations=2) & light | bg
+import os as _os
+if _os.environ.get('CLOTH'):
+    # the cloth is given (clash/warp_clash.py: the club's own cut), so a white guernsey isn't lost to the white behind it
+    bg = np.array(Image.open(_os.environ['CLOTH']).convert('L')) < 128
 # light areas enclosed by cloth: a logo if it lies inside a box, else the neck's lining seen through the neck
 logo = np.zeros(light.shape, bool)
 for b in [x for x in boxes.split(';') if x]:
@@ -28,6 +32,8 @@ hole = light & ~bg & ~logo
 lab2, n2 = nd.label(hole)
 sizes = nd.sum(np.ones_like(lab2), lab2, range(1, n2 + 1))
 lining = np.isin(lab2, [i + 1 for i, s in enumerate(sizes) if s > 1500])
+if _os.environ.get('CLOTH') and lining.sum() > 0.15 * (~bg).sum():
+    lining[:] = False   # a white guernsey: its light cloth is the cloth, not the neck's lining
 if lining.any():
     # the neck opening is one convex shape: the lining and the tags printed on it
     from scipy.spatial import ConvexHull

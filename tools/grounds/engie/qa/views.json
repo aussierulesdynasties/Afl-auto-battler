@@ -1,0 +1,314 @@
+[
+ {
+  "name": "top",
+  "h": 0,
+  "t": 0,
+  "d": 600,
+  "at": [
+   0,
+   0,
+   0
+  ],
+  "label": "straight down"
+ },
+ {
+  "name": "out_N",
+  "h": 180,
+  "t": 62,
+  "d": 450,
+  "at": [
+   0,
+   0,
+   0
+  ],
+  "label": "from the N"
+ },
+ {
+  "name": "out_NE",
+  "h": 225,
+  "t": 62,
+  "d": 450,
+  "at": [
+   0,
+   0,
+   0
+  ],
+  "label": "from the NE"
+ },
+ {
+  "name": "out_E",
+  "h": 270,
+  "t": 62,
+  "d": 450,
+  "at": [
+   0,
+   0,
+   0
+  ],
+  "label": "from the E"
+ },
+ {
+  "name": "out_SE",
+  "h": 315,
+  "t": 62,
+  "d": 450,
+  "at": [
+   0,
+   0,
+   0
+  ],
+  "label": "from the SE"
+ },
+ {
+  "name": "out_S",
+  "h": 0,
+  "t": 62,
+  "d": 450,
+  "at": [
+   0,
+   0,
+   0
+  ],
+  "label": "from the S"
+ },
+ {
+  "name": "out_SW",
+  "h": 45,
+  "t": 62,
+  "d": 450,
+  "at": [
+   0,
+   0,
+   0
+  ],
+  "label": "from the SW"
+ },
+ {
+  "name": "out_W",
+  "h": 90,
+  "t": 62,
+  "d": 450,
+  "at": [
+   0,
+   0,
+   0
+  ],
+  "label": "from the W"
+ },
+ {
+  "name": "out_NW",
+  "h": 135,
+  "t": 62,
+  "d": 450,
+  "at": [
+   0,
+   0,
+   0
+  ],
+  "label": "from the NW"
+ },
+ {
+  "name": "in_NE",
+  "h": 225,
+  "t": 74,
+  "d": 170,
+  "at": [
+   0,
+   0,
+   8
+  ],
+  "label": "into the bowl from the NE"
+ },
+ {
+  "name": "in_SE",
+  "h": 315,
+  "t": 74,
+  "d": 170,
+  "at": [
+   0,
+   0,
+   8
+  ],
+  "label": "into the bowl from the SE"
+ },
+ {
+  "name": "in_SW",
+  "h": 45,
+  "t": 74,
+  "d": 170,
+  "at": [
+   0,
+   0,
+   8
+  ],
+  "label": "into the bowl from the SW"
+ },
+ {
+  "name": "in_NW",
+  "h": 135,
+  "t": 74,
+  "d": 170,
+  "at": [
+   0,
+   0,
+   8
+  ],
+  "label": "into the bowl from the NW"
+ },
+ {
+  "name": "fac_N",
+  "h": 180,
+  "t": 72,
+  "d": 160,
+  "at": [
+   0.0,
+   112.0,
+   6
+  ],
+  "label": "N stand outside"
+ },
+ {
+  "name": "fac_NE",
+  "h": 225,
+  "t": 72,
+  "d": 160,
+  "at": [
+   79.2,
+   79.2,
+   6
+  ],
+  "label": "NE stand outside"
+ },
+ {
+  "name": "fac_E",
+  "h": 270,
+  "t": 72,
+  "d": 160,
+  "at": [
+   112.0,
+   0.0,
+   6
+  ],
+  "label": "E stand outside"
+ },
+ {
+  "name": "fac_SE",
+  "h": 315,
+  "t": 72,
+  "d": 160,
+  "at": [
+   79.2,
+   -79.2,
+   6
+  ],
+  "label": "SE stand outside"
+ },
+ {
+  "name": "fac_S",
+  "h": 0,
+  "t": 72,
+  "d": 160,
+  "at": [
+   0.0,
+   -112.0,
+   6
+  ],
+  "label": "S stand outside"
+ },
+ {
+  "name": "fac_SW",
+  "h": 45,
+  "t": 72,
+  "d": 160,
+  "at": [
+   -79.2,
+   -79.2,
+   6
+  ],
+  "label": "SW stand outside"
+ },
+ {
+  "name": "fac_W",
+  "h": 90,
+  "t": 72,
+  "d": 160,
+  "at": [
+   -112.0,
+   -0.0,
+   6
+  ],
+  "label": "W stand outside"
+ },
+ {
+  "name": "fac_NW",
+  "h": 135,
+  "t": 72,
+  "d": 160,
+  "at": [
+   -79.2,
+   79.2,
+   6
+  ],
+  "label": "NW stand outside"
+ },
+ {
+  "name": "wide_S",
+  "h": 0,
+  "t": 55,
+  "d": 1500,
+  "at": [
+   0,
+   0,
+   0
+  ],
+  "label": "Olympic Park from the S"
+ },
+ {
+  "name": "wide_N",
+  "h": 180,
+  "t": 55,
+  "d": 1500,
+  "at": [
+   0,
+   0,
+   0
+  ],
+  "label": "Olympic Park from the N"
+ },
+ {
+  "name": "wide_W",
+  "h": 90,
+  "t": 55,
+  "d": 1500,
+  "at": [
+   0,
+   0,
+   0
+  ],
+  "label": "from the W"
+ },
+ {
+  "name": "wide_E",
+  "h": 270,
+  "t": 55,
+  "d": 1500,
+  "at": [
+   0,
+   0,
+   0
+  ],
+  "label": "from the E"
+ },
+ {
+  "name": "wide_top",
+  "h": 0,
+  "t": 0,
+  "d": 2400,
+  "at": [
+   0,
+   0,
+   0
+  ],
+  "label": "2 km straight down"
+ }
+]

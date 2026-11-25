@@ -258,16 +258,11 @@ func _build() -> void:
 	draft_btn.pressed.connect(_on_intake_draft)
 	ctrl.add_child(draft_btn)
 
-	var again := UiKit.btn("New Career", UiKit.HEADING, false)
-	again.name = "NewCareer"
-	again.custom_minimum_size = Vector2(0, 48)
-	again.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	again.pressed.connect(func():
-		GameState.reset()
-		GameState.begin_draft()
-		Router.replace("draft"))
-	ctrl.add_child(again)
+	# No New Career here (director, 2026-11-25: "Remove the button"): it
+	# started a 2026 career on the spot and replaced the save without asking.
+	# A new career starts from the main menu or Options, which ask first.
 	var menu := UiKit.btn("Main Menu", UiKit.NAME)
+	menu.name = "MainMenu"
 	menu.custom_minimum_size = Vector2(0, 48)
 	menu.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	menu.pressed.connect(func(): Router.to_main_menu())

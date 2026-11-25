@@ -19,6 +19,9 @@ uniform float hot = 0.0;
 uniform float wind = 0.0;
 uniform vec2 wind_dir = vec2(1.0, 0.0);
 uniform vec2 half_size = vec2(86.3, 67.4);
+// A traced ground's fence as a Fourier radius (as oval3d_ground.gdshader's fen); fen_n 0: the ellipse.
+uniform float fen[33];
+uniform int fen_n = 0;
 // The boots and the ball: xy where on the ground, z how far they flatten the grass (m).
 uniform vec3 pushers[48];
 uniform int pusher_count = 0;
@@ -56,6 +59,17 @@ void vertex() {
 	v.xz += bend * tip * tip;
 	// Off the ground (outside the boundary the apron's blades are the same; past the fence none).
 	float e = length(at / (half_size + 6.0));
+	if (fen_n > 0) {
+		float l = max(length(at), 1e-4);
+		vec2 u = at / l;
+		float r = fen[0];
+		vec2 cs = u;
+		for (int k = 1; 2 * k < fen_n; k++) {
+			r += fen[2 * k - 1] * cs.x + fen[2 * k] * cs.y;
+			cs = vec2(cs.x * u.x - cs.y * u.y, cs.y * u.x + cs.x * u.y);
+		}
+		e = l / r;
+	}
 	float edge = length((at - centre) / (span * 0.5));
 	fade = (1.0 - smoothstep(0.7, 1.0, edge)) * step(e, 1.0);
 	v *= fade;
