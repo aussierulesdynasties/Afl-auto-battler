@@ -461,6 +461,14 @@ static func slug_for(ground: String) -> String:
 	return str(GROUNDS.get(db.ground_key(ground), "")) if db != null else ""
 
 
+## The ground's name for a model folder ("MCG" for mcg), as a screen writes it.
+static func ground_name(slug: String) -> String:
+	for g: String in GROUNDS:
+		if str(GROUNDS[g]) == slug:
+			return g
+	return slug
+
+
 ## The match's boundary fence now: half its length and width (the playing surface plus FENCE).
 static func match_fence() -> Vector2:
 	return Vector2(MatchMotion.HALF_LEN + FENCE, MatchMotion.HALF_WID + FENCE)

@@ -43,6 +43,7 @@ tests/output/
 captures/**/*.import
 docs/**/*.import
 tools/wheelo/cache/
+/ground_packs.json
 
 # textures Godot extracts from the background scenes on import (row 202 2b)
 assets/grounds/*/*_backdrop_part*_*.webp
