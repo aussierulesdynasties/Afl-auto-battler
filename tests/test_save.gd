@@ -45,6 +45,7 @@ func run() -> void:
 	_t("_test_old_save_backup_imports")
 	_t("_test_earlier_saves_restore")
 	_t("_test_save_costs")
+	_t("_test_honoured_ratings_survive_reload")
 	GameState.delete_saved_career()
 	GameState.replay_seed = 0
 	print(Ran.line("Save", self))
@@ -1354,3 +1355,57 @@ func _test_save_costs() -> void:
 	var r1: int = GameDB.reloads
 	GameState.reset()
 	_check(GameDB.reloads == r1 + 1, "...and so does a career after a season was started without a reset")
+
+
+## A past start's honoured players keep their rating through a save and load
+## (bug bash 2026-11-25: 120 of them across the 1990, 2000, 2010 and 2020
+## starts sat a point over their skills and fell that point the first time the
+## career loaded). Their skills are topped up to the rating their honours give
+## them (director, 2026-11-25: "Top up his skills").
+func _test_honoured_ratings_survive_reload() -> void:
+	GameState.replay_seed = SUITE_SEED
+	GameState.reset("1990")
+	GameState.career_seed = SUITE_SEED
+	GameState.begin_real_lists()
+	GameState.choose_real_club("BRL")
+	var guard := 0
+	while GameState.draft != null and not GameState.draft.is_finished() and guard < 400:
+		guard += 1
+		if GameState.draft.is_user_turn():
+			var board: Array = GameState.draft.board("", "", "", "overall", true)
+			if board.is_empty() or not GameState.draft.pick(board[0]):
+				break
+	GameState.finish_intake_draft()
+	_check(GameState.season != null and GameState.season_year == 1990, "A 1990 career starts (%d)" % GameState.season_year)
+	if GameState.season == null:
+		return
+	var before := {}
+	var honoured := 0
+	var on_skills := 0
+	for club in GameState.season.lists:
+		for p in (GameState.season.lists[club] as Array):
+			before[str(p["id"])] = "%d/%d" % [int(p["overall"]), int(p.get("potential", 0))]
+			if bool(p.get("rated_on_honours", false)):
+				honoured += 1
+				var ov := Ratings.rate_overall(p["attr"], str(p["role"]), Ratings.effective_games(p))
+				if ov == int(p["overall"]) and ov >= Ratings.honours_floor(float(p.get("honours", 0.0))):
+					on_skills += 1
+	_check(honoured >= 20 and on_skills == honoured,
+			"Every player rated on his honours has the skills for it, at least his floor (%d of %d)" % [on_skills, honoured])
+	_check(GameState.save_career(), "The 1990 career saves")
+	_check(GameState.load_career(), "The 1990 career loads")
+	var moved := []
+	var seen := 0
+	for club in GameState.season.lists:
+		for p in (GameState.season.lists[club] as Array):
+			var id := str(p["id"])
+			if not before.has(id):
+				continue
+			seen += 1
+			var now := "%d/%d" % [int(p["overall"]), int(p.get("potential", 0))]
+			if now != str(before[id]):
+				moved.append("%s %s %s -> %s" % [p.get("first", ""), p.get("last", ""), before[id], now])
+	_check(before.size() > 400 and seen == before.size() and moved.is_empty(),
+			"Every 1990 player keeps his rating and potential through a save and load (%d of %d seen; moved: %s)"
+			% [seen, before.size(), ", ".join(moved.slice(0, 5))])
+	GameState.delete_saved_career()
