@@ -270,7 +270,8 @@ func _compact_row(p: Dictionary) -> Control:
 	name_l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	name_l.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	h.add_child(name_l)
-	var info := UiKit.hbox(UiKit.Space.CLOSE)
+	# No gap of its own: the " · " between his marks spaces them like the dot inside "Wing · 32".
+	var info := UiKit.hbox(0)
 	info.name = "RowInfo"
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	info.size_flags_stretch_ratio = 1.1
@@ -324,11 +325,14 @@ func _info_bits(info: Control, p: Dictionary) -> void:
 		if i > 0:
 			# One line, never wrapped: a wrapping label squeezed to one character
 			# draws the dot high, off the words' line.
-			info.add_child(UiKit.line("·", UiKit.SMALL, UiKit.MUTED))
+			info.add_child(UiKit.line(" · ", UiKit.SMALL, UiKit.MUTED))
 		var l := UiKit.ellipsis(str(b[1]), UiKit.SMALL, b[2], bool(b[3]))
 		l.name = str(b[0])
 		if i == bits.size() - 1:
 			l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			# A cut always ends in "…": Godot drops it when under six letters stay,
+			# and "Defe" then reads as a word.
+			l.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS_FORCE
 		else:
 			# Only as wide as its words, so the next piece follows straight on.
 			l.size_flags_horizontal = Control.SIZE_FILL
