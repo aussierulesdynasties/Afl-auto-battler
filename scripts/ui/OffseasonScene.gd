@@ -752,6 +752,61 @@ func _agents(body: VBoxContainer) -> void:
 		return av > bv if _fa_sort_desc else av < bv)
 	if fas.is_empty():
 		body.add_child(_para("No free agents right now. Rivals let players go when the season ends.", 13, UiKit.MUTED))
+	# Each card is built as it scrolls into view, not all 98 on every tap
+	# (0.3 s, bug bash 2026-11-25; director, batch F): the list looks the same.
+	_agent_body = body
+	_agent_queue = fas
+	_agent_built = 0
+	_more_agents(_agents_shown)
+	# Built straight onto a box (the trade screen's familiarity line, a test), the
+	# tab has no scroll of its own to watch.
+	if not is_instance_valid(_scroll_box):
+		return
+	var bar := _scroll_box.get_v_scroll_bar()
+	bar.value_changed.connect(func(_v: float) -> void: _check_agents_end())
+	bar.changed.connect(_check_agents_end)
+
+
+## Cards built when the list opens, and added each time the scroll comes
+## within a screen of the last one built.
+const AGENT_BATCH := 10
+## The most cards built so far: a rebuild (a sort, closing talks) builds as many
+## again, so the list comes back at the same place.
+var _agents_shown := AGENT_BATCH
+var _agent_queue: Array = []
+var _agent_built := 0
+var _agent_body: VBoxContainer
+var _agents_check_queued := false
+
+
+## After a scroll or a layout: within a screen of the last card built, build the
+## next few. Deferred, so cards are never added while the list lays itself out.
+func _check_agents_end() -> void:
+	if _agents_check_queued:
+		return
+	_agents_check_queued = true
+	_agents_end.call_deferred()
+
+
+func _agents_end() -> void:
+	_agents_check_queued = false
+	if _tab != "agents" or not is_instance_valid(_scroll_box) or not is_instance_valid(_agent_body) \
+			or _agent_body.get_parent() != _scroll_box or _agent_built >= _agent_queue.size():
+		return
+	var bar := _scroll_box.get_v_scroll_bar()
+	if bar.value + bar.page < bar.max_value - _scroll_box.size.y:
+		return
+	_more_agents(AGENT_BATCH)
+
+
+## Builds the next `n` cards of the list, after the last one built.
+func _more_agents(n: int) -> void:
+	if not is_instance_valid(_agent_body):
+		return
+	var body := _agent_body
+	var fas := _agent_queue.slice(_agent_built, mini(_agent_built + n, _agent_queue.size()))
+	_agent_built += fas.size()
+	_agents_shown = maxi(_agents_shown, _agent_built)
 	for p in fas:
 		var want := Contracts.wants(p)
 		var card := _player_card(p, "%d OVR  ·  %s POT  ·  age %d  ·  wants %s for %d seasons  ·  from %s" % [

@@ -201,8 +201,7 @@ func _confirm_button(short := false) -> Button:
 	b.disabled = done
 	b.pressed.connect(func():
 		WeekChecklist.mark(GameState, "team")
-		_notice = "Our side is confirmed for this week."
-		_build())
+		_say("Our side is confirmed for this week."))
 	return b
 
 
@@ -232,9 +231,7 @@ func _side_page(auto: bool) -> Control:
 	if not nxt.is_empty():
 		# Look at them on the same oval (director, 2026-10-07).
 		var opp_name := GameDB.club_short(str(nxt["code"]))
-		page.add_child(UiKit.segmented("OvalView", [["mine", "Our team"], ["opp", opp_name]], _view, func(k):
-			_view = k
-			_build()))
+		page.add_child(UiKit.segmented("OvalView", [["mine", "Our team"], ["opp", opp_name]], _view, _switch_view))
 	var builder := TeamBuilder.new()
 	builder.name = "TeamBuilder"
 	builder.stacked = true
@@ -307,8 +304,7 @@ func _fill_actions(actions: HBoxContainer) -> void:
 	save.name = "SaveBest23"
 	save.pressed.connect(func():
 		GameState.set_best23(GameState.current_side())
-		_notice = "Saved as your Best 23. Choose it any week from Auto-pick."
-		_build())
+		_say("Saved as your Best 23. Choose it any week from Auto-pick."))
 	actions.add_child(save)
 	if not _undo.is_empty():
 		var undo := UiKit.text_action("Undo", UiKit.SECONDARY)
@@ -339,6 +335,42 @@ func _close_chemistry() -> bool:
 		_chemistry.queue_free()
 	_chemistry = null
 	return was
+
+
+## Save as my Best 23 and Confirm side change the line under the interchange,
+## the actions beside it and the week, never the oval or the list: only those
+## are built again (bug bash 2026-11-25, M-2: building the page again froze
+## each tap 250-565 ms).
+func _say(note: String) -> void:
+	_notice = note
+	var builder: TeamBuilder = _root.find_child("TeamBuilder", true, false)
+	if builder == null:
+		_build()
+		return
+	builder.show_note(note)
+	_refresh_facts()
+
+
+## The Our team / opponent switch: the side (the oval, the interchange and the
+## list) is built again for the club it shows; the top bar and the week stay
+## (bug bash 2026-11-25, M-2).
+func _switch_view(k: String) -> void:
+	if k == _view:
+		return
+	_view = k
+	var sc: ScrollContainer = _root.find_child("SelectionScroll", true, false)
+	if sc == null:
+		_build()
+		return
+	var places := UiKit.scroll_places(_root)
+	var page := _side_page(GameState.my_selection().is_empty())
+	if _wide and _bench_host != null:
+		page.custom_minimum_size.x = ACROSS_OVAL_W
+	page.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	page.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	UiKit.clear(sc)
+	sc.add_child(page)
+	UiKit.restore_places(_root, places)
 
 
 ## After a move: the week and the actions beside the interchange, without
