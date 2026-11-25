@@ -36,7 +36,9 @@ static var SURFACE := Color("2a2823")
 const ELEVATION := ["INK", "BG", "PANEL", "PANEL_ALT", "SURFACE"]
 static var LINE := Color("363229")        # rules and outlines
 static var TEXT := Color("f1eee6")
-static var MUTED := Color("a39e93")
+## The line under a name, metadata (director, 2026-11-25: "#B4AFA4", a step
+## brighter than a39e93: 8.6:1 on the page, 5.7:1 on the brightest stripe).
+static var MUTED := Color("b4afa4")
 static var FAINT := Color("6e695f")       # disabled
 static var EMPH := Color("f1eee6")        # emphasis is weight, not a colour
 ## Section headings and titles: a shade off the body text so a heading never
@@ -74,7 +76,7 @@ static func apply_appearance(mode: String) -> void:
 		INK = Color("0d0c0b")
 		LINE = Color("363229")
 		TEXT = Color("f1eee6")
-		MUTED = Color("a39e93")
+		MUTED = Color("b4afa4")
 		FAINT = Color("6e695f")
 		EMPH = TEXT
 		HEAD = HEAD_DARK
@@ -115,9 +117,14 @@ static func text_size() -> String:
 	return _text_size
 
 
-## A type size as it renders at the chosen text size.
+## The smallest any words render at Standard (director, 2026-11-25: "13"): a
+## size asked for under it (TINY, the 12s still on some screens) renders at it.
+const MIN_TEXT := 13.0
+
+
+## A type size as it renders at the chosen text size, never under MIN_TEXT.
 static func px(fs: float) -> int:
-	return roundi(fs * text_scale)
+	return roundi((maxf(fs, MIN_TEXT) if fs > 0.0 else fs) * text_scale)
 
 
 ## The one way a font size reaches a control outside UiKit's own builders:
@@ -293,7 +300,7 @@ const H1 := 24      # screen title / the one big fact on a screen
 const H2 := 18      # section heading
 const BODY := 15
 const SMALL := 13   # secondary lines
-const TINY := 11    # stamps and fine print only
+const TINY := 11    # stamps and fine print only; renders at MIN_TEXT (13)
 
 ## Type roles (STYLE-02 prep): what a piece of text is, at today's sizes
 ## exactly. Screens use these rather than a number, so the director's typeface
@@ -653,7 +660,7 @@ const CLUB_INKS := {
 	"RIC": ["#FFE12E", "#F1EEE6"],  # yellow, then white
 	"STK": ["#F5427A", "#F1EEE6"],  # red, then white
 	"SYD": ["#F04A3C", "#F1EEE6"],  # red, then white
-	"TAS": ["#4CB36B", "#E8D44D"],  # green, then yellow
+	"TAS": ["#49B068", "#E8D44D"],  # green (a shade darker, so it is never read as GOOD: INK_CLASH), then yellow
 	"WBD": ["#5A8FE8", "#F0455C"],  # blue, then red
 	"WCE": ["#F2A900", "#6B9AF5"],  # gold, then blue lifted
 }
@@ -1689,8 +1696,10 @@ static func section_link(title: String, leads_to: String, node_name: String) -> 
 ## One tap picks one: [key, label] options in a grid, the chosen one
 ## outlined. Buttons are named "<node_name>_<key>". on_pick(key) runs after
 ## the grid repaints. Short lists only; a long list wants its own sheet.
+## `strong` keys stand out by type alone: bold in TEXT ink, the rest in the
+## regular face (the stats a player's position is rated on, pre-season meetings).
 static func choice_grid(node_name: String, options: Array, current: String, columns: int,
-		on_pick: Callable = Callable()) -> GridContainer:
+		on_pick: Callable = Callable(), strong: Array = []) -> GridContainer:
 	var grid := GridContainer.new()
 	grid.name = node_name
 	grid.columns = columns
@@ -1700,7 +1709,7 @@ static func choice_grid(node_name: String, options: Array, current: String, colu
 	var buttons := {}
 	var paint := func() -> void:
 		for k in buttons:
-			paint_choice(buttons[k], str(k) == str(state["current"]))
+			paint_choice(buttons[k], str(k) == str(state["current"]), strong.has(str(k)))
 	for o in options:
 		var key := str(o[0])
 		var b := btn(str(o[1]), 14)
@@ -1709,6 +1718,8 @@ static func choice_grid(node_name: String, options: Array, current: String, colu
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		# A name on a choice ("Marcus Bontempelli") wraps rather than cuts.
 		b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		if not strong.is_empty() and not strong.has(key):
+			b.add_theme_font_override("font", FONT)
 		b.pressed.connect(func():
 			state["current"] = key
 			paint.call()
@@ -1721,11 +1732,12 @@ static func choice_grid(node_name: String, options: Array, current: String, colu
 
 
 ## A choice's look: the chosen one outlined in full text, the rest quiet.
-static func paint_choice(b: Button, on: bool) -> void:
+## `strong`: an option that stands out (choice_grid's strong keys) keeps TEXT ink.
+static func paint_choice(b: Button, on: bool, strong := false) -> void:
 	var sb := _choice_box(on)
 	for s in ["normal", "hover", "pressed", "hover_pressed", "focus"]:
 		b.add_theme_stylebox_override(s, sb)
-	b.add_theme_color_override("font_color", TEXT if on else MUTED)
+	b.add_theme_color_override("font_color", TEXT if on or strong else MUTED)
 	b.add_theme_color_override("font_hover_color", TEXT)
 	b.add_theme_color_override("font_pressed_color", TEXT)
 	feel(b, "tick")

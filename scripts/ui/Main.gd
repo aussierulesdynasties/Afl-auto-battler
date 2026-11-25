@@ -124,6 +124,11 @@ func _notification(what: int) -> void:
 
 func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
+	# The game boots onto this scene directly, not through the Router: put the
+	# menu at the bottom of the stack so a screen opened from it (Club Forge)
+	# can step back to it with its on-screen Back.
+	if Router.stack.is_empty():
+		Router.stack.append("main")
 	if GameState.new_career_setup_requested:
 		GameState.new_career_setup_requested = false
 		# Back from Choose your club: the options again, for the season picked.
@@ -554,6 +559,12 @@ func _year_button(id: String, tall := false) -> Button:
 	for n in [pad, row, fig, text] + text.get_children():
 		(n as Control).mouse_filter = Control.MOUSE_FILTER_IGNORE
 	b.add_child(pad)
+	# The wrapped line can need more than that floor: in the browser, 2020's line
+	# wrapped to three and its last line ran below the card's edge (director's
+	# capture, 2026-11-24). Grow the button to its words.
+	var floor_h := b.custom_minimum_size.y
+	pad.minimum_size_changed.connect(func() -> void:
+		b.custom_minimum_size.y = maxf(floor_h, pad.get_combined_minimum_size().y))
 	b.pressed.connect(_on_pick_year.bind(id))
 	return b
 
@@ -1395,8 +1406,9 @@ func _show_help() -> void:
 			+ "3. Track every selection in Picks. The position cards in the pool show your list's coverage; tap one to filter the pool. Carry at least two rucks.\n\n"
 			+ "4. Play the home-and-away season, with matches driven by your players' rated abilities. Set your tactics in the coach box. After each game every player develops: his development (By position to start) decides the kind of footballer he becomes, and fit players you leave out develop in the reserves at about half the senior rate. Choose each player's development in Training.\n\n"
 			+ "5. Pick your own side on the Team screen, or let the best 23 be picked around injuries. Two of your five midfielders play the wings: a runner suits it, a ball-winner is wasted there. A tagger makes a tag bite.\n\n"
-			+ ("6. Finish in the top %d to play finals and chase the flag. The top four start in the qualifying finals, 5-10 in the wildcards and eliminations. The season's awards, the honour roll and league records are in the Season Review.\n\n"
-			% Season.FINALISTS)
+			+ ("6. %s Win them all for the flag. The season's awards, the honour roll and league records are in the Season Review.\n\n"
+			% SeasonRules.how_finals_work(GameState.season.finals_format() if GameState.season != null
+					else str(SeasonRules.DEFAULT["finals"])))
 			+ "7. In the off-season, re-sign, release, sign free agents and trade in Trades & Contracts, then draft the next class. The hub's League news follows the whole league.\n\n"
 			+ "Two dials are set when you start a new career. Board patience is how many poor seasons the board puts up with before it warns you, and then moves on you. Rival recruiting is how hard the other clubs bargain when they trade with you. Players develop by the same rules whatever you pick.\n\n"
 			+ "Rotate your device at any time. Your draft picks, search and filters stay intact.", 16)

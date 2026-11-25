@@ -1,0 +1,318 @@
+year,week,kind,label,home,away,ground,date,own,in_vic
+1990,1,QF,Qualifying Final,COL,WCE,Waverley Park,1990-09-08,,1
+1990,1,EF,Elimination Final,MEL,HAW,MCG,1990-09-09,,1
+1990,1,QF,Qualifying Final,COL,WCE,Waverley Park,1990-09-15,,1
+1990,2,SF,Semi Final,WCE,MEL,Waverley Park,1990-09-22,,1
+1990,2,SF,Semi Final,ESS,COL,MCG,1990-09-23,,1
+1990,3,PF,Preliminary Final,ESS,WCE,Waverley Park,1990-09-29,,1
+1990,4,GF,Grand Final,ESS,COL,MCG,1990-10-06,,1
+1991,1,EF,Elimination Final,MEL,ESS,Waverley Park,1991-09-07,,1
+1991,1,EF,Elimination Final,GEE,STK,Waverley Park,1991-09-08,,1
+1991,1,QF,Qualifying Final,WCE,HAW,Subiaco Oval,1991-09-08,WCE,0
+1991,2,SF,Semi Final,HAW,GEE,Waverley Park,1991-09-14,,1
+1991,2,SF,Semi Final,WCE,MEL,Waverley Park,1991-09-15,,1
+1991,3,PF,Preliminary Final,WCE,GEE,Waverley Park,1991-09-21,,1
+1991,4,GF,Grand Final,WCE,HAW,Waverley Park,1991-09-28,,1
+1992,1,EF,Elimination Final,COL,STK,Waverley Park,1992-09-05,,1
+1992,1,QF,Qualifying Final,GEE,WBD,MCG,1992-09-06,,1
+1992,1,EF,Elimination Final,WCE,HAW,Subiaco Oval,1992-09-06,WCE,0
+1992,2,SF,Semi Final,WBD,STK,Waverley Park,1992-09-12,,1
+1992,2,SF,Semi Final,GEE,WCE,MCG,1992-09-13,,1
+1992,3,PF,Preliminary Final,GEE,WBD,MCG,1992-09-19,,1
+1992,4,GF,Grand Final,GEE,WCE,MCG,1992-09-26,,1
+1993,1,EF,Elimination Final,NTH,WCE,Waverley Park,1993-09-04,,1
+1993,1,QF,Qualifying Final,ESS,CAR,MCG,1993-09-04,,1
+1993,1,EF,Elimination Final,HAW,ADE,MCG,1993-09-05,,1
+1993,2,SF,Semi Final,CAR,ADE,Waverley Park,1993-09-11,,1
+1993,2,SF,Semi Final,ESS,WCE,MCG,1993-09-12,,1
+1993,3,PF,Preliminary Final,ESS,ADE,MCG,1993-09-18,,1
+1993,4,GF,Grand Final,ESS,CAR,MCG,1993-09-25,,1
+1994,1,QF,Qualifying Final,NTH,HAW,Waverley Park,1994-09-10,,1
+1994,1,QF,Qualifying Final,GEE,WBD,MCG,1994-09-10,,1
+1994,1,QF,Qualifying Final,CAR,MEL,MCG,1994-09-11,,1
+1994,1,QF,Qualifying Final,WCE,COL,WACA,1994-09-11,WCE,0
+1994,2,SF,Semi Final,CAR,GEE,Waverley Park,1994-09-17,,1
+1994,2,SF,Semi Final,WBD,MEL,MCG,1994-09-18,,1
+1994,3,PF,Preliminary Final,NTH,GEE,MCG,1994-09-24,,1
+1994,3,PF,Preliminary Final,WCE,MEL,WACA,1994-09-24,WCE,0
+1994,4,GF,Grand Final,WCE,GEE,MCG,1994-10-01,,1
+1995,1,QF,Qualifying Final,RIC,NTH,MCG,1995-09-08,,1
+1995,1,QF,Qualifying Final,ESS,WCE,Waverley Park,1995-09-09,,1
+1995,1,QF,Qualifying Final,GEE,WBD,MCG,1995-09-09,,1
+1995,1,QF,Qualifying Final,CAR,BRL,MCG,1995-09-10,,1
+1995,2,SF,Semi Final,RIC,ESS,MCG,1995-09-16,,1
+1995,2,SF,Semi Final,NTH,WCE,MCG,1995-09-17,,1
+1995,3,PF,Preliminary Final,GEE,RIC,Waverley Park,1995-09-23,,1
+1995,3,PF,Preliminary Final,CAR,NTH,MCG,1995-09-23,,1
+1995,4,GF,Grand Final,CAR,GEE,MCG,1995-09-30,,1
+1996,1,QF,Qualifying Final,BRL,ESS,The Gabba,1996-09-06,BRL,0
+1996,1,QF,Qualifying Final,WCE,CAR,Subiaco Oval,1996-09-07,WCE,0
+1996,1,QF,Qualifying Final,SYD,HAW,SCG,1996-09-07,SYD,0
+1996,1,QF,Qualifying Final,NTH,GEE,MCG,1996-09-08,,1
+1996,2,SF,Semi Final,WCE,ESS,MCG,1996-09-14,,1
+1996,2,SF,Semi Final,BRL,CAR,The Gabba,1996-09-14,BRL,0
+1996,3,PF,Preliminary Final,NTH,BRL,MCG,1996-09-21,,1
+1996,3,PF,Preliminary Final,SYD,ESS,SCG,1996-09-21,SYD,0
+1996,4,GF,Grand Final,SYD,NTH,MCG,1996-09-28,,1
+1997,1,QF,Qualifying Final,WBD,SYD,MCG,1997-09-06,,1
+1997,1,QF,Qualifying Final,ADE,WCE,Football Park,1997-09-07,ADE,0
+1997,1,QF,Qualifying Final,STK,BRL,Waverley Park,1997-09-07,,1
+1997,1,QF,Qualifying Final,GEE,NTH,MCG,1997-09-07,,1
+1997,2,SF,Semi Final,NTH,WCE,MCG,1997-09-13,,1
+1997,2,SF,Semi Final,GEE,ADE,Football Park,1997-09-13,ADE,0
+1997,3,PF,Preliminary Final,STK,NTH,MCG,1997-09-19,,1
+1997,3,PF,Preliminary Final,WBD,ADE,MCG,1997-09-20,,1
+1997,4,GF,Grand Final,STK,ADE,MCG,1997-09-27,,1
+1998,1,QF,Qualifying Final,NTH,ESS,MCG,1998-09-04,,1
+1998,1,QF,Qualifying Final,MEL,ADE,MCG,1998-09-05,,1
+1998,1,QF,Qualifying Final,SYD,STK,SCG,1998-09-05,SYD,0
+1998,1,QF,Qualifying Final,WBD,WCE,MCG,1998-09-06,,1
+1998,2,SF,Semi Final,MEL,STK,MCG,1998-09-12,,1
+1998,2,SF,Semi Final,SYD,ADE,SCG,1998-09-12,SYD,0
+1998,3,PF,Preliminary Final,NTH,MEL,MCG,1998-09-18,,1
+1998,3,PF,Preliminary Final,WBD,ADE,MCG,1998-09-19,,1
+1998,4,GF,Grand Final,NTH,ADE,MCG,1998-09-26,,1
+1999,1,QF,Qualifying Final,WBD,WCE,MCG,1999-09-03,,1
+1999,1,QF,Qualifying Final,NTH,PAD,MCG,1999-09-04,,1
+1999,1,QF,Qualifying Final,BRL,CAR,The Gabba,1999-09-04,BRL,0
+1999,1,QF,Qualifying Final,ESS,SYD,MCG,1999-09-05,,1
+1999,2,SF,Semi Final,CAR,WCE,MCG,1999-09-11,,1
+1999,2,SF,Semi Final,BRL,WBD,The Gabba,1999-09-11,BRL,0
+1999,3,PF,Preliminary Final,NTH,BRL,MCG,1999-09-17,,1
+1999,3,PF,Preliminary Final,ESS,CAR,MCG,1999-09-18,,1
+1999,4,GF,Grand Final,NTH,CAR,MCG,1999-09-25,,1
+2000,1,EF,Elimination Final,GEE,HAW,Marvel Stadium,2000-08-11,,1
+2000,1,QF,Qualifying Final,ESS,NTH,MCG,2000-08-12,,1
+2000,1,EF,Elimination Final,BRL,WBD,The Gabba,2000-08-12,BRL,0
+2000,1,QF,Qualifying Final,CAR,MEL,MCG,2000-08-13,,1
+2000,2,SF,Semi Final,NTH,HAW,MCG,2000-08-18,,1
+2000,2,SF,Semi Final,CAR,BRL,MCG,2000-08-19,,1
+2000,3,PF,Preliminary Final,MEL,NTH,MCG,2000-08-25,,1
+2000,3,PF,Preliminary Final,ESS,CAR,MCG,2000-08-26,,1
+2000,4,GF,Grand Final,ESS,MEL,MCG,2000-09-02,,1
+2001,1,QF,Qualifying Final,ESS,RIC,MCG,2001-09-07,,1
+2001,1,EF,Elimination Final,CAR,ADE,MCG,2001-09-08,,1
+2001,1,QF,Qualifying Final,BRL,PAD,The Gabba,2001-09-08,BRL,0
+2001,1,EF,Elimination Final,HAW,SYD,Marvel Stadium,2001-09-09,,1
+2001,2,SF,Semi Final,RIC,CAR,MCG,2001-09-15,,1
+2001,2,SF,Semi Final,PAD,HAW,Football Park,2001-09-15,PAD,0
+2001,3,PF,Preliminary Final,ESS,HAW,MCG,2001-09-22,,1
+2001,3,PF,Preliminary Final,BRL,RIC,The Gabba,2001-09-22,BRL,0
+2001,4,GF,Grand Final,ESS,BRL,MCG,2001-09-29,,1
+2002,1,QF,Qualifying Final,PAD,COL,Football Park,2002-09-06,PAD,0
+2002,1,EF,Elimination Final,ESS,WCE,Marvel Stadium,2002-09-07,,1
+2002,1,QF,Qualifying Final,BRL,ADE,The Gabba,2002-09-07,BRL,0
+2002,1,EF,Elimination Final,MEL,NTH,MCG,2002-09-08,,1
+2002,2,SF,Semi Final,PAD,ESS,Football Park,2002-09-13,PAD,0
+2002,2,SF,Semi Final,MEL,ADE,MCG,2002-09-14,,1
+2002,3,PF,Preliminary Final,ADE,COL,MCG,2002-09-21,,1
+2002,3,PF,Preliminary Final,BRL,PAD,The Gabba,2002-09-21,BRL,0
+2002,4,GF,Grand Final,BRL,COL,MCG,2002-09-28,,1
+2003,1,EF,Elimination Final,FRE,ESS,Subiaco Oval,2003-09-05,FRE,0
+2003,1,EF,Elimination Final,ADE,WCE,Football Park,2003-09-06,ADE,0
+2003,1,QF,Qualifying Final,COL,BRL,MCG,2003-09-06,,1
+2003,1,QF,Qualifying Final,PAD,SYD,Football Park,2003-09-07,PAD,0
+2003,2,SF,Semi Final,BRL,ADE,The Gabba,2003-09-12,BRL,0
+2003,2,SF,Semi Final,PAD,ESS,Football Park,2003-09-13,PAD,0
+2003,3,PF,Preliminary Final,COL,PAD,MCG,2003-09-20,,1
+2003,3,PF,Preliminary Final,SYD,BRL,Accor Stadium,2003-09-20,SYD,0
+2003,4,GF,Grand Final,COL,BRL,MCG,2003-09-27,,1
+2004,1,QF,Qualifying Final,BRL,STK,The Gabba,2004-09-03,BRL,0
+2004,1,EF,Elimination Final,MEL,ESS,MCG,2004-09-04,,1
+2004,1,EF,Elimination Final,SYD,WCE,Accor Stadium,2004-09-04,SYD,0
+2004,1,QF,Qualifying Final,PAD,GEE,Football Park,2004-09-05,PAD,0
+2004,2,SF,Semi Final,STK,SYD,MCG,2004-09-10,,1
+2004,2,SF,Semi Final,GEE,ESS,MCG,2004-09-11,,1
+2004,3,PF,Preliminary Final,PAD,STK,Football Park,2004-09-17,PAD,0
+2004,3,PF,Preliminary Final,BRL,GEE,MCG,2004-09-18,,1
+2004,4,GF,Grand Final,PAD,BRL,MCG,2004-09-25,,1
+2005,1,QF,Qualifying Final,WCE,SYD,Subiaco Oval,2005-09-02,WCE,0
+2005,1,EF,Elimination Final,GEE,MEL,MCG,2005-09-03,,1
+2005,1,QF,Qualifying Final,ADE,STK,Football Park,2005-09-03,ADE,0
+2005,1,EF,Elimination Final,NTH,PAD,Marvel Stadium,2005-09-04,,1
+2005,2,SF,Semi Final,SYD,GEE,SCG,2005-09-09,SYD,0
+2005,2,SF,Semi Final,ADE,PAD,Football Park,2005-09-10,ADE,0
+2005,3,PF,Preliminary Final,STK,SYD,MCG,2005-09-16,,1
+2005,3,PF,Preliminary Final,WCE,ADE,Subiaco Oval,2005-09-17,WCE,0
+2005,4,GF,Grand Final,WCE,SYD,MCG,2005-09-24,,1
+2006,1,EF,Elimination Final,STK,MEL,MCG,2006-09-08,,1
+2006,1,QF,Qualifying Final,ADE,FRE,Football Park,2006-09-09,ADE,0
+2006,1,QF,Qualifying Final,WCE,SYD,Subiaco Oval,2006-09-09,WCE,0
+2006,1,EF,Elimination Final,COL,WBD,MCG,2006-09-10,,1
+2006,2,SF,Semi Final,FRE,MEL,Subiaco Oval,2006-09-15,FRE,0
+2006,2,SF,Semi Final,WCE,WBD,Subiaco Oval,2006-09-16,WCE,0
+2006,3,PF,Preliminary Final,SYD,FRE,Accor Stadium,2006-09-22,SYD,0
+2006,3,PF,Preliminary Final,ADE,WCE,Football Park,2006-09-23,ADE,0
+2006,4,GF,Grand Final,WCE,SYD,MCG,2006-09-30,,1
+2007,1,QF,Qualifying Final,PAD,WCE,Football Park,2007-09-07,PAD,0
+2007,1,EF,Elimination Final,HAW,ADE,Marvel Stadium,2007-09-08,,1
+2007,1,EF,Elimination Final,COL,SYD,MCG,2007-09-08,,1
+2007,1,QF,Qualifying Final,GEE,NTH,MCG,2007-09-09,,1
+2007,2,SF,Semi Final,WCE,COL,Subiaco Oval,2007-09-14,WCE,0
+2007,2,SF,Semi Final,NTH,HAW,MCG,2007-09-15,,1
+2007,3,PF,Preliminary Final,GEE,COL,MCG,2007-09-21,,1
+2007,3,PF,Preliminary Final,PAD,NTH,Football Park,2007-09-22,PAD,0
+2007,4,GF,Grand Final,GEE,PAD,MCG,2007-09-29,,1
+2008,1,QF,Qualifying Final,HAW,WBD,MCG,2008-09-05,,1
+2008,1,EF,Elimination Final,ADE,COL,Football Park,2008-09-06,ADE,0
+2008,1,EF,Elimination Final,SYD,NTH,Accor Stadium,2008-09-06,SYD,0
+2008,1,QF,Qualifying Final,GEE,STK,MCG,2008-09-07,,1
+2008,2,SF,Semi Final,WBD,SYD,MCG,2008-09-12,,1
+2008,2,SF,Semi Final,STK,COL,MCG,2008-09-13,,1
+2008,3,PF,Preliminary Final,GEE,WBD,MCG,2008-09-19,,1
+2008,3,PF,Preliminary Final,HAW,STK,MCG,2008-09-20,,1
+2008,4,GF,Grand Final,GEE,HAW,MCG,2008-09-27,,1
+2009,1,EF,Elimination Final,ADE,ESS,Football Park,2009-09-04,ADE,0
+2009,1,QF,Qualifying Final,GEE,WBD,MCG,2009-09-05,,1
+2009,1,EF,Elimination Final,BRL,CAR,The Gabba,2009-09-05,BRL,0
+2009,1,QF,Qualifying Final,STK,COL,MCG,2009-09-06,,1
+2009,2,SF,Semi Final,WBD,BRL,MCG,2009-09-11,,1
+2009,2,SF,Semi Final,COL,ADE,MCG,2009-09-12,,1
+2009,3,PF,Preliminary Final,STK,WBD,MCG,2009-09-18,,1
+2009,3,PF,Preliminary Final,GEE,COL,MCG,2009-09-19,,1
+2009,4,GF,Grand Final,STK,GEE,MCG,2009-09-26,,1
+2010,1,QF,Qualifying Final,GEE,STK,MCG,2010-09-03,,1
+2010,1,EF,Elimination Final,FRE,HAW,Subiaco Oval,2010-09-04,FRE,0
+2010,1,QF,Qualifying Final,COL,WBD,MCG,2010-09-04,,1
+2010,1,EF,Elimination Final,SYD,CAR,Accor Stadium,2010-09-05,SYD,0
+2010,2,SF,Semi Final,GEE,FRE,MCG,2010-09-10,,1
+2010,2,SF,Semi Final,WBD,SYD,MCG,2010-09-11,,1
+2010,3,PF,Preliminary Final,COL,GEE,MCG,2010-09-17,,1
+2010,3,PF,Preliminary Final,STK,WBD,MCG,2010-09-18,,1
+2010,4,GF,Grand Final,COL,STK,MCG,2010-09-25,,1
+2010,4,GF,Grand Final,COL,STK,MCG,2010-10-02,,1
+2011,1,QF,Qualifying Final,GEE,HAW,MCG,2011-09-09,,1
+2011,1,QF,Qualifying Final,COL,WCE,MCG,2011-09-10,,1
+2011,1,EF,Elimination Final,STK,SYD,Marvel Stadium,2011-09-10,,1
+2011,1,EF,Elimination Final,CAR,ESS,MCG,2011-09-11,,1
+2011,2,SF,Semi Final,HAW,SYD,MCG,2011-09-16,,1
+2011,2,SF,Semi Final,WCE,CAR,Subiaco Oval,2011-09-17,WCE,0
+2011,3,PF,Preliminary Final,COL,HAW,MCG,2011-09-23,,1
+2011,3,PF,Preliminary Final,GEE,WCE,MCG,2011-09-24,,1
+2011,4,GF,Grand Final,COL,GEE,MCG,2011-10-01,,1
+2012,1,QF,Qualifying Final,HAW,COL,MCG,2012-09-07,,1
+2012,1,QF,Qualifying Final,ADE,SYD,Football Park,2012-09-08,ADE,0
+2012,1,EF,Elimination Final,GEE,FRE,MCG,2012-09-08,,1
+2012,1,EF,Elimination Final,WCE,NTH,Subiaco Oval,2012-09-09,WCE,0
+2012,2,SF,Semi Final,ADE,FRE,Football Park,2012-09-14,ADE,0
+2012,2,SF,Semi Final,COL,WCE,MCG,2012-09-15,,1
+2012,3,PF,Preliminary Final,SYD,COL,Accor Stadium,2012-09-21,,0
+2012,3,PF,Preliminary Final,HAW,ADE,MCG,2012-09-22,,1
+2012,4,GF,Grand Final,HAW,SYD,MCG,2012-09-29,,1
+2013,1,QF,Qualifying Final,HAW,SYD,MCG,2013-09-06,,1
+2013,1,QF,Qualifying Final,GEE,FRE,GMHBA Stadium,2013-09-07,GEE,1
+2013,1,EF,Elimination Final,COL,PAD,MCG,2013-09-07,,1
+2013,1,EF,Elimination Final,RIC,CAR,MCG,2013-09-08,,1
+2013,2,SF,Semi Final,GEE,PAD,MCG,2013-09-13,,1
+2013,2,SF,Semi Final,SYD,CAR,Accor Stadium,2013-09-14,,0
+2013,3,PF,Preliminary Final,HAW,GEE,MCG,2013-09-20,,1
+2013,3,PF,Preliminary Final,FRE,SYD,Subiaco Oval,2013-09-21,FRE,0
+2013,4,GF,Grand Final,HAW,FRE,MCG,2013-09-28,,1
+2014,1,QF,Qualifying Final,HAW,GEE,MCG,2014-09-05,,1
+2014,1,QF,Qualifying Final,SYD,FRE,Accor Stadium,2014-09-06,SYD,0
+2014,1,EF,Elimination Final,NTH,ESS,MCG,2014-09-06,,1
+2014,1,EF,Elimination Final,PAD,RIC,Adelaide Oval,2014-09-07,PAD,0
+2014,2,SF,Semi Final,GEE,NTH,MCG,2014-09-12,,1
+2014,2,SF,Semi Final,FRE,PAD,Subiaco Oval,2014-09-13,FRE,0
+2014,3,PF,Preliminary Final,SYD,NTH,Accor Stadium,2014-09-19,SYD,0
+2014,3,PF,Preliminary Final,HAW,PAD,MCG,2014-09-20,,1
+2014,4,GF,Grand Final,SYD,HAW,MCG,2014-09-27,,1
+2015,1,QF,Qualifying Final,WCE,HAW,Subiaco Oval,2015-09-11,WCE,0
+2015,1,QF,Qualifying Final,FRE,SYD,Subiaco Oval,2015-09-12,FRE,0
+2015,1,EF,Elimination Final,WBD,ADE,MCG,2015-09-12,,1
+2015,1,EF,Elimination Final,RIC,NTH,MCG,2015-09-13,,1
+2015,2,SF,Semi Final,HAW,ADE,MCG,2015-09-18,,1
+2015,2,SF,Semi Final,SYD,NTH,Accor Stadium,2015-09-19,SYD,0
+2015,3,PF,Preliminary Final,FRE,HAW,Subiaco Oval,2015-09-25,FRE,0
+2015,3,PF,Preliminary Final,WCE,NTH,Subiaco Oval,2015-09-26,WCE,0
+2015,4,GF,Grand Final,WCE,HAW,MCG,2015-10-03,,1
+2016,1,EF,Elimination Final,WCE,WBD,Subiaco Oval,2016-09-08,WCE,0
+2016,1,QF,Qualifying Final,GEE,HAW,MCG,2016-09-09,,1
+2016,1,QF,Qualifying Final,SYD,GWS,Accor Stadium,2016-09-10,,0
+2016,1,EF,Elimination Final,ADE,NTH,Adelaide Oval,2016-09-10,ADE,0
+2016,2,SF,Semi Final,HAW,WBD,MCG,2016-09-16,,1
+2016,2,SF,Semi Final,SYD,ADE,SCG,2016-09-17,SYD,0
+2016,3,PF,Preliminary Final,GEE,SYD,MCG,2016-09-23,,1
+2016,3,PF,Preliminary Final,GWS,WBD,Engie Stadium,2016-09-24,GWS,0
+2016,4,GF,Grand Final,SYD,WBD,MCG,2016-10-01,,1
+2017,1,QF,Qualifying Final,ADE,GWS,Adelaide Oval,2017-09-07,ADE,0
+2017,1,QF,Qualifying Final,GEE,RIC,MCG,2017-09-08,,1
+2017,1,EF,Elimination Final,SYD,ESS,SCG,2017-09-09,SYD,0
+2017,1,EF,Elimination Final,PAD,WCE,Adelaide Oval,2017-09-09,PAD,0
+2017,2,SF,Semi Final,GEE,SYD,MCG,2017-09-15,,1
+2017,2,SF,Semi Final,GWS,WCE,Engie Stadium,2017-09-16,GWS,0
+2017,3,PF,Preliminary Final,ADE,GEE,Adelaide Oval,2017-09-22,ADE,0
+2017,3,PF,Preliminary Final,RIC,GWS,MCG,2017-09-23,,1
+2017,4,GF,Grand Final,ADE,RIC,MCG,2017-09-30,,1
+2018,1,QF,Qualifying Final,RIC,HAW,MCG,2018-09-06,,1
+2018,1,EF,Elimination Final,MEL,GEE,MCG,2018-09-07,,1
+2018,1,EF,Elimination Final,SYD,GWS,SCG,2018-09-08,SYD,0
+2018,1,QF,Qualifying Final,WCE,COL,Optus Stadium,2018-09-08,WCE,0
+2018,2,SF,Semi Final,HAW,MEL,MCG,2018-09-14,,1
+2018,2,SF,Semi Final,COL,GWS,MCG,2018-09-15,,1
+2018,3,PF,Preliminary Final,RIC,COL,MCG,2018-09-21,,1
+2018,3,PF,Preliminary Final,WCE,MEL,Optus Stadium,2018-09-22,WCE,0
+2018,4,GF,Grand Final,WCE,COL,MCG,2018-09-29,,1
+2019,1,EF,Elimination Final,WCE,ESS,Optus Stadium,2019-09-05,WCE,0
+2019,1,QF,Qualifying Final,GEE,COL,MCG,2019-09-06,,1
+2019,1,EF,Elimination Final,GWS,WBD,Engie Stadium,2019-09-07,GWS,0
+2019,1,QF,Qualifying Final,BRL,RIC,The Gabba,2019-09-07,BRL,0
+2019,2,SF,Semi Final,GEE,WCE,MCG,2019-09-13,,1
+2019,2,SF,Semi Final,BRL,GWS,The Gabba,2019-09-14,BRL,0
+2019,3,PF,Preliminary Final,RIC,GEE,MCG,2019-09-20,,1
+2019,3,PF,Preliminary Final,COL,GWS,MCG,2019-09-21,,1
+2019,4,GF,Grand Final,RIC,GWS,MCG,2019-09-28,,1
+2020,1,QF,Qualifying Final,PAD,GEE,Adelaide Oval,2020-10-01,,0
+2020,1,QF,Qualifying Final,BRL,RIC,The Gabba,2020-10-02,,0
+2020,1,EF,Elimination Final,STK,WBD,The Gabba,2020-10-03,,0
+2020,1,EF,Elimination Final,WCE,COL,Optus Stadium,2020-10-03,WCE,0
+2020,2,SF,Semi Final,RIC,STK,People First Stadium,2020-10-09,,0
+2020,2,SF,Semi Final,GEE,COL,The Gabba,2020-10-10,,0
+2020,3,PF,Preliminary Final,PAD,RIC,Adelaide Oval,2020-10-16,,0
+2020,3,PF,Preliminary Final,BRL,GEE,The Gabba,2020-10-17,,0
+2020,4,GF,Grand Final,RIC,GEE,The Gabba,2020-10-24,,0
+2021,1,QF,Qualifying Final,PAD,GEE,Adelaide Oval,2021-08-27,PAD,0
+2021,1,EF,Elimination Final,SYD,GWS,York Park,2021-08-28,,0
+2021,1,QF,Qualifying Final,MEL,BRL,Adelaide Oval,2021-08-28,,0
+2021,1,EF,Elimination Final,WBD,ESS,York Park,2021-08-29,,0
+2021,2,SF,Semi Final,GEE,GWS,Optus Stadium,2021-09-03,,0
+2021,2,SF,Semi Final,BRL,WBD,The Gabba,2021-09-04,BRL,0
+2021,3,PF,Preliminary Final,MEL,GEE,Optus Stadium,2021-09-10,,0
+2021,3,PF,Preliminary Final,PAD,WBD,Adelaide Oval,2021-09-11,PAD,0
+2021,4,GF,Grand Final,MEL,WBD,Optus Stadium,2021-09-25,,0
+2022,1,EF,Elimination Final,BRL,RIC,The Gabba,2022-09-01,BRL,0
+2022,1,QF,Qualifying Final,MEL,SYD,MCG,2022-09-02,,1
+2022,1,QF,Qualifying Final,GEE,COL,MCG,2022-09-03,,1
+2022,1,EF,Elimination Final,FRE,WBD,Optus Stadium,2022-09-03,FRE,0
+2022,2,SF,Semi Final,MEL,BRL,MCG,2022-09-09,,1
+2022,2,SF,Semi Final,COL,FRE,MCG,2022-09-10,,1
+2022,3,PF,Preliminary Final,GEE,BRL,MCG,2022-09-16,,1
+2022,3,PF,Preliminary Final,SYD,COL,SCG,2022-09-17,SYD,0
+2022,4,GF,Grand Final,GEE,SYD,MCG,2022-09-24,,1
+2023,1,QF,Qualifying Final,COL,MEL,MCG,2023-09-07,,1
+2023,1,EF,Elimination Final,CAR,SYD,MCG,2023-09-08,,1
+2023,1,EF,Elimination Final,STK,GWS,MCG,2023-09-09,,1
+2023,1,QF,Qualifying Final,BRL,PAD,The Gabba,2023-09-09,BRL,0
+2023,2,SF,Semi Final,MEL,CAR,MCG,2023-09-15,,1
+2023,2,SF,Semi Final,PAD,GWS,Adelaide Oval,2023-09-16,PAD,0
+2023,3,PF,Preliminary Final,COL,GWS,MCG,2023-09-22,,1
+2023,3,PF,Preliminary Final,BRL,CAR,The Gabba,2023-09-23,BRL,0
+2023,4,GF,Grand Final,COL,BRL,MCG,2023-09-30,,1
+2024,1,QF,Qualifying Final,PAD,GEE,Adelaide Oval,2024-09-05,PAD,0
+2024,1,EF,Elimination Final,WBD,HAW,MCG,2024-09-06,,1
+2024,1,QF,Qualifying Final,SYD,GWS,SCG,2024-09-07,SYD,0
+2024,1,EF,Elimination Final,BRL,CAR,The Gabba,2024-09-07,BRL,0
+2024,2,SF,Semi Final,PAD,HAW,Adelaide Oval,2024-09-13,PAD,0
+2024,2,SF,Semi Final,GWS,BRL,Engie Stadium,2024-09-14,GWS,0
+2024,3,PF,Preliminary Final,SYD,PAD,SCG,2024-09-20,SYD,0
+2024,3,PF,Preliminary Final,GEE,BRL,MCG,2024-09-21,,1
+2024,4,GF,Grand Final,SYD,BRL,MCG,2024-09-28,,1
+2025,1,QF,Qualifying Final,ADE,COL,Adelaide Oval,2025-09-04,ADE,0
+2025,1,QF,Qualifying Final,GEE,BRL,MCG,2025-09-05,,1
+2025,1,EF,Elimination Final,GWS,HAW,Engie Stadium,2025-09-06,GWS,0
+2025,1,EF,Elimination Final,FRE,GCS,Optus Stadium,2025-09-06,FRE,0
+2025,2,SF,Semi Final,ADE,HAW,Adelaide Oval,2025-09-12,ADE,0
+2025,2,SF,Semi Final,BRL,GCS,The Gabba,2025-09-13,BRL,0
+2025,3,PF,Preliminary Final,GEE,HAW,MCG,2025-09-19,,1
+2025,3,PF,Preliminary Final,COL,BRL,MCG,2025-09-20,,1
+2025,4,GF,Grand Final,GEE,BRL,MCG,2025-09-27,,1
