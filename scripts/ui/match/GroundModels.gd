@@ -1474,20 +1474,7 @@ static func _add_geo(root: Node3D, g: Dictionary, name: String, tint: Color, met
 	arr[Mesh.ARRAY_COLOR] = g["c"]
 	var mesh := ArrayMesh.new()
 	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
-	var mat: Material
-	if towers:
-		var sm := ShaderMaterial.new()
-		sm.shader = _tower_shader()
-		sm.set_shader_parameter("tint", tint)
-		mat = sm
-	else:
-		var m := StandardMaterial3D.new()
-		m.vertex_color_use_as_albedo = true
-		m.albedo_color = tint
-		m.cull_mode = BaseMaterial3D.CULL_DISABLED
-		m.roughness = 0.95
-		m.disable_receive_shadows = true
-		mat = m
+	var mat := StandardMaterial3D.new()
 	mat.resource_name = "city"
 	mat.vertex_color_use_as_albedo = true
 	mat.albedo_color = tint
