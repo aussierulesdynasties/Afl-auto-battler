@@ -1671,6 +1671,12 @@ func _test_forge_signings_cost_picks() -> void:
 	# The draft passes exactly the picks the brief named.
 	ui.call("_end_first_offseason")
 	await _settle()
+	# The recruiters' meeting opens the draft: Done, as a coach would.
+	var done := ui.find_child("MeetingDone", true, false) as Button
+	var met: String = await Tap.tap(done) if done != null else ""
+	await _settle()
+	_check(met == "" and ui.find_child("DraftMeeting", true, false) == null,
+			"Done closes the recruiters' meeting (%s)" % met)
 	d = _state.draft
 	var guard := 0
 	while not d.is_finished() and guard < 200:
@@ -1689,8 +1695,9 @@ func _test_forge_signings_cost_picks() -> void:
 	for e in d.user_passed:
 		passed_mine.append(int(e["pick"]))
 	_check(passed_mine == passing, "The draft passed the picks the brief named (%s, named %s)" % [str(passed_mine), str(passing)])
-	# The pick log: a row for every passed pick, counted in its tab.
-	ui.call("_refresh_shown")
+	# The pick log: a row for every passed pick, counted in its tab. The
+	# picks above ran on the draft itself: refresh as the screen does after one.
+	ui.call("_refresh")
 	await _settle()
 	var tab := ui.find_child("Tab_picks", true, false) as Button
 	var why: String = await Tap.tap(tab) if tab != null else "no Picks tab"
