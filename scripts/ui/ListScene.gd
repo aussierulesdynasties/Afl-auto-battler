@@ -171,7 +171,7 @@ func _full_stage() -> Control:
 	hint.autowrap_mode = TextServer.AUTOWRAP_OFF
 	top.add_child(hint)
 	var ranked: Array = GameState.my_list.duplicate()
-	ranked.sort_custom(func(a, b): return int(a["overall"]) > int(b["overall"]))
+	ranked.sort_custom(func(a, b): return int(Rating.ovr(a)) > int(Rating.ovr(b)))
 	var per := ceili(ranked.size() / 3.0)
 	var grid := UiKit.hbox(UiKit.Space.GUTTER)
 	grid.name = "FullColumns"
@@ -277,12 +277,14 @@ func _compact_row(p: Dictionary) -> Control:
 	info.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	h.add_child(info)
 	_info_bits(info, p)
-	var ov := UiKit.line(str(int(p["overall"])), UiKit.BODY, UiKit.TEXT, true)
+	var ov := UiKit.line(str(int(Rating.ovr(p))), UiKit.BODY, UiKit.TEXT, true)
+	ov.name = "RowOvr"
 	ov.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	ov.custom_minimum_size = Vector2(24, 0)
 	ov.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	h.add_child(ov)
-	var pot := UiKit.line("%d" % int(p.get("potential", p["overall"])), UiKit.SMALL, UiKit.MUTED)
+	var pot := UiKit.line("%d" % int(p.get("potential", Rating.ovr(p))), UiKit.SMALL, UiKit.MUTED)
+	pot.name = "RowPot"
 	pot.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	pot.custom_minimum_size = Vector2(24, 0)
 	pot.size_flags_vertical = Control.SIZE_SHRINK_CENTER
