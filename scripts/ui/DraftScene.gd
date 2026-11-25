@@ -2405,7 +2405,13 @@ func _history_row(entry: Dictionary) -> Control:
 		tag = "released"
 	if tag != "":
 		club_row.add_child(UiKit.ellipsis(tag, UiKit.SMALL, UiKit.EMPH if mine else UiKit.MUTED))
-	h.add_child(UiKit.role_chip(str(entry["role"])))
+	else:
+		var push := Control.new()
+		push.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		club_row.add_child(push)
+	# His position sits at the right end of the club line, so his name has the
+	# row's whole width (a name was cut at 960x540 with the chip beside it).
+	club_row.add_child(UiKit.role_chip(str(entry["role"])))
 	if _draft.intake_mode:
 		var picked_player := _player_by_id(str(entry.get("player_id", "")))
 		var scout := DraftScouting.projection(picked_player, _club, _draft.seed,

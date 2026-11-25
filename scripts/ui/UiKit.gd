@@ -653,7 +653,7 @@ const CLUB_INKS := {
 	"RIC": ["#FFE12E", "#F1EEE6"],  # yellow, then white
 	"STK": ["#F5427A", "#F1EEE6"],  # red, then white
 	"SYD": ["#F04A3C", "#F1EEE6"],  # red, then white
-	"TAS": ["#4CB36B", "#E8D44D"],  # green, then yellow
+	"TAS": ["#49B068", "#E8D44D"],  # green (a shade darker, so it is never read as GOOD: INK_CLASH), then yellow
 	"WBD": ["#5A8FE8", "#F0455C"],  # blue, then red
 	"WCE": ["#F2A900", "#6B9AF5"],  # gold, then blue lifted
 }

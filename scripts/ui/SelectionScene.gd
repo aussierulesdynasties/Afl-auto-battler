@@ -113,12 +113,23 @@ func _build() -> void:
 		_list_host = UiKit.vbox(6)
 		_list_host.name = "NotPickedColumn"
 		_list_host.size_flags_vertical = Control.SIZE_EXPAND_FILL
-		cols.add_child(_scroller(_side_page(auto), "SelectionScroll"))
+		var side := _scroller(_side_page(auto), "SelectionScroll")
+		cols.add_child(side)
 		# The week keeps a readable measure: it does not stretch with the window.
 		var right := UiKit.vbox(10)
 		right.name = "WeekColumn"
 		right.size_flags_horizontal = Control.SIZE_FILL
-		right.custom_minimum_size.x = clampf(UiKit.view_width(self) * 0.4, WEEK_W_MIN, WEEK_W_MAX)
+		var measure := clampf(UiKit.view_width(self) * 0.4, WEEK_W_MIN, WEEK_W_MAX)
+		right.custom_minimum_size.x = measure
+		# ...but gives way before the oval's column is pushed past the window:
+		# at 960 wide the two came to 49 more than the screen, and Auto-pick
+		# and the right-hand cards ran off its edge.
+		var inner := UiKit.view_width(self) - float(_margin_x())
+		var give_way := func():
+			right.custom_minimum_size.x = clampf(inner - cols.get_theme_constant("separation")
+					- side.get_combined_minimum_size().x, 0.0, measure)
+		side.minimum_size_changed.connect(give_way)
+		give_way.call()
 		var week_page := _week.page()
 		var week := _scroller(week_page, "WeekScroll")
 		week.size_flags_vertical = Control.SIZE_FILL
@@ -172,6 +183,14 @@ func _confirm_button(short := false) -> Button:
 		_notice = "Our side is confirmed for this week."
 		_build())
 	return b
+
+
+## The page's left and right margins together (the insets around it).
+func _margin_x() -> int:
+	var m := _root.get_parent() as MarginContainer
+	if m == null:
+		return 24
+	return m.get_theme_constant("margin_left") + m.get_theme_constant("margin_right")
 
 
 ## A page fills the space and scrolls only if something abnormal (a very long
