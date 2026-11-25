@@ -35,7 +35,7 @@ extends SceneTree
 ##   --rounds N   go:KEY only: play N rounds first (default 6), so the season has numbers
 ##   --stop NAME  go:preseason only: the result filmed coming up on a tap of the
 ##                screen's button (trial, the default, or practice);
-##                go:season_review plays the whole season first
+##                go:season_review and go:offseason play the whole season first
 ## Seeded (2027): the same command films the same club and round.
 
 const Tap := preload("res://tests/tap.gd")
@@ -169,7 +169,8 @@ func _one(effect: String, out: String, secs: float, state, db, club: String) -> 
 				press.answer()
 			else:
 				press.to(_stop)
-		elif key == "season_review":
+		elif key == "season_review" or key == "offseason":
+			# Trades & Contracts opens from the hub once the season is over.
 			# The whole season played, finals and all, and awards night seen.
 			while not state.season.is_regular_done():
 				state.advance()

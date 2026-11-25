@@ -80,7 +80,7 @@ func _run() -> void:
 	for row in SIZES:
 		await _t("_test_draft", [row])
 	for row in [SIZES[0], SIZES[2]]:
-		await _t("_test_screen_field", [row, "selection", "BuilderSearch", Callable()])
+		await _t("_test_screen_field", [row, "selection", "BuilderSearch", _pull_list_up])
 		await _t("_test_screen_field", [row, "training", "", Callable()])
 		await _t("_test_screen_field", [row, "forge", "ForgeClubName", _open_club_form])
 		await _t("_test_screen_field", [row, "list", "NicknameField", _open_nickname])
@@ -279,6 +279,15 @@ func _open_club_form() -> void:
 	if b != null:
 		await Tap.tap(b)
 		await _settle()
+
+
+## On a phone Team selection's list rests as one line (director, 2026-11-25):
+## a real tap on its pull brings the search field up with the cards.
+func _pull_list_up() -> void:
+	var pull: Control = current_scene.find_child("ListPull", true, false)
+	if pull != null and pull.is_visible_in_tree():
+		await Tap.tap(pull)
+		await Tap.steady(current_scene.find_child("ListSheet", true, false))
 
 
 ## A player of your own, his profile, and "Add a nickname".
