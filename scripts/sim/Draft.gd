@@ -52,6 +52,15 @@ var passed_clubs := {}
 var user_passed: Array = []
 ## Intake: how many slots the planned rounds hold (the extra rounds come after).
 var _planned_len := 0
+## Intake: code -> the cap room the club had as the draft opened (GameState).
+## Each pick costs its first-year wage (pick_wage) and must fit what is left,
+## or the club passes (director, 2026-11-25, "Hold room": the draft is checked
+## against the cap). A club with no entry is not checked (a test pool, an
+## older save). room_spent: what its picks have cost tonight.
+var club_room := {}
+var room_spent := {}
+## The money year of the wages (next season's: GameState.finish_intake_draft).
+var room_year := 0
 
 var pool: Array = []
 var budget := 0
@@ -500,7 +509,8 @@ func pass_block_reason() -> String:
 		return "You can only pass on your own pick."
 	var gone := int(leaving.get(user_club, 0))
 	var have := int(existing_sizes.get(user_club, 0)) + count_for(user_club) - gone
-	if have < Contracts.min_list():
+	# A club with no cap room for the pick may always pass.
+	if have < Contracts.min_list() and pick_wage() <= room_left(user_club):
 		if gone > 0:
 			return "With %d retiring, your list has %d players for next season and needs at least %d, so you cannot pass yet." % [gone, have, Contracts.min_list()]
 		return "Your list has %d players and needs at least %d, so you cannot pass yet." % [have, Contracts.min_list()]
@@ -744,6 +754,8 @@ func _draft_pick(code: String, p: Dictionary) -> bool:
 	if not _can_afford_for(code, p):
 		return false
 
+	if intake_mode and club_room.has(code):
+		room_spent[code] = int(room_spent.get(code, 0)) + pick_wage()
 	var paid := price_for(code, p)
 	picked[id] = p
 	club_lists[code].append(p)
@@ -953,7 +965,22 @@ static func _match_player(pi: int, pairs: Array, slots: Array, holder: Array, se
 
 
 func _can_afford_for(code: String, p: Dictionary) -> bool:
+	if intake_mode:
+		return pick_wage() <= room_left(code)
 	return price_for(code, p) <= usable_cap_for(code)
+
+
+## Intake: the first-year wage of the pick on the clock (Contracts.draftee_deal
+## pays him this at the draft's close).
+func pick_wage() -> int:
+	return Contracts.draftee_salary(pick_index + 1, room_year if room_year > 0 else Contracts.money_year)
+
+
+## Intake: the cap room `code` has left tonight (no limit when unchecked).
+func room_left(code: String) -> int:
+	if not club_room.has(code):
+		return 999999999
+	return int(club_room[code]) - int(room_spent.get(code, 0))
 
 
 ## What a club can spend on its next pick: the cap it has left, less enough to
@@ -1955,6 +1982,9 @@ func pick_block_reason(p: Dictionary) -> String:
 			return "Not your pick yet - rival clubs are still choosing."
 		if count() >= pick_limit(user_club):
 			return "Your list is full."
+		if intake_mode and not _can_afford_for(user_club, p):
+			return "Not enough cap room: pick %d is paid %s.\nWe have %s left." % [
+					pick_index + 1, Contracts.money(pick_wage()), Contracts.money(maxi(0, room_left(user_club)))]
 		if not _can_afford_for(user_club, p):
 			var slots_after := target_size - count() - 1
 			if slots_after <= 0:
