@@ -1263,6 +1263,12 @@ func _restore_career(state: Dictionary) -> bool:
 	# is still this season's own (any other cap was set on purpose and stays).
 	if offseason_year > 0 and offseason_year == season_year and salary_cap == Contracts.salary_cap_for_year(season_year):
 		salary_cap = Contracts.salary_cap_for_year(season_year + 1)
+	# A save from before a season's pay cut counted (2020, bug bash batch B):
+	# its cap is the cut one (9,056,000), which contracts at full value never
+	# fit. Its cap becomes the one contracts are written against.
+	var cap_year := season_year + 1 if offseason_year > 0 and offseason_year == season_year else season_year
+	if Contracts.pay_cut(cap_year) > 0.0 and salary_cap == Contracts.era_cap(cap_year):
+		salary_cap = Contracts.salary_cap_for_year(cap_year)
 	fa_closed_year = int(state.get("fa_closed_year", 0))
 	first_offseason = int(state.get("first_offseason", 2))
 	compensation = state.get("compensation", [])
@@ -2792,6 +2798,12 @@ func begin_intake_draft() -> bool:
 	# The National Draft fills the senior list; the Rookie Draft follows.
 	draft.senior_cap = RookieList.senior_spots()
 	draft.user_max_age = Challenge.max_age(self)
+	# Every pick is checked against the cap (director, 2026-11-25, "Hold
+	# room"): a club drafts into the room it has kept, its retirees off the
+	# books, and passes when a pick's wage no longer fits.
+	draft.room_year = season_year + 1
+	for code in active:
+		draft.club_room[str(code)] = _trade_cap(str(code)) - Contracts.payroll(league_lists.get(code, []))
 	# Everyone gone before next season, for every club: the rollover retires
 	# them (Prospects.age_league, at most MAX_RETIRE_PER_CLUB a club), so the
 	# draft fills their places and does not hold them as full ones.
@@ -2900,11 +2912,14 @@ func finish_intake_draft() -> bool:
 		start_season(my_club, league_lists.get(my_club, []))
 		# A Legacy start: a real list longer than its first season allows
 		# (Essendon's 55 in 1990, against 52) delists its least worth before
-		# the season, every club yours included; a short one is filled by
-		# the Rookie Draft's top-up below (bug bash 4, L3).
+		# the season (bug bash 4, L3); a short one is filled by the Rookie
+		# Draft's top-up below. Yours: you pick who goes on the list cut
+		# screen (director, 2026-11-25, "You pick").
 		if EraRules.is_era(season_year):
 			for code in season.lists:
-				_era_trim(code, false)
+				if code != my_club:
+					_era_trim(code, false)
+			_flag_list_cut()
 		# Rebuild: the players who walked out sign with rival clubs for 2027.
 		Challenge.place_gone(self)
 		open_preseason(false)   # saved once, below
@@ -3184,6 +3199,7 @@ func _start_next_season(next_year: int, signed: int) -> void:
 	season_year = next_year
 	# The clubs as they were this year (the Bears until 1997); today's years change nothing.
 	GameDB.apply_era(season_year)
+	_flag_list_cut()
 	if my_first_season == 0 and my_club != "" and not sim_ahead:
 		my_first_season = season_year
 	# Dynamic rivalries cool once a season when two clubs stop meeting.
@@ -3241,8 +3257,15 @@ func _fill_short_lists() -> void:
 				return int(a.get("overall", 0)) > int(b.get("overall", 0))
 			return str(a["id"]) < str(b["id"]))
 		var names: PackedStringArray = []
-		for p in pool.slice(0, short):
+		var signed := 0
+		for p in pool:
+			if signed >= short:
+				break
 			var want := Contracts.wants(p)
+			# The best who fits under the cap (director, 2026-11-25, "Hold room").
+			if not fits_cap(str(code), list, int(want["salary"]), Contracts.next_size(list) + 1):
+				continue
+			signed += 1
 			_sign_fa(p, str(code), int(want["salary"]), int(want["years"]))
 			# Signed after the rollover ticked every contract: his deal starts
 			# this season, not the next, and he is not an off-season re-signing.
@@ -9021,7 +9044,7 @@ func open_offseason(keep_staff := false) -> void:
 			# Talked round this off-season, he cannot be delisted by choice
 			# until the next one: the club keeps him, as yours must.
 			if why == "delist" and ListStings.release_held(p, season_year + 1):
-				why = Contracts.ai_release_reason(p, list, cap_for(code))
+				why = Contracts.ai_release_reason(p, list, _keep_cap(code, list))
 			if why == "cap" and list.size() > Contracts.min_list():
 				# Before a wanted player walks for want of cap room, the club
 				# delists its least valuable expiring players it does not pick
@@ -9033,12 +9056,15 @@ func open_offseason(keep_staff := false) -> void:
 				if not spares.is_empty():
 					why = ai_release_reason(code, p)
 			# He told the club he plays on next season: it keeps him at his
-			# least, cap or not, rather than delist him the same off-season
-			# (bug bash 4, L4).
+			# least rather than delist him the same off-season (bug bash 4,
+			# L4). At the list minimum it keeps one it would delist. Either
+			# way only if he fits: a player who doesn't fit leaves, even at
+			# the minimum, and the draft fills his spot (director,
+			# 2026-11-25, "Hold room").
 			var held := ListStings.release_held(p, season_year + 1)
-			if held:
-				why = ""
-			if why == "" or (list.size() <= Contracts.min_list() and not real_gone):
+			if why == "delist" and (held or (list.size() <= Contracts.min_list() and not real_gone)):
+				why = Contracts.ai_release_reason(p, list, _keep_cap(code, list))
+			if why == "":
 				# Rivals bargain by the same rules: the least he takes for that term
 				# (a club pushing to win now keeps him a little cheaper, as yours does).
 				# Testers leave together later, so count them: the club must still
@@ -9095,8 +9121,9 @@ const TEST_MARKET_AGE := 28.0
 
 ## Legacy mode (EraRules): when next season's lists are smaller (52 to 42 in
 ## 1994, eight rookies to six in 2013), each rival delists its least valuable
-## players (Contracts.worth) down to the new limits, as the real clubs did. Yours makes room by
-## the same rule at the draft (draft_room_short). Today's seasons never shrink.
+## players (Contracts.worth) down to the new limits, as the real clubs did.
+## Yours: you pick who goes on the list cut screen (_flag_list_cut). Today's
+## seasons never shrink.
 func _era_trim_rivals() -> void:
 	if not EraRules.is_era(season_year):
 		return
@@ -9144,12 +9171,36 @@ func _least_worth(list: Array, kind: String) -> Dictionary:
 	return worst
 
 
-## How many your list must lose after the merger: {"": seniors over the
-## era's spots, "A": Category A rookies over theirs}. Empty when none.
+## Your list over this season's limits opens the list cut screen
+## (merger_cut_due, named for the merger it began with): after the Fitzroy
+## merger, and whenever a new Legacy season has fewer spots than your list
+## holds (director, 2026-11-25, "You pick": "The merger's delist screen opens
+## whenever your list is over the year's limit, not only after the merger").
+func _flag_list_cut() -> void:
+	if my_club == "" or season == null or not EraRules.is_era(season_year):
+		return
+	if not list_over(season.lists.get(my_club, [])).is_empty():
+		merger_cut_due = true
+
+
+## The cut that opened the screen was the Fitzroy merger's (its first season,
+## your club the Brisbane Lions): the screen and the news say so.
+func list_cut_after_merger() -> bool:
+	return my_club == LegacyRollover.MERGED_INTO and season_year == LegacyRollover.TALKS_YEAR + 1 \
+			and LegacyRollover.merged_away(self, LegacyRollover.MERGED)
+
+
+## How many your list must lose on the list cut screen: {"": seniors over
+## the season's spots, "A": Category A rookies over theirs}. Empty when none.
 func merger_cut_needs() -> Dictionary:
 	if not merger_cut_due or season == null:
 		return {}
-	var list: Array = season.lists.get(my_club, my_list)
+	return list_over(season.lists.get(my_club, my_list))
+
+
+## How far `list` is over this season's spots: {"": seniors, "A": Category A
+## rookies}, only the kinds that are over.
+func list_over(list: Array) -> Dictionary:
 	var out := {}
 	var sen := RookieList.senior_count(list) - RookieList.senior_spots()
 	if sen > 0:
@@ -9204,8 +9255,8 @@ func merger_delist(ids: Array) -> Dictionary:
 	return {"ok": true, "reason": "%d delisted." % going.size()}
 
 
-## Round 1 with the merger screen never finished: the club delists the rest
-## by the rule every rival uses (_least_worth), and the news says so.
+## Round 1 with the list cut screen never finished: the club delists the
+## rest by the rule every rival uses (_least_worth), and the news says so.
 func _merger_cut_by_club() -> void:
 	if not merger_cut_due:
 		return
@@ -9221,9 +9272,11 @@ func _merger_cut_by_club() -> void:
 			_release(my_club, worst, false, false)
 			HonourBoard.leave(self, worst, "delisted")
 			n += 1
+	var merger := list_cut_after_merger()
 	merger_cut_due = false
 	if n > 0:
-		add_news("contract", "The club delisted %s after the merger, before Round 1." % (
+		add_news("contract", ("The club delisted %s after the merger, before Round 1." if merger
+				else "The club delisted %s before Round 1, to fit the list.") % (
 				"one player" if n == 1 else "%d players" % n))
 
 
@@ -9243,8 +9296,8 @@ func ai_release_reason(code: String, p: Dictionary) -> String:
 	# weighed: only the class ranking replacement_worth keeps is made as before.
 	if Contracts.needed(p, list):
 		_fill_repl_class(code)
-		return Contracts.ai_release_reason(p, list, cap_for(code))
-	return Contracts.ai_release_reason(p, list, cap_for(code), replacement_worth(code, p))
+		return Contracts.ai_release_reason(p, list, _keep_cap(code, list))
+	return Contracts.ai_release_reason(p, list, _keep_cap(code, list), replacement_worth(code, p))
 
 
 ## What replacement_worth leaves behind when it reaches the draft: the class
@@ -9334,7 +9387,7 @@ func _cap_spares(code: String, keep: Dictionary) -> Array:
 	var scratch: Array = (season.lists.get(code, []) as Array).duplicate()
 	var asking := Contracts.ai_price(keep, scratch)
 	var out := []
-	while asking > cap_for(code) - Contracts.payroll(scratch) + int(keep.get("salary", 0)):
+	while asking > _keep_cap(code, scratch) - Contracts.payroll(scratch) + int(keep.get("salary", 0)):
 		if scratch.size() <= Contracts.min_list():
 			return []
 		var spare := _spare_expiring(code, keep, scratch)
@@ -9578,6 +9631,8 @@ func offer_contract(player_id: String, salary: int, years: int) -> Dictionary:
 	salary = maxi(Contracts.senior_min(), salary)
 	if my_payroll() - int(p.get("salary", 0)) + salary > cap_for(my_club):
 		return {"ok": false, "answer": "", "reason": "Not enough cap room for %s a season." % Contracts.money(salary)}
+	if my_payroll() - int(p.get("salary", 0)) + salary > cap_for(my_club) - held_room(Contracts.next_size(my_list)):
+		return {"ok": false, "answer": "", "code": "held_room", "reason": HELD_ROOM_LINE}
 	# Under 50, he may refuse you whatever you offer (director 2026-11-08).
 	if resign_refused(p):
 		refuse_resign(p, Contracts.REFUSED_GOES)
@@ -9724,8 +9779,11 @@ func _finish_t(code: String) -> float:
 	return 1.0
 
 
+## What a club can pay a free agent it signs: its cap room, less the room it
+## holds to fill the rest of its list (held_room) with him on it.
 func _cap_room_of(code: String) -> int:
-	return cap_for(code) - Contracts.payroll(season.lists.get(code, [])) - dead_for(code)
+	var list: Array = season.lists.get(code, [])
+	return cap_for(code) - Contracts.payroll(list) - dead_for(code) - held_room(Contracts.next_size(list) + 1)
 
 
 ## The cap `code` works under: the league's, plus a new club's sign-on money
@@ -10171,6 +10229,8 @@ func offer_free_agent(player_id: String, salary: int, years: int) -> Dictionary:
 				"reason": AiReasons.line(str(terms["code"]), {"player": name})}
 	if salary > cap_room():
 		return {"ok": false, "answer": "", "reason": "Not enough cap room for %s a season." % Contracts.money(salary)}
+	if salary > cap_room() - held_room(Contracts.next_size(my_list) + 1):
+		return {"ok": false, "answer": "", "code": "held_room", "reason": HELD_ROOM_LINE}
 	var reply := Contracts.respond(p, salary, years, int(talks.get("failed", 0)))
 	if str(reply["answer"]) != "accept":
 		var out := {"ok": false, "answer": str(reply["answer"]), "salary": int(reply["salary"])}
@@ -10756,6 +10816,8 @@ func _trade_assets(ids: Array, owner: String) -> Dictionary:
 
 ## Would `club` accept your `mine` (player and pick ids) for its `theirs`?
 func evaluate_trade(club: String, mine: Array, theirs: Array) -> Dictionary:
+	if club == my_club:
+		return {"ok": false, "code": "trade_own_club", "reason": AiReasons.line("trade_own_club")}
 	var night := draft_night_open()
 	if not offseason_open() and not night:
 		return {"ok": false, "code": "trade_closed", "reason": AiReasons.line("trade_closed")}
@@ -10793,8 +10855,47 @@ func evaluate_trade(club: String, mine: Array, theirs: Array) -> Dictionary:
 	# On the night a club judges a pick by its own read of the prospects left
 	# (the same read it drafts with), not the consensus.
 	ctx["prospects"] = _night_prospects(club) if night else trade_prospects()
+	# Each side's cap less what it still owes players it let go (dead_for), as
+	# cap_room counts it: a release leaves part of the contract on the cap.
+	# Each also keeps the room to fill its list (held_room).
+	ctx["hold_take"] = held_take()
 	return Contracts.evaluate_trade(season.lists.get(club, []), give, take,
-			cap_for(club), my_list, salary_cap, float(difficulty_rules()["trade_margin"]), ctx)
+			_trade_cap(club), my_list, _trade_cap(my_club), float(difficulty_rules()["trade_margin"]), ctx)
+
+
+## The most a club's list may be paid after a trade: its cap less its dead cap.
+func _trade_cap(code: String) -> int:
+	return cap_for(code) - dead_for(code)
+
+
+## Hold room (director, 2026-11-25): every offer, re-sign, signing and trade
+## leaves a club the room to fill its list to the minimum and, while the
+## off-season is open, to take three draftees at the National Draft
+## (Contracts.held_room). Nobody goes over the cap to fill a list.
+func held_take() -> int:
+	return DRAFT_MIN_TAKE if offseason_open() else 0
+
+
+## The room a club keeps when next season's list will hold `size` players.
+func held_room(size: int) -> int:
+	return Contracts.held_room(size, held_take())
+
+
+## The most a club may pay the list it keeps: its cap less its dead cap and
+## the room it holds to fill the list (held_room).
+func _keep_cap(code: String, list: Array) -> int:
+	return _trade_cap(code) - held_room(Contracts.next_size(list))
+
+
+## Would `code` stay under its cap, keeping the room it holds (held_room),
+## after paying `pay` more a season with next season's list (`list`) at
+## `size`? The check every draft and list filler uses.
+func fits_cap(code: String, list: Array, pay: int, size: int) -> bool:
+	return pay <= _trade_cap(code) - Contracts.payroll(list) - held_room(size)
+
+
+## The line when a deal fits the cap but not the room held to fill the list.
+const HELD_ROOM_LINE := "That leaves us too little cap room to fill our list."
 
 
 ## What a club weighs a trade with: its cycle, last season's games for
@@ -11045,8 +11146,9 @@ func _club_verdict(club: String, other: String, gives: Array, gets: Array, margi
 		prospects: Dictionary) -> Dictionary:
 	var ctx := trade_context(club)
 	ctx["prospects"] = prospects
-	return Contracts.evaluate_trade(season.lists[club], gives, gets, cap_for(club),
-			season.lists[other], cap_for(other), margin, ctx)
+	ctx["hold_take"] = held_take()
+	return Contracts.evaluate_trade(season.lists[club], gives, gets, _trade_cap(club),
+			season.lists[other], _trade_cap(other), margin, ctx)
 
 
 # ---------------------------------------------------------------------------
@@ -12510,8 +12612,10 @@ func _fa_staying() -> Array:
 ## without changing anything: [[player, "resign1" | "resign2" | "test" |
 ## "release"]], in order. A depth player re-signs if the cap allows, one of
 ## your best 23 tests the market, one who walked, refuses to re-sign with you
-## (resign_refused) or does not fit is let go (at the list minimum he re-signs
-## instead). So is a Legacy man whose real club delisted him now
+## (resign_refused) or does not fit is let go (at the list minimum one who
+## walked re-signs for a season instead, if he fits: one who doesn't fit
+## leaves even then, director 2026-11-25, "Hold room"). Fitting counts the
+## room held to fill the list (held_room). So is a Legacy man whose real club delisted him now
 ## (_real_delistings): his career ends as it does at every club unless you
 ## re-sign him yourself (director, 2026-11-13: careers end "about when he
 ## really did"). _close_free_agency runs this
@@ -12528,27 +12632,32 @@ func _fa_close_plan() -> Array:
 	# aside, so whoever takes yours can always be paid.
 	var room := cap_for(my_club) - my_payroll()
 	var size := my_list.size()
+	# Next season's list counts no retiree (Contracts.next_size).
+	var gone := size - Contracts.next_size(my_list)
 	for p in Contracts.expiring(my_list):
 		if bool(p.get("resigned", false)) or retiring_now(p):
 			continue
 		var walked := bool(p.get("talks", {}).get("walked", false)) or resign_refused(p) 				or int(p.get("real_end", 0)) == season_year + 1
-		if walked and size <= Contracts.min_list():
-			plan.append([p, "resign1"])
-			continue
 		var rise := Contracts.asking_salary(p) - int(p.get("salary", 0))
-		var fits := rise <= room
+		var fits := rise <= room - held_room(size - gone)
+		if walked and size <= Contracts.min_list() and fits:
+			plan.append([p, "resign1"])
+			room -= rise
+			continue
 		# Before free agency (Legacy, to 2011) one of your best 23 re-signs:
 		# there is no market for him to test.
 		if not walked and fits and best22.has(str(p["id"])) and size > Contracts.min_list() 				and EraRules.on("free_agency"):
 			plan.append([p, "test"])
 			size -= 1
 			room -= rise
-		elif not walked and (fits or size <= Contracts.min_list()):
+		elif not walked and fits:
 			plan.append([p, "resign2"])
 			room -= rise
 		else:
 			plan.append([p, "release"])
 			size -= 1
+			# His pay comes off the cap with him.
+			room += int(p.get("salary", 0))
 	return plan
 
 

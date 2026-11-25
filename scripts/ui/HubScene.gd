@@ -41,8 +41,9 @@ func _ready() -> void:
 	if GameState.interview_due and GameState.my_club != "":
 		Router.replace("interview")
 		return
-	# The Fitzroy merger left your list over its spots: you pick who goes
-	# (director 2026-11-15: "I pick, delist screen") before anything else.
+	# Your list is over the season's spots (the Fitzroy merger, or a Legacy
+	# season with fewer spots): you pick who goes (director 2026-11-15: "I
+	# pick, delist screen"; 2026-11-25: "You pick") before anything else.
 	if GameState.merger_cut_left() > 0:
 		Router.replace("merger_cut")
 		return

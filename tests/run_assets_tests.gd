@@ -799,9 +799,19 @@ func _test_banners() -> void:
 	_check(sets_missing.is_empty(), "Every banner set is in the file (%s)" % str(sets_missing))
 	var empty := []
 	var leftover := []
+	# 2026-11-21 (bro: "the plan for banner text is simply milestone stuff / no jokes for now, no
+	# rhymes"): the milestone set holds plain words; every other set stays a placeholder.
+	var milestone_texts := []
+	for kk in d.get("milestone", {}):
+		milestone_texts.append_array(d["milestone"][kk])
 	for t in all:
 		if str(t).strip_edges() == "":
 			empty.append(t)
+		if milestone_texts.has(t):
+			# A milestone names him: his name or his game count is in it.
+			if not ("{display_name}" in str(t) or "{player}" in str(t)):
+				leftover.append(t)
+			continue
 		var rest := str(t)
 		for ph in B.PLACEHOLDERS:
 			rest = rest.replace(ph, "")
@@ -810,7 +820,7 @@ func _test_banners() -> void:
 		if rest.strip_edges() != "":
 			leftover.append(t)
 	_check(not all.is_empty() and empty.is_empty(), "Every banner text has words (%d texts, %d empty)" % [all.size(), empty.size()])
-	_check(leftover.is_empty(), "No old rhyme is left: a text is only fill-ins and a day's name (%s)" % str(leftover.slice(0, 3)))
+	_check(leftover.is_empty(), "No old rhyme is left: a text is only fill-ins and a day's name, a milestone names its man (%s)" % str(leftover.slice(0, 3)))
 	var pairs := []
 	for r in d.get("rivalry", []):
 		var pr: Array = r.get("pair", [])
