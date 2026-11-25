@@ -14,9 +14,15 @@ instance uniform vec4 skin : source_color = vec4(0.76, 0.57, 0.45, 1.0);
 instance uniform vec4 hair : source_color = vec4(0.15, 0.10, 0.07, 1.0);
 // The scalp under his style (Oval3D.SCALP): 0 hair colour (the body's own painted crop, no
 // look), 1 bare skin (bald, and under a style's shell: the shell has its own hairline),
-// 2 clippered (buzz: the skin through the hair).
+// 2 clippered (buzz: the skin through the hair), 3 under a style on the MetaHuman (bare at the
+// forehead's hairline, hair colour behind it), 4 clippered on the MetaHuman (bare at the
+// forehead's hairline, clippered behind it: a buzz or undercut's sides start where hair grows).
 instance uniform int scalp = 0;
 const float BUZZ_COVER = 0.55;
+// A clippered cut's hairline on the MetaHuman (4): how far forward his scalp faces (UV2.y) where
+// the clippered hair fades into his forehead's skin.
+const float HAIRLINE_FROM = 0.45;
+const float HAIRLINE_TO = 0.6;
 uniform vec4 shorts : source_color;
 uniform vec4 boot : source_color = vec4(0.06, 0.06, 0.07, 1.0);
 // The club's kit (GameDB.club_guernsey) as the vignettes' figure material takes it, one kit.
@@ -65,6 +71,17 @@ instance uniform int number = -1;
 // down, and plain shoes; alpha 0 (every player) leaves the kit as it is.
 instance uniform vec4 trousers : source_color = vec4(0.0);
 varying float leg_h;  // the body's height here, metres from his feet (as drawn, standing)
+// The trainer's AFL vest (Oval3DCrew.TRAINER_VEST, row 202): its back print, placed by the vest's
+// own print coordinates (metres: g.x = 0.5 + x across him, g.y = height - 1 m; build_crew.py
+// print_uv) where 2025 broadcasts have it: a white sponsor patch 7 cm under the collar, his
+// one-digit number 20 cm under it, "TRAINER" 37 cm under it, in condensed capitals
+// (tools/oval3d/crew/make_vest_print.py: the word in the mask's top half, digits 0-9 below).
+uniform bool vest_back = false;
+uniform sampler2D vest_print : filter_linear_mipmap, repeat_disable;
+uniform vec4 vest_ink : source_color = vec4(0.06, 0.06, 0.1, 1.0);
+const vec4 VEST_PATCH = vec4(0.375, 0.45, 0.625, 0.53);   // x0, y0, x1, y1 (25 x 8 cm)
+const vec4 VEST_NUMBER = vec4(0.465, 0.26, 0.535, 0.40);  // 7 x 14 cm
+const vec4 VEST_WORD = vec4(0.345, 0.125, 0.655, 0.23);   // 31 x 10.5 cm
 
 // His skin's own detail, from the MetaHuman body's maps (assets/oval3d/skin): pores, knuckles,
 // veins, tendons, the shading of muscle. UV3 (CUSTOM0.xy, mh_to_glb_morph.py's uv_skin) holds
@@ -96,6 +113,11 @@ const vec2 DIGIT_PAD = vec2(16.0 / 96.0, 16.0 / 128.0);
 // The digits' mipmap is picked one level finer than the pixel's own footprint: crisper strokes on
 // a number a dozen pixels tall, still steady as he runs (the plain footprint blurred a 23 into an 11).
 const float DIGIT_SHARPEN = 0.5;
+
+// Hair colour under a style, in the shade its own strands sit in (scalp 3).
+const float UNDER_STYLE_SHADE = 0.6;
+// How much of its green skin facing the ground gives back (see the bounce, fragment()).
+const float GROUND_GREEN_CUT = 0.72;
 
 float region(float f) {
 	float aa = max(fwidth(f), 1e-3);
@@ -375,7 +397,29 @@ void fragment() {
 		jumper = base + (pat - base) * p.x + (pat2 - base) * p.y + (pat3 - base) * p.z;
 	}
 	vec2 g_dx = dFdx(g.xy), g_dy = dFdy(g.xy);
-	if (number >= 0) {
+	if (vest_back) {
+		// Read from behind, left to right: g.x falls (his right is on the viewer's right).
+		vec2 pw = vec2((VEST_WORD.z - g.x) / (VEST_WORD.z - VEST_WORD.x), (VEST_WORD.w - g.y) / (VEST_WORD.w - VEST_WORD.y));
+		vec2 pn = vec2((VEST_NUMBER.z - g.x) / (VEST_NUMBER.z - VEST_NUMBER.x), (VEST_NUMBER.w - g.y) / (VEST_NUMBER.w - VEST_NUMBER.y));
+		vec2 sw = vec2(-1.0 / (VEST_WORD.z - VEST_WORD.x), -0.5 / (VEST_WORD.w - VEST_WORD.y));
+		vec2 sn = vec2(-0.1 / (VEST_NUMBER.z - VEST_NUMBER.x), -0.5 / (VEST_NUMBER.w - VEST_NUMBER.y));
+		float ink = 0.0;
+		bool back = g.z < 0.5;
+		if (back && all(greaterThanEqual(pw, vec2(0.0))) && all(lessThanEqual(pw, vec2(1.0)))) {
+			ink = textureGrad(vest_print, pw * vec2(1.0, 0.5), g_dx * sw, g_dy * sw).r;
+		}
+		if (back && number >= 0 && all(greaterThanEqual(pn, vec2(0.0))) && all(lessThanEqual(pn, vec2(1.0)))) {
+			vec2 at = vec2((float(number % 10) + pn.x) * 0.1, 0.5 + pn.y * 0.5);
+			ink = textureGrad(vest_print, at, g_dx * sn, g_dy * sn).r;
+		}
+		jumper = mix(jumper, vest_ink.rgb, ink);
+		// The patch, its edge a few millimetres soft.
+		vec2 e = min(g.xy - VEST_PATCH.xy, VEST_PATCH.zw - g.xy);
+		float aa = max(length(vec2(g_dx.x, g_dy.x)), length(vec2(g_dx.y, g_dy.y))) + 0.002;
+		if (back) {
+			jumper = mix(jumper, vec3(0.92, 0.92, 0.9), smoothstep(-aa, aa, min(e.x, e.y)));
+		}
+	} else if (number >= 0) {
 		vec3 under = dn >= 100 ? jumper : base;
 		vec4 num = number_on_back(number, g, under, false, dn >= 100, g_dx, g_dy);
 		jumper = mix(jumper, num.rgb, num.a);
@@ -401,7 +445,17 @@ void fragment() {
 	s_col.gb = min(s_col.gb, vec2(s_col.r));
 	s_col = mix(vec3(1.0), s_col, has_maps);
 	vec3 c = skin.rgb * s_col;
-	vec3 scalp_col = scalp == 1 ? skin.rgb : (scalp == 2 ? mix(skin.rgb, hair.rgb, BUZZ_COVER) : hair.rgb);
+	// Bare scalp: on a body with skin maps (the MetaHuman) the mapped skin, so it matches the
+	// forehead below it; flat skin on the plain body.
+	vec3 bare_scalp = mix(skin.rgb, c, has_maps);
+	// 3: under a style on the MetaHuman, bare at his forehead's hairline, his hair colour behind it
+	// (UV2.y, Oval3D._mark_behind_hairline), so a gap between the style's locks reads as hair.
+	float behind = scalp == 3 ? 1.0 - smoothstep(0.3, 0.55, UV2.y)
+			: (scalp == 4 ? 1.0 - smoothstep(HAIRLINE_FROM, HAIRLINE_TO, UV2.y) : 1.0);
+	vec3 clippered = mix(bare_scalp, hair.rgb, BUZZ_COVER);
+	vec3 scalp_col = scalp == 1 ? bare_scalp : (scalp == 2 ? clippered
+			: (scalp == 3 ? mix(bare_scalp, hair.rgb * UNDER_STYLE_SHADE, behind)
+			: (scalp == 4 ? mix(bare_scalp, clippered, behind) : hair.rgb)));
 	c = mix(c, scalp_col, region(UV2.x));
 	// Where two kit regions meet, each field is about 0.5 and neither might pass it, which
 	// leaves a hairline of skin between guernsey and shorts. So the lower garment is drawn
@@ -446,12 +500,23 @@ void fragment() {
 	ALBEDO = c;
 	// Where bare skin shows: its own bumps and sheen. Kit and hair keep the flat cloth.
 	// (The kit as drawn: a guernsey cut past the body's old guernsey colours took the skin's sheen in patches.)
-	float bare = (1.0 - region(UV2.x)) * (1.0 - region(COLOR.a))
+	// A bare scalp (bald, or under a style's own hairline) is skin like the rest of his face.
+	float bare = (1.0 - region(UV2.x) * float(scalp != 1) * behind) * (1.0 - region(COLOR.a))
 		* (1.0 - region(COLOR.b + COLOR.a * step(0.02, COLOR.b))) * (1.0 - max(top, bottom))
 		* has_maps * (1.0 - legs);
 	NORMAL_MAP = vec3(s_nrm.r, 1.0 - s_nrm.g, 1.0);
 	NORMAL_MAP_DEPTH = bare;
 	ROUGHNESS = mix(mix(0.82, WET_CLOTH_ROUGH, oval_wet), s_rough * mix(1.0, WET_SKIN_ROUGH, oval_wet), bare);
+	// Skin lets light through and stays warm in its own shade; without it a pale face's creases
+	// (eyes, nostrils, jaw) took the cool fill light and read olive green. A little of his skin's
+	// own colour, warmed, fills them.
+	EMISSION = c * vec3(0.12, 0.05, 0.03) * bare;
+	// The grass's bounce (rule 2.80) lights whatever faces down, green: under his brows, nose
+	// and jaw that stained the skin. Skin facing the ground gives back less green, so the bounce
+	// lights it as the sky does.
+	vec3 wn = (INV_VIEW_MATRIX * vec4(NORMAL, 0.0)).xyz;
+	float down = clamp(-wn.y * 1.5 + 0.2, 0.0, 1.0) * bare;
+	ALBEDO *= mix(vec3(1.0), vec3(1.05, GROUND_GREEN_CUT, 0.95), down);
 	// Soft skin light (oval3d_skin_light.gdshaderinc) on bare skin only: never on the guernsey or shorts.
 	skin_wrap = bare * (1.0 - top) * (1.0 - bottom) * (1.0 - legs);
 	spec_amt = 0.5;

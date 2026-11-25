@@ -15,6 +15,8 @@ func run() -> void:
 	GameDB.reload()
 	GameState.replay_seed = SUITE_SEED
 	_t("_test_initial_contracts")
+	_t("_test_first_contracts_fit_the_cap")
+	_t("_test_rivals_keep_their_stars_2010")
 	_t("_test_real_money_scale")
 	_t("_test_offseason_flow")
 	_t("_test_offseason_books_are_next_seasons")
@@ -320,6 +322,67 @@ func _test_initial_contracts() -> void:
 	_check(not GameState.offseason_open(), "Trades are closed during the season")
 	_check(not bool(GameState.release_player(str(GameState.my_list[0]["id"]))["ok"]),
 			"Nobody can be released mid-season")
+
+
+## Bug bash 2026-11-23: the 2010 lists priced at rating opened Geelong at 122%
+## of the cap. A list's first contracts fit under its cap, each cut by the
+## same share and never under the minimum; a list that fits keeps its prices.
+func _test_first_contracts_fit_the_cap() -> void:
+	var list := []
+	for i in range(40):
+		list.append({"id": "FIT_%d" % i, "age": 26.0, "value": 600000 if i < 10 else 200000, "overall": 70})
+	var fresh := Contracts.assign_initial(list)
+	_check(fresh.size() == 40, "Every player without a contract gets one (%d)" % fresh.size())
+	var priced := Contracts.payroll(list)
+	var copy := list.duplicate(true)
+	Contracts.fit_to_cap(copy, copy, priced + 1000)
+	_check(Contracts.payroll(copy) == priced, "A list that fits keeps its prices")
+	var room := int(priced * 0.8)
+	Contracts.fit_to_cap(list, fresh, room)
+	_check(Contracts.payroll(list) <= room, "A list over the cap is cut to fit (%d of %d)" % [Contracts.payroll(list), room])
+	_check(int(list[0]["salary"]) > int(list[39]["salary"]), "Its best paid are still its best paid")
+	var tight := []
+	for i in range(40):
+		tight.append({"id": "TIGHT_%d" % i, "age": 26.0, "value": 400000})
+	var t_fresh := Contracts.assign_initial(tight)
+	Contracts.fit_to_cap(tight, t_fresh, 1000)
+	var floor_ok := true
+	for p in tight:
+		if int(p["salary"]) < Contracts.senior_min():
+			floor_ok = false
+	_check(floor_ok, "Nobody is cut under the minimum wage")
+
+
+## Bug bash 2026-11-23 (Legacy lore audit): from the 2010 start Geelong let
+## Corey Enright and Matthew Scarlett go for want of cap room, and North
+## Melbourne signed both; both stayed at Geelong. Every club opens under its
+## cap, settles its best players first and measures room against the price
+## it re-signs at, so Geelong keeps both through the 2010 off-season.
+func _test_rivals_keep_their_stars_2010() -> void:
+	GameState.reset("2010")
+	GameState.career_seed = 1
+	GameState.replay_seed = 1
+	GameState.begin_real_lists()
+	GameState.choose_real_club("WBD")
+	GameState.draft.start_for_user("")
+	GameState.finish_intake_draft()
+	var over := []
+	for code in GameState.season.lists:
+		if Contracts.payroll(GameState.season.lists[code]) > GameState.cap_for(str(code)):
+			over.append("%s %d" % [code, Contracts.payroll(GameState.season.lists[code])])
+	_check(over.is_empty(), "Every club opens 2010 under its cap of %d (%s)" % [GameState.salary_cap, str(over)])
+	var stars := {}
+	for p in GameState.season.lists["GEE"]:
+		if str(p.get("real_name", "")) in ["Corey Enright", "Matthew Scarlett"]:
+			stars[str(p["id"])] = str(p["real_name"])
+	_check(stars.size() == 2, "Enright and Scarlett start at Geelong (%s)" % str(stars.values()))
+	_to_offseason()
+	GameState.open_offseason()
+	var kept := []
+	for p in GameState.season.lists["GEE"]:
+		if stars.has(str(p["id"])):
+			kept.append(stars[str(p["id"])])
+	_check(kept.size() == stars.size(), "Geelong keeps them through the off-season (kept %s)" % str(kept))
 
 
 ## Found 2026-11-15 (director: "my salary cap was also extremely tight
@@ -643,6 +706,7 @@ func _test_offseason_flow() -> void:
 	else:
 		GameState.start_next_season()
 	var ticked := true
+	var unticked := []
 	var sizes_ok := true
 	var off_sizes := []
 	for code in GameState.season.lists:
@@ -661,7 +725,9 @@ func _test_offseason_flow() -> void:
 		for p in list:
 			if int(p.get("contract_years", 0)) < 1 or p.has("resigned"):
 				ticked = false
-	_check(ticked, "Every contract ticks down at the rollover")
+				unticked.append("%s %s years %d%s" % [code, str(p["id"]), int(p.get("contract_years", 0)),
+						" resigned" if p.has("resigned") else ""])
+	_check(ticked, "Every contract ticks down at the rollover (%s)" % ", ".join(unticked.slice(0, 6)))
 	_check(sizes_ok, "Every list stays between %d and %d (%s)" % [Contracts.min_list(), Contracts.MAX_LIST, ", ".join(off_sizes)])
 	# The best young ones stay in the pool a year (_fa_staying, director
 	# 2026-11-11): only those kept players are left.
@@ -2512,14 +2578,26 @@ func _test_mixed_packages() -> void:
 	var year := GameState.season_year
 	var invariant := true
 	var tried := 0
+	var valued := 0
 	for rival in ["COL", "WCE", "SYD", "NTH"]:
 		var theirs := (GameState.season.lists[rival] as Array).duplicate()
 		theirs.sort_custom(func(a, b): return int(a["overall"]) > int(b["overall"]))
 		var mine := GameState.my_list.duplicate()
 		mine.sort_custom(func(a, b): return int(a["overall"]) > int(b["overall"]))
+		# A package the club can deal in (no retiring man, a pick it still holds), so what is
+		# compared is its valuation, not which fault it finds first.
+		mine = mine.filter(func(q): return not GameState.retiring_now(q))
+		theirs = theirs.filter(func(q): return not GameState.retiring_now(q))
+		var their_pick := ""
+		for y in [year, year + 1]:
+			for rd in [1, 2]:
+				var pid := GameState.pick_id(y, rd, rival)
+				if their_pick == "" and str(GameState.pick_asset(pid).get("owner", "")) == rival:
+					their_pick = pid
 		var give := [str(mine[8]["id"]), GameState.pick_id(year, 2, me), str(mine[20]["id"]), GameState.pick_id(year + 1, 1, me)]
-		var take := [str(theirs[10]["id"]), GameState.pick_id(year, 1, rival), str(theirs[25]["id"])]
+		var take := [str(theirs[10]["id"]), their_pick, str(theirs[25]["id"])]
 		var base := GameState.evaluate_trade(rival, give, take)
+		valued += 1 if base.has("in") else 0
 		var g2 := give.duplicate()
 		g2.reverse()
 		var t2 := take.duplicate()
@@ -2527,7 +2605,15 @@ func _test_mixed_packages() -> void:
 		var flipped := GameState.evaluate_trade(rival, g2, t2)
 		invariant = invariant and str(base) == str(flipped)
 		tried += 1
-	_check(tried == 4 and invariant, "Players and picks on both sides: the order they go in changes nothing")
+	_check(tried == 4 and invariant and valued == 4,
+			"Players and picks on both sides: the order they go in changes nothing (%d of 4 valued)" % valued)
+	# A package with two faults gets the same answer whichever way round it goes.
+	var own_man := str(GameState.my_list[0]["id"])
+	var own_pick := GameState.pick_id(year, 1, me)
+	var two_ways := [GameState.evaluate_trade("COL", [own_man], [own_man, own_pick]),
+			GameState.evaluate_trade("COL", [own_man], [own_pick, own_man])]
+	_check(not bool(two_ways[0]["ok"]) and str(two_ways[0]) == str(two_ways[1]),
+			"A package with two faults gives one answer whatever its order (%s)" % str(two_ways[0].get("code", "")))
 	# Five lesser pieces - three fringe players and two late picks - for a star.
 	var refused := true
 	var judged := 0
@@ -3671,7 +3757,7 @@ func _test_rivals_act_in_their_interest() -> void:
 		q["contract_years"] = 1 if (q == spare_a or q == spare_b) else 3
 	var cap_before := GameState.salary_cap
 	var relief := GameState.cap_for(club) - GameState.salary_cap
-	var base := Contracts.payroll(list) - int(star.get("salary", 0)) + Contracts.asking_salary(star) - relief
+	var base := Contracts.payroll(list) - int(star.get("salary", 0)) + Contracts.ai_price(star, list) - relief
 	var sa := int(spare_a.get("salary", 0))
 	var sb := int(spare_b.get("salary", 0))
 	GameState.salary_cap = base - mini(sa, sb)

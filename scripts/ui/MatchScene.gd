@@ -338,7 +338,10 @@ func _fit_docked() -> void:
 ## The play, speed and skip buttons are not drawn and take no tap, click or key
 ## while a break, a call, a sheet or full time is up: they showed through the
 ## dimmed page under every sheet, as buttons that looked live and were not.
-## They keep their place, so the oval and the feed do not move when a sheet closes.
+## On a phone they keep their place, so the oval and the feed do not move when a
+## sheet closes. A PC's sheets cover only the oval, so the buttons step out of the
+## column and the feed takes their room until the sheet closes (director,
+## 2026-11-24: the hidden buttons left an empty strip under a squashed feed).
 func _sync_under_sheet() -> void:
 	if _controls_box == null or not is_instance_valid(_controls_box) or _over == null:
 		return
@@ -347,7 +350,11 @@ func _sync_under_sheet() -> void:
 		if c is Control and (c as Control).visible and not c.is_queued_for_deletion() \
 				and (c as Control).mouse_filter == Control.MOUSE_FILTER_STOP:
 			covered = true
-	_controls_box.modulate.a = 0.0 if covered else 1.0
+	if _pc:
+		_controls_box.modulate.a = 1.0
+		_controls_box.visible = not covered
+	else:
+		_controls_box.modulate.a = 0.0 if covered else 1.0
 	for b in _controls_box.find_children("*", "BaseButton", true, false):
 		(b as BaseButton).mouse_filter = Control.MOUSE_FILTER_IGNORE if covered else Control.MOUSE_FILTER_STOP
 		(b as BaseButton).focus_mode = Control.FOCUS_NONE if covered else Control.FOCUS_ALL
@@ -772,8 +779,9 @@ class MomentumMeter extends Control:
 		draw_rect(Rect2(mid - 1.0, 0, 2.0, size.y), UiKit.TEXT)
 
 
-## A PC's numbers beside the oval. Scoring shots are the scoreboard's and inside
-## 50s are counted as each is played, so both are right to the second. The rest
+## A PC's numbers beside the oval. Inside 50s are counted as each is played, so
+## they are right to the second (scoring shots left out: the scoreboard already
+## says them, director 2026-11-24 "not a useful stat"). The rest
 ## (disposals, marks, tackles, clearances) are the stats sheet's own totals at
 ## the last break, and say which break: the feed of play cannot count them.
 const LIVE_STATS := [["disposals", "Disposals"], ["marks", "Marks"], ["tackles", "Tackles"], ["clearances", "Clearances"]]
@@ -830,8 +838,6 @@ func _paint_live_stats() -> void:
 		head.add_child(club)
 	_live_stats.add_child(UiKit.rule())
 	_live_stats.add_child(head)
-	_live_stats.add_child(_live_row("shots", "Scoring shots",
-			int(_shown_goals[0]) + int(_shown_behinds[0]), int(_shown_goals[1]) + int(_shown_behinds[1])))
 	_live_stats.add_child(_live_row("inside50", "Inside 50s", int(_live_i50[0]), int(_live_i50[1])))
 	if team.size() != 2:
 		return
@@ -1244,8 +1250,14 @@ func _show_coach_box() -> void:
 	var v: VBoxContainer = box["body"]
 	var titles := {1: "Before the first ball-up", 2: "Quarter time", 3: "Half time", 4: "Three-quarter time"}
 	# The break leads with both clubs' colours (director, 2026-10-08).
-	# On a PC the title and the score share one line: the band is wide.
-	var bv: BoxContainer = UiKit.hbox(16) if wide else UiKit.vbox(2)
+	# On a PC the title and the score share one line: the band is wide. Before
+	# the bounce the title shares its line with the fixture, and the forecast
+	# takes the line under them: three across cut the fixture short at 960x540.
+	var bv: BoxContainer = UiKit.hbox(16) if wide and q != 1 else UiKit.vbox(2)
+	var head_row: BoxContainer = bv
+	if wide and q == 1:
+		head_row = UiKit.hbox(16)
+		bv.add_child(head_row)
 	var band := ClubDuel.band(str(_res["home"]), str(_res["away"]), bv, 6 if wide else 14)
 	band.name = "BreakBand"
 	(band.get_child(0) as ClubDuel).live()   # match day's atmosphere settles in (Feel)
@@ -1270,25 +1282,26 @@ func _show_coach_box() -> void:
 		title.autowrap_mode = TextServer.AUTOWRAP_OFF
 		title.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	ClubDuel.on_colour(title)
-	bv.add_child(title)
+	head_row.add_child(title)
 	if q == 1:
-		# Gather Round: the event's name stands for the round number, and the line
-		# may wrap, so the host ground is never cut short on a phone.
+		# Gather Round: the event's name stands for the round number. The line
+		# is never cut short (row 168): it may wrap, but only between its three
+		# parts, so no name is split (each part's own spaces don't break).
 		var label := str(_res.get("label", "Match"))
-		var gather := label.ends_with(GatherRound.NAME)
-		if gather:
+		if label.ends_with(GatherRound.NAME):
 			label = GatherRound.NAME
-		var where := UiKit.ellipsis("%s  ·  %s v %s  ·  %s" % [label,
-				GameDB.club_short(str(_res["home"])), GameDB.club_short(str(_res["away"])), GameDB.ground_shown(_venue())], UiKit.BODY, UiKit.TEXT, true)
+		var parts := [label, "%s v %s" % [GameDB.club_short(str(_res["home"])), GameDB.club_short(str(_res["away"]))],
+				GameDB.ground_shown(_venue())]
+		for i in parts.size():
+			parts[i] = str(parts[i]).replace(" ", "\u00A0")
+		var where := UiKit.lbl("  ·  ".join(parts), UiKit.BODY, UiKit.TEXT, true)
 		where.name = "BreakWhere"
-		if gather:
-			where.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-			where.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
+		where.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		where.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		ClubDuel.on_colour(where)
 		if wide:
-			where.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			where.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		bv.add_child(where)
+		head_row.add_child(where)
 		# The forecast, with the odds it turns at a break (row 160, director
 		# 2026-11-12: "Yes, at a break"): numbers at the gate, a fact, no advice.
 		var fc := _forecast_line(sim)
@@ -1297,11 +1310,6 @@ func _show_coach_box() -> void:
 			fcl.name = "BreakForecast"
 			fcl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			ClubDuel.on_colour(fcl)
-			if wide:
-				# Beside the venue in a row: a wrapping label needs its share of
-				# the width, or it wraps a letter a line (717 tall at 1280x720).
-				fcl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-				fcl.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 			bv.add_child(fcl)
 	else:
 		var sc := UiKit.lbl(MatchNotes.break_score(str(_res["home"]), str(_res["away"]),
@@ -1839,8 +1847,9 @@ func _show_coach_box() -> void:
 # ---------------------------------------------------------------------------
 ## What a call's sheet is headed, and what its row says it is.
 const CALL_TITLES := {"plan": "Game plan", "pep": "Pep talk", "tag": "Tag",
-		"def": "Defensive set-up", "pt": "Play through", "sit": "Sit down with a player",
-		"speech": "Half-time speech"}
+		"def": "Defensive set-up", "pt": "Play through", "sit": "Sit down with a player"}
+## At half time the sit-down's row also holds the speech.
+const TALKS_TITLE := "Talks"
 const CALL_ROW_LABELS := {"pt": "Play through (forward, midfield, back)"}
 
 
@@ -1905,6 +1914,10 @@ func _mount_one_line(c: Dictionary) -> void:
 	var store: VBoxContainer = c["store"]
 	var calls: Dictionary = c["calls"]
 	var wide: bool = c["wide"]
+	if not wide:
+		# A phone's half time holds seven rows (the talks share one): 6 px
+		# between its parts keeps the break on one screen.
+		v.add_theme_constant_override("separation", 6)
 	var sim: MatchSim = c["sim"]
 	var take := func(nm: String, parent := false) -> Control:
 		var n: Control = store.find_child(nm, true, false)
@@ -1991,8 +2004,18 @@ func _mount_one_line(c: Dictionary) -> void:
 		through.append(take.call("FocusPicker_" + str(slot), true))
 	body.call("pt", through)
 	body.call("def", [take.call("DefenceBlock")])
-	body.call("sit", [take.call("SitBlock")])
-	body.call("speech", [take.call("SpeechBlock")])
+	# The talks share one row (director's call via the coordinator, 2026-11-23): at
+	# half time the speech sits under the sit-down, so the phone break still fits
+	# without scrolling.
+	var speech_block: Control = take.call("SpeechBlock")
+	body.call("sit", [take.call("SitBlock"), speech_block])
+	var titles := CALL_TITLES.duplicate()
+	if speech_block != null:
+		titles["sit"] = TALKS_TITLE
+		# Under one Talks heading, each talk keeps its own.
+		var sit_h: Node = (bodies["sit"] as Node).find_child("CallHeading", true, false) if bodies.has("sit") else null
+		if sit_h != null:
+			(sit_h as Control).visible = true
 	((c["who_hook"] as Array)[0] as Callable).call()
 
 	# The rows: what each call is, and its answer now.
@@ -2000,7 +2023,7 @@ func _mount_one_line(c: Dictionary) -> void:
 	rows.name = "CallRows"
 	var row_of := {}
 	for key in order:
-		var r := _call_row(str(key), str(CALL_ROW_LABELS.get(key, CALL_TITLES[key])))
+		var r := _call_row(str(key), str(CALL_ROW_LABELS.get(key, titles[key])))
 		row_of[key] = r
 		rows.add_child(r)
 		rows.add_child(UiKit.rule())
@@ -2133,7 +2156,7 @@ func _mount_one_line(c: Dictionary) -> void:
 			_fit_break_facts(facts)
 		for key in order:
 			var k := str(key)
-			(row_of[key] as Button).pressed.connect(func(): _open_break_sheet(k, str(CALL_TITLES[k]), [bodies[k]], store))
+			(row_of[key] as Button).pressed.connect(func(): _open_break_sheet(k, str(titles[k]), [bodies[k]], store))
 		var one := UiKit.hbox(8)
 		start.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		skip.custom_minimum_size = Vector2(0, 48)
@@ -2148,7 +2171,7 @@ func _mount_one_line(c: Dictionary) -> void:
 		var chosen_sb := UiKit.style(Color.TRANSPARENT, 8, UiKit.RADIUS, UiKit.TEXT)
 		chosen_sb.set_border_width_all(2)
 		var select := func(key: String) -> void:
-			pane_title.text = str(CALL_TITLES[key])
+			pane_title.text = str(titles[key])
 			pane.set_meta("call", key)
 			for k in order:
 				(bodies[k] as Control).visible = str(k) == key
@@ -2295,16 +2318,17 @@ func _call_answer(key: String, calls: Dictionary, c: Dictionary) -> String:
 			return ", ".join(who_through) if any_through else "No one"
 		"sit":
 			var st := sim.talk_now(_my_side, "sit")
+			var sat := "Nobody yet"
 			if not st.is_empty():
-				return "%s: %s" % [named.call(str(st["id"]), "our player"), str(TALK_WORDS[str(st["band"])])]
-			if str(calls.get("sit_id", "")) != "":
-				return "%s, dice not rolled" % named.call(str(calls["sit_id"]), "our player")
-			return "Nobody yet"
-		"speech":
+				sat = "%s: %s" % [named.call(str(st["id"]), "our player"), str(TALK_WORDS[str(st["band"])])]
+			elif str(calls.get("sit_id", "")) != "":
+				sat = "%s, dice not rolled" % named.call(str(calls["sit_id"]), "our player")
+			if sim.current_quarter != 3:
+				return sat
+			# Half time: the speech shares the row.
 			var sp := sim.talk_now(_my_side, "speech")
-			if not sp.is_empty():
-				return "Given: %s" % str(TALK_WORDS[str(sp["band"])])
-			return "Not given yet"
+			var spoke := "speech %s" % str(TALK_WORDS[str(sp["band"])]) if not sp.is_empty() else "no speech yet"
+			return "%s; %s" % [sat, spoke]
 	return ""
 
 

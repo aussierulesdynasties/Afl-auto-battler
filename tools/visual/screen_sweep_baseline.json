@@ -99,6 +99,120 @@
    "small": 0
   }
  },
+ "pc_small": {
+  "coaching": {
+   "built": true,
+   "clipped": 0,
+   "min_font": 12.0,
+   "offscreen": 0,
+   "overlap": 0,
+   "small": 0
+  },
+  "draft": {
+   "built": true,
+   "clipped": 0,
+   "min_font": 13.0,
+   "offscreen": 0,
+   "overlap": 0,
+   "small": 0
+  },
+  "forge": {
+   "built": true,
+   "clipped": 0,
+   "min_font": 15.0,
+   "offscreen": 0,
+   "overlap": 0,
+   "small": 0
+  },
+  "hub": {
+   "built": true,
+   "clipped": 0,
+   "min_font": 13.0,
+   "offscreen": 0,
+   "overlap": 0,
+   "small": 0
+  },
+  "list": {
+   "built": true,
+   "clipped": 0,
+   "min_font": 11.0,
+   "offscreen": 0,
+   "overlap": 0,
+   "small": 0
+  },
+  "main": {
+   "built": true,
+   "clipped": 0,
+   "min_font": 13.0,
+   "offscreen": 0,
+   "overlap": 0,
+   "small": 0
+  },
+  "match": {
+   "built": true,
+   "clipped": 0,
+   "min_font": 13.0,
+   "offscreen": 0,
+   "overlap": 0,
+   "small": 0
+  },
+  "offseason": {
+   "built": true,
+   "clipped": 0,
+   "min_font": 12.0,
+   "offscreen": 0,
+   "overlap": 0,
+   "small": 0
+  },
+  "preseason": {
+   "built": true,
+   "clipped": 0,
+   "min_font": 13.0,
+   "offscreen": 0,
+   "overlap": 0,
+   "small": 61
+  },
+  "season_review": {
+   "built": true,
+   "clipped": 0,
+   "min_font": 12.0,
+   "offscreen": 0,
+   "overlap": 0,
+   "small": 0
+  },
+  "selection": {
+   "built": true,
+   "clipped": 0,
+   "min_font": 11.0,
+   "offscreen": 0,
+   "overlap": 0,
+   "small": 0
+  },
+  "staff": {
+   "built": true,
+   "clipped": 0,
+   "min_font": 13.0,
+   "offscreen": 0,
+   "overlap": 0,
+   "small": 0
+  },
+  "stats": {
+   "built": true,
+   "clipped": 0,
+   "min_font": 13.0,
+   "offscreen": 0,
+   "overlap": 0,
+   "small": 18
+  },
+  "training": {
+   "built": true,
+   "clipped": 0,
+   "min_font": 12.0,
+   "offscreen": 0,
+   "overlap": 0,
+   "small": 0
+  }
+ },
  "phone": {
   "coaching": {
    "built": true,

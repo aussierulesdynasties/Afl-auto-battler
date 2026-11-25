@@ -1,0 +1,1 @@
+source Donchitos/Claude-Code-Game-Studios@abc0de7 (MIT); reference/ copied from .claude/docs/templates, .claude/rules, docs/engine-reference/godot
