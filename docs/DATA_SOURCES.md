@@ -68,6 +68,23 @@ The map data is © OpenStreetMap contributors and is available under the Open Da
 (ODbL). Any release credits must carry that line. No aerial imagery is shipped: Google Earth and
 Esri imagery are used only to check the look by eye.
 
+### Manuka Oval's surroundings (tools/grounds/manuka/town/)
+
+Manuka's town within 1.1 km, Canberra's buildings, roads and trees out to 6.5 km (`manuka_backdrop_part3.glb`, `mid.py`) and the land out to 30 km (`manuka_backdrop_part1.glb`, `_part2.glb`) are built from
+open data only. Credits a release must carry:
+
+- Map data © OpenStreetMap contributors, ODbL: streets, land use, building footprints and storeys, Parliament
+  House's outline and flag mast, the Black Mountain Tower.
+- © Australian Capital Territory, CC BY 4.0 (ACT Government open data, data.act.gov.au): ACT Mature Trees 2020
+  (LiDAR tree crowns and heights), ACT Tree Assets (species) and ACT Building Footprints.
+- Overture Maps Foundation, release 2026-11-18.0 (ODbL): buildings (OpenStreetMap's and Microsoft's ML footprints and
+  heights; past the town every building out to 6.5 km, and in the town the two-storey houses) and road segments.
+- Terrarium elevation tiles (Mapzen and the AWS Open Data registry; sources include Geoscience Australia).
+
+Esri World Imagery and Google Earth 3D were used only to measure: each roof's colour (a median inside its footprint,
+matched to a roofing colour) and the storeys of 176 buildings read by eye (`storeys.json`). No imagery is
+committed or baked into a texture.
+
 ## Cazaly's Stadium, Cairns (tools/grounds/cazalys)
 
 - Map data © OpenStreetMap contributors, ODbL (the surroundings, the plain, the land-use classes).

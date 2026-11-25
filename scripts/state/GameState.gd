@@ -2405,8 +2405,8 @@ func close_first_offseason() -> void:
 
 ## The opening draft's picture of `code`'s list (its senior count and roles),
 ## read again after the list changed under it (a Rebuild's walkouts).
-func _draft_sees_list(code: String) -> void:
-	var arr: Array = league_lists[code]
+func _draft_sees_list(code: String, list = null) -> void:
+	var arr: Array = league_lists[code] if list == null else list
 	var c := {"RUCK": 0, "MID": 0, "DEF": 0, "FWD": 0}
 	var pairs: Array = []
 	for p in arr:
@@ -11955,6 +11955,20 @@ func list_problem() -> Array:
 ## The brief's third line: senior list spots against this year's picks, and
 ## which picks pass when there are more picks than spots (the draft's own
 ## count, draft_list_spots). `going`: your players retiring at the rollover.
+## The draft pick one more senior signing would cost you, in words ("" when
+## it costs none): "Signing him means pick 5 passes too." The next spot you
+## fill takes the last pick that still had one (director, 2026-11-25: "Live
+## count + warning").
+func signing_costs_pick_line() -> String:
+	var s := draft_list_spots()
+	var picks: Array = s["picks"]
+	var open := int(s["open"])
+	if open < 1 or open > picks.size():
+		return ""
+	return "Signing him means pick %d passes%s." % [int(picks[open - 1]),
+			" too" if not (s["passing"] as Array).is_empty() else ""]
+
+
 func draft_spots_line(going: int = -1) -> String:
 	var s := draft_list_spots()
 	if going < 0:
@@ -12001,6 +12015,11 @@ func draft_list_spots() -> Dictionary:
 		return out
 	out["retiring"] = my_list.filter(func(q): return retiring_now(q)).size()
 	if draft != null and draft.intake_mode:
+		if first_offseason == 1 and season.lists.has(my_club):
+			# The opening off-season: the draft read your list when it was
+			# made, so each signing since is counted now, before the draft
+			# opens (director, 2026-11-25: "Live count + warning").
+			_draft_sees_list(my_club, season.lists[my_club])
 		var plan := draft.spots_plan(my_club)
 		out["live"] = true
 		out["cap"] = draft.list_cap()
