@@ -228,6 +228,8 @@ static func _candidate(gs, club: String, bars: Dictionary) -> Dictionary:
 	for p in Contracts.expiring(list):
 		if not _available(gs, p) or role_at(p, bars) == "depth":
 			continue
+		if LegacyRollover.canon_reserved(gs, p):
+			continue   # his story decides where he goes (LegacyRollover)
 		if club != str(gs.my_club):
 			if int(p.get("overall", 0)) >= Expansion.STAR_STAYS_OVERALL:
 				continue
@@ -419,7 +421,10 @@ static func _settle(gs, code: String, st: Dictionary, t: Dictionary) -> void:
 		t["status"] = "stayed"
 		return
 	var wanted := true
-	if club != str(gs.my_club) or str(t["status"]) == "asked":
+	# A story's man (LegacyRollover.canon_offseason): his club tried to keep
+	# him and could not, or let him go. He goes, and it is paid for him.
+	var story := bool(t.get("canon", false))
+	if not story and (club != str(gs.my_club) or str(t["status"]) == "asked"):
 		var why: String = gs.ai_release_reason(club, p)
 		if why == "cap" and not Expansion.FIRST_CALL_CAP_SQUEEZED:
 			t["status"] = "stayed"   # he goes to free agency, as he would have
@@ -428,7 +433,7 @@ static func _settle(gs, code: String, st: Dictionary, t: Dictionary) -> void:
 			t["status"] = "stayed"   # his club re-signs him, as it would have
 			return
 		wanted = why != "delist"
-	if role_at(p, gs._selection_bars(list_of(gs, code))) == "depth":
+	if not story and role_at(p, gs._selection_bars(list_of(gs, code))) == "depth":
 		t["status"] = "stayed"   # he would not get a game there either
 		return
 	var deal := terms(p)

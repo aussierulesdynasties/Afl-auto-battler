@@ -984,7 +984,12 @@ func _offers(body: VBoxContainer) -> void:
 		text.name = "Offer_%d" % i
 		body.add_child(text)
 		var row := UiKit.hbox(8)
-		for b in [["Accept", "OfferAccept_%d" % i, true], ["No thanks", "OfferDecline_%d" % i, false]]:
+		var buttons := [["Accept", "OfferAccept_%d" % i, true]]
+		# A story's offer can't be turned down: none taken, the best goes
+		# through when trades close (LegacyRollover, director 2026-11-25).
+		if str((GameState.trade_offers[i] as Dictionary).get("canon", "")) == "":
+			buttons.append(["No thanks", "OfferDecline_%d" % i, false])
+		for b in buttons:
 			var btn := UiKit.btn(str(b[0]), 14)
 			btn.name = str(b[1])
 			btn.custom_minimum_size = Vector2(0, 44)
