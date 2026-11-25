@@ -3,7 +3,7 @@
 The merge queue spent most of its time waiting for GitHub's free runners (2026-11-22: median
 128 minutes from a group's start to its verdict, with about 9 jobs running at once across every
 PR; 2026-11-23: 4 to 6). Merge-queue groups can run on two runners on the director's PC instead
-(Ryzen 7 9700X, Windows, in WSL Ubuntu, capped at 6 GB). Since 2026-11-25 (director: "turn the
+(Ryzen 7 9700X, Windows, in WSL Ubuntu, capped at 8 GB). Since 2026-11-25 (director: "turn the
 PC runners on") this repo's own pull requests and pushes to main use the PC too, but only when one
 of its runners is online and idle at the moment the run is planned; otherwise they run on GitHub's
 runners, so the PC only ever adds capacity. A third, small runner (`afl-plan`) runs only the
@@ -31,7 +31,9 @@ set `QUEUE_RUNNER` to anything but `pc` to send everything to GitHub.
   sends it back to the queue), so pause between groups when you can.
 - The runners share the PC with the director's own use, games included. On 2026-11-23 six
   uncapped runners took about 15 GB, ran the PC out of memory and crashed a game. The director
-  then chose two runners under a 6 GB cap (below).
+  then chose two runners under a 6 GB cap. On 2026-11-25 the dataset check (a full export, near
+  4.8 GB) and a shard (about 2.5 GB) ran at once and went over it; the director raised the cap to
+  8 GB (31 GB in the PC).
 
 ## Setup (once)
 
@@ -40,7 +42,7 @@ set `QUEUE_RUNNER` to anything but `pc` to send everything to GitHub.
 3. `%UserProfile%\.wslconfig`, a hard cap so the runners can never starve Windows:
    ```
    [wsl2]
-   memory=6GB
+   memory=8GB
    processors=4
    swap=0
    vmIdleTimeout=-1
@@ -56,6 +58,6 @@ set `QUEUE_RUNNER` to anything but `pc` to send everything to GitHub.
 6. Check the runners are "Idle" at Settings > Actions > Runners, then set `QUEUE_RUNNER` to `pc`
    (`gh variable set QUEUE_RUNNER --body pc`).
 
-Two runners fit the 6 GB cap: a shard runs one Godot process, and a cold Godot import of the grounds
-takes 2 GB or more. More runners need a bigger cap, which is for the director to decide.
+Two runners fit the 8 GB cap: a shard runs one Godot process (about 2.5 GB), and the dataset check's
+export peaks near 4.8 GB. More runners need a bigger cap, which is for the director to decide.
 The planning runner (`setup_wsl_runners.sh plan`) runs no Godot and needs a few MB.

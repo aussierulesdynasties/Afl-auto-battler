@@ -55,7 +55,7 @@ on:
         default: ""
 
 # Where the jobs run: GitHub's runners, or the director's PC (self-hosted runners labelled
-# "afl-queue", in WSL, 2 runners capped at 6 GB) while the repo variable QUEUE_RUNNER is "pc"
+# "afl-queue", in WSL, 2 runners capped at 8 GB) while the repo variable QUEUE_RUNNER is "pc"
 # (director, 2026-11-25: "turn the PC runners on"). A merge-queue group takes the PC when one of
 # its runners is online; a pull request from this repo or a push to main takes it only when one is
 # online and idle, so the PC adds to GitHub's runners instead of queueing work behind itself. The

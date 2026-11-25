@@ -12,7 +12,7 @@
 # QUEUE_RUNNER is "pc", except pull requests from forks.
 # The runner is github.com/actions/runner (MIT licence); it updates itself.
 set -euo pipefail
-N="${1:-2}"   # two fit a 6 GB WSL cap (docs/CI_RUNNER.md); six took 15 GB on 2026-11-23
+N="${1:-2}"   # two fit an 8 GB WSL cap (docs/CI_RUNNER.md); six took 15 GB on 2026-11-23
 REPO_URL="https://github.com/aussierulesdynasties/Afl-auto-battler"
 VER="2.338.2"   # GitHub refuses runners older than 2.329.0; they update themselves after
 [ "$(id -u)" = 0 ] || { echo "run as root (sudo)"; exit 1; }
