@@ -1,0 +1,146 @@
+[
+ {
+  "name": "fac_n",
+  "label": "facade from the n",
+  "h": 180,
+  "t": 76,
+  "d": 140,
+  "at": [
+   2.0,
+   112.0,
+   12
+  ]
+ },
+ {
+  "name": "fac_ne",
+  "label": "facade from the ne",
+  "h": 225,
+  "t": 76,
+  "d": 140,
+  "at": [
+   88.3,
+   83.3,
+   12
+  ]
+ },
+ {
+  "name": "fac_e",
+  "label": "facade from the e",
+  "h": 270,
+  "t": 76,
+  "d": 140,
+  "at": [
+   130.0,
+   -3.0,
+   12
+  ]
+ },
+ {
+  "name": "fac_se",
+  "label": "facade from the se",
+  "h": 315,
+  "t": 76,
+  "d": 140,
+  "at": [
+   88.3,
+   -89.3,
+   12
+  ]
+ },
+ {
+  "name": "fac_s",
+  "label": "facade from the s",
+  "h": 0,
+  "t": 76,
+  "d": 140,
+  "at": [
+   2.0,
+   -118.0,
+   12
+  ]
+ },
+ {
+  "name": "fac_sw",
+  "label": "facade from the sw",
+  "h": 45,
+  "t": 76,
+  "d": 140,
+  "at": [
+   -84.3,
+   -89.3,
+   12
+  ]
+ },
+ {
+  "name": "fac_w",
+  "label": "facade from the w",
+  "h": 90,
+  "t": 76,
+  "d": 140,
+  "at": [
+   -126.0,
+   -3.0,
+   12
+  ]
+ },
+ {
+  "name": "fac_nw",
+  "label": "facade from the nw",
+  "h": 135,
+  "t": 76,
+  "d": 140,
+  "at": [
+   -84.3,
+   83.3,
+   12
+  ]
+ },
+ {
+  "name": "stand_n",
+  "label": "stand on the n side from across the field",
+  "h": 0,
+  "t": 78,
+  "d": 120,
+  "at": [
+   2.0,
+   57.0,
+   10
+  ]
+ },
+ {
+  "name": "stand_e",
+  "label": "stand on the e side from across the field",
+  "h": 90,
+  "t": 78,
+  "d": 120,
+  "at": [
+   62.0,
+   -3.0,
+   10
+  ]
+ },
+ {
+  "name": "stand_s",
+  "label": "stand on the s side from across the field",
+  "h": 180,
+  "t": 78,
+  "d": 120,
+  "at": [
+   2.0,
+   -63.0,
+   10
+  ]
+ },
+ {
+  "name": "stand_w",
+  "label": "stand on the w side from across the field",
+  "h": 270,
+  "t": 78,
+  "d": 120,
+  "at": [
+   -58.0,
+   -3.0,
+   10
+  ]
+ }
+]

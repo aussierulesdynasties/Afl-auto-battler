@@ -29,6 +29,9 @@ GROUNDS = {
             "ge_alt": 38.0, "fit": [0.34, 6.68, 0.05, 85.8, 84.43, 72.25]},
     "adelaide": {"lat": -34.915489777922076, "lon": 138.59627692467532, "ge_alt": 26.0,
                  "fit": [-0.4, 1.37, 0.0, -102.0, 91.36, 65.7]},
+    # The Gabba: origin solved from OSM way 4049692 against tools/grounds/gabba/osm/geo.json (2 cm rms).
+    "gabba": {"lat": -27.4858478, "lon": 153.0380888, "ge_alt": 22.0,
+              "fit": [2.47, 3.47, 0.0, 175.0, 86.88, 73.71]},
 }
 # Google Earth's camera, measured 2026-11-22 at Adelaide and the MCG by hovering the mouse over points whose
 # place on screen was worked out beforehand (the status bar gives the lat/lon under the mouse; every point fell
