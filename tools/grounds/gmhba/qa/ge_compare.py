@@ -18,7 +18,7 @@ GROUNDS = {
                  "fit": [-0.4, 1.37, 0.0, -102.0, 91.36, 65.7]},
     # GMHBA: the model's origin from 7 Google Earth wall-foot points (tools/grounds/gmhba/jss_roof/measured.md).
     "gmhba": {"lat": -38.1579976, "lon": 144.3546774, "ge_alt": 20.0,
-              "fit": [-8.89, 11.85, 0.02, -69.8, 94.3, 66.01]},
+              "fit": [-9.4, 11.35, 0.02, -68.3, 93.02, 64.19]},
 }
 FOV = 23.5
 
