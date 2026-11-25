@@ -2,10 +2,10 @@ class_name PremiershipCeremony
 extends Control
 ## The premiership ceremony (director, 2026-11-25; design bible 161, row 170):
 ## the Grand Final's siren opens a stage in the premiers' colours before full
-## time. One final frame for every concept: the stripes band with the cup, the
-## club's ribbons and that year's flag; the guernsey crest; "Premiers" with the
-## club's name under it; four facts (the score, the Norm Smith, the captain, the
-## club's history). Whoever wins the flag gets it, in their colours.
+## time. The final frame: the stripes band with the cup, the club's ribbons and
+## that year's flag; the guernsey crest; "Premiers" with the club's name under
+## it; four facts (the score, the Norm Smith, the captain, the club's history).
+## Whoever wins the flag gets it, in their colours.
 ##
 ## His answers (2026-11-25): the cup comes first, then the legend's farewell,
 ## then the full-time sheet, still. Another club's flag plays in full,
@@ -13,13 +13,10 @@ extends Control
 ## and Android Back leave. Reduced motion shows the final frame at once with
 ## only the sting.
 ##
-## PROTOTYPE: three concepts, one layout, each a table of beats. F7 (debug
-## builds only) cycles 1 -> 2 -> 3 and plays again; --ceremony=N films one.
-## The two he doesn't pick are deleted with the toggle.
-##   1 Broadcast: colour leads; still at 3.6 s.
-##   2 Stadium roar: the word leads (full time's heavy slam); still at 2.3 s.
-##   3 Full goosebumps: the light leads (the siren's breath, a sweep, the cup,
-##     the flag, the stamp); still at 6.3 s.
+## His pick of three (2026-11-25): Full goosebumps, the light leads. The
+## scorebug beats, the roar and a light sweep in the club's colours, the cup,
+## the ribbons coloured, the flag unfurls, the year and "Premiers" stamp, the
+## streamers (in front of the words); still at 6.3 s. The crowd does not dip.
 ## Presentation only: nothing here is read by the match or the season.
 
 signal done
@@ -37,12 +34,10 @@ const ROD_Y := 36.0         ## the flag's rod, in its art's 512 square
 const CREST := 56.0
 const SW := 150.0           ## a stripe across (ClubBackdrop)
 const RUN := 0.55           ## the stripes' lean: across this share of the height
-const SWEEP_W := 120.0      ## Concept 3's light, across
+const SWEEP_W := 120.0      ## the light, across
 const SWEEP_PEAK := 0.35
 const GREY := Color(0.8, 0.8, 0.8)   ## the ribbons as drawn, before the tint
-const DUCK_DB := -12.0      ## Concept 3: the crowd holds its breath
-const DUCK_SECS := 0.4
-const PULSE := 1.06         ## Concept 3: the scorebug's one beat
+const PULSE := 1.06         ## the scorebug's one beat
 const DUR_PULSE := 0.3
 const DUR_PAGE := 0.4
 const ROAR_DB := -6.0
@@ -50,8 +45,9 @@ const SIREN_DB := -6.0
 
 const STRIPES := """
 shader_type canvas_item;
-// The premiers' guernsey stripes (ClubBackdrop's lean), wiped in from the left
-// and settled into the band behind the cup: [top, bottom] in pixels.
+// The premiers' guernsey stripes (ClubBackdrop's lean), uncovered from the left
+// behind the light and settled into the band behind the cup: [top, bottom] in
+// pixels.
 uniform vec2 area = vec2(390.0, 844.0);
 uniform float sw = 150.0;
 uniform float run = 464.0;
@@ -76,9 +72,6 @@ void fragment() {
 }
 """
 
-## The concept this build plays (0 until first asked).
-static var concept := 0
-
 ## Sounds this ceremony started ("siren", "roar"), for tests.
 var heard: Array = []
 ## True once everything is in its final place (the end of the beats, or a tap).
@@ -86,10 +79,8 @@ var at_rest := false
 
 var _facts := {}
 var _premier := ""
-var _crowd: CrowdSound
 var _pulse: Array = []
 var _siren := false
-var _concept := 1
 var _page: ColorRect
 var _stripes: ColorRect
 var _mat: ShaderMaterial
@@ -119,17 +110,6 @@ var _flash_a := 0.0
 var _band_top := 0.0
 var _band_bottom := 0.0
 var _left := false
-
-
-## The concept to play: --ceremony=N on a debug build, else 1.
-static func current() -> int:
-	if concept == 0:
-		concept = 1
-		if OS.is_debug_build():
-			for a in OS.get_cmdline_args() + OS.get_cmdline_user_args():
-				if str(a).begins_with("--ceremony="):
-					concept = clampi(int(str(a).get_slice("=", 1)), 1, 3)
-	return concept
 
 
 ## What the ceremony says for a Grand Final result, or {} when there is no
@@ -212,17 +192,13 @@ static func _captains(club: String) -> String:
 
 
 ## Open the ceremony over `host` (the space under the scoreboard). `opts`:
-## "crowd" the match's CrowdSound (Concept 3 dips it), "pulse" the scorebug's
-## two score labels (Concept 3 beats them once), "siren" true where nothing
-## else has sounded the siren (the hub's sim path).
+## "pulse" the scorebug's two score labels (they beat once), "siren" true where
+## nothing else has sounded the siren (the hub's sim path).
 static func open(host: Control, f: Dictionary, opts := {}) -> PremiershipCeremony:
 	var c := PremiershipCeremony.new()
 	c.name = "PremiershipCeremony"
 	c._facts = f
 	c._premier = str(f.get("premier", ""))
-	var crowd: Variant = opts.get("crowd")
-	if crowd is CrowdSound:
-		c._crowd = crowd
 	c._pulse = opts.get("pulse", [])
 	c._siren = bool(opts.get("siren", false))
 	c._build()
@@ -438,19 +414,13 @@ func _apply_stripes() -> void:
 	_mat.set_shader_parameter("wipe", _wipe_s)
 
 
-## Wipe across from the left: 0 none, 1 the whole screen.
-func _set_wipe(k: float) -> void:
-	_wipe_s = k * (size.x + size.y * RUN + 2.0)
-	_apply_stripes()
-
-
 ## Full screen (0) into the band behind the cup (1).
 func _set_settle(k: float) -> void:
 	_settle_k = k
 	_apply_stripes()
 
 
-## Concept 3's light: its middle at `s` across the lean; the stripes are
+## The light: its middle at `s` across the lean; the stripes are
 ## uncovered behind it and the crest comes up as it passes.
 func _set_sweep(s: float) -> void:
 	_sweep_c = s
@@ -503,7 +473,6 @@ func _set_tint(k: float) -> void:
 # --- The run ----------------------------------------------------------------
 func _start() -> void:
 	at_rest = false
-	_concept = current()
 	if not UiKit.motion_on():
 		_rest()
 		Feel.press("land")
@@ -511,18 +480,12 @@ func _start() -> void:
 	_prime()
 	if _siren:
 		_sound("siren", "crowd_siren.wav", SIREN_DB)
-	match _concept:
-		2:
-			_stadium_roar()
-		3:
-			_goosebumps()
-		_:
-			_broadcast()
+	_beats()
 
 
 ## Everything at its start: nothing on the stage yet.
 func _prime() -> void:
-	_page.modulate.a = 0.0 if _concept == 3 else 1.0
+	_page.modulate.a = 0.0
 	_wipe_s = -SW
 	_settle_k = 0.0
 	_sweeping = false
@@ -536,9 +499,9 @@ func _prime() -> void:
 	if _flag_art != null:
 		_flag_art.scale = Vector2.ONE
 	if _year != null:
-		_year.modulate.a = 0.0 if _concept == 3 else 1.0
+		_year.modulate.a = 0.0
 		_year.scale = Vector2.ONE
-	_set_tint(0.0 if _concept == 3 else 1.0)
+	_set_tint(0.0)
 	_apply_stripes()
 	_sweep.queue_redraw()
 	_flash.queue_redraw()
@@ -595,25 +558,13 @@ func finish_now() -> void:
 	queue_free()
 
 
-## Play it again from the start (F7 in a debug build).
-func replay() -> void:
-	_kill()
-	if is_instance_valid(_streamers):
-		_streamers.queue_free()
-	_streamers = null
-	_restore()
-	_start()
-
-
 func _exit_tree() -> void:
 	_kill()
 	_restore()
 
 
-## The crowd back to its murmur and the scorebug to its size.
+## The scorebug back to its size.
 func _restore() -> void:
-	if _crowd != null and is_instance_valid(_crowd) and _crowd.ducked():
-		_crowd.unduck(0.0)
 	for l in _pulse:
 		if is_instance_valid(l) and l is Control:
 			(l as Control).scale = Vector2.ONE
@@ -624,18 +575,6 @@ func _gui_input(event: InputEvent) -> void:
 	if mb != null and mb.pressed and mb.button_index == MOUSE_BUTTON_LEFT:
 		accept_event()
 		jump_to_rest()
-
-
-## F7 cycles the three concepts and plays again (debug builds only; goes when
-## the director picks one).
-func _unhandled_input(event: InputEvent) -> void:
-	if not OS.is_debug_build():
-		return
-	var k := event as InputEventKey
-	if k != null and k.pressed and not k.echo and k.keycode == KEY_F7:
-		get_viewport().set_input_as_handled()
-		concept = current() % 3 + 1
-		replay()
 
 
 # --- Beats ------------------------------------------------------------------
@@ -668,11 +607,6 @@ func _settled() -> void:
 	Feel.moved.append("pc_settled")
 
 
-func _wipe_in(secs: float) -> void:
-	Feel.moved.append("pc_wipe")
-	_tw().tween_method(_set_wipe, 0.0, 1.0, secs).set_trans(UiKit.Motion.TRANS_SETTLE).set_ease(UiKit.Motion.EASE_SETTLE)
-
-
 func _settle_in(secs: float) -> void:
 	Feel.moved.append("pc_settle")
 	_tw().tween_method(_set_settle, 0.0, 1.0, secs).set_trans(UiKit.Motion.TRANS_IN).set_ease(Tween.EASE_IN_OUT)
@@ -698,37 +632,12 @@ func _grow(c: Control, from: float, secs: float, by := 0.0) -> void:
 
 
 ## The stamp: from LAND_FROM down to its size with the one overshoot.
-func _stamp(c: Control, secs: float, by := 0.0) -> void:
+func _stamp(c: Control, secs: float) -> void:
 	c.scale = Vector2.ONE * UiKit.Motion.LAND_FROM
-	_dy(c, by)
+	_dy(c, 0.0)
 	var tw := _tw()
 	tw.tween_property(c, "scale", Vector2.ONE, secs).set_trans(UiKit.Motion.TRANS_STAMP).set_ease(UiKit.Motion.EASE_STAMP)
 	tw.tween_property(c, "modulate:a", 1.0, UiKit.Motion.DUR_LAND_FADE).set_trans(UiKit.Motion.TRANS_IN).set_ease(UiKit.Motion.EASE_IN)
-	if by != 0.0:
-		tw.tween_method(_dy_setter(c), by, 0.0, secs).set_trans(UiKit.Motion.TRANS_STAMP).set_ease(UiKit.Motion.EASE_STAMP)
-
-
-## Full time's heavy slam, beat for beat (FullTimeMotion): it winds up, slams
-## down to its size, recoils under it and settles. `impact` sounds, flashes and
-## shakes on the slam.
-func _slam(c: Control, at: float, impact: bool) -> void:
-	var k: Array = FullTimeMotion.SLAM_HEAVY
-	_at(at, func() -> void:
-		Feel.moved.append("pc_slam")
-		c.scale = Vector2.ONE * float(k[0])
-		var tw := _tw(false)
-		tw.tween_property(c, "scale", Vector2.ONE * float(k[1]), FullTimeMotion.DUR_WIND) \
-				.set_trans(UiKit.Motion.TRANS_PULSE).set_ease(Tween.EASE_IN_OUT)
-		tw.parallel().tween_property(c, "modulate:a", 1.0, FullTimeMotion.DUR_APPEAR) \
-				.set_trans(UiKit.Motion.TRANS_IN).set_ease(UiKit.Motion.EASE_IN)
-		tw.tween_property(c, "scale", Vector2.ONE, FullTimeMotion.DUR_SLAM) \
-				.set_trans(UiKit.Motion.TRANS_OUT).set_ease(UiKit.Motion.EASE_OUT)
-		if impact:
-			tw.tween_callback(_impact)
-		tw.tween_property(c, "scale", Vector2.ONE * float(k[2]), FullTimeMotion.DUR_RECOIL) \
-				.set_trans(UiKit.Motion.TRANS_IN).set_ease(UiKit.Motion.EASE_IN)
-		tw.tween_property(c, "scale", Vector2.ONE, float(k[3])) \
-				.set_trans(UiKit.Motion.TRANS_SETTLE).set_ease(UiKit.Motion.EASE_SETTLE))
 
 
 ## The impact: the sting and its buzz, the club's flash, the shake.
@@ -781,73 +690,13 @@ func _roar() -> void:
 	_sound("roar", "crowd_goal.wav", ROAR_DB)
 
 
-# --- Concept 1 · Broadcast: colour leads ------------------------------------
-func _broadcast() -> void:
-	_at(0.60, func() -> void:
-		_roar()
-		_wipe_in(0.60))
-	_at(1.20, func() -> void: _settle_in(UiKit.Motion.DUR_BASE))
-	_at(1.30, func() -> void:
-		_rise(_crest, UiKit.Motion.RISE)
-		_rise(_eyebrow, UiKit.Motion.RISE))
-	_at(1.50, func() -> void:
-		Feel.press("land")
-		_rise(_premiers, 12.0, UiKit.Motion.DUR_MILESTONE))
-	_at(1.90, func() -> void:
-		_grow(_trophy, 0.96, UiKit.Motion.DUR_MILESTONE)
-		_grow(_flag, 0.96, UiKit.Motion.DUR_MILESTONE))
-	_at(2.40, func() -> void: _rise(_club, UiKit.Motion.RISE))
-	var end := 2.40 + UiKit.Motion.DUR_BASE
-	for i in range(_callouts.size()):
-		var l: Label = _callouts[i]
-		var t := 2.90 + 0.12 * i
-		_at(t, func() -> void: _rise(l, UiKit.Motion.RISE))
-		end = t + UiKit.Motion.DUR_BASE
-	_at(maxf(end, 1.90 + UiKit.Motion.DUR_MILESTONE), _settled)
-
-
-# --- Concept 2 · Stadium roar: the word leads -------------------------------
-func _stadium_roar() -> void:
-	_at(0.0, func() -> void:
-		_roar()
-		_wipe_in(0.30))
-	_at(0.30, func() -> void: _settle_in(UiKit.Motion.DUR_FAST))
-	_slam(_premiers, 0.30, true)
-	if not _callouts.is_empty():
-		_slam(_callouts[0], 0.30, false)
-	_at(0.80, func() -> void:
-		Feel.buzz("land")
-		_stamp(_trophy, UiKit.Motion.DUR_BASE, -40.0)
-		_stamp(_flag, UiKit.Motion.DUR_BASE, -40.0))
-	_at(1.00, _streamers_now)
-	var groups: Array = [[_crest, _club, _eyebrow]]
-	for i in range(1, _callouts.size()):
-		groups.append([_callouts[i]])
-	var end := 0.0
-	for g in range(groups.size()):
-		var these: Array = groups[g]
-		var t := 1.20 + 0.30 * g
-		_at(t, func() -> void:
-			Feel.press("tick")
-			for c in these:
-				_stamp(c, UiKit.Motion.DUR_FAST))
-		end = t + UiKit.Motion.DUR_FAST
-	_at(end, _settled)
-
-
-# --- Concept 3 · Full goosebumps: the light leads ---------------------------
-func _goosebumps() -> void:
+# --- The beats, in seconds from the siren: the light leads ------------------
+func _beats() -> void:
 	_at(0.0, func() -> void:
 		_beat_scorebug()
-		_tw().tween_property(_page, "modulate:a", 1.0, DUR_PAGE).set_trans(UiKit.Motion.TRANS_IN).set_ease(Tween.EASE_IN_OUT)
-		if _crowd != null and is_instance_valid(_crowd):
-			_crowd.duck(DUCK_DB, DUCK_SECS)
-			Feel.moved.append("pc_duck"))
+		_tw().tween_property(_page, "modulate:a", 1.0, DUR_PAGE).set_trans(UiKit.Motion.TRANS_IN).set_ease(Tween.EASE_IN_OUT))
 	_at(1.20, func() -> void:
 		_roar()
-		if _crowd != null and is_instance_valid(_crowd):
-			_crowd.unduck(DUCK_SECS)
-			Feel.moved.append("pc_unduck")
 		Feel.moved.append("pc_sweep")
 		_sweeping = true
 		var tw := _tw(false)
