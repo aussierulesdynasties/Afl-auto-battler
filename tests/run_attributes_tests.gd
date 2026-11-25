@@ -1,6 +1,7 @@
 extends SceneTree
 ## godot --headless --path . --script tests/run_attributes_tests.gd
 ## Run a headless editor import first on a fresh clone to register global classes.
+## Seeded by design: nothing random runs; it compares fixed lists and stored ratings.
 
 
 func _initialize() -> void:
