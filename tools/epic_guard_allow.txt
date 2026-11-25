@@ -9,11 +9,13 @@
 # MPFB (MakeHuman, CC0) body and what is cut from it
 assets/oval3d/player_average.glb                            MPFB average footballer, MakeHuman CC0 (tools/oval3d/export_player_glb.py)
 assets/oval3d/crew_average.glb                              crew clothes cut from the MPFB body (tools/oval3d/crew/build_crew.py)
+assets/oval3d/crew_vest_print.png                           trainer vest print, drawn by us with Barlow (SIL OFL) (tools/oval3d/crew/make_vest_print.py)
 assets/oval3d/player_average_soccer_cleat_3d_model_basecolor.jpg   Tripo boot texture, made by us from a prompt
 assets/oval3d/player_mh_soccer_cleat_3d_model_basecolor.jpg        the same Tripo boot texture, Godot-extracted from the MetaHuman body file's import
 
 # Animation loops (no mesh): Epic Game Animation Sample clips, kept by the director's decision of 2026-11-23
 assets/oval3d/player_loops.glb                              run, carry and stand loops (#1689)
+assets/oval3d/crew_clips.glb                                umpire and crew clips keyed by hand, no mesh (tools/oval3d/crew/key_crew_clips.py, #2068)
 
 # Crowd: Mixamo bodies baked to vertex animation (tools/oval3d/build_crowd_set.gd)
 assets/oval3d/crowd_set.res                                 Mixamo crowd bodies, baked
