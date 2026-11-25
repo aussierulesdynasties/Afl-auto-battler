@@ -105,8 +105,10 @@ for u in np.arange(0, 7.2, 1.8): t.vl(u, 0.1, 1.0, 5.2, (200, 204, 206))
 t.hl(5.2, 0.25, (200, 204, 206)); t.hl(1.0, 0.15, (170, 174, 176)); t.streaks(20, 5.3, 14); t.grime_bottom(1.0)
 t.save('fac_boon')
 
-# ---- Members / north building (GE i330, x330): two glazed levels, white slab edges, dark tinted glass, mullions 1.5 m
-t = T(6.0, 11.0, (40, 52, 62), n=3, bl=(1.5, 6))
+# ---- Members / north building (GE i330, x330): two glazed levels, white slab edges, tinted glass, mullions 1.5 m.
+# The glass reads slate grey-blue from the field (GE in_S median 37,63,85). On the PC 40,52,62 rendered navy at
+# half that and 66,86,98 at 26,48,79 (r5); scaled by GE over r5 channel by channel (the sky adds the blue)
+t = T(6.0, 11.0, (94, 113, 106), n=3, bl=(1.5, 6))
 for z0, z1 in ((0.0, 4.6), (5.6, 10.2)):
     t.a[t.Y(z1):t.Y(z0)] *= np.linspace(1.25, 0.85, t.Y(z0) - t.Y(z1))[:, None, None]
     for u in np.arange(0, 6, 1.5): t.vl(u, 0.08, z0, z1, (150, 158, 164))
@@ -238,17 +240,21 @@ fac_ponting()
 
 
 if __name__ == '__main__':
-    # ---- stepped rows (2026-11-22 rebuild): the treads and risers the 3D seats stand on. Precast grey concrete,
-    # the tread worn paler along its front edge, the riser darker with a drip line under the nosing.
-    t = T(4.0, 1.0, (150, 152, 150), n=3, bl=(1.0, 6)); t.vl(0.02, 0.03, mul=0.8); t.save('tread')
-    t = T(4.0, 1.0, (112, 116, 118), n=3, bl=(1.0, 6)); t.vl(0.02, 0.03, mul=0.8); t.streaks(10, 0, 1, mul=0.85)
+    # ---- stepped rows (2026-11-22 rebuild): the treads and risers the 3D seats stand on. Pale precast concrete
+    # (Google Earth from the field reads it near white between the rows and down the aisles; the PC seat check of
+    # 2026-11-23 showed 150/112 grey turning each seat into a speck and the rows into moire), the riser a shade
+    # darker with a drip line under the nosing.
+    t = T(4.0, 1.0, (198, 200, 198), n=3, bl=(1.0, 6)); t.vl(0.02, 0.03, mul=0.9); t.save('tread')
+    t = T(4.0, 1.0, (172, 176, 178), n=3, bl=(1.0, 6)); t.vl(0.02, 0.03, mul=0.9); t.streaks(10, 0, 1, mul=0.92)
     t.save('riser')
     # vomitory portals: pale precast concrete, and the tunnel's own dark painted inside
     t = T(3.0, 3.0, (176, 178, 176), n=3, bl=(1.0, 7)); t.streaks(8, 0, 3, mul=0.88); t.save('vom_conc')
     t = T(2.0, 2.0, (34, 36, 40), n=3, bl=(1.0, 4)); t.save('vom_dark')
-    # the tier front between the Ponting's tiers: a dark LED ribbon board (blank: no sponsors), a pale capping
-    t = T(6.0, 3.6, (28, 30, 36), n=3, bl=(1.0, 3))
-    for u in np.arange(0, 6, 0.6): t.vl(u, 0.02, mul=0.7)
+    # the tier front between the Ponting's tiers: grey precast concrete as Google Earth shows it (PC check r5: the
+    # whole face dark read as a thick navy band), a 1 m LED ribbon board in it (blank: no sponsors), a pale capping
+    t = T(6.0, 3.6, (160, 162, 160), n=3, bl=(1.0, 6)); t.grime_bottom(0.6, 0.85)
+    t.rect(0, 6, 1.3, 2.3, (28, 30, 36))
+    for u in np.arange(0, 6, 0.6): t.vl(u, 0.02, 1.3, 2.3, mul=0.7)
     t.rect(0, 6, 3.4, 3.6, (180, 182, 180)); t.hl(2.6, 0.04, mul=0.6); t.save('ribbon')
     # modelled facades (2026-11-22): each panel is its own face, so the textures are plain finishes only
     for name, col in (('skin_silver', (220, 226, 230)), ('skin_silver2', (196, 206, 214)), ('skin_pale', (184, 194, 202)),

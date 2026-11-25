@@ -100,7 +100,7 @@ save('mesh', a, (1.0, 1.0))
 
 # ---- roof sheeting and steel ----
 deck('roof_white', (222, 224, 224)); deck('roof_grey', (166, 170, 172)); deck('roof_w', (192, 194, 200), grime=10, rot=True, lap=False); deck('roof_soffit', (204, 206, 206), grime=12)
-deck('roof_club', (188, 190, 190), pitch=0.6, grime=20)
+deck('roof_club', (174, 174, 172), pitch=0.6, grime=20)   # GE t_* tiles: warm mid-grey, darker than the stand's sheeting
 a = base(512, 1024, (232, 234, 232), 4, 16); xu = 1024 / 4.0
 for k in range(2): a[:, int(k * 2 * xu):int(k * 2 * xu) + 6] *= 0.7
 a[470:] *= 0.82; weather(a, 0.14, 14, 40); save('fascia', a, (4.0, 2.0))
@@ -370,6 +370,22 @@ im.paste(Image.new('RGBA', t.size, (246, 246, 242, 255)), (10, 10), t); save('si
 a = base(512, 512, (165, 128, 110), 10, 22); a += noise(512, 512, 40, 14)[:, :, None] * np.array([1.0, 0.8, 0.7])
 st = R.random((512, 512)) > 0.992; a[st] = a[st] * 0.75 + np.array([200, 190, 178]) * 0.25
 save('earth', a, (4.0, 4.0))
+
+# grandstand roof sheeting (GE 3D 2026-11-22: silver-grey, 1.12x as bright as bldg_w's roof_w in the same top-down shot); appended last so the
+# random stream of every texture above stays as it was
+deck('roof_gs', (204, 206, 210), pitch=0.25, grime=14, rot=True)
+
+deck('roof_fawn', (206, 178, 140), pitch=0.6, grime=16)   # GE t_se: fawn membrane patches on the club's middle roof
+deck('roof_saw', (214, 220, 222), pitch=0.2, grime=8)     # GE cl_se: pale translucent sheeting in the Mulgrave Rd bays
+a = base(512, 512, (150, 178, 174), 3, 8); xu = 512 / 3.0   # GE cc_face: pale teal-grey panels on the club's field edge, 1.5 m modules
+for k in range(2): a[:, int(k * 1.5 * xu):int(k * 1.5 * xu) + 3] *= 0.72
+a[254:258] *= 0.8; save('clad_teal', a, (3.0, 3.0))
+
+# GE s_a/s_d: solar panels, dark blue cells in silver frames, 1.0 x 1.7 m modules (UV 1 tile per module)
+a = base(256, 256, (30, 42, 78), 2, 6)
+for k in range(1, 6): a[:, k * 256 // 6] = a[:, k * 256 // 6] * 0.6 + 50
+for k in range(1, 10): a[k * 256 // 10] = a[k * 256 // 10] * 0.6 + 50
+a[:, :5] = (172, 176, 180); a[:5] = (172, 176, 180); a[100:104] *= 1.15; save('solar', a, (1.0, 1.7))
 
 json.dump(TILE, open(OUT + 'tiles.json', 'w', newline=''), indent=0)
 for nm in sorted(TILE):
