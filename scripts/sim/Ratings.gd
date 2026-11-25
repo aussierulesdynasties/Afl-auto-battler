@@ -294,11 +294,32 @@ static func rate_on_honours(p: Dictionary) -> void:
 		p["season_overall"] = int(p.get("overall", 0))   # what the data season alone said
 	# Honours speak for a full season, as the record does (rate_on_record).
 	var games := maxf(RECORD_SHORT, effective_games(p))
-	p["attr"] = Prospects.fit_attributes(p["attr"], role, float(floor_ovr), games)
+	var fitted := Prospects.fit_attributes(p["attr"], role, float(floor_ovr), games)
+	p["attr"] = top_up_to(fitted, role, floor_ovr, games)
 	p["sample"] = games
-	p["overall"] = maxi(floor_ovr, rate_overall(p["attr"], role, games))
+	# His overall is what his skills say, as on every load (GameState.
+	# _recompute_ratings): a label lifted over his skills fell a point on load.
+	p["overall"] = rate_overall(p["attr"], role, games)
 	p["value"] = salary_value(p["overall"])
 	p["rated_on_honours"] = true
+
+
+## The fit shifts every skill by one offset and rounds each, which can leave
+## the skills a point under the target (120 honoured players across the 1990,
+## 2000, 2010 and 2020 starts, each one point short, bug bash 2026-11-25).
+## Closes that point one skill at a time, as GameDB.set_player_ovr closes a
+## hand-set rating; temperament (Prospects.UNRATED_KEYS) stays. The director's
+## call (2026-11-25): "Top up his skills".
+static func top_up_to(a: Dictionary, role: String, target: int, games: float) -> Dictionary:
+	var out := a.duplicate()
+	for _round in range(20):
+		for k in out:
+			if rate_overall(out, role, games) >= target:
+				return out
+			if k in Prospects.UNRATED_KEYS or int(out[k]) >= 99:
+				continue
+			out[k] = int(out[k]) + 1
+	return out
 
 
 ## A past start's injured star (bug bash 2026-11-23: Tony Liberatore, the

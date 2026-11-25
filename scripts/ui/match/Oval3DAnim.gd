@@ -37,6 +37,12 @@ const TURN_AIR := 12.0          # rad/s with both feet off the turf
 ## The carrier looks where he runs, not at the ball in his hands.
 const LOOK := [["neck_01", 35.0, 20.0, 0.5], ["head", 45.0, 25.0, 1.0]]  # bone, yaw, pitch, influence
 const LOOK_FOLLOW := 8.0       # 1/s: how fast the eyes catch a moving ball
+## A man lying in a take is all of him on the turf, not only his hips: these bones, where
+## they are near the ground, are handed to the director so runners keep off him
+## (MatchDirector.lying_spots, MatchMotion.keep_off).
+const BODY_BONES := ["pelvis", "head", "hand_l", "hand_r", "calf_l", "calf_r", "foot_l", "foot_r"]
+const SIDESTEP := 6.0           # m/s: the fastest he is drawn stepping round a man lying down
+const LIE_HIGH := 0.7          # m: a bone lower than this is lying on the turf
 const BALL_R := 0.09          # m: the ball on the turf (Oval3D.BALL_R)
 
 ## Tackles (row 197). Each pair is one motion-capture take of two men, tackler and tacklee,
@@ -46,6 +52,8 @@ const BALL_R := 0.09          # m: the ball on the turf (Oval3D.BALL_R)
 ## stands, the take turned about him so its tackler comes from where ours is.
 const PAIRS := "res://assets/oval3d/tackle_pairs.json"
 const LEAD := 0.3              # clip s: the run-in starts at least this long before the contact
+## m: how much further out than a take's own run-in its clip may start.
+const RUN_IN_SLACK := 3.0
 const CHASE_LEAD := 0.12       # s: the most of a take a chase-down plays before its contact
 ## The takes were captured standing: their tacklee waits for the hit and their tackler walks in.
 ## Joined by a man running flat out, the take stopped him dead (a 15 m/s carrier stood still for
@@ -64,6 +72,21 @@ const HURRY := 2.0             # how fast the get-up plays once the play has mov
 ## clip's own 2.7-3.1 s from contact to standing plays faster to fit (MatchDirector.TAKE_UP
 ## lets him move from then).
 const UP_IN := 1.5
+const UP_LATE := 0.25           # s: the get-up never squeezed into less than this
+## The pair is slid, as one, toward where the director has the two men: the clip's own
+## travel (a fall carried on, a get-up stepping off) left the picture metres off the play
+## (3D bug bash, 2026-11-23: 5-10 m). It follows over about FOLLOW_S, never faster than SLIDE.
+## It turns, too, about the middle of the two, so the line from tackler to tackled runs the
+## way the director has it (TURN_S, never faster than SWING).
+const FOLLOW_S := 0.05
+const SLIDE := 12.0            # m/s, on their feet (the run-in, the standing tail)
+const TURN_S := 0.12
+const SWING := 2.0             # rad/s, on their feet
+## Down on the turf, between the contact and up_s, a slide reads as skating: it creeps.
+const SLIDE_DOWN := 3.0        # m/s
+const SWING_DOWN := 1.2        # rad/s
+const UP_EARLY := 0.6           # clip s: this short of up_s he is standing enough to go
+const GO_IN := 0.3             # s
 const FAR := 5.0               # m: his token this far from him = the play has moved on
 const CLOSE_EARLY := 0.8       # s: a slowing tackler's take may start this much before its usual lead
 const MOVE_OFF := 0.3          # m/s: his token moving this fast = the play wants him (a take ends at up_s)
@@ -134,6 +157,7 @@ var _pairs := {}               # take name -> its tackle_pairs.json entry
 var _clock := 0.0              # s of animation time
 var _rig := Transform3D()      # a figure's node -> its skeleton
 var _pelvis := -1
+var _body := PackedInt32Array()  # BODY_BONES' indices
 var _hips := {}                # animation name -> [pelvis position track, rotation track]
 var _in: Array = []            # per player: the pair he is in, {} for none
 var _blend: Array = []         # per player: the pose he is easing out of, {} for none
@@ -182,6 +206,10 @@ func _init(p_director: MatchDirector, p_players: Array) -> void:
 		var p: Dictionary = players[0]
 		var skel: Skeleton3D = p["skel"]
 		_pelvis = skel.find_bone("pelvis")
+		for b in BODY_BONES:
+			var bi := skel.find_bone(b)
+			if bi >= 0:
+				_body.append(bi)
 		var n: Node = skel
 		while n != null and n != p["node"]:
 			_rig = (n as Node3D).transform * _rig
@@ -322,6 +350,7 @@ func _add_look(p: Dictionary) -> void:
 ## clip starts now), and every running pair's clip time.
 func frame(dt: float) -> void:
 	_clock += dt
+	director.lying_spots.clear()
 	var ahead := director.tackle_ahead()
 	if not ahead.is_empty() and not _pairs.is_empty():
 		var who := int(ahead["who"])
@@ -332,8 +361,10 @@ func frame(dt: float) -> void:
 			# Start as soon as the run-in of some take, from the distance he is out, fits.
 			var need := LEAD
 			var d := _drawn(who).distance_to(_drawn(v))
+			var run_in := 0.0
 			for name in _pairs:
 				need = maxf(need, _lead(name, d))
+				run_in = maxf(run_in, float((_takes[name]["dist"] as Array)[0]))
 			var run_down: bool = director.chasing_down()
 			if run_down:
 				# The takes' carriers stand or walk into them: in a run-down the carrier runs on in
@@ -346,7 +377,10 @@ func frame(dt: float) -> void:
 			# (director 2026-11-22: "the tackler is standing by idly waiting for the tackle").
 			var slowing := (_pace[who] as Vector2).length() < RUN_FROM and due <= need + CLOSE_EARLY \
 					and not run_down
-			if due <= need or slowing:
+			# ...and no further out than a take's own run-in (and a stride or two): from a long
+			# way off he runs in on his legs first, not on the clip (seed 31: a 30 m run-in on a
+			# take a few metres long, the clip dragging him). A run-down joins at the hit.
+			if (due <= need or slowing) and (run_down or d <= run_in + RUN_IN_SLACK):
 				_start(who, v, false)
 	var seen := {}
 	for pr in _in:
@@ -354,6 +388,17 @@ func frame(dt: float) -> void:
 			continue
 		seen[pr["id"]] = true
 		_advance(pr, dt)
+
+
+## An interchange (Oval3D._send_off): the man coming on is drawn at `from` (the gate) and
+## runs to his slot's spot, as a man back from a tackle does (GAP_CLOSE to GAP_MAX).
+func run_on(i: int, from: Vector2) -> void:
+	if i < 0 or i >= _gap.size():
+		return
+	if not (_in[i] as Dictionary).is_empty():
+		_leave(i)
+	_back[i] = Vector2.INF
+	_gap[i] = from - (director.tokens[i]["pos"] as Vector2)
 
 
 ## Animation seconds until the chase from `who` to `v` reaches MatchDirector's REACH.
@@ -372,6 +417,7 @@ func _advance(pr: Dictionary, dt: float) -> void:
 	if pr["fresh"]:
 		pr["fresh"] = false
 		return
+	_follow(pr, dt)
 	var cs := float(pr["cs"])
 	var c := float(pr["c"])
 	var rate := 1.0
@@ -390,14 +436,109 @@ func _advance(pr: Dictionary, dt: float) -> void:
 		# Down and back up in UP_IN; then the take's standing tail at its own pace.
 		if c < float(pr["up"]):
 			rate = maxf(1.0, (float(pr["up"]) - cs) / UP_IN)
+			# ...and up by the time the director lets him go (MatchDirector.TAKE_UP after its
+			# tackle): a contact landing late left him on the deck while his man ran on, 10-17 m
+			# behind him (3D bug bash, 2026-11-23).
+			var tk: Dictionary = director.tokens[int(pr["who"])]
+			if tk.has("tackle_t"):
+				var left := (MatchDirector.TAKE_UP - (director.time - float(tk["tackle_t"]))) / MatchDirector.TEMPO
+				rate = maxf(rate, (float(pr["up"]) - c) / maxf(left, UP_LATE))
 		# The get-up hurries when the play has gone on without them.
 		for i in [int(pr["who"]), int(pr["victim"])]:
-			if _in[i] == pr and _drawn(i).distance_to(director.tokens[i]["pos"]) > FAR:
+			if _in[i] != pr:
+				continue
+			if _drawn(i).distance_to(director.tokens[i]["pos"]) > FAR:
 				rate = maxf(rate, HURRY)
+			# The director has him running again while the clip still has him getting up: he
+			# is up and away within GO_IN.
+			if c >= cs and c < float(pr["up"]) \
+					and (director.tokens[i]["vel"] as Vector2).length() * MatchDirector.TEMPO > RUN_FROM:
+				rate = maxf(rate, (float(pr["up"]) - c) / GO_IN)
 	var nc := c + dt * rate
 	if c < cs and nc >= cs:
 		_hit(pr)
 	pr["c"] = nc
+
+
+## Keep the pair and the director together. A man the director has down in this take (from
+## the contact until MatchDirector.TAKE_UP after it) lies where the take puts him: his token is
+## moved there, as the director's "his body is where the take put him" means. The fall carries
+## the two of them 2-4 m, which the director does not know (3D bug bash, 2026-11-23: the picture
+## 5-10 m off the play, or, when the picture chased the tokens, the pile skating at 3-7 m/s).
+## While both are on their feet (the run-in, the standing tail) the pair is turned and slid,
+## as one, toward the director's places: the line between them to the director's, then the
+## mean of how far each is drawn from his token (each is then off by half the difference
+## between the clip's spacing and the director's). The run masks that slide.
+func _follow(pr: Dictionary, dt: float) -> void:
+	if dt <= 0.0:
+		return
+	var who := int(pr["who"])
+	var v := int(pr["victim"])
+	var adj: Transform3D = pr["adj"]
+	var down := float(pr["c"]) >= float(pr["cs"]) and float(pr["c"]) < float(pr["up"])
+	var swing := SWING_DOWN if down else SWING
+	var slide := SLIDE_DOWN if down else SLIDE
+	var free: Array = []
+	for i in [who, v]:
+		if _in[i] != pr:
+			continue
+		if float(pr["c"]) >= float(pr["cs"]) and not director._on_feet(i):
+			director.tokens[i]["pos"] = _drawn(i)
+			_lying(i)
+		else:
+			free.append(i)
+	if free.size() == 2:
+		var dk := _drawn(who)
+		var dv := _drawn(v)
+		var drawn := dv - dk
+		var want: Vector2 = (director.tokens[v]["pos"] as Vector2) - (director.tokens[who]["pos"] as Vector2)
+		if drawn.length() > 0.4 and want.length() > 0.4:
+			# A turn about UP by phi takes a line at angle a on the turf to a - phi.
+			var phi := wrapf(drawn.angle() - want.angle(), -PI, PI)
+			phi = clampf(phi * (1.0 - exp(-dt / TURN_S)), -swing * dt, swing * dt)
+			var mid := (dk + dv) * 0.5
+			var m3 := Vector3(mid.x, 0.0, mid.y)
+			adj = Transform3D(Basis(Vector3.UP, phi), m3 - Basis(Vector3.UP, phi) * m3) * adj
+	# Only when neither is down: one lying where the take put him holds the pair still.
+	if free.size() == _count_in(pr) and not free.is_empty():
+		var err := Vector2.ZERO
+		for i in free:
+			err += (director.tokens[i]["pos"] as Vector2) - _drawn(i)
+		var mv := (err / free.size() * (1.0 - exp(-dt / FOLLOW_S))).limit_length(slide * dt)
+		adj.origin += Vector3(mv.x, 0.0, mv.y)
+	pr["adj"] = adj
+
+
+## He is drawn round a man lying in a take, never through him: his token keeps off the body
+## (MatchMotion.keep_off), but where he is drawn off his token (back from a tackle, the
+## draw-apart) he could still run over it. He sidesteps at SIDESTEP at most.
+func _step_round(i: int, pos: Vector2, dt: float) -> void:
+	if director.lying_spots.is_empty():
+		return
+	var here: Vector2 = pos + (_gap[i] as Vector2)
+	var want := here
+	for sp in director.lying_spots:
+		var d := want - sp
+		if d.length() < MatchMotion.LIE_CLEAR:
+			var out := d.normalized() if d.length() > 0.001 else Vector2.RIGHT.rotated(float(i))
+			want = sp + out * MatchMotion.LIE_CLEAR
+	if want != here:
+		_gap[i] = (_gap[i] as Vector2) + (want - here).limit_length(SIDESTEP * maxf(dt, 1.0 / 60.0))
+
+
+## Hand the director the parts of man i that lie on the turf.
+func _lying(i: int) -> void:
+	var p: Dictionary = players[i]
+	var skel: Skeleton3D = p["skel"]
+	var to := (p["node"] as Node3D).transform * _rig
+	for bi in _body:
+		var at := to * skel.get_bone_global_pose(bi).origin
+		if at.y < LIE_HIGH:
+			director.lying_spots.append(Vector2(at.x, at.z))
+
+
+func _count_in(pr: Dictionary) -> int:
+	return int(_in[int(pr["who"])] == pr) + int(_in[int(pr["victim"])] == pr)
 
 
 ## The arms meet in the clip: where, and when, against the director's tackle.
@@ -405,7 +546,7 @@ func _hit(pr: Dictionary) -> void:
 	var rec: Dictionary = pr["rec"]
 	rec["hit_t"] = _clock
 	var e: Dictionary = _pairs[pr["name"]]
-	var cp: Transform3D = pr["P"]
+	var cp: Transform3D = (pr["adj"] as Transform3D) * (pr["P"] as Transform3D)
 	var at := cp * Vector3(float(e["contact"]["x"]), 0.0, float(e["contact"]["z"]))
 	rec["contact"] = Vector2(at.x, at.z)
 	var v := int(pr["victim"])
@@ -495,6 +636,7 @@ func _start(who: int, v: int, arrived: bool, at := Vector2.INF) -> void:
 		rec["event_t"] = _clock
 	tackles.append(rec)
 	var pr := {"id": tackles.size(), "name": name, "who": who, "victim": v, "P": P,
+			"adj": Transform3D.IDENTITY,
 			"c0": float(best["c0"]), "c": float(best["c0"]), "cs": float(best["cs"]),
 			"len": float(_pairs[name]["length_s"]), "arrived": arrived, "rec": rec,
 			"up": float(_pairs[name].get("up_s", _pairs[name]["length_s"])),
@@ -558,6 +700,8 @@ func step(i: int, p: Dictionary, holder: int, pos: Vector2, vel: Vector2, dt: fl
 		var back := clampf(2.0 * gap.length(), GAP_CLOSE, GAP_MAX)
 		_gap[i] = gap - gap.limit_length(back * dt)
 		_round(i, pos, gap, back * dt)
+	_step_round(i, pos, dt)
+	if gap != Vector2.ZERO or _gap[i] != Vector2.ZERO:
 		node.position = Vector3(pos.x + (_gap[i] as Vector2).x, 0.0, pos.y + (_gap[i] as Vector2).y)
 	if not o.is_empty():
 		# The clip carries him from where the scoop began (its own run): his token runs the
@@ -709,7 +853,7 @@ func _step_pair(i: int, p: Dictionary, dt: float, vel := Vector2.ZERO) -> void:
 	var warp := Transform3D(Basis(Vector3.UP, float(role["dy"]) * f), pivot + (role["w"] as Vector3) * f) \
 			* Transform3D(Basis.IDENTITY, -pivot)
 	var node: Node3D = p["node"]
-	node.transform = warp * (pr["P"] as Transform3D)
+	node.transform = (pr["adj"] as Transform3D) * warp * (pr["P"] as Transform3D)
 	var sv: Vector2 = pr.get("slide", Vector2.ZERO)
 	if sv != Vector2.ZERO:
 		var u := clampf((_clock - float(pr["t0"])) / SLIDE_T, 0.0, 1.0)
@@ -720,7 +864,15 @@ func _step_pair(i: int, p: Dictionary, dt: float, vel := Vector2.ZERO) -> void:
 	(p["ring"] as Node3D).position = Vector3(hips.origin.x, 0.03, hips.origin.z)
 	# Up off the ground (the pair's up_s), he goes as soon as the play wants him: the rest of
 	# the clip is the two of them standing (MatchDirector.TAKE_UP lets him move from then).
-	if float(pr["c"]) >= float(pr["len"]) or (float(pr["c"]) >= float(pr["up"]) and vel.length() > MOVE_OFF):
+	# Nearly up, with the director already sending him (MatchDirector.TAKE_UP passed), he goes
+	# now rather than finishing the clip while his man runs off (3D bug bash: 4 m behind in
+	# ball-up packs).
+	var up := float(pr["up"])
+	if not director._on_feet(i):
+		up = INF
+	elif float(pr["c"]) >= float(pr["cs"]):
+		up -= UP_EARLY
+	if float(pr["c"]) >= float(pr["len"]) or (float(pr["c"]) >= minf(up, float(pr["up"])) and vel.length() > MOVE_OFF):
 		_leave(i)
 
 
