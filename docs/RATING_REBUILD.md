@@ -138,8 +138,8 @@ depth pools and state leagues use the same ranges.
 **Progression.** XP (2/3 matches, 1/3 training, VFL half) buys attribute points; the plan picks which; a point
 costs more the higher the attribute. No gains once derived OVR at his primary position reaches POT (11-23).
 Age curves a little each round: Endurance, Durability, technical and Footy IQ measured year on year in Wheelo
-2012-25; Discipline XP only. Speed (grows to 23, holds to 26, −1.5 a season from 27, −3 from 31) and Strength
-(grows to 26, holds to 31, −1 a season from 32) were decision 8, not named in his reply: *ask before Phase 7.*
+2012-25; Discipline XP only. Speed grows to 23, holds to 26, −1.5 a season from 27, −3 from 31; Strength grows to
+26, holds to 31, −1 a season from 32 (director, 2026-11-25, question box: "Blueprint curves").
 Breakouts: same rate, +4 to +6 on his three most heavily weighted attributes. Types retested each season.
 
 **Economy.** Worth = 0.50 × OVR at his best position + 0.20 × Form + 0.30 × POT − 1.5 a year past 29, with a
@@ -155,6 +155,14 @@ average, on the OVR scale; under 5 games, Form = OVR.
 | AI selection | Best 0.8 × OVR at the slot + 0.2 × Form; ruck and key posts by position OVR |
 | Scouting blur | ±6 per attribute at full uncertainty, scout tiers ×1.25/1.00/0.80/0.65; shown OVR from fogged attributes |
 
+**Past starts (director, 2026-11-25, question box: "Nearest stats").** The 1990, 2000 and 2010 starts rate the
+1989, 1999 and 2009 seasons from AFL Tables: each attribute uses the closest count the season kept (kicks for Kicking,
+handballs for Handballing, marks for Marking, goals per shot for Goalkicking, goals and marks inside 50 for Forward
+craft, tackles for Pressure, hitouts for Ruck, frees against and clangers for Discipline, contested possessions and
+clearances for Contested ball, contested marks for Contested marking, one percenters for One-on-one defence, goal
+assists and inside 50s for Vision, % of game played for Endurance), a game, on that season's league scale; an
+attribute the season never recorded takes his position's average. The 2020 start (2019 season) is in Wheelo.
+
 ## 5. Phases (each its own PR, green CI, auto-merge)
 
 Director, 2026-11-25: "Fold Phase 2 into Phase 4—skip any temporary bridges or backward-compatibility
@@ -166,7 +174,7 @@ load after it. Lists and weight tables for his review go in `REVIEW.md` at the r
 | 1 | `Attributes.gd` (one list, groups, labels) replaces the 6 copies; `Rating.ovr(p)` wraps the OVR reads (still returns stored OVR) | Suites green; paired balance zero change |
 | 2 | Folded into 4 (director, 2026-11-25) | |
 | 3 | Wheelo rewritten for 18 attributes, league-wide: `attributes_2026.csv` (`tools/wheelo/attributes.py`); fitters, copy pool, weights, `rating_stats`, `ovr_overrides` deleted; 2027 lists in `REVIEW.md` | His read of the lists |
-| 4 | The swap: 18 attributes load on one league-wide scale (`engine_scale.csv` and `Skills.engine` deleted), sim reads them directly, out-of-position cut, OVR derived and dropped from saves, sim retuned, weights measured (table in `REVIEW.md`) | Calibration, balance table, his playtest |
+| 4 | Lands with 3, 6 and 7 as one PR: draftees, the Forge, progression and the past starts all fit skills to an OVR today, which mandate 1 forbids, and "skip any temporary bridges" rules out keeping them until 6 and 7. The swap: 18 attributes load on one league-wide scale (`engine_scale.csv` and `Skills.engine` deleted), sim reads them directly, out-of-position cut, OVR derived and dropped from saves, sim retuned, weights measured (table in `REVIEW.md`) | Calibration, balance table, his playtest |
 | 5 | Economy and AI: Worth with Durability, contracts, trades, draft ranking, selection, blur | Draft, contract, trade suites |
 | 6 | Generation: type ranges, classes, Forge, expansion, depth pools, state leagues | Intake and Forge-on-every-start tests |
 | 7 | Progression: XP into attributes, POT cap, age curves, breakouts, trait retest | Multi-season audit |

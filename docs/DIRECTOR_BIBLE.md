@@ -657,6 +657,8 @@ How to read this chapter. Every rule carries its date and a source tag in square
         - Work Rate: "one clean, rounded position-normalized mix (`30% pressure acts + 25% bounces + 25% (I50 + R50) + 20% uncontested possessions`) and lock it in—do not overfit weights to hit exact numbers on three players." Position-normalized means against what his position, height and weight usually produce ("normalized by position and height/weight", same day). Handball receives, also named, are in none of our data and are left out.
         - Combine 20 m sprint, no GPS (2026-11-25, question box): "Straight line": 2.80 s = 90 and 3.10 s = 50, whatever his position (Reef McInnes, key forward, 2.78 s, reads 93).
         - "Bake the scale, verify the sanity check, and move straight on without pausing for more attribute-weight questions."
+    - Past starts (2026-11-25, question box): the 1990, 2000 and 2010 starts rate the 1989, 1999 and 2009 seasons, which Wheelo does not hold; he picked "Nearest stats": each attribute uses the closest count that season kept (AFL Tables), a game, on that season's league scale, and an attribute the season never recorded takes his position's average (shown: 1989 Ablett Kicking 95 from 16.4 kicks a game, Dunstall Goalkicking 81 from 64% of shots).
+    - Speed and Strength age curves (2026-11-25, question box): "Blueprint curves": Speed grows to 23, holds to 26, falls 1.5 a season from 27 and 3 from 31; Strength grows to 26, holds to 31, falls 1 a season from 32 (shown: Pickett 93 at 25, 87 at 30, 78 at 33).
 
 ## 4.3 Pre-season
 
