@@ -50,3 +50,5 @@ tools/wheelo/cache/
 *.blend[0-9][0-9]
 *.bak
 *.log
+# Director review dumps (rating rebuild, 2026-11-25): read in place, never committed.
+/REVIEW.md
