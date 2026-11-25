@@ -43,6 +43,7 @@ tests/output/
 captures/**/*.import
 docs/**/*.import
 tools/wheelo/cache/
+/ground_packs.json
 
 # Blender autosave backups, editor/script backups and tool run logs: never source.
 *.blend[0-9]
