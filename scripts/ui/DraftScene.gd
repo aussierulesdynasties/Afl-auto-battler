@@ -624,6 +624,15 @@ func _show_first_offseason() -> void:
 
 
 func _end_first_offseason() -> void:
+	# Closing the trade period and free agency takes a moment (0.5-0.8 s, bug
+	# bash 2026-11-25): the cover and its line go up first (director, batch F).
+	if not GameDB.draftees.is_empty():
+		ScreenTransition.run("Starting the draft...", _close_first_offseason)
+		return
+	_close_first_offseason()
+
+
+func _close_first_offseason() -> void:
 	GameState.close_first_offseason()
 	GameState.autosave()
 	if _season_without_draft():
@@ -1181,8 +1190,9 @@ func _clear_except(box: Node, keep: Dictionary) -> void:
 		if keep.has(str(child.name)):
 			continue
 		if under != null and child is CanvasItem and (child == under or child.is_ancestor_of(under)):
+			# Hidden after the tap, not during it (UiKit.clear says why).
 			child.name = "Leaving_%d" % child.get_instance_id()
-			(child as CanvasItem).hide()
+			(child as CanvasItem).hide.call_deferred()
 			child.queue_free()
 			continue
 		box.remove_child(child)
@@ -1568,8 +1578,9 @@ func _land_rivals(build := true) -> bool:
 		if not _draft.has(name_s.substr(7)):
 			n += 1
 		elif under != null and (c == under or c.is_ancestor_of(under)):
+			# Hidden after the tap, not during it (UiKit.clear says why).
 			c.name = "Leaving_%d" % c.get_instance_id()
-			(c as CanvasItem).hide()
+			(c as CanvasItem).hide.call_deferred()
 			c.queue_free()
 		else:
 			_board_box.remove_child(c)
@@ -2174,10 +2185,15 @@ func _open_player(id: String) -> void:
 
 	# The decision.
 	var footer: VBoxContainer = box["footer"]
-	var can := _draft.can_pick_player(p)
+	# Before the opening National Draft (its off-season still open) nobody can be
+	# picked yet: the button is greyed and the line says why (director,
+	# 2026-11-25, bug bash batch F).
+	var before_draft := GameState.first_offseason == 1
+	var can := _draft.can_pick_player(p) and not before_draft
 	# A taken player's status already says where he went.
 	if not can and not _draft.has(id):
-		var why := _draft.pick_block_reason(p)
+		var why := "The National Draft hasn't started. The trade period and free agency are still open." \
+				if before_draft else _draft.pick_block_reason(p)
 		var wl := UiKit.lbl(why if why != "" else "He cannot be picked right now.", UiKit.SECONDARY, UiKit.BAD)
 		wl.name = "DetailBlocked"
 		wl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -2358,7 +2374,6 @@ func _shown_passes() -> int:
 
 func _refresh_history() -> void:
 	_history_stale = false
-	UiKit.clear(_history_box)
 	var entries := []
 	var picks_n := 0
 	var passed_n := 0
@@ -2379,18 +2394,44 @@ func _refresh_history() -> void:
 	_history_info.text = "%d %s" % [picks_n, "pick" if picks_n == 1 else "picks"]
 	if passed_n > 0:
 		_history_info.text += ", %d passed" % passed_n
+	# A row already built for an entry that has not changed stays: a new pick
+	# adds its own row at the top instead of the whole log being built again
+	# (bug bash 2026-11-25, M-6: on a PC-width window every pick rebuilt the
+	# log, 34-191 ms and growing). Anything else (the empty note, the Earlier
+	# picks button, a row whose entry changed) is built fresh.
+	var built := {}
+	for c in _history_box.get_children():
+		if str(c.name).begins_with("Leaving_"):
+			continue
+		if c.has_meta("log_sig"):
+			built[int(c.get_meta("log_sig"))] = c
+		else:
+			UiKit.drop(c)
+	var rows: Array = []
+	for i in range(mini(_history_shown, entries.size())):
+		var e: Dictionary = entries[i]
+		var sig := e.hash()
+		var row: Control = built.get(sig)
+		if row != null:
+			built.erase(sig)
+		else:
+			if e.has("buyer"):
+				row = _history_trade_row(e)
+			elif e.has("why"):
+				row = _history_pass_row(e)
+			else:
+				row = _history_row(e)
+			row.set_meta("log_sig", sig)
+			_history_box.add_child(row)
+		rows.append(row)
+	for gone in built.values():
+		UiKit.drop(gone)
+	for i in range(rows.size()):
+		_history_box.move_child(rows[i], i)
 	if entries.is_empty():
 		_history_box.add_child(UiKit.lbl("No picks yet" if _history_club.is_empty() else "No picks for this club yet", UiKit.HEADING, UiKit.TEXT, true))
 		_history_box.add_child(UiKit.lbl(
 				"Every pick shows here, from all %d rival clubs too. The newest come first." % maxi(1, _draft.clubs.size() - 1), 15, UiKit.MUTED))
-	for i in range(mini(_history_shown, entries.size())):
-		var e: Dictionary = entries[i]
-		if e.has("buyer"):
-			_history_box.add_child(_history_trade_row(e))
-		elif e.has("why"):
-			_history_box.add_child(_history_pass_row(e))
-		else:
-			_history_box.add_child(_history_row(e))
 	if _history_shown < entries.size():
 		var more := UiKit.btn("Earlier picks  ·  %d more" % (entries.size() - _history_shown), 14)
 		more.name = "EarlierPicks"

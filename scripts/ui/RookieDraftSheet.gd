@@ -80,7 +80,10 @@ static func close_open(host: Control) -> bool:
 
 static func _choose(host: Control, overlay: Control, player_id: String, on_done: Callable, pass_line: String) -> void:
 	RookieList.choose(GameState, player_id)
-	GameState.autosave()
+	# Saved on the way out (the next screen change, or the app closing or going
+	# to the background), so the pick answers at once (director, 2026-11-25,
+	# bug bash batch F).
+	GameState.mark_dirty()
 	if is_instance_valid(overlay):
 		overlay.name = NAME + "Closed"
 		overlay.queue_free()

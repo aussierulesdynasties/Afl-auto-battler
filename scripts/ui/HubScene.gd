@@ -2138,9 +2138,12 @@ func _letter_card() -> Control:
 	for line in ClubMoves.letter_risk(GameState):
 		v.add_child(_offer_line(line, UiKit.TEXT))
 	var row := UiKit.hbox(8)
+	# His answer opens the off-season (12 s on the hub, bug bash 2026-11-25):
+	# the cover and its line go up first (director, batch F).
 	var stay := _nav_button("Stay put", func():
-		if ClubMoves.decline_letter(GameState):
-			_build())
+		ScreenTransition.run(_offseason_line(), func():
+			if ClubMoves.decline_letter(GameState):
+				_build()))
 	stay.name = "RivalLetterStay"
 	var take := _nav_button("Take the job", func():
 		_move_clubs(code, func(): return ClubMoves.accept_letter(GameState)))
@@ -2152,20 +2155,23 @@ func _letter_card() -> Control:
 	return v
 
 
-## He takes a job (`sign` makes the move). A club yet to play is his from its
-## first National Draft, which opens at once: the club he leaves plays out its
-## off-season under its own staff (GameState.offseason_without_you, row 189),
-## so the cover goes up first and the draft screen follows.
+## He takes a job (`sign` makes the move). Either way the off-season opens, so
+## the cover goes up first (director, 2026-11-25, batch F). A club yet to play
+## is his from its first National Draft, which opens at once: the club he
+## leaves plays out its off-season under its own staff
+## (GameState.offseason_without_you, row 189), and the draft screen follows.
 func _move_clubs(code: String, sign: Callable) -> void:
-	if not ClubMoves.is_joining(GameState, code):
-		if bool(sign.call()):
-			_build()
-		return
-	ScreenTransition.run("Playing out the %d off-season..." % int(GameState.season_year), func():
-		if bool(sign.call()) and GameState.club_yet_to_play():
+	var joining := ClubMoves.is_joining(GameState, code)
+	ScreenTransition.run(_offseason_line(), func():
+		if bool(sign.call()) and joining and GameState.club_yet_to_play():
 			Router.go("draft")
 			return
 		_build())
+
+
+## The cover's line while the off-season opens.
+func _offseason_line() -> String:
+	return "Playing out the %d off-season..." % int(GameState.season_year)
 
 
 ## Where an offering club stands: its ladder finish and why the job is open,

@@ -930,18 +930,36 @@ static func clear(container: Node) -> void:
 	# tree mid-tap ends the event there: the scroll never hears the release,
 	# stays mid-drag, and every later mouse move drags the list back to where
 	# the tap began. So the row under the pointer leaves at the end of the
-	# frame instead, hidden and renamed so its replacement can take its name.
+	# frame instead, renamed so its replacement can take its name.
+	# It is hidden after the tap too, not during it: hiding the button that is
+	# still holding the press sends it a second release, so its `pressed` ran
+	# again inside the first (bug bash 2026-11-25, M-3: Auto-pick then a tap on
+	# a spot raised engine errors and could lose the oval).
 	var under: Control = null
 	if container.is_inside_tree():
 		under = container.get_viewport().gui_get_hovered_control()
 	for child in container.get_children():
-		if under != null and child is CanvasItem and (child == under or child.is_ancestor_of(under)):
-			child.name = "Leaving_%d" % child.get_instance_id()
-			(child as CanvasItem).hide()
-			child.queue_free()
-			continue
-		container.remove_child(child)
+		_drop(child, under)
+
+
+## One child out of its container, as clear() takes them all: a screen that
+## changes one card in place (Team selection) drops only that card.
+static func drop(child: Node) -> void:
+	var under: Control = null
+	if child.is_inside_tree():
+		under = child.get_viewport().gui_get_hovered_control()
+	_drop(child, under)
+
+
+static func _drop(child: Node, under: Control) -> void:
+	if under != null and child is CanvasItem and (child == under or child.is_ancestor_of(under)):
+		child.name = "Leaving_%d" % child.get_instance_id()
+		(child as CanvasItem).hide.call_deferred()
 		child.queue_free()
+		return
+	if child.get_parent() != null:
+		child.get_parent().remove_child(child)
+	child.queue_free()
 
 
 static func lbl(text: String, fs := 16, color := AUTO_COLOUR, bold := false) -> Label:
