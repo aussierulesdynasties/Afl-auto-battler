@@ -322,12 +322,16 @@ func _info_bits(info: Control, p: Dictionary) -> void:
 	for i in range(bits.size()):
 		var b: Array = bits[i]
 		if i > 0:
-			info.add_child(UiKit.lbl("·", UiKit.SMALL, UiKit.MUTED))
+			# One line, never wrapped: a wrapping label squeezed to one character
+			# draws the dot high, off the words' line.
+			info.add_child(UiKit.line("·", UiKit.SMALL, UiKit.MUTED))
 		var l := UiKit.ellipsis(str(b[1]), UiKit.SMALL, b[2], bool(b[3]))
 		l.name = str(b[0])
 		if i == bits.size() - 1:
 			l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		else:
+			# Only as wide as its words, so the next piece follows straight on.
+			l.size_flags_horizontal = Control.SIZE_FILL
 			l.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
 		info.add_child(l)
 
