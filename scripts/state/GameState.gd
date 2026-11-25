@@ -6869,7 +6869,7 @@ func finals_outcome_line(res: Dictionary) -> String:
 			return "Into the Grand Final." if won \
 					else "One game short: out in the preliminary final."
 		"GF":
-			return ("%d PREMIERS" % season_year) if won \
+			return ("Premiers in %d" % season_year) if won \
 					else ("Runners-up in %d" % season_year)
 	return ""
 
@@ -6880,7 +6880,7 @@ func _past_finals_outcome_line(res: Dictionary, tag: String, won: bool) -> Strin
 	if bool(res.get("replay_due", false)):
 		return "Level at the final siren: the final is played again next week."
 	if tag == "GF":
-		return ("%d PREMIERS" % season_year) if won else ("Runners-up in %d" % season_year)
+		return ("Premiers in %d" % season_year) if won else ("Runners-up in %d" % season_year)
 	if not won:
 		return "Second chance: you play again next week." if season.loser_goes_on(tag, my_club) 				else "Knocked out. Your season is over."
 	var spec := SeasonRules.bracket(season.finals_format())
