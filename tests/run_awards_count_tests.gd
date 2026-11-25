@@ -64,6 +64,7 @@ func _run() -> void:
 	await _t("_test_round_at_a_time")
 	await _t("_test_live")
 	await _t("_test_skip_before_the_break")
+	await _t("_test_skip_saves_on_the_way_out")
 	await _t("_test_club_count")
 	await _t("_test_fits_a_phone")
 	await _t("_test_resume")
@@ -338,6 +339,29 @@ func _test_skip_before_the_break() -> void:
 	var winner: Dictionary = _state.season_awards["brownlow_winner"]
 	_check(why == "" and _find(c, "AwardsCount") == null and _words(c).contains(_name(str(winner["id"]))),
 			"One tap on from there reveals the medallist")
+
+
+## Skip answers at once: the night is marked seen and saved on the way out (the
+## next screen change, or the app closing or going to the background), not on
+## the tap (director, 2026-11-25, bug bash batch F: the save held Skip 0.8-1.2 s).
+func _test_skip_saves_on_the_way_out() -> void:
+	var c := await _open(true)
+	_state.save_career()
+	_state.autosave_enabled = true
+	var writes: int = _state.saves_written
+	var why := await _tap(c, "AwardsSkip")
+	_check(why == "" and bool(_state.season_awards.get("presentation_seen", false)),
+			"A real tap on Skip closes the night (%s)" % why)
+	_check(_state.saves_written == writes and _state._dirty,
+			"Skip writes nothing on the tap and leaves the night to be saved (%d writes)" % (_state.saves_written - writes))
+	# What every screen change does first (Router._swap).
+	_state.autosave_if_dirty()
+	_check(_state.saves_written == writes + 1 and not _state._dirty,
+			"The next screen change saves it (%d writes)" % (_state.saves_written - writes))
+	_state.autosave_enabled = false
+	_state.load_career()
+	_check(bool(_state.season_awards.get("presentation_seen", false)),
+			"Loaded again, the night stays seen")
 
 
 ## Your club's best and fairest: after the league's awards, its games one at

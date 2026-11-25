@@ -223,7 +223,7 @@ static func key_post_order(players: Array, line: String) -> Array:
 	var rank := []
 	for i in range(players.size()):
 		var p: Dictionary = players[i]
-		rank.append([i, is_key_post(p, line), float(p.get("height_cm", 0.0)), int(p.get("overall", 0))])
+		rank.append([i, is_key_post(p, line), float(p.get("height_cm", 0.0)), int(Rating.ovr(p, 0))])
 	rank.sort_custom(func(a, b):
 		if a[1] != b[1]:
 			return a[1]

@@ -58,7 +58,7 @@ static func ready_to_back(gs) -> Dictionary:
 		return {}
 	var ovrs: Array = []
 	for p in roster:
-		ovrs.append(int((p as Dictionary).get("overall", 0)))
+		ovrs.append(int(Rating.ovr(p, 0)))
 	ovrs.sort()
 	ovrs.reverse()
 	var bar: int = int(ovrs[21]) - FRINGE
@@ -70,12 +70,12 @@ static func ready_to_back(gs) -> Dictionary:
 			in_side[str(id)] = true
 	var best := {}
 	for p in roster:
-		var ov := int(p.get("overall", 0))
+		var ov := int(Rating.ovr(p, 0))
 		if ov < bar or in_side.has(str(p.get("id", ""))) or not Backing.may_ask(p, w):
 			continue
 		if not ClubStories.out_of_side(gs, p):
 			continue
-		if gs.can_back(p) and (best.is_empty() or ov > int(best.get("overall", 0))):
+		if gs.can_back(p) and (best.is_empty() or ov > int(Rating.ovr(best, 0))):
 			best = p
 	return best
 

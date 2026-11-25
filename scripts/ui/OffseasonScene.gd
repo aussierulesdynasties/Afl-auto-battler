@@ -344,7 +344,7 @@ func _contracts(body: VBoxContainer) -> void:
 		var left := int(p.get("contract_years", 1)) - 1
 		var term := "out of contract" if left <= 0 else "%d season%s left" % [left, "" if left == 1 else "s"]
 		body.add_child(_para("%s  ·  %d OVR  ·  %s  ·  %s" % [
-				GameDB.player_display_name(p), int(p["overall"]), Contracts.money(int(p.get("salary", 0))),
+				GameDB.player_display_name(p), int(Rating.ovr(p)), Contracts.money(int(p.get("salary", 0))),
 				term], 12, UiKit.TEXT))
 
 
@@ -405,14 +405,14 @@ func _unsigned_rule(size: int) -> Control:
 func _contract_detail(p: Dictionary) -> String:
 	var want := Contracts.wants(p)
 	return "%d OVR  ·  %d POT  ·  age %d  ·  on %s  ·  wants %s for %d seasons" % [
-			int(p["overall"]), int(p.get("potential", p["overall"])), int(p.get("age", 0)),
+			int(Rating.ovr(p)), int(p.get("potential", Rating.ovr(p))), int(p.get("age", 0)),
 			Contracts.money(int(p.get("salary", 0))), Contracts.money(int(want["salary"])), int(want["years"])]
 
 
 func _retiring_detail(p: Dictionary) -> String:
 	var g := GameState.season_games(str(p["id"]))
 	return "%d OVR  ·  age %d  ·  %s this year" % [
-			int(p["overall"]), int(p.get("age", 0)), "1 game" if g == 1 else "%d games" % g]
+			int(Rating.ovr(p)), int(p.get("age", 0)), "1 game" if g == 1 else "%d games" % g]
 
 
 ## What asking a retiring man to go around again gains and costs.
@@ -571,7 +571,7 @@ func _show_talks() -> void:
 	var talk_name := _para(GameDB.player_display_name(p), 20, UiKit.TEXT)
 	talk_name.name = "TalkPlayerName"
 	v.add_child(NameLink.tappable(talk_name, str(p["id"])))
-	v.add_child(_para("Age %d  ·  %d OVR  ·  %s POT  ·  on %s now" % [int(p.get("age", 0)), int(p["overall"]),
+	v.add_child(_para("Age %d  ·  %d OVR  ·  %s POT  ·  on %s now" % [int(p.get("age", 0)), int(Rating.ovr(p)),
 			str(GameState.pot_view(p)["text"]), Contracts.money(int(p.get("salary", 0)))], 13, UiKit.MUTED))
 	# For a free agent his terms include what his options add.
 	var meet_salary := int(want["salary"]) + int(terms.get("premium", 0))
@@ -803,8 +803,8 @@ func _agents(body: VBoxContainer) -> void:
 		var bv: float
 		match _fa_sort:
 			"overall":
-				av = float(a.get("overall", 0))
-				bv = float(b.get("overall", 0))
+				av = float(Rating.ovr(a, 0))
+				bv = float(Rating.ovr(b, 0))
 			"potential":
 				av = float(GameState.pot_view(a)["mid"])
 				bv = float(GameState.pot_view(b)["mid"])
@@ -819,10 +819,65 @@ func _agents(body: VBoxContainer) -> void:
 		return av > bv if _fa_sort_desc else av < bv)
 	if fas.is_empty():
 		body.add_child(_para("No free agents right now. Rivals let players go when the season ends.", 13, UiKit.MUTED))
+	# Each card is built as it scrolls into view, not all 98 on every tap
+	# (0.3 s, bug bash 2026-11-25; director, batch F): the list looks the same.
+	_agent_body = body
+	_agent_queue = fas
+	_agent_built = 0
+	_more_agents(_agents_shown)
+	# Built straight onto a box (the trade screen's familiarity line, a test), the
+	# tab has no scroll of its own to watch.
+	if not is_instance_valid(_scroll_box):
+		return
+	var bar := _scroll_box.get_v_scroll_bar()
+	bar.value_changed.connect(func(_v: float) -> void: _check_agents_end())
+	bar.changed.connect(_check_agents_end)
+
+
+## Cards built when the list opens, and added each time the scroll comes
+## within a screen of the last one built.
+const AGENT_BATCH := 10
+## The most cards built so far: a rebuild (a sort, closing talks) builds as many
+## again, so the list comes back at the same place.
+var _agents_shown := AGENT_BATCH
+var _agent_queue: Array = []
+var _agent_built := 0
+var _agent_body: VBoxContainer
+var _agents_check_queued := false
+
+
+## After a scroll or a layout: within a screen of the last card built, build the
+## next few. Deferred, so cards are never added while the list lays itself out.
+func _check_agents_end() -> void:
+	if _agents_check_queued:
+		return
+	_agents_check_queued = true
+	_agents_end.call_deferred()
+
+
+func _agents_end() -> void:
+	_agents_check_queued = false
+	if _tab != "agents" or not is_instance_valid(_scroll_box) or not is_instance_valid(_agent_body) \
+			or _agent_body.get_parent() != _scroll_box or _agent_built >= _agent_queue.size():
+		return
+	var bar := _scroll_box.get_v_scroll_bar()
+	if bar.value + bar.page < bar.max_value - _scroll_box.size.y:
+		return
+	_more_agents(AGENT_BATCH)
+
+
+## Builds the next `n` cards of the list, after the last one built.
+func _more_agents(n: int) -> void:
+	if not is_instance_valid(_agent_body):
+		return
+	var body := _agent_body
+	var fas := _agent_queue.slice(_agent_built, mini(_agent_built + n, _agent_queue.size()))
+	_agent_built += fas.size()
+	_agents_shown = maxi(_agents_shown, _agent_built)
 	for p in fas:
 		var want := Contracts.wants(p)
 		var card := _player_card(p, "%d OVR  ·  %s POT  ·  age %d  ·  wants %s for %d seasons  ·  from %s" % [
-				int(p["overall"]), str(GameState.pot_view(p)["text"]), int(p.get("age", 0)),
+				int(Rating.ovr(p)), str(GameState.pot_view(p)["text"]), int(p.get("age", 0)),
 				Contracts.money(int(want["salary"])), int(want["years"]),
 				GameDB.club_short(str(p.get("released_by", "")))])
 		PlayerSheet.synergy_fit_block(card.get_child(0) as VBoxContainer, p, 12)
@@ -1058,7 +1113,12 @@ func _offers(body: VBoxContainer) -> void:
 		text.name = "Offer_%d" % i
 		body.add_child(text)
 		var row := UiKit.hbox(UiKit.GAP)
-		for b in [["Accept", "OfferAccept_%d" % i, true], ["No thanks", "OfferDecline_%d" % i, false]]:
+		var buttons := [["Accept", "OfferAccept_%d" % i, true]]
+		# A story's offer can't be turned down: none taken, the best goes
+		# through when trades close (LegacyRollover, director 2026-11-25).
+		if str((GameState.trade_offers[i] as Dictionary).get("canon", "")) == "":
+			buttons.append(["No thanks", "OfferDecline_%d" % i, false])
+		for b in buttons:
 			var btn := UiKit.btn(str(b[0]), 14)
 			btn.name = str(b[1])
 			btn.custom_minimum_size = Vector2(0, 44)
@@ -1157,7 +1217,7 @@ func _asset_line(id: String, club: String) -> String:
 		return _pick_label(pk) if not pk.is_empty() else "-"
 	for p in GameState.season.lists.get(club, []):
 		if str(p["id"]) == id:
-			return "%s, %s %d" % [GameDB.player_display_name(p), Ratings.role_tag(p), int(p["overall"])]
+			return "%s, %s %d" % [GameDB.player_display_name(p), Ratings.role_tag(p), int(Rating.ovr(p))]
 	return "-"
 
 
@@ -1203,8 +1263,8 @@ func _pick_grid(body: VBoxContainer, list: Array, chosen: Array, prefix: String)
 	body.add_child(UiKit.lbl("Players", 14, UiKit.MUTED, true))
 	var sorted := list.duplicate()
 	sorted.sort_custom(func(a, b):
-		if int(a["overall"]) != int(b["overall"]):
-			return int(a["overall"]) > int(b["overall"])
+		if int(Rating.ovr(a)) != int(Rating.ovr(b)):
+			return int(Rating.ovr(a)) > int(Rating.ovr(b))
 		return str(a["id"]) < str(b["id"]))
 	for p in sorted:
 		var id := str(p["id"])
@@ -1216,7 +1276,7 @@ func _pick_grid(body: VBoxContainer, list: Array, chosen: Array, prefix: String)
 		# never cuts them off.
 		var head := "%s%s%s  ·  %s" % [GameDB.player_display_name(p), "  ·  " + tag if tag != "" else "",
 				"  ·  Untouchable" if GameState.is_untouchable(id) else "", Ratings.role_tag(p)]
-		var facts := "Age %d  ·  %d OVR  ·  %s POT" % [int(p.get("age", 0)), int(p["overall"]),
+		var facts := "Age %d  ·  %d OVR  ·  %s POT" % [int(p.get("age", 0)), int(Rating.ovr(p)),
 				str(GameState.pot_view(p)["text"])]
 		var b := _asset_button(head + ("  ·  " if _wide() else "\n") + facts, chosen.has(id))
 		b.name = prefix + id
@@ -1626,7 +1686,7 @@ func _decide_row(e: Dictionary, rich: bool, row_h: int) -> Button:
 		who.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		who.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		h.add_child(who)
-		var facts := UiKit.line("%d OVR  ·  age %d" % [int(p["overall"]), int(p.get("age", 0))], UiKit.SMALL, UiKit.MUTED)
+		var facts := UiKit.line("%d OVR  ·  age %d" % [int(Rating.ovr(p)), int(p.get("age", 0))], UiKit.SMALL, UiKit.MUTED)
 		facts.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		h.add_child(facts)
 		var s := UiKit.line(str(st[0]), UiKit.SMALL, st[1], true)
@@ -1676,7 +1736,7 @@ func _whole_list(body: VBoxContainer) -> void:
 			# rollover (Re-signed says years - 1 too).
 			var left := int(p.get("contract_years", 1)) - 1
 			var term := "out of contract" if left <= 0 else "%d season%s left" % [left, "" if left == 1 else "s"]
-			col.add_child(_list_row([GameDB.player_display_name(p), str(int(p["overall"])),
+			col.add_child(_list_row([GameDB.player_display_name(p), str(int(Rating.ovr(p))),
 					Contracts.money(int(p.get("salary", 0))), term], fs, row_h, str(p["id"]), short))
 
 
