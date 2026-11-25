@@ -6,7 +6,10 @@ PR; 2026-11-23: 4 to 6). Merge-queue groups can run on two runners on the direct
 (Ryzen 7 9700X, Windows, in WSL Ubuntu, capped at 6 GB). Since 2026-11-25 (director: "turn the
 PC runners on") this repo's own pull requests and pushes to main use the PC too, but only when one
 of its runners is online and idle at the moment the run is planned; otherwise they run on GitHub's
-runners, so the PC only ever adds capacity.
+runners, so the PC only ever adds capacity. A third, small runner (`afl-plan`) runs only the
+plan job that makes that choice, so this repo's runs plan within seconds instead of waiting in
+GitHub's queue (director, 2026-11-25). With the PC paused, those runs wait until WSL is back;
+set `QUEUE_RUNNER` to anything but `pc` to send everything to GitHub.
 
 ## Safety
 
@@ -55,3 +58,4 @@ runners, so the PC only ever adds capacity.
 
 Two runners fit the 6 GB cap: a shard runs one Godot process, and a cold Godot import of the grounds
 takes 2 GB or more. More runners need a bigger cap, which is for the director to decide.
+The planning runner (`setup_wsl_runners.sh plan`) runs no Godot and needs a few MB.

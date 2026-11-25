@@ -4,6 +4,7 @@
 #
 #   sudo REG_TOKEN=<token> bash tools/ci_runner/setup_wsl_runners.sh [N]
 #   sudo bash tools/ci_runner/setup_wsl_runners.sh deps   # only (re)install the tools the jobs use
+#   sudo REG_TOKEN=<token> bash tools/ci_runner/setup_wsl_runners.sh plan   # the planning runner
 #
 # REG_TOKEN is a repository registration token (valid one hour):
 #   gh api -X POST repos/aussierulesdynasties/Afl-auto-battler/actions/runners/registration-token -q .token
@@ -27,6 +28,16 @@ id runner >/dev/null 2>&1 || useradd -m -s /bin/bash runner
 cd /home/runner
 [ -f "runner-$VER.tar.gz" ] || curl -sSL -o "runner-$VER.tar.gz" \
 	"https://github.com/actions/runner/releases/download/v$VER/actions-runner-linux-x64-$VER.tar.gz"
+# The planning runner: tests.yml's plan job only (a git checkout and a few API calls, a few MB), so a
+# run plans within seconds instead of waiting in GitHub's queue. It never takes the heavy jobs.
+if [ "$N" = plan ]; then
+	d="/home/runner/rplan"
+	if [ -f "$d/.runner" ]; then echo "rplan already configured"; exit 0; fi
+	mkdir -p "$d" && tar -xzf "runner-$VER.tar.gz" -C "$d" && chown -R runner:runner "$d"
+	sudo -u runner "$d/config.sh" --unattended --url "$REPO_URL" --token "$REG_TOKEN" --name "$(hostname)-afl-plan" --labels afl-plan --work _work --replace
+	(cd "$d" && ./svc.sh install runner && ./svc.sh start)
+	echo "Done: planning runner"; exit 0
+fi
 for i in $(seq 1 "$N"); do
 	d="/home/runner/r$i"
 	if [ -f "$d/.runner" ]; then echo "r$i already configured"; continue; fi

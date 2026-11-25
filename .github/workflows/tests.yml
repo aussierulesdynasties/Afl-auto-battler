@@ -84,7 +84,9 @@ jobs:
     # A draft runs nothing but the final "test" check, which stays red until the PR is
     # marked ready (that event starts the real run), so a draft never queues runners.
     if: github.event_name != 'pull_request' || !github.event.pull_request.draft
-    runs-on: ubuntu-latest   # it picks where the other jobs run, so it never waits for the PC
+    # While QUEUE_RUNNER is "pc", this repo's runs plan on the PC's small "afl-plan" runner (it only
+    # plans, so it is free within seconds) instead of waiting in GitHub's queue; forks plan on GitHub.
+    runs-on: ${{ (vars.QUEUE_RUNNER == 'pc' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)) && fromJSON('["self-hosted","Linux","X64","afl-plan"]') || 'ubuntu-latest' }}
     timeout-minutes: 20   # a PC runner's first checkout fetches about 1.6 GB
     outputs:
       code: ${{ steps.changes.outputs.code }}
