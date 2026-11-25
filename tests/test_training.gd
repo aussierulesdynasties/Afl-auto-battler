@@ -105,7 +105,11 @@ func _test_default_plan_spends() -> void:
 			changed += 1
 		# A low-potential player earns a point every ten or so games at his
 		# pace (director 2026-11-17), so the plan's promise is that nobody
-		# is left holding the XP for a point it could have bought.
+		# is left holding the XP for a point it could have bought. At his
+		# potential he buys nothing (director 2026-11-23, "Gains stop at
+		# potential") and keeps it banked.
+		if int(p.get("potential", 0)) > 0 and int(p["overall"]) >= int(p["potential"]):
+			continue
 		var w := {"xp": GameState.plan_weights(p),
 				"xp_match": Ratings.ROLE_WEIGHTS.get(str(p.get("role", "MID")), Ratings.ROLE_WEIGHTS["MID"])}
 		for bank in w:
@@ -487,6 +491,7 @@ func _test_archetypes_differ() -> void:
 	for plan in ["inside_mid", "outside_mid"]:
 		var p: Dictionary = mid.duplicate(true)
 		p["train_plan"] = plan
+		p["potential"] = 99   # room to grow: the plan is tested, not his ceiling
 		p["xp"] = 4000
 		built[plan] = _spend(p, GameState.plan_weights(p, plan))
 	var inside: Dictionary = built["inside_mid"]
@@ -496,6 +501,7 @@ func _test_archetypes_differ() -> void:
 			"Inside midfielders build contested ball, wings build carry (%s / %s)" % [str(inside), str(outside)])
 	var fwd := _first_of("FWD")
 	var small: Dictionary = fwd.duplicate(true)
+	small["potential"] = 99
 	small["xp"] = 4000
 	var sg := _spend(small, GameState.plan_weights(small, "small_fwd"))
 	_check(not sg.has("contested_marking"), "A small forward never trains contested marking (it would stop him crumbing)")
@@ -508,6 +514,7 @@ func _test_traits_through_training() -> void:
 	fwd["attr"]["contested_marking"] = Traits.SMALL_MAX_CM - 5
 	fwd["attr"]["goalkicking"] = int(Traits.DEFS["crumber"]["min"]) - 4
 	fwd["role2"] = ""
+	fwd["potential"] = 99
 	fwd["xp"] = 2500
 	_check(not Traits.has(fwd, "crumber"), "(setup) no Crumber yet")
 	_spend(fwd, GameState.plan_weights(fwd, "small_fwd"))
@@ -545,6 +552,7 @@ func _test_old_plans_migrate() -> void:
 	for k in ["contested_marking", "goalkicking", "accuracy"]:
 		f["attr"][k] = 95
 	f["train_plan"] = "manual"
+	f["potential"] = 99
 	f["xp"] = 2000
 	GameState.default_train_plan = "manual"
 	GameState.save_career()
@@ -1267,9 +1275,9 @@ func _test_stat_focus_club_move() -> void:
 
 
 ## The season record the summer reads (Growth.summer, director 2026-11-17):
-## every point bought goes into season_gains, a point bought at or past his
-## potential into over_gains too, and the rollover clears both on every list
-## and for free agents.
+## every point bought goes into season_gains, none is bought at his potential
+## (director 2026-11-23, "Gains stop at potential"), and the rollover clears
+## the records on every list and for free agents.
 func _test_season_record() -> void:
 	_new_season()
 	var one: Dictionary = (_first_of("MID") as Dictionary).duplicate(true)
@@ -1285,9 +1293,12 @@ func _test_season_record() -> void:
 	past.erase("over_gains")
 	past["potential"] = int(past["overall"])
 	past["xp"] = 400.0
+	var at_pot := int(past["overall"])
 	var past_bought := _spend(past, Ratings.ROLE_WEIGHTS["MID"])
-	_check(not past_bought.is_empty() and (past.get("over_gains", {}) as Dictionary) == past_bought,
-			"At his potential, every point he buys is noted as past it (%s / %s)" % [str(past_bought), str(past.get("over_gains", {}))])
+	# Gains stop at his potential (director 2026-11-23, "Gains stop at potential").
+	_check(past_bought.is_empty() and int(past["overall"]) == at_pot and float(past["xp"]) == 400.0
+			and not past.has("over_gains"),
+			"At his potential he buys nothing and keeps his XP banked (%s, %d)" % [str(past_bought), int(past["overall"])])
 	var fa: Dictionary = (_first_of("FWD") as Dictionary).duplicate(true)
 	fa["id"] = "record_fa"
 	fa["season_gains"] = {"contested": 3}
