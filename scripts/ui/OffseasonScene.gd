@@ -22,6 +22,11 @@ var _scroll_tab := ""
 var _scroll_positions := {}
 ## The draft gate's Delist: open Contracts scrolled to "Out of contract" (once).
 var _land_on_expiring := false
+## A PC's Contracts: the man whose card shows beside the list.
+var _pick_id := ""
+## The height under the tabs as last laid out (0 until then): a PC's Contracts
+## and Our list fill it rather than scroll.
+var _room := 0.0
 var _release_overlay: Control
 var _talk_overlay: Control
 var _talk_id := ""
@@ -77,7 +82,21 @@ func _build() -> void:
 	var head := UiKit.panel(UiKit.PANEL, UiKit.Space.ROOM, 8)
 	_root.add_child(head)
 	var hv := UiKit.vbox(UiKit.Space.TIGHT)
-	head.add_child(hv)
+	# A PC: what you just did, and its Undo, sit beside the list's brief in
+	# the heading's empty right-hand third, so a signing never pushes Contracts down.
+	var news := hv
+	if _wide() and (_notice != "" or not GameState.recruit_undo_last().is_empty()):
+		var split := UiKit.hbox(UiKit.Space.GUTTER)
+		head.add_child(split)
+		hv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		hv.size_flags_stretch_ratio = 2.0
+		split.add_child(hv)
+		news = UiKit.vbox(UiKit.Space.TIGHT)
+		news.name = "HeadNews"
+		news.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		split.add_child(news)
+	else:
+		head.add_child(hv)
 	var room := GameState.cap_room()
 	hv.add_child(UiKit.lbl("%s of the %s salary cap  ·  %s  ·  %d on our list" % [Contracts.money(GameState.my_payroll()),
 			Contracts.money(GameState.cap_for(GameState.my_club)), cap_room_words(room), GameState.my_list.size()], 15,
@@ -110,11 +129,17 @@ func _build() -> void:
 		var said := _why_para(_notice, _notice_club, 13, UiKit.TEXT) if _notice_club_text != "" and _notice == _notice_club_text \
 				else _para(_notice, 13, UiKit.GOOD)
 		said.name = "OffseasonNotice"
-		hv.add_child(said)
-	_undo_row(hv)
+		news.add_child(said)
+	_undo_row(news)
 	var tabs := UiKit.hbox(UiKit.Space.TIGHT)
 	_root.add_child(tabs)
-	for t in [["contracts", "Contracts"], ["agents", "Agents"], ["trade", "Trade"], ["budget", "Budget"]]:
+	var tab_list := [["contracts", "Contracts"], ["agents", "Agents"], ["trade", "Trade"], ["budget", "Budget"]]
+	# A PC: the whole list is a stage of its own, not the foot of Contracts.
+	if _wide():
+		tab_list.insert(1, ["list", "Our list"])
+	elif _tab == "list":
+		_tab = "contracts"
+	for t in tab_list:
 		var b := UiKit.tab(str(t[1]), _tab == str(t[0]))
 		b.name = "Tab_" + str(t[0])
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -134,7 +159,12 @@ func _build() -> void:
 	_root.add_child(_scroll_box)
 	match _tab:
 		"contracts":
-			_contracts(body)
+			if _wide():
+				_contracts_pc(body)
+			else:
+				_contracts(body)
+		"list":
+			_whole_list(body)
 		"agents":
 			_agents(body)
 		"trade":
@@ -142,9 +172,13 @@ func _build() -> void:
 		"budget":
 			_budget(body)
 	UiKit.restore_scroll(_scroll_box, int(_scroll_positions.get(_tab, 0)))
+	if _wide() and _tab in ["contracts", "list"]:
+		_fit_room(_scroll_box, _room_now())
 	if _land_on_expiring and _tab == "contracts":
 		_land_on_expiring = false
-		_scroll_to_expiring.call_deferred(_scroll_box, body)
+		# A PC opens Contracts on the first man out of contract already.
+		if not _wide():
+			_scroll_to_expiring.call_deferred(_scroll_box, body)
 
 
 ## Scrolls the Contracts list so the "Out of contract" heading is at its top.
@@ -187,7 +221,7 @@ func _undo_row(hv: VBoxContainer) -> void:
 	row.add_child(said)
 	var b := UiKit.btn("Undo", 15)
 	b.name = "UndoAction"
-	b.custom_minimum_size = Vector2(88, 48)
+	b.custom_minimum_size = Vector2(0, _tap_h()) if _wide() else Vector2(88, 48)
 	b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	b.pressed.connect(func():
 		var r := GameState.undo_recruit()
@@ -279,76 +313,22 @@ func _change_budget(area: String, level: int) -> void:
 func _contracts(body: VBoxContainer) -> void:
 	# A retiring player is in Retiring above, not up for a contract.
 	var expiring := Contracts.expiring(GameState.my_list).filter(func(q): return not GameState.retiring_now(q))
-	var clubs := GameDB.active_clubs(GameState.season_year).size()
-	for c in GameState.compensation:
-		if str(c["club"]) == GameState.my_club:
-			var got := _para("We get a draft pick %s for losing %s to %s." % [
-					Contracts.pick_words(int(c["after"]), clubs), str(c["name"]), GameDB.club_name(str(c["to"]))], 13, UiKit.TEXT)
-			got.name = "CompReceived"
-			body.add_child(got)
+	_compensation_lines(body)
 	_retiring(body)
 	if GameState.offseason_open():
-		# No free agency before 2012 (EraRules free_agency): an unsigned player
-		# re-signs or is delisted (bug bash 4, L13).
-		var how := "Leave one of our best 23 unsigned and he tests free agency. Our offer stands at his asking price. Rivals can beat it. Other players re-sign for two seasons if the cap allows." \
-				if EraRules.on("free_agency", GameState.season_year) \
-				else "Leave a player unsigned and he re-signs for two seasons if the cap allows; if it doesn't, he is delisted. Free agency starts in 2012."
-		var how_para := _para(how, 12, UiKit.MUTED)
-		how_para.name = "UnsignedRule"
-		body.add_child(how_para)
+		body.add_child(_unsigned_rule(12))
 	var head := UiKit.lbl("Out of contract  (%d)" % expiring.size(), UiKit.BODY, UiKit.EMPH, true)
 	head.name = "OutOfContractHead"
 	body.add_child(head)
 	if expiring.is_empty():
 		body.add_child(_para("Nobody is out of contract this year.", 13, UiKit.MUTED))
 	for p in expiring:
-		var want := Contracts.wants(p)
-		var card := _player_card(p, "%d OVR  ·  %d POT  ·  age %d  ·  on %s  ·  wants %s for %d seasons" % [
-				int(p["overall"]), int(p.get("potential", p["overall"])), int(p.get("age", 0)),
-				Contracts.money(int(p.get("salary", 0))), Contracts.money(int(want["salary"])), int(want["years"])])
+		var card := _player_card(p, _contract_detail(p))
 		body.add_child(card)
 		var row := UiKit.hbox(UiKit.Space.TIGHT)
 		row.name = "Contract_" + str(p["id"])
 		_action_slot(card).add_child(row)
-		if bool(p.get("resigned", false)):
-			row.add_child(UiKit.line("Re-signed for %d more seasons at %s" % [int(p["contract_years"]) - 1,
-					Contracts.money(int(p.get("salary", 0)))], 13, UiKit.GOOD, true))
-			continue
-		var talks: Dictionary = p.get("talks", {})
-		if bool(talks.get("walked", false)):
-			var gone := "Talks broke down. He'll test free agency"
-			if talks.has("refused"):
-				gone = Contracts.REFUSED_CARD % int(talks["refused"])
-			row.add_child(UiKit.line(gone, UiKit.SECONDARY, UiKit.BAD, true))
-			var proj := _para(str(GameState.projected_compensation(p)["reason"]), 12, UiKit.TEXT)
-			proj.name = "CompProjection"
-			(card.get_child(0) as VBoxContainer).add_child(proj)
-			continue
-		if talks.has("counter"):
-			(card.get_child(0) as VBoxContainer).add_child(_para("He'd sign for %s over %d season%s." % [
-					Contracts.money(int(talks["counter"])), int(talks["years"]), "" if int(talks["years"]) == 1 else "s"], 12, UiKit.TEXT))
-		var odds := _refuse_odds(p, 12)
-		if odds != null:
-			odds.name = "RefuseOdds"
-			(card.get_child(0) as VBoxContainer).add_child(odds)
-		var talk := UiKit.btn("Talk contract", UiKit.SECONDARY)
-		talk.name = "Negotiate"
-		talk.custom_minimum_size = Vector2(0, 44)
-		talk.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		_compact_actions(row, talk)
-		talk.pressed.connect(_open_talks.bind(str(p["id"])))
-		row.add_child(talk)
-		# Talked round this off-season: he stays until the next one (the ask's cost).
-		if ListStings.release_held(p, GameState.season_year + 1):
-			var held := _para(ListCosts.HELD_LINE, 12, UiKit.TEXT)
-			held.name = "ReleaseHeld"
-			(card.get_child(0) as VBoxContainer).add_child(held)
-			continue
-		var rel := UiKit.btn("Release", UiKit.SECONDARY)
-		rel.name = "Release"
-		rel.custom_minimum_size = Vector2(0, 44)
-		rel.pressed.connect(_confirm_release.bind(p))
-		row.add_child(rel)
+		_contract_parts(p, row, card.get_child(0) as VBoxContainer, 12, 44)
 	body.add_child(UiKit.lbl("Our whole list", UiKit.BODY, UiKit.EMPH, true))
 	var sorted := GameState.my_list.duplicate()
 	sorted.sort_custom(func(a, b): return int(a.get("salary", 0)) > int(b.get("salary", 0)))
@@ -371,9 +351,7 @@ func _retiring(body: VBoxContainer) -> void:
 	body.add_child(UiKit.lbl("Retiring  (%d)" % rows.size(), UiKit.BODY, UiKit.EMPH, true))
 	for r in rows:
 		var p: Dictionary = r["p"]
-		var g := GameState.season_games(str(p["id"]))
-		var card := _player_card(p, "%d OVR  ·  age %d  ·  %s this year" % [
-				int(p["overall"]), int(p.get("age", 0)), "1 game" if g == 1 else "%d games" % g])
+		var card := _player_card(p, _retiring_detail(p))
 		card.name = "Retiring_" + str(p["id"])
 		body.add_child(card)
 		var v := card.get_child(0) as VBoxContainer
@@ -387,18 +365,101 @@ func _retiring(body: VBoxContainer) -> void:
 			var ask := UiKit.text_action("Ask him to go around again")
 			ask.name = "TalkRound"
 			ask.alignment = HORIZONTAL_ALIGNMENT_LEFT
-			if _wide():
-				ask.size_flags_horizontal = Control.SIZE_SHRINK_END
-				ask.custom_minimum_size.x = 280
 			ask.pressed.connect(func():
 				GameState.talk_round(str(p["id"]))
 				_build())
 			_action_slot(card).add_child(ask)
-			var gc := ListCosts.ask_lines(Retirement.no_reason(p, GameState.season_year, g, GameState.career_facts))
-			v.add_child(UiKit.stake_row(str(gc[0]), "AskGain"))
-			v.add_child(UiKit.stake_row(str(gc[1]), "AskCost"))
+			_ask_stakes(p, v)
 		elif p.has("talked_round"):
 			v.add_child(_para("He went around again once already. This time he's going.", 12, UiKit.MUTED))
+
+
+## The draft picks we get for players we lost in free agency.
+func _compensation_lines(body: VBoxContainer) -> void:
+	var clubs := GameDB.active_clubs(GameState.season_year).size()
+	for c in GameState.compensation:
+		if str(c["club"]) == GameState.my_club:
+			var got := _para("We get a draft pick %s for losing %s to %s." % [
+					Contracts.pick_words(int(c["after"]), clubs), str(c["name"]), GameDB.club_name(str(c["to"]))], 13, UiKit.TEXT)
+			got.name = "CompReceived"
+			body.add_child(got)
+
+
+## What happens to a man left unsigned. No free agency before 2012 (EraRules
+## free_agency): he re-signs or is delisted (bug bash 4, L13).
+func _unsigned_rule(size: int) -> Control:
+	var how := "Leave one of our best 23 unsigned and he tests free agency. Our offer stands at his asking price. Rivals can beat it. Other players re-sign for two seasons if the cap allows." \
+			if EraRules.on("free_agency", GameState.season_year) \
+			else "Leave a player unsigned and he re-signs for two seasons if the cap allows; if it doesn't, he is delisted. Free agency starts in 2012."
+	var how_para := _para(how, size, UiKit.MUTED)
+	how_para.name = "UnsignedRule"
+	return how_para
+
+
+func _contract_detail(p: Dictionary) -> String:
+	var want := Contracts.wants(p)
+	return "%d OVR  ·  %d POT  ·  age %d  ·  on %s  ·  wants %s for %d seasons" % [
+			int(p["overall"]), int(p.get("potential", p["overall"])), int(p.get("age", 0)),
+			Contracts.money(int(p.get("salary", 0))), Contracts.money(int(want["salary"])), int(want["years"])]
+
+
+func _retiring_detail(p: Dictionary) -> String:
+	var g := GameState.season_games(str(p["id"]))
+	return "%d OVR  ·  age %d  ·  %s this year" % [
+			int(p["overall"]), int(p.get("age", 0)), "1 game" if g == 1 else "%d games" % g]
+
+
+## What asking a retiring man to go around again gains and costs.
+func _ask_stakes(p: Dictionary, info: VBoxContainer) -> void:
+	var g := GameState.season_games(str(p["id"]))
+	var gc := ListCosts.ask_lines(Retirement.no_reason(p, GameState.season_year, g, GameState.career_facts))
+	info.add_child(UiKit.stake_row(str(gc[0]), "AskGain"))
+	info.add_child(UiKit.stake_row(str(gc[1]), "AskCost"))
+
+
+## A man out of contract, on a phone's card or a PC's: what he said or the odds
+## into `info`, his actions (`h` tall) into `row`.
+func _contract_parts(p: Dictionary, row: HBoxContainer, info: VBoxContainer, size: int, h: int) -> void:
+	if bool(p.get("resigned", false)):
+		row.add_child(UiKit.line("Re-signed for %d more seasons at %s" % [int(p["contract_years"]) - 1,
+				Contracts.money(int(p.get("salary", 0)))], 13, UiKit.GOOD, true))
+		return
+	var talks: Dictionary = p.get("talks", {})
+	if bool(talks.get("walked", false)):
+		var gone := "Talks broke down. He'll test free agency"
+		if talks.has("refused"):
+			gone = Contracts.REFUSED_CARD % int(talks["refused"])
+		row.add_child(UiKit.line(gone, UiKit.SECONDARY, UiKit.BAD, true))
+		var proj := _para(str(GameState.projected_compensation(p)["reason"]), size, UiKit.TEXT)
+		proj.name = "CompProjection"
+		info.add_child(proj)
+		return
+	if talks.has("counter"):
+		info.add_child(_para("He'd sign for %s over %d season%s." % [
+				Contracts.money(int(talks["counter"])), int(talks["years"]), "" if int(talks["years"]) == 1 else "s"], size, UiKit.TEXT))
+	var odds := _refuse_odds(p, size)
+	if odds != null:
+		odds.name = "RefuseOdds"
+		info.add_child(odds)
+	var talk := UiKit.btn("Talk contract", UiKit.SECONDARY)
+	talk.name = "Negotiate"
+	talk.custom_minimum_size = Vector2(0, h)
+	# Across a phone's card; on a PC sized to its words.
+	if not _wide():
+		talk.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	talk.pressed.connect(_open_talks.bind(str(p["id"])))
+	row.add_child(talk)
+	# Talked round this off-season: he stays until the next one (the ask's cost).
+	if ListStings.release_held(p, GameState.season_year + 1):
+		var held := _para(ListCosts.HELD_LINE, size, UiKit.TEXT)
+		held.name = "ReleaseHeld"
+		info.add_child(held)
+		return
+	var rel := UiKit.btn("Release", UiKit.SECONDARY)
+	rel.name = "Release"
+	rel.custom_minimum_size = Vector2(0, h)
+	rel.pressed.connect(_confirm_release.bind(p))
+	row.add_child(rel)
 
 
 func _confirm_release(p: Dictionary) -> void:
@@ -1290,3 +1351,334 @@ func _para(text: String, size: int, colour: Color) -> Control:
 	var l := NameInk.label(text, _names(), size, colour)
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	return l
+
+
+# -- A PC (UI batch 5, director's board A): Contracts is the list of players to
+# decide on, and the picked one's card beside it; the whole list is its own tab.
+# Nothing scrolls: both fill the room under the tabs.
+
+## A short PC window (960 x 540): its controls stay a finger's 44 units. A
+## full one draws a unit as 1.5 px, so 36 units is 54 px.
+func _short_pc() -> bool:
+	return UiKit.view_height(self) < 640.0
+
+
+func _tap_h() -> int:
+	return 44 if _short_pc() else 36
+
+
+## The height under the tabs. Until the first layout measures it, the top bar,
+## the heading and the tabs are taken as 221 units (1920 x 1080).
+func _room_now() -> float:
+	return _room if _room > 0.0 else UiKit.view_height(self) - 221.0
+
+
+## The room is known only once laid out, and the heading grows after a signing,
+## a notice or an undo: when it differs from the room built for, build again.
+func _fit_room(sc: ScrollContainer, used: float) -> void:
+	sc.resized.connect(func():
+		if sc.size.y > 0.0 and absf(sc.size.y - used) > 1.0:
+			_room = sc.size.y
+			_build.call_deferred())
+
+
+## Who Contracts decides on: retiring first, then out of contract.
+func _to_decide() -> Array:
+	var out: Array = []
+	for r in GameState.retiring_players():
+		out.append({"p": r["p"], "retire": r})
+	for p in Contracts.expiring(GameState.my_list).filter(func(q): return not GameState.retiring_now(q)):
+		out.append({"p": p, "retire": {}})
+	return out
+
+
+## Where he stands, in a few words for his row in the list.
+func _status(e: Dictionary) -> Array:
+	var p: Dictionary = e["p"]
+	var r: Dictionary = e["retire"]
+	if not r.is_empty():
+		var talk: Dictionary = r["talk"]
+		if not talk.is_empty() and bool(talk["stays"]):
+			return ["Going around again", UiKit.GOOD]
+		return ["Retiring", UiKit.MUTED]
+	if bool(p.get("resigned", false)):
+		return ["Re-signed", UiKit.GOOD]
+	var talks: Dictionary = p.get("talks", {})
+	if bool(talks.get("walked", false)):
+		return ["Talks broke down", UiKit.BAD]
+	var want := Contracts.wants(p)
+	return ["wants %s for %d" % [Contracts.money(int(want["salary"])), int(want["years"])], UiKit.TEXT]
+
+
+func _contracts_pc(body: VBoxContainer) -> void:
+	body.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_compensation_lines(body)
+	var all := _to_decide()
+	if all.is_empty():
+		body.add_child(_para("Nobody is out of contract this year.", UiKit.SMALL, UiKit.MUTED))
+		return
+	var ids := all.map(func(e): return str(e["p"]["id"]))
+	# The first man still to sign, unless the coach picked someone.
+	if not ids.has(_pick_id):
+		_pick_id = str(all[0]["p"]["id"])
+		for e in all:
+			if (e["retire"] as Dictionary).is_empty() and not bool(e["p"].get("resigned", false)):
+				_pick_id = str(e["p"]["id"])
+				break
+	var split := UiKit.hbox(UiKit.Space.COLUMN)
+	split.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	body.add_child(split)
+	# As many rows to a column as the room holds; one column has room for more.
+	var row_h := 44 if _short_pc() else 40
+	var per_col := maxi(1, int(floor((_room_now() + UiKit.Space.SLIM) / float(row_h + UiKit.Space.SLIM))))
+	var cols := int(ceil(float(all.size()) / float(per_col)))
+	var rich := cols == 1
+	var list := UiKit.hbox(UiKit.Space.PAD)
+	list.name = "DecideList"
+	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	split.add_child(list)
+	for c in cols:
+		var col := UiKit.vbox(UiKit.Space.SLIM)
+		col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		list.add_child(col)
+		for i in range(c * per_col, mini(all.size(), (c + 1) * per_col)):
+			col.add_child(_decide_row(all[i], rich, row_h))
+	var pane := UiKit.panel(UiKit.PANEL, UiKit.Space.LOOSE, 0)
+	pane.name = "DecideCard"
+	pane.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	pane.size_flags_stretch_ratio = 1.1 if rich else 1.0
+	split.add_child(pane)
+	var pv := UiKit.vbox(UiKit.Space.CLOSE)
+	pane.add_child(pv)
+	for e in all:
+		if str(e["p"]["id"]) != _pick_id:
+			continue
+		var p: Dictionary = e["p"]
+		var retiring := not (e["retire"] as Dictionary).is_empty()
+		pv.add_child(_name_row(p, 20))
+		pv.add_child(_para(_retiring_detail(p) if retiring else _contract_detail(p), UiKit.SMALL, UiKit.MUTED))
+		pv.add_child(PlayerSheet.top_three(p, UiKit.SECONDARY, _short_pc()))
+		var acts := _decide_parts(e, pv)
+		pv.add_child(UiKit.spacer(UiKit.Space.TIGHT))
+		pv.add_child(acts)
+		_decide_more(pv, p, _short_pc())
+		var fill := Control.new()
+		fill.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		pv.add_child(fill)
+		if not retiring and GameState.offseason_open():
+			pv.add_child(_unsigned_rule(UiKit.SMALL))
+
+
+## The picked man's lines under his facts (an answer, the odds, the gain and the
+## cost) into `info`, and his actions, sized to their words, into the row it returns.
+func _decide_parts(e: Dictionary, info: VBoxContainer) -> HBoxContainer:
+	var row := UiKit.hbox(UiKit.Space.TIGHT)
+	var p: Dictionary = e["p"]
+	var r: Dictionary = e["retire"]
+	if r.is_empty():
+		row.name = "Contract_" + str(p["id"])
+		_contract_parts(p, row, info, UiKit.SMALL, _tap_h())
+		return row
+	row.name = "Retiring_" + str(p["id"])
+	var talk: Dictionary = r["talk"]
+	if not talk.is_empty():
+		var said := _para(str(talk["reason"]), UiKit.SMALL, UiKit.GOOD if bool(talk["stays"]) else UiKit.TEXT)
+		said.name = "RetireAnswer"
+		info.add_child(said)
+	elif bool(r["can_ask"]):
+		_ask_stakes(p, info)
+		var ask := UiKit.btn("Ask him to go around again", UiKit.SECONDARY)
+		ask.name = "TalkRound"
+		ask.custom_minimum_size = Vector2(0, _tap_h())
+		ask.pressed.connect(func():
+			GameState.talk_round(str(p["id"]))
+			_build())
+		row.add_child(ask)
+	elif p.has("talked_round"):
+		info.add_child(_para("He went around again once already. This time he's going.", UiKit.SMALL, UiKit.MUTED))
+	return row
+
+
+func _name_row(p: Dictionary, size: int) -> HBoxContainer:
+	var h := UiKit.hbox(UiKit.Space.CLOSE)
+	var chip := UiKit.role_chip(Ratings.role_tag(p))
+	chip.custom_minimum_size.x = UiKit.ROLE_COL
+	h.add_child(chip)
+	var who := UiKit.ellipsis(GameDB.player_display_name(p), size, UiKit.TEXT, true)
+	who.name = "PlayerName_" + str(p["id"])
+	h.add_child(NameLink.tappable(who, str(p["id"])))
+	return h
+
+
+## The card also says where he is headed: how he is developing and his match
+## ratings this season; on a full PC, his time with us and every rating, as the
+## player sheet lists them.
+func _decide_more(pv: VBoxContainer, p: Dictionary, short: bool) -> void:
+	pv.add_child(UiKit.spacer(UiKit.Space.TIGHT if short else UiKit.Space.PAD))
+	var dev := _para(GameState.development_state(p), UiKit.SECONDARY if short else UiKit.BODY, UiKit.TEXT)
+	dev.name = "DecideDevelopment"
+	pv.add_child(dev)
+	var form := ReservesForm.profile_lines(GameState.form_log, GameState.reserves_log, str(p.get("id", "")))
+	if not form.is_empty():
+		var fl := _para("Match ratings. " + " ".join(form), UiKit.FINE if short else UiKit.SECONDARY, UiKit.TEXT)
+		fl.name = "DecideForm"
+		pv.add_child(fl)
+	if short:
+		return
+	var w := PlayerSheet.with_us_block(p)
+	if w != null:
+		pv.add_child(UiKit.spacer(UiKit.Space.TIGHT))
+		pv.add_child(w)
+	var attr: Dictionary = p.get("attr", {}) if p.get("attr") is Dictionary else {}
+	if attr.is_empty():
+		return
+	pv.add_child(UiKit.spacer(UiKit.Space.PAD))
+	pv.add_child(UiKit.section("Ratings"))
+	var grid := GridContainer.new()
+	grid.name = "DecideRatings"
+	# Three across, each rating right beside its attribute.
+	grid.columns = 3
+	grid.add_theme_constant_override("h_separation", UiKit.Space.SPREAD)
+	grid.add_theme_constant_override("v_separation", 0)
+	pv.add_child(grid)
+	var unknown: Array = p.get("attr_unrecorded", [])
+	var rows: Array = PlayerSheet.ATTR_ROWS.duplicate()
+	rows.append(["leadership", "Leadership"])
+	for r in rows:
+		var v := float(Leadership.of(p)) if r[0] == "leadership" else \
+				(-1.0 if unknown.has(r[0]) else float(attr.get(r[0], 0.0)))
+		var cell := UiKit.hbox(UiKit.Space.SNUG)
+		cell.name = "Rating_" + str(r[0])
+		cell.add_child(UiKit.line(str(r[1]), UiKit.SMALL, UiKit.TEXT))
+		cell.add_child(UiKit.line("—" if v < 0.0 else str(int(round(v))), UiKit.SMALL, UiKit.MUTED))
+		grid.add_child(cell)
+
+
+## One man in the list: a tap shows his card. In one column the row has room
+## for his role and facts; in two, his name over where he stands.
+func _decide_row(e: Dictionary, rich: bool, row_h: int) -> Button:
+	var p: Dictionary = e["p"]
+	var on := str(p["id"]) == _pick_id
+	var b := Button.new()
+	b.name = "Decide_" + str(p["id"])
+	b.custom_minimum_size = Vector2(0, row_h)
+	b.focus_mode = Control.FOCUS_ALL
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(UiKit.TEXT, 0.09) if on else Color.TRANSPARENT
+	sb.border_color = UiKit.TEXT if on else UiKit.LINE
+	sb.border_width_left = 3 if on else 0
+	sb.border_width_bottom = 0 if on else 1
+	for state in ["normal", "pressed", "hover_pressed"]:
+		b.add_theme_stylebox_override(state, sb)
+	var hv := sb.duplicate() as StyleBoxFlat
+	if not on:
+		hv.bg_color = Color(UiKit.TEXT, 0.05)
+	b.add_theme_stylebox_override("hover", hv)
+	b.add_theme_stylebox_override("focus", UiKit.focus_ring())
+	b.pressed.connect(func():
+		_pick_id = str(p["id"])
+		_build())
+	var m := MarginContainer.new()
+	m.set_anchors_preset(Control.PRESET_FULL_RECT)
+	m.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	for side in ["left", "right"]:
+		m.add_theme_constant_override("margin_" + side, UiKit.Space.ROOM)
+	b.add_child(m)
+	var h := UiKit.hbox(UiKit.Space.PAD)
+	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	m.add_child(h)
+	var st := _status(e)
+	if rich:
+		var chip := UiKit.role_chip(Ratings.role_tag(p))
+		chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		h.add_child(chip)
+		var who := UiKit.ellipsis(GameDB.player_display_name(p), UiKit.BODY, UiKit.TEXT, true)
+		who.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		who.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		h.add_child(who)
+		var facts := UiKit.line("%d OVR  ·  age %d" % [int(p["overall"]), int(p.get("age", 0))], UiKit.SMALL, UiKit.MUTED)
+		facts.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		h.add_child(facts)
+		var s := UiKit.line(str(st[0]), UiKit.SMALL, st[1], true)
+		s.custom_minimum_size.x = 170
+		s.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		s.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		h.add_child(s)
+	else:
+		var v := UiKit.vbox(0)
+		v.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		v.alignment = BoxContainer.ALIGNMENT_CENTER
+		h.add_child(v)
+		var who := UiKit.ellipsis(GameDB.player_display_name(p), UiKit.BODY, UiKit.TEXT, true)
+		who.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		v.add_child(who)
+		var s := UiKit.ellipsis(str(st[0]), UiKit.SMALL, st[1], false)
+		s.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		v.add_child(s)
+	return b
+
+
+# -- Our list, a stage of its own on a PC: a table in three columns, by salary,
+# its rows spread to the height so it neither scrolls nor ends half way down.
+func _whole_list(body: VBoxContainer) -> void:
+	body.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	var sorted := GameState.my_list.duplicate()
+	sorted.sort_custom(func(a, b): return int(a.get("salary", 0)) > int(b.get("salary", 0)))
+	var cols := 3
+	var per := int(ceil(float(sorted.size()) / float(cols)))
+	var short := _short_pc()
+	var fs := UiKit.FINE if short else UiKit.BODY
+	var head_h := 22.0 if short else 30.0
+	var avail := _room_now() - head_h - UiKit.Space.TIGHT
+	var row_h := clampf(floor(avail / float(maxi(1, per))), 20.0, 44.0)
+	var h := UiKit.hbox(UiKit.Space.COLUMN if short else UiKit.Space.APART)
+	h.name = "WholeList"
+	body.add_child(h)
+	for c in cols:
+		var col := UiKit.vbox(0)
+		col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		h.add_child(col)
+		col.add_child(_list_row(["Player", "OVR", "Pay", "Contract"], fs, head_h, "", short))
+		for i in range(c * per, mini(sorted.size(), (c + 1) * per)):
+			var p: Dictionary = sorted[i]
+			# The season just played still counts in contract_years until the
+			# rollover (Re-signed says years - 1 too).
+			var left := int(p.get("contract_years", 1)) - 1
+			var term := "out of contract" if left <= 0 else "%d season%s left" % [left, "" if left == 1 else "s"]
+			col.add_child(_list_row([GameDB.player_display_name(p), str(int(p["overall"])),
+					Contracts.money(int(p.get("salary", 0))), term], fs, row_h, str(p["id"]), short))
+
+
+## One row of Our list (or its heading when `id` is empty): his name, rating,
+## pay and what is left of his contract, each in its own column.
+func _list_row(cells: Array, fs: int, row_h: float, id: String, short: bool) -> Control:
+	var head := id == ""
+	var row := PanelContainer.new()
+	row.custom_minimum_size.y = row_h
+	var sb := UiKit.line_row(false)
+	sb.content_margin_left = 0
+	sb.content_margin_right = 0
+	row.add_theme_stylebox_override("panel", sb)
+	var h := UiKit.hbox(UiKit.GAP)
+	row.add_child(h)
+	var ink := UiKit.MUTED if head else UiKit.TEXT
+	var size := UiKit.FINE if head else fs
+	var who := UiKit.ellipsis(str(cells[0]), size, ink, not head)
+	who.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	who.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	if head:
+		h.add_child(who)
+	else:
+		who.name = "ListName_" + id
+		var tap := NameLink.tappable(who, id)
+		tap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		h.add_child(tap)
+	var widths := [28, 44, 92] if short else [40, 64, 130]
+	for k in range(1, 4):
+		var l := UiKit.line(str(cells[k]), size, ink)
+		l.custom_minimum_size.x = widths[k - 1]
+		l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT if k < 3 else HORIZONTAL_ALIGNMENT_LEFT
+		h.add_child(l)
+	return row

@@ -1709,6 +1709,8 @@ func _run() -> void:
 	await _t("_test_list_shape_fits_phones")
 	for sz in [Vector2i(390, 844), Vector2i(1280, 720)]:
 		await _t("_test_list_words_fit", [sz])
+	for sz in [Vector2i(1280, 720), Vector2i(960, 540), Vector2i(390, 844)]:
+		await _t("_test_contracts_pc", [sz])
 	await _t("_test_restore_earlier_save_tap")
 	await _t("_test_top_up_sheet_taps")
 	print(Ran.line("Career UI", self))
@@ -6527,3 +6529,101 @@ func _test_top_up_sheet_taps() -> void:
 			and (_state.my_list as Array).size() == list_before + 1,
 			"A real tap on Done leaves the last spot empty (%s)" % done_tap)
 	root.size = size_before
+
+
+## A PC's Contracts (UI batch 5, the director's board A): the men to decide on
+## in a list, the picked one's card beside it, and a finger on another name
+## shows his. The whole list is a tab of its own. Neither scrolls, also once a
+## signing grows the heading. A phone keeps Contracts as it was.
+func _test_contracts_pc(sz: Vector2i) -> void:
+	var C = load("res://scripts/sim/Contracts.gd")
+	_state.reset()
+	_state.career_seed = 5508
+	_state.replay_seed = 5508
+	_state.start_season("MEL", _db.club_list("MEL"))
+	_state.season.round_index = _state.season.fixture.size()
+	_state.open_offseason()
+	var size_before := root.size
+	root.size = sz
+	var tag := "%dx%d" % [sz.x, sz.y]
+	var scene: Control = load("res://scenes/OffseasonScene.tscn").instantiate()
+	root.add_child(scene)
+	await _settle()
+	if sz.x < 760:
+		_check(scene.find_child("Tab_list", true, false) == null and scene.find_child("DecideCard", true, false) == null
+				and scene.find_child("OutOfContractHead", true, false) != null,
+				"Phone %s: Contracts keeps its cards and has no Our list tab" % tag)
+		scene.queue_free()
+		await _settle()
+		root.size = size_before
+		return
+	var deciding: int = _state.retiring_players().size() + C.expiring(_state.my_list).filter(
+			func(q): return not _state.retiring_now(q)).size()
+	var rows: Array = scene.find_children("Decide_*", "Button", true, false)
+	_check(deciding >= 2 and rows.size() == deciding and scene.find_child("DecideCard", true, false) != null,
+			"PC %s: every man to decide on has a row, and one card shows (%d of %d)" % [tag, rows.size(), deciding])
+	var actions := scene.find_children("Contract_*", "", true, false).size() + scene.find_children("Retiring_*", "", true, false).size()
+	_check(actions == 1, "PC %s: only the picked man's actions show (%d)" % [tag, actions])
+	# A finger on another man's row shows his card.
+	var other: Button = null
+	for r in rows:
+		if str(r.name).trim_prefix("Decide_") != str(scene.get("_pick_id")):
+			other = r
+	var want := str(other.name).trim_prefix("Decide_") if other != null else ""
+	var why: String = await Tap.tap(other) if other != null else "no second row"
+	await _settle()
+	var card := scene.find_child("DecideCard", true, false)
+	_check(why == "" and card != null and card.find_child("PlayerName_" + want, true, false) != null,
+			"PC %s: a finger on another man's row shows his card (%s)" % [tag, why])
+	# His buttons answer a finger: Release opens its confirm.
+	var mine: Dictionary = {}
+	for p in C.expiring(_state.my_list):
+		if not _state.retiring_now(p):
+			mine = p
+			break
+	var row_m: Button = scene.find_child("Decide_" + str(mine.get("id", "")), true, false)
+	var why_m: String = await Tap.tap(row_m) if row_m != null else "no row for a man out of contract"
+	await _settle()
+	var rel: Button = scene.find_child("Release", true, false)
+	var why_r: String = await Tap.tap(rel) if rel != null else "no Release"
+	await _settle()
+	_check(why_m == "" and why_r == "" and scene.find_child("ReleaseConfirmation", true, false) != null,
+			"PC %s: a finger on Release in his card opens the confirm (%s %s)" % [tag, why_m, why_r])
+	var cancel: Button = scene.find_child("CancelRelease", true, false)
+	if cancel != null:
+		await Tap.tap(cancel)
+		await _settle()
+	_check(_contracts_fit(scene) == "", "PC %s: Contracts fits without scrolling (%s)" % [tag, _contracts_fit(scene)])
+	# A signing grows the heading (its notice and Undo): the list still fits.
+	var out: Dictionary = _state.resign_player(str(mine["id"]), int(C.wants(mine)["years"]))
+	scene.set("_notice", str(out.get("reason", "")))
+	scene.call("_build")
+	await _settle()
+	_check(bool(out.get("ok", false)) and scene.find_child("UndoLast", true, false) != null and _contracts_fit(scene) == "",
+			"PC %s: after a signing Contracts still fits (%s)" % [tag, _contracts_fit(scene)])
+	# Our list, by a finger: every man on it, nothing scrolls.
+	var tab: Button = scene.find_child("Tab_list", true, false)
+	var why_t: String = await Tap.tap(tab) if tab != null else "no Our list tab"
+	await _settle()
+	var named := scene.find_children("ListName_*", "", true, false).size()
+	_check(why_t == "" and named == _state.my_list.size() and _contracts_fit(scene) == "",
+			"PC %s: a finger on Our list shows all %d, unscrolled (%d; %s)" % [tag, _state.my_list.size(), named, _contracts_fit(scene)])
+	scene.queue_free()
+	await _settle()
+	root.size = size_before
+
+
+## "" when the Off-season body fits its box and nothing runs past the right
+## edge; else what is over.
+func _contracts_fit(scene: Control) -> String:
+	var sc: ScrollContainer = scene.get("_scroll_box")
+	if sc == null or sc.get_child_count() == 0:
+		return "no body"
+	var over := (sc.get_child(0) as Control).size.y - sc.size.y
+	if over > 0.5:
+		return "over by %.0f" % over
+	var edge := scene.get_viewport().get_visible_rect().size.x
+	for c in scene.find_children("*", "Control", true, false):
+		if (c as Control).is_visible_in_tree() and (c as Control).get_global_rect().end.x > edge + 0.5:
+			return "%s past the edge" % c.name
+	return ""
