@@ -80,6 +80,7 @@ func run() -> void:
 	_t("_test_free_taker_kicks")
 	_t("_test_tackled_frees")
 	_t("_test_tackle_cuts", [res])
+	_t("_test_frees_and_subs", [res])
 	GameState.replay_seed = 0
 	print(Ran.line("Match visual", self))
 
@@ -4271,6 +4272,93 @@ func _test_free_taker_kicks() -> void:
 ## Holding the ball and dropping it are paid off a tackle (row 202, 2e, 2026-11-21): the man
 ## paid the free runs down the man caught (the director's chase), the tackle lands on him
 ## (a "tackle" contact, so the 3D tackle clips play), and the tackler then has the ball.
+## Watched through the match view: at a free kick the field umpire who paid it runs in and
+## stands off its mark until it is taken; a man coming off jogs to the gate and is gone, and
+## the man coming on runs onto the ground from it (no new clips, the art freeze of 2026-11-21).
+func _test_frees_and_subs(res: Dictionary) -> void:
+	var pv := PitchView.new()
+	pv.size = Vector2(360, 640)
+	pv.three_d = true
+	(Engine.get_main_loop() as SceneTree).root.add_child(pv)
+	var at_stand := res.duplicate()
+	at_stand["venue"] = "Alan Ray Oval"
+	pv.setup(at_stand)
+	var oval: Oval3D = pv._oval3d
+	var d: MatchDirector = pv.director
+	pv.set_speed(4.0)
+	pv.play()
+	var dt := 1.0 / 30.0
+	var frees := 0
+	var reached := 0
+	var long_frees := 0       # frees held 3 director seconds or more: time to get there
+	var long_reached := 0
+	var cur := -1
+	var best := INF
+	var held := 0.0
+	var seen := {}            # leaver figure -> [slot, director time it left, gap it ran on with, least gap since]
+	var off := 0              # men who reached the gate and were gone
+	var on := 0               # men coming on who were on their spot within 20 director seconds
+	var subs := 0
+	var frames := 0
+	var rot := oval.rotation.y
+	var replay := false
+	while d.time < 1500.0 and frames < 30000 and pv.playing:
+		var t0 := d.time
+		pv._process(dt)
+		frames += 1
+		# The picture cut away this frame: a goal's replay ended, or the ends changed.
+		var cut_now := oval.rotation.y != rot or (replay and not pv._replaying())
+		rot = oval.rotation.y
+		replay = pv._replaying()
+		var fr: Dictionary = d.free_now()
+		if not fr.is_empty() and int(fr["k"]) == cur:
+			held += d.time - t0
+		if fr.is_empty() or int(fr["k"]) != cur:
+			if cur >= 0:
+				reached += 1 if best < 1.0 else 0
+				if held >= 3.0:
+					long_frees += 1
+					long_reached += 1 if best < 1.0 else 0
+			cur = -1 if fr.is_empty() else int(fr["k"])
+			frees += 0 if fr.is_empty() else 1
+			best = INF
+			held = 0.0
+		if not fr.is_empty() and oval._ump_free >= 0:
+			var un: Node3D = (oval.umpires[oval._ump_free] as Dictionary)["node"]
+			best = minf(best, Vector2(un.position.x, un.position.z).distance_to(oval._free_spot(fr["at"])))
+		for l in oval._leavers:
+			var q: Dictionary = l["p"]
+			if not seen.has(q["node"]) or (seen[q["node"]] as Array).is_empty():
+				var i := int(l["slot"])
+				seen[q["node"]] = [i, d.time, (oval.anim._gap[i] as Vector2).length(), INF]
+				subs += 1
+		for n in seen:
+			var s: Array = seen[n]
+			if s.is_empty():
+				continue
+			# His closest to his spot so far: once there, a later tackle's get-up may draw him off
+			# it again before the man going off is gone.
+			s[3] = minf(float(s[3]), (oval.anim._gap[int(s[0])] as Vector2).length())
+			var gone := not (n as Node3D).visible
+			if gone and not oval._leavers.any(func(l): return (l["p"] as Dictionary)["node"] == n):
+				var np: Vector3 = (n as Node3D).position
+				# (A cut away, the ends changing at a break, ends the interchange off screen.)
+				off += 1 if Vector2(np.x, np.z).distance_to(oval._gate()) < 1.0 or cut_now else 0
+				on += 1 if float(s[2]) > 10.0 and float(s[3]) < 1.0 else 0
+				seen[n] = []
+	# Men still on their way when the watch ends are not counted.
+	subs -= seen.values().filter(func(v): return not (v as Array).is_empty()).size()
+	pv.queue_free()
+	print("  frees %d, umpire within 1 m of his spot at %d (held 3 s or more: %d of %d); subs %d, off %d, on %d" % [
+			frees, reached, long_reached, long_frees, subs, off, on])
+	_check(frees >= 5, "frees are paid in the first %d director seconds (%d)" % [int(d.time), frees])
+	_check(long_frees > 0 and long_reached == long_frees,
+			"a free held 3 s or more has its umpire standing off the mark (%d of %d)" % [long_reached, long_frees])
+	_check(subs > 0, "a man comes off in the first %d director seconds" % int(d.time))
+	_check(off == subs, "every man coming off jogs to the gate and is gone (%d of %d)" % [off, subs])
+	_check(on == subs, "every man coming on runs on from the gate to his spot (%d of %d)" % [on, subs])
+
+
 func _test_tackled_frees() -> void:
 	var res := MatchSim.new(Squad.new("FRE", GameDB.club_list("FRE"), true, "FRE"),
 			Squad.new("STK", GameDB.club_list("STK"), false, "STK"), 31).run()

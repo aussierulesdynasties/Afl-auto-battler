@@ -78,6 +78,14 @@ const ROLL_JUMP := 3.0         # m: a bigger move in one frame is the ball put s
 
 var director: MatchDirector
 var players: Array = []        # [{node, anim, ring}] in director.tokens order
+## An interchange (a rotation, or the man hurt going off): the man coming off jogs to the
+## interchange gate on the far wing (GATE) and is gone; the man coming on runs to his spot from
+## there (Oval3DAnim.run_on). Before, the slot's figure turned into the other man where he stood.
+const GATE_SPEED := 5.0       # m/s of match time the man coming off jogs at
+const GATE_OUT := 3.0         # m past the far boundary line on the centre line: the gate
+var _spares: Array = [[], []] # per side: figures for a man coming off, not in use
+var _leavers: Array = []      # [{p, side, to}] men jogging off now
+var _fig := {}                # what a spare figure is built from: scene, kits, cols, clubs
 var ball: MeshInstance3D
 var camera: Camera3D
 var film: MeshInstance3D  # the broadcast film look (_film)
@@ -119,6 +127,12 @@ func build(p_director: MatchDirector, home: String, away: String) -> void:
 	_ground()
 	_posts()
 	var slug := GroundModels.slug_for(ground) if ground != "" else ""
+	# A build that leaves the ground's model out (the Web build: docs/ITCH_BUILDS.md, "What each
+	# build carries") plays in the stands every ground without a model has, never in a ring of
+	# seats with no stadium under them.
+	if slug != "" and GroundModels.files(slug).is_empty():
+		push_warning("Oval3D: %s has no ground model in this build; playing in the plain stands" % slug)
+		slug = ""
 	if slug != "":
 		_ground_model(slug, "", home, away)
 	else:
@@ -130,11 +144,15 @@ func build(p_director: MatchDirector, home: String, away: String) -> void:
 	var scene: PackedScene = load(player_glb)
 	# Each club in its home guernsey, as the vignettes dress them (StoppageVignette._dress).
 	var kits := [_kit(GameDB.club_guernsey(home)), _kit(away_guernsey(home, away))]
+	_fig = {"scene": scene, "kits": kits, "clubs": [home, away]}
 	for t in director.tokens:
 		var side := int(t.get("side", 0))
 		var p := _player(scene, kits[side], GameDB.club_colours(home if side == 0 else away), home if side == 0 else away)
 		_dress(p, t)
 		players.append(p)
+	for side in range(2):
+		# One spare a side ready, so the first interchange builds nothing mid-match.
+		(_spares[side] as Array).append(_spare(side))
 	anim = Oval3DAnim.new(director, players)
 	director.want_contacts = true
 	_crew_seed = hash(home + "|" + away)
@@ -209,6 +227,7 @@ func sync(dt: float) -> void:
 		# a player it is in his hands; otherwise it lies on the turf.
 		holder = _nearest(director.ball["pos"], 1.0)
 		resting = holder < 0
+	_move_leavers(dt)
 	# The umpires first: the players are drawn clear of where they are this frame (_spaced).
 	_move_umpires(dt)
 	if crew != null:
@@ -217,8 +236,12 @@ func sync(dt: float) -> void:
 	for i in range(players.size()):
 		var t: Dictionary = director.tokens[i]
 		var p: Dictionary = players[i]
-		# An interchange puts another man in the slot: his own look and number.
+		# An interchange puts another man in the slot: his own look and number. The man coming
+		# off jogs to the gate, and the man coming on runs to the slot's spot from it.
 		if str(t.get("pid", "")) != str(p.get("pid", "")):
+			if str(p.get("pid", "")) != "":
+				_send_off(i, p)
+				anim.run_on(i, _gate())
 			_dress(p, t)
 		var pos: Vector2 = at[i]
 		var vel: Vector2 = t["vel"]
@@ -446,6 +469,16 @@ func set_ends(sign: float) -> void:
 ## for the coming stoppage, instead of a run the picture never showed.
 func umpires_after_cut() -> void:
 	_ump_cut = true
+	# The interchange made while the picture was away is over: the men coming off are gone and
+	# the men coming on are on their spots (the gate turns with the ground as the ends change).
+	for l in _leavers:
+		var q: Dictionary = l["p"]
+		(q["node"] as Node3D).visible = false
+		(_spares[int(l["side"])] as Array).append(q)
+		var i := int(l["slot"])
+		if anim != null and (anim._in[i] as Dictionary).is_empty():
+			anim._gap[i] = Vector2.ZERO
+	_leavers.clear()
 
 
 func _world(v: Vector3) -> Vector3:
@@ -787,6 +820,7 @@ func _number(p: Dictionary, n: int) -> void:
 func _dress(p: Dictionary, t: Dictionary) -> void:
 	var pid := str(t.get("pid", ""))
 	p["pid"] = pid
+	p["num"] = int(t.get("num", -1))
 	_number(p, int(t.get("num", -1)))
 	var who = GameDB.player_by_id(pid) if pid != "" else null
 	p["foot"] = str((who as Dictionary).get("foot", "R")) if who is Dictionary else "R"
@@ -795,6 +829,58 @@ func _dress(p: Dictionary, t: Dictionary) -> void:
 	_head(p, pid)
 	# His real height and weight, and a face of his own (Oval3DBuild; row 202, 2d).
 	Oval3DBuild.apply(p, player_glb, who if who is Dictionary else {}, pid)
+
+
+## A figure for a man of `side` coming off, hidden until used.
+func _spare(side: int) -> Dictionary:
+	var club: String = (_fig["clubs"] as Array)[side]
+	var p := _player(_fig["scene"], (_fig["kits"] as Array)[side], GameDB.club_colours(club), club)
+	(p["node"] as Node3D).visible = false
+	return p
+
+
+## The interchange gate in the director's ground (the oval turns at a change of ends; the gate
+## stays on the wing across from the main camera, where the benches face it).
+func _gate() -> Vector2:
+	var l := to_local(Vector3(0.0, 0.0, -(MatchMotion.HALF_WID + GATE_OUT)))
+	return Vector2(l.x, l.z)
+
+
+## Slot i's man (as drawn now) leaves: a spare figure dressed as him takes his place and pose,
+## and jogs off to the gate (_move_leavers).
+func _send_off(i: int, p: Dictionary) -> void:
+	var side := int(director.tokens[i].get("side", 0))
+	var pool: Array = _spares[side]
+	var q: Dictionary = pool.pop_back() if not pool.is_empty() else _spare(side)
+	_dress(q, {"pid": str(p.get("pid", "")), "num": int(p.get("num", -1))})
+	var node: Node3D = q["node"]
+	node.transform = (p["node"] as Node3D).transform
+	node.visible = true
+	(q["anim"] as AnimationPlayer).play("jog")
+	_leavers.append({"p": q, "side": side, "to": _gate(), "slot": i})
+
+
+## The men coming off jog to the gate, and are gone once there.
+func _move_leavers(dt: float) -> void:
+	for l in _leavers.duplicate():
+		var q: Dictionary = l["p"]
+		var node: Node3D = q["node"]
+		var at := Vector2(node.position.x, node.position.z)
+		var way: Vector2 = (l["to"] as Vector2) - at
+		if way.length() <= GATE_SPEED * dt or dt <= 0.0 and way.length() < 0.1:
+			node.visible = false
+			(_spares[int(l["side"])] as Array).append(q)
+			_leavers.erase(l)
+			continue
+		if dt <= 0.0:
+			continue
+		var step := way.normalized() * GATE_SPEED * dt
+		node.position += Vector3(step.x, 0.0, step.y)
+		node.rotation = Vector3(0.0, rotate_toward(node.rotation.y, atan2(way.x, way.y), 6.0 * dt), 0.0)
+		var ap: AnimationPlayer = q["anim"]
+		if ap.current_animation != "jog":
+			ap.play("jog")
+		ap.advance(dt * GATE_SPEED / LOOP_SPEED)
 
 
 ## Skin, hair colour and hair style on one figure. l: {"skin", "hair"} palette indices
@@ -3006,6 +3092,8 @@ var _ump_from := Vector3.ZERO # the ball's gap from his hands when he took it
 var _ump_off := Vector3.ZERO  # let go: his hands less the director's ball, easing out
 var _ump_off_t := -1.0
 var _ump_hit_from := Vector3.ZERO  # a bounce: where the ball left his hands
+var _ump_free := -1           # the field umpire who paid the free being taken (index in umpires)
+var _ump_free_k := -1         # ...and that free's event
 
 
 ## The umpire who takes stoppage `st` (director.stoppage_now), -1 for none. Kept for the whole
@@ -3028,6 +3116,42 @@ func _stoppage_umpire(st: Dictionary) -> int:
 			best_d = d
 			best = int(u["k"])
 	return best
+
+
+## At a free kick the field umpire nearest its mark (for a ball out of bounds, the boundary
+## umpire, who is on that wing; never one taking a stoppage) runs in and
+## stands FREE_SIDE metres off it, across the ground toward the middle, watching the mark until
+## the ball is kicked or the taker plays on (director.free_now). The real umpire also signals
+## the free; no clip exists for that yet (art freeze, 2026-11-21).
+const FREE_SIDE := 2.5
+
+
+func _free_umpire(fr: Dictionary) -> int:
+	if fr.is_empty():
+		_ump_free = -1
+		_ump_free_k = -1
+		return -1
+	if _ump_free >= 0 and _ump_free_k == int(fr["k"]):
+		return _ump_free
+	var at: Vector2 = fr["at"]
+	var want := "boundary" if str(fr.get("kind", "")) in ["out_on_full", "last_disposal"] else "field"
+	var best := -1
+	var best_d := INF
+	for u in umpires:
+		if str(u["role"]) != want or (u as Dictionary).has("clip") or int(u["k"]) == _ump_job:
+			continue
+		var n: Node3D = u["node"]
+		var d := Vector2(n.position.x, n.position.z).distance_to(at)
+		if d < best_d:
+			best_d = d
+			best = int(u["k"])
+	_ump_free = best
+	_ump_free_k = int(fr["k"])
+	return best
+
+
+func _free_spot(at: Vector2) -> Vector2:
+	return at + Vector2(0.0, -FREE_SIDE if at.y > 0.0 else FREE_SIDE)
 
 
 ## [mark, facing] for the umpire taking stoppage `st`: a centre bounce from BOUNCE_REACH back
@@ -3066,6 +3190,8 @@ func _move_umpires(frame_dt: float) -> void:
 		_ump_job = -1
 	if not st.is_empty():
 		_ump_job = _stoppage_umpire(st)
+	var fr: Dictionary = director.free_now() if st.is_empty() else {}
+	var paid := _free_umpire(fr)
 	var held := false
 	var first := (not _ump_placed or _ump_cut) and not st.is_empty()
 	_ump_placed = _ump_placed or first
@@ -3103,6 +3229,9 @@ func _move_umpires(frame_dt: float) -> void:
 			var m := _stoppage_mark(st)
 			want = m[0]
 			face = m[1]
+		var paying := k == paid
+		if paying:
+			want = _free_spot(fr["at"])
 		if first:
 			# The first picture (the opening bounce), or the first after a cut: everyone already
 			# on his spot.
@@ -3112,7 +3241,7 @@ func _move_umpires(frame_dt: float) -> void:
 		var step := want - at
 		var vel := Vector2.ZERO
 		if dt > 0.0 and step.length() > 0.05:
-			var move := step.limit_length((UMP_SPRINT if job else UMP_SPEED) * dt)
+			var move := step.limit_length((UMP_SPRINT if job or paying else UMP_SPEED) * dt)
 			at += move
 			vel = move / dt
 		node.position = Vector3(at.x, 0.0, at.y)
