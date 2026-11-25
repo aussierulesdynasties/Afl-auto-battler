@@ -2,7 +2,7 @@ extends SceneTree
 ## A close look at one spot of a ground, built as a match builds it, for a fault the
 ## pre-inspection measured (preinspect_grounds.gd).
 ##   godot --path . --rendering-method mobile --script tools/visual/preinspect_look.gd -- OUTDIR GROUND NAME:px,py,pz,tx,ty,tz[,fov] ...
-## Positions are the match's metres. PREINSPECT_NO_CROWD=1 hides the crowd (the seats as the fly-through shows them). Saves OUTDIR/<slug>_<NAME>.png. Looks only.
+## Positions are the match's metres. PREINSPECT_NO_CROWD=1 hides the crowd (the seats as the fly-through shows them); PREINSPECT_NO_HUD=1 hides the score panel; PREINSPECT_MARK_MAT=<material> paints that material magenta; PREINSPECT_UP=x,y,z sets the camera's up. Saves OUTDIR/<slug>_<NAME>.png. Looks only.
 ## PREINSPECT_NEAR=m clips as the broadcast cameras do (Oval3DBroadcast.NEAR, 20 m). PREINSPECT_ROOF=open|shut sets a ground's opening roof (GroundModels.ROOFS; a match shows it shut).
 ## PREINSPECT_MODEL_FRAME=1 reads positions in the model's own frame instead (x east, y north, z up, metres), the frame
 ## Google Earth views are worked out in (docs/MCG_STANDARD.md); PREINSPECT_SIZE=WxH sets the picture (default 960x540).
@@ -47,10 +47,28 @@ func _run() -> void:
 		var gr: Node = oval.find_child("Ground", true, false)
 		if gr != null:
 			GroundModels.set_roof(gr, GroundModels.slug_for(g), OS.get_environment("PREINSPECT_ROOF") == "shut")
+	# PREINSPECT_NO_HUD=1 hides the score panel and the other overlays (a ground check, not a broadcast).
+	if OS.get_environment("PREINSPECT_NO_HUD") != "":
+		for c in oval.find_children("*", "CanvasItem", true, false):
+			(c as CanvasItem).visible = false
+		for c in oval.find_children("*", "CanvasLayer", true, false):
+			(c as CanvasLayer).visible = false
+	# PREINSPECT_MARK_MAT=name draws that material's surfaces flat magenta (to find what a fault in a capture is).
+	var mark := OS.get_environment("PREINSPECT_MARK_MAT")
+	if mark != "":
+		var flag := StandardMaterial3D.new()
+		flag.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		flag.albedo_color = Color(1, 0, 1)
+		for mi in oval.find_children("*", "MeshInstance3D", true, false):
+			var m: Mesh = (mi as MeshInstance3D).mesh
+			for i in (m.get_surface_count() if m else 0):
+				var sm := m.surface_get_material(i)
+				if sm and sm.resource_name == mark:
+					(mi as MeshInstance3D).set_surface_override_material(i, flag)
 	var cam: Camera3D = oval.camera
 	var model_frame := OS.get_environment("PREINSPECT_MODEL_FRAME") != ""
 	var ground := oval.find_child("Ground", true, false) as Node3D
-	cam.far = 3000.0
+	cam.far = maxf(cam.far, 3000.0)   # a ground with a backdrop sees further (GroundModels.backdrop_far)
 	cam.near = float(OS.get_environment("PREINSPECT_NEAR")) if OS.get_environment("PREINSPECT_NEAR") != "" else 0.05
 	for spec in args.slice(2):
 		var parts := str(spec).split(":")
@@ -61,9 +79,14 @@ func _run() -> void:
 			pos = ground.global_transform * Vector3(pos.x, pos.z, -pos.y)
 			tgt = ground.global_transform * Vector3(tgt.x, tgt.z, -tgt.y)
 		cam.global_position = pos
-		# Straight down: model frame keeps the model's north (+y) at the top of the picture, as Google Earth does.
+		# Straight down: model frame keeps the model's north (+y) at the top of the picture, as Google Earth does;
+		# PREINSPECT_UP=x,y,z sets the camera's up outright.
 		var north := (ground.global_transform.basis * Vector3.FORWARD).normalized() if model_frame and ground != null else Vector3.FORWARD
-		cam.look_at(tgt, Vector3.UP if absf((tgt - pos).normalized().y) < 0.999 else north)
+		var up := Vector3.UP if absf((tgt - pos).normalized().y) < 0.999 else north
+		if OS.get_environment("PREINSPECT_UP") != "":
+			var u := OS.get_environment("PREINSPECT_UP").split_floats(",")
+			up = Vector3(u[0], u[1], u[2])
+		cam.look_at(tgt, up)
 		cam.fov = v[6] if v.size() > 6 else 60.0
 		for i in 8:
 			_place_sun(oval, ground, model_frame)
