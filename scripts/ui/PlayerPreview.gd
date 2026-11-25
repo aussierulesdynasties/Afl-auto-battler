@@ -46,7 +46,12 @@ func _ready() -> void:
 	oval.name = "PreviewFigures"
 	_view.add_child(oval)
 	_stage()
-	var scene: PackedScene = load(Oval3D.PLAYER_GLB)
+	# A build that left the footballer out (export_presets.cfg once excluded every .glb) must
+	# say so, not crash the phone on a null model: the form stays usable without him.
+	var scene: PackedScene = load(Oval3D.PLAYER_GLB) as PackedScene if ResourceLoader.exists(Oval3D.PLAYER_GLB) else null
+	if scene == null:
+		push_error("PlayerPreview: the 3D footballer %s is not in this build" % Oval3D.PLAYER_GLB)
+		return
 	for i in range(SPOTS.size()):
 		var p := oval._player(scene, oval._kit(PROSPECT_KIT), [Color(0, 0, 0, 0)])
 		(p["ring"] as Node3D).visible = false   # no club ring: he's no-one's yet
