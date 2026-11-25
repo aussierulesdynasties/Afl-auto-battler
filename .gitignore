@@ -43,6 +43,7 @@ tests/output/
 captures/**/*.import
 docs/**/*.import
 tools/wheelo/cache/
+/ground_packs.json
 
 # Aerial imagery is never committed (docs/MCG_STANDARD.md); the private copy is in the project files (adelaide-standard/private-imagery)
 .claude/review/adelaide/esri/
