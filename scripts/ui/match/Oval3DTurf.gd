@@ -762,8 +762,6 @@ func _sky_view() -> void:
 	if env.sky == null:
 		return
 	var sm: ShaderMaterial = env.sky.sky_material
-	if not sm.has_meta("target"):
-		return
 	var hzv = sm.get_shader_parameter("seen_horizon")
 	if hzv == null or hzv.a == 0.0:
 		hzv = sm.get_shader_parameter("horizon")
@@ -772,9 +770,15 @@ func _sky_view() -> void:
 	if hzv == null:
 		return # headless (tests): no renderer to give the shader's default
 	var hz: Color = hzv
-	var lum := 0.2126 * hz.r + 0.7152 * hz.g + 0.0722 * hz.b
-	sm.set_shader_parameter("view", float(sm.get_meta("target"))
-			/ (env.tonemap_exposure * float(sm.get_shader_parameter("energy")) * lum))
+	if sm.has_meta("target"):
+		var lum := 0.2126 * hz.r + 0.7152 * hz.g + 0.0722 * hz.b
+		sm.set_shader_parameter("view", float(sm.get_meta("target"))
+				/ (env.tonemap_exposure * float(sm.get_shader_parameter("energy")) * lum))
+	# A ground with its surroundings hazes them into the horizon you see (Oval3D._backdrop_view).
+	if env.fog_enabled:
+		env.fog_light_color = Color(hz.r, hz.g, hz.b)
+		var v = sm.get_shader_parameter("view")
+		env.fog_light_energy = float(sm.get_shader_parameter("energy")) * (float(v) if v != null else 1.0)
 
 
 ## The stands cast their shade across the ground (a late game, rule 2.80).
