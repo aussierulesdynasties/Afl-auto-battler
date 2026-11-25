@@ -43,7 +43,7 @@ func _run() -> void:
 		c.visible = false
 	var fit := GroundModels.fit_transform(slug)
 	var cam: Camera3D = oval.camera
-	cam.far = 4000.0
+	cam.far = maxf(4000.0, GroundModels.view_far(slug))
 	cam.near = 0.1
 	for i in 30:
 		await process_frame

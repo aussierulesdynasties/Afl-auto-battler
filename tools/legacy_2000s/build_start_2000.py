@@ -149,6 +149,7 @@ def last_of(L, last):
 
 
 def build(rated, by_year):
+    ids = BS.career_ids(BS.all_list_rows())
     hon = BS.honours(by_year, rated, DATA_SEASON)
     lists = BS.with_heights([r for r in read_csv("2000s", "lists.csv") if int(r["year"]) == YEAR])
     last = last_seasons()
@@ -185,12 +186,9 @@ def build(rated, by_year):
             got = rated.get(y, {}).get(pid) if pid else None
             if got and got[1] >= BS.PEAK_GAMES:
                 seasons.append("%d:%d:%d" % (y, got[0], got[1]))
-        peak = 0
-        for y in rated:
-            if y >= DATA_SEASON and pid:
-                got = rated[y].get(pid)
-                if got and got[1] >= BS.PEAK_GAMES:
-                    peak = max(peak, got[0])
+        # Informed potential (director 2026-11-11): his real peak from the
+        # data season on sets his ceiling (BS.real_peak).
+        peak = BS.real_peak(by_year, rated, pid or ids.get(L["draftguru_id"], ""), DATA_SEASON)
         car = careers.get(pid, [])
         first_year = min((int(r["year"]) for r in car), default=None)
         dy, dt, dp = draft_of(L, drafts)
