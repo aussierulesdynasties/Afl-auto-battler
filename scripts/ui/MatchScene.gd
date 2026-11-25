@@ -146,6 +146,7 @@ var _ft_tab := "summary"        # summary (home), stats or report
 const FullTimeMotion := preload("res://scripts/ui/match/FullTimeMotion.gd")
 var _ft_pending := {}           # full time's motion, waiting on the farewell to end
 var _ceremony: PremiershipCeremony   # the Grand Final's, while it is up
+var _farewell_ref: WeakRef     # a legend's farewell, while it is up (it frees itself)
 var _run_side := -1            # who kicked the last goal, and how many in a row
 var _run_len := 0
 var _press_said := [false, false]  # the High Press line, once a side
@@ -4372,8 +4373,8 @@ func _on_finished() -> void:
 		_open_ceremony(flag)
 		return
 	# Full time is built at once (its controls exist and work the moment the siren goes);
-	# a milestone game's farewell plays over it on its own layer, and a tap or its end
-	# shows full time underneath. Its motion waits for the farewell to end.
+	# a milestone game's farewell plays over it on its own layer, and its Continue (or
+	# Back) shows full time underneath. Its motion waits for the farewell to end.
 	_show_fulltime(_farewell.is_empty())
 	if not _farewell.is_empty():
 		_open_farewell()
@@ -4410,10 +4411,11 @@ func _open_farewell() -> void:
 	v.offset_top = _over.offset_top   # under the scoreboard, as every scene (T3.R42)
 	v.clip_contents = true            # its stand's roof stays off the scoreboard
 	_farewell = {}
-	# Its end (or a tap) lets the result land; so does it going any other way.
+	# Its Continue (or Back) lets the result land; so does it going any other way.
 	v.done.connect(_ft_play_pending, CONNECT_ONE_SHOT)
 	v.tree_exiting.connect(_ft_play_pending, CONNECT_ONE_SHOT)
 	var wv: WeakRef = weakref(v)   # not the node: it frees itself when it ends
+	_farewell_ref = wv
 	tree_exiting.connect(func():            # Back out of the match: it goes too
 		var n = wv.get_ref()
 		if n != null:
@@ -4555,6 +4557,7 @@ func _ft_motion_facts() -> Dictionary:
 		if r != null:
 			rows.append(r)
 	var f := {
+		"area": overlay,   # a tap here puts it all at rest (the skip rule)
 		"verdict": overlay.find_child("Verdict", true, false),
 		"rows": rows,
 		"finals": overlay.find_child("FinalsOutcome", true, false),
@@ -5214,6 +5217,12 @@ func handle_back() -> bool:
 	# The premiership ceremony: Back leaves it, as Continue does.
 	if _ceremony != null and is_instance_valid(_ceremony):
 		_ceremony.finish_now()
+		return true
+	# A legend's farewell: Back leaves it, as its Continue does, and full time
+	# comes up (director, 2026-11-26).
+	var fw: Object = _farewell_ref.get_ref() if _farewell_ref != null else null
+	if fw is FarewellVignette and (fw as FarewellVignette).is_open():
+		(fw as FarewellVignette).finish_now()
 		return true
 	# The bench's drawer on the oval shuts first.
 	if _pitch != null and _pitch.close_bench():

@@ -15,8 +15,10 @@ extends RefCounted
 ##
 ## Presentation only: it moves what full time says, never a word of it, and
 ## every figure is true the moment it shows. Each tween is on the node it moves,
-## so Continue (which frees the sheet) ends it at any frame, and nothing here
-## takes a touch. Reduced motion (and a headless run) moves nothing: the sheet
+## so Continue (which frees the sheet) ends it at any frame. A tap anywhere else
+## on the sheet (director, 2026-11-26, the skip rule) puts all of it at rest at
+## once, the ladder line too, and sounds the sting then if it hasn't sounded
+## (jump_to_rest). Reduced motion (and a headless run) moves nothing: the sheet
 ## is all there at once and only the sting sounds. A loss gets no sting
 ## (director, 2026-11-25): there is no quieter sound to give it.
 
@@ -86,6 +88,7 @@ static func play(f: Dictionary) -> void:
 		if sting:
 			Feel.press("land")
 		return
+	_arm(f)
 	var margin := int(f.get("margin", 0))
 	if result == "loss" and margin >= BIG_LOSS:
 		_sink(v, START)
@@ -117,7 +120,63 @@ static func _still(f: Dictionary) -> void:
 	if not UiKit.motion_on():
 		(ladder as Label).modulate.a = 1.0
 		return
+	_arm(f)
 	_when_seen(ladder, f.get("scroll") as ScrollContainer, LADDER_AT, func() -> void: _ladder(ladder, f))
+
+
+## A tap on the sheet (the skip rule): the sheet's area is f["area"].
+static func _arm(f: Dictionary) -> void:
+	var area: Variant = f.get("area")
+	if is_instance_valid(area) and area is Control:
+		SkipTap.arm(area, func() -> void: jump_to_rest(f))
+
+
+## The tap (director, 2026-11-26): every line where it ends, at once - the
+## verdict, the score rows, the finals line and the ladder line, which then
+## never counts or pops when it comes into view. No flash, no shake. The
+## result's sting sounds now if it hasn't yet, and only once; a loss and the
+## still sheet after the ceremony have none.
+static func jump_to_rest(f: Dictionary) -> void:
+	if bool(f.get("rest", false)):
+		return
+	f["rest"] = true
+	Feel.moved.append("ft_rest")
+	for c in _heroes(f):
+		var n := c as Control
+		n.set_meta("_ft_rest", true)   # _when_seen: never later
+		for k in ["ft", "ft_wait", "ft_pop", "text", "mod", "scale"]:
+			_stop(n, k)
+		_release(n)
+		n.scale = Vector2.ONE
+		n.modulate.a = 1.0
+		if n.has_meta("_ft_ink"):
+			n.add_theme_color_override("font_color", n.get_meta("_ft_ink"))
+			n.remove_meta("_ft_ink")
+	var ladder: Variant = f.get("ladder")
+	if is_instance_valid(ladder) and ladder is Label and f.get("say") is Callable:
+		(ladder as Label).text = str((f["say"] as Callable).call(int(f.get("to", 0))))
+	var shell: Variant = f.get("shell")
+	if is_instance_valid(shell) and shell is Control:
+		var s := shell as Control
+		_stop(s, "ft_flash")
+		_stop(s, "ft_shake")
+		if s.has_meta("_ft_flash"):
+			(s.get_meta("_ft_flash") as Dictionary)["a"] = 0.0
+			s.queue_redraw()
+		if s.has_meta("_ft_x0"):
+			s.position.x = float(s.get_meta("_ft_x0"))
+	if not bool(f.get("still", false)) and str(f.get("result", "")) != "loss" and not bool(f.get("stung", false)):
+		f["stung"] = true
+		Feel.press("land")
+
+
+## Kill the tween UiKit._own keeps on `c` under `kind`.
+static func _stop(c: Node, kind: String) -> void:
+	var key := "_motion_" + kind
+	if c.has_meta(key):
+		var tw: Variant = c.get_meta(key)
+		if tw is Tween and (tw as Tween).is_valid():
+			(tw as Tween).kill()
 
 
 static func _heroes(f: Dictionary) -> Array:
@@ -175,7 +234,8 @@ static func _slam(f: Dictionary, v: Control, heavy: bool, sting: bool) -> void:
 	tw.tween_method(_setter(v, "s"), float(k[1]), 1.0, DUR_SLAM) \
 			.set_trans(UiKit.Motion.TRANS_OUT).set_ease(UiKit.Motion.EASE_OUT)
 	tw.tween_callback(func() -> void:
-		if sting:
+		if sting and not bool(f.get("stung", false)):
+			f["stung"] = true
 			Feel.press("land")
 		_flash(f)
 		if heavy:
@@ -316,6 +376,7 @@ static func _pop(l: Label, up: bool) -> void:
 	if not is_instance_valid(l):
 		return
 	var base := l.get_theme_color("font_color")
+	l.set_meta("_ft_ink", base)   # a tap mid-pulse puts it back (jump_to_rest)
 	var hot := UiKit.margin_colour(up)
 	Feel.moved.append("ft_pop")
 	_aim(l)
@@ -330,6 +391,7 @@ static func _pop(l: Label, up: bool) -> void:
 			.set_trans(UiKit.Motion.TRANS_PULSE).set_ease(Tween.EASE_IN_OUT)
 	tw.tween_callback(func() -> void:
 		_release(l)
+		l.remove_meta("_ft_ink")
 		l.add_theme_color_override("font_color", base))
 
 
@@ -343,7 +405,8 @@ static func _ink(l: Label) -> Callable:
 static func _when_seen(c: Control, sc: ScrollContainer, at: float, go: Callable) -> void:
 	var st := {"ready": false, "fired": false}
 	var check := func() -> void:
-		if bool(st["fired"]) or not bool(st["ready"]) or not is_instance_valid(c) or not c.is_inside_tree():
+		if bool(st["fired"]) or not bool(st["ready"]) or not is_instance_valid(c) or not c.is_inside_tree() \
+				or c.has_meta("_ft_rest"):
 			return
 		if sc != null and is_instance_valid(sc) and not _in_view(c, sc):
 			return

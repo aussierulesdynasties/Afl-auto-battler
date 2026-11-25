@@ -4202,8 +4202,27 @@ func _test_season_awards() -> void:
 		_check(button_rect.position.x >= 0 and button_rect.end.x <= width and button_rect.end.y <= 800,
 			"Awards footer remains reachable at %d portrait width" % width)
 
-	next.emit_signal("pressed")
-	_check(scene._done, "A tap completes the winner animation without advancing the award")
+	# The skip rule (director, 2026-11-26: "Count as is, reveal fixed"): the
+	# button reads Next award from the winner's first frame, and a real tap on
+	# the sheet away from the stage puts his walk-on at its last frame.
+	_check(next.text == "Next award" and not scene._done, "From the winner's first frame the button reads Next award (%s)" % next.text)
+	var title: Label = null
+	for l in ceremony.find_children("*", "Label", true, false):
+		if (l as Label).text == "Brownlow Medal":
+			title = l
+	var tapped: String = await Tap.tap_at(title, title.size / 2.0, false) if title != null else "no award title"
+	_check(tapped == "" and is_instance_valid(scene) and scene._done and ceremony.find_child("AwardWinner", true, false) == scene,
+			"A real tap on the sheet completes the winner animation without advancing the award (%s)" % tapped)
+	next.emit_signal("pressed")   # on to the Coleman
+	await _settle()
+	next.emit_signal("pressed")   # its winner
+	await _settle()
+	var scene2: Control = ceremony.find_child("AwardWinner", true, false)
+	var mid_walk: bool = scene2 != null and not scene2._done
+	var why_next: String = await Tap.tap(next)
+	await _settle()
+	_check(mid_walk and why_next == "" and not is_instance_valid(scene2),
+			"Next award moves on from the winner's first frame (%s)" % why_next)
 	_check(var_to_str(_state.season_awards) == before, "Revealing awards does not mutate votes or results")
 	var seen := ""
 	for i in range(20):
