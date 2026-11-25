@@ -7,6 +7,7 @@ import numpy as np
 HERE = os.path.dirname(os.path.abspath(__file__)); SP = os.path.dirname(HERE)
 sys.path.insert(0, HERE)
 from mb import MB, TILE
+import facades as FC
 D = json.load(open(os.path.join(HERE, 'york_park.json')))
 FE = json.load(open(os.path.join(SP, 'work', 'fence.json')))['ell']   # x0, y0, a1, a2, rot(deg)
 OSM = json.load(open(os.path.join(SP, 'work', 'osm_xy.json')))
@@ -198,6 +199,16 @@ def brange(S):
 
 
 # ---------------- stand kinds ----------------
+def polar_path(bs, r_of, toward_pitch=False):
+    """the plan line at radius r_of(b) over bearings bs, as a facades.Path (outward = away from the pitch)"""
+    return FC.Path([pol(b, r_of(b)) for b in bs], flip=toward_pitch)
+
+
+def back_wall(mb, kind, bs, r_of, H):
+    """the stand's outside wall, modelled (facades.py): the painted texture name picks the wall kind"""
+    FC.KINDS[kind](mb, polar_path(bs, r_of), H)
+
+
 def single(S, mb, mr):
     bs = brange(S); M = S['mats']; zs0, zs1 = S['z_seat']; zr0, zr1 = S['z_roof']
     def geo(b):
@@ -207,8 +218,9 @@ def single(S, mb, mr):
         rf, ri, ro, rs0, rb = geo(b); zb = zr1 - 0.6 - (zr1 - zr0) * (S['back_in'] / (ro - ri))
         # front wall up, seats up the rake, back wall of the bowl up to the roof, cap, facade down
         return [(rs0, 0.0), (rs0, zs0), (rb - 0.4, zs1), (rb - 0.4, zb), (rb, zb), (rb, 0.0)]
-    n = nrows(prof, bs, 1); tp, tm = terrace(prof, [M['front'], M['seat'], 'conc_wall', 'conc_wall', M['back']], [(1, n)])
+    n = nrows(prof, bs, 1); tp, tm = terrace(prof, [M['front'], M['seat'], 'conc_wall', 'conc_wall', None], [(1, n)])
     strip(mb, bs, tp, tm, -1); seat_rows(bs, prof, 1, n)
+    back_wall(mb, M['back'], bs, lambda b: geo(b)[4], float(np.mean([prof(b)[3][1] for b in bs])))
     for b, sg in ((bs[0], -1), (bs[-1], 1)):
         endcap(mb, b, tp(b), 'conc_wall', sg)
     ribs = roof_strip(S, bs, geo, mr)
@@ -296,8 +308,11 @@ def two_tier(S, mb, mr):
         zb = zr1 - 0.6 - (zr1 - zr0) * (S['back_in'] / (ro - ri))
         return [(rs0, 0.0), (rs0, zs0), (rl, zs1), (rl, zb1), (rl + 0.6, zb1), (rl + 0.6, zu0), (rb - 0.4, zu1), (rb - 0.4, zb), (rb, zb), (rb, 0.0)]
     n1, n5 = nrows(prof, bs, 1), nrows(prof, bs, 5)
-    tp, tm = terrace(prof, [M['front'], M['seat'], M['box'], 'conc_wall', 'conc_wall', M['seat'], 'conc_wall', 'conc_wall', M['back']], [(1, n1), (5, n5)])
+    tp, tm = terrace(prof, [M['front'], M['seat'], None, 'conc_wall', 'conc_wall', M['seat'], 'conc_wall', 'conc_wall', None], [(1, n1), (5, n5)])
     strip(mb, bs, tp, tm, -1); seat_rows(bs, prof, 1, n1); seat_rows(bs, prof, 5, n5)
+    rl = lambda b: geo(b)[3] + S['lower_back']
+    FC.box_front(mb, polar_path(bs, rl, toward_pitch=True), zs1, zb1)
+    back_wall(mb, M['back'], bs, lambda b: geo(b)[4], float(np.mean([prof(b)[-2][1] for b in bs])))
     for b, sg in ((bs[0], -1), (bs[-1], 1)):
         endcap(mb, b, tp(b), 'conc_wall', sg)
     roof_strip(S, bs, geo, mr)
@@ -314,19 +329,42 @@ def open_stand(S, mb):
         endcap(mb, b, tp(b), 'conc_wall', sg)
 
 
+def FC_ccw(P):
+    from mb import ccw
+    return ccw(P)
+
+
+def _raised(mb, kind, W, z0, z1):
+    """a wall kind drawn on a wall that starts z0 up (behind a seat bank): laid out on its own height, lifted"""
+    class Lift:
+        def __init__(s, mb_): s.mb = mb_
+        def face(s, pts, m, uv=None): s.mb.face([(x, y, z + z0) for x, y, z in pts], m, uv=uv)
+    FC.KINDS[kind](Lift(mb), W, z1 - z0)
+
+
 def block(S, mb, mr):
     bs = brange(S); M = S['mats']; zs0, zs1 = S['z_seat']; H = S['z_block']
     def prof(b):
         rf = fence_r(b % 360); rs0 = rf + S['front_seats'][0]; r1, r2 = interp(S['block'], b)
         return [(rs0, 0.0), (rs0, zs0), (r1, zs1), (r1, H), (r2, H), (r2, 0.0)]
-    n = nrows(prof, bs, 1); tp, tm = terrace(prof, [M['front'], M['seat'], M['back'], M['roof'], M['back']], [(1, n)])
+    n = nrows(prof, bs, 1); tp, tm = terrace(prof, [M['front'], M['seat'], None, M['roof'], None], [(1, n)])
     strip(mb, bs, tp, tm, -1); seat_rows(bs, prof, 1, n)
+    # both walls modelled: the one rising behind the seats faces the pitch, the rear one faces out
+    r1f = lambda b: interp(S['block'], b)[0]; r2f = lambda b: interp(S['block'], b)[1]
+    if H - zs1 > 1.2:
+        _raised(mb, M['back'], polar_path(bs, r1f, toward_pitch=True), zs1, H)
+    else:
+        W1 = polar_path(bs, r1f, toward_pitch=True); FC.panel(mb, W1, 0, W1.L, zs1, H, 0.0, 'render_white')
+    FC.KINDS[M['back']](mb, polar_path(bs, r2f), H)
     for b, sg in ((bs[0], -1), (bs[-1], 1)):
-        endcap(mb, b, tp(b), M['back'], sg)
+        endcap(mb, b, tp(b), 'render_white', sg)
     if 'poly' in S:   # building traced from the satellite roof, moved by the lean at its height
         L = np.mean(np.array(S['lean'], float)[:, 1:], 0) / S['lean_z']
         P = [(x + L[0] * S['poly_z'], y + L[1] * S['poly_z']) for x, y in S['poly']]
-        mb.prism(P, 0.0, S['poly_z'], M['back'], top=M['roof'])
+        Pc = FC_ccw(P); cen = np.mean(np.array(Pc), 0)
+        for i in range(len(Pc)):   # each side of the building modelled (facades.py), the roof capped
+            FC.KINDS[M['back']](mb, FC.Path([Pc[i], Pc[(i + 1) % len(Pc)]], outward_from=tuple(cen)), S['poly_z'])
+        mb.cap(Pc, S['poly_z'], M['roof'])
         if 'overhang' in S:   # roof slab projecting toward the pitch along the front edge (poly points 0-1)
             p, q = np.array(P[0]), np.array(P[1]); t = (q - p) / np.linalg.norm(q - p); n = np.array([t[1], -t[0]])
             if np.dot(n, -(p + q) / 2) < 0: n = -n
@@ -384,11 +422,31 @@ def tower(mb, T):
     if np.dot(nr, f) < 0: nr = -nr
     c0 = np.array([x, y, zb]) + f * 0.6
     Q = lambda u, v, d=0.0: c0 + s * u * w / 2 + up * v + nr * d
-    oriented(mb, [Q(-1, 0), Q(1, 0), Q(1, hh), Q(-1, hh)], 'lamps', nr, [(0, 0), (1, 0), (1, 1), (0, 1)])
-    oriented(mb, [Q(-1, 0, -0.8), Q(1, 0, -0.8), Q(1, hh, -0.8), Q(-1, hh, -0.8)], 'steel_galv', -nr)
-    for (a, b_) in (((-1, 0), (1, 0)), ((1, 0), (1, hh)), ((1, hh), (-1, hh)), ((-1, hh), (-1, 0))):
-        q = [Q(*a), Q(*b_), Q(*b_, -0.8), Q(*a, -0.8)]; cen = Q(0, hh / 2, -0.4)
-        oriented(mb, q, 'steel_galv', np.mean(q, 0) - cen)
+    # The head (GE l045-l315, the grandstand photo): an open galvanised frame of rails and posts, the 4 rows of
+    # 8 lamps on it each a modelled box whose glass face looks down at the ground; the sky shows between them.
+    for v in np.linspace(0.0, hh, 5):
+        mb.beam(tuple(Q(-1, v, -0.3)), tuple(Q(1, v, -0.3)), 0.16, 0.16, 'steel_galv')
+    for u in (-1, -1 / 3, 1 / 3, 1):
+        mb.beam(tuple(Q(u, -0.1, -0.3)), tuple(Q(u, hh + 0.1, -0.3)), 0.16, 0.16, 'steel_galv')
+    for u in (-1 / 3, 1 / 3):   # two struts back to the pole
+        mb.beam((x, y, zb + 0.8), tuple(Q(u, 0.5, -0.3)), 0.3, 0.3, 'steel_galv')
+    for j in range(4):
+        for i in range(8):
+            u = -1 + (i + 0.5) * 2 / 8; v = (j + 0.5) * hh / 4; e = 0.34
+            c = [Q(u + du * e / (w / 2), v + dv * e, -0.2) for du, dv in ((-1, -1), (1, -1), (1, 1), (-1, 1))]
+            cf = [Q(u + du * e / (w / 2), v + dv * e, 0.45) for du, dv in ((-1, -1), (1, -1), (1, 1), (-1, 1))]
+            cen = Q(u, v, 0.12)
+            for k in range(4):
+                q = [c[k], c[(k + 1) % 4], cf[(k + 1) % 4], cf[k]]
+                oriented(mb, q, 'steel_galv', np.mean(q, 0) - cen)
+            oriented(mb, cf, 'lamp_face', nr); oriented(mb, c, 'steel_galv', -nr)
+    # a service platform with a railing just under the head
+    pz = zb - 0.9; pc = np.array([x, y, pz]) + f * 0.4
+    corners = [pc + s * u_ + f * v_ for u_, v_ in ((-w / 2 - 0.3, -1.0), (w / 2 + 0.3, -1.0), (w / 2 + 0.3, 1.5), (-w / 2 - 0.3, 1.5))]
+    oriented(mb, corners, 'steel_galv', np.array([0, 0, 1.0])); oriented(mb, [c_ - np.array([0, 0, 0.15]) for c_ in corners], 'steel_galv', np.array([0, 0, -1.0]))
+    for i_ in range(4):
+        p_, q_ = corners[i_] + np.array([0, 0, 1.1]), corners[(i_ + 1) % 4] + np.array([0, 0, 1.1])
+        mb.beam(tuple(p_), tuple(q_), 0.06, 0.06, 'steel_galv'); mb.beam(tuple(corners[i_]), tuple(p_), 0.06, 0.06, 'steel_galv')
 
 
 def scoreboard(mb, L, R, inset, z0, z1, depth, frame, back, faces, rim, back_rim=None):
@@ -460,7 +518,11 @@ def extras(col):
         a = math.radians(P['a']); uu = np.array([math.cos(a), math.sin(a)]); vv = np.array([-uu[1], uu[0]]); cc = np.array(P['c'], float)
         if np.dot(vv, -cc) < 0: vv = -vv            # vv points to the pitch
         h, hb, Lp, Wp = P['h'], P['bank'], P['L'], P['W']
-        mb.box(cc, Lp, Wp, h, P['a'], P['mat'], mtop='roof_flat')
+        from mb import rect, ccw
+        Rc = ccw(rect(cc, Lp, Wp, P['a']))
+        for i in range(4):   # walls modelled (facades.pav_wall), flat roof
+            FC.KINDS[P['mat']](mb, FC.Path([Rc[i], Rc[(i + 1) % 4]], outward_from=tuple(cc)), h)
+        mb.cap(Rc, h, 'roof_flat')
         # seat bank on the roof: rises from the pitch edge to a rear wall at the middle line
         f0, f1 = cc + vv * Wp / 2, cc
         q = lambda base_, s_, z: (*(base_ + uu * s_ * Lp / 2), z)

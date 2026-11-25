@@ -78,7 +78,7 @@ def concrete(name, col, pu=3.0, pv=1.5, tile=(6.0, 6.0)):
 
 concrete('conc_wall', (176, 172, 164))
 # paving: concourse concrete slabs 1.2 m, saw joints, stains
-a = base(N, N, (112, 104, 98), 7, 24); p = N / 2.4
+a = base(N, N, (132, 132, 128), 7, 24); p = N / 2.4   # grey concrete (Google Earth 2026: the concourse reads neutral grey, not warm)
 for k in range(2): a[int(k * 1.2 * p):int(k * 1.2 * p) + 3] *= 0.7; a[:, int(k * 1.2 * p):int(k * 1.2 * p) + 3] *= 0.7
 for _ in range(25):
     cx, cy, rr = R.integers(0, N), R.integers(0, N), R.integers(10, 60); yy, xx = np.ogrid[:N, :N]
@@ -103,8 +103,10 @@ def deck(name, col, pitch=0.3, tile=(6.0, 6.0), grime=18):
 
 deck('roof_white', (214, 216, 216)); deck('roof_grey', (170, 174, 176)); deck('roof_soffit', (190, 194, 198), grime=14)
 deck('roof_flat', (150, 152, 152), pitch=0.6, grime=22)
-# solar panels: 1.0 x 1.7 m modules, dark blue cells, silver frames, row gaps
-a = np.ones((N, N, 3)) * np.array((38, 48, 72), float); mu, mv = N / 4.0, N / (1.7 * 2 / 1.7 * 1.7 * 2 / 1.7) / 1.0
+# solar panels: 1.0 x 1.7 m modules, cells, silver frames, row gaps. The cells' colour is the aerial's own:
+# over the Gunns array the Esri tile reads a median (151, 158, 157) (roof_colours-style sample, 2026-11-23),
+# the panels mirroring a pale sky; the old dark navy read as a blue band in every Google Earth pair.
+a = np.ones((N, N, 3)) * np.array((148, 155, 156), float); mu, mv = N / 4.0, N / (1.7 * 2 / 1.7 * 1.7 * 2 / 1.7) / 1.0
 mv = N / 3.4
 for i in range(4): a[:, int(i * mu):int(i * mu) + 8] = (170, 176, 182)
 for j in range(2): a[int(j * 1.7 * mv):int(j * 1.7 * mv) + 10] = (170, 176, 182)
@@ -184,6 +186,7 @@ for i in range(8):
         x0, y0 = int(i * cu + 8), int(j * cv + 10); x1, y1 = int((i + 1) * cu - 8), int((j + 1) * cv - 10)
         a[y0:y1, x0:x1] = (170, 176, 180); a[y0 + 8:y1 - 8, x0 + 8:x1 - 8] = (86, 92, 98)
 save('lamps', a, (1, 1))
+a = base(256, 256, (238, 240, 236), 3, 5); save('lamp_face', a, (1.0, 1.0))   # the modelled lamps' glass
 
 # NE gap (scoreboard corner): pavilion render with a dark window band, blue rear panels of the roof seat banks, screen switched off
 def _pav(a, pu, pv, h, w):     # white render, dark glazed band 1.0-2.6 m with a mullion every 1.5 m, grey plinth
@@ -205,6 +208,33 @@ def _sw(a, pu, pv, h, w):      # SW corner building, one tile = full 9 m height:
 
 
 facade('facade_sw', (218, 218, 214), _sw, (6.0, 9.0), 1024, 1536); facade('facade_pav', (214, 214, 208), _pav); facade('panel_blue', (54, 84, 96), _panel)
+# ---- walls for the modelled facades (facades.py): only the detail too small to model (ribs, joints, render,
+# brick coursing); every window, louvre, pier and band is geometry now. Colours as the painted facades above.
+def _plain(a, pu, pv, h, w): pass
+def _ribs(step, dark):
+    def f(a, pu, pv, h, w):
+        for k in range(int(6 / step)): a[:, int(k * step * pu):int(k * step * pu) + 3] *= dark
+    return f
+def _brick(a, pu, pv, h, w):
+    a[:] = np.array((142, 72, 58)) + fine(h, w, 6)[:, :, None]
+    for k in range(int(3.6 / 0.086)): a[int(k * 0.086 * pv):int(k * 0.086 * pv) + 2] *= 0.8
+    for k in range(int(3.6 / 0.086)):
+        o = 0.0 if k % 2 else 0.115
+        for j in range(int(6 / 0.23) + 1):
+            x = int((o + j * 0.23) * pu); a[int(k * 0.086 * pv):int((k + 1) * 0.086 * pv), x:x + 2] *= 0.82
+def _joints(a, pu, pv, h, w):
+    for k in range(4): a[:, int(k * 1.5 * pu):int(k * 1.5 * pu) + 4] *= 0.78
+    for k in range(3): a[int(k * 1.2 * pv):int(k * 1.2 * pv) + 4] *= 0.78
+facade('render_grey', (176, 178, 176), _plain); facade('brick_red', (142, 72, 58), _brick)
+facade('clad_teal', (74, 107, 116), _ribs(0.25, 0.86)); facade('clad_grey', (168, 176, 178), _ribs(0.5, 0.9))
+facade('clad_pale', (196, 198, 198), _ribs(0.5, 0.84)); facade('panel_gunns', (110, 132, 146), _joints)
+facade('render_white', (220, 220, 216), _plain); facade('panel_light', (206, 208, 206), _joints)
+for nm, col, rough in (('glass_dark', (40, 48, 58), 4), ('plenum', (34, 36, 40), 3), ('louvre', (150, 156, 160), 6),
+                       ('sill', (196, 196, 192), 6), ('frame_alu', (186, 190, 192), 4)):
+    a = base(256, 256, col, 2, rough)
+    if nm == 'glass_dark': a += noise(256, 256, 4, 14)[:, :, None]          # sky and room reflections, soft
+    save(nm, a, (2.0, 2.0))
+
 a = base(512, 512, (24, 26, 30), 4, 14)
 for k in range(0, 512, 16): a[:, k:k + 2] *= 0.6; a[k:k + 2] *= 0.6        # LED module joints
 a[:10] = (60, 62, 66); a[-10:] = (60, 62, 66); a[:, :10] = (60, 62, 66); a[:, -10:] = (60, 62, 66)
@@ -260,14 +290,54 @@ dr.ellipse([L_(0.17, 0.12), L_(0.22, 0.15)], fill=blk)                          
 for (u0, v0, u1, v1) in ((0.02, 0.29, 0.10, 0.31), (0.05, 0.55, 0.12, 0.53), (0.50, 0.97, 0.62, 0.97), (0.24, 0.83, 0.34, 0.82)):
     dr.line([L_(u0, v0), L_(u1, v1)], fill=blk, width=6)                                      # claws
 dr.line([L_(0.40, 0.50), L_(0.52, 0.66)], fill=blk, width=6); dr.line([L_(0.58, 0.60), L_(0.56, 0.82)], fill=blk, width=6)   # haunch, leg
-F1 = ImageFont.truetype('C:/Windows/Fonts/georgia.ttf', 150); F2 = ImageFont.truetype('C:/Windows/Fonts/georgia.ttf', 96)
+GEORGIA = 'C:/Windows/Fonts/georgia.ttf'
+
+
+def shipped_image(name):
+    """The texture as it ships in the game's glb (for machines without the sign's font, Georgia)."""
+    import struct, io
+    b = open(os.path.join(os.path.dirname(OUT[:-1]), '..', '..', '..', '..', 'assets', 'grounds', 'york_park', 'york_park.glb'), 'rb').read()
+    n = struct.unpack('<I', b[12:16])[0]; js = json.loads(b[20:20 + n]); bin0 = 20 + n + 8
+    for im_ in js['images']:
+        if im_.get('name') == name:
+            v = js['bufferViews'][im_['bufferView']]; o = bin0 + v.get('byteOffset', 0)
+            return Image.open(io.BytesIO(b[o:o + v['byteLength']])).convert('RGB')
+
+
+if not os.path.exists(GEORGIA):
+    save('sign_utas', np.asarray(shipped_image('sign_utas').resize((SW_, SH_)), float), (7.0, 1.75)); F1 = None
+else:
+    F1 = ImageFont.truetype(GEORGIA, 150); F2 = ImageFont.truetype(GEORGIA, 96)
 def spaced(y, txt, f, x=560, sp=14):
     for ch in txt:
         dr.text((x, y), ch, font=f, fill=(66, 66, 72)); x += dr.textlength(ch, font=f) + sp
     return x
-x = spaced(70, 'UNIVERSITY', F1, 440); spaced(118, 'of', F2, x + 30, 4)
-spaced(270, 'TASMANIA', F1, 440, 40)
-a = np.asarray(im, float) + noise(SH_, SW_, 10, 6)[:, :, None]; save('sign_utas', a, (7.0, 1.75))
+if F1:
+    x = spaced(70, 'UNIVERSITY', F1, 440); spaced(118, 'of', F2, x + 30, 4)
+    spaced(270, 'TASMANIA', F1, 440, 40)
+    a = np.asarray(im, float) + noise(SH_, SW_, 10, 6)[:, :, None]; save('sign_utas', a, (7.0, 1.75))
+
+# ---- the neighbours (neighbours.py): UTAS Inveresk's railway-workshop sheds, The Workshop, River's Edge, the Library,
+# the Stone Building, the Tramsheds and Invermay Park. Colours read off Google Earth 2026 (qa lm_* close-ups).
+# Own seed, so the textures above stay as they were whether or not the sign's font was found.
+R = np.random.default_rng(41)
+def _corr(step, dark):     # corrugated sheet: a soft rib every `step` m
+    def f(a, pu, pv, h, w):
+        x = np.arange(w) / pu / step; a *= (1 - (1 - dark) * (0.5 + 0.5 * np.cos(2 * math.pi * x)))[None, :, None]
+    return f
+facade('clad_bluegrey', (128, 142, 154), _corr(0.076, 0.88))   # the sheds' walls: blue-grey corrugated iron
+facade('clad_silver', (178, 182, 184), _ribs(0.3, 0.8))        # River's Edge, the Library: zinc standing seams
+facade('render_cream', (212, 202, 176), _plain)                # the Stone Building's painted brick
+facade('panel_dark', (66, 70, 74), _joints)                    # Levee Studio, the Workshop's base
+facade('render_sand', (196, 184, 160), _plain)
+deck('roof_rust', (150, 92, 70), grime=34)                     # the north-east sheds' old red iron
+deck('roof_pale', (196, 200, 202))                             # the newer sheds' Zincalume
+deck('roof_red', (168, 62, 50))                                # Invermay Park's pavilions
+for nm, col, rough in (('frame_black', (30, 32, 34), 3), ('skylight', (206, 198, 160), 8), ('door_roller', (150, 154, 156), 6)):
+    a = base(256, 256, col, 2, rough)
+    if nm == 'door_roller':
+        for k in range(0, 256, 8): a[k:k + 2] *= 0.75          # roller slats
+    save(nm, a, (2.0, 2.0))
 
 json.dump(TILE, open(OUT + 'tiles.json', 'w', newline=''), indent=0)
 for nm in sorted(TILE):
