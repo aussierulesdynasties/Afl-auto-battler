@@ -971,8 +971,10 @@ func _refresh_tabs() -> void:
 	for item in [["pool", "Pool"], ["picks", "Picks"], ["squad", "My list"], ["order", "Order"]]:
 		var key: String = item[0]
 		var label := str(item[1])
-		if key == "picks" and _shown_picks() > 0:
-			label += " (%d)" % _shown_picks()
+		# Every pick called so far, passes included, so the count matches the log.
+		var called := _shown_picks() + _shown_passes()
+		if key == "picks" and called > 0:
+			label += " (%d)" % called
 		var b := UiKit.tab(label, _tab == key)
 		b.name = "Tab_" + key
 		b.pressed.connect(_select_tab.bind(key))
@@ -2311,11 +2313,14 @@ func _build_activity() -> PanelContainer:
 ## The night in order, oldest first, over the first `upto` picks of the log:
 ## each pick trade just before the pick it was struck before, then the trades
 ## struck before the next pick still to show. Matched on the pick's number in
-## the order, never the log's index: a skipped pick (a full list, a pass) leaves
-## no row, and counting rows put "before pick 42" after pick 42 (row 175).
-func _night_events(upto: int) -> Array:
+## the order, never the log's index: a skipped pick (a full list, a pass) is not
+## in the pick history, and counting rows put "before pick 42" after pick 42
+## (row 175). With `passes`, each passed pick sits in its place too, so the log
+## never skips a number (director, 2026-11-25: "Show passes as rows").
+func _night_events(upto: int, passes := false) -> Array:
 	var hist: Array = _draft.pick_history
 	var trades: Array = _draft.night_trades if _draft.intake_mode else []
+	var gone: Array = _draft.passed_picks if passes else []
 	var out := []
 	var last := 0
 	for i in range(upto):
@@ -2323,13 +2328,32 @@ func _night_events(upto: int) -> Array:
 		for t in trades:
 			if int(t["at"]) > last and int(t["at"]) <= no:
 				out.append(t)
+		for g in gone:
+			if int(g["pick"]) > last and int(g["pick"]) < no:
+				out.append(g)
 		out.append(hist[i])
 		last = no
 	var next := int(hist[upto]["pick"]) if upto < hist.size() else int(_draft.pick_index) + 1
 	for t in trades:
 		if int(t["at"]) > last and int(t["at"]) <= next:
 			out.append(t)
+	for g in gone:
+		if int(g["pick"]) > last and int(g["pick"]) < next:
+			out.append(g)
 	return out
+
+
+## The passed picks the log shows: every one, or during a replay those before
+## the next pick it has still to show.
+func _shown_passes() -> int:
+	var upto := _shown_picks()
+	var hist: Array = _draft.pick_history
+	var next := int(hist[upto]["pick"]) if upto < hist.size() else int(_draft.pick_index) + 1
+	var n := 0
+	for g in _draft.passed_picks:
+		if int(g["pick"]) < next:
+			n += 1
+	return n
 
 
 func _refresh_history() -> void:
@@ -2337,25 +2361,36 @@ func _refresh_history() -> void:
 	UiKit.clear(_history_box)
 	var entries := []
 	var picks_n := 0
+	var passed_n := 0
 	# During draft night's replay the log holds back the picks the board has not shown.
 	# Newest first: a pick trade sits under the pick it was struck before, never
 	# above it, where it would read as a deal for a pick already called (row 175).
-	for e in _night_events(_shown_picks()):
+	for e in _night_events(_shown_picks(), true):
 		if e.has("buyer"):
 			if _history_club.is_empty() or str(e["buyer"]) == _history_club or str(e["seller"]) == _history_club:
 				entries.append(e)
 		elif _history_club.is_empty() or str(e["club"]) == _history_club:
 			entries.append(e)
-			picks_n += 1
+			if e.has("why"):
+				passed_n += 1
+			else:
+				picks_n += 1
 	entries.reverse()
 	_history_info.text = "%d %s" % [picks_n, "pick" if picks_n == 1 else "picks"]
+	if passed_n > 0:
+		_history_info.text += ", %d passed" % passed_n
 	if entries.is_empty():
 		_history_box.add_child(UiKit.lbl("No picks yet" if _history_club.is_empty() else "No picks for this club yet", UiKit.HEADING, UiKit.TEXT, true))
 		_history_box.add_child(UiKit.lbl(
 				"Every pick shows here, from all %d rival clubs too. The newest come first." % maxi(1, _draft.clubs.size() - 1), 15, UiKit.MUTED))
 	for i in range(mini(_history_shown, entries.size())):
 		var e: Dictionary = entries[i]
-		_history_box.add_child(_history_trade_row(e) if e.has("buyer") else _history_row(e))
+		if e.has("buyer"):
+			_history_box.add_child(_history_trade_row(e))
+		elif e.has("why"):
+			_history_box.add_child(_history_pass_row(e))
+		else:
+			_history_box.add_child(_history_row(e))
 	if _history_shown < entries.size():
 		var more := UiKit.btn("Earlier picks  ·  %d more" % (entries.size() - _history_shown), 14)
 		more.name = "EarlierPicks"
@@ -2368,6 +2403,36 @@ func _refresh_history() -> void:
 func _entry_player_name(entry: Dictionary) -> String:
 	return GameDB.player_display_name_by_id(str(entry.get("player_id", "")),
 			str(entry.get("player_name", "Player")))
+
+
+## Why a pick passed, after "passed: " in its log row.
+const PASS_WHY := {"list_full": "list full", "passed": "the club passed",
+		"no_pick": "nobody left it would take"}
+
+
+## A passed pick in the log: its number, the club and why ("14 STK passed:
+## list full"). Short and muted, so the picks made still lead the log.
+func _history_pass_row(entry: Dictionary) -> Control:
+	var code := str(entry["club"])
+	var mine := code == _club
+	var p := _row_panel(mine)
+	p.name = "HistoryPass_%d" % int(entry["pick"])
+	p.custom_minimum_size.y = 36   # a short row: nobody joined
+	var h := UiKit.hbox(7)
+	p.add_child(h)
+	var number := UiKit.line("%d" % int(entry["pick"]), UiKit.SECONDARY, UiKit.EMPH if mine else UiKit.MUTED)
+	number.custom_minimum_size.x = 32
+	h.add_child(number)
+	var badge := UiKit.club_badge(code, UiKit.SMALL, true)
+	badge.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	h.add_child(badge)
+	var why := "passed: " + str(PASS_WHY.get(str(entry["why"]), "passed"))
+	var words := UiKit.ellipsis(why, UiKit.SMALL, UiKit.EMPH if mine else UiKit.MUTED)
+	words.name = "HistoryPassWhy_%d" % int(entry["pick"])
+	words.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	words.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	h.add_child(words)
+	return p
 
 
 func _history_row(entry: Dictionary) -> Control:
