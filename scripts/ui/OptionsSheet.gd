@@ -91,6 +91,7 @@ static func open(host: Control, in_career: bool, quit := false) -> Control:
 			[["low", "Low"], ["medium", "Medium"], ["high", "High"]], GameState.graphics_quality(),
 			"How much detail the 3D oval draws. Low keeps a weaker phone smooth: fewer shadows, every supporter a flat card. The match plays the same.",
 			func(k): GameState.set_graphics_quality(k))
+	_grounds(v)
 	_row(v, "Centre ball-up scene every match", "SettingsBounceScene", [["off", "Off"], ["on", "On"]],
 			"on" if GameState.bounce_scene_every_match() else "off",
 			"For playtesting. The centre ball-up call comes at the first centre ball-up of every last quarter you coach, whatever the score.",
@@ -232,6 +233,75 @@ static func _row(v: VBoxContainer, title: String, node_name: String, options: Ar
 	var l := UiKit.lbl(note, UiKit.SMALL, UiKit.MUTED)
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(l)
+
+
+## The 3D grounds a build fetches one by one (GroundPacks): how many are on this device, and a
+## button that fetches the rest now, so a match never waits for its ground. Only in a build
+## that fetches its grounds, and not on the Web, where the browser keeps just the latest few.
+static func _grounds(v: VBoxContainer) -> void:
+	var listed: Dictionary = GroundPacks.manifest().get("packs", {})
+	if listed.is_empty() or OS.has_feature("web"):
+		return
+	var box := UiKit.vbox(6)
+	box.name = "SettingsGrounds"
+	v.add_child(UiKit.spacer(4))
+	box.add_child(UiKit.lbl("3D grounds", UiKit.BODY, UiKit.TEXT, true))
+	var status := UiKit.lbl("", UiKit.SMALL, UiKit.MUTED)
+	status.name = "GroundsStatus"
+	status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	box.add_child(status)
+	var get_all := UiKit.btn("", UiKit.NAME)
+	get_all.name = "GroundsDownloadAll"
+	get_all.custom_minimum_size = Vector2(0, 44)
+	box.add_child(get_all)
+	var state := {"packs": null}
+	var refresh := func():
+		var left := GroundPacks.missing()
+		var mb := 0
+		for slug in left:
+			mb += GroundPacks.size_mb(slug)
+		if state["packs"] == null:
+			status.text = "%d of %d grounds are on this phone. A ground downloads the first time you play there." % [
+					listed.size() - left.size(), listed.size()]
+			get_all.text = "Download every ground (%d MB)" % mb
+			get_all.visible = not left.is_empty()
+	refresh.call()
+	get_all.pressed.connect(func():
+		if state["packs"] != null:
+			(state["packs"] as GroundPacks).cancel()
+			(state["packs"] as GroundPacks).queue_free()
+			state["packs"] = null
+			refresh.call()
+			return
+		var left := GroundPacks.missing()
+		if left.is_empty():
+			return
+		var packs := GroundPacks.new()
+		packs.name = "GroundsFetch"
+		box.add_child(packs)
+		state["packs"] = packs
+		get_all.text = "Stop"
+		var queue := Array(left)
+		packs.progress.connect(func(slug: String, done: int, total: int):
+			status.text = "Downloading %s: %d of %d MB. %d grounds to go." % [GroundModels.ground_name(slug),
+					done / 1000000, total / 1000000, queue.size()])
+		packs.finished.connect(func(_slug: String, ok: bool, why: String):
+			if state["packs"] != packs:
+				return
+			if not ok:
+				packs.queue_free()
+				state["packs"] = null
+				refresh.call()
+				status.text = why + " Try again when you're online."
+				return
+			if queue.is_empty():
+				packs.queue_free()
+				state["packs"] = null
+				refresh.call()
+				return
+			packs.fetch(str(queue.pop_front())))
+		packs.fetch(str(queue.pop_front())))
+	v.add_child(box)
 
 
 ## Volume (row 98): one slider for every sound - music, the crowd and button
