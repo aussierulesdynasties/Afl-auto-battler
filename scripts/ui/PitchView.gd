@@ -554,8 +554,7 @@ func _draw_press_zone_3d() -> void:
 				for q in range(4):
 					var t := float(q) / 3.0 if e < 0.0 else 1.0 - float(q) / 3.0
 					var x := lerpf(wx0, wx1, t)
-					var u := clampf(x / MatchMotion.HALF_LEN, -1.0, 1.0)
-					pts.append(Vector2(x, e * MatchMotion.HALF_WID * sqrt(1.0 - u * u)))
+					pts.append(Vector2(x, e * MatchMotion.edge_y(x, e)))
 					cols.append(Color(base.r, base.g, base.b, PRESS_ZONE_ALPHA * PRESS3D_K * fade * lerpf(k0, k1, t)))
 			_ground_polygon(pts, cols)
 
@@ -1411,6 +1410,19 @@ func _w2s_flat(p: Vector2) -> Vector2:
 	return _flat_size() * 0.5 + Vector2((p.x - _cam.x) * m, p.y - _cam.y) * _scale()
 
 
+## The boundary line `out_px` pixels out (in or out), as the flat ground draws it round `c` at `s` pixels a
+## metre: the ellipse a + out_px by b + out_px as always, or on a traced ground its own line (MatchMotion.ring),
+## mirrored along its length as the flat view lays the ends (end_sign).
+func _field_points(c: Vector2, s: float, out_px: float, n: int) -> PackedVector2Array:
+	if not MatchMotion.shaped():
+		return _ellipse_points(c, MatchMotion.HALF_LEN * s + out_px, MatchMotion.HALF_WID * s + out_px, n)
+	var m := end_sign(period)
+	var pts := PackedVector2Array()
+	for q in MatchMotion.ring(n, out_px / s):
+		pts.append(c + Vector2(q.x * m, q.y) * s)
+	return pts
+
+
 func _ellipse_points(c: Vector2, a: float, b: float, n: int) -> PackedVector2Array:
 	var pts := PackedVector2Array()
 	for i in range(n + 1):
@@ -1428,11 +1440,15 @@ func _stripe(c: Vector2, a: float, b: float, x0: float, x1: float) -> PackedVect
 		var x := lerpf(x0, x1, float(i) / float(steps))
 		var t := clampf((x - c.x) / a, -1.0, 1.0)
 		var yh := b * sqrt(1.0 - t * t)
+		if MatchMotion.shaped():
+			yh = MatchMotion.edge_y((x - c.x) / _scale() * end_sign(period), -1.0) * _scale()
 		pts.append(Vector2(x, c.y - yh))
 	for i in range(steps + 1):
 		var x2 := lerpf(x1, x0, float(i) / float(steps))
 		var t2 := clampf((x2 - c.x) / a, -1.0, 1.0)
 		var yh2 := b * sqrt(1.0 - t2 * t2)
+		if MatchMotion.shaped():
+			yh2 = MatchMotion.edge_y((x2 - c.x) / _scale() * end_sign(period), 1.0) * _scale()
 		pts.append(Vector2(x2, c.y + yh2))
 	return pts
 
@@ -1470,9 +1486,10 @@ func _draw() -> void:
 	var tod := time_of_day(weather)
 	var colours := _club_colours()
 	var flat := _flat_size()
+	_stadium.ends = end_sign(period)
 	_stadium.draw_stands(self, Rect2(-flat, flat * 3.0), c, s, colours, weather, tod)
 	var fence := maxf(3.0, 2.0 * s)
-	draw_colored_polygon(_ellipse_points(c, a + fence, b + fence, 128), FENCE_COLOUR)
+	draw_colored_polygon(_field_points(c, s, fence, 128), FENCE_COLOUR)
 
 	# Turf + mown stripes, the replay's grass as the day's weather leaves it, and
 	# the light over it: brighter in the middle, darker toward the fence.
@@ -1488,11 +1505,11 @@ func _draw() -> void:
 	var shade := maxf(6.0, 7.0 * s)
 	for i in range(4):
 		var inset := shade * float(i) / 4.0
-		draw_polyline(_ellipse_points(c, a - inset, b - inset, 96),
+		draw_polyline(_field_points(c, s, -inset, 96),
 				Color(0, 0, 0, 0.16 - 0.035 * float(i)), shade / 4.0 + 1.0, antialias)
 
 	# Boundary
-	draw_polyline(_ellipse_points(c, a, b, 128), Color(1, 1, 1, 0.85), 2.5, antialias)
+	draw_polyline(_field_points(c, s, 0.0, 128), Color(1, 1, 1, 0.85), 2.5, antialias)
 
 	var line_col := Color(1, 1, 1, 0.55)
 	var lw := 1.6

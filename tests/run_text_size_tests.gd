@@ -98,6 +98,10 @@ func _test_scale() -> void:
 		for fs in [UK.FINE, UK.BODY, UK.NAME, UK.H1, 44]:
 			_check(UK.px(fs) == roundi(fs * s), "%s: %d px renders at %d" % [key, fs, UK.px(fs)])
 			_check(UK.px(fs) >= fs, "%s: no size shrinks (%d)" % [key, fs])
+		# Nothing renders under 13 at Standard (director, 2026-11-25): 11 and 12
+		# come out as 13 does, at every size step.
+		_check(UK.px(UK.TINY) == UK.px(13) and UK.px(12) == UK.px(13) and UK.px(13) == roundi(13 * s),
+				"%s: nothing renders under 13 (TINY %d, 12 at %d, 13 at %d)" % [key, UK.px(UK.TINY), UK.px(12), UK.px(13)])
 	_check(is_equal_approx(UK.TEXT_SCALE["standard"], 1.0), "Standard leaves every size as it was")
 	UK.apply_text_size("huge")
 	_check(UK.text_size() == "standard" and is_equal_approx(UK.text_scale, 1.0), "an unknown size reads as Standard")

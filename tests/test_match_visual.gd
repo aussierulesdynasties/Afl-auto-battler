@@ -55,6 +55,8 @@ func run() -> void:
 	_t("_test_farewell")
 	_t("_test_match_ground")
 	_t("_test_ground_models")
+	_t("_test_traced_boundaries")
+	_t("_test_traced_ground_playback", [res])
 	_t("_test_ground_screens")
 	_t("_test_ground_backdrop")
 	_t("_test_stand_light")
@@ -62,6 +64,7 @@ func run() -> void:
 	_t("_test_graphics_levels", [res])
 	_t("_test_discs_apart")
 	_t("_test_clash_kit")
+	_t("_test_clash_guernsey_3d")
 	_t("_test_label_overlap")
 	_t("_test_bench_strip")
 	_t("_test_ends_change_at_restart", [res])
@@ -172,8 +175,10 @@ func _test_every_ground_size(res: Dictionary) -> void:
 		at["venue"] = g
 		at["events"] = half
 		_full_playback(at, " at %s" % g, 400)
-		_check(is_equal_approx(MatchMotion.HALF_LEN, GroundModels.field_for(g).x),
-				"The match at %s is played at its own size (%.0f x %.0f m)" % [g, MatchMotion.HALF_LEN * 2.0, MatchMotion.HALF_WID * 2.0])
+		# A traced ground plays on its real line (it ends just beyond the goal lines); else on the model's size.
+		var own := (MatchMotion.HALF_LEN >= MatchMotion.GOAL_X and MatchMotion.HALF_LEN < MatchMotion.GOAL_X + 3.0) \
+				if MatchMotion.shaped() else is_equal_approx(MatchMotion.HALF_LEN, GroundModels.field_for(g).x)
+		_check(own, "The match at %s is played at its own size (%.0f x %.0f m)" % [g, MatchMotion.HALF_LEN * 2.0, MatchMotion.HALF_WID * 2.0])
 	MatchMotion.use_field(GroundModels.field_for(VignetteGround.ground_of(res)))
 
 
@@ -931,8 +936,16 @@ func _test_truth(res: Dictionary) -> Array:
 ## the ball is being played, so that time is not counted against the collect.
 ## Main has no such man (its scrap moved the ball with nobody on it): its 110 is
 ## unchanged. On main 739db4b22: 91; the spilled-ball scrap: 116, 1 after pressure.
+## Set from the spread (2026-11-23, #2080): main 354ceeb9 read 118 and #2005 with
+## #2080 read 123 with no real shift. Paired over 44 seeds (1-44) the change is
+## -0.07 pauses a match (standard error 0.63); a match averages 25.7 with a
+## spread of 5.5 to 5.8, so the four seeds sum to about 103 give or take 11.5.
+## 120 sat 1.5 spreads above that and failed about one redraw in fourteen. 130 is
+## 2.3 spreads up (about 1 in 100 at random). The price: a rise of 7 pauses a
+## match (a quarter more, 28 on the four seeds) trips it more often than not;
+## a smaller rise needs the paired seeds to see it.
 const PAUSE_S := 1.5
-const PAUSE_MAX := 120
+const PAUSE_MAX := 130
 const PAUSE_PRESSURE_MAX := 4
 
 
@@ -1557,6 +1570,9 @@ func _test_set_shot_calls() -> void:
 				pass_seen += 1
 				var nk := d._next_real(k)
 				var want := d._actor_id(evs[nk]) if nk >= 0 else -1
+				if want < 0:
+					# The next event names nobody (a ball-up off his chance): the man it is kicked to.
+					want = d._token_by_pid(str(ev.get("to_id", "")))
 				for ph in d._pass_phases(k):
 					if str(ph["t"]) == "flight" and int(ph.get("recv", -1)) == want and want >= 0:
 						pass_ok += 1
@@ -2188,6 +2204,8 @@ func _test_ground_models() -> void:
 		for f in files:
 			_check(ResourceLoader.exists(f), "%s is imported (%s)" % [g, f])
 		MatchMotion.use_field(GroundModels.field_for(g))
+		if not GroundModels.shape_for(slug).is_empty():
+			continue   # laid on its traced goals instead: _test_traced_boundaries
 		var fence := GroundModels.match_fence()
 		var f: Array = GroundModels.FIT[slug]
 		var t := GroundModels.fit_transform(slug)
@@ -2212,8 +2230,9 @@ func _test_ground_models() -> void:
 	MatchMotion.use_field(Vector2.ZERO)
 	_check(MatchMotion.HALF_LEN == MatchMotion.STD_HALF_LEN and MatchMotion.gx(37.3) == 37.3,
 			"A ground with no size of its own plays on the standard oval, every spot as before")
-	_check(GroundModels.field_for("Adelaide Oval").is_equal_approx(Vector2(83.5, 62.0)),
-			"A ground with no model plays at its published size (Adelaide Oval 167 x 124)")
+	# (Adelaide Oval has had a model in matches since #1948; Victoria Park has none.)
+	_check(GroundModels.field_for("Victoria Park").is_equal_approx(Vector2(80.0, 65.0)),
+			"A ground with no model plays at its published size (Victoria Park 160 x 130)")
 	for code in GameDB.clubs.keys():
 		var home := VignetteGround.ground_of({"home": code})
 		if GroundModels.GROUNDS.has(GameDB.ground_key(home)):
@@ -2236,6 +2255,99 @@ func _test_ground_models() -> void:
 			and GroundModels.stretch("engie").is_equal_approx(Vector2.ONE),
 			"The turf stops at the model's fence")
 	oval.queue_free()
+
+
+## A ground whose boundary was traced on Google Earth (tools/grounds/boundary) plays on that line, not an ellipse:
+## measured, every traced point of the painted line is where the match's boundary is (within the fit's own error),
+## its goals are where the traced goals are, the model is laid on them unstretched, and the field's own sums
+## (inside, clamp, the width at x, the normal) agree with one another on the real shape.
+func _test_traced_boundaries() -> void:
+	var dir := "res://tools/grounds/boundary/traced/"
+	var names := DirAccess.get_files_at(dir)
+	_check(names.size() > 0, "At least one ground's boundary has been traced (%s)" % dir)
+	for fname in names:
+		if not fname.ends_with(".json"):
+			continue
+		var tr: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(dir + fname))
+		var slug := str(tr.get("slug", fname.get_basename()))
+		var sh := GroundModels.shape_for(slug)
+		_check(not sh.is_empty() and GroundModels.FIT.has(slug),
+				"%s's traced boundary is fitted into data/ground_boundaries.json (rerun fit_boundary.py)" % slug)
+		if sh.is_empty():
+			continue
+		GroundModels.play_on(slug, GroundModels.field(slug))
+		_check(MatchMotion.shaped(), "%s plays on its traced boundary" % slug)
+		var t := GroundModels.fit_transform(slug)
+		_check(t.basis.get_scale().is_equal_approx(Vector3.ONE), "%s's model is laid unstretched" % slug)
+		# The model's metres to the match's: every traced point of the line against the line the match plays on.
+		var worst := 0.0
+		var sq := 0.0
+		var line: Array = tr["line"]
+		for q in line:
+			var w := t * Vector3(float(q[0]), 0.0, float(q[1]))
+			var p := Vector2(w.x, w.z)
+			var off := absf(p.length() - MatchMotion.edge_r(p.angle()))
+			worst = maxf(worst, off)
+			sq += off * off
+		var rms := sqrt(sq / line.size())
+		_check(rms < 0.5 and worst < 1.5 + (2.0 if (sh["boundary_fit"] as Dictionary).has("left_out") else 0.0),
+				"%s: the match's boundary is on the traced line (rms %.2f m, worst %.2f m over %d points)" % [slug, rms, worst, line.size()])
+		for k in 2:
+			var gq: Array = (tr["goals"] as Array)[k]
+			var g := t * Vector3(float(gq[0]), 0.0, float(gq[1]))
+			_check(absf(absf(g.x) - MatchMotion.GOAL_X) < 0.01 and absf(g.z) < 0.01,
+					"%s: traced goal %d is on the match's goal line (%.2f, %.2f; goal line at %.2f)" % [slug, k, g.x, g.z, MatchMotion.GOAL_X])
+		# The field's sums on the real shape, round the whole ground.
+		var bad := 0
+		for i in 360:
+			var a := TAU * i / 360.0
+			var e := MatchMotion.edge_point(a)
+			var c := MatchMotion.clamp_to_oval(e * 1.3, 2.0)
+			if not MatchMotion.inside_oval(c, 1.99) or MatchMotion.inside_oval(e * 1.01, 0.0) \
+					or MatchMotion.fence_normal(e).dot(e.normalized()) <= 0.2:
+				bad += 1
+			# edge_y at this x on this side lands back on the line.
+			if absf(e.x) < MatchMotion.GOAL_X - 2.0:
+				var side := signf(e.y) if e.y != 0.0 else 1.0
+				var y := MatchMotion.edge_y(e.x, side)
+				var back := Vector2(e.x, y * side)
+				if absf(back.length() - MatchMotion.edge_r(back.angle())) > 0.05:
+					bad += 1
+		_check(bad == 0, "%s: inside, clamp, normal and width agree on the traced line all the way round (%d misses)" % [slug, bad])
+	# An untraced ground keeps its ellipse exactly.
+	MatchMotion.use_field(GroundModels.field_for("MCG"))
+	var ell := (MatchMotion.HALF_WID - 4.0) * sqrt(maxf(0.0, 1.0 - pow(31.0 / (MatchMotion.HALF_LEN - 1.0), 2.0)))
+	_check(not MatchMotion.shaped() and MatchMotion.edge_y(31.0, -1.0, 4.0, 1.0) == ell,
+			"An untraced ground plays on the same ellipse as before, to the last bit")
+	MatchMotion.use_field(Vector2.ZERO)
+
+
+## A match at a traced ground plays inside its real line: nobody off the ground, the ball's out-of-bounds
+## spots on the traced line, the boundary umpires just over it.
+func _test_traced_ground_playback(res: Dictionary) -> void:
+	var half: Array = (res["events"] as Array).slice(0, (res["events"] as Array).size() / 2)
+	for g in GroundModels.grounds():
+		var slug := GroundModels.slug_for(g)
+		if GroundModels.shape_for(slug).is_empty():
+			continue
+		var at := res.duplicate()
+		at["venue"] = g
+		at["events"] = half
+		_full_playback(at, " at %s" % g, 400)
+		_check(MatchMotion.shaped() and is_equal_approx(MatchMotion.GOAL_X, float(GroundModels.shape_for(slug)["goal_x"])),
+				"The match at %s is played on its traced boundary and goals" % g)
+		var d := MatchDirector.new()
+		d.setup(at, at["events"])
+		var on_line := 0
+		var out := 0
+		for k in range((at["events"] as Array).size()):
+			if str((at["events"][k] as Dictionary).get("kind", "")) in ["throwin", "last_disposal", "out_on_full"]:
+				var p := d._loc(k)
+				out += 1
+				if absf(p.length() - MatchMotion.edge_r(p.angle()) * 0.985) < 1.5:
+					on_line += 1
+		_check(out == 0 or on_line == out, "At %s the ball goes out on the traced line (%d of %d)" % [g, on_line, out])
+	MatchMotion.use_field(GroundModels.field_for(VignetteGround.ground_of(res)))
 
 
 ## Guernsey numbers on the 3D player (row 202 2d): the digits are read from one padded layer each,
@@ -2261,6 +2373,43 @@ func _test_three_d_numbers() -> void:
 	oval.free()
 
 
+## The 3D away side wears its club's real clash guernsey (data/kits_clash.csv, its own atlas) when the 2D
+## discs call a clash, and its home guernsey otherwise. Every club with a clash guernsey has its cell
+## painted, and each binding colour is set with its width.
+func _test_clash_guernsey_3d() -> void:
+	var g: Dictionary = Oval3D.away_guernsey("FRE", "MEL")
+	_check(bool(g["today"].get("clash", false)) and int(g["today"].get("cell", -1)) == int(GameDB.club_clash_kit("MEL")["cell"]),
+			"Melbourne at Fremantle wear their clash guernsey in 3D")
+	_check(not bool(Oval3D.away_guernsey("HAW", "WCE")["today"].get("clash", false)),
+			"West Coast at Hawthorn wear their home guernsey in 3D")
+	var oval := Oval3D.new()
+	var m: ShaderMaterial = oval._kit(g)
+	_check(m.get_shader_parameter("kit_atlas") == GameDB.kits_clash_atlas(), "A clash guernsey reads the clash atlas")
+	m = oval._kit(GameDB.club_guernsey("MEL"))
+	_check(m.get_shader_parameter("kit_atlas") == GameDB.kits_today_atlas(), "A home guernsey reads the home atlas")
+	oval.free()
+	var img: Image = GameDB.kits_clash_atlas().get_image()
+	if img.is_compressed():
+		img.decompress()
+	var painted := true
+	var bound := true
+	for code in ["ADE", "BRL", "CAR", "COL", "ESS", "FRE", "GEE", "GCS", "GWS", "HAW", "MEL", "NTH", "PAD", "RIC", "STK", "WCE", "WBD"]:
+		var k: Dictionary = GameDB.club_clash_kit(code)
+		if k.is_empty():
+			painted = false
+			continue
+		var cell := int(k["cell"])
+		var cw := img.get_width() / 8
+		var p := img.get_pixel((cell % 4) * 2 * cw + cw / 2, (cell / 4) * cw + cw * 3 / 4)
+		painted = painted and p.r + p.g + p.b > 0.05
+		var c: Color = k.get("collar", Color(0, 0, 0, 0))
+		if c.a > 0.0:
+			bound = bound and float(k.get("collar_cm", 0.0)) > 0.0
+	_check(painted, "Every club with a clash guernsey has its picture in the clash atlas")
+	_check(bound, "Every clash collar has its width")
+	_check(GameDB.club_clash_kit("SYD").is_empty(), "Sydney has no clash guernsey on file, so they wear their own")
+
+
 ## Settings > Graphics (Oval3DQuality): High is the look as built; Low draws every supporter as a
 ## card (no 3D people built), takes the seats' own shadows and the blades away, and draws the
 ## picture at three-quarter size. At every level the seats are drawn in slices round the bowl, so
@@ -2279,6 +2428,14 @@ func _test_graphics_levels(res: Dictionary) -> void:
 		vp.add_child(oval)
 		oval.build(d, "COL", "GEE")
 		oval.turf.apply("", VignetteKickoff.DAY)
+		# The body is rebuilt at load (guernsey cut, scalp, kit edges); its far detail levels are
+		# made again, or every player is drawn whole at any distance and in every shadow band.
+		var body: MeshInstance3D = null
+		for mi in (oval.players[0]["node"] as Node3D).find_children("*", "MeshInstance3D", true, false):
+			if mi.has_meta("kit"):
+				body = mi
+		var lods: Array = RenderingServer.mesh_get_surface(body.mesh.get_rid(), 0).get("lods", []) if body else []
+		_check(lods.size() >= 2, "%s: a player's body keeps its far detail levels (%d)" % [level, lods.size()])
 		var slices := 0
 		var seats := 0
 		var seat_casting := 0
@@ -2296,29 +2453,30 @@ func _test_graphics_levels(res: Dictionary) -> void:
 		for ch: Dictionary in oval.crowd._chunks:
 			people += (ch["people"] as Array).size()
 		if level == Oval3DQuality.HIGH:
-			_check(people > 0 and seat_casting == slices and vp.scaling_3d_scale == 1.0
+			_check(people > 0 and seat_casting == slices and vp.scaling_3d_scale == 1.0 and vp.msaa_3d == Viewport.MSAA_4X
 					and oval.turf.blades_on and oval.crowd.mix_d == Oval3DCrowd.MIX_D,
-					"High: 3D people within 55 m, the seats cast shadows, full size (%d people batches)" % people)
+					"High: 3D people within 55 m, the seats cast shadows, full size, edges smoothed 4x (%d people batches)" % people)
 		else:
 			var first: MultiMeshInstance3D = oval.crowd._chunks[0]["cards"]
 			_check(people == 0 and first.visibility_range_begin == 0.0 and seat_casting == 0
-					and vp.scaling_3d_scale < 1.0 and not oval.turf.blades_on,
+					and vp.scaling_3d_scale < 1.0 and not oval.turf.blades_on and vp.msaa_3d == Viewport.MSAA_DISABLED
+					and vp.scaling_3d_mode == Viewport.SCALING_3D_MODE_FSR,
 					"Low: every supporter a card, no seat shadows, no blades, a smaller picture (%d casting)" % seat_casting)
 		# A wet day (rule 2.83): rain falls at every level, fewer drops lower down; the far stands
 		# grey in it, the men look wet, the towers are on by day. A dry day after it takes all that away.
-		_check(oval.turf.rain == null and float(RenderingServer.global_shader_parameter_get("oval_wet")) == 0.0,
+		_check(oval.turf.rain == null and oval.turf.wet_kit == 0.0,
 				"%s: no rain and dry kit on a fine day" % level)
 		oval.turf.apply(VignetteWeather.WET, VignetteKickoff.DAY)
 		var rain: Oval3DRain = oval.turf.rain
 		_check(rain != null and rain.amount == int(Oval3DQuality.preset(level)["rain"]) and rain.get_parent() == oval
-				and oval._env.fog_enabled and float(RenderingServer.global_shader_parameter_get("oval_wet")) == 1.0
+				and oval._env.fog_enabled and oval.turf.wet_kit == 1.0
 				and oval.turf.fill.visible,
 				"%s wet: %d drops falling, haze, wet kit, the towers on" % [level, rain.amount if rain else -1])
 		_check(((rain.draw_pass_1 as QuadMesh).material as BaseMaterial3D).render_priority == Material.RENDER_PRIORITY_MAX,
 				"%s wet: the rain is drawn over the match film, not wiped by it" % level)
 		oval.turf.apply("", VignetteKickoff.DAY)
 		_check(oval.turf.rain == null and not oval._env.fog_enabled
-				and float(RenderingServer.global_shader_parameter_get("oval_wet")) == 0.0 and not oval.turf.fill.visible,
+				and oval.turf.wet_kit == 0.0 and not oval.turf.fill.visible,
 				"%s: a fine day after a wet one has no rain, haze or wet kit" % level)
 		vp.queue_free()
 
@@ -2442,6 +2600,9 @@ func _test_ground_screens() -> void:
 			"Only a screen's face is taken for a screen, not its legs or a glass screen")
 	var plain := Oval3D.new()
 	(Engine.get_main_loop() as SceneTree).root.add_child(plain)
+	# As the ground inspector builds it (tools/inspect): the match's world first, then the model.
+	plain._environment()
+	plain._ground()
 	plain._ground_model("mcg")
 	var none := Oval3DScreens.new()
 	plain.add_child(none)
@@ -3180,8 +3341,10 @@ func _check_turf3d(oval: Oval3D) -> void:
 		_check(g.g > g.r and g.g > g.b and wet == (1.0 if look[0] == VignetteWeather.WET else 0.0)
 				and turf.env.tonemap_exposure >= 1.0,
 				"%s %s: the turf is green and the weather's sheen is set (%s, wet %.0f)" % [look[1], look[0], str(g), wet])
-	# Rule 2.114: the broadcast colour, the turf's colour read once and the film's white balance.
-	var film_ok := turf.film == null or turf.film.get_shader_parameter("balance") == Oval3DTurf.BALANCE[VignetteKickoff.NIGHT]
+	# Rule 2.114: the broadcast colour, the turf's colour read once and the film's white balance
+	# (at night: the loop above ends on a hot day, whose balance is the day's).
+	turf.apply("", VignetteKickoff.NIGHT)
+	var film_ok: bool = turf.film == null or turf.film.get_shader_parameter("balance") == Oval3DTurf.BALANCE[VignetteKickoff.NIGHT]
 	_check(turf.broadcast == 1.0 and float(turf.mat.get_shader_parameter("true_colour")) == 1.0 and film_ok,
 			"The 3D picture is in broadcast colour: turf colour read once, the night's white balance on the film")
 	turf.apply("", VignetteKickoff.DAY)
@@ -3230,11 +3393,17 @@ func _wear_total(turf: Oval3DTurf) -> float:
 ## and releases the feed exactly as the flat oval does, a footballer for every token, the
 ## ground turning at each change of ends, and the flat oval back when the setting is off.
 func _test_three_d_view(res: Dictionary) -> void:
+	# At a ground with no model (one the game has no look for), so the stand and its crowd are built and
+	# checked; the grounds with models are _test_ground_models'. The ground never changes the match,
+	# but its size sets how far the men run and the ball flies (MatchMotion.use_field), so the flat
+	# oval it is held to plays the same ground.
+	var at_stand := res.duplicate()
+	at_stand["venue"] = "Alan Ray Oval"
 	var flat := PitchView.new()
 	flat.size = Vector2(360, 480)
 	var flat_seen := []
 	flat.event_played.connect(func(ev): flat_seen.append(ev))
-	flat.setup(res)
+	flat.setup(at_stand)
 	flat.set_speed(8.0)
 	flat.play()
 	for i in range(300):
@@ -3245,10 +3414,6 @@ func _test_three_d_view(res: Dictionary) -> void:
 	(Engine.get_main_loop() as SceneTree).root.add_child(pv)
 	var seen := []
 	pv.event_played.connect(func(ev): seen.append(ev))
-	# At a ground with no model (one the game has no look for), so the stand and its crowd are built and
-	# checked; the grounds with models are _test_ground_models'. The ground never changes the match.
-	var at_stand := res.duplicate()
-	at_stand["venue"] = "Alan Ray Oval"
 	pv.setup(at_stand)
 	var oval: Oval3D = pv._oval3d
 	_check(oval != null and oval.players.size() == pv.director.tokens.size(),
@@ -3370,7 +3535,15 @@ func _test_three_d_cameras(res: Dictionary) -> void:
 	var inside := 0
 	var wide := 0.0
 	var vs := Vector2(pv._vp3d.size)
-	var tv_w := 57.0 * 9.0 / 16.0 * vs.x / vs.y  # 16:9 TV's top and bottom on the taller picture
+	var tv_k := 9.0 / 16.0 * vs.x / vs.y  # a 16:9 TV picture's top and bottom on the taller picture
+	var tv_w := Oval3DBroadcast.TV_TIGHT * tv_k  # ...at its tightest
+	var tight_sum := 0.0  # the TV picture's width at ball-ups and in open play
+	var tight_n := 0
+	var open_sum := 0.0
+	var open_n := 0
+	var lead_ok := 0  # frames a carried or kicked ball is ahead of the picture's middle, or on it
+	var lead_n := 0
+	var was_close := false
 	var at_tv := 0
 	var at_wide := 0
 	var wide_long := 0  # wide-shot frames on a kick of 40 m or more (fully wide just after it lands)
@@ -3427,6 +3600,8 @@ func _test_three_d_cameras(res: Dictionary) -> void:
 		was_replay = tv.replaying
 		if tv.replaying:
 			continue
+		var from_close := was_close and tv._close_who < 0
+		was_close = tv._close_who >= 0
 		if tv._close_who >= 0:
 			close_frames += 1
 			if not closes.has(tv._close_who):
@@ -3466,8 +3641,23 @@ func _test_three_d_cameras(res: Dictionary) -> void:
 		var d := cam.global_position.distance_to(Vector3(look.x, Oval3DBroadcast.AIM_Y, look.z))
 		var w := 2.0 * d * tan(deg_to_rad(cam.fov) * 0.5)
 		wide = maxf(wide, maxf(tv_w - w, w - 57.0))
-		if absf(w - tv_w) < 0.5:
-			at_tv += 1
+		if tv._zoom <= 0.0:
+			if absf(w - tv.tv_width * tv_k) < 0.5:
+				at_tv += 1
+			if from_close:  # back from the ruckmen's close-ups for the throw
+				tight_sum += tv.tv_width
+				tight_n += 1
+			else:
+				if str(pv.director.ball["mode"]) in ["carry", "held"]:
+					open_sum += tv.tv_width
+					open_n += 1
+				var bv := tv._lead(bp, tv.tv_width)
+				tv._ball_trail.pop_back()
+				if bv.length() > 2.0:
+					lead_n += 1
+					var centre := cam.unproject_position(oval._world(oval._look) + Vector3(0.0, Oval3DBroadcast.AIM_Y, 0.0))
+					var bx := cam.unproject_position(bp + bv) - at
+					lead_ok += 1 if (at - centre).dot(bx) <= 0.0 else 0
 		elif absf(w - 57.0) < 0.5:
 			at_wide += 1
 			var ph: Array = pv.director._phases
@@ -3479,7 +3669,13 @@ func _test_three_d_cameras(res: Dictionary) -> void:
 			"The main camera keeps the ball in the picture (%d of %d frames; out: %s)" % [inside, frames, outs])
 	_check(wide < 0.5, "The main camera stays on its mount, %.0f to 57 m across where it aims (off by %.2f m)" % [tv_w, wide])
 	_check(at_tv > frames / 2 and at_wide > 0 and wide_long > 0 and wide_bounce > 0,
-			"Rule 2.111: mostly at TV's height (%.0f m across: %d of %d frames), wide (57 m) on long kicks (%d) and the walk back to a centre bounce (%d)" % [tv_w, at_tv, frames, wide_long, wide_bounce])
+			"Rule 2.111: mostly at TV's height (%d of %d frames), wide (57 m) on long kicks (%d) and the walk back to a centre bounce (%d)" % [at_tv, frames, wide_long, wide_bounce])
+	var tight := tight_sum / maxf(1.0, tight_n)
+	var open := open_sum / maxf(1.0, open_n)
+	_check(tight_n > 0 and open_n > 0 and tight <= 36.0 and open >= tight + 4.0,
+			"As on real TV (19-42 m across at a contest, to about 60 in open play), tight at a ball-up's throw (%.0f m across the TV picture) and wider in open play (%.0f m)" % [tight, open])
+	_check(lead_n > 50 and lead_ok >= lead_n * 0.6,
+			"The aim leads the ball: it sits behind the picture's middle, open grass ahead of it (%d of %d frames)" % [lead_ok, lead_n])
 	_check(cuts > 0 and shot_ok == cuts and back >= cuts - 1,
 			"Set shots cut live to the camera behind the goals and back (%d cuts, %d set shots, %d back)" % [cuts, shot_ok, back])
 	_check(cut_ks.size() == cuts,
@@ -3508,12 +3704,16 @@ func _test_three_d_hair(res: Dictionary) -> void:
 	var shells := Oval3D.hair_shells()
 	var meshes := {}
 	var real := 0
+	# On the MetaHuman each shell is refitted to his skull (#1976): a new mesh made from the
+	# file's, so it has no path of its own; on the old body it is the file's mesh itself.
+	var refit := Oval3D.player_glb != Oval3D.HAIR_FIT_GLB
 	for st in shells:
 		var m: Mesh = shells[st]["mesh"]
 		meshes[m] = true
-		if m.resource_path.begins_with(Oval3D.HAIR_GLB) and str(shells[st]["bone"]) == "head":
+		var from_file := m.resource_path == "" if refit else m.resource_path.begins_with(Oval3D.HAIR_GLB)
+		if from_file and str(shells[st]["bone"]) == "head":
 			real += 1
-	_check(shells.size() == real and real == meshes.size() and real > 0,
+	_check(Oval3D.hair_glb == Oval3D.HAIR_GLB and shells.size() == real and real == meshes.size() and real > 0,
 			"Each 3D hair style is its own mesh from %s, on the head bone (%d of %d)" % [Oval3D.HAIR_GLB, real, shells.size()])
 	var none := []
 	for st in Appearance.HAIR_STYLES:
@@ -3553,7 +3753,10 @@ func _test_three_d_hair(res: Dictionary) -> void:
 	oval.look(p0, {"skin": 2, "hair": 1, "hair_style": "bald"})
 	_check(not p0.has("hair_node") and _scalp(p0) == 1, "Bald on the 3D oval: no hair, bare scalp")
 	oval.look(p0, {"skin": 2, "hair": 1, "hair_style": "buzz"})
-	_check(not p0.has("hair_node") and _scalp(p0) == 2, "A buzz cut on the 3D oval: clippered scalp")
+	# Clippered is 2 on the old body and 4 on the MetaHuman (bare at his hairline, #1976).
+	var clippered := Oval3D.SCALP_CLIPPERED_MH if Oval3D.player_glb != Oval3D.HAIR_FIT_GLB else 2
+	_check(not p0.has("hair_node") and _scalp(p0) == clippered,
+			"A buzz cut on the 3D oval: clippered scalp (%d, want %d)" % [_scalp(p0), clippered])
 	if had == null:
 		who.erase("look")
 	else:
@@ -3852,10 +4055,58 @@ func _test_match_crew(res: Dictionary) -> void:
 	var wrong := []
 	var was_drinks := false
 	var was_runner := false
+	var scores := {}          # shot k -> its goal umpire's signal ("" until he gives one)
+	var signal_wrong := []
+	# The goal umpires' flags (Oval3DGoalUmpire): drawn after goals, and never jumping when they
+	# go from the padding to a hand, hand to hand, or back.
+	var flag_at := {}
+	var flag_in := {}
+	var flag_jumps := []
+	var drawn := 0
+	var was_drawn := {}
 	while d.time < 600.0 and frames < 40000 and pv.playing:
 		pv._process(dt)
 		frames += 1
 		var shot := d.shot_now()
+		if not shot.is_empty() and str(shot.get("phase", "")) in ["emit", "celebrate"]:
+			var k := int(shot["k"])
+			if not scores.has(k):
+				scores[k] = ""
+			for u in oval.umpires:
+				if str(u["role"]) != "goal" or not u.has("clip") or str(u["clip"]["kind"]) != "signal":
+					continue
+				var given := str((u["anim"] as AnimationPlayer).current_animation)
+				if scores[k] == "":
+					scores[k] = given
+					var want := Oval3DCrew.GOAL_SIGNAL if bool(shot["goal"]) else Oval3DCrew.BEHIND_SIGNAL
+					# A goal while he still has both flags out from the last score is waved.
+					if bool(shot["goal"]) and given == Oval3DCrew.GOAL_WAVE:
+						want = given
+					if given != want or signf((u["node"] as Node3D).position.x) != signf((shot["to"] as Vector2).x):
+						signal_wrong.append("%s at %.0f s for a %s" % [given, d.time, "goal" if shot["goal"] else "behind"])
+		for u in oval.umpires:
+			if not u.has("flag"):
+				continue
+			var two := Oval3DGoalUmpire.holding(u) == 2
+			if two and not bool(was_drawn.get(u["k"], false)):
+				drawn += 1
+			was_drawn[u["k"]] = two
+			# A hand's attachment follows its bone when the skeleton next updates (a drawn
+			# frame); this loop draws none, so bring them up to date.
+			(u["skel"] as Skeleton3D).force_update_all_bone_transforms()
+			for side in ["r", "l"]:
+				(u["flags"][side]["on"] as BoneAttachment3D).on_skeleton_update()
+			for side in ["r", "l"]:
+				var fn: Node3D = u["flags"][side]["node"]
+				var key := "%d%s" % [u["k"], side]
+				var par := fn.get_parent()
+				if pv._tv.replaying:
+					flag_at.erase(key)
+				elif flag_at.has(key) and flag_in.get(key) != par and (flag_at[key] as Vector3).distance_to(fn.global_position) > 0.05:
+					flag_jumps.append("%.2f m at %.0f s" % [(flag_at[key] as Vector3).distance_to(fn.global_position), d.time])
+				if not pv._tv.replaying:
+					flag_at[key] = fn.global_position
+				flag_in[key] = par
 		var set_break := not shot.is_empty() and bool(shot.get("set", false))
 		var goal := not shot.is_empty() and bool(shot.get("goal", false))
 		var st := d.stoppage_now()
@@ -3880,6 +4131,12 @@ func _test_match_crew(res: Dictionary) -> void:
 		was_runner = r_on
 	_check(drinks > 0 and runs > 0, "Drinks go out before set shots (%d) and runners after goals (%d)" % [drinks, runs])
 	_check(wrong.is_empty(), "Trainers and runners are on the ground only when the rules let them: %s" % [wrong.slice(0, 4)])
+	var unsignalled := scores.keys().filter(func(k): return scores[k] == "")
+	_check(scores.size() > 0 and unsignalled.is_empty(),
+			"The goal umpire at the scoring end signals every score (%d scores, %d not signalled)" % [scores.size(), unsignalled.size()])
+	_check(signal_wrong.is_empty(), "Two hands for a goal, one for a behind, from the scoring end: %s" % [signal_wrong.slice(0, 4)])
+	_check(drawn > 0, "The goal umpire draws both flags after a goal (%d times)" % drawn)
+	_check(flag_jumps.is_empty(), "His flags never jump going in or out of his hands: %s" % [flag_jumps.slice(0, 4)])
 	pv.queue_free()
 
 ## The umpires at stoppages on the 3D oval (row 197; the field umpire passed, rule 2.75): at a
