@@ -144,6 +144,10 @@ NEVER_READ = (".gitignore", ".github/", ".claude/")
 CODE = (".sh", ".py", ".gd")
 # Fixtures that are data, read by the suites through res:// paths: traced like assets.
 FIXTURE_DATA = (".txt", ".gz", ".csv", ".json", ".save")
+# Folders a suite lists at run time (DirAccess), so no path names the files inside and the walker
+# cannot trace them. A changed file under one selects its suites (director 2026-11-24: a change to a
+# ground's model files runs the seat check; the MCG seat fault reached main without it, #2052).
+SCANNED = {"assets/grounds/": ("ground_seats",)}
 
 
 PATHS = re.compile(r"[\w./-]+")
@@ -225,6 +229,7 @@ def select(changed, root=ROOT, smoke=SMOKE):
         if base in auto:
             return sorted(suites), f"{path} is an autoload every suite loads"
         wanted |= {s for s, d in dists.items() if d.get(base, 99) <= REACH}
+        wanted |= {s for folder, named in SCANNED.items() if base.startswith(folder) for s in named if s in suites}
     return sorted(wanted), ""
 
 

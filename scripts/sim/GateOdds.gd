@@ -69,7 +69,7 @@ const TAG_STAY_GAIN := "%s stays on %s, who is held to about %d touches"
 
 # Skip to full time.
 const SKIP_FIRST := "Skip plays the match on the plan we took in. No tag, no talk. Nothing changed here is kept. Every call in the match takes 'no change'."
-const SKIP_LATER := "Skip plays the rest on last quarter's calls and talk. No more sit-downs or speeches. Nothing changed here is kept. Every call in the match takes 'no change'."
+const SKIP_LATER := "Skip plays the rest on last quarter's calls and talk. No sit-downs or speech. Nothing changed here is kept. In-match calls take 'no change'."
 
 # The in-match risk cards.
 const BURST_GAIN := {

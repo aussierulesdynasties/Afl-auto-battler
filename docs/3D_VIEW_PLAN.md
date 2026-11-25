@@ -266,7 +266,8 @@ _Update this section whenever 3D work merges. It is the one place 3D progress is
 | Marrara Oval (TIO Darwin) | model open | #1918 |
 | Traeger Park | model open | #1919 |
 | The Gabba | model, 3D seats; plays in a match (built 2026-11-19/20 on a branch that never merged; brought in from the PC) | |
-| Barossa Park, Sky Stadium, Jiangwan Stadium, Hands Oval, Blacktown, Summit Park, Macquarie Point | model; plays in a match (`tools/grounds/<g>/model`) | |
+| Barossa Park | rebuilt to the MCG standard: clubrooms (with the south end), terraces, Gather Round stands with 3D seats, courts fitted on the satellite's lines, second oval, land and Lyndoch out to 1 km, gum trees, far country to 16 km (tools/grounds/barossa); open: clubroom roof outline, stair to the south deck, far ranges | #2041 |
+| Sky Stadium, Jiangwan Stadium, Hands Oval, Blacktown, Summit Park, Macquarie Point | model; plays in a match (`tools/grounds/<g>/model`) | |
 
 Machine pre-inspection of the 30 match grounds, before the director's fly-through (2026-11-21, #1950):
 [3D_PREINSPECTION.md](3D_PREINSPECTION.md). Its fixes are in; its open faults are listed there.
