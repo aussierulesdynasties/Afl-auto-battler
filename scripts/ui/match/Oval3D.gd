@@ -154,7 +154,7 @@ func build(p_director: MatchDirector, home: String, away: String) -> void:
 	add_child(ball)
 	camera = Camera3D.new()
 	camera.fov = 30.0
-	camera.far = GroundModels.view_far(GroundModels.slug_for(ground) if ground != "" else "")
+	camera.far = maxf(_far_view, GroundModels.view_far(GroundModels.slug_for(ground) if ground != "" else ""))
 	# Placed in world space, so turning the ground for a change of ends (set_ends) leaves
 	# the camera where the broadcast puts it.
 	camera.top_level = true
@@ -624,6 +624,10 @@ func _ground_model(slug: String, base := "", home := "", away := "") -> void:
 	var root := GroundModels.instantiate(slug, base)
 	add_child(root)
 	Oval3DQuality.apply_model(quality, root)
+	if GroundModels.has_backdrop(slug, base):
+		_backdrop_view(slug)
+	if turf == null:   # a bare view (the ground inspector's test): the model alone
+		return
 	turf.set_ground(slug)
 	turf.light_stands(root)
 	_turf_mat.set_shader_parameter("fence_clip", GroundModels.match_fence())
@@ -643,6 +647,36 @@ func _ground_model(slug: String, base := "", home := "", away := "") -> void:
 	root.add_child(crowd)
 	crowd.build_on_seats(seats, GroundModels.seat_points(slug, base),
 			GameDB.club_colours(home), GameDB.club_colours(away))
+
+
+## A ground with its surroundings (GroundModels.backdrop): the cameras see out to the skyline and
+## the hills, and the air thickens with distance into the horizon's own colour (Oval3DTurf sets it
+## with the sky, so it follows the day, the dusk and the night). Nothing nearer than HAZE_FROM is
+## hazed, so the stadium, the men and the ball are untouched.
+const HAZE_FROM := 600.0
+const HAZE_TO := 9000.0
+
+
+var _far_view := 0.0
+
+
+func _backdrop_view(slug := "") -> void:
+	_far_view = GroundModels.backdrop_far(slug)
+	if camera != null:
+		camera.far = _far_view
+	if _env == null:   # a bare view (the ground inspector's test) has no sky to haze into
+		return
+	_env.fog_enabled = true
+	_env.fog_mode = Environment.FOG_MODE_DEPTH
+	_env.fog_depth_begin = HAZE_FROM
+	_env.fog_depth_end = GroundModels.backdrop_haze(slug, HAZE_TO)
+	_env.fog_depth_curve = 0.8
+	_env.fog_density = 1.0
+	_env.fog_aerial_perspective = 0.0
+	_env.fog_sky_affect = 0.0
+	_env.fog_light_color = Color(0.68, 0.78, 0.88)
+	if turf != null:
+		turf._sky_view()
 
 
 ## How far past the match's fence the apron skirt runs, and how far under the turf it lies (under
