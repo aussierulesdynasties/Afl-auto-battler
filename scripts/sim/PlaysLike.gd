@@ -290,8 +290,33 @@ static var _by := {}
 
 ## The compared player's name as this career shows it. "" when there is none.
 static func name_of(p: Dictionary) -> String:
-	var e := nearest(p, GameDB.plays_like_pool)
-	return "" if e.is_empty() else shown_name(e, GameDB.plays_like_pool)
+	var pool: Array = GameDB.plays_like_pool
+	var e := _nearest_memoised(p, pool)
+	return "" if e.is_empty() else shown_name(e, pool)
+
+
+## nearest() for `p` against `pool`, kept for as long as the pool and the facts
+## it reads from him are unchanged: a draft board asks for the same prospects at
+## every pick, and a search of thousands of real seasons each time froze a phone.
+static func _nearest_memoised(p: Dictionary, pool: Array) -> Dictionary:
+	if not is_same(pool, _memo_pool) or _memo_size != pool.size() or _memo.size() > MEMO_MAX:
+		_memo.clear()
+		_memo_pool = pool
+		_memo_size = pool.size()
+	var key := [str(p.get("id", "")), str(p.get("role", "")), p.get("potential"), p.get("overall"),
+			p.get("height_cm"), str(p.get("real_name", "")), str(p.get("club", "")),
+			(p.get("attr", {}) as Dictionary).hash()].hash()
+	if _memo.has(key):
+		return _memo[key]
+	var e := nearest(p, pool)
+	_memo[key] = e
+	return e
+
+
+const MEMO_MAX := 20000
+static var _memo := {}
+static var _memo_pool: Array = []
+static var _memo_size := -1
 
 
 ## "Plays like: Marcus Bontempelli", or "" when there is nobody to compare.

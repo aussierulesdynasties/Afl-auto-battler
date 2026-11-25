@@ -367,7 +367,7 @@ func _load(i: int) -> void:
 	# At the ground's own size, as a match there is played (GroundModels.field: its fence less
 	# the run-off), so its model sits unstretched on the turf; any other model on the standard oval.
 	var own := GroundModels.field(str(g.get("dir", ""))) if g["kind"] in ["match", "seated"] else Vector2.ZERO
-	MatchMotion.use_field(own)
+	GroundModels.play_on(str(g.get("dir", "")) if g["kind"] in ["match", "seated"] else "", own)
 	oval = OVAL3D.new()
 	oval.name = "Oval"
 	# The ground's name, so the sun stands over it where it really does (its place and bearing,
