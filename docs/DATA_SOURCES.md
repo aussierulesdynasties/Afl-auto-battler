@@ -79,6 +79,11 @@ Esri imagery are used only to check the look by eye.
   set by DaHuzyBru (CC BY-SA 4.0), and the photos listed in tools/grounds/cazalys/ref/sources.json.
 - Google Earth 3D and Esri World Imagery were used to measure and trace plans by eye. No imagery is committed
   or baked into any texture; the car park west of the stand, missing from OSM, was traced this way.
+People First Stadium (tools/grounds/people_first/surrounds.py) is painted the same way from OpenStreetMap, with
+the precinct's sheds and halls that OpenStreetMap lacks taken from Microsoft's Global ML Building Footprints
+(© Microsoft, Open Database Licence, ODbL). Its paving classes are read from a reference satellite image that
+stays in the project files and is never committed or shipped. The Gold Coast skyline handed to the background
+scene (people_first_skyline.json) is OpenStreetMap data (© OpenStreetMap contributors, ODbL).
 
 ## What we have vs wishlist
 
