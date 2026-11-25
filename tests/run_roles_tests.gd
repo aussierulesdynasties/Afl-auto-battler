@@ -43,6 +43,7 @@ func _run() -> void:
 	await _t("_test_selection_tests")
 	await _t("_test_selection_pages_tests")
 	await _t("_test_selection_narrow_phones")
+	await _t("_test_spot_taps_change_one_card")
 	await _t("_test_skip_match_tests")
 	await _t("_test_week_ink_tests")
 	await _t("_test_team_changes_tests")
@@ -809,6 +810,86 @@ func _test_selection_pages_tests() -> void:
 		await _settle()
 	root.size = Vector2i(420, 860)
 	_state.set_selection({})
+
+
+## A tap on the side changes only the cards it touched (bug bash 2026-11-25,
+## M-2: every tap built the whole builder again and froze it 250-565 ms). Picking
+## and putting a man down redraw his card alone, in its place, and the oval is not
+## laid out again; a swap redraws the two cards it moved.
+func _test_spot_taps_change_one_card() -> void:
+	var db = root.get_node("GameDB")
+	_state.reset()
+	_state.start_season("COL", db.club_list("COL"))
+	_state.set_selection({})
+	var ui := await _open()
+	var tb := ui.find_child("TeamBuilder", true, false)
+	_check(tb != null, "The selection screen has its side builder")
+	if tb == null:
+		ui.queue_free()
+		return
+	var before := _spot_cards(ui)
+	_check(before.size() == 23, "The side's 23 cards are on screen (%d)" % before.size())
+	var tb_script: Script = tb.get_script()
+	var laid: int = tb_script.get("layouts")
+	_check(laid > 0, "The oval was laid out when the screen opened (%d)" % laid)
+	# Pick the centre.
+	_check((await Tap.tap(ui.find_child("Spot_C", true, false))) == "", "The centre's card takes a tap")
+	await _settle()
+	_check(tb.picked() != "", "The tap picks the centre")
+	var after := _spot_cards(ui)
+	_check(_changed(before, after) == ["Spot_C"],
+			"Picking the centre redraws his card alone (%s)" % str(_changed(before, after)))
+	_check(_moved(before, after).is_empty(), "No card moves when the centre is picked (%s)" % str(_moved(before, after)))
+	_check(int(tb_script.get("layouts")) == laid, "The oval is not laid out again for a pick")
+	# Put him down again.
+	before = after
+	_check((await Tap.tap(ui.find_child("Spot_C", true, false))) == "", "The picked card takes a second tap")
+	await _settle()
+	_check(tb.picked() == "", "A second tap puts the centre down")
+	after = _spot_cards(ui)
+	_check(_changed(before, after) == ["Spot_C"],
+			"Putting him down redraws his card alone (%s)" % str(_changed(before, after)))
+	_check(_moved(before, after).is_empty(), "No card moves when he is put down (%s)" % str(_moved(before, after)))
+	_check(int(tb_script.get("layouts")) == laid, "The oval is not laid out again when he is put down")
+	# Swap the centre and a wing: their two cards, nothing else.
+	before = after
+	await Tap.tap(ui.find_child("Spot_C", true, false))
+	await _settle()
+	_check((await Tap.tap(ui.find_child("Spot_WL", true, false))) == "", "The wing's card takes a tap")
+	await _settle()
+	after = _spot_cards(ui)
+	var swapped := _changed(before, after)
+	swapped.sort()
+	_check(swapped == ["Spot_C", "Spot_WL"], "A swap redraws the two cards it moved (%s)" % str(swapped))
+	ui.queue_free()
+	await _settle()
+	_state.set_selection({})
+
+
+## Every card on the oval and the bench: name -> [instance id, position].
+func _spot_cards(ui: Node) -> Dictionary:
+	var out := {}
+	for pat in ["Spot_*", "BenchSpot_*"]:
+		for c in ui.find_children(pat, "Button", true, false):
+			if (c as Control).is_visible_in_tree():
+				out[str(c.name)] = [c.get_instance_id(), (c as Control).position]
+	return out
+
+
+func _changed(a: Dictionary, b: Dictionary) -> Array:
+	var out: Array = []
+	for k in a:
+		if not b.has(k) or b[k][0] != a[k][0]:
+			out.append(k)
+	return out
+
+
+func _moved(a: Dictionary, b: Dictionary) -> Array:
+	var out: Array = []
+	for k in a:
+		if b.has(k) and not (b[k][1] as Vector2).is_equal_approx(a[k][1]):
+			out.append(k)
+	return out
 
 
 ## A coach who skips the match: the plan he last used (set in the pre-bounce
@@ -1734,8 +1815,32 @@ func _test_top_three_on_compact_cards() -> void:
 				holder = holder.get_parent()
 			bad = _top_three_fault(holder, q, profile) if bad == "" else bad
 		_check(bad == "", "Off-season %s: every row shows the top three whole at 390 px (%s)" % [tab, bad])
+		if tab == "agents":
+			await _agents_build_on_scroll(off)
 		off.queue_free()
 		await _settle()
+
+
+## Bug bash batch F (M-4; director 2026-11-25, "As now, built on scroll"): the
+## Agents tab opens with its first cards and builds the rest as the list
+## scrolls down, one list, every free agent in it by the bottom.
+func _agents_build_on_scroll(off: Control) -> void:
+	var batch: int = int(off.get_script().get_script_constant_map()["AGENT_BATCH"])
+	var total: int = _state.free_agents.size()
+	var count := func() -> int:
+		return off.find_children("Agent_*", "", true, false).size()
+	var first: int = count.call()
+	_check(total > batch and first == batch,
+			"Agents: the list opens with its first %d cards of %d (%d built)" % [batch, total, first])
+	var sc: ScrollContainer = off.get("_scroll_box")
+	var steps := 0
+	while sc != null and count.call() < total and steps < 40:
+		steps += 1
+		sc.scroll_vertical = int(sc.get_v_scroll_bar().max_value)
+		await _settle()
+	_check(count.call() == total,
+			"Agents: scrolling down builds the rest a few at a time, every one there by the bottom (%d of %d, %d scrolls)" % [
+			count.call(), total, steps])
 
 
 ## One of yours or a free agent, by id.
