@@ -11,10 +11,11 @@ REPO = os.path.dirname(os.path.dirname(os.path.dirname(HERE)))
 SRC = os.path.join(REPO, '.claude', 'review', 'adelaide', 'model')
 TEX = os.path.join(HERE, 'tex'); TILES = {int(k): v for k, v in json.load(open(os.path.join(TEX, 'tiles.json'))).items()}
 out = os.path.abspath(sys.argv[sys.argv.index('--') + 1]); os.makedirs(out, exist_ok=True)
-ROUGH = {0: 0.8, 1: 0.85, 2: 0.9, 3: 0.45, 4: 0.35, 5: 0.15, 6: 0.85, 7: 0.9, 8: 0.5, 9: 0.7, 10: 0.42, 11: 0.85, 12: 0.92, 13: 0.6}
-METAL = {4: 0.4, 5: 0.3, 10: 0.5}
+ROUGH = {0: 0.8, 1: 0.85, 2: 0.9, 3: 0.9, 4: 0.6, 5: 0.15, 6: 0.85, 7: 0.9, 8: 0.5, 9: 0.7, 10: 0.42, 11: 0.85, 12: 0.92, 13: 0.6, 14: 0.8}
+METAL = {4: 0.1, 5: 0.3, 10: 0.5}   # painted steel and the membrane matte: glossier, they mirrored the sky purple-blue (2026-11-22)
 NAMES = {0: 'paint', 1: 'paving', 2: 'concrete', 3: 'membrane', 4: 'steel', 5: 'glass', 6: 'brick', 7: 'grass', 8: 'fins',
-         9: 'timber', 10: 'copper', 11: 'stone', 12: 'turf', 13: 'scoreboard'}
+         9: 'timber', 10: 'copper', 11: 'stone', 12: 'turf', 13: 'scoreboard', 14: 'ivy'}
+PART_KIND = {'ivy': 14}   # a part that is one material whatever its alpha says (the alpha byte holds kinds up to 12)
 bpy.ops.wm.read_factory_settings(use_empty=True)
 MATS = {}
 
@@ -31,7 +32,11 @@ def mat(k):
     MATS[k] = m; return m
 
 
+# ground.ply (gen.py's flat lawn, 6 km a side) stays out: the land round the ground is GroundModels.SURROUNDS,
+# painted from OpenStreetMap (surrounds.py), which needs nothing of the model's past its walls.
 for f in sorted(glob.glob(os.path.join(SRC, '*.ply'))):
+    if os.path.basename(f) == 'ground.ply':
+        continue
     bpy.ops.wm.ply_import(filepath=f); o = bpy.context.selected_objects[0]; me = o.data
     o.name = me.name = 'ao_' + os.path.splitext(os.path.basename(f))[0]
     ca = me.color_attributes[0]; ca.name = 'Col'
@@ -39,6 +44,8 @@ for f in sorted(glob.glob(os.path.join(SRC, '*.ply'))):
     lin = ca.data_type == 'FLOAT_COLOR'
     a = col[:, 3] if not lin else col[:, 3]   # alpha is never colour-managed
     kind = np.rint(a * 255 / 20).astype(int)
+    pk_ = PART_KIND.get(os.path.splitext(os.path.basename(f))[0])
+    if pk_ is not None: kind[:] = pk_
     if ca.domain == 'POINT':
         vk = kind
     col[:, 3] = 1.0; ca.data.foreach_set('color', col.ravel())   # alpha back to opaque: it only carried the kind
@@ -60,8 +67,8 @@ for f in sorted(glob.glob(os.path.join(SRC, '*.ply'))):
 
 # The model leaves the field out (a hole in the lawn inside the boundary): a grass floor under it, 0.3 m down, so any
 # gap between the match's turf and the stands shows grass, never the sky under the world.
-me = bpy.data.meshes.new('ao_floor'); H = 160.0
-me.from_pydata([(-H, -H, -0.3), (H, -H, -0.3), (H, H, -0.3), (-H, H, -0.3)], [], [(0, 1, 2, 3)])
+me = bpy.data.meshes.new('ao_floor'); H = 107.0   # a disc just past where the surrounds' map starts (105 m)
+me.from_pydata([(H * math.cos(a * math.pi / 32), H * math.sin(a * math.pi / 32), -0.3) for a in range(64)], [], [tuple(range(64))])
 ca = me.color_attributes.new('Col', 'FLOAT_COLOR', 'POINT'); g = [pow(c / 255, 2.2) for c in (88, 104, 56)]
 for e in ca.data: e.color = (*g, 1.0)
 uv = me.uv_layers.new(); tu, tv = TILES[7]
@@ -85,7 +92,7 @@ for l in L[h + 1 + nv:h + 1 + nv + nf]:
 (np.array(tri) @ C.T).astype('<f4').tofile(os.path.join(out, 'seat_tmpl.bin'))
 D = [np.load(os.path.join(SRC, 'inst', f)) for f in ('seats.npz', 'seats_hill.npz') if os.path.exists(os.path.join(SRC, 'inst', f))]
 P, Y, CC = (np.concatenate([d[k] for d in D]) for k in ('pos', 'yaw', 'col'))   # the stands' seats and the Hill's (hill.py)
-NAME = {(35, 55, 77): 'seat_ao_navy', (70, 70, 75): 'seat_ao_charcoal', (95, 105, 118): 'seat_ao_slate',
+NAME = {(35, 55, 77): 'seat_ao_navy', (70, 70, 75): 'seat_ao_charcoal', (100, 116, 114): 'seat_ao_slate',
         (95, 118, 112): 'seat_ao_sage', (150, 45, 50): 'seat_ao_red', (200, 62, 36): 'seat_ao_orange'}
 for f in glob.glob(os.path.join(out, 'seats_*.bin')): os.remove(f)
 for key, nm in NAME.items():

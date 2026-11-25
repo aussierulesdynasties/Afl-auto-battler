@@ -77,7 +77,7 @@ run_godot() {  # seconds, paths...
 
 start=$(date +%s)
 if [ "${PREFLIGHT_SKIP_IMPORT:-0}" != 1 ]; then
-	timeout 600 "$GODOT" --headless --path . --editor --import > "$LOG" 2>&1
+	timeout 1200 "$GODOT" --headless --path . --editor --import > "$LOG" 2>&1
 	import_code=$?
 	if [ "$import_code" != 0 ] || grep -qE "SCRIPT ERROR|Parse Error|Compile Error" "$LOG"; then
 		fail "the project import" "scripts failed to compile during import (exit $import_code)"

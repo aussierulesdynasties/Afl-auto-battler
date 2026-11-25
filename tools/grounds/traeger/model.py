@@ -60,15 +60,24 @@ add('fence','fence_pal','rail_pal',pts=[_st.W(-1.0,1.5,0)[:2],_st.W(-5.8,1.5,0)[
 # east_wall removed (director 2026-11-19 "Remove wall": it ran through the tennis courts on the satellite)
 # ---------- scoreboard: legs at photo (787,485)/(825,485), board 479..449 ----------
 L=bp(787,485);Rr=bp(825,485);M=lerp(L,Rr,.5)
+# r16: the photo picks put the board 8 m in from the fence, on the turf (the fence they were read against was 2.8 m in);
+# Google Earth's straight-down view, through its solved camera, has the board's top edge at these points
+L,Rr=[36.94,97.12],[45.11,92.05]
 zb=float(at_vline(P,806,479,M)[2]);zt=float(at_vline(P,806,449,M)[2])
 add('board','scoreboard','screen',a=L,b=Rr,z0=zb,z1=zt)
 for q in(L,Rr):add('pole','sb_leg','post',base=q,z1=zb,r0=0.15,r1=0.15)
 # ---------- east shelter: white roof at 3 m ----------
 # east_shelter dropped (lead ruling via the secretary 2026-11-18: no photo shows it)
 # add('slab','east_shelter','roof_white',pts=[bp(u,v,3.0)+[3.0] for u,v in[(1091,500),(1106,500),(1127,515),(1112,517)]],th=0.2)
-# ---------- green shed (satellite footprint, gable) ----------
-add('gable','shed','roof_green',fp=[[17,-105],[85,-105],[85,-119],[17,-119]],eave=4.0,ridge=6.0)
-add('gable','shed_annex','roof_green',fp=[[2,-106],[17,-106],[17,-119],[2,-119]],eave=3.0,ridge=4.5)
+# ---------- sheds south of the oval (r16: corners off Google Earth's straight-down view s_top through its solved
+# camera, measure/close.json; the old shed footprint sat on the path between the two buildings) ----------
+# teal sheds: a short gable block at the west end, a long gable along the north and a longer one along the south
+add('gable','shed_west_block','roof_green',fp=[[13.06,-98.03],[22.41,-97.41],[23.29,-110.75],[13.94,-111.37]],eave=4.0,ridge=6.0)
+add('gable','shed','roof_green',fp=[[22.44,-97.86],[60.34,-95.36],[61.04,-106.03],[23.14,-108.54]],eave=4.0,ridge=6.0)
+add('gable','shed_south','roof_green',fp=[[22.38,-109.2],[91.24,-104.66],[91.73,-112.13],[22.87,-116.68]],eave=3.8,ridge=5.2)
+# light teal hip-roofed shed west of the path, and the white flat-roofed store east of the long sheds
+add('gable','shed_annex','roof_green_light',fp=[[-24.1,-106.97],[0.62,-104.34],[2.39,-113.87],[-23.37,-114.74]],eave=3.2,ridge=4.8,hip=True)
+add('prism','shed_store','wall_white',fp=[[72.82,-89.52],[84.83,-88.73],[85.62,-100.74],[73.61,-101.53]],z0=0,ztop=3.6)
 # ---------- trees: canopy centre pixel at 7 m ----------
 TR=[(300,900,120),(115,770,40),(215,770,30),(380,470,22),
     (1020,490,30),(1328,826,80)]
@@ -80,6 +89,12 @@ T=json.load(open('towers.json'))
 SATB={'FL_pole':[-52.0,97.5],'FL_2':[-61.0,75.0],'NL_pole':[-58.5,-72.5]}   # satellite: head seen from above / shadow foot
 T0={k:dict(v) for k,v in T.items()}
 for k in SATB:T[k]['base']=SATB[k]
+# r16: lamp heads triangulated from Google Earth's straight-down view and an oblique, both through solved cameras
+# (measure/oblique.py). NL_lat is a 35 m lattice beside NL_pole: the old spot, 22 m away in the open grass, has none.
+GE_HEAD={'FR_pole':([58.8,88.2],None),'FR_2':([67.4,76.3],None),'R_pole':([60.0,-73.0],None),'NL_lat':([-58.1,-65.9],35.5)}
+for k,(b_,top_) in GE_HEAD.items():
+    T[k]['base']=b_
+    if top_:T[k]['hbot']=top_-(T[k]['top']-T[k]['hbot']);T[k]['top']=top_
 for k,v in T.items():
     b=v['base'];lat=k.endswith('lat') or k.endswith('_2')   # c05: FL_2 is a lattice mast with a square head; FR_2 the same (era tower, unphotographed close)
     r0,r1={'NL_pole':(1.1,0.5),'R_pole':(1.1,0.5),'FL_pole':(0.9,0.45),'FR_pole':(0.9,0.45),'FL_2':(0.7,0.35),'FR_2':(0.7,0.35)}.get(k,(1.1,0.7))
