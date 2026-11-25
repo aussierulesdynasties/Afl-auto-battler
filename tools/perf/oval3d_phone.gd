@@ -8,9 +8,10 @@ extends Node
 ## table stays on screen (screenshot it). On a PC or in the cloud (a software GPU there: only the
 ## counts, memory and the ratios of the times carry over to a phone):
 ##   godot --path . --rendering-method mobile tools/perf/Oval3DPhone.tscn -- [grounds=mcg,marvel]
-##       [levels=high,low] [size=1012x1242] [measure=5] [out=rows.json] [shots=DIR] [aa=msaa2] [quit]
+##       [levels=high,low] [size=1012x1242] [measure=5] [slot=night] [out=rows.json] [shots=DIR] [aa=msaa2] [quit]
 ##       [looks=NAME:px,py,pz,tx,ty,tz[,fov];NAME2:...]
 ## shots=DIR saves each ground and level's last measured frame as DIR/<ground>_<level>.png.
+## slot= day (default), twilight or night: the time of day measured (a night game adds the towers).
 ## looks= also saves, after the measuring, a still from each fixed camera (match metres, from p
 ## looking at t, fov 60 unless given) as DIR/<ground>_<level>_<NAME>.png: a façade or roof
 ## detail the broadcast camera never frames, at the level's own render settings and aa=.
@@ -122,7 +123,7 @@ func _run() -> void:
 			Oval3DQuality.apply_viewport(level, vp)
 			vp.add_child(oval)
 			oval.build(director, "FRE", "STK")
-			oval.turf.apply("", VignetteKickoff.DAY)
+			oval.turf.apply("", _arg("slot", VignetteKickoff.DAY))
 			var tv := Oval3DBroadcast.new(oval)
 			var load_s := (Time.get_ticks_usec() - t0) / 1e6
 			await _play(WARM, null, director, oval, tv)
