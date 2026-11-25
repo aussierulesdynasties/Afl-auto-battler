@@ -64,6 +64,7 @@ the renderer's time against the plain stand on High (software GPU, so ratios onl
 | mcg | 3593 / 2559 / 1880 | 237 / 219 / 206 | 1.36 / 1.02 / 0.76 | 821 / 785 |
 | scg | 3446 / 2538 / 2181 | 216 / 201 / 209 | 1.37 / 1.04 / 0.85 | 887 / 853 |
 | marvel | 3123 / 2134 / 1910 | 172 / 159 / 166 | 1.43 / 0.97 / 0.75 | 865 / 834 |
+| gabba (2026-11-22, measured heights, overhanging upper tier, 37,286 seats; MCG 3332 / 3034 / 2426 on the same run) | 3018 / 2654 / 2101 | 343 / 300 / 301 | not measured against the stand | 687 / 653 |
 | macpoint | 2859 / 1985 / 1683 | 386 / 371 / 376 | 1.15 / 0.96 / 0.72 | 783 / 750 |
 | york_park | 2257 / 1795 / 1592 | 300 / 292 / 300 | 0.95 / 0.77 / 0.65 | 836 / 803 |
 | moorabbin | 2227 / 2015 / 1793 | 239 / 235 / 243 | 0.98 / 0.83 / 0.68 | 794 / 762 |

@@ -468,6 +468,9 @@ func _late_game() -> void:
 ## (GroundModels' surrounds, meta open_ground): it lies in the open under the sky like the turf.
 const STAND_GREEN := 0.15    # how much of the grass's colour the stands' grey keeps
 const STAND_SHADER := preload("res://scripts/ui/match/oval3d_stand.gdshader")
+## Share of the sun a translucent roof membrane passes to its underside (a PTFE sheet passes about 10-15%;
+## tuned by eye against the Gabba's 2019 photo sphere).
+const MEMBRANE_THROUGH := 0.45
 const AMB_KEYS := ["amb_down", "amb_low", "amb_level", "amb_high", "amb_up"]
 var _stand_mats: Array[ShaderMaterial] = []
 
@@ -519,6 +522,12 @@ func _light_stands() -> void:
 		for k in AMB_KEYS.size():
 			m.set_shader_parameter(AMB_KEYS[k], amb[k])
 		m.set_shader_parameter("ref_scale", 1.0 / e_amb if e_amb > 0.001 else 0.0)
+		# A lit membrane (the Gabba's roof, from below) is not a grey underside: the sun comes through it,
+		# so it reads bright cream as the 2019 photo sphere shows. It keeps the grey correction (without it
+		# the grass's green bounce tinted the cream olive).
+		if m.resource_name.begins_with("membrane_lit"):
+			var sun_e := sun.light_energy if sun != null and sun.visible else 0.0
+			m.set_shader_parameter("through", Vector3.ONE * MEMBRANE_THROUGH * sun_e)
 
 
 ## The sky's light (its cosine-weighted mean, as the engine lights a face from the sky) for a face
@@ -624,8 +633,6 @@ func _sky_view() -> void:
 	if env.sky == null:
 		return
 	var sm: ShaderMaterial = env.sky.sky_material
-	if not sm.has_meta("target"):
-		return
 	var hzv = sm.get_shader_parameter("seen_horizon")
 	if hzv == null or hzv.a == 0.0:
 		hzv = sm.get_shader_parameter("horizon")
@@ -634,9 +641,15 @@ func _sky_view() -> void:
 	if hzv == null:
 		return # headless (tests): no renderer to give the shader's default
 	var hz: Color = hzv
-	var lum := 0.2126 * hz.r + 0.7152 * hz.g + 0.0722 * hz.b
-	sm.set_shader_parameter("view", float(sm.get_meta("target"))
-			/ (env.tonemap_exposure * float(sm.get_shader_parameter("energy")) * lum))
+	if sm.has_meta("target"):
+		var lum := 0.2126 * hz.r + 0.7152 * hz.g + 0.0722 * hz.b
+		sm.set_shader_parameter("view", float(sm.get_meta("target"))
+				/ (env.tonemap_exposure * float(sm.get_shader_parameter("energy")) * lum))
+	# A ground with its surroundings hazes them into the horizon you see (Oval3D._backdrop_view).
+	if env.fog_enabled:
+		env.fog_light_color = Color(hz.r, hz.g, hz.b)
+		var v = sm.get_shader_parameter("view")
+		env.fog_light_energy = float(sm.get_shader_parameter("energy")) * (float(v) if v != null else 1.0)
 
 
 ## The stands cast their shade across the ground (a late game, rule 2.80).

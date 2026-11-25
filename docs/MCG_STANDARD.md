@@ -83,6 +83,14 @@ width set by that material's metres per u (measured from the model's UVs). The d
 - **Glass:** mullions every 1.5 m and transoms every 3.6 m, a sky reflection at the top of each run,
   and a slab shadow under each floor.
 
+- **No painted-on geometry (director, 2026-11-22).** Arches, doorways, recesses, struts, window reveals,
+  frames, sills, pilasters and mouldings are always modelled with real depth: an opening is cut through the
+  wall with reveals and something behind it, and a frame or trim stands proud with its own top, underside
+  and ends. A dark shape or a coloured strip laid a few centimetres off a wall is never an arch or a window.
+  A texture may only carry detail too small to see in depth from the stands or the broadcast camera (brick
+  coursing, panel joints, mullions on flat curtain glass). Adelaide's arcade, its scoreboard door, windows and
+  louvres were rebuilt to this rule on 2026-11-22.
+
 ## Materials
 
 A ground's named materials can be corrected without rebuilding the model, through
@@ -173,3 +181,29 @@ Optus went through the same gate. What it added to the method:
 
 Open at Optus: shadows read too blue on every ground (truss shadow on the roof blue/red 1.37 vs Google Earth's
 1.10); that is the match sky light, shared by all grounds.
+
+## Adelaide Oval (third ground to the standard, 2026-11-21)
+
+- **The compare tool is in the repo.** `tools/grounds/ge_compare.py` plans each view's Google Earth URL and
+  our matching camera through the ground's FIT, `tools/grounds/ge_shoot.js` takes the Google Earth shots,
+  and `ge_compare.py sheet` lays the pairs side by side. Views live with the ground
+  (`tools/grounds/adelaide/qa/views.json`); a view with `cam` is a fixed camera for a photosphere or Street
+  View picture supplied by hand. Grounds now play at their own size (#1949), so the camera needs no stretch.
+- **Google Earth's camera, measured (2026-11-22).** Pairs made before this were framed wrongly and are good for
+  looks and colours only, never sizes. Measured at Adelaide and the MCG by putting the mouse on points whose
+  place on screen was worked out first (the status bar gives the lat/lon under it; all fell within a metre):
+  the URL's `35y` is the vertical field of view of the whole browser window, centred on it, so our picture of
+  the 720-row crop needs 25.6 degrees, not 23.5. The `a` altitude is the look-at point's height above sea
+  level, and the turf's height must be Google Earth's own (Adelaide 26 m, not the 40 m used; MCG 8 m):
+  `ge_shoot.js <work> --level`, then `ge_compare.py level`. Google Earth also lifts a camera it thinks too
+  low, by 15-30 m at Adelaide below about 100 m, keeping its spot and tilt; `ge_shoot.js` saves the status
+  bar beside each shot and a second `ge_compare.py plan` puts ours where Google Earth's really was.
+- **Street View at Adelaide is a drone photosphere.** Asking Google Maps for a panorama at the field centre
+  returns a 360 drone sphere taken above the Riverbank Stand (April 2021); `qa/sv_views.json` matches it
+  looking north, east, south and west.
+- **No tint where the map is painted for the light.** Optus's `tint` made Adelaide's parklands yellow;
+  Adelaide's map is painted in Google Earth's colours with no tint.
+- **The model's own ground stops under its stands.** Adelaide's 6 km lawn is out of the export; its floor is
+  a 107 m disc and the map starts at 105 m, outside the turf (a map under the turf flickered through it).
+- **Park trees.** OpenStreetMap maps most of the parklands' street trees; the other parks are filled to a
+  tree per 260 m² of open grass. Park 26, which holds the ground and its open ovals, is left as mapped.
