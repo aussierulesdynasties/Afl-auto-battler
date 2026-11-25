@@ -275,7 +275,11 @@ func _check_clock(m: Control, words: Array, at: String) -> void:
 ## Under a sheet the play, speed and skip buttons are not drawn, and a real tap
 ## where each one sits presses nothing and changes nothing in the match.
 func _check_dead_controls(m: Control, controls: Control, at: String) -> int:
-	_check(is_zero_approx(controls.modulate.a), "The play and skip buttons are not drawn under the sheet (%s: alpha %.2f)" % [at, controls.modulate.a])
+	# A phone keeps them in place at alpha 0; a PC hides them so the feed takes
+	# their room (director, 2026-11-24: "Yes, feed takes it").
+	_check(is_zero_approx(controls.modulate.a) or not controls.is_visible_in_tree(),
+			"The play and skip buttons are not drawn under the sheet (%s: alpha %.2f, shown %s)" % [
+			at, controls.modulate.a, str(controls.is_visible_in_tree())])
 	var sim = _state.pending_sim
 	var pitch = m.get("_pitch")
 	var snap := func() -> Array:

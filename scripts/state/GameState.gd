@@ -3244,6 +3244,10 @@ func _fill_short_lists() -> void:
 		for p in pool.slice(0, short):
 			var want := Contracts.wants(p)
 			_sign_fa(p, str(code), int(want["salary"]), int(want["years"]))
+			# Signed after the rollover ticked every contract: his deal starts
+			# this season, not the next, and he is not an off-season re-signing.
+			p["contract_years"] = int(want["years"])
+			p.erase("resigned")
 			p.erase("fa_kept")
 			names.append(GameDB.player_display_name(p))
 		# No free agent left: the best players passed over at an earlier draft,
@@ -8769,10 +8773,14 @@ func _weeks_text(w: int) -> String:
 func ensure_contracts() -> void:
 	if season == null:
 		return
-	for code in season.lists:
-		Contracts.assign_initial(season.lists[code])
 	if salary_cap <= 0:
 		salary_cap = Contracts.salary_cap_for_year(season_year)
+	for code in season.lists:
+		var list: Array = season.lists[code]
+		# Room kept for the spots still open on its list, at the minimum wage:
+		# the draft fills them after these first contracts.
+		var open_spots := maxi(0, Contracts.max_list() - list.size()) * Contracts.senior_min()
+		Contracts.fit_to_cap(list, Contracts.assign_initial(list), cap_for(str(code)) - dead_for(str(code)) - open_spots)
 
 
 func my_payroll() -> int:
@@ -8991,7 +8999,15 @@ func open_offseason(keep_staff := false) -> void:
 		if code == my_club:
 			continue
 		var list: Array = season.lists[code]
-		for p in Contracts.expiring(list).duplicate():
+		# Its best players first, as a real club settles them: room spent on a
+		# role player re-signed first must not cost it a star (bug bash
+		# 2026-11-23).
+		var due := Contracts.expiring(list).duplicate()
+		due.sort_custom(func(a, b):
+			if Contracts.worth(a) != Contracts.worth(b):
+				return Contracts.worth(a) > Contracts.worth(b)
+			return str(a["id"]) < str(b["id"]))
+		for p in due:
 			if retiring_now(p):
 				continue  # he retires at the rollover: no contract, no free agency
 			if not list.has(p):
@@ -9316,7 +9332,7 @@ func _spare_expiring(code: String, keep: Dictionary, on: Array = []) -> Dictiona
 ## minimum list) would not make the room, so it never loses them for nothing.
 func _cap_spares(code: String, keep: Dictionary) -> Array:
 	var scratch: Array = (season.lists.get(code, []) as Array).duplicate()
-	var asking := Contracts.asking_salary(keep)
+	var asking := Contracts.ai_price(keep, scratch)
 	var out := []
 	while asking > cap_for(code) - Contracts.payroll(scratch) + int(keep.get("salary", 0)):
 		if scratch.size() <= Contracts.min_list():
@@ -9482,6 +9498,9 @@ func _release(code: String, p: Dictionary, wanted := false, announce := true) ->
 	# Compensation picks came with free agency (2012 on, EraRules).
 	p["comp_eligible"] = wanted and comp_tenure_ok(p) and EraRules.on("free_agency")
 	p["contract_years"] = 0
+	# Re-signed this off-season and let go: that deal is gone with him, and a
+	# club that takes him later must not carry it past the rollover.
+	p.erase("resigned")
 	free_agents.append(p)
 	offseason_log.append({"kind": "released", "club": code, "id": str(p["id"]), "wanted": wanted,
 			"eligible": bool(p["comp_eligible"])})
@@ -13800,9 +13819,9 @@ func development_state(p: Dictionary) -> String:
 ## Spend his two banks (Growth, the director's design 2026-11-17): match XP
 ## (p["xp_match"]) on his position's rating stats, training XP (p["xp"]) on
 ## `train_weights` (his focus or his plan). While he learns a position
-## (`learning`), both banks split four ways (_learn_split). No ceiling: he
-## keeps buying past his potential, and what he buys there is noted for the
-## summer (Growth.summer).
+## (`learning`), both banks split four ways (_learn_split). His potential is
+## the ceiling (director 2026-11-23, "Gains stop at potential"): _buy stops
+## there and the rest stays banked.
 func _spend_banks(p: Dictionary, train_weights: Dictionary, learning := false) -> Dictionary:
 	var gains := {}
 	var split: Dictionary = p.get("xp_split", {})
@@ -13856,8 +13875,8 @@ static func _top_two(w: Dictionary) -> Array:
 
 
 ## Buy stat points from one bank (holder[bank]) while it lasts, each one going
-## to the best weight per XP (Growth.cost). Adds to `gains`; notes every point
-## in season_gains, and those bought at or past his potential in over_gains.
+## to the best weight per XP (Growth.cost), until his rating reaches his
+## potential. Adds to `gains`; notes every point in season_gains.
 func _buy(p: Dictionary, holder: Dictionary, bank: String, weights: Dictionary, gains: Dictionary) -> void:
 	var games := float(p.get("gm", 18.0))
 	var attr: Dictionary = p.get("attr", {})
@@ -13877,17 +13896,17 @@ func _buy(p: Dictionary, holder: Dictionary, bank: String, weights: Dictionary, 
 				best_cost = c
 		if best_key == "" or float(holder.get(bank, 0.0)) < float(best_cost):
 			break
-		var past := pot > 0 and int(p.get("overall", 0)) >= pot
+		# Gains stop at his potential (director 2026-11-23, "Gains stop at
+		# potential": stars climbed to 99 in a season, 90+ from 10 to 44 in
+		# three). The XP stays in his bank; a breakout can still pass it.
+		if pot > 0 and int(p.get("overall", 0)) >= pot:
+			break
 		holder[bank] = float(holder[bank]) - float(best_cost)
 		attr[best_key] = int(attr[best_key]) + 1
 		gains[best_key] = int(gains.get(best_key, 0)) + 1
 		var sg: Dictionary = p.get("season_gains", {})
 		sg[best_key] = int(sg.get(best_key, 0)) + 1
 		p["season_gains"] = sg
-		if past:
-			var og: Dictionary = p.get("over_gains", {})
-			og[best_key] = int(og.get(best_key, 0)) + 1
-			p["over_gains"] = og
 		_recalc_player_overall(p)
 		if pot > 0 and not p.has("peak_year") and int(p["overall"]) >= pot:
 			p["peak_year"] = season_year
