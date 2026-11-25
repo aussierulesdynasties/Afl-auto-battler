@@ -20,7 +20,6 @@ extends RefCounted
 ## is all there at once and only the sting sounds. A loss gets no sting
 ## (director, 2026-11-25): there is no quieter sound to give it.
 
-const Motion := UiKit.Motion
 
 const CLOSE_WIN := 12          ## director, 2026-11-25: "close wins < 12 pts"
 const BIG_LOSS := 40           ## the game's heavy loss (MediaConference, ClubLife)
@@ -60,6 +59,11 @@ const DUR_PULSE_BACK := 0.45
 static func prepare(f: Dictionary) -> void:
 	if not UiKit.motion_on():
 		return
+	if bool(f.get("still", false)):
+		var lad: Variant = f.get("ladder")
+		if is_instance_valid(lad) and lad is Control:
+			(lad as Control).modulate.a = 0.0
+		return
 	for c in _heroes(f):
 		(c as Control).modulate.a = 0.0
 
@@ -70,6 +74,9 @@ static func prepare(f: Dictionary) -> void:
 static func play(f: Dictionary) -> void:
 	var v: Variant = f.get("verdict")
 	if not is_instance_valid(v) or not (v is Control) or not (v as Control).is_inside_tree():
+		return
+	if bool(f.get("still", false)):
+		_still(f)
 		return
 	var result := str(f.get("result", ""))
 	var sting := result != "loss"
@@ -97,6 +104,20 @@ static func play(f: Dictionary) -> void:
 				UiKit.land(fin, 0.0, true, true)
 			else:
 				_settle(fin, 0.0, false))
+
+
+## After the premiership ceremony (director, 2026-11-25: "open still"): the
+## sheet is all there, with no slam, flash, shake or sting; only the ladder
+## move still counts when it comes into view.
+static func _still(f: Dictionary) -> void:
+	Feel.moved.append("ft_still")
+	var ladder: Variant = f.get("ladder")
+	if not (is_instance_valid(ladder) and ladder is Label):
+		return
+	if not UiKit.motion_on():
+		(ladder as Label).modulate.a = 1.0
+		return
+	_when_seen(ladder, f.get("scroll") as ScrollContainer, LADDER_AT, func() -> void: _ladder(ladder, f))
 
 
 static func _heroes(f: Dictionary) -> Array:
@@ -130,9 +151,9 @@ static func _settle(c: Control, delay: float, sting: bool) -> void:
 		_aim(c)
 		_put(c, "s", SETTLE_FROM))
 	tw.tween_method(_setter(c, "s"), SETTLE_FROM, 1.0, DUR_SETTLE) \
-			.set_trans(Motion.TRANS_SETTLE).set_ease(Motion.EASE_SETTLE)
+			.set_trans(UiKit.Motion.TRANS_SETTLE).set_ease(UiKit.Motion.EASE_SETTLE)
 	tw.parallel().tween_property(c, "modulate:a", 1.0, DUR_SETTLE_FADE) \
-			.set_trans(Motion.TRANS_IN).set_ease(Motion.EASE_IN)
+			.set_trans(UiKit.Motion.TRANS_IN).set_ease(UiKit.Motion.EASE_IN)
 	tw.tween_callback(func() -> void: _release(c))
 
 
@@ -148,11 +169,11 @@ static func _slam(f: Dictionary, v: Control, heavy: bool, sting: bool) -> void:
 		_aim(v)
 		_put(v, "s", float(k[0])))
 	tw.tween_method(_setter(v, "s"), float(k[0]), float(k[1]), DUR_WIND) \
-			.set_trans(Motion.TRANS_PULSE).set_ease(Tween.EASE_IN_OUT)
+			.set_trans(UiKit.Motion.TRANS_PULSE).set_ease(Tween.EASE_IN_OUT)
 	tw.parallel().tween_property(v, "modulate:a", 1.0, DUR_APPEAR) \
-			.set_trans(Motion.TRANS_IN).set_ease(Motion.EASE_IN)
+			.set_trans(UiKit.Motion.TRANS_IN).set_ease(UiKit.Motion.EASE_IN)
 	tw.tween_method(_setter(v, "s"), float(k[1]), 1.0, DUR_SLAM) \
-			.set_trans(Motion.TRANS_OUT).set_ease(Motion.EASE_OUT)
+			.set_trans(UiKit.Motion.TRANS_OUT).set_ease(UiKit.Motion.EASE_OUT)
 	tw.tween_callback(func() -> void:
 		if sting:
 			Feel.press("land")
@@ -161,9 +182,9 @@ static func _slam(f: Dictionary, v: Control, heavy: bool, sting: bool) -> void:
 			_shake(f)
 		_snap_rows(f.get("rows", [])))
 	tw.tween_method(_setter(v, "s"), 1.0, float(k[2]), DUR_RECOIL) \
-			.set_trans(Motion.TRANS_IN).set_ease(Motion.EASE_IN)
+			.set_trans(UiKit.Motion.TRANS_IN).set_ease(UiKit.Motion.EASE_IN)
 	tw.tween_method(_setter(v, "s"), float(k[2]), 1.0, float(k[3])) \
-			.set_trans(Motion.TRANS_SETTLE).set_ease(Motion.EASE_SETTLE)
+			.set_trans(UiKit.Motion.TRANS_SETTLE).set_ease(UiKit.Motion.EASE_SETTLE)
 	tw.tween_callback(func() -> void: _release(v))
 
 
@@ -176,11 +197,11 @@ static func _sink(v: Control, delay: float) -> void:
 		Feel.moved.append("ft_sink")
 		_put(v, "dy", SINK_FROM))
 	tw.tween_method(_setter(v, "dy"), SINK_FROM, SINK_UNDER, DUR_SINK) \
-			.set_trans(Motion.TRANS_SETTLE).set_ease(Motion.EASE_OUT)
+			.set_trans(UiKit.Motion.TRANS_SETTLE).set_ease(UiKit.Motion.EASE_OUT)
 	tw.parallel().tween_property(v, "modulate:a", 1.0, DUR_SETTLE_FADE) \
-			.set_trans(Motion.TRANS_IN).set_ease(Motion.EASE_IN)
+			.set_trans(UiKit.Motion.TRANS_IN).set_ease(UiKit.Motion.EASE_IN)
 	tw.tween_method(_setter(v, "dy"), SINK_UNDER, 0.0, DUR_SINK_BACK) \
-			.set_trans(Motion.TRANS_SETTLE).set_ease(Motion.EASE_SETTLE)
+			.set_trans(UiKit.Motion.TRANS_SETTLE).set_ease(UiKit.Motion.EASE_SETTLE)
 	tw.tween_callback(func() -> void: _release(v))
 
 
@@ -193,14 +214,14 @@ static func _snap_rows(rows: Array) -> void:
 			continue
 		var tw := UiKit._own(r, "ft")
 		if i > 0:
-			tw.tween_interval(Motion.STAGGER * i)
+			tw.tween_interval(UiKit.Motion.STAGGER * i)
 		tw.tween_callback(func() -> void:
 			Feel.moved.append("ft_snap")
-			_put(r, "dy", -Motion.RISE))
-		tw.tween_method(_setter(r, "dy"), -Motion.RISE, 0.0, DUR_SNAP) \
-				.set_trans(Motion.TRANS_IN).set_ease(Motion.EASE_IN)
+			_put(r, "dy", -UiKit.Motion.RISE))
+		tw.tween_method(_setter(r, "dy"), -UiKit.Motion.RISE, 0.0, DUR_SNAP) \
+				.set_trans(UiKit.Motion.TRANS_IN).set_ease(UiKit.Motion.EASE_IN)
 		tw.parallel().tween_property(r, "modulate:a", 1.0, DUR_APPEAR) \
-				.set_trans(Motion.TRANS_IN).set_ease(Motion.EASE_IN)
+				.set_trans(UiKit.Motion.TRANS_IN).set_ease(UiKit.Motion.EASE_IN)
 		tw.tween_callback(func() -> void: _release(r))
 
 
@@ -216,9 +237,9 @@ static func _flash(f: Dictionary) -> void:
 	Feel.moved.append("ft_flash")
 	var tw := UiKit._own(shell, "ft_flash")
 	tw.tween_method(_flash_setter(shell, st), 0.0, FLASH_PEAK, DUR_FLASH_IN) \
-			.set_trans(Motion.TRANS_IN).set_ease(Motion.EASE_IN)
+			.set_trans(UiKit.Motion.TRANS_IN).set_ease(UiKit.Motion.EASE_IN)
 	tw.tween_method(_flash_setter(shell, st), FLASH_PEAK, 0.0, DUR_FLASH_OUT) \
-			.set_trans(Motion.TRANS_IN).set_ease(Motion.EASE_IN)
+			.set_trans(UiKit.Motion.TRANS_IN).set_ease(UiKit.Motion.EASE_IN)
 
 
 static func _flash_state(shell: Control) -> Dictionary:
@@ -262,7 +283,7 @@ static func _shake(f: Dictionary) -> void:
 	var step := DUR_SHAKE / float(SHAKE.size())
 	for dx in SHAKE:
 		tw.tween_property(s, "position:x", x0 + float(dx), step) \
-				.set_trans(Motion.TRANS_PULSE).set_ease(Tween.EASE_IN_OUT)
+				.set_trans(UiKit.Motion.TRANS_PULSE).set_ease(Tween.EASE_IN_OUT)
 
 
 ## The ladder move: it comes up as it counts from where you were to where you
@@ -283,10 +304,10 @@ static func _ladder(l: Label, f: Dictionary) -> void:
 			st["popped"] = true
 			_pop(l, to < from)
 		return str(say.call(n))
-	UiKit.count_up(l, to, shown, Motion.DUR_COUNT, from)
+	UiKit.count_up(l, to, shown, UiKit.Motion.DUR_COUNT, from)
 	var tw := UiKit._own(l, "ft")
-	tw.tween_property(l, "modulate:a", 1.0, Motion.DUR_LAND_FADE) \
-			.set_trans(Motion.TRANS_IN).set_ease(Motion.EASE_IN)
+	tw.tween_property(l, "modulate:a", 1.0, UiKit.Motion.DUR_LAND_FADE) \
+			.set_trans(UiKit.Motion.TRANS_IN).set_ease(UiKit.Motion.EASE_IN)
 
 
 ## The ladder count's last number pops to 1.08 and pulses the up (GOOD)
@@ -300,13 +321,13 @@ static func _pop(l: Label, up: bool) -> void:
 	_aim(l)
 	var tw := UiKit._own(l, "ft_pop")
 	tw.tween_method(_setter(l, "s"), 1.0, POP, DUR_POP) \
-			.set_trans(Motion.TRANS_IN).set_ease(Motion.EASE_IN)
+			.set_trans(UiKit.Motion.TRANS_IN).set_ease(UiKit.Motion.EASE_IN)
 	tw.parallel().tween_method(_ink(l), base, hot, DUR_POP) \
-			.set_trans(Motion.TRANS_IN).set_ease(Motion.EASE_IN)
-	tw.tween_method(_setter(l, "s"), POP, 1.0, Motion.DUR_BASE) \
-			.set_trans(Motion.TRANS_SETTLE).set_ease(Motion.EASE_SETTLE)
+			.set_trans(UiKit.Motion.TRANS_IN).set_ease(UiKit.Motion.EASE_IN)
+	tw.tween_method(_setter(l, "s"), POP, 1.0, UiKit.Motion.DUR_BASE) \
+			.set_trans(UiKit.Motion.TRANS_SETTLE).set_ease(UiKit.Motion.EASE_SETTLE)
 	tw.parallel().tween_method(_ink(l), hot, base, DUR_PULSE_BACK).set_delay(DUR_PULSE_HOLD) \
-			.set_trans(Motion.TRANS_PULSE).set_ease(Tween.EASE_IN_OUT)
+			.set_trans(UiKit.Motion.TRANS_PULSE).set_ease(Tween.EASE_IN_OUT)
 	tw.tween_callback(func() -> void:
 		_release(l)
 		l.add_theme_color_override("font_color", base))
