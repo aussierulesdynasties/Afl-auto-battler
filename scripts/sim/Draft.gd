@@ -144,7 +144,7 @@ func _session_of() -> Dictionary:
 func _init(all_players: Array, p_clubs: Array = [], p_seed: int = 0,
 		p_fixed_order: Array = [], p_rounds: int = 0) -> void:
 	pool = all_players.duplicate()
-	pool.sort_custom(func(a, b): return a["overall"] > b["overall"])
+	pool.sort_custom(func(a, b): return Rating.ovr(a) > Rating.ovr(b))
 	clubs = p_clubs.duplicate()
 	seed = p_seed
 	_fixed_order = p_fixed_order.duplicate()
@@ -788,7 +788,7 @@ func _draft_pick(code: String, p: Dictionary) -> bool:
 		# player's hidden label.
 		"player_name": str(p.get("generic_name", p.get("name", "Player"))),
 		"role": Ratings.role_tag(p),
-		"overall": int(p["overall"]),
+		"overall": int(Rating.ovr(p)),
 		"value": paid,
 		"source_club": str(p["club"]),
 	}
@@ -1227,7 +1227,7 @@ func _first_ruck_public(code: String, p: Dictionary) -> bool:
 	if p.is_empty() or bool(user_view(p)["scouted"]):
 		return false
 	for q in club_lists.get(code, []):
-		if str(q["role"]) == "RUCK" and int(q["overall"]) >= RUCK_FIRST_CHOICE and bool(user_view(q)["scouted"]):
+		if str(q["role"]) == "RUCK" and int(Rating.ovr(q)) >= RUCK_FIRST_CHOICE and bool(user_view(q)["scouted"]):
 			return false
 	return true
 
@@ -1349,7 +1349,7 @@ func _ai_score(code: String, p: Dictionary, detail = null, salary := -1) -> floa
 		if role == "RUCK" and intake_mode:
 			need = _intake_ruck_need(code, p)
 		var second_star := false
-		if role == "RUCK" and bool(t[4]) and int(p["overall"]) >= RUCK_FIRST_CHOICE:
+		if role == "RUCK" and bool(t[4]) and int(Rating.ovr(p)) >= RUCK_FIRST_CHOICE:
 			# One ruck plays at a time: a club with its first-choice ruck
 			# looks for a second, not another star to sit behind him.
 			need *= SECOND_STAR_RUCK
@@ -1453,7 +1453,7 @@ func _eval_error(code: String, p: Dictionary) -> float:
 	# 2026-11-10: "everything follows the read"), so Pick for me and your price
 	# see what you see.
 	if code == user_club:
-		return float(int(user_view(p)["overall_mid"]) - int(p.get("overall", 50)))
+		return float(int(user_view(p)["overall_mid"]) - int(Rating.ovr(p, 50)))
 	var sd := club_eval_sd(code)
 	if sd <= 0.0:
 		return 0.0
@@ -1479,7 +1479,7 @@ func _eval_certainty(p: Dictionary) -> float:
 		# Clubs agree on what a player has shown, not on what he is worth to
 		# them: with horizons, a 35-year-old star is still read exactly.
 		var shown := func(p: Dictionary) -> float:
-			return float(p["overall"]) if league_mode and not intake_mode and horizon_value else _worth(p)
+			return float(Rating.ovr(p)) if league_mode and not intake_mode and horizon_value else _worth(p)
 		var by_worth := pool.duplicate()
 		by_worth.sort_custom(func(a, b):
 			if not is_equal_approx(shown.call(a), shown.call(b)):
@@ -1509,7 +1509,7 @@ const USER_EVAL_SD := 3.0
 ## drafted is your recruiters' read, as every rival club has its own; your
 ## own picks are known exactly. The player underneath never changes.
 func user_view(p: Dictionary) -> Dictionary:
-	var ov := int(p.get("overall", 50))
+	var ov := int(Rating.ovr(p, 50))
 	var pot := maxi(ov, int(p.get("potential", ov)))
 	if intake_mode and bool(p.get("projected", false)):
 		var proj := DraftScouting.projection(p, user_club, seed, scouting_mult_for(user_club))
@@ -1565,7 +1565,7 @@ func scouted_copy(p: Dictionary) -> Dictionary:
 	var view := user_view(p)
 	if not bool(view["scouted"]) or not p.has("attr"):
 		return p
-	var shift := float(int(view["overall_mid"]) - int(p.get("overall", 50)))
+	var shift := float(int(view["overall_mid"]) - int(Rating.ovr(p, 50)))
 	var c := p.duplicate(true)
 	var attr: Dictionary = c["attr"]
 	for k in attr.keys():
@@ -1608,7 +1608,7 @@ static func _hash01(key: String) -> float:
 func _worth(p: Dictionary) -> float:
 	if league_mode and not intake_mode and horizon_value:
 		return horizon_worth(p, "build")
-	var ov := float(p["overall"])
+	var ov := float(Rating.ovr(p))
 	var pot := maxf(ov, float(p.get("potential", ov)))
 	var w := AI_POT_WEIGHT_INTAKE if intake_mode else AI_POT_WEIGHT_LEAGUE
 	return ov * (1.0 - w) + pot * w
@@ -1710,7 +1710,7 @@ func _has_first_ruck(code: String) -> bool:
 	if intake_mode:
 		return false
 	for p in club_lists.get(code, []):
-		if str(p["role"]) == "RUCK" and int(p["overall"]) >= RUCK_FIRST_CHOICE and float(p.get("age", 30.0)) < 33.0:
+		if str(p["role"]) == "RUCK" and int(Rating.ovr(p)) >= RUCK_FIRST_CHOICE and float(p.get("age", 30.0)) < 33.0:
 			return true
 	return false
 
@@ -1723,7 +1723,7 @@ func _intake_ruck_need(code: String, p: Dictionary) -> float:
 		return 1.0
 	if n >= 3:
 		return 0.0
-	var project := int(p.get("potential", 0)) - int(p.get("overall", 0)) >= INTAKE_RUCK_PROJECT_GAP
+	var project := int(p.get("potential", 0)) - int(Rating.ovr(p, 0)) >= INTAKE_RUCK_PROJECT_GAP
 	return INTAKE_COVERED if (current_round() >= INTAKE_RUCK_LATE_ROUND or project) else INTAKE_RUCK_THIRD
 
 
@@ -2149,7 +2149,7 @@ func board(role := "", club := "", search := "", sort := "overall",
 				out.sort_custom(func(a, b):
 					return int(seen[a["id"]]["overall_mid"]) > int(seen[b["id"]]["overall_mid"]))
 			else:
-				out.sort_custom(func(a, b): return a["overall"] > b["overall"])
+				out.sort_custom(func(a, b): return Rating.ovr(a) > Rating.ovr(b))
 		"value":
 			# Lowest cost at your price, then your read (L1: never the truth).
 			var cost := {}
@@ -2161,7 +2161,7 @@ func board(role := "", club := "", search := "", sort := "overall",
 					return int(cost[a["id"]]) < int(cost[b["id"]])
 				if not read.is_empty():
 					return int(read[a["id"]]["overall_mid"]) > int(read[b["id"]]["overall_mid"])
-				return a["overall"] > b["overall"])
+				return Rating.ovr(a) > Rating.ovr(b))
 		"name":
 			out.sort_custom(func(a, b): return GameDB.player_sort_name(a) < GameDB.player_sort_name(b))
 		"potential":
@@ -2188,7 +2188,7 @@ func board(role := "", club := "", search := "", sort := "overall",
 				out.sort_custom(func(a, b):
 					if int(a.get("potential", 0)) != int(b.get("potential", 0)):
 						return int(a.get("potential", 0)) > int(b.get("potential", 0))
-					return a["overall"] > b["overall"])
+					return Rating.ovr(a) > Rating.ovr(b))
 		"goals":
 			out.sort_custom(func(a, b):
 				if intake_mode:

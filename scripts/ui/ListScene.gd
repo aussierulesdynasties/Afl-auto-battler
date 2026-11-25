@@ -295,7 +295,7 @@ func _role_groups(lbox: Control, players: Array, skip_empty: bool) -> void:
 		var g: Array = grouped[r]
 		if skip_empty and g.is_empty():
 			continue
-		g.sort_custom(func(a, b): return int(a["overall"]) > int(b["overall"]))
+		g.sort_custom(func(a, b): return int(Rating.ovr(a)) > int(Rating.ovr(b)))
 		lbox.add_child(UiKit.spacer(4))
 		# STYLE-05: each position heads its group in its role colour at name
 		# weight (role colours are ink only, style guide 2.1), not small grey.
@@ -403,11 +403,11 @@ func _list_row(p: Dictionary) -> Control:
 	nums.alignment = BoxContainer.ALIGNMENT_CENTER
 	nums.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	h.add_child(nums)
-	var ov := UiKit.line(str(int(p["overall"])), 20, UiKit.TEXT, true)
+	var ov := UiKit.line(str(int(Rating.ovr(p))), 20, UiKit.TEXT, true)
 	ov.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	ov.custom_minimum_size = Vector2(40, 0)
 	nums.add_child(ov)
-	var pot := UiKit.line("POT %d" % int(p.get("potential", p["overall"])), UiKit.TINY, UiKit.MUTED)
+	var pot := UiKit.line("POT %d" % int(p.get("potential", Rating.ovr(p))), UiKit.TINY, UiKit.MUTED)
 	pot.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	nums.add_child(pot)
 	return row

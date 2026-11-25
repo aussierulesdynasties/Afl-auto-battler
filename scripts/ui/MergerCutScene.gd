@@ -75,8 +75,8 @@ func _build() -> void:
 		body.add_child(head)
 		var rows := _list().filter(func(q): return str(q.get("rookie_list", "")) == kind)
 		rows.sort_custom(func(a, b):
-			if int(a.get("overall", 0)) != int(b.get("overall", 0)):
-				return int(a.get("overall", 0)) > int(b.get("overall", 0))
+			if int(Rating.ovr(a, 0)) != int(Rating.ovr(b, 0)):
+				return int(Rating.ovr(a, 0)) > int(Rating.ovr(b, 0))
 			return str(a["id"]) < str(b["id"]))
 		var full := _picked(kind) >= int(needs[kind])
 		for p in rows:
@@ -167,7 +167,7 @@ func _row(p: Dictionary, full: bool) -> Control:
 	var left := int(p.get("contract_years", 1))
 	# Two lines, broken at a fixed place, so no line ends or starts with a "·".
 	info.add_child(UiKit.lbl("%d OVR  ·  %d POT  ·  age %d" % [
-			int(p.get("overall", 0)), int(p.get("potential", p.get("overall", 0))), int(p.get("age", 0))],
+			int(Rating.ovr(p, 0)), int(p.get("potential", Rating.ovr(p, 0))), int(p.get("age", 0))],
 			UiKit.SECONDARY, UiKit.MUTED))
 	info.add_child(UiKit.lbl("%s  ·  %s" % [
 			"%d season%s left" % [left, "" if left == 1 else "s"] if left > 0 else "out of contract",
