@@ -145,6 +145,8 @@ var _ft_tab := "summary"        # summary (home), stats or report
 ## Full time's motion (director, 2026-11-25; FullTimeMotion says what it does).
 const FullTimeMotion := preload("res://scripts/ui/match/FullTimeMotion.gd")
 var _ft_pending := {}           # full time's motion, waiting on the farewell to end
+var _ceremony: PremiershipCeremony   # the Grand Final's, while it is up
+var _farewell_ref: WeakRef     # a legend's farewell, while it is up (it frees itself)
 var _run_side := -1            # who kicked the last goal, and how many in a row
 var _run_len := 0
 var _press_said := [false, false]  # the High Press line, once a side
@@ -4390,25 +4392,62 @@ func _on_finished() -> void:
 	if _interactive:
 		GameState.finish_interactive_match(_res)
 	_sync_controls()
+	# The Grand Final: the premiership ceremony comes first (director, 2026-11-25:
+	# the cup, then a legend's farewell, then full time, still). Full time is
+	# built under it, hidden, and opens when it is done.
+	var flag := PremiershipCeremony.facts(_res)
+	if not flag.is_empty():
+		_show_fulltime(false, true)
+		_open_ceremony(flag)
+		return
 	# Full time is built at once (its controls exist and work the moment the siren goes);
-	# a milestone game's farewell plays over it on its own layer, and a tap or its end
-	# shows full time underneath. Its motion waits for the farewell to end.
+	# a milestone game's farewell plays over it on its own layer, and its Continue (or
+	# Back) shows full time underneath. Its motion waits for the farewell to end.
 	_show_fulltime(_farewell.is_empty())
 	if not _farewell.is_empty():
-		var v := FarewellVignette.open(get_tree().root, _farewell["ms"], _farewell["man"],
-				GameState.my_club, str(_farewell["opp"]), _farewell["mine"], _farewell["theirs"],
-				"Full time", str(GameState.pending_match.get("weather", "")) == "wet")
-		v.offset_top = _over.offset_top   # under the scoreboard, as every scene (T3.R42)
-		v.clip_contents = true            # its stand's roof stays off the scoreboard
-		_farewell = {}
-		# Its end (or a tap) lets the result land; so does it going any other way.
-		v.done.connect(_ft_play_pending, CONNECT_ONE_SHOT)
-		v.tree_exiting.connect(_ft_play_pending, CONNECT_ONE_SHOT)
-		var wv: WeakRef = weakref(v)   # not the node: it frees itself when it ends
-		tree_exiting.connect(func():            # Back out of the match: it goes too
-			var n = wv.get_ref()
-			if n != null:
-				n.finish_now())
+		_open_farewell()
+
+
+## The premiership ceremony over the space under the scoreboard; full time
+## waits under it, hidden.
+func _open_ceremony(flag: Dictionary) -> void:
+	var ov: Variant = _ft_box.get("overlay")
+	if is_instance_valid(ov) and ov is Control:
+		(ov as Control).visible = false
+	_ceremony = PremiershipCeremony.open(_over, flag, {"pulse": [_score_home, _score_away]})
+	_ceremony.done.connect(_after_ceremony, CONNECT_ONE_SHOT)
+
+
+## Continue (or Back) on the ceremony: a legend's farewell if there is one,
+## then full time, still.
+func _after_ceremony() -> void:
+	_ceremony = null
+	var ov: Variant = _ft_box.get("overlay")
+	if is_instance_valid(ov) and ov is Control:
+		(ov as Control).visible = true
+	if not _farewell.is_empty():
+		_open_farewell()
+	else:
+		_ft_play_pending()
+
+
+## A milestone man's farewell over full time; full time's motion waits for it.
+func _open_farewell() -> void:
+	var v := FarewellVignette.open(get_tree().root, _farewell["ms"], _farewell["man"],
+			GameState.my_club, str(_farewell["opp"]), _farewell["mine"], _farewell["theirs"],
+			"Full time", str(GameState.pending_match.get("weather", "")) == "wet")
+	v.offset_top = _over.offset_top   # under the scoreboard, as every scene (T3.R42)
+	v.clip_contents = true            # its stand's roof stays off the scoreboard
+	_farewell = {}
+	# Its Continue (or Back) lets the result land; so does it going any other way.
+	v.done.connect(_ft_play_pending, CONNECT_ONE_SHOT)
+	v.tree_exiting.connect(_ft_play_pending, CONNECT_ONE_SHOT)
+	var wv: WeakRef = weakref(v)   # not the node: it frees itself when it ends
+	_farewell_ref = wv
+	tree_exiting.connect(func():            # Back out of the match: it goes too
+		var n = wv.get_ref()
+		if n != null:
+			n.finish_now())
 
 
 ## Who the scene after the siren honours, and both sides' players: {} unless your
@@ -4450,7 +4489,7 @@ func _farewell_for(match: Dictionary) -> Dictionary:
 ## report) and Stats - and one way out: Continue. Back on Stats returns to
 ## Summary. Review match (Sim round) opens the same screen. `play_now` false:
 ## the result's motion waits (_ft_play_pending) while the farewell plays over it.
-func _show_fulltime(play_now := true) -> void:
+func _show_fulltime(play_now := true, still := false) -> void:
 	# A PC's Stats tab holds the score and the team numbers side by side, so the
 	# sheet is wider there; the Summary keeps its own reading width inside it.
 	var box := UiKit.modal_box(_over, SHEET_MAX_W if _stats_wide() else 640.0, 0.0, _wash())
@@ -4500,6 +4539,8 @@ func _show_fulltime(play_now := true) -> void:
 	# The result lands, then the ladder move (FullTimeMotion). What is still to
 	# come is hidden now, so it never shows at rest and then pops.
 	var f := _ft_motion_facts()
+	if still:
+		f["still"] = true   # after the premiership ceremony: no second slam
 	FullTimeMotion.prepare(f)
 	if play_now:
 		FullTimeMotion.play(f)
@@ -4544,6 +4585,7 @@ func _ft_motion_facts() -> Dictionary:
 		if r != null:
 			rows.append(r)
 	var f := {
+		"area": overlay,   # a tap here puts it all at rest (the skip rule)
 		"verdict": overlay.find_child("Verdict", true, false),
 		"rows": rows,
 		"finals": overlay.find_child("FinalsOutcome", true, false),
@@ -5200,6 +5242,16 @@ func _qcell(text: String, w: int, col: Color, fs: int, bold := false) -> Label:
 ## Router back hook. A live match cannot be abandoned half way (the rest of
 ## the round is already on the ladder), so back is swallowed until full time.
 func handle_back() -> bool:
+	# The premiership ceremony: Back leaves it, as Continue does.
+	if _ceremony != null and is_instance_valid(_ceremony):
+		_ceremony.finish_now()
+		return true
+	# A legend's farewell: Back leaves it, as its Continue does, and full time
+	# comes up (director, 2026-11-26).
+	var fw: Object = _farewell_ref.get_ref() if _farewell_ref != null else null
+	if fw is FarewellVignette and (fw as FarewellVignette).is_open():
+		(fw as FarewellVignette).finish_now()
+		return true
 	# The bench's drawer on the oval shuts first.
 	if _pitch != null and _pitch.close_bench():
 		return true
