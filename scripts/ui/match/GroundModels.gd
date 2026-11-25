@@ -113,6 +113,14 @@ const SURROUNDS := {
 			# Geelong's walls in Google Earth: red and brown brick, cream render, grey block, weatherboard.
 			"walls": [Color(0.62, 0.42, 0.34), Color(0.74, 0.7, 0.62), Color(0.55, 0.53, 0.5), Color(0.68, 0.5, 0.4),
 					Color(0.8, 0.78, 0.72), Color(0.6, 0.6, 0.6), Color(0.52, 0.36, 0.3)]},
+	# People First: the Carrara precinct, the Nerang River, its bush and the streets round it
+	# (tools/grounds/people_first/surrounds.py); the map laid on the model's origin. Drawn only while the
+	# ground has no background scene: the scene covers the same land from 98 m out, in more detail.
+	"people_first": {"fallback": true, "y": -0.04, "inner": 60.0, "colour": Color(0.41, 0.49, 0.3),
+			"map": "surrounds.webp", "span": 2048.0, "trees": "trees.bin", "buildings": "buildings.bin",
+			# Carrara's walls in Google Earth: cream and white render, pale brick, grey sheds.
+			"walls": [Color(0.82, 0.8, 0.74), Color(0.72, 0.62, 0.52), Color(0.6, 0.6, 0.58), Color(0.88, 0.86, 0.82),
+					Color(0.66, 0.5, 0.42), Color(0.74, 0.72, 0.68)]},
 	# Mars: Ballarat North painted from OSM (tools/grounds/mars/surrounds/data.py), the canopy model's trees; its
 	# houses, the workshops' chimney and the land out to the ranges are mars_part2.glb (build_bpy.py).
 	"mars": {"y": -0.06, "inner": 95.0, "outer": 1900.0, "colour": Color(0.48, 0.5, 0.34),
@@ -423,7 +431,9 @@ static func instantiate(slug: String, base := "") -> Node3D:
 	slice_big_meshes(root)
 	var fit: Array = FIT.get(slug, [0.0, 0.0])
 	_add_seats(root, dir, Vector2(float(fit[0]), float(fit[1])))
-	if SURROUNDS.has(slug):
+	# A "fallback" ring stands in only until the ground's background scene (#2023) is in the game.
+	if SURROUNDS.has(slug) and not (SURROUNDS[slug].get("fallback", false)
+			and not files(slug + "_backdrop", dir).is_empty()):
 		_add_surrounds(root, SURROUNDS[slug], dir, FIT.get(slug, []))
 	return root
 
@@ -499,7 +509,7 @@ static func _add_surrounds(root: Node3D, s: Dictionary, dir := "", fit: Array = 
 					5, str(s.get("tree_kind", "")))
 		if s.has("buildings") and FileAccess.file_exists(dir + str(s["buildings"])):
 			_add_buildings(root, FileAccess.get_file_as_bytes(dir + str(s["buildings"])).to_float32_array(), y,
-					s.get("building_tint", s.get("tint", Color.WHITE)), s.get("walls", []))
+					s.get("walls", []), s.get("building_tint", s.get("tint", Color.WHITE)))
 		for m in s.get("models", []):
 			var extra := load_glb(dir + str(m))
 			if extra != null:
@@ -736,8 +746,7 @@ static func _add_trees(root: Node3D, buf: PackedFloat32Array, y: float, stride :
 ## The map's buildings round the ground (point count, height, then the footprint's x, z): plain
 ## walls in a pale render or brick and a flat roof each, as one mesh. Seen past the stands and
 ## from a fly-through, they set the MCG in its city rather than on a plain.
-static func _add_buildings(root: Node3D, buf: PackedFloat32Array, y: float, tint := Color.WHITE,
-		walls: Array = []) -> void:
+static func _add_buildings(root: Node3D, buf: PackedFloat32Array, y: float, walls: Array = [], tint := Color.WHITE) -> void:
 	var v := PackedVector3Array()
 	var nrm := PackedVector3Array()
 	var col := PackedColorArray()
