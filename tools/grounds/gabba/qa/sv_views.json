@@ -1,0 +1,6 @@
+[
+ {"name": "sv_s", "label": "2019 photo sphere spot, looking south", "cam": [-62, 12, 1.6], "h": 180, "p": 12, "fov": 70},
+ {"name": "sv_n", "label": "2019 photo sphere spot, looking north", "cam": [-62, 12, 1.6], "h": 0, "p": 12, "fov": 70},
+ {"name": "sv_e", "label": "2019 photo sphere spot, looking east", "cam": [-62, 12, 1.6], "h": 90, "p": 12, "fov": 70},
+ {"name": "sv_w", "label": "2019 photo sphere spot, looking west", "cam": [-62, 12, 1.6], "h": 270, "p": 12, "fov": 70}
+]

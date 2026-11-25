@@ -1,7 +1,8 @@
 # Adelaide Oval: the director's fault list (2026-11-21)
 
-Paused 2026-11-21 (director, via the coordinator): all stadium effort goes into making the MCG the quality
-standard first. Pick this list up again once that standard exists. Positions are as the ground inspector's C key
+Resumed 2026-11-21 evening to the MCG standard (Google Earth side-by-sides, seat rule, surrounds). Since #1949 grounds
+play at their own size, so these positions now land a few metres from where he stood; the QA pass re-shot all of
+them (`tools/grounds/adelaide/qa/faults.views`). Positions are as the ground inspector's C key
 copies them ("x y z, facing, looking"); `godot ... GroundInspector.tscn -- --ground=adelaide --views=<file>`
 re-shoots any list of them (one "name x y z facing looking" a line).
 
@@ -13,14 +14,94 @@ Generators: `.claude/review/adelaide/tools/gen.py` (stands, roofs, seats), `tool
 | 1 | -1.3 62.1 169.6; -56.8 87.2 31.3; -117.0 116.8 -2.5 | Seats outside the stadium (behind the Riverbank roof, on the east stand's outer slope, behind the hotel deck) | Fixed: gen.py `seat_ok` places a seat only on a raked row, pitch-side of every roof or under one with 2.6 m headroom; a failing block-row goes whole. Riverbank stand ends at its roof, back glazed to the roof |
 | 2, 5 | -53.7 15.4 27.6; -59.1 15.7 -28.8 | Gaps between the stands, chairs on the edge of the chasm with no barrier | Fixed: lower bowl runs round both south corners (spec `corner_se`, `corner_sw`; the Esri plan shows it continuous); a 1.1 m parapet on every raised stand end and back. The upper-tier gaps at the corners are real and stay |
 | 3 | (lower bowl front) | Is this lip correct? | Fixed: the fence-front wall is now the dark wall of the photos (front_skin), not orange brick |
-| 4 | -2.8 107.4 -114.1, facing 183, looking -70 | Is this (west) roof accurate? | Open: compare the five petals with photos/crop.jpg and close/west_stands_2023.jpg; the back edge was raised to 24.5 m for fault 9 |
+| 4 | -2.8 107.4 -114.1, facing 183, looking -70 | Is this (west) roof accurate? | Checked against Google Earth from eight directions: five petals, front and back lines within a few metres. The petals were puffier than the real membrane; their rise is now lower (west 3.9 m, east 5.7 m, was 4.9 and 8.8) |
 | 6 | -3.1 32.4 -89.2; 7.3 63.3 -103.4 | Box building with two brick towers, flat slab overhanging, seats under it | Fixed: it is a real building (Esri plan, aerial photo: a flat-roofed block behind the petals between the towers). Now 17.45 m, its roof meeting the petals' back, towers 25 m, no seats in it |
 | 7 | 75.7 6.0 -30.0, facing 60 | Hill seats were a painted slab | Fixed: 2,860 instanced seats on stepped treads (hill.py) |
 | 8 | 86.3 17.2 -65.5, facing 2 | Oversized orange seats down the outside of the west stand's end wall; green roof underside | Fixed: the OSM notch at the stand's north end dropped (way_drop 20, 21). Roof underside green: global lighting fix in PR #1970 (MCG thread) |
 | 9 | 37.8 18.1 -81.0; 19.4 17.5 -119.4 | Upper-tier rows uneven, running to the back where the roof crushes them | Fixed: west petals' back edge 24.5 m (back_west_2023), upper tier ends at the roof, the gap to the roof closed; flat decks never seated |
 | 10 | 117.7 4.5 79.9, facing 327 | Scoreboard on a floating slab, flat black panel, paper-thin board on stilts | Fixed: the Hill is grassed down to the parkland all round; the amenities box sits on the mound; the screen is a 1.8 m solid cabinet with a bezel and back panels; the shelter roof is a solid slab |
-| 11 | 85.1 35.8 26.9, facing 113 | Terrible texture work on the outer precinct | Partly fixed: 400 mm pavers (texture kind 1) with no streaks, kerbs round the grass patches, the worn patch is grass. Open: plants or trees, a real screen face, a full pass over the rest of the outer precinct |
+| 11 | 85.1 35.8 26.9, facing 113 | Terrible texture work on the outer precinct | Fixed: the land round the ground is now the parklands from OpenStreetMap (paths, lawns, 4,600 trees, the Torrens, the CBD), and the precinct is the stadium's paved concourse (surrounds.py). The big screen's face is matte (it was glass and mirrored the sky purple); the heritage scoreboard's back has its green plinth, pilasters, trim and sash windows; the buildings round the ground take OSM's wall and roof colours |
 
-Also open, found in our own fly-through: a pale rectangle inside the west upper tier at 37.8 18.1 -81.0 (looks
-like one missing block of seats; seat_ok drops none there, so look at the tread or the lower tier showing through);
-the east stand's back walls and north end exterior are plain concrete.
+Found in our own fly-through and fixed (2026-11-22): the pale rectangle inside the west upper tier at 37.8 18.1 -81.0
+was the stand's raked underside (gen.py `open_back`) coming up through the tread where the tier's back steps in north
+of the middle tower, so the seat check took out 70 seats there; the underside now meets the slab only where the tier
+is clear of it, and the block is seated again (the seat check removes 14 seats in all, was 84). The big screen's ends,
+the heritage scoreboard's window frames and the west stand's base read purple at a glancing angle: the stand light's
+grass correction (oval3d_stand.gdshader) was mirrored at full strength on rough dark faces; it now rises only as far
+as a rough face mirrors (Schlick with roughness). Painted steel and the roof membrane are matte (export.py). The land
+next to the stands is a second map at 4 pixels a metre out to 254 m (`surrounds_near.webp`, paving slabs on the
+concourse): the 1 m map smeared the concourse and paths seen from the stands. The flat deck behind the west upper
+tier is concrete grey, not near-white. The east stand's back walls and north end exterior are grey precast.
+
+The director's west-face notes (2026-11-22, from the Google Earth sheet): "are the dark archways painted on or not?
+they shouldnt be"; "make the archways covered in green plants like in the Earth view"; the main entrance "isnt
+accurate to real life at all". The arches were dark shapes 7 cm off the wall. Fixed (gen.py `arcade`): the brick face
+up to the string course has real openings cut through it, 4 m wide, crowned at 6.4 m, with brick reveals 1.8 m deep,
+a dark passage behind, stairs climbing inside and a sandstone beam across each opening (west_2019.jpg); the string
+course is a moulding 0.18 m proud. Climbing plants cover the arcade face up to a ragged line about 10.6 m up, the
+openings clear (their own part, `ivy.ply`, with a leaf texture, kind 14). The entrance between the towers (`entrance`,
+spec `south_block.entrance`) is now a glazed ground floor standing 5 m out with a terrace on its roof inside an
+orange-brick rim, three pale canopies leaning back from the rim to the facade, and a dark round-topped pod at each
+end; planted stair cores stand out beside both towers (`green_walls`). The base wall's brick no longer stands in front
+of the entrance building's recessed glass floor. The heritage scoreboard's arched door is cut 0.35 m into its brick
+base, and its sash windows, pilasters, trim and louvres stand proud with real depth (hill.py); they were flat strips.
+
+The stands' pitch-facing storeys and names (2026-11-22, from the 2026 photos chappell, edwinsmith, bradman, riverbank,
+wanganeen_oatey and west_stands_2023; rows counted, heights in the photos' proportions under the fitted roofs): the west
+is three tiers as built, a 7-row bottom tier, the brick wall, an 8-row middle tier, a glazed level with white columns,
+the pale fascia with navy LED panels either side (blank: no ads), a 25-row upper tier and a panelled back wall up to the
+roof (it was two even tiers with the whole upper tier red). The Bradman Pavilion is its own section: cream wall, red
+middle tier, the cream facade with real window openings, a timber door and fanlight, cornice, the balcony with its
+clock, the green glazed level, the ledge carrying the letters, red upper tier and the glass box under the roof. The east
+and Riverbank stands have their stacked levels: LED ribbon, red middle tier, glazed level with columns, balcony slab
+with its LED ribbon and glass rail, upper glazed level, fascia. Every name is solid raised letters (DejaVu Sans, spacing
+and weight matched to each photo): CHAPPELL STAND, SIR EDWIN SMITH STAND, SIR DONALD BRADMAN PAVILION, GAVIN WANGANEEN
+STAND, JACK OATEY STAND, MAX BASHEER STAND, FOS WILLIAMS STAND, RIVERBANK STAND (gen.py `tier_parts`, spec `fronts`,
+`zones`). The west roof's back band keeps its old base (spec `back_z0`). The petals' front hems now arch up between
+the valleys as in the photos (spec `lobet`: west full lobe height at the hem, east 0.7); they were nearly level.
+
+Still short (2026-11-22): the entrance glass band's lettering is unreadable in Google Earth (plain glass, nothing
+invented); the east names' places along the stand are read from one
+oblique photo (to within a few metres); the stands hold 37,431 seats plus the Hill's 2,860, short of the real ground (see the seat gap below),
+the roof petals' valleys read softer than the real membrane;
+the lawns are a flat bright green where Google Earth's are muted and mottled. The Riverbank's back is rebuilt from
+Google Earth's own height readings (2026-11-22, the status bar under the mouse on calibrated south views): it was one
+grey drum 31.5 m tall out to the street; it is now a back wall behind the top rows (a grey band from the deck to 27 m, a
+dark band with mullions to the 32.5 m top rail), a deck at 22 m under the roof's overhang, white columns leaning from the
+deck to the roof's back edge every 10 m, and the glazed podium (a red-brown base, glass to 14 m, a grey fascia to 21 m)
+on its traced line, 3 to 6 m inside OSM's, with the dark glass box and lift tower at its west end (26 m and 28 m) and the
+dark tower standing clear at its east end (28 m). Still open there: Google Earth puts that back wall about 41 m from the
+boundary, where our top rows run to 52 m, so the real deck under the roof is about 11 m deeper and the columns lean
+further; Google Earth's heights under the roofs drape (seats there read 8 m too high and flat), so the upper tier's
+depth needs a section drawing or the centre photo sphere before the seats move. The plaza south of the stand is 3 m
+above the turf in Google Earth and flat with it here, and the white wedge on the deck seen from the south is not a shade sail: Google Earth's position readings across it (13 points, 8.7-29.7 m east, 2026-11-23) all read the deck's own 22 m, its edge 21 m, so it is the sunlit deck floor outside the roof's shadow, which ours already has. Roof
+outlines fitted top-down to Google Earth (2026-11-22, after the shape audit flagged them; masks of the white roofs in
+matching straight-down shots, checked against Google Earth's own position readings): the Riverbank's pitch-side hem was
+0.5-4.3 m short of the real one (OSM's outline stopped it) and now sits within median 0.2 m, 1.6 m at worst; the east
+and west roofs, traced off an aerial photo, sat 4.8 m and 3.5 m east of Google Earth's and are moved (east roof overlap
+0.78 -> 0.93). The pitch-side hems were then re-measured per row straight down against Google Earth and the vertices
+shifted by the median-filtered residuals (2026-11-23): the east roof now centres at zero shift (overlap 0.93, both
+edges within median 1.3 m) and the west within 0.5 m (overlap 0.85-0.86); the large 1-4.5 m systematic edge error is
+gone, the residue small and localised (a west-edge bulge that is a real Google Earth feature, not a shift). Moving the
+east roof let 595 upper-tier seats pass the headroom check (60 lost):
+39,756 -> 40,291. The seat gap (2026-11-22): the published stand figures are West 14,000 (Hassell: "over four levels"), East 19,000, Riverbank 14,000, 50,083 seated in all; ours are West 10,513, East 14,492, Riverbank 12,293 (corners included), with the Hill's 2,860 against about 3,000. No seat map, architect page or engineering paper read gives rows per tier (the Port Adelaide 2020 map only shows Level 5 priced rows running A to X, general admission from Y, in the East and the Riverbank, which our upper tiers of 22 and 25 rows roughly match). Matched Google Earth views from over the field (project file adelaide-standard/stand_tiers_vs_google_earth_2026-11-22.jpg) put the East's and the Riverbank's tiers, walkways and fascias where ours are; rows are too fine to count there, and the West's centre is draped under its roof. Rows were then counted on a 2017 photo sphere taken from a Riverbank media room (Google Maps user photo, frames kept privately in project files adelaide-standard/private-imagery/pano_2017): the East's grey lower bowl has 24 or more rows from the fence, running back under the red tier's overhang; the red tier is a separate tier of 5 + 7 rows either side of a cross aisle; the upper tier about 27 rows (each count about 2 rows either way); the Chappell's upper tier about 28 rows (ours 26). The East is rebuilt to them (gen.py `over`: a tier whose front rows overhang the rows below, with its own soffit and fascia), its heights from Google Earth's position readings down the stand's face (lower bowl 0.24 m per m in the open, red tier front 6-7 m, red rows 8-11 m, the Level 5 fascia 18-20 m), the top row 2.6 m under the roof, whose top matches Google Earth's (33 m valleys, 35-36 m crowns): seats 40,291 -> 43,199. The Riverbank, measured (2026-11-23): the clubs' seat maps (Adelaide Crows 2015, Port Adelaide 2018) give its lower bowl rows A to Y, 25 rows if no letter is skipped, as ours has (20 m of 0.8 m rows); Level 5 is priced to row W and general admission from row Y. Google Earth's position readings straight up the stand's face (two lines, 20 m apart) put the upper tier's rows within 1-2 m of ours in height (Google Earth z 20/23/29 m at 33/38/48 m from the fence; ours 21.8/24.2/29.3), the front under the overhang draped low. One seat-view photo label (block 524, row HH, "only one row behind you") implies about 33-35 rows in Level 5, which the measured 18 m of raked upper tier cannot hold at any real row depth: unresolved, so the Riverbank is not changed on it. The West's centre, the Bradman Pavilion, counted (2026-11-23) on a 2026 close photo from across the ground (.claude/review/adelaide/close/bradman_2026.jpg, seat-back rows by eye and by brightness peaks): the green front tier 9 rows, the red members' tier 8-9, the upper red tier about 6 + 6 either side of a cross aisle; ours (spec zone `bradman`) has 6, 8 and 10. The red tier matches. The other two are not changed yet: ours fits 6 rows into the 4.8 m between the fence and the members' tier, and 9 real rows cannot fit there at any real row depth, so the tier depths themselves are wrong and need measuring first. Google Earth cannot give them here: its mesh drapes the pavilion (two lines of position readings, 2026-11-23, read the lower tiers flat at 3 m out to 15 m from the fence and a curtain from the roof edge at 22-23 m). It needs a section drawing or an oblique photo that shows the tiers in profile. The lawns, measured: Google Earth's sunlit park grass reads (115, 154, 113) median, a blue haze over everything there, and the drone photo sphere's (May 2021) about (105, 115, 55); ours are LAWN (100, 140, 72) and BASE (112, 135, 80), between the two, so the colour stays until it is judged on the PC's GPU. Fixed from Google Earth (2026-11-22, calibrated straight-down shots, no imagery kept): each
+nearby roof's and sports pitch's colour (`roof_colours.py`: no more salmon sheds, Memorial Drive's grass courts no
+longer blue); the trees stand where Google Earth shows canopy (`ge_trees.py`, replacing the random park fill); the
+grass courts, No. 2 oval's square and the practice nets and wickets that OSM leaves out are traced (`surrounds.py`
+TRACED); the tennis centre's show-court canopy is built in 3D (`landmarks.py`). The west stand's height is
+settled: once the compare tool framed like Google Earth (2026-11-22: its field of view, the turf's height and Google
+Earth lifting low cameras, docs/MCG_STANDARD.md), the west roof line, the light towers and the arcade sit on Google
+Earth's in every low view, so the photos' widths misled. Built from the 2026 photos since: the media boxes let into the
+upper tiers (three each in the Chappell and Sir Edwin Smith, two in the Bradman, nine along the Riverbank; sponsor
+panels left off), and the two interchange benches before the Bradman, sunk into the front rows under clear roofs. The
+Riverbank's "V struts" are not in the 2026 photos, so none are built. The calibrated pairs did show the main entrance 1.3 times
+too wide: its brick towers stood 60 m apart and 25 m tall, where Google Earth's straight-down and west views put them
+48 m apart (north tower 8 m further south) and 28 m tall, a paler terracotta than the arcade. The building between them
+now rises to 24.5 m, under the roof's edge, as in Google Earth: grey walls, a light glass ribbon at 10-13 m and a row of
+framed windows at 20-23 m with a white edge above (it stopped at 17.5 m with the stand's back wall showing over it). The
+three canopies are narrower (5.5 m) and climb to 10.5 m at the facade; the ivy walls outside the towers are 11 m wide.
+
+Found in the Google Earth pass (2026-11-21) and fixed: the Riverbank Stand's back was a dark navy drum (now storeys:
+stone and glass at the street, a maroon band, glass, pale louvres with white struts to the roof); the lower bowl and
+Riverbank top tier seats were blue (now grey-green and sage, from the photos); the Western Grandstand's brick was
+dark maroon (now the photos' orange-red).
