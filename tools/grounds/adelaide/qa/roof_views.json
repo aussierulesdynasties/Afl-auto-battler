@@ -1,0 +1,5 @@
+[
+ {"name": "roof_e", "label": "east roof petals, close", "h": 90, "t": 62, "d": 200, "at": [85, 10, 25]},
+ {"name": "roof_w", "label": "west roof petals, close", "h": 270, "t": 62, "d": 200, "at": [-80, -15, 20]},
+ {"name": "roof_e_top", "label": "east roof from above", "h": 0, "t": 20, "d": 300, "at": [85, 10, 25]}
+]

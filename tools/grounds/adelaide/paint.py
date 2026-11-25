@@ -93,4 +93,16 @@ t = (4.8, 4.4); a = 0.9 * cells(N, t, 1.2, 0.55, 0.05) * (1 + noise(N, 6, 0.06))
 # sand joints, light wear; no streaks (director 2026-11-21: "terrible texture work")
 t = (4.8, 4.8); a = 0.92 * cells(N, t, 0.4, 0.4, 0.05) * (1 + noise(N, 12, 0.05)) * (1 + grain(N, 0.025))
 a = joints(a, t, 0.4, 0.4, 0.78, 1); save(1, a, t)
+# 14 ivy (the Western Grandstand's arcade, Google Earth: green with climbing plants): overlapping leaves 6-11 cm,
+# each its own tone, dark gaps between; a tile 2 m square. Drawn last so every texture before it keeps its random stream
+t = (2.0, 2.0); a = np.full((N, N), 0.42) + noise(N, 6, 0.06); ys, xs = np.mgrid[0:N, 0:N]
+for _ in range(2600):
+    cx, cy = R.uniform(0, N, 2); rr = R.uniform(0.03, 0.055) / t[0] * N; ang = R.uniform(0, math.pi); tone = R.uniform(0.78, 1.2)
+    x0, x1, y0, y1 = int(cx - rr - 1), int(cx + rr + 2), int(cy - rr - 1), int(cy + rr + 2)
+    X, Y = np.meshgrid(np.arange(x0, x1), np.arange(y0, y1)); dx, dy = X - cx, Y - cy
+    u = dx * math.cos(ang) + dy * math.sin(ang); v = -dx * math.sin(ang) + dy * math.cos(ang)
+    inside = (u / rr) ** 2 + (v / (rr * 0.75)) ** 2 < 1
+    shade = tone * (1.0 - 0.18 * (v / rr))   # each leaf lit from above
+    a[Y[inside] % N, X[inside] % N] = shade[inside]
+save(14, a * (1 + grain(N, 0.03)), t)
 json.dump(TILES, open(os.path.join(OUT, 'tiles.json'), 'w'), indent=1); print('painted', sorted(TILES))

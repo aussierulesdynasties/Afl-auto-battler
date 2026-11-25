@@ -59,6 +59,7 @@ func run() -> void:
 	_t("_test_traced_boundaries")
 	_t("_test_traced_ground_playback", [res])
 	_t("_test_ground_screens")
+	_t("_test_ground_backdrop")
 	_t("_test_stand_light")
 	_t("_test_mcg_crowd", [res])
 	_t("_test_graphics_levels", [res])
@@ -2522,6 +2523,54 @@ func _test_graphics_levels(res: Dictionary) -> void:
 ## The ground's big screens and fence signs (Oval3DScreens, row 202 2b): a match at a ground whose
 ## model has screens lays a face over each, facing the ground, that shows the score, a goal and
 ## the clock; the boards ring the fence in both clubs' colours; the inspector (no clubs) gets none.
+## Row 202 2b, background scenes: a ground with its surroundings builds them with its model, they
+## cast no shadow into the stadium, the cameras see out to them through a haze that starts well past
+## the stadium, and none of the scene's own ground is left over the arena (the park's ground once lay
+## 4 m over the MCG's turf). A ground without surroundings keeps the 900 m view and no haze.
+func _test_ground_backdrop() -> void:
+	_check(GroundModels.has_backdrop("mcg") and GroundModels.has_backdrop("gmhba"),
+			"The MCG and GMHBA Stadium have their surroundings")
+	_check(not GroundModels.has_backdrop("gabba"), "The Gabba has none (its own surrounds, #2020)")
+	for g in ["MCG", "The Gabba"]:
+		var d := MatchDirector.new()
+		var res := _result(42)
+		d.setup(res, res["events"])
+		var oval := Oval3D.new()
+		oval.ground = g
+		(Engine.get_main_loop() as SceneTree).root.add_child(oval)
+		oval.build(d, "COL", "GEE")
+		var bds := oval.find_children("Backdrop", "", true, false)
+		if g == "The Gabba":
+			_check(bds.is_empty() and oval.camera.far < 1000.0 and not oval._env.fog_enabled,
+					"A ground without surroundings keeps the 900 m view and no haze")
+			oval.free()
+			continue
+		_check(bds.size() == 1 and (bds[0] as Node).get_parent().name == "Ground",
+				"The MCG's surroundings are laid with its model (%d)" % bds.size())
+		if bds.size() != 1:
+			oval.free()
+			continue
+		var geo := (bds[0] as Node).find_children("*", "GeometryInstance3D", true, false)
+		_check(geo.size() > 10, "The surroundings have their pieces (%d)" % geo.size())
+		var shadow := geo.filter(func(n): return (n as GeometryInstance3D).cast_shadow != GeometryInstance3D.SHADOW_CASTING_SETTING_OFF)
+		_check(shadow.is_empty(), "The surroundings cast no shadow (%d do)" % shadow.size())
+		_check(oval.camera.far >= GroundModels.BACKDROP_FAR, "The camera sees out to the skyline (%.0f m)" % oval.camera.far)
+		_check(oval._env.fog_enabled and oval._env.fog_depth_begin >= 500.0,
+				"The haze starts well past the stadium (%.0f m)" % oval._env.fog_depth_begin)
+		var over := 0
+		var fence := GroundModels.MATCH_FENCE * 1.15
+		for n in geo:
+			var mi := n as MeshInstance3D
+			if mi == null or not str(mi.name).begins_with("bg_near_ground"):
+				continue
+			var xf := oval.global_transform.affine_inverse() * mi.global_transform
+			for i in mi.mesh.get_surface_count():
+				for v in mi.mesh.surface_get_arrays(i)[Mesh.ARRAY_VERTEX]:
+					var p: Vector3 = xf * v
+					if pow(p.x / fence.x, 2) + pow(p.z / fence.y, 2) < 1.0 and p.y > -1.0:
+						over += 1
+		_check(over == 0, "None of the park's ground lies over the arena (%d points)" % over)
+		oval.free()
 ## The stands' light (director, 2026-11-21: roof undersides "grey, a faint green tint"): the model's
 ## surfaces take the stand shader; a face turned up keeps the sky's light, one turned down loses the
 ## grass's green; at night nothing changes; the men and the turf keep their own materials.
