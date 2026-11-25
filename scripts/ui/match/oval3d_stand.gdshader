@@ -65,6 +65,7 @@ void fragment() {
 	// Schlick with roughness, as the renderer's own sky reflection is weighted: a rough face at a grazing angle mirrors
 	// far less than a smooth one. The plain Schlick share took out more green than the sky had put in, and a white
 	// face seen edge-on (Optus's roof fascia from above) turned purple.
+	// (Also Adelaide's big screen and its scoreboard's window frames, 2026-11-22.)
 	vec3 f = f0 + (max(vec3(1.0 - roughness_v), f0) - f0) * pow(1.0 - nv, 5.0);
 	fix += f * sky_fix(r_y) * ref_scale * (1.0 - roughness_v * 0.6);
 	EMISSION = fix * ao + a.rgb * through * step(n_y, 0.0);

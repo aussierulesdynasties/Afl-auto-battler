@@ -15,6 +15,7 @@ shade per tree) and buildings.bin (per building: point count, height, then x, z 
 all float32 in the model's metres: x east, z south, the model's 0, 0 (gen.py's OSM origin) at the middle
 of the map. Map data (c) OpenStreetMap contributors, ODbL.
 """
+import json
 import math
 import os
 import sys
@@ -45,6 +46,7 @@ NEAR_SIZE, NEAR_SPAN = 2048, 512.0
 # What paint() draws at: pixels a side and metres a pixel (set per map by paint()).
 _PX = {"size": SIZE, "ppm": 1.0}
 STADIUM_WAY = "268922032"
+BUILT_IN_3D = {"1238356686"}   # OSM footprints landmarks.py builds properly (the tennis canopy)
 
 # Colours: Google Earth's over the North Adelaide parklands in late spring, painted for the match light with no
 # tint (GroundModels SURROUNDS "adelaide"): irrigated green lawns and ovals, the drier parkland grass between
@@ -175,6 +177,8 @@ def area_colour(t):
         return SAND
     if t.get("amenity") == "parking" and t.get("parking") not in ("underground", "multi-storey"):
         return PARKING
+    if t.get("leisure") == "pitch" and t.get("_id") in GE_PITCHES:   # its surface as Google Earth shows it
+        return tuple(GE_PITCHES[t["_id"]])
     if t.get("leisure") == "pitch" and t.get("sport") == "tennis":
         return TENNIS
     if t.get("leisure") == "pitch":
@@ -274,6 +278,8 @@ def paint(trees, ways, size=SIZE, span=float(SIZE)):
         if t.get("_hole"):
             continue
         d.polygon(poly(p), fill=area_colour(t))
+    for _name, pts, col in TRACED:
+        d.polygon(poly(pts + pts[:1]), fill=col)
     for t, p in ways:
         if t.get("railway") in ("rail", "light_rail", "tram") and len(p) > 1 and t.get("tunnel") != "yes":
             d.line(poly(p), fill=BALLAST, width=max(1, int(round(5 * k))), joint="curve")
@@ -437,6 +443,27 @@ HOUSE_WALLS = [(214, 200, 176), (196, 150, 118), (224, 218, 204), (176, 120, 92)
 CITY_WALLS = [(200, 200, 196), (168, 176, 182), (214, 210, 200), (140, 150, 160), (186, 176, 160)]
 
 
+# Each roof's own colour read off Google Earth where it could be (roof_colours.py: one median colour per building,
+# no imagery kept); the palette above only for roofs outside its shots or under trees.
+_RC = os.path.join(os.path.dirname(os.path.abspath(__file__)), "roof_colours.json")
+GE_ROOFS = json.load(open(_RC)) if os.path.exists(_RC) else {}
+_TR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ge_trees.json")
+GE_TREES = json.load(open(_TR)) if os.path.exists(_TR) else []   # where Google Earth shows canopy (ge_trees.py)
+_PC = os.path.join(os.path.dirname(os.path.abspath(__file__)), "pitch_colours.json")
+GE_PITCHES = json.load(open(_PC)) if os.path.exists(_PC) else {}
+# Ground surfaces OSM leaves out, traced from a straight-down Google Earth shot (400 m over (-190, -60), the calibrated
+# camera of ge_compare.py, 2026-11-22), in the model's metres (east, north); colours are each area's median there, as
+# read (this renderer shows the map's colours nearly as painted, so Google Earth's colour is what makes them match).
+TRACED = [
+    ("Memorial Drive grass courts, north row", [(-243.5, -73.1), (-128.9, -50.4), (-123.1, -82.7), (-240.5, -104.2)], (140, 158, 119)),
+    ("Memorial Drive grass courts, south row", [(-241.3, -105.5), (-169.3, -92.8), (-163.5, -124.4), (-236.7, -138.3)], (145, 160, 121)),
+    ("No. 2 oval's square", [(-216.5, 23.8), (-202.0, 23.8), (-202.0, -0.8), (-216.5, -0.8)], (160, 178, 134)),
+    ("No. 2 oval's synthetic pitch", [(-200.9, 24.1), (-194.3, 24.1), (-194.3, -0.7), (-200.9, -0.7)], (81, 114, 104)),
+    ("the synthetic practice nets", [(-222.8, -33.5), (-198.8, -32.2), (-197.6, -58.7), (-221.6, -60.0)], (84, 118, 103)),
+    ("the turf practice wickets", [(-197.1, -29.7), (-138.2, -22.6), (-136.5, -49.9), (-196.3, -56.2)], (154, 156, 121)),
+]
+
+
 def _colour(v):
     if not v:
         return None
@@ -454,7 +481,7 @@ def building_list(ways, st):
     for t, p in ways:
         if "building" not in t or len(p) < 4 or p[0] != p[-1] or t.get("layer", "0").startswith("-"):
             continue
-        if t.get("_id") == STADIUM_WAY:
+        if t.get("_id") == STADIUM_WAY or t.get("_id") in BUILT_IN_3D:
             continue
         a = np.array(p[:-1])
         if st and _inside(tuple(a.mean(0)), st):
@@ -471,7 +498,8 @@ def building_list(ways, st):
             out += [x, z]
         house = t.get("building") in ("house", "terrace", "detached", "semidetached_house", "garage", "shed") or h < 9
         wall = _colour(t.get("building:colour")) or (HOUSE_WALLS if house else CITY_WALLS)[rng.integers(4 if house else 5)]
-        roof = _colour(t.get("roof:colour")) or (HOUSE_ROOFS if house else FLAT_ROOFS)[rng.integers(5 if house else 4)]
+        pal = (HOUSE_ROOFS if house else FLAT_ROOFS)[rng.integers(5 if house else 4)]   # drawn always: later draws stay put
+        roof = _colour(t.get("roof:colour")) or (tuple(GE_ROOFS[t["_id"]]) if t.get("_id") in GE_ROOFS else pal)
         cols += list(wall) + list(roof)
     return np.array(out, "<f4"), np.array(cols, np.uint8)
 
@@ -494,8 +522,17 @@ def main():
             extra.append(p)
     mapped, ways = load(path, extra)
     st = stadium_ring(ways)
-    trees = all_trees(mapped, ways)
-    trees += fill_parks(paint(trees, ways), trees, ways, st)
+    if GE_TREES:   # every mapped tree, and a tree wherever Google Earth shows canopy (ge_trees.py) not already mapped
+        trees = [(e, n, 4.5) for e, n in mapped]
+        if trees:
+            from scipy.spatial import cKDTree
+            near = cKDTree(np.array([(e, n) for e, n, _ in trees]))
+            trees += [(e, n, 4.5) for e, n in GE_TREES if near.query((e, n))[0] > 5.0]
+        else:
+            trees = [(e, n, 4.5) for e, n in GE_TREES]
+    else:
+        trees = all_trees(mapped, ways)
+        trees += fill_parks(paint(trees, ways), trees, ways, st)
     im = paint(trees, ways)
     im.save(os.path.join(OUT, "surrounds.webp"), quality=88, method=6)
     paint(trees, ways, NEAR_SIZE, NEAR_SPAN).save(os.path.join(OUT, "surrounds_near.webp"), quality=88, method=6)

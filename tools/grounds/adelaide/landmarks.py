@@ -1,6 +1,6 @@
 """The landmarks round Adelaide Oval in 3D (Adelaide to the MCG standard, stage 6): the Adelaide Oval
 footbridge over Torrens Lake, the other bridges (King William Road, the University footbridge, the weir), and
-St Peter's Cathedral's twin spires north of the ground. Shapes from their OpenStreetMap outlines; heights
+St Peter's Cathedral's twin spires north of the ground, and the Memorial Drive tennis canopy west of it (Google Earth). Shapes from their OpenStreetMap outlines; heights
 from OSM (the cathedral's 51 m) and the published figures (the footbridge: 255 m, 2014, a white steel deck
 that rises over the lake with a sculpted balustrade). Writes assets/grounds/adelaide/landmarks.glb in the
 model's frame (x east, y north, z up in Blender; the model's 0, 0 as tools/grounds/adelaide/surrounds.py).
@@ -190,6 +190,44 @@ def cathedral(ways, bm_stone, bm_roof, bm_spire):
                 bm_spire.faces.new([b[k], b[(k + 1) % 4], tp])
 
 
+# The Memorial Drive tennis centre's show-court canopy west of the ground, from Google Earth (straight down from 400 m
+# and oblique from 180 m, 2026-11-22, the calibrated camera of tools/grounds/ge_compare.py): a white pillow roof
+# about 40 x 41 m on slim steel columns, its edge about 9 m up and its crown a metre higher, with a flat-roofed glazed
+# annex on its west side. OSM has only a 20 x 26 m "roof" here (way 1238356686, left out of buildings.bin).
+TENNIS = {"c": (-138.0, -103.0), "a": 20.0, "b": 20.5, "rot": -2.5, "edge": 9.0, "crown": 1.2,
+          "annex": [(-169.7, -89.8), (-152.8, -89.8), (-152.8, -123.3), (-169.7, -123.3)], "annex_h": 6.0}
+
+
+def tennis_canopy(bm_white, bm_steel, bm_glass):
+    t = TENNIS; cx, cy = t["c"]; r_ = math.radians(t["rot"]); cr, sr = math.cos(r_), math.sin(r_)
+    rot = lambda x, y: (cx + x * cr - y * sr, cy + x * sr + y * cr)
+    def at(r, th, dz=0.0):   # a superellipse (rounded square) ring r of the roof, 0 centre .. 1 edge
+        c, s_ = math.cos(th), math.sin(th)
+        u = math.copysign(abs(c) ** 0.5, c); v = math.copysign(abs(s_) ** 0.5, s_)
+        x, y = rot(t["a"] * r * u, t["b"] * r * v)
+        return (x, y, t["edge"] + t["crown"] * (1 - r * r) + dz)
+    NA, NR = 64, 8
+    ths = [2 * math.pi * i / NA for i in range(NA)]
+    for dz, flip in ((0.0, False), (-0.45, True)):   # the top and, 45 cm under it, the underside
+        rings = [[bm_white.verts.new(at(r / NR, th, dz)) for th in ths] for r in range(1, NR + 1)]
+        top = bm_white.verts.new(at(0, 0, dz))
+        for i in range(NA):
+            f = [top, rings[0][i], rings[0][(i + 1) % NA]]
+            bm_white.faces.new(f[::-1] if flip else f)
+        for k in range(NR - 1):
+            for i in range(NA):
+                f = [rings[k][i], rings[k + 1][i], rings[k + 1][(i + 1) % NA], rings[k][(i + 1) % NA]]
+                bm_white.faces.new(f[::-1] if flip else f)
+    for i in range(NA):   # the fascia round the edge
+        a, b = at(1, ths[i]), at(1, ths[(i + 1) % NA])
+        quad(bm_white, (a[0], a[1], a[2] - 0.45), (b[0], b[1], b[2] - 0.45), b, a)
+    for i in range(10):   # slim columns just inside the edge
+        x, y, z = at(0.9, 2 * math.pi * (i + 0.5) / 10)
+        prism(bm_steel, [(x - 0.2, y - 0.2), (x + 0.2, y - 0.2), (x + 0.2, y + 0.2), (x - 0.2, y + 0.2)], 0.0, z - 0.4)
+    prism(bm_glass, t["annex"], 0.0, t["annex_h"] - 0.6)          # the annex: dark glass walls
+    prism(bm_white, t["annex"], t["annex_h"] - 0.6, t["annex_h"])  # its pale flat roof and fascia
+
+
 def main():
     ways = load(sys.argv[1])
     bpy.ops.wm.read_factory_settings(use_empty=True)
@@ -205,6 +243,9 @@ def main():
     for wid, w in FOOT_BRIDGES.items():
         flat_bridge(ways, wid, w, 2.5, parts["bridge_deck"][1], parts["bridge_steel"][1])
     cathedral(ways, parts["cathedral_stone"][1], parts["cathedral_roof"][1], parts["cathedral_spire"][1])
+    parts["tennis_roof"] = (material("tennis_roof", (0.93, 0.93, 0.91), 0.6), bmesh.new())
+    parts["tennis_glass"] = (material("tennis_glass", (0.22, 0.27, 0.30), 0.2, 0.1), bmesh.new())
+    tennis_canopy(parts["tennis_roof"][1], parts["bridge_steel"][1], parts["tennis_glass"][1])
     for name, (mat, bm) in parts.items():
         bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
         me = bpy.data.meshes.new(name)
