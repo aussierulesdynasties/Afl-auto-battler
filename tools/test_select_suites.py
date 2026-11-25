@@ -102,6 +102,17 @@ class SelectionTests(unittest.TestCase):
     def test_a_fixture_selects_the_suite_that_reads_it(self):
         self.assertEqual(self.pick("tests/fixtures/snap.txt"), (["smoke", "snap"], ""))
 
+    def test_a_ground_model_file_selects_the_seat_check(self):
+        # ground_seats lists assets/grounds/ at run time, so no path names the files it reads.
+        root = self.repo()
+        for name in ("tests/run_ground_seats_tests.gd", "assets/grounds/mcg/mcg.glb",
+                     "assets/grounds/mcg/seats_seat_mcg_grey.bin", "assets/oval3d/heads/MEL_10.glb"):
+            (root / name).parent.mkdir(parents=True, exist_ok=True)
+            (root / name).write_text("")
+        for path in ("assets/grounds/mcg/mcg.glb", "assets/grounds/mcg/seats_seat_mcg_grey.bin"):
+            self.assertEqual(select([path], root=root, smoke=("smoke",)), (["ground_seats", "smoke"], ""), path)
+        self.assertEqual(select(["assets/oval3d/heads/MEL_10.glb"], root=root, smoke=("smoke",)), (["smoke"], ""))
+
     def test_files_the_test_run_never_reads_select_the_smoke_set(self):
         # one_off.py is named only by a note, and notes are never followed.
         for path in (".gitignore", ".github/workflows/other.yml", "tools/one_off.py", "tools/notes.md"):

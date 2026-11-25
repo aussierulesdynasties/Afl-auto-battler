@@ -34,6 +34,7 @@ const GROUNDS := {
 	"Jiangwan Stadium": "jiangwan", "Hands Oval": "hands",
 	"Blacktown International Sportspark": "blacktown", "Summit Park": "summit",
 	"Macquarie Point Stadium": "macpoint", "Adelaide Oval": "adelaide", "The Gabba": "gabba",
+	"Mars Stadium": "mars",
 }
 
 ## Each model's boundary fence, measured off the model (tools/grounds/fit_fence.py: an ellipse
@@ -50,7 +51,10 @@ const FIT := {
 	"scg": [0.34, 6.68, 0.05, 85.8, 84.43, 72.25],
 	"gmhba": [-8.89, 11.85, 0.02, -69.8, 94.3, 66.01],
 	"people_first": [-0.72, 0.04, 0.02, -72.6, 89.11, 72.26],
-	"engie": [20.64, -43.32, 0.0, -41.1, 92.14, 76.44],
+	# ENGIE: an ellipse through the field edge traced from Google Earth (tools/grounds/engie/fit) gives the
+	# centre and axis; its halves are a 162 x 126 m field plus FENCE, a metre inside the real 164 x 128, so
+	# the game's fence runs 0.6 m (sides) to 3.2 m (ends) outside the grass edge and clears the front rows (2026-11-22).
+	"engie": [-4.26, -3.6, 0.0, -44.0, 87.0, 69.0],
 	"bellerive": [0.31, -0.64, -0.02, 68.7, 86.9, 66.77],
 	"manuka": [5.93, 8.15, 0.03, -82.9, 85.94, 73.1],
 	"norwood": [1.96, -3.15, 0.0, 88.3, 88.73, 63.59],
@@ -67,19 +71,25 @@ const FIT := {
 	"north_hobart": [-6.71, 0.91, 0.0, -43.8, 81.59, 60.47],
 	"bruce": [21.36, -39.57, 0.4, -56.7, 104.51, 64.28],
 	"riverway": [-0.41, 1.12, 0.0, -89.9, 86.05, 72.72],
-	# The seven first drafts (#1930) are built round their fence: centre at the origin (Summit
+	# Barossa Park: the fence ellipse fitted to the grass edge traced on the 2026 mosaic (rms 0.31 m,
+	# tools/grounds/barossa/plan.py FENCE).
+	"barossa": [0.163, 0.467, 0.0, 72.716, 86.139, 65.766],
+	# The other first drafts (#1930) are built round their fence: centre at the origin (Summit
 	# 2 m off), floor 0. Jiangwan is a running-track stadium; its boundary was placed by judgement.
-	"barossa": [0.0, 0.0, 0.0, 72.7, 85.63, 65.98],
 	"sky": [0.0, 0.0, 0.0, -77.7, 81.66, 63.74],
 	"jiangwan": [0.0, 0.0, 0.0, 63.0, 84.0, 63.0],
 	"hands": [0.0, 0.0, 0.0, -61.7, 92.51, 78.09],
-	"blacktown": [0.0, 0.0, 0.0, 79.9, 86.29, 72.12],
+	# Blacktown: the ellipse closest to its traced fence curve (tools/grounds/blacktown, 2026-11-22).
+	"blacktown": [-4.86, -2.37, 0.0, 78.5, 85.15, 74.82],
 	"summit": [-1.9, 0.75, 0.0, -83.5, 86.34, 76.17],
 	"macpoint": [0.0, 0.0, 0.0, 35.0, 85.0, 72.0],
 	# Adelaide Oval's model (#1856) exported for the game by tools/grounds/adelaide/export.py, and the
 	# Gabba's model (tools/grounds/gabba), measured the same way.
 	"adelaide": [-0.4, 1.37, 0.0, -102.0, 91.36, 65.7],
 	"gabba": [2.47, 3.47, 0.0, 175.0, 86.88, 73.71],
+	# Mars Stadium (tools/grounds/mars): its fence is one smooth curve fitted to Google Earth's straight-down
+	# trace (qa/fit.py, 0.22 m rms), 169.4 x 139.0 m; this ellipse fits it to 0.45 m rms.
+	"mars": [-5.4, 5.43, 0.0, -58.1, 84.07, 69.23],
 }
 
 ## The land round a model that ends at its own street (in the model's metres): the ring from
@@ -87,6 +97,12 @@ const FIT := {
 ## stadium does not stand on an island in an empty world. The MCG stands in Yarra Park: `map` is
 ## its ground painted from OpenStreetMap (tools/grounds/mcg/surrounds.py), `span` m a side round the
 ## model's middle, and `trees` the park's trees from the same map (x, z, height, canopy, shade).
+## Barossa Park stands in its own land (tools/grounds/barossa/land.py): `land` is a model of the
+## ground round it out to 1 km on its true heights (Lyndoch, the vineyards' rows, the houses), and
+## its trees carry their own height (`trees_y`: x, y, z, height, canopy, shade) and draw as the
+## ground's own gum trees (`gums`, tools/grounds/barossa/trees.py). `far_land` is the country on to
+## 16 km (the Barossa Range on the skyline, tools/grounds/barossa/far.py), and `far` how far the match
+## camera sees to show it.
 const SURROUNDS := {
 	# Bellerive: its streets and houses, Bellerive Beach, Kangaroo Bay and the Derwent
 	# (tools/grounds/bellerive/surrounds.py), laid on the model's origin (the OSM pitch's centre). It starts under the
@@ -115,6 +131,18 @@ const SURROUNDS := {
 			# Geelong's walls in Google Earth: red and brown brick, cream render, grey block, weatherboard.
 			"walls": [Color(0.62, 0.42, 0.34), Color(0.74, 0.7, 0.62), Color(0.55, 0.53, 0.5), Color(0.68, 0.5, 0.4),
 					Color(0.8, 0.78, 0.72), Color(0.6, 0.6, 0.6), Color(0.52, 0.36, 0.3)]},
+	# Mars: Ballarat North painted from OSM (tools/grounds/mars/surrounds/data.py), the canopy model's trees; its
+	# houses, the workshops' chimney and the land out to the ranges are mars_part2.glb (build_bpy.py).
+	"mars": {"y": -0.06, "inner": 95.0, "outer": 1900.0, "colour": Color(0.48, 0.5, 0.34),
+			"map": "surrounds.webp", "span": 3840.0, "trees": "trees.bin"},
+	# ENGIE: the showground, Olympic Boulevard and its plazas, the Brickpit and the parklands to Haslams Creek
+	# painted from OpenStreetMap with every mapped tree (tools/grounds/engie/surrounds/surrounds.py); its
+	# buildings are modelled in engie_part2.glb (surrounds/landmarks.py), so none are stood up here. It starts
+	# under the stands (85 m), the stadium's paved site drawn over it by the model.
+	"engie": {"y": -0.04, "inner": 85.0, "colour": Color(0.43, 0.46, 0.33),
+			"map": "surrounds.webp", "span": 2048.0, "trees": "trees.bin"},
+	"barossa": {"y": 0.0, "inner": 180.0, "land": "barossa_land.glb", "trees": "trees.bin", "trees_y": true,
+			"gums": "barossa_gums.glb", "far_land": "barossa_far.glb", "far": 16000.0},
 	"mcg": {"y": -0.03, "inner": 140.0, "colour": Color(0.45, 0.55, 0.27),
 			"map": "surrounds.webp", "span": 2048.0, "trees": "trees.bin", "buildings": "buildings.bin"},
 	# Optus Stadium on the Burswood peninsula: the Swan River, Perth Water, the parks and plaza from
@@ -209,7 +237,7 @@ const SEAT_COLOURS := {
 	# Mars Stadium (seat_blue and seat_greyblue there keep the values already here).
 	"seat_cream": Color(0.785, 0.747, 0.655), "seat_white": Color(0.815, 0.830, 0.845),
 	"seat_navyblue": Color(0.157, 0.235, 0.502), "seat_charcoal": Color(0.141, 0.165, 0.227),
-	"seat_slategrey": Color(0.361, 0.392, 0.447),
+	"seat_slategrey": Color(0.361, 0.392, 0.447), "seat_lightgrey": Color(0.698, 0.714, 0.737),
 	# Accor: aqua lower bowl (seat_teal there keeps the value already here).
 	"seat_aqua": Color(0.527, 0.719, 0.757),
 	# Bellerive: pale grey-blue plastic all round the Boon and Ponting stands, the sunlit seats'
@@ -238,12 +266,18 @@ const SEAT_COLOURS := {
 	"seat_lo_blue": Color(0.411, 0.544, 0.550), "seat_lo_tan": Color(0.459, 0.556, 0.489),
 	"seat_mid_blue": Color(0.475, 0.580, 0.518), "seat_mid_tan": Color(0.518, 0.592, 0.457),
 	"seat_up_blue": Color(0.330, 0.473, 0.510), "seat_up_tan": Color(0.378, 0.485, 0.450),
+	# ENGIE Stadium: red tip-up seats on black shells with the odd orange one under the roofs, orange with
+	# some red at the open north-east end (a photo sphere in the stands, Jan 2019).
+	"seat_engie_red": Color8(206, 44, 40), "seat_engie_orange": Color8(232, 112, 36),
+	"seat_engie_shell": Color8(34, 34, 36),
 	# York Park's teal-green plastic (york_park/model/paint.py), the SCG's two seat colours
 	# (their glb material colours, linear -> sRGB).
 	"seat_plastic": Color(0.255, 0.365, 0.33),
+	# Barossa Park: the bright blue seats of Gather Round's temporary stands (the 2026 match photo).
+	"seat_barossa_blue": Color(0.12, 0.29, 0.62),
 	"seat_scg_teal": Color(0.125, 0.443, 0.427), "seat_scg_maroon": Color(0.443, 0.125, 0.163),
 	# The seven first drafts (#1930; Jiangwan and Summit have no seats).
-	"seat_barossa": Color(0.197, 0.212, 0.235), "seat_hands": Color(0.151, 0.319, 0.502),
+	"seat_hands": Color(0.151, 0.319, 0.502),
 	"seat_sky_gold": Color(0.778, 0.609, 0.197), "seat_sky_grey": Color(0.266, 0.281, 0.304),
 	"seat_bt": Color(0.135, 0.197, 0.349), "seat_mp": Color(0.219, 0.25, 0.296),
 	# Adelaide Oval's stand colours, as its model paints them (tools/grounds/adelaide/export.py).
@@ -303,6 +337,50 @@ static func field_for(ground: String) -> Vector2:
 	return Vector2(float(own["length"]), float(own["width"])) * 0.5
 
 
+static var _traced := {}   # data/ground_boundaries.json's grounds, read once
+
+
+## The traced boundary of the model `slug` (data/ground_boundaries.json, tools/grounds/boundary/fit_boundary.py):
+## "frame" [x, z, degrees] the goals' midpoint and the line through them in the model's metres, "goal_x" half
+## the distance between the goal lines, "boundary" the line's Fourier radius about that midpoint, "fence" the
+## fence's where it was traced too. {} where the ground's boundary has not been traced yet (it plays on the
+## ellipse its FIT row gives).
+static func shape_for(slug: String) -> Dictionary:
+	if _traced.is_empty():
+		var parsed = JSON.parse_string(FileAccess.get_file_as_string("res://data/ground_boundaries.json"))
+		_traced = (parsed as Dictionary).get("grounds", {}) if parsed is Dictionary else {}
+		if _traced.is_empty():
+			_traced = {"": {}}
+	return _traced.get(slug, {})
+
+
+## Play the match at `ground` on its own field (MatchMotion.use_field), and on its traced boundary line and goals
+## where it has them (MatchMotion.use_shape). Every match, the fly-through and the tests set the ground up here.
+static func play_at(ground: String) -> void:
+	play_on(slug_for(ground) if ground != "" else "", field_for(ground))
+
+
+## ...the same by the model's folder, `half` the field size to fall back on.
+static func play_on(slug: String, half: Vector2) -> void:
+	MatchMotion.use_field(half)
+	var sh := shape_for(slug) if slug != "" else {}
+	if not sh.is_empty():
+		MatchMotion.use_shape(PackedFloat32Array(sh["boundary"]), float(sh["goal_x"]))
+
+
+## The fence (grass edge) of the ground the match is on, as a Fourier radius in the match's frame, where it was
+## traced; else the boundary line FENCE further out (or empty on an untraced ground: the ellipse match_fence()).
+static func match_fence_shape(slug: String) -> PackedFloat32Array:
+	if not MatchMotion.shaped():
+		return PackedFloat32Array()
+	var sh := shape_for(slug)
+	if sh.has("fence"):
+		return PackedFloat32Array(sh["fence"])
+	var f := MatchMotion.SHAPE.duplicate()
+	f[0] += FENCE
+	return f
+
+
 ## Every ground that has a model, by its name.
 static func grounds() -> Array:
 	return GROUNDS.keys()
@@ -316,8 +394,17 @@ static func fit_transform(slug: String) -> Transform3D:
 		return Transform3D.IDENTITY
 	var f: Array = FIT[slug]
 	var s := stretch(slug)
-	var basis := Basis.from_scale(Vector3(s.x, 1.0, s.y)) * Basis(Vector3.UP, deg_to_rad(float(f[3])))
+	var turn := float(f[3])
 	var centre := Vector3(float(f[0]), float(f[2]), float(f[1]))
+	# A traced ground is laid on its real goals: their midpoint to the middle, the line through them along x,
+	# and nothing stretched (the match plays on that very line, MatchMotion.use_shape).
+	var sh := shape_for(slug)
+	if not sh.is_empty():
+		var fr: Array = sh["frame"]
+		centre = Vector3(float(fr[0]), float(f[2]), float(fr[1]))
+		turn = float(fr[2])
+		s = Vector2.ONE
+	var basis := Basis.from_scale(Vector3(s.x, 1.0, s.y)) * Basis(Vector3.UP, deg_to_rad(turn))
 	return Transform3D(basis, -(basis * centre) - Vector3(0.0, UNDER_TURF, 0.0))
 
 
@@ -399,6 +486,9 @@ static func instantiate(slug: String, base := "") -> Node3D:
 ## A flat ring of parkland round the model (SURROUNDS): grass with a broad mottle, unlit by
 ## nothing it would not be lit by (it takes the sun, the sky and the stands' shade).
 static func _add_surrounds(root: Node3D, s: Dictionary, dir := "") -> void:
+	if s.has("land"):
+		_add_land(root, s, dir)
+		return
 	var inner: float = s["inner"]
 	var outer: float = s.get("outer", 2500.0)
 	var y: float = s["y"]
@@ -463,7 +553,7 @@ static func _add_surrounds(root: Node3D, s: Dictionary, dir := "") -> void:
 		g.set_meta("open_ground", true)
 		root.add_child(g)
 		if s.has("trees") and FileAccess.file_exists(dir + str(s["trees"])):
-			_add_trees(root, FileAccess.get_file_as_bytes(dir + str(s["trees"])).to_float32_array(), y,
+			_add_trees(root, FileAccess.get_file_as_bytes(dir + str(s["trees"])).to_float32_array(), y, 5,
 					bool(s.get("deep_crowns", false)), bool(s.get("tree_lod", false)))
 		if s.has("buildings") and FileAccess.file_exists(dir + str(s["buildings"])):
 			var rgb := PackedFloat32Array()
@@ -504,6 +594,114 @@ static func _add_surrounds(root: Node3D, s: Dictionary, dir := "") -> void:
 	root.add_child(mi)
 
 
+## A ground's own land model (SURROUNDS `land`): drawn like the painted map, taking no sun shadow
+## (past the shadow map's reach the Mobile renderer would draw it in shade) and casting none.
+static func _add_land(root: Node3D, s: Dictionary, dir: String) -> void:
+	for key in ["land", "far_land"]:
+		if s.has(key):
+			_add_land_model(root, dir + str(s[key]), "Land" if key == "land" else "FarLand")
+	if not s.has("trees") or not FileAccess.file_exists(dir + str(s["trees"])):
+		return
+	var buf := FileAccess.get_file_as_bytes(dir + str(s["trees"])).to_float32_array()
+	var gums := load_glb(dir + str(s["gums"])) if s.has("gums") else null
+	if gums == null:
+		_add_trees(root, buf, float(s["y"]), 6 if s.get("trees_y", false) else 5)
+		return
+	_paint_vertex_colours(gums)
+	# like the land, the trees take no shadow: past the sun's shadow range they would read as in shade
+	for mi: MeshInstance3D in gums.find_children("*", "MeshInstance3D", true, false):
+		for i in mi.mesh.get_surface_count():
+			var m := mi.mesh.surface_get_material(i) as BaseMaterial3D
+			if m != null:
+				m.disable_receive_shadows = true
+	_add_gums(root, buf, gums)
+	gums.free()
+
+
+## One model of the land (its colours in its vertices), casting and taking no shadow.
+static func _add_land_model(root: Node3D, path: String, node_name: String) -> void:
+	var land := load_glb(path)
+	if land != null:
+		land.name = node_name
+		_paint_vertex_colours(land)
+		for mi: MeshInstance3D in land.find_children("*", "MeshInstance3D", true, false):
+			mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			mi.set_meta("open_ground", true)
+			if mi.mesh == null:
+				continue
+			for i in mi.mesh.get_surface_count():
+				var m := mi.get_active_material(i) as StandardMaterial3D
+				if m != null:
+					var own := m.duplicate() as StandardMaterial3D
+					own.disable_receive_shadows = true
+					mi.set_surface_override_material(i, own)
+		root.add_child(land)
+
+
+## How far the match camera sees at the ground `slug`: 900 m, or further where the ground's land
+## carries its far country (SURROUNDS `far`, as at Barossa Park, whose ranges stand 3 to 10 km off).
+static func view_far(slug: String) -> float:
+	return float(SURROUNDS.get(slug, {}).get("far", 900.0))
+
+
+## Trees nearer the camera than this draw as a whole gum (trunk, limbs and leaf clumps), further ones as the
+## gum's coarse crown.
+const GUM_NEAR := 450.0
+
+
+## The land's trees from the ground's own gum models (`gums`: nodes gum<k>_leaf, gum<k>_wood and gum<k>_far, each
+## at 1 m tall and 1 m crown radius), one batch a variant a block, each tree its own height, crown, turn and shade.
+## Records are x, ground y, z, height, crown radius, shade (model metres).
+static func _add_gums(root: Node3D, buf: PackedFloat32Array, gums: Node3D) -> void:
+	var meshes := {}
+	for mi: MeshInstance3D in gums.find_children("gum*", "MeshInstance3D", true, false):
+		meshes[str(mi.name)] = mi.mesh
+	var kinds := 0
+	while meshes.has("gum%d_leaf" % kinds):
+		kinds += 1
+	if kinds == 0:
+		return
+	var blocks := {}
+	for i in range(0, buf.size() - 5, 6):
+		var key := Vector3i(floori(buf[i] / TREE_BLOCK), floori(buf[i + 2] / TREE_BLOCK),
+				int(fposmod(buf[i + 5] * 7919.0, 1.0) * kinds) % kinds)
+		if not blocks.has(key):
+			blocks[key] = []
+		blocks[key].append(i)
+	for key: Vector3i in blocks:
+		var ids: Array = blocks[key]
+		var parts := [["gum%d_leaf" % key.z, true, 0.0, GUM_NEAR], ["gum%d_wood" % key.z, false, 0.0, GUM_NEAR],
+				["gum%d_far" % key.z, true, GUM_NEAR, 0.0]]
+		for part: Array in parts:
+			if not meshes.has(part[0]):
+				continue
+			var mm := MultiMesh.new()
+			mm.transform_format = MultiMesh.TRANSFORM_3D
+			mm.use_colors = true
+			mm.mesh = meshes[part[0]]
+			mm.instance_count = ids.size()
+			for j in ids.size():
+				var i: int = ids[j]
+				var h: float = buf[i + 3]
+				var r: float = buf[i + 4]
+				var shade: float = buf[i + 5]
+				var turn := Basis(Vector3.UP, fposmod(shade * 113.7, 1.0) * TAU)
+				mm.set_instance_transform(j, Transform3D(turn.scaled(Vector3(r, h, r)), Vector3(buf[i], buf[i + 1], buf[i + 2])))
+				# grey-green blue gum to the darker river red gum, tree to tree
+				var c := Color(0.92, 0.96, 0.93).lerp(Color(1.06, 1.04, 0.9), shade) * (0.85 + 0.3 * fposmod(shade * 7.3, 1.0))
+				mm.set_instance_color(j, c if part[1] else Color.WHITE)
+			var mi := MultiMeshInstance3D.new()
+			mi.name = "%s_%d_%d" % [part[0], key.x, key.y]
+			mi.multimesh = mm
+			mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			mi.visibility_range_begin = part[2]
+			mi.visibility_range_end = part[3]
+			mi.visibility_range_begin_margin = 20.0 if part[2] > 0.0 else 0.0
+			mi.visibility_range_end_margin = 20.0 if part[3] > 0.0 else 0.0
+			mi.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_DISABLED
+			root.add_child(mi)
+
+
 ## The ring's radii, m from the model's middle (0 is `inner`): close rings keep the painted map's
 ## roads straight where it is seen, the last runs out past the horizon.
 const RINGS := [0.0, 250.0, 400.0, 600.0, 850.0, 1100.0]
@@ -517,7 +715,8 @@ const TREE_NEAR := 320.0
 ## canopy, one batch a block of the park. Unlit by their own shadows (the map paints their shade).
 ## deep: a broad tree's crown hangs down to a few metres off the ground (eucalypts seen from the side in
 ## Google Earth: one deep mass, not a ball on a bare trunk); it stays as wide as measured.
-static func _add_trees(root: Node3D, buf: PackedFloat32Array, y: float, deep := false, lod := false) -> void:
+static func _add_trees(root: Node3D, buf: PackedFloat32Array, y: float, stride := 5, deep := false,
+		lod := false) -> void:
 	var canopy := _canopy_mesh()
 	var trunk := CylinderMesh.new()
 	trunk.top_radius = 0.022
@@ -539,8 +738,11 @@ static func _add_trees(root: Node3D, buf: PackedFloat32Array, y: float, deep := 
 	bark.roughness = 1.0
 	bark.disable_receive_shadows = true
 	var blocks := {}
-	for i in range(0, buf.size() - 4, 5):
-		var key := Vector2i(floori(buf[i] / TREE_BLOCK), floori(buf[i + 1] / TREE_BLOCK))
+	# Each tree's x, z (and its own ground height when stride is 6) begin its record.
+	var zo := 2 if stride == 6 else 1
+	var o := 1 if stride == 6 else 0
+	for i in range(0, buf.size() - stride + 1, stride):
+		var key := Vector2i(floori(buf[i] / TREE_BLOCK), floori(buf[i + zo] / TREE_BLOCK))
 		if not blocks.has(key):
 			blocks[key] = []
 		blocks[key].append(i)
@@ -557,12 +759,12 @@ static func _add_trees(root: Node3D, buf: PackedFloat32Array, y: float, deep := 
 		stems.instance_count = ids.size()
 		for j in ids.size():
 			var i: int = ids[j]
-			var h: float = buf[i + 2]
-			var r: float = buf[i + 3]
-			var at := Vector3(buf[i], y, buf[i + 1])
-			var turn := Basis(Vector3.UP, buf[i + 4] * TAU)
+			var h: float = buf[i + 2 + o]
+			var r: float = buf[i + 3 + o]
+			var at := Vector3(buf[i], buf[i + 1] if stride == 6 else y, buf[i + zo])
+			var turn := Basis(Vector3.UP, buf[i + 4 + o] * TAU)
 			var crown := h - r * 1.1
-			var shade: float = buf[i + 4]
+			var shade: float = buf[i + 4 + o]
 			if shade >= 2.0:
 				# A pine or cypress (shade 2 and up, from a ground's measured canopy heights): one tall dark
 				# column from low on the trunk to the top, not a ball on a stick.
