@@ -769,16 +769,6 @@ var _agent_body: VBoxContainer
 var _agents_check_queued := false
 
 
-func _more_agents(n: int) -> void:
-	if not is_instance_valid(_agent_body):
-		return
-	var to := mini(_agent_built + n, _agent_queue.size())
-	while _agent_built < to:
-		_agent_body.add_child(_agent_card(_agent_queue[_agent_built]))
-		_agent_built += 1
-	_agents_shown = maxi(_agents_shown, _agent_built)
-
-
 ## After a scroll or a layout: within a screen of the last card built, build the
 ## next few. Deferred, so cards are never added while the list lays itself out.
 func _check_agents_end() -> void:
@@ -799,49 +789,57 @@ func _agents_end() -> void:
 	_more_agents(AGENT_BATCH)
 
 
-func _agent_card(p: Dictionary) -> Control:
-	var want := Contracts.wants(p)
-	var card := _player_card(p, "%d OVR  ·  %s POT  ·  age %d  ·  wants %s for %d seasons  ·  from %s" % [
-			int(p["overall"]), str(GameState.pot_view(p)["text"]), int(p.get("age", 0)),
-			Contracts.money(int(want["salary"])), int(want["years"]),
-			GameDB.club_short(str(p.get("released_by", "")))])
-	PlayerSheet.synergy_fit_block(card.get_child(0) as VBoxContainer, p, 12)
-	var offers := GameState.fa_offers(str(p["id"]))
-	if not offers.is_empty():
-		var bits := PackedStringArray()
-		for o in offers.slice(0, 3):
-			bits.append("%s %s for %d" % ["us" if bool(o["mine"]) else GameDB.club_short(str(o["club"])), Contracts.money(int(o["salary"])), int(o["years"])])
-		var line := "Offers: " + ", ".join(bits) + (" and %d more" % (offers.size() - 3) if offers.size() > 3 else "")
-		(card.get_child(0) as VBoxContainer).add_child(_para(line + ".", 12, UiKit.TEXT))
-	var row := UiKit.hbox(4)
-	row.name = "Agent_" + str(p["id"])
-	_action_slot(card).add_child(row)
-	var talks: Dictionary = p.get("talks", {})
-	var barred := Challenge.block_reason(GameState, p)
-	if bool(talks.get("walked", false)):
-		row.add_child(UiKit.line("Talks broke down. He'll look elsewhere", UiKit.SECONDARY, UiKit.BAD, true))
-	elif barred != "":
-		# Your challenge bars him: said before any talks, not after.
-		(card.get_child(0) as VBoxContainer).add_child(_para(barred, 12, UiKit.MUTED))
-		var shut := UiKit.btn(Challenge.short_tag(GameState, p), UiKit.SECONDARY)
-		shut.name = "FreeAgentBarred"
-		shut.custom_minimum_size = Vector2(0, 44)
-		shut.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		shut.disabled = true
-		_compact_actions(row, shut)
-		row.add_child(shut)
-	else:
-		if talks.has("counter"):
-			(card.get_child(0) as VBoxContainer).add_child(_para("He'd sign for %s over %d season%s." % [
-					Contracts.money(int(talks["counter"])), int(talks["years"]), "" if int(talks["years"]) == 1 else "s"], 12, UiKit.TEXT))
-		var talk := UiKit.btn("Talk contract", UiKit.SECONDARY)
-		talk.name = "FreeAgentTalks"
-		talk.custom_minimum_size = Vector2(0, 44)
-		talk.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		_compact_actions(row, talk)
-		talk.pressed.connect(_open_talks.bind(str(p["id"]), true))
-		row.add_child(talk)
-	return card
+## Builds the next `n` cards of the list, after the last one built.
+func _more_agents(n: int) -> void:
+	if not is_instance_valid(_agent_body):
+		return
+	var body := _agent_body
+	var fas := _agent_queue.slice(_agent_built, mini(_agent_built + n, _agent_queue.size()))
+	_agent_built += fas.size()
+	_agents_shown = maxi(_agents_shown, _agent_built)
+	for p in fas:
+		var want := Contracts.wants(p)
+		var card := _player_card(p, "%d OVR  ·  %s POT  ·  age %d  ·  wants %s for %d seasons  ·  from %s" % [
+				int(p["overall"]), str(GameState.pot_view(p)["text"]), int(p.get("age", 0)),
+				Contracts.money(int(want["salary"])), int(want["years"]),
+				GameDB.club_short(str(p.get("released_by", "")))])
+		PlayerSheet.synergy_fit_block(card.get_child(0) as VBoxContainer, p, 12)
+		var offers := GameState.fa_offers(str(p["id"]))
+		if not offers.is_empty():
+			var bits := PackedStringArray()
+			for o in offers.slice(0, 3):
+				bits.append("%s %s for %d" % ["us" if bool(o["mine"]) else GameDB.club_short(str(o["club"])), Contracts.money(int(o["salary"])), int(o["years"])])
+			var line := "Offers: " + ", ".join(bits) + (" and %d more" % (offers.size() - 3) if offers.size() > 3 else "")
+			(card.get_child(0) as VBoxContainer).add_child(_para(line + ".", 12, UiKit.TEXT))
+		var row := UiKit.hbox(4)
+		row.name = "Agent_" + str(p["id"])
+		_action_slot(card).add_child(row)
+		var talks: Dictionary = p.get("talks", {})
+		var barred := Challenge.block_reason(GameState, p)
+		if bool(talks.get("walked", false)):
+			row.add_child(UiKit.line("Talks broke down. He'll look elsewhere", UiKit.SECONDARY, UiKit.BAD, true))
+		elif barred != "":
+			# Your challenge bars him: said before any talks, not after.
+			(card.get_child(0) as VBoxContainer).add_child(_para(barred, 12, UiKit.MUTED))
+			var shut := UiKit.btn(Challenge.short_tag(GameState, p), UiKit.SECONDARY)
+			shut.name = "FreeAgentBarred"
+			shut.custom_minimum_size = Vector2(0, 44)
+			shut.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			shut.disabled = true
+			_compact_actions(row, shut)
+			row.add_child(shut)
+		else:
+			if talks.has("counter"):
+				(card.get_child(0) as VBoxContainer).add_child(_para("He'd sign for %s over %d season%s." % [
+						Contracts.money(int(talks["counter"])), int(talks["years"]), "" if int(talks["years"]) == 1 else "s"], 12, UiKit.TEXT))
+			var talk := UiKit.btn("Talk contract", UiKit.SECONDARY)
+			talk.name = "FreeAgentTalks"
+			talk.custom_minimum_size = Vector2(0, 44)
+			talk.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			_compact_actions(row, talk)
+			talk.pressed.connect(_open_talks.bind(str(p["id"]), true))
+			row.add_child(talk)
+		body.add_child(card)
 
 
 ## The trade builder, one screen for a phone: who you're trading with, what

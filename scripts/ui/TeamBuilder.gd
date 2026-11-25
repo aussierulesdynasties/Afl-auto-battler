@@ -567,20 +567,12 @@ func _fill_grid() -> void:
 		if q != "" and not GameDB.player_display_name(p).to_lower().contains(q):
 			continue
 		out.append(p)
-	# The three in the best form in the twos lead the list, where their mark is
-	# seen without a scroll; the rest by OVR.
-	var hot: Dictionary = _marks["hot"]
-	out.sort_custom(func(a, b):
-		var ha := hot.has(str(a["id"]))
-		if ha != hot.has(str(b["id"])):
-			return ha
-		return int(a["overall"]) > int(b["overall"]))
 	# A card already in the list that would be built the same stays: only the
 	# players who came into the list, or whose pick or form mark changed, are
 	# built (bug bash 2026-11-25, M-2: building all 52 again took 90 ms a tap).
 	var want := {}
-	for p in out:
-		want[str(p["id"])] = true
+	for w in out:
+		want[str(w["id"])] = true
 	var keep := {}
 	for c in _grid.get_children():
 		if str(c.name).begins_with("Leaving_"):
@@ -591,6 +583,14 @@ func _fill_grid() -> void:
 		else:
 			UiKit.drop(c)
 	var at := 0
+	# The three in the best form in the twos lead the list, where their mark is
+	# seen without a scroll; the rest by OVR.
+	var hot: Dictionary = _marks["hot"]
+	out.sort_custom(func(a, b):
+		var ha := hot.has(str(a["id"]))
+		if ha != hot.has(str(b["id"])):
+			return ha
+		return int(a["overall"]) > int(b["overall"]))
 	for p in out:
 		var id := str(p["id"])
 		var c: Control = keep.get(id)
