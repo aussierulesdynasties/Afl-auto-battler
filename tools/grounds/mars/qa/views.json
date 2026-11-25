@@ -1,0 +1,234 @@
+[
+ {
+  "name": "top",
+  "label": "straight down",
+  "h": 0,
+  "t": 0,
+  "d": 330
+ },
+ {
+  "name": "top_wide",
+  "label": "straight down, wide",
+  "h": 0,
+  "t": 0,
+  "d": 700
+ },
+ {
+  "name": "trace_sw",
+  "label": "straight down for the trace",
+  "h": 0,
+  "t": 0,
+  "d": 330,
+  "at": [
+   -40,
+   -35,
+   0
+  ]
+ },
+ {
+  "name": "trace_ne",
+  "label": "straight down for the trace",
+  "h": 0,
+  "t": 0,
+  "d": 330,
+  "at": [
+   40,
+   35,
+   0
+  ]
+ },
+ {
+  "name": "trace_w",
+  "label": "straight down for the trace",
+  "h": 0,
+  "t": 0,
+  "d": 330,
+  "at": [
+   -50,
+   0,
+   0
+  ]
+ },
+ {
+  "name": "trace_e",
+  "label": "straight down for the trace",
+  "h": 0,
+  "t": 0,
+  "d": 330,
+  "at": [
+   50,
+   0,
+   0
+  ]
+ },
+ {
+  "name": "trace_s",
+  "label": "straight down for the trace",
+  "h": 0,
+  "t": 0,
+  "d": 330,
+  "at": [
+   0,
+   -45,
+   0
+  ]
+ },
+ {
+  "name": "trace_n",
+  "label": "straight down for the trace",
+  "h": 0,
+  "t": 0,
+  "d": 330,
+  "at": [
+   0,
+   45,
+   0
+  ]
+ },
+ {
+  "name": "from_s",
+  "label": "from the south",
+  "h": 0,
+  "t": 50,
+  "d": 500
+ },
+ {
+  "name": "from_n",
+  "label": "from the north",
+  "h": 180,
+  "t": 50,
+  "d": 500
+ },
+ {
+  "name": "from_e",
+  "label": "from the east",
+  "h": 270,
+  "t": 50,
+  "d": 500
+ },
+ {
+  "name": "from_w",
+  "label": "from the west",
+  "h": 90,
+  "t": 50,
+  "d": 500
+ },
+ {
+  "name": "from_se",
+  "label": "from the south-east",
+  "h": 315,
+  "t": 60,
+  "d": 420
+ },
+ {
+  "name": "from_sw",
+  "label": "from the south-west",
+  "h": 45,
+  "t": 60,
+  "d": 420
+ },
+ {
+  "name": "from_ne",
+  "label": "from the north-east",
+  "h": 225,
+  "t": 60,
+  "d": 420
+ },
+ {
+  "name": "from_nw",
+  "label": "from the north-west",
+  "h": 135,
+  "t": 60,
+  "d": 420
+ },
+ {
+  "name": "low_w",
+  "label": "low on the west stand",
+  "h": 270,
+  "t": 75,
+  "d": 260
+ },
+ {
+  "name": "low_n",
+  "label": "low on the north stand",
+  "h": 0,
+  "t": 75,
+  "d": 260
+ },
+ {
+  "name": "low_e",
+  "label": "low on the east stand",
+  "h": 90,
+  "t": 75,
+  "d": 260
+ },
+ {
+  "name": "low_se",
+  "label": "low on the new stands",
+  "h": 140,
+  "t": 75,
+  "d": 260
+ },
+ {
+  "name": "bowl_n",
+  "label": "into the bowl from the north end",
+  "h": 180,
+  "t": 65,
+  "d": 200
+ },
+ {
+  "name": "bowl_s",
+  "label": "into the bowl from the south end",
+  "h": 0,
+  "t": 65,
+  "d": 200
+ },
+ {
+  "name": "fence_10",
+  "label": "close on the fence at bearing 10",
+  "h": 10,
+  "t": 62,
+  "d": 110,
+  "at": [
+   13.0,
+   73.9,
+   0
+  ]
+ },
+ {
+  "name": "fence_40",
+  "label": "close on the fence at bearing 40",
+  "h": 40,
+  "t": 62,
+  "d": 110,
+  "at": [
+   54.6,
+   65.1,
+   0
+  ]
+ },
+ {
+  "name": "fence_80",
+  "label": "close on the fence at bearing 80",
+  "h": 80,
+  "t": 62,
+  "d": 110,
+  "at": [
+   68.0,
+   12.0,
+   0
+  ]
+ },
+ {
+  "name": "fence_250",
+  "label": "close on the fence at bearing 250",
+  "h": 250,
+  "t": 62,
+  "d": 110,
+  "at": [
+   -70.5,
+   -25.7,
+   0
+  ]
+ }
+]

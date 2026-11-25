@@ -149,12 +149,21 @@ func _make_blades() -> void:
 func _copy_look() -> void:
 	for f in _followers:
 		for u in mat.shader.get_shader_uniform_list():
-			if str(u["name"]) != "fence_clip":
+			if not str(u["name"]) in ["fence_clip", "fen_n"]:
 				f.set_shader_parameter(u["name"], mat.get_shader_parameter(u["name"]))
 	if _bmat == null:
 		return
 	for k in ["grass_a", "grass_b", "wet", "hot", "wind", "wind_dir", "true_colour", "turf_gain"]:
 		_bmat.set_shader_parameter(k, mat.get_shader_parameter(k))
+
+
+## A traced ground's fence (GroundModels.match_fence_shape): the standing blades stop at it, not at the
+## ellipse FENCE outside the field's half-extents.
+func fence_shape(c: PackedFloat32Array) -> void:
+	if _bmat == null:
+		return
+	_bmat.set_shader_parameter("fen", Oval3D._coefs(c))
+	_bmat.set_shader_parameter("fen_n", c.size())
 
 
 ## The ground's own cut and grass (MOWING), from its GroundModels slug; "" the default.
@@ -263,6 +272,9 @@ func apply(p_weather: String, p_slot: String) -> void:
 
 ## Drops in the air at each level (Oval3DQuality "rain"); the node drawing them while it rains.
 var rain: Oval3DRain
+## What oval_wet was last set to (1 wet kit, 0 dry): the renderer's own copy can't be read back
+## at run time outside the editor (a headless run reads nothing).
+var wet_kit := 0.0
 
 
 ## A wet day beyond the turf and sky (rule 2.83): rain falls on screen and the far stands grey in
@@ -270,7 +282,8 @@ var rain: Oval3DRain
 ## and by day the towers are on early, their light a second faint shadow and the glint in the wet
 ## turf. The graphics level sets how many drops fall (Oval3DQuality "rain").
 func _wet_world(wet: bool) -> void:
-	RenderingServer.global_shader_parameter_set("oval_wet", 1.0 if wet else 0.0)
+	wet_kit = 1.0 if wet else 0.0
+	RenderingServer.global_shader_parameter_set("oval_wet", wet_kit)
 	Oval3DRain.haze(env, wet)
 	var level := str(oval.get("quality")) if oval.get("quality") != null else ""
 	var drops := int(Oval3DQuality.preset(level)["rain"])
@@ -551,7 +564,28 @@ func stand_light(sm: ShaderMaterial, scale := 1.0, green := 1.0) -> Array:
 ## A sky shader setting, or the shader's own default when the look leaves it unset.
 func _sky_param(sm: ShaderMaterial, key: String) -> Variant:
 	var v: Variant = sm.get_shader_parameter(key)
-	return v if v != null else RenderingServer.shader_get_parameter_default(sm.shader.get_rid(), key)
+	if v == null:
+		v = RenderingServer.shader_get_parameter_default(sm.shader.get_rid(), key)
+	if v == null:
+		v = _code_default(sm.shader.code, key)
+	return v
+
+
+## A uniform's default as the shader's own code writes it. A renderer that does not compile
+## shaders (a headless test run) knows no defaults, and the stands would read a sky of nothing.
+static func _code_default(code: String, key: String) -> Variant:
+	var re := RegEx.create_from_string(
+			"uniform\\s+(float|vec4)\\s+" + key + "\\b[^=;]*=\\s*([^;]+);")
+	var m := re.search(code)
+	if m == null:
+		return null
+	var val := m.get_string(2).strip_edges()
+	if m.get_string(1) == "float":
+		return float(val)
+	var nums := val.trim_prefix("vec4(").trim_suffix(")").split(",")
+	if nums.size() != 4:
+		return null
+	return Color(float(nums[0]), float(nums[1]), float(nums[2]), float(nums[3]))
 
 
 ## A wet day (rule 2.83): the sky is cloud, grey light from all round, the sun only a soft
