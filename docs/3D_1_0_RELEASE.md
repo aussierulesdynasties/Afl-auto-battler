@@ -52,7 +52,7 @@ the machine pre-inspection clean, then his fly-through.
 | MCG | Rebuilt to the standard (#1987 merged); the last 405 seats under the tiers removed (#2027, merged); Yarra Park from OSM; horizon past 2 km empty; not yet flown through by him | #2027 | Make the MCG look like the real MCG (closed); seats: Fix the shared seat generator |
 | Marvel Stadium | Rebuild open: true bearing, instanced seats, shut roof, Docklands; roofs from above read pale | #2011 | Make Marvel Stadium look real |
 | Adelaide Oval | Rebuild open (Riverbank, Torrens, footbridge, St Peter's) and his 11 faults; arches with ivy and main entrance in #2015 | #2010 #2015 | Fix Adelaide Oval's saved faults |
-| Optus Stadium | Roof, bronze facade, surrounds open | #1993 | Make Optus Stadium look real |
+| Optus Stadium | Roof, bronze facade, surrounds on main (#1993); the bowl's shape still has to match Google Earth | #1993 | Make Optus Stadium look real |
 | SCG | North roof and tiers, Moore Park, Allianz open (WIP) | #2017 | Make the SCG look real |
 | The Gabba | Rebuild open (v8: modelled steel, louvres, gates; Woolloongabba) | #2020 | Make the Gabba look real (thread closed; PR still open) |
 | GMHBA Stadium | Rebuild open (Selwood Stand roof, seats no longer black); fins and plant screens still painted | #2016 | Make GMHBA Stadium look real |
@@ -66,11 +66,11 @@ the machine pre-inspection clean, then his fly-through.
 ### The 24 Legacy-mode grounds
 
 Rebuilds under way: York Park, Mars Stadium (open, #2036, now in matches), Cazaly's Stadium, Traeger Park
-(not yet in matches; #2006 wires it). Each has its own "Make ... look real" thread.
+(not yet in matches; #2006 wires it), Blacktown (stages 1-3 on main, #2048: fence on its real curve, stands at Google Earth's sizes, surroundings). Each has its own "Make ... look real" thread.
 
 **No owner:** Waverley Park, Windy Hill, Moorabbin Oval, Ikon Park, Whitten Oval, Football Park,
 Subiaco Oval, WACA (scoreboard legs inside the boundary), North Hobart Oval, Bruce Stadium,
-Riverway Stadium, Sky Stadium, Jiangwan Stadium, Hands Oval, Blacktown, Summit Park, Macquarie Point
+Riverway Stadium, Sky Stadium, Jiangwan Stadium, Hands Oval, Summit Park, Macquarie Point
 Stadium (all first drafts on main), and Accor Stadium, Marrara Oval (TIO Darwin) and Victoria Park
 (models exist; none plays in a match yet).
 
@@ -88,15 +88,15 @@ Stadium (all first drafts on main), and Accor Stadium, Marrara Oval (TIO Darwin)
 
 | Item | State 2026-11-22 | PR | Owner |
 |---|---|---|---|
-| MetaHuman body in every match | Built, not on main: main still draws the old average body | #1976 | Improve the players' on-field look (thread failed; PR waits in the queue) |
-| Builds by height and weight | Ruled (2.97, 2.98); ships with #1976 | #1976 | as above |
-| Far detail levels and edge smoothing for players | Built and measured (MCG High 6.2 M triangles to 2.75 M) | #1982 (draft, on #1976) | Keep stadiums smooth on phones (closed; PR open) |
+| MetaHuman body in every match | On main (2026-11-23) | #1976 | Improve the players' on-field look |
+| Builds by height and weight | Ruled (2.97, 2.98); on main with #1976 | #1976 | as above |
+| Far detail levels and edge smoothing for players | Built and measured (MCG High 6.2 M triangles to 2.75 M); the MetaHuman landed without them, so main draws 5.7-8.1 M at every level | #2054 | Keep stadiums smooth on phones |
 | Faces: every one of the 762 real players from his portrait, automatically | v5 board; v6 under way (MetaHuman grooms per player, cornrows, buzz cuts). Not in a match yet; how 44 different heads load in a match and what they cost on a phone is not designed | | Find a way to build real player faces |
 | Hair for real players | Epic's groom library, picked and reshaped per player from the photo (part of faces v6) | | Find a way to build real player faces |
-| Club Forge hair (20 cuts) | Refitted to MetaHuman, trimmed to 20 | #1976 | as #1976 |
+| Club Forge hair (20 cuts) | Refitted to MetaHuman, trimmed to 20; on main | #1976 | as #1976 |
 | Guernseys, all 18 clubs and clash, on the MetaHuman body | Sydney and the Bulldogs cut to their photos (#1946); numbers hold on TV (#1997); the other 16 being checked on the new body (WIP) | #2038 | Check club guernseys on MetaHuman players |
-| Umpires: field, boundary, goal | Field umpire look passed (2.75); boundary and goal umpires open | #2043 | Add boundary and goal umpires and trainers |
-| Trainers and runners (injuries, breaks) | Open | #2043 | Add boundary and goal umpires and trainers |
+| Umpires: field, boundary, goal | Field umpire look passed (2.75); boundary and goal umpires on main | #2043 | Add boundary and goal umpires and trainers |
+| Trainers and runners (injuries, breaks) | On main | #2043 | Add boundary and goal umpires and trainers |
 
 ## 3. Animations
 
@@ -138,48 +138,59 @@ Stadium (all first drafts on main), and Accor Stadium, Marrara Oval (TIO Darwin)
 | Gate | State 2026-11-22 | Owner |
 |---|---|---|
 | Real phone frame times at Low, Medium and High | Not measured. The "Android 3D probe" preset also leaves out every `.glb`, so today it would show no grounds or players: fix the packaging first, then he installs it. Cloud numbers below | **He** (install and run it), then this thread reads the numbers |
-| Video memory | MCG on High 678 MB on main today; with the MetaHuman bodies about 976 MB (#1982's measure). Rule of thumb for a mid phone: keep under 1.5 GB | Each item's owner, this thread watches |
-| Ground and player models in the builds | Every export preset (Android, Windows, Web, the 3D probe) has `*.glb` in its exclude filter, so a phone or PC build has no grounds and no players in the 3D match (found by #2058, 2026-11-23). On main: 776 MB of ground `.glb` and 44 MB of player and head `.glb`. Needs: what ships in the APK, what downloads per ground, the size budget | **Nobody** (thread asked for) |
+| Video memory | MCG on High 980 MB on main today (MetaHuman players). Rule of thumb for a mid phone: keep under 1.5 GB | Each item's owner, this thread watches |
+| Ground and player models in the builds | Every export preset (Android, Windows, Web, the 3D probe) has `*.glb` in its exclude filter, so a phone or PC build has no grounds and no players in the 3D match (found by #2058, 2026-11-23). On main: 776 MB of ground `.glb` and 44 MB of player and head `.glb`. Needs: what ships in the APK, what downloads per ground, the size budget | Ship grounds and players in phone builds |
 | Download size of a 3D build | Imported assets about 750 MB before the rebuilds and backdrops land (#2023 alone adds about 1.4 GB of models). Never exported with the models in it | Same thread as the row above |
 | Licences of everything that ships | MetaHuman is decided: comply only. Where ground data may come from is now one rule in [MCG_STANDARD.md](MCG_STANDARD.md) ("Where shipped data may come from"): fidelity first, copying from Google Earth is fine, no raw imagery committed or baked into a shipped texture. Still open: the MetaHuman body file in the public repo (assets/oval3d/player_mh.glb); third-party captures committed under .claude/review and tools/grounds (Google Earth, Esri tiles, image-search photos); motion clips (above); the credits screen (the list itself is docs/CREDITS_3D.md) | Ground threads (their data); this thread (the rule, the credits list); **nobody** for the rest |
 | Third-party images already in git history (Google Earth captures, Esri tiles, photos under .claude/review and tools/grounds; about 2.6 GB of review images in all) | Taken out of the current files ground by ground (People First: 28 files in #2019). Purging them from history rewrites the public repo for everyone, so it is the director's call, after 1.0 work settles | Later; his call |
 | Tests and the nightly ground shots green on main | Many PRs above wait in the merge queue, several stacked on each other | Audit everything built for the 3D view (merge queue doctor) |
 | His look on every item | Not started for grounds (fly-through) | He |
 
-## Measured (2026-11-22)
+## Measured (2026-11-23, MetaHuman players on main)
 
-Cloud measure on main at 5415edf (Godot 4.7.2 Mobile renderer on a software GPU, 1080 x 1240,
+Cloud measure on main at ff8e359 (Godot 4.7.2 Mobile renderer on a software GPU, 1080 x 1240,
 `tools/perf/Oval3DPhone.tscn`, Fremantle v St Kilda at 4x under the broadcast camera). Triangles,
-draw calls and memory carry over to a phone; renderer time is a cloud ratio only. Main still draws
-the old player body, so add the MetaHuman's cost from #1982's table in
-[PHONE_3D_BUDGET.md](PHONE_3D_BUDGET.md) once it merges.
+draw calls and memory carry over to a phone; renderer time is a cloud ratio only. Raw numbers:
+`/mnt/project-files/3d-release/phone_cost_main_2026-11-23.json` (project files).
 
 | Ground | Level | Triangles (thousands) | Draw calls | Video MB | Memory MB |
 |---|---|---|---|---|---|
-| MCG | High | 3,327 | 287 | 678 | 278 |
-| MCG | Medium | 3,029 | 278 | 654 | 278 |
-| MCG | Low | 2,421 | 270 | 643 | 252 |
-| Marvel | High | 3,269 | 206 | 651 | 223 |
-| Marvel | Medium | 2,607 | 198 | 627 | 223 |
-| Marvel | Low | 2,356 | 200 | 620 | 223 |
-| Optus | High | 4,006 | 327 | 651 | 270 |
-| Optus | Medium | 3,433 | 288 | 627 | 270 |
-| Optus | Low | 2,368 | 260 | 616 | 246 |
-| People First | High | 2,284 | 204 | 620 | 224 |
-| People First | Medium | 2,271 | 206 | 596 | 224 |
-| People First | Low | 2,087 | 214 | 588 | 224 |
-| Adelaide Oval | High | 4,370 | 269 | 634 | 263 |
-| Adelaide Oval | Medium | 3,389 | 258 | 610 | 263 |
-| Adelaide Oval | Low | 2,785 | 258 | 599 | 242 |
-| The Gabba | High | 2,821 | 374 | 615 | 259 |
-| The Gabba | Medium | 2,569 | 325 | 591 | 259 |
-| The Gabba | Low | 2,078 | 309 | 582 | 240 |
+| MCG | High | 7,140 | 325 | 980 | 285 |
+| MCG | Medium | 6,852 | 316 | 956 | 286 |
+| MCG | Low | 6,182 | 308 | 945 | 260 |
+| Marvel | High | 6,883 | 237 | 925 | 231 |
+| Marvel | Medium | 6,227 | 229 | 901 | 231 |
+| Marvel | Low | 5,906 | 231 | 893 | 231 |
+| Optus | High | 7,668 | 362 | 924 | 278 |
+| Optus | Medium | 7,102 | 323 | 900 | 278 |
+| Optus | Low | 5,946 | 295 | 889 | 254 |
+| People First | High | 6,034 | 238 | 893 | 232 |
+| People First | Medium | 6,028 | 240 | 869 | 232 |
+| People First | Low | 5,730 | 247 | 862 | 232 |
+| Adelaide Oval | High | 8,116 | 304 | 907 | 271 |
+| Adelaide Oval | Medium | 7,142 | 293 | 883 | 271 |
+| Adelaide Oval | Low | 6,489 | 293 | 873 | 250 |
+| The Gabba | High | 6,653 | 412 | 889 | 267 |
+| The Gabba | Medium | 6,408 | 363 | 865 | 267 |
+| The Gabba | Low | 5,843 | 347 | 856 | 248 |
 
-What this says: the big grounds draw 2.3-4.4 million triangles a frame on High and still 2.1-2.8 million on Low, so Low saves at most about a third (about a million of every frame is the players, whose far detail levels arrive with #1982); video memory sits at 600-700 MB at every level, before the MetaHuman bodies (about +300 MB) and the rebuilt grounds land. The rebuilds measure themselves (the Gabba's v8 reports 2.98 / 2.66 / 2.02 million). Whether that runs smoothly is the phone's answer, not the cloud's.
+What this says: the MetaHuman players (#1976) doubled the frame. The MCG on High went from 3.3 to 7.1
+million triangles and from 678 to 980 MB of video memory, and Low now saves only about a seventh
+(6.2 million on the MCG), because the players' far detail levels did not come with #1976. They are in
+#2054 (edge smoothing and player detail levels, measured on the MetaHuman at MCG High 6.2 to 2.75
+million). Until #2054 lands, every ground is 5.7-8.1 million triangles at every level and close to
+900-980 MB of video memory. The 22 Nov table (old body) was 2.1-4.4 million and 580-680 MB.
+
+#2054 measured against this main (MCG, same tool): High 7.14 to 2.41 million triangles, Medium 6.85 to
+2.20, Low 6.18 to 1.63. Renderer time drops about 41-43% on Medium and Low but rises 13% on High,
+because 4x edge smoothing is costly on the software GPU (a phone's tiled GPU should do it cheaply; only
+the phone run settles it). Video memory rises 90-130 MB (to 1,032-1,111 MB) for the far detail levels
+and the smoothing buffers.
 
 ## Change log
 
 - 2026-11-22: first version, built from the plan, the open PRs, the threads and project memory.
 - 2026-11-22: the director chose all 37 grounds for 1.0.
 - 2026-11-22: the data-source rule for grounds written into MCG_STANDARD.md and sent to every ground thread; softened the same day (fidelity first; only raw imagery in the repo or textures is out).
-- 2026-11-22 evening: stat card (#1990), goal replay (#2022), siren and crowd (#2012) and broadcast colour (#2014) and the MCG seat fix (#2027) on main; every export preset found to leave out the ground and player models (#2058); owners and PRs for ENGIE, Manuka, Norwood, Barossa, Mars, guernseys, umpires and trainers, kick clips and night lights.
+- 2026-11-22 evening: stat card (#1990), goal replay (#2022), siren and crowd (#2012) and broadcast colour (#2014) and the MCG seat fix (#2027) on main; MetaHuman players (#1976) and the match crew (#2043) on main, phone cost re-measured (players' detail levels still missing, #2054); every export preset found to leave out the ground and player models (#2058); owners and PRs for ENGIE, Manuka, Norwood, Barossa, Mars, guernseys, umpires and trainers, kick clips and night lights.
+- 2026-11-23: Optus Stadium rebuild on main (#1993); Blacktown stages 1-3 on main (#2048).

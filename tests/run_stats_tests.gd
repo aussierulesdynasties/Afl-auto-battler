@@ -75,7 +75,8 @@ func _run() -> void:
 	for sz in [Vector2i(390, 844), Vector2i(1280, 720)]:
 		await _t("_test_fixture", [sz])
 	# 320 x 693: a 390 x 844 window on a scaled desktop (ScreenLayout's 320-unit floor).
-	for sz in [Vector2i(390, 844), Vector2i(320, 693), Vector2i(1280, 720)]:
+	# 960 x 540: the smallest PC window, one unit a pixel (3.C.41).
+	for sz in [Vector2i(390, 844), Vector2i(320, 693), Vector2i(960, 540), Vector2i(1280, 720)]:
 		await _t("_test_ladder", [sz])
 	for sz in [Vector2i(390, 844), Vector2i(1280, 720)]:
 		await _t("_test_team_rating", [sz])
@@ -1096,17 +1097,19 @@ func _test_ladder(sz: Vector2i) -> void:
 		_check(season.club_results(mine).size() == 0 or row_text.contains("".join(PackedStringArray((season.club_results(mine) as Array).slice(-5)))),
 				"...and the last five results as letters (%s)" % tag)
 
-	# The sort headers are thumb high on a phone (44 px; the sweep, 2026-10-18:
-	# they were 40) with the columns no wider than before, and unchanged on a PC.
+	# The sort headers are thumb high (44 px; the sweep, 2026-10-18: they were
+	# 40 on a phone; 2026-11-25: 40 tall and 30 wide at 960x540), and on a PC,
+	# where each is a button, thumb wide too.
 	var short_heads := []
 	var header_w := 0.0
 	for b in s.find_child("LadderHeader", true, false).get_children():
 		if not b is Button:
 			continue
-		if (b as Control).size.y < (44.0 if sz.x < 900 else 40.0):
-			short_heads.append("%s %.0f" % [b.name, (b as Control).size.y])
+		if (b as Control).size.y < 44.0 or (sz.x >= 900 and (b as Control).size.x < 44.0):
+			short_heads.append("%s %.0fx%.0f" % [b.name, (b as Control).size.x, (b as Control).size.y])
 		header_w += (b as Control).size.x
-	_check(short_heads.is_empty(), "Ladder sort headers are %s px tall (%s: short %s)" % ["at least 44" if sz.x < 900 else "40", tag, str(short_heads)])
+	_check(short_heads.is_empty(), "Ladder sort headers are at least 44 px %s (%s: short %s)" % [
+			"tall" if sz.x < 900 else "each way", tag, str(short_heads)])
 	var short_rows := []
 	for b in s.find_children("Club_*", "Button", true, false):
 		if (b as Control).size.y < (44.0 if sz.x < 900 else 32.0):

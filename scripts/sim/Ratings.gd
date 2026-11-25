@@ -267,9 +267,15 @@ static func rate_on_record(p: Dictionary, season := 2026) -> void:
 ## attributes are refitted to it, so he plays to it. Today's data carries no
 ## honours, so a 2026 start is untouched. Real players only, once, when the
 ## data loads (GameDB), after rate_on_record.
-const HONOURS_FLOOR := 72.0
+## The line is set from the record (bug bash 2026-11-23, "gun players were in
+## the mid 70s"): over 1987-2025 an All-Australian rated a median 82-84 in his
+## season, a Brownlow top 3 85-87, a club champion 79 (tools/ratings_check.py),
+## so one point is 80, not the 77 that held 2009's All-Australians and club
+## champions at a wall of 77. Kept in step with tools/legacy_1990s/
+## build_start.py's HONOURS_*, which sets a real peak the same way.
+const HONOURS_FLOOR := 75.0
 const HONOURS_PER_POINT := 5.0
-const HONOURS_CAP := 86.0
+const HONOURS_CAP := 92.0
 
 
 static func honours_floor(score: float) -> int:
@@ -288,11 +294,68 @@ static func rate_on_honours(p: Dictionary) -> void:
 		p["season_overall"] = int(p.get("overall", 0))   # what the data season alone said
 	# Honours speak for a full season, as the record does (rate_on_record).
 	var games := maxf(RECORD_SHORT, effective_games(p))
-	p["attr"] = Prospects.fit_attributes(p["attr"], role, float(floor_ovr), games)
+	var fitted := Prospects.fit_attributes(p["attr"], role, float(floor_ovr), games)
+	p["attr"] = top_up_to(fitted, role, floor_ovr, games)
 	p["sample"] = games
-	p["overall"] = maxi(floor_ovr, rate_overall(p["attr"], role, games))
+	# His overall is what his skills say, as on every load (GameState.
+	# _recompute_ratings): a label lifted over his skills fell a point on load.
+	p["overall"] = rate_overall(p["attr"], role, games)
 	p["value"] = salary_value(p["overall"])
 	p["rated_on_honours"] = true
+
+
+## The fit shifts every skill by one offset and rounds each, which can leave
+## the skills a point under the target (120 honoured players across the 1990,
+## 2000, 2010 and 2020 starts, each one point short, bug bash 2026-11-25).
+## Closes that point one skill at a time, as GameDB.set_player_ovr closes a
+## hand-set rating; temperament (Prospects.UNRATED_KEYS) stays. The director's
+## call (2026-11-25): "Top up his skills".
+static func top_up_to(a: Dictionary, role: String, target: int, games: float) -> Dictionary:
+	var out := a.duplicate()
+	for _round in range(20):
+		for k in out:
+			if rate_overall(out, role, games) >= target:
+				return out
+			if k in Prospects.UNRATED_KEYS or int(out[k]) >= 99:
+				continue
+			out[k] = int(out[k]) + 1
+	return out
+
+
+## A past start's injured star (bug bash 2026-11-23: Tony Liberatore, the
+## 1990 Brownlow medallist, rated 55 on his one 1989 game and asked for a
+## trade to get a game). A real player whose data season was cut short
+## (Potential flags him "rehab": under REHAB_GAMES games and a real peak
+## REHAB_PEAK_GAP above it) has had his rehab summer before the career's
+## first season: he starts where the rehab year takes him (Potential.
+## rehab_pull of the gap to his potential), as TradeValue already judges him.
+## Real players with a real peak only, once, when the data loads (GameDB),
+## after Potential.assign.
+const REHAB_FROM_AGE := 23.0
+
+
+static func rate_on_rehab(p: Dictionary) -> void:
+	if not bool(p.get("rehab", false)) or float(p.get("real_peak", 0)) <= 0.0 or not p.has("attr"):
+		return
+	# A young player's short season is his development, not an injury: his
+	# real peak comes through growth (REHAB_FROM_AGE).
+	if float(p.get("age", 0.0)) < REHAB_FROM_AGE:
+		return
+	var ovr := float(p.get("overall", 0))
+	var gap := float(p.get("potential", ovr)) - ovr
+	if gap <= 0.0:
+		return
+	var target := ovr + gap * Potential.rehab_pull(float(p.get("age", 26.0)))
+	var role := str(p.get("role", "MID"))
+	if not p.has("season_overall"):
+		p["season_overall"] = int(ovr)   # what the data season alone said
+	var games := maxf(RECORD_SHORT, effective_games(p))
+	p["attr"] = Prospects.fit_attributes(p["attr"], role, target, games)
+	p["sample"] = games
+	p["overall"] = mini(int(p.get("potential", 99)), maxi(int(ovr), rate_overall(p["attr"], role, games)))
+	p["value"] = salary_value(p["overall"])
+	p["rated_on_rehab"] = true
+	p.erase("rehab")
 
 
 static func effective_games(p: Dictionary) -> float:

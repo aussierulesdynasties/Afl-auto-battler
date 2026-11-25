@@ -41,6 +41,8 @@ func _run() -> void:
 	await _t("_test_phone_browser_never_wide")
 	await _t("_test_stage")
 	await _t("_test_league_draft_stays_instant")
+	await _t("_test_pick_keeps_rows")
+	await _t("_test_rivals_land_a_few_a_frame")
 	await _t("_test_take_tasmania")
 	await _t("_test_first_offseason")
 	await _t("_test_rival_why")
@@ -1585,4 +1587,149 @@ func _test_first_offseason() -> void:
 			short += 1
 	_check(short == 0, "Every Geelong contract still runs into 2027")
 	draft_ui.queue_free()
+	await _settle()
+
+
+## The draft hang on a phone (2026-11-23): a pick keeps the board's rows of the
+## players still on it, in the board's order, each pick button as a freshly
+## built row would have it; and the pick log out of view catches up when its
+## tab is opened.
+func _test_pick_keeps_rows() -> void:
+	_state.reset()
+	_state.draft = load("res://scripts/sim/Draft.gd").new(_db.all_players_sorted(),
+			_db.active_clubs(2026).duplicate(), 12345)
+	root.size = Vector2i(390, 844)
+	var ui: Control = load("res://scenes/DraftScene.tscn").instantiate()
+	root.add_child(ui)
+	ui.call("_on_club_chosen", "COL")
+	await _settle()
+	var draft = _state.draft
+	var box: Control = ui.get("_board_box")
+	var before := {}
+	for c in box.get_children():
+		before[str(c.name)] = c.get_instance_id()
+	var pick: Button = null
+	for c in box.get_children():
+		var b := c.find_child("Pick_*", true, false) as Button
+		if b != null and not b.disabled:
+			pick = b
+			break
+	var why: String = await Tap.tap(pick) if pick != null else "no pick button"
+	_check(why == "", "A finger's tap reaches a pick button on the board (%s)" % why)
+	await _settle()
+	var rows: Array = ui.call("_board_rows")
+	var shown: Array = box.get_children().filter(func(c): return str(c.name).begins_with("Player_"))
+	var in_order := shown.size() == mini(int(ui.get("_shown")), rows.size())
+	var kept := 0
+	var buttons_right := true
+	for i in range(shown.size()):
+		var row: Control = shown[i]
+		var p: Dictionary = rows[i] if i < rows.size() else {}
+		in_order = in_order and str(row.name) == "Player_" + str(p.get("id", ""))
+		if before.get(str(row.name), 0) == row.get_instance_id():
+			kept += 1
+			var fresh: Control = ui.call("_player_row", p)
+			var a := row.find_child("Pick_*", true, false) as Button
+			var f := fresh.find_child("Pick_*", true, false) as Button
+			buttons_right = buttons_right and a.text == f.text and a.disabled == f.disabled \
+					and a.tooltip_text == f.tooltip_text and row.tooltip_text == fresh.tooltip_text \
+					and a.get_theme_stylebox("normal") is StyleBoxFlat and f.get_theme_stylebox("normal") is StyleBoxFlat \
+					and (a.get_theme_stylebox("normal") as StyleBoxFlat).bg_color == (f.get_theme_stylebox("normal") as StyleBoxFlat).bg_color
+			fresh.free()
+	_check(in_order, "After a pick the board's rows are the board's players, in its order (%d rows)" % shown.size())
+	_check(kept > 0 and kept < shown.size(),
+			"A pick keeps the rows still on the board and builds the new ones (%d of %d kept)" % [kept, shown.size()])
+	_check(buttons_right, "A kept row's pick button reads as a freshly built row's would")
+	var tab: Button = ui.find_child("Tab_picks", true, false)
+	why = await Tap.tap(tab) if tab != null else "no Picks tab"
+	_check(why == "", "A finger's tap reaches the Picks tab (%s)" % why)
+	await _settle()
+	var history: Control = ui.get("_history_box")
+	var logged := history.get_children().filter(func(c): return str(c.name).begins_with("HistoryPick_")).size()
+	_check(logged == mini(int(ui.get("_history_shown")), draft.pick_history.size()) and logged > 1,
+			"The pick log opened after a pick shows every pick so far (%d of %d)" % [logged, draft.pick_history.size()])
+	ui.queue_free()
+	await _settle()
+
+
+## The draft hang (2026-11-23), spread: on a phone's screen (not a test
+## runner) the rival picks after yours are made a few milliseconds a frame and
+## land on the board as they come. Your tap returns at once with the board on
+## Wait; the picks then are the ones a draft makes all at once; and when the
+## last lands the board holds no taken player, every button is as a fresh row's
+## and Pick for me is open again.
+func _test_rivals_land_a_few_a_frame() -> void:
+	var scene = load("res://scripts/ui/DraftScene.gd")
+	scene.spread_in_runner = true
+	_state.reset()
+	_state.draft = load("res://scripts/sim/Draft.gd").new(_db.all_players_sorted(),
+			_db.active_clubs(2026).duplicate(), 12345)
+	var twin = load("res://scripts/sim/Draft.gd").new(_db.all_players_sorted(),
+			_db.active_clubs(2026).duplicate(), 12345)
+	twin.start_for_user("COL")
+	root.size = Vector2i(390, 844)
+	var ui: Control = load("res://scenes/DraftScene.tscn").instantiate()
+	root.add_child(ui)
+	ui.call("_on_club_chosen", "COL")
+	var guard := 0
+	while ui.call("rivals_running") and guard < 600:
+		guard += 1
+		await process_frame
+	await _settle()
+	var draft = _state.draft
+	_check(draft.is_user_turn() and draft.pick_history.size() == twin.pick_history.size(),
+			"The picks before ours land a few a frame, and it is our pick")
+	var box: Control = ui.get("_board_box")
+	var pick: Button = null
+	var player := {}
+	for c in box.get_children():
+		var b: Button = c.get_meta("pick") if c.has_meta("pick") else null
+		if b != null and not b.disabled:
+			pick = b
+			player = draft.board("", "", "", "overall", true).filter(
+					func(q): return "Player_" + str(q["id"]) == str(c.name))[0]
+			break
+	var at: int = draft.pick_history.size()
+	var why: String = await Tap.tap(pick) if pick != null else "no pick button"
+	_check(why == "", "A finger's tap reaches a pick button (%s)" % why)
+	var made: int = draft.pick_history.size() - at
+	var waiting := true
+	for c in box.get_children():
+		if c.has_meta("pick") and (c as CanvasItem).visible:
+			waiting = waiting and (c.get_meta("pick") as Button).disabled
+	var pick_me: Button = ui.find_child("PickForMe", true, false)
+	_check(ui.call("rivals_running") and made < 10 and waiting and pick_me != null and pick_me.disabled,
+			"The tap returns with the rivals still to pick and every button on Wait (%d picks made)" % made)
+	twin.pick(player)
+	var frames := 0
+	while ui.call("rivals_running") and frames < 2000:
+		frames += 1
+		await process_frame
+	await _settle()
+	_check(frames > 3 and JSON.stringify(draft.pick_history) == JSON.stringify(twin.pick_history),
+			"The rival picks landed over %d frames are the picks made all at once" % frames)
+	var clean := true
+	var buttons_right := true
+	var n := 0
+	for c in box.get_children():
+		if not (c.has_meta("pick") and (c as CanvasItem).visible):
+			continue
+		n += 1
+		var id := str(c.name).substr(7)
+		clean = clean and not draft.has(id)
+		var p: Dictionary = draft.board("", "", "", "overall", true).filter(func(q): return str(q["id"]) == id)[0] \
+				if not draft.has(id) else {}
+		if p.is_empty():
+			continue
+		var fresh: Control = ui.call("_player_row", p)
+		var a: Button = c.get_meta("pick")
+		var f: Button = fresh.get_meta("pick")
+		buttons_right = buttons_right and a.text == f.text and a.disabled == f.disabled and a.tooltip_text == f.tooltip_text
+		fresh.free()
+	_check(clean and n == mini(int(ui.get("_shown")), draft.board("", "", "", "overall", true).size()),
+			"When the last pick lands the board is a full page with no taken player (%d rows)" % n)
+	_check(buttons_right and pick_me != null and not pick_me.disabled,
+			"Every pick button reads as a fresh row's, and Pick for me is open again")
+	scene.spread_in_runner = false
+	ui.queue_free()
 	await _settle()
