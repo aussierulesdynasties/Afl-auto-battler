@@ -6533,7 +6533,8 @@ func _test_top_up_sheet_taps() -> void:
 
 ## A PC's Contracts (UI batch 5, the director's board A): the men to decide on
 ## in a list, the picked one's card beside it, and a finger on another name
-## shows his. The whole list is a tab of its own. Neither scrolls, also once a
+## shows his. At 960x540 his card takes turns, Contract | Ratings (the director's
+## pick 2). The whole list is a tab of its own. Neither scrolls, also once a
 ## signing grows the heading. A phone keeps Contracts as it was.
 func _test_contracts_pc(sz: Vector2i) -> void:
 	var C = load("res://scripts/sim/Contracts.gd")
@@ -6560,6 +6561,7 @@ func _test_contracts_pc(sz: Vector2i) -> void:
 	var deciding: int = _state.retiring_players().size() + C.expiring(_state.my_list).filter(
 			func(q): return not _state.retiring_now(q)).size()
 	var rows: Array = scene.find_children("Decide_*", "Button", true, false)
+	var row_names: Array = rows.map(func(x): return str(x.name))
 	_check(deciding >= 2 and rows.size() == deciding and scene.find_child("DecideCard", true, false) != null,
 			"PC %s: every man to decide on has a row, and one card shows (%d of %d)" % [tag, rows.size(), deciding])
 	var actions := scene.find_children("Contract_*", "", true, false).size() + scene.find_children("Retiring_*", "", true, false).size()
@@ -6575,6 +6577,50 @@ func _test_contracts_pc(sz: Vector2i) -> void:
 	var card := scene.find_child("DecideCard", true, false)
 	_check(why == "" and card != null and card.find_child("PlayerName_" + want, true, false) != null,
 			"PC %s: a finger on another man's row shows his card (%s)" % [tag, why])
+	# A row says what he wants in seasons: "wants $535k for 2 seasons".
+	var wants: Array = []
+	for l in scene.find_children("*", "Label", true, false):
+		if (l as Label).text.begins_with("wants "):
+			wants.append((l as Label).text)
+	var worded := RegEx.create_from_string("^wants \\$[0-9.]+[km] for (1 season|[2-9] seasons)$")
+	_check(not wants.is_empty() and wants.all(func(t): return worded.search(t) != null),
+			"PC %s: each row says what he wants in seasons (%s)" % [tag, ", ".join(wants)])
+	# Each man's card shows his time with us and every rating, and never scrolls. A short
+	# window (960x540) has them on the card's Ratings stage, a finger beside his name.
+	var short := sz.y < 640
+	var shown := 0
+	var unfit: Array = []
+	for nm in row_names:
+		var r: Button = scene.find_child(nm, true, false)
+		if r == null:
+			unfit.append(nm + " gone")
+			continue
+		await Tap.tap(r)
+		await _settle()
+		if _contracts_fit(scene) != "":
+			unfit.append("%s %s" % [nm, _contracts_fit(scene)])
+		var stage_on := not short
+		if short:
+			var on_card := scene.find_child("ProfileWithUs", true, false) == null \
+					and scene.find_child("DecideRatings", true, false) == null
+			var to_ratings: Button = scene.find_child("CardStage_ratings", true, false)
+			var why_s: String = await Tap.tap(to_ratings) if to_ratings != null else "no Ratings beside his name"
+			await _settle()
+			stage_on = on_card and why_s == "" and scene.find_child("Contract_*", true, false) == null
+			if not stage_on:
+				unfit.append("%s Ratings stage (%s)" % [nm, why_s])
+		if stage_on and scene.find_child("ProfileWithUs", true, false) != null \
+				and scene.find_child("DecideRatings", true, false) != null:
+			shown += 1
+		if _contracts_fit(scene) != "":
+			unfit.append("%s %s" % [nm, _contracts_fit(scene)])
+		var to_contract: Button = scene.find_child("CardStage_contract", true, false)
+		if short and to_contract != null:
+			await Tap.tap(to_contract)
+			await _settle()
+	_check(shown == rows.size() and unfit.is_empty(),
+			"PC %s: every card shows his time with us and his ratings (%d of %d) and none scrolls (%s)"
+			% [tag, shown, rows.size(), ", ".join(unfit)])
 	# His buttons answer a finger: Release opens its confirm.
 	var mine: Dictionary = {}
 	for p in C.expiring(_state.my_list):

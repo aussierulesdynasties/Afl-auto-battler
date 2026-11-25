@@ -24,6 +24,9 @@ var _scroll_positions := {}
 var _land_on_expiring := false
 ## A PC's Contracts: the man whose card shows beside the list.
 var _pick_id := ""
+## A short PC's Contracts card: "contract" (what he wants and the buttons) or
+## "ratings" (his time with us and every rating); it stays put as he picks men.
+var _card_stage := "contract"
 ## The height under the tabs as last laid out (0 until then): a PC's Contracts
 ## and Our list fill it rather than scroll.
 var _room := 0.0
@@ -173,6 +176,9 @@ func _build() -> void:
 			_budget(body)
 	UiKit.restore_scroll(_scroll_box, int(_scroll_positions.get(_tab, 0)))
 	if _wide() and _tab in ["contracts", "list"]:
+		# These pages fit their window. A scroll bar would take 10 px of width, rewrap the card's
+		# words and grow the page past the window it fitted.
+		_scroll_box.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_NEVER
 		_fit_room(_scroll_box, _room_now())
 	if _land_on_expiring and _tab == "contracts":
 		_land_on_expiring = false
@@ -1407,7 +1413,9 @@ func _status(e: Dictionary) -> Array:
 	if bool(talks.get("walked", false)):
 		return ["Talks broke down", UiKit.BAD]
 	var want := Contracts.wants(p)
-	return ["wants %s for %d" % [Contracts.money(int(want["salary"])), int(want["years"])], UiKit.TEXT]
+	var years := int(want["years"])
+	return ["wants %s for %d %s" % [Contracts.money(int(want["salary"])), years, "season" if years == 1 else "seasons"],
+			UiKit.TEXT]
 
 
 func _contracts_pc(body: VBoxContainer) -> void:
@@ -1455,8 +1463,26 @@ func _contracts_pc(body: VBoxContainer) -> void:
 			continue
 		var p: Dictionary = e["p"]
 		var retiring := not (e["retire"] as Dictionary).is_empty()
-		pv.add_child(_name_row(p, 20))
+		var head := _name_row(p, 20)
+		pv.add_child(head)
+		# A short window can't hold the whole card: Contract and Ratings take turns beside his name.
+		var ratings := _short_pc() and _card_stage == "ratings"
+		if _short_pc():
+			var push := Control.new()
+			push.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			head.add_child(push)
+			head.add_child(UiKit.segmented("CardStage", [["contract", "Contract"], ["ratings", "Ratings"]], _card_stage,
+					func(k):
+						_card_stage = str(k)
+						_build()))
 		pv.add_child(_para(_retiring_detail(p) if retiring else _contract_detail(p), UiKit.SMALL, UiKit.MUTED))
+		if ratings:
+			var w := PlayerSheet.with_us_block(p)
+			if w != null:
+				pv.add_child(UiKit.spacer(UiKit.Space.PAD))
+				pv.add_child(w)
+			_ratings_grid(pv, p)
+			continue
 		pv.add_child(PlayerSheet.top_three(p, UiKit.SECONDARY, _short_pc()))
 		var acts := _decide_parts(e, pv)
 		pv.add_child(UiKit.spacer(UiKit.Space.TIGHT))
@@ -1512,7 +1538,7 @@ func _name_row(p: Dictionary, size: int) -> HBoxContainer:
 
 ## The card also says where he is headed: how he is developing and his match
 ## ratings this season; on a full PC, his time with us and every rating, as the
-## player sheet lists them.
+## player sheet lists them (a short one shows those on its Ratings stage).
 func _decide_more(pv: VBoxContainer, p: Dictionary, short: bool) -> void:
 	pv.add_child(UiKit.spacer(UiKit.Space.TIGHT if short else UiKit.Space.PAD))
 	var dev := _para(GameState.development_state(p), UiKit.SECONDARY if short else UiKit.BODY, UiKit.TEXT)
@@ -1529,6 +1555,11 @@ func _decide_more(pv: VBoxContainer, p: Dictionary, short: bool) -> void:
 	if w != null:
 		pv.add_child(UiKit.spacer(UiKit.Space.TIGHT))
 		pv.add_child(w)
+	_ratings_grid(pv, p)
+
+
+## Every rating, three across, each number right beside its attribute.
+func _ratings_grid(pv: VBoxContainer, p: Dictionary) -> void:
 	var attr: Dictionary = p.get("attr", {}) if p.get("attr") is Dictionary else {}
 	if attr.is_empty():
 		return
@@ -1536,7 +1567,6 @@ func _decide_more(pv: VBoxContainer, p: Dictionary, short: bool) -> void:
 	pv.add_child(UiKit.section("Ratings"))
 	var grid := GridContainer.new()
 	grid.name = "DecideRatings"
-	# Three across, each rating right beside its attribute.
 	grid.columns = 3
 	grid.add_theme_constant_override("h_separation", UiKit.Space.SPREAD)
 	grid.add_theme_constant_override("v_separation", 0)
