@@ -252,8 +252,6 @@ func reload(dataset := Datasets.DEFAULT) -> void:
 		push_error("GameDB: no dataset '%s'; nothing reloaded." % dataset)
 		return
 	reloads += 1
-	# Graded against this dataset's players, as after a fresh launch (P1-6).
-	PlayerProfile.forget_cache()
 	_use_dataset(dataset, row)
 	clubs = _load_clubs()
 	club_order = CLUB_ORDER.duplicate()
@@ -314,6 +312,11 @@ func reload(dataset := Datasets.DEFAULT) -> void:
 	late_draftees = []
 	# Last, so every AFL list, rating and alias above is drawn as before.
 	_load_state_leagues()
+	# Graded against this dataset's players, as after a fresh launch (P1-6).
+	# Here, once every player is rated: a match still on a worker thread works
+	# a missing scale out from `players`, and cleared at the start it read the
+	# new list before any player had his attributes (CI 45648543132).
+	PlayerProfile.forget_cache()
 
 
 	loaded = not players.is_empty()
