@@ -522,6 +522,13 @@ func _show_talks() -> void:
 		v.add_child(_para("Our senior list is full at %d. Release a player first." % RookieList.senior_spots(), 14, UiKit.BAD))
 	elif no_spot != "":
 		v.add_child(_para(RookieList.block_words(GameState.my_list, no_spot) + " Release a player first.", 14, UiKit.BAD))
+	elif _talk_fa:
+		# A spot he fills is one a draft pick needed: say which pick passes.
+		var cost := GameState.signing_costs_pick_line()
+		if cost != "":
+			var pick_cost := _para(cost, 14, UiKit.BAD)
+			pick_cost.name = "FaPickCost"
+			v.add_child(pick_cost)
 	for reason in terms.get("reasons", []):
 		var why := _para(str(reason), 14, UiKit.BAD if bool(terms["refuse"]) else UiKit.TEXT)
 		why.name = "FreeAgentReason"

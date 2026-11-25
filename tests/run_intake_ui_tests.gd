@@ -1081,7 +1081,14 @@ func _test_draft_night_screen(size: Vector2i) -> void:
 		_check(info_r != null and info_r.text != "" and not info_r.text.left(1).is_valid_int(),
 				"The pool's line does not repeat the count the board gives (%s: %s)" % [tag, info_r.text if info_r else "-"])
 		var picks_tab: Button = ui.find_child("SideTab_picks" if size.x >= 760 else "Tab_picks", true, false)
-		_check(picks_tab != null and picks_tab.text == "Picks (%d)" % (at + 1),
+		# The tab counts every pick called, passes included (director,
+		# 2026-11-25: "Show passes as rows"): those before the next pick to show.
+		var next_shown: int = int(draft.pick_history[at + 1]["pick"]) if at + 1 < draft.pick_history.size() else draft.pick_index + 1
+		var passes_shown := 0
+		for g in draft.passed_picks:
+			if int(g["pick"]) < next_shown:
+				passes_shown += 1
+		_check(picks_tab != null and picks_tab.text == "Picks (%d)" % (at + 1 + passes_shown),
 				"The pick log holds back the picks the board has not shown (%s: %s)" % [tag, picks_tab.text if picks_tab else "-"])
 		await create_timer(0.75).timeout
 		_check(ui.find_child("DraftNightStage", true, false) == null and status.text != "Pick %d: %s" % [int(first_rival["pick"]), _db.club_name(str(first_rival["club"]))],
@@ -1093,7 +1100,7 @@ func _test_draft_night_screen(size: Vector2i) -> void:
 				and yours.text == "You're on the clock",
 				"A tap on the board finishes the replay: you are on the clock again (%s: %s)" % [tag, status.text])
 		picks_tab = ui.find_child("SideTab_picks" if size.x >= 760 else "Tab_picks", true, false)
-		_check(picks_tab != null and picks_tab.text == "Picks (%d)" % draft.pick_history.size(),
+		_check(picks_tab != null and picks_tab.text == "Picks (%d)" % (draft.pick_history.size() + draft.passed_picks.size()),
 				"Then the pick log has every pick (%s: %s)" % [tag, picks_tab.text if picks_tab else "-"])
 	# Back cuts the show to the end, beat and replay alike.
 	if draft.is_user_turn():

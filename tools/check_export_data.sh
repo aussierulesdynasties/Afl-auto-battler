@@ -82,6 +82,9 @@ export_path=""
 binary_format/embed_pck=false
 binary_format/architecture="x86_64"
 PRESET
+# The checkout's own import, when it has one, so the ground models (hundreds of MB of glb) are
+# not imported a second time: Godot re-imports only what changed since.
+[ -d "$ROOT/.godot/imported" ] && cp -a "$ROOT/.godot" "$WORK/project/"
 "$GODOT" --headless --path "$WORK/project" --import > "$WORK/import.log" 2>&1
 if ! "$GODOT" --headless --path "$WORK/project" --export-pack "DataCheck" "$WORK/run/game.pck" > "$WORK/export.log" 2>&1 \
 		|| [ ! -s "$WORK/run/game.pck" ]; then
