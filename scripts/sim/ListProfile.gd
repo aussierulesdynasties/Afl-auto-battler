@@ -35,7 +35,7 @@ const FINISH_W := {"goalkicking": 0.5, "accuracy": 0.3, "contested_marking": 0.2
 
 
 static func _a(p: Dictionary, key: String) -> float:
-	return Skills.value(p.get("attr", {}), key, 0.0)
+	return Attributes.value(p.get("attr", {}), key, 0.0)
 
 
 static func _control(p: Dictionary) -> float:

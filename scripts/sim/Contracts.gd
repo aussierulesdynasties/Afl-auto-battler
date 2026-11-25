@@ -191,7 +191,7 @@ static func assign_initial(list: Array) -> Array:
 		else:
 			years = rng.randi_range(1, 2)
 		p["contract_years"] = years
-		p["salary"] = pay(int(p.get("value", 3)))
+		p["salary"] = pay(Ratings.value_of(p))
 	return fresh
 
 
@@ -731,7 +731,7 @@ static func payroll(list: Array) -> int:
 	for p in list:
 		if retired_by(p, money_year):
 			continue
-		total += int(p["salary"]) if p.has("salary") else pay(int(p.get("value", SENIOR_MIN_2027)))
+		total += int(p["salary"]) if p.has("salary") else pay(Ratings.value_of(p))
 	return total
 
 

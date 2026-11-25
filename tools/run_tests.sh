@@ -29,10 +29,6 @@ set -u
 cd "$(dirname "$0")/.." || exit 1
 
 GODOT="${GODOT:-godot}"
-# The suites play on the data without the director's hand-set OVR rows
-# (data/ovr_overrides.csv): they check the rules, not those numbers. Only the
-# ratings suite turns the rows back on, because it tests them.
-export AFL_SKIP_OVR_ROWS=1
 # A caller's SUITE_TIMEOUT applies to every suite. Left unset, a suite listed in
 # tools/ci_long_suites.txt gets the nightly's 3000 s and every other suite 900 s:
 # story needs 488-857 s on a CI runner, so 900 s left no headroom on a machine

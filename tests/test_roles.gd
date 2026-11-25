@@ -176,14 +176,11 @@ func _test_named_players() -> void:
 	# Read on the director's own OVR rows, as the game plays them (the suites
 	# turn them off): his row (Dawson 90) is part of who he is. On his 2026
 	# stats alone Dawson's pressure outruns his handballs and bounces.
-	var skip: bool = GameDB.skip_ovr_overrides
-	GameDB.skip_ovr_overrides = false
 	GameDB.reload()
 	for n in [["SYD", "Errol Gulden"], ["GWS", "Finn Callaghan"], ["GEE", "Max Holmes"], ["ADE", "Jordan Dawson"]]:
 		var star := _find(n[0], n[1])
 		_check(not star.is_empty() and Roles.label(star) == "Inside midfielder",
 				"%s, a top ball-winner, is an inside midfielder (%s)" % [n[1], Roles.label(star)])
-	GameDB.skip_ovr_overrides = skip
 	GameDB.reload()
 	_check(str(_find("GWS", "Josh Kelly").get("role", "")) == "MID" and str(_find("MEL", "Steven May").get("role", "")) == "DEF",
 			"Listed veterans take their real position, not a height roll")
@@ -219,7 +216,7 @@ func _test_engine_rewards_wings() -> void:
 	var centre := []
 	for p in good.ground:
 		if str(p["role"]) == "MID" and not Roles.on_wing(p):
-			centre.append(Skills.engine(p, "contested"))
+			centre.append(Attributes.value(p.get("attr", {}), "contested"))
 	var mean := 0.0
 	for v in centre:
 		mean += v
@@ -233,14 +230,11 @@ func _test_tagger() -> void:
 	var star := _mid("S", 70, 80, 95, 95)
 	_check(Roles.is_tagger(stopper) and Roles.label(stopper) == "Tagger", "A stopper is a tagger")
 	_check(not Roles.is_tagger(star), "A star ball-winner who tackles is not a tagger")
-	# How rare a tagger is, on the data without the hand-set OVR rows.
-	GameDB.skip_ovr_overrides = true
 	GameDB.reload()
 	var n := 0
 	for p in GameDB.players:
 		if Roles.is_tagger(p):
 			n += 1
-	GameDB.skip_ovr_overrides = false
 	GameDB.reload()
 	_check(BalanceGate.held(n >= 8 and n <= 40, "tagger count 8-40"), "Taggers are a specialist few (%d)" % n)
 	# In a match, a tagger on the ground makes the tag bite harder.
@@ -521,14 +515,12 @@ func _test_listed_second_positions() -> void:
 	_check(tag.call("Gryan Miers") == "FWD/MID", "Gryan Miers is a forward who can go through the middle (%s)" % tag.call("Gryan Miers"))
 	for n in ["Zac Williams", "Liam Baker", "Jhye Clark", "Sam De Koning"]:
 		_check(tag.call(n).begins_with("DEF"), "%s is a defender (%s)" % [n, tag.call(n)])
-	var lp := func(listed: String, numbers: String) -> String:
-		return Ratings.listed_primary({"real_pos": listed}, numbers)
-	_check(lp.call("FWD", "MID") == "FWD", "Midfield numbers never move a listed forward")
-	_check(lp.call("DEF", "MID") == "DEF", "Midfield numbers never move a listed defender")
-	_check(lp.call("FWD", "DEF") == "FWD" and lp.call("DEF", "FWD") == "DEF", "Nor does the other line's game")
-	_check(lp.call("FWD", "RUCK") == "RUCK", "A ruck reading (hit-out volume) stands")
-	_check(lp.call("", "MID") == "MID" and lp.call("MID", "DEF") == "DEF" and lp.call("RUC", "MID") == "MID",
-			"Without a forward or back listing, the numbers decide")
+	# His line is his AFL position's (docs/RATING_REBUILD.md §2, Lines).
+	var off_line := ""
+	for p in GameDB.players:
+		if str(p["role"]) != Rating.line_of(Rating.apos_of(p)):
+			off_line += "%s (%s, %s) " % [p.get("real_name", ""), Rating.apos_of(p), p["role"]]
+	_check(off_line == "", "Every player's line is his AFL position's: %s" % off_line)
 	var ld := 0
 	var misread := ""
 	for p in GameDB.players:
@@ -551,16 +543,9 @@ func _test_listed_second_positions() -> void:
 			bad = str(p.get("real_name", ""))
 	_check(fwd >= 210 and def >= 230, "The draft has forward and defensive depth (%d FWD, %d DEF)" % [fwd, def])
 	_check(bad == "", "A second position is never the first (%s)" % bad)
-	var mid := {"role": "MID", "real_pos": "FWD", "gm": 10.0, "gl": 5.0, "mi": 0.0, "rb": 0.0, "onepct": 0.0}
-	_check(Ratings.listed_secondary(mid) == "FWD", "A goalkicking listed forward gets FWD")
-	mid["gl"] = 1.0
-	_check(Ratings.listed_secondary(mid) == "", "A listed forward who does not kick goals or mark inside 50 does not")
-	_check(Ratings.listed_secondary({"role": "DEF", "real_pos": "FWD", "gm": 10.0, "gl": 9.0}) == "",
-			"Only a midfielder on the numbers takes his listed line")
 
-## Save contract (W7, row 91): a career saved before the listing led keeps the
-## positions and OVRs it was saved with. Player dicts are saved whole and never
-## re-derived on load, so no upgrade step: the new reading reaches new careers.
+## Save contract (W7, row 91): a career keeps the positions it was saved with.
+## Its OVRs are read from the saved attributes (Rating.gd), never stored.
 func _test_old_save_keeps_positions() -> void:
 	GameState.reset()
 	GameState.start_season("NTH", GameDB.club_list("NTH"))
@@ -572,20 +557,18 @@ func _test_old_save_keeps_positions() -> void:
 	if him.is_empty():
 		return
 	var id := str(him["id"])
-	# As the build before row 91 rated him (the career holds its own copy).
+	# As a build before row 91 placed him (the career holds its own copy).
 	him["role"] = "MID"
 	him["role2"] = ""
-	var was := Ratings.rate_overall(him["attr"], "MID", Ratings.effective_games(him))
-	him["overall"] = was
 	_check(GameState.save_career(), "The career saves")
 	GameState.reset()
-	_check(GameState.load_career(), "A career saved with the old reading loads")
+	_check(GameState.load_career(), "A career saved with him in the midfield loads")
 	var back: Dictionary = {}
 	for p in GameState.my_list:
 		if str(p.get("id", "")) == id:
 			back = p
-	_check(not back.is_empty() and str(back["role"]) == "MID" and int(back["overall"]) == was,
-			"It keeps the position and OVR it was saved with (%s %s)" % [back.get("role", "?"), back.get("overall", "?")])
+	_check(not back.is_empty() and str(back["role"]) == "MID",
+			"It keeps the position it was saved with (%s)" % back.get("role", "?"))
 	GameState.reset()
 
 
@@ -814,7 +797,7 @@ func _test_top_attributes() -> void:
 ## Needs work against players of his position, in a sentence; all above
 ## average says so; in between says nothing.
 func _test_needs_work_line() -> void:
-	var core: Dictionary = Ratings.ROLE_WEIGHTS["MID"]
+	var core: Dictionary = Rating.shares({"role": "MID"})
 	var low := _mid("N1", 50, 50, 50)
 	var high := _mid("N2", 50, 50, 50)
 	for k in core:

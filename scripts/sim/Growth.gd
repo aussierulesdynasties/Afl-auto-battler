@@ -82,20 +82,18 @@ static func games_to_potential(pot: int) -> float:
 
 
 ## The XP one point of his rating costs now: the cheapest of his position's
-## rating stats, priced as training buys them (GameState._cost_for) against
-## what a point of that stat adds to his rating (Ratings.overall_per_point).
-static func xp_per_point(p: Dictionary, role := "") -> float:
-	if role == "":
-		role = str(p.get("role", "MID"))
+## rated attributes, priced as training buys them (GameState._cost_for)
+## against what a point of that attribute adds to his OVR (its weight at his
+## AFL position, Rating.shares).
+static func xp_per_point(p: Dictionary) -> float:
 	var a: Dictionary = p.get("attr", {})
 	var games := float(p.get("gm", 18.0))
-	var conf_games := Ratings.effective_games(p)
 	var best := 0.0
-	var w: Dictionary = Ratings.ROLE_WEIGHTS.get(role, Ratings.ROLE_WEIGHTS["MID"])
+	var w := Rating.shares(p)
 	for k in w:
 		if not a.has(k) or int(a[k]) >= 99:
 			continue
-		var per := Ratings.overall_per_point(role, str(k), conf_games)
+		var per := float(w[k])
 		if per <= 0.0:
 			continue
 		var price := float(cost(int(a[k]), games)) / per
@@ -249,25 +247,21 @@ static func summer(p: Dictionary, year: int) -> int:
 	if int(p.get("games_missed_injured", 0)) >= INJURY_GAMES:
 		last -= INJURY_CUT
 		p["career_last"] = last
-	var role := str(p.get("role", "MID"))
-	var games := Ratings.effective_games(p)
 	if year >= int(round(last)):
 		# His career is over: the season's gains were temporary, and he falls.
 		_take_back(a, p.get("season_gains", {}), 1.0)
 		p["attr"] = a
-		var now := Ratings.rate_overall(a, role, games)
+		var now := int(Rating.ovr(p))
 		var n := int(p.get("decline_n", 0))
 		var fall := int(FALL[n % FALL.size()])
 		p["decline_n"] = n + 1
-		p["attr"] = Prospects.fit_attributes(a, role, float(now - fall), games)
+		p["attr"] = Prospects.fit_attributes(a, Rating.apos_of(p), float(now - fall))
 	elif p.has("peak_year") and not (p.get("over_gains", {}) as Dictionary).is_empty():
 		var peak := int(p["peak_year"])
 		var span := maxf(1.0, round(last) - float(peak))
 		var f := clampf(TAKE_FIRST + (1.0 - TAKE_FIRST) * float(year - peak) / span, TAKE_FIRST, 1.0)
 		_take_back(a, p["over_gains"], f)
 		p["attr"] = a
-	p["overall"] = Ratings.rate_overall(p["attr"], role, games)
-	p["value"] = Ratings.salary_value(int(Rating.ovr(p)))
 	return int(Rating.ovr(p)) - ov
 
 
@@ -276,7 +270,7 @@ static func summer(p: Dictionary, year: int) -> int:
 ## audits and tests that need a class some seasons on; the season itself
 ## grows players game by game (GameState._grant_xp).
 static func play_games(p: Dictionary, games: int) -> void:
-	var w: Dictionary = Ratings.ROLE_WEIGHTS.get(str(p.get("role", "MID")), Ratings.ROLE_WEIGHTS["MID"])
+	var w := Rating.shares(p)
 	for g in range(games):
 		p["xp_match"] = float(p.get("xp_match", 0.0)) + match_xp(p, 1.0)
 		p["xp"] = float(p.get("xp", 0.0)) + train_xp(p)
@@ -313,12 +307,8 @@ static func breakouts(code: String, arr: Array, year: int) -> Array:
 		if rng.randf() >= chance:
 			continue
 		var jump := rng.randi_range(int(BREAKOUT_JUMP[0]), int(BREAKOUT_JUMP[1]))
-		var role := str(p.get("role", "MID"))
-		var games := Ratings.effective_games(p)
 		var ov := int(Rating.ovr(p))
-		p["attr"] = Prospects.fit_attributes(p["attr"], role, float(ov + jump), games)
-		p["overall"] = Ratings.rate_overall(p["attr"], role, games)
-		p["value"] = Ratings.salary_value(int(Rating.ovr(p)))
+		p["attr"] = Prospects.fit_attributes(p["attr"], Rating.apos_of(p), float(ov + jump))
 		var story: Array = p.get("breakouts", [])
 		story.append([year, int(Rating.ovr(p)) - ov])
 		p["breakouts"] = story

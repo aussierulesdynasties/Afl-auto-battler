@@ -1,33 +1,31 @@
 extends RefCounted
-## The overall rating (Ratings.rate_overall) describes what the match engine
-## rewards: each role's core is built from the attributes Squad and MatchSim
-## use for that role, the scale stays bounded and position-fair, a list's
-## mean OVR tracks its engine strength, and a loaded save re-derives OVR from
-## the attributes. Run through tests/run_ratings_tests.gd.
+## The overall rating is read from the attributes and nothing else (Director
+## Bible 4.2.30a, docs/RATING_REBUILD.md §2-§3): each position's weights add to
+## 100, a flat 60 reads 60 everywhere, an attribute moves only the positions
+## that weigh it, out of position takes the director's share off Technical and
+## Footy IQ only, selection and pay read the same derived number, and a save
+## never carries an OVR of its own. Run through tests/run_ratings_tests.gd.
 
 var failures: Array[String] = []
 var checks := 0
 
-## Every season and draft here is seeded (C15): a clock seed makes a different
-## league each run.
+## Every season here is seeded (C15): a clock seed makes a different league
+## each run.
 const SUITE_SEED := 2027
-const BalanceGate := preload("res://tests/balance_gate.gd")
 
 
 func run() -> void:
 	failures.clear()
 	checks = 0
 	GameState.replay_seed = SUITE_SEED
-	GameDB.skip_ovr_overrides = false     # this suite tests the hand-set rows
-	GameDB.reload()
 	_t("_test_weights")
-	_t("_test_role_attributes")
-	_t("_test_archetypes")
-	_t("_test_scale")
-	_t("_test_ovr_tracks_strength")
-	_t("_test_save_recomputes")
-	_t("_test_attr_adjustment")
-	_t("_test_ovr_overrides")
+	_t("_test_flat_reads_flat")
+	_t("_test_weighted_only")
+	_t("_test_better_never_lower")
+	_t("_test_derived_not_stored")
+	_t("_test_out_of_position")
+	_t("_test_selection_and_pay_read_it")
+	_t("_test_save_carries_no_ovr")
 	GameState.delete_saved_career()
 	GameState.replay_seed = 0
 	print(Ran.line("Ratings", self))
@@ -40,350 +38,162 @@ func _check(condition: bool, message: String) -> void:
 		push_error(message)
 
 
-## A flat 50 in every attribute.
-
 ## Runs one test function; it must make at least one check (tests/functions_ran.gd).
 const Ran := preload("res://tests/functions_ran.gd")
 func _t(test: String, args := []) -> Variant:
 	return await Ran.one(self, test, args)
-func _base() -> Dictionary:
+
+
+## Every attribute at `x`.
+func _flat(x: int) -> Dictionary:
 	var a := {}
-	for k in Skills.KEYS:
-		a[k] = 50
+	for k in Attributes.KEYS:
+		a[k] = x
 	return a
 
 
-func _ov(a: Dictionary, role: String) -> int:
-	return Ratings.rate_overall(a, role, 20.0)
-
-
-func _with(role: String, changes: Dictionary) -> int:
-	var a := _base()
-	for k in changes:
-		a[k] = changes[k]
-	return _ov(a, role)
-
-
+## Seven positions, each weighting real attributes, each adding to 100.
 func _test_weights() -> void:
-	var ok := true
-	for role in Ratings.ROLE_WEIGHTS:
-		var total := 0.0
-		for k in Ratings.ROLE_WEIGHTS[role]:
-			total += float(Ratings.ROLE_WEIGHTS[role][k])
-			if not _base().has(k):
-				ok = false
-		if absf(total - 1.0) > 0.005:
-			ok = false
-	_check(ok, "Every line's weighting is of real skills and adds to 1 (to the fit's rounding)")
+	_check(Rating.POSITIONS.size() == 7, "seven AFL positions (%d)" % Rating.POSITIONS.size())
+	for apos in Rating.POSITIONS:
+		var w: Dictionary = Rating.WEIGHTS.get(apos, {})
+		var total := 0
+		var known := true
+		for k in w:
+			total += int(w[k])
+			known = known and Attributes.KEYS.has(k)
+		_check(total == 100, "%s's weights add to 100 (%d)" % [apos, total])
+		_check(known, "%s weighs only the 18 attributes" % apos)
+		_check(not w.has("durability"), "%s gives Durability no share of OVR (it is priced in Worth)" % apos)
 
 
-## Each line's rating moves with the skills its AFL Player Rating rewards
-## (Ratings.ROLE_WEIGHTS, the Wheelo fit; director's interview 2026-11-15),
-## and not with the ones it gives no share.
-func _test_role_attributes() -> void:
-	var cases := [
-		["MID", "contested", "Contested ball lifts a midfielder"],
-		["MID", "creating", "Creating lifts a midfielder"],
-		["MID", "carry", "Carry lifts a midfielder"],
-		["MID", "pressure", "Pressure lifts a midfielder"],
-		["DEF", "intercept", "Intercepting lifts a defender"],
-		["DEF", "kicking", "Kicking lifts a defender"],
-		["FWD", "goalkicking", "Goalkicking lifts a forward"],
-		["FWD", "creating", "Creating lifts a forward"],
-		["FWD", "pressure", "Pressure lifts a forward"],
-		["RUCK", "ruck", "Ruck work lifts a ruck"],
-		["RUCK", "contested", "Contested ball lifts a ruck"],
-	]
-	var flat := {}
-	for role in ["MID", "DEF", "FWD", "RUCK"]:
-		flat[role] = _with(role, {})
-	for c in cases:
-		_check(_with(c[0], {c[1]: 80}) >= int(flat[c[0]]) + 2, "%s (%d -> %d)" % [c[2], int(flat[c[0]]), _with(c[0], {c[1]: 80})])
-	var unused := []
-	for role in ["MID", "DEF", "FWD", "RUCK"]:
-		for k in Skills.KEYS:
-			if not (Ratings.ROLE_WEIGHTS[role] as Dictionary).has(k):
-				unused.append([role, k])
-	var still := true
-	for c in unused:
-		if _with(c[0], {c[1]: 90}) != int(flat[c[0]]):
-			still = false
-	_check(not unused.is_empty() and still,
-			"A skill a line's rating gives no share leaves that line's rating alone (%d cases)" % unused.size())
-	# Star power and durability count for everyone.
-	_check(_with("DEF", {"star": 80}) > int(flat["DEF"]) and _with("FWD", {"durability": 90}) > int(flat["FWD"]),
-			"Star power and durability count in every line")
+## The weights are shares: every attribute at 60 reads 60 at every position.
+func _test_flat_reads_flat() -> void:
+	for x in [30, 60, 90]:
+		for apos in Rating.POSITIONS:
+			_check(Rating.of_attrs(_flat(x), apos) == x, "a flat %d reads %d as a %s (%d)" % [
+					x, x, apos, Rating.of_attrs(_flat(x), apos)])
 
 
-## Players the AFL Player Rating rewards most rate higher within their line.
-func _test_archetypes() -> void:
-	var reader := _with("DEF", {"intercept": 85, "kicking": 75})
-	var stopper := _with("DEF", {"pressure": 85, "speed": 80})
-	_check(reader > stopper, "A defender who intercepts and uses it outrates one who only chases and tackles (%d v %d)" % [reader, stopper])
-	var bull := _with("MID", {"contested": 85, "creating": 70})
-	var pretty := _with("MID", {"kicking": 85, "pressure": 80, "contested": 40})
-	_check(bull > pretty, "An inside midfielder who wins the ball and sets up scores outrates an outside one who does not (%d v %d)" % [bull, pretty])
-	var target := _with("FWD", {"goalkicking": 80, "creating": 75, "accuracy": 70})
-	var runner := _with("FWD", {"kicking": 80, "carry": 80, "pressure": 80})
-	_check(target > runner, "A forward who kicks goals and sets them up outrates a running one who does not score (%d v %d)" % [target, runner])
-	var tapper := _with("RUCK", {"ruck": 85})
-	var mobile := _with("RUCK", {"ruck": 45, "kicking": 80, "intercept": 80})
-	_check(tapper > mobile, "A ruck who wins the tap outrates one who does not (%d v %d)" % [tapper, mobile])
+## Raising an attribute lifts a position by its weight, and leaves a position
+## that gives it no weight exactly where it was.
+func _test_weighted_only() -> void:
+	var lifted := 0
+	var still := 0
+	for apos in Rating.POSITIONS:
+		var w: Dictionary = Rating.WEIGHTS[apos]
+		for k in Attributes.KEYS:
+			var a := _flat(50)
+			a[k] = 90
+			var got := Rating.of_attrs(a, apos)
+			var want := int(round(50.0 + 40.0 * float(w.get(k, 0)) / 100.0))
+			if got != want:
+				_check(false, "%s at 90 makes a %s %d, want %d" % [k, apos, got, want])
+			elif w.has(k):
+				lifted += 1
+			else:
+				still += 1
+	_check(lifted > 50 and still > 30, "each attribute moves exactly the positions that weigh it (%d lifted, %d unmoved)" % [lifted, still])
 
 
-## The real 2026 pool on the new scale: bounded, no crowd of 90s, every
-## position able to reach the high 80s, nobody near the retirement floor.
-func _test_scale() -> void:
-	var by_role := {"MID": [], "DEF": [], "FWD": [], "RUCK": []}
-	var nineties := 0
-	var lo := 99
-	var hi := 1
-	for p in GameDB.players:
-		var ov := int(p["overall"])
-		(by_role[str(p["role"])] as Array).append(ov)
-		nineties += 1 if ov >= 90 else 0
-		lo = mini(lo, ov)
-		hi = maxi(hi, ov)
-	_check(BalanceGate.held(lo >= 36 and hi <= 97, "ratings: 2026 scale range"), "2026 ratings stay on the scale, clear of the retirement floor (%d-%d)" % [lo, hi])
-	_check(BalanceGate.held(nineties >= 1 and nineties <= 8, "ratings: 90+ player count"), "Only a handful of 90+ players (%d)" % nineties)
-	var fair := true
-	var meds := []
-	for role in by_role:
-		var v: Array = by_role[role]
-		v.sort()
-		meds.append(int(v[v.size() / 2]))
-		if int(v[-1]) < 84:
-			fair = false
-	_check(BalanceGate.held(fair, "ratings: position tops reach mid 80s"), "Every position's best reach the mid 80s or better")
-	_check(BalanceGate.held(meds.max() - meds.min() <= 6, "ratings: position median spread"), "Position medians stay close together (%s)" % str(meds))
+## A better player never rates lower: every attribute up one never takes
+## OVR down, at any position.
+func _test_better_never_lower() -> void:
 	var mono := true
-	for role in Ratings.ROLE_WEIGHTS:
-		var last := -INF
+	for apos in Rating.POSITIONS:
+		var last := -1
 		for x in range(1, 100):
-			var a := {}
-			for k in Skills.KEYS:
-				a[k] = x
-			var y := float(Ratings.rate_overall(a, role, 22.0))
-			if y < last:
-				mono = false
+			var y := Rating.of_attrs(_flat(x), apos)
+			mono = mono and y >= last
 			last = y
-	_check(mono, "A better player never rates lower")
+	_check(mono, "a better player never rates lower")
 
 
-## Across the 18 real lists, a higher mean selected-22 OVR means a higher
-## engine strength - the point of the rating.
-func _test_ovr_tracks_strength() -> void:
-	var xs := []
-	var ys := []
-	for code in GameDB.CLUB_ORDER:
-		var list: Array = GameDB.club_list(code)
-		if list.is_empty():
-			continue
-		var sq := Squad.new(code, list, false, code)
-		var total := 0.0
-		for p in sq.ground + sq.bench:
-			total += float(p["overall"])
-		xs.append(total / float(sq.ground.size() + sq.bench.size()))
-		ys.append(sq.strength())
-	var r := _pearson(xs, ys)
-	_check(BalanceGate.held(r >= 0.80, "ratings: OVR tracks engine strength"), "Selected-22 OVR tracks engine strength across the real lists (r = %.2f)" % r)
+## OVR is worked out when it is read: a player dictionary has no "overall",
+## and one written there by mistake is ignored.
+func _test_derived_not_stored() -> void:
+	var players: Array = GameDB.players
+	_check(players.size() > 500, "the league has its players (%d)" % players.size())
+	var stored := 0
+	var wrong := 0
+	for p in players:
+		if (p as Dictionary).has("overall"):
+			stored += 1
+		if int(Rating.ovr(p)) != Rating.of_attrs(p["attr"], Rating.apos_of(p)):
+			wrong += 1
+	_check(stored == 0, "no real player carries a stored OVR (%d do)" % stored)
+	_check(wrong == 0, "every real player's OVR is his attributes at his position (%d differ)" % wrong)
+	var p: Dictionary = (players[0] as Dictionary).duplicate(true)
+	var right := int(Rating.ovr(p))
+	p["overall"] = 99
+	_check(int(Rating.ovr(p)) == right, "a stray stored 99 does not change his OVR (%d)" % int(Rating.ovr(p)))
+	_check(Rating.ovr({}) == null and Rating.ovr({}, 40) == 40, "no attributes reads the fallback")
 
 
-func _pearson(xs: Array, ys: Array) -> float:
-	var n := float(xs.size())
-	var mx := 0.0
-	var my := 0.0
-	for i in range(xs.size()):
-		mx += float(xs[i]) / n
-		my += float(ys[i]) / n
-	var sxy := 0.0
-	var sxx := 0.0
-	var syy := 0.0
-	for i in range(xs.size()):
-		sxy += (float(xs[i]) - mx) * (float(ys[i]) - my)
-		sxx += pow(float(xs[i]) - mx, 2)
-		syy += pow(float(ys[i]) - my, 2)
-	return sxy / sqrt(sxx * syy) if sxx > 0.0 and syy > 0.0 else 0.0
+## The director's out-of-position shares (2026-11-25): 5% a step, Ruck 25%,
+## key defender to key forward 10%, a key player into the midfield 20%; taken
+## off Technical and Footy IQ only.
+func _test_out_of_position() -> void:
+	_check(is_equal_approx(Rating.cut("Gen. Defender", "Midfielder"), 0.05), "one step along the ground costs 5%")
+	_check(is_equal_approx(Rating.cut("Gen. Defender", "Gen. Forward"), 0.15), "three steps cost 15%")
+	_check(is_equal_approx(Rating.cut("Key Defender", "Key Forward"), 0.10)
+			and is_equal_approx(Rating.cut("Key Forward", "Key Defender"), 0.10), "a swingman costs 10% either way")
+	_check(is_equal_approx(Rating.cut("Key Defender", "Midfielder"), 0.20)
+			and is_equal_approx(Rating.cut("Key Forward", "Midfielder"), 0.20), "a key player in the midfield costs 20%")
+	var rucks := true
+	for apos in Rating.POSITIONS:
+		if apos != "Ruck":
+			rucks = rucks and is_equal_approx(Rating.cut(apos, "Ruck"), 0.25) and is_equal_approx(Rating.cut("Ruck", apos), 0.25)
+	_check(rucks, "into or out of the ruck costs 25%")
+	_check(is_equal_approx(Rating.cut("Midfielder", "Midfielder"), 0.0), "his own position costs nothing")
+	# A Key Defender with 80 in everything, in the midfield: Technical and Footy
+	# IQ at 64, Physical and Mental untouched, rated as a Midfielder.
+	var kd := {"apos": "Key Defender", "attr": _flat(80)}
+	var a := _flat(80)
+	for k in Attributes.TECHNICAL + Attributes.FOOTY_IQ:
+		a[k] = 64
+	_check(Rating.at_line(kd, "MID") == Rating.of_attrs(a, "Midfielder"),
+			"a key defender in the midfield is rated a Midfielder with his skills 20%% down (%d, want %d)" % [
+					Rating.at_line(kd, "MID"), Rating.of_attrs(a, "Midfielder")])
+	_check(Rating.at_line(kd, "DEF") == 80, "in his own line he reads his own OVR (%d)" % Rating.at_line(kd, "DEF"))
+	_check(Rating.spot_position("Key Defender", "FWD") == "Key Forward", "a key defender up forward plays key forward (the closest)")
+	var phys := {"apos": "Midfielder", "attr": _flat(0)}
+	for k in Attributes.PHYSICAL:
+		phys["attr"][k] = 80
+	var fwd := Rating.spot_position("Midfielder", "FWD")
+	_check(Rating.at_line(phys, "FWD") == Rating.of_attrs(phys["attr"], fwd),
+			"Physical attributes carry to another line untouched (%d, want %d as a %s)" % [
+					Rating.at_line(phys, "FWD"), Rating.of_attrs(phys["attr"], fwd), fwd])
 
 
-## OVR is derived data: a save carrying an out-of-date rating is corrected
-## on load (with POT moved by the same amount), and a current one is not
-## touched.
-func _test_save_recomputes() -> void:
+## Selection rates a man at a slot by Rating.at_line, and the salary curve
+## prices his derived OVR.
+func _test_selection_and_pay_read_it() -> void:
+	var n := 0
+	var same := true
+	var paid := true
+	for p in GameDB.players:
+		n += 1
+		for line in ["DEF", "MID", "FWD", "RUCK"]:
+			same = same and is_equal_approx(Ratings.line_rating(p, line), float(Rating.at_line(p, line)))
+		paid = paid and Ratings.value_of(p) == Ratings.salary_value(int(Rating.ovr(p)))
+	_check(n > 500, "rated the league (%d)" % n)
+	_check(same, "selection's rating at a slot is Rating.at_line")
+	_check(paid, "his value is the salary curve at his derived OVR")
+
+
+## A save writes attributes, never an OVR, and a loaded player reads the same
+## OVR he had.
+func _test_save_carries_no_ovr() -> void:
 	GameState.reset()
 	GameState.start_season("GEE", GameDB.club_list("GEE"))
 	var p: Dictionary = GameState.my_list[0]
 	var id := str(p["id"])
-	var right := int(p["overall"])
-	var pot := int(p["potential"])
-	var other: Dictionary = GameState.my_list[1]
-	var other_ov := int(other["overall"])
-	var other_pot := int(other["potential"])
-	p["overall"] = right - 7          # as an older formula might have rated him
-	p["value"] = Ratings.salary_value(right - 7)
-	p["potential"] = pot - 7
+	var right := int(Rating.ovr(p))
+	p["overall"] = right - 7          # as an older build might have written it
 	GameState.save_career()
+	_check(FileAccess.file_exists(GameState.save_path), "the career saved")
 	GameState.load_career()
 	var q := GameState.list_player(id)
-	_check(int(q["overall"]) == right and int(q["overall"]) == Ratings.rate_overall(q["attr"], str(q["role"]), Ratings.effective_games(q)),
-			"A stale saved OVR is re-derived from the attributes on load (%d)" % int(q["overall"]))
-	_check(int(q["value"]) == Ratings.salary_value(right), "Its salary value follows")
-	_check(int(q["potential"]) == pot, "POT moves with it, keeping his headroom (%d)" % int(q["potential"]))
-	var o := GameState.list_player(str(other["id"]))
-	_check(int(o["overall"]) == other_ov and int(o["potential"]) == other_pot, "A current rating is left exactly as it was")
-	# Every player on every list agrees with the formula after a load.
-	var agree := true
-	for code in GameState.season.lists:
-		for x in GameState.season.lists[code]:
-			if int(x["overall"]) != Ratings.rate_overall(x["attr"], str(x["role"]), Ratings.effective_games(x)):
-				agree = false
-	_check(agree, "Every loaded rating matches the current formula")
-
-
-## The director's named-player corrections (Ratings.ATTR_ADJUSTMENTS: Harvey
-## Langford 15%, Connor Rozee 10%, Jake Bowey the least that lifts his OVR 5%):
-## every skill that much higher than his rating file gives, capped at 99, rated
-## normally from there. Each applies exactly once, and nobody else moves.
-## Bowey's POT is 5% up too (data/potential_overrides.csv, "+5%").
-func _test_attr_adjustment() -> void:
-	var with: Array = GameDB._load_players()
-	var without: Array = GameDB._load_players()
-	Ratings.derive_all(with)
-	Ratings.derive_all(without)
-	GameDB._apply_rating_stats(with)
-	GameDB._apply_rating_stats(without, false)
-	var named := {}    # index in the data -> his factor
-	for j in range(without.size()):
-		var key := "%s|%s %s" % [without[j]["club"], without[j]["first"], without[j]["last"]]
-		if Ratings.ATTR_ADJUSTMENTS.has(key):
-			named[j] = float(Ratings.ATTR_ADJUSTMENTS[key])
-	_check(named.size() == Ratings.ATTR_ADJUSTMENTS.size(),
-			"(setup) every corrected player is in the data (%d of %d)" % [named.size(), Ratings.ATTR_ADJUSTMENTS.size()])
-	for j in named:
-		var f: float = named[j]
-		var who := "%s %s" % [with[j]["first"], with[j]["last"]]
-		var a: Dictionary = with[j]["attr"]
-		var raw: Dictionary = without[j]["attr"]
-		var exact := true
-		for k in raw:
-			exact = exact and int(a[k]) == clampi(int(round(float(raw[k]) * f)), 1, 99)
-		_check(exact and int(with[j]["overall"]) > int(without[j]["overall"]),
-				"%s's skills are %d%% above his rating file (OVR %d, from %d)" % [
-					who, int(round((f - 1.0) * 100.0)), int(with[j]["overall"]), int(without[j]["overall"])])
-		_check(str(with[j]["role"]) == str(without[j]["role"]), "%s's position is unchanged" % who)
-	for j in named:
-		if str(with[j]["last"]) != "Bowey":
-			continue
-		var role := str(with[j]["role"])
-		var games := float(with[j].get("gm", 14))
-		var from := int(without[j]["overall"])
-		var target := int(round(float(from) * 1.05))
-		# The smallest factor, in thousandths, that reaches his 5% up.
-		var least := 0.0
-		for t in range(1000, 1400):
-			var b := {}
-			for k in without[j]["attr"]:
-				b[k] = clampi(int(round(float(without[j]["attr"][k]) * float(t) / 1000.0)), 1, 99)
-			if Ratings.rate_overall(b, role, games) >= target:
-				least = float(t) / 1000.0
-				break
-		_check(int(with[j]["overall"]) == target,
-				"Jake Bowey's OVR is 5%% up, %d to %d (it is %d)" % [from, target, int(with[j]["overall"])])
-		_check(is_equal_approx(float(Ratings.ATTR_ADJUSTMENTS["MEL|Jake Bowey"]), least),
-				"Jake Bowey's factor is the smallest that gives %d (%.3f; it is %.3f)" % [
-					target, least, float(Ratings.ATTR_ADJUSTMENTS["MEL|Jake Bowey"])])
-	var bowey_pot := 0
-	var bowey_ovr := 0
-	for p in GameDB.players:
-		if str(p["club"]) == "MEL" and str(p["last"]) == "Bowey":
-			bowey_pot = int(p["potential"])
-			bowey_ovr = int(p["overall"])
-	var plain := []
-	for p in GameDB._load_players():
-		if str(p["club"]) == "MEL" and str(p["last"]) == "Bowey":
-			plain.append(p)
-	Ratings.derive_all(plain)
-	GameDB._apply_rating_stats(plain)
-	GameDB._apply_history(plain)
-	for p in plain:
-		Ratings.rate_on_record(p, GameDB.DATA_SEASON)
-		Ratings.rate_on_honours(p)
-		Potential.assign(p)
-	if not plain.is_empty():
-		var want := clampi(int(round(float(plain[0]["potential"]) * 1.05)), bowey_ovr, Potential.MAX_POT)
-		_check(bowey_pot == want, "Jake Bowey's POT is 5%% up, %d to %d (it is %d)" % [
-				int(plain[0]["potential"]), want, bowey_pot])
-	var others_same := true
-	for j in range(with.size()):
-		if not named.has(j) and (with[j]["attr"] != without[j]["attr"]
-				or int(with[j]["overall"]) != int(without[j]["overall"])):
-			others_same = false
-	_check(others_same, "Nobody else's ratings move")
-	# Applied once: rating the same players again starts from the rating file,
-	# not from the corrected skills, so nothing compounds.
-	var before := {}
-	for j in named:
-		before[j] = (with[j]["attr"] as Dictionary).duplicate()
-	Ratings.derive_all(with)
-	GameDB._apply_rating_stats(with)
-	var stable := true
-	for j in named:
-		stable = stable and with[j]["attr"] == before[j]
-	_check(stable, "A second rating pass does not apply a correction twice")
-
-
-## Hand-set OVR (data/ovr_overrides.csv): each named player reads his target, his
-## strongest attributes keep their order, and a typo'd row is reported, not lost.
-func _test_ovr_overrides() -> void:
-	_check(GameDB.override_unmatched.is_empty(),
-			"every shipped override row finds his player: %s" % str(GameDB.override_unmatched))
-	var rows := GameDB._read_rows(GameDB.OVR_CSV)
-	_check(rows.size() >= 2, "ovr_overrides.csv has rows")
-	var raw: Array = GameDB._load_players()
-	Ratings.derive_all(raw)
-	GameDB._apply_rating_stats(raw)
-	for i in range(1, rows.size()):
-		var c: Array = rows[i]
-		if str(c[3]).ends_with("%"):
-			continue
-		var who: Dictionary = _find(c)
-		if who.is_empty():
-			continue
-		_check(int(who["overall"]) == int(c[3]), "%s reads OVR %s, got %d" % [c[2], c[3], int(who["overall"])])
-		_check(int(who["potential"]) >= int(who["overall"]), "%s POT is not below OVR" % c[2])
-		var before := _find_in(raw, c)
-		if not before.is_empty() and int(c[3]) > int(before["overall"]):
-			# Raised: his best attribute is still a best one (a tie at 99 is fine).
-			var top: String = _top3(before["attr"])[0]
-			var mx := 0
-			for k in who["attr"]:
-				mx = maxi(mx, int(who["attr"][k]))
-			_check(int(who["attr"][top]) == mx, "%s keeps his strength (%s): %s" % [c[2], top, str(who["attr"])])
-	# Director, 2026-11-08: Blicavs is a 65 wherever he plays.
-	var blicavs := _find(["GEE", "Mark", "Blicavs"])
-	_check(int(blicavs["overall"]) == 65, "Blicavs reads 65 (got %d)" % int(blicavs["overall"]))
-	for line in Ratings.ROLE_WEIGHTS:
-		_check(Ratings.line_rating(blicavs, line) <= 65.0,
-				"Blicavs's 65 holds at %s (got %.0f)" % [line, Ratings.line_rating(blicavs, line)])
-	# An unmatched row is reported, not lost.
-	GameDB.override_hits = {}
-	_check(GameDB._report_unmatched_overrides().size() >= rows.size() - 1, "unmatched rows are reported")
-	GameDB.reload()
-
-
-func _find(c: Array) -> Dictionary:
-	var r := _find_in(GameDB.players, c)
-	return r if not r.is_empty() else _find_in(GameDB.list_additions, c)
-
-
-func _find_in(list: Array, c: Array) -> Dictionary:
-	for p in list:
-		if p["club"] == str(c[0]) and p["first"] == str(c[1]) and p["last"] == str(c[2]):
-			return p
-	return {}
-
-
-func _top3(a: Dictionary) -> Array:
-	var ks: Array = a.keys()
-	ks.sort_custom(func(x, y): return int(a[x]) > int(a[y]) or (int(a[x]) == int(a[y]) and str(x) < str(y)))
-	return ks.slice(0, 3)
+	_check(not q.is_empty() and not q.has("overall"), "the stray OVR is not written, so a loaded player has none")
+	_check(int(Rating.ovr(q)) == right, "his OVR reads the same after a load (%d, was %d)" % [int(Rating.ovr(q)), right])

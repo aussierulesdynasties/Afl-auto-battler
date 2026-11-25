@@ -1,725 +1,725 @@
-club,first,last,src,apos,speed_src,speed,endurance,strength,work_rate,kicking,handballing,marking,contested_marking,one_on_one,contested_ball,goalkicking,ruck,vision,reading_play,pressure,forward_craft,discipline,durability
-ADE,Jordan,Dawson,2026,Midfielder,est,62,61,58,78,47,27,68,33,31,62,99,12,66,48,87,32,29,87
-ADE,Sam,Berry,2026,Midfielder,20m,61,29,76,36,50,29,41,35,31,81,27,31,54,41,93,7,37,95
-ADE,Izak,Rankine,2026,Midfielder,gps,98,52,67,49,52,37,62,34,17,76,82,15,63,38,77,31,44,87
-ADE,Josh,Worrell,2026,Gen. Defender,20m,49,77,25,45,75,50,80,19,60,36,41,3,25,98,37,2,59,95
-ADE,Wayne,Milera,2026,Gen. Defender,gps,74,56,50,42,70,63,81,27,41,34,76,4,39,78,40,9,56,79
-ADE,Rory,Laird,2026,Gen. Defender,gps,77,50,63,21,53,49,93,15,29,31,60,4,34,75,41,3,61,79
-ADE,James,Peatling,2026,Midfielder,20m,58,27,48,14,37,40,43,10,28,65,16,12,49,34,77,9,58,83
-ADE,Brayden,Cook,2026,Midfielder,20m,50,54,38,25,63,52,67,33,29,38,84,5,50,49,48,21,65,95
-ADE,Josh,Rachele,2026,Gen. Forward,est,66,54,53,34,49,36,48,23,8,41,99,5,69,24,55,56,38,99
-ADE,Alex,Neal-Bullen,2026,Gen. Forward,gps,82,61,53,54,41,43,56,10,5,38,30,4,56,36,73,31,64,91
-ADE,Ben,Keays,2026,Gen. Forward,20m,39,69,64,40,39,42,40,16,9,34,80,3,70,17,63,44,56,99
-ADE,Jake,Soligo,2026,Mid-Forward,est,60,36,60,24,32,35,44,11,50,46,59,7,52,35,74,21,36,87
-ADE,Max,Michalanney,2026,Gen. Defender,20m,60,62,29,13,74,45,70,37,48,21,29,2,24,50,44,4,58,99
-ADE,Riley,Thilthorpe,2026,Key Forward,20m,62,64,61,54,50,13,52,99,31,38,50,16,58,15,35,84,58,87
-ADE,Daniel,Curtin,2026,Midfielder,est,60,47,61,35,59,46,52,57,42,50,37,24,53,41,65,12,60,72
-ADE,Lachlan,McAndrew,2026,Ruck,est,35,29,55,55,36,26,25,48,54,67,40,82,49,26,64,12,18,95
-ADE,Luke,Nankervis,2026,Gen. Defender,est,65,39,43,14,52,58,52,27,48,29,61,3,26,66,47,11,62,72
-ADE,Zac,Taylor,2026,Gen. Forward,est,65,32,38,22,65,34,43,11,19,29,87,3,57,24,54,25,74,87
-ADE,Hugo,Hall-Kahan,2026,Gen. Defender,est,65,48,40,45,68,51,64,9,50,28,40,3,32,51,39,9,64,52
-ADE,Isaac,Cumming,2026,Midfielder,gps,80,38,53,2,60,68,57,33,36,34,99,5,43,43,53,17,50,68
-ADE,James,Borlase,2026,Key Defender,20m,26,79,65,20,48,49,52,63,92,22,7,2,13,66,25,2,74,75
-ADE,Taylor,Walker,2026,Key Forward,est,47,47,67,43,63,30,55,66,19,24,87,2,55,11,32,82,51,72
-ADE,Darcy,Fogarty,2026,Key Forward,est,47,56,59,34,55,4,57,63,11,29,99,2,50,10,35,88,46,64
-ADE,Mark,Keane,2026,Key Defender,est,47,87,50,38,48,55,57,65,89,23,19,2,18,86,27,2,35,44
-ADE,Nick,Murray,2026,Key Defender,est,47,86,57,48,73,54,61,38,83,22,44,2,21,66,31,6,53,44
-ADE,Jordon,Butts,2026,Key Defender,est,46,75,23,27,51,46,58,60,70,27,6,3,14,78,22,4,47,36
-ADE,Callum,Ah Chee,2026,Gen. Forward,est,66,30,42,31,61,28,48,11,17,27,67,3,51,19,47,38,50,36
-ADE,Luke,Pedlar,2026,Gen. Forward,est,65,23,43,19,47,7,43,32,9,26,82,3,38,18,46,38,69,40
-ADE,Toby,Murray,2026,Ruck,est,34,1,43,16,56,21,32,28,52,36,67,40,36,15,37,28,49,52
-ADE,Hugh,Bond,2026,Gen. Defender,est,65,62,43,12,53,53,60,8,47,24,38,3,20,60,44,6,64,28
-BRL,Lachie,Neale,2026,Midfielder,gps,66,59,96,39,52,36,75,11,20,88,11,19,70,37,65,15,71,99
-BRL,Will,Ashcroft,2026,Midfielder,est,63,60,62,79,36,61,71,5,5,72,50,16,82,29,67,25,51,99
-BRL,Josh,Dunkley,2026,Midfielder,est,61,51,66,48,33,40,64,50,19,60,27,10,55,40,99,13,46,99
-BRL,Zac,Bailey,2026,Mid-Forward,est,61,63,65,58,46,50,74,46,8,51,70,9,84,22,67,47,48,95
-BRL,Darcy,Wilmot,2026,Gen. Defender,est,65,65,36,30,58,65,88,28,55,29,48,4,32,78,41,4,52,99
-BRL,Levi,Ashcroft,2026,Midfielder,est,60,44,47,6,39,52,82,39,15,39,56,6,50,36,47,25,73,99
-BRL,Jaspa,Fletcher,2026,Gen. Defender,est,66,65,37,36,58,75,80,16,29,28,57,4,34,57,44,8,56,99
-BRL,Cam,Rayner,2026,Gen. Forward,est,65,57,67,49,57,44,55,31,19,45,43,9,77,21,54,41,48,99
-BRL,Dayne,Zorko,2026,Gen. Defender,est,66,51,56,55,67,49,93,18,25,25,88,4,50,61,47,12,62,63
-BRL,Jarrod,Berry,2026,Midfielder,gps,80,34,54,18,44,41,73,30,31,47,13,8,46,51,51,17,61,81
-BRL,Ryan,Lester,2026,Key Defender,gps,80,75,38,52,58,73,92,32,57,24,15,3,29,78,38,9,66,84
-BRL,Kai,Lohmann,2026,Gen. Forward,20m,65,52,39,51,46,39,47,42,6,36,74,4,63,18,65,68,37,99
-BRL,Harris,Andrews,2026,Key Defender,gps,87,97,58,40,50,52,77,94,91,28,1,2,22,95,25,3,64,88
-BRL,Charlie,Cameron,2026,Gen. Forward,gps,95,50,34,27,46,18,53,27,12,24,84,3,60,19,47,79,58,99
-BRL,Logan,Morris,2026,Key Forward,est,47,47,51,31,41,21,58,61,12,24,71,7,59,10,32,99,68,95
-BRL,Hugh,McCluggage,2026,Midfielder,est,60,27,60,26,39,33,60,22,16,54,51,10,51,25,70,28,44,63
-BRL,Bruce,Reville,2026,Midfielder,est,59,36,43,6,64,65,68,46,15,34,44,5,47,38,43,19,59,66
-BRL,Darcy,Fort,2026,Ruck,est,34,1,55,31,34,44,32,47,59,55,38,53,48,29,35,15,41,95
-BRL,Sam,Draper,2026,Ruck,est,33,13,74,28,27,44,24,50,32,55,36,72,51,26,27,25,32,95
-BRL,Conor,McKenna,2026,Gen. Forward,gps,80,47,57,54,50,53,35,5,11,21,72,2,65,19,48,38,63,77
-BRL,Keidean,Coleman,2026,Gen. Defender,gps,78,31,33,11,66,54,78,16,54,23,46,2,39,64,34,9,74,48
-BRL,Noah,Answerth,2026,Gen. Defender,gps,84,53,47,10,67,50,72,5,43,19,41,2,28,53,43,3,53,59
-BRL,Ty,Gallop,2026,Key Defender,est,47,76,47,37,63,14,60,50,75,21,1,4,19,59,37,7,50,77
-BRL,Darcy,Gardiner,2026,Key Defender,est,47,70,49,24,47,49,64,48,70,21,19,2,16,62,25,3,41,59
-BRL,James,Tunstill,2026,Midfielder,est,60,38,29,4,41,25,61,8,34,35,28,5,37,29,54,17,75,41
-BRL,Eric,Hipwood,2026,Key Forward,gps,81,38,26,47,55,1,52,60,29,25,66,2,43,20,35,66,45,52
-BRL,Oscar,Allen,2026,Key Forward,est,47,42,42,31,50,28,47,37,29,21,80,7,41,9,30,66,67,55
-BRL,Lincoln,McCarthy,2026,Gen. Forward,gps,85,43,68,20,45,15,58,23,15,30,70,3,51,31,47,34,40,30
-BRL,Sam,Marshall,2026,Midfielder,est,61,44,56,35,49,48,53,34,19,49,47,8,50,41,67,16,51,8
-BRL,Darragh,Joyce,2026,Key Defender,est,46,77,39,30,53,38,75,49,72,17,19,3,14,63,23,5,63,12
-CAR,Sam,Walsh,2026,Midfielder,est,61,49,64,65,50,60,63,3,16,69,26,13,59,44,80,16,32,99
-CAR,Patrick,Cripps,2026,Midfielder,est,60,55,80,37,35,47,37,63,11,95,11,17,54,23,79,24,1,99
-CAR,Jagga,Smith,2026,Midfielder,20m,58,40,38,22,33,55,48,5,8,67,41,13,59,32,59,16,57,99
-CAR,Oliver,Florent,2026,Gen. Defender,est,66,62,47,59,68,66,77,10,43,33,27,4,38,72,48,4,53,99
-CAR,George,Hewett,2026,Midfielder,est,60,31,63,28,43,41,59,51,8,64,67,13,56,30,72,22,49,83
-CAR,Adam,Cerra,2026,Gen. Defender,est,66,42,49,53,63,38,77,25,46,37,46,6,41,42,65,8,58,87
-CAR,Ben,Ainsworth,2026,Gen. Forward,20m,77,49,47,43,52,41,76,10,5,25,65,4,59,18,46,51,63,99
-CAR,Lachlan,Cowan,2026,Gen. Defender,est,65,59,38,30,58,47,76,30,50,23,41,3,29,68,42,3,61,95
-CAR,Nick,Haynes,2026,Gen. Defender,est,64,70,46,29,58,54,99,23,57,20,28,2,26,84,31,5,64,75
-CAR,Will,Hayward,2026,Gen. Forward,gps,86,48,49,36,51,39,68,56,11,28,63,2,46,27,44,49,45,83
-CAR,Nic,Newman,2026,Gen. Defender,est,66,52,39,56,66,75,95,14,50,16,47,2,31,57,53,5,55,64
-CAR,Billy,Wilson,2026,Gen. Defender,20m,72,44,26,52,65,54,77,5,25,24,24,3,30,48,46,6,60,68
-CAR,Francis,Evans,2026,Gen. Forward,est,66,44,47,41,56,24,41,10,7,33,61,3,63,25,65,38,54,91
-CAR,Harry,McKay,2026,Key Forward,est,47,62,55,48,50,22,57,83,36,39,55,10,39,18,30,71,46,91
-CAR,Marc,Pittonet,2026,Ruck,est,34,27,79,27,7,33,15,59,60,68,48,77,41,25,43,16,19,87
-CAR,Brodie,Kemp,2026,Key Forward,20m,66,77,29,36,34,42,67,34,33,20,41,2,51,12,39,81,61,99
-CAR,Mitch,McGovern,2026,Key Forward,gps,88,47,57,45,41,61,52,40,45,23,56,2,42,19,42,64,72,99
-CAR,Harry,Dean,2026,Key Defender,est,47,59,31,32,44,31,68,46,69,21,35,2,17,74,31,3,64,87
-CAR,Blake,Acres,2026,Midfielder,gps,84,57,55,36,51,50,85,22,39,34,3,5,59,46,57,19,60,48
-CAR,Oliver,Hollands,2026,Midfielder,est,61,65,28,30,56,53,76,38,17,32,49,5,47,48,68,14,45,56
-CAR,Cooper,Lord,2026,Midfielder,est,60,44,55,25,49,48,66,38,10,36,64,6,49,33,59,17,64,44
-CAR,Matthew,Cottrell,2026,Gen. Forward,gps,75,50,31,36,39,48,51,25,12,26,33,2,55,30,54,28,74,56
-CAR,Wade,Derksen,2026,Key Defender,est,47,67,45,32,42,26,71,33,73,25,19,2,20,78,23,3,61,60
-CAR,Jacob,Weitering,2026,Key Defender,est,46,81,59,33,52,53,89,61,97,23,19,8,16,85,19,2,69,56
-CAR,Talor,Byrne,2026,Gen. Forward,est,66,24,32,15,44,47,46,21,6,26,34,3,48,15,60,40,58,79
-CAR,Zac,Williams,2026,Gen. Defender,est,66,37,57,42,64,61,55,23,28,43,30,6,35,55,50,10,56,36
-CAR,Lewis,Young,2026,Key Defender,est,46,51,53,26,37,38,48,50,83,29,1,13,22,64,26,11,46,56
-CAR,Matt,Carroll,2026,Midfielder,est,60,29,43,12,67,58,54,67,28,38,55,5,48,47,46,24,56,40
-CAR,Elijah,Hollands,2026,Mid-Forward,est,59,41,54,22,40,48,43,17,7,41,99,5,47,40,52,27,46,25
-CAR,Jack,Ison,2026,Gen. Forward,est,65,31,39,35,38,39,52,7,11,31,6,2,54,21,49,30,53,32
-COL,Nick,Daicos,2026,Midfielder,est,64,69,50,99,48,66,59,34,6,75,70,16,86,41,64,33,37,95
-COL,Josh,Daicos,2026,Gen. Defender,est,65,66,50,54,66,71,87,4,32,33,1,5,49,57,52,8,60,99
-COL,Dan,Houston,2026,Gen. Defender,est,65,57,47,43,72,53,89,21,34,28,41,3,39,75,48,11,59,99
-COL,Jack,Crisp,2026,Midfielder,gps,82,50,65,48,54,76,69,26,30,51,47,7,46,52,79,15,55,99
-COL,Jordan,de Goey,2026,Mid-Forward,gps,79,48,70,35,46,49,64,43,5,45,74,8,74,23,48,39,54,91
-COL,Darcy,Cameron,2026,Ruck,est,35,46,72,46,6,15,40,61,28,74,38,73,46,52,52,10,30,95
-COL,Patrick,Lipinski,2026,Mid-Forward,est,60,56,51,42,50,71,63,24,10,37,51,6,55,35,64,24,64,83
-COL,Scott,Pendlebury,2026,Midfielder,est,59,21,63,20,39,68,64,48,25,54,39,11,68,32,55,16,63,70
-COL,Isaac,Quaynor,2026,Gen. Defender,est,66,62,57,39,73,64,84,16,52,23,35,2,26,70,52,3,61,87
-COL,Ned,Long,2026,Mid-Forward,est,61,34,58,54,34,42,40,10,14,49,48,8,51,25,99,18,45,91
-COL,Steele,Sidebottom,2026,Midfielder,est,61,51,58,25,49,58,62,51,40,38,25,6,32,45,56,14,65,87
-COL,Beau,McCreery,2026,Gen. Forward,gps,86,46,44,92,64,67,34,38,10,39,55,5,58,22,88,24,42,95
-COL,Edward,Allan,2026,Midfielder,20m,88,30,37,44,61,62,29,31,30,49,46,9,40,29,87,11,38,79
-COL,Lachie,Schultz,2026,Gen. Forward,est,66,49,53,44,56,36,55,27,8,31,40,3,61,20,81,54,55,91
-COL,Brayden,Maynard,2026,Gen. Defender,gps,82,51,56,39,71,65,75,19,51,24,33,2,33,69,53,5,42,70
-COL,Jeremy,Howe,2026,Key Defender,gps,84,81,44,38,64,57,76,45,87,21,22,2,22,84,27,4,61,74
-COL,Billy,Frampton,2026,Key Defender,est,46,99,32,35,58,64,73,45,80,22,19,2,16,83,23,2,46,99
-COL,Roan,Steele,2026,Midfielder,est,59,51,44,1,43,64,47,43,13,37,73,6,46,36,56,25,71,79
-COL,Harry,Perryman,2026,Gen. Defender,est,65,40,41,26,57,58,67,23,62,21,22,2,28,59,47,2,67,66
-COL,Daniel,McStay,2026,Key Forward,est,47,49,69,43,46,38,42,68,44,34,87,12,44,14,46,75,62,99
-COL,Tim,Membrey,2026,Key Forward,gps,95,58,49,28,38,27,65,33,18,21,48,2,42,12,29,83,68,83
-COL,Angus,Anderson,2026,Gen. Forward,est,66,27,37,46,52,38,40,12,10,31,84,4,52,22,64,39,59,70
-COL,Sam,Swadling,2026,Midfielder,est,60,23,41,26,55,53,59,5,31,44,82,7,37,45,48,21,64,38
-COL,Jamie,Elliott,2026,Gen. Forward,gps,80,58,56,15,39,26,49,19,7,26,91,3,59,13,50,62,60,46
-COL,Harvey,Harrison,2026,Gen. Forward,20m,84,32,51,30,52,53,49,9,10,20,32,3,53,17,55,29,72,50
-COL,Jack,Buller,2026,Key Forward,est,46,45,52,28,32,17,44,59,17,21,12,4,25,9,28,56,39,42
-COL,Will,Hayes,2026,Gen. Forward,20m,63,22,45,12,53,48,36,20,5,19,69,2,37,13,48,33,77,42
-COL,Oscar,Steene,2026,Ruck,est,34,3,32,13,33,24,27,33,32,50,59,53,34,30,36,18,43,34
-COL,Charlie,West,2026,Key Forward,20m,69,41,52,25,47,24,31,73,23,28,87,16,33,7,32,49,66,38
-COL,Wil,Parker,2026,Gen. Defender,est,65,48,49,16,70,37,62,9,39,26,41,2,23,67,45,6,53,21
-ESS,Zach,Merrett,2026,Midfielder,gps,87,62,71,73,53,50,65,46,32,54,94,11,58,41,87,18,55,99
-ESS,Archie,Roberts,2026,Gen. Defender,est,66,64,46,64,61,43,78,21,30,33,64,4,39,71,35,7,42,90
-ESS,Sam,Durham,2026,Midfielder,gps,83,40,47,42,51,62,51,54,18,64,67,12,60,31,79,23,16,86
-ESS,Andrew,McGrath,2026,Gen. Defender,est,66,53,65,40,75,65,62,7,25,33,59,4,42,62,46,5,71,86
-ESS,Jacob,Farrow,2026,Gen. Defender,est,66,53,41,37,65,54,89,32,40,23,43,3,29,49,41,8,70,90
-ESS,Jaxon,Prior,2026,Gen. Defender,est,66,63,31,37,64,49,72,24,39,22,14,2,31,62,43,5,69,95
-ESS,Darcy,Parish,2026,Midfielder,est,60,39,60,28,53,39,56,7,5,67,34,15,62,27,63,13,36,61
-ESS,Zach,Reid,2026,Key Defender,20m,41,78,14,46,59,41,81,35,52,17,16,5,15,60,28,4,61,99
-ESS,Jye,Caldwell,2026,Midfielder,est,61,28,62,22,43,19,46,33,29,57,41,10,45,24,81,15,48,73
-ESS,Kyle,Langford,2026,Gen. Defender,est,64,66,48,13,44,46,70,25,59,30,2,3,31,68,38,19,54,82
-ESS,Xavier,Duursma,2026,Midfielder,est,60,47,29,1,43,58,66,43,44,36,82,5,32,43,55,17,67,78
-ESS,Mason,Redman,2026,Gen. Defender,gps,78,51,51,34,71,54,72,23,52,22,55,3,38,57,34,7,66,69
-ESS,Dyson,Sharp,2026,Mid-Forward,est,60,30,56,33,36,40,51,27,42,52,35,9,48,31,74,20,62,65
-ESS,Will,Setterfield,2026,Midfielder,est,61,50,59,48,52,22,57,34,15,61,69,11,51,35,82,15,31,48
-ESS,Sullivan,Robey,2026,Mid-Forward,est,61,44,57,44,47,41,46,16,51,57,92,11,40,20,70,23,30,65
-ESS,Archer,Day-Wicks,2026,Gen. Forward,est,66,43,42,36,50,33,41,32,24,25,19,3,34,24,63,24,48,90
-ESS,Nate,Caddy,2026,Key Forward,20m,61,73,43,36,44,1,50,46,16,24,49,7,45,14,32,88,61,95
-ESS,Archie,Perkins,2026,Gen. Forward,20m,73,44,54,46,53,40,70,12,8,21,40,2,46,20,44,37,70,69
-ESS,Peter,Wright,2026,Ruck,est,34,58,63,32,50,29,48,29,56,40,97,45,46,29,35,55,41,78
-ESS,Isaac,Kako,2026,Gen. Forward,est,67,47,47,28,39,32,31,22,5,33,61,3,42,20,62,30,52,65
-ESS,Lachlan,Blakiston,2026,Key Defender,est,47,63,52,48,67,34,40,26,64,37,29,30,21,47,39,6,15,73
-ESS,Elijah,Tsatas,2026,Midfielder,est,60,32,53,33,55,36,61,6,7,62,53,12,41,30,62,14,67,27
-ESS,Nick,Bryan,2026,Ruck,20m,60,24,32,35,34,33,24,35,54,55,17,73,36,25,47,11,26,56
-ESS,Ben,McKay,2026,Key Defender,est,47,88,41,30,36,60,59,31,57,24,24,9,19,58,27,19,53,65
-ESS,Max,Kondogiannis,2026,Midfielder,est,59,33,34,1,66,72,40,4,23,29,13,5,28,31,52,9,58,52
-ESS,Saad,El-Hawli,2026,Gen. Defender,est,66,36,31,26,48,60,63,7,29,28,26,3,24,59,40,9,65,35
-ESS,Zak,Johnson,2026,Gen. Defender,est,65,48,28,22,54,66,69,8,42,18,22,2,29,49,35,5,75,31
-ESS,Jordan,Ridley,2026,Key Defender,est,47,21,46,33,56,56,78,38,48,16,5,16,18,60,21,3,62,31
-ESS,Nik,Cox,2026,Mid-Forward,20m,66,51,21,18,48,54,45,24,10,36,56,20,38,27,51,19,72,35
-ESS,Jaxon,Artemis,2026,Gen. Defender,20m,69,49,34,16,56,56,60,8,31,25,25,3,24,49,49,5,62,27
-FRE,Andrew,Brayshaw,2026,Midfielder,gps,75,49,67,64,64,68,51,5,40,59,48,12,64,39,92,13,36,99
-FRE,Jordan,Clark,2026,Gen. Defender,gps,92,63,39,74,80,73,71,14,50,31,42,4,50,62,43,7,50,99
-FRE,Shai,Bolton,2026,Midfielder,gps,75,51,71,79,63,67,44,25,29,61,61,12,89,27,65,27,32,95
-FRE,Caleb,Serong,2026,Midfielder,20m,47,48,86,44,44,57,38,30,8,85,68,19,69,39,84,17,60,88
-FRE,Murphy,Reid,2026,Gen. Forward,est,67,56,50,78,47,30,47,20,6,42,25,7,71,23,55,26,54,92
-FRE,Luke,Ryan,2026,Gen. Defender,gps,78,63,61,38,75,51,94,22,41,19,37,2,27,65,35,3,48,95
-FRE,Karl,Worner,2026,Gen. Defender,est,66,57,41,51,84,65,85,25,59,23,24,2,27,77,39,4,55,99
-FRE,Luke,Jackson,2026,Ruck,20m,47,46,49,47,45,27,26,65,54,77,63,82,63,32,66,32,23,99
-FRE,Neil,Erasmus,2026,Midfielder,est,60,36,46,16,49,43,58,37,22,44,22,7,47,42,53,16,54,99
-FRE,Matthew,Johnson,2026,Midfielder,est,61,39,41,34,69,63,48,55,31,45,39,8,58,31,63,11,50,95
-FRE,Heath,Chapman,2026,Gen. Defender,20m,59,66,27,26,68,56,74,30,55,23,31,2,30,67,39,6,56,95
-FRE,Judd,McVee,2026,Gen. Defender,est,66,53,33,27,55,73,60,19,57,28,58,3,31,61,27,4,72,88
-FRE,Hayden,Young,2026,Midfielder,20m,61,22,52,39,46,56,59,21,9,55,99,27,58,31,67,24,66,66
-FRE,Josh,Treacy,2026,Key Forward,20m,67,78,63,48,57,38,62,66,50,31,55,2,56,22,43,95,55,99
-FRE,Sam,Switkowski,2026,Gen. Forward,gps,81,38,42,30,36,56,39,39,10,34,34,4,53,23,62,26,73,95
-FRE,Nathan,O'Driscoll,2026,Midfielder,20m,73,46,45,18,65,54,59,3,35,36,48,5,49,44,49,15,69,63
-FRE,Isaiah,Dudley,2026,Gen. Forward,est,66,30,52,10,44,52,31,3,21,28,62,3,58,17,55,42,59,99
-FRE,Patrick,Voss,2026,Key Forward,est,48,77,44,51,54,46,52,29,14,26,60,2,54,13,49,81,31,95
-FRE,Corey,Wagner,2026,Midfielder,est,61,38,42,29,70,59,54,4,28,36,8,6,51,37,58,8,61,59
-FRE,Michael,Frederick,2026,Gen. Forward,gps,90,43,23,35,63,28,52,11,23,23,75,3,46,23,51,43,76,81
-FRE,Jye,Amiss,2026,Key Forward,est,46,80,26,18,35,31,47,85,15,25,52,2,37,6,24,96,69,95
-FRE,Brennan,Cox,2026,Key Defender,est,46,48,63,31,47,49,62,57,79,24,19,2,17,77,24,2,56,66
-FRE,Alex,Pearce,2026,Key Defender,gps,84,57,57,28,57,51,41,67,69,30,19,2,14,76,22,2,55,88
-FRE,Oscar,McDonald,2026,Key Defender,est,47,93,62,41,62,17,68,43,91,22,16,2,24,74,29,5,52,52
-FRE,Mason,Cox,2026,Ruck,est,33,1,45,21,22,21,23,31,33,37,20,55,31,22,28,18,54,74
-FRE,Jaeger,O'Meara,2026,Midfielder,est,60,32,56,11,58,59,49,6,8,43,22,8,53,37,59,12,59,23
-FRE,Chris,Scerri,2026,Gen. Forward,est,66,31,38,26,64,54,26,12,9,32,51,2,41,25,53,19,63,34
-FRE,Sean,Darcy,2026,Ruck,est,34,1,73,22,49,21,19,22,55,48,48,62,40,20,34,14,25,26
-FRE,Jeremy,Sharp,2026,Mid-Forward,20m,68,37,39,21,61,54,61,11,9,37,86,6,46,25,57,30,61,8
-FRE,Brandon,Walker,2026,Gen. Defender,gps,87,50,35,28,67,57,56,22,50,27,41,3,27,63,38,5,68,8
-GEE,Bailey,Smith,2026,Midfielder,gps,72,64,65,91,62,30,59,9,11,75,80,15,85,45,80,21,43,95
-GEE,Max,Holmes,2026,Midfielder,gps,81,48,37,99,65,75,66,49,33,65,48,12,72,47,70,14,52,79
-GEE,Oliver,Dempsey,2026,Midfielder,est,60,76,29,16,51,67,67,70,27,45,65,6,51,44,53,43,67,99
-GEE,Tanner,Bruhn,2026,Gen. Defender,est,66,28,37,51,62,52,72,6,38,36,1,5,47,49,49,9,59,91
-GEE,Lawson,Humphries,2026,Gen. Defender,20m,63,57,45,41,68,53,82,13,55,27,71,3,33,70,44,9,68,95
-GEE,Tom,Stewart,2026,Gen. Defender,gps,92,58,54,43,76,51,76,41,61,32,59,2,26,99,32,4,53,91
-GEE,Tom,Atkins,2026,Midfielder,est,62,37,83,28,36,39,27,49,35,70,74,12,50,39,97,7,30,99
-GEE,Shaun,Mannagh,2026,Gen. Forward,est,66,46,62,59,46,42,40,9,6,45,73,8,77,19,63,47,59,99
-GEE,Zach,Guthrie,2026,Gen. Defender,gps,85,52,27,16,62,65,75,19,55,24,33,3,27,65,44,4,65,99
-GEE,Connor,O'Sullivan,2026,Key Defender,est,47,90,45,52,64,63,83,58,75,26,7,10,24,91,33,3,51,99
-GEE,Oisin,Mullin,2026,Midfielder,gps,84,55,65,2,54,48,47,3,38,50,22,9,39,31,70,10,51,99
-GEE,Gryan,Miers,2026,Gen. Forward,20m,38,55,53,60,40,56,68,17,7,31,34,4,67,22,62,23,72,68
-GEE,Mark,O'Connor,2026,Gen. Defender,est,65,53,47,20,60,65,67,18,41,30,50,4,41,59,47,8,65,87
-GEE,Patrick,Dangerfield,2026,Gen. Forward,gps,79,27,68,31,51,24,45,40,12,45,78,5,73,20,41,62,53,75
-GEE,Oliver,Henry,2026,Gen. Forward,est,65,52,24,22,51,26,45,27,5,31,81,2,59,16,52,65,56,95
-GEE,Sam,De Koning,2026,Key Defender,20m,43,37,32,33,36,52,45,46,81,45,1,25,27,75,30,4,47,75
-GEE,Jeremy,Cameron,2026,Key Forward,gps,80,74,51,50,53,26,75,43,34,18,67,10,51,18,24,85,55,75
-GEE,Mark,Blicavs,2026,Midfielder,est,59,36,71,7,33,46,37,60,52,53,33,31,34,43,59,13,49,79
-GEE,Shannon,Neale,2026,Key Forward,20m,58,82,53,63,62,30,48,55,20,32,90,16,61,12,49,82,33,99
-GEE,Mitchell,Edwards,2026,Ruck,20m,53,2,26,35,49,27,19,51,44,51,38,64,41,29,43,10,26,79
-GEE,James,Worpel,2026,Midfielder,20m,53,26,66,39,40,38,45,32,8,65,47,14,60,32,88,16,28,44
-GEE,Jack,Martin,2026,Gen. Forward,gps,84,29,46,13,40,40,54,29,17,28,48,3,42,14,46,54,47,72
-GEE,Jack,Henry,2026,Key Defender,gps,80,59,53,14,41,47,58,24,82,23,22,9,21,61,25,10,66,83
-GEE,Brad,Close,2026,Gen. Forward,gps,72,47,22,20,46,57,34,10,9,26,41,2,57,19,58,30,74,72
-GEE,Oliver,Wiltshire,2026,Gen. Forward,est,66,36,21,23,49,47,31,4,7,27,44,3,51,18,47,32,67,64
-GEE,Jack,Bowes,2026,Midfielder,est,60,29,55,24,52,56,53,34,30,41,62,6,58,37,57,21,48,36
-GEE,Jhye,Clark,2026,Gen. Defender,est,65,38,45,21,57,55,67,45,40,30,16,3,38,55,51,16,54,36
-GEE,Jake,Kolodjashnij,2026,Key Defender,est,47,57,54,36,46,60,56,55,63,21,34,2,17,68,28,4,59,44
-GEE,Jay,Polkinghorne,2026,Key Forward,est,47,38,39,22,47,12,50,45,11,20,55,2,48,8,29,80,62,32
-ADE,Billy,Dowling,2026,Midfielder,20m,50,39,48,20,50,49,61,47,8,53,51,9,51,28,65,27,58,13
-ADE,Finnbar,Maley,2026,Key Forward,est,47,24,56,34,31,28,38,48,25,25,53,13,38,13,36,52,53,25
-ADE,Chayce,Jones,2026,Gen. Defender,gps,91,61,45,8,69,55,61,11,31,28,41,2,25,66,39,6,67,13
-ADE,Oscar,Ryan,2026,Gen. Defender,20m,63,48,32,30,67,56,67,31,46,26,59,3,42,69,43,8,63,9
-ADE,Charlie,Edwards,2026,Midfielder,est,61,42,51,35,52,43,53,49,13,52,28,10,51,35,63,13,38,9
-ADE,Reilly,O'Brien,2026,Ruck,est,34,14,63,28,33,43,30,43,35,54,39,71,38,29,43,15,33,9
-ADE,Archie,Ludowyke,2026,Key Forward,est,47,37,33,35,37,26,47,31,18,26,45,4,47,15,37,64,61,9
-ADE,Mitch,Hinge,2026,Gen. Defender,est,65,32,40,31,74,62,65,15,26,27,41,3,32,60,39,6,66,5
-BRL,Daniel,Annable,2026,Midfielder,est,60,32,46,13,54,63,48,8,34,40,45,7,52,28,58,16,58,12
-BRL,Shadeau,Brain,2026,Gen. Defender,est,65,56,42,22,63,60,76,13,32,20,41,3,38,55,34,7,66,8
-BRL,Cody,Curtin,2026,Key Forward,est,47,40,48,42,27,31,35,32,23,20,37,9,30,13,35,52,56,16
-BRL,Zane,Zakostelsky,2026,Key Defender,20m,69,37,38,32,60,11,63,41,45,23,18,14,18,58,32,8,58,12
-BRL,Will,McLachlan,2026,Gen. Forward,est,66,30,41,34,56,27,41,27,11,28,59,3,48,18,54,39,63,5
-CAR,Campbell,Chesser,2026,Midfielder,est,60,46,57,23,56,40,58,8,33,43,22,8,46,38,64,14,49,13
-CAR,Adam,Saad,2026,Gen. Defender,gps,96,49,49,68,68,69,61,11,51,25,41,3,29,62,39,5,67,13
-CAR,Liam,Reidy,2026,Ruck,est,35,21,68,43,26,38,20,42,36,57,24,65,42,23,51,12,18,17
-CAR,Jordan,Boyd,2026,Gen. Defender,est,66,49,44,35,69,43,76,13,29,21,41,2,29,61,44,5,68,9
-CAR,Flynn,Young,2026,Gen. Forward,est,65,42,29,27,50,46,46,9,8,24,51,3,55,15,51,34,72,13
-CAR,Lachie,Fogarty,2026,Gen. Forward,est,65,36,44,20,42,45,36,12,11,33,35,3,50,19,49,30,62,9
-CAR,Ashton,Moir,2026,Gen. Forward,est,65,41,45,31,42,42,44,8,9,27,74,4,45,15,51,45,62,9
-CAR,Hudson,O'Keeffe,2026,Ruck,20m,69,1,46,22,33,1,23,43,32,50,29,55,39,20,36,16,35,13
-CAR,Flynn,Riley,2026,Ruck,est,34,21,59,40,43,34,27,47,31,61,58,67,42,31,46,19,37,5
-COL,Liam,Puncher,2026,Key Defender,est,47,66,23,22,65,46,50,35,53,17,19,2,10,55,29,2,62,34
-COL,Darcy,Moore,2026,Key Defender,est,46,29,47,37,58,18,53,50,76,22,19,3,14,68,24,3,55,17
-COL,Lachlan,Sullivan,2026,Gen. Forward,est,66,39,52,36,54,30,38,10,9,26,73,3,62,23,54,35,67,9
-COL,Mitch,Podhajski,2026,Key Forward,est,47,44,49,30,37,8,47,42,16,27,24,4,44,17,36,66,66,9
-COL,Noah,Howes,2026,Key Defender,est,47,62,56,35,76,52,62,46,72,24,19,3,19,74,25,4,52,9
-ESS,Jade,Gresham,2026,Gen. Forward,est,65,47,48,18,32,52,36,8,6,25,33,4,45,14,53,34,58,31
-ESS,Hussien,El Achkar,2026,Gen. Forward,est,66,32,35,14,41,19,26,6,7,34,87,3,43,21,62,38,74,39
-ESS,Tom,Edwards,2026,Gen. Forward,est,65,43,28,26,49,27,36,26,12,27,69,3,53,22,48,41,63,31
-ESS,Angus,Clarke,2026,Mid-Forward,est,60,37,50,20,57,27,57,20,8,33,48,5,48,26,62,32,63,27
-ESS,Harry,Jones,2026,Gen. Defender,est,65,55,14,11,56,57,60,13,29,20,61,2,24,52,42,11,50,31
-ESS,Archie,May,2026,Key Forward,est,47,26,46,41,55,34,35,42,44,24,88,7,34,11,44,63,39,44
-ESS,Jayden,Nguyen,2026,Gen. Forward,20m,77,47,33,18,44,59,40,28,18,28,20,3,35,25,50,25,72,22
-ESS,Vigo,Visentini,2026,Ruck,est,34,27,59,42,30,14,51,30,52,51,49,66,43,34,47,17,28,14
-ESS,Brayden,Fiorini,2026,Midfielder,est,61,50,53,29,53,50,53,9,19,47,52,8,55,37,60,23,57,10
-ESS,Rhys,Unwin,2026,Gen. Forward,20m,75,33,39,28,44,43,36,29,8,28,51,3,46,18,61,29,54,18
-ESS,Matt,Guelfi,2026,Gen. Forward,gps,88,7,53,19,32,38,29,30,11,30,52,3,39,19,47,26,67,14
-FRE,Bailey,Banfield,2026,Gen. Defender,est,66,61,59,41,52,55,71,15,33,28,41,3,28,64,44,6,62,5
-FRE,Tobyn,Murray,2026,Gen. Forward,est,66,47,50,31,50,28,44,12,8,31,50,4,50,22,56,37,62,5
-GEE,George,Stevens,2026,Midfielder,est,60,31,78,28,52,48,51,9,10,54,59,11,50,27,62,16,61,9
-GEE,Mitch,Knevitt,2026,Mid-Forward,20m,67,45,42,31,51,28,42,18,8,45,53,7,53,25,67,27,55,9
-GEE,Rhys,Stanley,2026,Ruck,est,34,24,74,35,41,18,30,48,44,61,39,68,60,29,42,15,40,5
-GCS,Noah,Anderson,2026,Midfielder,20m,59,67,67,99,54,63,73,8,8,68,34,15,72,34,78,19,39,95
-GCS,John,Noble,2026,Gen. Defender,gps,87,61,32,69,75,72,99,11,34,22,53,3,37,64,43,11,59,99
-GCS,Touk,Miller,2026,Mid-Forward,gps,84,59,76,43,54,58,55,29,54,57,69,11,57,33,70,22,48,99
-GCS,Bodhi,Uwland,2026,Gen. Defender,est,65,72,59,39,72,58,86,28,74,30,37,2,36,86,38,5,62,99
-GCS,Matt,Rowell,2026,Midfielder,20m,50,58,73,50,39,33,38,37,8,94,19,19,57,41,99,10,7,78
-GCS,Christian,Petracca,2026,Mid-Forward,est,60,56,90,42,57,42,46,34,7,75,71,14,71,28,60,37,44,86
-GCS,Mac,Andrew,2026,Key Defender,est,47,88,21,63,65,65,85,39,63,27,13,13,31,95,34,5,37,99
-GCS,Daniel,Rioli,2026,Gen. Defender,gps,88,53,43,88,74,86,62,7,36,23,38,3,37,52,51,10,60,86
-GCS,Joel,Jeffrey,2026,Gen. Defender,est,66,38,21,49,78,57,77,25,50,23,53,3,40,50,42,13,63,95
-GCS,Wil,Powell,2026,Gen. Defender,est,66,59,34,38,83,56,73,7,29,31,82,4,34,62,62,9,55,86
-GCS,Leo,Lombard,2026,Gen. Forward,20m,83,54,43,63,53,38,41,6,7,35,27,4,60,20,65,30,47,99
-GCS,Sam,Collins,2026,Key Defender,est,47,86,68,37,47,44,79,42,90,31,19,2,14,99,27,2,71,90
-GCS,Bailey,Humphrey,2026,Gen. Forward,est,65,56,59,41,51,44,41,23,8,41,53,5,65,22,58,47,28,86
-GCS,Zeke,Uwland,2026,Midfielder,est,59,29,36,6,65,36,57,28,6,28,43,4,35,39,44,14,48,73
-GCS,Ben,Long,2026,Gen. Forward,gps,83,50,41,13,42,46,44,18,15,30,64,3,54,15,47,52,40,90
-GCS,Sam,Clohesy,2026,Midfielder,est,60,36,21,11,65,65,63,4,34,33,38,5,41,48,56,12,52,52
-GCS,Ben,King,2026,Key Forward,gps,80,72,20,28,54,39,43,58,43,22,89,5,31,9,25,91,51,99
-GCS,Lachie,Weller,2026,Midfielder,gps,90,27,55,20,86,44,46,12,38,37,79,6,51,43,49,18,69,48
-GCS,Beau,Addinsall,2026,Midfielder,est,60,28,49,11,33,50,55,9,8,44,36,8,41,31,59,13,57,39
-GCS,Ned,Moyle,2026,Ruck,est,34,48,62,36,45,18,21,41,68,54,52,80,44,18,39,11,45,69
-GCS,Ethan,Read,2026,Key Forward,20m,38,40,34,40,21,7,36,42,40,29,25,10,29,21,34,46,42,65
-GCS,Jed,Walter,2026,Key Forward,gps,93,46,58,29,52,24,37,52,35,25,80,8,37,11,31,72,51,78
-GCS,Jarrod,Witts,2026,Ruck,est,34,9,75,36,26,14,21,32,50,61,44,82,44,24,35,9,24,56
-GCS,Will,Graham,2026,Mid-Forward,20m,75,25,46,19,60,31,41,22,8,40,57,5,54,23,65,20,51,52
-GCS,Oscar,Adams,2026,Key Defender,est,47,46,20,23,55,68,57,28,69,18,19,2,11,62,28,2,39,56
-GCS,Jai,Murray,2026,Midfielder,est,60,32,41,13,49,35,57,5,13,34,20,5,45,35,48,11,48,39
-GCS,Lachlan,Gulbin,2026,Gen. Forward,est,65,36,38,35,50,51,42,15,12,24,26,2,44,23,54,27,67,48
-GCS,Alex,Davies,2026,Midfielder,est,60,11,55,27,43,31,34,6,32,58,56,9,46,34,75,15,38,27
-GCS,Charlie,Ballard,2026,Key Defender,gps,89,51,43,18,41,38,53,57,67,21,19,2,17,63,26,3,59,48
-GCS,Jake,Rogers,2026,Gen. Forward,est,66,20,40,8,40,51,30,38,4,30,58,3,53,20,52,24,71,39
-GCS,Nick,Holman,2026,Mid-Forward,est,60,44,53,18,63,43,41,5,17,39,79,6,37,32,62,22,45,31
-GCS,Ben,Jepson,2026,Midfielder,est,60,32,35,3,64,47,57,13,17,35,35,6,36,31,56,11,53,22
-GCS,Dylan,Patterson,2026,Gen. Forward,est,65,18,25,30,68,32,34,11,10,19,73,2,66,15,48,31,67,22
-GCS,Jamarra,Ugle-Hagan,2026,Key Forward,20m,77,40,30,28,35,8,45,53,16,23,39,3,39,11,35,70,62,14
-GCS,Jy,Farrar,2026,Gen. Forward,est,65,21,25,26,53,28,37,5,10,25,48,3,47,15,49,32,65,14
-GCS,Caleb,Lewis,2026,Key Forward,est,47,32,33,33,41,41,42,35,20,24,40,4,33,11,37,55,54,10
-GWS,Clayton,Oliver,2026,Midfielder,est,60,57,80,43,47,52,46,7,8,93,28,19,60,36,77,11,4,99
-GWS,Lachie,Ash,2026,Gen. Defender,gps,95,61,41,99,70,82,99,6,56,29,44,4,50,65,41,11,50,99
-GWS,Lachie,Whitfield,2026,Gen. Defender,est,65,51,41,59,63,77,87,7,20,26,61,3,43,62,50,7,52,90
-GWS,Finn,Callaghan,2026,Midfielder,est,63,56,55,99,65,70,47,9,31,61,88,13,63,35,71,16,32,82
-GWS,Connor,Idun,2026,Gen. Defender,20m,71,99,58,35,60,56,90,27,66,30,41,2,24,89,35,2,66,99
-GWS,Toby,Greene,2026,Mid-Forward,est,59,57,70,37,35,22,51,46,13,60,45,10,82,24,60,54,16,90
-GWS,Harvey,Thomas,2026,Midfielder,est,61,58,47,16,56,47,48,31,38,51,42,7,44,44,71,17,49,95
-GWS,Harry,Himmelberg,2026,Gen. Defender,gps,77,74,51,26,64,51,78,28,84,27,55,2,25,80,30,8,51,99
-GWS,Joe,Fonti,2026,Gen. Defender,gps,88,61,16,41,50,70,91,16,59,20,59,2,23,71,45,6,32,95
-GWS,Stephen,Coniglio,2026,Mid-Forward,est,60,38,66,16,27,47,42,13,54,40,85,6,61,28,57,24,62,90
-GWS,Ryan,Angwin,2026,Midfielder,est,60,57,50,22,67,49,46,24,22,46,73,7,46,40,68,13,58,86
-GWS,Jake,Stringer,2026,Key Forward,est,48,69,66,50,49,23,51,46,14,37,75,3,62,19,47,79,54,99
-GWS,Jayden,Laverde,2026,Key Defender,est,46,67,54,32,53,51,70,60,71,25,1,2,15,85,30,2,49,82
-GWS,Toby,Bedford,2026,Mid-Forward,gps,77,43,36,16,54,71,34,4,51,40,66,6,54,28,82,23,53,73
-GWS,Phoenix,Gothard,2026,Gen. Forward,20m,68,34,40,40,41,44,34,9,6,37,33,4,49,22,65,39,60,69
-GWS,Xavier,O'Halloran,2026,Midfielder,20m,69,42,57,33,60,48,40,53,20,48,39,7,55,35,65,15,55,61
-GWS,Kieren,Briggs,2026,Ruck,est,34,18,76,41,33,13,23,32,58,66,21,78,45,31,50,9,36,78
-GWS,Aaron,Cadman,2026,Key Forward,est,47,83,50,46,57,20,51,46,20,25,89,2,50,15,43,78,64,78
-GWS,Harry,Rowston,2026,Midfielder,20m,59,19,58,10,46,58,53,32,30,43,93,7,53,32,62,18,48,52
-GWS,Callum,Brown,2026,Gen. Forward,gps,89,40,58,24,57,25,44,39,19,25,71,10,42,17,48,49,58,78
-GWS,Brent,Daniels,2026,Mid-Forward,gps,79,32,69,43,54,48,41,25,10,56,99,11,63,24,82,27,43,44
-GWS,Sam,Taylor,2026,Key Defender,gps,80,61,50,32,45,49,63,52,98,27,19,2,17,80,30,3,59,52
-GWS,Max,Gruzewski,2026,Key Forward,est,46,41,33,18,47,25,50,49,43,22,53,2,36,9,24,71,81,65
-GWS,Conor,Stone,2026,Midfielder,20m,50,29,40,4,52,68,48,5,27,35,57,5,48,39,51,17,63,44
-GWS,Nick,Madden,2026,Ruck,est,35,8,80,46,32,19,25,57,45,58,16,70,41,37,51,10,27,39
-GWS,Jake,Riccardi,2026,Key Forward,est,47,42,46,44,49,33,50,42,16,22,99,18,49,16,37,63,36,39
-GWS,Jack,Buckley,2026,Key Defender,est,46,66,40,26,60,54,55,42,72,23,19,2,15,77,26,3,53,39
-GWS,Josaia,Delana,2026,Gen. Forward,est,66,33,55,20,48,57,30,21,10,34,28,4,56,26,64,19,47,39
-GWS,Toby,McMullin,2026,Gen. Defender,20m,79,25,49,4,66,62,51,24,30,23,6,2,38,47,41,7,49,35
-GWS,Jesse,Hogan,2026,Key Forward,gps,83,67,64,33,50,4,51,42,13,22,26,3,38,12,29,76,60,39
-GWS,Riley,Hamilton,2026,Gen. Forward,est,66,37,32,29,28,41,29,23,9,27,11,3,37,16,59,30,52,35
-GWS,James,Leake,2026,Gen. Defender,est,65,43,28,14,53,61,58,28,43,25,41,3,21,53,39,5,66,22
-GWS,Leek,Aleer,2026,Ruck,est,35,2,42,23,30,50,24,35,53,52,16,47,38,31,55,14,41,31
-GWS,Jack,Ough,2026,Midfielder,est,60,1,45,12,49,50,36,6,8,49,52,9,41,31,54,13,58,22
-GWS,Harrison,Oliver,2026,Gen. Defender,est,65,31,48,1,57,52,53,9,30,17,56,3,33,43,38,6,50,22
-GWS,Oliver,Hannaford,2026,Gen. Forward,20m,70,9,57,23,32,13,42,9,5,29,7,3,40,12,53,32,58,22
-GWS,Cody,Angove,2026,Gen. Forward,est,66,32,51,36,56,51,44,12,9,28,66,4,58,18,50,39,64,5
-HAW,Jai,Newcombe,2026,Midfielder,est,61,52,79,53,53,55,48,39,32,88,41,21,65,35,80,15,10,99
-HAW,Josh,Ward,2026,Midfielder,est,61,44,51,29,47,59,61,7,29,61,74,12,66,35,77,13,53,99
-HAW,Connor,Macdonald,2026,Gen. Forward,est,66,47,45,70,41,56,64,28,5,45,29,7,69,25,66,30,59,99
-HAW,Jarman,Impey,2026,Gen. Defender,gps,86,50,59,51,67,59,93,36,41,24,52,3,44,77,37,8,58,91
-HAW,James,Sicily,2026,Key Defender,gps,84,83,62,71,69,60,89,68,70,33,31,2,37,99,31,7,47,95
-HAW,Massimo,D'Ambrosio,2026,Midfielder,est,60,57,60,26,63,69,66,32,38,35,18,5,51,48,55,12,63,99
-HAW,Cam,Mackenzie,2026,Midfielder,est,61,28,51,34,41,53,37,7,30,54,25,11,58,23,76,10,55,91
-HAW,Josh,Battle,2026,Key Defender,est,48,99,54,75,66,53,81,70,68,25,13,6,21,88,32,4,52,91
-HAW,Jack,Ginnivan,2026,Gen. Forward,est,65,49,41,57,48,28,74,29,20,31,56,4,69,30,53,36,62,95
-HAW,Dylan,Moore,2026,Gen. Forward,gps,75,68,40,41,46,57,62,25,7,31,83,3,72,24,61,40,65,95
-HAW,Blake,Hardwick,2026,Gen. Defender,est,65,82,47,17,67,58,79,56,43,24,54,2,29,73,44,16,55,99
-HAW,Karl,Amon,2026,Gen. Defender,20m,79,55,24,57,75,54,79,4,24,18,4,3,41,47,50,4,64,79
-HAW,Josh,Weddle,2026,Gen. Defender,20m,72,66,57,73,75,62,66,37,48,26,11,5,43,54,47,15,61,87
-HAW,Nick,Watson,2026,Gen. Forward,gps,88,47,53,20,58,36,35,58,7,45,99,5,65,23,46,73,65,91
-HAW,Mitch,Lewis,2026,Key Forward,est,47,48,44,54,43,34,60,58,23,26,91,5,50,13,37,76,56,95
-HAW,Lloyd,Meek,2026,Ruck,est,34,5,78,41,25,28,26,50,31,58,10,79,47,28,50,11,34,99
-HAW,Will,Day,2026,Midfielder,20m,57,28,33,39,51,53,51,57,13,62,56,13,52,40,77,23,30,52
-HAW,Harry,Morrison,2026,Midfielder,est,60,60,54,4,46,49,70,27,23,38,44,6,56,47,58,17,57,60
-HAW,Jack,Gunston,2026,Key Forward,est,47,77,37,32,42,13,73,47,11,19,80,2,36,8,34,99,57,75
-HAW,Conor,Nash,2026,Midfielder,gps,76,39,66,31,45,40,40,32,31,72,55,15,48,33,77,12,43,40
-HAW,Mabior,Chol,2026,Key Forward,gps,76,35,38,48,38,8,42,69,48,33,34,11,51,16,44,67,44,79
-HAW,Tom,Barrass,2026,Key Defender,gps,82,62,53,19,53,40,49,67,77,23,26,2,13,74,22,3,59,83
-HAW,Bailey,Macdonald,2026,Gen. Defender,est,66,42,32,9,59,69,48,15,29,24,33,2,21,56,51,3,59,56
-HAW,Ned,Reeves,2026,Ruck,est,34,1,36,22,23,34,16,20,57,52,15,77,45,17,38,13,42,60
-HAW,Jack,Scrimshaw,2026,Key Defender,est,47,62,46,48,47,68,68,30,62,29,19,3,22,81,30,3,33,25
-HAW,Sam,Butler,2026,Mid-Forward,20m,67,35,35,12,35,37,50,11,41,32,39,5,45,17,64,22,64,32
-HAW,Finn,Maginness,2026,Mid-Forward,20m,69,39,44,10,55,38,36,12,8,41,56,5,41,31,56,19,51,25
-HAW,Flynn,Perez,2026,Gen. Defender,est,65,44,40,11,63,62,50,16,32,22,41,2,29,52,51,4,44,28
-HAW,Noah,Mraz,2026,Key Defender,est,47,73,54,46,48,64,60,58,89,29,6,9,22,85,33,9,56,17
-HAW,Jack,Dalton,2026,Gen. Forward,est,66,28,55,33,53,35,48,8,8,29,42,3,44,23,58,29,59,21
-HAW,Cameron,Nairn,2026,Mid-Forward,est,60,37,38,24,40,45,56,7,54,31,65,5,47,30,56,17,55,17
-HAW,Bodie,Ryan,2026,Gen. Defender,20m,62,49,36,5,61,61,65,16,44,16,41,2,26,49,35,4,45,21
-HAW,Ollie,Greeves,2026,Gen. Forward,est,65,12,36,30,29,50,58,11,8,29,47,4,55,21,43,33,68,17
-HAW,Calsher,Dear,2026,Key Forward,est,48,52,37,42,40,10,51,35,17,27,1,3,39,19,43,64,66,21
-HAW,Will,McCabe,2026,Mid-Forward,est,60,37,31,28,45,68,51,12,11,30,58,5,39,24,50,23,63,17
-HAW,Max,Beattie,2026,Gen. Forward,est,65,9,38,11,47,34,38,11,6,24,44,2,48,17,47,35,68,17
-HAW,Henry,Hustwaite,2026,Midfielder,est,61,43,44,40,45,53,49,10,10,60,47,12,49,39,67,15,53,5
-HAW,Max,Ramsden,2026,Key Forward,est,47,56,20,39,33,33,44,70,22,29,43,4,37,17,34,61,60,9
-HAW,Matt,Hill,2026,Gen. Forward,est,65,24,26,29,39,45,33,12,7,32,55,4,51,21,50,35,56,9
-HAW,Aidan,Schubert,2026,Key Forward,est,47,47,31,41,41,21,54,57,16,22,34,10,48,12,38,68,61,5
-MEL,Jack,Steele,2026,Midfielder,gps,75,44,81,48,54,53,49,9,30,74,32,14,59,46,93,13,52,99
-MEL,Kysaiah,Pickett,2026,Midfielder,gps,93,63,59,66,45,26,44,53,14,63,35,13,77,35,78,35,26,99
-MEL,Tom,Sparrow,2026,Midfielder,gps,78,40,66,60,45,57,43,3,18,69,69,15,60,29,98,20,34,99
-MEL,Max,Gawn,2026,Ruck,est,34,60,90,61,35,23,44,78,49,85,34,87,64,47,34,21,30,99
-MEL,Ed,Langdon,2026,Midfielder,gps,81,80,47,19,66,71,73,17,31,35,77,5,50,54,48,22,65,99
-MEL,Koltyn,Tholstrup,2026,Gen. Defender,20m,57,63,57,24,72,40,62,21,42,33,43,3,35,76,32,7,69,99
-MEL,Jake,Bowey,2026,Gen. Defender,20m,70,63,36,56,77,72,65,8,43,33,40,4,37,69,50,6,73,66
-MEL,Harvey,Langford,2026,Midfielder,est,60,44,49,6,57,49,49,45,22,45,75,6,44,42,49,35,61,99
-MEL,Kade,Chandler,2026,Gen. Forward,gps,92,59,60,61,56,55,39,22,18,45,71,6,70,22,78,33,56,95
-MEL,Trent,Rivers,2026,Gen. Defender,20m,58,38,47,60,74,67,72,16,17,26,64,3,45,64,45,8,69,70
-MEL,Jake,Lever,2026,Key Defender,20m,37,99,45,42,60,53,90,34,84,21,19,2,19,93,26,3,48,91
-MEL,Caleb,Windsor,2026,Mid-Forward,gps,85,30,37,41,51,43,35,12,54,37,82,6,55,29,64,18,59,87
-MEL,Harry,Sharp,2026,Gen. Forward,est,67,55,21,60,65,44,41,12,11,29,73,4,58,15,58,37,58,99
-MEL,Blake,Howes,2026,Gen. Defender,est,64,56,33,12,62,52,71,20,51,24,19,2,27,59,40,3,62,83
-MEL,Daniel,Turner,2026,Key Defender,est,47,88,44,47,62,51,74,75,74,27,26,2,22,88,30,5,55,83
-MEL,Bayley,Fritsch,2026,Gen. Forward,est,65,69,41,31,56,31,48,32,14,29,81,3,58,17,46,60,71,91
-MEL,Jacob,van Rooyen,2026,Key Forward,20m,55,63,66,37,57,17,54,56,35,35,81,9,46,12,34,82,65,91
-MEL,Changkuoth,Jiath,2026,Gen. Defender,gps,80,31,27,26,70,48,78,41,41,22,33,2,34,67,37,4,58,66
-MEL,Joel,Fitzgerald,2026,Midfielder,est,60,9,52,26,24,46,35,32,29,55,38,10,54,32,74,12,48,46
-MEL,Bailey,Laurie,2026,Gen. Forward,20m,38,11,49,26,44,35,42,13,6,25,48,3,48,14,51,29,64,70
-MEL,Harry,Petty,2026,Key Forward,est,48,68,26,44,54,42,54,54,44,28,73,11,47,37,48,61,45,83
-MEL,Christian,Salem,2026,Gen. Defender,gps,88,31,47,15,55,44,51,16,32,28,34,3,33,55,39,6,62,38
-MEL,Latrelle,Pickett,2026,Gen. Forward,est,68,17,31,69,39,45,31,14,8,28,30,4,46,19,43,26,46,66
-MEL,Matthew,Jefferson,2026,Key Forward,est,47,44,34,30,51,21,32,49,16,28,46,10,45,11,39,54,65,66
-MEL,Tom,McDonald,2026,Key Defender,est,47,83,62,44,63,53,64,47,63,19,41,8,20,66,29,9,44,46
-MEL,Xavier,Lindsay,2026,Gen. Defender,est,65,35,26,16,67,45,51,16,43,25,39,3,32,51,45,6,71,30
-MEL,Paddy,Cross,2026,Mid-Forward,est,59,28,26,1,64,25,34,28,54,30,85,4,39,19,60,26,56,46
-MEL,Jai,Culley,2026,Midfielder,est,60,32,51,14,56,38,43,44,11,49,29,7,55,34,60,17,68,30
-MEL,Brody,Mihocek,2026,Key Forward,gps,77,34,62,27,51,2,45,70,12,22,94,8,39,9,30,69,59,42
-MEL,Jake,Melksham,2026,Gen. Forward,est,65,44,43,21,42,20,43,21,13,23,74,2,48,17,43,45,50,30
-MEL,Max,Heath,2026,Ruck,20m,43,1,47,24,51,30,18,46,19,48,18,60,42,24,37,13,42,30
-MEL,Xavier,Taylor,2026,Gen. Defender,20m,50,56,34,21,39,60,53,19,44,27,41,3,25,57,38,6,58,13
-MEL,Lukas,Cooke,2026,Key Defender,est,46,39,25,27,59,51,62,55,68,24,17,3,17,74,24,5,58,9
-MEL,Andy,Moniz-Wakefield,2026,Gen. Forward,est,65,7,31,25,45,26,40,30,9,28,74,3,44,19,52,32,67,9
-MEL,Luker,Kentfield,2026,Key Forward,est,47,22,50,28,51,6,41,42,21,25,40,13,37,16,34,55,48,13
-MEL,Jack,Viney,2026,Midfielder,est,61,31,76,19,53,49,51,10,11,55,34,10,47,39,69,15,54,5
-MEL,Aidan,Johnson,2026,Ruck,est,34,20,64,25,37,33,32,37,30,59,39,62,50,24,47,15,9,5
-NTH,Harry,Sheezel,2026,Midfielder,est,61,55,61,67,46,52,89,37,8,67,31,13,67,38,86,24,41,95
-NTH,Caleb,Daniel,2026,Gen. Defender,gps,82,64,57,22,66,76,80,4,12,28,31,5,43,51,39,4,68,99
-NTH,Luke,Parker,2026,Gen. Defender,est,65,70,63,49,61,65,91,22,47,29,81,4,34,76,37,8,56,99
-NTH,Luke,Davies-Uniacke,2026,Midfielder,est,62,61,69,73,65,61,53,58,9,78,46,16,67,39,81,17,19,99
-NTH,Jy,Simpkin,2026,Midfielder,gps,86,63,45,34,56,47,71,19,23,46,37,9,57,36,57,26,38,99
-NTH,Colby,McKercher,2026,Gen. Forward,gps,73,57,33,99,56,54,52,3,3,20,33,3,47,23,54,16,46,99
-NTH,Dylan,Stephens,2026,Midfielder,gps,75,65,24,19,64,66,72,12,6,35,12,6,44,41,47,12,44,99
-NTH,Finn,O'Sullivan,2026,Midfielder,20m,65,60,36,21,56,47,58,9,12,53,37,11,56,27,71,16,39,82
-NTH,Cameron,Zurhaar,2026,Gen. Defender,gps,84,57,56,21,61,52,78,38,47,24,16,2,40,57,32,20,50,99
-NTH,Tristan,Xerri,2026,Ruck,est,35,38,73,44,30,6,30,66,62,89,31,72,52,36,68,17,12,82
-NTH,Tom,Blamires,2026,Midfielder,est,60,40,42,13,57,52,50,3,32,34,46,5,41,39,47,12,65,73
-NTH,Luke,McDonald,2026,Gen. Defender,est,64,68,50,23,73,60,80,13,48,20,35,2,29,52,37,4,50,78
-NTH,George,Wardlaw,2026,Midfielder,est,61,5,62,23,49,40,41,42,33,68,90,12,46,38,86,15,30,69
-NTH,Charlie,Comben,2026,Key Defender,20m,49,89,18,33,52,57,69,72,82,23,36,2,18,84,30,3,37,95
-NTH,Paul,Curtis,2026,Gen. Forward,est,66,52,32,29,46,38,51,32,12,31,67,4,63,20,64,64,38,86
-NTH,Charlie,Spargo,2026,Gen. Forward,est,65,30,39,16,45,49,58,5,3,17,64,2,58,15,44,30,63,82
-NTH,Jack,Darling,2026,Key Forward,est,47,31,66,29,46,3,47,79,42,33,62,7,47,10,36,72,68,95
-NTH,Nick,Larkey,2026,Key Forward,est,47,80,44,31,45,33,57,56,42,23,42,2,43,7,29,88,75,99
-NTH,Cooper,Trembath,2026,Key Forward,est,47,54,47,37,46,42,51,59,43,27,84,20,40,13,43,63,71,99
-NTH,Aidan,Corr,2026,Key Defender,gps,84,55,55,31,66,40,57,31,72,19,19,2,14,62,23,2,49,69
-NTH,Griffin,Logue,2026,Key Defender,gps,93,61,66,33,45,49,67,31,58,24,19,2,13,73,22,2,50,69
-NTH,Cooper,Harvey,2026,Gen. Defender,est,64,49,50,16,60,72,77,24,45,18,41,2,30,55,33,5,56,31
-NTH,Tom,Powell,2026,Gen. Forward,gps,79,43,33,32,42,44,65,6,9,31,48,5,51,25,51,28,59,35
-NTH,Zane,Duursma,2026,Gen. Forward,20m,57,16,24,1,44,48,40,34,8,22,50,2,35,14,36,39,75,65
-NTH,Jacob,Konstanty,2026,Gen. Forward,est,66,44,41,11,50,40,39,17,9,30,74,4,37,16,53,32,46,44
-NTH,Riley,Hardeman,2026,Gen. Defender,est,65,41,26,14,69,41,61,8,48,16,50,2,29,46,35,5,68,31
-NTH,Josh,Goater,2026,Gen. Defender,est,65,33,28,20,63,52,72,20,49,20,32,2,25,58,30,4,64,27
-NTH,Zac,Banch,2026,Gen. Forward,est,66,29,43,23,67,52,46,6,11,22,44,3,54,13,48,39,47,35
-NTH,Toby,Pink,2026,Key Defender,est,46,83,52,33,75,47,72,26,82,20,19,2,15,66,23,3,57,22
-NTH,Wil,Dawson,2026,Ruck,est,34,1,24,18,28,43,27,50,36,34,12,44,31,17,43,11,54,44
-NTH,Lachy,Dovaston,2026,Gen. Forward,est,66,12,33,26,47,32,42,13,7,29,28,4,48,16,50,33,68,27
-NTH,Callum,Coleman-Jones,2026,Ruck,est,34,1,69,18,16,30,26,23,26,56,18,53,34,19,34,12,18,22
-NTH,Bailey,Scott,2026,Midfielder,est,60,39,28,17,48,48,56,8,19,38,23,7,40,28,63,14,59,14
-NTH,Matt,Whitlock,2026,Key Forward,20m,57,35,43,32,47,16,49,26,16,21,53,3,38,9,29,60,65,14
-NTH,Zac,Fisher,2026,Gen. Defender,est,66,50,45,19,62,59,71,15,24,24,41,3,28,55,40,6,65,5
-NTH,Taylor,Goad,2026,Ruck,20m,68,1,43,30,43,16,21,32,32,50,39,64,37,23,39,13,42,10
-PAD,Zak,Butters,2026,Midfielder,gps,81,59,56,82,51,62,53,49,19,81,25,17,67,53,79,15,31,73
-PAD,Jase,Burgoyne,2026,Midfielder,est,60,61,32,24,44,47,74,45,46,54,30,9,62,59,62,21,57,99
-PAD,Jason,Horne-Francis,2026,Midfielder,gps,88,49,63,46,37,19,67,41,11,72,83,16,69,30,63,47,11,90
-PAD,Darcy,Byrne-Jones,2026,Gen. Defender,gps,75,52,42,36,52,56,77,17,41,33,34,3,33,73,53,8,70,95
-PAD,Willem,Drew,2026,Midfielder,est,61,58,49,38,39,44,42,49,42,68,32,13,51,36,92,9,49,95
-PAD,Ollie,Wines,2026,Midfielder,est,60,14,85,27,36,33,58,52,20,63,37,11,61,32,67,13,46,82
-PAD,Joe,Richards,2026,Gen. Forward,20m,59,53,44,65,44,42,62,31,12,45,35,8,58,28,78,27,60,86
-PAD,Aliir,Aliir,2026,Key Defender,gps,86,99,62,41,55,39,94,84,66,26,16,2,18,99,21,3,44,95
-PAD,Logan,Evans,2026,Gen. Defender,20m,55,69,31,38,60,60,80,23,46,20,54,2,24,62,41,5,46,82
-PAD,Joe,Berry,2026,Gen. Forward,est,65,40,37,35,55,36,49,3,7,30,40,3,51,23,54,29,60,99
-PAD,Jordon,Sweet,2026,Ruck,est,34,49,81,46,39,18,28,39,54,69,28,84,52,23,45,19,9,95
-PAD,Miles,Bergman,2026,Gen. Defender,20m,66,48,31,30,65,58,78,44,57,31,47,4,32,58,44,10,59,69
-PAD,Mitch,Georgiades,2026,Key Forward,gps,82,80,24,25,35,36,74,52,34,22,59,3,45,9,31,99,41,90
-PAD,Lachie,Jones,2026,Key Defender,gps,82,60,51,36,74,40,56,25,74,23,42,2,22,70,36,6,70,86
-PAD,Kane,Farrell,2026,Gen. Defender,gps,83,52,31,65,78,65,93,9,52,23,55,3,34,49,44,6,60,56
-PAD,Josh,Lai,2026,Gen. Defender,est,64,51,46,4,74,48,71,31,24,22,41,2,23,71,35,3,66,82
-PAD,Jacob,Wehr,2026,Midfielder,est,59,41,31,1,54,50,51,33,15,29,7,5,38,31,52,8,54,73
-PAD,Corey,Durdin,2026,Gen. Forward,est,65,53,48,2,40,36,49,14,7,26,77,2,51,15,49,52,63,99
-PAD,Jack,Whitlock,2026,Key Forward,est,47,63,36,39,29,17,47,48,44,24,11,10,34,12,35,57,61,99
-PAD,Christian,Moraes,2026,Gen. Forward,est,65,16,30,27,44,56,45,5,6,24,53,3,43,21,47,20,57,52
-PAD,Ewan,Mackinlay,2026,Midfielder,est,61,46,50,11,54,55,45,35,9,35,48,5,36,33,60,16,72,61
-PAD,Todd,Marshall,2026,Key Forward,est,47,38,27,44,48,37,59,31,49,18,43,2,36,28,32,43,69,65
-PAD,Jack,Watkins,2026,Mid-Forward,est,59,13,33,1,22,44,45,30,22,32,41,6,41,28,53,16,60,48
-PAD,Jackson,Mead,2026,Mid-Forward,20m,54,31,51,28,45,33,49,21,41,36,49,7,45,25,63,17,51,44
-PAD,Xavier,Bamert,2026,Gen. Forward,est,65,39,28,27,42,29,56,20,8,21,25,2,47,21,48,33,71,44
-PAD,Dante,Visentini,2026,Ruck,est,34,25,49,22,36,39,34,28,65,37,64,48,31,25,40,18,33,65
-PAD,Jack,Lukosius,2026,Mid-Forward,20m,66,32,30,21,70,20,66,39,42,32,74,4,56,28,49,31,58,35
-PAD,Esava,Ratugolea,2026,Key Defender,gps,90,68,67,30,57,48,62,73,72,27,19,2,20,93,23,2,61,35
-PAD,Tom,Anastasopoulos,2026,Gen. Forward,est,65,39,21,20,43,27,46,8,10,19,52,2,36,19,54,29,67,22
-PAD,Will,Lorenz,2026,Gen. Defender,20m,55,48,25,33,62,65,72,11,28,33,30,4,28,57,45,5,57,14
-PAD,Mitch,Zadow,2026,Gen. Forward,est,65,27,52,14,41,6,33,6,10,27,54,3,41,17,50,37,45,39
-PAD,Connor,Rozee,2026,Midfielder,gps,85,37,40,38,55,48,59,9,12,53,33,10,45,41,66,19,42,10
-PAD,Balyn,O'Brien,2026,Gen. Defender,est,65,43,29,2,56,59,49,8,47,25,27,3,19,47,39,4,63,27
-PAD,Will,Brodie,2026,Midfielder,est,60,22,69,31,55,48,46,9,8,64,47,12,52,37,67,13,52,10
-PAD,Harrison,Ramm,2026,Key Defender,est,47,66,51,32,38,59,41,67,91,29,19,8,14,62,33,3,51,27
-PAD,Brandon,Zerk-Thatcher,2026,Key Defender,est,47,79,31,27,56,39,65,36,48,20,19,3,14,61,26,3,45,18
-PAD,Alex,Van Wyk,2026,Ruck,est,34,3,54,27,31,18,30,55,24,53,17,67,38,20,36,13,46,14
-PAD,Tom,Cochrane,2026,Gen. Forward,est,65,31,51,29,36,12,41,12,8,29,48,3,57,15,53,39,60,14
-PAD,Ollie,Lord,2026,Key Forward,est,47,57,45,43,36,18,44,46,43,30,55,12,39,15,43,66,62,5
-RIC,Tim,Taranto,2026,Midfielder,est,61,56,81,43,31,40,45,37,7,88,36,17,59,34,86,26,54,90
-RIC,Jayden,Short,2026,Gen. Defender,est,65,57,43,38,68,56,98,7,29,19,39,2,29,56,36,8,58,90
-RIC,Jack,Ross,2026,Midfielder,20m,70,44,70,52,60,51,51,36,8,70,60,19,57,42,79,14,49,82
-RIC,Seth,Campbell,2026,Gen. Forward,est,68,51,36,76,49,38,40,25,22,38,44,5,52,23,65,33,53,99
-RIC,Nick,Vlastuin,2026,Gen. Defender,est,65,63,58,19,63,58,62,30,35,30,28,3,19,81,42,4,45,95
-RIC,Patrick,Retschko,2026,Midfielder,est,61,70,40,40,61,57,70,9,37,33,22,5,35,45,49,9,62,78
-RIC,Dion,Prestia,2026,Midfielder,est,61,29,74,26,46,50,54,6,7,47,2,9,52,35,72,10,50,73
-RIC,Nathan,Broad,2026,Gen. Defender,est,64,61,44,15,57,45,76,29,77,20,29,2,19,71,27,3,77,90
-RIC,Sam,Grlj,2026,Gen. Defender,20m,73,40,28,45,61,47,48,4,33,21,38,3,32,42,59,7,72,90
-RIC,Sam,Banks,2026,Gen. Defender,est,65,35,21,16,69,56,55,15,9,21,22,3,21,43,40,5,61,78
-RIC,Ben,Miller,2026,Key Defender,20m,75,95,52,56,72,47,77,49,81,18,19,5,16,67,29,2,51,90
-RIC,Tom,Brown,2026,Gen. Defender,20m,66,42,28,21,66,54,61,40,45,27,26,3,34,60,33,8,59,78
-RIC,Jacob,Hopper,2026,Midfielder,est,60,38,74,18,38,19,42,47,9,75,9,13,44,28,55,8,20,52
-RIC,Tyler,Sonsie,2026,Mid-Forward,est,59,58,40,7,54,34,54,22,51,41,47,5,39,46,49,19,62,65
-RIC,James,Trezise,2026,Gen. Defender,est,65,54,27,11,53,52,68,22,25,26,10,3,28,55,44,8,61,61
-RIC,Steely,Green,2026,Gen. Forward,est,66,54,42,24,44,36,45,12,7,26,30,3,47,17,59,33,57,86
-RIC,Sam,Cumming,2026,Midfielder,20m,67,33,49,14,65,34,46,35,18,45,94,8,42,28,64,22,48,61
-RIC,Noah,Balta,2026,Key Defender,gps,90,65,73,49,50,38,54,69,61,37,27,24,27,52,29,24,43,73
-RIC,Toby,Nankervis,2026,Ruck,est,35,29,83,47,34,20,22,48,47,78,51,81,40,26,57,10,15,52
-RIC,Kane,McAuliffe,2026,Midfielder,20m,73,34,62,28,59,37,46,9,30,51,57,9,54,46,65,11,25,44
-RIC,Hugo,Ralphsmith,2026,Mid-Forward,20m,67,62,23,19,69,34,48,6,51,38,96,5,44,34,54,23,56,56
-RIC,Sam,Lalor,2026,Mid-Forward,est,60,39,60,28,77,40,45,25,8,46,92,23,61,23,62,38,36,52
-RIC,Mykelti,Lefau,2026,Key Forward,gps,87,72,52,52,57,20,41,41,26,28,71,8,29,14,54,54,53,90
-RIC,Luke,Trainor,2026,Gen. Defender,est,65,60,34,29,50,36,73,26,44,17,28,2,20,51,36,4,20,48
-RIC,Tom,Lynch,2026,Key Forward,est,47,62,58,34,36,12,33,60,19,29,4,4,42,11,34,67,51,65
-RIC,Taj,Hotton,2026,Mid-Forward,20m,79,31,55,10,36,31,30,18,10,52,42,8,43,29,70,13,51,44
-RIC,Kye,Annand,2026,Key Defender,est,46,77,31,38,65,40,66,33,83,22,19,3,12,70,21,3,59,48
-RIC,Campbell,Gray,2026,Key Defender,est,47,36,41,28,64,34,49,31,51,20,21,6,11,55,33,5,40,44
-RIC,Jonty,Faull,2026,Key Forward,est,47,57,44,33,52,8,40,43,24,21,64,7,28,11,37,45,71,44
-RIC,Oliver,Hayes-Brown,2026,Ruck,est,34,1,81,35,58,6,18,20,46,62,55,54,36,22,33,10,45,31
-RIC,Maurice,Rioli,2026,Gen. Forward,gps,97,30,41,24,51,27,28,14,8,29,18,3,45,21,68,19,58,44
-RIC,Rhyan,Mansell,2026,Gen. Forward,gps,89,40,28,25,43,16,52,22,12,26,38,3,47,25,60,49,58,27
-RIC,Jasper,Alger,2026,Gen. Forward,20m,73,27,37,11,65,35,38,28,15,28,80,3,41,14,49,52,53,35
-RIC,Tom,Burton,2026,Gen. Forward,est,66,45,34,36,61,44,30,8,6,27,31,3,42,19,46,24,62,22
-RIC,Samson,Ryan,2026,Ruck,20m,52,4,40,27,51,5,22,38,47,44,54,57,39,22,34,16,31,27
-RIC,Liam,Fawcett,2026,Key Forward,20m,53,53,33,27,51,7,40,23,17,20,65,3,35,12,30,70,65,31
-RIC,Judson,Clarke,2026,Midfielder,est,60,38,42,2,53,54,48,8,30,50,29,8,43,40,55,13,64,14
-RIC,Noah,Roberts-Thomson,2026,Gen. Forward,20m,75,37,28,22,66,31,37,12,9,23,99,3,39,13,50,39,70,14
-RIC,Zane,Peucker,2026,Gen. Forward,20m,78,31,32,30,59,54,51,19,7,25,69,3,49,19,48,34,56,10
-RIC,Harry,Armstrong,2026,Key Forward,est,47,40,43,23,41,28,37,35,15,19,57,3,28,10,28,48,69,18
-RIC,Josh,Gibcus,2026,Key Defender,20m,58,70,35,35,55,26,64,54,78,26,19,3,17,79,32,4,59,5
-STK,Bradley,Hill,2026,Gen. Defender,gps,98,71,49,69,64,63,97,14,36,22,84,3,54,50,44,19,62,99
-STK,Hugo,Garcia,2026,Midfielder,20m,73,40,57,44,50,48,43,31,36,76,71,17,62,26,89,18,49,99
-STK,Max,Hall,2026,Mid-Forward,est,62,56,68,81,61,49,65,11,40,62,91,12,77,23,82,42,61,99
-STK,Marcus,Windhager,2026,Midfielder,est,60,60,62,38,48,46,68,3,16,45,50,8,49,45,64,10,46,99
-STK,Callum,Wilkie,2026,Key Defender,est,48,99,49,78,53,66,99,69,73,26,4,2,19,99,31,2,62,99
-STK,Nasiah,Wanganeen-Milera,2026,Midfielder,est,64,46,31,99,55,57,45,42,29,52,61,10,83,36,59,33,39,73
-STK,Darcy,Wilson,2026,Mid-Forward,gps,84,63,34,81,47,63,65,7,54,38,42,6,61,33,66,31,57,95
-STK,Jack,Sinclair,2026,Gen. Defender,est,66,52,53,67,71,61,90,8,43,28,54,4,49,67,45,6,71,65
-STK,Rowan,Marshall,2026,Ruck,est,34,41,84,43,28,22,48,68,34,72,44,57,52,28,41,33,23,90
-STK,Mattaes,Phillipou,2026,Mid-Forward,20m,65,33,56,45,53,45,49,4,51,44,58,8,48,21,76,21,57,90
-STK,Mason,Wood,2026,Midfielder,est,59,52,49,11,58,48,77,51,42,38,22,6,45,42,50,26,70,86
-STK,Jack,Silvagni,2026,Key Defender,est,47,90,46,46,46,57,77,51,68,28,32,2,19,85,33,12,34,99
-STK,Sam,Flanders,2026,Midfielder,20m,62,40,58,55,63,55,77,4,35,45,37,8,43,44,66,13,66,52
-STK,Mitch,Owens,2026,Key Forward,est,47,69,50,36,44,28,39,72,42,37,59,7,51,21,38,61,59,86
-STK,Jack,Macrae,2026,Midfielder,est,60,10,60,21,38,36,49,4,9,69,34,13,47,37,69,8,49,52
-STK,Liam,Stocker,2026,Gen. Defender,est,64,41,48,2,65,36,67,18,50,23,41,2,19,67,35,3,53,78
-STK,Tom,De Koning,2026,Ruck,est,34,34,54,32,48,6,35,63,29,52,23,62,51,25,32,24,7,86
-STK,Ryan,Byrnes,2026,Midfielder,20m,60,52,52,1,57,46,63,44,26,35,46,6,42,39,51,17,64,65
-STK,Cooper,Sharman,2026,Key Forward,20m,39,68,33,43,44,34,52,57,23,28,44,8,68,19,40,66,71,90
-STK,Jack,Carroll,2026,Gen. Defender,20m,61,52,35,38,74,52,85,17,42,17,15,2,38,49,40,5,68,52
-STK,Jack,Higgins,2026,Gen. Forward,20m,50,49,54,1,39,28,39,36,10,29,32,2,44,14,49,64,67,69
-STK,Hugh,Boxshall,2026,Midfielder,est,61,44,45,16,41,43,46,36,11,51,38,9,32,40,84,22,39,44
-STK,Liam,O'Connell,2026,Gen. Defender,est,65,53,41,2,46,55,55,19,32,26,10,3,18,51,46,5,69,56
-STK,Anthony,Caminiti,2026,Key Defender,est,47,64,30,18,45,52,35,29,79,29,7,4,15,49,35,14,44,78
-STK,Liam,Ryan,2026,Gen. Forward,gps,92,40,33,1,46,53,33,35,9,25,71,2,51,13,38,62,60,73
-STK,Campbell,Lake,2026,Gen. Forward,est,66,33,39,30,46,41,34,4,7,34,79,3,42,21,73,28,57,44
-STK,Hunter,Clark,2026,Gen. Defender,est,65,8,42,19,62,63,65,18,30,27,41,2,29,61,43,8,71,31
-STK,Dan,Butler,2026,Gen. Forward,gps,87,26,44,32,37,47,29,44,6,23,53,3,39,20,67,25,42,44
-STK,Tobie,Travaglia,2026,Gen. Defender,est,65,19,18,2,69,71,57,24,41,25,41,3,22,50,36,4,67,31
-STK,Liam,Henry,2026,Gen. Forward,20m,55,14,21,7,28,36,45,10,7,22,7,2,46,25,43,37,69,35
-STK,Angus,Hastie,2026,Gen. Defender,est,65,33,12,22,64,65,62,8,36,14,41,2,22,45,42,6,75,31
-STK,Dougal,Howard,2026,Key Defender,gps,84,56,34,30,51,33,82,29,56,15,10,3,15,53,18,3,46,31
-STK,Alix,Tauru,2026,Gen. Defender,20m,63,13,53,6,48,34,57,25,44,20,51,2,22,44,36,14,63,39
-STK,Charlie,Banfield,2026,Midfielder,est,60,33,43,20,52,37,50,32,11,46,36,8,40,36,64,17,64,14
-STK,Isaac,Keeler,2026,Key Forward,est,47,38,42,40,31,27,47,57,32,30,40,9,44,13,34,63,58,10
-STK,Max,King,2026,Key Forward,gps,80,30,29,36,34,34,44,57,16,27,49,4,38,12,32,64,63,5
-SYD,Nick,Blakey,2026,Gen. Defender,gps,98,63,24,99,74,69,62,22,55,27,50,3,60,79,37,9,40,87
-SYD,Isaac,Heeney,2026,Midfielder,gps,84,52,78,46,49,56,47,65,30,85,87,17,80,44,79,50,42,79
-SYD,Callum,Mills,2026,Gen. Defender,est,66,46,42,58,79,74,72,27,44,28,17,3,31,75,46,3,74,91
-SYD,Chad,Warner,2026,Midfielder,est,65,49,67,99,55,54,48,36,9,65,72,13,93,38,75,41,35,87
-SYD,Brodie,Grundy,2026,Ruck,est,35,45,80,62,15,24,27,32,32,88,57,86,60,36,55,15,1,91
-SYD,Jake,Lloyd,2026,Gen. Forward,est,66,66,49,54,61,67,64,17,11,30,68,3,50,35,54,33,72,99
-SYD,Jai,Serong,2026,Midfielder,20m,57,67,39,27,55,54,62,39,44,46,38,7,47,53,61,14,57,95
-SYD,Errol,Gulden,2026,Midfielder,est,63,49,66,96,60,54,56,27,15,63,20,13,83,42,81,17,25,52
-SYD,Riley,Bice,2026,Gen. Defender,est,68,55,37,75,60,73,74,12,56,23,73,2,44,64,44,7,67,79
-SYD,Tom,McCartin,2026,Key Defender,20m,47,92,49,57,57,63,80,50,73,27,19,2,19,99,29,2,37,87
-SYD,Angus,Sheldrick,2026,Midfielder,20m,57,1,80,20,40,56,37,3,4,59,23,10,58,37,67,13,34,79
-SYD,Matt,Roberts,2026,Midfielder,est,60,63,56,25,71,60,60,49,21,37,52,6,43,54,54,10,71,83
-SYD,James,Rowbottom,2026,Mid-Forward,est,61,36,47,40,38,44,26,3,54,57,50,10,59,33,99,15,62,91
-SYD,James,Jordon,2026,Midfielder,est,61,65,45,20,65,64,34,47,32,43,77,7,45,31,80,13,65,87
-SYD,Sam,Wicks,2026,Gen. Defender,gps,88,60,33,64,74,66,49,20,52,24,39,3,34,57,47,4,43,79
-SYD,Justin,McInerney,2026,Midfielder,est,60,46,32,29,51,68,58,25,11,49,74,10,74,37,57,31,41,56
-SYD,Tom,Papley,2026,Gen. Forward,gps,90,36,51,60,47,42,40,32,23,36,53,4,85,20,53,54,42,79
-SYD,Charlie,Curnow,2026,Key Forward,est,47,72,68,31,39,9,43,84,22,31,76,2,44,13,31,93,40,95
-SYD,Logan,McDonald,2026,Key Forward,20m,59,48,33,32,56,56,49,51,47,27,99,7,51,20,31,82,67,91
-SYD,Dane,Rampe,2026,Key Defender,gps,89,55,56,39,73,67,44,27,74,28,4,3,20,75,35,3,61,68
-SYD,Harry,Cunningham,2026,Gen. Defender,gps,88,40,40,9,60,51,60,19,48,18,27,2,27,47,47,8,71,56
-SYD,Will,Edwards,2026,Key Defender,20m,80,74,63,36,84,56,46,39,87,28,19,2,20,78,25,2,38,56
-SYD,Caiden,Cleary,2026,Gen. Forward,est,66,34,49,32,60,38,39,4,11,35,22,3,45,20,63,28,43,44
-SYD,Malcolm,Rosas,2026,Gen. Forward,gps,89,22,38,23,45,52,28,5,11,29,99,3,40,18,58,32,62,64
-SYD,Harry,Kyle,2026,Gen. Defender,est,65,45,33,13,60,67,46,6,52,25,58,3,21,56,40,5,62,48
-SYD,Braeden,Campbell,2026,Gen. Forward,gps,79,50,38,55,61,56,36,20,8,38,58,5,77,32,64,29,61,32
-SYD,Joel,Amartey,2026,Key Forward,est,47,41,52,32,35,24,40,53,19,26,36,7,39,11,36,77,59,60
-SYD,Lewis,Melican,2026,Key Defender,gps,80,62,61,33,60,40,53,55,62,25,6,2,23,77,28,3,69,44
-SYD,Billy,Cootee,2026,Gen. Forward,est,66,29,45,25,52,37,41,9,8,27,65,3,49,17,57,41,54,44
-SYD,Hayden,McLean,2026,Key Forward,est,47,30,48,37,39,45,31,76,35,35,56,17,37,11,40,58,62,48
-SYD,Joel,Hamling,2026,Key Defender,gps,90,72,49,19,52,62,50,34,92,25,13,2,19,67,24,7,63,44
-SYD,Tom,Hanily,2026,Gen. Forward,est,65,18,52,19,61,65,41,23,11,26,44,3,49,22,50,32,58,28
-SYD,Jesse,Dattoli,2026,Gen. Forward,est,65,25,68,26,44,26,51,25,9,35,10,4,65,18,47,41,69,21
-SYD,Corey,Warner,2026,Gen. Forward,20m,67,13,37,36,61,59,34,9,9,21,44,2,53,16,49,27,57,21
-SYD,Peter,Ladhams,2026,Ruck,est,34,27,58,29,22,26,23,51,50,67,60,72,41,25,40,17,33,9
-SYD,Will,Green,2026,Ruck,est,34,15,42,38,59,19,24,38,43,54,8,63,55,20,48,15,32,13
-WCE,Harley,Reid,2026,Midfielder,20m,63,54,79,82,60,47,33,44,12,91,41,18,58,33,75,19,1,99
-WCE,Tim,Kelly,2026,Midfielder,est,60,40,68,44,56,52,61,3,29,70,16,14,65,41,68,7,56,90
-WCE,Tom,McCarthy,2026,Gen. Defender,est,67,55,56,76,69,57,80,25,45,27,34,4,33,68,44,4,73,95
-WCE,Liam,Duggan,2026,Gen. Defender,est,66,54,47,43,61,61,87,18,43,20,22,2,35,59,42,6,66,95
-WCE,Willem,Duursma,2026,Midfielder,20m,65,44,32,52,54,29,57,42,34,45,72,7,45,34,74,21,61,95
-WCE,Elliot,Yeo,2026,Midfielder,gps,77,26,64,29,51,21,42,21,26,60,13,11,47,20,79,23,39,90
-WCE,Liam,Baker,2026,Gen. Defender,gps,88,57,53,12,52,58,52,11,20,37,64,4,38,63,47,14,24,86
-WCE,Milan,Murdock,2026,Gen. Forward,est,67,42,48,44,33,18,39,31,6,41,91,4,49,32,65,31,63,86
-WCE,Tylar,Young,2026,Key Defender,est,46,77,55,46,71,54,77,31,61,21,19,2,18,77,22,2,49,99
-WCE,Brady,Hough,2026,Gen. Defender,est,65,54,15,7,71,45,67,8,23,22,63,3,25,39,48,12,53,99
-WCE,Hamish,Davis,2026,Midfielder,est,59,40,46,2,44,46,49,35,15,37,19,5,32,44,53,9,69,90
-WCE,Jake,Waterman,2026,Key Forward,est,47,77,53,34,41,35,76,49,11,18,33,2,52,11,28,96,61,99
-WCE,Josh,Lindsay,2026,Gen. Defender,est,65,42,47,16,72,56,64,8,37,21,49,2,26,48,34,5,62,65
-WCE,Bailey,Williams,2026,Ruck,est,35,43,67,42,40,16,18,34,32,73,29,82,56,28,52,17,35,82
-WCE,Bo,Allan,2026,Midfielder,20m,65,50,45,1,61,48,45,51,27,39,61,5,37,44,48,15,44,82
-WCE,Jack,Graham,2026,Mid-Forward,gps,84,40,64,49,44,37,39,4,5,51,90,9,58,29,97,17,20,56
-WCE,Marcus,Herbert,2026,Gen. Defender,est,68,54,50,77,55,53,76,19,29,27,35,3,24,65,43,4,45,44
-WCE,Ryan,Maric,2026,Midfielder,est,60,49,54,27,62,39,56,51,17,38,43,6,42,41,56,8,63,52
-WCE,Tom,Cole,2026,Gen. Forward,est,66,52,40,39,57,41,55,11,26,24,75,3,43,28,51,30,52,73
-WCE,Jobe,Shanahan,2026,Key Forward,est,47,81,36,32,50,17,49,49,24,25,82,2,28,22,36,60,63,99
-WCE,Reuben,Ginbey,2026,Key Defender,20m,73,80,39,41,53,53,61,43,92,30,19,2,23,99,33,3,72,56
-WCE,Rhett,Bazzo,2026,Key Defender,est,47,77,35,31,63,38,67,38,73,24,19,2,13,84,28,3,49,61
-WCE,Cooper,Duff-Tytler,2026,Key Forward,20m,74,28,33,49,39,26,34,20,54,34,1,17,34,19,48,32,54,69
-WCE,Brandon,Starcevich,2026,Gen. Defender,gps,84,46,51,13,70,43,49,28,15,25,61,2,21,53,39,4,49,48
-WCE,Jack,Williams,2026,Key Forward,est,47,45,47,41,43,30,39,60,43,32,48,13,43,11,38,46,52,52
-WCE,Deven,Robertson,2026,Midfielder,gps,81,42,64,26,42,52,46,7,10,63,47,11,47,35,76,13,48,18
-WCE,Oliver,Francou,2026,Midfielder,est,61,32,65,36,45,26,51,7,7,59,18,10,40,40,80,10,32,18
-WCE,Elijah,Hewett,2026,Mid-Forward,20m,69,34,56,14,58,33,45,30,5,37,40,6,40,21,61,15,46,27
-WCE,Harvey,Johnston,2026,Gen. Forward,est,65,38,35,17,46,39,41,18,5,22,63,2,38,14,54,28,68,35
-WCE,Harry,Schoenberg,2026,Gen. Forward,20m,46,45,46,21,48,39,42,8,6,29,27,4,41,16,48,25,61,22
-WCE,Malakai,Champion,2026,Gen. Forward,20m,72,32,41,5,46,49,35,13,10,29,73,3,36,16,53,28,53,35
-WCE,Sandy,Brock,2026,Key Defender,gps,82,68,35,34,65,66,56,36,72,21,19,3,14,61,29,5,47,27
-WCE,Jamie,Cripps,2026,Gen. Forward,est,66,49,52,33,40,34,49,11,9,25,31,3,46,19,54,41,61,22
-WCE,Jack,Hutchinson,2026,Gen. Forward,est,65,10,48,28,36,17,34,14,9,31,62,3,31,18,58,31,60,27
-WCE,Tom,Gross,2026,Gen. Forward,est,65,30,27,22,49,42,43,14,6,29,29,3,47,21,53,32,71,18
-WCE,Matt,Flynn,2026,Ruck,est,35,29,74,36,24,32,20,28,43,60,34,67,43,27,53,14,18,18
-WCE,Archer,Reid,2026,Key Forward,est,47,46,35,32,36,37,36,57,17,28,52,14,46,8,30,52,64,27
-WCE,Matthew,Owies,2026,Gen. Forward,est,66,41,62,26,48,59,43,38,11,28,54,3,48,20,56,41,59,14
-WCE,Jacob,Newton,2026,Gen. Forward,20m,73,44,44,20,32,50,33,9,6,31,38,4,41,17,56,30,70,14
-WCE,Harry,Edwards,2026,Key Defender,est,46,7,29,21,67,18,49,37,57,23,19,3,14,60,24,4,60,10
-WBD,Marcus,Bontempelli,2026,Midfielder,gps,75,64,79,81,69,47,59,49,22,80,73,19,82,36,77,39,47,95
-WBD,Ed,Richards,2026,Midfielder,gps,75,54,60,99,52,56,54,33,31,78,99,17,81,28,84,27,39,95
-WBD,Matthew,Kennedy,2026,Midfielder,est,61,37,74,42,39,41,60,53,7,72,42,17,53,36,79,24,22,95
-WBD,Bailey,Dale,2026,Gen. Defender,gps,83,63,52,67,68,45,67,17,36,29,28,3,40,83,36,5,63,79
-WBD,Ryley,Sanders,2026,Midfielder,est,61,57,66,43,50,46,49,32,17,59,31,11,49,37,77,11,47,91
-WBD,Joel,Freijah,2026,Mid-Forward,20m,66,61,60,55,35,48,56,8,57,60,44,12,67,33,78,21,30,99
-WBD,Lachlan,Bramble,2026,Gen. Defender,est,67,56,34,38,72,46,54,18,26,25,63,3,43,45,45,7,73,99
-WBD,Bailey,Williams,2026,Gen. Defender,gps,82,61,51,44,71,57,82,20,15,30,34,3,32,65,39,15,59,75
-WBD,Rhylee,West,2026,Gen. Forward,est,66,46,59,36,43,44,49,19,23,40,33,5,52,24,58,37,43,95
-WBD,Cooper,Hynes,2026,Mid-Forward,est,59,42,48,20,48,50,39,5,32,33,53,5,35,31,58,20,59,91
-WBD,Michael,Sellwood,2026,Gen. Defender,est,64,62,51,6,61,45,62,35,57,26,28,2,17,80,41,3,47,95
-WBD,Buku,Khamis,2026,Key Defender,est,46,99,34,16,52,53,69,33,62,19,5,2,17,72,23,5,60,99
-WBD,Aaron,Naughton,2026,Key Forward,20m,51,58,45,31,34,33,51,64,17,30,33,5,64,10,33,94,63,95
-WBD,Connor,Budarick,2026,Gen. Defender,gps,80,42,40,17,64,44,69,11,32,22,49,3,24,48,46,6,69,64
-WBD,Tom,Liberatore,2026,Midfielder,est,60,31,71,33,43,32,49,32,10,74,49,15,58,32,74,12,62,44
-WBD,Tim,English,2026,Ruck,est,34,36,42,46,42,43,52,35,24,50,54,73,46,41,43,20,42,68
-WBD,Rory,Lobb,2026,Ruck,est,34,65,62,48,47,21,45,44,68,39,1,38,34,40,45,18,53,87
-WBD,Arthur,Jones,2026,Gen. Forward,est,66,37,32,21,54,42,42,25,6,28,59,2,47,21,53,52,49,79
-WBD,Sam,Davidson,2026,Midfielder,20m,66,43,37,7,56,56,45,41,44,30,28,5,41,30,58,22,61,72
-WBD,James,O'Donnell,2026,Key Defender,est,46,90,32,32,71,52,62,28,82,19,19,6,17,67,23,2,61,83
-WBD,Nick,Coffield,2026,Gen. Defender,20m,75,56,29,21,57,44,84,13,49,17,41,2,19,56,30,3,70,52
-WBD,Lachie,Jaques,2026,Gen. Defender,est,65,46,35,18,57,43,69,11,46,19,18,2,33,53,40,6,65,40
-WBD,Josh,Dolan,2026,Gen. Forward,est,66,25,35,32,44,39,41,5,3,26,37,3,48,22,57,26,76,52
-WBD,Jordan,Croft,2026,Key Forward,est,48,33,15,46,52,29,34,39,18,25,30,8,33,19,41,36,48,68
-WBD,Cody,Weightman,2026,Gen. Forward,20m,62,37,45,19,27,17,39,13,10,37,1,4,40,18,55,35,57,44
-WBD,Jedd,Busslinger,2026,Key Defender,est,48,88,24,59,63,49,70,20,88,19,19,2,21,67,21,2,34,32
-WBD,Oskar,Baker,2026,Gen. Forward,gps,84,24,44,34,56,26,64,19,15,22,87,3,38,21,42,39,48,36
-WBD,Will,Lewis,2026,Key Forward,est,48,45,37,44,52,19,33,42,13,28,65,5,41,14,49,54,29,52
-WBD,Lachlan,McNeil,2026,Mid-Forward,est,59,19,51,1,48,39,35,16,40,38,76,4,35,29,54,19,70,44
-WBD,Luke,Kennedy,2026,Gen. Forward,est,66,28,51,31,33,23,27,15,6,35,58,4,35,18,70,22,68,32
-WBD,Adam,Treloar,2026,Gen. Forward,est,65,14,68,38,33,57,49,42,9,32,51,5,39,19,44,27,66,21
-WBD,Sam,Darcy,2026,Key Forward,est,47,43,38,48,39,3,38,77,38,33,34,15,49,10,38,74,34,25
-WBD,Louis,Emmett,2026,Ruck,est,35,1,40,27,27,9,24,28,27,42,6,39,27,16,47,13,48,28
-WBD,Harvey,Gallagher,2026,Midfielder,20m,73,37,49,6,45,41,42,8,30,43,19,8,43,29,50,14,58,13
-WBD,Laitham,Vandermeer,2026,Gen. Forward,gps,86,23,44,26,42,46,44,10,10,28,34,3,47,15,47,32,54,9
-WBD,Ryan,Gardner,2026,Key Defender,est,46,14,40,23,53,17,48,29,70,16,21,11,14,51,24,7,65,17
-WBD,Lachlan,Smith,2026,Ruck,20m,46,14,64,35,35,26,26,34,30,59,22,62,38,27,47,15,34,9
-WBD,Luke,Cleary,2026,Gen. Defender,est,65,28,24,20,60,69,61,13,29,22,41,3,27,51,35,7,63,9
-WBD,Lachlan,Carmichael,2026,Gen. Defender,est,65,40,26,6,59,65,67,13,43,17,41,2,26,51,37,5,62,9
-ADE,Sid,Draper,2025,Mid-Forward,est,59,1,33,1,32,35,25,44,6,30,39,5,29,17,47,17,49,40
-ADE,Lachlan,Sholl,2024,Midfielder,est,59,62,49,32,50,38,74,17,14,38,71,6,38,47,57,20,57,86
-BRL,Tom,Doedee,2023,Gen. Defender,gps,84,69,34,13,53,71,66,23,61,24,41,2,21,73,31,2,55,48
-BRL,Luke,Beecken,2025,Midfielder,est,60,18,52,1,59,34,43,9,11,46,47,9,44,29,54,15,53,5
-BRL,Henry,Smith,2025,Key Forward,est,47,47,32,40,57,42,42,41,24,25,99,13,37,11,33,69,42,8
-BRL,Jack,Payne,2025,Key Defender,est,46,81,29,34,51,35,74,50,90,19,19,2,19,84,21,3,68,48
-CAR,Jesse,Motlop,2025,Gen. Forward,gps,85,47,35,28,30,49,32,30,6,33,35,5,44,15,61,30,32,99
-CAR,Lucas,Camporeale,2025,Midfielder,est,60,30,53,5,44,24,44,7,14,49,47,9,42,29,55,10,57,14
-CAR,Harry,O'Farrell,2025,Key Defender,est,47,66,30,39,63,43,66,59,42,20,59,2,13,77,25,6,50,27
-COL,Tew,Jiath,2024,Gen. Defender,est,65,52,33,34,73,62,66,12,25,23,41,3,35,56,43,5,54,5
-COL,Bobby,Hill,2025,Gen. Forward,gps,96,39,30,11,47,61,37,16,7,27,52,3,60,13,40,47,42,56
-COL,Jakob,Ryan,2023,Gen. Defender,est,65,34,33,32,47,36,65,16,22,24,41,3,27,60,34,5,62,5
-COL,Reef,McInnes,2024,Key Forward,20m,93,19,31,23,48,30,30,26,18,26,89,3,26,7,33,62,58,39
-ESS,Lewis,Hayes,2025,Gen. Defender,est,65,53,33,48,53,59,64,15,33,24,41,3,29,58,37,5,57,5
-ESS,Nic,Martin,2025,Mid-Forward,est,62,70,46,91,47,82,87,48,20,34,73,5,56,43,49,26,58,69
-ESS,Liam,McMahon,2025,Key Forward,20m,74,42,34,16,48,46,36,31,17,30,99,4,29,11,21,65,62,31
-FRE,Sam,Sturt,2024,Gen. Forward,20m,68,52,32,31,51,37,43,13,8,25,91,3,46,17,50,54,59,56
-FRE,Hugh,Davies,2024,Key Defender,est,47,77,31,33,42,59,56,38,63,23,19,2,14,65,28,4,50,10
-FRE,Cooper,Simpson,2025,Gen. Defender,est,65,29,26,17,66,61,57,12,33,17,47,2,28,51,32,7,60,13
-FRE,Josh,Draper,2025,Key Defender,est,47,69,32,25,54,53,44,26,59,27,19,10,12,56,26,2,42,46
-FRE,Dominic,Bedendo,2022,Midfielder,20m,70,42,55,29,36,49,47,18,9,48,62,9,43,36,65,16,35,10
-GCS,Caleb,Graham,2022,Key Defender,est,46,83,29,29,58,38,49,34,81,21,93,6,12,64,23,3,62,68
-GEE,Toby,Conway,2024,Ruck,est,35,48,74,57,14,18,30,29,61,70,45,74,47,36,59,13,15,21
-GEE,Tyson,Stengle,2025,Gen. Forward,gps,68,60,40,4,33,38,42,28,9,33,34,3,70,17,49,54,55,91
-GEE,Jed,Bews,2023,Gen. Defender,gps,90,53,35,1,50,47,45,11,49,30,4,2,18,65,40,3,61,65
-GWS,Darcy,Jones,2025,Gen. Forward,gps,96,61,48,56,56,37,31,35,18,41,65,5,57,19,65,28,72,95
-GWS,Tom,Green,2025,Midfielder,est,60,62,99,55,47,55,45,22,28,95,52,16,75,36,67,19,27,95
-GWS,Josh,Kelly,2025,Midfielder,est,60,56,58,37,59,53,50,24,15,49,56,9,52,41,66,10,48,62
-HAW,James,Blanck,2023,Key Defender,est,46,68,25,15,45,48,34,34,68,21,19,2,9,54,25,2,42,65
-MEL,Steven,May,2025,Key Defender,gps,78,94,34,51,64,42,82,66,75,21,19,1,21,84,19,2,52,69
-MEL,Shane,McAdam,2023,Gen. Forward,est,65,44,31,24,54,31,53,18,13,23,87,2,49,12,52,64,53,31
-MEL,Jed,Adams,2025,Key Defender,est,47,85,32,39,71,54,59,49,86,24,19,2,17,73,31,4,52,5
-MEL,Tom,Campbell,2021,Ruck,est,34,50,53,23,46,19,38,35,49,49,50,47,35,31,35,27,24,41
-MEL,Jack,Henderson,2025,Gen. Forward,est,65,39,37,10,28,32,36,36,10,32,60,4,39,18,47,28,60,22
-NTH,Jackson,Archer,2024,Gen. Defender,est,64,57,34,1,38,64,52,24,49,24,41,2,15,62,40,2,54,65
-NTH,Robert,Hansen,2025,Mid-Forward,est,60,3,30,1,55,67,39,5,8,27,69,4,48,21,35,13,72,52
-PAD,Sam,Powell-Pepper,2025,Gen. Forward,est,66,59,39,47,58,50,52,49,12,29,67,3,55,17,52,46,35,69
-PAD,Josh,Sinn,2025,Gen. Defender,gps,83,22,25,1,64,58,50,9,50,18,44,2,17,40,26,2,71,86
-PAD,Ivan,Soldo,2024,Ruck,est,35,71,55,49,13,34,28,31,62,57,30,85,59,29,55,22,8,31
-PAD,Mani,Liddy,2025,Midfielder,est,59,47,40,8,37,52,57,34,7,34,8,6,44,35,55,11,56,39
-RIC,Tom,Sims,2025,Key Forward,est,47,43,35,39,53,5,30,37,26,30,42,10,28,13,38,35,62,48
-RIC,Kaleb,Smith,2025,Gen. Defender,20m,79,26,32,1,55,46,57,17,35,25,41,3,20,48,25,4,60,35
-STK,Lance,Collard,2025,Gen. Forward,20m,74,1,25,4,45,55,23,11,6,23,33,2,37,13,40,27,67,52
-STK,Paddy,Dow,2024,Midfielder,est,60,29,61,16,45,47,44,4,12,57,40,11,41,24,63,14,65,44
-STK,Alex,Dodson,2025,Key Forward,est,47,43,32,33,41,33,42,46,18,24,56,9,40,13,28,62,44,5
-SYD,Taylor,Adams,2024,Mid-Forward,est,59,33,58,13,28,39,47,15,9,49,38,8,46,30,63,19,48,73
-WBD,Riley,Garcia,2025,Mid-Forward,est,60,32,52,14,56,38,33,6,7,49,26,9,52,21,59,15,42,35
-WBD,James,Harmes,2025,Midfielder,gps,81,37,55,10,47,44,44,25,15,46,57,6,39,43,54,25,65,56
-WCE,Tyler,Brockman,2025,Gen. Forward,est,65,47,42,14,27,35,35,28,11,38,44,5,39,16,52,31,46,86
-WCE,Noah,Long,2025,Gen. Forward,est,65,27,26,7,49,46,32,12,8,22,30,3,35,13,40,23,73,44
-WCE,Clay,Hall,2025,Midfielder,est,60,42,60,16,48,50,38,4,15,56,12,10,37,34,60,8,39,56
-WCE,Harry,Barnett,2024,Ruck,est,34,43,62,43,35,16,27,31,35,58,39,73,43,31,49,15,22,5
-WCE,Lucca,Grego,2025,Midfielder,est,60,51,60,21,45,56,48,29,29,54,47,10,45,40,58,13,51,5
-WCE,Tyrell,Dewar,2025,Midfielder,est,60,32,32,10,64,39,49,31,18,23,56,4,38,29,36,11,52,69
-WCE,Finlay,Macrae,2024,Mid-Forward,est,59,12,36,8,43,58,27,5,8,35,63,7,39,18,52,18,73,39
+club,first,last,src,apos,line2,speed_src,speed,endurance,strength,work_rate,kicking,handballing,marking,contested_marking,one_on_one,contested_ball,goalkicking,ruck,vision,reading_play,pressure,forward_craft,discipline,durability
+ADE,Jordan,Dawson,2026,Midfielder,,est,62,61,58,78,47,27,68,33,31,62,99,12,66,48,87,32,29,87
+ADE,Sam,Berry,2026,Midfielder,,20m,61,29,76,36,50,29,41,35,31,81,27,31,54,41,93,7,37,95
+ADE,Izak,Rankine,2026,Midfielder,FWD,gps,98,52,67,49,52,37,62,34,17,76,82,15,63,38,77,31,44,87
+ADE,Josh,Worrell,2026,Gen. Defender,,20m,49,77,25,45,75,50,80,19,60,36,41,3,25,98,37,2,59,95
+ADE,Wayne,Milera,2026,Gen. Defender,,gps,74,56,50,42,70,63,81,27,41,34,76,4,39,78,40,9,56,79
+ADE,Rory,Laird,2026,Gen. Defender,MID,gps,77,50,63,21,53,49,93,15,29,31,60,4,34,75,41,3,61,79
+ADE,James,Peatling,2026,Midfielder,FWD,20m,58,27,48,14,37,40,43,10,28,65,16,12,49,34,77,9,58,83
+ADE,Brayden,Cook,2026,Midfielder,FWD,20m,50,54,38,25,63,52,67,33,29,38,84,5,50,49,48,21,65,95
+ADE,Josh,Rachele,2026,Gen. Forward,,est,66,54,53,34,49,36,48,23,8,41,99,5,69,24,55,56,38,99
+ADE,Alex,Neal-Bullen,2026,Gen. Forward,MID,gps,82,61,53,54,41,43,56,10,5,38,30,4,56,36,73,31,64,91
+ADE,Ben,Keays,2026,Gen. Forward,MID,20m,39,69,64,40,39,42,40,16,9,34,80,3,70,17,63,44,56,99
+ADE,Jake,Soligo,2026,Mid-Forward,,est,60,36,60,24,32,35,44,11,50,46,59,7,52,35,74,21,36,87
+ADE,Max,Michalanney,2026,Gen. Defender,,20m,60,62,29,13,74,45,70,37,48,21,29,2,24,50,44,4,58,99
+ADE,Riley,Thilthorpe,2026,Key Forward,,20m,62,64,61,54,50,13,52,99,31,38,50,16,58,15,35,84,58,87
+ADE,Daniel,Curtin,2026,Midfielder,,est,60,47,61,35,59,46,52,57,42,50,37,24,53,41,65,12,60,72
+ADE,Lachlan,McAndrew,2026,Ruck,,est,35,29,55,55,36,26,25,48,54,67,40,82,49,26,64,12,18,95
+ADE,Luke,Nankervis,2026,Gen. Defender,MID,est,65,39,43,14,52,58,52,27,48,29,61,3,26,66,47,11,62,72
+ADE,Zac,Taylor,2026,Gen. Forward,MID,est,65,32,38,22,65,34,43,11,19,29,87,3,57,24,54,25,74,87
+ADE,Hugo,Hall-Kahan,2026,Gen. Defender,,est,65,48,40,45,68,51,64,9,50,28,40,3,32,51,39,9,64,52
+ADE,Isaac,Cumming,2026,Midfielder,DEF,gps,80,38,53,2,60,68,57,33,36,34,99,5,43,43,53,17,50,68
+ADE,James,Borlase,2026,Key Defender,,20m,26,79,65,20,48,49,52,63,92,22,7,2,13,66,25,2,74,75
+ADE,Taylor,Walker,2026,Key Forward,,est,47,47,67,43,63,30,55,66,19,24,87,2,55,11,32,82,51,72
+ADE,Darcy,Fogarty,2026,Key Forward,,est,47,56,59,34,55,4,57,63,11,29,99,2,50,10,35,88,46,64
+ADE,Mark,Keane,2026,Key Defender,,est,47,87,50,38,48,55,57,65,89,23,19,2,18,86,27,2,35,44
+ADE,Nick,Murray,2026,Key Defender,,est,47,86,57,48,73,54,61,38,83,22,44,2,21,66,31,6,53,44
+ADE,Jordon,Butts,2026,Key Defender,,est,46,75,23,27,51,46,58,60,70,27,6,3,14,78,22,4,47,36
+ADE,Callum,Ah Chee,2026,Gen. Forward,MID,est,66,30,42,31,61,28,48,11,17,27,67,3,51,19,47,38,50,36
+ADE,Luke,Pedlar,2026,Gen. Forward,,est,65,23,43,19,47,7,43,32,9,26,82,3,38,18,46,38,69,40
+ADE,Toby,Murray,2026,Ruck,,est,34,1,43,16,56,21,32,28,52,36,67,40,36,15,37,28,49,52
+ADE,Hugh,Bond,2026,Gen. Defender,,est,65,62,43,12,53,53,60,8,47,24,38,3,20,60,44,6,64,28
+BRL,Lachie,Neale,2026,Midfielder,,gps,66,59,96,39,52,36,75,11,20,88,11,19,70,37,65,15,71,99
+BRL,Will,Ashcroft,2026,Midfielder,,est,63,60,62,79,36,61,71,5,5,72,50,16,82,29,67,25,51,99
+BRL,Josh,Dunkley,2026,Midfielder,,est,61,51,66,48,33,40,64,50,19,60,27,10,55,40,99,13,46,99
+BRL,Zac,Bailey,2026,Mid-Forward,,est,61,63,65,58,46,50,74,46,8,51,70,9,84,22,67,47,48,95
+BRL,Darcy,Wilmot,2026,Gen. Defender,,est,65,65,36,30,58,65,88,28,55,29,48,4,32,78,41,4,52,99
+BRL,Levi,Ashcroft,2026,Midfielder,,est,60,44,47,6,39,52,82,39,15,39,56,6,50,36,47,25,73,99
+BRL,Jaspa,Fletcher,2026,Gen. Defender,MID,est,66,65,37,36,58,75,80,16,29,28,57,4,34,57,44,8,56,99
+BRL,Cam,Rayner,2026,Gen. Forward,,est,65,57,67,49,57,44,55,31,19,45,43,9,77,21,54,41,48,99
+BRL,Dayne,Zorko,2026,Gen. Defender,MID,est,66,51,56,55,67,49,93,18,25,25,88,4,50,61,47,12,62,63
+BRL,Jarrod,Berry,2026,Midfielder,,gps,80,34,54,18,44,41,73,30,31,47,13,8,46,51,51,17,61,81
+BRL,Ryan,Lester,2026,Key Defender,,gps,80,75,38,52,58,73,92,32,57,24,15,3,29,78,38,9,66,84
+BRL,Kai,Lohmann,2026,Gen. Forward,,20m,65,52,39,51,46,39,47,42,6,36,74,4,63,18,65,68,37,99
+BRL,Harris,Andrews,2026,Key Defender,,gps,87,97,58,40,50,52,77,94,91,28,1,2,22,95,25,3,64,88
+BRL,Charlie,Cameron,2026,Gen. Forward,,gps,95,50,34,27,46,18,53,27,12,24,84,3,60,19,47,79,58,99
+BRL,Logan,Morris,2026,Key Forward,,est,47,47,51,31,41,21,58,61,12,24,71,7,59,10,32,99,68,95
+BRL,Hugh,McCluggage,2026,Midfielder,,est,60,27,60,26,39,33,60,22,16,54,51,10,51,25,70,28,44,63
+BRL,Bruce,Reville,2026,Midfielder,,est,59,36,43,6,64,65,68,46,15,34,44,5,47,38,43,19,59,66
+BRL,Darcy,Fort,2026,Ruck,,est,34,1,55,31,34,44,32,47,59,55,38,53,48,29,35,15,41,95
+BRL,Sam,Draper,2026,Ruck,,est,33,13,74,28,27,44,24,50,32,55,36,72,51,26,27,25,32,95
+BRL,Conor,McKenna,2026,Gen. Forward,DEF,gps,80,47,57,54,50,53,35,5,11,21,72,2,65,19,48,38,63,77
+BRL,Keidean,Coleman,2026,Gen. Defender,,gps,78,31,33,11,66,54,78,16,54,23,46,2,39,64,34,9,74,48
+BRL,Noah,Answerth,2026,Gen. Defender,,gps,84,53,47,10,67,50,72,5,43,19,41,2,28,53,43,3,53,59
+BRL,Ty,Gallop,2026,Key Defender,FWD,est,47,76,47,37,63,14,60,50,75,21,1,4,19,59,37,7,50,77
+BRL,Darcy,Gardiner,2026,Key Defender,FWD,est,47,70,49,24,47,49,64,48,70,21,19,2,16,62,25,3,41,59
+BRL,James,Tunstill,2026,Midfielder,,est,60,38,29,4,41,25,61,8,34,35,28,5,37,29,54,17,75,41
+BRL,Eric,Hipwood,2026,Key Forward,,gps,81,38,26,47,55,1,52,60,29,25,66,2,43,20,35,66,45,52
+BRL,Oscar,Allen,2026,Key Forward,,est,47,42,42,31,50,28,47,37,29,21,80,7,41,9,30,66,67,55
+BRL,Lincoln,McCarthy,2026,Gen. Forward,,gps,85,43,68,20,45,15,58,23,15,30,70,3,51,31,47,34,40,30
+BRL,Sam,Marshall,2026,Midfielder,,est,61,44,56,35,49,48,53,34,19,49,47,8,50,41,67,16,51,8
+BRL,Darragh,Joyce,2026,Key Defender,,est,46,77,39,30,53,38,75,49,72,17,19,3,14,63,23,5,63,12
+CAR,Sam,Walsh,2026,Midfielder,,est,61,49,64,65,50,60,63,3,16,69,26,13,59,44,80,16,32,99
+CAR,Patrick,Cripps,2026,Midfielder,,est,60,55,80,37,35,47,37,63,11,95,11,17,54,23,79,24,1,99
+CAR,Jagga,Smith,2026,Midfielder,,20m,58,40,38,22,33,55,48,5,8,67,41,13,59,32,59,16,57,99
+CAR,Oliver,Florent,2026,Gen. Defender,MID,est,66,62,47,59,68,66,77,10,43,33,27,4,38,72,48,4,53,99
+CAR,George,Hewett,2026,Midfielder,,est,60,31,63,28,43,41,59,51,8,64,67,13,56,30,72,22,49,83
+CAR,Adam,Cerra,2026,Gen. Defender,MID,est,66,42,49,53,63,38,77,25,46,37,46,6,41,42,65,8,58,87
+CAR,Ben,Ainsworth,2026,Gen. Forward,,20m,77,49,47,43,52,41,76,10,5,25,65,4,59,18,46,51,63,99
+CAR,Lachlan,Cowan,2026,Gen. Defender,,est,65,59,38,30,58,47,76,30,50,23,41,3,29,68,42,3,61,95
+CAR,Nick,Haynes,2026,Gen. Defender,,est,64,70,46,29,58,54,99,23,57,20,28,2,26,84,31,5,64,75
+CAR,Will,Hayward,2026,Gen. Forward,,gps,86,48,49,36,51,39,68,56,11,28,63,2,46,27,44,49,45,83
+CAR,Nic,Newman,2026,Gen. Defender,,est,66,52,39,56,66,75,95,14,50,16,47,2,31,57,53,5,55,64
+CAR,Billy,Wilson,2026,Gen. Defender,,20m,72,44,26,52,65,54,77,5,25,24,24,3,30,48,46,6,60,68
+CAR,Francis,Evans,2026,Gen. Forward,,est,66,44,47,41,56,24,41,10,7,33,61,3,63,25,65,38,54,91
+CAR,Harry,McKay,2026,Key Forward,,est,47,62,55,48,50,22,57,83,36,39,55,10,39,18,30,71,46,91
+CAR,Marc,Pittonet,2026,Ruck,,est,34,27,79,27,7,33,15,59,60,68,48,77,41,25,43,16,19,87
+CAR,Brodie,Kemp,2026,Key Forward,DEF,20m,66,77,29,36,34,42,67,34,33,20,41,2,51,12,39,81,61,99
+CAR,Mitch,McGovern,2026,Key Forward,DEF,gps,88,47,57,45,41,61,52,40,45,23,56,2,42,19,42,64,72,99
+CAR,Harry,Dean,2026,Key Defender,,est,47,59,31,32,44,31,68,46,69,21,35,2,17,74,31,3,64,87
+CAR,Blake,Acres,2026,Midfielder,,gps,84,57,55,36,51,50,85,22,39,34,3,5,59,46,57,19,60,48
+CAR,Oliver,Hollands,2026,Midfielder,DEF,est,61,65,28,30,56,53,76,38,17,32,49,5,47,48,68,14,45,56
+CAR,Cooper,Lord,2026,Midfielder,,est,60,44,55,25,49,48,66,38,10,36,64,6,49,33,59,17,64,44
+CAR,Matthew,Cottrell,2026,Gen. Forward,MID,gps,75,50,31,36,39,48,51,25,12,26,33,2,55,30,54,28,74,56
+CAR,Wade,Derksen,2026,Key Defender,,est,47,67,45,32,42,26,71,33,73,25,19,2,20,78,23,3,61,60
+CAR,Jacob,Weitering,2026,Key Defender,,est,46,81,59,33,52,53,89,61,97,23,19,8,16,85,19,2,69,56
+CAR,Talor,Byrne,2026,Gen. Forward,,est,66,24,32,15,44,47,46,21,6,26,34,3,48,15,60,40,58,79
+CAR,Zac,Williams,2026,Gen. Defender,FWD,est,66,37,57,42,64,61,55,23,28,43,30,6,35,55,50,10,56,36
+CAR,Lewis,Young,2026,Key Defender,,est,46,51,53,26,37,38,48,50,83,29,1,13,22,64,26,11,46,56
+CAR,Matt,Carroll,2026,Midfielder,DEF,est,60,29,43,12,67,58,54,67,28,38,55,5,48,47,46,24,56,40
+CAR,Elijah,Hollands,2026,Mid-Forward,FWD,est,59,41,54,22,40,48,43,17,7,41,99,5,47,40,52,27,46,25
+CAR,Jack,Ison,2026,Gen. Forward,,est,65,31,39,35,38,39,52,7,11,31,6,2,54,21,49,30,53,32
+COL,Nick,Daicos,2026,Midfielder,,est,64,69,50,99,48,66,59,34,6,75,70,16,86,41,64,33,37,95
+COL,Josh,Daicos,2026,Gen. Defender,MID,est,65,66,50,54,66,71,87,4,32,33,1,5,49,57,52,8,60,99
+COL,Dan,Houston,2026,Gen. Defender,,est,65,57,47,43,72,53,89,21,34,28,41,3,39,75,48,11,59,99
+COL,Jack,Crisp,2026,Midfielder,,gps,82,50,65,48,54,76,69,26,30,51,47,7,46,52,79,15,55,99
+COL,Jordan,de Goey,2026,Mid-Forward,,gps,79,48,70,35,46,49,64,43,5,45,74,8,74,23,48,39,54,91
+COL,Darcy,Cameron,2026,Ruck,,est,35,46,72,46,6,15,40,61,28,74,38,73,46,52,52,10,30,95
+COL,Patrick,Lipinski,2026,Mid-Forward,FWD,est,60,56,51,42,50,71,63,24,10,37,51,6,55,35,64,24,64,83
+COL,Scott,Pendlebury,2026,Midfielder,,est,59,21,63,20,39,68,64,48,25,54,39,11,68,32,55,16,63,70
+COL,Isaac,Quaynor,2026,Gen. Defender,,est,66,62,57,39,73,64,84,16,52,23,35,2,26,70,52,3,61,87
+COL,Ned,Long,2026,Mid-Forward,,est,61,34,58,54,34,42,40,10,14,49,48,8,51,25,99,18,45,91
+COL,Steele,Sidebottom,2026,Midfielder,,est,61,51,58,25,49,58,62,51,40,38,25,6,32,45,56,14,65,87
+COL,Beau,McCreery,2026,Gen. Forward,,gps,86,46,44,92,64,67,34,38,10,39,55,5,58,22,88,24,42,95
+COL,Edward,Allan,2026,Midfielder,,20m,88,30,37,44,61,62,29,31,30,49,46,9,40,29,87,11,38,79
+COL,Lachie,Schultz,2026,Gen. Forward,,est,66,49,53,44,56,36,55,27,8,31,40,3,61,20,81,54,55,91
+COL,Brayden,Maynard,2026,Gen. Defender,,gps,82,51,56,39,71,65,75,19,51,24,33,2,33,69,53,5,42,70
+COL,Jeremy,Howe,2026,Key Defender,,gps,84,81,44,38,64,57,76,45,87,21,22,2,22,84,27,4,61,74
+COL,Billy,Frampton,2026,Key Defender,,est,46,99,32,35,58,64,73,45,80,22,19,2,16,83,23,2,46,99
+COL,Roan,Steele,2026,Midfielder,,est,59,51,44,1,43,64,47,43,13,37,73,6,46,36,56,25,71,79
+COL,Harry,Perryman,2026,Gen. Defender,,est,65,40,41,26,57,58,67,23,62,21,22,2,28,59,47,2,67,66
+COL,Daniel,McStay,2026,Key Forward,,est,47,49,69,43,46,38,42,68,44,34,87,12,44,14,46,75,62,99
+COL,Tim,Membrey,2026,Key Forward,,gps,95,58,49,28,38,27,65,33,18,21,48,2,42,12,29,83,68,83
+COL,Angus,Anderson,2026,Gen. Forward,,est,66,27,37,46,52,38,40,12,10,31,84,4,52,22,64,39,59,70
+COL,Sam,Swadling,2026,Midfielder,,est,60,23,41,26,55,53,59,5,31,44,82,7,37,45,48,21,64,38
+COL,Jamie,Elliott,2026,Gen. Forward,,gps,80,58,56,15,39,26,49,19,7,26,91,3,59,13,50,62,60,46
+COL,Harvey,Harrison,2026,Gen. Forward,,20m,84,32,51,30,52,53,49,9,10,20,32,3,53,17,55,29,72,50
+COL,Jack,Buller,2026,Key Forward,,est,46,45,52,28,32,17,44,59,17,21,12,4,25,9,28,56,39,42
+COL,Will,Hayes,2026,Gen. Forward,,20m,63,22,45,12,53,48,36,20,5,19,69,2,37,13,48,33,77,42
+COL,Oscar,Steene,2026,Ruck,,est,34,3,32,13,33,24,27,33,32,50,59,53,34,30,36,18,43,34
+COL,Charlie,West,2026,Key Forward,,20m,69,41,52,25,47,24,31,73,23,28,87,16,33,7,32,49,66,38
+COL,Wil,Parker,2026,Gen. Defender,,est,65,48,49,16,70,37,62,9,39,26,41,2,23,67,45,6,53,21
+ESS,Zach,Merrett,2026,Midfielder,,gps,87,62,71,73,53,50,65,46,32,54,94,11,58,41,87,18,55,99
+ESS,Archie,Roberts,2026,Gen. Defender,,est,66,64,46,64,61,43,78,21,30,33,64,4,39,71,35,7,42,90
+ESS,Sam,Durham,2026,Midfielder,,gps,83,40,47,42,51,62,51,54,18,64,67,12,60,31,79,23,16,86
+ESS,Andrew,McGrath,2026,Gen. Defender,,est,66,53,65,40,75,65,62,7,25,33,59,4,42,62,46,5,71,86
+ESS,Jacob,Farrow,2026,Gen. Defender,,est,66,53,41,37,65,54,89,32,40,23,43,3,29,49,41,8,70,90
+ESS,Jaxon,Prior,2026,Gen. Defender,,est,66,63,31,37,64,49,72,24,39,22,14,2,31,62,43,5,69,95
+ESS,Darcy,Parish,2026,Midfielder,,est,60,39,60,28,53,39,56,7,5,67,34,15,62,27,63,13,36,61
+ESS,Zach,Reid,2026,Key Defender,,20m,41,78,14,46,59,41,81,35,52,17,16,5,15,60,28,4,61,99
+ESS,Jye,Caldwell,2026,Midfielder,,est,61,28,62,22,43,19,46,33,29,57,41,10,45,24,81,15,48,73
+ESS,Kyle,Langford,2026,Gen. Defender,FWD,est,64,66,48,13,44,46,70,25,59,30,2,3,31,68,38,19,54,82
+ESS,Xavier,Duursma,2026,Midfielder,,est,60,47,29,1,43,58,66,43,44,36,82,5,32,43,55,17,67,78
+ESS,Mason,Redman,2026,Gen. Defender,,gps,78,51,51,34,71,54,72,23,52,22,55,3,38,57,34,7,66,69
+ESS,Dyson,Sharp,2026,Mid-Forward,,est,60,30,56,33,36,40,51,27,42,52,35,9,48,31,74,20,62,65
+ESS,Will,Setterfield,2026,Midfielder,,est,61,50,59,48,52,22,57,34,15,61,69,11,51,35,82,15,31,48
+ESS,Sullivan,Robey,2026,Mid-Forward,,est,61,44,57,44,47,41,46,16,51,57,92,11,40,20,70,23,30,65
+ESS,Archer,Day-Wicks,2026,Gen. Forward,,est,66,43,42,36,50,33,41,32,24,25,19,3,34,24,63,24,48,90
+ESS,Nate,Caddy,2026,Key Forward,,20m,61,73,43,36,44,1,50,46,16,24,49,7,45,14,32,88,61,95
+ESS,Archie,Perkins,2026,Gen. Forward,MID,20m,73,44,54,46,53,40,70,12,8,21,40,2,46,20,44,37,70,69
+ESS,Peter,Wright,2026,Ruck,FWD,est,34,58,63,32,50,29,48,29,56,40,97,45,46,29,35,55,41,78
+ESS,Isaac,Kako,2026,Gen. Forward,,est,67,47,47,28,39,32,31,22,5,33,61,3,42,20,62,30,52,65
+ESS,Lachlan,Blakiston,2026,Key Defender,,est,47,63,52,48,67,34,40,26,64,37,29,30,21,47,39,6,15,73
+ESS,Elijah,Tsatas,2026,Midfielder,,est,60,32,53,33,55,36,61,6,7,62,53,12,41,30,62,14,67,27
+ESS,Nick,Bryan,2026,Ruck,,20m,60,24,32,35,34,33,24,35,54,55,17,73,36,25,47,11,26,56
+ESS,Ben,McKay,2026,Key Defender,,est,47,88,41,30,36,60,59,31,57,24,24,9,19,58,27,19,53,65
+ESS,Max,Kondogiannis,2026,Midfielder,,est,59,33,34,1,66,72,40,4,23,29,13,5,28,31,52,9,58,52
+ESS,Saad,El-Hawli,2026,Gen. Defender,MID,est,66,36,31,26,48,60,63,7,29,28,26,3,24,59,40,9,65,35
+ESS,Zak,Johnson,2026,Gen. Defender,,est,65,48,28,22,54,66,69,8,42,18,22,2,29,49,35,5,75,31
+ESS,Jordan,Ridley,2026,Key Defender,,est,47,21,46,33,56,56,78,38,48,16,5,16,18,60,21,3,62,31
+ESS,Nik,Cox,2026,Mid-Forward,,20m,66,51,21,18,48,54,45,24,10,36,56,20,38,27,51,19,72,35
+ESS,Jaxon,Artemis,2026,Gen. Defender,,20m,69,49,34,16,56,56,60,8,31,25,25,3,24,49,49,5,62,27
+FRE,Andrew,Brayshaw,2026,Midfielder,,gps,75,49,67,64,64,68,51,5,40,59,48,12,64,39,92,13,36,99
+FRE,Jordan,Clark,2026,Gen. Defender,,gps,92,63,39,74,80,73,71,14,50,31,42,4,50,62,43,7,50,99
+FRE,Shai,Bolton,2026,Midfielder,,gps,75,51,71,79,63,67,44,25,29,61,61,12,89,27,65,27,32,95
+FRE,Caleb,Serong,2026,Midfielder,,20m,47,48,86,44,44,57,38,30,8,85,68,19,69,39,84,17,60,88
+FRE,Murphy,Reid,2026,Gen. Forward,,est,67,56,50,78,47,30,47,20,6,42,25,7,71,23,55,26,54,92
+FRE,Luke,Ryan,2026,Gen. Defender,,gps,78,63,61,38,75,51,94,22,41,19,37,2,27,65,35,3,48,95
+FRE,Karl,Worner,2026,Gen. Defender,,est,66,57,41,51,84,65,85,25,59,23,24,2,27,77,39,4,55,99
+FRE,Luke,Jackson,2026,Ruck,,20m,47,46,49,47,45,27,26,65,54,77,63,82,63,32,66,32,23,99
+FRE,Neil,Erasmus,2026,Midfielder,,est,60,36,46,16,49,43,58,37,22,44,22,7,47,42,53,16,54,99
+FRE,Matthew,Johnson,2026,Midfielder,,est,61,39,41,34,69,63,48,55,31,45,39,8,58,31,63,11,50,95
+FRE,Heath,Chapman,2026,Gen. Defender,,20m,59,66,27,26,68,56,74,30,55,23,31,2,30,67,39,6,56,95
+FRE,Judd,McVee,2026,Gen. Defender,,est,66,53,33,27,55,73,60,19,57,28,58,3,31,61,27,4,72,88
+FRE,Hayden,Young,2026,Midfielder,DEF,20m,61,22,52,39,46,56,59,21,9,55,99,27,58,31,67,24,66,66
+FRE,Josh,Treacy,2026,Key Forward,,20m,67,78,63,48,57,38,62,66,50,31,55,2,56,22,43,95,55,99
+FRE,Sam,Switkowski,2026,Gen. Forward,,gps,81,38,42,30,36,56,39,39,10,34,34,4,53,23,62,26,73,95
+FRE,Nathan,O'Driscoll,2026,Midfielder,,20m,73,46,45,18,65,54,59,3,35,36,48,5,49,44,49,15,69,63
+FRE,Isaiah,Dudley,2026,Gen. Forward,,est,66,30,52,10,44,52,31,3,21,28,62,3,58,17,55,42,59,99
+FRE,Patrick,Voss,2026,Key Forward,,est,48,77,44,51,54,46,52,29,14,26,60,2,54,13,49,81,31,95
+FRE,Corey,Wagner,2026,Midfielder,DEF,est,61,38,42,29,70,59,54,4,28,36,8,6,51,37,58,8,61,59
+FRE,Michael,Frederick,2026,Gen. Forward,,gps,90,43,23,35,63,28,52,11,23,23,75,3,46,23,51,43,76,81
+FRE,Jye,Amiss,2026,Key Forward,,est,46,80,26,18,35,31,47,85,15,25,52,2,37,6,24,96,69,95
+FRE,Brennan,Cox,2026,Key Defender,,est,46,48,63,31,47,49,62,57,79,24,19,2,17,77,24,2,56,66
+FRE,Alex,Pearce,2026,Key Defender,,gps,84,57,57,28,57,51,41,67,69,30,19,2,14,76,22,2,55,88
+FRE,Oscar,McDonald,2026,Key Defender,,est,47,93,62,41,62,17,68,43,91,22,16,2,24,74,29,5,52,52
+FRE,Mason,Cox,2026,Ruck,FWD,est,33,1,45,21,22,21,23,31,33,37,20,55,31,22,28,18,54,74
+FRE,Jaeger,O'Meara,2026,Midfielder,,est,60,32,56,11,58,59,49,6,8,43,22,8,53,37,59,12,59,23
+FRE,Chris,Scerri,2026,Gen. Forward,,est,66,31,38,26,64,54,26,12,9,32,51,2,41,25,53,19,63,34
+FRE,Sean,Darcy,2026,Ruck,,est,34,1,73,22,49,21,19,22,55,48,48,62,40,20,34,14,25,26
+FRE,Jeremy,Sharp,2026,Mid-Forward,,20m,68,37,39,21,61,54,61,11,9,37,86,6,46,25,57,30,61,8
+FRE,Brandon,Walker,2026,Gen. Defender,,gps,87,50,35,28,67,57,56,22,50,27,41,3,27,63,38,5,68,8
+GEE,Bailey,Smith,2026,Midfielder,,gps,72,64,65,91,62,30,59,9,11,75,80,15,85,45,80,21,43,95
+GEE,Max,Holmes,2026,Midfielder,DEF,gps,81,48,37,99,65,75,66,49,33,65,48,12,72,47,70,14,52,79
+GEE,Oliver,Dempsey,2026,Midfielder,FWD,est,60,76,29,16,51,67,67,70,27,45,65,6,51,44,53,43,67,99
+GEE,Tanner,Bruhn,2026,Gen. Defender,MID,est,66,28,37,51,62,52,72,6,38,36,1,5,47,49,49,9,59,91
+GEE,Lawson,Humphries,2026,Gen. Defender,,20m,63,57,45,41,68,53,82,13,55,27,71,3,33,70,44,9,68,95
+GEE,Tom,Stewart,2026,Gen. Defender,,gps,92,58,54,43,76,51,76,41,61,32,59,2,26,99,32,4,53,91
+GEE,Tom,Atkins,2026,Midfielder,,est,62,37,83,28,36,39,27,49,35,70,74,12,50,39,97,7,30,99
+GEE,Shaun,Mannagh,2026,Gen. Forward,,est,66,46,62,59,46,42,40,9,6,45,73,8,77,19,63,47,59,99
+GEE,Zach,Guthrie,2026,Gen. Defender,,gps,85,52,27,16,62,65,75,19,55,24,33,3,27,65,44,4,65,99
+GEE,Connor,O'Sullivan,2026,Key Defender,,est,47,90,45,52,64,63,83,58,75,26,7,10,24,91,33,3,51,99
+GEE,Oisin,Mullin,2026,Midfielder,DEF,gps,84,55,65,2,54,48,47,3,38,50,22,9,39,31,70,10,51,99
+GEE,Gryan,Miers,2026,Gen. Forward,,20m,38,55,53,60,40,56,68,17,7,31,34,4,67,22,62,23,72,68
+GEE,Mark,O'Connor,2026,Gen. Defender,,est,65,53,47,20,60,65,67,18,41,30,50,4,41,59,47,8,65,87
+GEE,Patrick,Dangerfield,2026,Gen. Forward,MID,gps,79,27,68,31,51,24,45,40,12,45,78,5,73,20,41,62,53,75
+GEE,Oliver,Henry,2026,Gen. Forward,,est,65,52,24,22,51,26,45,27,5,31,81,2,59,16,52,65,56,95
+GEE,Sam,De Koning,2026,Key Defender,,20m,43,37,32,33,36,52,45,46,81,45,1,25,27,75,30,4,47,75
+GEE,Jeremy,Cameron,2026,Key Forward,,gps,80,74,51,50,53,26,75,43,34,18,67,10,51,18,24,85,55,75
+GEE,Mark,Blicavs,2026,Midfielder,RUCK,est,59,36,71,7,33,46,37,60,52,53,33,31,34,43,59,13,49,79
+GEE,Shannon,Neale,2026,Key Forward,,20m,58,82,53,63,62,30,48,55,20,32,90,16,61,12,49,82,33,99
+GEE,Mitchell,Edwards,2026,Ruck,,20m,53,2,26,35,49,27,19,51,44,51,38,64,41,29,43,10,26,79
+GEE,James,Worpel,2026,Midfielder,,20m,53,26,66,39,40,38,45,32,8,65,47,14,60,32,88,16,28,44
+GEE,Jack,Martin,2026,Gen. Forward,,gps,84,29,46,13,40,40,54,29,17,28,48,3,42,14,46,54,47,72
+GEE,Jack,Henry,2026,Key Defender,,gps,80,59,53,14,41,47,58,24,82,23,22,9,21,61,25,10,66,83
+GEE,Brad,Close,2026,Gen. Forward,,gps,72,47,22,20,46,57,34,10,9,26,41,2,57,19,58,30,74,72
+GEE,Oliver,Wiltshire,2026,Gen. Forward,,est,66,36,21,23,49,47,31,4,7,27,44,3,51,18,47,32,67,64
+GEE,Jack,Bowes,2026,Midfielder,DEF,est,60,29,55,24,52,56,53,34,30,41,62,6,58,37,57,21,48,36
+GEE,Jhye,Clark,2026,Gen. Defender,MID,est,65,38,45,21,57,55,67,45,40,30,16,3,38,55,51,16,54,36
+GEE,Jake,Kolodjashnij,2026,Key Defender,,est,47,57,54,36,46,60,56,55,63,21,34,2,17,68,28,4,59,44
+GEE,Jay,Polkinghorne,2026,Key Forward,,est,47,38,39,22,47,12,50,45,11,20,55,2,48,8,29,80,62,32
+ADE,Billy,Dowling,2026,Midfielder,,20m,50,39,48,20,50,49,61,47,8,53,51,9,51,28,65,27,58,13
+ADE,Finnbar,Maley,2026,Key Forward,,est,47,24,56,34,31,28,38,48,25,25,53,13,38,13,36,52,53,25
+ADE,Chayce,Jones,2026,Gen. Defender,MID,gps,91,61,45,8,69,55,61,11,31,28,41,2,25,66,39,6,67,13
+ADE,Oscar,Ryan,2026,Gen. Defender,,20m,63,48,32,30,67,56,67,31,46,26,59,3,42,69,43,8,63,9
+ADE,Charlie,Edwards,2026,Midfielder,,est,61,42,51,35,52,43,53,49,13,52,28,10,51,35,63,13,38,9
+ADE,Reilly,O'Brien,2026,Ruck,,est,34,14,63,28,33,43,30,43,35,54,39,71,38,29,43,15,33,9
+ADE,Archie,Ludowyke,2026,Key Forward,,est,47,37,33,35,37,26,47,31,18,26,45,4,47,15,37,64,61,9
+ADE,Mitch,Hinge,2026,Gen. Defender,,est,65,32,40,31,74,62,65,15,26,27,41,3,32,60,39,6,66,5
+BRL,Daniel,Annable,2026,Midfielder,,est,60,32,46,13,54,63,48,8,34,40,45,7,52,28,58,16,58,12
+BRL,Shadeau,Brain,2026,Gen. Defender,,est,65,56,42,22,63,60,76,13,32,20,41,3,38,55,34,7,66,8
+BRL,Cody,Curtin,2026,Key Forward,,est,47,40,48,42,27,31,35,32,23,20,37,9,30,13,35,52,56,16
+BRL,Zane,Zakostelsky,2026,Key Defender,,20m,69,37,38,32,60,11,63,41,45,23,18,14,18,58,32,8,58,12
+BRL,Will,McLachlan,2026,Gen. Forward,,est,66,30,41,34,56,27,41,27,11,28,59,3,48,18,54,39,63,5
+CAR,Campbell,Chesser,2026,Midfielder,,est,60,46,57,23,56,40,58,8,33,43,22,8,46,38,64,14,49,13
+CAR,Adam,Saad,2026,Gen. Defender,,gps,96,49,49,68,68,69,61,11,51,25,41,3,29,62,39,5,67,13
+CAR,Liam,Reidy,2026,Ruck,,est,35,21,68,43,26,38,20,42,36,57,24,65,42,23,51,12,18,17
+CAR,Jordan,Boyd,2026,Gen. Defender,,est,66,49,44,35,69,43,76,13,29,21,41,2,29,61,44,5,68,9
+CAR,Flynn,Young,2026,Gen. Forward,,est,65,42,29,27,50,46,46,9,8,24,51,3,55,15,51,34,72,13
+CAR,Lachie,Fogarty,2026,Gen. Forward,,est,65,36,44,20,42,45,36,12,11,33,35,3,50,19,49,30,62,9
+CAR,Ashton,Moir,2026,Gen. Forward,,est,65,41,45,31,42,42,44,8,9,27,74,4,45,15,51,45,62,9
+CAR,Hudson,O'Keeffe,2026,Ruck,FWD,20m,69,1,46,22,33,1,23,43,32,50,29,55,39,20,36,16,35,13
+CAR,Flynn,Riley,2026,Ruck,,est,34,21,59,40,43,34,27,47,31,61,58,67,42,31,46,19,37,5
+COL,Liam,Puncher,2026,Key Defender,,est,47,66,23,22,65,46,50,35,53,17,19,2,10,55,29,2,62,34
+COL,Darcy,Moore,2026,Key Defender,,est,46,29,47,37,58,18,53,50,76,22,19,3,14,68,24,3,55,17
+COL,Lachlan,Sullivan,2026,Gen. Forward,MID,est,66,39,52,36,54,30,38,10,9,26,73,3,62,23,54,35,67,9
+COL,Mitch,Podhajski,2026,Key Forward,,est,47,44,49,30,37,8,47,42,16,27,24,4,44,17,36,66,66,9
+COL,Noah,Howes,2026,Key Defender,,est,47,62,56,35,76,52,62,46,72,24,19,3,19,74,25,4,52,9
+ESS,Jade,Gresham,2026,Gen. Forward,,est,65,47,48,18,32,52,36,8,6,25,33,4,45,14,53,34,58,31
+ESS,Hussien,El Achkar,2026,Gen. Forward,,est,66,32,35,14,41,19,26,6,7,34,87,3,43,21,62,38,74,39
+ESS,Tom,Edwards,2026,Gen. Forward,,est,65,43,28,26,49,27,36,26,12,27,69,3,53,22,48,41,63,31
+ESS,Angus,Clarke,2026,Mid-Forward,DEF,est,60,37,50,20,57,27,57,20,8,33,48,5,48,26,62,32,63,27
+ESS,Harry,Jones,2026,Gen. Defender,FWD,est,65,55,14,11,56,57,60,13,29,20,61,2,24,52,42,11,50,31
+ESS,Archie,May,2026,Key Forward,,est,47,26,46,41,55,34,35,42,44,24,88,7,34,11,44,63,39,44
+ESS,Jayden,Nguyen,2026,Gen. Forward,DEF,20m,77,47,33,18,44,59,40,28,18,28,20,3,35,25,50,25,72,22
+ESS,Vigo,Visentini,2026,Ruck,,est,34,27,59,42,30,14,51,30,52,51,49,66,43,34,47,17,28,14
+ESS,Brayden,Fiorini,2026,Midfielder,,est,61,50,53,29,53,50,53,9,19,47,52,8,55,37,60,23,57,10
+ESS,Rhys,Unwin,2026,Gen. Forward,,20m,75,33,39,28,44,43,36,29,8,28,51,3,46,18,61,29,54,18
+ESS,Matt,Guelfi,2026,Gen. Forward,,gps,88,7,53,19,32,38,29,30,11,30,52,3,39,19,47,26,67,14
+FRE,Bailey,Banfield,2026,Gen. Defender,FWD,est,66,61,59,41,52,55,71,15,33,28,41,3,28,64,44,6,62,5
+FRE,Tobyn,Murray,2026,Gen. Forward,,est,66,47,50,31,50,28,44,12,8,31,50,4,50,22,56,37,62,5
+GEE,George,Stevens,2026,Midfielder,,est,60,31,78,28,52,48,51,9,10,54,59,11,50,27,62,16,61,9
+GEE,Mitch,Knevitt,2026,Mid-Forward,,20m,67,45,42,31,51,28,42,18,8,45,53,7,53,25,67,27,55,9
+GEE,Rhys,Stanley,2026,Ruck,,est,34,24,74,35,41,18,30,48,44,61,39,68,60,29,42,15,40,5
+GCS,Noah,Anderson,2026,Midfielder,,20m,59,67,67,99,54,63,73,8,8,68,34,15,72,34,78,19,39,95
+GCS,John,Noble,2026,Gen. Defender,,gps,87,61,32,69,75,72,99,11,34,22,53,3,37,64,43,11,59,99
+GCS,Touk,Miller,2026,Mid-Forward,,gps,84,59,76,43,54,58,55,29,54,57,69,11,57,33,70,22,48,99
+GCS,Bodhi,Uwland,2026,Gen. Defender,,est,65,72,59,39,72,58,86,28,74,30,37,2,36,86,38,5,62,99
+GCS,Matt,Rowell,2026,Midfielder,,20m,50,58,73,50,39,33,38,37,8,94,19,19,57,41,99,10,7,78
+GCS,Christian,Petracca,2026,Mid-Forward,,est,60,56,90,42,57,42,46,34,7,75,71,14,71,28,60,37,44,86
+GCS,Mac,Andrew,2026,Key Defender,,est,47,88,21,63,65,65,85,39,63,27,13,13,31,95,34,5,37,99
+GCS,Daniel,Rioli,2026,Gen. Defender,,gps,88,53,43,88,74,86,62,7,36,23,38,3,37,52,51,10,60,86
+GCS,Joel,Jeffrey,2026,Gen. Defender,,est,66,38,21,49,78,57,77,25,50,23,53,3,40,50,42,13,63,95
+GCS,Wil,Powell,2026,Gen. Defender,,est,66,59,34,38,83,56,73,7,29,31,82,4,34,62,62,9,55,86
+GCS,Leo,Lombard,2026,Gen. Forward,,20m,83,54,43,63,53,38,41,6,7,35,27,4,60,20,65,30,47,99
+GCS,Sam,Collins,2026,Key Defender,,est,47,86,68,37,47,44,79,42,90,31,19,2,14,99,27,2,71,90
+GCS,Bailey,Humphrey,2026,Gen. Forward,MID,est,65,56,59,41,51,44,41,23,8,41,53,5,65,22,58,47,28,86
+GCS,Zeke,Uwland,2026,Midfielder,,est,59,29,36,6,65,36,57,28,6,28,43,4,35,39,44,14,48,73
+GCS,Ben,Long,2026,Gen. Forward,DEF,gps,83,50,41,13,42,46,44,18,15,30,64,3,54,15,47,52,40,90
+GCS,Sam,Clohesy,2026,Midfielder,,est,60,36,21,11,65,65,63,4,34,33,38,5,41,48,56,12,52,52
+GCS,Ben,King,2026,Key Forward,,gps,80,72,20,28,54,39,43,58,43,22,89,5,31,9,25,91,51,99
+GCS,Lachie,Weller,2026,Midfielder,DEF,gps,90,27,55,20,86,44,46,12,38,37,79,6,51,43,49,18,69,48
+GCS,Beau,Addinsall,2026,Midfielder,,est,60,28,49,11,33,50,55,9,8,44,36,8,41,31,59,13,57,39
+GCS,Ned,Moyle,2026,Ruck,,est,34,48,62,36,45,18,21,41,68,54,52,80,44,18,39,11,45,69
+GCS,Ethan,Read,2026,Key Forward,,20m,38,40,34,40,21,7,36,42,40,29,25,10,29,21,34,46,42,65
+GCS,Jed,Walter,2026,Key Forward,,gps,93,46,58,29,52,24,37,52,35,25,80,8,37,11,31,72,51,78
+GCS,Jarrod,Witts,2026,Ruck,,est,34,9,75,36,26,14,21,32,50,61,44,82,44,24,35,9,24,56
+GCS,Will,Graham,2026,Mid-Forward,FWD,20m,75,25,46,19,60,31,41,22,8,40,57,5,54,23,65,20,51,52
+GCS,Oscar,Adams,2026,Key Defender,,est,47,46,20,23,55,68,57,28,69,18,19,2,11,62,28,2,39,56
+GCS,Jai,Murray,2026,Midfielder,,est,60,32,41,13,49,35,57,5,13,34,20,5,45,35,48,11,48,39
+GCS,Lachlan,Gulbin,2026,Gen. Forward,,est,65,36,38,35,50,51,42,15,12,24,26,2,44,23,54,27,67,48
+GCS,Alex,Davies,2026,Midfielder,,est,60,11,55,27,43,31,34,6,32,58,56,9,46,34,75,15,38,27
+GCS,Charlie,Ballard,2026,Key Defender,,gps,89,51,43,18,41,38,53,57,67,21,19,2,17,63,26,3,59,48
+GCS,Jake,Rogers,2026,Gen. Forward,,est,66,20,40,8,40,51,30,38,4,30,58,3,53,20,52,24,71,39
+GCS,Nick,Holman,2026,Mid-Forward,FWD,est,60,44,53,18,63,43,41,5,17,39,79,6,37,32,62,22,45,31
+GCS,Ben,Jepson,2026,Midfielder,,est,60,32,35,3,64,47,57,13,17,35,35,6,36,31,56,11,53,22
+GCS,Dylan,Patterson,2026,Gen. Forward,,est,65,18,25,30,68,32,34,11,10,19,73,2,66,15,48,31,67,22
+GCS,Jamarra,Ugle-Hagan,2026,Key Forward,,20m,77,40,30,28,35,8,45,53,16,23,39,3,39,11,35,70,62,14
+GCS,Jy,Farrar,2026,Gen. Forward,DEF,est,65,21,25,26,53,28,37,5,10,25,48,3,47,15,49,32,65,14
+GCS,Caleb,Lewis,2026,Key Forward,,est,47,32,33,33,41,41,42,35,20,24,40,4,33,11,37,55,54,10
+GWS,Clayton,Oliver,2026,Midfielder,,est,60,57,80,43,47,52,46,7,8,93,28,19,60,36,77,11,4,99
+GWS,Lachie,Ash,2026,Gen. Defender,,gps,95,61,41,99,70,82,99,6,56,29,44,4,50,65,41,11,50,99
+GWS,Lachie,Whitfield,2026,Gen. Defender,,est,65,51,41,59,63,77,87,7,20,26,61,3,43,62,50,7,52,90
+GWS,Finn,Callaghan,2026,Midfielder,,est,63,56,55,99,65,70,47,9,31,61,88,13,63,35,71,16,32,82
+GWS,Connor,Idun,2026,Gen. Defender,,20m,71,99,58,35,60,56,90,27,66,30,41,2,24,89,35,2,66,99
+GWS,Toby,Greene,2026,Mid-Forward,FWD,est,59,57,70,37,35,22,51,46,13,60,45,10,82,24,60,54,16,90
+GWS,Harvey,Thomas,2026,Midfielder,FWD,est,61,58,47,16,56,47,48,31,38,51,42,7,44,44,71,17,49,95
+GWS,Harry,Himmelberg,2026,Gen. Defender,,gps,77,74,51,26,64,51,78,28,84,27,55,2,25,80,30,8,51,99
+GWS,Joe,Fonti,2026,Gen. Defender,,gps,88,61,16,41,50,70,91,16,59,20,59,2,23,71,45,6,32,95
+GWS,Stephen,Coniglio,2026,Mid-Forward,,est,60,38,66,16,27,47,42,13,54,40,85,6,61,28,57,24,62,90
+GWS,Ryan,Angwin,2026,Midfielder,,est,60,57,50,22,67,49,46,24,22,46,73,7,46,40,68,13,58,86
+GWS,Jake,Stringer,2026,Key Forward,,est,48,69,66,50,49,23,51,46,14,37,75,3,62,19,47,79,54,99
+GWS,Jayden,Laverde,2026,Key Defender,,est,46,67,54,32,53,51,70,60,71,25,1,2,15,85,30,2,49,82
+GWS,Toby,Bedford,2026,Mid-Forward,FWD,gps,77,43,36,16,54,71,34,4,51,40,66,6,54,28,82,23,53,73
+GWS,Phoenix,Gothard,2026,Gen. Forward,,20m,68,34,40,40,41,44,34,9,6,37,33,4,49,22,65,39,60,69
+GWS,Xavier,O'Halloran,2026,Midfielder,FWD,20m,69,42,57,33,60,48,40,53,20,48,39,7,55,35,65,15,55,61
+GWS,Kieren,Briggs,2026,Ruck,,est,34,18,76,41,33,13,23,32,58,66,21,78,45,31,50,9,36,78
+GWS,Aaron,Cadman,2026,Key Forward,,est,47,83,50,46,57,20,51,46,20,25,89,2,50,15,43,78,64,78
+GWS,Harry,Rowston,2026,Midfielder,,20m,59,19,58,10,46,58,53,32,30,43,93,7,53,32,62,18,48,52
+GWS,Callum,Brown,2026,Gen. Forward,,gps,89,40,58,24,57,25,44,39,19,25,71,10,42,17,48,49,58,78
+GWS,Brent,Daniels,2026,Mid-Forward,FWD,gps,79,32,69,43,54,48,41,25,10,56,99,11,63,24,82,27,43,44
+GWS,Sam,Taylor,2026,Key Defender,,gps,80,61,50,32,45,49,63,52,98,27,19,2,17,80,30,3,59,52
+GWS,Max,Gruzewski,2026,Key Forward,,est,46,41,33,18,47,25,50,49,43,22,53,2,36,9,24,71,81,65
+GWS,Conor,Stone,2026,Midfielder,DEF,20m,50,29,40,4,52,68,48,5,27,35,57,5,48,39,51,17,63,44
+GWS,Nick,Madden,2026,Ruck,,est,35,8,80,46,32,19,25,57,45,58,16,70,41,37,51,10,27,39
+GWS,Jake,Riccardi,2026,Key Forward,,est,47,42,46,44,49,33,50,42,16,22,99,18,49,16,37,63,36,39
+GWS,Jack,Buckley,2026,Key Defender,,est,46,66,40,26,60,54,55,42,72,23,19,2,15,77,26,3,53,39
+GWS,Josaia,Delana,2026,Gen. Forward,,est,66,33,55,20,48,57,30,21,10,34,28,4,56,26,64,19,47,39
+GWS,Toby,McMullin,2026,Gen. Defender,FWD,20m,79,25,49,4,66,62,51,24,30,23,6,2,38,47,41,7,49,35
+GWS,Jesse,Hogan,2026,Key Forward,,gps,83,67,64,33,50,4,51,42,13,22,26,3,38,12,29,76,60,39
+GWS,Riley,Hamilton,2026,Gen. Forward,,est,66,37,32,29,28,41,29,23,9,27,11,3,37,16,59,30,52,35
+GWS,James,Leake,2026,Gen. Defender,,est,65,43,28,14,53,61,58,28,43,25,41,3,21,53,39,5,66,22
+GWS,Leek,Aleer,2026,Ruck,DEF,est,35,2,42,23,30,50,24,35,53,52,16,47,38,31,55,14,41,31
+GWS,Jack,Ough,2026,Midfielder,,est,60,1,45,12,49,50,36,6,8,49,52,9,41,31,54,13,58,22
+GWS,Harrison,Oliver,2026,Gen. Defender,,est,65,31,48,1,57,52,53,9,30,17,56,3,33,43,38,6,50,22
+GWS,Oliver,Hannaford,2026,Gen. Forward,,20m,70,9,57,23,32,13,42,9,5,29,7,3,40,12,53,32,58,22
+GWS,Cody,Angove,2026,Gen. Forward,,est,66,32,51,36,56,51,44,12,9,28,66,4,58,18,50,39,64,5
+HAW,Jai,Newcombe,2026,Midfielder,,est,61,52,79,53,53,55,48,39,32,88,41,21,65,35,80,15,10,99
+HAW,Josh,Ward,2026,Midfielder,,est,61,44,51,29,47,59,61,7,29,61,74,12,66,35,77,13,53,99
+HAW,Connor,Macdonald,2026,Gen. Forward,,est,66,47,45,70,41,56,64,28,5,45,29,7,69,25,66,30,59,99
+HAW,Jarman,Impey,2026,Gen. Defender,,gps,86,50,59,51,67,59,93,36,41,24,52,3,44,77,37,8,58,91
+HAW,James,Sicily,2026,Key Defender,,gps,84,83,62,71,69,60,89,68,70,33,31,2,37,99,31,7,47,95
+HAW,Massimo,D'Ambrosio,2026,Midfielder,DEF,est,60,57,60,26,63,69,66,32,38,35,18,5,51,48,55,12,63,99
+HAW,Cam,Mackenzie,2026,Midfielder,FWD,est,61,28,51,34,41,53,37,7,30,54,25,11,58,23,76,10,55,91
+HAW,Josh,Battle,2026,Key Defender,,est,48,99,54,75,66,53,81,70,68,25,13,6,21,88,32,4,52,91
+HAW,Jack,Ginnivan,2026,Gen. Forward,,est,65,49,41,57,48,28,74,29,20,31,56,4,69,30,53,36,62,95
+HAW,Dylan,Moore,2026,Gen. Forward,,gps,75,68,40,41,46,57,62,25,7,31,83,3,72,24,61,40,65,95
+HAW,Blake,Hardwick,2026,Gen. Defender,,est,65,82,47,17,67,58,79,56,43,24,54,2,29,73,44,16,55,99
+HAW,Karl,Amon,2026,Gen. Defender,MID,20m,79,55,24,57,75,54,79,4,24,18,4,3,41,47,50,4,64,79
+HAW,Josh,Weddle,2026,Gen. Defender,,20m,72,66,57,73,75,62,66,37,48,26,11,5,43,54,47,15,61,87
+HAW,Nick,Watson,2026,Gen. Forward,,gps,88,47,53,20,58,36,35,58,7,45,99,5,65,23,46,73,65,91
+HAW,Mitch,Lewis,2026,Key Forward,,est,47,48,44,54,43,34,60,58,23,26,91,5,50,13,37,76,56,95
+HAW,Lloyd,Meek,2026,Ruck,,est,34,5,78,41,25,28,26,50,31,58,10,79,47,28,50,11,34,99
+HAW,Will,Day,2026,Midfielder,,20m,57,28,33,39,51,53,51,57,13,62,56,13,52,40,77,23,30,52
+HAW,Harry,Morrison,2026,Midfielder,,est,60,60,54,4,46,49,70,27,23,38,44,6,56,47,58,17,57,60
+HAW,Jack,Gunston,2026,Key Forward,,est,47,77,37,32,42,13,73,47,11,19,80,2,36,8,34,99,57,75
+HAW,Conor,Nash,2026,Midfielder,,gps,76,39,66,31,45,40,40,32,31,72,55,15,48,33,77,12,43,40
+HAW,Mabior,Chol,2026,Key Forward,,gps,76,35,38,48,38,8,42,69,48,33,34,11,51,16,44,67,44,79
+HAW,Tom,Barrass,2026,Key Defender,,gps,82,62,53,19,53,40,49,67,77,23,26,2,13,74,22,3,59,83
+HAW,Bailey,Macdonald,2026,Gen. Defender,,est,66,42,32,9,59,69,48,15,29,24,33,2,21,56,51,3,59,56
+HAW,Ned,Reeves,2026,Ruck,,est,34,1,36,22,23,34,16,20,57,52,15,77,45,17,38,13,42,60
+HAW,Jack,Scrimshaw,2026,Key Defender,,est,47,62,46,48,47,68,68,30,62,29,19,3,22,81,30,3,33,25
+HAW,Sam,Butler,2026,Mid-Forward,FWD,20m,67,35,35,12,35,37,50,11,41,32,39,5,45,17,64,22,64,32
+HAW,Finn,Maginness,2026,Mid-Forward,FWD,20m,69,39,44,10,55,38,36,12,8,41,56,5,41,31,56,19,51,25
+HAW,Flynn,Perez,2026,Gen. Defender,,est,65,44,40,11,63,62,50,16,32,22,41,2,29,52,51,4,44,28
+HAW,Noah,Mraz,2026,Key Defender,,est,47,73,54,46,48,64,60,58,89,29,6,9,22,85,33,9,56,17
+HAW,Jack,Dalton,2026,Gen. Forward,,est,66,28,55,33,53,35,48,8,8,29,42,3,44,23,58,29,59,21
+HAW,Cameron,Nairn,2026,Mid-Forward,,est,60,37,38,24,40,45,56,7,54,31,65,5,47,30,56,17,55,17
+HAW,Bodie,Ryan,2026,Gen. Defender,,20m,62,49,36,5,61,61,65,16,44,16,41,2,26,49,35,4,45,21
+HAW,Ollie,Greeves,2026,Gen. Forward,,est,65,12,36,30,29,50,58,11,8,29,47,4,55,21,43,33,68,17
+HAW,Calsher,Dear,2026,Key Forward,,est,48,52,37,42,40,10,51,35,17,27,1,3,39,19,43,64,66,21
+HAW,Will,McCabe,2026,Mid-Forward,,est,60,37,31,28,45,68,51,12,11,30,58,5,39,24,50,23,63,17
+HAW,Max,Beattie,2026,Gen. Forward,,est,65,9,38,11,47,34,38,11,6,24,44,2,48,17,47,35,68,17
+HAW,Henry,Hustwaite,2026,Midfielder,,est,61,43,44,40,45,53,49,10,10,60,47,12,49,39,67,15,53,5
+HAW,Max,Ramsden,2026,Key Forward,,est,47,56,20,39,33,33,44,70,22,29,43,4,37,17,34,61,60,9
+HAW,Matt,Hill,2026,Gen. Forward,,est,65,24,26,29,39,45,33,12,7,32,55,4,51,21,50,35,56,9
+HAW,Aidan,Schubert,2026,Key Forward,,est,47,47,31,41,41,21,54,57,16,22,34,10,48,12,38,68,61,5
+MEL,Jack,Steele,2026,Midfielder,,gps,75,44,81,48,54,53,49,9,30,74,32,14,59,46,93,13,52,99
+MEL,Kysaiah,Pickett,2026,Midfielder,FWD,gps,93,63,59,66,45,26,44,53,14,63,35,13,77,35,78,35,26,99
+MEL,Tom,Sparrow,2026,Midfielder,FWD,gps,78,40,66,60,45,57,43,3,18,69,69,15,60,29,98,20,34,99
+MEL,Max,Gawn,2026,Ruck,,est,34,60,90,61,35,23,44,78,49,85,34,87,64,47,34,21,30,99
+MEL,Ed,Langdon,2026,Midfielder,,gps,81,80,47,19,66,71,73,17,31,35,77,5,50,54,48,22,65,99
+MEL,Koltyn,Tholstrup,2026,Gen. Defender,FWD,20m,57,63,57,24,72,40,62,21,42,33,43,3,35,76,32,7,69,99
+MEL,Jake,Bowey,2026,Gen. Defender,,20m,70,63,36,56,77,72,65,8,43,33,40,4,37,69,50,6,73,66
+MEL,Harvey,Langford,2026,Midfielder,,est,60,44,49,6,57,49,49,45,22,45,75,6,44,42,49,35,61,99
+MEL,Kade,Chandler,2026,Gen. Forward,,gps,92,59,60,61,56,55,39,22,18,45,71,6,70,22,78,33,56,95
+MEL,Trent,Rivers,2026,Gen. Defender,,20m,58,38,47,60,74,67,72,16,17,26,64,3,45,64,45,8,69,70
+MEL,Jake,Lever,2026,Key Defender,,20m,37,99,45,42,60,53,90,34,84,21,19,2,19,93,26,3,48,91
+MEL,Caleb,Windsor,2026,Mid-Forward,DEF,gps,85,30,37,41,51,43,35,12,54,37,82,6,55,29,64,18,59,87
+MEL,Harry,Sharp,2026,Gen. Forward,MID,est,67,55,21,60,65,44,41,12,11,29,73,4,58,15,58,37,58,99
+MEL,Blake,Howes,2026,Gen. Defender,,est,64,56,33,12,62,52,71,20,51,24,19,2,27,59,40,3,62,83
+MEL,Daniel,Turner,2026,Key Defender,FWD,est,47,88,44,47,62,51,74,75,74,27,26,2,22,88,30,5,55,83
+MEL,Bayley,Fritsch,2026,Gen. Forward,,est,65,69,41,31,56,31,48,32,14,29,81,3,58,17,46,60,71,91
+MEL,Jacob,van Rooyen,2026,Key Forward,,20m,55,63,66,37,57,17,54,56,35,35,81,9,46,12,34,82,65,91
+MEL,Changkuoth,Jiath,2026,Gen. Defender,MID,gps,80,31,27,26,70,48,78,41,41,22,33,2,34,67,37,4,58,66
+MEL,Joel,Fitzgerald,2026,Midfielder,,est,60,9,52,26,24,46,35,32,29,55,38,10,54,32,74,12,48,46
+MEL,Bailey,Laurie,2026,Gen. Forward,MID,20m,38,11,49,26,44,35,42,13,6,25,48,3,48,14,51,29,64,70
+MEL,Harry,Petty,2026,Key Forward,DEF,est,48,68,26,44,54,42,54,54,44,28,73,11,47,37,48,61,45,83
+MEL,Christian,Salem,2026,Gen. Defender,,gps,88,31,47,15,55,44,51,16,32,28,34,3,33,55,39,6,62,38
+MEL,Latrelle,Pickett,2026,Gen. Forward,,est,68,17,31,69,39,45,31,14,8,28,30,4,46,19,43,26,46,66
+MEL,Matthew,Jefferson,2026,Key Forward,,est,47,44,34,30,51,21,32,49,16,28,46,10,45,11,39,54,65,66
+MEL,Tom,McDonald,2026,Key Defender,FWD,est,47,83,62,44,63,53,64,47,63,19,41,8,20,66,29,9,44,46
+MEL,Xavier,Lindsay,2026,Gen. Defender,MID,est,65,35,26,16,67,45,51,16,43,25,39,3,32,51,45,6,71,30
+MEL,Paddy,Cross,2026,Mid-Forward,,est,59,28,26,1,64,25,34,28,54,30,85,4,39,19,60,26,56,46
+MEL,Jai,Culley,2026,Midfielder,,est,60,32,51,14,56,38,43,44,11,49,29,7,55,34,60,17,68,30
+MEL,Brody,Mihocek,2026,Key Forward,,gps,77,34,62,27,51,2,45,70,12,22,94,8,39,9,30,69,59,42
+MEL,Jake,Melksham,2026,Gen. Forward,,est,65,44,43,21,42,20,43,21,13,23,74,2,48,17,43,45,50,30
+MEL,Max,Heath,2026,Ruck,,20m,43,1,47,24,51,30,18,46,19,48,18,60,42,24,37,13,42,30
+MEL,Xavier,Taylor,2026,Gen. Defender,,20m,50,56,34,21,39,60,53,19,44,27,41,3,25,57,38,6,58,13
+MEL,Lukas,Cooke,2026,Key Defender,,est,46,39,25,27,59,51,62,55,68,24,17,3,17,74,24,5,58,9
+MEL,Andy,Moniz-Wakefield,2026,Gen. Forward,DEF,est,65,7,31,25,45,26,40,30,9,28,74,3,44,19,52,32,67,9
+MEL,Luker,Kentfield,2026,Key Forward,,est,47,22,50,28,51,6,41,42,21,25,40,13,37,16,34,55,48,13
+MEL,Jack,Viney,2026,Midfielder,,est,61,31,76,19,53,49,51,10,11,55,34,10,47,39,69,15,54,5
+MEL,Aidan,Johnson,2026,Ruck,FWD,est,34,20,64,25,37,33,32,37,30,59,39,62,50,24,47,15,9,5
+NTH,Harry,Sheezel,2026,Midfielder,DEF,est,61,55,61,67,46,52,89,37,8,67,31,13,67,38,86,24,41,95
+NTH,Caleb,Daniel,2026,Gen. Defender,MID,gps,82,64,57,22,66,76,80,4,12,28,31,5,43,51,39,4,68,99
+NTH,Luke,Parker,2026,Gen. Defender,MID,est,65,70,63,49,61,65,91,22,47,29,81,4,34,76,37,8,56,99
+NTH,Luke,Davies-Uniacke,2026,Midfielder,,est,62,61,69,73,65,61,53,58,9,78,46,16,67,39,81,17,19,99
+NTH,Jy,Simpkin,2026,Midfielder,,gps,86,63,45,34,56,47,71,19,23,46,37,9,57,36,57,26,38,99
+NTH,Colby,McKercher,2026,Gen. Forward,DEF,gps,73,57,33,99,56,54,52,3,3,20,33,3,47,23,54,16,46,99
+NTH,Dylan,Stephens,2026,Midfielder,,gps,75,65,24,19,64,66,72,12,6,35,12,6,44,41,47,12,44,99
+NTH,Finn,O'Sullivan,2026,Midfielder,DEF,20m,65,60,36,21,56,47,58,9,12,53,37,11,56,27,71,16,39,82
+NTH,Cameron,Zurhaar,2026,Gen. Defender,FWD,gps,84,57,56,21,61,52,78,38,47,24,16,2,40,57,32,20,50,99
+NTH,Tristan,Xerri,2026,Ruck,,est,35,38,73,44,30,6,30,66,62,89,31,72,52,36,68,17,12,82
+NTH,Tom,Blamires,2026,Midfielder,,est,60,40,42,13,57,52,50,3,32,34,46,5,41,39,47,12,65,73
+NTH,Luke,McDonald,2026,Gen. Defender,,est,64,68,50,23,73,60,80,13,48,20,35,2,29,52,37,4,50,78
+NTH,George,Wardlaw,2026,Midfielder,,est,61,5,62,23,49,40,41,42,33,68,90,12,46,38,86,15,30,69
+NTH,Charlie,Comben,2026,Key Defender,FWD,20m,49,89,18,33,52,57,69,72,82,23,36,2,18,84,30,3,37,95
+NTH,Paul,Curtis,2026,Gen. Forward,,est,66,52,32,29,46,38,51,32,12,31,67,4,63,20,64,64,38,86
+NTH,Charlie,Spargo,2026,Gen. Forward,,est,65,30,39,16,45,49,58,5,3,17,64,2,58,15,44,30,63,82
+NTH,Jack,Darling,2026,Key Forward,,est,47,31,66,29,46,3,47,79,42,33,62,7,47,10,36,72,68,95
+NTH,Nick,Larkey,2026,Key Forward,,est,47,80,44,31,45,33,57,56,42,23,42,2,43,7,29,88,75,99
+NTH,Cooper,Trembath,2026,Key Forward,,est,47,54,47,37,46,42,51,59,43,27,84,20,40,13,43,63,71,99
+NTH,Aidan,Corr,2026,Key Defender,,gps,84,55,55,31,66,40,57,31,72,19,19,2,14,62,23,2,49,69
+NTH,Griffin,Logue,2026,Key Defender,,gps,93,61,66,33,45,49,67,31,58,24,19,2,13,73,22,2,50,69
+NTH,Cooper,Harvey,2026,Gen. Defender,FWD,est,64,49,50,16,60,72,77,24,45,18,41,2,30,55,33,5,56,31
+NTH,Tom,Powell,2026,Gen. Forward,MID,gps,79,43,33,32,42,44,65,6,9,31,48,5,51,25,51,28,59,35
+NTH,Zane,Duursma,2026,Gen. Forward,,20m,57,16,24,1,44,48,40,34,8,22,50,2,35,14,36,39,75,65
+NTH,Jacob,Konstanty,2026,Gen. Forward,,est,66,44,41,11,50,40,39,17,9,30,74,4,37,16,53,32,46,44
+NTH,Riley,Hardeman,2026,Gen. Defender,,est,65,41,26,14,69,41,61,8,48,16,50,2,29,46,35,5,68,31
+NTH,Josh,Goater,2026,Gen. Defender,,est,65,33,28,20,63,52,72,20,49,20,32,2,25,58,30,4,64,27
+NTH,Zac,Banch,2026,Gen. Forward,,est,66,29,43,23,67,52,46,6,11,22,44,3,54,13,48,39,47,35
+NTH,Toby,Pink,2026,Key Defender,FWD,est,46,83,52,33,75,47,72,26,82,20,19,2,15,66,23,3,57,22
+NTH,Wil,Dawson,2026,Ruck,DEF,est,34,1,24,18,28,43,27,50,36,34,12,44,31,17,43,11,54,44
+NTH,Lachy,Dovaston,2026,Gen. Forward,,est,66,12,33,26,47,32,42,13,7,29,28,4,48,16,50,33,68,27
+NTH,Callum,Coleman-Jones,2026,Ruck,FWD,est,34,1,69,18,16,30,26,23,26,56,18,53,34,19,34,12,18,22
+NTH,Bailey,Scott,2026,Midfielder,,est,60,39,28,17,48,48,56,8,19,38,23,7,40,28,63,14,59,14
+NTH,Matt,Whitlock,2026,Key Forward,,20m,57,35,43,32,47,16,49,26,16,21,53,3,38,9,29,60,65,14
+NTH,Zac,Fisher,2026,Gen. Defender,FWD,est,66,50,45,19,62,59,71,15,24,24,41,3,28,55,40,6,65,5
+NTH,Taylor,Goad,2026,Ruck,,20m,68,1,43,30,43,16,21,32,32,50,39,64,37,23,39,13,42,10
+PAD,Zak,Butters,2026,Midfielder,,gps,81,59,56,82,51,62,53,49,19,81,25,17,67,53,79,15,31,73
+PAD,Jase,Burgoyne,2026,Midfielder,DEF,est,60,61,32,24,44,47,74,45,46,54,30,9,62,59,62,21,57,99
+PAD,Jason,Horne-Francis,2026,Midfielder,,gps,88,49,63,46,37,19,67,41,11,72,83,16,69,30,63,47,11,90
+PAD,Darcy,Byrne-Jones,2026,Gen. Defender,FWD,gps,75,52,42,36,52,56,77,17,41,33,34,3,33,73,53,8,70,95
+PAD,Willem,Drew,2026,Midfielder,,est,61,58,49,38,39,44,42,49,42,68,32,13,51,36,92,9,49,95
+PAD,Ollie,Wines,2026,Midfielder,,est,60,14,85,27,36,33,58,52,20,63,37,11,61,32,67,13,46,82
+PAD,Joe,Richards,2026,Gen. Forward,,20m,59,53,44,65,44,42,62,31,12,45,35,8,58,28,78,27,60,86
+PAD,Aliir,Aliir,2026,Key Defender,,gps,86,99,62,41,55,39,94,84,66,26,16,2,18,99,21,3,44,95
+PAD,Logan,Evans,2026,Gen. Defender,,20m,55,69,31,38,60,60,80,23,46,20,54,2,24,62,41,5,46,82
+PAD,Joe,Berry,2026,Gen. Forward,,est,65,40,37,35,55,36,49,3,7,30,40,3,51,23,54,29,60,99
+PAD,Jordon,Sweet,2026,Ruck,,est,34,49,81,46,39,18,28,39,54,69,28,84,52,23,45,19,9,95
+PAD,Miles,Bergman,2026,Gen. Defender,,20m,66,48,31,30,65,58,78,44,57,31,47,4,32,58,44,10,59,69
+PAD,Mitch,Georgiades,2026,Key Forward,,gps,82,80,24,25,35,36,74,52,34,22,59,3,45,9,31,99,41,90
+PAD,Lachie,Jones,2026,Key Defender,,gps,82,60,51,36,74,40,56,25,74,23,42,2,22,70,36,6,70,86
+PAD,Kane,Farrell,2026,Gen. Defender,,gps,83,52,31,65,78,65,93,9,52,23,55,3,34,49,44,6,60,56
+PAD,Josh,Lai,2026,Gen. Defender,,est,64,51,46,4,74,48,71,31,24,22,41,2,23,71,35,3,66,82
+PAD,Jacob,Wehr,2026,Midfielder,,est,59,41,31,1,54,50,51,33,15,29,7,5,38,31,52,8,54,73
+PAD,Corey,Durdin,2026,Gen. Forward,,est,65,53,48,2,40,36,49,14,7,26,77,2,51,15,49,52,63,99
+PAD,Jack,Whitlock,2026,Key Forward,,est,47,63,36,39,29,17,47,48,44,24,11,10,34,12,35,57,61,99
+PAD,Christian,Moraes,2026,Gen. Forward,MID,est,65,16,30,27,44,56,45,5,6,24,53,3,43,21,47,20,57,52
+PAD,Ewan,Mackinlay,2026,Midfielder,,est,61,46,50,11,54,55,45,35,9,35,48,5,36,33,60,16,72,61
+PAD,Todd,Marshall,2026,Key Forward,,est,47,38,27,44,48,37,59,31,49,18,43,2,36,28,32,43,69,65
+PAD,Jack,Watkins,2026,Mid-Forward,,est,59,13,33,1,22,44,45,30,22,32,41,6,41,28,53,16,60,48
+PAD,Jackson,Mead,2026,Mid-Forward,,20m,54,31,51,28,45,33,49,21,41,36,49,7,45,25,63,17,51,44
+PAD,Xavier,Bamert,2026,Gen. Forward,,est,65,39,28,27,42,29,56,20,8,21,25,2,47,21,48,33,71,44
+PAD,Dante,Visentini,2026,Ruck,,est,34,25,49,22,36,39,34,28,65,37,64,48,31,25,40,18,33,65
+PAD,Jack,Lukosius,2026,Mid-Forward,FWD,20m,66,32,30,21,70,20,66,39,42,32,74,4,56,28,49,31,58,35
+PAD,Esava,Ratugolea,2026,Key Defender,,gps,90,68,67,30,57,48,62,73,72,27,19,2,20,93,23,2,61,35
+PAD,Tom,Anastasopoulos,2026,Gen. Forward,,est,65,39,21,20,43,27,46,8,10,19,52,2,36,19,54,29,67,22
+PAD,Will,Lorenz,2026,Gen. Defender,MID,20m,55,48,25,33,62,65,72,11,28,33,30,4,28,57,45,5,57,14
+PAD,Mitch,Zadow,2026,Gen. Forward,,est,65,27,52,14,41,6,33,6,10,27,54,3,41,17,50,37,45,39
+PAD,Connor,Rozee,2026,Midfielder,DEF,gps,85,37,40,38,55,48,59,9,12,53,33,10,45,41,66,19,42,10
+PAD,Balyn,O'Brien,2026,Gen. Defender,,est,65,43,29,2,56,59,49,8,47,25,27,3,19,47,39,4,63,27
+PAD,Will,Brodie,2026,Midfielder,,est,60,22,69,31,55,48,46,9,8,64,47,12,52,37,67,13,52,10
+PAD,Harrison,Ramm,2026,Key Defender,,est,47,66,51,32,38,59,41,67,91,29,19,8,14,62,33,3,51,27
+PAD,Brandon,Zerk-Thatcher,2026,Key Defender,,est,47,79,31,27,56,39,65,36,48,20,19,3,14,61,26,3,45,18
+PAD,Alex,Van Wyk,2026,Ruck,,est,34,3,54,27,31,18,30,55,24,53,17,67,38,20,36,13,46,14
+PAD,Tom,Cochrane,2026,Gen. Forward,,est,65,31,51,29,36,12,41,12,8,29,48,3,57,15,53,39,60,14
+PAD,Ollie,Lord,2026,Key Forward,,est,47,57,45,43,36,18,44,46,43,30,55,12,39,15,43,66,62,5
+RIC,Tim,Taranto,2026,Midfielder,,est,61,56,81,43,31,40,45,37,7,88,36,17,59,34,86,26,54,90
+RIC,Jayden,Short,2026,Gen. Defender,,est,65,57,43,38,68,56,98,7,29,19,39,2,29,56,36,8,58,90
+RIC,Jack,Ross,2026,Midfielder,,20m,70,44,70,52,60,51,51,36,8,70,60,19,57,42,79,14,49,82
+RIC,Seth,Campbell,2026,Gen. Forward,,est,68,51,36,76,49,38,40,25,22,38,44,5,52,23,65,33,53,99
+RIC,Nick,Vlastuin,2026,Gen. Defender,,est,65,63,58,19,63,58,62,30,35,30,28,3,19,81,42,4,45,95
+RIC,Patrick,Retschko,2026,Midfielder,,est,61,70,40,40,61,57,70,9,37,33,22,5,35,45,49,9,62,78
+RIC,Dion,Prestia,2026,Midfielder,,est,61,29,74,26,46,50,54,6,7,47,2,9,52,35,72,10,50,73
+RIC,Nathan,Broad,2026,Gen. Defender,,est,64,61,44,15,57,45,76,29,77,20,29,2,19,71,27,3,77,90
+RIC,Sam,Grlj,2026,Gen. Defender,,20m,73,40,28,45,61,47,48,4,33,21,38,3,32,42,59,7,72,90
+RIC,Sam,Banks,2026,Gen. Defender,MID,est,65,35,21,16,69,56,55,15,9,21,22,3,21,43,40,5,61,78
+RIC,Ben,Miller,2026,Key Defender,RUCK,20m,75,95,52,56,72,47,77,49,81,18,19,5,16,67,29,2,51,90
+RIC,Tom,Brown,2026,Gen. Defender,,20m,66,42,28,21,66,54,61,40,45,27,26,3,34,60,33,8,59,78
+RIC,Jacob,Hopper,2026,Midfielder,,est,60,38,74,18,38,19,42,47,9,75,9,13,44,28,55,8,20,52
+RIC,Tyler,Sonsie,2026,Mid-Forward,FWD,est,59,58,40,7,54,34,54,22,51,41,47,5,39,46,49,19,62,65
+RIC,James,Trezise,2026,Gen. Defender,MID,est,65,54,27,11,53,52,68,22,25,26,10,3,28,55,44,8,61,61
+RIC,Steely,Green,2026,Gen. Forward,,est,66,54,42,24,44,36,45,12,7,26,30,3,47,17,59,33,57,86
+RIC,Sam,Cumming,2026,Midfielder,,20m,67,33,49,14,65,34,46,35,18,45,94,8,42,28,64,22,48,61
+RIC,Noah,Balta,2026,Key Defender,,gps,90,65,73,49,50,38,54,69,61,37,27,24,27,52,29,24,43,73
+RIC,Toby,Nankervis,2026,Ruck,,est,35,29,83,47,34,20,22,48,47,78,51,81,40,26,57,10,15,52
+RIC,Kane,McAuliffe,2026,Midfielder,,20m,73,34,62,28,59,37,46,9,30,51,57,9,54,46,65,11,25,44
+RIC,Hugo,Ralphsmith,2026,Mid-Forward,DEF,20m,67,62,23,19,69,34,48,6,51,38,96,5,44,34,54,23,56,56
+RIC,Sam,Lalor,2026,Mid-Forward,FWD,est,60,39,60,28,77,40,45,25,8,46,92,23,61,23,62,38,36,52
+RIC,Mykelti,Lefau,2026,Key Forward,,gps,87,72,52,52,57,20,41,41,26,28,71,8,29,14,54,54,53,90
+RIC,Luke,Trainor,2026,Gen. Defender,,est,65,60,34,29,50,36,73,26,44,17,28,2,20,51,36,4,20,48
+RIC,Tom,Lynch,2026,Key Forward,,est,47,62,58,34,36,12,33,60,19,29,4,4,42,11,34,67,51,65
+RIC,Taj,Hotton,2026,Mid-Forward,FWD,20m,79,31,55,10,36,31,30,18,10,52,42,8,43,29,70,13,51,44
+RIC,Kye,Annand,2026,Key Defender,,est,46,77,31,38,65,40,66,33,83,22,19,3,12,70,21,3,59,48
+RIC,Campbell,Gray,2026,Key Defender,,est,47,36,41,28,64,34,49,31,51,20,21,6,11,55,33,5,40,44
+RIC,Jonty,Faull,2026,Key Forward,,est,47,57,44,33,52,8,40,43,24,21,64,7,28,11,37,45,71,44
+RIC,Oliver,Hayes-Brown,2026,Ruck,,est,34,1,81,35,58,6,18,20,46,62,55,54,36,22,33,10,45,31
+RIC,Maurice,Rioli,2026,Gen. Forward,,gps,97,30,41,24,51,27,28,14,8,29,18,3,45,21,68,19,58,44
+RIC,Rhyan,Mansell,2026,Gen. Forward,,gps,89,40,28,25,43,16,52,22,12,26,38,3,47,25,60,49,58,27
+RIC,Jasper,Alger,2026,Gen. Forward,,20m,73,27,37,11,65,35,38,28,15,28,80,3,41,14,49,52,53,35
+RIC,Tom,Burton,2026,Gen. Forward,,est,66,45,34,36,61,44,30,8,6,27,31,3,42,19,46,24,62,22
+RIC,Samson,Ryan,2026,Ruck,,20m,52,4,40,27,51,5,22,38,47,44,54,57,39,22,34,16,31,27
+RIC,Liam,Fawcett,2026,Key Forward,,20m,53,53,33,27,51,7,40,23,17,20,65,3,35,12,30,70,65,31
+RIC,Judson,Clarke,2026,Midfielder,FWD,est,60,38,42,2,53,54,48,8,30,50,29,8,43,40,55,13,64,14
+RIC,Noah,Roberts-Thomson,2026,Gen. Forward,,20m,75,37,28,22,66,31,37,12,9,23,99,3,39,13,50,39,70,14
+RIC,Zane,Peucker,2026,Gen. Forward,,20m,78,31,32,30,59,54,51,19,7,25,69,3,49,19,48,34,56,10
+RIC,Harry,Armstrong,2026,Key Forward,,est,47,40,43,23,41,28,37,35,15,19,57,3,28,10,28,48,69,18
+RIC,Josh,Gibcus,2026,Key Defender,,20m,58,70,35,35,55,26,64,54,78,26,19,3,17,79,32,4,59,5
+STK,Bradley,Hill,2026,Gen. Defender,MID,gps,98,71,49,69,64,63,97,14,36,22,84,3,54,50,44,19,62,99
+STK,Hugo,Garcia,2026,Midfielder,,20m,73,40,57,44,50,48,43,31,36,76,71,17,62,26,89,18,49,99
+STK,Max,Hall,2026,Mid-Forward,FWD,est,62,56,68,81,61,49,65,11,40,62,91,12,77,23,82,42,61,99
+STK,Marcus,Windhager,2026,Midfielder,DEF,est,60,60,62,38,48,46,68,3,16,45,50,8,49,45,64,10,46,99
+STK,Callum,Wilkie,2026,Key Defender,,est,48,99,49,78,53,66,99,69,73,26,4,2,19,99,31,2,62,99
+STK,Nasiah,Wanganeen-Milera,2026,Midfielder,DEF,est,64,46,31,99,55,57,45,42,29,52,61,10,83,36,59,33,39,73
+STK,Darcy,Wilson,2026,Mid-Forward,,gps,84,63,34,81,47,63,65,7,54,38,42,6,61,33,66,31,57,95
+STK,Jack,Sinclair,2026,Gen. Defender,,est,66,52,53,67,71,61,90,8,43,28,54,4,49,67,45,6,71,65
+STK,Rowan,Marshall,2026,Ruck,,est,34,41,84,43,28,22,48,68,34,72,44,57,52,28,41,33,23,90
+STK,Mattaes,Phillipou,2026,Mid-Forward,FWD,20m,65,33,56,45,53,45,49,4,51,44,58,8,48,21,76,21,57,90
+STK,Mason,Wood,2026,Midfielder,,est,59,52,49,11,58,48,77,51,42,38,22,6,45,42,50,26,70,86
+STK,Jack,Silvagni,2026,Key Defender,FWD,est,47,90,46,46,46,57,77,51,68,28,32,2,19,85,33,12,34,99
+STK,Sam,Flanders,2026,Midfielder,FWD,20m,62,40,58,55,63,55,77,4,35,45,37,8,43,44,66,13,66,52
+STK,Mitch,Owens,2026,Key Forward,,est,47,69,50,36,44,28,39,72,42,37,59,7,51,21,38,61,59,86
+STK,Jack,Macrae,2026,Midfielder,FWD,est,60,10,60,21,38,36,49,4,9,69,34,13,47,37,69,8,49,52
+STK,Liam,Stocker,2026,Gen. Defender,,est,64,41,48,2,65,36,67,18,50,23,41,2,19,67,35,3,53,78
+STK,Tom,De Koning,2026,Ruck,,est,34,34,54,32,48,6,35,63,29,52,23,62,51,25,32,24,7,86
+STK,Ryan,Byrnes,2026,Midfielder,DEF,20m,60,52,52,1,57,46,63,44,26,35,46,6,42,39,51,17,64,65
+STK,Cooper,Sharman,2026,Key Forward,,20m,39,68,33,43,44,34,52,57,23,28,44,8,68,19,40,66,71,90
+STK,Jack,Carroll,2026,Gen. Defender,MID,20m,61,52,35,38,74,52,85,17,42,17,15,2,38,49,40,5,68,52
+STK,Jack,Higgins,2026,Gen. Forward,,20m,50,49,54,1,39,28,39,36,10,29,32,2,44,14,49,64,67,69
+STK,Hugh,Boxshall,2026,Midfielder,,est,61,44,45,16,41,43,46,36,11,51,38,9,32,40,84,22,39,44
+STK,Liam,O'Connell,2026,Gen. Defender,,est,65,53,41,2,46,55,55,19,32,26,10,3,18,51,46,5,69,56
+STK,Anthony,Caminiti,2026,Key Defender,FWD,est,47,64,30,18,45,52,35,29,79,29,7,4,15,49,35,14,44,78
+STK,Liam,Ryan,2026,Gen. Forward,,gps,92,40,33,1,46,53,33,35,9,25,71,2,51,13,38,62,60,73
+STK,Campbell,Lake,2026,Gen. Forward,,est,66,33,39,30,46,41,34,4,7,34,79,3,42,21,73,28,57,44
+STK,Hunter,Clark,2026,Gen. Defender,MID,est,65,8,42,19,62,63,65,18,30,27,41,2,29,61,43,8,71,31
+STK,Dan,Butler,2026,Gen. Forward,,gps,87,26,44,32,37,47,29,44,6,23,53,3,39,20,67,25,42,44
+STK,Tobie,Travaglia,2026,Gen. Defender,,est,65,19,18,2,69,71,57,24,41,25,41,3,22,50,36,4,67,31
+STK,Liam,Henry,2026,Gen. Forward,MID,20m,55,14,21,7,28,36,45,10,7,22,7,2,46,25,43,37,69,35
+STK,Angus,Hastie,2026,Gen. Defender,MID,est,65,33,12,22,64,65,62,8,36,14,41,2,22,45,42,6,75,31
+STK,Dougal,Howard,2026,Key Defender,,gps,84,56,34,30,51,33,82,29,56,15,10,3,15,53,18,3,46,31
+STK,Alix,Tauru,2026,Gen. Defender,,20m,63,13,53,6,48,34,57,25,44,20,51,2,22,44,36,14,63,39
+STK,Charlie,Banfield,2026,Midfielder,,est,60,33,43,20,52,37,50,32,11,46,36,8,40,36,64,17,64,14
+STK,Isaac,Keeler,2026,Key Forward,,est,47,38,42,40,31,27,47,57,32,30,40,9,44,13,34,63,58,10
+STK,Max,King,2026,Key Forward,,gps,80,30,29,36,34,34,44,57,16,27,49,4,38,12,32,64,63,5
+SYD,Nick,Blakey,2026,Gen. Defender,,gps,98,63,24,99,74,69,62,22,55,27,50,3,60,79,37,9,40,87
+SYD,Isaac,Heeney,2026,Midfielder,FWD,gps,84,52,78,46,49,56,47,65,30,85,87,17,80,44,79,50,42,79
+SYD,Callum,Mills,2026,Gen. Defender,MID,est,66,46,42,58,79,74,72,27,44,28,17,3,31,75,46,3,74,91
+SYD,Chad,Warner,2026,Midfielder,,est,65,49,67,99,55,54,48,36,9,65,72,13,93,38,75,41,35,87
+SYD,Brodie,Grundy,2026,Ruck,,est,35,45,80,62,15,24,27,32,32,88,57,86,60,36,55,15,1,91
+SYD,Jake,Lloyd,2026,Gen. Forward,MID,est,66,66,49,54,61,67,64,17,11,30,68,3,50,35,54,33,72,99
+SYD,Jai,Serong,2026,Midfielder,DEF,20m,57,67,39,27,55,54,62,39,44,46,38,7,47,53,61,14,57,95
+SYD,Errol,Gulden,2026,Midfielder,,est,63,49,66,96,60,54,56,27,15,63,20,13,83,42,81,17,25,52
+SYD,Riley,Bice,2026,Gen. Defender,,est,68,55,37,75,60,73,74,12,56,23,73,2,44,64,44,7,67,79
+SYD,Tom,McCartin,2026,Key Defender,,20m,47,92,49,57,57,63,80,50,73,27,19,2,19,99,29,2,37,87
+SYD,Angus,Sheldrick,2026,Midfielder,,20m,57,1,80,20,40,56,37,3,4,59,23,10,58,37,67,13,34,79
+SYD,Matt,Roberts,2026,Midfielder,DEF,est,60,63,56,25,71,60,60,49,21,37,52,6,43,54,54,10,71,83
+SYD,James,Rowbottom,2026,Mid-Forward,,est,61,36,47,40,38,44,26,3,54,57,50,10,59,33,99,15,62,91
+SYD,James,Jordon,2026,Midfielder,,est,61,65,45,20,65,64,34,47,32,43,77,7,45,31,80,13,65,87
+SYD,Sam,Wicks,2026,Gen. Defender,FWD,gps,88,60,33,64,74,66,49,20,52,24,39,3,34,57,47,4,43,79
+SYD,Justin,McInerney,2026,Midfielder,,est,60,46,32,29,51,68,58,25,11,49,74,10,74,37,57,31,41,56
+SYD,Tom,Papley,2026,Gen. Forward,,gps,90,36,51,60,47,42,40,32,23,36,53,4,85,20,53,54,42,79
+SYD,Charlie,Curnow,2026,Key Forward,,est,47,72,68,31,39,9,43,84,22,31,76,2,44,13,31,93,40,95
+SYD,Logan,McDonald,2026,Key Forward,,20m,59,48,33,32,56,56,49,51,47,27,99,7,51,20,31,82,67,91
+SYD,Dane,Rampe,2026,Key Defender,,gps,89,55,56,39,73,67,44,27,74,28,4,3,20,75,35,3,61,68
+SYD,Harry,Cunningham,2026,Gen. Defender,,gps,88,40,40,9,60,51,60,19,48,18,27,2,27,47,47,8,71,56
+SYD,Will,Edwards,2026,Key Defender,,20m,80,74,63,36,84,56,46,39,87,28,19,2,20,78,25,2,38,56
+SYD,Caiden,Cleary,2026,Gen. Forward,,est,66,34,49,32,60,38,39,4,11,35,22,3,45,20,63,28,43,44
+SYD,Malcolm,Rosas,2026,Gen. Forward,,gps,89,22,38,23,45,52,28,5,11,29,99,3,40,18,58,32,62,64
+SYD,Harry,Kyle,2026,Gen. Defender,,est,65,45,33,13,60,67,46,6,52,25,58,3,21,56,40,5,62,48
+SYD,Braeden,Campbell,2026,Gen. Forward,MID,gps,79,50,38,55,61,56,36,20,8,38,58,5,77,32,64,29,61,32
+SYD,Joel,Amartey,2026,Key Forward,,est,47,41,52,32,35,24,40,53,19,26,36,7,39,11,36,77,59,60
+SYD,Lewis,Melican,2026,Key Defender,,gps,80,62,61,33,60,40,53,55,62,25,6,2,23,77,28,3,69,44
+SYD,Billy,Cootee,2026,Gen. Forward,,est,66,29,45,25,52,37,41,9,8,27,65,3,49,17,57,41,54,44
+SYD,Hayden,McLean,2026,Key Forward,RUCK,est,47,30,48,37,39,45,31,76,35,35,56,17,37,11,40,58,62,48
+SYD,Joel,Hamling,2026,Key Defender,,gps,90,72,49,19,52,62,50,34,92,25,13,2,19,67,24,7,63,44
+SYD,Tom,Hanily,2026,Gen. Forward,,est,65,18,52,19,61,65,41,23,11,26,44,3,49,22,50,32,58,28
+SYD,Jesse,Dattoli,2026,Gen. Forward,,est,65,25,68,26,44,26,51,25,9,35,10,4,65,18,47,41,69,21
+SYD,Corey,Warner,2026,Gen. Forward,MID,20m,67,13,37,36,61,59,34,9,9,21,44,2,53,16,49,27,57,21
+SYD,Peter,Ladhams,2026,Ruck,,est,34,27,58,29,22,26,23,51,50,67,60,72,41,25,40,17,33,9
+SYD,Will,Green,2026,Ruck,,est,34,15,42,38,59,19,24,38,43,54,8,63,55,20,48,15,32,13
+WCE,Harley,Reid,2026,Midfielder,,20m,63,54,79,82,60,47,33,44,12,91,41,18,58,33,75,19,1,99
+WCE,Tim,Kelly,2026,Midfielder,,est,60,40,68,44,56,52,61,3,29,70,16,14,65,41,68,7,56,90
+WCE,Tom,McCarthy,2026,Gen. Defender,,est,67,55,56,76,69,57,80,25,45,27,34,4,33,68,44,4,73,95
+WCE,Liam,Duggan,2026,Gen. Defender,,est,66,54,47,43,61,61,87,18,43,20,22,2,35,59,42,6,66,95
+WCE,Willem,Duursma,2026,Midfielder,,20m,65,44,32,52,54,29,57,42,34,45,72,7,45,34,74,21,61,95
+WCE,Elliot,Yeo,2026,Midfielder,DEF,gps,77,26,64,29,51,21,42,21,26,60,13,11,47,20,79,23,39,90
+WCE,Liam,Baker,2026,Gen. Defender,MID,gps,88,57,53,12,52,58,52,11,20,37,64,4,38,63,47,14,24,86
+WCE,Milan,Murdock,2026,Gen. Forward,,est,67,42,48,44,33,18,39,31,6,41,91,4,49,32,65,31,63,86
+WCE,Tylar,Young,2026,Key Defender,,est,46,77,55,46,71,54,77,31,61,21,19,2,18,77,22,2,49,99
+WCE,Brady,Hough,2026,Gen. Defender,MID,est,65,54,15,7,71,45,67,8,23,22,63,3,25,39,48,12,53,99
+WCE,Hamish,Davis,2026,Midfielder,,est,59,40,46,2,44,46,49,35,15,37,19,5,32,44,53,9,69,90
+WCE,Jake,Waterman,2026,Key Forward,,est,47,77,53,34,41,35,76,49,11,18,33,2,52,11,28,96,61,99
+WCE,Josh,Lindsay,2026,Gen. Defender,,est,65,42,47,16,72,56,64,8,37,21,49,2,26,48,34,5,62,65
+WCE,Bailey,Williams,2026,Ruck,,est,35,43,67,42,40,16,18,34,32,73,29,82,56,28,52,17,35,82
+WCE,Bo,Allan,2026,Midfielder,DEF,20m,65,50,45,1,61,48,45,51,27,39,61,5,37,44,48,15,44,82
+WCE,Jack,Graham,2026,Mid-Forward,FWD,gps,84,40,64,49,44,37,39,4,5,51,90,9,58,29,97,17,20,56
+WCE,Marcus,Herbert,2026,Gen. Defender,,est,68,54,50,77,55,53,76,19,29,27,35,3,24,65,43,4,45,44
+WCE,Ryan,Maric,2026,Midfielder,DEF,est,60,49,54,27,62,39,56,51,17,38,43,6,42,41,56,8,63,52
+WCE,Tom,Cole,2026,Gen. Forward,DEF,est,66,52,40,39,57,41,55,11,26,24,75,3,43,28,51,30,52,73
+WCE,Jobe,Shanahan,2026,Key Forward,,est,47,81,36,32,50,17,49,49,24,25,82,2,28,22,36,60,63,99
+WCE,Reuben,Ginbey,2026,Key Defender,MID,20m,73,80,39,41,53,53,61,43,92,30,19,2,23,99,33,3,72,56
+WCE,Rhett,Bazzo,2026,Key Defender,,est,47,77,35,31,63,38,67,38,73,24,19,2,13,84,28,3,49,61
+WCE,Cooper,Duff-Tytler,2026,Key Forward,,20m,74,28,33,49,39,26,34,20,54,34,1,17,34,19,48,32,54,69
+WCE,Brandon,Starcevich,2026,Gen. Defender,,gps,84,46,51,13,70,43,49,28,15,25,61,2,21,53,39,4,49,48
+WCE,Jack,Williams,2026,Key Forward,,est,47,45,47,41,43,30,39,60,43,32,48,13,43,11,38,46,52,52
+WCE,Deven,Robertson,2026,Midfielder,,gps,81,42,64,26,42,52,46,7,10,63,47,11,47,35,76,13,48,18
+WCE,Oliver,Francou,2026,Midfielder,,est,61,32,65,36,45,26,51,7,7,59,18,10,40,40,80,10,32,18
+WCE,Elijah,Hewett,2026,Mid-Forward,,20m,69,34,56,14,58,33,45,30,5,37,40,6,40,21,61,15,46,27
+WCE,Harvey,Johnston,2026,Gen. Forward,DEF,est,65,38,35,17,46,39,41,18,5,22,63,2,38,14,54,28,68,35
+WCE,Harry,Schoenberg,2026,Gen. Forward,MID,20m,46,45,46,21,48,39,42,8,6,29,27,4,41,16,48,25,61,22
+WCE,Malakai,Champion,2026,Gen. Forward,,20m,72,32,41,5,46,49,35,13,10,29,73,3,36,16,53,28,53,35
+WCE,Sandy,Brock,2026,Key Defender,,gps,82,68,35,34,65,66,56,36,72,21,19,3,14,61,29,5,47,27
+WCE,Jamie,Cripps,2026,Gen. Forward,,est,66,49,52,33,40,34,49,11,9,25,31,3,46,19,54,41,61,22
+WCE,Jack,Hutchinson,2026,Gen. Forward,MID,est,65,10,48,28,36,17,34,14,9,31,62,3,31,18,58,31,60,27
+WCE,Tom,Gross,2026,Gen. Forward,MID,est,65,30,27,22,49,42,43,14,6,29,29,3,47,21,53,32,71,18
+WCE,Matt,Flynn,2026,Ruck,,est,35,29,74,36,24,32,20,28,43,60,34,67,43,27,53,14,18,18
+WCE,Archer,Reid,2026,Key Forward,,est,47,46,35,32,36,37,36,57,17,28,52,14,46,8,30,52,64,27
+WCE,Matthew,Owies,2026,Gen. Forward,,est,66,41,62,26,48,59,43,38,11,28,54,3,48,20,56,41,59,14
+WCE,Jacob,Newton,2026,Gen. Forward,,20m,73,44,44,20,32,50,33,9,6,31,38,4,41,17,56,30,70,14
+WCE,Harry,Edwards,2026,Key Defender,,est,46,7,29,21,67,18,49,37,57,23,19,3,14,60,24,4,60,10
+WBD,Marcus,Bontempelli,2026,Midfielder,,gps,75,64,79,81,69,47,59,49,22,80,73,19,82,36,77,39,47,95
+WBD,Ed,Richards,2026,Midfielder,DEF,gps,75,54,60,99,52,56,54,33,31,78,99,17,81,28,84,27,39,95
+WBD,Matthew,Kennedy,2026,Midfielder,,est,61,37,74,42,39,41,60,53,7,72,42,17,53,36,79,24,22,95
+WBD,Bailey,Dale,2026,Gen. Defender,,gps,83,63,52,67,68,45,67,17,36,29,28,3,40,83,36,5,63,79
+WBD,Ryley,Sanders,2026,Midfielder,,est,61,57,66,43,50,46,49,32,17,59,31,11,49,37,77,11,47,91
+WBD,Joel,Freijah,2026,Mid-Forward,DEF,20m,66,61,60,55,35,48,56,8,57,60,44,12,67,33,78,21,30,99
+WBD,Lachlan,Bramble,2026,Gen. Defender,MID,est,67,56,34,38,72,46,54,18,26,25,63,3,43,45,45,7,73,99
+WBD,Bailey,Williams,2026,Gen. Defender,MID,gps,82,61,51,44,71,57,82,20,15,30,34,3,32,65,39,15,59,75
+WBD,Rhylee,West,2026,Gen. Forward,,est,66,46,59,36,43,44,49,19,23,40,33,5,52,24,58,37,43,95
+WBD,Cooper,Hynes,2026,Mid-Forward,FWD,est,59,42,48,20,48,50,39,5,32,33,53,5,35,31,58,20,59,91
+WBD,Michael,Sellwood,2026,Gen. Defender,,est,64,62,51,6,61,45,62,35,57,26,28,2,17,80,41,3,47,95
+WBD,Buku,Khamis,2026,Key Defender,FWD,est,46,99,34,16,52,53,69,33,62,19,5,2,17,72,23,5,60,99
+WBD,Aaron,Naughton,2026,Key Forward,,20m,51,58,45,31,34,33,51,64,17,30,33,5,64,10,33,94,63,95
+WBD,Connor,Budarick,2026,Gen. Defender,FWD,gps,80,42,40,17,64,44,69,11,32,22,49,3,24,48,46,6,69,64
+WBD,Tom,Liberatore,2026,Midfielder,,est,60,31,71,33,43,32,49,32,10,74,49,15,58,32,74,12,62,44
+WBD,Tim,English,2026,Ruck,,est,34,36,42,46,42,43,52,35,24,50,54,73,46,41,43,20,42,68
+WBD,Rory,Lobb,2026,Ruck,DEF,est,34,65,62,48,47,21,45,44,68,39,1,38,34,40,45,18,53,87
+WBD,Arthur,Jones,2026,Gen. Forward,,est,66,37,32,21,54,42,42,25,6,28,59,2,47,21,53,52,49,79
+WBD,Sam,Davidson,2026,Midfielder,,20m,66,43,37,7,56,56,45,41,44,30,28,5,41,30,58,22,61,72
+WBD,James,O'Donnell,2026,Key Defender,,est,46,90,32,32,71,52,62,28,82,19,19,6,17,67,23,2,61,83
+WBD,Nick,Coffield,2026,Gen. Defender,,20m,75,56,29,21,57,44,84,13,49,17,41,2,19,56,30,3,70,52
+WBD,Lachie,Jaques,2026,Gen. Defender,,est,65,46,35,18,57,43,69,11,46,19,18,2,33,53,40,6,65,40
+WBD,Josh,Dolan,2026,Gen. Forward,,est,66,25,35,32,44,39,41,5,3,26,37,3,48,22,57,26,76,52
+WBD,Jordan,Croft,2026,Key Forward,,est,48,33,15,46,52,29,34,39,18,25,30,8,33,19,41,36,48,68
+WBD,Cody,Weightman,2026,Gen. Forward,,20m,62,37,45,19,27,17,39,13,10,37,1,4,40,18,55,35,57,44
+WBD,Jedd,Busslinger,2026,Key Defender,,est,48,88,24,59,63,49,70,20,88,19,19,2,21,67,21,2,34,32
+WBD,Oskar,Baker,2026,Gen. Forward,MID,gps,84,24,44,34,56,26,64,19,15,22,87,3,38,21,42,39,48,36
+WBD,Will,Lewis,2026,Key Forward,,est,48,45,37,44,52,19,33,42,13,28,65,5,41,14,49,54,29,52
+WBD,Lachlan,McNeil,2026,Mid-Forward,FWD,est,59,19,51,1,48,39,35,16,40,38,76,4,35,29,54,19,70,44
+WBD,Luke,Kennedy,2026,Gen. Forward,,est,66,28,51,31,33,23,27,15,6,35,58,4,35,18,70,22,68,32
+WBD,Adam,Treloar,2026,Gen. Forward,MID,est,65,14,68,38,33,57,49,42,9,32,51,5,39,19,44,27,66,21
+WBD,Sam,Darcy,2026,Key Forward,,est,47,43,38,48,39,3,38,77,38,33,34,15,49,10,38,74,34,25
+WBD,Louis,Emmett,2026,Ruck,,est,35,1,40,27,27,9,24,28,27,42,6,39,27,16,47,13,48,28
+WBD,Harvey,Gallagher,2026,Midfielder,DEF,20m,73,37,49,6,45,41,42,8,30,43,19,8,43,29,50,14,58,13
+WBD,Laitham,Vandermeer,2026,Gen. Forward,DEF,gps,86,23,44,26,42,46,44,10,10,28,34,3,47,15,47,32,54,9
+WBD,Ryan,Gardner,2026,Key Defender,,est,46,14,40,23,53,17,48,29,70,16,21,11,14,51,24,7,65,17
+WBD,Lachlan,Smith,2026,Ruck,,20m,46,14,64,35,35,26,26,34,30,59,22,62,38,27,47,15,34,9
+WBD,Luke,Cleary,2026,Gen. Defender,,est,65,28,24,20,60,69,61,13,29,22,41,3,27,51,35,7,63,9
+WBD,Lachlan,Carmichael,2026,Gen. Defender,,est,65,40,26,6,59,65,67,13,43,17,41,2,26,51,37,5,62,9
+ADE,Sid,Draper,2025,Mid-Forward,,est,59,1,33,1,32,35,25,44,6,30,39,5,29,17,47,17,49,40
+ADE,Lachlan,Sholl,2024,Midfielder,,est,59,62,49,32,50,38,74,17,14,38,71,6,38,47,57,20,57,86
+BRL,Tom,Doedee,2023,Gen. Defender,,gps,84,69,34,13,53,71,66,23,61,24,41,2,21,73,31,2,55,48
+BRL,Luke,Beecken,2025,Midfielder,,est,60,18,52,1,59,34,43,9,11,46,47,9,44,29,54,15,53,5
+BRL,Henry,Smith,2025,Key Forward,,est,47,47,32,40,57,42,42,41,24,25,99,13,37,11,33,69,42,8
+BRL,Jack,Payne,2025,Key Defender,,est,46,81,29,34,51,35,74,50,90,19,19,2,19,84,21,3,68,48
+CAR,Jesse,Motlop,2025,Gen. Forward,,gps,85,47,35,28,30,49,32,30,6,33,35,5,44,15,61,30,32,99
+CAR,Lucas,Camporeale,2025,Midfielder,,est,60,30,53,5,44,24,44,7,14,49,47,9,42,29,55,10,57,14
+CAR,Harry,O'Farrell,2025,Key Defender,,est,47,66,30,39,63,43,66,59,42,20,59,2,13,77,25,6,50,27
+COL,Tew,Jiath,2024,Gen. Defender,,est,65,52,33,34,73,62,66,12,25,23,41,3,35,56,43,5,54,5
+COL,Bobby,Hill,2025,Gen. Forward,,gps,96,39,30,11,47,61,37,16,7,27,52,3,60,13,40,47,42,56
+COL,Jakob,Ryan,2023,Gen. Defender,,est,65,34,33,32,47,36,65,16,22,24,41,3,27,60,34,5,62,5
+COL,Reef,McInnes,2024,Key Forward,,20m,93,19,31,23,48,30,30,26,18,26,89,3,26,7,33,62,58,39
+ESS,Lewis,Hayes,2025,Gen. Defender,,est,65,53,33,48,53,59,64,15,33,24,41,3,29,58,37,5,57,5
+ESS,Nic,Martin,2025,Mid-Forward,DEF,est,62,70,46,91,47,82,87,48,20,34,73,5,56,43,49,26,58,69
+ESS,Liam,McMahon,2025,Key Forward,,20m,74,42,34,16,48,46,36,31,17,30,99,4,29,11,21,65,62,31
+FRE,Sam,Sturt,2024,Gen. Forward,,20m,68,52,32,31,51,37,43,13,8,25,91,3,46,17,50,54,59,56
+FRE,Hugh,Davies,2024,Key Defender,,est,47,77,31,33,42,59,56,38,63,23,19,2,14,65,28,4,50,10
+FRE,Cooper,Simpson,2025,Gen. Defender,,est,65,29,26,17,66,61,57,12,33,17,47,2,28,51,32,7,60,13
+FRE,Josh,Draper,2025,Key Defender,,est,47,69,32,25,54,53,44,26,59,27,19,10,12,56,26,2,42,46
+FRE,Dominic,Bedendo,2022,Midfielder,,20m,70,42,55,29,36,49,47,18,9,48,62,9,43,36,65,16,35,10
+GCS,Caleb,Graham,2022,Key Defender,,est,46,83,29,29,58,38,49,34,81,21,93,6,12,64,23,3,62,68
+GEE,Toby,Conway,2024,Ruck,,est,35,48,74,57,14,18,30,29,61,70,45,74,47,36,59,13,15,21
+GEE,Tyson,Stengle,2025,Gen. Forward,,gps,68,60,40,4,33,38,42,28,9,33,34,3,70,17,49,54,55,91
+GEE,Jed,Bews,2023,Gen. Defender,,gps,90,53,35,1,50,47,45,11,49,30,4,2,18,65,40,3,61,65
+GWS,Darcy,Jones,2025,Gen. Forward,,gps,96,61,48,56,56,37,31,35,18,41,65,5,57,19,65,28,72,95
+GWS,Tom,Green,2025,Midfielder,,est,60,62,99,55,47,55,45,22,28,95,52,16,75,36,67,19,27,95
+GWS,Josh,Kelly,2025,Midfielder,,est,60,56,58,37,59,53,50,24,15,49,56,9,52,41,66,10,48,62
+HAW,James,Blanck,2023,Key Defender,,est,46,68,25,15,45,48,34,34,68,21,19,2,9,54,25,2,42,65
+MEL,Steven,May,2025,Key Defender,,gps,78,94,34,51,64,42,82,66,75,21,19,1,21,84,19,2,52,69
+MEL,Shane,McAdam,2023,Gen. Forward,,est,65,44,31,24,54,31,53,18,13,23,87,2,49,12,52,64,53,31
+MEL,Jed,Adams,2025,Key Defender,,est,47,85,32,39,71,54,59,49,86,24,19,2,17,73,31,4,52,5
+MEL,Tom,Campbell,2021,Ruck,,est,34,50,53,23,46,19,38,35,49,49,50,47,35,31,35,27,24,41
+MEL,Jack,Henderson,2025,Gen. Forward,,est,65,39,37,10,28,32,36,36,10,32,60,4,39,18,47,28,60,22
+NTH,Jackson,Archer,2024,Gen. Defender,,est,64,57,34,1,38,64,52,24,49,24,41,2,15,62,40,2,54,65
+NTH,Robert,Hansen,2025,Mid-Forward,FWD,est,60,3,30,1,55,67,39,5,8,27,69,4,48,21,35,13,72,52
+PAD,Sam,Powell-Pepper,2025,Gen. Forward,,est,66,59,39,47,58,50,52,49,12,29,67,3,55,17,52,46,35,69
+PAD,Josh,Sinn,2025,Gen. Defender,,gps,83,22,25,1,64,58,50,9,50,18,44,2,17,40,26,2,71,86
+PAD,Ivan,Soldo,2024,Ruck,,est,35,71,55,49,13,34,28,31,62,57,30,85,59,29,55,22,8,31
+PAD,Mani,Liddy,2025,Midfielder,,est,59,47,40,8,37,52,57,34,7,34,8,6,44,35,55,11,56,39
+RIC,Tom,Sims,2025,Key Forward,,est,47,43,35,39,53,5,30,37,26,30,42,10,28,13,38,35,62,48
+RIC,Kaleb,Smith,2025,Gen. Defender,,20m,79,26,32,1,55,46,57,17,35,25,41,3,20,48,25,4,60,35
+STK,Lance,Collard,2025,Gen. Forward,,20m,74,1,25,4,45,55,23,11,6,23,33,2,37,13,40,27,67,52
+STK,Paddy,Dow,2024,Midfielder,,est,60,29,61,16,45,47,44,4,12,57,40,11,41,24,63,14,65,44
+STK,Alex,Dodson,2025,Key Forward,,est,47,43,32,33,41,33,42,46,18,24,56,9,40,13,28,62,44,5
+SYD,Taylor,Adams,2024,Mid-Forward,,est,59,33,58,13,28,39,47,15,9,49,38,8,46,30,63,19,48,73
+WBD,Riley,Garcia,2025,Mid-Forward,FWD,est,60,32,52,14,56,38,33,6,7,49,26,9,52,21,59,15,42,35
+WBD,James,Harmes,2025,Midfielder,,gps,81,37,55,10,47,44,44,25,15,46,57,6,39,43,54,25,65,56
+WCE,Tyler,Brockman,2025,Gen. Forward,,est,65,47,42,14,27,35,35,28,11,38,44,5,39,16,52,31,46,86
+WCE,Noah,Long,2025,Gen. Forward,,est,65,27,26,7,49,46,32,12,8,22,30,3,35,13,40,23,73,44
+WCE,Clay,Hall,2025,Midfielder,,est,60,42,60,16,48,50,38,4,15,56,12,10,37,34,60,8,39,56
+WCE,Harry,Barnett,2024,Ruck,,est,34,43,62,43,35,16,27,31,35,58,39,73,43,31,49,15,22,5
+WCE,Lucca,Grego,2025,Midfielder,,est,60,51,60,21,45,56,48,29,29,54,47,10,45,40,58,13,51,5
+WCE,Tyrell,Dewar,2025,Midfielder,FWD,est,60,32,32,10,64,39,49,31,18,23,56,4,38,29,36,11,52,69
+WCE,Finlay,Macrae,2024,Mid-Forward,,est,59,12,36,8,43,58,27,5,8,35,63,7,39,18,52,18,73,39

@@ -82,13 +82,13 @@ const TAGGER_MARGIN := 0.20
 ## What the wing rewards: carry and disposal. Raw attribute blend.
 static func wing_fit(p: Dictionary) -> float:
 	var a: Dictionary = p.get("attr", {})
-	return 0.55 * float(a.get("carry", 0)) + 0.45 * Skills.disposal_of(a, 0.0)
+	return 0.55 * float(a.get("carry", 0)) + 0.45 * Attributes.disposal_of(a, 0.0)
 
 
 ## What the centre square rewards: contested ball first.
 static func centre_fit(p: Dictionary) -> float:
 	var a: Dictionary = p.get("attr", {})
-	return 0.75 * float(a.get("contested", 0)) + 0.25 * Skills.disposal_of(a, 0.0)
+	return 0.75 * float(a.get("contested", 0)) + 0.25 * Attributes.disposal_of(a, 0.0)
 
 
 static func is_mid(p: Dictionary) -> bool:
@@ -155,7 +155,7 @@ static func usual_touches(target: Dictionary) -> float:
 		return TAG_USUAL_TOUCHES
 	var a: Dictionary = target["attr"]
 	var f: Array = USUAL_TOUCHES_FIT
-	var n := float(f[0]) + float(f[1]) * Skills.disposal_of(a, 0.0) + float(f[2]) * float(a.get("carry", 0))
+	var n := float(f[0]) + float(f[1]) * Attributes.disposal_of(a, 0.0) + float(f[2]) * float(a.get("carry", 0))
 	if on_wing(target):
 		n += float(f[3])
 	return maxf(USUAL_TOUCHES_MIN, n)

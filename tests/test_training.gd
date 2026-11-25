@@ -55,6 +55,11 @@ func run() -> void:
 	print(Ran.line("Training", self))
 
 
+## The weights of the position he would count as in `line` (Rating.spot_position).
+func _line_weights(p: Dictionary, line: String) -> Dictionary:
+	return Rating.WEIGHTS[Rating.spot_position(Rating.apos_of(p), line)]
+
+
 func _check(condition: bool, message: String) -> void:
 	checks += 1
 	if not condition:
@@ -111,7 +116,7 @@ func _test_default_plan_spends() -> void:
 		if int(p.get("potential", 0)) > 0 and int(p["overall"]) >= int(p["potential"]):
 			continue
 		var w := {"xp": GameState.plan_weights(p),
-				"xp_match": Ratings.ROLE_WEIGHTS.get(str(p.get("role", "MID")), Ratings.ROLE_WEIGHTS["MID"])}
+				"xp_match": Rating.shares(p)}
 		for bank in w:
 			# The plan saves for the stat with the most weight per XP.
 			var price := 0
@@ -136,7 +141,7 @@ func _test_default_plan_spends() -> void:
 			ruck = p
 	if not ruck.is_empty():
 		var gains: Dictionary = auto["by_player"][str(ruck["id"])]
-		var allowed: Dictionary = Ratings.ROLE_WEIGHTS["RUCK"]
+		var allowed: Dictionary = Rating.shares(ruck)
 		var only_ruck_stats := true
 		for k in gains:
 			if not allowed.has(k):
@@ -462,7 +467,7 @@ func _test_plans_match_the_engine() -> void:
 		if p.is_empty():
 			continue
 		var w: Dictionary = GameState.plan_weights(p, "position")
-		if w != Ratings.ROLE_WEIGHTS[role]:
+		if w != Rating.shares(p):
 			pos_ok = false
 		for key in GameState.plans_for(p):
 			for k in GameState.plan_weights(p, key):
@@ -775,7 +780,6 @@ func _test_learning_a_position() -> void:
 			"Both banks go into the split, and only its stats move (%s)" % str(off_split))
 	cand["attr"] = keep_attr
 	cand.erase("xp_split")
-	GameState._recalc_player_overall(cand)
 	# Club limit.
 	var started := 1
 	for q in GameState.my_list:
@@ -801,7 +805,7 @@ func _test_learning_a_position() -> void:
 	_check(GameState.project_job(cand) == job, "The project survives a save")
 	# Pass: rate him within PROJECT_PASS there, run the weeks out.
 	var attr: Dictionary = cand["attr"]
-	for k in Ratings.ROLE_WEIGHTS[role]:
+	for k in _line_weights(cand, role):
 		attr[k] = maxi(int(attr[k]), 90)
 	var res := {}
 	for i in range(GameState.PROJECT_WEEKS):
@@ -822,7 +826,7 @@ func _test_learning_a_position() -> void:
 	if not other.is_empty():
 		var orole := GameState.project_role(other)
 		var oattr: Dictionary = other["attr"]
-		for k in Ratings.ROLE_WEIGHTS[orole]:
+		for k in _line_weights(other, orole):
 			oattr[k] = 20
 		var r2 := {}
 		other["injury_weeks"] = 0
@@ -1072,9 +1076,8 @@ func _test_retraining_is_additive() -> void:
 			# A third position needs a job in reach; bring the line he would learn within it.
 			for r in ["MID", "FWD", "DEF", "RUCK"]:
 				if not Ratings.positions(cand).has(r) and GameState.learn_job_for(cand, r) != "":
-					for k in Ratings.ROLE_WEIGHTS[r]:
+					for k in _line_weights(cand, r):
 						cand["attr"][k] = maxi(int(cand["attr"][k]), 90)
-					GameState._recalc_player_overall(cand)
 					break
 			jobs = GameState.learnable_jobs(cand)
 		_check(not jobs.is_empty(), "Position %d is open to learn" % (n + 2))
@@ -1083,9 +1086,8 @@ func _test_retraining_is_additive() -> void:
 		var job: String = jobs[0]
 		var role: String = GameState.LEARN_JOBS[job]["role"]
 		GameState.set_player_plan(id, GameState.LEARN_PREFIX + job)
-		for k in Ratings.ROLE_WEIGHTS[role]:
+		for k in _line_weights(cand, role):
 			cand["attr"][k] = maxi(int(cand["attr"][k]), 90)
-		GameState._recalc_player_overall(cand)
 		var before: Dictionary = (cand["attr"] as Dictionary).duplicate()
 		var res := {}
 		for i in range(GameState.PROJECT_WEEKS):
@@ -1189,7 +1191,7 @@ func _test_stat_focus_split() -> void:
 	var mid: Dictionary = (p["attr"] as Dictionary).duplicate()
 	p["xp_match"] = 600.0
 	GameState.apply_plan_to(p)
-	var role_w: Dictionary = Ratings.ROLE_WEIGHTS[str(p["role"])]
+	var role_w: Dictionary = Rating.shares(p)
 	var on_role := 0
 	var off_role := 0
 	for k in mid:
@@ -1285,7 +1287,7 @@ func _test_season_record() -> void:
 	one.erase("over_gains")
 	one["potential"] = int(one["overall"]) + 20
 	one["xp"] = 400.0
-	var bought := _spend(one, Ratings.ROLE_WEIGHTS["MID"])
+	var bought := _spend(one, Rating.shares(one))
 	_check(not bought.is_empty() and (one.get("season_gains", {}) as Dictionary) == bought and not one.has("over_gains"),
 			"Below his potential, training keeps the season's gains and none past it (%s / %s)" % [str(bought), str(one.get("season_gains", {}))])
 	var past: Dictionary = (_first_of("MID") as Dictionary).duplicate(true)
@@ -1294,7 +1296,7 @@ func _test_season_record() -> void:
 	past["potential"] = int(past["overall"])
 	past["xp"] = 400.0
 	var at_pot := int(past["overall"])
-	var past_bought := _spend(past, Ratings.ROLE_WEIGHTS["MID"])
+	var past_bought := _spend(past, Rating.shares(past))
 	# Gains stop at his potential (director 2026-11-23, "Gains stop at potential").
 	_check(past_bought.is_empty() and int(past["overall"]) == at_pot and float(past["xp"]) == 400.0
 			and not past.has("over_gains"),

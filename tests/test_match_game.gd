@@ -11,8 +11,6 @@ func run() -> void:
 	failures.clear()
 	checks = 0
 	# These fixtures (rotations, rucks played through) are about the engine, not the director's
-	# hand-set ratings (data/ovr_overrides.csv): they play on the data without them.
-	GameDB.skip_ovr_overrides = true
 	GameDB.reload()
 	_t("_test_auto_sim_untouched")
 	_t("_test_stoppage_location")
@@ -107,7 +105,6 @@ func run() -> void:
 	_t("_test_bomb_card_shows_the_dice")
 	_t("_test_forward_archetypes")
 	_t("_test_every_call_two_sided")
-	GameDB.skip_ovr_overrides = false
 	GameDB.reload()
 	print(Ran.line("Match game", self))
 
@@ -2842,7 +2839,7 @@ func _test_tag_own_touches() -> void:
 	var f: Array = Roles.USUAL_TOUCHES_FIT
 	for p in [busy, quiet]:
 		var a: Dictionary = p["attr"]
-		var want := float(f[0]) + float(f[1]) * Skills.disposal_of(a) + float(f[2]) * float(a["carry"]) + (float(f[3]) if Roles.on_wing(p) else 0.0)
+		var want := float(f[0]) + float(f[1]) * Attributes.disposal_of(a) + float(f[2]) * float(a["carry"]) + (float(f[3]) if Roles.on_wing(p) else 0.0)
 		_check(is_equal_approx(Roles.usual_touches(p), maxf(Roles.USUAL_TOUCHES_MIN, want)),
 				"%s usually gets what the sim gives his ratings (%.1f)" % [str(p["id"]), want])
 	# Tagged: the hold the sim plays with this man on him, as touches off his own count.

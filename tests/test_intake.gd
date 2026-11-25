@@ -1518,8 +1518,6 @@ func _test_copied_from_2012_on() -> void:
 func _test_gen_traits_rates() -> void:
 	# The 2026 lists as the game loads them: the hand-set OVR rows on (run_tests.sh plays
 	# the suites without them), and none of the earlier tests' career changes.
-	var skipped: bool = GameDB.skip_ovr_overrides
-	GameDB.skip_ovr_overrides = false
 	# Twice: a list player's projection borrows shapes from the lists loaded before it,
 	# so the second load is the one every later load repeats.
 	for i in 2:
@@ -1587,7 +1585,6 @@ func _test_gen_traits_rates() -> void:
 			same_listed = false
 	Prospects.forget_cache()
 	var forge_b: Dictionary = Prospects.make_custom(forge, 2027, 777)
-	GameDB.skip_ovr_overrides = skipped
 	GameDB.reload()
 	_check(same_listed, "The real-list players projected from no senior game are not generated and load unchanged (%d)" % listed_attr.size())
 	_check(bool(forge_a.get("user_created", false)) and forge_a["attr"] == forge_b["attr"],

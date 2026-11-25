@@ -72,7 +72,7 @@ static func profile(p: Dictionary, real := false) -> Dictionary:
 	if real:
 		peak = maxf(peak, Potential.recent_peak(p))
 	peak = maxf(peak, float(Rating.ovr(p, 0)))
-	var at_peak := Prospects.fit_attributes(attr, role, peak)
+	var at_peak := Prospects.fit_attributes(attr, Rating.apos_of(p), peak)
 	var vec := PackedFloat32Array()
 	for key in KEYS:
 		vec.append(float(at_peak[key]))

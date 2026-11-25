@@ -38,13 +38,13 @@ func _games(src: Dictionary, pot: int, arm: String) -> String:
 	p.erase("project")
 	p.erase("peak_year")
 	var role := str(p["role"])
-	p["attr"] = Prospects.fit_attributes(p["attr"], role, 60.0, Ratings.effective_games(p))
-	GameState._recalc_player_overall(p)
-	var start := int(p["overall"])
+	for k in p["attr"]:
+		p["attr"][k] = 60      # every attribute 60 reads OVR 60
+	var start := int(Rating.ovr(p))
 	p["potential"] = pot
 	p["xp"] = 0.0
 	p["xp_match"] = 0.0
-	var own: Dictionary = Ratings.ROLE_WEIGHTS[role]
+	var own: Dictionary = Rating.shares(p)
 	var off := {str(OFF[role]): 1.0}
 	for g in range(1, 400):
 		p["xp_match"] = float(p["xp_match"]) + Growth.match_xp(p, 1.0)
@@ -55,6 +55,6 @@ func _games(src: Dictionary, pot: int, arm: String) -> String:
 		elif arm == "all_off":
 			p["xp"] = float(p["xp"]) + t
 			GameState._spend_banks(p, off)
-		if int(p["overall"]) >= pot:
+		if int(Rating.ovr(p)) >= pot:
 			return "%d(from %d)" % [g, start]
-	return ">400(at %d)" % int(p["overall"])
+	return ">400(at %d)" % int(Rating.ovr(p))

@@ -121,7 +121,7 @@ static func combine_lines(p: Dictionary, club: String, seed: int, uncertainty_mu
 	match role:
 		"MID":
 			craft_label = "Inside work"
-			craft = 0.60 * float(a.get("contested", 50)) + 0.25 * Skills.disposal_of(a) + 0.15 * float(a.get("pressure", 50))
+			craft = 0.60 * float(a.get("contested", 50)) + 0.25 * Attributes.disposal_of(a) + 0.15 * float(a.get("pressure", 50))
 		"DEF":
 			craft_label = "Defensive craft"
 			craft = 0.55 * float(a.get("intercept", 50)) + 0.30 * float(a.get("pressure", 50)) + 0.15 * float(a.get("contested", 50))

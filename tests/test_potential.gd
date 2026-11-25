@@ -178,13 +178,13 @@ func _test_growth_pace() -> void:
 	base["id"] = "pace_mid"
 	base["gm"] = 18.0
 	base["sample"] = 18.0
-	base["attr"] = Prospects.fit_attributes(base["attr"], "MID", 60.0, Ratings.effective_games(base))
-	GameState._recalc_player_overall(base)
+	for k in base["attr"]:
+		base["attr"][k] = 60      # every attribute 60 reads OVR 60
 	base["potential"] = 85
 	base["xp"] = 0.0
 	base["xp_match"] = 0.0
 	var games := 0
-	while int(base["overall"]) < 85 and games < 400:
+	while int(Rating.ovr(base)) < 85 and games < 400:
 		Growth.play_games(base, 1)
 		games += 1
 	_check(games >= 140 and games <= 160, "A potential-85 midfielder from 60 reaches 85 after about 150 games (%d)" % games)

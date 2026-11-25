@@ -25,7 +25,6 @@ func run() -> void:
 	_t("_test_review_after_reload")
 	_t("_test_breeze_end_survives")
 	_t("_test_training_survives")
-	_t("_test_adjusted_players_survive")
 	_t("_test_no_save_mid_match")
 	_t("_test_mid_draft_round_trip")
 	_t("_test_intake_and_second_season")
@@ -497,33 +496,6 @@ func _test_training_survives() -> void:
 			and int(full["skin"]) == 4 and (full["tattoos"] as Array).size() == 1,
 			"A chosen look survives a reload")
 	_check(not full.has("freckles"), "An old save's freckles load cleanly and are dropped")
-
-
-## The director's named-player corrections (Ratings.ATTR_ADJUSTMENTS) are in the
-## attributes a career saves, so a reload gives back exactly what was saved: the
-## correction is not applied again, and an older career keeps what it saved.
-func _test_adjusted_players_survive() -> void:
-	_new_season()
-	GameState.advance()
-	var names := {}
-	for key in Ratings.ATTR_ADJUSTMENTS:
-		names[str(key).split("|")[1]] = true
-	var before := {}
-	for p in GameDB.players:
-		var who := "%s %s" % [p["first"], p["last"]]
-		if names.has(who):
-			var live: Dictionary = GameState._find_player(str(p["id"]))
-			if not live.is_empty():
-				before[who] = {"id": str(p["id"]), "attr": (live["attr"] as Dictionary).duplicate(),
-						"overall": int(live["overall"]), "potential": int(live["potential"])}
-	GameState.save_career()
-	GameState.load_career()
-	for who in names:
-		var was: Dictionary = before.get(who, {})
-		var q: Dictionary = GameState._find_player(str(was.get("id", "")))
-		_check(not was.is_empty() and not q.is_empty() and q["attr"] == was["attr"]
-				and int(q["overall"]) == int(was["overall"]) and int(q["potential"]) == int(was["potential"]),
-				"%s's corrected attributes and POT survive a reload exactly" % who)
 
 
 func _test_no_save_mid_match() -> void:
@@ -1357,11 +1329,10 @@ func _test_save_costs() -> void:
 	_check(GameDB.reloads == r1 + 1, "...and so does a career after a season was started without a reset")
 
 
-## A past start's honoured players keep their rating through a save and load
-## (bug bash 2026-11-25: 120 of them across the 1990, 2000, 2010 and 2020
-## starts sat a point over their skills and fell that point the first time the
-## career loaded). Their skills are topped up to the rating their honours give
-## them (director, 2026-11-25: "Top up his skills").
+## A past start's players keep their rating through a save and load (bug bash
+## 2026-11-25: 120 across the 1990, 2000, 2010 and 2020 starts once fell a
+## point the first time the career loaded). Their OVR is read from the saved
+## attributes, so it cannot drift.
 func _test_honoured_ratings_survive_reload() -> void:
 	GameState.replay_seed = SUITE_SEED
 	GameState.reset("1990")
@@ -1380,18 +1351,9 @@ func _test_honoured_ratings_survive_reload() -> void:
 	if GameState.season == null:
 		return
 	var before := {}
-	var honoured := 0
-	var on_skills := 0
 	for club in GameState.season.lists:
 		for p in (GameState.season.lists[club] as Array):
-			before[str(p["id"])] = "%d/%d" % [int(p["overall"]), int(p.get("potential", 0))]
-			if bool(p.get("rated_on_honours", false)):
-				honoured += 1
-				var ov := Ratings.rate_overall(p["attr"], str(p["role"]), Ratings.effective_games(p))
-				if ov == int(p["overall"]) and ov >= Ratings.honours_floor(float(p.get("honours", 0.0))):
-					on_skills += 1
-	_check(honoured >= 20 and on_skills == honoured,
-			"Every player rated on his honours has the skills for it, at least his floor (%d of %d)" % [on_skills, honoured])
+			before[str(p["id"])] = "%d/%d" % [int(Rating.ovr(p, 0)), int(p.get("potential", 0))]
 	_check(GameState.save_career(), "The 1990 career saves")
 	_check(GameState.load_career(), "The 1990 career loads")
 	var moved := []
@@ -1402,7 +1364,7 @@ func _test_honoured_ratings_survive_reload() -> void:
 			if not before.has(id):
 				continue
 			seen += 1
-			var now := "%d/%d" % [int(p["overall"]), int(p.get("potential", 0))]
+			var now := "%d/%d" % [int(Rating.ovr(p, 0)), int(p.get("potential", 0))]
 			if now != str(before[id]):
 				moved.append("%s %s %s -> %s" % [p.get("first", ""), p.get("last", ""), before[id], now])
 	_check(before.size() > 400 and seen == before.size() and moved.is_empty(),

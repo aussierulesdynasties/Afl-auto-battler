@@ -141,12 +141,12 @@ func _test_classes(state: Node, db: Node) -> void:
 		var a: Dictionary = p["attr"]
 		var avg := 0.0
 		var keys := 0.0
-		for k in Skills.KEYS:
+		for k in Attributes.KEYS:
 			if not k in Prospects.UNRATED_KEYS:
 				avg += float(a[k])
 				keys += 1.0
 		avg /= keys
-		return {"disp": Skills.disposal_of(a) - avg, "acc": float(a["accuracy"]) - avg,
+		return {"disp": Attributes.disposal_of(a) - avg, "acc": float(a["accuracy"]) - avg,
 				"cont": float(a["contested"]) - avg, "mark": float(a["contested_marking"]) - avg,
 				"pres": float(a["pressure"]) - avg, "tackle": float(a["pressure"])}
 	for y in range(FIRST_YEAR, FIRST_YEAR + 40):
@@ -155,7 +155,7 @@ func _test_classes(state: Node, db: Node) -> void:
 				dom_gap += float(p["potential"]) - float(p["overall"])
 				dom_rank_gap += float(p["overall"]) - Prospects.rank_base_overall(int(p["draft_rank"]))
 				dom_carry += float(p["attr"]["carry"]) - float(p["overall"])
-				dom_disp += Skills.disposal_of(p["attr"]) - float(p["overall"])
+				dom_disp += Attributes.disposal_of(p["attr"]) - float(p["overall"])
 				dom_n += 1
 	var raw_gap := 0.0
 	var raw_rank_gap := 0.0
@@ -194,7 +194,7 @@ func _test_classes(state: Node, db: Node) -> void:
 	# "marking") lands on a key nothing reads and his code's shape is lost.
 	for c in INTL.countries():
 		for k in (c.get("bias", {}) as Dictionary):
-			_check(str(k) in Skills.KEYS, "%s leans on a real skill (%s)" % [c["id"], k])
+			_check(str(k) in Attributes.KEYS, "%s leans on a real skill (%s)" % [c["id"], k])
 	var m := func(id: String, key: String) -> float:
 		return float(stat[id][key]) / float(stat[id]["n"])
 	print("INTL profile IRL disp %.1f acc %.1f | NZL cont %.1f pres %.1f | USA h %.0f mark %.1f disp %.1f | KEN carry %.1f disp %.1f" % [

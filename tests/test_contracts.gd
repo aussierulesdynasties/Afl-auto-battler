@@ -84,15 +84,13 @@ func _new_season() -> void:
 	GameState.start_season("GEE", GameDB.club_list("GEE"))
 
 
-## Your players at `role` drop to 40, so a free agent there would start for you.
-## Their attributes drop too: a load rates every player from them again.
+## Your players at `role` drop to 30 in every attribute (their OVR is read from
+## them), so a free agent there would start for you.
 func _thin_line(role: String) -> void:
 	for q in GameState.my_list:
 		if str(q["role"]) == role:
 			for k in q["attr"]:
 				q["attr"][k] = mini(int(q["attr"][k]), 30)
-			q["overall"] = mini(int(q["overall"]),
-					Ratings.rate_overall(q["attr"], role, Ratings.effective_games(q)))
 	GameState._bars = {}
 
 

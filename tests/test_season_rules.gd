@@ -15,9 +15,7 @@ const SUITE_SEED := 2027
 
 ## tests/season_golden.gd's digest of the game's league, recorded from the
 ## code before season rules (commit 6e3e96a8). Any change is a change to the
-## 2026 fixture or finals. The played seasons depend on the ratings data:
-## GOLDEN as tools/run_tests.sh and CI run it (AFL_SKIP_OVR_ROWS=1, the
-## ratings overrides off), PLAYED_WITH_OVR when the suite runs on its own.
+## 2026 fixture or finals. The played seasons depend on the ratings data.
 const GOLDEN := {
 	"fixture:1": "88379d64dfcfdf22f88fcc1bbcc1bab4",
 	"fixture:2": "15aab1f43b8c605b37bc9eef32c73406",
@@ -26,10 +24,6 @@ const GOLDEN := {
 	"fixture:90210": "1734a8fcc9068e3e444e293a25f944b4",
 	"played:2027": "7ab2ad0d721bf816332c761bc81951a1",
 	"played:7": "402e1febb45c2a0dc4bae498bb661f44",
-}
-const PLAYED_WITH_OVR := {
-	"played:2027": "264d2cbc643edf485133bac629aa0926",
-	"played:7": "40b9adb0d872ef0f0a7d70fd996ebd4e",
 }
 
 const Golden := preload("res://tests/season_golden.gd")
@@ -476,6 +470,4 @@ func _test_golden_2026() -> void:
 	_check(GOLDEN.size() == Golden.FIXTURE_SEEDS.size() + Golden.PLAYED_SEEDS.size(), "The golden digest is recorded")
 	for k in GOLDEN:
 		var want := str(GOLDEN[k])
-		if not GameDB.skip_ovr_overrides and PLAYED_WITH_OVR.has(k):
-			want = str(PLAYED_WITH_OVR[k])
 		_check(str(d.get(k, "")) == want, "2026 league unchanged: %s (%s, was %s)" % [k, d.get(k, ""), want])

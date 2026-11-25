@@ -2,7 +2,7 @@ extends SceneTree
 ## Real 2026 per-player-game averages by game role, from data/players_2026.csv.
 ## Regenerate afl_role_rates.json with:
 ##   godot --headless --path . --script tools/balance/build_role_rates.gd -- tools/balance/afl_role_rates.json
-## Roles are the game's own (Ratings.derive_all: primary role). Only players
+## Roles are the game's own (each player's line from his AFL position). Only players
 ## with at least MIN_GAMES games; a rate is a pooled total over pooled games.
 
 const MIN_GAMES := 5
@@ -83,7 +83,7 @@ func _run() -> void:
 				"disposals_clubs": {"n": per_club.size(), "min": snappedf(per_club.min(), 0.01),
 				"max": snappedf(per_club.max(), 0.01), "sd": snappedf(sd, 0.01)}}
 	var doc := {
-		"source": "data/players_2026.csv (AFL Tables 2026 season totals), players with at least %d games, grouped by the game's primary role (Ratings.derive_all). Each rate is the pooled total divided by pooled games for that role. Regenerate with tools/balance/build_role_rates.gd." % MIN_GAMES,
+		"source": "data/players_2026.csv (AFL Tables 2026 season totals), players with at least %d games, grouped by the game's line (each player's AFL position). Each rate is the pooled total divided by pooled games for that role. Regenerate with tools/balance/build_role_rates.gd." % MIN_GAMES,
 		"min_games": MIN_GAMES,
 		"roles": roles,
 		"types": types}

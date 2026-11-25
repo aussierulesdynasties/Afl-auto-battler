@@ -86,7 +86,9 @@ position (new). **Out of position (amendment):** cuts Footy IQ and Technical att
 Strength or Endurance (nor Work Rate, a Physical attribute, nor Discipline or Durability); the cut grows with
 positional distance. Sizes (director, question box): 5% a step along KD, GD, Mid, Mid-Fwd, Gen Fwd, KF, at most 25%;
 into or out of the ruck 25%; except KD to KF or KF to KD (swingman) 10%, and KD or KF moved to Mid 20%. Each
-Technical and Footy IQ attribute plays at (1 - cut) while he is there.
+Technical and Footy IQ attribute plays at (1 - cut) while he is there. Which position a spot counts as (director, 2026-11-25, question box: "The line decides"): in each line, whichever position of that line is closest to his own (forward line KF, Gen Fwd or Mid-Fwd; midfield Mid or Mid-Fwd; back line KD or GD; ruck Ruck), so no cut inside his own line. A KD or KF anywhere in the midfield takes 20% (same day: "20%, as you ruled").
+
+**Lines.** His line is his AFL position's: KD and GD back, Mid and Mid-Fwd midfield, Gen Fwd and KF forward, Ruck ruck (in 2026 the club listing agrees for every player). His second line (director, 2026-11-25, question box: "Where CD rated him"): a line Champion Data rated him in for a season of 5+ games in the three seasons before the data season, other than his own, the one with more games if two (`line2` in the attributes files). Wheelo keeps no position for 2012 or 2014-18, nor before 2012, so the 1990-2020 starts have none.
 
 | From \ to | KD | GD | Mid | Mid-Fwd | Gen Fwd | KF | Ruck |
 |---|---|---|---|---|---|---|---|
