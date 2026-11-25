@@ -120,7 +120,7 @@ static func breeze_toward(result: Dictionary, sim = null) -> float:
 func draw_stands(ci: CanvasItem, view: Rect2, c: Vector2, s: float, colours: Array, weather: String, tod: String) -> void:
 	_build(colours)
 	ci.draw_rect(view, OUTSIDE.get(tod, OUTSIDE[NIGHT]), true)
-	var xf := Transform2D(0.0, Vector2(s, s), 0.0, c)
+	var xf := Transform2D(0.0, Vector2(s * _mirror(), s), 0.0, c)
 	var light: Color = STAND_LIGHT.get(tod, STAND_LIGHT[NIGHT])
 	if weather == VignetteWeather.WET:
 		light = Color(light.r * 0.80, light.g * 0.86, light.b * 0.96)
@@ -132,16 +132,24 @@ func draw_stands(ci: CanvasItem, view: Rect2, c: Vector2, s: float, colours: Arr
 		ci.draw_mesh(_lamps, null, xf, Color(1, 1, 1, lamps))
 
 
+## The flat view lays the ground mirrored along its length when the sides change ends (PitchView.end_sign,
+## set here as `ends`). An ellipse is the same either way; a traced ground is not, so it is drawn mirrored
+## too, the stands and turf round the very line the players are kept inside.
+var ends := 1.0
+func _mirror() -> float:
+	return ends if MatchMotion.shaped() else 1.0
+
+
 ## The turf: the replay's grass and its mown stripes, the worn patches at the
 ## goal squares and the centre, then the light over it (`light`, PitchView's).
 func draw_turf(ci: CanvasItem, c: Vector2, s: float, weather: String, tod: String, light: Texture2D) -> void:
 	# The ground's size is in the key: the next match may be at a ground of another size.
-	var key := "%s|%s|%s|%s" % [weather, tod, MatchMotion.HALF_LEN, MatchMotion.HALF_WID]
+	var key := "%s|%s|%s" % [weather, tod, MatchMotion.field_key()]
 	if _turf == null or key != _turf_key:
 		_turf_key = key
 		_turf = _turf_mesh(grass(weather, tod))
 		_lit = null
-	var xf := Transform2D(0.0, Vector2(s, s), 0.0, c)
+	var xf := Transform2D(0.0, Vector2(s * _mirror(), s), 0.0, c)
 	ci.draw_mesh(_turf, null, xf)
 	if _lit == null:
 		_lit = _lit_mesh()
@@ -154,7 +162,7 @@ func draw_pools(ci: CanvasItem, c: Vector2, s: float, tod: String) -> void:
 	var lamps: float = LAMPS.get(tod, 1.0)
 	if lamps <= 0.0 or _pools == null:
 		return
-	ci.draw_mesh(_pools, _pool_texture(), Transform2D(0.0, Vector2(s, s), 0.0, c), Color(1, 1, 1, lamps))
+	ci.draw_mesh(_pools, _pool_texture(), Transform2D(0.0, Vector2(s * _mirror(), s), 0.0, c), Color(1, 1, 1, lamps))
 
 
 ## In the wind, the flags on the roof stream toward the end the breeze favours
@@ -165,7 +173,7 @@ func draw_flags(ci: CanvasItem, base: Transform2D, c: Vector2, s: float, colours
 	var h := 3.4 * s
 	for i in range(_flags.size()):
 		var f: Dictionary = _flags[i]
-		var at: Vector2 = c + (f["at"] as Vector2) * s
+		var at: Vector2 = c + (f["at"] as Vector2) * Vector2(s * _mirror(), s)
 		var side := 0 if bool(f["home"]) else 1
 		# Streaming along the ground, a little across it, as VignetteWeather.WIND_DIR.
 		var ang := (0.0 if toward > 0.0 else PI) + 0.22 * toward
@@ -188,7 +196,7 @@ static func _first(colours: Array, side: int) -> Color:
 
 
 static func _ring_point(out: float, ang: float) -> Vector2:
-	return Vector2(cos(ang) * (MatchMotion.HALF_LEN + out), sin(ang) * (MatchMotion.HALF_WID + out))
+	return MatchMotion.ring_point(ang, out)
 
 
 func _build(colours: Array) -> void:
@@ -196,7 +204,7 @@ func _build(colours: Array) -> void:
 	if spec.is_empty():
 		VignetteGround._apply(VignetteGround.venue)
 		spec = VignetteGround.spec
-	var key := "%s|%s" % [str(colours), VignetteGround.venue]
+	var key := "%s|%s|%s" % [str(colours), VignetteGround.venue, MatchMotion.field_key()]
 	if key == _key and _flat != null:
 		return
 	_key = key
@@ -319,7 +327,7 @@ static func _turf_mesh(cols: Array) -> ArrayMesh:
 	var b := Build.new()
 	var hl := MatchMotion.HALF_LEN
 	var hw := MatchMotion.HALF_WID
-	b.ellipse(Vector2.ZERO, hl, hw, 128, cols[0])
+	b.field(128, cols[0])
 	var x := -hl
 	var n := 0
 	while x < hl:
@@ -339,7 +347,7 @@ static func _turf_mesh(cols: Array) -> ArrayMesh:
 
 static func _lit_mesh() -> ArrayMesh:
 	var b := Build.new()
-	b.ellipse(Vector2.ZERO, MatchMotion.HALF_LEN, MatchMotion.HALF_WID, 96, Color.WHITE, true)
+	b.field(96, Color.WHITE, true)
 	return b.mesh()
 
 
@@ -408,7 +416,22 @@ class Build:
 			else:
 				tri(c, c + Vector2(d0.x * a, d0.y * b), c + Vector2(d1.x * a, d1.y * b), col)
 
-	## A mown stripe from x0 to x1, cut exactly to the oval.
+	## The field inside the boundary line (MatchMotion: the ellipse, or the ground's traced line), filled.
+	func field(n: int, col: Color, lit := false) -> void:
+		if not MatchMotion.shaped():
+			ellipse(Vector2.ZERO, MatchMotion.HALF_LEN, MatchMotion.HALF_WID, n, col, lit)
+			return
+		var half := Vector2(MatchMotion.HALF_LEN, MatchMotion.HALF_WID)
+		for i in range(n):
+			var p0 := MatchMotion.ring_point(TAU * float(i) / float(n))
+			var p1 := MatchMotion.ring_point(TAU * float(i + 1) / float(n))
+			if lit:
+				tri(Vector2.ZERO, p0, p1, col, Vector2(0.5, 0.5), Vector2(0.5, 0.5) + p0 / half * 0.5,
+						Vector2(0.5, 0.5) + p1 / half * 0.5)
+			else:
+				tri(Vector2.ZERO, p0, p1, col)
+
+	## A mown stripe from x0 to x1, cut exactly to the oval (or the traced line, each side its own).
 	func stripe(x0: float, x1: float, hl: float, hw: float, col: Color) -> void:
 		var steps := 8
 		for i in range(steps):
@@ -416,8 +439,15 @@ class Build:
 			var xb := lerpf(x0, x1, float(i + 1) / float(steps))
 			var ya := hw * sqrt(maxf(0.0, 1.0 - pow(clampf(xa / hl, -1.0, 1.0), 2.0)))
 			var yb := hw * sqrt(maxf(0.0, 1.0 - pow(clampf(xb / hl, -1.0, 1.0), 2.0)))
-			tri(Vector2(xa, -ya), Vector2(xb, -yb), Vector2(xb, yb), col)
-			tri(Vector2(xa, -ya), Vector2(xb, yb), Vector2(xa, ya), col)
+			var ya0 := -ya
+			var yb0 := -yb
+			if MatchMotion.shaped():
+				ya = MatchMotion.edge_y(xa, 1.0)
+				yb = MatchMotion.edge_y(xb, 1.0)
+				ya0 = -MatchMotion.edge_y(xa, -1.0)
+				yb0 = -MatchMotion.edge_y(xb, -1.0)
+			tri(Vector2(xa, ya0), Vector2(xb, yb0), Vector2(xb, yb), col)
+			tri(Vector2(xa, ya0), Vector2(xb, yb), Vector2(xa, ya), col)
 
 	func mesh() -> ArrayMesh:
 		var m := ArrayMesh.new()

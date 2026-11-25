@@ -48,3 +48,9 @@ tools/wheelo/cache/
 .claude/review/adelaide/esri/
 .claude/review/adelaide/hill/plan_*.jpg
 .claude/review/adelaide/proof/topdown_overlay.png
+
+# Blender autosave backups, editor/script backups and tool run logs: never source.
+*.blend[0-9]
+*.blend[0-9][0-9]
+*.bak
+*.log

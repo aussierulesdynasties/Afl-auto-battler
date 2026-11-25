@@ -558,6 +558,9 @@ func _test_selection_pages_tests() -> void:
 			var inter2 := ui.find_child("InterchangeRow", true, false)
 			_check(_gap_x(inter2.get_child(0), ui.find_child("SaveBest23", true, false)) < 48.0,
 					"PC: Save as my Best 23 is beside the interchange (%s)" % ptag)
+			_check(ui.find_child("BenchHost", true, false) == null
+					and ui.find_child("BuilderField", true, false).is_ancestor_of(inter2),
+					"PC: from 1280 wide the interchange stays under the ground (%s)" % ptag)
 			# A real swap on the left updates the right at once.
 			var sline_before := ui.find_child("SynergyLine", true, false).get_instance_id()
 			var s0: Dictionary = _state.current_side()
@@ -593,6 +596,63 @@ func _test_selection_pages_tests() -> void:
 					"PC: a real tap on a player not picked picks him up (%s %s)" % [ptag, tl])
 			ui.queue_free()
 			await _settle()
+		# The smallest PC window (960x540, 3.C.41): the week column gives way,
+		# so Auto-pick and the players not picked stay on the screen.
+		root.size = Vector2i(960, 540)
+		_state.set_selection({})
+		ui = await _open(false)
+		var edge := ui.get_viewport().get_visible_rect().size.x
+		var past: Array = []
+		for c in ui.find_children("*", "Control", true, false):
+			if (c as Control).is_visible_in_tree() and (c as Control).get_global_rect().end.x > edge + 0.5:
+				past.append(str(c.name))
+		_check(ui.find_child("WeekColumn", true, false) != null and past.is_empty(),
+				"PC 960x540: nothing runs past the right edge (%s, %d past: %s)" % [club, past.size(), str(past.slice(0, 5))])
+		# Ground across (director, 2026-11-25): the oval takes the full height on
+		# the left, the interchange heads the right-hand column, and no two of the
+		# 18 on the ground cover each other.
+		var bhost: Control = ui.find_child("BenchHost", true, false)
+		var wcol: Control = ui.find_child("WeekColumn", true, false)
+		var irow9: Control = ui.find_child("InterchangeRow", true, false)
+		var bench9: Control = ui.find_child("Bench", true, false)
+		_check(bhost != null and wcol != null and wcol.is_ancestor_of(bhost) and irow9 != null and bhost.is_ancestor_of(irow9)
+				and bench9 != null and bhost.is_ancestor_of(bench9),
+				"PC 960x540: the interchange heads the right-hand column (%s)" % club)
+		var bottom := ui.get_viewport().get_visible_rect().size.y
+		var low: Array = []
+		for n in [ui.find_child("BuilderField", true, false), irow9, bench9]:
+			if n == null or (n as Control).get_global_rect().end.y > bottom + 0.5:
+				low.append(str(n.name) if n != null else "missing")
+		_check(low.is_empty() and _no_scroll(ui.find_child("SelectionScroll", true, false)),
+				"PC 960x540: the ground and the interchange are all on the screen, no scroll (%s: %s)" % [club, str(low)])
+		var spots9 := ui.find_children("Spot_*", "Button", true, false)
+		var hits: Array = []
+		for i in range(spots9.size()):
+			for j in range(i + 1, spots9.size()):
+				var ra: Rect2 = (spots9[i] as Control).get_global_rect().grow(-0.5)
+				if ra.intersects((spots9[j] as Control).get_global_rect().grow(-0.5)):
+					hits.append("%s/%s" % [spots9[i].name, spots9[j].name])
+		_check(spots9.size() == 18 and hits.is_empty(),
+				"PC 960x540: no two of the 18 on the ground cover each other (%s, %d on the ground, %s)" % [club, spots9.size(), str(hits)])
+		# ...and a finger reaches them there: Auto-pick opens its menu, a player
+		# not picked is picked up (both sat past the edge before 2026-11-25).
+		var ap: MenuButton = ui.find_child("AutoPick", true, false)
+		var tap_ap: String = await Tap.tap(ap)
+		await _settle()
+		_check(tap_ap == "" and ap != null and ap.get_popup().visible,
+				"PC 960x540: a real tap on Auto-pick opens its menu (%s: %s)" % [club, tap_ap])
+		if ap != null:
+			ap.get_popup().hide()
+			await _settle()
+		var grid9: GridContainer = ui.find_child("NotSelected", true, false)
+		var tap_np: String = "no player not picked"
+		if grid9 != null and grid9.get_child_count() > 0:
+			tap_np = await Tap.tap(grid9.get_child(0))
+		await _settle()
+		_check(tap_np == "" and ui.find_child("PickedBar", true, false) != null,
+				"PC 960x540: a real tap on a player not picked picks him up (%s: %s)" % [club, tap_np])
+		ui.queue_free()
+		await _settle()
 	root.size = Vector2i(420, 860)
 	_state.set_selection({})
 

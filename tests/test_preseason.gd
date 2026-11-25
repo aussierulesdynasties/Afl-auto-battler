@@ -27,6 +27,8 @@ func run() -> void:
 	_t("_test_sim_to_round_one")
 	_t("_test_old_saves")
 	await _t("_test_screens")
+	await _t("_test_meeting_focus")
+	await _t("_test_meeting_group")
 	await _t("_test_story_stop")
 	await _t("_test_draft_card")
 	PreSeason.reload()
@@ -507,6 +509,8 @@ func _test_screens() -> void:
 			and _label(scene, "PreSeasonHero") == "Player meetings",
 			"With a pre-season running, the game opens on the player meetings")
 	_check(_fits(scene, 390.0), "Nothing on the meetings runs off a phone's screen")
+	_check(scene.find_child("PreSeasonTraining", true, false) == null,
+			"The meetings have no Training button: they set the focus themselves")
 	# Open a player's meeting and set his focus by taps.
 	var p: Dictionary = {}
 	for q in GameState.my_list:
@@ -524,6 +528,14 @@ func _test_screens() -> void:
 	await _frames(tree, 4)
 	_check(GameState.stat_focus(p) != key or not GameState.focus_locked(p),
 			"The pick is a draft until the meetings are done")
+	_check(scene.find_child("MeetSheet", true, false) != null,
+			"His meeting opens in a panel over the page")
+	_check(await _tap(scene.find_child("MeetClose", true, false), "Close"), "A finger's tap closes his meeting")
+	await _frames(tree, 4)
+	var said := _label(scene, "MeetSaid_" + pid)
+	_check(scene.find_child("MeetSheet", true, false) == null and scene.find_child("PreSeasonMeetings", true, false) != null
+			and said == GameState.train_stat_label(key).to_lower(),
+			"Closing it leaves the four lines, his row showing the focus picked (%s)" % said)
 	_check(await _tap(scene.find_child("PreSeasonGo", true, false), "Meetings done"), "A finger's tap finishes the meetings")
 	await _frames(tree, 6)
 	scene = tree.current_scene as Control
@@ -589,6 +601,186 @@ func _test_screens() -> void:
 	_check(scene != null and scene.name == "PreSeasonScene" and _fits(scene, 1600.0),
 			"On a PC's width the week fits")
 	tree.root.size = Vector2i(390, 844)
+	Router.stack = []
+
+
+## The stat focus picker (director, 2026-11-24): the stats a midfielder is
+## rated on are in bold TEXT, the rest regular MUTED; on a 1600x900 window the
+## choices sit in the left half and his profile on the right; a phone keeps
+## one column.
+func _test_meeting_focus() -> void:
+	PreSeason.reload()
+	var tree := Engine.get_main_loop() as SceneTree
+	tree.root.size = Vector2i(1600, 900)
+	_career()
+	GameState.set_setting("seen_weekly_loop_intro", true)
+	GameState.set_setting("seen_training_intro", true)
+	var p: Dictionary = {}
+	for q in GameState.my_list:
+		if p.is_empty() and str(q.get("role", "")) == "MID" and GameState.project_job(q) == "" 				and GameState.focus_options(q).size() >= 6:
+			p = q
+	_check(not p.is_empty(), "The club has a midfielder with a stat focus to pick")
+	if p.is_empty():
+		return
+	var pid := str(p["id"])
+	_check(PlayerProfile.rated_on(p) == ["contested", "creating"],
+			"A midfielder is rated most on contested ball and creating (%s)" % str(PlayerProfile.rated_on(p)))
+	var scene: Control = await _open(tree)
+	var row_tap := scene.find_child("MeetTap_" + pid, true, false) as Control
+	await _into_view(tree, row_tap)
+	_check(await _tap(row_tap, "a midfielder's meeting"), "A finger's tap opens a midfielder's meeting on a PC")
+	await _frames(tree, 6)
+	var bold_ok := true
+	var seen := 0
+	for key in GameState.focus_options(p):
+		var b := scene.find_child("MeetFocus_" + str(key), true, false) as Button
+		if b == null:
+			bold_ok = false
+			continue
+		seen += 1
+		var strong := PlayerProfile.rated_on(p).has(str(key))
+		var font := b.get_theme_font("font")
+		var ink := b.get_theme_color("font_color")
+		var chosen := str(key) == GameState.stat_focus(p)
+		if strong and (font != UiKit.BOLD or ink != UiKit.TEXT):
+			bold_ok = false
+		if not strong and (font != UiKit.FONT or (not chosen and ink != UiKit.MUTED)):
+			bold_ok = false
+	_check(bold_ok and seen >= 6 and _label(scene, "MeetFocusRated").contains("midfielder"),
+			"The stats his position is rated on are bold TEXT, the rest regular MUTED, with the key line (%s)"
+			% _label(scene, "MeetFocusRated"))
+	var choices := scene.find_child("MeetChoices", true, false) as Control
+	var profile := scene.find_child("MeetProfile", true, false) as Control
+	var grid := scene.find_child("MeetFocus", true, false) as Control
+	var sheet := scene.find_child("MeetSheet", true, false) as Control
+	var mid := 800.0
+	if sheet != null and sheet.find_child("MeetChoices", true, false) != null:
+		var shell := (choices.get_parent() as Control)
+		mid = shell.get_global_rect().get_center().x
+	_check(choices != null and profile != null and grid != null and sheet != null
+			and grid.get_global_rect().end.x <= mid + 0.5
+			and profile.get_global_rect().position.x >= mid - 0.5
+			and profile.get_global_rect().end.x <= 1600.0 + 0.5
+			and profile.find_child("ProfileName", true, false) != null
+			and profile.find_child("ProfileAttributes", true, false) != null,
+			"On a 1600x900 window his meeting opens over the page, the stat buttons on its left half and his profile on the right (%s / %s)"
+			% [str(grid.get_global_rect()) if grid != null else "-", str(profile.get_global_rect()) if profile != null else "-"])
+	_check(_fits(scene, 1600.0), "Nothing on the PC meeting runs off the window")
+	_check(await _tap(scene.find_child("MeetClose", true, false), "Close"), "A finger's tap closes his meeting on a PC")
+	await _frames(tree, 4)
+	_check(scene.find_child("MeetSheet", true, false) == null and _one_page(scene)
+			and scene.find_child("MeetLine_RUCK", true, false) != null
+			and (scene.find_child("MeetLine_MID", true, false) as Control).get_global_rect().position.y
+				== (scene.find_child("MeetLine_RUCK", true, false) as Control).get_global_rect().position.y,
+			"On a PC the four lines sit side by side on one page")
+	await _tap(scene.find_child("MeetTap_" + pid, true, false), "a midfielder's meeting")
+	await _frames(tree, 4)
+	# A phone: one column, no profile beside, still bold.
+	tree.root.size = Vector2i(390, 844)
+	await _frames(tree, 6)
+	scene = tree.current_scene as Control
+	var phone_b := scene.find_child("MeetFocus_contested", true, false) as Button
+	_check(scene.find_child("MeetProfile", true, false) == null and phone_b != null
+			and phone_b.get_theme_font("font") == UiKit.BOLD and _fits(scene, 390.0),
+			"On a phone the meeting stays one column, the rated stats still bold, nothing cut")
+	Router.stack = []
+
+
+## Ticking players and giving them one stat focus together, by a finger's taps
+## on a phone (director, 2026-11-25: "multi click players and set stat focus
+## for multiple at once"; tick boxes, and a player who can't train the stat is
+## named and keeps his own).
+func _test_meeting_group() -> void:
+	PreSeason.reload()
+	var tree := Engine.get_main_loop() as SceneTree
+	tree.root.size = Vector2i(390, 844)
+	_career()
+	GameState.set_setting("seen_weekly_loop_intro", true)
+	GameState.set_setting("seen_training_intro", true)
+	# A line that all trains one stat, and a player in another line who doesn't.
+	var mids := []
+	var key := ""
+	var g := ""
+	var d: Dictionary = {}
+	for line in PreSeason.GROUPS:
+		if key != "":
+			break
+		var members := []
+		for q in GameState.my_list:
+			if PreSeason.group_of(q) == line:
+				members.append(q)
+		for row in GameState.TRAIN_STATS:
+			var k := str(row[0])
+			var all_in := not members.is_empty()
+			for m in members:
+				if GameState.project_job(m) == "" and not GameState.focus_options(m).has(k):
+					all_in = false
+			if not all_in:
+				continue
+			for q in GameState.my_list:
+				if d.is_empty() and PreSeason.group_of(q) != line and GameState.project_job(q) == "" 						and not GameState.focus_options(q).has(k):
+					d = q
+			if not d.is_empty():
+				key = k
+				g = str(line)
+				mids = members
+				break
+	_check(key != "", "A stat one line trains and a player elsewhere doesn't (%s, %s)" % [g, key])
+	if key == "":
+		return
+	var scene: Control = await _open(tree)
+	var all_mid := scene.find_child("MeetAll_" + g, true, false) as Control
+	await _into_view(tree, all_mid)
+	_check(await _tap(all_mid, "All"), "A finger's tap ticks a whole line")
+	await _frames(tree, 4)
+	var tick := scene.find_child("MeetTick_" + str(d["id"]), true, false) as Control
+	await _into_view(tree, tick)
+	_check(await _tap(tick, "a defender's tick"), "A finger's tap ticks a player from another line")
+	await _frames(tree, 4)
+	var go := scene.find_child("PreSeasonGo", true, false) as Button
+	_check(go != null and go.text == "Set stat focus for %d" % (mids.size() + 1)
+			and scene.find_child("MeetClearTicks", true, false) != null,
+			"The way on sets the focus for the ticked players (%s)" % (go.text if go != null else "-"))
+	_check(await _tap(go, "Set stat focus"), "A finger's tap opens the stat focus for the ticked players")
+	await _frames(tree, 4)
+	var pick := scene.find_child("MeetGroupFocus_" + key, true, false) as Control
+	_check(pick != null and await _tap(pick, "a stat focus for all"), "A finger's tap picks one stat for them all")
+	await _frames(tree, 4)
+	var skip := _label(scene, "MeetGroupSkip")
+	var set_it := scene.find_child("MeetGroupSet", true, false) as Button
+	_check(skip.contains(GameDB.card_surname(d)) and set_it != null and not set_it.disabled,
+			"The player who can't train it is named before it is set (%s)" % skip)
+	_check(await _tap(set_it, "Set"), "A finger's tap sets it")
+	await _frames(tree, 6)
+	var ok := scene.find_child("MeetGroupSheet", true, false) == null
+	for m in mids:
+		if GameState.project_job(m) == "":
+			ok = ok and _label(scene, "MeetSaid_" + str(m["id"])) == GameState.train_stat_label(key).to_lower()
+	_check(ok and _label(scene, "MeetSaid_" + str(d["id"])) != GameState.train_stat_label(key).to_lower(),
+			"Every player in the line shows the focus; the other keeps his own")
+	go = scene.find_child("PreSeasonGo", true, false) as Button
+	_check(go.text == "Meetings done", "With the ticks spent, the way on is Meetings done again")
+	# Every line at once, then cleared.
+	var every := scene.find_child("MeetAllLines", true, false) as Control
+	await _into_view(tree, every)
+	_check(await _tap(every, "Select every line"), "A finger's tap ticks every line")
+	await _frames(tree, 4)
+	go = scene.find_child("PreSeasonGo", true, false) as Button
+	_check(go.text == "Set stat focus for %d" % GameState.my_list.size(),
+			"Every player on the list is ticked (%s)" % go.text)
+	_check(await _tap(scene.find_child("MeetClearTicks", true, false), "Clear"), "A finger's tap clears the ticks")
+	await _frames(tree, 4)
+	go = scene.find_child("PreSeasonGo", true, false) as Button
+	_check(go.text == "Meetings done", "Clear leaves nobody ticked")
+	# His profile from his meeting on a phone.
+	var tap := scene.find_child("MeetTap_" + str(d["id"]), true, false) as Control
+	await _into_view(tree, tap)
+	await _tap(tap, "a defender's meeting")
+	await _frames(tree, 4)
+	var prof := scene.find_child("MeetProfileOpen", true, false) as Control
+	_check(prof != null and await _tap(prof, "Profile"), "A finger's tap on Profile in his meeting")
+	await _frames(tree, 4)
+	_check(scene.find_child("PlayerProfile", true, false) != null, "His profile opens from his meeting on a phone")
 	Router.stack = []
 
 
@@ -730,6 +922,21 @@ func _open(tree: SceneTree) -> Control:
 func _label(scene: Node, node_name: String) -> String:
 	var l := scene.find_child(node_name, true, false) as Label if scene != null else null
 	return l.text if l != null else ""
+
+
+## The meetings need no scroll: the page's scroll container holds them whole.
+func _one_page(scene: Control) -> bool:
+	var page := scene.find_child("PreSeasonPage", true, false) as Control
+	var lines := scene.find_child("PreSeasonMeetings", true, false) as Control
+	if page == null or lines == null:
+		return false
+	var sc := page.get_parent() as ScrollContainer
+	if sc == null:
+		return false
+	var ok := lines.get_global_rect().end.y <= sc.get_global_rect().end.y + 0.5 and sc.scroll_vertical == 0
+	if not ok:
+		push_error("Meetings run past the page: %s vs %s" % [str(lines.get_global_rect()), str(sc.get_global_rect())])
+	return ok
 
 
 func _fits(scene: Control, width: float) -> bool:
