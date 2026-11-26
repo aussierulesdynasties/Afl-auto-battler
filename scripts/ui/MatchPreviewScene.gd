@@ -12,6 +12,7 @@ const MEASURE := 600.0      # the page keeps a readable measure on a wide window
 var _week: WeekPreview
 var _page: VBoxContainer
 var _continue: Button
+var _wide := false          # laid out for a PC window (Preview B)
 
 
 func _ready() -> void:
@@ -29,6 +30,7 @@ func _ready() -> void:
 	var root := UiKit.vbox(UiKit.GAP)
 	root.name = "PreviewColumn"
 	margin.add_child(root)
+	_wide = _is_wide()
 	_week = WeekPreview.new(self, func(_note: String, _undo: Dictionary): _refill())
 	root.add_child(UiKit.top_bar("Match preview", true))
 	_page = _week.page()
@@ -48,14 +50,28 @@ func _ready() -> void:
 			_fit(margin))
 
 
-## A wide window: the column stays at the measure, centred, the club's colour either side.
+func _is_wide() -> bool:
+	return ScreenLayout.roomy(UiKit.view_width(self), UiKit.view_height(self))
+
+
+## A phone, or a window too narrow for the PC layout: the column stays at the
+## measure, centred, the club's colour either side, Continue across it. A PC
+## window (director, 2026-11-27, Preview B): the page across the window, 32 from
+## each edge, Continue sized to its word at the right. A window that crosses
+## between the two rebuilds the page.
 func _fit(margin: MarginContainer) -> void:
+	var wide := _is_wide()
 	var spare := maxf(0.0, UiKit.view_width(self) - 24.0 - MEASURE)
-	var side := int(spare / 2.0)
+	var side := 20 if wide else int(spare / 2.0)
 	UiKit.apply_insets(margin, 12)
 	if side > 0:
 		margin.add_theme_constant_override("margin_left", margin.get_theme_constant("margin_left") + side)
 		margin.add_theme_constant_override("margin_right", margin.get_theme_constant("margin_right") + side)
+	_continue.size_flags_horizontal = Control.SIZE_SHRINK_END if wide else Control.SIZE_EXPAND_FILL
+	_continue.custom_minimum_size = Vector2(0, (44 if UiKit.view_height(self) < 600.0 else 52) if wide else 56)
+	if wide != _wide:
+		_wide = wide
+		_refill()
 
 
 ## A synergy completed from the guide changed the side: the page says the new side.
