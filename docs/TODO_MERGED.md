@@ -209,3 +209,4 @@ What has landed toward each open row of docs/TODO.md and docs/TODO_RULINGS.md, o
 - 202: Merged #1995: 3D match: the main camera zooms and leads the play like AFL TV (row 202 2e).
 - 202: Merged #1996: 3D lighting: night towers, the real sun over every ground, and the day look (row 202 2a).
 - 202: Merged #1997: 3D guernsey numbers hold their shape on the TV camera (row 202 2d).
+- 202: Merged #2003: 3D wet games: rain falls in the match, wet guernseys, towers on early (rule 2.83, row 202 2a).
