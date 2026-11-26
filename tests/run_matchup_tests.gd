@@ -1099,7 +1099,10 @@ func _test_facts_without_options() -> void:
 	# Two clubs whose first opponent (seed 2031) has two or more facts, one
 	# naming a player: on the director's ratings (row 200) Brisbane's, Gold
 	# Coast, sits mid-table in every line, so the Bulldogs (v Adelaide) stand in.
-	for club in ["FRE", "WBD"]:
+	# On the rebuilt ratings (2026-11-26) Fremantle's, Collingwood, has no
+	# defender who reads the ball well enough to play loose and no top-ten
+	# player, so no fact names anyone: Geelong (v Melbourne) stands in.
+	for club in ["GEE", "WBD"]:
 		_reset()
 		_state.set_setting("seen_weekly_loop_intro", true)
 		_state.start_season(club, db.club_list(club))
