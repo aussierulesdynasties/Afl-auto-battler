@@ -328,6 +328,8 @@ static func dress_button(b: Button, index: Dictionary) -> void:
 	r.add_theme_font_override("normal_font", b.get_theme_font("font"))
 	r.text = bb
 	r.set_meta("plain", b.text)
+	# Set as the button sets its own words (centred, as a plain answer is).
+	r.horizontal_alignment = b.alignment
 	var margin := 0.0
 	var sb := b.get_theme_stylebox("normal")
 	if sb != null:
