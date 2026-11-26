@@ -237,6 +237,16 @@ static func club_facts(gs, week: int, ph: String) -> Dictionary:
 			"club_deck": deck_code(str(gs.my_club)), "opp_deck": _opponent_deck(gs),
 			"controversies": 0 if gs.get("controversies") != null and not bool(gs.get("controversies")) else 1,
 			"advisors": advisors(gs)}
+	# A line or development coach gone restless, and the group he backs (Council).
+	var rl: Dictionary = Council.restless(gs, str(gs.my_club)) if gs.get("council") != null else {}
+	var rb: Dictionary = Council.restless_backs(gs, str(gs.my_club)) if not rl.is_empty() else {}
+	facts["restless_staff"] = 0 if rl.is_empty() else 1
+	facts["restless_backing"] = 0 if rb.is_empty() else 1
+	facts["restless_group"] = str(Factions.kind_cfg(str(rb.get("k", ""))).get("label", "the unhappy players")).to_lower()
+	# The card's own advisor facts name him when he is there (StoryEngine.advisor_facts);
+	# these only stand in when a card is shown without him (a preview, a test).
+	facts["restless_name"] = str(rl.get("name", "the line coach"))
+	facts["restless_role"] = str(rl.get("role", "line coach"))
 	facts.merge(_leader_facts(gs), true)
 	facts.merge(_finals_facts(gs, ph), true)
 	facts.merge(papers_facts(gs), true)
@@ -1251,6 +1261,11 @@ static func _apply(gs, e: Dictionary, p: Dictionary, facts: Dictionary, applied:
 		"fresh", "heavy_legs":
 			for q in _targets(gs, e, p):
 				q[str(e["op"])] = true
+		"council":
+			# The restless coach the card seats: pulled into line or won back.
+			Council.card_loyalty(gs, gs.my_club, str(e.get("do", "")))
+		"standing":
+			Promises.move(gs, int(e.get("r", 0)), int(e.get("a", 0)), StoryEngine.fill(str(e.get("why", "")), facts))
 		"faction":
 			# The coach answers the group the card's player leads (Factions).
 			var grp := Factions.of_player(gs, gs.my_club, str(p["id"]))

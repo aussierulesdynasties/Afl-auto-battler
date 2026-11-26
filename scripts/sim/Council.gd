@@ -43,7 +43,13 @@ extends RefCounted
 ##     the market or your release, leaves a mark on the players attached to
 ##     him (staff_gone).
 ##   - A faction's pressure each round leans on the council (faction_sway):
-##     loyal members attached to its men talk them down, disloyal ones stir.
+##     loyal members tied to it (its men, or an agenda that matches its
+##     grievance) talk it down, restless ones back it and push it on.
+##   - In season, a line or development coach at RESTLESS_LINE or under takes
+##     his man-management away (withheld: no softening when his men are
+##     dropped) and acts on his own on the cards (the "restless" advisor:
+##     a leak to the papers, a word in the board's ear, backing a group).
+##   - Two members can back competing choices on one card (clash).
 ## Nothing here reaches the match: loyalty and agendas never touch MatchSim,
 ## and a player's mark from losing his coach reaches morale only by the
 ## opinion drift every club already has (ClubLife.drift_morale).
@@ -72,12 +78,22 @@ const WALK_LINE := 25
 ## Loyal and disloyal, for a faction's sway and the Staff screen's words.
 const LOYAL_LINE := 65
 const RESTLESS_LINE := 35
-## The most a council moves a faction's pressure in one round, either way.
+## The most a council moves a faction's pressure down in one round, and up.
 const SWAY_MAX := 2
+const STIR_MAX := 4
+## How hard each restless member tied to a group pushes it on, a round.
+const STIR := 2
+## The coaches whose disloyalty bites in season (withheld, restless).
+const TEETH_JOBS := ["MID", "FWD", "DEF", "DEV"]
 ## A pitch needs its choice to suit him by this much more than every other.
 const PITCH_MARGIN := 2
 ## What going against a member's advice builds: [Respect, Authority].
 const OVERRULE := [0, 1]
+## Two members backing different choices on one card (a clash): the one you
+## side with gains (advice_taken), the other loses (advice_passed_over); a
+## third choice of your own costs both a little (advice_both_overruled) and
+## builds your Authority by OWN_WAY.
+const OWN_WAY := [0, 2]
 ## The kids a youth member wants to see in a side, and the fewest he puts up with.
 const YOUTH_AGE := 21
 const YOUTH_SERVED := 5
@@ -275,6 +291,11 @@ static func advisor_seats(gs) -> Dictionary:
 	var out := {}
 	for m in members(gs, str(gs.my_club)):
 		out[str(m["seat"])] = {"name": str(m["name"]), "role": str(m["role"])}
+	# A line or development coach gone restless can act on his own: the
+	# leak, the board's ear and the players' group cards seat him.
+	var r := restless(gs, str(gs.my_club))
+	if not r.is_empty():
+		out["restless"] = {"name": str(r["name"]), "role": str(r["role"])}
 	return out
 
 
@@ -382,6 +403,12 @@ static func pitch(gs, card: Dictionary) -> Dictionary:
 		best["option"] = top
 	if best.is_empty():
 		return {}
+	return _signed(best, card)
+
+
+## A member's pitch as the card carries it: his line in his own voice.
+static func _signed(m: Dictionary, card: Dictionary) -> Dictionary:
+	var best := m.duplicate()
 	var lines: Array = (agenda(str(best["agenda"])).get("voice", {}) as Dictionary).get(str(best["manner"]), [])
 	var line := ""
 	if not lines.is_empty():
@@ -389,6 +416,38 @@ static func pitch(gs, card: Dictionary) -> Dictionary:
 	best.erase("coach")
 	best["line"] = line
 	return best
+
+
+## The member who backs a different choice from `first` on the same card, so
+## the two clash: {} when nobody does. His choice must suit him by
+## PITCH_MARGIN more than the one `first` backs; the widest gap wins, the
+## table's order breaking a tie. At most two members a card.
+static func clash(gs, card: Dictionary, first: Dictionary) -> Dictionary:
+	var opts: Array = card.get("options", [])
+	if first.is_empty() or opts.size() < 2:
+		return {}
+	var against := int(first.get("option", -1))
+	var best := {}
+	var best_gap := PITCH_MARGIN - 1
+	for m in members(gs, str(gs.my_club)):
+		if str(m["id"]) == str(first.get("id", "")):
+			continue
+		var scores := []
+		for o in opts:
+			scores.append(suits(str(m["agenda"]), (o as Dictionary).get("effects", [])))
+		var top := -1
+		for i in scores.size():
+			if i != against and (top < 0 or int(scores[i]) > int(scores[top])):
+				top = i
+		if top < 0 or int(scores[top]) <= 0:
+			continue
+		var gap := int(scores[top]) - int(scores[against])
+		if gap <= best_gap:
+			continue
+		best_gap = gap
+		best = m.duplicate()
+		best["option"] = top
+	return {} if best.is_empty() else _signed(best, card)
 
 
 ## Give each of a week's cards its pitch (when someone has a view).
@@ -399,30 +458,66 @@ static func pitch_cards(gs, cards: Array) -> void:
 		var p := pitch(gs, card)
 		if not p.is_empty():
 			card["pitch"] = p
+			# A second member who wants the other way makes it a clash.
+			var c := clash(gs, card, p)
+			if not c.is_empty():
+				card["clash"] = c
 
 
-## The card's lines for its pitch: who backs which choice and why, then what
-## taking or going against his advice does, one number a line (the decision gate shows the
-## size, never which is better). [] when nobody backs a choice.
+## The card's lines for its pitch: who backs which choice and why (one line
+## each, two when members clash), then what taking or going against the advice
+## does, one number a line (the decision gate shows the size, never which is
+## better). [] when nobody backs a choice. said_count says how many of the
+## first lines are the members' own words.
 static func pitch_lines(card: Dictionary) -> Array:
 	var p: Dictionary = card.get("pitch", {})
 	var opts: Array = card.get("options", [])
 	if p.is_empty() or int(p.get("option", -1)) < 0 or int(p["option"]) >= opts.size():
 		return []
+	var c: Dictionary = card.get("clash", {})
+	if not c.is_empty() and (int(c.get("option", -1)) < 0 or int(c["option"]) >= opts.size()):
+		c = {}
+	var take := int(round(float(Opinion.def("advice_taken").get("v", 0))))
+	# Named, never "his": the council has women in it. One effect, one number
+	# a line (copy voice, style guide 5.1).
+	var first := str(p["name"]).get_slice(" ", 0)
+	if c.is_empty():
+		var pass_v := int(round(float(Opinion.def("advice_overruled").get("v", 0))))
+		return [_said(p, opts), "Take %s advice: loyalty %+d." % [CopyRules.possessive(first), take],
+				"Go against %s: loyalty %d." % [first, pass_v],
+				"Go against %s: your Authority %+d." % [first, int(OVERRULE[1])]]
+	var other := str(c["name"]).get_slice(" ", 0)
+	if other == first:
+		first = str(p["name"])
+		other = str(c["name"])
+	var lose := int(round(float(Opinion.def("advice_passed_over").get("v", 0))))
+	var out := [_said(p, opts), _said(c, opts)]
+	for pair in [[first, other], [other, first]]:
+		out.append("Take %s advice: %s loyalty %+d." % [CopyRules.possessive(pair[0]), CopyRules.possessive(pair[0]), take])
+		out.append("Take %s advice: %s loyalty %d." % [CopyRules.possessive(pair[0]), CopyRules.possessive(pair[1]), lose])
+	if opts.size() > 2:
+		var both := int(round(float(Opinion.def("advice_both_overruled").get("v", 0))))
+		out.append("Go your own way: %s and %s loyalty %d each." % [first, other, both])
+		out.append("Go your own way: your Authority %+d." % int(OWN_WAY[1]))
+	return out
+
+
+## How many of pitch_lines' first lines are a member's own words (1, or 2 in a
+## clash; 0 with none).
+static func said_count(card: Dictionary) -> int:
+	if (card.get("pitch", {}) as Dictionary).is_empty():
+		return 0
+	return 2 if not (card.get("clash", {}) as Dictionary).is_empty() else 1
+
+
+static func _said(p: Dictionary, opts: Array) -> String:
 	var label := str((opts[int(p["option"])] as Dictionary).get("label", ""))
 	var said := "%s, %s, backs \"%s\"" % [str(p["name"]), str(p["role"]), label]
 	if str(p.get("line", "")) != "":
 		said += ": \"%s.\"" % str(p["line"])
 	else:
 		said += "."
-	var take := int(round(float(Opinion.def("advice_taken").get("v", 0))))
-	var pass_v := int(round(float(Opinion.def("advice_overruled").get("v", 0))))
-	# One effect, one number a line (copy voice, style guide 5.1). Named, never
-	# "his": the council has women in it.
-	var first := str(p["name"]).get_slice(" ", 0)
-	return [said, "Take %s advice: loyalty %+d." % [CopyRules.possessive(first), take],
-			"Go against %s: loyalty %d." % [first, pass_v],
-			"Go against %s: your Authority %+d." % [first, int(OVERRULE[1])]]
+	return said
 
 
 ## The coach answered a card a member had backed a choice on.
@@ -432,6 +527,10 @@ static func answered(gs, card: Dictionary, choice: int) -> void:
 		return
 	var when := str(gs.last_label) if str(gs.last_label) != "" else "Week %d" % int(gs.story_week())
 	var src := "card:%s|%d" % [str(card.get("tid", "")), int(gs.story_week())]
+	var c: Dictionary = card.get("clash", {})
+	if not c.is_empty():
+		_answered_clash(gs, card, p, c, choice, when, src)
+		return
 	if choice == int(p.get("option", -1)):
 		Opinion.add(gs.relations, str(p["key"]), "advice_taken", int(gs.season_year), when, str(gs.my_club),
 				1.0, src)
@@ -442,6 +541,29 @@ static func answered(gs, card: Dictionary, choice: int) -> void:
 		Promises.move(gs, int(OVERRULE[0]), int(OVERRULE[1]),
 				"You overruled your %s, %s" % [str(p["role"]), str(p["name"])])
 		card["pitch_taken"] = false
+
+
+## Two members clashed on the card: the one you sided with gains, the other
+## loses; a choice of your own costs both a little and builds your Authority.
+static func _answered_clash(gs, card: Dictionary, p: Dictionary, c: Dictionary, choice: int, when: String,
+		src: String) -> void:
+	var year := int(gs.season_year)
+	var club := str(gs.my_club)
+	if choice == int(p.get("option", -1)) or choice == int(c.get("option", -1)):
+		var won := p if choice == int(p["option"]) else c
+		var lost := c if won == p else p
+		Opinion.add(gs.relations, str(won["key"]), "advice_taken", year, when, club, 1.0, src)
+		Opinion.add(gs.relations, str(lost["key"]), "advice_passed_over", year, when, club, 1.0, src, 1.0,
+				"You took %s side" % CopyRules.possessive(str(won["name"])))
+		card["pitch_taken"] = won == p
+		card["clash_taken"] = won == c
+		return
+	for m in [p, c]:
+		Opinion.add(gs.relations, str(m["key"]), "advice_both_overruled", year, when, club, 1.0, src)
+	Promises.move(gs, int(OWN_WAY[0]), int(OWN_WAY[1]),
+			"You went your own way over %s and %s" % [str(p["name"]), str(c["name"])])
+	card["pitch_taken"] = false
+	card["clash_taken"] = false
 
 
 # ---------------------------------------------------------------------------
@@ -508,10 +630,13 @@ static func _read_side(gs, club: String, played: Dictionary, when: String) -> in
 	return added
 
 
-## The pressure a club's council puts on a faction each round (Factions.gd):
-## each loyal member attached to one of its men talks it down a point, each
-## restless one stirs it a point, at most SWAY_MAX either way. `f` is the
-## faction ({members: [ids], ...}).
+## The pressure a club's council puts on a faction each round (Factions.gd).
+## A member counts on a group when he is attached to one of its men (his line,
+## his kids, his leaders) or his agenda matches the group's grievance (the
+## kind's "agendas" in factions.json). Each loyal one talks it down a point;
+## each restless one (loyalty RESTLESS_LINE or under) backs it and pushes it
+## on by STIR. At most SWAY_MAX down and STIR_MAX up a round. `f` is the
+## faction ({k: kind, members: [ids], ...}).
 static func faction_sway(gs, club: String, f: Dictionary) -> int:
 	var ids := {}
 	for id in f.get("members", []):
@@ -520,19 +645,89 @@ static func faction_sway(gs, club: String, f: Dictionary) -> int:
 		return 0
 	var sway := 0
 	for m in members(gs, club):
-		var touches := false
-		for p in attached(gs, club, str(m["job"])):
-			if ids.has(str(p["id"])):
-				touches = true
-				break
-		if not touches:
+		if not backs_on(gs, club, m, f, ids):
 			continue
 		var v := loyalty(gs, m)
 		if v >= LOYAL_LINE:
 			sway -= 1
 		elif v <= RESTLESS_LINE:
-			sway += 1
-	return clampi(sway, -SWAY_MAX, SWAY_MAX)
+			sway += STIR
+	return clampi(sway, -SWAY_MAX, STIR_MAX)
+
+
+## Is a member's line or agenda tied to this group?
+static func backs_on(gs, club: String, m: Dictionary, f: Dictionary, ids := {}) -> bool:
+	var kinds_agendas: Array = Factions.kind_cfg(str(f.get("k", ""))).get("agendas", [])
+	if kinds_agendas.has(str(m.get("agenda", ""))):
+		return true
+	if ids.is_empty():
+		for id in f.get("members", []):
+			ids[str(id)] = true
+	for p in attached(gs, club, str(m["job"])):
+		if ids.has(str(p["id"])):
+			return true
+	return false
+
+
+# ---------------------------------------------------------------------------
+# A disloyal coach in season: no softening for his men, and a voice of his own
+# ---------------------------------------------------------------------------
+
+## The jobs whose man-management stops softening a drop: a line coach (MID,
+## FWD, DEF) or the development coach whose loyalty is RESTLESS_LINE or under.
+## {job: true}. The same at every club.
+static func withheld(gs, club: String) -> Dictionary:
+	var out := {}
+	for m in members(gs, club):
+		if TEETH_JOBS.has(str(m["job"])) and loyalty(gs, m) <= RESTLESS_LINE:
+			out[str(m["job"])] = true
+	return out
+
+
+## Does a disloyal coach take his man-management away from this player? His
+## line's coach, or (21 and under) the development coach.
+static func soften_withheld(p: Dictionary, held: Dictionary) -> bool:
+	if held.is_empty():
+		return false
+	if held.has(CoachEffects.line_job(p)):
+		return true
+	return held.has("DEV") and int(p.get("age", 25)) <= YOUTH_AGE
+
+
+## The club's most disloyal line or development coach, the cards' "restless"
+## advisor: {} when none is RESTLESS_LINE or under.
+static func restless(gs, club: String) -> Dictionary:
+	var best := {}
+	var low := RESTLESS_LINE + 1
+	for m in members(gs, club):
+		if not TEETH_JOBS.has(str(m["job"])):
+			continue
+		var v := loyalty(gs, m)
+		if v < low:
+			low = v
+			best = m
+	return best
+
+
+## The group at the club the restless coach is backing ({} for none).
+static func restless_backs(gs, club: String) -> Dictionary:
+	var m := restless(gs, club)
+	if m.is_empty():
+		return {}
+	for f in Factions.of_club(gs, club):
+		if backs_on(gs, club, m, f):
+			return f
+	return {}
+
+
+## A card moves the restless coach's loyalty ("called_out" or "won_back").
+static func card_loyalty(gs, club: String, k: String, why := "") -> float:
+	var m := restless(gs, club)
+	if m.is_empty():
+		return 0.0
+	var when := str(gs.last_label) if str(gs.last_label) != "" else "Week %d" % int(gs.story_week())
+	return Opinion.add(gs.relations, str(m["key"]), k, int(gs.season_year), when, club, 1.0,
+			"card:%s|%d" % [k, int(gs.story_week())], 1.0, why)
 
 
 # ---------------------------------------------------------------------------

@@ -29,8 +29,10 @@ extends RefCounted
 ## waits reform_wait played rounds before it forms again. A save without the
 ## key has no groups.
 ##
-## The Council (its own phase) plugs in at council_sway: the pressure a club's
-## staff adds to or takes off a group each round. It is 0 until that lands.
+## The Council plugs in at council_sway (Council.faction_sway): the pressure a
+## club's staff adds to or takes off a group each round. A rough season (low
+## Respect, a losing run, many men left out) speeds groups up; a settled,
+## well-respected club stays quiet (climate).
 ## Card options may name the seat whose voice pitches them (pitched_by).
 
 const PATH := "res://data/relations/factions.json"
@@ -128,8 +130,46 @@ static func morale_shift(gs, club: String, id: String) -> int:
 ## The Council's say on a group this round (+ pushes it on, - calms it). The
 ## Council phase replaces this body with Council.faction_sway(gs, club, f);
 ## until then a club's staff have no say.
-static func council_sway(_gs, _club: String, _f: Dictionary) -> int:
-	return 0
+static func council_sway(gs, club: String, f: Dictionary) -> int:
+	return Council.faction_sway(gs, club, f)
+
+
+## How rough a club's season is for its players (climate in the file): one
+## point each for a senior coach whose Respect is under low_respect, a losing
+## run of losing_run or more, and snubbed or more players left out so often
+## that they think less of the coach (a live left-out mark and an opinion
+## under join_line). A club with none of those and Respect at
+## high_respect or more is quiet (-1). The same reading at every club.
+static func climate(gs, club: String, players: Array) -> int:
+	var c: Dictionary = cfg().get("climate", {})
+	if c.is_empty():
+		return 0
+	var rough := 0
+	var r := Promises.respect(gs, "" if club == str(gs.my_club) else club)
+	if r < int(c.get("low_respect", 0)):
+		rough += 1
+	if gs.season != null and losing_run(gs.season.club_results(club)) >= int(c.get("losing_run", 99)):
+		rough += 1
+	var snubbed := 0
+	var mine := club == str(gs.my_club)
+	for p in players:
+		if grieves(gs.relations, str(p["id"]), "selection") and opinion_of(gs, p, mine) < num("join_line"):
+			snubbed += 1
+	if snubbed >= int(c.get("snubbed", 99)):
+		rough += 1
+	if rough == 0 and r >= int(c.get("high_respect", 101)):
+		return -1
+	return rough
+
+
+## Losses in a row at the end of a club's results ("W", "L", "D").
+static func losing_run(results: Array) -> int:
+	var n := 0
+	for i in range(results.size() - 1, -1, -1):
+		if str(results[i]) != "L":
+			break
+		n += 1
+	return n
 
 
 # ---------------------------------------------------------------------------
@@ -142,11 +182,13 @@ static func opinion_of(gs, p: Dictionary, mine: bool) -> int:
 
 
 ## Does he carry a live mark of this grievance (a cost, not a lift)?
+## A kind may name several grievances, "selection|ambition": any one will do.
 static func grieves(rel: Dictionary, id: String, tag: String) -> bool:
 	if tag == "any":
 		return true
+	var tags := tag.split("|")
 	for m in Opinion.mods(rel, Opinion.player_key(id)):
-		if str((m as Dictionary).get("tag", "")) == tag and float(m["v"]) < 0.0:
+		if tags.has(str((m as Dictionary).get("tag", ""))) and float(m["v"]) < 0.0:
 			return true
 	return false
 
@@ -183,6 +225,14 @@ static func round_tick(gs, club: String, players: Array, mine: bool, games_of: D
 	var out := []
 	var by_id := {}
 	var op := {}
+	# A rough season makes men quicker to stand together and pushes a group on
+	# faster; a quiet club calms them (climate).
+	var weather := climate(gs, club, players)
+	var cl: Dictionary = cfg().get("climate", {})
+	var need := float(num("join_need")) - float(weather) * float(cl.get("join_ease", 0))
+	if weather < 0:
+		need = float(num("join_need")) + float(cl.get("quiet_join", 0))
+	need = maxf(1.0, need)
 	for p in players:
 		var id := str(p["id"])
 		by_id[id] = p
@@ -222,7 +272,7 @@ static func round_tick(gs, club: String, players: Array, mine: bool, games_of: D
 			if not fits(gs, p, k, int(games_of.get(id, 0))):
 				continue
 			var r := readiness(int(op[id]), p)
-			if r >= float(num("join_need")):
+			if r >= need:
 				ready.append([id, r])
 		ready.sort_custom(func(a, b): return float(a[1]) > float(b[1]) if float(a[1]) != float(b[1]) else str(a[0]) < str(b[0]))
 		var f := _group(groups, k)
@@ -243,6 +293,7 @@ static func round_tick(gs, club: String, players: Array, mine: bool, games_of: D
 	# Pressure, and where it takes each group.
 	for f in groups.duplicate():
 		var step := num("per_member") * (f["members"] as Array).size() + council_sway(gs, club, f)
+		step += weather * int(cl.get("rough_step", 0)) if weather > 0 else -int(cl.get("quiet_ease", 0)) * absi(weather)
 		if not joined.has(str(f["k"])) and int(f["since"]) != week:
 			step -= num("ease")
 		f["pressure"] = clampi(int(f["pressure"]) + step, 0, num("pressure_max"))
@@ -298,9 +349,17 @@ static func _ended(gs, club: String, k: String, week: int) -> void:
 	_past(gs, club)[k] = week
 
 
+## A kind waits reform_wait rounds after its last group ended at the club, and
+## any kind waits club_wait rounds after any group there ended: one flare-up
+## settles before the next.
 static func _may_form(gs, club: String, k: String, week: int) -> bool:
 	var past := _past(gs, club)
-	return not past.has(k) or week - int(past[k]) >= num("reform_wait")
+	if past.has(k) and week - int(past[k]) < num("reform_wait"):
+		return false
+	for other in past:
+		if week - int(past[other]) < int(cfg().get("club_wait", 0)):
+			return false
+	return true
 
 
 ## Every club's groups, without the bookkeeping key.

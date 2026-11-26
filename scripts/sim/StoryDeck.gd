@@ -88,6 +88,10 @@ const OPS := {
 	# A group of unhappy players (Factions.gd): the coach meets its demand,
 	# refuses it, or breaks it up ("do"), on a card about its leader.
 	"faction": true,
+	# The restless coach the card seats (Council.restless): you pull him into line
+	# or win him back ("do": called_out or won_back), and your standing as senior
+	# coach moves ("r" Respect, "a" Authority).
+	"council": false, "standing": false,
 }
 ## The odds a rolled outcome may carry, in percent.
 const ODDS_MIN := 5
@@ -177,6 +181,10 @@ const CLUB_FACTS := ["club", "opp", "has_opp", "round", "year", "losing_run", "w
 		# The club decks: your deck and this week's opponent's (ClubStories.deck_code),
 		# and whether the Controversies switch is on (1) or off (0).
 		"club_deck", "opp_deck", "controversies",
+		# A line or development coach gone restless (Council.restless): 1 when there is
+		# one, 1 when he is backing one of the club's groups of unhappy players, and
+		# what that group is called.
+		"restless_staff", "restless_backing", "restless_group", "restless_name", "restless_role",
 		# The bonding deck: the club's Indigenous players (the cultural day needs one,
 		# director 2026-11-17), and the player a card's sore falls on, with his odds.
 		"indigenous", "sore_one_name", "sore_one_pct"]

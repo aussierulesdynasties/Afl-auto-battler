@@ -1464,6 +1464,7 @@ func _restore_career(state: Dictionary) -> bool:
 		HonourBoard.backfill(self, func(id: String) -> Dictionary: return _any_player(id))
 	# A save from before the Council fills its office seats in (Council.ensure).
 	Council.ensure(self)
+	Ambitions.ensure(self)
 	return true
 
 
@@ -3284,6 +3285,7 @@ func _start_next_season(next_year: int, signed: int) -> void:
 	_captaincy_refresh()
 	_bonds_refresh()
 	Council.ensure(self)
+	Ambitions.ensure(self)
 	_ground_rename_news()
 	_culture_rollover()
 	_build_season_wrap(next_year)
@@ -3794,6 +3796,7 @@ func start_season(club_code: String, list: Array, save := true) -> void:
 	_captaincy_refresh()
 	_bonds_refresh()
 	Council.ensure(self)
+	Ambitions.ensure(self)
 	_ground_rename_news()
 	last_phase = "regular"
 	last_label = "Round 1"
@@ -9045,6 +9048,9 @@ func open_offseason(keep_staff := false) -> void:
 	_dev_promises_lapse()
 	Promises.card_season_end(self)
 	Promises.season_end(self)
+	# Ambitions still open are judged where they stand (Ambitions.season_end).
+	for ev in Ambitions.season_end(self):
+		_ambition_news(str(ev["club"]), ev["p"], str(ev["e"]))
 	_factions_season_end()
 	offseason_year = season_year
 	# Every deal from here is for next season, so the cap is next season's
@@ -9620,6 +9626,33 @@ func _resign(p: Dictionary, years: int, salary := -1, floor_price := -1) -> void
 	p["contract_years"] = years + 1
 	p["resigned"] = true
 	p.erase("talks")
+	# A man who wanted his club to sign him on has it (Ambitions).
+	Ambitions.contract_signed(self, _club_code_of(p), p)
+
+
+## The club whose list he is on ("" for none).
+func _club_code_of(p: Dictionary) -> String:
+	if season == null:
+		return ""
+	var id := str(p.get("id", ""))
+	for code in season.lists:
+		for q in season.lists[code]:
+			if str(q["id"]) == id:
+				return str(code)
+	return ""
+
+
+## An ambition met or gone sour at your club is news; a rival's is not.
+func _ambition_news(club: String, p: Dictionary, how: String) -> void:
+	if club != my_club or how == "lapsed":
+		return
+	var a: Dictionary = p.get(Ambitions.KEY, {})
+	var label := str(Ambitions.kind_cfg(str(a.get("k", ""))).get("label", "")).to_lower()
+	var who := GameDB.player_display_name(p)
+	if how == "met":
+		add_news("club", "%s got what he wanted this season: %s." % [who, label])
+	else:
+		add_news("club", "%s has given up on %s this season, and holds it against you." % [who, label])
 
 
 ## Off a list and into free agency. `wanted`: the club wanted him (he walked,
@@ -11839,8 +11872,9 @@ func _collect_trade_requests() -> void:
 		for p in season.lists[code]:
 			var id := str(p["id"])
 			var starts := []
-			# Told he can go when his group broke up (Factions): he asks out.
-			var unsettled := int(p.get("faction_out", 0)) == season_year
+			# Told he can go when his group broke up (Factions), or his ambition
+			# for the season went sour and he has had enough (Ambitions): he asks out.
+			var unsettled := int(p.get("faction_out", 0)) == season_year or Ambitions.asks_out(p, season_year)
 			if not side.has(id) or unsettled:
 				var keen := []
 				for other in bars:
@@ -15055,12 +15089,15 @@ func _board_after_round(results: Array) -> void:
 	if roster.size() > side:
 		for r in roster[side]:
 			played[str(r["id"])] = true
-	# Your man-managers soften what being left out costs (CoachEffects).
+	# Your man-managers soften what being left out costs (CoachEffects); a
+	# line or development coach gone restless no longer does it for his men
+	# (Council.withheld).
 	var soft := {}
 	if not coaches.is_empty():
 		var staff: Dictionary = club_staff(my_club)
+		var held := Council.withheld(self, my_club)
 		for p in my_list:
-			soft[str(p["id"])] = CoachEffects.soften(staff, p)
+			soft[str(p["id"])] = 0.0 if Council.soften_withheld(p, held) else CoachEffects.soften(staff, p)
 	ClubLife.morale_after_match(my_list, played, margin > 0, soft, culture_effect(my_club, "sting"), _round_unavailable,
 			str(CoachEffects.arch_of(my_club)[1]))
 	# A promised man left out because every place was held by another promised
@@ -15190,6 +15227,9 @@ func _opinion_after_round(results: Array) -> void:
 					Factions.morale_shift(self, str(code), str(p["id"])))
 	# Every club's council reads the side it picked (Council.after_round).
 	Council.after_round(self, results)
+	# Every club's players' ambitions move (Ambitions.gd); yours make the news.
+	for ev in Ambitions.after_round(self, results):
+		_ambition_news(str(ev["club"]), ev["p"], str(ev["e"]))
 
 
 ## Groups of unhappy players, every club by the same rules (Factions.gd): who
@@ -15295,8 +15335,9 @@ func _rival_morale_after_round(results: Array) -> void:
 			var soft := {}
 			var staff: Dictionary = staffs.get(code, {})
 			if not staff.is_empty():
+				var held := Council.withheld(self, code)
 				for p in list:
-					soft[str(p["id"])] = CoachEffects.soften(staff, p)
+					soft[str(p["id"])] = 0.0 if Council.soften_withheld(p, held) else CoachEffects.soften(staff, p)
 			ClubLife.morale_after_match(list, played, int(score[side]) > int(score[1 - side]), soft, culture_effect(code, "sting"),
 					_round_unavailable, str(CoachEffects.arch_of(code)[1]))
 			# Their senior coach's Authority, by the rule yours follows.
@@ -16352,6 +16393,7 @@ func _coaching_offseason() -> void:
 	# The men whose coach left take it; a coach at a new club starts afresh.
 	Council.after_market(self, before, walked)
 	Council.ensure(self)
+	Ambitions.ensure(self)
 
 
 ## Your club's season as a coach weighs it when a rival approaches him

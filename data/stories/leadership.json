@@ -2415,5 +2415,176 @@
 				"result": "{first} will ask to go. The senior group breaks up."
 			}
 		]
+	},
+	{
+		"id": "staff_restless_leak",
+		"category": "leadership",
+		"subject": {
+			"kind": "club"
+		},
+		"when": {
+			"restless_staff": 1
+		},
+		"advisors": [
+			{
+				"seat": "restless"
+			}
+		],
+		"cooldown": 10,
+		"title": [
+			"Our side was in the paper before we named it"
+		],
+		"text": [
+			"The team got out a day early, and everyone in the rooms says it came from {restless_name}, the {restless_role}. {restless_name} has not been happy with you for a while."
+		],
+		"choices": [
+			{
+				"key": "line",
+				"label": "Pull {restless_name} into line",
+				"effects": [
+					{
+						"op": "council",
+						"do": "called_out"
+					},
+					{
+						"op": "standing",
+						"a": 2,
+						"why": "You pulled {restless_name} into line over a leak"
+					},
+					{
+						"op": "board",
+						"d": 2
+					}
+				],
+				"result": "You have it out behind closed doors. Nothing else gets out, but {restless_name} is sore about it."
+			},
+			{
+				"key": "back",
+				"label": "Win {restless_name} back over",
+				"effects": [
+					{
+						"op": "council",
+						"do": "won_back"
+					},
+					{
+						"op": "standing",
+						"a": -1,
+						"why": "You let a leak go to keep {restless_name} onside"
+					}
+				],
+				"result": "A coffee, a long talk, and {restless_name} feels heard. A few people in the rooms think you went soft."
+			}
+		]
+	},
+	{
+		"id": "staff_restless_board",
+		"category": "leadership",
+		"subject": {
+			"kind": "club"
+		},
+		"when": {
+			"restless_staff": 1
+		},
+		"advisors": [
+			{
+				"seat": "restless"
+			}
+		],
+		"cooldown": 10,
+		"title": [
+			"{restless_name} has been in the board's ear"
+		],
+		"text": [
+			"Word is {restless_name}, the {restless_role}, has been telling a board member how {restless_name} would run the footy department."
+		],
+		"choices": [
+			{
+				"key": "first",
+				"label": "Get to the board first",
+				"effects": [
+					{
+						"op": "board",
+						"d": 3
+					},
+					{
+						"op": "council",
+						"do": "called_out"
+					}
+				],
+				"result": "You put your side to the board before the whispers do. {restless_name} knows you know."
+			},
+			{
+				"key": "back",
+				"label": "Win {restless_name} back over",
+				"effects": [
+					{
+						"op": "council",
+						"do": "won_back"
+					},
+					{
+						"op": "board",
+						"d": -2
+					}
+				],
+				"result": "You bring {restless_name} into the tent. The board has heard the grumbles, and it remembers them."
+			}
+		]
+	},
+	{
+		"id": "staff_restless_backs_group",
+		"category": "leadership",
+		"subject": {
+			"kind": "club"
+		},
+		"when": {
+			"restless_staff": 1,
+			"restless_backing": 1
+		},
+		"advisors": [
+			{
+				"seat": "restless"
+			}
+		],
+		"cooldown": 8,
+		"title": [
+			"{restless_name} is standing with the players"
+		],
+		"text": [
+			"{restless_name}, the {restless_role}, has been backing {restless_group} in front of the group. Every week {restless_name} sides with them, they push harder."
+		],
+		"choices": [
+			{
+				"key": "line",
+				"label": "Pull {restless_name} into line",
+				"effects": [
+					{
+						"op": "council",
+						"do": "called_out"
+					},
+					{
+						"op": "standing",
+						"a": 2,
+						"why": "You pulled {restless_name} into line in front of the players"
+					}
+				],
+				"result": "You make it plain where the line is. {restless_name} goes quiet in the meetings, and quieter with you."
+			},
+			{
+				"key": "back",
+				"label": "Win {restless_name} back over",
+				"effects": [
+					{
+						"op": "council",
+						"do": "won_back"
+					},
+					{
+						"op": "standing",
+						"r": -1,
+						"why": "You gave ground to keep {restless_name} onside"
+					}
+				],
+				"result": "You give {restless_name} more say. The players notice who moved."
+			}
+		]
 	}
 ]
