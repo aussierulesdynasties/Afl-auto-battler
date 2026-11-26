@@ -88,7 +88,7 @@ The MCG of each era for Legacy matches: first part on main (#2052), thread "Buil
 | Faces: every one of the 762 real players from his portrait, automatically | v5 board; v6 under way (MetaHuman grooms per player, cornrows, buzz cuts). Not in a match yet; how 44 different heads load in a match and what they cost on a phone is not designed | | Find a way to build real player faces |
 | Hair for real players | Epic's groom library, picked and reshaped per player from the photo (part of faces v6) | | Find a way to build real player faces |
 | Club Forge hair (20 cuts) | Refitted to MetaHuman, trimmed to 20; on main | #1976 | as #1976 |
-| Guernseys, all 18 clubs and clash, on the MetaHuman body | On main (#2038, 2026-11-24). Thread closed | #2038 | Check club guernseys on MetaHuman players (closed) |
+| Guernseys, all 18 clubs and clash, on the MetaHuman body | On main (#2038, 2026-11-24). Thread closed. Both kit atlases now import at half size, 4096 x 2560 (#2165): the four compressed files go from about 224 MB to 56 MB, and at the ruck close-up the guernseys look the same | #2038 #2165 | Check club guernseys on MetaHuman players (closed) |
 | Umpires: field, boundary, goal | Field umpire look passed (2.75); boundary and goal umpires on main | #2043 | Add boundary and goal umpires and trainers |
 | Trainers and runners (injuries, breaks) | On main | #2043 | Add boundary and goal umpires and trainers |
 
@@ -192,3 +192,4 @@ and the smoothing buffers.
 - 2026-11-26: catch-up after a two-day pause. On main since 24 Nov: builds carry the grounds and players (#2060), lighting at every ground (#1996), banner run-through (#2004), real land round every ground (#2072, which also carried the Marvel, Adelaide, SCG, Gabba, Bellerive, York Park, Norwood and Traeger branches: their PRs closed as landed), Cazaly's (#2034), Manuka (#2035), GMHBA (#2016), People First (#2019), ENGIE (#2037), Mars (#2036), Blacktown audit (#2084), guernseys (#2038), match crew round two (#2068), move clips (#2040), interchanges (#2025), crowd attendance (#1992), the 3D bug bash (#2067), MetaHuman files out of the public repo (#2062).
 - 2026-11-26 morning: the night-tower beams (#2146) and Blacktown's PC-check fixes (#2150) on main.
 - 2026-11-26 midday: the surroundings of every match ground (#2023, WIP, not shippable), Norwood's frontages (#2145), and Manuka, People First and Norwood on their real boundary lines (#2148) on main.
+- 2026-11-26 afternoon: guernsey atlases at half size (#2165, about 168 MB less) and a faster first 3D player build (#2155) on main.
