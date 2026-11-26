@@ -68,6 +68,15 @@ class SelectionTests(unittest.TestCase):
         # Deep.gd is called by Alpha.gd, which suite a names; suite a does not name Deep.gd itself.
         self.assertEqual(self.pick("scripts/sim/Deep.gd"), (["smoke"], ""))
 
+    def test_a_grounds_seats_or_model_selects_the_seat_check(self):
+        # ground_seats finds the seat files by listing assets/grounds/, so no path names them (#2018).
+        root = self.repo()
+        for name in ("tests/run_ground_seats_tests.gd", "assets/grounds/oval/seats_blue.bin", "assets/grounds/oval/oval.glb"):
+            (root / name).parent.mkdir(parents=True, exist_ok=True)
+            (root / name).write_text("")
+        for changed in ("assets/grounds/oval/seats_blue.bin", "assets/grounds/oval/oval.glb"):
+            self.assertEqual(select([changed], root=root, smoke=("smoke",))[0], ["ground_seats", "smoke"])
+
     def test_a_test_file_selects_its_own_suite(self):
         self.assertEqual(self.pick("tests/test_b.gd")[0], ["b", "smoke"])
         self.assertEqual(self.pick("tests/run_a_tests.gd.uid")[0], ["a", "smoke"])
@@ -92,6 +101,17 @@ class SelectionTests(unittest.TestCase):
 
     def test_a_fixture_selects_the_suite_that_reads_it(self):
         self.assertEqual(self.pick("tests/fixtures/snap.txt"), (["smoke", "snap"], ""))
+
+    def test_a_ground_model_file_selects_the_seat_check(self):
+        # ground_seats lists assets/grounds/ at run time, so no path names the files it reads.
+        root = self.repo()
+        for name in ("tests/run_ground_seats_tests.gd", "assets/grounds/mcg/mcg.glb",
+                     "assets/grounds/mcg/seats_seat_mcg_grey.bin", "assets/oval3d/heads/MEL_10.glb"):
+            (root / name).parent.mkdir(parents=True, exist_ok=True)
+            (root / name).write_text("")
+        for path in ("assets/grounds/mcg/mcg.glb", "assets/grounds/mcg/seats_seat_mcg_grey.bin"):
+            self.assertEqual(select([path], root=root, smoke=("smoke",)), (["ground_seats", "smoke"], ""), path)
+        self.assertEqual(select(["assets/oval3d/heads/MEL_10.glb"], root=root, smoke=("smoke",)), (["smoke"], ""))
 
     def test_files_the_test_run_never_reads_select_the_smoke_set(self):
         # one_off.py is named only by a note, and notes are never followed.

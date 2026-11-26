@@ -68,6 +68,25 @@ func _run() -> void:
 	await _t("_test_result_sheet_reduced")
 	await _t("_test_land_edge_tap")
 	await _t("_test_round_list")
+	_t("_test_every_tween_checks_reduced")
+	await _t("_test_dice_reduced")
+	await _t("_test_rows_answer_a_finger")
+	await _t("_test_count_waits_for_the_dots")
+	await _t("_test_arrival_moves_once")
+	await _t("_test_chemistry_figure_while_filling")
+	await _t("_test_review_waits_for_awards")
+	await _t("_test_land_hidden")
+	await _t("_test_fulltime_win")
+	await _t("_test_fulltime_loss_silent")
+	await _t("_test_fulltime_close_win")
+	await _t("_test_fulltime_big_loss")
+	await _t("_test_fulltime_reduced")
+	await _t("_test_fulltime_continue_frame1")
+	await _t("_test_fulltime_tap_rest")
+	await _t("_test_fulltime_tap_after_sting")
+	await _t("_test_fulltime_drag_not_tap")
+	await _t("_test_farewell_tap_holds")
+	await _t("_test_farewell_back")
 
 	_feel.test_motion = false
 	_feel.force_phone = false
@@ -84,6 +103,7 @@ func _run() -> void:
 ## once, and each sheet starts from a fresh copy of that round's results (a
 ## career and a round per sheet only replayed the same seeded week).
 var _week: Dictionary = {}
+var _ladder_beats: Dictionary = {}   ## _see_ladder: frame of the count's last number, frame of the pop
 
 
 func _prime(win: bool, hurt := true) -> void:
@@ -638,3 +658,746 @@ func _test_round_list() -> void:
 				"At the hub page's end its fade is gone too (alpha %.2f)" % page_fade.modulate.a)
 	hub.queue_free()
 	await _settle()
+
+
+## Reduced motion keeps the screen still (Settings: "no fades, counting numbers,
+## pulses, moving backgrounds or shake"), so every tween in the game's scripts sits
+## in a function that asks first (UiKit.motion_on, Feel.reduced, a screen's own
+## reduced check), or is on this list with the place that asks for it.
+const TWEEN_GUARDS := ["motion_on()", "Feel.reduced", "reduced_motion()", "_reduced()", "should_run()"]
+const TWEEN_ASKED_UPSTREAM := {
+	"scripts/ui/DraftScene.gd:_show_beat": "draft night's stage plays only when _night_on() (motion_on)",
+	"scripts/ui/DraftScene.gd:_end_beat": "fades the stage _show_beat put up",
+	"scripts/ui/DraftScene.gd:_slide_recent": "called only when motion_on (_recent_rows)",
+	"scripts/ui/UiKit.gd:_own": "the helpers' tween, made after each helper asks",
+	"scripts/ui/UiKit.gd:_after": "a helper's delay, made after the helper asks",
+}
+
+
+func _test_every_tween_checks_reduced() -> void:
+	var files: Array = []
+	var dirs: Array = ["res://scripts"]
+	while not dirs.is_empty():
+		var d: String = dirs.pop_back()
+		var da := DirAccess.open(d)
+		if da == null:
+			continue
+		for sub in da.get_directories():
+			dirs.append(d + "/" + sub)
+		for f in da.get_files():
+			if f.ends_with(".gd"):
+				files.append(d + "/" + f)
+	_check(files.size() > 100, "the scan reads the game's scripts (%d)" % files.size())
+	var seen := 0
+	var bare: Array = []
+	var used := {}
+	for path in files:
+		var lines: PackedStringArray = FileAccess.get_file_as_string(path).split("\n")
+		var start := -1
+		var fn := ""
+		for i in range(lines.size()):
+			var l: String = lines[i]
+			if l.begins_with("func ") or l.begins_with("static func "):
+				start = i
+				fn = l.trim_prefix("static ").trim_prefix("func ").get_slice("(", 0)
+			if not "create_tween(" in l or l.strip_edges().begins_with("#"):
+				continue
+			seen += 1
+			var key := "%s:%s" % [str(path).trim_prefix("res://"), fn]
+			var body := "\n".join(lines.slice(maxi(start, 0), i + 1))
+			var asks := false
+			for g in TWEEN_GUARDS:
+				asks = asks or g in body
+			if TWEEN_ASKED_UPSTREAM.has(key):
+				used[key] = true
+			elif not asks:
+				bare.append("%s line %d" % [key, i + 1])
+	_check(seen >= 20, "the scan finds the game's tweens (%d)" % seen)
+	_check(bare.is_empty(), "every tween asks Reduced motion first (not: %s)" % ", ".join(bare))
+	for k in TWEEN_ASKED_UPSTREAM:
+		_check(used.has(k), "%s still makes a tween (else take it off the list)" % k)
+
+
+## The dice at a break talk tumble; with Reduced motion they land at once.
+func _test_dice_reduced() -> void:
+	var host := Control.new()
+	host.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	root.add_child(host)
+	var dice: Control = load("res://scripts/ui/match/TalkDice.gd").new()
+	host.add_child(dice)
+	var landed := [0]
+	_state.set_reduced_motion(true)
+	_feel.clear()
+	dice.roll([3, 5], func() -> void: landed[0] += 1)
+	_check(dice.is_landed() and dice.faces == [3, 5] and landed[0] == 1 and _feel.moved.is_empty(),
+			"reduced: the dice land on the roll at once, no tumble (%s)" % str(_feel.moved))
+	_state.set_reduced_motion(false)
+	_feel.clear()
+	dice.roll([6, 2], func() -> void: landed[0] += 1)
+	_check(not dice.is_landed() and _feel.moved == ["dice"], "motion on: the dice tumble first (%s)" % str(_feel.moved))
+	await create_timer(1.6).timeout
+	_check(dice.is_landed() and dice.faces == [6, 2] and landed[0] == 2, "motion on: then land on the roll")
+	host.queue_free()
+	await _settle()
+
+
+## Every button answers a finger (director, 2026-10-11): a player row on My list
+## and a coach's row on Staff press in under a real tap, and still do their job.
+func _test_rows_answer_a_finger() -> void:
+	_prime(true, false)
+	for case in [["res://scenes/ListScene.tscn", "Row_"], ["res://scenes/StaffScene.tscn", "StaffRow_"]]:
+		var scene: Control = load(str(case[0])).instantiate()
+		# My list opens on its shape; the rows are on the Full list tab.
+		if "_pane" in scene:
+			scene.set("_pane", "list")
+		root.add_child(scene)
+		await _settle(8)
+		var row: Button = null
+		for b in scene.find_children(str(case[1]) + "*", "Button", true, false):
+			if (b as Control).is_visible_in_tree():
+				row = b
+				break
+		_check(row != null, "%s: a row is on screen" % case[0])
+		if row == null:
+			scene.queue_free()
+			continue
+		# The list's row opens a profile screen: here only its press is wanted.
+		for c in row.pressed.get_connections():
+			if (c["callable"] as Callable).get_method() == "_open_profile":
+				row.pressed.disconnect(c["callable"])
+		var hit := [false]
+		row.pressed.connect(func() -> void: hit[0] = true)
+		await Tap.steady(row)
+		_feel.clear()
+		var why: String = await Tap.tap(row)
+		_check(why == "" and hit[0], "%s: a real tap reaches %s (%s)" % [case[0], row.name, why])
+		_check("press" in _feel.moved, "%s: %s presses in under the finger (%s)" % [case[0], row.name, str(_feel.moved)])
+		_check(str(row.get_meta("feel", "")) == "soft", "%s: %s sounds as a button does" % [case[0], row.name])
+		scene.queue_free()
+		await _settle()
+
+
+## An arriving screen's count waits for the dots between screens (UI Batch 4):
+## built under the cover it shows the figure it counts from, and counts once
+## the dots have gone, where it is seen.
+func _test_count_waits_for_the_dots() -> void:
+	var wipe: Node = root.get_node("ScreenTransition")
+	var host := Control.new()
+	host.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	root.add_child(host)
+	var got := {}
+	_feel.clear()
+	wipe.call("cover", func():
+		var n: Label = _uk.lbl("", 20)
+		host.add_child(n)
+		got["label"] = n
+		_uk.count_up(n, 80, func(v): return "%d pts" % v)
+		got["under"] = n.text
+		got["moved"] = _feel.moved.duplicate())
+	await wipe.cleared
+	var n: Label = got.get("label")
+	_check(n != null and str(got.get("under", "")) == "0 pts",
+			"Under the dots the count shows where it starts (%s)" % str(got.get("under", "")))
+	_check((got.get("moved", ["x"]) as Array).is_empty(), "Under the dots it has not started (%s)" % str(got.get("moved", "")))
+	var at_clear := int(n.text.split(" ")[0]) if n != null else 99
+	_check(at_clear < 40, "It counts once the dots have gone (%s as they clear)" % (n.text if n != null else "no label"))
+	await create_timer(1.0).timeout
+	_check(n != null and n.text == "80 pts", "It ends on the true figure (%s)" % (n.text if n != null else "no label"))
+	host.queue_free()
+	await _settle()
+
+
+## Stats, Team selection and the Season review move as you arrive (counts,
+## the chemistry bar, a fade) and not again when the page is rebuilt by a
+## tab, a sort, a pick or a resize.
+func _test_arrival_moves_once() -> void:
+	var db = root.get_node("GameDB")
+	_state.start_season("COL", db.club_list("COL"))
+	for i in range(3):
+		_state.advance()
+	var paths := ["res://scenes/StatsHubScene.tscn", "res://scenes/SelectionScene.tscn",
+			"res://scenes/SeasonReviewScene.tscn"]
+	_check(paths.size() == 3, "Three screens arrive with motion")
+	for path in paths:
+		_feel.clear()
+		var scene: Control = load(path).instantiate()
+		root.add_child(scene)
+		await _settle()
+		var moved: Array = _feel.moved.duplicate()
+		_check(moved.has("count_up") or moved.has("fill_bar"), "%s: arriving, its figures move (%s)" % [path.get_file(), str(moved)])
+		_feel.clear()
+		scene.call("_build")
+		await _settle()
+		_check(_feel.moved.is_empty(), "%s: a rebuild does not move them again (%s)" % [path.get_file(), str(_feel.moved)])
+		scene.queue_free()
+		await _settle()
+
+
+## Arriving at Team selection the chemistry figure counts up with its bar and
+## sits where the meter puts that figure at every step: never to the left of
+## the bar's start, over the words beside it (the short phone bar).
+func _test_chemistry_figure_while_filling() -> void:
+	var db = root.get_node("GameDB")
+	_state.start_season("COL", db.club_list("COL"))
+	var scene: Control = load("res://scenes/SelectionScene.tscn").instantiate()
+	root.add_child(scene)
+	var fill: Control = null
+	var fig: Label = null
+	var worst := INF
+	var seen := {}
+	for i in range(30):
+		await process_frame
+		if fill == null:
+			fill = scene.find_child("ChemistryFill", true, false)
+			fig = fill.get_node_or_null("ChemistryFigure") if fill != null else null
+		if fig == null or fill.size.x <= 0.0 and fill.get_parent_control().size.x <= 0.0:
+			continue
+		seen[fig.text] = true
+		worst = minf(worst, fig.get_global_rect().position.x - fill.get_global_rect().position.x)
+	_check(fig != null, "Team selection has its chemistry figure")
+	_check(seen.size() >= 3, "The figure counts up with the bar (%d figures seen)" % seen.size())
+	_check(worst >= -0.5, "While it fills the figure never starts left of the bar (%.1f px)" % worst)
+	scene.queue_free()
+	await _settle()
+
+
+## On a first visit awards night opens over the Season review: the review's
+## figures wait under it and count once it has closed.
+func _test_review_waits_for_awards() -> void:
+	var db = root.get_node("GameDB")
+	_state.start_season("COL", db.club_list("COL"))
+	var season = _state.season
+	season.round_index = season.fixture.size()
+	_state.ensure_finals()
+	var guard := 0
+	while not season.is_season_over() and guard < 10:
+		guard += 1
+		_state.advance()
+	_check(season.is_season_over() and not _state.season_awards.is_empty(), "The season is over with its awards")
+	_state.season_awards["presentation_seen"] = false
+	var scene: Control = load("res://scenes/SeasonReviewScene.tscn").instantiate()
+	root.add_child(scene)
+	await _settle()
+	var night: Control = scene.find_child("SeasonAwards", true, false)
+	var finish: Label = scene.find_child("SeasonFinish", true, false)
+	_check(night != null and finish != null, "Awards night is up over the review")
+	_check(finish != null and not finish.has_meta("_motion_text"), "Under awards night the review's figures wait")
+	if night != null:
+		night.queue_free()
+	await _settle()
+	finish = scene.find_child("SeasonFinish", true, false)
+	_check(finish != null and finish.has_meta("_motion_text"), "Once it closes, the finish counts")
+	_feel.clear()
+	scene.call("_build")
+	await _settle()
+	_check(_feel.moved.is_empty(), "After that a rebuild moves nothing (%s)" % str(_feel.moved))
+	scene.queue_free()
+	await _settle()
+
+
+# ---------------------------------------------------------------------------
+# Full time (director, 2026-11-25): the result lands, then the ladder move
+# (FullTimeMotion).
+
+## land(hidden) (the full-time verdict): invisible from the call until its beat,
+## then it fades up as it lands. Without `hidden` (the hub's sheet) the text is
+## solid throughout; with Reduced motion it is there at once.
+func _test_land_hidden() -> void:
+	var host := Control.new()
+	host.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	root.add_child(host)
+	var l: Label = _uk.lbl("Won by 23", 30, _uk.TEXT, true)
+	host.add_child(l)
+	await _settle(2)
+	_feel.clear()
+	_uk.land(l, 0.4, true, true)
+	_check(is_equal_approx(l.modulate.a, 0.0), "land(hidden): invisible from the call (alpha %.2f)" % l.modulate.a)
+	await create_timer(0.15).timeout
+	_check(is_equal_approx(l.modulate.a, 0.0) and _feel.moved.is_empty() and not _feel.heard.has("land"),
+			"land(hidden): still invisible, still and silent before its beat (alpha %.2f, %s)" % [l.modulate.a, str(_feel.moved)])
+	await create_timer(1.0).timeout
+	_check(is_equal_approx(l.modulate.a, 1.0) and is_equal_approx(l.scale.x, 1.0) and _feel.moved == ["land"] and _feel.heard.has("land"),
+			"land(hidden): after its beat it has landed, solid and at rest, with the sting (alpha %.2f, scale %.2f, %s)"
+			% [l.modulate.a, l.scale.x, str(_feel.moved)])
+	var m: Label = _uk.lbl("Won by 9", 30, _uk.TEXT, true)
+	host.add_child(m)
+	await _settle(2)
+	_uk.land(m, 0.3)
+	_check(is_equal_approx(m.modulate.a, 1.0), "land without hidden leaves the text solid from the call (the hub's sheet)")
+	_state.set_reduced_motion(true)
+	var r: Label = _uk.lbl("Won by 4", 30, _uk.TEXT, true)
+	host.add_child(r)
+	_uk.land(r, 0.3, true, true)
+	_check(is_equal_approx(r.modulate.a, 1.0), "Reduced motion: land(hidden) leaves it visible from the call")
+	_state.set_reduced_motion(false)
+	host.queue_free()
+	await _settle()
+
+
+## Full time as Review match opens it, your score and theirs forced as [goals,
+## behinds]. The ladder spot before is forced four places away, so the ladder
+## line has a count to make.
+func _open_fulltime(mine: Array, theirs: Array) -> Control:
+	_prime(true, false)
+	var res: Dictionary = _state.last_match
+	var me := 0 if str(res["home"]) == _state.my_club else 1
+	var goals := [0, 0]
+	var behinds := [0, 0]
+	goals[me] = int(mine[0])
+	behinds[me] = int(mine[1])
+	goals[1 - me] = int(theirs[0])
+	behinds[1 - me] = int(theirs[1])
+	res["goals"] = goals
+	res["behinds"] = behinds
+	res["score"] = [goals[0] * 6 + behinds[0], goals[1] * 6 + behinds[1]]
+	_state.last_match = res
+	var now: int = _state.my_position()
+	_state.last_pos_before = now + 4 if now <= 14 else now - 4
+	_state.review_requested = true
+	_feel.clear()
+	var scene: Control = load("res://scenes/MatchScene.tscn").instantiate()
+	root.add_child(scene)
+	return scene
+
+
+func _ft_shell(scene: Node) -> Control:
+	var rise := scene.find_child("SheetRise", true, false)
+	return rise.get_child(0) as Control if rise != null and rise.get_child_count() > 0 else null
+
+
+func _ft_rows(scene: Node) -> Array:
+	return [scene.find_child("FinalScore_0", true, false), scene.find_child("FinalScore_1", true, false)]
+
+
+## Watch full time for `secs`, sampling every frame: the verdict's largest scale
+## and drop, the flash's brightest, and the sheet's widest sideways move.
+func _watch_fulltime(scene: Node, secs: float) -> Dictionary:
+	var v: Control = scene.find_child("Verdict", true, false)
+	var shell := _ft_shell(scene)
+	var x0 := shell.position.x if shell != null else 0.0
+	var out := {"max_s": 0.0, "max_dy": 0.0, "flash": 0.0, "max_dx": 0.0}
+	var timer := create_timer(secs)
+	while timer.time_left > 0.0:
+		await process_frame
+		if is_instance_valid(v):
+			out["max_s"] = maxf(float(out["max_s"]), v.scale.x)
+			if v.has_meta("_ft_pose"):
+				out["max_dy"] = maxf(float(out["max_dy"]), absf(float((v.get_meta("_ft_pose") as Dictionary)["dy"])))
+		if shell != null and is_instance_valid(shell):
+			if shell.has_meta("_ft_flash"):
+				out["flash"] = maxf(float(out["flash"]), float((shell.get_meta("_ft_flash") as Dictionary)["a"]))
+			out["max_dx"] = maxf(float(out["max_dx"]), absf(shell.position.x - x0))
+	return out
+
+
+## The verdict and both score rows are solid, at scale 1 and back in their places.
+func _ft_at_rest(scene: Node) -> bool:
+	var v: Control = scene.find_child("Verdict", true, false)
+	if v == null or not is_equal_approx(_alpha_chain(v), 1.0) or not is_equal_approx(v.scale.x, 1.0) or v.has_meta("_ft_pose"):
+		return false
+	for r in _ft_rows(scene):
+		if r == null or not is_equal_approx((r as Control).modulate.a, 1.0) or (r as Node).has_meta("_ft_pose"):
+			return false
+	return true
+
+
+## The ladder line counts the first time it is in view: on a phone, once it is
+## scrolled up into the sheet's window. Returns the line once it has had time.
+func _see_ladder(scene: Node, want: String) -> Label:
+	var l: Label = scene.find_child("LadderMove", true, false)
+	_check(l != null and l.text == want, "The ladder line holds the true words from the first frame (%s)" % (l.text if l != null else "missing"))
+	if l == null:
+		return null
+	var sc := scene.find_child("FullTime", true, false).find_children("*", "ScrollContainer", true, false)[0] as ScrollContainer
+	var mid := l.get_global_rect().get_center().y
+	var view := sc.get_global_rect()
+	if mid < view.position.y or mid > view.end.y:
+		_check(is_equal_approx(l.modulate.a, 0.0) and not _feel.moved.has("count_up"),
+				"Below the fold the ladder line waits, hidden, uncounted (alpha %.2f)" % l.modulate.a)
+		sc.scroll_vertical += int(mid - view.get_center().y)
+	else:
+		_check(_feel.moved.has("count_up"), "In view, the ladder line counted at its beat (%s)" % str(_feel.moved))
+	# Frame by frame: when the count's last number shows, and when the pop starts.
+	_ladder_beats = {"last": -1, "pop": -1}
+	var counted := false
+	var frame := 0
+	var t := create_timer(1.6)
+	while t.time_left > 0.0:
+		await process_frame
+		frame += 1
+		if l.text != want:
+			counted = true
+		elif counted and int(_ladder_beats["last"]) < 0:
+			_ladder_beats["last"] = frame
+		if _feel.moved.has("ft_pop") and int(_ladder_beats["pop"]) < 0:
+			_ladder_beats["pop"] = frame
+	_check(_feel.moved.has("count_up") and is_equal_approx(l.modulate.a, 1.0) and l.text == want and is_equal_approx(l.scale.x, 1.0),
+			"Seen, the ladder line counts to the true spot and rests solid (%s, alpha %.2f)" % [l.text, l.modulate.a])
+	return l
+
+
+## A 30-point win: the verdict winds up and slams, the sheet flashes your club's
+## colour, the rows snap in under it, and the ladder count ends on the pop.
+func _test_fulltime_win() -> void:
+	var scene := _open_fulltime([13, 5], [8, 5])
+	var v: Label = scene.find_child("Verdict", true, false)
+	var rows := _ft_rows(scene)
+	var cont: Control = scene.find_child("FullTimeContinue", true, false)
+	_check(v != null and v.text == "Won by 30", "Full time: the verdict says Won by 30 from the first frame (%s)" % (v.text if v != null else "missing"))
+	_check(v != null and is_equal_approx(v.modulate.a, 0.0) and rows[0] != null and is_equal_approx((rows[0] as Control).modulate.a, 0.0)
+			and is_equal_approx((rows[1] as Control).modulate.a, 0.0),
+			"The verdict and the score rows are hidden until their beat, never at rest and then popping")
+	_check(cont != null and is_equal_approx(_alpha_chain(cont), 1.0), "Continue is solid from the first frame")
+	var want: String = _state.ladder_move_line(_state.last_pos_before)
+	var w: Dictionary = await _watch_fulltime(scene, 1.3)
+	_check(_feel.moved.has("ft_slam") and _feel.moved.has("ft_flash") and _feel.moved.count("ft_snap") == 2
+			and not _feel.moved.has("ft_slam_heavy") and not _feel.moved.has("ft_shake") and not _feel.moved.has("land"),
+			"A 30-point win: wind-up and slam, the flash, both rows snap in; no heavy slam or shake (%s)" % str(_feel.moved))
+	_check(_feel.heard.has("land"), "A win: the sting on the impact")
+	_check(float(w["max_s"]) > 1.3 and float(w["max_s"]) <= 1.361, "A win winds up toward 1.36 (largest %.3f)" % float(w["max_s"]))
+	_check(float(w["flash"]) > 0.2 and float(w["flash"]) <= 0.301 and is_zero_approx(float(w["max_dx"])),
+			"A win: the winner's colour flashes to 0.30 (%.2f); the sheet stays still" % float(w["flash"]))
+	var shell := _ft_shell(scene)
+	_check(_ft_at_rest(scene) and shell != null and is_zero_approx(float((shell.get_meta("_ft_flash") as Dictionary)["a"])),
+			"A win: by 1.3 s everything is at rest and the flash gone")
+	var ink: Color = _uk.club_ink(_state.my_club)
+	_check(shell != null and (shell.get_meta("_ft_flash") as Dictionary)["col"] == Color(ink, 1.0),
+			"A win: the flash is your club's name colour, which reads on the dark sheet (%s)" % str(ink))
+	var l := await _see_ladder(scene, want)
+	_check(_feel.moved.has("ft_pop") and l != null and l.get_theme_color("font_color") == Color("cfcabe"),
+			"The ladder count ends on the pop and its colour comes back (%s)" % str(_feel.moved))
+	var last := int(_ladder_beats.get("last", -1))
+	var pop := int(_ladder_beats.get("pop", -1))
+	_check(last > 0 and pop >= last and pop - last <= 1,
+			"The pop lands with the count's last number (number on frame %d, pop on frame %d)" % [last, pop])
+	_check(_all_text_solid(scene.find_child("FullTime", true, false)), "Every line of full time ends solid")
+	scene.queue_free()
+	await _settle()
+
+
+## A 30-point loss: the plain slam, silent and without a flash (director,
+## 2026-11-25: no celebratory sting on a loss, and no flash).
+func _test_fulltime_loss_silent() -> void:
+	var scene := _open_fulltime([8, 5], [13, 5])
+	var v: Label = scene.find_child("Verdict", true, false)
+	_check(v != null and v.text == "Lost by 30", "Loss: the verdict says Lost by 30 (%s)" % (v.text if v != null else "missing"))
+	var w: Dictionary = await _watch_fulltime(scene, 1.2)
+	_check(_feel.moved.has("ft_slam") and not _feel.moved.has("ft_slam_heavy") and not _feel.moved.has("ft_flash")
+			and not _feel.moved.has("ft_shake") and not _feel.heard.has("land"),
+			"A 30-point loss: the plain slam, no flash, no shake, no sting (%s, %s)" % [str(_feel.moved), str(_feel.heard)])
+	_check(is_zero_approx(float(w["flash"])), "A loss: the sheet never flashes (%.2f)" % float(w["flash"]))
+	_check(_ft_at_rest(scene), "A 30-point loss: it ends solid and at rest")
+	scene.queue_free()
+	await _settle()
+
+
+## A close win (under 12): the heavy slam and the shake; Screen shake Off keeps
+## the sheet still.
+func _test_fulltime_close_win() -> void:
+	_state.set_screen_shake_on(true)
+	var scene := _open_fulltime([10, 5], [10, 0])
+	var w: Dictionary = await _watch_fulltime(scene, 1.4)
+	_check(_feel.moved.has("ft_slam_heavy") and _feel.moved.has("ft_shake") and _feel.moved.has("ft_flash"),
+			"A 5-point win: the heavy slam, the shake, the flash (%s)" % str(_feel.moved))
+	_check(float(w["max_s"]) > 1.4 and float(w["max_s"]) <= 1.481 and float(w["max_dx"]) > 1.5 and float(w["max_dx"]) <= 3.01,
+			"A close win winds up toward 1.48 (%.3f) and shakes up to 3 px (%.2f)" % [float(w["max_s"]), float(w["max_dx"])])
+	var shell := _ft_shell(scene)
+	_check(_ft_at_rest(scene) and shell != null and is_zero_approx(shell.position.x), "A close win ends at rest, the sheet back in place")
+	scene.queue_free()
+	await _settle()
+	_state.set_screen_shake_on(false)
+	scene = _open_fulltime([10, 5], [10, 0])
+	w = await _watch_fulltime(scene, 1.2)
+	_check(_feel.moved.has("ft_slam_heavy") and not _feel.moved.has("ft_shake") and is_zero_approx(float(w["max_dx"])),
+			"Screen shake Off: the heavy slam without the shake (%s)" % str(_feel.moved))
+	scene.queue_free()
+	await _settle()
+	_state.set_screen_shake_on(true)
+
+
+## A big loss (40 or more): the verdict sinks into place, silent, and the rows
+## fade up.
+func _test_fulltime_big_loss() -> void:
+	_state.set_screen_shake_on(true)
+	var scene := _open_fulltime([6, 5], [13, 8])
+	var v: Label = scene.find_child("Verdict", true, false)
+	_check(v != null and v.text == "Lost by 45", "Big loss: Lost by 45 (%s)" % (v.text if v != null else "missing"))
+	var w: Dictionary = await _watch_fulltime(scene, 1.4)
+	_check(_feel.moved.has("ft_sink") and not _feel.moved.has("ft_slam") and not _feel.moved.has("ft_flash")
+			and not _feel.moved.has("ft_shake") and not _feel.heard.has("land") and _feel.moved.count("reveal") >= 2,
+			"A 45-point loss: it sinks and the rows fade up; no slam, flash, shake or sting (%s, %s)" % [str(_feel.moved), str(_feel.heard)])
+	_check(float(w["max_dy"]) >= 7.9 and float(w["max_dy"]) <= 8.01 and float(w["max_s"]) <= 1.001,
+			"Big loss: it falls from 8 px above, clear of the line over it, without scaling (%.1f px)" % float(w["max_dy"]))
+	_check(_ft_at_rest(scene), "Big loss: it ends solid and in its place")
+	scene.queue_free()
+	await _settle()
+
+
+## Reduced motion (the director's rule): full time is all there at once, nothing
+## moves, only the sting sounds on a win.
+func _test_fulltime_reduced() -> void:
+	_state.set_reduced_motion(true)
+	var scene := _open_fulltime([10, 5], [10, 0])
+	var l: Label = scene.find_child("LadderMove", true, false)
+	var want: String = _state.ladder_move_line(_state.last_pos_before)
+	_check(_ft_at_rest(scene) and l != null and is_equal_approx(l.modulate.a, 1.0) and l.text == want,
+			"Reduced motion: the verdict, the rows and the ladder line are all there on the first frame")
+	await create_timer(1.2).timeout
+	_check(_feel.moved.is_empty(), "Reduced motion: nothing moves (%s)" % str(_feel.moved))
+	_check(_feel.heard.has("land"), "Reduced motion: the win's sting still sounds")
+	scene.queue_free()
+	await _settle()
+	scene = _open_fulltime([8, 5], [13, 5])
+	await create_timer(0.6).timeout
+	_check(not _feel.heard.has("land") and _feel.moved.is_empty(), "Reduced motion, a loss: silent and still (%s)" % str(_feel.heard))
+	scene.queue_free()
+	await _settle()
+	_state.set_reduced_motion(false)
+
+
+## A real finger on Continue from the first frame and mid-slam, on a close win
+## (the heavy slam and the shake): nothing the motion draws takes the touch.
+func _test_fulltime_continue_frame1() -> void:
+	var router := root.get_node("Router")
+	var stack: Array = (router.get("stack") as Array).duplicate()
+	router.set("stack", [])   # Back has nowhere to go: the scene stays to be checked
+	var scene := _open_fulltime([10, 5], [10, 0])
+	var v: Control = scene.find_child("Verdict", true, false)
+	var hidden := is_equal_approx(v.modulate.a, 0.0)
+	var why: String = await Tap.tap(scene.find_child("FullTimeContinue", true, false))
+	_check(why == "" and hidden, "A real tap on Continue at frame 1, the verdict still to come, reaches it (%s)" % why)
+	await create_timer(0.3).timeout
+	var mid := v.scale.x > 1.01 or v.modulate.a < 0.99
+	var why2: String = await Tap.tap(scene.find_child("FullTimeContinue", true, false))
+	_check(why2 == "" and mid, "...and mid-slam (scale %.2f) it still reaches it (%s)" % [v.scale.x, why2])
+	_check(not _feel.moved.has("ft_rest"), "A tap on Continue is Continue's, not a tap on the sheet (%s)" % str(_feel.moved))
+	var ok := true
+	for n in scene.find_child("FullTime", true, false).find_children("*", "Control", true, false):
+		if n is Label and (n as Control).mouse_filter != Control.MOUSE_FILTER_IGNORE and str(n.name).begins_with("Ft"):
+			ok = false
+	_check(ok, "Nothing full time's motion adds takes a touch")
+	scene.queue_free()
+	await _settle()
+	router.set("stack", stack)
+
+
+## A finger on the sheet away from its buttons: the verdict's place.
+func _tap_sheet(scene: Node) -> String:
+	var v: Control = scene.find_child("Verdict", true, false)
+	if v == null:
+		return "no verdict"
+	return await Tap.tap_at(v, v.size / 2.0, false)
+
+
+## The skip rule on full time (director, 2026-11-26: "Already at 6th", "Plays on
+## the tap"): a real tap on the sheet at its first frame puts every line in its
+## last place at once, the ladder line included, and a win's sting sounds on the
+## tap, once. Nothing counts, pops or slams later, even when the ladder is
+## scrolled to, and the tap does not leave full time.
+func _test_fulltime_tap_rest() -> void:
+	var router := root.get_node("Router")
+	var stack: Array = (router.get("stack") as Array).duplicate()
+	router.set("stack", [])
+	var scene := _open_fulltime([10, 5], [10, 0])
+	var v: Control = scene.find_child("Verdict", true, false)
+	var hidden := v != null and is_equal_approx(v.modulate.a, 0.0)
+	var why: String = await _tap_sheet(scene)
+	_check(why == "" and hidden and _feel.moved.has("ft_rest") and _ft_at_rest(scene),
+			"A real tap on the sheet at frame 1, the verdict still to come, puts it all in place (%s, %s)" % [why, str(_feel.moved)])
+	_check(_feel.heard.count("land") == 1, "A win: the sting sounds on the tap, once (%s)" % str(_feel.heard))
+	var l: Label = scene.find_child("LadderMove", true, false)
+	var want: String = _state.ladder_move_line(_state.last_pos_before)
+	_check(l != null and l.text == want and is_equal_approx(l.modulate.a, 1.0),
+			"The ladder line is already at its spot, solid (%s)" % (l.text if l != null else "missing"))
+	var shell := _ft_shell(scene)
+	_check(shell != null and is_zero_approx(shell.position.x) and is_zero_approx(float((shell.get_meta("_ft_flash", {"a": 0.0}) as Dictionary)["a"])),
+			"No flash and no shake after the tap")
+	await create_timer(1.6).timeout
+	if l != null:
+		var sc := scene.find_child("FullTime", true, false).find_children("*", "ScrollContainer", true, false)[0] as ScrollContainer
+		var mid := l.get_global_rect().get_center().y
+		var view := sc.get_global_rect()
+		if mid < view.position.y or mid > view.end.y:
+			sc.scroll_vertical += int(mid - view.get_center().y)
+	await create_timer(1.0).timeout
+	for beat in ["count_up", "ft_pop", "ft_slam", "ft_slam_heavy", "ft_flash", "ft_shake", "ft_snap"]:
+		_check(not _feel.moved.has(beat), "After the tap, nothing plays later: no %s (%s)" % [beat, str(_feel.moved)])
+	_check(_feel.heard.count("land") == 1 and l != null and l.text == want and is_equal_approx(l.modulate.a, 1.0),
+			"Scrolled to, the ladder line stays put and the sting never sounds again (%s)" % str(_feel.heard))
+	_check(scene.is_inside_tree() and scene.find_child("FullTimeContinue", true, false) != null,
+			"The tap stays on full time; only Continue leaves")
+	scene.queue_free()
+	await _settle()
+	router.set("stack", stack)
+
+
+## The sting once (director, 2026-11-26: "Plays on the tap"): a tap after the
+## impact has sounded it adds no second one, and a loss stays silent on the tap.
+func _test_fulltime_tap_after_sting() -> void:
+	var router := root.get_node("Router")
+	var stack: Array = (router.get("stack") as Array).duplicate()
+	router.set("stack", [])
+	var scene := _open_fulltime([13, 5], [8, 5])
+	await create_timer(0.8).timeout
+	var before: int = _feel.heard.count("land")
+	var why: String = await _tap_sheet(scene)
+	await create_timer(0.3).timeout
+	_check(before == 1 and why == "" and _feel.moved.has("ft_rest") and _feel.heard.count("land") == 1,
+			"A tap after the impact's sting: no second sting (%d before, %s)" % [before, str(_feel.heard)])
+	scene.queue_free()
+	await _settle()
+	scene = _open_fulltime([8, 5], [13, 5])
+	why = await _tap_sheet(scene)
+	await create_timer(1.0).timeout
+	_check(why == "" and _feel.moved.has("ft_rest") and _ft_at_rest(scene) and not _feel.heard.has("land"),
+			"A loss: the tap puts it in place, silent (%s, %s)" % [str(_feel.moved), str(_feel.heard)])
+	scene.queue_free()
+	await _settle()
+	router.set("stack", stack)
+
+
+## A finger that drags the sheet up is scrolling it, not tapping it; the next
+## plain tap still jumps.
+func _test_fulltime_drag_not_tap() -> void:
+	var router := root.get_node("Router")
+	var stack: Array = (router.get("stack") as Array).duplicate()
+	router.set("stack", [])
+	var scene := _open_fulltime([13, 5], [8, 5])
+	await _settle(2)
+	var v: Control = scene.find_child("Verdict", true, false)
+	var sc := scene.find_child("FullTime", true, false).find_children("*", "ScrollContainer", true, false)[0] as ScrollContainer
+	var bar := sc.get_v_scroll_bar()
+	var room := int(bar.max_value - bar.page)
+	_check(room > 20, "At phone size the sheet scrolls (%d px of room), so a drag can be told from a tap" % room)
+	var touch := InputEventScreenTouch.new()
+	touch.index = 0
+	touch.position = Tap.pixel_point(v, v.size / 2.0)
+	touch.pressed = true
+	Input.parse_input_event(touch)
+	Input.flush_buffered_events()
+	await _settle(2)
+	sc.scroll_vertical += 40   # the finger drags the sheet up
+	await _settle(2)
+	var lift := touch.duplicate() as InputEventScreenTouch
+	lift.pressed = false
+	Input.parse_input_event(lift)
+	Input.flush_buffered_events()
+	await _settle(2)
+	_check(sc.scroll_vertical > 0 and not _feel.moved.has("ft_rest"),
+			"A finger that drags the sheet scrolls it; it is not a tap (%s)" % str(_feel.moved))
+	sc.scroll_vertical = 0
+	await _settle(2)
+	var why: String = await _tap_sheet(scene)
+	_check(why == "" and _feel.moved.has("ft_rest"), "...and the next plain tap still jumps the sheet (%s)" % str(_feel.moved))
+	scene.queue_free()
+	await _settle()
+	router.set("stack", stack)
+
+
+## A legend's farewell over full time, as Review match opens it (the premiership
+## suite's way): his 200th, full time built under it and waiting.
+func _open_farewell_match() -> Dictionary:
+	_prime(true, false)
+	var res: Dictionary = _state.last_match
+	var opp := str(res["away"]) if str(res["home"]) == _state.my_club else str(res["home"])
+	var sq: Object = _state.my_squad()
+	var mine: Array = (sq.get("ground") as Array) + (sq.get("bench") as Array)
+	var man: Dictionary = mine[0]
+	_state.last_pos_before = _state.my_position()
+	_state.review_requested = true
+	_feel.clear()
+	var scene: Control = load("res://scenes/MatchScene.tscn").instantiate()
+	scene.set("_farewell", {"ms": {"player": "Smith", "games": 200, "id": str(man["id"])}, "man": man,
+			"opp": opp, "mine": mine, "theirs": []})
+	root.add_child(scene)
+	await _settle(2)
+	return {"scene": scene, "fw": root.find_child("FarewellVignette", true, false)}
+
+
+func _close_match(scene: Node) -> void:
+	if is_instance_valid(scene):
+		scene.queue_free()
+	await create_timer(0.3).timeout
+	var left := root.find_child("Farewell", true, false)
+	if left != null:
+		left.queue_free()
+	await _settle()
+
+
+## The skip rule on a legend's farewell (director, 2026-11-26: "Continue, holds
+## at end"): a real tap on the scene at its first frame jumps to its last frame,
+## him up on two teammates' shoulders, and holds there until Continue; the strip
+## beside Continue is the scene's too; untouched, it plays through and holds.
+func _test_farewell_tap_holds() -> void:
+	var end: float = load("res://scripts/ui/match/FarewellVignette.gd").get_script_constant_map()["END"]
+	var o: Dictionary = await _open_farewell_match()
+	var scene: Control = o["scene"]
+	var fv: Control = o["fw"]
+	var cont: Control = root.find_child("FarewellContinue", true, false)
+	_check(fv != null and cont != null and float(fv.get("_t")) < 0.5 and is_equal_approx(_alpha_chain(cont), 1.0),
+			"A legend's farewell opens with Continue under it, solid, at its first frame")
+	if fv == null or cont == null:
+		await _close_match(scene)
+		return
+	var why: String = await Tap.tap_at(fv, fv.size / 2.0)
+	_check(why == "" and _feel.moved.has("fw_rest") and is_equal_approx(float(fv.get("_t")), end) and str(fv.call("phase")) == "chaired",
+			"A real tap on the scene at its first frame jumps to its last frame, him chaired off (%s, t %.2f)" % [why, float(fv.get("_t"))])
+	await create_timer(0.8).timeout
+	_check(is_instance_valid(fv) and bool(fv.call("is_open")) and is_equal_approx(float(fv.get("_t")), end)
+			and not _feel.moved.has("fw_leave") and not _feel.moved.has("ft_slam"),
+			"...and holds there: the farewell stays up, full time waits under it (%s)" % str(_feel.moved))
+	why = await Tap.tap(cont)
+	await create_timer(1.3).timeout
+	_check(why == "" and _feel.moved.has("fw_leave") and root.find_child("FarewellVignette", true, false) == null
+			and _feel.moved.has("ft_slam") and _ft_at_rest(scene),
+			"Continue on the held frame: the farewell goes and the result lands (%s, %s)" % [why, str(_feel.moved)])
+	await _close_match(scene)
+	# The black strip round Continue is the scene's: a tap there jumps too.
+	o = await _open_farewell_match()
+	scene = o["scene"]
+	var strip: Control = root.find_child("FarewellFooter", true, false)
+	why = await Tap.tap_at(strip, Vector2(6.0, strip.size.y / 2.0)) if strip != null else "no strip"
+	_check(why == "" and _feel.moved.has("fw_rest") and not _feel.moved.has("fw_leave"),
+			"A tap on the strip beside Continue jumps the scene; it does not leave it (%s, %s)" % [why, str(_feel.moved)])
+	await _close_match(scene)
+	# Untouched: it plays through and holds on the last frame until Continue.
+	o = await _open_farewell_match()
+	scene = o["scene"]
+	fv = o["fw"]
+	await create_timer(end + 0.6).timeout
+	_check(is_instance_valid(fv) and bool(fv.call("is_open")) and is_equal_approx(float(fv.get("_t")), end)
+			and not _feel.moved.has("fw_rest") and not _feel.moved.has("ft_slam"),
+			"Untouched, it plays through and holds on him chaired off; full time still waits (%s)" % str(_feel.moved))
+	await _close_match(scene)
+
+
+## Continue and Back leave a legend's farewell from its first frame (the skip
+## rule); Back stays on the match and full time lands. A second finger on the
+## farewell as it fades is still the farewell's, not a tap on full time under it.
+func _test_farewell_back() -> void:
+	var o: Dictionary = await _open_farewell_match()
+	var scene: Control = o["scene"]
+	var fv: Control = o["fw"]
+	_check(fv != null and float(fv.get("_t")) < 0.5, "A legend's farewell is up at its first frame")
+	var back: Variant = scene.call("handle_back")
+	await _settle()
+	_check(back == true and _feel.moved.has("fw_leave") and not _feel.moved.has("fw_rest"),
+			"Back at the first frame leaves the farewell (%s)" % str(_feel.moved))
+	await create_timer(1.3).timeout
+	var ft: Control = scene.find_child("FullTime", true, false)
+	_check(root.find_child("FarewellVignette", true, false) == null and scene.is_inside_tree() and ft != null and ft.is_visible_in_tree(),
+			"...and stays on the match: the farewell gone, full time up")
+	_check(_feel.moved.has("ft_slam") and _ft_at_rest(scene), "...where the result lands (%s)" % str(_feel.moved))
+	await _close_match(scene)
+	o = await _open_farewell_match()
+	scene = o["scene"]
+	fv = o["fw"]
+	var why: String = await Tap.tap(root.find_child("FarewellContinue", true, false))
+	_check(why == "" and _feel.moved.has("fw_leave") and not _feel.moved.has("fw_rest"),
+			"A real tap on Continue at the first frame leaves the farewell; it is Continue's, not a jump (%s, %s)" % [why, str(_feel.moved)])
+	var up := is_instance_valid(fv) and fv.is_inside_tree()
+	var ft2: Control = scene.find_child("FullTime", true, false)
+	await Tap.tap_at(ft2, ft2.size / 2.0, false)
+	_check(up and not _feel.moved.has("ft_rest"),
+			"A second finger on the farewell as it fades is the farewell's: full time under it does not jump (%s)" % str(_feel.moved))
+	await _close_match(scene)

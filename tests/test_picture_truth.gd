@@ -311,7 +311,13 @@ func _tick(pitch, m: Control) -> void:
 	var bs := Truth.ball_speed_fault(ball, _prev_ball, h)
 	if not _prev_ball.is_empty():
 		_peak("ball_ratio", (ball["pos"] as Vector2).distance_to(_prev_ball["pos"]) / (Truth.KICK_SPEED * h))
-	_ok("ball speed", bs == "", "The ball moves no faster than a kick (%s; %s)" % [bs, _where(d)])
+	if int(pitch.period) == period_before:
+		_ok("ball speed", bs == "", "The ball moves no faster than a kick (%s; %s)" % [bs, _where(d)])
+	else:
+		# A new quarter's ball is with the umpire in the centre (MatchDirector "place"): the
+		# break is off the picture, as the discs' change of ends is (bug bash 2026-11-23: the
+		# ball slid there unheld at chest height from where the last quarter ended).
+		_count("ball at a new quarter")
 	_prev_w2s = PackedVector2Array()
 	for t in d.tokens:
 		_prev_w2s.append(pitch._w2s(t["pos"]))

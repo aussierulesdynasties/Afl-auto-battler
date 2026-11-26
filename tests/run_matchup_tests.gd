@@ -53,6 +53,7 @@ func _run() -> void:
 	await _t("_test_finals_week_by_week")
 	await _t("_test_finals_cup")
 	await _t("_test_finals_status_paths")
+	await _t("_test_finals_screen_each_era")
 	await _t("_test_premiership_streamers")
 	await _t("_test_coach_approach_card")
 	await _t("_test_season_wrap")
@@ -393,6 +394,16 @@ func _test_finals_week_by_week() -> void:
 		weeks += 1
 		one_at_a_time = one_at_a_time and (_state.season.is_season_over()
 				or int(_state.season.finals.get("week", 0)) == before + 1)
+		# Grand Final week: the premiers' flag ceremony comes first, then the
+		# week's results (director, 2026-11-25: another club's flag gets the full
+		# ceremony, skippable). A real tap on its Continue.
+		var cer: Variant = hub.get("_ceremony")
+		if cer != null and is_instance_valid(cer):
+			one_at_a_time = one_at_a_time and _state.season.is_season_over()
+			var cont: Control = (cer as Node).find_child("CeremonyContinue", true, false)
+			var cwhy: String = await Tap.tap(cont) if cont != null else "no Continue"
+			await _settle()
+			one_at_a_time = one_at_a_time and cwhy == ""
 		one_at_a_time = one_at_a_time and hub.get("_results_overlay") != null
 		if not _state.season.is_season_over():
 			one_at_a_time = one_at_a_time and int(_state.season_awards.get("year", 0)) != _state.season_year
@@ -1439,6 +1450,87 @@ func _settle() -> void:
 		await process_frame
 
 
+## The finals screen and the hub's finals words follow the season's real
+## finals system (bro, 2026-11-23: a 2010 save showed a wildcard round, which
+## the AFL brought in only in 2026). Each era's series is played through on a
+## phone and a PC: every week's tabs and headings are that year's, no wildcard
+## before 2026, every slot fills (the ranked McIntyre and final-six slots
+## too), every later final has its routes in, and the hub names the week.
+func _test_finals_screen_each_era() -> void:
+	var db = root.get_node("GameDB")
+	var hub = load("res://scripts/ui/HubScene.gd")
+	_reset()
+	_state.start_season("FRE", db.club_list("FRE"))
+	var base = _state.season
+	# [year, clubs, the hub's first-week button, weeks]
+	var eras := [[1990, 14, "Play the finals", 4], [1991, 15, "Play the finals", 4], [1993, 15, "Play the finals", 4],
+			[1997, 16, "Play the finals", 4], [2010, 16, "Play the finals", 4], [2026, 18, "Play the wildcard", 5]]
+	for era in eras:
+		var y := int(era[0])
+		var codes: Array = (base.clubs as Array).slice(0, int(era[1]))
+		var lists := {}
+		for c in codes:
+			lists[c] = base.lists[c]
+		var s = load("res://scripts/sim/Season.gd").new(codes, lists, 7, y)
+		s.round_index = s.fixture.size()
+		s.start_finals()
+		_state.season = s
+		_check(s.finals_weeks() == int(era[3]), "%d: %d finals weeks (%d)" % [y, int(era[3]), s.finals_weeks()])
+		_check(str(hub.finals_words(s)[0]) == str(era[2]), "%d: the hub's first finals button reads %s (%s)" % [y, era[2], hub.finals_words(s)[0]])
+		_check(SeasonRules.how_finals_work(s.finals_format()).contains("top %d" % s.finalists()),
+				"%d: how to play names the top %d" % [y, s.finalists()])
+		var guard := 0
+		while guard < 8:
+			guard += 1
+			var done: bool = s.is_season_over()
+			var name: String = SeasonRules.week_name(s.finals_format(), int(s.finals.get("week", 1)))
+			if not done and (s.finals.get("replay", []) as Array).is_empty():
+				_check(str(hub.finals_words(s)[1]).begins_with(name.substr(0, 4)),
+						"%d week %d: the hub heads the week %s (%s)" % [y, int(s.finals["week"]), name, hub.finals_words(s)[1]])
+			for sz in [Vector2i(390, 844), Vector2i(1280, 720)]:
+				root.size = sz
+				var host := MarginContainer.new()
+				root.add_child(host)
+				host.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+				var fb = load("res://scripts/ui/FinalsBracket.gd").new()
+				host.add_child(fb)
+				fb.setup(s, "FRE", func(_md): pass)
+				await _settle()
+				var words := []
+				for n in fb.find_children("*", "Control", true, false):
+					if n is Label or n is Button:
+						words.append(str(n.text))
+				var all := " | ".join(words)
+				_check(all.to_lower().contains("wildcard") == (y >= 2026),
+						"%d %dx%d week %d: a wildcard round only from 2026 (%s)" % [y, sz.x, sz.y, int(s.finals["week"]), all.left(300)])
+				if sz.x < 600:
+					var tabs: Control = fb.find_child("FinalsStage", true, false)
+					_check(tabs != null and tabs.get_child_count() == s.finals_weeks(),
+							"%d: the phone's stage tabs are the %d weeks" % [y, s.finals_weeks()])
+				if done:
+					_check(not all.contains("Winner of") and not all.contains("Loser of") and not all.contains("-placed")
+							and not all.contains("highest") and not all.contains("To be decided"),
+							"%d %dx%d: once the flag is decided every final shows its clubs (%s)" % [y, sz.x, sz.y, all.left(400)])
+					# Every final after week one has a route in from each side that is not a seed.
+					var routes: Array = fb._routes()
+					var weeks: Array = fb._weeks()
+					for w in range(1, weeks.size()):
+						for m in weeks[w][2]:
+							var want := 0
+							for side in [str(m[2]), str(m[3])]:
+								want += 0 if side.begins_with("S") else 1
+							var have := routes.filter(func(r): return str(r[1]) == str(m[0])).size()
+							_check(have == want, "%d: %s has %d routes in (%d)" % [y, m[0], want, have])
+				host.queue_free()
+				await _settle()
+			if done:
+				break
+			s.play_finals_week()
+		_check(s.is_season_over(), "%d: the series reached a premier" % y)
+	root.size = Vector2i(1280, 720)
+	_state.season = base
+
+
 ## Premiership streamers (director, 2026-11-04: particles only for the
 ## premiership and the Brownlow reveal). They fall once when the finals series
 ## opens with the flag decided, in the premiers' two colours, go through a
@@ -1572,12 +1664,14 @@ func _test_premiership_streamers() -> void:
 	feel.test_motion = false
 	hub.queue_free()
 	await _settle()
-	# Nowhere else: only the hub's finals series names the streamers.
+	# Nowhere else: only the hub's finals series and the premiership ceremony
+	# (director's plan, 2026-11-25) name the streamers.
 	var users := []
 	_scripts_naming("res://scripts", "PremiershipStreamers", users)
 	users.sort()
-	_check(users == ["res://scripts/ui/HubScene.gd", "res://scripts/ui/PremiershipStreamers.gd"],
-			"Only the finals series plays streamers (%s)" % str(users))
+	_check(users == ["res://scripts/ui/HubScene.gd", "res://scripts/ui/PremiershipStreamers.gd",
+			"res://scripts/ui/match/PremiershipCeremony.gd"],
+			"Only the finals series and the premiership ceremony play streamers (%s)" % str(users))
 	var hub_src := FileAccess.get_file_as_string("res://scripts/ui/HubScene.gd")
 	_check(hub_src.count("PremiershipStreamers") == 1, "The hub starts them in one place only")
 

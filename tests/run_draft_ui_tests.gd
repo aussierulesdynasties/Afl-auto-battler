@@ -41,8 +41,11 @@ func _run() -> void:
 	await _t("_test_phone_browser_never_wide")
 	await _t("_test_stage")
 	await _t("_test_league_draft_stays_instant")
+	await _t("_test_pick_keeps_rows")
+	await _t("_test_rivals_land_a_few_a_frame")
 	await _t("_test_take_tasmania")
 	await _t("_test_first_offseason")
+	await _t("_test_forge_signings_cost_picks")
 	await _t("_test_rival_why")
 	await _t("_test_draft_fit")
 	await _t("_test_redraft_wears_club")
@@ -1536,6 +1539,10 @@ func _test_first_offseason() -> void:
 	_check(why == "" and _state.my_club == "GEE" and gate != null and _state.first_offseason == 1
 			and _state.offseason_open() and ui.find_child("DraftWorkspace", true, false) == null,
 			"A finger on Geelong opens the 2026 off-season before the draft (%s)" % why)
+	# Bug bash batch F (P1-9; director 2026-11-25, "Greyed, red line"): before
+	# Start the draft, a Combine prospect's Sign is greyed under the red line,
+	# and a finger on it picks nobody.
+	await _sign_waits_for_the_draft(ui)
 	# Every real contract runs on: nobody is out of contract in this window.
 	var expiring := 0
 	var listed := 0
@@ -1567,8 +1574,30 @@ func _test_first_offseason() -> void:
 	var start: Node = draft_ui.find_child("FirstOffseasonStart", true, false)
 	_check(start != null and (start as Button).text == "Start the draft",
 			"Back at the draft, the off-season's screen is still up")
+	# Bug bash batch F (M-5; director 2026-11-25, "Football line"): closing the
+	# window takes a moment, so the cover and its line go up before it runs.
+	var wipe := root.get_node("ScreenTransition")
+	var cover_line: Label = wipe.get_node("CoverLine")
+	wipe.set("test_cover", true)
+	# Looked at every frame from the tap on: the first frame the line is up
+	# says whether the window was still open.
+	var seen := {"up": false, "before": false}
+	var look := func():
+		if not seen["up"] and cover_line.visible and cover_line.text == "Starting the draft...":
+			seen["up"] = true
+			seen["before"] = _state.first_offseason == 1
+	process_frame.connect(look)
 	why = await Tap.tap(start)
+	for i in range(1200):
+		if not bool(wipe.get("busy")):
+			break
+		await process_frame
+	process_frame.disconnect(look)
+	wipe.set("test_cover", false)
 	await _settle()
+	_check(seen["up"] and seen["before"],
+			"A finger on Start the draft puts up the cover with \"Starting the draft...\" before the window closes (line %s, before %s)" % [
+			seen["up"], seen["before"]])
 	var signed := 0
 	for code in _state.league_lists:
 		for p in _state.league_lists[code]:
@@ -1585,4 +1614,336 @@ func _test_first_offseason() -> void:
 			short += 1
 	_check(short == 0, "Every Geelong contract still runs into 2027")
 	draft_ui.queue_free()
+	await _settle()
+
+
+## The opening off-season's Combine: a prospect's sheet keeps Sign greyed
+## with the line above it, and a finger on Sign picks nobody (bug bash
+## 2026-11-25, P1-9: one tap made our pick and ran 16 rival picks).
+func _sign_waits_for_the_draft(ui: Control) -> void:
+	var picks_before: int = _state.draft.count()
+	var at_before := int(_state.draft.pick_index)
+	var why: String = await Tap.tap(ui.find_child("CombineEntry", true, false))
+	await _settle()
+	for n in ["CombineIntroOk"]:
+		var ok := ui.find_child(n, true, false) as BaseButton
+		if ok != null and ok.is_visible_in_tree():
+			await Tap.tap(ok)
+			await _settle()
+	var row: BaseButton = null
+	for c in ui.find_children("Prospect_*", "BaseButton", true, false):
+		if (c as BaseButton).is_visible_in_tree():
+			row = c
+			break
+	_check(why == "" and row != null, "The Combine opens in the off-season with its prospects (%s)" % why)
+	if row == null:
+		return
+	why = await Tap.tap(row)
+	await _settle()
+	var sign: Button = ui.find_child("DetailDraft", true, false)
+	var line: Label = ui.find_child("DetailBlocked", true, false)
+	_check(why == "" and sign != null and sign.is_visible_in_tree() and sign.disabled,
+			"A finger on a prospect opens his sheet with Sign there but greyed (%s)" % why)
+	_check(line != null and line.is_visible_in_tree()
+			and line.text == "The National Draft hasn't started. The trade period and free agency are still open."
+			and line.get_theme_color("font_color") == load("res://scripts/ui/UiKit.gd").BAD
+			and sign != null and line.get_global_rect().end.y <= sign.get_global_rect().position.y + 0.5,
+			"Above it, in red: %s" % (line.text if line != null else "no line"))
+	if sign != null:
+		var missed: String = await Tap.tap(sign)
+		await _settle()
+		_check(missed != "" and _state.draft.count() == picks_before and int(_state.draft.pick_index) == at_before
+				and _state.first_offseason == 1,
+				"A finger on the greyed Sign picks nobody and the draft has not moved (%d picks, pick %d)" % [
+				_state.draft.count(), int(_state.draft.pick_index)])
+	var close: Button = ui.find_child("DetailClose", true, false)
+	if close != null:
+		await Tap.tap(close)
+		await _settle()
+	# The Combine has no button of its own to leave by (Android Back closes it).
+	var combine = ui.get("_combine")
+	if is_instance_valid(combine):
+		combine.call("close")
+		await _settle()
+
+
+## A Forge club signs in the opening off-season (director, 2026-11-25: "WEIRD
+## draft stuff going on when i play as a club forge team"; "Yes, I signed
+## some"). Each signing counts at once ("Live count + warning"): the brief
+## names the picks that will pass, the offer sheet names the pick the next
+## signing costs, the draft passes exactly those picks, and the pick log shows
+## each pass as a row ("Show passes as rows"), counted in its tab.
+func _test_forge_signings_cost_picks() -> void:
+	_state.reset("2026")
+	var err = _state.create_club({"name": "Darwin", "short": "Darwin", "code": "DAR",
+			"location": "darwin", "primary": "#F2B705", "secondary": "#7A1F2B",
+			"accent": "#FFFFFF", "design": "sash", "kit": "p/s/a"})
+	_check(str(err) == "", "The Forge club is made (%s)" % str(err))
+	_state.interview_due = false
+	_state.begin_real_lists()
+	root.size = Vector2i(390, 844)
+	var ui: Control = load("res://scenes/DraftScene.tscn").instantiate()
+	root.add_child(ui)
+	await _settle()
+	ui.call("_on_club_chosen", "DAR")
+	await _settle()
+	var d = _state.draft
+	var spots: Dictionary = _state.draft_list_spots()
+	var picks: Array = spots["picks"]
+	_check(_state.first_offseason == 1 and picks.size() >= 2 and int(spots["open"]) > 0,
+			"Darwin opens its off-season with spots and picks (%s)" % str(spots))
+	# Sign free agents one by one until a pick will pass, checking each step.
+	var signed := 0
+	var warned := ""
+	for p in _state.free_agents.duplicate():
+		var before: Dictionary = _state.draft_list_spots()
+		if not (before["passing"] as Array).is_empty() or int(before["open"]) <= 0:
+			break
+		var line: String = _state.signing_costs_pick_line()
+		var r: Dictionary = _state.sign_free_agent(str(p["id"]), 1)
+		for k in 8:
+			if str(r.get("answer", "")) == "counter":
+				r = _state.offer_free_agent(str(p["id"]), int(r["salary"]), 1)
+			elif str(r.get("answer", "")) == "table":
+				r = _state.offer_free_agent(str(p["id"]), int(r["salary"]) + 20000, 1)
+			else:
+				break
+		if str(r.get("answer", "")) != "signed":
+			continue
+		signed += 1
+		var after: Dictionary = _state.draft_list_spots()
+		_check(int(after["open"]) == int(before["open"]) - 1,
+				"Signing %d counts at once: %d spots, then %d" % [signed, int(before["open"]), int(after["open"])])
+		if int(before["open"]) <= (before["picks"] as Array).size():
+			var lost := int((before["picks"] as Array)[int(before["open"]) - 1])
+			warned = line
+			_check(line == "Signing him means pick %d passes." % lost and (after["passing"] as Array).has(lost),
+					"The warning named the pick he cost (%s; passing now %s)" % [line, str(after["passing"])])
+	var plan: Dictionary = _state.draft_list_spots()
+	var passing: Array = plan["passing"]
+	_check(signed > 0 and warned != "" and not passing.is_empty(),
+			"Signings took Darwin past its spots (%d signed, passing %s)" % [signed, str(passing)])
+	var brief: String = _state.draft_spots_line()
+	_check(brief.contains("will pass unless you delist before it starts")
+			and brief.contains(d.picks_words(passing)),
+			"The brief names the picks that will pass: %s" % brief)
+	# The offer sheet says it too, with "too" once a pick already passes.
+	var off: Control = load("res://scenes/OffseasonScene.tscn").instantiate()
+	root.add_child(off)
+	await _settle()
+	var fa_id := ""
+	for p in _state.free_agents:
+		fa_id = str(p["id"])
+		break
+	if int(plan["open"]) > 0 and fa_id != "":
+		off.call("_open_talks", fa_id, true)
+		await _settle()
+		var cost := off.find_child("FaPickCost", true, false) as Label
+		var want := "Signing him means pick %d passes too." % int((plan["picks"] as Array)[int(plan["open"]) - 1])
+		_check(cost != null and cost.text == want and cost.is_visible_in_tree(),
+				"The offer sheet warns: %s (wanted %s)" % [cost.text if cost != null else "no line", want])
+	off.queue_free()
+	await _settle()
+	# The draft passes exactly the picks the brief named.
+	ui.call("_end_first_offseason")
+	await _settle()
+	# The recruiters' meeting opens the draft: Done, as a coach would.
+	var done := ui.find_child("MeetingDone", true, false) as Button
+	var met: String = await Tap.tap(done) if done != null else ""
+	await _settle()
+	_check(met == "" and ui.find_child("DraftMeeting", true, false) == null,
+			"Done closes the recruiters' meeting (%s)" % met)
+	d = _state.draft
+	var guard := 0
+	while not d.is_finished() and guard < 200:
+		guard += 1
+		if d.is_user_turn():
+			var chosen := {}
+			for q in d.pool:
+				if d.can_pick_player(q):
+					chosen = q
+					break
+			if chosen.is_empty():
+				break
+			d.pick(chosen)
+		d.auto_until_user_turn()
+	var passed_mine := []
+	for e in d.user_passed:
+		passed_mine.append(int(e["pick"]))
+	_check(passed_mine == passing, "The draft passed the picks the brief named (%s, named %s)" % [str(passed_mine), str(passing)])
+	# The pick log: a row for every passed pick, counted in its tab. The
+	# picks above ran on the draft itself: refresh as the screen does after one.
+	ui.call("_refresh")
+	await _settle()
+	var tab := ui.find_child("Tab_picks", true, false) as Button
+	var why: String = await Tap.tap(tab) if tab != null else "no Picks tab"
+	await _settle()
+	var called: int = d.pick_history.size() + d.passed_picks.size()
+	tab = ui.find_child("Tab_picks", true, false) as Button   # the tabs are rebuilt on a tap
+	_check(why == "" and tab != null and tab.text.contains("(%d)" % called),
+			"The Picks tab counts the passes too: %s, %d called (%s)" % [tab.text if tab != null else "-", called, why])
+	var mine_rows := 0
+	for n in passing:
+		var row := ui.find_child("HistoryPassWhy_%d" % int(n), true, false) as Label
+		if row != null and row.text == "passed: list full":
+			mine_rows += 1
+	# The log pages its rows: the newest come first, so look at every page.
+	var more := ui.find_child("EarlierPicks", true, false)
+	while more != null and mine_rows < passing.size():
+		(more as Button).emit_signal("pressed")
+		await _settle()
+		mine_rows = 0
+		for n in passing:
+			var row := ui.find_child("HistoryPassWhy_%d" % int(n), true, false) as Label
+			if row != null and row.text == "passed: list full":
+				mine_rows += 1
+		more = ui.find_child("EarlierPicks", true, false)
+	_check(mine_rows == passing.size(),
+			"Each of Darwin's passed picks has its row: %d of %d" % [mine_rows, passing.size()])
+	ui.queue_free()
+	await _settle()
+
+
+## The draft hang on a phone (2026-11-23): a pick keeps the board's rows of the
+## players still on it, in the board's order, each pick button as a freshly
+## built row would have it; and the pick log out of view catches up when its
+## tab is opened.
+func _test_pick_keeps_rows() -> void:
+	_state.reset()
+	_state.draft = load("res://scripts/sim/Draft.gd").new(_db.all_players_sorted(),
+			_db.active_clubs(2026).duplicate(), 12345)
+	root.size = Vector2i(390, 844)
+	var ui: Control = load("res://scenes/DraftScene.tscn").instantiate()
+	root.add_child(ui)
+	ui.call("_on_club_chosen", "COL")
+	await _settle()
+	var draft = _state.draft
+	var box: Control = ui.get("_board_box")
+	var before := {}
+	for c in box.get_children():
+		before[str(c.name)] = c.get_instance_id()
+	var pick: Button = null
+	for c in box.get_children():
+		var b := c.find_child("Pick_*", true, false) as Button
+		if b != null and not b.disabled:
+			pick = b
+			break
+	var why: String = await Tap.tap(pick) if pick != null else "no pick button"
+	_check(why == "", "A finger's tap reaches a pick button on the board (%s)" % why)
+	await _settle()
+	var rows: Array = ui.call("_board_rows")
+	var shown: Array = box.get_children().filter(func(c): return str(c.name).begins_with("Player_"))
+	var in_order := shown.size() == mini(int(ui.get("_shown")), rows.size())
+	var kept := 0
+	var buttons_right := true
+	for i in range(shown.size()):
+		var row: Control = shown[i]
+		var p: Dictionary = rows[i] if i < rows.size() else {}
+		in_order = in_order and str(row.name) == "Player_" + str(p.get("id", ""))
+		if before.get(str(row.name), 0) == row.get_instance_id():
+			kept += 1
+			var fresh: Control = ui.call("_player_row", p)
+			var a := row.find_child("Pick_*", true, false) as Button
+			var f := fresh.find_child("Pick_*", true, false) as Button
+			buttons_right = buttons_right and a.text == f.text and a.disabled == f.disabled \
+					and a.tooltip_text == f.tooltip_text and row.tooltip_text == fresh.tooltip_text \
+					and a.get_theme_stylebox("normal") is StyleBoxFlat and f.get_theme_stylebox("normal") is StyleBoxFlat \
+					and (a.get_theme_stylebox("normal") as StyleBoxFlat).bg_color == (f.get_theme_stylebox("normal") as StyleBoxFlat).bg_color
+			fresh.free()
+	_check(in_order, "After a pick the board's rows are the board's players, in its order (%d rows)" % shown.size())
+	_check(kept > 0 and kept < shown.size(),
+			"A pick keeps the rows still on the board and builds the new ones (%d of %d kept)" % [kept, shown.size()])
+	_check(buttons_right, "A kept row's pick button reads as a freshly built row's would")
+	var tab: Button = ui.find_child("Tab_picks", true, false)
+	why = await Tap.tap(tab) if tab != null else "no Picks tab"
+	_check(why == "", "A finger's tap reaches the Picks tab (%s)" % why)
+	await _settle()
+	var history: Control = ui.get("_history_box")
+	var logged := history.get_children().filter(func(c): return str(c.name).begins_with("HistoryPick_")).size()
+	_check(logged == mini(int(ui.get("_history_shown")), draft.pick_history.size()) and logged > 1,
+			"The pick log opened after a pick shows every pick so far (%d of %d)" % [logged, draft.pick_history.size()])
+	ui.queue_free()
+	await _settle()
+
+
+## The draft hang (2026-11-23), spread: on a phone's screen (not a test
+## runner) the rival picks after yours are made a few milliseconds a frame and
+## land on the board as they come. Your tap returns at once with the board on
+## Wait; the picks then are the ones a draft makes all at once; and when the
+## last lands the board holds no taken player, every button is as a fresh row's
+## and Pick for me is open again.
+func _test_rivals_land_a_few_a_frame() -> void:
+	var scene = load("res://scripts/ui/DraftScene.gd")
+	scene.spread_in_runner = true
+	_state.reset()
+	_state.draft = load("res://scripts/sim/Draft.gd").new(_db.all_players_sorted(),
+			_db.active_clubs(2026).duplicate(), 12345)
+	var twin = load("res://scripts/sim/Draft.gd").new(_db.all_players_sorted(),
+			_db.active_clubs(2026).duplicate(), 12345)
+	twin.start_for_user("COL")
+	root.size = Vector2i(390, 844)
+	var ui: Control = load("res://scenes/DraftScene.tscn").instantiate()
+	root.add_child(ui)
+	ui.call("_on_club_chosen", "COL")
+	var guard := 0
+	while ui.call("rivals_running") and guard < 600:
+		guard += 1
+		await process_frame
+	await _settle()
+	var draft = _state.draft
+	_check(draft.is_user_turn() and draft.pick_history.size() == twin.pick_history.size(),
+			"The picks before ours land a few a frame, and it is our pick")
+	var box: Control = ui.get("_board_box")
+	var pick: Button = null
+	var player := {}
+	for c in box.get_children():
+		var b: Button = c.get_meta("pick") if c.has_meta("pick") else null
+		if b != null and not b.disabled:
+			pick = b
+			player = draft.board("", "", "", "overall", true).filter(
+					func(q): return "Player_" + str(q["id"]) == str(c.name))[0]
+			break
+	var at: int = draft.pick_history.size()
+	var why: String = await Tap.tap(pick) if pick != null else "no pick button"
+	_check(why == "", "A finger's tap reaches a pick button (%s)" % why)
+	var made: int = draft.pick_history.size() - at
+	var waiting := true
+	for c in box.get_children():
+		if c.has_meta("pick") and (c as CanvasItem).visible:
+			waiting = waiting and (c.get_meta("pick") as Button).disabled
+	var pick_me: Button = ui.find_child("PickForMe", true, false)
+	_check(ui.call("rivals_running") and made < 10 and waiting and pick_me != null and pick_me.disabled,
+			"The tap returns with the rivals still to pick and every button on Wait (%d picks made)" % made)
+	twin.pick(player)
+	var frames := 0
+	while ui.call("rivals_running") and frames < 2000:
+		frames += 1
+		await process_frame
+	await _settle()
+	_check(frames > 3 and JSON.stringify(draft.pick_history) == JSON.stringify(twin.pick_history),
+			"The rival picks landed over %d frames are the picks made all at once" % frames)
+	var clean := true
+	var buttons_right := true
+	var n := 0
+	for c in box.get_children():
+		if not (c.has_meta("pick") and (c as CanvasItem).visible):
+			continue
+		n += 1
+		var id := str(c.name).substr(7)
+		clean = clean and not draft.has(id)
+		var p: Dictionary = draft.board("", "", "", "overall", true).filter(func(q): return str(q["id"]) == id)[0] \
+				if not draft.has(id) else {}
+		if p.is_empty():
+			continue
+		var fresh: Control = ui.call("_player_row", p)
+		var a: Button = c.get_meta("pick")
+		var f: Button = fresh.get_meta("pick")
+		buttons_right = buttons_right and a.text == f.text and a.disabled == f.disabled and a.tooltip_text == f.tooltip_text
+		fresh.free()
+	_check(clean and n == mini(int(ui.get("_shown")), draft.board("", "", "", "overall", true).size()),
+			"When the last pick lands the board is a full page with no taken player (%d rows)" % n)
+	_check(buttons_right and pick_me != null and not pick_me.disabled,
+			"Every pick button reads as a fresh row's, and Pick for me is open again")
+	scene.spread_in_runner = false
+	ui.queue_free()
 	await _settle()

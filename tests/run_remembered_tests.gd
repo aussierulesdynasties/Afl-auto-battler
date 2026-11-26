@@ -191,6 +191,8 @@ func _test_selection_drop_taps() -> void:
 	var spot := _spot_of(ui, star_id)
 	var why_a: String = await Tap.tap(spot) if spot != null else "no spot"
 	await _settle()
+	# At rest the phone's list shows one line (director, 2026-11-25): pull it up.
+	why_a += await _pull_up(ui)
 	var why_b: String = await Tap.tap(_grid_card(ui, ins[0]))
 	await _settle()
 	ui = current_scene
@@ -211,6 +213,7 @@ func _test_selection_drop_taps() -> void:
 	spot = _spot_of(ui, blank_id)
 	await Tap.tap(spot)
 	await _settle()
+	await _pull_up(current_scene)
 	await Tap.tap(_grid_card(current_scene, ins[1]))
 	await _settle()
 	_check(current_scene.find_child("BuilderRemembered", true, false) == null,
@@ -234,6 +237,16 @@ func _spot_of(ui: Node, id: String) -> Control:
 		if str(c.get_meta("id", "")) == id:
 			return c
 	return null
+
+
+## A real tap on the phone list's pull, unless it is already up. "" when done.
+func _pull_up(ui: Node) -> String:
+	var tb: Node = ui.find_child("TeamBuilder", true, false)
+	if tb == null or tb.is_raised():
+		return ""
+	var why: String = await Tap.tap(ui.find_child("ListPull", true, false))
+	await Tap.steady(ui.find_child("ListSheet", true, false))
+	return why
 
 
 func _grid_card(ui: Node, id: String) -> Control:

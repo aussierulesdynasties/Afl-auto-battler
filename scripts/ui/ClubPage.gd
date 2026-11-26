@@ -247,7 +247,7 @@ static func _in(list: Array, id: String) -> Dictionary:
 
 ## This season's last five results, newest first; the opponent opens his page.
 static func _last_five(code: String) -> Control:
-	var v := UiKit.vbox(4)
+	var v := UiKit.vbox(UiKit.Space.TIGHT)
 	v.name = "LastFive"
 	var season: Season = GameState.season
 	var games := []
@@ -294,7 +294,7 @@ static func _best22(body: VBoxContainer, code: String, mine: bool) -> void:
 			("Side named for this round" if named else "Projected side: picked on match day"), UiKit.SMALL, UiKit.MUTED)
 	note.name = "SideNote"
 	body.add_child(note)
-	var v := UiKit.vbox(4)
+	var v := UiKit.vbox(UiKit.Space.TIGHT)
 	v.name = "BestSide"
 	body.add_child(v)
 	var ink := UiKit.club_ink(code, UiKit.PANEL)
@@ -326,7 +326,7 @@ static func _swapped(body: VBoxContainer, code: String) -> void:
 		return
 	body.add_child(UiKit.spacer(UiKit.SECTION - 8))
 	body.add_child(UiKit.section("Players swapped"))
-	var v := UiKit.vbox(4)
+	var v := UiKit.vbox(UiKit.Space.TIGHT)
 	v.name = "Swapped"
 	body.add_child(v)
 	var mine_ink := UiKit.club_ink(GameState.my_club, UiKit.PANEL)
@@ -466,17 +466,17 @@ static func _board_row(host: Control, row: Dictionary, wide: bool, i: int) -> Co
 	var face := PanelContainer.new()
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = Color(1, 1, 1, 0.04 if i % 2 == 0 and not head else 0.0)
-	sb.content_margin_left = 6
-	sb.content_margin_right = 6
+	sb.content_margin_left = UiKit.Space.CLOSE
+	sb.content_margin_right = UiKit.Space.CLOSE
 	if not head and not wide:
 		# A phone row's name, honours and figures sit close as one block, with
 		# its air at the edges of the row, not between its lines.
-		sb.content_margin_top = 6
-		sb.content_margin_bottom = 6
+		sb.content_margin_top = UiKit.Space.CLOSE
+		sb.content_margin_bottom = UiKit.Space.CLOSE
 	face.add_theme_stylebox_override("panel", sb)
 	# A row is a tap: 44 high at least, as every button in the game.
 	face.custom_minimum_size = Vector2(0, 44 if wide and not head else (32 if wide else (24 if head else 44)))
-	var hb := UiKit.hbox(4)
+	var hb := UiKit.hbox(UiKit.Space.TIGHT)
 	var fs := UiKit.SMALL if head else UiKit.BODY
 	var colour := UiKit.MUTED if head else UiKit.TEXT
 	var name := UiKit.ellipsis("Player" if head else _row_name(row), UiKit.SMALL if head else UiKit.NAME,
@@ -491,7 +491,7 @@ static func _board_row(host: Control, row: Dictionary, wide: bool, i: int) -> Co
 	else:
 		# A phone has no room for a name beside five figures: the name takes
 		# its own line, the figures sit under it in the columns.
-		var stack := UiKit.vbox(2)
+		var stack := UiKit.vbox(UiKit.Space.SLIM)
 		face.add_child(stack)
 		if head:
 			name.free()

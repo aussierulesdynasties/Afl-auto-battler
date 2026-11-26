@@ -757,10 +757,12 @@ func _test_calls_trace() -> void:
 					shown += cr
 					if pts != roundi(cr):
 						bad.append("%s says %d, the ledger %.2f" % [r["cause"], pts, cr])
-				elif str(r["kind"]) == "theirs" and pts != roundi(theirs):
+				# The game sums the causes in its own order, so a ledger that sits on
+				# a half point can round either way: allow that half point.
+				elif str(r["kind"]) == "theirs" and absf(pts - theirs) > 0.5001:
 					bad.append("their calls say %d, the ledger %.2f" % [pts, theirs])
 			for r in c["rows"]:
-				if str(r["kind"]) == "other" and int(r["pts"]) != roundi(mine_total - shown):
+				if str(r["kind"]) == "other" and absf(int(r["pts"]) - (mine_total - shown)) > 0.5001:
 					bad.append("our other calls say %d, the ledger %.2f" % [int(r["pts"]), mine_total - shown])
 			if sum != margin or int(c["margin"]) != margin:
 				bad.append("rows add to %d, the margin is %d" % [sum, margin])

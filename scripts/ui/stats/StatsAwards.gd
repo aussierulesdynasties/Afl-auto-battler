@@ -34,7 +34,7 @@ const AA_SPOTS := {"RUCK": ["RUCK"], "MID": ["MID", "MID", "MID", "WING", "WING"
 
 static func build(host: Control) -> Control:
 	var season: Season = GameState.season
-	var v := UiKit.vbox(6)
+	var v := UiKit.vbox(UiKit.Space.CLOSE)
 	v.name = "StatsAwards"
 	var aw: Dictionary = GameState.season_awards
 	if not aw.is_empty() and int(aw.get("year", 0)) == GameState.season_year:
@@ -55,7 +55,7 @@ static func build(host: Control) -> Control:
 	var coaches := race(host, "Coaches Award", "CoachesAward", "coaches", "Votes", "No votes yet.")
 	if bool(host.call("wide")):
 		# Two races, side by side on a PC.
-		var pair := UiKit.hbox(32)
+		var pair := UiKit.hbox(UiKit.Space.BROAD)
 		pair.name = "Races"
 		coleman.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 		coaches.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
@@ -65,7 +65,7 @@ static func build(host: Control) -> Control:
 	else:
 		v.add_child(coleman)
 		v.add_child(coaches)
-	var brownlow := UiKit.vbox(4)
+	var brownlow := UiKit.vbox(UiKit.Space.TIGHT)
 	brownlow.name = "BrownlowSealed"
 	_title(brownlow, "Brownlow Medal")
 	brownlow.add_child(_para("The umpires' votes stay sealed until the count after the Grand Final."))
@@ -184,7 +184,7 @@ static func _honours(host: Control, aw: Dictionary) -> Control:
 ## The All-Australian team on the oval: the one named at season's end, or the
 ## one that would be picked today.
 static func _aa(host: Control, team: Array, awarded: bool, min_games: int) -> Control:
-	var v := UiKit.vbox(6)
+	var v := UiKit.vbox(UiKit.Space.CLOSE)
 	v.name = "AllAustralian"
 	_title(v, "All-Australian team")
 	if awarded:
@@ -284,7 +284,7 @@ static func _title(v: Control, text: String) -> void:
 
 ## Column heads over a race table, lined up with _player_row.
 static func _header(head: String) -> Control:
-	var h := UiKit.hbox(8)
+	var h := UiKit.hbox(UiKit.GAP)
 	var widths := [28, 0, 72, 64]
 	var cols := ["", "Player", "Club", head]
 	for i in range(cols.size()):
@@ -316,8 +316,7 @@ static func _player_row(host: Control, id: String, club: String, rank: String, f
 	# Every row carries its club's rule down the left; your club's players, the
 	# ladder's wash as well.
 	var flat := StatsSide.row_style(club, band, club == GameState.my_club)
-	var hover := StyleBoxFlat.new()
-	hover.bg_color = Color(UiKit.TEXT, 0.06)
+	var hover := UiKit.row_hover(0.06)
 	for state in ["normal", "focus"]:
 		b.add_theme_stylebox_override(state, flat)
 	for state in ["hover", "pressed", "hover_pressed"]:

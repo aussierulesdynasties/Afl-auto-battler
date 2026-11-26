@@ -54,7 +54,7 @@ static func _build(host: Control, box: Dictionary, state: Dictionary, done: Call
 	var changed := JSON.stringify(draft) != JSON.stringify(Captaincy.slots(rec))
 
 	# What your pick would cost, in football words.
-	var notes := UiKit.vbox(6)
+	var notes := UiKit.vbox(UiKit.Space.CLOSE)
 	notes.name = "CaptaincyCosts"
 	if changed:
 		if not bool(pv["ok"]):
@@ -105,10 +105,10 @@ static func _build(host: Control, box: Dictionary, state: Dictionary, done: Call
 		else:
 			off_why = "Change a spot to continue"
 	if wide:
-		var cols := UiKit.hbox(18)
+		var cols := UiKit.hbox(UiKit.SECTION)
 		spots.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		cols.add_child(spots)
-		var side := UiKit.vbox(10)
+		var side := UiKit.vbox(UiKit.Space.ROOM)
 		side.custom_minimum_size = Vector2(300, 0)
 		side.add_child(notes)
 		side.add_child(how)
@@ -139,26 +139,22 @@ static func _slot_row(host: Control, box: Dictionary, state: Dictionary, done: C
 	for s in draft:
 		if str((s as Dictionary)["role"]) == "captain":
 			has_captain = true
-	var h := UiKit.hbox(8)
+	var h := UiKit.hbox(UiKit.GAP)
 	var pick := Button.new()
 	pick.name = "CaptaincySlot_%d" % i
 	pick.focus_mode = Control.FOCUS_NONE
 	pick.custom_minimum_size = Vector2(0, 64)
 	pick.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	for st in ["normal", "hover", "pressed", "focus"]:
-		var sb := StyleBoxFlat.new()
-		sb.bg_color = Color(1, 1, 1, 0.04) if st == "hover" or st == "pressed" else Color.TRANSPARENT
+		var sb := UiKit.line_row(st == "hover" or st == "pressed")
 		if p.is_empty():
 			# An empty spot is an outlined row you can see is a tap.
 			sb.border_color = UiKit.MUTED
 			sb.set_border_width_all(1)
 			sb.set_corner_radius_all(UiKit.RADIUS)
-			sb.content_margin_left = 12
-		else:
-			sb.border_color = UiKit.LINE
-			sb.border_width_bottom = 1
+			sb.content_margin_left = UiKit.Space.PAD
 		pick.add_theme_stylebox_override(st, sb)
-	var inner := UiKit.hbox(8)
+	var inner := UiKit.hbox(UiKit.GAP)
 	inner.set_anchors_preset(Control.PRESET_FULL_RECT)
 	inner.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	pick.add_child(inner)
@@ -249,11 +245,11 @@ static func _open_picker(host: Control, sheet: Dictionary, state: Dictionary, do
 	var grid := GridContainer.new()
 	grid.name = "PickerGrid"
 	grid.columns = 3 if wide else 1
-	grid.add_theme_constant_override("h_separation", 12)
+	grid.add_theme_constant_override("h_separation", UiKit.Space.PAD)
 	grid.add_theme_constant_override("v_separation", 0)
 	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	pb.add_child(grid)
-	pb.add_child(UiKit.spacer(14))
+	pb.add_child(UiKit.spacer(UiKit.Space.LOOSE))
 	for p in people:
 		var id := str(p["id"])
 		var row := Button.new()
@@ -262,12 +258,8 @@ static func _open_picker(host: Control, sheet: Dictionary, state: Dictionary, do
 		row.custom_minimum_size = Vector2(0, 60)
 		row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		for st in ["normal", "hover", "pressed", "focus"]:
-			var sb := StyleBoxFlat.new()
-			sb.bg_color = Color(1, 1, 1, 0.04) if st == "hover" or st == "pressed" else Color.TRANSPARENT
-			sb.border_color = UiKit.LINE
-			sb.border_width_bottom = 1
-			row.add_theme_stylebox_override(st, sb)
-		var h := UiKit.hbox(8)
+			row.add_theme_stylebox_override(st, UiKit.line_row(st == "hover" or st == "pressed"))
+		var h := UiKit.hbox(UiKit.GAP)
 		h.set_anchors_preset(Control.PRESET_FULL_RECT)
 		h.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		h.offset_right = -NameLink.PROFILE_W
@@ -340,7 +332,7 @@ static func _open_picker(host: Control, sheet: Dictionary, state: Dictionary, do
 ## Confirm takes the accent.
 static func _secondary(text: String, fs: int) -> Button:
 	var b := UiKit.btn(text, fs)
-	var sb := UiKit.style(Color.TRANSPARENT, 8, UiKit.RADIUS, UiKit.MUTED)
+	var sb := UiKit.style(Color.TRANSPARENT, UiKit.GAP, UiKit.RADIUS, UiKit.MUTED)
 	sb.set_border_width_all(1)
 	for state in ["normal", "hover", "pressed", "focus"]:
 		b.add_theme_stylebox_override(state, sb)

@@ -369,14 +369,14 @@ static func _yours_tag() -> Label:
 ## A story with the club's bar down its side; big=true for the lead.
 ## `short`: the hub's card, where a multi-beat story shows its first beat only.
 static func _story_block(st: Dictionary, big: bool, short := false) -> Control:
-	var v := UiKit.vbox(4)
+	var v := UiKit.vbox(UiKit.Space.TIGHT)
 	v.name = "Lead" if big else "Story"
 	# The lead sits on its club's tinted panel (_wash); its club ink reads there.
 	var surface := _wash(str(st["club"])) if big and str(st["club"]) != "" else UiKit.AUTO_COLOUR
 	if bool(st["mine"]):
 		v.add_child(_yours_tag())
 	if str(st["club"]) != "" and big:
-		var head := UiKit.hbox(8)
+		var head := UiKit.hbox(UiKit.GAP)
 		head.add_child(UiKit.club_marker(str(st["club"]), 34.0))
 		head.add_child(UiKit.line(GameDB.club_name(str(st["club"])), UiKit.NAME, _ink(str(st["club"]), surface), true))
 		v.add_child(head)
@@ -390,7 +390,7 @@ static func _story_block(st: Dictionary, big: bool, short := false) -> Control:
 
 
 static func _brief_block(b: Dictionary, wide: bool) -> Control:
-	var v := UiKit.vbox(4)
+	var v := UiKit.vbox(UiKit.Space.TIGHT)
 	v.name = "Brief_" + str(b["key"])
 	v.add_child(UiKit.lbl(str(b["title"]), UiKit.NAME, UiKit.TEXT, true))
 	v.add_child(UiKit.rule())
@@ -398,8 +398,8 @@ static func _brief_block(b: Dictionary, wide: bool) -> Control:
 		# Names and clubs in columns, so fifteen of them read as a list, not a column.
 		var g := GridContainer.new()
 		g.columns = 3 if wide else 1
-		g.add_theme_constant_override("h_separation", 16)
-		g.add_theme_constant_override("v_separation", 4)
+		g.add_theme_constant_override("h_separation", UiKit.Space.COLUMN)
+		g.add_theme_constant_override("v_separation", UiKit.Space.TIGHT)
 		for st in b["entries"]:
 			var r := _brief_row(st, str(b["key"]))
 			r.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -414,7 +414,7 @@ static func _brief_block(b: Dictionary, wide: bool) -> Control:
 static func _brief_row(st: Dictionary, key: String) -> Control:
 	var club := str(st["club"])
 	if key == _FIRST_GOAL and club != "":
-		var h := UiKit.hbox(6)
+		var h := UiKit.hbox(UiKit.Space.CLOSE)
 		h.name = "BriefRow"
 		h.add_child(UiKit.club_marker(club, 20.0))
 		h.add_child(UiKit.line(str(st["name"]), UiKit.SECONDARY, _ink(club), true))
@@ -443,7 +443,7 @@ static func fill(body: Container, items: Array, my_club: String, wide: bool, nam
 	var page := front(items, my_club)
 	if now != "":
 		page["dateline"] = now
-	var head := UiKit.hbox(8)
+	var head := UiKit.hbox(UiKit.GAP)
 	var title := UiKit.heading("League news", UiKit.H1)
 	title.autowrap_mode = TextServer.AUTOWRAP_OFF
 	head.add_child(title)
@@ -456,15 +456,15 @@ static func fill(body: Container, items: Array, my_club: String, wide: bool, nam
 	body.add_child(UiKit.rule())
 	if (page["lead"] as Dictionary).is_empty():
 		return
-	var lead_panel := UiKit.panel(_wash(str(page["lead"]["club"])), 16)
+	var lead_panel := UiKit.panel(_wash(str(page["lead"]["club"])), UiKit.Space.COLUMN)
 	lead_panel.name = "LeadStory"
 	lead_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	lead_panel.add_child(_story_block(page["lead"], true))
-	var side := UiKit.vbox(10)
+	var side := UiKit.vbox(UiKit.Space.ROOM)
 	side.name = "SecondaryStories"
 	side.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	for st in page["secondary"]:
-		var card := UiKit.panel(UiKit.PANEL, 12)
+		var card := UiKit.panel(UiKit.PANEL, UiKit.Space.PAD)
 		card.add_child(_story_block(st, false))
 		side.add_child(card)
 	var long_one: Control = null
@@ -479,9 +479,9 @@ static func fill(body: Container, items: Array, my_club: String, wide: bool, nam
 	if wide:
 		# Two columns that each end where their own stories end: the lead and
 		# some briefs on the left, the secondary stories and the rest on the right.
-		var cols := UiKit.hbox(24)
-		var left := UiKit.vbox(16)
-		var right := UiKit.vbox(16)
+		var cols := UiKit.hbox(UiKit.Space.GUTTER)
+		var left := UiKit.vbox(UiKit.Space.COLUMN)
+		var right := UiKit.vbox(UiKit.Space.COLUMN)
 		for c in [left, right]:
 			(c as Control).size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			(c as Control).size_flags_vertical = Control.SIZE_SHRINK_BEGIN
@@ -555,10 +555,10 @@ static func mini(items: Array, my_club: String, on_open: Callable, names := {}, 
 	tap.custom_minimum_size = Vector2(0, 44)
 	tap.pressed.connect(on_open)
 	card.add_child(tap)
-	var v := UiKit.vbox(8)
+	var v := UiKit.vbox(UiKit.GAP)
 	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	card.add_child(v)
-	var top := UiKit.hbox(8)
+	var top := UiKit.hbox(UiKit.GAP)
 	top.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var title := UiKit.section("League news")
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -570,7 +570,7 @@ static func mini(items: Array, my_club: String, on_open: Callable, names := {}, 
 	top.add_child(UiKit.lbl("›", UiKit.NAME, UiKit.MUTED))
 	v.add_child(top)
 	if not (page["lead"] as Dictionary).is_empty():
-		var lead := UiKit.panel(_wash(str(page["lead"]["club"])), 12)
+		var lead := UiKit.panel(_wash(str(page["lead"]["club"])), UiKit.Space.PAD)
 		lead.add_child(_story_block(page["lead"], true, true))
 		v.add_child(lead)
 		for st in page["secondary"]:

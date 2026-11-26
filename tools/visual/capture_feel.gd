@@ -20,12 +20,22 @@ extends SceneTree
 ##                         ended your tag), the band settling and the call
 ##                         brightening twice
 ##                settings the Settings sheet, scrolled to the new rows (still)
+##                go:KEY   the hub, then the way a player goes to screen KEY (a
+##                         Router key: stats, list, selection, staff, coaching,
+##                         preseason, season_review, offseason):
+##                         the dot wipe and the screen arriving (UI Batch 4)
 ##   --size WxH   default 390x844 (a phone in portrait); 1280x720 a PC
 ##   --secs S     how long to keep filming after the effect starts (default 3)
 ##   --out PATH   stills: <out>_end.png (and <out>_start.png)
 ##   --club CODE  your club (default COL; a colourful club shows the living colour better)
+##   --plain      lay the screen out at a plain screen's density (scale 1, no
+##                DPI), as a phone of that size shows it, not at this PC's
 ##   --no-music   music off, so the clip holds only the feel sounds (to measure them)
 ##   --volume N   Settings > Volume at N% (default 100), to show the slider part way
+##   --rounds N   go:KEY only: play N rounds first (default 6), so the season has numbers
+##   --stop NAME  go:preseason only: the result filmed coming up on a tap of the
+##                screen's button (trial, the default, or practice);
+##                go:season_review and go:offseason play the whole season first
 ## Seeded (2027): the same command films the same club and round.
 
 const Tap := preload("res://tests/tap.gd")
@@ -84,6 +94,8 @@ func _run() -> void:
 	var effect := str(args.get("effect", "hub"))
 	var out := str(args.get("out", "/tmp/feel"))
 	var secs := float(args.get("secs", "3"))
+	_rounds = int(args.get("rounds", "6"))
+	_stop = str(args.get("stop", "trial"))
 	if args.has("size"):
 		var wh := str(args["size"]).split("x")
 		W = int(wh[0])
@@ -103,6 +115,14 @@ func _run() -> void:
 	AudioServer.set_bus_mute(music, args.has("no-music"))
 	root.size = Vector2i(W, H)
 	DisplayServer.window_set_size(Vector2i(W, H))
+	if args.has("plain"):
+		for i in range(10):
+			await process_frame
+		var layout = root.get_node("ScreenLayout")
+		var px := Vector2(root.size)
+		var here: float = layout.desktop_density(px, DisplayServer.screen_get_scale(), DisplayServer.screen_get_dpi())
+		layout.ui_scale = layout.desktop_density(px, 1.0, 0) / maxf(1.0, here)
+		layout._update_scale()
 	if Engine.get_write_movie_path() != "":
 		_film = out
 		process_frame.connect(_save_frame)
@@ -130,7 +150,68 @@ func _run() -> void:
 	quit(0)
 
 
+var _rounds := 6
+var _stop := "trial"
+
+
 func _one(effect: String, out: String, secs: float, state, db, club: String) -> void:
+	if effect.begins_with("go:"):
+		state.start_season(club, db.club_list(club))
+		state.tutorials = false
+		var key := effect.substr(3)
+		var press = load("res://tests/preseason_press.gd")
+		if key == "preseason":
+			# Pressed on to the tap that brings the stop being filmed: the week
+			# before the time trial, or the practice match before it is played.
+			state.open_preseason(false)
+			if _stop == "trial":
+				press.to_week(2)
+				press.answer()
+			else:
+				press.to(_stop)
+		elif key == "season_review" or key == "offseason":
+			# Trades & Contracts opens from the hub once the season is over.
+			# The whole season played, finals and all, and awards night seen.
+			while not state.season.is_regular_done():
+				state.advance()
+			state.ensure_finals()
+			while not state.season.is_season_over():
+				state.advance()
+			state.season_awards["presentation_seen"] = true
+		else:
+			for i in range(_rounds):
+				state.advance()
+		state.media_conference = {}
+		state.backing_talk = {}
+		state.week_events = []   # no week question over the hub
+		if not state.midseason.is_empty():
+			state.midseason["carnival_seen"] = true   # nor the Under-18 carnival card
+		load("res://scripts/state/TrainingReport.gd").dismiss(state)   # nor the training report
+		state._dirty = false   # saved, as after a week: no save under the dots
+		# Loaded before filming: the film's clock runs ahead of a real load,
+		# which would put the Loading line up where a phone shows none.
+		load(str(root.get_node("Router").SCENES[key]))
+		# Return visits: no first-visit note over the screen being filmed.
+		for k in load("res://scripts/ui/FirstVisitIntro.gd").TEXT:
+			state.set_setting("seen_%s_intro" % k, true)
+		# The pre-season is its own screen through the summer (the hub hands
+		# straight to it): its result comes up on a tap of its button.
+		var from := "PreSeasonScene" if key == "preseason" else "HubScene"
+		var hub: Control = load("res://scenes/%s.tscn" % from).instantiate()
+		root.add_child(hub)
+		current_scene = hub
+		await _wait(1.0)
+		_shot(out + "_start.png")
+		if key == "preseason":
+			# The practice match simmed (Coach the match goes to the ground).
+			await Tap.tap(hub.find_child("PracticeSim" if _stop == "practice" else "PreSeasonGo", true, false))
+		else:
+			root.get_node("Router").call("go", key)
+		await _wait(0.3)
+		_shot(out + "_peak.png")
+		await _wait(maxf(0.0, secs - 0.3))
+		_shot(out + "_end.png")
+		return
 	match effect:
 		"draft":
 			state.draft = load("res://scripts/sim/Draft.gd").new(db.all_players_sorted() + db.all_draftees_sorted(),

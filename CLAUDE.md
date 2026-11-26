@@ -1,22 +1,20 @@
 # AFL Auto-Battler: working rules
 
-The design bible loads in full at session start ("Always loaded" below). `docs/TODO.md` is the one list of work not done:
+The design bible is read on demand (below). `docs/TODO.md` is the one list of work not done:
 read it when you pick or close work, not otherwise (a brief that names your row is enough). Director rulings are in
 `docs/DIRECTOR_BIBLE.md` (513 KB: search it, never read it whole). Must-read files stay under 60 KB (CI: `tools/check_doc_sizes.py`).
 
 Godot 4 / GDScript. Run `tools/run_tests.sh` (or `tools/run_tests.sh draft_ui`
-for one suite) before pushing.
-
-## Always loaded
-
-Claude Code imports this core document in full at every session start (the `@` lines below),
-so it is part of this file: read it as rules, never skim or skip them.
-
-@docs/DESIGN_BIBLE.md
+for one suite) before pushing. MetaHuman files (and anything made from them) never go in this public
+repo: they live in a private repo and `tools/epic_assets.sh fetch` copies them in (docs/EPIC_ASSETS.md).
 
 ## The design bible comes first (director, 2026-10-09)
 
-[docs/DESIGN_BIBLE.md](docs/DESIGN_BIBLE.md) is loaded in full at session start (above).
+[docs/DESIGN_BIBLE.md](docs/DESIGN_BIBLE.md) is read on demand (director, 2026-11-25), not
+at session start. Read the sections that bear on the work (vision, the four pillars, the
+principles, the coach, match day and the visual sim, the art standard, the feature test,
+balance, what this game will not have) before you assess a feature, make a design or copy
+call, touch the sim, art or a decision gate, or answer anything it may already rule on.
 It is the ultimate truth for what this game is. Both Claude accounts and every
 role work from it.
 

@@ -30,7 +30,7 @@ func _ready() -> void:
 	UiKit.apply_insets(margin, 12)
 	add_child(margin)
 
-	_root = UiKit.vbox(9)
+	_root = UiKit.vbox(UiKit.Space.EASY)
 	margin.add_child(_root)
 	get_viewport().size_changed.connect(func():
 		if is_inside_tree() and not UiKit.keyboard_resize(self):
@@ -86,14 +86,14 @@ func _build_pane() -> Control:
 	# own rows.
 	var host: BoxContainer
 	if _narrow() and _pane == "shape":
-		var page := UiKit.vbox(9)
+		var page := UiKit.vbox(UiKit.Space.EASY)
 		page.name = "ShapePage"
 		var page_scroll := UiKit.scroll(page)
 		page_scroll.name = "ShapeScroll"
 		pane_root = page_scroll
 		host = page
 	else:
-		host = UiKit.vbox(9)
+		host = UiKit.vbox(UiKit.Space.EASY)
 		host.name = "ListPage" if _narrow() else "WidePage"
 		host.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		pane_root = host
@@ -137,7 +137,7 @@ func _build_pane() -> Control:
 		var h := cap_link.find_child("SectionLeadsTo", true, false)
 		if h != null:
 			(h as Control).size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		(cap_link.get_child(0) as BoxContainer).add_theme_constant_override("separation", 16)
+		(cap_link.get_child(0) as BoxContainer).add_theme_constant_override("separation", UiKit.Space.COLUMN)
 	else:
 		# A phone keeps the word whole ("Captain…" said nothing, critic
 		# 2026-11-04): the names give way instead, and the chevron stays.
@@ -163,7 +163,7 @@ func _build_pane() -> Control:
 	host.add_child(_scouting_link())
 
 	if _narrow():
-		var tabs := UiKit.hbox(2)
+		var tabs := UiKit.hbox(UiKit.Space.SLIM)
 		host.add_child(tabs)
 		var shape_tab := UiKit.tab("Shape", _pane == "shape")
 		shape_tab.name = "ListTabShape"
@@ -180,9 +180,9 @@ func _build_pane() -> Control:
 
 	var body: BoxContainer
 	if _narrow():
-		body = UiKit.vbox(10)
+		body = UiKit.vbox(UiKit.Space.ROOM)
 	else:
-		body = UiKit.hbox(10)
+		body = UiKit.hbox(UiKit.Space.ROOM)
 	body.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	host.add_child(body)
 
@@ -197,11 +197,11 @@ func _shape_panel() -> Control:
 	# On a phone the page's scroll rail takes 20 px of the width; the panel's
 	# padding gives some of it back so the cards keep their full names (the
 	# sweep: "Andy Moniz-Wakefield" needs 116 px, the squeezed card gave 114).
-	var left := UiKit.panel(UiKit.PANEL, 6 if _narrow() else 12)
+	var left := UiKit.panel(UiKit.PANEL, UiKit.Space.CLOSE if _narrow() else UiKit.Space.PAD)
 	left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	left.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	left.custom_minimum_size = Vector2(0, 220)
-	var lv := UiKit.vbox(5)
+	var lv := UiKit.vbox(UiKit.Space.SNUG)
 	lv.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	left.add_child(lv)
 	lv.add_child(UiKit.lbl("Best 23", UiKit.H2, UiKit.EMPH, true))
@@ -230,10 +230,10 @@ func _shape_panel() -> Control:
 
 
 func _full_list_panel() -> Control:
-	var right := UiKit.panel(UiKit.PANEL, 12)
+	var right := UiKit.panel(UiKit.PANEL, UiKit.Space.PAD)
 	right.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	right.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	var rv := UiKit.vbox(5)
+	var rv := UiKit.vbox(UiKit.Space.SNUG)
 	rv.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	right.add_child(rv)
 	rv.add_child(UiKit.lbl("Full list", UiKit.H2, UiKit.EMPH, true))
@@ -249,7 +249,7 @@ func _full_list_panel() -> Control:
 	sh.name = "SeniorListHead"
 	lbox.add_child(sh)
 	_role_groups(lbox, seniors, false)
-	lbox.add_child(UiKit.spacer(8))
+	lbox.add_child(UiKit.spacer(UiKit.GAP))
 	var rh := UiKit.lbl("Rookie list  %d / %d" % [rookies.size(), RookieList.cat_a_spots()], UiKit.BODY, UiKit.EMPH, true)
 	rh.name = "RookieListHead"
 	lbox.add_child(rh)
@@ -262,7 +262,7 @@ func _full_list_panel() -> Control:
 		_role_groups(lbox, rookies, true)
 	# Category B rookies have their own two spots, outside the 44 (real lists).
 	if not cat_b.is_empty():
-		lbox.add_child(UiKit.spacer(8))
+		lbox.add_child(UiKit.spacer(UiKit.GAP))
 		# A club that started with more than two, as its real 2026 list had
 		# (GWS: three), shows the count alone and says why: "3 / 2" is no rule.
 		var over_b: bool = cat_b.size() > RookieList.cat_b_spots()
@@ -295,8 +295,8 @@ func _role_groups(lbox: Control, players: Array, skip_empty: bool) -> void:
 		var g: Array = grouped[r]
 		if skip_empty and g.is_empty():
 			continue
-		g.sort_custom(func(a, b): return int(a["overall"]) > int(b["overall"]))
-		lbox.add_child(UiKit.spacer(4))
+		g.sort_custom(func(a, b): return int(Rating.ovr(a)) > int(Rating.ovr(b)))
+		lbox.add_child(UiKit.spacer(UiKit.Space.TIGHT))
 		# STYLE-05: each position heads its group in its role colour at name
 		# weight (role colours are ink only, style guide 2.1), not small grey.
 		var gh := UiKit.lbl("%s  (%d)" % [UiKit.ROLE_LABEL[r], g.size()],
@@ -305,7 +305,7 @@ func _role_groups(lbox: Control, players: Array, skip_empty: bool) -> void:
 		lbox.add_child(gh)
 		for p in g:
 			lbox.add_child(_list_row(p))
-		lbox.add_child(UiKit.spacer(6))
+		lbox.add_child(UiKit.spacer(UiKit.Space.CLOSE))
 
 
 ## His number on your club's guernsey: everyone on this list plays for you,
@@ -330,13 +330,11 @@ func _list_row(p: Dictionary) -> Control:
 	row.custom_minimum_size = Vector2(0, 56)
 	row.focus_mode = Control.FOCUS_NONE
 	for state in ["normal", "hover", "pressed", "focus"]:
-		var sb := StyleBoxFlat.new()
-		sb.bg_color = Color(1, 1, 1, 0.04) if state == "hover" or state == "pressed" else Color.TRANSPARENT
-		sb.border_color = UiKit.LINE
-		sb.border_width_bottom = 1
-		row.add_theme_stylebox_override(state, sb)
+		row.add_theme_stylebox_override(state, UiKit.line_row(state == "hover" or state == "pressed"))
 	row.pressed.connect(_open_profile.bind(str(p["id"])))
-	var h := UiKit.hbox(8)
+	# It answers a finger as every button does: it presses in, sounds and buzzes.
+	UiKit.feel(row, "soft")
+	var h := UiKit.hbox(UiKit.GAP)
 	h.set_anchors_preset(Control.PRESET_FULL_RECT)
 	h.offset_left = 2
 	h.offset_right = -2
@@ -403,11 +401,11 @@ func _list_row(p: Dictionary) -> Control:
 	nums.alignment = BoxContainer.ALIGNMENT_CENTER
 	nums.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	h.add_child(nums)
-	var ov := UiKit.line(str(int(p["overall"])), 20, UiKit.TEXT, true)
+	var ov := UiKit.line(str(int(Rating.ovr(p))), 20, UiKit.TEXT, true)
 	ov.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	ov.custom_minimum_size = Vector2(40, 0)
 	nums.add_child(ov)
-	var pot := UiKit.line("POT %d" % int(p.get("potential", p["overall"])), UiKit.TINY, UiKit.MUTED)
+	var pot := UiKit.line("POT %d" % int(p.get("potential", Rating.ovr(p))), UiKit.TINY, UiKit.MUTED)
 	pot.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	nums.add_child(pot)
 	return row

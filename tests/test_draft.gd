@@ -40,6 +40,8 @@ func run() -> void:
 	_t("_test_rival_says_why")
 	_t("_test_draft_reasons_change_nothing")
 	_t("_test_real_drafts_reasons_change_nothing")
+	_t("_test_rival_pick_reads_whole_pool")
+	_t("_test_rivals_step_same_picks")
 	GameState.replay_seed = 0
 	GameDB.skip_ovr_overrides = false
 	GameDB.reload()
@@ -1297,3 +1299,93 @@ func _test_pick_for_me_matches_rival() -> void:
 		if int(e[0]) < rival_ids.size() and str(e[1]) != rival_ids[int(e[0])]:
 			ok = false
 	_check(ok, "Pick for me picks what a rival in the same slot picks (%s vs %s)" % [user_ids, rival_ids])
+
+
+## The draft hang on a phone (2026-11-23): a rival weighs each position once a
+## pick (need, replacement, the edge's weight) and each player's worth, its
+## opinion and his price once a draft or a run of picks, not once a player.
+## Its pick is still the best player on the whole pool by _ai_score read the
+## slow way, pick after pick, through a League Draft's opening rounds; and
+## nothing it keeps is written to a save.
+func _test_rival_pick_reads_whole_pool() -> void:
+	var d := Draft.new(GameDB.all_players_sorted(), GameDB.active_clubs(2026).duplicate(), 2468)
+	var same := 0
+	var picks := 0
+	while picks < 90 and not d.is_finished():
+		var code := d.current_club()
+		var usable := d.usable_cap_for(code)
+		var forced := d._forced_role(code)
+		var want := {}
+		var want_score := -INF
+		for p in d.pool:
+			if d.picked.has(str(p["id"])) or d.price_for(code, p) > usable:
+				continue
+			if forced != "" and not Ratings.plays_role(p, forced):
+				continue
+			var s := d._ai_score(code, p)
+			if s > want_score:
+				want_score = s
+				want = p
+		var got := d._best_ai_pick(code)
+		if not want.is_empty() and str(got.get("id", "")) == str(want["id"]):
+			same += 1
+		if got.is_empty() or not d._draft_pick(code, got):
+			break
+		picks += 1
+	_check(picks == 90 and same == picks,
+			"A rival's pick is the best on the whole pool, read the slow way, %d of %d picks" % [same, picks])
+	var saved := CareerSave.object_vars(d)
+	var kept := saved.keys().filter(func(k): return str(k) in ["_terms", "_terms_on", "_terms_code",
+			"_rival_views", "_run_memo", "_run_memo_on", "_worths"])
+	_check(kept.is_empty(), "What the rival AI keeps between picks is not written to a save (%s)" % str(kept))
+
+
+## The rival picks after yours made a slice at a time (rivals_step, the draft
+## screen's few milliseconds a frame) are the same picks, in the same order, as
+## made all at once: a League Draft from the real pool and a National Draft
+## class, with the slices cut mid-pick (100 microseconds) and your picks made
+## the same way in both.
+func _test_rivals_step_same_picks() -> void:
+	var clubs: Array = GameDB.active_clubs(2026).duplicate()
+	for kind in ["league", "intake"]:
+		var runs := []
+		for sliced in [false, true]:
+			var d: Draft
+			if kind == "league":
+				d = Draft.new(GameDB.all_players_sorted(), clubs.duplicate(), 4321)
+			else:
+				var sizes := {}
+				var counts := {}
+				for c in clubs:
+					sizes[c] = 40
+					counts[c] = {"RUCK": 2, "MID": 14, "DEF": 12, "FWD": 12}
+				d = Draft.build_intake(GameDB.all_draftees_sorted(), clubs.duplicate(), clubs.duplicate(), 4321,
+						sizes, counts)
+			Draft.hold_rivals = sliced
+			d.start_for_user(str(clubs[5]))
+			Draft.hold_rivals = false
+			var guard := 0
+			var slices := 0
+			while not d.is_finished() and guard < 2000:
+				guard += 1
+				if d.rivals_due():
+					if sliced:
+						while not d.rivals_step(100):
+							slices += 1
+					else:
+						d.auto_until_user_turn()
+					continue
+				# Stop on the user's turn, once both runs have landed the same rival picks.
+				if d.pick_history.size() > 150 and kind == "league":
+					break
+				var board: Array = d.board("", "", "", "overall", true).filter(func(q): return d.can_pick_player(q))
+				Draft.hold_rivals = sliced
+				var ok: bool = d.pick(board[0]) if not board.is_empty() else d.user_pass()
+				Draft.hold_rivals = false
+				if not ok:
+					break
+			runs.append(JSON.stringify(d.pick_history))
+			if sliced:
+				_check(slices > 10, "%s: the sliced run stopped part way through picks (%d slices)" % [kind, slices])
+		_check(runs[0] == runs[1] and runs[0].length() > 100,
+				"%s Draft: rival picks made a slice at a time are the picks made at once" % kind)

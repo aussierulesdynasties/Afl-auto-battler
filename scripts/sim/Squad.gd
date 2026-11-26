@@ -105,7 +105,7 @@ static func pick_sub(list_players: Array, named: Array) -> Array:
 	for p in list_players:
 		if taken.has(str(p["id"])) or not Ratings.available(p):
 			continue
-		var v := float(p["overall"]) * Workload.selection_factor(p)
+		var v := float(Rating.ovr(p)) * Workload.selection_factor(p)
 		if v > best_v or (v == best_v and str(p["id"]) < str(best["id"])):
 			best = p
 			best_v = v

@@ -21,7 +21,7 @@ func _ready() -> void:
 	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
 	UiKit.apply_insets(margin, 12)
 	add_child(margin)
-	_root = UiKit.vbox(10)
+	_root = UiKit.vbox(UiKit.Space.ROOM)
 	margin.add_child(_root)
 	get_viewport().size_changed.connect(_on_resize)
 	_build()
@@ -52,7 +52,7 @@ func _build() -> void:
 	if _wide():
 		var cols := HBoxContainer.new()
 		cols.name = "CoachingColumns"
-		cols.add_theme_constant_override("separation", 40)
+		cols.add_theme_constant_override("separation", UiKit.Space.APART)
 		body.add_child(cols)
 		left = UiKit.vbox(UiKit.SECTION)
 		right = UiKit.vbox(UiKit.SECTION)
@@ -75,7 +75,7 @@ func _build() -> void:
 ## "When I sim the week" (row T3.R43, P-66): the lines the assistant follows
 ## when you sim, as they stand, and the way into the sheet that sets them.
 func _sim_orders() -> Control:
-	var v := UiKit.vbox(6)
+	var v := UiKit.vbox(UiKit.Space.CLOSE)
 	v.name = "SimOrdersSection"
 	v.add_child(_head("When I sim the week"))
 	var lines := SimOrdersSheet.summary()
@@ -112,7 +112,7 @@ func _wide() -> bool:
 ## A black-and-white club (team_colour is the red accent) or a red or orange
 ## one (it would read as BAD or the primary action) gets a quiet TEXT rule.
 func _head(text: String) -> Control:
-	var v := UiKit.vbox(5)
+	var v := UiKit.vbox(UiKit.Space.SNUG)
 	var rule := ColorRect.new()
 	rule.name = "SectionRule"
 	rule.custom_minimum_size = Vector2(0, 2)
@@ -142,7 +142,7 @@ func _wrapped(text: String, fs := UiKit.BODY, col := UiKit.AUTO_COLOUR) -> Label
 # ---------------------------------------------------------------------------
 func _profile_row(row: Dictionary, ground: Array) -> Control:
 	var dim := str(row["dim"])
-	var box := UiKit.vbox(2)
+	var box := UiKit.vbox(UiKit.Space.SLIM)
 	var b := Button.new()
 	b.name = "Profile_%s" % dim
 	b.flat = true
@@ -151,7 +151,7 @@ func _profile_row(row: Dictionary, ground: Array) -> Control:
 	b.mouse_filter = Control.MOUSE_FILTER_PASS
 	for state in ["normal", "hover", "pressed", "hover_pressed", "focus"]:
 		b.add_theme_stylebox_override(state, StyleBoxEmpty.new())
-	var h := UiKit.hbox(8)
+	var h := UiKit.hbox(UiKit.GAP)
 	b.add_child(h)
 	h.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var name_l := UiKit.line(str(row["label"]), UiKit.BODY, UiKit.TEXT)
@@ -187,7 +187,7 @@ const TRADE_OFF_LINE := "Each plan buys an edge and gives something up. The note
 # How we play
 # ---------------------------------------------------------------------------
 func _how_we_play() -> Control:
-	var v := UiKit.vbox(6)
+	var v := UiKit.vbox(UiKit.Space.CLOSE)
 	v.name = "HowWePlay"
 	v.add_child(_head("How we play"))
 	v.add_child(_wrapped("Each plan runs on one of our list's strengths. That is our side as picked, against every list in the league.",
@@ -217,7 +217,7 @@ func _how_we_play() -> Control:
 	# The strengths no plan runs on, as before: a word each, a tap for who leads it.
 	var rest := UiKit.vbox(0)
 	rest.name = "ListProfile"
-	rest.add_child(UiKit.spacer(4))
+	rest.add_child(UiKit.spacer(UiKit.Space.TIGHT))
 	rest.add_child(UiKit.lbl("Also on our list", UiKit.SMALL, UiKit.TEXT, true))
 	for row in profile:
 		if not PlanTiles.PLAN_STRENGTH.values().has(str(row["dim"])):
@@ -230,13 +230,13 @@ func _how_we_play() -> Control:
 
 	var style := GameState.how_we_play()
 	if int(style["games"]) < 3:
-		v.add_child(UiKit.spacer(4))
+		v.add_child(UiKit.spacer(UiKit.Space.TIGHT))
 		v.add_child(_wrapped("After three games, how we win and get beaten shows here.",
 				UiKit.BODY, UiKit.MUTED))
 		return v
 	for part in [["How we win", "win", "WinLine"], ["How we get beaten", "beaten", "BeatenLine"]]:
 		var lines: Array = style[part[1]]
-		v.add_child(UiKit.spacer(4))
+		v.add_child(UiKit.spacer(UiKit.Space.TIGHT))
 		v.add_child(UiKit.lbl(str(part[0]), UiKit.BODY, UiKit.TEXT, true))
 		if lines.is_empty():
 			var quiet := _wrapped(_quiet_line(str(part[1]), int(style["games"])), UiKit.BODY, UiKit.MUTED)
@@ -253,7 +253,7 @@ func _how_we_play() -> Control:
 # Form
 # ---------------------------------------------------------------------------
 func _form() -> Control:
-	var v := UiKit.vbox(4)
+	var v := UiKit.vbox(UiKit.Space.TIGHT)
 	v.name = "Form"
 	v.add_child(_head("Recent games"))
 	var form := GameState.player_form()
@@ -272,7 +272,7 @@ func _form() -> Control:
 		v.add_child(head)
 		for row in rows:
 			v.add_child(_form_row(row, str(part[1])))
-		v.add_child(UiKit.spacer(4))
+		v.add_child(UiKit.spacer(UiKit.Space.TIGHT))
 	return v
 
 
@@ -312,7 +312,7 @@ const SETTLED_GAMES := 10
 # List and cap
 # ---------------------------------------------------------------------------
 func _list_and_cap() -> Control:
-	var v := UiKit.vbox(4)
+	var v := UiKit.vbox(UiKit.Space.TIGHT)
 	v.name = "ListAndCap"
 	v.add_child(_head("List and cap"))
 	var line := "%d players on the list" % GameState.my_list.size()
@@ -323,6 +323,11 @@ func _list_and_cap() -> Control:
 	var l := _wrapped(line)
 	l.name = "CapLine"
 	v.add_child(l)
+	var cut := Contracts.pay_cut_note(Contracts.money_year)
+	if cut != "":
+		var n := _wrapped(cut, UiKit.SECONDARY)
+		n.name = "PayCutNote"
+		v.add_child(n)
 	var b := UiKit.btn("My list", UiKit.BODY)
 	b.name = "OpenList"
 	b.custom_minimum_size = Vector2(0, 44)
@@ -340,7 +345,7 @@ func _list_and_cap() -> Control:
 func _board() -> Control:
 	if GameState.board_goal_text() == "":
 		return null
-	var v := UiKit.vbox(4)
+	var v := UiKit.vbox(UiKit.Space.TIGHT)
 	v.name = "Board"
 	v.add_child(_head("The board"))
 	var state := GameState.board_state()
@@ -357,7 +362,7 @@ func _board() -> Control:
 	goal_why.name = "BoardGoalWhy"
 	v.add_child(goal_why)
 	if GameState.board_why() != "":
-		v.add_child(UiKit.spacer(8))
+		v.add_child(UiKit.spacer(UiKit.GAP))
 		var why := _wrapped(GameState.board_why(), UiKit.BODY, UiKit.MUTED)
 		why.name = "BoardWhy"
 		v.add_child(why)
@@ -373,7 +378,7 @@ func _staff() -> Control:
 	var v := UiKit.vbox(0)
 	v.name = "Staff"
 	v.add_child(_head("Staff"))
-	v.add_child(UiKit.spacer(4))
+	v.add_child(UiKit.spacer(UiKit.Space.TIGHT))
 	var staff := GameState.club_staff(GameState.my_club)
 	var open := {}
 	for vac in GameState.staff_vacancies:
@@ -385,7 +390,7 @@ func _staff() -> Control:
 			v.add_child(_staff_row(job, {}))
 		else:
 			v.add_child(_staff_row(job, staff[job]))
-	v.add_child(UiKit.spacer(6))
+	v.add_child(UiKit.spacer(UiKit.Space.CLOSE))
 	var jobs := GameState.staff_vacancies.size()
 	var b := UiKit.btn("Staff" if jobs == 0 else "Staff  ·  %d to fill" % jobs, UiKit.BODY, jobs > 0)
 	b.name = "OpenStaff"
@@ -409,7 +414,7 @@ func _staff_row(job: String, c: Dictionary) -> Control:
 		b.add_theme_stylebox_override(state, StyleBoxEmpty.new())
 	var label := str(Coaches.JOB_LABEL[job])
 	# The job in bold, the man in regular: a vacancy is quiet.
-	var h := UiKit.hbox(8)
+	var h := UiKit.hbox(UiKit.GAP)
 	b.add_child(h)
 	h.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var role := UiKit.line(label, UiKit.BODY, UiKit.MUTED if c.is_empty() else UiKit.TEXT, true)

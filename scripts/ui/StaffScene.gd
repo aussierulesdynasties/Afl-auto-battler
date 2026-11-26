@@ -25,7 +25,7 @@ func _ready() -> void:
 	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
 	UiKit.apply_insets(margin, 12)
 	add_child(margin)
-	_root = UiKit.vbox(10)
+	_root = UiKit.vbox(UiKit.Space.ROOM)
 	margin.add_child(_root)
 	get_viewport().size_changed.connect(func():
 		if not UiKit.keyboard_resize(self):
@@ -45,13 +45,13 @@ func _build() -> void:
 	body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	# Whose staff this is: the club's guernsey and, where its colour reads on
 	# the page, its ink. A dark club is carried by the guernsey alone.
-	var who_h := UiKit.hbox(8)
+	var who_h := UiKit.hbox(UiKit.GAP)
 	who_h.add_child(UiKit.club_marker(_club, 24.0))
 	var head := UiKit.ellipsis(GameDB.club_name(_club), UiKit.H2, _ink(_club), true)
 	head.name = "StaffClub"
 	who_h.add_child(head)
 	body.add_child(who_h)
-	body.add_child(UiKit.spacer(6))
+	body.add_child(UiKit.spacer(UiKit.Space.CLOSE))
 	var staff := GameState.club_staff(_club)
 	var open := {}
 	if mine:
@@ -66,7 +66,7 @@ func _build() -> void:
 	# A created club's first staff (director 2026-11-15): we hire all five.
 	if mine and GameState.first_staff_open():
 		body.add_child(_first_staff_intro(open.size()))
-		body.add_child(UiKit.spacer(6))
+		body.add_child(UiKit.spacer(UiKit.Space.CLOSE))
 	# A PC lays the staff out as cards across the screen, not one stretched
 	# column (director, 2026-10-10: no phone UI on a PC).
 	var w := UiKit.view_width(self)
@@ -76,8 +76,8 @@ func _build() -> void:
 		grid = GridContainer.new()
 		grid.name = "StaffGrid"
 		grid.columns = 3 if w >= 1100.0 else 2
-		grid.add_theme_constant_override("h_separation", 12)
-		grid.add_theme_constant_override("v_separation", 12)
+		grid.add_theme_constant_override("h_separation", UiKit.Space.PAD)
+		grid.add_theme_constant_override("v_separation", UiKit.Space.PAD)
 		body.add_child(grid)
 	for job in Coaches.JOBS:
 		var row: Control
@@ -92,7 +92,7 @@ func _build() -> void:
 		else:
 			row = _empty_row(job)
 		if grid != null:
-			var card := UiKit.panel(UiKit.PANEL, 14)
+			var card := UiKit.panel(UiKit.PANEL, UiKit.Space.LOOSE)
 			card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			card.add_child(row)
 			grid.add_child(card)
@@ -100,7 +100,7 @@ func _build() -> void:
 			body.add_child(row)
 			body.add_child(UiKit.rule())
 
-	body.add_child(UiKit.spacer(14))
+	body.add_child(UiKit.spacer(UiKit.Space.LOOSE))
 	var others := UiKit.btn("Our club" if not mine else "Another club's staff", UiKit.BODY)
 	others.name = "OtherClubs"
 	# On a PC it reads as a button (an outline), not a stray line of text.
@@ -131,7 +131,7 @@ func _build() -> void:
 
 ## You: the senior coach's calls are yours, so there are no grades to show.
 func _you_row() -> Control:
-	var v := UiKit.vbox(1)
+	var v := UiKit.vbox(UiKit.Space.HAIR)
 	v.name = "StaffRow_SC"
 	v.custom_minimum_size.y = 64
 	v.add_child(UiKit.lbl("Senior coach", UiKit.SMALL, UiKit.TEXT, true))
@@ -151,7 +151,7 @@ func _coach_row(job: String, c: Dictionary, releasable := false) -> Control:
 	b.focus_mode = Control.FOCUS_NONE
 	for state in ["normal", "hover", "pressed", "hover_pressed", "focus"]:
 		b.add_theme_stylebox_override(state, StyleBoxEmpty.new())
-	var v := UiKit.vbox(1)
+	var v := UiKit.vbox(UiKit.Space.HAIR)
 	v.set_anchors_preset(Control.PRESET_FULL_RECT)
 	v.alignment = BoxContainer.ALIGNMENT_CENTER
 	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -164,6 +164,8 @@ func _coach_row(job: String, c: Dictionary, releasable := false) -> Control:
 	if word != null:
 		v.add_child(word)
 	b.pressed.connect(func(): _sheet = CoachSheet.open(self, c))
+	# It answers a finger as every button does: it presses in, sounds and buzzes.
+	UiKit.feel(b, "soft")
 	var expiring := releasable and GameState.expiring_staff().has(c)
 	if expiring:
 		var stance := CoachMarket.assistant_stance(c, GameState.season_year)
@@ -183,14 +185,14 @@ func _coach_row(job: String, c: Dictionary, releasable := false) -> Control:
 		return b
 	# The offseason: an assistant can be let go (no payout, no negotiation);
 	# one whose term is up can also be kept, on his terms.
-	var h := UiKit.hbox(8)
+	var h := UiKit.hbox(UiKit.GAP)
 	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	h.add_child(b)
 	# Re-sign stacks over Release, so his lines keep the row's width at
 	# phone size instead of wrapping a word a line (bug-bash 7).
 	var acts: BoxContainer = h
 	if expiring:
-		acts = UiKit.vbox(8)
+		acts = UiKit.vbox(UiKit.GAP)
 		acts.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		h.add_child(acts)
 		var keep := UiKit.btn("Re-sign", 14)
@@ -231,7 +233,7 @@ func _word_line(c: Dictionary) -> Label:
 ## One of your jobs is open: why, a short list to choose from, or let the
 ## club pick (the same judgement the AI clubs use).
 func _vacancy_card(job: String, vac: Dictionary) -> Control:
-	var v := UiKit.vbox(6)
+	var v := UiKit.vbox(UiKit.Space.CLOSE)
 	v.name = "Vacancy_" + job
 	v.add_child(UiKit.lbl("%s vacancy" % _job_title(job), UiKit.BODY, UiKit.TEXT, true))
 	if str(vac.get("reason", "")) != "":
@@ -259,9 +261,9 @@ func _vacancy_card(job: String, vac: Dictionary) -> Control:
 
 
 func _candidate_row(job: String, c: Dictionary, i: int) -> Control:
-	var h := UiKit.hbox(8)
+	var h := UiKit.hbox(UiKit.GAP)
 	h.name = "Candidate_%s_%d" % [job, i]
-	var info := UiKit.vbox(1)
+	var info := UiKit.vbox(UiKit.Space.HAIR)
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	h.add_child(info)
 	var who := Button.new()
@@ -298,7 +300,7 @@ func _candidate_row(job: String, c: Dictionary, i: int) -> Control:
 
 ## The first-staff step's heading: what is open and what happens if we wait.
 func _first_staff_intro(n: int) -> Control:
-	var v := UiKit.vbox(2)
+	var v := UiKit.vbox(UiKit.Space.SLIM)
 	v.name = "FirstStaff"
 	v.add_child(UiKit.lbl("Hire our first staff", UiKit.HEADING, _ink(GameState.my_club), true))
 	for t in ["A new club: nobody on our staff yet.",
@@ -312,9 +314,9 @@ func _first_staff_intro(n: int) -> Control:
 
 ## An open job whose shortlist is closed: one tap opens it.
 func _vacancy_row(job: String) -> Control:
-	var h := UiKit.hbox(8)
+	var h := UiKit.hbox(UiKit.GAP)
 	h.name = "Vacancy_" + job
-	var v := UiKit.vbox(1)
+	var v := UiKit.vbox(UiKit.Space.HAIR)
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	v.add_child(UiKit.lbl(str(Coaches.JOB_LABEL[job]), UiKit.SMALL, UiKit.TEXT, true))
 	v.add_child(UiKit.lbl("Vacant", UiKit.BODY, UiKit.EMPH, true))
@@ -337,7 +339,7 @@ func _job_title(job: String) -> String:
 
 ## A job nobody holds (an expansion club before it has hired).
 func _empty_row(job: String) -> Control:
-	var v := UiKit.vbox(1)
+	var v := UiKit.vbox(UiKit.Space.HAIR)
 	v.name = "StaffRow_" + job
 	v.custom_minimum_size.y = 52
 	v.add_child(UiKit.lbl(str(Coaches.JOB_LABEL[job]), UiKit.SMALL, UiKit.MUTED))
@@ -356,8 +358,8 @@ func _ink(code: String) -> Color:
 
 func _padded(c: Control) -> Control:
 	var m := MarginContainer.new()
-	m.add_theme_constant_override("margin_top", 6)
-	m.add_theme_constant_override("margin_bottom", 6)
+	m.add_theme_constant_override("margin_top", UiKit.Space.CLOSE)
+	m.add_theme_constant_override("margin_bottom", UiKit.Space.CLOSE)
 	m.add_child(c)
 	return m
 
