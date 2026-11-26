@@ -1024,6 +1024,7 @@ func _test_tail_seeds(truth_hb: Array) -> Array:
 	var hb_total := int(truth_hb[0])
 	var hb_kick := int(truth_hb[1])
 	var worst_all := 0.0
+	var worst_at := ""
 	var worst_share := float(hb_kick) / maxf(1.0, float(hb_total))
 	var all_over_100 := hb_total > 100
 	var pooled := [0, 0]
@@ -1032,24 +1033,32 @@ func _test_tail_seeds(truth_hb: Array) -> Array:
 		var pa := _pauses(res)
 		pooled[0] += int(pa[0])
 		pooled[1] += int(pa[1])
-		worst_all = maxf(worst_all, _worst_release(res))
+		var w: Dictionary = _worst_release(res)
+		print("TAIL seed %d worst release %.1f m: %s" % [seed, float(w["off"]), str(w["at"])])
+		if float(w["off"]) > worst_all:
+			worst_all = float(w["off"])
+			worst_at = "seed %d, %s" % [seed, str(w["at"])]
 		var hb := _handball_counts(res)
 		hb_total += hb[0]
 		hb_kick += hb[1]
 		worst_share = maxf(worst_share, float(hb[1]) / maxf(1.0, float(hb[0])))
 		all_over_100 = all_over_100 and hb[0] > 100
-	_check(worst_all < 15.0, "No release far from the logged spot on seeds 1-3 either (worst %.1f m)" % worst_all)
+	_check(worst_all < 15.0, "No release far from the logged spot on seeds 1-3 either (worst %.1f m, %s)" % [worst_all, worst_at])
 	_check(all_over_100 and hb_kick <= hb_total / 50,
 			"A handball is drawn as a handball over four seeds (%d of %d drawn as kicks)" % [hb_kick, hb_total])
 	_check(worst_share <= 0.03, "No seed draws over 3%% of its handballs as kicks (worst %.1f%%)" % (worst_share * 100.0))
 	return pooled
 
 
-func _worst_release(res: Dictionary) -> float:
+## The release furthest from its logged spot: {off, at}, `at` the arrival itself, so a
+## failure names the event to look at.
+func _worst_release(res: Dictionary) -> Dictionary:
 	var played := _play(res, res["events"], 1.0 / 60.0 * 4.0, false)
-	var worst := 0.0
+	var worst := {"off": 0.0, "at": {}}
 	for a in (played["director"] as MatchDirector).arrivals:
-		worst = maxf(worst, absf((a["pos"] as Vector2).x - float(a["want_x"])))
+		var off := absf((a["pos"] as Vector2).x - float(a["want_x"]))
+		if off > float(worst["off"]):
+			worst = {"off": off, "at": a}
 	return worst
 
 
