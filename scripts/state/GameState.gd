@@ -10996,7 +10996,7 @@ func _league_fingerprint() -> String:
 
 func _club_phase(club: String) -> String:
 	var standing := _standing(club)
-	var side := Ratings.select_22(season.lists[club])
+	var side := TradeValue.side_of(season.lists[club])
 	var ages := 0.0
 	var n := 0
 	for q in (side["ground"] as Array) + (side["bench"] as Array):
@@ -11981,7 +11981,7 @@ func _fringe(code: String) -> Array:
 		_fringe_cache = {"key": key}
 	if not _fringe_cache.has(code):
 		var ground := {}
-		for q in Ratings.select_22(season.lists[code])["ground"]:
+		for q in TradeValue.side_of(season.lists[code])["ground"]:
 			ground[str(q["id"])] = true
 		_fringe_cache[code] = (season.lists[code] as Array).filter(func(q): return not ground.has(str(q["id"])))
 	return _fringe_cache[code]

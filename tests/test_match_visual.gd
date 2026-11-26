@@ -2429,6 +2429,27 @@ func _test_ground_terrain() -> void:
 			"The MCG's Yarra Park ring lies on the real land (%d points, worst %.3f m)" % [count, off])
 	_check(above <= 0.001, "Where it meets the model the ring is never above the MCG's street (%.3f)" % above)
 	mcg.free()
+	# Norwood's ring starts on the venue's own edge (63-100 m round): every spoke has the same rings, so each
+	# triangle joins neighbouring rings. Spokes with different ring counts once joined near rings to far ones,
+	# a fan of spikes over the turf from straight above (2026-11-26).
+	var nw := GroundModels.instantiate("norwood")
+	var nring: MeshInstance3D = nw.get_node_or_null("Surrounds")
+	var spread := 0.0
+	var tris := 0
+	if nring != null:
+		var arrs := nring.mesh.surface_get_arrays(0)
+		var nv: PackedVector3Array = arrs[Mesh.ARRAY_VERTEX]
+		var ni: PackedInt32Array = arrs[Mesh.ARRAY_INDEX]
+		for t in range(0, ni.size(), 3):
+			var r0 := Vector2(nv[ni[t]].x, nv[ni[t]].z).length()
+			var r1 := Vector2(nv[ni[t + 1]].x, nv[ni[t + 1]].z).length()
+			var r2 := Vector2(nv[ni[t + 2]].x, nv[ni[t + 2]].z).length()
+			if minf(r0, minf(r1, r2)) < 300.0:
+				spread = maxf(spread, maxf(r0, maxf(r1, r2)) - minf(r0, minf(r1, r2)))
+				tris += 1
+	_check(nring != null and tris > 1000 and spread < 2.0 * GroundModels.LAND_STEP,
+			"Norwood's land ring joins neighbouring rings only (%d triangles, widest %.1f m)" % [tris, spread])
+	nw.free()
 
 
 ## A ground whose boundary was traced on Google Earth (tools/grounds/boundary) plays on that line, not an ellipse:
@@ -2683,7 +2704,7 @@ func _test_ground_backdrop() -> void:
 	_check(GroundModels.has_backdrop("mcg") and GroundModels.has_backdrop("gmhba"),
 			"The MCG and GMHBA Stadium have their surroundings")
 	_check(not GroundModels.has_backdrop("gabba"), "The Gabba has none (its own surrounds, #2020)")
-	for g in ["MCG", "The Gabba"]:
+	for g in ["MCG", "WACA", "The Gabba"]:   # the WACA: the first ground rebuilt as the real place
 		var d := MatchDirector.new()
 		var res := _result(42)
 		d.setup(res, res["events"])
@@ -2701,7 +2722,7 @@ func _test_ground_backdrop() -> void:
 			oval.free()
 			continue
 		_check(bds.size() == 1 and (bds[0] as Node).get_parent().name == "Ground",
-				"The MCG's surroundings are laid with its model (%d)" % bds.size())
+				"%s's surroundings are laid with its model (%d)" % [g, bds.size()])
 		if bds.size() != 1:
 			oval.free()
 			continue
@@ -2711,9 +2732,9 @@ func _test_ground_backdrop() -> void:
 		_check(shadow.is_empty(), "The surroundings cast no shadow (%d do)" % shadow.size())
 		_check(oval.camera.far >= GroundModels.BACKDROP_FAR, "The camera sees out to the skyline (%.0f m)" % oval.camera.far)
 		_check(oval._env.fog_enabled and oval._env.fog_depth_begin >= 500.0,
-				"The haze starts well past the stadium (%.0f m)" % oval._env.fog_depth_begin)
+				"%s: the haze starts well past the stadium (%.0f m)" % [g, oval._env.fog_depth_begin])
 		var over := 0
-		var fence := GroundModels.match_fence() * 1.15
+		var fence := GroundModels.match_fence()
 		for n in geo:
 			var mi := n as MeshInstance3D
 			if mi == null or not str(mi.name).begins_with("bg_near_ground"):
@@ -2722,9 +2743,13 @@ func _test_ground_backdrop() -> void:
 			for i in mi.mesh.get_surface_count():
 				for v in mi.mesh.surface_get_arrays(i)[Mesh.ARRAY_VERTEX]:
 					var p: Vector3 = xf * v
-					if pow(p.x / fence.x, 2) + pow(p.z / fence.y, 2) < 1.0 and p.y > -1.0:
+					# inside the fence it lies under the model's own ground (GroundModels.UNDER_TURF, 0.1 m
+					# under the turf); out to 15% past the fence (the stands at most grounds, the grass banks
+					# at the WACA's ends) none of it rises over the turf
+					var e := pow(p.x / fence.x, 2) + pow(p.z / fence.y, 2)
+					if (e < 1.0 and p.y > -0.2) or (e < 1.3225 and p.y > 0.0):
 						over += 1
-		_check(over == 0, "None of the park's ground lies over the arena (%d points)" % over)
+		_check(over == 0, "%s: none of the park's ground lies over the arena (%d points)" % [g, over])
 		oval.free()
 ## The stands' light (director, 2026-11-21: roof undersides "grey, a faint green tint"): the model's
 ## surfaces take the stand shader; a face turned up keeps the sky's light, one turned down loses the
