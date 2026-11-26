@@ -405,6 +405,26 @@
 		]
 	},
 	{
+		"id": "gee_long_way_from_home",
+		"club": "GEE",
+		"controversy": false,
+		"category": "leadership",
+		"subject": {"kind": "player", "pick": "random", "where": {"age_max": 21}},
+		"title": ["A long way from home"],
+		"text": ["{name} is struggling: no family nearby, few mates, and a quiet regional town. His manager says he's thinking about asking to go home."],
+		"choices": [
+			{"key": "family", "label": "Move him in with a senior player's family",
+			 "effects": [{"op": "trust", "d": 3, "why": "The club found him a home and a mentor"}, {"op": "odds", "chance": 75, "hit": [{"op": "morale", "d": 4, "who": "subject"}], "hit_result": "{first} settles in."}, {"op": "morale", "d": -1, "who": "others"}],
+			 "result": "{name} has a home and a mentor. The senior player gives up his own time."},
+			{"key": "fly", "label": "Fly his family over for a week",
+			 "effects": [{"op": "board", "d": -2, "was": "funds"}, {"op": "odds", "chance": 50, "hit": [{"op": "morale", "d": 5, "who": "subject"}], "hit_result": "The visit does the trick."}],
+			 "result": "{name} feels looked after. It may not last."},
+			{"key": "time", "label": "Give him time; he'll adjust",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "No player got special treatment"}, {"op": "morale", "d": -4, "who": "subject"}],
+			 "result": "No favourites for anyone. {name} is still thinking about home."}
+		]
+	},
+	{
 		"id": "gee_town_in_hoops",
 		"club": "GEE",
 		"controversy": false,

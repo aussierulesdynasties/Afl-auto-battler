@@ -207,6 +207,64 @@
 		"private": true
 	},
 	{
+		"id": "community_school_visit",
+		"category": "community",
+		"subject": {
+			"kind": "player",
+			"where": {
+				"fit": true,
+				"age_max": 24
+			},
+			"pick": "random"
+		},
+		"title": [
+			"A school has asked for {name}"
+		],
+		"text": [
+			"His old school wants him at assembly on Friday."
+		],
+		"choices": [
+			{
+				"key": "go",
+				"label": "Send {first}",
+				"effects": [
+					{
+						"op": "morale",
+						"d": 3
+					},
+					{
+						"op": "board",
+						"d": 2
+					},
+					{
+						"op": "slow_start",
+						"who": "subject",
+						"chance": 10,
+						"on": "week"
+					}
+				],
+				"result": "{name} speaks at assembly."
+			},
+			{
+				"key": "no",
+				"label": "Send a video instead",
+				"effects": [
+					{
+						"op": "morale",
+						"d": -2
+					},
+					{
+						"op": "culture",
+						"strand": "standards",
+						"d": 1,
+						"why": "You kept game weeks on football"
+					}
+				],
+				"result": "{name} sends a video instead."
+			}
+		]
+	},
+	{
 		"id": "finals_club_greats",
 		"category": "community",
 		"phase": [

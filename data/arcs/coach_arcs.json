@@ -1205,12 +1205,6 @@
        {
         "op": "morale",
         "d": 5
-       },
-       {
-        "op": "trust",
-        "d": -4,
-        "scar": true,
-        "why": "You held him when he asked to go"
        }
       ],
       "result": "You ask {first} to stay.",

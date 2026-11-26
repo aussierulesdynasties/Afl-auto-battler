@@ -1,5 +1,5 @@
 extends RefCounted
-## The bonding deck (rule 69a): a Team bonding week deals one card from the eight
+## The bonding deck (rule 69a): a Team bonding week deals one card from the nine
 ## in data/stories/bonding.json. Each card has a small choice (a gain alone) and
 ## a big one (a gain and a cost), and every answer does what its lines say. The
 ## card stops the pre-season after its week, Round 1's own cards wait aside and
@@ -14,9 +14,7 @@ const Press := preload("res://tests/preseason_press.gd")
 const SEED := 6113
 const CLUB := "FRE"
 const IDS := ["bond_away_camp", "bond_talent_quest", "bond_community_week", "bond_beach_day", "bond_cultural_day",
-		"bond_leadership_workshop", "bond_families_day", "pre_leaders_vote"]
-## pre_sim_heated was retired in Card Pass 1 (2026-11-26): the in-season match
-## sim card (training_match_sim_heated) is the one fight at training.
+		"bond_leadership_workshop", "bond_families_day", "pre_leaders_vote", "pre_sim_heated"]
 ## The old pre-season cards the nine replaced (director, rule 69a).
 const GONE := ["pre_recruit_behind", "pre_contract_talk", "pre_bulking_up", "pre_camp", "pre_knee_return",
 		"pre_flag_hangover", "pre_kid_flying", "pre_star_last", "pre_members_open"]
@@ -86,7 +84,7 @@ func _test_deck() -> void:
 	bonding.sort()
 	var want := IDS.duplicate()
 	want.sort()
-	_check(bonding == want, "The bonding deck is the approved cards: %s" % ", ".join(PackedStringArray(bonding)))
+	_check(bonding == want, "The bonding deck is the nine approved cards: %s" % ", ".join(PackedStringArray(bonding)))
 	var gone := GONE.filter(func(id): return not StoryDeck.by_id(deck, id).is_empty())
 	_check(gone.is_empty(), "The old pre-season cards are out of the deck: %s" % ", ".join(PackedStringArray(gone)))
 	var only := true
@@ -231,24 +229,21 @@ func _test_effects() -> void:
 				if op == "sore":
 					if int(after["sore"]) <= int(before["sore"]):
 						wrong.append("%s/%s sore" % [id, opts[ci]["key"]])
-				elif op == "bond_seed":
-					if int(after["bonds"]) <= int(before["bonds"]):
-						wrong.append("%s/%s made no new mates" % [id, opts[ci]["key"]])
 				elif not before.has(k):
 					wrong.append("%s/%s %s not measured" % [id, opts[ci]["key"], k])
 				elif (int(after[k]) - int(before[k])) * d <= 0:
 					wrong.append("%s/%s %s did not move %d" % [id, opts[ci]["key"], k, d])
 				moved += 1
 	_check(wrong.is_empty(), "Every answer moves what its lines say: %s" % " | ".join(PackedStringArray(wrong.slice(0, 6))))
-	_check(moved >= 30, "...and every effect on the eight cards was exercised (%d)" % moved)
+	_check(moved >= 30, "...and every effect on the nine cards was exercised (%d)" % moved)
 	# Culture steps land on the culture page with their reason.
 	_career()
 	_to_week()
 	_bond_week()
-	GameState.week_events = [GameState.story_card("bond_away_camp")]
-	GameState.resolve_card(0, 1)
+	GameState.week_events = [GameState.story_card("pre_sim_heated")]
+	GameState.resolve_card(0, 0)
 	var rs := Culture.reasons(GameState.relations, CLUB, "standards")
-	_check(not rs.is_empty() and str(rs[0]["why"]).begins_with("A navy camp set the standard"),
+	_check(not rs.is_empty() and str(rs[0]["why"]).begins_with("You pulled the group up"),
 			"A strand step is logged on the culture page with its reason")
 
 
@@ -258,8 +253,7 @@ func _snapshot() -> Dictionary:
 			"together": Culture.value(GameState.relations, CLUB, "together"),
 			"ambition": Culture.value(GameState.relations, CLUB, "ambition"),
 			"board": GameState.board_confidence(), "morale_all": 0, "morale_rest": 0,
-			"trust_leaders": 0, "trust_indigenous": 0, "sore": 0,
-			"bonds": (Bonds.ensure(GameState.bonds)["by"] as Dictionary).values().reduce(func(n, m): return n + (m as Dictionary).size(), 0)}
+			"trust_leaders": 0, "trust_indigenous": 0, "sore": 0}
 	for p in GameState.my_list:
 		var id := str(p["id"])
 		out["morale_all"] += ClubLife.morale(p)

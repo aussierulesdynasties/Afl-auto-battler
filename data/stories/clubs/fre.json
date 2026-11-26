@@ -198,6 +198,23 @@
 		]
 	},
 	{
+		"id": "fre_long_way_home",
+		"club": "FRE",
+		"controversy": false,
+		"category": "family",
+		"subject": {"kind": "player", "pick": "random", "where": {"age_max": 21}},
+		"title": ["The long way home"],
+		"text": ["{name} has been quiet all month, a long way from his family on the other side of the country. His manager says he's homesick, and the Melbourne clubs will come knocking when his contract is up."],
+		"choices": [
+			{"key": "fly", "label": "Fly his family over for a fortnight",
+			 "effects": [{"op": "morale", "d": 10, "who": "subject"}, {"op": "trust", "d": 3, "why": "The club flew his family over"}, {"op": "board", "d": -2, "was": "funds"}],
+			 "result": "{name}'s family spends a fortnight in Fremantle. It isn't cheap."},
+			{"key": "talk", "label": "Talk him through it",
+			 "effects": [{"op": "morale", "d": 3, "who": "subject"}, {"op": "trust", "d": -2, "why": "He wanted more than a talk"}],
+			 "result": "{name} appreciates the chat. He still misses home."}
+		]
+	},
+	{
 		"id": "fre_longest_flights",
 		"club": "FRE",
 		"controversy": false,

@@ -78,10 +78,6 @@ const OPS := {
 	# The development talk (T5.r93): games in his new position promised if it
 	# takes (a role trial when it does), or told it is for depth (no promise).
 	"dev_promise": true, "no_promise": true,
-	# Card Pass 1 (2026-11-26): a promise the choice says out loud, kept on the
-	# coach's record and settled by its own test (Promises.card_made); a tie
-	# between the card's two players (Bonds.form).
-	"promise": false, "bond": true, "bond_seed": false,
 	# A roll with its odds on the card (the club decks, row 157): `chance` percent of
 	# the time the `hit` effects land, otherwise the `miss` effects.
 	"odds": false,
@@ -112,7 +108,7 @@ const HOLDS_AT := 60
 const HOLDS_WITH_TRUST := 45
 
 ## Facts a player card can test and print (GameState._story_player_facts).
-const PLAYER_FACTS := ["temperament", "name", "first", "age", "games", "fit", "selected", "overall", "potential",
+const PLAYER_FACTS := ["name", "first", "age", "games", "fit", "selected", "overall", "potential",
 		"pot_gap", "contract_years", "morale", "trust", "trust_band", "discipline", "backed", "back_wait", "back_out",
 		"fit_rank", "talk_case", "kpi", "kpi_or_need", "explain_label", "talk_text", "sore_odds",
 		"sore_pct", "injury_pct", "trial_ovr", "ask", "early_price", "more_seasons", "extension_ok", "intl_extension_ok", "job", "real_named",
@@ -448,12 +444,6 @@ static func _check_engine_fields(t: Dictionary) -> Array:
 		for k in (ab.get("where", {}) as Dictionary):
 			if not _known_condition(str(k), PLAYER_FACTS):
 				errs.append("%s: unknown second-player condition '%s'" % [id, str(k)])
-		if ab.has("pick") and (role != "teammate" or not _known_pick(str(ab["pick"]))):
-			errs.append("%s: a second player is picked ('%s') only as a teammate, by a known pick" % [id, str(ab["pick"])])
-		if ab.has("required") and not (ab["required"] is bool):
-			errs.append("%s: actor_b required must be true or false" % id)
-		if not bool(ab.get("required", true)) and str(ab.get("fallback", "")) == "":
-			errs.append("%s: a second player who may be missing needs fallback words" % id)
 	var advisors: Variant = t.get("advisors", [])
 	if not (advisors is Array):
 		errs.append("%s: advisors must be a list" % id)
@@ -515,33 +505,6 @@ static func _check_effect(where: String, e, player: bool) -> Array:
 		errs.append("%s: unknown target '%s'" % [where, who])
 	if who == "b" and (not _has_b or not B_OPS.has(op)):
 		errs.append("%s: only %s can reach a card's second player, and only on a card that has one" % [where, ", ".join(B_OPS)])
-	if op == "promise":
-		var pk := str(e.get("kind", ""))
-		if not (pk in Promises.CARD_KINDS):
-			errs.append("%s: a promise's kind '%s' is not one of %s" % [where, pk, ", ".join(Promises.CARD_KINDS)])
-		elif pk in Promises.PLAYER_KINDS and not player:
-			errs.append("%s: a promise to a player needs a player card" % where)
-		var pw := int(e.get("weeks", Promises.CARD_WEEKS.get(pk, 0)))
-		if pw < 0 or pw > 26 or (pk == "wins" and pw < 1):
-			errs.append("%s: a promise runs 0..26 weeks (wins at least one), not %d" % [where, pw])
-		if pk == "wins" and (int(e.get("need", 2)) < 1 or int(e.get("need", 2)) > pw):
-			errs.append("%s: wins needed must be 1..%d" % [where, pw])
-		if e.has("season") and not (str(e["season"]) in ["this", "next"]):
-			errs.append("%s: a finals promise is for this season or next" % where)
-	if op == "bond_seed" and (int(e.get("n", 1)) < 1 or int(e.get("n", 1)) > 3):
-		errs.append("%s: a camp makes 1..3 new mateships" % where)
-	if op == "bond":
-		var to_kid := str(e.get("with", "b")) == "kid"
-		if not (str(e.get("with", "b")) in ["b", "kid"]) or (not to_kid and not _has_b) or str(e.get("who", "subject")) != "subject":
-			errs.append("%s: a bond ties the card's player to its second player (or the young player it names)" % where)
-		if not (str(e.get("kind", "")) in StoryEngine.BOND_WORDS):
-			errs.append("%s: a bond's kind '%s' is not one of %s" % [where, str(e.get("kind", "")), ", ".join(StoryEngine.BOND_WORDS.keys())])
-		if int(e.get("s", 1)) < 1 or int(e.get("s", 1)) > Bonds.STRENGTH_MAX:
-			errs.append("%s: a bond's strength is 1..%d" % [where, Bonds.STRENGTH_MAX])
-	if e.has("temper"):
-		# Morale only: his opinion of you is sized by his temperament in Opinion itself.
-		if not (str(e["temper"]) in Temperament.LEVERS) or op != "morale" or str(e.get("who", "subject")) != "subject":
-			errs.append("%s: temper sizes his own morale move by one of %s" % [where, ", ".join(Temperament.LEVERS)])
 	# A permanent mark (director, 2026-11-26): only a trust move can leave one.
 	if e.has("scar") and (not (e["scar"] is bool) or op != "trust"):
 		errs.append("%s: a scar (true or false) marks only a trust move" % where)
@@ -643,7 +606,7 @@ static func _check_text(where: String, s: String, player: bool, ranked := false)
 static func _known_condition(k: String, facts: Array) -> bool:
 	if k == "flag" or k == "no_flag":
 		return true
-	for suffix in ["_min", "_max", "_every", "_any", "_none"]:
+	for suffix in ["_min", "_max", "_every"]:
 		if k.ends_with(suffix):
 			return facts.has(k.trim_suffix(suffix))
 	return facts.has(k)

@@ -39,6 +39,26 @@
 		]
 	},
 	{
+		"id": "ade_kid_wants_home",
+		"club": "ADE",
+		"controversy": false,
+		"category": "contracts",
+		"subject": {"kind": "player", "pick": "lowest:games", "where": {"age_max": 21}},
+		"title": ["The kid wants to go home"],
+		"text": ["{name} has had a rough few months a long way from his family. His manager rings: the Melbourne clubs are circling and the word \"home\" keeps coming up."],
+		"choices": [
+			{"key": "extend", "label": "Offer a longer deal with flights home built in",
+			 "effects": [{"op": "trust", "d": 3, "why": "You backed him with a longer deal"}, {"op": "board", "d": -2, "was": "funds"}, {"op": "odds", "chance": 70, "hit": [{"op": "morale", "d": 3, "who": "subject"}], "miss": [{"op": "morale", "d": -3, "who": "subject"}], "hit_result": "{first} signed. He's staying.", "miss_result": "{first} hasn't signed. Home is still on his mind."}],
+			 "result": "The offer is on the table, and it isn't cheap."},
+			{"key": "trade", "label": "Open trade talks with his manager",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The club set the terms, not the manager"}, {"op": "trust", "d": -5, "why": "You put him up for trade"}],
+			 "result": "Talks are open. {first} knows the club will let him go at the right price."},
+			{"key": "wait", "label": "Back the program and wait",
+			 "effects": [{"op": "odds", "chance": 45, "hit": [{"op": "morale", "d": 3, "who": "subject"}], "miss": [{"op": "morale", "d": -4, "who": "subject"}], "hit_result": "{first} settled on his own. He's starting to call it home.", "miss_result": "{first} is still homesick, and his manager knows it."}],
+			 "result": "No new deal. The club backs its program to settle him."}
+		]
+	},
+	{
 		"id": "ade_names_one_club",
 		"club": "ADE",
 		"controversy": false,

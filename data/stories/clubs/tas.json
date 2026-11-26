@@ -92,6 +92,26 @@
 		]
 	},
 	{
+		"id": "tas_homesick",
+		"club": "TAS",
+		"controversy": false,
+		"category": "health",
+		"subject": {"kind": "player", "pick": "random", "where": {"age_max": 20, "new_here": true, "real_named": false}},
+		"title": ["Homesick across the Strait"],
+		"text": ["{name} came over from the mainland and is struggling. He's never lived away from home, his family are a flight away and his form has dropped off."],
+		"choices": [
+			{"key": "fly", "label": "Fly him home for a weekend",
+			 "effects": [{"op": "morale", "d": 8, "who": "subject"}, {"op": "forgo_xp", "d": 6, "who": "subject"}],
+			 "result": "{first} sees his family and comes back lighter. He missed a week's work."},
+			{"key": "family", "label": "Move him in with a local family",
+			 "effects": [{"op": "morale", "d": 4, "who": "subject"}, {"op": "culture", "strand": "together", "d": 1, "why": "A local family took in one of the boys"}, {"op": "odds", "chance": 20, "hit": [{"op": "trust", "d": -4, "why": "He still talked about a trade home"}], "miss": [], "hit_result": "It didn't take, and he's talking about a trade home."}],
+			 "result": "{first} has a home-cooked tea and a spare room in town."},
+			{"key": "busy", "label": "Keep him busy with more footy",
+			 "effects": [{"op": "xp", "d": 6, "who": "subject"}, {"op": "morale", "d": -4, "who": "subject"}],
+			 "result": "Extra sessions fill the days. {first} still goes home to an empty flat."}
+		]
+	},
+	{
 		"id": "tas_away_flight",
 		"club": "TAS",
 		"controversy": false,
