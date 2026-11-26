@@ -13,7 +13,7 @@ const TEXT := {
 	]],
 	"league_draft": ["The League redraft", [
 		"Every club starts from nothing. Each drafts a list of 44 from the league's players.",
-		"Each player we take costs his salary. Our list must fit under the cap. It must have at least two rucks.",
+		"Each player we take costs his salary. Our list must fit under the cap. It must have at least one ruck.",
 		"When our pick comes up, take a player from the pool. The position counts show where we're short.",
 	]],
 	"combine": ["The Combine", [

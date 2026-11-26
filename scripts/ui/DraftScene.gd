@@ -2784,7 +2784,7 @@ func _refresh_status() -> void:
 		_finish_btn.tooltip_text = \
 				"The draft ends when every pick is made or the pool runs dry."
 	else:
-		_finish_btn.tooltip_text = "Fill our list under the cap, with at least 2 rucks."
+		_finish_btn.tooltip_text = "Fill our list under the cap, with at least one ruck."
 	if _draft.user_stuck():
 		_next_picks.text = "No player fits our cap and list.\nRelease a pick on My list."
 	if done:
