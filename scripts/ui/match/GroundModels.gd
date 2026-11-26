@@ -190,7 +190,8 @@ const SURROUNDS := {
 				62.8, 63.2, 63.8, 64.7, 66.0, 68.1, 70.8, 73.9, 77.7, 82.2, 86.2, 86.6, 87.6, 90.1, 92.4, 95.4,
 				97.1, 98.1, 98.9, 99.6, 100.0, 100.2, 100.3, 100.2, 100.1, 99.2, 98.2, 97.1, 95.9, 94.5, 93.9, 92.3,
 				90.6, 89.1, 87.4, 85.6, 83.6, 81.5, 79.3, 77.1, 74.9, 72.9, 71.1, 69.6, 68.3, 67.4, 66.9, 66.8],
-			"map": "surrounds.webp", "span": 2048.0, "trees": "trees.bin", "buildings": "buildings.bin",
+			"map": "surrounds.webp", "span": 2048.0, "trees": "trees.bin", "gum_trees": "gums.bin", "deep_crowns": true,
+			"buildings": "buildings.bin",
 			# Norwood in Google Earth: bluestone and sandstone villa fronts, red brick, cream render, white townhouses.
 			# (linear, as the vertex colours are read; each roof's own colour is in roofs.bin)
 			"walls": [Color(0.181, 0.19, 0.199), Color(0.579, 0.428, 0.237), Color(0.349, 0.133, 0.082), Color(0.681, 0.612, 0.456),
@@ -780,6 +781,11 @@ static func _add_surrounds(root: Node3D, s: Dictionary, dir := "", fit: Array = 
 			_add_trees(root, FileAccess.get_file_as_bytes(dir + str(s["trees"])).to_float32_array(), y, 5,
 					str(s.get("tree_kind", "")), bool(s.get("deep_crowns", false)), bool(s.get("tree_lod", false)),
 					relief, land, reach)
+		# `gum_trees`: a second list drawn as eucalypts (grey-green, pale limbs) among the ground's other trees
+		# (Norwood: the crowns the imagery shows grey-green and broad, tools/grounds/norwood/surrounds.py).
+		if s.has("gum_trees") and FileAccess.file_exists(dir + str(s["gum_trees"])):
+			_add_trees(root, FileAccess.get_file_as_bytes(dir + str(s["gum_trees"])).to_float32_array(), y, 5,
+					"gum", true, bool(s.get("tree_lod", false)), relief, land, reach)
 		if s.has("buildings") and FileAccess.file_exists(dir + str(s["buildings"])):
 			# `building_colours`: each building's wall and roof colour (6 bytes, the map's order), from
 			# OpenStreetMap's building:colour and roof:colour where mapped (Adelaide).
