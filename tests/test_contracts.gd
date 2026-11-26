@@ -631,9 +631,13 @@ func _test_offseason_flow() -> void:
 	GameState.salary_cap += 5000000
 	# A free agent no other club has offered for signs at his asking price;
 	# where rivals have offered, your offer goes on the table instead.
+	# Always exercise the signing, whatever this seeded market bid: rivals
+	# with cap room (#2065) can have an offer on every free agent, so the
+	# one signed here has theirs taken off first, as the cap rejection above
+	# sets its own terms.
 	for fa in GameState.free_agents.duplicate():
-		if str(fa.get("released_by", "")) != GameState.my_club and (fa.get("offers", []) as Array).is_empty() \
-				and not bool(GameState.free_agent_terms(str(fa["id"]))["refuse"]):
+		if str(fa.get("released_by", "")) != GameState.my_club:
+			fa["offers"] = []
 			var res := GameState.sign_free_agent(str(fa["id"]), int(Contracts.wants(fa)["years"]))
 			signed = bool(res["ok"]) and GameState.list_player(str(fa["id"])) == fa \
 					and str(fa["club"]) == GameState.my_club
@@ -2983,7 +2987,13 @@ func _test_trade_market() -> void:
 		var reb := str(by_phase["rebuilding"])
 		var bld := str(by_phase["building"])
 		var con := str(by_phase["contending"])
-		var reb_star := str(Ratings.select_22(GameState.season.lists[reb])["ground"][0]["id"])
+		# The rebuilding club's best starter who is staying: a man retiring, or
+		# one who asked to go to another club, is off every market (_trade_pool).
+		var reb_star := ""
+		for q in Ratings.select_22(GameState.season.lists[reb])["ground"]:
+			if not GameState.retiring_now(q) and not GameState.trade_requests.has(str(q["id"])):
+				reb_star = str(q["id"])
+				break
 		var bld_star := str(Ratings.select_22(GameState.season.lists[bld])["ground"][0]["id"])
 		_check(ids.call(GameState._trade_pool(con, reb)).has(reb_star)
 				and not ids.call(GameState._fringe(reb)).has(reb_star),
