@@ -23,18 +23,73 @@ SPECIES = {
  'shrub':       (0.27, (0.6, 1.4), (90, 108, 66), (90, 76, 60)),        # wattle, bottlebrush, yard shrubs: low, no clear trunk
 }
 _names = list(SPECIES); _w = np.array([SPECIES[k][0] for k in _names]); _w /= _w.sum()
+if spec.get('real'):   # real place: the trace finds trees, not shrubs; Perth/Adelaide/Melbourne streets are gums, planes and elms
+    _w = np.array([SPECIES[k][0] if k in ('sugar_gum', 'lemon_gum', 'elm', 'plane') else 0.0 for k in _names]); _w /= _w.sum()
 _pick = rng.choice(len(_names), size=len(TR), p=_w)
 G = {k: ([], [], []) for k in _names}   # verts, faces, cols
 def _put(k, V, F, c):
     v, f, cl = G[k]; o = len(v); v += V.tolist(); f += [tuple(o + q for q in fc) for fc in F]; cl += [c] * sum(len(fc) for fc in F)
 def _rot(V, a): c, s = math.cos(a), math.sin(a); return np.stack([V[:, 0] * c - V[:, 1] * s, V[:, 0] * s + V[:, 1] * c, V[:, 2]], 1)
+ICO0, ICO0F = _ico(0)
+# the far crown: an octahedron (8 faces), a few pixels at 700 m, so the budget keeps every tree's crown
+OCT = np.array([[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]], float)
+OCTF = [(0, 2, 4), (2, 1, 4), (1, 3, 4), (3, 0, 4), (2, 0, 5), (1, 2, 5), (3, 1, 5), (0, 3, 5)]
+# distance detail (a tree 500 m out is a few pixels on a phone): near trees as built; from LOD_MID their crown is its
+# 3 biggest clumps as 20-face blobs; from LOD_FAR one blob the size of the whole crown and no trunk. The budget then
+# keeps every tree instead of thinning the canopy.
+LOD_MID, LOD_FAR = spec.get('tree_lod_m', (450.0, 1100.0))
+_LOD = 0; _BUF = []
 def _blob(k, x, y, z, rx, rz, a, col):
+    if _LOD:
+        _BUF.append((k, x, y, z, rx, rz, a, col)); return
     V = (ICO1 + rng.normal(0, 0.13, ICO1.shape)) * [rx, rx * rng.uniform(0.8, 1.2), rz]; _put(k, _rot(V, a) + [x, y, z], ICO1F, col)
+def _flush():
+    global _BUF
+    if not _BUF: return
+    B = np.array([[b[1], b[2], b[3], b[4], b[5]] for b in _BUF]); k = _BUF[0][0]; col = _BUF[0][7]
+    lo = np.min(B[:, :3] - B[:, [3, 3, 4]], 0); hi = np.max(B[:, :3] + B[:, [3, 3, 4]], 0)
+    if _LOD == 1:   # the whole crown as one 20-face blob
+        c = (lo + hi) / 2; r = (hi - lo) / 2 * 0.92
+        V = (ICO0 + rng.normal(0, 0.06, ICO0.shape)) * r; _put(k, _rot(V, _BUF[0][6]) + c, ICO0F, col)
+    else:   # far: crowns merged by cell, one 8-face blob over the cell's canopy (every tree's cover kept)
+        _cs = 30.0 if math.hypot(lo[0] + hi[0], lo[1] + hi[1]) < 2 * 1100 else 48.0   # 30 m cells, 48 m past 1.1 km
+        key = ('elm' if 'elm' in G else k, int(math.floor((lo[0] + hi[0]) / 2 / _cs)), int(math.floor((lo[1] + hi[1]) / 2 / _cs)))
+        m = _FAR.get(key)
+        _ca = (hi[0] - lo[0]) * (hi[1] - lo[1]) * 0.78
+        _zc, _zr = (lo[2] + hi[2]) / 2, (hi[2] - lo[2]) / 2   # this tree's crown: its middle height and half its depth
+        _xc, _yc = (lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2
+        _sm = np.array([1, _xc, _yc, _zc, _xc * _xc, _xc * _yc, _yc * _yc, _xc * _zc, _yc * _zc])   # for the slope's plane
+        if m is None: _FAR[key] = [lo.copy(), hi.copy(), np.array(col, float), 1, _BUF[0][6], _ca, _zc, _zr, _sm]
+        else: m[0] = np.minimum(m[0], lo); m[1] = np.maximum(m[1], hi); m[2] += col; m[3] += 1; m[5] += _ca; m[6] += _zc; m[7] += _zr; m[8] = m[8] + _sm
+    _BUF = []
+_FAR = {}
+def _far_flush():
+    for (k, _, _), (lo, hi, cs, n, a, ca, zc, zr, sm) in _FAR.items():
+        c = (lo + hi) / 2; r = (hi - lo) / 2 * 0.9
+        f = min(1.0, math.sqrt(ca / max(1.0, 0.78 * (hi[0] - lo[0]) * (hi[1] - lo[1]))))   # the blob covers what the crowns covered
+        # its height is the crowns' own depth at their mean height, not the cell's whole height range: on a hillside
+        # that range takes in the slope and the blob stood up as a spike, so ridges read as a sawtooth
+        c[2] = zc / n; r = np.array([r[0] * f, r[1] * f, min(r[2], 1.15 * zr / n)])
+        V = _rot((OCT + rng.normal(0, 0.05, OCT.shape)) * r, a)
+        # laid along the slope: the plane through the crowns' middles (a flat blob on a steep town belt stood out of the
+        # hill as a dark shelf, shards on the skyline)
+        N_, X_, Y_, Z_, XX, XY, YY, XZ, YZ = sm; gx_ = gy_ = 0.0
+        if N_ >= 3:
+            A_ = np.array([[XX - X_ * X_ / N_, XY - X_ * Y_ / N_], [XY - X_ * Y_ / N_, YY - Y_ * Y_ / N_]])
+            b_ = np.array([XZ - X_ * Z_ / N_, YZ - Y_ * Z_ / N_])
+            if abs(np.linalg.det(A_)) > 1e-3 * max(1.0, A_.trace()) ** 2: gx_, gy_ = np.clip(np.linalg.solve(A_, b_), -1.5, 1.5)
+        c[0], c[1] = X_ / N_, Y_ / N_
+        V[:, 2] += gx_ * V[:, 0] + gy_ * V[:, 1]
+        _put(k, V + c, OCTF, tuple(cs / n))
 def _trunk(k, x, y, z, r, h, col, lean=(0, 0)):
+    if _LOD: return
     V = TRK * [r, r, h]; V[6:, :] = V[6:, :]; V[1::2, 0] += lean[0]; V[1::2, 1] += lean[1]; _put(k, V + [x, y, z], TRKF, col)
-for (x, y, _k), si in zip(TR, _pick):
+for _t, si in zip(TR, _pick):
+    x, y = _t[0], _t[1]
+    _flush(); _d = math.hypot(x, y); _LOD = 0 if _d < LOD_MID else (1 if _d < LOD_FAR else 2)
     k = _names[si]; _, (s0, s1), cc, bc = SPECIES[k]; s = rng.uniform(s0, s1); z0 = float(height(x, y)) - 0.2; a = rng.uniform(0, 2 * math.pi)
     jit = rng.uniform(0.86, 1.14); hue = rng.uniform(-0.05, 0.05)
+    if len(_t) >= 6 and _t[3] >= 0: cc = tuple(_t[3:6])   # real place: the crown's colour from the aerial
     col = lin(cc) * jit * np.array([1 + hue, 1, 1 - hue], np.float32); bark = lin(bc) * rng.uniform(0.9, 1.1)
     if k == 'sugar_gum':   # forked trunk, 5-7 flattened clumps spread wide and at different heights
         H = 7.5 * s; _trunk(k, x, y, z0, 0.38 * s, H * 0.75, bark)
@@ -64,6 +119,7 @@ for (x, y, _k), si in zip(TR, _pick):
     else:   # shrub
         for i in range(rng.integers(1, 4)):
             o = rng.normal(0, 0.8 * s, 2); _blob(k, x + o[0], y + o[1], z0 + 1.1 * s, rng.uniform(1.1, 1.8) * s, rng.uniform(0.8, 1.2) * s, a + i, col)
+_flush(); _far_flush()
 for k, (verts, faces, cols) in G.items():
     if not faces: continue
     tm = mat_vcol('tree_' + k, 0.9); nt = tm.node_tree; b = nt.nodes['Principled BSDF']; vc = b.inputs['Base Color'].links[0].from_socket
