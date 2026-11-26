@@ -5,8 +5,12 @@ read it when you pick or close work, not otherwise (a brief that names your row 
 `docs/DIRECTOR_BIBLE.md` (513 KB: search it, never read it whole). Must-read files stay under 60 KB (CI: `tools/check_doc_sizes.py`).
 
 Godot 4 / GDScript. Run `tools/run_tests.sh` (or `tools/run_tests.sh draft_ui`
-for one suite) before pushing. MetaHuman files (and anything made from them) never go in this public
+for one suite) before pushing. Hooks in `.claude/hooks/pr_guard.py` enforce the PR rules: they refuse a merge of a
+conflicting PR, a merge of main that isn't needed, a second push within 20 min, and ending a turn
+after a push with nothing set to wake you; each refusal names its override. In a cloud session they
+install Godot and gdlint at start, so run the suites there too. MetaHuman files (and anything made from them) never go in this public
 repo: they live in a private repo and `tools/epic_assets.sh fetch` copies them in (docs/EPIC_ASSETS.md).
+Ground models (`assets/grounds/`) live there too: publish them with `tools/ground_assets.sh`, never `git add` (docs/GROUND_ASSETS.md).
 
 ## The design bible comes first (director, 2026-10-09)
 
@@ -91,25 +95,33 @@ the jobs themselves took about 30 min. Merges took days, and the director calls 
 number one development blocker.
 
 - **Never end a turn with CI pending and nothing to wake you.** After you push, subscribe to the
-  PR's activity (`subscribe_pr_activity`), or schedule a check-in, or watch the run in the
-  foreground (`gh pr checks <n> --watch`, `gh run watch`). A red check that sits for hours
+  PR's activity (`subscribe_pr_activity`) or schedule a check-in (`send_later`); on a machine
+  with a full `gh`, `gh pr checks <n> --watch` also works. A red check that sits for hours
   because nobody looked is the most common failure here.
 - **A red check is the next job.** Read the failed job's log, fix it, push once. Do not start
   other work, open another PR or ask the director to merge while your PR is red.
 - **Push once, not in drips.** Each push cancels the run in progress and goes to the back of the
   queue (45 cancelled PR runs on 26 Nov). Batch your commits locally and run the touched suites
   with `tools/run_tests.sh <suite>` before you push.
-- **Respect the open PR cap (Director Bible 1.48): at most 3 ready PRs.** Over the cap, open
-  yours as a draft (drafts skip the game tests) and mark it ready when a slot frees. Count with
-  `gh pr list --state open --json isDraft --jq 'map(select(.isDraft|not))|length'`.
+- **Respect the open PR cap (Director Bible 7.48): at most 3 ready PRs.** Over the cap, open
+  yours as a draft (drafts skip the game tests) and mark it ready when a slot frees. Count
+  the open PRs that are not drafts (GitHub MCP `list_pull_requests`, or `gh pr list`). The
+  `PR cap` workflow enforces it: a PR over the cap goes back to draft and is released in turn.
 - **Check for a conflict before you ask for a merge, never after.** Run `git fetch origin main &&
   git merge-tree --write-tree origin/main HEAD`. If it reports a conflict, merge main in and fix
-  it first (never rebase or force-push, 1.48). Do not turn on auto-merge or ask for a merge on a
+  it first (never rebase or force-push, 7.48). Do not turn on auto-merge or ask for a merge on a
   PR you know conflicts: it cannot land, and it wastes a full test run.
 - **Before you open a PR, check the open set** for one that already touches the same files or row
-  (`gh pr list --search <row or file>`). Add to it or wait for it rather than opening a rival.
-- **Close what you abandon.** A PR you are not finishing gets closed with one line saying why, so
-  it stops taking runners on every main push.
+  (list the open PRs and read their titles and files). Add to it or wait for it rather than
+  opening a rival.
+- **Say what you abandon.** A PR you are not finishing: mark it draft (it stops taking runners)
+  and tell the director it can be closed. Never close it yourself (Director Bible 7.50).
+
+## Review boards and imagery (director, 2026-11-26)
+
+Review boards, WIP films, reference photos and aerial or satellite imagery go to the private repo
+`aussierulesdynasties/afl-review-archive` (same `.claude/review/` paths), never to this public repo, and never
+as a "save work in progress to main" commit. `.claude/review/` is ignored here.
 
 ## UI and writing
 
@@ -118,7 +130,7 @@ Before touching any screen, copy or vignette, load the `afl-ui-writing` skill (v
 ## Assigned flavour and styling work (director, 2026-10-06)
 
 - **Flavour FL-001-FL-008:** scope and rulings in [the Director Bible](docs/DIRECTOR_BIBLE.md). Every addition has zero gameplay effects and must look distinct from real game information; new ritual/farewell vignette scenes are authorised (shared 2.5D art, tactical-scene gates kept).
-- **Styling STYLE-01-STYLE-08:** scope and rulings in [the Director Bible](docs/DIRECTOR_BIBLE.md). Dark Android first. Light theme parked (director 2026-10-13: "im also happy to abandon 'light mode' for now"): no new light-theme work, captures or tests; the code stays. A visual treatment merges only after the director approves its look; green CI is not enough.
+- **Styling STYLE-01-STYLE-08:** scope and rulings in [the Director Bible](docs/DIRECTOR_BIBLE.md). Dark Android first. Light theme removed (director 2026-11-26: "please remove 'light mode' from the game"): dark is the only appearance. A visual treatment merges only after the director approves its look; green CI is not enough.
 - The Training player-row name/secondary-line stack is a confirmed vertical-alignment defect.
 
 ## Skills

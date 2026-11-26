@@ -47,7 +47,7 @@ func _run() -> void:
 		state.set_setting("seen_%s_intro" % key, true)
 	state.set_confirm_sim_round(false)
 	load("res://scripts/ui/Feel.gd").reduced = reduced
-	load("res://scripts/ui/UiKit.gd").apply_appearance("dark")
+	load("res://scripts/ui/UiKit.gd").apply_palette()
 	root.size = Vector2i(_w, _h)
 	DisplayServer.window_set_size(Vector2i(_w, _h))
 	state.reset()

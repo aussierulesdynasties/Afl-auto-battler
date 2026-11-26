@@ -56,7 +56,7 @@ func _one(out: String, club: String, w: int, h: int, rounds: int) -> void:
 	state.start_season(club, db.club_list(club))
 	for i in range(rounds):
 		state.advance()
-	UK.apply_appearance("dark")
+	UK.apply_palette()
 	root.size = Vector2i(w, h)
 	DisplayServer.window_set_size(Vector2i(w, h))
 	await _frames(3)

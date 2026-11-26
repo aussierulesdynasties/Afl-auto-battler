@@ -112,8 +112,8 @@ const SHAKE_MAX_PX := 4.0   # and never more than this, on any screen
 ## it over.
 const RESTARTS := ["goal", "behind", "quarter", "ballup", "throwin", "free", "fifty",
 		"last_disposal", "out_on_full"]
-## The turf is green in both appearances, so the ring is the dark theme's text
-## colour fixed, not UiKit.TEXT, which turns dark in light mode.
+## The ring is the page's text colour, fixed here so the turf ring never
+## follows a capture tool's palette tryout.
 const RING_COLOUR := Color(0.945, 0.933, 0.902)
 ## A player's disc, half as big again as it was (director, 2026-11-12: "Bigger
 ## discs, bench drawer", about 1.5x, the jumper number readable): never under a

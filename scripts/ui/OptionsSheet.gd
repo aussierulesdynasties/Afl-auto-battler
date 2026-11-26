@@ -4,7 +4,6 @@ extends RefCounted
 ## preferences apply at once; career actions keep destructive changes behind
 ## an explicit confirmation.
 
-const APPEARANCE_OPTIONS := [["dark", "Dark"], ["light", "Light"]]
 const REPORT_INFO := "Copies the build, the round, this screen and the last 20 lines of the match feed. Paste it into a message. Nothing is sent from the game."
 const TEXT_SIZE_INFO := "Makes the game's words bigger."
 const SPEED_OPTIONS :=[["1", "1x"], ["2", "2x"], ["4", "4x"], ["8", "8x"]]
@@ -21,12 +20,6 @@ static func open(host: Control, in_career: bool, quit := false) -> Control:
 	v.add_theme_constant_override("separation", UiKit.Space.CLOSE)
 	v.add_child(UiKit.heading("Settings", UiKit.H1))
 
-	_row(v, "Appearance", "SettingsAppearance", APPEARANCE_OPTIONS,
-			GameState.appearance(), "Changes the screens only. Club colours and the ground stay as they are.",
-			func(k):
-				if GameState.set_appearance(k):
-					overlay.queue_free()
-					host.get_tree().call_deferred("reload_current_scene"))
 	_row(v, "Text size", "SettingsTextSize", UiKit.TEXT_SIZES, GameState.text_size(), TEXT_SIZE_INFO,
 			func(k):
 				if GameState.set_text_size(k):
@@ -92,10 +85,6 @@ static func open(host: Control, in_career: bool, quit := false) -> Control:
 			"How much detail the 3D oval draws. Low keeps a weaker phone smooth: fewer shadows, every supporter a flat card. The match plays the same.",
 			func(k): GameState.set_graphics_quality(k))
 	_grounds(v)
-	_row(v, "Centre ball-up scene every match", "SettingsBounceScene", [["off", "Off"], ["on", "On"]],
-			"on" if GameState.bounce_scene_every_match() else "off",
-			"For playtesting. The centre ball-up call comes at the first centre ball-up of every last quarter you coach, whatever the score.",
-			func(k): GameState.set_bounce_scene_every_match(k == "on"))
 
 	_saves(v, overlay, host)
 
