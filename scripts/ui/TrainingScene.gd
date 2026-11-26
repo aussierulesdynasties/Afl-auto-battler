@@ -57,6 +57,12 @@ var _scroll_to_learn := false
 ## A PC's squad list: one-line rows, down then across in as many columns as fit.
 const PC_ROW_H := 22.0
 const PC_ROW_SEP := 2.0
+## The most men across a band before the list would need a scroll.
+const PC_BAND_MAX := 6
+## A stat-sheet row (_pc_sheet): a click target, not a thumb's.
+const PC_SHEET_ROW_H := 36.0
+## The narrowest list column that still shows a man's position beside his name.
+const PC_POS_MIN_W := 200.0
 var _pc_fit_rows := 99
 var _pc_area_w := 0.0
 var _pc_grid: GridContainer = null
@@ -349,7 +355,7 @@ func _band() -> Control:
 
 
 ## The squad: the tabs, the search and the group hint on one line, then every
-## man as a one-line row, down then across in as many columns as fit.
+## man as a one-line row in a band per position (_pc_fill).
 ## `compact`: the list beside the player, name and OVR only.
 func _pc_list(compact: bool) -> Control:
 	_pc_compact = compact
@@ -424,13 +430,16 @@ func _pc_fit(sc: Control) -> void:
 			_pc_fill.call_deferred(_pc_grid)
 
 
-## Heads and rows in reading order, cut into columns of the rows that fit; a
-## position's head never sits alone at the foot of a column.
+## A band per position (director, 2026-11-26: "B: band per position"): its
+## head runs across the list and its men fill three across beneath it, best
+## first. A list too long for the box goes four across (up to six) rather
+## than scroll. Every band shares one grid of columns.
 func _pc_fill(grid: GridContainer) -> void:
 	if not is_instance_valid(grid):
 		return
 	UiKit.clear(grid)
-	var items: Array = []
+	grid.columns = 1
+	var groups: Array = []
 	for role in ["RUCK", "MID", "DEF", "FWD"]:
 		if _role != "" and _role != role:
 			continue
@@ -446,60 +455,53 @@ func _pc_fill(grid: GridContainer) -> void:
 		if group.is_empty():
 			continue
 		group.sort_custom(func(a, b): return int(Rating.ovr(a)) > int(Rating.ovr(b)))
-		items.append(["head", "%s (%d)" % [UiKit.ROLE_LABEL[role], group.size()]])
-		for p in group:
-			items.append(["p", p])
-	if items.is_empty():
-		grid.columns = 1
+		groups.append([role, group])
+	if groups.is_empty():
 		grid.add_child(UiKit.lbl("No players match.", UiKit.NAME, UiKit.TEXT, true))
 		return
-	# As few columns as the box needs, then the rows spread evenly over them, so
-	# no column is left near empty.
-	var k := _pc_cut(items, _pc_fit_rows).size()
-	var depth_cap := mini(int(ceil(items.size() / float(k))), _pc_fit_rows)
-	var cols := _pc_cut(items, depth_cap)
-	while cols.size() > k and depth_cap < _pc_fit_rows:
-		depth_cap += 1
-		cols = _pc_cut(items, depth_cap)
-	k = cols.size()
-	grid.columns = k
-	var colw := (_pc_area_w - float(UiKit.Space.LOOSE) * float(k - 1)) / float(k) if _pc_area_w > 0.0 else 300.0
-	var depth := 0
-	for c in cols:
-		depth = maxi(depth, (c as Array).size())
-	for i in range(depth):
-		for j in range(k):
-			var col: Array = cols[j]
-			if i < col.size():
-				grid.add_child(_pc_item(col[i], colw))
-			else:
-				var gap := Control.new()
-				gap.custom_minimum_size.y = PC_ROW_H
-				gap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-				gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
-				grid.add_child(gap)
+	var n := 3
+	while n < PC_BAND_MAX and _pc_band_lines(groups, n) > _pc_fit_rows:
+		n += 1
+	var colw := (_pc_area_w - float(UiKit.Space.LOOSE) * float(n - 1)) / float(n) if _pc_area_w > 0.0 else 300.0
+	for g in groups:
+		var role := str(g[0])
+		var men: Array = g[1]
+		grid.add_child(_pc_item(["head", "%s (%d)" % [UiKit.ROLE_LABEL[role], men.size()], role], colw))
+		var band := GridContainer.new()
+		band.name = "Band_" + role
+		band.columns = n
+		band.add_theme_constant_override("h_separation", UiKit.Space.LOOSE)
+		band.add_theme_constant_override("v_separation", int(PC_ROW_SEP))
+		band.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		grid.add_child(band)
+		for p in men:
+			band.add_child(_pc_item(["p", p], colw))
+		# The last row filled out, so its columns are the other bands' columns.
+		for i in range((n - men.size() % n) % n):
+			var gap := Control.new()
+			gap.custom_minimum_size.y = PC_ROW_H
+			gap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			band.add_child(gap)
 
 
-## Reading order cut into columns of at most `cap` lines; a position's head
-## never sits alone at the foot of a column.
-func _pc_cut(items: Array, cap: int) -> Array:
-	var cols: Array = [[]]
-	for it in items:
-		var col: Array = cols.back()
-		var room := cap - col.size()
-		if room <= 0 or (str(it[0]) == "head" and room < 2):
-			cols.append([])
-			col = cols.back()
-		col.append(it)
-	return cols
+## The lines the bands take at `n` across: a head each, then its rows.
+func _pc_band_lines(groups: Array, n: int) -> int:
+	var lines := 0
+	for g in groups:
+		lines += 1 + int(ceil((g[1] as Array).size() / float(n)))
+	return lines
 
 
 ## One line: a position's head, or a man: name, position, OVR (a rise in
-## green, as on his card), and in a wide column where he stands.
+## green, as on his card), and in a wide column where he stands. A narrow
+## column (six across at 960x540) keeps his name and drops the position word:
+## his band already names it.
 func _pc_item(it: Array, colw: float) -> Control:
 	if str(it[0]) == "head":
 		var head := UiKit.lbl(str(it[1]), UiKit.SECONDARY, UiKit.TEXT, true)
-		head.name = "GroupHead"
+		# One name per band: siblings that share a name are renamed by Godot.
+		head.name = "GroupHead_" + str(it[2])
 		head.custom_minimum_size.y = PC_ROW_H
 		head.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
 		head.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -524,13 +526,14 @@ func _pc_item(it: Array, colw: float) -> Control:
 		face.add_child(tick)
 	var full_name := GameDB.player_display_name(p)
 	var n := UiKit.ellipsis(full_name, 13, UiKit.TEXT, true)
+	n.name = "TraineeName"
 	n.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	n.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	n.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS_FORCE
 	n.resized.connect(func():
 		n.text = BenchDrawer._fit_name(full_name, n.size.x, n.get_theme_font_size("font_size")))
 	face.add_child(n)
-	if not _pc_compact:
+	if not _pc_compact and colw >= PC_POS_MIN_W:
 		var pos := UiKit.line(_card_position(p), 12, UiKit.MUTED)
 		pos.custom_minimum_size.x = 48
 		pos.size_flags_vertical = Control.SIZE_SHRINK_CENTER
@@ -657,9 +660,9 @@ func _pc_player(page: bool) -> Control:
 					_build())
 		outer.add_child(tabs)
 		outer.move_child(tabs, cols.get_index())
-		# Five choices across on the player stage; four beside the list, where
-		# five would wrap a choice's words ("Contested marking 34").
-		var across := 5 if page else 4
+		# The choices as a stat sheet, both tabs alike: three across beside the
+		# list, four on the player stage.
+		var across := 4 if page else 3
 		if _pc_tab == "stat":
 			var sf := _stat_focus_panel(p)
 			sf.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -668,7 +671,7 @@ func _pc_player(page: bool) -> Control:
 			cols.add_child(sf)
 			var pick := sf.find_child("StatFocusPick", true, false) as GridContainer
 			if pick != null:
-				pick.columns = across
+				_pc_sheet(pick, across, _focus_choice if _focus_choice != "" else GameState.stat_focus(p), p)
 			# Sized to its words, not stretched across the panel.
 			var lock := sf.find_child("StatFocusLock", true, false) as Control
 			if lock != null:
@@ -682,7 +685,7 @@ func _pc_player(page: bool) -> Control:
 			for g_name in ["PlayerPlan", "PlayerLearn"]:
 				var g := dev.find_child(g_name, true, false) as GridContainer
 				if g != null:
-					g.columns = across
+					_pc_sheet(g, across, GameState.plan_for(p), {})
 	var hint := _trait_hint(p, true)
 	if hint != null:
 		foot.add_child(hint)
@@ -691,6 +694,64 @@ func _pc_player(page: bool) -> Control:
 		foot.add_child(res_line)
 	foot.visible = foot.get_child_count() > 0
 	return panel
+
+
+## A choice grid as a stat sheet (director, 2026-11-26: "A: stat sheet"): a
+## row each, its words on the left and, for a stat, his number on the right,
+## a thin rule under each; the chosen row outlined in white. `p`: the player
+## whose stats the keys are (StatFocusPick); empty for the development plans.
+func _pc_sheet(grid: GridContainer, across: int, chosen: String, p: Dictionary) -> void:
+	grid.columns = across
+	grid.add_theme_constant_override("h_separation", UiKit.Space.LOOSE)
+	grid.add_theme_constant_override("v_separation", 0)
+	var prefix := str(grid.name) + "_"
+	for c in grid.get_children():
+		var b := c as Button
+		if b == null:
+			continue
+		var key := str(b.name).trim_prefix(prefix)
+		var on := key == chosen
+		var words := GameState.train_stat_label(key) if not p.is_empty() else b.text
+		b.text = ""
+		b.tooltip_text = words
+		b.custom_minimum_size.y = PC_SHEET_ROW_H
+		var sb := StyleBoxFlat.new()
+		sb.content_margin_left = 12
+		sb.content_margin_right = 12
+		sb.bg_color = UiKit.SURFACE if on else Color(0, 0, 0, 0)
+		sb.border_color = UiKit.TEXT if on else UiKit.LINE
+		if on:
+			sb.set_border_width_all(2)
+			sb.set_corner_radius_all(UiKit.RADIUS)
+		else:
+			sb.border_width_bottom = 1
+		for s in ["normal", "hover", "pressed", "hover_pressed"]:
+			b.add_theme_stylebox_override(s, sb)
+		var face := UiKit.hbox(UiKit.Space.CLOSE)
+		face.name = "SheetRow"
+		face.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		face.offset_left = 12
+		face.offset_right = -12
+		b.add_child(face)
+		var nm := UiKit.line(words, 14, UiKit.TEXT, on)
+		nm.name = "SheetWords"
+		nm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		nm.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		nm.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		face.add_child(nm)
+		if not p.is_empty():
+			var num := UiKit.line(PlayerProfile.attr_text(p, key), 14, UiKit.TEXT, true)
+			num.name = "SheetNumber"
+			num.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+			num.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+			face.add_child(num)
+		_ignore_mouse(face)
+	# The last row filled out, so a short sheet keeps the columns of the one above.
+	for i in range((across - grid.get_child_count() % across) % across):
+		var gap := Control.new()
+		gap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		grid.add_child(gap)
 
 
 ## His background and every stat, as the Stats button shows them: two columns

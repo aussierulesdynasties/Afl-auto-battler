@@ -31,6 +31,8 @@ func _run() -> void:
 	await _t("_test_training_results")
 	await _t("_test_training_pc")
 	await _t("_test_training_pc_tabs")
+	await _t("_test_training_pc_bands")
+	await _t("_test_training_pc_sheet")
 	print(Ran.line("Training", self, [suite]))
 	quit(0 if _failures.is_empty() else 1)
 
@@ -695,7 +697,7 @@ func _test_training_pc_tabs() -> void:
 				scene.call("_build")
 				await _settle()
 				# A real click on a choice he isn't on: a new development focus, or a stat.
-				var pre := {"dev changed": "PlayerPlan_", "stat picked": "StatFocusPick_"}.get(state, "")
+				var pre: String = {"dev changed": "PlayerPlan_", "stat picked": "StatFocusPick_"}.get(state, "")
 				if pre != "":
 					var b: Button = null
 					for c in scene.find_children(pre + "*", "Button", true, false):
@@ -714,6 +716,167 @@ func _test_training_pc_tabs() -> void:
 		scene.queue_free()
 		await _settle()
 	root.size = Vector2i(390, 844)
+
+
+## The squad on a PC (director, 2026-11-26: "B: band per position"): each
+## position's head runs across the list and its men fill three across beneath
+## it, best first, every band on one grid of columns. At 960x540 the bands go
+## wider rather than scroll, and every man's name still reads whole.
+func _test_training_pc_bands() -> void:
+	var gs = root.get_node("GameState")
+	var db = root.get_node("GameDB")
+	var ui = load("res://scripts/ui/UiKit.gd")
+	gs.reset()
+	gs.replay_seed = 20261126
+	gs.set_setting("seen_training_intro", true)
+	gs.start_season("FRE", db.club_list("FRE"))
+	for sz in [Vector2i(1280, 720), Vector2i(960, 540)]:
+		root.size = sz
+		var tag := "PC bands %dx%d" % [sz.x, sz.y]
+		var scene: Control = load("res://scenes/TrainingScene.tscn").instantiate()
+		root.add_child(scene)
+		await _settle()
+		var bands := scene.find_children("Band_*", "GridContainer", true, false)
+		var heads := scene.find_children("GroupHead_*", "Label", true, false)
+		_check(bands.size() == 4 and heads.size() == 4,
+				"%s: a head and a band for each of the four positions (%d heads, %d bands)" % [tag, heads.size(), bands.size()])
+		var across: int = (bands[0] as GridContainer).columns if not bands.is_empty() else 0
+		_check(across == 3 if sz.x == 1280 else across >= 3, "%s: %d across (three beside the player)" % [tag, across])
+		var bad: Array = []
+		var lefts := {}
+		var w_lo := INF
+		var w_hi := 0.0
+		var men := 0
+		for band in bands:
+			var g := band as GridContainer
+			var head: Control = g.get_parent().get_child(g.get_index() - 1) as Control if g.get_index() > 0 else null
+			if head == null or str(head.name) != "GroupHead_" + str(g.name).trim_prefix("Band_") or head.get_global_rect().end.y > g.get_global_rect().position.y + 0.5 \
+					or absf(head.get_global_rect().position.x - g.get_global_rect().position.x) > 0.5 or g.columns != across:
+				bad.append("%s: not under its head" % g.name)
+			var last := 999
+			for c in g.get_children():
+				if not (c is Button):
+					continue
+				men += 1
+				var rc := (c as Control).get_global_rect()
+				lefts[snappedf(rc.position.x, 1.0)] = true
+				w_lo = minf(w_lo, rc.size.x)
+				w_hi = maxf(w_hi, rc.size.x)
+				var rating := (c as Control).find_child("Rating", true, false) as Label
+				var ovr := int(rating.text.get_slice(" ", rating.text.get_slice_count(" ") - 1)) if rating != null else 0
+				if ovr > last:
+					bad.append("%s: %d after %d" % [c.name, ovr, last])
+				last = ovr
+				var nm := (c as Control).find_child("TraineeName", true, false) as Label
+				var fs: int = nm.get_theme_font_size("font_size") if nm != null else 13
+				if nm == null or ui.BOLD.get_string_size(nm.text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x > nm.size.x + 0.5:
+					bad.append("%s: name cut (%s)" % [c.name, "none" if nm == null else nm.text])
+		# A grid shares out its spare pixels whole, so columns may differ by one.
+		_check(men == gs.my_list.size() and lefts.size() == across and w_hi - w_lo <= 1.0 and bad.is_empty(),
+				"%s: all %d of %d men in bands on %d columns of one width, best first, names whole (%d left edges, widths %.1f-%.1f, %d bad: %s)" % [
+				tag, men, gs.my_list.size(), across, lefts.size(), w_lo, w_hi, bad.size(), str(bad.slice(0, 3))])
+		_pc_rows_fit(scene, tag)
+		scene.queue_free()
+		await _settle()
+	root.size = Vector2i(390, 844)
+
+
+## The focus choices on a PC as a stat sheet (director, 2026-11-26: "A: stat
+## sheet"): a row each, the stat on the left and his number on the right on one
+## line, a thin rule under each, the chosen one outlined in white; the
+## development plans take the same rows, words only, and a short second sheet
+## keeps the first one's columns.
+func _test_training_pc_sheet() -> void:
+	var gs = root.get_node("GameState")
+	var db = root.get_node("GameDB")
+	var ui = load("res://scripts/ui/UiKit.gd")
+	var prof = load("res://scripts/sim/PlayerProfile.gd")
+	gs.reset()
+	gs.replay_seed = 20261126
+	gs.set_setting("seen_training_intro", true)
+	gs.start_season("FRE", db.club_list("FRE"))
+	root.size = Vector2i(1280, 720)
+	var tag := "PC sheet 1280x720"
+	var scene: Control = load("res://scenes/TrainingScene.tscn").instantiate()
+	root.add_child(scene)
+	await _settle()
+	# A man with a position to learn, so both development sheets show.
+	var learn: Array = []
+	for q in gs.my_list:
+		scene.set("_selected", str(q["id"]))
+		scene.call("_build")
+		await _settle()
+		learn = scene.find_children("PlayerLearn_*", "Button", true, false)
+		if not learn.is_empty():
+			break
+	var p: Dictionary = gs.list_player(str(scene.get("_selected")))
+	var plan := scene.find_children("PlayerPlan_*", "Button", true, false)
+	var bad: Array = []
+	for b in plan:
+		bad.append_array(_sheet_row_faults(b, str(b.name).trim_prefix("PlayerPlan_") == gs.plan_for(p), false, ui))
+	for b in learn:
+		bad.append_array(_sheet_row_faults(b, str(b.name).trim_prefix("PlayerLearn_") == gs.plan_for(p), false, ui))
+	var r_plan := (plan[0] as Control).get_global_rect() if not plan.is_empty() else Rect2()
+	var r_learn := (learn[0] as Control).get_global_rect() if not learn.is_empty() else Rect2(-9, 0, 0, 0)
+	_check(plan.size() >= 2 and not learn.is_empty() and bad.is_empty()
+			and absf(r_plan.position.x - r_learn.position.x) < 0.5 and absf(r_plan.size.x - r_learn.size.x) < 0.5,
+			"%s: the development plans are sheet rows, words only, his plan outlined, Learn on the same columns (%d plans, %d learn, %d bad: %s)" % [
+			tag, plan.size(), learn.size(), bad.size(), str(bad.slice(0, 3))])
+	var why: String = await Tap.tap(scene.find_child("FocusTabs_stat", true, false))
+	await _settle()
+	var rows := scene.find_children("StatFocusPick_*", "Button", true, false)
+	var other: Button = null
+	var chosen := str(scene.get("_focus_choice")) if str(scene.get("_focus_choice")) != "" else str(gs.stat_focus(p))
+	bad.clear()
+	for b in rows:
+		var key := str(b.name).trim_prefix("StatFocusPick_")
+		bad.append_array(_sheet_row_faults(b, key == chosen, true, ui))
+		var words := (b as Control).find_child("SheetWords", true, false) as Label
+		var num := (b as Control).find_child("SheetNumber", true, false) as Label
+		if words != null and num != null and (words.text != gs.train_stat_label(key) or num.text != prof.attr_text(p, key)):
+			bad.append("%s: %s %s" % [key, words.text, num.text])
+		if key != chosen and other == null:
+			other = b
+	_check(why == "" and rows.size() >= 8 and bad.is_empty(),
+			"%s: every stat is a sheet row, its name left and his number right on one line (%d rows, %d bad: %s)" % [
+			tag, rows.size(), bad.size(), str(bad.slice(0, 3))])
+	var picked := str(other.name).trim_prefix("StatFocusPick_") if other != null else ""
+	why = await Tap.tap(other) if other != null else "no other stat"
+	await _settle()
+	bad.clear()
+	for b in scene.find_children("StatFocusPick_*", "Button", true, false):
+		bad.append_array(_sheet_row_faults(b, str(b.name).trim_prefix("StatFocusPick_") == picked, true, ui))
+	_check(why == "" and str(scene.get("_focus_choice")) == picked and bad.is_empty(),
+			"%s: a real click on %s outlines that row alone (%s, %d bad: %s)" % [tag, picked, why, bad.size(), str(bad.slice(0, 3))])
+	scene.queue_free()
+	await _settle()
+	root.size = Vector2i(390, 844)
+
+
+## What is wrong with one stat-sheet row: its words (and a stat's number) on
+## one line, the number at the right, no button text; the chosen row outlined
+## in white, the rest a thin rule under them.
+func _sheet_row_faults(b: Button, on: bool, number: bool, ui) -> Array:
+	var out: Array = []
+	var words := b.find_child("SheetWords", true, false) as Label
+	var num := b.find_child("SheetNumber", true, false) as Label
+	var rc := b.get_global_rect()
+	if b.text != "" or words == null or (num != null) != number or rc.size.y > 40.0:
+		out.append("%s: not a sheet row" % b.name)
+		return out
+	if number:
+		var wr := words.get_global_rect()
+		var nr := num.get_global_rect()
+		if absf(wr.get_center().y - nr.get_center().y) > 1.0 or nr.position.x < wr.position.x or rc.end.x - nr.end.x > 14.0:
+			out.append("%s: number not at the right on its line" % b.name)
+	var sb := b.get_theme_stylebox("normal") as StyleBoxFlat
+	if sb == null:
+		out.append("%s: no sheet look" % b.name)
+	elif on and (sb.border_width_top != 2 or sb.border_width_bottom != 2 or sb.border_color != ui.TEXT):
+		out.append("%s: chosen but not outlined" % b.name)
+	elif not on and (sb.border_width_top != 0 or sb.border_width_bottom != 1 or sb.bg_color.a > 0.0):
+		out.append("%s: not chosen but not a ruled row" % b.name)
+	return out
 
 
 ## Every player's row is one line and inside the list's window: none is cut off below.
