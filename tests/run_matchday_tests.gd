@@ -511,6 +511,14 @@ func _test_phone_match(sz: Vector2i) -> void:
 	m.call("_on_skip")
 	for i in range(60):
 		await process_frame
+	# A milestone farewell plays over full time and holds until Continue
+	# (director, 2026-11-26): the coach closes it with a tap, as a phone would.
+	var fw: Node = root.find_child("FarewellVignette", true, false)
+	if fw != null and fw.call("is_open"):
+		var fw_go := root.find_child("FarewellContinue", true, false) as Control
+		_check(fw_go != null and (await Tap.tap(fw_go)) == "", "Continue on the farewell takes a real tap (%s)" % tag)
+		await _settle()
+		_check(not is_instance_valid(fw) or not fw.call("is_open"), "Continue closes the farewell over full time (%s)" % tag)
 	var ft_box: Node = m.find_child("FullTime", true, false)
 	var ft := _text(ft_box)
 	_check(ft_box != null and ft.contains("Full time"), "Full time is unmistakable (%s)" % tag)
