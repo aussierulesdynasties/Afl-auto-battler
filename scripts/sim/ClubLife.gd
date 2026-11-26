@@ -337,11 +337,12 @@ static func morale_target(opinion: int) -> int:
 
 
 ## One round's drift towards that: at most DRIFT_STEP, never past it. An
-## injured player is left to the injured rule (morale_after_match).
-static func drift_morale(p: Dictionary, opinion: int) -> void:
+## injured player is left to the injured rule (morale_after_match). `shift`
+## moves where it settles: a group he stands with pushing (Factions.morale_shift).
+static func drift_morale(p: Dictionary, opinion: int, shift := 0) -> void:
 	if int(p.get("injury_weeks", 0)) > 0:
 		return
-	var gap := morale_target(opinion) - int(p.get("morale", MORALE_BASE))
+	var gap := morale_target(opinion) + shift - int(p.get("morale", MORALE_BASE))
 	if gap != 0:
 		add_morale(p, signi(gap) * mini(DRIFT_STEP, absi(gap)))
 

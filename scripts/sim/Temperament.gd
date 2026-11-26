@@ -24,7 +24,7 @@ const PATH := "res://data/relations/temperaments.json"
 const KEY := "temperament"
 ## The levers other systems may ask about. Anything else is 1.0.
 const LEVERS := ["dropped", "backed", "promise_kept", "promise_broken", "discipline",
-		"praised", "bond", "decay", "respect", "authority"]
+		"praised", "bond", "decay", "respect", "authority", "faction"]
 ## How a lever reads in a drill-down line: [what happens, "hits him" words].
 const LEVER_WORDS := {
 	"dropped": "Being dropped",
@@ -161,6 +161,9 @@ static func reactions(p: Dictionary) -> Array:
 ## "A broken promise counts 40% more with him." / "He holds on to things 20% longer."
 static func reaction_text(lever: String, mult: float) -> String:
 	var pct := roundi(absf(mult - 1.0) * 100.0)
+	if lever == "faction":
+		return ("He is %d%% quicker to stand with unhappy teammates." if mult > 1.0
+				else "He is %d%% slower to stand with unhappy teammates.") % pct
 	if lever == "decay":
 		return ("He gets over things %d%% faster." if mult > 1.0 else "He holds on to things %d%% longer.") % pct
 	var what := str(LEVER_WORDS.get(lever, lever))

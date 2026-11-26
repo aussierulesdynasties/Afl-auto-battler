@@ -81,6 +81,9 @@ const OPS := {
 	# A roll with its odds on the card (the club decks, row 157): `chance` percent of
 	# the time the `hit` effects land, otherwise the `miss` effects.
 	"odds": false,
+	# A group of unhappy players (Factions.gd): the coach meets its demand,
+	# refuses it, or breaks it up ("do"), on a card about its leader.
+	"faction": true,
 }
 ## The odds a rolled outcome may carry, in percent.
 const ODDS_MIN := 5
@@ -139,7 +142,11 @@ const PLAYER_FACTS := ["name", "first", "age", "games", "fit", "selected", "over
 		# the job's word, the week, his ratings there and in his own spot, the pass
 		# margin, the odds it takes and where the line plays ("up forward").
 		"dev_talk_due", "proj_word", "proj_week", "proj_weeks", "proj_there", "proj_own", "proj_pass",
-		"take_odds", "proj_line"]
+		"take_odds", "proj_line",
+		# The group he stands with (Factions.gd): its kind ("" for none), where it
+		# is (forming, demanding, ultimatum), whether he leads it, how many stand
+		# with it, what it is called and what it wants.
+		"faction", "faction_state", "faction_leader", "faction_size", "faction_group", "faction_demand"]
 ## Facts about the club and the week (GameState._story_club_facts).
 const CLUB_FACTS := ["club", "opp", "has_opp", "round", "year", "losing_run", "winning_run", "ladder",
 		"board", "fit_count", "run_games", "finals_week", "captain_name", "vice_name", "vice_id",
@@ -508,6 +515,8 @@ static func _check_effect(where: String, e, player: bool) -> Array:
 	# A permanent mark (director, 2026-11-26): only a trust move can leave one.
 	if e.has("scar") and (not (e["scar"] is bool) or op != "trust"):
 		errs.append("%s: a scar (true or false) marks only a trust move" % where)
+	if op == "faction" and not Factions.ANSWERS.has(str(e.get("do", ""))):
+		errs.append("%s: a faction answer is one of %s" % [where, ", ".join(Factions.ANSWERS)])
 	var group_ok: bool = (GROUP_PLAYER_WHO.get(op, []) as Array).has(who)
 	if who == "one" and op != "sore":
 		errs.append("%s: only a sore can fall on one player picked at random" % where)

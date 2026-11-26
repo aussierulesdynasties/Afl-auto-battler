@@ -1123,6 +1123,9 @@ static func _effect_parts(e: Dictionary, facts: Dictionary) -> Array:
 					for np in _effect_parts(ne, facts):
 						rolled.append([np[0], side[1] + str(np[1])])
 			return rolled
+		"faction":
+			return Factions.effect_parts(str(e.get("do", "")), int(facts.get("faction_size", 0)),
+					str(facts.get("faction_state", "")) == "ultimatum")
 		"delegate":
 			# Left to the captain: where the group stands now, then what each
 			# outcome does, each under its own gain or cost.

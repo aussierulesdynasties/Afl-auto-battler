@@ -73,6 +73,16 @@ static func promises(gs: Object, id: String) -> Array:
 	return out
 
 
+## The group of unhappy players he stands with at your club, in words, or ""
+## (Factions.gd): who they are, how many, who leads them and what they want.
+static func faction(gs: Object, id: String) -> String:
+	if gs == null or not ("factions" in gs):
+		return ""
+	return Factions.profile_line(gs, str(gs.get("my_club")), id, func(pid: String) -> String:
+		var q = GameDB.player_by_id(pid)
+		return GameDB.player_display_name(q) if q != null else "a teammate")
+
+
 ## Your standing as senior coach, live: {"respect", "authority"} out of 100,
 ## or {} with no game to read.
 static func standing(gs: Object) -> Dictionary:
