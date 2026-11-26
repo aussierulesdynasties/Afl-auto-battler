@@ -952,13 +952,26 @@ func _list_tests() -> void:
 ## Best 23: the oval beside how we stack up, captaincy and scouting; the oval
 ## names its players at 1280x720 and shows numbers only at 960x540. Full list:
 ## every player ranked best first, down then across, with his OVR and POT.
-## Neither scrolls.
+## Neither scrolls. A row shows what keeps him out, else who he is: his marks
+## (untouchable, chemistry, past concussions) are on his profile only (the
+## director's pick B, 2026-11-26).
 func _test_list_pc() -> void:
 	var db = root.get_node("GameDB")
 	_state.reset()
 	_state.start_season("COL", db.club_list("COL"))
 	var n: int = _state.my_list.size()
 	_check(n > 23, "Collingwood has more men than a Best 23 to show (%d)" % n)
+	# His marks are on his profile only (director's pick, 2026-11-26): one man carries all three.
+	var CF = load("res://scripts/sim/CareerFacts.gd")
+	var TF = load("res://scripts/sim/TeamFamiliarity.gd")
+	var marked: Dictionary = _state.my_list[0]
+	var mid := str(marked["id"])
+	_state.set_untouchable(mid, true)
+	TF.arrive_club(marked)
+	for k in range(3):
+		CF.add(_state.career_facts, mid, CF.row(int(_state.season_year), "R%d" % (k + 1), "injury", _state.my_club, "", "concussion"))
+	_check(_state.is_untouchable(mid) and str(TF.tag(marked)) != "" and _state.concussions_in_window(marked) >= 3,
+			"One man is untouchable, new to the club and has three concussions this season")
 	for sz in [Vector2i(1280, 720), Vector2i(960, 540)]:
 		var tag := "%dx%d" % [sz.x, sz.y]
 		root.size = sz
@@ -1001,6 +1014,14 @@ func _test_list_pc() -> void:
 				ranked = false
 		_check(both == n and ranked,
 				"PC %s: each row shows his OVR and POT, ranked best first down then across (%d of %d)" % [tag, both, n])
+		var marks := 0
+		for r in rows:
+			for mark in ["RowUntouchable", "RowFamiliarity", "RowConcussions"]:
+				if r.find_child(mark, true, false) != null:
+					marks += 1
+		var his: Button = ls.find_child("Row_" + mid, true, false)
+		_check(his != null and marks == 0 and his.find_child("RowIdentity", true, false) != null,
+				"PC %s: the marked man's row shows who he is, and no row carries a mark (%d found)" % [tag, marks])
 		var f2 := _pc_fits(ls)
 		_check(f2 == "", "PC %s: the Full list fits the window, nothing scrolls (%s)" % [tag, f2])
 		var last: Button = rows[rows.size() - 1] if not rows.is_empty() else null
@@ -1008,6 +1029,16 @@ func _test_list_pc() -> void:
 		await _settle()
 		_check(why_r == "" and ls.find_child("PlayerProfile", true, false) != null,
 				"PC %s: a finger on the last man in the list opens his profile (%s)" % [tag, why_r])
+		ls.call("_close_profile")
+		await _settle()
+		var why_m: String = await Tap.tap(his) if his != null else "no row"
+		await _settle()
+		var prof: Node = ls.find_child("PlayerProfile", true, false)
+		var mark_btn: Button = prof.find_child("Untouchable", true, false) if prof != null else null
+		_check(why_m == "" and mark_btn != null and mark_btn.text == "Remove untouchable mark"
+				and prof.find_child("ProfileFamiliarity", true, false) != null
+				and prof.find_child("ProfileConcussions", true, false) != null,
+				"PC %s: a finger on his name opens his profile with his marks: untouchable, chemistry, concussions (%s)" % [tag, why_m])
 		ls.queue_free()
 		await _settle()
 	# A phone keeps its Shape | Full list tabs.

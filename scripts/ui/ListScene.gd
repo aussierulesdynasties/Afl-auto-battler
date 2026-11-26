@@ -270,7 +270,6 @@ func _compact_row(p: Dictionary) -> Control:
 	name_l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	name_l.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	h.add_child(name_l)
-	# No gap of its own: the " · " between his marks spaces them like the dot inside "Wing · 32".
 	var info := UiKit.hbox(0)
 	info.name = "RowInfo"
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -295,22 +294,16 @@ func _compact_row(p: Dictionary) -> Control:
 	return row
 
 
-## The compact row's middle: what keeps him out (and his concussions) when anything
-## does; else his marks (untouchable, his chemistry), then who he is. The last
-## piece gives way first when the column is narrow.
+## The compact row's middle: what keeps him out when anything does, else who he is.
+## His marks (untouchable, chemistry, past concussions) are on his profile only
+## (director's pick, 2026-11-26), so a PC row is never cut for them.
 func _info_bits(info: Control, p: Dictionary) -> void:
-	var bits: Array = []
 	var status := _status(p)
-	var knocks := GameState.concussions_in_window(p)
+	var l: Label
 	if str(status[0]) != "":
-		bits.append(["RowStatus", str(status[0]), status[1], true])
-	if knocks >= MedicalPanel.SHOWN_FROM:
-		bits.append(["RowConcussions", MedicalPanel.count_text(knocks), UiKit.BAD, true])
-	if bits.is_empty():
-		if GameState.is_untouchable(str(p["id"])):
-			bits.append(["RowUntouchable", "Untouchable", UiKit.TEXT, true])
-		if TeamFamiliarity.tag(p) != "":
-			bits.append(["RowFamiliarity", TeamFamiliarity.tag(p), UiKit.TEXT, false])
+		l = UiKit.ellipsis(str(status[0]), UiKit.SMALL, status[1], true)
+		l.name = "RowStatus"
+	else:
 		var who := PackedStringArray()
 		if RookieList.is_cat_b(p):
 			who.append("Cat B")
@@ -319,25 +312,13 @@ func _info_bits(info: Control, p: Dictionary) -> void:
 		who.append(Roles.label(p))
 		if float(p.get("age", 0.0)) > 0.0:
 			who.append("%d" % int(p["age"]))
-		bits.append(["RowIdentity", " · ".join(who), UiKit.MUTED, false])
-	for i in range(bits.size()):
-		var b: Array = bits[i]
-		if i > 0:
-			# One line, never wrapped: a wrapping label squeezed to one character
-			# draws the dot high, off the words' line.
-			info.add_child(UiKit.line(" · ", UiKit.SMALL, UiKit.MUTED))
-		var l := UiKit.ellipsis(str(b[1]), UiKit.SMALL, b[2], bool(b[3]))
-		l.name = str(b[0])
-		if i == bits.size() - 1:
-			l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			# A cut always ends in "…": Godot drops it when under six letters stay,
-			# and "Defe" then reads as a word.
-			l.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS_FORCE
-		else:
-			# Only as wide as its words, so the next piece follows straight on.
-			l.size_flags_horizontal = Control.SIZE_FILL
-			l.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
-		info.add_child(l)
+		l = UiKit.ellipsis(" · ".join(who), UiKit.SMALL, UiKit.MUTED)
+		l.name = "RowIdentity"
+	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	# A cut always ends in "…": Godot drops it when under six letters stay,
+	# and "Defe" then reads as a word.
+	l.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS_FORCE
+	info.add_child(l)
 
 
 ## A phone: show the pane the tabs ask for, building it the first time it is shown.
