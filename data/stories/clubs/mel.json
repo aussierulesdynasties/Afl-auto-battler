@@ -80,26 +80,6 @@
 		]
 	},
 	{
-		"id": "mel_home_for_the_big_one",
-		"club": "MEL",
-		"controversy": false,
-		"category": "family",
-		"subject": {"kind": "player", "pick": "random", "where": {"age_max": 24}},
-		"title": ["He wants to go home for a week"],
-		"text": ["{name} is homesick. There's a big family occasion back home in the middle of the season, and he wants a week off to be there. He's under contract."],
-		"choices": [
-			{"key": "go", "label": "Let him go",
-			 "effects": [{"op": "trust", "d": 6, "why": "The club let him go home when it mattered"}, {"op": "morale", "d": 4, "who": "subject"}, {"op": "rest"}],
-			 "result": "{first} flies home and misses a game."},
-			{"key": "hold", "label": "Hold him to his contract",
-			 "effects": [{"op": "xp", "d": 4, "who": "subject"}, {"op": "morale", "d": -5, "who": "subject"}, {"op": "trust", "d": -4, "why": "The club kept him from home"}],
-			 "result": "{first} is here, training and available. He's unsettled."},
-			{"key": "family", "label": "Fly his family out instead",
-			 "effects": [{"op": "morale", "d": 2, "who": "subject"}, {"op": "board", "d": -2, "was": "funds"}],
-			 "result": "His family come to him. It costs the club, and he still misses home."}
-		]
-	},
-	{
 		"id": "mel_green_for_a_night",
 		"club": "MEL",
 		"controversy": false,
@@ -195,7 +175,7 @@
 			 "effects": [{"op": "trust", "d": 4, "why": "You kept him in the side when he was struggling"}, {"op": "xp", "d": 2, "who": "subject"}, {"op": "odds", "chance": 30, "hit": [{"op": "morale", "d": -4, "who": "subject"}], "miss": [], "hit_result": "He's dropped within the month anyway."}],
 			 "result": "{first} feels backed. Another month of learning on the job."},
 			{"key": "promise", "label": "Send him down with a promise",
-			 "effects": [{"op": "xp", "d": 8, "who": "subject"}, {"op": "morale", "d": -1, "who": "subject"}, {"op": "odds", "chance": 40, "hit": [{"op": "trust", "d": -4, "why": "The promised game didn't come"}], "miss": [], "hit_result": "The month is up, he's still in the twos, and he remembers the promise."}],
+			 "effects": [{"op": "xp", "d": 8, "who": "subject"}, {"op": "morale", "d": -1, "who": "subject"}, {"op": "promise", "kind": "senior_game", "weeks": 6}],
 			 "result": "{first} goes down knowing there's a game waiting if he plays well."}
 		]
 	},
