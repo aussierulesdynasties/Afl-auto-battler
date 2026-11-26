@@ -719,6 +719,8 @@ static func player_fact(gs, p: Dictionary, selected: bool, i: Dictionary, fit_ra
 			"games": gs.games_played(p), "fit": fit, "selected": selected, "overall": ovr, "potential": pot,
 			"pot_gap": pot - ovr, "contract_years": int(p.get("contract_years", 2)), "morale": ClubLife.morale(p),
 			"trust": t, "trust_band": Trust.band(t), "opinion": Trust.opinion(t),
+			# How hard a broken promise lands with him (Promises.broken_trust).
+			"broken_scale": Temperament.scale(p, "promise_broken"),
 			# Under 50 he may refuse to re-sign (director 2026-11-08); "" at 50 or over.
 			"refuse_line": Contracts.REFUSE_ODDS % [Trust.opinion(t), gs.resign_refuse_chance(p), name]
 					if gs.resign_refuse_chance(p) > 0 else "",

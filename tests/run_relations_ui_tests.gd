@@ -57,6 +57,7 @@ func _run() -> void:
 	await _t("_test_profile_relations")
 	await _t("_test_rival_profile")
 	await _t("_test_drop_preview")
+	await _t("_test_preview_is_live")
 	_gs.replay_seed = 0
 	print(Ran.line("RelationsUi", self))
 	for f in _failures:
@@ -226,6 +227,67 @@ func _test_drop_preview() -> void:
 	_check(load("res://scripts/ui/SelectionScene.gd").drop_preview(_gs.list_player(out_id)) == null,
 			"A man not picked has no drop preview")
 	_close_sheets()
+
+
+## Phase 1 integration: what the preview says is what the round does. A real
+## tap opens a promised man's preview; leave him out and the Respect it showed
+## is the Respect you have, and each mate it named carries that mark.
+func _test_preview_is_live() -> void:
+	_fresh("COL")
+	_router.go("selection")
+	await _settle(10)
+	var scene: Node = current_scene
+	var pid := ""
+	for q in _gs.my_list:
+		if pid == "" and _gs.in_current_side(q) and int(q.get("injury_weeks", 0)) <= 0 \
+				and not (_gs.bond_fallout_moves(str(q["id"]), "drop") as Array).is_empty():
+			pid = str(q["id"])
+	_check(pid != "", "(setup) a man in the side with someone tied to him at the club")
+	if pid == "":
+		return
+	var p: Dictionary = _gs.list_player(pid)
+	p["expects_game"] = 12
+	Promises.made(_gs, p, "game")
+	scene = current_scene
+	var strip: Control = scene.find_child("Condition_" + pid, true, false)
+	var tile: Control = strip.get_parent().get_parent() as Control if strip != null else null
+	var tap: String = await Tap.tap(tile) if tile != null else "no tile"
+	await _settle()
+	var prof: Button = scene.find_child("PickedProfile", true, false)
+	var tap2: String = (await Tap.tap(prof)) if prof != null else "no Profile"
+	await _settle()
+	_check(tap == "" and tap2 == "", "Real taps open his profile (%s, %s)" % [tap, tap2])
+	var prev: Control = scene.find_child("DropPreview", true, false)
+	_check(prev != null, "The preview shows")
+	if prev == null:
+		return
+	var rl: Label = prev.find_child("DropRespect", true, false)
+	_check(rl != null and prev.find_child("DropAuthority", true, false) == null,
+			"Breaking his game shows a Respect line and no Authority gain (%s)" % _text(prev))
+	var want_r := -1
+	if rl != null:
+		var bits := rl.text.trim_suffix(".").split(" to ")
+		want_r = int(bits[bits.size() - 1])
+	var named := {}
+	for l in prev.find_children("DropFallout_*", "", true, false):
+		named[str(l.name).trim_prefix("DropFallout_")] = true
+	_check(not named.is_empty(), "His mates are named")
+	_close_sheets()
+	var side: Dictionary = _gs.current_side().duplicate(true)
+	for k in side:
+		(side[k] as Array).erase(pid)
+	side["OUT"] = [pid]
+	_gs.set_selection(side)
+	_gs._settle_week_event()
+	_gs.week_event = {}
+	_gs.advance()
+	_check(Promises.respect(_gs) == want_r, "The Respect the preview showed is the Respect you have (%d, %d)" % [want_r, Promises.respect(_gs)])
+	var carried := 0
+	for oid in named:
+		for m in Opinion.mods(_gs.relations, Opinion.player_key(str(oid))):
+			if str(m.get("src", "")) == pid:
+				carried += 1
+	_check(carried == named.size(), "Each mate the preview named carries the mark (%d of %d)" % [carried, named.size()])
 
 
 func _text(n: Node) -> String:

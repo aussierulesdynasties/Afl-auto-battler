@@ -22,8 +22,8 @@ extends RefCounted
 ##                      [{"y", "w", "r", "a", "why"}], "side": [ids]}: two
 ##                      scores out of 100 that move with what you actually do.
 ##                      Backing players and keeping your word builds Respect;
-##                      ruthless drops build Authority; a broken promise costs
-##                      Respect. The senior coach's archetype only sets where
+##                      ruthless drops build Authority; a broken promise only
+##                      costs Respect. The senior coach's archetype only sets where
 ##                      they start (and where they settle back to between
 ##                      seasons), never where they must stay.
 ##   gs.club_standing   {code: the same shape} for every other club's senior
@@ -37,10 +37,9 @@ extends RefCounted
 ## A kept promise leaves a lasting mark on his opinion of you, a broken one a
 ## permanent one (Trust.change, as it always has, at the call site), and the
 ## players in his line who watched it get a smaller mark of their own. Marks
-## go through the Opinion API when the game has it (Opinion.add), and the
-## player's temperament sizes them when the game has temperaments
-## (Temperament.scale): both are looked up, so this class works on either side
-## of those merges.
+## go through Opinion.add, and the player's temperament sizes them and how
+## long he holds them (Temperament.scale; a broken promise's permanent cost too,
+## broken_trust).
 
 const KINDS := ["run", "game", "dev_games", "win"]
 
@@ -62,9 +61,10 @@ const ARCH_LEAN := {
 const MADE := [1, 0]
 const KEPT := {"run": [4, 0], "game": [2, 0], "dev_games": [4, 0], "win": [0, 2],
 		"senior_game": [2, 0], "deal": [3, 0], "stays": [2, 0], "finals": [0, 3], "wins": [0, 2]}
-## Breaking your word costs Respect; it also shows the group you will make the
-## hard call, which is Authority of a kind.
-const BROKEN := {"run": [-6, 1], "game": [-4, 1], "dev_games": [-6, 1], "win": [0, -2],
+## Breaking your word costs Respect, and builds no Authority: hard selection
+## and discipline calls build that, a broken promise only costs (director,
+## 2026-11-26).
+const BROKEN := {"run": [-6, 0], "game": [-4, 0], "dev_games": [-6, 0], "win": [0, -2],
 		"senior_game": [-4, 0], "deal": [-6, 0], "stays": [-4, 0], "finals": [-2, -3], "wins": [0, -2]}
 ## Dropping a fit player who played last week: the hard call.
 const DROP := [0, 1]
@@ -73,9 +73,6 @@ const DROP_ROUND_MAX := 2
 ## Between seasons each score settles this share of the way back to its base.
 const SETTLE := 0.25
 
-## A kept promise's lasting mark when the game has no Opinion API yet, as a
-## move of the permanent trust (Trust.change; opinion +3).
-const KEPT_TRUST := 6
 ## The trust a broken promise costs him (the call sites' own constants).
 const BROKEN_TRUST := {"run": StoryEngine.BROKEN_RUN_TRUST, "game": StoryEngine.BROKEN_PROMISE_TRUST,
 		"dev_games": StoryEngine.BROKEN_PROMISE_TRUST}
@@ -297,7 +294,7 @@ static func settle(gs, p: Dictionary, kind: String, out: String) -> void:
 			var m: Array = BROKEN.get(kind, [0, 0])
 			move(gs, int(m[0]), int(m[1]), "You broke your word to %s on %s" % [who, what])
 			for q in ([] if p.is_empty() else witnesses(gs, p)):
-				_opinion_add(gs, q, "saw_promise_broken")
+				_opinion_add(gs, q, "saw_promise_broken", "promise_broken")
 
 
 ## The players who saw it: his line-mates on your list, up to WITNESS_MAX.
@@ -313,11 +310,17 @@ static func witnesses(gs, p: Dictionary) -> Array:
 
 
 static func _mark_kept(gs, p: Dictionary) -> void:
-	if _opinion_add(gs, p, "promise_kept"):
-		return
-	var t := roundi(KEPT_TRUST * _temper(p, "promise_kept"))
-	Trust.change(gs.relations, Trust.player_key(str(p.get("id", ""))), t,
-			"You kept your word to him", int(gs.season_year), str(gs.last_label))
+	_opinion_add(gs, p, "promise_kept", "promise_kept")
+
+
+## What breaking a `kind` promise costs his trust, permanently, sized by his
+## temperament ("promise_broken"): what the call sites charge and every
+## preview and card shows.
+static func broken_trust(p: Dictionary, kind: String) -> int:
+	var t := int(BROKEN_TRUST.get(kind, 0))
+	if t == 0:
+		return 0
+	return clampi(roundi(float(t) * Temperament.scale(p, "promise_broken")), -Trust.STEP_MAX, Trust.STEP_MAX)
 
 
 # ---------------------------------------------------------------------------
@@ -544,7 +547,7 @@ static func preview_drop(gs, player_id: String) -> Dictionary:
 		r = clampi(r + int(m[0]), LOWEST, HIGHEST)
 		a = clampi(a + int(m[1]), LOWEST, HIGHEST)
 		(out["broken"] as Array).append(str(pr["text"]))
-		t = clampi(t + clampi(int(BROKEN_TRUST.get(k, 0)), -Trust.STEP_MAX, Trust.STEP_MAX), Trust.LOWEST, Trust.HIGHEST)
+		t = clampi(t + broken_trust(p, k), Trust.LOWEST, Trust.HIGHEST)
 	if (s.get("side", []) as Array).has(player_id):
 		a = clampi(a + int(DROP[1]), LOWEST, HIGHEST)
 	out["respect"] = r - int(s["respect"])
@@ -589,7 +592,7 @@ static func after_match(gs, played: Dictionary, unavailable := {}, club := "") -
 
 
 # ---------------------------------------------------------------------------
-# The sibling systems, looked up by name so either merge order works
+# Marks on his opinion
 # ---------------------------------------------------------------------------
 
 static func _arch_p(code: String) -> String:
@@ -598,28 +601,8 @@ static func _arch_p(code: String) -> String:
 	return str(CoachEffects.arch_of(code)[1])
 
 
-static func _global_class(name: String) -> Script:
-	for c in ProjectSettings.get_global_class_list():
-		if str(c.get("class", "")) == name:
-			return load(str(c["path"]))
-	return null
-
-
-## His temperament's multiplier for a moment (Temperament.scale), 1.0 when
-## the game has no temperaments.
-static func _temper(p: Dictionary, what: String) -> float:
-	var t := _global_class("Temperament")
-	if t == null or not t.has_method("scale"):
-		return 1.0
-	return float(t.call("scale", p, what))
-
-
-## A fading mark on his opinion (Opinion.add, data/relations/modifiers.json);
-## false when the game has no Opinion API, so the caller can fall back.
-static func _opinion_add(gs, p: Dictionary, mark: String) -> bool:
-	var o := _global_class("Opinion")
-	if o == null or not o.has_method("add"):
-		return false
-	o.call("add", gs.relations, Trust.player_key(str(p.get("id", ""))), mark, int(gs.season_year),
-			str(gs.last_label), str(gs.my_club), _temper(p, mark), "promise", 1.0)
-	return true
+## A mark on his opinion (Opinion.add, data/relations/modifiers.json), sized by
+## his temperament's `lever` and fading at his pace ("decay").
+static func _opinion_add(gs, p: Dictionary, mark: String, lever: String) -> void:
+	Opinion.add(gs.relations, Opinion.player_key(str(p.get("id", ""))), mark, int(gs.season_year),
+			str(gs.last_label), str(gs.my_club), Temperament.scale(p, lever), "promise", Temperament.scale(p, "decay"))
