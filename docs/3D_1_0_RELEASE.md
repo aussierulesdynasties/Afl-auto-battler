@@ -63,7 +63,7 @@ the machine pre-inspection clean, then his fly-through.
 
 ### The 24 Legacy-mode grounds
 
-On main: York Park (through #2072, thread closed), Mars Stadium (#2036, in matches), Cazaly's Stadium (#2034, ready for his review), Traeger Park (through #2072), Blacktown (#2048 and the audit pass #2084; work continues). Each has its own "Make ... look real" thread.
+On main: York Park (through #2072, thread closed), Mars Stadium (#2036, in matches), Cazaly's Stadium (#2034, ready for his review), Traeger Park (through #2072), Blacktown (#2048, the audit pass #2084 and the PC-check fixes #2150; work continues). Each has its own "Make ... look real" thread.
 The MCG of each era for Legacy matches: first part on main (#2052), thread "Build the MCG of each era".
 
 **Owner since 2026-11-23: "Build Legacy mode's old grounds"** for the other 19: Waverley Park, Windy Hill, Moorabbin Oval, Ikon Park, Whitten Oval, Football Park, Subiaco Oval, WACA, North Hobart Oval, Bruce Stadium, Riverway Stadium, Sky Stadium, Jiangwan Stadium, Hands Oval, Summit Park, Macquarie Point Stadium, Accor Stadium, Marrara Oval and Victoria Park. On 2026-11-26: 14 measured and written up, Hands Oval's heights in progress, Riverway, Bruce, Summit and Macquarie Point still to measure; no models rebuilt yet. Subiaco has a draft PR (#2069).
@@ -75,7 +75,7 @@ The MCG of each era for Legacy matches: first part on main (#2052), thread "Buil
 | Real surroundings per ground | #2023 holds generic OSM surrounds for 24 grounds, which he rejected: it must not merge as is. Being redone ground by ground | Build real surroundings for each ground; each ground's thread |
 | Crowd on every ground's seats | Seated on any ground with seat files; 19 grounds had none (pre-inspection, 2026-11-21) | Each ground's thread (seat rule) |
 | Live big screens | Built (#1947); 11 grounds have no screen face in their model | Each ground's thread |
-| Night lights from each ground's own towers | On main (#1996, 2026-11-25): night towers and the real sun over every ground | Light matches like the real grounds |
+| Night lights from each ground's own towers | On main (#1996, 2026-11-25): night towers and the real sun over every ground; the beams now light the field and the players, with spill on the stadium and the land round it (#2146, 2026-11-26) | Light matches like the real grounds |
 | Turf cut and colour | Per-ground mowing and broadcast colour (#2014) on main | Make the turf colour look like TV |
 
 ## 2. Players
@@ -190,3 +190,4 @@ and the smoothing buffers.
 - 2026-11-23: Optus Stadium rebuild on main (#1993); Blacktown stages 1-3 on main (#2048).
 - 2026-11-24: player detail levels and edge smoothing (#2054), the TV main camera (#1995), the MCG of each era (first part, #2052) and the shared Google Earth compare tool (#2047) on main.
 - 2026-11-26: catch-up after a two-day pause. On main since 24 Nov: builds carry the grounds and players (#2060), lighting at every ground (#1996), banner run-through (#2004), real land round every ground (#2072, which also carried the Marvel, Adelaide, SCG, Gabba, Bellerive, York Park, Norwood and Traeger branches: their PRs closed as landed), Cazaly's (#2034), Manuka (#2035), GMHBA (#2016), People First (#2019), ENGIE (#2037), Mars (#2036), Blacktown audit (#2084), guernseys (#2038), match crew round two (#2068), move clips (#2040), interchanges (#2025), crowd attendance (#1992), the 3D bug bash (#2067), MetaHuman files out of the public repo (#2062).
+- 2026-11-26 morning: the night-tower beams (#2146) and Blacktown's PC-check fixes (#2150) on main.
