@@ -465,6 +465,7 @@ func _test_walk_early_elimination() -> void:
 		weeks += 1
 		hub.call("_sim_week")
 		await _settle()
+		await _past_ceremony(hub)
 		if _tips(hub).has("PostseasonIntro"):
 			early = true
 		var go: Button = hub.find_child("ResultsContinue", true, false)
@@ -565,6 +566,18 @@ func _test_walk_replay() -> void:
 	_walk(mode, "Settings rows: %d; tips controls: Tutorials On/Off%s" % [rows,
 			"" if src.find("seen_") == -1 else ", plus a reset of seen tips"])
 	_check(src.find("seen_") == -1, "Replay still unbuilt: when a reset lands, update docs/research/ONBOARDING_WALKTHROUGH_2026-11-10.md")
+
+
+## A simmed Grand Final opens the premiers' flag ceremony before the week's
+## results (director, 2026-11-25): a real tap on its Continue.
+func _past_ceremony(hub: Node) -> void:
+	var cer: Variant = hub.get("_ceremony")
+	if cer == null or not is_instance_valid(cer):
+		return
+	var cont: Control = (cer as Node).find_child("CeremonyContinue", true, false)
+	var why: String = await Tap.tap(cont) if cont != null else "no Continue"
+	await _settle()
+	_check(why == "", "The Grand Final's flag ceremony comes first, and its Continue takes a finger's tap (%s)" % why)
 
 
 func _settle() -> void:

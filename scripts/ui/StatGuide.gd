@@ -89,7 +89,7 @@ static func show(parent: Control) -> Control:
 	overlay.set_meta("cols", cols_n)
 	UiKit.close_on_outside_tap(box)
 	var v: VBoxContainer = box["body"]
-	v.add_theme_constant_override("separation", 10)
+	v.add_theme_constant_override("separation", UiKit.Space.ROOM)
 	overlay.set_meta("body", v)
 	var ok := UiKit.btn("Got it", UiKit.NAME, true)
 	ok.name = "CloseStatGuide"
@@ -113,21 +113,21 @@ static func open_page(overlay: Control, id: String) -> void:
 	var v: VBoxContainer = overlay.get_meta("body")
 	_clear(v)
 	overlay.set_meta("page", id)
-	var row := UiKit.hbox(10)
+	var row := UiKit.hbox(UiKit.Space.ROOM)
 	var all := UiKit.btn("‹ All topics", UiKit.NAME)
 	all.name = "GuideAllTopics"
 	all.custom_minimum_size = Vector2(0, 44)
 	all.pressed.connect(func(): _show_grid(overlay))
 	row.add_child(all)
 	v.add_child(row)
-	var page := UiKit.vbox(10)
+	var page := UiKit.vbox(UiKit.Space.ROOM)
 	page.name = "GuidePage_" + id
 	v.add_child(page)
 	if id.begins_with("group"):
 		var g: Array = GROUPS[int(id.trim_prefix("group"))]
 		page.add_child(UiKit.heading(str(g[0]), UiKit.H1))
 		for key in g[1]:
-			var item := UiKit.vbox(2)
+			var item := UiKit.vbox(UiKit.Space.SLIM)
 			item.name = "Guide_" + str(key)
 			item.add_child(UiKit.lbl(_label_for(str(key)), UiKit.NAME, _ink(), true))
 			item.add_child(_para(short(str(key)), 14, UiKit.TEXT))
@@ -146,8 +146,8 @@ static func _show_grid(overlay: Control) -> void:
 	var grid := GridContainer.new()
 	grid.name = "GuideGrid"
 	grid.columns = int(overlay.get_meta("cols", 2))
-	grid.add_theme_constant_override("h_separation", 8)
-	grid.add_theme_constant_override("v_separation", 8)
+	grid.add_theme_constant_override("h_separation", UiKit.GAP)
+	grid.add_theme_constant_override("v_separation", UiKit.GAP)
 	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	for t in tiles():
 		grid.add_child(_tile(overlay, str(t[0]), str(t[1]), str(t[2])))
@@ -167,7 +167,7 @@ static func _tile(overlay: Control, id: String, title: String, teaser: String) -
 	m.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	for edge in ["left", "right", "top", "bottom"]:
 		m.add_theme_constant_override("margin_" + edge, 8)
-	var col := UiKit.vbox(2)
+	var col := UiKit.vbox(UiKit.Space.SLIM)
 	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	col.alignment = BoxContainer.ALIGNMENT_CENTER
 	var head := UiKit.lbl(title, UiKit.NAME, _ink(), true)

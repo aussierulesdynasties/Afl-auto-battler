@@ -22,7 +22,7 @@ static func reset() -> void:
 
 static func build(host: Control) -> Control:
 	var season: Season = GameState.season
-	var v := UiKit.vbox(10)
+	var v := UiKit.vbox(UiKit.Space.ROOM)
 	v.name = "StatsFixture"
 	var pgs := pages(season)
 	if pgs.is_empty():
@@ -39,7 +39,7 @@ static func build(host: Control) -> Control:
 	var narrow := not bool(host.call("wide"))
 
 	# Round navigation: back, the round picker, forward.
-	var nav := UiKit.hbox(6)
+	var nav := UiKit.hbox(UiKit.Space.CLOSE)
 	nav.name = "RoundNav"
 	var prev := UiKit.btn("Previous", UiKit.BODY)
 	prev.name = "PrevRound"
@@ -99,14 +99,14 @@ static func build(host: Control) -> Control:
 	var mixed := done_n > 0 and done_n < matches.size()
 	var list: Container
 	if narrow:
-		var col := UiKit.vbox(4)
+		var col := UiKit.vbox(UiKit.Space.TIGHT)
 		list = col
 	else:
 		# Compact rows two or three across, the score beside the clubs.
 		var grid := GridContainer.new()
 		grid.columns = 3 if float(host.call("content_width")) >= 1240.0 else 2
-		grid.add_theme_constant_override("h_separation", 28)
-		grid.add_theme_constant_override("v_separation", 4)
+		grid.add_theme_constant_override("h_separation", UiKit.Space.SPREAD)
+		grid.add_theme_constant_override("v_separation", UiKit.Space.TIGHT)
 		list = grid
 	list.name = "FixtureRows"
 	v.add_child(list)
@@ -255,9 +255,7 @@ static func _row(host: Control, season: Season, m: Dictionary, index: int, narro
 	# Your club's match is marked as the ladder marks your row: a wash of your
 	# colour and a rule down its left.
 	var flat := StatsSide.row_style(mine if yours else "", false, yours)
-	var hover := StyleBoxFlat.new()
-	hover.bg_color = Color(UiKit.TEXT, 0.05)
-	hover.set_corner_radius_all(UiKit.RADIUS)
+	var hover := UiKit.row_hover(0.05, UiKit.RADIUS)
 	for state in ["normal", "focus"]:
 		b.add_theme_stylebox_override(state, flat)
 	for state in ["hover", "pressed", "hover_pressed"]:
@@ -267,14 +265,14 @@ static func _row(host: Control, season: Season, m: Dictionary, index: int, narro
 	b.add_child(box)
 	box.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	box.add_theme_constant_override("margin_left", StatsSide.RULE_INSET)
-	box.add_theme_constant_override("margin_right", 4)
-	var row := UiKit.hbox(10)
+	box.add_theme_constant_override("margin_right", UiKit.Space.TIGHT)
+	var row := UiKit.hbox(UiKit.Space.ROOM)
 	box.add_child(row)
-	var clubs := UiKit.vbox(2)
+	var clubs := UiKit.vbox(UiKit.Space.SLIM)
 	clubs.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	clubs.alignment = BoxContainer.ALIGNMENT_CENTER
 	row.add_child(clubs)
-	var side := UiKit.vbox(2)
+	var side := UiKit.vbox(UiKit.Space.SLIM)
 	side.alignment = BoxContainer.ALIGNMENT_CENTER
 	row.add_child(side)
 	for s in range(2):
@@ -350,8 +348,8 @@ static func _round_sheet(host: Control, pgs: Array) -> void:
 	var grid := GridContainer.new()
 	grid.name = "RoundGrid"
 	grid.columns = 6
-	grid.add_theme_constant_override("h_separation", 6)
-	grid.add_theme_constant_override("v_separation", 6)
+	grid.add_theme_constant_override("h_separation", UiKit.Space.CLOSE)
+	grid.add_theme_constant_override("v_separation", UiKit.Space.CLOSE)
 	body.add_child(grid)
 	var finals: VBoxContainer = null
 	for i in range(pgs.size()):
@@ -360,7 +358,7 @@ static func _round_sheet(host: Control, pgs: Array) -> void:
 		if bool(p["finals"]):
 			if finals == null:
 				body.add_child(UiKit.section("Finals"))
-				finals = UiKit.vbox(6)
+				finals = UiKit.vbox(UiKit.Space.CLOSE)
 				body.add_child(finals)
 			b = UiKit.btn(str(p["title"]), UiKit.BODY)
 			finals.add_child(b)
@@ -424,9 +422,9 @@ static func _preview_sheet(host: Control, season: Season, m: Dictionary) -> void
 	for i in range(rows.size()):
 		order[str(rows[i]["code"])] = i + 1
 	for code in [home, away]:
-		var block := UiKit.vbox(3)
+		var block := UiKit.vbox(UiKit.Space.THIN)
 		block.name = "Preview_" + str(code)
-		var head := UiKit.hbox(8)
+		var head := UiKit.hbox(UiKit.GAP)
 		var heads := UiKit.club_badge(str(code), UiKit.NAME, false, true)
 		StatsSide.badge(heads, str(code), true)
 		head.add_child(heads)
