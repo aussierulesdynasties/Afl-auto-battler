@@ -110,6 +110,9 @@ var _set_choice := {}
 ## Who the last free kick was paid to ({"side", "id"}): inside his forward 50
 ## he takes it as a set shot (_free_set_shot).
 var _free_taker := {}
+## The man the free that started this chain was paid to, when it was not a set
+## shot: he takes the kick himself (play_chain's first carrier).
+var _free_man := {}
 ## The side whose disposal last went loose (spoiled, smothered) or astray (a
 ## clanger): a loose-ball win off it in the next chain is an intercept.
 var _lost_by := -1
@@ -2693,26 +2696,35 @@ static func _tv(key: String, value: float) -> float:
 const PRESS_RUSH_GAIN := 0.96
 ## Rushed behinds (director, 2026-11-26, P2-1: "Add at the 2026 rate"): a
 ## defender closed down within RUSH_DEPTH metres of his own goal line rushes it
-## through this often, unless he marked it (_holds_mark). Real AFL 2026: 2.12 a
-## team a game (standings behinds less player behinds, AFL Tables;
-## afl_team_rates.json "rushed_behinds"). Measured over 500 paired matches,
-## every time (1.0): 20 m gives 2.2, 25 m gives 3.1.
-const RUSH_DEPTH := 20.0
+## through this often, unless he marked it or was paid a free (_holds_mark). Only when he is backed
+## up on the line (director, 2026-11-27: "players only revert to rushing the
+## behind if they have no other choice"; asked how close, he chose "Within 5 m"
+## and, told that gives fewer than the real 2.12 a team a game, "Fewer is fine").
+## Measured over 612 paired matches, every time (1.0): 5 m gives 0.4, 9 m 0.7,
+## 20 m 2.2 (afl_team_rates.json "rushed_behinds": real 2.12, AFL Tables).
+const RUSH_DEPTH := 5.0
 const RUSH_THROUGH := 1.0
 
 
 ## `side`'s man, closed down near his own goal, rushes it through: a behind to
 ## the other side that no one of theirs kicked, and `side` kicks in.
-## A man who has marked it takes his kick: the protected area keeps the
-## opposition off him, so he is never the one who rushes it through. His
-## events since he got the ball say whether one was a mark.
+## A man who has marked it, or been paid a free, takes his kick: the protected
+## area keeps the opposition off him, so he is never the one who rushes it
+## through. His events since he got the ball say whether one was a mark or a free.
 func _holds_mark(carrier: Dictionary) -> bool:
 	var pid := str(carrier.get("id", ""))
 	var k := events.size() - 1
-	while k >= 0 and str((events[k] as Dictionary).get("player_id", "")) == pid:
-		if str((events[k] as Dictionary).get("kind", "")) == "mark":
-			return true
+	while k >= 0:
+		var ev: Dictionary = events[k]
 		k -= 1
+		# A change off the bench or an injury logged in between is not play (seed 38: the free to
+		# WCE_42, a sub, then he rushed it).
+		if str(ev.get("kind", "")) in ["sub", "moment", "injury"]:
+			continue
+		if str(ev.get("player_id", "")) != pid:
+			return false
+		if str(ev.get("kind", "")) in ["mark", "free", "fifty"]:
+			return true
 	return false
 
 
@@ -3688,6 +3700,12 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 			var marker := _on_ground(side, str(_chain_from.get("gatherer", _chain_from.get("id", ""))))
 			if not marker.is_empty():
 				carrier = marker
+		# The free was paid to him, so he takes the kick (a teammate 1 m away
+		# took it 242 times in 281 frees over 10 matches, and the 3D drew a
+		# 1 m lob to him: director, 2026-11-27, "Weddles kick is the one that
+		# makes no sense here"). The pick is still drawn, as for a mark.
+		if touches == 1 and chain_origin == "free" and not _free_man.is_empty():
+			carrier = _free_man
 		var kick_in_play_on := _kick_in_play_on(carrier) if is_kick_in else false
 		# The loose ball won off the other side's spoiled, smothered or
 		# astray disposal is an intercept possession (Champion Data), by
@@ -3940,6 +3958,15 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 				# 2026-11-26, P2-1): a behind to them, and we kick in.
 				if (not is_kick_in and atk_fp <= -(gline - _tv("RUSH_DEPTH", RUSH_DEPTH))
 						and not _holds_mark(carrier) and rush_rng.randf() < _tv("RUSH_THROUGH", RUSH_THROUGH)):
+					# He runs it over the line, so the kick or handball written
+					# above never happened (director, 2026-11-26, "hed simply run
+					# over the line"): it goes from the log and from the counts.
+					if disposal_event == events.size() - 1:
+						events.remove_at(disposal_event)
+						# Not a kick-in (above), so it was counted as a disposal.
+						for undone in ["kicks" if disposal_kind == "kick" else "handballs", "disposals"]:
+							_t(side, undone, -1.0)
+							_p(carrier, undone, -1.0)
 					return _rushed_through(side, carrier, fp, presser)
 			var turn_p: float = (_tv("PRESS_TURNOVER", PRESS_TURNOVER_FLOW)
 					* (0.80 + 0.40 * _a(presser, "pressure") / 100.0)
@@ -5389,6 +5416,9 @@ func _play_one_chain(T: Dictionary) -> void:
 	var res := {}
 	_last_disp = {}
 	var taker := _free_set_taker(side, start_fp) if chain_origin == "free" else {}
+	_free_man = {}
+	if chain_origin == "free" and taker.is_empty() and int(_free_taker.get("side", -1)) == side:
+		_free_man = _on_ground(side, str(_free_taker.get("id", "")))
 	_free_taker = {}
 	if not taker.is_empty():
 		res = _free_set_shot(side, start_fp, taker)

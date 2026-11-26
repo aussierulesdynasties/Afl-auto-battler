@@ -709,6 +709,8 @@ func step(i: int, p: Dictionary, holder: int, pos: Vector2, vel: Vector2, dt: fl
 		var t0 := float(o["t0"])
 		var span := float(o["touch"]) - t0
 		var k := 1.0 if span <= 0.001 else clampf((float(o["t"]) - t0) / span, 0.0, 1.0)
+		if o.has("face"):
+			_track_move(o, pos, vel, dt)
 		var spot: Vector2 = (o["at"] as Vector2) + (o["off"] as Vector2) * (1.0 - k)
 		_gap[i] = spot - pos
 		node.position = Vector3(spot.x, 0.0, spot.y)
@@ -800,7 +802,7 @@ func _step_once(i: int, p: Dictionary, o: Dictionary, dt: float) -> void:
 		t = maxf(float(o["t"]), float(o["touch"]) - HOLD_SHORT)
 	o["t"] = t
 	var ap: AnimationPlayer = p["anim"]
-	(p["node"] as Node3D).rotation.y = float(o["yaw"])
+	(p["node"] as Node3D).rotation.y = float(o.get("face", o["yaw"]))
 	if ap.current_animation != str(o["anim"]):
 		ap.play(str(o["anim"]))
 	ap.seek(minf(float(o["t"]), ap.current_animation_length), true)
@@ -831,7 +833,7 @@ func _end_once(i: int) -> void:
 	(p["node"] as Node3D).position = Vector3(spot.x, 0.0, spot.y)  # where his last pose was drawn
 	var hips := _hips_world(p)
 	_snap(i, p)
-	_face[i] = float((_once[i] as Dictionary)["yaw"])
+	_face[i] = float((_once[i] as Dictionary).get("face", (_once[i] as Dictionary)["yaw"]))
 	_back[i] = Vector2(hips.origin.x, hips.origin.z)
 	_once[i] = {}
 
@@ -1375,6 +1377,7 @@ func _start_move(i: int, clip: String, left: float, aim: Vector2, late: bool, fr
 	var here := Vector2(node.position.x, node.position.z)
 	var how := "mark" if str(m["kind"]) == "mark" else str(m["kind"])
 	var yaw := node.rotation.y
+	var face := yaw
 	var spot := here
 	if how == "mark":
 		var land: Vector2 = aim if aim != Vector2.INF else here
@@ -1384,19 +1387,43 @@ func _start_move(i: int, clip: String, left: float, aim: Vector2, late: bool, fr
 		var at: Vector3 = m["at"]
 		spot = land - Vector2(at.x, at.z).rotated(-yaw)
 	else:
-		var meet := here + (_pace[i] as Vector2) * left
+		# Where his token will be at the contact on the run it is making (_track_move keeps it
+		# so), his hips turned the way he faces now.
+		var meet := here + (director.tokens[i]["vel"] as Vector2) * MatchDirector.TEMPO * left
 		var to: Vector2 = (aim - meet) if aim != Vector2.INF else Vector2.ZERO
 		if to.length() > 1.0:
 			yaw = atan2(to.x, to.y) - float(m["aim"])
-		spot = meet - (m["hips_c"] as Vector2).rotated(-yaw)
+		spot = meet - (m["hips_c"] as Vector2).rotated(-face)
 	var ap: AnimationPlayer = p["anim"]
 	var h0 := _clip_hips(ap, clip, t0).origin
 	var hips_now := _hips_world(p).origin
-	var off := Vector2(hips_now.x, hips_now.z) - (spot + Vector2(h0.x, h0.z).rotated(-yaw))
+	var off := Vector2(hips_now.x, hips_now.z) - (spot + Vector2(h0.x, h0.z).rotated(-face))
 	_snap(i, p)
 	_once[i] = {"anim": clip, "t": t0, "t0": t0, "touch": c, "end": float(m["end"]), "yaw": yaw,
 			"at": spot, "off": off if t0 < c else Vector2.ZERO, "how": how, "rate": 1.0,
 			"arrived": false, "kind": str(m["kind"])}
+	if how != "mark":
+		_once[i]["face"] = face
+		_once[i]["aim"] = aim
+
+
+## A kick or handball goes where his token goes. His hips meet the ball where his token is at
+## the contact, on the run it is making now, re-aimed every frame: set once from his run as the
+## clip began, a man turning to run in for his free kick ran the other way and was drawn 6 m
+## from his token at the kick, the ball then flying sideways off his boot to the token's line
+## (seed 20, Weddle). On a steady run the spot stays put and the clip's own run carries his
+## hips there. He turns to the kick at a planted pivot (TURN_PLANTED), never in one frame;
+## after the contact the spot runs on behind his token as his follow-through does.
+func _track_move(o: Dictionary, pos: Vector2, vel: Vector2, dt: float) -> void:
+	var m: Dictionary = _moments[str(o["anim"])]
+	var left := (float(o["touch"]) - float(o["t"])) / maxf(float(o.get("rate", 1.0)), 0.05)
+	var meet := pos + vel * MatchDirector.TEMPO * left
+	var aim: Vector2 = o.get("aim", Vector2.INF)
+	if aim != Vector2.INF and left > 0.0 and (aim - meet).length() > 1.0:
+		o["yaw"] = atan2((aim - meet).x, (aim - meet).y) - float(m["aim"])
+	var turn := TURN_PLANTED * dt if dt > 0.0 else PI
+	o["face"] = rotate_toward(float(o["face"]), float(o["yaw"]), turn)
+	o["at"] = meet - (m["hips_c"] as Vector2).rotated(-float(o["face"]))
 
 
 ## Before the touch, the clip's rate steers its contact onto the director's latest estimate.
