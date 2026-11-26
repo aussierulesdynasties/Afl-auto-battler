@@ -62,3 +62,8 @@ assets/grounds/*/*_backdrop_part*_*.jpg.import
 *.blend[0-9][0-9]
 *.bak
 *.log
+# Numbered backups (scene.py.bak36, clad_rib.png.bak31): *.bak above misses them.
+*.bak[0-9]*
+# Blender scenes are working files, archived on the PC (docs/3D_INVENTORY.md); the game loads the .glb.
+# The two already tracked under .claude/review stay tracked until someone moves them.
+*.blend
