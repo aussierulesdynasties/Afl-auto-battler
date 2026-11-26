@@ -7,6 +7,8 @@ extends Control
 
 var _root: VBoxContainer
 var _sheet: Control
+## A short PC's page comes in two stages: "play" (How we play) or "club" (The club).
+var _stage := "play"
 
 
 func _ready() -> void:
@@ -42,34 +44,90 @@ func _build() -> void:
 		return
 	UiKit.clear(_root)
 	_root.add_child(UiKit.top_bar("Coaching", true))
+	if _wide() and _short_pc():
+		_staged()
+		return
 	var body := UiKit.vbox(UiKit.SECTION)
 	body.name = "CoachingBody"
 	body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	# A PC: how you play on the left, the club around it on the right, rather
-	# than one column stretched across the screen (director, 2026-10-10).
-	var left := body
-	var right := body
-	if _wide():
-		var cols := HBoxContainer.new()
-		cols.name = "CoachingColumns"
-		cols.add_theme_constant_override("separation", UiKit.Space.APART)
-		body.add_child(cols)
-		left = UiKit.vbox(UiKit.SECTION)
-		right = UiKit.vbox(UiKit.SECTION)
-		left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		left.size_flags_stretch_ratio = 1.4
-		right.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		cols.add_child(left)
-		cols.add_child(right)
-	left.add_child(_how_we_play())
-	left.add_child(_form())
-	left.add_child(_sim_orders())
+	if not _wide():
+		body.add_child(_how_we_play())
+		body.add_child(_form())
+		body.add_child(_sim_orders())
+		body.add_child(_list_and_cap())
+		var b := _board()
+		if b != null:
+			body.add_child(b)
+		body.add_child(_staff())
+		_root.add_child(UiKit.scroll(body))
+		return
+	# A PC: the whole page on one screen in three columns, how we play, recent
+	# games and the sim, then the club (director's pick C, 2026-11-26).
+	var mid := UiKit.vbox(UiKit.SECTION)
+	mid.add_child(_form())
+	mid.add_child(_sim_orders())
+	var right := UiKit.vbox(UiKit.SECTION)
 	right.add_child(_list_and_cap())
 	var board := _board()
 	if board != null:
 		right.add_child(board)
 	right.add_child(_staff())
+	var hw := _how_we_play()
+	hw.size_flags_stretch_ratio = 1.3
+	body.add_child(_columns([hw, mid, right]))
 	_root.add_child(UiKit.scroll(body))
+
+
+## A PC window under 640 units tall (960x540) can't hold the page in columns.
+func _short_pc() -> bool:
+	return UiKit.view_height(self) < 640.0
+
+
+## A short PC: How we play | The club, each stage laid in columns so neither scrolls
+## (director's pick C, B's two stages at 960x540).
+func _staged() -> void:
+	var tabs := UiKit.hbox(UiKit.Space.TIGHT)
+	tabs.name = "CoachingStages"
+	_root.add_child(tabs)
+	for s in [["play", "How we play"], ["club", "The club"]]:
+		var t := UiKit.tab(str(s[1]), _stage == str(s[0]))
+		t.name = "Stage_" + str(s[0])
+		t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		t.pressed.connect(func():
+			_stage = str(s[0])
+			_build())
+		tabs.add_child(t)
+	var body := UiKit.vbox(UiKit.SECTION)
+	body.name = "CoachingBody"
+	body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var parts: Array = []
+	if _stage == "club":
+		# The staff section has no room here: its button sits beside My list.
+		var mid := UiKit.vbox(UiKit.SECTION)
+		mid.add_child(_list_and_cap())
+		mid.add_child(_sim_orders())
+		parts = [_form(), mid]
+		var board := _board()
+		if board != null:
+			parts.append(board)
+	else:
+		# The plans on the left; the rest of the list, the note and how we win and lose beside them.
+		var rest := UiKit.vbox(UiKit.Space.CLOSE)
+		var hw := _how_we_play(rest)
+		hw.size_flags_stretch_ratio = 1.3
+		parts = [hw, rest]
+	body.add_child(_columns(parts))
+	_root.add_child(UiKit.scroll(body))
+
+
+func _columns(parts: Array) -> Control:
+	var cols := HBoxContainer.new()
+	cols.name = "CoachingColumns"
+	cols.add_theme_constant_override("separation", UiKit.Space.APART)
+	for part in parts:
+		(part as Control).size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		cols.add_child(part)
+	return cols
 
 
 ## "When I sim the week" (row T3.R43, P-66): the lines the assistant follows
@@ -186,10 +244,13 @@ const TRADE_OFF_LINE := "Each plan buys an edge and gives something up. The note
 # ---------------------------------------------------------------------------
 # How we play
 # ---------------------------------------------------------------------------
-func _how_we_play() -> Control:
+## `beside`: a short PC's How we play stage, whose tab names it; the strengths no
+## plan runs on and everything after them go in that column.
+func _how_we_play(beside: VBoxContainer = null) -> Control:
 	var v := UiKit.vbox(UiKit.Space.CLOSE)
 	v.name = "HowWePlay"
-	v.add_child(_head("How we play"))
+	if beside == null:
+		v.add_child(_head("How we play"))
 	v.add_child(_wrapped("Each plan runs on one of our list's strengths. That is our side as picked, against every list in the league.",
 			UiKit.SMALL, UiKit.MUTED))
 	# What it costs and what it buys, in one line (P-63).
@@ -222,30 +283,31 @@ func _how_we_play() -> Control:
 	for row in profile:
 		if not PlanTiles.PLAN_STRENGTH.values().has(str(row["dim"])):
 			rest.add_child(_profile_row(row, ground))
-	v.add_child(rest)
-	v.add_child(note)
-	v.add_child(fit)
-	v.add_child(_wrapped("Every match starts on this plan. Change it at any break.",
+	var out: VBoxContainer = v if beside == null else beside
+	out.add_child(rest)
+	out.add_child(note)
+	out.add_child(fit)
+	out.add_child(_wrapped("Every match starts on this plan. Change it at any break.",
 			UiKit.SMALL, UiKit.MUTED))
 
 	var style := GameState.how_we_play()
 	if int(style["games"]) < 3:
-		v.add_child(UiKit.spacer(UiKit.Space.TIGHT))
-		v.add_child(_wrapped("After three games, how we win and get beaten shows here.",
+		out.add_child(UiKit.spacer(UiKit.Space.TIGHT))
+		out.add_child(_wrapped("After three games, how we win and get beaten shows here.",
 				UiKit.BODY, UiKit.MUTED))
 		return v
 	for part in [["How we win", "win", "WinLine"], ["How we get beaten", "beaten", "BeatenLine"]]:
 		var lines: Array = style[part[1]]
-		v.add_child(UiKit.spacer(UiKit.Space.TIGHT))
-		v.add_child(UiKit.lbl(str(part[0]), UiKit.BODY, UiKit.TEXT, true))
+		out.add_child(UiKit.spacer(UiKit.Space.TIGHT))
+		out.add_child(UiKit.lbl(str(part[0]), UiKit.BODY, UiKit.TEXT, true))
 		if lines.is_empty():
 			var quiet := _wrapped(_quiet_line(str(part[1]), int(style["games"])), UiKit.BODY, UiKit.MUTED)
 			quiet.name = "%sNone" % part[2]
-			v.add_child(quiet)
+			out.add_child(quiet)
 		for i in range(lines.size()):
 			var l := _wrapped(str(lines[i]))
 			l.name = "%s_%d" % [part[2], i]
-			v.add_child(l)
+			out.add_child(l)
 	return v
 
 
@@ -335,7 +397,14 @@ func _list_and_cap() -> Control:
 		b.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 		b.custom_minimum_size.x = 180
 	b.pressed.connect(func(): Router.go("list"))
-	v.add_child(b)
+	if not (_wide() and _short_pc()):
+		v.add_child(b)
+		return v
+	# A short PC's club stage has no staff section: the way to the staff sits beside My list.
+	var bh := UiKit.hbox(UiKit.GAP)
+	v.add_child(bh)
+	bh.add_child(b)
+	bh.add_child(_staff_button())
 	return v
 
 
@@ -391,6 +460,12 @@ func _staff() -> Control:
 		else:
 			v.add_child(_staff_row(job, staff[job]))
 	v.add_child(UiKit.spacer(UiKit.Space.CLOSE))
+	v.add_child(_staff_button())
+	return v
+
+
+## The way into the staff, with the jobs still to fill.
+func _staff_button() -> Button:
 	var jobs := GameState.staff_vacancies.size()
 	var b := UiKit.btn("Staff" if jobs == 0 else "Staff  ·  %d to fill" % jobs, UiKit.BODY, jobs > 0)
 	b.name = "OpenStaff"
@@ -399,8 +474,7 @@ func _staff() -> Control:
 		b.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 		b.custom_minimum_size.x = 180
 	b.pressed.connect(func(): Router.go("staff"))
-	v.add_child(b)
-	return v
+	return b
 
 
 func _staff_row(job: String, c: Dictionary) -> Control:

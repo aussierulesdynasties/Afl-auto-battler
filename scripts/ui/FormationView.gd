@@ -46,6 +46,8 @@ var _bench: Array = []
 var _club := ""
 var _placed: Array = []
 var _selected := -1
+## false: numbers only (a short PC window, where names can't be read).
+var names_shown := true
 var _callout: PanelContainer
 var _callout_box: VBoxContainer
 
@@ -303,7 +305,7 @@ func _geometry() -> Dictionary:
 	return {
 		"rect": rect, "c": centre, "a": a, "b": b, "tr": tr,
 		"bench": bench_rect, "tokens": tokens,
-		"labels": a >= 108.0,
+		"labels": a >= 108.0 and names_shown,
 	}
 
 
