@@ -21,10 +21,14 @@ for e in OLD:   # tagging since retired: a riverbank or reservoir area is water 
 sj = json.load(open(os.path.join(PD, 'sat.json'))); hm, mp = sj['half_m'], sj['m_per_px']
 SA_OLD = np.asarray(Image.open(os.path.join(PD, 'sat_%s.png' % tag)).convert('RGB')).astype(np.float32)
 SA_NOW = np.asarray(Image.open(os.path.join(PD, 'sat_now.png')).convert('RGB')).astype(np.float32)
+# an era frame that covers only part of the square (a Google Earth history frame registered onto it) is black past its
+# edge: those pixels are no aerial at all, and a building over them is beyond the era's aerial
+VALID = SA_OLD.sum(2) > 0
 # the two aerials differ in colour cast (Ikon's 2013 release is green-tinted: grey roofs read as plants), so the era's
 # is matched to today's per channel (mean and spread over the whole frame) before any colour test
-_m = SA_OLD.reshape(-1, 3); _n = SA_NOW.reshape(-1, 3)
+_m = SA_OLD[VALID]; _n = SA_NOW.reshape(-1, 3)
 SA_OLD = np.clip((SA_OLD - _m.mean(0)) / (_m.std(0) + 1e-6) * _n.std(0) + _n.mean(0), 0, 255)
+SA_OLD[~VALID] = np.nan
 def poly(el):
     pts = [((p['lon'] - lon0) * KX, (p['lat'] - lat0) * KY) for p in el.get('geometry') or [] if p]
     if len(pts) < 4: return None
@@ -41,6 +45,7 @@ def med(SA, q):
     if x0 < 0 or y0 < 0 or x1 >= SA.shape[1] or y1 >= SA.shape[0]: return None
     mk = Image.new('L', (x1 - x0, y1 - y0)); ImageDraw.Draw(mk).polygon([(u - x0, v - y0) for u, v in zip(U, V)], fill=1)
     px = SA[y0:y1, x0:x1][np.asarray(mk) > 0]
+    if len(px) and np.isnan(px).any(): return None   # past the era frame's edge
     return np.median(px, 0) if len(px) >= 6 else None
 def frac(SA, q, paved):
     xs, ys = q.exterior.xy
@@ -49,7 +54,7 @@ def frac(SA, q, paved):
     if x0 < 0 or y0 < 0 or x1 >= SA.shape[1] or y1 >= SA.shape[0]: return None
     mk = Image.new('L', (x1 - x0, y1 - y0)); ImageDraw.Draw(mk).polygon([(u - x0, v - y0) for u, v in zip(U, V)], fill=1)
     px = SA[y0:y1, x0:x1][np.asarray(mk) > 0]
-    if len(px) < 6: return None
+    if len(px) < 6 or np.isnan(px).any(): return None
     R, G, B = px[:, 0], px[:, 1], px[:, 2]; Vv = px.max(1)
     veg = (2 * G - R - B > 12) & (Vv < 170)
     bare = (R - B > 25) & (R - G < 28) & (Vv > 100)
