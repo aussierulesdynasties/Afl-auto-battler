@@ -100,12 +100,13 @@ static func contract_factor(p: Dictionary) -> float:
 static func selection_bars(list: Array, projected := false) -> Dictionary:
 	if not _bars_memo_on:
 		return _selection_bars(list, projected)
-	var key := PackedStringArray(["1" if projected else "0"])
-	for q in list:
-		key.append("%s:%d" % [str(q["id"]), int(Rating.ovr(q, 0))])
-	var k := ",".join(key)
+	var side_k := _side_key(list)
+	var k := ("1," if projected else "0,") + side_k
 	if not _bars_memo.has(k):
-		_bars_memo[k] = _selection_bars(list, projected)
+		# The bars now and projected read the same side: it is picked once.
+		if not _side_memo.has(side_k):
+			_side_memo[side_k] = Ratings.select_22(list)
+		_bars_memo[k] = _bars_of(_side_memo[side_k], projected)
 	return (_bars_memo[k] as Dictionary).duplicate()
 
 
@@ -115,7 +116,27 @@ static func selection_bars(list: Array, projected := false) -> Dictionary:
 ## the same list's bars thousands of times; remember them until it closes.
 ## A trade changes the list, so it changes the key: nothing to invalidate.
 static var _bars_memo := {}
+static var _side_memo := {}
 static var _bars_memo_on := false
+
+
+## A list's best 22 (Ratings.select_22): while the market is frozen, picked
+## once per list and shared by everyone who asks, the bars included. Read
+## it, never change it.
+static func side_of(list: Array) -> Dictionary:
+	if not _bars_memo_on:
+		return Ratings.select_22(list)
+	var side_k := _side_key(list)
+	if not _side_memo.has(side_k):
+		_side_memo[side_k] = Ratings.select_22(list)
+	return _side_memo[side_k]
+
+
+static func _side_key(list: Array) -> String:
+	var key := PackedStringArray()
+	for q in list:
+		key.append("%s:%d" % [str(q["id"]), int(Rating.ovr(q, 0))])
+	return ",".join(key)
 ## How many times the bars were worked out from scratch (perf guard in tests).
 static var bars_built := 0
 
@@ -123,11 +144,15 @@ static var bars_built := 0
 static func remember_bars(on: bool) -> void:
 	_bars_memo_on = on
 	_bars_memo.clear()
+	_side_memo.clear()
 
 
 static func _selection_bars(list: Array, projected: bool) -> Dictionary:
+	return _bars_of(Ratings.select_22(list), projected)
+
+
+static func _bars_of(side: Dictionary, projected: bool) -> Dictionary:
 	bars_built += 1
-	var side := Ratings.select_22(list)
 	var bars := {}
 	for q in side["ground"]:
 		var r := str(q["role"])

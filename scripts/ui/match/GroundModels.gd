@@ -125,7 +125,7 @@ const SURROUNDS := {
 	# York Park: Invermay and the Inveresk precinct, the North Esk and the Tamar's east bank
 	# (tools/grounds/york_park/surrounds.py), laid on the model's origin (the OSM pitch's centroid). It starts
 	# past the fence everywhere, under the model's concourse.
-	"york_park": {"y": -0.04, "inner": 92.0, "colour": Color(0.52, 0.51, 0.36),
+	"york_park": {"y": -0.04, "inner": 92.0, "outer": 1024.0, "colour": Color(0.52, 0.51, 0.36),
 			"map": "surrounds.webp", "span": 2048.0, "trees": "trees.bin", "buildings": "buildings.bin",
 			# Invermay in Google Earth: white and cream weatherboard, red and brown brick, grey render,
 			# pale showroom cladding.
@@ -137,7 +137,7 @@ const SURROUNDS := {
 	# Bellerive: its streets and houses, Bellerive Beach, Kangaroo Bay and the Derwent
 	# (tools/grounds/bellerive/surrounds.py), laid on the model's origin (the OSM pitch's centre). It starts under the
 	# apron (88 m, past the fence everywhere): under the turf it z-fought from a blimp's height (grey bars).
-	"bellerive": {"y": -0.04, "inner": 88.0, "colour": Color(0.5, 0.5, 0.34),
+	"bellerive": {"y": -0.04, "inner": 88.0, "outer": 1024.0, "colour": Color(0.5, 0.5, 0.34),
 			"map": "surrounds.webp", "span": 2048.0, "trees": "trees.bin", "buildings": "buildings.bin",
 			# The ground close round it at 0.375 m a pixel, 768 m a side (surrounds_near.webp): at 1 m a pixel
 			# the yards and verges read as mush in close views (PC check r5).
@@ -156,7 +156,7 @@ const SURROUNDS := {
 					Color(0.4, 0.56, 0.44), Color(0.82, 0.82, 0.8), Color(0.44, 0.52, 0.62), Color(0.56, 0.3, 0.24)]},
 	# Cazaly's: Westcourt and Parramatta Park, Mulgrave Road, Moody Creek (tools/grounds/cazalys/surr/surrounds.py),
 	# laid on the model's origin (the OSM pitch's centroid); the ranges and the sea are its backdrop (surr/backdrop.py).
-	"cazalys": {"y": -0.04, "inner": 95.0, "colour": Color(0.41, 0.47, 0.28),
+	"cazalys": {"y": -0.04, "inner": 95.0, "outer": 1024.0, "colour": Color(0.41, 0.47, 0.28),
 			"map": "surrounds.webp", "span": 2048.0, "trees": "trees.bin", "buildings": "buildings.bin",
 			# Westcourt in Google Earth: white and cream weatherboard Queenslanders, pastel and grey render, some brick.
 			"walls": [Color(0.9, 0.9, 0.86), Color(0.86, 0.82, 0.7), Color(0.74, 0.8, 0.78), Color(0.9, 0.9, 0.86),
@@ -166,7 +166,7 @@ const SURROUNDS := {
 					Color(0.32, 0.42, 0.35), Color(0.52, 0.27, 0.22), Color(0.72, 0.72, 0.69), Color(0.36, 0.42, 0.52)]},
 	# GMHBA: Kardinia Park and Geelong's streets and houses (tools/grounds/gmhba/surrounds.py); the map is
 	# laid on the model's origin, the stadium's own footprint painted plain under the model.
-	"gmhba": {"y": -0.04, "inner": 60.0, "fence_margin": 4.0, "colour": Color(0.48, 0.49, 0.33),
+	"gmhba": {"y": -0.04, "inner": 60.0, "outer": 1024.0, "fence_margin": 4.0, "colour": Color(0.48, 0.49, 0.33),
 			"map": "surrounds.webp", "span": 2048.0, "trees": "trees.bin", "tree_kind": "gum", "buildings": "buildings.bin",
 			# Geelong's walls in Google Earth: red and brown brick, cream render, grey block, weatherboard.
 			"walls": [Color(0.62, 0.42, 0.34), Color(0.74, 0.7, 0.62), Color(0.55, 0.53, 0.5), Color(0.68, 0.5, 0.4),
@@ -181,7 +181,7 @@ const SURROUNDS := {
 					Color(0.66, 0.5, 0.42), Color(0.74, 0.72, 0.68)]},
 	# Norwood: Kent Town and Norwood's streets, villas, cottages and townhouses (tools/grounds/norwood/surrounds.py),
 	# laid on the model's origin (the centre circle). The houses that face the ground are in the model itself.
-	"norwood": {"y": -0.04, "inner": 60.0, "colour": Color(0.5, 0.49, 0.38),
+	"norwood": {"y": -0.04, "inner": 60.0, "outer": 1024.0, "colour": Color(0.5, 0.49, 0.38),
 			# The venue's own edge (the back of its walk) every 3.75 degrees (tools/grounds/norwood/model/arena.py).
 			"inner_by_angle": [
 				67.2, 68.0, 69.1, 70.6, 72.2, 74.0, 75.9, 77.9, 80.3, 82.8, 85.3, 87.7, 89.0, 91.2, 93.5, 95.5,
@@ -223,18 +223,12 @@ const SURROUNDS := {
 			# Round 12: the real land (terrain.bin, tools/grounds/marvel/land.py) right up to `inner`. The model's own
 			# pad follows the same land, from 0.9 m under the old street by the harbour to 4.4 m over it on the east.
 			"follow_land": true},
-	# Optus Stadium on the Burswood peninsula: the Swan River, Perth Water, the parks and plaza from
-	# OpenStreetMap (tools/grounds/optus/surrounds.py), and its bridges in 3D, Matagarup's arches
-	# included (`models`, tools/grounds/optus/bridges.py).
-	"optus": {"y": -0.03, "inner": 100.0, "colour": Color(0.45, 0.55, 0.27),
-			"map": "surrounds.webp", "span": 2048.0, "trees": "trees.bin", "buildings": "buildings.bin",
-			"models": ["bridges.glb"], "tint": Color.WHITE, "building_tint": Color.WHITE},
 	# Adelaide Oval in the North Adelaide parklands: the River Torrens and Torrens Lake, Pennington and
 	# Creswell Gardens, the CBD's towers to the south (tools/grounds/adelaide/surrounds.py), and in 3D
 	# the Adelaide Oval footbridge, the river's other bridges and St Peter's Cathedral
 	# (tools/grounds/adelaide/landmarks.py). The map starts under the stands (inner 105 m): the model's
 	# own ground stops there, and inside it the match's turf and the model's floor take over.
-	"adelaide": {"y": -0.03, "inner": 105.0, "colour": Color(0.45, 0.55, 0.27),
+	"adelaide": {"y": -0.03, "inner": 105.0, "outer": 1024.0, "colour": Color(0.45, 0.55, 0.27),
 			"map": "surrounds.webp", "span": 2048.0, "trees": "trees.bin", "buildings": "buildings.bin",
 			"models": ["landmarks.glb"], "building_colours": "buildings_col.bin",
 			# The precinct and the parkland next to the stands at 4 pixels a metre (the far map's 1 m smeared
@@ -678,6 +672,9 @@ static func _add_surrounds(root: Node3D, s: Dictionary, dir := "", fit: Array = 
 	# where the street comes close (GMHBA's Moorabool Street side).
 	var margin: float = s.get("fence_margin", -1.0)
 	var outer: float = s.get("outer", 2500.0)
+	# Where the ground's background scene takes over (`outer` given): the map's square corners reach past
+	# the ring, so its trees and buildings stop on the same circle, never drawn twice with the scene's.
+	var reach: float = outer if s.has("outer") else INF
 	var y: float = s["y"]
 	var by_angle: Array = s.get("inner_by_angle", [])
 	var n := 96 if by_angle.is_empty() else by_angle.size()
@@ -707,7 +704,13 @@ static func _add_surrounds(root: Node3D, s: Dictionary, dir := "", fit: Array = 
 			first = _past_fence(d, fit, margin)
 		# A venue that is not round ends where its own ground ends: inner_by_angle gives that edge (m) every
 		# 360/n degrees from +x toward +z; the land starts half a metre inside it, under the model's ground.
-		return first if by_angle.is_empty() else float(by_angle[i % by_angle.size()]) - 0.5
+		if by_angle.is_empty():
+			return first
+		# The ring may have more directions than the list (360 on the real land): read the edge between
+		# its entries by angle, never by index, or a 96-entry list wrapped 3.75 times round in spikes.
+		var t := float(i) * by_angle.size() / n
+		var k := int(t)
+		return lerpf(float(by_angle[k % by_angle.size()]), float(by_angle[(k + 1) % by_angle.size()]), t - k) - 0.5
 	var radii := func(i: int, d: Vector3) -> Array:
 		var r0: float = start.call(i, d)
 		var rs: Array = RINGS.map(func(f): return f if f > 0.0 else r0) + [outer]
@@ -719,11 +722,15 @@ static func _add_surrounds(root: Node3D, s: Dictionary, dir := "", fit: Array = 
 				r += RELIEF_RING if r < 600.0 else RELIEF_RING * 2.0
 			rs.append_array([RELIEF_REACH, outer])
 		if land != null:
+			# The same rings on every spoke, each `off` past where that spoke starts: _ring_mesh joins
+			# ring k of one spoke to ring k of the next, so a spoke with more rings than its neighbour
+			# (the venue's edge varies 63-100 m round Norwood) tore the ring into spikes over the turf.
 			rs = []
-			var r := r0
-			while r < outer:
-				rs.append(r)
-				r += LAND_STEP if r < inner + 300.0 else (LAND_STEP * 3.0 if r < inner + 900.0 else LAND_STEP * 10.0)
+			var off := 0.0
+			while inner + off < outer - 100.0:
+				rs.append(r0 + off)
+				var q := inner + off
+				off += LAND_STEP if q < inner + 300.0 else (LAND_STEP * 3.0 if q < inner + 900.0 else LAND_STEP * 10.0)
 			rs.append(outer)
 		if near != null:
 			rs = [r_near] + rs.filter(func(r): return r > r_near + 1.0)
@@ -772,7 +779,7 @@ static func _add_surrounds(root: Node3D, s: Dictionary, dir := "", fit: Array = 
 		if s.has("trees") and FileAccess.file_exists(dir + str(s["trees"])):
 			_add_trees(root, FileAccess.get_file_as_bytes(dir + str(s["trees"])).to_float32_array(), y, 5,
 					str(s.get("tree_kind", "")), bool(s.get("deep_crowns", false)), bool(s.get("tree_lod", false)),
-					relief, land)
+					relief, land, reach)
 		if s.has("buildings") and FileAccess.file_exists(dir + str(s["buildings"])):
 			# `building_colours`: each building's wall and roof colour (6 bytes, the map's order), from
 			# OpenStreetMap's building:colour and roof:colour where mapped (Adelaide).
@@ -785,7 +792,7 @@ static func _add_surrounds(root: Node3D, s: Dictionary, dir := "", fit: Array = 
 			_add_buildings(root, FileAccess.get_file_as_bytes(dir + str(s["buildings"])).to_float32_array(), y,
 					s.get("walls", []), s.get("roofs", []), rgb, s.get("building_tint", s.get("tint", Color.WHITE)),
 					bcol, float(s.get("facades", 0.0)),
-					str(s.get("building_style", "")), land)
+					str(s.get("building_style", "")), land, reach)
 		for m in s.get("models", []):
 			var extra := load_glb(dir + str(m))
 			if extra != null:
@@ -1041,7 +1048,7 @@ const TREE_NEAR := 320.0
 ## deep: a broad tree's crown hangs down to a few metres off the ground (eucalypts seen from the side in
 ## Google Earth: one deep mass, not a ball on a bare trunk); it stays as wide as measured.
 static func _add_trees(root: Node3D, buf: PackedFloat32Array, y: float, stride := 5, kind := "", deep := false,
-		lod := false, relief := PackedFloat32Array(), land: GroundTerrain = null) -> void:
+		lod := false, relief := PackedFloat32Array(), land: GroundTerrain = null, reach := INF) -> void:
 	var gum := kind == "gum"
 	var canopy := _gum_canopy_mesh() if gum else _canopy_mesh()
 	var trunk := CylinderMesh.new()
@@ -1071,6 +1078,8 @@ static func _add_trees(root: Node3D, buf: PackedFloat32Array, y: float, stride :
 	var zo := 2 if stride == 6 else 1
 	var o := 1 if stride == 6 else 0
 	for i in range(0, buf.size() - stride + 1, stride):
+		if Vector2(buf[i], buf[i + zo]).length() > reach:
+			continue
 		var key := Vector2i(floori(buf[i] / TREE_BLOCK), floori(buf[i + zo] / TREE_BLOCK))
 		if not blocks.has(key):
 			blocks[key] = []
@@ -1153,7 +1162,7 @@ static func _add_trees(root: Node3D, buf: PackedFloat32Array, y: float, stride :
 ## of their own ("facade_detail"); Low swaps in their plain walls ("facade_plain", Oval3DQuality).
 static func _add_buildings(root: Node3D, buf: PackedFloat32Array, y0: float, walls: Array = [],
 		roofs: Array = [], roof_rgb := PackedFloat32Array(), tint := Color.WHITE,
-		colours := PackedByteArray(), facade_r := 0.0, style := "", land: GroundTerrain = null) -> void:
+		colours := PackedByteArray(), facade_r := 0.0, style := "", land: GroundTerrain = null, reach := INF) -> void:
 	if style == "towers":
 		_add_towers(root, buf, y0, tint, style, land)
 		return
@@ -1203,6 +1212,12 @@ static func _add_buildings(root: Node3D, buf: PackedFloat32Array, y0: float, wal
 			foot.append(Vector2(buf[i + head + k * 2], buf[i + head + 1 + k * 2]))
 		i += head + n * 2
 		b += 1
+		if reach < INF:   # past the ring's end the background scene draws the town (b is kept: colours stay in step)
+			var c := Vector2.ZERO
+			for q in foot:
+				c += q
+			if (c / maxf(foot.size(), 1)).length() > reach:
+				continue
 		# On real land the ground floor sits at the lowest land under it (dug in on the high side).
 		var y := y0 if land == null else land.base(foot) - 0.1
 		var wall: Color = walls[b % walls.size()] if not walls.is_empty() else WALLS[b % WALLS.size()]
@@ -2123,6 +2138,10 @@ static func roof_shut(root: Node, slug: String) -> bool:
 ## How far a camera sees when the ground has its surroundings (backdrop()): the city skyline and
 ## the hills. Without them the match view stops at 900 m.
 const BACKDROP_FAR := 7000.0
+## Grounds whose CBD skyline stands further off than that see further (Whitten Oval and Windy Hill: the
+## city towers 7 to 8.5 km away; North Hobart and Macquarie Point: kunanyi / Mount Wellington, its
+## summit 7 km off and its slopes beyond), the haze ending where it does elsewhere.
+const BACKDROP_FAR_AT := {"whitten": 9000.0, "windy_hill": 9500.0, "north_hobart": 14000.0, "macpoint": 14000.0}
 ## Grounds whose backdrop runs further, [camera far, haze end] in m.
 const BACKDROP_RANGE := {
 		# Manuka: the Brindabellas stand on Canberra's western skyline 25 km out, Black Mountain's tower 5.4 km.
@@ -2139,7 +2158,7 @@ const BACKDROP_RANGE := {
 
 
 static func backdrop_far(slug: String) -> float:
-	return float(BACKDROP_RANGE[slug][0]) if BACKDROP_RANGE.has(slug) else BACKDROP_FAR
+	return float(BACKDROP_RANGE[slug][0]) if BACKDROP_RANGE.has(slug) else float(BACKDROP_FAR_AT.get(slug, BACKDROP_FAR))
 
 
 static func backdrop_haze(slug: String, default_to: float) -> float:
@@ -2243,6 +2262,8 @@ static func _backdrop_materials(model: Node, plain := "") -> void:
 				# Tinted only where the mesh carries colours: a modelled part (York Park's neighbours)
 				# has none, and the tint would read whatever the missing array left behind.
 				mat.vertex_color_use_as_albedo = (mesh.surface_get_format(i) & Mesh.ARRAY_FORMAT_COLOR) != 0
+				if key.begins_with("headstone"):   # each stone is one face, seen from both sides
+					mat.cull_mode = BaseMaterial3D.CULL_DISABLED
 				mat.disable_receive_shadows = true   # past the shadow map's reach it reads blue-grey
 				if mat.roughness >= 0.7:
 					# matte ground (grass, paving, roads, roofs of far blocks): seen at a low angle its sky
