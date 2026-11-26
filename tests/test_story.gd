@@ -1627,7 +1627,7 @@ func _test_leadership() -> void:
 			"Every leadership-record row is one real player with a known role (%s)" % ", ".join(PackedStringArray(bad)))
 
 	var twin := Ovr.to({"real_name": "Pat Example", "id": "x1", "age": 27.0, "club": "GEE", "gm": 20,
-			"career": {"games": 150, "stints": [["GEE", 2019, 2025, 150, 10]]}, 
+			"career": {"games": 150, "stints": [["GEE", 2019, 2025, 150, 10]]},
 			"attr": {"kicking": 80}}, 70)
 	var higher := twin.duplicate(true)
 	Ovr.to(higher, 95)

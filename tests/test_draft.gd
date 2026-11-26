@@ -135,7 +135,7 @@ func _test_position_guidance() -> void:
 
 func _dual(id: String, role: String, role2 := "") -> Dictionary:
 	return Ovr.to({"id": id, "name": id, "last": id, "club": "ORIGINAL", "role": role, "role2": role2,
-			 "gl": 0, "di": 0,
+			"gl": 0, "di": 0,
 			"attr": {"ruck": 10, "contested_ball": 50, "kicking": 50, "handballing": 50, "speed": 50, "work_rate": 50,
 				"strength": 50, "endurance": 60, "reading_play": 40, "one_on_one": 40, "pressure": 40, "forward_craft": 40,
 				"contested_marking": 40, "marking": 40, "goalkicking": 50, "vision": 40, "discipline": 50, "durability": 60}}, 60)
@@ -825,7 +825,7 @@ func _test_asset_valuation() -> void:
 		var role: String = ["MID", "DEF", "FWD", "RUCK"][i % 4]
 		pool.append(Ovr.to({"id": "pr_%d" % i, "name": "Prospect %d" % i, "club": "U18",
 				"role": "MID" if i == 0 else role, "role2": "",
-				 "potential": 92 if i == 0 else 74,
+				"potential": 92 if i == 0 else 74,
 				"gl": 0, "di": 0}, 78 if i == 0 else 66 - i / 3))
 	var clubs := ["A", "B", "C", "D"]
 	var sizes := {}
@@ -1058,7 +1058,7 @@ func _test_finished_list_reachability() -> void:
 
 ## A fake player already on a club's list, for the P-18 fixtures.
 func _held(id: String, role: String, ovr := 60) -> Dictionary:
-	return Ovr.to({"id": id, "name": id, "last": id, "club": "ORIGINAL", "role": role, 
+	return Ovr.to({"id": id, "name": id, "last": id, "club": "ORIGINAL", "role": role,
 		"age": 25.0}, ovr)
 
 
@@ -1256,7 +1256,7 @@ func _ai_test_pool() -> Array:
 	for i in range(24):
 		pool.append(Ovr.to({"id": "bf_%d" % i, "name": "P %d" % i, "club": "U18",
 				"role": ["MID", "DEF", "FWD", "RUCK"][i % 4], "role2": "",
-				 "potential": 65 + (i * 11) % 25, "gl": 0, "di": 0}, 50 + (i * 7) % 20))
+				"potential": 65 + (i * 11) % 25, "gl": 0, "di": 0}, 50 + (i * 7) % 20))
 	return pool
 
 
