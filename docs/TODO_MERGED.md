@@ -218,3 +218,4 @@ What has landed toward each open row of docs/TODO.md and docs/TODO_RULINGS.md, o
 - 202: Merged #2047: Grounds: one shared Google Earth compare tool for every ground.
 - 202: Merged #2054: 3D match on phones: edge smoothing per Graphics level, sharper film, player detail levels kept (row 202).
 - 180: Merged #2058: Club Forge: Create a player no longer crashes the phone build; Back works after a fresh start.
+- 142: Merged #2065: Rival clubs keep their stars: first contracts fit the cap, stars settled first.
