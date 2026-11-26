@@ -66,14 +66,18 @@ static func _log_time(test: String, ms: int) -> void:
 ## ran through one() fails here, by name, first. `also` lists the sub-suites
 ## whose checks and failures the suite has already added to its own: their
 ## functions join the count, and their uncalled ones fail here unless the
-## sub-suite printed its own line (which failed them already).
-static func line(label: String, suite: Object, also: Array = []) -> String:
+## sub-suite printed its own line (which failed them already). `elsewhere`
+## names the functions another runner calls (a suite split in two, such as
+## career_ui and career_ui_2): they are neither counted nor failed here.
+static func line(label: String, suite: Object, also: Array = [], elsewhere: Array = []) -> String:
 	var ran := 0
 	var defined := 0
 	for s in [suite] + also:
 		var called: Array = s.get_meta(_CALLED, [])
 		var reported: bool = s != suite and s.get_meta(_LINED, false)
 		for test in defined_tests(s):
+			if elsewhere.has(test) and not called.has(test):
+				continue
 			defined += 1
 			if called.has(test):
 				ran += 1
