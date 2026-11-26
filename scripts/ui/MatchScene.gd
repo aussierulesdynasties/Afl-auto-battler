@@ -127,7 +127,11 @@ var _card: StatCard = null   # the goal kicker's stat card on the picture (row 2
 var _mom_line: Button         # the line's tap (a tap still explains momentum)
 var _mom_line_meter: Control  # MomentumMeter, a few pixels tall
 var _bug_note: Label          # the first match's momentum line, over the picture
-const MOM_LINE_H := 5.0
+## The line's height in layout units and the strength it is drawn at (director,
+## 2026-11-26: "make it thinner and less bright"). It was sized as a type size, which
+## never goes under 13, so it stood 13 tall at full strength.
+const MOM_LINE_H := 3.0
+const MOM_LINE_STRENGTH := 0.6
 const MOM_LINE_TAP := 24.0
 const SCORE_BAND_PAD := 8
 ## The break is the PC sheet (four columns): player cards say their detail
@@ -631,6 +635,7 @@ func _sync_bug() -> void:
 		_mom_line_meter.name = "MomentumMeter"
 		_mom_line_meter.call("setup", UiKit.score_colour(str(_res["home"])), UiKit.score_colour(str(_res["away"])))
 		_mom_line_meter.custom_minimum_size = Vector2.ZERO
+		_mom_line_meter.modulate.a = MOM_LINE_STRENGTH
 		_mom_line.add_child(_mom_line_meter)
 		_bug_note = UiKit.lbl("", UiKit.SMALL, Color.WHITE)
 		_bug_note.name = "MomentumNoteOnPicture"
@@ -657,7 +662,7 @@ func _place_bug() -> void:
 	if _bug == null or not is_instance_valid(_bug) or _pitch == null:
 		return
 	var s := _pitch.size
-	var line_h := float(UiKit.px(MOM_LINE_H))
+	var line_h := MOM_LINE_H
 	var tap := float(UiKit.px(MOM_LINE_TAP))
 	_mom_line.position = Vector2(0, s.y - tap)
 	_mom_line.size = Vector2(s.x, tap)
