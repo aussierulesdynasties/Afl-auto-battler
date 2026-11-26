@@ -67,10 +67,14 @@ on:
 # runners; nothing needs switching. A fork's pull request never reaches the PC.
 # docs/CI_RUNNER.md has the setup.
 #
-# A newer push to a PR supersedes its older run. Every push to main gets its own
-# group (its sha) and is never cancelled, so back-to-back merges each get a verdict.
+# A newer push to a PR supersedes its older run. Pushes to main share one group that is never
+# cancelled in progress: one main run at a time, and while it runs only the newest waiting push
+# is kept (GitHub drops an older pending run). Director 2026-11-26, "Tests only, web build
+# nightly": every merge used to get its own full run, and 25 of 35 were cancelled by hand on
+# 25-26 Nov, some after every shard had passed. A break is still caught on the next run, which
+# may cover two or three merges.
 concurrency:
-  group: tests-${{ github.event_name == 'push' && github.sha || github.ref }}
+  group: tests-${{ github.event_name == 'push' && 'main-push' || github.ref }}
   cancel-in-progress: ${{ github.event_name != 'push' }}
 
 permissions:
