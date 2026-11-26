@@ -19,6 +19,9 @@
 		"advice_taken": {"v": 4, "fade": 0.5, "tag": "council", "why": "You took the advice"},
 		"advice_overruled": {"v": -4, "fade": 0.5, "tag": "council", "why": "You went against the advice"},
 		"agenda_served": {"v": 2, "fade": 0.5, "tag": "council", "why": "The club is going the way wanted"},
-		"agenda_crossed": {"v": -2, "fade": 0.5, "tag": "council", "why": "The club is not going the way wanted"}
+		"agenda_crossed": {"v": -2, "fade": 0.5, "tag": "council", "why": "The club is not going the way wanted"},
+		"faction_heard": {"v": 6, "fade": 0.5, "tag": "faction", "why": "You heard out the group he stands with"},
+		"faction_rebuffed": {"v": -5, "fade": 0.5, "tag": "faction", "why": "You knocked back the group he stands with"},
+		"faction_split": {"v": -8, "fade": 0.25, "tag": "faction", "why": "You broke up the group he stood with"}
 	}
 }

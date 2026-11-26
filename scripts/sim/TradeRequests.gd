@@ -83,3 +83,17 @@ static func asks(p: Dictionary, club: String, year: int, states: Dictionary,
 			and roll(year, id, "games") < GAMES_CHANCE:
 		return {"why": "games", "to": starts_at.slice(0, MAX_CLUBS)}
 	return {}
+
+
+## A player who stood with a group the coach broke up, or that gave up on him
+## (Factions), asks out at season's end, contracted or not: to the clubs
+## whose side he would walk into, else three clubs his id picks (the same
+## every time). {"why": "unsettled", "to": [clubs]}, or {} with nowhere to go.
+static func unsettled(p: Dictionary, starts_at: Array, others: Array, year: int) -> Dictionary:
+	var to := starts_at.slice(0, MAX_CLUBS)
+	if to.is_empty():
+		var id := str(p.get("id", ""))
+		var pool := others.map(func(c): return str(c))
+		pool.sort_custom(func(x, y): return roll(year, id, "unsettled " + str(x)) < roll(year, id, "unsettled " + str(y)))
+		to = pool.slice(0, MAX_CLUBS)
+	return {} if to.is_empty() else {"why": "unsettled", "to": to}
