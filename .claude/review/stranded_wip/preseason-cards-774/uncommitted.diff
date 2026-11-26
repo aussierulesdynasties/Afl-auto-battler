@@ -1,9 +1,0 @@
-diff --git a/tests/floor_deltas/claude-preseason-cards.txt b/tests/floor_deltas/claude-preseason-cards.txt
-index 948b194af..768fb9b95 100644
---- a/tests/floor_deltas/claude-preseason-cards.txt
-+++ b/tests/floor_deltas/claude-preseason-cards.txt
-@@ -1,2 +1,2 @@
--story +30
--preseason +8
-+story +41
-+preseason +10

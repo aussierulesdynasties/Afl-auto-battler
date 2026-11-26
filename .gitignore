@@ -52,10 +52,10 @@ assets/grounds/*/*_backdrop_part*_*.png
 assets/grounds/*/*_backdrop_part*_*.png.import
 assets/grounds/*/*_backdrop_part*_*.jpg
 assets/grounds/*/*_backdrop_part*_*.jpg.import
-# Aerial imagery is never committed (docs/MCG_STANDARD.md); the private copy is in the project files (adelaide-standard/private-imagery)
-.claude/review/adelaide/esri/
-.claude/review/adelaide/hill/plan_*.jpg
-.claude/review/adelaide/proof/topdown_overlay.png
+# Review boards, WIP films, reference photos and aerial imagery live in the private repo
+# aussierulesdynasties/afl-review-archive (same paths), never here: this repo is public (2026-11-26).
+# Tools still write boards into .claude/review/ on your machine; commit them to the archive.
+.claude/review/
 
 # Blender autosave backups, editor/script backups and tool run logs: never source.
 *.blend[0-9]
