@@ -2995,8 +2995,15 @@ func _test_trade_market() -> void:
 		var reb := str(by_phase["rebuilding"])
 		var bld := str(by_phase["building"])
 		var con := str(by_phase["contending"])
-		var reb_star := str(Ratings.select_22(GameState.season.lists[reb])["ground"][0]["id"])
-		var bld_star := str(Ratings.select_22(GameState.season.lists[bld])["ground"][0]["id"])
+		# Each club's best starter who has not asked to go somewhere: a man who
+		# asked to go home (Story moves) is on offer only to the clubs he named.
+		var unasked := func(code: String) -> String:
+			for q in Ratings.select_22(GameState.season.lists[code])["ground"]:
+				if not GameState.trade_requests.has(str(q["id"])):
+					return str(q["id"])
+			return ""
+		var reb_star: String = unasked.call(reb)
+		var bld_star: String = unasked.call(bld)
 		_check(ids.call(GameState._trade_pool(con, reb)).has(reb_star)
 				and not ids.call(GameState._fringe(reb)).has(reb_star),
 				"A contender can go after a rebuilding club's starter")
