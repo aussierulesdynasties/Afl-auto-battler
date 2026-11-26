@@ -1,0 +1,121 @@
+{
+	"_about": "Player-to-player bonds (Bonds.gd). Kinds, how many each club starts with, and what a coach's call on one man does to the men tied to him. Fallout numbers are opinion points on the 0-100 scale the game shows, before strength scaling. Proposals for the director to tune.",
+	"per_player_cap": 4,
+	"strength_scale": {
+		"1": 0.6,
+		"2": 1.0,
+		"3": 1.4
+	},
+	"kinds": {
+		"mate": {
+			"label": "Close mate",
+			"plural": "close mates",
+			"per_club": 5,
+			"fallout": {
+				"drop": -2,
+				"trade": -6,
+				"delist": -5,
+				"back": 2
+			},
+			"marks": {
+				"drop": "mate_dropped",
+				"trade": "mate_traded",
+				"delist": "mate_traded",
+				"back": "mate_backed"
+			}
+		},
+		"rival": {
+			"label": "Rival for the spot",
+			"plural": "rivals",
+			"per_club": 2,
+			"fallout": {
+				"drop": 2,
+				"trade": 3,
+				"delist": 2,
+				"back": -3
+			},
+			"marks": {
+				"drop": "rival_traded",
+				"trade": "rival_traded",
+				"delist": "rival_traded",
+				"back": "rival_picked"
+			}
+		},
+		"mentor": {
+			"label": "Mentor",
+			"plural": "mentors",
+			"per_club": 2,
+			"fallout": {
+				"drop": -2,
+				"trade": -6,
+				"delist": -5,
+				"back": 1
+			},
+			"marks": {
+				"drop": "mate_dropped",
+				"trade": "mate_traded",
+				"delist": "mate_traded",
+				"back": "mate_backed"
+			}
+		},
+		"protege": {
+			"label": "Protege",
+			"plural": "proteges",
+			"per_club": 0,
+			"fallout": {
+				"drop": -3,
+				"trade": -4,
+				"delist": -4,
+				"back": 2
+			},
+			"marks": {
+				"drop": "mate_dropped",
+				"trade": "mate_traded",
+				"delist": "mate_traded",
+				"back": "mate_backed"
+			}
+		},
+		"ally": {
+			"label": "Leadership ally",
+			"plural": "leadership allies",
+			"per_club": 2,
+			"fallout": {
+				"drop": -4,
+				"trade": -6,
+				"delist": -5,
+				"back": 2
+			},
+			"marks": {
+				"drop": "mate_dropped",
+				"trade": "mate_traded",
+				"delist": "mate_traded",
+				"back": "mate_backed"
+			}
+		},
+		"family": {
+			"label": "Family",
+			"plural": "family",
+			"per_club": 0,
+			"fallout": {
+				"drop": -3,
+				"trade": -8,
+				"delist": -6,
+				"back": 2
+			},
+			"marks": {
+				"drop": "mate_dropped",
+				"trade": "mate_traded",
+				"delist": "mate_traded",
+				"back": "mate_backed"
+			}
+		}
+	},
+	"mark_base": {
+		"mate_dropped": -2,
+		"mate_traded": -6,
+		"mate_backed": 2,
+		"rival_picked": -3,
+		"rival_traded": 3
+	},
+	"_marks": "Each row names the Opinion mark (data/relations/modifiers.json) it lands as; fallout() gives the scale that makes the mark equal this file's move."
+}
