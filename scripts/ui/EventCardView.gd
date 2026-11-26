@@ -113,11 +113,14 @@ static func build(index: int, narrow: bool, rebuild: Callable, show_rule: Callab
 		if not pitch.is_empty():
 			var pv := UiKit.vbox(UiKit.Space.THIN)
 			pv.name = "EventPitch_%d" % index
-			var said := NameInk.label(str(pitch[0]), names, UiKit.SECONDARY, UiKit.TEXT)
-			said.name = "EventPitchSaid_%d" % index
-			said.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-			pv.add_child(said)
-			for k in range(1, pitch.size()):
+			# One member's word, or two who clash over the card.
+			var n_said := maxi(1, Council.said_count(e))
+			for k in n_said:
+				var said := NameInk.label(str(pitch[k]), names, UiKit.SECONDARY, UiKit.TEXT)
+				said.name = "EventPitchSaid_%d" % index if k == 0 else "EventPitchSaid_%d_%d" % [index, k]
+				said.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+				pv.add_child(said)
+			for k in range(n_said, pitch.size()):
 				var sl := UiKit.lbl(str(pitch[k]), UiKit.SMALL, UiKit.TEXT)
 				sl.name = "EventPitchStake_%d_%d" % [index, k]
 				sl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART

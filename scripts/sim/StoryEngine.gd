@@ -73,7 +73,7 @@ const ACTOR_ROLES := ["close_mate", "positional_rival", "mentor", "protege", "br
 ## unless the card says the seat is not required (then {x_name} is "the <role>").
 const ADVISOR_SEATS := {"list_manager": "list manager", "high_performance": "head of high performance",
 		"line_coach": "midfield coach", "senior_assistant": "senior assistant", "development": "development coach",
-		"fwd_coach": "forwards coach", "def_coach": "backline coach"}
+		"fwd_coach": "forwards coach", "def_coach": "backline coach", "restless": "coach"}
 ## A result line may name players from a ranked list: {best3}, {worst2}.
 const RANKED_TOKEN := "\\{(best|worst)([1-9])\\}"
 
@@ -1124,6 +1124,19 @@ static func _effect_parts(e: Dictionary, facts: Dictionary) -> Array:
 					for np in _effect_parts(ne, facts):
 						rolled.append([np[0], side[1] + str(np[1])])
 			return rolled
+		"council":
+			var mk := str(e.get("do", ""))
+			var v := int(round(float(Opinion.def(mk).get("v", 0))))
+			if v == 0:
+				return []
+			var coach_name := str(facts.get("restless_name", "the coach"))
+			return [["gain" if v > 0 else "cost", "%s loyalty to you %s %d." % [CopyRules.possessive(coach_name), "up" if v > 0 else "down", absi(v)]]]
+		"standing":
+			var parts: Array = []
+			for pair in [[int(e.get("r", 0)), "Your Respect"], [int(e.get("a", 0)), "Your Authority"]]:
+				if int(pair[0]) != 0:
+					parts.append(["gain" if int(pair[0]) > 0 else "cost", "%s %s %d." % [pair[1], "up" if int(pair[0]) > 0 else "down", absi(int(pair[0]))]])
+			return parts
 		"faction":
 			return Factions.effect_parts(str(e.get("do", "")), int(facts.get("faction_size", 0)),
 					str(facts.get("faction_state", "")) == "ultimatum")

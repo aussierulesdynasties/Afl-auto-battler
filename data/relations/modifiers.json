@@ -22,6 +22,12 @@
 		"agenda_crossed": {"v": -2, "fade": 0.5, "tag": "council", "why": "The club is not going the way wanted"},
 		"faction_heard": {"v": 6, "fade": 0.5, "tag": "faction", "why": "You heard out the group he stands with"},
 		"faction_rebuffed": {"v": -5, "fade": 0.5, "tag": "faction", "why": "You knocked back the group he stands with"},
-		"faction_split": {"v": -8, "fade": 0.25, "tag": "faction", "why": "You broke up the group he stood with"}
+		"faction_split": {"v": -8, "fade": 0.25, "tag": "faction", "why": "You broke up the group he stood with"},
+		"ambition_met": {"v": 8, "fade": 0.25, "tag": "ambition", "why": "He got what he wanted this season"},
+		"ambition_soured": {"v": -8, "fade": 0.2, "tag": "ambition", "why": "He did not get what he wanted this season"},
+		"advice_passed_over": {"v": -3, "fade": 0.5, "tag": "council", "why": "You took the other side's advice"},
+		"advice_both_overruled": {"v": -2, "fade": 0.5, "tag": "council", "why": "You went your own way over the advice"},
+		"called_out": {"v": -5, "fade": 0.5, "tag": "council", "why": "You pulled him into line"},
+		"won_back": {"v": 6, "fade": 0.5, "tag": "council", "why": "You went out of your way to win him back"}
 	}
 }

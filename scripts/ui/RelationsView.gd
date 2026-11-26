@@ -83,6 +83,16 @@ static func faction(gs: Object, id: String) -> String:
 		return GameDB.player_display_name(q) if q != null else "a teammate")
 
 
+## What he wants from his season (Ambitions.gd), for his profile:
+## {"label", "want", "status", "state"} or {} for none.
+static func ambition(gs: Object, p: Dictionary) -> Dictionary:
+	if gs == null or gs.get("season") == null:
+		return {}
+	var season = gs.get("season")
+	var left := maxi(0, int(season.regular_rounds()) - int(season.round_index))
+	return Ambitions.profile(p, int(gs.get("season_year")), left)
+
+
 ## Your standing as senior coach, live: {"respect", "authority"} out of 100,
 ## or {} with no game to read.
 static func standing(gs: Object) -> Dictionary:
