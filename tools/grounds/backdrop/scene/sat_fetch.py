@@ -5,7 +5,9 @@ import numpy as np
 from PIL import Image
 spec = json.load(open(sys.argv[1])); R = float(sys.argv[2]); S = float(sys.argv[3]); Z = 18
 lat0, lon0 = spec['lat'], spec['lon']; KX = 111320 * math.cos(math.radians(lat0)); KY = 110540
-D = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', spec['name'], 'sat_tiles'); os.makedirs(D, exist_ok=True)
+REL = os.environ.get('SAT_RELEASE', '')   # an Esri World Imagery Wayback release: the place as it was (a closed ground's era)
+D = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', spec['name'], 'sat_tiles' + ('_' + REL if REL else '')); os.makedirs(D, exist_ok=True)
+URL = ('https://wayback.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/WMTS/1.0.0/default028mm/MapServer/tile/' + REL + '/{Z}/{ty}/{tx}') if REL else 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{Z}/{ty}/{tx}'
 def tile_xy(lat, lon):
     n = 2 ** Z; return ((lon + 180) / 360 * n * 256, (1 - math.asinh(math.tan(math.radians(lat))) / math.pi) / 2 * n * 256)
 N = int(2 * R / S)
@@ -22,7 +24,7 @@ for tx in range(tx0, tx1 + 1):
         if not os.path.exists(p):
             for i in range(4):
                 try:
-                    r = urllib.request.urlopen(urllib.request.Request(f'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{Z}/{ty}/{tx}', headers={'User-Agent': 'scene-reference/0.1'}), timeout=60).read()
+                    r = urllib.request.urlopen(urllib.request.Request(URL.format(Z=Z, ty=ty, tx=tx), headers={'User-Agent': 'scene-reference/0.1'}), timeout=60).read()
                     open(p, 'wb').write(r); break
                 except Exception as e: print('retry', e); time.sleep(3)
         mos.paste(Image.open(p).convert('RGB'), ((tx - tx0) * 256, (ty - ty0) * 256))

@@ -6,7 +6,7 @@ ground under the stadium. Big meshes are decimated, the trees thinned with dista
 bake scaled to tex_px, and everything cut into wedges round the ground (see SECTORS).
 Needs the scene's textures where the .blend points (//../../tex, //../../data/<ground>/prep).
 """
-import bpy, bmesh, sys, os, re, numpy as np, math
+import bpy, bmesh, sys, os, re, json, numpy as np, math
 a = sys.argv[sys.argv.index('--') + 1:]
 SRC, OUT = a[0], a[1]
 TEX = int(a[2]) if len(a) > 2 else 4096
@@ -74,8 +74,49 @@ def under_stadium(x, y):
         if (b_[0] - a_[0]) * (y - a_[1]) - (b_[1] - a_[1]) * (x - a_[0]) < 0: return False
     return True
 
+# a model whose own ground ends on a measured line (ground kit ground_r table) carries the flat ground beyond it as
+# 'concourse_far' (hidden by the game under the backdrop): its inner edge is that line, with the ground's height on it.
+# The scene's near ground then meets the model exactly there, instead of sinking under a convex hull.
+EDGE = None
+_cf = [o for o in bpy.data.objects if o.type == 'MESH' and o.name.startswith('concourse_far')]
+if _cf:
+    o = _cf[0]; co = np.zeros(len(o.data.vertices) * 3); o.data.vertices.foreach_get('co', co); co = co.reshape(-1, 3)
+    W_ = np.array(o.matrix_world); co = co @ W_[:3, :3].T + W_[:3, 3]
+    b_ = np.round(np.degrees(np.arctan2(co[:, 0], co[:, 1])) % 360, 3) % 360; r_ = np.hypot(co[:, 0], co[:, 1])
+    EB, ER, EZ = [], [], []
+    for bv in np.unique(b_):
+        k = np.where(b_ == bv)[0]; i = k[np.argmin(r_[k])]
+        EB.append(bv); ER.append(r_[i] + 0.2); EZ.append(co[i, 2])   # the kit draws it from 0.2 m inside the line
+    EDGE = (np.array(EB), np.array(ER), np.array(EZ))
+    print('model ground edge from concourse_far:', len(EB), 'bearings, r', round(min(ER), 1), '-', round(max(ER), 1))
+def edge_at(x, y):
+    b = np.degrees(np.arctan2(x, y)) % 360
+    return float(np.interp(b, EDGE[0], EDGE[1], period=360)), float(np.interp(b, EDGE[0], EDGE[2], period=360))
+
 for o in [o for o in bpy.data.objects if not o.name.startswith('bg_')]:
     bpy.data.objects.remove(o, do_unlink=True)
+
+# the broadcast cameras' mounts (BG_CAMS: a JSON list of [x, y, z] in this scene's metres, from the game's
+# Oval3DBroadcast cameras for this ground): no tree crown within 25 m of one, or the camera looks out through it
+CAMS = np.array(json.loads(os.environ['BG_CAMS'])) if os.environ.get('BG_CAMS') else None
+if CAMS is not None:
+    gone = 0
+    for o in [o for o in bpy.data.objects if o.type == 'MESH' and o.name.startswith('bg_trees')]:
+        bm = bmesh.new(); bm.from_mesh(o.data); M = o.matrix_world; bm.verts.ensure_lookup_table(); seen = set(); kill = []
+        for v in bm.verts:
+            if v.index in seen: continue
+            st = [v]; c = []; seen.add(v.index)
+            while st:
+                x = st.pop(); c.append(x)
+                for e in x.link_edges:
+                    y = e.other_vert(x)
+                    if y.index not in seen: seen.add(y.index); st.append(y)
+            P_ = np.array([tuple(M @ q.co) for q in c])
+            if (np.linalg.norm(P_[:, None, :] - CAMS[None], axis=2) < 25.0).any(): kill += c; gone += 1
+        if kill:
+            bmesh.ops.delete(bm, geom=kill, context='VERTS'); bm.to_mesh(o.data)
+        bm.free()
+    print('trees taken from in front of the broadcast cameras', gone)
 
 SEAMED = ('bg_near_ground', 'bg_far_terrain')
 if INNER > 0.0:   # the game draws its own ground, trees and buildings in here: nothing twice
@@ -92,10 +133,48 @@ if INNER > 0.0:   # the game draws its own ground, trees and buildings in here: 
         bpy.data.objects.remove(o, do_unlink=True)
 
 g = bpy.data.objects['bg_near_ground']
+if EDGE is not None:   # cut on the model's own ground edge: drop cells wholly inside it, pull inside corners out onto it
+    bm = bmesh.new(); bm.from_mesh(g.data); M = g.matrix_world; Mi = M.inverted()
+    def inside(w): return math.hypot(w.x, w.y) < edge_at(w.x, w.y)[0]
+    # cells across the edge are split down to under half a metre first: pulling a coarse cell's inside corners onto
+    # the line leaves its straight side short of a bend in the line (gaps up to 1 m at Blacktown's yard corners)
+    for _ in range(5):
+        strad = [f for f in bm.faces if len(set(inside(M @ v.co) for v in f.verts)) == 2]
+        es = list({e for f in strad for e in f.edges if (M @ e.verts[0].co - M @ e.verts[1].co).xy.length > 0.5})
+        if not es: break
+        bmesh.ops.subdivide_edges(bm, edges=es, cuts=1, use_grid_fill=True)
+        bmesh.ops.triangulate(bm, faces=[f for f in bm.faces if len(f.verts) > 4])
+    kill = [f for f in bm.faces if all(inside(M @ v.co) for v in f.verts)]
+    bmesh.ops.delete(bm, geom=kill, context='FACES')
+    _b = np.radians(EDGE[0]); EP = np.stack([EDGE[1] * np.sin(_b), EDGE[1] * np.cos(_b)], 1)
+    EA = EP; ED = np.roll(EP, -1, 0) - EP; EL2 = np.maximum((ED ** 2).sum(1), 1e-9); EZA = EDGE[2]; EZB = np.roll(EDGE[2], -1)
+    moved = 0
+    for v in bm.verts:
+        w = M @ v.co
+        if v.link_faces and inside(w):
+            # onto the nearest point of the line, not along the radius: where the line itself runs nearly radial (a yard
+            # corner) a radial move goes metres and folds the cells; then 10 cm in and 2 cm under the model's ground,
+            # so no hairline crack shows
+            t = np.clip(((w.x - EA[:, 0]) * ED[:, 0] + (w.y - EA[:, 1]) * ED[:, 1]) / EL2, 0.0, 1.0)
+            px, py = EA[:, 0] + t * ED[:, 0], EA[:, 1] + t * ED[:, 1]; i = int(np.argmin((px - w.x) ** 2 + (py - w.y) ** 2))
+            qx, qy = float(px[i]), float(py[i]); L = math.hypot(qx, qy); z = float(EZA[i] + t[i] * (EZB[i] - EZA[i]))
+            w.x, w.y, w.z = qx * (L - 0.1) / L, qy * (L - 0.1) / L, z - 0.02; v.co = Mi @ w; moved += 1
+    bm.to_mesh(g.data); bm.free()
+    print('ground faces cut inside the model edge', len(kill), 'corners moved onto it', moved)
+    HULL = None
 bm = bmesh.new(); bm.from_mesh(g.data); M = g.matrix_world
 kill = [f for f in bm.faces if under_stadium(*(M @ f.calc_center_median()).xy)]
 bmesh.ops.delete(bm, geom=kill, context='FACES'); bm.to_mesh(g.data); bm.free()
 print('ground faces cut under stadium', len(kill))
+# a face kept because its middle lies outside the footprint can still have a corner inside it, at
+# the ground's height over the arena's edge: those corners sink under the model's own ground
+sunk = 0
+Mi = g.matrix_world.inverted()
+for v in g.data.vertices:
+    w = M @ v.co
+    if under_stadium(w.x, w.y) and w.z > -1.5:
+        w.z = -1.5; v.co = Mi @ w; sunk += 1
+print('ground corners sunk under stadium', sunk)
 
 if SKYLINE:
     exec(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'skyline.py')).read())
@@ -159,6 +238,8 @@ SCALE = 1.0
 if BUDGET:
     want = 0.45 * BUDGET
     thin = MID_KEEP * zone[1] + FAR_KEEP * zone[2]
+    if os.environ.get('BG_KEEP_TREES'):   # real place: every tree stays; trees21 makes the far ones cheap instead
+        thin = 0
     if zone[0] + thin > want and thin > 0:
         SCALE = max(0.05, (want - min(zone[0], 0.5 * want)) / thin)
     print('tree tris near/mid/far', [int(z) for z in zone], 'keep scale', round(SCALE, 3))
@@ -185,14 +266,14 @@ for o, bm, comps in scans:
 if BUDGET:   # the rest: big flat meshes decimated (buildings stay whole: boxes do not decimate well)
     meshes_ = [o for o in bpy.data.objects if o.type == 'MESH']
     rest = [o for o in meshes_ if not o.name.startswith('bg_trees')]
-    flat = [o for o in rest if not re.match(r'bg_(bld|roof|clad|flash|lm_)', o.name) and tris(o) > 3000]
+    flat = [o for o in rest if not re.match(r'bg_(bld|roof|clad|flash|lm_|cars|headstones)', o.name) and tris(o) > 3000]
     room = BUDGET - _tris_all(tree_objs) - _tris_all([o for o in rest if o not in flat])
     have = _tris_all(flat)
     if have > room > 0:
         g = max(0.08, room / have)
         for o in flat: decimate(o.name, g)
         print('budget: flat meshes decimated to', round(g, 3))
-    blds = [o for o in rest if o not in flat]
+    blds = [o for o in rest if o not in flat and re.match(r'bg_(bld|roof|clad|flash)', o.name) and not o.name.startswith('bg_roof_plant')]   # houses and towers; cars, headstones and roof plant are not thinned
     if _tris_all(blds) > 0.35 * BUDGET:   # too many houses: far ones go, each wall with its own roof
         from mathutils.kdtree import KDTree
         def comps_of(o):
