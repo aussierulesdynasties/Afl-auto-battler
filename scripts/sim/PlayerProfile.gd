@@ -17,14 +17,7 @@ const WEAK_SHARE := 0.25          # bottom quarter of his role: a weakness
 ## strength: a midfielder's goalkicking (5%) is not what he is picked for.
 const MIN_WEIGHT := 0.10
 
-const ATTR_LABELS := {
-	"kicking": "Kicking", "handballing": "Handballing", "contested": "Contested ball",
-	"contested_marking": "Contested marking", "uncontested_marking": "Uncontested marking",
-	"pressure": "Pressure", "intercept": "Intercepting", "speed": "Speed", "carry": "Carry",
-	"goalkicking": "Goalkicking", "accuracy": "Accuracy", "creating": "Creating",
-	"ruck": "Ruck work", "discipline": "Discipline", "durability": "Durability",
-	"star": "Star power",
-}
+const ATTR_LABELS := Attributes.PROSE_LABELS
 
 static var _sorted := {}          # "ROLE|attr" -> sorted 2026 values
 static var _db: Node = null       # GameDB, looked up once on the main thread

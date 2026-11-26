@@ -212,8 +212,8 @@ static func approach(gs, code: String, include_coach: bool) -> void:
 
 
 static func _better(a: Dictionary, b: Dictionary) -> bool:
-	if int(a["overall"]) != int(b["overall"]):
-		return int(a["overall"]) > int(b["overall"])
+	if int(Rating.ovr(a)) != int(Rating.ovr(b)):
+		return int(Rating.ovr(a)) > int(Rating.ovr(b))
 	if float(a.get("age", 25.0)) != float(b.get("age", 25.0)):
 		return float(a.get("age", 25.0)) < float(b.get("age", 25.0))
 	return str(a["id"]) < str(b["id"])
@@ -228,8 +228,10 @@ static func _candidate(gs, club: String, bars: Dictionary) -> Dictionary:
 	for p in Contracts.expiring(list):
 		if not _available(gs, p) or role_at(p, bars) == "depth":
 			continue
+		if LegacyRollover.canon_reserved(gs, p):
+			continue   # his story decides where he goes (LegacyRollover)
 		if club != str(gs.my_club):
-			if int(p.get("overall", 0)) >= Expansion.STAR_STAYS_OVERALL:
+			if int(Rating.ovr(p, 0)) >= Expansion.STAR_STAYS_OVERALL:
 				continue
 			var why: String = gs.ai_release_reason(club, p)
 			if why == "cap" and not Expansion.FIRST_CALL_CAP_SQUEEZED:
@@ -263,7 +265,7 @@ static func _available(gs, p: Dictionary) -> bool:
 
 ## His place in a side with these selection bars (GameState.fa_role's rule).
 static func role_at(p: Dictionary, bars: Dictionary) -> String:
-	var ovr := int(p.get("overall", 0))
+	var ovr := int(Rating.ovr(p, 0))
 	for r in [str(p.get("role", "")), str(p.get("role2", ""))]:
 		if r != "" and ovr > int(bars.get(r, 0)):
 			return "ground"
@@ -419,7 +421,10 @@ static func _settle(gs, code: String, st: Dictionary, t: Dictionary) -> void:
 		t["status"] = "stayed"
 		return
 	var wanted := true
-	if club != str(gs.my_club) or str(t["status"]) == "asked":
+	# A story's man (LegacyRollover.canon_offseason): his club tried to keep
+	# him and could not, or let him go. He goes, and it is paid for him.
+	var story := bool(t.get("canon", false))
+	if not story and (club != str(gs.my_club) or str(t["status"]) == "asked"):
 		var why: String = gs.ai_release_reason(club, p)
 		if why == "cap" and not Expansion.FIRST_CALL_CAP_SQUEEZED:
 			t["status"] = "stayed"   # he goes to free agency, as he would have
@@ -428,7 +433,7 @@ static func _settle(gs, code: String, st: Dictionary, t: Dictionary) -> void:
 			t["status"] = "stayed"   # his club re-signs him, as it would have
 			return
 		wanted = why != "delist"
-	if role_at(p, gs._selection_bars(list_of(gs, code))) == "depth":
+	if not story and role_at(p, gs._selection_bars(list_of(gs, code))) == "depth":
 		t["status"] = "stayed"   # he would not get a game there either
 		return
 	var deal := terms(p)
@@ -444,7 +449,7 @@ static func _settle(gs, code: String, st: Dictionary, t: Dictionary) -> void:
 	t["status"] = "joined"
 	gs.offseason_log.append({"kind": "signed", "club": code, "id": str(p["id"]),
 			"salary": int(deal["salary"]), "years": int(deal["years"])})
-	if club == str(gs.my_club) or int(p.get("overall", 0)) >= int(gs.NEWS_MIN_OVR):
+	if club == str(gs.my_club) or int(Rating.ovr(p, 0)) >= int(gs.NEWS_MIN_OVR):
 		gs.add_news("expansion", "%s sign %s from %s: %s for %d season%s." % [GameDB.club_name(code),
 				GameDB.player_display_name(p), GameDB.club_name(club), Contracts.money(int(deal["salary"])),
 				int(deal["years"]), "" if int(deal["years"]) == 1 else "s"])
@@ -518,7 +523,7 @@ static func _make_room(gs, code: String, picks: Array, draft_ahead := true, keep
 		var rb := str(b.get("real_name", "")) != ""
 		if ra != rb:
 			return rb
-		return int(a["overall"]) < int(b["overall"]))
+		return int(Rating.ovr(a)) < int(Rating.ovr(b)))
 	# With no state-league signing left (a concession club's list is all
 	# drafted and signed men), its least valuable other player makes way,
 	# never the one it has just taken (Ablett to Gold Coast, 2011).

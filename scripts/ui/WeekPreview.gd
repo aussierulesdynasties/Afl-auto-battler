@@ -45,7 +45,7 @@ func fill(v: VBoxContainer) -> void:
 	else:
 		var code := str(nxt["code"])
 		# One phrase, and the opponent is named once: under "Them" below.
-		var heading := UiKit.hbox(6)
+		var heading := UiKit.hbox(UiKit.Space.CLOSE)
 		heading.name = "WeekHeading"
 		# Gather Round names the event and the host ground (rule 2.38): "at home"
 		# only for a club at its own ground.
@@ -64,7 +64,7 @@ func fill(v: VBoxContainer) -> void:
 		report.name = "AssistantReport"
 		report.pressed.connect(show_report.bind(code))
 		v.add_child(report)
-		var lines := UiKit.vbox(22)
+		var lines := UiKit.vbox(UiKit.Space.WIDER)
 		lines.name = "HeadToHead"
 		v.add_child(lines)
 		# The overall team rank, then every line, each side's league rank beside
@@ -78,7 +78,7 @@ func fill(v: VBoxContainer) -> void:
 			v.add_child(tips)
 	v.add_child(_synergy_view())
 	# What the week says about your own people, set apart from the facts above.
-	var notes := UiKit.vbox(8)
+	var notes := UiKit.vbox(UiKit.GAP)
 	notes.name = "WeekNotes"
 	var own := GameState.my_week_notes()
 	# A key player already on the team sheet's outs is said there, once.
@@ -142,7 +142,7 @@ func _outline_btn(text: String) -> Button:
 	var b := UiKit.btn(text, UiKit.NAME)
 	b.custom_minimum_size = Vector2(0, 48 if _roomy() else 52)
 	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var sb := UiKit.style(Color.TRANSPARENT, 8, UiKit.RADIUS, SOFT)
+	var sb := UiKit.style(Color.TRANSPARENT, UiKit.GAP, UiKit.RADIUS, SOFT)
 	sb.set_border_width_all(2)
 	b.add_theme_stylebox_override("normal", sb)
 	var down := sb.duplicate() as StyleBoxFlat
@@ -157,7 +157,7 @@ func _outline_btn(text: String) -> Button:
 ## columns that match the header above: yours under your club's colour, theirs
 ## under theirs. "Even, both average" stays one line.
 func _h2h_row(row: Dictionary, opp: String) -> Control:
-	var one := UiKit.vbox(4)
+	var one := UiKit.vbox(UiKit.Space.TIGHT)
 	one.name = "H2H_" + str(row["key"])
 	one.set_meta("plain", str(row["text"]))
 	one.add_child(UiKit.lbl(str(row["label"]), UiKit.NAME, UiKit.TEXT, true))
@@ -170,7 +170,7 @@ func _h2h_row(row: Dictionary, opp: String) -> Control:
 		if row.has(side[1] + "_word"):
 			said = "%s %s · %s" % [side[0], str(row[side[1] + "_word"]),
 					Almanac.ordinal(int(row[side[1] + "_rank"]))]
-		var c := UiKit.vbox(4)
+		var c := UiKit.vbox(UiKit.Space.TIGHT)
 		c.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		var bar := ColorRect.new()
 		bar.color = side[2]
@@ -199,7 +199,7 @@ func _tips_view() -> Control:
 	var opp := a if h == GameState.my_club else h
 	var inks: Array = UiKit.club_ink_pair(GameState.my_club, opp)
 	var ink := {GameState.my_club: inks[0], opp: inks[1]}
-	var box := UiKit.vbox(8)
+	var box := UiKit.vbox(UiKit.GAP)
 	box.name = "Tips"
 	box.add_child(UiKit.lbl("The tips", UiKit.NAME, UiKit.TEXT, true))
 	var names := {h: GameDB.club_name(h), a: GameDB.club_name(a)}
@@ -210,12 +210,12 @@ func _tips_view() -> Control:
 	head.name = "TipsHeadline"
 	head.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(head)
-	var rows := UiKit.vbox(6)
+	var rows := UiKit.vbox(UiKit.Space.CLOSE)
 	rows.name = "TipsPanel"
 	box.add_child(rows)
 	for tip in tips:
 		var pick := str(tip["pick"])
-		var row := UiKit.hbox(10)
+		var row := UiKit.hbox(UiKit.Space.ROOM)
 		row.name = "Tip_" + str(tip["journalist"])
 		row.set_meta("pick", pick)
 		row.set_meta("margin", int(tip["margin"]))
@@ -244,7 +244,7 @@ func _tips_view() -> Control:
 ## A fact about your own people with a short bar in `ink` at its left: its own
 ## row, never a stray line under the buttons.
 func _note_row(body: Control, ink: Color) -> Control:
-	var row := UiKit.hbox(8)
+	var row := UiKit.hbox(UiKit.GAP)
 	var bar := ColorRect.new()
 	bar.color = ink
 	bar.custom_minimum_size = Vector2(4, 0)
@@ -270,7 +270,7 @@ func _rule() -> Control:
 func _crest_tile(code: String, crest := 30.0) -> Control:
 	var tile := PanelContainer.new()
 	tile.name = "CrestTile"
-	tile.add_theme_stylebox_override("panel", UiKit.style(Color("e8e4da"), 3, UiKit.RADIUS))
+	tile.add_theme_stylebox_override("panel", UiKit.style(Color("e8e4da"), UiKit.Space.THIN, UiKit.RADIUS))
 	tile.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	tile.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	tile.add_child(UiKit.club_marker(code, crest))
@@ -288,7 +288,7 @@ func _club_sides(opp: String) -> Control:
 	var at := 0
 	for side in ["mine", "theirs"]:
 		var code: String = GameState.my_club if side == "mine" else opp
-		var col := UiKit.vbox(6)
+		var col := UiKit.vbox(UiKit.Space.CLOSE)
 		col.name = "ClubSide_" + side
 		col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		col.size_flags_stretch_ratio = 1.0
@@ -298,7 +298,7 @@ func _club_sides(opp: String) -> Control:
 		bar.custom_minimum_size = Vector2(0, 4)
 		bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		col.add_child(bar)
-		var head := UiKit.hbox(8)
+		var head := UiKit.hbox(UiKit.GAP)
 		head.name = "ClubHead"
 		head.add_child(_crest_tile(code))
 		var who := UiKit.vbox(0)
@@ -324,7 +324,7 @@ func _club_sides(opp: String) -> Control:
 ## choice is yours). The full rules are one tap away on the block's own
 ## heading, a link like the assistant's report, so it reads as a lookup.
 func _synergy_view() -> Control:
-	var h := UiKit.vbox(8)
+	var h := UiKit.vbox(UiKit.GAP)
 	h.name = "Synergies"
 	var rules := _link_btn("Synergies ›")
 	rules.name = "SynergyRules"
@@ -364,11 +364,11 @@ func show_synergies() -> void:
 		active[str(r["key"])] = bool(r["active"])
 	for key in Traits.SYNERGIES:
 		var s: Dictionary = Traits.SYNERGIES[key]
-		var row := UiKit.vbox(2)
+		var row := UiKit.vbox(UiKit.Space.SLIM)
 		row.name = "Synergy_" + str(key)
-		v.add_child(UiKit.spacer(6))
+		v.add_child(UiKit.spacer(UiKit.Space.CLOSE))
 		v.add_child(row)
-		var head := UiKit.hbox(8)
+		var head := UiKit.hbox(UiKit.GAP)
 		row.add_child(head)
 		var name_l := UiKit.lbl(str(s["label"]), UiKit.BODY, UiKit.TEXT, true)
 		name_l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -401,7 +401,7 @@ func show_synergies() -> void:
 ## from your available list, then Undo if you want your side back. Disabled,
 ## with the reason, when your list can't do it.
 func _complete_button(key: String) -> Control:
-	var v := UiKit.vbox(2)
+	var v := UiKit.vbox(UiKit.Space.SLIM)
 	var r: Dictionary = GameState.complete_synergy(key, GameState.current_side())
 	var b := UiKit.btn("Complete %s" % str(Traits.SYNERGIES[key]["label"]).to_lower(), 14)
 	b.name = "Complete_" + key
@@ -447,7 +447,7 @@ func show_report(code: String) -> void:
 	v.add_child(UiKit.lbl("Assistant's report: %s" % GameDB.club_name(code), UiKit.H1, UiKit.TEXT, true))
 	var parts := GameState.opponent_report(code)
 	for part in parts:
-		v.add_child(UiKit.spacer(6))
+		v.add_child(UiKit.spacer(UiKit.Space.CLOSE))
 		v.add_child(UiKit.lbl(str(part[0]), UiKit.BODY, UiKit.TEXT, true))
 		for t in part[1]:
 			v.add_child(para(str(t), 14, UiKit.TEXT))

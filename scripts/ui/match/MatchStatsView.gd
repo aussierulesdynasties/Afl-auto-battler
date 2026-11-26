@@ -43,7 +43,7 @@ func setup(res: Dictionary, my_side: int, live := false) -> MatchStatsView:
 	_live = live
 	if players_first:
 		_view = "players"
-	add_theme_constant_override("separation", 8)
+	add_theme_constant_override("separation", UiKit.GAP)
 	# The layout reads the screen's width, which a view not yet on screen
 	# can't know (it took a PC's and opened a phone in landscape columns
 	# until a quarter was tapped), so it builds once it is.
@@ -81,7 +81,7 @@ func _build() -> void:
 				(c as Control).size_flags_horizontal = Control.SIZE_FILL
 				(c as Control).custom_minimum_size.x = 96.0
 		add_child(scope)
-	var tabs := UiKit.hbox(2)
+	var tabs := UiKit.hbox(UiKit.Space.SLIM)
 	tabs.name = "StatsViews"
 	add_child(tabs)
 	for t in [["team", "Team stats"], ["players", "Player stats"]]:
@@ -143,16 +143,16 @@ func _team(res: Dictionary) -> Control:
 	var grid := GridContainer.new()
 	grid.name = "TeamStats"
 	grid.columns = cols
-	grid.add_theme_constant_override("h_separation", 20 if compact else 32)
-	grid.add_theme_constant_override("v_separation", 14)
+	grid.add_theme_constant_override("h_separation", UiKit.Space.WIDE if compact else UiKit.Space.BROAD)
+	grid.add_theme_constant_override("v_separation", UiKit.Space.LOOSE)
 	for g in GROUPS:
-		var box := UiKit.vbox(2)
+		var box := UiKit.vbox(UiKit.Space.SLIM)
 		box.name = "Group_" + str(g[0])
 		box.custom_minimum_size.x = (clampf((room - 20.0 * float(cols - 1)) / float(cols), COMPACT_GROUP_W, COMPACT_GROUP_MAX_W) if compact else GROUP_W) if cols > 1 else 0.0
 		box.size_flags_horizontal = Control.SIZE_EXPAND_FILL if cols == 1 else Control.SIZE_FILL
 		# Your club on the left, every group, so you never have to look up
 		# which column is yours.
-		var head := UiKit.hbox(4)
+		var head := UiKit.hbox(UiKit.Space.TIGHT)
 		head.add_child(_cell(GameDB.club_short(codes[_me]), 56, UiKit.TEXT, UiKit.SMALL, true))
 		var title := UiKit.ellipsis(str(g[0]), UiKit.SMALL, UiKit.MUTED, true)
 		title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -171,7 +171,7 @@ func _team(res: Dictionary) -> Control:
 			else:
 				a = int(round(float(t[_me].get(key, 0.0))))
 				b = int(round(float(t[1 - _me].get(key, 0.0))))
-			var h := UiKit.hbox(4)
+			var h := UiKit.hbox(UiKit.Space.TIGHT)
 			h.name = "TeamRow_" + key
 			# The bigger number in bold: more is not always better (clangers,
 			# frees against), so no good/bad colour.

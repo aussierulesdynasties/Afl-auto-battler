@@ -434,7 +434,7 @@ static func _injury_story(inj: Dictionary, results: Array, ctx: Dictionary) -> D
 		return {}
 	var player: Callable = ctx.get("player", func(_i): return {})
 	var p: Dictionary = player.call(id)
-	if p.is_empty() or int(p.get("overall", 0)) < INJURY_OVR:
+	if p.is_empty() or int(Rating.ovr(p, 0)) < INJURY_OVR:
 		return {}
 	var nm := GameDB.player_display_name(p)
 	var club := str(inj.get("club", ""))

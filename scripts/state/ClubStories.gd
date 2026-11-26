@@ -573,7 +573,7 @@ static func _leader_facts(gs) -> Dictionary:
 	for p in gs.my_list:
 		if in_side.has(str(p["id"])) or gs.games_played(p) >= 10 or float(p.get("age", 30.0)) > 21.0:
 			continue
-		if kid.is_empty() or int(p.get("potential", p.get("overall", 0))) > int(kid.get("potential", kid.get("overall", 0))):
+		if kid.is_empty() or int(p.get("potential", Rating.ovr(p, 0))) > int(kid.get("potential", Rating.ovr(kid, 0))):
 			kid = p
 	return {"captain_name": GameDB.player_display_name(cap) if not cap.is_empty() else "",
 			"vice_name": GameDB.player_display_name(vice) if not vice.is_empty() else "",
@@ -647,14 +647,14 @@ static func player_facts(gs) -> Array:
 	for p in gs.my_list:
 		if int(p.get("injury_weeks", 0)) <= 0:
 			fit.append(p)
-	fit.sort_custom(func(a, b): return int(a["overall"]) > int(b["overall"]))
+	fit.sort_custom(func(a, b): return int(Rating.ovr(a)) > int(Rating.ovr(b)))
 	var rank := {}
 	for i in range(fit.size()):
 		rank[str(fit[i]["id"])] = i + 1
 	var cap_room: int = gs.cap_for(str(gs.my_club)) - gs.my_payroll()
 	# By rating on the whole list, the injured included (ties by id, so the same list ranks the same way).
 	var everyone: Array = gs.my_list.duplicate()
-	everyone.sort_custom(func(a, b): return int(a["overall"]) > int(b["overall"]) 			or (int(a["overall"]) == int(b["overall"]) and str(a["id"]) < str(b["id"])))
+	everyone.sort_custom(func(a, b): return int(Rating.ovr(a)) > int(Rating.ovr(b)) 			or (int(Rating.ovr(a)) == int(Rating.ovr(b)) and str(a["id"]) < str(b["id"])))
 	var all_rank := {}
 	for i in range(everyone.size()):
 		all_rank[str(everyone[i]["id"])] = i + 1
@@ -703,7 +703,7 @@ static func player_fact(gs, p: Dictionary, selected: bool, i: Dictionary, fit_ra
 	var early := ClubLife.early_price(p)
 	var more := ClubLife.early_years(p) - 1
 	var t := Trust.value(gs.relations, Trust.player_key(id))
-	var ovr := int(p.get("overall", 0))
+	var ovr := int(Rating.ovr(p, 0))
 	var pot := int(p.get("potential", ovr))
 	var recent: Array = (gs.form_log.get(id, {}) as Dictionary).get("last", [])
 	var form := 0
@@ -783,7 +783,7 @@ static func player_fact(gs, p: Dictionary, selected: bool, i: Dictionary, fit_ra
 	if gs.season != null:
 		left = maxi(0, gs.season.regular_rounds() - gs.season.round_index)
 	out["wait_price"] = ClubLife.wait_words(p, int(round(
-			Growth.points_per_game(int(p.get("potential", p.get("overall", 60)))) * float(left))))
+			Growth.points_per_game(int(p.get("potential", Rating.ovr(p, 60)))) * float(left))))
 	# His learning project, for the development talk (T5.r93).
 	out.merge(project_facts(gs, p), true)
 	# The result of his role trial, for the card that reports it.
@@ -920,7 +920,7 @@ const LINE_WHERE := {"FWD": "up forward", "DEF": "down back", "MID": "in the mid
 ## job's word, the week, both ratings, the pass rule and the odds it takes.
 static func project_facts(gs, p: Dictionary) -> Dictionary:
 	var out := {"dev_talk_due": false, "proj_word": "", "proj_week": 0, "proj_weeks": GameState.PROJECT_WEEKS,
-			"proj_there": 0, "proj_own": int(p.get("overall", 0)), "proj_pass": GameState.PROJECT_PASS,
+			"proj_there": 0, "proj_own": int(Rating.ovr(p, 0)), "proj_pass": GameState.PROJECT_PASS,
 			"take_odds": "", "proj_line": ""}
 	var job: String = gs.project_job(p)
 	if job == "" or (p.get("attr", {}) as Dictionary).is_empty():

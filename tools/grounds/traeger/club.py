@@ -6,9 +6,15 @@ import json,numpy as np
 # front line moved onto the satellite with the stand (same rigid shift)
 P0=np.array([-61.69,69.88]);EU=np.array([-67.92,49.92])-P0;EU/=np.linalg.norm(EU);EW=np.array([EU[1],-EU[0]])
 if EW[0]>0:EW=-EW
-C=dict(blue_u1=24.0,blue_d=15.6,blue_zf=2.6,blue_ridge_w=8.0,blue_zr=4.9,ovh=0.6,
-       bal_u0=20.9,bal_u1=29.5,bal_d=4.5,bal_floor=3.2,bal_z=6.3,
-       g_s0=31.6,g_s1=45.0,g_t0=7.3,g_t1=21.6,g_eave=6.0,g_pitch=18.0,g_ridge_t=16.5,g_rot=14.0,ac=[(38.6,18.5),(41.2,18.5)])
+# r16 (2026-11-22): re-measured through Google Earth's solved cameras (measure/oblique.py; corners picked on the
+# straight-down view at 0.36 m a pixel, heights triangulated with the obliques). The blue building runs u -2.5..28.2
+# at the roof (30.7 m; it was 24), its front eave at w 2.6, ridge w 10.8 (6.3 m up; it was 4.9), back eave w 19.9.
+# The white flat roof is a verandah in front of the teal building and the blue building's south end (u 23.1..42.2,
+# front edge w -0.15, 5.6 m up). The teal building sits square to the club line (u 28.3..42.6, w 3.0..19.5 at the
+# roof, eave 5.5 m), not turned to the stand; its two air-conditioning units at u 35.25, w 9.5 and 12.5.
+C=dict(blue_u0=-1.9,blue_u1=27.6,blue_w0=3.2,blue_w1=19.3,blue_zf=3.0,blue_ridge=10.8,blue_zr=6.3,ovh=0.6,
+       bal_u0=23.1,bal_u1=42.2,bal_w0=0.15,bal_w1=3.2,bal_floor=3.2,bal_z=5.6,
+       g_u0=28.7,g_u1=42.2,g_w0=3.2,g_w1=18.9,g_eave=5.5,g_pitch=18.0,ac=[(35.25,9.54),(35.26,12.46)])
 FR=[P0,EU,EW]
 def X(u,w,z):p=FR[0]+u*FR[1]+w*FR[2];return [float(p[0]),float(p[1]),float(z)]
 G=[]
@@ -20,7 +26,8 @@ def box(name,mat,u0,u1,w0,w1,z0,z1,top=True,bottom=False):
 def quad(name,mat,pts,mode='tile'):mesh(name,mat,[X(*p) for p in pts],[[0,1,2,3]],mode)
 c=C
 # ---- blue building: single storey gable; front slope blue (sponsor), back slope green with the yellow band ----
-U1,Dp,zf,wr,zr,o=c['blue_u1'],c['blue_d'],c['blue_zf'],c['blue_ridge_w'],c['blue_zr'],c['ovh']
+FR[:]=[P0+c['blue_u0']*EU+c['blue_w0']*EW,EU,EW]   # the blue building's own corner (north end, front wall)
+U1,Dp,zf,wr,zr,o=c['blue_u1']-c['blue_u0'],c['blue_w1']-c['blue_w0'],c['blue_zf'],c['blue_ridge']-c['blue_w0'],c['blue_zr'],c['ovh']
 box('blue_body','club_render',0,U1,0,Dp,0,zf,top=False)
 quad('blue_front','blue_front',[(U1,-0.01,0),(0,-0.01,0),(0,-0.01,zf),(U1,-0.01,zf)],'panel')
 def rz(w):return zf+0.1+(zr-zf-0.1)*(1-abs(w-wr)/wr) if w<=wr else zf+0.1+(zr-zf-0.1)*(1-(w-wr)/(Dp-wr))
@@ -30,7 +37,8 @@ quad('blue_roof_back','roof_back_club',[(-o,wr,zr),(-o,Dp+o,zf+0.1-(zr-zf)*o/(Dp
 quad('blue_fascia','fascia',[(U1,-o,zf-0.15),(-o,-o,zf-0.15),(-o,-o,zf+0.05),(U1,-o,zf+0.05)])
 quad('blue_soffit','roof_soffit',[(-o,-o,zf),(U1,-o,zf),(U1,0,zf+0.02),(-o,0,zf+0.02)])
 # ---- glass balcony block between the blue building and the green building (white flat roof) ----
-u0,u1,d=c['bal_u0'],c['bal_u1'],c['bal_d']
+FR[:]=[P0+c['bal_w0']*EW,EU,EW]
+u0,u1,d=c['bal_u0'],c['bal_u1'],c['bal_w1']-c['bal_w0']
 box('bal_ground','club_render',u0,u1,0.0,d,0,c['bal_floor'],top=False)
 quad('bal_front_lo','bal_front_lo',[(u1,-0.01,0),(u0,-0.01,0),(u0,-0.01,c['bal_floor']),(u1,-0.01,c['bal_floor'])],'panel')
 box('bal_slab','cream',u0,u1,-0.2,d,c['bal_floor']-0.25,c['bal_floor'],bottom=True)
@@ -39,15 +47,11 @@ box('bal_roof','steel_white',u0,u1,-0.3,d,c['bal_z']-0.3,c['bal_z'],bottom=True)
 box('bal_end','club_render',u0-0.25,u0,0,d,c['bal_floor'],c['bal_z']-0.3)
 for uu in np.linspace(u0+0.15,u1-0.15,5):box('bal_post','rear_dark',uu-0.07,uu+0.07,-0.15,0.0,c['bal_floor'],c['bal_z']-0.3)
 quad('bal_glass','glass_bal',[(u1,-0.08,c['bal_floor']),(u0,-0.08,c['bal_floor']),(u0,-0.08,c['bal_floor']+1.1),(u1,-0.08,c['bal_floor']+1.1)],'panel')
-# ---- green building: two storeys, gable roof, ALIGNED WITH THE STAND (w04 gable end fits plane s=32:
-#      eave t 7.8 z 6.0, apex t 15.0 z 8.55); recessed upper balcony with dark rails along the front ----
-ST=json.load(open('stand.json'));Oa,Aa,Bb=np.array(ST['O']),np.array(ST['a']),np.array(ST['b'])
-# w04: eave and ridge both climb northward on a stand-parallel plane, so the block turns g_rot deg toward the club line
-dl=np.radians(c['g_rot']);A2=Aa*np.cos(dl)-Bb*np.sin(dl);B2=Bb*np.cos(dl)+Aa*np.sin(dl);PV=Oa+c['g_s0']*Aa+c['g_t0']*Bb
-FR[:]=[PV-c['g_s0']*A2-c['g_t0']*B2,-A2,B2]   # u=-s, w=t about the s0/t0 corner, rotated
-g0,g1,w0,w1=-c['g_s1'],-c['g_s0'],c['g_t0'],c['g_t1'];fl=c['bal_floor'];bd=1.6
-wm=c['g_ridge_t'];e=0.6;vo=0.4   # w04 ridge back-projects to t 16-17, z ~9.2
-# w04 fit (fg2.py): eave EDGE z 6.0 at s 31.2 t 6.7, pitch 18 deg, gable parallel to the stand
+# ---- teal building: two storeys, gable roof along the club line, square to it (r16: Google Earth's straight-down
+#      view shows its edges parallel to the blue building's); recessed upper balcony with dark rails along the front ----
+FR[:]=[P0,EU,EW]
+g0,g1,w0,w1=c['g_u0'],c['g_u1'],c['g_w0'],c['g_w1'];fl=c['bal_floor'];bd=1.6
+wm=(w0+w1)/2;e=0.6;vo=0.4
 k=float(np.tan(np.radians(c['g_pitch'])));ze=c['g_eave']+k*e;zr2=c['g_eave']+k*(wm-(w0-e))
 box('green_body','club_brick',g0,g1,w0+bd,w1,0,ze,top=False)
 box('green_lower','club_brick',g0,g1,w0,w0+bd,0,fl,top=False)
@@ -59,7 +63,6 @@ box('green_balc_floor','cream',g0,g1,w0-0.1,w0+bd,fl-0.25,fl)
 for z in (fl+1.05,fl+0.1):box('green_rail','rear_dark',g0,g1,w0+0.02,w0+0.1,z-0.06,z)
 for uu in np.arange(g0+0.05,g1,0.14):box('green_bal','rear_dark',uu,uu+0.025,w0+0.04,w0+0.08,fl+0.1,fl+1.0,top=False)
 for uu in np.linspace(g0+0.1,g1-0.1,7):box('green_post','rear_dark',uu-0.07,uu+0.07,w0,w0+0.14,fl,ze)
-for uu,ww in c['ac']:pass
 for nm,ws,we in (('green_roof_f',w0-e,wm),('green_roof_b',w1+e,wm)):
     zs=zr2-k*abs(wm-ws) if ws<wm else ze-k*e
     pts=[(g1+vo,ws,zs),(g0-vo,ws,zs),(g0-vo,wm,zr2),(g1+vo,wm,zr2)]
@@ -70,9 +73,8 @@ for nm,ws,we in (('green_roof_f',w0-e,wm),('green_roof_b',w1+e,wm)):
 for uu,sg in ((g0-vo,-1),(g1+vo,1)):
     for ws in (w0-e,w1+e):
         zs=zr2-k*abs(wm-ws) if ws<wm else ze-k*e;quad('green_barge','fascia',[(uu,ws,zs-0.2),(uu,wm,zr2-0.2),(uu,wm,zr2),(uu,ws,zs)])
-for s0_,t0_ in c['ac']:   # measured in the stand frame (bp.py, plane t 18.5); convert into the turned frame
-    Wp=Oa+s0_*Aa+t0_*Bb-PV;s_=c['g_s0']+Wp@A2;t_=c['g_t0']+Wp@B2
-    uu=-s_;zr_=zr2-(zr2-ze+k*e)*(t_-wm)/(w1+e-wm);box('ac_unit','ac_unit',uu-0.85,uu+0.85,t_-0.6,t_+0.6,zr_-0.3,10.5)   # w04: 1.7 m wide, tops z 10.5
+for uu,t_ in c['ac']:   # measured on the straight-down view; each sits on its own slope, 1.3 m tall
+    zr_=zr2-k*abs(t_-wm);box('ac_unit','ac_unit',uu-0.85,uu+0.85,t_-0.6,t_+0.6,zr_-0.3,zr_+1.3)
 FR[:]=[P0,EU,EW]
 # ---- UVs in metres (tiled) or 0..1 (panel), club frame ----
 T=json.load(open('tex3/tex.json'));TILE=T['TILE']

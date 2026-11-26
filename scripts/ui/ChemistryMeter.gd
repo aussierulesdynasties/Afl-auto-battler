@@ -88,7 +88,7 @@ static func _set_figure(fill: Control, share: float) -> void:
 
 ## A man's chemistry as a bar with its figure, for his profile.
 static func familiarity_row(p: Dictionary, colour: Color) -> Control:
-	var row := UiKit.hbox(10)
+	var row := UiKit.hbox(UiKit.Space.ROOM)
 	row.add_child(UiKit.line("Chemistry", UiKit.BODY, UiKit.TEXT, true))
 	row.add_child(bar(TeamFamiliarity.value(p) / TeamFamiliarity.FULL, colour))
 	row.add_child(UiKit.line("%d%%" % roundi(TeamFamiliarity.value(p)), UiKit.BODY, UiKit.TEXT, true))
@@ -111,7 +111,7 @@ static func meter(on_tap: Callable) -> Button:
 	b.focus_mode = Control.FOCUS_NONE
 	b.custom_minimum_size = Vector2(0, 48)
 	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var row := UiKit.hbox(10)
+	var row := UiKit.hbox(UiKit.Space.ROOM)
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	b.add_child(row)
 	row.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -122,6 +122,22 @@ static func meter(on_tap: Callable) -> Button:
 	b.set_meta("share", share)
 	b.pressed.connect(on_tap)
 	return b
+
+
+## Arriving at the screen: the bar fills from empty and its figure counts up
+## with it (Reduced motion: both are simply there).
+static func arrive(b: Button) -> void:
+	var share := float(b.get_meta("share", 0.0))
+	var fill: Control = b.find_child("ChemistryFill", true, false)
+	var fig: Label = fill.get_node_or_null("ChemistryFigure") if fill != null else null
+	UiKit.fill_bar(fill, 0.0, share)
+	if fig != null:
+		# On the way up the figure sits where the meter puts that figure: past a
+		# short fill, inside a long one, never over the words beside the bar.
+		var say := func(n: int) -> String:
+			_set_figure(fill, n / 100.0)
+			return fig.text
+		UiKit.count_up(fig, percent(share), say, UiKit.Motion.DUR_BAR)
 
 
 ## The side changed: the bar moves to where it now stands.
@@ -146,12 +162,12 @@ static func open(host: Control, on_close := Callable()) -> Control:
 	v.add_child(figure_bar(TeamFamiliarity.chemistry(side), ink, "SheetChemistryFill"))
 
 	var men := TeamFamiliarity.new_club_men(side)
-	v.add_child(UiKit.spacer(6))
+	v.add_child(UiKit.spacer(UiKit.Space.CLOSE))
 	v.add_child(_head("Players from other clubs", ink))
 	v.add_child(_count_row(men.size(), ink))
 
-	v.add_child(UiKit.spacer(6))
-	var cost := UiKit.hbox(10)
+	v.add_child(UiKit.spacer(UiKit.Space.CLOSE))
+	var cost := UiKit.hbox(UiKit.Space.ROOM)
 	cost.name = "ChemistryCost"
 	var pts := UiKit.figure(str(TeamFamiliarity.team_points(side)), UiKit.HERO, UiKit.TEXT)
 	pts.name = "ChemistryPoints"
@@ -169,7 +185,7 @@ static func open(host: Control, on_close := Callable()) -> Control:
 	for p in side:
 		if TeamFamiliarity.value(p) < TeamFamiliarity.FULL and not men.has(p):
 			others.append(p)
-	v.add_child(UiKit.spacer(6))
+	v.add_child(UiKit.spacer(UiKit.Space.CLOSE))
 	if men.is_empty() and others.is_empty():
 		var none := UiKit.line("Nobody new in this side.", UiKit.BODY, UiKit.TEXT)
 		none.name = "ChemistryNobody"
@@ -182,7 +198,7 @@ static func open(host: Control, on_close := Callable()) -> Control:
 			rows.add_child(_man_row(p, ink))
 		v.add_child(rows)
 		if not others.is_empty():
-			v.add_child(UiKit.spacer(6))
+			v.add_child(UiKit.spacer(UiKit.Space.CLOSE))
 			var head := _head("Draftees and first-gamers", ink)
 			head.add_child(UiKit.line("Don't count", UiKit.SECONDARY, UiKit.TEXT))
 			v.add_child(head)
@@ -203,7 +219,7 @@ static func open(host: Control, on_close := Callable()) -> Control:
 
 
 static func _head(text: String, ink: Color) -> HBoxContainer:
-	var row := UiKit.hbox(8)
+	var row := UiKit.hbox(UiKit.GAP)
 	var l := UiKit.line(text, UiKit.NAME, UiKit.club_name_colour(ink), true)
 	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(l)
@@ -268,7 +284,7 @@ static func _fade(step: int, ink: Color) -> Control:
 
 
 static func _columns() -> Control:
-	var row := UiKit.hbox(8)
+	var row := UiKit.hbox(UiKit.GAP)
 	var fam := UiKit.line("Chemistry, up 5% a game", UiKit.SECONDARY, UiKit.TEXT)
 	fam.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(fam)
@@ -280,7 +296,7 @@ static func _columns() -> Control:
 
 
 static func _man_row(p: Dictionary, ink: Color) -> Control:
-	var row := UiKit.hbox(8)
+	var row := UiKit.hbox(UiKit.GAP)
 	row.name = "ChemistryMan_" + str(p["id"])
 	row.custom_minimum_size = Vector2(0, ROW_H)
 	var who := UiKit.ellipsis(GameDB.player_display_name(p), UiKit.BODY, UiKit.TEXT)

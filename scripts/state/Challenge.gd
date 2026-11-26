@@ -140,8 +140,8 @@ static func strip_best(gs, code: String, n: int = REBUILD_GONE) -> Array:
 	var arr: Array = gs.league_lists.get(code, [])
 	var ranked := arr.duplicate()
 	ranked.sort_custom(func(a, b):
-		if int(a.get("overall", 0)) != int(b.get("overall", 0)):
-			return int(a.get("overall", 0)) > int(b.get("overall", 0))
+		if int(Rating.ovr(a, 0)) != int(Rating.ovr(b, 0)):
+			return int(Rating.ovr(a, 0)) > int(Rating.ovr(b, 0))
 		return str(a["id"]) < str(b["id"]))
 	var gone := []
 	for p in ranked.slice(0, mini(n, ranked.size())):

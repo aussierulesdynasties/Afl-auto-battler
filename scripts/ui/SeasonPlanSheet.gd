@@ -20,7 +20,7 @@ static func line(host: Control, on_close: Callable = Callable()) -> Control:
 	b.name = "SeasonPlanLine"
 	b.custom_minimum_size = Vector2(0, 56)
 	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var h := UiKit.hbox(8)
+	var h := UiKit.hbox(UiKit.GAP)
 	h.set_anchors_preset(Control.PRESET_FULL_RECT)
 	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	b.add_child(h)
@@ -75,7 +75,7 @@ static func open(host: Control, on_close: Callable = Callable()) -> Control:
 
 static func _secondary(text: String, fs: int) -> Button:
 	var b := UiKit.btn(text, fs)
-	var sb := UiKit.style(Color.TRANSPARENT, 8, UiKit.RADIUS, UiKit.MUTED)
+	var sb := UiKit.style(Color.TRANSPARENT, UiKit.GAP, UiKit.RADIUS, UiKit.MUTED)
 	sb.set_border_width_all(1)
 	for st in ["normal", "hover", "pressed", "focus"]:
 		b.add_theme_stylebox_override(st, sb)
@@ -111,14 +111,14 @@ static func _build(host: Control, box: Dictionary, state: Dictionary, done: Call
 	var dept := UiKit.lbl(Conditioning.department_line(level), UiKit.SMALL, UiKit.MUTED)
 	dept.name = "SeasonPlanDepartment"
 	dept.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	var plans := UiKit.vbox(8)
+	var plans := UiKit.vbox(UiKit.GAP)
 	plans.name = "SeasonPlans"
 	for key in Conditioning.PLANS:
 		plans.add_child(_plan_row(host, box, state, done, str(key), draft, open_now, level))
 	if bool(state["wide"]):
 		# A PC: the line and its words on the left, the four plans beside it.
-		var cols := UiKit.hbox(20)
-		var left := UiKit.vbox(8)
+		var cols := UiKit.hbox(UiKit.Space.WIDE)
+		var left := UiKit.vbox(UiKit.GAP)
 		left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		left.add_child(chart)
 		left.add_child(cap)
@@ -169,7 +169,7 @@ static func _build(host: Control, box: Dictionary, state: Dictionary, done: Call
 			footer.add_child(why)
 		if bool(state["wide"]):
 			# A PC: the two actions side by side at the right, sized to their words.
-			var row := UiKit.hbox(8)
+			var row := UiKit.hbox(UiKit.GAP)
 			row.alignment = BoxContainer.ALIGNMENT_END
 			confirm.custom_minimum_size = Vector2(200, 48)
 			close.custom_minimum_size = Vector2(140, 48)
@@ -189,10 +189,10 @@ static func _plan_row(host: Control, box: Dictionary, state: Dictionary, done: C
 	var row := PanelContainer.new()
 	row.name = "PlanRow_" + key
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var sb := UiKit.style(UiKit.SURFACE, 12, UiKit.RADIUS, UiKit.TEXT if on else Color.TRANSPARENT)
+	var sb := UiKit.style(UiKit.SURFACE, UiKit.Space.PAD, UiKit.RADIUS, UiKit.TEXT if on else Color.TRANSPARENT)
 	sb.set_border_width_all(2 if on else 0)
 	row.add_theme_stylebox_override("panel", sb)
-	var v := UiKit.vbox(2)
+	var v := UiKit.vbox(UiKit.Space.SLIM)
 	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_child(v)
 	var title: String = Conditioning.PLAN_LABEL[key]
