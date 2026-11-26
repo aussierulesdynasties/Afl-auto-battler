@@ -2777,9 +2777,10 @@ const TACKLER_MIX := {"pressure": 0.60, "speed": 0.20, "durability": 0.20}
 
 ## His tackler score (TACKLER_MIX).
 func _tackler_score(p: Dictionary) -> float:
+	var f := fit(p)
 	var s := 0.0
 	for k in TACKLER_MIX:
-		s += float(TACKLER_MIX[k]) * _a(p, k)
+		s += float(TACKLER_MIX[k]) * (_skill(p, k) * f)
 	return s
 
 
@@ -2787,13 +2788,33 @@ func _pick_presser(side: int, zone: int):
 	var w: Dictionary = PRESS_ZONES[zone]
 	var group: Array = (squads[side] as Squad).ground
 	var weights := []
-	var ctx := _pick_ctx(side)
+	# The pick context is still asked once a pick: the spare minder's stand-in is
+	# kept from the first pick that asks for him (_minder_memo).
+	_pick_ctx(side)
 	var pw := _tv("PRESS_PICK_POW", PRESS_PICK_POW)
+	# No tactic moves who tackles: _tactic_player_mult(side, p, "tackler") is 1.0 for
+	# every player (no focus, tag or minder call touches a tackle), so it isn't asked
+	# once a player here (bug bash M-10). test_pressure's pick power check counts it.
 	for p in group:
-		weights.append(float(w.get(str(p["role"]), 0.0))
-				* pow(maxf(1.0, _tackler_score(p)), pw)
-				* _tactic_player_mult(side, p, "tackler", ctx))
+		weights.append(float(w.get(str(p["role"]), 0.0)) * _tackle_weight(p, pw))
 	return _pick(group, weights)
+
+
+## pow(his tackler score, pw), kept by player with what it was worked out from: his
+## fit, his line on the day (which skills it reads) and the power. A pick a chain
+## asks it of every man on the ground, and those change only between chains.
+var _tackle_kept := {}
+
+
+func _tackle_weight(p: Dictionary, pw: float) -> float:
+	var f := fit(p)
+	var role = p.get("role")
+	var kept = _tackle_kept.get(p["id"])
+	if kept != null and kept[0] == f and kept[1] == role and kept[2] == pw:
+		return kept[3]
+	var v := pow(maxf(1.0, _tackler_score(p)), pw)
+	_tackle_kept[p["id"]] = [f, role, pw, v]
+	return v
 
 
 ## Who contests a long kick in general play, by where it lands, from the
@@ -5719,6 +5740,13 @@ func _trait(p: Dictionary, key: String) -> bool:
 ## A player's attribute as he is playing right now. Skills.engine is kept
 ## the first time a match asks (_engine_cache): it is most of the engine's time.
 func _a(p: Dictionary, key: String) -> float:
+	return _skill(p, key) * fit(p)
+
+
+## His attribute before his legs on the day (fit): Skills.engine, kept the first
+## time a match asks. A pick that reads several of his ratings multiplies each by
+## one fit(p), the same number _a would ask for every time (bug bash M-10).
+func _skill(p: Dictionary, key: String) -> float:
 	var id: String = p["id"]
 	var mine = _engine_cache.get(id)
 	if mine == null:
@@ -5733,7 +5761,7 @@ func _a(p: Dictionary, key: String) -> float:
 	if v == null:
 		v = Skills.engine(p, key)
 		row[key] = v
-	return v * fit(p)
+	return v
 
 
 ## The back zone's role weights for a pick on ball use among `group`: each
@@ -5774,7 +5802,8 @@ func _rebound_exit(side: int, carrier, from_atk: float, to_atk: float, how: Stri
 ## His use of the ball as he is playing right now: the kick-in taker's and
 ## the back-zone carrier's rating (BALL_USE).
 func _ball_use(p: Dictionary) -> float:
-	return BALL_USE_CARRY * _a(p, "carry") + BALL_USE_DISPOSAL * _a(p, "kicking")
+	var f := fit(p)
+	return BALL_USE_CARRY * (_skill(p, "carry") * f) + BALL_USE_DISPOSAL * (_skill(p, "kicking") * f)
 
 
 ## Mean fit of the on-ground midfielders and rucks: who wins the stoppages.
