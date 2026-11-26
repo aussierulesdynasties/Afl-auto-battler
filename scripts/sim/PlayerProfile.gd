@@ -44,8 +44,31 @@ static func _values(role: String, key: String) -> Array:
 ## Forget the graded scales: GameDB.reload calls it, so a career on another
 ## dataset (a 2026 career after a 1990 one) grades against its own players,
 ## as it would after a fresh launch (bug bash P1-6).
+## The new scales are built in full here, on the main thread, and swapped in
+## at once: a match still running on a worker thread then reads a complete
+## scale, old or new, and never has to work one out from GameDB while the
+## main thread reloads or frees it (CI 45655943455). At launch nothing has
+## been graded yet, so the scales stay to be filled as they are asked for.
 static func forget_cache() -> void:
-	_sorted = {}
+	if _sorted.is_empty():
+		return
+	var fresh := {}
+	for p in _game_db().players:
+		var role := str(p.get("role", ""))
+		for key in ATTR_LABELS:
+			var k: String = role + "|" + key
+			if not fresh.has(k):
+				fresh[k] = []
+			fresh[k].append(Skills.value(p["attr"], key, 0.0))
+		var apos := str(p.get("apos", ""))
+		if apos != "":
+			var ka := APOS_PEERS + apos + "|contested_marking"
+			if not fresh.has(ka):
+				fresh[ka] = []
+			fresh[ka].append(Skills.value(p["attr"], "contested_marking", 0.0))
+	for k in fresh:
+		fresh[k].sort()
+	_sorted = fresh
 
 
 static func _game_db() -> Node:
