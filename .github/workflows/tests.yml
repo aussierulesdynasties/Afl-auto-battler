@@ -426,7 +426,9 @@ jobs:
   shard:
     name: shard ${{ matrix.shard }}
     needs: [plan, lint, preflight]
-    if: always() && needs.plan.result == 'success' && needs.lint.result == 'success' && needs.plan.outputs.code == 'true' && (needs.preflight.result == 'success' || needs.preflight.result == 'skipped')
+    # !cancelled(), not always(): always() let a cancelled or superseded run keep running and
+    # starting its shards (2026-11-26: 15 cancelled runs still held runners half an hour later).
+    if: ${{ !cancelled() && needs.plan.result == 'success' && needs.lint.result == 'success' && needs.plan.outputs.code == 'true' && (needs.preflight.result == 'success' || needs.preflight.result == 'skipped') }}
     runs-on: ${{ fromJSON(needs.plan.outputs.runner || '"ubuntu-latest"') }}
     # A shard plans ~240 s; 40 still covers a 900 s suite timeout run twice. A PC runner runs two
     # shards side by side at about half a GitHub runner's speed: shard 1 (22 min on GitHub) hit 40 there
@@ -540,7 +542,9 @@ jobs:
   extras:
     name: dataset and harness checks
     needs: [plan, lint, preflight]
-    if: always() && needs.plan.result == 'success' && needs.lint.result == 'success' && needs.plan.outputs.code == 'true' && (needs.preflight.result == 'success' || needs.preflight.result == 'skipped') && github.event_name != 'schedule'
+    # !cancelled(), not always(): always() let a cancelled or superseded run keep running and
+    # starting its shards (2026-11-26: 15 cancelled runs still held runners half an hour later).
+    if: ${{ !cancelled() && needs.plan.result == 'success' && needs.lint.result == 'success' && needs.plan.outputs.code == 'true' && (needs.preflight.result == 'success' || needs.preflight.result == 'skipped') && github.event_name != 'schedule' }}
     runs-on: ${{ fromJSON(needs.plan.outputs.runner || '"ubuntu-latest"') }}
     timeout-minutes: 30
     steps:

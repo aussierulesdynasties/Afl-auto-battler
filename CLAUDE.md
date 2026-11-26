@@ -94,25 +94,27 @@ the jobs themselves took about 30 min. Merges took days, and the director calls 
 number one development blocker.
 
 - **Never end a turn with CI pending and nothing to wake you.** After you push, subscribe to the
-  PR's activity (`subscribe_pr_activity`), or schedule a check-in, or watch the run in the
-  foreground (`gh pr checks <n> --watch`, `gh run watch`). A red check that sits for hours
+  PR's activity (`subscribe_pr_activity`) or schedule a check-in (`send_later`); on a machine
+  with a full `gh`, `gh pr checks <n> --watch` also works. A red check that sits for hours
   because nobody looked is the most common failure here.
 - **A red check is the next job.** Read the failed job's log, fix it, push once. Do not start
   other work, open another PR or ask the director to merge while your PR is red.
 - **Push once, not in drips.** Each push cancels the run in progress and goes to the back of the
   queue (45 cancelled PR runs on 26 Nov). Batch your commits locally and run the touched suites
   with `tools/run_tests.sh <suite>` before you push.
-- **Respect the open PR cap (Director Bible 1.48): at most 3 ready PRs.** Over the cap, open
-  yours as a draft (drafts skip the game tests) and mark it ready when a slot frees. Count with
-  `gh pr list --state open --json isDraft --jq 'map(select(.isDraft|not))|length'`.
+- **Respect the open PR cap (Director Bible 7.48): at most 3 ready PRs.** Over the cap, open
+  yours as a draft (drafts skip the game tests) and mark it ready when a slot frees. Count
+  the open PRs that are not drafts (GitHub MCP `list_pull_requests`, or `gh pr list`). The
+  `PR cap` workflow enforces it: a PR over the cap goes back to draft and is released in turn.
 - **Check for a conflict before you ask for a merge, never after.** Run `git fetch origin main &&
   git merge-tree --write-tree origin/main HEAD`. If it reports a conflict, merge main in and fix
-  it first (never rebase or force-push, 1.48). Do not turn on auto-merge or ask for a merge on a
+  it first (never rebase or force-push, 7.48). Do not turn on auto-merge or ask for a merge on a
   PR you know conflicts: it cannot land, and it wastes a full test run.
 - **Before you open a PR, check the open set** for one that already touches the same files or row
-  (`gh pr list --search <row or file>`). Add to it or wait for it rather than opening a rival.
-- **Close what you abandon.** A PR you are not finishing gets closed with one line saying why, so
-  it stops taking runners on every main push.
+  (list the open PRs and read their titles and files). Add to it or wait for it rather than
+  opening a rival.
+- **Say what you abandon.** A PR you are not finishing: mark it draft (it stops taking runners)
+  and tell the director it can be closed. Never close it yourself (Director Bible 7.50).
 
 ## Review boards and imagery (director, 2026-11-26)
 
