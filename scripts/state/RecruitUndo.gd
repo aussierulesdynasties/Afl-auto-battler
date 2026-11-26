@@ -162,7 +162,8 @@ static func undo(gs: Node) -> Dictionary:
 		"release":
 			reason = "Delisting undone: %s is back on your list." % name
 		"sign":
-			reason = "Signing undone: %s is a free agent again." % name
+			reason = ("Signing undone: %s is a free agent again." if EraRules.on("free_agency")
+					else "Signing undone: %s is unsigned again.") % name
 		"resign":
 			reason = "Re-signing undone: %s is out of contract again." % name
 	# The step below is valid again only if it still matches what is restored.

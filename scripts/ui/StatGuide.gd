@@ -40,6 +40,14 @@ const TOPICS := [
 ]
 
 
+## A topic's page text. Before free agency (to 2011, EraRules) Contracts says
+## what the off-season had then.
+static func topic_text(t: Array) -> String:
+	if str(t[0]) == "Contracts" and not EraRules.on("free_agency"):
+		return "After the Grand Final, re-sign or release players, sign delisted players and trade."
+	return str(t[1])
+
+
 static func short(key: String) -> String:
 	return str((STATS.get(key, [""]) as Array)[0])
 
@@ -135,7 +143,7 @@ static func open_page(overlay: Control, id: String) -> void:
 	else:
 		var t: Array = TOPICS[int(id.trim_prefix("topic"))]
 		page.add_child(UiKit.heading(str(t[0]), UiKit.H1))
-		page.add_child(_para(str(t[1]), 14, UiKit.TEXT))
+		page.add_child(_para(topic_text(t), 14, UiKit.TEXT))
 
 
 static func _show_grid(overlay: Control) -> void:

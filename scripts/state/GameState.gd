@@ -1107,6 +1107,13 @@ func _save_meta() -> Dictionary:
 			"saved_at": Time.get_datetime_string_from_system()}
 
 
+## Where a loaded career opens: the hub, or the draft screen while there is no
+## hub to go back to yet (no season, a club yet to play, or the off-season
+## before the opening draft, row 199). Continue and Options both use it.
+func resume_screen() -> String:
+	return "hub" if season != null and not club_yet_to_play() and first_offseason != 1 else "draft"
+
+
 ## Replace the in-memory career with the saved one. Returns false (and leaves
 ## a fresh state) if there is no usable save.
 func load_career() -> bool:
@@ -9653,7 +9660,8 @@ func offer_contract(player_id: String, salary: int, years: int) -> Dictionary:
 	if talks.has("refused"):
 		return {"ok": false, "answer": "walk", "reason": Contracts.REFUSED_TALKS % int(talks["refused"])}
 	if bool(talks.get("walked", false)):
-		return {"ok": false, "answer": "walk", "reason": "Talks have broken down: he will test free agency."}
+		return {"ok": false, "answer": "walk", "reason": "Talks have broken down: he will test free agency."
+				if EraRules.on("free_agency") else "Talks have broken down: he will be delisted."}
 	years = clampi(years, 1, Contracts.MAX_YEARS)
 	salary = maxi(Contracts.senior_min(), salary)
 	if my_payroll() - int(p.get("salary", 0)) + salary > cap_for(my_club):
@@ -9662,7 +9670,7 @@ func offer_contract(player_id: String, salary: int, years: int) -> Dictionary:
 		return {"ok": false, "answer": "", "code": "held_room", "reason": HELD_ROOM_LINE}
 	# Under 50, he may refuse you whatever you offer (director 2026-11-08).
 	if resign_refused(p):
-		refuse_resign(p, Contracts.REFUSED_GOES)
+		refuse_resign(p, Contracts.refused_goes())
 		return {"ok": false, "answer": "walk", "reason": Contracts.REFUSED_TALKS % int(p["talks"]["refused"])}
 	var name := GameDB.player_display_name(p)
 	var snap := RecruitUndo.snapshot(self, player_id)
@@ -9684,7 +9692,8 @@ func offer_contract(player_id: String, salary: int, years: int) -> Dictionary:
 		"walk":
 			talks["walked"] = true
 			p["talks"] = talks
-			out["reason"] = "Talks have broken down: %s will test free agency." % name
+			out["reason"] = ("Talks have broken down: %s will test free agency." if EraRules.on("free_agency")
+					else "Talks have broken down: %s will be delisted.") % name
 	if bool(reply["insult"]):
 		ClubLife.add_morale(p, -Contracts.INSULT_MORALE)
 	if bool(out["ok"]):
@@ -10225,7 +10234,8 @@ func fa_market_stage(player_id: String) -> String:
 ## "reject" | "", "salary", "reason", "responses": [lines]}.
 func offer_free_agent(player_id: String, salary: int, years: int) -> Dictionary:
 	if not offseason_open():
-		return {"ok": false, "answer": "", "reason": "Free agency is only open in the off-season."}
+		return {"ok": false, "answer": "", "reason": "Free agency is only open in the off-season."
+				if EraRules.on("free_agency") else "Delisted players can only be signed in the off-season."}
 	var p := free_agent(player_id)
 	if p.is_empty():
 		return {"ok": false, "answer": "", "reason": "He has already signed elsewhere."}
@@ -12683,7 +12693,7 @@ func _close_free_agency() -> void:
 		var talks: Dictionary = p.get("talks", {})
 		var told := talks.has("refused")
 		if str(step[1]) == "release" and not bool(talks.get("walked", false)) and resign_refused(p):
-			refuse_resign(p, Contracts.REFUSED_GOES)
+			refuse_resign(p, Contracts.refused_goes())
 			told = true
 		match str(step[1]):
 			"resign1":

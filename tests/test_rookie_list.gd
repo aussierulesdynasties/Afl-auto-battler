@@ -51,6 +51,7 @@ func run(tree: SceneTree) -> void:
 	_t("_test_nobody_left")
 	await _t("_test_rookie_draft_tap")
 	await _t("_test_list_screen_and_upgrade_tap")
+	await _t("_test_list_screen_1990")
 	_t("_test_release_and_resign")
 	_t("_test_entering_club_seat")
 	_t("_test_midseason_fills_rookie_spots")
@@ -342,6 +343,34 @@ func _test_list_screen_and_upgrade_tap() -> void:
 	_check(rh2 != null and rh2.text.contains("0 / 6"), "The rookie list count drops (%s)" % (rh2.text if rh2 else "none"))
 	scene.queue_free()
 	await _settle()
+
+
+## Before the rookie list (1997, EraRules) a club has one list: the list screen
+## shows no rookie list heading, rookie count or empty rookie line (bug bash P3-4).
+func _test_list_screen_1990() -> void:
+	gs.reset("1990")
+	gs.season_year = 1990
+	gs.start_season("GEE", GameDB.club_list("GEE"))   # Adelaide (CLUB) enters in 1991
+	gs.set_setting("seen_weekly_loop_intro", true)
+	gs.tutorials = false
+	_check(gs.season_year == 1990 and not RookieList.in_force(), "A 1990 career has no rookie list (%d)" % gs.season_year)
+	var scene: Control = load("res://scenes/ListScene.tscn").instantiate()
+	scene.set("_pane", "list")
+	root.add_child(scene)
+	await _settle()
+	var sh := scene.find_child("SeniorListHead", true, false) as Label
+	_check(sh != null and sh.text.begins_with("Our list  %d / " % gs.my_list.size()),
+			"One list, with its spots (%s)" % (sh.text if sh else "none"))
+	_check(scene.find_child("RookieListHead", true, false) == null and scene.find_child("RookieListNone", true, false) == null,
+			"No rookie list heading or empty rookie line")
+	var count := ""
+	for l in scene.find_children("*", "Label", true, false):
+		if (l as Label).text.contains("on our list") or (l as Label).text.contains(" senior  ·  "):
+			count = (l as Label).text
+	_check(count.begins_with("%d on our list" % gs.my_list.size()), "The count is one list (%s)" % count)
+	scene.queue_free()
+	await _settle()
+	gs.reset()
 
 
 ## A delisted rookie is a free agent; whoever signs him, his old club too,

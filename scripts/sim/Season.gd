@@ -1004,6 +1004,25 @@ func recalc_ladder() -> void:
 		row["pct"] = (100.0 * int(row["pf"]) / pa) if pa > 0 else 0.0
 
 
+## Which of two ladder rows has the better percentage: 1 when `a`, -1 when
+## `b`, 0 when level. Compared exactly (a's points for times b's against,
+## against b's for times a's against), so two percentages a hair apart are
+## never counted level. A club yet to concede that has scored is ahead of every
+## club that has conceded; one yet to play counts as 0.
+static func pct_order(a: Dictionary, b: Dictionary) -> int:
+	var fa := int(a.get("pf", 0))
+	var xa := int(a.get("pa", 0))
+	var fb := int(b.get("pf", 0))
+	var xb := int(b.get("pa", 0))
+	if fa == 0 and xa == 0:
+		xa = 1
+	if fb == 0 and xb == 0:
+		xb = 1
+	var left := fa * xb
+	var right := fb * xa
+	return 1 if left > right else (-1 if left < right else 0)
+
+
 ## Points first, then percentage - the actual AFL tiebreak order.
 func ladder_sorted() -> Array:
 	var out := []
@@ -1018,8 +1037,9 @@ func ladder_sorted() -> Array:
 	out.sort_custom(func(a, b):
 		if a["pts"] != b["pts"]:
 			return int(a["pts"]) > int(b["pts"])
-		if not is_equal_approx(a["pct"], b["pct"]):
-			return a["pct"] > b["pct"]
+		var by_pct := pct_order(a, b)
+		if by_pct != 0:
+			return by_pct > 0
 		if int(a["pf"]) != int(b["pf"]):
 			return int(a["pf"]) > int(b["pf"])
 		var na: String = names.get(str(a["code"]), str(a["code"]))
