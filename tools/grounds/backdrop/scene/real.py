@@ -22,11 +22,20 @@ def overture_heights(g, xy):
         except Exception: continue
         polys.append(transform(lambda x, y, z=None: xy(y, x), g_)); hs.append(float(h))
     tree = STRtree(polys)
-    from shapely.geometry import Point
-    def look(cx, cy):
+    from shapely.geometry import Point, Polygon
+    def look(cx, cy, pts=None):
+        """the tallest Overture building at the outline's middle, or (with the outline) the tallest one
+        lying mostly inside it: one OSM outline often holds a whole block of flats"""
         pt = Point(cx, cy); best = None
         for i in tree.query(pt):
             if polys[i].contains(pt): best = hs[i] if best is None else max(best, hs[i])
+        if pts is not None and len(pts) >= 3:
+            try: q = Polygon(pts).buffer(0)
+            except Exception: q = None
+            if q is not None and q.area > 0:
+                for i in tree.query(q):
+                    a_ = polys[i].area
+                    if a_ > 8 and polys[i].intersection(q).area > 0.5 * a_: best = hs[i] if best is None else max(best, hs[i])
         return best
     print('overture heights', len(polys))
     return look
@@ -44,7 +53,7 @@ def canopy(SA):
     from scipy.ndimage import uniform_filter, binary_opening, binary_closing
     mu = uniform_filter(V, 7); sd = np.sqrt(np.maximum(0, uniform_filter(V * V, 7) - mu * mu))
     water = (uniform_filter(V, 15) < 55) & (uniform_filter(sd, 15) < 10)
-    t = (exg > 10) & (V < 95) & (V > 25) & (sd > 8) & ~water
+    t = (exg > 8) & (V < 110) & (V > 14) & (sd > 8) & ~water   # checked on Queens Gardens' belts and shrubberies
     return binary_closing(binary_opening(t, iterations=2), iterations=1)
 
 def shade(SA):
@@ -68,3 +77,33 @@ def colour_field(SA, half, mpp, bld_polys, tree_mask, cell=12.0):
     col = np.stack([gaussian_filter(np.where(n[..., 0] > c * c * 0.2, s[..., k] / np.maximum(n[..., 0], 1), 0), 1.2) for k in range(3)], -1) / w[..., None]
     col = col * np.minimum(1.0, 175.0 / np.maximum(col.max(-1, keepdims=True), 1))   # bright pavement capped like the roofs
     return col   # (h2, w2, 3), north up, cell metres = c * mpp, covering [-half, half)
+
+
+def raster_heights(D):
+    """measured building heights: data/<g>/bh.npy, height above bare ground on the local grid (rows north -> south),
+    from lidar_ndsm.py (LiDAR DSM - DEM, 'measured': true) or a building-height map. Returns (look, measured) or None.
+    look(pts) -> the 75th percentile inside the outline pulled in 1 m (walls and eaves mix with the ground), the
+    pixel under its middle when it is smaller than that, None off cover"""
+    p = os.path.join(D, 'bh.npy')
+    if not os.path.exists(p): return None
+    H = np.load(p, mmap_mode='r'); m = json.load(open(os.path.join(D, 'bh.json'))); hf, st = m['half_m'], m['m_per_px']
+    from PIL import Image, ImageDraw
+    from shapely.geometry import Polygon
+    def look(pts):
+        q = Polygon(pts).buffer(0); qi = q.buffer(-1.0)
+        if qi.is_empty or qi.area < 4 * st * st: qi = None
+        P = qi if qi is not None else q
+        if P.geom_type == 'MultiPolygon': P = max(P.geoms, key=lambda a: a.area)
+        uv = [((x + hf) / st, (hf - y) / st) for x, y in P.exterior.coords]
+        x0, y0 = [int(math.floor(min(v))) for v in zip(*uv)]; x1, y1 = [int(math.ceil(max(v))) + 1 for v in zip(*uv)]
+        if x0 < 0 or y0 < 0 or x1 > H.shape[1] or y1 > H.shape[0]: return None
+        mk = Image.new('L', (x1 - x0, y1 - y0)); ImageDraw.Draw(mk).polygon([(u - x0, v - y0) for u, v in uv], fill=1)
+        v = np.asarray(H[y0:y1, x0:x1])[np.asarray(mk) > 0]
+        if len(v) == 0:
+            c = q.centroid; r, cc = int((hf - c.y) / st), int((c.x + hf) / st)
+            v = np.asarray([H[r, cc]]) if 0 <= r < H.shape[0] and 0 <= cc < H.shape[1] else v
+        v = v[np.isfinite(v)]
+        if len(v) == 0: return None
+        h = float(np.percentile(v, 75))
+        return h if h >= 2.0 else None   # under 2 m above the ground is a shelter, a fence or a demolished lot
+    return look, bool(m.get('measured'))

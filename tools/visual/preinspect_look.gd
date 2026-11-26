@@ -3,6 +3,7 @@ extends SceneTree
 ## pre-inspection measured (preinspect_grounds.gd).
 ##   godot --path . --rendering-method mobile --script tools/visual/preinspect_look.gd -- OUTDIR GROUND NAME:px,py,pz,tx,ty,tz[,fov] ...
 ## Positions are the match's metres. PREINSPECT_NO_CROWD=1 hides the crowd (the seats as the fly-through shows them); PREINSPECT_NO_HUD=1 hides the score panel; PREINSPECT_MARK_MAT=<material> paints that material magenta; PREINSPECT_UP=x,y,z sets the camera's up. PREINSPECT_FRAMES=60 waits longer before each shot (a big backdrop's sky light can take that long; before it the scene reads as dusk). Saves OUTDIR/<slug>_<NAME>.png. Looks only.
+## PREINSPECT_SLOT=night (or twilight) lights the ground as a match at that time does; leave PREINSPECT_SUN unset with it.
 ## PREINSPECT_NEAR=m clips as the broadcast cameras do (Oval3DBroadcast.NEAR, 20 m). PREINSPECT_ROOF=open|shut sets a ground's opening roof (GroundModels.ROOFS; a match shows it shut).
 ## PREINSPECT_MODEL_FRAME=1 reads positions in the model's own frame instead (x east, y north, z up, metres), the frame
 ## Google Earth views are worked out in (docs/MCG_STANDARD.md); PREINSPECT_SIZE=WxH sets the picture (default 960x540).
@@ -40,6 +41,8 @@ func _run() -> void:
 	root.add_child(oval)
 	oval.build(d, "FRE", "STK")
 	oval.set_process(false)
+	if OS.get_environment("PREINSPECT_SLOT") != "":   # the time of day a match is played at (Oval3DTurf.apply, as PitchView calls it)
+		oval.turf.apply("", OS.get_environment("PREINSPECT_SLOT"))
 	if OS.get_environment("PREINSPECT_NO_CROWD") != "":
 		for c in oval.find_children("Crowd", "", true, false):
 			c.visible = false
