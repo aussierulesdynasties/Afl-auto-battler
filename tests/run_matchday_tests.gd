@@ -3280,14 +3280,16 @@ func _test_side_keeps_calls() -> void:
 			and _is_chosen(ms, "FocusPicker_focus_fwdGrid_" + picked),
 			"Real taps set a plan, pep talk, tag, tagger, defensive set-up (%s, was %s) and a forward to play through (%s)"
 			% [def_key, def_was, str(taps)])
-	var loose_now := str(sim.interceptor[side])
 	# Change the side, swap one midfielder nobody's call needs, come back.
+	# The sheet's calls go into the match on the tap, so the loose man the
+	# defensive set-up names is read after it, not from the opening pick.
+	await _tap_named(ms, "ChangeSide", taps)
+	var loose_now := str(sim.interceptor[side])
 	var busy := {tagger: true, picked: true, loose_now: true}
 	var spare := ""
 	for p in sim.squads[side].ground:
 		if spare == "" and not busy.has(str(p["id"])) and str(p.get("role", "")) == "MID":
 			spare = str(p["id"])
-	await _tap_named(ms, "ChangeSide", taps)
 	var sel: Node = current_scene
 	_state.set_selection({"OUT": [spare]})
 	sel.call("_build")
