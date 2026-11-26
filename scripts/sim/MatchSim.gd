@@ -477,7 +477,7 @@ const WET_FUMBLE_HELD := 0.5
 ## contested player; a Wet-weather player fumbles WET_CLANGERS as often, as he
 ## makes fewer clangers. {} when he gathers it cleanly. Dice: fumble_rng only.
 func _wet_fumble(side: int, carrier, at_fp: float) -> Dictionary:
-	var p := _wx("fumble", 0.0) * (1.30 - 0.60 * _a(carrier, "contested_ball") / 100.0)
+	var p := _wx("fumble", 0.0) * (1.20 - 0.60 * _a(carrier, "contested_ball") / 100.0)
 	if _trait(carrier, "wet_weather"):
 		p *= Traits.WET_CLANGERS
 	if p <= 0.0 or fumble_rng.randf() >= p:
@@ -1634,7 +1634,7 @@ const LEAD_UP_SIZES := {"small": 1.25, "general": 1.15, "key": 1.35}
 const GROUND_SIZES := {"small": 1.8, "general": 1.0, "key": 0.45}
 ## His own game in the air moves an unmatched entry's mark chance by
 ## (forward_air - FWD_AIR_CENTRE) / FWD_AIR_SCALE.
-const FWD_AIR_CENTRE := 58.0
+const FWD_AIR_CENTRE := 47.2
 const FWD_AIR_SCALE := 170.0
 ## An unmarked, unspoiled entry hits the deck this often (more off a tall
 ## target), and a ground-ball forward gets the shot instead of the target.
@@ -2076,7 +2076,7 @@ func _high_contact_free(tackler) -> bool:
 	if tackler == null:
 		return false
 	var discipline := _a(tackler, "discipline")
-	var p := HIGH_CONTACT_BASE * (1.35 - 0.70 * discipline / 100.0)
+	var p := HIGH_CONTACT_BASE * (1.41 - 0.70 * discipline / 100.0)
 	if _trait(tackler, "hothead"):
 		p *= HOTHEAD_FREES
 	var era := _era("free_rate")
@@ -2090,8 +2090,8 @@ func _holding_ball_free(carrier, touches: int) -> bool:
 	if carrier == null:
 		return false
 	var p := HTB_PRIOR if touches > 1 else HTB_NO_PRIOR
-	p *= 1.18 - 0.30 * _a(carrier, "contested_ball") / 100.0
-	p *= 1.12 - 0.24 * _a(carrier, "handballing") / 100.0
+	p *= 1.129 - 0.30 * _a(carrier, "contested_ball") / 100.0
+	p *= 1.091 - 0.24 * _a(carrier, "handballing") / 100.0
 	# A Hothead fights the tackle instead of getting rid of it (the cap too).
 	var hot := HOTHEAD_FREES if _trait(carrier, "hothead") else 1.0
 	p *= hot
@@ -2104,8 +2104,8 @@ func _holding_ball_free(carrier, touches: int) -> bool:
 func _marking_free(side: int, attacker, defender) -> Dictionary:
 	if attacker == null or defender == null:
 		return {}
-	var def_p := MARK_FREE_BASE * (1.35 - 0.65 * _a(defender, "discipline") / 100.0)
-	var att_p := MARK_FREE_BASE * 0.70 * (1.35 - 0.65 * _a(attacker, "discipline") / 100.0)
+	var def_p := MARK_FREE_BASE * (1.398 - 0.65 * _a(defender, "discipline") / 100.0)
+	var att_p := MARK_FREE_BASE * 0.70 * (1.411 - 0.65 * _a(attacker, "discipline") / 100.0)
 	if _trait(defender, "hothead"):
 		def_p *= HOTHEAD_FREES
 	if _trait(attacker, "hothead"):
@@ -2202,7 +2202,7 @@ func _maybe_fifty(receiving_side: int, mark_fp: float, offender, recipient) -> f
 	if offender == null:
 		return mark_fp
 	var discipline := _a(offender, "discipline")
-	var chance := FIFTY_BASE * (1.35 - 0.70 * discipline / 100.0) * _ar(1 - receiving_side, "fifty")
+	var chance := FIFTY_BASE * (1.396 - 0.70 * discipline / 100.0) * _ar(1 - receiving_side, "fifty")
 	if _trait(offender, "hothead"):
 		chance *= 1.65
 	if discipline_rng.randf() >= clampf(chance, 0.002, 0.035):
@@ -2237,12 +2237,12 @@ func _maybe_report(side: int, offender, victim) -> void:
 	if offender == null or victim == null:
 		return
 	var discipline := _a(offender, "discipline")
-	var chance := REPORT_BASE * (1.30 - 0.60 * discipline / 100.0) * _ar(side, "fifty")
+	var chance := REPORT_BASE * (1.352 - 0.60 * discipline / 100.0) * _ar(side, "fifty")
 	if _trait(offender, "hothead"):
 		chance *= 1.75
 	if mro_rng.randf() >= clampf(chance, 0.001, 0.014):
 		return
-	var severity := mro_rng.randf() + (50.0 - discipline) / 500.0 \
+	var severity := mro_rng.randf() + (58.6 - discipline) / 500.0 \
 			+ (0.06 if _trait(offender, "hothead") else 0.0)
 	var tribunal_roll := mro_rng.randf()
 	var appeal_roll := mro_rng.randf()
@@ -2321,11 +2321,11 @@ func _credit_aerial_loose(def_side: int, fp: float, receiver: Dictionary) -> voi
 			wl *= 1.0 + LOOSE_READ * _a(p, "reading_play") / 100.0
 			found = true
 		var stop := 0.62 * _a(p, "reading_play") + 0.38 * _contest_of(p, "one_on_one")
-		var mp := clampf(0.34 + (receive - stop) / 240.0
+		var mp := clampf(0.418 + (receive - stop) / 240.0
 				+ (0.05 if _trait(receiver, "aerial") else 0.0), 0.16, 0.55) * _wx("aerial")
-		var sp := clampf(0.36 + (stop - receive) / 220.0
+		var sp := clampf(0.275 + (stop - receive) / 220.0
 				+ (0.07 if _trait(p, "interceptor") else 0.0), 0.20, 0.65)
-		var ip := sp * INTERCEPT_MARK * (0.6 + 0.8 * _a(p, "reading_play") / 100.0) * _wx("aerial")
+		var ip := sp * INTERCEPT_MARK * (0.529 + 0.8 * _a(p, "reading_play") / 100.0) * _wx("aerial")
 		var ours := ip + 0.5 * (1.0 - mp - ip)
 		w_sum += w
 		wl_sum += wl
@@ -2449,19 +2449,19 @@ func _entry_ev(side: int, shooter: Dictionary, feeder, defender, matched: Dictio
 		dfd = matched
 		duel_shift = Matchups.mark_shift(shooter, matched)
 	var mark_cap := 0.78 if matched.is_empty() else Matchups.DUEL_CAP
-	var base_m := _entry_mark_base(matched) + (atk.fwd_mark - dfn.def_intercept) / Matchups.MARK_LINES 			+ (0.06 if _trait(shooter, "aerial") else 0.0) + duel_shift
+	var base_m := _entry_mark_base(matched) + (atk.fwd_mark - dfn.def_intercept - ENTRY_LINES_CENTRE) / Matchups.MARK_LINES 			+ (0.06 if _trait(shooter, "aerial") else 0.0) + duel_shift
 	if matched.is_empty():
 		base_m += (Matchups.forward_air(shooter) - FWD_AIR_CENTRE) / FWD_AIR_SCALE
 	var spoil_read := dfn.def_intercept
 	if not matched.is_empty():
 		spoil_read = 0.5 * dfn.def_intercept + 0.5 * Matchups.defender_air(matched)
-	var p_sp := clampf(0.30 + 0.35 * spoil_read / 100.0
+	var p_sp := clampf(0.269 + 0.35 * spoil_read / 100.0
 			+ (0.05 if dfd != null and _trait(dfd, "interceptor") else 0.0) - duel_shift, 0.05, 0.95)
 	var beaten := Matchups.BEATEN_SHOT if not matched.is_empty() else 1.0
 	var g_m := shot_chance(side, shooter, true, false, false, feeder, dfd)
 	var g_s := shot_chance(side, shooter, false, true, false, feeder, dfd)
 	var g_c := shot_chance(side, shooter, false, false, false, feeder, dfd)
-	var b0 := float(T["inside50_behind"]) * (0.80 + 0.40 * _a(shooter, "forward_craft") / 100.0)
+	var b0 := float(T["inside50_behind"]) * (0.824 + 0.40 * _a(shooter, "forward_craft") / 100.0)
 	var p_m0 := clampf(base_m, 0.10, mark_cap)
 	# Off the deck: a crumb after a spoil, and (unmatched) the spill to a
 	# ground-ball forward when nobody touched it.
@@ -2531,10 +2531,10 @@ func _deck_ev(side: int) -> Array:
 		if w <= 0.0:
 			continue
 		var g := shot_chance(side, p, false, false)
-		var b := float(T["inside50_behind"]) * (0.80 + 0.40 * _a(p, "forward_craft") / 100.0)
-		var c := CRUMB_P * (0.7 + 0.6 * _a(p, "pressure") / 100.0)
+		var b := float(T["inside50_behind"]) * (0.835 + 0.40 * _a(p, "forward_craft") / 100.0)
+		var c := CRUMB_P * (0.683 + 0.6 * _a(p, "pressure") / 100.0)
 		var size: String = fwd_size(p) if str(p.get("role", "")) == "FWD" else "general"
-		var win := float(GROUND_WIN[size]) * (0.85 + 0.30 * _a(p, "pressure") / 100.0)
+		var win := float(GROUND_WIN[size]) * (0.841 + 0.30 * _a(p, "pressure") / 100.0)
 		w_sum += w
 		crumb += w * c * (6.0 * g * CRUMB_SNAP + b)
 		gg += w * win * g
@@ -2696,9 +2696,9 @@ const SMOTHER_CAP := 0.022
 ## arcs ran far under real, contested marks over).
 ## Most ordinary kicks still use the calibrated chain model unchanged.
 const GENERAL_AERIAL_P := 0.15
-const GENERAL_SPOIL_BASE := 0.82
+const GENERAL_SPOIL_BASE := 0.814
 ## A general-play marking contest's mark chance, level players.
-const GENERAL_MARK_P := 0.18
+const GENERAL_MARK_P := 0.187
 ## Clamp bounds, kept well clear of the bases (2026-11-10: the bases had come
 ## to sit on a bound and the players' edge did nothing on that side).
 const GENERAL_MARK_MIN := 0.05
@@ -2957,7 +2957,7 @@ func _general_aerial(side: int, mark_fp: float, carrier, gain: float, rushed: bo
 		return {}
 	var receive := _contest_of(receiver, "contested_marking")
 	var stop := 0.62 * _a(defender, "reading_play") + 0.38 * _contest_of(defender, "one_on_one")
-	var mark_p := clampf(0.34 + (receive - stop) / 240.0
+	var mark_p := clampf(0.418 + (receive - stop) / 240.0
 			+ (0.05 if _trait(receiver, "aerial") else 0.0), 0.16, 0.55) * _wx("aerial")
 	var roll := aerial_rng.randf()
 	if roll < mark_p:
@@ -2976,10 +2976,10 @@ func _general_aerial(side: int, mark_fp: float, carrier, gain: float, rushed: bo
 			mev["against_id"] = str(man["id"])
 			_log_duel(side, receiver, man, true, mev)
 		return {"outcome": "mark", "actor": receiver, "contested": contested}
-	var spoil_p := clampf(0.36 + (stop - receive) / 220.0
+	var spoil_p := clampf(0.275 + (stop - receive) / 220.0
 			+ (0.07 if _trait(defender, "interceptor") else 0.0), 0.20, 0.65)
 	if roll < mark_p + spoil_p:
-		var take_p := _tv("INTERCEPT_MARK", INTERCEPT_MARK) * (0.6 + 0.8 * _a(defender, "reading_play") / 100.0) * _wx("aerial")
+		var take_p := _tv("INTERCEPT_MARK", INTERCEPT_MARK) * (0.529 + 0.8 * _a(defender, "reading_play") / 100.0) * _wx("aerial")
 		if zone_intercepts and aerial_rng.randf() < take_p:
 			_intercept(opp, defender, false)
 			_won_back["marked"] = true
@@ -3203,7 +3203,7 @@ func _kick_in_play_on(taker) -> bool:
 	if taker == null:
 		return false
 	# He takes off from the square: a line-breaking run (Speed).
-	var chance := clampf(0.30 + _a(taker, "speed") / 180.0, 0.42, 0.82)
+	var chance := clampf(0.226 + _a(taker, "speed") / 180.0, 0.42, 0.82)
 	return restart_rng.randf() < chance
 
 
@@ -3305,7 +3305,7 @@ func _general_aerial_contest(side: int, mark_fp: float, carrier) -> Dictionary:
 	# An Interceptor who gets to it can hold it, as on a lead
 	# (_general_aerial): without this the extra spoils killed kicks the player would
 	# have intercepted later (bug bash 5). Drawn only for an Interceptor.
-	if spoilt and zone_intercepts and _trait(defender, "interceptor") 			and aerial_rng.randf() < _tv("INTERCEPT_MARK", INTERCEPT_MARK) * (0.6 + 0.8 * _a(defender, "reading_play") / 100.0) * _wx("aerial"):
+	if spoilt and zone_intercepts and _trait(defender, "interceptor") 			and aerial_rng.randf() < _tv("INTERCEPT_MARK", INTERCEPT_MARK) * (0.529 + 0.8 * _a(defender, "reading_play") / 100.0) * _wx("aerial"):
 		_intercept(opp, defender, false)
 		_won_back["marked"] = true
 		_t(opp, "marks")
@@ -3692,7 +3692,7 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 				_t(side, "poss_d50")
 			elif (fp if side == 0 else -fp) >= f50:
 				_t(side, "poss_f50")
-		var hb_bias: float = (0.85
+		var hb_bias: float = (0.888
 				+ 0.30 * (100.0 - _a(carrier, "marking")) / 100.0)
 		var disposal_kind := "handball"
 		var marked := false
@@ -3727,7 +3727,7 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 				_t(side, "kicks")
 				_p(carrier, "kicks")
 			var mark_p: float = (float(T["mark_share_of_kicks"])
-					* (0.75 + 0.50 * _a(carrier, "marking") / 100.0))
+					* (0.681 + 0.50 * _a(carrier, "marking") / 100.0))
 			if chip or keep:
 				mark_p = minf(0.95, mark_p * _tv("D50_CHIP_MARK", D50_CHIP_MARK))
 			marked = false if is_kick_in else rng.randf() < mark_p
@@ -3750,7 +3750,7 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 		atk_fp = fp if side == 0 else -fp
 		var zone := _press_zone(atk_fp)
 		var pressure: float = (float(T["pressure_base"])
-				* (0.72 + 0.56 * _zone_pressure(opp, zone) / 100.0))
+				* (0.705 + 0.56 * _zone_pressure(opp, zone) / 100.0))
 		pressure *= 1.10 if atk_fp < 0.0 else 0.95
 		if in_d50:
 			pressure *= _tv("D50_PRESSURE", D50_PRESSURE)
@@ -3821,7 +3821,7 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 						"high_contact", "High contact")
 				return {"outcome": "free", "fp": mark, "actor": carrier, "free_side": side}
 			var retain: float = (float(T["tackle_retention"])
-					* (0.75 + 0.50 * _a(carrier, "strength") / 100.0))
+					* (0.774 + 0.50 * _a(carrier, "strength") / 100.0))
 			if _trait(carrier, "bull"):
 				retain *= 1.10
 			if in_d50:
@@ -3882,8 +3882,8 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 			if in_d50:
 				_t(side, "d50_rushed")
 			var turn_p: float = (_tv("PRESS_TURNOVER", PRESS_TURNOVER_FLOW)
-					* (0.80 + 0.40 * _a(presser, "pressure") / 100.0)
-					* (1.20 - 0.40 * _a(carrier, "disposal") / 100.0))
+					* (0.766 + 0.40 * _a(presser, "pressure") / 100.0)
+					* (1.170 - 0.40 * _a(carrier, "disposal") / 100.0))
 			if zone == 0 and _pv(opp, "press") > 1.0:
 				turn_p *= PRESS_ZONE_TURNOVER
 			if in_d50:
@@ -3910,7 +3910,7 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 				_last_disp["kind"] = disposal_kind
 				if disposal_kind == "kick":
 					_kick_marked(opp, taker, fp, mark_rng.randf() < _tv("PRESS_KICK_MARKED", PRESS_KICK_MARKED)
-							* (0.6 + 0.8 * _a(taker, "reading_play") / 100.0))
+							* (0.568 + 0.8 * _a(taker, "reading_play") / 100.0))
 				return {"outcome": "turnover", "fp": fp, "actor": taker}
 			rushed = true
 
@@ -3919,7 +3919,7 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 		# ball rather than automatically handed to either side.
 		if disposal_kind == "kick" and not marked:
 			var smotherer = _pick_presser(opp, zone)
-			var smother_p := SMOTHER_BASE * (0.55 + 0.90 * _a(smotherer, "pressure") / 100.0)
+			var smother_p := SMOTHER_BASE * (0.474 + 0.90 * _a(smotherer, "pressure") / 100.0)
 			smother_p *= 1.35 if rushed else 0.85
 			if smother_rng.randf() < minf(SMOTHER_CAP, smother_p):
 				_t(opp, "smothers")
@@ -3937,7 +3937,7 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 
 		var prev_atk_fp := atk_fp
 		var gain: float = (float(T["metres_gain_mean"])
-				* (0.55 + 0.90 * _a(carrier, "speed") / 100.0))   # running with it (Speed)
+				* (0.405 + 0.90 * _a(carrier, "speed") / 100.0))   # running with it (Speed)
 		gain *= _pv(side, "gain") * _pep_mult(side, "gain") * _ar(side, "gain")
 		if synergies[side].has("supply_line"):
 			gain *= Traits.power("supply_line")
@@ -4067,6 +4067,17 @@ func kick_in_fp(side: int) -> float:
 ## 12.4 marks inside 50 a team a game (Champion Data 2026; director 2026-11-21:
 ## "marks i50 need to go back to afl normal"; it was 25 a game).
 const ENTRY_LEAD_BASE := 0.10
+## The two lines' gap an entry reads (the forwards' marking less the backs'
+## reading of the play): -10.6 on average on the old engine scale, -35.2 on the
+## attributes as they are (150 matches of 2026 lists, 2026-11-26). The entry
+## reads the gap from this centre, so the average entry is marked as often as
+## the old tuning had it and each point of the gap still counts the same.
+## The same rule moved every fixed number in this file that an attribute is
+## read against (the rating rebuild, docs/RATING_REBUILD.md): the number moves
+## by its slope x the shift in that spot's mean reading. Example: metres
+## gained = average x (0.55 + 0.90 x Speed/100) read Carry before; the ball
+## carrier's Speed averages 66 where his Carry averaged 50, so 0.55 is 0.405.
+const ENTRY_LINES_CENTRE := -24.6
 ## A shot off the ground, a snap or a crumb, against one from a mark (1.16). Fewer
 ## entries are marked, so more goals come off the deck, as in real footy.
 const LOOSE_SHOT := 1.0
@@ -4167,7 +4178,7 @@ func resolve_forward50(side: int, fp: float, feeder) -> Dictionary:
 	if matched.is_empty():
 		air_shift = (Matchups.forward_air(shooter) - FWD_AIR_CENTRE) / FWD_AIR_SCALE
 	var marked := rng.randf() < clampf(
-			_entry_mark_base(matched) + (atk.fwd_mark - dfn.def_intercept) / Matchups.MARK_LINES + mark_edge + duel_shift + air_shift
+			_entry_mark_base(matched) + (atk.fwd_mark - dfn.def_intercept - ENTRY_LINES_CENTRE) / Matchups.MARK_LINES + mark_edge + duel_shift + air_shift
 			+ roam_shift, 0.10, mark_cap) * _wx("aerial")
 	# A third-man arrival is not credited to the direct defender's 1v1 log.
 	# Interceptor contests have their own evidence/stats and story.
@@ -4195,7 +4206,7 @@ func resolve_forward50(side: int, fp: float, feeder) -> Dictionary:
 			# The quota gives the requested long-run shape: 30% none, 60% one,
 			# 10% up to two (mean 0.8, hard max two). Aerial/marking quality
 			# decides which genuine contested marks earn the spectacular tag.
-			var spectacular_p := clampf(0.28 + (_a(shooter, "contested_marking") - 50.0) / 180.0
+			var spectacular_p := clampf(0.28 + (_a(shooter, "contested_marking") - 39.6) / 180.0
 					+ (0.12 if _trait(shooter, "aerial") else 0.0), 0.16, 0.62)
 			if speccy_rng.randf() < spectacular_p:
 				speccy = true
@@ -4222,7 +4233,7 @@ func resolve_forward50(side: int, fp: float, feeder) -> Dictionary:
 		spoil_read = 0.5 * dfn.def_intercept + 0.5 * Matchups.defender_air(matched)
 	# In a named contest the same aerial gap decides whether he gets a fist
 	# to it (Matchups): a defender on top spoils more, one beaten spoils less.
-	var spoilt := rng.randf() < clampf(0.30 + 0.35 * spoil_read / 100.0 + spoil_edge - duel_shift, 0.05, 0.95)
+	var spoilt := rng.randf() < clampf(0.269 + 0.35 * spoil_read / 100.0 + spoil_edge - duel_shift, 0.05, 0.95)
 	# The defender in the contest missed it: the spare, flying in as the extra
 	# body, gets his own fist to it.
 	var spoiler = defender
@@ -4255,7 +4266,7 @@ func resolve_forward50(side: int, fp: float, feeder) -> Dictionary:
 			shooter = ground_fwd
 			crumbed = true
 			var size: String = fwd_size(ground_fwd) if str(ground_fwd.get("role", "")) == "FWD" else "general"
-			ground_lost = rng.randf() >= float(GROUND_WIN[size]) * (0.85 + 0.30 * _a(ground_fwd, "pressure") / 100.0)
+			ground_lost = rng.randf() >= float(GROUND_WIN[size]) * (0.808 + 0.30 * _a(ground_fwd, "pressure") / 100.0)
 	# Spoiled to the deck, or spilled out of the pack: it comes to rest where the footage
 	# says, and the snap, the crumb, the rebound or the ball-up is played from there.
 	if not marked and (spoilt or crumbed):
@@ -4290,7 +4301,7 @@ func resolve_forward50(side: int, fp: float, feeder) -> Dictionary:
 			matched = {}
 	var goal_p := shot_chance(side, shooter, marked, spoilt, true, setter, defender)
 	var behind_p: float = (float(T["inside50_behind"])
-			* (0.80 + 0.40 * _a(shooter, "forward_craft") / 100.0))
+			* (0.823 + 0.40 * _a(shooter, "forward_craft") / 100.0))
 	if ground_lost:
 		goal_p = 0.0  # beaten to it at ground level: the defence clears
 		behind_p = 0.0
@@ -4428,10 +4439,10 @@ func resolve_forward50(side: int, fp: float, feeder) -> Dictionary:
 ## defence clears it or the snap misses everything.
 func _crumb(side: int, fp: float) -> Dictionary:
 	var crumber = _ground_forward(side)
-	if crumber == null or rng.randf() >= CRUMB_P * (0.7 + 0.6 * _a(crumber, "pressure") / 100.0):
+	if crumber == null or rng.randf() >= CRUMB_P * (0.618 + 0.6 * _a(crumber, "pressure") / 100.0):
 		return {}
 	var snap := shot_chance(side, crumber, false, false) * CRUMB_SNAP
-	var behind_p: float = float(_rates()["inside50_behind"]) * (0.80 + 0.40 * _a(crumber, "forward_craft") / 100.0)
+	var behind_p: float = float(_rates()["inside50_behind"]) * (0.836 + 0.40 * _a(crumber, "forward_craft") / 100.0)
 	var r := rng.randf()
 	_gain(side, crumber, "gb")
 	_shot(side, crumber, false, "goal" if r < snap else ("behind" if r < snap + behind_p else ""))
@@ -4479,7 +4490,7 @@ var i50_rng := RandomNumberGenerator.new()
 ## every other draw falls where it did.
 func _i50_give(side: int, at_fp: float, holder: Dictionary, defender, marked: bool, crumbed: bool) -> Dictionary:
 	var how := "mark" if marked else ("ground" if crumbed else "lead")
-	var look := _tv("I50_GIVE_" + how.to_upper(), float(I50_GIVE[how])) * (0.6 + 0.8 * _a(holder, "vision") / 100.0)
+	var look := _tv("I50_GIVE_" + how.to_upper(), float(I50_GIVE[how])) * (0.650 + 0.8 * _a(holder, "vision") / 100.0)
 	if i50_rng.randf() >= look:
 		return {}
 	# Who he finds: the forwards and mids on the ground, the better finishers
@@ -4515,8 +4526,8 @@ func _i50_give(side: int, at_fp: float, holder: Dictionary, defender, marked: bo
 	_chain_touch[str(holder["id"])] = holder
 	var hn := GameDB.player_display_name(holder)
 	var mn := GameDB.player_display_name(mate)
-	var reach := clampf(_tv("I50_GIVE_REACH", I50_GIVE_REACH) + 0.20 * (_a(holder, "disposal") - 50.0) / 100.0
-			- 0.20 * ((squads[opp] as Squad).def_intercept - 50.0) / 100.0, 0.60, 0.97)
+	var reach := clampf(_tv("I50_GIVE_REACH", I50_GIVE_REACH) + 0.20 * (_a(holder, "disposal") - 40.8) / 100.0
+			- 0.20 * ((squads[opp] as Squad).def_intercept - 58.9) / 100.0, 0.60, 0.97)
 	if i50_rng.randf() >= reach:
 		var taker = defender
 		if taker == null or (taker as Dictionary).is_empty():
@@ -4602,7 +4613,7 @@ func _intercept(side: int, who, could_mark: bool, contested := false) -> void:
 	# the ball marks more of them. A mark is a mark: he takes the next kick
 	# (the next chain starts from him, _chain_from["marked"]).
 	# could_mark: it came off the other side's kick inside 50.
-	if could_mark and mark_rng.randf() < 0.35 * (0.5 + _a(who, "reading_play") / 100.0) * _wx("aerial"):
+	if could_mark and mark_rng.randf() < 0.35 * (0.441 + _a(who, "reading_play") / 100.0) * _wx("aerial"):
 		_t(side, "marks")
 		_p(who, "marks")
 		_won_back["marked"] = true
@@ -4670,7 +4681,7 @@ func _run_and_carry(side: int, carrier, gained: float, pressed: bool, is_kick_in
 	if atk_fp >= float(_rates()["forward50_line"]):
 		return
 	var carry := _a(carrier, "speed") / 100.0
-	if run_rng.randf() >= RUN_P * (0.3 + 1.4 * carry) * _wx("run"):
+	if run_rng.randf() >= RUN_P * (0.073 + 1.4 * carry) * _wx("run"):
 		return
 	# Rounded first, so the bounces credited are the ones the event's run says (29.96 m
 	# was one bounce in the stats and two on the event).
@@ -4825,9 +4836,10 @@ func _tag_shot(set_shot: bool) -> void:
 	(events[events.size() - 1] as Dictionary)["set_shot"] = set_shot
 
 
-## Shot quality from the inside-50 kick: 0.94x from a poor creator, 1.06x
-## from an elite one (1.0 at 50).
-const FEED_BASE := 0.94
+## Shot quality from the inside-50 kick: 0.95x from a poor creator, 1.07x
+## from an elite one (1.0 at Vision 44: it was 50 on the old engine scale, moved
+## with the feeders' mean as ENTRY_LINES_CENTRE says).
+const FEED_BASE := 0.947
 const FEED_SLOPE := 0.12
 
 
@@ -4846,20 +4858,20 @@ func shot_chance(side: int, shooter: Dictionary, marked: bool, spoilt: bool, cre
 			goal_p *= (BREEZE_WITH + BREEZE_AGAINST) * 0.5
 		else:
 			goal_p *= BREEZE_WITH if with_breeze(side) else BREEZE_AGAINST
-	goal_p *= 0.80 + 0.40 * _a(shooter, "forward_craft") / 100.0
+	goal_p *= 0.827 + 0.40 * _a(shooter, "forward_craft") / 100.0
 	goal_p *= 1.16 if marked else _tv("loose_shot", LOOSE_SHOT)
 	goal_p *= 0.82 + 0.36 * _a(shooter, "goalkicking") / 100.0
 	if spoilt and not marked:
 		goal_p *= 0.58
-	goal_p *= 0.90 + 0.20 * atk.attack / 100.0
+	goal_p *= 0.917 + 0.20 * atk.attack / 100.0
 	# The delivery inside 50: a creative kick makes the shot a better one.
 	if feeder != null:
 		goal_p *= FEED_BASE + FEED_SLOPE * _a(feeder, "vision") / 100.0
 	goal_p *= 1.06 - 0.12 * dfn.defence / 100.0
 	if credit:
 		# What fresh legs would have given, for the Legs line.
-		var fresh := goal_p * (0.80 + 0.40 * _a_fresh(shooter, "forward_craft") / 100.0) \
-				/ (0.80 + 0.40 * _a(shooter, "forward_craft") / 100.0) \
+		var fresh := goal_p * (0.827 + 0.40 * _a_fresh(shooter, "forward_craft") / 100.0) \
+				/ (0.827 + 0.40 * _a(shooter, "forward_craft") / 100.0) \
 				* (0.82 + 0.36 * _a_fresh(shooter, "goalkicking") / 100.0) \
 				/ (0.82 + 0.36 * _a(shooter, "goalkicking") / 100.0)
 		_credit(side, "legs", 6.0 * (goal_p - fresh))
@@ -5484,7 +5496,7 @@ func _mid_kick_intercept(side: int, at: float) -> Dictionary:
 			break
 	_intercept(opp, taker, false)
 	_kick_marked(opp, taker, at, mid_ic_rng.randf() < _tv("CLANGER_MARKED", CLANGER_MARKED)
-			* (0.6 + 0.8 * _a(taker, "reading_play") / 100.0))
+			* (0.624 + 0.8 * _a(taker, "reading_play") / 100.0))
 	# The passage it cut short did not use all its share of the quarter: that
 	# time is played (MID_GIVE_BACK of a chain each), so the match keeps its
 	# length of play.
@@ -5880,8 +5892,11 @@ func _after_chain() -> void:
 			_t(side, "distance_run", gps)
 			_p(p, "distance_run", gps)
 
+			# Endurance (main read the old Durability here: 74.6 on average for a side's
+			# 18, Endurance 54.5, so the drain's 1.2 is 1.12 and an average side tires
+			# as before; ENTRY_LINES_CENTRE says how each centre moved).
 			var dur := float((p["attr"] as Dictionary).get("endurance", 70.0))
-			var d := ENERGY_DRAIN * per_chain * float(ROLE_DRAIN.get(role, 1.0)) 					* (1.2 - 0.4 * dur / 100.0) * fatigue_pace * Workload.drain_mult(p)
+			var d := ENERGY_DRAIN * per_chain * float(ROLE_DRAIN.get(role, 1.0)) 					* (1.12 - 0.4 * dur / 100.0) * fatigue_pace * Workload.drain_mult(p)
 			if _trait(p, "engine"):
 				d *= 0.75
 			exertion[id] = float(exertion.get(id, 0.0)) + d
@@ -6705,10 +6720,10 @@ func _offer_set_shot(side: int, p_fp: float, shooter: Dictionary, defender, band
 	for p in _by_roles((squads[side] as Squad).ground, ["FWD", "MID"]):
 		if str(p["id"]) != str(shooter["id"]) and (mate.is_empty() or _a(p, "forward_craft") > _a(mate, "forward_craft")):
 			mate = p
-	var pass_p := clampf(0.50 + 0.35 * _a(shooter, "disposal") / 100.0
+	var pass_p := clampf(0.522 + 0.35 * _a(shooter, "disposal") / 100.0
 			- 0.25 * dfn.def_intercept / 100.0, 0.35, 0.85)
 	var mate_goal := _set_goal(clampf(shot_chance(side, mate, true, false) * 1.3, 0.05, 0.9)) if not mate.is_empty() else 0.0
-	var bomb_goal := clampf(0.26 + 0.20 * (squads[side] as Squad).fwd_mark / 100.0
+	var bomb_goal := clampf(0.302 + 0.20 * (squads[side] as Squad).fwd_mark / 100.0
 			- 0.12 * dfn.def_intercept / 100.0, 0.1, 0.5)
 	var options := [
 		{"key": "shoot", "label": "Take the shot",
@@ -7116,8 +7131,8 @@ func _bomb(side: int, shooter: Dictionary, defender: Dictionary) -> Dictionary:
 	_p(shooter, "disposals")
 	_p(shooter, "kicks")
 	fp = sq_fp
-	var p_mark := clampf(PACK_MARK + (att - dfn) / 250.0, 0.08, 0.40) if marker != null else 0.0
-	var p_def := clampf(PACK_DEFENCE + (dfn - att) / 250.0, 0.15, 0.50)
+	var p_mark := clampf(PACK_MARK + (att - dfn - PACK_LINES_CENTRE) / 250.0, 0.08, 0.40) if marker != null else 0.0
+	var p_def := clampf(PACK_DEFENCE + (dfn - att + PACK_LINES_CENTRE) / 250.0, 0.15, 0.50)
 	r = rng.randf()
 	if r < p_mark:
 		_t(side, "marks")
@@ -7131,7 +7146,7 @@ func _bomb(side: int, shooter: Dictionary, defender: Dictionary) -> Dictionary:
 	if r < p_mark + p_def:
 		# The defence wins it: a mark, or a fist that clears it - a good
 		# marker takes it, others punch it clear.
-		var back_marks := mark_rng.randf() < clampf(0.30 + (_a(back, "contested_marking") - 60.0) / 150.0, 0.15, 0.75)
+		var back_marks := mark_rng.randf() < clampf(0.30 + (_a(back, "contested_marking") - 51.5) / 150.0, 0.15, 0.75)
 		if back_marks:
 			_t(opp, "marks")
 			_p(back, "marks")
@@ -7155,7 +7170,7 @@ func _bomb(side: int, shooter: Dictionary, defender: Dictionary) -> Dictionary:
 	_t(opp, "one_percenters")
 	_p(back, "one_percenters")
 	var crumber = _ground_forward(side, "" if marker == null else str(marker["id"]))
-	var gathers: bool = crumber != null and rng.randf() < PACK_CRUMB * (0.7 + 0.6 * _a(crumber, "pressure") / 100.0)
+	var gathers: bool = crumber != null and rng.randf() < PACK_CRUMB * (0.618 + 0.6 * _a(crumber, "pressure") / 100.0)
 	_pack_event(side, sq_fp, back, "spoiled",
 			{"spoiler_id": str(back["id"]), "crumber_id": str(crumber["id"]) if gathers else ""},
 			"%s spoils it to the deck%s" % [GameDB.player_display_name(back),
@@ -7172,7 +7187,7 @@ func _bomb(side: int, shooter: Dictionary, defender: Dictionary) -> Dictionary:
 		_p(crumber, "disposals")
 		_p(crumber, "kicks")
 		var snap := shot_chance(side, crumber, false, false) * CRUMB_SNAP
-		var bh: float = float(_rates()["inside50_behind"]) * (0.80 + 0.40 * _a(crumber, "forward_craft") / 100.0)
+		var bh: float = float(_rates()["inside50_behind"]) * (0.836 + 0.40 * _a(crumber, "forward_craft") / 100.0)
 		return _set_result(side, crumber, null, back, snap, bh, true, "", true)
 	if rng.randf() < PACK_RUSHED:
 		# Rushed through for a behind: no one's shot.
@@ -7229,8 +7244,8 @@ func bomb_odds(side: int, shooter: Dictionary) -> Dictionary:
 		if share <= 0.0:
 			continue
 		var att := 0.0 if marker == null else _contest_of(marker, "contested_marking")
-		var p_mark := clampf(PACK_MARK + (att - dfn) / 250.0, 0.08, 0.40) if marker != null else 0.0
-		var p_def := clampf(PACK_DEFENCE + (dfn - att) / 250.0, 0.15, 0.50)
+		var p_mark := clampf(PACK_MARK + (att - dfn - PACK_LINES_CENTRE) / 250.0, 0.08, 0.40) if marker != null else 0.0
+		var p_def := clampf(PACK_DEFENCE + (dfn - att + PACK_LINES_CENTRE) / 250.0, 0.15, 0.50)
 		var g := 0.0
 		var b := 0.0
 		if marker != null:
@@ -7276,9 +7291,9 @@ func _deck_odds(side: int, exclude: String, ctx: Dictionary) -> Dictionary:
 		if share <= 0.0:
 			continue
 		var crumber: Dictionary = row[0]
-		var gathers := clampf(PACK_CRUMB * (0.7 + 0.6 * _a(crumber, "pressure") / 100.0), 0.0, 1.0)
+		var gathers := clampf(PACK_CRUMB * (0.618 + 0.6 * _a(crumber, "pressure") / 100.0), 0.0, 1.0)
 		var snap := clampf(shot_chance(side, crumber, false, false) * CRUMB_SNAP, 0.0, 1.0)
-		var bh: float = float(_rates()["inside50_behind"]) * (0.80 + 0.40 * _a(crumber, "forward_craft") / 100.0)
+		var bh: float = float(_rates()["inside50_behind"]) * (0.836 + 0.40 * _a(crumber, "forward_craft") / 100.0)
 		goal += share * gathers * snap
 		behind += share * (gathers * minf(bh, 1.0 - snap) + (1.0 - gathers) * PACK_RUSHED)
 	return {"goal": goal, "behind": behind}
@@ -7380,6 +7395,13 @@ const PACK_DEFENCE := 0.25       # the defence marks or punches it, level pack
 const PACK_MARK_ACC := 0.92      # his shot from the square, an ordinary kick
 const PACK_CRUMB := 0.45         # spoiled: a crumber gathers, before pressure
 const PACK_RUSHED := 0.60        # not gathered: rushed through, else they clear it
+## The pack's gap (the marking forward's contest less the best back's pack
+## read): -13.7 a bomb on the old engine scale, -29.6 on the attributes as
+## they are (3,060 bombs, every pair of 2026 lists, 2026-11-26). Read from
+## this centre, so the average pack is marked as often as the old tuning had
+## it (ENTRY_LINES_CENTRE's rule). The back who wins it marks from Contested
+## marking 51.5, his 60 less the 8.5 the average best back moved.
+const PACK_LINES_CENTRE := -15.9
 
 
 func _shot_turnover(side: int, defender: Dictionary, text: String, marked := false) -> Dictionary:

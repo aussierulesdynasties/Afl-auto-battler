@@ -44,7 +44,9 @@ const AIR_CM := [178.0, 200.0]
 const DUEL_SCALE := 110.0
 ## The typical gap between a key forward and the key defender a coach puts on
 ## him by default: a default match-up leaves the lines to decide on average.
-const DUEL_CENTRE := 8.0
+## 8.0 on the old engine scale; the attributes as they are put the matched
+## defender 15.6 higher in the air (150 matches, 2026-11-26).
+const DUEL_CENTRE := -7.6
 ## An entry's marking contest before the match-up (MatchSim.resolve_forward50):
 ## a bit under even (0.45 then, so marks inside 50 sat at real AFL's 12.4 a team a
 ## game, director 2026-11-21; 0.38 once kicks went longer, row 201 gap 6), moved by the two lines (their forwards' marking against

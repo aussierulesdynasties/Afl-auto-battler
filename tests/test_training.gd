@@ -956,7 +956,7 @@ func _test_unicorn() -> void:
 	for i in range(int(ts["aerial"])):
 		fwds.append({"id": "A%d" % i, "role": "FWD", "attr": {"contested_marking": 99}})
 	for i in range(int(ts["crumber"]) - 1):
-		fwds.append({"id": "C%d" % i, "role": "FWD", "attr": {"forward_craft": 99, "contested_marking": 30}})
+		fwds.append({"id": "C%d" % i, "role": "FWD", "attr": {"forward_craft": 99, "contested_marking": Traits.SMALL_MAX_CM - 8}})
 	var u_mid := u.duplicate(true)
 	u_mid["id"] = "U2"
 	_check(not Traits.active(fwds + [u_mid]).has("tall_small"), "A Unicorn in the midfield cannot fill a forward-line synergy")

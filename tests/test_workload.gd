@@ -298,7 +298,9 @@ func _test_budget_one_spend_drives_plan() -> void:
 
 
 func _test_recovery() -> void:
-	var p := {"id": "test", "age": 25, "attr": {"durability": 70}}
+	# Endurance 50 recovers what the old Durability 70 did (Workload.recovery):
+	# Endurance reads 20 lower on the same men.
+	var p := {"id": "test", "age": 25, "attr": {"endurance": 50}}
 	var lists := {"GEE": [p]}
 	_check(Workload.label(p) == "Fresh" and Workload.energy_cap(p) == 100.0,
 			"Older players without workload fields start fresh")
@@ -310,11 +312,11 @@ func _test_recovery() -> void:
 	_check(Workload.value(p) == loaded, "A completed week cannot apply workload twice")
 	Workload.advance_week(lists, [], "rest")
 	_check(Workload.label(p) == "Fresh", "A week without senior football restores readiness")
-	var veteran := {"id": "old", "age": 34, "attr": {"durability": 50}, "workload": 50.0}
-	var young := {"id": "young", "age": 24, "attr": {"durability": 95}, "workload": 50.0}
+	var veteran := {"id": "old", "age": 34, "attr": {"endurance": 50}, "workload": 50.0}
+	var young := {"id": "young", "age": 24, "attr": {"endurance": 95}, "workload": 50.0}
 	Workload.advance_week({"A": [veteran], "B": [young]}, [], "bye")
 	_check(Workload.value(veteran) < 50.0 and Workload.value(young) < Workload.value(veteran),
-			"Byes recover everyone; durable younger players recover faster")
+			"Byes recover everyone; fitter younger players recover faster")
 	for week in range(100):
 		Workload.advance_week(lists, [{"exertion": {"test": 190.0}}], "long%d" % week)
 	_check(Workload.value(p) < 60.0, "Repeated heavy games reach a bounded load")

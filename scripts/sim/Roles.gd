@@ -61,8 +61,11 @@ const TAG_TOUCHES := [[0.42, 19.48], [0.50, 21.03], [0.58, 22.37], [0.66, 23.53]
 ## seeds): his touches untagged, from the ratings the carry pick reads
 ## (MatchSim.pick_carrier: Disposal, Carry, and a wing's share of the running ball),
 ## fitted over 1,032 midfielder-matches (89 men);
-## [constant, per Disposal, per Carry, on a wing]:
-const USUAL_TOUCHES_FIT := [1.84, 0.168, 0.116, 1.29]
+## [constant, per Disposal, per Work Rate, on a wing]. The constant was 1.84 on
+## the old engine scale (Disposal and Carry); a side's midfielders read 22.0
+## lower in Disposal and 12.3 lower in Work Rate than they did in Carry (150
+## matches, 2026-11-26), so it is 6.96 and the usual man still gets his touches.
+const USUAL_TOUCHES_FIT := [6.96, 0.168, 0.116, 1.29]
 const USUAL_TOUCHES_MIN := 8.0
 ## and what a tag takes off him: about the same count of touches whoever he is,
 ## not the same share (400 paired matches an arm, a different midfielder tagged
