@@ -1021,15 +1021,20 @@ static func hair_shells() -> Dictionary:
 	if not _shells.is_empty() or not ResourceLoader.exists(hair_glb):
 		return _shells
 	var root: Node = (load(hair_glb) as PackedScene).instantiate()
+	var found := []
 	for n in root.find_children("hair_*", "MeshInstance3D", true, false):
 		var mi := n as MeshInstance3D
 		var parent := mi.get_parent()
 		if not parent is BoneAttachment3D:
 			push_error("Oval3D: %s is not on a bone in %s" % [mi.name, hair_glb])
 			continue
+		found.append([mi.mesh, mi.transform, str((parent as BoneAttachment3D).bone_name), mi])
+	var refit := _refit_styles(found)
+	for f in range(found.size()):
+		var mi: MeshInstance3D = found[f][3]
 		var style := str(mi.name).trim_prefix("hair_")
-		var bone := (parent as BoneAttachment3D).bone_name
-		_shells[style] = {"mesh": _lodded(_refit_hair(mi.mesh, mi.transform, bone)), "bone": bone, "at": mi.transform}
+		var bone := (mi.get_parent() as BoneAttachment3D).bone_name
+		_shells[style] = {"mesh": _lodded(refit[f]), "bone": bone, "at": mi.transform}
 		var tex := hair_glb.get_base_dir().path_join("hair_tex/%s.png" % style)
 		if ResourceLoader.exists(tex):
 			_shells[style]["tex"] = load(tex)
@@ -1056,44 +1061,77 @@ static var _skull_radii := {}
 ## along its own direction by how far the new skull lies outside the old one there, so it keeps
 ## its height above the scalp, its hairline and its fall. On the body it was made for, unchanged.
 static func _refit_hair(m: Mesh, at: Transform3D, bone: String) -> Mesh:
-	if player_glb == HAIR_FIT_GLB or not (m is ArrayMesh):
-		return m
+	return _refit_styles([[m, at, bone]])[0]
+
+
+## _refit_hair for each [mesh, at, bone] in styles, in order. The heads are measured and each
+## surface's arrays read here first; then every surface's points are refit side by side on the
+## worker threads (each reads only the heads' measurements and writes only its own arrays); then
+## the meshes are built here. The rendering server is asked only from this thread.
+static func _refit_styles(styles: Array) -> Array:
+	var out := []
+	var jobs := []
+	var built := {}
+	for st: Array in styles:
+		var m: Mesh = st[0]
+		var bone: String = st[2]
+		out.append(m)
+		if player_glb == HAIR_FIT_GLB or not (m is ArrayMesh):
+			continue
+		if _skull_outline(HAIR_FIT_GLB, bone).is_empty() or _skull_outline(player_glb, bone).is_empty():
+			continue
+		_face_shift(bone)
+		_nose_tip(player_glb, bone)
+		_face_front(player_glb, bone)
+		_neck_outline(player_glb, bone)
+		var am := m as ArrayMesh
+		built[out.size() - 1] = ArrayMesh.new()
+		for s in range(am.get_surface_count()):
+			jobs.append([out.size() - 1, s, am.surface_get_arrays(s), st[1], bone])
+	_each_set(jobs, func(j: int) -> void:
+		var job: Array = jobs[j]
+		_refit_points(job[2], job[3], job[4]))
+	for job: Array in jobs:
+		var k: int = job[0]
+		var am := styles[k][0] as ArrayMesh
+		var mesh: ArrayMesh = built[k]
+		var s: int = job[1]
+		mesh.add_surface_from_arrays(am.surface_get_primitive_type(s), job[2])
+		mesh.surface_set_material(s, am.surface_get_material(s))
+	for k: int in built:
+		out[k] = built[k]
+	return out
+
+
+## One surface's arrays (a) of a style on the bone's head, refit in place (see _refit_hair).
+static func _refit_points(a: Array, at: Transform3D, bone: String) -> void:
 	var old_r := _skull_outline(HAIR_FIT_GLB, bone)
 	var new_r := _skull_outline(player_glb, bone)
-	if old_r.is_empty() or new_r.is_empty():
-		return m
 	var shift := _face_shift(bone)
 	var nose := _nose_tip(player_glb, bone)
 	var face := _face_front(player_glb, bone)
 	var neck := _neck_outline(player_glb, bone)
-	var am := m as ArrayMesh
-	var out := ArrayMesh.new()
 	var back := at.affine_inverse()
-	for s in range(am.get_surface_count()):
-		var a := am.surface_get_arrays(s)
-		var vs: PackedVector3Array = a[Mesh.ARRAY_VERTEX]
-		var on_face := PackedByteArray()
-		on_face.resize(vs.size())
-		for i in range(vs.size()):
-			var q := at * vs[i] - SKULL_MID
-			var d := q.normalized()
-			var lift := _skull_at(new_r, d) - _skull_at(old_r, d)
-			var p := SKULL_MID + shift + q + d * lift
-			on_face[i] = 1 if _on_face(p, nose, face) or _on_cheek(p, nose, neck) else 0
-			vs[i] = back * _clear_neck(_clear_eyes(p, nose), nose, neck)
-		a[Mesh.ARRAY_VERTEX] = vs
-		# A lock that would lie on or through his face below his nose goes (see _on_face).
-		var idx = a[Mesh.ARRAY_INDEX]
-		if idx is PackedInt32Array:
-			var kept := PackedInt32Array()
-			for f in range(0, idx.size(), 3):
-				if on_face[idx[f]] + on_face[idx[f + 1]] + on_face[idx[f + 2]] == 0:
-					kept.append_array([idx[f], idx[f + 1], idx[f + 2]])
-			if kept.size() > 0:
-				a[Mesh.ARRAY_INDEX] = kept
-		out.add_surface_from_arrays(am.surface_get_primitive_type(s), a)
-		out.surface_set_material(s, am.surface_get_material(s))
-	return out
+	var vs: PackedVector3Array = a[Mesh.ARRAY_VERTEX]
+	var on_face := PackedByteArray()
+	on_face.resize(vs.size())
+	for i in range(vs.size()):
+		var q := at * vs[i] - SKULL_MID
+		var d := q.normalized()
+		var lift := _skull_at(new_r, d) - _skull_at(old_r, d)
+		var p := SKULL_MID + shift + q + d * lift
+		on_face[i] = 1 if _on_face(p, nose, face) or _on_cheek(p, nose, neck) else 0
+		vs[i] = back * _clear_neck(_clear_eyes(p, nose), nose, neck)
+	a[Mesh.ARRAY_VERTEX] = vs
+	# A lock that would lie on or through his face below his nose goes (see _on_face).
+	var idx = a[Mesh.ARRAY_INDEX]
+	if idx is PackedInt32Array:
+		var kept := PackedInt32Array()
+		for f in range(0, idx.size(), 3):
+			if on_face[idx[f]] + on_face[idx[f + 1]] + on_face[idx[f + 2]] == 0:
+				kept.append_array([idx[f], idx[f + 1], idx[f + 2]])
+		if kept.size() > 0:
+			a[Mesh.ARRAY_INDEX] = kept
 
 
 ## How much higher (and further forward) the face of the body in use sits on its head bone than
@@ -1110,8 +1148,16 @@ static func _face_shift(bone: String) -> Vector3:
 
 
 ## The tip of the nose of glb's body at rest, in bone's space: the skin's foremost point on the
-## middle line of the face. Vector3.INF when the body has none.
+## middle line of the face. Vector3.INF when the body has none. Measured once per body and bone
+## (every hair style asks for it; measuring means loading the whole body).
 static func _nose_tip(glb: String, bone: String) -> Vector3:
+	var key := "nose:" + glb + ":" + bone
+	if not _skull_radii.has(key):
+		_skull_radii[key] = _measure_nose_tip(glb, bone)
+	return _skull_radii[key]
+
+
+static func _measure_nose_tip(glb: String, bone: String) -> Vector3:
 	var best := Vector3.INF
 	if not ResourceLoader.exists(glb):
 		return best
@@ -1575,12 +1621,14 @@ static func _skull(m: Mesh) -> Mesh:
 				ns[i] = n.normalized()
 		a[Mesh.ARRAY_NORMAL] = ns
 		var shapes := am.surface_get_blend_shape_arrays(s)
-		for sh in shapes:
+		_each_set(shapes, func(set_i: int) -> void:
+			var sh: Array = shapes[set_i]
 			var bv: PackedVector3Array = (sh as Array)[Mesh.ARRAY_VERTEX]
 			for i in range(bv.size()):
 				if lift.has(k[i]):
 					bv[i] -= lift[k[i]] * lifted
 			(sh as Array)[Mesh.ARRAY_VERTEX] = bv
+		)
 		out.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, a, shapes, {}, _custom_format(am, s))
 		out.surface_set_material(s, am.surface_get_material(s))
 		out.surface_set_name(s, am.surface_get_name(s))
@@ -1782,12 +1830,13 @@ static func _kit_edges(m: Mesh) -> Mesh:
 		if pts[v].y > low - 0.01:
 			cut[v] = true
 	var mid := _depth_middle(gv)
-	var measure := func(vs: PackedVector3Array, kind: float) -> Array:
+	# The points from i0 to i1 (_in_blocks measures a surface in blocks side by side).
+	var measure := func(vs: PackedVector3Array, kind: float, i0: int, i1: int) -> Array:
 		var out := PackedFloat32Array()
 		out.resize(vs.size() * 4)
 		var more := PackedFloat32Array()
 		more.resize(vs.size() * 4)
-		for i in range(vs.size()):
+		for i in range(i0, i1):
 			var p := vs[i]
 			var e := Vector4(FAR, FAR, FAR, kind)
 			more[i * 4] = p.z - _middle_at(mid, p.y)
@@ -1835,7 +1884,7 @@ static func _kit_edges(m: Mesh) -> Mesh:
 			out[i * 4 + 1] = e.y
 			out[i * 4 + 2] = e.z
 			out[i * 4 + 3] = e.w
-		return [out, more]
+		return [out.slice(i0 * 4, i1 * 4), more.slice(i0 * 4, i1 * 4)]
 	var out := ArrayMesh.new()
 	out.blend_shape_mode = am.blend_shape_mode
 	for b in range(am.get_blend_shape_count()):
@@ -1848,7 +1897,7 @@ static func _kit_edges(m: Mesh) -> Mesh:
 			a[Mesh.ARRAY_VERTEX] = gv
 		if s == gs or s == ss or s == ks:
 			var vs: PackedVector3Array = a[Mesh.ARRAY_VERTEX]
-			var both: Array = measure.call(vs, 1.0 if s == gs else (0.5 if s == ss else SKIN))
+			var both: Array = _in_blocks(measure, vs, 1.0 if s == gs else (0.5 if s == ss else SKIN))
 			a[Mesh.ARRAY_CUSTOM1] = both[0]
 			a[Mesh.ARRAY_CUSTOM2] = both[1]
 			flags = (flags & ~EDGE_MASK) | EDGE_FORMAT
@@ -1902,9 +1951,16 @@ static func _drape(ga: Array, bsa: Array, gi: PackedInt32Array, wid: PackedInt32
 	one.resize(count)
 	for i in range(gv.size()):
 		one[wid[i]] = i
+	# Each corner's neighbours in one list (nb_at[w] to nb_at[w + 1]), in nbr's order.
+	var nb_at := PackedInt32Array([0])
+	var nb := PackedInt32Array()
+	for w in range(count):
+		nb.append_array(nbr[w])
+		nb_at.append(nb.size())
 	var sets := [ga]
 	sets.append_array(bsa)
-	for arrs: Array in sets:
+	_each_set(sets, func(set_i: int) -> void:
+		var arrs: Array = sets[set_i]
 		var vs: PackedVector3Array = arrs[Mesh.ARRAY_VERTEX]
 		var p := PackedVector3Array()
 		p.resize(count)
@@ -1947,7 +2003,7 @@ static func _drape(ga: Array, bsa: Array, gi: PackedInt32Array, wid: PackedInt32
 		flf.resize(nl * nx)
 		flf.fill(-INF)
 		var flb := flf.duplicate()
-		var si := sets.find(arrs)
+		var si := set_i
 		if si >= 0 and si < shorts_sets.size():
 			for q: Vector3 in shorts_sets[si]:
 				if q.y < lo or q.y > hi:
@@ -1993,16 +2049,18 @@ static func _drape(ga: Array, bsa: Array, gi: PackedInt32Array, wid: PackedInt32
 			p[w] += dz[w]
 		# Then the knit's surface is eased: the lumps of muscle under it go (the hem's own edge
 		# keeps its line).
+		var eased := PackedInt32Array()
+		for w in range(count):
+			if not (wt[w] <= 0.0 or nbr[w].is_empty() or edge.has(w)):
+				eased.append(w)
 		for it in range(DRAPE_SMOOTH):
 			for f in [0.5, -0.53]:
 				var t := p.duplicate()
-				for w in range(count):
-					if wt[w] <= 0.0 or nbr[w].is_empty() or edge.has(w):
-						continue
+				for w in eased:
 					var avg := Vector3.ZERO
-					for u in nbr[w]:
-						avg += p[u]
-					t[w] = p[w] + f * wt[w] * (avg / float(nbr[w].size()) - p[w])
+					for j in range(nb_at[w], nb_at[w + 1]):
+						avg += p[nb[j]]
+					t[w] = p[w] + f * wt[w] * (avg / float(nb_at[w + 1] - nb_at[w]) - p[w])
 				p = t
 		# The easing pulls some hem points back inside the shorts (their waistband showed through the
 		# hem in bumps): last of all, every point stays DRAPE_OVER outside the shorts anywhere within a
@@ -2043,7 +2101,7 @@ static func _drape(ga: Array, bsa: Array, gi: PackedInt32Array, wid: PackedInt32
 		arrs[Mesh.ARRAY_VERTEX] = vs
 		var ns: PackedVector3Array = arrs[Mesh.ARRAY_NORMAL]
 		if ns == null or ns.is_empty():
-			continue
+			return
 		var acc := PackedVector3Array()
 		acc.resize(count)
 		for f in range(0, gi.size(), 3):
@@ -2059,6 +2117,7 @@ static func _drape(ga: Array, bsa: Array, gi: PackedInt32Array, wid: PackedInt32
 				var n := acc[wid[i]].normalized()
 				ns[i] = n if n.dot(ns[i]) >= 0.0 else -n
 		arrs[Mesh.ARRAY_NORMAL] = ns
+	)
 
 
 ## The shorts' front over the groin (2026-11-22: the shorts read as briefs). The body's shorts are
@@ -2103,7 +2162,8 @@ static func _flat_front(sa: Array, sbs: Array) -> void:
 			nbr[b][a] = true
 	var sets := [sa]
 	sets.append_array(sbs)
-	for arrs: Array in sets:
+	_each_set(sets, func(set_i: int) -> void:
+		var arrs: Array = sets[set_i]
 		var vs: PackedVector3Array = arrs[Mesh.ARRAY_VERTEX]
 		var p := PackedVector3Array()
 		p.resize(count)
@@ -2175,7 +2235,7 @@ static func _flat_front(sa: Array, sbs: Array) -> void:
 		arrs[Mesh.ARRAY_VERTEX] = vs
 		var ns: PackedVector3Array = arrs[Mesh.ARRAY_NORMAL]
 		if ns == null or ns.is_empty():
-			continue
+			return
 		# Each normal turned by as much as the faces round it turned (the faces' own normals before
 		# and after), so the crowded faces of the fork, which never moved, cannot spoil it.
 		var n0 := _face_normals(before, si, wid, count)
@@ -2192,6 +2252,34 @@ static func _flat_front(sa: Array, sbs: Array) -> void:
 					continue
 				ns[i] = ns[i].rotated(ax.normalized(), a.angle_to(b)).normalized()
 		arrs[Mesh.ARRAY_NORMAL] = ns
+	)
+
+
+## fn(j) for every shape set j (the rest pose, then each build morph), side by side on the worker
+## threads. Each set reads only the shared welds and writes only its own arrays, so the result is
+## the same as one after another; it takes a fraction of the time (2026-11-26: the guernsey's
+## drape over 20 sets was 3.4 s of each club's first build).
+static func _each_set(sets: Array, fn: Callable) -> void:
+	var task := WorkerThreadPool.add_group_task(fn, sets.size())
+	WorkerThreadPool.wait_for_group_task_completion(task)
+
+
+## measure(vs, kind, i0, i1) over all of vs in blocks, side by side on the worker threads (each
+## point is measured on its own), joined in order: the same two arrays as one pass.
+static func _in_blocks(measure: Callable, vs: PackedVector3Array, kind: float) -> Array:
+	var n := 16
+	var parts := []
+	for b in range(n):
+		parts.append([])
+	var task := WorkerThreadPool.add_group_task(func(b: int) -> void:
+		parts[b].append_array(measure.call(vs, kind, vs.size() * b / n, vs.size() * (b + 1) / n)), n)
+	WorkerThreadPool.wait_for_group_task_completion(task)
+	var out := PackedFloat32Array()
+	var more := PackedFloat32Array()
+	for part: Array in parts:
+		out.append_array(part[0])
+		more.append_array(part[1])
+	return [out, more]
 
 
 ## Per welded corner, the sum of its faces' normals (area weighted).
@@ -2268,7 +2356,8 @@ static func _smooth_hem(ga: Array, bsa: Array, gi: PackedInt32Array, wid: Packed
 		return
 	var sets := [ga]
 	sets.append_array(bsa)
-	for arrs: Array in sets:
+	_each_set(sets, func(set_i: int) -> void:
+		var arrs: Array = sets[set_i]
 		var vs: PackedVector3Array = arrs[Mesh.ARRAY_VERTEX]
 		var p := PackedVector3Array()
 		p.resize(count)
@@ -2289,7 +2378,7 @@ static func _smooth_hem(ga: Array, bsa: Array, gi: PackedInt32Array, wid: Packed
 		# Normals of the moved corners from the faces round them.
 		var ns: PackedVector3Array = arrs[Mesh.ARRAY_NORMAL]
 		if ns == null or ns.is_empty():
-			continue
+			return
 		var acc := PackedVector3Array()
 		acc.resize(count)
 		for f in range(0, gi.size(), 3):
@@ -2308,6 +2397,7 @@ static func _smooth_hem(ga: Array, bsa: Array, gi: PackedInt32Array, wid: Packed
 				var n := acc[wid[i]].normalized()
 				ns[i] = n if n.dot(ns[i]) >= 0.0 else -n
 		arrs[Mesh.ARRAY_NORMAL] = ns
+	)
 
 
 ## One open edge of the guernsey (ids: welded corners in order round it): its raw points, the
@@ -2933,20 +3023,30 @@ static func _drop_unused(a: Array, shapes: Array) -> void:
 			keep.append(i)
 	if keep.size() == n:
 		return
+	# The kept points in runs of neighbours (start, end), each run copied whole.
+	var runs := PackedInt32Array()
+	for i in keep:
+		if runs.is_empty() or i != runs[runs.size() - 1]:
+			runs.append(i)
+			runs.append(i + 1)
+		else:
+			runs[runs.size() - 1] = i + 1
 	for j in range(idx.size()):
 		idx[j] = map[idx[j]]
 	a[Mesh.ARRAY_INDEX] = idx
-	for arrs in [a] + shapes:
+	var sets := [a] + shapes
+	_each_set(sets, func(set_i: int) -> void:
+		var arrs: Array = sets[set_i]
 		for t in range(Mesh.ARRAY_MAX):
 			if t == Mesh.ARRAY_INDEX or arrs[t] == null:
 				continue
 			var src = arrs[t]
 			var per: int = src.size() / n
 			var dst = src.slice(0, 0)
-			for r in keep:
-				for c in range(per):
-					dst.append(src[r * per + c])
+			for r in range(0, runs.size(), 2):
+				dst.append_array(src.slice(runs[r] * per, runs[r + 1] * per))
 			arrs[t] = dst
+	)
 
 
 ## Adds the points in more (no index) to the end of a, channel by channel.
