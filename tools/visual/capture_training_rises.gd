@@ -36,7 +36,7 @@ func _run() -> void:
 	state.set_setting("seen_training_intro", true)
 	state.start_season(club, db.club_list(club))
 	state.tutorials = false
-	UK.apply_appearance("dark")
+	UK.apply_palette()
 	var rises := []
 	var n := 0
 	for p in state.my_list:

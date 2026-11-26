@@ -27,7 +27,7 @@ func _run() -> void:
 	state.autosave_enabled = false
 	state.save_path = "user://capture_votes.save"
 	state.settings_path = "user://capture_votes.cfg"
-	load("res://scripts/ui/UiKit.gd").apply_appearance("dark")
+	load("res://scripts/ui/UiKit.gd").apply_palette()
 	_vp = SubViewport.new()
 	_vp.size = Vector2i(390, 844)
 	_vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS

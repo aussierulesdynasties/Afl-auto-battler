@@ -59,7 +59,7 @@ func _run() -> void:
 	_state.autosave_enabled = false
 	_state.save_path = "user://test_contrast.save"
 	_state.settings_path = "user://test_contrast.cfg"
-	UK.apply_appearance("dark")
+	UK.apply_palette()
 	_forge_clubs()
 	_t("_test_scale_is_ordered")
 	_t("_test_text_tokens_on_every_step")

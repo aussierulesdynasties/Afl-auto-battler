@@ -18,6 +18,7 @@ func run() -> void:
 	_t("_test_named_wings")
 	_t("_test_named_players")
 	_t("_test_engine_rewards_wings")
+	_t("_test_engine_kept_per_match")
 	_t("_test_tagger")
 	_t("_test_tag_targets")
 	_t("_test_no_prescriptions")
@@ -228,19 +229,62 @@ func _test_engine_rewards_wings() -> void:
 			"Midfield contest is the three centre-square midfielders")
 
 
+## The match keeps each man's engine skills the first time it asks
+## (MatchSim._engine_cache): after a full match every kept number is still
+## what Skills.engine gives, and a copy of a man picked to another line reads
+## his skills at that line, not the line kept first.
+func _test_engine_kept_per_match() -> void:
+	var home := Squad.new("SYD", GameDB.club_list("SYD"), true, "SYD")
+	var away := Squad.new("COL", GameDB.club_list("COL"), false, "COL")
+	var sim := MatchSim.new(home, away, 7)
+	sim.run()
+	var men: Array = home.ground + home.bench + away.ground + away.bench
+	_check(men.size() >= 44, "Both sides field their 22 (%d)" % men.size())
+	var kept := 0
+	var wrong := 0
+	for p in men:
+		var mine: Dictionary = sim._engine_cache.get(str(p["id"]), {})
+		var row: Dictionary = mine.get(p.get("role"), {})
+		for key in row:
+			kept += 1
+			if float(row[key]) != Skills.engine(p, key):
+				wrong += 1
+	_check(kept > 200 and wrong == 0,
+			"Every kept engine skill is Skills.engine's (%d kept, %d wrong)" % [kept, wrong])
+	# A man with no AFL position of record reads his line's scale; the same
+	# man picked to another line in a fresh match.
+	var fresh := MatchSim.new(Squad.new("SYD", GameDB.club_list("SYD"), true, "SYD"),
+			Squad.new("COL", GameDB.club_list("COL"), false, "COL"), 7)
+	var man: Dictionary = (home.ground[0] as Dictionary).duplicate()
+	man.erase("apos")
+	man["role"] = "DEF"
+	var other := man.duplicate()
+	other["role"] = "RUCK"
+	var differs := false
+	for key in ["contested", "pressure", "contested_marking", "intercept"]:
+		_check(fresh._a(man, key) == Skills.engine(man, key) * fresh.fit(man)
+				and fresh._a(other, key) == Skills.engine(other, key) * fresh.fit(other),
+				"Each line's copy reads %s at its own line" % key)
+		differs = differs or Skills.engine(man, key) != Skills.engine(other, key)
+	_check(differs, "The two lines' scales differ for at least one of those skills")
+
+
 func _test_tagger() -> void:
 	var stopper := _mid("T", 40, 45, 25, 95)
 	var star := _mid("S", 70, 80, 95, 95)
 	_check(Roles.is_tagger(stopper) and Roles.label(stopper) == "Tagger", "A stopper is a tagger")
 	_check(not Roles.is_tagger(star), "A star ball-winner who tackles is not a tagger")
 	# How rare a tagger is, on the data without the hand-set OVR rows.
+	var skip: bool = GameDB.skip_ovr_overrides
 	GameDB.skip_ovr_overrides = true
 	GameDB.reload()
 	var n := 0
 	for p in GameDB.players:
 		if Roles.is_tagger(p):
 			n += 1
-	GameDB.skip_ovr_overrides = false
+	# Back to the suite's own setting (AFL_SKIP_OVR_ROWS), not "rows on": every
+	# later function would otherwise play on the director's hand-set rows.
+	GameDB.skip_ovr_overrides = skip
 	GameDB.reload()
 	_check(BalanceGate.held(n >= 8 and n <= 40, "tagger count 8-40"), "Taggers are a specialist few (%d)" % n)
 	# In a match, a tagger on the ground makes the tag bite harder.

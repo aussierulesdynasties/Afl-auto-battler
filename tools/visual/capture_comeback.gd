@@ -82,7 +82,7 @@ func _run() -> void:
 	_start(state, db, club, found)
 	for q in range(3):
 		state.pending_sim.run_quarter()
-	UK.apply_appearance("dark")
+	UK.apply_palette()
 	_size_window()
 	var scene = load("res://scenes/MatchScene.tscn").instantiate()
 	root.add_child(scene)

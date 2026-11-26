@@ -53,6 +53,15 @@ func _init(club_codes: Array, club_lists: Dictionary, p_seed: int = 0, p_year: i
 	for c in clubs:
 		lists[c] = club_lists.get(c, [])
 	seed = p_seed
+	# A year's count no fixture can give every club (19 clubs at 2023's 23:
+	# 437 games for two clubs a match) plays one fewer in the fewest rounds
+	# that fit it, so every club plays the same: 22 each in 24 rounds, two
+	# byes each, in 2023 and 2024 (director, 2026-11-25: "All play 22";
+	# bug bash P1-8).
+	var games := int(rules.get("games", 0))
+	if games > clubs.size() - 1 and (games * clubs.size()) % 2 == 1:
+		rules["games"] = games - 1
+		rules["rounds"] = games - 1
 	rules["rounds"] = rounds_to_fit(int(rules.get("rounds", REGULAR_ROUNDS)), int(rules.get("games", 0)), clubs.size())
 	ladder = {}
 	for c in clubs:
