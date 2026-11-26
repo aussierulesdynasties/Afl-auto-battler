@@ -173,7 +173,7 @@ static func refresh(state: Dictionary, lists: Dictionary, year: int, career_seed
 	# 2. A season has turned: ties apart fade, proteges grow up.
 	var last := int(state.get("year", 0))
 	if last > 0 and year > last:
-		_age(state, club_of, by_id, year, year - last)
+		_age(state, club_of, by_id, year - last)
 	# 3. Family, wherever each man is listed.
 	var added := _family(state, by_id, year)
 	# 4. Every club topped up by the same rule.
@@ -189,7 +189,7 @@ static func refresh(state: Dictionary, lists: Dictionary, year: int, career_seed
 	return added
 
 
-static func _age(state: Dictionary, club_of: Dictionary, by_id: Dictionary, year: int, seasons: int) -> void:
+static func _age(state: Dictionary, club_of: Dictionary, by_id: Dictionary, seasons: int) -> void:
 	var by: Dictionary = state["by"]
 	var ids: Array = by.keys()
 	ids.sort()
