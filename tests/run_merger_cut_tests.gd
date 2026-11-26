@@ -411,6 +411,9 @@ func _test_merger_pc(sz: Vector2i) -> void:
 		var act := (scene.find_child("MergerCard", true, false) as Node).find_child("Delist", true, false) as Button
 		why = await _tap(act)
 		_check(why == "", "PC %s: a real tap on the card's Delist for %s lands (%s)" % [tag, id, why])
+		var crossed := scene.find_child("MergerRow_" + id, true, false)
+		_check(crossed != null and crossed.find_child("CrossedOff", true, false) != null,
+				"PC %s: %s's row is crossed off once he is marked" % [tag, id])
 	var marked := scene.find_child("MergerCard", true, false)
 	_check(marked != null and marked.find_child("DelistGain", true, false) != null and marked.find_child("DelistCost", true, false) != null
 			and marked.find_child("Keep", true, false) != null, "PC %s: the card states the gain and the cost, then Keep" % tag)

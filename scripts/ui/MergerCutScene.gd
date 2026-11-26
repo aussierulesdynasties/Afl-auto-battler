@@ -455,18 +455,35 @@ func _pc_row(p: Dictionary, h: float, side_w: float) -> Button:
 	var row := UiKit.hbox(0)
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	m.add_child(row)
-	var who := UiKit.ellipsis(GameDB.player_display_name(p), UiKit.BODY, UiKit.BAD if _going.has(id) else UiKit.TEXT, true)
+	var marked := _going.has(id)
+	var who := UiKit.ellipsis(GameDB.player_display_name(p), UiKit.BODY, UiKit.BAD if marked else UiKit.TEXT, true)
 	who.name = "PlayerName_" + id
 	who.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	who.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	row.add_child(who)
+	if marked:
+		# Crossed off the list: a line through his name as well as red, so the
+		# mark is not colour alone, and it costs the name no room.
+		var w := who.get_theme_font("font").get_string_size(who.text, HORIZONTAL_ALIGNMENT_LEFT, -1,
+				who.get_theme_font_size("font_size")).x
+		var cross := ColorRect.new()
+		cross.name = "CrossedOff"
+		cross.color = UiKit.BAD
+		cross.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		cross.anchor_top = 0.5
+		cross.anchor_bottom = 0.5
+		cross.offset_top = -1.0
+		cross.offset_bottom = 1.0
+		cross.offset_right = w
+		who.add_child(cross)
+		who.resized.connect(func(): cross.offset_right = minf(w, who.size.x))
 	var tag := Ratings.role_tag(p)
 	var role := UiKit.line(tag, UiKit.SMALL, UiKit.ROLE_COLOUR.get(tag.split("/")[0], UiKit.MUTED), true)
 	role.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	role.custom_minimum_size.x = UiKit.FONT.get_string_size(tag, HORIZONTAL_ALIGNMENT_LEFT, -1, UiKit.px(UiKit.SMALL)).x + UiKit.Space.CLOSE
 	role.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	row.add_child(role)
-	var side := UiKit.line(_side_name(p), UiKit.SMALL, UiKit.club_ink(_side(p)), true)
+	var side := UiKit.line(_side_name(p), UiKit.SMALL, UiKit.club_name_colour(UiKit.club_ink(_side(p))), true)
 	side.name = "Side"
 	side.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	side.custom_minimum_size.x = side_w + 18.0
@@ -505,7 +522,7 @@ func _pc_card(p: Dictionary, big: bool, full: bool) -> VBoxContainer:
 	role.custom_minimum_size.x = 60
 	h.add_child(role)
 	var side := _side(p)
-	var from := UiKit.line(("From " if side != GameState.my_club else "") + GameDB.club_name(side), tag_size, UiKit.club_ink(side), true)
+	var from := UiKit.line(("From " if side != GameState.my_club else "") + GameDB.club_name(side), tag_size, UiKit.club_name_colour(UiKit.club_ink(side)), true)
 	from.name = "From"
 	h.add_child(from)
 	v.add_child(h)
