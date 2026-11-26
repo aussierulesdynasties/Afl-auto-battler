@@ -511,6 +511,11 @@ func _test_pc(t: Array, z: Dictionary, gap: int) -> Control:
 			l.name = "DayLine_" + key
 			v.add_child(l)
 			v.add_child(UiKit.spacer(maxi(2, gap - 4)))
+	# The four columns stand as tall as the tallest, so every "All results ›"
+	# sits on one line: a day line that wraps does not drop its link.
+	var push := Control.new()
+	push.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	v.add_child(push)
 	var all := UiKit.text_action("All results ›", UiKit.BODY)
 	all.name = "AllResults_" + key
 	all.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
