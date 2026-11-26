@@ -758,7 +758,8 @@
        {
         "op": "trust",
         "d": -8,
-        "why": "You dropped him in his last season"
+        "why": "You dropped him in his last season",
+        "scar": true
        },
        {
         "op": "culture",
