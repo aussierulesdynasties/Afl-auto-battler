@@ -1,7 +1,7 @@
 {
  "_about": "Blocks and towers that OSM mapped after the era snapshot, judged by eye against the era aerial (era_merge.py): built_since = open ground, a car park or a building site then (left out); low = a different, lower building stood there then (kept at 6 m); every other reviewed id stood. Ikon Park, Whitten and WACA: Esri Aug/Feb 2013; Subiaco Jan 2017; Football Park Feb 2013.",
  "waca": {
-  "aerial": "Google Earth historical imagery, 22 Sep 2000 (oldest clear cover; reference only, never committed), registered onto the 1 m square at 1.26 m/px. Blocks and towers (1,500 m2 or 4 storeys and over) inside the frame are checked; smaller buildings follow the colour test; the CBD beyond the frame is not reviewed and stands. The 2013 review is kept as waca_2013.",
+  "aerial": "Google Earth historical imagery, 22 Sep 2000 (oldest clear cover; reference only, never committed), registered onto the 1 m square at 1.26 m/px. Blocks and towers (1,500 m2 or 4 storeys and over) inside the frame are checked; smaller buildings follow the colour test; the CBD beyond the frame is not reviewed and stands. The 2013 review is kept as waca_2013. Across the river beyond the frame: Crown Towers (2016), Crown Promenade (2004), the members' car park and Perth Stadium's gates (2017) are built since; the casino, hotel and Burswood Dome stood.",
   "reviewed": [
    148352333,
    148352343,
@@ -207,7 +207,16 @@
    167229239,
    1089493099,
    166830283,
-   1089077883
+   1089077883,
+   698207742,
+   843429934,
+   695799457,
+   695799458,
+   695799459,
+   695799460,
+   695799461,
+   166830281,
+   370188595
   ],
   "built_since": [
    147463603,
@@ -253,7 +262,16 @@
    146788732,
    726608520,
    167228683,
-   167228682
+   167228682,
+   698207742,
+   843429934,
+   695799457,
+   695799458,
+   695799459,
+   695799460,
+   695799461,
+   166830281,
+   370188595
   ],
   "low": [
    147463615,
