@@ -30,6 +30,8 @@ jobs:
       suites: ${{ steps.list.outputs.suites }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          sparse-checkout: tools   # this job reads only tools/ci_long_suites.txt
       - id: list
         run: |
           suites=$( (grep -vE '^[[:space:]]*(#|$)' tools/ci_long_suites.txt; echo calibration) | sort -u | python3 -c 'import json,sys; print(json.dumps([l.strip() for l in sys.stdin if l.strip()]))')
@@ -58,6 +60,12 @@ jobs:
         suite: ${{ fromJSON(needs.plan.outputs.suites) }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          filter: blob:none   # fetch only the files checked out
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |   # .claude/review (5 GB of review boards) is never read by CI
+            /*
+            !/.claude/review/
 
       - name: Epic/MetaHuman files (private repo, docs/EPIC_ASSETS.md)
         uses: ./.github/actions/epic-assets
