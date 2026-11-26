@@ -269,6 +269,12 @@ var _asked := {}             # one-off moment keys already offered
 ## on the bench) or "keep" (the rotations leave him out there).
 var _held := {}
 var _traits := {}            # player id -> Traits.of(), cached
+## Skills.engine by player id, then his line on the day, then skill (_a). It
+## reads only his ratings and his AFL position (his line's when he has none of
+## record), and none of them change during a match; the line is in the key
+## because the same man can come in as a copy picked to another line
+## (Ratings._for_slot). So every result is as it was, only sooner.
+var _engine_cache := {}
 var synergies := [[], []]    # side -> active synergy keys (the starting 18)
 ## Team form (-1..1) from each club's recent results (Season.club_form), set
 ## from Squad.form. It touches two narrow things: composure (a side in form
@@ -5697,9 +5703,24 @@ func _trait(p: Dictionary, key: String) -> bool:
 	return known.has(key)
 
 
-## A player's attribute as he is playing right now.
+## A player's attribute as he is playing right now. Skills.engine is kept
+## the first time a match asks (_engine_cache): it is most of the engine's time.
 func _a(p: Dictionary, key: String) -> float:
-	return Skills.engine(p, key) * fit(p)
+	var id: String = p["id"]
+	var mine = _engine_cache.get(id)
+	if mine == null:
+		mine = {}
+		_engine_cache[id] = mine
+	var role = p.get("role")
+	var row = mine.get(role)
+	if row == null:
+		row = {}
+		mine[role] = row
+	var v = row.get(key)
+	if v == null:
+		v = Skills.engine(p, key)
+		row[key] = v
+	return v * fit(p)
 
 
 ## The back zone's role weights for a pick on ball use among `group`: each
