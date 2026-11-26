@@ -241,17 +241,19 @@ static func reason_text(r: Dictionary) -> String:
 ## Add the mark `k` from data/relations/modifiers.json, its size times `scale`
 ## (a temperament, the coach's standing: the caller's to give). `club` is where
 ## he is now; `src` who caused it (a player id for a mate's fallout, "" for the
-## coach). The same mark from the same source does not stack: it is renewed at
+## coach). `fade_scale` sizes how fast it fades (a temperament that holds a
+## grudge, under 1; one that forgets, over 1; a permanent mark stays permanent).
+## The same mark from the same source does not stack: it is renewed at
 ## the larger of the two sizes, so a man left out four weeks running carries
 ## one "left out" at full size, not four. Returns the opinion points it moved,
 ## 0 for an unknown key or a scale of 0.
 static func add(rel: Dictionary, key: String, k: String, year: int, when: String, club := "",
-		scale := 1.0, src := "") -> float:
+		scale := 1.0, src := "", fade_scale := 1.0) -> float:
 	var d := def(k)
 	if d.is_empty():
 		push_warning("Opinion.add: no mark called %s in %s" % [k, DEFS_PATH])
 		return 0.0
-	return add_raw(rel, key, k, float(d["v"]) * scale, float(d.get("fade", 1.0)), str(d.get("tag", "")),
+	return add_raw(rel, key, k, float(d["v"]) * scale, float(d.get("fade", 1.0)) * maxf(0.0, fade_scale), str(d.get("tag", "")),
 			str(d.get("why", "")), year, when, club, src)
 
 
