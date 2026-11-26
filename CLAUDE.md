@@ -111,6 +111,12 @@ number one development blocker.
 - **Close what you abandon.** A PR you are not finishing gets closed with one line saying why, so
   it stops taking runners on every main push.
 
+## Review boards and imagery (director, 2026-11-26)
+
+Review boards, WIP films, reference photos and aerial or satellite imagery go to the private repo
+`aussierulesdynasties/afl-review-archive` (same `.claude/review/` paths), never to this public repo, and never
+as a "save work in progress to main" commit. `.claude/review/` is ignored here.
+
 ## UI and writing
 
 Before touching any screen, copy or vignette, load the `afl-ui-writing` skill (visual identity, readability, colour, consistency, review test).
