@@ -3331,17 +3331,31 @@ func _test_trial_rating_and_old_cards() -> void:
 ## first week. {} if the test list has nobody.
 func _dev_learner() -> Dictionary:
 	var side := GameState.current_side()
-	for q in GameState.my_list:
-		if _line_in(side, str(q["id"])) in ["", "BENCH"] or int(q.get("injury_weeks", 0)) > 0:
-			continue
-		var jobs := GameState.learnable_jobs(q)
-		if jobs.is_empty():
-			continue
-		GameState.set_player_plan(str(q["id"]), GameState.LEARN_PREFIX + str(jobs[0]))
-		if GameState.project_job(q) == "":
-			continue
-		(q["project"] as Dictionary)["weeks"] = 1
-		return q
+	# As the list stands first; then, if nobody in the side clears it, one
+	# player's POT is lifted to what one more position needs (the attribute
+	# ratings can leave a side with nobody over that bar). These tests read
+	# the talk, not the bar.
+	for lift in [false, true]:
+		for q in GameState.my_list:
+			if _line_in(side, str(q["id"])) in ["", "BENCH"] or int(q.get("injury_weeks", 0)) > 0:
+				continue
+			var was: Variant = q.get("potential")
+			var need: int = GameState.learn_pot_needed(q)
+			if lift and need >= 0:
+				q["potential"] = maxi(int(q.get("potential", 0)), need)
+			var jobs := GameState.learnable_jobs(q)
+			if jobs.is_empty():
+				if lift:
+					if was == null:
+						q.erase("potential")
+					else:
+						q["potential"] = was
+				continue
+			GameState.set_player_plan(str(q["id"]), GameState.LEARN_PREFIX + str(jobs[0]))
+			if GameState.project_job(q) == "":
+				continue
+			(q["project"] as Dictionary)["weeks"] = 1
+			return q
 	return {}
 
 

@@ -33,6 +33,10 @@ func run() -> void:
 	_t("_test_medical_sub_2021")
 	_t("_test_no_sub_2016")
 	_t("_test_coaches_votes_from_2003")
+	_t("_test_last_disposal_from_2026")
+	_t("_test_substitute_hurt_only_once_on")
+	# Last: it loads another dataset and back.
+	_t("_test_profile_scales_follow_the_dataset")
 	GameState.reset()
 	GameState.delete_saved_career()
 	GameState.replay_seed = 0
@@ -511,3 +515,115 @@ func _test_coaches_votes_from_2003() -> void:
 	EraRules.year = 0
 	for n in [h1, f1, h2, f2, ms]:
 		n.free()
+
+
+## Before 2026 an untouched kick or handball over the line between the arcs
+## is a throw-in, or 1 time in 11 a free for insufficient intent; from 2026
+## it is always a free (director, 2026-11-26: "1 in 11 a free"; bug bash P1-7).
+func _test_last_disposal_from_2026() -> void:
+	var want := {1990: false, 2025: false, 2026: true, 2040: true, 0: true}
+	for y in want:
+		_check(EraRules.on("last_disposal", y) == bool(want[y]), "%d last-disposal free %s" % [y, str(want[y])])
+	_check(absf(MatchSim.INSUFFICIENT_INTENT_SHARE - 1.0 / 11.0) < 0.01,
+			"1 in 11 is an insufficient-intent free (%.3f)" % MatchSim.INSUFFICIENT_INTENT_SHARE)
+	var f50 := float(Ratings.T["forward50_line"])
+	var counts := {}
+	for y in [2025, 2026]:
+		var c := {"intent": 0, "plain": 0, "throwin": 0}
+		for seed in range(1, 31 if y == 2025 else 9):
+			var sim := _match(y, seed)
+			for e in sim.events:
+				var kind := str(e.get("kind", ""))
+				if kind == "last_disposal":
+					var intent := bool(e.get("intent", false))
+					c["intent" if intent else "plain"] += 1
+					if intent != str(e["text"]).begins_with("Insufficient intent"):
+						c["worded"] = str(e["text"])
+				elif kind == "throwin" and e.has("disposal_kind") and not bool(e.get("touched", true)) \
+						and ["kick", "handball"].has(str(e["disposal_kind"])) and absf(float(e["fp"])) < f50:
+					c["throwin"] += 1
+		counts[y] = c
+	var old: Dictionary = counts[2025]
+	var now: Dictionary = counts[2026]
+	_check(int(old["plain"]) == 0, "2025: no last-disposal free between the arcs (%d)" % old["plain"])
+	var cases := int(old["intent"]) + int(old["throwin"])
+	var share := float(old["intent"]) / maxf(1.0, float(cases))
+	_check(cases >= 40 and share > 0.03 and share < 0.2,
+			"2025: about 1 in 11 untouched exits between the arcs is a free (%d of %d)" % [old["intent"], cases])
+	_check(int(now["plain"]) > 0 and int(now["intent"]) == 0 and int(now["throwin"]) == 0,
+			"2026: every untouched exit between the arcs is a last-disposal free (%d free, %d intent, %d throw-ins)"
+			% [now["plain"], now["intent"], now["throwin"]])
+	for y in counts:
+		_check(not (counts[y] as Dictionary).has("worded"),
+				"%d: an intent free is called one, and only it: '%s'" % [y, (counts[y] as Dictionary).get("worded", "")])
+	EraRules.year = 0
+
+
+## The substitute gets the same injury roll as everyone, at a minute of the
+## match: hurt only if he is on by then (director, 2026-11-26: "His share of
+## the match"; bug bash P3-8).
+func _test_substitute_hurt_only_once_on() -> void:
+	for at in [3, 118]:
+		EraRules.year = 2011
+		EraRules.list_ahead = false
+		var sim := MatchSim.new(Squad.new("GEE", GameDB.club_list("GEE"), true, "GEE"),
+				Squad.new("CAR", GameDB.club_list("CAR"), false, "CAR"), 31)
+		var subs: Array = (sim.squads[0] as Squad).sub
+		_check(subs.size() == 1, "2011: Geelong names a substitute")
+		if subs.is_empty():
+			return
+		var sub_id := str((subs[0] as Dictionary)["id"])
+		for inj in sim._injury_plan.duplicate():
+			if str(inj["id"]) == sub_id:
+				sim._injury_plan.erase(inj)
+		sim._injury_plan.append({"side": 0, "id": sub_id, "at": at, "weeks": 2, "kind": "hamstring", "sub": true})
+		sim.run()
+		var on_min := -1
+		for e in sim.events:
+			if bool(e.get("substitute", false)) and str(e.get("player_id", "")) == sub_id:
+				on_min = int(e["min"])
+		var hurt := false
+		for r in sim.injuries:
+			if str(r["id"]) == sub_id:
+				hurt = true
+				_check(int(r["min"]) >= on_min, "Hurt at %d, after he came on at %d" % [r["min"], on_min])
+		_check(on_min >= 0, "The substitute comes on (seed 31)")
+		_check(hurt == (on_min >= 0 and on_min < at),
+				"Minute %d: on at %d, so %s" % [at, on_min, "hurt" if on_min < at else "not hurt"])
+	# His roll is everyone's: some substitutes are planned a knock, from their
+	# own dice, and a 2026 side has none to roll for.
+	var planned := 0
+	for y in [2021, 2026]:
+		EraRules.year = y
+		planned = 0
+		for seed in range(1, 121):
+			var sim := MatchSim.new(Squad.new("GEE", GameDB.club_list("GEE"), true, "GEE"),
+					Squad.new("CAR", GameDB.club_list("CAR"), false, "CAR"), seed)
+			for inj in sim._injury_plan:
+				if bool(inj.get("sub", false)):
+					planned += 1
+		if y == 2021:
+			_check(planned >= 3 and planned <= 25, "2021: about 4 in 100 substitutes are planned a knock (%d of 240)" % planned)
+		else:
+			_check(planned == 0, "2026: no substitute, no roll (%d)" % planned)
+	EraRules.year = 0
+
+
+## The graded scales come from the loaded dataset's players: after another
+## dataset loads, a rating is graded against its players, and back again
+## (bug bash P1-6).
+func _test_profile_scales_follow_the_dataset() -> void:
+	GameDB.reload()
+	var role := "MID"
+	var fresh: Array = PlayerProfile._values(role, "speed").duplicate()
+	_check(fresh.size() >= 40, "2026: %d midfielders on the scale" % fresh.size())
+	var DS = load("res://scripts/core/Datasets.gd")
+	DS.add("test_era_profile_1989", {"data_season": 1989, "start_year": 1990, "start_date": "1990-03-01",
+			"players": "res://tests/fixtures/dataset_1989_players.csv"})
+	GameDB.reload("test_era_profile_1989")
+	var old: Array = PlayerProfile._values(role, "speed").duplicate()
+	DS.remove("test_era_profile_1989")
+	GameDB.reload()
+	var back: Array = PlayerProfile._values(role, "speed")
+	_check(not old.is_empty() and old != fresh, "Another dataset: graded against its own %d midfielders, not 2026's %d" % [old.size(), fresh.size()])
+	_check(back == fresh, "Back on 2026: graded against 2026's players again")

@@ -80,6 +80,10 @@ func play(from: int, count: int, out: String, weather: String,
 	for i in range(args.size() - 1):
 		if str(args[i]) == "--year":
 			year = int(args[i + 1])
+	# And that season's rules (EraRules, read by the engine as the season being
+	# played: the substitute, the last-disposal free), as GameState sets them in a career.
+	if year > 0:
+		EraRules.year = year
 	# --bump APOS:KEY:N (docs/RATING_REBUILD.md §3, measuring the OVR weights): side
 	# i % 2 plays with every player at that AFL position (Rating.apos_of; "_" for a
 	# space, "Key_Defender") N points up on that attribute, within 1-99; the rival

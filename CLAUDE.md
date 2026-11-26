@@ -103,6 +103,9 @@ number one development blocker.
 - **Push once, not in drips.** Each push cancels the run in progress and goes to the back of the
   queue (45 cancelled PR runs on 26 Nov). Batch your commits locally and run the touched suites
   with `tools/run_tests.sh <suite>` before you push.
+- **Cancel with force-cancel.** A branch last synced before 26 Nov keeps running its shards
+  after a plain cancel. Use `POST actions/runs/<id>/force-cancel`, or run the `Repo hygiene`
+  workflow with `force_cancel: <run ids>` (MCP `actions_run_trigger`), or merge main in.
 - **Respect the open PR cap (Director Bible 7.48): at most 3 ready PRs.** Over the cap, open
   yours as a draft (drafts skip the game tests) and mark it ready when a slot frees. Count
   the open PRs that are not drafts (GitHub MCP `list_pull_requests`, or `gh pr list`). The
