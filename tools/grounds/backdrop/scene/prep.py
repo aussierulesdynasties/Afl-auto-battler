@@ -847,7 +847,12 @@ for el in js + PARTS + OVB:
         _hb = _BH[0](pts)
         if _hb is not None: h = _hb; _src = 'lidar' if _BH[1] else 'height map'
     if _GEH and _now_ok and _src != 'lidar' and str(el.get('id')) in _GEH:   # rooftop minus bare earth, read off Google Earth's 3D (ge_heights.py)
-        h = _GEH[str(el.get('id'))]; _src = 'google earth'
+        _gh = _GEH[str(el.get('id'))]
+        # an OCR misread can repeat on both reads (a "37 m" elevation read as 371 at Ikon Park and Moorabbin): a reading
+        # over 45 m stands only where the map or Overture puts a building of at least half that height there
+        _ref = h if h is not None else (_OVH(cx, cy, pts) if _OVH is not None else None)
+        if _gh <= 45 or (_ref is not None and _ref >= 0.5 * _gh): h = _gh; _src = 'google earth'
+        else: print('google earth reading rejected', el.get('id'), _gh, 'm (no other source near it)')
     if h is None and _OVH is not None and _now_ok:
         h = _OVH(cx, cy, pts); _src = 'overture' if h is not None else None
     if h is None: h = LV.get(kind, LV['*']); _src = 'GUESSED'
