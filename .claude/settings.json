@@ -1,6 +1,8 @@
 {
   "permissions": {
-    "deny": ["mcp__Blender"]
+    "deny": [
+      "mcp__Blender"
+    ]
   },
   "enabledPlugins": {
     "unity@inline": false,
@@ -8,7 +10,47 @@
     "meshy-3d-agent@inline": false
   },
   "deniedMcpServers": [
-    { "serverName": "rokoko" },
-    { "serverName": "claude.ai ElevenLabs" }
-  ]
+    {
+      "serverName": "rokoko"
+    },
+    {
+      "serverName": "claude.ai ElevenLabs"
+    }
+  ],
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/pr_guard.py\" start",
+            "timeout": 300
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash|mcp__github__merge_pull_request|mcp__github__enable_pr_auto_merge",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/pr_guard.py\" pretool",
+            "timeout": 180
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/pr_guard.py\" stop",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  }
 }
