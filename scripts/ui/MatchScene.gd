@@ -2724,7 +2724,10 @@ func _quarter_view(q: int) -> Control:
 ## A phone's break fits its sheet whatever the quarter threw up. Each fact can
 ## run to two lines; when together they would push the page into scrolling,
 ## the last ones give up their place, as a weather turn takes one (row 160).
-## Their plan (the rival's line) and the first fact always stay.
+## Their plan (the rival's line) always stays. When their plan and one fact
+## still need more room than the sheet has (two-line facts under a weather
+## turn), the page's parts close up from 6 px to 4 first, and only then does
+## that last fact go: what our calls did and Best so far are a tap away.
 func _fit_break_facts(facts: Control) -> void:
 	for i in range(2):
 		await get_tree().process_frame
@@ -2743,13 +2746,24 @@ func _fit_break_facts(facts: Control) -> void:
 			return
 		var drop: Control = null
 		var kept := 0
+		var rival := false
 		for ch in facts.get_children():
-			if (ch as Control).visible and not ch.has_meta("rival"):
+			if not (ch as Control).visible:
+				continue
+			if ch.has_meta("rival"):
+				rival = true
+			else:
 				kept += 1
 				drop = ch
-		if kept <= 1:
+		var page := facts.get_parent() as BoxContainer
+		if kept > 1:
+			drop.visible = false
+		elif page != null and page.get_theme_constant("separation") > UiKit.Space.TIGHT:
+			page.add_theme_constant_override("separation", UiKit.Space.TIGHT)
+		elif kept == 1 and rival:
+			drop.visible = false
+		else:
 			return
-		drop.visible = false
 		for i in range(2):
 			await get_tree().process_frame
 

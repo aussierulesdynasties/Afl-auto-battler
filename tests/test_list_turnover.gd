@@ -93,6 +93,16 @@ func _test_passing_list_turns_over(dataset: String, me: String) -> void:
 			draft.auto_until_user_turn()
 		if not GameState.finish_intake_draft():
 			break
+		# He passes the Rookie Draft too. Lists are lodged after it and a list
+		# still short is filled then (RookieList._finish), so the size below is
+		# the one the season starts on: a big retiring year can empty the
+		# National Draft's class before every club is back to the minimum
+		# (2034 here: 57 retired, his last 2 places waited for the lodging).
+		var rguard := 0
+		while RookieList.waiting(GameState) and rguard < 40:
+			rguard += 1
+			RookieList.choose(GameState, "")
+		RookieList.settle(GameState)
 		seasons += 1
 		# Each season against its own minimum (48 to 1993, 38 from 1994).
 		if GameState.my_list.size() - Contracts.min_list() < short_by:
