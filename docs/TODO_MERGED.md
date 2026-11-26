@@ -223,3 +223,4 @@ What has landed toward each open row of docs/TODO.md and docs/TODO_RULINGS.md, o
 - 202: Merged #2083: 3D 1.0 plan: Optus rebuild and Blacktown stages 1-3 on main (row 202).
 - 202: Merged #2145: Norwood Oval: the north and south frontages modelled one by one on the real land (row 202).
 - 202: Merged #2146: Night towers: the beams light the field and the men; the stadium and the land round it take the spill.
+- 202: Merged #2174: 3D 1.0 plan: surroundings, Norwood frontages, real boundary lines.
