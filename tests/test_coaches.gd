@@ -38,6 +38,7 @@ func run() -> void:
 	await _t("_test_ui_expiring")
 	await _t("_test_ui_promise_fits")
 	await _t("_test_ui_first_staff")
+	await _t("_test_ui_pc")
 	GameState.delete_saved_career()
 	GameState.replay_seed = 0
 	print(Ran.line("Coaches", self))
@@ -359,6 +360,131 @@ func _test_ui() -> void:
 	decorated.queue_free()
 	GameState.honour_roll.resize(GameState.honour_roll.size() - 2)
 	host.queue_free()
+
+
+## A PC (the director's picks, 2026-11-26, row 171). Staff: three cards across
+## at every PC size, each coach's grades on his card (Teaching, Tactics,
+## Man-management, Fit for this job). Coaching: one page in three columns, or at
+## 960x540 two stages, How we play | The club. Neither scrolls; a phone keeps
+## its one column.
+func _test_ui_pc() -> void:
+	var tree := Engine.get_main_loop() as SceneTree
+	_new_career("CAR")
+	var staff: Dictionary = GameState.club_staff("CAR")
+	var coach_jobs: Array = Coaches.JOBS.filter(func(j): return j != "SC" and staff.has(j))
+	_check(coach_jobs.size() >= 4, "Carlton has its coaches to show (%d)" % coach_jobs.size())
+	for sz in [Vector2i(1280, 720), Vector2i(960, 540)]:
+		var tag := "%dx%d" % [sz.x, sz.y]
+		tree.root.size = sz
+		var scene: Control = load("res://scenes/StaffScene.tscn").instantiate()
+		tree.root.add_child(scene)
+		await _frames(3)
+		var grid: GridContainer = scene.find_child("StaffGrid", true, false)
+		_check(grid != null and grid.columns == 3 and grid.get_child_count() == Coaches.JOBS.size(),
+				"PC %s: Staff is three cards across, one per job" % tag)
+		var graded: Array = []
+		for job in coach_jobs:
+			var g: Control = scene.find_child("Grades_" + job, true, false)
+			var t := _text(g) if g != null else ""
+			if g != null and g.is_visible_in_tree() and t.contains("Teaching") and t.contains("Tactics") \
+					and t.contains("Man-management") and t.contains("Fit for this job"):
+				graded.append(job)
+		_check(graded.size() == coach_jobs.size(),
+				"PC %s: every coach's card shows his grades and his fit (%d of %d)" % [tag, graded.size(), coach_jobs.size()])
+		var fits := _pc_fits(scene)
+		_check(fits == "", "PC %s: Staff fits the window, nothing scrolls (%s)" % [tag, fits])
+		var row: Button = scene.find_child("StaffRow_" + str(coach_jobs[0]), true, false)
+		var why: String = await Tap.tap(row) if row != null else "no row"
+		await _frames(2)
+		_check(why == "" and scene.find_child("CoachProfile", true, false) != null,
+				"PC %s: a finger on a coach's card opens his profile (%s)" % [tag, why])
+		scene.queue_free()
+		await _frames(1)
+
+	# Coaching on a 1280x720 PC: the whole page in three columns.
+	tree.root.size = Vector2i(1280, 720)
+	var ch: Control = load("res://scenes/CoachingScene.tscn").instantiate()
+	tree.root.add_child(ch)
+	await _frames(3)
+	var cols: Control = ch.find_child("CoachingColumns", true, false)
+	var laid := cols != null and cols.get_child_count() == 3 and str(cols.get_child(0).name) == "HowWePlay" \
+			and cols.get_child(1).find_child("Form", true, false) != null \
+			and cols.get_child(1).find_child("SimOrdersSection", true, false) != null \
+			and cols.get_child(2).find_child("ListAndCap", true, false) != null \
+			and cols.get_child(2).find_child("Staff", true, false) != null
+	_check(laid and ch.find_child("CoachingStages", true, false) == null,
+			"PC 1280x720: Coaching is one page: how we play | recent games and the sim | list, cap and staff")
+	var cf := _pc_fits(ch)
+	_check(cf == "", "PC 1280x720: Coaching fits the window, nothing scrolls (%s)" % cf)
+	ch.queue_free()
+	await _frames(1)
+
+	# Coaching on a 960x540 PC: two stages, a finger apart.
+	tree.root.size = Vector2i(960, 540)
+	ch = load("res://scenes/CoachingScene.tscn").instantiate()
+	tree.root.add_child(ch)
+	await _frames(3)
+	_check(ch.find_child("Stage_play", true, false) != null and ch.find_child("Stage_club", true, false) != null
+			and ch.find_child("HowWePlay", true, false) != null and ch.find_child("Form", true, false) == null,
+			"PC 960x540: Coaching opens on How we play, The club beside it")
+	cf = _pc_fits(ch)
+	_check(cf == "", "PC 960x540: the How we play stage fits the window (%s)" % cf)
+	var to_club: Button = ch.find_child("Stage_club", true, false)
+	var why_c: String = await Tap.tap(to_club) if to_club != null else "no The club"
+	await _frames(3)
+	_check(why_c == "" and ch.find_child("HowWePlay", true, false) == null
+			and ch.find_child("Form", true, false) != null and ch.find_child("ListAndCap", true, false) != null
+			and ch.find_child("SimOrdersSection", true, false) != null and ch.find_child("OpenStaff", true, false) != null,
+			"PC 960x540: a finger on The club shows recent games, the list and cap, the sim and Staff (%s)" % why_c)
+	cf = _pc_fits(ch)
+	_check(cf == "", "PC 960x540: The club stage fits the window (%s)" % cf)
+	var to_play: Button = ch.find_child("Stage_play", true, false)
+	var why_p: String = await Tap.tap(to_play) if to_play != null else "no How we play"
+	await _frames(3)
+	_check(why_p == "" and ch.find_child("HowWePlay", true, false) != null,
+			"PC 960x540: a finger on How we play brings it back (%s)" % why_p)
+	ch.queue_free()
+	await _frames(1)
+
+	# A phone keeps its one column, on both screens.
+	tree.root.size = Vector2i(390, 844)
+	var ps: Control = load("res://scenes/StaffScene.tscn").instantiate()
+	tree.root.add_child(ps)
+	await _frames(3)
+	_check(ps.find_child("StaffGrid", true, false) == null and ps.find_children("Grades_*", "", true, false).is_empty(),
+			"A phone's Staff stays one column of rows, grades in each profile")
+	ps.queue_free()
+	var pc: Control = load("res://scenes/CoachingScene.tscn").instantiate()
+	tree.root.add_child(pc)
+	await _frames(3)
+	_check(pc.find_child("CoachingColumns", true, false) == null and pc.find_child("CoachingStages", true, false) == null
+			and pc.find_child("HowWePlay", true, false) != null and pc.find_child("Form", true, false) != null,
+			"A phone's Coaching stays one scrolling column")
+	pc.queue_free()
+	await _frames(1)
+
+
+func _frames(n: int) -> void:
+	var tree := Engine.get_main_loop() as SceneTree
+	for i in range(n):
+		await tree.process_frame
+
+
+## "" when nothing on the screen scrolls or runs off the window, else what does.
+func _pc_fits(scene: Control) -> String:
+	var view := scene.get_viewport().get_visible_rect().size
+	for sc in scene.find_children("*", "ScrollContainer", true, false):
+		var box := sc as ScrollContainer
+		if not box.is_visible_in_tree() or box.get_child_count() == 0:
+			continue
+		var over := (box.get_child(0) as Control).size.y - box.size.y
+		if over > 0.5:
+			return "%s scrolls by %.0f" % [box.name, over]
+	for c in scene.find_children("*", "Control", true, false):
+		var r := (c as Control).get_global_rect()
+		if (c as Control).is_visible_in_tree() and (r.end.x > view.x + 0.5 or r.end.y > view.y + 0.5):
+			return "%s past the edge" % c.name
+	return ""
 
 
 func _text(n: Node) -> String:
