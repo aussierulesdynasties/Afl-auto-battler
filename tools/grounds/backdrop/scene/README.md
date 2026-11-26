@@ -28,7 +28,8 @@ Setup: `pip install bpy==5.2.4 scipy`; a working folder `$WORK` with `proto/` = 
 Map data (c) OpenStreetMap contributors, ODbL. Building heights: Overture Maps Foundation buildings (ODbL, from
 OpenStreetMap and others). Terrain: AWS Terrain Tiles. Ground colour variation: Digital Earth Australia Sentinel-2
 analysis-ready data, CC BY 4.0, contains modified Copernicus Sentinel data. The Esri aerial is reference only:
-nothing from it is drawn except a median colour per roof, car park or mapped patch of ground, and where its trees are.
+nothing from it is drawn except a median colour per roof, car park or mapped patch of ground, where its trees,
+parked cars and rooftop units stand, and which garden cover each house block shows.
 
 Real place (`BG_REAL=1 bash run1.sh <ground>`, 2026-11-22): the surroundings built as the real place, ground by
 ground against Google Earth.
@@ -42,6 +43,17 @@ ground against Google Earth.
 - `towers_real.py`: towers with a modelled floor slab every storey and a column every ~4.5 m, never painted windows.
 - `real_lm.py` / `real_lm.json`: landmarks per ground (another ground's own model across the river, an arch bridge
   modelled from Google Earth).
+- `prep.py` gardens: house land between the houses takes lawn, dry grass or bare earth, and paving in the shares the
+  aerial shows on that street (each cell classed from the aerial, blended over ~2.5 m), each in its town-wide median
+  colour, not one pooled grey.
+- `cars.py` (after `prep.py`): every surface car park from the close aerial (`aerial19.py`: Esri z19, ~0.25 m, the
+  same `SAT_RELEASE` for an era): the lot's asphalt colour, the cars parked in it as they were (peaks of difference
+  from the asphalt at car scale; a dark peak counts only with no bright car beside it, as it is usually a shadow),
+  which way each faces (its row, or its own shape when it stands alone), and the bay grid where the cars sit on one.
+  `pools.py` models each car (body and glasshouse, 20 triangles, roof in the colour the aerial shows) and draws bay
+  lines (`mk_carpark_tex.py`) only on lots whose grid was found; the rest are plain asphalt.
+- `roofplant.py` (after `prep.py`): air-conditioning units and plant rooms on flat roofs, placed and sized where the
+  close aerial shows them; `pools.py` models them as boxes inside the parapet.
 - `scene.py`: near ground stands 2 m clear of the sea plane except on mapped water; at 0.5 m the river drew through
   low parks from a distance (the depth test lost).
 
@@ -49,3 +61,23 @@ Fixes found in QA (2026-11-22): the terrain tiles carry single-cell spikes (a 30
 2.5 km at York Park), so `prep.py` gives any cell above or below all 8 neighbours by more than a cliff (25 m at
 zoom 14, 60 m at zoom 12) their median; Barossa, Summit and Bruce paint untagged open land as paddock, not the
 town verge's grey-green; an inland ground's sea plane drops below the land (`scene.py`).
+
+### A closed ground in its own era (Subiaco 2018, Football Park 2013)
+
+The model is the stadium as it stood, so its surroundings are the place as it was then, not today's:
+
+1. `python3 ohsome_snap.py $WORK/data/<g>/osm.json $WORK/data/<g>/osm_<year>.json <date>`: OpenStreetMap as it
+   was on that date (ohsome API, HeiGIT; the full-history route, as the snapshot route is refused from the cloud).
+2. `SAT_RELEASE=<id> python3 sat_fetch.py spec/<g>.json 1500 1.0` then copy `sat.png` to `sat_<year>.png` (today's
+   copied first to `sat_now.png`): an Esri World Imagery Wayback release from the era
+   (waybackconfig.json lists them; 8249 = 2018-06-06). Sampled for colours only, never shipped.
+3. `python3 era_merge.py <g> <year>`: the era's map, plus today's buildings that were only mapped later. A big
+   block (1,500 m² and up) is dropped as built since when the era's aerial shows plants, sand or asphalt under it and
+   today's shows a roof; house-sized ones always stay (roof colour tests flip one house in ten between releases).
+   Anything beyond the era's aerial stays. Every block and tower mapped after the snapshot is judged by eye from
+   contact sheets (era aerial beside today's) and recorded in `era_review.json` (built since / a lower building then /
+   stood); anything mapped since on the era map's golf courses, water or building sites is left out. Check the release's capture date first (Wayback metadata layer): the
+   oldest Esri imagery is 2013 (Ikon Park and Whitten, release 11509 = 31 Aug 2013; Football Park = 5 Feb 2013).
+4. `SAT_RELEASE=<id> BG_REAL=1 bash run1.sh <g>`.
+
+Check from straight above against the era's aerial with `capture_backdrop.gd ... nofog "shot=top:0.01,560,0:0,0,0:94"`.

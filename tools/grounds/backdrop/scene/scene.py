@@ -22,6 +22,7 @@ def lin(c): return np.array(srgb(c), np.float32)
 near = np.load(os.path.join(D, 'near_h.npy')); far = np.load(os.path.join(D, 'far_h.npy'))
 NE, NS, FA, FS = meta['near'], meta['near_step'], meta['far'], meta['far_step']
 R0 = spec['clear_r_m']
+FC = [float(v) for v in spec.get('fp_centre', [0.0, 0.0])]   # the model's own centre (prep.py fp_centre)
 def samp(G, half, step, X, Y):
     fx = (np.asarray(X) + half) / step; fy = (np.asarray(Y) + half) / step
     i = np.clip(np.floor(fx).astype(int), 0, G.shape[1] - 2); j = np.clip(np.floor(fy).astype(int), 0, G.shape[0] - 2)
@@ -96,7 +97,7 @@ def mat_mul(nm, path, rough=0.85, gain=1.0):   # gain = 1 / texture's linear mea
 n = near.shape[0]
 g = np.arange(n) * NS - NE
 X, Y = np.meshgrid(g, g)
-Z = near.copy(); Z[np.hypot(X, Y) < R0 + 5] -= 0.15
+Z = near.copy(); Z[np.hypot(X - FC[0], Y - FC[1]) < R0 + 5] -= 0.15
 # the model's own flat ground (apron) box: sink the terrain under it so no corner pokes through
 if spec.get('pad_box_m'):
     hx, hy = spec['pad_box_m']; Z[(np.abs(X) < hx + NS) & (np.abs(Y) < hy + NS)] = np.minimum(Z[(np.abs(X) < hx + NS) & (np.abs(Y) < hy + NS)], -0.3)
@@ -131,8 +132,38 @@ noise = rng.random(VF.shape[0])
 vc = (lin(PAL['far_flat'])[None] * (1 - noise[:, None] * 0.5) + lin(PAL['far_veg'])[None] * noise[:, None] * 0.5)
 st = np.clip((slope.ravel() - 0.12) / 0.2, 0, 1)[:, None]
 vc = vc * (1 - st) + lin(PAL['far_steep'])[None] * st
+# real place: the far land takes its real colours, forest, paddock, suburb and bare rock, from Sentinel-2 at 80 m
+# (s2far.py; DEA, CC BY 4.0), each channel scaled so the near square's 80 m blocks match the close aerial's averages
+_S2F = os.path.join(os.environ.get('WORK', '/home/user/work'), 's2', name + '_far.npy')
+_S2ON = False
+if spec.get('real') and os.path.exists(_S2F) and os.path.exists(os.path.join(HERE, 'data', name, 'sat.png')):
+    from scipy.ndimage import gaussian_filter as _gfs, map_coordinates as _mcs
+    from PIL import Image
+    _M = np.load(_S2F); _fj = json.load(open(_S2F[:-4] + '.json')); _fh, _fs = _fj['half_m'], _fj['m_per_px']
+    _v = np.isfinite(_M).all(-1); _M0 = np.where(_v[..., None], _M, 0)
+    for _sg in (1.5, 4, 12, 40):   # holes (cloud, shade) take the colours round them
+        _w = _gfs(_v.astype(np.float32), _sg); _f = np.stack([_gfs(_M0[..., c], _sg) for c in range(3)], -1) / np.maximum(_w, 1e-6)[..., None]
+        _fill = ~_v & (_w > 0.05); _M0[_fill] = _f[_fill]; _v = _v | _fill
+    _SA = np.asarray(Image.open(os.path.join(HERE, 'data', name, 'sat.png')).convert('RGB')).astype(np.float32) / 255
+    _sj = json.load(open(os.path.join(HERE, 'data', name, 'sat.json'))); _ah, _am = _sj['half_m'], _sj['m_per_px']
+    _SAl = np.where(_SA <= 0.04045, _SA / 12.92, ((_SA + 0.055) / 1.055) ** 2.4)
+    _k = int(round(_fs / _am)); _nb_ = _SAl.shape[0] // _k
+    _blk = _SAl[:_nb_ * _k, :_nb_ * _k].reshape(_nb_, _k, _nb_, _k, 3).mean((1, 3))
+    _bc = -_ah + (np.arange(_nb_) + 0.5) * _fs
+    _BX, _BY = np.meshgrid(_bc, -_bc)
+    _ri = (_fh - _BY) / _fs - 0.5; _ci = (_BX + _fh) / _fs - 0.5
+    _sb = np.stack([_mcs(_M0[..., c], [_ri, _ci], order=1) for c in range(3)], -1)
+    _ok = (_sb.min(-1) > 0) & np.isfinite(_sb).all(-1)
+    _gain = np.array([(_blk[..., c][_ok] * _sb[..., c][_ok]).sum() / max(1e-6, (_sb[..., c][_ok] ** 2).sum()) for c in range(3)])
+    _ri = (_fh - VF[:, 1]) / _fs - 0.5; _ci = (VF[:, 0] + _fh) / _fs - 0.5
+    _sv = np.stack([_mcs(_M0[..., c], [_ri, _ci], order=1, mode='nearest') for c in range(3)], -1)
+    _in = (np.abs(VF[:, 0]) < _fh) & (np.abs(VF[:, 1]) < _fh) & (_sv.min(-1) > 0)
+    vc = vc.copy(); vc[_in] = np.clip(_sv[_in] * _gain, 0, 1)
+    print('far land from Sentinel-2', int(_in.sum()), 'vertices, gain', np.round(_gain, 6)); _S2ON = True
 _zr = np.round(ZF * 2) / 2; _vals, _cnt = np.unique(_zr[ZF < np.percentile(ZF, 60)], return_counts=True); ZSEA = float(_vals[np.argmax(_cnt)])
 if spec.get('inland_check', True) and name not in ('gmhba', 'mcg', 'traeger') and ZSEA + meta['base'] > 8.0: ZSEA = -meta['base']   # inland: the commonest low height is a plain, not the sea; the sea plane goes to real sea level
+if meta.get('sea_z') is not None and ZSEA + meta['base'] <= 8.0 and abs(ZSEA - meta['sea_z']) > 0.25:   # measured land: the sea is at its datum's zero
+    print('sea plane from the measured datum', meta['sea_z'], 'not the commonest low height', ZSEA); ZSEA = float(meta['sea_z'])
 WV = (np.abs(ZF - ZSEA) < 1.0) & (slope < 0.004)
 def _nb(M_, op):   # 4-neighbour erosion (all) / dilation (any), numpy only
     P_ = np.pad(M_, 1, constant_values=(op == 'all'))
@@ -156,6 +187,14 @@ if os.path.exists(_LUf):   # the aerial's water class also counts: bay cells who
     _lw = (_LU[np.clip(((FA - YF) / _st).astype(int), 0, _n - 1), np.clip(((XF + FA) / _st).astype(int), 0, _n - 1)] == 3) & (ZF < ZSEA + 6)
     _lw = _nb(_nb(_lw, 'all'), 'any'); print('aerial water cells added', int((_lw & ~WV).sum()))
     _nw = _lw & ~WV; WV = WV | _lw; VF[_nw.ravel(), 2] = np.minimum(VF[_nw.ravel(), 2], ZSEA - 1.0)
+_S2W = os.path.join(os.environ.get('WORK', '/home/user/work'), 's2', name + '_far_water.npy')
+if spec.get('real') and os.path.exists(_S2W):   # real place: water where Sentinel-2's clear looks mostly saw water (estuaries, bays, lakes past OSM's reach)
+    from scipy.ndimage import map_coordinates as _mcw
+    _W2 = np.nan_to_num(np.load(_S2W), nan=0.0); _wj = json.load(open(_S2W.replace('_far_water.npy', '_far.json'))); _wh2, _ws2 = _wj['half_m'], _wj['m_per_px']
+    _sw = _mcw(_W2, [(_wh2 - YF) / _ws2 - 0.5, (XF + _wh2) / _ws2 - 0.5], order=1, mode='constant', cval=0.0)
+    _sw = (_sw > 0.5) & (ZF < ZSEA + 6) & (np.abs(XF) < _wh2) & (np.abs(YF) < _wh2)
+    _sw = _nb(_nb(_sw, 'all'), 'any'); print('Sentinel-2 water cells added', int((_sw & ~WV).sum()))
+    _nw = _sw & ~WV; WV = WV | _sw; VF[_nw.ravel(), 2] = np.minimum(VF[_nw.ravel(), 2], ZSEA - 1.0)
 _lz = ~WV.ravel(); VF[_lz, 2] = np.maximum(VF[_lz, 2], ZSEA + 1.7)   # land never dips under the sea plane
 _shore = WV & ~_nb(WV, 'all'); _sand = ~WV & _nb(WV, 'any')
 vc = vc.copy(); vc[WV.ravel()] = lin((34, 58, 82))[:3]; vc[_shore.ravel()] = lin((60, 92, 110))[:3]; vc[_sand.ravel()] = lin((172, 164, 134))[:3]
@@ -174,8 +213,13 @@ if os.path.exists(_wmp): _WM = np.load(_wmp); _isw = _WM[np.clip(_pi * _WM.shape
 _low = (~_isw) & (_co[:, 2] < ZSEA + 3.2)
 _co[_low, 2] = ZSEA + 3.2; _nm.vertices.foreach_set('co', _co.ravel()); _nm.update()
 print('near ground lifted over the water plane', int(_low.sum()))
+# everything laid on the ground after this (car parks, cars, roof plant, buildings) reads the lifted height, so it
+# stands on the ground the game draws and not under it
+_gi = np.clip(np.round((_co[_low, 0] + NE) / NS).astype(int), 0, near.shape[1] - 1); _gj = np.clip(np.round((_co[_low, 1] + NE) / NS).astype(int), 0, near.shape[0] - 1)
+near[_gj, _gi] = np.maximum(near[_gj, _gi], ZSEA + 3.2)
 d = np.hypot(VF[:, 0], VF[:, 1])
 hz = (1 - np.exp(-d / spec.get('haze_m', 22000)))[:, None] * 0.85
+if _S2ON: hz = hz * 0   # real colours: the game's own day haze does the distance (Oval3DTurf), not a second one baked in
 vc = vc * (1 - hz) + lin(PAL['haze'])[None] * hz
 SHOREF = None
 if spec.get('coast_v2'): exec(open(os.path.join(HERE, 'coast21.py'), encoding='utf-8').read())
@@ -183,6 +227,7 @@ if SHOREF is None: SHOREF = np.zeros(len(FF), bool)
 _wf = np.zeros(len(FF), bool); _fc = np.hypot((VF[FF[:, 0], 0] + VF[FF[:, 2], 0]) / 2, (VF[FF[:, 0], 1] + VF[FF[:, 2], 1]) / 2)
 _stf = (st.ravel()[FF].max(1) > 0.5)
 _sub = (_fc < 5500) & ~_stf & ~WV.ravel()[FF].all(1) & ~SHOREF
+if _S2ON: _sub = np.zeros_like(_sub)   # real colours: suburbs, paddocks and bush all read from Sentinel-2, not a generic suburb tile
 if SHOREF.any():   # sea wall / beach band along the real coastline: its own plain mesh
     _F = FF[SHOREF]; _o = mk_obj('bg_shore', VF, _F.tolist(), mat_vcol('shore', 0.9)); _l = _F.ravel()
     _shc = np.array(lin((176, 168, 146)))[None, :3] * (1 - hz) + np.array(lin(PAL['haze']))[None, :3] * hz
@@ -193,7 +238,12 @@ if spec.get('coast_v2'): exec(open(os.path.join(HERE, 'water21.py'), encoding='u
 else:
   _wo = mk_obj('bg_far_water', _wq.tolist(), _wf4.tolist(), mat_vcol('far_water', 0.9)); _wo.active_material.node_tree.nodes['Principled BSDF'].inputs['Specular IOR Level'].default_value = 0.15
   _wh = (1 - np.exp(-np.hypot(_wq[:, 0], _wq[:, 1]) / spec.get('haze_m', 22000)))[:, None] * 0.85
-  _wc = np.array(lin((30, 54, 76)))[None, :3] * (1 - _wh) + np.array(lin(PAL['haze']))[None, :3] * _wh
+  # real place: the far water in the near water's own colour, so a river or harbour is one colour out to the horizon
+  # (per-place colours from the aerial or Sentinel-2 were tried: the aerial reads the Swan and the Derwent near-black
+  # and West Lakes glare-white, Sentinel-2's turbid medians read them as grey land)
+  _wrgb = tuple(PAL['water']) if spec.get('real') else (30, 54, 76)
+  if _S2ON: _wh = _wh * 0   # real colours: the game's day haze does the distance
+  _wc = np.array(lin(_wrgb))[None, :3] * (1 - _wh) + np.array(lin(PAL['haze']))[None, :3] * _wh
   set_corner_col(_wo.data, np.concatenate([_wc[_wf4.ravel()], np.ones((_wf4.size, 1))], 1))
 for _nm, _sel, _mt in (('bg_far_suburb', _sub, mat_mul('far_suburb', os.path.join(HERE, 'tex', 'mt', 'far_suburb.png'), 0.9, 1 / float(open(os.path.join(HERE, 'tex', 'mt', 'far_suburb.mean')).read()))),):
     _nt = _mt.node_tree; _t = [n for n in _nt.nodes if n.type == 'TEX_IMAGE'][0]; _mu = [n for n in _nt.nodes if n.type == 'MIX'][0]
@@ -211,7 +261,8 @@ for _nm, _sel, _mt in (('bg_far_suburb', _sub, mat_mul('far_suburb', os.path.joi
     _nt.links.new(_mm.outputs[2], _gm.inputs[0]); _nt.links.new(_gm.outputs[0], _mu.inputs[7])
     if _sel.any():
         _F = FF[_sel]; _o = mk_obj(_nm, VF, _F.tolist(), _mt); _l = _F.ravel()
-        _svc = np.array(lin((122, 122, 110)))[None, :3] * (1 - hz) + np.array(lin(PAL['haze']))[None, :3] * hz; set_corner_col(_o.data, np.concatenate([_svc[_l], np.ones((len(_l), 1))], 1)); set_uv(_o.data, np.stack([VF[_l, 0] / 500.0, VF[_l, 1] / 500.0], 1))
+        _svc = vc if _S2ON else np.array(lin((122, 122, 110)))[None, :3] * (1 - hz) + np.array(lin(PAL['haze']))[None, :3] * hz;   # real place: the suburbs' own Sentinel-2 colour
+        set_corner_col(_o.data, np.concatenate([_svc[_l], np.ones((len(_l), 1))], 1)); set_uv(_o.data, np.stack([VF[_l, 0] / 500.0, VF[_l, 1] / 500.0], 1))
 FF = FF[~_wf & ~_sub & ~SHOREF]
 _fm = mat_mul('far_land', os.path.join(HERE, 'tex', 'mt', 'far_land.png'), 0.95, 1 / float(open(os.path.join(HERE, 'tex', 'mt', 'far_land.mean')).read()))
 _nt = _fm.node_tree; _t = [n for n in _nt.nodes if n.type == 'TEX_IMAGE'][0]; _mu = [n for n in _nt.nodes if n.type == 'MIX'][0]
@@ -221,6 +272,7 @@ _mr.inputs['From Min'].default_value = 4000; _mr.inputs['From Max'].default_valu
 _fd = _nt.nodes.new('ShaderNodeMix'); _fd.data_type = 'RGBA'; _fd.inputs[7].default_value = _mc   # paddocks soften toward the haze
 _nt.links.new(_cd.outputs['View Distance'], _mr.inputs['Value']); _nt.links.new(_mr.outputs['Result'], _fd.inputs[0])
 _nt.links.new(_t.outputs['Color'], _fd.inputs[6]); _nt.links.new(_fd.outputs[2], _mu.inputs[7])
+if _S2ON: _fm = mat_vcol('far_land', 0.95)   # real colours: the paddock texture's greens and tans would tint them
 ob = mk_obj('bg_far_terrain', VF, FF.tolist(), _fm)
 lp = FF.ravel()
 _c, _s = math.cos(0.41), math.sin(0.41); set_uv(ob.data, np.stack([VF[lp, 0] * _c - VF[lp, 1] * _s, VF[lp, 0] * _s + VF[lp, 1] * _c], 1) / 1600.0)   # rotated tile: no screen-aligned repeat
@@ -250,7 +302,7 @@ if os.path.exists(BRP):
         if b.get('rail'): continue   # rail bridges are drawn as track
         if b['w'] <= 6 and np.hypot(*np.diff(P, axis=0).T).sum() < 30: continue   # stair/ramp stubs
         ends = height(P[[0, -1], 0], P[[0, -1], 1])
-        z = max(float(ends.max()), 0.0 if np.hypot(*P.mean(0)) < R0 + 60 else float(ends.max())) + 0.3
+        z = max(float(ends.max()), 0.0 if np.hypot(*(P.mean(0) - FC)) < R0 + 60 else float(ends.max())) + 0.3
         if b['w'] <= 6:   # footbridge: draw only where it spans a drop (>2 m under its ends); on flat ground it is a path
             t_ = np.linspace(0, 1, 40)[:, None]; S_ = np.concatenate([P[i] * (1 - t_) + P[i + 1] * t_ for i in range(len(P) - 1)])
             if float(ends.max()) - float(height(S_[:, 0], S_[:, 1]).min()) < 2.0: continue
@@ -330,7 +382,7 @@ if spec.get('rail_geo') and os.path.exists(RLP):
             for j in range(1, k + 1): Q.append(Q[-1] + (p2 - Q[-1]) * (1.0 / (k - j + 1)))
         Q = np.array(Q)
         if KF is not None or KE:   # tracks under the ground model are hidden by it: split them out
-            if KF is not None: ok = np.hypot(Q[:, 0], Q[:, 1]) > KF[((np.degrees(np.arctan2(Q[:, 1], Q[:, 0])) % 360) // 2).astype(int)] + 1.0
+            if KF is not None: ok = np.hypot(Q[:, 0] - FC[0], Q[:, 1] - FC[1]) > KF[((np.degrees(np.arctan2(Q[:, 1] - FC[1], Q[:, 0] - FC[0])) % 360) // 2).astype(int)] + 1.0
             else: ex, ey, ea, eb = KE; ok = np.hypot((Q[:, 0] - ex) / ea, (Q[:, 1] - ey) / eb) > 1.04
             if CM is not None:   # never on a bank: only where the cutting floor is flat, or wholly outside the cutting
                 cmq = samp(CM, NE, NS, Q[:, 0], Q[:, 1]); ok &= ~((cmq > 0.02) & (cmq < 0.92))
@@ -380,7 +432,7 @@ if os.path.exists(RDP):
             k = max(1, int(math.ceil(np.hypot(*(p2 - Q[-1])) / 3.0)))
             for j in range(1, k + 1): Q.append(Q[-1] + (p2 - Q[-1]) * (1.0 / (k - j + 1)))
         Q = np.array(Q); ok = np.ones(len(Q), bool)
-        if KFr is not None: ok = np.hypot(Q[:, 0], Q[:, 1]) > KFr[((np.degrees(np.arctan2(Q[:, 1], Q[:, 0])) % 360) // 2).astype(int)] + 1.0
+        if KFr is not None: ok = np.hypot(Q[:, 0] - FC[0], Q[:, 1] - FC[1]) > KFr[((np.degrees(np.arctan2(Q[:, 1] - FC[1], Q[:, 0] - FC[0])) % 360) // 2).astype(int)] + 1.0
         w = RW[r['hw']]; main = RK[r['hw']] >= (2 if RV2 else 3)
         for rr in np.split(np.arange(len(Q)), np.where(np.diff(ok.astype(int)) != 0)[0] + 1):
             if not ok[rr[0]] or len(rr) < 2: continue
@@ -421,7 +473,7 @@ def hip_rect(P):   # minimum-area rectangle: centre, long-axis unit u, short-axi
     return u * (a0 + a1) / 2 + v * (b0 + b1) / 2, u, v, a1 - a0, b1 - b0
 def build_class(cls, tex, tw, th, var=None, gr=0.13):
     verts, faces, cols, uvs = [], [], [], []
-    RF = {'metal': [[], [], [], []], 'tile': [[], [], [], []], 'corr': [[], [], [], []], 'far': [[], [], [], []]}   # roof meshes: verts, faces, cols, uvs
+    RF = {'metal': [[], [], [], []], 'tile': [[], [], [], []], 'corr': [[], [], [], []], 'far': [[], [], [], []], 'flat': [[], [], [], []]}   # roof meshes: verts, faces, cols, uvs
     walls = [lin(c) for c in PAL['walls_' + cls]]
     roofs = [lin(c) for c in PAL['roofs_' + ('house' if cls == 'house' else 'flat')]]
     FLS = [[], [], []]
@@ -435,7 +487,8 @@ def build_class(cls, tex, tw, th, var=None, gr=0.13):
         h = b['h']
         wc = walls[b['wall'] % len(walls)] * (1 + 0.06 * (rng.random() - 0.5))
         rc = lin(b['roof_c']) if b.get('roof_c') else roofs[b['roof'] % len(roofs)] * (1 + 0.08 * (rng.random() - 0.5))
-        shed = cls == 'block' and b['a'] >= 400 and h <= 10
+        shed = (bool(b['shed']) and cls == 'block' and h <= 14) if 'shed' in b else (cls == 'block' and b['a'] >= 400 and h <= 10)
+        flatr = bool(spec.get('real')) and cls == 'block' and not shed and not b.get('open')   # real place: a flat roof inside a 0.6 m parapet
         V_, F_, C_, U_ = (CL if shed else (verts, faces, cols, uvs)); TW, TH = (12.0, 12.0) if shed else (tw, th)
         pitched = cls == 'house'
         if pitched: hc, hu, hv, hL, hW = hip_rect(P); rh = min(3.4, (hW / 2 + 0.45) * math.tan(math.radians(25)))
@@ -443,9 +496,9 @@ def build_class(cls, tex, tw, th, var=None, gr=0.13):
         top = base + 1.0 + h - rh
         _gb = base
         if b.get('open'): base = top - 1.4; shed = False; V_, F_, C_, U_ = verts, faces, cols, uvs; TW, TH = tw, th   # canopy: 0.4 m fascia only
-        k = len(P); s0 = len(V_)
+        k = len(P); s0 = len(V_); wtop = top + (0.6 if flatr else 0.0)
         for x, y in P: V_.append((x, y, base))
-        for x, y in P: V_.append((x, y, top))
+        for x, y in P: V_.append((x, y, wtop))
         per = 0.0
         for i in range(k):
             j = (i + 1) % k
@@ -453,9 +506,17 @@ def build_class(cls, tex, tw, th, var=None, gr=0.13):
             F_.append((s0 + i, s0 + j, s0 + k + j, s0 + k + i))
             C_ += [wc] * 4
             u0, u1 = per / TW, (per + L) / TW
-            v0, v1 = -1.0 / TH, (top - base - 1.0) / TH
+            v0, v1 = -1.0 / TH, (wtop - base - 1.0) / TH
             U_ += [(u0, v0), (u1, v0), (u1, v1), (u0, v1)]
             per += L
+        if flatr:   # the parapet's inner face, from the roof up to its top
+            s1 = len(V_)
+            for x, y in P: V_.append((x, y, top))
+            for x, y in P: V_.append((x, y, wtop))
+            for i in range(k):
+                j = (i + 1) % k
+                F_.append((s1 + i, s1 + k + i, s1 + k + j, s1 + j)); C_ += [tuple(np.array(wc)[:3] * 0.85) + tuple(np.array(wc)[3:])] * 4
+                U_ += [(0.0, 0.0), (0.0, 0.6 / TH), (0.05, 0.6 / TH), (0.05, 0.0)]
         if b.get('open'):   # steel posts at each corner, ground to roof
             for x, y in P:
                 o = len(V_); d = 0.08
@@ -470,6 +531,7 @@ def build_class(cls, tex, tw, th, var=None, gr=0.13):
         RT = 3.04
         if kind == 'metal' and cls == 'block' and b['a'] >= 400: kind, RT = 'far', 12.0   # sheds: sheet runs along the long axis, multiplied (512 px = 12 m)
         if kind == 'far' and b['a'] >= 1500: kind, RT = 'far', 12.0   # big industrial roofs: coarse sheet runs (512 px = 24 m)
+        if flatr: kind, RT = 'flat', 8.0   # membrane or concrete: the aerial's colour, a faint grain
         if kind == 'far': rc = np.minimum(0.35 * np.array(rc)[:3] + 0.65 * np.array(lin((120, 123, 124)))[:3], np.array(lin((98, 100, 100)))[:3])   # zincalume grey, never paper white
         rv, rf, rcl, ruv = RF[kind]; r0 = len(rv)
         def ruv_(x, y, sw=(kind == 'far')): a_, b_ = (x * ct + y * st) / RT, (-x * st + y * ct) / RT; return (b_, a_) if sw else (a_, b_)
@@ -507,7 +569,7 @@ def build_class(cls, tex, tw, th, var=None, gr=0.13):
     set_uv(ob.data, uvs)
     for kind, (rv, rf, rcl, ruv) in RF.items():
         if not rf: continue
-        ro = mk_obj('bg_roof_%s_%s%s' % (cls, kind, sfx), rv, rf, mat_mul('roof_%s_far' % cls, os.path.join(HERE, 'tex', 'mt', 'roof_shed.png'), 0.55, 1 / float(open(os.path.join(HERE, 'tex', 'mt', 'roof_shed.mean')).read())) if kind == 'far' else mat_facade('roof_%s_%s' % (cls, kind), os.path.join(HERE, 'tex', 'mt/roof_corrugated.png' if kind == 'corr' else 'mt/roof_far.png' if kind == 'far' else 'roof_%s.png' % kind)))
+        ro = mk_obj('bg_roof_%s_%s%s' % (cls, kind, sfx), rv, rf, mat_mul('roof_%s_flat' % cls, os.path.join(HERE, 'tex', 'mt', 'roof_flat.png'), 0.8, 1 / float(open(os.path.join(HERE, 'tex', 'mt', 'roof_flat.mean')).read())) if kind == 'flat' else mat_mul('roof_%s_far' % cls, os.path.join(HERE, 'tex', 'mt', 'roof_shed.png'), 0.55, 1 / float(open(os.path.join(HERE, 'tex', 'mt', 'roof_shed.mean')).read())) if kind == 'far' else mat_facade('roof_%s_%s' % (cls, kind), os.path.join(HERE, 'tex', 'mt/roof_corrugated.png' if kind == 'corr' else 'mt/roof_far.png' if kind == 'far' else 'roof_%s.png' % kind)))
         set_corner_col(ro.data, np.concatenate([np.array(rcl), np.ones((len(rcl), 1))], 1))
         set_uv(ro.data, [ruv[i] for f_ in rf for i in f_])
 for _i, b in enumerate(BL):
@@ -537,7 +599,7 @@ KIND = {  # canopy radius, canopy centre height, squash, trunk height, trunk rad
 TR = json.load(open(os.path.join(D, 'trees.json')))
 TR = np.array(TR, float)
 r = np.hypot(TR[:, 0], TR[:, 1])
-cap = spec.get('tree_cap', 30000)
+cap = spec.get('tree_cap', 10 ** 9 if spec.get('real') else 30000)   # real place: every traced tree kept
 near_keep = r < 700
 p_far = max(0.0, min(1.0, (cap - near_keep.sum()) / max(1, (~near_keep).sum())))
 TR = TR[near_keep | (rng.random(len(TR)) < p_far)]
