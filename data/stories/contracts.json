@@ -262,6 +262,11 @@
 					{
 						"op": "board",
 						"d": -1
+					},
+					{
+						"op": "promise",
+						"kind": "deal",
+						"weeks": 8
 					}
 				],
 				"result": "{name} is reassured, for now. The board hears a deal was promised before the numbers were agreed."
