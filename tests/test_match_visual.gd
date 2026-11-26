@@ -2254,6 +2254,7 @@ func _test_night_towers() -> void:
 			pts.append(Vector3(cos(r) * 140.0, 70.0, sin(r) * 120.0))
 	pts.append(Vector3(0.0, 3.0, -120.0))   # a gate lamp on a wall: no tower
 	_check(Oval3DTowers.bank_middles(pts).size() == 3, "Lamps group into a bank per tower; a low lamp is no tower")
+	var spills: Array[float] = []
 	for level in [Oval3DQuality.HIGH, Oval3DQuality.LOW]:
 		var d := MatchDirector.new()
 		var res := _result(42)
@@ -2282,12 +2283,34 @@ func _test_night_towers() -> void:
 		for g in p0.find_children("*", "GeometryInstance3D", true, false):
 			on_layer = on_layer or (g.layers & Oval3DTowers.SHADOW_LAYER) != 0
 		_check(men_only and on_layer, "Only the men throw the towers' shadows, not the stadium")
+		# The beams light the field and the men, not the stadium and the land round it: those take
+		# the spill alone, which fades away, and the spill carries the same share at every level.
+		var beams_off := true
+		for b in t.beams:
+			beams_off = beams_off and b.light_cull_mask & Oval3DTowers.SURROUND_LAYER == 0 and b.light_cull_mask & 1 != 0
+		var model: Node = oval.find_child("Ground", true, false)
+		var stadium_ok := model != null
+		var pieces := 0
+		for g in (model.find_children("*", "VisualInstance3D", true, false) if model else []):
+			if str(g.get_path()).contains("/Crowd/"):
+				continue   # the crowd keeps the beams, as bright as the grass (rule 2.82)
+			pieces += 1
+			stadium_ok = stadium_ok and g.layers & Oval3DTowers.SURROUND_LAYER != 0 and g.layers & 1 == 0
+		var men_lit: bool = p0.find_children("*", "GeometryInstance3D", true, false).all(func(g): return g.layers & 1 != 0)
+		_check(beams_off and stadium_ok and pieces > 0 and men_lit,
+				"The towers' beams leave the stadium and the land round it to the spill, not the crowd (%d pieces)" % pieces)
+		var spill := 0.0
+		for i in t.spots.size():
+			spill += t.spots[i].light_energy / t._spill_k[i]
+		spills.append(spill)
 		oval.turf.apply("", VignetteKickoff.TWILIGHT)
 		_check(t.level > 0.0 and t.beams.all(func(b): return not b.visible) and oval._sun.visible,
 				"At a twilight game the towers are on but the sun still throws the shadows")
 		oval.turf.apply("", VignetteKickoff.DAY)
 		_check(t.level == 0.0 and t.spots.all(func(s): return not s.visible), "By day the towers are off")
 		oval.queue_free()
+	_check(spills.size() == 2 and absf(spills[0] - spills[1]) < 0.001 * spills[0],
+			"The stands get the same spill at every graphics level (%s)" % [spills])
 
 
 ## Row 202 2b: every ground with a 3D model plays in it, at its own size. Each model's files are
@@ -2392,6 +2415,27 @@ func _test_ground_terrain() -> void:
 			"The MCG's Yarra Park ring lies on the real land (%d points, worst %.3f m)" % [count, off])
 	_check(above <= 0.001, "Where it meets the model the ring is never above the MCG's street (%.3f)" % above)
 	mcg.free()
+	# Norwood's ring starts on the venue's own edge (63-100 m round): every spoke has the same rings, so each
+	# triangle joins neighbouring rings. Spokes with different ring counts once joined near rings to far ones,
+	# a fan of spikes over the turf from straight above (2026-11-26).
+	var nw := GroundModels.instantiate("norwood")
+	var nring: MeshInstance3D = nw.get_node_or_null("Surrounds")
+	var spread := 0.0
+	var tris := 0
+	if nring != null:
+		var arrs := nring.mesh.surface_get_arrays(0)
+		var nv: PackedVector3Array = arrs[Mesh.ARRAY_VERTEX]
+		var ni: PackedInt32Array = arrs[Mesh.ARRAY_INDEX]
+		for t in range(0, ni.size(), 3):
+			var r0 := Vector2(nv[ni[t]].x, nv[ni[t]].z).length()
+			var r1 := Vector2(nv[ni[t + 1]].x, nv[ni[t + 1]].z).length()
+			var r2 := Vector2(nv[ni[t + 2]].x, nv[ni[t + 2]].z).length()
+			if minf(r0, minf(r1, r2)) < 300.0:
+				spread = maxf(spread, maxf(r0, maxf(r1, r2)) - minf(r0, minf(r1, r2)))
+				tris += 1
+	_check(nring != null and tris > 1000 and spread < 2.0 * GroundModels.LAND_STEP,
+			"Norwood's land ring joins neighbouring rings only (%d triangles, widest %.1f m)" % [tris, spread])
+	nw.free()
 
 
 ## A ground whose boundary was traced on Google Earth (tools/grounds/boundary) plays on that line, not an ellipse:
@@ -2552,6 +2596,7 @@ func _test_clash_guernsey_3d() -> void:
 ## picture at three-quarter size. At every level the seats are drawn in slices round the bowl, so
 ## the camera draws only those in view. Rain falls at both, Low with fewer drops.
 func _test_graphics_levels(res: Dictionary) -> void:
+	var spills: Array[float] = []
 	for level in [Oval3DQuality.HIGH, Oval3DQuality.LOW]:
 		var d := MatchDirector.new()
 		d.setup(res, res["events"])
