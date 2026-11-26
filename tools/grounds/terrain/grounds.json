@@ -1,0 +1,305 @@
+{
+ "mcg": {
+  "lat": -37.81998,
+  "lon": 144.98345,
+  "zoom": 14,
+  "far_zoom": 12,
+  "step": 5.0,
+  "licence": "Geoscience Australia, DEM of Australia derived from LiDAR 5 Metre Grid, CC BY 4.0"
+ },
+ "marvel": {
+  "lat": -37.81636,
+  "lon": 144.94753,
+  "zoom": 14,
+  "far_zoom": 12,
+  "step": 5.0,
+  "licence": "Geoscience Australia, DEM of Australia derived from LiDAR 5 Metre Grid, CC BY 4.0"
+ },
+ "adelaide": {
+  "lat": -34.915489777922076,
+  "lon": 138.59627692467532,
+  "zoom": 14,
+  "far_zoom": 12,
+  "step": 5.0,
+  "licence": "Geoscience Australia, DEM of Australia derived from LiDAR 5 Metre Grid, CC BY 4.0"
+ },
+ "optus": {
+  "lat": -31.95112,
+  "lon": 115.88896,
+  "zoom": 14,
+  "far_zoom": 12,
+  "step": 5.0,
+  "licence": "Geoscience Australia, DEM of Australia derived from LiDAR 5 Metre Grid, CC BY 4.0",
+  "turf_above_data_m": 2.0,
+  "turf_note": "The LiDAR predates the stadium (built 2014-17 on raised Burswood land). Six open-road spots read a steady 2.0 m offset against Google Earth (proof/optus.md), so the turf is set 2.0 m above the data at the centre circle."
+ },
+ "gmhba": {
+  "lat": -38.15788,
+  "lon": 144.35274,
+  "zoom": 14,
+  "far_zoom": 12,
+  "step": 5.0,
+  "licence": "Geoscience Australia, DEM of Australia derived from LiDAR 5 Metre Grid, CC BY 4.0"
+ },
+ "people_first": {
+  "lat": -28.00657,
+  "lon": 153.36658,
+  "zoom": 14,
+  "far_zoom": 12,
+  "step": 5.0,
+  "licence": "Geoscience Australia, DEM of Australia derived from LiDAR 5 Metre Grid, CC BY 4.0"
+ },
+ "mars": {
+  "lat": -37.539307,
+  "lon": 143.848166,
+  "source": "fabdem",
+  "step": 5.0,
+  "zoom": 0,
+  "far_zoom": 12,
+  "licence": "FABDEM V1-2, University of Bristol / Fathom, CC BY-NC-SA 4.0 (30 m; buildings and forest removed from Copernicus GLO-30)",
+  "better": "Victorian Government 1 m DEM (Ballarat 2019 LiDAR, CC BY 4.0) exists in ELVIS but only by an emailed order; its S3 tiles refuse direct download"
+ },
+ "traeger": {
+  "lat": -23.70947,
+  "lon": 133.87414,
+  "source": "fabdem",
+  "step": 5.0,
+  "zoom": 0,
+  "far_zoom": 12,
+  "licence": "FABDEM V1-2, University of Bristol / Fathom, CC BY-NC-SA 4.0 (30 m; buildings and forest removed from Copernicus GLO-30)"
+ },
+ "cazalys": {
+  "lat": -16.935653,
+  "lon": 145.749062,
+  "zoom": 14,
+  "far_zoom": 12,
+  "step": 5.0,
+  "licence": "Geoscience Australia, DEM of Australia derived from LiDAR 5 Metre Grid, CC BY 4.0"
+ },
+ "riverway": {
+  "lat": -19.317618,
+  "lon": 146.731873,
+  "zoom": 14,
+  "far_zoom": 12,
+  "step": 5.0,
+  "licence": "Geoscience Australia, DEM of Australia derived from LiDAR 5 Metre Grid, CC BY 4.0"
+ },
+ "accor": {
+  "lat": -33.84716,
+  "lon": 151.06338,
+  "zoom": 14,
+  "far_zoom": 12,
+  "step": 5.0,
+  "licence": "Geoscience Australia, DEM of Australia derived from LiDAR 5 Metre Grid, CC BY 4.0"
+ },
+ "tio_darwin": {
+  "lat": -12.3991417,
+  "lon": 130.8872844,
+  "zoom": 14,
+  "far_zoom": 12,
+  "step": 5.0,
+  "licence": "Geoscience Australia, DEM of Australia derived from LiDAR 5 Metre Grid, CC BY 4.0"
+ },
+ "victoria_park": {
+  "lat": -37.79766,
+  "lon": 144.99228,
+  "zoom": 14,
+  "far_zoom": 12,
+  "step": 5.0,
+  "licence": "Geoscience Australia, DEM of Australia derived from LiDAR 5 Metre Grid, CC BY 4.0"
+ },
+ "scg": {
+  "lat": -33.8914,
+  "lon": 151.2247,
+  "zoom": 14,
+  "far_zoom": 12,
+  "step": 5.0,
+  "licence": "Geoscience Australia, DEM of Australia derived from LiDAR 5 Metre Grid, CC BY 4.0"
+ },
+ "engie": {
+  "lat": -33.8431,
+  "lon": 151.0676,
+  "zoom": 14,
+  "far_zoom": 12,
+  "step": 5.0,
+  "licence": "Geoscience Australia, DEM of Australia derived from LiDAR 5 Metre Grid, CC BY 4.0"
+ },
+ "bellerive": {
+  "lat": -42.8773034,
+  "lon": 147.3737403,
+  "zoom": 15,
+  "far_zoom": 12,
+  "step": 2.5,
+  "licence": "LIST (State of Tasmania), Tasmanian 2 metre DEM, CC BY 3.0",
+  "centre_note": "Centre circle from the Bellerive model (#2018): OSM pitch centre plus the model offset x 0.31 east, z -0.64."
+ },
+ "manuka": {
+  "lat": -35.318,
+  "lon": 149.1348,
+  "zoom": 14,
+  "far_zoom": 12,
+  "step": 5.0,
+  "licence": "Geoscience Australia, DEM of Australia derived from LiDAR 5 Metre Grid, CC BY 4.0"
+ },
+ "norwood": {
+  "lat": -34.919825,
+  "lon": 138.630446,
+  "zoom": 14,
+  "far_zoom": 12,
+  "step": 5.0,
+  "licence": "Geoscience Australia, DEM of Australia derived from LiDAR 5 Metre Grid, CC BY 4.0"
+ },
+ "waverley_park": {
+  "lat": -37.9256,
+  "lon": 145.1887,
+  "zoom": 14,
+  "far_zoom": 12,
+  "step": 5.0,
+  "licence": "Geoscience Australia, DEM of Australia derived from LiDAR 5 Metre Grid, CC BY 4.0"
+ },
+ "windy_hill": {
+  "lat": -37.752,
+  "lon": 144.9196,
+  "zoom": 14,
+  "far_zoom": 12,
+  "step": 5.0,
+  "licence": "Geoscience Australia, DEM of Australia derived from LiDAR 5 Metre Grid, CC BY 4.0"
+ },
+ "moorabbin": {
+  "lat": -37.938,
+  "lon": 145.0437,
+  "zoom": 14,
+  "far_zoom": 12,
+  "step": 5.0,
+  "licence": "Geoscience Australia, DEM of Australia derived from LiDAR 5 Metre Grid, CC BY 4.0"
+ },
+ "ikon_park": {
+  "lat": -37.7838,
+  "lon": 144.9618,
+  "zoom": 14,
+  "far_zoom": 12,
+  "step": 5.0,
+  "licence": "Geoscience Australia, DEM of Australia derived from LiDAR 5 Metre Grid, CC BY 4.0"
+ },
+ "whitten": {
+  "lat": -37.8001,
+  "lon": 144.887,
+  "zoom": 14,
+  "far_zoom": 12,
+  "step": 5.0,
+  "licence": "Geoscience Australia, DEM of Australia derived from LiDAR 5 Metre Grid, CC BY 4.0"
+ },
+ "football_park": {
+  "lat": -34.8799,
+  "lon": 138.4956,
+  "zoom": 14,
+  "far_zoom": 12,
+  "step": 5.0,
+  "licence": "Geoscience Australia, DEM of Australia derived from LiDAR 5 Metre Grid, CC BY 4.0"
+ },
+ "subiaco": {
+  "lat": -31.9446,
+  "lon": 115.8301,
+  "zoom": 14,
+  "far_zoom": 12,
+  "step": 5.0,
+  "licence": "Geoscience Australia, DEM of Australia derived from LiDAR 5 Metre Grid, CC BY 4.0"
+ },
+ "waca": {
+  "lat": -31.9598,
+  "lon": 115.8795,
+  "zoom": 14,
+  "far_zoom": 12,
+  "step": 5.0,
+  "licence": "Geoscience Australia, DEM of Australia derived from LiDAR 5 Metre Grid, CC BY 4.0"
+ },
+ "york_park": {
+  "lat": -41.426,
+  "lon": 147.1389,
+  "zoom": 15,
+  "far_zoom": 12,
+  "step": 2.5,
+  "licence": "LIST (State of Tasmania), Tasmanian 2 metre DEM, CC BY 3.0"
+ },
+ "north_hobart": {
+  "lat": -42.8679,
+  "lon": 147.3162,
+  "zoom": 15,
+  "far_zoom": 12,
+  "step": 2.5,
+  "licence": "LIST (State of Tasmania), Tasmanian 2 metre DEM, CC BY 3.0"
+ },
+ "bruce": {
+  "lat": -35.25,
+  "lon": 149.1026,
+  "zoom": 14,
+  "far_zoom": 12,
+  "step": 5.0,
+  "licence": "Geoscience Australia, DEM of Australia derived from LiDAR 5 Metre Grid, CC BY 4.0"
+ },
+ "barossa": {
+  "lat": -34.5983,
+  "lon": 138.8858,
+  "zoom": 14,
+  "far_zoom": 12,
+  "step": 5.0,
+  "licence": "Geoscience Australia, DEM of Australia derived from LiDAR 5 Metre Grid, CC BY 4.0"
+ },
+ "sky": {
+  "lat": -41.2731,
+  "lon": 174.7859,
+  "zoom": 16,
+  "far_zoom": 12,
+  "step": 2.0,
+  "licence": "Toitu Te Whenua LINZ, New Zealand LiDAR 1m DEM, CC BY 4.0"
+ },
+ "jiangwan": {
+  "lat": 31.3084171,
+  "lon": 121.5110962,
+  "source": "fabdem",
+  "step": 5.0,
+  "zoom": 0,
+  "far_zoom": 12,
+  "licence": "FABDEM V1-2, University of Bristol / Fathom, CC BY-NC-SA 4.0 (30 m; buildings and forest removed from Copernicus GLO-30)"
+ },
+ "hands": {
+  "lat": -33.3463,
+  "lon": 115.6428,
+  "zoom": 14,
+  "far_zoom": 12,
+  "step": 5.0,
+  "licence": "Geoscience Australia, DEM of Australia derived from LiDAR 5 Metre Grid, CC BY 4.0"
+ },
+ "blacktown": {
+  "lat": -33.7692997,
+  "lon": 150.8593847,
+  "zoom": 14,
+  "far_zoom": 12,
+  "step": 5.0,
+  "licence": "Geoscience Australia, DEM of Australia derived from LiDAR 5 Metre Grid, CC BY 4.0"
+ },
+ "summit": {
+  "lat": -35.078,
+  "lon": 138.8934,
+  "zoom": 14,
+  "far_zoom": 12,
+  "step": 5.0,
+  "licence": "Geoscience Australia, DEM of Australia derived from LiDAR 5 Metre Grid, CC BY 4.0"
+ },
+ "macpoint": {
+  "lat": -42.8801809,
+  "lon": 147.3356121,
+  "zoom": 15,
+  "far_zoom": 12,
+  "step": 2.5,
+  "licence": "LIST (State of Tasmania), Tasmanian 2 metre DEM, CC BY 3.0"
+ },
+ "gabba": {
+  "lat": -27.4859,
+  "lon": 153.038,
+  "zoom": 14,
+  "far_zoom": 12,
+  "step": 5.0,
+  "licence": "Geoscience Australia, DEM of Australia derived from LiDAR 5 Metre Grid, CC BY 4.0"
+ }
+}

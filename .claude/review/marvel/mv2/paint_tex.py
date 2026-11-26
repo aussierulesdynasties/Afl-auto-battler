@@ -123,7 +123,7 @@ def sign_face(name,col,seed,W,H,U0,Ztop,txt,stripes,gcol):
     if stripes:
         for i in range(int(round(W/0.3))):c.vline(i*0.3+0.15,0.025,np.array(col)*1.3,0.7)
     c.grime_bottom(0.3,0.12,col=gcol);c.grain(0.01);c.keep_mean()
-    M,P=word(txt,W,H,3.4,0.45);D=distance_transform_edt(M>0.5)/P             # metres inside each letter
+    M,P=word(txt,W,H,H*0.72,0.45);D=distance_transform_edt(M>0.5)/P             # metres inside each letter
     def rs(a):return np.asarray(Image.fromarray((np.clip(a,0,1)*255).astype(np.uint8)).resize((c.n,c.n),Image.LANCZOS),float)/255
     A=rs(M);ring=rs(((D>0.09)&(D<0.12)).astype(float));edge=rs(((D>0)&(D<0.03)).astype(float))
     L=np.ones((c.n,c.n,3))*np.array((0.90,0.90,0.88));L*=(1-0.25*ring)[...,None];L*=(1-0.15*edge)[...,None]
@@ -132,8 +132,9 @@ def sign_face(name,col,seed,W,H,U0,Ztop,txt,stripes,gcol):
     c.a=c.a[:,::-1]
     du=int(round(((U0/W)%1)*c.n));dv=int(round((1-((Ztop/H)%1))*c.n))%c.n
     c.a=np.roll(np.roll(c.a,du,axis=1),dv,axis=0);out(name,c,(W,H))
-sign_face('sign_marvel',(0.70,0.08,0.10),31,13.5,4.7,2.5,41.2,'MARVEL',True,(0.3,0.28,0.25))
-sign_face('sign_stadium',(0.06,0.06,0.07),32,19.9,4.7,-17.4,41.2,'STADIUM',False,(0.5,0.48,0.45))
+# the roof sign's panels: 7.6 m tall, tops at 53.2 m (parts2.py, measured 2026-11-23)
+sign_face('sign_marvel',(0.70,0.08,0.10),31,13.5,7.6,2.5,53.2,'MARVEL',True,(0.3,0.28,0.25))
+sign_face('sign_stadium',(0.06,0.06,0.07),32,19.9,7.6,-17.4,53.2,'STADIUM',False,(0.5,0.48,0.45))
 from PIL import Image as _I
 c=Canvas(4,4,(0.3,0.4,0.2),33);c.a=np.asarray(_I.open('tex/plants.png').convert('RGB'),float)/255
 if c.a.shape[0]!=c.n:c.a=np.asarray(_I.fromarray((c.a*255).astype(np.uint8)).resize((c.n,c.n)),float)/255

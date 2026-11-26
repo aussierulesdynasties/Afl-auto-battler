@@ -1,0 +1,104 @@
+{
+ "ground": "marvel",
+ "source": "mapterhorn",
+ "licence": "Geoscience Australia, DEM of Australia derived from LiDAR 5 Metre Grid, CC BY 4.0",
+ "ge_centre_m": 8.0,
+ "judged": 8,
+ "spots": 10,
+ "mean": 0.56,
+ "rms": 0.6,
+ "worst": 0.82,
+ "passed": true,
+ "rows": [
+  [
+   "s00",
+   389.6,
+   204.2,
+   292.0,
+   5.24,
+   -286.76,
+   "surface (roof/tree/car), not judged"
+  ],
+  [
+   "s01",
+   186.3,
+   384.7,
+   7.0,
+   7.5,
+   0.5,
+   "judged"
+  ],
+  [
+   "s02",
+   26.1,
+   236.8,
+   7.0,
+   -2.17,
+   -9.17,
+   "surface (roof/tree/car), not judged"
+  ],
+  [
+   "s03",
+   -236.9,
+   211.3,
+   -6.0,
+   -5.75,
+   0.25,
+   "judged"
+  ],
+  [
+   "s04",
+   -218.5,
+   103.3,
+   -7.0,
+   -6.23,
+   0.77,
+   "judged"
+  ],
+  [
+   "s05",
+   -167.5,
+   -38.2,
+   -7.0,
+   -6.18,
+   0.82,
+   "judged"
+  ],
+  [
+   "s06",
+   -112.0,
+   -299.0,
+   -6.0,
+   -5.75,
+   0.25,
+   "judged"
+  ],
+  [
+   "s07",
+   92.3,
+   -308.7,
+   -5.0,
+   -4.22,
+   0.78,
+   "judged"
+  ],
+  [
+   "s08",
+   209.4,
+   -194.2,
+   -3.0,
+   -2.26,
+   0.74,
+   "judged"
+  ],
+  [
+   "s09",
+   476.6,
+   -27.2,
+   2.0,
+   2.35,
+   0.35,
+   "judged"
+  ]
+ ]
+}
