@@ -75,26 +75,36 @@ func _build() -> void:
 	if wide:
 		grid = GridContainer.new()
 		grid.name = "StaffGrid"
-		grid.columns = 3 if w >= 1100.0 else 2
+		# Three across at every PC size, each coach's grades on his card (director's pick B, 2026-11-26).
+		grid.columns = 3
 		grid.add_theme_constant_override("h_separation", UiKit.Space.PAD)
 		grid.add_theme_constant_override("v_separation", UiKit.Space.PAD)
 		body.add_child(grid)
 	for job in Coaches.JOBS:
 		var row: Control
+		var coach := false
 		if job == "SC" and mine:
-			row = _you_row()
+			row = _you_row(grid != null)
 		elif open.has(job) and job == _open_job:
 			row = _vacancy_card(job, open[job])
 		elif open.has(job):
 			row = _vacancy_row(job)
 		elif staff.has(job):
 			row = _coach_row(job, staff[job], mine and GameState.can_release_staff())
+			coach = true
 		else:
 			row = _empty_row(job)
 		if grid != null:
 			var card := UiKit.panel(UiKit.PANEL, UiKit.Space.LOOSE)
 			card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			card.add_child(row)
+			_lines_on_top(row)
+			if coach:
+				var cv := UiKit.vbox(UiKit.Space.TIGHT)
+				cv.add_child(row)
+				cv.add_child(_grades(staff[job], job))
+				card.add_child(cv)
+			else:
+				card.add_child(row)
 			grid.add_child(card)
 		else:
 			body.add_child(row)
@@ -129,8 +139,40 @@ func _build() -> void:
 	_root.add_child(UiKit.scroll(body))
 
 
+## A PC card's lines start at its top, so the room a row keeps falls under them, not above.
+func _lines_on_top(row: Control) -> void:
+	var v := row as VBoxContainer
+	if v == null:
+		for vb in row.find_children("*", "VBoxContainer", true, false):
+			v = vb
+			break
+	if v != null:
+		v.alignment = BoxContainer.ALIGNMENT_BEGIN
+
+
+## His grades on his PC card, a line each, and how he fits this job.
+func _grades(c: Dictionary, job: String) -> Control:
+	var g := UiKit.vbox(UiKit.Space.HAIR)
+	g.name = "Grades_" + job
+	for key in Coaches.SKILLS:
+		g.add_child(_grade_row(str(Coaches.SKILL_LABEL[key]), Coaches.grade(Coaches.skill(c, key))))
+	if str(c.get("status", "")) == "club":
+		g.add_child(_grade_row("Fit for this job", Coaches.grade(Coaches.role_fit(c, job))))
+	return g
+
+
+func _grade_row(label: String, value: String) -> Control:
+	var row := UiKit.hbox(UiKit.GAP)
+	var l := UiKit.lbl(label, UiKit.SMALL, UiKit.TEXT)
+	l.autowrap_mode = TextServer.AUTOWRAP_OFF
+	l.custom_minimum_size = Vector2(128, 0)
+	row.add_child(l)
+	row.add_child(UiKit.line(value, UiKit.SMALL, UiKit.TEXT, true))
+	return row
+
+
 ## You: the senior coach's calls are yours, so there are no grades to show.
-func _you_row() -> Control:
+func _you_row(framed := false) -> Control:
 	var v := UiKit.vbox(UiKit.Space.HAIR)
 	v.name = "StaffRow_SC"
 	v.custom_minimum_size.y = 64
@@ -139,7 +181,12 @@ func _you_row() -> Control:
 	var l := UiKit.lbl("Selection, tactics and training are your calls.", UiKit.SMALL, UiKit.TEXT)
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(l)
-	return _padded(v)
+	if not framed:
+		return _padded(v)
+	# On the PC grid it keeps a coach row's height and sits at the top of its card.
+	v.custom_minimum_size.y = 68
+	v.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	return v
 
 
 func _coach_row(job: String, c: Dictionary, releasable := false) -> Control:
