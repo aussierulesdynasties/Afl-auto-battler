@@ -1024,6 +1024,7 @@ func _test_tail_seeds(truth_hb: Array) -> Array:
 	var hb_total := int(truth_hb[0])
 	var hb_kick := int(truth_hb[1])
 	var worst_all := 0.0
+	var worst_at := ""
 	var worst_share := float(hb_kick) / maxf(1.0, float(hb_total))
 	var all_over_100 := hb_total > 100
 	var pooled := [0, 0]
@@ -1032,24 +1033,32 @@ func _test_tail_seeds(truth_hb: Array) -> Array:
 		var pa := _pauses(res)
 		pooled[0] += int(pa[0])
 		pooled[1] += int(pa[1])
-		worst_all = maxf(worst_all, _worst_release(res))
+		var w: Dictionary = _worst_release(res)
+		print("TAIL seed %d worst release %.1f m: %s" % [seed, float(w["off"]), str(w["at"])])
+		if float(w["off"]) > worst_all:
+			worst_all = float(w["off"])
+			worst_at = "seed %d, %s" % [seed, str(w["at"])]
 		var hb := _handball_counts(res)
 		hb_total += hb[0]
 		hb_kick += hb[1]
 		worst_share = maxf(worst_share, float(hb[1]) / maxf(1.0, float(hb[0])))
 		all_over_100 = all_over_100 and hb[0] > 100
-	_check(worst_all < 15.0, "No release far from the logged spot on seeds 1-3 either (worst %.1f m)" % worst_all)
+	_check(worst_all < 15.0, "No release far from the logged spot on seeds 1-3 either (worst %.1f m, %s)" % [worst_all, worst_at])
 	_check(all_over_100 and hb_kick <= hb_total / 50,
 			"A handball is drawn as a handball over four seeds (%d of %d drawn as kicks)" % [hb_kick, hb_total])
 	_check(worst_share <= 0.03, "No seed draws over 3%% of its handballs as kicks (worst %.1f%%)" % (worst_share * 100.0))
 	return pooled
 
 
-func _worst_release(res: Dictionary) -> float:
+## The release furthest from its logged spot: {off, at}, `at` the arrival itself, so a
+## failure names the event to look at.
+func _worst_release(res: Dictionary) -> Dictionary:
 	var played := _play(res, res["events"], 1.0 / 60.0 * 4.0, false)
-	var worst := 0.0
+	var worst := {"off": 0.0, "at": {}}
 	for a in (played["director"] as MatchDirector).arrivals:
-		worst = maxf(worst, absf((a["pos"] as Vector2).x - float(a["want_x"])))
+		var off := absf((a["pos"] as Vector2).x - float(a["want_x"]))
+		if off > float(worst["off"]):
+			worst = {"off": off, "at": a}
 	return worst
 
 
@@ -2198,13 +2207,14 @@ func _test_farewell() -> void:
 
 
 ## The real sun over every ground (Oval3DSunClock.sun_basis): each ground's bearing is known and
-## agrees with its model's own axis (models are laid x east, z south) but for the three turned off
+## agrees with its model's own axis (models are laid x east, z south) but for the four turned off
 ## true north; and the light comes out of the north at an Australian ground, whichever way the
 ## ground lies, so its north side is the sunlit one.
 func _test_sun_bearing() -> void:
 	var places: Dictionary = Oval3DSunClock.place("MCG")
 	_check(places.has("axis"), "The MCG's bearing is known (%s)" % str(places))
-	var off_true := ["marvel", "ikon_park", "blacktown"]
+	# Traeger Park's model is turned 25.4 degrees to north (tools/grounds/traeger/measure/outline.py).
+	var off_true := ["marvel", "ikon_park", "blacktown", "traeger"]
 	var bad := []
 	for g in GroundModels.GROUNDS:
 		var slug: String = GroundModels.GROUNDS[g]
@@ -2371,8 +2381,12 @@ func _test_ground_models() -> void:
 	(Engine.get_main_loop() as SceneTree).root.add_child(oval)
 	oval.build(d, str(res.get("home", "ADE")), str(res.get("away", "MEL")))
 	var model: Node3D = oval.get_node_or_null("Ground")
-	_check(model != null and model.find_children("*", "MeshInstance3D", true, false).size() > 0 and oval.crowd == null,
-			"A match at Engie Stadium plays in its model, with no stand or crowd")
+	# Its crowd, if any, sits on the model's own seats (Engie has had seat files since #2037), as at
+	# the MCG (_test_mcg_crowd), never on the plain stand.
+	_check(model != null and model.find_children("*", "MeshInstance3D", true, false).size() > 0
+			and (oval.crowd == null or oval.crowd.get_parent() == model),
+			"A match at Engie Stadium plays in its model, with no plain stand; any crowd is on the model's seats (%s)" % [
+			"no model" if model == null else ("crowd on " + str(oval.crowd.get_parent().name) if oval.crowd != null else "no crowd")])
 	_check(oval._turf_mat.get_shader_parameter("fence_clip") == GroundModels.match_fence()
 			and GroundModels.stretch("engie").is_equal_approx(Vector2.ONE),
 			"The turf stops at the model's fence")
@@ -2415,6 +2429,27 @@ func _test_ground_terrain() -> void:
 			"The MCG's Yarra Park ring lies on the real land (%d points, worst %.3f m)" % [count, off])
 	_check(above <= 0.001, "Where it meets the model the ring is never above the MCG's street (%.3f)" % above)
 	mcg.free()
+	# Norwood's ring starts on the venue's own edge (63-100 m round): every spoke has the same rings, so each
+	# triangle joins neighbouring rings. Spokes with different ring counts once joined near rings to far ones,
+	# a fan of spikes over the turf from straight above (2026-11-26).
+	var nw := GroundModels.instantiate("norwood")
+	var nring: MeshInstance3D = nw.get_node_or_null("Surrounds")
+	var spread := 0.0
+	var tris := 0
+	if nring != null:
+		var arrs := nring.mesh.surface_get_arrays(0)
+		var nv: PackedVector3Array = arrs[Mesh.ARRAY_VERTEX]
+		var ni: PackedInt32Array = arrs[Mesh.ARRAY_INDEX]
+		for t in range(0, ni.size(), 3):
+			var r0 := Vector2(nv[ni[t]].x, nv[ni[t]].z).length()
+			var r1 := Vector2(nv[ni[t + 1]].x, nv[ni[t + 1]].z).length()
+			var r2 := Vector2(nv[ni[t + 2]].x, nv[ni[t + 2]].z).length()
+			if minf(r0, minf(r1, r2)) < 300.0:
+				spread = maxf(spread, maxf(r0, maxf(r1, r2)) - minf(r0, minf(r1, r2)))
+				tris += 1
+	_check(nring != null and tris > 1000 and spread < 2.0 * GroundModels.LAND_STEP,
+			"Norwood's land ring joins neighbouring rings only (%d triangles, widest %.1f m)" % [tris, spread])
+	nw.free()
 
 
 ## A ground whose boundary was traced on Google Earth (tools/grounds/boundary) plays on that line, not an ellipse:
@@ -2669,7 +2704,7 @@ func _test_ground_backdrop() -> void:
 	_check(GroundModels.has_backdrop("mcg") and GroundModels.has_backdrop("gmhba"),
 			"The MCG and GMHBA Stadium have their surroundings")
 	_check(not GroundModels.has_backdrop("gabba"), "The Gabba has none (its own surrounds, #2020)")
-	for g in ["MCG", "The Gabba"]:
+	for g in ["MCG", "WACA", "The Gabba"]:   # the WACA: the first ground rebuilt as the real place
 		var d := MatchDirector.new()
 		var res := _result(42)
 		d.setup(res, res["events"])
@@ -2679,12 +2714,15 @@ func _test_ground_backdrop() -> void:
 		oval.build(d, "COL", "GEE")
 		var bds := oval.find_children("Backdrop", "", true, false)
 		if g == "The Gabba":
-			_check(bds.is_empty() and oval.camera.far < 1000.0 and not oval._env.fog_enabled,
-					"A ground without surroundings keeps the 900 m view and no haze")
+			# The thin air haze every dry day has (Oval3DTurf._haze, _test_graphics_levels) is no backdrop's haze.
+			var far_haze := oval._env.fog_enabled and oval._env.fog_mode == Environment.FOG_MODE_DEPTH
+			_check(bds.is_empty() and oval.camera.far < 1000.0 and not far_haze,
+					"A ground without surroundings keeps the 900 m view and no distance haze (%d backdrops, far %.0f m, fog %s mode %d)" % [
+					bds.size(), oval.camera.far, str(oval._env.fog_enabled), oval._env.fog_mode])
 			oval.free()
 			continue
 		_check(bds.size() == 1 and (bds[0] as Node).get_parent().name == "Ground",
-				"The MCG's surroundings are laid with its model (%d)" % bds.size())
+				"%s's surroundings are laid with its model (%d)" % [g, bds.size()])
 		if bds.size() != 1:
 			oval.free()
 			continue
@@ -2694,9 +2732,9 @@ func _test_ground_backdrop() -> void:
 		_check(shadow.is_empty(), "The surroundings cast no shadow (%d do)" % shadow.size())
 		_check(oval.camera.far >= GroundModels.BACKDROP_FAR, "The camera sees out to the skyline (%.0f m)" % oval.camera.far)
 		_check(oval._env.fog_enabled and oval._env.fog_depth_begin >= 500.0,
-				"The haze starts well past the stadium (%.0f m)" % oval._env.fog_depth_begin)
+				"%s: the haze starts well past the stadium (%.0f m)" % [g, oval._env.fog_depth_begin])
 		var over := 0
-		var fence := GroundModels.match_fence() * 1.15
+		var fence := GroundModels.match_fence()
 		for n in geo:
 			var mi := n as MeshInstance3D
 			if mi == null or not str(mi.name).begins_with("bg_near_ground"):
@@ -2705,9 +2743,13 @@ func _test_ground_backdrop() -> void:
 			for i in mi.mesh.get_surface_count():
 				for v in mi.mesh.surface_get_arrays(i)[Mesh.ARRAY_VERTEX]:
 					var p: Vector3 = xf * v
-					if pow(p.x / fence.x, 2) + pow(p.z / fence.y, 2) < 1.0 and p.y > -1.0:
+					# inside the fence it lies under the model's own ground (GroundModels.UNDER_TURF, 0.1 m
+					# under the turf); out to 15% past the fence (the stands at most grounds, the grass banks
+					# at the WACA's ends) none of it rises over the turf
+					var e := pow(p.x / fence.x, 2) + pow(p.z / fence.y, 2)
+					if (e < 1.0 and p.y > -0.2) or (e < 1.3225 and p.y > 0.0):
 						over += 1
-		_check(over == 0, "None of the park's ground lies over the arena (%d points)" % over)
+		_check(over == 0, "%s: none of the park's ground lies over the arena (%d points)" % [g, over])
 		oval.free()
 ## The stands' light (director, 2026-11-21: roof undersides "grey, a faint green tint"): the model's
 ## surfaces take the stand shader; a face turned up keeps the sky's light, one turned down loses the
