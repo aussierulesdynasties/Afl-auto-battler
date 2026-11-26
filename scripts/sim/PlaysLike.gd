@@ -36,8 +36,7 @@ class_name PlaysLike
 
 ## The attributes compared: those in the overall rating that say how he plays
 ## (not durability, and not temperament, which is not in the rating).
-const KEYS := ["kicking", "handballing", "contested", "contested_marking", "uncontested_marking",
-		"pressure", "intercept", "speed", "carry", "goalkicking", "accuracy", "creating", "ruck", "star"]
+const KEYS := Attributes.PLAY_STYLE_KEYS
 ## "Similar height": real players this close are preferred over all others.
 const NEAR_CM := 4.0
 ## "About his level": real players whose peak overall is this close to the
@@ -69,10 +68,10 @@ static func profile(p: Dictionary, real := false) -> Dictionary:
 		if not attr.has(key):
 			return {}
 	var role := str(p.get("role", "MID"))
-	var peak := float(p.get("potential", p.get("overall", 0)))
+	var peak := float(p.get("potential", Rating.ovr(p, 0)))
 	if real:
 		peak = maxf(peak, Potential.recent_peak(p))
-	peak = maxf(peak, float(p.get("overall", 0)))
+	peak = maxf(peak, float(Rating.ovr(p, 0)))
 	var at_peak := Prospects.fit_attributes(attr, role, peak)
 	var vec := PackedFloat32Array()
 	for key in KEYS:
@@ -290,8 +289,33 @@ static var _by := {}
 
 ## The compared player's name as this career shows it. "" when there is none.
 static func name_of(p: Dictionary) -> String:
-	var e := nearest(p, GameDB.plays_like_pool)
-	return "" if e.is_empty() else shown_name(e, GameDB.plays_like_pool)
+	var pool: Array = GameDB.plays_like_pool
+	var e := _nearest_memoised(p, pool)
+	return "" if e.is_empty() else shown_name(e, pool)
+
+
+## nearest() for `p` against `pool`, kept for as long as the pool and the facts
+## it reads from him are unchanged: a draft board asks for the same prospects at
+## every pick, and a search of thousands of real seasons each time froze a phone.
+static func _nearest_memoised(p: Dictionary, pool: Array) -> Dictionary:
+	if not is_same(pool, _memo_pool) or _memo_size != pool.size() or _memo.size() > MEMO_MAX:
+		_memo.clear()
+		_memo_pool = pool
+		_memo_size = pool.size()
+	var key := [str(p.get("id", "")), str(p.get("role", "")), p.get("potential"), Rating.ovr(p),
+			p.get("height_cm"), str(p.get("real_name", "")), str(p.get("club", "")),
+			(p.get("attr", {}) as Dictionary).hash()].hash()
+	if _memo.has(key):
+		return _memo[key]
+	var e := nearest(p, pool)
+	_memo[key] = e
+	return e
+
+
+const MEMO_MAX := 20000
+static var _memo := {}
+static var _memo_pool: Array = []
+static var _memo_size := -1
 
 
 ## "Plays like: Marcus Bontempelli", or "" when there is nobody to compare.

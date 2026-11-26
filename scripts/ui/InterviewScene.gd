@@ -58,12 +58,12 @@ func _ready() -> void:
 	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	UiKit.apply_insets(margin, 16)
 	add_child(margin)
-	var page := UiKit.vbox(14)
+	var page := UiKit.vbox(UiKit.Space.LOOSE)
 	page.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var vw := UiKit.view_width(self)
 	var vh := UiKit.view_height(self)
 	_wide = ScreenLayout.roomy(vw, vh)
-	_frame = UiKit.vbox(10)
+	_frame = UiKit.vbox(UiKit.Space.ROOM)
 	_frame.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	if GameState.vignettes_on():
 		_stage = Control.new()
@@ -100,10 +100,10 @@ func _ready() -> void:
 		sheet.name = "InterviewSheet"
 		var sb := StyleBoxFlat.new()
 		sb.bg_color = Color(UiKit.BG, 0.94)
-		sb.content_margin_bottom = 2.0
+		sb.content_margin_bottom = UiKit.Space.SLIM
 		sheet.add_theme_stylebox_override("panel", sb)
 		_frame.add_child(sheet)
-		col = UiKit.vbox(10)
+		col = UiKit.vbox(UiKit.Space.ROOM)
 		if _wide:
 			var mid := CenterContainer.new()
 			sheet.add_child(mid)
@@ -220,8 +220,8 @@ func _question() -> void:
 	# A wide screen sets the answers two by two, so all four sit above the fold.
 	var grid := GridContainer.new()
 	grid.columns = 2 if get_viewport_rect().size.x > get_viewport_rect().size.y else 1
-	grid.add_theme_constant_override("h_separation", 12)
-	grid.add_theme_constant_override("v_separation", 12)
+	grid.add_theme_constant_override("h_separation", UiKit.Space.PAD)
+	grid.add_theme_constant_override("v_separation", UiKit.Space.PAD)
 	_root.add_child(grid)
 	for a in range(answers.size()):
 		var b := UiKit.btn(str(answers[a][1]), UiKit.BODY)

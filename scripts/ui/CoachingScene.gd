@@ -7,6 +7,8 @@ extends Control
 
 var _root: VBoxContainer
 var _sheet: Control
+## A short PC's page comes in two stages: "play" (How we play) or "club" (The club).
+var _stage := "play"
 
 
 func _ready() -> void:
@@ -21,7 +23,7 @@ func _ready() -> void:
 	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
 	UiKit.apply_insets(margin, 12)
 	add_child(margin)
-	_root = UiKit.vbox(10)
+	_root = UiKit.vbox(UiKit.Space.ROOM)
 	margin.add_child(_root)
 	get_viewport().size_changed.connect(_on_resize)
 	_build()
@@ -42,40 +44,96 @@ func _build() -> void:
 		return
 	UiKit.clear(_root)
 	_root.add_child(UiKit.top_bar("Coaching", true))
+	if _wide() and _short_pc():
+		_staged()
+		return
 	var body := UiKit.vbox(UiKit.SECTION)
 	body.name = "CoachingBody"
 	body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	# A PC: how you play on the left, the club around it on the right, rather
-	# than one column stretched across the screen (director, 2026-10-10).
-	var left := body
-	var right := body
-	if _wide():
-		var cols := HBoxContainer.new()
-		cols.name = "CoachingColumns"
-		cols.add_theme_constant_override("separation", 40)
-		body.add_child(cols)
-		left = UiKit.vbox(UiKit.SECTION)
-		right = UiKit.vbox(UiKit.SECTION)
-		left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		left.size_flags_stretch_ratio = 1.4
-		right.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		cols.add_child(left)
-		cols.add_child(right)
-	left.add_child(_how_we_play())
-	left.add_child(_form())
-	left.add_child(_sim_orders())
+	if not _wide():
+		body.add_child(_how_we_play())
+		body.add_child(_form())
+		body.add_child(_sim_orders())
+		body.add_child(_list_and_cap())
+		var b := _board()
+		if b != null:
+			body.add_child(b)
+		body.add_child(_staff())
+		_root.add_child(UiKit.scroll(body))
+		return
+	# A PC: the whole page on one screen in three columns, how we play, recent
+	# games and the sim, then the club (director's pick C, 2026-11-26).
+	var mid := UiKit.vbox(UiKit.SECTION)
+	mid.add_child(_form())
+	mid.add_child(_sim_orders())
+	var right := UiKit.vbox(UiKit.SECTION)
 	right.add_child(_list_and_cap())
 	var board := _board()
 	if board != null:
 		right.add_child(board)
 	right.add_child(_staff())
+	var hw := _how_we_play()
+	hw.size_flags_stretch_ratio = 1.3
+	body.add_child(_columns([hw, mid, right]))
 	_root.add_child(UiKit.scroll(body))
+
+
+## A PC window under 640 units tall (960x540) can't hold the page in columns.
+func _short_pc() -> bool:
+	return UiKit.view_height(self) < 640.0
+
+
+## A short PC: How we play | The club, each stage laid in columns so neither scrolls
+## (director's pick C, B's two stages at 960x540).
+func _staged() -> void:
+	var tabs := UiKit.hbox(UiKit.Space.TIGHT)
+	tabs.name = "CoachingStages"
+	_root.add_child(tabs)
+	for s in [["play", "How we play"], ["club", "The club"]]:
+		var t := UiKit.tab(str(s[1]), _stage == str(s[0]))
+		t.name = "Stage_" + str(s[0])
+		t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		t.pressed.connect(func():
+			_stage = str(s[0])
+			_build())
+		tabs.add_child(t)
+	var body := UiKit.vbox(UiKit.SECTION)
+	body.name = "CoachingBody"
+	body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var parts: Array = []
+	if _stage == "club":
+		# The staff section has no room here: its button sits beside My list.
+		var mid := UiKit.vbox(UiKit.SECTION)
+		mid.add_child(_list_and_cap())
+		mid.add_child(_sim_orders())
+		parts = [_form(), mid]
+		var board := _board()
+		if board != null:
+			parts.append(board)
+	else:
+		# The plans on the left; the rest of the list, the note and how we win and lose beside them.
+		var rest := UiKit.vbox(UiKit.Space.CLOSE)
+		var hw := _how_we_play(rest)
+		hw.size_flags_stretch_ratio = 1.3
+		parts = [hw, rest]
+	body.add_child(_columns(parts))
+	_root.add_child(UiKit.scroll(body))
+
+
+func _columns(parts: Array) -> Control:
+	var cols := HBoxContainer.new()
+	cols.name = "CoachingColumns"
+	cols.add_theme_constant_override("separation", UiKit.Space.APART)
+	for part in parts:
+		(part as Control).size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		cols.add_child(part)
+	return cols
 
 
 ## "When I sim the week" (row T3.R43, P-66): the lines the assistant follows
 ## when you sim, as they stand, and the way into the sheet that sets them.
 func _sim_orders() -> Control:
-	var v := UiKit.vbox(6)
+	var v := UiKit.vbox(UiKit.Space.CLOSE)
 	v.name = "SimOrdersSection"
 	v.add_child(_head("When I sim the week"))
 	var lines := SimOrdersSheet.summary()
@@ -112,7 +170,7 @@ func _wide() -> bool:
 ## A black-and-white club (team_colour is the red accent) or a red or orange
 ## one (it would read as BAD or the primary action) gets a quiet TEXT rule.
 func _head(text: String) -> Control:
-	var v := UiKit.vbox(5)
+	var v := UiKit.vbox(UiKit.Space.SNUG)
 	var rule := ColorRect.new()
 	rule.name = "SectionRule"
 	rule.custom_minimum_size = Vector2(0, 2)
@@ -142,7 +200,7 @@ func _wrapped(text: String, fs := UiKit.BODY, col := UiKit.AUTO_COLOUR) -> Label
 # ---------------------------------------------------------------------------
 func _profile_row(row: Dictionary, ground: Array) -> Control:
 	var dim := str(row["dim"])
-	var box := UiKit.vbox(2)
+	var box := UiKit.vbox(UiKit.Space.SLIM)
 	var b := Button.new()
 	b.name = "Profile_%s" % dim
 	b.flat = true
@@ -151,7 +209,7 @@ func _profile_row(row: Dictionary, ground: Array) -> Control:
 	b.mouse_filter = Control.MOUSE_FILTER_PASS
 	for state in ["normal", "hover", "pressed", "hover_pressed", "focus"]:
 		b.add_theme_stylebox_override(state, StyleBoxEmpty.new())
-	var h := UiKit.hbox(8)
+	var h := UiKit.hbox(UiKit.GAP)
 	b.add_child(h)
 	h.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var name_l := UiKit.line(str(row["label"]), UiKit.BODY, UiKit.TEXT)
@@ -186,10 +244,13 @@ const TRADE_OFF_LINE := "Each plan buys an edge and gives something up. The note
 # ---------------------------------------------------------------------------
 # How we play
 # ---------------------------------------------------------------------------
-func _how_we_play() -> Control:
-	var v := UiKit.vbox(6)
+## `beside`: a short PC's How we play stage, whose tab names it; the strengths no
+## plan runs on and everything after them go in that column.
+func _how_we_play(beside: VBoxContainer = null) -> Control:
+	var v := UiKit.vbox(UiKit.Space.CLOSE)
 	v.name = "HowWePlay"
-	v.add_child(_head("How we play"))
+	if beside == null:
+		v.add_child(_head("How we play"))
 	v.add_child(_wrapped("Each plan runs on one of our list's strengths. That is our side as picked, against every list in the league.",
 			UiKit.SMALL, UiKit.MUTED))
 	# What it costs and what it buys, in one line (P-63).
@@ -217,35 +278,36 @@ func _how_we_play() -> Control:
 	# The strengths no plan runs on, as before: a word each, a tap for who leads it.
 	var rest := UiKit.vbox(0)
 	rest.name = "ListProfile"
-	rest.add_child(UiKit.spacer(4))
+	rest.add_child(UiKit.spacer(UiKit.Space.TIGHT))
 	rest.add_child(UiKit.lbl("Also on our list", UiKit.SMALL, UiKit.TEXT, true))
 	for row in profile:
 		if not PlanTiles.PLAN_STRENGTH.values().has(str(row["dim"])):
 			rest.add_child(_profile_row(row, ground))
-	v.add_child(rest)
-	v.add_child(note)
-	v.add_child(fit)
-	v.add_child(_wrapped("Every match starts on this plan. Change it at any break.",
+	var out: VBoxContainer = v if beside == null else beside
+	out.add_child(rest)
+	out.add_child(note)
+	out.add_child(fit)
+	out.add_child(_wrapped("Every match starts on this plan. Change it at any break.",
 			UiKit.SMALL, UiKit.MUTED))
 
 	var style := GameState.how_we_play()
 	if int(style["games"]) < 3:
-		v.add_child(UiKit.spacer(4))
-		v.add_child(_wrapped("After three games, how we win and get beaten shows here.",
+		out.add_child(UiKit.spacer(UiKit.Space.TIGHT))
+		out.add_child(_wrapped("After three games, how we win and get beaten shows here.",
 				UiKit.BODY, UiKit.MUTED))
 		return v
 	for part in [["How we win", "win", "WinLine"], ["How we get beaten", "beaten", "BeatenLine"]]:
 		var lines: Array = style[part[1]]
-		v.add_child(UiKit.spacer(4))
-		v.add_child(UiKit.lbl(str(part[0]), UiKit.BODY, UiKit.TEXT, true))
+		out.add_child(UiKit.spacer(UiKit.Space.TIGHT))
+		out.add_child(UiKit.lbl(str(part[0]), UiKit.BODY, UiKit.TEXT, true))
 		if lines.is_empty():
 			var quiet := _wrapped(_quiet_line(str(part[1]), int(style["games"])), UiKit.BODY, UiKit.MUTED)
 			quiet.name = "%sNone" % part[2]
-			v.add_child(quiet)
+			out.add_child(quiet)
 		for i in range(lines.size()):
 			var l := _wrapped(str(lines[i]))
 			l.name = "%s_%d" % [part[2], i]
-			v.add_child(l)
+			out.add_child(l)
 	return v
 
 
@@ -253,7 +315,7 @@ func _how_we_play() -> Control:
 # Form
 # ---------------------------------------------------------------------------
 func _form() -> Control:
-	var v := UiKit.vbox(4)
+	var v := UiKit.vbox(UiKit.Space.TIGHT)
 	v.name = "Form"
 	v.add_child(_head("Recent games"))
 	var form := GameState.player_form()
@@ -272,7 +334,7 @@ func _form() -> Control:
 		v.add_child(head)
 		for row in rows:
 			v.add_child(_form_row(row, str(part[1])))
-		v.add_child(UiKit.spacer(4))
+		v.add_child(UiKit.spacer(UiKit.Space.TIGHT))
 	return v
 
 
@@ -312,7 +374,7 @@ const SETTLED_GAMES := 10
 # List and cap
 # ---------------------------------------------------------------------------
 func _list_and_cap() -> Control:
-	var v := UiKit.vbox(4)
+	var v := UiKit.vbox(UiKit.Space.TIGHT)
 	v.name = "ListAndCap"
 	v.add_child(_head("List and cap"))
 	var line := "%d players on the list" % GameState.my_list.size()
@@ -323,6 +385,11 @@ func _list_and_cap() -> Control:
 	var l := _wrapped(line)
 	l.name = "CapLine"
 	v.add_child(l)
+	var cut := Contracts.pay_cut_note(Contracts.money_year)
+	if cut != "":
+		var n := _wrapped(cut, UiKit.SECONDARY)
+		n.name = "PayCutNote"
+		v.add_child(n)
 	var b := UiKit.btn("My list", UiKit.BODY)
 	b.name = "OpenList"
 	b.custom_minimum_size = Vector2(0, 44)
@@ -330,7 +397,14 @@ func _list_and_cap() -> Control:
 		b.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 		b.custom_minimum_size.x = 180
 	b.pressed.connect(func(): Router.go("list"))
-	v.add_child(b)
+	if not (_wide() and _short_pc()):
+		v.add_child(b)
+		return v
+	# A short PC's club stage has no staff section: the way to the staff sits beside My list.
+	var bh := UiKit.hbox(UiKit.GAP)
+	v.add_child(bh)
+	bh.add_child(b)
+	bh.add_child(_staff_button())
 	return v
 
 
@@ -340,7 +414,7 @@ func _list_and_cap() -> Control:
 func _board() -> Control:
 	if GameState.board_goal_text() == "":
 		return null
-	var v := UiKit.vbox(4)
+	var v := UiKit.vbox(UiKit.Space.TIGHT)
 	v.name = "Board"
 	v.add_child(_head("The board"))
 	var state := GameState.board_state()
@@ -357,7 +431,7 @@ func _board() -> Control:
 	goal_why.name = "BoardGoalWhy"
 	v.add_child(goal_why)
 	if GameState.board_why() != "":
-		v.add_child(UiKit.spacer(8))
+		v.add_child(UiKit.spacer(UiKit.GAP))
 		var why := _wrapped(GameState.board_why(), UiKit.BODY, UiKit.MUTED)
 		why.name = "BoardWhy"
 		v.add_child(why)
@@ -373,7 +447,7 @@ func _staff() -> Control:
 	var v := UiKit.vbox(0)
 	v.name = "Staff"
 	v.add_child(_head("Staff"))
-	v.add_child(UiKit.spacer(4))
+	v.add_child(UiKit.spacer(UiKit.Space.TIGHT))
 	var staff := GameState.club_staff(GameState.my_club)
 	var open := {}
 	for vac in GameState.staff_vacancies:
@@ -385,7 +459,13 @@ func _staff() -> Control:
 			v.add_child(_staff_row(job, {}))
 		else:
 			v.add_child(_staff_row(job, staff[job]))
-	v.add_child(UiKit.spacer(6))
+	v.add_child(UiKit.spacer(UiKit.Space.CLOSE))
+	v.add_child(_staff_button())
+	return v
+
+
+## The way into the staff, with the jobs still to fill.
+func _staff_button() -> Button:
 	var jobs := GameState.staff_vacancies.size()
 	var b := UiKit.btn("Staff" if jobs == 0 else "Staff  ·  %d to fill" % jobs, UiKit.BODY, jobs > 0)
 	b.name = "OpenStaff"
@@ -394,8 +474,7 @@ func _staff() -> Control:
 		b.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 		b.custom_minimum_size.x = 180
 	b.pressed.connect(func(): Router.go("staff"))
-	v.add_child(b)
-	return v
+	return b
 
 
 func _staff_row(job: String, c: Dictionary) -> Control:
@@ -409,7 +488,7 @@ func _staff_row(job: String, c: Dictionary) -> Control:
 		b.add_theme_stylebox_override(state, StyleBoxEmpty.new())
 	var label := str(Coaches.JOB_LABEL[job])
 	# The job in bold, the man in regular: a vacancy is quiet.
-	var h := UiKit.hbox(8)
+	var h := UiKit.hbox(UiKit.GAP)
 	b.add_child(h)
 	h.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var role := UiKit.line(label, UiKit.BODY, UiKit.MUTED if c.is_empty() else UiKit.TEXT, true)

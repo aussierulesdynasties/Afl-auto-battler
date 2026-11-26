@@ -123,13 +123,13 @@ const TRAIN_COST_SCALE := 1.25
 static func match_xp(p: Dictionary, game: float) -> float:
 	if game <= 0.0:
 		return 0.0
-	return points_per_game(int(p.get("potential", p.get("overall", 60)))) * MATCH_SHARE \
+	return points_per_game(int(p.get("potential", Rating.ovr(p, 60)))) * MATCH_SHARE \
 			* game * xp_per_point(p)
 
 
 ## His training XP for the week before his club's multipliers.
 static func train_xp(p: Dictionary) -> float:
-	return points_per_game(int(p.get("potential", p.get("overall", 60)))) * TRAIN_SHARE \
+	return points_per_game(int(p.get("potential", Rating.ovr(p, 60)))) * TRAIN_SHARE \
 			* xp_per_point(p)
 
 
@@ -212,7 +212,7 @@ static func career_last(p: Dictionary, season_year: int) -> float:
 		var start := _first_season(p, season_year)
 		var played := maxi(0, season_year - start)
 		var rng := Prospects._rng_for("%s|career" % str(p.get("id", "")))
-		var pot := int(p.get("potential", p.get("overall", 60)))
+		var pot := int(p.get("potential", Rating.ovr(p, 60)))
 		var n := roll_seasons(pot, Traits.fine_wine(p), played + 1, rng)
 		last = float(start - 1 + n)
 	last = maxf(last, float(season_year))
@@ -242,7 +242,7 @@ static func _first_season(p: Dictionary, season_year: int) -> int:
 ## falls. Returns the rating change.
 static func summer(p: Dictionary, year: int) -> int:
 	var a: Dictionary = p.get("attr", {})
-	var ov := int(p.get("overall", 0))
+	var ov := int(Rating.ovr(p, 0))
 	if a.is_empty():
 		return 0
 	var last := career_last(p, year)
@@ -267,8 +267,8 @@ static func summer(p: Dictionary, year: int) -> int:
 		_take_back(a, p["over_gains"], f)
 		p["attr"] = a
 	p["overall"] = Ratings.rate_overall(p["attr"], role, games)
-	p["value"] = Ratings.salary_value(int(p["overall"]))
-	return int(p["overall"]) - ov
+	p["value"] = Ratings.salary_value(int(Rating.ovr(p)))
+	return int(Rating.ovr(p)) - ov
 
 
 ## Grow him as if he played `games` ordinary senior games on his position
@@ -301,7 +301,7 @@ static func _take_back(a: Dictionary, gains: Dictionary, share: float) -> void:
 static func breakouts(code: String, arr: Array, year: int) -> Array:
 	var eligible := []
 	for p in arr:
-		var ov := int(p.get("overall", 0))
+		var ov := int(Rating.ovr(p, 0))
 		if ov >= BREAKOUT_MIN and ov <= BREAKOUT_MAX and not (p.get("attr", {}) as Dictionary).is_empty():
 			eligible.append(p)
 	var out := []
@@ -315,12 +315,12 @@ static func breakouts(code: String, arr: Array, year: int) -> Array:
 		var jump := rng.randi_range(int(BREAKOUT_JUMP[0]), int(BREAKOUT_JUMP[1]))
 		var role := str(p.get("role", "MID"))
 		var games := Ratings.effective_games(p)
-		var ov := int(p["overall"])
+		var ov := int(Rating.ovr(p))
 		p["attr"] = Prospects.fit_attributes(p["attr"], role, float(ov + jump), games)
 		p["overall"] = Ratings.rate_overall(p["attr"], role, games)
-		p["value"] = Ratings.salary_value(int(p["overall"]))
+		p["value"] = Ratings.salary_value(int(Rating.ovr(p)))
 		var story: Array = p.get("breakouts", [])
-		story.append([year, int(p["overall"]) - ov])
+		story.append([year, int(Rating.ovr(p)) - ov])
 		p["breakouts"] = story
-		out.append([str(p.get("id", "")), int(p["overall"]) - ov])
+		out.append([str(p.get("id", "")), int(Rating.ovr(p)) - ov])
 	return out

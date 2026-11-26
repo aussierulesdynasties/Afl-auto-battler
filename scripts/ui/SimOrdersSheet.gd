@@ -23,7 +23,7 @@ static func open(from: Node, on_close := Callable()) -> Control:
 	if on_close.is_valid():
 		overlay.tree_exited.connect(func() -> void: on_close.call_deferred())
 	var v: VBoxContainer = box["body"]
-	v.add_theme_constant_override("separation", 6)
+	v.add_theme_constant_override("separation", UiKit.Space.CLOSE)
 	var head := UiKit.heading("When I sim the week", UiKit.H1)
 	head.name = "SimOrdersTitle"
 	v.add_child(head)
@@ -34,14 +34,14 @@ static func open(from: Node, on_close := Callable()) -> Control:
 	v.add_child(plan)
 	for q in SimOrders.questions():
 		var key := str(q["key"])
-		v.add_child(UiKit.spacer(6))
+		v.add_child(UiKit.spacer(UiKit.Space.CLOSE))
 		var title := UiKit.lbl(str(q["title"]), UiKit.NAME, UiKit.TEXT, true)
 		title.name = "SimOrderTitle_" + key
 		v.add_child(title)
 		var lead := UiKit.lbl(str(q["lead"]), UiKit.SMALL, UiKit.MUTED)
 		lead.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(lead)
-		var group := UiKit.vbox(6)
+		var group := UiKit.vbox(UiKit.Space.CLOSE)
 		group.name = "SimOrderOptions_" + key
 		v.add_child(group)
 		for o in q["options"]:
@@ -93,7 +93,7 @@ static func _option(q: String, o: Dictionary, group: Control) -> Control:
 	for side in ["top", "bottom"]:
 		pad.add_theme_constant_override("margin_" + side, 8)
 	wrap.add_child(pad)
-	var col := UiKit.vbox(2)
+	var col := UiKit.vbox(UiKit.Space.SLIM)
 	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	pad.add_child(col)
 	var name_l := UiKit.lbl(str(o["label"]), UiKit.NAME, UiKit.TEXT, true)
@@ -101,7 +101,7 @@ static func _option(q: String, o: Dictionary, group: Control) -> Control:
 	name_l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	col.add_child(name_l)
 	for part in [["Gain", "gain"], ["Cost", "cost"]]:
-		var row := UiKit.hbox(6)
+		var row := UiKit.hbox(UiKit.Space.CLOSE)
 		row.name = "Option" + str(part[0])
 		row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		var tag := UiKit.lbl(str(part[0]), UiKit.SECONDARY, UiKit.MUTED, true)

@@ -31,6 +31,10 @@ static var test_cover := false
 
 enum Phase { IDLE, COVERING, HELD, REVEALING }
 
+## The dots have gone: the new screen is in full view (UiKit.count_up and
+## reveal start here, so an arriving screen's motion is seen).
+signal cleared
+
 var busy := false
 ## How many lines were drawn on the cover; tests read it.
 var lines_shown := 0
@@ -102,6 +106,11 @@ func _ready() -> void:
 ## Whether the cover sweeps (motion) or simply goes up (Reduced motion).
 func should_run() -> bool:
 	return UiKit.motion_on()
+
+
+## From the moment the dots start to cover until they have gone again.
+func covering() -> bool:
+	return _phase != Phase.IDLE
 
 
 ## Whether a cover goes up at all: everywhere but a headless test run.
@@ -281,6 +290,7 @@ func _done() -> void:
 	_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_set_factor(0.0)
 	busy = false
+	cleared.emit()
 
 
 func _hide_line() -> void:

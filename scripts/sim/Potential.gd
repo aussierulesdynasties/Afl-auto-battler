@@ -131,7 +131,7 @@ static func rehab_pull(age: float) -> float:
 static func assign(p: Dictionary) -> void:
 	if p.has("potential"):
 		return
-	var ov := int(p.get("overall", 50))
+	var ov := int(Rating.ovr(p, 50))
 	var rng := _rng(p)
 	# A past start knows each real player's real peak (p["real_peak"], his best
 	# real season from the data season on): that sets his ceiling, give or take
@@ -176,7 +176,7 @@ const REACHABLE_FROM_AGE := 26.0
 ## The best rating his development is expected to take him to from now
 ## (outlook, ten seasons, breakouts aside).
 static func reachable_peak(p: Dictionary) -> float:
-	var best := float(p.get("overall", 0))
+	var best := float(Rating.ovr(p, 0))
 	for season in outlook(p, 10):
 		best = maxf(best, float(season[0]))
 	return best
@@ -214,9 +214,9 @@ static func pedigree_potential(p: Dictionary, pot: float) -> float:
 ## jump happens next rollover. A full season's player grows at the ordinary
 ## pace toward it (director 2026-11-17, silent corrections).
 static func set_override(p: Dictionary, pot: int) -> void:
-	p["potential"] = clampi(pot, int(p.get("overall", 1)), MAX_POT)
+	p["potential"] = clampi(pot, int(Rating.ovr(p, 1)), MAX_POT)
 	var games := float(p.get("gm", 0.0))
-	if int(p["potential"]) - int(p.get("overall", 0)) >= REHAB_GAP 			and games > 0.0 and games < REHAB_GAMES:
+	if int(p["potential"]) - int(Rating.ovr(p, 0)) >= REHAB_GAP 			and games > 0.0 and games < REHAB_GAMES:
 		p["rehab"] = true
 
 
@@ -232,7 +232,7 @@ static func gap_pull(age: float) -> float:
 ## How far a player's rating moves toward POT in one off-season. Positive
 ## only; decline with age is handled by the caller. Consumes the rehab flag.
 static func growth(p: Dictionary, age: float) -> float:
-	var gap := float(int(p.get("potential", p.get("overall", 0))) - int(p.get("overall", 0)))
+	var gap := float(int(p.get("potential", Rating.ovr(p, 0))) - int(Rating.ovr(p, 0)))
 	if gap <= 0.0:
 		return 0.0
 	var pull := gap_pull(age)
@@ -254,7 +254,7 @@ static func growth(p: Dictionary, age: float) -> float:
 ## playing], ...] for `years` seasons, the first the one about to be played.
 ## Breakouts are left out: nobody can plan on one.
 static func outlook(p: Dictionary, years: int) -> Array:
-	var r := float(p.get("overall", 50))
+	var r := float(Rating.ovr(p, 50))
 	var pot := maxf(r, float(p.get("potential", r)))
 	var age := float(p.get("age", 26.0))
 	var rehab := bool(p.get("rehab", false))
@@ -329,14 +329,14 @@ static func _draftee_potential(p: Dictionary, rng: RandomNumberGenerator) -> flo
 	# his age has. Draft classes are 18-19, so they never reach this.
 	var age := float(p.get("age", 18.0))
 	if age > MAX_PROSPECT_AGE:
-		return float(int(p.get("overall", 50))) + _headroom(age) + rng.randf_range(-2.0, 3.0)
+		return float(int(Rating.ovr(p, 50))) + _headroom(age) + rng.randf_range(-2.0, 3.0)
 	var rank := clampi(int(p.get("draft_rank", 40)), 1, 80)
 	var room := maxf(6.0, 22.0 - 0.25 * float(rank - 1))
 	# A strong or weak generated class moves its best prospects' ceilings
 	# (Prospects.CLASS_TIERS); the per-player roll still makes busts.
 	room += float(p.get("class_ceiling", 0.0))
 	room += float(p.get("night_drop", 0.0))  # a lower draft-night rating keeps the same ceiling
-	return float(int(p.get("overall", 50))) + room + rng.randf_range(-3.0, 3.0)
+	return float(int(Rating.ovr(p, 50))) + room + rng.randf_range(-3.0, 3.0)
 
 
 static func _rng(p: Dictionary) -> RandomNumberGenerator:

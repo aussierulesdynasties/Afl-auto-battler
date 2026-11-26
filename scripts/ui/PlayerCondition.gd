@@ -107,14 +107,14 @@ static func strip(p: Dictionary, form_log: Dictionary, reserves_log: Dictionary,
 		labelled := false) -> HBoxContainer:
 	var c := read(p, form_log, reserves_log)
 	var id := str(p.get("id", ""))
-	var h := UiKit.hbox(4 if not labelled else 10)
+	var h := UiKit.hbox(UiKit.Space.TIGHT if not labelled else UiKit.Space.ROOM)
 	h.name = "Condition_" + id
 	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	for k in KEYS:
-		var cell := UiKit.vbox(1)
+		var cell := UiKit.vbox(UiKit.Space.HAIR)
 		cell.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		cell.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		var top := UiKit.hbox(4)
+		var top := UiKit.hbox(UiKit.Space.TIGHT)
 		top.alignment = BoxContainer.ALIGNMENT_CENTER if not labelled else BoxContainer.ALIGNMENT_BEGIN
 		if labelled:
 			var w := UiKit.lbl(WORDS[k], size, UiKit.MUTED)
@@ -158,10 +158,10 @@ static func _bar(fill: float, colour: Color) -> Control:
 static func sheet_block(p: Dictionary, form_log: Dictionary, reserves_log: Dictionary) -> VBoxContainer:
 	var c := read(p, form_log, reserves_log)
 	var id := str(p.get("id", ""))
-	var v := UiKit.vbox(4)
+	var v := UiKit.vbox(UiKit.Space.TIGHT)
 	v.name = "ProfileCondition"
 	for k in KEYS:
-		var row := UiKit.hbox(8)
+		var row := UiKit.hbox(UiKit.GAP)
 		var w := UiKit.lbl(WORDS[k], UiKit.SMALL, UiKit.MUTED, true)
 		w.custom_minimum_size.x = 64
 		w.autowrap_mode = TextServer.AUTOWRAP_OFF

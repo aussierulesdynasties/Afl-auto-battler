@@ -18,6 +18,13 @@ extends Control
 
 const WEEK_W_MIN := 460.0
 const WEEK_W_MAX := 600.0
+## Under this width (a 960x540 PC window) the oval and the interchange under it
+## don't both fit the height: the six centre cards overlapped and the bench was
+## cut at the foot. The oval takes the full height on the left, this wide, and
+## the interchange goes to the top of the right-hand column (director,
+## 2026-11-25: "A · ground across"). Wider windows keep the interchange under the oval.
+const ACROSS_BELOW := 1000.0
+const ACROSS_OVAL_W := 586.0
 
 var _root: VBoxContainer
 var _notice := ""
@@ -32,6 +39,8 @@ var _line_cache := {}      # the other clubs' lines, built once a visit
 var _wide := false
 var _chemistry: Control           # the Team Chemistry sheet, open over the side
 var _list_host: VBoxContainer = null  # a wide screen's column for the players not picked
+var _bench_host: VBoxContainer = null  # the interchange's place in that column, under ACROSS_BELOW wide
+var _settled := false   # built once this visit: a move or a switch rebuilds without the arrival
 
 
 func _ready() -> void:
@@ -46,7 +55,7 @@ func _ready() -> void:
 	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
 	UiKit.apply_insets(margin, 12)
 	add_child(margin)
-	_root = UiKit.vbox(8)
+	_root = UiKit.vbox(UiKit.GAP)
 	margin.add_child(_root)
 	_week = WeekPreview.new(self, func(note: String, undo: Dictionary):
 		_undo = undo
@@ -57,6 +66,7 @@ func _ready() -> void:
 		if is_inside_tree() and not UiKit.keyboard_resize(self):
 			_build())
 	_build()
+	_settled = true
 	FirstVisitIntro.show_if_due.call_deferred(self, "selection")
 
 
@@ -101,7 +111,7 @@ func _build() -> void:
 	if not auto and not GameState.my_selection().has("WING"):
 		GameState.set_selection(GameState.current_side())
 	if _wide:
-		var cols := UiKit.hbox(14)
+		var cols := UiKit.hbox(UiKit.Space.LOOSE)
 		cols.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		_root.add_child(cols)
 		# The players not picked have the column beside the oval (director,
@@ -110,15 +120,34 @@ func _build() -> void:
 		# to live here. put the unselected players there"). The synergies and
 		# your own news, which move with the side, sit under them.
 		_week.with_report = false
-		_list_host = UiKit.vbox(6)
+		_list_host = UiKit.vbox(UiKit.Space.CLOSE)
 		_list_host.name = "NotPickedColumn"
 		_list_host.size_flags_vertical = Control.SIZE_EXPAND_FILL
-		cols.add_child(_scroller(_side_page(auto), "SelectionScroll"))
+		var across := UiKit.view_width(self) < ACROSS_BELOW
+		_bench_host = null
+		if across:
+			_bench_host = UiKit.vbox(UiKit.Space.CLOSE)
+			_bench_host.name = "BenchHost"
+		var side_page := _side_page(auto)
+		if across:
+			side_page.custom_minimum_size.x = ACROSS_OVAL_W
+		var side := _scroller(side_page, "SelectionScroll")
+		cols.add_child(side)
 		# The week keeps a readable measure: it does not stretch with the window.
-		var right := UiKit.vbox(10)
+		var right := UiKit.vbox(UiKit.Space.ROOM)
 		right.name = "WeekColumn"
 		right.size_flags_horizontal = Control.SIZE_FILL
-		right.custom_minimum_size.x = clampf(UiKit.view_width(self) * 0.4, WEEK_W_MIN, WEEK_W_MAX)
+		var measure := clampf(UiKit.view_width(self) * 0.4, WEEK_W_MIN, WEEK_W_MAX)
+		right.custom_minimum_size.x = measure
+		# ...but gives way before the oval's column is pushed past the window:
+		# at 960 wide the two came to 49 more than the screen, and Auto-pick
+		# and the right-hand cards ran off its edge.
+		var inner := UiKit.view_width(self) - float(_margin_x())
+		var give_way := func():
+			right.custom_minimum_size.x = clampf(inner - cols.get_theme_constant("separation")
+					- side.get_combined_minimum_size().x, 0.0, measure)
+		side.minimum_size_changed.connect(give_way)
+		give_way.call()
 		var week_page := _week.page()
 		var week := _scroller(week_page, "WeekScroll")
 		week.size_flags_vertical = Control.SIZE_FILL
@@ -128,11 +157,14 @@ func _build() -> void:
 		week_page.minimum_size_changed.connect(fit)
 		right.resized.connect(fit)
 		fit.call_deferred()
+		if _bench_host != null:
+			right.add_child(_bench_host)
 		right.add_child(_list_host)
 		right.add_child(week)
 		cols.add_child(right)
 	else:
 		_list_host = null
+		_bench_host = null
 		# A phone scrolls the page by drag, with no bar (as Training): the bar's
 		# strip pushed the page 20 px past a 390 px screen, and the Auto-pick
 		# button's right border with it.
@@ -141,7 +173,7 @@ func _build() -> void:
 		_root.add_child(sc)
 	if GameState.side_from_match and GameState.match_day_setup_open():
 		# Reached from the match-day setup: the way back is the primary action.
-		var row := UiKit.hbox(8)
+		var row := UiKit.hbox(UiKit.GAP)
 		row.alignment = BoxContainer.ALIGNMENT_END
 		var back := UiKit.btn("Back to match day", UiKit.NAME, true)
 		back.name = "BackToMatchDay"
@@ -169,9 +201,16 @@ func _confirm_button(short := false) -> Button:
 	b.disabled = done
 	b.pressed.connect(func():
 		WeekChecklist.mark(GameState, "team")
-		_notice = "Our side is confirmed for this week."
-		_build())
+		_say("Our side is confirmed for this week."))
 	return b
+
+
+## The page's left and right margins together (the insets around it).
+func _margin_x() -> int:
+	var m := _root.get_parent() as MarginContainer
+	if m == null:
+		return 24
+	return m.get_theme_constant("margin_left") + m.get_theme_constant("margin_right")
 
 
 ## A page fills the space and scrolls only if something abnormal (a very long
@@ -186,19 +225,18 @@ func _scroller(page: Control, node_name: String) -> ScrollContainer:
 ## The side: the oval you can look at theirs on, your 18 and the bench, and
 ## the players not picked, with what acts on the side beside the interchange.
 func _side_page(auto: bool) -> Control:
-	var page := UiKit.vbox(8)
+	var page := UiKit.vbox(UiKit.GAP)
 	page.name = "SidePage"
 	var nxt := GameState.my_next_opponent()
 	if not nxt.is_empty():
 		# Look at them on the same oval (director, 2026-10-07).
 		var opp_name := GameDB.club_short(str(nxt["code"]))
-		page.add_child(UiKit.segmented("OvalView", [["mine", "Our team"], ["opp", opp_name]], _view, func(k):
-			_view = k
-			_build()))
+		page.add_child(UiKit.segmented("OvalView", [["mine", "Our team"], ["opp", opp_name]], _view, _switch_view))
 	var builder := TeamBuilder.new()
 	builder.name = "TeamBuilder"
 	builder.stacked = true
 	builder.rest_host = _list_host if _wide else null
+	builder.bench_host = _bench_host if _wide else null
 	builder.pull_up = not _wide
 	builder.condition = true
 	builder.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -218,7 +256,7 @@ func _side_page(auto: bool) -> Control:
 		var actions := HBoxContainer.new()
 		actions.name = "SideActions"
 		actions.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		actions.add_theme_constant_override("separation", 8)
+		actions.add_theme_constant_override("separation", UiKit.GAP)
 		_fill_actions(actions)
 		builder.interchange_actions = actions
 		builder.hint_extra = "Auto-pick names our side until you move someone." if auto else ""
@@ -226,10 +264,12 @@ func _side_page(auto: bool) -> Control:
 		# why. It shares the line of the Your team / opponent switch, so the
 		# height it used goes to the players not picked.
 		var meter := ChemistryMeter.meter(_open_chemistry)
+		if not _settled:
+			ChemistryMeter.arrive(meter)
 		var tabs: Control = page.get_node_or_null("OvalView")
 		# (A larger text size, Settings, has no room for both on a phone's line.)
 		if tabs != null and (_wide or UiKit.text_scale <= 1.0):
-			var top := UiKit.hbox(12)
+			var top := UiKit.hbox(UiKit.Space.PAD)
 			top.name = "SideTop"
 			tabs.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 			page.remove_child(tabs)
@@ -264,8 +304,7 @@ func _fill_actions(actions: HBoxContainer) -> void:
 	save.name = "SaveBest23"
 	save.pressed.connect(func():
 		GameState.set_best23(GameState.current_side())
-		_notice = "Saved as your Best 23. Choose it any week from Auto-pick."
-		_build())
+		_say("Saved as your Best 23. Choose it any week from Auto-pick."))
 	actions.add_child(save)
 	if not _undo.is_empty():
 		var undo := UiKit.text_action("Undo", UiKit.SECONDARY)
@@ -296,6 +335,42 @@ func _close_chemistry() -> bool:
 		_chemistry.queue_free()
 	_chemistry = null
 	return was
+
+
+## Save as my Best 23 and Confirm side change the line under the interchange,
+## the actions beside it and the week, never the oval or the list: only those
+## are built again (bug bash 2026-11-25, M-2: building the page again froze
+## each tap 250-565 ms).
+func _say(note: String) -> void:
+	_notice = note
+	var builder: TeamBuilder = _root.find_child("TeamBuilder", true, false)
+	if builder == null:
+		_build()
+		return
+	builder.show_note(note)
+	_refresh_facts()
+
+
+## The Our team / opponent switch: the side (the oval, the interchange and the
+## list) is built again for the club it shows; the top bar and the week stay
+## (bug bash 2026-11-25, M-2).
+func _switch_view(k: String) -> void:
+	if k == _view:
+		return
+	_view = k
+	var sc: ScrollContainer = _root.find_child("SelectionScroll", true, false)
+	if sc == null:
+		_build()
+		return
+	var places := UiKit.scroll_places(_root)
+	var page := _side_page(GameState.my_selection().is_empty())
+	if _wide and _bench_host != null:
+		page.custom_minimum_size.x = ACROSS_OVAL_W
+	page.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	page.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	UiKit.clear(sc)
+	sc.add_child(page)
+	UiKit.restore_places(_root, places)
 
 
 ## After a move: the week and the actions beside the interchange, without
@@ -390,7 +465,7 @@ func _side_ink(code: String) -> Color:
 
 
 func _side_name(code: String, fs: int, marker := 18.0) -> Control:
-	var h := UiKit.hbox(6)
+	var h := UiKit.hbox(UiKit.Space.CLOSE)
 	h.add_child(UiKit.club_marker(code, marker))
 	h.add_child(UiKit.line(GameDB.club_name(code), fs, _side_ink(code), true))
 	return h

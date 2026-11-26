@@ -106,7 +106,16 @@ static func foundation_size(code: String) -> int:
 ## entering before the concessions signs them from its home state league.
 static func foundation_list(code: String, year: int, career_seed: int) -> Array:
 	var salt := "%04d" % posmod(career_seed, 10000)
-	var out: Array = Prospects.generate_expansion_list(code, year, foundation_size(code), salt)
+	# With the concessions they are rated as the state-leaguers who fill out a
+	# League redraft are (Prospects.DEPTH_FIRST_RANK): ranked after a draft
+	# class, a list's depth players. Ranked from 1 they came in as picks 1 to
+	# 30 of a class with no draft-night discount, the best of them a club's
+	# fifth-best player, and a Forge club on real lists was the league's
+	# best-rated side in its first season (bug bash, 2026-11-23). A club
+	# entering before the concessions builds its whole first list from its
+	# state league's best, and keeps that.
+	var first_rank := Prospects.DEPTH_FIRST_RANK if concessions(code) else 1
+	var out: Array = Prospects.generate_expansion_list(code, year, foundation_size(code), salt, first_rank)
 	var home := "" if concessions(code) else str(EARLY_HOME.get(code, ""))
 	var sides: Array = Prospects.JUNIOR_TEAMS.filter(func(t): return str(t[2]) == home)
 	for i in out.size():
@@ -118,7 +127,7 @@ static func foundation_list(code: String, year: int, career_seed: int) -> Array:
 			p["draft_state"] = home
 			p["state"] = home
 	for p in out:
-		var ovr := int(p.get("overall", 50))
+		var ovr := int(Rating.ovr(p, 50))
 		var room := 1
 		for band in FOUNDATION_ROOM:
 			if float(p.get("age", 25.0)) <= float(band[0]):

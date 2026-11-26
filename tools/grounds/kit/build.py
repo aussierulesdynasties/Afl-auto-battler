@@ -513,19 +513,33 @@ def concourse(col):
     {b: [bearings], dr: [distances beyond the fence], z: [[height per dr] per bearing]} the bank and path follow the
     measured ground (held at the last measured height beyond the table), otherwise they are flat"""
     mb = MB('concourse'); bs = np.arange(0, 360.001, 1.0); RO = D['outer_r']
+    # a measured bank's cells are not flat (heights differ on each corner): smooth_ground welds and smooth-shades them,
+    # else each cell shows as two flat triangles of different shade, the thin one dark against the sun
+    mb.smooth = bool(D.get('smooth_ground'))
     Ro = (lambda b: float(np.interp(b % 360, *zip(*RO), period=360))) if isinstance(RO, list) else (lambda b: RO)
     PWt = D.get('path_w', 3.0); T = D.get('terrain')
     pw = (lambda b: float(np.interp(b % 360, *zip(*PWt), period=360))) if isinstance(PWt, list) else (lambda b: PWt)
     RG = D.get('ground_r', 240)   # where the ground disc ends: a number or a [b, r] table
     Rg = (lambda b: float(np.interp(b % 360, *zip(*RG), period=360))) if isinstance(RG, list) else (lambda b: RG)
-    def band2(ra, rb, ra2, rb2, step):   # radii across a band on both edges of a 1-degree slice, split every 'step' m
-        n = max(1, int(math.ceil(max(rb - ra, rb2 - ra2) / step))) if T else 1
+    def band2(ra, rb, ra2, rb2, step, n=None):   # radii across a band on both edges of a 1-degree slice, split every 'step' m
+        if n is None: n = max(1, int(math.ceil(max(rb - ra, rb2 - ra2) / step))) if T else 1
         return [ra + (rb - ra) * j / n for j in range(n + 1)], [ra2 + (rb2 - ra2) * j / n for j in range(n + 1)]
+    # one split count all round each band, so neighbouring slices share the vertices on their common edge: a count per
+    # slice left T-junctions whose cracks showed the layer below as dark slashes (Blacktown's west bank, 2026-11-23)
+    _N = lambda f, step: max(1, int(math.ceil(max(f(b) for b in bs) / step))) if T else 1
+    NB = _N(lambda b: Ro(b) - fence_r(b % 360) - 0.12, 1.5); NP = _N(pw, 1.5)
+    NO = _N(lambda b: Rg(b) - Ro(b) - pw(b) + 0.2, 4.0)
+    CBB = D['mats_ground'].get('concourse_by_b', [])   # [[b0, b1, mat]]: another surface on part of the bank
+    def conc_m(b):
+        b %= 360
+        for b0, b1, mm in CBB:
+            if (b0 <= b < b1) if b0 <= b1 else (b >= b0 or b < b1): return mm
+        return D['mats_ground']['concourse']
     for i in range(len(bs) - 1):
         ba, bb = bs[i], bs[i + 1]
-        for r0a, r0b, r1a, r1b, m in ((fence_r(ba % 360) + 0.12, fence_r(bb % 360) + 0.12, Ro(ba), Ro(bb), D['mats_ground']['concourse']),
-                                      (Ro(ba), Ro(bb), Ro(ba) + pw(ba), Ro(bb) + pw(bb), D['mats_ground'].get('path', 'paving'))):
-            A, B = band2(r0a, r1a, r0b, r1b, 1.5)
+        for r0a, r0b, r1a, r1b, m, nn in ((fence_r(ba % 360) + 0.12, fence_r(bb % 360) + 0.12, Ro(ba), Ro(bb), conc_m(0.5 * (ba + bb)), NB),
+                                          (Ro(ba), Ro(bb), Ro(ba) + pw(ba), Ro(bb) + pw(bb), D['mats_ground'].get('path', 'paving'), NP)):
+            A, B = band2(r0a, r1a, r0b, r1b, 1.5, nn)
             for j in range(len(A) - 1):
                 q = [P3(ba, A[j], terrain_z(ba, A[j]) - 0.02), P3(bb, B[j], terrain_z(bb, B[j]) - 0.02),
                      P3(bb, B[j + 1], terrain_z(bb, B[j + 1]) - 0.02), P3(ba, A[j + 1], terrain_z(ba, A[j + 1]) - 0.02)]
@@ -539,16 +553,20 @@ def concourse(col):
     # field-level floor inside the fence (the game lays its field on top) and a ground disc under everything beyond the path,
     # so nothing stands over sky (Bruce gate fix, 2026-11-19)
     gm = D['mats_ground'].get('field', 'ground_grass'); om = D['mats_ground'].get('outside', 'ground_grass')
+    # outside_mesh: the ground beyond the path in a mesh of its own; one named *_far sits with the land round the ground,
+    # which the towers' beams leave to their spill at night (Oval3DTowers.keep_off_beams)
+    mo = MB(D['outside_mesh']) if D.get('outside_mesh') else mb; mo.smooth = mb.smooth
     for i in range(len(bs) - 1):
         ba, bb = bs[i], bs[i + 1]
         Q = [([P3(ba, 0, -0.05), P3(bb, fence_r(bb % 360) + 0.2, -0.05), P3(ba, fence_r(ba % 360) + 0.2, -0.05)], gm)]
-        A, B = band2(Ro(ba) + pw(ba) - 0.2, Rg(ba), Ro(bb) + pw(bb) - 0.2, Rg(bb), 4.0)
+        A, B = band2(Ro(ba) + pw(ba) - 0.2, Rg(ba), Ro(bb) + pw(bb) - 0.2, Rg(bb), 4.0, NO)
         for j in range(len(A) - 1):
             Q.append(([P3(ba, A[j], terrain_z(ba, A[j]) - 0.04), P3(bb, B[j], terrain_z(bb, B[j]) - 0.04),
                        P3(bb, B[j + 1], terrain_z(bb, B[j + 1]) - 0.04), P3(ba, A[j + 1], terrain_z(ba, A[j + 1]) - 0.04)], om))
-        for q, m in Q:
-            oriented(mb, q, m, np.array([0, 0, 1.0]), uv=[(p[0] / TILE.get(m, (1, 1))[0], p[1] / TILE.get(m, (1, 1))[1]) for p in q])
+        for j, (q, m) in enumerate(Q):   # the field floor first, then the outside band
+            oriented(mb if j == 0 else mo, q, m, np.array([0, 0, 1.0]), uv=[(p[0] / TILE.get(m, (1, 1))[0], p[1] / TILE.get(m, (1, 1))[1]) for p in q])
     mb.build(col)
+    if mo is not mb: mo.build(col)
     if isinstance(RG, list):   # a ground_r table: the measured ground ends there, and a flat ring out to 240 m in its own
         far = MB('concourse_far')   # mesh fills the rest where no backdrop is drawn (the game hides it under a backdrop)
         for i in range(len(bs) - 1):
@@ -572,11 +590,23 @@ def tower(mb, T):
     if np.dot(nr, f) < 0: nr = -nr
     c0 = np.array([x, y, zb]) + f * 0.6
     Q = lambda u, v, d=0.0: c0 + s * u * w / 2 + up * v + nr * d
-    oriented(mb, [Q(-1, 0), Q(1, 0), Q(1, hh), Q(-1, hh)], 'lamps', nr, [(0, 0), (1, 0), (1, 1), (0, 1)])
+    grid = T.get('grid')   # (cols, rows): a frame face with a grid of separate lamp faces, as on open lattice heads
+    if grid:
+        gc, gr = grid; fill = T.get('lamp_fill', 0.72); fm = T.get('frame_mat', 'steel_galv')
+        oriented(mb, [Q(-1, 0), Q(1, 0), Q(1, hh), Q(-1, hh)], fm, nr, [(0, 0), (1, 0), (1, 1), (0, 1)])
+        cw, ch = 2.0 / gc, hh / gr
+        for i in range(gc):
+            for j in range(gr):
+                u0 = -1 + cw * (i + 0.5 * (1 - fill)); u1 = u0 + cw * fill
+                v0 = ch * (j + 0.5 * (1 - fill)); v1 = v0 + ch * fill
+                oriented(mb, [Q(u0, v0, 0.08), Q(u1, v0, 0.08), Q(u1, v1, 0.08), Q(u0, v1, 0.08)], 'lamps', nr,
+                         [(0, 0), (1, 0), (1, 1), (0, 1)])
+    else:
+        oriented(mb, [Q(-1, 0), Q(1, 0), Q(1, hh), Q(-1, hh)], 'lamps', nr, [(0, 0), (1, 0), (1, 1), (0, 1)])
     oriented(mb, [Q(-1, 0, -0.8), Q(1, 0, -0.8), Q(1, hh, -0.8), Q(-1, hh, -0.8)], 'steel_galv', -nr)
     for (a, b_) in (((-1, 0), (1, 0)), ((1, 0), (1, hh)), ((1, hh), (-1, hh)), ((-1, hh), (-1, 0))):
         q = [Q(*a), Q(*b_), Q(*b_, -0.8), Q(*a, -0.8)]; cen = Q(0, hh / 2, -0.4)
-        oriented(mb, q, 'steel_galv', np.mean(q, 0) - cen)
+        oriented(mb, q, T.get('frame_mat', 'steel_galv'), np.mean(q, 0) - cen)
 
 
 def scoreboard(mb, L, R, inset, z0, z1, depth, frame, back, faces, rim, back_rim=None):

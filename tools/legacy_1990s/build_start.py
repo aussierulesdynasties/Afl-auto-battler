@@ -311,50 +311,134 @@ def wheelo_rated(year):
 
 
 # ---------------------------------------------------------------- honours --
-def honours(by_year, rated, data_season=DATA_SEASON):
-    """{afltables_id: score} over the three seasons to data_season (the last
-    in full, then 0.75 and 0.5: HONOURS_W for 1990). Every start uses it. A named honour finds its
-    player by the season's own rows: name and club, else a name unique that
-    season, else a surname unique at that club (Steve / Stephen Malaxos). An
-    honour with no match is printed."""
+def season_honours(by_year, rated, y, quiet=False):
+    """{afltables_id: score} for one season: a club best-and-fairest, an
+    All-Australian or Team of the Year pick, a Brownlow top 3, each a point,
+    4th to 10th half. A named honour finds its player by the season's own
+    rows: name and club, else a name unique that season, else a surname unique
+    at that club (Steve / Stephen Malaxos). An honour with no match is printed
+    unless quiet."""
+    key = (y, quiet)
+    if key in _season_hon:
+        return _season_hon[key]
+
     def plain(last):
         return "".join(ch for ch in last.lower().replace(" sr.", "").replace(" jr.", "") if ch.isalpha())
     score = defaultdict(float)
-    for y, w in {data_season: 1.0, data_season - 1: 0.75, data_season - 2: 0.5}.items():
-        by_name = defaultdict(set)
-        by_name_club = {}
-        by_last_club = defaultdict(set)
-        for r in by_year.get(y, []):
+    by_name = defaultdict(set)
+    by_name_club = {}
+    by_last_club = defaultdict(set)
+    for r in by_year.get(y, []):
+        k = (r["first"].strip().lower(), plain(r["last"]))
+        by_name[k].add(r["afltables_id"])
+        by_name_club[k + (code(r["club"]),)] = r["afltables_id"]
+        by_last_club[(k[1], code(r["club"]))].add(r["afltables_id"])
+    for fn in HONOURS_FILES:
+        for r in _honour_rows(fn):
+            if int(r["year"]) != y or r["club"] == "OTHER":
+                continue
             k = (r["first"].strip().lower(), plain(r["last"]))
-            by_name[k].add(r["afltables_id"])
-            by_name_club[k + (code(r["club"]),)] = r["afltables_id"]
-            by_last_club[(k[1], code(r["club"]))].add(r["afltables_id"])
-        for fn in HONOURS_FILES:
-            with open(os.path.join(LEG, "honours", fn), newline="", encoding="utf-8") as fh:
-                for r in csv.DictReader(fh):
-                    if int(r["year"]) != y or r["club"] == "OTHER":
-                        continue
-                    k = (r["first"].strip().lower(), plain(r["last"]))
-                    pid = by_name_club.get(k + (code(r["club"]),))
-                    if pid is None and len(by_name[k]) == 1:
-                        pid = next(iter(by_name[k]))
-                    if pid is None and len(by_last_club[(k[1], code(r["club"]))]) == 1:
-                        pid = next(iter(by_last_club[(k[1], code(r["club"]))]))
-                    if pid is None:
-                        print("honours: no %d player for %s %s (%s, %s)" % (y, r["first"], r["last"], r["club"], fn))
-                        continue
-                    score[pid] += w
-        # Brownlow placings on the season's votes (a mid-season move is one season).
-        votes = sorted(((float(e[2]["br"] or 0), pid) for pid, e in rated.get(y, {}).items()), reverse=True)
-        for v, pid in votes:
-            if v <= 0:
-                break
-            place = 1 + sum(1 for o, _ in votes if o > v)
-            if place <= 3:
-                score[pid] += w
-            elif place <= 10:
-                score[pid] += 0.5 * w
+            pid = by_name_club.get(k + (code(r["club"]),))
+            if pid is None and len(by_name[k]) == 1:
+                pid = next(iter(by_name[k]))
+            if pid is None and len(by_last_club[(k[1], code(r["club"]))]) == 1:
+                pid = next(iter(by_last_club[(k[1], code(r["club"]))]))
+            if pid is None:
+                if not quiet:
+                    print("honours: no %d player for %s %s (%s, %s)" % (y, r["first"], r["last"], r["club"], fn))
+                continue
+            score[pid] += 1.0
+    # Brownlow placings on the season's votes (a mid-season move is one season).
+    votes = sorted(((float(e[2]["br"] or 0), pid) for pid, e in rated.get(y, {}).items()), reverse=True)
+    for v, pid in votes:
+        if v <= 0:
+            break
+        place = 1 + sum(1 for o, _ in votes if o > v)
+        if place <= 3:
+            score[pid] += 1.0
+        elif place <= 10:
+            score[pid] += 0.5
+    _season_hon[key] = score
     return score
+
+
+_season_hon: dict = {}
+_hon_rows: dict = {}
+
+
+def _honour_rows(fn):
+    if fn not in _hon_rows:
+        with open(os.path.join(LEG, "honours", fn), newline="", encoding="utf-8") as fh:
+            _hon_rows[fn] = list(csv.DictReader(fh))
+    return _hon_rows[fn]
+
+
+def honours(by_year, rated, data_season=DATA_SEASON):
+    """{afltables_id: score} over the three seasons to data_season (the last
+    in full, then 0.75 and 0.5: HONOURS_W for 1990). Every start uses it."""
+    score = defaultdict(float)
+    for y, w in {data_season: 1.0, data_season - 1: 0.75, data_season - 2: 0.5}.items():
+        for pid, v in season_honours(by_year, rated, y).items():
+            score[pid] += w * v
+    return score
+
+
+# The game's honours line (scripts/sim/Ratings.gd HONOURS_FLOOR, _PER_POINT,
+# _CAP): what a season's honours say he was at least. Keep the two in step.
+HONOURS_FLOOR = 75.0
+HONOURS_PER_POINT = 5.0
+HONOURS_CAP = 92.0
+
+
+def real_peak(by_year, rated, pid, from_year):
+    """His real peak from `from_year` on, the director's "Informed" potential
+    (2026-11-11): the level he held at his best, not one freak season (bug
+    bash 2026-11-23: one season's 99 made a 99 ceiling of Easton Wood, Shane
+    Edwards and Jack Sinclair alike). The mean of his two best seasons of
+    PEAK_GAMES or more (his one, when he had one), and never under what his
+    honours that season say (an All-Australian, a club champion or a Brownlow
+    top 3 is a point, 4th to 10th half: HONOURS_FLOOR + HONOURS_PER_POINT a
+    point, at most HONOURS_CAP), so James Hird's 1996 Brownlow counts. 0 when
+    he never played PEAK_GAMES in a season."""
+    if not pid:
+        return 0
+    best, hon = [], 0.0
+    for y in rated:
+        if y < from_year:
+            continue
+        got = rated[y].get(pid)
+        if got and got[1] >= PEAK_GAMES:
+            best.append(got[0])
+            s = season_honours(by_year, rated, y, quiet=True).get(pid, 0.0)
+            if s > 0:
+                hon = max(hon, min(HONOURS_CAP, HONOURS_FLOOR + HONOURS_PER_POINT * s))
+    if not best:
+        return 0
+    best.sort(reverse=True)
+    level = sum(best[:2]) / len(best[:2])
+    return int(round(max(level, hon)))
+
+
+def career_ids(rows):
+    """{draftguru_id: afltables_id} from every list row that has both. A
+    season he played no AFL game leaves the id blank on that year's row
+    (Daniel Talia's 2010, Jonathon Patton's 2021), so his real peak must come
+    through another year's row."""
+    out = {}
+    for r in rows:
+        if r.get("draftguru_id") and r.get("afltables_id"):
+            out.setdefault(r["draftguru_id"], r["afltables_id"])
+    return out
+
+
+def all_list_rows():
+    rows = []
+    for d in ("1990s", "2000s", "2010s", "2020s"):
+        path = os.path.join(LEG, d, "lists.csv")
+        if os.path.exists(path):
+            with open(path, newline="", encoding="utf-8") as fh:
+                rows += list(csv.DictReader(fh))
+    return rows
 
 
 # ------------------------------------------------------------------ lists --
@@ -396,6 +480,7 @@ def age_at(dob):
 
 
 def build(by_year, rated):
+    ids = career_ids(all_list_rows())
     hon = honours(by_year, rated)
     with open(os.path.join(LEG, "1990s", "lists_1990_opening.csv"), newline="", encoding="utf-8") as fh:
         lists = with_heights(list(csv.DictReader(fh)))
@@ -432,12 +517,9 @@ def build(by_year, rated):
             got = rated.get(y, {}).get(pid) if pid else None
             if got and got[1] >= PEAK_GAMES:
                 seasons.append("%d:%d:%d" % (y, got[0], got[1]))
-        peak = 0
-        for y in rated:
-            if y >= DATA_SEASON and pid:
-                got = rated[y].get(pid)
-                if got and got[1] >= PEAK_GAMES:
-                    peak = max(peak, got[0])
+        # Informed potential (director 2026-11-11): his real peak from the
+        # data season on sets his ceiling (real_peak).
+        peak = real_peak(by_year, rated, pid or ids.get(L["draftguru_id"], ""), DATA_SEASON)
         first_year = min((int(r["year"]) for r in careers.get(pid, [])), default=None)
         debut = "01-04-%d" % first_year if first_year else ""
         d = drafts.get(L["draftguru_id"]) if L["draftguru_id"] else None

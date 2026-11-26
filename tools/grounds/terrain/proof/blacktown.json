@@ -1,0 +1,59 @@
+{
+ "ground": "blacktown",
+ "source": "mapterhorn",
+ "licence": "Geoscience Australia, DEM of Australia derived from LiDAR 5 Metre Grid, CC BY 4.0",
+ "ge_centre_m": 34.0,
+ "judged": 4,
+ "spots": 5,
+ "mean": -0.26,
+ "rms": 0.4,
+ "worst": 0.59,
+ "passed": true,
+ "rows": [
+  [
+   "s00",
+   300.5,
+   79.5,
+   1.0,
+   0.41,
+   -0.59,
+   "judged"
+  ],
+  [
+   "s01",
+   334.3,
+   265.6,
+   9.0,
+   4.49,
+   -4.51,
+   "surface (roof/tree/car), not judged"
+  ],
+  [
+   "s06",
+   -125.0,
+   -253.8,
+   0.0,
+   -0.11,
+   -0.11,
+   "judged"
+  ],
+  [
+   "s07",
+   -65.5,
+   -212.6,
+   0.0,
+   -0.51,
+   -0.51,
+   "judged"
+  ],
+  [
+   "s09",
+   215.5,
+   -11.7,
+   0.0,
+   0.18,
+   0.18,
+   "judged"
+  ]
+ ]
+}

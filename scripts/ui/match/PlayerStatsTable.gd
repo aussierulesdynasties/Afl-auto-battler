@@ -53,6 +53,8 @@ static func detail_words(words: String, n: int) -> String:
 var _res: Dictionary
 var _me := 0
 var _wide := false
+var _wanted_wide := false   # the screen is wide enough to ask for the wide columns
+var _narrowed_at := -1.0    # the table's width when the wide columns cut a name
 var _side := 0
 var _sort := "rating"
 var _open := ""
@@ -65,9 +67,11 @@ func setup(res: Dictionary, first_side: int, wide := false) -> PlayerStatsTable:
 	_me = first_side
 	_side = first_side
 	_wide = wide
+	_wanted_wide = wide
 	name = "PlayerStats"
-	add_theme_constant_override("separation", 4)
-	_tabs = UiKit.hbox(2)
+	resized.connect(func() -> void: _fit_columns.call_deferred())
+	add_theme_constant_override("separation", UiKit.Space.TIGHT)
+	_tabs = UiKit.hbox(UiKit.Space.SLIM)
 	add_child(_tabs)
 	_rows = UiKit.vbox(0)
 	add_child(_rows)
@@ -88,7 +92,7 @@ func _rebuild() -> void:
 			_rebuild())
 		_tabs.add_child(t)
 	UiKit.clear(_rows)
-	var head := UiKit.hbox(2)
+	var head := UiKit.hbox(UiKit.Space.SLIM)
 	head.name = "StatsHeader"
 	var who := UiKit.line("Player", UiKit.SMALL, UiKit.MUTED)
 	who.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -118,8 +122,34 @@ func _rebuild() -> void:
 	var legend := UiKit.lbl("  ·  ".join(key_bits), UiKit.SMALL, UiKit.MUTED)
 	legend.name = "StatsKey"
 	legend.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_rows.add_child(UiKit.spacer(4))
+	_rows.add_child(UiKit.spacer(UiKit.Space.TIGHT))
 	_rows.add_child(legend)
+
+
+## The wide columns only while every name still reads in full: a wide screen
+## whose table sits in a narrow pane cut "Zach Merrett" to "Za" (director's
+## capture, 2026-11-24). Back to the wide columns when the table grows again.
+func _fit_columns() -> void:
+	if not is_inside_tree():
+		return
+	if _wide and _names_cut():
+		_wide = false
+		_narrowed_at = size.x
+		_rebuild()
+	elif not _wide and _wanted_wide and size.x > _narrowed_at + 1.0:
+		_wide = true
+		_rebuild()
+
+
+## True when any name in the table is cut short by its column.
+func _names_cut() -> bool:
+	for n in _rows.find_children("PlayerName_*", "Label", true, false):
+		var lab := n as Label
+		var font := lab.get_theme_font("font")
+		var fs := lab.get_theme_font_size("font_size")
+		if lab.size.x > 0.0 and font.get_string_size(lab.text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x > lab.size.x + 1.0:
+			return true
+	return false
 
 
 func _columns() -> Array:
@@ -150,7 +180,7 @@ func _row(p: Dictionary) -> Control:
 		_open = "" if _open == id else id
 		_rebuild())
 	v.add_child(b)
-	var h := UiKit.hbox(2)
+	var h := UiKit.hbox(UiKit.Space.SLIM)
 	h.set_anchors_preset(Control.PRESET_FULL_RECT)
 	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	b.add_child(h)
@@ -192,5 +222,5 @@ func _row(p: Dictionary) -> Control:
 		more.name = "PlayerDetail"
 		more.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(more)
-		v.add_child(UiKit.spacer(4))
+		v.add_child(UiKit.spacer(UiKit.Space.TIGHT))
 	return v

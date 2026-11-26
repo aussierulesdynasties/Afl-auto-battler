@@ -56,6 +56,9 @@ func _run() -> void:
 	await _t("_test_stack_fits", [Vector2i(390, 844)])
 	await _t("_test_stack_fits", [Vector2i(320, 568)])
 	await _t("_test_stack_fits", [Vector2i(1280, 720)])
+	# A 16:9 PC window (960x540 or 1280x720 on a high-density screen: the short
+	# side capped at 320 units, ScreenLayout): the logo and shot shrink.
+	await _t("_test_stack_fits", [Vector2i(569, 320)])
 	_t("_test_every_kick_is_a_set_shot")
 	_t("_test_ball_flies_and_turns")
 	_t("_test_reduced_motion_rests")
@@ -214,7 +217,17 @@ func _test_stack_fits(view: Vector2i) -> void:
 	_check(logo.end.y <= stage.position.y, "%s: the logo sits clear above the shot" % who)
 	_check(stage.end.y <= float(at["line_top"]), "%s: the line sits clear below the shot" % who)
 	_check(float(at["line_top"]) + float(at["line_h"]) <= float(view.y), "%s: the longest line fits, wrapped" % who)
-	_check(stage.size.x >= 120.0, "%s: the shot is big enough to read" % who)
+	var aspect: float = load("res://scripts/ui/GameLogo.gd").aspect()
+	var full_logo_h := roundf(minf(420.0, float(view.x) - 64.0) * aspect)
+	if logo.size.y >= full_logo_h:
+		_check(stage.size.x >= 120.0, "%s: the shot is big enough to read" % who)
+	else:
+		# Too short for both at full size (director, 2026-11-25: "shrink to
+		# fit"): they shrink together, and only as far as the line needs.
+		var full_stage_h := roundf(minf(minf(float(view.x) - 64.0, 300.0) * 0.68, float(view.y) * 0.3))
+		_check(absf(stage.size.y / logo.size.y - full_stage_h / full_logo_h) < 0.02,
+				"%s: the logo and shot shrink together (%.3f vs %.3f)" % [who, stage.size.y / logo.size.y, full_stage_h / full_logo_h])
+		_check(logo.position.y <= 17.0, "%s: shrunk just enough: the stack starts at the top margin (%s)" % [who, logo.position.y])
 
 
 func _test_every_kick_is_a_set_shot() -> void:
@@ -459,9 +472,10 @@ func _test_tap_after_cover() -> void:
 	sim.queue_free()
 
 
-## A browser build has no threads, so loading the next screen blocks: it must
-## not start while the dots sweep in (they would freeze half way), only once
-## the cover and a line are on screen.
+## A browser build loads the next screen straight away on the main thread (it
+## never queues it: the queued match screen sat at 0% for over a minute in a
+## browser, 2026-11-24). That blocks, so it must not start while the dots sweep
+## in (they would freeze half way), only once the cover and a line are on screen.
 func _test_browser_loads_under_the_line() -> void:
 	var path := "res://scenes/StatsHubScene.tscn"
 	await _down()   # no cover left over from the tests before
@@ -471,21 +485,25 @@ func _test_browser_loads_under_the_line() -> void:
 	feel.test_motion = true
 	_router.set("test_main_thread_load", true)
 	_wipe.set("test_cover", true)
+	var loads_before := int(_router.get("direct_loads"))
 	_router.go("stats")
 	var during_sweep := ResourceLoader.load_threaded_get_status(path)
+	var loads_then := int(_router.get("direct_loads"))
 	var phase_then := int(_wipe.get("_phase"))
-	var seen := {"line": false}
 	var t0 := Time.get_ticks_msec()
-	while ResourceLoader.load_threaded_get_status(path) == ResourceLoader.THREAD_LOAD_INVALID_RESOURCE 			and Time.get_ticks_msec() - t0 < 10000:
-		seen["line"] = bool(_wipe.call("line_visible"))
-		seen["drawn"] = int(_wipe.get("drawn_count"))
+	while int(_router.get("direct_loads")) == loads_before and Time.get_ticks_msec() - t0 < 10000:
 		await process_frame
+	await process_frame
+	var under_line := bool(_router.get("direct_load_under_line"))
+	var loads_after := int(_router.get("direct_loads"))
+	var queued := ResourceLoader.load_threaded_get_status(path)
 	await _down()
 	feel.test_motion = false
 	_router.set("test_main_thread_load", false)
 	_wipe.set("test_cover", false)
-	_check(phase_then == 1 and during_sweep == ResourceLoader.THREAD_LOAD_INVALID_RESOURCE,
-			"no load while the dots sweep in (phase %d, status %d)" % [phase_then, during_sweep])
-	_check(seen.get("line", false), "the line is up before the load starts")
+	_check(phase_then == 1 and loads_then == loads_before and during_sweep == ResourceLoader.THREAD_LOAD_INVALID_RESOURCE,
+			"no load while the dots sweep in (phase %d, loads %d, status %d)" % [phase_then, loads_then - loads_before, during_sweep])
+	_check(loads_after == loads_before + 1 and under_line, "the line is up before the load starts (loads %d, line %s)" % [loads_after - loads_before, under_line])
+	_check(queued == ResourceLoader.THREAD_LOAD_INVALID_RESOURCE, "the screen is loaded straight away, never queued (status %d)" % queued)
 	_check(current_scene != null and current_scene.scene_file_path == path,
 			"and the screen still opens (%s)" % (current_scene.scene_file_path if current_scene else "none"))

@@ -10,7 +10,7 @@ const ROW_H_PHONE := 44
 
 
 static func build(host: Control) -> Control:
-	var v := UiKit.vbox(6)
+	var v := UiKit.vbox(UiKit.Space.CLOSE)
 	v.name = "StatsCoach"
 	_record(v)
 	_draftees(host, v)
@@ -53,7 +53,7 @@ static func _draftees(host: Control, v: Control) -> void:
 		v.add_child(_para("No one yet. A player you draft shows here once he wins our best and fairest. Making the All-Australian team counts too.",
 				"DrafteesEmpty"))
 		return
-	var list := UiKit.vbox(2)
+	var list := UiKit.vbox(UiKit.Space.SLIM)
 	list.name = "Draftees"
 	for i in range(rows.size()):
 		list.add_child(_draftee_row(host, rows[i], i % 2 == 1))
@@ -87,9 +87,9 @@ static func _draftee_row(host: Control, r: Dictionary, band: bool) -> Control:
 	col.add_child(how)
 	var face := StatsSide.row_style(club, band, club == GameState.my_club)
 	face.content_margin_left = StatsSide.RULE_INSET + 4
-	face.content_margin_right = 8
-	face.content_margin_top = 6
-	face.content_margin_bottom = 6
+	face.content_margin_right = UiKit.GAP
+	face.content_margin_top = UiKit.Space.CLOSE
+	face.content_margin_bottom = UiKit.Space.CLOSE
 	var p := StatsAwards._find(id)
 	var box: Control
 	if p.is_empty():
@@ -130,20 +130,20 @@ static func _board(host: Control, v: Control) -> void:
 	if rows.is_empty():
 		v.add_child(_para("The board gives its first verdict when your first season ends.", "VerdictsEmpty"))
 		return
-	var list := UiKit.vbox(2)
+	var list := UiKit.vbox(UiKit.Space.SLIM)
 	list.name = "Verdicts"
 	for i in range(rows.size()):
 		var r: Dictionary = rows[i]
 		var club := str(r["club"])
 		var face := StatsSide.row_style(club, i % 2 == 1, club == GameState.my_club)
 		face.content_margin_left = StatsSide.RULE_INSET + 4
-		face.content_margin_right = 8
-		face.content_margin_top = 6
-		face.content_margin_bottom = 6
+		face.content_margin_right = UiKit.GAP
+		face.content_margin_top = UiKit.Space.CLOSE
+		face.content_margin_bottom = UiKit.Space.CLOSE
 		var panel := PanelContainer.new()
 		panel.name = "Verdict_%d" % int(r["year"])
 		panel.add_theme_stylebox_override("panel", face)
-		var row := UiKit.hbox(12)
+		var row := UiKit.hbox(UiKit.Space.PAD)
 		panel.add_child(row)
 		var when := UiKit.vbox(0)
 		when.custom_minimum_size.x = 56

@@ -76,7 +76,7 @@ static func depth_role(status: Dictionary) -> String:
 
 static func _old_core(list_players: Array) -> int:
 	var best := list_players.duplicate()
-	best.sort_custom(func(a, b): return int(a["overall"]) > int(b["overall"]))
+	best.sort_custom(func(a, b): return int(Rating.ovr(a)) > int(Rating.ovr(b)))
 	var n := 0
 	for p in best.slice(0, 10):
 		if float(p.get("age", 0.0)) >= 29.0:
