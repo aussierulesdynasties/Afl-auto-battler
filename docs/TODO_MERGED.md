@@ -205,3 +205,4 @@ What has landed toward each open row of docs/TODO.md and docs/TODO_RULINGS.md, o
 - 202: Merged #1969: 3D inventory: save every session's work in progress to main.
 - 202: Merged #1976: 3D match: the MetaHuman footballer in every match, Club Forge hair refitted and trimmed to 20 cuts (row 202 2d).
 - 201: Merged #1977: Match sim: longer kicks, fewer chains, and calls that change how the side kicks (row 201 gaps 6-8).
+- 202: Merged #1987: MCG flagship: matte roof, walls, seat rule and colours, Yarra Park from OpenStreetMap, MCG standard doc (row 202 2b).
