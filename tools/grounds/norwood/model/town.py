@@ -11,6 +11,7 @@ import math
 import numpy as np
 from nwlib import V, add, box3, obox, unit, perp, wall, prism
 from north import gable_building, skillion
+from land import T, on_land
 
 P = "town"
 
@@ -50,6 +51,7 @@ def townhouses():
     EE = [83.32, 86.26, 84.3, 87.61, 87.9, 83.71]
     part = P + "_terrace"
     for k in range(6):
+      with on_land(part):
         y0, y1 = YB[k], YB[k + 1]
         yc, wd = (y0 + y1) / 2, y0 - y1
         x0, x1 = WE[k] + 0.35, EE[k] - 0.35
@@ -65,12 +67,15 @@ def townhouses():
         # small timber deck and steps on the ground side
         obox(part, (x0 - 0.8, yc), 0.0, 1.6, 3.2, 0.0, 0.5, "timber_dark", top="timber_dark")
     # the low flat-roofed garage at the row's south end
-    prism(part, [(77.5, -53.6), (82.0, -53.6), (82.0, -60.0), (77.5, -60.0)], 0.0, 3.2, "brick_terrace", top="roof_grey")
+    with on_land(part):
+        prism(part, [(77.5, -53.6), (82.0, -53.6), (82.0, -60.0), (77.5, -60.0)], 0.0, 3.2, "brick_terrace", top="roof_grey")
     # the south end house, set back and lower, hipped to the ground (top-down: x 70.4-78.9, y -58.0 to -66.5)
-    gable_building(part, (74.65, -62.25), math.pi / 2, 7.8, 7.8, 5.8, 8.4, "brick_terrace", "roof_pale",
-                   over=0.35, windows=[(1.1, 1.0, 2.6, 3.2), (1.1, 3.9, 5.4, 3.2)], hip=True)
+    with on_land(part):
+        gable_building(part, (74.65, -62.25), math.pi / 2, 7.8, 7.8, 5.8, 8.4, "brick_terrace", "roof_pale",
+                       over=0.35, windows=[(1.1, 1.0, 2.6, 3.2), (1.1, 3.9, 5.4, 3.2)], hip=True)
     # the jacarandas' bed and the low brick wall in front of the row (between the terrace walk and the houses)
-    box3(part, V(71.0, -10.0, 0.0), V(71.0, -57.0, 0.0), 0.3, 0.9, "brick_terrace")
+    with on_land(part):
+        box3(part, V(71.0, -10.0, 0.0), V(71.0, -57.0, 0.0), 0.3, 0.9, "brick_terrace")
 
 
 def big_house():
@@ -152,51 +157,58 @@ def south_east():
     """The south-east block: the big two-storey house with its gables to Osmond Terrace, its pool court,
     the modern house with solar panels and the tennis court beside the ground (top-down tiles)."""
     part = P + "_se"
-    gable_building(part, (110.0, -78.0), math.pi / 2, 36.0, 14.0, 6.8, 10.4, "render_cream", "roof_slate_grey",
-                   over=0.5, windows=[(1.2, 1.0, 2.8, 3.4), (1.2, 4.0, 5.9, 3.4)], hip=True)
-    for y in (-68.0, -80.0, -91.0):
-        gable_building(part, (119.5, y), 0.0, 7.0, 6.5, 6.8, 9.8, "render_cream", "roof_slate_grey", over=0.4,
-                       windows=[(1.2, 1.0, 2.8, 3.0), (1.2, 4.0, 5.9, 3.0)], gable_mat="render_cream")
-    gable_building(part, (96.0, -93.5), 0.0, 22.0, 9.0, 6.4, 9.4, "render_cream", "roof_slate_grey", over=0.4,
-                   windows=[(1.2, 1.0, 2.8, 3.2), (1.2, 4.0, 5.6, 3.2)], hip=True)
+    with on_land(part):
+        gable_building(part, (110.0, -78.0), math.pi / 2, 36.0, 14.0, 6.8, 10.4, "render_cream", "roof_slate_grey",
+                       over=0.5, windows=[(1.2, 1.0, 2.8, 3.4), (1.2, 4.0, 5.9, 3.4)], hip=True)
+    with on_land(part):
+        for y in (-68.0, -80.0, -91.0):
+            gable_building(part, (119.5, y), 0.0, 7.0, 6.5, 6.8, 9.8, "render_cream", "roof_slate_grey", over=0.4,
+                           windows=[(1.2, 1.0, 2.8, 3.0), (1.2, 4.0, 5.9, 3.0)], gable_mat="render_cream")
+    with on_land(part):
+        gable_building(part, (96.0, -93.5), 0.0, 22.0, 9.0, 6.4, 9.4, "render_cream", "roof_slate_grey", over=0.4,
+                       windows=[(1.2, 1.0, 2.8, 3.2), (1.2, 4.0, 5.6, 3.2)], hip=True)
     # the pool and its paving (the water a hand under the coping): top-down, pool x 92.3-97.7, y -77.3 to -81.7
-    obox(part, (94.5, -78.8), 0.0, 17.0, 9.0, 0.0, 0.12, "concrete", top="concrete")
-    obox(part, (95.0, -79.5), 0.0, 5.4, 4.4, 0.12, 0.14, "glass_rail", top="glass_rail")
+    with on_land(part):
+        obox(part, (94.5, -78.8), 0.0, 17.0, 9.0, 0.0, 0.12, "concrete", top="concrete")
+        obox(part, (95.0, -79.5), 0.0, 5.4, 4.4, 0.12, 0.14, "glass_rail", top="glass_rail")
     # the two modern houses north of the pool: flat roofs covered in solar panels (traced, lean out for 6.6 m)
     for (x0, x1, y0, y1) in ((80.8, 90.1, -73.0, -63.5), (93.1, 102.6, -73.6, -60.6)):
+      with on_land(part):
         prism(part, [(x0, y0), (x1, y0), (x1, y1), (x0, y1)], 0.0, 6.6, "render_white", top="roof_grey")
         for xx in np.arange(x0 + 1.4, x1 - 1.0, 2.2):
             obox(part, (xx, (y0 + y1) / 2), 0.0, 1.8, (y1 - y0) - 2.4, 6.7, 6.78, "window_dark", top="window_dark")
     # the low building south of the court, its flat roof under two rows of solar panels
-    prism(part, [(68.5, -104.7), (84.3, -104.7), (84.3, -97.8), (68.5, -97.8)], 0.0, 3.5, "render_white", top="roof_grey")
-    for yy in (-99.9, -102.6):
-        obox(part, (76.4, yy), 0.0, 14.4, 1.9, 3.6, 3.68, "window_dark", top="window_dark")
+    with on_land(part):
+        prism(part, [(68.5, -104.7), (84.3, -104.7), (84.3, -97.8), (68.5, -97.8)], 0.0, 3.5, "render_white", top="roof_grey")
+        for yy in (-99.9, -102.6):
+            obox(part, (76.4, yy), 0.0, 14.4, 1.9, 3.6, 3.68, "window_dark", top="window_dark")
     # the tennis court (Google Earth top-down: its green x 66.05-82.35, y -66.8 to -97.8) with its lines
     # (white strips a few millimetres proud) and its fence
-    CX, CY = 74.2, -82.3
-    obox(part, (CX, CY), math.pi / 2, 31.0, 16.3, 0.0, 0.04, "court_surround", top="court_surround")
-    obox(part, (CX, CY), math.pi / 2, 23.77, 10.97, 0.04, 0.05, "court_green", top="court_green")
-    for dx in (-5.485, -4.115, 4.115, 5.485):
-        box3(part, V(CX + dx, CY - 11.885, 0.05), V(CX + dx, CY + 11.885, 0.05), 0.05, 0.006, "paint_white")
-    for dy in (-11.885, -6.4, 6.4, 11.885):
-        box3(part, V(CX - 5.485, CY + dy, 0.05), V(CX + 5.485, CY + dy, 0.05), 0.05, 0.006, "paint_white")
-    box3(part, V(CX, CY - 6.4, 0.05), V(CX, CY + 6.4, 0.05), 0.05, 0.006, "paint_white")
-    box3(part, V(CX - 7.0, CY, 1.07), V(CX + 7.0, CY, 1.07), 0.04, 0.04, "steel_dark")   # the net
-    X0, X1, Y0, Y1 = CX - 8.15, CX + 8.15, CY - 15.5, CY + 15.5
-    for (x0, y0), (x1, y1) in (((X0, Y0), (X1, Y0)), ((X1, Y0), (X1, Y1)), ((X1, Y1), (X0, Y1)), ((X0, Y1), (X0, Y0))):
-        L = math.hypot(x1 - x0, y1 - y0)
-        for t in np.arange(0.0, L + 0.01, 3.0):
-            x, y = x0 + (x1 - x0) * t / L, y0 + (y1 - y0) * t / L
-            box3(part, V(x, y, 0.0), V(x, y, 3.0), 0.06, 0.06, "steel_dark")
-        box3(part, V(x0, y0, 3.0), V(x1, y1, 3.0), 0.05, 0.05, "steel_dark")
+    with on_land(part, level=float(T.height(74.2, -82.3))):   # the court is level, cut into the slope
+        CX, CY = 74.2, -82.3
+        obox(part, (CX, CY), math.pi / 2, 31.0, 16.3, 0.0, 0.04, "court_surround", top="court_surround")
+        obox(part, (CX, CY), math.pi / 2, 23.77, 10.97, 0.04, 0.05, "court_green", top="court_green")
+        for dx in (-5.485, -4.115, 4.115, 5.485):
+            box3(part, V(CX + dx, CY - 11.885, 0.05), V(CX + dx, CY + 11.885, 0.05), 0.05, 0.006, "paint_white")
+        for dy in (-11.885, -6.4, 6.4, 11.885):
+            box3(part, V(CX - 5.485, CY + dy, 0.05), V(CX + 5.485, CY + dy, 0.05), 0.05, 0.006, "paint_white")
+        box3(part, V(CX, CY - 6.4, 0.05), V(CX, CY + 6.4, 0.05), 0.05, 0.006, "paint_white")
+        box3(part, V(CX - 7.0, CY, 1.07), V(CX + 7.0, CY, 1.07), 0.04, 0.04, "steel_dark")   # the net
+        X0, X1, Y0, Y1 = CX - 8.15, CX + 8.15, CY - 15.5, CY + 15.5
+        for (x0, y0), (x1, y1) in (((X0, Y0), (X1, Y0)), ((X1, Y0), (X1, Y1)), ((X1, Y1), (X0, Y1)), ((X0, Y1), (X0, Y0))):
+            L = math.hypot(x1 - x0, y1 - y0)
+            for t in np.arange(0.0, L + 0.01, 3.0):
+                x, y = x0 + (x1 - x0) * t / L, y0 + (y1 - y0) * t / L
+                box3(part, V(x, y, 0.0), V(x, y, 3.0), 0.06, 0.06, "steel_dark")
+            box3(part, V(x0, y0, 3.0), V(x1, y1, 3.0), 0.05, 0.05, "steel_dark")
 
 
 def build():
+    # each on the real land (land.py): the row's houses one by one, the rest as the groups they stand in
     townhouses()
-    big_house()
-    shed()
-    villa_37()
-    villa_ne()
-    townhouses_ne()
+    for fn, part in ((big_house, P + "_house_e"), (shed, P + "_shed"), (villa_37, P + "_villa37"),
+                     (villa_ne, P + "_villa_ne"), (townhouses_ne, P + "_ne43")):
+        with on_land(part):
+            fn()
     south_east()
     return {}

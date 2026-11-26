@@ -21,12 +21,13 @@ import arena  # noqa: E402
 import west  # noqa: E402
 import north  # noqa: E402
 import town  # noqa: E402
+import frontage  # noqa: E402
 
 TEX = os.path.join(HERE, "tex")
 SPEC = json.load(open(os.path.join(TEX, "spec.json")))
 ROUGH = {"window_dark": 0.12, "steel_dark": 0.5, "roof_red": 0.75, "flashing": 0.6, "pipe_brown": 0.5}
 METAL = {"steel_dark": 0.4}
-MODULES = [ses, west, north, arena, town]
+MODULES = [ses, west, north, arena, town, frontage]
 
 
 def material(name, cache={}):
