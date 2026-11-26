@@ -36,6 +36,14 @@ legacy=$(gh pr list --state open --label roadmap --limit 200 --json number,headR
   --jq '.[] | select(.headRefName | startswith("roadmap-close/pr-")) | "\(.number):\(.headRefName | ltrimstr("roadmap-close/pr-"))"')
 for pair in $legacy; do srcs="$srcs ${pair#*:}"; done
 [ -n "$new_src" ] && srcs="$srcs $new_src"
+# Every PR merged in the last 7 days too. The roadmap-close concurrency group keeps only one
+# pending run and cancels the rest, so a burst of merges used to lose notes. The script is
+# idempotent (a deleted row stays deleted, a merge note is written once per row and PR), so
+# re-applying a PR that already landed changes nothing.
+since=$(date -u -d '7 days ago' +%Y-%m-%dT%H:%M:%SZ)
+recent=$(gh pr list --state merged --base main --limit 300 --json number,mergedAt,headRefName \
+  --jq ".[] | select(.mergedAt >= \"$since\") | select(.headRefName | startswith(\"roadmap-close/\") | not) | .number")
+srcs="$srcs $recent"
 srcs=$(echo "$srcs" | tr ' ' '\n' | grep -E '^[0-9]+$' | sort -n -u | tr '\n' ' ' | sed 's/ $//')
 
 if [ -z "$srcs" ]; then echo "No source PRs to note."; exit 0; fi
@@ -45,6 +53,8 @@ kept=""
 lines=""
 for src in $srcs; do
   gh api "repos/$GITHUB_REPOSITORY/pulls/$src" --jq '.body // ""' > "$tmp/body.txt"
+  # A body that names no row has nothing to do.
+  grep -qiE '^[[:space:]>*-]*(closes?[[:space:]]+rows?|part[[:space:]]+of[[:space:]]+rows?)[[:space:]]' "$tmp/body.txt" || continue
   title=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$src" --jq .title)
   ids=$(python3 tools/roadmap_close.py --body-file "$tmp/body.txt" --todo docs/TODO.md \
     --todo docs/TODO_RULINGS.md --pr "$src" --title "$title" 2>/dev/null) || ids=""

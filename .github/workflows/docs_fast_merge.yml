@@ -36,6 +36,8 @@ permissions:
   pull-requests: write
 jobs:
   merge:
+    # Only a green Tests run can make a PR mergeable; a cancelled or red one changes nothing.
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
