@@ -2556,7 +2556,8 @@ func _test_menu_and_career() -> void:
 			"The profile shows his opinion of you out of 100, with the reasons folded away (%s)" % (twords.text if twords != null else "missing"))
 	var why_tap: String = await Tap.tap(twhy) if twhy != null else "missing"
 	await _settle()
-	var first_reason: Label = treasons.get_child(1) if treasons != null and treasons.get_child_count() > 2 else null
+	var memory: Control = treasons.find_child("OpinionMemory", true, false) if treasons != null else null
+	var first_reason: Label = memory.get_child(1) if memory != null and memory.get_child_count() > 2 else null
 	_check(why_tap == "" and treasons.visible and twhy.size.y >= 44 and first_reason != null
 			and first_reason.text.begins_with("Round 5, ") and first_reason.text.ends_with("Opinion of you +5.")
 			and (treasons.get_child(0) as Label).text.contains("he may refuse to re-sign with us"),
