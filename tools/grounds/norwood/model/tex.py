@@ -200,6 +200,7 @@ def main():
     brick("brick_terrace", (164, 84, 60), (196, 182, 160))               # the east townhouses' orange-red brick
     sheeting("corr_bluegrey", (170, 186, 192), th=3.0)                   # the east shed's pale blue-grey walls
     sheeting("roof_slate_grey", (128, 134, 136))                         # villas' grey Colorbond and slate
+    sheeting("roof_tan", (196, 160, 124))                                # the tan-roofed villa north of the ground
     flat("court_green", (58, 112, 74), amp=5)                            # synthetic tennis court
     flat("court_surround", (150, 78, 60), amp=5)
     flat("timber_white", (232, 230, 222), amp=3)                         # verandah posts, frieze, balustrades
