@@ -137,7 +137,7 @@ func _run() -> void:
 	MN = load("res://scripts/ui/match/MatchNotes.gd")
 	var state = root.get_node("GameState")
 	var db = root.get_node("GameDB")
-	load("res://scripts/ui/UiKit.gd").apply_appearance("dark")
+	load("res://scripts/ui/UiKit.gd").apply_palette()
 	root.size = Vector2i(W, H)
 	DisplayServer.window_set_size(Vector2i(W, H))
 	var sl = root.get_node("ScreenLayout")

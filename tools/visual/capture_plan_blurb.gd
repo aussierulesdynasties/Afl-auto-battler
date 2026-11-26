@@ -71,7 +71,7 @@ func _run() -> void:
 		sim.set_tactics(mine, {"gameplan": plans_seq[q % 3], "pep": peps[q % 3], "tag_id": ""})
 		sim.set_rotation_policy(mine, rots[q % 3])
 		sim.run_quarter()
-	UK.apply_appearance("dark")
+	UK.apply_palette()
 	if _w >= 760:
 		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
 		DisplayServer.window_set_size(Vector2i(_w, _h))

@@ -20,6 +20,11 @@ BANNED = [
      "old club lines are presentation only: the match never reads them (from matchup _test_old_club_rules)"),
 ]
 
+# Files a rule leaves out, each with its ruling. Bonds.gd reads family ties to make family bonds,
+# whose fallout reaches opinion: the owner's relationship brief (2026-11-26) asks for family
+# bonds by name and supersedes the bio-only ruling (2026-10-13). MatchSim still never reads them.
+EXEMPT = {"no-family-in-sim": ["scripts/sim/Bonds.gd"]}
+
 PRESETS = "export_presets.cfg"
 # [rule, must contain, must not contain, why]
 PRESET_LINES = [
@@ -44,6 +49,8 @@ def check(root, banned=None):
     out = []
     for rule, spec, words, why in (BANNED if banned is None else banned):
         for path in _files(root, spec):
+            if path.replace(os.sep, "/") in EXEMPT.get(rule, []):
+                continue
             text = read(root, path)
             if not text:
                 out.append(Finding(path, 0, rule, "file not found or empty: update tools/lint/boundaries.py"))

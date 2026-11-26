@@ -1024,6 +1024,7 @@ func _test_tail_seeds(truth_hb: Array) -> Array:
 	var hb_total := int(truth_hb[0])
 	var hb_kick := int(truth_hb[1])
 	var worst_all := 0.0
+	var worst_at := ""
 	var worst_share := float(hb_kick) / maxf(1.0, float(hb_total))
 	var all_over_100 := hb_total > 100
 	var pooled := [0, 0]
@@ -1032,24 +1033,32 @@ func _test_tail_seeds(truth_hb: Array) -> Array:
 		var pa := _pauses(res)
 		pooled[0] += int(pa[0])
 		pooled[1] += int(pa[1])
-		worst_all = maxf(worst_all, _worst_release(res))
+		var w: Dictionary = _worst_release(res)
+		print("TAIL seed %d worst release %.1f m: %s" % [seed, float(w["off"]), str(w["at"])])
+		if float(w["off"]) > worst_all:
+			worst_all = float(w["off"])
+			worst_at = "seed %d, %s" % [seed, str(w["at"])]
 		var hb := _handball_counts(res)
 		hb_total += hb[0]
 		hb_kick += hb[1]
 		worst_share = maxf(worst_share, float(hb[1]) / maxf(1.0, float(hb[0])))
 		all_over_100 = all_over_100 and hb[0] > 100
-	_check(worst_all < 15.0, "No release far from the logged spot on seeds 1-3 either (worst %.1f m)" % worst_all)
+	_check(worst_all < 15.0, "No release far from the logged spot on seeds 1-3 either (worst %.1f m, %s)" % [worst_all, worst_at])
 	_check(all_over_100 and hb_kick <= hb_total / 50,
 			"A handball is drawn as a handball over four seeds (%d of %d drawn as kicks)" % [hb_kick, hb_total])
 	_check(worst_share <= 0.03, "No seed draws over 3%% of its handballs as kicks (worst %.1f%%)" % (worst_share * 100.0))
 	return pooled
 
 
-func _worst_release(res: Dictionary) -> float:
+## The release furthest from its logged spot: {off, at}, `at` the arrival itself, so a
+## failure names the event to look at.
+func _worst_release(res: Dictionary) -> Dictionary:
 	var played := _play(res, res["events"], 1.0 / 60.0 * 4.0, false)
-	var worst := 0.0
+	var worst := {"off": 0.0, "at": {}}
 	for a in (played["director"] as MatchDirector).arrivals:
-		worst = maxf(worst, absf((a["pos"] as Vector2).x - float(a["want_x"])))
+		var off := absf((a["pos"] as Vector2).x - float(a["want_x"]))
+		if off > float(worst["off"]):
+			worst = {"off": off, "at": a}
 	return worst
 
 
@@ -1520,16 +1529,13 @@ func _test_broadcast_vignettes() -> void:
 ## A live score is painted in a club's own colour only where it can be read.
 ## Sydney's black accent on the dark panel was invisible (1.00:1).
 func _test_score_colour() -> void:
-	var was: String = UiKit.appearance()
 	var unreadable: Array = []
-	for mode in ["dark", "light"]:
-		UiKit.apply_appearance(mode)
-		for code in GameDB.club_order:
-			if UiKit.contrast(UiKit.score_colour(str(code)), UiKit.PANEL) < 4.5:
-				unreadable.append("%s (%s)" % [code, mode])
+	UiKit.apply_palette()
+	for code in GameDB.club_order:
+		if UiKit.contrast(UiKit.score_colour(str(code)), UiKit.PANEL) < 4.5:
+			unreadable.append(str(code))
 	# Collected and checked once: a floor counts rules, not data.
-	_check(unreadable.is_empty(), "Every club's live score reads at 4.5:1 on the panel, in both appearances (%s)" % ", ".join(unreadable))
-	UiKit.apply_appearance("dark")
+	_check(unreadable.is_empty(), "Every club's live score reads at 4.5:1 on the panel (%s)" % ", ".join(unreadable))
 	var syd: Color = UiKit.score_colour("SYD")
 	_check(syd != (GameDB.club_colours("SYD") as Array)[2], "Sydney's black accent is not used for its score on the dark panel")
 	var legible: String = ""
@@ -1540,7 +1546,6 @@ func _test_score_colour() -> void:
 			break
 	_check(legible != "" and UiKit.score_colour(legible) == (GameDB.club_colours(legible) as Array)[2],
 			"A club whose accent reads keeps its own colour for its score")
-	UiKit.apply_appearance(was)
 
 
 ## ARD-M4-013: the three set-shot calls are three visibly different
@@ -2198,13 +2203,14 @@ func _test_farewell() -> void:
 
 
 ## The real sun over every ground (Oval3DSunClock.sun_basis): each ground's bearing is known and
-## agrees with its model's own axis (models are laid x east, z south) but for the three turned off
+## agrees with its model's own axis (models are laid x east, z south) but for the four turned off
 ## true north; and the light comes out of the north at an Australian ground, whichever way the
 ## ground lies, so its north side is the sunlit one.
 func _test_sun_bearing() -> void:
 	var places: Dictionary = Oval3DSunClock.place("MCG")
 	_check(places.has("axis"), "The MCG's bearing is known (%s)" % str(places))
-	var off_true := ["marvel", "ikon_park", "blacktown"]
+	# Traeger Park's model is turned 25.4 degrees to north (tools/grounds/traeger/measure/outline.py).
+	var off_true := ["marvel", "ikon_park", "blacktown", "traeger"]
 	var bad := []
 	for g in GroundModels.GROUNDS:
 		var slug: String = GroundModels.GROUNDS[g]
@@ -2371,8 +2377,12 @@ func _test_ground_models() -> void:
 	(Engine.get_main_loop() as SceneTree).root.add_child(oval)
 	oval.build(d, str(res.get("home", "ADE")), str(res.get("away", "MEL")))
 	var model: Node3D = oval.get_node_or_null("Ground")
-	_check(model != null and model.find_children("*", "MeshInstance3D", true, false).size() > 0 and oval.crowd == null,
-			"A match at Engie Stadium plays in its model, with no stand or crowd")
+	# Its crowd, if any, sits on the model's own seats (Engie has had seat files since #2037), as at
+	# the MCG (_test_mcg_crowd), never on the plain stand.
+	_check(model != null and model.find_children("*", "MeshInstance3D", true, false).size() > 0
+			and (oval.crowd == null or oval.crowd.get_parent() == model),
+			"A match at Engie Stadium plays in its model, with no plain stand; any crowd is on the model's seats (%s)" % [
+			"no model" if model == null else ("crowd on " + str(oval.crowd.get_parent().name) if oval.crowd != null else "no crowd")])
 	_check(oval._turf_mat.get_shader_parameter("fence_clip") == GroundModels.match_fence()
 			and GroundModels.stretch("engie").is_equal_approx(Vector2.ONE),
 			"The turf stops at the model's fence")
@@ -2700,8 +2710,11 @@ func _test_ground_backdrop() -> void:
 		oval.build(d, "COL", "GEE")
 		var bds := oval.find_children("Backdrop", "", true, false)
 		if g == "The Gabba":
-			_check(bds.is_empty() and oval.camera.far < 1000.0 and not oval._env.fog_enabled,
-					"A ground without surroundings keeps the 900 m view and no haze")
+			# The thin air haze every dry day has (Oval3DTurf._haze, _test_graphics_levels) is no backdrop's haze.
+			var far_haze := oval._env.fog_enabled and oval._env.fog_mode == Environment.FOG_MODE_DEPTH
+			_check(bds.is_empty() and oval.camera.far < 1000.0 and not far_haze,
+					"A ground without surroundings keeps the 900 m view and no distance haze (%d backdrops, far %.0f m, fog %s mode %d)" % [
+					bds.size(), oval.camera.far, str(oval._env.fog_enabled), oval._env.fog_mode])
 			oval.free()
 			continue
 		_check(bds.size() == 1 and (bds[0] as Node).get_parent().name == "Ground",

@@ -90,7 +90,7 @@ func _run() -> void:
 		push_error("no match to play")
 		quit(1)
 		return
-	load("res://scripts/ui/UiKit.gd").apply_appearance("dark")
+	load("res://scripts/ui/UiKit.gd").apply_palette()
 	DisplayServer.window_set_size(Vector2i(_w, _h))
 	root.size = Vector2i(_w, _h)
 	var scene = load("res://scenes/MatchScene.tscn").instantiate()
