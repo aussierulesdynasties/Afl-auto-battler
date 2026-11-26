@@ -11225,7 +11225,10 @@ func _rival_on_clock(code: String, index: int) -> void:
 	# difficulty margin is what rivals ask of you, not of each other.
 	var margin := NIGHT_RIVAL_MARGIN
 	_freeze_league(true)
-	var sellers_read := trade_prospects()
+	# The seller reads the class by its own draft board too, as every club
+	# does on the night (director 2026-11-27, "Seller uses own board"): by
+	# the consensus a buyer's board nearly always saw less in the pick.
+	var sellers_read := _night_prospects(code)
 	var seller_worth := _worth_to_read(code, pick, sellers_read)
 	var seller_rel := _night_rel(code, pick, sellers_read)
 	var tried := 0

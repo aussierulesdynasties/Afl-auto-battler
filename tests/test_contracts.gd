@@ -44,6 +44,7 @@ func run() -> void:
 	_t("_test_future_picks")
 	_t("_test_draft_night_trades")
 	_t("_test_night_trades_never_name_called_picks")
+	_t("_test_night_seller_reads_own_board")
 	_t("_test_mixed_packages")
 	_t("_test_trade_market")
 	_t("_test_ask_price")
@@ -2386,6 +2387,66 @@ func _night_rival_deals(seed: int) -> int:
 	return d.night_trades.filter(func(tr): return str(tr["buyer"]) != me and str(tr["seller"]) != me).size()
 
 
+## Director 2026-11-27 ("Seller uses own board"): on draft night a rival
+## selling its pick to another rival judges it by its own draft board, as the
+## buyer does, not by the consensus. Each rival deal's bar (the seller's want
+## plus the margin) is the seller's own-board read taken just before the deal.
+func _test_night_seller_reads_own_board() -> void:
+	var acc := {"deals": 0, "own": 0, "differs": 0}
+	var tried := []
+	for seed in [3, 5, 6]:
+		if int(acc["deals"]) > 0:
+			break
+		tried.append(seed)
+		GameState.reset()
+		GameState.career_seed = seed
+		GameState.replay_seed = seed
+		GameState.start_season("GEE", GameDB.club_list("GEE"))
+		_to_offseason()
+		if not GameState.begin_intake_draft():
+			continue
+		var d: Draft = GameState.draft
+		var me := GameState.my_club
+		if d.rival_on_clock.is_connected(GameState._rival_on_clock):
+			d.rival_on_clock.disconnect(GameState._rival_on_clock)
+		var watch := func(code: String, index: int) -> void:
+			var bar := -1.0
+			var consensus := -1.0
+			if GameState.draft_night_open() and code != me and index < d.pick_rounds.size() 					and index < d.pick_origin.size():
+				var pick: Dictionary = GameState.pick_asset(GameState.pick_id(GameState.season_year,
+						int(d.pick_rounds[index]), str(d.pick_origin[index])))
+				if not pick.is_empty() and str(pick["owner"]) == code:
+					GameState._freeze_league(true)
+					var m := 1.0 + GameState.NIGHT_RIVAL_MARGIN
+					bar = GameState._night_rel(code, pick, GameState._night_prospects(code)) * m
+					consensus = GameState._night_rel(code, pick, GameState.trade_prospects()) * m
+					GameState._freeze_league(false)
+			var before := d.night_trades.size()
+			GameState._rival_on_clock(code, index)
+			if d.night_trades.size() > before and bar >= 0.0:
+				var w: Array = d.night_trades[-1].get("worths", [])
+				acc["deals"] = int(acc["deals"]) + 1
+				if w.size() == 2 and absf(float(w[1]) - bar) <= 1e-6 * maxf(1.0, bar):
+					acc["own"] = int(acc["own"]) + 1
+				if absf(consensus - bar) > 1e-6 * maxf(1.0, bar):
+					acc["differs"] = int(acc["differs"]) + 1
+		d.rival_on_clock.connect(watch)
+		var guard := 0
+		while not d.is_finished() and guard < 4000:
+			guard += 1
+			if d.is_user_turn():
+				if not d.pick_for_me():
+					d.user_pass()
+			else:
+				d.auto_until_user_turn()
+	print("contracts: rival deals judged on the seller's own board = %d of %d (seeds %s)" % [int(acc["own"]), int(acc["deals"]), str(tried)])
+	_check(int(acc["deals"]) > 0, "Rivals trade picks with each other on draft night (%d deals, seeds %s)" % [int(acc["deals"]), str(tried)])
+	_check(int(acc["own"]) == int(acc["deals"]),
+			"Every rival deal's bar is the seller's own draft board plus the margin (%d of %d)" % [int(acc["own"]), int(acc["deals"])])
+	_check(int(acc["differs"]) > 0,
+			"The seller's own board and the consensus read the pick differently (%d of %d deals): the check tells them apart" % [int(acc["differs"]), int(acc["deals"])])
+
+
 ## Row 175 (director 2026-11-12: "why are adelaide trading for pick 42 if the
 ## pick already called"): a whole draft night, and no trade - rival with rival,
 ## a rival's offer to you, a deal you put up - names a pick already made, and
@@ -2574,12 +2635,24 @@ func _test_future_picks() -> void:
 			mine_now = 1 if str(d.pick_sequence[k]) == me else 0
 	_check(mine_now == 1, "Trading next year's pick leaves this year's with you")
 	_run_draft()
+	# The club that bought it may pass it on in a draft-night deal, as clubs do:
+	# then that deal shows it going out, from the club that held it.
+	var holder := GameState.pick_owner_of(next, 1, me)
+	var moved_on := ""
+	var from := rival
+	for nt in GameState.draft.night_trades:
+		if (nt["out"] as Array).has(my_future) and str(nt["buyer"]) == from:
+			from = str(nt["seller"])
+			moved_on += " " + str(nt["text"])
+	_check(holder != me and holder == from,
+			"After the draft the pick is %s's, by draft-night deals only:%s" % [holder, moved_on])
 	_check(GameState.finish_intake_draft() and GameState.season_year == next
-			and GameState.pick_owner_of(next, 1, me) == rival, "The future pick carries over the rollover")
+			and GameState.pick_owner_of(next, 1, me) == holder, "The future pick carries over the rollover")
 	_to_offseason()
 	var now := GameState.pick_asset(GameState.pick_id(next, 1, me))
-	_check(not now.is_empty() and str(now["owner"]) == rival and (now["positions"] as Array).size() == 1
-			and str(now["name"]).contains("(No. "), "A year on it is this year's pick, at its exact spot, still theirs")
+	_check(not now.is_empty() and str(now["owner"]) != me and (now["positions"] as Array).size() == 1
+			and str(now["name"]).contains("(No. "), "A year on it is this year's pick, at its exact spot, still not yours")
+	holder = str(now.get("owner", ""))
 	_check(not GameState.pick_asset(GameState.pick_id(next + 2, 1, me)).is_empty()
 			and GameState.pick_asset(GameState.pick_id(next + 3, 1, me)).is_empty(),
 			"The next two years open for trading; the one after doesn't")
@@ -2589,7 +2662,7 @@ func _test_future_picks() -> void:
 	for k in range(d.pick_sequence.size()):
 		if str(d.pick_origin[k]) == me and int(d.pick_rounds[k]) == 1 and d.comp_at(k).is_empty():
 			at = k
-	_check(at >= 0 and str(d.pick_sequence[at]) == rival, "At that draft the pick is theirs")
+	_check(at >= 0 and str(d.pick_sequence[at]) == holder, "At that draft the pick is %s's, who held it" % holder)
 
 
 ## Players and picks on both sides: the order you add them changes nothing,
