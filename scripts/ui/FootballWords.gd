@@ -15,19 +15,21 @@ extends RefCounted
 const SHEET_NAME := "WordRule"
 
 static var _cache := {}
+static var _cache_free_agency := true   # the era the cache was built for (StatGuide.topic_text)
 
 
 ## Every word: {shown word -> {"title", "kind", "lines": [...], "trait": key or ""}}.
 static func entries() -> Dictionary:
-	if not _cache.is_empty():
+	if not _cache.is_empty() and _cache_free_agency == EraRules.on("free_agency"):
 		return _cache
+	_cache_free_agency = EraRules.on("free_agency")
 	var out := {}
 	for row in GameState.TRAIN_STATS:
 		var key := str(row[0])
 		out[str(row[1])] = {"title": str(row[1]), "kind": "Rating", "lines": [StatGuide.short(key)], "trait": ""}
 	for t in StatGuide.TOPICS:
 		var title := str(t[0])
-		var e := {"title": title, "kind": "How it works", "lines": [str(t[1])], "trait": ""}
+		var e := {"title": title, "kind": "How it works", "lines": [StatGuide.topic_text(t)], "trait": ""}
 		out[title] = e
 		# "Overall (OVR)" is said as OVR on the screens.
 		var short := title.get_slice("(", 1).trim_suffix(")") if title.contains("(") else ""

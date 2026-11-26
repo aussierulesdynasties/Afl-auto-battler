@@ -334,6 +334,21 @@ const REFUSED := "%s won't re-sign with us. Opinion of you: %d out of 100."
 const REFUSED_GOES := "He goes to free agency."
 const REFUSED_SEASON_END := "He goes to free agency when the season ends."
 const REFUSED_STAYS := "He stays on the market."
+## Before free agency (to 2011, EraRules) a player who won't re-sign is delisted.
+const REFUSED_DELISTED := "He is delisted."
+const REFUSED_DELISTED_SEASON_END := "He is delisted when the season ends."
+
+
+## Where a player who refuses you goes now: free agency, or before it, off the list.
+static func refused_goes() -> String:
+	return REFUSED_GOES if EraRules.on("free_agency") else REFUSED_DELISTED
+
+
+## Where he goes when the season ends: free agency, or before it, off the list.
+static func refused_season_end() -> String:
+	return REFUSED_SEASON_END if EraRules.on("free_agency") else REFUSED_DELISTED_SEASON_END
+
+
 ## What talks with him say once he has refused.
 const REFUSED_TALKS := "Won't re-sign with us. Opinion of you: %d out of 100."
 ## On his contract card once he has refused.

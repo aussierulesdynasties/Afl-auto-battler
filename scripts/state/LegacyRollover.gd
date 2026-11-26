@@ -523,7 +523,8 @@ static func _merge(gs, to_draft: bool) -> void:
 		head = "Fitzroy played finals often enough to stand alone, but the board took the merger anyway (the %d%% chance)." % MERGE_ANYWAY_PCT
 	gs.add_news("legacy", "%s The Brisbane Lions play from %d and take Fitzroy's best %d players: %s. The rest of Fitzroy's list %s." % [
 			head, TALKS_YEAR + 1, taken.size(), _and(taken),
-			("go into the %d National Draft" % int(gs.season_year)) if to_draft else "are free agents"])
+			("go into the %d National Draft" % int(gs.season_year)) if to_draft
+			else ("are free agents" if EraRules.on("free_agency") else "are delisted")])
 
 
 ## Fitzroy's leftovers nobody drafted: one young enough stays in the pool for
@@ -770,11 +771,14 @@ static func canon_week(gs) -> void:
 			continue
 		if cst.has(m["id"]):
 			continue
-		var e := {"asked": true}
-		cst[m["id"]] = e
 		var at := canon_find(gs, m)
 		if at.is_empty():
+			# He is on no list (retired, delisted): nobody is asked, so no news
+			# of him follows at the rollover.
+			cst[m["id"]] = {"missing": true}
 			continue
+		var e := {"asked": true}
+		cst[m["id"]] = e
 		var p: Dictionary = at["p"]
 		var from := str(at["club"])
 		if str(m["kind"]) == "retire":

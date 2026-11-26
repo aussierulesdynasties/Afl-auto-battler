@@ -73,6 +73,7 @@ func _run() -> void:
 	await _t("_test_new_career_flow")
 	await _t("_test_screen_wipe")
 	await _t("_test_loading_cover")
+	await _t("_test_season_wrap")
 
 	print("BACKTABLE")
 	for line in _table:
@@ -1012,3 +1013,40 @@ func _wait_cover(wipe: Node) -> void:
 			return
 		await process_frame
 	_check(false, "loading cover: the cover comes down")
+
+
+# ---------------------------------------------------------------------------
+# The off-season wrap (bug bash P3-1). Back did nothing on it, so a phone's
+# Back left the coach stuck there. Back is its Start button now, as Back is
+# Continue on the results: with a pre-season due it opens the pre-season,
+# else the season starts on the hub. Each way out, one after another.
+# ---------------------------------------------------------------------------
+func _test_season_wrap() -> void:
+	for preseason in [false, true]:
+		for way in WAYS:
+			_fresh_career()
+			_state.season_wrap = {"year": _state.season_year, "seen": false, "ins": [], "outs": [], "staff": [],
+					"goal": "Make the finals", "reason": "The board sees a list good enough to play finals."}
+			if preseason:
+				_state.open_preseason(false)
+			var label := "season wrap%s" % (" (pre-season due)" if preseason else "")
+			_check(_state.preseason_active() == preseason, "%s: the pre-season is %s" % [label, "due" if preseason else "not due"])
+			await _open("hub")
+			var hub := current_scene
+			await _settle(3)
+			var wrap: Node = hub.find_child("SeasonWrap", true, false)
+			_check(wrap != null, "%s: it opens over the hub (%s)" % [label, way])
+			if wrap == null:
+				_table.append("%s | %s | did not open" % [label, way])
+				continue
+			var depth: int = (_router.stack as Array).size()
+			var why: String = await _leave(way, hub.find_child("BeginSeason", true, false))
+			await _settle(10)
+			var gone: bool = not is_instance_valid(wrap) or wrap.is_queued_for_deletion()
+			var lands := "preseason" if preseason else "hub"
+			var ok: bool = why == "" and gone and not _state.needs_season_wrap() and _router.current() == lands \
+					and (_router.stack as Array).size() == depth
+			_check(ok, "%s: %s starts it and lands on %s, one screen deep (%s; gone %s, now %s, stack %s)"
+					% [label, "a click on Start" if way == "click" else "Back by " + way, lands, why, str(gone),
+					_router.current(), str(_router.stack)])
+			_table.append("%s | %s | %s" % [label, way, "ok" if ok else "FAIL now=%s" % _router.current()])
