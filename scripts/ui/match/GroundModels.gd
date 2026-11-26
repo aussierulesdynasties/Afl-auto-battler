@@ -222,7 +222,11 @@ const SURROUNDS := {
 			"models": ["bridges.glb", "landmarks.glb"], "tint": Color(0.84, 0.84, 0.84), "building_tint": Color.WHITE, "building_style": "towers",
 			# Round 12: the real land (terrain.bin, tools/grounds/marvel/land.py) right up to `inner`. The model's own
 			# pad follows the same land, from 0.9 m under the old street by the harbour to 4.4 m over it on the east.
-			"follow_land": true},
+			"follow_land": true,
+			# Round 13b: the backdrop (#2072, marvel_backdrop_part*.glb) is cut back to past 1024 m
+			# (tools/grounds/backdrop/cut_inner.py), as reduce.py's `inner` does for the MCG: inside it this ring,
+			# the measured landmarks and the OpenStreetMap buildings are the ground's own; the two drew everything twice.
+			"outer": 1024.0},
 	# Optus Stadium on the Burswood peninsula: the Swan River, Perth Water, the parks and plaza from
 	# OpenStreetMap (tools/grounds/optus/surrounds.py), and its bridges in 3D, Matagarup's arches
 	# included (`models`, tools/grounds/optus/bridges.py).

@@ -183,7 +183,7 @@ def side_truss(name,v1,v2,u0,u1,n=24):
     for i in range(n+1):web+=[(B1[i],B2[i])]+([(B1[i],T[i]),(B2[i],T[i])] if 0<i<n else [])
     for i in range(n):k,j=(i,i+1) if i<n/2 else (i+1,i);web+=[(B1[k],T[j]),(B2[k],T[j])]
     posts=[(B,(B[0],B[1],zf(B[1]))) for X in (B1,B2) for B in X[1:-1] if B[2]-zf(B[1])>0.6]
-    beams(name+'_ch',ch,0.8,'teal');beams(name+'_web',web+posts,0.32,'teal')
+    beams(name+'_ch',ch,1.15,'teal');beams(name+'_web',web+posts,0.45,'teal')  # round 13b: the long-edge trusses read faint from the top view (C3)
 for sg,(o1,o2,i1,i2),(u0,u1) in((1,(88.75,97.5,57.5,66.0),(-84.3,84.0)),(-1,(-88.75,-97.5,-57.5,-66.0),(-84.1,84.6))):
     side_truss('truss_%s_out'%('w' if sg>0 else 'e'),o1,o2,u0,u1);side_truss('truss_%s_in'%('w' if sg>0 else 'e'),i1,i2,u0,u1)
 def end_arch(name,sgn,n=20):
