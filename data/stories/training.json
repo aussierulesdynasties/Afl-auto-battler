@@ -499,7 +499,8 @@
 					{
 						"op": "trust",
 						"d": -3,
-						"why": "You sent him back to the twos"
+						"why": "You sent him back to the twos",
+						"scar": true
 					}
 				],
 				"result": "{name} heads back to the twos."
