@@ -50,13 +50,9 @@ static var BAD := Color("e38b73")
 static var ACCENT := Color("c8412b")      # the primary action, and nothing else
 
 
-## The dark palette, as boot and every capture tool start from.
+## The dark palette, as boot and every capture tool start from, on your
+## club's ground (shade_ground) when a club is yours.
 static func apply_palette() -> void:
-	BG = Color("121110")
-	PANEL = Color("1b1a17")
-	PANEL_ALT = Color("24221e")
-	INK = Color("0d0c0b")
-	LINE = Color("363229")
 	TEXT = Color("f1eee6")
 	MUTED = Color("b4afa4")
 	FAINT = Color("6e695f")
@@ -65,7 +61,42 @@ static func apply_palette() -> void:
 	GOOD = Color("8cc49a")
 	BAD = Color("e38b73")
 	ACCENT = Color("c8412b")
+	shade_ground()
+
+
+## Your club's ground (director 2026-11-26, "B: strong club shade"): the five
+## steps of the scale and the rules take the hue of your club's first colour at
+## CLUB_GROUND of its strength, each keeping its own lightness, so text reads on
+## them as on the plain ground. Fremantle's panels are 1f0d3d, a navy club's
+## navy, a red club's a deep wine; Collingwood and Essendon (a black first
+## colour, no hue) stay black. No club yet: the plain ground. GameState.my_club
+## and DraftScene's club_override call this when the club changes, so the next
+## screen built wears it.
+const CLUB_GROUND := 0.9
+## The club whose shade the ground wears now ("" for the plain ground).
+static var ground_club := ""
+
+
+static func shade_ground() -> void:
+	INK = Color("0d0c0b")
+	BG = Color("121110")
+	PANEL = Color("1b1a17")
+	PANEL_ALT = Color("24221e")
 	SURFACE = Color("2a2823")
+	LINE = Color("363229")
+	ground_club = ""
+	var code := my_club()
+	if code != "" and GameDB.clubs.has(code):
+		var first: Color = GameDB.club_colours(code)[0]
+		var hue := first.ok_hsl_h
+		var sat := CLUB_GROUND * clampf(first.ok_hsl_s, 0.0, 1.0)
+		INK = Color.from_ok_hsl(hue, sat, INK.ok_hsl_l)
+		BG = Color.from_ok_hsl(hue, sat, BG.ok_hsl_l)
+		PANEL = Color.from_ok_hsl(hue, sat, PANEL.ok_hsl_l)
+		PANEL_ALT = Color.from_ok_hsl(hue, sat, PANEL_ALT.ok_hsl_l)
+		SURFACE = Color.from_ok_hsl(hue, sat, SURFACE.ok_hsl_l)
+		LINE = Color.from_ok_hsl(hue, sat, LINE.ok_hsl_l)
+		ground_club = code
 	RenderingServer.set_default_clear_color(BG)
 
 
@@ -789,10 +820,12 @@ static func _lift_on(colour: Color, surface: Color) -> Color:
 static func _ink(code: String, which: int, surface) -> Color:
 	if CLUB_INKS.has(code):
 		var picked := Color(str((CLUB_INKS[code] as Array)[which]))
-		if surface == AUTO_COLOUR:
-			return picked
 		# On a club-tinted surface the hand-picked ink is lifted along its own
-		# hue only as far as it takes to read there.
+		# hue only as far as it takes to read there. With no surface named it
+		# reads on a panel, which on your club's ground (shade_ground) has a hue
+		# of its own: Melbourne's red on Port's teal panel is 4.49:1 as picked.
+		if surface == AUTO_COLOUR:
+			surface = PANEL
 		return _lift_on(picked, surface)
 	if surface == AUTO_COLOUR:
 		surface = PANEL

@@ -115,6 +115,7 @@ func _ready() -> void:
 	# The redraft wears the chosen club's colours before my_club is set, a
 	# draft resumed from a save included.
 	UiKit.club_override = _club
+	UiKit.shade_ground()
 	for i in range(_draft.pick_history.size() - 1, -1, -1):
 		if str(_draft.pick_history[i]["club"]) == _club:
 			_last_batch_start = int(_draft.pick_history[i]["pick"])
@@ -158,6 +159,7 @@ func _intro_key() -> String:
 ## Off the draft, colour reads GameState.my_club alone again.
 func _exit_tree() -> void:
 	UiKit.club_override = ""
+	UiKit.shade_ground()
 
 
 func _on_resize() -> void:
@@ -418,6 +420,7 @@ func _grid_columns() -> int:
 func _on_club_chosen(code: String) -> void:
 	_club = code
 	UiKit.club_override = code
+	UiKit.shade_ground()
 	_phase = "board"
 	_last_batch_start = _draft.pick_history.size()
 	if GameState.choosing_club():

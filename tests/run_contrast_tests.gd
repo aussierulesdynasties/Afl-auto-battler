@@ -66,6 +66,7 @@ func _run() -> void:
 	_t("_test_primary_fill_every_club")
 	_t("_test_club_ink_on_every_step")
 	_t("_test_club_ink_is_not_good")
+	_t("_test_every_club_ground")
 	_db.unregister_custom_clubs()
 	print(Ran.line("Contrast", self))
 	quit(0 if _failures.is_empty() else 1)
@@ -197,6 +198,48 @@ func _test_club_ink_on_every_step() -> void:
 			var r: float = UK.contrast(ink, sf)
 			_check(r >= TEXT_FLOOR - EPS, "%s: its ink with no surface named (%s) reads on %s: %.2f:1" % [
 					code, _hex(ink), _hex(sf), r])
+
+
+## Your club's ground (UiKit.shade_ground; director 2026-11-26, "B: strong club
+## shade"): on every club's ground, the Forge's colours included, the scale
+## keeps its order and every text token and club ink still reads. The shades he
+## was shown: Fremantle's panels 1f0d3d; Collingwood and Essendon stay black.
+func _test_every_club_ground() -> void:
+	var was: String = _state.my_club
+	var who := _clubs()
+	_check(who.size() >= 18 + _forge.size(), "Every club's ground is walked (%d)" % who.size())
+	var worst := 99.0
+	var worst_at := ""
+	for code in who:
+		_state.my_club = code
+		_check(UK.ground_club == code and UK.BG == RenderingServer.get_default_clear_color(),
+				"%s: the page takes its shade when it becomes your club" % code)
+		_test_scale_is_ordered()
+		_test_text_tokens_on_every_step()
+		_test_club_ink_on_every_step()
+		var steps: Array = UK.elevation()
+		for token in ["TEXT", "MUTED", "GOOD", "BAD"]:
+			for i in steps.size():
+				var r: float = UK.contrast(UK.get(token), steps[i])
+				if r < worst:
+					worst = r
+					worst_at = "%s %s on %s %s" % [code, token, UK.ELEVATION[i], _hex(steps[i])]
+	var shown := {"FRE": ["PANEL", "1f0d3d"], "COL": ["BG", "111111"], "ESS": ["PANEL", "1a1a1a"]}
+	for code in shown:
+		_state.my_club = code
+		var got: String = (UK.get(shown[code][0]) as Color).to_html(false)
+		_check(got == shown[code][1], "%s: its %s is %s as shown, got %s" % [code, shown[code][0], shown[code][1], got])
+	# The League redraft wears the club chosen before my_club is set (DraftScene).
+	_state.my_club = ""
+	UK.club_override = "FRE"
+	UK.shade_ground()
+	_check(UK.ground_club == "FRE", "The redraft's chosen club gives the page its shade")
+	UK.club_override = ""
+	UK.shade_ground()
+	_check(UK.ground_club == "" and UK.BG.to_html(false) == "121110" and UK.PANEL.to_html(false) == "1b1a17",
+			"No club: the plain ground (%s, %s)" % [_hex(UK.BG), _hex(UK.PANEL)])
+	_state.my_club = was
+	print("Club grounds: lowest text contrast %.2f:1 (%s)" % [worst, worst_at])
 
 
 ## A club's name ink is never mistaken for GOOD (afl-ui-writing: club colour
