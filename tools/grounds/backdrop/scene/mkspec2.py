@@ -56,5 +56,9 @@ if g in ('blacktown',): s['drop_buildings'] = [[(-125, -97), (-98, -99), (-60, -
                                                 [(-241, -154), (-198, -154), (-198, -186), (-241, -186)],   # the shade sails (map: two roofed buildings)
                                                 [(-221, -193), (-194, -189), (-189, -215), (-217, -219)]]   # a 1 m concrete slab (the model's SLAB), not a 7 m block
 s.update(name=g, lat=F['origin'][0], lon=F['origin'][1], glb=glb, landmarks=[], yaw=F['yaw'])
+# the ground model's own centre where its origin is off the oval (GroundModels FIT x, -z): the footprint and the clear
+# radius are measured round it (Whitten's origin is 165 m from the oval, outside the arena)
+_FC = {'whitten': [146.34, 76.06], 'ikon_park': [44.35, 22.32], 'bruce': [21.36, 39.57]}
+if g in _FC: s['fp_centre'] = _FC[g]
 json.dump(s, open('spec/%s.json' % g, 'w'), indent=1)
 print(g, s['lat'], s['lon'], 'yaw', F['yaw'])

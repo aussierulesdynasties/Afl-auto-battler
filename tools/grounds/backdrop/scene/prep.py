@@ -111,6 +111,12 @@ np.save(os.path.join(OUT, 'near_raw.npy'), near.astype(np.float32))
 # real ground banks up or down to it over pad_bank_m (default 25 m) outside its outline, nothing wider (person, 2026-11-23:
 # "copy the shit exactly" includes the land; a 150 m flat pad + 250 m blend removed up to 29 m of real slope)
 r = np.hypot(X, Y); R0 = spec['clear_r_m']; BK = float(spec.get('pad_bank_m', 25.0))
+# fp_centre: the ground model's own centre where its origin is off the oval (Whitten's sits 165 m away); the
+# footprint (probe_outline.py with FP_C) and the clear radius are measured round it
+FC = [float(v) for v in spec.get('fp_centre', [0.0, 0.0])]
+def _fpb(x, y):   # radius and 2-degree bin about the model's centre
+    dx = np.asarray(x, float) - FC[0]; dy = np.asarray(y, float) - FC[1]
+    return np.hypot(dx, dy), ((np.degrees(np.arctan2(dy, dx)) % 360) // 2).astype(int) % 180
 _fp = os.path.join(OUT, 'footprint.json')
 def _fp_fill(a):   # bins the outline probe missed (radius ~0) take the circular interpolation of their neighbours
     a = np.asarray(a, float); ok = a > 20
@@ -119,8 +125,9 @@ def _fp_fill(a):   # bins the outline probe missed (radius ~0) take the circular
         return np.where(ok, a, float(spec.get('outline_fill_m', 95.0)))
     k = np.arange(len(a)); n = len(a)
     return np.interp(k, np.concatenate([k[ok] - n, k[ok], k[ok] + n]), np.tile(a[ok], 3))
-RK = _fp_fill(json.load(open(_fp)))[((np.degrees(np.arctan2(Y, X)) % 360) // 2).astype(int)] if os.path.exists(_fp) else R0
-w = np.clip((r - RK - 2.0) / BK, 0, 1); w = w * w * (3 - 2 * w)
+rF, bF = _fpb(X, Y)
+RK = _fp_fill(json.load(open(_fp)))[bF] if os.path.exists(_fp) else R0
+w = np.clip((rF - RK - 2.0) / BK, 0, 1); w = w * w * (3 - 2 * w)
 near = near * w
 BANK = None
 if spec.get('rail_cut'):
@@ -142,8 +149,8 @@ if spec.get('rail_cut'):
     fade = np.clip((rc['r_end'] - r) / (rc['r_end'] - rc['r_full']), 0, 1)
     FP = os.path.join(OUT, 'footprint.json')
     if rc.get('keep_footprint') and os.path.exists(FP):   # the ground model's own outline stays on solid ground
-        RK = np.array(json.load(open(FP)))[((np.degrees(np.arctan2(Y, X)) % 360) // 2).astype(int)]
-        cmask = cmask * np.clip((np.hypot(X, Y) - RK - 1.5) / rc.get("keep_bank_m", 2.0), 0, 1)
+        rF, bF = _fpb(X, Y); RK = np.array(json.load(open(FP)))[bF]
+        cmask = cmask * np.clip((rF - RK - 1.5) / rc.get("keep_bank_m", 2.0), 0, 1)
     if rc.get('keep_ellipse') and not rc.get('keep_footprint'):   # the ground model's own plaza stays on solid ground
         ex, ey, ea, eb = rc['keep_ellipse']
         q = np.hypot((X - ex) / ea, (Y - ey) / eb); cmask = cmask * np.clip((q - 1.0) / 0.035, 0, 1)
@@ -822,7 +829,7 @@ for el in js + PARTS + OVB:
     pts = pts[:-1] if pts[0] == pts[-1] else pts
     cx = sum(p[0] for p in pts) / len(pts); cy = sum(p[1] for p in pts) / len(pts)
     if abs(cx) > NEAR or abs(cy) > NEAR: continue
-    if ((any(math.hypot(px_, py_) < _FPR[int((math.degrees(math.atan2(py_, px_)) % 360) // 2)] + 2 for px_, py_ in pts)) if _FPR is not None else math.hypot(cx, cy) < skip_r) or t.get("building") in ("grandstand", "stadium"): continue
+    if ((any(_fpb(px_, py_)[0] < _FPR[_fpb(px_, py_)[1]] + 2 for px_, py_ in pts)) if _FPR is not None else _fpb(cx, cy)[0] < skip_r) or t.get("building") in ("grandstand", "stadium"): continue
     if t.get('layer', '0').startswith('-') or t.get('location') == 'underground': continue
     # drop_buildings: outlines the ground model builds itself, measured (its own polygons, local metres); the map's
     # version of the same building is left out so the two never stand inside each other
@@ -910,10 +917,10 @@ TR = []
 # model's outline (footprint.json + 2 m), not only beyond the clear radius
 if spec.get('trees_to_footprint') and _FPR is not None:
     def _clear(x, y):
-        x = np.asarray(x, float); y = np.asarray(y, float)
-        return np.hypot(x, y) > _FPR[((np.degrees(np.arctan2(y, x)) % 360) // 2).astype(int) % 180] + 2
+        rr, bb = _fpb(x, y)
+        return rr > _FPR[bb] + 2
 else:
-    def _clear(x, y): return np.hypot(x, y) > skip_r
+    def _clear(x, y): return _fpb(x, y)[0] > skip_r
 for el in js:
     if el['type'] == 'node' and el.get('tags', {}).get('natural') == 'tree':
         x, y = xy(el['lat'], el['lon'])

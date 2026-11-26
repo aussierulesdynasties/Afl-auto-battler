@@ -11,7 +11,7 @@ L=$($P -c "import json;s=json.load(open('spec/$g.json'));print(s['lat'],s['lon']
 $P fetch.py $g $L 1 | tail -2
 $P sat_fetch.py spec/$g.json 1500 1.0 | tail -1
 GLB=$($P -c "import json;print(json.load(open('spec/$g.json'))['glb'])")
-$P probe_outline.py -- "$GLB" data/$g/prep/footprint.json $SKIP 2>&1 | grep OUTLINE
+FP_C=$($P -c "import json;print(','.join(map(str,json.load(open('spec/$g.json')).get('fp_centre',[0,0]))))") $P probe_outline.py -- "$GLB" data/$g/prep/footprint.json $SKIP 2>&1 | grep OUTLINE
 $P prep.py spec/$g.json 2>&1 | tail -4
 $P cars.py spec/$g.json 2>&1 | tail -1
 $P roofplant.py spec/$g.json 2>&1 | tail -1
