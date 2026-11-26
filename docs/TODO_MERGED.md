@@ -198,3 +198,4 @@ What has landed toward each open row of docs/TODO.md and docs/TODO_RULINGS.md, o
 - 171: Merged #2140: UI Batch 5, area 2: Staff, Coaching and My list fit a PC window.
 - 202: Merged #2148: Manuka, People First and Norwood play on their real boundary lines.
 - 202: Merged #2150: Blacktown: PC-check fixes in one pass (tower heads, bank by side, colours, night surroundings).
+- 202: Merged #2157: 3D 1.0 plan: night-tower beams and Blacktown fixes.
