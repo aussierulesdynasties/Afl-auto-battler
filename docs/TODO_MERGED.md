@@ -215,3 +215,4 @@ What has landed toward each open row of docs/TODO.md and docs/TODO_RULINGS.md, o
 - 198: Merged #2040: 3D match: real AFL move clips timed to the touch, reel fixes, run-down tackles.
 - 202: Merged #2041: 3D: Barossa Park rebuilt to the MCG standard (row 202).
 - 202: Merged #2045: Match plays on each ground's traced boundary line, not an ellipse.
+- 202: Merged #2047: Grounds: one shared Google Earth compare tool for every ground.
