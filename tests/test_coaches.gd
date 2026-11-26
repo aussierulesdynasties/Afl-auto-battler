@@ -362,8 +362,8 @@ func _test_ui() -> void:
 	host.queue_free()
 
 
-## A PC (the director's picks, 2026-11-26, row 171). Staff: three cards across
-## at every PC size, each coach's grades on his card (Teaching, Tactics,
+## A PC (the director's picks, 2026-11-26, row 171). Staff: two rows of cards
+## at every PC size (four across since the Council's two seats joined the six jobs), each coach's grades on his card (Teaching, Tactics,
 ## Man-management, Fit for this job). Coaching: one page in three columns, or at
 ## 960x540 two stages, How we play | The club. Neither scrolls; a phone keeps
 ## its one column.
@@ -380,8 +380,8 @@ func _test_ui_pc() -> void:
 		tree.root.add_child(scene)
 		await _frames(3)
 		var grid: GridContainer = scene.find_child("StaffGrid", true, false)
-		_check(grid != null and grid.columns == 3 and grid.get_child_count() == Coaches.JOBS.size(),
-				"PC %s: Staff is three cards across, one per job" % tag)
+		_check(grid != null and grid.columns == 4 and grid.get_child_count() == Council.SEATS.size(),
+				"PC %s: Staff is four cards across, one per council seat" % tag)
 		var graded: Array = []
 		for job in coach_jobs:
 			var g: Control = scene.find_child("Grades_" + job, true, false)

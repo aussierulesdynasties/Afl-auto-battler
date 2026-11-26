@@ -107,6 +107,24 @@ static func build(index: int, narrow: bool, rebuild: Callable, show_rule: Callab
 				more.pressed.connect(func(): show_rule.call(rule_text))
 				col.add_child(more)
 			row.add_child(col)
+		# A council member backing one choice, signed in his own words (the
+		# Council, decision 5), then what taking or going against him does.
+		var pitch := Council.pitch_lines(e)
+		if not pitch.is_empty():
+			var pv := UiKit.vbox(UiKit.Space.THIN)
+			pv.name = "EventPitch_%d" % index
+			var said := NameInk.label(str(pitch[0]), names, UiKit.SECONDARY, UiKit.TEXT)
+			said.name = "EventPitchSaid_%d" % index
+			said.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			pv.add_child(said)
+			for k in range(1, pitch.size()):
+				var sl := UiKit.lbl(str(pitch[k]), UiKit.SMALL, UiKit.TEXT)
+				sl.name = "EventPitchStake_%d_%d" % [index, k]
+				sl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+				pv.add_child(sl)
+			# A little air: his word is not one more Gain or Cost line.
+			v.add_child(UiKit.spacer(UiKit.Space.CLOSE))
+			v.add_child(pv)
 	else:
 		# What the answer led to, in plain TEXT: an outcome can go either way, so
 		# it never wears GOOD (T3.R9).

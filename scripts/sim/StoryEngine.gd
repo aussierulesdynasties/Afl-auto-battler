@@ -72,7 +72,8 @@ const ACTOR_ROLES := ["close_mate", "positional_rival", "mentor", "protege", "br
 ## club has nobody in (an older save, or a seat not yet filled) skips the card,
 ## unless the card says the seat is not required (then {x_name} is "the <role>").
 const ADVISOR_SEATS := {"list_manager": "list manager", "high_performance": "head of high performance",
-		"line_coach": "midfield coach", "senior_assistant": "senior assistant", "development": "development coach"}
+		"line_coach": "midfield coach", "senior_assistant": "senior assistant", "development": "development coach",
+		"fwd_coach": "forwards coach", "def_coach": "backline coach"}
 ## A result line may name players from a ranked list: {best3}, {worst2}.
 const RANKED_TOKEN := "\\{(best|worst)([1-9])\\}"
 
