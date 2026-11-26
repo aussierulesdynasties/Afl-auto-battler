@@ -70,8 +70,8 @@ func setup(res: Dictionary, first_side: int, wide := false) -> PlayerStatsTable:
 	_wanted_wide = wide
 	name = "PlayerStats"
 	resized.connect(func() -> void: _fit_columns.call_deferred())
-	add_theme_constant_override("separation", 4)
-	_tabs = UiKit.hbox(2)
+	add_theme_constant_override("separation", UiKit.Space.TIGHT)
+	_tabs = UiKit.hbox(UiKit.Space.SLIM)
 	add_child(_tabs)
 	_rows = UiKit.vbox(0)
 	add_child(_rows)
@@ -92,7 +92,7 @@ func _rebuild() -> void:
 			_rebuild())
 		_tabs.add_child(t)
 	UiKit.clear(_rows)
-	var head := UiKit.hbox(2)
+	var head := UiKit.hbox(UiKit.Space.SLIM)
 	head.name = "StatsHeader"
 	var who := UiKit.line("Player", UiKit.SMALL, UiKit.MUTED)
 	who.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -122,7 +122,7 @@ func _rebuild() -> void:
 	var legend := UiKit.lbl("  ·  ".join(key_bits), UiKit.SMALL, UiKit.MUTED)
 	legend.name = "StatsKey"
 	legend.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_rows.add_child(UiKit.spacer(4))
+	_rows.add_child(UiKit.spacer(UiKit.Space.TIGHT))
 	_rows.add_child(legend)
 
 
@@ -180,7 +180,7 @@ func _row(p: Dictionary) -> Control:
 		_open = "" if _open == id else id
 		_rebuild())
 	v.add_child(b)
-	var h := UiKit.hbox(2)
+	var h := UiKit.hbox(UiKit.Space.SLIM)
 	h.set_anchors_preset(Control.PRESET_FULL_RECT)
 	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	b.add_child(h)
@@ -222,5 +222,5 @@ func _row(p: Dictionary) -> Control:
 		more.name = "PlayerDetail"
 		more.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(more)
-		v.add_child(UiKit.spacer(4))
+		v.add_child(UiKit.spacer(UiKit.Space.TIGHT))
 	return v

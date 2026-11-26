@@ -33,8 +33,8 @@ static func grid(columns: int, ground: Array, profile: Array, on_pick: Callable 
 	var g := GridContainer.new()
 	g.name = "ClubPlan"
 	g.columns = columns
-	g.add_theme_constant_override("h_separation", 6)
-	g.add_theme_constant_override("v_separation", 6)
+	g.add_theme_constant_override("h_separation", UiKit.Space.CLOSE)
+	g.add_theme_constant_override("v_separation", UiKit.Space.CLOSE)
 	var by_dim := words(profile)
 	var tiles := {}
 	var paint := func() -> void:

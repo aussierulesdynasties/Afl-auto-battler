@@ -212,6 +212,10 @@ func _process(delta: float) -> void:
 	if _left_at >= 0.0 and get_tree().current_scene != _scene_then and get_tree().current_scene != null:
 		set_process(false)
 		var layer := get_parent()
+		# Fades up to the match; with Reduced motion the match is simply there.
+		if not UiKit.motion_on():
+			layer.queue_free()
+			return
 		var tw := create_tween()
 		tw.tween_property(self, "modulate:a", 0.0, 0.25)
 		tw.tween_callback(layer.queue_free)

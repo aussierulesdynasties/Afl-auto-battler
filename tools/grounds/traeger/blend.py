@@ -8,7 +8,7 @@ bpy.ops.wm.read_factory_settings(use_empty=True)
 sc=bpy.context.scene
 COL={'roof_white':(0.86,0.85,0.82),'base_dark':(0.09,0.10,0.12),'glass':(0.10,0.14,0.18),'wall_cream':(0.72,0.66,0.55),
 'wall_white':(0.85,0.85,0.83),'brick':(0.45,0.22,0.13),'post':(0.85,0.85,0.85),'steel':(0.62,0.64,0.65),'frame':(0.18,0.19,0.2),
-'roof_green':(0.04,0.13,0.10),'lamp_face':(0.78,0.80,0.80),'tree':(0.20,0.22,0.07),'trunk':(0.55,0.50,0.42),'dirt':(0.36,0.17,0.10),'grass':(0.08,0.22,0.04)}
+'roof_green':(0.04,0.13,0.10),'roof_green_light':(0.26,0.44,0.41),'lamp_face':(0.78,0.80,0.80),'tree':(0.20,0.22,0.07),'trunk':(0.55,0.50,0.42),'dirt':(0.36,0.17,0.10),'grass':(0.08,0.22,0.04)}
 TEXM={'lamps':'lamps.png','hoard':'hoard.png','sign_tio':'sign_tio.png','sign_white':'sign_white.png','roof_blue':'roof_blue.png','screen':'screen.png','hoard_blue':'hoard_blue.png','hoard_white':'hoard_white.png','rail':'rail.png'}
 EMIT={'screen':0.6}   # daytime reference: lamps are off
 TJ=json.load(open(os.path.join(os.path.dirname(os.path.abspath(PR)),'tex3','tex.json')));TILE=TJ['TILE']
@@ -160,10 +160,19 @@ for pr in P:   # the hoardings were traced over the permanent fence: the runs st
     elif k=='board':
         a,b2=pr['a'],pr['b'];quad(n,a,b2,pr['z0'],pr['z1'],m)   # reads left-to-right from the field
     elif k=='gable':
-        fp=pr['fp'];e=pr['eave'];r=pr['ridge'];x0,x1=fp[0][0],fp[1][0];yN,yS=fp[0][1],fp[2][1];ym=(yN+yS)/2
-        mk(n+'_walls',[(x0,yN,0),(x1,yN,0),(x1,yS,0),(x0,yS,0),(x0,yN,e),(x1,yN,e),(x1,yS,e),(x0,yS,e)],box_faces(4),'shed_wall')
-        mk(n+'_gables',[(x0,yN,e),(x0,ym,r),(x0,yS,e),(x1,yN,e),(x1,ym,r),(x1,yS,e)],[(0,1,2),(2,1,0),(3,4,5),(5,4,3)],'shed_wall')
-        mk(n,[(x0-0.4,yN-0.4,e-0.1),(x1+0.4,yN-0.4,e-0.1),(x1+0.4,ym,r),(x0-0.4,ym,r),(x1+0.4,yS+0.4,e-0.1),(x0-0.4,yS+0.4,e-0.1)],[(0,1,2,3),(3,2,1,0),(3,2,4,5),(5,4,2,3)],m)
+        # fp: four corners, the long sides first (fp[0]->fp[1]) and last (fp[3]->fp[2]); the ridge runs between the
+        # short sides' midpoints, a hip roof (hip=True) pulls it in by half the width at each end; 0.4 m overhang
+        Q=[Vector((x,y,0)) for x,y in pr['fp']];e=pr['eave'];r=pr['ridge'];hip=pr.get('hip',False)
+        u=(Q[1]-Q[0]).normalized();v=(Q[3]-Q[0]).normalized();o=0.4
+        mk(n+'_walls',[tuple(q) for q in Q]+[(q.x,q.y,e) for q in Q],box_faces(4),'shed_wall')
+        R=[Q[0]-u*o-v*o,Q[1]+u*o-v*o,Q[2]+u*o+v*o,Q[3]-u*o+v*o]
+        m0,m1=(Q[0]+Q[3])/2,(Q[1]+Q[2])/2;hw=(Q[3]-Q[0]).length/2
+        if hip:m0,m1=m0+u*hw,m1-u*hw
+        else:mk(n+'_gables',[(Q[0].x,Q[0].y,e),(m0.x,m0.y,r),(Q[3].x,Q[3].y,e),(Q[1].x,Q[1].y,e),(m1.x,m1.y,r),(Q[2].x,Q[2].y,e)],[(0,1,2),(2,1,0),(3,4,5),(5,4,3)],'shed_wall')
+        if not hip:m0,m1=m0-u*o,m1+u*o
+        V=[(q.x,q.y,e-0.1) for q in R]+[(m0.x,m0.y,r),(m1.x,m1.y,r)]
+        F=[(0,1,5,4),(4,5,1,0),(5,2,3,4),(4,3,2,5)]+([(1,2,5),(5,2,1),(3,0,4),(4,0,3)] if hip else [])
+        mk(n,V,F,m)
     elif k=='tree':
         cx,cy=pr['xy'];r=pr['r'];h=pr['h'];cd=pr['cd']
         cone(n+'_trunk',(cx,cy),0,h-cd*0.6,0.35,0.2,'trunk',8)
@@ -204,9 +213,9 @@ for e in('BLENDER_EEVEE_NEXT','BLENDER_EEVEE'):
     except TypeError:pass
 sc.view_settings.view_transform='Standard'
 sc.render.film_transparent=True
-sc.render.filepath=os.path.join(OUT,'render_ground.png');bpy.ops.render.render(write_still=True)
+sc.render.filepath=os.path.join(OUT,'render_ground.png');(None if os.environ.get('NO_RENDER') else bpy.ops.render.render(write_still=True))
 for o in coll('ground').objects:o.hide_render=True
-sc.render.filepath=os.path.join(OUT,'render_model.png');bpy.ops.render.render(write_still=True)
+sc.render.filepath=os.path.join(OUT,'render_model.png');(None if os.environ.get('NO_RENDER') else bpy.ops.render.render(write_still=True))
 for o in coll('ground').objects:o.hide_render=False
 bpy.ops.export_scene.gltf(filepath=os.path.join(OUT,'traeger.glb'),export_format='GLB',export_cameras=False,export_lights=False)
 bpy.ops.wm.save_as_mainfile(filepath=os.path.join(OUT,'traeger.blend'))

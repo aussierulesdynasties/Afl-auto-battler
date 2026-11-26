@@ -129,10 +129,10 @@ func _inks() -> Array:
 
 
 func _header() -> Control:
-	var v := UiKit.vbox(2)
+	var v := UiKit.vbox(UiKit.Space.SLIM)
 	v.name = "BoxHeader"
 	for side in [0, 1]:
-		var h := UiKit.hbox(14)
+		var h := UiKit.hbox(UiKit.Space.LOOSE)
 		h.name = "BoxHeader_%d" % side
 		h.add_child(UiKit.club_marker(_codes[side]))
 		var nm := UiKit.line(GameDB.club_short(_codes[side]), UiKit.NAME, UiKit.club_name_colour(_inks()[side]), true)
@@ -151,7 +151,7 @@ func _header() -> Control:
 ## behinds at every break, running. Each quarter's column is one button;
 ## tapping it says that quarter's scores and goalkickers, again clears it.
 func _quarter_strip() -> Control:
-	var h := UiKit.hbox(4)
+	var h := UiKit.hbox(UiKit.Space.TIGHT)
 	h.name = "QuarterStrip"
 	var marks := UiKit.vbox(0)
 	marks.add_child(_strip_cell("", false, UiKit.MUTED))
@@ -285,7 +285,7 @@ func _fill_players() -> void:
 	if players.is_empty():
 		return
 	var wide := compact or UiKit.view_width(self) >= 760.0
-	var cols := UiKit.hbox(32)
+	var cols := UiKit.hbox(UiKit.Space.BROAD)
 	cols.name = "BoxPlayerColumns"
 	for side in [0, 1]:
 		var rows := []
@@ -300,7 +300,7 @@ func _fill_players() -> void:
 		col.name = "BoxPlayers_%d" % side
 		col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		col.add_child(UiKit.spacer(UiKit.GAP))
-		var head := UiKit.hbox(6)
+		var head := UiKit.hbox(UiKit.Space.CLOSE)
 		head.add_child(UiKit.club_marker(_codes[side]))
 		head.add_child(UiKit.line(GameDB.club_short(_codes[side]), UiKit.BODY, UiKit.club_name_colour(_inks()[side]), true))
 		col.add_child(head)
@@ -352,7 +352,7 @@ func _player_row(r: Dictionary, figure: String, ink: Color) -> Control:
 			return
 		_open = "" if _open == id else id
 		_fill_players())
-	var h := UiKit.hbox(8)
+	var h := UiKit.hbox(UiKit.GAP)
 	h.set_anchors_preset(Control.PRESET_FULL_RECT)
 	h.offset_right = -NameLink.PROFILE_W
 	# His name in his club's ink, both clubs alike (director A1, 2026-10-14).
@@ -397,7 +397,7 @@ func _player_row(r: Dictionary, figure: String, ink: Color) -> Control:
 		l.name = "BoxPlayerLine_" + id
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(l)
-		v.add_child(UiKit.spacer(4))
+		v.add_child(UiKit.spacer(UiKit.Space.TIGHT))
 	return v
 
 
@@ -411,7 +411,7 @@ static func _one(words: String) -> String:
 # Head to head
 # ---------------------------------------------------------------------------
 func _head_to_head(team: Array) -> Control:
-	var v := UiKit.vbox(6)
+	var v := UiKit.vbox(UiKit.Space.CLOSE)
 	v.name = "HeadToHead"
 	for row in BARS:
 		var key := str(row[0])
@@ -419,9 +419,9 @@ func _head_to_head(team: Array) -> Control:
 			continue
 		var a := int(round(float(team[0].get(key, 0.0))))
 		var b := int(round(float(team[1].get(key, 0.0))))
-		var box := UiKit.vbox(2)
+		var box := UiKit.vbox(UiKit.Space.SLIM)
 		box.name = "H2H_" + key
-		var h := UiKit.hbox(8)
+		var h := UiKit.hbox(UiKit.GAP)
 		var la := UiKit.line(str(a), UiKit.BODY, UiKit.TEXT, a > b)
 		la.custom_minimum_size.x = 44
 		h.add_child(la)

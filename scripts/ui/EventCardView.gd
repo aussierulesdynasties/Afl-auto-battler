@@ -11,9 +11,9 @@ extends RefCounted
 
 static func build(index: int, narrow: bool, rebuild: Callable, show_rule: Callable, names := {}, bare := false) -> Control:
 	var e: Dictionary = GameState.week_events[index]
-	var card: Control = UiKit.vbox(0) if bare else UiKit.panel(UiKit.PANEL, 12)
+	var card: Control = UiKit.vbox(0) if bare else UiKit.panel(UiKit.PANEL, UiKit.Space.PAD)
 	card.name = "WeekEvent" if index == 0 else "WeekEvent_%d" % index
-	var v := UiKit.vbox(8 if bare else 6)
+	var v := UiKit.vbox(UiKit.GAP if bare else UiKit.Space.CLOSE)
 	card.add_child(v)
 	# On the hub the card's title is a heading, so the card reads as its own
 	# section above the week, not as one more line of it (T3.R9).
@@ -44,7 +44,7 @@ static func build(index: int, narrow: bool, rebuild: Callable, show_rule: Callab
 			sl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			v.add_child(sl)
 		var opts: Array = e.get("options", [])
-		var row: BoxContainer = UiKit.vbox(22) if narrow else UiKit.hbox(8)
+		var row: BoxContainer = UiKit.vbox(UiKit.Space.WIDER) if narrow else UiKit.hbox(UiKit.GAP)
 		v.add_child(row)
 		for i in range(opts.size()):
 			var o: Dictionary = opts[i]
@@ -68,7 +68,7 @@ static func build(index: int, narrow: bool, rebuild: Callable, show_rule: Callab
 			if lines.is_empty() and rule_text == "":
 				row.add_child(b)
 				continue
-			var col := UiKit.vbox(3)
+			var col := UiKit.vbox(UiKit.Space.THIN)
 			col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			col.add_child(b)
 			for line in lines:
@@ -87,7 +87,7 @@ static func build(index: int, narrow: bool, rebuild: Callable, show_rule: Callab
 					col.add_child(cl)
 					continue
 				# The marker is bold in your club's ink (STYLE-03); the sentence stays regular TEXT.
-				var item := UiKit.hbox(6)
+				var item := UiKit.hbox(UiKit.Space.CLOSE)
 				var mk := UiKit.lbl(mark, UiKit.SECONDARY, UiKit.label_ink(), true)
 				mk.name = "Event%sMark_%d_%d" % [kind, index, i]
 

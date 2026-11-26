@@ -18,7 +18,7 @@ func _ready() -> void:
 	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
 	UiKit.apply_insets(margin, 12)
 	add_child(margin)
-	_root = UiKit.vbox(9)
+	_root = UiKit.vbox(UiKit.Space.EASY)
 	margin.add_child(_root)
 	get_viewport().size_changed.connect(func():
 		if is_inside_tree() and not UiKit.keyboard_resize(self):
@@ -57,9 +57,9 @@ func _build() -> void:
 func _records_card() -> Control:
 	if _records_club == "" or not GameState.club_records.has(_records_club):
 		_records_club = GameState.my_club
-	var card := UiKit.panel(UiKit.PANEL, 14)
+	var card := UiKit.panel(UiKit.PANEL, UiKit.Space.LOOSE)
 	card.name = "ClubRecords"
-	var v := UiKit.vbox(4)
+	var v := UiKit.vbox(UiKit.Space.TIGHT)
 	card.add_child(v)
 	v.add_child(UiKit.section("Club records"))
 	var codes: Array = GameState.club_records.keys()
@@ -97,9 +97,9 @@ func _all_legends(seasons: Array) -> Array:
 
 
 func _legends_card(legends: Array) -> Control:
-	var card := UiKit.panel(UiKit.PANEL, 14)
+	var card := UiKit.panel(UiKit.PANEL, UiKit.Space.LOOSE)
 	card.name = "LegendsCard"
-	var v := UiKit.vbox(4)
+	var v := UiKit.vbox(UiKit.Space.TIGHT)
 	card.add_child(v)
 	v.add_child(UiKit.section("Legends"))
 	for lg in legends:
@@ -113,9 +113,9 @@ func _legends_card(legends: Array) -> Control:
 
 ## The coach's own line: the one figure is the flags.
 func _coach_card(t: Dictionary) -> Control:
-	var card := UiKit.panel(UiKit.PANEL, 14)
+	var card := UiKit.panel(UiKit.PANEL, UiKit.Space.LOOSE)
 	card.name = "CoachRecord"
-	var v := UiKit.vbox(4)
+	var v := UiKit.vbox(UiKit.Space.TIGHT)
 	card.add_child(v)
 	v.add_child(UiKit.section("Your record"))
 	var flags := int(t["flags"])
@@ -141,10 +141,10 @@ func _coach_card(t: Dictionary) -> Control:
 func _season_card(e: Dictionary) -> Control:
 	var club := str(e.get("club", GameState.my_club))
 	var flag := bool(e.get("flag", false))
-	var card := UiKit.panel(UiKit.PANEL, 14)
-	var v := UiKit.vbox(4)
+	var card := UiKit.panel(UiKit.PANEL, UiKit.Space.LOOSE)
+	var v := UiKit.vbox(UiKit.Space.TIGHT)
 	card.add_child(v)
-	var head := UiKit.hbox(10)
+	var head := UiKit.hbox(UiKit.Space.ROOM)
 	head.add_child(UiKit.figure(str(int(e.get("year", 0))), UiKit.H1, UiKit.club_vivid(club)))
 	if club != "":
 		var badge := UiKit.club_badge(club, UiKit.NAME, false, true)
@@ -222,7 +222,7 @@ func _row(v: VBoxContainer, what: String, text: String, node: String) -> void:
 	# a long heading ("Most disposals in a match") outgrows the column and
 	# pushes its line out of step with the rows above.
 	var stacked := UiKit.text_scale > 1.0 and UiKit.view_width(self) < 640.0
-	var h: BoxContainer = UiKit.vbox(0) if stacked else UiKit.hbox(8)
+	var h: BoxContainer = UiKit.vbox(0) if stacked else UiKit.hbox(UiKit.GAP)
 	h.name = node
 	var a := UiKit.lbl(what, UiKit.SECONDARY, UiKit.MUTED)
 	if not stacked:
@@ -232,7 +232,7 @@ func _row(v: VBoxContainer, what: String, text: String, node: String) -> void:
 		# neatly"): centred on a line that wraps, it floated between the rows.
 		a.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 		a.vertical_alignment = VERTICAL_ALIGNMENT_TOP
-		h.add_theme_constant_override("separation", 12)
+		h.add_theme_constant_override("separation", UiKit.Space.PAD)
 	a.autowrap_mode = TextServer.AUTOWRAP_OFF
 	h.add_child(a)
 	var b := UiKit.lbl(text, UiKit.SECONDARY, UiKit.TEXT)

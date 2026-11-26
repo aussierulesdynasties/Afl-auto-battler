@@ -286,9 +286,17 @@ func _test_rookie_draft_tap() -> void:
 	var pid := str(pool[0]["id"])
 	var btn := sheet.find_child("RookiePick_%s" % pid, true, false) as Button
 	_check(btn != null, "The best player left has a Pick button")
+	# The pick is saved on the way out, not on the tap (director, 2026-11-25,
+	# bug bash batch F): with saving on, the tap writes nothing and leaves the
+	# career marked for the next screen change.
+	gs.autosave_enabled = true
+	var writes: int = gs.saves_written
 	var why: String = await Tap.tap(btn)
 	_check(why == "", "A real tap on Pick reaches it (%s)" % why)
 	await _settle()
+	_check(gs.saves_written == writes and gs._dirty,
+			"The pick answers at once: nothing written on the tap, saved at the next screen change (%d writes)" % (gs.saves_written - writes))
+	gs.autosave_enabled = false
 	_check(RookieList.is_rookie(RookieList._find(gs.my_list, pid)), "The tapped player joins your rookie list")
 	# Your next round's pick opens straight away; Pass ends it.
 	if RookieList.waiting(gs):
