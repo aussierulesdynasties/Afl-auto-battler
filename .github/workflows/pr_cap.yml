@@ -51,9 +51,13 @@ jobs:
 
           # Ready PRs that count: not draft, not a bot's, not exempt.
           counted='[.[] | select(.isDraft | not) | select(.author.is_bot | not)
-                    | select(.author.login != "github-actions" and .author.login != "app/github-actions")
+                    | select(.author.login != "github-actions[bot]")
                     | select(all(.labels[]; .name != "cap-exempt"))]'
-          list() { gh pr list --state open --limit 200 --json number,isDraft,author,labels,createdAt; }
+          # REST, not `gh pr list --json author`: gh's author query asks for an app author's owner
+          # fields, which need read:org, and MERGE_TOKEN has only repo (failed on 26 Nov). The jq
+          # gives the same shape the filters below read.
+          list() { gh api "repos/$GH_REPO/pulls?state=open&per_page=100" --paginate --jq '.[] | {number, isDraft: .draft,
+            author: {login: .user.login, is_bot: (.user.type == "Bot")}, labels: [.labels[] | {name}], createdAt: .created_at}' | jq -s .; }
 
           draft() { gh api graphql -f id="$(gh pr view "$1" --json id --jq .id)" \
             -f query='mutation($id: ID!) { convertPullRequestToDraft(input: {pullRequestId: $id}) { pullRequest { isDraft } } }' >/dev/null; }
