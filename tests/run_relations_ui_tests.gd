@@ -138,7 +138,7 @@ func _test_profile_relations() -> void:
 	if _gs.has_method("bond_ties"):
 		var ties: Array = _view.bonds(_gs, id)
 		var bonds: Control = sheet.find_child("ProfileBonds", true, false)
-		_check((bonds != null) == not ties.is_empty(), "His bonds are listed exactly when he has some")
+		_check((bonds != null) == (not ties.is_empty()), "His bonds are listed exactly when he has some")
 		if not ties.is_empty():
 			var name_l: Label = bonds.get_child(0).find_child("BondName", true, false)
 			var bt: String = await Tap.tap(name_l)
