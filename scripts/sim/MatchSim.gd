@@ -1695,12 +1695,16 @@ func _weighted_roles(group: Array, key: String, roles: Dictionary, power := 2.0,
 	if side >= 0:
 		ctx["zone"] = zone
 	var weights := []
+	var use_ball := key == BALL_USE
+	var sized := not sizes.is_empty()
+	var tactics_on := side >= 0
 	for p in group:
-		var rating := _ball_use(p) if key == BALL_USE else _a(p, key)
-		var w: float = float(roles.get(str(p["role"]), 0.0)) * pow(maxf(1.0, rating), power)
-		if not sizes.is_empty() and str(p["role"]) == "FWD":
+		var role := str(p["role"])
+		var rating := _ball_use(p) if use_ball else _a(p, key)
+		var w: float = float(roles.get(role, 0.0)) * pow(maxf(1.0, rating), power)
+		if sized and role == "FWD":
 			w *= float(sizes.get(fwd_size(p), 1.0))
-		if side >= 0:
+		if tactics_on:
 			w *= _tactic_player_mult(side, p, purpose, ctx)
 		weights.append(w)
 	return _pick(group, weights)
@@ -1741,52 +1745,61 @@ func _tactic_player_mult(side: int, p: Dictionary, purpose: String, ctx: Diction
 	if ctx.is_empty():
 		ctx = _pick_ctx(side)
 	var out := 1.0
-	var id := str(p["id"])
-	var slot := str((ctx["focus"] as Dictionary).get(id, ""))
+	var id: String = p["id"]
+	var slot = (ctx["focus"] as Dictionary).get(id)
 	# A call works only while he fills a spot it works from.
-	if slot != "" and not (FOCUS_SLOT_ROLES[slot] as Array).has(str(p["role"])):
-		slot = ""
-	var focused := slot != ""
+	var focused := false
+	if slot != null and slot != "":
+		focused = (FOCUS_SLOT_ROLES[slot] as Array).has(str(p["role"]))
 	# "transition" is a carry in the middle of the ground (pick_carrier).
-	var carrying := purpose == "carrier" or purpose == "transition"
-	# The wings run the ball through the middle and are not at the stoppage.
-	if purpose == "transition" and Roles.on_wing(p):
-		out *= Roles.WING_TRANSITION
-	elif purpose == "clearance" and Roles.on_wing(p):
-		out *= Roles.WING_STOPPAGE
-	# "Play through him" is a job by the slot he fills (focus_role_text).
-	# A midfielder or ruck gets more of the ball in every chain, and is not
-	# made the shooter: his forwards still take the shots. A forward gets
-	# the ball up forward and the shots at goal; a defender has first use
-	# coming out of the back half. A small early boost, then the usage
-	# curve fades him back toward a low-30s disposal game.
+	if purpose == "carrier" or purpose == "transition":
+		# The wings run the ball through the middle and are not at the stoppage.
+		if purpose == "transition" and Roles.on_wing(p):
+			out *= Roles.WING_TRANSITION
+		# "Play through him" is a job by the slot he fills (focus_role_text).
+		# A midfielder or ruck gets more of the ball in every chain, and is not
+		# made the shooter: his forwards still take the shots. A forward gets
+		# the ball up forward and the shots at goal; a defender has first use
+		# coming out of the back half. A small early boost, then the usage
+		# curve fades him back toward a low-30s disposal game.
+		if focused:
+			out *= _focus_mult(str(slot), purpose, str(ctx.get("zone", "")))
+		# Ball magnet (and the wet-weather player in the wet) wins more of the
+		# ball: a bigger share, and the usage curve fades the player that much
+		# later, so the gain survives a big game (bug bash 5: a pick weight alone
+		# was cancelled by the curve).
+		var reach := 1.0
+		if _trait(p, "ball_magnet"):
+			reach *= BALL_MAGNET
+		if weather == "wet" and _trait(p, "wet_weather"):
+			reach *= Traits.WET_BALL
+		out *= reach
+		if id == ctx["their_tag"] and can_be_tagged(p):
+			out *= float(ctx["tag_share"])
+		# Our tagger is playing the man, not the ball.
+		if id == ctx["tagger"]:
+			out *= TAGGER_BALL
+		# Our forward minding their loose defender is up the ground with him.
+		if purpose == "carrier" and id == ctx.get("minder", ""):
+			out *= MINDER_INVOLVE
+		return out * _usage_mult(p, focused, reach)
+	if purpose == "clearance":
+		if Roles.on_wing(p):
+			out *= Roles.WING_STOPPAGE
+		if focused:
+			out *= _focus_mult(str(slot), purpose, str(ctx.get("zone", "")))
+		if _trait(p, "bull"):
+			out *= BULL_CLEARANCE
+		return out
 	if focused:
-		out *= _focus_mult(slot, purpose, str(ctx.get("zone", "")))
-	# Ball magnet (and the wet-weather player in the wet) wins more of the
-	# ball: a bigger share, and the usage curve fades the player that much
-	# later, so the gain survives a big game (bug bash 5: a pick weight alone
-	# was cancelled by the curve).
-	var reach := 1.0
-	if carrying and _trait(p, "ball_magnet"):
-		reach *= BALL_MAGNET
-	if carrying and weather == "wet" and _trait(p, "wet_weather"):
-		reach *= Traits.WET_BALL
-	out *= reach
-	if purpose == "clearance" and _trait(p, "bull"):
-		out *= BULL_CLEARANCE
+		out *= _focus_mult(str(slot), purpose, str(ctx.get("zone", "")))
 	# A Crumber lives at the feet of the pack: he is there when it spills.
 	if purpose == "crumb" and _trait(p, "crumber"):
 		out *= CRUMBER_AT_FEET
-	if id == str(ctx["their_tag"]) and can_be_tagged(p) and (carrying or purpose == "shooter" or purpose == "crumb"):
+	if (purpose == "shooter" or purpose == "crumb") and id == ctx["their_tag"] and can_be_tagged(p):
 		out *= float(ctx["tag_share"])
-	# Our tagger is playing the man, not the ball.
-	if carrying and id == str(ctx["tagger"]):
-		out *= TAGGER_BALL
-	# Our forward minding their loose defender is up the ground with him.
-	if id == str(ctx.get("minder", "")) and purpose in ["shooter", "aerial_target", "crumb", "carrier"]:
+	if (purpose == "shooter" or purpose == "aerial_target" or purpose == "crumb") and id == ctx.get("minder", ""):
 		out *= MINDER_INVOLVE
-	if carrying:
-		out *= _usage_mult(p, focused, reach)
 	return out
 
 
