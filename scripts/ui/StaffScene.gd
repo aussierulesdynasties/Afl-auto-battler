@@ -1,6 +1,8 @@
 extends Control
-## A club's coaching staff: six jobs, one row each. At your club the senior
-## coach is you; the other five work for you. Tap a coach for his profile.
+## A club's coaching staff: six jobs, one row each, then the list manager and
+## the head of high performance (the Council's eight seats). At your club the
+## senior coach is you; the other seven work for you, each pushing for his
+## agenda, with his loyalty to you shown. Tap a coach for his profile.
 ## Other clubs' staffs are one tap away. After the season your open jobs
 ## show a shortlist (appoint or auto-fill) and assistants can be released.
 
@@ -75,8 +77,11 @@ func _build() -> void:
 	if wide:
 		grid = GridContainer.new()
 		grid.name = "StaffGrid"
-		# Three across at every PC size, each coach's grades on his card (director's pick B, 2026-11-26).
-		grid.columns = 3
+		# Each coach's grades on his card (director's pick B, 2026-11-26), on
+		# two rows that fit the window: three across for the six coaching jobs,
+		# four across since the Council's list manager and head of high
+		# performance joined them (eight cards).
+		grid.columns = 4
 		grid.add_theme_constant_override("h_separation", UiKit.Space.PAD)
 		grid.add_theme_constant_override("v_separation", UiKit.Space.PAD)
 		body.add_child(grid)
@@ -108,6 +113,21 @@ func _build() -> void:
 			grid.add_child(card)
 		else:
 			body.add_child(row)
+			body.add_child(UiKit.rule())
+	# The two council seats beyond the coaching jobs: the list manager and the
+	# head of high performance (Council.gd), at every club.
+	for m in Council.members(GameState, _club):
+		if not Council.OFFICE_JOBS.has(str(m["job"])):
+			continue
+		var orow := _office_row(m, mine)
+		if grid != null:
+			var ocard := UiKit.panel(UiKit.PANEL, UiKit.Space.LOOSE)
+			ocard.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			_lines_on_top(orow)
+			ocard.add_child(orow)
+			grid.add_child(ocard)
+		else:
+			body.add_child(orow)
 			body.add_child(UiKit.rule())
 
 	body.add_child(UiKit.spacer(UiKit.Space.LOOSE))
@@ -206,6 +226,8 @@ func _coach_row(job: String, c: Dictionary, releasable := false) -> Control:
 	v.add_child(UiKit.lbl(str(Coaches.JOB_LABEL[job]), UiKit.SMALL, UiKit.TEXT, true))
 	v.add_child(UiKit.ellipsis(GameDB.player_display_name(c), UiKit.BODY, UiKit.TEXT, true))
 	v.add_child(UiKit.lbl(Coaches.headline(c), UiKit.SMALL, UiKit.TEXT))
+	for l in _council_lines(job, str(c.get("cid", "")), _club == GameState.my_club):
+		v.add_child(l)
 	# What you have promised him, and what a broken promise cost (T5.Q16).
 	var word := _word_line(c)
 	if word != null:
@@ -382,6 +404,50 @@ func _vacancy_row(job: String) -> Control:
 func _job_title(job: String) -> String:
 	var label := str(Coaches.JOB_LABEL[job])
 	return label if job == "SC" or job == "SA" else label + " coach"
+
+
+## A list manager or head of high performance: the seat, his name, what he
+## pushes for and (at your club) where his loyalty stands.
+func _office_row(m: Dictionary, mine: bool) -> Control:
+	var v := UiKit.vbox(UiKit.Space.HAIR)
+	v.name = "StaffRow_" + str(m["job"])
+	v.custom_minimum_size.y = 64
+	v.add_child(UiKit.lbl(str(Council.OFFICE_LABEL[str(m["job"])]), UiKit.SMALL, UiKit.TEXT, true))
+	v.add_child(UiKit.ellipsis(str(m["name"]), UiKit.BODY, UiKit.TEXT, true))
+	for l in _council_lines(str(m["job"]), str(m["id"]), mine):
+		v.add_child(l)
+	return _padded(v)
+
+
+## What a council member pushes for, and at your club his loyalty to you with
+## the biggest reason behind it now (a rival club's loyalties stay theirs).
+func _council_lines(job: String, id: String, mine: bool) -> Array:
+	var out := []
+	var m := {}
+	for x in Council.members(GameState, _club):
+		if str(x["id"]) == id:
+			m = x
+	if m.is_empty():
+		return out
+	var ag := UiKit.lbl("Pushes to " + Council.agenda_label(str(m["agenda"])).to_lower(), UiKit.SMALL, UiKit.TEXT)
+	ag.name = "Agenda_" + job
+	ag.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	out.append(ag)
+	if not mine:
+		return out
+	var lv := Council.loyalty(GameState, m)
+	var ll := UiKit.lbl("Loyalty to you: %d out of 100. %s." % [lv, Council.loyalty_word(lv)], UiKit.SMALL,
+			UiKit.EMPH if lv <= Council.RESTLESS_LINE else UiKit.TEXT, lv <= Council.RESTLESS_LINE)
+	ll.name = "Loyalty_" + job
+	ll.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	out.append(ll)
+	var marks := Opinion.breakdown(GameState.relations, str(m["key"]))
+	if not marks.is_empty():
+		var why := UiKit.lbl(Opinion.mark_text(marks[0]), UiKit.SMALL, UiKit.TEXT)
+		why.name = "LoyaltyWhy_" + job
+		why.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		out.append(why)
+	return out
 
 
 ## A job nobody holds (an expansion club before it has hired).

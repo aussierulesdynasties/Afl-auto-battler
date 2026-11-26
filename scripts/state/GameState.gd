@@ -287,6 +287,10 @@ var coach_standing := {}
 var club_standing := {}
 ## Player-to-player bonds: mates, rivals, mentors, leaders, family (Bonds.gd).
 var bonds := {}
+## The Council (Council.gd): every club's list manager and head of high
+## performance, {"office": {club: {job: person}}, "hired": n}. The coaches'
+## agendas live on their records; every member's loyalty in relations ("s:").
+var council := {}
 ## What the stories remember (StoryEngine.new_state): cooldowns, flags, arcs.
 var story := {}
 ## Off only in tests and audits that measure the game without the cards.
@@ -1023,6 +1027,7 @@ func _save_state() -> Dictionary:
 		"coach_standing": coach_standing,
 		"club_standing": club_standing,
 		"bonds": bonds,
+		"council": council,
 		"story": story,
 		"media_conference": media_conference,
 		"backing_talk": backing_talk,
@@ -1315,6 +1320,7 @@ func _restore_career(state: Dictionary) -> bool:
 	coach_standing = state.get("coach_standing", {}) if state.get("coach_standing") is Dictionary else {}
 	club_standing = state.get("club_standing", {}) if state.get("club_standing") is Dictionary else {}
 	bonds = Bonds.ensure(state.get("bonds", {}))
+	council = state.get("council", {}) if state.get("council") is Dictionary else {}
 	var raw_story: Variant = state.get("story", {})
 	var old_calendar := StoryEngine.is_old_calendar(raw_story)
 	if old_calendar:
@@ -1451,6 +1457,8 @@ func _restore_career(state: Dictionary) -> bool:
 	honour_boards = state.get("honour_boards", {}) if state.get("honour_boards") is Dictionary else {}
 	if not state.has("honour_board"):
 		HonourBoard.backfill(self, func(id: String) -> Dictionary: return _any_player(id))
+	# A save from before the Council fills its office seats in (Council.ensure).
+	Council.ensure(self)
 	return true
 
 
@@ -1977,6 +1985,7 @@ func reset(next_dataset := Datasets.DEFAULT) -> void:
 	coach_standing = {}
 	club_standing = {}
 	bonds = {}
+	council = {}
 	story = StoryEngine.new_state()
 	media_conference = {}
 	match_stories = []
@@ -3268,6 +3277,7 @@ func _start_next_season(next_year: int, signed: int) -> void:
 	_open_board_season()
 	_captaincy_refresh()
 	_bonds_refresh()
+	Council.ensure(self)
 	_ground_rename_news()
 	_culture_rollover()
 	_build_season_wrap(next_year)
@@ -3777,6 +3787,7 @@ func start_season(club_code: String, list: Array, save := true) -> void:
 	_open_board_season()
 	_captaincy_refresh()
 	_bonds_refresh()
+	Council.ensure(self)
 	_ground_rename_news()
 	last_phase = "regular"
 	last_label = "Round 1"
@@ -4920,6 +4931,7 @@ func papers_answer(choice: int) -> String:
 		return ""
 	choice = clampi(choice, 0, (card["options"] as Array).size() - 1)
 	var out := ClubStories.apply_choice(self, card, choice)
+	Council.answered(self, card, choice)
 	StoryEngine.record_choice(story, card, choice, story_week())
 	rec["answered"] = true
 	rec["choice"] = choice
@@ -5397,6 +5409,7 @@ func _preseason_cards() -> bool:
 	if not preseason.has("round1"):
 		preseason["round1"] = week_events
 	week_events = drawn
+	Council.pitch_cards(self, week_events)
 	preseason["story_pending"] = true
 	mark_dirty()
 	return true
@@ -15160,6 +15173,8 @@ func _opinion_after_round(results: Array) -> void:
 		var mine := str(code) == my_club
 		for p in season.lists[code]:
 			ClubLife.drift_morale(p, Opinion.coach_opinion(relations, Opinion.player_key(str(p["id"])), mine))
+	# Every club's council reads the side it picked (Council.after_round).
+	Council.after_round(self, results)
 
 
 ## The rating at which being left out stings as "one of our best", the same
@@ -15676,6 +15691,8 @@ func _next_week_event() -> void:
 	if season == null or is_sacked() or not stories_on or my_club == "":
 		return
 	week_events = ClubStories.pick(self)
+	# A council member may back one choice on a card, in his own words.
+	Council.pitch_cards(self, week_events)
 	for i in range(year_cards.size() - 1, -1, -1):
 		week_events.push_front(year_cards[i])
 	ClubArcs.week(self)
@@ -15906,6 +15923,7 @@ func resolve_card(index: int, choice: int) -> String:
 		return ""
 	choice = clampi(choice, 0, options.size() - 1)
 	var out := ClubStories.apply_choice(self, card, choice)
+	Council.answered(self, card, choice)
 	StoryEngine.record_choice(story, card, choice, story_week())
 	card["resolved"] = true
 	card["choice"] = choice
@@ -16204,6 +16222,13 @@ func coach(cid: String) -> Dictionary:
 	return coaches.get(cid, {})
 
 
+## Your council as the cards' advisors name it, {seat: {"name", "role"}}
+## (ClubStories.advisors reads it): every filled seat, the list manager and
+## the head of high performance included.
+func council_seats() -> Dictionary:
+	return Council.advisor_seats(self)
+
+
 ## The coaching world moves once a season, at its close (CoachMarket): AI
 ## senior coaches are judged against where their list ranked preseason -
 ## the same goal the board sets you - and every vacancy is filled. Your
@@ -16219,6 +16244,16 @@ func _coaching_offseason() -> void:
 		if not bool(a.get("kept", false)):
 			promised[str(a["cid"])] = [str(a["club"]), str(a["job"])]
 	ctx["promised"] = promised
+	# The Council first: a member at the end of his tether walks out, at every
+	# club (Council.season_end); then the market moves everyone else.
+	var walked := {}
+	for w in Council.season_end(self):
+		walked[str(w["id"])] = true
+		if str(w["club"]) == my_club:
+			if Coaches.JOBS.has(str(w["job"])):
+				staff_vacancies.append({"job": str(w["job"]), "reason": "%s has walked out." % str(w["name"])})
+			add_news("coaching", "Your %s, %s, has walked out on the club." % [Council.role_word(str(w["job"])), str(w["name"])])
+	var before := Council.posts(self)
 	var out := CoachMarket.offseason(ctx)
 	for v in out["vacancies"]:
 		if not _vacancy_open(str(v["job"])):
@@ -16226,6 +16261,9 @@ func _coaching_offseason() -> void:
 	for t in out["news"]:
 		add_news("coaching", str(t))
 	coach_approaches = []
+	# The men whose coach left take it; a coach at a new club starts afresh.
+	Council.after_market(self, before, walked)
+	Council.ensure(self)
 
 
 ## Your club's season as a coach weighs it when a rival approaches him
@@ -16522,6 +16560,9 @@ func release_staff(cid: String) -> void:
 	CoachMarket.ensure_fields(c, season_year)
 	var job := CoachMarket.release(coaches, cid, season_year)
 	staff_vacancies.append({"job": job, "reason": "You released %s." % GameDB.player_display_name(c)})
+	# The men he coached take it (Council.staff_gone); his loyalty goes with him.
+	Council.staff_gone(self, my_club, job, GameDB.player_display_name(c), "sacked")
+	relations.erase(Council.KEY_PREFIX + cid)
 	_dirty = true
 
 
