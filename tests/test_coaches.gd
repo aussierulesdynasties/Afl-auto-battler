@@ -234,7 +234,7 @@ func _test_save_round_trip() -> void:
 	_check(GameState.save_career(), "A career with coaches saves")
 	# No coach may land in the shared player table.
 	var f := FileAccess.open(GameState.save_path, FileAccess.READ)
-	var blob: Dictionary = f.get_var()
+	var blob: Dictionary = CareerSave.unpacked(f.get_var())
 	f.close()
 	var leaked := false
 	for sid in blob["players"]:

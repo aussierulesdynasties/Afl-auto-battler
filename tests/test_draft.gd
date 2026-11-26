@@ -118,7 +118,7 @@ func _test_position_guidance() -> void:
 	var draft := Draft.new(_pool(), ["A", "B"], 42)
 	draft.start_for_user(str(draft.draft_order[0]))
 	_check(draft.position_targets() == {"RUCK": 2, "MID": 5, "DEF": 6, "FWD": 6},
-			"Coverage agrees with the 6-6-6 ground slots and two-ruck rule")
+			"Coverage agrees with the 6-6-6 ground slots and a list's two rucks of depth")
 	_check(draft.position_needs() == draft.position_targets(), "An empty list needs every target slot")
 	var defender: Dictionary = draft.board("DEF", "", "", "overall", true)[0]
 	_check(draft.pick(defender), "Can select a defender")
@@ -167,7 +167,7 @@ func _test_dual_position_coverage() -> void:
 	_check(cov["DEF"] == 1 and cov["MID"] == 1, "A DEF/MID counts as cover for both lines")
 	_check(int(needs["DEF"]) + int(needs["MID"]) == 6 + 5 - 1,
 			"...but fills only one spot between them")
-	# A MID/RUCK is ruck cover, as the two-ruck rule already says.
+	# A MID/RUCK is ruck cover, as the ruck rule already says.
 	list.clear()
 	for i in range(5):
 		list.append(_dual("m%d" % i, "MID"))
@@ -1017,7 +1017,7 @@ func _test_finished_list_reachability() -> void:
 	_check(o.spent() <= o.budget and ((not cheap.is_empty() and o.pick(cheap) and o.spent() <= o.budget) or o.can_release()),
 			"The replacement is checked against the cap like any pick, or Release is still offered")
 
-	# An older save: finished with one ruck. Release, and the places left must go to rucks.
+	# An older save: finished with no ruck. Release, and the place left must go to a ruck.
 	var r := _copy_draft(cheapest)
 	var mr := str(r.draft_order[3])
 	_check(r.is_finished() and r.is_valid(), "A second copy of the finished draft, untouched by the first")
@@ -1027,15 +1027,16 @@ func _test_finished_list_reachability() -> void:
 	for i in range(lst.size()):
 		if Ratings.plays_role(lst[i], "RUCK"):
 			kept += 1
-			if kept >= 2:
+			if kept >= 1:
 				var fake: Dictionary = (lst[i] as Dictionary).duplicate()
 				fake["id"] = "legacy_fill"
 				fake["role"] = "DEF"
 				fake["role2"] = ""
 				lst[i] = fake
 				swapped = true
-	_check(swapped and not r.is_valid() and r.count_covering("RUCK") < 2 and r.finished_list_refused(),
-			"Finished with fewer than two rucks: refused (%s)" % r.invalid_reason())
+	_check(swapped and not r.is_valid() and r.count_covering("RUCK") == 0 and r.finished_list_refused()
+			and r.invalid_reason() == "You have no ruck. Every list needs one.",
+			"Finished with no ruck: refused (%s)" % r.invalid_reason())
 	var any_id := ""
 	for p in r.list():
 		if str(p["id"]) != "legacy_fill" and not Ratings.plays_role(p, "RUCK"):
@@ -1056,19 +1057,19 @@ func _held(id: String, role: String, ovr := 60) -> Dictionary:
 func _test_rival_says_why() -> void:
 	var AR = load("res://scripts/sim/AiReasons.gd")
 	var name_of := func(q: Dictionary) -> String: return str(q.get("name", ""))
-	# The two-ruck rule: with two places left and no ruck, Carlton must take a
+	# The ruck rule: with one place left and no ruck, Carlton must take a
 	# ruck, so it passes on the best defender in the draft.
 	var d := Draft.new(_pool(), ["CAR", "GEE"], 123)
 	d.wanted()["player_0"] = true
-	for i in range(8):
+	for i in range(d.target_size - 1):
 		(d.club_lists["CAR"] as Array).append(_held("held_%d" % i, ["DEF", "MID", "FWD"][i % 3]))
 	var why := {}
 	var got := d._best_ai_pick("CAR", why)
 	_check(str(got.get("role", "")) == "RUCK" and str(why.get("player_0", "")) == "draft_must_ruck",
-			"Two places left and no ruck: Carlton takes a ruck and its reason is the two-ruck rule (%s)" % str(why))
+			"One place left and no ruck: Carlton takes a ruck and its reason is the ruck rule (%s)" % str(why))
 	var e := {"pick": 9, "club": "CAR", "player_id": "player_0", "other_id": str(got.get("id", "")), "code": "draft_must_ruck", "gap": ""}
-	_check(d.wanted_line(e, name_of) == "Carlton passed on Player 0: they had to take a ruck, and every list needs two.",
-			"The two-ruck sentence names the club and the player: " + d.wanted_line(e, name_of))
+	_check(d.wanted_line(e, name_of) == "Carlton passed on Player 0: they had to take a ruck, and every list needs one.",
+			"The ruck sentence names the club and the player: " + d.wanted_line(e, name_of))
 	# His price: a prospect the club can't afford is passed on for the cap.
 	d = Draft.new(_pool(), ["CAR", "GEE"], 123)
 	for q in d.pool:

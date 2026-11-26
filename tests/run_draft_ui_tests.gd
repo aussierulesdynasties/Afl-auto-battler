@@ -863,11 +863,11 @@ func _test_inspect(ui: Control) -> void:
 	_check(blocked != null and blocked.text.begins_with("Not your pick"), "Between your picks, the details say so")
 	ui.call("_close_player")
 	draft.pick_index = idx
-	# Ruck rule: with only two places left and no ruck, a midfielder is off
+	# Ruck rule: with one place left and no ruck, a midfielder is off
 	# limits and the details say why.
 	var mine: Array = draft.club_lists[draft.user_club]
 	var saved := mine.duplicate()
-	while mine.size() < draft.target_size - 2:
+	while mine.size() < draft.target_size - 1:
 		var filler: Dictionary = rows[0].duplicate()
 		filler["id"] = "filler_%d" % mine.size()
 		filler["role"] = "MID"
@@ -893,7 +893,7 @@ func _test_inspect(ui: Control) -> void:
 	ui.call("_open_player", str(non_ruck["id"]))
 	await _settle()
 	blocked = ui.find_child("DetailBlocked", true, false)
-	_check(blocked != null and blocked.text.contains("rucks"), "The two-ruck rule is given as the reason (%s)" % (blocked.text if blocked else "-"))
+	_check(blocked != null and blocked.text.contains("every list needs one"), "The ruck rule is given as the reason (%s)" % (blocked.text if blocked else "-"))
 	ui.call("_close_player")
 	draft.club_lists[draft.user_club] = saved
 	draft.club_spend[draft.user_club] = spend2
