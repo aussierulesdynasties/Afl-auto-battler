@@ -217,9 +217,9 @@ const SURROUNDS := {
 	# Marvel Stadium in Docklands: Victoria Harbour, the Southern Cross rail yards, the streets and towers
 	# round it from OpenStreetMap (tools/grounds/marvel/surrounds.py), and the Bolte Bridge's towers and
 	# deck in 3D (tools/grounds/marvel/bridges.py).
-	"marvel": {"y": -0.03, "inner": 120.0, "colour": Color(0.55, 0.56, 0.52),
+	"marvel": {"y": -0.03, "inner": 120.0, "colour": Color(0.42, 0.43, 0.43),
 			"map": "surrounds.webp", "span": 2048.0, "trees": "trees.bin", "buildings": "buildings.bin",
-			"models": ["bridges.glb", "landmarks.glb"], "tint": Color(0.86, 0.84, 0.82), "building_tint": Color.WHITE, "building_style": "towers",
+			"models": ["bridges.glb", "landmarks.glb"], "tint": Color(0.84, 0.84, 0.84), "building_tint": Color.WHITE, "building_style": "towers",
 			# Round 12: the real land (terrain.bin, tools/grounds/marvel/land.py) right up to `inner`. The model's own
 			# pad follows the same land, from 0.9 m under the old street by the harbour to 4.4 m over it on the east.
 			"follow_land": true},
@@ -1722,8 +1722,9 @@ static func _add_towers(root: Node3D, buf: PackedFloat32Array, y0: float, tint :
 	# Marvel round 12 (own audit of the round 11 PC renders): the concrete towers read near-white with punched
 	# windows from every side (ext_180, obl_s, obl_se, obl_e), where Google Earth's read mid grey-blue: darker
 	# concrete, and more of the towers glass.
-	const TOWER_CONCRETE := [Color8(150, 152, 150), Color8(132, 134, 134), Color8(160, 158, 150), Color8(128, 118, 108),
-			Color8(142, 148, 152), Color8(116, 120, 122)]
+	# Round 13 (PC check of round 12: the massing read tan and beige, Google Earth grey-blue glass): no warm concrete.
+	const TOWER_CONCRETE := [Color8(146, 150, 152), Color8(130, 134, 138), Color8(150, 154, 156), Color8(122, 128, 134),
+			Color8(140, 146, 152), Color8(116, 120, 126)]
 	var i := 0
 	var b := 0
 	while i + 1 < buf.size():
@@ -1752,7 +1753,7 @@ static func _add_towers(root: Node3D, buf: PackedFloat32Array, y0: float, tint :
 		if towers:
 			# The same building gets the same look every match: its pick hangs on its own corner.
 			var pick := absi(int(foot[0].x * 7.0) * 31 + int(foot[0].y * 3.0) * 17 + b) if id < 0 else id * 7919 % 100003
-			var glassy := (pick % 100) < ((85 if h > 30.0 else 40) if id < 0 else 70)
+			var glassy := (pick % 100) < ((85 if h > 30.0 else 40) if id < 0 else 80)
 			wall = TOWER_GLASS[pick % TOWER_GLASS.size()] if glassy else TOWER_CONCRETE[pick % TOWER_CONCRETE.size()]
 			wall.a = 1.0 if glassy else 0.5
 			roof = Color8(128, 128, 124) if glassy else wall.darkened(0.25)  # Google Earth's grey roofs (top view)
