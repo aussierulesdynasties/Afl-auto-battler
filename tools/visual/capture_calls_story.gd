@@ -116,7 +116,7 @@ func _run() -> void:
 	state.pending_sim = null
 	state.pending_match = {}
 	state.review_requested = true
-	UK.apply_appearance("dark")
+	UK.apply_palette()
 	_size_window()
 	var full = load("res://scenes/MatchScene.tscn").instantiate()
 	root.add_child(full)

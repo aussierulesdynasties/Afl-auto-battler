@@ -59,7 +59,7 @@ func _run() -> void:
 	gs.autosave_enabled = false
 	gs.save_path = "user://capture_premiership_side.save"
 	gs.settings_path = "user://capture_premiership_side.cfg"
-	UK.apply_appearance("dark")
+	UK.apply_palette()
 	root.size = Vector2i(_w, _h)
 	DisplayServer.window_set_size(Vector2i(_w, _h))
 	gs.reset()

@@ -48,7 +48,7 @@ func _run() -> void:
 	state.replay_seed = 2031
 	state.start_season(_club, db.club_list(_club))
 	state.set_setting("seen_season_stats_intro", true)
-	UK.apply_appearance("dark")
+	UK.apply_palette()
 	root.size = Vector2i(_w, _h)
 	DisplayServer.window_set_size(Vector2i(_w, _h))
 	var guard := 0

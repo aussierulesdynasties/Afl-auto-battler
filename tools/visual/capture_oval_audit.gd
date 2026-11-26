@@ -108,7 +108,7 @@ func _run() -> void:
 		_state.set_setting("match_speed", float(args["speed"]))
 	_state.start_season(home, db.club_list(home))
 	_state.tutorials = false
-	UK.apply_appearance("dark")
+	UK.apply_palette()
 	# The pairing: this round's fixture has the two clubs meet, the home side at home
 	# (whoever each was to play swaps across), so the season stays a whole round.
 	var season = _state.season

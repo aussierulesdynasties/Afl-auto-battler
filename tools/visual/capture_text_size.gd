@@ -89,7 +89,7 @@ func _run() -> void:
 	_state.settings_path = "user://capture_text_size.cfg"
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(_state.settings_path))
 	# Loaded, not named: the autoloads UiKit needs are not up when this script compiles.
-	load("res://scripts/ui/UiKit.gd").apply_appearance("dark")
+	load("res://scripts/ui/UiKit.gd").apply_palette()
 	_state.set_text_size(text_size)
 	root.size = Vector2i(w, h)
 	DisplayServer.window_set_size(Vector2i(w, h))
