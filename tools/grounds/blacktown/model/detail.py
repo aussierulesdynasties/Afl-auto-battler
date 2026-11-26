@@ -69,7 +69,11 @@ ASPHALT = [[(-160.0, 34.6), (-126.0, 34.6), (-128.5, -27.5), (-110.5, -27.5), (-
             (-101.0, 41.5), (-99.5, 63.0), (-112.0, 63.5), (-150.0, 57.5), (-160.0, 52.5)]]
 CONCRETE = [[(-148.5, -21.0), (-128.5, -23.0), (-110.5, -27.5), (-108.3, -30.0), (-111.0, -36.0), (-107.0, -45.0), (-104.0, -52.0),
              (-106.0, -58.0), (-118.0, -60.0), (-125.0, -52.0), (-130.0, -47.5), (-146.0, -28.0), (-148.5, -27.0)],
-            [(-176.0, -12.0), (-148.5, -12.0), (-148.5, -19.5), (-176.0, -19.5)]]   # the footpath west of the indoor centre
+            [(-176.0, -12.0), (-148.5, -12.0), (-148.5, -19.5), (-176.0, -19.5)],   # the footpath west of the indoor centre
+            # the apron off the stand's south end, round the grass to the kiosk path: its edges on the NSW aerial
+            # (2026-11-26, the grass arc and the south-east edge; under the stand it runs on under the roof)
+            [(-87.0, -79.0), (-82.5, -84.4), (-78.0, -84.2), (-75.0, -84.4), (-72.0, -85.3), (-69.6, -86.8), (-66.0, -89.9),
+             (-64.5, -92.3), (-59.9, -87.1), (-65.5, -78.3), (-70.0, -75.0), (-80.0, -76.0)]]
 # the south fence: chain-link on the north edge of the long path round the south of the ground, from the kiosk out to
 # the gate on the road. Its line through the lamp heads on the NSW aerial (the lamps stand in it); 3.0 m high from its
 # posts' shadows (3.3-4.1 m, 11 posts) against the 5 m lamps' (5.9-6.4 m) on the same picture, which the indoor
@@ -96,7 +100,12 @@ PATHS = [([(-121.0, -55.0), (-117.0, -62.0), (-109.0, -77.0), (-101.0, -90.0), (
          ([(-99.0, -100.5), (-91.5, -101.3), (-82.9, -109.3), (-73.9, -116.5), (-63.7, -122.8), (-53.7, -129.1), (-43.3, -134.4),
            (-32.1, -138.4), (-20.9, -141.6), (-4.5, -145.2), (-1.0, -146.0)], 5.2),
          ([(-129.0, -50.5), (-157.0, -70.0)], 5.6, 'asphalt_bt'),         # the wide sealed path south-west to the car park
-         ([(-158.0, -67.5), (-185.0, -46.0)], 3.0)]                       # and the path north-west from its end
+         ([(-158.0, -67.5), (-185.0, -46.0)], 3.0),                       # and the path north-west from its end
+         # the footpath round the south-east outside the ground, on Google Earth's imagery (newer than the NSW aerial,
+         # which predates it): 3 m concrete from the south gate out to the road in the east
+         ([(-36.0, -133.5), (-20.0, -128.2), (-5.0, -122.0), (10.0, -113.8), (25.0, -107.4), (40.0, -99.0), (55.0, -88.8),
+           (70.0, -77.9), (85.0, -67.3), (100.0, -55.0), (112.5, -46.6), (116.5, -42.6), (119.5, -39.3), (122.5, -36.9),
+           (125.5, -35.1), (131.5, -33.8), (141.0, -33.3)], 3.0)]
 # lamp posts along the paths: their heads on the NSW aerial, 5 m posts with a short arm
 # the kiosk where the south paths meet: roof corners on the NSW aerial (moved 0.4 m east for its lean), 3 m high on
 # Google Earth's status bar (3 m grid, 13 cells)
@@ -173,16 +182,19 @@ def build(k, col):
     for b in along(LIGHT_STEP, lambda b: geo(b)[1], 5.0):
         r = geo(b)[1] + 0.6; t = np.array(k.pol(b + 90, 1.0))
         for s in (-0.35, 0.35):
-            c = np.array(k.pol(b, r)) + t * s; mb.cyl(tuple(c), 0.22, zr0 - 1.05, zr0 - 0.55, 'lamps', n=12)
+            c = np.array(k.pol(b, r)) + t * s; mb.cyl(tuple(c), 0.22, zr0 - 1.05, zr0 - 0.55, 'roof_lamps', n=12)
         mb.beam(k.P3(b, r - 0.3, zr0 - 0.5), k.P3(b, r + 0.3, zr0 - 0.5), 0.9, 0.12, 'steel_galv')
     wing(k, mb, S, geo, rad, up)
     walkway(k, mb, geo, rad, up)
     for b in BANK_STAIRS: bank_stair(k, mb, b)
-    yard(k, mb, up)
-    indoor(k, mb, up)
-    keep = k.SHEAR[:]; k.SHEAR.clear(); south(k, mb); screen(k, mb); sails(k, mb); k.SHEAR[:] = keep
-    mb.build(col)
-    g = k.MB('surfaces'); f = k.MB('detail_far'); grounds(k, g, f); g.build(col); f.build(col)   # its own mesh: the game and the scene see it as ground
+    # the buildings round the stand's back in a mesh of their own, named *_far: with the land round the ground they take
+    # only the towers' spill at night, not their beams (Oval3DTowers.keep_off_beams); 'detail' keeps the stand's own parts
+    mo = k.MB('detail_outer_far')
+    yard(k, mo, up)
+    indoor(k, mo, up)
+    keep = k.SHEAR[:]; k.SHEAR.clear(); south(k, mo); screen(k, mb); sails(k, mo); k.SHEAR[:] = keep
+    mb.build(col); mo.build(col)
+    g = k.MB('surfaces_far'); f = k.MB('detail_far'); grounds(k, g, f); g.build(col); f.build(col)   # its own mesh: the game and the scene see it as ground
     # detail_far: the car park and the paths out to it, well past the model's own ground: the scene leaves it out of the
     # model's outline (run1.sh SKIP, BG_HULL_SKIP 'detail') so its trees and buildings beside them stay
 
