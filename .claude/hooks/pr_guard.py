@@ -14,6 +14,17 @@ PRs", 2026-11-26). Prose in CLAUDE.md did not stop it, so these hooks do:
     - a second `git push` of the same branch within PUSH_GAP_MIN minutes: refused. Each push cancels
       the run the last push started (337 pushes after opening in 105 merged PRs). Override:
       PUSH_AGAIN_OK=1 in the command, once the earlier run has finished or failed.
+    - cancelling a Tests run on main's push event (gh run cancel, the actions/runs cancel APIs, the
+      GitHub MCP cancel_workflow_run): refused. Main runs one push at a time and keeps only the
+      newest waiting one, so a running main run is always worth finishing; 25 of 35 main runs were
+      cancelled by hand on 25-26 Nov, some after every job had passed. A run whose event and branch
+      can't be read is refused too. Override: CANCEL_RUN_OK=1 in the command.
+    - merge or auto-merge of a PR that changes a workflow under .github/workflows with no successful
+      run of that workflow on the PR's head commit: refused. A workflow is only proven by running
+      it: pr_cap.yml (#2186) passed review and CI, then failed live on every PR open because its gh
+      commands needed a token scope MERGE_TOKEN lacks. Run it from the branch (workflow_dispatch,
+      `gh workflow run <file> --ref <branch>`) and link the green run. A workflow with no trigger
+      that can run from a branch: label the PR workflow-untestable and say why in its body.
   stop      (Stop)
     - ending a turn after a push with nothing armed to wake the session when CI finishes: blocked
       once. A cloud session that just ends its turn never hears that its run went red.
@@ -46,6 +57,8 @@ WATCH_TOOLS = {
 }
 WATCH_BASH_RE = re.compile(r"\bgh\s+(run\s+watch|pr\s+checks\b[^\n]*--watch)")
 MERGED_TOOLS = {"mcp__github__merge_pull_request"}
+CANCEL_RE = re.compile(r"\bgh\s+run\s+cancel\s+(\d+)|actions/runs/(\d+)/(?:force-)?cancel\b")
+REPO = "aussierulesdynasties/Afl-auto-battler"
 
 
 def git(cwd, *args, timeout=GIT_TIMEOUT):
@@ -71,7 +84,39 @@ def merge_conflicts(cwd, base, head):
     return None
 
 
-def check_pr_merge(cwd, number):
+def gh_json(path):
+    try:
+        r = subprocess.run(["gh", "api", path], capture_output=True, text=True, timeout=30)
+        return json.loads(r.stdout) if r.returncode == 0 else None
+    except (OSError, subprocess.TimeoutExpired, ValueError):
+        return None
+
+
+def check_workflows_proven(number, repo):
+    pr = gh_json(f"repos/{repo}/pulls/{number}")
+    files = gh_json(f"repos/{repo}/pulls/{number}/files?per_page=100")
+    if not pr or files is None:
+        return
+    if any(l.get("name") == "workflow-untestable" for l in pr.get("labels", [])):
+        return
+    sha = pr.get("head", {}).get("sha", "")
+    changed = sorted({f["filename"].split("/")[-1] for f in files
+                      if f.get("status") != "removed" and f["filename"].startswith(".github/workflows/")
+                      and f["filename"].endswith((".yml", ".yaml"))})
+    unproven = []
+    for wf in changed:
+        runs = gh_json(f"repos/{repo}/actions/workflows/{wf}/runs?head_sha={sha}&status=success&per_page=1")
+        if runs is not None and not runs.get("total_count"):
+            unproven.append(wf)
+    if unproven:
+        deny(f"PR #{number} changes {', '.join(unproven)} and none of them has a successful run on its "
+             f"head commit {sha[:9]}. Run each from the branch first (`gh workflow run <file> --ref "
+             "<branch>`, or the event it listens to), check it went green, and link the run in the PR. "
+             "pr_cap.yml merged on green CI and then failed live on every PR. If a workflow cannot "
+             "run from a branch, label the PR workflow-untestable and say why. (.claude/hooks/pr_guard.py)")
+
+
+def check_pr_merge(cwd, number, repo=REPO):
     if git(cwd, "fetch", "-q", "--filter=blob:none", "origin", "main",
            f"+refs/pull/{number}/head:refs/claude-guard/pr-{number}").returncode != 0:
         return
@@ -81,6 +126,7 @@ def check_pr_merge(cwd, number):
         deny(f"PR #{number} conflicts with main in: {shown}. It cannot merge, and auto-merge on it "
              "never fires, so arming it only wastes a test run. Merge origin/main into the branch, "
              "resolve, run the touched suites, push once, then merge. (.claude/hooks/pr_guard.py)")
+    check_workflows_proven(number, repo)
 
 
 FETCH_RE = re.compile(r"\bgit\s+(?:-C\s+\S+\s+)?fetch\s+(?:-\S+\s+)*origin\s+([^\s;&|]+)")
@@ -161,17 +207,50 @@ def check_push(cwd, command):
         pass
 
 
+def run_event(run_id, repo):
+    """(event, head_branch) of an Actions run, or None when gh can't read it."""
+    try:
+        r = subprocess.run(["gh", "api", f"repos/{repo}/actions/runs/{run_id}", "--jq",
+                            '.event + " " + .head_branch'], capture_output=True, text=True, timeout=30)
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    parts = r.stdout.split()
+    return tuple(parts) if r.returncode == 0 and len(parts) == 2 else None
+
+
+def check_cancel(run_id, repo, command=""):
+    if "CANCEL_RUN_OK=1" in command:
+        return
+    info = run_event(run_id, repo)
+    if info and not (info[0] == "push" and info[1] == "main"):
+        return
+    what = "is a Tests run on a push to main" if info else "could not be read (it may be a push run on main)"
+    deny(f"Run {run_id} {what}. Main runs one push at a time and keeps only the newest waiting push "
+         "on its own, so cancelling it throws away a run that may have passed and leaves main "
+         "untested; it never starts your own run sooner. Let it finish. If a run really must go, "
+         "ask the director, then prefix the command with CANCEL_RUN_OK=1. (.claude/hooks/pr_guard.py)")
+
+
 def pretool(data):
     tool = data.get("tool_name", "")
     inp = data.get("tool_input") or {}
     cwd = data.get("cwd") or os.getcwd()
     if tool in ("mcp__github__merge_pull_request", "mcp__github__enable_pr_auto_merge"):
         if inp.get("pullNumber"):
-            check_pr_merge(cwd, int(inp["pullNumber"]))
+            repo = f"{inp.get('owner')}/{inp.get('repo')}" if inp.get("owner") else REPO
+            check_pr_merge(cwd, int(inp["pullNumber"]), repo)
+        return
+    if tool == "mcp__github__actions_run_trigger":
+        if inp.get("method") == "cancel_workflow_run" and inp.get("run_id"):
+            repo = f"{inp.get('owner')}/{inp.get('repo')}" if inp.get("owner") else REPO
+            check_cancel(int(inp["run_id"]), repo)
         return
     if tool != "Bash":
         return
     command = inp.get("command", "")
+    for m in CANCEL_RE.finditer(command):
+        rm = re.search(r"repos/([^/\s]+/[^/\s]+)/actions/runs", command)
+        check_cancel(int(m.group(1) or m.group(2)), rm.group(1) if rm else REPO, command)
     m = GH_MERGE_RE.search(command)
     if m:
         check_pr_merge(cwd, int(m.group(1)))
