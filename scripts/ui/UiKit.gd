@@ -69,11 +69,16 @@ static func apply_palette() -> void:
 ## CLUB_GROUND of its strength, each keeping its own lightness, so text reads on
 ## them as on the plain ground. Fremantle's panels are 1f0d3d, a navy club's
 ## navy, a red club's a deep wine; Collingwood and Essendon (a black first
-## colour, no hue) stay black. No club yet: the plain ground. GameState.my_club
-## and DraftScene's club_override call this when the club changes, so the next
-## screen built wears it.
+## colour, no hue) stay black. Before a club is yours (the title screen, the
+## club chooser) the ground is the club of your saved career (director
+## 2026-11-27, "C: last save's club"), and AFL navy when there is no save.
+## GameState.my_club and DraftScene's club_override call this when the club
+## changes, so the next screen built wears it.
 const CLUB_GROUND := 0.9
-## The club whose shade the ground wears now ("" for the plain ground).
+## AFL navy, the ground when no club is yours and no career is saved: 071124.
+const NAVY_HUE := 262.0 / 360.0
+const NAVY_SAT := 0.6
+## The club whose shade the ground wears now ("" for AFL navy).
 static var ground_club := ""
 
 
@@ -86,18 +91,30 @@ static func shade_ground() -> void:
 	LINE = Color("363229")
 	ground_club = ""
 	var code := my_club()
+	if code == "":
+		code = _saved_club()
+	var hue := NAVY_HUE
+	var sat := NAVY_SAT
 	if code != "" and GameDB.clubs.has(code):
 		var first: Color = GameDB.club_colours(code)[0]
-		var hue := first.ok_hsl_h
-		var sat := CLUB_GROUND * clampf(first.ok_hsl_s, 0.0, 1.0)
-		INK = Color.from_ok_hsl(hue, sat, INK.ok_hsl_l)
-		BG = Color.from_ok_hsl(hue, sat, BG.ok_hsl_l)
-		PANEL = Color.from_ok_hsl(hue, sat, PANEL.ok_hsl_l)
-		PANEL_ALT = Color.from_ok_hsl(hue, sat, PANEL_ALT.ok_hsl_l)
-		SURFACE = Color.from_ok_hsl(hue, sat, SURFACE.ok_hsl_l)
-		LINE = Color.from_ok_hsl(hue, sat, LINE.ok_hsl_l)
+		hue = first.ok_hsl_h
+		sat = CLUB_GROUND * clampf(first.ok_hsl_s, 0.0, 1.0)
 		ground_club = code
+	INK = Color.from_ok_hsl(hue, sat, INK.ok_hsl_l)
+	BG = Color.from_ok_hsl(hue, sat, BG.ok_hsl_l)
+	PANEL = Color.from_ok_hsl(hue, sat, PANEL.ok_hsl_l)
+	PANEL_ALT = Color.from_ok_hsl(hue, sat, PANEL_ALT.ok_hsl_l)
+	SURFACE = Color.from_ok_hsl(hue, sat, SURFACE.ok_hsl_l)
+	LINE = Color.from_ok_hsl(hue, sat, LINE.ok_hsl_l)
 	RenderingServer.set_default_clear_color(BG)
+
+
+## The club of the career saved on this device, or "" with no save.
+static func _saved_club() -> String:
+	var gs = Engine.get_main_loop().root.get_node_or_null("GameState") if Engine.get_main_loop() is SceneTree else null
+	if gs == null or not gs.has_saved_career():
+		return ""
+	return str((gs.saved_career_meta() as Dictionary).get("club", ""))
 
 
 ## The elevation scale as colours, lowest step first (ELEVATION names them).

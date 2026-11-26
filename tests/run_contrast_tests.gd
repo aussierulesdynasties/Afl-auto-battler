@@ -235,9 +235,22 @@ func _test_every_club_ground() -> void:
 	UK.shade_ground()
 	_check(UK.ground_club == "FRE", "The redraft's chosen club gives the page its shade")
 	UK.club_override = ""
+	# Before a club is yours: the saved career's club, AFL navy with no save
+	# (director 2026-11-27, "C: last save's club").
+	var CS = load("res://scripts/state/CareerSave.gd")
+	var path_was: String = _state.save_path
+	_state.save_path = "user://ground_test.save"
+	CS.delete(_state.save_path)
+	_state.my_club = ""
+	_check(UK.ground_club == "" and UK.BG.to_html(false) == "071124" and UK.PANEL.to_html(false) == "0c1932",
+			"No club, no save: AFL navy (%s, %s)" % [_hex(UK.BG), _hex(UK.PANEL)])
+	_test_scale_is_ordered()
+	_test_text_tokens_on_every_step()
+	_check(bool(CS.write({}, {"club": "GEE"}, _state.save_path)), "A saved career for the title ground")
 	UK.shade_ground()
-	_check(UK.ground_club == "" and UK.BG.to_html(false) == "121110" and UK.PANEL.to_html(false) == "1b1a17",
-			"No club: the plain ground (%s, %s)" % [_hex(UK.BG), _hex(UK.PANEL)])
+	_check(UK.ground_club == "GEE", "No club yet, a Geelong save: the page wears Geelong (%s)" % UK.ground_club)
+	CS.delete(_state.save_path)
+	_state.save_path = path_was
 	_state.my_club = was
 	print("Club grounds: lowest text contrast %.2f:1 (%s)" % [worst, worst_at])
 
