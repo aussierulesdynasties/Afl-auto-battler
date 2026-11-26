@@ -24,7 +24,8 @@ def mat(name):
     # officeglass is not metallic: as metal it mirrored the sky and read blue-purple on the shaded east (PC check round 5)
     if src in('glass','fcglass','curtain','silver','tank'):b.inputs['Metallic'].default_value=0.35 if src!='silver' else 0.5
     # floodlight lenses and the tier ribbons light up (glTF emissive, so the game shows them lit)
-    em={'lamp':6.0,'ribbon':1.2}.get(src)
+    # round 13: the west sign is lit (its face is in shade, where Google Earth's letters still read white)
+    em={'lamp':6.0,'ribbon':1.2,'sign_marvel':0.15,'sign_stadium':0.15}.get(src)
     if em:nt.links.new(tx.outputs['Color'],b.inputs['Emission Color']);b.inputs['Emission Strength'].default_value=em
     if name=='deck2':
         hs=nt.nodes.new('ShaderNodeHueSaturation');hs.inputs['Value'].default_value=0.93

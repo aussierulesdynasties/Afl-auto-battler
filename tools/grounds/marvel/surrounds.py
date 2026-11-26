@@ -51,22 +51,22 @@ DROP_SIDS = {8392} | set(range(1044, 1056))
 # Colours: Google Earth's over Docklands, painted through the match light's measured response (GroundModels
 # SURROUNDS tint 2.0, 1.4, 0.95, then about R 0.95x - 10, G 0.84x, B 0.85x on screen), so each renders as
 # Google Earth shows it: dry summer grass, green irrigated lawns, the dark river.
-BASE = (160, 164, 152)         # Docklands is paved and built over: the city's grey between mapped areas
+BASE = (132, 134, 132)  # round 13 (PC check of round 12: the ground read beige-cream, Google Earth mid grey)         # Docklands is paved and built over: the city's grey between mapped areas
 LAWN = (108, 156, 70)          # the irrigated lawns: Stadium Park, Pelican Lawns, the river parks
 PITCH = (102, 152, 62)
 SCRUB = (137, 137, 100)
 WETLAND = (105, 119, 82)
 SAND = (221, 220, 176)
-ASPHALT = (105, 110, 108)
-PARKING = (132, 137, 132)
-PATH = (216, 220, 194)
-PAVED = (184, 190, 176)        # concrete plazas, promenades and the stadium's concourse
+ASPHALT = (88, 90, 92)
+PARKING = (118, 120, 120)
+PATH = (158, 158, 152)
+PAVED = (150, 150, 146)        # concrete plazas, promenades and the stadium's concourse
 PLAZA = (218, 186, 170)        # the promenades' pavers (Harbour Esplanade, Docklands Park): pale salmon-tan; (206, 150, 128) rendered terracotta against GE (203, 165, 149) (PC check 2026-11-23)
-BALLAST = (144, 130, 116)       # the Southern Cross yards; round 11 (PC check): about 14 too dark and too cold against Google Earth's warm rust
+BALLAST = (124, 116, 108)       # the Southern Cross yards; round 11 (PC check): about 14 too dark and too cold against Google Earth's warm rust
 RAIL = (92, 80, 70)             # a track: sleepers and rails together, 2.6 m wide (drawn smoothed)
 ROOF = (168, 179, 174)
 WATER = (36, 68, 82)            # round 10: Google Earth's harbour reads navy (32, 64, 82); (62, 79, 76) rendered grey-green
-URBAN = (160, 164, 152)
+URBAN = (132, 134, 132)
 WOOD = (84, 101, 59)
 DRY = (148, 140, 120)           # unwatered verges by the rail yards: dry brown in Google Earth (c_e, c_ne), not green
 DRY_EAST = 50.0                 # grass east of this (metres east) is the rail-side verge

@@ -187,14 +187,25 @@ def side_truss(name,v1,v2,u0,u1,n=24):
 for sg,(o1,o2,i1,i2),(u0,u1) in((1,(88.75,97.5,57.5,66.0),(-84.3,84.0)),(-1,(-88.75,-97.5,-57.5,-66.0),(-84.1,84.6))):
     side_truss('truss_%s_out'%('w' if sg>0 else 'e'),o1,o2,u0,u1);side_truss('truss_%s_in'%('w' if sg>0 else 'e'),i1,i2,u0,u1)
 def end_arch(name,sgn,n=20):
+    # Round 13 (PC check of round 12, bowl_n/bowl_s: round 12's end bows stood too tall and read as an extra arch). Points picked on Google Earth's north truss (2026-11-24): its top chord 49.4-53.4 m and its
+    # bottom chord 44.4-45.4 m (model z) along the span, so a flat truss about 5.5 m deep at 45-50.5 m, cambered 1 m,
+    # standing on raking legs from the end roof's inner edge (37.5 m).
+    # Round 13 cloud pair (bowl_n): the flat truss was wrong in shape. Google Earth's bowl_n shows the truss's depth
+    # falling to nothing at its west end and its top chord a smooth curve: a bowstring, the bottom chord straight at
+    # the picked 44.4-45.4 m and the top chord rising from it at the ends to the picked 53.4 m at mid-span (49.4 m
+    # about two-thirds of the way out, as picked), with posts and diagonals between.
     v0,v1=VE_IN+0.8,VW_IN-0.8;half=(v1-v0)/2;vc=(v0+v1)/2;T=[];B1=[];B2=[]
+    ZBe,ZTe=45.0,53.4
     for i in range(n+1):
-        v=v0+(v1-v0)*i/n;x=v-vc;f=1-(x/half)**2
-        T.append((sgn*(UE+6.0*f),v,float(arcz(x,half,ZO,ZT))));B1.append((sgn*UE,v,float(arcz(x,half,ZO+0.3,ZB+1))));B2.append((sgn*(UE+3.5*f+0.5),v,float(arcz(x,half,ZO+0.3,ZB+1))))
+        v=v0+(v1-v0)*i/n;x=v-vc;c=(ZTe-ZBe-0.3)*(1-(x/half)**2)
+        T.append((sgn*(UE+2.0),v,ZBe+0.3+c));B1.append((sgn*UE,v,ZBe));B2.append((sgn*(UE+4.0),v,ZBe))
     ch=[(X[i],X[i+1]) for X in (T,B1,B2) for i in range(n)];web=[]
     for i in range(n+1):web+=[(B1[i],B2[i])]+([(B1[i],T[i]),(B2[i],T[i])] if 0<i<n else [])
     for i in range(n):k,j=(i,i+1) if i<n/2 else (i+1,i);web+=[(B1[k],T[j]),(B2[k],T[j])]
-    beams(name+'_ch',ch,0.8,'teal');beams(name+'_web',web,0.32,'teal')
+    legs=[]
+    for i in (0,n//4,n//2,3*n//4,n):
+        for B in (B1[i],B2[i]):legs.append((B,(B[0],B[1],float(roof_top(B[0]*0.999,B[1]))-0.2)))
+    beams(name+'_ch',ch,0.8,'teal');beams(name+'_web',web+legs,0.32,'teal')
 end_arch('arch_n',-1);end_arch('arch_s',1)
 # ---------------- bowl: outer wall lofted round a superellipse (face measured at the west centre: v 108.5)
 r0=se_r(TH,OA,OB,ON);PU=r0*np.cos(TH);PV=r0*np.sin(TH)
@@ -236,7 +247,8 @@ for k,L in enumerate(np.arange(4.0,per[-1]-4.0,BR)):
     zt=min(33.9,float(roof_top(*P3(th,-5,0)[:2]))-1.6)
     if zt<29:continue
     posts+=[(P3(th,-1.0,27.8),P3(th,-1.0,zt))];segs+=[(P3(th,-1.0,zt-0.4),P3(th2,-1.0,27.8))]
-beams('recess_posts',posts,0.45,'teal');beams('recess_braces',segs,0.35,'teal')
+# round 13 (PC check of round 12, c_w): pale braces read as a white zigzag on Google Earth's plain dark band; dark steel
+beams('recess_posts',posts,0.45,'upperwall');beams('recess_braces',segs,0.35,'upperwall')
 # ---------------- concourse plinth: ring 3 m outside the face, 0..6.5 m; west deck out to the measured balustrade
 def se_poly(o,n=K):return np.stack([(se_r(TH,OA,OB,ON)+o)*np.cos(TH),(se_r(TH,OA,OB,ON)+o)*np.sin(TH)],1)
 def z3(P,z):return np.c_[P,np.full(len(P),z)]
@@ -534,8 +546,11 @@ for sg in(1,-1):
 def lean(q,z):return [(u+0.1738*z,v+0.0805*z) for u,v in q]
 # NE corner: one long block (roof 9.3 m wide, 38.7 m long) from the roof corner to the plaza, z 33, plant room on top to 37
 NEB=[(-120.3,-59.1),(-125.6,-66.7),(-93.9,-88.9),(-88.6,-81.3)]
-prism('cornerNE_block',lean(NEB,33.0),0.0,33.0,'bluepanel','concrete')
-_c=np.mean(lean([(-106.4,-78.3)],37.0),0);rbox('cornerNE_plant',tuple(_c),9.0,7.5,math.atan2(-0.574,0.819),33.0,37.0,'silver','concrete')
+# round 13 (PC check of round 12, c_ne): Google Earth's block is pale blue glass under a white top, its plant room pale
+# cyan glass; it was a dark navy chequer
+prism('cornerNE_block',lean(NEB,29.5),0.0,29.5,'paleglass','concrete')
+prism('cornerNE_block_top',lean(NEB,33.0),29.5,33.0,'white','concrete')
+_c=np.mean(lean([(-106.4,-78.3)],37.0),0);rbox('cornerNE_plant',tuple(_c),9.0,7.5,math.atan2(-0.574,0.819),33.0,37.0,'paleglass','concrete')
 # B: office block north of the deck (Google Earth c_e, c_ne: pale boxes, a spandrel band and a ribbon of
 # glass behind fins every storey, over an open ground floor of slim columns): roof u -55..-21, v -107..-125 (north half), out to -131 south of u -40; z 24
 from shapely.geometry import Point
@@ -548,7 +563,8 @@ for nm,q,z in(('eastB_plant',[(-54.0,-109.0),(-54.0,-117.0),(-47.0,-117.0),(-47.
                 ('eastD_plant',[(11.0,-110.0),(11.0,-124.0),(28.0,-124.0),(28.0,-110.0)],24.0),('eastD_plant2',[(32.0,-107.5),(32.0,-116.0),(44.5,-116.0),(44.5,-107.5)],24.0)):
     # round 12 (Google Earth offices_e, offices_ne): white plant storeys about 6 m tall with a dark louvre band, set back
     # on the boxes' roofs; round 11's 2 m silver vents were too low and their metal top mirrored the sky
-    vent_block(nm,lean(q,z+6.0),z,z+6.0,z+3.6,z+4.8,bay=3.0,pier=0.8,depth=0.25,wall='white',top='concrete')
+    # round 13 (own pair c_ne: ours read tall bright white stacks; Google Earth's are one pale grey storey): 4 m, concrete
+    vent_block(nm,lean(q,z+4.0),z,z+4.0,z+2.2,z+3.0,bay=3.0,pier=0.8,depth=0.25,wall='concrete',top='concrete')
 # C: car deck between B and D (roof u -21..10, v -116..-124, z 7) and the white walkway strip beside the wall (v -107..-116, z 10)
 # round 12 (Google Earth point pick in c_ne, model (119.1, 41.3) at 22.4 m, and the offices_ne close-up): between the two
 # office boxes stands a glazed building with a bowed dark-glass front, its roof level with the boxes' glass, where round 11
@@ -571,12 +587,15 @@ stair('plinth_stairN',FU0,-62.0,124.0,137.0,ZP);stair('plinth_stairS',FU1,60.5,1
 # (Wikimedia Commons: the sign clear above the roof's edge, posts under it); it had been tucked under the roof's edge.
 # Height from the sign's own proportions, which need no camera: 4.2 wide to 1 tall in the 2019 photo and 4.3 in Google
 # Earth's view from the west, so about 7.6 m on its 33.4 m width (Google Earth's mesh, which smooths thin tops, reads 4.7).
-SV0,SZ0,SZ1=97.0,45.6,53.2  # 45.6 = 6 tiles of 7.6 m, so the lettering texture starts at the panel's foot
+# Round 13 (PC check of round 12, c_w and c_sw: it stood about 75 px too high, against the trusses; Google Earth has it on
+# the facade under the roof's edge). Points picked on Google Earth's c_w (2026-11-24): the board's face at about x -99, its
+# letters from 36.4 to 41.4 m and the fascia above it at 42.4-43.4 m. It now hangs on the upper wall (face v 103.7) from
+# 35.4 m to 42.5 m, its foot behind the ledge at 36.5 m; 35.4 = 5 tiles of 7.08 m, so the lettering starts at its foot.
+SV0,SZ0,SZ1=102.7,35.4,42.48
 # round 12 (PC check of round 11): its red back showed over the roof as a red block from the east (obl_e), where Google
 # Earth shows a pale frame: the backs, ends, tops and undersides are the posts' silver steel, only the face is lettered
 prism('sign_red',[(-16,SV0),(-2.5,SV0),(-2.5,SV0+1.0),(-16,SV0+1.0)],SZ0,SZ1,'silver','silver',side_m=['silver','silver','sign_marvel','silver'],bottom='silver')
 prism('sign_black',[(-2.5,SV0),(17.4,SV0),(17.4,SV0+1.0),(-2.5,SV0+1.0)],SZ0,SZ1,'silver','silver',side_m=['silver','silver','sign_stadium','silver'],bottom='silver')
-beams('sign_posts',[((u_,SV0+0.5,roof_top(u_,SV0+0.5)-0.2),(u_,SV0+0.5,SZ0)) for u_ in(-14.0,-6.0,2.0,10.0,16.0)],0.3,'silver')
 from shapely.geometry import Polygon,MultiPoint
 from shapely.ops import unary_union
 _S=np.array([uvw(u,v,0.0)[:2] for u,v in((0,0),(1,0),(0,1))]);_A=np.linalg.inv(np.stack([_S[1]-_S[0],_S[2]-_S[0]],1))
@@ -611,8 +630,8 @@ loft('site_base',[z3l(_ex,ZB0),z3l(_ex,ZB1),z3l(_hole,ZB1)],['concrete','paving'
 EV0,EZ0=-108.2,30.4
 # boxes, then the lettered faces drawn on their own with UVs from each panel's left edge (round 11 check: the boxes'
 # own UVs ran from the stadium's axis, so the lettering came out split, "EL MARV DIUM STA")
-prism('sign_red_e',[(-u_-9.0,v_) for u_,v_ in [(-16,EV0),(-2.5,EV0),(-2.5,EV0-1.0),(-16,EV0-1.0)]],EZ0,EZ0+7.6,'silver','silver',bottom='silver')
-prism('sign_black_e',[(-u_-9.0,v_) for u_,v_ in [(-2.5,EV0),(17.4,EV0),(17.4,EV0-1.0),(-2.5,EV0-1.0)]],EZ0,EZ0+7.6,'silver','silver',bottom='silver')
+prism('sign_red_e',[(-u_-9.0,v_) for u_,v_ in [(-16,EV0),(-2.5,EV0),(-2.5,EV0-1.0),(-16,EV0-1.0)]],EZ0,EZ0+(SZ1-SZ0),'silver','silver',bottom='silver')
+prism('sign_black_e',[(-u_-9.0,v_) for u_,v_ in [(-2.5,EV0),(17.4,EV0),(17.4,EV0-1.0),(-2.5,EV0-1.0)]],EZ0,EZ0+(SZ1-SZ0),'silver','silver',bottom='silver')
 # the lettered faces: the west board's own faces turned half round, with the west board's own UVs (the lettering
 # textures are authored for those UVs, mirrored and offset), stood 0.05 m proud of the east boxes' faces
 _W0=np.array(wv((0.0,0.0,0.0)))
@@ -624,7 +643,7 @@ for _pn,_mt in(('sign_red','sign_marvel'),('sign_black','sign_stadium')):
         for _i in _f:
             _x=np.array(_pp['V'][_i]);_u,_v=to_uv(_x);_z=_x[2]-_W0[2]
             _Q.append((-_u-9.0,EV0-(_v-SV0)-0.05*np.sign(_v-SV0-0.5)-(0.0),_z-(SZ0-EZ0)))
-        add(_pn+'_e_face',_Q,[list(range(len(_Q)))],_mt,[_uv])
+        add(_pn+'_e_face',_Q,[list(range(len(_Q)))],_mt+'_e',[_uv])  # round 13: the east board's own grounds (sun on)
 print('east sign roof over it', [round(roof_top(u_,-106.0),1) for u_ in (-26.0,-9.0,7.0)])
 # the red 7 on the Seven block's north-west face (Google Earth ext_135): a top bar and a slanting stem, 12 m tall
 _a,_b=np.array(TWN[3]),np.array(TWN[0])
