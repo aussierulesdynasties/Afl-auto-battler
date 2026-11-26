@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://ka5j8v11oqft"
-path="res://.godot/imported/cazalys_backdrop_part1.glb-4f67d49172996e420c9d8380c7afd2c8.scn"
+uid="uid://rgxcftxx7ebk"
+path="res://.godot/imported/jiangwan_backdrop_part2.glb-f64c2a6b4ca768b940cf53a698167b2c.scn"
 
 [deps]
 
-source_file="res://assets/grounds/cazalys/cazalys_backdrop_part1.glb"
-dest_files=["res://.godot/imported/cazalys_backdrop_part1.glb-4f67d49172996e420c9d8380c7afd2c8.scn"]
+source_file="res://assets/grounds/jiangwan/jiangwan_backdrop_part2.glb"
+dest_files=["res://.godot/imported/jiangwan_backdrop_part2.glb-f64c2a6b4ca768b940cf53a698167b2c.scn"]
 
 [params]
 
