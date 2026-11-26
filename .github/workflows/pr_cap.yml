@@ -1,0 +1,94 @@
+# The open PR cap, enforced (Director Bible 1.48: at most 3 ready PRs; director 2026-11-26:
+# merges took days because 30+ ready PRs shared about 20 GitHub runners).
+#
+# A PR opened, reopened or marked ready while 3 other ready PRs are open goes back to draft
+# with the label "waiting-for-slot" and one comment. Drafts skip the game tests, so a
+# waiting PR takes no runners. When a ready PR closes or merges (and hourly as a backstop),
+# the oldest waiting PR is marked ready again, which starts its Tests run.
+#
+# Not counted and never drafted: bot PRs (the rolling roadmap PR) and PRs labelled
+# "cap-exempt" (the director's override for an urgent fix).
+#
+# pull_request_target, so it runs from main with a token that can edit the PR. It never
+# checks out or runs the PR's code: it only reads PR numbers, draft flags and labels.
+# Draft and ready changes use MERGE_TOKEN (an admin's token). A change made with the workflow
+# token would start no Tests run when a PR is marked ready.
+name: PR cap
+on:
+  pull_request_target:
+    types: [opened, reopened, ready_for_review, closed]
+  schedule:
+    - cron: "23 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: pr-cap
+  cancel-in-progress: false
+
+permissions:
+  pull-requests: write
+  issues: write   # labels and comments use the issues API
+
+env:
+  CAP: 3
+
+jobs:
+  cap:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Hold new PRs over the cap, release waiting ones when a slot frees
+        env:
+          GH_TOKEN: ${{ secrets.MERGE_TOKEN || github.token }}
+          GH_REPO: ${{ github.repository }}
+          EVENT: ${{ github.event_name }}
+          ACTION: ${{ github.event.action }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          set -u
+          gh label create waiting-for-slot --color BFD4F2 --description "Over the 3 ready PR cap; marked ready when a slot frees" 2>/dev/null || true
+          gh label create cap-exempt --color D93F0B --description "Director's override: not held by the PR cap" 2>/dev/null || true
+
+          # Ready PRs that count: not draft, not a bot's, not exempt.
+          counted='[.[] | select(.isDraft | not) | select(.author.is_bot | not)
+                    | select(.author.login != "github-actions" and .author.login != "app/github-actions")
+                    | select(all(.labels[]; .name != "cap-exempt"))]'
+          list() { gh pr list --state open --limit 200 --json number,isDraft,author,labels,createdAt; }
+
+          draft() { gh api graphql -f id="$(gh pr view "$1" --json id --jq .id)" \
+            -f query='mutation($id: ID!) { convertPullRequestToDraft(input: {pullRequestId: $id}) { pullRequest { isDraft } } }' >/dev/null; }
+          ready() { gh pr ready "$1"; }
+
+          if [ "$EVENT" = "pull_request_target" ] && [ "$ACTION" != "closed" ]; then
+            info=$(gh pr view "$PR" --json isDraft,author,labels)
+            if echo "$info" | jq -e '.isDraft or .author.is_bot or any(.labels[]; .name == "cap-exempt")' >/dev/null; then
+              echo "#$PR: draft, bot or exempt; not held"; exit 0
+            fi
+            others=$(list | jq "$counted | map(select(.number != $PR)) | length")
+            if [ "$others" -ge "$CAP" ]; then
+              draft "$PR" || { echo "::warning::could not turn #$PR into a draft"; exit 0; }
+              gh pr edit "$PR" --add-label waiting-for-slot
+              gh pr comment "$PR" --body "Held as a draft: $others other PRs are ready and the cap is $CAP (Director Bible 1.48). Drafts take no CI runners. This PR is marked ready again on its own when a slot frees, oldest waiting first. To wait, keep working on the branch. Marking it ready by hand puts it straight back."
+              echo "#$PR: held ($others ready)"
+            else
+              gh pr edit "$PR" --remove-label waiting-for-slot 2>/dev/null || true
+              echo "#$PR: within the cap ($others others ready)"
+            fi
+            exit 0
+          fi
+
+          # A PR closed, or the hourly pass: release the oldest waiting PRs into free slots.
+          all=$(list)
+          n=$(echo "$all" | jq "$counted | length")
+          for num in $(echo "$all" | jq -r '[.[] | select(.isDraft) | select(any(.labels[]; .name == "waiting-for-slot"))] | sort_by(.createdAt) | .[].number'); do
+            [ "$n" -ge "$CAP" ] && break
+            gh pr edit "$num" --remove-label waiting-for-slot
+            if ready "$num"; then
+              gh pr comment "$num" --body "A slot freed: marked ready, so its Tests run starts now."
+              n=$((n + 1))
+              echo "#$num: released"
+            else
+              echo "::warning::could not mark #$num ready"
+            fi
+          done
+          echo "$n ready PR(s) counted against a cap of $CAP"
