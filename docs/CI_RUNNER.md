@@ -1,4 +1,11 @@
-# CI runners on the director's PC
+# CI runners on the director's PC (removed 2026-11-26)
+
+Removed on 2026-11-26 (director: "Remove it"). WSL Ubuntu is uninstalled, the seven runner
+registrations and the keepalive task are deleted, and the repo variable `QUEUE_RUNNER` is
+`github`, so every job runs on GitHub's runners. `tests.yml` still holds the `pc` path, unused.
+The rest of this file is the old setup, kept as a record.
+
+## What it was
 
 The merge queue spent most of its time waiting for GitHub's free runners (2026-11-22: median
 128 minutes from a group's start to its verdict, with about 9 jobs running at once across every
