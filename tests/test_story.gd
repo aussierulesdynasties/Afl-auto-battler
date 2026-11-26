@@ -84,6 +84,13 @@ func run() -> void:
 	_t("_test_captain_from_the_start")
 	_t("_test_time_trial_names")
 	_t("_test_vacancy_is_filled")
+	_t("_test_card_tiers")
+	_t("_test_reactive_expires")
+	_t("_test_second_player_binding")
+	_t("_test_advisor_seats")
+	_t("_test_club_variants")
+	_t("_test_engine_field_checks")
+	_t("_test_scar_cards")
 	var finals_cards = load("res://tests/test_finals_cards.gd").new()
 	finals_cards.run(self)
 	var preseason_cards = load("res://tests/test_preseason_cards.gd").new()
@@ -3646,3 +3653,193 @@ func _test_dev_promise_suspended_waits() -> void:
 	GameState._dev_promise_week()
 	_check(_line_in(GameState.my_selection(), id) != "" and str(dt["state"]) == "on",
 			"Free again: he is named and his games start (%s)" % str(dt))
+
+
+# ---------------------------------------------------------------------------
+# The card engine for the relationship overhaul (director, 2026-11-26): three
+# tiers, a card's second player and advisors, each club's own words, scars.
+# ---------------------------------------------------------------------------
+
+func _pl_card(id: String, extra := {}) -> Dictionary:
+	var t := {"id": id, "category": "selection", "subject": {"kind": "player"}, "title": ["{name}"], "text": ["x"],
+			"cooldown": 0, "subject_cooldown": 0,
+			"choices": [{"key": "a", "label": "A", "effects": []}, {"key": "b", "label": "B", "effects": []}]}
+	t.merge(extra, true)
+	return StoryDeck.normalise(t)
+
+
+func _ctx(wk: int, players := []) -> Dictionary:
+	return {"seed": 7, "year": 2027, "week": wk, "phase": "regular", "club": {"club_deck": "GEE"}, "players": players}
+
+
+## Urgent first, then what you did this week, then flavour; a crisis week (an
+## urgent card while a reactive one is fresh) brings both, never more.
+func _test_card_tiers() -> void:
+	var flavour := _club_card("flavour", "members", {"cooldown": 0, "weight": 50})
+	var urgent := _club_card("ultimatum", "leadership", {"cooldown": 0, "tier": "urgent"})
+	var fallout := _club_card("fallout", "selection", {"cooldown": 0, "tier": "reactive", "trigger": {"event": "mate_dropped"}})
+	_check(StoryEngine.card_tier(flavour) == "ambient" and StoryEngine.card_tier(urgent) == "urgent"
+			and StoryEngine.card_tier(fallout) == "reactive", "Each card has its tier")
+	_check(StoryEngine.card_tier(StoryDeck.by_id(StoryDeck.all(), "training_backed_kid_flying")) == "urgent",
+			"An arc follow-up is urgent without saying so")
+	_check(StoryEngine.card_tier(StoryDeck.by_id(StoryDeck.all(), "media_radio_spray")) == "reactive",
+			"A card about the club's run is reactive without saying so")
+	var deck := [flavour, urgent, fallout]
+	var firsts := 0
+	var sizes := []
+	for wk in range(2, 12):
+		var got: Array = StoryEngine.pick_week(deck, _ctx(wk), StoryEngine.new_state())
+		if not got.is_empty() and str(got[0]["tid"]) == "ultimatum":
+			firsts += 1
+		sizes.append(got.size())
+	_check(firsts == 10, "An urgent card takes the week, a quiet week too (%d of 10)" % firsts)
+	_check(sizes.max() == 1, "No event, no second card (%s)" % str(sizes))
+	var story := StoryEngine.new_state()
+	StoryEngine.note_event(story, "mate_dropped", "club", StoryEngine.week_abs(2027, 5))
+	var crisis: Array = StoryEngine.pick_week(deck, _ctx(5), story)
+	_check(crisis.size() == 2 and str(crisis[0]["tid"]) == "ultimatum" and str(crisis[1]["tid"]) == "fallout"
+			and str(crisis[1].get("tier", "")) == "reactive",
+			"A crisis week brings the urgent card and the fresh reactive one (%s)" % str(crisis.map(func(c): return c["tid"])))
+	var calm := StoryEngine.new_state()
+	StoryEngine.note_event(calm, "mate_dropped", "club", StoryEngine.week_abs(2027, 5))
+	var react: Array = StoryEngine.pick_week([flavour, fallout], _ctx(5), calm)
+	_check(react.size() == 1 and str(react[0]["tid"]) == "fallout", "Without an urgent card the reactive one leads, ahead of flavour")
+	var rate := 0
+	for wk in range(2, 32):
+		rate += StoryEngine.pick_week([flavour], _ctx(wk), StoryEngine.new_state()).size()
+	_check(rate >= 15 and rate <= 27, "Flavour alone still comes in about 7 weeks of 10 (%d of 30)" % rate)
+
+
+## A reactive card answers its event once, while it is fresh, then never.
+func _test_reactive_expires() -> void:
+	var fallout := _club_card("fallout", "selection", {"cooldown": 0, "tier": "reactive", "trigger": {"event": "mate_dropped", "within": 1}})
+	var story := StoryEngine.new_state()
+	StoryEngine.note_event(story, "mate_dropped", "club", StoryEngine.week_abs(2027, 5))
+	_check(not StoryEngine.fresh_event(fallout, story, "club", StoryEngine.week_abs(2027, 6)).is_empty(), "Fresh the week after")
+	_check(StoryEngine.fresh_event(fallout, story, "club", StoryEngine.week_abs(2027, 8)).is_empty(), "Gone three weeks on")
+	var got: Array = StoryEngine.pick_week([fallout], _ctx(6), story)
+	_check(got.size() == 1 and str(got[0].get("event", "")) == "mate_dropped", "Dealt while fresh, naming its event")
+	_check(StoryEngine.pick_week([fallout], _ctx(7), story).is_empty(), "Answered once, it never comes again for that event")
+	StoryEngine.note_event(story, "mate_dropped", "club", StoryEngine.week_abs(2027, 9))
+	_check(StoryEngine.pick_week([fallout], _ctx(9), story).size() == 1, "A new event brings it again")
+	var old := {"flags": {}, "last": {}}
+	StoryEngine.ensure(old)
+	_check(old.has("events") and StoryEngine.pick_week([fallout], _ctx(9), old).is_empty(), "An older save has no events: nothing reactive comes")
+
+
+## A card names a second player through the subject's ties, or skips him.
+func _test_second_player_binding() -> void:
+	var card := _pl_card("mate", {"tier": "reactive", "trigger": {"event": "dropped"},
+			"actor_b": {"role": "close_mate", "where": {"fit": true}},
+			"title": ["{first_b} wants to know why {first} was dropped"],
+			"choices": [{"key": "a", "label": "Explain it to {first_b}", "effects": [{"op": "morale", "d": 3, "who": "b"},
+					{"op": "trust", "d": 2, "who": "b", "why": "You explained it"}]},
+				{"key": "b", "label": "B", "effects": []}]})
+	_check(StoryDeck.validate([card]).is_empty(), "The second-player card is valid (%s)" % str(StoryDeck.validate([card])))
+	var a := {"id": "a", "name": "Al Smith", "first": "Al", "fit": true, "actors": {"close_mate": "b"}}
+	var b := {"id": "b", "name": "Bo Daniels", "first": "Bo", "fit": true}
+	var story := StoryEngine.new_state()
+	var w := StoryEngine.week_abs(2027, 4)
+	StoryEngine.note_event(story, "dropped", "a", w)
+	var got: Array = StoryEngine.pick_week([card], _ctx(4, [a, b]), story)
+	_check(got.size() == 1 and str(got[0]["title"]) == "Bo wants to know why Al was dropped" and str(got[0].get("player_b_id", "")) == "b",
+			"His mate is named in the card (%s)" % (str(got[0]["title"]) if not got.is_empty() else "none"))
+	_check(not got.is_empty() and str(got[0]["options"][0]["label"]) == "Explain it to Bo"
+			and str(got[0]["options"][0]["detail"]).contains("Bo's morale"), "The choice and its stakes name him")
+	var hurt := b.duplicate()
+	hurt["fit"] = false
+	var s2 := StoryEngine.new_state()
+	StoryEngine.note_event(s2, "dropped", "a", w)
+	_check(StoryEngine.pick_week([card], _ctx(4, [a, hurt]), s2).is_empty(), "The mate fails the card's conditions: no card")
+	var loner := a.duplicate()
+	loner["actors"] = {}
+	var s3 := StoryEngine.new_state()
+	StoryEngine.note_event(s3, "dropped", "a", w)
+	_check(StoryEngine.pick_week([card], _ctx(4, [loner, b]), s3).is_empty(), "No mate (an older save): no card")
+	var other := _pl_card("other", {"tier": "reactive", "trigger": {"event": "dropped"}, "actor_b": {"role": "other"},
+			"title": ["{first} and {first_b}"]})
+	var s4 := StoryEngine.new_state()
+	StoryEngine.note_event(s4, "dropped", "a", w, "b")
+	var got2: Array = StoryEngine.pick_week([other], _ctx(4, [a, b]), s4)
+	_check(got2.size() == 1 and str(got2[0]["title"]) == "Al and Bo", "The event's other player can be the second player")
+
+
+## A card speaks through its council seats, and waits when one is empty.
+func _test_advisor_seats() -> void:
+	var card := _club_card("council", "training", {"cooldown": 0, "advisors": ["list_manager"],
+			"title": ["{advisor_name} wants the kids played"], "text": ["Our {list_manager_role} has a view."]})
+	_check(StoryDeck.validate([card]).is_empty(), "The advisor card is valid (%s)" % str(StoryDeck.validate([card])))
+	var ctx := _ctx(4)
+	_check(StoryEngine.pick_week([card], ctx, StoryEngine.new_state()).is_empty(), "No list manager yet: the card waits")
+	ctx["club"]["advisors"] = {"list_manager": {"name": "Jo Price", "role": "list manager"}}
+	var got: Array = []
+	for wk in range(4, 10):
+		ctx["week"] = wk
+		got = StoryEngine.pick_week([card], ctx, StoryEngine.new_state())
+		if not got.is_empty():
+			break
+	_check(got.size() == 1 and str(got[0]["title"]) == "Jo Price wants the kids played" and str(got[0]["text"]) == "Our list manager has a view.",
+			"The seat's holder and role fill the card (%s)" % (str(got[0]["title"]) if not got.is_empty() else "none"))
+	var soft := card.duplicate(true)
+	soft["advisors"] = [{"seat": "high_performance", "required": false}]
+	soft["title"] = ["{advisor_name} is worried"]
+	_check(StoryEngine.advisor_facts(soft, {}).get("advisor_name", "") == "the head of high performance", "A seat not required names the role")
+	_check(not ClubStories.advisors(GameState).is_empty() or GameState.my_club == "", "The club's coaching panel fills the seats it has")
+
+
+## One mechanic, each club's own words.
+func _test_club_variants() -> void:
+	var card := _club_card("home", "family", {"cooldown": 0, "title": ["Homesick"], "text": ["He misses home."],
+			"club_variants": {"WCE": {"title": ["Homesick in Perth"], "choices": {"a": {"label": "Fly his family over"}}}}})
+	_check(StoryDeck.validate([card]).is_empty(), "The shared card is valid (%s)" % str(StoryDeck.validate([card])))
+	var rng := RandomNumberGenerator.new()
+	var wce := StoryEngine.build([card], card, {"kind": "club"}, {"club_deck": "WCE"}, rng, 1)
+	var gee := StoryEngine.build([card], card, {"kind": "club"}, {"club_deck": "GEE"}, rng, 1)
+	_check(str(wce["title"]) == "Homesick in Perth" and str(wce["text"]) == "He misses home."
+			and str(wce["options"][0]["label"]) == "Fly his family over", "West Coast gets its own words over the shared card")
+	_check(str(gee["title"]) == "Homesick" and str(gee["options"][0]["label"]) == "A", "Another club gets the shared words")
+	var bad := card.duplicate(true)
+	bad["club_variants"] = {"XYZ": {"title": ["x"]}, "WCE": {"choices": {"zz": {"label": "x"}}}}
+	_check(StoryDeck.validate([bad]).size() >= 2, "An unknown club or a choice that does not exist is refused")
+	var effects := card.duplicate(true)
+	effects["club_variants"] = {"WCE": {"choices": {"a": {"effects": []}}}}
+	_check(not StoryDeck.validate([effects]).is_empty(), "A club may change the words, never the mechanic")
+
+
+func _test_engine_field_checks() -> void:
+	_check(not _bad({"tier": "panic"}).is_empty(), "An unknown tier is refused")
+	_check(not _bad({"tier": "reactive"}).is_empty(), "A reactive card without a trigger is refused")
+	_check(not _bad({"trigger": {"event": "x", "within": 9}}).is_empty(), "A trigger fresh too long is refused")
+	_check(not _bad({"subject": {"kind": "club"}, "title": ["x"], "actor_b": {"role": "close_mate"}}).is_empty(), "A second player on a club card is refused")
+	_check(not _bad({"actor_b": {"role": "best_friend"}}).is_empty(), "An unknown second-player role is refused")
+	_check(not _bad({"actor_b": {"role": "other"}}).is_empty(), "The event's other player without a trigger is refused")
+	_check(not _bad({"title": ["{first_b}"]}).is_empty(), "{first_b} without a second player is refused")
+	_check(not _bad({"choices": [{"key": "a", "label": "A", "effects": [{"op": "morale", "d": 3, "who": "b"}]},
+			{"key": "b", "label": "B", "effects": []}]}).is_empty(), "An effect on a second player the card does not have is refused")
+	_check(not _bad({"advisors": ["mascot"]}).is_empty(), "An unknown advisor seat is refused")
+	_check(not _bad({"choices": [{"key": "a", "label": "A", "effects": [{"op": "morale", "d": 3, "scar": true}]},
+			{"key": "b", "label": "B", "effects": []}]}).is_empty(), "A scar on anything but a trust move is refused")
+	_check(_bad({"choices": [{"key": "a", "label": "A", "effects": [{"op": "trust", "d": -3, "why": "W", "scar": true}]},
+			{"key": "b", "label": "B", "effects": []}]}).is_empty(), "A scar on a trust move is fine")
+
+
+## The cards that leave a permanent mark (director, 2026-11-26).
+func _test_scar_cards() -> void:
+	var scarred := {}
+	for t in StoryDeck.all():
+		for c in t.get("choices", []):
+			for e in (c as Dictionary).get("effects", []):
+				if bool((e as Dictionary).get("scar", false)):
+					scarred[str(t["id"])] = true
+	for id in ["family_baby_due", "family_dad_in_hospital", "finals_fitness_test", "gf_racing_the_clock",
+			"selection_finals_experience", "media_in_the_papers", "training_backed_kid_struggling"]:
+		_check(scarred.has(id), "%s leaves a permanent mark" % id)
+	var arcs: Variant = JSON.parse_string(FileAccess.get_file_as_string("res://data/arcs/coach_arcs.json"))
+	var dropped := false
+	for a in arcs:
+		for b in a.get("beats", []):
+			if str(b.get("id", "")) == "arc_veteran_form":
+				for c in b["choices"]:
+					for e in c["effects"]:
+						dropped = dropped or bool(e.get("scar", false))
+	_check(dropped, "Dropping a legend in his last season leaves a permanent mark")
