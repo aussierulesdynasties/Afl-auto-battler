@@ -203,11 +203,15 @@ static func _pick(w: Dictionary, from: Array, rng: RandomNumberGenerator) -> Str
 
 
 ## How strongly his record points at each temperament (every one starts at
-## 1.0, so anyone can be anything; the record tilts the odds).
+## 1.0, or the file's start_weight, so anyone can be anything; the record
+## tilts the odds). Leader starts low: it is for the voices in the rooms,
+## about four or five a club (director 2026-11-26).
 static func weights(p: Dictionary) -> Dictionary:
 	var w := {}
-	for k in keys():
-		w[k] = 1.0
+	var all := keys()   # loads the file
+	var start: Dictionary = _data.get("start_weight", {}) if _data.get("start_weight") is Dictionary else {}
+	for k in all:
+		w[k] = float(start.get(k, 1.0))
 	var a: Dictionary = p.get("attr", {}) if p.get("attr") is Dictionary else {}
 	var disc := float(a.get("discipline", 50))
 	var star := float(a.get("star", 50))
@@ -219,7 +223,7 @@ static func weights(p: Dictionary) -> Dictionary:
 	# A vice-captain or leadership-group player leans to leading; so does a
 	# long-serving voice (a named captain always leads: assign()).
 	var lead := float(Leadership.of(p))
-	w["leader"] += maxf(0.0, lead - 55.0) / 12.0
+	w["leader"] += maxf(0.0, lead - float(_data.get("leader_from", 55.0))) / 12.0
 	w["leader"] += {"vice": 4.0, "group": 2.0}.get(Leadership.role_2026(p), 0.0)
 	# Years at one club.
 	if clubs <= 1:

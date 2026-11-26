@@ -245,16 +245,17 @@ static func reason_text(r: Dictionary) -> String:
 ## grudge, under 1; one that forgets, over 1; a permanent mark stays permanent).
 ## The same mark from the same source does not stack: it is renewed at
 ## the larger of the two sizes, so a man left out four weeks running carries
-## one "left out" at full size, not four. Returns the opinion points it moved,
-## 0 for an unknown key or a scale of 0.
+## one "left out" at full size, not four. `why` names the moment in place of
+## the file's words (a mate's fallout: "You dropped his close mate, Sam Day").
+## Returns the opinion points it moved, 0 for an unknown key or a scale of 0.
 static func add(rel: Dictionary, key: String, k: String, year: int, when: String, club := "",
-		scale := 1.0, src := "", fade_scale := 1.0) -> float:
+		scale := 1.0, src := "", fade_scale := 1.0, why := "") -> float:
 	var d := def(k)
 	if d.is_empty():
 		push_warning("Opinion.add: no mark called %s in %s" % [k, DEFS_PATH])
 		return 0.0
 	return add_raw(rel, key, k, float(d["v"]) * scale, float(d.get("fade", 1.0)) * maxf(0.0, fade_scale), str(d.get("tag", "")),
-			str(d.get("why", "")), year, when, club, src)
+			why if why != "" else str(d.get("why", "")), year, when, club, src)
 
 
 ## The same with every part given (tests, and a card that sizes its own mark).

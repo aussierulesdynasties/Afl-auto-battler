@@ -1,7 +1,9 @@
 {
-	"_about": "Football temperaments (Temperament.gd). Every player holds one or two. Levers are multipliers other systems read through Temperament.scale(p, lever): over 1 he feels it more, under 1 less. 'decay' over 1 means his opinion marks fade faster. Grounded in on-field and locker-room personality only.",
+	"_about": "Football temperaments (Temperament.gd). Every player holds one or two. start_weight: where a temperament's odds start before the record tilts them (1.0 when not listed); leader_from: the Leadership rating from which the record leans to leader. Levers are multipliers other systems read through Temperament.scale(p, lever): over 1 he feels it more, under 1 less. 'decay' over 1 means his opinion marks fade faster. Grounded in on-field and locker-room personality only.",
 	"order": ["leader", "clubman", "competitor", "professional", "quiet_achiever", "fiery", "mercurial", "mercenary"],
 	"second_chance": 0.5,
+	"start_weight": {"leader": 0.05},
+	"leader_from": 62,
 	"scale_min": 0.5,
 	"scale_max": 2.0,
 	"temperaments": {

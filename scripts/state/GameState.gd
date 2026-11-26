@@ -7686,7 +7686,7 @@ func _dev_promise_broken(p: Dictionary, t: Dictionary, sting: bool) -> void:
 	if sting:
 		p.erase("expects_game")
 		ClubLife.add_morale(p, -DEV_PROMISE_STING)
-		Trust.change(relations, Trust.player_key(str(p["id"])), ClubStories.BROKEN_PROMISE_TRUST,
+		Trust.change(relations, Trust.player_key(str(p["id"])), Promises.broken_trust(p, "dev_games"),
 				"You promised him games in his new position and left him out", season_year, last_label)
 		_culture_move(my_club, "together", -StoryEngine.BROKEN_TOGETHER, "You promised a player games and left him out")
 
@@ -9592,6 +9592,10 @@ func _release(code: String, p: Dictionary, wanted := false, announce := true) ->
 	var dead := ListCosts.dead_money(p) if offseason_open() and not retiring_now(p) else 0
 	if dead > 0:
 		dead_cap[code] = {"year": season_year + 1, "amount": dead_for(code) + dead}
+	# Delisted (not a man you wanted who went to market, nor a career ending):
+	# the men tied to him take it (Phase 1 integration).
+	if not wanted and not retiring_now(p) and not p.has("real_end"):
+		apply_bond_fallout(str(p["id"]), "delist")
 	(season.lists[code] as Array).erase(p)
 	p["released_by"] = code
 	# A delisted rookie is a free agent: whoever signs him, his old club
@@ -12646,6 +12650,12 @@ func _execute_trade(a: String, b: String, a_gives: Array, b_gives: Array) -> voi
 	# What each side gave, as the other side will remember it (pick_story).
 	var a_gave := _trail_assets(a_gives)
 	var b_gave := _trail_assets(b_gives)
+	# The men tied to a player traded away take it, at the club that let him go
+	# (Phase 1 integration, every club by the same rule).
+	var club_of := _bond_clubs()
+	for x in a_gives + b_gives:
+		if not Contracts.is_pick(x):
+			apply_bond_fallout(str(x["id"]), "trade", club_of)
 	for x in a_gives:
 		_move_asset(x, a, b)
 		_note_pick_got(x, a, b, b_gave)
@@ -15015,7 +15025,7 @@ func _board_after_round(results: Array) -> void:
 			backing_talk = Backing.talk(p, Backing.ledger(p).back())
 		if run_state == "broken":
 			ClubLife.add_morale(p, -CoachEffects.softened(Backing.STING, float(soft.get(pid, 0.0))))
-			Trust.change(relations, Trust.player_key(pid), ClubStories.BROKEN_RUN_TRUST,
+			Trust.change(relations, Trust.player_key(pid), Promises.broken_trust(p, "run"),
 					"You broke your word on his run of games", season_year, last_label)
 			_culture_move(my_club, "together", -StoryEngine.BROKEN_TOGETHER, "You broke your word on a player's run of games")
 		p.erase("expects_game")
@@ -15036,7 +15046,7 @@ func _board_after_round(results: Array) -> void:
 			if not played.has(str(p["id"])) and int(p.get("injury_weeks", 0)) <= 0 \
 					and not _round_unavailable.has(str(p["id"])) and not no_room.has(str(p["id"])):
 				ClubLife.add_morale(p, -CoachEffects.softened(sting, float(soft.get(str(p["id"]), 0.0))))
-				Trust.change(relations, Trust.player_key(str(p["id"])), ClubStories.BROKEN_PROMISE_TRUST,
+				Trust.change(relations, Trust.player_key(str(p["id"])), Promises.broken_trust(p, "game"),
 						"You promised him a game and left him out", season_year, last_label)
 				_culture_move(my_club, "together", -StoryEngine.BROKEN_TOGETHER, "You promised a player a game and left him out")
 				if own_game:
@@ -15061,9 +15071,11 @@ func _opinion_after_round(results: Array) -> void:
 		return
 	Opinion.fade_round(relations)
 	var club_of := {}
+	_players_now = {}
 	for code in season.lists:
 		for p in season.lists[code]:
 			club_of[str(p["id"])] = str(code)
+			_players_now[str(p["id"])] = p
 	Opinion.drop_other_clubs(relations, club_of)
 	var when := last_label if last_label != "" else "Round %d" % season.round_index
 	for res in results:
@@ -15085,13 +15097,20 @@ func _opinion_after_round(results: Array) -> void:
 				var key := Opinion.player_key(id)
 				if no_room.has(id):
 					continue
+				# His temperament sizes the mark and how long he holds it
+				# (Phase 1 integration): the same rule at every club.
+				var fade := Temperament.scale(p, "decay")
 				if played.has(id):
 					if final:
-						Opinion.add(relations, key, "picked_final", season_year, when, code)
+						Opinion.add(relations, key, "picked_final", season_year, when, code,
+								Temperament.scale(p, "backed"), "", fade)
 				elif int(p.get("injury_weeks", 0)) <= 0 and not _round_unavailable.has(id):
 					var k := Opinion.drop_mark(int(Rating.ovr(p, 0)), final, OPINION_STAR_OVR)
-					Opinion.add(relations, key, k, season_year, when, code)
+					Opinion.add(relations, key, k, season_year, when, code, Temperament.scale(p, "dropped"), "", fade)
+					# The men tied to him take it too (Bonds.fallout).
+					apply_bond_fallout(id, "drop", club_of)
 	_round_no_room = {}
+	_players_now = {}
 	for code in season.lists:
 		var mine := str(code) == my_club
 		for p in season.lists[code]:
@@ -15966,6 +15985,7 @@ func _start_backing(p: Dictionary) -> String:
 	var round_no := 0 if season.is_regular_done() else season.round_index + 1
 	Backing.start(p, season_year, round_no, games_played(p))
 	Promises.made(self, p, "run")
+	apply_bond_fallout(str(p["id"]), "back")
 	ClubLife.add_morale(p, Backing.THRILL)
 	p["expects_game"] = Backing.STING
 	mark_dirty()
@@ -17041,6 +17061,71 @@ func _bond_clubs() -> Dictionary:
 				if p is Dictionary:
 					out[str(p.get("id", ""))] = str(code)
 	return out
+
+
+## id -> player, filled only while a round's opinion is settled (_opinion_after_round).
+var _players_now := {}
+
+
+## The player dictionary for an id wherever he is now (a club's list, free
+## agency), {} when he is not in the game.
+func _player_now(player_id: String) -> Dictionary:
+	if not _players_now.is_empty():
+		return _players_now.get(player_id, {})
+	if season != null:
+		for code in season.lists:
+			for q in season.lists[code]:
+				if str(q.get("id", "")) == player_id:
+					return q
+	for q in free_agents:
+		if str(q.get("id", "")) == player_id:
+			return q
+	return {}
+
+
+## What a call on one man does to the men tied to him, as it will land
+## (Phase 1 integration): each row of Bonds.fallout, sized by the tie's
+## strength and the other man's own temperament ("bond"), fading at his pace
+## ("decay"). Only the men at his club take it: a live mark is about the
+## coach at his own club. With `apply` false nothing changes and each row's "opinion" is the
+## exact move his shown opinion would make (a mark he already carries renews,
+## never stacks). `club_of` is _bond_clubs() (pass one in when looping).
+## Returns [{"id", "kind", "opinion", "mark", "why"}], biggest first.
+func bond_fallout_moves(player_id: String, action: String, apply := false, club_of := {}) -> Array:
+	if club_of.is_empty():
+		club_of = _bond_clubs()
+	var out := []
+	var club := str(club_of.get(player_id, ""))
+	for f in Bonds.fallout(Bonds.ensure(bonds), player_id, action, club_of):
+		var oid := str(f["id"])
+		var mark := str(f.get("mark", ""))
+		# A live mark is about the coach at his own club: only the men at the
+		# club that made the call take it (a brother elsewhere has nothing
+		# against his own coach for it).
+		if mark == "" or Opinion.def(mark).is_empty() or str(club_of.get(oid, "")) != club:
+			continue
+		var q := _player_now(oid)
+		var scale := float(f.get("scale", 1.0)) * (Temperament.scale(q, "bond") if not q.is_empty() else 1.0)
+		var key := Opinion.player_key(oid)
+		var mine := str(club_of.get(oid, "")) == my_club
+		var before := Opinion.coach_opinion(relations, key, mine)
+		if apply:
+			Opinion.add(relations, key, mark, season_year, last_label, str(club_of.get(oid, "")), scale, player_id,
+					Temperament.scale(q, "decay") if not q.is_empty() else 1.0, str(f.get("why", "")))
+		var rel := relations
+		if not apply:
+			rel = {key: (relations.get(key, {}) as Dictionary).duplicate(true)}
+			Opinion.add(rel, key, mark, 0, "", "", scale, player_id, 1.0, str(f.get("why", "")))
+		var moved := Opinion.coach_opinion(rel, key, mine) - before
+		if moved != 0:
+			out.append({"id": oid, "kind": str(f["kind"]), "opinion": moved, "mark": mark, "why": str(f.get("why", ""))})
+	out.sort_custom(func(a, b): return absi(int(a["opinion"])) > absi(int(b["opinion"])))
+	return out
+
+
+## Apply a call's fallout to the men tied to him (bond_fallout_moves).
+func apply_bond_fallout(player_id: String, action: String, club_of := {}) -> Array:
+	return bond_fallout_moves(player_id, action, true, club_of)
 
 
 ## His bonds for a profile (Bonds.ties): [{"id", "kind", "label", "what",
