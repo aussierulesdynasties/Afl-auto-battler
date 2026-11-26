@@ -6158,6 +6158,29 @@ func _test_year_step_taps() -> void:
 			and y26.is_visible_in_tree() and y90.is_visible_in_tree() and y26.get_index() < y90.get_index()
 			and y26.size.y >= 88.0 and y90.size.y >= 88.0,
 			"New career asks the season first, today's league on top, each a thumb-sized tap (tap %s, mode %s)" % [t1, menu.get("_mode")])
+	# Every card holds its words: 2020's third wrapped line ran below the card's
+	# edge in the browser (director's capture, 2026-11-24). The wrap depends on
+	# the window's width, so every width from a small phone to a wide PC is tried,
+	# and the words' bottom is measured against the card's bottom.
+	var spill := []
+	var three := 0
+	var was := root.size
+	for w in range(360, 1601, 20):
+		root.size = Vector2i(w, 900)
+		await _settle()
+		for b in menu.find_children("StartYear_*", "Button", true, false):
+			var card := (b as Control).get_global_rect()
+			var low := 0.0
+			for l in b.find_children("*", "Label", true, false):
+				low = maxf(low, (l as Control).get_global_rect().end.y)
+				if (l as Label).get_line_count() >= 3:
+					three += 1
+			if low > card.end.y + 0.5 and spill.size() < 6:
+				spill.append("%d wide %s words end %d, card %d" % [w, b.name, low, card.end.y])
+	root.size = was
+	await _settle()
+	_check(three > 0, "Some width wraps a start card's line to three, the case that spilled (%d)" % three)
+	_check(spill.is_empty(), "Every start card holds its words at every width (%s)" % ", ".join(spill))
 	_router.handle_back(false)
 	await _settle()
 	_check(str(current_scene.get("_mode")) == "home", "Back from the year step is the title screen (%s)" % current_scene.get("_mode"))
