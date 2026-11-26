@@ -414,7 +414,7 @@ func _run() -> void:
 	_state.autosave_enabled = false
 	_state.save_path = "user://sweep.save"
 	_state.settings_path = "user://sweep.cfg"
-	UK.apply_appearance("dark")
+	UK.apply_palette()
 	UK.apply_text_size(text_size)
 	root.size = Vector2i(W, H)
 	DisplayServer.window_set_size(Vector2i(W, H))

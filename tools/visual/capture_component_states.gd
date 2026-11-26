@@ -1,7 +1,7 @@
 extends SceneTree
 ## Real renderer: godot --path . --rendering-method gl_compatibility --script tools/visual/capture_component_states.gd
 ## Environment: CAP_W, CAP_H (default 390x900), CAP_OUT (file path, default
-## "component_states.png"), CAP_MODE ("dark" default, or "light").
+## "component_states.png").
 ## A sheet of the shared controls in each state (normal, hover, pressed,
 ## disabled, selected), the red primary, danger, tabs, and three fixtures of
 ## club-coloured scores. Built from UiKit's own styles; illustrative only, it
@@ -23,7 +23,7 @@ func _run() -> void:
 	var w := int(OS.get_environment("CAP_W")) if OS.get_environment("CAP_W") != "" else 390
 	var h := int(OS.get_environment("CAP_H")) if OS.get_environment("CAP_H") != "" else 900
 	var out := OS.get_environment("CAP_OUT") if OS.get_environment("CAP_OUT") != "" else "component_states.png"
-	UK.apply_appearance("light" if OS.get_environment("CAP_MODE") == "light" else "dark")
+	UK.apply_palette()
 	DisplayServer.window_set_size(Vector2i(w, h))
 	root.size = Vector2i(w, h)
 	var bg := ColorRect.new()

@@ -44,7 +44,7 @@ func _run() -> void:
 	for key in load("res://scripts/ui/FirstVisitIntro.gd").TEXT:
 		state.set_setting("seen_%s_intro" % key, true)
 	state.start_season("GEE", db.club_list("GEE"))
-	UK.apply_appearance("dark")
+	UK.apply_palette()
 	root.size = Vector2i(W, H)
 	DisplayServer.window_set_size(Vector2i(W, H))
 	state.season.round_index = state.season.fixture.size()

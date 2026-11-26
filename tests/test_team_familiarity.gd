@@ -253,6 +253,8 @@ func _test_save_and_old_save() -> void:
 
 
 func _test_career_start_clears() -> void:
+	# The histories are stamped against the game's own data.
+	GameDB.reload()
 	GameState.reset()
 	GameState.replay_seed = 0
 	GameState.set_canberra(true)
@@ -269,6 +271,7 @@ func _test_career_start_clears() -> void:
 	TF.arrive_club(list[0])
 	_check(GameState.choose_sim_ahead_club(code), "A club can be taken on")
 	_check(TF.value(list[0]) == 100.0, "Everyone on a list when your career starts begins at 100")
+	GameDB.reload()
 
 
 func _settle() -> void:

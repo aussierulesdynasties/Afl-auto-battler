@@ -27,15 +27,23 @@ on:
     workflows: [Tests]
     types: [completed]
   workflow_dispatch:
-concurrency:
-  group: docs-fast-merge-${{ github.ref }}
-  cancel-in-progress: false
 permissions:
   contents: write
   actions: write
   pull-requests: write
 jobs:
   merge:
+    # Only a green Tests run of a pull request (or its dispatched docs pass) can make a PR ready to
+    # land: a main push, a cancelled or a red run cannot. Those took a runner for nothing (25-26 Nov:
+    # 264 runs; 145 Tests runs ended cancelled). A skipped job takes no runner.
+    if: >-
+      github.event_name != 'workflow_run' ||
+      (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event != 'push')
+    # The group is on the job, not the workflow, so a run whose job is skipped never enters it.
+    # (A workflow-level group let it cancel the one pending run that had work to do.)
+    concurrency:
+      group: docs-fast-merge-${{ github.ref }}
+      cancel-in-progress: false
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:

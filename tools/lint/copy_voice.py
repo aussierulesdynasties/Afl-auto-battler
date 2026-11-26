@@ -78,7 +78,6 @@ STATS_PASS = {
     ]],
     "scripts/ui/OptionsSheet.gd": [[
         "Copies the build, the round, this screen and the last 20 lines of the match feed. Paste it into a message. Nothing is sent from the game.",
-        "Changes the screens only. Club colours and the ground stay as they are.",
         "A light buzz when you press a button. A firmer one when a result lands.",
         "Sim the week and Sim to Round 1 play our match without you. With this on, they ask first.",
         "Fullscreen fills the screen with no border. Window opens maximised. Alt+Enter switches.",
@@ -86,7 +85,6 @@ STATS_PASS = {
         "Draws 30 frames a second instead of 60. Uses less battery. Matches and scenes play the same, a little less smoothly.",
         "Off skips the scenes. Every call and result stays the same.",
         "Prototypes for judging on a phone. The match plays the same either way.",
-        "For playtesting. The centre ball-up call comes at the first centre ball-up of every last quarter you coach, whatever the score.",
         "Back up writes your career to a file you keep. Use it to move devices or keep the career safe. Loading a backup or an earlier save keeps the career it replaces in the list below. You can go back to it.",
     ], [
         "Copies the build, your round, this screen and the last twenty lines of the match feed, ready to paste into a message. Nothing is sent from the game.",

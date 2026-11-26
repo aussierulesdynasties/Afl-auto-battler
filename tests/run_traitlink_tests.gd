@@ -114,8 +114,8 @@ func _touch(pos: Vector2, down: bool) -> void:
 func _test_sheet_flow(club: String, sz: Vector2i) -> void:
 	var tag := "%s %dx%d" % [club, sz.x, sz.y]
 	_gs.reset()
-	_gs.start_season(club, _db.club_list(club))
 	_gs.replay_seed = SUITE_SEED
+	_gs.start_season(club, _db.club_list(club))
 	root.size = sz
 	var host := Control.new()
 	host.name = "Screen"
@@ -215,9 +215,9 @@ func _test_line_flow(sz: Vector2i) -> void:
 func _test_training_news(sz: Vector2i) -> void:
 	var tag := "news %dx%d" % [sz.x, sz.y]
 	_gs.reset()
+	_gs.replay_seed = SUITE_SEED
 	_gs.set_setting("seen_training_intro", true)
 	_gs.start_season("FRE", _db.club_list("FRE"))
-	_gs.replay_seed = SUITE_SEED
 	var a: Dictionary = _gs.my_list[0]
 	_gs.last_training_report = {"count": 1, "label": "Round 1", "auto": {
 			"rises": [], "traits": [[str(a["id"]), "sharpshooter"]], "at_pot": []}}

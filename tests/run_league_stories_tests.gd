@@ -448,9 +448,9 @@ func _play_rounds(n: int) -> Dictionary:
 func _test_phone(size: Vector2i) -> void:
 	var tag := "%dx%d" % [size.x, size.y]
 	_state.reset()
+	_state.replay_seed = SUITE_SEED
 	_state.start_season("MEL", _db.club_list("MEL"))
 	_state.tutorials = false
-	_state.replay_seed = SUITE_SEED
 	var res := _res("FRE", "STK", [[2, 2], [3, 2], [6, 2], [5, 2]], [[5, 3], [4, 3], [2, 1], [1, 2]])
 	var st := _one(res)
 	_state.news = [{"year": 2027, "when": "Round 5", "kind": "league_story", "text": _ls.text(st),

@@ -320,7 +320,7 @@ func _test_boot_splash_is_ours() -> void:
 	var path := str(ProjectSettings.get_setting("application/boot_splash/image", ""))
 	_check(path.ends_with("boot_splash.png") and FileAccess.file_exists(path), "the boot splash is our image (%s)" % path)
 	var ui: GDScript = load("res://scripts/ui/UiKit.gd")
-	ui.call("apply_appearance", "dark")
+	ui.call("apply_palette")
 	var cover: Color = ui.get("PANEL_ALT")
 	var bg: Color = ProjectSettings.get_setting("application/boot_splash/bg_color", Color.BLACK)
 	_check(absf(bg.r - cover.r) < 0.01 and absf(bg.g - cover.g) < 0.01 and absf(bg.b - cover.b) < 0.01,

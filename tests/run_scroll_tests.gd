@@ -79,8 +79,8 @@ func _run() -> void:
 
 func _open(key: String) -> void:
 	_state.reset()
-	_state.start_season("FRE", _db.club_list("FRE"))
 	_state.replay_seed = SUITE_SEED
+	_state.start_season("FRE", _db.club_list("FRE"))
 	_state.tutorials = false
 	_router.stack = []
 	_router.go("main")
@@ -442,8 +442,8 @@ func _test_hub_fold() -> void:
 	var tapped := ""
 	for club in ["WBD", "FRE", "COL", "MEL", "SYD", "GEE"]:
 		_state.reset()
-		_state.start_season(club, _db.club_list(club))
 		_state.replay_seed = SUITE_SEED
+		_state.start_season(club, _db.club_list(club))
 		_state.tutorials = false
 		# The Milestones card brings the next row to the fold (the reported case).
 		_state.milestone_log["coach"] = {"games": 49}
@@ -507,8 +507,8 @@ func _test_hub_fold() -> void:
 func _test_hub_round1(size: Vector2i) -> void:
 	var tag := "hub round 1 %dx%d" % [size.x, size.y]
 	_state.reset()
-	_state.start_season("WBD", _db.club_list("WBD"))
 	_state.replay_seed = SUITE_SEED
+	_state.start_season("WBD", _db.club_list("WBD"))
 	_state.tutorials = false
 	# Last year's finish: the real 2026 ladder in a real-lists first season,
 	# nothing in a redrafted league or for a club that is not on that ladder.
