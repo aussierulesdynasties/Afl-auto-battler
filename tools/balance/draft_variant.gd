@@ -86,11 +86,11 @@ func _eval_sd_range() -> Array:
 	return model.get("eval_sd", [0.0, 0.0])
 
 
-func _ai_score(code: String, p: Dictionary, detail = null) -> float:
+func _ai_score(code: String, p: Dictionary, detail = null, salary := -1) -> float:
 	if model.is_empty():
-		return super(code, p, detail)
+		return super(code, p, detail, salary)
 	_refresh_ai_cache()
-	var penalty := _cap_penalty(code, p) if bool(model.get("cap_penalty", true)) else 0.0
+	var penalty := _cap_penalty(code, p, salary) if bool(model.get("cap_penalty", true)) else 0.0
 	var noise := float((_noise.get(code, {}) as Dictionary).get(str(p["id"]), 0.0))
 	var err := _eval_error(code, p)
 	if str(model.get("score", "current")) == "bpa":

@@ -189,11 +189,17 @@ static func select_22(list_players: Array, dual := -1) -> Dictionary:
 	for p in pool:
 		if p.has("expects_game") or Backing.is_active(p):
 			promised[p["id"]] = true
-	pool.sort_custom(func(a, b):
-		var pa: bool = promised.has(a["id"])
-		if pa != promised.has(b["id"]):
-			return pa
-		return float(Rating.ovr(a)) * Workload.selection_factor(a) > float(Rating.ovr(b)) * Workload.selection_factor(b))
+	# Each player's place in the queue is read once, not at every comparison
+	# (a sort compares each player many times): the same order.
+	if pool.size() > 1:
+		var queue := []
+		for p in pool:
+			queue.append([promised.has(p["id"]), float(Rating.ovr(p)) * Workload.selection_factor(p), p])
+		queue.sort_custom(func(a, b):
+			if a[0] != b[0]:
+				return a[0]
+			return a[1] > b[1])
+		pool = queue.map(func(e): return e[2])
 
 	var ground: Array = []
 	var used := {}
@@ -564,14 +570,17 @@ static func _merit_swaps(pool: Array, ground: Array, used: Dictionary, promised:
 ## Players ordered by ruck work, best first (ties by overall), for filling
 ## an empty ruck spot with the nearest thing to a ruckman.
 static func by_ruck(players: Array) -> Array:
-	var out := players.duplicate()
-	out.sort_custom(func(a, b):
-		var ra := float(a["attr"]["ruck"])
-		var rb := float(b["attr"]["ruck"])
-		if ra != rb:
-			return ra > rb
-		return int(Rating.ovr(a)) > int(Rating.ovr(b)))
-	return out
+	if players.size() < 2:
+		return players.duplicate()
+	# Each player's ruck work and overall read once, not at every comparison.
+	var keyed := []
+	for p in players:
+		keyed.append([float(p["attr"]["ruck"]), int(Rating.ovr(p)), p])
+	keyed.sort_custom(func(a, b):
+		if a[0] != b[0]:
+			return a[0] > b[0]
+		return a[1] > b[1])
+	return keyed.map(func(e): return e[2])
 
 
 ## The pool with each trial player listed in his trial position: his own
