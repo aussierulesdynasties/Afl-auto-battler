@@ -191,3 +191,4 @@ What has landed toward each open row of docs/TODO.md and docs/TODO_RULINGS.md, o
 - 202: Merged #2035: Manuka Oval to the MCG standard: stands, seats, scoreboard, towers, the town round it and Canberra to 30 km (row 202 2b).
 - 202: Merged #2025: 3D match: interchanges jog off and run on, the free's umpire stands off the mark, far tackles run in (row 202 2e, WIP).
 - 202: Merged #2072: Real land round every ground: measured bare-earth terrain, the surrounds ring on it.
+- 171: Merged #2130: Screen sweep: the screens it never reached, and the Off-season open.
