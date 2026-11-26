@@ -796,6 +796,8 @@ func has_saved_career() -> bool:
 
 ## One sentence per line, so a narrow phone never leaves one word alone.
 const SAVE_UNREADABLE := "Your saved career could not be read.\nStarting a new career will overwrite it."
+## A save from before the player ratings were rebuilt (CareerSave.FIRST_LOADABLE).
+const SAVE_TOO_OLD := "Your saved career is from before the new player ratings.\nThis version cannot open it.\nStarting a new career will overwrite it."
 
 
 ## Why a career file on disk cannot be continued, in the coach's words, or
@@ -804,6 +806,8 @@ func saved_career_problem() -> String:
 	match CareerSave.problem(save_path):
 		"newer":
 			return "Your saved career is from a newer version.\nUpdate the game to keep playing it.\nStarting a new career will overwrite it."
+		"older":
+			return SAVE_TOO_OLD
 		"unreadable":
 			return SAVE_UNREADABLE
 	return ""
@@ -1661,6 +1665,8 @@ func import_career(bytes: PackedByteArray) -> String:
 			return ""
 		"newer":
 			return "That backup is from a newer version of the game.\nUpdate the game to load it."
+		"older":
+			return "That backup is from before the new player ratings.\nThis version cannot load it. Your career is unchanged."
 	return "That file is not a career backup, or it is damaged.\nYour career is unchanged."
 
 

@@ -254,11 +254,12 @@ func _test_complete_synergy_reentry() -> void:
 		Ovr.to(p, 70 if in23.has(str(p["id"])) else 40)
 		var attr: Dictionary = p.get("attr", {})
 		attr["contested_marking"] = Traits.SMALL_MAX_CM - 5
-		attr["goalkicking"] = 40
+		attr["forward_craft"] = 40   # a crumber is read from forward craft (Traits)
 		p["attr"] = attr
 	var crumber: Dictionary = GameState.list_player(str(side["FWD"][0]))
 	Ovr.to(crumber, 50)
-	crumber["attr"]["goalkicking"] = 60
+	crumber["attr"]["forward_craft"] = 60
+	crumber["attr"]["contested_marking"] = Traits.SMALL_MAX_CM - 5
 	var spare: Array = []
 	for p in GameState.my_list:
 		if spare.size() < 3 and not in23.has(str(p["id"])):
@@ -270,7 +271,9 @@ func _test_complete_synergy_reentry() -> void:
 		return
 	spare[0]["attr"]["contested_marking"] = 80
 	spare[1]["attr"]["contested_marking"] = 80
-	spare[2]["attr"]["goalkicking"] = 60
+	spare[2]["attr"]["forward_craft"] = 60
+	# Ovr.to lifts every attribute a forward weighs, his marking too: small again.
+	spare[2]["attr"]["contested_marking"] = Traits.SMALL_MAX_CM - 5
 	_check(Traits.of(crumber).has("crumber") and Traits.of(spare[0]).has("aerial") and Traits.of(spare[2]).has("crumber"),
 			"(one crumber in the side, two aerials and a crumber outside it)")
 	var r: Dictionary = GameState.complete_synergy("tall_small", side)
@@ -681,17 +684,34 @@ func _test_merit_second_position() -> void:
 			best_fwd = p
 	var spare := {}
 	for p in list:
-		if not on.has(str(p["id"])) and str(p["role"]) in ["MID", "DEF"] and str(p.get("role2", "")) == "" 				and (p.get("learned", []) as Array).is_empty() and Ratings.available(p):
+		if not on.has(str(p["id"])) and str(p["role"]) == "DEF" and str(p.get("role2", "")) == "" 				and (p.get("learned", []) as Array).is_empty() and Ratings.available(p):
 			spare = p
 			break
 	_check(not spare.is_empty() and not best_fwd.is_empty(), "Someone is left out of the side")
 	if spare.is_empty() or best_fwd.is_empty():
 		return
-	# He has learned to play forward, and plays it as well as the best forward;
-	# his own rating (what orders his own line) is unchanged, so only the
-	# merit pass can bring him in.
+	# He has learned to play forward, and has a forward's best skills there: what
+	# the forward line's positions weigh and a defender's rating does not
+	# (goalkicking, forward craft) is 99. His own rating (what orders his own
+	# line) is read from the same attributes and is unchanged, so only the merit
+	# pass can bring him in. A midfielder would not do: a Mid-Forward's forward
+	# rating is his own.
 	spare["role2"] = "FWD"
-	spare["attr"] = (best_fwd["attr"] as Dictionary).duplicate()
+	var own_before := int(Ovr.of(spare))
+	var own_w: Dictionary = Rating.WEIGHTS[Rating.apos_of(spare)]
+	for apos in Rating.LINE_POSITIONS["FWD"]:
+		for k in Rating.WEIGHTS[apos]:
+			if not own_w.has(k):
+				spare["attr"][k] = 99
+	var weakest := INF
+	for g in auto["ground"]:
+		if str(g["role"]) == "FWD":
+			for q in list:
+				if str(q["id"]) == str(g["id"]):
+					weakest = minf(weakest, Ratings.line_rating(q, "FWD"))
+	_check(int(Ovr.of(spare)) == own_before and Ratings.line_rating(spare, "FWD") > weakest,
+			"(setup) his own rating is unchanged (%d) and he rates above the weakest forward there (%.0f v %.0f)" % [
+				int(Ovr.of(spare)), Ratings.line_rating(spare, "FWD"), weakest])
 	Ratings.merit_lines = false
 	var before := Ratings.select_22(list)
 	Ratings.merit_lines = true

@@ -781,7 +781,7 @@ func _story_setup(id: String, from: String, mine: String, seed := 1) -> Dictiona
 	var list: Array = GameState.league_lists[from]
 	var star: Dictionary = list[0]
 	for p in list:
-		if int(p.get("overall", 0)) > int(star.get("overall", 0)):
+		if int(Ovr.of(p, 0)) > int(Ovr.of(star, 0)):
 			star = p
 	star["real_name"] = "%s %s" % [str(m["first"]), str(m["last"])]
 	star["dob"] = str(m["dob"])
@@ -877,12 +877,12 @@ func _test_story_none() -> void:
 	# Grundy asks to be a club's first ruck: Hawthorn's best ruck already is.
 	star = _story_setup("grundy_mel", "HAW", "HAW")
 	star["role"] = "RUCK"
-	star["overall"] = 99
+	Ovr.to(star, 99)
 	cards = _canon_cards(LegacyRollover.canon("grundy_mel"))
 	_check(cards.is_empty() and bool(_story("grundy_mel").get("none", false)), "Grundy, Hawthorn's first ruck: no story")
 	# First ruck: no other ruckman on the list as good as him.
-	var as_good := {"id": "x1", "role": "MID", "role2": "RUCK", "overall": 99}
-	var below := {"id": "x2", "role": "RUCK", "overall": 98}
+	var as_good: Dictionary = Ovr.to({"id": "x1", "role": "MID", "role2": "RUCK"}, 99)
+	var below: Dictionary = Ovr.to({"id": "x2", "role": "RUCK", "role2": ""}, 98)
 	_check(not LegacyRollover._first_ruck(star, [star, as_good]) and LegacyRollover._first_ruck(star, [star, below]),
 			"A club with a ruckman as good as him would not make him its first ruck")
 	GameDB.reload("1990")

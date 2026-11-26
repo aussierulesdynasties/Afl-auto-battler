@@ -247,7 +247,8 @@ static func read_meta(path := DEFAULT_PATH) -> Dictionary:
 
 
 ## Why there is no usable save at `path`: "" (a usable save, or no file at
-## all), "newer" (written by a newer build) or "unreadable" (damaged).
+## all), "newer" (written by a newer build), "older" (written before
+## FIRST_LOADABLE) or "unreadable" (damaged).
 static func problem(path := DEFAULT_PATH) -> String:
 	if exists(path):
 		return ""
@@ -258,7 +259,8 @@ static func problem(path := DEFAULT_PATH) -> String:
 		var v := _version_at(p)
 		if v > VERSION:
 			return "newer"
-		found = "unreadable"
+		if found == "":
+			found = "older" if v > 0 and v < FIRST_LOADABLE else "unreadable"
 	return found
 
 
@@ -706,7 +708,8 @@ static func export_bytes(path := DEFAULT_PATH) -> PackedByteArray:
 
 
 ## Make `bytes` (an exported file) the career save. Returns "" on success,
-## "newer" (a newer build wrote it) or "unreadable". The career it replaces
+## "newer" (a newer build wrote it), "older" (from before FIRST_LOADABLE) or
+## "unreadable". The career it replaces
 ## joins the earlier saves, so an import can be undone with Restore. A bad
 ## file never touches the save in place.
 static func import_bytes(bytes: PackedByteArray, path := DEFAULT_PATH) -> String:
@@ -721,5 +724,7 @@ static func import_bytes(bytes: PackedByteArray, path := DEFAULT_PATH) -> String
 	var v := _version_at(probe)
 	DirAccess.remove_absolute(probe)
 	if blob.is_empty():
-		return "newer" if v > VERSION else "unreadable"
+		if v > VERSION:
+			return "newer"
+		return "older" if v > 0 and v < FIRST_LOADABLE else "unreadable"
 	return "" if _write_blob(blob, path) else "unreadable"

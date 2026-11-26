@@ -1631,9 +1631,13 @@ func _sign_waits_for_the_draft(ui: Control) -> void:
 		if ok != null and ok.is_visible_in_tree():
 			await Tap.tap(ok)
 			await _settle()
+	# Choosing the club ran the rival picks before its first turn
+	# (Draft.start_for_user), so the Combine's best may already be gone: his
+	# sheet says where he went and has no Sign. The first one still there.
 	var row: BaseButton = null
 	for c in ui.find_children("Prospect_*", "BaseButton", true, false):
-		if (c as BaseButton).is_visible_in_tree():
+		if (c as BaseButton).is_visible_in_tree() \
+				and not _state.draft.has(str(c.name).trim_prefix("Prospect_")):
 			row = c
 			break
 	_check(why == "" and row != null, "The Combine opens in the off-season with its prospects (%s)" % why)

@@ -133,7 +133,8 @@ func _test_1990_contracts() -> void:
 		# Priced at his rating, or under it where his club's first contracts
 		# were cut to fit its cap (Contracts.fit_to_cap: Geelong opens 1990
 		# over it at rating prices).
-		if salary > _scaled(model, 1500000, 52) \n				or salary < mini(Contracts.senior_min(), _scaled(model, 1500000, 52)):
+		if salary > _scaled(model, 1500000, 52) \
+				or salary < mini(Contracts.senior_min(), _scaled(model, 1500000, 52)):
 			bad.append("%s salary %d" % [str(p["id"]), salary])
 		if Contracts.asking_salary(p) < _scaled(model, 1500000, 52):
 			bad.append("%s ask %d" % [str(p["id"]), Contracts.asking_salary(p)])

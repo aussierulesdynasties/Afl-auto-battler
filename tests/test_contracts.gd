@@ -332,7 +332,8 @@ func _test_initial_contracts() -> void:
 func _test_first_contracts_fit_the_cap() -> void:
 	var list := []
 	for i in range(40):
-		list.append(Ovr.to({"id": "FIT_%d" % i, "age": 26.0, "value": 600000 if i < 10 else 200000}, 70))
+		# Pay is read from his OVR (Ratings.value_of): the ten best paid are the ten best.
+		list.append(Ovr.to({"id": "FIT_%d" % i, "age": 26.0}, 85 if i < 10 else 62))
 	var fresh := Contracts.assign_initial(list)
 	_check(fresh.size() == 40, "Every player without a contract gets one (%d)" % fresh.size())
 	var priced := Contracts.payroll(list)
@@ -630,6 +631,12 @@ func _test_offseason_flow() -> void:
 	GameState.salary_cap += 5000000
 	# A free agent no other club has offered for signs at his asking price;
 	# where rivals have offered, your offer goes on the table instead.
+	# Rivals offer for nearly every free agent (main: 13 of 14 in this career), so
+	# the case under test is made: one free agent with no offer on the table.
+	var others := GameState.free_agents.filter(func(fa): return str(fa.get("released_by", "")) != GameState.my_club)
+	_check(not others.is_empty(), "Rivals' players reach free agency")
+	if others.filter(func(fa): return (fa.get("offers", []) as Array).is_empty()).is_empty() and not others.is_empty():
+		others[0]["offers"] = []
 	for fa in GameState.free_agents.duplicate():
 		if str(fa.get("released_by", "")) != GameState.my_club and (fa.get("offers", []) as Array).is_empty() \
 				and not bool(GameState.free_agent_terms(str(fa["id"]))["refuse"]):
@@ -1901,7 +1908,7 @@ func _test_trade_value() -> void:
 		sensible = sensible and bool(_trade(club_vet, [vet], [kid], "rebuilding", m)["ok"]) \
 				and not bool(_trade(club_vet, [vet], [kid], "contending", m)["ok"])
 	_check(sensible, "On every difficulty a rebuilder moves a 30-year-old star for a young talent; a contender keeps him")
-	var prospect := _with(base[2], {"id": "t_prospect", "overall": 66, "potential": 90, "age": 20.0})
+	var prospect := _with(base[2], {"id": "t_prospect", "overall": 69, "potential": 90, "age": 20.0})
 	var starter := _with(base[3], {"id": "t_starter", "overall": 80, "potential": 80, "age": 27.0})
 	var club_kid: Array = base.duplicate()
 	club_kid.append(prospect)
@@ -1976,7 +1983,7 @@ func _test_trade_packages_and_needs() -> void:
 	_check(pair > solo * 1.4, "Two starters at separate weak spots both count (%.2f v %.2f alone)" % [pair, solo])
 	# A promising young forward line that is weak now - and has shown it:
 	# an unseen ceiling is only half banked (TradeValue.proven).
-	var kids := base.map(func(q): return _with(q, {"overall": 58, "potential": 86, "age": 20.0,
+	var kids := base.map(func(q): return _with(q, {"overall": 61, "potential": 86, "age": 20.0,
 			"career": {"games": 60}}) if str(q["role"]) == "FWD" else q)
 	var vet := _with(base.filter(func(q): return str(q["role"]) == "FWD")[0], {"id": "t_vetfwd",  "potential": 72, "age": 27.0, "role2": "", "overall": 72})
 	var now_bars := TradeValue.selection_bars(kids)
@@ -2386,63 +2393,75 @@ func _night_rival_deals(seed: int) -> int:
 ## a rival's offer to you, a deal you put up - names a pick already made, and
 ## the pick log shows every deal before the pick it was struck before.
 func _test_night_trades_never_name_called_picks() -> void:
-	GameState.reset()
-	GameState.career_seed = 5
-	GameState.replay_seed = 5
-	GameState.start_season("GEE", GameDB.club_list("GEE"))
-	_to_offseason()
-	var me := GameState.my_club
-	var year := GameState.season_year
-	_check(GameState.begin_intake_draft(), "Row 175: the national draft opens")
-	var d: Draft = GameState.draft
 	var tonight := RegEx.create_from_string("pick (\\d+) tonight")
 	var bad := []   # what named a called pick, in words
 	var user_turns := 0
 	var offers_seen := 0
 	var guard := 0
-	while not d.is_finished() and guard < 2000:
-		guard += 1
-		if not d.is_user_turn():
-			d.auto_until_user_turn()
-			continue
-		user_turns += 1
-		var clock := int(d.pick_index) + 1   # the pick on the clock: every pick before it is made
-		# Every club's picks on the table: none already made.
-		for code in GameDB.active_clubs(year):
-			for pk in GameState.club_picks(str(code)):
-				if int(pk["year"]) == year and int(pk["spot"]) < clock:
-					bad.append("%s holds made pick %d at pick %d" % [code, int(pk["spot"]), clock])
-		# A pick already made cannot be put up, by you or for you. (A compensation
-		# pick has no id of its own: its round and club name the club's regular
-		# pick, which may still be to come.)
-		var comp := {}
-		for c in d.comp_picks:
-			comp[int(c["index"])] = true
-		for i in range(int(d.pick_index)):
-			var id := GameState.pick_id(year, int(d.pick_rounds[i]), str(d.pick_origin[i]))
-			var pk := GameState.pick_asset(id)
-			if not pk.is_empty() and (not comp.has(i) or int(pk["spot"]) < clock):
-				bad.append("made pick %d is still an asset (as pick %d) at pick %d" % [i + 1, int(pk["spot"]), clock])
-		# Offers rivals put to you for this pick: picks still to come, in words too.
-		GameState.make_night_offers()
-		for i in GameState.open_trade_offers():
-			offers_seen += 1
-			var o: Dictionary = GameState.trade_offers[i]
-			for id in (o["give"] as Array) + (o["take"] as Array):
-				var pk := GameState.pick_asset(str(id))
-				if pk.is_empty() or (int(pk["year"]) == year and int(pk["spot"]) < clock):
-					bad.append("offer %d names %s at pick %d" % [i, str(id), clock])
-			for m in tonight.search_all(GameState.trade_offer_text(i)):
-				if int(m.get_string(1)) < clock:
-					bad.append("offer text names pick %s at pick %d" % [m.get_string(1), clock])
-		var made_id := GameState.pick_id(year, int(d.pick_rounds[d.pick_index]), str(d.pick_origin[d.pick_index]))
-		if not d.pick_for_me():
-			d.user_pass()
-		# Once your pick is made, no offer for it is left standing.
-		for i in GameState.open_trade_offers():
-			if (GameState.trade_offers[i]["take"] as Array).has(made_id):
-				bad.append("an offer for %s outlived the pick" % made_id)
-	_check(d.is_finished(), "Row 175: the draft runs to the end (%d steps)" % guard)
+	var me := ""
+	var year := 0
+	var d: Draft = null
+	var nights := []
+	# Not every night has deals (seed 5 has one, and none after this suite's earlier
+	# tests): a quiet night is still checked, then the next seed's night, so the
+	# deal checks below always have deals to read.
+	for night_seed in [5, 3, 6, 7]:
+		GameState.reset()
+		GameState.career_seed = night_seed
+		GameState.replay_seed = night_seed
+		GameState.start_season("GEE", GameDB.club_list("GEE"))
+		_to_offseason()
+		me = GameState.my_club
+		year = GameState.season_year
+		_check(GameState.begin_intake_draft(), "Row 175: the national draft opens")
+		d = GameState.draft
+		guard = 0
+		nights.append(night_seed)
+		while not d.is_finished() and guard < 2000:
+			guard += 1
+			if not d.is_user_turn():
+				d.auto_until_user_turn()
+				continue
+			user_turns += 1
+			var clock := int(d.pick_index) + 1   # the pick on the clock: every pick before it is made
+			# Every club's picks on the table: none already made.
+			for code in GameDB.active_clubs(year):
+				for pk in GameState.club_picks(str(code)):
+					if int(pk["year"]) == year and int(pk["spot"]) < clock:
+						bad.append("%s holds made pick %d at pick %d" % [code, int(pk["spot"]), clock])
+			# A pick already made cannot be put up, by you or for you. (A compensation
+			# pick has no id of its own: its round and club name the club's regular
+			# pick, which may still be to come.)
+			var comp := {}
+			for c in d.comp_picks:
+				comp[int(c["index"])] = true
+			for i in range(int(d.pick_index)):
+				var id := GameState.pick_id(year, int(d.pick_rounds[i]), str(d.pick_origin[i]))
+				var pk := GameState.pick_asset(id)
+				if not pk.is_empty() and (not comp.has(i) or int(pk["spot"]) < clock):
+					bad.append("made pick %d is still an asset (as pick %d) at pick %d" % [i + 1, int(pk["spot"]), clock])
+			# Offers rivals put to you for this pick: picks still to come, in words too.
+			GameState.make_night_offers()
+			for i in GameState.open_trade_offers():
+				offers_seen += 1
+				var o: Dictionary = GameState.trade_offers[i]
+				for id in (o["give"] as Array) + (o["take"] as Array):
+					var pk := GameState.pick_asset(str(id))
+					if pk.is_empty() or (int(pk["year"]) == year and int(pk["spot"]) < clock):
+						bad.append("offer %d names %s at pick %d" % [i, str(id), clock])
+				for m in tonight.search_all(GameState.trade_offer_text(i)):
+					if int(m.get_string(1)) < clock:
+						bad.append("offer text names pick %s at pick %d" % [m.get_string(1), clock])
+			var made_id := GameState.pick_id(year, int(d.pick_rounds[d.pick_index]), str(d.pick_origin[d.pick_index]))
+			if not d.pick_for_me():
+				d.user_pass()
+			# Once your pick is made, no offer for it is left standing.
+			for i in GameState.open_trade_offers():
+				if (GameState.trade_offers[i]["take"] as Array).has(made_id):
+					bad.append("an offer for %s outlived the pick" % made_id)
+		_check(d.is_finished(), "Row 175: the draft runs to the end (%d steps)" % guard)
+		if not d.night_trades.is_empty():
+			break
 	# Every deal of the night, in its own words: the picks it names this year are
 	# the one on the clock or later.
 	var named := 0
@@ -2452,7 +2471,7 @@ func _test_night_trades_never_name_called_picks() -> void:
 			if int(m.get_string(1)) < int(tr["at"]):
 				bad.append("deal before pick %d names pick %s: %s" % [int(tr["at"]), m.get_string(1), str(tr["text"])])
 	print("contracts: row 175 night deals = %d, your turns = %d, offers = %d" % [d.night_trades.size(), user_turns, offers_seen])
-	_check(d.night_trades.size() > 0 and named > 0, "Row 175: the night has deals naming tonight's picks (%d)" % d.night_trades.size())
+	_check(d.night_trades.size() > 0 and named > 0, "Row 175: the night has deals naming tonight's picks (%d, seeds %s)" % [d.night_trades.size(), str(nights)])
 	_check(bad.is_empty(), "Row 175: no trade names a pick already called (%s)" % str(bad.slice(0, 4)))
 	# The pick log: each deal sits before the pick it was struck before, by the
 	# pick's number in the order, so a skipped pick (a full list, a pass) cannot
@@ -2590,10 +2609,13 @@ func _test_mixed_packages() -> void:
 		theirs.sort_custom(func(a, b): return int(Ovr.of(a)) > int(Ovr.of(b)))
 		var mine := GameState.my_list.duplicate()
 		mine.sort_custom(func(a, b): return int(Ovr.of(a)) > int(Ovr.of(b)))
-		# A package the club can deal in (no retiring man, a pick it still holds), so what is
-		# compared is its valuation, not which fault it finds first.
-		mine = mine.filter(func(q): return not GameState.retiring_now(q))
-		theirs = theirs.filter(func(q): return not GameState.retiring_now(q))
+		# A package the club can deal in (no retiring man, nobody who has asked to go to
+		# another club, a pick it still holds), so what is compared is its valuation, not
+		# which fault it finds first.
+		var dealable := func(q): return not GameState.retiring_now(q) \
+				and not GameState.trade_requests.has(str(q["id"]))
+		mine = mine.filter(dealable)
+		theirs = theirs.filter(dealable)
 		var their_pick := ""
 		for y in [year, year + 1]:
 			for rd in [1, 2]:
@@ -3563,7 +3585,7 @@ func _test_trade_reasons() -> void:
 			and str(v["reason"]) == "Collingwood said no: Weak Link wouldn't get a game in their side.",
 			"A newcomer who wouldn't get a game is the reason given (%s)" % str(v.get("reason", "")))
 	# A rebuilder keeps its young cornerstone.
-	var prospect := _with(base[2], {"id": "t_prospect", "overall": 66, "potential": 90, "age": 20.0})
+	var prospect := _with(base[2], {"id": "t_prospect", "overall": 69, "potential": 90, "age": 20.0})
 	var club_kid: Array = base.duplicate()
 	club_kid.append(prospect)
 	var reb := {"phase": "rebuilding", "name": "Collingwood", "names": {"t_prospect": "Kid Prospect"}}
@@ -3614,7 +3636,10 @@ func _test_trade_reasons() -> void:
 	ours.sort_custom(func(a, b): return int(Ovr.of(a)) < int(Ovr.of(b)))
 	var counters := 0
 	var counter_ok := true
-	for k in [4, 6, 8, 10, 12, 14]:
+	# On the 2026 scale our weakest against their best is mostly "wouldn't get a
+	# game", which has no counter; the pairs further down are close enough to be
+	# refused on value, and those are countered.
+	for k in range(4, mini(mini(ours.size(), col.size()), 26), 2):
 		var r := GameState.evaluate_trade("COL", [str(ours[k]["id"])], [str(col[k]["id"])])
 		if bool(r["ok"]) or not r.has("in"):
 			continue

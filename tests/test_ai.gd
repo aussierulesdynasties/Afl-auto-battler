@@ -77,7 +77,7 @@ func _test_league_draft_balance() -> void:
 					rucks += 1
 					# Good for the seasons ahead: a 35-year-old is a one-year
 					# asset (League Draft horizons, director 2026-10-07).
-					if int(Ovr.of(p)) >= 65 and float(p.get("age", 30)) < 33.0:
+					if int(Ovr.of(p)) >= Draft.RUCK_FIRST_CHOICE and float(p.get("age", 30)) < 33.0:
 						good += 1
 			if rucks < 2 or rucks > 3:
 				two_rucks = false

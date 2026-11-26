@@ -516,7 +516,7 @@ func _test_event_decisions() -> void:
 	_check(early >= ask + 1 and float(early) >= float(ask) * 1.12,
 			"Extending early costs materially more than today's price (%d v %d)" % [early, ask])
 	_check(ClubLife.extension_wanted(star, {}), "A star out of contract asks to extend")
-	var good: Dictionary = star.duplicate()
+	var good: Dictionary = star.duplicate(true)   # deep: OVR is read from his attr dict
 	Ovr.to(good, ClubLife.EXTENSION_MIN_OVR - 4)
 	_check(not ClubLife.extension_wanted(good, {}), "A good player below star level waits for the off-season")
 	_check(not ClubLife.extension_wanted(star, {"extension|someone_else": true}),
@@ -534,7 +534,7 @@ func _test_event_decisions() -> void:
 			"Waiting commits nothing and costs a little morale")
 	# Waiting's upside and its risk, sized from the price curve (bible §4).
 	var flat := Ovr.to({"id": "w_flat",  "age": 26.0, "morale": 70}, 84)
-	var up := flat.duplicate()
+	var up := flat.duplicate(true)   # deep: OVR is read from his attr dict
 	Ovr.to(up, 84 + 3)
 	var rise := Contracts.asking_salary(up) - Contracts.asking_salary(flat)
 	var waits := ClubLife.wait_words(flat, 3)

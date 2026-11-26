@@ -28,7 +28,7 @@ func run() -> void:
 	_t("_test_not_cleared_ends_career")
 	_t("_test_rivals_get_it")
 	_t("_test_through_a_round")
-	_t("_test_old_save_loads")
+	_t("_test_old_records_load")
 	_t("_test_no_other_dice_move")
 	_t("_test_line_in_every_path")
 	_t("_test_two_in_a_week")
@@ -365,27 +365,9 @@ func _test_through_a_round() -> void:
 	_check(GameState.last_medical.is_empty(), "Next round starts with no sittings")
 
 
-const OLD_SAVE_FIXTURE := "res://tests/fixtures/career_v1_2026-09-30.save.gz"
-
-
-func _test_old_save_loads() -> void:
-	# A real save from the 2026-09-30 build: no sittings, nobody near the panel.
-	GameState.delete_saved_career()
-	var gz := FileAccess.get_file_as_bytes(OLD_SAVE_FIXTURE)
-	var raw := gz.decompress_dynamic(-1, FileAccess.COMPRESSION_GZIP)
-	var f := FileAccess.open(GameState.save_path, FileAccess.WRITE)
-	f.store_buffer(raw)
-	f.close()
-	GameState.reset()
-	_check(GameState.load_career(), "The older save opens")
-	var most := 0
-	for code in GameState.season.lists:
-		for p in GameState.season.lists[code]:
-			most = maxi(most, GameState.concussions_in_window(p))
-	_check(GameState.last_medical.is_empty() and most == 0 and GameState.my_medical_lines().is_empty(),
-			"It has no sittings and nobody has a counted concussion (most %d)" % most)
-	GameState.advance()
-	_check(GameState.season.round_index == 3, "It keeps playing")
+## Older records inside a current save (a save from before the rating rebuild
+## does not open at all: test_save, _test_old_version_save_refused).
+func _test_old_records_load() -> void:
 	GameState.delete_saved_career()
 	# An injury an older save kept as a bare year has no kind: never a concussion.
 	_career()

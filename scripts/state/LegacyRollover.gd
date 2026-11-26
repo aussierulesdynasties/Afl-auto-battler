@@ -808,7 +808,7 @@ static func _first_ruck(p: Dictionary, list: Array) -> bool:
 		if q == p or str(q.get("id", "")) == str(p.get("id", "")):
 			continue
 		if (str(q.get("role", "")) == "RUCK" or str(q.get("role2", "")) == "RUCK") \
-				and int(q.get("overall", 0)) >= int(p.get("overall", 0)):
+				and Rating.ovr(q, 0) >= Rating.ovr(p, 0):
 			return false
 	return true
 
