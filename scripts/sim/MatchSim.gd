@@ -281,6 +281,12 @@ var _asked := {}             # one-off moment keys already offered
 ## on the bench) or "keep" (the rotations leave him out there).
 var _held := {}
 var _traits := {}            # player id -> Traits.of(), cached
+## Skills.engine by player id, then his line on the day, then skill (_a). It
+## reads only his ratings and his AFL position (his line's when he has none of
+## record), and none of them change during a match; the line is in the key
+## because the same man can come in as a copy picked to another line
+## (Ratings._for_slot). So every result is as it was, only sooner.
+var _engine_cache := {}
 var synergies := [[], []]    # side -> active synergy keys (the starting 18)
 ## Team form (-1..1) from each club's recent results (Season.club_form), set
 ## from Squad.form. It touches two narrow things: composure (a side in form
@@ -1703,12 +1709,16 @@ func _weighted_roles(group: Array, key: String, roles: Dictionary, power := 2.0,
 	if side >= 0:
 		ctx["zone"] = zone
 	var weights := []
+	var use_ball := key == BALL_USE
+	var sized := not sizes.is_empty()
+	var tactics_on := side >= 0
 	for p in group:
-		var rating := _ball_use(p) if key == BALL_USE else _a(p, key)
-		var w: float = float(roles.get(str(p["role"]), 0.0)) * pow(maxf(1.0, rating), power)
-		if not sizes.is_empty() and str(p["role"]) == "FWD":
+		var role := str(p["role"])
+		var rating := _ball_use(p) if use_ball else _a(p, key)
+		var w: float = float(roles.get(role, 0.0)) * pow(maxf(1.0, rating), power)
+		if sized and role == "FWD":
 			w *= float(sizes.get(fwd_size(p), 1.0))
-		if side >= 0:
+		if tactics_on:
 			w *= _tactic_player_mult(side, p, purpose, ctx)
 		weights.append(w)
 	return _pick(group, weights)
@@ -1749,52 +1759,61 @@ func _tactic_player_mult(side: int, p: Dictionary, purpose: String, ctx: Diction
 	if ctx.is_empty():
 		ctx = _pick_ctx(side)
 	var out := 1.0
-	var id := str(p["id"])
-	var slot := str((ctx["focus"] as Dictionary).get(id, ""))
+	var id: String = p["id"]
+	var slot = (ctx["focus"] as Dictionary).get(id)
 	# A call works only while he fills a spot it works from.
-	if slot != "" and not (FOCUS_SLOT_ROLES[slot] as Array).has(str(p["role"])):
-		slot = ""
-	var focused := slot != ""
+	var focused := false
+	if slot != null and slot != "":
+		focused = (FOCUS_SLOT_ROLES[slot] as Array).has(str(p["role"]))
 	# "transition" is a carry in the middle of the ground (pick_carrier).
-	var carrying := purpose == "carrier" or purpose == "transition"
-	# The wings run the ball through the middle and are not at the stoppage.
-	if purpose == "transition" and Roles.on_wing(p):
-		out *= Roles.WING_TRANSITION
-	elif purpose == "clearance" and Roles.on_wing(p):
-		out *= Roles.WING_STOPPAGE
-	# "Play through him" is a job by the slot he fills (focus_role_text).
-	# A midfielder or ruck gets more of the ball in every chain, and is not
-	# made the shooter: his forwards still take the shots. A forward gets
-	# the ball up forward and the shots at goal; a defender has first use
-	# coming out of the back half. A small early boost, then the usage
-	# curve fades him back toward a low-30s disposal game.
+	if purpose == "carrier" or purpose == "transition":
+		# The wings run the ball through the middle and are not at the stoppage.
+		if purpose == "transition" and Roles.on_wing(p):
+			out *= Roles.WING_TRANSITION
+		# "Play through him" is a job by the slot he fills (focus_role_text).
+		# A midfielder or ruck gets more of the ball in every chain, and is not
+		# made the shooter: his forwards still take the shots. A forward gets
+		# the ball up forward and the shots at goal; a defender has first use
+		# coming out of the back half. A small early boost, then the usage
+		# curve fades him back toward a low-30s disposal game.
+		if focused:
+			out *= _focus_mult(str(slot), purpose, str(ctx.get("zone", "")))
+		# Ball magnet (and the wet-weather player in the wet) wins more of the
+		# ball: a bigger share, and the usage curve fades the player that much
+		# later, so the gain survives a big game (bug bash 5: a pick weight alone
+		# was cancelled by the curve).
+		var reach := 1.0
+		if _trait(p, "ball_magnet"):
+			reach *= BALL_MAGNET
+		if weather == "wet" and _trait(p, "wet_weather"):
+			reach *= Traits.WET_BALL
+		out *= reach
+		if id == ctx["their_tag"] and can_be_tagged(p):
+			out *= float(ctx["tag_share"])
+		# Our tagger is playing the man, not the ball.
+		if id == ctx["tagger"]:
+			out *= TAGGER_BALL
+		# Our forward minding their loose defender is up the ground with him.
+		if purpose == "carrier" and id == ctx.get("minder", ""):
+			out *= MINDER_INVOLVE
+		return out * _usage_mult(p, focused, reach)
+	if purpose == "clearance":
+		if Roles.on_wing(p):
+			out *= Roles.WING_STOPPAGE
+		if focused:
+			out *= _focus_mult(str(slot), purpose, str(ctx.get("zone", "")))
+		if _trait(p, "bull"):
+			out *= BULL_CLEARANCE
+		return out
 	if focused:
-		out *= _focus_mult(slot, purpose, str(ctx.get("zone", "")))
-	# Ball magnet (and the wet-weather player in the wet) wins more of the
-	# ball: a bigger share, and the usage curve fades the player that much
-	# later, so the gain survives a big game (bug bash 5: a pick weight alone
-	# was cancelled by the curve).
-	var reach := 1.0
-	if carrying and _trait(p, "ball_magnet"):
-		reach *= BALL_MAGNET
-	if carrying and weather == "wet" and _trait(p, "wet_weather"):
-		reach *= Traits.WET_BALL
-	out *= reach
-	if purpose == "clearance" and _trait(p, "bull"):
-		out *= BULL_CLEARANCE
+		out *= _focus_mult(str(slot), purpose, str(ctx.get("zone", "")))
 	# A Crumber lives at the feet of the pack: he is there when it spills.
 	if purpose == "crumb" and _trait(p, "crumber"):
 		out *= CRUMBER_AT_FEET
-	if id == str(ctx["their_tag"]) and can_be_tagged(p) and (carrying or purpose == "shooter" or purpose == "crumb"):
+	if (purpose == "shooter" or purpose == "crumb") and id == ctx["their_tag"] and can_be_tagged(p):
 		out *= float(ctx["tag_share"])
-	# Our tagger is playing the man, not the ball.
-	if carrying and id == str(ctx["tagger"]):
-		out *= TAGGER_BALL
-	# Our forward minding their loose defender is up the ground with him.
-	if id == str(ctx.get("minder", "")) and purpose in ["shooter", "aerial_target", "crumb", "carrier"]:
+	if (purpose == "shooter" or purpose == "aerial_target" or purpose == "crumb") and id == ctx.get("minder", ""):
 		out *= MINDER_INVOLVE
-	if carrying:
-		out *= _usage_mult(p, focused, reach)
 	return out
 
 
@@ -2772,9 +2791,10 @@ const TACKLER_MIX := {"pressure": 0.60, "speed": 0.20, "durability": 0.20}
 
 ## His tackler score (TACKLER_MIX).
 func _tackler_score(p: Dictionary) -> float:
+	var f := fit(p)
 	var s := 0.0
 	for k in TACKLER_MIX:
-		s += float(TACKLER_MIX[k]) * _a(p, k)
+		s += float(TACKLER_MIX[k]) * (_skill(p, k) * f)
 	return s
 
 
@@ -2782,13 +2802,33 @@ func _pick_presser(side: int, zone: int):
 	var w: Dictionary = PRESS_ZONES[zone]
 	var group: Array = (squads[side] as Squad).ground
 	var weights := []
-	var ctx := _pick_ctx(side)
+	# The pick context is still asked once a pick: the spare minder's stand-in is
+	# kept from the first pick that asks for him (_minder_memo).
+	_pick_ctx(side)
 	var pw := _tv("PRESS_PICK_POW", PRESS_PICK_POW)
+	# No tactic moves who tackles: _tactic_player_mult(side, p, "tackler") is 1.0 for
+	# every player (no focus, tag or minder call touches a tackle), so it isn't asked
+	# once a player here (bug bash M-10). test_pressure's pick power check counts it.
 	for p in group:
-		weights.append(float(w.get(str(p["role"]), 0.0))
-				* pow(maxf(1.0, _tackler_score(p)), pw)
-				* _tactic_player_mult(side, p, "tackler", ctx))
+		weights.append(float(w.get(str(p["role"]), 0.0)) * _tackle_weight(p, pw))
 	return _pick(group, weights)
+
+
+## pow(his tackler score, pw), kept by player with what it was worked out from: his
+## fit, his line on the day (which skills it reads) and the power. A pick a chain
+## asks it of every man on the ground, and those change only between chains.
+var _tackle_kept := {}
+
+
+func _tackle_weight(p: Dictionary, pw: float) -> float:
+	var f := fit(p)
+	var role = p.get("role")
+	var kept = _tackle_kept.get(p["id"])
+	if kept != null and kept[0] == f and kept[1] == role and kept[2] == pw:
+		return kept[3]
+	var v := pow(maxf(1.0, _tackler_score(p)), pw)
+	_tackle_kept[p["id"]] = [f, role, pw, v]
+	return v
 
 
 ## Who contests a long kick in general play, by where it lands, from the
@@ -5721,9 +5761,31 @@ func _trait(p: Dictionary, key: String) -> bool:
 	return known.has(key)
 
 
-## A player's attribute as he is playing right now.
+## A player's attribute as he is playing right now. Skills.engine is kept
+## the first time a match asks (_engine_cache): it is most of the engine's time.
 func _a(p: Dictionary, key: String) -> float:
-	return Skills.engine(p, key) * fit(p)
+	return _skill(p, key) * fit(p)
+
+
+## His attribute before his legs on the day (fit): Skills.engine, kept the first
+## time a match asks. A pick that reads several of his ratings multiplies each by
+## one fit(p), the same number _a would ask for every time (bug bash M-10).
+func _skill(p: Dictionary, key: String) -> float:
+	var id: String = p["id"]
+	var mine = _engine_cache.get(id)
+	if mine == null:
+		mine = {}
+		_engine_cache[id] = mine
+	var role = p.get("role")
+	var row = mine.get(role)
+	if row == null:
+		row = {}
+		mine[role] = row
+	var v = row.get(key)
+	if v == null:
+		v = Skills.engine(p, key)
+		row[key] = v
+	return v
 
 
 ## The back zone's role weights for a pick on ball use among `group`: each
@@ -5764,7 +5826,8 @@ func _rebound_exit(side: int, carrier, from_atk: float, to_atk: float, how: Stri
 ## His use of the ball as he is playing right now: the kick-in taker's and
 ## the back-zone carrier's rating (BALL_USE).
 func _ball_use(p: Dictionary) -> float:
-	return BALL_USE_CARRY * _a(p, "carry") + BALL_USE_DISPOSAL * _a(p, "kicking")
+	var f := fit(p)
+	return BALL_USE_CARRY * (_skill(p, "carry") * f) + BALL_USE_DISPOSAL * (_skill(p, "kicking") * f)
 
 
 ## Mean fit of the on-ground midfielders and rucks: who wins the stoppages.
