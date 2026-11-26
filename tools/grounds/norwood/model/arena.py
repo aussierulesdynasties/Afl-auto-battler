@@ -237,8 +237,10 @@ RINGS_B = {}
 
 def towers():
     """Four light towers (NW, NE, SE, SW): white tapered poles, a lattice head of lamps tilted to the field
-    (photos 19, AFLW 01, 24). Bases on the top-down mosaic (the poles' feet beside the shadows)."""
-    H = 38.0
+    (photos 19, AFLW 01, 24). Bases on the top-down mosaic (the poles' feet beside the shadows). The 2022 towers
+    are 34 m tall with 48 VALO luminaires a pole (Hughes PR, 16 Dec 2022): the head's top is at 34 m, four rows of
+    twelve lamps."""
+    H = 31.75   # the head's centre: its top (H + hh cos 30) is 34 m
     for name, (x, y) in {"nw": (-57.0, 54.5), "ne": (54.0, 59.3), "se": (58.5, -56.0), "sw": (-47.0, -64.5)}.items():
         part = P + "_tower_" + name
         cyl(part, (x, y), 0.0, 0.6, 0.75, 0.75, "concrete", n=16, cap="concrete")
@@ -249,20 +251,20 @@ def towers():
         tilt = math.radians(30)
         up = np.append(-to, 0) * math.sin(tilt) + V(0, 0, 1) * math.cos(tilt)
         fw = np.cross(np.append(side, 0), up)
-        hw, hh = 3.2, 2.0
+        hw, hh = 4.0, 2.6
         # the frame: a rectangle of square steel, three rows of eight lamps (box housings, glass faces)
         corners = [c - np.append(side, 0) * hw - up * hh, c + np.append(side, 0) * hw - up * hh,
                    c + np.append(side, 0) * hw + up * hh, c - np.append(side, 0) * hw + up * hh]
         for k in range(4):
             box3(part, corners[k], corners[(k + 1) % 4], 0.14, 0.14, "paint_white")
-        for k in range(1, 3):
-            a = corners[0] + (corners[3] - corners[0]) * k / 3
-            b = corners[1] + (corners[2] - corners[1]) * k / 3
+        for k in range(1, 4):
+            a = corners[0] + (corners[3] - corners[0]) * k / 4
+            b = corners[1] + (corners[2] - corners[1]) * k / 4
             box3(part, a, b, 0.1, 0.1, "paint_white")
         box3(part, (x, y, H - 1.6), c - up * hh * 0.2, 0.4, 0.4, "paint_white")
-        for row in range(3):
-            for col in range(8):
-                p = c + np.append(side, 0) * (-hw + 0.4 + col * (2 * hw - 0.8) / 7) + up * (-hh + 0.65 + row * (2 * hh - 1.3) / 2)
+        for row in range(4):
+            for col in range(12):
+                p = c + np.append(side, 0) * (-hw + 0.4 + col * (2 * hw - 0.8) / 11) + up * (-hh + 0.65 + row * (2 * hh - 1.3) / 3)
                 # a lamp: a 0.55 x 0.45 box 0.3 deep, its face toward the field
                 for s0, s1, mat in ((0.0, 0.3, "lamp_body"),):
                     pass
