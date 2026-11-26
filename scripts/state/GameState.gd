@@ -7911,7 +7911,6 @@ func _after_round(results: Array) -> void:
 	OwnProspect.check(self)
 	_draft_class_news()
 	_board_after_round(results)
-	_card_promises_after_round(results)
 	_rival_morale_after_round(results)
 	_opinion_after_round(results)
 	_familiarity_after_round(results)
@@ -9009,7 +9008,6 @@ func open_offseason(keep_staff := false) -> void:
 			if project_job(p) != "":
 				_finish_project(p, str(code) == my_club)
 	_dev_promises_lapse()
-	Promises.card_season_end(self)
 	Promises.season_end(self)
 	offseason_year = season_year
 	# Every deal from here is for next season, so the cap is next season's
@@ -15048,17 +15046,6 @@ func _board_after_round(results: Array) -> void:
 	# Who you dropped, for the coach's Authority (Promises.after_match).
 	Promises.after_match(self, played, _round_unavailable)
 	_after_match_talks(played, int(res.get("round", season.round_index)))
-
-
-## The promises your cards made (Promises.card_made): each one its test can
-## settle after this round, kept or broken (Card Pass 1, 2026-11-26).
-func _card_promises_after_round(results: Array) -> void:
-	var res := _my_result(results)
-	var won: Variant = null
-	if not res.is_empty():
-		var side := 0 if str(res["home"]) == my_club else 1
-		won = int(res["score"][side]) > int(res["score"][1 - side])
-	Promises.check_open(self, won)
 
 
 ## What each club's coach did this round, as his players take it (Opinion.gd,

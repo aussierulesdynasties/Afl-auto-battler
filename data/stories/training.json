@@ -181,17 +181,13 @@
 		"id": "training_match_sim_heated",
 		"category": "training",
 		"subject": {
-			"kind": "player",
-			"where": {
-				"fit": true
-			},
-			"pick": "random"
+			"kind": "club"
 		},
 		"title": [
-			"{name} and {player_b} got into it at match sim"
+			"Match sim got heated"
 		],
 		"text": [
-			"The two of them had to be pulled apart. The assistants reckon it's the edge you've been after."
+			"Two of the boys had to be pulled apart at match sim. The assistants reckon it's the edge you've been after."
 		],
 		"choices": [
 			{
@@ -208,14 +204,9 @@
 						"strand": "standards",
 						"d": -1,
 						"why": "A fight at match sim was left alone"
-					},
-					{
-						"op": "bond",
-						"kind": "rival",
-						"s": 1
 					}
 				],
-				"result": "It stays on the track. {first} and {first_b} won't be swapping numbers."
+				"result": "It stays on the track."
 			},
 			{
 				"key": "pull",
@@ -235,14 +226,7 @@
 				],
 				"result": "You pull the group up. The standard is set."
 			}
-		],
-		"actor_b": {
-			"role": "teammate",
-			"where": {
-				"fit": true
-			},
-			"pick": "random"
-		}
+		]
 	},
 	{
 		"id": "training_seniors_day_off",

@@ -91,9 +91,6 @@ func run() -> void:
 	_t("_test_club_variants")
 	_t("_test_engine_field_checks")
 	_t("_test_scar_cards")
-	_t("_test_card_promises")
-	_t("_test_card_bonds_and_temperament")
-	_t("_test_card_pass_one_deck")
 	var finals_cards = load("res://tests/test_finals_cards.gd").new()
 	finals_cards.run(self)
 	var preseason_cards = load("res://tests/test_preseason_cards.gd").new()
@@ -246,12 +243,12 @@ const GAIN_WORDS := {
 	"fresh": "legs", "promise_win": "Win and", "extend_early": "signs on", "captaincy_swap": "takes the armband",
 	"rush_back": "cleared to play", "role_trial": "plays as a", "rest": "can't get hurt", "culture": "(Standards|Togetherness|Ambition) up [0-9]+%",
 	"running": "more weeks? of running", "drill": "on the game plan", "open_price": "early premium", "new_club_keep": "stays for",
-	"no_promise": "No promise to keep", "bond": "become (close mates|mentor|allies)", "bond_seed": "new close mates",
+	"no_promise": "No promise to keep",
 }
 const COST_WORDS := {
 	"morale": "(?i)morale", "board": "(?i)board confidence", "trust": "opinion of you (down (about )?[0-9]+|falls [0-9]+|slips a little)",
 	"rest": "misses", "heavy_legs": "Heavy legs", "sore": "chance he is injured", "expects_game": "expects a game",
-	"start_backing": "expects to be picked", "back_kid": "is promised the next", "promise": "is promised a (senior|new|future)", "rival": "become rivals", "promise_win": "Lose or draw and", "extend_early": "Locked in", "captaincy_swap": "mid-season",
+	"start_backing": "expects to be picked", "back_kid": "is promised", "promise_win": "Lose or draw and", "extend_early": "Locked in", "captaincy_swap": "mid-season",
 	"rush_back": "hurt again", "slow_start": "slowly", "loss_sting": "also falls", "role_trial": "away from his usual spot", "on_record": "on the record",
 	"culture": "(Standards|Togetherness|Ambition) down [0-9]+%", "running": "less running", "forgo_xp": "Slower growth",
 	"new_club_keep": "against our cap", "new_club_go": "when this season ends", "dev_promise": "expects his next three games",
@@ -310,31 +307,6 @@ func _stakes_in(effects: Array) -> Array:
 			for k in [op, "morale", "trust", "role_trial"]:
 				if not costs.has(k):
 					costs.append(k)
-			continue
-		# A card's promise (Promises.card_made): a player's names what breaking it costs
-		# his trust; a board promise names the board both ways.
-		if op == "promise":
-			if str(e.get("kind", "")) in Promises.PLAYER_KINDS:
-				for k in ["promise", "trust"]:
-					if not costs.has(k):
-						costs.append(k)
-			else:
-				if not gains.has("board"):
-					gains.append("board")
-				if not costs.has("board"):
-					costs.append("board")
-			continue
-		# A tie between two players: a rivalry is a cost, any other tie a gain.
-		if op == "bond":
-			if str(e.get("kind", "mate")) == "rival":
-				if not costs.has("rival"):
-					costs.append("rival")
-			elif not gains.has("bond"):
-				gains.append("bond")
-			continue
-		if op == "bond_seed":
-			if not gains.has(op):
-				gains.append(op)
 			continue
 		if op == "loss_sting":
 			costs.append_array([op, "morale"])
@@ -407,10 +379,6 @@ func _test_choice_stakes_are_stated() -> void:
 			choices += 1
 			var effects: Array = o["effects"]
 			var lines := StoryEngine.stakes_lines(effects, card["facts"])
-			# A card whose second player nobody on this list fits is never dealt; built
-			# here anyway, its tie with him reaches nobody and says nothing.
-			if str(card["facts"].get("b_id", "")) == "":
-				effects = effects.filter(func(e): return not (str(e.get("op", "")) == "bond" and str(e.get("with", "b")) == "b"))
 			var want := _stakes_in(effects)
 			if not (want[0] as Array).is_empty() or not (want[1] as Array).is_empty():
 				mechanical += 1
@@ -604,7 +572,7 @@ func _test_topical_card_comes_first() -> void:
 	_check(StoryEngine.pick_week(real, c2, story).size() == 1, "The real card is dealt on a losing run")
 	c2["week"] = 6
 	_check(StoryEngine.pick_week(real, c2, story).is_empty(), "...and waits out its cooldown, not every week of the run")
-	for id in ["media_radio_spray", "board_wants_answers"]:
+	for id in ["media_radio_spray", "leadership_players_meeting", "board_wants_answers"]:
 		_check(bool(StoryDeck.by_id(StoryDeck.all(), id).get("topical", false)), "%s is the week's card when its run is on" % id)
 
 
@@ -662,10 +630,11 @@ func _test_bug_bash_4_story() -> void:
 	bye["club"] = {"opp": "Carlton", "has_opp": true}
 	_check(not StoryEngine.eligible_subject(barb, bye, StoryEngine.new_state(), 9, RandomNumberGenerator.new()).is_empty(),
 			"...and is dealt in a week with an opponent")
-	# Card Pass 1 retired the pre-season copy of the match sim card: one is left.
-	_check(StoryDeck.by_id(StoryDeck.all(), "pre_sim_heated").is_empty()
-			and not StoryDeck.by_id(StoryDeck.all(), "training_match_sim_heated").is_empty(),
-			"One match sim card is left, the in-season one")
+	# The pre-season match sim card reads differently from the in-season one.
+	var pre := StoryDeck.by_id(StoryDeck.all(), "pre_sim_heated")
+	var mid := StoryDeck.by_id(StoryDeck.all(), "training_match_sim_heated")
+	_check(str(pre["title"][0]) != str(mid["title"][0]) and str(pre["text"][0]) != str(mid["text"][0]),
+			"The pre-season and in-season match sim cards are not word for word the same")
 	_check(not str(StoryDeck.by_id(StoryDeck.all(), "finals_in")["text"][0]).contains("the ten"),
 			"'We're in' does not name a final ten in an era with a final eight")
 	var trial_title := str(StoryDeck.by_id(StoryDeck.all(), "media_trial_worked")["title"][0])
@@ -3874,154 +3843,3 @@ func _test_scar_cards() -> void:
 					for e in c["effects"]:
 						dropped = dropped or bool(e.get("scar", false))
 	_check(dropped, "Dropping a legend in his last season leaves a permanent mark")
-
-
-## Card Pass 1: a promise a card says out loud goes on the coach's record and
-## is settled by its own test, kept or broken, with what each costs.
-func _test_card_promises() -> void:
-	GameState.reset()
-	GameState.start_season("GEE", GameDB.club_list("GEE"))
-	var gs = GameState
-	var p: Dictionary = gs.my_list[30]
-	var pid := str(p["id"])
-	gs.season_tally.erase(pid)
-	var o := Promises.card_made(gs, p, {"op": "promise", "kind": "senior_game", "weeks": 3})
-	_check(not o.is_empty() and Promises.of(gs, pid).any(func(x): return str(x["kind"]) == "senior_game"),
-			"A card's promise of a game is on the record, and on what he is owed")
-	_check(Promises.card_made(gs, p, {"op": "promise", "kind": "senior_game", "weeks": 3}).is_empty(),
-			"...once: the same promise is not made twice")
-	_check(Promises.preview_drop(gs, pid)["broken"].is_empty(), "One week left out breaks no promise with weeks to run")
-	gs.season_tally[pid] = {"games": 1}
-	var kept0 := int(Promises.word(gs)["kept"])
-	Promises.check_open(gs, null)
-	_check(Promises.open(gs).is_empty() and int(Promises.word(gs)["kept"]) == kept0 + 1, "He plays: the promise is kept")
-	var q: Dictionary = gs.my_list[31]
-	var qid := str(q["id"])
-	gs.season_tally.erase(qid)
-	var o2 := Promises.card_made(gs, q, {"op": "promise", "kind": "senior_game", "weeks": 2})
-	o2["by"] = gs.story_week()
-	var t0 := Trust.value(gs.relations, Trust.player_key(qid))
-	var broken0 := int(Promises.word(gs)["broken"])
-	Promises.check_open(gs, null)
-	_check(int(Promises.word(gs)["broken"]) == broken0 + 1 and Trust.value(gs.relations, Trust.player_key(qid)) < t0,
-			"The weeks run out with no game: broken, and his trust falls")
-	var r: Dictionary = gs.my_list[32]
-	r["contract_years"] = 1
-	Promises.card_made(gs, r, {"op": "promise", "kind": "deal", "weeks": 8})
-	Promises.check_open(gs, null)
-	_check(Promises.open(gs).size() == 1, "A deal promised is open until he signs")
-	r["contract_years"] = 3
-	Promises.check_open(gs, null)
-	_check(Promises.open(gs).is_empty(), "He signs on: kept")
-	gs.board["confidence"] = 50
-	Promises.card_made(gs, {}, {"op": "promise", "kind": "wins", "weeks": 3, "need": 2})
-	Promises.check_open(gs, true)
-	_check(Promises.open(gs).size() == 1, "One win of the two promised: still open")
-	Promises.check_open(gs, true)
-	_check(Promises.open(gs).is_empty() and gs.board_confidence() == 50 + int(Promises.CARD_BOARD["wins"]),
-			"Two wins: kept, and the board says so (%d)" % gs.board_confidence())
-	Promises.card_made(gs, {}, {"op": "promise", "kind": "wins", "weeks": 2, "need": 2})
-	Promises.check_open(gs, false)
-	_check(Promises.open(gs).is_empty() and gs.board_confidence() == 50 + int(Promises.CARD_BOARD["wins"]) - int(Promises.CARD_BOARD["wins"]),
-			"A loss when every game was needed: broken at once")
-	var top: Variant = gs.season.finals.get("top", [])
-	gs.season.finals["top"] = [gs.my_club]
-	Promises.card_made(gs, {}, {"op": "promise", "kind": "finals"})
-	Promises.card_made(gs, {}, {"op": "promise", "kind": "finals", "season": "next"})
-	var kept1 := int(Promises.word(gs)["kept"])
-	Promises.card_season_end(gs)
-	_check(int(Promises.word(gs)["kept"]) == kept1 + 1 and Promises.open(gs).size() == 1,
-			"Finals this season are judged at its end; next season's promise waits")
-	gs.season.finals["top"] = top
-	var lines := StoryEngine.stakes_lines([{"op": "promise", "kind": "finals", "season": "next"}], {})
-	_check(" ".join(lines).contains("Make finals next season"), "The gate says what the promise is and what it costs (%s)" % " ".join(lines))
-	var bad := StoryDeck.validate([_pl_card("pr", {"choices": [{"key": "a", "label": "A", "effects": [{"op": "promise", "kind": "moon"}]},
-			{"key": "b", "label": "B", "effects": []}]})])
-	_check(not bad.is_empty(), "An unknown promise is refused")
-
-
-## Card Pass 1: a card can pick its second player itself, tie the two, read
-## his temperament, and size his own mood by it.
-func _test_card_bonds_and_temperament() -> void:
-	var card := _pl_card("mentor", {"subject": {"kind": "player", "where": {"age_max": 21}},
-			"actor_b": {"role": "teammate", "where": {"age_min": 26}, "pick": "highest:leadership"},
-			"title": ["{first} and {first_b}"],
-			"choices": [{"key": "a", "label": "A", "effects": [{"op": "bond", "kind": "mentor", "s": 1}]},
-				{"key": "b", "label": "B", "effects": []}]})
-	_check(StoryDeck.validate([card]).is_empty(), "The teammate card is valid (%s)" % str(StoryDeck.validate([card])))
-	var a := {"id": "a", "name": "Al Kid", "first": "Al", "age": 19, "fit": true}
-	var b := {"id": "b", "name": "Bo Vet", "first": "Bo", "age": 30, "leadership": 80, "fit": true}
-	var c := {"id": "c", "name": "Cy Old", "first": "Cy", "age": 29, "leadership": 40, "fit": true}
-	var got := []
-	for wk in range(4, 14):
-		got = StoryEngine.pick_week([card], _ctx(wk, [a, b, c]), StoryEngine.new_state())
-		if not got.is_empty():
-			break
-	_check(not got.is_empty() and str(got[0]["title"]) == "Al and Bo" and str(got[0]["options"][0]["detail"]).contains("Al and Bo become mentor and protege"),
-			"The card picks the senior man with the most leadership, and says what the choice makes (%s)" % (str(got[0]["options"][0]["detail"]) if not got.is_empty() else "none"))
-	var none := card.duplicate(true)
-	none["actor_b"]["where"] = {"age_min": 40}
-	var none_got := []
-	for wk in range(4, 14):
-		none_got.append_array(StoryEngine.pick_week([none], _ctx(wk, [a, b, c]), StoryEngine.new_state()))
-	_check(none_got.is_empty(), "Nobody fits a second player the card needs: no card")
-	var soft := none.duplicate(true)
-	soft["actor_b"]["required"] = false
-	soft["actor_b"]["fallback"] = "a senior player"
-	var soft_got := []
-	for wk in range(4, 14):
-		soft_got = StoryEngine.pick_week([soft], _ctx(wk, [a, b, c]), StoryEngine.new_state())
-		if not soft_got.is_empty():
-			break
-	_check(not soft_got.is_empty() and str(soft_got[0]["title"]) == "Al and a senior player", "...unless it can do without him, in plain words")
-	GameState.reset()
-	GameState.start_season("GEE", GameDB.club_list("GEE"))
-	var p: Dictionary = GameState.my_list[3]
-	var m: Dictionary = GameState.my_list[4]
-	ClubStories._apply(GameState, {"op": "bond", "kind": "mate", "s": 1}, p, {"b_id": str(m["id"])}, {})
-	_check(Bonds.kind(Bonds.ensure(GameState.bonds), str(p["id"]), str(m["id"])) == "mate", "The bond is made, both ways")
-	var made := ClubStories.bond_seed(Bonds.ensure(GameState.bonds), GameState.my_list, 2, 2027, 11)
-	_check(made.size() == 2, "The camp makes two new mateships (%s)" % str(made))
-	_check(StoryEngine.meets({"temperament": ["leader"]}, {"temperament_any": ["leader", "fiery"]}, {})
-			and not StoryEngine.meets({"temperament": ["clubman"]}, {"temperament_any": ["leader", "fiery"]}, {})
-			and StoryEngine.meets({"temperament": ["clubman"]}, {"temperament_none": ["mercenary"]}, {}),
-			"A card can ask for a temperament, or rule one out")
-	_check(StoryEngine.effect_d({"op": "morale", "d": -5, "temper": "dropped"}, {"temper": {"dropped": 1.35}}) == -7
-			and StoryEngine.effect_d({"op": "morale", "d": -5, "temper": "dropped"}, {}) == -5,
-			"His own mood is sized by how he takes it")
-	var bad := StoryDeck.validate([_pl_card("t", {"choices": [{"key": "a", "label": "A", "effects": [{"op": "trust", "d": 2, "why": "x", "temper": "dropped"}]},
-			{"key": "b", "label": "B", "effects": [{"op": "bond", "kind": "mate"}]}]})])
-	_check(bad.size() >= 2, "Temperament sizes morale only, and a bond needs a second player (%s)" % str(bad))
-
-
-## Card Pass 1's deck: the retired cards are gone, the 14 homesick cards are
-## one shared card in each club's words, and the untracked promises are tracked.
-func _test_card_pass_one_deck() -> void:
-	var all := StoryDeck.all()
-	for id in ["family_partner_graduation", "family_house_settlement", "leadership_players_meeting",
-			"community_school_visit", "pre_sim_heated", "brb_homesick", "wce_homesick_kid", "gcs_go_home"]:
-		_check(StoryDeck.by_id(all, id).is_empty(), "%s is retired" % id)
-	var home := StoryDeck.by_id(all, "family_homesick")
-	_check(not home.is_empty() and (home.get("club_variants", {}) as Dictionary).size() == 13 and bool(home.get("private", false)),
-			"One homesick card, in thirteen clubs' words")
-	var kid := {"id": "k", "name": "Kai Young", "first": "Kai", "age": 19, "games": 4, "fit": true, "temperament": ["clubman"]}
-	var vet := {"id": "v", "name": "Vic Old", "first": "Vic", "age": 30, "games": 200, "leadership": 70, "fit": true}
-	var ctx := _ctx(6, [kid, vet])
-	ctx["club"]["club_deck"] = "WCE"
-	var got := []
-	for wk in range(6, 30):
-		ctx["week"] = wk
-		got = StoryEngine.pick_week([home], ctx, StoryEngine.new_state())
-		if not got.is_empty():
-			break
-	_check(not got.is_empty() and str(got[0]["title"]) == "Homesick in Perth"
-			and (got[0]["options"] as Array).any(func(o): return str(o["label"]) == "Move him in with Vic Old"),
-			"West Coast's words, and the senior housemate named (%s)" % (str(got[0]["title"]) if not got.is_empty() else "none"))
-	var tracked := 0
-	for t in all:
-		for ch in t.get("choices", []):
-			for e in ch.get("effects", []):
-				if str(e.get("op", "")) == "promise":
-					tracked += 1
-	_check(tracked == 11, "Eleven promises the cards used to leave untracked are on the record (%d)" % tracked)
-

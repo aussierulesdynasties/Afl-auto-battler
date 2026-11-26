@@ -4,7 +4,7 @@
 	 "text": ["We're taking the group away for three days. Where do we go?"],
 	 "choices": [
 		{"key": "bush", "label": "Bush camp",
-		 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "Three days in swags around a campfire"}, {"op": "bond_seed", "n": 2}],
+		 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "Three days in swags around a campfire"}],
 		 "result": "Swags, a campfire and no phones. The group came home closer."},
 		{"key": "navy", "label": "Navy camp",
 		 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "The group got through a navy camp together"},
@@ -103,5 +103,17 @@
 		{"key": "overrule", "label": "Overrule them",
 		 "effects": [{"op": "morale", "d": 2, "who": "all"}],
 		 "result": "The vote doesn't stand. The players keep their mornings."}
+	 ]},
+	{"id": "pre_sim_heated", "subject": {"kind": "club"}, "category": "bonding", "phase": ["bonding"], "cooldown": 0, "per_season": 1,
+	 "title": ["The match sim got heated"],
+	 "text": ["Two of the boys squared up at match sim and had to be separated."],
+	 "choices": [
+		{"key": "pull", "label": "Pull the group up",
+		 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "You pulled the group up after a fight at match sim"},
+				{"op": "morale", "d": -3, "who": "all"}],
+		 "result": "We pulled the group up. The standard is set."},
+		{"key": "leave", "label": "Let it go",
+		 "effects": [{"op": "morale", "d": 2, "who": "all"}],
+		 "result": "It stays on the track."}
 	 ]}
 ]

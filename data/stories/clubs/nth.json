@@ -340,7 +340,7 @@
 		"text": ["The members' forum turned ugly this week: years of high picks and still no finals. The board wants to hear a timeline."],
 		"choices": [
 			{"key": "promise", "label": "Promise finals next year",
-			 "effects": [{"op": "board", "d": 5}, {"op": "loss_sting", "chance": 25, "d": -5, "who": "side"}, {"op": "promise", "kind": "finals", "season": "next"}],
+			 "effects": [{"op": "board", "d": 5}, {"op": "loss_sting", "chance": 25, "d": -5, "who": "side"}],
 			 "result": "The room calms down. Every loss next year will be held up against the promise."},
 			{"key": "defend", "label": "Defend the rebuild",
 			 "effects": [{"op": "culture", "strand": "ambition", "d": 1, "why": "The coach backed the young list in public"}, {"op": "morale", "d": 3, "who": "all"}, {"op": "board", "d": -4}],

@@ -437,7 +437,7 @@
 			 "effects": [{"op": "board", "d": 4}, {"op": "xp", "d": 5, "who": "all"}, {"op": "slow_start", "chance": 30, "who": "side", "on": "week"}],
 			 "result": "The board gives the coach time. The young ones get games, and the results may get worse first."},
 			{"key": "now", "label": "Promise to win now with the experienced players",
-			 "effects": [{"op": "morale", "d": 3, "who": "side"}, {"op": "promise", "kind": "wins", "weeks": 3, "need": 2}],
+			 "effects": [{"op": "morale", "d": 3, "who": "side"}, {"op": "odds", "chance": 40, "hit": [{"op": "board", "d": -4}], "hit_result": "The next fortnight goes badly, and the board remembers the promise."}],
 			 "result": "The senior players feel backed. The board will judge the coach on results."}
 		]
 	},

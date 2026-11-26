@@ -82,7 +82,7 @@
 		"text": ["{name} played league for his school, and the city's league club has offered him a development deal for next season. His family wants to know where he fits."],
 		"choices": [
 			{"key": "promise", "label": "Promise him senior games",
-			 "effects": [{"op": "morale", "d": 10, "who": "subject"}, {"op": "culture", "strand": "standards", "d": -1, "why": "A senior game was promised before it was earned"}, {"op": "promise", "kind": "senior_game", "weeks": 0}],
+			 "effects": [{"op": "morale", "d": 10, "who": "subject"}, {"op": "culture", "strand": "standards", "d": -1, "why": "A senior game was promised before it was earned"}],
 			 "result": "{first} commits to the club. Now the promise has to be kept."},
 			{"key": "truth", "label": "Tell him the truth: he's a project",
 			 "effects": [{"op": "trust", "d": 2, "why": "You told him straight"}, {"op": "xp", "d": 8, "who": "subject"}, {"op": "morale", "d": -5, "who": "subject"}],
@@ -335,6 +335,24 @@
 			{"key": "lunch", "label": "A lunch with the members instead",
 			 "effects": [{"op": "board", "d": 4, "was": "members"}, {"op": "morale", "d": -1, "who": "all"}],
 			 "result": "The members have a great day. The players miss the moment."}
+		]
+	},
+	{
+		"id": "canb_homesick",
+		"club": "CANB",
+		"controversy": false,
+		"category": "family",
+		"private": true,
+		"subject": {"kind": "player", "pick": "random", "where": {"age_max": 22, "games_max": 30}},
+		"title": ["A long way from his mates"],
+		"text": ["{name} has gone quiet. Canberra is cold, small and a long way from his mates, and his manager has started saying the words \"go home\"."],
+		"choices": [
+			{"key": "family", "label": "Fly his family up for a week",
+			 "effects": [{"op": "morale", "d": 10, "who": "subject"}, {"op": "board", "d": -2, "was": "funds"}, {"op": "slow_start", "chance": 10, "who": "side"}],
+			 "result": "His family arrives. {first} lights up, and the week is a bit unsettled."},
+			{"key": "host", "label": "Put him with a local family",
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "A club family took in a young player"}, {"op": "morale", "d": 5, "who": "subject"}, {"op": "trust", "d": -2, "why": "You decided for him"}],
+			 "result": "A host family takes him in. He wanted to be heard, not housed."}
 		]
 	},
 	{
