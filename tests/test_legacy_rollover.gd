@@ -30,14 +30,20 @@ func run() -> void:
 	_t("_test_colours_apart")
 	_t("_test_new_club_from_the_save")
 	_t("_test_concessions_by_entry")
-	_t("_test_canon_move", ["ablett_gcs", "rival"])
-	_t("_test_canon_move", ["ablett_gcs", "let_go"])
-	_t("_test_canon_move", ["ablett_gcs", "fight"])
-	_t("_test_canon_move", ["franklin_syd", "rival"])
-	_t("_test_canon_move", ["franklin_syd", "fight"])
-	_t("_test_canon_move", ["merrett_flag", "rival"])
-	_t("_test_canon_move", ["scully_gws", "let_go"])
-	_t("_test_canon_chain")
+	_t("_test_story_none")
+	_t("_test_story_cards")
+	_t("_test_story_no_room")
+	_t("_test_story_trade_go")
+	_t("_test_story_trade_keep", ["kept"])
+	_t("_test_story_trade_keep", ["insist"])
+	_t("_test_story_trade_keep", ["open"])
+	_t("_test_story_trade_rival", ["kept"])
+	_t("_test_story_trade_rival", ["insist"])
+	_t("_test_story_trade_rival", ["open"])
+	_t("_test_story_free_agent", ["go"])
+	_t("_test_story_free_agent", ["rival"])
+	_t("_test_story_new_club")
+	_t("_test_story_old_saves")
 	_t("_test_canon_retire", ["rioli_home", "rival"])
 	_t("_test_canon_retire", ["rioli_home", "let_go"])
 	_t("_test_canon_retire", ["jurrah_home", "fight"])
@@ -742,77 +748,412 @@ func _canon_cards(m: Dictionary) -> Array:
 	return GameState.week_events.filter(func(e): return str(e.get("tid", "")) == LegacyRollover.CANON_TID)
 
 
-## A canon move: "His coach, with odds" (director, 2026-11-13). `how`: "rival"
-## (he is at a rival club: no card, he goes), "let_go" (your card, you let him
-## go) or "fight" (your card, you fight: he stays exactly when the seeded roll
-## is within KEEP_PCT). "just have a story no matter where he is": he starts at
-## Hawthorn, wherever he really was.
-func _test_canon_move(id: String, how: String) -> void:
+## The story moves (director, 2026-11-25): "the event is simply "Dangerfield is
+## requesting a trade to Victoria" and then theres options for us to either try
+## to keep him, or get max value". His man is the best player on `from`'s list
+## (so clubs want him), 26 and out of contract, with you coaching `mine`, in a
+## 1990 career's lists. His real-career dates go, so this career's rules alone
+## decide when he retires. Room under the cap for the keep deal.
+func _story_setup(id: String, from: String, mine: String, seed := 1) -> Dictionary:
+	GameState.replay_seed = SUITE_SEED
+	GameState.reset("1990")
+	GameState.career_seed = seed
+	_start(mine)
 	var m := LegacyRollover.canon(id)
-	var from := "HAW"
-	var seen := {}
-	for seed in range(1, 40):
-		GameState.reset("1990")
+	var list: Array = GameState.league_lists[from]
+	var star: Dictionary = list[0]
+	for p in list:
+		if int(p.get("overall", 0)) > int(star.get("overall", 0)):
+			star = p
+	star["real_name"] = "%s %s" % [str(m["first"]), str(m["last"])]
+	star["dob"] = str(m["dob"])
+	star["age"] = 26.0
+	star["contract_years"] = 1
+	star.erase("retiring")
+	# The year is forced past every 1990 man's real career: without his real
+	# dates, nobody is delisted for a career that ended long before.
+	for c in GameState.league_lists:
+		for q in GameState.league_lists[c]:
+			for k in (q as Dictionary).keys():
+				if str(k).begins_with("real_") and str(k) != "real_name":
+					q.erase(k)
+	GameState.salary_cap = 1000000000
+	return star
+
+
+## The first career seed whose dice give `want`: "kept", "insist" (not kept,
+## he insists on his real club) or "open" (not kept, the clubs bid).
+func _seed_for(id: String, want: String) -> int:
+	var m := LegacyRollover.canon(id)
+	for seed in range(1, 200):
 		GameState.career_seed = seed
-		_start("CAR" if how == "rival" else from)
-		var star := _plant(m, from)
-		var cards := _canon_cards(m)
-		var e: Dictionary = LegacyRollover._canon_st(GameState).get(id, {})
-		var to := str(e.get("to", ""))
-		_check(to != "" and to != from, "%s: he has somewhere to go (%s)" % [id, to])
-		if str(m["to"]) != "":
-			_check(to == str(m["to"]), "%s: to the club he really joined" % id)
-		else:
-			_check(to == str(GameState.season.ladder_sorted()[0]["code"]), "%s: to the ladder's leader" % id)
-		if how == "rival":
-			_check(cards.is_empty(), "%s: no card when he is at a rival club" % id)
-		else:
-			_check(cards.size() == 1, "%s: his coach gets the card (%d)" % [id, cards.size()])
-			if cards.is_empty():
-				return
-			var rule := str(cards[0]["options"][0]["rule"])
-			var who := GameDB.player_display_name(star)
-			_check(("%d%% %s stays" % [LegacyRollover.KEEP_PCT, who]) in rule and ("%d%% %s goes anyway" % [100 - LegacyRollover.KEEP_PCT, who]) in rule,
-					"%s: the gate states the odds (%s)" % [id, rule])
-			LegacyRollover.answered(GameState, cards[0], 0 if how == "fight" else 1)
-			LegacyRollover.week(GameState)
-			_check(GameState.week_events.size() == 1, "%s: the card comes once" % id)
-		LegacyRollover.canon_moves(GameState, int(m["year"]))
-		# A club entering that year takes him onto the list it is building
-		# when it has the expansion package, else onto league_lists (canon_moves).
-		var moved := (GameState.league_lists.get(to, []) as Array).has(star)
-		if GameDB.enter_year(to) == int(m["year"]):
-			moved = moved or ExpansionBuild.list_of(GameState, to).has(star)
-		var at_home := (GameState.league_lists[from] as Array).has(star)
-		_check(moved != at_home, "%s: he is at exactly one club (moved %s, home %s)" % [id, moved, at_home])
-		if how != "fight":
-			_check(moved, "%s (%s): he goes, as he really did" % [id, how])
-			break
-		var kept := int(e.get("roll", 101)) <= LegacyRollover.KEEP_PCT
-		_check(at_home == kept, "%s: fought for, he stays exactly on a roll within %d (roll %d, home %s)" % [
-				id, LegacyRollover.KEEP_PCT, int(e.get("roll", -1)), at_home])
-		if kept:
-			_check(int(star.get("contract_years", 0)) == LegacyRollover.KEEP_YEARS, "%s: kept on %d more seasons" % [id, LegacyRollover.KEEP_YEARS])
-		seen[kept] = true
-		if seen.size() == 2:
-			break
-	if how == "fight":
-		_check(seen.size() == 2, "%s: over the seeds, fighting both keeps and loses him (%s)" % [id, str(seen.keys())])
+		var e := {}
+		LegacyRollover._keep_rolls(GameState, m, e)
+		var got := "kept" if bool(e["kept"]) else ("insist" if bool(e["insist"]) else "open")
+		if got == want:
+			return seed
+	return -1
+
+
+func _key(card: Dictionary, key: String) -> int:
+	var opts: Array = card.get("options", [])
+	for i in opts.size():
+		if str((opts[i] as Dictionary).get("key", "")) == key:
+			return i
+	return -1
+
+
+func _club_of(p: Dictionary) -> String:
+	for c in GameState.season.lists:
+		for q in GameState.season.lists[c]:
+			if str(q["id"]) == str(p["id"]):
+				return str(c)
+	return ""
+
+
+func _story(id: String) -> Dictionary:
+	return LegacyRollover._canon_st(GameState).get(id, {})
+
+
+func _said(text: String) -> bool:
+	return GameState.news.any(func(n): return text in str(n.get("text", "")))
+
+
+## The season is over and the off-season opens to the point the stories play
+## out (GameState.open_offseason calls LegacyRollover.canon_offseason).
+func _story_offseason() -> void:
+	_skip_season()
+	GameState.offseason_year = GameState.season_year
+	LegacyRollover.canon_offseason(GameState)
+
+
+## The trade period opens as open_offseason has it: the year's requests, then
+## the stories' (LegacyRollover.canon_requests). The market is the caller's.
+func _story_requests() -> void:
+	GameState.trade_offers = []
+	GameState.trade_table = []
+	GameState._collect_trade_requests()
+	LegacyRollover.canon_requests(GameState)
+
+
+## The open offers for a story: their indexes in trade_offers.
+func _story_offer_ids(id: String) -> Array:
+	return GameState.open_trade_offers().filter(func(i): return str(GameState.trade_offers[i].get("canon", "")) == id)
+
+
+## "No story": he already has what his story asks for, so nothing happens that
+## season (director, 2026-11-25).
+func _test_story_none() -> void:
+	# Dangerfield asks for a trade to Victoria: at Hawthorn he has it.
+	var star := _story_setup("dangerfield_gee", "HAW", "HAW")
+	var cards := _canon_cards(LegacyRollover.canon("dangerfield_gee"))
+	_check(cards.is_empty() and bool(_story("dangerfield_gee").get("none", false)),
+			"Dangerfield at a Victorian club: no story (%d cards, %s)" % [cards.size(), str(_story("dangerfield_gee"))])
+	_check(int(star["contract_years"]) == 1, "His contract is left alone (%d)" % int(star["contract_years"]))
+	_check(not LegacyRollover.canon_reserved(GameState, star), "With no story, a new club may still approach him")
+	# Franklin tests free agency to go to Sydney: at Sydney there is no story.
+	_story_setup("franklin_syd", "SYD", "HAW")
+	cards = _canon_cards(LegacyRollover.canon("franklin_syd"))
+	_check(cards.is_empty() and bool(_story("franklin_syd").get("none", false)) and not _said("free agency"),
+			"Franklin at Sydney: no story")
+	# Grundy asks to be a club's first ruck: Hawthorn's best ruck already is.
+	star = _story_setup("grundy_mel", "HAW", "HAW")
+	star["role"] = "RUCK"
+	star["overall"] = 99
+	cards = _canon_cards(LegacyRollover.canon("grundy_mel"))
+	_check(cards.is_empty() and bool(_story("grundy_mel").get("none", false)), "Grundy, Hawthorn's first ruck: no story")
+	# First ruck: no other ruckman on the list as good as him.
+	var as_good := {"id": "x1", "role": "MID", "role2": "RUCK", "overall": 99}
+	var below := {"id": "x2", "role": "RUCK", "overall": 98}
+	_check(not LegacyRollover._first_ruck(star, [star, as_good]) and LegacyRollover._first_ruck(star, [star, below]),
+			"A club with a ruckman as good as him would not make him its first ruck")
 	GameDB.reload("1990")
 
 
-## Grundy's two moves, from wherever the sim has him: Melbourne, then Sydney.
-func _test_canon_chain() -> void:
-	GameState.reset("1990")
-	_start("CAR")
-	var star := _plant(LegacyRollover.canon("grundy_mel"), "HAW")
-	for id in ["grundy_mel", "grundy_syd"]:
-		var m := LegacyRollover.canon(id)
-		_canon_cards(m)
-		LegacyRollover.canon_moves(GameState, int(m["year"]))
-		_check((GameState.league_lists[str(m["to"])] as Array).has(star), "%s: Grundy plays for %s" % [id, str(m["to"])])
-	_check(not (GameState.league_lists["HAW"] as Array).has(star) and not (GameState.league_lists["MEL"] as Array).has(star),
-			"Grundy is on one list only")
+## The story breaks in round CANON_ROUND of the season before, as one of three
+## stories ("The real story"), naming the kind of club he asks for ("The kind
+## of club"), with the odds on the card.
+func _test_story_cards() -> void:
+	# A trade story at your club.
+	var m := LegacyRollover.canon("dangerfield_gee")
+	var star := _story_setup("dangerfield_gee", "WCE", "WCE")
+	var who := GameDB.player_display_name(star)
+	var cards := _canon_cards(m)
+	_check(cards.size() == 1, "Dangerfield at our West Coast: his coach gets the card (%d)" % cards.size())
+	if cards.size() == 1:
+		var card: Dictionary = cards[0]
+		_check(str(card["title"]) == "%s requests a trade" % who and ("%s is requesting a trade to Victoria for next season." % who) in str(card["text"]),
+				"The card says what he asks for (%s: %s)" % [card["title"], card["text"]])
+		_check(_key(card, "keep") == 0 and _key(card, "go") == 1, "Try to keep him, or get the most for him")
+		var rule := str(card["options"][0]["rule"])
+		_check(("50%% %s stays, on 4 more seasons at " % who) in rule
+				and "25% he insists on Geelong, and we must take their offer. 25% the Victorian clubs make offers and we pick one." in rule,
+				"The keep option states the odds (%s)" % rule)
+		_check("The Victorian clubs make offers when trades open, and we pick one." == str(card["options"][1]["rule"]),
+				"Getting the most for him: the offers (%s)" % str(card["options"][1]["rule"]))
+	_check(int(star["contract_years"]) >= 2, "Out of contract, his deal runs one more season so he can be traded (%d)" % int(star["contract_years"]))
+	LegacyRollover.week(GameState)
+	_check(GameState.week_events.size() == 1, "The card comes once")
+	# A free agent's story.
+	star = _story_setup("franklin_syd", "HAW", "HAW")
+	who = GameDB.player_display_name(star)
+	cards = _canon_cards(LegacyRollover.canon("franklin_syd"))
+	_check(cards.size() == 1 and str(cards[0]["title"]) == "%s tests free agency" % who and int(star["contract_years"]) == 1,
+			"Franklin tests free agency; his contract ends this season")
+	if cards.size() == 1:
+		_check("signs with the club that offers most" in str(cards[0]["options"][_key(cards[0], "go")]["rule"]),
+				"Let go, he signs with the club that offers most")
+	# A new club's offer.
+	star = _story_setup("ablett_gcs", "HAW", "HAW")
+	cards = _canon_cards(LegacyRollover.canon("ablett_gcs"))
+	_check(cards.size() == 1 and "join a new club next season: Gold Coast, in their first season, 2011." in str(cards[0]["text"])
+			and int(star["contract_years"]) == 1, "Ablett weighs Gold Coast's offer; his contract ends this season")
+	# The other asks, in their words.
+	m = LegacyRollover.canon("merrett_flag")
+	star = _story_setup("merrett_flag", "HAW", "HAW")
+	GameState.season_year = 2025
+	var card := LegacyRollover.canon_card(GameState, m, star, "HAW")
+	var keep_rule := str(card["options"][0]["rule"])
+	_check("is requesting a trade to a side chasing the flag" in str(card["text"])
+			and "50% the sides chasing the flag make offers and we pick one." in keep_rule and not "insists" in keep_rule,
+			"Merrett asks for a side chasing the flag; with no real club, the clubs bid (%s)" % keep_rule)
+	m = LegacyRollover.canon("grundy_mel")
+	GameState.season_year = 2022
+	card = LegacyRollover.canon_card(GameState, m, star, "HAW")
+	_check("a trade to a club that will make him its first ruck" in str(card["text"])
+			and "25% he insists on Melbourne" in str(card["options"][0]["rule"]), "Grundy asks to be a club's first ruck")
+	# At a rival club: no card, the news.
+	star = _story_setup("dangerfield_gee", "WCE", "SYD")
+	cards = _canon_cards(LegacyRollover.canon("dangerfield_gee"))
+	_check(cards.is_empty() and _said("%s (%s) is requesting a trade to Victoria." % [GameDB.player_display_name(star), GameDB.club_name("WCE")]),
+			"At a rival club: no card, and the news says what he asks for")
+	GameDB.reload("1990")
+
+
+## The keep deal needs the room to fill the list ("Hold room"): without it the
+## card offers only the trade.
+func _test_story_no_room() -> void:
+	var star := _story_setup("dangerfield_gee", "WCE", "WCE")
+	GameState.salary_cap = 0
+	var cards := _canon_cards(LegacyRollover.canon("dangerfield_gee"))
+	_check(cards.size() == 1, "The card (%d)" % cards.size())
+	if cards.size() == 1:
+		_check(_key(cards[0], "keep") == -1 and _key(cards[0], "go") == 0
+				and ("We don't have the cap room to keep him on %s a season." % Contracts.money(LegacyRollover.keep_salary(star))) in str(cards[0]["text"]),
+				"No room for the keep deal: only the offers, and the card says why")
+	GameDB.reload("1990")
+
+
+## "Pick from offers": let go, every club that meets his ask makes an offer
+## when trades open. A story's offer can't be turned down, and if we take none
+## by the close of trades, the one worth most to us goes through ("Best offer
+## goes through").
+func _test_story_trade_go() -> void:
+	var id := "dangerfield_gee"
+	var m := LegacyRollover.canon(id)
+	var star := _story_setup(id, "WCE", "WCE")
+	var pid := str(star["id"])
+	var who := GameDB.player_display_name(star)
+	var cards := _canon_cards(m)
+	_check(cards.size() == 1, "The card (%d)" % cards.size())
+	if cards.size() != 1:
+		return
+	LegacyRollover.answered(GameState, cards[0], _key(cards[0], "go"))
+	_check(not bool(_story(id).get("fight", true)), "Let go, the club does not try to keep him")
+	_story_offseason()
+	_check(str(_story(id).get("step", "")) == "request" and _club_of(star) == "WCE", "He waits for the trade period (%s)" % str(_story(id)))
+	_story_requests()
+	var vic := LegacyRollover.canon_clubs(GameState, m, star, "WCE")
+	_check(not vic.is_empty() and vic.all(func(c): return str(GameState._club_states().get(c, "")) == "VIC"),
+			"The clubs he asks for are the Victorian ones (%s)" % str(vic))
+	var ask: Dictionary = GameState.trade_requests.get(pid, {})
+	_check(ask.get("to", []) == vic and str(ask.get("why", "")) == "story" and not bool(ask.get("insist", true)),
+			"He requests a trade to every Victorian club (%s)" % str(ask))
+	_check(_said("%s (%s) is requesting a trade to Victoria: " % [who, GameDB.club_name("WCE")])
+			and _said("If we take none of the offers by the close of trades, the best goes through."), "The news says so")
+	GameState._open_trade_market()
+	var offers := _story_offer_ids(id)
+	_check(offers.size() >= 2, "The Victorian clubs make offers (%d)" % offers.size())
+	_check(offers.all(func(i): return vic.has(str(GameState.trade_offers[i]["club"])) and GameState.trade_offers[i]["take"] == [pid]),
+			"Each offer is from a Victorian club, for him")
+	if offers.is_empty():
+		return
+	GameState.decline_trade_offer(offers[0])
+	_check(str(GameState.trade_offers[offers[0]]["status"]) == "open", "A story's offer can't be turned down")
+	# The offer worth most to us, by the trade rules.
+	var prospects := GameState.trade_prospects()
+	var best := ""
+	var best_v := -1.0
+	for i in offers:
+		var o: Dictionary = GameState.trade_offers[i]
+		var gets: Array = GameState._trade_assets(o["give"], str(o["club"]))["assets"]
+		var v := TradeValue.package(gets.map(func(a): return GameState._worth_to("WCE", a, prospects)))
+		if v > best_v:
+			best_v = v
+			best = str(o["club"])
+	GameState._close_free_agency()
+	_check(_club_of(star) == best, "Trades close with no offer taken: the best goes through, to %s (he is at %s)" % [best, _club_of(star)])
+	_check(not GameState.trade_requests.has(pid), "His request is met")
+	GameDB.reload("1990")
+
+
+## "Try to keep him", at your club: 50% he stays on the keep deal. Not kept,
+## half the time he insists on his real club, which alone bids, and we must
+## take its offer ("Half the time", "A fair offer"); otherwise the clubs he
+## asks for make offers. `want`: the dice, "kept", "insist" or "open".
+func _test_story_trade_keep(want: String) -> void:
+	var id := "dangerfield_gee"
+	var m := LegacyRollover.canon(id)
+	var seed := _seed_for(id, want)
+	_check(seed > 0, "A career seed gives %s" % want)
+	var star := _story_setup(id, "WCE", "WCE", seed)
+	var who := GameDB.player_display_name(star)
+	var cards := _canon_cards(m)
+	_check(cards.size() == 1, "The card (%d)" % cards.size())
+	if cards.size() != 1:
+		return
+	var keep_pay := LegacyRollover.keep_salary(star)
+	LegacyRollover.answered(GameState, cards[0], _key(cards[0], "keep"))
+	var e := _story(id)
+	_check(bool(e.get("fight", false)) and (int(e.get("roll", 0)) <= 50) == (want == "kept"),
+			"%s: the club tries, and the roll decides (roll %d)" % [want, int(e.get("roll", 0))])
+	if want == "kept":
+		_story_offseason()
+		_check(str(e.get("step", "")) == "kept" and _club_of(star) == "WCE" and int(star["contract_years"]) == 4 and int(star["salary"]) == keep_pay,
+				"Kept, he stays on 4 more seasons at %s (%d seasons at %d)" % [Contracts.money(keep_pay), int(star["contract_years"]), int(star["salary"])])
+		_check(_said("%s stays at %s, on 4 more seasons at %s a season." % [who, GameDB.club_name("WCE"), Contracts.money(keep_pay)]), "The news says so")
+		GameDB.reload("1990")
+		return
+	_check((int(e.get("insist_roll", 0)) <= 50) == (want == "insist"), "%s: the second roll decides (roll %d)" % [want, int(e.get("insist_roll", 0))])
+	if want == "insist":
+		# The whole off-season, as the game opens it.
+		_skip_season()
+		GameState.open_offseason()
+		_check(_said("%s (%s) insists on a trade to Geelong." % [who, GameDB.club_name("WCE")]), "He insists on Geelong")
+		_check(_club_of(star) == "GEE", "Geelong make their offer and we must take it: he is a Cat (%s)" % _club_of(star))
+		_check(_story_offer_ids(id).is_empty(), "No other club bids")
+	else:
+		_story_offseason()
+		_story_requests()
+		GameState._open_trade_market()
+		var vic := LegacyRollover.canon_clubs(GameState, m, star, "WCE")
+		var offers := _story_offer_ids(id)
+		_check(not offers.is_empty() and offers.all(func(i): return vic.has(str(GameState.trade_offers[i]["club"]))),
+				"The Victorian clubs make offers and we pick one (%d)" % offers.size())
+		if not offers.is_empty():
+			var club := str(GameState.trade_offers[offers[-1]]["club"])
+			_check(bool(GameState.accept_trade_offer(offers[-1])["ok"]) and _club_of(star) == club, "We take %s's offer" % club)
+	GameDB.reload("1990")
+
+
+## "Same dice, best bid": at a rival club the same dice decide, and the bid
+## goes to the club that values him most and fits his pay.
+func _test_story_trade_rival(want: String) -> void:
+	var id := "dangerfield_gee"
+	var m := LegacyRollover.canon(id)
+	var star := _story_setup(id, "WCE", "SYD", _seed_for(id, want))
+	_canon_cards(m)
+	# A rival keeps him in the off-season, so the deal is in next season's money.
+	_skip_season()
+	GameState.offseason_year = GameState.season_year
+	var keep_pay := LegacyRollover.keep_salary(star)
+	LegacyRollover.canon_offseason(GameState)
+	var e := _story(id)
+	_check(bool(e.get("fight", false)), "%s: his club tries to keep him" % want)
+	if want == "kept":
+		_check(str(e.get("step", "")) == "kept" and _club_of(star) == "WCE" and int(star["contract_years"]) == 4 and int(star["salary"]) == keep_pay,
+				"Kept, he stays at West Coast on the keep deal")
+		GameDB.reload("1990")
+		return
+	_story_requests()
+	var to: Array = GameState.trade_requests.get(str(star["id"]), {}).get("to", [])
+	_check(to == (["GEE"] if want == "insist" else LegacyRollover.canon_clubs(GameState, m, star, "WCE")),
+			"%s: he asks for %s" % [want, str(to)])
+	var prospects := GameState.trade_prospects()
+	var bids: Array = GameState._story_bids("WCE", star, to, prospects)
+	_check(not bids.is_empty(), "%s: a club bids for him" % want)
+	for i in range(1, bids.size()):
+		_check(GameState._worth_to(str(bids[i - 1][0]), star, prospects, true) >= GameState._worth_to(str(bids[i][0]), star, prospects, true),
+				"The bids come keenest first")
+	GameState._open_trade_market()
+	if not bids.is_empty():
+		_check(_club_of(star) == str(bids[0][0]), "%s: he goes to the club that values him most, %s (he is at %s)" % [want, str(bids[0][0]), _club_of(star)])
+		_check(GameState.offseason_log.any(func(r): return str(r.get("request", "")) == "story" and (r["in"] as Array).has(str(star["id"]))),
+				"The trade is the story's")
+	GameDB.reload("1990")
+
+
+## "Keep or compensation": a free agent tests free agency. Let go (or not kept
+## at a rival), he leaves at season's end and signs with the club that offers
+## most, and his club gets the compensation pick. His old club can't sign him
+## back that off-season. `how`: "go" (your club lets him go) or "rival".
+func _test_story_free_agent(how: String) -> void:
+	var id := "franklin_syd"
+	var mine := "HAW" if how == "go" else "CAR"
+	var star := _story_setup(id, "HAW", mine, 1 if how == "go" else _seed_for(id, "open"))
+	var who := GameDB.player_display_name(star)
+	var cards := _canon_cards(LegacyRollover.canon(id))
+	if how == "go":
+		_check(cards.size() == 1, "The card (%d)" % cards.size())
+		if cards.size() != 1:
+			return
+		LegacyRollover.answered(GameState, cards[0], _key(cards[0], "go"))
+	_skip_season()
+	GameState.open_offseason()
+	_check(str(_story(id).get("step", "")) == "free_agent", "%s: he tests free agency (%s)" % [how, str(_story(id))])
+	_check(_club_of(star) == "" and str(star.get("released_by", "")) == "HAW" and bool(star.get("comp_eligible", false))
+			and int(star.get("story_left", 0)) == GameState.season_year,
+			"%s: he leaves Hawthorn, wanted, so a club that signs him pays a pick" % how)
+	_check(_said("%s leaves %s to test free agency." % [who, GameDB.club_name("HAW")]), "The news says so")
+	if how == "go":
+		var r := GameState.offer_free_agent(str(star["id"]), int(star.get("salary", 0)) * 2, 2)
+		_check(not bool(r["ok"]) and str(r.get("code", "")) == "story_left", "We can't sign him back (%s)" % str(r))
+	GameState._close_free_agency()
+	var at := _club_of(star)
+	_check(at != "" and at != "HAW", "%s: he signs with another club (%s)" % [how, at])
+	_check(GameState.compensation.any(func(c): return str(c["club"]) == "HAW" and str(c["player"]) == str(star["id"])),
+			"%s: Hawthorn get the compensation pick" % how)
+	GameDB.reload("1990")
+
+
+## A new club's offer: let go, he joins it for its first season, and his club
+## is paid for him as the new clubs pay.
+func _test_story_new_club() -> void:
+	var id := "ablett_gcs"
+	var star := _story_setup(id, "HAW", "HAW")
+	var cards := _canon_cards(LegacyRollover.canon(id))
+	_check(cards.size() == 1, "The card (%d)" % cards.size())
+	if cards.size() != 1:
+		return
+	_check(LegacyRollover.canon_reserved(GameState, star), "His story decides where he goes: Gold Coast do not approach him on their own")
+	LegacyRollover.answered(GameState, cards[0], _key(cards[0], "go"))
+	_skip_season()
+	GameState.open_offseason()
+	var his := (ExpansionBuild.state(GameState, "GCS")["targets"] as Array).filter(func(t): return str(t["id"]) == str(star["id"]))
+	_check(str(_story(id).get("step", "")) == "joining" and his.size() == 1 and bool(his[0].get("canon", false)),
+			"Gold Coast's one approach to him is the story's (%d)" % his.size())
+	_check(not his.is_empty() and str(his[0]["status"]) == "joined" and ExpansionBuild.list_of(GameState, "GCS").has(star) and _club_of(star) == "",
+			"He joins Gold Coast's list for 2011 (%s)" % (str(his[0]["status"]) if not his.is_empty() else "-"))
+	_check(GameState.compensation.any(func(c): return str(c["club"]) == "HAW" and str(c["player"]) == str(star["id"])),
+			"Hawthorn are paid for him")
+	GameDB.reload("1990")
+
+
+## Saves from before the redesign: a card with no keys (the first option was to
+## keep him), and a story the old card already kept, whose deal stands.
+func _test_story_old_saves() -> void:
+	var star := _story_setup("franklin_syd", "HAW", "HAW")
+	GameState.season_year = 2013
+	LegacyRollover.answered(GameState, {"tid": LegacyRollover.CANON_TID, "canon": "franklin_syd",
+			"options": [{"label": "Fight for him"}, {"label": "Let him go"}]}, 0)
+	_check(bool(_story("franklin_syd").get("fight", false)) and _story("franklin_syd").has("roll"), "A keyless card's first option keeps him")
+	star = _story_setup("franklin_syd", "HAW", "HAW")
+	GameState.season_year = 2013
+	star["contract_years"] = 4
+	LegacyRollover._canon_st(GameState)["franklin_syd"] = {"asked": true, "to": "SYD", "fight": true, "roll": 10, "kept": true}
+	_story_offseason()
+	_check(str(_story("franklin_syd").get("step", "")) == "kept" and int(star["contract_years"]) == 4 and _club_of(star) == "HAW",
+			"Kept by the old card, he stays on his deal (%s, %d seasons)" % [str(_story("franklin_syd")), int(star["contract_years"])])
 	GameDB.reload("1990")
 
 

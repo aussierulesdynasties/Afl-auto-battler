@@ -45,11 +45,11 @@ func setup(my_club: String, opp: String, is_home: bool, line: String, narrow: bo
 	size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	clip_contents = true
 	add_child(ClubDuel.new().setup(my_club, opp))
-	var v := UiKit.vbox(6)
+	var v := UiKit.vbox(UiKit.Space.CLOSE)
 	v.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 14)
 	v.alignment = BoxContainer.ALIGNMENT_CENTER
 	add_child(v)
-	var row := UiKit.hbox(10)
+	var row := UiKit.hbox(UiKit.Space.ROOM)
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
 	v.add_child(row)
 	var crest := 88.0 if narrow else 92.0
@@ -145,7 +145,7 @@ static func _shadow() -> GradientTexture2D:
 
 
 func _side(code: String, crest: float, narrow: bool) -> Control:
-	var s := UiKit.vbox(4)
+	var s := UiKit.vbox(UiKit.Space.TIGHT)
 	s.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	s.alignment = BoxContainer.ALIGNMENT_CENTER
 	var c := CenterContainer.new()

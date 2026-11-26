@@ -41,6 +41,7 @@ COLOUR_CUES = {
     "PreSeasonScene.gd": [["UiKit.TEXT if ok else UiKit.BAD", "the medical panel line says cleared / not cleared", 1]],
     "CaptaincySheet.gd": [["UiKit.BAD if off_bad", "the reason he can't lead, in words", 1]],
     "ClubPage.gd": [["UiKit.GOOD if us > them", "Won / Lost / Drew", 1]],
+    "FullTimeMotion.gd": [["margin_colour(up)", "the ladder line says Up / Down in words", 1]],
     "MergerCutScene.gd": [["UiKit.BAD if marked", "the row's button says Keep, with the Gain and Cost lines under it", 1]],
     "CoachingScene.gd": [
         ["part[1] == \"hot\"", "the heading: In good form / In poor form", 1],
@@ -99,7 +100,8 @@ COLOUR_CUES = {
     "TeamBuilder.gd": [
         ["start_note != \"\"", "the note in words", 1],
         ["Workload.NEEDS_BREAK", "the workload word", 1],
-        ["Ratings.available(p)", "why he is out, in words", 1]],
+        ["Ratings.available(p)", "why he is out, in words", 1],
+        ["fill.color = UiKit.BAD", "his Form figure beside the bar, well below his season's (director, 2026-11-25)", 1]],
     "TrainingScene.gd": [
         ["rise.size() > 0", "the rise mark and its words", 2],
         ["Traits.is_bad(trait_keys[0])", "the weakness mark", 1],

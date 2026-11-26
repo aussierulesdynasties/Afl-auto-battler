@@ -19,6 +19,9 @@ var _body: VBoxContainer
 ## The sheets over a section (a match's box score, a club's side and a player
 ## opened from it), the last on top.
 var _sheets: Array = []
+## The page has been built once this visit: a tab, a sort or a filter rebuilds
+## it without its arrival (the numbers count up only as you come in).
+var _settled := false
 
 
 func _ready() -> void:
@@ -33,10 +36,11 @@ func _ready() -> void:
 	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
 	UiKit.apply_insets(margin, 12)
 	add_child(margin)
-	_root = UiKit.vbox(8)
+	_root = UiKit.vbox(UiKit.GAP)
 	margin.add_child(_root)
 	get_viewport().size_changed.connect(_on_resize)
 	_build()
+	_settled = true
 	if GameState.intro_due("season_stats"):
 		_show_intro.call_deferred()
 
@@ -82,7 +86,7 @@ func _build() -> void:
 	# fit does the row scroll sideways.
 	var tabs := HBoxContainer.new()
 	tabs.name = "StatsSections"
-	tabs.add_theme_constant_override("separation", 2)
+	tabs.add_theme_constant_override("separation", UiKit.Space.SLIM)
 	for s in SECTIONS:
 		var key := str(s[0])
 		var t := UiKit.tab(str(s[1]), key == current)
@@ -108,7 +112,7 @@ func _build() -> void:
 		strip.custom_minimum_size.y = 46
 		strip.add_child(tabs)
 		_root.add_child(strip)
-	_body = UiKit.vbox(10)
+	_body = UiKit.vbox(UiKit.Space.ROOM)
 	_body.name = "SectionBody"
 	_body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var sc := UiKit.scroll(_body)
@@ -157,12 +161,16 @@ func _tabs_width(tabs: HBoxContainer, pad: int, fs: int) -> float:
 ## your colour, the round and your record beside it.
 func _hero() -> Control:
 	var season: Season = GameState.season
-	var row := UiKit.hbox(12)
+	var row := UiKit.hbox(UiKit.Space.PAD)
 	row.name = "StatsHero"
 	if wide():
 		row.alignment = BoxContainer.ALIGNMENT_CENTER
 	var pos := UiKit.figure(GameState.ordinal(GameState.my_position()), UiKit.HERO, UiKit.club_vivid(GameState.my_club))
 	pos.name = "StatsHeroPosition"
+	if arriving():
+		# Coming in, your spot climbs from the foot of the ladder, as the hub's does.
+		UiKit.count_up(pos, GameState.my_position(), func(n): return GameState.ordinal(n),
+				UiKit.Motion.DUR_COUNT, season.ladder.size())
 	row.add_child(pos)
 	var when := "Home and away complete" if season.is_regular_done() 			else ("Before " + season.round_name(0) if season.round_index == 0 else "After " + season.round_progress(season.round_index - 1))
 	var lr := GameState.my_ladder_row()
@@ -173,6 +181,11 @@ func _hero() -> Control:
 	txt.add_child(UiKit.line(when, UiKit.SMALL, UiKit.MUTED))
 	row.add_child(txt)
 	return row
+
+
+## The first build of this visit, when the page's numbers count up.
+func arriving() -> bool:
+	return not _settled
 
 
 func _section(key: String) -> Control:

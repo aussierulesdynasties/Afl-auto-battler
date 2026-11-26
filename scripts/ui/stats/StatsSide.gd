@@ -68,11 +68,10 @@ static func row_style(club: String, band := false, mine := false) -> StyleBoxFla
 	if club == "" or not GameDB.clubs.has(club):
 		return flat
 	if mine:
-		flat.bg_color = Color(UiKit.club_vivid(club), 0.22)
-		flat.border_width_left = 4
+		UiKit.mark_your_row(flat, club)
 	else:
 		flat.border_width_left = 3
-	flat.border_color = UiKit.club_vivid(club)
+		flat.border_color = UiKit.club_vivid(club)
 	return flat
 
 
