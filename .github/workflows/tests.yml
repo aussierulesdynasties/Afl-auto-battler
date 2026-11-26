@@ -662,11 +662,9 @@ jobs:
         with:
           filter: blob:none   # fetch only the files checked out
           sparse-checkout-cone-mode: false
-          # This job reads only the shard tools and the suite list (the tree id needs no files):
-          # seconds, where the whole game's 3 GB of models took about 3 minutes.
-          sparse-checkout: |
-            /tools/
-            /tests/
+          sparse-checkout: |   # .claude/review (5 GB of review boards) is never read by CI
+            /*
+            !/.claude/review/
 
       - uses: actions/download-artifact@v4
         if: needs.plan.outputs.code == 'true' && needs.plan.result == 'success' && (needs.preflight.result == 'success' || needs.preflight.result == 'skipped')
