@@ -171,9 +171,9 @@ func _test_pure(me: String) -> void:
 
 func _test_page() -> void:
 	_state.reset()
+	_state.replay_seed = SUITE_SEED
 	_state.start_season("MEL", _db.club_list("MEL"))
 	_state.tutorials = false
-	_state.replay_seed = SUITE_SEED
 	var old := _item("game", "Old Hand kicked 7 goals for %s against %s." % [_db.club_name("GEE"), _db.club_name("SYD")], "Pre-season")
 	var items := _round_one() + [old]
 	root.size = Vector2i(1280, 720)
@@ -261,9 +261,9 @@ func _test_page() -> void:
 func _test_hub(size: Vector2i, wide: bool) -> void:
 	var tag := "%dx%d" % [size.x, size.y]
 	_state.reset()
+	_state.replay_seed = SUITE_SEED
 	_state.start_season("MEL", _db.club_list("MEL"))
 	_state.tutorials = false
-	_state.replay_seed = SUITE_SEED
 	_state.news = _round_one()
 	# Stories dated before the week the coach is in: the page still says the week
 	# (director 2026-11-13, "Header should say Round 1").

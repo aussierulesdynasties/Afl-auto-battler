@@ -269,8 +269,8 @@ func _test_draft(row: Array) -> void:
 
 func _fresh_career() -> void:
 	_state.reset()
-	_state.start_season("COL", _db.club_list("COL"))
 	_state.replay_seed = SUITE_SEED
+	_state.start_season("COL", _db.club_list("COL"))
 	_state.tutorials = false
 
 
