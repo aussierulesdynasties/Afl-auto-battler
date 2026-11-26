@@ -200,8 +200,10 @@ func _test_drop_preview() -> void:
 	_check(prev != null and prev.is_visible_in_tree(), "His profile shows what leaving him out costs")
 	if prev == null:
 		return
-	var state: Control = prev.get_parent().find_child("ProfileState", false, false)
-	_check(state != null and prev.get_index() == state.get_index() + 1, "The cost sits right under his availability")
+	var state: Control = prev.get_parent().find_child("ProfileReadiness", false, false)
+	if state == null:
+		state = prev.get_parent().find_child("ProfileState", false, false)
+	_check(state != null and prev.get_index() == state.get_index() + 1, "The cost sits right under how he is now")
 	var cost: Dictionary = _view.drop_preview(_gs, p, _gs.relations, false)
 	if _has_script("Opinion"):
 		var ol: Label = prev.find_child("DropOpinion", true, false)
