@@ -216,11 +216,16 @@
     84.3
    ],
    "top": 44.5,
-   "head_h": 4.0,
-   "head_w": 5.0,
+   "head_h": 5.0,
+   "head_w": 6.5,
    "r_base": 0.55,
    "r_top": 0.3,
-   "tilt": 15
+   "tilt": 30,
+   "grid": [
+    7,
+    6
+   ],
+   "frame_mat": "tower_frame_bt"
   },
   {
    "xy": [
@@ -228,11 +233,16 @@
     100.8
    ],
    "top": 44.5,
-   "head_h": 4.0,
-   "head_w": 5.0,
+   "head_h": 5.0,
+   "head_w": 6.5,
    "r_base": 0.55,
    "r_top": 0.3,
-   "tilt": 15
+   "tilt": 30,
+   "grid": [
+    7,
+    6
+   ],
+   "frame_mat": "tower_frame_bt"
   },
   {
    "xy": [
@@ -240,11 +250,16 @@
     20.6
    ],
    "top": 44.5,
-   "head_h": 4.0,
-   "head_w": 5.0,
+   "head_h": 5.0,
+   "head_w": 6.5,
    "r_base": 0.55,
    "r_top": 0.3,
-   "tilt": 15
+   "tilt": 30,
+   "grid": [
+    7,
+    6
+   ],
+   "frame_mat": "tower_frame_bt"
   },
   {
    "xy": [
@@ -252,11 +267,16 @@
     -78.0
    ],
    "top": 44.5,
-   "head_h": 4.0,
-   "head_w": 5.0,
+   "head_h": 5.0,
+   "head_w": 6.5,
    "r_base": 0.55,
    "r_top": 0.3,
-   "tilt": 15
+   "tilt": 30,
+   "grid": [
+    7,
+    6
+   ],
+   "frame_mat": "tower_frame_bt"
   },
   {
    "xy": [
@@ -264,11 +284,16 @@
     -100.6
    ],
    "top": 44.5,
-   "head_h": 4.0,
-   "head_w": 5.0,
+   "head_h": 5.0,
+   "head_w": 6.5,
    "r_base": 0.55,
    "r_top": 0.3,
-   "tilt": 15
+   "tilt": 30,
+   "grid": [
+    7,
+    6
+   ],
+   "frame_mat": "tower_frame_bt"
   },
   {
    "xy": [
@@ -276,17 +301,29 @@
     -26.2
    ],
    "top": 44.5,
-   "head_h": 4.0,
-   "head_w": 5.0,
+   "head_h": 5.0,
+   "head_w": 6.5,
    "r_base": 0.55,
    "r_top": 0.3,
-   "tilt": 15
+   "tilt": 30,
+   "grid": [
+    7,
+    6
+   ],
+   "frame_mat": "tower_frame_bt"
   }
  ],
  "mats_ground": {
   "concourse": "grass_bank",
   "path": "track_dirt",
-  "outside": "ground_outside_bt"
+  "outside": "ground_outside_bt",
+  "concourse_by_b": [
+   [
+    85,
+    215,
+    "bank_dry_bt"
+   ]
+  ]
  },
  "_note": "Blacktown International Sportspark, Oval 1 (Rooty Hill, Sydney). Stage 1 (2026-11-22): the boundary fence is one smooth curve (fence_fourier) fitted to the NSW 7.5 cm aerial; the grandstand's roof footprint and 11 m height come from Google Earth's 3D mesh (straight-down shots, roof front 0.3 m over the fence, 24.5 m deep). Seat rows (11, 1.0-5.4 m) are estimated from the published 1,600 seats, not measured. Stage 2 (2026-11-22): heights read off Google Earth's status bar on a 3 m grid and on radial lines round the bank (whole metres); detail.py models the open gallery and columns on the stand's back, the roof masts (16 m tops), the floodlights under the roof, the 8 m south wing and its raised walkway, the indoor centre (roof 6-7 m, monitors 8 m) and two stairs up the bank; the north roof end is cut on its real line (end_skew); light towers stand at Google Earth's head positions (44.5 m); the bank and the dirt path on its top follow the measured terrain table. Not yet built: the surroundings beyond the bank (stage 3); the ground beyond 35 m out from the fence is held at the last measured height.",
  "fence_mat": "pickets",
@@ -379,9 +416,9 @@
   "roof_bt": {
    "kind": "deck",
    "col": [
-    222,
-    208,
-    184
+    211,
+    198,
+    175
    ]
   },
   "ground_dry": {
@@ -395,9 +432,9 @@
   "track_dirt": {
    "kind": "grass",
    "col": [
-    150,
-    112,
-    82
+    156,
+    130,
+    95
    ]
   },
   "render_bt": {
@@ -474,13 +511,12 @@
    ]
   },
   "roof_white_bt": {
-   "kind": "flat",
+   "kind": "deck",
    "col": [
     214,
     214,
     208
-   ],
-   "noise": 4
+   ]
   },
   "cover_bt": {
    "kind": "flat",
@@ -494,9 +530,9 @@
   "asphalt_bt": {
    "kind": "flat",
    "col": [
-    124,
-    127,
-    121
+    99,
+    101,
+    103
    ],
    "noise": 6,
    "tile": [
@@ -572,10 +608,44 @@
   "ground_outside_bt": {
    "kind": "grass",
    "col": [
-    124,
-    111,
-    88
+    142,
+    122,
+    90
    ]
+  },
+  "grass_bank": {
+   "kind": "grass",
+   "col": [
+    110,
+    121,
+    86
+   ]
+  },
+  "bank_dry_bt": {
+   "kind": "grass",
+   "col": [
+    148,
+    126,
+    89
+   ]
+  },
+  "roof_lamps": {
+   "kind": "flat",
+   "col": [
+    200,
+    200,
+    196
+   ],
+   "noise": 2
+  },
+  "tower_frame_bt": {
+   "kind": "flat",
+   "col": [
+    226,
+    228,
+    226
+   ],
+   "noise": 3
   }
  },
  "fence_fourier": {
@@ -2602,5 +2672,9 @@
  "_paint_ground_how": "asphalt_bt and concrete_bt: median colours of the sunlit lane and plaza on the NSW aerial (138,142,133 and 177,179,174), the asphalt taken a little darker for the shaded yard (83,93,88)",
  "_paint_yard_how": "roof_green_bt, bin_red_bt, bin_blue_bt: medians of the yard shed roof and the two bins on a straight-down Google Earth shot (2025-07-24), colours only; sail_blue_bt: the west shade sail on the same shot",
  "_paint_outside_how": "ground_outside_bt (the ground beyond the bank, out to where the scene takes over): the scene's own ground colour 3-7 m past the model's outline (median of 424 samples all round, 2026-11-23), so there is no seam; Google Earth 2025-07-24 reads the same dry grass there (112-165, 119-142, 86-111 on its lit shots), the old green was the NSW aerial's wetter season The field turf keeps the kit ground_grass.",
- "smooth_ground": true
+ "smooth_ground": true,
+ "_towers_head_how": "heads from the NSW 6 cm aerial and Google Earth's obliques (2026-11-26): an open white frame about 6.5 m wide and 5 m high holding about 7 x 6 lamps, tipped about 30 degrees (3.5 m deep in plan); readings 5.8-7.6 m wide",
+ "_bank_how": "Google Earth's top view (2026-11-26): the bank is green from the north round to bearing about 80 and dry brown from about 90 to 215 between the fence and 17 m out; paints are the GE medians over the PC's render/paint ratio",
+ "outside_mesh": "outside_far",
+ "_paint_roof_how": "roof_bt: the PC's render of the old paint (222,208,184) read 5% lighter than Google Earth's roof (216,202,187) in the same view (2026-11-26), so the paint is that much darker"
 }
