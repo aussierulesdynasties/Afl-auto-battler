@@ -10,7 +10,9 @@
 #
 # Runs. Cancels pull_request runs that test a commit the PR has already moved past, or a PR
 # that is closed, and force-cancels any run still queued after 24 hours (runs from 11 Nov
-# sat "queued" for 12 days and a normal cancel refuses them).
+# sat "queued" for 12 days and a normal cancel refuses them). A run that even force-cancel
+# refuses ("has not been queued yet", HTTP 409) and is over 7 days old is a dead record that
+# holds no runner; it is deleted so it stops showing as queued.
 #
 # Retire list. .github/hygiene/retire_branches.tsv names branches with no PR that were sorted
 # by hand (docs in project files, github-hygiene/no-pr-branches-2026-11-23.md): name, tip SHA,
@@ -110,9 +112,19 @@ jobs:
               --jq '.workflow_runs[] | [.id, .event, .head_branch, .head_sha, .created_at] | @tsv'
           done > runs.tsv
           day_ago=$(date -u -d '24 hours ago' +%Y-%m-%dT%H:%M:%SZ)
+          week_ago=$(date -u -d '7 days ago' +%Y-%m-%dT%H:%M:%SZ)
+          removed=0
           while IFS=$'\t' read -r id event branch sha created; do
             if [[ "$created" < "$day_ago" ]]; then
-              act gh api -X POST "repos/$GH_REPO/actions/runs/$id/force-cancel"; cancelled=$((cancelled+1)); continue
+              if [ "$DRY_RUN" = 1 ]; then echo "would: force-cancel $id"; cancelled=$((cancelled+1)); continue; fi
+              if gh api -X POST "repos/$GH_REPO/actions/runs/$id/force-cancel" >/dev/null 2>&1; then
+                cancelled=$((cancelled+1))
+              elif [[ "$created" < "$week_ago" ]]; then
+                gh api -X DELETE "repos/$GH_REPO/actions/runs/$id" >/dev/null && removed=$((removed+1)) || echo "failed: delete run $id"
+              else
+                echo "failed: force-cancel $id"
+              fi
+              continue
             fi
             [ "$event" = pull_request ] || continue
             cur=$(awk -F'\t' -v b="$branch" '$2 == b {print $3}' open.tsv | head -1)
@@ -121,7 +133,7 @@ jobs:
             fi
           done < runs.tsv
 
-          summary="Branches deleted: $deleted ($archived archived as tags first). Kept: $kept_nopr with no PR, $kept_newer with commits after their PR closed. Runs cancelled: $cancelled."
+          summary="Branches deleted: $deleted ($archived archived as tags first). Kept: $kept_nopr with no PR, $kept_newer with commits after their PR closed. Runs cancelled: $cancelled. Dead run records deleted: $removed."
           [ "$DRY_RUN" = 1 ] && summary="(dry run) $summary"
           echo "$summary"
           echo "$summary" >> "$GITHUB_STEP_SUMMARY"
