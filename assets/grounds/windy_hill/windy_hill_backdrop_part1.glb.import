@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://dvsfooh50gy3h"
-path="res://.godot/imported/bridges.glb-36e6d3d182a1be4e45c9b501b48804c4.scn"
+uid="uid://dv3q0co28syxh"
+path="res://.godot/imported/windy_hill_backdrop_part1.glb-3c92d843ff94d5a3ce951974a213ec83.scn"
 
 [deps]
 
-source_file="res://assets/grounds/optus/bridges.glb"
-dest_files=["res://.godot/imported/bridges.glb-36e6d3d182a1be4e45c9b501b48804c4.scn"]
+source_file="res://assets/grounds/windy_hill/windy_hill_backdrop_part1.glb"
+dest_files=["res://.godot/imported/windy_hill_backdrop_part1.glb-3c92d843ff94d5a3ce951974a213ec83.scn"]
 
 [params]
 
