@@ -434,7 +434,7 @@ const SEAT_COLOURS := {
 	# The seven first drafts (#1930; Jiangwan and Summit have no seats).
 	"seat_hands": Color(0.151, 0.319, 0.502),
 	"seat_sky_gold": Color(0.778, 0.609, 0.197), "seat_sky_grey": Color(0.266, 0.281, 0.304),
-	"seat_bt": Color(0.135, 0.197, 0.349), "seat_mp": Color(0.219, 0.25, 0.296),
+	"seat_bt": Color(0.173, 0.18, 0.196), "seat_mp": Color(0.219, 0.25, 0.296),
 	# Adelaide Oval's stand colours, as its model paints them (tools/grounds/adelaide/export.py).
 	"seat_ao_navy": Color8(35, 55, 77), "seat_ao_charcoal": Color8(70, 70, 75),
 	"seat_ao_slate": Color8(100, 116, 114), "seat_ao_sage": Color8(95, 118, 112),
@@ -2174,7 +2174,7 @@ static func backdrop(slug: String, base := "") -> Node3D:
 ## Adelaide's model carries a 6 km grass plane; the ground kit's first drafts (#1930) a 240 m concourse disc;
 ## the WACA, Bruce and North Hobart a flat plate round the stands (tools/grounds/backdrop/scene: run1.sh SKIP).
 const BACKDROP_HIDES := {"adelaide": ["ao_ground"], "barossa": ["concourse"], "sky": ["concourse"],
-	"jiangwan": ["concourse"], "hands": ["concourse"], "blacktown": ["concourse"], "summit": ["concourse"],
+	"jiangwan": ["concourse"], "hands": ["concourse"], "blacktown": ["concourse_far"], "summit": ["concourse"],
 	"macpoint": ["concourse"], "waca": ["land", "road", "brick"], "bruce": ["g_ground"], "north_hobart": ["ground"],
 	"traeger": ["ground_dirt"]}
 
