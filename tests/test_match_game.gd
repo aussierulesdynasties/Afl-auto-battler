@@ -2124,8 +2124,9 @@ func _test_play_through_three() -> void:
 	_check(off.focus_active(0, "focus_fwd") == false and probe.focus_active(0, "focus_fwd"),
 			"...and the screen can tell a working call from a waiting one")
 	# Real matches, paired seeds: each man gets more of his job, none an absurd share.
-	# 80 games: over 24 the target's shots are inside the noise.
-	var n := 80
+	# 200 games, the focus audit's floor (director, 2026-11-27): the target's
+	# extra shots (about +0.16 a game) are inside the noise over 80.
+	var n := 200
 	var on := {"md": 0.0, "fs": 0.0, "dk": 0.0, "td": 0.0, "top": 0.0}
 	var base := {"md": 0.0, "fs": 0.0, "dk": 0.0, "td": 0.0}
 	# Both arms coach the same plan, the club's usual game: the plan is the
@@ -2155,8 +2156,8 @@ func _test_play_through_three() -> void:
 			"The calls move who gets it, not how much the side has (%.0f v %.0f disposals)" % [on["td"] / n, base["td"] / n])
 	# 45 was set when a side had 358 disposals a game; the defensive-50
 	# clearing kick (2026-11-07) gives a side 384 (real 367.6), so the same
-	# share is 48. Over these 80 games the pillar's two 40+ games are 42 and 46
-	# (38 on main); the real one-game record is 54.
+	# share is 48. Over these 200 games the most any of the three has in a game
+	# is 33 (2026-11-27); the real one-game record is 54.
 	_check(BalanceGate.held(on["top"] < 48.0, "top player use share"), "Nobody becomes the only one who gets it (most in a game %d)" % int(on["top"]))
 
 
