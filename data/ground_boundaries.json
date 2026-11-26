@@ -374,7 +374,7 @@
     "seen_share": 0.978,
     "longest_unseen_arc_deg": 4.8,
     "dates_agree": "line: 89% (2022) and 76% (2019) of shared points within 0.5 m after lining up",
-    "placement": "NOT PINNED. Google Earth places the three aerials up to 1.8 m apart. Pinning by the grass edge against the current 3D view gives 2023 (+0.15, -1.68) m but the same method on 2019 and 2022 disagrees with the line-to-line shifts by 1.5-2 m, so the grass edge can't pin it to better than about 2 m. Pin it to the rebuilt model (#2035) when that lands."
+    "placement": "Checked against the rebuilt model (#2035) in a match top-down render: the model's fence rail sits on the traced fence all round (median 0.00 m; the 2 m outliers the edge finder reports on the east are the stand's shadow edge, not the rail), and the match's painted line is within 0.36 m rms of the trace. Google Earth places the three aerials up to 1.8 m apart; the 2023 frame agrees with the model."
    },
    "fence": [
     78.263,
@@ -504,6 +504,137 @@
     "max": 6.83
    }
   },
+  "norwood": {
+   "frame": [
+    0.0,
+    0.3,
+    88.461
+   ],
+   "goal_x": 81.93,
+   "boundary": [
+    70.276,
+    -0.3548,
+    -2.7987,
+    14.4082,
+    -1.1538,
+    0.3478,
+    0.7845,
+    -1.4082,
+    -0.4339,
+    -0.248,
+    0.5334,
+    -0.7432,
+    0.3971,
+    0.2232,
+    -0.3171,
+    -0.5161,
+    -0.3209,
+    0.3574,
+    -0.0664,
+    0.2981,
+    0.0799
+   ],
+   "boundary_fit": {
+    "n": 360,
+    "order": 10,
+    "rms_m": 0.017,
+    "p95_m": 0.026,
+    "max_m": 0.031,
+    "largest_gap_deg": 1.03
+   },
+   "ends_vs_goal_lines_m": [
+    0.711,
+    0.06
+   ],
+   "source": "Google Earth top-down mosaic (0.2 m/px, ground level so no lean), 2026-11-22: painted line read along 1440 rays round a hand prior of 29 points read off gridded crops (50 m arc junctions, goal lines), fitted as a 10-term Fourier radius about (1, 0). Goals: middle of each goal line from the goal squares (posts lean in Google Earth, squares do not). Centre: centre square's middle. Fence: model/arena.py LOOP (OSM pitch edge shifted onto Google Earth; along the Western Stand it follows the stand's podium).",
+   "trace_error": 0.62,
+   "centre_vs_goals_mid_m": [
+    -0.2,
+    -0.005
+   ],
+   "fence": [
+    75.5827,
+    -0.2388,
+    -1.2166,
+    14.4497,
+    -1.7439,
+    0.0799,
+    -0.1426,
+    -1.4706,
+    -0.0632,
+    0.4805,
+    -0.0097,
+    0.1317,
+    0.057,
+    -0.1138,
+    0.0463,
+    0.1259,
+    -0.0187,
+    -0.064,
+    0.2245,
+    -0.2388,
+    -0.1184,
+    0.1128,
+    -0.1555,
+    0.0282,
+    0.0552,
+    0.0238,
+    -0.0877,
+    0.1443,
+    0.086,
+    -0.0995,
+    0.1319
+   ],
+   "fence_fit": {
+    "n": 355,
+    "order": 15,
+    "rms_m": 0.19,
+    "p95_m": 0.321,
+    "max_m": 1.031,
+    "left_out": [
+     {
+      "at": [
+       -57.9,
+       53.1
+      ],
+      "off_m": 1.27
+     },
+     {
+      "at": [
+       -56.6,
+       53.9
+      ],
+      "off_m": 1.43
+     },
+     {
+      "at": [
+       -52.7,
+       59.6
+      ],
+      "off_m": 1.5
+     },
+     {
+      "at": [
+       -51.4,
+       60.3
+      ],
+      "off_m": 1.62
+     },
+     {
+      "at": [
+       -50.0,
+       60.3
+      ],
+      "off_m": 1.13
+     }
+    ],
+    "largest_gap_deg": 1.77
+   },
+   "runoff_m": {
+    "min": 0.41,
+    "max": 9.37
+   }
+  },
   "people_first": {
    "frame": [
     -1.35,
@@ -568,7 +699,8 @@
       0.0
      ]
     },
-    "placement_on_google_earth": "about 1 m: the Queensland aerial and Google Earth agree to 0.5 m overall"
+    "placement_on_google_earth": "about 1 m: the Queensland aerial and Google Earth agree to 0.5 m overall",
+    "model_check": "Rebuilt model (#2019) in a match top-down render: painted line within 0.05 m of the trace from -60 to +180 deg; on the shadowed north side the render's paint is too dark for the check to find (offsets there are the stand). Model fence rail within about 1.5 m of the traced fence on the north, 0.3-0.5 m elsewhere."
    },
    "centre_vs_goals_mid_m": [
     0.005,
