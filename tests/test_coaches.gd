@@ -370,6 +370,9 @@ func _test_ui() -> void:
 func _test_ui_pc() -> void:
 	var tree := Engine.get_main_loop() as SceneTree
 	_new_career("CAR")
+	# Every council member with a live reason under his loyalty: the tallest card.
+	for m in Council.members(GameState, "CAR"):
+		Opinion.add(GameState.relations, str(m["key"]), "advice_overruled", GameState.season_year, "Round 1", "CAR")
 	var staff: Dictionary = GameState.club_staff("CAR")
 	var coach_jobs: Array = Coaches.JOBS.filter(func(j): return j != "SC" and staff.has(j))
 	_check(coach_jobs.size() >= 4, "Carlton has its coaches to show (%d)" % coach_jobs.size())
