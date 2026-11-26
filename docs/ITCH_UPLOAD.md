@@ -23,7 +23,7 @@ $B status aussierulesdynasties/aussie-rules-dynasties
 
 A channel named `windows` or `android` gets its platform tag on itch by itself. `tools/export_builds.sh` hands the Android signing key to Godot itself, so no session needs to open it. The key and its backup: docs/ITCH_BUILDS.md.
 
-The html5 channel can also take the Web build workflow's artifact: on GitHub, Actions, "Web build" (it runs on every push to main), download `aussie-rules-dynasties-web` and unzip it once, so `index.html` is at the top next to `index.js`, `index.pck` and `index.wasm`. About 25 MB zipped, mostly the figure sheets.
+The html5 channel can also take the Web build workflow's artifact: on GitHub, Actions, "Web build" (it runs on every push to main), download `aussie-rules-dynasties-web` and unzip it once, so `index.html` is at the top next to `index.js`, `index.pck`, `index.wasm` and the two texture packs, `index.textures_pc.pck` and `index.textures_phone.pck`. A browser downloads only the pack its graphics draw with (`tools/web_texture_packs.py`, which both exports use). itch takes 200 MB a file and 500 MB in all; the workflow's summary shows every file against those limits.
 
 **Version number.** The version comes from `project.godot` `config/version` (the menu and Settings read it, and the Android and Windows exports use it); nothing else holds a copy, and `tools/check_version.py` fails CI if one appears. The butler `--userversion` is `<version>-<sha7>` (for example `0.1.13-60a1bd4`).
 

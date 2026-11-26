@@ -99,7 +99,16 @@ for p in "${platforms[@]}"; do
 		;;
 	web)
 		rm -rf builds/web
-		export_one "Web" "builds/web/index.html"
+		# The textures go in one pack per graphics family and the page fetches only its browser's,
+		# so no file passes itch's 200 MB limit (tools/web_texture_packs.py).
+		echo "== export Web, its main pack and two texture packs -> builds/web"
+		PY="$(command -v python || command -v python3)"
+		if "$PY" tools/web_texture_packs.py "$GODOT" builds/web; then
+			report+=("builds/web $(du -sh builds/web | cut -f1)")
+		else
+			echo "FAIL: the Web export did not finish (tools/web_texture_packs.py)" >&2
+			failed=1
+		fi
 		;;
 	*)
 		echo "unknown platform: $p (windows, android, web)" >&2

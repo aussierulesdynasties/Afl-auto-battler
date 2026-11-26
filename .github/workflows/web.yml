@@ -86,7 +86,9 @@ jobs:
           git rev-parse --short HEAD > build_info.txt
           mkdir -p build/web
           "$HOME/godot/godot" --headless --import || true
-          "$HOME/godot/godot" --headless --export-release Web "$PWD/build/web/index.html"
+          # The textures go in one pack per graphics family and the page fetches only its
+          # browser's, so no file passes itch's 200 MB limit (tools/web_texture_packs.py).
+          python3 tools/web_texture_packs.py "$HOME/godot/godot" build/web --summary "$GITHUB_STEP_SUMMARY"
           test -f build/web/index.html
           ls -la build/web
 
