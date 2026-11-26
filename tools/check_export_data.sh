@@ -51,6 +51,9 @@ mkdir -p "$WORK/project" "$WORK/run"
 git ls-files -co --exclude-standard -z | (cd "$ROOT" && tar --null -T - -cf -) | tar -xf - -C "$WORK/project"
 # The Epic/MetaHuman files are ignored (docs/EPIC_ASSETS.md), so ls-files leaves them out; an export
 # fetches them first (tools/export_builds.sh), so copy the ones the lock pins in as well.
+# The ground models are ignored too (docs/GROUND_ASSETS.md): copy assets/grounds/ whole, with the
+# textures Godot extracts from each model on import, as an export from this checkout would see it.
+cp -R "$ROOT/assets/grounds/." "$WORK/project/assets/grounds/"
 awk '$1 ~ /^[0-9a-f]+$/ && length($1) == 64 {print $2}' "$ROOT/tools/epic_assets.lock" | while read -r f; do
 	if [ -f "$ROOT/$f" ]; then
 		mkdir -p "$WORK/project/$(dirname "$f")"
