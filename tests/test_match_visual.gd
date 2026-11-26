@@ -451,8 +451,9 @@ func _test_open_play_shots(res: Dictionary) -> void:
 
 
 ## A defender rushing it through (P2-1) is drawn doing it: the man the log
-## names gathers it, carries it toward his own goal line and knocks it over
-## between the goal and behind posts. No one leads up to crumb it.
+## names gathers it, runs it back to his own goal line with the man who closed
+## him down at his back, and knocks it over from close in, between the goal and
+## behind posts. No one leads up to crumb it, and he never had it from a mark.
 func _test_rushed_behind_staged(res: Dictionary) -> void:
 	var evs: Array = res["events"]
 	var ks := []
@@ -463,8 +464,15 @@ func _test_rushed_behind_staged(res: Dictionary) -> void:
 	var d := MatchDirector.new()
 	d.setup(res, evs)
 	var ok := 0
-	for k in ks:
+	var chased := 0
+	for k in range(evs.size()):
 		var ev: Dictionary = evs[k]
+		if str(ev.get("kind", "")) == "sub":
+			# As playback does: the man coming on takes the slot, so a rusher or
+			# presser who came off the bench is found.
+			d._sub(ev)
+		if not ev.has("rusher_id"):
+			continue
 		var who := d._token_by_pid(str(ev["rusher_id"]))
 		var ph: Array = d._shot_phases(k)
 		var first: Dictionary = ph[0]
@@ -476,11 +484,31 @@ func _test_rushed_behind_staged(res: Dictionary) -> void:
 			if str(p["t"]) == "crumb":
 				crumb = true
 		var to: Vector2 = flight.get("to", Vector2.ZERO)
-		if (who >= 0 and int(d.tokens[who]["side"]) == 1 - int(ev["side"])
+		var back: Dictionary = ph[2] if ph.size() > 2 else {}
+		var carry: Vector2 = back.get("carry", back.get("to", Vector2.ZERO))
+		var chaser := d._token_by_pid(str(ev.get("presser_id", "")))
+		if chaser >= 0:
+			chased += int(str(back.get("t", "")) == "chase" and int(back.get("who", -1)) == chaser
+					and int(back.get("victim", -1)) == who and int(d.tokens[chaser]["side"]) == int(ev["side"]))
+		else:
+			chased += 1
+		if carry.distance_to(to) <= MatchDirector.RUSH_KNOCK + 0.01 and (who >= 0 and int(d.tokens[who]["side"]) == 1 - int(ev["side"])
 				and str(first["t"]) == "collect" and int(first["who"]) == who and not crumb
 				and is_equal_approx(absf(to.x), MatchMotion.GOAL_X) and absf(to.y) > 3.2 and absf(to.y) < 9.6):
 			ok += 1
-	_check(ok == ks.size(), "Each rushed behind is the defender's: he gathers it and it goes over between the posts (%d of %d)" % [ok, ks.size()])
+	_check(ok == ks.size(), "Each rushed behind is the defender's: he runs it back and knocks it over between the posts (%d of %d)" % [ok, ks.size()])
+	_check(chased == ks.size(), "The man who closed him down chases him back to the line (%d of %d)" % [chased, ks.size()])
+	# A man who has marked takes his kick: none of the rusher's own touches
+	# before it is a mark.
+	var from_mark := 0
+	for k in ks:
+		var pid := str((evs[k] as Dictionary)["rusher_id"])
+		var j: int = k - 1
+		while j >= 0 and str((evs[j] as Dictionary).get("player_id", "")) == pid:
+			if str((evs[j] as Dictionary).get("kind", "")) == "mark":
+				from_mark += 1
+			j -= 1
+	_check(from_mark == 0, "Nobody rushes it through after marking it: he takes his kick (%d did)" % from_mark)
 
 
 ## Teams change ends every quarter: the home side attacks one end of the

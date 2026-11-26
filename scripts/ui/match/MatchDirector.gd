@@ -1374,6 +1374,10 @@ func _inside50_phases(k: int) -> Array:
 	return out
 
 
+## A rushed behind is knocked over from this close to the line (metres).
+const RUSH_KNOCK := 3.0
+
+
 func _shot_phases(k: int) -> Array:
 	var ev: Dictionary = events[k]
 	var s := _actor_id(ev)
@@ -1384,14 +1388,20 @@ func _shot_phases(k: int) -> Array:
 	var target := Vector2(MatchMotion.GOAL_X * _dir(side), gy)
 	var out := []
 	# Rushed through by the defender who had it (P2-1): he gathers, runs it
-	# toward his own goal line and knocks it over, between the goal and behind
-	# posts. The ball never moves without him.
+	# back to his own goal line with the man who closed him down at his back,
+	# and knocks it over from close in, between the goal and behind posts.
+	# The ball never moves without him.
 	var rusher := _token_by_pid(str(ev.get("rusher_id", ""))) if bool(ev.get("rushed", false)) else -1
 	if rusher >= 0:
-		var near := (ball["pos"] as Vector2).lerp(target, 0.25)
+		var from: Vector2 = ball["pos"]
+		var near := target + (from - target).limit_length(RUSH_KNOCK)
 		var dr := near.distance_to(target)
-		return [{"t": "collect", "who": rusher, "roll": true}, {"t": "possess", "who": rusher, "quiet": true},
-				{"t": "hold", "who": rusher, "carry": near, "run": true, "max": 1.2},
+		var chaser := _token_by_pid(str(ev.get("presser_id", "")))
+		var back: Dictionary = {"t": "hold", "who": rusher, "carry": near, "run": true,
+				"max": from.distance_to(near) / float(tokens[rusher]["top"]) * 1.6 + 0.5}
+		if chaser >= 0 and chaser != rusher:
+			back = {"t": "chase", "who": chaser, "victim": rusher, "run_down": true, "to": near, "max": RUN_DOWN_MAX}
+		return [{"t": "collect", "who": rusher, "roll": true}, {"t": "possess", "who": rusher, "quiet": true}, back,
 				{"t": "flight", "to": target, "dur": 0.25 + dr / 40.0, "apex": 1.0 + dr * 0.05,
 					"recv": -1, "mode": "shot"},
 				{"t": "emit", "log": true, "flash": "behind"},
