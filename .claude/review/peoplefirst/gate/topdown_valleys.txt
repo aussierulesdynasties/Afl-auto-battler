@@ -1,7 +1,0 @@
-photo valleys (model V points)
-   358.3 deg  nearest satellite edge 0.59 m
-   365.7 deg  nearest satellite edge 0.59 m
-   373.1 deg  nearest satellite edge 1.77 m
-   380.2 deg  nearest satellite edge 0.00 m
-   387.4 deg  nearest satellite edge 0.26 m
-   394.7 deg  nearest satellite edge 0.79 m

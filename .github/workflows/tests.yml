@@ -32,7 +32,10 @@ name: Tests
 # start this workflow at all.
 on:
   pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
+    # converted_to_draft: a PR turned back into a draft (by hand, or by the PR cap) gets a new run,
+    # which cancels the one in progress (concurrency below) and runs nothing. Without it the old run
+    # kept its runners: 7 drafts' runs were still going on 2026-11-26 after the cap drafted them.
+    types: [opened, synchronize, reopened, ready_for_review, converted_to_draft]
   # The merge queue (ruleset on main, director 2026-11-12) needs "test" on the queued
   # group: the PR on top of main and every PR ahead of it. A group runs the suites that
   # cover everything it changes against the main it was built on (tools/select_suites.py,
@@ -64,10 +67,14 @@ on:
 # runners; nothing needs switching. A fork's pull request never reaches the PC.
 # docs/CI_RUNNER.md has the setup.
 #
-# A newer push to a PR supersedes its older run. Every push to main gets its own
-# group (its sha) and is never cancelled, so back-to-back merges each get a verdict.
+# A newer push to a PR supersedes its older run. Pushes to main share one group that is never
+# cancelled in progress: one main run at a time, and while it runs only the newest waiting push
+# is kept (GitHub drops an older pending run). Director 2026-11-26, "Tests only, web build
+# nightly": every merge used to get its own full run, and 25 of 35 were cancelled by hand on
+# 25-26 Nov, some after every shard had passed. A break is still caught on the next run, which
+# may cover two or three merges.
 concurrency:
-  group: tests-${{ github.event_name == 'push' && github.sha || github.ref }}
+  group: tests-${{ github.event_name == 'push' && 'main-push' || github.ref }}
   cancel-in-progress: ${{ github.event_name != 'push' }}
 
 permissions:
@@ -419,7 +426,9 @@ jobs:
   shard:
     name: shard ${{ matrix.shard }}
     needs: [plan, lint, preflight]
-    if: always() && needs.plan.result == 'success' && needs.lint.result == 'success' && needs.plan.outputs.code == 'true' && (needs.preflight.result == 'success' || needs.preflight.result == 'skipped')
+    # !cancelled(), not always(): always() let a cancelled or superseded run keep running and
+    # starting its shards (2026-11-26: 15 cancelled runs still held runners half an hour later).
+    if: ${{ !cancelled() && needs.plan.result == 'success' && needs.lint.result == 'success' && needs.plan.outputs.code == 'true' && (needs.preflight.result == 'success' || needs.preflight.result == 'skipped') }}
     runs-on: ${{ fromJSON(needs.plan.outputs.runner || '"ubuntu-latest"') }}
     # A shard plans ~240 s; 40 still covers a 900 s suite timeout run twice. A PC runner runs two
     # shards side by side at about half a GitHub runner's speed: shard 1 (22 min on GitHub) hit 40 there
@@ -533,7 +542,9 @@ jobs:
   extras:
     name: dataset and harness checks
     needs: [plan, lint, preflight]
-    if: always() && needs.plan.result == 'success' && needs.lint.result == 'success' && needs.plan.outputs.code == 'true' && (needs.preflight.result == 'success' || needs.preflight.result == 'skipped') && github.event_name != 'schedule'
+    # !cancelled(), not always(): always() let a cancelled or superseded run keep running and
+    # starting its shards (2026-11-26: 15 cancelled runs still held runners half an hour later).
+    if: ${{ !cancelled() && needs.plan.result == 'success' && needs.lint.result == 'success' && needs.plan.outputs.code == 'true' && (needs.preflight.result == 'success' || needs.preflight.result == 'skipped') && github.event_name != 'schedule' }}
     runs-on: ${{ fromJSON(needs.plan.outputs.runner || '"ubuntu-latest"') }}
     timeout-minutes: 30
     steps:
@@ -599,14 +610,19 @@ jobs:
     runs-on: ${{ fromJSON(needs.plan.outputs.runner || '"ubuntu-latest"') }}
     timeout-minutes: 5
     steps:
+      # Only what the two steps below read: the shard plan (tools/*.py and its lists) and the
+      # suite names (tests/run_*_tests.gd). The tree hash needs no files. A full checkout here
+      # took 2 to 3 minutes, on the last job of every run.
       - uses: actions/checkout@v4
         if: needs.plan.outputs.code == 'true' && needs.plan.result == 'success' && (needs.preflight.result == 'success' || needs.preflight.result == 'skipped')
         with:
           filter: blob:none   # fetch only the files checked out
           sparse-checkout-cone-mode: false
-          sparse-checkout: |   # .claude/review (5 GB of review boards) is never read by CI
-            /*
-            !/.claude/review/
+          sparse-checkout: |
+            /tools/*.py
+            /tools/*.txt
+            /tools/*.json
+            /tests/run_*_tests.gd
 
       - uses: actions/download-artifact@v4
         if: needs.plan.outputs.code == 'true' && needs.plan.result == 'success' && (needs.preflight.result == 'success' || needs.preflight.result == 'skipped')
