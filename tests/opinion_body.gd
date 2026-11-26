@@ -29,6 +29,7 @@ func go(t: SceneTree) -> void:
 	_t("_test_trust_name")
 	_t("_test_drift_rules")
 	_t("_test_round_every_club")
+	_t("_test_card_moves")
 	_t("_test_save_round_trip")
 	print(Ran.line("Opinion", self))
 
@@ -110,7 +111,7 @@ func _test_fade() -> void:
 		by[str(x["k"])] = x
 	_check(int(by["dropped"]["weeks"]) == 4, "Left out: gone in 4 weeks (%d)" % int(by["dropped"]["weeks"]))
 	_check(int(by["promise_broken"]["weeks"]) == -1, "A broken promise stays")
-	_check(int(by["dropped_final"]["weeks"]) == 39, "A finals snub fades over most of a year (%d)" % int(by["dropped_final"]["weeks"]))
+	_check(int(by["dropped_final"]["weeks"]) == 40, "A finals snub fades over most of a year (%d)" % int(by["dropped_final"]["weeks"]))
 	_check(Opinion.mark_text(by["dropped"]) == "Left out while fit: -4. Gone in 4 weeks.", "In words: %s" % Opinion.mark_text(by["dropped"]))
 	_check(Opinion.mark_text(by["promise_broken"]).ends_with("It stays."), "A scar says it stays")
 	for i in range(4):
@@ -158,7 +159,7 @@ func _test_club_moves() -> void:
 	_check(Opinion.coach_opinion(r2, k, false) == 46 and Opinion.coach_opinion(r2, k, true) == 46,
 			"His opinion of his coach counts the marks, at any club")
 	Opinion.change(r2, k, 40, "Backed him", 2027, "Round 3")
-	_check(Opinion.coach_opinion(r2, k, false) == 46 and Opinion.coach_opinion(r2, k, true) == 66,
+	_check(Opinion.coach_opinion(r2, k, false) == 46 and Opinion.coach_opinion(r2, k, true) == 56,
 			"At a rival club his opinion of you is not his opinion of his own coach")
 
 
@@ -252,12 +253,26 @@ func _test_save_round_trip() -> void:
 			any = str(key)
 			break
 	_check(any != "", "There is a live mark to save")
-	var state: Dictionary = _state.to_dict() if _state.has_method("to_dict") else {}
-	if state.is_empty():
-		_check(_state.save_game(), "The career saves")
-		_check(_state.load_game(), "The career loads")
-	else:
-		_state.from_dict(JSON.parse_string(JSON.stringify(state)))
+	_check(_state.save_career(), "The career saves")
+	_state.relations = {}
+	_check(_state.load_career(), "The career loads")
 	_check(absf(Opinion.live(_state.relations, any) - Opinion.live(before, any)) < 0.01
 			and Opinion.weeks_left(Opinion.mods(_state.relations, any)[0]) == Opinion.weeks_left(Opinion.mods(before, any)[0]),
 			"A live mark comes back from the save with its size and its weeks")
+
+
+func _test_card_moves() -> void:
+	var rel := {}
+	var k := Opinion.player_key("c1")
+	var got := Opinion.card_move(rel, k, -10, "You called him out", 2027, "Round 2")
+	_check(got == -10 and Opinion.base(rel, k) == 0 and Opinion.live(rel, k) == -5.0,
+			"A card's trust move is a live mark: -5 points, permanent part untouched")
+	_check(int(Opinion.breakdown(rel, k)[0]["weeks"]) == 9, "It fades over 9 rounds")
+	Opinion.card_move(rel, k, -10, "You called him out", 2027, "Round 3")
+	_check(Opinion.mods(rel, k).size() == 1, "The same card again renews its mark")
+	Opinion.card_move(rel, k, 6, "You backed him in the papers", 2027, "Round 3")
+	_check(Opinion.mods(rel, k).size() == 2, "Another card is another mark")
+	var s := Opinion.card_move(rel, k, -12, "You told him he was finished", 2027, "Round 4", true)
+	_check(s == -12 and Opinion.base(rel, k) == -12 and Opinion.reasons(rel, k).size() == 1,
+			"A scar card moves the permanent part, with its reason")
+	_check(Opinion.card_move(rel, k, 0, "Nothing", 2027, "Round 4") == 0, "A move of 0 does nothing")

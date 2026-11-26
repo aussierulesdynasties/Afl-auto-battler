@@ -383,3 +383,27 @@ static func preview(rel: Dictionary, key: String, k: String, scale := 1.0, src :
 	var before := opinion(value(copy, key))
 	add(copy, key, k, 0, "", "", scale, src)
 	return opinion(value(copy, key)) - before
+
+
+## How fast a story card's move fades, in opinion points a round (a card's
+## largest move, STEP_MAX trust, is 10 points: gone in 20 rounds).
+const CARD_FADE := 0.5
+
+
+## A story card's "trust" op (and a pre-season paper's cost), `d` in trust units
+## as the cards have always written it (StoryDeck caps it at STEP_MAX). Since
+## 2026-11-26 (DIRECTOR_BIBLE 5.170) a card's move is a live mark that fades,
+## CARD_FADE a round; a card op marked "scar": true moves the permanent part
+## instead, with its reason kept, as every card did before. The mark is keyed by
+## its reason, so two different cards never renew each other and the same card
+## again renews, never stacks. Returns the trust moved, as Opinion.change does.
+static func card_move(rel: Dictionary, key: String, d: int, why: String, year: int, when: String,
+		scar := false, club := "") -> int:
+	if d == 0:
+		return 0
+	if scar:
+		return change(rel, key, d, why, year, when)
+	var before := value(rel, key)
+	add_raw(rel, key, "card:" + why, float(clampi(d, -STEP_MAX, STEP_MAX)) / float(PER_POINT), CARD_FADE,
+			"card", why, year, when, club)
+	return value(rel, key) - before

@@ -1099,10 +1099,12 @@ func _test_opinion_never_drifts() -> void:
 		for l in entry.get("log", []):
 			logged += int(l.get("d", 0))
 		# Any move came with a reason (a choice); nothing else moved him.
-		if Trust.value(GameState.relations, key) != int(given[key]) + logged:
-			drifted.append("%s %d -> %d (logged %+d)" % [key, int(given[key]), Trust.value(GameState.relations, key), logged])
+		# The permanent part never drifts (DIRECTOR_BIBLE 5.170); the live marks
+		# on top of it fade by design (Opinion.gd, tests/run_opinion_tests.gd).
+		if Opinion.base(GameState.relations, key) != int(given[key]) + logged:
+			drifted.append("%s %d -> %d (logged %+d)" % [key, int(given[key]), Opinion.base(GameState.relations, key), logged])
 	_check(GameState.season_year == year + 1, "The season rolled over")
-	_check(drifted.is_empty(), "No player's opinion of you drifts on its own over a season and a rollover (%s)" % str(drifted))
+	_check(drifted.is_empty(), "The permanent part of no player's opinion of you drifts over a season and a rollover (%s)" % str(drifted))
 
 ## Part 2: a free agent weighs your club against his options, from facts the
 ## player can see. Cap room alone never signs anyone.
