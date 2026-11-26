@@ -93,6 +93,10 @@ func _test_passing_list_turns_over(dataset: String, me: String) -> void:
 			draft.auto_until_user_turn()
 		if not GameState.finish_intake_draft():
 			break
+		# The season starts once the Rookie Draft is settled (he passes, as the
+		# game does before the pre-season week) and lists are lodged: a club the
+		# National Draft left short signs from the free agents (_fill_short_lists).
+		RookieList.settle(GameState)
 		seasons += 1
 		# Each season against its own minimum (48 to 1993, 38 from 1994).
 		if GameState.my_list.size() - Contracts.min_list() < short_by:
