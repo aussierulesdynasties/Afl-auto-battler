@@ -620,7 +620,7 @@ func _tiny_pool(n: int) -> Array:
 			"club": "ORIGINAL", "num": i,
 			"role": ["MID", "DEF", "RUCK", "FWD", "MID", "DEF"][i % 6],
 			"role2": "",
-			 "value": 2,
+			"value": 2,
 			"gl": i, "di": 100 - i, "gm": 0.0,
 		}, 70 - i))
 	return out
