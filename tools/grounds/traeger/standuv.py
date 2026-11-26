@@ -2,7 +2,8 @@
 import json,numpy as np
 D=json.load(open('stand.json'));T=json.load(open('tex3/tex.json'));TILE=T['TILE'];PANEL=set(T['PANEL'])
 O=np.array(D['O']);a=np.array(D['a']);b=np.array(D['b'])
-def sf(V):V=np.array(V,float);d=V[:,:2]-O;return np.c_[d@a,d@b,V[:,2]]   # stand frame s,t,z
+KS,KT,KZ,T0=D.get('K',[1,1,1,0])
+def sf(V):V=np.array(V,float);d=V[:,:2]-O;return np.c_[d@a/KS,(d@b-T0)/KT,V[:,2]/KZ]   # stand frame s,t,z (stand.py's own units)
 for m in D['G']:
     if m['mat'] not in TILE and m['mat'] not in PANEL:continue
     Q=sf(m['V']);UV=[]

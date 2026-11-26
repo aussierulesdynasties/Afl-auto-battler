@@ -24,8 +24,14 @@ UNDER_TURF = 0.1
 # 26 m in Google Earth, and the 40 m first used here put every Google Earth camera 14 m higher over the field
 # than ours (2026-11-22). The MCG's turf reads 8 m.
 GROUNDS = {
+    # SCG (turf 38 m in Google Earth, read 2026-11-22): the field centre is model (0.34, 6.68) from the origin -33.8916, 151.2248 (x east, z south).
+    "scg": {"lat": -33.8916 - 6.68 / 110574.0, "lon": 151.2248 + 0.34 / (111320.0 * math.cos(math.radians(-33.8916))),
+            "ge_alt": 38.0, "fit": [0.34, 6.68, 0.05, 85.8, 84.43, 72.25]},
     "adelaide": {"lat": -34.915489777922076, "lon": 138.59627692467532, "ge_alt": 26.0,
                  "fit": [-0.4, 1.37, 0.0, -102.0, 91.36, 65.7]},
+    # The Gabba: origin solved from OSM way 4049692 against tools/grounds/gabba/osm/geo.json (2 cm rms).
+    "gabba": {"lat": -27.4858478, "lon": 153.0380888, "ge_alt": 22.0,
+              "fit": [2.47, 3.47, 0.0, 175.0, 86.88, 73.71]},
 }
 # Google Earth's camera, measured 2026-11-22 at Adelaide and the MCG by hovering the mouse over points whose
 # place on screen was worked out beforehand (the status bar gives the lat/lon under the mouse; every point fell

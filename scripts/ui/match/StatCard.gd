@@ -93,14 +93,14 @@ func setup(who: String, code: String, card: Dictionary) -> StatCard:
 	tsb.set_border_width_all(0)
 	tsb.corner_radius_bottom_left = 0
 	tsb.corner_radius_bottom_right = 0
-	tsb.content_margin_left = 6
-	tsb.content_margin_right = 10
-	tsb.content_margin_top = 3
-	tsb.content_margin_bottom = 3
+	tsb.content_margin_left = UiKit.Space.CLOSE
+	tsb.content_margin_right = UiKit.Space.ROOM
+	tsb.content_margin_top = UiKit.Space.THIN
+	tsb.content_margin_bottom = UiKit.Space.THIN
 	top.add_theme_stylebox_override("panel", tsb)
 	var row := HBoxContainer.new()
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	row.add_theme_constant_override("separation", 6)
+	row.add_theme_constant_override("separation", UiKit.Space.CLOSE)
 	top.add_child(row)
 	var crest := UiKit.club_marker(code, 22.0)
 	crest.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -128,20 +128,20 @@ func setup(who: String, code: String, card: Dictionary) -> StatCard:
 	bsb.set_border_width_all(0)
 	bsb.corner_radius_top_left = 0
 	bsb.corner_radius_top_right = 0
-	bsb.content_margin_left = 8
-	bsb.content_margin_right = 10
-	bsb.content_margin_top = 2
-	bsb.content_margin_bottom = 3
+	bsb.content_margin_left = UiKit.GAP
+	bsb.content_margin_right = UiKit.Space.ROOM
+	bsb.content_margin_top = UiKit.Space.SLIM
+	bsb.content_margin_bottom = UiKit.Space.THIN
 	bottom.add_theme_stylebox_override("panel", bsb)
 	var nums := HBoxContainer.new()
 	nums.name = "Line"
 	nums.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	nums.add_theme_constant_override("separation", 12)
+	nums.add_theme_constant_override("separation", UiKit.Space.PAD)
 	bottom.add_child(nums)
 	for p: Array in numbers(card):
 		var one := HBoxContainer.new()
 		one.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		one.add_theme_constant_override("separation", 4)
+		one.add_theme_constant_override("separation", UiKit.Space.TIGHT)
 		var n := UiKit.figure(str(p[0]), NUM_FS, Color.WHITE)
 		UiKit.set_font_size(n, NUM_FS, "font_size", true)
 		n.mouse_filter = Control.MOUSE_FILTER_IGNORE

@@ -301,7 +301,7 @@ static func next_size(list: Array) -> int:
 
 ## What re-signing (or signing) this player costs now.
 static func asking_salary(p: Dictionary) -> int:
-	var price := pay(Ratings.salary_value(int(p.get("overall", 50))))
+	var price := pay(Ratings.salary_value(int(Rating.ovr(p, 50))))
 	# An unhappy player wants paying to stay.
 	if ClubLife.morale(p) < 40:
 		price = ceili(price * 1.25)
@@ -774,7 +774,7 @@ static func ai_term(p: Dictionary, list: Array) -> int:
 ## the same scale (so a rating point moves it smoothly, where salaries step); a
 ## longer deal and a younger player each count for more. Roughly 1 to 14.
 static func compensation_value(p: Dictionary, salary: int, years: int) -> float:
-	var rating := clampf((float(p.get("overall", 50)) - 35.0) / 5.5, 1.0, 10.0)
+	var rating := clampf((float(Rating.ovr(p, 50)) - 35.0) / 5.5, 1.0, 10.0)
 	var base := 0.4 * salary_score(salary) + 0.6 * rating
 	var term := 0.85 + 0.1 * float(clampi(years, 1, MAX_YEARS))
 	var youth := clampf(1.0 + (27.0 - float(p.get("age", 27.0))) * 0.03, 0.85, 1.15)
@@ -831,7 +831,7 @@ static func expiring(list: Array) -> Array:
 ## Worth to a club, for re-signing and trades: rating blended with potential,
 ## discounted for age past 29.
 static func worth(p: Dictionary) -> float:
-	var ov := float(p.get("overall", 50))
+	var ov := float(Rating.ovr(p, 50))
 	var pot := maxf(ov, float(p.get("potential", ov)))
 	var w := ov * 0.65 + pot * 0.35
 	w -= 1.5 * maxf(0.0, float(p.get("age", 25.0)) - 29.0)

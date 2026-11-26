@@ -138,7 +138,7 @@ static func open(from: Node, words: Array) -> Control:
 	overlay.name = SHEET_NAME
 	UiKit.close_on_outside_tap(box)
 	var v: VBoxContainer = box["body"]
-	v.add_theme_constant_override("separation", 6)
+	v.add_theme_constant_override("separation", UiKit.Space.CLOSE)
 	var shown := 0
 	for w in words:
 		var e: Dictionary = all.get(str(w), {})
@@ -152,7 +152,7 @@ static func open(from: Node, words: Array) -> Control:
 			kind = str(rows[1])
 			lines = rows.slice(2)
 		if shown > 0:
-			v.add_child(UiKit.spacer(8))
+			v.add_child(UiKit.spacer(UiKit.GAP))
 		var t := UiKit.lbl(title, UiKit.H1 if words.size() == 1 else UiKit.NAME, UiKit.TEXT, true)
 		t.name = "WordTitle_%d" % shown
 		t.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART

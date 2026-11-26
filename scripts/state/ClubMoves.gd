@@ -754,7 +754,7 @@ static func former_player(gs, st: Dictionary, code: String) -> String:
 	var list: Array = gs.season.lists.get(code, []) if gs.season != null else []
 	var best := {}
 	for p in list:
-		if (st["coach"]["coached"] as Dictionary).has(str(p["id"])) and int(p.get("overall", 0)) > int(best.get("overall", -1)):
+		if (st["coach"]["coached"] as Dictionary).has(str(p["id"])) and int(Rating.ovr(p, 0)) > int(Rating.ovr(best, -1)):
 			best = p
 	return GameDB.player_display_name(best) if not best.is_empty() else ""
 

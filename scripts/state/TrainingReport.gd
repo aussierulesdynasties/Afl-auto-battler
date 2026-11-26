@@ -36,7 +36,7 @@ static func _snap(gs, p: Dictionary) -> Dictionary:
 	var attr := {}
 	for row in GameState.TRAIN_STATS:
 		attr[str(row[0])] = int(round(float((p.get("attr", {}) as Dictionary).get(str(row[0]), 0))))
-	return {"ovr": int(p.get("overall", 0)), "attr": attr, "jobs": gs.open_jobs(p)}
+	return {"ovr": int(Rating.ovr(p, 0)), "attr": attr, "jobs": gs.open_jobs(p)}
 
 
 static func after_game(gs) -> void:
@@ -85,7 +85,7 @@ static func build(gs, b: Dictionary, to: int) -> Dictionary:
 			elif after < before:
 				fell.append([str(row[1]), before, after])
 		var ovr0 := int(was.get("ovr", 0))
-		var ovr1 := int(p.get("overall", 0))
+		var ovr1 := int(Rating.ovr(p, 0))
 		rose.sort_custom(func(a, c): return (int(a[2]) - int(a[1])) > (int(c[2]) - int(c[1])))
 		if not rose.is_empty():
 			risers.append({"id": id, "ovr0": ovr0, "ovr1": ovr1, "points": up,

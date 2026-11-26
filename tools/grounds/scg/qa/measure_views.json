@@ -1,0 +1,422 @@
+[
+ {
+  "name": "east_top",
+  "label": "east straight down",
+  "h": 0,
+  "t": 0,
+  "d": 450,
+  "at": [
+   249.7,
+   6.7,
+   0
+  ]
+ },
+ {
+  "name": "east_000",
+  "label": "east from heading 0",
+  "h": 0,
+  "t": 50,
+  "d": 320,
+  "at": [
+   249.7,
+   6.7,
+   0
+  ]
+ },
+ {
+  "name": "east_090",
+  "label": "east from heading 90",
+  "h": 90,
+  "t": 50,
+  "d": 320,
+  "at": [
+   249.7,
+   6.7,
+   0
+  ]
+ },
+ {
+  "name": "east_180",
+  "label": "east from heading 180",
+  "h": 180,
+  "t": 50,
+  "d": 320,
+  "at": [
+   249.7,
+   6.7,
+   0
+  ]
+ },
+ {
+  "name": "east_270",
+  "label": "east from heading 270",
+  "h": 270,
+  "t": 50,
+  "d": 320,
+  "at": [
+   249.7,
+   6.7,
+   0
+  ]
+ },
+ {
+  "name": "northeast_top",
+  "label": "northeast straight down",
+  "h": 0,
+  "t": 0,
+  "d": 450,
+  "at": [
+   169.7,
+   136.7,
+   0
+  ]
+ },
+ {
+  "name": "northeast_000",
+  "label": "northeast from heading 0",
+  "h": 0,
+  "t": 50,
+  "d": 320,
+  "at": [
+   169.7,
+   136.7,
+   0
+  ]
+ },
+ {
+  "name": "northeast_090",
+  "label": "northeast from heading 90",
+  "h": 90,
+  "t": 50,
+  "d": 320,
+  "at": [
+   169.7,
+   136.7,
+   0
+  ]
+ },
+ {
+  "name": "northeast_180",
+  "label": "northeast from heading 180",
+  "h": 180,
+  "t": 50,
+  "d": 320,
+  "at": [
+   169.7,
+   136.7,
+   0
+  ]
+ },
+ {
+  "name": "northeast_270",
+  "label": "northeast from heading 270",
+  "h": 270,
+  "t": 50,
+  "d": 320,
+  "at": [
+   169.7,
+   136.7,
+   0
+  ]
+ },
+ {
+  "name": "eq_top",
+  "label": "eq straight down",
+  "h": 0,
+  "t": 0,
+  "d": 450,
+  "at": [
+   59.7,
+   -223.3,
+   0
+  ]
+ },
+ {
+  "name": "eq_000",
+  "label": "eq from heading 0",
+  "h": 0,
+  "t": 50,
+  "d": 320,
+  "at": [
+   59.7,
+   -223.3,
+   0
+  ]
+ },
+ {
+  "name": "eq_090",
+  "label": "eq from heading 90",
+  "h": 90,
+  "t": 50,
+  "d": 320,
+  "at": [
+   59.7,
+   -223.3,
+   0
+  ]
+ },
+ {
+  "name": "eq_180",
+  "label": "eq from heading 180",
+  "h": 180,
+  "t": 50,
+  "d": 320,
+  "at": [
+   59.7,
+   -223.3,
+   0
+  ]
+ },
+ {
+  "name": "eq_270",
+  "label": "eq from heading 270",
+  "h": 270,
+  "t": 50,
+  "d": 320,
+  "at": [
+   59.7,
+   -223.3,
+   0
+  ]
+ },
+ {
+  "name": "showring_top",
+  "label": "showring straight down",
+  "h": 0,
+  "t": 0,
+  "d": 450,
+  "at": [
+   229.7,
+   -193.3,
+   0
+  ]
+ },
+ {
+  "name": "showring_000",
+  "label": "showring from heading 0",
+  "h": 0,
+  "t": 50,
+  "d": 320,
+  "at": [
+   229.7,
+   -193.3,
+   0
+  ]
+ },
+ {
+  "name": "showring_090",
+  "label": "showring from heading 90",
+  "h": 90,
+  "t": 50,
+  "d": 320,
+  "at": [
+   229.7,
+   -193.3,
+   0
+  ]
+ },
+ {
+  "name": "showring_180",
+  "label": "showring from heading 180",
+  "h": 180,
+  "t": 50,
+  "d": 320,
+  "at": [
+   229.7,
+   -193.3,
+   0
+  ]
+ },
+ {
+  "name": "showring_270",
+  "label": "showring from heading 270",
+  "h": 270,
+  "t": 50,
+  "d": 320,
+  "at": [
+   229.7,
+   -193.3,
+   0
+  ]
+ },
+ {
+  "name": "driver_top",
+  "label": "driver straight down",
+  "h": 0,
+  "t": 0,
+  "d": 450,
+  "at": [
+   -100.3,
+   -23.3,
+   0
+  ]
+ },
+ {
+  "name": "driver_000",
+  "label": "driver from heading 0",
+  "h": 0,
+  "t": 50,
+  "d": 320,
+  "at": [
+   -100.3,
+   -23.3,
+   0
+  ]
+ },
+ {
+  "name": "driver_090",
+  "label": "driver from heading 90",
+  "h": 90,
+  "t": 50,
+  "d": 320,
+  "at": [
+   -100.3,
+   -23.3,
+   0
+  ]
+ },
+ {
+  "name": "driver_180",
+  "label": "driver from heading 180",
+  "h": 180,
+  "t": 50,
+  "d": 320,
+  "at": [
+   -100.3,
+   -23.3,
+   0
+  ]
+ },
+ {
+  "name": "driver_270",
+  "label": "driver from heading 270",
+  "h": 270,
+  "t": 50,
+  "d": 320,
+  "at": [
+   -100.3,
+   -23.3,
+   0
+  ]
+ },
+ {
+  "name": "bridges_top",
+  "label": "bridges straight down",
+  "h": 0,
+  "t": 0,
+  "d": 450,
+  "at": [
+   -330.3,
+   176.7,
+   0
+  ]
+ },
+ {
+  "name": "bridges_000",
+  "label": "bridges from heading 0",
+  "h": 0,
+  "t": 50,
+  "d": 320,
+  "at": [
+   -330.3,
+   176.7,
+   0
+  ]
+ },
+ {
+  "name": "bridges_090",
+  "label": "bridges from heading 90",
+  "h": 90,
+  "t": 50,
+  "d": 320,
+  "at": [
+   -330.3,
+   176.7,
+   0
+  ]
+ },
+ {
+  "name": "bridges_180",
+  "label": "bridges from heading 180",
+  "h": 180,
+  "t": 50,
+  "d": 320,
+  "at": [
+   -330.3,
+   176.7,
+   0
+  ]
+ },
+ {
+  "name": "bridges_270",
+  "label": "bridges from heading 270",
+  "h": 270,
+  "t": 50,
+  "d": 320,
+  "at": [
+   -330.3,
+   176.7,
+   0
+  ]
+ },
+ {
+  "name": "disney_top",
+  "label": "disney straight down",
+  "h": 0,
+  "t": 0,
+  "d": 450,
+  "at": [
+   329.7,
+   86.7,
+   0
+  ]
+ },
+ {
+  "name": "disney_000",
+  "label": "disney from heading 0",
+  "h": 0,
+  "t": 50,
+  "d": 320,
+  "at": [
+   329.7,
+   86.7,
+   0
+  ]
+ },
+ {
+  "name": "disney_090",
+  "label": "disney from heading 90",
+  "h": 90,
+  "t": 50,
+  "d": 320,
+  "at": [
+   329.7,
+   86.7,
+   0
+  ]
+ },
+ {
+  "name": "disney_180",
+  "label": "disney from heading 180",
+  "h": 180,
+  "t": 50,
+  "d": 320,
+  "at": [
+   329.7,
+   86.7,
+   0
+  ]
+ },
+ {
+  "name": "disney_270",
+  "label": "disney from heading 270",
+  "h": 270,
+  "t": 50,
+  "d": 320,
+  "at": [
+   329.7,
+   86.7,
+   0
+  ]
+ }
+]

@@ -619,10 +619,16 @@ func _test_match() -> void:
 			continue
 		var depth3: int = (_router.stack as Array).size()
 		var vignette: Node = root.find_child("FarewellVignette", true, false)
-		if way == "click" and vignette != null:
-			# A tap skips a farewell; then Continue is clear.
-			await _click(vignette as Control)
+		if vignette != null:
+			# A legend's farewell goes first (the skip rule): its Continue, or
+			# Back by this way, closes it and stays on the match; then full time.
+			if way == "click":
+				await _click(root.find_child("FarewellContinue", true, false) as Control)
+			else:
+				await _leave(way, null)
 			await _settle(30)
+			_check(root.find_child("FarewellVignette", true, false) == null and _router.current() == "match",
+					"match full time: %s closes a legend's farewell and stays on the match" % way)
 		# A press conference the result raised would open its own screen over
 		# the hub; this case is about leaving full time, so it is skipped.
 		_state.skip_media_conference()

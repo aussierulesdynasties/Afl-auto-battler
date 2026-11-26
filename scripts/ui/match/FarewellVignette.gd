@@ -3,7 +3,10 @@ extends StoppageVignette
 ## After the siren of a milestone game (FL-007, director approved 2026-10-09): both
 ## sides form a guard of honour and clap him off, he walks through it with a hand up
 ## to the crowd, then two teammates chair him off on their shoulders. About six
-## seconds; a tap skips it. Decoration only: it reads who played and changes nothing.
+## seconds, then it holds on him chaired off until Continue (director, 2026-11-26,
+## the skip rule): a tap on the scene jumps to that last frame, and Continue or
+## Android Back leaves from the first frame. Decoration only: it reads who played
+## and changes nothing.
 ## The occasion is GameState's banner milestone (the same man the run-through banner
 ## honours): a career or club milestone of 200 games or more (200, 250, 300...), or his
 ## last game (director, 2026-10-09).
@@ -44,6 +47,11 @@ const BOUNDARY_AT := 72.0
 ## horizon to keep the crowd at the top; a wide window, fitted to its height, stays sharp at 1.68.
 const PORTRAIT := Vector2(1.25, 0.43)
 const LANDSCAPE := Vector2(1.68, 0.508)
+## Continue, in a black strip under the scene: as the premiership ceremony's.
+const PAD := 16.0
+const BTN_H := 48.0
+const MAX_W := 430.0
+const FOOTER_H := BTN_H + 2.0 * PAD
 ## Review captures can force a framing (tools/visual/capture_farewell.gd --lens, --horizon);
 ## 0 leaves it to the screen's shape.
 static var lens := 0.0
@@ -58,6 +66,7 @@ var copy := ""
 var _left := false
 var _man := {}              # the milestone man's token
 var _carriers := []         # two teammates' tokens
+var _footer: Control        # the strip under the scene that holds Continue
 
 
 ## The words for the occasion, or "" when it isn't one: ms is GameState's banner
@@ -95,8 +104,41 @@ static func open(host: Node, ms: Dictionary, man: Dictionary, my_code: String, o
 	v.mouse_filter = Control.MOUSE_FILTER_STOP
 	layer.add_child(v)
 	v.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	v.offset_bottom = -FOOTER_H
+	v._add_footer(layer)
 	v.setup_farewell(ms, man, my_code, opp_code, mine, theirs, heading, wet)
 	return v
+
+
+## Continue under the scene. A sibling of the scene, not its child: the scene
+## clips what it holds, and a clip stops a touch as well as a stroke.
+func _add_footer(layer: Node) -> void:
+	var f := ColorRect.new()
+	f.name = "FarewellFooter"
+	f.color = Color(0, 0, 0)
+	f.mouse_filter = Control.MOUSE_FILTER_STOP
+	layer.add_child(f)
+	f.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
+	f.offset_top = -FOOTER_H
+	f.offset_bottom = 0.0
+	var b := UiKit.btn("Continue", UiKit.NAME, true)
+	b.name = "FarewellContinue"
+	b.mouse_filter = Control.MOUSE_FILTER_STOP
+	UiKit.feel(b, "main")
+	b.pressed.connect(finish_now)
+	f.add_child(b)
+	var place := func() -> void:
+		var cw := minf(f.size.x, MAX_W) - 2.0 * PAD
+		b.position = Vector2((f.size.x - cw) / 2.0, PAD)
+		b.size = Vector2(cw, BTN_H)
+	f.resized.connect(place)
+	place.call()
+	# The strip round the button is the scene's: a tap there jumps too.
+	f.gui_input.connect(func(e: InputEvent) -> void:
+		f.accept_event()
+		if (e is InputEventMouseButton or e is InputEventScreenTouch) and e.is_pressed():
+			jump_to_rest())
+	_footer = f
 
 
 func setup_farewell(ms: Dictionary, man: Dictionary, my_code: String, opp_code: String,
@@ -135,18 +177,44 @@ func _token(p: Dictionary, side: int, wet: bool, extra := {}) -> Dictionary:
 	return t
 
 
-## Straight to the end (a tap; tests).
+## A tap on the scene: straight to its last frame, him up on two teammates'
+## shoulders nearest the camera, held there until Continue. Nothing else moves.
+func jump_to_rest() -> void:
+	if _left or _t >= END:
+		return
+	_t = END
+	set_process(false)
+	Feel.moved.append("fw_rest")
+	queue_redraw()
+
+
+## Continue and Android Back, from the first frame: the farewell goes and full
+## time comes up.
 func finish_now() -> void:
 	if _left:
 		return
 	_left = true
 	set_process(false)
+	Feel.moved.append("fw_leave")
 	done.emit()
 	var layer := get_parent()
+	# Fades out; with Reduced motion it is simply gone.
+	if not UiKit.motion_on():
+		if layer is CanvasLayer:
+			layer.queue_free()
+		else:
+			visible = false
+		return
 	var tw := create_tween()
 	tw.tween_property(self, "modulate:a", 0.0, 0.2)
+	if is_instance_valid(_footer):
+		tw.parallel().tween_property(_footer, "modulate:a", 0.0, 0.2)
 	if layer is CanvasLayer:
 		tw.tween_callback(layer.queue_free)
+
+
+func is_open() -> bool:
+	return not _left
 
 
 func phase() -> String:
@@ -154,17 +222,16 @@ func phase() -> String:
 
 
 func _process(delta: float) -> void:
-	_t += delta
-	if _t >= END:
-		finish_now()
-		return
+	_t = minf(_t + delta, END)
 	queue_redraw()
+	if _t >= END:
+		set_process(false)   # it holds on the last frame until Continue
 
 
 func _gui_input(event: InputEvent) -> void:
 	accept_event()     # nothing under the scene takes a tap while it plays
 	if (event is InputEventMouseButton or event is InputEventScreenTouch) and event.is_pressed():
-		finish_now()
+		jump_to_rest()
 
 
 # ---------------------------------------------------------------------------

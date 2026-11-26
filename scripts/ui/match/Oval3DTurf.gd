@@ -46,6 +46,7 @@ const MOWING := {
 	"jiangwan": [CHECKER, 12.0, "couch"], "hands": [ACROSS, 10.0, "couch"],
 	"blacktown": [ACROSS, 12.0, "couch"], "summit": [ACROSS, 10.0, "rye"], "macpoint": [DIAMONDS, 12.0, "rye"],
 	"adelaide": [CHECKER, 12.0, "rye"], "gabba": [ACROSS, 12.0, "couch"],
+	"traeger": [ACROSS, 10.0, "couch"],
 }
 ## How each grass shifts the day's turf colours (multiplied in, so weather and light still set them).
 const GRASS_TINT := {
@@ -590,6 +591,9 @@ func _late_game() -> void:
 ## (GroundModels' surrounds, meta open_ground): it lies in the open under the sky like the turf.
 const STAND_GREEN := 0.15    # how much of the grass's colour the stands' grey keeps
 const STAND_SHADER := preload("res://scripts/ui/match/oval3d_stand.gdshader")
+## Share of the sun a translucent roof membrane passes to its underside (a PTFE sheet passes about 10-15%;
+## tuned by eye against the Gabba's 2019 photo sphere).
+const MEMBRANE_THROUGH := 0.45
 const AMB_KEYS := ["amb_down", "amb_low", "amb_level", "amb_high", "amb_up"]
 var _stand_mats: Array[ShaderMaterial] = []
 
@@ -598,8 +602,9 @@ var _stand_mats: Array[ShaderMaterial] = []
 ## stand shader does not cover (see-through or glowing ones) keep their own.
 func light_stands(model: Node) -> void:
 	var seen := {}
+	var backdrops := model.find_children("Backdrop", "", true, false)   # the background scene keeps its own paint
 	for mi: MeshInstance3D in model.find_children("*", "MeshInstance3D", true, false):
-		if mi.mesh == null or mi.has_meta("open_ground"):
+		if mi.mesh == null or mi.has_meta("open_ground") or backdrops.any(func(b): return (b as Node).is_ancestor_of(mi)):
 			continue
 		for i in mi.mesh.get_surface_count():
 			var m := mi.get_active_material(i) as StandardMaterial3D
@@ -641,6 +646,12 @@ func _light_stands() -> void:
 		for k in AMB_KEYS.size():
 			m.set_shader_parameter(AMB_KEYS[k], amb[k])
 		m.set_shader_parameter("ref_scale", 1.0 / e_amb if e_amb > 0.001 else 0.0)
+		# A lit membrane (the Gabba's roof, from below) is not a grey underside: the sun comes through it,
+		# so it reads bright cream as the 2019 photo sphere shows. It keeps the grey correction (without it
+		# the grass's green bounce tinted the cream olive).
+		if m.resource_name.begins_with("membrane_lit"):
+			var sun_e := sun.light_energy if sun != null and sun.visible else 0.0
+			m.set_shader_parameter("through", Vector3.ONE * MEMBRANE_THROUGH * sun_e)
 
 
 ## The sky's light (its cosine-weighted mean, as the engine lights a face from the sky) for a face

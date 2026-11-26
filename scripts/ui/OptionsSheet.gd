@@ -18,7 +18,7 @@ static func open(host: Control, in_career: bool, quit := false) -> Control:
 	overlay.name = "Settings"
 	UiKit.close_on_outside_tap(box)
 	var v: VBoxContainer = box["body"]
-	v.add_theme_constant_override("separation", 6)
+	v.add_theme_constant_override("separation", UiKit.Space.CLOSE)
 	v.add_child(UiKit.heading("Settings", UiKit.H1))
 
 	_row(v, "Appearance", "SettingsAppearance", APPEARANCE_OPTIONS,
@@ -117,7 +117,7 @@ static func open(host: Control, in_career: bool, quit := false) -> Control:
 			overlay.queue_free()
 			Router.to_new_career_setup())
 		v.add_child(fresh)
-		var confirm := UiKit.vbox(6)
+		var confirm := UiKit.vbox(UiKit.Space.CLOSE)
 		confirm.name = "DeleteConfirm"
 		confirm.visible = false
 		var del := UiKit.danger_btn("Delete this career", UiKit.NAME)
@@ -131,7 +131,7 @@ static func open(host: Control, in_career: bool, quit := false) -> Control:
 				UiKit.BODY, UiKit.BAD)
 		warn.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		confirm.add_child(warn)
-		var row := UiKit.hbox(8)
+		var row := UiKit.hbox(UiKit.GAP)
 		var keep := UiKit.btn("Keep it", UiKit.NAME)
 		keep.name = "OptionsDeleteCancel"
 		keep.custom_minimum_size = Vector2(0, 44)
@@ -210,7 +210,7 @@ static func _toast(over: Control, text: String) -> void:
 	var t := PanelContainer.new()
 	t.name = "Toast"
 	t.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	t.add_theme_stylebox_override("panel", UiKit.style(UiKit.TEXT, 8, UiKit.RADIUS))
+	t.add_theme_stylebox_override("panel", UiKit.style(UiKit.TEXT, UiKit.GAP, UiKit.RADIUS))
 	var l := UiKit.lbl(text, UiKit.NAME, UiKit.BG, true)
 	l.autowrap_mode = TextServer.AUTOWRAP_OFF
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -227,7 +227,7 @@ static func _toast(over: Control, text: String) -> void:
 ## explanation under it.
 static func _row(v: VBoxContainer, title: String, node_name: String, options: Array,
 		current: String, note: String, on_pick: Callable) -> void:
-	v.add_child(UiKit.spacer(4))
+	v.add_child(UiKit.spacer(UiKit.Space.TIGHT))
 	v.add_child(UiKit.lbl(title, UiKit.BODY, UiKit.TEXT, true))
 	v.add_child(UiKit.choice_grid(node_name, options, current, options.size(), on_pick))
 	var l := UiKit.lbl(note, UiKit.SMALL, UiKit.MUTED)
@@ -242,9 +242,9 @@ static func _grounds(v: VBoxContainer) -> void:
 	var listed: Dictionary = GroundPacks.manifest().get("packs", {})
 	if listed.is_empty() or OS.has_feature("web"):
 		return
-	var box := UiKit.vbox(6)
+	var box := UiKit.vbox(UiKit.Space.CLOSE)
 	box.name = "SettingsGrounds"
-	v.add_child(UiKit.spacer(4))
+	v.add_child(UiKit.spacer(UiKit.Space.TIGHT))
 	box.add_child(UiKit.lbl("3D grounds", UiKit.BODY, UiKit.TEXT, true))
 	var status := UiKit.lbl("", UiKit.SMALL, UiKit.MUTED)
 	status.name = "GroundsStatus"
@@ -307,8 +307,8 @@ static func _grounds(v: VBoxContainer) -> void:
 ## Volume (row 98): one slider for every sound - music, the crowd and button
 ## sounds - with the level written beside its name.
 static func _volume_row(v: VBoxContainer) -> void:
-	v.add_child(UiKit.spacer(4))
-	var head := UiKit.hbox(8)
+	v.add_child(UiKit.spacer(UiKit.Space.TIGHT))
+	var head := UiKit.hbox(UiKit.GAP)
 	var title := UiKit.lbl("Volume", UiKit.BODY, UiKit.TEXT, true)
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	head.add_child(title)
@@ -344,9 +344,9 @@ static func _volume_row(v: VBoxContainer) -> void:
 ## text colour (as a chosen option is outlined), a round thumb big enough for
 ## a thumb.
 static func _paint_slider(s: HSlider) -> void:
-	var track := UiKit.style(UiKit.LINE, 3, 3)
+	var track := UiKit.style(UiKit.LINE, UiKit.Space.THIN, 3)
 	track.set_border_width_all(0)
-	var fill := UiKit.style(UiKit.TEXT, 3, 3)
+	var fill := UiKit.style(UiKit.TEXT, UiKit.Space.THIN, 3)
 	fill.set_border_width_all(0)
 	s.add_theme_stylebox_override("slider", track)
 	s.add_theme_stylebox_override("grabber_area", fill)
@@ -375,7 +375,7 @@ const SAVES_INFO := "Back up writes your career to a file you keep. Use it to mo
 
 
 static func _saves(v: VBoxContainer, overlay: Control, host: Control) -> void:
-	var box := UiKit.vbox(6)
+	var box := UiKit.vbox(UiKit.Space.CLOSE)
 	box.name = "SettingsSaves"
 	v.add_child(UiKit.spacer(UiKit.GAP))
 	v.add_child(UiKit.rule())
@@ -393,7 +393,7 @@ static func _saves(v: VBoxContainer, overlay: Control, host: Control) -> void:
 		status.visible = text != ""
 	# Mid-match the career cannot change under the match.
 	var locked := not GameState.pending_match.is_empty()
-	var row := UiKit.hbox(8)
+	var row := UiKit.hbox(UiKit.GAP)
 	var backup_btn := UiKit.btn("Back up career", UiKit.NAME)
 	backup_btn.name = "SavesExport"
 	backup_btn.custom_minimum_size = Vector2(0, 44)
@@ -425,7 +425,7 @@ static func _saves(v: VBoxContainer, overlay: Control, host: Control) -> void:
 	if not earlier.is_empty():
 		box.add_child(UiKit.lbl("Earlier saves", UiKit.BODY, UiKit.TEXT, true))
 		for meta in earlier:
-			var line := UiKit.hbox(8)
+			var line := UiKit.hbox(UiKit.GAP)
 			line.name = "EarlierSave%d" % int(meta["slot"])
 			var what := UiKit.lbl(_save_line(meta), UiKit.BODY, UiKit.TEXT)
 			what.size_flags_horizontal = Control.SIZE_EXPAND_FILL

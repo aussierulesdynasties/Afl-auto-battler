@@ -57,9 +57,11 @@ func run() -> void:
 	_t("_test_ground_models")
 	_t("_test_night_towers")
 	_t("_test_sun_bearing")
+	_t("_test_ground_terrain")
 	_t("_test_traced_boundaries")
 	_t("_test_traced_ground_playback", [res])
 	_t("_test_ground_screens")
+	_t("_test_ground_backdrop")
 	_t("_test_stand_light")
 	_t("_test_mcg_crowd", [res])
 	_t("_test_crowd_attendance")
@@ -2354,6 +2356,44 @@ func _test_ground_models() -> void:
 	oval.queue_free()
 
 
+## The real land round a ground (tools/grounds/terrain): a ground whose surrounds the game draws
+## itself lays its ring on the measured bare-earth heights, not flat. At Norwood the land falls about
+## 2 m from the ground to Beulah Road (Google Earth and Geoscience Australia's LiDAR agree); the
+## ring never rises above the model's street where it meets the model; trees and buildings stand
+## on the land.
+func _test_ground_terrain() -> void:
+	var fit: Array = GroundModels.FIT["norwood"]
+	var land := GroundTerrain.load_for("res://assets/grounds/norwood/", fit)
+	_check(land != null, "Norwood's land is in the game (assets/grounds/norwood/terrain.bin)")
+	if land == null:
+		return
+	# Model metres: x east, z south. Beulah Road is about 165 m north, 10 m west of the centre circle.
+	var turf := land.height(float(fit[0]), float(fit[1]))
+	var beulah := land.height(float(fit[0]) - 10.0, float(fit[1]) - 165.0)
+	_check(absf(turf - float(fit[2])) < 0.05, "The land at the centre circle is the turf (%.2f)" % turf)
+	_check(absf(beulah - turf + 2.0) < 0.3, "Beulah Road is about 2 m below the turf (%.2f)" % (beulah - turf))
+	var mcg := GroundModels.instantiate("mcg")
+	var ring: MeshInstance3D = mcg.get_node_or_null("Surrounds")
+	var mland := GroundTerrain.load_for("res://assets/grounds/mcg/", GroundModels.FIT["mcg"])
+	var s: Dictionary = GroundModels.SURROUNDS["mcg"]
+	var off := 0.0
+	var above := 0.0
+	var count := 0
+	if ring != null and mland != null:
+		var v: PackedVector3Array = ring.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+		for p in v:
+			var r := Vector2(p.x, p.z).length()
+			if r > float(s["inner"]) + GroundModels.LAND_BANK + 1.0 and r < 900.0:
+				off = maxf(off, absf(p.y - (mland.height(p.x, p.z) - 0.03)))
+				count += 1
+			if r < float(s["inner"]) + 0.5:
+				above = maxf(above, p.y - float(s["y"]))
+	_check(ring != null and mland != null and count > 1000 and off < 0.01,
+			"The MCG's Yarra Park ring lies on the real land (%d points, worst %.3f m)" % [count, off])
+	_check(above <= 0.001, "Where it meets the model the ring is never above the MCG's street (%.3f)" % above)
+	mcg.free()
+
+
 ## A ground whose boundary was traced on Google Earth (tools/grounds/boundary) plays on that line, not an ellipse:
 ## measured, every traced point of the painted line is where the match's boundary is (within the fit's own error),
 ## its goals are where the traced goals are, the model is laid on them unstretched, and the field's own sums
@@ -2597,6 +2637,54 @@ func _test_graphics_levels(res: Dictionary) -> void:
 ## The ground's big screens and fence signs (Oval3DScreens, row 202 2b): a match at a ground whose
 ## model has screens lays a face over each, facing the ground, that shows the score, a goal and
 ## the clock; the boards ring the fence in both clubs' colours; the inspector (no clubs) gets none.
+## Row 202 2b, background scenes: a ground with its surroundings builds them with its model, they
+## cast no shadow into the stadium, the cameras see out to them through a haze that starts well past
+## the stadium, and none of the scene's own ground is left over the arena (the park's ground once lay
+## 4 m over the MCG's turf). A ground without surroundings keeps the 900 m view and no haze.
+func _test_ground_backdrop() -> void:
+	_check(GroundModels.has_backdrop("mcg") and GroundModels.has_backdrop("gmhba"),
+			"The MCG and GMHBA Stadium have their surroundings")
+	_check(not GroundModels.has_backdrop("gabba"), "The Gabba has none (its own surrounds, #2020)")
+	for g in ["MCG", "The Gabba"]:
+		var d := MatchDirector.new()
+		var res := _result(42)
+		d.setup(res, res["events"])
+		var oval := Oval3D.new()
+		oval.ground = g
+		(Engine.get_main_loop() as SceneTree).root.add_child(oval)
+		oval.build(d, "COL", "GEE")
+		var bds := oval.find_children("Backdrop", "", true, false)
+		if g == "The Gabba":
+			_check(bds.is_empty() and oval.camera.far < 1000.0 and not oval._env.fog_enabled,
+					"A ground without surroundings keeps the 900 m view and no haze")
+			oval.free()
+			continue
+		_check(bds.size() == 1 and (bds[0] as Node).get_parent().name == "Ground",
+				"The MCG's surroundings are laid with its model (%d)" % bds.size())
+		if bds.size() != 1:
+			oval.free()
+			continue
+		var geo := (bds[0] as Node).find_children("*", "GeometryInstance3D", true, false)
+		_check(geo.size() > 10, "The surroundings have their pieces (%d)" % geo.size())
+		var shadow := geo.filter(func(n): return (n as GeometryInstance3D).cast_shadow != GeometryInstance3D.SHADOW_CASTING_SETTING_OFF)
+		_check(shadow.is_empty(), "The surroundings cast no shadow (%d do)" % shadow.size())
+		_check(oval.camera.far >= GroundModels.BACKDROP_FAR, "The camera sees out to the skyline (%.0f m)" % oval.camera.far)
+		_check(oval._env.fog_enabled and oval._env.fog_depth_begin >= 500.0,
+				"The haze starts well past the stadium (%.0f m)" % oval._env.fog_depth_begin)
+		var over := 0
+		var fence := GroundModels.match_fence() * 1.15
+		for n in geo:
+			var mi := n as MeshInstance3D
+			if mi == null or not str(mi.name).begins_with("bg_near_ground"):
+				continue
+			var xf := oval.global_transform.affine_inverse() * mi.global_transform
+			for i in mi.mesh.get_surface_count():
+				for v in mi.mesh.surface_get_arrays(i)[Mesh.ARRAY_VERTEX]:
+					var p: Vector3 = xf * v
+					if pow(p.x / fence.x, 2) + pow(p.z / fence.y, 2) < 1.0 and p.y > -1.0:
+						over += 1
+		_check(over == 0, "None of the park's ground lies over the arena (%d points)" % over)
+		oval.free()
 ## The stands' light (director, 2026-11-21: roof undersides "grey, a faint green tint"): the model's
 ## surfaces take the stand shader; a face turned up keeps the sky's light, one turned down loses the
 ## grass's green; at night nothing changes; the men and the turf keep their own materials.

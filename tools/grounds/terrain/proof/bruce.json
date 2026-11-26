@@ -1,0 +1,50 @@
+{
+ "ground": "bruce",
+ "source": "mapterhorn",
+ "licence": "Geoscience Australia, DEM of Australia derived from LiDAR 5 Metre Grid, CC BY 4.0",
+ "ge_centre_m": 612.0,
+ "judged": 4,
+ "spots": 4,
+ "mean": 0.45,
+ "rms": 0.46,
+ "worst": 0.57,
+ "passed": true,
+ "rows": [
+  [
+   "s02",
+   -109.5,
+   433.0,
+   -2.0,
+   -1.56,
+   0.44,
+   "judged"
+  ],
+  [
+   "s03",
+   -243.5,
+   193.3,
+   4.0,
+   4.5,
+   0.5,
+   "judged"
+  ],
+  [
+   "s04",
+   -426.0,
+   123.8,
+   20.0,
+   20.29,
+   0.29,
+   "judged"
+  ],
+  [
+   "s09",
+   240.9,
+   -80.8,
+   6.0,
+   6.57,
+   0.57,
+   "judged"
+  ]
+ ]
+}
