@@ -426,7 +426,8 @@
 					{
 						"op": "trust",
 						"d": -4,
-						"why": "You left him out of the final"
+						"why": "You left him out of the final",
+						"scar": true
 					},
 					{
 						"op": "culture",
