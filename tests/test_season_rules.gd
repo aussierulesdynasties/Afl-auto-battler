@@ -77,8 +77,12 @@ func _t(test: String, args := []) -> Variant:
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+## `n` clubs from the game's league; past its 18, Tasmania makes a 19th (a
+## Forge club in a past season makes the league odd the same way).
 func _codes(n: int) -> Array:
 	var all: Array = GameDB.active_clubs(2027).duplicate()
+	if n > all.size():
+		all.append("TAS")
 	return all.slice(0, n)
 
 
@@ -202,7 +206,11 @@ func _test_fixture_shapes() -> void:
 	# [year, clubs, rounds, games each]
 	var cases := [[1990, 14, 22, 22], [1991, 15, 24, 22], [1993, 15, 22, 20], [1994, 15, 24, 22],
 			[1997, 16, 22, 22], [2005, 16, 22, 22], [2012, 18, 23, 22], [2020, 18, 18, 17],
-			[2023, 18, 24, 23], [2024, 18, 25, 23]]
+			[2023, 18, 24, 23], [2024, 18, 25, 23],
+			# 19 clubs can't all play 23 (19 x 23 is odd), so all play 22 in
+			# 24 rounds, two byes each (director, 2026-11-25: "All play 22";
+			# bug bash P1-8).
+			[2023, 19, 24, 22], [2024, 19, 24, 22]]
 	for c in cases:
 		var y := int(c[0])
 		var n := int(c[1])
