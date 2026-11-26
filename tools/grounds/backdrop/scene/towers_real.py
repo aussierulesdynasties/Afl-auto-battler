@@ -27,7 +27,11 @@ if os.path.exists(_ovp):
     if os.path.exists(_opp):
         for r in json.load(open(_opp)): _parts.setdefault(r['building_id'], []).append(r)
     _NB = NE
+    # a closed ground's era: city towers built since (judged by eye on the era's own frames of the city, era_merge.py)
+    _edp = os.path.join(os.environ.get('WORK', '/home/user/work'), 'data', name, 'era_drop.json')
+    _cdrop = set(json.load(open(_edp)).get('city_ids', [])) if os.path.exists(_edp) else set()
     for r in json.load(open(_ovp)):
+        if r['id'] in _cdrop: continue
         h = r['height'] or (r['num_floors'] * 3.4 + 1.0 if r['num_floors'] else None)
         if not h or h < 30: continue
         try: g_ = _W.loads(r['wkt'])
