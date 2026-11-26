@@ -137,7 +137,12 @@ if os.path.exists(_ovp):
 # today's measured heights (LiDAR, Google Earth, Overture) fit only buildings that are still the same building today
 nowids = {e['id'] for e in NOW}
 today = [e['id'] for e in out if e['type'] == 'way' and 'building' in e.get('tags', {}) and e['id'] in nowids and e['tags'].get('era') != 'low']
-json.dump({'overture_ids': ovd, 'today_ids': today}, open(os.path.join(D, 'era_drop.json'), 'w'))
+# the city's towers past the near square, judged on the era's frames of the city (era_review.json "_city_<city>_<year>",
+# named by this ground's "city"): those built since are left out of the skyline (towers_real.py)
+_cr = json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'era_review.json'))).get(_rv.get('city', ''), {})
+cdrop = list(_cr.get('built_since', []))
+print('era', tag, 'city towers built since', len(cdrop))
+json.dump({'overture_ids': ovd, 'today_ids': today, 'city_ids': cdrop}, open(os.path.join(D, 'era_drop.json'), 'w'))
 print('era', tag, 'overture footprints built since', len(ovd))
 json.dump({'elements': out}, open(os.path.join(D, 'osm.json'), 'w'))
 print('era', tag, 'old buildings', len(OB), 'late-mapped kept', late, 'built since dropped', drop, 'traced', len(_rv.get('extra', [])))
