@@ -452,11 +452,8 @@ static func drop_preview(p: Dictionary) -> Control:
 		for i in range((cost["broken"] as Array).size()):
 			var b = cost["broken"][i]
 			lines.append(["DropBroken_%d" % i, "It breaks: %s" % str(b).trim_suffix(".") + "."])
-	var bonds := RelationsView.bond_label_script()
 	for f in cost["fallout"]:
-		var tie := ""
-		if bonds != null and str(f.get("kind", "")) != "":
-			tie = ", his " + str(bonds.call("label", str(f["kind"]))).to_lower()
+		var tie := ", his " + str(f["what"]) if str(f.get("what", "")) != "" else ""
 		lines.append(["DropFallout_" + str(f["id"]), "%s%s: opinion of you %+d." % [str(f["name"]), tie, int(f["opinion"])]])
 	var st: Dictionary = cost["standing"]
 	for pair in [["respect", "Respect"], ["authority", "Authority"]]:
