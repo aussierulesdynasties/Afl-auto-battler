@@ -319,6 +319,103 @@
     "max": 7.38
    }
   },
+  "manuka": {
+   "frame": [
+    3.715,
+    5.165,
+    -80.135
+   ],
+   "goal_x": 79.815,
+   "boundary": [
+    72.6175,
+    -0.1555,
+    0.3472,
+    7.2051,
+    -0.0244,
+    0.027,
+    -0.0712,
+    0.6746,
+    -0.0402,
+    0.0379,
+    -0.0136,
+    -0.033,
+    -0.0121,
+    0.0081,
+    -0.0353,
+    -0.0998,
+    -0.0002,
+    -0.0109,
+    0.0067,
+    -0.0407,
+    -0.0102,
+    -0.0055,
+    0.0119,
+    -0.0264,
+    0.0112,
+    -0.0066,
+    0.0306,
+    -0.0931,
+    0.001
+   ],
+   "boundary_fit": {
+    "n": 352,
+    "order": 14,
+    "rms_m": 0.147,
+    "p95_m": 0.352,
+    "max_m": 0.578,
+    "largest_gap_deg": 4.78
+   },
+   "ends_vs_goal_lines_m": [
+    0.283,
+    0.494
+   ],
+   "source": "Google Earth web historical imagery: aerials of 30 Jul 2023 (anchor), 30 Mar 2022 and 30 Apr 2019, straight-down captures at 0.132 m a pixel. Each date's painted line traced along 1440 rays; the other two dates lined up on the 2023 line by the line itself (2022: shift -0.04,-1.18 m, rms 0.34; 2019: -1.40,-1.09 m, rms 0.96) and the median taken. Goals: 50 m arc then the 6.4 x 9 m goal square; 2023 and 2019 agree to 0.09 m after lining up.",
+   "trace_error": {
+    "seen_share": 0.978,
+    "longest_unseen_arc_deg": 4.8,
+    "dates_agree": "line: 89% (2022) and 76% (2019) of shared points within 0.5 m after lining up",
+    "placement": "NOT PINNED. Google Earth places the three aerials up to 1.8 m apart. Pinning by the grass edge against the current 3D view gives 2023 (+0.15, -1.68) m but the same method on 2019 and 2022 disagrees with the line-to-line shifts by 1.5-2 m, so the grass edge can't pin it to better than about 2 m. Pin it to the rebuilt model (#2035) when that lands."
+   },
+   "fence": [
+    78.263,
+    -0.9271,
+    0.6298,
+    6.3717,
+    0.2181,
+    -0.2178,
+    -0.1846,
+    0.6659,
+    -0.1546,
+    0.0932,
+    -0.102,
+    -0.0178,
+    -0.0088,
+    -0.0559,
+    0.1058,
+    -0.1846,
+    0.0679,
+    0.0015,
+    0.0248,
+    -0.036,
+    -0.0541,
+    -0.0263,
+    -0.098,
+    0.0461,
+    -0.002
+   ],
+   "fence_fit": {
+    "n": 303,
+    "order": 12,
+    "rms_m": 0.262,
+    "p95_m": 0.608,
+    "max_m": 0.853,
+    "largest_gap_deg": 12.37
+   },
+   "runoff_m": {
+    "min": 3.76,
+    "max": 6.95
+   }
+  },
   "north_hobart": {
    "frame": [
     -5.135,
@@ -405,6 +502,130 @@
    "runoff_m": {
     "min": 1.16,
     "max": 6.83
+   }
+  },
+  "people_first": {
+   "frame": [
+    -1.35,
+    1.185,
+    -71.582
+   ],
+   "goal_x": 78.685,
+   "boundary": [
+    73.7868,
+    -0.0878,
+    -0.2752,
+    6.4114,
+    0.1186,
+    0.2588,
+    0.1862,
+    -0.7987,
+    -0.2134,
+    -0.1844,
+    -0.0735,
+    -0.001,
+    0.2612,
+    0.1918,
+    -0.0077,
+    -0.2152,
+    -0.0724,
+    -0.1145,
+    0.0588,
+    -0.0914,
+    0.0508,
+    0.0072,
+    -0.0553,
+    -0.1037,
+    -0.0154
+   ],
+   "boundary_fit": {
+    "n": 339,
+    "order": 12,
+    "rms_m": 0.003,
+    "p95_m": 0.005,
+    "max_m": 0.006,
+    "largest_gap_deg": 6.0
+   },
+   "ends_vs_goal_lines_m": [
+    0.374,
+    0.232
+   ],
+   "source": "Two pictures, both with the AFL markings: (1) Queensland Government aerial (State Remotely Sensed Image Library, latest public State program), about 0.1 m; (2) Esri World Imagery Wayback release 13192, satellite dated 2025-10-01, 0.34 m, which sees the west side that the aerial has under the roof's shadow. Painted line traced in each as the ridge of a thin bright line with lit grass 1.5 m either side, along 1440 rays. The satellite picture was laid on the aerial by its own goals and goal midpoint (painted, ground level), then the seen points of both were fitted with one 12-term Fourier radius about the goals' midpoint. Goals: middle of each goal line (goal-square template) from the aerial; 50 m arcs found at 50.1 and 50.2 m in the aerial and 50.2 and 50.4 m in the satellite picture. Aerial placed on Google Earth by ground-level edges 130-280 m out (shift -0.36 E, -0.35 N).",
+   "trace_error": {
+    "line_rms_to_fit": 0.1,
+    "seen_share": 0.89,
+    "longest_unseen_arc_deg": 6.5,
+    "two_pictures_agree_where_both_seen": {
+     "rays": 674,
+     "median_m": -0.24,
+     "rms_m": 0.56
+    },
+    "second_picture_on_first_by_goals": {
+     "turn_deg": -0.24,
+     "residual_m": [
+      0.1,
+      0.1,
+      0.0
+     ]
+    },
+    "placement_on_google_earth": "about 1 m: the Queensland aerial and Google Earth agree to 0.5 m overall"
+   },
+   "centre_vs_goals_mid_m": [
+    0.005,
+    -0.002
+   ],
+   "fence": [
+    78.3366,
+    0.1478,
+    0.4763,
+    6.9962,
+    0.3915,
+    0.5657,
+    0.1502,
+    -0.7435,
+    -0.5925,
+    -0.4492,
+    -0.3262,
+    -0.2651,
+    0.187,
+    0.1986,
+    0.1736,
+    -0.0102,
+    0.1653,
+    0.1423,
+    -0.1453,
+    -0.0236,
+    -0.1843,
+    -0.2039,
+    0.0069
+   ],
+   "fence_fit": {
+    "n": 319,
+    "order": 11,
+    "rms_m": 0.245,
+    "p95_m": 0.452,
+    "max_m": 0.904,
+    "left_out": [
+     {
+      "at": [
+       -41.2,
+       -62.5
+      ],
+      "off_m": 1.49
+     },
+     {
+      "at": [
+       -43.6,
+       -61.3
+      ],
+      "off_m": 1.28
+     }
+    ],
+    "largest_gap_deg": 22.01
+   },
+   "runoff_m": {
+    "min": 1.31,
+    "max": 5.72
    }
   },
   "riverway": {
