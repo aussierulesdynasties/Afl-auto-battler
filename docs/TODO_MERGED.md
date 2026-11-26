@@ -200,3 +200,27 @@ What has landed toward each open row of docs/TODO.md and docs/TODO_RULINGS.md, o
 - 202: Merged #2150: Blacktown: PC-check fixes in one pass (tower heads, bank by side, colours, night surroundings).
 - 202: Merged #2157: 3D 1.0 plan: night-tower beams and Blacktown fixes.
 - 171: Merged #2189: UI Batch 5, Preview and Press: matchups across the top, the room across the top.
+- 202: Merged #1920: Mars Stadium (Ballarat): model (row 202 2b, WIP).
+- 201: Merged #1957: Match view: handballs drawn as handballs, not kicks (row 201 gap 7).
+- 202: Merged #1969: 3D inventory: save every session's work in progress to main.
+- 202: Merged #1976: 3D match: the MetaHuman footballer in every match, Club Forge hair refitted and trimmed to 20 cuts (row 202 2d).
+- 201: Merged #1977: Match sim: longer kicks, fewer chains, and calls that change how the side kicks (row 201 gaps 6-8).
+- 202: Merged #1987: MCG flagship: matte roof, walls, seat rule and colours, Yarra Park from OpenStreetMap, MCG standard doc (row 202 2b).
+- 202: Merged #1995: 3D match: the main camera zooms and leads the play like AFL TV (row 202 2e).
+- 202: Merged #1996: 3D lighting: night towers, the real sun over every ground, and the day look (row 202 2a).
+- 202: Merged #1997: 3D guernsey numbers hold their shape on the TV camera (row 202 2d).
+- 202: Merged #2003: 3D wet games: rain falls in the match, wet guernseys, towers on early (rule 2.83, row 202 2a).
+- 202: Merged #2016: GMHBA Stadium to the MCG standard: Selwood Stand roof in matches, solar roof, north and east walls, seats no longer black, Kardinia Park and Geelong (row 202 2b).
+- 202: Merged #2023: 3D match: background scenes for every match ground (row 202 2b, WIP, not shippable).
+- 198: Merged #2040: 3D match: real AFL move clips timed to the touch, reel fixes, run-down tackles.
+- 202: Merged #2041: 3D: Barossa Park rebuilt to the MCG standard (row 202).
+- 202: Merged #2045: Match plays on each ground's traced boundary line, not an ellipse.
+- 202: Merged #2047: Grounds: one shared Google Earth compare tool for every ground.
+- 202: Merged #2054: 3D match on phones: edge smoothing per Graphics level, sharper film, player detail levels kept (row 202).
+- 180: Merged #2058: Club Forge: Create a player no longer crashes the phone build; Back works after a fresh start.
+- 142: Merged #2065: Rival clubs keep their stars: first contracts fit the cap, stars settled first.
+- 202: Merged #2081: 3D heads: warm shade fill and grass-green cut on the head shader.
+- 202: Merged #2083: 3D 1.0 plan: Optus rebuild and Blacktown stages 1-3 on main (row 202).
+- 202: Merged #2145: Norwood Oval: the north and south frontages modelled one by one on the real land (row 202).
+- 202: Merged #2146: Night towers: the beams light the field and the men; the stadium and the land round it take the spill.
+- 202: Merged #2174: 3D 1.0 plan: surroundings, Norwood frontages, real boundary lines.
