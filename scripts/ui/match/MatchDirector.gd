@@ -2637,8 +2637,11 @@ func _lead_receivers(k: int, cur: int) -> void:
 			prev_kind = kind
 			continue
 		# A clanger or a spoil is a touch of the ball where the log has it: the man who fumbles
-		# or punches it leads there as a receiver does, so he is on it when it comes loose.
-		if not _possession(kind) and not kind in ["rebound", "clanger", "spoil"]:
+		# or punches it leads there as a receiver does, so he is on it when it comes loose. So does
+		# the man a marked player passes to (a give inside 50, or a set shot played on): left out,
+		# he ran off to the goal square while the mark was held and the pass came down 32 m from
+		# him, put in his hands from there (picture truth suite match, event 1103).
+		if not _possession(kind) and not kind in ["rebound", "clanger", "spoil", "receive"]:
 			t += 0.5
 			continue
 		var restart := _restart(j)
