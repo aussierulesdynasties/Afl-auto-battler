@@ -13,7 +13,6 @@ extends RefCounted
 const OPINION_PATH := "res://scripts/sim/Opinion.gd"
 const TEMPERAMENT_PATH := "res://scripts/sim/Temperament.gd"
 const PROMISES_PATH := "res://scripts/sim/Promises.gd"
-const BONDS_PATH := "res://scripts/sim/Bonds.gd"
 ## A player rated this or more is "one of our best" when left out (the line
 ## GameState uses for the morale sting and the Opinion mark).
 const STAR_OVR := 78
@@ -90,6 +89,7 @@ static func bonds(gs: Object, id: String) -> Array:
 		if op == null:
 			continue
 		out.append({"id": other, "kind": str(t.get("kind", "")), "label": str(t.get("label", "")),
+				"what": str(t.get("what", "")),
 				"name": GameDB.player_display_name(op), "club": str((op as Dictionary).get("club", ""))})
 	return out
 
@@ -140,15 +140,15 @@ static func drop_preview(gs: Object, p: Dictionary, rel: Dictionary, final := fa
 		out["respect"] = int(pd.get("respect", 0))
 		out["authority"] = int(pd.get("authority", 0))
 	if gs != null and gs.has_method("bond_fallout"):
+		# Each one named as what he is to the man left out ("his brother").
+		var what := {}
+		for b in bonds(gs, id):
+			what[str(b["id"])] = str(b["what"]) if str(b["what"]) != "" else str(b["label"]).to_lower()
 		for f in (gs.call("bond_fallout", id, "drop") as Array):
 			var op = GameDB.player_by_id(str(f.get("id", "")))
 			if op == null or int(f.get("opinion", 0)) == 0:
 				continue
-			out["fallout"].append({"id": str(f["id"]), "name": GameDB.player_display_name(op), "kind": str(f.get("kind", "")),
+			out["fallout"].append({"id": str(f["id"]), "name": GameDB.player_display_name(op), "what": str(what.get(str(f["id"]), "")),
 					"opinion": int(f["opinion"]), "why": str(f.get("why", ""))})
 	return out
 
-
-## Bonds.gd, for its kind words ("Close mate"), or null before it exists.
-static func bond_label_script() -> Script:
-	return _script(BONDS_PATH)

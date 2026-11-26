@@ -574,6 +574,8 @@ static func _trust(v: VBoxContainer, p: Dictionary) -> void:
 			var row := UiKit.hbox(UiKit.GAP)
 			row.name = "Bond_" + str(b["id"])
 			var kl := UiKit.lbl(str(b["label"]) + ":", UiKit.SMALL, UiKit.TEXT)
+			# The kind keeps its width: the name beside it is the one that wraps.
+			kl.autowrap_mode = TextServer.AUTOWRAP_OFF
 			kl.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 			row.add_child(kl)
 			var nl := UiKit.lbl(str(b["name"]), UiKit.SMALL, ink, true)
