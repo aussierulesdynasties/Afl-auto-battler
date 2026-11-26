@@ -68,7 +68,7 @@ static func open(host: Control, on_start: Callable) -> Control:
 		said.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(said)
 		v.move_child(said, 1)
-		var row := UiKit.hbox(8)
+		var row := UiKit.hbox(UiKit.GAP)
 		footer.add_child(row)
 		for r in [["DraftRoomDelist", "Delist", "contracts"], ["DraftRoomTrade", "Trade", "trade"]]:
 			var b := UiKit.btn(str(r[1]), UiKit.NAME, str(r[2]) == "contracts")

@@ -57,6 +57,9 @@ func _run() -> void:
 	await _t("_test_stack_fits", [Vector2i(390, 844)])
 	await _t("_test_stack_fits", [Vector2i(320, 568)])
 	await _t("_test_stack_fits", [Vector2i(1280, 720)])
+	# A 16:9 PC window (960x540 or 1280x720 on a high-density screen: the short
+	# side capped at 320 units, ScreenLayout): the logo and shot shrink.
+	await _t("_test_stack_fits", [Vector2i(569, 320)])
 	_t("_test_every_kick_is_a_set_shot")
 	_t("_test_ball_flies_and_turns")
 	_t("_test_reduced_motion_rests")
@@ -215,7 +218,17 @@ func _test_stack_fits(view: Vector2i) -> void:
 	_check(logo.end.y <= stage.position.y, "%s: the logo sits clear above the shot" % who)
 	_check(stage.end.y <= float(at["line_top"]), "%s: the line sits clear below the shot" % who)
 	_check(float(at["line_top"]) + float(at["line_h"]) <= float(view.y), "%s: the longest line fits, wrapped" % who)
-	_check(stage.size.x >= 120.0, "%s: the shot is big enough to read" % who)
+	var aspect: float = load("res://scripts/ui/GameLogo.gd").aspect()
+	var full_logo_h := roundf(minf(420.0, float(view.x) - 64.0) * aspect)
+	if logo.size.y >= full_logo_h:
+		_check(stage.size.x >= 120.0, "%s: the shot is big enough to read" % who)
+	else:
+		# Too short for both at full size (director, 2026-11-25: "shrink to
+		# fit"): they shrink together, and only as far as the line needs.
+		var full_stage_h := roundf(minf(minf(float(view.x) - 64.0, 300.0) * 0.68, float(view.y) * 0.3))
+		_check(absf(stage.size.y / logo.size.y - full_stage_h / full_logo_h) < 0.02,
+				"%s: the logo and shot shrink together (%.3f vs %.3f)" % [who, stage.size.y / logo.size.y, full_stage_h / full_logo_h])
+		_check(logo.position.y <= 17.0, "%s: shrunk just enough: the stack starts at the top margin (%s)" % [who, logo.position.y])
 
 
 func _test_every_kick_is_a_set_shot() -> void:

@@ -395,6 +395,16 @@ func _test_finals_week_by_week() -> void:
 		weeks += 1
 		one_at_a_time = one_at_a_time and (_state.season.is_season_over()
 				or int(_state.season.finals.get("week", 0)) == before + 1)
+		# Grand Final week: the premiers' flag ceremony comes first, then the
+		# week's results (director, 2026-11-25: another club's flag gets the full
+		# ceremony, skippable). A real tap on its Continue.
+		var cer: Variant = hub.get("_ceremony")
+		if cer != null and is_instance_valid(cer):
+			one_at_a_time = one_at_a_time and _state.season.is_season_over()
+			var cont: Control = (cer as Node).find_child("CeremonyContinue", true, false)
+			var cwhy: String = await Tap.tap(cont) if cont != null else "no Continue"
+			await _settle()
+			one_at_a_time = one_at_a_time and cwhy == ""
 		one_at_a_time = one_at_a_time and hub.get("_results_overlay") != null
 		if not _state.season.is_season_over():
 			one_at_a_time = one_at_a_time and int(_state.season_awards.get("year", 0)) != _state.season_year
@@ -1655,12 +1665,14 @@ func _test_premiership_streamers() -> void:
 	feel.test_motion = false
 	hub.queue_free()
 	await _settle()
-	# Nowhere else: only the hub's finals series names the streamers.
+	# Nowhere else: only the hub's finals series and the premiership ceremony
+	# (director's plan, 2026-11-25) name the streamers.
 	var users := []
 	_scripts_naming("res://scripts", "PremiershipStreamers", users)
 	users.sort()
-	_check(users == ["res://scripts/ui/HubScene.gd", "res://scripts/ui/PremiershipStreamers.gd"],
-			"Only the finals series plays streamers (%s)" % str(users))
+	_check(users == ["res://scripts/ui/HubScene.gd", "res://scripts/ui/PremiershipStreamers.gd",
+			"res://scripts/ui/match/PremiershipCeremony.gd"],
+			"Only the finals series and the premiership ceremony play streamers (%s)" % str(users))
 	var hub_src := FileAccess.get_file_as_string("res://scripts/ui/HubScene.gd")
 	_check(hub_src.count("PremiershipStreamers") == 1, "The hub starts them in one place only")
 

@@ -23,7 +23,7 @@ func _ready() -> void:
 	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
 	UiKit.apply_insets(margin, 12)
 	add_child(margin)
-	_root = UiKit.vbox(8)
+	_root = UiKit.vbox(UiKit.GAP)
 	margin.add_child(_root)
 	get_viewport().size_changed.connect(func():
 		if is_inside_tree() and not UiKit.keyboard_resize(self):
@@ -58,7 +58,7 @@ func _build() -> void:
 	# No way round it: Back leaves for the title, as the hub's does.
 	_root.add_child(UiKit.top_bar("After the merger" if GameState.list_cut_after_merger() else "List cut", false))
 	var needs := GameState.merger_cut_needs()
-	var body := UiKit.vbox(6)
+	var body := UiKit.vbox(UiKit.Space.CLOSE)
 	body.name = "MergerRows"
 	body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	body.add_child(_hero())
@@ -71,7 +71,7 @@ func _build() -> void:
 		var head := UiKit.lbl(("Senior list" if kind == "" else "Category A rookies") + "  (%d to go)" % int(needs[kind]),
 				UiKit.H2, UiKit.EMPH, true)
 		head.name = "MergerHead_" + ("senior" if kind == "" else "rookie")
-		body.add_child(UiKit.spacer(4))
+		body.add_child(UiKit.spacer(UiKit.Space.TIGHT))
 		body.add_child(head)
 		var rows := _list().filter(func(q): return str(q.get("rookie_list", "")) == kind)
 		rows.sort_custom(func(a, b):
@@ -88,7 +88,7 @@ func _build() -> void:
 ## The one figure the screen is about: how many are still to go.
 func _hero() -> Control:
 	var left := maxi(0, GameState.merger_cut_left() - _going.size())
-	var h := UiKit.hbox(12)
+	var h := UiKit.hbox(UiKit.Space.PAD)
 	h.name = "MergerLeft"
 	h.add_child(UiKit.club_marker(GameState.my_club, 36.0))
 	var fig := UiKit.figure(str(left), UiKit.HERO, UiKit.club_vivid(GameState.my_club))
@@ -135,25 +135,25 @@ func _row(p: Dictionary, full: bool) -> Control:
 	var marked := _going.has(id)
 	var card := PanelContainer.new()
 	card.name = "MergerRow_" + id
-	var quiet := UiKit.style(Color.TRANSPARENT, 8, 0)
+	var quiet := UiKit.style(Color.TRANSPARENT, UiKit.GAP, 0)
 	quiet.set_border_width_all(0)
 	quiet.border_width_bottom = 1
 	quiet.border_color = UiKit.LINE
-	quiet.content_margin_top = 8
-	quiet.content_margin_bottom = 8
+	quiet.content_margin_top = UiKit.GAP
+	quiet.content_margin_bottom = UiKit.GAP
 	card.add_theme_stylebox_override("panel", quiet)
-	var v := UiKit.vbox(3)
+	var v := UiKit.vbox(UiKit.Space.THIN)
 	card.add_child(v)
-	var top := UiKit.hbox(8)
+	var top := UiKit.hbox(UiKit.GAP)
 	v.add_child(top)
-	var info := UiKit.vbox(2)
+	var info := UiKit.vbox(UiKit.Space.SLIM)
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top.add_child(info)
 	# The name gets the row's full width; the role and the side sit under it.
 	var who := UiKit.ellipsis(GameDB.player_display_name(p), UiKit.NAME, UiKit.BAD if marked else UiKit.TEXT, true)
 	who.name = "PlayerName_" + id
 	info.add_child(NameLink.tappable(who, id))
-	var h := UiKit.hbox(8)
+	var h := UiKit.hbox(UiKit.GAP)
 	info.add_child(h)
 	h.add_child(UiKit.role_chip(Ratings.role_tag(p)))
 	# Which side he came from, in that club's colour: the merger's two halves.

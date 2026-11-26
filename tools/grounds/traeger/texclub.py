@@ -83,7 +83,7 @@ for x in range(0,W,9):d.rectangle([x,0,x+2,H],fill=NAVY)
 for x in np.linspace(0,W-8,5).astype(int):d.rectangle([x,0,x+8,H],fill=NAVY)
 d.rectangle([0,0,W,7],fill=NAVY);d.rectangle([0,H-7,W,H],fill=NAVY);im.save(os.path.join(OUT,'glass_bal.png'));PANEL['glass_bal']=True
 # ---- blue roof (aerial + w09): sky-blue corrugated, white "Territorians" script, TIO logo box (white, blue letters, red bar) ----
-L,D=24.6,8.6;W,H=int(L*K),int(D*K)
+L,D=30.7,8.2;W,H=int(L*K),int(D*K)   # r16: the roof measured 30.7 m along, eave to ridge 8.2 m (club.py)
 img=np.zeros((H,W,3))+rgb('#3b9be2')+noise(H,W,8,3,201)[...,None];x=np.arange(W)/K
 im=u8(img);d=ImageDraw.Draw(im)
 # panel u runs 0 (south) .. 1 (north); v 0 at the eave (front, bottom of the image) .. 1 at the ridge (top)
@@ -92,11 +92,10 @@ img=np.asarray(im).astype(float)
 # corrugation at 100 px/m cannot hold a 76 mm sine cleanly: use soft ribs every 0.19 m (trimdek profile)
 xr=(np.arange(W)/K)%0.19;img+=np.where(xr<0.03,-14,np.where(xr<0.045,8,0))[None,:,None]
 save('roof_blue_club',img);PANEL['roof_blue_club']=True
-# ---- back slope (aerial): green roofing with a yellow band along the ridge over the south part ----
-W,H=int(L*K),int(7.6*K);img=np.zeros((H,W,3))+rgb('#59745a')+noise(H,W,8,4,211)[...,None]
-im=u8(img);d=ImageDraw.Draw(im)
-d.polygon([(0,0),(int(16/L*W),0),(0,int(0.75*H))],fill=(222,186,74))
-img=np.asarray(im).astype(float);xr=(np.arange(W)/K)%0.19;img+=np.where(xr<0.03,-14,np.where(xr<0.045,8,0))[None,:,None]
+# ---- back slope: yellow all over (Google Earth's straight-down view and its 3D mesh, r16; the 2020 aerial had green
+#      roofing with a yellow band, since painted over), the aerial band's own yellow; ridge to eave 9.1 m ----
+W,H=int(L*K),int(9.1*K);img=np.zeros((H,W,3))+np.array((222,186,74),float)+noise(H,W,8,4,211)[...,None]
+xr=(np.arange(W)/K)%0.19;img+=np.where(xr<0.03,-14,np.where(xr<0.045,8,0))[None,:,None]
 save('roof_back_club',img);PANEL['roof_back_club']=True
 json.dump(dict(TILE=TILE,PANEL=list(PANEL)),open(os.path.join(OUT,'tex.json'),'w'))
 print('club textures:',[k for k in ('club_render','club_brick','club_weather','roof_green','ac_unit','bal_back_blue','blue_front','green_front_lo','bal_front_lo','glass_bal','roof_blue_club','roof_back_club') if os.path.exists(os.path.join(OUT,k+'.png'))])

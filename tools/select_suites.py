@@ -37,6 +37,11 @@ REACH = 1  # a suite covers a script its own files name (a hop of 1), not what t
 FOLLOWED = (".gd", ".tscn", ".tres", ".gdshader", ".uid")
 # Leaf resources: referenced from scripts and scenes, never a source of further references.
 LEAF_DIRS = ("assets/",)
+# Suites that find their files by listing a folder at run time (DirAccess), so no path names them and the
+# walker cannot see the link: a change under the folder selects the suite. ground_seats checks every
+# assets/grounds/<slug>/seats_*.bin against its model (tools/grounds/seat_rule.gd: SeatRule.grounds());
+# without this a ground's new seats or model ran no seat check before the merge queue.
+SCANNED = {"assets/grounds/": ("ground_seats",)}
 IDENT = re.compile(r"\b[A-Za-z_][A-Za-z0-9_]*\b")
 RES = re.compile(r"res://[A-Za-z0-9_./\- ]*[A-Za-z0-9_./\-]")
 CLASS_NAME = re.compile(r"^\s*class_name\s+([A-Za-z_][A-Za-z0-9_]*)", re.M)

@@ -65,7 +65,7 @@ static var award_filter := ""
 
 ## The trophies of `code`. `rebuild` lays them out afresh (the filter changed).
 static func build(host: Control, code: String, rebuild: Callable) -> Control:
-	var v := UiKit.vbox(6)
+	var v := UiKit.vbox(UiKit.Space.CLOSE)
 	v.name = "ClubTrophies"
 	var mine := code == GameState.my_club
 	var wide := UiKit.view_width(host) >= WIDE
@@ -212,7 +212,7 @@ static func progress(season, club: String) -> String:
 # Club honours
 # ---------------------------------------------------------------------------
 static func _club_honours(host: Control, seasons: Array, club: String, first: int) -> Control:
-	var v := UiKit.vbox(6)
+	var v := UiKit.vbox(UiKit.Space.CLOSE)
 	v.name = "ClubHonours"
 	_title(v, "Club honours")
 	var mine := club == GameState.my_club
@@ -262,7 +262,7 @@ static func _history(club: String, before: String) -> Control:
 	var h := ClubHistory.before_career(club)
 	if not bool(h["known"]):
 		return null
-	var v := UiKit.vbox(2)
+	var v := UiKit.vbox(UiKit.Space.SLIM)
 	v.name = "ClubHistory"
 	var years: Array = h["years"]
 	var also: Dictionary = h.get("also", {})
@@ -307,7 +307,7 @@ static func _club_item(host: Control, it: Dictionary) -> Button:
 	var art: Control
 	var label := ""
 	if str(it["kind"]) == "premiership":
-		var pair := UiKit.hbox(4)
+		var pair := UiKit.hbox(UiKit.Space.TIGHT)
 		pair.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		pair.add_child(HonoursArt.view("premiership_cup", SHELF_ART, club, 0, "Premiership cup"))
 		pair.add_child(HonoursArt.view("premiership_flag", SHELF_ART, club, year, "Premiership flag"))
@@ -331,7 +331,7 @@ static func _achievement(seasons: Array) -> Control:
 	var defs := Achievements.for_code(GameState.my_club, forge)
 	if defs.is_empty():
 		return null
-	var v := UiKit.vbox(2)
+	var v := UiKit.vbox(UiKit.Space.SLIM)
 	v.name = "ClubAchievement"
 	var start := int(seasons[0]["year"]) if not seasons.is_empty() else GameState.season_year
 	for d in defs:
@@ -416,7 +416,7 @@ static func by_player(items: Array) -> Array:
 
 
 static func _player_honours(host: Control, seasons: Array, club: String) -> Control:
-	var v := UiKit.vbox(6)
+	var v := UiKit.vbox(UiKit.Space.CLOSE)
 	v.name = "PlayerHonours"
 	_title(v, "Players' honours")
 	var items := player_honours(seasons, club)
@@ -427,7 +427,7 @@ static func _player_honours(host: Control, seasons: Array, club: String) -> Cont
 		none.name = "NoPlayerHonours"
 		v.add_child(none)
 	for g in by_player(items):
-		var block := UiKit.vbox(2)
+		var block := UiKit.vbox(UiKit.Space.SLIM)
 		block.name = "PlayerGroup_%s" % str(g["id"])
 		var who := UiKit.lbl(GameState.award_name({"id": str(g["id"])}), UiKit.BODY, UiKit.TEXT, true)
 		who.name = "PlayerName"
@@ -538,9 +538,9 @@ static func _tenure_row(cols: Array, head: bool, band := false, row_h := ROW_H, 
 	if not won:
 		flat.bg_color = UiKit.PANEL if band else Color.TRANSPARENT
 	flat.content_margin_left = StatsSide.RULE_INSET + 2   # clear of the rule, in every row so the columns line up
-	flat.content_margin_right = 4
+	flat.content_margin_right = UiKit.Space.TIGHT
 	p.add_theme_stylebox_override("panel", flat)
-	var h := UiKit.hbox(6 if narrow else 8)
+	var h := UiKit.hbox(UiKit.Space.CLOSE if narrow else UiKit.GAP)
 	h.custom_minimum_size.y = 24 if head else row_h
 	p.add_child(h)
 	var widths := [46, 42, 62, 0] if narrow else [56, 56, 72, 0]
@@ -565,8 +565,8 @@ static func _tenure_row(cols: Array, head: bool, band := false, row_h := ROW_H, 
 static func _shelf(node: String) -> HFlowContainer:
 	var f := HFlowContainer.new()
 	f.name = node
-	f.add_theme_constant_override("h_separation", 8)
-	f.add_theme_constant_override("v_separation", 12)
+	f.add_theme_constant_override("h_separation", UiKit.GAP)
+	f.add_theme_constant_override("v_separation", UiKit.Space.PAD)
 	return f
 
 
@@ -579,14 +579,12 @@ static func _item(art: Control, top: String, bottom: String, wrap_top := false) 
 	b.focus_mode = Control.FOCUS_NONE
 	var flat := StyleBoxFlat.new()
 	flat.bg_color = Color.TRANSPARENT
-	var hover := StyleBoxFlat.new()
-	hover.bg_color = Color(UiKit.TEXT, 0.05)
-	hover.set_corner_radius_all(UiKit.RADIUS)
+	var hover := UiKit.row_hover(0.05, UiKit.RADIUS)
 	for state in ["normal", "focus"]:
 		b.add_theme_stylebox_override(state, flat)
 	for state in ["hover", "pressed", "hover_pressed"]:
 		b.add_theme_stylebox_override(state, hover)
-	var v := UiKit.vbox(2)
+	var v := UiKit.vbox(UiKit.Space.SLIM)
 	v.alignment = BoxContainer.ALIGNMENT_CENTER
 	art.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	v.add_child(art)
@@ -625,7 +623,7 @@ static func _open_club(host: Control, it: Dictionary) -> void:
 	if str(it["kind"]) == "premiership":
 		# The cup and the flag side by side, as large as the sheet allows.
 		var h := minf(SHEET_ART * 0.8, (_sheet_w(host) - 8.0) / 2.0)
-		var pair := UiKit.hbox(8)
+		var pair := UiKit.hbox(UiKit.GAP)
 		pair.add_child(HonoursArt.view("premiership_cup", h, club, 0, "Premiership cup"))
 		pair.add_child(HonoursArt.view("premiership_flag", h, club, year, "Premiership flag"))
 		art = pair

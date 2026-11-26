@@ -421,7 +421,10 @@ jobs:
     needs: [plan, lint, preflight]
     if: always() && needs.plan.result == 'success' && needs.lint.result == 'success' && needs.plan.outputs.code == 'true' && (needs.preflight.result == 'success' || needs.preflight.result == 'skipped')
     runs-on: ${{ fromJSON(needs.plan.outputs.runner || '"ubuntu-latest"') }}
-    timeout-minutes: 40   # a shard plans ~240 s; 40 still covers a 900 s suite timeout run twice
+    # A shard plans ~240 s; 40 still covers a 900 s suite timeout run twice. A PC runner runs two
+    # shards side by side at about half a GitHub runner's speed: shard 1 (22 min on GitHub) hit 40 there
+    # on 2026-11-26, so PC-routed shards get 75.
+    timeout-minutes: ${{ contains(needs.plan.outputs.runner, 'afl-queue') && 75 || 40 }}
     strategy:
       # PRs release runner slots promptly; main/manual diagnostics collect all failures.
       fail-fast: ${{ github.event_name == 'pull_request' || github.event_name == 'merge_group' }}
