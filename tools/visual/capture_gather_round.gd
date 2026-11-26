@@ -48,7 +48,7 @@ func _run() -> void:
 		guard += 1
 	state.media_conference = {}   # the press sit-down is not what this capture shows
 	print("CAPTURE gather round ", g + 1, " at round ", state.season.round_index + 1)
-	UK.apply_appearance("dark")
+	UK.apply_palette()
 	root.size = Vector2i(_w, _h)
 	DisplayServer.window_set_size(Vector2i(_w, _h))
 	var sl = root.get_node("ScreenLayout")

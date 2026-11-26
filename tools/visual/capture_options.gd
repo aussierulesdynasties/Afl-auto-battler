@@ -5,7 +5,7 @@ extends SceneTree
 ##       -f args="--size 390x844"
 ## Writes <out>.png (the sheet as it opens) and <out>_vignettes.png (scrolled
 ## so the Vignettes row is in view, set to Off).
-##   --size WxH   window size (default 390x844)    --light   light appearance
+##   --size WxH   window size (default 390x844)
 
 var _w := 390
 var _h := 844
@@ -17,7 +17,6 @@ func _initialize() -> void:
 
 func _run() -> void:
 	var out := "options"
-	var mode := "dark"
 	var a := OS.get_cmdline_user_args()
 	for i in range(a.size()):
 		match str(a[i]):
@@ -27,8 +26,6 @@ func _run() -> void:
 				var wh := str(a[i + 1]).split("x")
 				_w = int(wh[0])
 				_h = int(wh[1])
-			"--light":
-				mode = "light"
 	await process_frame
 	var state = root.get_node("GameState")
 	var db = root.get_node("GameDB")
@@ -38,7 +35,7 @@ func _run() -> void:
 	state.reset()
 	state.set_setting("seen_weekly_loop_intro", true)
 	state.set_vignettes_on(false)
-	load("res://scripts/ui/UiKit.gd").apply_appearance(mode)
+	load("res://scripts/ui/UiKit.gd").apply_palette()
 	root.size = Vector2i(_w, _h)
 	DisplayServer.window_set_size(Vector2i(_w, _h))
 	state.start_season("COL", db.club_list("COL"))

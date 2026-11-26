@@ -30,6 +30,8 @@ jobs:
       suites: ${{ steps.list.outputs.suites }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          sparse-checkout: tools   # this job reads only tools/ci_long_suites.txt
       - id: list
         run: |
           suites=$( (grep -vE '^[[:space:]]*(#|$)' tools/ci_long_suites.txt; echo calibration) | sort -u | python3 -c 'import json,sys; print(json.dumps([l.strip() for l in sys.stdin if l.strip()]))')
@@ -45,13 +47,25 @@ jobs:
     # match_visual replays several seeded matches in full: 29 minutes on a fast runner
     # (2026-11-24), 45 here and over 56 on a slow one (2026-11-25 and -26, cut off at
     # 60 before it finished, which hid its result). It gets 90.
-    timeout-minutes: ${{ matrix.suite == 'legacy_rollover' && 130 || matrix.suite == 'match_visual' && 90 || 60 }}
+    # legacy_2000_long and legacy_2010_long play every match of their seasons too
+    # since #2076: 7 seasons took 718 s on 2026-11-26 after about 19 minutes of
+    # setup, so 28 seasons pass 60. They get legacy_rollover's 130.
+    timeout-minutes: ${{ (matrix.suite == 'legacy_rollover' || matrix.suite == 'legacy_2000_long' || matrix.suite == 'legacy_2010_long') && 130 || matrix.suite == 'match_visual' && 90 || 60 }}
     strategy:
       fail-fast: false
+      # 24 long suites at once took the whole free pool (about 20 runners) for hours, and PRs
+      # queued behind it. 8 at a time leaves the rest for pull requests (2026-11-26).
+      max-parallel: 8
       matrix:
         suite: ${{ fromJSON(needs.plan.outputs.suites) }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          filter: blob:none   # fetch only the files checked out
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |   # .claude/review (5 GB of review boards) is never read by CI
+            /*
+            !/.claude/review/
 
       - name: Epic/MetaHuman files (private repo, docs/EPIC_ASSETS.md)
         uses: ./.github/actions/epic-assets
@@ -76,7 +90,7 @@ jobs:
           unzip -q godot.zip && rm godot.zip
           mv "${name}" godot && chmod +x godot
       - name: Run ${{ matrix.suite }}
-        run: SUITE_TIMEOUT=${{ matrix.suite == 'legacy_rollover' && 7200 || matrix.suite == 'match_visual' && 4800 || 3000 }} SUITES_ONLY=1 GODOT="$HOME/godot/godot" LOG_DIR="$RUNNER_TEMP/test-logs" tools/run_tests.sh ${{ matrix.suite }}
+        run: SUITE_TIMEOUT=${{ (matrix.suite == 'legacy_rollover' || matrix.suite == 'legacy_2000_long' || matrix.suite == 'legacy_2010_long') && 7200 || matrix.suite == 'match_visual' && 4800 || 3000 }} SUITES_ONLY=1 GODOT="$HOME/godot/godot" LOG_DIR="$RUNNER_TEMP/test-logs" tools/run_tests.sh ${{ matrix.suite }}
       - name: Upload test logs
         if: always()
         uses: actions/upload-artifact@v4

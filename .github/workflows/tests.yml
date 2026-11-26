@@ -32,7 +32,10 @@ name: Tests
 # start this workflow at all.
 on:
   pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
+    # converted_to_draft: a PR turned back into a draft (by hand, or by the PR cap) gets a new run,
+    # which cancels the one in progress (concurrency below) and runs nothing. Without it the old run
+    # kept its runners: 7 drafts' runs were still going on 2026-11-26 after the cap drafted them.
+    types: [opened, synchronize, reopened, ready_for_review, converted_to_draft]
   # The merge queue (ruleset on main, director 2026-11-12) needs "test" on the queued
   # group: the PR on top of main and every PR ahead of it. A group runs the suites that
   # cover everything it changes against the main it was built on (tools/select_suites.py,
@@ -64,10 +67,14 @@ on:
 # runners; nothing needs switching. A fork's pull request never reaches the PC.
 # docs/CI_RUNNER.md has the setup.
 #
-# A newer push to a PR supersedes its older run. Every push to main gets its own
-# group (its sha) and is never cancelled, so back-to-back merges each get a verdict.
+# A newer push to a PR supersedes its older run. Pushes to main share one group that is never
+# cancelled in progress: one main run at a time, and while it runs only the newest waiting push
+# is kept (GitHub drops an older pending run). Director 2026-11-26, "Tests only, web build
+# nightly": every merge used to get its own full run, and 25 of 35 were cancelled by hand on
+# 25-26 Nov, some after every shard had passed. A break is still caught on the next run, which
+# may cover two or three merges.
 concurrency:
-  group: tests-${{ github.event_name == 'push' && github.sha || github.ref }}
+  group: tests-${{ github.event_name == 'push' && 'main-push' || github.ref }}
   cancel-in-progress: ${{ github.event_name != 'push' }}
 
 permissions:
@@ -410,16 +417,43 @@ jobs:
           mkdir -p ~/godot && mv "${name}" ~/godot/godot.$$ && mv -f ~/godot/godot.$$ ~/godot/godot
           echo "$GODOT_VERSION" > ~/godot/VERSION && cd / && rm -rf "$tmp"
 
+      # The last import (.godot), so this job re-imports only what changed (about 11 minutes
+      # of every ground model and texture otherwise). tools/ci_import_cache.py.
+      - name: Restore the Godot import
+        id: import-cache
+        if: runner.environment == 'github-hosted'
+        uses: ./.github/actions/godot-import-cache
+        with:
+          godot-version: ${{ env.GODOT_VERSION }}
+
       # Every test runner must compile, and its load must not hang, before the
       # shards start: a runner naming a class whose load chain reaches an autoload
       # hung a shard for the full 900 s timeout three times on 2026-10-17/18.
       - name: Every test runner compiles
         run: GODOT="$HOME/godot/godot" bash tools/ci_preflight_compile.sh
 
+      # A pull request that changes imported files saves its own import, so its shards and
+      # extras restore it instead of each re-importing the change; main's cache is saved by
+      # the extras job of a push. Only the import of files tracked here is kept (no Epic files).
+      - name: Keep only what may be cached
+        id: prune
+        if: runner.environment == 'github-hosted' && steps.import-cache.outputs.hit != 'true'
+        run: python3 tools/ci_import_cache.py prune
+
+      - name: Save the Godot import
+        if: steps.prune.outcome == 'success'
+        uses: actions/cache/save@v4
+        continue-on-error: true  # a cache outage must not fail tested code
+        with:
+          path: .godot
+          key: ${{ steps.import-cache.outputs.key }}
+
   shard:
     name: shard ${{ matrix.shard }}
     needs: [plan, lint, preflight]
-    if: always() && needs.plan.result == 'success' && needs.lint.result == 'success' && needs.plan.outputs.code == 'true' && (needs.preflight.result == 'success' || needs.preflight.result == 'skipped')
+    # !cancelled(), not always(): always() let a cancelled or superseded run keep running and
+    # starting its shards (2026-11-26: 15 cancelled runs still held runners half an hour later).
+    if: ${{ !cancelled() && needs.plan.result == 'success' && needs.lint.result == 'success' && needs.plan.outputs.code == 'true' && (needs.preflight.result == 'success' || needs.preflight.result == 'skipped') }}
     runs-on: ${{ fromJSON(needs.plan.outputs.runner || '"ubuntu-latest"') }}
     # A shard plans ~240 s; 40 still covers a 900 s suite timeout run twice. A PC runner runs two
     # shards side by side at about half a GitHub runner's speed: shard 1 (22 min on GitHub) hit 40 there
@@ -469,6 +503,15 @@ jobs:
           # A rename, so PC runners sharing ~/godot never see a half-written file.
           mkdir -p ~/godot && mv "${name}" ~/godot/godot.$$ && mv -f ~/godot/godot.$$ ~/godot/godot
           echo "$GODOT_VERSION" > ~/godot/VERSION && cd / && rm -rf "$tmp"
+
+      # The last import (.godot), so this job re-imports only what changed (about 11 minutes
+      # of every ground model and texture otherwise). tools/ci_import_cache.py.
+      - name: Restore the Godot import
+        id: import-cache
+        if: runner.environment == 'github-hosted'
+        uses: ./.github/actions/godot-import-cache
+        with:
+          godot-version: ${{ env.GODOT_VERSION }}
 
       - name: Run the suites in this shard
         env:
@@ -533,7 +576,9 @@ jobs:
   extras:
     name: dataset and harness checks
     needs: [plan, lint, preflight]
-    if: always() && needs.plan.result == 'success' && needs.lint.result == 'success' && needs.plan.outputs.code == 'true' && (needs.preflight.result == 'success' || needs.preflight.result == 'skipped') && github.event_name != 'schedule'
+    # !cancelled(), not always(): always() let a cancelled or superseded run keep running and
+    # starting its shards (2026-11-26: 15 cancelled runs still held runners half an hour later).
+    if: ${{ !cancelled() && needs.plan.result == 'success' && needs.lint.result == 'success' && needs.plan.outputs.code == 'true' && (needs.preflight.result == 'success' || needs.preflight.result == 'skipped') && github.event_name != 'schedule' }}
     runs-on: ${{ fromJSON(needs.plan.outputs.runner || '"ubuntu-latest"') }}
     timeout-minutes: 30
     steps:
@@ -581,8 +626,32 @@ jobs:
           mkdir -p ~/godot && mv "${name}" ~/godot/godot.$$ && mv -f ~/godot/godot.$$ ~/godot/godot
           echo "$GODOT_VERSION" > ~/godot/VERSION && cd / && rm -rf "$tmp"
 
+      # The last import (.godot), so this job re-imports only what changed (about 11 minutes
+      # of every ground model and texture otherwise). tools/ci_import_cache.py.
+      - name: Restore the Godot import
+        id: import-cache
+        if: runner.environment == 'github-hosted'
+        uses: ./.github/actions/godot-import-cache
+        with:
+          godot-version: ${{ env.GODOT_VERSION }}
+
       - name: Run the dataset, export and harness checks
         run: SKIP_STATIC=1 SKIP_VERSION_CHECK=1 EXTRAS_ONLY=1 GODOT="$HOME/godot/godot" LOG_DIR="$RUNNER_TEMP/test-logs" tools/run_tests.sh
+
+      # A push to main saves the import it ended with, for every later run to start from
+      # (pull requests restore it; tools/ci_import_cache.py keeps no Epic files' imports).
+      - name: Keep only what may be cached
+        id: prune
+        if: github.event_name == 'push' && runner.environment == 'github-hosted' && steps.import-cache.outputs.hit != 'true'
+        run: python3 tools/ci_import_cache.py prune
+
+      - name: Save the Godot import
+        if: steps.prune.outcome == 'success'
+        uses: actions/cache/save@v4
+        continue-on-error: true  # a cache outage must not fail tested code
+        with:
+          path: .godot
+          key: ${{ steps.import-cache.outputs.key }}
 
       - name: Upload test logs
         if: failure()
@@ -599,14 +668,19 @@ jobs:
     runs-on: ${{ fromJSON(needs.plan.outputs.runner || '"ubuntu-latest"') }}
     timeout-minutes: 5
     steps:
+      # Only what the two steps below read: the shard plan (tools/*.py and its lists) and the
+      # suite names (tests/run_*_tests.gd). The tree hash needs no files. A full checkout here
+      # took 2 to 3 minutes, on the last job of every run.
       - uses: actions/checkout@v4
         if: needs.plan.outputs.code == 'true' && needs.plan.result == 'success' && (needs.preflight.result == 'success' || needs.preflight.result == 'skipped')
         with:
           filter: blob:none   # fetch only the files checked out
           sparse-checkout-cone-mode: false
-          sparse-checkout: |   # .claude/review (5 GB of review boards) is never read by CI
-            /*
-            !/.claude/review/
+          sparse-checkout: |
+            /tools/*.py
+            /tools/*.txt
+            /tools/*.json
+            /tests/run_*_tests.gd
 
       - uses: actions/download-artifact@v4
         if: needs.plan.outputs.code == 'true' && needs.plan.result == 'success' && (needs.preflight.result == 'success' || needs.preflight.result == 'skipped')

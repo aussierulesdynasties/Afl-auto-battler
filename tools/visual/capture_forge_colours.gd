@@ -43,7 +43,7 @@ func _run() -> void:
 		if str(a[i]) == "--out":
 			out = str(a[i + 1])
 	await process_frame
-	load("res://scripts/ui/UiKit.gd").apply_appearance("dark")
+	load("res://scripts/ui/UiKit.gd").apply_palette()
 	var state = root.get_node("GameState")
 	state.autosave_enabled = false
 	state.save_path = "user://capture.save"
