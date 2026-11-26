@@ -671,6 +671,8 @@ const TWEEN_ASKED_UPSTREAM := {
 	"scripts/ui/DraftScene.gd:_slide_recent": "called only when motion_on (_recent_rows)",
 	"scripts/ui/UiKit.gd:_own": "the helpers' tween, made after each helper asks",
 	"scripts/ui/UiKit.gd:_after": "a helper's delay, made after the helper asks",
+	"scripts/ui/match/PremiershipCeremony.gd:_at": "a beat's delay; only _beats() calls it, after _start() asks",
+	"scripts/ui/match/PremiershipCeremony.gd:_tw": "the beats' tween; reached only after _start() asks",
 }
 
 
