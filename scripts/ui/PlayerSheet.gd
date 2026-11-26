@@ -540,6 +540,7 @@ static func _trust(v: VBoxContainer, p: Dictionary) -> void:
 	var temps := RelationsView.temperaments(p)
 	var ties := RelationsView.bonds(GameState, id)
 	var words := RelationsView.promises(GameState, id) if mine else []
+	var group := RelationsView.faction(GameState, id) if mine else ""
 	if not mine and temps.is_empty() and ties.is_empty():
 		return
 	var block := UiKit.vbox(UiKit.Space.TIGHT)
@@ -564,6 +565,12 @@ static func _trust(v: VBoxContainer, p: Dictionary) -> void:
 			block.add_child(dl)
 	if mine:
 		_opinion(block, p, temps)
+	# The group of unhappy players he stands with (Factions), in words.
+	if group != "":
+		var gl := UiKit.lbl(group, UiKit.SMALL, UiKit.TEXT)
+		gl.name = "ProfileFaction"
+		gl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		block.add_child(gl)
 	# His mates and rivals, each name a tap to his profile.
 	if not ties.is_empty():
 		var bl := UiKit.vbox(UiKit.Space.SLIM)

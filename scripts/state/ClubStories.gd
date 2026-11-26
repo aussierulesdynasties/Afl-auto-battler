@@ -767,6 +767,14 @@ static func player_fact(gs, p: Dictionary, selected: bool, i: Dictionary, fit_ra
 			"injury_word": Injuries.wording(str(p.get("injury_kind", ""))) if int(p.get("injury_weeks", 0)) > 0 else "",
 			# Injured in the pre-season: the Round 1 games the physio's plan costs him (preseason_miss).
 			"pre_miss_rounds": int(miss["rounds"])}
+	# The group he stands with (Factions.gd), for its demand and ultimatum cards.
+	var grp := Factions.of_player(gs, gs.my_club, id)
+	out["faction"] = str(grp.get("k", ""))
+	out["faction_state"] = str(grp.get("state", ""))
+	out["faction_leader"] = not grp.is_empty() and str(grp["leader"]) == id
+	out["faction_size"] = (grp.get("members", []) as Array).size()
+	out["faction_group"] = str(Factions.kind_cfg(str(grp.get("k", ""))).get("label", "")).to_lower()
+	out["faction_demand"] = str(Factions.kind_cfg(str(grp.get("k", ""))).get("demand", ""))
 	# International prospects' cards: where he comes from and how far into his career he is.
 	var country: Dictionary = InternationalProspects.country(str(p.get("intl", "")))
 	var career := Career.of(p)
@@ -1243,6 +1251,12 @@ static func _apply(gs, e: Dictionary, p: Dictionary, facts: Dictionary, applied:
 		"fresh", "heavy_legs":
 			for q in _targets(gs, e, p):
 				q[str(e["op"])] = true
+		"faction":
+			# The coach answers the group the card's player leads (Factions).
+			var grp := Factions.of_player(gs, gs.my_club, str(p["id"]))
+			if grp.is_empty():
+				return "The group has broken up by itself since."
+			gs.faction_answer(gs.my_club, grp, str(e.get("do", "meet")))
 		"expects_game":
 			# The game you promised: a side you named takes him in now, as a run
 			# does (director, 2026-11-12: "he should show as on the team the
