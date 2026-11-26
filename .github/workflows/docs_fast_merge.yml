@@ -3,10 +3,12 @@
 # main so two code PRs cannot combine to break it; a PR that only changes Markdown cannot do
 # that, and the roadmap-close notes PRs (label "roadmap") were stuck behind it.
 #
-# Every 10 minutes, and after each Tests run, this merges straight into main any open PR that:
+# After each Tests run (and hourly as a backstop; every 10 minutes was 100+ runs a day), this merges straight into main any open PR that:
 #   - has auto-merge turned on (the author asked for it to land),
 #   - is labelled "roadmap" or changes only *.md files,
 #   - has no conflict, and every check on its head has passed (or skipped).
+# With no merge queue on main (the ruleset was removed), there is nothing to wait for. Until
+# 2026-11-26 the queue lookup failed then, read as "unknown", and this merged nothing at all.
 # It waits while any PR is in the merge queue (director, 2026-11-22: "yes" to docs notes
 # waiting until the queue is empty). A merge straight onto main makes the queue throw away
 # and restart every group it is testing; one roadmap note cost the front five PRs 45 minutes.
@@ -20,7 +22,7 @@
 name: Docs fast merge
 on:
   schedule:
-    - cron: "*/10 * * * *"
+    - cron: "41 * * * *"   # hourly backstop; the Tests trigger below does the real work
   workflow_run:
     workflows: [Tests]
     types: [completed]
@@ -45,12 +47,18 @@ jobs:
         run: |
           set -u
           merged=0
-          queued=$(gh api graphql -f owner="${GH_REPO%%/*}" -f name="${GH_REPO##*/}" -f query='
-            query($owner: String!, $name: String!) {
-              repository(owner: $owner, name: $name) {
-                mergeQueue(branch: "main") { entries { totalCount } }
-              }
-            }' --jq '.data.repository.mergeQueue.entries.totalCount' 2>/dev/null) || queued=""
+          # Is there a merge queue on main at all? (REST: the rules that apply to the branch.)
+          has_queue=$(gh api "repos/$GH_REPO/rules/branches/main" --jq '[.[] | select(.type == "merge_queue")] | length' 2>/dev/null) || has_queue=""
+          if [ "$has_queue" = "0" ]; then
+            queued=0
+          else
+            queued=$(gh api graphql -f owner="${GH_REPO%%/*}" -f name="${GH_REPO##*/}" -f query='
+              query($owner: String!, $name: String!) {
+                repository(owner: $owner, name: $name) {
+                  mergeQueue(branch: "main") { entries { totalCount } }
+                }
+              }' --jq '.data.repository.mergeQueue.entries.totalCount // 0' 2>/dev/null) || queued=""
+          fi
           if [ "$queued" != "0" ]; then
             echo "Merge queue holds ${queued:-an unknown number of} PR(s); docs and roadmap PRs wait until it is empty."
             exit 0
@@ -99,6 +107,3 @@ jobs:
               break
             fi
           done
-          if [ "$merged" = 1 ]; then
-            gh workflow run roadmap_rebuild.yml --ref main || echo "::warning::could not start Roadmap rebuild"
-          fi
