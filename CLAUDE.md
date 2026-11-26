@@ -90,7 +90,7 @@ Before touching any screen, copy or vignette, load the `afl-ui-writing` skill (v
 ## Assigned flavour and styling work (director, 2026-10-06)
 
 - **Flavour FL-001-FL-008:** scope and rulings in [the Director Bible](docs/DIRECTOR_BIBLE.md). Every addition has zero gameplay effects and must look distinct from real game information; new ritual/farewell vignette scenes are authorised (shared 2.5D art, tactical-scene gates kept).
-- **Styling STYLE-01-STYLE-08:** scope and rulings in [the Director Bible](docs/DIRECTOR_BIBLE.md). Dark Android first. Light theme parked (director 2026-10-13: "im also happy to abandon 'light mode' for now"): no new light-theme work, captures or tests; the code stays. A visual treatment merges only after the director approves its look; green CI is not enough.
+- **Styling STYLE-01-STYLE-08:** scope and rulings in [the Director Bible](docs/DIRECTOR_BIBLE.md). Dark Android first. Light theme removed (director 2026-11-26: "please remove 'light mode' from the game"): dark is the only appearance. A visual treatment merges only after the director approves its look; green CI is not enough.
 - The Training player-row name/secondary-line stack is a confirmed vertical-alignment defect.
 
 ## Skills

@@ -41,7 +41,7 @@ func _run() -> void:
 	state.save_path = "user://capture_break_fit.save"
 	state.settings_path = "user://capture_break_fit.cfg"
 	state.set_setting("seen_training_intro", true)
-	load("res://scripts/ui/UiKit.gd").apply_appearance("dark")
+	load("res://scripts/ui/UiKit.gd").apply_palette()
 	_vp = SubViewport.new()
 	_vp.size = Vector2i(_w, _h)
 	_vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS

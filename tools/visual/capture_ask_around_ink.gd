@@ -47,7 +47,7 @@ func _run() -> void:
 	print("Sanders ", pid)
 	state.season.round_index = state.season.fixture.size()
 	state.open_offseason()
-	UK.apply_appearance("dark")
+	UK.apply_palette()
 	root.size = Vector2i(W, H)
 	DisplayServer.window_set_size(Vector2i(W, H))
 	var bg := ColorRect.new()

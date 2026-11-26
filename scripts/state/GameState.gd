@@ -460,7 +460,7 @@ func _ready() -> void:
 	PreSeason.data()   # its sizes are read once, before any scouting read needs one
 	var cfg := ConfigFile.new()
 	cfg.load(settings_path)
-	UiKit.apply_appearance(str(cfg.get_value("ui", "appearance", "dark")))
+	UiKit.apply_palette()
 	UiKit.apply_text_size(str(cfg.get_value("ui", "text_size", "standard")))
 	_carry_old_sound_levels(cfg)
 	_apply_sound_mute(bool(cfg.get_value("ui", "mute_sounds", false)))
@@ -521,22 +521,6 @@ func set_setting(key: String, value) -> void:
 	cfg.load(settings_path)
 	cfg.set_value("ui", key, value)
 	cfg.save(settings_path)
-
-
-func appearance() -> String:
-	var mode := str(get_setting("appearance", "dark"))
-	return mode if mode in ["dark", "light"] else "dark"
-
-
-## Change the shared UI palette. The caller rebuilds the current screen when
-## this returns true so no old-theme controls remain on screen.
-func set_appearance(mode: String) -> bool:
-	if mode != "dark" and mode != "light":
-		return false
-	var changed := appearance() != mode
-	set_setting("appearance", mode)
-	UiKit.apply_appearance(mode)
-	return changed
 
 
 ## Standard, Larger or Largest (row 118): an unknown saved value reads as
@@ -637,13 +621,18 @@ func set_confirm_sim_round(enabled: bool) -> void:
 
 ## Playtest aid (ARD-M8-007): the centre-bounce scene in every match you
 ## coach, at the first centre bounce of the last quarter whatever the score.
-## Off by default; it changes when the call comes, not the football.
+## It changes when the call comes, not the football. For tests and capture
+## tools only (its Options row went, director 2026-11-26): never saved, off at
+## every launch.
+var _bounce_every_match := false
+
+
 func bounce_scene_every_match() -> bool:
-	return bool(get_setting("bounce_scene_every_match", false))
+	return _bounce_every_match
 
 
 func set_bounce_scene_every_match(enabled: bool) -> void:
-	set_setting("bounce_scene_every_match", enabled)
+	_bounce_every_match = enabled
 
 
 ## Vignettes (ROADMAP §1.11): the match-day scenes - the run through the

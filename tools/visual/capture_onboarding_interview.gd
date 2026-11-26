@@ -83,7 +83,7 @@ func _run() -> void:
 	state.save_path = "user://capture_onboarding_interview.save"
 	state.settings_path = "user://capture_onboarding_interview.cfg"
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(state.settings_path))
-	load("res://scripts/ui/UiKit.gd").apply_appearance("dark")
+	load("res://scripts/ui/UiKit.gd").apply_palette()
 	DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
 	DisplayServer.window_set_size(Vector2i(W, H))
 	await _frames(10)
