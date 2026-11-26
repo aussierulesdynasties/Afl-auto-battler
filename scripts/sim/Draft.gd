@@ -1531,14 +1531,17 @@ func price(p: Dictionary) -> int:
 
 ## A player as your scouts see him (row T1.R26 L1, "everything follows the
 ## read"): every rating moved by the read's miss on his OVR, so his strengths,
-## traits and full ratings miss exactly as often as the OVR range does. Only
-## what you see uses it; the player underneath never changes. `p` itself when
-## your read of him is exact.
+## traits and full ratings miss exactly as often as the OVR range does. The
+## miss is moved in the points of his weighted sum (Rating.unstretch), so the
+## copy reads the scouts' OVR to within the point a whole-number shift allows:
+## a read of 75 on a 72 (sums 62.3 and 60.0) moves every rating up 2.3, to 2.
+## Only what you see uses it; the player underneath never changes. `p` itself
+## when your read of him is exact.
 func scouted_copy(p: Dictionary) -> Dictionary:
 	var view := user_view(p)
 	if not bool(view["scouted"]) or not p.has("attr"):
 		return p
-	var shift := float(int(view["overall_mid"]) - int(Rating.ovr(p, 50)))
+	var shift := Rating.unstretch(float(int(view["overall_mid"]))) - Rating.unstretch(float(int(Rating.ovr(p, 50))))
 	var c := p.duplicate(true)
 	var attr: Dictionary = c["attr"]
 	for k in attr.keys():
@@ -1617,7 +1620,8 @@ const HORIZON_WEIGHTS := {
 }
 ## Share of rival clubs going for the flag now; the rest build.
 const HORIZON_NOW_SHARE := 0.25
-const HORIZON_REPLACEMENT := 58.0
+## Replacement level (director 2026-11-26: "replacement player at 60").
+const HORIZON_REPLACEMENT := 60.0
 ## Share of a season after he retires that still dilutes a building club's
 ## view of a veteran (1.0 = full, the old rule).
 static var BUILD_RETIRED_SHARE := 0.35

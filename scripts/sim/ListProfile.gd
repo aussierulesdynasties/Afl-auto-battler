@@ -31,7 +31,7 @@ const AVERAGE := 0.72
 const MARKERS := 6
 const CONTROL_W := {"disposal": 0.65, "discipline": 0.35}
 const FINISHERS := 5
-const FINISH_W := {"goalkicking": 0.5, "accuracy": 0.3, "contested_marking": 0.2}
+const FINISH_W := {"forward_craft": 0.5, "goalkicking": 0.3, "contested_marking": 0.2}
 
 
 static func _a(p: Dictionary, key: String) -> float:

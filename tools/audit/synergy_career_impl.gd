@@ -16,6 +16,7 @@ extends RefCounted
 ## ("any") and AI players carrying a focus ("focus"), for a main-vs-branch pair.
 ## Args after the impl name: policy seed club seasons
 ## godot --headless --path . --script tools/audit/run_audit.gd -- synergy_career_impl trainer 1 MEL 4
+const Ovr := preload("res://tests/ovr.gd")
 
 var policy := "ai"
 var club := "MEL"
@@ -130,7 +131,7 @@ func run() -> void:
 	GameState.reset()
 	GameState.autosave_enabled = false
 	var pool: Array = GameDB.all_players_sorted() + GameDB.all_draftees_sorted()
-	pool.sort_custom(func(a, b): return a["overall"] > b["overall"])
+	pool.sort_custom(func(a, b): return Ovr.of(a) > Ovr.of(b))
 	GameState.draft = Draft.new(pool, GameDB.active_clubs(GameState.season_year).duplicate(), seed_n)
 	GameState.draft.start_for_user(club)
 	_run_draft(GameState.draft)

@@ -32,6 +32,7 @@ extends RefCounted
 ##   phase [seeds]    AI plans by phase (as the game runs them) against an
 ##                    all-Steady season on the same seed: by phase, the plan,
 ##                    the peak week and the change in wins and finals.
+const Ovr := preload("res://tests/ovr.gd")
 
 const PAIRS := [["MEL", "CAR"], ["GEE", "COL"], ["SYD", "WCE"], ["BRL", "ADE"], ["HAW", "ESS"], ["FRE", "STK"]]
 const ARMS := [
@@ -194,7 +195,7 @@ func _season(seed: int, plans: Dictionary, tier: int, by_phase := false) -> Dict
 			"peak": int(_actual_peak(gs.fitness_record(c), gs.fitness_hp_level(c))[1])}
 		for p in gs.season.lists[code]:
 			if float(p.get("age", 30.0)) <= ClubBudget.YOUNG_AGE:
-				young[str(p["id"])] = [c, int(p.get("overall", 0))]
+				young[str(p["id"])] = [c, int(Ovr.of(p, 0))]
 	var guard := 0
 	while not gs.season.is_season_over() and guard < 40:
 		gs.advance()
@@ -228,7 +229,7 @@ func _season(seed: int, plans: Dictionary, tier: int, by_phase := false) -> Dict
 		for p in gs.season.lists[code]:
 			var y = young.get(str(p["id"]))
 			if y != null and out.has(str(y[0])):
-				out[y[0]]["young"] += float(int(p.get("overall", 0)) - int(y[1]))
+				out[y[0]]["young"] += float(int(Ovr.of(p, 0)) - int(y[1]))
 				out[y[0]]["nyoung"] += 1
 	return out
 

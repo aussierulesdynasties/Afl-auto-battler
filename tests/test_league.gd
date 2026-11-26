@@ -1,4 +1,5 @@
 extends RefCounted
+const Ovr := preload("res://tests/ovr.gd")
 ## Difficulty, the league news feed and the player-name preference. Run through
 ## tests/run_league_tests.gd.
 
@@ -203,10 +204,10 @@ func _test_difficulty() -> void:
 		GameState.rival_recruiting = pair[1]
 		var q := rival.duplicate(true)
 		q["xp"] = 100000
-		q["potential"] = int(q["overall"]) + 12
-		q["season_start_ov"] = int(q["overall"])
+		q["potential"] = int(Ovr.of(q)) + 12
+		q["season_start_ov"] = int(Ovr.of(q))
 		GameState.ai_spend_xp(q)
-		gains.append(int(q["overall"]) - int(rival["overall"]))
+		gains.append(int(Ovr.of(q)) - int(Ovr.of(rival)))
 	_check(gains[0] == gains[1], "Rivals develop the same on the hardest and easiest dials (%s)" % str(gains))
 
 	GameState.board_patience = "fair"

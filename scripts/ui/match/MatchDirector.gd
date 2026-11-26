@@ -304,8 +304,8 @@ func _make_token(p: Dictionary, side: int, role: String, slot: String, base: Vec
 	var carry := 50.0
 	var pl = GameDB.player_by_id(str(p.get("id", "")))
 	if pl != null and pl.has("attr"):
-		carry = float((pl["attr"] as Dictionary).get("carry", 50.0))
-	# Speed from the carry rating (run-and-carry players are the quick ones);
+		carry = float((pl["attr"] as Dictionary).get("speed", 50.0))
+	# How fast he runs on screen comes from his Speed attribute;
 	# presentation only, it never feeds back into the match.
 	var top := 11.6 + 2.6 * clampf((carry - 50.0) / 50.0, -1.0, 1.0) + _rng.randf_range(-0.4, 0.4)
 	if role == "RUCK":

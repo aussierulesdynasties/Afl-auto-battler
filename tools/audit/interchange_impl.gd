@@ -8,6 +8,7 @@ extends RefCounted
 ## and distance run per player; per season: injuries, the league's in-season
 ## rating rise (training and XP) and, after a rollover, its development.
 ## Args after the impl name: seeds (comma-separated) seasons.
+const Ovr := preload("res://tests/ovr.gd")
 
 const CLUB := "MEL"
 
@@ -26,7 +27,7 @@ func _mean_ovr() -> float:
 	var n := 0
 	for code in GameState.season.lists:
 		for p in GameState.season.lists[code]:
-			t += float(p["overall"])
+			t += float(Ovr.of(p))
 			n += 1
 	return t / maxi(1, n)
 
@@ -48,7 +49,7 @@ func _career(seed: int, seasons: int, bench: int) -> void:
 	GameState.replay_seed = seed
 	GameState.career_seed = seed
 	var pool: Array = GameDB.all_players_sorted() + GameDB.all_draftees_sorted()
-	pool.sort_custom(func(a, b): return a["overall"] > b["overall"])
+	pool.sort_custom(func(a, b): return Ovr.of(a) > Ovr.of(b))
 	GameState.draft = Draft.new(pool, GameDB.active_clubs(GameState.season_year).duplicate(), seed)
 	GameState.draft.start_for_user(CLUB)
 	_run_draft(GameState.draft)

@@ -1,4 +1,5 @@
 extends RefCounted
+const Ovr := preload("res://tests/ovr.gd")
 ## Team selection: auto-pick is unchanged, a named side is what takes the
 ## field (out of position too), gaps and over-full slots are handled, a player
 ## you leave out really does not play, and the selection is saved.
@@ -95,10 +96,10 @@ func _test_ruck_selection_integrity() -> void:
 	var tapper: String = str(ruck_ids[1])
 	for p in list:
 		if str(p["id"]) == high_ovr:
-			p["overall"] = 99
+			Ovr.to(p, 99)
 			p["attr"]["ruck"] = 55
 		elif str(p["id"]) == tapper:
-			p["overall"] = 50
+			Ovr.to(p, 50)
 			p["attr"]["ruck"] = 90
 	var side := Ratings.select_22(list)
 	var starter := ""
@@ -166,15 +167,15 @@ func _test_blooding_net_change() -> void:
 	for p in GameState.my_list:
 		p["age"] = 28
 		p["injury_weeks"] = 0
-		p["overall"] = 72 if in23.has(str(p["id"])) else 40
+		Ovr.to(p, 72 if in23.has(str(p["id"])) else 40)
 	var fwd: Array = side["FWD"]
 	var young_starter: Dictionary = GameState.list_player(str(fwd[0]))
 	var w1: Dictionary = GameState.list_player(str(fwd[1]))
 	var w2: Dictionary = GameState.list_player(str(fwd[2]))
 	young_starter["age"] = 21.6
-	young_starter["overall"] = 60
-	w1["overall"] = 65
-	w2["overall"] = 66
+	Ovr.to(young_starter, 60)
+	Ovr.to(w1, 65)
+	Ovr.to(w2, 66)
 	var youngs: Array = []
 	for p in GameState.my_list:
 		if youngs.size() < 2 and not in23.has(str(p["id"])) and str(p["role"]) == "FWD":
@@ -185,9 +186,9 @@ func _test_blooding_net_change() -> void:
 	var y1: Dictionary = youngs[0]
 	var y2: Dictionary = youngs[1]
 	y1["age"] = 19
-	y1["overall"] = 64
+	Ovr.to(y1, 64)
 	y2["age"] = 21.4
-	y2["overall"] = 63
+	Ovr.to(y2, 63)
 	var pool: Array = GameState.my_list.filter(func(p): return Ratings.available(p))
 	var r: Dictionary = GameState.blood_youth(side, pool)
 	var out: Dictionary = r["side"]
@@ -250,19 +251,19 @@ func _test_complete_synergy_reentry() -> void:
 			in23[str(id)] = true
 	for p in GameState.my_list:
 		p["injury_weeks"] = 0
-		p["overall"] = 70 if in23.has(str(p["id"])) else 40
+		Ovr.to(p, 70 if in23.has(str(p["id"])) else 40)
 		var attr: Dictionary = p.get("attr", {})
 		attr["contested_marking"] = Traits.SMALL_MAX_CM - 5
 		attr["goalkicking"] = 40
 		p["attr"] = attr
 	var crumber: Dictionary = GameState.list_player(str(side["FWD"][0]))
-	crumber["overall"] = 50
+	Ovr.to(crumber, 50)
 	crumber["attr"]["goalkicking"] = 60
 	var spare: Array = []
 	for p in GameState.my_list:
 		if spare.size() < 3 and not in23.has(str(p["id"])):
 			p["role"] = "FWD"
-			p["overall"] = 72
+			Ovr.to(p, 72)
 			spare.append(p)
 	_check(spare.size() == 3, "(three players outside the 23)")
 	if spare.size() < 3:
@@ -369,7 +370,7 @@ func _test_gap_goes_to_best_suited() -> void:
 		if not named.has(id) and str(p.get("role", "")) == "FWD" and Ratings.available(p):
 			spare.append(p)
 	spare.sort_custom(func(a, b):
-		return float(a["overall"]) * Workload.selection_factor(a) > float(b["overall"]) * Workload.selection_factor(b))
+		return float(Ovr.of(a)) * Workload.selection_factor(a) > float(Ovr.of(b)) * Workload.selection_factor(b))
 	_check(spare.size() >= 2, "Two spare forwards to choose from (%d)" % spare.size())
 	if spare.size() < 2:
 		return
@@ -652,11 +653,11 @@ func _test_dual_ruck() -> void:
 		_check(has_ruck.call(forced["bench"]) and (forced["bench"] as Array).size() == 5, "A dual-ruck call always benches the second ruck")
 		# The bench player he would replace: the last in bench order, as the
 		# rule reads it (not the lowest-rated, which a reshuffle can split from it).
-		var last_ovr := float((off["bench"] as Array)[(off["bench"] as Array).size() - 1]["overall"])
+		var last_ovr := float(Ovr.of((off["bench"] as Array)[(off["bench"] as Array).size() - 1]))
 		var spare_ovr := 0.0
 		for p in Ratings.by_ruck(r):
 			if not _ids(off["ground"]).has(str(p["id"])):
-				spare_ovr = float(p["overall"])
+				spare_ovr = float(Ovr.of(p))
 				break
 		_check(has_ruck.call(auto_sel["bench"]) == (spare_ovr >= last_ovr - Ratings.DUAL_RUCK_MARGIN) or has_ruck.call(off["bench"]),
 				"An AI club runs dual ruck when its spare ruck is close enough (spare %.0f, last on the bench %.0f)" % [spare_ovr, last_ovr])
@@ -676,7 +677,7 @@ func _test_merit_second_position() -> void:
 		on[str(g["id"])] = true
 	var best_fwd := {}
 	for p in list:
-		if str(p["role"]) == "FWD" and (best_fwd.is_empty() or int(p["overall"]) > int(best_fwd["overall"])):
+		if str(p["role"]) == "FWD" and (best_fwd.is_empty() or int(Ovr.of(p)) > int(Ovr.of(best_fwd))):
 			best_fwd = p
 	var spare := {}
 	for p in list:
@@ -841,7 +842,7 @@ func _test_key_posts() -> void:
 	for i in range(6):
 		var c: Dictionary = (smalls[i] as Dictionary).duplicate()
 		c["id"] = "k%d" % i
-		c["overall"] = 70 - i
+		Ovr.to(c, 70 - i)
 		c["height_cm"] = heights[i]
 		line.append(c)
 	_check(line.all(func(c): return not Roles.is_key_post(c, "DEF")), "(the made-up line has no key defender)")
@@ -855,9 +856,9 @@ func _test_key_posts() -> void:
 	var k1: Dictionary = (keys[0] as Dictionary).duplicate()
 	var k2: Dictionary = (keys[1] as Dictionary).duplicate()
 	k1["id"] = "K1"
-	k1["overall"] = 80
+	Ovr.to(k1, 80)
 	k2["id"] = "K2"
-	k2["overall"] = 75
+	Ovr.to(k2, 75)
 	var five := [line[0], k2, line[2], k1, line[4]]
 	laid = Roles.key_post_order(five, "DEF").map(func(p): return str(p["id"]))
 	_check(laid == ["K1", "k0", "K2", "k2", "k4"],
@@ -941,7 +942,7 @@ func _test_youth_no_cycle() -> void:
 	for p in GameState.my_list:
 		p["injury_weeks"] = 0
 		p["age"] = 28.0 if in23.has(str(p["id"])) else 19.0
-		p["overall"] = 72 if in23.has(str(p["id"])) else 70
+		Ovr.to(p, 72 if in23.has(str(p["id"])) else 70)
 	# The youth pick starts from the best side on these ratings: on the
 	# director's position-relative skills (row 200) that can differ from the
 	# side picked before the ages and ratings above were set.

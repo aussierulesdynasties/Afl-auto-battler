@@ -13,6 +13,9 @@ for what the game generates and how players age.
       attribute,age,change,n: the average change a season, by his age in
       the first of two seasons (Endurance, Durability, the technical and
       Footy IQ attributes).
+  data/league_seasons.csv
+      year,id,name,club,apos,height_cm and the 18 attributes: every rated
+      player-season, for "Plays like" (PlaysLike.add_past_seasons).
 
 The players of a season are the club lists' (data/legacy/2010s and 2020s
 lists.csv) who played that season, each rated by attributes.py on that
@@ -56,6 +59,7 @@ LISTS = [os.path.join(DATA, "legacy", "2010s", "lists.csv"), os.path.join(DATA, 
 FIRST, LAST = W.FIRST, 2025
 RANGES_OUT = os.path.join(DATA, "draftee_ranges.csv")
 CURVES_OUT = os.path.join(DATA, "age_curves.csv")
+SEASONS_OUT = os.path.join(DATA, "league_seasons.csv")
 DRAFT_AGES = (18, 19, 20)      # a ruck counts at any debut age
 
 # The director's types, 2026-11-15, in the engine's stat keys. 1 = listed;
@@ -306,6 +310,17 @@ def main():
             v = deltas[k][age]
             curves.append({"attribute": k, "age": age, "change": round(sum(v) / len(v), 2), "n": len(v)})
 
+    # Every rated player-season (PlaysLike).
+    season_rows = []
+    for y in range(FIRST, LAST + 1):
+        for key, (r, a) in sorted(seasons[y].items(), key=lambda kv: str(kv[0])):
+            row = {"year": y, "id": r.get("draftguru_id") or "%s_%s_%s" % (r["first"], r["last"], r["dob"]),
+                   "name": "%s %s" % (r["first"], r["last"]), "club": r["club"], "apos": a["apos"],
+                   "height_cm": r.get("height_cm") or ""}
+            for k in A.ATTRS:
+                row[k] = a[k]
+            season_rows.append(row)
+
     print("rated %d player seasons; %d list players not found in Wheelo" % (found_n, missed_n))
     young = [a for _k, a in firsts if a["_age"] in DRAFT_AGES]
     print("first seasons: %d, %d of them aged 18-20, %d of those held a type later" % (
@@ -314,7 +329,9 @@ def main():
         print("  %-22s %3d  (%s)" % (name, len(first_season.get(name, [])), ", ".join(positions)))
     if "--check" not in sys.argv:
         for path, rows, cols in ((RANGES_OUT, ranges, ["type", "positions", "attribute", "p10", "p90", "n"]),
-                                 (CURVES_OUT, curves, ["attribute", "age", "change", "n"])):
+                                 (CURVES_OUT, curves, ["attribute", "age", "change", "n"]),
+                                 (SEASONS_OUT, season_rows,
+                                  ["year", "id", "name", "club", "apos", "height_cm"] + list(A.ATTRS))):
             with open(path, "w", newline="", encoding="utf-8") as fh:
                 wr = csv.DictWriter(fh, fieldnames=cols, lineterminator="\n")
                 wr.writeheader()

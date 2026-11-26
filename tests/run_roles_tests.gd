@@ -1,4 +1,5 @@
 extends SceneTree
+const Ovr := preload("res://tests/ovr.gd")
 const Tap := preload("res://tests/tap.gd")
 ## godot --headless --path . --script tests/run_roles_tests.gd
 ## Roles (tests/test_roles.gd), then the Selection screen on a phone: the
@@ -805,9 +806,9 @@ func _test_backing_ui_tests() -> void:
 	var kid: Dictionary = {}
 	var best: Dictionary = {}
 	for p in _state.my_list:
-		if str(p["role"]) != "RUCK" and (kid.is_empty() or int(p["overall"]) < int(kid["overall"])):
+		if str(p["role"]) != "RUCK" and (kid.is_empty() or int(Ovr.of(p)) < int(Ovr.of(kid))):
 			kid = p
-		if best.is_empty() or int(p["overall"]) > int(best["overall"]):
+		if best.is_empty() or int(Ovr.of(p)) > int(Ovr.of(best)):
 			best = p
 	var through: int = _state.season_year - 1
 	kid["career"] = {"games": 2, "goals": 0, "stints": [], "through": through, "unknown": []}

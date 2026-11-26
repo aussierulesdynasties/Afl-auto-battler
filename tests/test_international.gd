@@ -1,4 +1,5 @@
 extends RefCounted
+const Ovr := preload("res://tests/ovr.gd")
 ## Run through tests/run_international_tests.gd.
 ## International prospects: each generated draft
 ## class has one or two prospects from Ireland, New Zealand, the USA or an
@@ -126,46 +127,45 @@ func _test_classes(state: Node, db: Node) -> void:
 	var stat := {}
 	var dom_gap := 0.0
 	var dom_n := 0
-	var dom_rank_gap := 0.0
-	var dom_carry := 0.0
 	var dom_disp := 0.0
+	var dom_at := {}   # draft rank -> [OVR total, prospects]: a home-grown prospect at that pick
 	# A country's lean is the shape of his skills: each against his own average
-	# rated skill (the fit to his overall moves every skill alike, and a lean on a
-	# skill his position counts heavily would otherwise vanish into it), read
-	# against the very same prospect made without his country's lean. A generated
-	# player copies a real 2012-2026 player (director, 2026-11-17), so two players
-	# of one role differ by about 14 points a skill: against a role average, a
-	# 4-point lean is lost in who he copied over 45 players. "tackle" is his
-	# pressure itself.
+	# skill (the code's lean is laid on at his level, every skill but Discipline,
+	# and a lean on a skill his position counts heavily would otherwise vanish
+	# into it), read against the very same prospect made without his country's
+	# lean. A generated player is his type's ranges at his talent, each skill
+	# ±6 (RATING_REBUILD §4), so against a type average a 4-point lean is lost
+	# in the noise over 45 players. "tackle" is his pressure itself.
 	var lean := func(p: Dictionary) -> Dictionary:
 		var a: Dictionary = p["attr"]
 		var avg := 0.0
 		var keys := 0.0
 		for k in Attributes.KEYS:
-			if not k in Prospects.UNRATED_KEYS:
+			if k != "discipline":
 				avg += float(a[k])
 				keys += 1.0
 		avg /= keys
-		return {"disp": Attributes.disposal_of(a) - avg, "acc": float(a["accuracy"]) - avg,
-				"cont": float(a["contested"]) - avg, "mark": float(a["contested_marking"]) - avg,
+		return {"disp": Attributes.disposal_of(a) - avg, "acc": float(a["goalkicking"]) - avg,
+				"cont": float(a["contested_ball"]) - avg, "mark": float(a["contested_marking"]) - avg,
 				"pres": float(a["pressure"]) - avg, "tackle": float(a["pressure"])}
 	for y in range(FIRST_YEAR, FIRST_YEAR + 40):
 		for p in classes[y]:
 			if not p.has("intl"):
-				dom_gap += float(p["potential"]) - float(p["overall"])
-				dom_rank_gap += float(p["overall"]) - Prospects.rank_base_overall(int(p["draft_rank"]))
-				dom_carry += float(p["attr"]["carry"]) - float(p["overall"])
-				dom_disp += Attributes.disposal_of(p["attr"]) - float(p["overall"])
+				dom_gap += float(p["potential"]) - float(Ovr.of(p))
+				var at: Array = dom_at.get(int(p["draft_rank"]), [0.0, 0])
+				dom_at[int(p["draft_rank"])] = [float(at[0]) + float(Ovr.of(p)), int(at[1]) + 1]
+				dom_disp += Attributes.disposal_of(p["attr"]) - float(Ovr.of(p))
 				dom_n += 1
 	var raw_gap := 0.0
 	var raw_rank_gap := 0.0
+	var raw_rank_n := 0
 	for p in all_intl:
 		var id := str(p["intl"])
 		var s: Dictionary = stat.get(id, {"n": 0, "disp": 0.0, "acc": 0.0, "cont": 0.0, "mark": 0.0,
-				"pres": 0.0, "tackle": 0.0, "carry": 0.0, "h": 0.0, "age_lo": 99.0, "age_hi": 0.0, "ruckfwd": 0})
+				"pres": 0.0, "tackle": 0.0, "h": 0.0, "age_lo": 99.0, "age_hi": 0.0, "ruckfwd": 0})
 		s["n"] += 1
 		var a: Dictionary = p["attr"]
-		var ovr := float(p["overall"])
+		var ovr := float(Ovr.of(p))
 		var l: Dictionary = lean.call(p)
 		var plain: Dictionary = p.duplicate(true)
 		plain.erase("attr_bias")
@@ -173,7 +173,6 @@ func _test_classes(state: Node, db: Node) -> void:
 		var base: Dictionary = lean.call(plain)
 		for k in l:
 			s[k] += float(l[k]) - float(base[k])
-		s["carry"] += float(a["carry"]) - ovr
 		s["h"] += float(p["height_cm"])
 		s["age_lo"] = minf(float(s["age_lo"]), float(p["age"]))
 		s["age_hi"] = maxf(float(s["age_hi"]), float(p["age"]))
@@ -181,13 +180,16 @@ func _test_classes(state: Node, db: Node) -> void:
 			s["ruckfwd"] += 1
 		stat[id] = s
 		raw_gap += float(p["potential"]) - ovr
-		raw_rank_gap += ovr - Prospects.rank_base_overall(int(p["draft_rank"]))
+		var usual: Array = dom_at.get(int(p["draft_rank"]), [0.0, 0])
+		if int(usual[1]) > 0:
+			raw_rank_gap += ovr - float(usual[0]) / float(usual[1])
+			raw_rank_n += 1
 		_check(str(p["draft_team"]) != "" and str(p["draft_league"]) != "" and str(p["draft_state"]) == INTL.country_name(p),
 				"%s: his pathway and country are filled in" % p["id"])
 		_check(float(p["age"]) >= 17.9 and float(p["age"]) <= 21.0, "%s: age %.1f is 18 to 20 when made (19 to 21 at the draft)" % [p["id"], float(p["age"])])
 	var n_all := float(all_intl.size())
-	_check(raw_rank_gap / n_all < dom_rank_gap / float(dom_n) - 1.0,
-			"Raw: rated under his rank's usual (%.1f vs %.1f)" % [raw_rank_gap / n_all, dom_rank_gap / float(dom_n)])
+	_check(raw_rank_n > 0 and raw_rank_gap / float(raw_rank_n) < -1.0,
+			"Raw: rated under a home-grown prospect taken at his pick (%.1f)" % (raw_rank_gap / float(maxi(1, raw_rank_n))))
 	_check(raw_gap / n_all > dom_gap / float(dom_n),
 			"Decent potential: more room to grow than a domestic prospect (%.1f vs %.1f)" % [raw_gap / n_all, dom_gap / float(dom_n)])
 	# A country's lean names the game's own skills: a stale name ("disposal",
@@ -197,9 +199,9 @@ func _test_classes(state: Node, db: Node) -> void:
 			_check(str(k) in Attributes.KEYS, "%s leans on a real skill (%s)" % [c["id"], k])
 	var m := func(id: String, key: String) -> float:
 		return float(stat[id][key]) / float(stat[id]["n"])
-	print("INTL profile IRL disp %.1f acc %.1f | NZL cont %.1f pres %.1f | USA h %.0f mark %.1f disp %.1f | KEN carry %.1f disp %.1f" % [
+	print("INTL profile IRL disp %.1f acc %.1f | NZL cont %.1f pres %.1f | USA h %.0f mark %.1f disp %.1f | KEN disp %.1f" % [
 			m.call("IRL", "disp"), m.call("IRL", "acc"), m.call("NZL", "cont"), m.call("NZL", "pres"),
-			m.call("USA", "h"), m.call("USA", "mark"), m.call("USA", "disp"), m.call("KEN", "carry"), m.call("KEN", "disp")])
+			m.call("USA", "h"), m.call("USA", "mark"), m.call("USA", "disp"), m.call("KEN", "disp")])
 	_check(m.call("IRL", "disp") > m.call("USA", "disp") + 3.0, "Irish prospects kick and dispose better than Americans")
 	_check(m.call("IRL", "acc") > m.call("NZL", "acc") + 2.0, "Irish prospects are more accurate than New Zealanders")
 	_check(m.call("NZL", "cont") > m.call("IRL", "cont") + 3.0, "New Zealanders are stronger in a contest than the Irish")
@@ -232,8 +234,8 @@ func _test_classes(state: Node, db: Node) -> void:
 	var twin := one.duplicate(true)
 	twin.erase("intl")
 	var view_t := DraftScouting.projection(twin, "ADE", SEED)
-	var wi: int = int(view_i["overall"][1]) - int(view_i["overall"][0]) + int(view_i["potential"][1]) - int(view_i["potential"][0])
-	var wt: int = int(view_t["overall"][1]) - int(view_t["overall"][0]) + int(view_t["potential"][1]) - int(view_t["potential"][0])
+	var wi: int = int(Ovr.of(view_i)[1]) - int(Ovr.of(view_i)[0]) + int(view_i["potential"][1]) - int(view_i["potential"][0])
+	var wt: int = int(Ovr.of(view_t)[1]) - int(Ovr.of(view_t)[0]) + int(view_t["potential"][1]) - int(view_t["potential"][0])
 	_check(wi > wt, "Recruiters' range on him is wider than on the same player at home (%d vs %d)" % [wi, wt])
 
 	var dup := 0
@@ -266,7 +268,7 @@ func _test_career(state: Node, db: Node) -> void:
 	state.open_offseason()
 	var spare: Dictionary = state.my_list[0]
 	for p in state.my_list:
-		if int(p["overall"]) < int(spare["overall"]):
+		if int(Ovr.of(p)) < int(Ovr.of(spare)):
 			spare = p
 	_check(bool(state.release_player(str(spare["id"])).get("ok", false)), "Adelaide delists a player to make room")
 	_check(state.begin_intake_draft(), "The intake opens")

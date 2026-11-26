@@ -20,10 +20,12 @@ func run() -> void:
 	GameState.replay_seed = SUITE_SEED
 	_t("_test_weights")
 	_t("_test_flat_reads_flat")
+	_t("_test_stretch")
 	_t("_test_weighted_only")
 	_t("_test_better_never_lower")
 	_t("_test_derived_not_stored")
 	_t("_test_out_of_position")
+	_t("_test_match_reads_the_cut")
 	_t("_test_selection_and_pay_read_it")
 	_t("_test_save_carries_no_ovr")
 	GameState.delete_saved_career()
@@ -67,12 +69,43 @@ func _test_weights() -> void:
 		_check(not w.has("durability"), "%s gives Durability no share of OVR (it is priced in Worth)" % apos)
 
 
-## The weights are shares: every attribute at 60 reads 60 at every position.
+## The weights are shares: every attribute at 60 is a weighted sum of 60 at
+## every position, which the stretch reads as 72.
 func _test_flat_reads_flat() -> void:
 	for x in [30, 60, 90]:
 		for apos in Rating.POSITIONS:
-			_check(Rating.of_attrs(_flat(x), apos) == x, "a flat %d reads %d as a %s (%d)" % [
-					x, x, apos, Rating.of_attrs(_flat(x), apos)])
+			_check(is_equal_approx(Rating.raw_of(_flat(x), apos), float(x))
+					and Rating.of_attrs(_flat(x), apos) == int(round(Rating.stretch(float(x)))),
+					"a flat %d is a weighted sum of %d as a %s, OVR %d" % [x, x, apos, Rating.of_attrs(_flat(x), apos)])
+
+
+## The director's stretch (2026-11-26): replacement level 53 reads 62, a solid
+## regular 60 reads 72, a star 67 reads 80-82, a generational superstar 72
+## reads 89-92; never down, and the same curve run backwards.
+func _test_stretch() -> void:
+	_check(Rating.of_attrs(_flat(53), "Midfielder") == 62, "a weighted sum of 53 reads 62 (%d)" % Rating.of_attrs(_flat(53), "Midfielder"))
+	_check(Rating.of_attrs(_flat(60), "Midfielder") == 72, "60 reads 72 (%d)" % Rating.of_attrs(_flat(60), "Midfielder"))
+	var star := Rating.of_attrs(_flat(67), "Midfielder")
+	_check(star >= 80 and star <= 82, "67 reads a star's 80-82 (%d)" % star)
+	var great := Rating.of_attrs(_flat(72), "Midfielder")
+	_check(great >= 89 and great <= 92, "72 reads a generational 89-92 (%d)" % great)
+	_check(int(round(Rating.stretch(63.5))) == 77, "the worked example: 63.5 reads 77 (%.1f)" % Rating.stretch(63.5))
+	var past := Rating.of_attrs(_flat(76), "Midfielder")
+	_check(past >= 90 and past <= 93, "past a generational sum the climb flattens: 76 reads %d" % past)
+	_check(int(round(Rating.stretch(86.8))) == 99, "the best season on record (86.8) reads 99 (%.1f)" % Rating.stretch(86.8))
+	var up := true
+	var back := true
+	var last := -1.0
+	for i in range(100, 990):
+		var raw := float(i) / 10.0
+		var o := Rating.stretch(raw)
+		up = up and o >= last
+		last = o
+		if o > 1.0 and o < 99.0:
+			back = back and absf(Rating.unstretch(o) - raw) < 0.001
+	_check(up, "the stretch never reads a bigger sum lower")
+	_check(back, "unstretch runs it backwards")
+	_check(Rating.stretch(1.0) == 1.0 and Rating.stretch(99.0) == 99.0, "it stays within 1-99")
 
 
 ## Raising an attribute lifts a position by its weight, and leaves a position
@@ -86,7 +119,7 @@ func _test_weighted_only() -> void:
 			var a := _flat(50)
 			a[k] = 90
 			var got := Rating.of_attrs(a, apos)
-			var want := int(round(50.0 + 40.0 * float(w.get(k, 0)) / 100.0))
+			var want := int(round(Rating.stretch(50.0 + 40.0 * float(w.get(k, 0)) / 100.0)))
 			if got != want:
 				_check(false, "%s at 90 makes a %s %d, want %d" % [k, apos, got, want])
 			elif w.has(k):
@@ -155,7 +188,7 @@ func _test_out_of_position() -> void:
 	_check(Rating.at_line(kd, "MID") == Rating.of_attrs(a, "Midfielder"),
 			"a key defender in the midfield is rated a Midfielder with his skills 20%% down (%d, want %d)" % [
 					Rating.at_line(kd, "MID"), Rating.of_attrs(a, "Midfielder")])
-	_check(Rating.at_line(kd, "DEF") == 80, "in his own line he reads his own OVR (%d)" % Rating.at_line(kd, "DEF"))
+	_check(Rating.at_line(kd, "DEF") == Rating.ovr(kd), "in his own line he reads his own OVR (%d)" % Rating.at_line(kd, "DEF"))
 	_check(Rating.spot_position("Key Defender", "FWD") == "Key Forward", "a key defender up forward plays key forward (the closest)")
 	var phys := {"apos": "Midfielder", "attr": _flat(0)}
 	for k in Attributes.PHYSICAL:
@@ -164,6 +197,28 @@ func _test_out_of_position() -> void:
 	_check(Rating.at_line(phys, "FWD") == Rating.of_attrs(phys["attr"], fwd),
 			"Physical attributes carry to another line untouched (%d, want %d as a %s)" % [
 					Rating.at_line(phys, "FWD"), Rating.of_attrs(phys["attr"], fwd), fwd])
+
+
+## The match plays the same cut (mandate 2: the same 80 Kicking kicks the same
+## for everyone, changed only by live state and out of position): a key
+## defender picked in the midfield kicks 20% down and runs as fast as ever.
+func _test_match_reads_the_cut() -> void:
+	var cut_keys: Array = Attributes.TECHNICAL + Attributes.FOOTY_IQ + ["disposal"]
+	_check(Attributes.CUT_BY_POSITION.size() == cut_keys.size() and cut_keys.all(func(k): return Attributes.CUT_BY_POSITION.has(k)),
+			"the match cuts what OVR cuts: Technical, Footy IQ and ball use (%d keys)" % Attributes.CUT_BY_POSITION.size())
+	var sim := MatchSim.new(Squad.new("GEE", GameDB.club_list("GEE"), true, "GEE"),
+			Squad.new("COL", GameDB.club_list("COL"), false, "COL"), SUITE_SEED)
+	var home := {"id": "cut_home", "apos": "Key Defender", "role": "DEF", "attr": _flat(80)}
+	var away := home.duplicate(true)
+	away["id"] = "cut_away"
+	away["role"] = "MID"
+	var kick: float = sim._a(away, "kicking") / sim._a(home, "kicking")
+	var run: float = sim._a(away, "speed") / sim._a(home, "speed")
+	_check(is_equal_approx(kick, 0.80), "his kicking plays 20%% down in the midfield (x%.2f)" % kick)
+	_check(is_equal_approx(run, 1.0), "his speed plays the same (x%.2f)" % run)
+	var mid := {"id": "cut_mid", "apos": "Midfielder", "role": "MID", "attr": _flat(80)}
+	_check(is_equal_approx(sim._a(mid, "kicking"), sim._a(home, "kicking")),
+			"the same 80 Kicking kicks the same for a midfielder and a key defender in their own spots")
 
 
 ## Selection rates a man at a slot by Rating.at_line, and the salary curve

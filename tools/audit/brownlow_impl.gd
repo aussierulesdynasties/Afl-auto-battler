@@ -18,6 +18,7 @@ extends RefCounted
 ##   WIN  mode season id votes
 ##   WSH  mode season votes_to_winning_side all_votes   (drawn matches left out)
 ##   WSA  mode season alt_key votes_to_winning_side all_votes   (the same, per ALT)
+const Ovr := preload("res://tests/ovr.gd")
 
 ## CoachReport.influence's terms: the season totals in ROW are these stats.
 const COMP := {"disposals": 1.0, "goals": 5.0, "marks": 0.8, "inside50": 2.0, "tackles": 0.5,
@@ -93,7 +94,7 @@ func run() -> void:
 			print("ROW|%s|%d|%s|%s %s|%s|%s|%s|%s|%d|%d|%d|%d|%d|%.2f|%d|%d|%d|%s|%s" % [mode, s, str(id),
 					str(p.get("first", "")), str(p.get("last", "")), str(t["club"]),
 					str(p.get("role", "")), str(p.get("role2", "")), str(p.get("real_pos", "")),
-					int(p.get("overall", 0)), int(t["games"]), int(t["votes"]), int(t["polled"]),
+					int(Ovr.of(p, 0)), int(t["games"]), int(t["votes"]), int(t["polled"]),
 					int(t.get("coaches", 0)), float(t["influence"]) / float(maxi(1, int(t["games"]))),
 					int(c.get("tackles", 0.0)), int(c.get("pressure_acts", 0.0)), int(c.get("hitouts", 0.0)),
 					",".join(parts), ",".join(alts)])

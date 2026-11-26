@@ -1,4 +1,5 @@
 extends SceneTree
+const Ovr := preload("res://tests/ovr.gd")
 ## godot --headless --path . --script tests/run_stats_tests.gd
 ## Season stats (the Stats patch, ROADMAP §1.11): the hub's Season stats
 ## button, every section, and the numbers behind them.
@@ -1669,7 +1670,7 @@ func _test_team_rating(sz: Vector2i) -> void:
 			var picked: Array = (side["ground"] as Array) + (side["bench"] as Array)
 			var sum := 0.0
 			for p in picked:
-				sum += float(p["overall"])
+				sum += float(Ovr.of(p))
 			if int(TR.rating(list)) != int(round(sum / float(picked.size()))):
 				rating_ok = false
 			var standing: Array = _state._standing(code)
@@ -1799,7 +1800,7 @@ func _test_ladder_rating_is_preview() -> void:
 	var saved: Array = (season.lists[odd] as Array).duplicate(true)
 	# High OVR on paper, poor at everything the match engine reads.
 	for p in season.lists[odd]:
-		p["overall"] = 99
+		Ovr.to(p, 99)
 		for k in (p["attr"] as Dictionary):
 			p["attr"][k] = 30
 	var ovr_better := 0

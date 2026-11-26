@@ -333,7 +333,7 @@ jobs:
         if: success() || failure()
         run: bash tools/check_suite_seeds.sh
 
-      - name: Intake / development harness
+      - name: Draft-class data check
         if: success() || failure()
         run: python3 tools/intake_harness.py --quiet
 

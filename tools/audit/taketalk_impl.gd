@@ -9,6 +9,7 @@ extends RefCounted
 ## is kept, and paired with the verdict when it comes.
 ## Args after the impl name: seeds (comma-separated) club seasons
 ## Prints a ROW line per (week, gap) and a TOTAL line.
+const Ovr := preload("res://tests/ovr.gd")
 
 const PassMargin := preload("res://tools/audit/passmargin_impl.gd")
 
@@ -40,7 +41,7 @@ func _watch() -> void:
 			if w >= 1 and w <= 4:
 				var gaps: Dictionary = open.get(key, {})
 				if not gaps.has(w):
-					gaps[w] = int(p.get("overall", 0)) - GameState.rating_as(p, GameState.project_role(p))
+					gaps[w] = int(Ovr.of(p, 0)) - GameState.rating_as(p, GameState.project_role(p))
 				open[key] = gaps
 	# Judged: the career fact for this year is there and the project is gone.
 	for key in open.keys():
@@ -64,7 +65,7 @@ func _career(seed: int, seasons: int) -> void:
 	GameState.autosave_enabled = false
 	GameState.replay_seed = seed
 	var pool: Array = GameDB.all_players_sorted() + GameDB.all_draftees_sorted()
-	pool.sort_custom(func(a, b): return a["overall"] > b["overall"])
+	pool.sort_custom(func(a, b): return Ovr.of(a) > Ovr.of(b))
 	GameState.draft = Draft.new(pool, GameDB.active_clubs(GameState.season_year).duplicate(), seed)
 	GameState.draft.start_for_user(club)
 	pm._run_draft(GameState.draft)

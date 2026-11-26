@@ -16,6 +16,7 @@ extends RefCounted
 ##         rivals go.
 ##
 ## tools/balance/rival_reads_report.py adds the seasons up.
+const Ovr := preload("res://tests/ovr.gd")
 
 ## Senior games played, by bucket floor.
 const GAMES := [0, 50, 100, 150]
@@ -47,7 +48,7 @@ func _pot(gs) -> Dictionary:
 
 
 func _pot_one(out: Dictionary, p: Dictionary, reader: String, seed: int, levels: Array, where: String) -> void:
-	var ov := int(p.get("overall", 50))
+	var ov := int(Ovr.of(p, 50))
 	var pot := maxi(ov, int(p.get("potential", ov)))
 	var games := float((p.get("career", {}) as Dictionary).get("games", p.get("gm", 0.0)))
 	var bucket := 0
@@ -115,7 +116,7 @@ func _fa(gs, user: String) -> Array:
 			top["salary"] = int(o["salary"]) + steps * Contracts.SALARY_STEP
 			top["years"] = maxi(int(o["years"]), wanted)
 			ceiling = maxi(ceiling, Contracts.worth_to_him(p, top))
-		var row := {"id": id, "ovr": int(p.get("overall", 0)), "rivals": rivals.size(),
+		var row := {"id": id, "ovr": int(Ovr.of(p, 0)), "rivals": rivals.size(),
 				"shown": _best_worth(p, rivals), "ceiling": ceiling}
 		var floor_salary := Contracts.lowest(p, wanted)
 		var open := _cheapest_lead(p, mine, rivals, floor_salary)

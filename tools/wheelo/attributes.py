@@ -14,6 +14,13 @@ season, on one scale for every position.
       question box: "Where CD rated him"); the one with more games if two.
       Only seasons where Wheelo keeps his position count (it has none for
       2012 and 2014-2018, nor before 2012).
+  data/legacy/<start>/attributes_<start>.csv
+      the same for the 2020, 2010, 2000 and 1990 starts.
+  data/legacy/entry_attributes.csv
+      year,club,first,last and the same columns: each new club's established
+      foundation player (data/legacy/entry_lists.csv, a row with a src
+      season), from that season, rated beside the start whose season is
+      nearest it (that start's players fill what his season did not keep).
 
 The scale (approved 2026-11-25). A rate: the league's 2nd percentile that
 season is 1, its 98th is 99. A count a game: zero is 1, the league's 98th
@@ -73,6 +80,8 @@ STARTS = {
              "legacy/1990/list_additions_1990.csv", "legacy/1990/attributes_1990.csv"),
 }
 OUT = os.path.join(DATA, STARTS["2026"][4])   # review_lists.py reads it
+ENTRY_IN = os.path.join(DATA, "legacy", "entry_lists.csv")
+ENTRY_OUT = os.path.join(DATA, "legacy", "entry_attributes.csv")
 
 # Storage order, by the card's four groups (§2).
 ATTRS = ["speed", "endurance", "strength", "work_rate",
@@ -593,6 +602,53 @@ def listed_players(start: str):
     return [item for item in out if id(item) not in drop], missed
 
 
+def entry_players():
+    """Each new club's established foundation player with his src season's
+    row, by the start whose rated season is nearest it: {start: [(list row,
+    body row, season, found)]}, and the ones not found."""
+    by_start, missed = defaultdict(list), []
+    for r in read(ENTRY_IN):
+        if not r.get("src"):
+            continue
+        year = int(r["src"])
+        got = season(year).find(r["first"], r["last"], r["club"], r.get("gm"), r.get("ki"))
+        if got is None:
+            missed.append("%s %s %s %d" % (r["club"], r["first"], r["last"], year))
+            continue
+        start = min(STARTS, key=lambda s: (abs(STARTS[s][0] - year), STARTS[s][0]))
+        by_start[start].append((r, r, year, got))
+    return by_start, missed
+
+
+def build_entry(ref: dict):
+    """entry_attributes.csv's rows: each group rated with its start's players
+    (rate), only the entry players kept."""
+    by_start, missed = entry_players()
+    out = []
+    for start, group in sorted(by_start.items()):
+        players, _m = listed_players(start)
+        rows, _info = rate(players + group, [], STARTS[start][0], ref)
+        mine = {id(item[0]) for item in group}
+        for row in rows:
+            if id(row["_p"]["r"]) in mine:
+                row["year"] = row["_p"]["r"]["year"]
+                out.append(row)
+    return out, missed
+
+
+def write_entry(rows):
+    cols = ["year", "club", "first", "last", "src", "apos", "line2", "speed_src"] + ATTRS
+    with open(ENTRY_OUT, "w", newline="", encoding="utf-8") as fh:
+        wr = csv.DictWriter(fh, fieldnames=cols, lineterminator="\n", extrasaction="ignore")
+        wr.writeheader()
+        wr.writerows(rows)
+    imp = ENTRY_OUT + ".import"
+    if not os.path.exists(imp):
+        with open(imp, "w", newline="\n", encoding="utf-8") as fh:
+            fh.write(IMPORT)
+    return ENTRY_OUT
+
+
 UNKEPT = "unkept"   # a stat the season never kept: left out, not averaged in
 
 
@@ -779,7 +835,7 @@ def check(start, rows, info):
 
 
 def main():
-    want = [a for a in sys.argv[1:] if a in STARTS] or list(STARTS)
+    want = [a for a in sys.argv[1:] if a in STARTS or a == "entry"] or list(STARTS) + ["entry"]
     ref = None
     for start in ["2026"] + [s for s in STARTS if s != "2026"]:
         if start != "2026" and start not in want:
@@ -793,6 +849,14 @@ def main():
             path = write(start, rows)
             print("wrote %s: %d players" % (os.path.relpath(path, ROOT), len(rows)))
         check(start, rows, info)
+    if "entry" in want:
+        rows, missed = build_entry(ref)
+        if "--check" not in sys.argv:
+            print("wrote %s: %d players" % (os.path.relpath(write_entry(rows), ROOT), len(rows)))
+        print("entry lists, not found in their season:", len(missed), "; ".join(missed))
+        for r in rows:
+            print("  %s %s %s %s (%s) %s" % (r["year"], r["club"], r["first"] + " " + r["last"], r["apos"],
+                                            r["src"], " ".join("%s %d" % (k[:4], r[k]) for k in ATTRS)))
 
 
 if __name__ == "__main__":

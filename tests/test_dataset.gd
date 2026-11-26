@@ -1,4 +1,5 @@
 extends RefCounted
+const Ovr := preload("res://tests/ovr.gd")
 ## The career's dataset (Legacy mode, TODO row 142, step P1): GameDB loads the
 ## set a career chose, a save keeps it, and the 2026 career behaves exactly as
 ## it did before the dataset became a choice. The golden fingerprints below
@@ -125,7 +126,7 @@ static func _player_line(p: Dictionary) -> String:
 	for k in keys:
 		a.append("%s=%.4f" % [k, float(attr[k])])
 	return "%s|%s|%s|%d|%.4f|%d|%d|%s|%s|%d|%s|%s|%s|%s|%s" % [str(p.get("id", "")), str(p.get("real_name", "")),
-			str(p.get("club", "")), int(p.get("num", 0)), float(p.get("age", 0.0)), int(p.get("overall", 0)),
+			str(p.get("club", "")), int(p.get("num", 0)), float(p.get("age", 0.0)), int(Ovr.of(p, 0)),
 			int(p.get("potential", 0)), str(p.get("role", "")), str(p.get("role2", "")), int(p.get("draft_year", 0)),
 			str(p.get("rated_on_record", false)), str(p.get("generic_name", "")), str(p.get("home_state", "")),
 			str(p.get("career", "")), ",".join(a)]
@@ -348,7 +349,7 @@ func _test_fixture_load() -> void:
 	var rated_ok := true
 	var off := 0
 	for p in GameDB.players:
-		if int(p.get("overall", 0)) <= 0 or not p.has("potential"):
+		if int(Ovr.of(p, 0)) <= 0 or not p.has("potential"):
 			rated_ok = false
 		var want := float(Prospects.days_between(str(p["dob"]), "1990-03-01")) / 365.25
 		if not is_equal_approx(float(p["age"]), want) or want < 17.0 or want > 40.0:

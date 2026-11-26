@@ -76,7 +76,7 @@ func _run() -> void:
 		quit(1)
 		return
 	var id := str(who["id"])
-	print("READS who=", id, " value=", int(who["value"]), " price=", draft.price(who))
+	print("READS who=", id, " price=", draft.price(who))
 	var kind := ui.find_child("Kind_" + id, true, false) as Control
 	if kind != null:
 		_scroll_to(ui, kind)

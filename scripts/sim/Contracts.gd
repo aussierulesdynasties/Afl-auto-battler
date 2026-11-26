@@ -236,7 +236,14 @@ static func draftee_deal(p: Dictionary, year := 2027) -> void:
 
 ## What re-signing (or signing) this player costs now.
 static func asking_salary(p: Dictionary) -> int:
-	var price := pay(Ratings.salary_value(int(Rating.ovr(p, 50))))
+	return asking_at(p, int(Rating.ovr(p, 50)))
+
+
+## What he would ask at an OVR of `ovr` (ClubLife.wait_words: his rating at
+## the off-season). OVR is read from the attributes, so a later rating is
+## passed in, never written onto him.
+static func asking_at(p: Dictionary, ovr: int) -> int:
+	var price := pay(Ratings.salary_value(ovr))
 	# An unhappy player wants paying to stay.
 	if ClubLife.morale(p) < 40:
 		price = ceili(price * 1.25)

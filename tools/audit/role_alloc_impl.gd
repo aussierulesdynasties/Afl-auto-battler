@@ -5,6 +5,7 @@ extends RefCounted
 ## first and second positions the season numbers give him, the player types
 ## each role produces, the named cases the director raised, and each club's
 ## coverage by line. Reads; changes nothing. No arguments.
+const Ovr := preload("res://tests/ovr.gd")
 
 const NAMED := ["Gryan Miers", "Bodhi Uwland", "Harvey Langford", "Maurice Rioli",
 		"Cody Weightman", "Nick Daicos", "Isaac Heeney", "Jeremy Cameron"]
@@ -46,7 +47,7 @@ func run() -> void:
 		for p in all:
 			if str(p.get("real_pos", "")) == line and str(p.get("role", "")) == "MID":
 				rows.append(p)
-		rows.sort_custom(func(a, b): return int(a.get("overall", 0)) > int(b.get("overall", 0)))
+		rows.sort_custom(func(a, b): return int(Ovr.of(a, 0)) > int(Ovr.of(b, 0)))
 		var kept := 0
 		for p in rows:
 			if str(p.get("role2", "")) == line:
@@ -54,7 +55,7 @@ func run() -> void:
 		print("\nLISTED %s, FIRST POSITION MID: %d (%d keep %s second)" % [line, rows.size(), kept, line])
 		for p in rows:
 			print("  %-24s %s  OVR %2d  %3.0fcm  %2d gm  2nd %-4s  %s" % [GameDB.player_display_name(p),
-					str(p.get("club", "")), int(p.get("overall", 0)), float(p.get("height_cm", 0.0)),
+					str(p.get("club", "")), int(Ovr.of(p, 0)), float(p.get("height_cm", 0.0)),
 					int(p.get("gm", 0)), str(p.get("role2", "")) if str(p.get("role2", "")) != "" else "-",
 					PlayerProfile.player_type(p)])
 

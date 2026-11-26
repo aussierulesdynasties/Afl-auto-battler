@@ -271,9 +271,6 @@ func reload(dataset := Datasets.DEFAULT) -> void:
 	for p in players:
 		Potential.assign(p)
 	_apply_potential_overrides(players)
-	# The lists first: the prospects below borrow their shapes from these players
-	# (Prospects._shape_for). Built later, the boot load drew them from nothing and
-	# every reload from the lists of the load before it.
 	players_by_club = {}
 	for code in club_order:
 		players_by_club[code] = []
@@ -281,7 +278,6 @@ func reload(dataset := Datasets.DEFAULT) -> void:
 		if not players_by_club.has(p["club"]):
 			players_by_club[p["club"]] = []
 		players_by_club[p["club"]].append(p)
-	Prospects.forget_cache()
 	national_draft = _load_national_draft()
 	draftees = _load_draftees()
 	list_additions = _load_list_additions()
@@ -696,10 +692,10 @@ func _load_draftees() -> Array:
 		p["u18_ho"] = _cell_float(cells, idx, "u18_ho")
 		p["note"] = _cell_str(cells, idx, "note")
 		p["data_src"] = _cell_str(cells, idx, "data_src")
-		p["draft_class"] = true  # a draft class: rated on Prospects.DRAFT_NIGHT_SCALE (row 65)
+		p["draft_class"] = true
 		# A man the pre-draft rankings missed and a club took at the real
-		# National Draft: rated from the pick he went at, the public verdict
-		# on him, and not said to be ranked (Prospects.pedigree).
+		# National Draft: built from the pick he went at (Prospects.project)
+		# and not said to be ranked.
 		if p["data_src"] == "afl-draft-nov26":
 			var row := national_pick(p)
 			if not row.is_empty():
@@ -825,6 +821,12 @@ func _rate_as_prospect(p: Dictionary) -> void:
 		p[k] = 0.0
 	p["note"] = ""
 	p["data_src"] = "listed %d, no senior game" % DATA_SEASON
+	# No attributes row gave him a line: the list's position, else his height,
+	# as a list addition takes it (_load_list_additions).
+	if str(p.get("role", "")) == "":
+		var pos := str(p.get("real_pos", ""))
+		p["role"] = pos if pos in ["RUCK", "MID", "DEF", "FWD"] else listed_role(p)
+		p["role2"] = ""
 	Prospects.project(p)
 
 

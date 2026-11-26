@@ -1,4 +1,5 @@
 extends RefCounted
+const Ovr := preload("res://tests/ovr.gd")
 ## Roles: wings and taggers are real jobs the engine rewards, not labels.
 ## Two of the five midfield spots are wings; the centre square alone wins
 ## the stoppage; a tagger makes a tag bite; vocabulary is one set of words.
@@ -47,18 +48,18 @@ func _t(test: String, args := []) -> Variant:
 	return await Ran.one(self, test, args)
 
 
-func _mid(id: String, carry: int, disposal: int, contested: int, pressure := 50) -> Dictionary:
+func _mid(id: String, run: int, disposal: int, contested: int, pressure := 50) -> Dictionary:
 	var attr := {}
 	for k in PlayerProfile.ATTR_LABELS:
 		attr[k] = 50
-	attr["carry"] = carry
+	attr["work_rate"] = run
 	attr["kicking"] = disposal
 	attr["handballing"] = disposal
-	attr["contested"] = contested
+	attr["contested_ball"] = contested
 	attr["pressure"] = pressure
-	return {"id": id, "role": "MID", "role2": "", "overall": 70, "attr": attr,
+	return Ovr.to({"id": id, "role": "MID", "role2": "",  "attr": attr,
 			"name": "Player " + ["Ash", "Birch", "Cedar", "Dune", "Elm"][id.length() % 5] + id.substr(0, 1),
-			"real_name": "Player " + id.substr(0, 1)}
+			"real_name": "Player " + id.substr(0, 1)}, 70)
 
 
 func _test_identity() -> void:
@@ -132,7 +133,7 @@ func _test_named_wings() -> void:
 		for p in list:
 			if str(p["id"]) == id:
 				by_contest.append(p)
-	by_contest.sort_custom(func(a, b): return int(a["attr"]["contested"]) > int(b["attr"]["contested"]))
+	by_contest.sort_custom(func(a, b): return int(a["attr"]["contested_ball"]) > int(b["attr"]["contested_ball"]))
 	ids["WING"] = [str(by_contest[0]["id"]), str(by_contest[1]["id"])]
 	for p in by_contest.slice(2):
 		ids["MID"].append(str(p["id"]))
@@ -185,8 +186,8 @@ func _test_named_players() -> void:
 	_check(str(_find("GWS", "Josh Kelly").get("role", "")) == "MID" and str(_find("MEL", "Steven May").get("role", "")) == "DEF",
 			"Listed veterans take their real position, not a height roll")
 	var green_rated := _find("GWS", "Tom Green")
-	_check(int(green_rated.get("overall", 0)) >= 80 and int(green_rated.get("stats_year", 0)) == 2025,
-			"Tom Green is rated on his 2025 season, not as a prospect (OVR %d)" % int(green_rated.get("overall", 0)))
+	_check(int(Ovr.of(green_rated, 0)) >= 80 and int(green_rated.get("stats_year", 0)) == 2025,
+			"Tom Green is rated on his 2025 season, not as a prospect (OVR %d)" % int(Ovr.of(green_rated, 0)))
 	var tall_small := 0
 	for p in GameDB.players:
 		if str(p.get("role", "")) == "DEF" and PlayerProfile.player_type(p) == "Small defender" 				and float(p.get("height_cm", 0.0)) > PlayerProfile.SMALL_DEF_CM:
@@ -216,7 +217,7 @@ func _test_engine_rewards_wings() -> void:
 	var centre := []
 	for p in good.ground:
 		if str(p["role"]) == "MID" and not Roles.on_wing(p):
-			centre.append(Attributes.value(p.get("attr", {}), "contested"))
+			centre.append(Attributes.value(p.get("attr", {}), "contested_ball"))
 	var mean := 0.0
 	for v in centre:
 		mean += v
@@ -587,15 +588,15 @@ func _test_formation_wings() -> void:
 	# A strong ball-winner rated second-best of the five is inside, not on a
 	# wing: before, the oval filled C, W, W, IM, IM in rating order.
 	var boss := _mid("boss", 50, 70, 95)
-	boss["overall"] = 90
+	Ovr.to(boss, 90)
 	var bull := _mid("bull", 50, 69, 90)       # Wardlaw-style: contested first
-	bull["overall"] = 85
+	Ovr.to(bull, 85)
 	var run1 := _mid("run1", 80, 75, 40)
-	run1["overall"] = 60
+	Ovr.to(run1, 60)
 	var run2 := _mid("run2", 78, 74, 42)
-	run2["overall"] = 58
+	Ovr.to(run2, 58)
 	var mid5 := _mid("mid5", 55, 60, 70)
-	mid5["overall"] = 70
+	Ovr.to(mid5, 70)
 	var ruck := _mid("ruck", 30, 40, 60)
 	ruck["role"] = "RUCK"
 	var ground := [boss, bull, run1, run2, mid5, ruck]
@@ -672,7 +673,7 @@ func _test_list_profile() -> void:
 			seen[str(r["word"])] = true
 	_check(seen.size() == 4, "Across the league, every word is used (%s)" % str(seen.keys()))
 	# The list changes: better ball-winners lift Contest to the top.
-	var better: Array = _boosted(grounds[mine], ["contested", "ruck"], 30)
+	var better: Array = _boosted(grounds[mine], ["contested_ball", "ruck"], 30)
 	var g2 := grounds.duplicate()
 	g2[mine] = better
 	_check(_word(ListProfile.profile(g2, mine), "contest") == "Elite",
@@ -691,20 +692,20 @@ func _test_list_profile() -> void:
 	_check(is_equal_approx(ListProfile.score(markers, "control"), ListProfile.score(grounds[mine], "control"))
 			and ListProfile.score(markers, "aerial") > ListProfile.score(grounds[mine], "aerial"),
 			"Aerial power and Control are different things")
-	# Finishing: the best five forwards' goalkicking, accuracy and marking.
+	# Finishing: the best five forwards' forward craft, goalkicking and contested marking.
 	var fwds: Array = grounds[mine].filter(func(p): return str(p["role"]) == "FWD")
 	var vals: Array = fwds.map(func(p):
-		return 0.5 * float(p["attr"]["goalkicking"]) + 0.3 * float(p["attr"]["accuracy"]) + 0.2 * float(p["attr"]["contested_marking"]))
+		return 0.5 * float(p["attr"]["forward_craft"]) + 0.3 * float(p["attr"]["goalkicking"]) + 0.2 * float(p["attr"]["contested_marking"]))
 	vals.sort()
 	vals.reverse()
 	var top: Array = vals.slice(0, 5)
 	var want: float = top.reduce(func(a, b): return a + b, 0.0) / float(top.size())
 	_check(is_equal_approx(ListProfile.score(grounds[mine], "finishing"), want),
-			"Finishing is the best five forwards' goalkicking, accuracy and marking")
+			"Finishing is the best five forwards' forward craft, goalkicking and contested marking")
 	_check(ListProfile.leaders(grounds[mine], "finishing").all(func(p): return str(p["role"]) == "FWD"),
 			"Finishing is led by forwards")
 	# Better kicks for goal lift it to the top; better defenders do not move it.
-	var kickers: Array = _boosted(grounds[mine], ["goalkicking", "accuracy"], 30)
+	var kickers: Array = _boosted(grounds[mine], ["forward_craft", "goalkicking"], 30)
 	var g4 := grounds.duplicate()
 	g4[mine] = kickers
 	_check(_word(ListProfile.profile(g4, mine), "finishing") == "Elite",
@@ -774,23 +775,23 @@ func _test_top_attributes() -> void:
 	for p in GameDB.players:
 		if (p.get("attr", {}) as Dictionary).is_empty():
 			continue
-		if weakest.is_empty() or int(p["overall"]) < int(weakest["overall"]):
+		if weakest.is_empty() or int(Rating.ovr(p)) < int(Rating.ovr(weakest)):
 			weakest = p
 	_check(PlayerProfile.top_attributes(weakest).size() == 3,
-			"The lowest-rated player in the league still gets three (OVR %d)" % int(weakest.get("overall", 0)))
+			"The lowest-rated player in the league still gets three (OVR %d)" % int(Rating.ovr(weakest, 0)))
 	var tied := _mid("T1", 50, 50, 50, 50)
 	var order := []
 	for t in PlayerProfile.top_attributes(tied):
 		order.append(str(t["key"]))
-	_check(order == ["kicking", "handballing", "contested_marking"], "Level ratings keep a fixed order (%s)" % str(order))
-	tied["attr"]["star"] = 99
+	_check(order == Attributes.KEYS.slice(0, 3), "Level ratings keep a fixed order (%s)" % str(order))
+	tied["attr"]["discipline"] = 99
 	tied["attr"]["durability"] = 99
 	var sd := []
 	for t in PlayerProfile.top_attributes(tied):
 		sd.append(str(t["key"]))
-	_check(sd == ["durability", "star", "kicking"], "Durability and Star power are ranked with the rest (%s)" % str(sd))
-	_check(PlayerProfile.TOP_KEYS.size() == 16, "All 16 skills are ranked")
-	_check(PlayerProfile.top_attributes({"attr": {"contested_marking": 61, "carry": 70}}).size() == 2
+	_check(sd == ["discipline", "durability", Attributes.KEYS[0]], "Discipline and Durability are ranked with the rest (%s)" % str(sd))
+	_check(PlayerProfile.TOP_KEYS.size() == 18, "All 18 attributes are ranked")
+	_check(PlayerProfile.top_attributes({"attr": {"contested_marking": 61, "speed": 70}}).size() == 2
 			and PlayerProfile.top_attributes({}).is_empty(), "Missing ratings are never made up")
 
 

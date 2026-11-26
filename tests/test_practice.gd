@@ -1,4 +1,5 @@
 extends RefCounted
+const Ovr := preload("res://tests/ovr.gd")
 ## The pre-season practice match (PreSeason.gd, GameState "practice"): who
 ## plays whom, the side and the prospects trialled, what it leaves behind (and
 ## what it must not), the AI clubs' matches, saves old and new, and the
@@ -369,7 +370,7 @@ func _lists_after(games: float) -> Dictionary:
 	for code in ["FRE", "WCE"]:
 		var rows := {}
 		for p in GameState.season.lists[code]:
-			rows[str(p["id"])] = "%d/%d" % [int(p["overall"]), int(p.get("xp", 0))]
+			rows[str(p["id"])] = "%d/%d" % [int(Ovr.of(p)), int(p.get("xp", 0))]
 		out[code] = rows
 	PreSeason.reload()
 	return out

@@ -1,4 +1,5 @@
 extends RefCounted
+const Ovr := preload("res://tests/ovr.gd")
 ## Career save regression suite. A save must reload into the same career:
 ## same lists, ladder, fixture position and draft, with shared player dicts
 ## still shared, so the next round plays out identically either way.
@@ -341,7 +342,6 @@ func _test_second_career_plays_like_first() -> void:
 	var first := _career_trace()
 	# What a game that loaded a save mid-career leaves behind: the caches built
 	# from the players as they stand now, not as the 2026 data has them.
-	Prospects.forget_cache()
 	Prospects.generate_class(GameState.season_year, 7)
 	StoryDeck.all()
 	var second := _career_trace()
@@ -396,7 +396,7 @@ func _offseason_trace() -> Dictionary:
 	if GameState.begin_intake_draft():
 		var pool := []
 		for p in GameState.draftee_pool:
-			pool.append("%s:%s:%s" % [str(p.get("id", "")), str(p.get("overall", "")), str(p.get("potential", ""))])
+			pool.append("%s:%s:%s" % [str(p.get("id", "")), str(Ovr.of(p, "")), str(p.get("potential", ""))])
 		out["draft_class"] = pool
 		var d: Draft = GameState.draft
 		var guard := 0
@@ -412,7 +412,7 @@ func _offseason_trace() -> Dictionary:
 	for code in GameState.season.lists:
 		var ids := []
 		for p in GameState.season.lists[code]:
-			ids.append("%s:%s:%s" % [str(p.get("id", "")), str(p.get("overall", "")), str(p.get("potential", ""))])
+			ids.append("%s:%s:%s" % [str(p.get("id", "")), str(Ovr.of(p, "")), str(p.get("potential", ""))])
 		lists.append("%s:%s" % [code, ",".join(ids)])
 	out["lists"] = lists
 	# Everything else the next round reads, so a mismatch names its source.
@@ -1046,7 +1046,7 @@ func _test_player_club_follows_list() -> void:
 	GameState.advance()
 	GameState.advance()
 	var ladder := _ladder_sig()
-	var overalls := GameState.my_list.map(func(p): return int(p["overall"]))
+	var overalls := GameState.my_list.map(func(p): return int(Ovr.of(p)))
 	# A save written before format 2: every player still on a club that is not his list's.
 	for code in GameState.season.lists:
 		for p in GameState.season.lists[code]:
@@ -1071,7 +1071,7 @@ func _test_player_club_follows_list() -> void:
 			"On load every player takes his list's club once (%d of %d)" % [counts[1], counts[0]])
 	_check(GameState.my_list.map(func(p): return str(p["id"])) == ids, "The same players, in the same order")
 	_check(_ladder_sig() == ladder, "The ladder is the same")
-	_check(GameState.my_list.map(func(p): return int(p["overall"])) == overalls, "The same ratings")
+	_check(GameState.my_list.map(func(p): return int(Ovr.of(p))) == overalls, "The same ratings")
 	_check(GameState.my_list.all(func(p): return str(p["club"]) == "COL"), "Your players are COL after the load")
 	var kept: Array = []
 	for p in GameState.my_list:

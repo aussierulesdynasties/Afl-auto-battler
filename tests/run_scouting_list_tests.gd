@@ -1,4 +1,5 @@
 extends SceneTree
+const Ovr := preload("res://tests/ovr.gd")
 ## godot --headless --path . --script tests/run_scouting_list_tests.gd
 ## The scouting list (row 130): add and remove a prospect, the cap, a listed
 ## prospect's read narrowing faster than one off the list on a pinned seed,
@@ -89,7 +90,7 @@ func _test_listed_read_narrows_faster() -> void:
 		p.erase("watch")
 		p.erase("seen")
 	var club: String = _state.my_club
-	var truth := [int(on["overall"]), int(on["potential"]), (on.get("attr", {}) as Dictionary).duplicate()]
+	var truth := [int(Ovr.of(on)), int(on["potential"]), (on.get("attr", {}) as Dictionary).duplicate()]
 	var before: Dictionary = _state.prospect_reads([on, off])
 	SL.add(_state, str(on["id"]))
 	for w in range(17):
@@ -111,9 +112,9 @@ func _test_listed_read_narrows_faster() -> void:
 	_check(width.call(on_a, "potential") + width.call(on_a, "overall") < width.call(off_a, "potential") + width.call(off_a, "overall")
 			or width.call(on_b, "potential") + width.call(on_b, "overall") > width.call(off_b, "potential") + width.call(off_b, "overall"),
 			"Narrowed more than the player off the list")
-	_check(off_a["overall"] == off_b["overall"] and off_a["potential"] == off_b["potential"],
+	_check(Ovr.of(off_a) == Ovr.of(off_b) and off_a["potential"] == off_b["potential"],
 			"The read off the list has not moved")
-	_check(int(on["overall"]) == truth[0] and int(on["potential"]) == truth[1] and on.get("attr", {}) == truth[2],
+	_check(int(Ovr.of(on)) == truth[0] and int(on["potential"]) == truth[1] and on.get("attr", {}) == truth[2],
 			"Nothing true about him changed")
 	var moved: String = SL.change_text(_state.scouting_list[0], on_a)
 	_check(moved.begins_with("Listed before Round 1: ") and moved.contains(DS.range_text(on_b["potential"])),

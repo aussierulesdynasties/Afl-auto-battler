@@ -248,7 +248,7 @@ else
 fi
 
 if [ "${SKIP_STATIC:-0}" != 1 ]; then
-say "== Intake / development harness"
+say "== Draft-class data check"
 if python3 tools/intake_harness.py --quiet > "$LOG_DIR/intake_harness.log" 2>&1; then
 	summary+=("| intake_harness | pass | |")
 else

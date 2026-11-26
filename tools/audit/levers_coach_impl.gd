@@ -10,6 +10,7 @@ extends RefCounted
 ##          preferring a job in a line he doesn't have yet)
 ## Args after the impl name: seeds (comma-separated) seasons. Prints each
 ## season and a SUMMARY per career.
+const Ovr := preload("res://tests/ovr.gd")
 
 const SYN_MAX_DROP := 6
 const LINES := ["RUCK", "MID", "WING", "DEF", "FWD"]
@@ -46,7 +47,7 @@ func _select_for_synergies(gs) -> int:
 					continue
 				for g_id in (sel[line] as Array).duplicate():
 					var g: Dictionary = by_id.get(str(g_id), {})
-					if g.is_empty() or int(g["overall"]) - int(b["overall"]) > SYN_MAX_DROP:
+					if g.is_empty() or int(Ovr.of(g)) - int(Ovr.of(b)) > SYN_MAX_DROP:
 						continue
 					var trial: Dictionary = sel.duplicate(true)
 					var li: Array = trial[line]
