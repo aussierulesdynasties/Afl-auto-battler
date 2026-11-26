@@ -498,6 +498,14 @@ func on_replay() -> bool:
 	return replaying or _wipe >= 0.0
 
 
+## A sting is taking the picture into a replay and has not cut yet. The play under it waits
+## (PitchView): after a goal the ball goes back to the centre on its own, which real TV never
+## shows; held until the cut, it goes back under the replay (bug bash 2026-11-23: at 2x and over
+## it slid there at chest height under the band).
+func stinging_in() -> bool:
+	return _wipe >= 0.0 and not _wipe_clip.is_empty()
+
+
 ## Where the sting is: 0 starting, 0.5 covering the picture (the cut), 1 gone; -1 none.
 func sting() -> float:
 	return _wipe / WIPE_S if _wipe >= 0.0 else -1.0
@@ -551,6 +559,8 @@ func skip_replay() -> void:
 func _cut_live() -> void:
 	replaying = false
 	_replay = []
+	for f in oval.umpires:
+		Oval3DGoalUmpire.in_replay(oval, f, false)
 	# Off the live picture for the replay: the umpires go to where the live play has them now
 	# (the field umpire on his mark for the centre bounce the play held for).
 	oval.umpires_after_cut()
@@ -590,6 +600,9 @@ func _play_replay(wall: float) -> void:
 		for b in range(q0.size()):
 			skel.set_bone_pose_rotation(b, (q0[b] as Quaternion).slerp(q1[b], u))
 		skel.set_bone_pose_position(0, (m0[2] as Vector3).lerp(m1[2], u))
+	for f in oval.umpires:
+		# A goal umpire's flags back where they were kept before the score (Oval3DGoalUmpire).
+		Oval3DGoalUmpire.in_replay(oval, f, true)
 	oval.ball.transform = (r0["ball"] as Transform3D).interpolate_with(r1["ball"], u)
 	_replay_shot(wall)
 
@@ -630,8 +643,12 @@ func _replay_shot(wall: float) -> void:
 ## The goals camera for a kick at the goals at world end `end` (+1 or -1): it stands behind the
 ## other goals and holds on these posts.
 func _goals_shot(end: float) -> void:
-	var eye := Vector3(-end * (MatchMotion.HALF_LEN + EYE_BACK), EYE_UP, 0.0)
-	_shoot(eye, Vector3(end * MatchMotion.HALF_LEN, GOALS_AIM_Y, 0.0), GOALS_WIDTH)
+	# Each end of a traced ground is its own distance out (MatchMotion.end_x); the ground may be turned
+	# half a turn (Oval3D.set_ends), so the world's end is the ground's other one then.
+	var turned := (oval.global_transform.basis * Vector3.RIGHT).x < 0.0 if oval != null else false
+	var here := end * (-1.0 if turned else 1.0)
+	var eye := Vector3(-end * (MatchMotion.end_x(-here) + EYE_BACK), EYE_UP, 0.0)
+	_shoot(eye, Vector3(end * MatchMotion.end_x(here), GOALS_AIM_Y, 0.0), GOALS_WIDTH)
 
 
 ## `aim` added to `trail` (now), and the mean of the trail's last `over` seconds.

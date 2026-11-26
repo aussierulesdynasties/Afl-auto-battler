@@ -1,0 +1,218 @@
+[
+ {
+  "name": "mid_n",
+  "label": "from the centre, looking n",
+  "cam": [
+   2.5,
+   -3.5,
+   1.7
+  ],
+  "h": 0,
+  "p": 14,
+  "fov": 62
+ },
+ {
+  "name": "mid_e",
+  "label": "from the centre, looking e",
+  "cam": [
+   2.5,
+   -3.5,
+   1.7
+  ],
+  "h": 90,
+  "p": 14,
+  "fov": 62
+ },
+ {
+  "name": "mid_s",
+  "label": "from the centre, looking s",
+  "cam": [
+   2.5,
+   -3.5,
+   1.7
+  ],
+  "h": 180,
+  "p": 14,
+  "fov": 62
+ },
+ {
+  "name": "mid_w",
+  "label": "from the centre, looking w",
+  "cam": [
+   2.5,
+   -3.5,
+   1.7
+  ],
+  "h": 270,
+  "p": 14,
+  "fov": 62
+ },
+ {
+  "name": "street_n",
+  "label": "street level, n side",
+  "cam": [
+   2.5,
+   161.5,
+   1.7
+  ],
+  "h": 180,
+  "p": 12,
+  "fov": 62
+ },
+ {
+  "name": "street_ne",
+  "label": "street level, ne side",
+  "cam": [
+   119.2,
+   113.2,
+   1.7
+  ],
+  "h": 225,
+  "p": 12,
+  "fov": 62
+ },
+ {
+  "name": "street_e",
+  "label": "street level, e side",
+  "cam": [
+   167.5,
+   -3.5,
+   1.7
+  ],
+  "h": 270,
+  "p": 12,
+  "fov": 62
+ },
+ {
+  "name": "street_se",
+  "label": "street level, se side",
+  "cam": [
+   119.2,
+   -120.2,
+   1.7
+  ],
+  "h": 315,
+  "p": 12,
+  "fov": 62
+ },
+ {
+  "name": "street_s",
+  "label": "street level, s side",
+  "cam": [
+   2.5,
+   -168.5,
+   1.7
+  ],
+  "h": 0,
+  "p": 12,
+  "fov": 62
+ },
+ {
+  "name": "street_sw",
+  "label": "street level, sw side",
+  "cam": [
+   -114.2,
+   -120.2,
+   1.7
+  ],
+  "h": 45,
+  "p": 12,
+  "fov": 62
+ },
+ {
+  "name": "street_w",
+  "label": "street level, w side",
+  "cam": [
+   -162.5,
+   -3.5,
+   1.7
+  ],
+  "h": 90,
+  "p": 12,
+  "fov": 62
+ },
+ {
+  "name": "street_nw",
+  "label": "street level, nw side",
+  "cam": [
+   -114.2,
+   113.2,
+   1.7
+  ],
+  "h": 135,
+  "p": 12,
+  "fov": 62
+ },
+ {
+  "name": "seat_n",
+  "label": "upper tier seat, looking n across",
+  "cam": [
+   2.5,
+   -97.6,
+   21.4
+  ],
+  "h": 0,
+  "p": -6,
+  "fov": 62
+ },
+ {
+  "name": "seat_e",
+  "label": "upper tier seat, looking e across",
+  "cam": [
+   -103.1,
+   -3.5,
+   21.4
+  ],
+  "h": 90,
+  "p": -6,
+  "fov": 62
+ },
+ {
+  "name": "under_w",
+  "label": "back row of the upper tier, looking up at the roof",
+  "cam": [
+   -106.2,
+   -3.5,
+   25.3
+  ],
+  "h": 90,
+  "p": 22,
+  "fov": 75
+ },
+ {
+  "name": "seat_s",
+  "label": "upper tier seat, looking s across",
+  "cam": [
+   2.5,
+   90.6,
+   21.4
+  ],
+  "h": 180,
+  "p": -6,
+  "fov": 62
+ },
+ {
+  "name": "seat_w",
+  "label": "upper tier seat, looking w across",
+  "cam": [
+   108.1,
+   -3.5,
+   21.4
+  ],
+  "h": 270,
+  "p": -6,
+  "fov": 62
+ },
+ {
+  "name": "under_e",
+  "label": "back row of the upper tier, looking up at the roof",
+  "cam": [
+   111.2,
+   -3.5,
+   25.3
+  ],
+  "h": 270,
+  "p": 22,
+  "fov": 75
+ }
+]

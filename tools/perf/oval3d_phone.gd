@@ -8,9 +8,10 @@ extends Node
 ## table stays on screen (screenshot it). On a PC or in the cloud (a software GPU there: only the
 ## counts, memory and the ratios of the times carry over to a phone):
 ##   godot --path . --rendering-method mobile tools/perf/Oval3DPhone.tscn -- [grounds=mcg,marvel]
-##       [levels=high,low] [size=1012x1242] [measure=5] [out=rows.json] [shots=DIR] [aa=msaa2] [quit]
+##       [levels=high,low] [size=1012x1242] [measure=5] [slot=night] [out=rows.json] [shots=DIR] [aa=msaa2] [quit]
 ##       [looks=NAME:px,py,pz,tx,ty,tz[,fov];NAME2:...]
 ## shots=DIR saves each ground and level's last measured frame as DIR/<ground>_<level>.png.
+## slot= day (default), twilight or night: the time of day measured (a night game adds the towers).
 ## looks= also saves, after the measuring, a still from each fixed camera (match metres, from p
 ## looking at t, fov 60 unless given) as DIR/<ground>_<level>_<NAME>.png: a façade or roof
 ## detail the broadcast camera never frames, at the level's own render settings and aa=.
@@ -101,6 +102,18 @@ func _run() -> void:
 		for level in levels:
 			label.text = "%s%s\n%s\nLoading %s, %s..." % [head, COLS, "\n".join(rows), g, level]
 			await get_tree().process_frame
+			# A build without the ground models fetches the ground's pack first (GroundPacks).
+			var g_slug: String = "" if g == "(stand)" else str(GroundModels.GROUNDS[g])
+			if not GroundPacks.ready(g_slug):
+				var packs := GroundPacks.new()
+				add_child(packs)
+				packs.progress.connect(func(_s, done, total):
+					label.text = "%s%s\n%s\nFetching %s: %d of %d MB" % [head, COLS, "\n".join(rows), g,
+							done / 1000000, total / 1000000])
+				packs.fetch(g_slug)
+				var got: Array = await packs.finished
+				packs.queue_free()
+				print("fetched %s: %s %s" % [g_slug, got[1], got[2]])
 			var t0 := Time.get_ticks_usec()
 			var director = load("res://scripts/ui/match/MatchDirector.gd").new()
 			director.setup(res, res["events"])
@@ -110,7 +123,7 @@ func _run() -> void:
 			Oval3DQuality.apply_viewport(level, vp)
 			vp.add_child(oval)
 			oval.build(director, "FRE", "STK")
-			oval.turf.apply("", VignetteKickoff.DAY)
+			oval.turf.apply("", _arg("slot", VignetteKickoff.DAY))
 			var tv := Oval3DBroadcast.new(oval)
 			var load_s := (Time.get_ticks_usec() - t0) / 1e6
 			await _play(WARM, null, director, oval, tv)

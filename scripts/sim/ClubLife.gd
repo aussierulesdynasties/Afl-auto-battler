@@ -313,7 +313,7 @@ static func morale_after_match(list: Array, played: Dictionary, won: bool, softe
 		if played.has(id):
 			add_morale(p, (MATCH_MORALE_WIN if won else MATCH_MORALE_LOSS) + swing)
 		elif int(p.get("injury_weeks", 0)) <= 0 and not unavailable.has(id):
-			var loss := 6 if int(p.get("overall", 0)) >= 78 else 3
+			var loss := 6 if int(Rating.ovr(p, 0)) >= 78 else 3
 			add_morale(p, -int(round(sting * CoachEffects.softened(loss, _sting_share(float(soften.get(id, 0.0)), culture_s)))))
 		else:
 			# Injured players drift back toward settled.
@@ -421,7 +421,7 @@ const INTL_EXTENSION_MIN_OVR := 75
 ## at season's end, settled enough to want to stay - and nobody has asked yet
 ## this season, so most contract calls wait for the off-season.
 static func extension_wanted(p: Dictionary, memory: Dictionary, min_ovr: int = EXTENSION_MIN_OVR) -> bool:
-	if int(p.get("contract_years", 2)) > 1 or int(p.get("overall", 0)) < min_ovr or morale(p) < 40:
+	if int(p.get("contract_years", 2)) > 1 or int(Rating.ovr(p, 0)) < min_ovr or morale(p) < 40:
 		return false
 	for key in memory:
 		if str(key).begins_with("extension|"):
@@ -447,7 +447,7 @@ const WAIT_FLAT := "At the off-season he asks what his rating is worth then. The
 
 
 static func wait_words(p: Dictionary, lift: int) -> String:
-	var ovr := int(p.get("overall", 0))
+	var ovr := int(Rating.ovr(p, 0))
 	lift = maxi(0, lift)
 	var up := p.duplicate()
 	up["overall"] = ovr + lift

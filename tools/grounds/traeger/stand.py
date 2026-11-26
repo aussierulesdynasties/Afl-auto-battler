@@ -6,7 +6,12 @@ import numpy as np,json,math
 # roof south edge y -7.5; the length (29.9 m) and every s/t/z measure stay the photo values.
 O=np.array([-68.6,-7.5]);A=np.array([-68.96,22.44])-O;L=float(np.linalg.norm(A));a=A/L
 b=np.array([-a[1],a[0]]);b=-b if b[0]>0 else b   # back = west
-def W(s,t,z):p=O+s*a+t*b;return [float(p[0]),float(p[1]),float(z)]
+# r16 (2026-11-22): Google Earth's solved cameras (measure/oblique.py) put the roof 32.5 m long (front corners picked
+# at s -0.15 and 32.25), its front edge 1.5 m further back than O, its back edge 26.5 m behind it, and its front edge
+# 12.3 to 12.6 m up (two obliques). The photo values below are all in one unit set off a door, so the stand keeps
+# their proportions and is laid out larger: KS along, KT back, KZ up, its front moved back by T0.
+KS,KT,KZ,T0=1.085,1.04,1.085,1.5
+def W(s,t,z):p=O+(T0+t*KT)*b+s*KS*a;return [float(p[0]),float(p[1]),float(z*KZ)]
 G=[]
 def mesh(name,mat,V,F,uv=None):G.append(dict(name=name,mat=mat,V=V,F=F,**({'UV':uv} if uv else {})))
 def quad(name,mat,P4):mesh(name,mat,P4,[[0,1,2,3]])
@@ -227,4 +232,4 @@ def build():
         sbar('st_post%g_%g'%(ss_,tt_),'steel_white',ss_,tt_,0,ss_,tt_,zt,0.1,6)
     return G
 if __name__=='__main__':
-    build();json.dump(dict(G=G,P=P,O=O.tolist(),a=a.tolist(),b=b.tolist(),L=L),open('stand.json','w'));print(len(G),'meshes L=%.2f B=%.2f'%(L,B))
+    build();json.dump(dict(G=G,P=P,O=O.tolist(),a=a.tolist(),b=b.tolist(),L=L,K=[KS,KT,KZ,T0]),open('stand.json','w'));print(len(G),'meshes L=%.2f B=%.2f'%(L,B))

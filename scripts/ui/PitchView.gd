@@ -11,6 +11,9 @@ extends Control
 
 signal event_played(ev: Dictionary)
 signal finished
+## Through the banner on the 3D ground (run_banner): the first man is through, and the scene is over.
+signal banner_burst
+signal banner_done
 ## The sides have changed ends: `period` is the one now being played.
 signal ends_changed(period: int)
 
@@ -216,6 +219,7 @@ var _oval3d: Oval3D = null
 var _vp3d: SubViewport = null
 var _view3d: TextureRect = null
 var _tv: Oval3DBroadcast = null  # the TV coverage: which camera, where it points
+var _banner: Oval3DBanner = null  # through the banner before the first bounce (run_banner)
 var _siren_replay := false     # the deciding behind's replay is on after the siren
 const REPLAY_TAG := "Replay: tap to skip"
 const REPLAY_TAG_W := 150.0    # px: the tag's pill, as the director picked it on the board
@@ -319,7 +323,14 @@ func _setup_3d() -> void:
 	if _oval3d != null:
 		_oval3d.queue_free()
 		_oval3d = null
-	if not three_d:
+		_banner = null
+	# A build that fetches each ground's model the first time a match is played there
+	# (GroundPacks): the flat oval plays on while it comes, then the 3D picture starts.
+	var ground_slug := GroundModels.slug_for(VignetteGround.ground_of(result)) if three_d else ""
+	var waiting := ground_slug != "" and not GroundPacks.ready(ground_slug)
+	if waiting:
+		_fetch_ground(ground_slug)
+	if not three_d or waiting:
 		if _vp3d != null:
 			_vp3d.queue_free()
 			_view3d.queue_free()
@@ -355,17 +366,101 @@ func _setup_3d() -> void:
 	_vp3d.add_child(_oval3d)
 	# The ground the match is at: its real model where one is in the game (GroundModels.GROUNDS).
 	_oval3d.ground = VignetteGround.ground_of(result)
+	var weather := str(result.get("weather", ""))
+	# How many came (MatchAttendance: fitted to real AFL crowds); the stands fill to it.
+	_oval3d.attendance = MatchAttendance.of_match(result, _oval3d.ground, time_of_day(weather))
 	_oval3d.build(director, home_code, away_code)
 	_tv = Oval3DBroadcast.new(_oval3d)
 	# The turf and light for the day, as the flat oval and the vignettes draw it.
-	var weather := str(result.get("weather", ""))
-	_oval3d.turf.apply(weather, time_of_day(weather))
+	_sun = null
+	if time_override != "":
+		_oval3d.turf.apply(weather, time_of_day(weather))
+	else:
+		# The real sun over the ground from the bounce (plan 2a.4): the light moves with the clock.
+		_sun = Oval3DSunClock.for_match(_oval3d.ground, str(result.get("label", "")), time_of_day(weather))
+		_oval3d.turf.follow_clock(weather, _sun)
 	_make_paint_3d()
 	_oval3d.set_ends(end_sign(period))
 	_fit_3d()
 	_sync_3d(0.0)
 	_paint_ground_3d()
 	queue_redraw()
+
+
+## The ground's model on its way: {slug, name, done, total, why} while fetching or after a
+## failed fetch ("why" set); {} otherwise.
+var ground_fetch := {}
+var _packs: GroundPacks = null
+var _fetch_rect := Rect2()
+var _fetch_line: Control = null
+
+
+func _fetch_ground(slug: String) -> void:
+	if _packs != null:
+		return
+	ground_fetch = {"slug": slug, "name": VignetteGround.ground_of(result), "done": 0,
+			"total": GroundPacks.size_mb(slug) * 1000000, "why": ""}
+	_packs = GroundPacks.new()
+	_packs.name = "GroundPacks"
+	add_child(_packs)
+	_packs.progress.connect(func(_s: String, done: int, total: int) -> void:
+		ground_fetch["done"] = done
+		ground_fetch["total"] = total
+		_fetch_line.queue_redraw())
+	_packs.finished.connect(_ground_fetched)
+	_packs.fetch(slug)
+	if _fetch_line == null:
+		# Its own layer over the flat oval's figures.
+		_fetch_line = Control.new()
+		_fetch_line.name = "GroundFetchLine"
+		_fetch_line.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_fetch_line.set_anchors_preset(Control.PRESET_FULL_RECT)
+		_fetch_line.draw.connect(_draw_ground_fetch)
+		add_child(_fetch_line)
+	queue_redraw()
+
+
+func _ground_fetched(slug: String, ok: bool, why: String) -> void:
+	_packs.queue_free()
+	_packs = null
+	if not ok:
+		ground_fetch["why"] = why
+		_fetch_line.queue_redraw()
+		return
+	ground_fetch = {}
+	_fetch_line.queue_redraw()
+	if three_d and director != null and GroundModels.slug_for(VignetteGround.ground_of(result)) == slug:
+		_setup_3d()
+	queue_redraw()
+
+
+## The line over the flat oval while the ground's model comes: how far it has got, or why it
+## failed and that a tap tries again.
+func ground_fetch_text() -> String:
+	if ground_fetch.is_empty():
+		return ""
+	var where := str(ground_fetch["name"])
+	if str(ground_fetch["why"]) != "":
+		return "%s didn't download. Tap here to try again." % where
+	return "Downloading %s for the 3D view: %d of %d MB" % [where,
+			int(ground_fetch["done"]) / 1000000, maxi(1, int(ceil(float(ground_fetch["total"]) / 1e6)))]
+
+
+func _draw_ground_fetch() -> void:
+	var text := ground_fetch_text()
+	_fetch_rect = Rect2()
+	if text == "":
+		return
+	var c := _fetch_line
+	var fs := 15
+	var origin := Vector2(12, 12 + fs)
+	var w := UiKit.BOLD.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+	_fetch_rect = Rect2(Vector2(4, 4), Vector2(w + 16, fs + 20))
+	c.draw_rect(_fetch_rect, Color(0, 0, 0, 0.6))
+	c.draw_string(UiKit.BOLD, origin, text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, RING_COLOUR)
+	if str(ground_fetch["why"]) == "" and int(ground_fetch["total"]) > 0:
+		var k := clampf(float(ground_fetch["done"]) / float(ground_fetch["total"]), 0.0, 1.0)
+		c.draw_rect(Rect2(origin + Vector2(0, 5), Vector2(w * k, 3)), RING_COLOUR)
 
 
 ## The 3D picture is drawn at the screen's own pixels, not the stretched 2D canvas's
@@ -420,12 +515,7 @@ func replay_tag_rect() -> Rect2:
 ## "Replay: tap to skip" on a dark pill, as the Bench pill is drawn.
 func _draw_replay_tag() -> void:
 	var pill := replay_tag_rect()
-	var box := StyleBoxFlat.new()
-	box.bg_color = Color(UiKit.BG, 0.92)
-	box.border_color = Color(RING_COLOUR, 0.55)
-	box.set_border_width_all(1)
-	box.set_corner_radius_all(4)
-	draw_style_box(box, pill)
+	draw_style_box(UiKit.ground_tag(Color(RING_COLOUR, 0.55)), pill)
 	var fs := UiKit.px(UiKit.SECONDARY)
 	var w := UiKit.BOLD.get_string_size(REPLAY_TAG, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
 	draw_string(UiKit.BOLD, Vector2(pill.position.x + (pill.size.x - w) * 0.5,
@@ -438,6 +528,40 @@ func _full_time() -> void:
 		_siren_replay = true
 		return
 	finished.emit()
+
+
+## Through the banner (Oval3DBanner) on the 3D ground before the first bounce: `side`'s
+## players (0 home) burst through `text` held up by the cheer squad. banner_burst as the first
+## is through, banner_done when it ends (on its own or at a tap). False when there is no 3D
+## picture to play it on.
+func run_banner(text: String, side: int) -> bool:
+	if _oval3d == null or _banner != null:
+		return false
+	_banner = Oval3DBanner.new()
+	_banner.name = "Banner"
+	_oval3d.add_child(_banner)
+	_banner.build(_oval3d, side, text, home_code if side == 0 else away_code, hash(result.get("label", "")))
+	_banner.burst.connect(func(): banner_burst.emit())
+	set_process(true)
+	return true
+
+
+func banner_running() -> bool:
+	return _banner != null
+
+
+func _end_banner() -> void:
+	if _banner == null:
+		return
+	var b := _banner
+	_banner = null
+	b.finish()
+	b.queue_free()
+	# Cut back to the match as it stands: the bodies on their spots, the umpires too.
+	_oval3d.umpires_after_cut()
+	_sync_3d(0.0)
+	queue_redraw()
+	banner_done.emit()
 
 
 ## The coach skips the replay on the 3D picture (rule 2.96): the picture is live again at once.
@@ -554,8 +678,7 @@ func _draw_press_zone_3d() -> void:
 				for q in range(4):
 					var t := float(q) / 3.0 if e < 0.0 else 1.0 - float(q) / 3.0
 					var x := lerpf(wx0, wx1, t)
-					var u := clampf(x / MatchMotion.HALF_LEN, -1.0, 1.0)
-					pts.append(Vector2(x, e * MatchMotion.HALF_WID * sqrt(1.0 - u * u)))
+					pts.append(Vector2(x, e * MatchMotion.edge_y(x, e)))
 					cols.append(Color(base.r, base.g, base.b, PRESS_ZONE_ALPHA * PRESS3D_K * fade * lerpf(k0, k1, t)))
 			_ground_polygon(pts, cols)
 
@@ -623,6 +746,8 @@ func _make_paint_3d() -> void:
 func _draw_3d() -> void:
 	if _vp3d == null or not is_inside_tree():
 		return
+	if _banner != null:
+		return     # the ceremony: no names or captions over it
 	draw_set_transform(shake_offset() if _shake > 0.0 else Vector2.ZERO)
 	if _replaying():
 		# Names and captions follow the live play, not the replayed bodies: none on a replay.
@@ -684,6 +809,8 @@ func _draw_sting() -> void:
 # Playback
 # ---------------------------------------------------------------------------
 func play() -> void:
+	if _banner != null:
+		_end_banner()     # play before the run-through has ended: it ends here
 	if director.idle():
 		# Nothing new to show (a moment right where the last one left off):
 		# say so, or the match screen waits for a finish that never comes
@@ -754,9 +881,10 @@ func _process(delta: float) -> void:
 			_nudge_h += delta * speed * MatchDirector.TEMPO
 		# Real footy's pauses (a ball-up waiting for the players, a player
 		# after a mark) play at double the watching speed (rule 2.93). The centre
-		# bounce waits for a goal's replay to end (rule 2.96).
+		# bounce waits for a goal's replay to end (rule 2.96), and play waits
+		# while a sting takes the picture into a replay (_tv.stinging_in).
 		var out := []
-		if not (_tv != null and _tv.on_replay() and director.bounce_next()):
+		if not (_tv != null and ((_tv.on_replay() and director.bounce_next()) or _tv.stinging_in())):
 			out = director.advance(delta * speed * (MatchDirector.PAUSE_PLAY if director.pausing() else 1.0))
 		for ev in out:
 			_track_quarter(ev)
@@ -787,6 +915,13 @@ func _process(delta: float) -> void:
 		_shake = maxf(0.0, _shake - delta)
 		queue_redraw()
 	_update_camera(delta)
+	if _oval3d != null and _banner != null:
+		# Through the banner: the scene has the ground and the camera until it ends.
+		_fit_3d()
+		if _banner.frame(delta):
+			_end_banner()
+		queue_redraw()
+		return
 	if _oval3d != null:
 		_sync_3d(delta * speed if playing else 0.0, delta if playing or _siren_replay else 0.0)
 		if _siren_replay and not _tv.on_replay():
@@ -832,6 +967,20 @@ func set_marks(next: Dictionary) -> void:
 ## A long press on a marked disc says what the mark means; a tap or a drag
 ## does nothing here.
 func _gui_input(e: InputEvent) -> void:
+	if _banner != null and ((e is InputEventMouseButton and (e as InputEventMouseButton).pressed)
+			or (e is InputEventScreenTouch and (e as InputEventScreenTouch).pressed)):
+		# A tap ends the run-through at once (as the vignette's tap did).
+		_banner.finish()
+		_end_banner()
+		accept_event()
+		return
+	if e is InputEventMouseButton and (e as InputEventMouseButton).button_index == MOUSE_BUTTON_LEFT \
+			and (e as InputEventMouseButton).pressed and str(ground_fetch.get("why", "")) != "" \
+			and _fetch_rect.has_point((e as InputEventMouseButton).position):
+		# The ground's model failed to come: a tap on the line tries again.
+		_fetch_ground(str(ground_fetch["slug"]))
+		accept_event()
+		return
 	if e is InputEventMouseButton and (e as InputEventMouseButton).button_index == MOUSE_BUTTON_LEFT:
 		if (e as InputEventMouseButton).pressed and _tv != null and _tv.on_replay():
 			# A tap anywhere on the picture skips the replay (rule 2.96).
@@ -1027,6 +1176,8 @@ func _follow_ball() -> void:
 ## here when events are skipped, not watched) makes the change if the restart
 ## has not; the final siren never does.
 func _track_quarter(ev: Dictionary) -> void:
+	if _sun != null and _oval3d != null and ev.has("q") and ev.has("min"):
+		_oval3d.turf.set_hour(_sun.hour_at(int(ev["q"]), float(ev["min"])))
 	var kind := str(ev.get("kind", ""))
 	if kind == "quarter":
 		if _flip_pending:
@@ -1411,6 +1562,19 @@ func _w2s_flat(p: Vector2) -> Vector2:
 	return _flat_size() * 0.5 + Vector2((p.x - _cam.x) * m, p.y - _cam.y) * _scale()
 
 
+## The boundary line `out_px` pixels out (in or out), as the flat ground draws it round `c` at `s` pixels a
+## metre: the ellipse a + out_px by b + out_px as always, or on a traced ground its own line (MatchMotion.ring),
+## mirrored along its length as the flat view lays the ends (end_sign).
+func _field_points(c: Vector2, s: float, out_px: float, n: int) -> PackedVector2Array:
+	if not MatchMotion.shaped():
+		return _ellipse_points(c, MatchMotion.HALF_LEN * s + out_px, MatchMotion.HALF_WID * s + out_px, n)
+	var m := end_sign(period)
+	var pts := PackedVector2Array()
+	for q in MatchMotion.ring(n, out_px / s):
+		pts.append(c + Vector2(q.x * m, q.y) * s)
+	return pts
+
+
 func _ellipse_points(c: Vector2, a: float, b: float, n: int) -> PackedVector2Array:
 	var pts := PackedVector2Array()
 	for i in range(n + 1):
@@ -1428,11 +1592,15 @@ func _stripe(c: Vector2, a: float, b: float, x0: float, x1: float) -> PackedVect
 		var x := lerpf(x0, x1, float(i) / float(steps))
 		var t := clampf((x - c.x) / a, -1.0, 1.0)
 		var yh := b * sqrt(1.0 - t * t)
+		if MatchMotion.shaped():
+			yh = MatchMotion.edge_y((x - c.x) / _scale() * end_sign(period), -1.0) * _scale()
 		pts.append(Vector2(x, c.y - yh))
 	for i in range(steps + 1):
 		var x2 := lerpf(x1, x0, float(i) / float(steps))
 		var t2 := clampf((x2 - c.x) / a, -1.0, 1.0)
 		var yh2 := b * sqrt(1.0 - t2 * t2)
+		if MatchMotion.shaped():
+			yh2 = MatchMotion.edge_y((x2 - c.x) / _scale() * end_sign(period), 1.0) * _scale()
 		pts.append(Vector2(x2, c.y + yh2))
 	return pts
 
@@ -1470,9 +1638,10 @@ func _draw() -> void:
 	var tod := time_of_day(weather)
 	var colours := _club_colours()
 	var flat := _flat_size()
+	_stadium.ends = end_sign(period)
 	_stadium.draw_stands(self, Rect2(-flat, flat * 3.0), c, s, colours, weather, tod)
 	var fence := maxf(3.0, 2.0 * s)
-	draw_colored_polygon(_ellipse_points(c, a + fence, b + fence, 128), FENCE_COLOUR)
+	draw_colored_polygon(_field_points(c, s, fence, 128), FENCE_COLOUR)
 
 	# Turf + mown stripes, the replay's grass as the day's weather leaves it, and
 	# the light over it: brighter in the middle, darker toward the fence.
@@ -1488,11 +1657,11 @@ func _draw() -> void:
 	var shade := maxf(6.0, 7.0 * s)
 	for i in range(4):
 		var inset := shade * float(i) / 4.0
-		draw_polyline(_ellipse_points(c, a - inset, b - inset, 96),
+		draw_polyline(_field_points(c, s, -inset, 96),
 				Color(0, 0, 0, 0.16 - 0.035 * float(i)), shade / 4.0 + 1.0, antialias)
 
 	# Boundary
-	draw_polyline(_ellipse_points(c, a, b, 128), Color(1, 1, 1, 0.85), 2.5, antialias)
+	draw_polyline(_field_points(c, s, 0.0, 128), Color(1, 1, 1, 0.85), 2.5, antialias)
 
 	var line_col := Color(1, 1, 1, 0.55)
 	var lw := 1.6
@@ -2019,10 +2188,16 @@ func _draw_role_labels(tr: float) -> void:
 		draw_string(UiKit.BOLD, origin, text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(1, 1, 1, 0.85))
 
 
+## A caption's size on discs of radius tr, at the chosen text size: a turnover
+## is a cue, a size up; a name is quieter.
+static func caption_size(tr: float, turnover: bool) -> int:
+	return UiKit.px(clampi(int(tr * (2.1 if turnover else 1.6)), 15 if turnover else 11, 20 if turnover else 15))
+
+
 ## The surnames' size: never under the 13 px floor (row T3.R9), and a little
 ## bigger under the bigger discs of a PC, where there is room for it.
 static func role_label_size(tr: float) -> int:
-	return clampi(int(tr * 0.85), UiKit.FINE, 16)
+	return UiKit.px(clampi(int(tr * 0.85), UiKit.FINE, 16))
 
 
 ## The jumper number's size on a disc of radius tr: it grows and shrinks with the
@@ -2140,7 +2315,7 @@ func _draw_press_banner() -> void:
 	if _press_banner.is_empty():
 		return
 	var text := str(_press_banner["text"])
-	var fs := 20
+	var fs := UiKit.px(20)
 	var font := UiKit.BOLD
 	var width := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
 	var origin := Vector2(clampf((size.x - width) * 0.5, 4.0, maxf(4.0, size.x - width - 4.0)), float(fs) + 10.0)
@@ -2169,7 +2344,7 @@ func _draw_caption(tr: float) -> void:
 		return
 	var turnover := bool(_caption.get("turnover", false))
 	# A turnover is a cue, not a name: a size up, so it reads at a glance.
-	var fs := clampi(int(tr * (2.1 if turnover else 1.6)), 15 if turnover else 11, 20 if turnover else 15)
+	var fs := caption_size(tr, turnover)
 	var width := UiKit.BOLD.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
 	var p := _disc_at(tok)
 	if not _caption_on_view(p):
@@ -2247,7 +2422,7 @@ func caption_box() -> Rect2:
 		return Rect2()
 	var tr := token_radius()
 	var turnover := bool(_caption.get("turnover", false))
-	var fs := clampi(int(tr * (2.1 if turnover else 1.6)), 15 if turnover else 11, 20 if turnover else 15)
+	var fs := caption_size(tr, turnover)
 	var width := UiKit.BOLD.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
 	if not _caption_on_view(_disc_at(tok)):
 		return Rect2()
@@ -2535,6 +2710,8 @@ func close_bench() -> bool:
 ## Day, twilight or night for this match (OvalStadium.time_of_day; a capture or a
 ## test may set `time_override`).
 var time_override := ""
+## The match's sun clock while the 3D oval follows it (null when a slot is forced).
+var _sun: Oval3DSunClock
 
 func time_of_day(weather := "") -> String:
 	return time_override if time_override != "" else OvalStadium.time_of_day(weather)
@@ -2648,7 +2825,7 @@ func _draw_tip() -> void:
 	if tip.is_empty():
 		return
 	draw_set_transform(Vector2.ZERO)
-	var fs := 14
+	var fs := UiKit.px(14)
 	var who := str(tip.get("name", ""))
 	var text := str(tip["text"])
 	var nw := UiKit.BOLD.get_string_size(who, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x

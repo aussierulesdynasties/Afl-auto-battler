@@ -152,8 +152,14 @@ The answers are recorded in the Director Bible and summarised here.
   stands' shade across the ground. Prototype: `tools/visual/capture_look3d.gd`.
 - 2a post-processing, tone (rule 2.81): AgX tonemapping with a footy-TV grade (contrast 1.1,
   saturation 1.2), exposure set by the brightness of open grass; club rings keep their exact colour.
-- 2a lighting, night (rule 2.82): four light towers, one to each corner, each casting a shadow;
+- 2a lighting, night (rule 2.82): the ground's light towers, each casting a shadow;
   a roofed venue's lighting is settled with the stadium (2b). The crowd needs almost no shine.
+  Built (2026-11-21, `scripts/ui/match/Oval3DTowers.gd`): the towers come from the ground model's own
+  lamp banks, so the MCG has its real six; each lights the ground (a little brighter on its own
+  side), its head glows against the sky, the roof's front edge carries a row of lights, and the
+  men throw a star of faint shadows (4, 2 or 1 by graphics level; the stadium throws none). They are
+  on at twilight too, the sun keeping the shadows until it sets. Grounds whose model has no lamps,
+  and Marvel and Optus (2.91), keep the old two-light night. Check: `tools/visual/capture_night3d.gd`.
 - 2a weather, wet (rule 2.83): cloud light (no sun, soft shadows) and rain falling on screen
   (fine streaks from 15 m out). A distance haze barely shows at the match cameras' range.
 - 2a skies (rule 2.84): the world has designed skies, one for each weather and time of day ("i 100% want skies"; "a world design decision"); the seven prototype skies approved ("Theyre gorgeous").
@@ -220,9 +226,9 @@ _Update this section whenever 3D work merges. It is the one place 3D progress is
 | 2a. Light, tone, weather, skies | 202 | chosen and built (2.80-2.84, #1693 #1694 #1696 #1701); film look over the picture (2.112, #1839) | phone costing: every ground measured at three graphics levels in the cloud ([PHONE_3D_BUDGET.md](PHONE_3D_BUDGET.md), Settings > Graphics); the real phone run (the "Android 3D probe" APK) is next |
 | 1.0 release checklist | | [3D_1_0_RELEASE.md](3D_1_0_RELEASE.md): what must be finished before 3D goes to itch (all four: grounds, players, animations, presentation; all 37 grounds) | kept current by the release thread |
 | 2b. The 37 grounds | 202 | 32 have a model that plays in a match; Accor (#1921) and Traeger (#1919) merged as WIP models; Mars, TIO and Victoria Park in open PRs; background scenes built for 11 grounds, none in a match yet (full list: [3D_INVENTORY.md](3D_INVENTORY.md)) | land the open PRs; wire background scenes into matches |
-| 2c. Crowd | 202 | chosen: 3D people within 55 m, cards beyond (2.92), built; seated on the MCG model's own seats (he chose "Seat the crowd in the MCG", 2026-11-20, #1929) | measure its cost on a phone; each other ground gets it once it loads in a match |
+| 2c. Crowd | 202 | chosen: 3D people within 55 m, cards beyond (2.92), built; seated on the MCG model's own seats (he chose "Seat the crowd in the MCG", 2026-11-20, #1929). Brought toward the real thing (2026-11-21, he asked for "all 3" of the coordinator's ideas, this one "club colours in the right bays, a mix of people instead of clones, and reactions to goals"; WIP, not shippable, not yet shown to him): cheer squads in the front rows behind each goal, away supporters gathered toward their end, the MCC members' reserve in its own clothes; a winter crowd (jackets, jeans, each club's guernsey in its own design, scarves, beanies) dressed from the same baked bodies (`Oval3DCrowdDress`); each sits at his own pace and lean; reactions to goals, behinds, contested marks, tackles and the siren from the two baked clips nobody used. QA sheet: `tools/visual/capture_mcg_crowd.gd`. Crowd size by fixture (2026-11-21, WIP): each match draws a crowd from a model fitted to all 866 real AFL crowds of 2023-2026 (`MatchAttendance`, `data/attendance.json`, `tools/attendance/fit.py`: ground, each club's pull home and away, derby or neutral ground, time of day, finals week; a Grand Final sells out), and the seats fill to it the way a real ground does (cheer squads and members first, lower rows before upper, whole upper bays closed). QA sheet: `tools/attendance/capture_fill.gd` | measure its cost on a phone; cheer squad flags and banners; each other ground gets it once it loads in a match |
 | 2d. Players' look | 202 | body: MetaHuman (2.85, 2.89); builds by height and weight (2.97, 2.98); faces ruled (2.99) | the Tripo heads (director generates) and the features for everyone else |
-| 2e. Cameras | 202 | main camera, goal replay, set shots, ball-up close-ups, tap to skip, TV framing, picture layout, stat bars, score bug all ruled and built (2.93-2.111, #1818); after a mark it stays on the main camera (2.113); holding-the-ball and dropped-ball frees now show the tackle, and a tackle that stops play cuts close from a wing camera (B, chosen 2026-11-21) | umpire free-kick signals and injuries need new clips (art freeze) |
+| 2e. Cameras | 202 | main camera, goal replay, set shots, ball-up close-ups, tap to skip, TV framing, picture layout, stat bars, score bug all ruled and built (2.93-2.111, #1818); after a mark it stays on the main camera (2.113); holding-the-ball and dropped-ball frees now show the tackle, and a tackle that stops play cuts close from a wing camera (B, chosen 2026-11-21); a man coming off jogs to the gate and his replacement runs on; at a free the field umpire stands off the mark; a tackler far off runs all the way in; through the banner before the first bounce, cut wide, front-on and from the race (2.115, Oval3DBanner) | umpire free-kick signals and injuries (down, trainers, helped off) need new clips (art freeze) |
 | 2f. Match crew | 202 | a 2026 match's officials and club crew in matches (Oval3DCrew, Oval3DCrewMotion): 4 field umpires (real numbers), 4 boundary (two a wing, a half each), 2 goal umpires; each club's 4 trainers at the arcs and its runner at the bench, on the ground only when Regulation 12.13 lets them. Clothes modelled for both bodies (tools/oval3d/crew/build_crew.py): umpire shirt, goal umpire's trousers, belt, cap, trainer vest | goal umpire flag signals, boundary throw-ins, return throws and water runs keyed from broadcast footage (crew_clips.glb) |
 | Broadcast popups | 207 | stat card ruled (2.94, 2.95) | ask: when a card shows and for how long; the journalists' posts |
 | 3. Asset and animation plan | 203 | done (#1707), docs/3D_ASSET_PLAN.md | |
@@ -237,12 +243,12 @@ _Update this section whenever 3D work merges. It is the one place 3D progress is
 | Ground | State | PRs |
 |---|---|---|
 | MCG | model, instanced seats | #1843 |
-| Marvel Stadium | model | #1911 |
+| Marvel Stadium | rebuilt to the MCG standard (true bearing, instanced seats, shut roof, Docklands surrounds) | #1911, this PR |
 | Adelaide Oval | model, 3D seats; plays in a match (exported for the game by tools/grounds/adelaide) | #1856 |
 | Optus Stadium | being rebuilt to the MCG standard: every ring an offset of the roof edge traced from Google Earth, bowl, podium and roof measured in metres (tools/grounds/optus/survey); seats; background scene (not in a match) | #1867 #1880 #1897; #1993 |
 | SCG | model | #1909 |
 | GMHBA Stadium | exterior model; background scene (not in a match) | #1903 #1878; open: Selwood Stand roof #1924 |
-| People First Stadium | model, roof; background scene (not in a match) | #1853 #1860 #1868 #1889 #1892 |
+| People First Stadium | model, roof; MCG standard r37 (fins, podium, scoreboard lattice, pods, glazed band, Carrara surroundings: tools/grounds/people_first); background scene (not in a match) | #1853 #1860 #1868 #1889 #1892 #2019 |
 | ENGIE Stadium | texture pass | #1866 |
 | Bellerive Oval | model | #1900 |
 | Manuka Oval | model | #1865 |
@@ -265,8 +271,9 @@ _Update this section whenever 3D work merges. It is the one place 3D progress is
 | Accor Stadium | model open | #1921 |
 | Marrara Oval (TIO Darwin) | model open | #1918 |
 | Traeger Park | model open | #1919 |
-| The Gabba | model, 3D seats; plays in a match (built 2026-11-19/20 on a branch that never merged; brought in from the PC) | |
-| Barossa Park, Sky Stadium, Jiangwan Stadium, Hands Oval, Blacktown, Summit Park, Macquarie Point | model; plays in a match (`tools/grounds/<g>/model`) | |
+| The Gabba | model, 3D seats; plays in a match; to the MCG standard 2026-11-22 (modelled steel and roof, real seat colours, Woolloongabba from OpenStreetMap); roof, tiers and screen at heights measured in Google Earth (tools/grounds/gabba/README.md) | #2020 |
+| Barossa Park | rebuilt to the MCG standard: clubrooms (with the south end), terraces, Gather Round stands with 3D seats, courts fitted on the satellite's lines, second oval, land and Lyndoch out to 1 km, gum trees, far country to 16 km (tools/grounds/barossa); open: clubroom roof outline, stair to the south deck, far ranges | #2041 |
+| Sky Stadium, Jiangwan Stadium, Hands Oval, Blacktown, Summit Park, Macquarie Point | model; plays in a match (`tools/grounds/<g>/model`) | |
 
 Machine pre-inspection of the 30 match grounds, before the director's fly-through (2026-11-21, #1950):
 [3D_PREINSPECTION.md](3D_PREINSPECTION.md). Its fixes are in; its open faults are listed there.
@@ -279,6 +286,6 @@ fly-through review like the rest of the ground: curators cut a new pattern each 
 ### Open questions for the director (3D only)
 
 - Row 207: when a stat card appears and for how long; the journalists' posts (who, what, when, where).
-- Row 202 2e: the other cameras and cuts in play (after a mark answered, 2.113). Tackles that stop play cut close (B, chosen 2026-11-21). Free-kick umpire signals and injuries (down, trainers, helped off) wait on the art freeze: no clip exists for them.
+- Row 202 2e: the other cameras and cuts in play (after a mark answered, 2.113). Tackles that stop play cut close (B, chosen 2026-11-21). Interchanges jog off and run on through the gate, and the umpire stands off a free's mark (no new clips). Free-kick umpire signals and injuries (down, trainers, helped off) wait on the art freeze: no clip exists for them.
 - Design bible: how weather affects a match (its look is settled; its effect on play is not).
 

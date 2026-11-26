@@ -17,14 +17,7 @@ const WEAK_SHARE := 0.25          # bottom quarter of his role: a weakness
 ## strength: a midfielder's goalkicking (5%) is not what he is picked for.
 const MIN_WEIGHT := 0.10
 
-const ATTR_LABELS := {
-	"kicking": "Kicking", "handballing": "Handballing", "contested": "Contested ball",
-	"contested_marking": "Contested marking", "uncontested_marking": "Uncontested marking",
-	"pressure": "Pressure", "intercept": "Intercepting", "speed": "Speed", "carry": "Carry",
-	"goalkicking": "Goalkicking", "accuracy": "Accuracy", "creating": "Creating",
-	"ruck": "Ruck work", "discipline": "Discipline", "durability": "Durability",
-	"star": "Star power",
-}
+const ATTR_LABELS := Attributes.PROSE_LABELS
 
 static var _sorted := {}          # "ROLE|attr" -> sorted 2026 values
 static var _db: Node = null       # GameDB, looked up once on the main thread
@@ -87,6 +80,20 @@ static func grade(pct: float) -> String:
 		if pct >= 1.0 - float(g[0]):
 			return str(g[1])
 	return ""
+
+
+## The attributes his rating rests on: those carrying at least MIN_WEIGHT of
+## his position's share in Ratings.ROLE_WEIGHTS (the line rate_overall rates
+## him on, his first role), heaviest first. A midfielder: contested ball and
+## creating. Shown in bold on the pre-season meeting's stat focus.
+static func rated_on(p: Dictionary) -> Array:
+	var core: Dictionary = Ratings.ROLE_WEIGHTS.get(str(p.get("role", "MID")), Ratings.ROLE_WEIGHTS["MID"])
+	var keys := []
+	for key in core:
+		if float(core[key]) >= MIN_WEIGHT:
+			keys.append(str(key))
+	keys.sort_custom(func(a, b): return float(core[a]) > float(core[b]))
+	return keys
 
 
 ## Up to three strengths among what his role is judged on, best first:

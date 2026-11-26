@@ -5,9 +5,7 @@ extends RefCounted
 ## Kept free of every autoload, so a save or a trait can read a skill without
 ## pulling GameDB in (tools/lint/autoload_reach.py).
 
-const KEYS := ["kicking", "handballing", "contested_marking", "uncontested_marking",
-		"contested", "pressure", "intercept", "speed", "carry", "goalkicking", "accuracy",
-		"creating", "ruck", "discipline", "durability", "star"]
+const KEYS := Attributes.KEYS   # the one list (scripts/sim/Attributes.gd)
 
 ## Handballs' share of AFL disposals (the engine's Ratings.T.handball_share).
 const HANDBALL_SHARE := 0.44

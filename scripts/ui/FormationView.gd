@@ -39,12 +39,7 @@ const ASSIGN := {
 	"FWD": ["FF", "HFFL", "HFFR", "FPL", "FPR", "HFF"],
 	"RUCK": ["RUCK"],
 }
-const CALLOUT_ATTRS := {
-	"DEF": [["intercept", "Intercept"], ["pressure", "Pressure"], ["kicking", "Kicking"]],
-	"MID": [["contested", "Contested"], ["handballing", "Handballing"], ["carry", "Carry"]],
-	"FWD": [["goalkicking", "Goalkicking"], ["contested_marking", "Contested marking"], ["accuracy", "Accuracy"]],
-	"RUCK": [["ruck", "Ruck"], ["contested", "Contested"], ["contested_marking", "Contested marking"]],
-}
+const CALLOUT_ATTRS := Attributes.CALLOUTS
 
 var _ground: Array = []
 var _bench: Array = []
@@ -90,7 +85,7 @@ func _assign(ground: Array, bench: Array, chosen := false) -> Array:
 	# order. Only an auto-picked side is sorted and given its key posts.
 	if not chosen:
 		for role in buckets:
-			(buckets[role] as Array).sort_custom(func(a, b): return int(a["overall"]) > int(b["overall"]))
+			(buckets[role] as Array).sort_custom(func(a, b): return int(Rating.ovr(a)) > int(Rating.ovr(b)))
 	buckets["MID"] = _midfield_order(buckets["MID"], chosen)
 	if not chosen:
 		# Key defenders and key forwards take the posts (Roles.key_post_order).
@@ -169,12 +164,12 @@ static func _midfield_order(mids: Array, chosen := false) -> Array:
 func _ensure_callout() -> void:
 	if _callout != null:
 		return
-	_callout = UiKit.panel(UiKit.INK, 8, 8)
+	_callout = UiKit.panel(UiKit.INK, UiKit.GAP, 8)
 	_callout.visible = false
 	_callout.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_callout.custom_minimum_size = Vector2(168, 0)
 	add_child(_callout)
-	_callout_box = UiKit.vbox(2)
+	_callout_box = UiKit.vbox(UiKit.Space.SLIM)
 	_callout.add_child(_callout_box)
 
 
@@ -200,7 +195,7 @@ func _show_callout(index: int) -> void:
 	var duty := str(slot.get("title", ""))
 	if bool(entry.get("bench", false)):
 		duty = "Interchange"
-	_callout_box.add_child(UiKit.lbl("%s  ·  %d OVR  ·  %d development points banked" % [duty, int(p.get("overall", 0)),
+	_callout_box.add_child(UiKit.lbl("%s  ·  %d OVR  ·  %d development points banked" % [duty, int(Rating.ovr(p, 0)),
 			int(p.get("xp", 0))], 12, UiKit.EMPH, true))
 	var role := str(slot.get("role", p.get("role", "MID")))
 	var rows: Array = CALLOUT_ATTRS.get(role, CALLOUT_ATTRS["MID"])

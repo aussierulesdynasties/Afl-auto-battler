@@ -59,6 +59,8 @@ const KIND := "rookie"
 const NOBODY_LEFT_NEWS := "Rookie Draft: nobody was left when your pick came up, so your draft ended."
 ## Nobody to take from the start: one line instead of two.
 const NOBODY_AT_ALL_NEWS := "Rookie Draft: there was nobody to take, so no club made a pick, yours included."
+## No cap room for a rookie wage when your pick came up (director, 2026-11-25).
+const NO_ROOM_NEWS := "Rookie Draft: there was no cap room for a rookie's wage, so your draft ended."
 ## Under this age a Rookie Draft pick signs for two seasons, otherwise one.
 const TWO_YEAR_UNDER := 21.0
 ## Rival clubs leave their last Rookie Draft picks unused (the director,
@@ -281,6 +283,10 @@ static func upgrade_block(gs, code: String, player_id: String) -> String:
 		return "He is not on the list."
 	if not is_rookie(p):
 		return "He is already on the senior list."
+	# His wage rises to the senior minimum: it must fit under the cap.
+	var rise := maxi(0, senior_wage(gs.season_year) - int(p.get("salary", 0)))
+	if not gs.fits_cap(code, list, rise, Contracts.next_size(list)):
+		return "We have no cap room to upgrade him.\nHis pay would rise to %s." % Contracts.money(senior_wage(gs.season_year))
 	match add_block(list, "senior", str(p.get("rookie_list", ""))):
 		"senior":
 			return "The senior list is full (%d). A senior spot opens when a player retires, is delisted or traded." % senior_spots()
@@ -316,8 +322,8 @@ static func ai_upgrades(gs) -> Array:
 		var list: Array = _list_of(gs, str(code))
 		var rk := rookies(list)
 		rk.sort_custom(func(a, b):
-			if int(a.get("overall", 0)) != int(b.get("overall", 0)):
-				return int(a.get("overall", 0)) > int(b.get("overall", 0))
+			if int(Rating.ovr(a, 0)) != int(Rating.ovr(b, 0)):
+				return int(Rating.ovr(a, 0)) > int(Rating.ovr(b, 0))
 			return str(a["id"]) < str(b["id"]))
 		for p in rk:
 			if senior_count(list) >= senior_spots():
@@ -387,7 +393,15 @@ static func _can_pick(gs, rec: Dictionary, code: String) -> bool:
 		return false
 	if code != gs.my_club and MidseasonDraft.pool(gs).size() <= AI_LEAVES:
 		return false
-	return rookie_spot_free(_list_of(gs, code))
+	var list := _list_of(gs, code)
+	if not rookie_spot_free(list):
+		return false
+	# Every pick is checked against the cap (director, 2026-11-25, "Hold room").
+	if not gs.fits_cap(code, list, wage(gs.season_year), Contracts.next_size(list) + 1):
+		if code == gs.my_club:
+			rec["no_room"] = true
+		return false
+	return true
 
 
 ## Clubs pick in order, round after round, until your turn or the end.
@@ -517,6 +531,8 @@ static func _finish(gs) -> void:
 		gs.add_news("draft", line)
 		if nobody:
 			gs.add_news("draft", NOBODY_LEFT_NEWS)
+	if bool(rec.get("no_room", false)) and mine.is_empty():
+		gs.add_news("draft", NO_ROOM_NEWS)
 	gs.mark_dirty()
 
 

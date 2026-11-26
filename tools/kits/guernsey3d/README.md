@@ -36,6 +36,8 @@ camera takes the nearest face-on cloth's colour, so the shoulders and sides don'
 
 5. Unfold: `python unwrap.py CODE` -> unwrap_CODE.json (xatlas).
 6. Cut with the pattern: `godot --headless --path . --script tools/kits/guernsey3d/cut_res.gd -- wrap5_CODE.glb CODE unwrap_CODE.json`.
+   The cut is made from the MetaHuman body, so it is private: `tools/epic_assets.sh publish "why"`
+   (or `... publish "why" assets/oval3d/cuts/CODE.res` for a new club), never `git add` ([EPIC_ASSETS.md](../../../docs/EPIC_ASSETS.md)).
 7. Bake (PLANAR = an atlas where step 3 put the photos in CELL): `python bake_unwrap.py CODE CELL PLANAR kits_today.png`.
    It also writes texels_CODE.npz for club fixes that paint by place on the body.
 8. St Kilda then: `python club_fixes/stk_panels_uw.py kits_today.png 14` and

@@ -36,7 +36,7 @@ this game? If it could belong to any sports-management app, it has drifted.
 | INK | `#0d0c0b` | inputs and wells |
 | LINE | `#363229` | rules and outlines |
 | TEXT | `#f1eee6` | every ordinary word and figure |
-| MUTED | `#a39e93` | the line under a name, metadata, inactive tabs |
+| MUTED | `#b4afa4` | the line under a name, metadata, inactive tabs (director, 2026-11-25; was `#a39e93`) |
 | FAINT | `#6e695f` | disabled only |
 | GOOD / BAD | `#8cc49a` / `#e38b73` | a genuine state (form, injury, over the cap); never information, never decoration |
 | ACCENT | red | the primary action when no club colour applies (main menu, Settings). Red is no longer the only primary fill (director, 2026-11-04): see 2.2 |
@@ -48,7 +48,8 @@ Light mode is maintained, not designed for. It uses dedicated pairs, never inver
 ### 2.2 Where colour goes
 
 - **Atmosphere:** the club's colour as a wash (ClubDuel, MatchPoster, the match scoreboard), a
-  gradient from the club colour to the page at the head of a screen, a 2 px club rule under a
+  gradient from the club colour to the page at the head of a screen, the guernsey stripes behind
+  the title only (ClubBackdrop: full colour to 48, gone by 64; director, 2026-11-25), a 2 px club rule under a
   heading, the club's guernsey marker. Both clubs on match day. This is where "not boring" lives.
 - **The primary action:** one button per screen, filled in the club colour (ACCENT when there is
   no club), white or near-black ink by luminance. Never two filled buttons on one screen.
@@ -93,7 +94,8 @@ only sizes a screen may use; literal sizes are a defect and a test fails them.
 
 Small sizes: ARD Signwriter is a sign face and thins out under 14 px. ARD Regular stays for small
 body text, no Barlow pairing and no A/B (director, 2026-11-04). SECONDARY is 14 and nothing the
-player decides on is set in FINE.
+player decides on is set in FINE. Nothing renders under 13 at Standard: `UiKit.px()` lifts any
+smaller size to `MIN_TEXT` (director, 2026-11-25).
 
 Rules: sentence case always, except AFL conventions (OVR, POT, Grand Final, club codes); no
 letter-spacing; no all-caps labels; digits in tables are tabular; the Display cut is for scores,
@@ -186,7 +188,8 @@ fence band and the turf's edge in shadow. Overlays (breaks, calls, close-ups) us
 sheet and the vignette rules.
 
 ### 4.7 Occasion (awards, trophy room, finals, off-season wrap)
-Club colour as a full wash, the Display cut big, the honours art large, one thing happening. A
+Club colour as a full wash, the Display cut big, the honours art large, one beat at a time,
+building to one final frame (director, 2026-11-25: the premiership's "Full goosebumps"). A
 skippable, readable culmination.
 
 ## 5. Copy
@@ -254,7 +257,25 @@ with us. His opinion of you: 31 out of 100."
   under a second.
 - Relaxed motion is allowed (director, 2026-11-04): sheets slide in, figures count up, screens
   transition. It stays short and eased; nothing shakes except the approved match haptics and shake,
-  and nothing bounces without the director's yes. It ships behind the `ui_motion` switch first.
+  the full-time sheet's 3 px shake on a close or finals win and the premiership's "Premiers" stamp,
+  and nothing bounces without the director's yes (approved: the ladder move's 1.08 pop; director,
+  2026-11-25). It ships behind the `ui_motion` switch first.
+- **Weight follows rarity** (director, 2026-11-25: "a Premiership happens at most once a season...
+  don't hold back to weekly-match restraint"). A weekly result stays restrained. Extra weight (a
+  heavier slam and recoil, the 3 px shake) goes only to a close win (under 12 points) and a finals
+  win; a loss of 40 or more sinks instead. A once-a-season moment gets the full multi-beat build:
+  the premiership reaches its final frame at 6.3 s. Why: the extra weight stays special because
+  most weeks don't get it.
+- **Celebration is for wins** (director, 2026-11-25: "don't play the celebratory land sting on a
+  loss"; no flash on a loss either). On every result reveal the land sting and the club-colour
+  flash play only for a win. A loss gets neither. Why: both read as celebration.
+- **A celebration plays once per result** (director, 2026-11-26). A screen that opens straight
+  after a ceremony or reveal opens still: no slam, flash, shake or sting (the full-time sheet after
+  the premiership ceremony). Why: playing it again repeats the payoff and blunts it.
+- **Skip from the first frame** (director, 2026-11-25 and 2026-11-26). In every animated sequence
+  (the full-time sheet, ceremonies, award reveals, farewells), Continue and Android Back leave from
+  the first frame, and a tap anywhere else jumps to the final frame and waits for Continue. Prove
+  it with a real tap at the first frame.
 - Particles only for two moments (director, 2026-11-04): club-colour streamers for the premiership
   and 24 gold sparkles on a Brownlow winner reveal. Nowhere else.
 - Headless runs (tests, captures) see the final state at once (`UiKit.motion_on()`).
