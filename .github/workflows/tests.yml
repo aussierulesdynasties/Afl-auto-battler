@@ -32,9 +32,7 @@ name: Tests
 # start this workflow at all.
 on:
   pull_request:
-    # converted_to_draft: the draft no-op run replaces (cancels) the full run already going,
-    # so a PR the cap holds stops taking runners at once (2026-11-26).
-    types: [opened, synchronize, reopened, ready_for_review, converted_to_draft]
+    types: [opened, synchronize, reopened, ready_for_review]
   # The merge queue (ruleset on main, director 2026-11-12) needs "test" on the queued
   # group: the PR on top of main and every PR ahead of it. A group runs the suites that
   # cover everything it changes against the main it was built on (tools/select_suites.py,
