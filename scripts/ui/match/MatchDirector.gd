@@ -869,8 +869,27 @@ func _possession_phases(k: int) -> Array:
 			var taker := _free_taker_of(k)
 			var take := _take_free(taker)
 			if taker >= 0 and taker == a:
-				return take + [{"t": "hold", "who": a, "carry": loc, "run": true,
-						"max": (ball["pos"] as Vector2).distance_to(loc) / float(tokens[a]["top"]) * 1.6 + 0.5}] + tail
+				var to_mark := [{"t": "hold", "who": a, "carry": loc, "run": true,
+						"max": (ball["pos"] as Vector2).distance_to(loc) / float(tokens[a]["top"]) * 1.6 + 0.5}]
+				var kick: Dictionary = tail[tail.size() - 1]
+				var mm := _mark_man(a, loc)
+				if mm >= 0 and str(kick.get("how", "")) == "kick" and _next_real(k) >= 0:
+					kick["aim"] = _kick_to(_next_real(k), loc)
+					# He kicks it over the man on the mark (director, the call scenes: "the man on the
+					# mark in front of the kicker"). Paid it at the mark, he goes back behind it, away
+					# from where his kick is going, runs in and kicks; the nearest of the other side
+					# comes to stand on the mark, facing him, until the ball has gone. With nobody on
+					# the mark, Weddle ran on past Clark, who gave the free away, 1.5 m off him (seed
+					# 20 ev 258). The free is still paid where it was logged (the 3 m release check).
+					var back := _behind_mark(a, loc, kick["aim"])
+					tail[tail.size() - 1] = {"t": "hold", "who": a, "carry": back, "run": true,
+							"stand": mm, "mark": loc,
+							"max": loc.distance_to(back) / float(tokens[a]["top"]) * 1.6 + 0.5}
+					kick["carry"] = back + (loc - back).normalized() * MARK_RUN_IN
+					kick["stand"] = mm
+					kick["mark"] = loc
+					tail.append(kick)
+				return take + to_mark + tail
 			# The ball comes to the mark as a kick would: 0.4 s when it is close,
 			# and a kick's own time when it is not (a fixed 0.4 s sent it 52 m
 			# from the boundary line in one frame at 8x).
@@ -1631,6 +1650,53 @@ func _take_free(who: int) -> Array:
 	# (A ball still loose comes his way off the men round it, as any loose
 	# ball does: walking 30 m to a ball nobody touches is play waiting.)
 	return [{"t": "collect", "who": who, "roll": true}, {"t": "possess", "who": who, "quiet": true}]
+
+
+## A free's kick: he goes back this far behind the mark before he runs in, the five metres the
+## after-the-siren shot gives him (BroadcastVignette.KICK_BEHIND), and kicks MARK_RUN_IN on
+## from there, a couple of strides short of the man on the mark.
+const MARK_BACK := 5.0
+## Where the kick that opens possession k lands, kicked from src: its own spot, or for an entry
+## the set shot's spot when the next act is a mark kicked for goal (the same rule as
+## _inside50_phases, which flies it there). Seed 20: Weddle lined up on the entry's logged spot
+## and the ball went 30 degrees off his line over the man on the mark, to the set shot's spot.
+func _kick_to(k: int, src: Vector2) -> Vector2:
+	var loc := _loc(k)
+	if str((events[k] as Dictionary).get("kind", "")) != "inside50":
+		return loc
+	var nk := _next_real(k)
+	if nk >= 0 and str(events[nk].get("kind", "")) == "mark" and (events[nk] as Dictionary).has("band"):
+		var spot := _set_spot(int(events[nk].get("side", 0)), str(events[nk]["band"]), loc.y)
+		if (spot.x - src.x) * _dir(int((events[k] as Dictionary).get("side", 0))) > -SET_SPOT_BACK:
+			return spot
+	return loc
+
+
+const MARK_RUN_IN := 2.0
+
+
+## Who stands the mark a free is kicked over: the nearest man of the other side to it (-1 when
+## there is none).
+func _mark_man(kicker: int, mark: Vector2) -> int:
+	var best := -1
+	var near := INF
+	for t in tokens:
+		if int(t["side"]) == int(tokens[kicker]["side"]):
+			continue
+		var d := (t["pos"] as Vector2).distance_to(mark)
+		if d < near:
+			near = d
+			best = int(t["id"])
+	return best
+
+
+## Where he takes a free's kick from: MARK_BACK behind the mark, on the line from where his
+## kick is going through the mark (away from his goal when that is the mark itself).
+func _behind_mark(kicker: int, mark: Vector2, aim: Vector2) -> Vector2:
+	var away := mark - aim
+	if away.length() < MARK_BACK:
+		away = mark - Vector2(MatchMotion.GOAL_X * _dir(int(tokens[kicker]["side"])), 0.0)
+	return MatchMotion.clamp_to_oval(mark + away.normalized() * MARK_BACK, 1.0)
 
 
 ## Who takes the free a possession beat restarts from: the man the free
@@ -2929,6 +2995,21 @@ func _enter(p: Dictionary) -> void:
 				if p.has("chaser"):
 					MatchMotion.set_goal(tokens[int(p["chaser"])], p["chase_to"], 1.0, true, true)
 					_busy[int(p["chaser"])] = true
+				if int(p.get("stand", -1)) >= 0 and str(p.get("how", "")) == "kick":
+					# He lines up on the line from where his kick is going back through the mark: the
+					# spot it goes to can be worked out again after the beat was planned (seed 20: the
+					# ball left 30 degrees off the line over the man on the mark).
+					var nk := _next_real(int(_beat.get("k", -1)))
+					if nk >= 0:
+						var aim := _kick_to(nk, p["mark"])
+						if aim.distance_to(p["mark"]) >= MARK_BACK:
+							p["aim"] = aim
+							p["carry"] = MatchMotion.clamp_to_oval((p["mark"] as Vector2)
+									+ ((p["mark"] as Vector2) - aim).normalized() * (MARK_BACK - MARK_RUN_IN), 1.0)
+				if int(p.get("stand", -1)) >= 0:
+					# The man on the mark comes to it and stands on it (standing men face the ball).
+					MatchMotion.set_goal(tokens[int(p["stand"])], p["mark"], 0.8, true)
+					_busy[int(p["stand"])] = true
 			if p.has("mode"):
 				mode = str(p["mode"])
 		"chase":

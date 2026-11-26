@@ -4772,6 +4772,12 @@ func _test_free_taker_kicks() -> void:
 	var held := false
 	var last_k := -1
 	var guard := 0
+	# The man on the mark: where the free was paid, who stands it and where the kick goes.
+	var mark_spot := Vector2.INF
+	var mark_man := -1
+	var mark_p := {}
+	var over_mark := 0
+	var off_mark := []
 	while not d.idle() and guard < 200000:
 		guard += 1
 		d.advance(0.05)
@@ -4798,6 +4804,12 @@ func _test_free_taker_kicks() -> void:
 				kicked = false
 				held = false
 				free_k = -1
+				mark_spot = Vector2.INF
+				for p: Dictionary in d._phases:
+					if int(p.get("stand", -1)) >= 0 and str(p.get("how", "")) != "":
+						mark_spot = p["mark"]
+						mark_man = int(p["stand"])
+						mark_p = p
 			last_k = k
 		if k == restart_k and str(d.ball["mode"]) == "held" and int(d.ball["holder"]) == taker:
 			held = true
@@ -4811,6 +4823,18 @@ func _test_free_taker_kicks() -> void:
 			var gap: float = (d.tokens[who]["pos"] as Vector2).distance_to(from)
 			if gap > 1.5:
 				far.append("k%d: kicker %.1f m from the ball" % [k, gap])
+			if who == taker and mark_spot.is_finite():
+				# His free's kick: the man on the mark stands on it, and he kicks from behind it,
+				# over him, toward where the kick is going.
+				over_mark += 1
+				var on: float = (d.tokens[mark_man]["pos"] as Vector2).distance_to(mark_spot)
+				var behind := from.distance_to(mark_spot)
+				# Over him: the mark lies on the line of the kick (within 15 degrees).
+				var line := (mark_spot - from).normalized().dot(((mark_p["aim"] as Vector2) - from).normalized())
+				if on > 1.5 or behind < 2.0 or line < cos(deg_to_rad(15.0)):
+					off_mark.append("k%d: man on the mark %.1f m off it, kicked from %.1f m behind it, %.0f degrees off the line"
+							% [k, on, behind, rad_to_deg(acos(clampf(line, -1.0, 1.0)))])
+				mark_spot = Vector2.INF
 			if k == restart_k and not kicked:
 				kicked = true
 				if who == taker:
@@ -4822,6 +4846,10 @@ func _test_free_taker_kicks() -> void:
 	_check(frees > 10 and taken > 10, "Seed 31 pays frees and their takers kick them (%d paid, %d taken)" % [frees, taken])
 	_check(not_taken.is_empty(), "Every free's taker has the ball and kicks it himself (%d not: %s)" % [not_taken.size(), not_taken.slice(0, 5)])
 	_check(far.is_empty(), "No kick leaves with its kicker more than 1.5 m from the ball (%d: %s)" % [far.size(), far.slice(0, 5)])
+	print("  frees kicked over the man on the mark: %d" % over_mark)
+	_check(over_mark >= 5 and off_mark.is_empty(),
+			"A free is kicked over the man on the mark: he stands on it, the kicker goes back behind it (%d kicked, %d not: %s)"
+			% [over_mark, off_mark.size(), off_mark.slice(0, 5)])
 
 
 ## The crowd fills to the match's attendance (MatchAttendance, fitted to real AFL crowds): a big
