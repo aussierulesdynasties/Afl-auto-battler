@@ -51,7 +51,7 @@ if g in ('blacktown',): s['osm_retag'] = {'979754558': {'highway': 'footway', 's
 # NSW grounds, real place: the state's 5 m ground model (dem_nsw.py) for the terrain
 if g in ('blacktown',) and os.environ.get('BG_REAL'): s['dem_nsw'] = True
 # the small trees on the model's own ground south of the stand (crown centres on the NSW aerial, 2026-11-23)
-if g in ('blacktown',): s['extra_trees'] = [[-120.8, -76.0], [-114.8, -87.6], [-108.1, -95.7], [-82.6, -117.8], [-74.3, -123.2]]
+if g in ('blacktown',): s['extra_trees'] = [[-120.8, -76.0], [-114.8, -87.6], [-108.1, -95.7], [-82.6, -117.8], [-74.3, -123.2], [-28.8, -180.6], [-22.1, -174.4], [-13.1, -170.7], [-5.7, -164.2], [2.4, -158.0], [19.7, -145.3], [29.3, -139.4], [36.7, -133.5], [57.3, -119.4], [62.7, -114.7], [70.2, -109.8], [86.0, -98.6], [110.2, -81.4], [117.9, -75.9], [126.5, -70.5], [133.7, -65.1], [146.1, -56.0], [154.4, -49.9], [165.6, -42.9], [172.4, -35.5], [179.7, -32.2], [79.8, -105.5], [95.7, -94.5], [103.4, -87.8]]   # + the street trees in the road's median to the south-east (NSW aerial, 2026-11-26)
 if g in ('blacktown',): s['drop_buildings'] = [[(-125, -97), (-98, -99), (-60, -128), (-80, -156), (-112, -140), (-125, -126)],
                                                 [(-241, -154), (-198, -154), (-198, -186), (-241, -186)],   # the shade sails (map: two roofed buildings)
                                                 [(-221, -193), (-194, -189), (-189, -215), (-217, -219)]]   # a 1 m concrete slab (the model's SLAB), not a 7 m block
