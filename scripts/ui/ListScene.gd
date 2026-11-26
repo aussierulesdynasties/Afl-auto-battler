@@ -107,8 +107,11 @@ func _build_pane() -> Control:
 	head.name = "LineStanding"
 	head.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	host.add_child(head)
-	var count := "%d senior  ·  %d rookie" % [RookieList.senior_count(GameState.my_list),
-			RookieList.rookie_count(GameState.my_list)]
+	# Before the rookie list (1997) a club has one list.
+	var count := "%d on our list" % GameState.my_list.size()
+	if RookieList.in_force() or RookieList.rookie_count(GameState.my_list) > 0:
+		count = "%d senior  ·  %d rookie" % [RookieList.senior_count(GameState.my_list),
+				RookieList.rookie_count(GameState.my_list)]
 	if injured > 0:
 		count += "  ·  %d injured" % injured
 	host.add_child(UiKit.lbl(count, UiKit.SMALL, UiKit.MUTED))
@@ -245,20 +248,28 @@ func _full_list_panel() -> Control:
 	var seniors := RookieList.seniors(GameState.my_list)
 	var rookies := RookieList.rookies(GameState.my_list).filter(func(q): return not RookieList.is_cat_b(q))
 	var cat_b := RookieList.rookies(GameState.my_list).filter(func(q): return RookieList.is_cat_b(q))
-	var sh := UiKit.lbl("Senior list  %d / %d" % [seniors.size(), RookieList.senior_spots()], UiKit.BODY, UiKit.EMPH, true)
+	# Before the rookie list (1997, EraRules) a club has one list, not a senior one.
+	var one_list := not RookieList.in_force() and rookies.is_empty() and cat_b.is_empty()
+	var sh := UiKit.lbl("%s  %d / %d" % ["Our list" if one_list else "Senior list", seniors.size(), RookieList.senior_spots()],
+			UiKit.BODY, UiKit.EMPH, true)
 	sh.name = "SeniorListHead"
 	lbox.add_child(sh)
 	_role_groups(lbox, seniors, false)
-	lbox.add_child(UiKit.spacer(8))
-	var rh := UiKit.lbl("Rookie list  %d / %d" % [rookies.size(), RookieList.cat_a_spots()], UiKit.BODY, UiKit.EMPH, true)
-	rh.name = "RookieListHead"
-	lbox.add_child(rh)
-	if rookies.is_empty():
-		var none := UiKit.lbl("No rookies yet. The Rookie Draft and the mid-season rookie draft fill these spots.",
+	# The rookie list from 1997 (EraRules); before it there is none to show.
+	if not one_list:
+		lbox.add_child(UiKit.spacer(8))
+		var rh := UiKit.lbl("Rookie list  %d / %d" % [rookies.size(), RookieList.cat_a_spots()], UiKit.BODY, UiKit.EMPH, true)
+		rh.name = "RookieListHead"
+		lbox.add_child(rh)
+	if rookies.is_empty() and RookieList.in_force():
+		# The mid-season rookie draft runs from 2019 (EraRules).
+		var none := UiKit.lbl("No rookies yet. The Rookie Draft and the mid-season rookie draft fill these spots."
+				if EraRules.on("midseason_draft", EraRules.list_year()) else "No rookies yet. The Rookie Draft fills these spots.",
 				UiKit.SMALL, UiKit.MUTED)
+		none.name = "RookieListNone"
 		none.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		lbox.add_child(none)
-	else:
+	elif not rookies.is_empty():
 		_role_groups(lbox, rookies, true)
 	# Category B rookies have their own two spots, outside the 44 (real lists).
 	if not cat_b.is_empty():

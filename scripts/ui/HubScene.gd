@@ -13,6 +13,7 @@ var _results_overlay: Control
 var _media_overlay: Control
 var _talk_overlay: Control
 var _midseason_overlay: Control
+var _wrap_overlay: Control      # the off-season wrap (SeasonWrap)
 var _news_overlay: Control
 var _rule_overlay: Control
 var _tribunal_overlay: Control
@@ -187,6 +188,7 @@ func _show_season_wrap() -> void:
 	var box := UiKit.modal_box(self, 520.0, 0.0)
 	var overlay: Control = box["overlay"]
 	overlay.name = "SeasonWrap"
+	_wrap_overlay = overlay
 	var v: VBoxContainer = box["body"]
 	v.add_child(UiKit.lbl("Off-season complete", 20, UiKit.TEXT, true))
 	v.add_child(UiKit.lbl("Our %d list is set." % int(w.get("year", GameState.season_year)), 14, UiKit.MUTED))
@@ -220,7 +222,7 @@ func _show_season_wrap() -> void:
 	var lost: Array = GameState.fa_lost_lines()
 	if not lost.is_empty():
 		v.add_child(UiKit.spacer(4))
-		v.add_child(UiKit.lbl("Free agency", 14, UiKit.MUTED, true))
+		v.add_child(UiKit.lbl("Free agency" if EraRules.on("free_agency") else "Delisted players", 14, UiKit.MUTED, true))
 		for i in range(lost.size()):
 			var club := str(lost[i]["club"])
 			var l := NameInk.label(str(lost[i]["text"]), {GameDB.club_name(club): club}, 14, UiKit.TEXT)
@@ -274,12 +276,20 @@ func _show_season_wrap() -> void:
 	var go := UiKit.btn("Start the pre-season" if to_preseason else "Start the season", UiKit.BODY, true)
 	go.name = "BeginSeason"
 	go.custom_minimum_size.y = 48
-	go.pressed.connect(func():
-		GameState.begin_season_from_wrap()
-		overlay.queue_free()
-		if to_preseason:
-			Router.replace("preseason"))
+	go.pressed.connect(_begin_from_wrap)
 	(box["footer"] as VBoxContainer).add_child(go)
+
+
+## Out of the off-season wrap into the pre-season (or the season): its button,
+## and Back.
+func _begin_from_wrap() -> void:
+	var to_preseason: bool = GameState.preseason_active()
+	GameState.begin_season_from_wrap()
+	if is_instance_valid(_wrap_overlay):
+		_wrap_overlay.queue_free()
+	_wrap_overlay = null
+	if to_preseason:
+		Router.replace("preseason")
 
 
 func _on_resize() -> void:
@@ -1258,9 +1268,12 @@ static func skip_lines(season: Season, year: int, answers: Dictionary, to := "se
 		var k := str(q["key"])
 		out.append(["SkipAnswer_" + k, "%s: %s" % [str(SkipOrders.SHORT[k]),
 				SkipOrders.label(qs, k, str(answers.get(k, "")))], false])
-	var stop := "It stops after the last match of the season: re-signings, trades, free agency and the national draft stay yours. If the board sacks you, it stops there."
+	# Free agency from 2012 (EraRules); before it, the off-season has none.
+	var yours := "re-signings, trades, free agency and the national draft stay yours" if EraRules.on("free_agency") \
+			else "re-signings, trades and the national draft stay yours"
+	var stop := "It stops after the last match of the season: %s. If the board sacks you, it stops there." % yours
 	if home_away:
-		stop = "It stops after the last home and away round: if you make the finals, you coach them. Re-signings, trades, free agency and the national draft stay yours."
+		stop = "It stops after the last home and away round: if you make the finals, you coach them. %s." % (yours.left(1).to_upper() + yours.substr(1))
 	# A pick left unmade passes when the next round is played (MidseasonDraft, RookieList).
 	if season.round_index < MidseasonDraft.DRAFT_AFTER or MidseasonDraft.waiting(GameState) or RookieList.waiting(GameState):
 		stop += " Any rookie pick that comes up along the way is passed."
@@ -2504,6 +2517,11 @@ func handle_back() -> bool:
 	if TopUpSheet.close_open(self):
 		return true
 	if DraftSpotsSheet.close_open(self):
+		return true
+	# Back on the off-season wrap is its Start button, as Back is Continue on
+	# the results: the wrap has nothing behind it but the new season.
+	if _wrap_overlay != null and is_instance_valid(_wrap_overlay):
+		_begin_from_wrap()
 		return true
 	# Back skips the press conference, as its Skip button does (natural
 	# Android Back); an overlay opened over it closes first.

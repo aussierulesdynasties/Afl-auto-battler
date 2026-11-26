@@ -653,7 +653,10 @@ static func _how(row: Dictionary) -> String:
 		"delisted":
 			return "Delisted after the %d season." % int(row.get("left", 0))
 		"free_agent":
-			return "Left as a free agent after the %d season." % int(row.get("left", 0))
+			# Free agency from 2012 (EraRules); before it, a player who went is delisted.
+			var left := int(row.get("left", 0))
+			return ("Left as a free agent after the %d season." if EraRules.on("free_agency", left)
+					else "Delisted after the %d season.") % left
 		"moved":
 			var to := str(row.get("to_club", ""))
 			return "Left for %s after the %d season." % [GameDB.club_name(to), int(row.get("left", 0))] if to != "" \

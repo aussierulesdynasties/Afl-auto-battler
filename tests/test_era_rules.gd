@@ -32,6 +32,7 @@ func run() -> void:
 	_t("_test_medical_sub_2021")
 	_t("_test_no_sub_2016")
 	_t("_test_coaches_votes_from_2003")
+	_t("_test_free_agency_words")
 	GameState.reset()
 	GameState.delete_saved_career()
 	GameState.replay_seed = 0
@@ -508,3 +509,34 @@ func _test_coaches_votes_from_2003() -> void:
 	EraRules.year = 0
 	for n in [h1, f1, h2, f2, ms]:
 		n.free()
+
+
+## Free agency from 2012 (EraRules): before it, the words say delisted, never
+## free agency (bug bash P3-3). 2011 and 2012, each the season being played.
+func _test_free_agency_words() -> void:
+	var hub = load("res://scripts/ui/HubScene.gd")
+	for y in [2011, 2012]:
+		_career(y)
+		var fa: bool = y >= 2012
+		_check(EraRules.on("free_agency") == fa, "%d: free agency %s" % [y, "on" if fa else "off"])
+		_check(Contracts.refused_goes() == (Contracts.REFUSED_GOES if fa else Contracts.REFUSED_DELISTED)
+				and Contracts.refused_season_end() == (Contracts.REFUSED_SEASON_END if fa else Contracts.REFUSED_DELISTED_SEASON_END),
+				"%d: a refusal says %s" % [y, Contracts.refused_goes()])
+		var topic := StatGuide.topic_text(["Contracts", "today's words"])
+		_check((topic == "today's words") == fa and topic.contains("delisted") != fa, "%d: the Contracts guide (%s)" % [y, topic])
+		var word: Dictionary = FootballWords.entries().get("Contracts", {})
+		_check(str((word.get("lines", [""]) as Array)[0]) == StatGuide.topic_text(StatGuide.TOPICS.filter(
+				func(t): return str(t[0]) == "Contracts")[0]), "%d: the long-press word reads the same" % y)
+		var pages := ""
+		for key in ["offseason", "contracts", "postseason"]:
+			pages += " ".join(FirstVisitIntro.lines_for(key))
+		_check(pages.to_lower().contains("free agen") == fa, "%d: the off-season intros %s free agency" % [y, "name" if fa else "never name"])
+		for to in ["season", "home_away"]:
+			var stop := ""
+			for line in hub.skip_lines(GameState.season, y, {}, to):
+				if str(line[0]) == "SkipStop":
+					stop = str(line[1])
+			_check(stop != "" and stop.contains("free agency") == fa and stop.contains("Re-signings, trades") == (to == "home_away"),
+					"%d: skipping to the %s, it says what stays yours (%s)" % [y, to, stop])
+		_check(ClubPage._how({"how": "free_agent", "left": y}) == ("Left as a free agent after the %d season." if fa
+				else "Delisted after the %d season.") % y, "%d: a former player's line (%s)" % [y, ClubPage._how({"how": "free_agent", "left": y})])
