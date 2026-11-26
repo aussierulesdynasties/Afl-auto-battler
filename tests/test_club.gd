@@ -173,10 +173,11 @@ func _test_season_flow() -> void:
 			for p in GameState.season.lists[code]:
 				var was := int(rival_before.get(str(p["id"]), ClubLife.MORALE_BASE))
 				if on.has(str(p["id"])):
-					rival_ok = rival_ok and ClubLife.morale(p) == clampi(was + (4 if won else 1) + swing, 5, 100)
+					# Then a step of drift towards his opinion of his coach (ClubLife.drift_morale).
+					rival_ok = rival_ok and absi(ClubLife.morale(p) - clampi(was + (4 if won else 1) + swing, 5, 100)) <= ClubLife.DRIFT_STEP
 					played_count += 1
 				elif int(p.get("injury_weeks", 0)) <= 0 and was > 5:
-					rival_ok = rival_ok and ClubLife.morale(p) < was
+					rival_ok = rival_ok and ClubLife.morale(p) <= was
 					left_out_count += 1
 	_check(rival_ok and played_count > 100 and left_out_count > 0,
 			"Rival players' morale moves by your club's rule (%d played, %d left out)" % [played_count, left_out_count])
