@@ -362,9 +362,11 @@ const VERTEX_COLOURED := ["adelaide"]
 ## Grounds whose seats throw no shadows (see _instances).
 const SEATS_NO_SHADOW := ["bellerive"]
 ## Grounds whose seats turn into far rows (_seat_far_mesh) between SEAT_FAR_FROM and SEAT_FAR_TO m.
-const SEAT_FAR_SHADER := preload("res://scripts/ui/match/seat_far.gdshader")
-const SEAT_NEAR_SHADER := preload("res://scripts/ui/match/seat_near.gdshader")
-const SURROUNDS_SHADER := preload("res://scripts/ui/match/surrounds_ground.gdshader")
+## A shader here is a path, loaded where a ground first uses it: as a preload it loaded
+## at every launch, because the main menu's flat oval names this class (bug bash M-12).
+const SEAT_FAR_SHADER := "res://scripts/ui/match/seat_far.gdshader"
+const SEAT_NEAR_SHADER := "res://scripts/ui/match/seat_near.gdshader"
+const SURROUNDS_SHADER := "res://scripts/ui/match/surrounds_ground.gdshader"
 const SEAT_FAR := ["bellerive"]
 const SEAT_FAR_FROM := 40.0
 const SEAT_FAR_TO := 70.0
@@ -751,7 +753,7 @@ static func _add_surrounds(root: Node3D, s: Dictionary, dir := "", fit: Array = 
 		var mat: Material = mm
 		if s.has("near_map") and ResourceLoader.exists(dir + str(s["near_map"])):
 			var sm := ShaderMaterial.new()
-			sm.shader = SURROUNDS_SHADER
+			sm.shader = load(SURROUNDS_SHADER)
 			sm.resource_name = "surrounds"
 			sm.set_shader_parameter("far_map", map)
 			sm.set_shader_parameter("near_map", load(dir + str(s["near_map"])))
@@ -2197,9 +2199,10 @@ const BACKDROP_HIDES := {"adelaide": ["ao_ground"], "barossa": ["concourse"], "s
 	"macpoint": ["concourse"], "waca": ["land", "road", "brick"], "bruce": ["g_ground"], "north_hobart": ["ground"],
 	"traeger": ["ground_dirt"]}
 
-const BACKDROP_SHADER := preload("res://scripts/ui/match/oval3d_backdrop.gdshader")
-const BACKDROP_LEAF_SHADER := preload("res://scripts/ui/match/oval3d_backdrop_leaf.gdshader")
-const TERRAIN_SHADER := preload("res://scripts/ui/match/oval3d_terrain.gdshader")
+## Paths, loaded where used (see SEAT_FAR_SHADER).
+const BACKDROP_SHADER := "res://scripts/ui/match/oval3d_backdrop.gdshader"
+const BACKDROP_LEAF_SHADER := "res://scripts/ui/match/oval3d_backdrop_leaf.gdshader"
+const TERRAIN_SHADER := "res://scripts/ui/match/oval3d_terrain.gdshader"
 
 
 ## The scene's materials as Blender drew them: the trees and everything else tinted by their
@@ -2218,7 +2221,7 @@ static func _backdrop_materials(model: Node, plain := "") -> void:
 		if String(mi.name).begins_with("terrain_shaded"):
 			if not made.has("terrain_shaded"):
 				var tm := ShaderMaterial.new()
-				tm.shader = TERRAIN_SHADER
+				tm.shader = load(TERRAIN_SHADER)
 				if plain != "" and ResourceLoader.exists(plain):
 					tm.set_shader_parameter("plain", load(plain))
 					tm.set_shader_parameter("has_plain", true)
@@ -2247,14 +2250,14 @@ static func _backdrop_materials(model: Node, plain := "") -> void:
 				# standard material's alpha scissor drew them black
 				if not made.has(key):
 					var lm := ShaderMaterial.new()
-					lm.shader = BACKDROP_LEAF_SHADER
+					lm.shader = load(BACKDROP_LEAF_SHADER)
 					lm.set_shader_parameter("tex", mat.albedo_texture)
 					made[key] = lm
 				(mi as MeshInstance3D).set_surface_override_material(i, made[key])
 			elif key.begins_with("facade_") or key.begins_with("roof_"):
 				if not made.has(key):
 					var sm := ShaderMaterial.new()
-					sm.shader = BACKDROP_SHADER
+					sm.shader = load(BACKDROP_SHADER)
 					sm.set_shader_parameter("tex", mat.albedo_texture)
 					made[key] = sm
 				(mi as MeshInstance3D).set_surface_override_material(i, made[key])
@@ -2382,7 +2385,7 @@ static func _instances(root: Node3D, mesh: Mesh, path: String, colour: String, m
 		if SEAT_FAR.has(ground):
 			# the shells give way to the far rows (_seat_far_material) seat by seat (seat_near.gdshader)
 			var nm := ShaderMaterial.new()
-			nm.shader = SEAT_NEAR_SHADER
+			nm.shader = load(SEAT_NEAR_SHADER)
 			nm.set_shader_parameter("albedo", sm.albedo_color)
 			nm.set_shader_parameter("fade_from", SEAT_FAR_FROM)
 			nm.set_shader_parameter("fade_to", SEAT_FAR_TO)
@@ -2459,7 +2462,7 @@ static func _seat_far_material(colour: String) -> ShaderMaterial:
 			img.set_pixel(x, y, p)
 	img.generate_mipmaps()
 	var mat := ShaderMaterial.new()
-	mat.shader = SEAT_FAR_SHADER
+	mat.shader = load(SEAT_FAR_SHADER)
 	mat.set_shader_parameter("tex", ImageTexture.create_from_image(img))
 	mat.set_shader_parameter("fade_from", SEAT_FAR_FROM)
 	mat.set_shader_parameter("fade_to", SEAT_FAR_TO)
