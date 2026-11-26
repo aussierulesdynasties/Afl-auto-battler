@@ -51,6 +51,9 @@ jobs:
     timeout-minutes: ${{ (matrix.suite == 'legacy_rollover' || matrix.suite == 'legacy_2000_long' || matrix.suite == 'legacy_2010_long') && 130 || matrix.suite == 'match_visual' && 90 || 60 }}
     strategy:
       fail-fast: false
+      # 24 long suites at once took the whole free pool (about 20 runners) for hours, and PRs
+      # queued behind it. 8 at a time leaves the rest for pull requests (2026-11-26).
+      max-parallel: 8
       matrix:
         suite: ${{ fromJSON(needs.plan.outputs.suites) }}
     steps:
