@@ -194,3 +194,4 @@ What has landed toward each open row of docs/TODO.md and docs/TODO_RULINGS.md, o
 - 171: Merged #2130: Screen sweep: the screens it never reached, and the Off-season open.
 - 202: Merged #2143: 3D 1.0 plan: catch-up for 24-26 Nov.
 - 168: Merged #2127: UI Batch 4: motion, focus ring, press feedback, and Team selection's oval on a phone.
+- 171: Merged #2140: UI Batch 5, area 2: Staff, Coaching and My list fit a PC window.
