@@ -22,6 +22,7 @@ def lin(c): return np.array(srgb(c), np.float32)
 near = np.load(os.path.join(D, 'near_h.npy')); far = np.load(os.path.join(D, 'far_h.npy'))
 NE, NS, FA, FS = meta['near'], meta['near_step'], meta['far'], meta['far_step']
 R0 = spec['clear_r_m']
+FC = [float(v) for v in spec.get('fp_centre', [0.0, 0.0])]   # the model's own centre (prep.py fp_centre)
 def samp(G, half, step, X, Y):
     fx = (np.asarray(X) + half) / step; fy = (np.asarray(Y) + half) / step
     i = np.clip(np.floor(fx).astype(int), 0, G.shape[1] - 2); j = np.clip(np.floor(fy).astype(int), 0, G.shape[0] - 2)
@@ -96,7 +97,7 @@ def mat_mul(nm, path, rough=0.85, gain=1.0):   # gain = 1 / texture's linear mea
 n = near.shape[0]
 g = np.arange(n) * NS - NE
 X, Y = np.meshgrid(g, g)
-Z = near.copy(); Z[np.hypot(X, Y) < R0 + 5] -= 0.15
+Z = near.copy(); Z[np.hypot(X - FC[0], Y - FC[1]) < R0 + 5] -= 0.15
 # the model's own flat ground (apron) box: sink the terrain under it so no corner pokes through
 if spec.get('pad_box_m'):
     hx, hy = spec['pad_box_m']; Z[(np.abs(X) < hx + NS) & (np.abs(Y) < hy + NS)] = np.minimum(Z[(np.abs(X) < hx + NS) & (np.abs(Y) < hy + NS)], -0.3)
@@ -301,7 +302,7 @@ if os.path.exists(BRP):
         if b.get('rail'): continue   # rail bridges are drawn as track
         if b['w'] <= 6 and np.hypot(*np.diff(P, axis=0).T).sum() < 30: continue   # stair/ramp stubs
         ends = height(P[[0, -1], 0], P[[0, -1], 1])
-        z = max(float(ends.max()), 0.0 if np.hypot(*P.mean(0)) < R0 + 60 else float(ends.max())) + 0.3
+        z = max(float(ends.max()), 0.0 if np.hypot(*(P.mean(0) - FC)) < R0 + 60 else float(ends.max())) + 0.3
         if b['w'] <= 6:   # footbridge: draw only where it spans a drop (>2 m under its ends); on flat ground it is a path
             t_ = np.linspace(0, 1, 40)[:, None]; S_ = np.concatenate([P[i] * (1 - t_) + P[i + 1] * t_ for i in range(len(P) - 1)])
             if float(ends.max()) - float(height(S_[:, 0], S_[:, 1]).min()) < 2.0: continue
@@ -381,7 +382,7 @@ if spec.get('rail_geo') and os.path.exists(RLP):
             for j in range(1, k + 1): Q.append(Q[-1] + (p2 - Q[-1]) * (1.0 / (k - j + 1)))
         Q = np.array(Q)
         if KF is not None or KE:   # tracks under the ground model are hidden by it: split them out
-            if KF is not None: ok = np.hypot(Q[:, 0], Q[:, 1]) > KF[((np.degrees(np.arctan2(Q[:, 1], Q[:, 0])) % 360) // 2).astype(int)] + 1.0
+            if KF is not None: ok = np.hypot(Q[:, 0] - FC[0], Q[:, 1] - FC[1]) > KF[((np.degrees(np.arctan2(Q[:, 1] - FC[1], Q[:, 0] - FC[0])) % 360) // 2).astype(int)] + 1.0
             else: ex, ey, ea, eb = KE; ok = np.hypot((Q[:, 0] - ex) / ea, (Q[:, 1] - ey) / eb) > 1.04
             if CM is not None:   # never on a bank: only where the cutting floor is flat, or wholly outside the cutting
                 cmq = samp(CM, NE, NS, Q[:, 0], Q[:, 1]); ok &= ~((cmq > 0.02) & (cmq < 0.92))
@@ -431,7 +432,7 @@ if os.path.exists(RDP):
             k = max(1, int(math.ceil(np.hypot(*(p2 - Q[-1])) / 3.0)))
             for j in range(1, k + 1): Q.append(Q[-1] + (p2 - Q[-1]) * (1.0 / (k - j + 1)))
         Q = np.array(Q); ok = np.ones(len(Q), bool)
-        if KFr is not None: ok = np.hypot(Q[:, 0], Q[:, 1]) > KFr[((np.degrees(np.arctan2(Q[:, 1], Q[:, 0])) % 360) // 2).astype(int)] + 1.0
+        if KFr is not None: ok = np.hypot(Q[:, 0] - FC[0], Q[:, 1] - FC[1]) > KFr[((np.degrees(np.arctan2(Q[:, 1] - FC[1], Q[:, 0] - FC[0])) % 360) // 2).astype(int)] + 1.0
         w = RW[r['hw']]; main = RK[r['hw']] >= (2 if RV2 else 3)
         for rr in np.split(np.arange(len(Q)), np.where(np.diff(ok.astype(int)) != 0)[0] + 1):
             if not ok[rr[0]] or len(rr) < 2: continue
