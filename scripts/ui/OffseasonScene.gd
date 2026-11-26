@@ -1682,10 +1682,18 @@ func _decide_row(e: Dictionary, rich: bool, row_h: int) -> Button:
 		var who := UiKit.ellipsis(GameDB.player_display_name(p), UiKit.BODY, UiKit.TEXT, true)
 		who.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		who.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		# Sized to his name, so his figure sits beside it, not across the row.
+		who.size_flags_horizontal = Control.SIZE_FILL
+		var font := who.get_theme_font("font")
+		who.custom_minimum_size.x = minf(260.0, font.get_string_size(who.text, HORIZONTAL_ALIGNMENT_LEFT, -1, who.get_theme_font_size("font_size")).x + 2.0)
 		h.add_child(who)
 		var facts := UiKit.line("%d OVR  ·  age %d" % [int(Rating.ovr(p)), int(p.get("age", 0))], UiKit.SMALL, UiKit.MUTED)
 		facts.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		h.add_child(facts)
+		var room := Control.new()
+		room.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		room.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		h.add_child(room)
 		var s := UiKit.line(str(st[0]), UiKit.SMALL, st[1], true)
 		s.custom_minimum_size.x = 170
 		s.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
