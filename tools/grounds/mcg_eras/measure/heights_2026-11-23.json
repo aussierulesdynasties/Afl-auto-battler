@@ -1,0 +1,58 @@
+{
+  "frame": "arena-centred metres, bearing clockwise from north; heights above the turf",
+  "sun": {
+    "2000-03-23": {
+      "az": 49.2,
+      "elev": 39.2,
+      "how": "azimuth from light tower T3 head shadow on the turf; elevation from date+azimuth; tower head-shadow length agrees within 0.2 deg"
+    },
+    "2001-06-20": {
+      "az": 28.7,
+      "elev": 23.0,
+      "how": "azimuth from T2 shaft shadow line; elevation from date+azimuth"
+    },
+    "2001-07-04": {
+      "az": 29.6,
+      "elev": 23.2,
+      "how": "azimuth from T2 shaft shadow line; elevation from date+azimuth (T2 head-shadow length suggests 25.5, unresolved)"
+    }
+  },
+  "roof_front_plan": "front_north.txt (March 2000, near straight down; picks checked by eye on polar strips)",
+  "results": {
+    "olympic_roof_front_0_60deg": {
+      "jun_2001": [
+        24.4,
+        25.4
+      ],
+      "jul_2001": [
+        21.2,
+        23.2
+      ],
+      "fit_rms_m": 3.5,
+      "note": "two dates disagree by about 2.5 m; likely the July sun elevation"
+    },
+    "members_roof_front": "not constrained: its winter shadow falls along the west seats, not the turf",
+    "ponsford_roof_back_255_280deg": {
+      "h": 26,
+      "range": [
+        25,
+        28
+      ],
+      "fit_rms_m": 1.5,
+      "how": "March 2000 shadow on the ground west of the stand; height is above that ground, which sits near plaza level (today's model: plaza 4.2 m above the turf), so about 30 m above the turf"
+    },
+    "gss_roof_front_90_110deg_check": {
+      "h": [
+        35.6,
+        36.6
+      ],
+      "fit_rms_m": 0.19,
+      "note": "today's model: roof_h 31.5 above its plaza datum, turf at -4.2, so 35.7 above the turf: agrees"
+    },
+    "gss_roof_back_212_228deg_check": {
+      "h": 39.5,
+      "fit_rms_m": 1.0,
+      "note": "ground SW of the stand may sit lower than the turf"
+    }
+  }
+}

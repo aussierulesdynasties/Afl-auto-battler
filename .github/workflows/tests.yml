@@ -54,13 +54,15 @@ on:
         required: false
         default: ""
 
-# Where the jobs run: GitHub's runners, except merge-queue groups while the repo variable
-# QUEUE_RUNNER is "pc" and at least one self-hosted runner labelled "afl-queue" (the
-# director's PC, in WSL, 2 runners capped at 6 GB) is online. The plan job, always on GitHub,
-# checks that with the runners API (secret MERGE_TOKEN) and hands its choice to every other
-# job. A group planned while the PC is paused (WSL shut down) runs on GitHub's runners; nothing
-# needs switching. Pull requests and pushes to main always run on GitHub's runners, so a fork
-# never reaches the PC. docs/CI_RUNNER.md has the setup.
+# Where the jobs run: GitHub's runners, or the director's PC (self-hosted runners labelled
+# "afl-queue", in WSL, 2 runners capped at 8 GB) while the repo variable QUEUE_RUNNER is "pc"
+# (director, 2026-11-25: "turn the PC runners on"). A merge-queue group takes the PC when one of
+# its runners is online; a pull request from this repo or a push to main takes it only when one is
+# online and idle, so the PC adds to GitHub's runners instead of queueing work behind itself. The
+# plan job, always on GitHub, checks that with the runners API (secret MERGE_TOKEN) and hands its
+# choice to every other job. With the PC paused (WSL shut down) everything runs on GitHub's
+# runners; nothing needs switching. A fork's pull request never reaches the PC.
+# docs/CI_RUNNER.md has the setup.
 #
 # A newer push to a PR supersedes its older run. Every push to main gets its own
 # group (its sha) and is never cancelled, so back-to-back merges each get a verdict.
@@ -82,7 +84,9 @@ jobs:
     # A draft runs nothing but the final "test" check, which stays red until the PR is
     # marked ready (that event starts the real run), so a draft never queues runners.
     if: github.event_name != 'pull_request' || !github.event.pull_request.draft
-    runs-on: ubuntu-latest   # it picks where the other jobs run, so it never waits for the PC
+    # While QUEUE_RUNNER is "pc", this repo's runs plan on the PC's small "afl-plan" runner (it only
+    # plans, so it is free within seconds) instead of waiting in GitHub's queue; forks plan on GitHub.
+    runs-on: ${{ (vars.QUEUE_RUNNER == 'pc' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)) && fromJSON('["self-hosted","Linux","X64","afl-plan"]') || 'ubuntu-latest' }}
     timeout-minutes: 20   # a PC runner's first checkout fetches about 1.6 GB
     outputs:
       code: ${{ steps.changes.outputs.code }}
@@ -101,8 +105,9 @@ jobs:
             /*
             !/.claude/review/
 
-      # Merge-queue groups go to the PC while QUEUE_RUNNER is "pc" and an afl-queue runner is online;
-      # everything else, and any doubt (no token, API error, PC paused), stays on GitHub's runners.
+      # While QUEUE_RUNNER is "pc": a merge-queue group goes to the PC when an afl-queue runner is
+      # online; this repo's pull requests and pushes to main when one is online and idle. Forks, and
+      # any doubt (no token, API error, PC paused), stay on GitHub's runners.
       - name: Pick where the jobs run
         id: runner
         env:
@@ -110,14 +115,23 @@ jobs:
           WANT: ${{ vars.QUEUE_RUNNER }}
         run: |
           pick='"ubuntu-latest"'
-          if [ "$WANT" = pc ] && [ "${{ github.event_name }}" = merge_group ]; then
+          ev="${{ github.event_name }}"
+          own=no
+          case "$ev" in
+            merge_group) own=queue ;;
+            push|workflow_dispatch) own=idle ;;
+            pull_request) [ "${{ github.event.pull_request.head.repo.full_name }}" = "${{ github.repository }}" ] && own=idle ;;
+          esac
+          if [ "$WANT" = pc ] && [ "$own" != no ]; then
             n=0
+            want_idle=$([ "$own" = idle ] && echo true || echo false)
             if [ -n "$GH_TOKEN" ]; then
               n=$(gh api "repos/${{ github.repository }}/actions/runners" \
-                --jq '[.runners[] | select(.status == "online" and ([.labels[].name] | index("afl-queue")))] | length' \
+                --jq "[.runners[] | select(.status == \"online\" and ([.labels[].name] | index(\"afl-queue\"))
+                  and ($want_idle == false or .busy == false))] | length" \
                 2>/dev/null) || n=0
             fi
-            echo "PC runners online: ${n:-0}"
+            echo "PC runners online$([ "$own" = idle ] && echo ' and idle'): ${n:-0}"
             if [ "${n:-0}" -gt 0 ]; then pick='["self-hosted","Linux","X64","afl-queue"]'; fi
           fi
           echo "Jobs run on: $pick" >> "$GITHUB_STEP_SUMMARY"
@@ -337,6 +351,10 @@ jobs:
         if: success() || failure()
         run: python3 tools/intake_harness.py --quiet
 
+      - name: No Epic/MetaHuman files in this public repo (docs/EPIC_ASSETS.md)
+        if: success() || failure()
+        run: python3 -I tools/check_epic_files.py
+
       - name: Offline promise (the Android preset requests vibrate only)
         if: success() || failure()
         run: |
@@ -359,6 +377,11 @@ jobs:
           sparse-checkout: |   # .claude/review (5 GB of review boards) is never read by CI
             /*
             !/.claude/review/
+
+      - name: Epic/MetaHuman files (private repo, docs/EPIC_ASSETS.md)
+        uses: ./.github/actions/epic-assets
+        with:
+          token: ${{ secrets.EPIC_ASSETS_TOKEN || secrets.MERGE_TOKEN }}
 
       - name: Cache Godot
         id: godot-cache
@@ -398,7 +421,10 @@ jobs:
     needs: [plan, lint, preflight]
     if: always() && needs.plan.result == 'success' && needs.lint.result == 'success' && needs.plan.outputs.code == 'true' && (needs.preflight.result == 'success' || needs.preflight.result == 'skipped')
     runs-on: ${{ fromJSON(needs.plan.outputs.runner || '"ubuntu-latest"') }}
-    timeout-minutes: 40   # a shard plans ~240 s; 40 still covers a 900 s suite timeout run twice
+    # A shard plans ~240 s; 40 still covers a 900 s suite timeout run twice. A PC runner runs two
+    # shards side by side at about half a GitHub runner's speed: shard 1 (22 min on GitHub) hit 40 there
+    # on 2026-11-26, so PC-routed shards get 75.
+    timeout-minutes: ${{ contains(needs.plan.outputs.runner, 'afl-queue') && 75 || 40 }}
     strategy:
       # PRs release runner slots promptly; main/manual diagnostics collect all failures.
       fail-fast: ${{ github.event_name == 'pull_request' || github.event_name == 'merge_group' }}
@@ -411,6 +437,11 @@ jobs:
           sparse-checkout: |   # .claude/review (5 GB of review boards) is never read by CI
             /*
             !/.claude/review/
+
+      - name: Epic/MetaHuman files (private repo, docs/EPIC_ASSETS.md)
+        uses: ./.github/actions/epic-assets
+        with:
+          token: ${{ secrets.EPIC_ASSETS_TOKEN || secrets.MERGE_TOKEN }}
 
       - name: Cache Godot
         id: godot-cache
@@ -513,6 +544,11 @@ jobs:
           sparse-checkout: |   # .claude/review (5 GB of review boards) is never read by CI
             /*
             !/.claude/review/
+
+      - name: Epic/MetaHuman files (private repo, docs/EPIC_ASSETS.md)
+        uses: ./.github/actions/epic-assets
+        with:
+          token: ${{ secrets.EPIC_ASSETS_TOKEN || secrets.MERGE_TOKEN }}
 
       - uses: actions/setup-python@v5
         with:

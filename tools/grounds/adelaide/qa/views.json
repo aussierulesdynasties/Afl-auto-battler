@@ -1,0 +1,18 @@
+[
+ {"name": "top", "label": "straight down", "h": 0, "t": 0, "d": 700},
+ {"name": "from_s", "label": "from the south (river)", "h": 0, "t": 50, "d": 600},
+ {"name": "from_n", "label": "from the north (Hill)", "h": 180, "t": 50, "d": 600},
+ {"name": "from_e", "label": "from the east", "h": 270, "t": 50, "d": 600},
+ {"name": "from_w", "label": "from the west", "h": 90, "t": 50, "d": 600},
+ {"name": "from_se", "label": "from the south-east", "h": 315, "t": 60, "d": 500},
+ {"name": "from_sw", "label": "from the south-west", "h": 45, "t": 60, "d": 500},
+ {"name": "from_ne", "label": "from the north-east", "h": 225, "t": 60, "d": 500},
+ {"name": "from_nw", "label": "from the north-west", "h": 135, "t": 60, "d": 500},
+ {"name": "low_s", "label": "low from the footbridge side", "h": 10, "t": 78, "d": 420},
+ {"name": "low_w", "label": "low from the west (War Memorial Dr)", "h": 90, "t": 80, "d": 330},
+ {"name": "low_e", "label": "low from the east (King William Rd)", "h": 270, "t": 80, "d": 330},
+ {"name": "low_n", "label": "low from the north (Hill side)", "h": 180, "t": 80, "d": 330},
+ {"name": "bowl_n", "label": "into the bowl from the north end", "h": 180, "t": 65, "d": 220, "at": [0, -20, 0]},
+ {"name": "bowl_s", "label": "into the bowl from the south end", "h": 0, "t": 65, "d": 220, "at": [0, 20, 0]},
+ {"name": "city", "label": "wide, with the city", "h": 20, "t": 70, "d": 1500}
+]

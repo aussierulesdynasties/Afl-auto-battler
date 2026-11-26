@@ -20,7 +20,7 @@ func _ready() -> void:
 	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
 	UiKit.apply_insets(margin, 12)
 	add_child(margin)
-	_root = UiKit.vbox(9)
+	_root = UiKit.vbox(UiKit.Space.EASY)
 	margin.add_child(_root)
 	get_viewport().size_changed.connect(func():
 		if is_inside_tree() and not UiKit.keyboard_resize(self) and _wide() != _built_wide:
@@ -81,7 +81,7 @@ func _build() -> void:
 		if not listed_ids.has(str(p["id"])):
 			rest.add_child(_row(p, reads, fit, {}, is_full))
 
-	var body: BoxContainer = UiKit.hbox(28) if _built_wide else UiKit.vbox(UiKit.SECTION)
+	var body: BoxContainer = UiKit.hbox(UiKit.Space.SPREAD) if _built_wide else UiKit.vbox(UiKit.SECTION)
 	body.name = "ScoutBody"
 	if _built_wide:
 		# PC: the list and the class side by side, each scrolling its own rows.
@@ -104,7 +104,7 @@ func _build() -> void:
 
 ## A section's heading in your club's ink, with a quiet note after it.
 func _heading(text: String, note: String) -> Control:
-	var h := UiKit.hbox(10)
+	var h := UiKit.hbox(UiKit.Space.ROOM)
 	var t := UiKit.lbl(text, UiKit.H2, UiKit.label_ink(), true)
 	t.autowrap_mode = TextServer.AUTOWRAP_OFF
 	h.add_child(t)
@@ -121,11 +121,11 @@ func _row(p: Dictionary, reads: Dictionary, fit: Dictionary, entry: Dictionary, 
 	var id := str(p["id"])
 	var r: Dictionary = reads.get(id, {})
 	var on_list := not entry.is_empty()
-	var v := UiKit.vbox(2)
+	var v := UiKit.vbox(UiKit.Space.SLIM)
 	v.name = ("ScoutRow_" if on_list else "ClassRow_") + id
 	# Name and who he is on the left, the button beside both lines: the two
 	# lines fill the button's thumb height, so no gap opens under the name.
-	var top := UiKit.hbox(8)
+	var top := UiKit.hbox(UiKit.GAP)
 	var who := UiKit.vbox(0)
 	who.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	who.size_flags_vertical = Control.SIZE_SHRINK_CENTER

@@ -76,7 +76,7 @@ func _build() -> void:
 		_club_sheet()
 		return
 	_offers()
-	var who := UiKit.hbox(8)
+	var who := UiKit.hbox(UiKit.GAP)
 	var with_l := UiKit.ellipsis("Trading with %s" % GameDB.club_name(_club), UiKit.NAME,
 			UiKit.club_name_colour(UiKit.club_ink(_club)), true)
 	with_l.name = "TradingWith"
@@ -97,7 +97,7 @@ func _build() -> void:
 			str(stance.get(GameState.club_phase(_club), ""))], 13, UiKit.MUTED)
 	cycle.name = "TradeClubPhase"
 	_body.add_child(cycle)
-	_body.add_child(UiKit.spacer(4))
+	_body.add_child(UiKit.spacer(UiKit.Space.TIGHT))
 	_package("We give", _mine, "GiveRow_", "Nothing yet. Add one of our picks below.")
 	_package("We get", _theirs, "GetRow_", "Nothing yet. Add one of their picks below.")
 	var verdict := GameState.evaluate_trade(_club, _mine, _theirs)
@@ -136,7 +136,7 @@ func _build() -> void:
 		_build())
 	_body.add_child(go)
 	_body.add_child(UiKit.spacer(UiKit.SECTION - 6))
-	var sides := UiKit.hbox(4)
+	var sides := UiKit.hbox(UiKit.Space.TIGHT)
 	for t in [["theirs", "Their picks"], ["mine", "Our picks"]]:
 		var tb := UiKit.tab(str(t[1]), _side == str(t[0]))
 		tb.name = "TradeSide_" + str(t[0])
@@ -161,7 +161,7 @@ func _offers() -> void:
 		var text := _para(GameState.trade_offer_text(i), 14, UiKit.TEXT)
 		text.name = "Offer_%d" % i
 		_body.add_child(text)
-		var row := UiKit.hbox(8)
+		var row := UiKit.hbox(UiKit.GAP)
 		for b in [["Accept", "OfferAccept_%d" % i, true], ["No thanks", "OfferDecline_%d" % i, false]]:
 			var btn := UiKit.btn(str(b[0]), 14)
 			btn.name = str(b[1])
@@ -190,7 +190,7 @@ func _package(title: String, ids: Array, prefix: String, none: String) -> void:
 		_body.add_child(_para(none, 13, UiKit.MUTED))
 		return
 	for id in ids.duplicate():
-		var row := UiKit.hbox(8)
+		var row := UiKit.hbox(UiKit.GAP)
 		row.name = prefix + str(id).replace(":", "_")
 		var pk := GameState.pick_asset(str(id))
 		var what := _para(pick_label(pk) if not pk.is_empty() else "-", 14, UiKit.TEXT)

@@ -70,6 +70,8 @@ const DIGITS := preload("res://assets/vignette/figures_digits.png")
 ## A Sherrin is about 0.29 m end to end and 0.18 m across.
 const BALL_R := 0.09
 const BALL_LONG := 1.6
+const DEAD_HANDS := 2.0       # m: a dead ball higher than this is at the top of a bounce or throw-up
+const TOSS_APEX := 0.6        # m a ball tossed back to a ball-up's spot rises over its line
 const DROP_T := 0.35          # s: a ball out of a man's hands takes this to reach where it lies
 const DROP_SNAP := 0.25       # m: a smaller gap than this is drawn straight away
 const ROLL_TURN := 8.0         # rad/s: a rolling ball's long axis turns across its way at most this fast
@@ -78,6 +80,14 @@ const ROLL_JUMP := 3.0         # m: a bigger move in one frame is the ball put s
 
 var director: MatchDirector
 var players: Array = []        # [{node, anim, ring}] in director.tokens order
+## An interchange (a rotation, or the man hurt going off): the man coming off jogs to the
+## interchange gate on the far wing (GATE) and is gone; the man coming on runs to his spot from
+## there (Oval3DAnim.run_on). Before, the slot's figure turned into the other man where he stood.
+const GATE_SPEED := 5.0       # m/s of match time the man coming off jogs at
+const GATE_OUT := 3.0         # m past the far boundary line on the centre line: the gate
+var _spares: Array = [[], []] # per side: figures for a man coming off, not in use
+var _leavers: Array = []      # [{p, side, to}] men jogging off now
+var _fig := {}                # what a spare figure is built from: scene, kits, cols, clubs
 var ball: MeshInstance3D
 var camera: Camera3D
 var film: MeshInstance3D  # the broadcast film look (_film)
@@ -87,48 +97,71 @@ var crew: Oval3DCrewMotion     # the clubs' trainers and runners
 var crowd: Oval3DCrowd
 ## The ground's big screens and fence signs (Oval3DScreens): live score, GOAL card, replay.
 var screens: Oval3DScreens
+## The ground's light towers at night (Oval3DTowers; null at the game's own oval).
+var towers: Oval3DTowers
 ## The ground the match is at (VignetteGround.ground_of), set before build(): its model when it
 ## has one (GroundModels), else the stand and crowd.
 var ground := ""
+## The match's crowd (MatchAttendance.crowd), set before build(): the stands fill to its share of
+## the ground's capacity. 0: the old fixed fill (every match the same). Looks only.
+var attendance := 0
 ## Graphics quality (Oval3DQuality: low, medium or high), set before build(). Looks only.
 var quality := Oval3DQuality.HIGH
 var _turf_mat: ShaderMaterial  # the turf's paint (oval3d_ground.gdshader)
 var _crowd_t := 0.0           # s of match the crowd has run (its idle and cheer clock)
-var _goal_on := false          # the director was showing a goal last frame
+var _crowd_seen := 0          # the director's events the crowd has reacted to
+var _run_down_side := -1       # the tackling side of a chase-down being run now, -1 when none
 var _look := Vector3.ZERO
+var _launch_from := Vector3.ZERO  # where the ball left a boot or fist
+var _launch_t := -1.0             # s since it did, -1 once it has joined the flight's line
+const LAUNCH_EASE := 0.12         # s: from boot or fist onto the director's flight
 var _in_hands := false         # the ball was drawn in a man's hands last frame
 var _drop_from := Vector3.ZERO # where it left his hands
 var _drop_t := -1.0            # s into its fall to the turf; -1 when not falling
 var _roll_yaw := 0.0           # the rolling ball's long axis, as a turn about UP
 var _roll := 0.0               # how far it has turned over about that axis
 var _on_turf := false          # it was rolling (or lying) last frame
+var _carry_from := Vector3.INF # where a carried ball (_carried) set off; INF none
+var _carry_to := Vector2.ZERO
 var _settle_t := 0.0           # s since it came out of his hands or the air
 
 
 func build(p_director: MatchDirector, home: String, away: String) -> void:
 	director = p_director
-	# The ground at its own size (MatchDirector.setup sets the same for a match's own ground).
+	# The ground at its own size, on its traced boundary where it has one (MatchDirector.setup sets the
+	# same for a match's own ground).
 	if ground != "":
-		MatchMotion.use_field(GroundModels.field_for(ground))
+		GroundModels.play_at(ground)
 	_environment()
 	_ground()
 	_posts()
 	var slug := GroundModels.slug_for(ground) if ground != "" else ""
+	# A build that leaves the ground's model out (the Web build: docs/ITCH_BUILDS.md, "What each
+	# build carries") plays in the stands every ground without a model has, never in a ring of
+	# seats with no stadium under them.
+	if slug != "" and GroundModels.files(slug).is_empty():
+		push_warning("Oval3D: %s has no ground model in this build; playing in the plain stands" % slug)
+		slug = ""
 	if slug != "":
 		_ground_model(slug, "", home, away)
 	else:
 		_stands(home, away)
 	screens = Oval3DScreens.new()
 	add_child(screens)
-	screens.build(self, get_node_or_null("Ground"), GroundModels.match_fence(), home, away)
+	screens.build(self, get_node_or_null("Ground"), GroundModels.match_fence(), home, away,
+			GroundModels.match_fence_shape(slug))
 	var scene: PackedScene = load(player_glb)
 	# Each club in its home guernsey, as the vignettes dress them (StoppageVignette._dress).
-	var kits := [_kit(GameDB.club_guernsey(home)), _kit(GameDB.club_guernsey(away))]
+	var kits := [_kit(GameDB.club_guernsey(home)), _kit(away_guernsey(home, away))]
+	_fig = {"scene": scene, "kits": kits, "clubs": [home, away]}
 	for t in director.tokens:
 		var side := int(t.get("side", 0))
 		var p := _player(scene, kits[side], GameDB.club_colours(home if side == 0 else away), home if side == 0 else away)
 		_dress(p, t)
 		players.append(p)
+	for side in range(2):
+		# One spare a side ready, so the first interchange builds nothing mid-match.
+		(_spares[side] as Array).append(_spare(side))
 	anim = Oval3DAnim.new(director, players)
 	director.want_contacts = true
 	_crew_seed = hash(home + "|" + away)
@@ -146,9 +179,14 @@ func build(p_director: MatchDirector, home: String, away: String) -> void:
 	mat.roughness = 0.6
 	ball.material_override = mat
 	add_child(ball)
+	if towers != null:
+		# The men, the umpires and the ball throw the towers' shadows (the stadium does not).
+		for p in players + umpires:
+			Oval3DTowers.throws_shadow(p["node"])
+		Oval3DTowers.throws_shadow(ball)
 	camera = Camera3D.new()
 	camera.fov = 30.0
-	camera.far = _far_m if _far_view else 900.0
+	camera.far = maxf(_far_m if _far_view else 0.0, GroundModels.view_far(GroundModels.slug_for(ground) if ground != "" else ""))
 	# Placed in world space, so turning the ground for a change of ends (set_ends) leaves
 	# the camera where the broadcast puts it.
 	camera.top_level = true
@@ -201,8 +239,13 @@ func sync(dt: float) -> void:
 		# A dead ball (a free kick or mark being set up) has no holder in the director but
 		# keeps its hand height; drawn as it is, it would hang in the air. Within a metre of
 		# a player it is in his hands; otherwise it lies on the turf.
-		holder = _nearest(director.ball["pos"], 1.0)
-		resting = holder < 0
+		# Above any man's hands it is the top of a bounce or a throw-up, held there for the
+		# ruckmen's tap: drawn where it is, not dropped to the turf (or into a man's hands) for
+		# that frame and thrown back up by the tap (bug bash 2026-11-23).
+		var up := float(director.ball.get("h", 0.0)) > DEAD_HANDS
+		holder = -1 if up else _nearest(director.ball["pos"], 1.0)
+		resting = holder < 0 and not up
+	_move_leavers(dt)
 	# The umpires first: the players are drawn clear of where they are this frame (_spaced).
 	_move_umpires(dt)
 	if crew != null:
@@ -211,8 +254,12 @@ func sync(dt: float) -> void:
 	for i in range(players.size()):
 		var t: Dictionary = director.tokens[i]
 		var p: Dictionary = players[i]
-		# An interchange puts another man in the slot: his own look and number.
+		# An interchange puts another man in the slot: his own look and number. The man coming
+		# off jogs to the gate, and the man coming on runs to the slot's spot from it.
 		if str(t.get("pid", "")) != str(p.get("pid", "")):
+			if str(p.get("pid", "")) != "":
+				_send_off(i, p)
+				anim.run_on(i, _gate())
 			_dress(p, t)
 		var pos: Vector2 = at[i]
 		var vel: Vector2 = t["vel"]
@@ -224,20 +271,60 @@ func sync(dt: float) -> void:
 	if _ump_ball:
 		# An umpire has it: never a player standing within a metre of it.
 		holder = -1
+	var pending := anim.launch_pending()
 	if _umpire_ball(dt):
 		_in_hands = true
 		_on_turf = false
 		_drop_t = -1.0
+	elif pending != Vector3.INF:
+		# Let go by the director a moment before his boot or fist gets there: still his.
+		ball.position = pending
+		_point_ball(anim.ball_axis(anim.launching()))
+		_in_hands = true
+		_on_turf = false
+		_drop_t = -1.0
+	elif holder < 0 and anim.caught() >= 0:
+		# Marked: in his hands while the director still has him running onto it.
+		_hold_ball(players[anim.caught()])
+		_in_hands = true
+		_on_turf = false
+		_drop_t = -1.0
 	elif holder >= 0 and holder < players.size():
-		_hold_ball(players[holder])
+		var on_him := anim.ball_at(holder)
+		if on_him != Vector3.INF:
+			# His kick or handball has it: on the holding palm, or dropped to his boot.
+			ball.position = on_him
+			if not _point_ball(anim.ball_axis(holder)):
+				_hold_ball(players[holder], false)
+		else:
+			_hold_ball(players[holder])
 		_in_hands = true
 		_on_turf = false
 		_drop_t = -1.0
 	else:
 		var to := Vector3(bp.x, BALL_R if resting else maxf(BALL_R, h), bp.y)
+		if mode == "carry":
+			to = _carried(bp)
+		else:
+			_carry_from = Vector3.INF
 		if mode == "flight":
 			_drop_t = -1.0
-		elif _in_hands and dt > 0.0 and ball.position.distance_to(to) > DROP_SNAP:
+			if _in_hands:
+				# Off his boot or fist: the flight starts where the ball met it and joins the
+				# director's line over LAUNCH_EASE (the line starts at his token, hand height).
+				_launch_from = ball.position
+				_launch_t = 0.0
+			if _launch_t >= 0.0 and dt > 0.0:
+				_launch_t += dt
+				var w := smoothstep(0.0, LAUNCH_EASE, _launch_t)
+				to = _launch_from.lerp(to, w)
+				if w >= 1.0:
+					_launch_t = -1.0
+			var catch := anim.catch_at()
+			if not catch.is_empty():
+				# The last of its flight into the marking hands.
+				to = to.lerp(catch["to"], float(catch["w"]))
+		elif _in_hands and dt > 0.0 and ball.position.distance_to(to) > DROP_SNAP and mode != "carry":
 			# Out of his hands onto the turf (a spill from a tackle, a fumble, a man walking off a
 			# dead ball): it falls from where his hands had it, never jumps there in one frame.
 			_drop_from = ball.position
@@ -341,7 +428,35 @@ func _roll_ball(moved: Vector2, dt: float) -> void:
 	ball.quaternion = target if settle >= 1.0 else ball.quaternion.slerp(target, settle)
 
 
-func _hold_ball(p: Dictionary) -> void:
+## The director sends a dead ball somewhere on its own ("carry", at chest height): a ball-up's
+## ball given back to the umpire's spot, or after a goal the ball back to the centre. Drawn as
+## it really goes (bug bash 2026-11-23: it slid there at 1.2 m with nobody holding it): a ball-up's
+## is tossed, out of his hands in a low arc to the turf at the umpire's spot; after a goal it lies
+## where it was until the play has cut to the replay (Oval3DBroadcast.stinging_in holds the play
+## while the sting runs), and is in the centre when the picture comes back.
+func _carried(bp: Vector2) -> Vector3:
+	if _carry_from == Vector3.INF:
+		_carry_from = ball.position
+		_carry_to = director.ball.get("to", bp)
+	if director.mode == "centre":
+		return Vector3(_carry_from.x, BALL_R, _carry_from.z)
+	var whole := Vector2(_carry_from.x, _carry_from.z).distance_to(_carry_to)
+	var u := 1.0 - clampf(bp.distance_to(_carry_to) / maxf(whole, 0.01), 0.0, 1.0)
+	return Vector3(bp.x, lerpf(maxf(_carry_from.y, BALL_R), BALL_R, u) + 4.0 * TOSS_APEX * u * (1.0 - u), bp.y)
+
+
+## Turn the ball's long axis along `axis` (world). False when `axis` is ZERO (no say).
+func _point_ball(axis: Vector3) -> bool:
+	if axis.length() < 0.01:
+		return false
+	var up := Vector3.UP if absf(axis.normalized().dot(Vector3.UP)) < 0.95 else Vector3.RIGHT
+	ball.look_at(ball.position + axis, up)
+	return true
+
+
+## The ball in his hands: between his palms, its long axis across them. `place` false turns it
+## only (a kick or handball has already put it where it is).
+func _hold_ball(p: Dictionary, place := true) -> void:
 	var skel: Skeleton3D = p["skel"]
 	var hands: Array = p["hands"]
 	var gt := skel.global_transform
@@ -351,24 +466,39 @@ func _hold_ball(p: Dictionary) -> void:
 		palms.append(gt * (pose.origin + pose.basis.y.normalized() * float(p["hand_len"][k]) * 0.6))
 	var l: Vector3 = palms[0]
 	var r: Vector3 = palms[1]
-	ball.position = (l + r) * 0.5
+	# The palms are in the world: the ground turns half a turn when the sides change ends
+	# (set_ends), so in the second and fourth quarters the ball's own (ground) position is not
+	# the world's. Set in ground terms it was drawn mirrored, at the far end of the ground.
+	if place:
+		ball.global_position = (l + r) * 0.5
 	var across := r - l
 	if across.length() > 0.01:
-		ball.look_at(ball.position + across, Vector3.UP)
+		ball.look_at(ball.global_position + across, Vector3.UP)
 
 
-## The crowd's clock, and a goal the moment the director shows one: the scoring side's
-## supporters rise.
+## The crowd's clock, and each moment the director shows, as he shows it: the crowd reacts to
+## goals, near misses, big marks and tackles and the final siren (Oval3DCrowd.on_event). A jump of
+## many events at once (a skip ahead) is let pass, all but the last. A chase-down tackle from
+## behind gets the tackling side's supporters up, the moment he gets his man.
 func _sync_crowd(dt: float) -> void:
 	_crowd_t += dt
 	if crowd == null:
 		return
 	crowd.set_now(_crowd_t)
-	var goal := not director.flash.is_empty() and bool(director.flash.get("goal", false))
-	if goal and not _goal_on and director.emitted > 0:
-		var ev: Dictionary = director.events[director.emitted - 1]
-		crowd.cheer(int(ev.get("side", 0)), _crowd_t)
-	_goal_on = goal
+	if director.emitted < _crowd_seen:
+		_crowd_seen = director.emitted
+	if director.emitted - _crowd_seen > 4:
+		_crowd_seen = director.emitted - 1
+	while _crowd_seen < director.emitted:
+		crowd.on_event(director.events[_crowd_seen], _crowd_t)
+		_crowd_seen += 1
+	if director.chasing_down():
+		var ahead := director.tackle_ahead()
+		if not ahead.is_empty():
+			_run_down_side = int(director.tokens[int(ahead["who"])]["side"])
+	elif _run_down_side >= 0:
+		crowd.cheer(_run_down_side, _crowd_t)
+		_run_down_side = -1
 
 
 ## The sides change ends: +1 when the home side kicks to the far end of the camera's ground
@@ -384,6 +514,16 @@ func set_ends(sign: float) -> void:
 ## for the coming stoppage, instead of a run the picture never showed.
 func umpires_after_cut() -> void:
 	_ump_cut = true
+	# The interchange made while the picture was away is over: the men coming off are gone and
+	# the men coming on are on their spots (the gate turns with the ground as the ends change).
+	for l in _leavers:
+		var q: Dictionary = l["p"]
+		(q["node"] as Node3D).visible = false
+		(_spares[int(l["side"])] as Array).append(q)
+		var i := int(l["slot"])
+		if anim != null and (anim._in[i] as Dictionary).is_empty():
+			anim._gap[i] = Vector2.ZERO
+	_leavers.clear()
 
 
 func _world(v: Vector3) -> Vector3:
@@ -457,18 +597,42 @@ func _environment() -> void:
 func _ground() -> void:
 	var mi := MeshInstance3D.new()
 	var pm := PlaneMesh.new()
-	pm.size = Vector2(2.0 * (MatchMotion.HALF_LEN + FENCE + 1.0), 2.0 * (MatchMotion.HALF_WID + FENCE + 1.0))
+	pm.size = 2.0 * _turf_half()
 	mi.mesh = pm
 	var sm := ShaderMaterial.new()
 	sm.shader = load("res://scripts/ui/match/oval3d_ground.gdshader")
 	sm.set_shader_parameter("half_size", Vector2(MatchMotion.HALF_LEN, MatchMotion.HALF_WID))
 	sm.set_shader_parameter("goal_x", MatchMotion.GOAL_X)
+	# A traced ground's own boundary line (MatchMotion.SHAPE), the paint and the run-off following it.
+	sm.set_shader_parameter("bnd", _coefs(MatchMotion.SHAPE))
+	sm.set_shader_parameter("bnd_n", MatchMotion.SHAPE.size())
 	mi.material_override = sm
 	add_child(mi)
 	_turf_mat = sm
 	turf = Oval3DTurf.new(self, sm, _env, _sun, pm.size * 0.5)
 	add_child(turf)
 	turf.apply("", VignetteKickoff.DAY)
+
+
+## Half the turf plane's size: the field and its run-off (FENCE) and a metre, or on a traced ground the
+## furthest its fence reaches (GroundModels.match_fence_shape), so the turf meets the fence all round.
+func _turf_half() -> Vector2:
+	var half := Vector2(MatchMotion.HALF_LEN + FENCE + 1.0, MatchMotion.HALF_WID + FENCE + 1.0)
+	var f := GroundModels.match_fence_shape(GroundModels.slug_for(ground) if ground != "" else "")
+	for i in 720:
+		var t := TAU * i / 720.0
+		var r := MatchMotion.series_r(f, t) + 1.0 if not f.is_empty() else 0.0
+		half = half.max(Vector2(absf(cos(t)), absf(sin(t))) * r)
+	return half
+
+
+## A Fourier radius as the turf shader takes it: 33 floats, unused ones 0.
+static func _coefs(c: PackedFloat32Array) -> PackedFloat32Array:
+	var out := PackedFloat32Array()
+	out.resize(33)
+	for i in mini(c.size(), 33):
+		out[i] = c[i]
+	return out
 
 
 func _posts() -> void:
@@ -504,10 +668,14 @@ func _posts() -> void:
 func _stands(home: String, away: String) -> void:
 	crowd = Oval3DCrowd.new()
 	crowd.name = "Crowd"
+	var share := MatchAttendance.fill(ground, attendance)
+	if share >= 0.0:
+		crowd.fill = share
 	crowd.mix_d = float(Oval3DQuality.preset(quality)["people_d"])
 	add_child(crowd)
 	crowd.build(MatchMotion.HALF_LEN + FENCE, MatchMotion.HALF_WID + FENCE, STAND_DEPTH, STAND_RISE,
-			GameDB.club_colours(home), GameDB.club_colours(away))
+			GameDB.club_colours(home), GameDB.club_colours(away),
+			GameDB.club_guernsey(home), GameDB.club_guernsey(away))
 	# The fence: a low white wall at the foot of the stand.
 	var fence := MeshInstance3D.new()
 	var fm := CylinderMesh.new()
@@ -540,13 +708,22 @@ func _ground_model(slug: String, base := "", home := "", away := "") -> void:
 	Oval3DQuality.apply_model(quality, root)
 	if GroundModels.has_backdrop(slug, base):
 		_far_m = GroundModels.backdrop_far(slug)
+		_haze_to = GroundModels.backdrop_haze(slug, HAZE_TO)
 		_backdrop_view()
+	towers = Oval3DTowers.new()
+	add_child(towers)
+	towers.build(slug, root, self)
+	towers.set_shadows(int(Oval3DQuality.preset(quality)["tower_shadows"]))
 	if turf == null:   # a bare view (the ground inspector's test): the model alone
 		return
 	turf.set_ground(slug)
 	turf.light_stands(root)
 	_turf_mat.set_shader_parameter("fence_clip", GroundModels.match_fence())
-	_apron_skirt()
+	var fs := GroundModels.match_fence_shape(slug)
+	_turf_mat.set_shader_parameter("fen", _coefs(fs))
+	_turf_mat.set_shader_parameter("fen_n", fs.size())
+	turf.fence_shape(fs)
+	_apron_skirt(fs)
 	if home == "":
 		return
 	var seats := GroundModels.seat_transforms(slug, base)
@@ -554,10 +731,14 @@ func _ground_model(slug: String, base := "", home := "", away := "") -> void:
 		return
 	crowd = Oval3DCrowd.new()
 	crowd.name = "Crowd"
+	var share := MatchAttendance.fill(ground, attendance)
+	if share >= 0.0:
+		crowd.fill = share
 	crowd.mix_d = float(Oval3DQuality.preset(quality)["people_d"])
 	root.add_child(crowd)
 	crowd.build_on_seats(seats, GroundModels.seat_points(slug, base),
-			GameDB.club_colours(home), GameDB.club_colours(away))
+			GameDB.club_colours(home), GameDB.club_colours(away),
+			GameDB.club_guernsey(home), GameDB.club_guernsey(away), root.transform, slug)
 
 
 ## A ground with its surroundings (GroundModels.backdrop): the cameras see out to the skyline and
@@ -570,6 +751,7 @@ const HAZE_TO := 9000.0
 
 var _far_view := false
 var _far_m := GroundModels.BACKDROP_FAR
+var _haze_to := HAZE_TO
 
 
 func _backdrop_view() -> void:
@@ -589,7 +771,7 @@ func _backdrop_haze() -> void:
 	_env.fog_enabled = true
 	_env.fog_mode = Environment.FOG_MODE_DEPTH
 	_env.fog_depth_begin = HAZE_FROM
-	_env.fog_depth_end = HAZE_TO
+	_env.fog_depth_end = _haze_to
 	_env.fog_depth_curve = 0.8
 	_env.fog_density = 1.0
 	_env.fog_aerial_perspective = 0.0
@@ -607,19 +789,24 @@ const SKIRT_DROP := 0.3
 ## no ground drawn between the turf's edge and its wall, and the sky under the world showed through
 ## as a white strip at the foot of the fence. A ring of the turf's apron, from just inside the
 ## match's fence to SKIRT_OUT past it, lies under the model's ground and fills that gap with grass.
-func _apron_skirt() -> void:
+func _apron_skirt(shape := PackedFloat32Array()) -> void:
 	var f := GroundModels.match_fence()
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
 	st.set_normal(Vector3.UP)
-	var n := 180
+	var n := 180 if shape.is_empty() else 720
+	# The fence's half-axes toward angle a (an ellipse's), or its traced radius there, as a scale on the
+	# unit direction: [inside edge, outside edge].
+	var ring := func(a: float) -> Array:
+		var u := Vector3(cos(a), 0.0, sin(a))
+		if shape.is_empty():
+			return [Vector3(u.x * f.x * 0.97, 0.0, u.z * f.y * 0.97), Vector3(u.x * (f.x + SKIRT_OUT), 0.0, u.z * (f.y + SKIRT_OUT))]
+		var r := MatchMotion.series_r(shape, a)
+		return [u * (r - 2.0), u * (r + SKIRT_OUT)]
 	for i in n:
-		var a0 := TAU * i / n
-		var a1 := TAU * (i + 1) / n
-		var p := [Vector3(cos(a0) * f.x * 0.97, 0.0, sin(a0) * f.y * 0.97),
-				Vector3(cos(a1) * f.x * 0.97, 0.0, sin(a1) * f.y * 0.97),
-				Vector3(cos(a1) * (f.x + SKIRT_OUT), 0.0, sin(a1) * (f.y + SKIRT_OUT)),
-				Vector3(cos(a0) * (f.x + SKIRT_OUT), 0.0, sin(a0) * (f.y + SKIRT_OUT))]
+		var r0: Array = ring.call(TAU * i / n)
+		var r1: Array = ring.call(TAU * (i + 1) / n)
+		var p := [r0[0], r1[0], r1[1], r0[1]]
 		for k in [0, 1, 2, 0, 2, 3]:
 			st.add_vertex(p[k])
 	var mi := MeshInstance3D.new()
@@ -628,6 +815,7 @@ func _apron_skirt() -> void:
 	mi.position.y = -SKIRT_DROP
 	var sm := _turf_mat.duplicate() as ShaderMaterial
 	sm.set_shader_parameter("fence_clip", Vector2.ZERO)
+	sm.set_shader_parameter("fen_n", 0)
 	mi.material_override = sm
 	add_child(mi)
 	turf.follow(sm)
@@ -637,6 +825,18 @@ func _apron_skirt() -> void:
 ## straight off disk otherwise. null if it cannot be read.
 static func load_glb(path: String) -> Node3D:
 	return GroundModels.load_glb(path)
+
+
+## The away side's guernsey: its real clash guernsey when the two sides' kits are too alike on the
+## turf (the same call the 2D oval makes, PitchView.kits_for), else its home one. Only a club wearing
+## its current guernsey (not a Legacy season's) and with a clash guernsey on file changes.
+static func away_guernsey(home: String, away: String) -> Dictionary:
+	var g: Dictionary = GameDB.club_guernsey(away)
+	var clash := GameDB.club_clash_kit(away)
+	if g.has("today") and not clash.is_empty() and bool(PitchView.kits_for(home, away)[1].get("clash", false)):
+		g = g.duplicate()
+		g["today"] = clash
+	return g
 
 
 ## One kit material per club: the region fields in the mesh pick skin, hair, guernsey,
@@ -664,9 +864,10 @@ func _kit(kit: Dictionary) -> ShaderMaterial:
 	# The club's current home guernsey, drawn from its photo (data/kits_today.csv), with its
 	# collar and armhole bindings on the guernsey's own edges.
 	var today: Dictionary = kit.get("today", {})
-	if not today.is_empty() and GameDB.kits_today_atlas() != null:
+	var atlas: Texture2D = GameDB.kits_clash_atlas() if today.get("clash", false) else GameDB.kits_today_atlas()
+	if not today.is_empty() and atlas != null:
 		m.set_shader_parameter("kit_design", [float(100 + int(today["cell"]))])
-		m.set_shader_parameter("kit_atlas", GameDB.kits_today_atlas())
+		m.set_shader_parameter("kit_atlas", atlas)
 		m.set_shader_parameter("kit_grid", GameDB.kits_today_grid())
 		m.set_shader_parameter("kit_collar", today["collar"])
 		m.set_shader_parameter("kit_arms", today["armholes"])
@@ -720,13 +921,67 @@ func _number(p: Dictionary, n: int) -> void:
 func _dress(p: Dictionary, t: Dictionary) -> void:
 	var pid := str(t.get("pid", ""))
 	p["pid"] = pid
+	p["num"] = int(t.get("num", -1))
 	_number(p, int(t.get("num", -1)))
 	var who = GameDB.player_by_id(pid) if pid != "" else null
+	p["foot"] = str((who as Dictionary).get("foot", "R")) if who is Dictionary else "R"
 	look(p, GameDB.figure_look(who) if who != null else StoppageVignette.UMPIRE_LOOK)
 	# His own Tripo head, where the director made one (rule 2.99): the MetaHuman head comes off.
 	_head(p, pid)
 	# His real height and weight, and a face of his own (Oval3DBuild; row 202, 2d).
 	Oval3DBuild.apply(p, player_glb, who if who is Dictionary else {}, pid)
+
+
+## A figure for a man of `side` coming off, hidden until used.
+func _spare(side: int) -> Dictionary:
+	var club: String = (_fig["clubs"] as Array)[side]
+	var p := _player(_fig["scene"], (_fig["kits"] as Array)[side], GameDB.club_colours(club), club)
+	(p["node"] as Node3D).visible = false
+	return p
+
+
+## The interchange gate in the director's ground (the oval turns at a change of ends; the gate
+## stays on the wing across from the main camera, where the benches face it).
+func _gate() -> Vector2:
+	var l := to_local(Vector3(0.0, 0.0, -(MatchMotion.HALF_WID + GATE_OUT)))
+	return Vector2(l.x, l.z)
+
+
+## Slot i's man (as drawn now) leaves: a spare figure dressed as him takes his place and pose,
+## and jogs off to the gate (_move_leavers).
+func _send_off(i: int, p: Dictionary) -> void:
+	var side := int(director.tokens[i].get("side", 0))
+	var pool: Array = _spares[side]
+	var q: Dictionary = pool.pop_back() if not pool.is_empty() else _spare(side)
+	_dress(q, {"pid": str(p.get("pid", "")), "num": int(p.get("num", -1))})
+	var node: Node3D = q["node"]
+	node.transform = (p["node"] as Node3D).transform
+	node.visible = true
+	(q["anim"] as AnimationPlayer).play("jog")
+	_leavers.append({"p": q, "side": side, "to": _gate(), "slot": i})
+
+
+## The men coming off jog to the gate, and are gone once there.
+func _move_leavers(dt: float) -> void:
+	for l in _leavers.duplicate():
+		var q: Dictionary = l["p"]
+		var node: Node3D = q["node"]
+		var at := Vector2(node.position.x, node.position.z)
+		var way: Vector2 = (l["to"] as Vector2) - at
+		if way.length() <= GATE_SPEED * dt or dt <= 0.0 and way.length() < 0.1:
+			node.visible = false
+			(_spares[int(l["side"])] as Array).append(q)
+			_leavers.erase(l)
+			continue
+		if dt <= 0.0:
+			continue
+		var step := way.normalized() * GATE_SPEED * dt
+		node.position += Vector3(step.x, 0.0, step.y)
+		node.rotation = Vector3(0.0, rotate_toward(node.rotation.y, atan2(way.x, way.y), 6.0 * dt), 0.0)
+		var ap: AnimationPlayer = q["anim"]
+		if ap.current_animation != "jog":
+			ap.play("jog")
+		ap.advance(dt * GATE_SPEED / LOOP_SPEED)
 
 
 ## Skin, hair colour and hair style on one figure. l: {"skin", "hair"} palette indices
@@ -784,7 +1039,7 @@ static func hair_shells() -> Dictionary:
 			continue
 		var style := str(mi.name).trim_prefix("hair_")
 		var bone := (parent as BoneAttachment3D).bone_name
-		_shells[style] = {"mesh": _refit_hair(mi.mesh, mi.transform, bone), "bone": bone, "at": mi.transform}
+		_shells[style] = {"mesh": _lodded(_refit_hair(mi.mesh, mi.transform, bone)), "bone": bone, "at": mi.transform}
 		var tex := hair_glb.get_base_dir().path_join("hair_tex/%s.png" % style)
 		if ResourceLoader.exists(tex):
 			_shells[style]["tex"] = load(tex)
@@ -1412,6 +1667,10 @@ static func _middle_at(mid: PackedFloat32Array, y: float) -> float:
 ## x and y are -SKIN_REACH: a small number, so the edge's smoothing stays a pixel wide). CUSTOM2: x metres in front of the body's middle, so a triangle over a seam knows
 ## which side it is on; yzw on that skin, the nearest guernsey corner's pattern coordinates. Once
 ## per mesh; every player shares the copy.
+## How far from an edge's own line a binding can reach (the widest is 3 cm, Canberra's collar).
+const BIND_REACH := 0.045
+
+
 static func _kit_edges(m: Mesh) -> Mesh:
 	if _edged.has(m):
 		return _edged[m]
@@ -1505,6 +1764,18 @@ static func _kit_edges(m: Mesh) -> Mesh:
 	# The cloth under the drawn hem is worn as shorts: its moulded folds are smoothed away.
 	var gbs := am.surface_get_blend_shape_arrays(gs)
 	_smooth_hem(ga, gbs, gi, wid, pts.size(), faces, level)
+	# The guernsey hangs as cloth: it spans the body's hollows instead of following every muscle.
+	# The shorts as cloth too: the front spans the groin from thigh to thigh.
+	var sa := am.surface_get_arrays(ss) if ss >= 0 else []
+	var sbs := am.surface_get_blend_shape_arrays(ss) if ss >= 0 else []
+	var shorts_sets := []
+	if ss >= 0:
+		_flat_front(sa, sbs)
+		shorts_sets = [sa[Mesh.ARRAY_VERTEX]]
+		for sb in sbs:
+			shorts_sets.append(sb[Mesh.ARRAY_VERTEX])
+	_drape(ga, gbs, gi, wid, pts.size(), faces, low - 0.03, shorts_sets)
+	gv = ga[Mesh.ARRAY_VERTEX]
 	# The guernsey's pattern coordinates (as the shader reads them) near its neck and armholes,
 	# lent to the skin there so the skin can wear the guernsey up to the drawn edge.
 	var guv: PackedVector2Array = ga[Mesh.ARRAY_TEX_UV]
@@ -1537,8 +1808,12 @@ static func _kit_edges(m: Mesh) -> Mesh:
 				var r := _nearest_arm(p, arms)
 				if kind == 1.0:
 					# The bindings are a few centimetres at most: only the top of the guernsey is measured.
-					e.x = n.x + float(neck["out"])
-					e.y = r.x
+					# Only near its own edge: a point 15 cm from the neck, down the back by the armhole,
+					# has a neck point nearest whose way in runs away from it and read as outside the
+					# neck, so the collar drew a patch over the shoulder blade (2026-11-22, the clash
+					# collars); the same down the side seam below the armpit.
+					e.x = n.x + float(neck["out"]) if n.y < BIND_REACH else FAR
+					e.y = r.x if r.y < BIND_REACH else FAR
 				elif n.y < SKIN_REACH:
 					# Round the armholes the model's own edge is the line (re-cut smooth in the
 					# model): skin there stays skin, and only the neck's line counts.
@@ -1576,8 +1851,8 @@ static func _kit_edges(m: Mesh) -> Mesh:
 	for b in range(am.get_blend_shape_count()):
 		out.add_blend_shape(am.get_blend_shape_name(b))
 	for s in range(am.get_surface_count()):
-		var a := ga if s == gs else am.surface_get_arrays(s)
-		var bsa := gbs if s == gs else am.surface_get_blend_shape_arrays(s)
+		var a := ga if s == gs else (sa if s == ss else am.surface_get_arrays(s))
+		var bsa := gbs if s == gs else (sbs if s == ss else am.surface_get_blend_shape_arrays(s))
 		var flags := _custom_format(am, s)
 		if s == gs:
 			a[Mesh.ARRAY_VERTEX] = gv
@@ -1591,6 +1866,381 @@ static func _kit_edges(m: Mesh) -> Mesh:
 		out.surface_set_material(s, am.surface_get_material(s))
 		out.surface_set_name(s, am.surface_get_name(s))
 	_edged[m] = out
+	return out
+
+
+## Taubin passes that ease the knit's surface once it hangs.
+const DRAPE_SMOOTH := 30
+## The chest band the guernsey falls from: DRAPE_CHEST under the guernsey's top (the armpits) to
+## DRAPE_ABOVE over it.
+const DRAPE_CHEST := 0.12
+const DRAPE_ABOVE := 0.10
+## How far the hem stands outside the shorts it covers.
+const DRAPE_OVER := 0.005
+## Passes of easing over the strip that rests on the shorts, after it is pushed outside them.
+const DRAPE_HEM_SMOOTH := 20
+
+## The guernsey hangs from the chest and the shoulder blades (2026-11-22: the white of Sydney's
+## guernsey showed a lumpy pot belly). The club cuts (tools/kits/guernsey3d/recut5.py) smooth the
+## cloth below the chest, but in doing so push its front up to 2 cm out past the body at the belly
+## (measured at the centre line: the cut's chest 15.6 cm in front of the body's middle, its belly
+## 17.3 cm, the body's own belly 15.5 cm), so a white guernsey showed a pot belly. A worn guernsey
+## falls from the chest: below the chest band (DRAPE_CHEST under the armpits) no part of its front
+## stands further forward than the chest in the same 2 cm column, and no part of its back further
+## back than the shoulder blades; down through the hem strip, which the shader paints as shorts, it
+## still stays DRAPE_OVER outside the shorts under it. Then the knit is eased (Taubin, which keeps its
+## size; the hem's own edge keeps its line), so the lumps of muscle under it go. Nothing moves at the
+## neck and armholes (above top, eased in over 7 cm, where the skin wears the guernsey up to its
+## drawn edge). The rest pose and every build morph hang from their own shape (shorts_sets: the
+## shorts' points in the rest pose, then in each morph).
+static func _drape(ga: Array, bsa: Array, gi: PackedInt32Array, wid: PackedInt32Array,
+		count: int, faces: Dictionary, top: float, shorts_sets: Array) -> void:
+	var gv: PackedVector3Array = ga[Mesh.ARRAY_VERTEX]
+	var nbr := []
+	nbr.resize(count)
+	for i in range(count):
+		nbr[i] = PackedInt32Array()
+	for e: Vector2i in faces:
+		nbr[e.x].append(e.y)
+		nbr[e.y].append(e.x)
+	var edge := {}
+	for e: Vector2i in faces:
+		if faces[e] == 1:
+			edge[e.x] = true
+			edge[e.y] = true
+	var one := PackedInt32Array()
+	one.resize(count)
+	for i in range(gv.size()):
+		one[wid[i]] = i
+	var sets := [ga]
+	sets.append_array(bsa)
+	for arrs: Array in sets:
+		var vs: PackedVector3Array = arrs[Mesh.ARRAY_VERTEX]
+		var p := PackedVector3Array()
+		p.resize(count)
+		var wt := PackedFloat32Array()
+		wt.resize(count)
+		var lo := INF
+		var hi := -INF
+		var xlo := INF
+		for w in range(count):
+			p[w] = vs[one[w]]
+			lo = minf(lo, p[w].y)
+			hi = maxf(hi, p[w].y)
+			xlo = minf(xlo, p[w].x)
+			wt[w] = smoothstep(top, top - 0.07, p[w].y)
+		# One middle for the whole guernsey, the chest's (a belly that stands out would move a
+		# level's own middle forward with it).
+		var mid := _depth_middle(p)
+		var m0 := 0.0
+		for j in range(11):
+			m0 += _middle_at(mid, top - 0.05 + 0.01 * j) / 11.0
+		# Front and back, per 2 cm column: the furthest the chest (and shoulder blades) stand out,
+		# from DRAPE_CHEST under the guernsey's top to DRAPE_ABOVE over it.
+		var nx := int(ceil(-2.0 * xlo / 0.02)) + 2
+		var capf := PackedFloat32Array()
+		capf.resize(nx)
+		capf.fill(-INF)
+		var capb := capf.duplicate()
+		for w in range(count):
+			if p[w].y > top + DRAPE_ABOVE or p[w].y < top - DRAPE_CHEST:
+				continue
+			var x := clampi(int((p[w].x - xlo) / 0.02), 0, nx - 1)
+			var d := p[w].z - m0
+			if d > 0.0:
+				capf[x] = maxf(capf[x], d)
+			else:
+				capb[x] = maxf(capb[x], -d)
+		# The shorts under the hem, per column and 1 cm level: the cloth stays DRAPE_OVER outside them.
+		var nl := int(ceil((hi - lo) / 0.01)) + 1
+		var flf := PackedFloat32Array()
+		flf.resize(nl * nx)
+		flf.fill(-INF)
+		var flb := flf.duplicate()
+		var si := sets.find(arrs)
+		if si >= 0 and si < shorts_sets.size():
+			for q: Vector3 in shorts_sets[si]:
+				if q.y < lo or q.y > hi:
+					continue
+				var k := clampi(int((q.y - lo) / 0.01), 0, nl - 1)
+				var x := clampi(int((q.x - xlo) / 0.02), 0, nx - 1)
+				var d := q.z - m0
+				if d > 0.0:
+					flf[k * nx + x] = maxf(flf[k * nx + x], d + DRAPE_OVER)
+				else:
+					flb[k * nx + x] = maxf(flb[k * nx + x], -d + DRAPE_OVER)
+		var dz := PackedVector3Array()
+		dz.resize(count)
+		for w in range(count):
+			if wt[w] <= 0.0 or p[w].y >= top - DRAPE_CHEST:
+				continue
+			var k := clampi(int((p[w].y - lo) / 0.01), 0, nl - 1)
+			var x := clampi(int((p[w].x - xlo) / 0.02), 0, nx - 1)
+			var d := p[w].z - m0
+			var out := absf(d)
+			var cap: float = capf[x] if d > 0.0 else capb[x]
+			var fl: float = flf[k * nx + x] if d > 0.0 else flb[k * nx + x]
+			var want := out
+			if cap > 0.0:
+				want = minf(want, cap)
+			want = maxf(want, fl)
+			if want != out:
+				# Eased in over the 4 cm under the chest band, so the cloth leaves the chest smoothly.
+				var e := smoothstep(top - DRAPE_CHEST, top - DRAPE_CHEST - 0.04, p[w].y)
+				dz[w] = Vector3(0.0, 0.0, signf(d) * (want - out) * wt[w] * e)
+		# The pull eased across neighbours, so no crease shows where columns and levels meet.
+		for it in range(8):
+			var t := dz.duplicate()
+			for w in range(count):
+				if wt[w] <= 0.0 or nbr[w].is_empty():
+					continue
+				var avg := Vector3.ZERO
+				for u in nbr[w]:
+					avg += dz[u]
+				t[w] = (dz[w] + avg / float(nbr[w].size())) * 0.5
+			dz = t
+		for w in range(count):
+			p[w] += dz[w]
+		# Then the knit's surface is eased: the lumps of muscle under it go (the hem's own edge
+		# keeps its line).
+		for it in range(DRAPE_SMOOTH):
+			for f in [0.5, -0.53]:
+				var t := p.duplicate()
+				for w in range(count):
+					if wt[w] <= 0.0 or nbr[w].is_empty() or edge.has(w):
+						continue
+					var avg := Vector3.ZERO
+					for u in nbr[w]:
+						avg += p[u]
+					t[w] = p[w] + f * wt[w] * (avg / float(nbr[w].size()) - p[w])
+				p = t
+		# The easing pulls some hem points back inside the shorts (their waistband showed through the
+		# hem in bumps): last of all, every point stays DRAPE_OVER outside the shorts anywhere within a
+		# column and a level of it.
+		var floor_at := {}
+		for w in range(count):
+			if wt[w] <= 0.0 or p[w].y >= top - DRAPE_CHEST:
+				continue
+			var k := clampi(int((p[w].y - lo) / 0.01), 0, nl - 1)
+			var x := clampi(int((p[w].x - xlo) / 0.02), 0, nx - 1)
+			var d := p[w].z - m0
+			var fl := -INF
+			for kk in range(maxi(k - 1, 0), mini(k + 2, nl)):
+				for xx in range(maxi(x - 1, 0), mini(x + 2, nx)):
+					fl = maxf(fl, flf[kk * nx + xx] if d > 0.0 else flb[kk * nx + xx])
+			if fl > absf(d):
+				p[w].z = m0 + signf(d) * fl
+			if fl > -INF:
+				floor_at[w] = fl
+		# Pushed out point by point, the strip over the shorts crumpled (creases across the lower belly):
+		# smoothed again, each pass held outside the shorts, it settles over them as one cloth.
+		for it in range(DRAPE_HEM_SMOOTH):
+			var t := p.duplicate()
+			for w: int in floor_at:
+				if edge.has(w) or nbr[w].is_empty():
+					continue
+				var avg := Vector3.ZERO
+				for u in nbr[w]:
+					avg += p[u]
+				# depth only: sliding the points up or down would carry the pattern with them (wavy hoops)
+				t[w].z = p[w].z + 0.5 * wt[w] * (avg.z / float(nbr[w].size()) - p[w].z)
+				var d := t[w].z - m0
+				if float(floor_at[w]) > absf(d):
+					t[w].z = m0 + signf(d) * float(floor_at[w])
+			p = t
+		for i in range(vs.size()):
+			vs[i] = p[wid[i]]
+		arrs[Mesh.ARRAY_VERTEX] = vs
+		var ns: PackedVector3Array = arrs[Mesh.ARRAY_NORMAL]
+		if ns == null or ns.is_empty():
+			continue
+		var acc := PackedVector3Array()
+		acc.resize(count)
+		for f in range(0, gi.size(), 3):
+			var a := wid[gi[f]]
+			var b := wid[gi[f + 1]]
+			var c := wid[gi[f + 2]]
+			var fn := (p[c] - p[a]).cross(p[b] - p[a])
+			acc[a] += fn
+			acc[b] += fn
+			acc[c] += fn
+		for i in range(vs.size()):
+			if wt[wid[i]] > 0.0 and acc[wid[i]].length_squared() > 0.0:
+				var n := acc[wid[i]].normalized()
+				ns[i] = n if n.dot(ns[i]) >= 0.0 else -n
+		arrs[Mesh.ARRAY_NORMAL] = ns
+
+
+## The shorts' front over the groin (2026-11-22: the shorts read as briefs). The body's shorts are
+## its own skin, so at the groin they stood up to 1 cm proud of the thighs' fronts. Shorts are cloth
+## stretched from one thigh to the other: within FLAT_REACH of the middle no point stands further
+## forward than the thighs' fronts at its level (FLAT_REACH to 10 cm out), eased out to nothing at
+## FLAT_REACH and above the groin (FLAT_UP); the pull is eased across neighbours so the cloth
+## moves as one piece and never folds. Rest pose and every build alike.
+const FLAT_REACH := 0.07
+## How far above the fork of the legs the groin's front is flattened (eased out over 5 cm more).
+const FLAT_UP := 0.17
+## How much of the bulge past the thighs' line is kept (cloth over the groin is not quite flat).
+const FLAT_KEEP := 0.25
+## The most a point is pressed back (the bulge is about a centimetre).
+const FLAT_MOST := 0.012
+static func _flat_front(sa: Array, sbs: Array) -> void:
+	var sv: PackedVector3Array = sa[Mesh.ARRAY_VERTEX]
+	var si: PackedInt32Array = sa[Mesh.ARRAY_INDEX]
+	var weld := {}
+	var wid := PackedInt32Array()
+	wid.resize(sv.size())
+	var count := 0
+	for i in range(sv.size()):
+		var k := Vector3i((sv[i] * 1e5).round())
+		if not weld.has(k):
+			weld[k] = count
+			count += 1
+		wid[i] = weld[k]
+	var one := PackedInt32Array()
+	one.resize(count)
+	for i in range(sv.size()):
+		one[wid[i]] = i
+	var nbr := []
+	nbr.resize(count)
+	for i in range(count):
+		nbr[i] = {}
+	for f in range(0, si.size(), 3):
+		for c in range(3):
+			var a := wid[si[f + c]]
+			var b := wid[si[f + (c + 1) % 3]]
+			nbr[a][b] = true
+			nbr[b][a] = true
+	var sets := [sa]
+	sets.append_array(sbs)
+	for arrs: Array in sets:
+		var vs: PackedVector3Array = arrs[Mesh.ARRAY_VERTEX]
+		var p := PackedVector3Array()
+		p.resize(count)
+		var lo := INF
+		var hi := -INF
+		for w in range(count):
+			p[w] = vs[one[w]]
+			lo = minf(lo, p[w].y)
+			hi = maxf(hi, p[w].y)
+		var nl := int(ceil((hi - lo) / 0.01)) + 1
+		# The thighs' front faces only (facing forward), never the insides of the legs.
+		var ns_in: PackedVector3Array = arrs[Mesh.ARRAY_NORMAL] if arrs[Mesh.ARRAY_NORMAL] != null else PackedVector3Array()
+		var thigh := PackedFloat32Array()
+		thigh.resize(nl)
+		thigh.fill(-INF)
+		for w in range(count):
+			var ax := absf(p[w].x)
+			if ax >= FLAT_REACH and ax < 0.10 and (ns_in.is_empty() or ns_in[one[w]].z > 0.5):
+				var k := clampi(int((p[w].y - lo) / 0.01), 0, nl - 1)
+				thigh[k] = maxf(thigh[k], p[w].z)
+		# The groin: from the fork of the legs (the lowest point on the middle line) up FLAT_UP.
+		var fork := INF
+		for w in range(count):
+			if absf(p[w].x) < 0.01:
+				fork = minf(fork, p[w].y)
+		# The thighs' fronts eased over 5 cm of height, so no level shows as a step.
+		var th := thigh.duplicate()
+		for k in range(nl):
+			var sum := 0.0
+			var n := 0
+			for j in range(maxi(0, k - 2), mini(nl, k + 3)):
+				if thigh[j] > -INF:
+					sum += thigh[j]
+					n += 1
+			th[k] = sum / n if n > 0 else -INF
+		var wt := PackedFloat32Array()
+		wt.resize(count)
+		var dz := PackedFloat32Array()
+		dz.resize(count)
+		for w in range(count):
+			var f := clampf((p[w].y - lo) / 0.01, 0.0, float(nl - 1))
+			var k := mini(int(f), nl - 2)
+			if th[k] == -INF or th[k + 1] == -INF:
+				continue
+			var plane := lerpf(th[k], th[k + 1], f - float(k))
+			# Every point standing out of the thighs' line is pressed back towards it, in order (a point
+			# in front stays in front), so the bulge flattens without folding.
+			var d := p[w].z - plane
+			if d <= 0.0:
+				continue
+			# Not the fork's own underside (its first 3 cm, eased over 4 cm more).
+			wt[w] = smoothstep(FLAT_REACH, FLAT_REACH - 0.03, absf(p[w].x)) \
+					* smoothstep(fork + FLAT_UP + 0.05, fork + FLAT_UP - 0.01, p[w].y) \
+					* smoothstep(fork + 0.03, fork + 0.07, p[w].y)
+			dz[w] = -minf(d * (1.0 - FLAT_KEEP), FLAT_MOST) * wt[w]
+		var before := p.duplicate()
+		var moved := {}
+		for w in range(count):
+			if absf(dz[w]) > 1e-5:
+				p[w].z += dz[w]
+		# The corners round a moved one turn with it too.
+		for w in range(count):
+			if absf(dz[w]) > 1e-5:
+				moved[w] = true
+				for u in nbr[w]:
+					moved[u] = true
+		for i in range(vs.size()):
+			vs[i] = p[wid[i]]
+		arrs[Mesh.ARRAY_VERTEX] = vs
+		var ns: PackedVector3Array = arrs[Mesh.ARRAY_NORMAL]
+		if ns == null or ns.is_empty():
+			continue
+		# Each normal turned by as much as the faces round it turned (the faces' own normals before
+		# and after), so the crowded faces of the fork, which never moved, cannot spoil it.
+		var n0 := _face_normals(before, si, wid, count)
+		var n1 := _face_normals(p, si, wid, count)
+		for i in range(vs.size()):
+			var w := wid[i]
+			if moved.has(w) and n0[w].length_squared() > 0.0 and n1[w].length_squared() > 0.0:
+				var a := n0[w].normalized()
+				var b := n1[w].normalized()
+				if a.dot(b) > 0.999999:
+					continue
+				var ax := a.cross(b)
+				if ax.length_squared() < 1e-12:
+					continue
+				ns[i] = ns[i].rotated(ax.normalized(), a.angle_to(b)).normalized()
+		arrs[Mesh.ARRAY_NORMAL] = ns
+
+
+## Per welded corner, the sum of its faces' normals (area weighted).
+static func _face_normals(p: PackedVector3Array, si: PackedInt32Array, wid: PackedInt32Array,
+		count: int) -> PackedVector3Array:
+	var acc := PackedVector3Array()
+	acc.resize(count)
+	for f in range(0, si.size(), 3):
+		var a := wid[si[f]]
+		var b := wid[si[f + 1]]
+		var c := wid[si[f + 2]]
+		var fn := (p[c] - p[a]).cross(p[b] - p[a])
+		acc[a] += fn
+		acc[b] += fn
+		acc[c] += fn
+	return acc
+
+
+static var _lods := {}
+## Off only for a capture that compares the players with and without their far detail levels.
+static var player_lods := true
+
+
+## `m` with its far detail levels made again. The import made them, but the body is rebuilt at
+## load (club_body, _skull, _kit_edges) and a rebuilt mesh keeps only its full detail, so every
+## player was drawn whole at any distance and in every shadow band. Same corners and attributes:
+## each level is only a shorter list of the same triangles. Once per mesh; every player shares it.
+static func _lodded(m: Mesh) -> Mesh:
+	if not player_lods:
+		return m
+	if _lods.has(m):
+		return _lods[m]
+	var am := m as ArrayMesh
+	var out: Mesh = m
+	if am != null:
+		var im := ImporterMesh.from_mesh(am)
+		im.generate_lods(60.0, 25.0, [])
+		out = im.get_mesh()
+	_lods[m] = out
 	return out
 
 
@@ -2323,7 +2973,7 @@ func _player(scene: PackedScene, kit: ShaderMaterial, cols: Array, club := "") -
 	# Every surface wears the kit except the boots and the eyes, which keep their own material.
 	for mi in node.find_children("*", "MeshInstance3D", true, false):
 		var m := mi as MeshInstance3D
-		m.mesh = _kit_edges(_skull(club_body(m.mesh, club)))
+		m.mesh = _lodded(_kit_edges(_skull(club_body(m.mesh, club))))
 		for s in range(m.mesh.get_surface_count()):
 			var own := m.mesh.surface_get_material(s)
 			if own == null or not own.resource_name in [BOOT_MATERIAL, EYE_MATERIAL]:
@@ -2347,6 +2997,8 @@ func _player(scene: PackedScene, kit: ShaderMaterial, cols: Array, club := "") -
 			if lib.has_animation(n):
 				lib.remove_animation(n)
 			lib.add_animation(n, loops[n])
+	# The broadcast-made clips held inside a real body's joint limits (once per clip).
+	ClipLimits.apply(ap, skel)
 	ap.callback_mode_process = AnimationMixer.ANIMATION_CALLBACK_MODE_PROCESS_MANUAL
 	ap.play("idle")
 	# The club ring at his feet: allegiance and a thumb target from any angle.
@@ -2391,8 +3043,20 @@ func _add_umpires(scene: PackedScene) -> void:
 		if role == "field":
 			_number(u, Oval3DCrew.field_number(_crew_seed, fields))
 			fields += 1
+		if role == "goal" or role == "boundary":
+			# The crew's own clips (Oval3DCrew.clips): a goal umpire's signals, a boundary
+			# umpire's throw-in.
+			var ap: AnimationPlayer = u["anim"]
+			var lib := ap.get_animation_library("")
+			var own := Oval3DCrew.clips(ap.get_node(ap.root_node).get_path_to(u["skel"]))
+			for n in own:
+				if not lib.has_animation(n):
+					lib.add_animation(n, own[n])
 		var at: Vector2 = spots[k][1]
 		(u["node"] as Node3D).position = Vector3(at.x, 0.0, at.y)
+		if role == "goal":
+			# His flags, stowed in a post's padding at his end (Oval3DGoalUmpire).
+			Oval3DGoalUmpire.setup(self, u, signf(at.x), _crew_seed + k)
 		umpires.append(u)
 
 
@@ -2443,6 +3107,21 @@ func _umpire_spots() -> Array:
 			y = maxf(y, 2.0) if end > 0.0 else minf(y, -2.0)
 		var reach := (VignetteGround.A + 0.9) * sqrt(maxf(0.0, 1.0 - pow(y / VignetteGround.L, 2.0)))
 		out[i][1] = Vector2(y * sx, reach * wing * sy)
+	if MatchMotion.shaped():
+		# On a traced boundary: a boundary umpire just over the real line at his spot along it (as the
+		# vignette's stand 0.9 m outside its ellipse), a goal umpire just behind the real goal line, a field
+		# umpire inside the real line.
+		for i in range(out.size()):
+			var at: Vector2 = out[i][1]
+			match str(out[i][0]):
+				"boundary":
+					var side := signf(at.y) if at.y != 0.0 else 1.0
+					at.y = side * (MatchMotion.edge_y(at.x, side) + 0.9)
+				"goal":
+					at.x = signf(at.x) * (MatchMotion.GOAL_X + 0.5)
+				_:
+					at = MatchMotion.clamp_to_oval(at, 3.0)
+			out[i][1] = at
 	return out
 
 
@@ -2474,6 +3153,18 @@ const UMP_SETUP_TRUST := 0.7
 const UMP_SQUARE := 3.0
 ## A ball-up or throw-in: the lift of the ball from his chest, played at UMP_LIFT_RATE.
 const UMP_T_LIFT := 0.45
+## The boundary umpire's throw-in (Oval3DCrew.THROW_IN, keyed from 2025 broadcasts): from the
+## ball at his chest he lets it go overhead at THROW_T_REL, timed to the director's throw-in (its
+## `in`, right to a frame once `sure`): he starts as soon as it could go in (`soonest`) and waits
+## at the bottom of his dip until it is going.
+const THROW_T_REL := 1.45
+## The bottom of the dip, held from THROW_T_BOTTOM to THROW_T_DRIVE in the clip.
+const THROW_T_BOTTOM := 0.75
+const THROW_T_DRIVE := 1.0
+## At most this much quicker than the broadcast's pace (a quicker throw's arms snap); a throw still
+## short of letting go keeps the ball in his hands until he does (_umpire_clip).
+const THROW_RATE_MAX := 1.6
+var _ump_tempo := 1.0
 const UMP_LIFT_RATE := 2.0
 ## On his mark within this many metres; the ball comes to his hands within UMP_TAKE of it.
 const UMP_SET := 0.3
@@ -2502,6 +3193,9 @@ var _ump_from := Vector3.ZERO # the ball's gap from his hands when he took it
 var _ump_off := Vector3.ZERO  # let go: his hands less the director's ball, easing out
 var _ump_off_t := -1.0
 var _ump_hit_from := Vector3.ZERO  # a bounce: where the ball left his hands
+var _ump_gone := Vector2.INF  # the stoppage (its spot) whose ball he has put in play; INF none
+var _ump_free := -1           # the field umpire who paid the free being taken (index in umpires)
+var _ump_free_k := -1         # ...and that free's event
 
 
 ## The umpire who takes stoppage `st` (director.stoppage_now), -1 for none. Kept for the whole
@@ -2526,6 +3220,42 @@ func _stoppage_umpire(st: Dictionary) -> int:
 	return best
 
 
+## At a free kick the field umpire nearest its mark (for a ball out of bounds, the boundary
+## umpire, who is on that wing; never one taking a stoppage) runs in and
+## stands FREE_SIDE metres off it, across the ground toward the middle, watching the mark until
+## the ball is kicked or the taker plays on (director.free_now). The real umpire also signals
+## the free; no clip exists for that yet (art freeze, 2026-11-21).
+const FREE_SIDE := 2.5
+
+
+func _free_umpire(fr: Dictionary) -> int:
+	if fr.is_empty():
+		_ump_free = -1
+		_ump_free_k = -1
+		return -1
+	if _ump_free >= 0 and _ump_free_k == int(fr["k"]):
+		return _ump_free
+	var at: Vector2 = fr["at"]
+	var want := "boundary" if str(fr.get("kind", "")) in ["out_on_full", "last_disposal"] else "field"
+	var best := -1
+	var best_d := INF
+	for u in umpires:
+		if str(u["role"]) != want or (u as Dictionary).has("clip") or int(u["k"]) == _ump_job:
+			continue
+		var n: Node3D = u["node"]
+		var d := Vector2(n.position.x, n.position.z).distance_to(at)
+		if d < best_d:
+			best_d = d
+			best = int(u["k"])
+	_ump_free = best
+	_ump_free_k = int(fr["k"])
+	return best
+
+
+func _free_spot(at: Vector2) -> Vector2:
+	return at + Vector2(0.0, -FREE_SIDE if at.y > 0.0 else FREE_SIDE)
+
+
 ## [mark, facing] for the umpire taking stoppage `st`: a centre bounce from BOUNCE_REACH back
 ## across the ground (the rucks come in from up and down the ground, never through his run); a
 ## ball-up just off the ball; a throw-in just over the line, his back to the play, as the boundary
@@ -2538,8 +3268,7 @@ func _stoppage_mark(st: Dictionary) -> Array:
 		"throwup":
 			return [at - Vector2(0.0, 0.6), Vector2(0.0, 1.0)]
 		_:
-			var out := Vector2(at.x / (MatchMotion.HALF_LEN * MatchMotion.HALF_LEN), at.y / (MatchMotion.HALF_WID * MatchMotion.HALF_WID))
-			out = out.normalized() if out.length() > 0.0 else Vector2(0.0, 1.0)
+			var out := MatchMotion.fence_normal(at) if at.length() > 0.0 else Vector2(0.0, 1.0)
 			return [at + out * 0.6, out]
 
 
@@ -2552,26 +3281,48 @@ func _move_umpires(frame_dt: float) -> void:
 	_ump_time = director.time
 	if dt > 0.0:
 		_ump_step = dt
+	# Director seconds to a real one (2 through the pauses, rule 2.93): a throw-in keeps real time.
+	if dt > 0.0 and frame_dt > 0.0:
+		_ump_tempo = dt / frame_dt
 	var spots := _umpire_spots()
 	var bp: Vector2 = director.ball["pos"]
 	var st: Dictionary = director.stoppage_now()
 	var flying := str(director.ball.get("mode", "")) == "flight"
 	if st.is_empty() and (_ump_job < 0 or not (umpires[_ump_job] as Dictionary).has("clip")):
 		_ump_job = -1
+	if st.is_empty() or (st["at"] as Vector2) != _ump_gone:
+		_ump_gone = Vector2.INF
 	if not st.is_empty():
 		_ump_job = _stoppage_umpire(st)
+	var fr: Dictionary = director.free_now() if st.is_empty() else {}
+	var paid := _free_umpire(fr)
 	var held := false
 	var first := (not _ump_placed or _ump_cut) and not st.is_empty()
 	_ump_placed = _ump_placed or first
 	_ump_cut = false
 	_ump_snapped = first
+	_goal_signals()
 	for u in umpires:
 		var node: Node3D = u["node"]
 		var ap: AnimationPlayer = u["anim"]
 		var k := int(u["k"])
-		if u.has("clip"):
-			held = _umpire_clip(u, st, dt) or held
+		if u.has("routine"):
+			# A goal umpire's flags after his signal: his own, in real time.
+			Oval3DGoalUmpire.step(self, u, frame_dt)
 			continue
+		if u.has("clip"):
+			# A score's signal and a throw-in keep real time: they are the umpire's own, not the
+			# play's, and the pauses run at double speed (rule 2.93); the throw is timed to the
+			# director's in real seconds (_ump_tempo).
+			var own_dt := frame_dt if str((u["clip"] as Dictionary).get("kind", "")) in ["signal", "throw"] else dt
+			held = _umpire_clip(u, st, own_dt) or held
+			if u.has("flag"):
+				# Flags still out from the last score as he signals this one.
+				Oval3DGoalUmpire.cloth(u, frame_dt)
+			continue
+		if u.has("flag") and signf((spots[k][1] as Vector2).x) != float(u["flag"]["end"]):
+			# The goal umpires have changed ends: his flags are kept at this end's post now.
+			Oval3DGoalUmpire.set_end(self, u, signf((spots[k][1] as Vector2).x))
 		if u.has("out") and _umpire_blend_out(u, dt):
 			continue
 		var at := Vector2(node.position.x, node.position.z)
@@ -2582,6 +3333,9 @@ func _move_umpires(frame_dt: float) -> void:
 			var m := _stoppage_mark(st)
 			want = m[0]
 			face = m[1]
+		var paying := k == paid
+		if paying:
+			want = _free_spot(fr["at"])
 		if first:
 			# The first picture (the opening bounce), or the first after a cut: everyone already
 			# on his spot.
@@ -2591,7 +3345,7 @@ func _move_umpires(frame_dt: float) -> void:
 		var step := want - at
 		var vel := Vector2.ZERO
 		if dt > 0.0 and step.length() > 0.05:
-			var move := step.limit_length((UMP_SPRINT if job else UMP_SPEED) * dt)
+			var move := step.limit_length((UMP_SPRINT if job or paying else UMP_SPEED) * dt)
 			at += move
 			vel = move / dt
 		node.position = Vector3(at.x, 0.0, at.y)
@@ -2613,15 +3367,32 @@ func _move_umpires(frame_dt: float) -> void:
 			if to.length() > 0.5 or face != Vector2.ZERO:
 				node.rotation.y = rotate_toward(node.rotation.y, atan2(to.x, to.y), turn)
 		var ball_near := bp.distance_to(st["at"]) < UMP_TAKE if job else false
-		if on_mark and ball_near and not flying:
+		# Once he has put this stoppage's ball in play it is the ruckmen's: at the top of a bounce
+		# or a throw-up the director holds it dead at their hands' height for the tap, right over
+		# his mark, and he must not take it back (bug bash 2026-11-23: it was drawn back in his
+		# hands, or on the turf mid-bounce, for a frame before the tap).
+		if on_mark and ball_near and not flying and _ump_gone == Vector2.INF:
 			# On his mark with the ball: it is in his hands, held at his chest (the clip's
 			# first frame) until he puts it in play.
 			held = true
+			var throw := str(st["kind"]) == "throwin" and ap.has_animation(Oval3DCrew.THROW_IN)
 			if ap.current_animation != UMP_CLIP:
 				ap.play(UMP_CLIP, 0.25)
 			ap.seek(0.0, false)
 			ap.advance(maxf(dt, 1e-4))
 			var going := _bounce_in(st)
+			if throw and float(st.get("soonest", INF)) / _ump_tempo <= THROW_T_REL:
+				# The ball may go in as soon as his throw could get it away: he starts, and waits
+				# at the bottom of his dip until it is sure to (_umpire_clip keeps time with it).
+				# From his hold (the ball at his chest, as the throw starts) into the throw; when
+				# the ball goes in sooner than his whole throw takes even quickened (a quick
+				# restart late in a match), into its dip part-way, never past the bottom.
+				var real_in := float(st["in"]) / _ump_tempo if bool(st.get("sure", false)) else INF
+				var t0 := clampf(THROW_T_REL - real_in * THROW_RATE_MAX, 0.0, THROW_T_BOTTOM)
+				ap.play(Oval3DCrew.THROW_IN, 0.2 if t0 > 0.0 else 0.1)
+				ap.seek(t0, true)
+				u["clip"] = {"kind": "throw", "t": t0, "rate": 1.0, "end": ap.current_animation_length}
+				continue
 			var squared := face == Vector2.ZERO or absf(angle_difference(node.rotation.y, atan2(face.x, face.y))) < 0.3
 			if str(st["kind"]) == "bounce" and is_finite(going) and squared:
 				# The bounce is coming: the clip starts, and keeps time with it (_umpire_clip).
@@ -2645,6 +3416,43 @@ func _move_umpires(frame_dt: float) -> void:
 	_umpire_ball_state(held)
 
 
+## A score signalled: once the ball has crossed the line (the director's emit), the goal umpire
+## at that end turns to the ground and signals it, a goal with both index fingers (the right arm
+## straight out at the shoulder, the left hand at the waist) or a behind with one (2025 AFL
+## broadcasts). Once per score.
+func _goal_signals() -> void:
+	var shot := director.shot_now()
+	if shot.is_empty() or not str(shot.get("phase", "")) in ["emit", "celebrate"]:
+		return
+	var to: Vector2 = shot["to"]
+	for u in umpires:
+		if str(u.get("role", "")) != "goal" or u.has("clip") or int(u.get("signalled", -1)) == int(shot["k"]):
+			continue
+		var node: Node3D = u["node"]
+		if signf(node.position.x) != signf(to.x):
+			continue
+		u["signalled"] = int(shot["k"])
+		# Still at his flags from the last score: he leaves off and signals this one where he is.
+		# With both flags still out a goal is waved with them (his hands are full for the
+		# signal); a behind's one arm points with its flag.
+		Oval3DGoalUmpire.stop(u)
+		if not u.has("home"):
+			u["home"] = Vector2(node.position.x, node.position.z)
+		var ap: AnimationPlayer = u["anim"]
+		var clip := Oval3DCrew.GOAL_SIGNAL if bool(shot["goal"]) else Oval3DCrew.BEHIND_SIGNAL
+		if bool(shot["goal"]) and Oval3DGoalUmpire.holding(u) == 2:
+			clip = Oval3DCrew.GOAL_WAVE
+		if not ap.has_animation(clip):
+			return
+		u.erase("out")
+		# Out of his stand; out of a wave with his flags (they come down at a hand's pace).
+		ap.play(clip, 0.45 if Oval3DGoalUmpire.holding(u) > 0 else 0.15)
+		ap.seek(0.0, false)
+		# Facing up the ground, to the field umpires: turned to it as he signals (_umpire_clip).
+		u["clip"] = {"kind": "signal", "t": 0.0, "rate": 1.0, "end": ap.current_animation_length,
+				"goal": bool(shot["goal"]), "yaw": atan2(-node.position.x, -node.position.z)}
+
+
 ## One frame of an umpire's one-off clip (a bounce, or the lift of a ball-up or throw-in). True
 ## while the ball is still his (in his hands, or on its way from them to the turf at a bounce).
 func _umpire_clip(u: Dictionary, st: Dictionary, dt: float) -> bool:
@@ -2663,12 +3471,40 @@ func _umpire_clip(u: Dictionary, st: Dictionary, dt: float) -> bool:
 	elif bouncing:
 		# After the ball hits the turf, the follow-through runs at the take's own speed.
 		rate = 1.0
+	var throwing := str(c["kind"]) == "throw"
+	if throwing and before < THROW_T_REL:
+		# Keeping time with the director's throw-in: let go as the ball goes up. Once the pack
+		# has gone (the ball already in flight) he gets it away at once.
+		var going := float(st.get("in", 0.0)) if str(st.get("kind", "")) == "throwin" else 0.0
+		going = maxf(going - _ump_step, 0.0) / _ump_tempo
+		# Down into the dip at the take's pace or quicker; at the bottom (where the broadcasts'
+		# umpires pause) he waits as long as the ball needs; the drive up never stalls.
+		var lo := 1.0 if before < THROW_T_BOTTOM else (0.0 if before < THROW_T_DRIVE else 0.6)
+		rate = clampf((THROW_T_REL - before) / maxf(going, 0.02), lo, THROW_RATE_MAX)
+	elif throwing:
+		rate = 1.0
 	c["t"] = before + dt * rate
+	if c.has("yaw"):
+		var n: Node3D = u["node"]
+		n.rotation.y = rotate_toward(n.rotation.y, float(c["yaw"]), Oval3DGoalUmpire.TURN_RATE * dt)
 	if float(c["t"]) >= float(c["end"]):
+		if str(c["kind"]) == "signal" and u.has("flag"):
+			# Signalled: on to his flags (Oval3DGoalUmpire), from where the signal left him.
+			u.erase("clip")
+			Oval3DGoalUmpire.start(u, bool(c.get("goal", true)), u["home"])
+			return false
 		_end_umpire_clip(u)
 		return false
 	# Advanced, never sought: a seek would leave the blend in from his stand where it was.
 	ap.advance(float(c["t"]) - before)
+	if throwing:
+		# His until the director throws it up: on time his hands are overhead letting it go; when
+		# the throw came too soon for the whole of his (a quick restart late in a match) it leaves
+		# his hands as they drive up (_umpire_let_go eases it onto its flight), never stuck in
+		# them while it should be in the air.
+		if str(director.ball.get("mode", "")) == "flight":
+			c["flown"] = true
+		return not c.get("flown", false)
 	if not bouncing:
 		return false
 	if float(c["t"]) < UMP_T_REL:
@@ -2676,8 +3512,13 @@ func _umpire_clip(u: Dictionary, st: Dictionary, dt: float) -> bool:
 	if before < UMP_T_REL:
 		_ump_hit_from = _umpire_hands(u)
 	# Out of his hands and onto the turf where the director bounces it, and there until the
-	# director's bounce takes it up (a frame or two when his clip runs ahead of it).
-	return str(director.ball.get("mode", "")) != "flight"
+	# director's bounce takes it up (a frame or two when his clip runs ahead of it). Once it has
+	# gone up it is never his again in this clip: at the top of the bounce the director holds it
+	# dead at the ruckmen's hands for the tap, and it was pulled back to the turf for a frame
+	# (bug bash 2026-11-23).
+	if str(director.ball.get("mode", "")) == "flight":
+		c["up"] = true
+	return not bool(c.get("up", false))
 
 
 ## Director seconds to the bounce of stoppage `st` for the umpire's clip to keep time with, less
@@ -2750,6 +3591,9 @@ func _umpire_ball_state(held: bool) -> void:
 	if not held and _ump_ball and ball != null:
 		_ump_off_t = 0.0
 		_ump_off = ball.global_position
+		var st: Dictionary = director.stoppage_now()
+		if not st.is_empty():
+			_ump_gone = st["at"]
 	_ump_ball = held
 
 
@@ -2785,12 +3629,15 @@ func _umpire_ball(dt: float) -> bool:
 			f = 1.0
 		want = _ump_hit_from.lerp(turf, f)
 		_ump_pick = -1.0
-	if _ump_pick >= 0.0 and dt > 0.0:
-		_ump_pick += dt
+	if _ump_pick >= 0.0:
+		if dt > 0.0:
+			_ump_pick += dt
 		var f := clampf(_ump_pick / _ump_pick_len, 0.0, 1.0)
 		# The gap it started at eases shut while it moves with his hands: a hand moving fast
-		# as the clip starts never leaves the ball behind.
+		# as the clip starts never leaves the ball behind. Never through the turf: as he bends to
+		# a ball lying on it his hands drop, and the gap carried it under (bug bash 2026-11-23).
 		want += _ump_from * (1.0 - f * f * (3.0 - 2.0 * f))
+		want.y = maxf(want.y, global_position.y + BALL_R)
 		if f >= 1.0:
 			_ump_pick = -1.0
 	ball.global_position = want

@@ -1,9 +1,11 @@
 extends Control
-## After the Fitzroy merger your list is over the era's spots: you pick who
-## goes (director 2026-11-15: "I pick, delist screen"). Rival clubs cut by
-## their own rule (GameState._era_trim_rivals). The hub opens this screen until
-## the list fits; a career that reaches Round 1 without it has the club delist
-## the rest by that rule (GameState._merger_cut_by_club).
+## Your list is over the season's spots: you pick who goes. It began with
+## the Fitzroy merger (director 2026-11-15: "I pick, delist screen") and opens
+## whenever a Legacy season has fewer spots than your list (director
+## 2026-11-25, "You pick"). Rival clubs cut by their own rule
+## (GameState._era_trim_rivals). The hub opens this screen until the list
+## fits; a career that reaches Round 1 without it has the club delist the rest
+## by that rule (GameState._merger_cut_by_club).
 
 var _root: VBoxContainer
 var _going: Array = []   # ids you marked to go
@@ -21,7 +23,7 @@ func _ready() -> void:
 	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
 	UiKit.apply_insets(margin, 12)
 	add_child(margin)
-	_root = UiKit.vbox(8)
+	_root = UiKit.vbox(UiKit.GAP)
 	margin.add_child(_root)
 	get_viewport().size_changed.connect(func():
 		if is_inside_tree() and not UiKit.keyboard_resize(self):
@@ -54,9 +56,9 @@ func _build() -> void:
 		return
 	UiKit.clear(_root)
 	# No way round it: Back leaves for the title, as the hub's does.
-	_root.add_child(UiKit.top_bar("After the merger", false))
+	_root.add_child(UiKit.top_bar("After the merger" if GameState.list_cut_after_merger() else "List cut", false))
 	var needs := GameState.merger_cut_needs()
-	var body := UiKit.vbox(6)
+	var body := UiKit.vbox(UiKit.Space.CLOSE)
 	body.name = "MergerRows"
 	body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	body.add_child(_hero())
@@ -69,12 +71,12 @@ func _build() -> void:
 		var head := UiKit.lbl(("Senior list" if kind == "" else "Category A rookies") + "  (%d to go)" % int(needs[kind]),
 				UiKit.H2, UiKit.EMPH, true)
 		head.name = "MergerHead_" + ("senior" if kind == "" else "rookie")
-		body.add_child(UiKit.spacer(4))
+		body.add_child(UiKit.spacer(UiKit.Space.TIGHT))
 		body.add_child(head)
 		var rows := _list().filter(func(q): return str(q.get("rookie_list", "")) == kind)
 		rows.sort_custom(func(a, b):
-			if int(a.get("overall", 0)) != int(b.get("overall", 0)):
-				return int(a.get("overall", 0)) > int(b.get("overall", 0))
+			if int(Rating.ovr(a, 0)) != int(Rating.ovr(b, 0)):
+				return int(Rating.ovr(a, 0)) > int(Rating.ovr(b, 0))
 			return str(a["id"]) < str(b["id"]))
 		var full := _picked(kind) >= int(needs[kind])
 		for p in rows:
@@ -86,7 +88,7 @@ func _build() -> void:
 ## The one figure the screen is about: how many are still to go.
 func _hero() -> Control:
 	var left := maxi(0, GameState.merger_cut_left() - _going.size())
-	var h := UiKit.hbox(12)
+	var h := UiKit.hbox(UiKit.Space.PAD)
 	h.name = "MergerLeft"
 	h.add_child(UiKit.club_marker(GameState.my_club, 36.0))
 	var fig := UiKit.figure(str(left), UiKit.HERO, UiKit.club_vivid(GameState.my_club))
@@ -103,13 +105,25 @@ func _hero() -> Control:
 
 func _lead(needs: Dictionary) -> Control:
 	var list := _list()
-	var from_fit := list.filter(func(q): return str(q.get("merged_from", "")) != "").size()
-	var text := "%d of %s's players have joined our list. A club can list %d senior players in %d, and we have %d." % [
-			from_fit, GameDB.club_name(LegacyRollover.MERGED),
-			RookieList.senior_spots(), GameState.season_year, RookieList.senior_count(list)]
-	if needs.has("A"):
-		text += " We have %d Category A rookies for %d spots." % [RookieList.cat_a_count(list), RookieList.cat_a_spots()]
-	text += " The ones we delist are free to sign with any club."
+	var text := ""
+	if GameState.list_cut_after_merger():
+		var from_fit := list.filter(func(q): return str(q.get("merged_from", "")) != "").size()
+		text = "%d of %s's players have joined our list. A club can list %d senior players in %d, and we have %d." % [
+				from_fit, GameDB.club_name(LegacyRollover.MERGED),
+				RookieList.senior_spots(), GameState.season_year, RookieList.senior_count(list)]
+		if needs.has("A"):
+			text += " We have %d Category A rookies for %d spots." % [RookieList.cat_a_count(list), RookieList.cat_a_spots()]
+		text += " The ones we delist are free to sign with any club."
+	else:
+		# One fact a line (the list, the rookies, what happens to them).
+		var lines: PackedStringArray = []
+		if needs.has(""):
+			lines.append("A club can list %d senior players in %d, and we have %d." % [
+					RookieList.senior_spots(), GameState.season_year, RookieList.senior_count(list)])
+		if needs.has("A"):
+			lines.append("We have %d Category A rookies for %d spots." % [RookieList.cat_a_count(list), RookieList.cat_a_spots()])
+		lines.append("The ones we delist are free to sign with any club.")
+		text = "\n".join(lines)
 	var l := _para(text, UiKit.BODY, UiKit.TEXT)
 	l.name = "MergerLead"
 	return l
@@ -121,25 +135,25 @@ func _row(p: Dictionary, full: bool) -> Control:
 	var marked := _going.has(id)
 	var card := PanelContainer.new()
 	card.name = "MergerRow_" + id
-	var quiet := UiKit.style(Color.TRANSPARENT, 8, 0)
+	var quiet := UiKit.style(Color.TRANSPARENT, UiKit.GAP, 0)
 	quiet.set_border_width_all(0)
 	quiet.border_width_bottom = 1
 	quiet.border_color = UiKit.LINE
-	quiet.content_margin_top = 8
-	quiet.content_margin_bottom = 8
+	quiet.content_margin_top = UiKit.GAP
+	quiet.content_margin_bottom = UiKit.GAP
 	card.add_theme_stylebox_override("panel", quiet)
-	var v := UiKit.vbox(3)
+	var v := UiKit.vbox(UiKit.Space.THIN)
 	card.add_child(v)
-	var top := UiKit.hbox(8)
+	var top := UiKit.hbox(UiKit.GAP)
 	v.add_child(top)
-	var info := UiKit.vbox(2)
+	var info := UiKit.vbox(UiKit.Space.SLIM)
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top.add_child(info)
 	# The name gets the row's full width; the role and the side sit under it.
 	var who := UiKit.ellipsis(GameDB.player_display_name(p), UiKit.NAME, UiKit.BAD if marked else UiKit.TEXT, true)
 	who.name = "PlayerName_" + id
 	info.add_child(NameLink.tappable(who, id))
-	var h := UiKit.hbox(8)
+	var h := UiKit.hbox(UiKit.GAP)
 	info.add_child(h)
 	h.add_child(UiKit.role_chip(Ratings.role_tag(p)))
 	# Which side he came from, in that club's colour: the merger's two halves.
@@ -153,7 +167,7 @@ func _row(p: Dictionary, full: bool) -> Control:
 	var left := int(p.get("contract_years", 1))
 	# Two lines, broken at a fixed place, so no line ends or starts with a "·".
 	info.add_child(UiKit.lbl("%d OVR  ·  %d POT  ·  age %d" % [
-			int(p.get("overall", 0)), int(p.get("potential", p.get("overall", 0))), int(p.get("age", 0))],
+			int(Rating.ovr(p, 0)), int(p.get("potential", Rating.ovr(p, 0))), int(p.get("age", 0))],
 			UiKit.SECONDARY, UiKit.MUTED))
 	info.add_child(UiKit.lbl("%s  ·  %s" % [
 			"%d season%s left" % [left, "" if left == 1 else "s"] if left > 0 else "out of contract",

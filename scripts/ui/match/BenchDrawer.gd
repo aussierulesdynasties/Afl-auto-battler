@@ -37,12 +37,7 @@ class Tab extends Button:
 
 	func _draw() -> void:
 		var pill := Rect2(0.0, size.y - BenchDrawer.TAB_PILL_H, size.x, BenchDrawer.TAB_PILL_H)
-		var box := StyleBoxFlat.new()
-		box.bg_color = Color(UiKit.BG, 0.92)
-		box.border_color = Color(PitchView.RING_COLOUR, 0.55 if not drawer.is_open else 0.95)
-		box.set_border_width_all(1)
-		box.set_corner_radius_all(4)
-		draw_style_box(box, pill)
+		draw_style_box(UiKit.ground_tag(Color(PitchView.RING_COLOUR, 0.55 if not drawer.is_open else 0.95)), pill)
 		var fs := UiKit.px(UiKit.SECONDARY)
 		var word := "Bench"
 		var w := UiKit.BOLD.get_string_size(word, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
@@ -275,12 +270,8 @@ func _draw_panel(ci: CanvasItem) -> void:
 	if not is_open or not has_bench():
 		return
 	var pr := panel_rect()
-	var box := StyleBoxFlat.new()
-	box.bg_color = UiKit.BG      # solid: the discs behind must not show through the names
-	box.border_color = UiKit.LINE
-	box.set_border_width_all(1)
-	box.set_corner_radius_all(4)
-	ci.draw_style_box(box, pr)
+	# Solid: the discs behind must not show through the names.
+	ci.draw_style_box(UiKit.ground_tag(UiKit.LINE, true), pr)
 	var col_w := pr.size.x * 0.5
 	var fs := UiKit.px(UiKit.SECONDARY)
 	var fine := UiKit.px(UiKit.FINE)

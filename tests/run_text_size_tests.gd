@@ -80,11 +80,31 @@ func _run() -> void:
 	await _t("_test_feed_whole_lines")
 	await _t("_test_weakness_mark")
 	await _t("_test_state_words")
+	await _t("_test_oval_words_grow")
 	UK.apply_text_size("standard")
 	print(Ran.line("Text size", self))
 	for f in _failures:
 		print("  FAIL: " + f)
 	quit(0 if _failures.is_empty() else 1)
+
+
+## The words drawn on the oval (a surname under a disc, the caption on one)
+## follow the text size as every label does (UI Batch 4).
+func _test_oval_words_grow() -> void:
+	var PV = load("res://scripts/ui/PitchView.gd")
+	for tr in [12.0, 16.0, 22.0]:
+		UK.apply_text_size("standard")
+		var name0: int = PV.role_label_size(tr)
+		var cap0: int = PV.caption_size(tr, false)
+		var turn0: int = PV.caption_size(tr, true)
+		UK.apply_text_size("largest")
+		var name1: int = PV.role_label_size(tr)
+		var cap1: int = PV.caption_size(tr, false)
+		var turn1: int = PV.caption_size(tr, true)
+		_check(name1 == UK.px(name0) and name1 > name0, "discs of %.0f: a surname grows at Largest (%d -> %d)" % [tr, name0, name1])
+		_check(cap1 == UK.px(cap0) and cap1 > cap0 and turn1 == UK.px(turn0) and turn1 > turn0,
+				"discs of %.0f: the caption grows at Largest (%d -> %d, turnover %d -> %d)" % [tr, cap0, cap1, turn0, turn1])
+	UK.apply_text_size("standard")
 
 
 ## Each size is its step; anything unknown reads as Standard.
@@ -98,6 +118,10 @@ func _test_scale() -> void:
 		for fs in [UK.FINE, UK.BODY, UK.NAME, UK.H1, 44]:
 			_check(UK.px(fs) == roundi(fs * s), "%s: %d px renders at %d" % [key, fs, UK.px(fs)])
 			_check(UK.px(fs) >= fs, "%s: no size shrinks (%d)" % [key, fs])
+		# Nothing renders under 13 at Standard (director, 2026-11-25): 11 and 12
+		# come out as 13 does, at every size step.
+		_check(UK.px(UK.TINY) == UK.px(13) and UK.px(12) == UK.px(13) and UK.px(13) == roundi(13 * s),
+				"%s: nothing renders under 13 (TINY %d, 12 at %d, 13 at %d)" % [key, UK.px(UK.TINY), UK.px(12), UK.px(13)])
 	_check(is_equal_approx(UK.TEXT_SCALE["standard"], 1.0), "Standard leaves every size as it was")
 	UK.apply_text_size("huge")
 	_check(UK.text_size() == "standard" and is_equal_approx(UK.text_scale, 1.0), "an unknown size reads as Standard")

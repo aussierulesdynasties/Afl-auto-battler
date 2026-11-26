@@ -65,6 +65,7 @@ func _run() -> void:
 	await _t("_test_screens")
 	await _t("_test_overlays")
 	await _t("_test_main_menu")
+	await _t("_test_cold_boot_forge")
 	await _t("_test_draft")
 	await _t("_test_match")
 	await _t("_test_crawl")
@@ -438,6 +439,36 @@ func _test_overlays() -> void:
 
 
 # ---------------------------------------------------------------------------
+# Cold boot: the game starts on the menu scene itself (project.godot's main
+# scene), not through Router.go, so nothing is on the stack yet. Club Forge,
+# opened from that menu, must still step back to it (director, 2026-10-13:
+# "Back button in club forge still doesn't work"; row 180).
+# ---------------------------------------------------------------------------
+func _test_cold_boot_forge() -> void:
+	for way in WAYS:
+		_state.reset()
+		_router.stack = []
+		change_scene_to_file("res://scenes/Main.tscn")
+		await _settle(8)
+		var menu := current_scene
+		var why: String = await _click_named(menu, "ClubForge")
+		await _settle(8)
+		var on_forge: bool = why == "" and _router.current() == "forge"
+		_check(on_forge, "cold boot: Club Forge opens from the menu (%s)" % why)
+		if not on_forge:
+			_table.append("cold boot forge | %s | did not open %s" % [way, why])
+			continue
+		var scene := current_scene
+		var btn: Control = scene.find_child("TopBarBack", true, false)
+		why = await _leave(way, btn)
+		await _settle(10)
+		var ok: bool = why == "" and _router.current() == "main" and current_scene != scene \
+				and current_scene != null and current_scene.find_child("ClubForge", true, false) != null
+		_check(ok, "cold boot: Club Forge Back by %s returns to the menu (%s; now %s, stack %s)" % [way, why, _router.current(), str(_router.stack)])
+		_table.append("cold boot forge | %s | %s" % [way, "ok" if ok else "FAIL %s now=%s stack=%s" % [why, _router.current(), str(_router.stack)]])
+
+
+# ---------------------------------------------------------------------------
 # Main menu: its sheets, then a lone Back does nothing and never quits
 # ---------------------------------------------------------------------------
 func _test_main_menu() -> void:
@@ -587,10 +618,16 @@ func _test_match() -> void:
 			continue
 		var depth3: int = (_router.stack as Array).size()
 		var vignette: Node = root.find_child("FarewellVignette", true, false)
-		if way == "click" and vignette != null:
-			# A tap skips a farewell; then Continue is clear.
-			await _click(vignette as Control)
+		if vignette != null:
+			# A legend's farewell goes first (the skip rule): its Continue, or
+			# Back by this way, closes it and stays on the match; then full time.
+			if way == "click":
+				await _click(root.find_child("FarewellContinue", true, false) as Control)
+			else:
+				await _leave(way, null)
 			await _settle(30)
+			_check(root.find_child("FarewellVignette", true, false) == null and _router.current() == "match",
+					"match full time: %s closes a legend's farewell and stays on the match" % way)
 		# A press conference the result raised would open its own screen over
 		# the hub; this case is about leaving full time, so it is skipped.
 		_state.skip_media_conference()

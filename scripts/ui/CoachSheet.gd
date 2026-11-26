@@ -16,7 +16,7 @@ static func open(host: Control, c: Dictionary, on_close: Callable = Callable()) 
 	var sc := v.get_parent()
 	sc.remove_child(v)
 	var gutter := MarginContainer.new()
-	gutter.add_theme_constant_override("margin_right", 14)
+	gutter.add_theme_constant_override("margin_right", UiKit.Space.LOOSE)
 	gutter.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	gutter.add_child(v)
 	sc.add_child(gutter)
@@ -34,8 +34,8 @@ static func open(host: Control, c: Dictionary, on_close: Callable = Callable()) 
 	v.add_child(UiKit.lbl("  ·  ".join(who), UiKit.SMALL, UiKit.MUTED))
 
 	# What kind of coach: each skill as a grade, then how he suits his job.
-	v.add_child(UiKit.spacer(4))
-	var skills := UiKit.vbox(2)
+	v.add_child(UiKit.spacer(UiKit.Space.TIGHT))
+	var skills := UiKit.vbox(UiKit.Space.SLIM)
 	skills.name = "CoachSkills"
 	v.add_child(skills)
 	for key in Coaches.SKILLS:
@@ -56,9 +56,9 @@ static func open(host: Control, c: Dictionary, on_close: Callable = Callable()) 
 	# he retired - the same person, whichever name the game is showing.
 	var played: Dictionary = c.get("played", {})
 	if not played.is_empty():
-		v.add_child(UiKit.spacer(6))
+		v.add_child(UiKit.spacer(UiKit.Space.CLOSE))
 		v.add_child(UiKit.section("Playing career"))
-		var pc := UiKit.vbox(2)
+		var pc := UiKit.vbox(UiKit.Space.SLIM)
 		pc.name = "CoachPlaying"
 		v.add_child(pc)
 		for line in playing_lines(played):
@@ -67,9 +67,9 @@ static func open(host: Control, c: Dictionary, on_close: Callable = Callable()) 
 	# His coaching career, as far as this game knows it.
 	var stints: Array = c.get("stints", [])
 	if not stints.is_empty():
-		v.add_child(UiKit.spacer(6))
+		v.add_child(UiKit.spacer(UiKit.Space.CLOSE))
 		v.add_child(UiKit.section("Coaching career"))
-		var list := UiKit.vbox(2)
+		var list := UiKit.vbox(UiKit.Space.SLIM)
 		list.name = "CoachCareer"
 		v.add_child(list)
 		for s in stints:
@@ -149,7 +149,7 @@ static func _wrapped(text: String) -> Label:
 
 
 static func _row(label: String, value: String) -> Control:
-	var row := UiKit.hbox(8)
+	var row := UiKit.hbox(UiKit.GAP)
 	var l := UiKit.lbl(label, UiKit.BODY, UiKit.TEXT)
 	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(l)
