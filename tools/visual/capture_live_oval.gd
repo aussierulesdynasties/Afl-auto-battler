@@ -34,7 +34,7 @@ func _run() -> void:
 	# for the next drawn frame would never end.
 	OS.low_processor_usage_mode = false
 	var UK = load("res://scripts/ui/UiKit.gd")
-	UK.apply_appearance("dark")
+	UK.apply_palette()
 	var Squad_ = load("res://scripts/sim/Squad.gd")
 	var Sim = load("res://scripts/sim/MatchSim.gd")
 	var Marks = load("res://scripts/ui/match/PlayerMarks.gd")

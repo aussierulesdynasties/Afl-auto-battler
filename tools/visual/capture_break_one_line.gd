@@ -59,7 +59,7 @@ func _run() -> void:
 	state.autosave_enabled = false
 	state.save_path = "user://capture_break_one_line.save"
 	state.settings_path = "user://capture_break_one_line.cfg"
-	UK.apply_appearance("dark")
+	UK.apply_palette()
 	var pc := _w >= 760
 	if pc:
 		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)

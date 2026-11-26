@@ -19,7 +19,7 @@ and renders are rebuilt on demand and git-ignored.
 4. `python3 kit/clear.py <dir>`: every stand front, building, tower and screen must sit outside the boundary fence
    (a straight stand's chord cuts inside a curved fence unless it is set back).
 5. `BLENDER=<blender 5.2> kit/make.sh <slug>`: textures, GLB and seat files into `model/`, proofs into `render/`,
-   review boards into `.claude/review/<slug>/` (top-down over the satellite, turntable stills, seats and boundary
+   review boards into `.claude/review/<slug>/` (commit those to the private review archive, never here) (top-down over the satellite, turntable stills, seats and boundary
    views, an orbit film).
 
 ## The plan (`<slug>.json`)
@@ -53,3 +53,6 @@ up, sunk into the concrete with its pans through the concourse ceiling).
 New seat colour names go in `SEAT_COLOURS` in `scripts/ui/match/Oval3D.gd` (the build prints each mean).
 
 Stadium only, as for the other grounds: no turf, goalposts, nets, sponsor boards, lettering or crowd.
+
+Models copied into `assets/grounds/<slug>/` are published with `tools/ground_assets.sh publish`, never committed
+here (docs/GROUND_ASSETS.md).

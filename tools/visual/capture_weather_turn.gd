@@ -41,7 +41,7 @@ func _run() -> void:
 	state.autosave_enabled = false
 	state.save_path = "user://capture_weather_turn.save"
 	state.settings_path = "user://capture_weather_turn.cfg"
-	UK.apply_appearance("dark")
+	UK.apply_palette()
 	root.size = Vector2i(_w, _h)
 	DisplayServer.window_set_size(Vector2i(_w, _h))
 	var sim = null

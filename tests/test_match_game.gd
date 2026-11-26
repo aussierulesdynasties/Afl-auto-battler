@@ -107,8 +107,6 @@ func run() -> void:
 	_t("_test_bomb_card_shows_the_dice")
 	_t("_test_forward_archetypes")
 	_t("_test_every_call_two_sided")
-	GameDB.skip_ovr_overrides = false
-	GameDB.reload()
 	print(Ran.line("Match game", self))
 
 
@@ -370,7 +368,9 @@ func _test_authenticity_events() -> void:
 			"A 50 stops at the goal line rather than marching through it")
 
 	var mro := _sim(7001)
-	var offender: Dictionary = (mro.squads[0] as Squad).ground[0]
+	# A copy: the squad's players are GameDB's own, and a real Cat left on
+	# discipline 1 changed every later match in this suite (found 2026-11-26).
+	var offender: Dictionary = ((mro.squads[0] as Squad).ground[0] as Dictionary).duplicate(true)
 	var victim: Dictionary = (mro.squads[1] as Squad).ground[0]
 	(offender["attr"] as Dictionary)["discipline"] = 1
 	for i in range(800):

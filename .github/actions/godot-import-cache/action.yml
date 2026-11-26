@@ -1,0 +1,32 @@
+name: Godot import cache
+description: >
+  Restore the last Godot import (.godot) before the project is imported, so the import
+  re-imports only the files that changed instead of every ground model and texture (about
+  11 minutes on a GitHub runner). Godot checks each source against the md5 it stored, so an
+  older cache is safe: it only costs the re-import of what differs. tools/ci_import_cache.py
+  has the key and what a saved cache may hold (no Epic/MetaHuman imports, docs/EPIC_ASSETS.md).
+inputs:
+  godot-version:
+    description: The Godot version, part of the key (an import from another version is never reused)
+    required: true
+outputs:
+  key:
+    description: The exact key for this tree's import, for a later actions/cache/save
+    value: ${{ steps.key.outputs.key }}
+  hit:
+    description: "'true' when a cache with exactly this key was restored (nothing to save)"
+    value: ${{ steps.restore.outputs.cache-hit }}
+runs:
+  using: composite
+  steps:
+    - name: Work out the import key
+      id: key
+      shell: bash
+      run: echo "key=godot-import-v1-${{ inputs.godot-version }}-$(python3 tools/ci_import_cache.py key)" >> "$GITHUB_OUTPUT"
+    - name: Restore the last import
+      id: restore
+      uses: actions/cache/restore@v4
+      with:
+        path: .godot
+        key: ${{ steps.key.outputs.key }}
+        restore-keys: godot-import-v1-${{ inputs.godot-version }}-
