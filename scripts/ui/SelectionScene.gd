@@ -442,6 +442,7 @@ static func drop_preview(p: Dictionary) -> Control:
 	var cost := RelationsView.drop_preview(GameState, p, GameState.relations, not GameState.season.finals.is_empty())
 	var box := UiKit.vbox(UiKit.Space.SLIM)
 	box.name = "DropPreview"
+	box.add_child(UiKit.spacer(UiKit.Space.TIGHT))
 	box.add_child(UiKit.subhead("If we leave him out this week"))
 	var lines := []
 	if int(cost["opinion"]) != 0:

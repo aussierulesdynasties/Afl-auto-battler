@@ -29,10 +29,15 @@ static func open(host: Control, p: Dictionary, on_close: Callable = Callable(),
 	var v: VBoxContainer = box["body"]
 	var nickname_row := profile_body(v, p, host)
 	if lead != null:
-		var state := v.find_child("ProfileState", false, false)
+		# Under how he is now: his availability, and his load and readiness when shown.
+		var after: Node = null
+		for n in ["ProfileReadiness", "ProfileState"]:
+			after = v.find_child(n, false, false)
+			if after != null:
+				break
 		v.add_child(lead)
-		if state != null:
-			v.move_child(lead, state.get_index() + 1)
+		if after != null:
+			v.move_child(lead, after.get_index() + 1)
 	if nickname_row != null:
 		v.add_child(UiKit.spacer(UiKit.Space.ROOM))
 		v.add_child(nickname_row)
