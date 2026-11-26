@@ -187,7 +187,7 @@
 		"text": ["Hawthorn rarely bottoms out, and the board says it never will. After missing the finals, they want you to promise September next year, not a rebuild."],
 		"choices": [
 			{"key": "promise", "label": "Promise finals",
-			 "effects": [{"op": "board", "d": 5}, {"op": "loss_sting", "chance": 25, "d": -5, "who": "side"}],
+			 "effects": [{"op": "board", "d": 5}, {"op": "loss_sting", "chance": 25, "d": -5, "who": "side"}, {"op": "promise", "kind": "finals", "season": "next"}],
 			 "result": "The board is happy. Every loss next year will be measured against that promise."},
 			{"key": "rebuild", "label": "Ask for time to rebuild",
 			 "effects": [{"op": "xp", "d": 6, "who": "side"}, {"op": "board", "d": -5}],

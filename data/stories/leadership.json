@@ -57,7 +57,10 @@
 			"kind": "player",
 			"where": {
 				"fit": true,
-				"games_min": 150
+				"games_min": 150,
+				"temperament_any": [
+					"leader"
+				]
 			},
 			"pick": "random"
 		},
@@ -91,9 +94,14 @@
 						"who": "subject",
 						"chance": 10,
 						"on": "week"
+					},
+					{
+						"op": "bond",
+						"kind": "protege",
+						"s": 1
 					}
 				],
-				"result": "{name} takes the young players on Wednesday. It's on top of his own week."
+				"result": "{name} takes the young players on Wednesday, and {first_b} sticks by him all session. It's on top of his own week."
 			},
 			{
 				"key": "no",
@@ -112,19 +120,31 @@
 				],
 				"result": "The coaches keep the session."
 			}
-		]
+		],
+		"actor_b": {
+			"role": "teammate",
+			"where": {
+				"fit": true,
+				"age_max": 21
+			},
+			"pick": "highest:potential"
+		}
 	},
 	{
 		"id": "leadership_late_to_meeting",
 		"category": "leadership",
 		"subject": {
-			"kind": "club"
+			"kind": "player",
+			"where": {
+				"fit": true
+			},
+			"pick": "random"
 		},
 		"title": [
-			"Two players were late to the team meeting"
+			"{name} and {player_b} were late to the team meeting"
 		],
 		"text": [
-			"Not the first time this year. The group's waiting to see what you do."
+			"Not the first time this year for the two mates. The group's waiting to see what you do."
 		],
 		"choices": [
 			{
@@ -144,7 +164,7 @@
 						"why": "Two players were made an example of in front of the group"
 					}
 				],
-				"result": "The pair train on their own on Sunday."
+				"result": "{first} and {first_b} train on their own on Sunday."
 			},
 			{
 				"key": "quiet",
@@ -165,60 +185,13 @@
 				],
 				"result": "A quiet word, and it's done."
 			}
-		]
-	},
-	{
-		"id": "leadership_players_meeting",
-		"topical": true,
-		"cooldown": 60,
-		"category": "leadership",
-		"subject": {
-			"kind": "club"
-		},
-		"title": [
-			"The players have called their own meeting"
 		],
-		"text": [
-			"After the losing run, the senior players want the room to themselves."
-		],
-		"choices": [
-			{
-				"key": "room",
-				"label": "Give them the room",
-				"effects": [
-					{
-						"op": "morale",
-						"d": 5,
-						"who": "all"
-					},
-					{
-						"op": "forgo_xp",
-						"d": 3,
-						"who": "all"
-					}
-				],
-				"result": "The players meet alone. They come out talking."
-			},
-			{
-				"key": "stay",
-				"label": "The coaches stay in",
-				"effects": [
-					{
-						"op": "morale",
-						"d": -3,
-						"who": "all"
-					},
-					{
-						"op": "xp",
-						"d": 3,
-						"who": "all"
-					}
-				],
-				"result": "The coaches stay. The meeting is short."
+		"private": true,
+		"actor_b": {
+			"role": "close_mate",
+			"where": {
+				"fit": true
 			}
-		],
-		"when": {
-			"losing_run_min": 3
 		}
 	},
 	{
@@ -229,7 +202,11 @@
 			"where": {
 				"fit": true,
 				"age_max": 23,
-				"games_min": 30
+				"games_min": 30,
+				"temperament_any": [
+					"fiery",
+					"leader"
+				]
 			},
 			"pick": "random"
 		},
@@ -251,7 +228,8 @@
 					},
 					{
 						"op": "morale",
-						"d": 4
+						"d": 4,
+						"temper": "praised"
 					},
 					{
 						"op": "morale",
@@ -272,7 +250,8 @@
 					},
 					{
 						"op": "morale",
-						"d": -4
+						"d": -4,
+						"temper": "discipline"
 					},
 					{
 						"op": "culture",
@@ -591,6 +570,12 @@
 						"op": "trust",
 						"d": 3,
 						"why": "You backed the young player he put forward"
+					},
+					{
+						"op": "bond",
+						"kind": "protege",
+						"s": 1,
+						"with": "kid"
 					}
 				],
 				"result": ""
@@ -1326,6 +1311,11 @@
 						"op": "trust",
 						"d": -2,
 						"why": "You told the group his deal was done before it was"
+					},
+					{
+						"op": "promise",
+						"kind": "deal",
+						"weeks": 0
 					}
 				],
 				"result": "The group takes you at your word."

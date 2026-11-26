@@ -501,7 +501,9 @@ func _test_event_tradeoffs() -> void:
 	mate["morale"] = 70
 	GameState.week_event = GameState.story_card("selection_unhappy", sulk2)
 	GameState.resolve_week_event(1)
-	_check(ClubLife.morale(sulk2) == 25 and ClubLife.morale(mate) == 72, "Earn it: he dips, the group lifts")
+	# His dip is sized by how he takes being dropped (Temperament, Card Pass 1).
+	var dip := maxi(1, roundi(5.0 * Temperament.scale(sulk2, "dropped")))
+	_check(ClubLife.morale(sulk2) == 30 - dip and ClubLife.morale(mate) == 72, "Earn it: he dips, the group lifts")
 
 ## Each card is a decision, not a good button and a bad one: both options
 ## carry a cost, the costs are real, and nothing repeats every week.
