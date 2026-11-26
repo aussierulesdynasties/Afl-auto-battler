@@ -31,8 +31,8 @@ func run() -> void:
 	_t("_test_tactical_sub_2011")
 	_t("_test_medical_sub_2021")
 	_t("_test_no_sub_2016")
-	_t("_test_coaches_votes_from_2003")
 	_t("_test_free_agency_words")
+	_t("_test_coaches_votes_from_2003")
 	GameState.reset()
 	GameState.delete_saved_career()
 	GameState.replay_seed = 0
@@ -484,33 +484,6 @@ func _test_no_sub_2016() -> void:
 	_check((sim.squads[0] as Squad).bench.size() == 4, "Four on a 2016 bench")
 
 
-## The coaches' votes began in 2003 (director 2026-11-13, "Hide before 2003"):
-## before it, no Coaches Award and no votes heading or counts at full time.
-func _test_coaches_votes_from_2003() -> void:
-	var want := {1990: false, 2002: false, 2003: true, 2025: true, 2026: true, 2027: true}
-	for y in want:
-		_check(EraRules.on("coaches_votes", y) == bool(want[y]), "%d coaches' votes %s" % [y, str(want[y])])
-	var tally := {"p1": {"club": "FIT", "votes": 3, "polled": 1, "coaches": 10, "games": 1, "goals_ha": 2,
-			"bf": 5, "influence": 9.0}}
-	var players := {"p1": {"id": "p1", "club": "FIT", "first": "Paul", "last": "Roos", "age": 26}}
-	_check((Awards.season_awards(tally, players, 1990)["coaches_award"] as Array).is_empty(),
-			"1990: no Coaches Award")
-	_check(not (Awards.season_awards(tally, players, 2003)["coaches_award"] as Array).is_empty(),
-			"2003: a Coaches Award")
-	var ms = load("res://scenes/MatchScene.tscn").instantiate()
-	EraRules.year = 1990
-	var h1: Control = ms.call("_votes_header")
-	var f1: Control = ms.call("_votes_figure", {"p1": 10}, "p1")
-	EraRules.year = 2026
-	var h2: Control = ms.call("_votes_header")
-	var f2: Control = ms.call("_votes_figure", {"p1": 10}, "p1")
-	_check(not h1.visible and not f1.visible, "1990 full time: no votes heading, no vote counts")
-	_check(h2.visible and f2.visible, "2026 full time: the votes heading and counts show")
-	EraRules.year = 0
-	for n in [h1, f1, h2, f2, ms]:
-		n.free()
-
-
 ## Free agency from 2012 (EraRules): before it, the words say delisted, never
 ## free agency (bug bash P3-3). 2011 and 2012, each the season being played.
 func _test_free_agency_words() -> void:
@@ -540,3 +513,30 @@ func _test_free_agency_words() -> void:
 					"%d: skipping to the %s, it says what stays yours (%s)" % [y, to, stop])
 		_check(ClubPage._how({"how": "free_agent", "left": y}) == ("Left as a free agent after the %d season." if fa
 				else "Delisted after the %d season.") % y, "%d: a former player's line (%s)" % [y, ClubPage._how({"how": "free_agent", "left": y})])
+
+
+## The coaches' votes began in 2003 (director 2026-11-13, "Hide before 2003"):
+## before it, no Coaches Award and no votes heading or counts at full time.
+func _test_coaches_votes_from_2003() -> void:
+	var want := {1990: false, 2002: false, 2003: true, 2025: true, 2026: true, 2027: true}
+	for y in want:
+		_check(EraRules.on("coaches_votes", y) == bool(want[y]), "%d coaches' votes %s" % [y, str(want[y])])
+	var tally := {"p1": {"club": "FIT", "votes": 3, "polled": 1, "coaches": 10, "games": 1, "goals_ha": 2,
+			"bf": 5, "influence": 9.0}}
+	var players := {"p1": {"id": "p1", "club": "FIT", "first": "Paul", "last": "Roos", "age": 26}}
+	_check((Awards.season_awards(tally, players, 1990)["coaches_award"] as Array).is_empty(),
+			"1990: no Coaches Award")
+	_check(not (Awards.season_awards(tally, players, 2003)["coaches_award"] as Array).is_empty(),
+			"2003: a Coaches Award")
+	var ms = load("res://scenes/MatchScene.tscn").instantiate()
+	EraRules.year = 1990
+	var h1: Control = ms.call("_votes_header")
+	var f1: Control = ms.call("_votes_figure", {"p1": 10}, "p1")
+	EraRules.year = 2026
+	var h2: Control = ms.call("_votes_header")
+	var f2: Control = ms.call("_votes_figure", {"p1": 10}, "p1")
+	_check(not h1.visible and not f1.visible, "1990 full time: no votes heading, no vote counts")
+	_check(h2.visible and f2.visible, "2026 full time: the votes heading and counts show")
+	EraRules.year = 0
+	for n in [h1, f1, h2, f2, ms]:
+		n.free()
