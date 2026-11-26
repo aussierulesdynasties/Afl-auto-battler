@@ -1365,6 +1365,8 @@ static func _injury_length_words() -> String:
 ## A broken promise's price, in the order it lands. `trust` is the move
 ## (negative); the opinion it costs is from his trust in `facts` today.
 static func _broken_words(sting: int, trust: int, facts: Dictionary) -> String:
+	# His temperament sizes it, as Promises.broken_trust charges it.
+	trust = clampi(roundi(float(trust) * float(facts.get("broken_scale", 1.0))), -Trust.STEP_MAX, Trust.STEP_MAX)
 	return "his morale falls up to %s, his opinion of you falls %d and the group's togetherness drops %s." % [
 			_pct(sting), -Trust.opinion_move(int(facts.get("trust", 0)), trust), _pct(BROKEN_TOGETHER)]
 
