@@ -58,12 +58,12 @@ the machine pre-inspection clean, then his fly-through.
 | ENGIE Stadium | On main (#2037, 2026-11-24): outline fitted to Google Earth, Olympic Park surroundings. Thread closed | #2037 | Make Engie Stadium look real (closed) |
 | Bellerive Oval | On main through #2072: facades, 3D seats, Hobart backdrop; seat colour still off, PC colour rounds continue | #2018 (landed in #2072) | Make Bellerive Oval look real |
 | Manuka Oval | On main (#2035, 2026-11-25): stands, seats, scoreboard, towers, the town and Canberra to 30 km. Thread closed | #2035 | Make Manuka Oval look real (closed) |
-| Norwood Oval | On main through #2072; work continues | #2042 (landed in #2072) | Make Norwood Oval look real |
+| Norwood Oval | On main: rebuild through #2072, then the north and south frontages modelled house by house on the measured land and towers to the published 34 m (#2145), and its real boundary line (#2148) | #2042 #2145 | Make Norwood Oval look real |
 | Barossa Park | On main (#2041): own land, gums, far ranges, second oval. Thread closed | #2041 | Make Barossa Park look real (closed) |
 
 ### The 24 Legacy-mode grounds
 
-On main: York Park (through #2072, thread closed), Mars Stadium (#2036, in matches), Cazaly's Stadium (#2034, ready for his review), Traeger Park (through #2072), Blacktown (#2048 and the audit pass #2084; work continues). Each has its own "Make ... look real" thread.
+On main: York Park (through #2072, thread closed), Mars Stadium (#2036, in matches), Cazaly's Stadium (#2034, ready for his review), Traeger Park (through #2072), Blacktown (#2048, the audit pass #2084 and the PC-check fixes #2150; work continues). Each has its own "Make ... look real" thread.
 The MCG of each era for Legacy matches: first part on main (#2052), thread "Build the MCG of each era".
 
 **Owner since 2026-11-23: "Build Legacy mode's old grounds"** for the other 19: Waverley Park, Windy Hill, Moorabbin Oval, Ikon Park, Whitten Oval, Football Park, Subiaco Oval, WACA, North Hobart Oval, Bruce Stadium, Riverway Stadium, Sky Stadium, Jiangwan Stadium, Hands Oval, Summit Park, Macquarie Point Stadium, Accor Stadium, Marrara Oval and Victoria Park. On 2026-11-26: 14 measured and written up, Hands Oval's heights in progress, Riverway, Bruce, Summit and Macquarie Point still to measure; no models rebuilt yet. Subiaco has a draft PR (#2069).
@@ -72,10 +72,10 @@ The MCG of each era for Legacy matches: first part on main (#2052), thread "Buil
 
 | Item | State | Owner |
 |---|---|---|
-| Real surroundings per ground | #2023 holds generic OSM surrounds for 24 grounds, which he rejected: it must not merge as is. Being redone ground by ground | Build real surroundings for each ground; each ground's thread |
+| Real surroundings per ground | On main as WIP, not shippable (#2023, 2026-11-26): every match ground draws its surroundings from OSM and Overture on the measured land; houses are boxes with roofs and about half the building heights are still guesses. Grounds whose own thread copies Google Earth (Gabba, Bellerive, Norwood and the rebuilt ones) draw their own. Never shown to the director as finished | Build real surroundings for each ground; each ground's thread |
 | Crowd on every ground's seats | Seated on any ground with seat files; 19 grounds had none (pre-inspection, 2026-11-21) | Each ground's thread (seat rule) |
 | Live big screens | Built (#1947); 11 grounds have no screen face in their model | Each ground's thread |
-| Night lights from each ground's own towers | On main (#1996, 2026-11-25): night towers and the real sun over every ground | Light matches like the real grounds |
+| Night lights from each ground's own towers | On main (#1996, 2026-11-25): night towers and the real sun over every ground; the beams now light the field and the players, with spill on the stadium and the land round it (#2146, 2026-11-26) | Light matches like the real grounds |
 | Turf cut and colour | Per-ground mowing and broadcast colour (#2014) on main | Make the turf colour look like TV |
 
 ## 2. Players
@@ -134,8 +134,8 @@ The MCG of each era for Legacy matches: first part on main (#2052), thread "Buil
 | Real phone frame times at Low, Medium and High | Not measured on a phone. Unblocked 2026-11-25: since #2060 the "Android 3D probe" carries the grounds and players, so it can be installed and read | **He** (install the probe and read its numbers) |
 | Video memory | MCG on High 980 MB on main today (MetaHuman players). Rule of thumb for a mid phone: keep under 1.5 GB | Each item's owner, this thread watches |
 | Ground and player models in the builds | On main (#2060, 2026-11-25): Android, Windows and the probe carry every ground and the players; web carries the players only. Per-ground download packs are built and tested but not used | Ship grounds and players in phone builds (closed) |
-| Download size of a 3D build | The APK is 913 MB with every stadium; the director chose one offline APK with a 4 GB ceiling (a 2.6 GB test APK installed). "Later we will try to get it smaller" | Ship grounds and players in phone builds (closed); making it smaller is later work |
-| Licences of everything that ships | MetaHuman is decided: comply only. Where ground data may come from is now one rule in [MCG_STANDARD.md](MCG_STANDARD.md) ("Where shipped data may come from"): fidelity first, copying from Google Earth is fine, no raw imagery committed or baked into a shipped texture. Still open: the MetaHuman body file in the public repo (assets/oval3d/player_mh.glb); third-party captures committed under .claude/review and tools/grounds (Google Earth, Esri tiles, image-search photos); motion clips (above); the credits screen (the list itself is docs/CREDITS_3D.md) | Ground threads (their data); this thread (the rule, the credits list); **nobody** for the rest |
+| Download size of a 3D build | The APK is 913 MB with every stadium; the director chose one offline APK with a 4 GB ceiling (a 2.6 GB test APK installed). "Later we will try to get it smaller" The 913 MB was measured before the surroundings (#2023) landed; not re-measured since | Ship grounds and players in phone builds (closed); making it smaller is later work |
+| Licences of everything that ships | MetaHuman is decided: comply only. Where ground data may come from is now one rule in [MCG_STANDARD.md](MCG_STANDARD.md) ("Where shipped data may come from"): fidelity first, copying from Google Earth is fine, no raw imagery committed or baked into a shipped texture. The MetaHuman files left the public repo (#2062). Still open: third-party captures committed under .claude/review and tools/grounds (Google Earth, Esri tiles, image-search photos); motion clips (above); the credits screen (the list itself is docs/CREDITS_3D.md) | Ground threads (their data); this thread (the rule, the credits list); **nobody** for the rest |
 | Third-party images already in git history (Google Earth captures, Esri tiles, photos under .claude/review and tools/grounds; about 2.6 GB of review images in all) | Taken out of the current files ground by ground. Purging history is a later item; the MetaHuman files left the public repo for a private one fetched at build time (#2062, 2026-11-25) | Move MetaHuman files out of the public repo; later item |
 | Tests and the nightly ground shots green on main | Most 3D PRs landed on 2026-11-25 | Fix CI |
 | His look on every item | Not started for grounds (fly-through) | He |
@@ -190,3 +190,5 @@ and the smoothing buffers.
 - 2026-11-23: Optus Stadium rebuild on main (#1993); Blacktown stages 1-3 on main (#2048).
 - 2026-11-24: player detail levels and edge smoothing (#2054), the TV main camera (#1995), the MCG of each era (first part, #2052) and the shared Google Earth compare tool (#2047) on main.
 - 2026-11-26: catch-up after a two-day pause. On main since 24 Nov: builds carry the grounds and players (#2060), lighting at every ground (#1996), banner run-through (#2004), real land round every ground (#2072, which also carried the Marvel, Adelaide, SCG, Gabba, Bellerive, York Park, Norwood and Traeger branches: their PRs closed as landed), Cazaly's (#2034), Manuka (#2035), GMHBA (#2016), People First (#2019), ENGIE (#2037), Mars (#2036), Blacktown audit (#2084), guernseys (#2038), match crew round two (#2068), move clips (#2040), interchanges (#2025), crowd attendance (#1992), the 3D bug bash (#2067), MetaHuman files out of the public repo (#2062).
+- 2026-11-26 morning: the night-tower beams (#2146) and Blacktown's PC-check fixes (#2150) on main.
+- 2026-11-26 midday: the surroundings of every match ground (#2023, WIP, not shippable), Norwood's frontages (#2145), and Manuka, People First and Norwood on their real boundary lines (#2148) on main.
