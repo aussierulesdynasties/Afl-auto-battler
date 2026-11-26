@@ -74,6 +74,12 @@ jobs:
       GODOT_VERSION: "4.7.2"
     steps:
       - uses: actions/checkout@v4
+        with:
+          filter: blob:none   # fetch only the files checked out
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |   # .claude/review (5 GB of review boards) is never read by CI
+            /*
+            !/.claude/review/
 
       - name: Epic/MetaHuman files (private repo, docs/EPIC_ASSETS.md)
         uses: ./.github/actions/epic-assets
@@ -235,6 +241,12 @@ jobs:
       GODOT_VERSION: "4.7.2"
     steps:
       - uses: actions/checkout@v4
+        with:
+          filter: blob:none   # fetch only the files checked out
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |   # .claude/review (5 GB of review boards) is never read by CI
+            /*
+            !/.claude/review/
 
       - name: Epic/MetaHuman files (private repo, docs/EPIC_ASSETS.md)
         uses: ./.github/actions/epic-assets

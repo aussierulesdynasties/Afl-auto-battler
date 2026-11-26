@@ -410,11 +410,36 @@ jobs:
           mkdir -p ~/godot && mv "${name}" ~/godot/godot.$$ && mv -f ~/godot/godot.$$ ~/godot/godot
           echo "$GODOT_VERSION" > ~/godot/VERSION && cd / && rm -rf "$tmp"
 
+      # The last import (.godot), so this job re-imports only what changed (about 11 minutes
+      # of every ground model and texture otherwise). tools/ci_import_cache.py.
+      - name: Restore the Godot import
+        id: import-cache
+        if: runner.environment == 'github-hosted'
+        uses: ./.github/actions/godot-import-cache
+        with:
+          godot-version: ${{ env.GODOT_VERSION }}
+
       # Every test runner must compile, and its load must not hang, before the
       # shards start: a runner naming a class whose load chain reaches an autoload
       # hung a shard for the full 900 s timeout three times on 2026-10-17/18.
       - name: Every test runner compiles
         run: GODOT="$HOME/godot/godot" bash tools/ci_preflight_compile.sh
+
+      # A pull request that changes imported files saves its own import, so its shards and
+      # extras restore it instead of each re-importing the change; main's cache is saved by
+      # the extras job of a push. Only the import of files tracked here is kept (no Epic files).
+      - name: Keep only what may be cached
+        id: prune
+        if: runner.environment == 'github-hosted' && steps.import-cache.outputs.hit != 'true'
+        run: python3 tools/ci_import_cache.py prune
+
+      - name: Save the Godot import
+        if: steps.prune.outcome == 'success'
+        uses: actions/cache/save@v4
+        continue-on-error: true  # a cache outage must not fail tested code
+        with:
+          path: .godot
+          key: ${{ steps.import-cache.outputs.key }}
 
   shard:
     name: shard ${{ matrix.shard }}
@@ -469,6 +494,15 @@ jobs:
           # A rename, so PC runners sharing ~/godot never see a half-written file.
           mkdir -p ~/godot && mv "${name}" ~/godot/godot.$$ && mv -f ~/godot/godot.$$ ~/godot/godot
           echo "$GODOT_VERSION" > ~/godot/VERSION && cd / && rm -rf "$tmp"
+
+      # The last import (.godot), so this job re-imports only what changed (about 11 minutes
+      # of every ground model and texture otherwise). tools/ci_import_cache.py.
+      - name: Restore the Godot import
+        id: import-cache
+        if: runner.environment == 'github-hosted'
+        uses: ./.github/actions/godot-import-cache
+        with:
+          godot-version: ${{ env.GODOT_VERSION }}
 
       - name: Run the suites in this shard
         env:
@@ -581,8 +615,32 @@ jobs:
           mkdir -p ~/godot && mv "${name}" ~/godot/godot.$$ && mv -f ~/godot/godot.$$ ~/godot/godot
           echo "$GODOT_VERSION" > ~/godot/VERSION && cd / && rm -rf "$tmp"
 
+      # The last import (.godot), so this job re-imports only what changed (about 11 minutes
+      # of every ground model and texture otherwise). tools/ci_import_cache.py.
+      - name: Restore the Godot import
+        id: import-cache
+        if: runner.environment == 'github-hosted'
+        uses: ./.github/actions/godot-import-cache
+        with:
+          godot-version: ${{ env.GODOT_VERSION }}
+
       - name: Run the dataset, export and harness checks
         run: SKIP_STATIC=1 SKIP_VERSION_CHECK=1 EXTRAS_ONLY=1 GODOT="$HOME/godot/godot" LOG_DIR="$RUNNER_TEMP/test-logs" tools/run_tests.sh
+
+      # A push to main saves the import it ended with, for every later run to start from
+      # (pull requests restore it; tools/ci_import_cache.py keeps no Epic files' imports).
+      - name: Keep only what may be cached
+        id: prune
+        if: github.event_name == 'push' && runner.environment == 'github-hosted' && steps.import-cache.outputs.hit != 'true'
+        run: python3 tools/ci_import_cache.py prune
+
+      - name: Save the Godot import
+        if: steps.prune.outcome == 'success'
+        uses: actions/cache/save@v4
+        continue-on-error: true  # a cache outage must not fail tested code
+        with:
+          path: .godot
+          key: ${{ steps.import-cache.outputs.key }}
 
       - name: Upload test logs
         if: failure()
@@ -604,9 +662,11 @@ jobs:
         with:
           filter: blob:none   # fetch only the files checked out
           sparse-checkout-cone-mode: false
-          sparse-checkout: |   # .claude/review (5 GB of review boards) is never read by CI
-            /*
-            !/.claude/review/
+          # This job reads only the shard tools and the suite list (the tree id needs no files):
+          # seconds, where the whole game's 3 GB of models took about 3 minutes.
+          sparse-checkout: |
+            /tools/
+            /tests/
 
       - uses: actions/download-artifact@v4
         if: needs.plan.outputs.code == 'true' && needs.plan.result == 'success' && (needs.preflight.result == 'success' || needs.preflight.result == 'skipped')
