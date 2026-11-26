@@ -32,7 +32,7 @@ opts = blocks[web + 1].replace(re.match(r'\[preset\.\d+\.options\]', blocks[web 
 head = re.sub(r'(?m)^name=.*$', 'name="WebProbe"', head)
 head = re.sub(r'(?m)^custom_features=.*$', 'custom_features="perf_probe"', head)
 head = re.sub(r'(?m)^include_filter="(.*)"$', r'include_filter="\1, ground_packs.json"', head)
-head = re.sub(r'(?m)^exclude_filter=.*$', 'exclude_filter="docs/*, tests/*, addons/*, assets/grounds/*, tools/kits/*, tools/legacy_1990s/*, tools/oval3d/*, tools/grounds/*"', head)
+head = re.sub(r'(?m)^exclude_filter=.*$', 'exclude_filter="docs/*, tests/*, addons/debug_draw_3d/*, addons/openvat_animated/*, assets/grounds/*, tools/kits/*, tools/legacy_1990s/*, tools/oval3d/*, tools/grounds/*"', head)
 open(sys.argv[1], "w").write(head + opts)
 PY
 "$GODOT" --headless --path "$ROOT" --export-release "WebProbe" "$OUT/site/index.html" > "$OUT/export.log" 2>&1 || { tail -20 "$OUT/export.log"; exit 1; }
