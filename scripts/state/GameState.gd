@@ -1428,6 +1428,21 @@ func _restore_career(state: Dictionary) -> bool:
 	return true
 
 
+## Every player in the league holds a temperament (Temperament.gd): each list,
+## your own, the free agents and the draft pool. Safe to call any time; a
+## player who has one keeps it. Returns how many were newly given one.
+func ensure_temperaments() -> int:
+	var n := Temperament.ensure_all(my_list) + Temperament.ensure_all(free_agents) \
+			+ Temperament.ensure_all(draftee_pool)
+	if season != null:
+		for code in season.lists:
+			n += Temperament.ensure_all(season.lists[code])
+	for code in league_lists:
+		if league_lists[code] is Array:
+			n += Temperament.ensure_all(league_lists[code])
+	return n
+
+
 ## A save from before born Unicorns (2026-10-08): the hand-picked ones get
 ## their flag back wherever they now play. A Unicorn made by training under
 ## the old rule stays a player of his learned positions, without the trait.
@@ -2361,6 +2376,7 @@ func open_first_offseason() -> void:
 			lists[code] = league_lists[code]
 	season = Season.new(codes, lists, _clock_seed(4), season_year)
 	season.finals = {"done": true}
+	ensure_temperaments()
 	ensure_contracts()
 	# An off-season's contracts still count the season just over (the
 	# rollover ticks them, _close_contracts): the real lists' years start
@@ -3182,6 +3198,7 @@ func _start_next_season(next_year: int, signed: int) -> void:
 	season = Season.new(GameDB.active_clubs(next_year).duplicate(), lists,
 			_clock_seed(3), next_year)
 	_sync_dual()
+	ensure_temperaments()
 	Season.beat()
 	# The cap moves with the new season before contracts are assigned.
 	salary_cap = Contracts.salary_cap_for_year(next_year)
@@ -3699,6 +3716,7 @@ func start_season(club_code: String, list: Array) -> void:
 	season = Season.new(GameDB.active_clubs(season_year).duplicate(), lists,
 			_clock_seed(4), season_year)
 	_sync_dual()
+	ensure_temperaments()
 	salary_cap = Contracts.salary_cap_for_year(season_year)
 	ensure_contracts()
 	# The coaching world from its Round 1 2026 source, carried into this
