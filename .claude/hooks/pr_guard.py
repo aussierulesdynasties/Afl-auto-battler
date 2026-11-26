@@ -19,6 +19,12 @@ PRs", 2026-11-26). Prose in CLAUDE.md did not stop it, so these hooks do:
       newest waiting one, so a running main run is always worth finishing; 25 of 35 main runs were
       cancelled by hand on 25-26 Nov, some after every job had passed. A run whose event and branch
       can't be read is refused too. Override: CANCEL_RUN_OK=1 in the command.
+    - merge or auto-merge of a PR that changes a workflow under .github/workflows with no successful
+      run of that workflow on the PR's head commit: refused. A workflow is only proven by running
+      it: pr_cap.yml (#2186) passed review and CI, then failed live on every PR open because its gh
+      commands needed a token scope MERGE_TOKEN lacks. Run it from the branch (workflow_dispatch,
+      `gh workflow run <file> --ref <branch>`) and link the green run. A workflow with no trigger
+      that can run from a branch: label the PR workflow-untestable and say why in its body.
   stop      (Stop)
     - ending a turn after a push with nothing armed to wake the session when CI finishes: blocked
       once. A cloud session that just ends its turn never hears that its run went red.
@@ -78,7 +84,39 @@ def merge_conflicts(cwd, base, head):
     return None
 
 
-def check_pr_merge(cwd, number):
+def gh_json(path):
+    try:
+        r = subprocess.run(["gh", "api", path], capture_output=True, text=True, timeout=30)
+        return json.loads(r.stdout) if r.returncode == 0 else None
+    except (OSError, subprocess.TimeoutExpired, ValueError):
+        return None
+
+
+def check_workflows_proven(number, repo):
+    pr = gh_json(f"repos/{repo}/pulls/{number}")
+    files = gh_json(f"repos/{repo}/pulls/{number}/files?per_page=100")
+    if not pr or files is None:
+        return
+    if any(l.get("name") == "workflow-untestable" for l in pr.get("labels", [])):
+        return
+    sha = pr.get("head", {}).get("sha", "")
+    changed = sorted({f["filename"].split("/")[-1] for f in files
+                      if f.get("status") != "removed" and f["filename"].startswith(".github/workflows/")
+                      and f["filename"].endswith((".yml", ".yaml"))})
+    unproven = []
+    for wf in changed:
+        runs = gh_json(f"repos/{repo}/actions/workflows/{wf}/runs?head_sha={sha}&status=success&per_page=1")
+        if runs is not None and not runs.get("total_count"):
+            unproven.append(wf)
+    if unproven:
+        deny(f"PR #{number} changes {', '.join(unproven)} and none of them has a successful run on its "
+             f"head commit {sha[:9]}. Run each from the branch first (`gh workflow run <file> --ref "
+             "<branch>`, or the event it listens to), check it went green, and link the run in the PR. "
+             "pr_cap.yml merged on green CI and then failed live on every PR. If a workflow cannot "
+             "run from a branch, label the PR workflow-untestable and say why. (.claude/hooks/pr_guard.py)")
+
+
+def check_pr_merge(cwd, number, repo=REPO):
     if git(cwd, "fetch", "-q", "--filter=blob:none", "origin", "main",
            f"+refs/pull/{number}/head:refs/claude-guard/pr-{number}").returncode != 0:
         return
@@ -88,6 +126,7 @@ def check_pr_merge(cwd, number):
         deny(f"PR #{number} conflicts with main in: {shown}. It cannot merge, and auto-merge on it "
              "never fires, so arming it only wastes a test run. Merge origin/main into the branch, "
              "resolve, run the touched suites, push once, then merge. (.claude/hooks/pr_guard.py)")
+    check_workflows_proven(number, repo)
 
 
 FETCH_RE = re.compile(r"\bgit\s+(?:-C\s+\S+\s+)?fetch\s+(?:-\S+\s+)*origin\s+([^\s;&|]+)")
@@ -198,7 +237,8 @@ def pretool(data):
     cwd = data.get("cwd") or os.getcwd()
     if tool in ("mcp__github__merge_pull_request", "mcp__github__enable_pr_auto_merge"):
         if inp.get("pullNumber"):
-            check_pr_merge(cwd, int(inp["pullNumber"]))
+            repo = f"{inp.get('owner')}/{inp.get('repo')}" if inp.get("owner") else REPO
+            check_pr_merge(cwd, int(inp["pullNumber"]), repo)
         return
     if tool == "mcp__github__actions_run_trigger":
         if inp.get("method") == "cancel_workflow_run" and inp.get("run_id"):

@@ -170,6 +170,26 @@ class Guard(unittest.TestCase):
         self.assertIsNone(run("pretool", {"tool_name": "mcp__github__actions_run_trigger", "cwd": self.work,
                                           "tool_input": {"method": "rerun_failed_jobs", "run_id": 1}}))
 
+    def gh_for_workflow_pr(self, runs):
+        d = os.path.join(self.tmp.name, "bin2")
+        os.makedirs(d, exist_ok=True)
+        with open(os.path.join(d, "gh"), "w") as f:
+            f.write('#!/bin/sh\ncase "$2" in\n'
+                    '  */pulls/8) echo \'{"head": {"sha": "abc"}, "labels": []}\';;\n'
+                    '  */pulls/8/files*) echo \'[{"filename": ".github/workflows/x.yml", "status": "modified"}]\';;\n'
+                    f'  */runs*) echo \'{{"total_count": {runs}}}\';;\n  *) exit 1;;\nesac\n')
+        os.chmod(os.path.join(d, "gh"), 0o755)
+        return {"PATH": d + os.pathsep + os.environ["PATH"]}
+
+    def test_merge_of_unrun_workflow_change_refused(self):
+        self.pr_head(8)
+        data = {"tool_name": "mcp__github__enable_pr_auto_merge", "cwd": self.work,
+                "tool_input": {"owner": "o", "repo": "r", "pullNumber": 8}}
+        out = run("pretool", data, env=self.gh_for_workflow_pr(0))
+        self.assertTrue(denied(out))
+        self.assertIn("x.yml", out["hookSpecificOutput"]["permissionDecisionReason"])
+        self.assertIsNone(run("pretool", data, env=self.gh_for_workflow_pr(1)))
+
     def test_start_outside_cloud_does_nothing(self):
         self.assertIsNone(run("start", {"cwd": self.work}, env={"CLAUDE_CODE_REMOTE": ""}))
 
