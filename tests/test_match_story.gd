@@ -31,8 +31,8 @@ func _settle(n := 6) -> void:
 
 func _fresh() -> void:
 	GameState.reset()
-	GameState.start_season("FRE", GameDB.club_list("FRE"))
 	GameState.replay_seed = SUITE_SEED
+	GameState.start_season("FRE", GameDB.club_list("FRE"))
 	GameState.tutorials = false
 	Router.stack = []
 

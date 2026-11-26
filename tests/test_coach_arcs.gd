@@ -29,8 +29,8 @@ func _t(test: String, args := []) -> Variant:
 
 func _fresh() -> void:
 	GameState.reset()
-	GameState.start_season("FRE", GameDB.club_list("FRE"))
 	GameState.replay_seed = SUITE_SEED
+	GameState.start_season("FRE", GameDB.club_list("FRE"))
 	GameState.tutorials = false
 	Router.stack = []
 
@@ -98,12 +98,19 @@ func _test_triggers_from_state() -> void:
 	_check(not st.is_empty(), "on: the arc state is kept")
 	_check(not (st["active"] as Dictionary).has("hot_seat") and not (st["active"] as Dictionary).has("drought") \
 			and not (st["active"] as Dictionary).has("legacy"), "a new coach is not on the hot seat, in a drought or a legend")
-	# The board really loses faith: the hot seat follows by round 8.
-	GameState.board["confidence"] = 25
+	# The board really loses faith: the hot seat follows by round 8. Held below
+	# 40 every week, so a winning run in the seeded season cannot lift it back.
 	for i in range(8):
+		GameState.board["confidence"] = 25
 		_week(rng)
-	_check((st["active"] as Dictionary).has("hot_seat") or (st["done"] as Dictionary).has("hot_seat"),
-			"a board below 40 by round 8 puts the coach on the hot seat")
+	var hot := CoachArcs.by_id(CoachArcs.all(), "hot_seat")
+	_check(not ClubArcs.trigger(GameState, st, hot, ClubStories.context(GameState), false).is_empty(),
+			"a board below 40 by round 8 holds the hot seat's trigger")
+	# It starts unless the coach already has as many arcs running as he can
+	# (CoachArcs.MAX_ACTIVE): the seeded season fills them by round 7.
+	_check((st["active"] as Dictionary).has("hot_seat") or (st["done"] as Dictionary).has("hot_seat")
+			or (st["active"] as Dictionary).size() >= CoachArcs.MAX_ACTIVE,
+			"a board below 40 by round 8 puts the coach on the hot seat, with an arc free (%s)" % str((st["active"] as Dictionary).keys()))
 	# A real trade request: the star-wants-out trigger names that player.
 	var star: Dictionary = GameState.my_list[0]
 	GameState.trade_requests[str(star["id"])] = {"year": GameState.season_year}

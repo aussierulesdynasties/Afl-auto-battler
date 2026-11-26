@@ -7,7 +7,7 @@ extends SceneTree
 ## their descriptions show), <out>_tag.png (Tag with no tag picked) and
 ## <out>_plan.png (the match screen with a long plan line: every call in full),
 ## <out>_tagger.png (a tag picked: the Who tags cards).
-##   --size WxH   window size (default 390x844)    --light   light appearance
+##   --size WxH   window size (default 390x844)
 ##   --club CODE  your club (default MEL)    --their-loose  they run a loose
 ##                defender at quarter time (the fullest break)
 ##   --plain      nobody plays loose on either side (the ordinary break)
@@ -25,7 +25,6 @@ func _initialize() -> void:
 
 func _run() -> void:
 	var out := "coach_break"
-	var mode := "dark"
 	var club := "MEL"
 	var their_loose := false
 	var plain := false
@@ -39,8 +38,6 @@ func _run() -> void:
 				var wh := str(a[i + 1]).split("x")
 				_w = int(wh[0])
 				_h = int(wh[1])
-			"--light":
-				mode = "light"
 			"--club":
 				club = str(a[i + 1])
 			"--their-loose":
@@ -78,7 +75,7 @@ func _run() -> void:
 	if plain:
 		for sd in [0, 1]:
 			state.pending_sim.set_interceptor(sd, "", false)
-	UK.apply_appearance(mode)
+	UK.apply_palette()
 	if _w >= 760:
 		# A PC window on the 1280x720 desktop canvas, as the game lays it out.
 		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)

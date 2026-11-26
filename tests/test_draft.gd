@@ -42,7 +42,6 @@ func run() -> void:
 	_t("_test_rival_pick_reads_whole_pool")
 	_t("_test_rivals_step_same_picks")
 	GameState.replay_seed = 0
-	GameDB.reload()
 	print(Ran.line("Draft", self))
 
 

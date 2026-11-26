@@ -48,7 +48,7 @@ func _run() -> void:
 	LegacyRollover._merge(gs, false)
 	gs.merger_cut_due = true
 	var UK = load("res://scripts/ui/UiKit.gd")
-	UK.apply_appearance("dark")
+	UK.apply_palette()
 	DisplayServer.window_set_size(Vector2i(w, h))
 	root.size = Vector2i(w, h)
 	var bg := ColorRect.new()

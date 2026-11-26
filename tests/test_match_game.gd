@@ -106,7 +106,6 @@ func run() -> void:
 	_t("_test_bomb_card_shows_the_dice")
 	_t("_test_forward_archetypes")
 	_t("_test_every_call_two_sided")
-	GameDB.reload()
 	print(Ran.line("Match game", self))
 
 

@@ -13,7 +13,7 @@ extends SceneTree
 ## For the ladder also <out>_ladder_sorted.png (sorted by W), <out>_ladder_top10.png, <out>_ladder_team.png
 ## (Team stats) and <out>_ladder_side.png (a club's side opened).
 ##   --section KEY   ladder, players, awards, fixture or trophies (default fixture)
-##   --size WxH      window size (default 390x844)    --light   light appearance
+##   --size WxH      window size (default 390x844)
 ##   --rounds N      rounds played before the capture (default 6)
 ##   --club CODE     the career's club (default COL)
 ##   --stat KEY      players: rank by this stat, then also write
@@ -31,7 +31,6 @@ func _initialize() -> void:
 func _run() -> void:
 	var out := "stats_hub"
 	var section := "fixture"
-	var mode := "dark"
 	var rounds := 6
 	var club := "COL"
 	var stat := ""
@@ -52,8 +51,6 @@ func _run() -> void:
 				club = str(a[i + 1])
 			"--stat":
 				stat = str(a[i + 1])
-			"--light":
-				mode = "light"
 	await process_frame
 	var state = root.get_node("GameState")
 	var db = root.get_node("GameDB")
@@ -69,7 +66,7 @@ func _run() -> void:
 	state.start_season(club, db.club_list(club))
 	for i in range(rounds):
 		state.advance()
-	UK.apply_appearance(mode)
+	UK.apply_palette()
 	root.size = Vector2i(_w, _h)
 	DisplayServer.window_set_size(Vector2i(_w, _h))
 	# --size is in UI units: a scaled (HiDPI) desktop would otherwise lay a

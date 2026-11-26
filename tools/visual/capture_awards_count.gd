@@ -87,7 +87,7 @@ func _run() -> void:
 	await process_frame
 	_gs = root.get_node("GameState")
 	var db = root.get_node("GameDB")
-	load("res://scripts/ui/UiKit.gd").apply_appearance("dark")
+	load("res://scripts/ui/UiKit.gd").apply_palette()
 	_gs.autosave_enabled = false
 	_gs.save_path = "user://capture_awards_count.save"
 	_gs.settings_path = "user://capture_awards_count.cfg"

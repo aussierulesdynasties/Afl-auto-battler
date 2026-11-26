@@ -95,7 +95,7 @@ func _run() -> void:
 	state.pending_sim = null
 	state.pending_match = {}
 	state.review_requested = true
-	UK.apply_appearance("dark")
+	UK.apply_palette()
 	root.size = Vector2i(_w, _h)
 	DisplayServer.window_set_size(Vector2i(_w, _h))
 	var full = load("res://scenes/MatchScene.tscn").instantiate()

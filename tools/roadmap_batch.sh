@@ -36,6 +36,14 @@ legacy=$(gh pr list --state open --label roadmap --limit 200 --json number,headR
   --jq '.[] | select(.headRefName | startswith("roadmap-close/pr-")) | "\(.number):\(.headRefName | ltrimstr("roadmap-close/pr-"))"')
 for pair in $legacy; do srcs="$srcs ${pair#*:}"; done
 [ -n "$new_src" ] && srcs="$srcs $new_src"
+# Every PR merged in the last 7 days too. The roadmap-close concurrency group keeps only one
+# pending run and cancels the rest, so a burst of merges used to lose notes. The script is
+# idempotent (a deleted row stays deleted, a merge note is written once per row and PR), so
+# re-applying a PR that already landed changes nothing.
+since=$(date -u -d '7 days ago' +%Y-%m-%dT%H:%M:%SZ)
+recent=$(gh pr list --state merged --base main --limit 300 --json number,mergedAt,headRefName \
+  --jq ".[] | select(.mergedAt >= \"$since\") | select(.headRefName | startswith(\"roadmap-close/\") | not) | .number")
+srcs="$srcs $recent"
 srcs=$(echo "$srcs" | tr ' ' '\n' | grep -E '^[0-9]+$' | sort -n -u | tr '\n' ' ' | sed 's/ $//')
 
 if [ -z "$srcs" ]; then echo "No source PRs to note."; exit 0; fi
@@ -45,6 +53,8 @@ kept=""
 lines=""
 for src in $srcs; do
   gh api "repos/$GITHUB_REPOSITORY/pulls/$src" --jq '.body // ""' > "$tmp/body.txt"
+  # A body that names no row has nothing to do.
+  grep -qiE '^[[:space:]>*-]*(closes?[[:space:]]+rows?|part[[:space:]]+of[[:space:]]+rows?)[[:space:]]' "$tmp/body.txt" || continue
   title=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$src" --jq .title)
   ids=$(python3 tools/roadmap_close.py --body-file "$tmp/body.txt" --todo docs/TODO.md \
     --todo docs/TODO_RULINGS.md --pr "$src" --title "$title" 2>/dev/null) || ids=""
@@ -88,20 +98,25 @@ else
   batch=$(gh pr create --base main --head "$branch" --label roadmap --title "Roadmap notes for merged PRs" --body "$body" | sed 's#.*/##')
 fi
 gh pr merge "$batch" --auto --squash || echo "::warning::#$batch: could not turn on auto-merge"
-# A push with the workflow token starts no CI: dispatch a docs-only Tests pass, and approve
-# the PR's own held run (GitHub holds a bot-opened PR's run at action_required).
-# shellcheck disable=SC2086
-gh workflow run tests.yml --ref "$branch" -f changed_files="$files"
+# A push with the workflow token starts no CI. GitHub holds the PR's own Tests run (a bot's
+# PR) at action_required: approving it is what reports "test" on the PR. Only if no held run
+# turns up, dispatch a docs-only pass instead (one run per note, not two).
 head=$(git rev-parse HEAD)
+approved=0
 for _ in 1 2 3 4 5 6 7 8 9 10 11 12; do
   run=$(gh run list --branch "$branch" --event pull_request --json databaseId,conclusion,headSha \
     --jq "[.[] | select(.conclusion == \"action_required\" and .headSha == \"$head\")][0].databaseId // empty")
   if [ -n "$run" ]; then
     gh api -X POST "repos/$GITHUB_REPOSITORY/actions/runs/$run/approve" >/dev/null \
-      && echo "Approved Tests run $run" \
-      || echo "::warning::Could not approve Tests run $run; approve it by hand or #$batch stays blocked"
+      && { echo "Approved Tests run $run"; approved=1; } \
+      || echo "::warning::Could not approve Tests run $run"
     break
   fi
   sleep 10
 done
+if [ "$approved" = 0 ]; then
+  # shellcheck disable=SC2086
+  gh workflow run tests.yml --ref "$branch" -f changed_files="$files" \
+    || echo "::warning::#$batch: no Tests run approved or dispatched; approve it by hand"
+fi
 echo "Batch PR #$batch holds: $kept"

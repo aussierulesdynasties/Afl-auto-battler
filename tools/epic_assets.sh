@@ -12,11 +12,17 @@
 # committed here. Access: EPIC_ASSETS_TOKEN (a GitHub token that can read the private repo; CI
 # passes it from a repo secret), else your own git credentials for github.com.
 # EPIC_ASSETS_CACHE (default ~/.cache/ard-epic-assets) holds the private repo's git objects.
+# The same script serves the ground models (tools/ground_assets.sh sets ASSETS_LOCK, ASSETS_CACHE and
+# ASSETS_WHAT; docs/GROUND_ASSETS.md).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-LOCK="$ROOT/tools/epic_assets.lock"
-CACHE="${EPIC_ASSETS_CACHE:-$HOME/.cache/ard-epic-assets}"
+LOCK="${ASSETS_LOCK:-$ROOT/tools/epic_assets.lock}"
+CACHE="${ASSETS_CACHE:-${EPIC_ASSETS_CACHE:-$HOME/.cache/ard-epic-assets}}"
+# What the files are, for messages; the guide that explains them.
+WHAT="${ASSETS_WHAT:-Epic/MetaHuman files}"
+DOC="${ASSETS_DOC:-docs/EPIC_ASSETS.md}"
+TAG="${ASSETS_TAG:-epic assets}"
 
 field() { sed -n "s/^$1 //p" "$LOCK" | head -1; }
 REPO="$(field repo)"
@@ -60,16 +66,16 @@ cmd_fetch() {
 	local todo
 	todo="$(stale)"
 	if [ -z "$todo" ]; then
-		echo "epic assets: all $(entries | wc -l | tr -d ' ') files in place ($COMMIT)"
+		echo "$TAG: all $(entries | wc -l | tr -d ' ') files in place ($COMMIT)"
 		return 0
 	fi
 	cache_init
 	if ! git -C "$CACHE" cat-file -e "$COMMIT^{commit}" 2>/dev/null; then
-		echo "epic assets: fetching $COMMIT from $REPO"
+		echo "$TAG: fetching $COMMIT from $REPO"
 		if ! gitp -C "$CACHE" fetch -q --depth 1 origin "$COMMIT"; then
-			echo "FAIL: could not fetch the Epic/MetaHuman files from $REPO." >&2
+			echo "FAIL: could not fetch the $WHAT from $REPO." >&2
 			echo "Set EPIC_ASSETS_TOKEN to a GitHub token that can read it, or sign in to GitHub as an" >&2
-			echo "account with access (cloud Claude sessions: attach the repo first). docs/EPIC_ASSETS.md" >&2
+			echo "account with access (cloud Claude sessions: attach the repo first). $DOC" >&2
 			return 1
 		fi
 	fi
@@ -81,7 +87,7 @@ cmd_fetch() {
 		mv "$ROOT/$path.tmp" "$ROOT/$path"
 		n=$((n + 1))
 	done <<< "$todo"
-	echo "epic assets: copied $n file(s) from $COMMIT"
+	echo "$TAG: copied $n file(s) from $COMMIT"
 	cmd_check
 }
 
@@ -89,11 +95,11 @@ cmd_check() {
 	local bad
 	bad="$(stale)"
 	if [ -n "$bad" ]; then
-		echo "FAIL: these Epic/MetaHuman files are missing or not the pinned version (run tools/epic_assets.sh fetch):" >&2
+		echo "FAIL: these $WHAT are missing or not the pinned version (run tools/$(basename "${ASSETS_SCRIPT:-$0}") fetch):" >&2
 		echo "$bad" | sed 's/^/  /' >&2
 		return 1
 	fi
-	echo "epic assets: OK ($(entries | wc -l | tr -d ' ') files, $COMMIT)"
+	echo "$TAG: OK ($(entries | wc -l | tr -d ' ') files, $COMMIT)"
 }
 
 cmd_publish() {
@@ -114,7 +120,7 @@ cmd_publish() {
 	done < "$CACHE/.paths"
 	git -C "$CACHE" add -A -- assets
 	if git -C "$CACHE" diff --cached --quiet; then
-		echo "epic assets: nothing changed"
+		echo "$TAG: nothing changed"
 	else
 		git -C "$CACHE" commit -q -m "$msg"
 		gitp -C "$CACHE" push -q origin "HEAD:$BRANCH"
@@ -128,6 +134,11 @@ cmd_publish() {
 	} > "$LOCK.new"
 	mv "$LOCK.new" "$LOCK"
 	for p in "${new[@]}"; do
+		# Already ignored here (assets/grounds/.gitignore ignores every ground file but .import): untrack only.
+		if git -C "$ROOT" check-ignore -q --no-index -- "$p"; then
+			git -C "$ROOT" rm -q --cached --ignore-unmatch -- "$p"
+			continue
+		fi
 		# assets/oval3d/.gitignore holds the oval's Epic paths; anything else goes in the root one.
 		if [ "${p#assets/oval3d/}" != "$p" ]; then
 			grep -qxF "/${p#assets/oval3d/}" "$ROOT/assets/oval3d/.gitignore" || echo "/${p#assets/oval3d/}" >> "$ROOT/assets/oval3d/.gitignore"
@@ -136,12 +147,12 @@ cmd_publish() {
 		fi
 		git -C "$ROOT" rm -q --cached --ignore-unmatch -- "$p"
 	done
-	echo "epic assets: pinned $head; commit tools/epic_assets.lock (and .gitignore if it changed)"
+	echo "$TAG: pinned $head; commit ${LOCK#$ROOT/} (and .gitignore if it changed)"
 }
 
 case "${1:-}" in
 	fetch) cmd_fetch ;;
 	check) cmd_check ;;
 	publish) shift; cmd_publish "$@" ;;
-	*) sed -n '2,15p' "$0"; exit 2 ;;
+	*) sed -n '2,15p' "${ASSETS_SCRIPT:-$0}"; exit 2 ;;
 esac
