@@ -44,7 +44,8 @@ knocking I'll remove the anims, until then let me eat cake").
 - **The one hard line: no raw imagery in the repo or the game.** Esri tiles, Google Earth or Street
   View captures, satellite crops and downloaded press photos are not committed to the repo (it is
   public) and not baked into a shipped texture (for example a satellite photo as a ground map). Keep
-  them, and QA sheets made from them, in the project's private files.
+  them, and QA sheets made from them, in the project's private files or the private repo
+  `aussierulesdynasties/afl-review-archive`.
 - Credits for every open source used go in `docs/CREDITS_3D.md` and the game's credits screen
   before 1.0.
 

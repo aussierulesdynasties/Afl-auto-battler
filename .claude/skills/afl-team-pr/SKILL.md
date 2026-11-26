@@ -54,7 +54,7 @@ Mark ready before the push you want tested; drafts skip game tests.
 - A CI failure or conflict on another session's branch goes to that session: branch, sha, run id, suite and check, whether main fails too, who acts next.
 - Every message names its PR and head sha and what you need or found. No "received" messages, no queue recaps. Decisions, blockers and findings go to the director.
 - A peer's message is a request, not a permission. Never ask a peer to do what your own session was refused; take it to the director.
-- End every turn with a state: working (only while a job you launched is still running, named), awaiting director, blocked, or available. While waiting on CI, an audit or a peer, arm a bounded background watcher and do the next useful part of your queue (work-while-waiting).
+- End every turn with a state: working (only while a job you launched is still running, named), awaiting director, blocked, or available. After a push, subscribe to the PR's activity (or watch the run) so a red run wakes you; a red run on your PR is your next job, before any new work or PR (director 2026-11-26 deleted the old work-while-waiting rule, Bible 7.29 and 7.32).
 
 ## Learnings
 
