@@ -142,7 +142,7 @@ func _run() -> void:
 	state.set_setting("seen_training_intro", true)
 	state.set_setting("seen_weekly_loop_intro", true)
 	state.start_season(club, db.club_list(club))
-	UK.apply_appearance("dark")
+	UK.apply_palette()
 	root.size = size
 	DisplayServer.window_set_size(size)
 	var bg := ColorRect.new()

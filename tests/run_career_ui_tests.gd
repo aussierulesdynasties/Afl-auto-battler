@@ -1860,27 +1860,19 @@ func _test_menu_and_career() -> void:
 			"The line is not shown again on a later visit")
 	# The Android save backup preset (user_data_backup/allow=true) is a static lint: tools/lint/boundaries.py.
 
-	# --- settings: appearance and player names apply at once -----------------
+	# --- settings: no appearance choice, no ball-up scene switch; names --------
+	# Light mode and the centre ball-up scene switch went (director, 2026-11-26).
 	current_scene.find_child("MenuSettings", true, false).emit_signal("pressed")
 	await _settle()
-	var light_setting: Button = current_scene.find_child("SettingsAppearance_light", true, false)
-	var dark_setting: Button = current_scene.find_child("SettingsAppearance_dark", true, false)
-	_check(light_setting != null and dark_setting != null, "Settings offers Dark and Light appearance")
-	if light_setting != null:
-		light_setting.emit_signal("pressed")
-		await _settle()
-	var kit = load("res://scripts/ui/UiKit.gd")
-	_check(_state.appearance() == "light" and kit.appearance() == "light"
-			and kit.BG.r > 0.8 and _router.current() == "main",
-			"Light appearance applies immediately and rebuilds the current screen")
-	current_scene.find_child("MenuSettings", true, false).emit_signal("pressed")
+	var opened := current_scene.find_child("Settings", true, false)
+	_check(opened != null and current_scene.find_child("SettingsTextSize_standard", true, false) != null
+			and current_scene.find_child("SettingsAppearance_light", true, false) == null
+			and current_scene.find_child("SettingsAppearance_dark", true, false) == null
+			and current_scene.find_child("SettingsBounceScene_on", true, false) == null,
+			"Settings offers no appearance choice and no centre ball-up scene switch")
+	if opened != null:
+		opened.queue_free()
 	await _settle()
-	dark_setting = current_scene.find_child("SettingsAppearance_dark", true, false)
-	if dark_setting != null:
-		dark_setting.emit_signal("pressed")
-		await _settle()
-	_check(_state.appearance() == "dark" and kit.appearance() == "dark"
-			and kit.BG.r < 0.2, "Dark appearance restores the original palette")
 	current_scene.find_child("MenuSettings", true, false).emit_signal("pressed")
 	await _settle()
 	_check(current_scene.find_child("SettingsNames_real", true, false) == null

@@ -1,11 +1,10 @@
 extends SceneTree
-## Visual review tool for the main screens in light mode, on a phone (390x844),
-## one sheet per theme so a light defect can be seen against the dark original.
+## Visual review tool for the main screens, on a phone (390x844) by default.
 ## Needs a real renderer:
-##   godot --path . --rendering-method gl_compatibility --script tools/visual/capture_screens_light.gd
-## `--out PREFIX` and `--mode light|dark` after `--` (capture.yml passes them) beat the environment. Environment: CAP_OUT (path prefix, default "screens"), CAP_MODE ("light" default or "dark").
+##   godot --path . --rendering-method gl_compatibility --script tools/visual/capture_screens.gd
+## `--out PREFIX` after `--` (ui-review.yml passes it) beats the environment. Environment: CAP_OUT (path prefix, default "screens").
 ## --size WxH: the window (default 390x844; 3840x2160 is a 1280x720 PC canvas at 300%).
-## Writes <prefix>_<mode>_<screen>.png for the hub, selection, training,
+## Writes <prefix>_<screen>.png for the hub, selection, training,
 ## list and coaching screens of a fresh Melbourne career, then the offseason (the
 ## season fast-forwarded to its end) and the League Draft. Never touches a real save.
 
@@ -60,13 +59,10 @@ func _clips(node: Node, screen: String, found: Array) -> void:
 
 func _run() -> void:
 	var out := OS.get_environment("CAP_OUT") if OS.get_environment("CAP_OUT") != "" else "screens"
-	var mode := OS.get_environment("CAP_MODE") if OS.get_environment("CAP_MODE") != "" else "light"
 	var cli := OS.get_cmdline_user_args()
 	for i in range(cli.size() - 1):
 		if str(cli[i]) == "--out":
 			out = str(cli[i + 1])
-		if str(cli[i]) == "--mode":
-			mode = str(cli[i + 1])
 		if str(cli[i]) == "--size":
 			var wh := str(cli[i + 1]).split("x")
 			W = int(wh[0])
@@ -98,7 +94,7 @@ func _run() -> void:
 					found = r
 		if found >= 0:
 			state.season.round_index = found
-	UK.apply_appearance(mode)
+	UK.apply_palette()
 	root.size = Vector2i(W, H)
 	DisplayServer.window_set_size(Vector2i(W, H))
 	var clips := []
@@ -111,7 +107,7 @@ func _run() -> void:
 		root.add_child(scene)
 		var img := await _shot()
 		_clips(scene, key, clips)
-		var path := "%s_%s_%s.png" % [out, mode, key]
+		var path := "%s_%s.png" % [out, key]
 		if img.save_png(path) != OK:
 			push_error("could not save " + path)
 		print("wrote ", path)
@@ -125,7 +121,7 @@ func _run() -> void:
 			if sc != null:
 				(sc as ScrollContainer).ensure_control_visible(ladder)
 				var img2 := await _shot()
-				img2.save_png("%s_%s_hub_ladder.png" % [out, mode])
+				img2.save_png("%s_hub_ladder.png" % out)
 				print("wrote hub ladder")
 		scene.queue_free()
 		await process_frame
@@ -134,7 +130,7 @@ func _run() -> void:
 	state.open_offseason()
 	var off = load("res://scenes/OffseasonScene.tscn").instantiate()
 	root.add_child(off)
-	(await _shot()).save_png("%s_%s_offseason.png" % [out, mode])
+	(await _shot()).save_png("%s_offseason.png" % out)
 	_clips(off, "offseason", clips)
 	print("wrote offseason")
 	off.queue_free()
@@ -146,10 +142,10 @@ func _run() -> void:
 	var draft = load("res://scenes/DraftScene.tscn").instantiate()
 	root.add_child(draft)
 	draft.call("_on_club_chosen", "MEL")
-	(await _shot()).save_png("%s_%s_draft.png" % [out, mode])
+	(await _shot()).save_png("%s_draft.png" % out)
 	_clips(draft, "draft", clips)
 	print("wrote draft")
-	var clip_file := FileAccess.open("%s_%s_clips.txt" % [out, mode], FileAccess.WRITE)
+	var clip_file := FileAccess.open("%s_clips.txt" % out, FileAccess.WRITE)
 	if clip_file != null:
 		clip_file.store_string("\n".join(clips) + "\n")
 	print("CLIPS %d" % clips.size())
