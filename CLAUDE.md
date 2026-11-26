@@ -10,6 +10,7 @@ conflicting PR, a merge of main that isn't needed, a second push within 20 min, 
 after a push with nothing set to wake you; each refusal names its override. In a cloud session they
 install Godot and gdlint at start, so run the suites there too. MetaHuman files (and anything made from them) never go in this public
 repo: they live in a private repo and `tools/epic_assets.sh fetch` copies them in (docs/EPIC_ASSETS.md).
+Ground models (`assets/grounds/`) live there too: publish them with `tools/ground_assets.sh`, never `git add` (docs/GROUND_ASSETS.md).
 
 ## The design bible comes first (director, 2026-10-09)
 

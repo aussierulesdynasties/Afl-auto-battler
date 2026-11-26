@@ -17,6 +17,10 @@ live in a private repo and tools/epic_assets.sh copies them in. This check fails
    name (tools/epic_blobs.txt lists their git blob ids);
 6. a tracked model or texture under assets/oval3d/ is not declared in tools/epic_guard_allow.txt
    with where it came from (so a new body part is a deliberate, sourced decision).
+
+It also fails when a ground model, seat file or texture is committed under assets/grounds/: those
+live in the same private repo so each rebuild stops growing this one (tools/ground_assets.sh,
+docs/GROUND_ASSETS.md); only their .import files are committed here.
 """
 import json
 import re
@@ -142,6 +146,17 @@ def main() -> int:
                           "does not declare (add it with its source if it is not Epic's)")
     if "--commits" in sys.argv:
         faults += history_faults(sys.argv[sys.argv.index("--commits") + 1], blobs)
+    grounds = sorted(p for p in files if p.startswith("assets/grounds/")
+                     and not p.endswith((".import", ".gitignore")))
+    if grounds:
+        print("Ground models live in the private repo, not here (docs/GROUND_ASSETS.md):")
+        for p in grounds[:20]:
+            print("  " + p)
+        if len(grounds) > 20:
+            print(f"  ... and {len(grounds) - 20} more")
+        print("Publish them instead: tools/ground_assets.sh publish \"why\" PATH...")
+        if not faults:
+            return 1
     if faults:
         print("Epic/MetaHuman files must not be committed to this public repo (docs/EPIC_ASSETS.md):")
         for f in faults:
