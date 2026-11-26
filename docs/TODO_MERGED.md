@@ -221,3 +221,4 @@ What has landed toward each open row of docs/TODO.md and docs/TODO_RULINGS.md, o
 - 142: Merged #2065: Rival clubs keep their stars: first contracts fit the cap, stars settled first.
 - 202: Merged #2081: 3D heads: warm shade fill and grass-green cut on the head shader.
 - 202: Merged #2083: 3D 1.0 plan: Optus rebuild and Blacktown stages 1-3 on main (row 202).
+- 202: Merged #2145: Norwood Oval: the north and south frontages modelled one by one on the real land (row 202).
