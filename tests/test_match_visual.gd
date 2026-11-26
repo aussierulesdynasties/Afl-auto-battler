@@ -2392,6 +2392,27 @@ func _test_ground_terrain() -> void:
 			"The MCG's Yarra Park ring lies on the real land (%d points, worst %.3f m)" % [count, off])
 	_check(above <= 0.001, "Where it meets the model the ring is never above the MCG's street (%.3f)" % above)
 	mcg.free()
+	# Norwood's ring starts on the venue's own edge (63-100 m round): every spoke has the same rings, so each
+	# triangle joins neighbouring rings. Spokes with different ring counts once joined near rings to far ones,
+	# a fan of spikes over the turf from straight above (2026-11-26).
+	var nw := GroundModels.instantiate("norwood")
+	var nring: MeshInstance3D = nw.get_node_or_null("Surrounds")
+	var spread := 0.0
+	var tris := 0
+	if nring != null:
+		var arrs := nring.mesh.surface_get_arrays(0)
+		var nv: PackedVector3Array = arrs[Mesh.ARRAY_VERTEX]
+		var ni: PackedInt32Array = arrs[Mesh.ARRAY_INDEX]
+		for t in range(0, ni.size(), 3):
+			var r0 := Vector2(nv[ni[t]].x, nv[ni[t]].z).length()
+			var r1 := Vector2(nv[ni[t + 1]].x, nv[ni[t + 1]].z).length()
+			var r2 := Vector2(nv[ni[t + 2]].x, nv[ni[t + 2]].z).length()
+			if minf(r0, minf(r1, r2)) < 300.0:
+				spread = maxf(spread, maxf(r0, maxf(r1, r2)) - minf(r0, minf(r1, r2)))
+				tris += 1
+	_check(nring != null and tris > 1000 and spread < 2.0 * GroundModels.LAND_STEP,
+			"Norwood's land ring joins neighbouring rings only (%d triangles, widest %.1f m)" % [tris, spread])
+	nw.free()
 
 
 ## A ground whose boundary was traced on Google Earth (tools/grounds/boundary) plays on that line, not an ellipse:

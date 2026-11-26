@@ -707,7 +707,13 @@ static func _add_surrounds(root: Node3D, s: Dictionary, dir := "", fit: Array = 
 			first = _past_fence(d, fit, margin)
 		# A venue that is not round ends where its own ground ends: inner_by_angle gives that edge (m) every
 		# 360/n degrees from +x toward +z; the land starts half a metre inside it, under the model's ground.
-		return first if by_angle.is_empty() else float(by_angle[i % by_angle.size()]) - 0.5
+		if by_angle.is_empty():
+			return first
+		# The ring may have more directions than the list (360 on the real land): read the edge between
+		# its entries by angle, never by index, or a 96-entry list wrapped 3.75 times round in spikes.
+		var t := float(i) * by_angle.size() / n
+		var k := int(t)
+		return lerpf(float(by_angle[k % by_angle.size()]), float(by_angle[(k + 1) % by_angle.size()]), t - k) - 0.5
 	var radii := func(i: int, d: Vector3) -> Array:
 		var r0: float = start.call(i, d)
 		var rs: Array = RINGS.map(func(f): return f if f > 0.0 else r0) + [outer]
@@ -719,11 +725,15 @@ static func _add_surrounds(root: Node3D, s: Dictionary, dir := "", fit: Array = 
 				r += RELIEF_RING if r < 600.0 else RELIEF_RING * 2.0
 			rs.append_array([RELIEF_REACH, outer])
 		if land != null:
+			# The same rings on every spoke, each `off` past where that spoke starts: _ring_mesh joins
+			# ring k of one spoke to ring k of the next, so a spoke with more rings than its neighbour
+			# (the venue's edge varies 63-100 m round Norwood) tore the ring into spikes over the turf.
 			rs = []
-			var r := r0
-			while r < outer:
-				rs.append(r)
-				r += LAND_STEP if r < inner + 300.0 else (LAND_STEP * 3.0 if r < inner + 900.0 else LAND_STEP * 10.0)
+			var off := 0.0
+			while inner + off < outer - 100.0:
+				rs.append(r0 + off)
+				var q := inner + off
+				off += LAND_STEP if q < inner + 300.0 else (LAND_STEP * 3.0 if q < inner + 900.0 else LAND_STEP * 10.0)
 			rs.append(outer)
 		if near != null:
 			rs = [r_near] + rs.filter(func(r): return r > r_near + 1.0)
