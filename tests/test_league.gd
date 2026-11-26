@@ -132,9 +132,9 @@ func _test_banner_context() -> void:
 	# FL-002: the director's 200-game line, with his full displayed name.
 	Career.of(star)["games"] = 199
 	var ctx200 := GameState.banner_context(m0)
-	# The texts are placeholders (the director's order, 2026-10-18): his 200th still gets the
-	# milestone set, here the club's name, until his own words are in the file.
-	_check(str(Banners.texts_for(ctx200)[0]) == "milestone" and Banners.pick(ctx200) == Banners.fill("{us}", ctx200),
+	# Milestones only, plain words (2026-11-21): the director's approved 200th-game line.
+	_check(str(Banners.texts_for(ctx200)[0]) == "milestone"
+			and Banners.pick(ctx200) == "200 games.\nTake a bow,\n%s." % GameDB.player_display_name(star),
 			"His 200th picks the milestone set (%s)" % Banners.pick(ctx200).replace("\n", " / "))
 	# A player who came from another club: his 100th game in these colours,
 	# not a career milestone.
@@ -143,7 +143,8 @@ func _test_banner_context() -> void:
 	var ctxc := GameState.banner_context(m0)
 	var msc: Dictionary = ctxc["milestone"]
 	_check(bool(msc.get("club", false)) and int(msc.get("games", 0)) == 100
-			and str(Banners.texts_for(ctxc)[0]) == "milestone" and Banners.pick(ctxc) == Banners.fill("{us}", ctxc),
+			and str(Banners.texts_for(ctxc)[0]) == "milestone"
+			and Banners.pick(ctxc) == "100 games for the club\n%s" % GameDB.player_display_name(star),
 			"His 100th for the club, not his career, is the club's banner (%s)" % str(msc))
 	# Out of the side: no message for him.
 	var on_list := GameState.list_player(str(star["id"]))

@@ -67,6 +67,10 @@ const float WET_HAIR = 0.75;
 const float WET_SKIN_ROUGH = 0.7;
 // The player's own number (0-99), per figure; -1 for none.
 instance uniform int number = -1;
+// Not a footballer (the cheer squad, Oval3DBanner): long trousers in this colour from the shorts
+// down, and plain shoes; alpha 0 (every player) leaves the kit as it is.
+instance uniform vec4 trousers : source_color = vec4(0.0);
+varying float leg_h;  // the body's height here, metres from his feet (as drawn, standing)
 // The trainer's AFL vest (Oval3DCrew.TRAINER_VEST, row 202): its back print, placed by the vest's
 // own print coordinates (metres: g.x = 0.5 + x across him, g.y = height - 1 m; build_crew.py
 // print_uv) where 2025 broadcasts have it: a white sponsor patch 7 cm under the collar, his
@@ -367,6 +371,7 @@ vec4 number_on_back(int n, vec3 g, vec3 base, bool mirrored, bool pic, vec2 gx, 
 }
 
 void vertex() {
+	leg_h = VERTEX.y;
 	skin_uv = CUSTOM0.xy;
 	kit_edge = CUSTOM1;
 	kit_fore = CUSTOM2.x;
@@ -479,6 +484,13 @@ void fragment() {
 		shade = below * HEM_SHADOW * (1.0 - smoothstep(0.0, HEM_SHADOW_M, -kit_edge.z));
 	}
 	c = mix(c, shorts.rgb * (1.0 - shade), bottom);
+	float legs = 0.0;
+	if (trousers.a > 0.0) {
+		// Trousers from the shorts' hem down; the shoes under them.
+		legs = (1.0 - top) * (1.0 - smoothstep(0.80, 0.84, leg_h));
+		vec3 denim = trousers.rgb * (0.92 + 0.08 * sin(leg_h * 140.0));
+		c = mix(c, leg_h < 0.075 ? vec3(0.78, 0.78, 0.76) : denim, legs);
+	}
 	c = mix(c, jumper, top);
 	// A wet day (rule 2.83, Oval3DTurf sets oval_wet): soaked cloth goes a shade darker and
 	// holds a dull sheen; wet hair darkens; wet skin shines more. Looks only.
@@ -491,7 +503,7 @@ void fragment() {
 	// A bare scalp (bald, or under a style's own hairline) is skin like the rest of his face.
 	float bare = (1.0 - region(UV2.x) * float(scalp != 1) * behind) * (1.0 - region(COLOR.a))
 		* (1.0 - region(COLOR.b + COLOR.a * step(0.02, COLOR.b))) * (1.0 - max(top, bottom))
-		* has_maps;
+		* has_maps * (1.0 - legs);
 	NORMAL_MAP = vec3(s_nrm.r, 1.0 - s_nrm.g, 1.0);
 	NORMAL_MAP_DEPTH = bare;
 	ROUGHNESS = mix(mix(0.82, WET_CLOTH_ROUGH, oval_wet), s_rough * mix(1.0, WET_SKIN_ROUGH, oval_wet), bare);
@@ -506,6 +518,6 @@ void fragment() {
 	float down = clamp(-wn.y * 1.5 + 0.2, 0.0, 1.0) * bare;
 	ALBEDO *= mix(vec3(1.0), vec3(1.05, GROUND_GREEN_CUT, 0.95), down);
 	// Soft skin light (oval3d_skin_light.gdshaderinc) on bare skin only: never on the guernsey or shorts.
-	skin_wrap = bare * (1.0 - top) * (1.0 - bottom);
+	skin_wrap = bare * (1.0 - top) * (1.0 - bottom) * (1.0 - legs);
 	spec_amt = 0.5;
 }

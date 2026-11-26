@@ -28,8 +28,10 @@ const GOLDEN_LOAD := "490f9cee806122afc1502cd7c8c79b58"  # moved with Canberra's
 ## trade and sign in during it. Both prints were redrawn by the director's
 ## ratings (row 200, 2026-11-16) on top of row 199. First contracts fitting
 ## each club's cap (#2065: Geelong, Hawthorn and Gold Coast opened over it)
-## redrew it again.
-const GOLDEN_REAL := "f45597be894d17ff3955f68dffc2c30e"
+## redrew it again. Hold room (bug bash batch B, 2026-11-25: every signing
+## leaves a club the room to fill its list and take three draftees) changes
+## who the rivals sign before the opening draft.
+const GOLDEN_REAL := "442a0a1858bf8f009a6a49c76e067961"
 ## A played match's floating point differs between Windows and Linux builds of
 ## Godot, so the season has one fingerprint per platform; each was taken on
 ## main before the change (Linux: run_on_github run 43024085570). Removing

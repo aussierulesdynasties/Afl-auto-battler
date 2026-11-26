@@ -1,0 +1,413 @@
+{
+ "_about": "Manuka Oval (Canberra) as it is in 2026, for build.py. Frame: x east, y north from the OSM pitch way 4941717's node centroid (lat -35.3180995, lon 149.1345344); the field centre is C. Bearings are compass degrees from C; d is metres past the fence (the curve in fence, fitted to Google Earth) along its outward normal; z is metres above the field. Plan read off aerial imagery (Esri World Imagery, unwrapped round the fence) and OSM; heights and rows by eye from Google Earth 3D (2026-11-22). Looks only.",
+ "C": [
+  4.7,
+  -5.0
+ ],
+ "fence_h": 1.0,
+ "lower": {
+  "_": "the low front terrace all round: light grey seats, 8 rows to the concourse",
+  "rows": 8,
+  "d0": 0.9,
+  "z0": 1.0,
+  "d1": 7.3,
+  "z1": 2.4,
+  "conc": 9.3,
+  "gaps": [
+   [
+    57.5,
+    133.7
+   ]
+  ],
+  "bradman_rows": 5,
+  "_z": "Google Earth's status bar: 1 m at 2 to 5 m out, 2 m at 6 to 9 m"
+ },
+ "astands": {
+  "_": "the stands under thin dark roofs with white A-frames on top: rows of mixed-colour seats. Ends, roof fronts and backs traced on a calibrated Google Earth top-down (2026-11-22, camera 691 m over the turf, 0.436 m a pixel, lean-corrected to roof height); roof_b0/roof_b1 bound the dark roof where a translucent canopy (canopies) covers the rest",
+  "north": {
+   "b0": 301.6,
+   "b1": 386.9,
+   "rows": 9,
+   "d0": 9.6,
+   "z0": 2.8,
+   "d1": 18.9,
+   "z1": 5.9,
+   "rf": 10.9,
+   "rfz": 8.2,
+   "rb": 19.8,
+   "rbz": 7.8,
+   "roof_b0": 322.5,
+   "rb_at": [
+    [
+     301.6,
+     19.8
+    ],
+    [
+     370.0,
+     19.8
+    ],
+    [
+     372.5,
+     21.2
+    ],
+    [
+     386.9,
+     21.2
+    ]
+   ],
+   "_h": "roof heights from Google Earth's status bar from angled cameras (shape/oblique.py heights)",
+   "_z": "rows: Google Earth's status bar reads 3 to 4 m at 12 to 14 m out (under the roof's front) and the roof 8 to 9 m; the back row kept 1.9 m or more under the roof"
+  },
+  "west": {
+   "b0": 196.1,
+   "b1": 259.1,
+   "rows": 10,
+   "d0": 10.0,
+   "z0": 2.8,
+   "d1": 19.1,
+   "z1": 6.4,
+   "rf": 10.4,
+   "rfz": 9.0,
+   "rb": 20.1,
+   "rbz": 8.4,
+   "roof_b1": 238.4,
+   "_h": "roof heights from Google Earth's status bar from angled cameras (shape/oblique.py heights)",
+   "_z": "rows: Google Earth's status bar reads 3 to 4 m at 12 to 14 m out (under the roof's front) and the roof 8 to 9 m; the back row kept 1.9 m or more under the roof"
+  },
+  "southeast": {
+   "b0": 162.1,
+   "b1": 174.1,
+   "rows": 9,
+   "d0": 10.0,
+   "z0": 2.8,
+   "d1": 20.0,
+   "z1": 6.3,
+   "rf": 11.1,
+   "rfz": 9.0,
+   "rb": 21.0,
+   "rbz": 8.3,
+   "_h": "roof heights from Google Earth's status bar from angled cameras (shape/oblique.py heights)",
+   "_z": "rows: Google Earth's status bar reads 3 to 4 m at 12 to 14 m out (under the roof's front) and the roof 8 to 9 m; the back row kept 1.9 m or more under the roof"
+  }
+ },
+ "bradman": {
+  "_": "Bradman Stand: 5 front rows, a plinth wall, 16 rows to the boxes under a deep white roof; ends, roof front and back and the two vomitories traced on the calibrated Google Earth top-down (2026-11-22), roof lean-corrected at roof_top",
+  "b0": 262.1,
+  "b1": 297.9,
+  "rows": 16,
+  "d0": 6.0,
+  "z0": 1.8,
+  "d1": 21.0,
+  "z1": 8.4,
+  "roof_front": 10.88,
+  "roof_top": 13.0,
+  "roof_fascia": 2.0,
+  "soffit_front": 11.0,
+  "soffit_back": 11.2,
+  "back": 35.12,
+  "voms": [
+   273.0,
+   287.5
+  ],
+  "_h": "roof top 13 m from Google Earth's status bar (100 probes from two angled cameras, every one 13); front seats 3 m at 9 m out the same way; rows raked to fit under the roof",
+  "_lean": "roof edges traced again at its measured 13 m (the lean moves them 0.5 m out)"
+ },
+ "red": {
+  "_": "the open red-seat terraces on the east side: three blocks with stairs between; blocks, their aisles and depth traced on the calibrated Google Earth top-down (2026-11-22)",
+  "blocks": [
+   [
+    103.4,
+    121.0
+   ],
+   [
+    123.0,
+    140.3
+   ],
+   [
+    141.6,
+    157.3
+   ]
+  ],
+  "rows": 12,
+  "d0": 12.4,
+  "z0": 2.4,
+  "d1": 22.3,
+  "z1": 7.0,
+  "aisles": [
+   106.6,
+   116.9,
+   125.9,
+   136.25,
+   144.7,
+   153.75
+  ]
+ },
+ "hill": {
+  "_": "the east bank: grass slope, path, gravel terrace, box hedge on top",
+  "b0": 57.0,
+  "b1": 133.0,
+  "grass_to": 8.5,
+  "grass_z": [
+   1.0,
+   1.7
+  ],
+  "path_to": 10.3,
+  "gravel_to": 20.5,
+  "gravel_z": [
+   1.8,
+   2.8
+  ],
+  "hedge_to": 22.5,
+  "hedge_h": 1.3
+ },
+ "media": {
+  "_": "the media and corporate building over the southern seats (in OSM's Menzies Terrace): curved, five levels behind bronze fins and dark glass, the upper four stepping back floor by floor to the white roof deck at 21 m (Google Earth's status bar from angled cameras: deck 21 m, the face 14.5 m out at 14 to 15 m up) with rounded back corners. Deck ends, front and back and the ledge traced on the calibrated Google Earth top-down (2026-11-22); the form from Google Earth 3D from the field; roof_back_at: the deck's back edge [bearing, d] (the block's back wall 1 m inside it); deck_outline: the white deck's outline [bearing, d] traced row by row (front corners cut back, the back corners rounded); the front is dark glass under the ledge (Google Earth 3D close from the field: no fins on it), the fins on the back and ends",
+  "b0": 175.1,
+  "b1": 196.4,
+  "face": 10.5,
+  "z_under": 3.2,
+  "z_roof": 20.9,
+  "levels": [
+   3.2,
+   6.6,
+   9.8,
+   13.0,
+   16.4
+  ],
+  "deck_front": 15.1,
+  "ledge": {
+   "b0": 174.4,
+   "b1": 198.1,
+   "front": 12.4,
+   "z_front": 14.6,
+   "z_back": 15.4,
+   "fascia": 2.2,
+   "_": "front: the dark band's front on the top-down (the first upper floor's slab); z_front, fascia: no longer used"
+  },
+  "roof_back_at": [
+   [
+    175.1,
+    29.2
+   ],
+   [
+    176.5,
+    30.5
+   ],
+   [
+    178.0,
+    30.8
+   ],
+   [
+    191.5,
+    30.6
+   ],
+   [
+    193.5,
+    29.7
+   ],
+   [
+    195.0,
+    28.4
+   ],
+   [
+    196.4,
+    26.2
+   ]
+  ],
+  "deck_outline": [
+   [
+    175.8,
+    15.1
+   ],
+   [
+    196.05,
+    15.1
+   ],
+   [
+    196.1,
+    17.7
+   ],
+   [
+    196.42,
+    20.7
+   ],
+   [
+    196.4,
+    23.7
+   ],
+   [
+    196.06,
+    25.7
+   ],
+   [
+    195.67,
+    26.7
+   ],
+   [
+    195.1,
+    27.7
+   ],
+   [
+    194.4,
+    28.7
+   ],
+   [
+    193.6,
+    29.7
+   ],
+   [
+    192.5,
+    30.4
+   ],
+   [
+    191.5,
+    30.6
+   ],
+   [
+    185.0,
+    30.7
+   ],
+   [
+    178.0,
+    30.8
+   ],
+   [
+    176.5,
+    30.5
+   ],
+   [
+    175.6,
+    29.7
+   ],
+   [
+    175.15,
+    28.2
+   ],
+   [
+    175.0,
+    26.7
+   ],
+   [
+    175.3,
+    25.7
+   ],
+   [
+    175.15,
+    23.7
+   ],
+   [
+    175.1,
+    20.7
+   ],
+   [
+    175.5,
+    18.7
+   ],
+   [
+    175.8,
+    17.7
+   ]
+  ],
+  "_lean": "deck traced again at its measured 21 m (the lean moves it 0.8 m toward the field)"
+ },
+ "screen": {
+  "_": "the video screen on a steel frame, north-east; ends, face (d at the ends: a straight box) and depth traced on the calibrated straight-down shot (shape/README)",
+  "b0": 38.1,
+  "b1": 51.4,
+  "d": 14.6,
+  "z0": 6.5,
+  "z1": 14.0,
+  "dep": 3.0,
+  "_h": "face 13.3 m (middle) to 14.6 m (ends) out, 6.5 to 14 m up: Google Earth's status bar swept up the face from an angled camera"
+ },
+ "scoreboard": {
+  "_": "Jack Fingleton Scoreboard , heritage, from the MCG; footprint traced on the calibrated Google Earth top-down (2026-11-22): [bearing, d] corners, front edge first",
+  "h": 9.2,
+  "clock": 2.6,
+  "plan": [
+   [
+    55.4,
+    17.9
+   ],
+   [
+    67.4,
+    17.9
+   ],
+   [
+    67.4,
+    22.9
+   ],
+   [
+    55.4,
+    22.9
+   ]
+  ]
+ },
+ "nest": {
+  "_": "camera and commentary box right behind Hawke Terrace's roof: b 5.0-14.2, d 20.8-24.5 traced on a calibrated straight-down shot; top 16 m from Google Earth's status bar",
+  "b": 9.6,
+  "d": 22.65,
+  "w": 18.3,
+  "dep": 3.7,
+  "z0": 13.0,
+  "z1": 16.0
+ },
+ "towers": {
+  "_": "six 47 m light towers (2013), leaning in so no part tops Parliament House's height rule; OSM masts",
+  "H": 47.0,
+  "lean_deg": 6.5,
+  "head_h": 14.0,
+  "head_w": 8.6
+ },
+ "residence": {
+  "_": "the 1930s curator's residence, two storeys, cream render, terracotta hipped roof",
+  "b": 33.5,
+  "d": 32.0,
+  "L": 12.0,
+  "W": 9.0,
+  "a": 32.0,
+  "eave": 6.8,
+  "ridge": 9.6
+ },
+ "fence": {
+  "_": "the boundary fence (the white pickets on their kerb) traced on a straight-down Google Earth shot (range calibrated from its own lat/lon readout to 0.16 m), r(bearing) about C as a Fourier series to order 8: r = a0 + sum(a_k cos k b + b_k sin k b). tools/grounds/manuka/shape/",
+  "fourier": [
+   78.7884,
+   0.2273,
+   -0.4049,
+   6.627,
+   2.3088,
+   0.0945,
+   -0.0883,
+   0.3347,
+   0.2537,
+   0.0119,
+   0.068,
+   -0.062,
+   -0.1618,
+   0.0203,
+   0.0021,
+   -0.0385,
+   -0.1603
+  ]
+ },
+ "canopies": {
+  "_": "translucent pale canopies over the stands' ends (Google Earth top-down: pale (195, 219, 236), the frame showing through)",
+  "list": [
+   {
+    "b0": 301.6,
+    "b1": 321.6,
+    "rf": 11.8,
+    "rb": 21.9,
+    "of": "north"
+   },
+   {
+    "b0": 239.1,
+    "b1": 259.1,
+    "rf": 11.6,
+    "rb": 21.9,
+    "of": "west"
+   }
+  ]
+ }
+}
