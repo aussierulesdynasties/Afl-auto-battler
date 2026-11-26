@@ -21,6 +21,7 @@ func run() -> void:
 	_t("_test_full_playback", [res])
 	_t("_test_every_ground_size", [res])
 	_t("_test_open_play_shots", [res])
+	_t("_test_rushed_behind_staged", [res])
 	_t("_test_speed_sequencing", [res])
 	_t("_test_rng_isolation", [res])
 	_t("_test_appended_segments")
@@ -425,7 +426,7 @@ func _test_open_play_shots(res: Dictionary) -> void:
 			tagged = false
 		elif bool(ev["set_shot"]) and set_k < 0:
 			set_k = i
-		elif not bool(ev["set_shot"]) and open_k < 0:
+		elif not bool(ev["set_shot"]) and open_k < 0 and not ev.has("rusher_id"):
 			open_k = i
 	_check(tagged, "Every score says whether it came from a set shot")
 	_check(set_k >= 0 and open_k >= 0, "A match has set shots and open-play shots")
@@ -447,6 +448,39 @@ func _test_open_play_shots(res: Dictionary) -> void:
 	var b: Dictionary = staged.call(open_k)
 	_check(a["hold"] > 0.3 and not a["crumb"], "A set shot is lined up")
 	_check(b["hold"] == 0.0 and b["crumb"], "An open-play shot is kicked on the run, the play going on around it")
+
+
+## A defender rushing it through (P2-1) is drawn doing it: the man the log
+## names gathers it, carries it toward his own goal line and knocks it over
+## between the goal and behind posts. No one leads up to crumb it.
+func _test_rushed_behind_staged(res: Dictionary) -> void:
+	var evs: Array = res["events"]
+	var ks := []
+	for i in range(evs.size()):
+		if (evs[i] as Dictionary).has("rusher_id"):
+			ks.append(i)
+	_check(not ks.is_empty(), "The match has a defender rushing it through (%d)" % ks.size())
+	var d := MatchDirector.new()
+	d.setup(res, evs)
+	var ok := 0
+	for k in ks:
+		var ev: Dictionary = evs[k]
+		var who := d._token_by_pid(str(ev["rusher_id"]))
+		var ph: Array = d._shot_phases(k)
+		var first: Dictionary = ph[0]
+		var flight := {}
+		var crumb := false
+		for p in ph:
+			if str(p["t"]) == "flight":
+				flight = p
+			if str(p["t"]) == "crumb":
+				crumb = true
+		var to: Vector2 = flight.get("to", Vector2.ZERO)
+		if (who >= 0 and int(d.tokens[who]["side"]) == 1 - int(ev["side"])
+				and str(first["t"]) == "collect" and int(first["who"]) == who and not crumb
+				and is_equal_approx(absf(to.x), MatchMotion.GOAL_X) and absf(to.y) > 3.2 and absf(to.y) < 9.6):
+			ok += 1
+	_check(ok == ks.size(), "Each rushed behind is the defender's: he gathers it and it goes over between the posts (%d of %d)" % [ok, ks.size()])
 
 
 ## Teams change ends every quarter: the home side attacks one end of the

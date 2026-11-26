@@ -2694,9 +2694,10 @@ const PRESS_RUSH_GAIN := 0.96
 ## Rushed behinds (director, 2026-11-26, P2-1: "Add at the 2026 rate"): a
 ## defender closed down within RUSH_DEPTH metres of his own goal line rushes it
 ## through this often. Real AFL 2026: 2.12 a team a game (standings behinds less
-## player behinds, AFL Tables; afl_team_rates.json "rushed_behinds").
+## player behinds, AFL Tables; afl_team_rates.json "rushed_behinds"). Measured
+## over 1,000 paired matches: 0.5 gives 1.1, 1.0 (every time) gives 2.1.
 const RUSH_DEPTH := 15.0
-const RUSH_THROUGH := 0.5
+const RUSH_THROUGH := 1.0
 
 
 ## `side`'s man, closed down near his own goal, rushes it through: a behind to
@@ -3919,7 +3920,7 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 			_press_where(opp, atk_fp, in_d50, false)
 			if in_d50:
 				_t(side, "d50_rushed")
-				# Near his own goal he sometimes rushes it through (director,
+				# Near his own goal he rushes it through (director,
 				# 2026-11-26, P2-1): a behind to them, and we kick in.
 				if (not is_kick_in and atk_fp <= -(gline - _tv("RUSH_DEPTH", RUSH_DEPTH))
 						and rush_rng.randf() < _tv("RUSH_THROUGH", RUSH_THROUGH)):
