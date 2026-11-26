@@ -687,7 +687,7 @@ func _test_meeting_focus() -> void:
 	tree.root.size = Vector2i(390, 844)
 	await _frames(tree, 6)
 	scene = tree.current_scene as Control
-	var phone_b := scene.find_child("MeetFocus_contested", true, false) as Button
+	var phone_b := scene.find_child("MeetFocus_contested_ball", true, false) as Button
 	_check(scene.find_child("MeetProfile", true, false) == null and phone_b != null
 			and phone_b.get_theme_font("font") == UiKit.BOLD and _fits(scene, 390.0),
 			"On a phone the meeting stays one column, the rated stats still bold, nothing cut")
