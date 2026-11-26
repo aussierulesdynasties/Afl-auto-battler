@@ -50,4 +50,7 @@ confirmed.
 
 ## Not measured yet
 
-Stand and roof heights, light towers (model guesses 35 m): no Google Earth 3D or LiDAR used here yet.
+Stand and roof heights, light towers (model guesses 35 m). Google Earth 3D here was probed (2,664 points,
+700 m eye) but its mesh is dated 3/8/2022, before the redevelopment: it shows the old west stand at about 4 m
+above the turf, so none of its heights apply to the 2025-26 ground and none are used. The new grandstand's
+heights need photos or newer 3D data.
