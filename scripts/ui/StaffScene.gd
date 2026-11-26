@@ -48,12 +48,23 @@ func _build() -> void:
 	# Whose staff this is: the club's guernsey and, where its colour reads on
 	# the page, its ink. A dark club is carried by the guernsey alone.
 	var who_h := UiKit.hbox(UiKit.GAP)
-	who_h.add_child(UiKit.club_marker(_club, 24.0))
-	var head := UiKit.ellipsis(GameDB.club_name(_club), UiKit.H2, _ink(_club), true)
+	who_h.add_child(UiKit.club_marker(_club, 26.0))
+	var head := UiKit.club_title(GameDB.club_name(_club), UiKit.H2, _club, UiKit.BG)
 	head.name = "StaffClub"
+	head.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	if head is Label:
+		(head as Label).autowrap_mode = TextServer.AUTOWRAP_OFF
 	who_h.add_child(head)
 	body.add_child(who_h)
-	body.add_child(UiKit.spacer(UiKit.Space.CLOSE))
+	body.add_child(UiKit.spacer(UiKit.Space.TIGHT))
+	# What the figures on the cards are, once, for the whole page.
+	if mine and not GameState.first_staff_open():
+		var ctx := UiKit.lbl("Loyalty to you is out of 100. At %d or less, they leave after the season." % Council.WALK_LINE,
+				UiKit.SECONDARY, UiKit.MUTED)
+		ctx.name = "StaffContext"
+		ctx.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		body.add_child(ctx)
+	body.add_child(UiKit.spacer(UiKit.Space.ROOM))
 	var staff := GameState.club_staff(_club)
 	var open := {}
 	if mine:
@@ -100,11 +111,10 @@ func _build() -> void:
 		else:
 			row = _empty_row(job)
 		if grid != null:
-			var card := UiKit.panel(UiKit.PANEL, UiKit.Space.PAD)
-			card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			var card := _card(job == "SC" and mine)
 			_lines_on_top(row)
 			if coach:
-				var cv := UiKit.vbox(UiKit.Space.TIGHT)
+				var cv := UiKit.vbox(UiKit.Space.ROOM)
 				cv.add_child(row)
 				cv.add_child(_grades(staff[job], job))
 				card.add_child(cv)
@@ -121,8 +131,7 @@ func _build() -> void:
 			continue
 		var orow := _office_row(m, mine)
 		if grid != null:
-			var ocard := UiKit.panel(UiKit.PANEL, UiKit.Space.PAD)
-			ocard.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			var ocard := _card(false)
 			_lines_on_top(orow)
 			ocard.add_child(orow)
 			grid.add_child(ocard)
@@ -170,10 +179,38 @@ func _lines_on_top(row: Control) -> void:
 		v.alignment = BoxContainer.ALIGNMENT_BEGIN
 
 
-## His grades on his PC card, a line each, and how he fits this job.
+## A PC card: the panel with a 2 px rule of the club's colour along its top.
+## Yours, the senior coach's, carries the club's wash as well: the one card
+## on the page that is you.
+func _card(yours: bool) -> PanelContainer:
+	var card := UiKit.panel(UiKit.PANEL, UiKit.Space.PAD)
+	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var sb := (card.get_theme_stylebox("panel") as StyleBoxFlat).duplicate() as StyleBoxFlat
+	sb.border_width_top = 2
+	sb.border_color = _rule_ink()
+	sb.content_margin_top = UiKit.Space.PAD + 2
+	if yours:
+		sb.bg_color = UiKit.PANEL.lerp(UiKit.team_wash(), 0.28)
+		sb.border_width_top = 3
+	card.add_theme_stylebox_override("panel", sb)
+	return card
+
+
+## The club's colour for a rule: its vivid colour, or for a black-and-white
+## club the white of its stripes.
+func _rule_ink() -> Color:
+	if UiKit.club_is_black(_club):
+		return UiKit.TEXT
+	return UiKit.club_vivid(_club, UiKit.PANEL)
+
+
+## His grades on his PC card, a line each under a rule, the grade at the
+## card's right edge, and how he fits this job.
 func _grades(c: Dictionary, job: String) -> Control:
 	var g := UiKit.vbox(UiKit.Space.HAIR)
 	g.name = "Grades_" + job
+	g.add_child(UiKit.rule())
+	g.add_child(UiKit.spacer(UiKit.Space.TIGHT))
 	for key in Coaches.SKILLS:
 		g.add_child(_grade_row(str(Coaches.SKILL_LABEL[key]), Coaches.grade(Coaches.skill(c, key))))
 	if str(c.get("status", "")) == "club":
@@ -183,28 +220,78 @@ func _grades(c: Dictionary, job: String) -> Control:
 
 func _grade_row(label: String, value: String) -> Control:
 	var row := UiKit.hbox(UiKit.GAP)
-	var l := UiKit.lbl(label, UiKit.SMALL, UiKit.TEXT)
+	var l := UiKit.lbl(label, UiKit.SMALL, UiKit.MUTED)
 	l.autowrap_mode = TextServer.AUTOWRAP_OFF
-	l.custom_minimum_size = Vector2(128, 0)
+	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(l)
-	row.add_child(UiKit.line(value, UiKit.SMALL, UiKit.TEXT, true))
+	var v := UiKit.line(value, UiKit.SMALL, UiKit.TEXT, true)
+	v.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	row.add_child(v)
 	return row
 
 
-## You: the senior coach's calls are yours, so there are no grades to show.
+## A row's head: his job over his name, and at the right what the coach reads
+## at a glance (loyalty to you, or your own standing).
+func _head(role: String, who: String, who_ink: Color, right: Control, wide: bool, sub := "") -> HBoxContainer:
+	var h := UiKit.hbox(UiKit.GAP)
+	var v := UiKit.vbox(0)
+	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	v.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	var r := UiKit.ellipsis(role, UiKit.SMALL, UiKit.MUTED, true)
+	r.name = "Role"
+	v.add_child(r)
+	var n := UiKit.ellipsis(who, UiKit.HEADING if wide else UiKit.NAME, who_ink, true)
+	n.name = "Name"
+	v.add_child(n)
+	if sub != "":
+		v.add_child(UiKit.lbl(sub, UiKit.SECONDARY, UiKit.MUTED))
+	h.add_child(v)
+	if right != null:
+		right.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+		h.add_child(right)
+	return h
+
+
+## A figure in the scoreboard face over the word for it, right-aligned.
+func _figure(value: int, word: String, ink := UiKit.TEXT) -> VBoxContainer:
+	var v := UiKit.vbox(0)
+	var f := UiKit.figure(str(value), UiKit.NUMBER, ink)
+	f.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	v.add_child(f)
+	var w := UiKit.lbl(word, UiKit.SMALL, ink if ink != UiKit.TEXT else UiKit.MUTED, ink != UiKit.TEXT)
+	w.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	w.autowrap_mode = TextServer.AUTOWRAP_OFF
+	v.add_child(w)
+	return v
+
+
+## You: the senior coach's calls are yours, so there are no grades to show;
+## your standing with the club, Respect and Authority, takes their place.
 func _you_row(framed := false) -> Control:
-	var v := UiKit.vbox(UiKit.Space.HAIR)
+	var v := UiKit.vbox(UiKit.Space.CLOSE)
 	v.name = "StaffRow_SC"
-	v.custom_minimum_size.y = 64
-	v.add_child(UiKit.lbl("Senior coach", UiKit.SMALL, UiKit.TEXT, true))
-	v.add_child(UiKit.lbl("You", UiKit.BODY, _ink(GameState.my_club), true))
-	var l := UiKit.lbl("Selection, tactics and training are your calls.", UiKit.SMALL, UiKit.TEXT)
+	var stand := UiKit.hbox(UiKit.Space.LOOSE if framed else UiKit.Space.ROOM)
+	stand.name = "YourStanding"
+	stand.add_child(_figure(Promises.respect(GameState), "Respect"))
+	stand.add_child(_figure(Promises.authority(GameState), "Authority"))
+	var you_ink := UiKit.TEXT if UiKit.club_is_black(GameState.my_club) else _ink(GameState.my_club)
+	v.add_child(_head("Senior coach", "You", you_ink, stand, framed))
+	var l := UiKit.lbl("Selection, tactics and training are your calls.", UiKit.SECONDARY, UiKit.TEXT)
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(l)
 	if not framed:
 		return _padded(v)
-	# On the PC grid it keeps a coach row's height and sits at the top of its card.
-	v.custom_minimum_size.y = 68
+	# On a PC card, what moves the two figures sits where a coach's grades do.
+	var how := UiKit.vbox(UiKit.Space.HAIR)
+	how.name = "StandingHow"
+	how.add_child(UiKit.spacer(UiKit.Space.CLOSE))
+	how.add_child(UiKit.rule())
+	how.add_child(UiKit.spacer(UiKit.Space.TIGHT))
+	for t in ["Keeping your word builds Respect.", "Hard calls build Authority."]:
+		var hl := UiKit.lbl(t, UiKit.SMALL, UiKit.MUTED)
+		hl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		how.add_child(hl)
+	v.add_child(how)
 	v.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	return v
 
@@ -218,15 +305,23 @@ func _coach_row(job: String, c: Dictionary, releasable := false) -> Control:
 	b.focus_mode = Control.FOCUS_NONE
 	for state in ["normal", "hover", "pressed", "hover_pressed", "focus"]:
 		b.add_theme_stylebox_override(state, StyleBoxEmpty.new())
-	var v := UiKit.vbox(UiKit.Space.HAIR)
+	var wide := ScreenLayout.roomy(UiKit.view_width(self), UiKit.view_height(self))
+	var mine := _club == GameState.my_club
+	var m := _member(str(c.get("cid", "")))
+	var v := UiKit.vbox(UiKit.Space.THIN)
+	# A phone's row keeps a little air above and below its lines; a PC card's
+	# lines start at the card's top, level with its neighbours'.
+	var air := 0 if wide else UiKit.Space.CLOSE
 	v.set_anchors_preset(Control.PRESET_FULL_RECT)
-	v.alignment = BoxContainer.ALIGNMENT_CENTER
+	v.offset_top = air
+	v.offset_bottom = -air
+	v.alignment = BoxContainer.ALIGNMENT_BEGIN if wide else BoxContainer.ALIGNMENT_CENTER
 	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	b.add_child(v)
-	v.add_child(UiKit.lbl(str(Coaches.JOB_LABEL[job]), UiKit.SMALL, UiKit.TEXT, true))
-	v.add_child(UiKit.ellipsis(GameDB.player_display_name(c), UiKit.BODY, UiKit.TEXT, true))
-	v.add_child(UiKit.lbl(Coaches.headline(c), UiKit.SMALL, UiKit.TEXT))
-	for l in _council_lines(job, str(c.get("cid", "")), _club == GameState.my_club):
+	v.add_child(_head(str(Coaches.JOB_LABEL[job]), GameDB.player_display_name(c), UiKit.TEXT,
+			_loyalty(job, m) if mine else null, wide, "" if wide else Coaches.headline(c)))
+	# On a PC his grades are on the card; a phone's row says under his name what he is good at.
+	for l in _council_lines(job, m, mine, wide):
 		v.add_child(l)
 	# What you have promised him, and what a broken promise cost (T5.Q16).
 	var word := _word_line(c)
@@ -247,7 +342,7 @@ func _coach_row(job: String, c: Dictionary, releasable := false) -> Control:
 	# The row grows with its lines (a wrapped term, a promise): a Button does
 	# not size to its children, so it follows the column's height, never
 	# less than the plain row (bug-bash 7).
-	var fit := func(): b.custom_minimum_size.y = maxf(68.0, v.get_combined_minimum_size().y + 12.0)
+	var fit := func(): b.custom_minimum_size.y = maxf(0.0 if wide else 68.0, v.get_combined_minimum_size().y + 2.0 * air)
 	v.minimum_size_changed.connect(fit)
 	fit.call()
 	if not releasable:
@@ -406,50 +501,81 @@ func _job_title(job: String) -> String:
 	return label if job == "SC" or job == "SA" else label + " coach"
 
 
-## A list manager or head of high performance: the seat, his name, what he
-## pushes for and (at your club) where his loyalty stands.
+## A list manager or head of high performance: the seat, the name, what they
+## push for and (at your club) where their loyalty stands. On a PC card, what
+## the seat looks after sits where a coach's grades do.
+const OFFICE_ABOUT := {
+	"LM": "Looks after the list: the draft, trades and contracts.",
+	"HP": "Looks after the bodies: fitness, loads and injuries.",
+}
+
+
 func _office_row(m: Dictionary, mine: bool) -> Control:
-	var v := UiKit.vbox(UiKit.Space.HAIR)
-	v.name = "StaffRow_" + str(m["job"])
-	v.custom_minimum_size.y = 64
-	v.add_child(UiKit.lbl(str(Council.OFFICE_LABEL[str(m["job"])]), UiKit.SMALL, UiKit.TEXT, true))
-	v.add_child(UiKit.ellipsis(str(m["name"]), UiKit.BODY, UiKit.TEXT, true))
-	for l in _council_lines(str(m["job"]), str(m["id"]), mine):
+	var job := str(m["job"])
+	var wide := ScreenLayout.roomy(UiKit.view_width(self), UiKit.view_height(self))
+	var v := UiKit.vbox(UiKit.Space.THIN)
+	v.name = "StaffRow_" + job
+	v.add_child(_head(str(Council.OFFICE_LABEL[job]), str(m["name"]), UiKit.TEXT,
+			_loyalty(job, m) if mine else null, wide))
+	for l in _council_lines(job, m, mine, wide):
 		v.add_child(l)
+	if wide:
+		var about := UiKit.vbox(UiKit.Space.HAIR)
+		about.name = "About_" + job
+		about.add_child(UiKit.spacer(UiKit.Space.CLOSE))
+		about.add_child(UiKit.rule())
+		about.add_child(UiKit.spacer(UiKit.Space.TIGHT))
+		var t := UiKit.lbl(str(OFFICE_ABOUT.get(job, "")), UiKit.SMALL, UiKit.MUTED)
+		t.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		about.add_child(t)
+		v.add_child(about)
+		return v
 	return _padded(v)
 
 
-## What a council member pushes for, and at your club his loyalty to you with
-## the biggest reason behind it now (a rival club's loyalties stay theirs).
-func _council_lines(job: String, id: String, mine: bool) -> Array:
-	var out := []
-	var m := {}
+## The council member in a seat at this club, by id.
+func _member(id: String) -> Dictionary:
 	for x in Council.members(GameState, _club):
 		if str(x["id"]) == id:
-			m = x
+			return x
+	return {}
+
+
+## Loyalty to you as a figure, the word for it under: the fact on his card the
+## coach reads first. Restless or worse, it is in bold.
+func _loyalty(job: String, m: Dictionary) -> Control:
+	if m.is_empty():
+		return null
+	var lv := Council.loyalty(GameState, m)
+	var f := _figure(lv, Council.loyalty_word(lv).replace(" to you", ""))
+	f.name = "Loyalty_" + job
+	if lv <= Council.RESTLESS_LINE:
+		var w := f.get_child(1) as Label
+		w.add_theme_color_override("font_color", UiKit.TEXT)
+		w.add_theme_font_override("font", UiKit.BOLD)
+	return f
+
+
+## What a council member pushes for, and at your club the biggest reason
+## behind his loyalty to you now (a rival club's loyalties stay theirs).
+func _council_lines(job: String, m: Dictionary, mine: bool, wide: bool) -> Array:
+	var out := []
 	if m.is_empty():
 		return out
-	var ag := UiKit.lbl("Pushes to " + Council.agenda_label(str(m["agenda"])).to_lower(), UiKit.SMALL, UiKit.TEXT)
+	var ag := UiKit.lbl("Pushes to " + Council.agenda_label(str(m["agenda"])).to_lower(), UiKit.SECONDARY, UiKit.TEXT)
 	ag.name = "Agenda_" + job
 	ag.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	out.append(ag)
 	if not mine:
 		return out
-	var lv := Council.loyalty(GameState, m)
-	var ll := UiKit.lbl("Loyalty to you: %d out of 100. %s." % [lv, Council.loyalty_word(lv)], UiKit.SMALL,
-			UiKit.EMPH if lv <= Council.RESTLESS_LINE else UiKit.TEXT, lv <= Council.RESTLESS_LINE)
-	ll.name = "Loyalty_" + job
-	ll.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	out.append(ll)
 	var marks := Opinion.breakdown(GameState.relations, str(m["key"]))
 	if not marks.is_empty():
 		# On a PC card the reason keeps to one line, so eight cards still fit
 		# two rows at 960x540 without scrolling; a phone row has the room for
 		# how long it lasts.
-		var wide := ScreenLayout.roomy(UiKit.view_width(self), UiKit.view_height(self))
-		var text := "%s: %+d." % [str(marks[0]["why"]), int(marks[0]["points"])] if wide \
+		var text := "%s, %+d" % [str(marks[0]["why"]), int(marks[0]["points"])] if wide \
 				else Opinion.mark_text(marks[0])
-		var why := UiKit.lbl(text, UiKit.SMALL, UiKit.TEXT)
+		var why := UiKit.lbl(text, UiKit.SMALL, UiKit.MUTED)
 		why.name = "LoyaltyWhy_" + job
 		why.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		out.append(why)
