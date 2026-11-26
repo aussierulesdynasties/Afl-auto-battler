@@ -233,6 +233,7 @@ func _test_drop_preview() -> void:
 ## tap opens a promised man's preview; leave him out and the Respect it showed
 ## is the Respect you have, and each mate it named carries that mark.
 func _test_preview_is_live() -> void:
+	var prom: Script = load("res://scripts/sim/Promises.gd")
 	_fresh("COL")
 	_router.go("selection")
 	await _settle(10)
@@ -247,7 +248,7 @@ func _test_preview_is_live() -> void:
 		return
 	var p: Dictionary = _gs.list_player(pid)
 	p["expects_game"] = 12
-	Promises.made(_gs, p, "game")
+	prom.made(_gs, p, "game")
 	scene = current_scene
 	var strip: Control = scene.find_child("Condition_" + pid, true, false)
 	var tile: Control = strip.get_parent().get_parent() as Control if strip != null else null
@@ -281,7 +282,7 @@ func _test_preview_is_live() -> void:
 	_gs._settle_week_event()
 	_gs.week_event = {}
 	_gs.advance()
-	_check(Promises.respect(_gs) == want_r, "The Respect the preview showed is the Respect you have (%d, %d)" % [want_r, Promises.respect(_gs)])
+	_check(prom.respect(_gs) == want_r, "The Respect the preview showed is the Respect you have (%d, %d)" % [want_r, prom.respect(_gs)])
 	var carried := 0
 	for oid in named:
 		for m in Opinion.mods(_gs.relations, Opinion.player_key(str(oid))):
