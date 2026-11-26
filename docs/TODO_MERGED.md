@@ -207,3 +207,4 @@ What has landed toward each open row of docs/TODO.md and docs/TODO_RULINGS.md, o
 - 201: Merged #1977: Match sim: longer kicks, fewer chains, and calls that change how the side kicks (row 201 gaps 6-8).
 - 202: Merged #1987: MCG flagship: matte roof, walls, seat rule and colours, Yarra Park from OpenStreetMap, MCG standard doc (row 202 2b).
 - 202: Merged #1995: 3D match: the main camera zooms and leads the play like AFL TV (row 202 2e).
+- 202: Merged #1996: 3D lighting: night towers, the real sun over every ground, and the day look (row 202 2a).
