@@ -449,14 +449,15 @@ static func drop_preview(p: Dictionary) -> Control:
 		lines.append(["DropOpinion", "Being left out: opinion of you %+d." % int(cost["opinion"])])
 	if int(cost["promise"]) != 0 or not (cost["broken"] as Array).is_empty():
 		lines.append(["DropPromise", "Breaking your word: opinion of you %+d." % int(cost["promise"])])
-		for b in cost["broken"]:
-			lines.append(["DropBroken", "It breaks: %s" % str(b).trim_suffix(".") + "."])
+		for i in range((cost["broken"] as Array).size()):
+			var b = cost["broken"][i]
+			lines.append(["DropBroken_%d" % i, "It breaks: %s" % str(b).trim_suffix(".") + "."])
 	var bonds := RelationsView.bond_label_script()
 	for f in cost["fallout"]:
 		var tie := ""
 		if bonds != null and str(f.get("kind", "")) != "":
 			tie = ", his " + str(bonds.call("label", str(f["kind"]))).to_lower()
-		lines.append(["DropFallout", "%s%s: opinion of you %+d." % [str(f["name"]), tie, int(f["opinion"])]])
+		lines.append(["DropFallout_" + str(f["id"]), "%s%s: opinion of you %+d." % [str(f["name"]), tie, int(f["opinion"])]])
 	var st: Dictionary = cost["standing"]
 	for pair in [["respect", "Respect"], ["authority", "Authority"]]:
 		var d := int(cost[pair[0]])

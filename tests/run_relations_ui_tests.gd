@@ -210,7 +210,7 @@ func _test_drop_preview() -> void:
 		_check(int(cost["opinion"]) < 0 and ol != null and ol.text.ends_with("%+d." % int(cost["opinion"])),
 				"Being left out costs his opinion of you (%s)" % (ol.text if ol else "-"))
 	if _gs.has_method("bond_fallout"):
-		_check(prev.find_children("DropFallout", "", true, false).size() == (cost["fallout"] as Array).size(),
+		_check(prev.find_children("DropFallout_*", "", true, false).size() == (cost["fallout"] as Array).size(),
 				"Each mate or rival who takes it has a line")
 	var all := _text(prev)
 	_check(not all.to_lower().contains("modifier") and not all.to_lower().contains("best"), "Facts, no verdicts (%s)" % all)
