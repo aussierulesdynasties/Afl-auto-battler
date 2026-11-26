@@ -47,7 +47,7 @@ percentile 99. A stat a season does not record is left out. Height and weight st
 | Group | Attribute | Real-player recipe (Wheelo) | What it drives in the match |
 |---|---|---|---|
 | Physical | Speed | GPS top speed, 32.5 km/h = 70 up to 36.0+ km/h = 98 (`C:/kt/speed`); no GPS, a combine 20 m time: 2.80 s = 90 up to 3.10 s = 50; neither: estimate (below) | Open-field separation, line-breaking runs, chase-down tackles (tackling 20%) |
-| | Endurance | Time on ground | How fast he tires (`MatchSim:5844`, `Workload:61`); tackling 20% |
+| | Endurance | Time on ground 40 + uncontested possessions 30 + pressure acts 30, the blend re-scaled onto the 2nd-98th percentile 1-99 (director, 2026-11-27: "re-scale the blended result back onto the league's 2nd–98th percentile (1–99) scale so elite gut-runners still reach 95–99") | How fast he tires (`MatchSim:5899`, `Workload:65`); tackling 20% |
 | | Strength | Weight for height 50 + contested possessions a game 50 | Breaking tackles, one-on-one and ruck contests |
 | | Work Rate | Pressure acts 30 + bounces 25 + (inside 50s + rebound 50s) 25 + uncontested possessions 20, against what his position, height and weight usually produce | Transition spread, uncontested link-up chains, repeat defensive pressure |
 | Technical | Kicking | Efficiency 50 + metres gained per kick 50 | Kick range, ball use, disposal (56%) |
@@ -181,7 +181,7 @@ average, on the OVR scale; under 5 games, Form = OVR.
 handballs for Handballing, marks for Marking, goals per shot for Goalkicking, goals and marks inside 50 for Forward
 craft, tackles for Pressure, hitouts for Ruck, frees against and clangers for Discipline, contested possessions and
 clearances for Contested ball, contested marks for Contested marking, one percenters for One-on-one defence, goal
-assists and inside 50s for Vision, % of game played for Endurance), a game, on that season's league scale; an
+assists and inside 50s for Vision, % of game played 40 and uncontested possessions 30 for Endurance, AFL Tables keeping no pressure acts), a game, on that season's league scale; an
 attribute the season never recorded takes his position's average. The 2020 start (2019 season) is in Wheelo.
 
 ## 5. Phases (each its own PR, green CI, auto-merge)

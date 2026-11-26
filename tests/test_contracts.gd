@@ -3145,11 +3145,15 @@ func _test_trade_market() -> void:
 	# Retirees can't be traded: leave them out of both sides.
 	var theirs := (GameState.season.lists[rival] as Array).filter(func(q): return not GameState.retiring_now(q))
 	theirs.sort_custom(func(a, b): return int(Ovr.of(a)) > int(Ovr.of(b)))
-	var mine := GameState.my_list.filter(func(q): return not GameState.retiring_now(q))
+	# Seniors only, as in the reason-code fixture: a rookie traded for a senior can
+	# hit the senior list cap (row 88).
+	var mine := RookieList.seniors(GameState.my_list).filter(func(q): return not GameState.retiring_now(q))
 	mine.sort_custom(func(a, b): return int(Ovr.of(a)) < int(Ovr.of(b)))
 	var countered := 0
 	var good := true
-	for k in [6, 10, 14]:
+	# Down the two lists by rank, as the reason-code fixture does: which ranks are
+	# refused on value moves whenever the ratings do.
+	for k in range(4, mini(mini(mine.size(), theirs.size()), 26), 2):
 		var ask := [str(theirs[k]["id"])]
 		var offer := [str(mine[k]["id"])]
 		var v := GameState.evaluate_trade(rival, offer, ask)

@@ -5893,10 +5893,11 @@ func _after_chain() -> void:
 			_p(p, "distance_run", gps)
 
 			# Endurance (main read the old Durability here: 74.6 on average for a side's
-			# 18, Endurance 54.5, so the drain's 1.2 is 1.12 and an average side tires
-			# as before; ENTRY_LINES_CENTRE says how each centre moved).
+			# 18, Endurance 54.5, so the drain's 1.2 became 1.12 and an average side tires
+			# as before; ENTRY_LINES_CENTRE says how each centre moved). The 40/30/30
+			# blend (director 2026-11-27) put a side's 18 at 57.5, so 1.12 is 1.132.
 			var dur := float((p["attr"] as Dictionary).get("endurance", 70.0))
-			var d := ENERGY_DRAIN * per_chain * float(ROLE_DRAIN.get(role, 1.0)) 					* (1.12 - 0.4 * dur / 100.0) * fatigue_pace * Workload.drain_mult(p)
+			var d := ENERGY_DRAIN * per_chain * float(ROLE_DRAIN.get(role, 1.0)) 					* (1.132 - 0.4 * dur / 100.0) * fatigue_pace * Workload.drain_mult(p)
 			if _trait(p, "engine"):
 				d *= 0.75
 			exertion[id] = float(exertion.get(id, 0.0)) + d
