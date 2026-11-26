@@ -358,7 +358,7 @@ def make_textures():
     flat("home_frame", (214, 216, 214))
     # round 11 read lilac in sun at (76, 84, 90); round 12 (PC check of round 11): far too light, Google Earth is dark
     # navy glass in the white grid
-    flat("home_glass", (96, 112, 130), noise=3.0)  # round 13 cloud pair obl_w: (70, 92, 118) still read navy
+    flat("home_glass", (112, 120, 128), noise=3.0)  # round 13b: (96, 112, 130) still read bluer than Google Earth obl_w
     flat("near_wall", (200, 202, 200))
     panels("plaza_red", (186, 128, 112), (164, 116, 102), w=1.2, h=0.6, noise=8.0)
     TILE["plaza_red"] = (4.8, 2.4)
@@ -416,12 +416,14 @@ class Geo:
             uvs = _auto_uv(pts)
         self.parts.setdefault(mat, []).append((pts, [tuple(map(float, u)) for u in uvs]))
 
-    def wall(self, mat, a, b, z0, z1, u0=0.0):
+    def wall(self, mat, a, b, z0, z1, u0=0.0, mirror=False):
         """A vertical quad from plan point a to b (outward face on the right of a->b when the
-        footprint runs counter-clockwise), z0..z1. Returns the run length."""
+        footprint runs counter-clockwise), z0..z1. Returns the run length. `mirror` runs the texture
+        the other way along the wall (lettering that would otherwise read backwards)."""
         L = math.hypot(b[0] - a[0], b[1] - a[1])
+        ua, ub = (u0 + L, u0) if mirror else (u0, u0 + L)
         self.poly(mat, [(a[0], a[1], z0), (b[0], b[1], z0), (b[0], b[1], z1), (a[0], a[1], z1)],
-                  [(u0, z0), (u0 + L, z0), (u0 + L, z1), (u0, z1)])
+                  [(ua, z0), (ub, z0), (ub, z1), (ua, z1)])
         return L
 
     def cap(self, mat, ring, z, up=True):
@@ -618,8 +620,8 @@ def nab(g, ring, h=72.0):
     faces = [("south", [P[0], P[1]]), ("east", [P[1], P[2]]), ("west", P[2:] + [P[0]])]
     # Round 12 (real land): the land falls from 4.4 m along the east face (Google Earth: 7 m above sea level at its foot)
     # to 1 m on the west, by the stadium. The 7 m glazed ground storey is read on the east face (c_e, c_ne), so it
-    # stands on that face's land; the west's podium glass runs on down to its lower ground. The top, picked in Google
-    # Earth at 60.4 m, stays where it was measured.
+    # stands on that face's land; the west's podium glass runs on down to its lower ground. The top (72.4 m, round 13b
+    # picks along the whole roof) stays where it was measured.
     east_land = float(np.mean([land.z(*(np.array(P[1]) + (np.array(P[2]) - np.array(P[1])) * f)) for f in (0.1, 0.5, 0.9)]))
     base, top, fold = east_land + 7.0, h, 2.2
     # The east face (Google Earth c_e, PC check of 2026-11-23) is four glass blocks and a silver end, split
@@ -1397,7 +1399,7 @@ def near_buildings(g, W):
                 if base < 0.5:
                     banded(g, ring, base, top, 3.6, 0.9, 2.9, 0.0, wall, glass, top="roof_white", parapet=0.0)
                 elif sid == 9966 and hi:
-                    rows = sawtooth_rows(g, ring, base, 9.0, top - base, flip=True)  # round 13 (c_sw pair): glass toward the west, as Google Earth
+                    rows = sawtooth_rows(g, ring, base, 5.6, top - base, flip=True)  # round 13b: 5 gables as Google Earth c_sw (pitch 9.0 gave 3); glass toward the west
                     assert rows >= 3, (sid, rows)
                 else:
                     g.prism(ring, base, top, "near_wall", top="roof_white")
@@ -1741,7 +1743,8 @@ def graffiti_wall(g, W, h=3.4):
         assert line[0][0] < pts[0][0], "the wall must sit west of the carriageway"
         for a, b in zip(line[:-1], line[1:]):
             g.lift = float(min(land.z(*a), land.z(*b)))   # round 12: on the road's land
-            g.wall(mat, a, b, -0.5, h, u)
+            # round 13b (c_ne pair): the road face's lettering read backwards; its texture now runs the other way
+            g.wall(mat, a, b, -0.5, h, -u - float(np.hypot(*(b - a))), mirror=True)   # u runs -s along the wall
             u += g.wall(mat, b, a, -0.5, h, u)
         if wid == "580628688":
             # ivy over the painted wall's first 9 m at the NAB end, on its road face (Google Earth c_e)
@@ -1762,8 +1765,18 @@ def build():
     # Round 12 (real land, land.py): heights read off Google Earth's 3D (NAB's top, the mural, the city massing's tops)
     # are above sea level and keep lift 0, their feet running down into the land; heights given above the ground
     # (OpenStreetMap, CTBUH, floor counts) stand on the lowest land under their footprint.
-    nab(g, W["221441430"][1], h=60.0)
+    # round 13b: Google Earth point picks on NAB's roof (obl_ne, 2026-11-26) read 71.4-73.4 m from its south end
+    # (y -105) to its north end (y -25), and c_se's south roof edge 71.4-72.4 m; OpenStreetMap says 72 m. The 60 m of
+    # round 12 was 12 m low.
+    nab(g, W["221441430"][1], h=72.4)
     near_buildings(g, W)
+    # round 13b: the two round vent stacks on 9966's roof in c_sw's foreground, picked in Google Earth (2026-11-26):
+    # flat ribbed caps at 45.4 m, about 4.6 m across, centred (-198.7, -219.8) and (-190.9, -215.8); the left stack's
+    # foot picks 38.4 m. Steel shafts about 2.6 m across under the caps.
+    g.lift = 0.0
+    for c_ in ((-198.7, -219.8), (-190.9, -215.8)):
+        g.prism(cylinder_ring(c_, 1.3, 16), 38.0, 44.8, "steel", top=None)
+        g.prism(cylinder_ring(c_, 2.3, 24), 44.8, 45.4, "steel", top="roof_grey", bottom="steel_dark")
     graffiti_wall(g, W)
     g.lift = 0.0
     road_strips(g, W)
