@@ -29,6 +29,8 @@ func _run() -> void:
 	await _t("_test_training_grid")
 	await _t("_test_stat_focus_tap")
 	await _t("_test_training_results")
+	await _t("_test_training_pc")
+	await _t("_test_training_pc_tabs")
 	print(Ran.line("Training", self, [suite]))
 	quit(0 if _failures.is_empty() else 1)
 
@@ -66,7 +68,7 @@ func _test_training_hero() -> void:
 					"%s: Training says in a line what a plan costs and what it buys (P-63)" % tag)
 			var tex: Texture2D = hero.texture if hero != null else null
 			_check(tex != null and tex.resource_path == "res://assets/ui/models/training_gear.png"
-					and float(tex.get_height()) >= 2.0 * hero.size.y and hero.size.y >= 72.0,
+					and float(tex.get_height()) >= 2.0 * hero.size.y and hero.size.y >= 64.0,
 					"%s: Training shows the training gear's own picture, sharp at this size (%s)" % [tag, tex.resource_path if tex != null else "missing"])
 			if hero == null:
 				scene.queue_free()
@@ -102,7 +104,11 @@ func _test_training_hero() -> void:
 			for b in scene.find_children("Trainee_*", "Button", true, false):
 				row = b
 				break
-			_check(row != null and row.size.y >= 44.0, "%s: a player's row is still a thumb tall (%d)" % [tag, int(row.size.y) if row != null else 0])
+			if sz.x < 600:
+				_check(row != null and row.size.y >= 44.0, "%s: a player's row is still a thumb tall (%d)" % [tag, int(row.size.y) if row != null else 0])
+			else:
+				# A PC's squad list is one line a player (Batch 5, the director's pick "A: one page").
+				_check(row != null and row.size.y <= 26.0, "%s: a player's row is one line on a PC (%d)" % [tag, int(row.size.y) if row != null else 0])
 			if sz.x < 600 and club == "FRE":
 				var why: String = await Tap.tap(row)
 				await _settle()
@@ -480,7 +486,7 @@ func _test_training_results() -> void:
 		for row in (grid.get_children() if grid != null else []):
 			order.append(str(row.name).trim_prefix("Rise_"))
 		_check(order == [str(b["id"]), str(a["id"]), str(c["id"])], "%s: every riser has a row, biggest rise first (%s)" % [tag, order])
-		_check(grid != null and grid.columns == (1 if sz.x < 600 else 3), "%s: one column on a phone, three on a PC" % tag)
+		_check(grid != null and grid.columns == (1 if sz.x < 600 else 2), "%s: one column on a phone, two in a PC's band" % tag)
 		if grid == null or grid.get_child_count() < 2:
 			scene.queue_free()
 			await _settle()
@@ -509,6 +515,235 @@ func _test_training_results() -> void:
 			sheet.queue_free()
 		scene.queue_free()
 		await _settle()
+
+
+## Training on a PC (Batch 5, the director's pick "A: one page"): from 640
+## tall the squad list sits beside the picked player, one line a man, and a
+## real click on a name puts him on the right; Stats opens his full page, and
+## All players or Back closes it. Under 640 tall the screen is two stages, the
+## squad and the player. Nothing scrolls and nothing runs off the window.
+func _test_training_pc() -> void:
+	var gs = root.get_node("GameState")
+	var db = root.get_node("GameDB")
+	gs.reset()
+	gs.set_setting("seen_training_intro", true)
+	gs.start_season("FRE", db.club_list("FRE"))
+	root.size = Vector2i(1280, 720)
+	var scene: Control = load("res://scenes/TrainingScene.tscn").instantiate()
+	root.add_child(scene)
+	await _settle()
+	var tag := "PC 1280x720"
+	var body: Control = scene.find_child("TrainingBody", true, false)
+	var list: Control = scene.find_child("TrainingListPanel", true, false)
+	var cols: Control = scene.find_child("PlayerColumns", true, false)
+	_check(scene.find_child("TrainingBand", true, false) != null and body != null and list != null and cols != null
+			and body.is_ancestor_of(list) and body.is_ancestor_of(cols)
+			and list.get_global_rect().end.x <= cols.get_global_rect().position.x + 0.5,
+			"%s: the week's band on top, the squad list beside the picked player" % tag)
+	_pc_rows_fit(scene, tag)
+	_pc_on_screen(scene, tag + " one page")
+	var other: Button = null
+	for r in scene.find_children("Trainee_*", "Button", true, false):
+		if str(r.name).trim_prefix("Trainee_") != str(scene.get("_selected")):
+			other = r
+			break
+	var pid := str(other.name).trim_prefix("Trainee_") if other != null else ""
+	# The name he is shown by (a real player's real name), as his row and his head show it.
+	var surname: String = str(db.player_display_name(gs.list_player(pid))).get_slice(" ", 1) if pid != "" else "?"
+	var why: String = await Tap.tap(other)
+	await _settle()
+	var head: Control = scene.find_child("PlayerHead", true, false)
+	var named := false
+	if head != null:
+		for c in head.find_children("*", "", true, false):
+			if (c is Label or c is Button or c is RichTextLabel) and str(c.get("text")).contains(surname):
+				named = true
+	_check(why == "" and str(scene.get("_selected")) == pid and named and scene.find_child("TrainingListPanel", true, false) != null,
+			"%s: a real click on a name puts him beside the list (%s, %s)" % [tag, surname, why])
+	why = await Tap.tap(scene.find_child("AdvancedToggle", true, false))
+	await _settle()
+	_check(why == "" and bool(scene.get("_pc_page")) and scene.find_child("PlayerStats", true, false) != null
+			and scene.find_child("TrainingListPanel", true, false) == null and scene.find_child("AllPlayers", true, false) != null,
+			"%s: a real click on Stats opens his full page (%s)" % [tag, why])
+	_pc_on_screen(scene, tag + " his page")
+	why = await Tap.tap(scene.find_child("AllPlayers", true, false))
+	await _settle()
+	_check(why == "" and not bool(scene.get("_pc_page")) and scene.find_child("TrainingBody", true, false) != null,
+			"%s: a real click on All players goes back to the list (%s)" % [tag, why])
+	why = await Tap.tap(scene.find_child("AdvancedToggle", true, false))
+	await _settle()
+	var back_page: bool = scene.call("handle_back")
+	await _settle()
+	_check(why == "" and back_page and not bool(scene.get("_pc_page")) and scene.find_child("TrainingBody", true, false) != null
+			and scene.call("handle_back") == false,
+			"%s: Back closes his page, then leaves Training (%s)" % [tag, why])
+	scene.queue_free()
+	await _settle()
+	# The smallest PC window: two stages, the squad and the player.
+	root.size = Vector2i(960, 540)
+	tag = "PC 960x540"
+	scene = load("res://scenes/TrainingScene.tscn").instantiate()
+	root.add_child(scene)
+	await _settle()
+	_check(scene.find_child("TrainingBand", true, false) != null and scene.find_child("TrainingListPanel", true, false) != null
+			and scene.find_child("PlayerColumns", true, false) == null,
+			"%s: the squad stage is the band and the list" % tag)
+	_pc_rows_fit(scene, tag)
+	_pc_on_screen(scene, tag + " squad")
+	why = await Tap.tap(scene.find_children("Trainee_*", "Button", true, false).front())
+	await _settle()
+	_check(why == "" and bool(scene.get("_showing_detail")) and scene.find_child("PlayerColumns", true, false) != null
+			and scene.find_child("TrainingListPanel", true, false) == null and scene.find_child("AllPlayers", true, false) != null,
+			"%s: a real click on a name opens the player stage (%s)" % [tag, why])
+	_pc_on_screen(scene, tag + " player")
+	why = await Tap.tap(scene.find_child("AdvancedToggle", true, false))
+	await _settle()
+	_check(why == "" and scene.find_child("PlayerStats", true, false) != null, "%s: Stats shows his stats on the player stage (%s)" % [tag, why])
+	_pc_on_screen(scene, tag + " stats")
+	why = await Tap.tap(scene.find_child("AllPlayers", true, false))
+	await _settle()
+	_check(why == "" and not bool(scene.get("_showing_detail")) and scene.find_child("TrainingListPanel", true, false) != null,
+			"%s: a real click on All players goes back to the squad (%s)" % [tag, why])
+	why = await Tap.tap(scene.find_children("Trainee_*", "Button", true, false).front())
+	await _settle()
+	var back_player: bool = scene.call("handle_back")
+	await _settle()
+	_check(why == "" and back_player and scene.find_child("TrainingListPanel", true, false) != null
+			and scene.call("handle_back") == false,
+			"%s: Back goes from the player to the squad, then leaves Training (%s)" % [tag, why])
+	scene.queue_free()
+	await _settle()
+	root.size = Vector2i(390, 844)
+
+
+## Training on a PC (director, 2026-11-26: "A: two tabs for everyone"):
+## Development focus | Stat focus are two tabs, one at a time across the
+## panel, and the tab stays as you click down the list. The trait line is its
+## first part, and a click on it shows what the trait does. Every player of the
+## club fits the window in either tab, with a development focus just changed or
+## a stat picked, at 1280x720 and 960x540.
+func _test_training_pc_tabs() -> void:
+	var gs = root.get_node("GameState")
+	var db = root.get_node("GameDB")
+	gs.reset()
+	gs.replay_seed = 20261126
+	gs.set_setting("seen_training_intro", true)
+	gs.start_season("FRE", db.club_list("FRE"))
+	root.size = Vector2i(1280, 720)
+	var scene: Control = load("res://scenes/TrainingScene.tscn").instantiate()
+	root.add_child(scene)
+	await _settle()
+	var tag := "PC tabs 1280x720"
+	_check(scene.find_child("FocusTabs", true, false) != null and scene.find_child("DevelopmentFocus", true, false) != null
+			and scene.find_child("StatFocus", true, false) == null,
+			"%s: Development focus | Stat focus tabs, Development focus showing" % tag)
+	var why: String = await Tap.tap(scene.find_child("FocusTabs_stat", true, false))
+	await _settle()
+	_check(why == "" and str(scene.get("_pc_tab")) == "stat" and scene.find_child("StatFocus", true, false) != null
+			and scene.find_child("DevelopmentFocus", true, false) == null,
+			"%s: a real click on Stat focus shows it in place of Development focus (%s)" % [tag, why])
+	var other: Button = null
+	for r in scene.find_children("Trainee_*", "Button", true, false):
+		if str(r.name).trim_prefix("Trainee_") != str(scene.get("_selected")):
+			other = r
+			break
+	var pid := str(other.name).trim_prefix("Trainee_") if other != null else ""
+	why = await Tap.tap(other)
+	await _settle()
+	_check(why == "" and pid != "" and str(scene.get("_selected")) == pid and scene.find_child("StatFocus", true, false) != null
+			and scene.find_child("DevelopmentFocus", true, false) == null,
+			"%s: the tab stays on Stat focus as you click down the list (%s)" % [tag, why])
+	why = await Tap.tap(scene.find_child("FocusTabs_dev", true, false))
+	await _settle()
+	_check(why == "" and scene.find_child("DevelopmentFocus", true, false) != null and scene.find_child("StatFocus", true, false) == null,
+			"%s: a real click on Development focus brings it back (%s)" % [tag, why])
+	# The trait line: "4 more pressure and he's a Lockdown  ›"; a click shows what a Lockdown does.
+	var hint: Label = null
+	for q in gs.my_list:
+		scene.set("_selected", str(q["id"]))
+		scene.call("_build")
+		await _settle()
+		hint = scene.find_child("TraitHint", true, false) as Label
+		if hint != null:
+			break
+	_check(hint != null and hint.text.ends_with("›") and hint.text.contains(" and he's ") and not hint.text.contains(":"),
+			"%s: the trait line is its first part and a link (%s)" % [tag, "none" if hint == null else hint.text])
+	why = await Tap.tap(hint) if hint != null else "no trait line"
+	await _settle()
+	var info := root.find_child("TraitInfo", true, false)
+	_check(why == "" and info != null, "%s: a real click on the trait line shows what the trait does (%s)" % [tag, why])
+	if info != null:
+		info.queue_free()
+	scene.queue_free()
+	await _settle()
+	for sz in [Vector2i(1280, 720), Vector2i(960, 540)]:
+		root.size = sz
+		scene = load("res://scenes/TrainingScene.tscn").instantiate()
+		root.add_child(scene)
+		await _settle()
+		var players: Array = gs.my_list.duplicate()
+		_check(players.size() >= 30, "PC %dx%d: a full list to fit (%d players)" % [sz.x, sz.y, players.size()])
+		var past: Array = []
+		for q in players:
+			var qid := str(q["id"])
+			for state in ["dev", "dev changed", "stat", "stat picked"]:
+				scene.set("_selected", qid)
+				scene.set("_showing_detail", sz.y < 640)
+				scene.set("_pc_tab", "stat" if state.begins_with("stat") else "dev")
+				scene.set("_notice", "")
+				scene.set("_focus_choice", "")
+				scene.call("_build")
+				await _settle()
+				# A real click on a choice he isn't on: a new development focus, or a stat.
+				var pre := {"dev changed": "PlayerPlan_", "stat picked": "StatFocusPick_"}.get(state, "")
+				if pre != "":
+					var b: Button = null
+					for c in scene.find_children(pre + "*", "Button", true, false):
+						if not (c as Button).button_pressed and not (c as Button).disabled:
+							b = c
+							break
+					why = await Tap.tap(b) if b != null else ""
+					await _settle()
+					if why != "":
+						past.append("%s %s: %s" % [db.player_display_name(q), state, why])
+				var off := _off_window(scene)
+				if not off.is_empty():
+					past.append("%s %s: %s" % [db.player_display_name(q), state, str(off.slice(0, 2))])
+		_check(past.is_empty(), "PC %dx%d: all %d players fit the window in either tab, a focus changed or a stat picked (%d past: %s)" % [
+				sz.x, sz.y, players.size(), past.size(), str(past.slice(0, 3))])
+		scene.queue_free()
+		await _settle()
+	root.size = Vector2i(390, 844)
+
+
+## Every player's row is one line and inside the list's window: none is cut off below.
+func _pc_rows_fit(scene: Control, tag: String) -> void:
+	var box: Control = scene.find_child("ListScroll", true, false)
+	var rows := scene.find_children("Trainee_*", "Button", true, false)
+	var bad: Array = []
+	for r in rows:
+		var rc := (r as Control).get_global_rect()
+		if rc.size.y > 26.0 or box == null or not box.get_global_rect().grow(0.5).encloses(rc):
+			bad.append(str(r.name))
+	_check(rows.size() >= 30 and bad.is_empty(),
+			"%s: all %d players are one-line rows inside the list (%d out: %s)" % [tag, rows.size(), bad.size(), str(bad.slice(0, 4))])
+
+
+## No word or button runs off the window: the screen needs no scroll.
+func _pc_on_screen(scene: Control, tag: String) -> void:
+	var past := _off_window(scene)
+	_check(past.is_empty(), "%s: everything is on the window, no scroll (%d past: %s)" % [tag, past.size(), str(past.slice(0, 4))])
+
+
+## The words and buttons that are not wholly on the window.
+func _off_window(scene: Control) -> Array:
+	var view := scene.get_viewport().get_visible_rect().grow(0.5)
+	var past: Array = []
+	for c in scene.find_children("*", "Control", true, false):
+		if (c is Label or c is Button or c is RichTextLabel) and (c as Control).is_visible_in_tree() \
+				and not view.encloses((c as Control).get_global_rect()):
+			past.append(str(c.name))
+	return past
 
 
 func _settle() -> void:

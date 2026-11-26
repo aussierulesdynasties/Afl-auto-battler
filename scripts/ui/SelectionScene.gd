@@ -41,6 +41,14 @@ var _chemistry: Control           # the Team Chemistry sheet, open over the side
 var _list_host: VBoxContainer = null  # a wide screen's column for the players not picked
 var _bench_host: VBoxContainer = null  # the interchange's place in that column, under ACROSS_BELOW wide
 var _settled := false   # built once this visit: a move or a switch rebuilds without the arrival
+## Under ACROSS_BELOW wide the screen is two stages (director's board, Batch 5):
+## "side", the oval with the interchange and the week beside it, or "rest",
+## the players not picked across the page. Each visit opens on the side.
+var _stage := "side"
+var _stage_bars: Array = []
+var _side_cols: Control = null
+var _rest_page: Control = null
+var _note_host: VBoxContainer = null  # the picked player's line on the side stage
 
 
 func _ready() -> void:
@@ -125,9 +133,18 @@ func _build() -> void:
 		_list_host.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		var across := UiKit.view_width(self) < ACROSS_BELOW
 		_bench_host = null
+		_note_host = null
+		_stage_bars = []
+		_side_cols = cols
+		_rest_page = null
 		if across:
 			_bench_host = UiKit.vbox(UiKit.Space.CLOSE)
 			_bench_host.name = "BenchHost"
+			_note_host = UiKit.vbox(UiKit.Space.CLOSE)
+			_note_host.name = "StageNote"
+			_note_host.visible = false
+		else:
+			_stage = "side"
 		var side_page := _side_page(auto)
 		if across:
 			side_page.custom_minimum_size.x = ACROSS_OVAL_W
@@ -150,21 +167,54 @@ func _build() -> void:
 		give_way.call()
 		var week_page := _week.page()
 		var week := _scroller(week_page, "WeekScroll")
-		week.size_flags_vertical = Control.SIZE_FILL
-		# The week's lines are as tall as what they say, never more than a third of the column.
-		var fit := func():
-			week.custom_minimum_size.y = minf(week_page.get_combined_minimum_size().y, right.size.y * 0.34)
-		week_page.minimum_size_changed.connect(fit)
-		right.resized.connect(fit)
-		fit.call_deferred()
-		if _bench_host != null:
+		if across:
+			# Our side | Not picked: the list has a stage of its own, and the
+			# week has the column under the interchange.
+			var stages := _stage_bar("SelectionStages")
+			right.add_child(stages)
+			right.add_child(_note_host)
 			right.add_child(_bench_host)
-		right.add_child(_list_host)
-		right.add_child(week)
-		cols.add_child(right)
+			week.size_flags_vertical = Control.SIZE_EXPAND_FILL
+			right.add_child(week)
+			cols.add_child(right)
+			_rest_page = UiKit.vbox(UiKit.Space.CLOSE)
+			_rest_page.name = "NotPickedStage"
+			_rest_page.size_flags_vertical = Control.SIZE_EXPAND_FILL
+			# The switch keeps its place on the page from stage to stage.
+			var top := UiKit.hbox(UiKit.Space.CLOSE)
+			var gap := Control.new()
+			gap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			top.add_child(gap)
+			var stages_rest := _stage_bar("SelectionStagesRest")
+			var keep_x := func(): stages_rest.custom_minimum_size.x = right.custom_minimum_size.x
+			right.minimum_size_changed.connect(keep_x)
+			keep_x.call()
+			top.add_child(stages_rest)
+			_rest_page.add_child(top)
+			_rest_page.add_child(_list_host)
+			_root.add_child(_rest_page)
+			cols.visible = _stage == "side"
+			_rest_page.visible = _stage == "rest"
+		else:
+			week.size_flags_vertical = Control.SIZE_FILL
+			# The week's lines are as tall as what they say, never more than a third of the column.
+			var fit := func():
+				week.custom_minimum_size.y = minf(week_page.get_combined_minimum_size().y, right.size.y * 0.34)
+			week_page.minimum_size_changed.connect(fit)
+			right.resized.connect(fit)
+			fit.call_deferred()
+			right.add_child(_list_host)
+			right.add_child(week)
+			cols.add_child(right)
 	else:
 		_list_host = null
 		_bench_host = null
+		_note_host = null
+		_stage_bars = []
+		_side_cols = null
+		_rest_page = null
+		_stage = "side"
 		# A phone scrolls the page by drag, with no bar (as Training): the bar's
 		# strip pushed the page 20 px past a 390 px screen, and the Auto-pick
 		# button's right border with it.
@@ -237,6 +287,16 @@ func _side_page(auto: bool) -> Control:
 	builder.stacked = true
 	builder.rest_host = _list_host if _wide else null
 	builder.bench_host = _bench_host if _wide else null
+	builder.list_rows = _wide
+	if _note_host != null:
+		UiKit.clear(_note_host)
+		_note_host.visible = false
+		builder.note_lift_host = _note_host if _stage == "side" else null
+	# A click on a player not picked takes him back to the oval, held, as a
+	# phone's raised list drops once a player is tapped.
+	builder.tapped.connect(func():
+		if _stage == "rest":
+			_show_stage("side"))
 	builder.pull_up = not _wide
 	builder.condition = true
 	builder.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -370,7 +430,46 @@ func _switch_view(k: String) -> void:
 	page.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	UiKit.clear(sc)
 	sc.add_child(page)
+	_name_stages()
 	UiKit.restore_places(_root, places)
+
+
+## The switch between the two stages, Our side | Not picked (Their side while
+## the oval shows the opponent's).
+func _stage_bar(node_name: String) -> HBoxContainer:
+	var bar := UiKit.segmented(node_name, [["side", _side_word()], ["rest", "Not picked"]], _stage, _show_stage)
+	_stage_bars.append(bar)
+	return bar
+
+
+func _side_word() -> String:
+	return "Their side" if _view == "opp" else "Our side"
+
+
+func _name_stages() -> void:
+	for bar in _stage_bars:
+		if is_instance_valid(bar):
+			(bar.get_node("%s_side" % bar.name) as Button).text = _side_word()
+
+
+## One stage shows, the other waits: nothing is built again, so the player
+## held from the list is still held on the oval.
+func _show_stage(k: String) -> void:
+	_stage = k
+	if is_instance_valid(_side_cols):
+		_side_cols.visible = k == "side"
+	if is_instance_valid(_rest_page):
+		_rest_page.visible = k == "rest"
+	for bar in _stage_bars:
+		if is_instance_valid(bar):
+			for key in ["side", "rest"]:
+				UiKit.paint_tab(bar.get_node("%s_%s" % [bar.name, key]) as Button, key == k)
+	var builder: TeamBuilder = _root.find_child("TeamBuilder", true, false)
+	if builder != null and _note_host != null:
+		builder.note_lift_host = _note_host if k == "side" else null
+		if k != "side":
+			_note_host.visible = false
+		builder.refill_note()
 
 
 ## After a move: the week and the actions beside the interchange, without
@@ -445,7 +544,8 @@ func _close_profile() -> void:
 	_sheet = null
 
 
-## Android Back closes a profile, then the report or the synergy guide, then leaves.
+## Android Back closes a profile, then the report or the synergy guide, then
+## goes from the players not picked back to the oval, then leaves.
 func handle_back() -> bool:
 	if FirstVisitIntro.close_open(self):
 		return true
@@ -454,7 +554,13 @@ func handle_back() -> bool:
 		return true
 	if _close_chemistry():
 		return true
-	return _week != null and _week.close_overlay()
+	if _week != null and _week.close_overlay():
+		return true
+	if _stage == "rest" and is_instance_valid(_rest_page):
+		# Back from the players not picked goes to the oval, not off the screen.
+		_show_stage("side")
+		return true
+	return false
 
 
 ## The club's readable ink on the dark page (4.5:1 or better, UiKit.club_ink):
