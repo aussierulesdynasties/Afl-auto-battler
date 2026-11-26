@@ -36,15 +36,8 @@ on:
     # which cancels the one in progress (concurrency below) and runs nothing. Without it the old run
     # kept its runners: 7 drafts' runs were still going on 2026-11-26 after the cap drafted them.
     types: [opened, synchronize, reopened, ready_for_review, converted_to_draft]
-  # The merge queue (ruleset on main, director 2026-11-12) needs "test" on the queued
-  # group: the PR on top of main and every PR ahead of it. A group runs the suites that
-  # cover everything it changes against the main it was built on (tools/select_suites.py,
-  # the same pick a pull request gets, so a change it cannot trace still runs the full
-  # wall; docs-only groups skip the game tests). Only a full-wall group records its tree,
-  # so after a partial group the push to main runs every suite but the long ones
-  # (tools/ci_same_tree.sh): the full check still runs on main, after the merge.
-  merge_group:
-    types: [checks_requested]
+  # No merge_group trigger: main has no merge queue (its rule was taken off the main ruleset;
+  # main only requires "test"). Turning the queue back on needs merge_group here again.
   push:
     branches: [main]
     paths-ignore:
@@ -59,9 +52,8 @@ on:
 
 # Where the jobs run: GitHub's runners, or the director's PC (self-hosted runners labelled
 # "afl-queue", in WSL, 2 runners capped at 8 GB) while the repo variable QUEUE_RUNNER is "pc"
-# (director, 2026-11-25: "turn the PC runners on"). A merge-queue group takes the PC when one of
-# its runners is online; a pull request from this repo or a push to main takes it only when one is
-# online and idle, so the PC adds to GitHub's runners instead of queueing work behind itself. The
+# (director, 2026-11-25: "turn the PC runners on"). A pull request from this repo or a push to
+# main takes it only when one is online and idle, so the PC adds to GitHub's runners instead of queueing work behind itself. The
 # plan job, always on GitHub, checks that with the runners API (secret MERGE_TOKEN) and hands its
 # choice to every other job. With the PC paused (WSL shut down) everything runs on GitHub's
 # runners; nothing needs switching. A fork's pull request never reaches the PC.
@@ -112,8 +104,8 @@ jobs:
             /*
             !/.claude/review/
 
-      # While QUEUE_RUNNER is "pc": a merge-queue group goes to the PC when an afl-queue runner is
-      # online; this repo's pull requests and pushes to main when one is online and idle. Forks, and
+      # While QUEUE_RUNNER is "pc": this repo's pull requests and pushes to main go to the PC
+      # when an afl-queue runner is online and idle. Forks, and
       # any doubt (no token, API error, PC paused), stay on GitHub's runners.
       - name: Pick where the jobs run
         id: runner
@@ -125,7 +117,6 @@ jobs:
           ev="${{ github.event_name }}"
           own=no
           case "$ev" in
-            merge_group) own=queue ;;
             push|workflow_dispatch) own=idle ;;
             pull_request) [ "${{ github.event.pull_request.head.repo.full_name }}" = "${{ github.repository }}" ] && own=idle ;;
           esac
@@ -152,7 +143,6 @@ jobs:
         env:
           IS_DRAFT: ${{ github.event.pull_request.draft }}
           PRETEND: ${{ inputs.changed_files }}
-          MQ_BASE: ${{ github.event.merge_group.base_sha }}
         run: |
           code=true
           reason=""
@@ -181,14 +171,6 @@ jobs:
             fi
             echo "$why"
           fi
-          # A merge-queue group: diff the group's head against the main it was built on.
-          if [ "${{ github.event_name }}" = merge_group ]; then
-            git fetch -q --no-tags --depth=1 origin "$MQ_BASE"
-            if ! git diff --name-only "$MQ_BASE" HEAD | grep -qvE '^docs/|\.md$|^tools/audit/|^tools/visual/|^tools/lint/'; then
-              code=false
-              reason="merge queue group of documentation, audit or capture scripts or the static lints only"
-            fi
-          fi
           if [ "$code" = false ]; then echo "Skipping the game tests ($reason)."; fi
           # Pull requests run calibration only when the sim or the data changed.
           sim=true
@@ -205,7 +187,6 @@ jobs:
         id: shards
         env:
           PRETEND: ${{ inputs.changed_files }}
-          MQ_BASE: ${{ github.event.merge_group.base_sha }}
         run: |
           # Fast gate (director 2026-11-04): pull requests and pushes to main skip the
           # long suites in tools/ci_long_suites.txt (over about 240 s on CI); the
@@ -221,10 +202,6 @@ jobs:
           partial=false
           files=""
           if [ "${{ github.event_name }}" = pull_request ]; then files=$(git diff --name-only --no-renames HEAD^1 HEAD); fi
-          # A queue group picks from everything it changes against the main it was built on
-          # (the base was fetched by the step above). Queue time is spent waiting for runners,
-          # so a group of ground PRs runs their few suites, not the whole wall.
-          if [ "${{ github.event_name }}" = merge_group ]; then files=$(git diff --name-only --no-renames "$MQ_BASE" HEAD); fi
           if [ "${{ github.event_name }}" = workflow_dispatch ]; then files="$PRETEND"; fi
           if [ -n "$files" ]; then
             pick=$(python3 tools/select_suites.py --json --files $files)
@@ -373,7 +350,7 @@ jobs:
   # so the shards start as soon as it passes.
   preflight:
     needs: plan
-    if: needs.plan.outputs.code == 'true' && (github.event_name == 'pull_request' || github.event_name == 'merge_group')
+    if: needs.plan.outputs.code == 'true' && (github.event_name == 'pull_request')
     runs-on: ${{ fromJSON(needs.plan.outputs.runner || '"ubuntu-latest"') }}
     timeout-minutes: 25   # the first import of every ground's 3D model and background scene takes up to 20 min on a runner
     steps:
@@ -436,7 +413,7 @@ jobs:
     timeout-minutes: ${{ contains(needs.plan.outputs.runner, 'afl-queue') && 75 || 40 }}
     strategy:
       # PRs release runner slots promptly; main/manual diagnostics collect all failures.
-      fail-fast: ${{ github.event_name == 'pull_request' || github.event_name == 'merge_group' }}
+      fail-fast: ${{ github.event_name == 'pull_request' }}
       matrix: ${{ fromJSON(needs.plan.outputs.shards) }}
     steps:
       - uses: actions/checkout@v4
@@ -482,7 +459,7 @@ jobs:
       - name: Run the suites in this shard
         env:
           SUITES: ${{ matrix.suites }}
-          STOP_ON_FAILURE: ${{ (github.event_name == 'pull_request' || github.event_name == 'merge_group') && '1' || '0' }}
+          STOP_ON_FAILURE: ${{ (github.event_name == 'pull_request') && '1' || '0' }}
         # Flaky rule (#894, 2026-11-04): a failed shard retries once, and a pass on the retry is
         # green but flagged FLAKY. The retry runs only the suites that did not pass, and only
         # when none failed a check outright: the suites are seeded (tools/check_suite_seeds.sh),
@@ -639,7 +616,7 @@ jobs:
       # squashes this PR unchanged can skip its shards (tools/ci_same_tree.sh).
       - name: Record the tested tree
         id: tree
-        if: (github.event_name == 'pull_request' || github.event_name == 'merge_group') && needs.plan.outputs.code == 'true' && needs.plan.outputs.partial != 'true' && needs.shard.result == 'success' && needs.extras.result == 'success' && needs.preflight.result == 'success' && needs.lint.result == 'success'
+        if: (github.event_name == 'pull_request') && needs.plan.outputs.code == 'true' && needs.plan.outputs.partial != 'true' && needs.shard.result == 'success' && needs.extras.result == 'success' && needs.preflight.result == 'success' && needs.lint.result == 'success'
         run: |
           tree=$(git rev-parse HEAD^{tree})
           echo "$tree" > "$RUNNER_TEMP/tree.txt"
