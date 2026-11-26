@@ -1772,9 +1772,10 @@ func reset(next_dataset := Datasets.DEFAULT) -> void:
 	# ageing, XP training). A new career must start from the pristine
 	# dataset, so reload the data files before rebuilding anything. The cache
 	# built from the players (story cards) is dropped with it, so a new career
-	# never reads one built under the last. PlayerProfile's rating scale stays:
-	# matches on worker threads only read it (Season warms it first), and
-	# clearing it let a worker rebuild it and crash (CI 38237786675).
+	# never reads one built under the last. PlayerProfile's rating scale is not
+	# cleared here: matches on worker threads only read it (Season warms it
+	# first), and clearing it let a worker rebuild it and crash (CI
+	# 38237786675). It rebuilds itself on the main thread after a reload.
 	StoryDeck.reload()
 	# Boot already loaded the data and no career has touched it yet (the cold
 	# Continue, or the first New career): reuse it rather than parse every
