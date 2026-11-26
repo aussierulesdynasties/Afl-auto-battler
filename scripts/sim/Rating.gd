@@ -2,9 +2,10 @@ class_name Rating
 extends RefCounted
 ## A player's OVR, read through one door (Director Bible 4.2.30a,
 ## docs/RATING_REBUILD.md §3): "Make OVR Strictly a Read-Only Derived Output".
-## OVR at a position = Σ weight × attribute ÷ 100, rounded, his AFL position's
-## weights unless a position is named. Worked out whenever it is read, never
-## saved, never fed back into anything that sets an attribute.
+## OVR at a position = the stretch (STRETCH) of Σ weight × attribute ÷ 100,
+## rounded, his AFL position's weights unless a position is named. Worked out
+## whenever it is read, never saved, never fed back into anything that sets an
+## attribute.
 ## Only player dictionaries come here. A snapshot that keeps an "overall" of
 ## its own (a match roster row, a draft read, a retirement or medical summary,
 ## a pick in the draft history) reads its own key.
@@ -81,13 +82,100 @@ static func at(p: Dictionary, apos: String) -> int:
 	return of_attrs(p.get("attr", {}), apos)
 
 
+## The stretch (director 2026-11-26, question box): "Keep the 17 attributes
+## untouched on the 1-99 scale, and apply a clean monotonic stretch curve
+## inside Rating.ovr() when computing the derived OVR number". [weighted sum,
+## OVR] points, a straight line between each pair and the end segments' slopes
+## past the ends, within 1-99: replacement level 53 reads 62, a solid AFL
+## regular 60 reads 72, a star or All-Australian 67 reads 81, a generational
+## superstar (2025 Bontempelli) "~72+ raw" reads 89-92: from 72 the climb
+## flattens to the best season on record (Jonathan Brown 2006, 86.8), 99.
+## Example: a weighted sum of 63.5 reads 72 + 3.5 x 9 / 7 = 76.5, OVR 77;
+## Wayne Carey's 1999 (82.3) reads 90 + 10.3 x 0.6 = 96.2, OVR 96.
+const STRETCH := [[53.0, 62.0], [60.0, 72.0], [67.0, 81.0], [72.0, 90.0], [87.0, 99.0]]
+
+
 ## The OVR these attributes make at `apos`.
 static func of_attrs(a: Dictionary, apos: String) -> int:
+	return int(round(stretch(raw_of(a, apos))))
+
+
+## The weighted sum the stretch reads: Σ weight × attribute ÷ 100.
+static func raw_of(a: Dictionary, apos: String) -> float:
 	var w: Dictionary = WEIGHTS.get(apos, WEIGHTS["Midfielder"])
 	var total := 0.0
 	for k in w:
 		total += float(w[k]) * float(a.get(k, 0))
-	return int(round(total / 100.0))
+	return total / 100.0
+
+
+## The OVR (unrounded) a weighted sum reads.
+static func stretch(raw: float) -> float:
+	var i := _segment(raw, 0)
+	var a: Array = STRETCH[i]
+	return clampf(float(a[1]) + (raw - float(a[0])) * _rise(i), 1.0, 99.0)
+
+
+## The weighted sum that reads `ovr` (the stretch run backwards).
+static func unstretch(ovr: float) -> float:
+	var i := _segment(ovr, 1)
+	var a: Array = STRETCH[i]
+	return float(a[0]) + (ovr - float(a[1])) / _rise(i)
+
+
+## OVR a weighted point is worth at this weighted sum: 1.43 below a solid
+## regular, 1.29 up to a star, 1.8 up to a generational one, 0.6 past him.
+static func slope(raw: float) -> float:
+	return _rise(_segment(raw, 0))
+
+
+static func _segment(x: float, col: int) -> int:
+	var i := 0
+	while i < STRETCH.size() - 2 and x > float(STRETCH[i + 1][col]):
+		i += 1
+	return i
+
+
+static func _rise(i: int) -> float:
+	var a: Array = STRETCH[i]
+	var b: Array = STRETCH[i + 1]
+	return (float(b[1]) - float(a[1])) / (float(b[0]) - float(a[0]))
+
+
+## These attributes moved evenly, whole points, every one but Discipline
+## (temperament moves only by XP), by the shift that puts their OVR at `apos`
+## nearest `target`: the same footballer a level up or down. Used where a
+## director's rule fixes the level and the attributes only reshape: the
+## Forge's choices (never buy power), an international's code, a career's
+## last falls (Growth.FALL) and "Plays like" at a prospect's POT.
+## Example: a Midfielder of OVR 60 to 63 moves every attribute but Discipline
+## up 3 (97% of his weights), 60 + 2.9 = 62.9, OVR 63.
+static func shift_to(a: Dictionary, apos: String, target: float) -> Dictionary:
+	var best := {}
+	var best_gap := INF
+	var lo := -99
+	var hi := 99
+	# OVR only rises with the shift: find the first shift that reaches the target.
+	while lo < hi:
+		var mid := (lo + hi) >> 1
+		if of_attrs(_shifted(a, mid), apos) < target:
+			lo = mid + 1
+		else:
+			hi = mid
+	for d in [lo - 1, lo]:
+		var s := _shifted(a, d)
+		var gap := absf(float(of_attrs(s, apos)) - target)
+		if gap < best_gap:
+			best_gap = gap
+			best = s
+	return best
+
+
+static func _shifted(a: Dictionary, d: int) -> Dictionary:
+	var out := {}
+	for k in a:
+		out[k] = int(round(float(a[k]))) if k == "discipline" else clampi(int(round(float(a[k]))) + d, 1, 99)
+	return out
 
 
 ## His AFL position: the one of record, else his own line's (a player made

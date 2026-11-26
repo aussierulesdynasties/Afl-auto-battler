@@ -9,6 +9,7 @@ extends RefCounted
 ## the most-repeated cards, cards by category, arcs started / finished /
 ## lapsed (by arc), the total of each lever the answers moved, and players
 ## by trust band at the end. REPEAT lines list every card with its count.
+const Ovr := preload("res://tests/ovr.gd")
 
 var club := "MEL"
 
@@ -41,7 +42,7 @@ func run() -> void:
 		GameState.start_season(club, GameDB.club_list(club))
 	else:
 		var pool: Array = GameDB.all_players_sorted() + GameDB.all_draftees_sorted()
-		pool.sort_custom(func(a, b): return a["overall"] > b["overall"])
+		pool.sort_custom(func(a, b): return Ovr.of(a) > Ovr.of(b))
 		GameState.draft = Draft.new(pool, GameDB.active_clubs(GameState.season_year).duplicate(), seed)
 		GameState.draft.start_for_user(club)
 		_run_draft(GameState.draft)

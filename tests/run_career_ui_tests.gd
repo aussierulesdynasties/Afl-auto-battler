@@ -1,4 +1,5 @@
 extends SceneTree
+const Ovr := preload("res://tests/ovr.gd")
 ## godot --headless --path . --script tests/run_career_ui_tests.gd
 ## Main menu save flow (Continue Career, New Career confirmation) and the
 ## Android back button / Escape routing, driven through the real scenes.
@@ -3727,7 +3728,7 @@ func _test_list_problem_and_ask_around() -> void:
 	var why_side: String = await Tap.tap(scene.find_child("TradeSide_mine", true, false))
 	await _settle()
 	var side: Array = _state.my_list.duplicate()
-	side.sort_custom(func(a, b): return int(a["overall"]) > int(b["overall"]))
+	side.sort_custom(func(a, b): return int(Ovr.of(a)) > int(Ovr.of(b)))
 	var pid := str(side[3]["id"])
 	var why_pick: String = await Tap.tap(scene.find_child("Mine_" + pid, true, false))
 	await _settle()
@@ -3894,8 +3895,8 @@ func _ask_price_tap_in_offseason() -> void:
 	var club := str(scene.get("_trade_club"))
 	var theirs: Array = (_state.season.lists[club] as Array).duplicate()
 	theirs.sort_custom(func(a, b):
-		if int(a["overall"]) != int(b["overall"]):
-			return int(a["overall"]) > int(b["overall"])
+		if int(Ovr.of(a)) != int(Ovr.of(b)):
+			return int(Ovr.of(a)) > int(Ovr.of(b))
 		return str(a["id"]) < str(b["id"]))
 	var pid := ""
 	var expect := {}
@@ -4944,10 +4945,10 @@ func _test_new_career_challenge_taps() -> void:
 	_check(all_gone, "The three are off the list and in free agency")
 	var best_left := 0
 	for q in _state.league_lists.get(club, []):
-		best_left = maxi(best_left, int(q.get("overall", 0)))
+		best_left = maxi(best_left, int(Ovr.of(q, 0)))
 	var worst_gone := 999
 	for g in gone:
-		worst_gone = mini(worst_gone, int(freed.get(str(g["id"]), {}).get("overall", 0)))
+		worst_gone = mini(worst_gone, int(Ovr.of(freed.get(str(g["id"]), {}), 0)))
 	_check(worst_gone >= best_left, "They were the club's three best (%d gone, %d left)" % [worst_gone, best_left])
 	var back: Dictionary = freed.get(str(gone[0]["id"]), {}) if not gone.is_empty() else {}
 	_check(not back.is_empty() and CH.block_reason(_state, back).begins_with("Rebuild:"),

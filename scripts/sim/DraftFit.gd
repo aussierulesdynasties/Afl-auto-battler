@@ -19,11 +19,11 @@ const MARKED := 6
 ## PlanFit.NEEDS for his plan). FATH and GAMB read the projection instead.
 const WEIGHTS := {
 	"DS": {"pressure": 1.0},
-	"TA": {"carry": 0.6, "disposal": 0.4},
-	"CC": {"contested": 1.0},
+	"TA": {"work_rate": 0.6, "disposal": 0.4},
+	"CC": {"contested_ball": 1.0},
 	"PC": {"disposal": 0.65, "discipline": 0.35},
 	"HARD": {"discipline": 1.0},
-	"ANA": {"intercept": 0.5, "creating": 0.5},
+	"ANA": {"reading_play": 0.5, "vision": 0.5},
 }
 
 ## The lines a Strategic archetype's plan counts (PlanFit.NEEDS): a ruck is

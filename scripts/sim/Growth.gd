@@ -10,10 +10,10 @@ extends RefCounted
 ## there before a 60. XP is priced in rating points (xp_per_point), so the
 ## pace holds for every role and every rating.
 ##
-## Past his peak a summer takes back part of what he trained past his
-## potential, climbing to all of it by his last real season; after that every
-## season's gains are temporary and he falls 2, 3, 2, 3. How long he lasts is
-## rolled from real careers with a similar peak (career_last).
+## Every attribute but Discipline and Work Rate also moves with his age, a
+## little each round (age_round; RATING_REBUILD §4). Once his career is over
+## every season's gains are temporary and he falls 2, 3, 2, 3. How long he
+## lasts is rolled from real careers with a similar peak (career_last).
 
 ## [potential, games to reach it from a draft rating of 60]. 85 and up: 150.
 ## Between two rows the games fill in a straight line (72 -> 110).
@@ -29,10 +29,6 @@ const VFL_SHARE := 0.5
 ## before; 150 games is the pace of ordinary games.
 const ORDINARY_GAME_XP := 37.0
 
-## The take-away past his peak: this share of what he trained past his
-## potential in the first summer after it, climbing to all of it by his last
-## real season.
-const TAKE_FIRST := 0.4
 ## The fall a season once his career is over: 2, 3, 2, 3 (2.5 a season).
 const FALL := [2, 3]
 ## A season he missed this many games injured takes a quarter of a season off
@@ -40,11 +36,27 @@ const FALL := [2, 3]
 const INJURY_GAMES := 10
 const INJURY_CUT := 0.25
 ## Breakouts: about half a player a club a season, a mid-tier player (rated
-## 60 to 75, any age), +5 to +8 that he keeps.
+## 60 to 75, any age), +4 to +6 that he keeps on each of the three attributes
+## his position weighs most (RATING_REBUILD §4).
 const BREAKOUTS_PER_CLUB := 0.5
 const BREAKOUT_MIN := 60
 const BREAKOUT_MAX := 75
-const BREAKOUT_JUMP := [5, 8]
+const BREAKOUT_JUMP := [4, 6]
+const BREAKOUT_ATTRS := 3
+
+## The age curves: each attribute's average move from one season to the next
+## at each age, real players 2012-25 (tools/wheelo/league.py). An age the
+## file has no row for moves nothing.
+const CURVES_CSV := "res://data/age_curves.csv"
+## Speed and Strength (director 2026-11-25, question box: "Blueprint curves"):
+## Speed holds to 26, -1.5 a season from 27, -3 from 31; Strength holds to
+## 31, -1 a season from 32. Their growth before that is XP's.
+##   [first age, change a season], latest first.
+const SPEED_CURVE := [[31, -3.0], [27, -1.5]]
+const STRENGTH_CURVE := [[32, -1.0]]
+
+## {attribute: {age: change a season}}.
+static var _curves := {}
 
 ## Careers to roll from (data/legacy/classes.csv): drafts in these years,
 ## all finished.
@@ -84,16 +96,17 @@ static func games_to_potential(pot: int) -> float:
 ## The XP one point of his rating costs now: the cheapest of his position's
 ## rated attributes, priced as training buys them (GameState._cost_for)
 ## against what a point of that attribute adds to his OVR (its weight at his
-## AFL position, Rating.shares).
+## AFL position, Rating.shares, times the stretch's slope where he is).
 static func xp_per_point(p: Dictionary) -> float:
 	var a: Dictionary = p.get("attr", {})
 	var games := float(p.get("gm", 18.0))
 	var best := 0.0
 	var w := Rating.shares(p)
+	var lift := Rating.slope(Rating.raw_of(a, Rating.apos_of(p)))
 	for k in w:
 		if not a.has(k) or int(a[k]) >= 99:
 			continue
-		var per := float(w[k])
+		var per := float(w[k]) * lift
 		if per <= 0.0:
 			continue
 		var price := float(cost(int(a[k]), games)) / per
@@ -235,9 +248,9 @@ static func _first_season(p: Dictionary, season_year: int) -> int:
 # The summer
 # ---------------------------------------------------------------------------
 ## One player's summer after season `year` (the one just played): an injured
-## season shortens his career; past his peak, part of what he trained past his
-## potential goes; once his career is over, the season's gains go and he
-## falls. Returns the rating change.
+## season shortens his career; once his career is over, the season's gains go
+## and he falls, every attribute but Discipline by the same points
+## (Rating.shift_to). Returns the rating change.
 static func summer(p: Dictionary, year: int) -> int:
 	var a: Dictionary = p.get("attr", {})
 	var ov := int(Rating.ovr(p, 0))
@@ -255,13 +268,7 @@ static func summer(p: Dictionary, year: int) -> int:
 		var n := int(p.get("decline_n", 0))
 		var fall := int(FALL[n % FALL.size()])
 		p["decline_n"] = n + 1
-		p["attr"] = Prospects.fit_attributes(a, Rating.apos_of(p), float(now - fall))
-	elif p.has("peak_year") and not (p.get("over_gains", {}) as Dictionary).is_empty():
-		var peak := int(p["peak_year"])
-		var span := maxf(1.0, round(last) - float(peak))
-		var f := clampf(TAKE_FIRST + (1.0 - TAKE_FIRST) * float(year - peak) / span, TAKE_FIRST, 1.0)
-		_take_back(a, p["over_gains"], f)
-		p["attr"] = a
+		p["attr"] = Rating.shift_to(a, Rating.apos_of(p), float(now - fall))
 	return int(Rating.ovr(p)) - ov
 
 
@@ -291,7 +298,10 @@ static func _take_back(a: Dictionary, gains: Dictionary, share: float) -> void:
 
 ## A club's breakouts this summer: each mid-tier player (rated BREAKOUT_MIN to
 ## BREAKOUT_MAX) has an equal share of BREAKOUTS_PER_CLUB; one who breaks out
-## jumps 5 to 8 and keeps it. Returns [[id, jump]].
+## gains 4 to 6 on each of the three attributes his position weighs most
+## (top_weighted) and keeps it. Returns [[id, OVR change]].
+## Example: a Midfielder who rolls +5 gains 5 Contested ball, Kicking and
+## Handballing (weights 22, 12 and 12 of 100): OVR +2.3.
 static func breakouts(code: String, arr: Array, year: int) -> Array:
 	var eligible := []
 	for p in arr:
@@ -308,9 +318,116 @@ static func breakouts(code: String, arr: Array, year: int) -> Array:
 			continue
 		var jump := rng.randi_range(int(BREAKOUT_JUMP[0]), int(BREAKOUT_JUMP[1]))
 		var ov := int(Rating.ovr(p))
-		p["attr"] = Prospects.fit_attributes(p["attr"], Rating.apos_of(p), float(ov + jump))
+		var a: Dictionary = p["attr"]
+		for key in top_weighted(Rating.apos_of(p)):
+			a[key] = clampi(int(a.get(key, 50)) + jump, 1, 99)
 		var story: Array = p.get("breakouts", [])
 		story.append([year, int(Rating.ovr(p)) - ov])
 		p["breakouts"] = story
 		out.append([str(p.get("id", "")), int(Rating.ovr(p)) - ov])
+	return out
+
+
+## The BREAKOUT_ATTRS attributes `apos` weighs most; a tie goes to the one
+## first in Attributes.KEYS.
+static func top_weighted(apos: String) -> Array:
+	var w: Dictionary = Rating.WEIGHTS.get(apos, Rating.WEIGHTS["Midfielder"])
+	var keys := []
+	for k in Attributes.KEYS:
+		if w.has(k):
+			keys.append(k)
+	keys.sort_custom(func(x, y): return int(w[x]) > int(w[y]) or (int(w[x]) == int(w[y])
+			and Attributes.KEYS.find(x) < Attributes.KEYS.find(y)))
+	return keys.slice(0, BREAKOUT_ATTRS)
+
+
+# ---------------------------------------------------------------------------
+# Age curves (RATING_REBUILD §4)
+# ---------------------------------------------------------------------------
+## How far `key` moves in a season he plays at `age` (whole years).
+## Example: Kicking at 20 moves +1.37 a season; Speed at 28 moves -1.5.
+static func age_change(key: String, age: int) -> float:
+	match key:
+		"speed":
+			return _stepped(SPEED_CURVE, age)
+		"strength":
+			return _stepped(STRENGTH_CURVE, age)
+	return float((_load_curves().get(key, {}) as Dictionary).get(age, 0.0))
+
+
+static func _stepped(curve: Array, age: int) -> float:
+	for step in curve:
+		if age >= int(step[0]):
+			return float(step[1])
+	return 0.0
+
+
+static func _load_curves() -> Dictionary:
+	if not _curves.is_empty():
+		return _curves
+	var f := FileAccess.open(CURVES_CSV, FileAccess.READ)
+	if f == null:
+		return _curves
+	var head := f.get_csv_line()
+	var col := {}
+	for i in head.size():
+		col[head[i]] = i
+	while not f.eof_reached():
+		var r := f.get_csv_line()
+		if r.size() < head.size() or str(r[0]) == "":
+			continue
+		var key := str(r[col["attribute"]])
+		if not _curves.has(key):
+			_curves[key] = {}
+		(_curves[key] as Dictionary)[int(r[col["age"]])] = float(r[col["change"]])
+	return _curves
+
+
+## One regular round of ageing for every listed player: each attribute moves
+## 1/`rounds` of its season's change at his age, the fractions kept in
+## "age_carry" until they make a whole point. A rise waits while his OVR is
+## at his POT (no gains at his potential, 11-23).
+## Example: Endurance at 20 (+6.04 a season) over 24 rounds moves 0.25 a
+## round, a whole point every fourth round.
+static func age_round(lists: Dictionary, rounds: int) -> void:
+	var share := 1.0 / float(maxi(1, rounds))
+	for code in lists:
+		for p in lists[code]:
+			age_step(p, share)
+
+
+## Move one player `share` of a season along his age curves.
+static func age_step(p: Dictionary, share: float) -> void:
+	var a: Dictionary = p.get("attr", {})
+	if a.is_empty():
+		return
+	var age := int(floor(float(p.get("age", 25.0))))
+	var pot := int(p.get("potential", 0))
+	var carry: Dictionary = p.get("age_carry", {})
+	for key in Attributes.KEYS:
+		var c := age_change(key, age) * share
+		if c == 0.0:
+			continue
+		if c > 0.0 and pot > 0 and int(Rating.ovr(p, 0)) >= pot:
+			continue
+		var v := float(carry.get(key, 0.0)) + c
+		var whole := int(v) # toward zero: a part point waits
+		if whole != 0:
+			a[key] = clampi(int(a.get(key, 50)) + whole, 1, 99)
+			v -= float(whole)
+		carry[key] = v
+	p["age_carry"] = carry
+
+
+## Attributes moved by every season's change from `from_age` up to (not
+## including) `to_age`, rounded once at the end, within 1-99: a player made
+## at an age past his first season (Prospects._age_into).
+## Example: Kicking from 19 to 22 adds the changes at 19, 20 and 21.
+static func age_attrs(a: Dictionary, from_age: int, to_age: int) -> Dictionary:
+	var out := {}
+	for key in a:
+		var moved := float(a[key])
+		for age in range(from_age, to_age):
+			moved += age_change(str(key), age)
+		out[key] = clampi(int(round(moved)), 1, 99)
 	return out

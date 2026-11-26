@@ -9,6 +9,7 @@ extends RefCounted
 ##   edge      names, a club with no picks, a user with no picks, save and load
 ## godot --headless --path . --script tools/audit/run_audit.gd -- draft_logic_impl league 20
 ## Output lines are plain text; the summary lines start with "SUM".
+const Ovr := preload("res://tests/ovr.gd")
 
 const BASE_YEAR := 2028
 var _acc := {}   # running sums for the SUM lines
@@ -25,7 +26,7 @@ static func _key_def(p: Dictionary) -> bool:
 
 
 static func _worth(p: Dictionary) -> float:
-	var ov := float(p.get("overall", 0))
+	var ov := float(Ovr.of(p, 0))
 	return ov * 0.35 + maxf(ov, float(p.get("potential", ov))) * 0.65
 
 
@@ -83,7 +84,7 @@ func analyse(d: Draft, label: String, kept: Dictionary = {}) -> void:
 	for p in pool:
 		by_id[str(p["id"])] = p
 	var worth_rank := _ranks(pool, func(p): return _worth(p))
-	var ovr_rank := _ranks(pool, func(p): return float(p["overall"]))
+	var ovr_rank := _ranks(pool, func(p): return float(Ovr.of(p)))
 	var cons_rank := _ranks(pool, func(p): return -float(p.get("draft_rank", 999)))
 	var hist: Array = d.pick_history
 
@@ -255,7 +256,7 @@ func analyse(d: Draft, label: String, kept: Dictionary = {}) -> void:
 func league(n: int) -> void:
 	for s in range(1, n + 1):
 		var pool: Array = GameDB.all_players_sorted() + GameDB.all_draftees_sorted()
-		pool.sort_custom(func(a, b): return a["overall"] > b["overall"])
+		pool.sort_custom(func(a, b): return Ovr.of(a) > Ovr.of(b))
 		var clubs: Array = GameDB.active_clubs(GameDB.START_YEAR).duplicate()
 		var d := Draft.new(pool, clubs, s)
 		d.start_for_user("")
@@ -304,7 +305,7 @@ func league(n: int) -> void:
 		_add("L_clubs_no_key_def", nk)
 		_add("L_max_rucks", maxr)
 		_add("L_runs", 1)
-		var ovr_rank := _ranks(pool, func(p): return float(p["overall"]))
+		var ovr_rank := _ranks(pool, func(p): return float(Ovr.of(p)))
 		var pick_of := {}
 		for e in d.pick_history:
 			pick_of[str(e["player_id"])] = int(e["pick"])
@@ -406,16 +407,16 @@ func _bust_band(d: Draft, year: int) -> void:
 	for e in d.pick_history:
 		var p: Dictionary = (by_id[str(e["player_id"])] as Dictionary).duplicate(true)
 		var proj := DraftScouting.projection(p, "AUD", d.seed, 1.0)
-		var o0 := int(p["overall"])
+		var o0 := int(Ovr.of(p))
 		var pot0 := maxi(o0, int(p.get("potential", o0)))
 		var o3 := o0
 		var o5 := o0
 		for i in range(1, 6):
 			Prospects.age_player(p, year + i)
 			if i == 3:
-				o3 = int(p["overall"])
+				o3 = int(Ovr.of(p))
 			if i == 5:
-				o5 = int(p["overall"])
+				o5 = int(Ovr.of(p))
 		rows.append([int(e["pick"]), o0, pot0, o3, o5, int(proj["overall_mid"]), int(proj["potential_mid"]), int(p.get("draft_rank", 0))])
 	for r in rows:
 		var band := "1-10" if int(r[0]) <= 10 else ("11-30" if int(r[0]) <= 30 else "31+")
@@ -630,7 +631,7 @@ func dbg() -> void:
 		var p := d._best_ai_pick(code)
 		print("DBG|slot %d club %s full %s limit %d count %d best %s afford %s" % [d.pick_index, code, str(d._list_full(code)), d.pick_limit(code), d.count_for(code), str(p.get("id", "NONE")), str(d._can_afford_for(code, p)) if not p.is_empty() else "-"])
 		if p.is_empty():
-			print("DBG|usable cap %d reserve %d value0 %d" % [d.usable_cap_for(code), d.reserve_for(code), int(cls[0]["value"])])
+			print("DBG|usable cap %d reserve %d value0 %d" % [d.usable_cap_for(code), d.reserve_for(code), Draft.cost_of(cls[0])])
 			d._skip_current_pick()
 		else:
 			print("DBG|drafted %s" % str(d._draft_pick(code, p)))
@@ -638,7 +639,7 @@ func dbg() -> void:
 
 func who() -> void:
 	var pool: Array = GameDB.all_players_sorted() + GameDB.all_draftees_sorted()
-	pool.sort_custom(func(a, b): return a["overall"] > b["overall"])
+	pool.sort_custom(func(a, b): return Ovr.of(a) > Ovr.of(b))
 	var clubs: Array = GameDB.active_clubs(GameDB.START_YEAR).duplicate()
 	var d := Draft.new(pool, clubs, 1)
 	d.start_for_user("")
@@ -651,14 +652,14 @@ func who() -> void:
 		var p: Dictionary = pool[i]
 		print("WHO|rank %d %s %s role %s/%s age %.1f ovr %d pot %d value %d height %s picked %d | horizon(%s) %.1f build %.1f now %.1f need %.2f score %.1f cappen %.1f" % [
 				i + 1, str(p["id"]), GameDB.player_display_name(p), str(p["role"]), str(p.get("role2", "")), float(p.get("age", 0)),
-				int(p["overall"]), int(p.get("potential", 0)), int(p["value"]), str(p.get("height_cm", "")), int(pick_of.get(str(p["id"]), 0)),
+				int(Ovr.of(p)), int(p.get("potential", 0)), Draft.cost_of(p), str(p.get("height_cm", "")), int(pick_of.get(str(p["id"]), 0)),
 				d0.club_horizon(code), d0._club_worth(code, p), d0.horizon_worth(p, "build"), d0.horizon_worth(p, "now"),
 				d0._need_weight(code, str(p["role"])), d0._ai_score(code, p), d0._cap_penalty(code, p)])
 
 
 func who2() -> void:
 	var pool: Array = GameDB.all_players_sorted() + GameDB.all_draftees_sorted()
-	pool.sort_custom(func(a, b): return a["overall"] > b["overall"])
+	pool.sort_custom(func(a, b): return Ovr.of(a) > Ovr.of(b))
 	for p in pool:
 		if str(p["id"]) == "MEL_11" or str(p["id"]) == "SYD_5":
 			print("WHO2|%s outlook %s" % [str(p["id"]), str(Potential.outlook(p, 8))])
@@ -667,7 +668,7 @@ func who2() -> void:
 	var rk := []
 	for e in d.pick_history:
 		if str(e["role"]).begins_with("RUCK"):
-			rk.append("#%d ovr %d" % [int(e["pick"]), int(e["overall"])])
+			rk.append("#%d ovr %d" % [int(e["pick"]), int(Ovr.of(e))])
 	print("WHO2|ruck picks (pick, ovr): %s" % ", ".join(rk.slice(0, 30)))
 
 
@@ -675,7 +676,7 @@ func who2() -> void:
 ## n League Drafts. Prints one line per seed and a mean per player.
 func old_stars(n: int) -> void:
 	var pool: Array = GameDB.all_players_sorted() + GameDB.all_draftees_sorted()
-	pool.sort_custom(func(a, b): return a["overall"] > b["overall"])
+	pool.sort_custom(func(a, b): return Ovr.of(a) > Ovr.of(b))
 	var ids := ["MEL_11"]
 	for p in pool:
 		if float(p.get("age", 0)) >= 32.0 and str(p["id"]) != "MEL_11" and ids.size() < 6:
@@ -692,7 +693,7 @@ func old_stars(n: int) -> void:
 		print("OLD|seed %d|%s" % [s, str(row)])
 	for id in ids:
 		var p: Dictionary = GameDB.player_by_id(id)
-		print("OLDMEAN|%s %s age %.1f ovr %d|mean pick %.1f" % [id, GameDB.player_display_name(p), float(p.get("age", 0)), int(p["overall"]), float(sums[id]) / n])
+		print("OLDMEAN|%s %s age %.1f ovr %d|mean pick %.1f" % [id, GameDB.player_display_name(p), float(p.get("age", 0)), int(Ovr.of(p)), float(sums[id]) / n])
 
 
 ## Row 22: role concentration and the director's named boards (2026-10-07).
@@ -712,7 +713,7 @@ static func _kind(p: Dictionary) -> String:
 
 func spread(n: int) -> void:
 	var pool: Array = GameDB.all_players_sorted() + GameDB.all_draftees_sorted()
-	pool.sort_custom(func(a, b): return a["overall"] > b["overall"])
+	pool.sort_custom(func(a, b): return Ovr.of(a) > Ovr.of(b))
 	var named_ids := {}
 	for p in pool:
 		var nm := "%s %s" % [str(p.get("first", "")), str(p.get("last", ""))]
@@ -784,7 +785,7 @@ func spread(n: int) -> void:
 		var sorted := ps.duplicate()
 		sorted.sort()
 		print("NAMED|%s|age %.0f %s ovr %d pot %d|mean pick %.1f, range %d-%d" % [nm,
-				float(p.get("age", 0)), _kind(p), int(p["overall"]), int(p.get("potential", 0)),
+				float(p.get("age", 0)), _kind(p), int(Ovr.of(p)), int(p.get("potential", 0)),
 				_mean(ps), int(sorted[0]), int(sorted[-1])])
 
 
@@ -815,7 +816,7 @@ func _why_row(d: Draft, code: String, p: Dictionary) -> String:
 	var worth: float = d._club_worth(code, p)
 	var repl: float = d._replacement(code, role)
 	return "%s %s ovr %d pot %d age %.0f: worth %.1f repl %.1f over %.1f (cap %.1f, w %.2f) need %.2f score %.1f" % [
-			_kind(p), str(p.get("last", p["id"])), int(p["overall"]), int(p.get("potential", 0)),
+			_kind(p), str(p.get("last", p["id"])), int(Ovr.of(p)), int(p.get("potential", 0)),
 			float(p.get("age", 0)), worth, repl, worth - repl, d._vorp_cap(code), d._vorp_weight(code),
 			d._need_weight(code, role), d._ai_score(code, p)]
 

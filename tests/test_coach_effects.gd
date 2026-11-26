@@ -1,4 +1,5 @@
 extends RefCounted
+const Ovr := preload("res://tests/ovr.gd")
 ## Coaching gameplay effects (CoachEffects.gd, Coaching Phase 5): teaching
 ## and match XP, tactics and game-plan execution, man-management and the
 ## morale cost of being left out. Run through tests/run_coach_effects_tests.gd.
@@ -231,14 +232,14 @@ func _test_togetherness() -> void:
 
 
 func _test_man_management() -> void:
-	var p := {"id": "P", "role": "MID", "overall": 70}
+	var p := Ovr.to({"id": "P", "role": "MID"}, 70)
 	_check(is_zero_approx(CoachEffects.soften(_staff(60), p)) and is_zero_approx(CoachEffects.soften(_staff(65), p)),
 			"A poor man-manager spares nothing")
 	var elite := CoachEffects.soften(_staff(92), p)
 	_check(elite > 0.3 and elite <= CoachEffects.SOFTEN_MAX, "An elite one spares up to 40%% (%.2f)" % elite)
 	for staff_v in [60, 92]:
 		var soft := CoachEffects.soften(_staff(staff_v), p)
-		var q := {"id": "P", "role": "MID", "overall": 80, "morale": 70}
+		var q := Ovr.to({"id": "P", "role": "MID",  "morale": 70}, 80)
 		var path := []
 		for i in range(8):
 			ClubLife.morale_after_match([q], {}, false, {"P": soft})
@@ -248,7 +249,7 @@ func _test_man_management() -> void:
 		else:
 			_check(int(path[-1]) < 70 and int(path[0]) > 64, "With an elite one he still slides, just more slowly (%s)" % str(path))
 			_check(ClubLife.morale(q) >= 0, "Morale stays in bounds")
-	var played := {"id": "P", "role": "MID", "overall": 70, "morale": 50}
+	var played := Ovr.to({"id": "P", "role": "MID",  "morale": 50}, 70)
 	ClubLife.morale_after_match([played], {"P": true}, true, {"P": 0.4})
 	_check(ClubLife.morale(played) == 54, "Softening never touches what playing is worth")
 

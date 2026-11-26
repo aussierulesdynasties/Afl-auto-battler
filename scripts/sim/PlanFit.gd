@@ -15,11 +15,11 @@ extends RefCounted
 ## plan -> the attributes that carry it (weights), which lines can carry it,
 ## how many players count, and what a coach calls them.
 const NEEDS := {
-	"attacking": {"attr": {"carry": 0.6, "disposal": 0.4}, "lines": ["MID", "FWD", "DEF"],
+	"attacking": {"attr": {"work_rate": 0.6, "disposal": 0.4}, "lines": ["MID", "FWD", "DEF"],
 			"n": 6, "word": "runners"},
 	"defensive": {"attr": {"pressure": 1.0}, "lines": ["MID", "FWD"], "n": 8,
 			"word": "pressure players"},
-	"contest": {"attr": {"contested": 1.0}, "lines": ["MID"], "n": 4, "ruck": true,
+	"contest": {"attr": {"contested_ball": 1.0}, "lines": ["MID"], "n": 4, "ruck": true,
 			"word": "ball-winners"},
 	# Controlled Tempo holds the ball against a press: it needs ball users
 	# right across the ground - disposal under pressure, and the discipline

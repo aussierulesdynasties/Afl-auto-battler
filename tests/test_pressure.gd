@@ -249,8 +249,8 @@ func _test_player_rating() -> void:
 func _test_creating() -> void:
 	var sim := _sim(5)
 	var shooter: Dictionary = sim.squads[0].ground.filter(func(p): return str(p["role"]) == "FWD")[0]
-	var low := {"id": "f_low", "role": "MID", "attr": {"creating": 30.0}}
-	var high := {"id": "f_high", "role": "MID", "attr": {"creating": 70.0}}
+	var low := {"id": "f_low", "role": "MID", "attr": {"vision": 30.0}}
+	var high := {"id": "f_high", "role": "MID", "attr": {"vision": 70.0}}
 	var p_low := sim.shot_chance(0, shooter, true, false, false, low)
 	var p_high := sim.shot_chance(0, shooter, true, false, false, high)
 	_check(p_high > p_low, "A creative inside-50 kick makes a better shot")

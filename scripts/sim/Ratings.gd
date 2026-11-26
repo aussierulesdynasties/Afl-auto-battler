@@ -144,11 +144,15 @@ static func plays_role(p: Dictionary, role: String) -> bool:
 ## The curve preserves the old 1-10 salary tiers while expressing them in
 ## football money: depth at the senior floor, established players in the
 ## hundreds of thousands, and genuine stars above $1m.
+## The middle points sit on the stretched OVR scale (Rating.STRETCH): each pays
+## what the same place in the 2026 league was paid before the rebuild (the
+## median player, 58 then and 62 now, about $375k), so lists still fit the cap.
+## From 79 up the points are the stretch's own stars (2025 Bontempelli 90).
 static func salary_value(overall: int) -> int:
 	# Annual salary the market pays for a rating: it rises smoothly between
 	# these points (no cliff for one rating point), from the senior minimum.
-	var points := [[40, 155000], [48, 255000], [55, 335000], [61, 415000],
-			[67, 515000], [73, 625000], [79, 740000], [85, 875000], [90, 1030000], [99, 1250000]]
+	var points := [[40, 155000], [50, 255000], [58, 335000], [64, 415000],
+			[70, 515000], [79, 740000], [85, 875000], [90, 1030000], [99, 1250000]]
 	if overall <= int(points[0][0]):
 		return int(points[0][1])
 	for i in range(1, points.size()):

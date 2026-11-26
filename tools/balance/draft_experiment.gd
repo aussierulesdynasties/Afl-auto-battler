@@ -12,6 +12,7 @@ extends SceneTree
 ## --variant real uses the real 2026 lists (no draft).
 ## Seeds: draft seed L; season s (0-based) of league L uses L * 1000 + s + 1.
 ## Aggregate with tools/balance/draft_experiment_report.py.
+const Ovr := preload("res://tests/ovr.gd")
 
 ## One mechanism changed per variant (keys: tools/balance/draft_variant.gd).
 ## Every variant but "current" leaves out the shipped club-specific
@@ -148,7 +149,7 @@ func _run() -> void:
 					undrafted.append(i + 1)
 			for e in d.pick_history:
 				picks.append([int(e["pick"]), str(e["club"]), str(e["player_id"]), str(e["role"]),
-						int(e["overall"]), int(rank_of[str(e["player_id"])])])
+						int(Ovr.of(e)), int(rank_of[str(e["player_id"])])])
 			if d.has_method("club_eval_sd"):
 				for c in codes:
 					noise_sd[str(c)] = d.club_eval_sd(str(c)) if str(c) != user else 0.0

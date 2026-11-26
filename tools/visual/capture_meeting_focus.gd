@@ -7,6 +7,7 @@ extends SceneTree
 ## <out>_<W>x<H>.png (his meeting open over the page), <out>_<W>x<H>_ticked.png
 ## (the mids and one defender ticked) and <out>_<W>x<H>_group.png (one stat
 ## focus for them all, the player who can't train it named). Never touches a real save.
+const Ovr := preload("res://tests/ovr.gd")
 
 var W := 1600
 var H := 900
@@ -77,7 +78,7 @@ func _run() -> void:
 	for q in state.my_list:
 		if str(q.get("role", "")) == "MID" and state.project_job(q) == "" and state.focus_options(q).size() >= 10:
 			mids.append(q)
-	mids.sort_custom(func(x, y): return int(x.get("overall", 0)) > int(y.get("overall", 0)))
+	mids.sort_custom(func(x, y): return int(Ovr.of(x, 0)) > int(Ovr.of(y, 0)))
 	if not mids.is_empty():
 		pick = mids[0]
 	root.get_node("Router").go("hub")
@@ -90,7 +91,7 @@ func _run() -> void:
 		print("MISSING a midfielder")
 		quit(1)
 		return
-	print("player ", db.player_display_name(pick), " ", pick["role"], " ", pick["overall"])
+	print("player ", db.player_display_name(pick), " ", pick["role"], " ", Ovr.of(pick))
 	var tag := "%dx%d" % [W, H]
 	await _shot("%s_%s_page.png" % [out, tag])
 	var lines := current_scene.find_child("PreSeasonMeetings", true, false) as Control

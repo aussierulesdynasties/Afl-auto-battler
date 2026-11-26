@@ -10,6 +10,7 @@ extends RefCounted
 ## off-season) and so on:
 ##   TP|arm|seed|year|phase|id|name|role|age|stat value|OVR|POT|league mean of the stat for his role
 ## and once a season the league's mean OVR (LG).
+const Ovr := preload("res://tests/ovr.gd")
 
 var club := "MEL"
 var arm := "none"
@@ -74,7 +75,7 @@ func _report(seed: int, phase: String, tracked: Dictionary) -> void:
 			if a.has(stat):
 				sums[role] = float(sums.get(role, 0.0)) + float(a[stat])
 				counts[role] = int(counts.get(role, 0)) + 1
-			ovr += float(p.get("overall", 0))
+			ovr += float(Ovr.of(p, 0))
 			n += 1
 	print("LG|%s|%d|%d|%s|mean OVR %.2f" % [arm, seed, GameState.season_year, phase, ovr / maxf(1.0, n)])
 	for p in GameState.my_list:
@@ -85,5 +86,5 @@ func _report(seed: int, phase: String, tracked: Dictionary) -> void:
 		var a: Dictionary = p.get("attr", {})
 		print("TP|%s|%d|%d|%s|%s|%s|%s|%d|%d|%d|%d|%.2f" % [arm, seed, GameState.season_year, phase, id,
 				GameDB.player_display_name(p), role, int(float(p.get("age", 0))), int(a.get(stat, 0)),
-				int(p.get("overall", 0)), int(p.get("potential", 0)),
+				int(Ovr.of(p, 0)), int(p.get("potential", 0)),
 				float(sums.get(role, 0.0)) / maxf(1.0, float(counts.get(role, 0)))])

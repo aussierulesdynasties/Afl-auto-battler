@@ -1,4 +1,5 @@
 extends RefCounted
+const Ovr := preload("res://tests/ovr.gd")
 ## Training plans and the stat guide: plans spend a player's XP after every
 ## game (there is no Manual: cut 2026-11-03), single-stat focus touches only that stat, changing a
 ## plan spends banked XP at once, the club plan applies to anyone without his
@@ -60,6 +61,28 @@ func _line_weights(p: Dictionary, line: String) -> Dictionary:
 	return Rating.WEIGHTS[Rating.spot_position(Rating.apos_of(p), line)]
 
 
+## Puts his own OVR `gap` above his rating at `line`. Both are read from the
+## same attributes (RATING_REBUILD), so only the attributes one side weighs
+## and the other does not move: the new line's own ones first, else his.
+func _gap_to(p: Dictionary, line: String, gap: int) -> void:
+	var own_w: Dictionary = Rating.WEIGHTS[Rating.apos_of(p)]
+	var there_w := _line_weights(p, line)
+	var there_only := there_w.keys().filter(func(k): return not own_w.has(k))
+	var own_only := own_w.keys().filter(func(k): return not there_w.has(k))
+	var a: Dictionary = p["attr"]
+	for _i in 200:
+		var d := gap - (int(Rating.ovr(p, 0)) - GameState.rating_as(p, line))
+		if d == 0:
+			return
+		var s := 1 if d > 0 else -1
+		if not there_only.is_empty():
+			for k in there_only:
+				a[k] = clampi(int(a.get(k, 50)) - s, 1, 99)
+		else:
+			for k in own_only:
+				a[k] = clampi(int(a.get(k, 50)) + s, 1, 99)
+
+
 func _check(condition: bool, message: String) -> void:
 	checks += 1
 	if not condition:
@@ -75,6 +98,21 @@ func _t(test: String, args := []) -> Variant:
 func _new_season() -> void:
 	GameState.reset()
 	GameState.start_season("GEE", GameDB.club_list("GEE"))
+
+
+## A season at the first club with PROJECT_MAX players who can learn a
+## position and have no second one: since the attributes rate every
+## position (RATING_REBUILD), Geelong's 2026 list has none.
+func _learning_season() -> void:
+	for code in GameDB.CLUB_ORDER:
+		GameState.reset()
+		GameState.start_season(str(code), GameDB.club_list(str(code)))
+		var n := 0
+		for q in GameState.my_list:
+			if str(q.get("role2", "")) == "" and not GameState.learnable_jobs(q).is_empty():
+				n += 1
+		if n >= GameState.PROJECT_MAX:
+			return
 
 
 func _snapshot() -> Dictionary:
@@ -93,7 +131,11 @@ func _test_default_plan_spends() -> void:
 	var bought := 0
 	var auto := {"by_player": {}}
 	var lines := 0
+	var at_pot := {}
 	for i in range(6):
+		for q in GameState.my_list:
+			if int(q.get("potential", 0)) > 0 and int(Ovr.of(q)) >= int(q["potential"]):
+				at_pot[str(q["id"])] = true
 		GameState.advance()
 		var week: Dictionary = GameState.last_training_report.get("auto", {})
 		bought += int(week.get("points", 0))
@@ -113,7 +155,12 @@ func _test_default_plan_spends() -> void:
 		# is left holding the XP for a point it could have bought. At his
 		# potential he buys nothing (director 2026-11-23, "Gains stop at
 		# potential") and keeps it banked.
-		if int(p.get("potential", 0)) > 0 and int(p["overall"]) >= int(p["potential"]):
+		if int(p.get("potential", 0)) > 0 and int(Ovr.of(p)) >= int(p["potential"]):
+			continue
+		# A man who sat at his potential banked it; a round's age change
+		# (Growth.age_round) after the week's spend can take him a point under
+		# it, and the bank buys that back the next week.
+		if at_pot.has(str(p["id"])):
 			continue
 		var w := {"xp": GameState.plan_weights(p),
 				"xp_match": Rating.shares(p)}
@@ -179,7 +226,7 @@ func _test_focus() -> void:
 ## and the XP tests can count it.
 func _hold(id: String) -> void:
 	var p := GameState.list_player(id)
-	p["season_start_ov"] = int(p["overall"]) - 30
+	p["season_start_ov"] = int(Ovr.of(p)) - 30
 
 
 ## Spend what is in his training bank (p["xp"]) on `w`, the game's own way.
@@ -199,7 +246,7 @@ func _test_changing_plans() -> void:
 	# Bank XP directly (nothing in the game banks it now) on two developing players.
 	var p: Dictionary = {}
 	for q in GameState.my_list:
-		var room := int(q.get("potential", 0)) - int(q["overall"])
+		var room := int(q.get("potential", 0)) - int(Ovr.of(q))
 		if room >= 3 and p.is_empty():
 			p = q
 	p["xp"] = float(p.get("xp", 0)) + 400.0
@@ -211,7 +258,7 @@ func _test_changing_plans() -> void:
 			"Switching a player's plan spends his banked XP straight away")
 	var other: Dictionary = {}
 	for q in GameState.my_list:
-		var room := int(q.get("potential", 0)) - int(q["overall"])
+		var room := int(q.get("potential", 0)) - int(Ovr.of(q))
 		if q != p and room >= 3 and other.is_empty():
 			other = q
 	other["xp"] = float(other.get("xp", 0)) + 400.0
@@ -231,12 +278,12 @@ func _test_plans_survive_save() -> void:
 	var mid := _first_of("MID")
 	GameState.set_player_plan(str(fwd["id"]), "key_fwd")
 	GameState.advance()
-	var fwd_state := [int(fwd["xp"]), int(fwd["overall"]), int(fwd["potential"]), (fwd["attr"] as Dictionary).duplicate()]
+	var fwd_state := [int(fwd["xp"]), int(Ovr.of(fwd)), int(fwd["potential"]), (fwd["attr"] as Dictionary).duplicate()]
 	GameState.save_career()
 	GameState.load_career()
 	var q := GameState.list_player(str(fwd["id"]))
 	_check(GameState.plan_for(q) == "key_fwd", "A player's own plan survives a save")
-	_check([int(q["xp"]), int(q["overall"]), int(q["potential"]), q["attr"]] == fwd_state,
+	_check([int(q["xp"]), int(Ovr.of(q)), int(q["potential"]), q["attr"]] == fwd_state,
 			"XP, rating, potential and attributes survive a save unchanged")
 	GameState.set_default_plan("inside_mid")
 	_check(GameState.default_train_plan == "position", "Only Position plan can be the club plan")
@@ -501,9 +548,9 @@ func _test_archetypes_differ() -> void:
 		built[plan] = _spend(p, GameState.plan_weights(p, plan))
 	var inside: Dictionary = built["inside_mid"]
 	var outside: Dictionary = built["outside_mid"]
-	_check(int(inside.get("contested", 0)) > int(outside.get("contested", 0)) + 5
-			and int(outside.get("carry", 0)) > int(inside.get("carry", 0)) + 5,
-			"Inside midfielders build contested ball, wings build carry (%s / %s)" % [str(inside), str(outside)])
+	_check(int(inside.get("contested_ball", 0)) > int(outside.get("contested_ball", 0)) + 5
+			and int(outside.get("work_rate", 0)) > int(inside.get("work_rate", 0)) + 5,
+			"Inside midfielders build contested ball, wings build their running game (%s / %s)" % [str(inside), str(outside)])
 	var fwd := _first_of("FWD")
 	var small: Dictionary = fwd.duplicate(true)
 	small["potential"] = 99
@@ -517,7 +564,7 @@ func _test_traits_through_training() -> void:
 	_new_season()
 	var fwd: Dictionary = _first_of("FWD").duplicate(true)
 	fwd["attr"]["contested_marking"] = Traits.SMALL_MAX_CM - 5
-	fwd["attr"]["goalkicking"] = int(Traits.DEFS["crumber"]["min"]) - 4
+	fwd["attr"]["forward_craft"] = int(Traits.DEFS["crumber"]["min"]) - 4
 	fwd["role2"] = ""
 	fwd["potential"] = 99
 	fwd["xp"] = 2500
@@ -525,16 +572,16 @@ func _test_traits_through_training() -> void:
 	_spend(fwd, GameState.plan_weights(fwd, "small_fwd"))
 	_check(Traits.has(fwd, "crumber"), "Small forward training unlocks Crumber")
 	var d: Dictionary = _first_of("DEF").duplicate(true)
-	# Controlled fixture: only Intercept is buyable, so this tests the plan/trait
+	# Controlled fixture: only Reading the play is buyable, so this tests the plan/trait
 	# path rather than whichever real defender happens to be first in the list.
 	d["potential"] = 99
 	d["gm"] = 0
-	d["attr"]["intercept"] = 74
+	d["attr"]["reading_play"] = 74
 	d["attr"]["pressure"] = 99
 	d["xp"] = 3000
 	_spend(d, GameState.plan_weights(d, "key_def"))
-	_check(int(d["attr"]["intercept"]) >= 80 and Traits.of(d).has("interceptor") or Traits.of(d).filter(func(k): return k != "wet_weather").size() >= 2,
-			"Key defender training reaches Interceptor (%d)" % int(d["attr"]["intercept"]))
+	_check(int(d["attr"]["reading_play"]) >= 80 and Traits.of(d).has("interceptor") or Traits.of(d).filter(func(k): return k != "wet_weather").size() >= 2,
+			"Key defender training reaches Interceptor (%d)" % int(d["attr"]["reading_play"]))
 
 
 ## Saves from before the overhaul: removed plans and off-role plans fall
@@ -554,7 +601,7 @@ func _test_old_plans_migrate() -> void:
 		if str(q["role"]) == "FWD" and str(q.get("role2", "")) == "" and q != a and q != b and q != c:
 			f = q
 			break
-	for k in ["contested_marking", "goalkicking", "accuracy"]:
+	for k in ["contested_marking", "forward_craft", "goalkicking"]:
 		f["attr"][k] = 95
 	f["train_plan"] = "manual"
 	f["potential"] = 99
@@ -576,7 +623,7 @@ func _test_old_plans_migrate() -> void:
 		if GameState.plan_for(q) == "manual" or str(q.get("train_plan", "")) == "manual":
 			nobody_manual = false
 	_check(nobody_manual, "Nobody loads on Manual")
-	f2["season_start_ov"] = int(f2["overall"])
+	f2["season_start_ov"] = int(Ovr.of(f2))
 	var xp_before := int(f2["xp"])
 	GameState.apply_plan_to(f2)
 	_check(int(f2["xp"]) < xp_before, "His banked XP is spent under the new plan")
@@ -590,7 +637,7 @@ func _test_training_news() -> void:
 	_new_season()
 	var p := _first_of("MID")
 	p["xp"] = 3000
-	var ov := int(p["overall"])
+	var ov := int(Ovr.of(p))
 	var out := GameState.apply_train_plans()
 	var rose := false
 	for r in out["rises"]:
@@ -672,12 +719,13 @@ func _test_training_multiselect() -> void:
 func _test_dual_role_plans() -> void:
 	var balta := {}
 	for p in GameDB.players:
-		if str(p.get("real_name", "")) == "Noah Balta":
+		if str(p.get("role", "")) == "RUCK" and str(p.get("role2", "")) == "DEF":
 			balta = p
-	_check(str(balta.get("role", "")) == "RUCK" and str(balta.get("role2", "")) == "DEF", "Noah Balta is a ruck who defends")
+			break
+	_check(not balta.is_empty(), "A ruck who defends is on a list")
 	var plans := GameState.plans_for(balta)
 	_check(plans.has("ruck") and plans.has("key_def") and plans.has("rebound_def"),
-			"Balta can train as a ruck or a defender (%s)" % str(plans))
+			"%s can train as a ruck or a defender (%s)" % [str(balta.get("real_name", "")), str(plans)])
 	_check(not plans.has("inside_mid") and not plans.has("key_fwd"), "...and nothing he does not play")
 	var def_ruck := {"role": "DEF", "role2": "RUCK", "attr": {}}
 	_check(GameState.plans_for(def_ruck).has("ruck"), "A defender who pinch-hits in the ruck can train the ruck")
@@ -734,7 +782,7 @@ func _test_learning_a_position() -> void:
 	_check(GameState.learn_job_for(mid_h, "RUCK") == "" and GameState.learn_job_for(tall, "RUCK") == "ruck",
 			"The ruck takes a ruckman's height")
 	# POT gates.
-	_new_season()
+	_learning_season()
 	var cand := {}
 	for q in GameState.my_list:
 		if str(q.get("role2", "")) == "" and int(q.get("potential", 0)) >= 70 and not GameState.learnable_jobs(q).is_empty():
@@ -755,7 +803,7 @@ func _test_learning_a_position() -> void:
 			"Choosing it starts the project")
 	_check(GameState.learnable_jobs(cand).is_empty(), "One project at a time")
 	var line: String = load("res://scripts/ui/TrainingScene.gd")._project_line(cand)
-	var ahead := GameState.rating_as(cand, role) >= int(cand["overall"]) - GameState.PROJECT_PASS
+	var ahead := GameState.rating_as(cand, role) >= int(Ovr.of(cand)) - GameState.PROJECT_PASS
 	_check(line.begins_with("Week 0 of %d" % GameState.PROJECT_WEEKS)
 			and line.contains("up to the standard" if ahead else "within %d by week" % GameState.PROJECT_PASS),
 			"Training shows the standard he is chasing, or that he has reached it (%s)" % line)
@@ -825,9 +873,7 @@ func _test_learning_a_position() -> void:
 			other = q
 	if not other.is_empty():
 		var orole := GameState.project_role(other)
-		var oattr: Dictionary = other["attr"]
-		for k in _line_weights(other, orole):
-			oattr[k] = 20
+		_gap_to(other, orole, 10)
 		var r2 := {}
 		other["injury_weeks"] = 0
 		for i in range(GameState.PROJECT_WEEKS):
@@ -855,9 +901,9 @@ func _test_learning_a_position() -> void:
 ## the ground fills one missing place in one synergy, in his line for a line
 ## synergy.
 func _test_unicorn() -> void:
-	var u := {"id": "U1", "role": "MID", "role2": "FWD", "potential": 89, "overall": 70, "attr": {"contested": 60}}
-	_check(GameState.learn_pot_needed(u) == 90 and int(u["potential"]) < 90,
-			"A third position takes POT 90")
+	var u := Ovr.to({"id": "U1", "role": "MID", "role2": "FWD", "potential": 87,  "attr": {"contested_ball": 60}}, 70)
+	_check(GameState.learn_pot_needed(u) == 88 and int(u["potential"]) < 88,
+			"A third position takes POT 88 (director 2026-11-26)")
 	u["learned"] = ["DEF"]
 	_check(not Traits.is_unicorn(u) and Ratings.role_tag(u) == "MID/FWD/DEF",
 			"Learning forward, midfield and back is not a Unicorn: that is born")
@@ -899,7 +945,7 @@ func _test_unicorn() -> void:
 	var er: Dictionary = Traits.SYNERGIES["engine_room"]["needs"]
 	var bulls := []
 	for i in range(int(er["bull"]) - 1):
-		bulls.append({"id": "B%d" % i, "role": "MID", "attr": {"contested": 99}})
+		bulls.append({"id": "B%d" % i, "role": "MID", "attr": {"contested_ball": 99}})
 	_check(not Traits.active(bulls).has("engine_room"), "One contested bull short is not an Engine room")
 	var with_u := Traits.active(bulls + [u])
 	_check(with_u.has("engine_room"), "A Unicorn fills the missing bull (%s)" % str(with_u))
@@ -910,7 +956,7 @@ func _test_unicorn() -> void:
 	for i in range(int(ts["aerial"])):
 		fwds.append({"id": "A%d" % i, "role": "FWD", "attr": {"contested_marking": 99}})
 	for i in range(int(ts["crumber"]) - 1):
-		fwds.append({"id": "C%d" % i, "role": "FWD", "attr": {"goalkicking": 99, "contested_marking": 30}})
+		fwds.append({"id": "C%d" % i, "role": "FWD", "attr": {"forward_craft": 99, "contested_marking": 30}})
 	var u_mid := u.duplicate(true)
 	u_mid["id"] = "U2"
 	_check(not Traits.active(fwds + [u_mid]).has("tall_small"), "A Unicorn in the midfield cannot fill a forward-line synergy")
@@ -956,7 +1002,7 @@ func _test_rival_projects() -> void:
 func _test_pass_margin_tightened() -> void:
 	_check(GameState.PROJECT_PASS == 1, "The pass margin is 1 (was 3)")
 	_check(GameState.PROJECT_REACH == 6, "Reach is unchanged: a move within 6 may be tried")
-	_new_season()
+	_learning_season()
 	var cand := {}
 	var job := ""
 	for q in GameState.my_list:
@@ -969,30 +1015,29 @@ func _test_pass_margin_tightened() -> void:
 	if cand.is_empty():
 		return
 	var role := str(GameState.LEARN_JOBS[job]["role"])
-	var keep_ov := int(cand["overall"])
+	var keep: Dictionary = (cand["attr"] as Dictionary).duplicate()
 	# 3 behind at the verdict: learned at the old margin, not now.
 	GameState._start_project(cand, job)
-	var there := GameState.rating_as(cand, role)
-	cand["overall"] = there + 3
+	_gap_to(cand, role, 3)
 	var r := GameState._finish_project(cand, false)
-	_check(int(r.get("own", 0)) - int(r.get("there", 0)) == 3 and there >= int(r["own"]) - 3,
+	_check(int(r.get("own", 0)) - int(r.get("there", 0)) == 3,
 			"The case: he ends 3 below his own rating there, a pass at the old margin (%s)" % str(r))
 	_check(not bool(r.get("learned", true)) and not Ratings.plays_role(cand, role),
 			"3 behind no longer takes: he cannot be picked there (%s)" % str(r))
 	# Exactly PROJECT_PASS behind: still learned.
 	GameState._start_project(cand, job)
-	cand["overall"] = there + GameState.PROJECT_PASS
+	_gap_to(cand, role, GameState.PROJECT_PASS)
 	r = GameState._finish_project(cand, false)
 	_check(bool(r.get("learned", false)) and Ratings.plays_role(cand, role),
 			"%d behind still takes: he can be picked there (%s)" % [GameState.PROJECT_PASS, str(r)])
-	cand["overall"] = keep_ov
+	cand["attr"] = keep
 
 
 ## A project survives a save mid-way, ends when he changes clubs (his chance
 ## for the season stays spent), and is judged where it stands when the
 ## season ends. A learned third position counts wherever positions matter.
 func _test_project_endings() -> void:
-	_new_season()
+	_learning_season()
 	var learners := []
 	for q in GameState.my_list:
 		var jobs := GameState.learnable_jobs(q)
@@ -1057,7 +1102,7 @@ func _last_project_fact(id: String) -> Dictionary:
 ## position and every earlier one, no attribute falls as a consequence, and
 ## all of it survives a save.
 func _test_retraining_is_additive() -> void:
-	_new_season()
+	_learning_season()
 	var cand := {}
 	for q in GameState.my_list:
 		if str(q.get("role2", "")) == "" and not GameState.learnable_jobs(q).is_empty():
@@ -1088,6 +1133,8 @@ func _test_retraining_is_additive() -> void:
 		GameState.set_player_plan(id, GameState.LEARN_PREFIX + job)
 		for k in _line_weights(cand, role):
 			cand["attr"][k] = maxi(int(cand["attr"][k]), 90)
+		# Level with his own rating there, whatever the out-of-position cut.
+		_gap_to(cand, role, 0)
 		var before: Dictionary = (cand["attr"] as Dictionary).duplicate()
 		var res := {}
 		for i in range(GameState.PROJECT_WEEKS):
@@ -1121,7 +1168,7 @@ func _focus_subject() -> Array:
 	for q in GameState.my_list:
 		if str(q.get("role2", "")) != "" or int(q.get("age", 30)) > 24:
 			continue
-		if int(q.get("potential", 0)) - int(q["overall"]) < 6:
+		if int(q.get("potential", 0)) - int(Ovr.of(q)) < 6:
 			continue
 		var w: Dictionary = GameState.plan_weights(q)
 		var low := ""
@@ -1284,27 +1331,23 @@ func _test_season_record() -> void:
 	_new_season()
 	var one: Dictionary = (_first_of("MID") as Dictionary).duplicate(true)
 	one.erase("season_gains")
-	one.erase("over_gains")
-	one["potential"] = int(one["overall"]) + 20
+	one["potential"] = int(Ovr.of(one)) + 20
 	one["xp"] = 400.0
 	var bought := _spend(one, Rating.shares(one))
-	_check(not bought.is_empty() and (one.get("season_gains", {}) as Dictionary) == bought and not one.has("over_gains"),
-			"Below his potential, training keeps the season's gains and none past it (%s / %s)" % [str(bought), str(one.get("season_gains", {}))])
+	_check(not bought.is_empty() and (one.get("season_gains", {}) as Dictionary) == bought,
+			"Below his potential, training keeps the season's gains (%s / %s)" % [str(bought), str(one.get("season_gains", {}))])
 	var past: Dictionary = (_first_of("MID") as Dictionary).duplicate(true)
 	past.erase("season_gains")
-	past.erase("over_gains")
-	past["potential"] = int(past["overall"])
+	past["potential"] = int(Ovr.of(past))
 	past["xp"] = 400.0
-	var at_pot := int(past["overall"])
+	var at_pot := int(Ovr.of(past))
 	var past_bought := _spend(past, Rating.shares(past))
 	# Gains stop at his potential (director 2026-11-23, "Gains stop at potential").
-	_check(past_bought.is_empty() and int(past["overall"]) == at_pot and float(past["xp"]) == 400.0
-			and not past.has("over_gains"),
-			"At his potential he buys nothing and keeps his XP banked (%s, %d)" % [str(past_bought), int(past["overall"])])
+	_check(past_bought.is_empty() and int(Ovr.of(past)) == at_pot and float(past["xp"]) == 400.0,
+			"At his potential he buys nothing and keeps his XP banked (%s, %d)" % [str(past_bought), int(Ovr.of(past))])
 	var fa: Dictionary = (_first_of("FWD") as Dictionary).duplicate(true)
 	fa["id"] = "record_fa"
-	fa["season_gains"] = {"contested": 3}
-	fa["over_gains"] = {"contested": 1}
+	fa["season_gains"] = {"contested_ball": 3}
 	GameState.free_agents.append(fa)
 	for p in GameState.my_list:
 		p["season_gains"] = {"kicking": 1}
@@ -1312,10 +1355,10 @@ func _test_season_record() -> void:
 	var stale := 0
 	for code in GameState.season.lists:
 		for p in GameState.season.lists[code]:
-			if p.has("season_gains") or p.has("over_gains"):
+			if p.has("season_gains"):
 				stale += 1
 	for p in GameState.free_agents:
-		if p.has("season_gains") or p.has("over_gains"):
+		if p.has("season_gains"):
 			stale += 1
 	_check(stale == 0, "The rollover clears every season record, free agents' too (%d left)" % stale)
 	_new_season()
@@ -1335,18 +1378,18 @@ func _test_focus_grows_a_trait() -> void:
 	var p := {}
 	var bull_min := int(Traits.DEFS["bull"]["min"])
 	for q in GameState.my_list:
-		if str(q["role"]) == "MID" and int(q["attr"]["contested"]) < bull_min and not Traits.of(q).has("bull"):
+		if str(q["role"]) == "MID" and int(q["attr"]["contested_ball"]) < bull_min and not Traits.of(q).has("bull"):
 			p = q
 			break
 	_check(not p.is_empty(), "A midfielder short of Contested bull")
 	if p.is_empty():
 		return
-	var ft := GameState.focus_trait(p, "contested")
-	_check(str(ft.get("key", "")) == "bull" and int(ft["gap"]) == bull_min - int(p["attr"]["contested"]),
+	var ft := GameState.focus_trait(p, "contested_ball")
+	_check(str(ft.get("key", "")) == "bull" and int(ft["gap"]) == bull_min - int(p["attr"]["contested_ball"]),
 			"A contested focus grows him toward Contested bull, and says how far")
 	_check(GameState.focus_trait(p, "ruck").is_empty(), "A midfielder's ruck focus names no trait")
-	p["attr"]["contested"] = 99
-	_check(GameState.focus_trait(p, "contested").is_empty() or Traits.of(p).size() >= Traits.MAX_GOOD,
+	p["attr"]["contested_ball"] = 99
+	_check(GameState.focus_trait(p, "contested_ball").is_empty() or Traits.of(p).size() >= Traits.MAX_GOOD,
 			"Once he has it the focus names it no more")
 	# Bug bash 5: Defensive forward is a forward's own job, so a midfielder who
 	# also plays forward is never pointed at it.

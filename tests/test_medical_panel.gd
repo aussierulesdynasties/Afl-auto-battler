@@ -1,4 +1,5 @@
 extends RefCounted
+const Ovr := preload("res://tests/ovr.gd")
 ## The concussion medical panel (director, 2026-11-11: "if a player gets 5 or
 ## more concussions within a 5 year period, they should have to pass a medical
 ## retirement check"; flat odds each time; straight after the fifth).
@@ -496,7 +497,7 @@ func _one_from_the_panel(p: Dictionary, want: bool) -> bool:
 func _trim(club: String, n: int, keep: Dictionary) -> Array:
 	var list: Array = GameState.season.lists[club]
 	var spare := list.filter(func(q): return str(q["id"]) != str(keep.get("id", "")))
-	spare.sort_custom(func(a, b): return int(a.get("overall", 0)) < int(b.get("overall", 0)))
+	spare.sort_custom(func(a, b): return int(Ovr.of(a, 0)) < int(Ovr.of(b, 0)))
 	var cut := []
 	while list.size() > n and not spare.is_empty():
 		var q: Dictionary = spare.pop_front()

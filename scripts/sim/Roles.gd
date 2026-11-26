@@ -79,16 +79,16 @@ const TAGGER_PRESSURE := 0.70
 const TAGGER_MARGIN := 0.20
 
 
-## What the wing rewards: carry and disposal. Raw attribute blend.
+## What the wing rewards: the running game (Work Rate) and disposal. Raw attribute blend.
 static func wing_fit(p: Dictionary) -> float:
 	var a: Dictionary = p.get("attr", {})
-	return 0.55 * float(a.get("carry", 0)) + 0.45 * Attributes.disposal_of(a, 0.0)
+	return 0.55 * float(a.get("work_rate", 0)) + 0.45 * Attributes.disposal_of(a, 0.0)
 
 
 ## What the centre square rewards: contested ball first.
 static func centre_fit(p: Dictionary) -> float:
 	var a: Dictionary = p.get("attr", {})
-	return 0.75 * float(a.get("contested", 0)) + 0.25 * Attributes.disposal_of(a, 0.0)
+	return 0.75 * float(a.get("contested_ball", 0)) + 0.25 * Attributes.disposal_of(a, 0.0)
 
 
 static func is_mid(p: Dictionary) -> bool:
@@ -106,8 +106,8 @@ static func is_wing(p: Dictionary) -> bool:
 			return false
 	var mid_view := p.duplicate()
 	mid_view["role"] = "MID"
-	var run := 0.5 * (PlayerProfile.percentile(mid_view, "carry", true) + PlayerProfile.percentile(mid_view, "disposal", true))
-	var win := PlayerProfile.percentile(mid_view, "contested", true)
+	var run := 0.5 * (PlayerProfile.percentile(mid_view, "work_rate", true) + PlayerProfile.percentile(mid_view, "disposal", true))
+	var win := PlayerProfile.percentile(mid_view, "contested_ball", true)
 	if run - win >= WING_MARGIN:
 		return true
 	# A midfielder who seldom wins it at the stoppage and gets most of his
@@ -128,8 +128,8 @@ static func is_tagger(p: Dictionary) -> bool:
 	var mid_view := p.duplicate()
 	mid_view["role"] = "MID"
 	var press := PlayerProfile.percentile(mid_view, "pressure", true)
-	var win := PlayerProfile.percentile(mid_view, "contested", true)
-	var run := 0.5 * (PlayerProfile.percentile(mid_view, "carry", true) + PlayerProfile.percentile(mid_view, "disposal", true))
+	var win := PlayerProfile.percentile(mid_view, "contested_ball", true)
+	var run := 0.5 * (PlayerProfile.percentile(mid_view, "work_rate", true) + PlayerProfile.percentile(mid_view, "disposal", true))
 	return press >= TAGGER_PRESSURE and press - maxf(win, run) >= TAGGER_MARGIN
 
 
@@ -155,7 +155,7 @@ static func usual_touches(target: Dictionary) -> float:
 		return TAG_USUAL_TOUCHES
 	var a: Dictionary = target["attr"]
 	var f: Array = USUAL_TOUCHES_FIT
-	var n := float(f[0]) + float(f[1]) * Attributes.disposal_of(a, 0.0) + float(f[2]) * float(a.get("carry", 0))
+	var n := float(f[0]) + float(f[1]) * Attributes.disposal_of(a, 0.0) + float(f[2]) * float(a.get("work_rate", 0))
 	if on_wing(target):
 		n += float(f[3])
 	return maxf(USUAL_TOUCHES_MIN, n)

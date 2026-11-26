@@ -15,6 +15,7 @@ Stdlib only.
 from __future__ import annotations
 
 import csv
+import math
 import os
 import sys
 from collections import defaultdict
@@ -70,9 +71,24 @@ KEPT = {
 }
 
 
+# Rating.STRETCH (director 2026-11-26): [weighted sum, OVR] points.
+STRETCH = [(53.0, 62.0), (60.0, 72.0), (67.0, 81.0), (72.0, 90.0), (87.0, 99.0)]
+
+
+def stretch(raw: float) -> float:
+    """Rating.stretch: a straight line between each pair of points, the end
+    segments' slopes past the ends, within 1-99."""
+    i = 0
+    while i < len(STRETCH) - 2 and raw > STRETCH[i + 1][0]:
+        i += 1
+    (x0, y0), (x1, y1) = STRETCH[i], STRETCH[i + 1]
+    return min(99.0, max(1.0, y0 + (raw - x0) * (y1 - y0) / (x1 - x0)))
+
+
 def ovr(row) -> int:
+    """Rating.of_attrs; Godot's round() is half away from zero."""
     w = WEIGHTS[row["apos"]]
-    return int(round(sum(wt * int(row[k]) for k, wt in w.items()) / 100.0))
+    return int(math.floor(stretch(sum(wt * int(row[k]) for k, wt in w.items()) / 100.0) + 0.5))
 
 
 def name(r):

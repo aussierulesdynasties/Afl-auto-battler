@@ -18,6 +18,7 @@ extends RefCounted
 ##   seeds  per pairing (default 40); six pairings
 ## Field position: metres from the centre, positive toward the home side's
 ## attacking goal (MatchSim.fp), so higher = further up the ground for home.
+const Ovr := preload("res://tests/ovr.gd")
 
 const PAIRS := [["MEL", "CAR"], ["GEE", "COL"], ["SYD", "WCE"], ["BRL", "ADE"], ["HAW", "ESS"], ["FRE", "STK"]]
 const ALL := ["plan_attacking", "plan_defensive", "plan_contest", "plan_controlled"]
@@ -150,7 +151,7 @@ class _Acc:
 
 func _top3(ps: Array) -> Dictionary:
 	var s := ps.duplicate()
-	s.sort_custom(func(a, b): return int(a["overall"]) > int(b["overall"]))
+	s.sort_custom(func(a, b): return int(Ovr.of(a)) > int(Ovr.of(b)))
 	var out := {}
 	for p in s.slice(0, 3):
 		out[str(p["id"])] = true

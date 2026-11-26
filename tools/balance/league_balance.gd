@@ -31,6 +31,7 @@ extends RefCounted
 ##
 ## Loaded with load() by tools/balance/league_balance_report.gd and the CI
 ## smoke suite (tests/test_league_balance.gd).
+const Ovr := preload("res://tests/ovr.gd")
 
 const FOUNDING_YEAR := 2026
 const FINALISTS := Season.FINALISTS
@@ -117,7 +118,7 @@ func club_ratings(lists: Dictionary, codes: Array) -> Dictionary:
 		var total := 0.0
 		var n := 0
 		for p in sq.ground + sq.bench:
-			total += float(p["overall"])
+			total += float(Ovr.of(p))
 			n += 1
 		out[c] = {"strength": sq.strength(), "ovr22": total / float(maxi(1, n)),
 				"contest": sq.contest, "attack": sq.attack, "defence": sq.defence}
@@ -136,13 +137,13 @@ func club_units(lists: Dictionary, codes: Array) -> Dictionary:
 		var value := 0
 		for p in list:
 			roles[str(p["role"])] = int(roles[str(p["role"])]) + 1
-			ovrs.append(float(p["overall"]))
-			value += int(p["value"])
+			ovrs.append(float(Ovr.of(p)))
+			value += Ratings.value_of(p)
 		ovrs.sort()
 		ovrs.reverse()
 		var sel := 0.0
 		for p in sq.ground + sq.bench:
-			sel += float(p["overall"])
+			sel += float(Ovr.of(p))
 		out[c] = {
 			"strength": sq.strength(), "ovr22": sel / float(maxi(1, sq.ground.size() + sq.bench.size())),
 			"contest": sq.contest, "attack": sq.attack, "defence": sq.defence,

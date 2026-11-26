@@ -1,4 +1,5 @@
 extends RefCounted
+const Ovr := preload("res://tests/ovr.gd")
 ## The 2020 Legacy start (TODO row 142): the 18 clubs on their real 2020 lists,
 ## rated on 2019, with 2020's senior coaches (rated from their records) and
 ## captains. 2020 is the hub season of shortened games; the career then rolls
@@ -55,7 +56,7 @@ func _test_the_2020_set() -> void:
 	_check(clubs.size() == 18, "18 clubs have 2020 lists (%d)" % clubs.size())
 	var fyfe := false
 	for p in GameDB.club_list("FRE"):
-		if str(p.get("last", "")) == "Fyfe" and int(p.get("overall", 0)) >= 85:
+		if str(p.get("last", "")) == "Fyfe" and int(Ovr.of(p, 0)) >= 85:
 			fyfe = true
 	_check(fyfe, "Nat Fyfe, the 2019 Brownlow medallist, is at Fremantle and rated as one")
 

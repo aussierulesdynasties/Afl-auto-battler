@@ -4,6 +4,7 @@ extends SceneTree
 ## whose copy the pass changed, so the same script gives the before (on the base) and the after:
 ##   godot --headless --path . --script tools/visual/capture_copy_voice_profile.gd -- --out <prefix> [--only a,b]
 ## Writes <prefix>_<state>.png for: top, injured, why, development, beyond, nickname, rival.
+const Ovr := preload("res://tests/ovr.gd")
 
 const CLUB := "FRE"
 var _out := "copy_voice_profile"
@@ -77,7 +78,7 @@ func _run() -> void:
 	if _want("beyond"):
 		_fresh(intro_keys)
 		var p5 := _best()
-		p5["potential"] = int(p5["overall"]) - 2
+		p5["potential"] = int(Ovr.of(p5)) - 2
 		var sheet5: Control = await _sheet(p5)
 		await _scroll_to(sheet5, "ProfileOVR")
 		await _shot("beyond")
@@ -114,7 +115,7 @@ func _want(state: String) -> bool:
 func _best() -> Dictionary:
 	var best: Dictionary = _state.my_list[0]
 	for q in _state.my_list:
-		if int(q.get("overall", 0)) > int(best.get("overall", 0)):
+		if int(Ovr.of(q, 0)) > int(Ovr.of(best, 0)):
 			best = q
 	return best
 
@@ -123,7 +124,7 @@ func _best() -> Dictionary:
 func _young() -> Dictionary:
 	var pick: Dictionary = _state.my_list[0]
 	for q in _state.my_list:
-		if int(q.get("potential", 0)) - int(q.get("overall", 0)) >= 3 and float(q.get("age", 99)) < float(pick.get("age", 99)):
+		if int(q.get("potential", 0)) - int(Ovr.of(q, 0)) >= 3 and float(q.get("age", 99)) < float(pick.get("age", 99)):
 			pick = q
 	return pick
 

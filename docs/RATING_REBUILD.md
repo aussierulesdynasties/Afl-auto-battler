@@ -102,8 +102,14 @@ Technical and Footy IQ attribute plays at (1 - cut) while he is there. Which pos
 
 ## 3. Derived positional OVR
 
-OVR(player, position) = Σ weight × attribute ÷ 100, rounded; his primary position or the slot's. Worked out
-when shown or used, never saved, never fed back. Durability weighs 0 (priced in Worth instead). Work Rate has no starting weight; Phase 4 measures one.
+OVR(player, position) = the stretch of Σ weight × attribute ÷ 100, rounded; his primary position or the slot's.
+Worked out when shown or used, never saved, never fed back. The stretch (director, 2026-11-26, question box: "Keep
+the 17 attributes untouched on the 1–99 scale, and apply a clean monotonic stretch curve inside `Rating.ovr()`") is
+a straight line between [weighted sum, OVR] points 53→62, 60→72, 67→81, 72→90 and 87→99 (`Rating.STRETCH`), and
+the end segments' slopes past the ends, within 1-99. Past 72 the climb flattens so the best season on record
+(Jonathan Brown 2006, 86.8) reads 99 and greats spread out (my call; his words gave "~72+ raw → ~89–92"). Example: a
+weighted sum of 63.5 reads 72 + 3.5 × 9 ÷ 7 = 76.5, OVR 77. A point of XP costs its weight times the stretch's slope
+where he is (`Growth.xp_per_point`). Durability weighs 0 (priced in Worth instead). Work Rate has no starting weight; Phase 4 measures one.
 
 | Attribute | KD | GD | Mid | Mid-Fwd | Gen Fwd | KF | Ruck |
 |---|---|---|---|---|---|---|---|
@@ -127,16 +133,27 @@ when shown or used, never saved, never fed back. Durability weighs 0 (priced in 
 
 These are starting numbers. Phase 4 measures them: per position, +10 on one attribute for every player there,
 1,000 paired matches; the margin each attribute buys becomes its weight; the measured table goes to him in `REVIEW.md`
-before it is locked. Best OVRs are expected in the 80s; Phase 8 recalibrates colour cuts and grades so mid-80s
-reads as elite.
+before it is locked. Phase 8 recalibrates colour cuts and grades to the stretched scale. Thresholds on it
+(director, 2026-11-26): star and extension 80, news 72, replacement player 60, POT to learn a third position 88, POT
+caps 95 for midfielders and 92 for everyone else.
 
 ## 4. Generation, progression, economy
 
 **Draftees.** One of the 12 types each. Ranges: each attribute's 10th-90th percentile among real
 first-season players of that type, aged 18-20, Wheelo 2012-25. A first season counts toward every type he held in
 any season of his career; a ruck's counts at any debut age (director, 2026-11-25, question box: "Type he held
-later", "Any debut age"). Built by `tools/wheelo/league.py` into `data/draftee_ranges.csv`. A draftee draws a talent percentile, takes his
-type's ranges at it, ±6 noise; POT from talent plus noise (`Potential.assign`). The Forge, expansion lists,
+later", "Any debut age"). Built by `tools/wheelo/league.py` into `data/draftee_ranges.csv`. A draftee's attributes are built bottom-up
+(director, 2026-11-26, question box: "Generate draftee attributes bottom-up from archetype rookie baselines with
+independent per-attribute variance plus a pick-tier offset so derived starting OVRs land around ~58–64 for Pick 1,
+~52–58 for First Rounders (2–18), and ~44–52 for later picks"; "do NOT draw a target OVR first"). His type's
+baseline is the middle of each p10-p90 range; every attribute but Discipline moves up or down the same amount so
+the baseline reads his pick's level (`Prospects.PICK_LEVEL`: pick 1 61, picks 2-18 57 down to 53, picks 19-60 51
+down to 45, an unranked man a late pick); then each attribute moves on its own, uniform within ± 0.2 of its range
+(`SPREAD`); then his class's strength shift. His OVR is read from the result. POT by pick (`Potential.DRAFT_POT`,
+his words: "Pick 1 POT to ~84–90, Picks 2–5 to ~80–86, First Round (6–18) to ~74–82, and Rounds 2–3 to ~64–76 (with
+rare late-pick gems)"): uniform in the pick's band; a pick from 19 on is a gem 1 in 30 and draws 80-86; plus his
+class's ceiling. A player under 22 is never retired for a low OVR. The line within each tier, the 0.2, the gem odds
+and band are my calls. The Forge, expansion lists,
 depth pools and state leagues use the same ranges.
 
 **Progression.** XP (2/3 matches, 1/3 training, VFL half) buys attribute points; the plan picks which; a point

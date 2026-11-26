@@ -72,9 +72,9 @@ static func forward_air(p: Dictionary) -> float:
 	return 0.7 * _a(p, "contested_marking") + 0.3 * _height_score(p)
 
 
-## A defender's game in the air: reading the ball, his own marking, his size.
+## A defender's game in the air: reading the ball, his one-on-one defence, his size.
 static func defender_air(p: Dictionary) -> float:
-	return 0.45 * _a(p, "intercept") + 0.30 * _a(p, "contested_marking") + 0.25 * _height_score(p)
+	return 0.45 * _a(p, "reading_play") + 0.30 * _a(p, "one_on_one") + 0.25 * _height_score(p)
 
 
 ## The shift in the forward's chance of marking when these two contest it.
@@ -193,7 +193,7 @@ static func defaults(attack_ground: Array, defence_ground: Array) -> Dictionary:
 ## Suitability to roam as the spare: reading the ball and marking first,
 ## defensive pressure second. OVR and height are deliberately not inputs.
 static func interceptor_score(p: Dictionary) -> float:
-	var score := 0.55 * _a(p, "intercept") + 0.30 * _a(p, "contested_marking") + 0.15 * _a(p, "pressure")
+	var score := 0.55 * _a(p, "reading_play") + 0.30 * _a(p, "contested_marking") + 0.15 * _a(p, "pressure")
 	var traits: Array = Traits.of(p)
 	if traits.has("interceptor"):
 		score += 6.0

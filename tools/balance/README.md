@@ -153,6 +153,12 @@ GODOT=<godot console exe> tools/balance.sh match 1000 --a "--weather perfect" --
   free-agency gate's "the best other" figure before and after rivals answer). It reads the career and
   changes nothing in it. `python tools/balance/rival_reads_report.py reads_*.json` adds the careers up.
   Six careers of seven seasons (`--policy board --seasons 7 --manage list`) take about ten minutes.
+- **OVR weights** (`tools/balance/weights.sh 1000`, docs/RATING_REBUILD.md §3 Phase 4): one unbumped run, then for
+  each AFL position and each of the 18 attributes a run where side `i % 2` has every player at that position +10
+  on that attribute (`--bump APOS:KEY:N`, "_" for a space: `Key_Defender`, `Gen._Forward`), on the same seeds.
+  `weights_report.py` gives each pair's paired margin and standard error and the measured weight: the margin's share
+  of the position's real gains (more than 2 se above 0), out of 100. 127 single-arm runs, about 45 s each on 14
+  workers; a stopped run carries on with the same `OUT`. `BUMP=` sets the size.
 - **Year mode** (`tools/balance.sh year 1000 --years "1990 2000 2010 2020 2026"`, legacy row 142 L5): one arm
   per season, each played with `--year Y` (the match takes that season's era row, `EraFootball`); every stat is
   marked against that season's real rates (`afl_year_rates.json`, built from `data/legacy/*/season_stats.csv` by

@@ -1,4 +1,5 @@
 extends RefCounted
+const Ovr := preload("res://tests/ovr.gd")
 ## Row 88: the rookie list (RookieList). Row 64: a prospect the National
 ## Draft passed over gets his rookie list chance in the Rookie Draft. A seeded career
 ## rolls over through the National Draft, which now fills the senior list
@@ -411,7 +412,7 @@ func _test_midseason_pool_after_offseason() -> void:
 		var fa: Dictionary = model.duplicate(true)
 		fa["id"] = "T_FA_%02d" % i
 		fa["age"] = 20.0 + float(i % 4)
-		fa["overall"] = 40 + i
+		Ovr.to(fa, 40 + i)
 		fa.erase("retiring")
 		made.append(fa)
 	(made[13] as Dictionary)["age"] = 26.0
@@ -435,9 +436,9 @@ func _test_midseason_pool_after_offseason() -> void:
 	var kept: Array = gs.free_agents.duplicate()
 	# Two more who stayed: one every club wants, one nobody does.
 	var star: Dictionary = made[0]
-	star["overall"] = 99
+	Ovr.to(star, 99)
 	var spare: Dictionary = made[1]
-	spare["overall"] = 26
+	Ovr.to(spare, 26)
 	for p in [star, spare]:
 		p["age"] = 22.0
 		p["fa_kept"] = gs.season_year
@@ -681,7 +682,7 @@ func _test_youth_only_drafts() -> void:
 	if draft == null:
 		return
 	_check(draft.user_max_age == Challenge.MAX_AGE, "Youth only: the National Draft carries the age line (%d)" % draft.user_max_age)
-	var old := {"id": "youth_test_old", "age": 25.4, "value": 0, "overall": 99}
+	var old := Ovr.to({"id": "youth_test_old", "age": 25.4, "value": 0}, 99)
 	_check(draft.too_old_for_user(old) and not draft.can_pick_player(old),
 			"Youth only: a 25-year-old cannot be drafted")
 	_check(draft.pick_block_reason(old).contains(" is 25, and you cannot"),

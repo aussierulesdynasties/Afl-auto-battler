@@ -31,6 +31,7 @@ extends Draft
 ##   eval_by_need true shipped: the club's opinion is weighted by its need
 ##                for the position (Draft._ai_score). false applies it in full.
 ## The two-ruck rule (_forced_role) and the hard budget check always apply.
+const Ovr := preload("res://tests/ovr.gd")
 
 var model := {}
 var club_noise_sd := {}          # code -> this club's valuation error SD
@@ -103,7 +104,7 @@ func _ai_score(code: String, p: Dictionary, detail = null) -> float:
 	for entry in roles:
 		var role: String = entry[0]
 		var need := _need_weight(code, role)
-		if role == "RUCK" and _has_first_ruck(code) and int(p["overall"]) >= RUCK_FIRST_CHOICE:
+		if role == "RUCK" and _has_first_ruck(code) and int(Ovr.of(p)) >= RUCK_FIRST_CHOICE:
 			need *= SECOND_STAR_RUCK
 		var worth := _club_worth(code, p) + noise + err * (need if bool(model.get("eval_by_need", true)) else 1.0)
 		var over := minf(AI_VORP_CAP, worth - _replacement(code, role))
