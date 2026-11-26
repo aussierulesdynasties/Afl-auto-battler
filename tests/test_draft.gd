@@ -661,10 +661,10 @@ func _test_position_status() -> void:
 	var d := Draft.new(_pool(), ["A", "B"], 5)
 	d.start_for_user("A")
 	var st := d.position_status()
-	_check(int(st["FWD"]["short"]) == 6 and int(st["RUCK"]["short"]) == 2,
-			"An empty list is short the whole match-day side")
-	_check(Draft.need_word(st["RUCK"], "RUCK") == "need 2" and Draft.need_word(st["FWD"], "FWD") == "short 6",
-			"Shortages read in a word: need 2, short 6")
+	_check(int(st["FWD"]["short"]) == 6 and int(st["RUCK"]["short"]) == 1,
+			"An empty list is short the whole match-day side (one ruck, director 2026-11-26)")
+	_check(Draft.need_word(st["RUCK"], "RUCK") == "need 1" and Draft.need_word(st["FWD"], "FWD") == "short 6",
+			"Shortages read in a word: need 1, short 6")
 	# Five MID/FWD players: they cover the midfield, so the forwards stay short.
 	var pairs := []
 	for i in range(5):

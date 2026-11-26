@@ -2693,16 +2693,30 @@ static func _tv(key: String, value: float) -> float:
 const PRESS_RUSH_GAIN := 0.96
 ## Rushed behinds (director, 2026-11-26, P2-1: "Add at the 2026 rate"): a
 ## defender closed down within RUSH_DEPTH metres of his own goal line rushes it
-## through this often. Real AFL 2026: 2.12 a team a game (standings behinds less
-## player behinds, AFL Tables; afl_team_rates.json "rushed_behinds"). Measured
-## over 1,000 paired matches: 0.5 gives 1.1, 1.0 (every time) gives 2.1.
-const RUSH_DEPTH := 15.0
+## through this often, unless he marked it (_holds_mark). Real AFL 2026: 2.12 a
+## team a game (standings behinds less player behinds, AFL Tables;
+## afl_team_rates.json "rushed_behinds"). Measured over 500 paired matches,
+## every time (1.0): 20 m gives 2.2, 25 m gives 3.1.
+const RUSH_DEPTH := 20.0
 const RUSH_THROUGH := 1.0
 
 
 ## `side`'s man, closed down near his own goal, rushes it through: a behind to
 ## the other side that no one of theirs kicked, and `side` kicks in.
-func _rushed_through(side: int, carrier: Dictionary, at_fp: float) -> Dictionary:
+## A man who has marked it takes his kick: the protected area keeps the
+## opposition off him, so he is never the one who rushes it through. His
+## events since he got the ball say whether one was a mark.
+func _holds_mark(carrier: Dictionary) -> bool:
+	var pid := str(carrier.get("id", ""))
+	var k := events.size() - 1
+	while k >= 0 and str((events[k] as Dictionary).get("player_id", "")) == pid:
+		if str((events[k] as Dictionary).get("kind", "")) == "mark":
+			return true
+		k -= 1
+	return false
+
+
+func _rushed_through(side: int, carrier: Dictionary, at_fp: float, presser) -> Dictionary:
 	var opp := 1 - side
 	_t(opp, "behinds")
 	_t(opp, "rushed_behinds")
@@ -2713,6 +2727,8 @@ func _rushed_through(side: int, carrier: Dictionary, at_fp: float) -> Dictionary
 	ev["rushed"] = true
 	ev["setshot"] = false
 	ev["rusher_id"] = str(carrier.get("id", ""))
+	if presser != null:
+		ev["presser_id"] = str(presser.get("id", ""))
 	_tag_shot(false)
 	_last_disp["end"] = "rushed"
 	return {"outcome": "behind", "fp": kick_in_fp(opp), "actor": carrier, "next_side": side}
@@ -3923,8 +3939,8 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 				# Near his own goal he rushes it through (director,
 				# 2026-11-26, P2-1): a behind to them, and we kick in.
 				if (not is_kick_in and atk_fp <= -(gline - _tv("RUSH_DEPTH", RUSH_DEPTH))
-						and rush_rng.randf() < _tv("RUSH_THROUGH", RUSH_THROUGH)):
-					return _rushed_through(side, carrier, fp)
+						and not _holds_mark(carrier) and rush_rng.randf() < _tv("RUSH_THROUGH", RUSH_THROUGH)):
+					return _rushed_through(side, carrier, fp, presser)
 			var turn_p: float = (_tv("PRESS_TURNOVER", PRESS_TURNOVER_FLOW)
 					* (0.80 + 0.40 * _a(presser, "pressure") / 100.0)
 					* (1.20 - 0.40 * _a(carrier, "disposal") / 100.0))
