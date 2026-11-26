@@ -12,17 +12,17 @@
 # balance, league_balance and calibration are planned last because most pull
 # requests skip them.
 # --- plan ---
-# From main run 45890519975 (2026-11-26), 144 suites, by tools/plan_ci_shards.py --shards 12.
-# Pull-request suite seconds per shard: 697 621 620 620 619 619 618 620 619 619 620 618
-1: career_ui
-2: club intake_ui contracts matchday_breaks club_decks coach_market fitness career_highs goal_run_moves calls era_football temperament
-3: expansion stats coach_arcs matchday dataset legacy_start_2020 midseason_draft match_flow milestones legacy_lore newsfront coach_pathway
-4: matchup coach_of_year plan_know legacy_2010_long save onboarding_walk player_condition assets real_fixture remembered combine_screen mid_intercepts
-5: crowd medical_panel nav_economy legacy_2000_long preseason finals clublink rival_read big_call ground_seats career_tale key_duels player_looks balance
-6: season_rules rowgap match_marks career match_visual form_marks ui_motion league namelink international gather_round kick_range state_leagues_data
-7: expansion_package draft_ui workload awards legacy_players story_culture plays_like merger_cut awards_count text_size back_carries planpane international_dealt calibration
-8: decision_scenes trainrep first_visit_intro rookie_list match_motion era_money break_talks selection coach_effects league_news nameink archetypes scouting_list
-9: practice almanac legacy_2010 ai legacy_rollover load_flair premade_history league_stories weekly_checklist premiership potential weather_look attributes
-10: picture_truth recruit_undo own_prospect injuries legacy_2020_long story scroll chronology draft second_tier year_events international_tap set_shots
-11: training match_story papers back_nav list_turnover roles pressure legacy_2000 keyboard team_familiarity state_leagues_gamedb bonds ratings
-12: achievements intake score_clock era_rules match_game save_release tipping predraft_card coaches sir_doug_round traitlink family contrast league_balance
+# From main run 45890519975 (2026-11-26), 145 suites, by tools/plan_ci_shards.py --shards 12.
+# Pull-request suite seconds per shard: 633 629 629 634 632 629 634 633 633 633 632 628
+1: career_ui matchday club_decks legacy_start_2020 rival_read text_size legacy_lore planpane scouting_list
+2: career_ui_2 legacy_2020_long story_culture tipping fitness keyboard team_familiarity family weather_look league_balance
+3: club workload awards list_turnover save_release plays_like midseason_draft draft goal_run_moves remembered temperament balance
+4: expansion first_visit_intro era_rules match_game era_money ui_motion merger_cut namelink premiership key_duels bonds attributes
+5: matchup rowgap stats career match_visual dataset clublink assets real_fixture calls kick_range coach_pathway
+6: crowd draft_ui match_marks back_nav match_motion form_marks coach_market selection awards_count milestones career_tale newsfront
+7: season_rules trainrep own_prospect rookie_list coach_arcs matchday_breaks finals player_condition coach_effects second_tier gather_round combine_screen set_shots
+8: expansion_package almanac score_clock ai legacy_2000_long save scroll league_stories big_call ground_seats nameink international_tap contrast
+9: decision_scenes match_story legacy_2010 plan_know legacy_players load_flair break_talks chronology coaches international potential mid_intercepts player_looks
+10: practice recruit_undo medical_panel injuries contracts preseason onboarding_walk league career_highs year_events state_leagues_gamedb ratings state_leagues_data
+11: picture_truth achievements papers intake_ui legacy_rollover roles premade_history legacy_2000 weekly_checklist league_news traitlink era_football international_dealt
+12: training intake coach_of_year nav_economy legacy_2010_long story pressure predraft_card match_flow sir_doug_round back_carries archetypes calibration
