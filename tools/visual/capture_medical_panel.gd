@@ -129,7 +129,7 @@ func _run() -> void:
 	state.save_path = "user://capture_medical.save"
 	state.settings_path = "user://capture_medical.cfg"
 	_career(state, db)
-	UK.apply_appearance("dark")
+	UK.apply_palette()
 	root.size = size
 	DisplayServer.window_set_size(size)
 	var bg := ColorRect.new()

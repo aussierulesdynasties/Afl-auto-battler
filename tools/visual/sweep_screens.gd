@@ -1,7 +1,8 @@
 extends SceneTree
 ## P-77 "One sweep of every screen" (proposals pass 2, director yes 2026-10-18).
 ## Opens every screen in Router.SCENES on one seeded career in the dark theme
-## and measures it. Per screen it records:
+## and measures it, with draft night and the Combine inside the draft room and
+## the interview's first question (UI batch 5: no screen left unswept). Per screen it records:
 ##   min_font     the smallest rendered font size in px (font size in UI units
 ##                times the window's pixels per unit), with the node that has it
 ##   offscreen    visible Controls whose rect leaves the viewport (sideways
@@ -376,14 +377,18 @@ func _career(start := true) -> void:
 	_state.reset()
 	_state.career_seed = SEED
 	_state.replay_seed = SEED
-	# Every first-visit intro seen, so each screen is measured itself rather
-	# than under its intro card.
+	_career_seen()
+	if start:
+		_state.start_season(CLUB, _db.club_list(CLUB))
+
+
+## Every first-visit intro seen, so each screen is measured itself rather than
+## under its intro card.
+func _career_seen() -> void:
 	var seen := ["training", "weekly_loop", "season_stats", "momentum"]
 	seen.append_array(load("res://scripts/ui/FirstVisitIntro.gd").TEXT.keys())
 	for k in seen:
 		_state.set_setting("seen_%s_intro" % k, true)
-	if start:
-		_state.start_season(CLUB, _db.club_list(CLUB))
 
 
 func _run() -> void:
@@ -409,7 +414,7 @@ func _run() -> void:
 	_state.autosave_enabled = false
 	_state.save_path = "user://sweep.save"
 	_state.settings_path = "user://sweep.cfg"
-	UK.apply_appearance("dark")
+	UK.apply_palette()
 	UK.apply_text_size(text_size)
 	root.size = Vector2i(W, H)
 	DisplayServer.window_set_size(Vector2i(W, H))
@@ -457,6 +462,46 @@ func _run() -> void:
 		scene = await _open(key, root.get_node("Router").SCENES[key])
 		await _close(scene)
 
+	# The screens off the hub: the match preview, the scouting list, the
+	# almanac, then the job interview (its name step, then its first question).
+	for key in ["preview", "scouting", "almanac"]:
+		scene = await _open(key, root.get_node("Router").SCENES[key])
+		await _close(scene)
+	_state.interview_due = true
+	scene = await _open("interview", "res://scenes/InterviewScene.tscn")
+	var who := scene.find_child("CoachName", true, false) as LineEdit
+	var go := scene.find_child("InterviewStart", true, false) as Button
+	if who != null and go != null:
+		who.text = "Sam Kelly"
+		who.text_changed.emit(who.text)
+		go.pressed.emit()
+		await _record("interview_question", scene)
+	else:
+		_fail("interview_question", "no name field or start button")
+	await _close(scene)
+	_state.interview_due = false
+
+	# The press conference after a round.
+	_career(true)
+	var weeks := 0
+	while not _state.media_conference_pending() and weeks < 8 and not _state.season.is_season_over():
+		weeks += 1
+		_state.advance()
+	if _state.media_conference_pending():
+		scene = load(root.get_node("Router").SCENES["press"]).instantiate()
+		root.add_child(scene)
+		# The question comes up once the room has played (the vignette's cue).
+		for i in range(900):
+			var said := scene.find_child("MediaSkip", true, false) as Control
+			if said != null and said.is_visible_in_tree():
+				break
+			await process_frame
+		await _record("press", scene)
+		await _close(scene)
+	else:
+		_fail("press", "no press conference in %d rounds" % weeks)
+	_career(true)
+
 	# The live match, at the pre-bounce box.
 	if _state.prepare_interactive_match():
 		scene = await _open("match", "res://scenes/MatchScene.tscn")
@@ -479,12 +524,52 @@ func _run() -> void:
 	if _state.season.is_season_over():
 		scene = await _open("season_review", "res://scenes/SeasonReviewScene.tscn")
 		await _close(scene)
+		# A rival board's letter holds the off-season shut until it is answered
+		# (this career's 2027 brings Tasmania's): decline it first, as a coach
+		# would, so the off-season is measured open (director, on the trades
+		# check: "Decline the letter in the test").
+		load("res://scripts/state/ClubMoves.gd").decline_letter(_state)
 		_state.open_offseason()
 		scene = await _open("offseason", "res://scenes/OffseasonScene.tscn")
 		await _close(scene)
+		# Draft night (the National Draft's board, the pre-draft meeting held),
+		# then the Combine over it.
+		_state.draft_meeting_year = _state.season_year
+		if _state.begin_intake_draft():
+			_state.draft_meeting_year = _state.season_year
+			scene = await _open("draft_night", "res://scenes/DraftScene.tscn")
+			if scene.has_method("_open_combine"):
+				scene.call("_open_combine")
+				await _record("combine", scene)
+			else:
+				_fail("combine", "the draft room has no Combine")
+			await _close(scene)
+		else:
+			_fail("draft_night", "the National Draft did not open")
+			_fail("combine", "the National Draft did not open")
 	else:
 		_fail("season_review", "the season did not finish")
 		_fail("offseason", "the season did not finish")
+		_fail("draft_night", "the season did not finish")
+		_fail("combine", "the season did not finish")
+
+	# The merger cut (a 1990s career where Fitzroy merged into Brisbane): last,
+	# since it sets the database to that era.
+	var legacy = load("res://scripts/state/LegacyRollover.gd")
+	_state.reset("1990")
+	_state.begin_real_lists()
+	_state.choose_real_club("BRL")
+	_state.finish_intake_draft()
+	_career_seen()
+	_state.media_conference = {}
+	_state.legacy = {"fitzroy": "merged"}
+	_state.season_year = legacy.TALKS_YEAR + 1
+	_db.apply_era(legacy.TALKS_YEAR + 1)
+	_state._era_trim("BRL", false)
+	legacy._merge(_state, false)
+	_state.merger_cut_due = true
+	scene = await _open("merger_cut", root.get_node("Router").SCENES["merger_cut"])
+	await _close(scene)
 
 	var data := {"size": "%dx%d" % [W, H], "text_size": UK.text_size(), "units": "%dx%d" % [int(_vr.size.x), int(_vr.size.y)],
 			"px_per_unit": snappedf(_factor, 0.001), "screens": _results}

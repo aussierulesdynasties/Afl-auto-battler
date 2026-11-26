@@ -1,0 +1,18 @@
+[
+ {"name": "top", "label": "straight down", "h": 0, "t": 0, "d": 650, "at": [2, -3, 0]},
+ {"name": "from_s", "label": "from the south (Vulture St)", "h": 0, "t": 50, "d": 600, "at": [2, -3, 0]},
+ {"name": "from_n", "label": "from the north (Stanley St)", "h": 180, "t": 50, "d": 600, "at": [2, -3, 0]},
+ {"name": "from_e", "label": "from the east", "h": 270, "t": 50, "d": 600, "at": [2, -3, 0]},
+ {"name": "from_w", "label": "from the west (Main St)", "h": 90, "t": 50, "d": 600, "at": [2, -3, 0]},
+ {"name": "from_se", "label": "from the south-east", "h": 315, "t": 60, "d": 500, "at": [2, -3, 0]},
+ {"name": "from_sw", "label": "from the south-west", "h": 45, "t": 60, "d": 500, "at": [2, -3, 0]},
+ {"name": "from_ne", "label": "from the north-east", "h": 225, "t": 60, "d": 500, "at": [2, -3, 0]},
+ {"name": "from_nw", "label": "from the north-west", "h": 135, "t": 60, "d": 500, "at": [2, -3, 0]},
+ {"name": "low_s", "label": "low from Vulture St", "h": 0, "t": 80, "d": 330, "at": [2, -3, 10]},
+ {"name": "low_w", "label": "low from Main St", "h": 90, "t": 80, "d": 330, "at": [2, -3, 10]},
+ {"name": "low_e", "label": "low from the east", "h": 270, "t": 80, "d": 330, "at": [2, -3, 10]},
+ {"name": "low_n", "label": "low from Stanley St", "h": 180, "t": 80, "d": 330, "at": [2, -3, 10]},
+ {"name": "bowl_n", "label": "into the bowl from the north end", "h": 180, "t": 65, "d": 220, "at": [2, -20, 0]},
+ {"name": "bowl_s", "label": "into the bowl from the south end", "h": 0, "t": 65, "d": 220, "at": [2, 15, 0]},
+ {"name": "bowl_w", "label": "into the bowl from the west", "h": 90, "t": 65, "d": 200, "at": [-10, -3, 0]}
+]

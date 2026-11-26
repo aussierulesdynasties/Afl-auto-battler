@@ -27,6 +27,13 @@ practices").
 Scale the effort to the change: a roster fix doesn't need a movie, and an
 animation change does.
 
+**Motion options for the director** (director, 2026-11-25). Film a throwaway
+warm-up take first in each Godot process, so cold-start layout timing doesn't
+shift take 1. Send a silent side-by-side of every option across four clubs, a
+dark one (Collingwood) among them. When anything makes a sound, also send one
+club through every option in a row, with sound, so he can judge the audio cues
+alongside the pacing.
+
 ## Taps, not handler calls
 
 `emit_signal("pressed")` proves the handler's logic. It can't show a player's

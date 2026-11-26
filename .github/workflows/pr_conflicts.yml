@@ -29,6 +29,10 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0     # merge-tree needs each PR's merge base with main
+          # No files but tools/: merge-tree works on git's objects, and fetches only the blobs
+          # a merge has to look inside (the full history's blobs are many GB of models and boards).
+          filter: blob:none
+          sparse-checkout: tools
 
       - name: Merge every open PR onto main, and each pair both ways
         env:

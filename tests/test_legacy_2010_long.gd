@@ -53,10 +53,23 @@ func _start() -> void:
 	GameState.finish_intake_draft()
 
 
+## Plays the season out as Sim the week does (GameState.skip_season), so the
+## board judges games that were played: skipping the rounds left every club on
+## no wins, a certain miss of a "win 7 games" goal, and the board sacked the
+## coach for seasons nobody played.
+##
+## The board never sacks this coach (director 2026-11-26: "Board never sacks"),
+## as in legacy_2000_long: he only sims each week and takes "Pick for me", and
+## no club's board kept such a coach to 2028 (0 of 32 starts in 2000 and 2010),
+## so each season starts with no poor seasons counted and the final warning
+## never comes. The game is unchanged: the sack is tested in the club and
+## coach_arcs suites, and this suite proves the calendar, the new clubs and the lists.
 func _to_offseason() -> void:
-	GameState.season.round_index = GameState.season.fixture.size()
-	GameState.ensure_finals()
-	while not GameState.season.is_season_over():
+	if not GameState.board.is_empty():
+		GameState.board["poor_seasons"] = 0
+		GameState.board["warned"] = false
+	GameState.skip_season()
+	while not GameState.season.is_season_over() and not GameState.is_sacked():
 		GameState.advance()
 
 
@@ -107,9 +120,8 @@ func _test_rolls_past_2027() -> void:
 		var from := GameState.season_year
 		_to_offseason()
 		# A sacked coach is never put back in his job (director 2026-11-17: "never
-		# reappoint the same coach after sacking"). The test career is one that
-		# keeps its job to 2028 on the default board (director: "Pick a lasting
-		# career"), so a sacking is a failure, not waved off.
+		# reappoint the same coach after sacking"). The board never sacks this
+		# coach (_to_offseason), so a sacking here is a failure, not waved off.
 		if GameState.is_sacked():
 			sackings.append(from)
 		_check(not GameState.is_sacked(), "The Carlton board keeps its coach after %d" % from)

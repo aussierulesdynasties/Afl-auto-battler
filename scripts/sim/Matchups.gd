@@ -114,8 +114,8 @@ static func key_forwards(ground: Array) -> Array:
 		if is_key_forward(p):
 			keys.append(p)
 	var by_ovr := func(a, b):
-		if int(a["overall"]) != int(b["overall"]):
-			return int(a["overall"]) > int(b["overall"])
+		if int(Rating.ovr(a)) != int(Rating.ovr(b)):
+			return int(Rating.ovr(a)) > int(Rating.ovr(b))
 		return str(a["id"]) < str(b["id"])
 	keys.sort_custom(by_ovr)
 	if keys.is_empty() and not fwds.is_empty():
@@ -148,8 +148,8 @@ static func defenders(ground: Array) -> Array:
 		var ab := defender_air(b)
 		if not is_equal_approx(aa, ab):
 			return aa > ab
-		if int(a["overall"]) != int(b["overall"]):
-			return int(a["overall"]) > int(b["overall"])
+		if int(Rating.ovr(a)) != int(Rating.ovr(b)):
+			return int(Rating.ovr(a)) > int(Rating.ovr(b))
 		return str(a["id"]) < str(b["id"]))
 	return out
 

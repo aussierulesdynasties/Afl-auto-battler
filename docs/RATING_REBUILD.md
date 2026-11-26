@@ -1,0 +1,150 @@
+# Player rating rebuild (approved 2026-11-25)
+
+The director's rulings are Director Bible rule 4.2.30a; this file is the approved blueprint with his five
+amendments written in. Where this file and the bible disagree, the bible wins.
+
+## 0. Earlier rulings replaced
+
+| Earlier ruling | Replaced by |
+|---|---|
+| 11-15 rulings 2 and 20: skills and OVR rated against his AFL position | One league-wide scale (mandate 2) |
+| 11-15 ruling 2: OVR = official AFL Player Rating | OVR worked out from attributes (mandate 3); real players' OVRs will move |
+| 11-15 ruling 10: Goalkicking = goals a game | Finishing becomes **Goalkicking**; goals a game moves to **Forward craft** |
+| 11-17: past-peak take-back of 40-100% | Age curves for each attribute (§4), applied a little each round |
+| `data/ovr_overrides.csv` (23 rows) | Deleted, not converted. The POT override rows stay. |
+| 11-15 "No invented stats", for speed only | Speed estimate for players with no record (§2, amendment) |
+| Calibration (15 team stats within ±7% of real AFL) | Goes red when the data changes in Phase 4; the sim is retuned. Balance stays his call. |
+
+## 1. Teardown list
+
+**Files deleted**
+- `data/engine_scale.csv`, `tools/wheelo/engine_scale.py`, `tools/wheelo/engine_targets.csv` (Phase 2).
+- `tools/wheelo/fit.py`, `fit_copy_pool.gd`, `copy_pool.py`, `data/copy_pool.csv` (Phase 3).
+- `tools/wheelo/weights_pre2012.json`, `weights_report.py` (Phase 3).
+- `data/ovr_overrides.csv`, `data/rating_stats_2026.csv` (replaced by `data/attributes_2026.csv`) (Phase 3/4).
+- The rating mirror in `tools/sim_harness.py`; its 5 importers re-pointed (Phase 8).
+
+**Code removed**
+- `Skills.gd` whole (`engine`, `_load_scale`, `migrate`), replaced by `Attributes.gd`.
+- `Prospects`: `fit_attributes`, `UNRATED_KEYS`, `project` (RANK_BANDS, readiness), copy-pool shaping.
+- `Ratings.gd`: `derive_all`, `METRIC_SPECS`, `ATTR_BLENDS`, `ROLE_BLENDS`, `rate_on_record/honours/rehab`,
+  `HONOURS_*`, `ROLE_WEIGHTS`, `LINE_FIT`, `rate_overall`, `overall_per_point`, `ATTR_ADJUSTMENTS`,
+  `ROLE_CORRECTIONS`. Team selection stays, re-pointed.
+- `GameDB`: `_load_rating_stats`, `_apply_rating_stats`, `set_player_ovr`, `_rate_few_games`, `baseline_overall`.
+- `GameState`: `_recompute_ratings` and the `season_start_ov` bookkeeping.
+- `Potential`: `outlook`, `reachable_peak`, `AGE_HEADROOM`, `ROLE_CAP`. `assign` stays.
+- `Growth`: OVR-point pricing and OVR breakouts (rebuilt on attributes), the dead `over_gains`.
+- `MatchSim`: the `STAR_OVR` read of stored OVR (uses derived OVR). `Squad`: the `team_star` term.
+
+**Player and save fields removed:** `overall`, `value`, `rates`, `norm`, `role_scores`, `attr_unrecorded`,
+`season_start_ov`, `baseline_overall`.
+
+## 2. Attributes: 17, 1-99, one scale for every position
+
+**Scale.** Rate stats: the league's 2nd percentile is 1, its 98th is 99. Per-game counts: zero is 1, the 98th
+percentile 99. A stat a season does not record is left out. Height and weight stay as measured body facts.
+
+| Group | Attribute | Real-player recipe (Wheelo) | What it drives in the match |
+|---|---|---|---|
+| Physical | Speed | GPS top speed / 20 m sprint (`C:/kt/speed`); no record: estimate (below) | Tackling 20%, running with the ball, breaks, play-on |
+| | Endurance | Time on ground | How fast he tires (`MatchSim:5844`, `Workload:61`); tackling 20% |
+| | Strength | **Open (amendment):** blend weight-for-height with contested output, or remove | Breaking tackles, one-on-one and ruck contests |
+| Technical | Kicking | Efficiency 50 + metres gained per kick 50 | Kick range, ball use, disposal (56%) |
+| | Handballing | Efficiency 60 + handball metres gained 40 | Holding the ball, disposal (44%) |
+| | Marking | Uncontested marks a game | Marks off kicks, kick-or-handball choice |
+| | Contested marking | Contested marks 50 + attacking one-on-one win % 50 | Attacking side of aerial contests |
+| | One-on-one defence | Defensive one-on-one loss % (inverted) 50 + spoils 30 + one-percenters 20 | Spoils, defending packs and leads |
+| | Contested ball | CP 30 + ground ball gets 20 + clearances 35 + CP rate 15 | Clearances, centre attendances, wet fumbles |
+| | Goalkicking | xScore rating per shot from 2021, goals per shot before | Whether the shot goes in |
+| | Ruck | Hitouts 35 + to advantage 30 + win % 20 + ruck clearances 15 | Hitouts |
+| Footy IQ | Vision | Goal assists 40 + score involvements 25 + launches 15 + inside 50s 20 | Inside-50 delivery, setting up shots |
+| | Reading the play | Intercept possessions a game | Intercepts, roaming, back-half ball use |
+| | Pressure | Pressure acts 70 + tackles 30 | Tackling 60%, zone pressure, minders |
+| | Forward craft | Goals a game 50 + marks inside 50 30 + marks on the lead 20 | Which forward is the danger and gets the shot |
+| Mental and durability | Discipline | Frees against 70 + clangers 30 (inverted) | Clangers, frees, 50s, reports |
+| | Durability | Share of club games played | Injury chance (`Injuries:45`), soreness |
+
+**Dropped:** `star` (OVR's job; Squad's contest composite becomes 0.48 mid contest, 0.27 ruck, 0.25 mid
+disposal), `carry` (now Speed), `accuracy` (now Goalkicking).
+
+**Speed with no record (amendment).** Search for more GPS/combine records before Phase 3. A player still
+missing gets an estimate from his archetype and movement stats (bounces, metres gained per disposal), never a
+flat 50; his card shows that number with an estimated mark, never a dash. *Formula open: ask before Phase 3.*
+
+**Strength (amendment).** Not pure weight-for-height. His two options: blend weight-for-height with contested
+output (Wheelo has no broken-tackles column; it has HardBallGets and ContestedPossessionRate), or remove
+Strength and let height, weight and Contested ball drive physical contests. *Choice open: ask before Phase 3.*
+
+**In-match modifiers:** fitness (energy ×0.80-1.05), form, wet weather, opponent pressure, and out of
+position (new). **Out of position (amendment):** cuts Footy IQ and Technical attributes only, never Speed,
+Strength or Endurance; the cut grows with positional distance (light for Mid/Mid-Fwd, heavy for KF/Ruck).
+*Distance table and sizes open: ask before Phase 4.*
+
+## 3. Derived positional OVR
+
+OVR(player, position) = Σ weight × attribute ÷ 100, rounded; his primary position or the slot's. Worked out
+when shown or used, never saved, never fed back. Durability weighs 0 (priced in Worth instead).
+
+| Attribute | KD | GD | Mid | Mid-Fwd | Gen Fwd | KF | Ruck |
+|---|---|---|---|---|---|---|---|
+| Speed | 5 | 10 | 6 | 8 | 10 | | |
+| Endurance | 4 | 6 | 10 | 5 | 4 | 4 | 8 |
+| Strength | 10 | | 6 | | | 10 | 12 |
+| Kicking | 8 | 15 | 12 | 10 | 5 | 5 | |
+| Handballing | 3 | 7 | 12 | 6 | | | 5 |
+| Marking | 5 | 10 | 4 | 6 | 10 | 10 | |
+| Contested marking | 15 | 5 | | | 5 | 25 | 10 |
+| One-on-one defence | 25 | 12 | | | | | |
+| Contested ball | | | 22 | 12 | | | 15 |
+| Goalkicking | | | 3 | 12 | 18 | 20 | |
+| Ruck | | | | | | | 40 |
+| Vision | | 4 | 10 | 12 | 10 | | |
+| Reading the play | 15 | 18 | | | | | |
+| Pressure | 5 | 8 | 12 | 12 | 14 | 4 | 5 |
+| Forward craft | | | | 14 | 20 | 18 | |
+| Discipline | 5 | 5 | 3 | 3 | 4 | 4 | 5 |
+
+These are starting numbers. Phase 4 measures them: per position, +10 on one attribute for every player there,
+1,000 paired matches; the margin each attribute buys becomes its weight; the measured table is shown to him
+before it is locked. Best OVRs are expected in the 80s; Phase 8 recalibrates colour cuts and grades so mid-80s
+reads as elite.
+
+## 4. Generation, progression, economy
+
+**Draftees.** One of the 12 types each. Ranges: each attribute's 10th-90th percentile among real
+first-season players of that type, aged 18-20, Wheelo 2012-25. A draftee draws a talent percentile, takes his
+type's ranges at it, ±6 noise; POT from talent plus noise (`Potential.assign`). The Forge, expansion lists,
+depth pools and state leagues use the same ranges.
+
+**Progression.** XP (2/3 matches, 1/3 training, VFL half) buys attribute points; the plan picks which; a point
+costs more the higher the attribute. No gains once derived OVR at his primary position reaches POT (11-23).
+Age curves a little each round: Endurance, Durability, technical and Footy IQ measured year on year in Wheelo
+2012-25; Discipline XP only. Speed (grows to 23, holds to 26, −1.5 a season from 27, −3 from 31) and Strength
+(grows to 26, holds to 31, −1 a season from 32) were decision 8, not named in his reply: *ask before Phase 7.*
+Breakouts: same rate, +4 to +6 on his three most heavily weighted attributes. Types retested each season.
+
+**Economy.** Worth = 0.50 × OVR at his best position + 0.20 × Form + 0.30 × POT − 1.5 a year past 29, with a
+**Durability factor (amendment)** so injury-prone players take a contract and trade discount. *Its form and
+size open: ask before Phase 5.* Form = last 10 `MatchNotes.match_rating` against his position's league
+average, on the OVR scale; under 5 games, Form = OVR.
+
+| Consumer | Uses |
+|---|---|
+| Contracts | Asking salary from Worth |
+| Trades | (Worth ÷ 70)^5 |
+| Draft ranking | OVR·(1−w) + POT·w (w 0.25 and 0.65), from fogged attributes |
+| AI selection | Best 0.8 × OVR at the slot + 0.2 × Form; ruck and key posts by position OVR |
+| Scouting blur | ±6 per attribute at full uncertainty, scout tiers ×1.25/1.00/0.80/0.65; shown OVR from fogged attributes |
+
+## 5. Phases (each its own PR, green CI, auto-merge, v1-v3 saves load)
+
+| # | What lands | Proof |
+|---|---|---|
+| 1 | `Attributes.gd` (one list, groups, labels) replaces the 6 copies; `Rating.ovr(p)` wraps the OVR reads (still returns stored OVR) | Suites green; paired balance zero change |
+| 2 | Bake the scale into stored values; sim reads attributes directly; `engine_scale.csv` and `Skills.engine` deleted (frozen curves only in the save upgrader) | `balance.sh match 1000` paired vs main |
+| 3 | Wheelo rewritten for 17 attributes, league-wide: `attributes_2026.csv`; fitters, copy pool, weights, `rating_stats`, `ovr_overrides` deleted; 2027 lists on a page for him | His read of the lists |
+| 4 | The swap: 17 attributes load, sim reads remapped, out-of-position cut, OVR derived and dropped from saves, sim retuned, weights measured | Calibration, balance table, his playtest |
+| 5 | Economy and AI: Worth with Durability, contracts, trades, draft ranking, selection, blur | Draft, contract, trade suites |
+| 6 | Generation: type ranges, classes, Forge, expansion, depth pools, state leagues | Intake and Forge-on-every-start tests |
+| 7 | Progression: XP into attributes, POT cap, age curves, breakouts, trait retest | Multi-season audit |
+| 8 | UI and words: card in four groups, colour cuts, grades, PlaysLike, Roles, story thresholds; `.hist` careers regenerated | Real taps; captures to him |

@@ -59,12 +59,13 @@ func _run() -> void:
 	_state.autosave_enabled = false
 	_state.save_path = "user://test_contrast.save"
 	_state.settings_path = "user://test_contrast.cfg"
-	UK.apply_appearance("dark")
+	UK.apply_palette()
 	_forge_clubs()
 	_t("_test_scale_is_ordered")
 	_t("_test_text_tokens_on_every_step")
 	_t("_test_primary_fill_every_club")
 	_t("_test_club_ink_on_every_step")
+	_t("_test_club_ink_is_not_good")
 	_db.unregister_custom_clubs()
 	print(Ran.line("Contrast", self))
 	quit(0 if _failures.is_empty() else 1)
@@ -196,3 +197,17 @@ func _test_club_ink_on_every_step() -> void:
 			var r: float = UK.contrast(ink, sf)
 			_check(r >= TEXT_FLOOR - EPS, "%s: its ink with no surface named (%s) reads on %s: %.2f:1" % [
 					code, _hex(ink), _hex(sf), r])
+
+
+## A club's name ink is never mistaken for GOOD (afl-ui-writing: club colour
+## "must not be mistaken for GOOD/BAD"): each hand-picked ink, first and second,
+## sits at least INK_CLASH from the GOOD green. Tasmania's green was 24.6 (2026-11-25).
+func _test_club_ink_is_not_good() -> void:
+	var inks: Dictionary = UK.CLUB_INKS
+	_check(inks.size() >= 19, "every AFL club has hand-picked inks: %d" % inks.size())
+	for code in inks:
+		for which in 2:
+			var ink := Color(str(inks[code][which]))
+			var d: float = UK.colour_distance(ink, UK.GOOD)
+			_check(d >= UK.INK_CLASH, "%s: its %s ink (%s) is %.1f from GOOD (%s), clash line %.0f" % [
+					code, "first" if which == 0 else "second", _hex(ink), d, _hex(UK.GOOD), UK.INK_CLASH])

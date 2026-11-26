@@ -60,6 +60,17 @@ jobs:
       RESOLUTION: ${{ inputs.resolution }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          filter: blob:none   # fetch only the files checked out
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |   # .claude/review (5 GB of review boards) is never read by CI
+            /*
+            !/.claude/review/
+
+      - name: Epic/MetaHuman files (private repo, docs/EPIC_ASSETS.md)
+        uses: ./.github/actions/epic-assets
+        with:
+          token: ${{ secrets.EPIC_ASSETS_TOKEN || secrets.MERGE_TOKEN }}
 
       - name: Check the inputs
         run: |
@@ -121,6 +132,9 @@ jobs:
       - name: Capture
         run: |
           set -f
+          # A step's shell stops at the first failing command (bash -e), so the exit code is caught
+          # with || below: a bare "code=$?" after a failed capture never ran, nor the clip and the log tail.
+          code=0
           mkdir -p out
           extra=""
           if [ "$MOVIE" = "true" ]; then extra="--movie"; fi
@@ -132,8 +146,7 @@ jobs:
           # ARGS is split on spaces on purpose; it was checked above.
           LIBGL_ALWAYS_SOFTWARE=1 xvfb-run -a -s "-screen 0 1280x1000x24" \
             "$HOME/godot/godot" --path . --rendering-method gl_compatibility $film \
-            --script "tools/visual/$TOOL.gd" -- $ARGS $extra --out "$PWD/out/$TOOL" > capture.log 2>&1
-          code=$?
+            --script "tools/visual/$TOOL.gd" -- $ARGS $extra --out "$PWD/out/$TOOL" > capture.log 2>&1 || code=$?
           set +f
           if [ "$MOVIE_MAKER" = "true" ] && [ -f "out/$TOOL.avi" ]; then
             if ls out/"$TOOL"_f*.png > /dev/null 2>&1; then

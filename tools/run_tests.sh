@@ -28,6 +28,16 @@
 set -u
 cd "$(dirname "$0")/.." || exit 1
 
+# The 3D suites draw the MetaHuman body, crew, cuts, skin and heads, which live in a private repo
+# (docs/EPIC_ASSETS.md). Copy them in when they are missing or stale; say so plainly if we can't.
+if ! bash tools/epic_assets.sh check >/dev/null 2>&1 && ! bash tools/epic_assets.sh fetch; then
+	echo "WARNING: the Epic/MetaHuman files are not in place, so the 3D suites will fail (docs/EPIC_ASSETS.md)." >&2
+fi
+# The ground models live in the same private repo (docs/GROUND_ASSETS.md).
+if ! bash tools/ground_assets.sh check >/dev/null 2>&1 && ! bash tools/ground_assets.sh fetch; then
+	echo "WARNING: the ground models are not in place, so the ground suites will fail (docs/GROUND_ASSETS.md)." >&2
+fi
+
 GODOT="${GODOT:-godot}"
 # The suites play on the data without the director's hand-set OVR rows
 # (data/ovr_overrides.csv): they check the rules, not those numbers. Only the
@@ -113,7 +123,7 @@ say "== Quick: skipping the import (.godot exists; a script error still fails it
 summary+=("| import | skipped | --quick |")
 else
 say "== Importing the project"
-timeout 600 "$GODOT" --headless --path . --editor --import > "$LOG_DIR/import.log" 2>&1
+timeout 1200 "$GODOT" --headless --path . --editor --import > "$LOG_DIR/import.log" 2>&1
 import_code=$?
 if [ "$import_code" != 0 ] || grep -qE "SCRIPT ERROR|Parse Error|Compile Error" "$LOG_DIR/import.log"; then
 	grep -E -A3 "SCRIPT ERROR|Parse Error|Compile Error" "$LOG_DIR/import.log" || true

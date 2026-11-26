@@ -1043,6 +1043,11 @@ func _test_event_sheet() -> void:
 	_check(sheet != null and later != null and sheet.find_child("SheetEvent", true, false) != null
 			and bool(_state.week_events[0].get("popped", false)),
 			"A new card opens over the hub on its own")
+	# One story at a time: its copy on the hub is out of sight behind the sheet
+	# (2026-11-25: it showed through the dim, 1.6 to 1).
+	var behind: Control = current_scene.find_child("WeekEvent", true, false)
+	_check(behind == null or not behind.is_visible_in_tree(),
+			"The hub doesn't show the same card behind its own sheet")
 	var later_tap: String = (await Tap.tap(later)) if later != null else "missing"
 	await _settle()
 	var waiting: Control = current_scene.find_child("WaitingEvents", true, false)
@@ -1088,6 +1093,9 @@ func _test_event_sheet() -> void:
 	_check(answer_tap == "" and bool(_state.week_events[0].get("resolved", false)) and done != null
 			and sheet_text.contains(str(_state.week_events[0].get("outcome", "-"))) and sheet.find_child("EventLater", true, false) == null,
 			"A real tap on an answer in the sheet answers the card and shows what happened (%s)" % answer_tap)
+	behind = current_scene.find_child("WeekEvent", true, false)
+	_check(behind == null or not behind.is_visible_in_tree(),
+			"...and the hub, redrawn by the answer, still leaves it out behind the sheet")
 	var done_tap: String = (await Tap.tap(done)) if done != null else "missing"
 	await _settle()
 	week = current_scene.find_child("ThisWeek", true, false)
@@ -1669,6 +1677,7 @@ func _run() -> void:
 	await _t("_test_event_sheet_flows")
 	await _t("_test_event_sheet_fits_every_card")
 	await _t("_test_sacked_job_choice_taps")
+	await _t("_test_season_review_keeps_the_save")
 	await _t("_test_rival_letter_taps")
 	await _t("_test_sim_asks_only_before_your_match")
 	await _t("_test_skip_long_press")
@@ -1700,6 +1709,8 @@ func _run() -> void:
 	await _t("_test_list_shape_fits_phones")
 	for sz in [Vector2i(390, 844), Vector2i(1280, 720)]:
 		await _t("_test_list_words_fit", [sz])
+	for sz in [Vector2i(1280, 720), Vector2i(960, 540), Vector2i(390, 844)]:
+		await _t("_test_contracts_pc", [sz])
 	await _t("_test_restore_earlier_save_tap")
 	await _t("_test_top_up_sheet_taps")
 	print(Ran.line("Career UI", self))
@@ -1849,27 +1860,19 @@ func _test_menu_and_career() -> void:
 			"The line is not shown again on a later visit")
 	# The Android save backup preset (user_data_backup/allow=true) is a static lint: tools/lint/boundaries.py.
 
-	# --- settings: appearance and player names apply at once -----------------
+	# --- settings: no appearance choice, no ball-up scene switch; names --------
+	# Light mode and the centre ball-up scene switch went (director, 2026-11-26).
 	current_scene.find_child("MenuSettings", true, false).emit_signal("pressed")
 	await _settle()
-	var light_setting: Button = current_scene.find_child("SettingsAppearance_light", true, false)
-	var dark_setting: Button = current_scene.find_child("SettingsAppearance_dark", true, false)
-	_check(light_setting != null and dark_setting != null, "Settings offers Dark and Light appearance")
-	if light_setting != null:
-		light_setting.emit_signal("pressed")
-		await _settle()
-	var kit = load("res://scripts/ui/UiKit.gd")
-	_check(_state.appearance() == "light" and kit.appearance() == "light"
-			and kit.BG.r > 0.8 and _router.current() == "main",
-			"Light appearance applies immediately and rebuilds the current screen")
-	current_scene.find_child("MenuSettings", true, false).emit_signal("pressed")
+	var opened := current_scene.find_child("Settings", true, false)
+	_check(opened != null and current_scene.find_child("SettingsTextSize_standard", true, false) != null
+			and current_scene.find_child("SettingsAppearance_light", true, false) == null
+			and current_scene.find_child("SettingsAppearance_dark", true, false) == null
+			and current_scene.find_child("SettingsBounceScene_on", true, false) == null,
+			"Settings offers no appearance choice and no centre ball-up scene switch")
+	if opened != null:
+		opened.queue_free()
 	await _settle()
-	dark_setting = current_scene.find_child("SettingsAppearance_dark", true, false)
-	if dark_setting != null:
-		dark_setting.emit_signal("pressed")
-		await _settle()
-	_check(_state.appearance() == "dark" and kit.appearance() == "dark"
-			and kit.BG.r < 0.2, "Dark appearance restores the original palette")
 	current_scene.find_child("MenuSettings", true, false).emit_signal("pressed")
 	await _settle()
 	_check(current_scene.find_child("SettingsNames_real", true, false) == null
@@ -2784,7 +2787,14 @@ func _test_menu_and_career() -> void:
 		if c is Button and load("res://scripts/sim/Ratings.gd").available(_state.list_player(str(c.get_meta("id")))):
 			grid_card = c
 			break
-	var tap_in: String = await Tap.tap(grid_card) if grid_card != null else "missing"
+	# At rest the phone's list shows one line (director, 2026-11-25): a real
+	# tap on its pull brings the cards up first.
+	var tap_in: String = await Tap.tap(current_scene.find_child("ListPull", true, false))
+	await Tap.steady(current_scene.find_child("ListSheet", true, false))
+	if grid_card != null:
+		(current_scene.find_child("NotSelectedScroll", true, false) as ScrollContainer).ensure_control_visible(grid_card)
+		await _settle()
+	tap_in += await Tap.tap(grid_card) if grid_card != null else "missing"
 	await _settle()
 	var tap_c: String = await Tap.tap(current_scene.find_child("Spot_C", true, false))
 	await _settle()
@@ -4193,8 +4203,27 @@ func _test_season_awards() -> void:
 		_check(button_rect.position.x >= 0 and button_rect.end.x <= width and button_rect.end.y <= 800,
 			"Awards footer remains reachable at %d portrait width" % width)
 
-	next.emit_signal("pressed")
-	_check(scene._done, "A tap completes the winner animation without advancing the award")
+	# The skip rule (director, 2026-11-26: "Count as is, reveal fixed"): the
+	# button reads Next award from the winner's first frame, and a real tap on
+	# the sheet away from the stage puts his walk-on at its last frame.
+	_check(next.text == "Next award" and not scene._done, "From the winner's first frame the button reads Next award (%s)" % next.text)
+	var title: Label = null
+	for l in ceremony.find_children("*", "Label", true, false):
+		if (l as Label).text == "Brownlow Medal":
+			title = l
+	var tapped: String = await Tap.tap_at(title, title.size / 2.0, false) if title != null else "no award title"
+	_check(tapped == "" and is_instance_valid(scene) and scene._done and ceremony.find_child("AwardWinner", true, false) == scene,
+			"A real tap on the sheet completes the winner animation without advancing the award (%s)" % tapped)
+	next.emit_signal("pressed")   # on to the Coleman
+	await _settle()
+	next.emit_signal("pressed")   # its winner
+	await _settle()
+	var scene2: Control = ceremony.find_child("AwardWinner", true, false)
+	var mid_walk: bool = scene2 != null and not scene2._done
+	var why_next: String = await Tap.tap(next)
+	await _settle()
+	_check(mid_walk and why_next == "" and not is_instance_valid(scene2),
+			"Next award moves on from the winner's first frame (%s)" % why_next)
 	_check(var_to_str(_state.season_awards) == before, "Revealing awards does not mutate votes or results")
 	var seen := ""
 	for i in range(20):
@@ -5316,6 +5345,33 @@ func _check_record_only(why: String) -> void:
 			"%s: Settings and the card stay" % why)
 
 
+## Season Review has no New Career (director, 2026-11-25: "Remove the
+## button"): it started a 2026 career on the spot and replaced the save
+## without asking. A finger on Main Menu reaches the menu with the career
+## still saved; a new one starts there, which asks first.
+func _test_season_review_keeps_the_save() -> void:
+	var size_before := root.size
+	root.size = Vector2i(390, 844)
+	_state.reset()
+	_state.start_season("SYD", _db.club_list("SYD"))
+	_state.advance()
+	_check(_state.save_career(), "A Sydney career saves before Season Review")
+	_router.stack = ["main", "hub"]
+	_router.go("season_review")
+	await _settle()
+	_check(_router.current() == "season_review" and current_scene.find_child("NewCareer", true, false) == null,
+			"Season Review has no New Career button")
+	var menu: Button = current_scene.find_child("MainMenu", true, false)
+	var why: String = await Tap.tap(menu) if menu != null else "missing"
+	await _settle()
+	var meta: Dictionary = _state.saved_career_meta()
+	_check(why == "" and _router.current() == "main" and _state.has_saved_career() and str(meta.get("club", "")) == "SYD"
+			and current_scene.find_child("ContinueCareer", true, false) != null,
+			"A finger on Main Menu reaches the menu and the Sydney career is still saved to continue (%s; %s)" % [why, str(meta)])
+	_state.delete_saved_career()
+	root.size = size_before
+
+
 func _test_sacked_job_choice_taps() -> void:
 	var size_before := root.size
 	root.size = Vector2i(390, 844)
@@ -5424,6 +5480,35 @@ func _test_sacked_job_choice_taps() -> void:
 	root.size = size_before
 
 
+## A real tap on `button` with the cover on (headless runs have none unless a
+## test asks): [what the tap said, whether the cover showed `line`, whether
+## `waiting` was still true when it first did, so the line was up before the
+## work ran].
+func _tap_under_cover(button: Control, line: String, waiting: Callable) -> Array:
+	if button == null:
+		return ["missing", false, false]
+	var wipe := root.get_node("ScreenTransition")
+	var cover_line: Label = wipe.get_node("CoverLine")
+	wipe.set("test_cover", true)
+	# Looked at every frame from the tap on (the work may start and end inside
+	# the tap's own frames): the first frame the line is up says whether the
+	# work was still to come.
+	var seen := {"up": false, "before": false}
+	var look := func():
+		if not seen["up"] and cover_line.visible and cover_line.text == line:
+			seen["up"] = true
+			seen["before"] = bool(waiting.call())
+	process_frame.connect(look)
+	var why: String = await Tap.tap(button)
+	for i in range(1800):
+		if not bool(wipe.get("busy")):
+			break
+		await process_frame
+	process_frame.disconnect(look)
+	wipe.set("test_cover", false)
+	return [why, seen["up"], seen["before"]]
+
+
 ## A strong season's real close at Fremantle (row 112): the home-and-away
 ## rounds skipped with Fremantle top of the ladder, so they play the finals
 ## and meet the board's goal, and the close writes a rival board's letter that
@@ -5478,7 +5563,15 @@ func _test_rival_letter_taps() -> void:
 	_check(stay != null and take != null and stay.get_combined_minimum_size().x <= stay.size.x + 0.5
 			and take.get_combined_minimum_size().x <= take.size.x + 0.5,
 			"Stay and Take read whole on a 390 phone")
-	var why: String = await Tap.tap(stay) if stay != null else "missing"
+	# Bug bash batch F (P1-10; director 2026-11-25, "Football line"): his answer
+	# opens the off-season (12 s on the hub), so the cover and its line go up
+	# before the work runs.
+	var line := "Playing out the %d off-season..." % int(_state.season_year)
+	var under: Array = await _tap_under_cover(stay, line, func(): return moves.letter_open(_state))
+	var why: String = under[0]
+	_check(bool(under[1]) and bool(under[2]),
+			"A finger on Stay puts up the cover with \"%s\" before the off-season opens (line %s, before %s)" % [
+			line, under[1], under[2]])
 	await _settle()
 	_check(why == "" and str(moves.letter(_state).get("answer", "")) == "declined" and _state.my_club == "FRE"
 			and (_state.coach_arcs["move"] as Dictionary).is_empty() and _state.offseason_open(),
@@ -5498,7 +5591,11 @@ func _test_rival_letter_taps() -> void:
 	_router.go("hub")
 	await _settle()
 	take = current_scene.find_child("RivalLetterTake", true, false)
-	why = await Tap.tap(take) if take != null else "missing"
+	under = await _tap_under_cover(take, line, func(): return _state.my_club == "FRE")
+	why = under[0]
+	_check(bool(under[1]) and bool(under[2]),
+			"A finger on Take the job puts up the cover with \"%s\" before the move (line %s, before %s)" % [
+			line, under[1], under[2]])
 	await _settle()
 	_check(why == "" and code != "" and _state.my_club == code and (_state.coach_arcs["move"] as Dictionary).is_empty()
 			and _state.offseason_open(),
@@ -6158,6 +6255,29 @@ func _test_year_step_taps() -> void:
 			and y26.is_visible_in_tree() and y90.is_visible_in_tree() and y26.get_index() < y90.get_index()
 			and y26.size.y >= 88.0 and y90.size.y >= 88.0,
 			"New career asks the season first, today's league on top, each a thumb-sized tap (tap %s, mode %s)" % [t1, menu.get("_mode")])
+	# Every card holds its words: 2020's third wrapped line ran below the card's
+	# edge in the browser (director's capture, 2026-11-24). The wrap depends on
+	# the window's width, so every width from a small phone to a wide PC is tried,
+	# and the words' bottom is measured against the card's bottom.
+	var spill := []
+	var three := 0
+	var was := root.size
+	for w in range(360, 1601, 20):
+		root.size = Vector2i(w, 900)
+		await _settle()
+		for b in menu.find_children("StartYear_*", "Button", true, false):
+			var card := (b as Control).get_global_rect()
+			var low := 0.0
+			for l in b.find_children("*", "Label", true, false):
+				low = maxf(low, (l as Control).get_global_rect().end.y)
+				if (l as Label).get_line_count() >= 3:
+					three += 1
+			if low > card.end.y + 0.5 and spill.size() < 6:
+				spill.append("%d wide %s words end %d, card %d" % [w, b.name, low, card.end.y])
+	root.size = was
+	await _settle()
+	_check(three > 0, "Some width wraps a start card's line to three, the case that spilled (%d)" % three)
+	_check(spill.is_empty(), "Every start card holds its words at every width (%s)" % ", ".join(spill))
 	_router.handle_back(false)
 	await _settle()
 	_check(str(current_scene.get("_mode")) == "home", "Back from the year step is the title screen (%s)" % current_scene.get("_mode"))
@@ -6461,3 +6581,147 @@ func _test_top_up_sheet_taps() -> void:
 			and (_state.my_list as Array).size() == list_before + 1,
 			"A real tap on Done leaves the last spot empty (%s)" % done_tap)
 	root.size = size_before
+
+
+## A PC's Contracts (UI batch 5, the director's board A): the men to decide on
+## in a list, the picked one's card beside it, and a finger on another name
+## shows his. At 960x540 his card takes turns, Contract | Ratings (the director's
+## pick 2). The whole list is a tab of its own. Neither scrolls, also once a
+## signing grows the heading. A phone keeps Contracts as it was.
+func _test_contracts_pc(sz: Vector2i) -> void:
+	var C = load("res://scripts/sim/Contracts.gd")
+	_state.reset()
+	_state.career_seed = 5508
+	_state.replay_seed = 5508
+	_state.start_season("MEL", _db.club_list("MEL"))
+	_state.season.round_index = _state.season.fixture.size()
+	_state.open_offseason()
+	var size_before := root.size
+	root.size = sz
+	var tag := "%dx%d" % [sz.x, sz.y]
+	var scene: Control = load("res://scenes/OffseasonScene.tscn").instantiate()
+	root.add_child(scene)
+	await _settle()
+	if sz.x < 760:
+		_check(scene.find_child("Tab_list", true, false) == null and scene.find_child("DecideCard", true, false) == null
+				and scene.find_child("OutOfContractHead", true, false) != null,
+				"Phone %s: Contracts keeps its cards and has no Our list tab" % tag)
+		scene.queue_free()
+		await _settle()
+		root.size = size_before
+		return
+	var deciding: int = _state.retiring_players().size() + C.expiring(_state.my_list).filter(
+			func(q): return not _state.retiring_now(q)).size()
+	var rows: Array = scene.find_children("Decide_*", "Button", true, false)
+	var row_names: Array = rows.map(func(x): return str(x.name))
+	_check(deciding >= 2 and rows.size() == deciding and scene.find_child("DecideCard", true, false) != null,
+			"PC %s: every man to decide on has a row, and one card shows (%d of %d)" % [tag, rows.size(), deciding])
+	var actions := scene.find_children("Contract_*", "", true, false).size() + scene.find_children("Retiring_*", "", true, false).size()
+	_check(actions == 1, "PC %s: only the picked man's actions show (%d)" % [tag, actions])
+	# A finger on another man's row shows his card.
+	var other: Button = null
+	for r in rows:
+		if str(r.name).trim_prefix("Decide_") != str(scene.get("_pick_id")):
+			other = r
+	var want := str(other.name).trim_prefix("Decide_") if other != null else ""
+	var why: String = await Tap.tap(other) if other != null else "no second row"
+	await _settle()
+	var card := scene.find_child("DecideCard", true, false)
+	_check(why == "" and card != null and card.find_child("PlayerName_" + want, true, false) != null,
+			"PC %s: a finger on another man's row shows his card (%s)" % [tag, why])
+	# A row says what he wants in seasons: "wants $535k for 2 seasons".
+	var wants: Array = []
+	for l in scene.find_children("*", "Label", true, false):
+		if (l as Label).text.begins_with("wants "):
+			wants.append((l as Label).text)
+	var worded := RegEx.create_from_string("^wants \\$[0-9.]+[km] for (1 season|[2-9] seasons)$")
+	_check(not wants.is_empty() and wants.all(func(t): return worded.search(t) != null),
+			"PC %s: each row says what he wants in seasons (%s)" % [tag, ", ".join(wants)])
+	# Each man's card shows his time with us and every rating, and never scrolls. A short
+	# window (960x540) has them on the card's Ratings stage, a finger beside his name.
+	var short := sz.y < 640
+	var shown := 0
+	var unfit: Array = []
+	for nm in row_names:
+		var r: Button = scene.find_child(nm, true, false)
+		if r == null:
+			unfit.append(nm + " gone")
+			continue
+		await Tap.tap(r)
+		await _settle()
+		if _contracts_fit(scene) != "":
+			unfit.append("%s %s" % [nm, _contracts_fit(scene)])
+		var stage_on := not short
+		if short:
+			var on_card := scene.find_child("ProfileWithUs", true, false) == null \
+					and scene.find_child("DecideRatings", true, false) == null
+			var to_ratings: Button = scene.find_child("CardStage_ratings", true, false)
+			var why_s: String = await Tap.tap(to_ratings) if to_ratings != null else "no Ratings beside his name"
+			await _settle()
+			stage_on = on_card and why_s == "" and scene.find_child("Contract_*", true, false) == null
+			if not stage_on:
+				unfit.append("%s Ratings stage (%s)" % [nm, why_s])
+		if stage_on and scene.find_child("ProfileWithUs", true, false) != null \
+				and scene.find_child("DecideRatings", true, false) != null:
+			shown += 1
+		if _contracts_fit(scene) != "":
+			unfit.append("%s %s" % [nm, _contracts_fit(scene)])
+		var to_contract: Button = scene.find_child("CardStage_contract", true, false)
+		if short and to_contract != null:
+			await Tap.tap(to_contract)
+			await _settle()
+	_check(shown == rows.size() and unfit.is_empty(),
+			"PC %s: every card shows his time with us and his ratings (%d of %d) and none scrolls (%s)"
+			% [tag, shown, rows.size(), ", ".join(unfit)])
+	# His buttons answer a finger: Release opens its confirm.
+	var mine: Dictionary = {}
+	for p in C.expiring(_state.my_list):
+		if not _state.retiring_now(p):
+			mine = p
+			break
+	var row_m: Button = scene.find_child("Decide_" + str(mine.get("id", "")), true, false)
+	var why_m: String = await Tap.tap(row_m) if row_m != null else "no row for a man out of contract"
+	await _settle()
+	var rel: Button = scene.find_child("Release", true, false)
+	var why_r: String = await Tap.tap(rel) if rel != null else "no Release"
+	await _settle()
+	_check(why_m == "" and why_r == "" and scene.find_child("ReleaseConfirmation", true, false) != null,
+			"PC %s: a finger on Release in his card opens the confirm (%s %s)" % [tag, why_m, why_r])
+	var cancel: Button = scene.find_child("CancelRelease", true, false)
+	if cancel != null:
+		await Tap.tap(cancel)
+		await _settle()
+	_check(_contracts_fit(scene) == "", "PC %s: Contracts fits without scrolling (%s)" % [tag, _contracts_fit(scene)])
+	# A signing grows the heading (its notice and Undo): the list still fits.
+	var out: Dictionary = _state.resign_player(str(mine["id"]), int(C.wants(mine)["years"]))
+	scene.set("_notice", str(out.get("reason", "")))
+	scene.call("_build")
+	await _settle()
+	_check(bool(out.get("ok", false)) and scene.find_child("UndoLast", true, false) != null and _contracts_fit(scene) == "",
+			"PC %s: after a signing Contracts still fits (%s)" % [tag, _contracts_fit(scene)])
+	# Our list, by a finger: every man on it, nothing scrolls.
+	var tab: Button = scene.find_child("Tab_list", true, false)
+	var why_t: String = await Tap.tap(tab) if tab != null else "no Our list tab"
+	await _settle()
+	var named := scene.find_children("ListName_*", "", true, false).size()
+	_check(why_t == "" and named == _state.my_list.size() and _contracts_fit(scene) == "",
+			"PC %s: a finger on Our list shows all %d, unscrolled (%d; %s)" % [tag, _state.my_list.size(), named, _contracts_fit(scene)])
+	scene.queue_free()
+	await _settle()
+	root.size = size_before
+
+
+## "" when the Off-season body fits its box and nothing runs past the right
+## edge; else what is over.
+func _contracts_fit(scene: Control) -> String:
+	var sc: ScrollContainer = scene.get("_scroll_box")
+	if sc == null or sc.get_child_count() == 0:
+		return "no body"
+	var over := (sc.get_child(0) as Control).size.y - sc.size.y
+	if over > 0.5:
+		return "over by %.0f" % over
+	var edge := scene.get_viewport().get_visible_rect().size.x
+	for c in scene.find_children("*", "Control", true, false):
+		if (c as Control).is_visible_in_tree() and (c as Control).get_global_rect().end.x > edge + 0.5:
+			return "%s past the edge" % c.name
+	return ""

@@ -19,10 +19,11 @@ the time to build the scene and the renderer's own time.
   package `...aussierulesdynasties.probe`, installs beside the game). On a phone it measures real
   frame times; see "What needs a phone" below.
 
-Run it again with:
+Run it again with (in the cloud, prefix `VK_ICD_FILENAMES=/opt/lavapipe/lvp_icd.json xvfb-run -a`, or
+Godot falls back to OpenGL and the numbers are not the Mobile renderer's):
 
     godot --path . --rendering-method mobile tools/perf/Oval3DPhone.tscn -- \
-        levels=high,medium,low measure=1 size=1080x1240 out=rows.json [grounds=mcg,marvel] [shots=DIR] quit
+        levels=high,medium,low measure=1 size=1080x1240 out=rows.json [grounds=mcg,marvel] [shots=DIR] [aa=msaa2] quit
 
 ## What was too heavy, and what changed
 
@@ -46,6 +47,7 @@ Every level plays the same match; only the picture changes (scripts/ui/match/Ova
 | Picture drawn at | full size | full size | three-quarter size, stretched |
 | Grass blades round the ball | yes | yes | no |
 | A late game's plain stand shades the wing | yes | yes | no |
+| Light towers throwing the men's shadows at night | 4 | 2 | 1 |
 
 Low keeps the soft shadow filter: the hard filter was tried first and lost the roof's shade on the
 stands, so Marvel's seats showed bright under the roof. Low keeps the ground's own shadows for the
@@ -62,7 +64,8 @@ the renderer's time against the plain stand on High (software GPU, so ratios onl
 | optus | 3839 / 2985 / 1948 | 311 / 261 / 238 | 1.31 / 0.95 / 0.73 | 878 / 843 |
 | mcg | 3593 / 2559 / 1880 | 237 / 219 / 206 | 1.36 / 1.02 / 0.76 | 821 / 785 |
 | scg | 3446 / 2538 / 2181 | 216 / 201 / 209 | 1.37 / 1.04 / 0.85 | 887 / 853 |
-| marvel | 3123 / 2134 / 1910 | 172 / 159 / 166 | 1.43 / 0.97 / 0.75 | 865 / 834 |
+| marvel | 2743 / 2729 / 2178 | 273 / 276 / 253 | (2026-11-22: modelled east offices and vents, landmark buildings, Southern Cross roof, harbour edge, rail gantries, the City of Melbourne massing for the skyline; landmarks +25k triangles and 10 draws, the massing +110k triangles and 2 draws; the roof's steel grid, lighting gantry, floodlights and six screens +31k triangles, no new draws) | 688 / 664 |
+| gabba (2026-11-22, measured heights, overhanging upper tier, 37,286 seats; MCG 3332 / 3034 / 2426 on the same run) | 3018 / 2654 / 2101 | 343 / 300 / 301 | not measured against the stand | 687 / 653 |
 | macpoint | 2859 / 1985 / 1683 | 386 / 371 / 376 | 1.15 / 0.96 / 0.72 | 783 / 750 |
 | york_park | 2257 / 1795 / 1592 | 300 / 292 / 300 | 0.95 / 0.77 / 0.65 | 836 / 803 |
 | moorabbin | 2227 / 2015 / 1793 | 239 / 235 / 243 | 0.98 / 0.83 / 0.68 | 794 / 762 |
@@ -91,15 +94,31 @@ the renderer's time against the plain stand on High (software GPU, so ratios onl
 | north_hobart | 1063 / 1051 / 1042 | 246 / 248 / 259 | 0.69 / 0.61 / 0.51 | 805 / 773 |
 | manuka | 1057 / 1045 / 1035 | 248 / 249 / 259 | 0.71 / 0.63 / 0.48 | 761 / 729 |
 
+## A night game under the towers
+
+At night a ground's own towers light it (scripts/ui/match/Oval3DTowers.gd, rule 2.82): a spotlight
+from every tower (no shadow), and from the 4, 2 or 1 towers the level allows a light that throws
+only the players', umpires' and ball's shadows (never the stadium's). The MCG, 1080 x 1240, a
+measured 5 s at 4x, the same match by day and by night (`slot=night`, 2026-11-21, software GPU):
+
+| MCG | Triangles (H / M / L) | Draw calls (H / M / L) | Renderer time, night against day (H / M / L) |
+|---|---|---|---|
+| Day | 3072 / 2436 / 1995 | 220 / 211 / 208 | |
+| Night | 2465 / 1988 / 1513 | 158 / 159 / 158 | 1.37 / 1.08 / 0.98 |
+
+Night draws less (the day sun draws the whole stadium into its shadow bands; the towers draw only
+the men), but every pixel takes six more lights: High costs about a third more by night, Medium a
+twelfth, Low the same. On a phone that struggles at night, Medium is the step down.
+
 ## What the numbers say
 
 - The heaviest grounds on High draw 3 to 4 million triangles a frame (Optus, MCG, SCG, Marvel);
   most grounds about 1.1 to 2 million. Low saves most at the big grounds (Optus 3.8 to 1.9 million)
   and cuts the renderer's time by a third to a half everywhere: a quarter fewer pixels, no 3D
   people in the crowd. It keeps the ground's own shadows, so its triangles fall less than its time.
-- The floor, about 1 million triangles at any ground and any level, is the 36 players and 7 umpires
-  drawn and drawn again into the shadow map, not the ground. Players' detail levels (row 197's
-  level-of-detail bodies) are the lever there, outside this page.
+- The floor, about 1 million triangles at any ground and any level, was the 36 players and 7 umpires
+  drawn and drawn again into the shadow map, not the ground. The players had no far detail levels at
+  all (below), and now do.
 - Draw calls stay under about 440 everywhere. Bruce Stadium (825 separate meshes in its model) and
   Macquarie Point are the most; merging Bruce's meshes would take it under 200.
 - Memory was the bigger risk on a cheap phone, and is now compressed. The 3D view held about 750 MB
@@ -121,6 +140,81 @@ the renderer's time against the plain stand on High (software GPU, so ratios onl
   Richmond, Hawthorn) differ by about 3 levels in 255 on average and look the same side by side; the
   grounds from the broadcast camera are indistinguishable. The table above was measured before the
   compression, so its video memory column is the old figure.
+
+## The MetaHuman footballer (row 202 2d)
+
+Matches now draw the MetaHuman body: about 79,500 triangles against the old body's 25,600. Measured
+the same way at the plain stand and the three heaviest grounds, it added about 2.7 million triangles
+a frame at every level, so Low barely helped (MCG Low 4.8 million).
+
+The cause was older than the new body. The import makes each body's far detail levels, but every
+player's body is rebuilt when a match loads (club_body, _skull, _kit_edges: guernsey cut, scalp,
+kit edges), and a rebuilt mesh keeps only its full detail. So every player was drawn whole at any
+distance and again in every shadow band, on any body. Oval3D._lodded now makes the levels again
+from the rebuilt mesh, once per body (about 0.2 s), and the hair styles likewise (they are refitted
+to the head at load). Same corners and the same look; each level is a shorter list of the same
+triangles, picked by the graphics level's mesh detail threshold (1, 2, 4).
+
+Triangles a frame (thousands) and the renderer's GPU time (cloud units, ratios only), Mobile
+renderer, 1080 x 1240. "Now" is the MetaHuman with its levels and the edge smoothing below:
+
+| | Old body | MetaHuman | Now | GPU: old / MetaHuman / now |
+|---|---|---|---|---|
+| Plain stand High | 1,986 | 4,688 | 1,230 | 479 / 1,310 / 495 |
+| Plain stand Low | 1,360 | 4,024 | 509 | 231 / 656 / 224 |
+| MCG High | 3,505 | 6,208 | 2,750 | 751 / 1,612 / 731 |
+| MCG Medium | 2,682 | 5,397 | 1,894 | 362 / 844 / 361 |
+| MCG Low | 2,153 | 4,817 | 1,302 | 268 / 749 / 264 |
+| Marvel High | 3,210 | 5,912 | 2,454 | 1,528 / 2,324 / 1,472 |
+| Marvel Low | 2,131 | 4,795 | 1,279 | 396 / 822 / 367 |
+| Optus High | 3,768 | 6,471 | 3,013 | 920 / 1,720 / 859 |
+| Optus Low | 2,175 | 4,840 | 1,324 | 338 / 737 / 295 |
+
+Draw calls do not change (MCG 247 on High). Video memory does: the MetaHuman adds about 205 MB
+(its rebuilt bodies, each club's cut with its 19 build shapes) and the detail levels about 70 MB
+more, so MCG on High is 976 MB against the old body's 701. Still under the 1.5 GB line, but the
+largest single item now; sharing one rebuilt body between more players is the lever if a phone
+needs it. Players filmed close at four sizes on High and Low, with and without the levels, look the
+same (no skin through the guernsey, no lost numbers or chevrons).
+
+So with this body Low is near the 1 million line again at the big grounds, and under it at the plain
+stand. The other grounds were not re-measured; they share the players, so expect the same saving.
+
+## Edge smoothing (anti-aliasing)
+
+Match 3D had none: a player's outline, a line or a goal post was a staircase. Each level now
+smooths its edges by multisampling (Viewport.msaa_3d, Oval3DQuality "msaa"): High 4 samples,
+Medium 2, Low none (its picture is drawn at three-quarter size and stretched, which softens edges
+already).
+
+- Multisampling, not FXAA. FXAA was tried: it smooths outlines but blurs the whole picture, and the
+  guernsey numbers and the boards' names went soft with it. TAA is not available on the Mobile
+  renderer.
+- On a phone's tiled GPU (Mali, Adreno) the extra samples stay on the chip and are resolved there,
+  which is why multisampling is the usual choice on phones. It is also what the hair's
+  alpha-to-coverage cards need to draw soft strand ends; without it they cut off hard.
+- Cost in the cloud: within the run-to-run noise at every level and ground (High with 4x is the
+  table's "now" column). The cloud's software GPU is not a tiled GPU, so the phone run decides. On a
+  PC the measuring tool takes `aa=none|msaa2|msaa4|fxaa` to cost each option against the level's own.
+
+## How it looks on a phone (2026-11-22)
+
+Captured at the oval's real size on a 1080 x 2400 phone (1012 x 1242, PitchView._fit_3d), not
+blown up: tools/perf/Oval3DPhone.tscn now draws into a picture of that size, as the match does.
+(Before this, its pictures and times came from a 1280 x 720 window although labelled 1080 x 1240.
+Triangles and draw calls do not depend on it; the GPU ratios moved a little.)
+
+- The softest thing in the picture is the film look's lens softening (rule 2.112): every pixel is
+  55% a blurred copy of the picture. On players about 35 px tall it smears their outline and
+  leaves a skin-coloured halo on the grass round each one. Without it the same frame is sharp
+  (board in the project files: phone_look_board.png). It is the director's ruled look, so it is
+  his to change.
+- Low drew three-quarter size and stretched it bilinearly; it now stretches with FSR 1, which
+  sharpens edges as it stretches, for about 1% more GPU time. Drawing Low at full size instead
+  costs about 40% more (as much as Medium), so it stays three-quarter.
+- Textures: the guernsey atlas, skin, heads, turf and crowd cards all have mipmaps; skin, heads and
+  turf blades filter anisotropically. Nothing found drawn without mipmaps where it shrinks, apart
+  from the guernsey number digits (filter_linear, row #1997's work).
 
 ## The budget (proposed, for the director)
 

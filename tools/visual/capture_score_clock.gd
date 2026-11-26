@@ -33,7 +33,7 @@ func _run() -> void:
 	state.autosave_enabled = false
 	state.save_path = "user://capture_score_clock.save"
 	state.settings_path = "user://capture_score_clock.cfg"
-	load("res://scripts/ui/UiKit.gd").apply_appearance("dark")
+	load("res://scripts/ui/UiKit.gd").apply_palette()
 	for key in load("res://scripts/ui/FirstVisitIntro.gd").TEXT:
 		state.set_setting("seen_%s_intro" % key, true)
 	root.size = Vector2i(_w, _h)

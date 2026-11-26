@@ -67,6 +67,21 @@ const float WET_HAIR = 0.75;
 const float WET_SKIN_ROUGH = 0.7;
 // The player's own number (0-99), per figure; -1 for none.
 instance uniform int number = -1;
+// Not a footballer (the cheer squad, Oval3DBanner): long trousers in this colour from the shorts
+// down, and plain shoes; alpha 0 (every player) leaves the kit as it is.
+instance uniform vec4 trousers : source_color = vec4(0.0);
+varying float leg_h;  // the body's height here, metres from his feet (as drawn, standing)
+// The trainer's AFL vest (Oval3DCrew.TRAINER_VEST, row 202): its back print, placed by the vest's
+// own print coordinates (metres: g.x = 0.5 + x across him, g.y = height - 1 m; build_crew.py
+// print_uv) where 2025 broadcasts have it: a white sponsor patch 7 cm under the collar, his
+// one-digit number 20 cm under it, "TRAINER" 37 cm under it, in condensed capitals
+// (tools/oval3d/crew/make_vest_print.py: the word in the mask's top half, digits 0-9 below).
+uniform bool vest_back = false;
+uniform sampler2D vest_print : filter_linear_mipmap, repeat_disable;
+uniform vec4 vest_ink : source_color = vec4(0.06, 0.06, 0.1, 1.0);
+const vec4 VEST_PATCH = vec4(0.375, 0.45, 0.625, 0.53);   // x0, y0, x1, y1 (25 x 8 cm)
+const vec4 VEST_NUMBER = vec4(0.465, 0.26, 0.535, 0.40);  // 7 x 14 cm
+const vec4 VEST_WORD = vec4(0.345, 0.125, 0.655, 0.23);   // 31 x 10.5 cm
 
 // His skin's own detail, from the MetaHuman body's maps (assets/oval3d/skin): pores, knuckles,
 // veins, tendons, the shading of muscle. UV3 (CUSTOM0.xy, mh_to_glb_morph.py's uv_skin) holds
@@ -356,6 +371,7 @@ vec4 number_on_back(int n, vec3 g, vec3 base, bool mirrored, bool pic, vec2 gx, 
 }
 
 void vertex() {
+	leg_h = VERTEX.y;
 	skin_uv = CUSTOM0.xy;
 	kit_edge = CUSTOM1;
 	kit_fore = CUSTOM2.x;
@@ -381,7 +397,29 @@ void fragment() {
 		jumper = base + (pat - base) * p.x + (pat2 - base) * p.y + (pat3 - base) * p.z;
 	}
 	vec2 g_dx = dFdx(g.xy), g_dy = dFdy(g.xy);
-	if (number >= 0) {
+	if (vest_back) {
+		// Read from behind, left to right: g.x falls (his right is on the viewer's right).
+		vec2 pw = vec2((VEST_WORD.z - g.x) / (VEST_WORD.z - VEST_WORD.x), (VEST_WORD.w - g.y) / (VEST_WORD.w - VEST_WORD.y));
+		vec2 pn = vec2((VEST_NUMBER.z - g.x) / (VEST_NUMBER.z - VEST_NUMBER.x), (VEST_NUMBER.w - g.y) / (VEST_NUMBER.w - VEST_NUMBER.y));
+		vec2 sw = vec2(-1.0 / (VEST_WORD.z - VEST_WORD.x), -0.5 / (VEST_WORD.w - VEST_WORD.y));
+		vec2 sn = vec2(-0.1 / (VEST_NUMBER.z - VEST_NUMBER.x), -0.5 / (VEST_NUMBER.w - VEST_NUMBER.y));
+		float ink = 0.0;
+		bool back = g.z < 0.5;
+		if (back && all(greaterThanEqual(pw, vec2(0.0))) && all(lessThanEqual(pw, vec2(1.0)))) {
+			ink = textureGrad(vest_print, pw * vec2(1.0, 0.5), g_dx * sw, g_dy * sw).r;
+		}
+		if (back && number >= 0 && all(greaterThanEqual(pn, vec2(0.0))) && all(lessThanEqual(pn, vec2(1.0)))) {
+			vec2 at = vec2((float(number % 10) + pn.x) * 0.1, 0.5 + pn.y * 0.5);
+			ink = textureGrad(vest_print, at, g_dx * sn, g_dy * sn).r;
+		}
+		jumper = mix(jumper, vest_ink.rgb, ink);
+		// The patch, its edge a few millimetres soft.
+		vec2 e = min(g.xy - VEST_PATCH.xy, VEST_PATCH.zw - g.xy);
+		float aa = max(length(vec2(g_dx.x, g_dy.x)), length(vec2(g_dx.y, g_dy.y))) + 0.002;
+		if (back) {
+			jumper = mix(jumper, vec3(0.92, 0.92, 0.9), smoothstep(-aa, aa, min(e.x, e.y)));
+		}
+	} else if (number >= 0) {
 		vec3 under = dn >= 100 ? jumper : base;
 		vec4 num = number_on_back(number, g, under, false, dn >= 100, g_dx, g_dy);
 		jumper = mix(jumper, num.rgb, num.a);
@@ -446,6 +484,13 @@ void fragment() {
 		shade = below * HEM_SHADOW * (1.0 - smoothstep(0.0, HEM_SHADOW_M, -kit_edge.z));
 	}
 	c = mix(c, shorts.rgb * (1.0 - shade), bottom);
+	float legs = 0.0;
+	if (trousers.a > 0.0) {
+		// Trousers from the shorts' hem down; the shoes under them.
+		legs = (1.0 - top) * (1.0 - smoothstep(0.80, 0.84, leg_h));
+		vec3 denim = trousers.rgb * (0.92 + 0.08 * sin(leg_h * 140.0));
+		c = mix(c, leg_h < 0.075 ? vec3(0.78, 0.78, 0.76) : denim, legs);
+	}
 	c = mix(c, jumper, top);
 	// A wet day (rule 2.83, Oval3DTurf sets oval_wet): soaked cloth goes a shade darker and
 	// holds a dull sheen; wet hair darkens; wet skin shines more. Looks only.
@@ -458,7 +503,7 @@ void fragment() {
 	// A bare scalp (bald, or under a style's own hairline) is skin like the rest of his face.
 	float bare = (1.0 - region(UV2.x) * float(scalp != 1) * behind) * (1.0 - region(COLOR.a))
 		* (1.0 - region(COLOR.b + COLOR.a * step(0.02, COLOR.b))) * (1.0 - max(top, bottom))
-		* has_maps;
+		* has_maps * (1.0 - legs);
 	NORMAL_MAP = vec3(s_nrm.r, 1.0 - s_nrm.g, 1.0);
 	NORMAL_MAP_DEPTH = bare;
 	ROUGHNESS = mix(mix(0.82, WET_CLOTH_ROUGH, oval_wet), s_rough * mix(1.0, WET_SKIN_ROUGH, oval_wet), bare);
@@ -473,6 +518,6 @@ void fragment() {
 	float down = clamp(-wn.y * 1.5 + 0.2, 0.0, 1.0) * bare;
 	ALBEDO *= mix(vec3(1.0), vec3(1.05, GROUND_GREEN_CUT, 0.95), down);
 	// Soft skin light (oval3d_skin_light.gdshaderinc) on bare skin only: never on the guernsey or shorts.
-	skin_wrap = bare * (1.0 - top) * (1.0 - bottom);
+	skin_wrap = bare * (1.0 - top) * (1.0 - bottom) * (1.0 - legs);
 	spec_amt = 0.5;
 }

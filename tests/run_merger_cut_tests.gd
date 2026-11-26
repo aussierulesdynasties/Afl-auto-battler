@@ -6,7 +6,10 @@ extends SceneTree
 ## in the save, the hub opening the screen, and the screen worked with real taps
 ## (tests/tap.gd) on a phone in portrait, 390x844. The setup is the real 1997
 ## rollover in small: the Bears' list cut to the era's spots by the rivals' rule,
-## then LegacyRollover._merge brings Fitzroy's best across.
+## then LegacyRollover._merge brings Fitzroy's best across. The same screen
+## opens whenever a Legacy season has fewer spots than your list (director
+## 2026-11-25, "You pick"): 1994's cut from 52 to 42, and an opening list longer
+## than its first season allows.
 ## Classes are reached through load() and autoload nodes (a --script runner
 ## compiles before the autoloads exist).
 
@@ -58,6 +61,13 @@ func _run() -> void:
 	_t("_test_club_cut_before_round_one")
 	_t("_test_saved")
 	await _t("_test_screen_taps")
+	_t("_test_list_cut_any_year")
+	_t("_test_opening_list_cut")
+	await _t("_test_list_cut_screen_taps")
+	# A PC (UI batch 5): the whole list across the window and his card beside it.
+	for sz in [Vector2i(1280, 720), Vector2i(960, 540)]:
+		await _t("_test_merger_pc", [sz])
+	root.size = PHONE
 	_db.reload()
 	print(Ran.line("Merger cut", self))
 	quit(1 if not _failures.is_empty() else 0)
@@ -231,3 +241,197 @@ func _test_screen_taps() -> void:
 		await process_frame
 	_check(current_scene != null and str(current_scene.name) != "MergerCutScene",
 			"Confirm leaves the merger screen (%s)" % str(current_scene.name if current_scene else null))
+
+
+## A Bears career in 1990 moved on to 1994, when senior lists fell from 52 to
+## 42: the list is over that season's spots with no merger behind it.
+func _setup_1994() -> void:
+	_gs.reset("1990")
+	_gs.begin_real_lists()
+	_gs.choose_real_club("BRL")
+	_gs.finish_intake_draft()
+	_gs.set_setting("seen_weekly_loop_intro", true)
+	_gs.media_conference = {}
+	_gs.merger_cut_due = false
+	_gs.season_year = 1994
+	_db.apply_era(1994)
+
+
+## The list cut opens whenever your list is over the season's limit, not only
+## after the merger (director, 2026-11-25, "You pick"), and the club cuts the
+## rest by least worth at Round 1, as it does after the merger; the news says
+## why.
+func _test_list_cut_any_year() -> void:
+	var RookieList = load("res://scripts/state/RookieList.gd")
+	_setup_1994()
+	var list := _list()
+	var over: int = RookieList.senior_count(list) - RookieList.senior_spots()
+	_check(RookieList.senior_spots() == 42 and over > 0,
+			"(setup) 1994 lists 42 seniors and ours has %d" % RookieList.senior_count(list))
+	_gs._flag_list_cut()
+	var needs: Dictionary = _gs.merger_cut_needs()
+	_check(_gs.merger_cut_due and int(needs.get("", 0)) == over and not needs.has("A"),
+			"Over 1994's spots, the list cut is due: %d to go (%s)" % [over, str(needs)])
+	_check(not _gs.list_cut_after_merger(), "It is not the merger's cut")
+	_gs.news.clear()
+	_gs._merger_cut_by_club()
+	_check(_fits() and not _gs.merger_cut_due, "Round 1 first: the club cuts the %d over and the list fits" % over)
+	var line := "The club delisted %s before Round 1, to fit the list." % ("one player" if over == 1 else "%d players" % over)
+	_check(_gs.news.any(func(e): return str(e.get("text", "")) == line), "The news says so: %s" % line)
+	_gs._flag_list_cut()
+	_check(not _gs.merger_cut_due, "A list that fits raises no cut")
+
+
+## A Legacy start whose real list is longer than its first season allows
+## (Essendon's 55 in 1990, against 52): rivals delist their least worth as
+## before (bug bash 4, L3); ours opens the list cut for you to pick.
+func _test_opening_list_cut() -> void:
+	var RookieList = load("res://scripts/state/RookieList.gd")
+	_gs.reset("1990")
+	_gs.begin_real_lists()
+	_gs.choose_real_club("ESS")
+	_gs.finish_intake_draft()
+	var list := _list()
+	var over: int = RookieList.senior_count(list) - RookieList.senior_spots()
+	_check(over > 0 and _gs.merger_cut_due and int(_gs.merger_cut_needs().get("", 0)) == over,
+			"Essendon opens %d over 1990's %d, the list cut due (%s)" % [over, RookieList.senior_spots(), str(_gs.merger_cut_needs())])
+	var rivals_over := []
+	for code in _gs.season.lists:
+		if code != _gs.my_club and not _gs.list_over(_gs.season.lists[code]).is_empty():
+			rivals_over.append(code)
+	_check(_gs.season.lists.size() >= 14 and rivals_over.is_empty(),
+			"Every rival opens inside the spots (%d clubs; over: %s)" % [_gs.season.lists.size(), str(rivals_over)])
+
+
+## The screen for a cut with no merger: its own title and lead, worked with
+## real taps on a phone in portrait.
+func _test_list_cut_screen_taps() -> void:
+	var RookieList = load("res://scripts/state/RookieList.gd")
+	_setup_1994()
+	_gs._flag_list_cut()
+	var n: int = _gs.merger_cut_left()
+	var have: int = RookieList.senior_count(_list())
+	_router.go("hub")
+	var scene: Node = await _scene_named("MergerCutScene")
+	_check(scene != null, "The hub opens the list cut while the list is over (scene %s)" % str(current_scene.name if current_scene else null))
+	if scene == null:
+		return
+	var titled := scene.find_children("*", "Label", true, false).any(func(l): return (l as Label).text == "List cut")
+	_check(titled, "Its title is List cut")
+	var lead := scene.find_child("MergerLead", true, false)
+	var want := "A club can list 42 senior players in 1994, and we have %d.\nThe ones we delist are free to sign with any club." % have
+	_check(lead != null and str(lead.get("text")) == want, "Its lead: %s (%s)" % [want, str(lead.get("text")) if lead else "none"])
+	var list := _list().duplicate()
+	list.sort_custom(func(a, b): return int(a.get("overall", 0)) < int(b.get("overall", 0)))
+	var going := list.slice(0, n).map(func(q): return str(q["id"]))
+	for id in going:
+		var why: String = await _tap(_row_button(scene, id, "Delist"))
+		_check(why == "", "A real tap on Delist for %s lands (%s)" % [id, why])
+	var why_go: String = await _tap(scene.find_child("ConfirmCut", true, false) as Button)
+	_check(why_go == "" and not _gs.merger_cut_due and _fits(), "A real tap on Confirm delists them and the list fits (%s)" % why_go)
+	for i in range(900):
+		if current_scene != null and str(current_scene.name) != "MergerCutScene":
+			break
+		await process_frame
+	_check(current_scene != null and str(current_scene.name) != "MergerCutScene",
+			"Confirm leaves the list cut (%s)" % str(current_scene.name if current_scene else null))
+
+## A PC (UI batch 5, the director's board A): the list in one-line rows across
+## the window (three columns at 1280 x 720; two, a page at a time, at 960 x 540)
+## with the clicked man's card beside it, and nothing scrolls. A real tap on a
+## row puts him on the card, a real tap on the card's Delist marks him, and
+## once enough are marked a real tap on Confirm delists them.
+func _test_merger_pc(sz: Vector2i) -> void:
+	_setup()
+	root.size = sz
+	var tag := "%dx%d" % [sz.x, sz.y]
+	var n: int = _gs.merger_cut_left()
+	var kinds: Array = _gs.merger_cut_needs().keys()
+	var listed := _list().filter(func(q): return kinds.has(str(q.get("rookie_list", ""))))
+	_router.go("hub")
+	var scene: Node = await _scene_named("MergerCutScene")
+	_check(scene != null, "PC %s: the hub opens the merger screen" % tag)
+	if scene == null:
+		return
+	await _settle(6)
+	var view := Rect2(Vector2.ZERO, Vector2(root.size))
+	var cols: Control = scene.find_child("MergerColumns", true, false)
+	var room: Control = scene.find_child("MergerRoom", true, false)
+	var columns: Array = cols.get_children().filter(func(c): return str(c.name).begins_with("MergerColumn_")) if cols != null else []
+	var want := 3 if sz.x >= 1000 else 2
+	_check(columns.size() == want, "PC %s: the list runs in %d columns (%d)" % [tag, want, columns.size()])
+	_check(room != null and cols.get_combined_minimum_size().y <= room.size.y + 0.5,
+			"PC %s: the list fits its room (%.0f in %.0f)" % [tag, cols.get_combined_minimum_size().y if cols != null else 0.0, room.size.y if room != null else 0.0])
+	var page: Control = room.get_parent().get_parent().get_parent() if room != null else null
+	_check(page != null and page.get_combined_minimum_size().y <= view.size.y,
+			"PC %s: the page fits the window, nothing scrolls (%.0f in %.0f)" % [tag, page.get_combined_minimum_size().y if page != null else 0.0, view.size.y])
+	var pages := scene.find_child("MergerPages", true, false)
+	var shown: Array = cols.find_children("MergerRow_*", "Button", true, false) if cols != null else []
+	if want == 3:
+		_check(pages == null and shown.size() == listed.size(), "PC %s: all %d players on one page (%d)" % [tag, listed.size(), shown.size()])
+	else:
+		_check(pages != null and pages.get_child_count() == 2 and shown.size() < listed.size(),
+				"PC %s: the list splits into two pages (%d of %d shown)" % [tag, shown.size(), listed.size()])
+	_check(not shown.is_empty() and shown.all(func(b): return view.encloses((b as Control).get_global_rect()) and (b as Control).size.y <= 44.5),
+			"PC %s: every row is one line and on screen" % tag)
+	var card: Control = scene.find_child("MergerCard", true, false)
+	_check(card != null and room != null and card.get_global_rect().position.x > room.get_global_rect().end.x and view.encloses(card.get_global_rect()),
+			"PC %s: the card sits beside the list, on screen" % tag)
+	if want == 2 and pages != null and pages.get_child_count() == 2:
+		var first_ids: Array = shown.map(func(r): return str(r.name))
+		var why_p: String = await _tap(pages.get_child(1) as Button)
+		var now: Array = scene.find_children("MergerRow_*", "Button", true, false)
+		_check(why_p == "" and not now.is_empty() and now.all(func(r): return not first_ids.has(str(r.name)))
+				and first_ids.size() + now.size() == listed.size(),
+				"PC %s: a real tap on the second page shows the other %d players (%s)" % [tag, now.size(), why_p])
+		var back := scene.find_child("MergerPages", true, false)
+		why_p = await _tap(back.get_child(0) as Button if back != null else null)
+		_check(why_p == "" and scene.find_children("MergerRow_*", "Button", true, false).size() == first_ids.size(),
+				"PC %s: ...and the first page brings them back" % tag)
+	# The lowest n, picked as a coach would: find him (turning the page if he is
+	# on the other one), click his row, then Delist on his card.
+	var list := _list().duplicate()
+	list.sort_custom(func(a, b): return int(a.get("overall", 0)) < int(b.get("overall", 0)))
+	var going := list.filter(func(q): return kinds.has(str(q.get("rookie_list", ""))) \
+			and int(q.get("play_on", 0)) != int(_gs.season_year)).slice(0, n).map(func(q): return str(q["id"]))
+	for id in going:
+		var row := scene.find_child("MergerRow_" + id, true, false) as Button
+		if row == null:
+			# A page tap rebuilds the screen, so find each page button afresh by name.
+			var turn := scene.find_child("MergerPages", true, false)
+			var names: Array = (turn.get_children() if turn != null else []).map(func(c): return str(c.name))
+			for nm in names:
+				if scene.find_child("MergerRow_" + id, true, false) == null:
+					await _tap(scene.find_child(nm, true, false) as Button)
+			row = scene.find_child("MergerRow_" + id, true, false) as Button
+		var why: String = await _tap(row)
+		var name_on := scene.find_child("CardName", true, false) as Label
+		_check(why == "" and name_on != null and name_on.text == _db.player_display_name(_player(id)),
+				"PC %s: a real tap on %s's row puts him on the card (%s)" % [tag, id, why])
+		var act := (scene.find_child("MergerCard", true, false) as Node).find_child("Delist", true, false) as Button
+		why = await _tap(act)
+		_check(why == "", "PC %s: a real tap on the card's Delist for %s lands (%s)" % [tag, id, why])
+		var crossed := scene.find_child("MergerRow_" + id, true, false)
+		_check(crossed != null and crossed.find_child("CrossedOff", true, false) != null,
+				"PC %s: %s's row is crossed off once he is marked" % [tag, id])
+	var marked := scene.find_child("MergerCard", true, false)
+	_check(marked != null and marked.find_child("DelistGain", true, false) != null and marked.find_child("DelistCost", true, false) != null
+			and marked.find_child("Keep", true, false) != null, "PC %s: the card states the gain and the cost, then Keep" % tag)
+	var confirm := scene.find_child("ConfirmCut", true, false) as Button
+	var at: Rect2 = confirm.get_global_rect() if confirm != null else Rect2()
+	_check(confirm != null and not confirm.disabled and confirm.text == "Delist %d players" % n and at.size.x < 400.0
+			and view.encloses(at) and at.end.x > view.size.x * 0.9,
+			"PC %s: Confirm reads Delist %d players, sized to its words at the right (%s)" % [tag, n, str(at)])
+	var why_go: String = await _tap(confirm)
+	_check(why_go == "" and not _gs.merger_cut_due and _fits(), "PC %s: a real tap on Confirm delists them and the list fits (%s)" % [tag, why_go])
+	for i in range(900):
+		if current_scene != null and str(current_scene.name) != "MergerCutScene":
+			break
+		await process_frame
+
+
+func _player(id: String) -> Dictionary:
+	for p in _list():
+		if str(p["id"]) == id:
+			return p
+	return {}

@@ -70,6 +70,40 @@ static func era_cap(year: int) -> int:
 	return int(EraRules.value("salary_cap", year, 0.0))
 
 
+## The share of every player's pay the league cut that season, 0 when none:
+## 2020's 29.17% "across the board" (COVID-19, agreed with the AFLPA; bug bash
+## batch B, director 2026-11-25). Its cap (salary_cap, 9,056,000) is the cut
+## total, so contracts are written, and counted, against the cap before the
+## cut: the same share of every deal and of the cap.
+static func pay_cut(year: int) -> float:
+	return EraRules.value("pay_cut_pct", year, 0.0) / 100.0
+
+
+## Why a season paid every player less, for its note (pay_cut_note).
+const PAY_CUT_WHY := {2020: "COVID-19"}
+
+
+## The season's pay cut under the cap line, "" without one (director,
+## 2026-11-25, "Contracts + note"): contracts show their full value, and the
+## note says what every player is paid and what a club pays at most.
+static func pay_cut_note(year: int) -> String:
+	if pay_cut(year) <= 0.0:
+		return ""
+	var why := str(PAY_CUT_WHY.get(year, ""))
+	return "%d: every player is paid %s%% less%s.\nClubs pay at most %s." % [year,
+			str(EraRules.value("pay_cut_pct", year, 0.0)), " (%s)" % why if why != "" else "", money(era_cap(year))]
+
+
+## What a season's contracts are written against: the real cap, before that
+## season's pay cut (2020: 9,056,000 / (1 - 0.2917) = 12,786,000).
+static func contract_cap(year: int) -> int:
+	var cap := era_cap(year)
+	var cut := pay_cut(year)
+	if cap <= 0 or cut <= 0.0:
+		return cap
+	return int(round(float(cap) / (1.0 - cut) / 1000.0)) * 1000
+
+
 ## That season's dollars per 2027 dollar: 1.0 outside the era record.
 static func era_scale(year: int) -> float:
 	var cap := era_cap(year)
@@ -94,7 +128,7 @@ static func pay_scale(year: int) -> float:
 	var s := era_scale(year)
 	if s == 1.0:
 		return 1.0
-	return s * float(MAX_LIST) / float(maxi(1, EraRules.list_max(year)))
+	return s / (1.0 - pay_cut(year)) * float(MAX_LIST) / float(maxi(1, EraRules.list_max(year)))
 
 
 ## `amount` 2027 model dollars of player pay in `year`'s dollars (default:
@@ -120,7 +154,7 @@ static func salary_step(year := -1) -> int:
 
 
 static func salary_cap_for_year(year: int) -> int:
-	var era := era_cap(year)
+	var era := contract_cap(year)
 	if era > 0:
 		return era
 	if year <= 2027:
@@ -172,11 +206,14 @@ static func salary_score(salary: int) -> float:
 
 
 ## First contracts for a list: younger players on longer deals. Seeded by
-## id, so the same career always gets the same contracts.
-static func assign_initial(list: Array) -> void:
+## id, so the same career always gets the same contracts. Returns the players
+## it gave a contract (fit_to_cap reads them).
+static func assign_initial(list: Array) -> Array:
+	var fresh := []
 	for p in list:
 		if p.has("contract_years"):
 			continue
+		fresh.append(p)
 		var rng := RandomNumberGenerator.new()
 		rng.seed = hash("contract|" + str(p["id"]))
 		var age := float(p.get("age", 25.0))
@@ -189,6 +226,28 @@ static func assign_initial(list: Array) -> void:
 			years = rng.randi_range(1, 2)
 		p["contract_years"] = years
 		p["salary"] = pay(int(p.get("value", 3)))
+	return fresh
+
+
+## A club's first contracts fit under its cap, as a real club's must (bug bash
+## 2026-11-23: the 2010 lists priced at rating opened Geelong at 122% of the
+## cap, Collingwood at 105%, so a strong list could keep none of its stars
+## out of contract). When `list` with the contracts in `fresh` costs more
+## than `room`, every fresh salary is cut by the same share, never under the
+## senior minimum: the best sides' players are on less than their rating
+## would fetch on the open market. A list that fits is left as it is.
+static func fit_to_cap(list: Array, fresh: Array, room: int) -> void:
+	if fresh.is_empty() or payroll(list) <= room:
+		return
+	var fresh_pay := 0
+	for p in fresh:
+		fresh_pay += int(p["salary"])
+	if fresh_pay <= 0:
+		return
+	var share := clampf(float(room - (payroll(list) - fresh_pay)) / float(fresh_pay), 0.0, 1.0)
+	var floor_pay := senior_min()
+	for p in fresh:
+		p["salary"] = maxi(mini(floor_pay, int(p["salary"])), int(floor(float(p["salary"]) * share / 1000.0)) * 1000)
 
 
 ## A first-year National Draft deal (a draftee's, on the senior list; the
@@ -196,7 +255,12 @@ static func assign_initial(list: Array) -> void:
 ## as the starting point and indexed in later game-world seasons.
 static func draftee_deal(p: Dictionary, year := 2027) -> void:
 	p["contract_years"] = ROOKIE_YEARS
-	var pick := int(p.get("draft_pick", 0))
+	p["salary"] = draftee_salary(int(p.get("draft_pick", 0)), year)
+
+
+## A National Draft pick's first-year wage in `year`'s dollars (draftee_deal):
+## the earlier the pick, the more he is paid; 0 or less is a pre-season pick.
+static func draftee_salary(pick: int, year := 2027) -> int:
 	var base := 125000
 	if pick > 0 and pick <= 10:
 		base = 150000
@@ -206,12 +270,38 @@ static func draftee_deal(p: Dictionary, year := 2027) -> void:
 		base = 130000
 	elif pick <= 0:
 		base = ROOKIE_MIN_2027
-	p["salary"] = indexed_money_2027(base, year)
+	return indexed_money_2027(base, year)
+
+
+## The cap room a club keeps while it settles its list (director, 2026-11-25,
+## "Hold room"): enough to fill the list to the minimum and, with the National
+## Draft still to come, to take `draft_take` draftees. Each spot is held at
+## held_wage. `size` is next season's list once the deal is done (next_size).
+static func held_room(size: int, draft_take: int, year := -1) -> int:
+	var spots := maxi(maxi(0, min_list() - size), draft_take)
+	return spots * held_wage(year)
+
+
+## What one spot is held at: the most a draftee is paid (pick 1) or the senior
+## minimum a list filler signs for, whichever is more.
+static func held_wage(year := -1) -> int:
+	var y := money_year if year < 0 else year
+	return maxi(senior_min(y), draftee_salary(1, y))
+
+
+## Next season's list: the players who are not retiring at this rollover (as
+## payroll counts it).
+static func next_size(list: Array) -> int:
+	var n := 0
+	for p in list:
+		if not retired_by(p, money_year):
+			n += 1
+	return n
 
 
 ## What re-signing (or signing) this player costs now.
 static func asking_salary(p: Dictionary) -> int:
-	var price := pay(Ratings.salary_value(int(p.get("overall", 50))))
+	var price := pay(Ratings.salary_value(int(Rating.ovr(p, 50))))
 	# An unhappy player wants paying to stay.
 	if ClubLife.morale(p) < 40:
 		price = ceili(price * 1.25)
@@ -620,13 +710,22 @@ const COMP_TENURE := 2
 ## outside its best 22) or "cap" (wanted, but no room for his price - he walks
 ## to free agency and can earn a pick). A club never lets a player go that it
 ## cannot replace with someone better, nor one it would pick (director
-## 2026-11-03: every club acts in its best interest).
+## 2026-11-03: every club acts in its best interest). Room is measured against
+## what the club re-signs him for (ai_price), the price it then pays: measured
+## against his full ask, Geelong let Corey Enright and Matthew Scarlett go in
+## 2010 for want of room it had (bug bash 2026-11-23).
 static func ai_release_reason(p: Dictionary, list: Array, cap: int, replacement: float = -INF) -> String:
 	if not needed(p, list) and worth(p) < replacement:
 		return "delist"
-	if asking_salary(p) > cap - payroll(list) + int(p.get("salary", 0)):
+	if ai_price(p, list) > cap - payroll(list) + int(p.get("salary", 0)):
 		return "cap"
 	return ""
+
+
+## What a rival club re-signs him for: the least he takes for its term
+## (lowest), as you can offer it to yours.
+static func ai_price(p: Dictionary, list: Array) -> int:
+	return lowest(p, ai_term(p, list))
 
 
 ## In his club's best 22: his rating clears the weakest starter picked at his
@@ -660,7 +759,7 @@ static func ai_term(p: Dictionary, list: Array) -> int:
 ## the same scale (so a rating point moves it smoothly, where salaries step); a
 ## longer deal and a younger player each count for more. Roughly 1 to 14.
 static func compensation_value(p: Dictionary, salary: int, years: int) -> float:
-	var rating := clampf((float(p.get("overall", 50)) - 35.0) / 5.5, 1.0, 10.0)
+	var rating := clampf((float(Rating.ovr(p, 50)) - 35.0) / 5.5, 1.0, 10.0)
 	var base := 0.4 * salary_score(salary) + 0.6 * rating
 	var term := 0.85 + 0.1 * float(clampi(years, 1, MAX_YEARS))
 	var youth := clampf(1.0 + (27.0 - float(p.get("age", 27.0))) * 0.03, 0.85, 1.15)
@@ -717,7 +816,7 @@ static func expiring(list: Array) -> Array:
 ## Worth to a club, for re-signing and trades: rating blended with potential,
 ## discounted for age past 29.
 static func worth(p: Dictionary) -> float:
-	var ov := float(p.get("overall", 50))
+	var ov := float(Rating.ovr(p, 50))
 	var pot := maxf(ov, float(p.get("potential", ov)))
 	var w := ov * 0.65 + pot * 0.35
 	w -= 1.5 * maxf(0.0, float(p.get("age", 25.0)) - 29.0)
@@ -781,6 +880,15 @@ static func evaluate_trade(ai_list: Array, give: Array, take: Array, cap: int,
 	var my_pay := payroll(my_list) - payroll(take) + payroll(give)
 	if my_pay > my_cap:
 		return _verdict(false, "trade_your_cap", ctx)
+	# Each side also keeps the room to fill its list to the minimum and take
+	# its draftees (held_room; ctx "hold_take" is how many draftees, director
+	# 2026-11-25, "Hold room"). Unset, as in a test of the bare rules: no hold.
+	if ctx.has("hold_take"):
+		var draft_take := int(ctx["hold_take"])
+		if ai_pay > cap - held_room(next_size(ai_list) - give.size() + take.size(), draft_take):
+			return _verdict(false, "trade_their_room", ctx)
+		if my_pay > my_cap - held_room(next_size(my_list) - take.size() + give.size(), draft_take):
+			return _verdict(false, "trade_your_room", ctx)
 	var phase := str(ctx.get("phase", "building"))
 	var games: Dictionary = ctx.get("games", {})
 	var remaining := ai_list.filter(func(q): return not give.has(q))

@@ -1,0 +1,30 @@
+name: Epic assets
+description: >
+  Copy the Epic/MetaHuman files (MetaHuman body, crew, guernsey cuts, skin maps, MetaHuman heads)
+  from the private repo into place (tools/epic_assets.sh fetch, docs/EPIC_ASSETS.md). They are
+  never committed to this public repo, and never cached or uploaded raw: the Unreal Engine EULA
+  lets them leave our hands only inside a built game. Then the ground models, which live in the
+  same private repo so each rebuild stops growing this one (tools/ground_assets.sh, docs/GROUND_ASSETS.md).
+inputs:
+  token:
+    description: A GitHub token that can read the private repo named in tools/epic_assets.lock
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Fetch the Epic/MetaHuman files
+      shell: bash
+      env:
+        EPIC_ASSETS_TOKEN: ${{ inputs.token }}
+      run: |
+        if [ -z "$EPIC_ASSETS_TOKEN" ]; then
+          echo "::error::No token for the private Epic/MetaHuman files: add the repo secret EPIC_ASSETS_TOKEN (docs/EPIC_ASSETS.md). Pull requests from forks get no secrets."
+          exit 1
+        fi
+        bash tools/epic_assets.sh fetch
+
+    - name: Fetch the ground models
+      shell: bash
+      env:
+        EPIC_ASSETS_TOKEN: ${{ inputs.token }}
+      run: bash tools/ground_assets.sh fetch

@@ -41,7 +41,7 @@ func _run() -> void:
 	state.autosave_enabled = false
 	state.save_path = "user://capture_veteran_provenance.save"
 	state.settings_path = "user://capture_veteran_provenance.cfg"
-	load("res://scripts/ui/UiKit.gd").apply_appearance("dark")
+	load("res://scripts/ui/UiKit.gd").apply_palette()
 	for key in load("res://scripts/ui/FirstVisitIntro.gd").TEXT:
 		state.set_setting("seen_%s_intro" % key, true)
 	state.set_setting("seen_weekly_loop_intro", true)

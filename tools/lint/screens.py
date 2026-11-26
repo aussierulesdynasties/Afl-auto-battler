@@ -41,7 +41,11 @@ COLOUR_CUES = {
     "PreSeasonScene.gd": [["UiKit.TEXT if ok else UiKit.BAD", "the medical panel line says cleared / not cleared", 1]],
     "CaptaincySheet.gd": [["UiKit.BAD if off_bad", "the reason he can't lead, in words", 1]],
     "ClubPage.gd": [["UiKit.GOOD if us > them", "Won / Lost / Drew", 1]],
-    "MergerCutScene.gd": [["UiKit.BAD if marked", "the row's button says Keep, with the Gain and Cost lines under it", 1]],
+    "FullTimeMotion.gd": [["margin_colour(up)", "the ladder line says Up / Down in words", 1]],
+    "MergerCutScene.gd": [
+        ["UiKit.BAD if marked", "the phone row's and the PC card's button says Keep, with the Gain and Cost lines under it; a PC list row crosses his name out", 3],
+        ["cross.color = UiKit.BAD", "the line through his name is the mark itself", 1],
+    ],
     "CoachingScene.gd": [
         ["part[1] == \"hot\"", "the heading: In good form / In poor form", 1],
         ["state in [\"Very secure\", \"Secure\"]", "the job security word", 1],
@@ -81,7 +85,10 @@ COLOUR_CUES = {
         ["margin_colour(winner == me)", "Won by / Lost by", 1]],
     "OffseasonScene.gd": [
         ["room >= 0 else UiKit.BAD", "cap room / over the cap by", 1],
-        ["talk[\"stays\"]", "his reason in words", 1],
+        ["talk[\"stays\"]", "his reason in words", 2],
+        ["return [\"Going around again\"", "the row says Going around again", 1],
+        ["return [\"Re-signed\"", "the row says Re-signed", 1],
+        ["return [\"Talks broke down\"", "the row says Talks broke down", 1],
         ["terms[\"refuse\"]", "his reason in words", 1],
         ["room_after >= 0 else UiKit.BAD", "none, over the cap", 1],
         ["verdict[\"ok\"]", "the club's reason in words", 1]],
@@ -99,7 +106,8 @@ COLOUR_CUES = {
     "TeamBuilder.gd": [
         ["start_note != \"\"", "the note in words", 1],
         ["Workload.NEEDS_BREAK", "the workload word", 1],
-        ["Ratings.available(p)", "why he is out, in words", 1]],
+        ["Ratings.available(p)", "why he is out, in words", 1],
+        ["fill.color = UiKit.BAD", "his Form figure beside the bar, well below his season's (director, 2026-11-25)", 1]],
     "TrainingScene.gd": [
         ["rise.size() > 0", "the rise mark and its words", 2],
         ["Traits.is_bad(trait_keys[0])", "the weakness mark", 1],

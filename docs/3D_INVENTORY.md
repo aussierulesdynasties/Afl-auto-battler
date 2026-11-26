@@ -11,6 +11,10 @@ Big files that git cannot hold (scene_bg.glb, scene.blend, over 100 MB) are copi
 `C:/Users/DANTE/Documents/AFL3D_archive/<ground>_bg/` on the PC (6.8 GB). Each `.claude/review/<ground>_bg/`
 folder has a `MANIFEST.txt` with the md5 of every big file left behind. Session notes: [handoffs/](handoffs/README.md).
 
+**`.claude/review/` moved out of this repo on 2026-11-26.** Every path below under `.claude/review/` is now in the
+private repo `aussierulesdynasties/afl-review-archive`, at the same path: clone it and copy (or link) its
+`.claude/review` into your checkout. New boards are committed there; this repo ignores the folder.
+
 ## Grounds
 
 | Ground | Stadium model | In a match | Background scene (surroundings) |
@@ -52,8 +56,8 @@ folder has a `MANIFEST.txt` with the md5 of every big file left behind. Session 
 | Area | What exists | Where |
 |---|---|---|
 | Crowd | 3D people near, cards beyond; seated on the MCG's own seats | `Oval3DCrowd.gd`, `Oval3DCrowdSet.gd`, `assets/oval3d/crowd_set.res`, `supporters/` (#1929) |
-| Players' bodies | MetaHuman body, builds by height and weight | `assets/oval3d/player_mh.glb`, `player_mh_builds.json`, `Oval3DBuild.gd` |
-| Players' heads | fitted heads, skin light; newest work saved | `assets/oval3d/heads/`; PR #1967 (not gated); review films `.claude/review/player_heads_wip` |
+| Players' bodies | MetaHuman body, builds by height and weight | `assets/oval3d/player_mh.glb` (private: [EPIC_ASSETS.md](EPIC_ASSETS.md)), `player_mh_builds.json`, `Oval3DBuild.gd` |
+| Players' heads | fitted heads, skin light; newest work saved | `assets/oval3d/heads/` (MetaHuman heads private: [EPIC_ASSETS.md](EPIC_ASSETS.md)); PR #1967 (not gated); review films `.claude/review/player_heads_wip` |
 | Hair | hair styles model and textures | `assets/oval3d/hair_styles.glb`, `hair_tex/` |
 | Turf | per-ground mowing cut and grass, markings from the ground's size | `Oval3DTurf.gd`, `assets/oval3d/turf/`; Adelaide and Gabba turf PR #1962 |
 | Cameras and broadcast | main camera, replays, set shots, score bug, stat bars | `Oval3D.gd`, `Oval3DBroadcast.gd`, `ScoreBug.gd` |
@@ -66,6 +70,9 @@ folder has a `MANIFEST.txt` with the md5 of every big file left behind. Session 
 ## Stranded or local-only work
 
 - Background scenes for 8 grounds lived only in session scratchpads; now copied to `.claude/review/<g>_bg` (this PR) and the archive folder.
+- MCG model textures: `tools/grounds/mcg/model/tex` is git-ignored, and `build.py` / `ship_mcg.py` need it to rebuild
+  `mcg.glb`. The full set (141 files, 126,555,198 bytes: hand-painted PNGs plus tiles.json, wallcols.json,
+  winspans.json) is in `C:/Users/DANTE/Documents/AFL3D_archive/mcg_tex/`; copy it into `model/tex` before a build.
 - Texture work in progress (Adelaide es2, GMHBA tex2, Optus roof 11 and h50 build): `.claude/review/texture_wip`.
 - Stadium lead gate boards: `.claude/review/stadium_lead_gates`.
 - Player heads WIP: PR #1967. Large local data stays on the PC: `D:/AflMH` and the session scratchpad (21.6 GB).

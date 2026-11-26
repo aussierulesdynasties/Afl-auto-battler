@@ -90,18 +90,9 @@ func _logo_art() -> TextureRect:
 	_logo.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	_logo.size_flags_horizontal = Control.SIZE_FILL
 	_logo.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	if UiKit.appearance() == "light":
-		# The logo file has a black ground. In light mode key only
-		# that near-black ground out so the lettering keeps its real colours.
-		var shader := Shader.new()
-		shader.code = "shader_type canvas_item;\nvoid fragment(){ vec4 c=texture(TEXTURE,UV); float hi=max(c.r,max(c.g,c.b)); c.a*=smoothstep(0.04,0.16,hi); COLOR=c; }"
-		var mat := ShaderMaterial.new()
-		mat.shader = shader
-		_logo.material = mat
-	else:
-		var mat := CanvasItemMaterial.new()
-		mat.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
-		_logo.material = mat
+	var mat := CanvasItemMaterial.new()
+	mat.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
+	_logo.material = mat
 	_fit_logo()
 	return _logo
 
@@ -124,6 +115,11 @@ func _notification(what: int) -> void:
 
 func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
+	# The game boots onto this scene directly, not through the Router: put the
+	# menu at the bottom of the stack so a screen opened from it (Club Forge)
+	# can step back to it with its on-screen Back.
+	if Router.stack.is_empty():
+		Router.stack.append("main")
 	if GameState.new_career_setup_requested:
 		GameState.new_career_setup_requested = false
 		# Back from Choose your club: the options again, for the season picked.
@@ -143,7 +139,7 @@ func _ready() -> void:
 	add_child(_pitch)
 	var shade := ColorRect.new()
 	shade.color = UiKit.BG
-	shade.color.a = 0.92 if UiKit.appearance() == "light" else 0.78
+	shade.color.a = 0.78
 	shade.set_anchors_preset(Control.PRESET_FULL_RECT)
 	shade.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(shade)
@@ -152,9 +148,9 @@ func _ready() -> void:
 	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
 	UiKit.apply_insets(margin, 16)
 	add_child(margin)
-	_content = UiKit.vbox(12)
+	_content = UiKit.vbox(UiKit.Space.PAD)
 	_content.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	var shell := UiKit.vbox(12)
+	var shell := UiKit.vbox(UiKit.Space.PAD)
 	margin.add_child(shell)
 	shell.add_child(UiKit.scroll(_content))
 	_footer = UiKit.vbox(0)
@@ -225,9 +221,9 @@ func _show_home() -> void:
 	# shrinks so the note sits as close to the tagline as to New career.
 	var saved := not GameState.has_career() and GameState.has_saved_career()
 	var why := "" if GameState.has_career() or saved else GameState.saved_career_problem()
-	_content.add_child(UiKit.spacer(28 if why == "" else 6))
+	_content.add_child(UiKit.spacer(UiKit.Space.SPREAD if why == "" else UiKit.Space.CLOSE))
 
-	var col := UiKit.vbox(10)
+	var col := UiKit.vbox(UiKit.Space.ROOM)
 	col.name = "MenuButtons"
 	col.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	col.custom_minimum_size.x = _column_width(320.0)
@@ -273,7 +269,7 @@ func _show_home() -> void:
 	if why != "":
 		_load_error.text = why
 		_load_error.visible = true
-		col.add_child(UiKit.spacer(10))
+		col.add_child(UiKit.spacer(UiKit.Space.ROOM))
 	var new_career := UiKit.btn("New career", UiKit.H2, not (live or saved))
 	new_career.name = "NewCareer"
 	# No career can start on missing or incomplete player data.
@@ -285,10 +281,10 @@ func _show_home() -> void:
 	forge.pressed.connect(func(): Router.go("forge"))
 	col.add_child(forge)
 
-	_content.add_child(UiKit.spacer(18))
+	_content.add_child(UiKit.spacer(UiKit.SECTION))
 	# A flow, so on a narrow window the last link wraps instead of leaving the screen.
 	var quiet := HFlowContainer.new()
-	quiet.add_theme_constant_override("h_separation", 4)
+	quiet.add_theme_constant_override("h_separation", UiKit.Space.TIGHT)
 	quiet.alignment = FlowContainer.ALIGNMENT_CENTER
 	quiet.add_child(_quiet_btn("How to play", "MenuHelp", _show_help))
 	quiet.add_child(_quiet_btn("Settings", "MenuSettings", _show_settings))
@@ -304,7 +300,7 @@ func _show_home() -> void:
 		exit.custom_minimum_size = Vector2(120, 48)
 		quiet.add_child(exit)
 	_content.add_child(quiet)
-	_content.add_child(UiKit.spacer(10))
+	_content.add_child(UiKit.spacer(UiKit.Space.ROOM))
 	var promise := UiKit.lbl(promise_text(WebStorage.on_web()), UiKit.SECONDARY, UiKit.MUTED)
 	promise.name = "OfflinePromise"
 	promise.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -323,7 +319,7 @@ func _show_home() -> void:
 		var build := UiKit.lbl(build_text, UiKit.SMALL, UiKit.MUTED)
 		build.name = "BuildLabel"
 		build.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		_content.add_child(UiKit.spacer(8))
+		_content.add_child(UiKit.spacer(UiKit.GAP))
 		_content.add_child(build)
 	else:
 		var build := _quiet_btn("%s  ·  %s" % [build_text, PATCH_NOTES_TITLE], "BuildLabel", _show_patch_notes, UiKit.SMALL)
@@ -484,7 +480,7 @@ func _show_year_step() -> void:
 	var wide := ScreenLayout.wide_view(UiKit.view_width(self), UiKit.view_height(self), 520.0)
 	form.custom_minimum_size.x = _column_width(880.0 if wide else 440.0)
 	_content.add_child(form)
-	var head := UiKit.vbox(4)
+	var head := UiKit.vbox(UiKit.Space.TIGHT)
 	head.add_child(UiKit.lbl("New career", UiKit.H1, UiKit.TEXT, true))
 	head.add_child(UiKit.lbl("Which season do you start in?", UiKit.NAME, UiKit.MUTED))
 	form.add_child(head)
@@ -535,14 +531,14 @@ func _year_button(id: String, tall := false) -> Button:
 	pad.set_anchors_preset(Control.PRESET_FULL_RECT)
 	for side in ["left", "right", "top", "bottom"]:
 		pad.add_theme_constant_override("margin_" + side, 14 if side in ["left", "right"] else 10)
-	var row: BoxContainer = UiKit.vbox(6) if tall else UiKit.hbox(14)
+	var row: BoxContainer = UiKit.vbox(UiKit.Space.CLOSE) if tall else UiKit.hbox(UiKit.Space.LOOSE)
 	row.alignment = BoxContainer.ALIGNMENT_BEGIN if tall else BoxContainer.ALIGNMENT_CENTER
 	pad.add_child(row)
 	var fig := UiKit.figure(str(year), UiKit.HERO, UiKit.TEXT)
 	fig.name = "Year"
 	fig.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	row.add_child(fig)
-	var text := UiKit.vbox(2)
+	var text := UiKit.vbox(UiKit.Space.SLIM)
 	text.alignment = BoxContainer.ALIGNMENT_CENTER
 	text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(text)
@@ -554,6 +550,12 @@ func _year_button(id: String, tall := false) -> Button:
 	for n in [pad, row, fig, text] + text.get_children():
 		(n as Control).mouse_filter = Control.MOUSE_FILTER_IGNORE
 	b.add_child(pad)
+	# The wrapped line can need more than that floor: in the browser, 2020's line
+	# wrapped to three and its last line ran below the card's edge (director's
+	# capture, 2026-11-24). Grow the button to its words.
+	var floor_h := b.custom_minimum_size.y
+	pad.minimum_size_changed.connect(func() -> void:
+		b.custom_minimum_size.y = maxf(floor_h, pad.get_combined_minimum_size().y))
 	b.pressed.connect(_on_pick_year.bind(id))
 	return b
 
@@ -626,7 +628,7 @@ func _show_setup() -> void:
 	# stay on screen: on a short screen the rows sit closer, close enough that
 	# the whole setup fits a 390 x 844 phone without scrolling.
 	_setup_tight = UiKit.view_height(self) < 900.0
-	var form := UiKit.vbox(5 if _setup_tight else UiKit.SECTION)
+	var form := UiKit.vbox(UiKit.Space.SNUG if _setup_tight else UiKit.SECTION)
 	form.name = "NewCareerSetup"
 	form.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	form.custom_minimum_size.x = _column_width(440.0)
@@ -762,7 +764,7 @@ func _show_setup() -> void:
 	_refresh_start()
 	start.pressed.connect(_on_start)
 	var cta := MarginContainer.new()
-	cta.add_theme_constant_override("margin_top", 6)
+	cta.add_theme_constant_override("margin_top", UiKit.Space.CLOSE)
 	cta.add_child(start)
 	_footer.add_child(cta)
 	var below := Control.new()
@@ -941,8 +943,8 @@ func _challenge_state() -> Dictionary:
 ## `info` maps the current key to its explanation; `on_pick` records a pick.
 func _choice(title: String, prefix: String, options: Array, current: String,
 		info: Callable, on_pick: Callable) -> VBoxContainer:
-	var v := UiKit.vbox(2 if _setup_tight else 8)
-	var head := UiKit.hbox(4)
+	var v := UiKit.vbox(UiKit.Space.SLIM if _setup_tight else UiKit.GAP)
+	var head := UiKit.hbox(UiKit.Space.TIGHT)
 	var t := UiKit.lbl(title, UiKit.H2, UiKit.TEXT, true)
 	t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	head.add_child(t)
@@ -951,7 +953,7 @@ func _choice(title: String, prefix: String, options: Array, current: String,
 	help.tooltip_text = "What this means"
 	head.add_child(help)
 	v.add_child(head)
-	var row := UiKit.hbox(8)
+	var row := UiKit.hbox(UiKit.GAP)
 	v.add_child(row)
 	var note := UiKit.lbl("", UiKit.SMALL, UiKit.MUTED)
 	note.name = prefix + "Note"
@@ -990,14 +992,14 @@ func _choice(title: String, prefix: String, options: Array, current: String,
 ## open a "?" to learn what they are choosing. Sizes stay in
 ## data/difficulty_dials.json and never reach the screen.
 func _dial_choice(dial: String, prefix: String, current: String, on_pick: Callable) -> VBoxContainer:
-	var v := UiKit.vbox(2 if _setup_tight else 8)
+	var v := UiKit.vbox(UiKit.Space.SLIM if _setup_tight else UiKit.GAP)
 	# The title takes the height of the other rows' header (their "?" is 44 high),
 	# so the setup keeps one rhythm.
 	var head := UiKit.lbl(DifficultyDials.title(dial), UiKit.H2, UiKit.TEXT, true)
 	head.custom_minimum_size.y = 44
 	head.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	v.add_child(head)
-	var row := UiKit.hbox(8)
+	var row := UiKit.hbox(UiKit.GAP)
 	v.add_child(row)
 	var note := UiKit.lbl("", UiKit.SMALL, UiKit.MUTED)
 	note.name = prefix + "Note"
@@ -1131,7 +1133,7 @@ func _open_sim_ahead_sheet(from_start: bool) -> void:
 		var l := UiKit.lbl(line, UiKit.BODY, UiKit.TEXT)
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(l)
-	var row := UiKit.hbox(8)
+	var row := UiKit.hbox(UiKit.GAP)
 	box["footer"].add_child(row)
 	var back := UiKit.btn("Back", UiKit.NAME)
 	back.name = "SimAheadBack"
@@ -1302,15 +1304,15 @@ func _show_patch_notes() -> void:
 	var v: VBoxContainer = box["body"]
 	v.add_child(UiKit.lbl(PATCH_NOTES_TITLE, 20, UiKit.EMPH, true))
 	v.add_child(UiKit.lbl("Build %s" % PatchNotes.version(), UiKit.SMALL, UiKit.MUTED))
-	var notes := UiKit.vbox(12)
+	var notes := UiKit.vbox(UiKit.Space.PAD)
 	notes.name = "PatchNotesLines"
 	for text in PatchNotes.lines():
 		var line := UiKit.lbl(str(text), UiKit.BODY, UiKit.TEXT)
 		line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		notes.add_child(line)
-	v.add_child(UiKit.spacer(4))
+	v.add_child(UiKit.spacer(UiKit.Space.TIGHT))
 	v.add_child(notes)
-	v.add_child(UiKit.spacer(6))
+	v.add_child(UiKit.spacer(UiKit.Space.CLOSE))
 	var close := UiKit.btn("Close", UiKit.NAME, true)
 	close.name = "PatchNotesClose"
 	close.custom_minimum_size = Vector2(0, 44)
@@ -1383,9 +1385,9 @@ func _show_help() -> void:
 	overlay.color = Color(0, 0, 0, 0.8)
 	overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(overlay)
-	_help_panel = UiKit.panel(UiKit.PANEL, 16, 12)
+	_help_panel = UiKit.panel(UiKit.PANEL, UiKit.Space.COLUMN, 12)
 	overlay.add_child(_help_panel)
-	var v := UiKit.vbox(12)
+	var v := UiKit.vbox(UiKit.Space.PAD)
 	_help_panel.add_child(v)
 	v.add_child(UiKit.heading("How to play", UiKit.H1))
 	var text := UiKit.lbl(
@@ -1395,8 +1397,9 @@ func _show_help() -> void:
 			+ "3. Track every selection in Picks. The position cards in the pool show your list's coverage; tap one to filter the pool. Carry at least two rucks.\n\n"
 			+ "4. Play the home-and-away season, with matches driven by your players' rated abilities. Set your tactics in the coach box. After each game every player develops: his development (By position to start) decides the kind of footballer he becomes, and fit players you leave out develop in the reserves at about half the senior rate. Choose each player's development in Training.\n\n"
 			+ "5. Pick your own side on the Team screen, or let the best 23 be picked around injuries. Two of your five midfielders play the wings: a runner suits it, a ball-winner is wasted there. A tagger makes a tag bite.\n\n"
-			+ ("6. Finish in the top %d to play finals and chase the flag. The top four start in the qualifying finals, 5-10 in the wildcards and eliminations. The season's awards, the honour roll and league records are in the Season Review.\n\n"
-			% Season.FINALISTS)
+			+ ("6. %s Win them all for the flag. The season's awards, the honour roll and league records are in the Season Review.\n\n"
+			% SeasonRules.how_finals_work(GameState.season.finals_format() if GameState.season != null
+					else str(SeasonRules.DEFAULT["finals"])))
 			+ "7. In the off-season, re-sign, release, sign free agents and trade in Trades & Contracts, then draft the next class. The hub's League news follows the whole league.\n\n"
 			+ "Two dials are set when you start a new career. Board patience is how many poor seasons the board puts up with before it warns you, and then moves on you. Rival recruiting is how hard the other clubs bargain when they trade with you. Players develop by the same rules whatever you pick.\n\n"
 			+ "Rotate your device at any time. Your draft picks, search and filters stay intact.", 16)

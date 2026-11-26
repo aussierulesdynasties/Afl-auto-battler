@@ -24,7 +24,7 @@ static func under(above: Control, p: Dictionary, fs := UiKit.SECONDARY) -> Contr
 	var l := make(p, fs)
 	if l == null:
 		return above
-	var v := UiKit.vbox(2)
+	var v := UiKit.vbox(UiKit.Space.SLIM)
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	v.add_child(above)
 	v.add_child(l)

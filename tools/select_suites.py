@@ -17,7 +17,7 @@ names, and any game file type the walker does not follow. A fixture the suites r
 path is traced like an asset. A file outside the game that no suite reads (another workflow,
 .gitignore, a one-off tool) and a deleted file nothing names select the smoke set only: the lint
 and data checks run in full on every pull request anyway.
-Pushes to main and the merge queue never call this: they run the full wall.
+Pushes to main never call this: they run the full wall (unless tools/ci_same_tree.sh finds the tree already tested).
 """
 import argparse
 import json
@@ -37,6 +37,13 @@ REACH = 1  # a suite covers a script its own files name (a hop of 1), not what t
 FOLLOWED = (".gd", ".tscn", ".tres", ".gdshader", ".uid")
 # Leaf resources: referenced from scripts and scenes, never a source of further references.
 LEAF_DIRS = ("assets/",)
+# Suites that find their files by listing a folder at run time (DirAccess), so no path names them and the
+# walker cannot see the link: a change under the folder selects the suite. ground_seats checks every
+# assets/grounds/<slug>/seats_*.bin against its model (tools/grounds/seat_rule.gd: SeatRule.grounds());
+# without this a ground's new seats or model ran no seat check before the merge queue.
+# The ground models themselves live in a private repo (docs/GROUND_ASSETS.md): a change to one shows
+# here as a change to their pin, tools/ground_assets.lock.
+SCANNED = {"assets/grounds/": ("ground_seats",), "tools/ground_assets.lock": ("ground_seats",)}
 IDENT = re.compile(r"\b[A-Za-z_][A-Za-z0-9_]*\b")
 RES = re.compile(r"res://[A-Za-z0-9_./\- ]*[A-Za-z0-9_./\-]")
 CLASS_NAME = re.compile(r"^\s*class_name\s+([A-Za-z_][A-Za-z0-9_]*)", re.M)
@@ -132,7 +139,7 @@ def suite_distances(root=ROOT):
 # Where the game and its test run live. A changed file outside these that nothing the test run
 # reads names (.gitignore, another workflow, a licence note, a one-off tool) cannot change a
 # suite's result, so it selects only the smoke set (director 2026-11-16: pull requests run the
-# tests related to their change; the merge queue runs the full wall before anything lands).
+# tests related to their change; the push to main runs the full wall after the merge).
 GAME = ("scripts/", "scenes/", "assets/", "data/", "tests/", "addons/", "project.godot", "export_presets.cfg")
 # What decides which suites run and how: a change here runs every suite.
 RUN_PLAN = (".github/workflows/tests.yml", "tools/run_tests.sh", "tools/list_suites.sh", "tools/ci_shards.py",
@@ -144,6 +151,10 @@ NEVER_READ = (".gitignore", ".github/", ".claude/")
 CODE = (".sh", ".py", ".gd")
 # Fixtures that are data, read by the suites through res:// paths: traced like assets.
 FIXTURE_DATA = (".txt", ".gz", ".csv", ".json", ".save")
+# Folders a suite lists at run time (DirAccess), so no path names the files inside and the walker
+# cannot trace them. A changed file under one selects its suites (director 2026-11-24: a change to a
+# ground's model files runs the seat check; the MCG seat fault reached main without it, #2052).
+SCANNED = {"assets/grounds/": ("ground_seats",), "tools/ground_assets.lock": ("ground_seats",)}
 
 
 PATHS = re.compile(r"[\w./-]+")
@@ -201,6 +212,12 @@ def select(changed, root=ROOT, smoke=SMOKE):
         base = path[:-len(".uid")] if path.endswith(".uid") else path
         if path.startswith(("docs/", "tools/audit/", "tools/visual/", "tools/lint/")) or path.endswith(".md"):
             continue
+        if base == "tools/ground_assets.lock":
+            # A ground model changed in the private repo (docs/GROUND_ASSETS.md): the suites that name a
+            # ground's files, plus the seat check that lists the folder.
+            wanted |= {s for s, d in dists.items() if any(k.startswith("assets/grounds/") and v <= REACH for k, v in d.items())}
+            wanted |= {s for s in SCANNED["assets/grounds/"] if s in suites}
+            continue
         if not base.startswith(GAME):
             if base in RUN_PLAN:
                 return sorted(suites), f"{path} decides which suites run"
@@ -225,6 +242,7 @@ def select(changed, root=ROOT, smoke=SMOKE):
         if base in auto:
             return sorted(suites), f"{path} is an autoload every suite loads"
         wanted |= {s for s, d in dists.items() if d.get(base, 99) <= REACH}
+        wanted |= {s for folder, named in SCANNED.items() if base.startswith(folder) for s in named if s in suites}
     return sorted(wanted), ""
 
 

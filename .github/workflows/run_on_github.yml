@@ -105,6 +105,18 @@ jobs:
         suite: ${{ fromJSON(needs.plan.outputs.suites) }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          filter: blob:none   # fetch only the files checked out
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |   # .claude/review (5 GB of review boards) is never read by CI
+            /*
+            !/.claude/review/
+
+      - name: Epic/MetaHuman files (private repo, docs/EPIC_ASSETS.md)
+        uses: ./.github/actions/epic-assets
+        with:
+          token: ${{ secrets.EPIC_ASSETS_TOKEN || secrets.MERGE_TOKEN }}
+
       - name: Cache Godot
         id: godot-cache
         uses: actions/cache@v4
@@ -141,10 +153,21 @@ jobs:
     timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
+        with:
+          filter: blob:none   # fetch only the files checked out
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |   # .claude/review (5 GB of review boards) is never read by CI
+            /*
+            !/.claude/review/
       - name: Check out the base arm
         if: inputs.base != ''
         uses: actions/checkout@v4
         with:
+          filter: blob:none   # fetch only the files checked out
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |   # .claude/review (5 GB of review boards) is never read by CI
+            /*
+            !/.claude/review/
           ref: ${{ inputs.base }}
           path: _base
       - name: Keep the base arm out of this project
@@ -238,6 +261,12 @@ jobs:
         arm: ${{ fromJSON(needs.shape-plan.outputs.arms) }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          filter: blob:none   # fetch only the files checked out
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |   # .claude/review (5 GB of review boards) is never read by CI
+            /*
+            !/.claude/review/
       - name: Cache Godot
         id: godot-cache
         uses: actions/cache@v4
@@ -280,6 +309,12 @@ jobs:
     timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
+        with:
+          filter: blob:none   # fetch only the files checked out
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |   # .claude/review (5 GB of review boards) is never read by CI
+            /*
+            !/.claude/review/
       - name: Cache Godot
         id: godot-cache
         uses: actions/cache@v4

@@ -80,7 +80,7 @@ func _run() -> void:
 	for row in SIZES:
 		await _t("_test_draft", [row])
 	for row in [SIZES[0], SIZES[2]]:
-		await _t("_test_screen_field", [row, "selection", "BuilderSearch", Callable()])
+		await _t("_test_screen_field", [row, "selection", "BuilderSearch", _pull_list_up])
 		await _t("_test_screen_field", [row, "training", "", Callable()])
 		await _t("_test_screen_field", [row, "forge", "ForgeClubName", _open_club_form])
 		await _t("_test_screen_field", [row, "list", "NicknameField", _open_nickname])
@@ -88,6 +88,7 @@ func _run() -> void:
 	await _t("_test_nickname_line", ["phone", true, Vector2i(390, 844)])
 	await _t("_test_pc_browser_resize")
 	_t("_test_touch_wording")
+	await _t("_test_focus_ring")
 
 	load("res://scripts/core/ScreenLayout.gd").force_web_phone = false
 	load("res://scripts/core/ScreenLayout.gd").force_web = false
@@ -268,8 +269,8 @@ func _test_draft(row: Array) -> void:
 
 func _fresh_career() -> void:
 	_state.reset()
-	_state.start_season("COL", _db.club_list("COL"))
 	_state.replay_seed = SUITE_SEED
+	_state.start_season("COL", _db.club_list("COL"))
 	_state.tutorials = false
 
 
@@ -278,6 +279,15 @@ func _open_club_form() -> void:
 	if b != null:
 		await Tap.tap(b)
 		await _settle()
+
+
+## On a phone Team selection's list rests as one line (director, 2026-11-25):
+## a real tap on its pull brings the search field up with the cards.
+func _pull_list_up() -> void:
+	var pull: Control = current_scene.find_child("ListPull", true, false)
+	if pull != null and pull.is_visible_in_tree():
+		await Tap.tap(pull)
+		await Tap.steady(current_scene.find_child("ListSheet", true, false))
 
 
 ## A player of your own, his profile, and "Add a nickname".
@@ -422,4 +432,60 @@ func _test_screen_field(row: Array, route: String, field_name: String, opener: C
 			"%s: keyboard down, the field and its text are as they were" % label)
 	if is_instance_valid(field):
 		field.release_focus()
+	await _settle()
+
+
+## On PC, Tab walks the controls: tabs, text links and choices wear the
+## buttons' focus ring (a 2 px TEXT outline) over their own look, and a click
+## or a tap shows none (Godot hides focus gained by a pointer).
+func _test_focus_ring() -> void:
+	var uk = load("res://scripts/ui/UiKit.gd")
+	var host := Control.new()
+	host.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	root.size = Vector2i(960, 540)
+	root.add_child(host)
+	var v: VBoxContainer = uk.vbox(8)
+	v.position = Vector2(20, 20)
+	v.size = Vector2(500, 400)
+	host.add_child(v)
+	var tab: Button = uk.tab("Ladder", true)
+	tab.name = "FocusTab"
+	v.add_child(tab)
+	var seg: HBoxContainer = uk.segmented("FocusSeg", [["a", "Season"], ["b", "Career"]], "a")
+	v.add_child(seg)
+	var link: Button = uk.text_action("See the rule")
+	link.name = "FocusLink"
+	v.add_child(link)
+	var grid: GridContainer = uk.choice_grid("FocusChoice", [["x", "Attack"], ["y", "Defend"]], "x", 2)
+	v.add_child(grid)
+	var main: Button = uk.btn("Continue", 16, true)
+	v.add_child(main)
+	await _settle()
+	var want: StyleBoxFlat = main.get_theme_stylebox("focus")
+	var all := [tab, seg.get_node("FocusSeg_b"), link, grid.get_node("FocusChoice_y")]
+	_check(all.size() == 4 and not all.has(null), "the four kinds of control are built")
+	for b in all:
+		var ring := b.get_theme_stylebox("focus") as StyleBoxFlat
+		var rest: StyleBox = b.get_theme_stylebox("normal")
+		_check(ring != null and ring != rest and ring.border_width_left == 2 and ring.border_width_bottom == 2
+				and ring.border_color == want.border_color and ring.bg_color.a == 0.0,
+				"%s: its focus look is the buttons' ring, not its resting look" % b.name)
+	# Tab from the first walks to the next, and that focus shows.
+	tab.grab_focus()
+	await _settle(2)
+	_check(tab.has_focus(true), "the keyboard's focus on a tab shows")
+	var k := InputEventAction.new()
+	k.action = "ui_focus_next"
+	k.pressed = true
+	Input.parse_input_event(k)
+	Input.flush_buffered_events()
+	await _settle(2)
+	var next := root.gui_get_focus_owner()
+	_check(next != null and next != tab and next.has_focus(true), "Tab walks on, and the next control shows its ring (%s)" % (next.name if next != null else "none"))
+	# A real tap on a choice: it takes the press, and no ring shows.
+	var y: Button = grid.get_node("FocusChoice_y")
+	var why: String = await Tap.tap(y)
+	_check(why == "", "a real tap reaches the choice (%s)" % why)
+	_check(not y.has_focus(true), "a tap or a click shows no ring")
+	host.queue_free()
 	await _settle()

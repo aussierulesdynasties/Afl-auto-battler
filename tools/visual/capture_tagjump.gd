@@ -38,7 +38,7 @@ func _run() -> void:
 	if not state.prepare_interactive_match():
 		quit(1)
 		return
-	load("res://scripts/ui/UiKit.gd").apply_appearance("dark")
+	load("res://scripts/ui/UiKit.gd").apply_palette()
 	DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
 	DisplayServer.window_set_size(Vector2i(w, h))
 	for i in range(10):
