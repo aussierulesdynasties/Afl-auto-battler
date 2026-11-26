@@ -19,26 +19,38 @@ const MIN_WEIGHT := 0.10
 
 const ATTR_LABELS := Attributes.PROSE_LABELS
 
-static var _sorted := {}          # "ROLE|attr" -> sorted 2026 values
+static var _sorted := {}          # "ROLE|attr" -> sorted values of the loaded league
+static var _sorted_of := -1       # the GameDB load (GameDB.reloads) _sorted was built from
 static var _db: Node = null       # GameDB, looked up once on the main thread
 
 
-## 2026 players of this role (the scale every rating is anchored to).
+## The loaded league's players of this role (the scale every rating is
+## anchored to: 2026 players in a 2026 career, 2010 players in a 2010 one).
+## Built again after the league data reloads, so a career reads the same
+## scale whatever ran before it in the session. Example: a 2010 career then a
+## 2026 one in one session ranked the 2026 players against 2010 players.
 static func _values(role: String, key: String) -> Array:
 	var k := role + "|" + key
-	if not _sorted.has(k):
-		var vals := []
-		var apos := role.trim_prefix(APOS_PEERS) if role.begins_with(APOS_PEERS) else ""
-		for p in _game_db().players:
-			if (str(p.get("apos", "")) == apos) if apos != "" else (str(p.get("role", "")) == role):
-				vals.append(Attributes.value(p["attr"], key, 0.0))
-		vals.sort()
-		# Off the main thread (a match on a worker) it is only read: warm()
-		# fills it first, and anything missed is worked out, not stored.
-		if OS.get_thread_caller_id() != OS.get_main_thread_id():
-			return vals
-		_sorted[k] = vals
-	return _sorted[k]
+	var main := OS.get_thread_caller_id() == OS.get_main_thread_id()
+	# Only the main thread swaps the cache, for a new one (never clears the old
+	# in place): a match still on a worker keeps reading the dictionary it has.
+	if main and _sorted_of != int(_game_db().reloads):
+		_sorted = {}
+		_sorted_of = int(_game_db().reloads)
+	var cache: Dictionary = _sorted
+	if cache.has(k):
+		return cache[k]
+	var vals := []
+	var apos := role.trim_prefix(APOS_PEERS) if role.begins_with(APOS_PEERS) else ""
+	for p in _game_db().players:
+		if (str(p.get("apos", "")) == apos) if apos != "" else (str(p.get("role", "")) == role):
+			vals.append(Attributes.value(p["attr"], key, 0.0))
+	vals.sort()
+	# Off the main thread (a match on a worker) it is only read: warm()
+	# fills it first, and anything missed is worked out, not stored.
+	if main:
+		cache[k] = vals
+	return vals
 
 
 static func _game_db() -> Node:
@@ -53,7 +65,7 @@ static func warm() -> void:
 	var roles := {}
 	for p in _game_db().players:
 		roles[str(p.get("role", ""))] = true
-	if _sorted.size() > roles.size() * ATTR_LABELS.size():
+	if _sorted_of == int(_game_db().reloads) and _sorted.size() > roles.size() * ATTR_LABELS.size():
 		return
 	for role in roles:
 		for key in ATTR_LABELS:
