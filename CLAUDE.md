@@ -5,7 +5,10 @@ read it when you pick or close work, not otherwise (a brief that names your row 
 `docs/DIRECTOR_BIBLE.md` (513 KB: search it, never read it whole). Must-read files stay under 60 KB (CI: `tools/check_doc_sizes.py`).
 
 Godot 4 / GDScript. Run `tools/run_tests.sh` (or `tools/run_tests.sh draft_ui`
-for one suite) before pushing. MetaHuman files (and anything made from them) never go in this public
+for one suite) before pushing. Hooks in `.claude/hooks/pr_guard.py` enforce the PR rules: they refuse a merge of a
+conflicting PR, a merge of main that isn't needed, a second push within 20 min, and ending a turn
+after a push with nothing set to wake you; each refusal names its override. In a cloud session they
+install Godot and gdlint at start, so run the suites there too. MetaHuman files (and anything made from them) never go in this public
 repo: they live in a private repo and `tools/epic_assets.sh fetch` copies them in (docs/EPIC_ASSETS.md).
 
 ## The design bible comes first (director, 2026-10-09)
@@ -110,6 +113,12 @@ number one development blocker.
   (`gh pr list --search <row or file>`). Add to it or wait for it rather than opening a rival.
 - **Close what you abandon.** A PR you are not finishing gets closed with one line saying why, so
   it stops taking runners on every main push.
+
+## Review boards and imagery (director, 2026-11-26)
+
+Review boards, WIP films, reference photos and aerial or satellite imagery go to the private repo
+`aussierulesdynasties/afl-review-archive` (same `.claude/review/` paths), never to this public repo, and never
+as a "save work in progress to main" commit. `.claude/review/` is ignored here.
 
 ## UI and writing
 

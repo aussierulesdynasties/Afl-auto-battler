@@ -49,7 +49,7 @@ def message(n, base, with_main, pairs, title):
     lines = []
     if n in with_main:
         lines.append(f"- **Conflicts with main now:** {', '.join(f'`{f}`' for f in with_main[n])}. "
-                     "Merge `origin/main` and resolve; the merge queue cannot take this PR until then.")
+                     "Merge `origin/main` and resolve; it cannot merge (and auto-merge never fires) until then.")
     for c in pairs:
         if n not in (c["a"], c["b"]):
             continue
