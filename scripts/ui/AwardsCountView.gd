@@ -76,7 +76,7 @@ var _shown := {}
 func _init() -> void:
 	add_theme_constant_override("separation", 0)
 	size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_page = UiKit.vbox(8)
+	_page = UiKit.vbox(UiKit.GAP)
 	_page.name = "CountPage"
 	add_child(_page)
 	_clock = Timer.new()
@@ -326,7 +326,7 @@ func _earlier_games() -> void:
 	var upto := (matches if at == rounds else ms.size()) - 1
 	if upto <= 0:
 		return
-	var box := UiKit.vbox(8)
+	var box := UiKit.vbox(UiKit.GAP)
 	box.name = "CountEarlier"
 	box.add_child(_gap(10))
 	box.add_child(_words("Earlier in %s" % _short(str(steps[at]["label"])), UiKit.TEXT, UiKit.HEADING, true))
@@ -339,7 +339,7 @@ func _earlier_games() -> void:
 ## ("3  Name  Club"), on the Brownlow your club's names in bold and each club's
 ## short name in that club's ink (your club's own count: every name is yours).
 func _game(m: Dictionary, teams: bool) -> Control:
-	var v := UiKit.vbox(2)
+	var v := UiKit.vbox(UiKit.Space.SLIM)
 	if teams:
 		var line := HFlowContainer.new()
 		line.add_theme_constant_override("h_separation", 0)
@@ -357,7 +357,7 @@ func _game(m: Dictionary, teams: bool) -> Control:
 	for vote in list:
 		var club := str(vote[2])
 		var mine := kind == "votes" and club == GameState.my_club
-		var one := UiKit.hbox(6)
+		var one := UiKit.hbox(UiKit.Space.CLOSE)
 		one.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		var pts := UiKit.line(str(int(vote[1])), UiKit.BODY, UiKit.TEXT, true)
 		pts.custom_minimum_size.x = POINTS_W
@@ -434,10 +434,10 @@ func _row(r: Dictionary, band: bool) -> Control:
 	p.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var flat := StatsSide.row_style(club, band, mine)
 	flat.content_margin_left = StatsSide.RULE_INSET
-	flat.content_margin_right = 4
+	flat.content_margin_right = UiKit.Space.TIGHT
 	p.add_theme_stylebox_override("panel", flat)
 	p.custom_minimum_size.y = ROW_H_STACK if kind == "votes" else ROW_H
-	var h := UiKit.hbox(6)
+	var h := UiKit.hbox(UiKit.Space.CLOSE)
 	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	p.add_child(h)
 	var rank := UiKit.line(("=%d" if bool(r.get("shared", false)) else "%d") % int(r["rank"]),
@@ -456,7 +456,7 @@ func _row(r: Dictionary, band: bool) -> Control:
 		both.alignment = BoxContainer.ALIGNMENT_CENTER
 		both.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		both.add_child(who)
-		var under := UiKit.hbox(6)
+		var under := UiKit.hbox(UiKit.Space.CLOSE)
 		under.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		var c := UiKit.line(GameDB.club_short(club), UiKit.SECONDARY, StatsSide.code_ink(club), mine)
 		c.name = "Club"
@@ -492,7 +492,7 @@ func _row(r: Dictionary, band: bool) -> Control:
 
 ## The Rising Star, presented at the break in the count.
 func _break_card() -> void:
-	var box := UiKit.vbox(6)
+	var box := UiKit.vbox(UiKit.Space.CLOSE)
 	box.name = "CountRisingStar"
 	var holder := CenterContainer.new()
 	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE

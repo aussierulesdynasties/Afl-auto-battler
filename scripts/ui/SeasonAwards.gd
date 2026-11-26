@@ -78,8 +78,10 @@ static func open(host: Control) -> Control:
 	var done := func() -> void:
 		GameState.season_awards["presentation_seen"] = true
 		GameState.season_awards.erase("count_at")
+		# Saved on the way out (the next screen change, or the app closing or
+		# going to the background), not on the tap: a whole season's save held
+		# Skip 0.8-1.2 s (director, 2026-11-25, bug bash batch F).
 		GameState.mark_dirty()
-		GameState.autosave()
 		overlay.queue_free()
 	var next := UiKit.btn("Reveal results", UiKit.NAME, true)
 	next.name = "AwardsNext"
@@ -99,10 +101,10 @@ static func open(host: Control) -> Control:
 		skip.add_theme_color_override("font_color", UiKit.MUTED)
 		skip.pressed.connect(done)
 		footer.add_child(skip)
-		var controls := UiKit.vbox(6)
+		var controls := UiKit.vbox(UiKit.Space.CLOSE)
 		controls.name = "CountControls"
-		var top := UiKit.hbox(6)
-		var bottom := UiKit.hbox(6)
+		var top := UiKit.hbox(UiKit.Space.CLOSE)
+		var bottom := UiKit.hbox(UiKit.Space.CLOSE)
 		controls.add_child(top)
 		controls.add_child(bottom)
 		for pair in [[top, watch], [top, skip_round], [bottom, skip_all], [bottom, next]]:
@@ -209,13 +211,13 @@ static func open(host: Control) -> Control:
 			if metric == "votes":
 				var story := _medallist_story(code, str(winner.get("id", "")))
 				if story != "":
-					body.add_child(UiKit.spacer(4))
+					body.add_child(UiKit.spacer(UiKit.Space.TIGHT))
 					var sl := _words(story, UiKit.TEXT)
 					sl.name = "WinnerStory"
 					var sb := UiKit.club_section_body(code, sl, StatsSide.ink(code))
 					sb.name = "WinnerStoryBox"
 					body.add_child(sb)
-					body.add_child(UiKit.spacer(6))
+					body.add_child(UiKit.spacer(UiKit.Space.CLOSE))
 			# A counted award has just shown its final count; the placings
 			# follow only the winner-by-winner reveal.
 			if metric != "goals" and rows.size() > 1 and count == "":
@@ -232,11 +234,6 @@ static func open(host: Control) -> Control:
 							StatsSide.ink(rc), 15, rc == GameState.my_club))
 		var last := int(state["stage"]) == stages.size() - 1
 		next.text = "Season review" if last else "Next award"
-		var animation = state["vignette"]
-		if is_instance_valid(animation):
-			var after := next.text
-			next.text = "Finish reveal"
-			animation.finished.connect(func(): next.text = after)
 	watch.pressed.connect(func() -> void:
 		var view = state["view"]
 		if is_instance_valid(view):
@@ -260,10 +257,6 @@ static func open(host: Control) -> Control:
 		if not bool(state["revealed"]):
 			state["revealed"] = true
 		else:
-			var scene = state["vignette"]
-			if is_instance_valid(scene) and not scene._done:
-				scene.finish_now()
-				return
 			state["stage"] = int(state["stage"]) + 1
 			state["revealed"] = false
 			state["paused"] = false
@@ -272,6 +265,13 @@ static func open(host: Control) -> Control:
 				return
 		build.call()
 		keep.call())
+	# The skip rule (director, 2026-11-26): Next moves on from the winner's
+	# first frame, and a tap anywhere else on the sheet puts his walk-on at its
+	# last frame, medal on and arms up. The count's board takes no tap.
+	SkipTap.arm(box["shell"], func() -> void:
+		var scene = state["vignette"]
+		if is_instance_valid(scene) and not scene._done:
+			scene.finish_now())
 	build.call()
 	# Without a count its controls never join the page. They go with the
 	# overlay, not before: the lambdas above hold them, and a lambda whose

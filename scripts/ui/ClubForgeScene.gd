@@ -64,7 +64,7 @@ func _ready() -> void:
 	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
 	UiKit.apply_insets(margin, 12)
 	add_child(margin)
-	_root = UiKit.vbox(10)
+	_root = UiKit.vbox(UiKit.Space.ROOM)
 	margin.add_child(_root)
 	_spec = GameState.forge_player()
 	get_viewport().size_changed.connect(_on_resize)
@@ -106,7 +106,7 @@ func _build() -> void:
 	elif ScreenLayout.wide_view(UiKit.view_width(self), UiKit.view_height(self), 760.0):
 		# A wide screen: your player and your club side by side, not two
 		# bars stretched across the page (director: no full-width bars on PC).
-		var cols := UiKit.hbox(40)
+		var cols := UiKit.hbox(UiKit.Space.APART)
 		cols.name = "ForgeHomeColumns"
 		body.add_child(cols)
 		for half in [_home, _club_home]:
@@ -156,7 +156,7 @@ func _home(body: VBoxContainer) -> void:
 	body.add_child(line)
 	var note := UiKit.lbl("Bring him into a career from New career.", UiKit.SMALL, UiKit.MUTED)
 	body.add_child(note)
-	body.add_child(UiKit.spacer(8))
+	body.add_child(UiKit.spacer(UiKit.GAP))
 	var edit := UiKit.btn("Edit", UiKit.NAME)
 	edit.name = "ForgeEditPlayer"
 	edit.custom_minimum_size.y = 44
@@ -198,8 +198,8 @@ func _player_workspace(form: ScrollContainer) -> Control:
 	_refresh_player_preview()
 	var out: BoxContainer
 	if wide:
-		out = UiKit.hbox(20)
-		var side := UiKit.vbox(10)
+		out = UiKit.hbox(UiKit.Space.WIDE)
+		var side := UiKit.vbox(UiKit.Space.ROOM)
 		side.name = "ForgePlayerPanel"
 		side.custom_minimum_size.x = 420 if big else 260
 		side.add_child(preview)
@@ -207,11 +207,11 @@ func _player_workspace(form: ScrollContainer) -> Control:
 		side.add_child(line)
 		out.add_child(side)
 	else:
-		out = UiKit.vbox(8)
-		var strip := UiKit.hbox(10)
+		out = UiKit.vbox(UiKit.GAP)
+		var strip := UiKit.hbox(UiKit.Space.ROOM)
 		strip.name = "ForgePlayerPanel"
 		strip.add_child(preview)
-		var words := UiKit.vbox(2)
+		var words := UiKit.vbox(UiKit.Space.SLIM)
 		words.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		words.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		words.add_child(name_l)
@@ -363,7 +363,7 @@ func _player_form(body: VBoxContainer) -> void:
 				tats.append({"place": Appearance.TATTOO_PLACES[i * 2 % Appearance.TATTOO_PLACES.size()], "design": "design_%d" % (i + 1)})
 			look["tattoos"] = tats))
 
-	body.add_child(UiKit.spacer(10))
+	body.add_child(UiKit.spacer(UiKit.Space.ROOM))
 	_problem = UiKit.lbl("", UiKit.SMALL, UiKit.BAD)
 	_problem.name = "ForgeProblem"
 	_problem.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -399,8 +399,8 @@ func _on_save() -> void:
 ## own most vivid colour that shows on the page; a player, or a colour that
 ## would read as BAD or the primary action, gets a quiet TEXT rule.
 func _heading(text: String, club := false) -> Control:
-	var v := UiKit.vbox(4)
-	v.add_child(UiKit.spacer(10))
+	var v := UiKit.vbox(UiKit.Space.TIGHT)
+	v.add_child(UiKit.spacer(UiKit.Space.ROOM))
 	var rule := ColorRect.new()
 	rule.name = "SectionRule"
 	rule.custom_minimum_size = Vector2(0, 2)
@@ -439,7 +439,7 @@ func _pairs(keys: Array, labels: Dictionary) -> Array:
 
 ## − value + for a number in [lo, hi]; `zero_label` names 0 when 0 means "none".
 func _stepper(node_name: String, key: String, fmt: String, band: Array, zero_label := "") -> Control:
-	var h := UiKit.hbox(8)
+	var h := UiKit.hbox(UiKit.GAP)
 	h.name = node_name
 	var value := UiKit.lbl("", UiKit.BODY, UiKit.TEXT, true)
 	value.name = node_name + "Value"
@@ -478,8 +478,8 @@ func _toggles(node_name: String, key: String, other: String, cols: int) -> GridC
 	var grid := GridContainer.new()
 	grid.name = node_name
 	grid.columns = cols
-	grid.add_theme_constant_override("h_separation", 6)
-	grid.add_theme_constant_override("v_separation", 6)
+	grid.add_theme_constant_override("h_separation", UiKit.Space.CLOSE)
+	grid.add_theme_constant_override("v_separation", UiKit.Space.CLOSE)
 	for k in Prospects.CUSTOM_TRAITS:
 		if k == "ruckwork" and str(_spec["role"]) != "RUCK" and str(_spec["role2"]) != "RUCK":
 			continue
@@ -501,7 +501,7 @@ func _toggles(node_name: String, key: String, other: String, cols: int) -> GridC
 
 ## A row of colour swatches; the chosen one outlined.
 func _swatches(node_name: String, colours: Array, look: Dictionary, key: String) -> HBoxContainer:
-	var h := UiKit.hbox(6)
+	var h := UiKit.hbox(UiKit.Space.CLOSE)
 	h.name = node_name
 	for i in colours.size():
 		var b := Button.new()
@@ -558,7 +558,7 @@ func _club_home(body: VBoxContainer) -> void:
 			_build())
 		body.add_child(make)
 		return
-	var head := UiKit.hbox(10)
+	var head := UiKit.hbox(UiKit.Space.ROOM)
 	head.add_child(UiKit.colour_marker(_club_colours(saved), 30.0, str(saved.get("design", "plain")), str(saved.get("code", ""))))
 	var title := UiKit.lbl(str(saved.get("name", "")), UiKit.H1, UiKit.TEXT, true)
 	title.name = "ForgeClubTitle"
@@ -573,7 +573,7 @@ func _club_home(body: VBoxContainer) -> void:
 	line.name = "ForgeClubLine"
 	body.add_child(line)
 	body.add_child(UiKit.lbl("Bring it into a career from New career.", UiKit.SMALL, UiKit.MUTED))
-	body.add_child(UiKit.spacer(8))
+	body.add_child(UiKit.spacer(UiKit.GAP))
 	var edit := UiKit.btn("Edit club", 16)
 	edit.name = "ForgeEditClub"
 	edit.custom_minimum_size.y = 44
@@ -606,8 +606,8 @@ func _club_form(body: VBoxContainer) -> void:
 	var home := GridContainer.new()
 	home.name = "ForgeHome"
 	home.columns = 1 if UiKit.view_width(self) < 520.0 else 3
-	home.add_theme_constant_override("h_separation", 8)
-	home.add_theme_constant_override("v_separation", 6)
+	home.add_theme_constant_override("h_separation", UiKit.GAP)
+	home.add_theme_constant_override("v_separation", UiKit.Space.CLOSE)
 	body.add_child(home)
 	var state := UiKit.option()
 	state.name = "ForgeState"
@@ -657,16 +657,16 @@ func _club_form(body: VBoxContainer) -> void:
 
 	_one_colour_each()
 	body.add_child(_heading("Guernsey", true))
-	_kit_box = UiKit.vbox(6)
+	_kit_box = UiKit.vbox(UiKit.Space.CLOSE)
 	_kit_box.name = "ForgeKit"
 	body.add_child(_kit_box)
 	_rebuild_kit()
 	body.add_child(_heading("Colours", true))
-	_colour_box = UiKit.vbox(8)
+	_colour_box = UiKit.vbox(UiKit.GAP)
 	_colour_box.name = "ForgeColours"
 	body.add_child(_colour_box)
 	_rebuild_paint()
-	body.add_child(UiKit.spacer(10))
+	body.add_child(UiKit.spacer(UiKit.Space.ROOM))
 
 
 ## The club as it will look, kept in view while the form scrolls: beside it
@@ -693,8 +693,8 @@ func _club_workspace(form: ScrollContainer) -> Control:
 	_pv = {"crest": crest, "name": name_l, "line": line}
 	var out: BoxContainer
 	if wide:
-		out = UiKit.hbox(20)
-		var side := UiKit.vbox(10)
+		out = UiKit.hbox(UiKit.Space.WIDE)
+		var side := UiKit.vbox(UiKit.Space.ROOM)
 		side.name = "ForgePreviewPanel"
 		side.custom_minimum_size.x = 260
 		var centre := CenterContainer.new()
@@ -705,23 +705,23 @@ func _club_workspace(form: ScrollContainer) -> Control:
 		side.add_child(_sub("Pick a colour, then tap the part of the guernsey to paint it."))
 		side.add_child(name_l)
 		side.add_child(line)
-		side.add_child(UiKit.spacer(6))
+		side.add_child(UiKit.spacer(UiKit.Space.CLOSE))
 		side.add_child(_problem)
 		side.add_child(save)
 		out.add_child(side)
 		out.add_child(form)
 	else:
-		out = UiKit.vbox(8)
-		var strip := UiKit.hbox(10)
+		out = UiKit.vbox(UiKit.GAP)
+		var strip := UiKit.hbox(UiKit.Space.ROOM)
 		strip.name = "ForgePreviewPanel"
 		strip.add_child(crest)
 		# Save sits under the name, not beside it, so the name keeps the
 		# strip's full width and stays on one line on a 390 px phone.
-		var words := UiKit.vbox(2)
+		var words := UiKit.vbox(UiKit.Space.SLIM)
 		words.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		words.add_child(name_l)
 		words.add_child(line)
-		words.add_child(UiKit.spacer(4))
+		words.add_child(UiKit.spacer(UiKit.Space.TIGHT))
 		save.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 		words.add_child(save)
 		strip.add_child(words)
@@ -837,8 +837,8 @@ func _rebuild_paint() -> void:
 	grid.name = "ForgePalette"
 	var room := UiKit.view_width(self) - 40.0 - (280.0 if wide else 0.0)
 	grid.columns = clampi(int((room + 6.0) / 50.0), 4, 15)
-	grid.add_theme_constant_override("h_separation", 6)
-	grid.add_theme_constant_override("v_separation", 6)
+	grid.add_theme_constant_override("h_separation", UiKit.Space.CLOSE)
+	grid.add_theme_constant_override("v_separation", UiKit.Space.CLOSE)
 	for c in ClubForge.PALETTE:
 		var hex := str(c[2])
 		var on := _brush.to_lower() == hex.to_lower()
@@ -875,8 +875,8 @@ func _rebuild_paint() -> void:
 	var parts := GridContainer.new()
 	parts.name = "ForgeParts"
 	parts.columns = 1 if UiKit.view_width(self) < 520.0 else 3
-	parts.add_theme_constant_override("h_separation", 6)
-	parts.add_theme_constant_override("v_separation", 6)
+	parts.add_theme_constant_override("h_separation", UiKit.Space.CLOSE)
+	parts.add_theme_constant_override("v_separation", UiKit.Space.CLOSE)
 	for part in ["body", "pattern", "trim"]:
 		if part == "pattern" and str(_club["design"]) == "plain":
 			continue
@@ -898,8 +898,8 @@ func _rebuild_kit() -> void:
 	var designs := GridContainer.new()
 	designs.name = "ForgeDesign"
 	designs.columns = 4 if narrow else 6
-	designs.add_theme_constant_override("h_separation", 6)
-	designs.add_theme_constant_override("v_separation", 6)
+	designs.add_theme_constant_override("h_separation", UiKit.Space.CLOSE)
+	designs.add_theme_constant_override("v_separation", UiKit.Space.CLOSE)
 	var cols := _kit_colours()
 	for d in ClubForge.DESIGNS:
 		var b := Button.new()
@@ -909,7 +909,7 @@ func _rebuild_kit() -> void:
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		b.mouse_filter = Control.MOUSE_FILTER_PASS
 		UiKit.paint_choice(b, str(_club["design"]) == str(d))
-		var face := UiKit.vbox(2)
+		var face := UiKit.vbox(UiKit.Space.SLIM)
 		face.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 		face.alignment = BoxContainer.ALIGNMENT_CENTER
 		var centre := CenterContainer.new()
@@ -938,9 +938,9 @@ func _swatch_button(node_name: String, title: String, colour_name: String, colou
 	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	b.mouse_filter = Control.MOUSE_FILTER_PASS
 	UiKit.paint_choice(b, on)
-	var face := UiKit.hbox(8)
+	var face := UiKit.hbox(UiKit.GAP)
 	face.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	face.add_theme_constant_override("separation", 8)
+	face.add_theme_constant_override("separation", UiKit.GAP)
 	var pad := Control.new()
 	pad.custom_minimum_size.x = 2
 	face.add_child(pad)

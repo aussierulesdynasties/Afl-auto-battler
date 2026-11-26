@@ -285,22 +285,65 @@ for w, s0, z0, s1, z1 in SB_WORDS:
     if w == 'ND':
         sb_dot(s0 + 0.08, z0 - 0.14); sb_dot(s0 + 0.22, z0 - 0.14)
 wallq(S_TW, T_B, 0, T_B, zb, Z_CORN, SB_TOWER, 'timber')
+# the back (what the Hill sees): cream weatherboard in bays between green pilasters, a green plinth and trim bands,
+# two rows of small sash windows in each bay (the heritage board's back, as its face's green and cream)
+_tb = T_B + 0.03
+def _relief(s0, s1, z0, z1, t0, t1, col, kind='plain'):
+    """a block standing out of the board's back from t0 to t1 (trim, pilasters, window frames): its face, top, underside
+    and ends, so every edge has real depth (no painted-on detail, director 2026-11-22)"""
+    for q in ((W(s0, t1, z0), W(s1, t1, z0), W(s1, t1, z1), W(s0, t1, z1)), (W(s0, t0, z1), W(s1, t0, z1), W(s1, t1, z1), W(s0, t1, z1)),
+              (W(s0, t0, z0), W(s1, t0, z0), W(s1, t1, z0), W(s0, t1, z0)), (W(s0, t0, z0), W(s0, t1, z0), W(s0, t1, z1), W(s0, t0, z1)),
+              (W(s1, t0, z0), W(s1, t1, z0), W(s1, t1, z1), W(s1, t0, z1))):
+        m.quad(*q, col, kind)
+_relief(0, S_TW, zb, zb + 1.0, T_B, _tb + 0.06, SB_GREEN)                     # plinth
+for _z in (Z_VER - 0.15, Z_CORN - 0.45):
+    _relief(0, S_TW, _z, _z + 0.3, T_B, _tb + 0.06, SB_GREEN)                  # trim bands
+_bays = np.linspace(0, S_TW, 6)
+for _s in _bays:
+    _relief(max(_s - 0.2, 0), min(_s + 0.2, S_TW), zb, Z_CORN, T_B, _tb + 0.12, SB_GREEN)   # pilasters
+for _a, _b in zip(_bays[:-1], _bays[1:]):
+    for _zw in (zb + 4.6, zb + 8.0):
+        for _k in (0.3, 0.62):
+            _c = _a + (_b - _a) * _k
+            # sash window: dark glass on the wall, a cream architrave 0.1 m proud round it and a deeper sill
+            wallq(_c + 0.38, _tb, _c - 0.38, _tb, _zw, _zw + 1.5, (40, 46, 50), 'plain')
+            for _f in ((_c - 0.5, _c - 0.38, _zw, _zw + 1.5), (_c + 0.38, _c + 0.5, _zw, _zw + 1.5), (_c - 0.5, _c + 0.5, _zw + 1.5, _zw + 1.62)):
+                _relief(_f[0], _f[1], _f[2], _f[3], T_B, _tb + 0.10, SB_CREAM)
+            _relief(_c - 0.58, _c + 0.58, _zw - 0.12, _zw, T_B, _tb + 0.16, SB_CREAM)   # sill
+            _relief(_c - 0.38, _c + 0.38, _zw + 0.72, _zw + 0.78, T_B, _tb + 0.05, SB_CREAM)  # meeting rail
 wallq(0, T_B, 0, T_F, zb, Z_CORN, SB_TOWER, 'timber')
 wallq(0, T_F, S_TW, T_F, zb, Z_VER, (60, 64, 58), 'plain')        # wall behind the verandah
 # tower: brick base to the verandah roof, cream weatherboard above (c01, c09)
-for (s0, t0, s1, t1) in ((S_BR, 0.0, LS, 0.0), (LS, 0.0, LS, T_B), (LS, T_B, S_BR, T_B), (S_BR, 0.0, S_BR, T_F)):
+for (s0, t0, s1, t1) in ((LS, 0.0, LS, T_B), (LS, T_B, S_BR, T_B), (S_BR, 0.0, S_BR, T_F)):
     wallq(s0, t0, s1, t1, zb, Z_VER, SB_BRICK, 'brick')
+# the brick base's face with its arched doorway cut through it (c09, c11; never painted on, director 2026-11-22):
+# columns from the path (or the arch's crown over the opening) up to the verandah, brick reveals 0.35 m deep, the
+# dark door at their back
+_D0, _D1, _DJ, _DD = 16.1, 17.3, 1.9, 0.35; _dr = (_D1 - _D0) / 2; _dc = (_D0 + _D1) / 2
+_aq = np.linspace(math.pi, 0, 13); _ss = sorted({S_BR, LS, _D0, _D1} | {_dc + _dr * math.cos(q) for q in _aq})
+def _dbot(x, xm): return zb + _DJ + math.sqrt(max(0.0, _dr * _dr - (x - _dc) ** 2)) if abs(xm - _dc) < _dr else zb
+for _a, _b in zip(_ss[:-1], _ss[1:]):
+    if _b - _a < 1e-4: continue
+    _m = (_a + _b) / 2; m.quad(W(_a, 0.0, _dbot(_a, _m)), W(_b, 0.0, _dbot(_b, _m)), W(_b, 0.0, Z_VER), W(_a, 0.0, Z_VER), SB_BRICK, 'brick')
+_ol = [(_D0, zb)] + [(_dc + _dr * math.cos(q), zb + _DJ + _dr * math.sin(q)) for q in _aq] + [(_D1, zb)]
+for (_s0, _z0), (_s1, _z1) in zip(_ol[:-1], _ol[1:]):
+    m.quad(W(_s0, 0.0, _z0), W(_s1, 0.0, _z1), W(_s1, _DD, _z1), W(_s0, _DD, _z0), SB_BRICK, 'brick')
+m.add([W(_s, _DD, _z) for _s, _z in _ol], [(0, i, i + 1) for i in range(1, len(_ol) - 1)], [(40, 36, 34)] * len(_ol), [(_s, _z) for _s, _z in _ol], 'plain')
 for (s0, t0, s1, t1) in ((S_TW, TTW, LS, TTW), (LS, TTW, LS, T_B), (LS, T_B, S_TW, T_B), (S_TW, TTW, S_TW, T_F)):
     wallq(s0, t0, s1, t1, Z_VER, Z_CORN, SB_TOWER, 'timber')
 m.quad(W(S_BR, 0, Z_VER), W(LS, 0, Z_VER), W(LS, T_F, Z_VER), W(S_BR, T_F, Z_VER), SB_ROOF, 'plain')
 # arched doorway in the brick base (c09, c11), louvred windows in the tower (c01)
-wallq(16.1, -0.01, 17.3, -0.01, zb, zb + 1.9, (40, 36, 34), 'plain')   # arch: c11 s 16.1-17.3, crown 2.5 m
-_aq = np.linspace(0, math.pi, 13)
-m.add([W(16.7, -0.01, zb + 1.9)] + [W(16.7 + 0.6 * math.cos(q), -0.01, zb + 1.9 + 0.6 * math.sin(q)) for q in _aq],
-      [(0, i + 1, i + 2) for i in range(12)] + [(0, i + 2, i + 1) for i in range(12)], [(40, 36, 34)] * 14, [(0, 0)] * 14, 'plain')
-for zw in (zb + 6.3, zb + 10.5):
-    wallq(S_TW + 0.5, TTW - 0.02, LS - 0.5, TTW - 0.02, zw, zw + 1.0, (46, 46, 44), 'fins')
-    wallq(LS + 0.02, 1.5, LS + 0.02, 2.7, zw, zw + 1.0, (46, 46, 44), 'fins')
+for zw in (zb + 6.3, zb + 10.5):   # louvred windows: a dark opening behind five real slats and a frame, on the front and the side
+    wallq(S_TW + 0.5, TTW - 0.01, LS - 0.5, TTW - 0.01, zw, zw + 1.0, (30, 30, 28), 'plain')
+    wallq(LS + 0.01, 1.5, LS + 0.01, 2.7, zw, zw + 1.0, (30, 30, 28), 'plain')
+    for _k in range(5):
+        _z = zw + 0.1 + _k * 0.19
+        _relief(S_TW + 0.5, LS - 0.5, _z, _z + 0.07, TTW - 0.02, TTW - 0.1, (46, 46, 44))
+        _relief(LS + 0.02, LS + 0.1, _z, _z + 0.07, 1.5, 2.7, (46, 46, 44))
+    for _a, _b, _c, _d in ((S_TW + 0.4, S_TW + 0.5, TTW, TTW - 0.12), (LS - 0.5, LS - 0.4, TTW, TTW - 0.12)):
+        _relief(_a, _b, zw - 0.1, zw + 1.1, _c, _d, SB_CREAM)
+    for _a, _b in ((1.4, 1.5), (2.7, 2.8)):
+        _relief(LS, LS + 0.12, zw - 0.1, zw + 1.1, _a, _b, SB_CREAM)
 # verandah: red roof, cream arched frieze, green posts, green palisade below (sponsor board left out)
 m.quad(W(-1.4, -0.3, Z_VER), W(S_BR, -0.3, Z_VER), W(S_BR, T_F, Z_VER + 0.1), W(-1.4, T_F, Z_VER + 0.1), SB_ROOF, 'plain')   # meets the board at z 3.3 (c11)
 wallq(-1.4, -0.3, S_BR, -0.3, Z_VER - 0.25, Z_VER, SB_GREEN, 'plain')
@@ -391,7 +434,7 @@ for (x0, x1, za, zb_) in ((-SWID / 2, SWID / 2, Z0, Z0 + 0.35), (-SWID / 2, SWID
                           (-SWID / 2, -SWID / 2 + 0.35, Z0, Z1), (SWID / 2 - 0.35, SWID / 2, Z0, Z1)):
     solid(m, SC_C + SU * (x0 + x1) / 2 - SN * 0.1, SU, SN, x1 - x0, 0.2, za, zb_, (34, 36, 38), 'steel')
 m.quad((*(SC_C - SU * (SWID / 2 - 0.35) - SN * 0.02), Z0 + 0.35), (*(SC_C + SU * (SWID / 2 - 0.35) - SN * 0.02), Z0 + 0.35),
-       (*(SC_C + SU * (SWID / 2 - 0.35) - SN * 0.02), Z1 - 0.35), (*(SC_C - SU * (SWID / 2 - 0.35) - SN * 0.02), Z1 - 0.35), SCREEN, 'glass')
+       (*(SC_C + SU * (SWID / 2 - 0.35) - SN * 0.02), Z1 - 0.35), (*(SC_C - SU * (SWID / 2 - 0.35) - SN * 0.02), Z1 - 0.35), SCREEN, 'plain')   # matte: a switched-off LED face, not glass (glass mirrored the sky purple)
 for x in np.arange(-SWID / 2 + 1.0, SWID / 2 - 0.5, 2.4):       # back panels
     m.quad((*(SC_C + SU * x + SN * 1.82), Z0 + 0.6), (*(SC_C + SU * (x + 2.0) + SN * 1.82), Z0 + 0.6),
            (*(SC_C + SU * (x + 2.0) + SN * 1.82), Z1 - 0.6), (*(SC_C + SU * x + SN * 1.82), Z1 - 0.6), (52, 54, 56), 'fins')

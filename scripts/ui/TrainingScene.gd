@@ -70,7 +70,7 @@ func _ready() -> void:
 	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
 	UiKit.apply_insets(margin, 12)
 	add_child(margin)
-	_root = UiKit.vbox(8)
+	_root = UiKit.vbox(UiKit.GAP)
 	margin.add_child(_root)
 	get_viewport().size_changed.connect(func():
 		if is_inside_tree() and not UiKit.keyboard_resize(self, _built_width):
@@ -173,14 +173,14 @@ func _build() -> void:
 	var back := bar.find_child("TopBarBack", true, false) as Control
 	if back != null:
 		back.custom_minimum_size = Vector2(GRID_TOUCH, GRID_TOUCH)
-	var backing := UiKit.panel(UiKit.PANEL, 4, UiKit.RADIUS)
+	var backing := UiKit.panel(UiKit.PANEL, UiKit.Space.TIGHT, UiKit.RADIUS)
 	backing.name = "TrainingHeader"
 	backing.add_child(bar)
 	_root.add_child(backing)
 	if _paged():
 		# Training grid on a phone: the news, the tabs and the cards are one
 		# page that scrolls as a whole (no list scrolling inside a page).
-		var page := UiKit.vbox(8)
+		var page := UiKit.vbox(UiKit.GAP)
 		page.add_child(_summary())
 		page.add_child(_list_panel())
 		_list_scroll = UiKit.scroll(page)
@@ -196,7 +196,7 @@ func _build() -> void:
 	if _paged():
 		pass
 	elif _wide:
-		var body := UiKit.hbox(10)
+		var body := UiKit.hbox(UiKit.Space.ROOM)
 		body.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		_root.add_child(body)
 		body.add_child(_list_panel())
@@ -224,8 +224,8 @@ const HERO_WIDE := 96.0
 
 
 func _summary() -> Control:
-	var panel := UiKit.panel(UiKit.PANEL, 10, 8)
-	var v := UiKit.vbox(3)
+	var panel := UiKit.panel(UiKit.PANEL, UiKit.Space.ROOM, 8)
+	var v := UiKit.vbox(UiKit.Space.THIN)
 	# Training grid on a phone with the list open: the news in a line or two,
 	# no picture and no standing explanation, so the cards get the screen.
 	var compact := not _wide and not (_showing_detail and _selected != "")
@@ -237,7 +237,7 @@ func _summary() -> Control:
 	else:
 		hero.name = "TrainingHero"
 		hero.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		var h := UiKit.hbox(14 if _wide else 12)
+		var h := UiKit.hbox(UiKit.Space.LOOSE if _wide else UiKit.Space.PAD)
 		v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		v.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		if _wide:
@@ -329,7 +329,7 @@ func _learn_picker(p: Dictionary, on_pick: Callable) -> Control:
 	var open: Array = GameState.open_jobs(p)
 	if learning == "" and open.is_empty():
 		return null
-	var v := UiKit.vbox(4)
+	var v := UiKit.vbox(UiKit.Space.TIGHT)
 	v.name = "LearnPosition"
 	v.add_child(UiKit.lbl("Learn a new position", 12, UiKit.MUTED, true))
 	var options := []
@@ -396,15 +396,15 @@ static func _soft() -> Color:
 
 
 func _list_panel() -> Control:
-	var panel := UiKit.panel(UiKit.PANEL, 10, 8)
+	var panel := UiKit.panel(UiKit.PANEL, UiKit.Space.ROOM, 8)
 	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var paged := _paged()
 	panel.size_flags_vertical = Control.SIZE_SHRINK_BEGIN if paged else Control.SIZE_EXPAND_FILL
 	if _wide:
 		panel.custom_minimum_size.x = 280
-	var v := UiKit.vbox(6)
+	var v := UiKit.vbox(UiKit.Space.CLOSE)
 	panel.add_child(v)
-	var tabs := UiKit.hbox(2)
+	var tabs := UiKit.hbox(UiKit.Space.SLIM)
 	tabs.name = "RoleTabs"
 	v.add_child(tabs)
 	for item in ROLE_TABS:
@@ -440,7 +440,7 @@ func _list_panel() -> Control:
 			slot.add_child(hint)
 		else:
 			slot.add_child(_bulk_bar())
-	var rows := UiKit.vbox(4)
+	var rows := UiKit.vbox(UiKit.Space.TIGHT)
 	rows.name = "TrainingRows"
 	_rows = rows
 	if paged:
@@ -473,15 +473,15 @@ func _set_role(role: String) -> void:
 ## Grid: the group bar on one row. The count, one outlined button per plan he
 ## can all take, Clear; it wraps only if the plans do not fit across.
 func _bulk_bar() -> Control:
-	var panel := UiKit.panel(UiKit.PANEL_ALT, 6, 6)
+	var panel := UiKit.panel(UiKit.PANEL_ALT, UiKit.Space.CLOSE, 6)
 	panel.name = "BulkTraining"
-	var v := UiKit.vbox(4)
+	var v := UiKit.vbox(UiKit.Space.TIGHT)
 	panel.add_child(v)
 	panel.custom_minimum_size.y = BAR_SLOT
 	var flow := HFlowContainer.new()
 	flow.name = "BulkRow"
-	flow.add_theme_constant_override("h_separation", 4)
-	flow.add_theme_constant_override("v_separation", 4)
+	flow.add_theme_constant_override("h_separation", UiKit.Space.TIGHT)
+	flow.add_theme_constant_override("v_separation", UiKit.Space.TIGHT)
 	v.add_child(flow)
 	var count := _bulk_selected.size()
 	var head := UiKit.line("%d selected" % count, UiKit.SECONDARY, UiKit.TEXT, true)
@@ -665,7 +665,7 @@ func _fill_rows(rows: Node) -> void:
 		air.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		rows.add_child(air)
 		rows.add_child(head)
-		var grid := UiKit.vbox(6)
+		var grid := UiKit.vbox(UiKit.Space.CLOSE)
 		grid.name = "TrainingGrid"
 		rows.add_child(grid)
 		# Two across; an odd one out keeps a half-width card at the left and
@@ -675,7 +675,7 @@ func _fill_rows(rows: Node) -> void:
 		_across = 2 if _top_three_fits(_card_text_width(2)) else 1
 		for i in range(0, group.size(), _across):
 			var pair: Array = group.slice(i, i + _across)
-			var line := UiKit.hbox(6)
+			var line := UiKit.hbox(UiKit.Space.CLOSE)
 			line.name = "GridRow"
 			grid.add_child(line)
 			for p in pair:
@@ -735,7 +735,7 @@ func _player_card(p: Dictionary) -> Control:
 	var v := UiKit.vbox(0)
 	pad.add_child(v)
 	# Row 1: where he plays, and his rating.
-	var top := UiKit.hbox(4)
+	var top := UiKit.hbox(UiKit.Space.TIGHT)
 	top.custom_minimum_size.y = 22
 	v.add_child(top)
 	if in_group:
@@ -760,7 +760,7 @@ func _player_card(p: Dictionary) -> Control:
 	# top row and the status, so a short name does not leave a hole. A player
 	# with no trait keeps the trait line's room, so the names of a row sit at
 	# one height (the confirmed name/second-line alignment defect).
-	var mid := UiKit.vbox(2)
+	var mid := UiKit.vbox(UiKit.Space.SLIM)
 	mid.name = "CardMiddle"
 	mid.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	mid.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -935,8 +935,8 @@ func _name_header(p: Dictionary) -> Control:
 	for state in ["normal", "hover", "pressed", "hover_pressed", "focus"]:
 		var flat := UiKit.style(Color.TRANSPARENT, 0, 0)
 		flat.set_border_width_all(0)
-		flat.content_margin_top = 6
-		flat.content_margin_bottom = 6
+		flat.content_margin_top = UiKit.Space.CLOSE
+		flat.content_margin_bottom = UiKit.Space.CLOSE
 		b.add_theme_stylebox_override(state, flat)
 	b.clip_text = true
 	b.custom_minimum_size.y = 44
@@ -978,9 +978,9 @@ func _wash_head(panel: Control) -> void:
 ## The headline: how many rose, as the screen's one big figure in your club's
 ## ink, the words beside it, the game under them and a club rule beneath.
 func _results_head(report: Dictionary, n: int, fresh: bool) -> Control:
-	var box := UiKit.vbox(6)
+	var box := UiKit.vbox(UiKit.Space.CLOSE)
 	box.name = "TrainingResultsHead"
-	var h := UiKit.hbox(12)
+	var h := UiKit.hbox(UiKit.Space.PAD)
 	box.add_child(h)
 	var fig := UiKit.figure(str(n), UiKit.HERO, UiKit.label_ink())
 	fig.name = "TrainingRiseCount"
@@ -1025,15 +1025,15 @@ func _rise_list(rows: Array, fresh: bool) -> Control:
 	var grid := GridContainer.new()
 	grid.name = "TrainingRises"
 	grid.columns = 3 if _wide else 1
-	grid.add_theme_constant_override("h_separation", 24)
-	grid.add_theme_constant_override("v_separation", 2)
+	grid.add_theme_constant_override("h_separation", UiKit.Space.GUTTER)
+	grid.add_theme_constant_override("v_separation", UiKit.Space.SLIM)
 	for i in range(rows.size()):
 		grid.add_child(_rise_row(rows[i], i == 0, fresh))
 	return grid
 
 
 func _rise_row(r: Dictionary, lead: bool, fresh: bool) -> Control:
-	var row := UiKit.hbox(8)
+	var row := UiKit.hbox(UiKit.GAP)
 	row.name = "Rise_" + str(r["id"])
 	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.custom_minimum_size = Vector2(240 if _wide else 0, 44 if lead else 30)
@@ -1096,11 +1096,11 @@ func _bring_into_view(c: Control) -> void:
 
 
 func _detail_panel() -> Control:
-	var panel := UiKit.panel(UiKit.PANEL, 10, 8)
+	var panel := UiKit.panel(UiKit.PANEL, UiKit.Space.ROOM, 8)
 	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	panel.custom_minimum_size.x = 280
-	var outer := UiKit.vbox(6)
+	var outer := UiKit.vbox(UiKit.Space.CLOSE)
 	panel.add_child(outer)
 	var p := GameState.list_player(_selected)
 	if p.is_empty() and _wide and not GameState.my_list.is_empty():
@@ -1122,7 +1122,7 @@ func _detail_panel() -> Control:
 			_showing_detail = false
 			_build())
 		outer.add_child(back)
-	var body := UiKit.vbox(6)
+	var body := UiKit.vbox(UiKit.Space.CLOSE)
 	_detail_scroll = UiKit.scroll(body)
 	_detail_scroll.name = "DetailScroll"
 	outer.add_child(_detail_scroll)
@@ -1131,7 +1131,7 @@ func _detail_panel() -> Control:
 	var duty := GameState.last_duty(_selected)
 	body.add_child(UiKit.lbl("%s  ·  %s" % [Ratings.role_tag(p), duty if duty != "" else "Not yet played"],
 			13, UiKit.MUTED))
-	var standing := UiKit.hbox(10)
+	var standing := UiKit.hbox(UiKit.Space.ROOM)
 	body.add_child(standing)
 	standing.add_child(UiKit.line("OVR %d" % int(Rating.ovr(p)), 22, UiKit.EMPH, true))
 	var rise := _last_rise(_selected)
@@ -1145,9 +1145,9 @@ func _detail_panel() -> Control:
 	if not Traits.of(p).is_empty():
 		body.add_child(UiKit.trait_chips(p))
 	# The decision: what kind of footballer he becomes.
-	var focus := UiKit.panel(UiKit.PANEL_ALT, 10, 8)
+	var focus := UiKit.panel(UiKit.PANEL_ALT, UiKit.Space.ROOM, 8)
 	body.add_child(focus)
-	var fv := UiKit.vbox(4)
+	var fv := UiKit.vbox(UiKit.Space.TIGHT)
 	focus.add_child(fv)
 	fv.add_child(UiKit.lbl("Development focus", 12, UiKit.MUTED, true))
 	var plan := GameState.plan_for(p)
@@ -1177,7 +1177,7 @@ func _detail_panel() -> Control:
 	fv.add_child(_plan_picker(p, on_pick))
 	var learn := _learn_picker(p, on_pick)
 	if learn != null:
-		fv.add_child(UiKit.spacer(6))
+		fv.add_child(UiKit.spacer(UiKit.Space.CLOSE))
 		fv.add_child(learn)
 		if _scroll_to_learn:
 			_scroll_to_learn = false
@@ -1235,9 +1235,9 @@ func _detail_panel() -> Control:
 ## focus per player per season, drills do the rest"). Tap a stat, then lock it
 ## in; it stays until the next season opens.
 func _stat_focus_panel(p: Dictionary) -> Control:
-	var box := UiKit.panel(UiKit.PANEL_ALT, 10, 8)
+	var box := UiKit.panel(UiKit.PANEL_ALT, UiKit.Space.ROOM, 8)
 	box.name = "StatFocus"
-	var v := UiKit.vbox(6)
+	var v := UiKit.vbox(UiKit.Space.CLOSE)
 	box.add_child(v)
 	var year := GameState.season_year
 	v.add_child(UiKit.lbl("Stat focus  ·  %d season" % year, 12, UiKit.MUTED, true))
@@ -1341,11 +1341,11 @@ func _working_on(p: Dictionary) -> String:
 
 
 func _stat_row(p: Dictionary, key: String, label: String, useful := true) -> Control:
-	var card := UiKit.panel(UiKit.PANEL_ALT, 8, 6)
-	var v := UiKit.vbox(4)
+	var card := UiKit.panel(UiKit.PANEL_ALT, UiKit.GAP, 6)
+	var v := UiKit.vbox(UiKit.Space.TIGHT)
 	card.add_child(v)
 	var cur := int((p["attr"] as Dictionary).get(key, 1))
-	var h := UiKit.hbox(8)
+	var h := UiKit.hbox(UiKit.GAP)
 	v.add_child(h)
 	var name := UiKit.ellipsis(label, UiKit.BODY, UiKit.TEXT, true)
 	name.size_flags_horizontal = Control.SIZE_EXPAND_FILL

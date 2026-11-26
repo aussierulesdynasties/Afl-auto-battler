@@ -38,7 +38,7 @@ static func open(host: Control, on_done: Callable, pass_line := PASS_PRESEASON) 
 	var shown := MidseasonDraft.pool(GameState).slice(0, SHOWN)
 	for p in shown:
 		var row := HBoxContainer.new()
-		row.add_theme_constant_override("separation", 12)
+		row.add_theme_constant_override("separation", UiKit.Space.PAD)
 		var txt := UiKit.lbl("%s  %d\n%s, %d, %s" % [GameDB.player_display_name(p), int(Rating.ovr(p, 0)),
 				DraftNight.position_words(p), int(p.get("age", 0)), MidseasonDraft.from_word(GameState, p)], 14, UiKit.TEXT)
 		txt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -80,7 +80,10 @@ static func close_open(host: Control) -> bool:
 
 static func _choose(host: Control, overlay: Control, player_id: String, on_done: Callable, pass_line: String) -> void:
 	RookieList.choose(GameState, player_id)
-	GameState.autosave()
+	# Saved on the way out (the next screen change, or the app closing or going
+	# to the background), so the pick answers at once (director, 2026-11-25,
+	# bug bash batch F).
+	GameState.mark_dirty()
 	if is_instance_valid(overlay):
 		overlay.name = NAME + "Closed"
 		overlay.queue_free()

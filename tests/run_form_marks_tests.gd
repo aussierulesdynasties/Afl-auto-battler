@@ -31,6 +31,14 @@ func _check(condition: bool, message: String) -> void:
 		push_error(message)
 
 
+## The oval tile (a Button) a label sits in.
+func _tile_of(n: Node) -> Button:
+	var up := n.get_parent()
+	while up != null and not (up is Button):
+		up = up.get_parent()
+	return up as Button
+
+
 func _t(test: String, args := []) -> Variant:
 	return await Ran.one(self, test, args)
 
@@ -213,9 +221,11 @@ func _senior_sig() -> String:
 	return str(hash(str(parts) + JSON.stringify(_gs.form_log, "", true)))
 
 
-## At 390x844, three tiles in the side carry their form gap and three cards in
-## the twos their reserves form; a real tap on a marked tile, then on Profile,
-## opens his numbers. No advice anywhere.
+## At 390x844, up to three tiles in the side have their Form figure in red
+## (director, 2026-11-25: no extra line, every card one size) with both
+## numbers in the tooltip, and three cards in the twos carry their reserves
+## form; a real tap on a marked tile, then on Profile, opens his numbers.
+## No advice anywhere.
 func _test_selection_marks_taps() -> void:
 	# Three rounds in is the career _test_recorded_and_saved saved; three more
 	# make six. A fresh career is the fallback when that save is missing.
@@ -235,9 +245,9 @@ func _test_selection_marks_taps() -> void:
 	_router.go("selection")
 	await _settle(10)
 	var scene: Node = current_scene
-	var colds: Array = scene.find_children("FormCold_*", "Label", true, false)
+	var colds: Array = scene.find_children("Form_*", "Label", true, false).filter(func(l): return l.has_meta("form_cold"))
 	var hots: Array = scene.find_children("FormHot_*", "Label", true, false)
-	var cold_ids := colds.map(func(l): return str(l.name).trim_prefix("FormCold_"))
+	var cold_ids := colds.map(func(l): return str(l.name).trim_prefix("Form_"))
 	var hot_ids := hots.map(func(l): return str(l.name).trim_prefix("FormHot_"))
 	cold_ids.sort()
 	hot_ids.sort()
@@ -258,14 +268,24 @@ func _test_selection_marks_taps() -> void:
 		var low := (l as Label).text.to_lower()
 		_check(not low.contains("drop") and not low.contains("bring in") and not low.contains("should")
 				and not low.contains("swap"), "A mark is a fact: %s" % (l as Label).text)
+	var uk = load("res://scripts/ui/UiKit.gd")
+	var sizes := {}
+	for t in scene.find_children("Spot_*", "Button", true, false):
+		sizes[str((t as Control).size.round())] = true
+	_check(sizes.size() == 1, "A red Form figure adds no line: every card on the oval one size (%s)" % str(sizes.keys()))
 	for l in colds:
-		_check((l as Label).is_visible_in_tree() and (l as Label).get_global_rect().size.x > 0.0
-				and (l as Label).get_parent_control().get_parent_control().get_global_rect().encloses((l as Label).get_global_rect().grow(-1.0)),
+		var cid_l := str((l as Label).name).trim_prefix("Form_")
+		var t := _tile_of(l)
+		_check((l as Label).is_visible_in_tree() and t != null and t.get_global_rect().encloses((l as Label).get_global_rect().grow(-1.0)),
 				"%s shows inside its tile" % (l as Label).name)
+		_check((l as Label).get_theme_color("font_color").is_equal_approx(uk.BAD),
+				"%s: his Form figure is red" % (l as Label).name)
+		_check(t != null and t.tooltip_text.contains(_rf.cold_full(expect["cold"][cid_l])),
+				"%s: the tooltip gives both numbers" % (l as Label).name)
 	if colds.is_empty():
 		return
-	var cid := str((colds[0] as Label).name).trim_prefix("FormCold_")
-	var tile: Button = (colds[0] as Label).get_parent().get_parent() as Button
+	var cid := str((colds[0] as Label).name).trim_prefix("Form_")
+	var tile: Button = _tile_of(colds[0])
 	var why: String = await Tap.tap(tile)
 	await _settle()
 	_check(why == "", "A real tap reaches the marked tile (%s)" % why)

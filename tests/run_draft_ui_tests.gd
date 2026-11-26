@@ -1540,6 +1540,10 @@ func _test_first_offseason() -> void:
 	_check(why == "" and _state.my_club == "GEE" and gate != null and _state.first_offseason == 1
 			and _state.offseason_open() and ui.find_child("DraftWorkspace", true, false) == null,
 			"A finger on Geelong opens the 2026 off-season before the draft (%s)" % why)
+	# Bug bash batch F (P1-9; director 2026-11-25, "Greyed, red line"): before
+	# Start the draft, a Combine prospect's Sign is greyed under the red line,
+	# and a finger on it picks nobody.
+	await _sign_waits_for_the_draft(ui)
 	# Every real contract runs on: nobody is out of contract in this window.
 	var expiring := 0
 	var listed := 0
@@ -1571,8 +1575,30 @@ func _test_first_offseason() -> void:
 	var start: Node = draft_ui.find_child("FirstOffseasonStart", true, false)
 	_check(start != null and (start as Button).text == "Start the draft",
 			"Back at the draft, the off-season's screen is still up")
+	# Bug bash batch F (M-5; director 2026-11-25, "Football line"): closing the
+	# window takes a moment, so the cover and its line go up before it runs.
+	var wipe := root.get_node("ScreenTransition")
+	var cover_line: Label = wipe.get_node("CoverLine")
+	wipe.set("test_cover", true)
+	# Looked at every frame from the tap on: the first frame the line is up
+	# says whether the window was still open.
+	var seen := {"up": false, "before": false}
+	var look := func():
+		if not seen["up"] and cover_line.visible and cover_line.text == "Starting the draft...":
+			seen["up"] = true
+			seen["before"] = _state.first_offseason == 1
+	process_frame.connect(look)
 	why = await Tap.tap(start)
+	for i in range(1200):
+		if not bool(wipe.get("busy")):
+			break
+		await process_frame
+	process_frame.disconnect(look)
+	wipe.set("test_cover", false)
 	await _settle()
+	_check(seen["up"] and seen["before"],
+			"A finger on Start the draft puts up the cover with \"Starting the draft...\" before the window closes (line %s, before %s)" % [
+			seen["up"], seen["before"]])
 	var signed := 0
 	for code in _state.league_lists:
 		for p in _state.league_lists[code]:
@@ -1590,6 +1616,56 @@ func _test_first_offseason() -> void:
 	_check(short == 0, "Every Geelong contract still runs into 2027")
 	draft_ui.queue_free()
 	await _settle()
+
+
+## The opening off-season's Combine: a prospect's sheet keeps Sign greyed
+## with the line above it, and a finger on Sign picks nobody (bug bash
+## 2026-11-25, P1-9: one tap made our pick and ran 16 rival picks).
+func _sign_waits_for_the_draft(ui: Control) -> void:
+	var picks_before: int = _state.draft.count()
+	var at_before := int(_state.draft.pick_index)
+	var why: String = await Tap.tap(ui.find_child("CombineEntry", true, false))
+	await _settle()
+	for n in ["CombineIntroOk"]:
+		var ok := ui.find_child(n, true, false) as BaseButton
+		if ok != null and ok.is_visible_in_tree():
+			await Tap.tap(ok)
+			await _settle()
+	var row: BaseButton = null
+	for c in ui.find_children("Prospect_*", "BaseButton", true, false):
+		if (c as BaseButton).is_visible_in_tree():
+			row = c
+			break
+	_check(why == "" and row != null, "The Combine opens in the off-season with its prospects (%s)" % why)
+	if row == null:
+		return
+	why = await Tap.tap(row)
+	await _settle()
+	var sign: Button = ui.find_child("DetailDraft", true, false)
+	var line: Label = ui.find_child("DetailBlocked", true, false)
+	_check(why == "" and sign != null and sign.is_visible_in_tree() and sign.disabled,
+			"A finger on a prospect opens his sheet with Sign there but greyed (%s)" % why)
+	_check(line != null and line.is_visible_in_tree()
+			and line.text == "The National Draft hasn't started. The trade period and free agency are still open."
+			and line.get_theme_color("font_color") == load("res://scripts/ui/UiKit.gd").BAD
+			and sign != null and line.get_global_rect().end.y <= sign.get_global_rect().position.y + 0.5,
+			"Above it, in red: %s" % (line.text if line != null else "no line"))
+	if sign != null:
+		var missed: String = await Tap.tap(sign)
+		await _settle()
+		_check(missed != "" and _state.draft.count() == picks_before and int(_state.draft.pick_index) == at_before
+				and _state.first_offseason == 1,
+				"A finger on the greyed Sign picks nobody and the draft has not moved (%d picks, pick %d)" % [
+				_state.draft.count(), int(_state.draft.pick_index)])
+	var close: Button = ui.find_child("DetailClose", true, false)
+	if close != null:
+		await Tap.tap(close)
+		await _settle()
+	# The Combine has no button of its own to leave by (Android Back closes it).
+	var combine = ui.get("_combine")
+	if is_instance_valid(combine):
+		combine.call("close")
+		await _settle()
 
 
 ## A Forge club signs in the opening off-season (director, 2026-11-25: "WEIRD

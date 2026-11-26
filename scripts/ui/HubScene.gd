@@ -10,6 +10,7 @@ var _finals_overlay: Control = null
 var _settings: Control
 var _root: VBoxContainer
 var _results_overlay: Control
+var _ceremony: PremiershipCeremony   # a simmed Grand Final's, before the results
 var _media_overlay: Control
 var _talk_overlay: Control
 var _midseason_overlay: Control
@@ -69,7 +70,7 @@ func _ready() -> void:
 		fade.tween_interval(0.2)
 		fade.tween_property(margin, "modulate:a", 1.0, 0.3)
 
-	_root = UiKit.vbox(10)
+	_root = UiKit.vbox(UiKit.Space.ROOM)
 	margin.add_child(_root)
 	get_viewport().size_changed.connect(_on_resize)
 	# A draft pick with nobody left to take is no choice: it passes here,
@@ -194,7 +195,7 @@ func _show_season_wrap() -> void:
 		var rows: Array = w.get(part[1], [])
 		if rows.is_empty():
 			continue
-		v.add_child(UiKit.spacer(4))
+		v.add_child(UiKit.spacer(UiKit.Space.TIGHT))
 		v.add_child(UiKit.lbl(str(part[0]), 14, UiKit.MUTED, true))
 		for i in range(rows.size()):
 			var r: Dictionary = rows[i]
@@ -204,7 +205,7 @@ func _show_season_wrap() -> void:
 			v.add_child(l)
 	var trades: Array = w.get("trades", [])
 	if not trades.is_empty():
-		v.add_child(UiKit.spacer(4))
+		v.add_child(UiKit.spacer(UiKit.Space.TIGHT))
 		v.add_child(UiKit.lbl("Trade period", 14, UiKit.MUTED, true))
 		# Every club and every player in the club's colours, red clubs too
 		# (director 2026-11-12, row 176). The lists are read after the trade
@@ -219,7 +220,7 @@ func _show_season_wrap() -> void:
 	# rival's name in its ink. This session's market only (not saved).
 	var lost: Array = GameState.fa_lost_lines()
 	if not lost.is_empty():
-		v.add_child(UiKit.spacer(4))
+		v.add_child(UiKit.spacer(UiKit.Space.TIGHT))
 		v.add_child(UiKit.lbl("Free agency", 14, UiKit.MUTED, true))
 		for i in range(lost.size()):
 			var club := str(lost[i]["club"])
@@ -230,7 +231,7 @@ func _show_season_wrap() -> void:
 			v.add_child(l)
 	var staff: Array = w.get("staff", [])
 	if not staff.is_empty():
-		v.add_child(UiKit.spacer(4))
+		v.add_child(UiKit.spacer(UiKit.Space.TIGHT))
 		v.add_child(UiKit.lbl("Coaching", 14, UiKit.MUTED, true))
 		for line in staff:
 			var l := UiKit.lbl(str(line), 14, UiKit.TEXT)
@@ -238,7 +239,7 @@ func _show_season_wrap() -> void:
 			v.add_child(l)
 	var league: Array = w.get("league_coaches", [])
 	if not league.is_empty():
-		v.add_child(UiKit.spacer(4))
+		v.add_child(UiKit.spacer(UiKit.Space.TIGHT))
 		v.add_child(UiKit.lbl("New senior coaches", 14, UiKit.MUTED, true))
 		for i in range(league.size()):
 			var l := UiKit.lbl(str(league[i]), 14, UiKit.TEXT)
@@ -246,7 +247,7 @@ func _show_season_wrap() -> void:
 			l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			v.add_child(l)
 	if str(w.get("goal", "")) != "":
-		v.add_child(UiKit.spacer(4))
+		v.add_child(UiKit.spacer(UiKit.Space.TIGHT))
 		v.add_child(UiKit.lbl("The board expects", 14, UiKit.MUTED, true))
 		var goal := UiKit.lbl(str(w["goal"]), UiKit.NAME, UiKit.TEXT, true)
 		goal.name = "WrapGoal"
@@ -314,7 +315,7 @@ func _build() -> void:
 	search.custom_minimum_size = Vector2(64, 44)
 	search.add_theme_color_override("font_color", UiKit.MUTED)
 	search.pressed.connect(func(): HubSearch.open(self))
-	var bar_tools := UiKit.hbox(4)
+	var bar_tools := UiKit.hbox(UiKit.Space.TIGHT)
 	bar_tools.add_child(search)
 	bar_tools.add_child(settings)
 	_root.add_child(UiKit.top_bar(_week_title(season), false, bar_tools))
@@ -354,7 +355,7 @@ func _build() -> void:
 			page.add_child(_news_card())
 		page.add_child(ladder)
 	else:
-		var cols := UiKit.hbox(28)
+		var cols := UiKit.hbox(UiKit.Space.SPREAD)
 		cols.name = "HubColumns"
 		page.add_child(cols)
 		var left := UiKit.vbox(UiKit.SECTION)
@@ -366,7 +367,7 @@ func _build() -> void:
 		left.add_child(UiKit.rule())
 		left.add_child(_standing_card())
 		# The front page sits under the ladder, in the space it leaves empty.
-		var right := UiKit.hbox(20)
+		var right := UiKit.hbox(UiKit.Space.WIDE)
 		right.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		right.size_flags_stretch_ratio = 1.25
 		left.size_flags_stretch_ratio = 1.0
@@ -402,7 +403,7 @@ func _build() -> void:
 		# the ladder column, not stretched across the page (director: no
 		# full-width bars on PC).
 		_root.add_child(_bar_air(UiKit.BG, page_scroll))
-		var foot := UiKit.hbox(28)
+		var foot := UiKit.hbox(UiKit.Space.SPREAD)
 		foot.name = "HubFooterWide"
 		_root.add_child(foot)
 		# Under the week column, the week's own decisions (Pick the side, Play
@@ -484,9 +485,9 @@ func _week_title(season: Season) -> String:
 
 
 func _ladder_section(season: Season, table_width := -1.0) -> Control:
-	var v := UiKit.vbox(6)
+	var v := UiKit.vbox(UiKit.Space.CLOSE)
 	v.name = "LadderSection"
-	var head := UiKit.hbox(8)
+	var head := UiKit.hbox(UiKit.GAP)
 	v.add_child(head)
 	# The heading is the way in: the whole season (ladder, every player's
 	# numbers, awards, fixture; director, 2026-10-07) sits
@@ -520,7 +521,7 @@ static func _ladder_hugs(section: Control) -> bool:
 
 ## Your season in a few lines: where you sit, your form, the board.
 func _standing_card() -> Control:
-	var cv := UiKit.vbox(3)
+	var cv := UiKit.vbox(UiKit.Space.THIN)
 	cv.name = "SeasonBlock"
 	cv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var badge := UiKit.club_badge(GameState.my_club, 16, false, true)
@@ -528,7 +529,7 @@ func _standing_card() -> Control:
 	cv.add_child(badge)
 	var lr := GameState.my_ladder_row()
 	# Where you sit, big, in your colour; the record beside it.
-	var pos_row := UiKit.hbox(10)
+	var pos_row := UiKit.hbox(UiKit.Space.ROOM)
 	var pos := UiKit.figure(GameState.ordinal(GameState.my_position()), UiKit.HERO, UiKit.club_vivid(GameState.my_club))
 	pos.name = "LadderPosition"
 	if not _settled:
@@ -776,9 +777,9 @@ func _close_rule() -> void:
 
 
 func _sacked_card() -> Control:
-	var card := UiKit.panel(UiKit.PANEL, 14)
+	var card := UiKit.panel(UiKit.PANEL, UiKit.Space.LOOSE)
 	card.name = "SackedCard"
-	var v := UiKit.vbox(8)
+	var v := UiKit.vbox(UiKit.GAP)
 	card.add_child(v)
 	var retired := ClubMoves.retired(GameState)
 	var jobs := ClubMoves.offers(GameState)
@@ -817,11 +818,11 @@ func _job_offers(v: VBoxContainer, jobs: Array) -> void:
 	v.add_child(head)
 	for o in jobs:
 		var code := str(o["code"])
-		var row := UiKit.vbox(3)
+		var row := UiKit.vbox(UiKit.Space.THIN)
 		row.name = "JobOffer_%s" % code
 		v.add_child(UiKit.rule())
 		v.add_child(row)
-		var name_row := UiKit.hbox(8)
+		var name_row := UiKit.hbox(UiKit.GAP)
 		name_row.add_child(UiKit.club_marker(code))
 		var nm := UiKit.lbl(str(o["name"]), UiKit.NAME, UiKit.club_vivid(code), true)
 		# A wrapping label in a row takes no width of its own: it fills the row.
@@ -861,7 +862,7 @@ func _offer_line(text: String, colour: Color) -> Label:
 
 ## Your coaching record, read out.
 func _record(v: VBoxContainer) -> void:
-	var rec := UiKit.vbox(3)
+	var rec := UiKit.vbox(UiKit.Space.THIN)
 	rec.name = "CoachRecord"
 	rec.add_child(UiKit.lbl("Your record", UiKit.H2, UiKit.TEXT, true))
 	var lines := ClubMoves.record_lines(GameState)
@@ -884,7 +885,7 @@ func _confirm_retire() -> void:
 	warn.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	body.add_child(warn)
 	_record(body)
-	var row := UiKit.hbox(8)
+	var row := UiKit.hbox(UiKit.GAP)
 	var no := _nav_button("Not yet", func(): overlay.queue_free())
 	no.name = "RetireNotYet"
 	var yes := _nav_button("Retire", func():
@@ -938,7 +939,7 @@ func _show_news() -> void:
 ## This week: who you play, the two or three things worth knowing about
 ## them, anything on your side that matters, and the way into the match.
 func _week_section(season: Season) -> Control:
-	var nv := UiKit.vbox(6)
+	var nv := UiKit.vbox(UiKit.Space.CLOSE)
 	nv.name = "ThisWeek"
 	nv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	# The week's headline leads (the poster, on a week with a match: the hub's one
@@ -1053,7 +1054,7 @@ func _week_section(season: Season) -> Control:
 		# Their side as one block under a bar in their colour, in full TEXT: the
 		# coach plans against these, and the bar says whose they are before the
 		# words do (T3.R9; they were grey).
-		var their_block := UiKit.vbox(2)
+		var their_block := UiKit.vbox(UiKit.Space.SLIM)
 		their_block.name = "OppBlock"
 		their_block.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		if standing_text != "":
@@ -1064,7 +1065,7 @@ func _week_section(season: Season) -> Control:
 		# Their list: the club's guernsey and name, then its line (TeamRating).
 		var their_list := GameState.team_outlook(opp)
 		if not their_list.is_empty():
-			var row := UiKit.hbox(6)
+			var row := UiKit.hbox(UiKit.Space.CLOSE)
 			row.name = "OppTeamOutlookRow"
 			var mark := UiKit.club_marker(opp, 18.0)
 			mark.size_flags_vertical = Control.SIZE_SHRINK_CENTER
@@ -1075,7 +1076,7 @@ func _week_section(season: Season) -> Control:
 			row.add_child(tl)
 			their_block.add_child(row)
 		if their_block.get_child_count() > 0:
-			var their_side := UiKit.hbox(10)
+			var their_side := UiKit.hbox(UiKit.Space.ROOM)
 			their_side.name = "OppSide"
 			var bar := ColorRect.new()
 			bar.name = "OppBar"
@@ -1098,7 +1099,7 @@ func _week_section(season: Season) -> Control:
 			told[str(row["id"])] = true
 		var old_club := GameState.old_club_lines(opp, told).slice(0, maxi(0, OldClubLines.MATCH_CAP - former.size()))
 		if not facts.is_empty() or not notes.is_empty() or not former.is_empty() or not old_club.is_empty():
-			nv.add_child(UiKit.spacer(4))
+			nv.add_child(UiKit.spacer(UiKit.Space.TIGHT))
 		# The first fact leads (the danger man, the thing to plan for); the
 		# rest follow in body copy, so three lines are not three equals. Facts
 		# only: the calls that answer them (tag, defensive set-up, game plan)
@@ -1135,11 +1136,11 @@ func _week_section(season: Season) -> Control:
 		# Where the legs are at, one tap from the season line and the plan.
 		var plan_line := SeasonPlanSheet.line(self, func(): _build())
 		if plan_line != null:
-			nv.add_child(UiKit.spacer(4))
+			nv.add_child(UiKit.spacer(UiKit.Space.TIGHT))
 			nv.add_child(plan_line)
 		var ms_card := _milestone_card()
 		if ms_card != null:
-			nv.add_child(UiKit.spacer(4))
+			nv.add_child(UiKit.spacer(UiKit.Space.TIGHT))
 			nv.add_child(ms_card)
 	# The week your season ends has its card, the Grand Final played or not.
 	# An answered card shows what happened here; one still waiting leads the
@@ -1147,7 +1148,7 @@ func _week_section(season: Season) -> Control:
 	for i in range(GameState.week_events.size()):
 		if not bool((GameState.week_events[i] as Dictionary).get("resolved", false)) or _on_sheet(i):
 			continue
-		nv.add_child(UiKit.spacer(4))
+		nv.add_child(UiKit.spacer(UiKit.Space.TIGHT))
 		nv.add_child(_event_card(i))
 	return nv
 
@@ -1188,7 +1189,7 @@ func _open_skip_choice() -> void:
 	var v: VBoxContainer = box["body"]
 	var footer: VBoxContainer = box["footer"]
 	v.add_child(UiKit.heading("Skip ahead", UiKit.H1))
-	var opts := UiKit.vbox(8)
+	var opts := UiKit.vbox(UiKit.GAP)
 	opts.name = "SkipChoices"
 	v.add_child(opts)
 	opts.add_child(_skip_choice_button("SkipChoiceHomeAway", "Skip the home and away",
@@ -1218,7 +1219,7 @@ func _skip_choice_button(id: String, title: String, line: String, to: String) ->
 	for side in ["top", "bottom"]:
 		pad.add_theme_constant_override("margin_" + side, 10)
 	wrap.add_child(pad)
-	var col := UiKit.vbox(2)
+	var col := UiKit.vbox(UiKit.Space.SLIM)
 	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	pad.add_child(col)
 	var name_l := UiKit.lbl(title, UiKit.NAME, UiKit.TEXT, true)
@@ -1305,7 +1306,7 @@ func _skip_show(step: int) -> void:
 			l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			v.add_child(l)
 			if bool(line[2]):
-				v.add_child(UiKit.spacer(2))
+				v.add_child(UiKit.spacer(UiKit.Space.SLIM))
 				v.add_child(UiKit.lbl("Your calls", UiKit.SECONDARY, UiKit.MUTED, true))
 		var go := UiKit.btn("Skip the home and away" if home_away else "Skip the season", UiKit.NAME, true)
 		go.name = "SkipSeasonGo"
@@ -1326,8 +1327,8 @@ func _skip_show(step: int) -> void:
 	lead.name = "SkipLead"
 	lead.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(lead)
-	v.add_child(UiKit.spacer(2))
-	var opts := UiKit.vbox(6)
+	v.add_child(UiKit.spacer(UiKit.Space.SLIM))
+	var opts := UiKit.vbox(UiKit.Space.CLOSE)
 	opts.name = "SkipOptions_" + key
 	v.add_child(opts)
 	for o in q["options"]:
@@ -1342,7 +1343,7 @@ func _skip_show(step: int) -> void:
 ## Back and the way on, side by side (the way on at the right), so the game
 ## plan's five answers fit a phone without a scroll.
 func _skip_pair(back: Button, on: Button) -> Control:
-	var row := UiKit.hbox(8)
+	var row := UiKit.hbox(UiKit.GAP)
 	row.name = "SkipButtons"
 	for b in [back, on]:
 		(b as Control).size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -1370,14 +1371,14 @@ func _skip_option(q: String, o: Dictionary, group: Control) -> Control:
 	for side in ["top", "bottom"]:
 		pad.add_theme_constant_override("margin_" + side, 8)
 	wrap.add_child(pad)
-	var col := UiKit.vbox(2)
+	var col := UiKit.vbox(UiKit.Space.SLIM)
 	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	pad.add_child(col)
 	var name_l := UiKit.lbl(str(o["label"]), UiKit.NAME, UiKit.TEXT, true)
 	name_l.name = "OptionName"
 	col.add_child(name_l)
 	for part in [["Gain", "gain"], ["Cost", "cost"]]:
-		var row := UiKit.hbox(6)
+		var row := UiKit.hbox(UiKit.Space.CLOSE)
 		row.name = "Option" + str(part[0])
 		row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		var tag := UiKit.lbl(str(part[0]), UiKit.SECONDARY, UiKit.MUTED, true)
@@ -1463,9 +1464,9 @@ func _milestone_card() -> Control:
 	var items := Milestones.card_items(GameState)
 	if items.is_empty():
 		return null
-	var panel := UiKit.panel(UiKit.PANEL, 12)
+	var panel := UiKit.panel(UiKit.PANEL, UiKit.Space.PAD)
 	panel.name = "MilestoneCard"
-	var v := UiKit.vbox(4)
+	var v := UiKit.vbox(UiKit.Space.TIGHT)
 	panel.add_child(v)
 	v.add_child(UiKit.lbl("Milestones this week", UiKit.SMALL, UiKit.MUTED, true))
 	for i in range(items.size()):
@@ -1483,9 +1484,9 @@ func _week_jobs_card() -> Control:
 	var call := WeekChecklist.big_call(GameState)
 	if items.is_empty() and call.is_empty():
 		return null
-	var panel := UiKit.panel(UiKit.PANEL, 12)
+	var panel := UiKit.panel(UiKit.PANEL, UiKit.Space.PAD)
 	panel.name = "WeekJobs"
-	var v := UiKit.vbox(2)
+	var v := UiKit.vbox(UiKit.Space.SLIM)
 	panel.add_child(v)
 	var left := WeekChecklist.left(GameState)
 	var head := UiKit.lbl("This week" if left == 0 else "This week  ·  %d to do" % left,
@@ -1510,7 +1511,7 @@ func _week_job_row(text: String, done: bool, route: String, big := false) -> But
 	var b := UiKit.text_action("", UiKit.NAME if big else UiKit.BODY)
 	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	b.custom_minimum_size = Vector2(0, 44)
-	var h := UiKit.hbox(8)
+	var h := UiKit.hbox(UiKit.GAP)
 	h.set_anchors_preset(Control.PRESET_FULL_RECT)
 	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	b.add_child(h)
@@ -1558,7 +1559,7 @@ func _with_jobs_note(row: Control) -> Control:
 	var left := WeekChecklist.left(GameState)
 	if left == 0 or row.find_child("PlayMatch", true, false) == null:
 		return row
-	var box := UiKit.vbox(2)
+	var box := UiKit.vbox(UiKit.Space.SLIM)
 	box.name = "WeekActionsBox"
 	box.size_flags_horizontal = row.size_flags_horizontal
 	box.size_flags_vertical = row.size_flags_vertical
@@ -1575,9 +1576,9 @@ func _with_jobs_note(row: Control) -> Control:
 ## A live MRO sanction can be challenged once before the next round. Keep it
 ## on the weekly hub rather than hiding the decision in the result popup.
 func _tribunal_card() -> Control:
-	var panel := UiKit.panel(UiKit.PANEL, 12)
+	var panel := UiKit.panel(UiKit.PANEL, UiKit.Space.PAD)
 	panel.name = "TribunalCard"
-	var v := UiKit.vbox(6)
+	var v := UiKit.vbox(UiKit.Space.CLOSE)
 	panel.add_child(v)
 	v.add_child(UiKit.lbl("Tribunal", UiKit.BODY, UiKit.TEXT, true))
 	for row in GameState.pending_mro_challenges():
@@ -1643,11 +1644,11 @@ func _show_tribunal_verdict(verdict: Dictionary) -> void:
 	var who := NameInk.label(str(verdict.get("name", "")), _league_names(), UiKit.NAME, UiKit.TEXT, true)
 	who.name = "VerdictPlayer"
 	v.add_child(who)
-	v.add_child(UiKit.spacer(4))
+	v.add_child(UiKit.spacer(UiKit.Space.TIGHT))
 	# The penalty, before and after, as the two figures the sheet is about.
 	var weeks := int(verdict.get("weeks_before", 0))
 	var before := "Fine" if fine else "%d match%s" % [weeks, "" if weeks == 1 else "es"]
-	var pen := UiKit.hbox(16)
+	var pen := UiKit.hbox(UiKit.Space.COLUMN)
 	pen.name = "VerdictPenalty"
 	for col in [["Before", before, UiKit.TEXT, "VerdictBefore"],
 			["Now", "Cleared" if won else before, UiKit.GOOD if won else UiKit.BAD, "VerdictAfter"]]:
@@ -1658,7 +1659,7 @@ func _show_tribunal_verdict(verdict: Dictionary) -> void:
 		c.add_child(f)
 		pen.add_child(c)
 	v.add_child(pen)
-	v.add_child(UiKit.spacer(4))
+	v.add_child(UiKit.spacer(UiKit.Space.TIGHT))
 	var lines := []
 	if won:
 		lines.append(["VerdictBrownlow", "Brownlow: eligible again." if bool(verdict.get("brownlow_ok", false))
@@ -1679,7 +1680,7 @@ func _show_tribunal_verdict(verdict: Dictionary) -> void:
 		l.name = str(item[0])
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(l)
-	v.add_child(UiKit.spacer(4))
+	v.add_child(UiKit.spacer(UiKit.Space.TIGHT))
 	v.add_child(UiKit.lbl("What it cost", UiKit.SECONDARY, UiKit.MUTED, true))
 	for item in [["VerdictRisked", "Risked: %s." % str(verdict.get("risked", ""))],
 			["VerdictPaid", "Paid: %s." % str(verdict.get("paid", ""))]]:
@@ -1703,7 +1704,7 @@ func _close_tribunal_verdict() -> void:
 ## "Gain:" or "Cost:" in label ink, then the line wrapping beside it.
 func _stake_row(line: String, node_name: String) -> Control:
 	var cut := line.find(": ")
-	var item := UiKit.hbox(6)
+	var item := UiKit.hbox(UiKit.Space.CLOSE)
 	item.name = node_name
 	var mk := UiKit.lbl(line.substr(0, cut + 1), UiKit.SECONDARY, UiKit.label_ink(), true)
 	mk.name = "Mark"
@@ -1730,7 +1731,7 @@ func _form_row(form: Dictionary) -> Control:
 			GameState.form_line(form).trim_suffix(last), UiKit.SECONDARY, _form_colour(float(form["value"])))
 	head.name = "FormLine"
 	row.add_child(head)
-	var streak := UiKit.hbox(1)
+	var streak := UiKit.hbox(UiKit.Space.HAIR)
 	streak.name = "FormStreak"
 	row.add_child(streak)
 	for ch in last:
@@ -1805,7 +1806,7 @@ func _week_actions(season: Season) -> Control:
 		var play := _nav_button(_play_label(), _on_play_pressed, true)
 		play.name = "PlayMatch"
 		buttons.append(play)
-	var row := UiKit.hbox(8)
+	var row := UiKit.hbox(UiKit.GAP)
 	row.name = "WeekActions"
 	for b in buttons:
 		row.add_child(b)
@@ -1987,7 +1988,7 @@ func _footer(season: Season, with_sim := true) -> Control:
 	# Four across a 360 px phone: tighter type and padding there, so no
 	# label is cut short.
 	var tight := _content_width() < 380.0 and buttons.size() >= 4
-	var row := UiKit.hbox(4 if tight else 6)
+	var row := UiKit.hbox(UiKit.Space.TIGHT if tight else UiKit.Space.CLOSE)
 	row.name = "HubFooter"
 	for b in buttons:
 		UiKit.set_font_size(b, 13 if tight else 15)
@@ -1997,8 +1998,8 @@ func _footer(season: Season, with_sim := true) -> Control:
 				var sb: StyleBox = b.get_theme_stylebox(state)
 				if sb != null:
 					sb = sb.duplicate()
-					sb.content_margin_left = 4
-					sb.content_margin_right = 4
+					sb.content_margin_left = UiKit.Space.TIGHT
+					sb.content_margin_right = UiKit.Space.TIGHT
 					b.add_theme_stylebox_override(state, sb)
 		# Each button is at least as wide as its own label, so the row's spare
 		# width is shared out beyond that and none is cut short ("Sim the we...").
@@ -2021,7 +2022,7 @@ func _staff_notice() -> Control:
 			reasons.append(str(vac["reason"]))
 	if reasons.is_empty():
 		return null
-	var v := UiKit.vbox(4)
+	var v := UiKit.vbox(UiKit.Space.TIGHT)
 	v.name = "StaffNotice"
 	for r in reasons:
 		var l := UiKit.lbl(r, UiKit.BODY, UiKit.TEXT)
@@ -2043,7 +2044,7 @@ func _staff_notice() -> Control:
 func _approach_cards() -> Control:
 	if GameState.coach_approaches.is_empty():
 		return null
-	var v := UiKit.vbox(6)
+	var v := UiKit.vbox(UiKit.Space.CLOSE)
 	v.name = "CoachApproaches"
 	for i in range(GameState.coach_approaches.size()):
 		var a: Dictionary = GameState.coach_approaches[i]
@@ -2054,7 +2055,7 @@ func _approach_cards() -> Control:
 			done.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			v.add_child(done)
 			continue
-		var card := UiKit.vbox(4)
+		var card := UiKit.vbox(UiKit.Space.TIGHT)
 		card.name = "Approach_%d" % i
 		card.add_child(UiKit.lbl("%s want %s" % [GameDB.club_name(str(a["club"])), who], UiKit.NAME, UiKit.TEXT, true))
 		var why := UiKit.lbl("Our %s. They have offered him the %s job." % [
@@ -2091,7 +2092,7 @@ func _letter_card() -> Control:
 		return null
 	var code := str(l["code"])
 	var mine := GameDB.club_name(GameState.my_club)
-	var v := UiKit.vbox(4)
+	var v := UiKit.vbox(UiKit.Space.TIGHT)
 	v.name = "RivalLetter"
 	var answer := str(l.get("answer", ""))
 	if answer != "":
@@ -2114,7 +2115,7 @@ func _letter_card() -> Control:
 		v.add_child(dl)
 		v.add_child(UiKit.rule())
 		return v
-	var name_row := UiKit.hbox(8)
+	var name_row := UiKit.hbox(UiKit.GAP)
 	name_row.add_child(UiKit.club_marker(code))
 	var nm := UiKit.lbl("A letter from %s" % str(l["name"]), UiKit.NAME, UiKit.club_vivid(code), true)
 	nm.name = "RivalLetterHead"
@@ -2138,10 +2139,13 @@ func _letter_card() -> Control:
 	v.add_child(risk_head)
 	for line in ClubMoves.letter_risk(GameState):
 		v.add_child(_offer_line(line, UiKit.TEXT))
-	var row := UiKit.hbox(8)
+	var row := UiKit.hbox(UiKit.GAP)
+	# His answer opens the off-season (12 s on the hub, bug bash 2026-11-25):
+	# the cover and its line go up first (director, batch F).
 	var stay := _nav_button("Stay put", func():
-		if ClubMoves.decline_letter(GameState):
-			_build())
+		ScreenTransition.run(_offseason_line(), func():
+			if ClubMoves.decline_letter(GameState):
+				_build()))
 	stay.name = "RivalLetterStay"
 	var take := _nav_button("Take the job", func():
 		_move_clubs(code, func(): return ClubMoves.accept_letter(GameState)))
@@ -2153,20 +2157,23 @@ func _letter_card() -> Control:
 	return v
 
 
-## He takes a job (`sign` makes the move). A club yet to play is his from its
-## first National Draft, which opens at once: the club he leaves plays out its
-## off-season under its own staff (GameState.offseason_without_you, row 189),
-## so the cover goes up first and the draft screen follows.
+## He takes a job (`sign` makes the move). Either way the off-season opens, so
+## the cover goes up first (director, 2026-11-25, batch F). A club yet to play
+## is his from its first National Draft, which opens at once: the club he
+## leaves plays out its off-season under its own staff
+## (GameState.offseason_without_you, row 189), and the draft screen follows.
 func _move_clubs(code: String, sign: Callable) -> void:
-	if not ClubMoves.is_joining(GameState, code):
-		if bool(sign.call()):
-			_build()
-		return
-	ScreenTransition.run("Playing out the %d off-season..." % int(GameState.season_year), func():
-		if bool(sign.call()) and GameState.club_yet_to_play():
+	var joining := ClubMoves.is_joining(GameState, code)
+	ScreenTransition.run(_offseason_line(), func():
+		if bool(sign.call()) and joining and GameState.club_yet_to_play():
 			Router.go("draft")
 			return
 		_build())
+
+
+## The cover's line while the off-season opens.
+func _offseason_line() -> String:
+	return "Playing out the %d off-season..." % int(GameState.season_year)
 
 
 ## Where an offering club stands: its ladder finish and why the job is open,
@@ -2180,7 +2187,7 @@ func _where_from(o: Dictionary) -> String:
 ## One answer to an approach: the button, then what it gives and costs and
 ## how he weighs it.
 func _approach_option(i: int, choice: String, text: String, what: String) -> Control:
-	var row := UiKit.vbox(2)
+	var row := UiKit.vbox(UiKit.Space.SLIM)
 	row.add_child(_approach_button(i, choice, text))
 	var col := UiKit.vbox(0)
 	if choice != "go":
@@ -2399,10 +2406,27 @@ func _sim_week() -> void:
 	else:
 		GameState.sim_week()
 	_build()
-	if not GameState.last_results.is_empty():
-		_show_results(GameState.last_results)
-	else:
+	_after_sim()
+
+
+## The simmed week's results; a simmed Grand Final opens its ceremony first.
+func _after_sim() -> void:
+	if GameState.last_results.is_empty():
 		_show_week_ask()
+		return
+	# A simmed Grand Final still lands on the ceremony (design bible 161), with
+	# its own siren, before the week's results.
+	var flag := {}
+	for r in GameState.last_results:
+		if flag.is_empty():
+			flag = PremiershipCeremony.facts(r)
+	if not flag.is_empty():
+		_ceremony = PremiershipCeremony.open(self, flag, {"siren": true})
+		_ceremony.done.connect(func() -> void:
+			_ceremony = null
+			_show_results(GameState.last_results), CONNECT_ONE_SHOT)
+		return
+	_show_results(GameState.last_results)
 
 
 ## What the cover says while the week is simmed.
@@ -2445,6 +2469,9 @@ func _close_finals() -> void:
 func handle_back() -> bool:
 	if MatchKickoff.busy:
 		return true     # the side is on its way out
+	if _ceremony != null and is_instance_valid(_ceremony):
+		_ceremony.finish_now()     # Back leaves the ceremony, as Continue does
+		return true
 	if FirstVisitIntro.close_open(self):
 		return true
 	if TrainingReportSheet.close_top(self):
@@ -2585,7 +2612,7 @@ func _show_midseason_pick() -> void:
 	var shown := MidseasonDraft.pool(GameState).slice(0, MIDSEASON_SHOWN)
 	for p in shown:
 		var row := HBoxContainer.new()
-		row.add_theme_constant_override("separation", 12)
+		row.add_theme_constant_override("separation", UiKit.Space.PAD)
 		var txt := UiKit.lbl("%s  %d\n%s, %d, %s" % [GameDB.player_display_name(p), int(Rating.ovr(p, 0)),
 				DraftNight.position_words(p), int(p.get("age", 0)), MidseasonDraft.from_word(GameState, p)], 14, UiKit.TEXT)
 		txt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -2742,7 +2769,7 @@ func _my_result(v: VBoxContainer, res: Dictionary) -> void:
 	if won and not drew:
 		UiKit.land(verdict, 0.12)
 	for side in [0, 1]:
-		var row := UiKit.hbox(8)
+		var row := UiKit.hbox(UiKit.GAP)
 		row.name = "MyScore_%d" % side
 		var lost_side := not drew and int(s[side]) < int(s[1 - side])
 		var nm := UiKit.ellipsis(GameDB.club_name(str(res["home"] if side == 0 else res["away"])),
@@ -2855,7 +2882,7 @@ func _results_list(results: Array) -> Control:
 			var won: bool = int(s[me]) > int(s[1 - me])
 			verdict = "Draw" if drew else ("Won" if won else "Lost")
 			vcol = UiKit.MUTED if drew else UiKit.margin_colour(won)
-		var sides: BoxContainer = UiKit.vbox(2) if narrow else UiKit.hbox(8)
+		var sides: BoxContainer = UiKit.vbox(UiKit.Space.SLIM) if narrow else UiKit.hbox(UiKit.GAP)
 		sides.name = "Sides"
 		for side in [0, 1]:
 			var code := str(res["home"] if side == 0 else res["away"])
@@ -2869,7 +2896,7 @@ func _results_list(results: Array) -> Control:
 		# Every game keeps the edge's room, so the columns line up; only yours is inked.
 		var game := HBoxContainer.new()
 		game.name = "ResultGame_%d" % i
-		game.add_theme_constant_override("separation", 8)
+		game.add_theme_constant_override("separation", UiKit.GAP)
 		game.set_meta("mine", mine)
 		var edge := ColorRect.new()
 		edge.name = "ClubBar"
@@ -2889,7 +2916,7 @@ func _results_list(results: Array) -> Control:
 func _result_side(code: String, goals: int, behinds: int, role: String, verdict: String,
 		vcol: Color, code_first := true) -> Control:
 	var ink := UiKit.MUTED if role == "lose" else UiKit.TEXT
-	var h := UiKit.hbox(8)
+	var h := UiKit.hbox(UiKit.GAP)
 	h.name = "ResultRow_%s" % code
 	h.set_meta("result", role)
 	var marker := UiKit.club_marker(code)

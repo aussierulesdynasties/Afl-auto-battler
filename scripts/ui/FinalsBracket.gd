@@ -117,7 +117,7 @@ func _build() -> void:
 
 ## Where you stand, in a line; the premiers once it's decided.
 func _status() -> Control:
-	var v := UiKit.vbox(4)
+	var v := UiKit.vbox(UiKit.Space.TIGHT)
 	v.name = "FinalsStatus"
 	v.alignment = BoxContainer.ALIGNMENT_CENTER
 	var f: Dictionary = _season.finals
@@ -186,7 +186,7 @@ func _premiers(prem: String) -> Control:
 	for e in ["left", "right", "top", "bottom"]:
 		m.add_theme_constant_override("margin_" + e, 14)
 	p.add_child(m)
-	var row: BoxContainer = UiKit.hbox(20) if wide else UiKit.vbox(14)
+	var row: BoxContainer = UiKit.hbox(UiKit.Space.WIDE) if wide else UiKit.vbox(UiKit.Space.LOOSE)
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
 	m.add_child(row)
 	var cup := _cup(HERO_CUP_WIDE if wide else HERO_CUP_NARROW)
@@ -233,7 +233,7 @@ static var _cup_mat: ShaderMaterial
 
 
 ## The premiership cup `height` tall, silver as drawn (never tinted).
-func _cup(height: float) -> Control:
+static func _cup(height: float) -> Control:
 	var cup := HonoursArt.view("premiership_cup", height, "", 0, "Premiership cup")
 	var art := cup.find_child("Art_premiership_cup", true, false) as TextureRect
 	if art == null and cup.get_child_count() > 0:
@@ -258,7 +258,7 @@ const RIBBONS_SHADER := "res://assets/honours/honours_tint.gdshader"
 
 ## The ribbons at the cup's height in `club`'s colours, laid exactly over the
 ## cup's picture; null without the files.
-func _ribbons(club: String, height: float) -> Control:
+static func _ribbons(club: String, height: float) -> Control:
 	if not (ResourceLoader.exists(RIBBONS) and ResourceLoader.exists(RIBBONS_MASK) and ResourceLoader.exists(RIBBONS_SHADER)):
 		return null
 	var tex: Texture2D = load(RIBBONS)
@@ -367,7 +367,7 @@ class BracketCanvas extends Control:
 				_nodes[str(m[0])] = n
 				add_child(n)
 		if not bool(_fb._season.finals.get("done", false)):
-			var cup := _fb._cup(FinalsBracket.CUP_H)
+			var cup := FinalsBracket._cup(FinalsBracket.CUP_H)
 			cup.name = "FinalsCup"
 			add_child(cup)
 			_nodes["_cup"] = cup
@@ -493,14 +493,14 @@ func _node(week: int, m: Array) -> Control:
 			UiKit.TEXT if mine else UiKit.AUTO_COLOUR)
 	for st in ["normal", "hover", "pressed", "disabled", "focus"]:
 		b.add_theme_stylebox_override(st, sb)
-	var v := UiKit.vbox(3)
+	var v := UiKit.vbox(UiKit.Space.THIN)
 	v.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 8)
 	var venue := GameDB.ground_shown(_season.finals_venue({"tag": tag, "home": home, "away": away}), _season.year) if home != "" else ""
 	v.add_child(UiKit.ellipsis(str(m[1]) + (("  ·  " + venue) if venue != "" else ""), UiKit.SMALL, UiKit.MUTED))
 	var win := str(_season.finals["slots"].get("W_" + tag, ""))
 	for side in [0, 1]:
 		var code := home if side == 0 else away
-		var h := UiKit.hbox(8)
+		var h := UiKit.hbox(UiKit.GAP)
 		if code == "":
 			h.add_child(UiKit.ellipsis(_waiting(home_slot if side == 0 else away_slot), UiKit.SMALL, UiKit.FAINT))
 		else:

@@ -62,6 +62,18 @@ CLOSE = {  # name: (eye, target, fov)
 if 'glb' in jobs:
     bpy.ops.export_scene.gltf(filepath=os.path.join(out, 'bellerive.glb'), export_format='GLB',
                               use_selection=False, export_cameras=False, export_lights=False)
+    # the seats stay out of the glb: one shell (seat_tmpl.bin, glTF frame) instanced at every seat
+    # (seats_<colour>.bin, row-major 3x4 a seat), the MCG's format (GroundModels._add_seats)
+    import numpy as np
+    for f in os.listdir(out):
+        if f.startswith('seats_') and f.endswith('.bin'):
+            os.remove(os.path.join(out, f))
+    np.array(build.seat_template(), '<f4').tofile(os.path.join(out, 'seat_tmpl.bin'))
+    seats = build.seat_list(); n = 0
+    for c, xf in build.seat_transforms(seats).items():
+        np.array(xf, '<f4').tofile(os.path.join(out, 'seats_%s.bin' % c)); n += len(xf)
+        print('seats', c, len(xf))
+    print('seats in all:', n)
 if 'stills' in jobs:
     for az in (0, 45, 90, 135, 180, 225, 270, 315):
         orbit(az); shot(os.path.join(out, f'turntable_{az:03d}.png'))

@@ -27,9 +27,9 @@ static func open(host: Control, p: Dictionary, on_close: Callable = Callable(),
 	var v: VBoxContainer = box["body"]
 	var nickname_row := profile_body(v, p, host)
 	if nickname_row != null:
-		v.add_child(UiKit.spacer(10))
+		v.add_child(UiKit.spacer(UiKit.Space.ROOM))
 		v.add_child(nickname_row)
-		v.add_child(UiKit.spacer(14))   # clear of Close
+		v.add_child(UiKit.spacer(UiKit.Space.LOOSE))   # clear of Close
 
 	# What the host offers sits in its own block under a rule, so a line about the
 	# action is never read as the end of the scrolled sheet above it.
@@ -154,7 +154,7 @@ static func profile_body(v: VBoxContainer, p: Dictionary, host: Control) -> Cont
 		v.add_child(fl)
 	# His chemistry as a bar (row 125): any club's man, a fact.
 	if TeamFamiliarity.line(p) != "":
-		var fam := UiKit.vbox(2)
+		var fam := UiKit.vbox(UiKit.Space.SLIM)
 		fam.name = "ProfileFamiliarity"
 		fam.add_child(ChemistryMeter.familiarity_row(p, UiKit.club_ink(str(p.get("club", GameState.my_club)))))
 		var fam_cost := UiKit.lbl(TeamFamiliarity.line(p), UiKit.SECONDARY, UiKit.TEXT)
@@ -172,8 +172,8 @@ static func profile_body(v: VBoxContainer, p: Dictionary, host: Control) -> Cont
 	_trust(v, p)
 
 	# How good, and how much room.
-	v.add_child(UiKit.spacer(4))
-	var nums := UiKit.hbox(18)
+	v.add_child(UiKit.spacer(UiKit.Space.TIGHT))
+	var nums := UiKit.hbox(UiKit.SECTION)
 	v.add_child(nums)
 	# POT as your club knows it: exact for yours, a recruiters' range for anyone else.
 	for pair in [[str(int(Rating.ovr(p))), "OVR"], [str(GameState.pot_view(p)["text"]), "POT"]]:
@@ -193,7 +193,7 @@ static func profile_body(v: VBoxContainer, p: Dictionary, host: Control) -> Cont
 		v.add_child(UiKit.lbl("Development focus: %s" % plan, UiKit.SMALL, UiKit.MUTED))
 
 	# What he is picked for.
-	v.add_child(UiKit.spacer(4))
+	v.add_child(UiKit.spacer(UiKit.Space.TIGHT))
 	top_attributes_block(v, p, false, UiKit.BODY, UiKit.SMALL)
 	for t in Traits.of(p):
 		var tl := UiKit.lbl("%s. %s" % [UiKit.trait_label(str(t)), Traits.scout(str(t))], UiKit.SMALL,
@@ -206,7 +206,7 @@ static func profile_body(v: VBoxContainer, p: Dictionary, host: Control) -> Cont
 
 	# What he has done.
 	var prod := PlayerProfile.production(p)
-	v.add_child(UiKit.spacer(4))
+	v.add_child(UiKit.spacer(UiKit.Space.TIGHT))
 	v.add_child(UiKit.lbl(str(prod["title"]), UiKit.SMALL, UiKit.MUTED))
 	var pl := UiKit.lbl(str(prod["line"]) if str(prod["line"]) != "" else "No stats on record.",
 			UiKit.BODY, UiKit.TEXT if str(prod["line"]) != "" else UiKit.MUTED)
@@ -243,7 +243,7 @@ static func profile_body(v: VBoxContainer, p: Dictionary, host: Control) -> Cont
 	var facts: Array = told["facts"]
 	var unplayed := tot == "" and facts.is_empty() and not only_us and story.is_empty()
 	if (tot != "" and not only_us) or not facts.is_empty() or unplayed or not story.is_empty():
-		v.add_child(UiKit.spacer(4))
+		v.add_child(UiKit.spacer(UiKit.Space.TIGHT))
 		v.add_child(UiKit.lbl("Career", UiKit.SMALL, UiKit.MUTED))
 	if not story.is_empty():
 		# One passage beside a bar in his club's colour, set apart from the facts.
@@ -253,7 +253,7 @@ static func profile_body(v: VBoxContainer, p: Dictionary, host: Control) -> Cont
 		var story_box := UiKit.club_section_body(his_club, story_l, name_ink if his_club != "" else UiKit.MUTED)
 		story_box.name = "CareerStoryBox"
 		v.add_child(story_box)
-		v.add_child(UiKit.spacer(6))
+		v.add_child(UiKit.spacer(UiKit.Space.CLOSE))
 	if tot != "" and not only_us:
 		var cl := UiKit.lbl(tot, UiKit.BODY, UiKit.TEXT)
 		cl.name = "ProfileCareer"
@@ -279,19 +279,19 @@ static func profile_body(v: VBoxContainer, p: Dictionary, host: Control) -> Cont
 	if not GameState.list_player(str(p.get("id", ""))).is_empty():
 		var remembered := with_us_block(p)
 		if remembered != null:
-			v.add_child(UiKit.spacer(4))
+			v.add_child(UiKit.spacer(UiKit.Space.TIGHT))
 			v.add_child(remembered)
 
 	# The attributes behind the rating: the deepest layer, last.
 	var has_ratings := p.get("attr") is Dictionary and not (p["attr"] as Dictionary).is_empty()
 	if has_ratings:
-		v.add_child(UiKit.spacer(6))
+		v.add_child(UiKit.spacer(UiKit.Space.CLOSE))
 		v.add_child(UiKit.section("Ratings"))
 		var grid := GridContainer.new()
 		grid.name = "ProfileAttributes"
 		grid.columns = 1 if UiKit.view_width(host) < 520.0 else 2
-		grid.add_theme_constant_override("h_separation", 14)
-		grid.add_theme_constant_override("v_separation", 3)
+		grid.add_theme_constant_override("h_separation", UiKit.Space.LOOSE)
+		grid.add_theme_constant_override("v_separation", UiKit.Space.THIN)
 		v.add_child(grid)
 		var attr: Dictionary = p["attr"]
 		var unknown: Array = p.get("attr_unrecorded", [])
@@ -302,7 +302,7 @@ static func profile_body(v: VBoxContainer, p: Dictionary, host: Control) -> Cont
 		var lead := attr_bar("leadership", "Leadership", float(Leadership.of(p)))
 		lead.name = "ProfileLeadership"
 		grid.add_child(lead)
-		v.add_child(UiKit.spacer(4))
+		v.add_child(UiKit.spacer(UiKit.Space.TIGHT))
 		var lead_note := UiKit.lbl(Leadership.basis_text(), UiKit.SMALL, UiKit.MUTED)
 		lead_note.name = "ProfileLeadershipNote"
 		lead_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -331,7 +331,7 @@ static func top_attributes_block(v: VBoxContainer, p: Dictionary, hidden: bool, 
 		none.name = "TopAttributesNone"
 		v.add_child(none)
 	for t in top:
-		var row := UiKit.hbox(8)
+		var row := UiKit.hbox(UiKit.GAP)
 		row.name = "TopAttr_" + str(t["key"])
 		var sn := UiKit.lbl(str(t["label"]), size, UiKit.TEXT)
 		sn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -364,7 +364,7 @@ static func top_three(p: Dictionary, size: int, one_line := false) -> Control:
 	var box: Container
 	if one_line:
 		var flow := HFlowContainer.new()
-		flow.add_theme_constant_override("h_separation", 14)
+		flow.add_theme_constant_override("h_separation", UiKit.Space.LOOSE)
 		flow.add_theme_constant_override("v_separation", 0)
 		box = flow
 	else:
@@ -375,7 +375,7 @@ static func top_three(p: Dictionary, size: int, one_line := false) -> Control:
 	box.name = "TopThree"
 	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	for t in top:
-		var row := UiKit.hbox(5 if one_line else 8)
+		var row := UiKit.hbox(UiKit.Space.SNUG if one_line else UiKit.GAP)
 		row.name = "TopAttr_" + str(t["key"])
 		row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		var sn := UiKit.line(str(t["label"]), size, UiKit.TEXT)
@@ -418,7 +418,7 @@ static func with_us_block(p: Dictionary) -> Control:
 	var head := Remembered.head(w)
 	if head == "":
 		return null
-	var box := UiKit.vbox(3)
+	var box := UiKit.vbox(UiKit.Space.THIN)
 	box.name = "ProfileWithUs"
 	var title := UiKit.lbl("With us", UiKit.BODY,
 			UiKit.club_name_colour(UiKit.club_ink(GameState.my_club)), true)
@@ -472,7 +472,7 @@ static func _only_club(p: Dictionary, code: String) -> bool:
 
 
 static func attr_bar(key: String, label: String, value: float) -> Control:
-	var h := UiKit.hbox(4)
+	var h := UiKit.hbox(UiKit.Space.TIGHT)
 	h.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var l := UiKit.ellipsis(label, UiKit.SMALL, UiKit.MUTED)
 	l.custom_minimum_size = Vector2(96, 0)
@@ -527,7 +527,7 @@ static func _trust(v: VBoxContainer, p: Dictionary) -> void:
 	if GameState.list_player(id).is_empty():
 		return
 	var key := Trust.player_key(id)
-	var row := UiKit.hbox(8)
+	var row := UiKit.hbox(UiKit.GAP)
 	row.name = "ProfileTrust"
 	# "50 out of 100" wraps as one piece, never "out of" on one line and "100." on the next.
 	var nb := String.chr(0xA0)
@@ -543,7 +543,7 @@ static func _trust(v: VBoxContainer, p: Dictionary) -> void:
 	why.custom_minimum_size = Vector2(72, 48)
 	row.add_child(why)
 	v.add_child(row)
-	var list := UiKit.vbox(4)
+	var list := UiKit.vbox(UiKit.Space.TIGHT)
 	list.name = "TrustReasons"
 	list.visible = false
 	var rule := UiKit.lbl(OPINION_RULE % [GameDB.player_display_name(p), Contracts.REFUSE_BELOW, Contracts.REFUSE_PER_POINT], UiKit.SMALL, UiKit.MUTED)
@@ -567,7 +567,7 @@ static func _trust(v: VBoxContainer, p: Dictionary) -> void:
 ## empty button), else null.
 static func _identity(v: VBoxContainer, p: Dictionary) -> Control:
 	var nick := FictionalIdentity.nickname(p)
-	var row: Control = UiKit.hbox(8)
+	var row: Control = UiKit.hbox(UiKit.GAP)
 	row.name = "ProfileNickname"
 	var nl := UiKit.lbl("\"%s\"" % nick if nick != "" else "", UiKit.BODY, UiKit.MUTED)
 	nl.name = "NicknameText"
@@ -586,7 +586,7 @@ static func _identity(v: VBoxContainer, p: Dictionary) -> Control:
 			edit.custom_minimum_size = Vector2(0, 48)
 			edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			for st in ["normal", "hover", "pressed", "hover_pressed"]:
-				edit.add_theme_stylebox_override(st, UiKit.style(Color.TRANSPARENT, 8, UiKit.RADIUS, UiKit.MUTED))
+				edit.add_theme_stylebox_override(st, UiKit.style(Color.TRANSPARENT, UiKit.GAP, UiKit.RADIUS, UiKit.MUTED))
 		var field := UiKit.search_field(nick, "Nickname, or leave it blank")
 		field.name = "NicknameField"
 		field.max_length = GameState.NICKNAME_MAX
@@ -596,7 +596,7 @@ static func _identity(v: VBoxContainer, p: Dictionary) -> Control:
 		field.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		if nick == "":
 			# The field opens above the button.
-			var stack := UiKit.vbox(6)
+			var stack := UiKit.vbox(UiKit.Space.CLOSE)
 			stack.name = "ProfileNickname"
 			field.custom_minimum_size = Vector2(0, 44)
 			# The nickname line moves into the stack (hidden until one is saved),
@@ -658,7 +658,7 @@ static func synergy_fit_block(v: Control, p: Dictionary, size: int) -> void:
 	var rows: Array = GameState.synergy_fit(p)
 	if rows.is_empty():
 		return
-	var box := UiKit.vbox(2)
+	var box := UiKit.vbox(UiKit.Space.SLIM)
 	box.name = "SynergyFit"
 	v.add_child(box)
 	for r in rows:

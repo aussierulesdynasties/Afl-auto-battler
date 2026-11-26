@@ -1,0 +1,18 @@
+# subiaco: our land vs Google Earth
+
+**PASS.** 8 judged spots of 10; ours minus GE: mean -0.44 m, RMS 0.54 m, worst 0.78 m. Source: Geoscience Australia, DEM of Australia derived from LiDAR 5 Metre Grid, CC BY 4.0.
+
+Rule: every judged spot within 1.5 m (GE whole metres at the spot and the centre, plus 0.5 m). A spot where GE reads more than 3 m above our land is a roof, tree or car under the pointer and is listed, not judged.
+
+| spot | x east | y north | GE rel. turf | ours | ours - GE | |
+|---|---|---|---|---|---|---|
+| s00 | 279.6 | 149.6 | 3.0 | -3.75 | -6.75 | surface (roof/tree/car), not judged |
+| s01 | 173.5 | 236.1 | -3.0 | -3.31 | -0.31 | judged |
+| s02 | -15.9 | 306.0 | 8.0 | 1.88 | -6.12 | surface (roof/tree/car), not judged |
+| s03 | -228.9 | 210.0 | 0.0 | -0.16 | -0.16 | judged |
+| s04 | -362.5 | 75.6 | -4.0 | -4.7 | -0.7 | judged |
+| s05 | -285.6 | -137.9 | -8.0 | -7.88 | 0.12 | judged |
+| s06 | -117.8 | -273.5 | -8.0 | -8.29 | -0.29 | judged |
+| s07 | 45.7 | -275.4 | -6.0 | -6.78 | -0.78 | judged |
+| s08 | 113.3 | -276.1 | -4.0 | -4.77 | -0.77 | judged |
+| s09 | 272.5 | -145.5 | 3.0 | 2.34 | -0.66 | judged |
