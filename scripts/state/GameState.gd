@@ -336,7 +336,10 @@ var season_year := 2026:
 		EraRules.list_ahead = offseason_year != 0 and offseason_year == value
 ## Rolled once per career: decides each generated draft class's quality tier
 ## (Prospects.class_tier), so a reload never re-rolls a class.
-var career_seed := 0
+var career_seed := 0:
+	set(v):
+		career_seed = v
+		_career_seed_from_clock = false
 ## Season conditioning (Conditioning.gd): club code -> this season's record
 ## {"year", "changes": [[week, plan]], "offset"}. Missing = Steady.
 var conditioning := {}
@@ -451,7 +454,18 @@ var event_sheets := true
 ## A new draft or season is seeded from the clock, so no two careers play
 ## alike. Measurement tools set this so a career replays exactly: each of
 ## those seeds then comes from it and the year (_clock_seed). 0 in the game.
-var replay_seed := 0
+## Set after reset() (as most tests do) it also seeds the career reset() just
+## gave a clock seed, unless career_seed was set by hand since: with the clock
+## seed left in, the first career of a run played a different league every run
+## (test suite audit, 2026-11-26).
+var replay_seed := 0:
+	set(v):
+		replay_seed = v
+		if v != 0 and _career_seed_from_clock:
+			_career_seed_from_clock = false
+			career_seed = 1 + posmod(v * 7919 + 101, 999999)
+## True from a reset() with no replay_seed until career_seed is set any other way.
+var _career_seed_from_clock := false
 ## Set by small edits (training, draft picks) that save on the next screen
 ## change or when the app is backgrounded, rather than on every tap.
 var _dirty := false
@@ -1960,6 +1974,7 @@ func reset(next_dataset := Datasets.DEFAULT) -> void:
 	# random one made the same league play out differently each run.
 	career_seed = randi_range(1, 999999) if replay_seed == 0 \
 			else 1 + posmod(replay_seed * 7919 + 101, 999999)
+	_career_seed_from_clock = replay_seed == 0
 	conditioning = {}
 	preseason = {}
 	plan_known = {}

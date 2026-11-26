@@ -234,13 +234,16 @@ func _test_tagger() -> void:
 	_check(Roles.is_tagger(stopper) and Roles.label(stopper) == "Tagger", "A stopper is a tagger")
 	_check(not Roles.is_tagger(star), "A star ball-winner who tackles is not a tagger")
 	# How rare a tagger is, on the data without the hand-set OVR rows.
+	var skip: bool = GameDB.skip_ovr_overrides
 	GameDB.skip_ovr_overrides = true
 	GameDB.reload()
 	var n := 0
 	for p in GameDB.players:
 		if Roles.is_tagger(p):
 			n += 1
-	GameDB.skip_ovr_overrides = false
+	# Back to the suite's own setting (AFL_SKIP_OVR_ROWS), not "rows on": every
+	# later function would otherwise play on the director's hand-set rows.
+	GameDB.skip_ovr_overrides = skip
 	GameDB.reload()
 	_check(BalanceGate.held(n >= 8 and n <= 40, "tagger count 8-40"), "Taggers are a specialist few (%d)" % n)
 	# In a match, a tagger on the ground makes the tag bite harder.

@@ -8,7 +8,8 @@ scene down to the backdrop the match loads:
     python reduce.py -- <proto>/out/<ground>/scene.blend assets/grounds/<slug>/<slug>_backdrop.glb [tex_px near_r mid_keep far_keep inner skyline.json]
 
 It writes `<slug>_backdrop_part1.glb` (everything but the trees) and `_part2.glb` (the trees), each
-under GitHub's 50 MB. Run it with Blender's Python module (`pip install bpy==5.2.4`, Python 3.13), with
+under GitHub's 50 MB. Publish them with `tools/ground_assets.sh publish` (docs/GROUND_ASSETS.md); they are not
+committed here. Run it with Blender's Python module (`pip install bpy==5.2.4`, Python 3.13), with
 the scene's textures where the .blend points (`//../../tex`, `//../../data/<ground>/prep`); the
 scenes and their textures live in the scene pipeline's scratch folder on the director's PC.
 
