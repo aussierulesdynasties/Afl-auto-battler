@@ -439,6 +439,7 @@ func _resize(sc: ScrollContainer, label: String, res: Array) -> void:
 ## sits below still takes a real tap once scrolled to.
 func _test_hub_fold() -> void:
 	const Tap := preload("res://tests/tap.gd")
+	var tapped := ""
 	for club in ["WBD", "FRE", "COL", "MEL", "SYD", "GEE"]:
 		_state.reset()
 		_state.start_season(club, _db.club_list(club))
@@ -492,12 +493,15 @@ func _test_hub_fold() -> void:
 					"%s: %s is cut by the fold with no title showing (%d-%d, fold %d, edge %d)" % [club, n.name, r.position.y, r.end.y, fold, edge])
 			if below == null and n is Button and r.position.y >= edge:
 				below = n
-		if below != null and club == "GEE":
+		# Which hub runs past the fold depends on its cards, which change with the
+		# club's list, so the first one that does takes the tap.
+		if below != null and tapped == "":
+			tapped = club
 			sc.scroll_vertical = int(below.get_global_rect().position.y - fold + 60.0)
 			await _settle(4)
 			var why: String = await Tap.tap(below)
-			_check(why == "", "A real tap reaches the button below the fold (%s)" % why)
-		_check(club != "GEE" or below != null, "GEE: a button sits below the fold to tap")
+			_check(why == "", "%s: a real tap reaches the button below the fold (%s)" % [club, why])
+	_check(tapped != "", "One of the six hubs has a button below the fold to tap")
 
 
 func _test_hub_round1(size: Vector2i) -> void:

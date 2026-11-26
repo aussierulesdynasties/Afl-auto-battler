@@ -1113,7 +1113,7 @@ func _test_rival_says_why() -> void:
 	# A first-choice ruck already: a second star ruck would sit behind him.
 	d = Draft.new(_pool(), ["CAR", "GEE"], 123)
 	d.wanted()["player_2"] = true
-	(d.club_lists["CAR"] as Array).append(_held("ruck_star", "RUCK", 72))
+	(d.club_lists["CAR"] as Array).append(_held("ruck_star", "RUCK", Draft.RUCK_FIRST_CHOICE + 2))
 	why = {}
 	d._best_ai_pick("CAR", why)
 	_check(str(why.get("player_2", "")) == "draft_first_ruck", "A first-choice ruck on the list: a star ruck is passed on (%s)" % str(why))

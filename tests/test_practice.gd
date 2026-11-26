@@ -370,7 +370,9 @@ func _lists_after(games: float) -> Dictionary:
 	for code in ["FRE", "WCE"]:
 		var rows := {}
 		for p in GameState.season.lists[code]:
-			rows[str(p["id"])] = "%d/%d" % [int(Ovr.of(p)), int(p.get("xp", 0))]
+			# XP is spent into single attributes, which can leave his whole OVR
+			# where it was: the attributes say whether he developed.
+			rows[str(p["id"])] = "%d/%s" % [int(p.get("xp", 0)), str(p.get("attr", {}))]
 		out[code] = rows
 	PreSeason.reload()
 	return out

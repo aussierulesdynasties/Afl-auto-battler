@@ -31,7 +31,7 @@ func run() -> void:
 	_t("_test_intake_and_second_season")
 	_t("_test_bad_file_is_ignored")
 	_t("_test_old_club_code_migrates")
-	_t("_test_old_version_save_upgrades")
+	_t("_test_old_version_save_refused")
 	_t("_test_unreadable_save_says_why")
 	_t("_test_safe_replacement")
 	_t("_test_fictional_identity")
@@ -42,7 +42,7 @@ func run() -> void:
 	_t("_test_bug_bash_round_trips")
 	_t("_test_export_import_round_trip")
 	_t("_test_bad_backup_leaves_career")
-	_t("_test_old_save_backup_imports")
+	_t("_test_old_save_backup_refused")
 	_t("_test_earlier_saves_restore")
 	_t("_test_save_costs")
 	_t("_test_honoured_ratings_survive_reload")
@@ -636,11 +636,10 @@ func _test_intake_and_second_season() -> void:
 
 
 ## A real save written by the 2026-09-30 build (commit ef3551ca, save
-## version 1, St Kilda still SKN, no season stats): St Kilda after two
-## rounds. It must open, upgraded, never drop to the menu (T5.Q24).
+## version 1, St Kilda after two rounds). A save from before the rating rebuild
+## (CareerSave.FIRST_LOADABLE; director, 2026-11-25: "i dont care about old
+## saves") does not open: the menu says why, in words, and offers no Continue.
 const OLD_SAVE_FIXTURE := "res://tests/fixtures/career_v1_2026-09-30.save.gz"
-const OLD_SAVE_LADDER := ["GWS 8", "PAD 8", "CAR 8", "ADE 6", "BRL 6", "FRE 4", "RIC 4", "GEE 4", "WCE 4",
-		"GCS 4", "ESS 4", "HAW 4", "STK 4", "WBD 4", "NTH 0", "SYD 0", "COL 0", "MEL 0"]
 
 
 func _put_old_save() -> void:
@@ -652,35 +651,19 @@ func _put_old_save() -> void:
 	f.close()
 
 
-func _test_old_version_save_upgrades() -> void:
+func _test_old_version_save_refused() -> void:
 	_put_old_save()
 	var f := FileAccess.open(GameState.save_path, FileAccess.READ)
 	var raw = f.get_var()
 	f.close()
-	_check(raw is Dictionary and int(raw.get("version", 0)) == 1 and CareerSave.VERSION > 1,
-			"The fixture really is an older-version save")
-	_check(GameState.has_saved_career() and GameState.saved_career_problem() == "",
-			"The menu offers Continue for it, with no problem line")
-	var meta := GameState.saved_career_meta()
-	_check(str(meta.get("club", "")) == "STK" and str(meta.get("stage", "")) == "Round 3",
-			"Its header reads St Kilda, round 3: %s" % meta)
+	_check(raw is Dictionary and int(raw.get("version", 0)) == 1 and CareerSave.FIRST_LOADABLE > 1,
+			"The fixture really is a save from before the rating rebuild")
+	_check(not GameState.has_saved_career(), "The menu offers no Continue for it")
+	_check(GameState.saved_career_problem() == GameState.SAVE_TOO_OLD,
+			"It says the save is from before the new player ratings, not that it is damaged (%s)" % GameState.saved_career_problem())
 	GameState.reset()
-	_check(GameState.load_career(), "The older save opens")
-	_check(GameState.my_club == "STK" and GameState.season != null and GameState.season.round_index == 2,
-			"It is the same career: St Kilda, two rounds played")
-	var ladder: Array = GameState.season.ladder_sorted().map(
-			func(r): return "%s %d" % [r["code"], int(r["pts"])])
-	_check(ladder == OLD_SAVE_LADDER, "The ladder is as it was saved: %s" % [ladder])
-	_check(GameState.my_list.size() > 30 and GameState.my_list[0] is Dictionary,
-			"Its list is back")
-	GameState.advance()
-	_check(GameState.season.round_index == 3, "The upgraded career plays on")
-	_check(GameState.save_career(), "It saves again")
-	f = FileAccess.open(GameState.save_path, FileAccess.READ)
-	raw = f.get_var()
-	f.close()
-	_check(int(raw.get("version", 0)) == CareerSave.VERSION, "...as the current version")
-	_check(GameState.load_career() and GameState.season.round_index == 3, "...and reloads")
+	_check(not GameState.load_career() and GameState.season == null, "It does not open")
+	GameState.delete_saved_career()
 
 
 ## A save that cannot be opened says so on the menu instead of the menu
@@ -1222,23 +1205,18 @@ func _test_bad_backup_leaves_career() -> void:
 			"The career still opens where it was")
 
 
-## A save file copied out of an old build (version 1) is a valid backup: it
-## imports, upgraded, as the career it was (T5.Q24).
-func _test_old_save_backup_imports() -> void:
+## A save file copied out of a build from before the rating rebuild (version 1)
+## is not imported: the coach is told why, and nothing is written.
+func _test_old_save_backup_refused() -> void:
 	GameState.delete_saved_career()
 	GameState.reset()
 	var gz := FileAccess.get_file_as_bytes(OLD_SAVE_FIXTURE)
 	var raw := gz.decompress_dynamic(-1, FileAccess.COMPRESSION_GZIP)
-	_check(GameState.import_career(raw) == "", "The old save imports")
-	_check(GameState.load_career() and GameState.my_club == "STK" and GameState.season.round_index == 2,
-			"It opens as St Kilda after two rounds")
-	var ladder: Array = GameState.season.ladder_sorted().map(
-			func(r): return "%s %d" % [r["code"], int(r["pts"])])
-	_check(ladder == OLD_SAVE_LADDER, "With its ladder")
-	var f := FileAccess.open(GameState.save_path, FileAccess.READ)
-	var blob = f.get_var()
-	f.close()
-	_check(int(blob.get("version", 0)) == CareerSave.VERSION, "It is stored as the current version")
+	var why := GameState.import_career(raw)
+	_check(why.contains("before the new player ratings") and why.contains("unchanged"),
+			"The old backup is refused, saying why (%s)" % why)
+	_check(not GameState.has_saved_career() and not FileAccess.file_exists(GameState.save_path),
+			"Nothing was written in its place")
 
 
 ## The last five points of the career are kept; saving twice in one week

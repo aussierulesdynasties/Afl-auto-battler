@@ -1798,11 +1798,15 @@ func _test_ladder_rating_is_preview() -> void:
 			odd = str(c)
 			break
 	var saved: Array = (season.lists[odd] as Array).duplicate(true)
-	# High OVR on paper, poor at everything the match engine reads.
+	# High OVR on paper, poor at everything the match engine reads. OVR is read from
+	# the attributes now, so every player is a key defender, great at what his OVR
+	# weighs (one-on-one, marking, reading the play) and poor at the contest, attack
+	# and pressure the side's strength is read from (Squad).
+	var kd: Dictionary = Rating.WEIGHTS["Key Defender"]
 	for p in season.lists[odd]:
-		Ovr.to(p, 99)
+		p["apos"] = "Key Defender"
 		for k in (p["attr"] as Dictionary):
-			p["attr"][k] = 30
+			p["attr"][k] = 99 if kd.has(k) and not ["pressure", "discipline"].has(k) else 1
 	var ovr_better := 0
 	for c in season.lists:
 		if str(c) != odd and TR.rating(season.lists[c]) > TR.rating(season.lists[odd]):

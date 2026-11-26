@@ -435,12 +435,15 @@ func _test_forward_types() -> void:
 			"A prolific medium forward who marks well is not a key forward")
 	_check(PlayerProfile.forward_type(fwd.call(200.0, 5, 40)) == "Forward",
 			"Height alone does not make a key forward")
-	_check(PlayerProfile.forward_type(fwd.call(190.0, 99, 80)) == "Key forward"
+	# 191 cm: the best mark in the league (one 2026 forward has 99, so 99 itself
+	# sits just under the top) is key just under the rule of thumb.
+	_check(PlayerProfile.forward_type(fwd.call(191.0, 99, 80)) == "Key forward"
 			and PlayerProfile.forward_type(fwd.call(193.0, 20, 80)) != "Key forward",
 			"192 cm is not a cut-off: a great mark just under it is key, a weak one over it is not")
 	_check(PlayerProfile.forward_type(fwd.call(0.0, 95, 95)) == "Forward", "No height on record: plain Forward")
 	# Jamie Elliott is 178 cm (his height once came from a 1991 namesake).
-	var want := {"Toby Greene": "Forward", "Charlie Cameron": "Forward", "Jamie Elliott": "Small forward",
+	# (Toby Greene is a Mid-Forward, so a midfielder first: _test_listed_second_positions.)
+	var want := {"Charlie Cameron": "Forward", "Jamie Elliott": "Small forward",
 			"Charlie Curnow": "Key forward", "Jeremy Cameron": "Key forward", "Harry McKay": "Key forward",
 			"Maurice Rioli": "Small forward", "Cody Weightman": "Small forward",
 			# Three games cannot make him a key defender or a rebounder.
@@ -497,23 +500,23 @@ func _test_identities() -> void:
 	_check(fwds >= 180, "Forwards are forwards first: enough for six a side and cover (%d)" % fwds)
 
 
-## His club's listing is his first position (director, 2026-11-06, T8.Q11,
-## row 91): a listed forward or defender is never a midfielder or the other
-## line on the numbers; only a ruck reading (real hit-out volume) stands. A
-## listed forward who also gets plenty of the ball keeps MID as a second
-## position.
+## His line is his AFL position's, and his second line is where Champion Data
+## rated him (director, 2026-11-25, question box: "Where CD rated him"): a line
+## he played 5+ games in for a season of the three before the data season. A
+## general forward CD never rated in the midfield keeps one line, however much
+## of the ball he gets; a Mid-Forward is a midfielder who can play forward.
 func _test_listed_second_positions() -> void:
 	var by_name := {}
 	for p in GameDB.players:
 		by_name[str(p.get("real_name", ""))] = p
 	var tag := func(n: String) -> String:
 		return Ratings.role_tag(by_name[n]) if by_name.has(n) else "?"
-	for n in ["Joe Richards", "Connor Macdonald", "Murphy Reid"]:
-		_check(tag.call(n) == "FWD/MID", "%s is a listed forward who goes through the middle (%s)" % [n, tag.call(n)])
+	for n in ["Joe Richards", "Connor Macdonald", "Murphy Reid", "Gryan Miers"]:
+		_check(tag.call(n) == "FWD", "%s is a forward, with no second line CD rated him in (%s)" % [n, tag.call(n)])
 	for n in ["Beau McCreery", "Milan Murdock", "Jack Ginnivan", "Kade Chandler", "Max King",
 			"Colby McKercher", "Chris Scerri", "Todd Marshall"]:
 		_check(tag.call(n).begins_with("FWD"), "%s is a forward (%s)" % [n, tag.call(n)])
-	_check(tag.call("Gryan Miers") == "FWD/MID", "Gryan Miers is a forward who can go through the middle (%s)" % tag.call("Gryan Miers"))
+	_check(tag.call("Toby Greene") == "MID/FWD", "Toby Greene (Mid-Forward) is a midfielder who plays forward too (%s)" % tag.call("Toby Greene"))
 	for n in ["Zac Williams", "Liam Baker", "Jhye Clark", "Sam De Koning"]:
 		_check(tag.call(n).begins_with("DEF"), "%s is a defender (%s)" % [n, tag.call(n)])
 	# His line is his AFL position's (docs/RATING_REBUILD.md §2, Lines).

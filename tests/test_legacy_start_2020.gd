@@ -57,7 +57,8 @@ func _test_the_2020_set() -> void:
 	_check(clubs.size() == 18, "18 clubs have 2020 lists (%d)" % clubs.size())
 	var fyfe := false
 	for p in GameDB.club_list("FRE"):
-		if str(p.get("last", "")) == "Fyfe" and int(Ovr.of(p, 0)) >= 85:
+		# A star reads 80 or more (director, 2026-11-26).
+		if str(p.get("last", "")) == "Fyfe" and int(Ovr.of(p, 0)) >= 80:
 			fyfe = true
 	_check(fyfe, "Nat Fyfe, the 2019 Brownlow medallist, is at Fremantle and rated as one")
 

@@ -21,7 +21,9 @@ const SUITE_SEED := 1990
 ## Both moved again with the real 2026 National Draft (2026-11-21): the class
 ## gained the 21 men drafted from outside the rankings, and an off-season
 ## signing counts the opening-draft picks a club has already made toward its 44.
-const GOLDEN_LOAD := "490f9cee806122afc1502cd7c8c79b58"  # moved with Canberra's name and colours (the Owls), then the real 2026 draft
+## The rating rebuild (2026-11-26: every player's attributes from the record, his line
+## from his AFL position, OVR never stored) redrew the load and the real-lists print.
+const GOLDEN_LOAD := "790957653b404bc46322e04f468a9797"  # moved with Canberra's name and colours (the Owls), the real 2026 draft, then the rating rebuild
 ## It moved again with row 199 (2026-11-15): the off-season before the
 ## opening draft closes with the rivals signing free agents, so the lists differ;
 ## the level ladder going A-Z by club (#1633) then changed the order the clubs
@@ -31,7 +33,7 @@ const GOLDEN_LOAD := "490f9cee806122afc1502cd7c8c79b58"  # moved with Canberra's
 ## redrew it again. Hold room (bug bash batch B, 2026-11-25: every signing
 ## leaves a club the room to fill its list and take three draftees) changes
 ## who the rivals sign before the opening draft.
-const GOLDEN_REAL := "442a0a1858bf8f009a6a49c76e067961"
+const GOLDEN_REAL := "cf1c91f55f0a8e1d9bf75175bde91ff2"
 ## A played match's floating point differs between Windows and Linux builds of
 ## Godot, so the season has one fingerprint per platform; each was taken on
 ## main before the change (Linux: run_on_github run 43024085570). Removing
@@ -65,7 +67,9 @@ const TEAM_BOOKKEEPING_KEYS := ["pressure_acts_dhalf", "tackles_i50", "poss_d50"
 		"d50_tackled", "d50_rushed", "d50_chips"]
 ## Team counts named by prefix (one key per way a defensive-50 chain ends).
 const TEAM_BOOKKEEPING_PREFIXES := ["d50_end_"]
-const GOLDEN_SEASON := {"Windows": "3a31d105f21a0536fbe1b09499ffd107", "Linux": "bf219aeb96e2f0fbc6fa30160822157c"}
+## The rating rebuild (2026-11-26) redrew it (new attributes, plan-fit anchors): Windows
+## from a local run on that branch, Linux from its CI run.
+const GOLDEN_SEASON := {"Windows": "880304b57987df53a068ba7e4ecd6059", "Linux": "bf219aeb96e2f0fbc6fa30160822157c"}
 
 ## A small league standing in for a legacy set until the 1990 files ship:
 ## 42 real players re-dated to a 1989 data season, a 1990 first season, and
