@@ -26,6 +26,7 @@ var _embedded := false
 var _root: VBoxContainer
 var _column: VBoxContainer
 var _top_skip: Button
+var _sheet: ScrollContainer
 var _answered := false
 
 
@@ -68,34 +69,22 @@ func _build() -> void:
 	var vh := UiKit.view_height(self)
 	var wide := ScreenLayout.roomy(vw, vh)
 	_root.add_child(_bar())
-	var where := where_text(GameState.media_conference)
-	if where != "":
-		var w := UiKit.lbl(where, UiKit.SMALL, UiKit.MUTED)
-		w.name = "MediaWhere"
-		w.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		_root.add_child(w)
-	var page := UiKit.vbox(UiKit.Space.LOOSE)
-	page.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_root.add_child(UiKit.scroll(page))
-	_column = UiKit.vbox(UiKit.Space.COLUMN if wide else UiKit.Space.OPEN)
-	_column.name = "MediaAnswers"
-	_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var scene: MediaConferenceVignette = null
 	if wide:
-		var row := UiKit.hbox(UiKit.Space.GUTTER)
-		row.name = "MediaRow"
-		page.add_child(row)
-		if GameState.vignettes_on():
-			var stage_w := minf(vw * 0.5, (vh - 120.0) * 1.6)
-			var stage := Control.new()
-			stage.name = "MediaConferenceStage"
-			stage.custom_minimum_size = Vector2(stage_w, stage_w / 1.6)
-			stage.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-			stage.clip_contents = true
-			row.add_child(stage)
-			scene = MediaConferenceVignette.open(stage, GameState.my_club)
-		row.add_child(_column)
+		scene = _wide_room()
 	else:
+		var where := where_text(GameState.media_conference)
+		if where != "":
+			var w := UiKit.lbl(where, UiKit.SMALL, UiKit.MUTED)
+			w.name = "MediaWhere"
+			w.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			_root.add_child(w)
+		var page := UiKit.vbox(UiKit.Space.LOOSE)
+		page.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		_root.add_child(UiKit.scroll(page))
+		_column = UiKit.vbox(UiKit.Space.OPEN)
+		_column.name = "MediaAnswers"
+		_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		# A short strip of the room on a phone, so the question and the first
 		# answer sit above the fold.
 		if GameState.vignettes_on():
@@ -114,6 +103,54 @@ func _build() -> void:
 			for it in shown:
 				if is_instance_valid(it):
 					(it as Control).visible = true)
+
+
+## A PC window (director's pick 2026-11-27, "B: room across the top"): the room a
+## band across the whole width, framed on the coach as the job interview frames
+## him; under it the question and the answers two by two. The band takes what the
+## page leaves, so nothing scrolls; returns the room (null with scenes off).
+func _wide_room() -> MediaConferenceVignette:
+	var scene: MediaConferenceVignette = null
+	if GameState.vignettes_on():
+		var stage := Control.new()
+		stage.name = "MediaConferenceStage"
+		stage.clip_contents = true
+		stage.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		_root.add_child(stage)
+		# The room is drawn down to the foot of the screen, with the interview's
+		# close-up camera, and shown through the band: the camera holds his head
+		# and the desk in the band (scene_bottom), the rest is clipped.
+		var room := Control.new()
+		room.name = "MediaConferenceRoom"
+		room.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		stage.add_child(room)
+		scene = MediaConferenceVignette.open(room, GameState.my_club)
+		scene.figure_cap = InterviewScene.FIGURE_CAP
+		stage.resized.connect(func():
+			room.size = Vector2(stage.size.x, maxf(stage.size.y, _root.size.y - stage.position.y))
+			if stage.size.y > 8.0:
+				scene.scene_bottom = stage.size.y)
+	_column = UiKit.vbox(UiKit.Space.ROOM)
+	_column.name = "MediaAnswers"
+	_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	# The page at its own height under the band (it scrolls only if a question is
+	# ever taller than the window).
+	_sheet = UiKit.scroll(_column)
+	_sheet.size_flags_vertical = Control.SIZE_FILL if scene != null else Control.SIZE_EXPAND_FILL
+	_root.add_child(_sheet)
+	if scene != null:
+		_root.resized.connect(_fit_wide)
+		_column.minimum_size_changed.connect(_fit_wide)
+	return scene
+
+
+## The page under the band as tall as it needs (up to the window less the bar).
+func _fit_wide() -> void:
+	if not is_instance_valid(_sheet) or _root.get_child_count() < 2:
+		return
+	var bar := (_root.get_child(0) as Control).size.y
+	var gaps := _root.get_theme_constant("separation") * 2.0
+	_sheet.custom_minimum_size.y = minf(_column.get_combined_minimum_size().y, _root.size.y - bar - gaps)
 
 
 ## Skip on the left (a word, not an arrow: it says what leaving does), the
@@ -157,7 +194,9 @@ static func where_text(conf: Dictionary) -> String:
 ## The question and its answers; returns what the room reveals when it is
 ## ready.
 func _question(wide: bool) -> Array:
-	var prompt := UiKit.vbox(UiKit.Space.ROOM if wide else UiKit.Space.CLOSE)
+	# A short PC window (960 x 540) sets the answers a size smaller.
+	var short := wide and UiKit.view_height(self) < 600.0
+	var prompt := UiKit.vbox(UiKit.Space.CLOSE)
 	prompt.name = "MediaPrompt"
 	_column.add_child(prompt)
 	var j := str(GameState.media_conference.get("journalist", ""))
@@ -166,7 +205,21 @@ func _question(wide: bool) -> Array:
 	var who := HFlowContainer.new()
 	who.name = "MediaByline"
 	who.add_theme_constant_override("h_separation", UiKit.Space.CLOSE)
-	prompt.add_child(who)
+	if wide:
+		# On a PC the round and the opponent sit at the right of his line.
+		var line := UiKit.hbox(UiKit.Space.GUTTER)
+		prompt.add_child(line)
+		who.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		line.add_child(who)
+		var where := where_text(GameState.media_conference)
+		if where != "":
+			var w := UiKit.lbl(where, UiKit.SMALL, UiKit.MUTED)
+			w.name = "MediaWhere"
+			w.autowrap_mode = TextServer.AUTOWRAP_OFF
+			w.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+			line.add_child(w)
+	else:
+		prompt.add_child(who)
 	if jd.is_empty():
 		who.add_child(UiKit.lbl(str(GameState.media_conference.get("by", "Journalist")), UiKit.H2, UiKit.TEXT, true))
 	else:
@@ -210,14 +263,28 @@ func _question(wide: bool) -> Array:
 	prompt.add_child(rules)
 	var shown: Array = [prompt]
 	var opts: Array = GameState.media_conference.get("options", [])
+	# On a PC the answers go two by two, what each does under it.
+	var grid: GridContainer = null
+	if wide:
+		grid = GridContainer.new()
+		grid.name = "MediaAnswerGrid"
+		grid.columns = 2
+		grid.add_theme_constant_override("h_separation", UiKit.Space.GUTTER)
+		grid.add_theme_constant_override("v_separation", UiKit.Space.ROOM)
+		_column.add_child(grid)
+		shown.append(grid)
 	for i in range(opts.size()):
-		var group := UiKit.vbox(UiKit.Space.TIGHT if wide else UiKit.Space.THIN)
+		var group := UiKit.vbox(UiKit.Space.CLOSE if wide else UiKit.Space.THIN)
 		group.name = "MediaAnswerGroup_%d" % i
-		_column.add_child(group)
-		shown.append(group)
+		if grid != null:
+			group.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			grid.add_child(group)
+		else:
+			_column.add_child(group)
+			shown.append(group)
 		var b := UiKit.btn(str((opts[i] as Dictionary).get("label", "")), UiKit.H2 if wide else UiKit.BODY)
 		b.name = "MediaAnswer_%d" % i
-		b.custom_minimum_size = Vector2(0, 56 if wide else 48)
+		b.custom_minimum_size = Vector2(0, (48 if short else 56) if wide else 48)
 		b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		NameInk.dress_button(b, _league_names())
@@ -226,15 +293,16 @@ func _question(wide: bool) -> Array:
 		# Both ways it can land, their odds and sizes (bible §4), in the page's
 		# own ink: the coach is deciding on it.
 		var effect := NameInk.label(GameState.press_odds_line(i),
-				_league_names(), UiKit.BODY if wide else UiKit.SMALL, UiKit.TEXT)
+				_league_names(), UiKit.BODY if wide and not short else UiKit.SMALL, UiKit.TEXT)
 		effect.name = "MediaAnswerLine_%d" % i
 		effect.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		group.add_child(effect)
 	var skip := UiKit.btn("Skip, say nothing", UiKit.BODY)
 	skip.name = "MediaSkip"
 	skip.flat = not wide
-	skip.custom_minimum_size = Vector2(240 if wide else 0, 44)
+	skip.custom_minimum_size = Vector2(0, 44)
 	if wide:
+		# Sized to its words.
 		skip.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	skip.pressed.connect(func():
 		GameState.skip_media_conference()
@@ -298,6 +366,9 @@ func _answer(i: int) -> void:
 	var ok := UiKit.btn("Continue", UiKit.NAME, true)
 	ok.name = "MediaOutcomeDone"
 	ok.custom_minimum_size = Vector2(0, 48)
+	if ScreenLayout.roomy(UiKit.view_width(self), UiKit.view_height(self)):
+		# On a PC, sized to its word, at the right as Continue sits.
+		ok.size_flags_horizontal = Control.SIZE_SHRINK_END
 	ok.pressed.connect(_leave)
 	out.add_child(ok)
 

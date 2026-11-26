@@ -294,9 +294,10 @@ static func rating_word(rank: int, n: int) -> String:
 
 ## This week, team against team and line against line, for both sides: the
 ## overall team rank first (Squad.strength, the list strength the board's goal
-## and ladder seeding rank by, here on each side as picked), then midfield v
-## midfield, ruck v ruck, your forwards v their defence and your defence v their
-## forwards in the sheet's rating words, each with its league rank. `own` is
+## and ladder seeding rank by, here on each side as picked), then each line
+## against the same line (director, 2026-11-27: "compare def to def and fwd to
+## fwd, its about lines strength not matchup"): midfield, ruck, forwards and
+## defence in the sheet's rating words, each with its league rank. `own` is
 ## your side as picked now, so a change of selection shows. [] without the
 ## opponent. Each row: {"key", "label", "text", "mine_rank", "theirs_rank", "n"}
 ## plus "mine_word" and "theirs_word" for a line (overall has no word).
@@ -329,8 +330,7 @@ static func head_to_head(mine: String, opp: String, lists: Dictionary, selection
 	# when the words match, "Midfield: even, both average (5th, 11th)." (never the
 	# same words twice).
 	for row in [["midfield", "Midfield", "midfield", "midfield"], ["ruck", "Ruck", "ruck", "ruck"],
-			["attack", "Your forwards against their defence", "attack", "defence"],
-			["defence", "Your defence against their forwards", "defence", "attack"]]:
+			["attack", "Forwards", "attack", "attack"], ["defence", "Defence", "defence", "defence"]]:
 		var m_rank: int = rank.call(mine, str(row[2]))
 		var t_rank: int = rank.call(opp, str(row[3]))
 		var m_word := rating_word(m_rank, n)
