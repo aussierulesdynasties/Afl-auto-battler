@@ -7218,10 +7218,10 @@ const TRAIN_PLANS := [
 			"text": "Wins the ball at stoppages and keeps it in the tackle.",
 			"weights": {"contested_ball": 3.0, "handballing": 1.0}},
 	{"key": "outside_mid", "label": "Wing", "roles": ["MID"],
-			"text": "Runs the wing: carries it from defence to attack and hits targets inside 50.",
+			"text": "Runs the wing: works it from defence to attack and hits targets inside 50.",
 			"weights": {"work_rate": 3.0, "kicking": 2.0, "vision": 1.0}},
 	{"key": "key_def", "label": "Key defender", "roles": ["DEF"],
-			"text": "Stops the opposition: spoils and marks inside 50, tackles hard.",
+			"text": "Stops the opposition: reads the play to cut off their attacks, and tackles hard.",
 			"weights": {"reading_play": 3.0, "pressure": 2.0}},
 	{"key": "rebound_def", "label": "Small defender", "roles": ["DEF"],
 			"text": "Wins it back, then runs it out of defence.",
@@ -7249,7 +7249,7 @@ const TRAIN_PLANS := [
 ## Who may try (director, 2026-10-06): a plausible move only (his rating there
 ## within PROJECT_REACH of his own); the job follows his size - key forward,
 ## key defender and ruck take height, a small forward or small defender has
-## to be small; POT 70+ for a second position and POT 90+ for a third (made
+## to be small; POT 70+ for a second position and POT 88+ for a third (director 2026-11-26; made
 ## rarer by the director, 2026-10-06, so Unicorns stay rare).
 ## Three positions across forward, midfield and back make him a Unicorn
 ## (Traits). One project per player a season, PROJECT_MAX a club at once.
@@ -7724,9 +7724,9 @@ func _advance_projects() -> Array:
 
 ## What the Position plan means for each role.
 const POSITION_PLAN_TEXT := {
-	"MID": "Mostly contested ball, with disposal and carry - what wins a midfielder's games.",
-	"DEF": "Intercept and pressure first, then carry - what stops the opposition.",
-	"FWD": "Goalkicking and marking first, then carry and accuracy - what puts a score on the board.",
+	"MID": "Mostly contested ball, then kicking, handballing and pressure - what wins a midfielder's games.",
+	"DEF": "Reading the play and one-on-one defence first, then marking and kicking - what stops the opposition.",
+	"FWD": "Forward craft and goalkicking first, then marking and pressure - what puts a score on the board.",
 	"RUCK": "Wins the tap, then the ball at the stoppage - a ruck's job in a match.",
 }
 ## The plan for anyone without his own: Position plan (always).

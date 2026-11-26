@@ -6886,7 +6886,7 @@ static func pass_words(p: float) -> String:
 static func kick_words(p: Dictionary) -> String:
 	var a: Dictionary = p.get("attr", {})
 	var k := 0.5 * float(a.get("forward_craft", 50)) + 0.5 * float(a.get("goalkicking", 50))
-	if k >= 78:
+	if k >= 85:
 		return "one of our best kicks for goal"
 	if k >= 65:
 		return "a reliable kick"

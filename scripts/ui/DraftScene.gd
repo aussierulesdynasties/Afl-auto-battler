@@ -2173,15 +2173,9 @@ func _open_player(id: String) -> void:
 				rl.name = "DetailAttributesRead"
 				rl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 				v.add_child(rl)
-			var grid := GridContainer.new()
-			grid.name = "DetailAttributes"
-			grid.columns = 1 if UiKit.view_width(self) < 520.0 else 2
-			grid.add_theme_constant_override("h_separation", UiKit.Space.LOOSE)
-			grid.add_theme_constant_override("v_separation", UiKit.Space.CLOSE)
-			v.add_child(grid)
-			var attr: Dictionary = seen["attr"]
-			for r in PlayerSheet.ATTR_ROWS:
-				grid.add_child(PlayerSheet.attr_bar(str(r[0]), str(r[1]), float(attr.get(r[0], 0.0))))
+			var groups := PlayerSheet.attr_groups(self, seen["attr"], str(p.get("speed_src", "")) == "est")
+			groups.name = "DetailAttributes"
+			v.add_child(groups)
 
 	# The decision.
 	var footer: VBoxContainer = box["footer"]

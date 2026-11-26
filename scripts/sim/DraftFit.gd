@@ -37,7 +37,7 @@ const LINES := {
 ## then the rating's name ("" when the fit already names it).
 const SUITS := {
 	"DS": ["Presses like your side", "pressure"],
-	"TA": ["Runs and carries like your side", ""],
+	"TA": ["Runs and uses it like your side", ""],
 	"CC": ["Wins it in close", "contested ball"],
 	"PC": ["Looks after the ball", "ball use"],
 	"HARD": ["Plays to your standards", "discipline"],

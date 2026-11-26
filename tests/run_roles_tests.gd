@@ -942,6 +942,14 @@ func _list_tests() -> void:
 		_check(prof != null and prof.find_child("ProfileLeadership", true, false) != null
 				and prof.find_child("ProfileLeadershipNote", true, false) != null,
 				"The profile shows Leadership beside his other ratings, with what it comes from")
+		var groups: Node = prof.find_child("ProfileAttributes", true, false) if prof != null else null
+		var group_rows := 0
+		if groups != null:
+			for g in groups.find_children("AttrGrid_*", "GridContainer", false, false):
+				group_rows += g.get_child_count()
+		_check(groups != null and groups.find_children("AttrGroup_*", "Label", false, false).size() == 4
+				and group_rows == Attributes.CARD_ROWS.size() + 1,
+				"The profile lists every rating in four groups under their headings, Leadership last (%d rows)" % group_rows)
 		_check(ls.call("handle_back") == true, "Back is handled on the profile")
 		await _settle()
 		_check(ls.find_child("PlayerProfile", true, false) == null, "Back closes the profile")
