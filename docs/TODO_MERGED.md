@@ -220,3 +220,4 @@ What has landed toward each open row of docs/TODO.md and docs/TODO_RULINGS.md, o
 - 180: Merged #2058: Club Forge: Create a player no longer crashes the phone build; Back works after a fresh start.
 - 142: Merged #2065: Rival clubs keep their stars: first contracts fit the cap, stars settled first.
 - 202: Merged #2081: 3D heads: warm shade fill and grass-green cut on the head shader.
+- 202: Merged #2083: 3D 1.0 plan: Optus rebuild and Blacktown stages 1-3 on main (row 202).
