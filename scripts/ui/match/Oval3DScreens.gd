@@ -291,8 +291,9 @@ func _make_replay() -> void:
 	_replay_cam = Camera3D.new()
 	_replay_cam.top_level = true
 	_replay_cam.far = 900.0
-	# The screens are not drawn in the replay they show (no picture inside the picture).
-	_replay_cam.cull_mask = 1
+	# The screens are not drawn in the replay they show (no picture inside the picture). The
+	# land round the ground sits on the towers' surroundings layer, so the replay draws it too.
+	_replay_cam.cull_mask = 1 | Oval3DTowers.SURROUND_LAYER
 	_replay_vp.add_child(_replay_cam)
 	_replay_cam.current = true
 	for f in faces:
