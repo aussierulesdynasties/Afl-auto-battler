@@ -88,7 +88,11 @@ func play(from: int, count: int, out: String, weather: String,
 	var bump := []
 	for i in range(args.size() - 1):
 		if str(args[i]) == "--bump":
-			bump = str(args[i + 1]).replace("_", " ").split(":")
+			# The "_" is a space in the position only: work_rate keeps its own.
+			var parts := str(args[i + 1]).split(":")
+			if not parts.is_empty():
+				parts[0] = parts[0].replace("_", " ")
+			bump = Array(parts)
 	if not bump.is_empty() and (bump.size() != 3 or not Rating.WEIGHTS.has(str(bump[0]))
 			or not Attributes.KEYS.has(str(bump[1]))):
 		push_error("balance: --bump is APOS:KEY:N, APOS one of %s, KEY one of Attributes.KEYS" % str(Rating.WEIGHTS.keys()))
