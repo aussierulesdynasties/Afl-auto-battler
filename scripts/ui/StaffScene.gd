@@ -100,7 +100,7 @@ func _build() -> void:
 		else:
 			row = _empty_row(job)
 		if grid != null:
-			var card := UiKit.panel(UiKit.PANEL, UiKit.Space.LOOSE)
+			var card := UiKit.panel(UiKit.PANEL, UiKit.Space.PAD)
 			card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			_lines_on_top(row)
 			if coach:
@@ -121,7 +121,7 @@ func _build() -> void:
 			continue
 		var orow := _office_row(m, mine)
 		if grid != null:
-			var ocard := UiKit.panel(UiKit.PANEL, UiKit.Space.LOOSE)
+			var ocard := UiKit.panel(UiKit.PANEL, UiKit.Space.PAD)
 			ocard.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			_lines_on_top(orow)
 			ocard.add_child(orow)
@@ -443,7 +443,13 @@ func _council_lines(job: String, id: String, mine: bool) -> Array:
 	out.append(ll)
 	var marks := Opinion.breakdown(GameState.relations, str(m["key"]))
 	if not marks.is_empty():
-		var why := UiKit.lbl(Opinion.mark_text(marks[0]), UiKit.SMALL, UiKit.TEXT)
+		# On a PC card the reason keeps to one line, so eight cards still fit
+		# two rows at 960x540 without scrolling; a phone row has the room for
+		# how long it lasts.
+		var wide := ScreenLayout.roomy(UiKit.view_width(self), UiKit.view_height(self))
+		var text := "%s: %+d." % [str(marks[0]["why"]), int(marks[0]["points"])] if wide \
+				else Opinion.mark_text(marks[0])
+		var why := UiKit.lbl(text, UiKit.SMALL, UiKit.TEXT)
 		why.name = "LoyaltyWhy_" + job
 		why.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		out.append(why)
