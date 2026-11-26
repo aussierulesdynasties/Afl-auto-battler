@@ -11,8 +11,9 @@ extends Node3D
 ## the side of the ground nearer the tower, as under real towers, and throws no shadow. A phone
 ## draws a shadow map of the men for each beam that throws one, so the graphics level
 ## (Oval3DQuality "tower_shadows") says how many do; a tower without a shadowed beam lights by
-## its spill alone. Only the men, the umpires and the ball throw a tower's shadow: the stands
-## have their roofs' own, and the whole stadium in every tower's shadow map would cost dearly.
+## its spill alone. The beams light the field and the men; the stadium round them takes the spill
+## alone (SURROUND_LAYER). Only the men, the umpires and the ball throw a tower's shadow: the
+## stands have their roofs' own, and the whole stadium in every tower's shadow map would cost dearly.
 ## A roofed ground (rule 2.91) and a ground whose model has no lamps keep Oval3DTurf's own
 ## night light: `banks` is empty and the turf never turns this on.
 
@@ -32,11 +33,15 @@ const ATTEN := 0.55
 ## tools/visual/capture_night3d.gd: open grass under the MCG's towers a little brighter and
 ## yellower than a fine day's (rule 2.81), as lit turf reads on a night broadcast.
 const CENTRE_LIGHT := 1.5
-## The share of all the towers' light carried by the shadow-throwing beams, by how many throw
-## one (the rest is every tower's spill). Each shadow takes its beam's light out of the turf
-## behind a man, so with a few beams carrying most of the light each shadow reads, faintly, and
-## where they all cross at his boots he stands in a dark pool, as on a night broadcast.
-const BEAM_SHARE := {0: 0.0, 1: 0.55, 2: 0.7, 3: 0.8, 4: 0.85}
+## The share of all the towers' light carried by the shadow-throwing beams, shared among those
+## that throw one (the rest is every tower's spill). Each shadow takes its beam's light out of
+## the turf behind a man, so with the beams carrying most of the light each shadow reads, faintly,
+## and where they all cross at his boots he stands in a dark pool, as on a night broadcast. The
+## beams light only the field and the men, as real floodlights are aimed; the stadium takes the
+## spill alone, so the share is the same at every graphics level and a stand is as bright on a
+## phone as on a PC (Blacktown QA, 2026-11-26: under the beams a white roof facing a low tower
+## blew out to pure white, and the MCG's stands read as bright as the grass).
+const BEAM_SHARE := 0.7
 ## How far up the lights are before the beams take over from the spill (the sun has gone).
 const BEAMS_FROM := 0.5
 ## How far from the camera a beam's shadows reach (m): the men in the broadcast picture.
@@ -161,22 +166,23 @@ static func spread_order(p_banks: Array[Vector3]) -> Array[int]:
 const SHADOW_LAYER := 1 << 19
 
 
-## The visual layer of the land round a ground (GroundModels' surrounds, meta open_ground; the
-## kit's far pieces, named *_far, such as Blacktown's car park; anything under a node named
-## Backdrop), in place of the camera's layer 1. The beams leave it
-## out: they are directional, so they would light a car park 200 m out as brightly as the turf
-## (Blacktown QA, 2026-11-24), where a night broadcast shows the land round a ground dim. It
-## takes only the towers' spill, which fades with distance and stops past the far fence.
+## The visual layer of the ground's model: its stands, roofs and buildings and the land round it,
+## in place of the camera's layer 1. The beams leave it out. They are directional, so they light
+## every face turned to a tower at full strength wherever it is: a car park 200 m out as bright as
+## the turf (Blacktown QA, 2026-11-24), a white roof facing a low tower blown out to white. A real
+## floodlight is aimed at the field, and a night broadcast shows the stands dimmer than the grass
+## and the land round a ground dim. The model takes only the towers' spill, which fades with
+## distance and stops past the far fence. The turf, the boundary, the men and the crowd (built
+## after this, as bright as the grass, rule 2.82) stay on layer 1.
 const SURROUND_LAYER := 1 << 18
 
 
-## Put the land round a ground on SURROUND_LAYER, so the beams leave it to the spill.
-static func keep_off_beams(n: Node, inside := false) -> void:
-	var here := inside or n.has_meta("open_ground") or n.name == "Backdrop" or str(n.name).ends_with("_far")
-	if here and n is VisualInstance3D:
+## Put a ground's model and everything under it on SURROUND_LAYER, so the beams leave it to the spill.
+static func keep_off_beams(n: Node) -> void:
+	if n is VisualInstance3D:
 		n.layers = (n.layers & ~1) | SURROUND_LAYER
 	for c in n.get_children():
-		keep_off_beams(c, here)
+		keep_off_beams(c)
 
 
 ## Put a node and everything under it on the towers' shadow layer.
@@ -204,7 +210,7 @@ func set_level(k: float) -> void:
 	# The beams throw their shadows once the towers carry the light (a twilight game's sun still
 	# throws its own, and the renderer draws only so many shadowed lights at once).
 	var n := _shadows if level >= BEAMS_FROM else 0
-	var share: float = BEAM_SHARE.get(n, 0.0)
+	var share: float = BEAM_SHARE if n > 0 else 0.0
 	for j in _order.size():
 		var i: int = _order[j]
 		var beam := j < n
