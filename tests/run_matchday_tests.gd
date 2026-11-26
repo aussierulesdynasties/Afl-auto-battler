@@ -511,6 +511,16 @@ func _test_phone_match(sz: Vector2i) -> void:
 	m.call("_on_skip")
 	for i in range(60):
 		await process_frame
+	# A legend's farewell comes up over full time when this match is his
+	# milestone: Back leaves it, as its Continue does, and full time is there
+	# (director, 2026-11-26). The review below is under it until then.
+	var fw_ref = m.get("_farewell_ref")
+	var fw: Object = fw_ref.get_ref() if fw_ref != null else null
+	if fw != null and fw.call("is_open"):
+		_check(m.call("handle_back") == true and not fw.call("is_open"),
+				"Back leaves the farewell over full time (%s)" % tag)
+		for i in range(30):
+			await process_frame
 	var ft_box: Node = m.find_child("FullTime", true, false)
 	var ft := _text(ft_box)
 	_check(ft_box != null and ft.contains("Full time"), "Full time is unmistakable (%s)" % tag)

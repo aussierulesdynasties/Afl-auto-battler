@@ -630,7 +630,19 @@ func _test_offseason_flow() -> void:
 	var signed := false
 	GameState.salary_cap += 5000000
 	# A free agent no other club has offered for signs at his asking price;
-	# where rivals have offered, your offer goes on the table instead.
+	# where rivals have offered, your offer goes on the table instead. Rivals
+	# can bid on the whole market (this seeded career's 14 free agents all
+	# had an offer by 25 Nov 2026): when nobody is left unoffered, the first man not released by us has his offers taken back,
+	# so the rule under test still meets the case it is about.
+	var unoffered := 0
+	for q in GameState.free_agents:
+		if str(q.get("released_by", "")) != GameState.my_club and (q.get("offers", []) as Array).is_empty():
+			unoffered += 1
+	if unoffered == 0:
+		for fa in GameState.free_agents:
+			if str(fa.get("released_by", "")) != GameState.my_club:
+				fa["offers"] = []
+				break
 	for fa in GameState.free_agents.duplicate():
 		if str(fa.get("released_by", "")) != GameState.my_club and (fa.get("offers", []) as Array).is_empty() \
 				and not bool(GameState.free_agent_terms(str(fa["id"]))["refuse"]):

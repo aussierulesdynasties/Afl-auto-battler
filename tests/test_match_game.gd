@@ -370,7 +370,10 @@ func _test_authenticity_events() -> void:
 			"A 50 stops at the goal line rather than marching through it")
 
 	var mro := _sim(7001)
-	var offender: Dictionary = (mro.squads[0] as Squad).ground[0]
+	# A copy: the squad's dictionaries are the dataset's own players
+	# (GameDB.club_list), and a discipline of 1 left on Geelong's first man
+	# changed every later match in this suite (reports, suspensions, moments).
+	var offender: Dictionary = ((mro.squads[0] as Squad).ground[0] as Dictionary).duplicate(true)
 	var victim: Dictionary = (mro.squads[1] as Squad).ground[0]
 	(offender["attr"] as Dictionary)["discipline"] = 1
 	for i in range(800):
