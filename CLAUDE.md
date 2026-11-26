@@ -5,7 +5,10 @@ read it when you pick or close work, not otherwise (a brief that names your row 
 `docs/DIRECTOR_BIBLE.md` (513 KB: search it, never read it whole). Must-read files stay under 60 KB (CI: `tools/check_doc_sizes.py`).
 
 Godot 4 / GDScript. Run `tools/run_tests.sh` (or `tools/run_tests.sh draft_ui`
-for one suite) before pushing. MetaHuman files (and anything made from them) never go in this public
+for one suite) before pushing. Hooks in `.claude/hooks/pr_guard.py` enforce the PR rules: they refuse a merge of a
+conflicting PR, a merge of main that isn't needed, a second push within 20 min, and ending a turn
+after a push with nothing set to wake you; each refusal names its override. In a cloud session they
+install Godot and gdlint at start, so run the suites there too. MetaHuman files (and anything made from them) never go in this public
 repo: they live in a private repo and `tools/epic_assets.sh fetch` copies them in (docs/EPIC_ASSETS.md).
 
 ## The design bible comes first (director, 2026-10-09)
@@ -82,6 +85,40 @@ supplies the vision, taste, AFL knowledge, priorities and final judgement.
 - **The right art loaded.** A capture or test of a vignette or figure proves the intended sheet or atlas loaded, not a fallback.
 - **Change approach after repeated failure.** After two similar failed fixes of the same problem, stop patching: gather different evidence (a capture, a trace, a measurement) and rethink the approach before trying again.
 - **Balance is measured locally (director, 2026-11-04).** Any balance-gated row, match-engine change or play-touching feature is screened with `tools/balance.sh match 1000` (paired: main vs the branch, `--a-root <main checkout> --b ""`; there are no feature switches, director 2026-11-06), about 85 s for 1,000 paired matches on 14 parallel Godot workers; the report marks each stat IN/NEAR/OUT of real AFL 2026 team rates and gives B-A with its standard error. Paste the table in the PR. Improve the harness (new modes, stats, references) instead of writing one-off probes; see tools/balance/README.md.
+
+## Getting a PR merged (director, 2026-11-26)
+
+CI is a shared pool of about 20 GitHub runners. A full Tests run needs up to 30 jobs, so every
+extra push or PR makes every other PR wait. On 26 Nov PRs waited hours for runners while
+the jobs themselves took about 30 min. Merges took days, and the director calls it the
+number one development blocker.
+
+- **Never end a turn with CI pending and nothing to wake you.** After you push, subscribe to the
+  PR's activity (`subscribe_pr_activity`), or schedule a check-in, or watch the run in the
+  foreground (`gh pr checks <n> --watch`, `gh run watch`). A red check that sits for hours
+  because nobody looked is the most common failure here.
+- **A red check is the next job.** Read the failed job's log, fix it, push once. Do not start
+  other work, open another PR or ask the director to merge while your PR is red.
+- **Push once, not in drips.** Each push cancels the run in progress and goes to the back of the
+  queue (45 cancelled PR runs on 26 Nov). Batch your commits locally and run the touched suites
+  with `tools/run_tests.sh <suite>` before you push.
+- **Respect the open PR cap (Director Bible 1.48): at most 3 ready PRs.** Over the cap, open
+  yours as a draft (drafts skip the game tests) and mark it ready when a slot frees. Count with
+  `gh pr list --state open --json isDraft --jq 'map(select(.isDraft|not))|length'`.
+- **Check for a conflict before you ask for a merge, never after.** Run `git fetch origin main &&
+  git merge-tree --write-tree origin/main HEAD`. If it reports a conflict, merge main in and fix
+  it first (never rebase or force-push, 1.48). Do not turn on auto-merge or ask for a merge on a
+  PR you know conflicts: it cannot land, and it wastes a full test run.
+- **Before you open a PR, check the open set** for one that already touches the same files or row
+  (`gh pr list --search <row or file>`). Add to it or wait for it rather than opening a rival.
+- **Close what you abandon.** A PR you are not finishing gets closed with one line saying why, so
+  it stops taking runners on every main push.
+
+## Review boards and imagery (director, 2026-11-26)
+
+Review boards, WIP films, reference photos and aerial or satellite imagery go to the private repo
+`aussierulesdynasties/afl-review-archive` (same `.claude/review/` paths), never to this public repo, and never
+as a "save work in progress to main" commit. `.claude/review/` is ignored here.
 
 ## UI and writing
 

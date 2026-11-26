@@ -52,10 +52,10 @@ assets/grounds/*/*_backdrop_part*_*.png
 assets/grounds/*/*_backdrop_part*_*.png.import
 assets/grounds/*/*_backdrop_part*_*.jpg
 assets/grounds/*/*_backdrop_part*_*.jpg.import
-# Aerial imagery is never committed (docs/MCG_STANDARD.md); the private copy is in the project files (adelaide-standard/private-imagery)
-.claude/review/adelaide/esri/
-.claude/review/adelaide/hill/plan_*.jpg
-.claude/review/adelaide/proof/topdown_overlay.png
+# Review boards, WIP films, reference photos and aerial imagery live in the private repo
+# aussierulesdynasties/afl-review-archive (same paths), never here: this repo is public (2026-11-26).
+# Tools still write boards into .claude/review/ on your machine; commit them to the archive.
+.claude/review/
 
 # Blender autosave backups, editor/script backups and tool run logs: never source.
 *.blend[0-9]
@@ -64,3 +64,8 @@ assets/grounds/*/*_backdrop_part*_*.jpg.import
 *.log
 # Director review dumps (rating rebuild, 2026-11-25): read in place, never committed.
 /REVIEW.md
+# Numbered backups (scene.py.bak36, clad_rib.png.bak31): *.bak above misses them.
+*.bak[0-9]*
+# Blender scenes are working files, archived on the PC (docs/3D_INVENTORY.md); the game loads the .glb.
+# The two already tracked under .claude/review stay tracked until someone moves them.
+*.blend
