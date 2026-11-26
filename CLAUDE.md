@@ -6,7 +6,8 @@ read it when you pick or close work, not otherwise (a brief that names your row 
 
 Godot 4 / GDScript. Run `tools/run_tests.sh` (or `tools/run_tests.sh draft_ui`
 for one suite) before pushing. Hooks in `.claude/hooks/pr_guard.py` enforce the PR rules: they refuse a merge of a
-conflicting PR, a merge of main that isn't needed, a second push within 20 min, and ending a turn
+conflicting PR, a merge of main that isn't needed, a second push within 20 min, cancelling a main push run, merging a
+workflow change with no green run of it on the PR's head, and ending a turn
 after a push with nothing set to wake you; each refusal names its override. In a cloud session they
 install Godot and gdlint at start, so run the suites there too. MetaHuman files (and anything made from them) never go in this public
 repo: they live in a private repo and `tools/epic_assets.sh fetch` copies them in (docs/EPIC_ASSETS.md).
@@ -105,8 +106,8 @@ number one development blocker.
   with `tools/run_tests.sh <suite>` before you push.
 - **Respect the open PR cap (Director Bible 7.48): at most 3 ready PRs.** Over the cap, open
   yours as a draft (drafts skip the game tests) and mark it ready when a slot frees. Count
-  the open PRs that are not drafts (GitHub MCP `list_pull_requests`, or `gh pr list`). The
-  `PR cap` workflow enforces it: a PR over the cap goes back to draft and is released in turn.
+  the open PRs that are not drafts (GitHub MCP `list_pull_requests`, or `gh pr list`). No bot
+  enforces it (the director removed the PR cap bot, 2026-11-26): you do.
 - **Check for a conflict before you ask for a merge, never after.** Run `git fetch origin main &&
   git merge-tree --write-tree origin/main HEAD`. If it reports a conflict, merge main in and fix
   it first (never rebase or force-push, 7.48). Do not turn on auto-merge or ask for a merge on a
