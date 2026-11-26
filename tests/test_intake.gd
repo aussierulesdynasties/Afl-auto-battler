@@ -27,6 +27,7 @@ func run() -> void:
 	_t("_test_career_spots_match_draft")
 	_t("_test_spots_sheet_before_offseason_opens")
 	_t("_test_draft_room_gate")
+	_t("_test_draft_checks_the_cap")
 	_t("_test_draft_rules")
 	_t("_test_career_rollover")
 	_t("_test_class_tiers")
@@ -1745,3 +1746,71 @@ func _test_rebuild_walkouts_sign() -> void:
 				room.append(str(code))
 		print("  rebuild: %d of 3 walkouts left in free agency; rivals with a senior spot: %s" % [still.size(), ", ".join(room)])
 	GameState.reset()
+
+
+## The draft is checked against the cap (director, 2026-11-25, "Hold room").
+## Each club drafts into its room for next season: its cap, less dead cap and
+## next season's payroll. A club with no room makes no pick; your pick is
+## refused in words, and a club with no room may pass even short of the
+## minimum. No club drafts past its room.
+func _test_draft_checks_the_cap() -> void:
+	_offseason_open()
+	var me: String = GameState.my_club
+	var clubs: Array = GameDB.active_clubs(GameState.season_year)
+	var broke := str(clubs[0]) if str(clubs[0]) != me else str(clubs[1])
+	# No tied (father-son, academy) draftees for the club with no room: a bid
+	# matched is a pick of its own.
+	for p in GameState.draftee_pool:
+		if str(p.get("tied_club", "")) == broke:
+			p["tied_club"] = ""
+	_check(GameState.begin_intake_draft(), "The draft opens")
+	var draft: Draft = GameState.draft
+	_check(draft.room_year == GameState.season_year + 1 and draft.club_room.size() == clubs.size() and clubs.size() >= 18,
+			"Every club's room is counted, in next season's money (%d of %d, %d)" % [draft.club_room.size(), clubs.size(), draft.room_year])
+	var differ := []
+	for code in clubs:
+		var want: int = GameState._trade_cap(str(code)) - Contracts.payroll(GameState.league_lists.get(code, []))
+		if int(draft.club_room.get(str(code), -1)) != want:
+			differ.append(str(code))
+	_check(differ.is_empty(), "Each club's room is its cap less dead cap and next season's payroll (differ: %s)" % str(differ))
+	# Its room is what it has spent tonight: nothing left for another pick.
+	var broke_had := draft.count_for(broke)
+	draft.club_room[broke] = int(draft.room_spent.get(broke, 0))
+	draft.auto_until_user_turn()
+	_check(draft.is_user_turn(), "Our pick comes up")
+	if not draft.is_user_turn():
+		return
+	var spent := int(draft.room_spent.get(me, 0))
+	var wage := draft.pick_wage()
+	var p := {}
+	for q in draft.pool:
+		if not draft.picked.has(str(q["id"])) and not draft.too_old_for_user(q):
+			p = q
+			break
+	var sizes_were: Variant = draft.existing_sizes.get(me, 0)
+	draft.existing_sizes[me] = Contracts.min_list() - 5
+	draft.club_room[me] = spent + wage - 1000
+	var why := draft.pick_block_reason(p)
+	_check(why == "Not enough cap room: pick %d is paid %s.\nWe have %s left." % [draft.pick_index + 1, Contracts.money(wage), Contracts.money(wage - 1000)],
+			"A pick we have no room for is refused in words (%s)" % why)
+	_check(draft.pass_block_reason() == "", "Short of the minimum with no room, we may pass (%s)" % draft.pass_block_reason())
+	draft.club_room[me] = spent + wage
+	_check(not draft.pick_block_reason(p).contains("cap room"), "With the room, the pick is not refused for room (%s)" % draft.pick_block_reason(p))
+	_check(draft.pass_block_reason() != "", "With the room, the minimum holds: no pass")
+	draft.existing_sizes[me] = sizes_were
+	draft.club_room[me] = 999999999
+	for i in range(600):
+		if draft.is_finished():
+			break
+		if draft.is_user_turn():
+			draft.pick_for_me()
+		else:
+			draft.auto_until_user_turn()
+	_check(draft.is_finished(), "The draft finishes")
+	_check(draft.count_for(broke) == broke_had, "%s, with no room, made no pick after (%d before, %d after)" % [
+			broke, broke_had, draft.count_for(broke)])
+	var past := []
+	for code in draft.club_room:
+		if int(draft.room_spent.get(code, 0)) > int(draft.club_room[code]):
+			past.append(str(code))
+	_check(past.is_empty(), "No club drafts past its room (%s)" % str(past))

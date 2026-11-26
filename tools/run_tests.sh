@@ -28,6 +28,12 @@
 set -u
 cd "$(dirname "$0")/.." || exit 1
 
+# The 3D suites draw the MetaHuman body, crew, cuts, skin and heads, which live in a private repo
+# (docs/EPIC_ASSETS.md). Copy them in when they are missing or stale; say so plainly if we can't.
+if ! bash tools/epic_assets.sh check >/dev/null 2>&1 && ! bash tools/epic_assets.sh fetch; then
+	echo "WARNING: the Epic/MetaHuman files are not in place, so the 3D suites will fail (docs/EPIC_ASSETS.md)." >&2
+fi
+
 GODOT="${GODOT:-godot}"
 # A caller's SUITE_TIMEOUT applies to every suite. Left unset, a suite listed in
 # tools/ci_long_suites.txt gets the nightly's 3000 s and every other suite 900 s:

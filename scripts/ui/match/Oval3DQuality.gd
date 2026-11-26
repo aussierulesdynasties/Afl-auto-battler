@@ -14,7 +14,7 @@ const HIGH := "high"
 const LEVELS := [LOW, MEDIUM, HIGH]
 
 ## Each level:
-##   shadow_atlas  the sun's shadow map, pixels a side (the four towers at night share it)
+##   shadow_atlas  the sun's shadow map, pixels a side
 ##   shadow_filter how soft its edge is drawn (RenderingServer.SHADOW_QUALITY_*). Not the hard
 ##                 edge: on the Mobile renderer it loses the roof's shade on a stand (Marvel lit
 ##                 bright under its roof), so Low keeps the soft filter's cheapest setting
@@ -27,6 +27,9 @@ const LEVELS := [LOW, MEDIUM, HIGH]
 ##   lod           mesh detail threshold (Viewport.mesh_lod_threshold): higher drops detail sooner
 ##   scale         share of the screen's pixels the 3D picture is drawn at (stretched to fit, by FSR)
 ##   blades        the standing grass blades round the ball
+##   tower_shadows how many of a ground's light towers throw the men's shadows at night (each
+##                 draws the men again into its own part of the sun's shadow map); the rest
+##                 light without one
 ##   rain          drops in the air on a wet day (rule 2.83: when it rains, rain falls on screen, so
 ##                 every level keeps some; High is the approved prototype's count)
 ##   msaa          edge smoothing (Viewport.msaa_3d): each pixel's edge sampled 4 or 2 times, so a
@@ -39,13 +42,13 @@ const LEVELS := [LOW, MEDIUM, HIGH]
 const PRESETS := {
 	HIGH: {"shadow_atlas": 4096, "shadow_filter": RenderingServer.SHADOW_QUALITY_SOFT_HIGH, "splits": 4,
 			"seat_shadows": true, "stand_shade": true, "people_d": 55.0, "lod": 1.0, "scale": 1.0,
-			"blades": true, "rain": 40000, "msaa": Viewport.MSAA_4X},
+			"blades": true, "tower_shadows": 4, "rain": 40000, "msaa": Viewport.MSAA_4X},
 	MEDIUM: {"shadow_atlas": 2048, "shadow_filter": RenderingServer.SHADOW_QUALITY_SOFT_LOW, "splits": 4,
 			"seat_shadows": false, "stand_shade": true, "people_d": 30.0, "lod": 2.0, "scale": 1.0,
-			"blades": true, "rain": 20000, "msaa": Viewport.MSAA_2X},
+			"blades": true, "tower_shadows": 2, "rain": 20000, "msaa": Viewport.MSAA_2X},
 	LOW: {"shadow_atlas": 2048, "shadow_filter": RenderingServer.SHADOW_QUALITY_SOFT_LOW, "splits": 2,
 			"seat_shadows": false, "stand_shade": false, "people_d": 0.0, "lod": 4.0, "scale": 0.75,
-			"blades": false, "rain": 10000, "msaa": Viewport.MSAA_DISABLED},
+			"blades": false, "tower_shadows": 1, "rain": 10000, "msaa": Viewport.MSAA_DISABLED},
 }
 
 

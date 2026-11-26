@@ -70,6 +70,8 @@ const DIGITS := preload("res://assets/vignette/figures_digits.png")
 ## A Sherrin is about 0.29 m end to end and 0.18 m across.
 const BALL_R := 0.09
 const BALL_LONG := 1.6
+const DEAD_HANDS := 2.0       # m: a dead ball higher than this is at the top of a bounce or throw-up
+const TOSS_APEX := 0.6        # m a ball tossed back to a ball-up's spot rises over its line
 const DROP_T := 0.35          # s: a ball out of a man's hands takes this to reach where it lies
 const DROP_SNAP := 0.25       # m: a smaller gap than this is drawn straight away
 const ROLL_TURN := 8.0         # rad/s: a rolling ball's long axis turns across its way at most this fast
@@ -95,6 +97,8 @@ var crew: Oval3DCrewMotion     # the clubs' trainers and runners
 var crowd: Oval3DCrowd
 ## The ground's big screens and fence signs (Oval3DScreens): live score, GOAL card, replay.
 var screens: Oval3DScreens
+## The ground's light towers at night (Oval3DTowers; null at the game's own oval).
+var towers: Oval3DTowers
 ## The ground the match is at (VignetteGround.ground_of), set before build(): its model when it
 ## has one (GroundModels), else the stand and crowd.
 var ground := ""
@@ -117,6 +121,8 @@ var _drop_t := -1.0            # s into its fall to the turf; -1 when not fallin
 var _roll_yaw := 0.0           # the rolling ball's long axis, as a turn about UP
 var _roll := 0.0               # how far it has turned over about that axis
 var _on_turf := false          # it was rolling (or lying) last frame
+var _carry_from := Vector3.INF # where a carried ball (_carried) set off; INF none
+var _carry_to := Vector2.ZERO
 var _settle_t := 0.0           # s since it came out of his hands or the air
 
 
@@ -173,9 +179,14 @@ func build(p_director: MatchDirector, home: String, away: String) -> void:
 	mat.roughness = 0.6
 	ball.material_override = mat
 	add_child(ball)
+	if towers != null:
+		# The men, the umpires and the ball throw the towers' shadows (the stadium does not).
+		for p in players + umpires:
+			Oval3DTowers.throws_shadow(p["node"])
+		Oval3DTowers.throws_shadow(ball)
 	camera = Camera3D.new()
 	camera.fov = 30.0
-	camera.far = GroundModels.view_far(GroundModels.slug_for(ground) if ground != "" else "")
+	camera.far = maxf(_far_view, GroundModels.view_far(GroundModels.slug_for(ground) if ground != "" else ""))
 	# Placed in world space, so turning the ground for a change of ends (set_ends) leaves
 	# the camera where the broadcast puts it.
 	camera.top_level = true
@@ -228,8 +239,12 @@ func sync(dt: float) -> void:
 		# A dead ball (a free kick or mark being set up) has no holder in the director but
 		# keeps its hand height; drawn as it is, it would hang in the air. Within a metre of
 		# a player it is in his hands; otherwise it lies on the turf.
-		holder = _nearest(director.ball["pos"], 1.0)
-		resting = holder < 0
+		# Above any man's hands it is the top of a bounce or a throw-up, held there for the
+		# ruckmen's tap: drawn where it is, not dropped to the turf (or into a man's hands) for
+		# that frame and thrown back up by the tap (bug bash 2026-11-23).
+		var up := float(director.ball.get("h", 0.0)) > DEAD_HANDS
+		holder = -1 if up else _nearest(director.ball["pos"], 1.0)
+		resting = holder < 0 and not up
 	_move_leavers(dt)
 	# The umpires first: the players are drawn clear of where they are this frame (_spaced).
 	_move_umpires(dt)
@@ -288,6 +303,10 @@ func sync(dt: float) -> void:
 		_drop_t = -1.0
 	else:
 		var to := Vector3(bp.x, BALL_R if resting else maxf(BALL_R, h), bp.y)
+		if mode == "carry":
+			to = _carried(bp)
+		else:
+			_carry_from = Vector3.INF
 		if mode == "flight":
 			_drop_t = -1.0
 			if _in_hands:
@@ -305,7 +324,7 @@ func sync(dt: float) -> void:
 			if not catch.is_empty():
 				# The last of its flight into the marking hands.
 				to = to.lerp(catch["to"], float(catch["w"]))
-		elif _in_hands and dt > 0.0 and ball.position.distance_to(to) > DROP_SNAP:
+		elif _in_hands and dt > 0.0 and ball.position.distance_to(to) > DROP_SNAP and mode != "carry":
 			# Out of his hands onto the turf (a spill from a tackle, a fumble, a man walking off a
 			# dead ball): it falls from where his hands had it, never jumps there in one frame.
 			_drop_from = ball.position
@@ -409,6 +428,23 @@ func _roll_ball(moved: Vector2, dt: float) -> void:
 	ball.quaternion = target if settle >= 1.0 else ball.quaternion.slerp(target, settle)
 
 
+## The director sends a dead ball somewhere on its own ("carry", at chest height): a ball-up's
+## ball given back to the umpire's spot, or after a goal the ball back to the centre. Drawn as
+## it really goes (bug bash 2026-11-23: it slid there at 1.2 m with nobody holding it): a ball-up's
+## is tossed, out of his hands in a low arc to the turf at the umpire's spot; after a goal it lies
+## where it was until the play has cut to the replay (Oval3DBroadcast.stinging_in holds the play
+## while the sting runs), and is in the centre when the picture comes back.
+func _carried(bp: Vector2) -> Vector3:
+	if _carry_from == Vector3.INF:
+		_carry_from = ball.position
+		_carry_to = director.ball.get("to", bp)
+	if director.mode == "centre":
+		return Vector3(_carry_from.x, BALL_R, _carry_from.z)
+	var whole := Vector2(_carry_from.x, _carry_from.z).distance_to(_carry_to)
+	var u := 1.0 - clampf(bp.distance_to(_carry_to) / maxf(whole, 0.01), 0.0, 1.0)
+	return Vector3(bp.x, lerpf(maxf(_carry_from.y, BALL_R), BALL_R, u) + 4.0 * TOSS_APEX * u * (1.0 - u), bp.y)
+
+
 ## Turn the ball's long axis along `axis` (world). False when `axis` is ZERO (no say).
 func _point_ball(axis: Vector3) -> bool:
 	if axis.length() < 0.01:
@@ -430,11 +466,14 @@ func _hold_ball(p: Dictionary, place := true) -> void:
 		palms.append(gt * (pose.origin + pose.basis.y.normalized() * float(p["hand_len"][k]) * 0.6))
 	var l: Vector3 = palms[0]
 	var r: Vector3 = palms[1]
+	# The palms are in the world: the ground turns half a turn when the sides change ends
+	# (set_ends), so in the second and fourth quarters the ball's own (ground) position is not
+	# the world's. Set in ground terms it was drawn mirrored, at the far end of the ground.
 	if place:
-		ball.position = (l + r) * 0.5
+		ball.global_position = (l + r) * 0.5
 	var across := r - l
 	if across.length() > 0.01:
-		ball.look_at(ball.position + across, Vector3.UP)
+		ball.look_at(ball.global_position + across, Vector3.UP)
 
 
 ## The crowd's clock, and each moment the director shows, as he shows it: the crowd reacts to
@@ -667,6 +706,14 @@ func _ground_model(slug: String, base := "", home := "", away := "") -> void:
 	var root := GroundModels.instantiate(slug, base)
 	add_child(root)
 	Oval3DQuality.apply_model(quality, root)
+	if GroundModels.has_backdrop(slug, base):
+		_backdrop_view(slug)
+	towers = Oval3DTowers.new()
+	add_child(towers)
+	towers.build(slug, root, self)
+	towers.set_shadows(int(Oval3DQuality.preset(quality)["tower_shadows"]))
+	if turf == null:   # a bare view (the ground inspector's test): the model alone
+		return
 	turf.set_ground(slug)
 	turf.light_stands(root)
 	_turf_mat.set_shader_parameter("fence_clip", GroundModels.match_fence())
@@ -690,6 +737,36 @@ func _ground_model(slug: String, base := "", home := "", away := "") -> void:
 	crowd.build_on_seats(seats, GroundModels.seat_points(slug, base),
 			GameDB.club_colours(home), GameDB.club_colours(away),
 			GameDB.club_guernsey(home), GameDB.club_guernsey(away), root.transform, slug)
+
+
+## A ground with its surroundings (GroundModels.backdrop): the cameras see out to the skyline and
+## the hills, and the air thickens with distance into the horizon's own colour (Oval3DTurf sets it
+## with the sky, so it follows the day, the dusk and the night). Nothing nearer than HAZE_FROM is
+## hazed, so the stadium, the men and the ball are untouched.
+const HAZE_FROM := 600.0
+const HAZE_TO := 9000.0
+
+
+var _far_view := 0.0
+
+
+func _backdrop_view(slug := "") -> void:
+	_far_view = GroundModels.backdrop_far(slug)
+	if camera != null:
+		camera.far = _far_view
+	if _env == null:   # a bare view (the ground inspector's test) has no sky to haze into
+		return
+	_env.fog_enabled = true
+	_env.fog_mode = Environment.FOG_MODE_DEPTH
+	_env.fog_depth_begin = HAZE_FROM
+	_env.fog_depth_end = GroundModels.backdrop_haze(slug, HAZE_TO)
+	_env.fog_depth_curve = 0.8
+	_env.fog_density = 1.0
+	_env.fog_aerial_perspective = 0.0
+	_env.fog_sky_affect = 0.0
+	_env.fog_light_color = Color(0.68, 0.78, 0.88)
+	if turf != null:
+		turf._sky_view()
 
 
 ## How far past the match's fence the apron skirt runs, and how far under the turf it lies (under
@@ -3106,6 +3183,7 @@ var _ump_from := Vector3.ZERO # the ball's gap from his hands when he took it
 var _ump_off := Vector3.ZERO  # let go: his hands less the director's ball, easing out
 var _ump_off_t := -1.0
 var _ump_hit_from := Vector3.ZERO  # a bounce: where the ball left his hands
+var _ump_gone := Vector2.INF  # the stoppage (its spot) whose ball he has put in play; INF none
 var _ump_free := -1           # the field umpire who paid the free being taken (index in umpires)
 var _ump_free_k := -1         # ...and that free's event
 
@@ -3202,6 +3280,8 @@ func _move_umpires(frame_dt: float) -> void:
 	var flying := str(director.ball.get("mode", "")) == "flight"
 	if st.is_empty() and (_ump_job < 0 or not (umpires[_ump_job] as Dictionary).has("clip")):
 		_ump_job = -1
+	if st.is_empty() or (st["at"] as Vector2) != _ump_gone:
+		_ump_gone = Vector2.INF
 	if not st.is_empty():
 		_ump_job = _stoppage_umpire(st)
 	var fr: Dictionary = director.free_now() if st.is_empty() else {}
@@ -3277,7 +3357,11 @@ func _move_umpires(frame_dt: float) -> void:
 			if to.length() > 0.5 or face != Vector2.ZERO:
 				node.rotation.y = rotate_toward(node.rotation.y, atan2(to.x, to.y), turn)
 		var ball_near := bp.distance_to(st["at"]) < UMP_TAKE if job else false
-		if on_mark and ball_near and not flying:
+		# Once he has put this stoppage's ball in play it is the ruckmen's: at the top of a bounce
+		# or a throw-up the director holds it dead at their hands' height for the tap, right over
+		# his mark, and he must not take it back (bug bash 2026-11-23: it was drawn back in his
+		# hands, or on the turf mid-bounce, for a frame before the tap).
+		if on_mark and ball_near and not flying and _ump_gone == Vector2.INF:
 			# On his mark with the ball: it is in his hands, held at his chest (the clip's
 			# first frame) until he puts it in play.
 			held = true
@@ -3418,8 +3502,13 @@ func _umpire_clip(u: Dictionary, st: Dictionary, dt: float) -> bool:
 	if before < UMP_T_REL:
 		_ump_hit_from = _umpire_hands(u)
 	# Out of his hands and onto the turf where the director bounces it, and there until the
-	# director's bounce takes it up (a frame or two when his clip runs ahead of it).
-	return str(director.ball.get("mode", "")) != "flight"
+	# director's bounce takes it up (a frame or two when his clip runs ahead of it). Once it has
+	# gone up it is never his again in this clip: at the top of the bounce the director holds it
+	# dead at the ruckmen's hands for the tap, and it was pulled back to the turf for a frame
+	# (bug bash 2026-11-23).
+	if str(director.ball.get("mode", "")) == "flight":
+		c["up"] = true
+	return not bool(c.get("up", false))
 
 
 ## Director seconds to the bounce of stoppage `st` for the umpire's clip to keep time with, less
@@ -3492,6 +3581,9 @@ func _umpire_ball_state(held: bool) -> void:
 	if not held and _ump_ball and ball != null:
 		_ump_off_t = 0.0
 		_ump_off = ball.global_position
+		var st: Dictionary = director.stoppage_now()
+		if not st.is_empty():
+			_ump_gone = st["at"]
 	_ump_ball = held
 
 
@@ -3527,12 +3619,15 @@ func _umpire_ball(dt: float) -> bool:
 			f = 1.0
 		want = _ump_hit_from.lerp(turf, f)
 		_ump_pick = -1.0
-	if _ump_pick >= 0.0 and dt > 0.0:
-		_ump_pick += dt
+	if _ump_pick >= 0.0:
+		if dt > 0.0:
+			_ump_pick += dt
 		var f := clampf(_ump_pick / _ump_pick_len, 0.0, 1.0)
 		# The gap it started at eases shut while it moves with his hands: a hand moving fast
-		# as the clip starts never leaves the ball behind.
+		# as the clip starts never leaves the ball behind. Never through the turf: as he bends to
+		# a ball lying on it his hands drop, and the gap carried it under (bug bash 2026-11-23).
 		want += _ump_from * (1.0 - f * f * (3.0 - 2.0 * f))
+		want.y = maxf(want.y, global_position.y + BALL_R)
 		if f >= 1.0:
 			_ump_pick = -1.0
 	ball.global_position = want

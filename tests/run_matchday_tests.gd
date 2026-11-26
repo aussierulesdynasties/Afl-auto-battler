@@ -79,6 +79,7 @@ func _run() -> void:
 	await _t("_test_feed_colours")
 	await _t("_test_momentum_meter")
 	await _t("_test_score_bug")
+	await _t("_test_banner_3d")
 	await _t("_test_stat_card_numbers")
 	await _t("_test_vignettes_setting")
 	await _t("_test_game_feel_effects")
@@ -2521,6 +2522,67 @@ func _test_momentum_meter() -> void:
 	_check(note2 != null and not note2.visible, "The next match does not say it again, nor keeps its room")
 	m2.queue_free()
 	await _settle()
+
+
+## Rule 2.115: on the 3D picture your side runs through the banner on the match's own ground before
+## the first bounce, with this match's words; a real tap on the picture ends it and the pre-match
+## calls open; back from Change the side it does not run again.
+func _test_banner_3d() -> void:
+	var db = root.get_node("GameDB")
+	_state.set_vignettes_on(true)
+	_state.set_setting("seen_momentum_intro", true)
+	_state.set_match_3d_on(true)
+	_state.reset()
+	_state.replay_seed = SUITE_SEED
+	_state.start_season("COL", db.club_list("COL"))
+	root.size = Vector2i(390, 844)
+	_state.prepare_interactive_match()
+	var mt: Dictionary = _state.pending_match
+	var opp := str(mt["away"]) if str(mt["home"]) == "COL" else str(mt["home"])
+	var want: String = load("res://scripts/ui/match/PreMatchVignette.gd").banner_text("COL", opp, str(mt.get("label", "")), _state.banner_context(mt))
+	var m: Control = load("res://scenes/MatchScene.tscn").instantiate()
+	root.add_child(m)
+	await _settle()
+	var pitch: Control = m.get("_pitch")
+	var banner: Node = pitch.find_child("Banner", true, false) if pitch != null else null
+	_check(pitch != null and bool(pitch.call("banner_running")) and banner != null,
+			"The side runs through the banner on the 3D ground first")
+	_check(m.find_child("CoachBox", true, false) == null, "The pre-match calls wait for the run-through")
+	var face = banner.get("_mat") if banner != null else null
+	_check(banner != null and face != null and want != "", "The banner carries this match's words (%s)" % want.replace("\n", " / "))
+	# The paper tears where the men go through, and stays up on the rope and the poles.
+	if banner != null:
+		var burst_at := float(banner.get("_burst_at"))
+		_check(float(banner.get("length")) > burst_at + 2.0 and burst_at < 5.0,
+				"Through within five seconds, the scene a few seconds more (%.1f s, %.1f s)" % [burst_at, float(banner.get("length"))])
+		while float(banner.get("t")) < burst_at + 1.0:
+			banner.call("frame", 1.0 / 30.0)
+		var cloth = banner.get("cloth")
+		var torn: int = cloth.call("cells_torn")
+		var whole := 0
+		for j in range(Oval3DBannerCloth.NY):
+			if cloth.call("_cell_whole", 0, j) and cloth.call("_cell_whole", Oval3DBannerCloth.NX - 1, j):
+				whole += 1
+		_check(torn >= 8 and torn < Oval3DBannerCloth.NX * Oval3DBannerCloth.NY / 2 and whole == Oval3DBannerCloth.NY,
+				"The paper tears where they go through and stays up at the poles (%d cells torn, %d of %d rows whole at the poles)"
+				% [torn, whole, Oval3DBannerCloth.NY])
+	var why: String = await Tap.tap_at(pitch, pitch.size * 0.5, false)
+	await _settle()
+	_check(why == "" and not bool(pitch.call("banner_running")) and m.find_child("CoachBox", true, false) != null,
+			"A tap on the picture ends it and the calls open (%s)" % why)
+	m.queue_free()
+	await _settle()
+	# Back from Change the side: the same match, no second run-through.
+	var m2: Control = load("res://scenes/MatchScene.tscn").instantiate()
+	root.add_child(m2)
+	await _settle()
+	var pitch2: Control = m2.get("_pitch")
+	_check(pitch2 != null and not bool(pitch2.call("banner_running")) and m2.find_child("CoachBox", true, false) != null,
+			"The same match again: straight to the calls")
+	m2.queue_free()
+	await _settle()
+	_state.set_match_3d_on(false)
+	_state.set_vignettes_on(false)
 
 
 ## Rule 2.107: with the 3D picture on a phone the scoreboard panel goes; the score sits on the

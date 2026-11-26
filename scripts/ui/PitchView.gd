@@ -11,6 +11,9 @@ extends Control
 
 signal event_played(ev: Dictionary)
 signal finished
+## Through the banner on the 3D ground (run_banner): the first man is through, and the scene is over.
+signal banner_burst
+signal banner_done
 ## The sides have changed ends: `period` is the one now being played.
 signal ends_changed(period: int)
 
@@ -216,6 +219,7 @@ var _oval3d: Oval3D = null
 var _vp3d: SubViewport = null
 var _view3d: TextureRect = null
 var _tv: Oval3DBroadcast = null  # the TV coverage: which camera, where it points
+var _banner: Oval3DBanner = null  # through the banner before the first bounce (run_banner)
 var _siren_replay := false     # the deciding behind's replay is on after the siren
 const REPLAY_TAG := "Replay: tap to skip"
 const REPLAY_TAG_W := 150.0    # px: the tag's pill, as the director picked it on the board
@@ -319,6 +323,7 @@ func _setup_3d() -> void:
 	if _oval3d != null:
 		_oval3d.queue_free()
 		_oval3d = null
+		_banner = null
 	# A build that fetches each ground's model the first time a match is played there
 	# (GroundPacks): the flat oval plays on while it comes, then the 3D picture starts.
 	var ground_slug := GroundModels.slug_for(VignetteGround.ground_of(result)) if three_d else ""
@@ -367,7 +372,13 @@ func _setup_3d() -> void:
 	_oval3d.build(director, home_code, away_code)
 	_tv = Oval3DBroadcast.new(_oval3d)
 	# The turf and light for the day, as the flat oval and the vignettes draw it.
-	_oval3d.turf.apply(weather, time_of_day(weather))
+	_sun = null
+	if time_override != "":
+		_oval3d.turf.apply(weather, time_of_day(weather))
+	else:
+		# The real sun over the ground from the bounce (plan 2a.4): the light moves with the clock.
+		_sun = Oval3DSunClock.for_match(_oval3d.ground, str(result.get("label", "")), time_of_day(weather))
+		_oval3d.turf.follow_clock(weather, _sun)
 	_make_paint_3d()
 	_oval3d.set_ends(end_sign(period))
 	_fit_3d()
@@ -522,6 +533,40 @@ func _full_time() -> void:
 		_siren_replay = true
 		return
 	finished.emit()
+
+
+## Through the banner (Oval3DBanner) on the 3D ground before the first bounce: `side`'s
+## players (0 home) burst through `text` held up by the cheer squad. banner_burst as the first
+## is through, banner_done when it ends (on its own or at a tap). False when there is no 3D
+## picture to play it on.
+func run_banner(text: String, side: int) -> bool:
+	if _oval3d == null or _banner != null:
+		return false
+	_banner = Oval3DBanner.new()
+	_banner.name = "Banner"
+	_oval3d.add_child(_banner)
+	_banner.build(_oval3d, side, text, home_code if side == 0 else away_code, hash(result.get("label", "")))
+	_banner.burst.connect(func(): banner_burst.emit())
+	set_process(true)
+	return true
+
+
+func banner_running() -> bool:
+	return _banner != null
+
+
+func _end_banner() -> void:
+	if _banner == null:
+		return
+	var b := _banner
+	_banner = null
+	b.finish()
+	b.queue_free()
+	# Cut back to the match as it stands: the bodies on their spots, the umpires too.
+	_oval3d.umpires_after_cut()
+	_sync_3d(0.0)
+	queue_redraw()
+	banner_done.emit()
 
 
 ## The coach skips the replay on the 3D picture (rule 2.96): the picture is live again at once.
@@ -706,6 +751,8 @@ func _make_paint_3d() -> void:
 func _draw_3d() -> void:
 	if _vp3d == null or not is_inside_tree():
 		return
+	if _banner != null:
+		return     # the ceremony: no names or captions over it
 	draw_set_transform(shake_offset() if _shake > 0.0 else Vector2.ZERO)
 	if _replaying():
 		# Names and captions follow the live play, not the replayed bodies: none on a replay.
@@ -767,6 +814,8 @@ func _draw_sting() -> void:
 # Playback
 # ---------------------------------------------------------------------------
 func play() -> void:
+	if _banner != null:
+		_end_banner()     # play before the run-through has ended: it ends here
 	if director.idle():
 		# Nothing new to show (a moment right where the last one left off):
 		# say so, or the match screen waits for a finish that never comes
@@ -837,9 +886,10 @@ func _process(delta: float) -> void:
 			_nudge_h += delta * speed * MatchDirector.TEMPO
 		# Real footy's pauses (a ball-up waiting for the players, a player
 		# after a mark) play at double the watching speed (rule 2.93). The centre
-		# bounce waits for a goal's replay to end (rule 2.96).
+		# bounce waits for a goal's replay to end (rule 2.96), and play waits
+		# while a sting takes the picture into a replay (_tv.stinging_in).
 		var out := []
-		if not (_tv != null and _tv.on_replay() and director.bounce_next()):
+		if not (_tv != null and ((_tv.on_replay() and director.bounce_next()) or _tv.stinging_in())):
 			out = director.advance(delta * speed * (MatchDirector.PAUSE_PLAY if director.pausing() else 1.0))
 		for ev in out:
 			_track_quarter(ev)
@@ -870,6 +920,13 @@ func _process(delta: float) -> void:
 		_shake = maxf(0.0, _shake - delta)
 		queue_redraw()
 	_update_camera(delta)
+	if _oval3d != null and _banner != null:
+		# Through the banner: the scene has the ground and the camera until it ends.
+		_fit_3d()
+		if _banner.frame(delta):
+			_end_banner()
+		queue_redraw()
+		return
 	if _oval3d != null:
 		_sync_3d(delta * speed if playing else 0.0, delta if playing or _siren_replay else 0.0)
 		if _siren_replay and not _tv.on_replay():
@@ -915,6 +972,13 @@ func set_marks(next: Dictionary) -> void:
 ## A long press on a marked disc says what the mark means; a tap or a drag
 ## does nothing here.
 func _gui_input(e: InputEvent) -> void:
+	if _banner != null and ((e is InputEventMouseButton and (e as InputEventMouseButton).pressed)
+			or (e is InputEventScreenTouch and (e as InputEventScreenTouch).pressed)):
+		# A tap ends the run-through at once (as the vignette's tap did).
+		_banner.finish()
+		_end_banner()
+		accept_event()
+		return
 	if e is InputEventMouseButton and (e as InputEventMouseButton).button_index == MOUSE_BUTTON_LEFT \
 			and (e as InputEventMouseButton).pressed and str(ground_fetch.get("why", "")) != "" \
 			and _fetch_rect.has_point((e as InputEventMouseButton).position):
@@ -1117,6 +1181,8 @@ func _follow_ball() -> void:
 ## here when events are skipped, not watched) makes the change if the restart
 ## has not; the final siren never does.
 func _track_quarter(ev: Dictionary) -> void:
+	if _sun != null and _oval3d != null and ev.has("q") and ev.has("min"):
+		_oval3d.turf.set_hour(_sun.hour_at(int(ev["q"]), float(ev["min"])))
 	var kind := str(ev.get("kind", ""))
 	if kind == "quarter":
 		if _flip_pending:
@@ -2643,6 +2709,8 @@ func close_bench() -> bool:
 ## Day, twilight or night for this match (OvalStadium.time_of_day; a capture or a
 ## test may set `time_override`).
 var time_override := ""
+## The match's sun clock while the 3D oval follows it (null when a slot is forced).
+var _sun: Oval3DSunClock
 
 func time_of_day(weather := "") -> String:
 	return time_override if time_override != "" else OvalStadium.time_of_day(weather)

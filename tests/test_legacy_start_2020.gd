@@ -20,6 +20,7 @@ const CLUB := "RIC"
 func run() -> void:
 	_t("_test_the_2020_set")
 	_t("_test_a_2020_career_starts_at_richmond")
+	_t("_test_2020_opens_under_the_cap")
 	_t("_test_the_hub_season_clock")
 	_t("_test_the_career_rolls_into_2021")
 	GameState.reset()
@@ -95,6 +96,41 @@ func _test_a_2020_career_starts_at_richmond() -> void:
 	_check(no_sc.is_empty(), "Every other club has its senior coach (%s)" % str(no_sc))
 	_check(no_captain.is_empty(), "Every club shows its 2020 captain (%s)" % str(no_captain))
 	# The career is left as it started: _test_the_career_rolls_into_2021 plays it.
+
+
+## 2020's pay cut (bug bash batch B, director 2026-11-25: "Batch B: cap and
+## lists"): every player was paid 29.17% less "across the board" and the cap
+## on record, 9,056,000, is the cut total; contracts are counted against the
+## cap before the cut, 12,786,000. Before this, a 2020 start opened every
+## club at 128-141% of its cap. Now every club opens under it.
+func _test_2020_opens_under_the_cap() -> void:
+	if GameState.season_year != 2020 or GameState.my_club != CLUB or GameDB.dataset_id != "2020":
+		Career.start(CLUB)
+	_check(is_equal_approx(Contracts.pay_cut(2020), 0.2917) and Contracts.pay_cut(2019) == 0.0
+			and Contracts.pay_cut(2021) == 0.0, "2020 alone has its pay cut, 29.17%")
+	_check(Contracts.era_cap(2020) == 9056000 and GameState.salary_cap == 12786000,
+			"2020's cap on record is 9,056,000; contracts count against 12,786,000 (%d)" % GameState.salary_cap)
+	var over := []
+	var shares := []
+	for code in GameState.season.lists:
+		var used := Contracts.payroll(GameState.season.lists[code]) + GameState.dead_for(code)
+		var share := float(used) / float(GameState.cap_for(code))
+		shares.append(share)
+		if used > GameState.cap_for(code):
+			over.append("%s %d%%" % [code, int(round(share * 100.0))])
+	shares.sort()
+	_check(shares.size() == 18 and over.is_empty(),
+			"Every 2020 club opens under its cap (%d clubs, %d%% to %d%%; over: %s)" % [shares.size(),
+			int(round(float(shares[0]) * 100.0)), int(round(float(shares[-1]) * 100.0)), str(over)])
+	# The note under the cap line (director, 2026-11-25, "Contracts + note").
+	_check(Contracts.pay_cut_note(2020) == "2020: every player is paid 29.17% less (COVID-19).\nClubs pay at most $9.06m."
+			and Contracts.pay_cut_note(2021) == "" and Contracts.pay_cut_note(2019) == "",
+			"2020's note says the cut and what a club pays (%s); 2019 and 2021 have none" % Contracts.pay_cut_note(2020))
+	# A save from before the cut was counted kept 2020's cap at 9,056,000: it loads at 12,786,000.
+	var state: Dictionary = GameState._save_state()
+	state["salary_cap"] = Contracts.era_cap(2020)
+	_check(GameState._restore_career(state) and GameState.salary_cap == 12786000,
+			"An old 2020 save's cap of 9,056,000 loads as 12,786,000 (%d)" % GameState.salary_cap)
 
 
 ## 2020's games were 16-minute quarters plus time on: the clock says so.
