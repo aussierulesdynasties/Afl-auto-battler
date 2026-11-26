@@ -57,11 +57,11 @@ static func open(host: Control, on_retrain: Callable) -> Control:
 	var left: VBoxContainer = body
 	var right: VBoxContainer = body
 	if wide:
-		var cols := UiKit.hbox(32)
+		var cols := UiKit.hbox(UiKit.Space.BROAD)
 		body.add_child(cols)
-		left = UiKit.vbox(8)
+		left = UiKit.vbox(UiKit.GAP)
 		left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		right = UiKit.vbox(8)
+		right = UiKit.vbox(UiKit.GAP)
 		right.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		cols.add_child(left)
 		cols.add_child(right)
@@ -85,7 +85,7 @@ static func open(host: Control, on_retrain: Callable) -> Control:
 		var rl := UiKit.lbl("In the reserves, %d %s kept developing." % [
 				n, "player" if n == 1 else "players"], UiKit.BODY, UiKit.TEXT)
 		rl.name = "ReportReserves"
-		left.add_child(UiKit.spacer(8))
+		left.add_child(UiKit.spacer(UiKit.GAP))
 		left.add_child(rl)
 
 	var rt := TrainingReport.retrain_list(GameState, r)
@@ -158,7 +158,7 @@ static func _retrain_row(host: Control, body: VBoxContainer, e: Dictionary, on_r
 	var p := GameState.list_player(str(e["id"]))
 	if p.is_empty():
 		return
-	var v := UiKit.vbox(4)
+	var v := UiKit.vbox(UiKit.Space.TIGHT)
 	v.name = "Retrain_" + str(e["id"])
 	body.add_child(v)
 	var id := str(e["id"])
@@ -168,8 +168,8 @@ static func _retrain_row(host: Control, body: VBoxContainer, e: Dictionary, on_r
 	# The way in: one button per position, worded as the choice it leads to.
 	var go := HFlowContainer.new()
 	go.name = "Jobs"
-	go.add_theme_constant_override("h_separation", 8)
-	go.add_theme_constant_override("v_separation", 6)
+	go.add_theme_constant_override("h_separation", UiKit.GAP)
+	go.add_theme_constant_override("v_separation", UiKit.Space.CLOSE)
 	v.add_child(go)
 	var words: Array = e["jobs"]
 	var keys: Array = e.get("keys", [])

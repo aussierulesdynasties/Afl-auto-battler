@@ -323,12 +323,12 @@ func reload(dataset := Datasets.DEFAULT) -> void:
 	pristine = loaded
 	baseline_overall = 0.0
 	for p in players:
-		baseline_overall += float(p["overall"])
+		baseline_overall += float(Rating.ovr(p))
 	if loaded:
 		baseline_overall /= float(players.size())
 		var sq := 0.0
 		for p in players:
-			sq += pow(float(p["overall"]) - baseline_overall, 2.0)
+			sq += pow(float(Rating.ovr(p)) - baseline_overall, 2.0)
 		baseline_spread = sqrt(sq / float(players.size()))
 	if not loaded:
 		push_error("GameDB: no players loaded. Check that %s exists, is complete and that its import type is 'Keep File (exported as is)'." % PLAYERS_ENRICHED_CSV)
@@ -626,14 +626,14 @@ func player_sort_name(player: Dictionary) -> String:
 ## Every player in the competition, best-first. Used as the draft pool.
 func all_players_sorted() -> Array:
 	var out := players.duplicate()
-	out.sort_custom(func(a, b): return a["overall"] > b["overall"])
+	out.sort_custom(func(a, b): return Rating.ovr(a) > Rating.ovr(b))
 	return out
 
 
 ## The shipped draft class best-first (projections applied at load).
 func all_draftees_sorted() -> Array:
 	var out := draftees.duplicate()
-	out.sort_custom(func(a, b): return a["overall"] > b["overall"])
+	out.sort_custom(func(a, b): return Rating.ovr(a) > Rating.ovr(b))
 	return out
 
 
@@ -847,9 +847,9 @@ func _load_list_additions() -> Array:
 				p["role"] = listed
 				p["role2"] = Ratings.assign_secondary(p)
 				if p.has("apos"):
-					p["attr"] = Prospects.fit_attributes(p["attr"], listed, float(p["overall"]), float(p["gm"]))
+					p["attr"] = Prospects.fit_attributes(p["attr"], listed, float(Rating.ovr(p)), float(p["gm"]))
 				p["overall"] = Ratings.rate_overall(p["attr"], listed, float(p["gm"]))
-				p["value"] = Ratings.salary_value(int(p["overall"]))
+				p["value"] = Ratings.salary_value(int(Rating.ovr(p)))
 			p["career"] = Career.from_source("?")
 			p["data_club"] = str(p["club"])
 			Potential.assign(p)
@@ -1238,7 +1238,7 @@ func _apply_rating_stats(list: Array, adjust := true) -> void:
 		var a := {}
 		for k in Skills.KEYS:
 			a[k] = clampi(int(row.get(k, 50)), 1, 99)
-		var ovr := float(row.get("ovr", p.get("overall", 60)))
+		var ovr := float(row.get("ovr", Rating.ovr(p, 60)))
 		var games := float(p.get("gm", 14))
 		var role := str(p.get("role", "MID"))
 		p["apos"] = str(row.get("apos", ""))
@@ -1257,7 +1257,7 @@ func _apply_rating_stats(list: Array, adjust := true) -> void:
 				a[k] = clampi(int(round(float(a[k]) * adj)), 1, 99)
 		p["attr"] = a
 		p["overall"] = Ratings.rate_overall(a, role, games)
-		p["value"] = Ratings.salary_value(int(p["overall"]))
+		p["value"] = Ratings.salary_value(int(Rating.ovr(p)))
 
 
 func _read_rows(path: String) -> Array:
@@ -2221,13 +2221,13 @@ func _apply_ovr_overrides(list: Array) -> void:
 		return
 	_each_override_row(OVR_CSV, "ovr", list, func(p, cell):
 		var text: String = str(cell).strip_edges()
-		var before_pot := int(p.get("potential", p["overall"]))
+		var before_pot := int(p.get("potential", Rating.ovr(p)))
 		var mult := 1.0
 		var target := 0
 		if (text.begins_with("+") or text.begins_with("-")) and text.ends_with("%"):
 			# A relative row (+10% or -10%): his computed OVR and the POT he had both scale.
 			mult = 1.0 + text.trim_suffix("%").to_float() / 100.0
-			target = int(round(float(p["overall"]) * mult))
+			target = int(round(float(Rating.ovr(p)) * mult))
 		else:
 			target = int(text)
 		if set_player_ovr(p, target):
@@ -2389,7 +2389,7 @@ func _apply_potential_overrides(list: Array) -> void:
 		var text: String = str(cell).strip_edges()
 		if (text.begins_with("+") or text.begins_with("-")) and text.ends_with("%"):
 			var mult := 1.0 + text.trim_suffix("%").to_float() / 100.0
-			Potential.set_override(p, int(round(float(p.get("potential", p["overall"])) * mult)))
+			Potential.set_override(p, int(round(float(p.get("potential", Rating.ovr(p))) * mult)))
 		else:
 			Potential.set_override(p, int(text)))
 

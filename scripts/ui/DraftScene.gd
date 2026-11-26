@@ -123,7 +123,7 @@ func _ready() -> void:
 	_margin = MarginContainer.new()
 	_margin.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(_margin)
-	_root = UiKit.vbox(8)
+	_root = UiKit.vbox(UiKit.GAP)
 	_margin.add_child(_root)
 	_search_timer = Timer.new()
 	_search_timer.one_shot = true
@@ -208,7 +208,7 @@ func _build_layout() -> void:
 	_layout_key = _layout_signature()
 	_built_width = UiKit.view_width(self)
 	_apply_margins()
-	_root.add_theme_constant_override("separation", 6 if _short else 10)
+	_root.add_theme_constant_override("separation", UiKit.Space.CLOSE if _short else UiKit.Space.ROOM)
 	if _phase == "club":
 		_show_club_select()
 	else:
@@ -292,8 +292,8 @@ func _show_club_select() -> void:
 	var grid := GridContainer.new()
 	grid.name = "ClubGrid"
 	grid.columns = _grid_columns()
-	grid.add_theme_constant_override("h_separation", 10)
-	grid.add_theme_constant_override("v_separation", 10)
+	grid.add_theme_constant_override("h_separation", UiKit.Space.ROOM)
+	grid.add_theme_constant_override("v_separation", UiKit.Space.ROOM)
 	_root.add_child(UiKit.scroll(grid))
 	var waits: Array = GameState.waiting_clubs()
 	var waiting := GameState.waiting_club()
@@ -309,9 +309,9 @@ func _show_club_select() -> void:
 		for edge in ["left", "right", "top", "bottom"]:
 			inner.add_theme_constant_override("margin_" + edge, 12)
 		b.add_child(inner)
-		var v := UiKit.vbox(5)
+		var v := UiKit.vbox(UiKit.Space.SNUG)
 		inner.add_child(v)
-		var row := UiKit.hbox(8)
+		var row := UiKit.hbox(UiKit.GAP)
 		v.add_child(row)
 		row.add_child(UiKit.club_badge(code, 13, true))
 		var first: Array = _draft.upcoming_picks(code, 1)
@@ -363,7 +363,7 @@ func _open_wait_sheet(code: String) -> void:
 		var l := UiKit.lbl(line, UiKit.BODY, UiKit.TEXT)
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(l)
-	var row := UiKit.hbox(8)
+	var row := UiKit.hbox(UiKit.GAP)
 	box["footer"].add_child(row)
 	var back := UiKit.btn("Back", UiKit.NAME)
 	back.name = "WaitBack"
@@ -485,7 +485,7 @@ func _club_backdrop() -> void:
 
 
 func _header(title_text: String, sub: String) -> Control:
-	var h := UiKit.hbox(10)
+	var h := UiKit.hbox(UiKit.Space.ROOM)
 	var back := UiKit.btn("‹", UiKit.GLYPH)
 	back.name = "BackToMenu"
 	back.custom_minimum_size = Vector2(44, 44)
@@ -553,7 +553,7 @@ func _crest_size() -> float:
 
 
 func _stage() -> Control:
-	var h := UiKit.hbox(8)
+	var h := UiKit.hbox(UiKit.GAP)
 	h.name = "DraftStage"
 	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	h.size_flags_vertical = Control.SIZE_SHRINK_CENTER
@@ -588,7 +588,7 @@ func _hang(code: String) -> void:
 func _show_first_offseason() -> void:
 	var legacy := GameDB.draftees.is_empty()
 	_root.add_child(_header("The %d off-season" % GameState.season_year, GameDB.club_name(_club)))
-	var v := UiKit.vbox(10)
+	var v := UiKit.vbox(UiKit.Space.ROOM)
 	v.name = "FirstOffseason"
 	_root.add_child(v)
 	var open_l := UiKit.lbl("The trade period and free agency are open. Every club can trade players "
@@ -624,6 +624,15 @@ func _show_first_offseason() -> void:
 
 
 func _end_first_offseason() -> void:
+	# Closing the trade period and free agency takes a moment (0.5-0.8 s, bug
+	# bash 2026-11-25): the cover and its line go up first (director, batch F).
+	if not GameDB.draftees.is_empty():
+		ScreenTransition.run("Starting the draft...", _close_first_offseason)
+		return
+	_close_first_offseason()
+
+
+func _close_first_offseason() -> void:
 	GameState.close_first_offseason()
 	GameState.autosave()
 	if _season_without_draft():
@@ -680,10 +689,10 @@ func _show_board() -> void:
 		_why_box.visible = false
 		_root.add_child(_why_box)
 
-	_main_tabs = UiKit.hbox(3)
+	_main_tabs = UiKit.hbox(UiKit.Space.THIN)
 	_main_tabs.visible = not _wide
 	_root.add_child(_main_tabs)
-	var body := UiKit.hbox(12)
+	var body := UiKit.hbox(UiKit.Space.PAD)
 	body.name = "DraftWorkspace"
 	body.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_root.add_child(body)
@@ -704,7 +713,7 @@ func _show_board() -> void:
 
 
 func _compact_header() -> Control:
-	var h := UiKit.hbox(10)
+	var h := UiKit.hbox(UiKit.Space.ROOM)
 	var back := UiKit.btn("‹", UiKit.GLYPH)
 	back.custom_minimum_size.x = 44
 	back.pressed.connect(back_to_menu)
@@ -730,18 +739,18 @@ func _compact_header() -> Control:
 ## ("Pick 12: Fremantle"), your next pick ("Your pick: 14, two away"), and the
 ## last three picks under it. A tap opens the pick log (and finishes a replay).
 func _live_board() -> PanelContainer:
-	var p := UiKit.panel(UiKit.PANEL, 9, 7)
+	var p := UiKit.panel(UiKit.PANEL, UiKit.Space.EASY, 7)
 	p.name = "LiveBoard"
 	p.mouse_filter = Control.MOUSE_FILTER_STOP
 	p.tooltip_text = "Tap to see every club's selections."
 	p.gui_input.connect(_on_board_input)
-	var col := UiKit.vbox(6)
+	var col := UiKit.vbox(UiKit.Space.CLOSE)
 	p.add_child(col)
-	var top := UiKit.hbox(10)
+	var top := UiKit.hbox(UiKit.Space.ROOM)
 	top.name = "OnTheClock"
 	col.add_child(top)
 	top.add_child(_stage())
-	var v := UiKit.vbox(1)
+	var v := UiKit.vbox(UiKit.Space.HAIR)
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	v.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	top.add_child(v)
@@ -770,7 +779,7 @@ func _live_board() -> PanelContainer:
 	_passed_line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_passed_line.visible = false
 	v.add_child(_passed_line)
-	_recent_box = UiKit.vbox(2)
+	_recent_box = UiKit.vbox(UiKit.Space.SLIM)
 	_recent_box.name = "RecentPicks"
 	if _wide:
 		# PC: the last three picks beside the club on the clock, in the same row,
@@ -813,7 +822,7 @@ func _on_board_input(event: InputEvent) -> void:
 # One row answers both "what does my list need?" and "show me those players":
 # a compact All, then a card per position with the count and the need.
 func _position_filters() -> Control:
-	var h := UiKit.hbox(5)
+	var h := UiKit.hbox(UiKit.Space.SNUG)
 	h.name = "PositionFilters"
 	var narrow := _usable_size().x < 400.0
 	var height := 52 if _short else 58
@@ -854,10 +863,10 @@ func _position_filters() -> Control:
 
 
 func _footer() -> Control:
-	var p := UiKit.panel(UiKit.INK, 8, 6)
-	var col := UiKit.vbox(6)
+	var p := UiKit.panel(UiKit.INK, UiKit.GAP, 6)
+	var col := UiKit.vbox(UiKit.Space.CLOSE)
 	p.add_child(col)
-	var h := UiKit.hbox(10)
+	var h := UiKit.hbox(UiKit.Space.ROOM)
 	col.add_child(h)
 	_next_picks = UiKit.lbl("", UiKit.SMALL, UiKit.MUTED)
 	_next_picks.name = "UpcomingPicks"
@@ -869,7 +878,7 @@ func _footer() -> Control:
 	UiKit.feel(_finish_btn, "end")     # the end of the draft: the siren
 	h.add_child(_finish_btn)
 	# Two plain buttons for your own pick; neither is the recommended one.
-	var acts := UiKit.hbox(8)
+	var acts := UiKit.hbox(UiKit.GAP)
 	acts.name = "PickActions"
 	col.add_child(acts)
 	_pick_me_btn = UiKit.btn("Pick for me", UiKit.SECONDARY)
@@ -991,15 +1000,15 @@ func _refresh_tabs() -> void:
 # leaving only a few pixels for players below a fixed filter toolbar.
 # ---------------------------------------------------------------------------
 func _build_pool() -> PanelContainer:
-	var panel := UiKit.panel(UiKit.PANEL, 10, 10)
+	var panel := UiKit.panel(UiKit.PANEL, UiKit.Space.ROOM, 10)
 	panel.name = "DraftPool"
-	var v := UiKit.vbox(8)
+	var v := UiKit.vbox(UiKit.GAP)
 	panel.add_child(v)
 	var filters := _filters()
 	_board_box = UiKit.vbox(0)
 	_board_box.name = "PlayerRows"
 	if _short:
-		var content := UiKit.vbox(8)
+		var content := UiKit.vbox(UiKit.GAP)
 		content.add_child(filters)
 		content.add_child(_board_box)
 		_board_scroll = UiKit.scroll(content)
@@ -1013,8 +1022,8 @@ func _build_pool() -> PanelContainer:
 
 
 func _filters() -> Control:
-	var v := UiKit.vbox(6)
-	var title_row := UiKit.hbox(8)
+	var v := UiKit.vbox(UiKit.Space.CLOSE)
+	var title_row := UiKit.hbox(UiKit.GAP)
 	v.add_child(title_row)
 	title_row.visible = _wide and not _short
 	var title_label := UiKit.heading("Draft pool", UiKit.H1)
@@ -1028,7 +1037,7 @@ func _filters() -> Control:
 	v.add_child(_position_filters())
 	_refresh_role_tabs()
 
-	var search_row := UiKit.hbox(6)
+	var search_row := UiKit.hbox(UiKit.Space.CLOSE)
 	v.add_child(search_row)
 	_search_field = UiKit.search_field(_search)
 	_search_field.name = "PlayerSearch"
@@ -1181,8 +1190,9 @@ func _clear_except(box: Node, keep: Dictionary) -> void:
 		if keep.has(str(child.name)):
 			continue
 		if under != null and child is CanvasItem and (child == under or child.is_ancestor_of(under)):
+			# Hidden after the tap, not during it (UiKit.clear says why).
 			child.name = "Leaving_%d" % child.get_instance_id()
-			(child as CanvasItem).hide()
+			(child as CanvasItem).hide.call_deferred()
 			child.queue_free()
 			continue
 		box.remove_child(child)
@@ -1200,7 +1210,7 @@ func _clear_filters() -> void:
 func _player_row(p: Dictionary) -> Control:
 	var row := _row_panel(false)
 	row.name = "Player_" + str(p["id"])
-	var h := UiKit.hbox(8)
+	var h := UiKit.hbox(UiKit.GAP)
 	row.add_child(h)
 	var role := str(p["role"])
 	# Tapping the player (chip, name, line) inspects him; only the button on
@@ -1217,13 +1227,13 @@ func _player_row(p: Dictionary) -> Control:
 	h.add_child(inspect)
 	# His role and name on top; under them, at the row's full width, the
 	# facts that decide a pick and how he plays (they wrap, never cut).
-	var face := UiKit.vbox(2)
+	var face := UiKit.vbox(UiKit.Space.SLIM)
 	face.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	inspect.add_child(face)
-	var top := UiKit.hbox(8)
+	var top := UiKit.hbox(UiKit.GAP)
 	face.add_child(top)
 	var chip := UiKit.role_chip(Ratings.role_tag(p))
-	var info := UiKit.vbox(2)
+	var info := UiKit.vbox(UiKit.Space.SLIM)
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	if UiKit.text_scale > 1.0 and not _wide:
 		# At a larger text size (Settings) a phone puts his role over his name,
@@ -1257,7 +1267,7 @@ func _player_row(p: Dictionary) -> Control:
 				read = "projected %s OVR · %s POT" % [DraftScouting.range_text(proj_view["overall"]),
 						DraftScouting.range_text(proj_view["potential"])]
 			else:
-				read = "projected %d OVR · %d POT" % [int(p["overall"]), int(p.get("potential", p["overall"]))]
+				read = "projected %d OVR · %d POT" % [int(Rating.ovr(p)), int(p.get("potential", Rating.ovr(p)))]
 	else:
 		where = GameDB.club_short(str(p["club"]))
 		var view := _draft.user_view(p)
@@ -1265,7 +1275,7 @@ func _player_row(p: Dictionary) -> Control:
 			read = "%s OVR · %s POT" % [DraftScouting.range_text(view["overall"]),
 					DraftScouting.range_text(view["potential"])]
 		else:
-			read = "%d OVR · %d POT" % [int(p["overall"]), int(p.get("potential", p["overall"]))]
+			read = "%d OVR · %d POT" % [int(Rating.ovr(p)), int(p.get("potential", Rating.ovr(p)))]
 		read += " · " + Contracts.money(_draft.price(p))
 	var facts := read
 	if float(p.get("age", 0.0)) > 0.0:
@@ -1275,7 +1285,7 @@ func _player_row(p: Dictionary) -> Control:
 		facts = "Pick %d to %s" % [int(entry.get("pick", 0)),
 				GameDB.club_short(_draft.drafted_by(str(p["id"])))]
 		if not bool(_draft.user_view(p)["scouted"]):
-			facts += " · %d OVR" % int(p["overall"])
+			facts += " · %d OVR" % int(Rating.ovr(p))
 	# Every fact on these lines decides a pick (his price is last): they wrap
 	# rather than cut on a phone, and the row grows to fit them.
 	face.add_child(_row_line(facts, UiKit.TEXT))
@@ -1348,7 +1358,7 @@ func _set_pick_state(row: Control, b: Button, p: Dictionary) -> void:
 	b.tooltip_text = reason
 	if can_pick:
 		b.add_theme_color_override("font_color", UiKit.TEXT)
-		b.add_theme_stylebox_override("normal", UiKit.style(UiKit.PANEL, 6, 5, Color("6c5142")))
+		b.add_theme_stylebox_override("normal", UiKit.style(UiKit.PANEL, UiKit.Space.CLOSE, 5, Color("6c5142")))
 	else:
 		b.add_theme_stylebox_override("normal", b.get_meta("outline"))
 	if bool(p.get("projected", false)) and _draft.intake_mode:
@@ -1568,8 +1578,9 @@ func _land_rivals(build := true) -> bool:
 		if not _draft.has(name_s.substr(7)):
 			n += 1
 		elif under != null and (c == under or c.is_ancestor_of(under)):
+			# Hidden after the tap, not during it (UiKit.clear says why).
 			c.name = "Leaving_%d" % c.get_instance_id()
-			(c as CanvasItem).hide()
+			(c as CanvasItem).hide.call_deferred()
 			c.queue_free()
 		else:
 			_board_box.remove_child(c)
@@ -1747,12 +1758,12 @@ func _show_beat(entry: Dictionary) -> void:
 	var words := MarginContainer.new()
 	for edge in ["left", "right"]:
 		words.add_theme_constant_override("margin_" + edge, 14)
-	words.add_theme_constant_override("margin_top", 10)
-	words.add_theme_constant_override("margin_bottom", 12)
+	words.add_theme_constant_override("margin_top", UiKit.Space.ROOM)
+	words.add_theme_constant_override("margin_bottom", UiKit.Space.PAD)
 	if not GameState.vignettes_on():
 		words.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	v.add_child(words)
-	var say := UiKit.vbox(3)
+	var say := UiKit.vbox(UiKit.Space.THIN)
 	say.alignment = BoxContainer.ALIGNMENT_CENTER
 	words.add_child(say)
 	# The pick in the club's ink, his name big, where from and what he plays,
@@ -1926,7 +1937,7 @@ func _show_meeting() -> void:
 			l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			v.add_child(l)
 	if not (notes["names"] as Array).is_empty():
-		v.add_child(UiKit.spacer(4))
+		v.add_child(UiKit.spacer(UiKit.Space.TIGHT))
 		v.add_child(UiKit.lbl("Recruiting liked", 14, UiKit.MUTED, true))
 		for row in notes["names"]:
 			var id := str(row["id"])
@@ -2025,14 +2036,14 @@ func _open_player(id: String) -> void:
 
 	# How good, and how much room. National Draft prospects stay inside the
 	# club's scouting view rather than revealing hidden true ratings.
-	var nums := UiKit.hbox(18)
+	var nums := UiKit.hbox(UiKit.SECTION)
 	v.add_child(nums)
 	if read:
 		nums.add_child(_big_range(view["overall"], "Projected OVR" if projected else "OVR", "DetailOVR"))
 		nums.add_child(_big_range(view["potential"], "POT", "DetailPOT"))
 	else:
-		nums.add_child(_big_number(int(p["overall"]), "Projected OVR" if projected else "OVR", "DetailOVR"))
-		nums.add_child(_big_number(int(p.get("potential", p["overall"])), "POT", "DetailPOT"))
+		nums.add_child(_big_number(int(Rating.ovr(p)), "Projected OVR" if projected else "OVR", "DetailOVR"))
+		nums.add_child(_big_number(int(p.get("potential", Rating.ovr(p))), "POT", "DetailPOT"))
 	var room := UiKit.lbl("Scouting estimate" if read else GameState.development_state(p), 14,
 			UiKit.MUTED if read else UiKit.TEXT)
 	room.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -2042,8 +2053,8 @@ func _open_player(id: String) -> void:
 	# His price rides on the Draft button; the intake has none worth a line.
 
 	# What kind of footballer: type, then what he is picked for. Flat, no box.
-	v.add_child(UiKit.spacer(4))
-	var kv := UiKit.vbox(3)
+	v.add_child(UiKit.spacer(UiKit.Space.TIGHT))
+	var kv := UiKit.vbox(UiKit.Space.THIN)
 	v.add_child(kv)
 	var type_l := UiKit.lbl(Roles.label(seen), UiKit.HEADING, UiKit.TEXT, true)
 	type_l.name = "DetailType"
@@ -2051,7 +2062,7 @@ func _open_player(id: String) -> void:
 	PlayerSheet.top_attributes_block(kv, seen, scouted, 14, UiKit.SECONDARY)
 	var traits: Array = Traits.of(seen)
 	if not traits.is_empty():
-		kv.add_child(UiKit.spacer(4))
+		kv.add_child(UiKit.spacer(UiKit.Space.TIGHT))
 		for t in traits:
 			var tl := UiKit.lbl("%s. %s" % [UiKit.trait_label(str(t)), Traits.scout(str(t))], 13,
 					UiKit.BAD if Traits.is_bad(str(t)) else UiKit.TEXT)
@@ -2065,7 +2076,7 @@ func _open_player(id: String) -> void:
 	# Draft fit (row 127): how he suits your coach's game.
 	var fits := _fit_of(p)
 	if not fits.is_empty():
-		kv.add_child(UiKit.spacer(4))
+		kv.add_child(UiKit.spacer(UiKit.Space.TIGHT))
 		for m in fits:
 			var fl := UiKit.lbl(str(m["text"]), 14, _fit_colour(), true)
 			fl.name = "DetailFit_" + str(m["arch"])
@@ -2075,7 +2086,7 @@ func _open_player(id: String) -> void:
 	# The Combine: his results on the day (measured, the same for every club),
 	# then the scouts' read of what they say about his football.
 	if _draft.intake_mode and bool(p.get("projected", false)):
-		v.add_child(UiKit.spacer(4))
+		v.add_child(UiKit.spacer(UiKit.Space.TIGHT))
 		var tested_head := UiKit.lbl("Combine testing", UiKit.SECONDARY, UiKit.MUTED, true)
 		tested_head.name = "CombineTesting"
 		v.add_child(tested_head)
@@ -2086,7 +2097,7 @@ func _open_player(id: String) -> void:
 		for t in (Combine.TESTS if Combine.tested(p, _draft.seed) else []):
 			var key := str(t[0])
 			var r := Combine.result(p, key, _draft.seed)
-			var tr := UiKit.hbox(8)
+			var tr := UiKit.hbox(UiKit.GAP)
 			tr.name = "Tested_" + key
 			var tn := UiKit.lbl(str(t[1]), 14, UiKit.TEXT)
 			tn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -2099,19 +2110,19 @@ func _open_player(id: String) -> void:
 	# Seen in your pre-season match: what he did that day.
 	var seen_line := PreSeason.seen_line(p, _club)
 	if seen_line != "":
-		v.add_child(UiKit.spacer(4))
+		v.add_child(UiKit.spacer(UiKit.Space.TIGHT))
 		var seen_lbl := UiKit.lbl(seen_line, UiKit.SECONDARY, UiKit.TEXT, true)
 		seen_lbl.name = "SeenPreSeason"
 		seen_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(seen_lbl)
 	if scouted:
-		v.add_child(UiKit.spacer(4))
+		v.add_child(UiKit.spacer(UiKit.Space.TIGHT))
 		var combine_head := UiKit.lbl("What the scouts saw", UiKit.SECONDARY, UiKit.MUTED, true)
 		combine_head.name = "CombineHeading"
 		v.add_child(combine_head)
 		for result in DraftScouting.combine_lines(p, _club, _draft.seed,
 				_draft.scouting_mult_for(_club)):
-			var cr := UiKit.hbox(8)
+			var cr := UiKit.hbox(UiKit.GAP)
 			cr.name = "Combine_" + str(result["label"]).replace(" ", "_").replace("/", "_")
 			var cl := UiKit.lbl(str(result["label"]), 14, UiKit.TEXT)
 			cl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -2125,7 +2136,7 @@ func _open_player(id: String) -> void:
 
 	# What he has done.
 	var prod := PlayerProfile.production(p)
-	v.add_child(UiKit.spacer(4))
+	v.add_child(UiKit.spacer(UiKit.Space.TIGHT))
 	v.add_child(UiKit.lbl(str(prod["title"]), UiKit.SECONDARY, UiKit.MUTED))
 	var pl2 := UiKit.lbl(str(prod["line"]) if str(prod["line"]) != "" else "No stats on record.",
 			14, UiKit.TEXT if str(prod["line"]) != "" else UiKit.MUTED)
@@ -2165,8 +2176,8 @@ func _open_player(id: String) -> void:
 			var grid := GridContainer.new()
 			grid.name = "DetailAttributes"
 			grid.columns = 1 if UiKit.view_width(self) < 520.0 else 2
-			grid.add_theme_constant_override("h_separation", 14)
-			grid.add_theme_constant_override("v_separation", 6)
+			grid.add_theme_constant_override("h_separation", UiKit.Space.LOOSE)
+			grid.add_theme_constant_override("v_separation", UiKit.Space.CLOSE)
 			v.add_child(grid)
 			var attr: Dictionary = seen["attr"]
 			for r in PlayerSheet.ATTR_ROWS:
@@ -2174,15 +2185,20 @@ func _open_player(id: String) -> void:
 
 	# The decision.
 	var footer: VBoxContainer = box["footer"]
-	var can := _draft.can_pick_player(p)
+	# Before the opening National Draft (its off-season still open) nobody can be
+	# picked yet: the button is greyed and the line says why (director,
+	# 2026-11-25, bug bash batch F).
+	var before_draft := GameState.first_offseason == 1
+	var can := _draft.can_pick_player(p) and not before_draft
 	# A taken player's status already says where he went.
 	if not can and not _draft.has(id):
-		var why := _draft.pick_block_reason(p)
+		var why := "The National Draft hasn't started. The trade period and free agency are still open." \
+				if before_draft else _draft.pick_block_reason(p)
 		var wl := UiKit.lbl(why if why != "" else "He cannot be picked right now.", UiKit.SECONDARY, UiKit.BAD)
 		wl.name = "DetailBlocked"
 		wl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		footer.add_child(wl)
-	var buttons := UiKit.hbox(8)
+	var buttons := UiKit.hbox(UiKit.GAP)
 	footer.add_child(buttons)
 	var close := UiKit.btn("Close", UiKit.BODY)
 	close.name = "DetailClose"
@@ -2241,19 +2257,19 @@ func _big_range(values: Array, label: String, node_name: String) -> Control:
 # League activity: every selection, your list, and the current snake round.
 # ---------------------------------------------------------------------------
 func _build_activity() -> PanelContainer:
-	var p := UiKit.panel(UiKit.PANEL, 10, 10)
+	var p := UiKit.panel(UiKit.PANEL, UiKit.Space.ROOM, 10)
 	p.name = "DraftActivity"
-	var v := UiKit.vbox(8)
+	var v := UiKit.vbox(UiKit.GAP)
 	p.add_child(v)
-	_side_tabs = UiKit.hbox(2)
+	_side_tabs = UiKit.hbox(UiKit.Space.SLIM)
 	_side_tabs.visible = _wide
 	v.add_child(_side_tabs)
 
-	_history_view = UiKit.vbox(6)
+	_history_view = UiKit.vbox(UiKit.Space.CLOSE)
 	_history_view.name = "PickLog"
 	_history_view.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	v.add_child(_history_view)
-	var head := UiKit.hbox(8)
+	var head := UiKit.hbox(UiKit.GAP)
 	_history_view.add_child(head)
 	var title_label := UiKit.heading("Pick log", UiKit.H1)
 	title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -2274,13 +2290,13 @@ func _build_activity() -> PanelContainer:
 		_refresh_history()
 		_history_scroll.set_deferred("scroll_vertical", 0))
 	_history_view.add_child(clubs)
-	_history_box = UiKit.vbox(4)
+	_history_box = UiKit.vbox(UiKit.Space.TIGHT)
 	_history_box.name = "PickLogRows"
 	if _short:
 		# Filters scroll with the log on low-height screens as well.
 		_history_view.remove_child(head)
 		_history_view.remove_child(clubs)
-		var content := UiKit.vbox(6)
+		var content := UiKit.vbox(UiKit.Space.CLOSE)
 		head.visible = false
 		content.add_child(head)
 		content.add_child(clubs)
@@ -2290,21 +2306,21 @@ func _build_activity() -> PanelContainer:
 		_history_scroll = UiKit.scroll(_history_box)
 	_history_view.add_child(_history_scroll)
 
-	_squad_view = UiKit.vbox(6)
+	_squad_view = UiKit.vbox(UiKit.Space.CLOSE)
 	_squad_view.name = "MySquad"
 	_squad_view.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	v.add_child(_squad_view)
 	_squad_view.add_child(UiKit.heading("Our list", UiKit.H1))
-	_mine_box = UiKit.vbox(5)
+	_mine_box = UiKit.vbox(UiKit.Space.SNUG)
 	_mine_scroll = UiKit.scroll(_mine_box)
 	_squad_view.add_child(_mine_scroll)
 
-	_order_view = UiKit.vbox(6)
+	_order_view = UiKit.vbox(UiKit.Space.CLOSE)
 	_order_view.name = "DraftOrder"
 	_order_view.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	v.add_child(_order_view)
 	_order_view.add_child(UiKit.heading("Draft order", UiKit.H1))
-	_order_box = UiKit.vbox(4)
+	_order_box = UiKit.vbox(UiKit.Space.TIGHT)
 	_order_scroll = UiKit.scroll(_order_box)
 	_order_view.add_child(_order_scroll)
 	return p
@@ -2358,7 +2374,6 @@ func _shown_passes() -> int:
 
 func _refresh_history() -> void:
 	_history_stale = false
-	UiKit.clear(_history_box)
 	var entries := []
 	var picks_n := 0
 	var passed_n := 0
@@ -2379,18 +2394,44 @@ func _refresh_history() -> void:
 	_history_info.text = "%d %s" % [picks_n, "pick" if picks_n == 1 else "picks"]
 	if passed_n > 0:
 		_history_info.text += ", %d passed" % passed_n
+	# A row already built for an entry that has not changed stays: a new pick
+	# adds its own row at the top instead of the whole log being built again
+	# (bug bash 2026-11-25, M-6: on a PC-width window every pick rebuilt the
+	# log, 34-191 ms and growing). Anything else (the empty note, the Earlier
+	# picks button, a row whose entry changed) is built fresh.
+	var built := {}
+	for c in _history_box.get_children():
+		if str(c.name).begins_with("Leaving_"):
+			continue
+		if c.has_meta("log_sig"):
+			built[int(c.get_meta("log_sig"))] = c
+		else:
+			UiKit.drop(c)
+	var rows: Array = []
+	for i in range(mini(_history_shown, entries.size())):
+		var e: Dictionary = entries[i]
+		var sig := e.hash()
+		var row: Control = built.get(sig)
+		if row != null:
+			built.erase(sig)
+		else:
+			if e.has("buyer"):
+				row = _history_trade_row(e)
+			elif e.has("why"):
+				row = _history_pass_row(e)
+			else:
+				row = _history_row(e)
+			row.set_meta("log_sig", sig)
+			_history_box.add_child(row)
+		rows.append(row)
+	for gone in built.values():
+		UiKit.drop(gone)
+	for i in range(rows.size()):
+		_history_box.move_child(rows[i], i)
 	if entries.is_empty():
 		_history_box.add_child(UiKit.lbl("No picks yet" if _history_club.is_empty() else "No picks for this club yet", UiKit.HEADING, UiKit.TEXT, true))
 		_history_box.add_child(UiKit.lbl(
 				"Every pick shows here, from all %d rival clubs too. The newest come first." % maxi(1, _draft.clubs.size() - 1), 15, UiKit.MUTED))
-	for i in range(mini(_history_shown, entries.size())):
-		var e: Dictionary = entries[i]
-		if e.has("buyer"):
-			_history_box.add_child(_history_trade_row(e))
-		elif e.has("why"):
-			_history_box.add_child(_history_pass_row(e))
-		else:
-			_history_box.add_child(_history_row(e))
 	if _history_shown < entries.size():
 		var more := UiKit.btn("Earlier picks  ·  %d more" % (entries.size() - _history_shown), 14)
 		more.name = "EarlierPicks"
@@ -2418,7 +2459,7 @@ func _history_pass_row(entry: Dictionary) -> Control:
 	var p := _row_panel(mine)
 	p.name = "HistoryPass_%d" % int(entry["pick"])
 	p.custom_minimum_size.y = 36   # a short row: nobody joined
-	var h := UiKit.hbox(7)
+	var h := UiKit.hbox(UiKit.Space.NEAT)
 	p.add_child(h)
 	var number := UiKit.line("%d" % int(entry["pick"]), UiKit.SECONDARY, UiKit.EMPH if mine else UiKit.MUTED)
 	number.custom_minimum_size.x = 32
@@ -2448,20 +2489,20 @@ func _history_row(entry: Dictionary) -> Control:
 	tap.custom_minimum_size.y = 54
 	tap.pressed.connect(_open_player.bind(str(entry.get("player_id", ""))))
 	p.add_child(tap)
-	var h := UiKit.hbox(7)
+	var h := UiKit.hbox(UiKit.Space.NEAT)
 	h.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	tap.add_child(h)
 	var number := UiKit.line("%d" % int(entry["pick"]), UiKit.SECONDARY, UiKit.EMPH if mine else UiKit.MUTED)
 	number.custom_minimum_size.x = 32
 	h.add_child(number)
-	var info := UiKit.vbox(3)
+	var info := UiKit.vbox(UiKit.Space.THIN)
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	h.add_child(info)
 	# His name whole: it wraps to a second line rather than cut, and the row grows.
 	info.add_child(UiKit.name_label(_entry_player_name(entry), UiKit.NAME, UiKit.TEXT))
 	h.minimum_size_changed.connect(func():
 		tap.custom_minimum_size.y = maxf(54.0, h.get_combined_minimum_size().y))
-	var club_row := UiKit.hbox(6)
+	var club_row := UiKit.hbox(UiKit.Space.CLOSE)
 	info.add_child(club_row)
 	club_row.add_child(UiKit.club_badge(str(entry["club"]), UiKit.SMALL, true))
 	# The club code says who picked him; only your own pick and a release say more.
@@ -2546,7 +2587,7 @@ func _refresh_mine() -> void:
 				14, UiKit.BAD)
 		fix.name = "DraftFix"
 		fix.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		_mine_box.add_child(UiKit.spacer(6))
+		_mine_box.add_child(UiKit.spacer(UiKit.Space.CLOSE))
 		_mine_box.add_child(fix)
 	elif _draft.user_stuck():
 		# Only an older save can get here: say so plainly and offer the one
@@ -2555,11 +2596,11 @@ func _refresh_mine() -> void:
 				14, UiKit.BAD)
 		why.name = "DraftStuck"
 		why.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		_mine_box.add_child(UiKit.spacer(6))
+		_mine_box.add_child(UiKit.spacer(UiKit.Space.CLOSE))
 		_mine_box.add_child(why)
 	_my_picks()
 	if _draft.count() == 0:
-		_mine_box.add_child(UiKit.spacer(8))
+		_mine_box.add_child(UiKit.spacer(UiKit.GAP))
 		_mine_box.add_child(UiKit.lbl("Our list starts here.", 20, UiKit.TEXT, true))
 		_mine_box.add_child(UiKit.lbl("Take a player from the pool. Tap a position to find the cover we lack.", UiKit.BODY, UiKit.MUTED))
 		var pool := UiKit.btn("Explore the player pool", UiKit.BODY, true)
@@ -2569,14 +2610,14 @@ func _refresh_mine() -> void:
 	_side_shape()
 	var counts := _draft.role_counts()
 	for role in ROLES:
-		_mine_box.add_child(UiKit.spacer(6))
+		_mine_box.add_child(UiKit.spacer(UiKit.Space.CLOSE))
 		_mine_box.add_child(UiKit.lbl("%s  /  %d" % [str(UiKit.ROLE_LABEL[role]), counts[role]],
 				13, UiKit.ROLE_COLOUR[role], true))
 		for player in _draft.list():
 			if str(player["role"]) == role:
 				var entry := _draft.pick_details(str(player["id"]))
 				var p := _row_panel(false)
-				var v := UiKit.vbox(2)
+				var v := UiKit.vbox(UiKit.Space.SLIM)
 				p.add_child(v)
 				var picked_name := UiKit.ellipsis(GameDB.player_display_name(player), UiKit.NAME, UiKit.TEXT, true)
 				picked_name.name = "PickedName_" + str(player["id"])
@@ -2589,13 +2630,13 @@ func _refresh_mine() -> void:
 							12, UiKit.MUTED))
 				else:
 					v.add_child(UiKit.lbl("Pick %d · %d OVR · %s" % [
-							int(entry.get("pick", 0)), int(player["overall"]), Contracts.money(_draft.price(player))],
+							int(entry.get("pick", 0)), int(Rating.ovr(player)), Contracts.money(_draft.price(player))],
 							12, UiKit.MUTED))
 				var like := PlaysLikeLine.make(player)
 				if like != null:
 					v.add_child(like)
 				if stuck:
-					var row := UiKit.hbox(8)
+					var row := UiKit.hbox(UiKit.GAP)
 					v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 					p.remove_child(v)
 					row.add_child(v)
@@ -2618,9 +2659,9 @@ func _side_shape() -> void:
 	if _draft.intake_mode or _draft.count() < SHAPE_FROM:
 		return
 	var own := Squad.new(_club, _draft.club_lists[_club], false, _club)
-	var box := UiKit.vbox(2)
+	var box := UiKit.vbox(UiKit.Space.SLIM)
 	box.name = "SideShape"
-	_mine_box.add_child(UiKit.spacer(8))
+	_mine_box.add_child(UiKit.spacer(UiKit.GAP))
 	box.add_child(UiKit.lbl("Our side so far, against the league", UiKit.BODY, UiKit.TEXT, true))
 	for row in Matchup.standing(_club, _draft.club_lists, {}, own):
 		box.add_child(UiKit.lbl("%s: %s." % [str(row[0]), str(row[1])], UiKit.BODY, UiKit.TEXT))
@@ -2661,7 +2702,7 @@ func _refresh_order() -> void:
 		var code := str(_draft.pick_sequence[index])
 		var mine := code == _club
 		var p := _row_panel(mine)
-		var h := UiKit.hbox(7)
+		var h := UiKit.hbox(UiKit.Space.NEAT)
 		p.add_child(h)
 		var arrow := UiKit.line("‹" if going_back else "›", UiKit.NAME, UiKit.EMPH, true)
 		arrow.custom_minimum_size.x = 16
@@ -2669,7 +2710,7 @@ func _refresh_order() -> void:
 		var number := UiKit.line("%d" % (index + 1), UiKit.SECONDARY, UiKit.MUTED)
 		number.custom_minimum_size.x = 34
 		h.add_child(number)
-		var v := UiKit.vbox(2)
+		var v := UiKit.vbox(UiKit.Space.SLIM)
 		v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		h.add_child(v)
 		# The club by its guernsey and name, as the ladder shows it.
@@ -2955,7 +2996,7 @@ func _recent_rows(hist: Array, upto: int, settle: bool) -> void:
 			continue
 		var code := str(entry["club"])
 		var mine := code == _club
-		var row := UiKit.hbox(8)
+		var row := UiKit.hbox(UiKit.GAP)
 		row.name = "RecentPick_%d" % int(entry["pick"])
 		var number := UiKit.line("%d" % int(entry["pick"]), UiKit.SECONDARY, UiKit.TEXT if mine else UiKit.MUTED, mine)
 		number.custom_minimum_size.x = 26
@@ -2992,7 +3033,7 @@ const RECENT_SETTLE := 0.12
 func _recent_trade_row(t: Dictionary) -> Control:
 	var buyer := str(t["buyer"])
 	var involved := buyer == _club or str(t["seller"]) == _club
-	var row := UiKit.hbox(8)
+	var row := UiKit.hbox(UiKit.GAP)
 	row.name = "RecentTrade_%d" % int(t["at"])
 	var tag := UiKit.line("Trade", UiKit.FINE, UiKit.EMPH, true)
 	tag.custom_minimum_size.x = 26
@@ -3020,18 +3061,18 @@ func _history_trade_row(t: Dictionary) -> Control:
 	var involved := str(t["buyer"]) == _club or str(t["seller"]) == _club
 	var p := _row_panel(involved)
 	p.name = "HistoryTrade_%d" % int(t["at"])
-	var h := UiKit.hbox(7)
+	var h := UiKit.hbox(UiKit.Space.NEAT)
 	p.add_child(h)
 	var tag := UiKit.line("Trade", UiKit.FINE, UiKit.EMPH, true)
 	tag.custom_minimum_size.x = 32
 	h.add_child(tag)
-	var info := UiKit.vbox(3)
+	var info := UiKit.vbox(UiKit.Space.THIN)
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	h.add_child(info)
 	var said := UiKit.lbl(str(t["text"]), UiKit.SECONDARY, UiKit.TEXT, involved)
 	said.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	info.add_child(said)
-	var who := UiKit.hbox(6)
+	var who := UiKit.hbox(UiKit.Space.CLOSE)
 	who.add_child(UiKit.club_badge(str(t["buyer"]), UiKit.SMALL, true))
 	who.add_child(UiKit.line("before pick %d" % int(t["at"]), UiKit.FINE, UiKit.MUTED))
 	info.add_child(who)
@@ -3154,7 +3195,7 @@ func _my_picks() -> void:
 	var by_pick := {}
 	for e in _draft.pick_history:
 		by_pick[int(e["pick"])] = e
-	var box := UiKit.vbox(3)
+	var box := UiKit.vbox(UiKit.Space.THIN)
 	box.name = "MyPicks"
 	box.add_child(UiKit.lbl("Our picks", 13, UiKit.EMPH, true))
 	var shown := 0
@@ -3168,7 +3209,7 @@ func _my_picks() -> void:
 			var entry: Dictionary = by_pick.get(index + 1, {})
 			taken = _entry_player_name(entry) if not entry.is_empty() \
 					else ("passed: list full" if _passed_for_room(index + 1) else "passed")
-		var row := UiKit.vbox(1)
+		var row := UiKit.vbox(UiKit.Space.HAIR)
 		row.name = "MyPick_%d" % (index + 1)
 		row.add_child(UiKit.lbl("No. %d  ·  Round %d%s" % [index + 1, int(_draft.pick_rounds[index]),
 				("  ·  " + taken) if taken != "" else ""], UiKit.BODY, UiKit.TEXT, true))
@@ -3181,13 +3222,13 @@ func _my_picks() -> void:
 			break
 	if shown > 0:
 		_mine_box.add_child(box)
-		_mine_box.add_child(UiKit.spacer(6))
+		_mine_box.add_child(UiKit.spacer(UiKit.Space.CLOSE))
 
 
 func _row_panel(mine: bool) -> PanelContainer:
 	var p := PanelContainer.new()
 	p.mouse_filter = Control.MOUSE_FILTER_PASS
-	var sb := UiKit.style(UiKit.PANEL_ALT if mine else Color.TRANSPARENT, 7, 4)
+	var sb := UiKit.style(UiKit.PANEL_ALT if mine else Color.TRANSPARENT, UiKit.Space.NEAT, 4)
 	sb.set_border_width_all(0)
 	sb.border_width_bottom = 1
 	if mine:

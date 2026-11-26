@@ -39,7 +39,7 @@ func _y(c: float) -> float:
 func _draw() -> void:
 	if size.x < 80.0 or _rec.is_empty():
 		return
-	var fine := 12
+	var fine := UiKit.px(UiKit.FINE)
 	# The finals, shaded.
 	var fx := _x(Conditioning.FINALS_FIRST - 0.5)
 	draw_rect(Rect2(fx, TOP, size.x - fx, size.y - TOP - BOTTOM), Color(UiKit.TEXT, 0.06))

@@ -1,0 +1,266 @@
+[
+ {
+  "name": "top",
+  "h": 0,
+  "t": 0,
+  "d": 560,
+  "at": [
+   0,
+   0,
+   0
+  ],
+  "label": "straight down"
+ },
+ {
+  "name": "out_N",
+  "h": 180,
+  "t": 62,
+  "d": 420,
+  "at": [
+   0,
+   0,
+   0
+  ],
+  "label": "from the N"
+ },
+ {
+  "name": "out_NE",
+  "h": 225,
+  "t": 62,
+  "d": 420,
+  "at": [
+   0,
+   0,
+   0
+  ],
+  "label": "from the NE"
+ },
+ {
+  "name": "out_E",
+  "h": 270,
+  "t": 62,
+  "d": 420,
+  "at": [
+   0,
+   0,
+   0
+  ],
+  "label": "from the E"
+ },
+ {
+  "name": "out_SE",
+  "h": 315,
+  "t": 62,
+  "d": 420,
+  "at": [
+   0,
+   0,
+   0
+  ],
+  "label": "from the SE"
+ },
+ {
+  "name": "out_S",
+  "h": 0,
+  "t": 62,
+  "d": 420,
+  "at": [
+   0,
+   0,
+   0
+  ],
+  "label": "from the S"
+ },
+ {
+  "name": "out_SW",
+  "h": 45,
+  "t": 62,
+  "d": 420,
+  "at": [
+   0,
+   0,
+   0
+  ],
+  "label": "from the SW"
+ },
+ {
+  "name": "out_W",
+  "h": 90,
+  "t": 62,
+  "d": 420,
+  "at": [
+   0,
+   0,
+   0
+  ],
+  "label": "from the W"
+ },
+ {
+  "name": "out_NW",
+  "h": 135,
+  "t": 62,
+  "d": 420,
+  "at": [
+   0,
+   0,
+   0
+  ],
+  "label": "from the NW"
+ },
+ {
+  "name": "in_N",
+  "h": 180,
+  "t": 74,
+  "d": 150,
+  "at": [
+   0.0,
+   0,
+   8
+  ],
+  "label": "into the bowl from the N"
+ },
+ {
+  "name": "in_E",
+  "h": 270,
+  "t": 74,
+  "d": 150,
+  "at": [
+   -0.0,
+   0,
+   8
+  ],
+  "label": "into the bowl from the E"
+ },
+ {
+  "name": "in_S",
+  "h": 0,
+  "t": 74,
+  "d": 150,
+  "at": [
+   -0.0,
+   0,
+   8
+  ],
+  "label": "into the bowl from the S"
+ },
+ {
+  "name": "in_W",
+  "h": 90,
+  "t": 74,
+  "d": 150,
+  "at": [
+   0.0,
+   0,
+   8
+  ],
+  "label": "into the bowl from the W"
+ },
+ {
+  "name": "fac_200",
+  "h": 20,
+  "t": 72,
+  "d": 150,
+  "at": [
+   -37.6,
+   -103.4,
+   6
+  ],
+  "label": "Boon Stand (S) outside"
+ },
+ {
+  "name": "fac_270",
+  "h": 90,
+  "t": 72,
+  "d": 150,
+  "at": [
+   -110.0,
+   -0.0,
+   6
+  ],
+  "label": "Ponting Stand (W) outside"
+ },
+ {
+  "name": "fac_315",
+  "h": 135,
+  "t": 72,
+  "d": 150,
+  "at": [
+   -77.8,
+   77.8,
+   6
+  ],
+  "label": "Members (NW) outside"
+ },
+ {
+  "name": "fac_010",
+  "h": 190,
+  "t": 72,
+  "d": 150,
+  "at": [
+   19.1,
+   108.3,
+   6
+  ],
+  "label": "Northern Stand outside"
+ },
+ {
+  "name": "fac_100",
+  "h": 280,
+  "t": 72,
+  "d": 150,
+  "at": [
+   108.3,
+   -19.1,
+   6
+  ],
+  "label": "east hill outside"
+ },
+ {
+  "name": "bd_W",
+  "cam": [
+   140,
+   0,
+   40
+  ],
+  "h": 270,
+  "p": -4,
+  "fov": 50,
+  "label": "from the east hill to the west (kunanyi)"
+ },
+ {
+  "name": "bd_E",
+  "cam": [
+   -120,
+   10,
+   45
+  ],
+  "h": 90,
+  "p": -8,
+  "fov": 50,
+  "label": "from over the Ponting Stand to the east"
+ },
+ {
+  "name": "bd_N",
+  "cam": [
+   0,
+   -150,
+   40
+  ],
+  "h": 0,
+  "p": -6,
+  "fov": 50,
+  "label": "from the beach side to the north"
+ },
+ {
+  "name": "st_house",
+  "h": 20,
+  "t": 60,
+  "d": 160,
+  "at": [
+   250,
+   150,
+   0
+  ],
+  "label": "houses north-east"
+ }
+]

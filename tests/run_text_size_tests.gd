@@ -80,11 +80,31 @@ func _run() -> void:
 	await _t("_test_feed_whole_lines")
 	await _t("_test_weakness_mark")
 	await _t("_test_state_words")
+	await _t("_test_oval_words_grow")
 	UK.apply_text_size("standard")
 	print(Ran.line("Text size", self))
 	for f in _failures:
 		print("  FAIL: " + f)
 	quit(0 if _failures.is_empty() else 1)
+
+
+## The words drawn on the oval (a surname under a disc, the caption on one)
+## follow the text size as every label does (UI Batch 4).
+func _test_oval_words_grow() -> void:
+	var PV = load("res://scripts/ui/PitchView.gd")
+	for tr in [12.0, 16.0, 22.0]:
+		UK.apply_text_size("standard")
+		var name0: int = PV.role_label_size(tr)
+		var cap0: int = PV.caption_size(tr, false)
+		var turn0: int = PV.caption_size(tr, true)
+		UK.apply_text_size("largest")
+		var name1: int = PV.role_label_size(tr)
+		var cap1: int = PV.caption_size(tr, false)
+		var turn1: int = PV.caption_size(tr, true)
+		_check(name1 == UK.px(name0) and name1 > name0, "discs of %.0f: a surname grows at Largest (%d -> %d)" % [tr, name0, name1])
+		_check(cap1 == UK.px(cap0) and cap1 > cap0 and turn1 == UK.px(turn0) and turn1 > turn0,
+				"discs of %.0f: the caption grows at Largest (%d -> %d, turnover %d -> %d)" % [tr, cap0, cap1, turn0, turn1])
+	UK.apply_text_size("standard")
 
 
 ## Each size is its step; anything unknown reads as Standard.

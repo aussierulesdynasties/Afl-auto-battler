@@ -51,7 +51,7 @@ static func healthy(p: Dictionary, list: Array) -> bool:
 	if not picked:
 		return false
 	var bars := TradeValue.selection_bars(list)
-	return int(p.get("overall", 0)) >= int(bars.get(str(p.get("role", "")), bars.get("bench", 0)))
+	return int(Rating.ovr(p, 0)) >= int(bars.get(str(p.get("role", "")), bars.get("bench", 0)))
 
 
 ## Whether a club may ask him: retiring this rollover, healthy, never talked

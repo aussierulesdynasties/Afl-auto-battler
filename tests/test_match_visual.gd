@@ -55,9 +55,13 @@ func run() -> void:
 	_t("_test_farewell")
 	_t("_test_match_ground")
 	_t("_test_ground_models")
+	_t("_test_night_towers")
+	_t("_test_sun_bearing")
+	_t("_test_ground_terrain")
 	_t("_test_traced_boundaries")
 	_t("_test_traced_ground_playback", [res])
 	_t("_test_ground_screens")
+	_t("_test_ground_backdrop")
 	_t("_test_stand_light")
 	_t("_test_mcg_crowd", [res])
 	_t("_test_crowd_attendance")
@@ -2193,6 +2197,99 @@ func _test_farewell() -> void:
 	v.free()
 
 
+## The real sun over every ground (Oval3DSunClock.sun_basis): each ground's bearing is known and
+## agrees with its model's own axis (models are laid x east, z south) but for the three turned off
+## true north; and the light comes out of the north at an Australian ground, whichever way the
+## ground lies, so its north side is the sunlit one.
+func _test_sun_bearing() -> void:
+	var places: Dictionary = Oval3DSunClock.place("MCG")
+	_check(places.has("axis"), "The MCG's bearing is known (%s)" % str(places))
+	var off_true := ["marvel", "ikon_park", "blacktown"]
+	var bad := []
+	for g in GroundModels.GROUNDS:
+		var slug: String = GroundModels.GROUNDS[g]
+		var p := Oval3DSunClock.place(g)
+		if not p.has("axis"):
+			bad.append(g + " has no bearing")
+			continue
+		if GroundModels.FIT.has(slug):
+			var model := fposmod(90.0 + float(GroundModels.FIT[slug][3]), 360.0)
+			var axis := Oval3DSunClock.axis_for(g)
+			var off := absf(angle_difference(deg_to_rad(model), deg_to_rad(axis)))
+			if off > deg_to_rad(30.0 if slug in off_true else 10.0):
+				bad.append("%s %.1f, its model %.1f" % [g, axis, model])
+	_check(bad.is_empty(), "Every ground's bearing faces its model's +x end, within 10 degrees (%s)" % str(bad))
+	# North in a ground's frame, for a sun due north 30 degrees up: the light travels due south.
+	for axis in [0.0, 75.7, 86.7, 180.0, 335.3]:
+		var fwd := -Oval3DSunClock.sun_basis(30.0, 0.0, axis).z
+		var south := Vector3(cos(deg_to_rad(180.0 - axis)), 0.0, sin(deg_to_rad(180.0 - axis)))
+		_check(Vector3(fwd.x, 0.0, fwd.z).normalized().dot(south) > 0.999 and fwd.y < -0.49,
+				"A sun due north over a ground lying %.0f degrees shines due south (%s)" % [axis, str(fwd)])
+	# A day and a late game at Optus and at Marvel: the light comes from the north half of the sky.
+	for g in ["Optus Stadium", "Marvel Stadium", "MCG"]:
+		var oval := Oval3D.new()
+		oval.ground = g
+		(Engine.get_main_loop() as SceneTree).root.add_child(oval)
+		oval._environment()
+		oval._ground()
+		var axis := Oval3DSunClock.axis_for(g)
+		for slot in [VignetteKickoff.DAY, VignetteKickoff.TWILIGHT]:
+			oval.turf.apply("", slot)
+			var fwd: Vector3 = -oval._sun.basis.z
+			var phi := atan2(-fwd.z, -fwd.x)   # the way to the sun, from the ground's +x end
+			var bearing := fposmod(axis + rad_to_deg(phi), 360.0)
+			_check(bearing > 270.0 or bearing < 90.0,
+					"At %s (%s) the sun is in the north (bearing %.0f)" % [g, slot, bearing])
+		oval.queue_free()
+
+
+## A night game at the MCG under its own towers (rule 2.82, Oval3DTowers): the six towers found
+## in the model's lamp banks, every one lighting, the men alone throwing their shadows, as many
+## shadowed beams as the graphics level allows; off by day, heads lit at a twilight game.
+func _test_night_towers() -> void:
+	var pts := PackedVector3Array()
+	for a in [10.0, 130.0, 250.0]:
+		for k in range(10):
+			var r := deg_to_rad(a + k * 0.5)
+			pts.append(Vector3(cos(r) * 140.0, 70.0, sin(r) * 120.0))
+	pts.append(Vector3(0.0, 3.0, -120.0))   # a gate lamp on a wall: no tower
+	_check(Oval3DTowers.bank_middles(pts).size() == 3, "Lamps group into a bank per tower; a low lamp is no tower")
+	for level in [Oval3DQuality.HIGH, Oval3DQuality.LOW]:
+		var d := MatchDirector.new()
+		var res := _result(42)
+		d.setup(res, res["events"])
+		var oval := Oval3D.new()
+		oval.ground = "MCG"
+		oval.quality = level
+		(Engine.get_main_loop() as SceneTree).root.add_child(oval)
+		oval.build(d, str(res.get("home", "ADE")), str(res.get("away", "MEL")))
+		var t: Oval3DTowers = oval.towers
+		_check(t != null and t.banks.size() == 6, "The MCG's six light towers come from its model (%d)" % (t.banks.size() if t else -1))
+		if t == null or t.banks.is_empty():
+			oval.queue_free()
+			continue
+		oval.turf.apply("", VignetteKickoff.NIGHT)
+		var lit := t.spots.filter(func(s): return s.visible and s.light_energy > 0.0).size()
+		var shadowed := t.beams.filter(func(b): return b.visible and b.shadow_enabled).size()
+		var want := int(Oval3DQuality.preset(level)["tower_shadows"])
+		_check(lit == 6 and shadowed == want and not oval._sun.visible,
+				"At night (%s) all six towers light the ground, %d throw shadows, the old night light is off (%d, %d)" % [level, want, lit, shadowed])
+		var men_only := true
+		for b in t.beams:
+			men_only = men_only and b.shadow_caster_mask == Oval3DTowers.SHADOW_LAYER
+		var p0: Node3D = oval.players[0]["node"]
+		var on_layer := false
+		for g in p0.find_children("*", "GeometryInstance3D", true, false):
+			on_layer = on_layer or (g.layers & Oval3DTowers.SHADOW_LAYER) != 0
+		_check(men_only and on_layer, "Only the men throw the towers' shadows, not the stadium")
+		oval.turf.apply("", VignetteKickoff.TWILIGHT)
+		_check(t.level > 0.0 and t.beams.all(func(b): return not b.visible) and oval._sun.visible,
+				"At a twilight game the towers are on but the sun still throws the shadows")
+		oval.turf.apply("", VignetteKickoff.DAY)
+		_check(t.level == 0.0 and t.spots.all(func(s): return not s.visible), "By day the towers are off")
+		oval.queue_free()
+
+
 ## Row 202 2b: every ground with a 3D model plays in it, at its own size. Each model's files are
 ## in the game, every club's home ground and the Grand Final resolve to theirs, and on its own
 ## field (GroundModels.field) each is laid unstretched with its measured boundary fence on the
@@ -2257,6 +2354,44 @@ func _test_ground_models() -> void:
 			and GroundModels.stretch("engie").is_equal_approx(Vector2.ONE),
 			"The turf stops at the model's fence")
 	oval.queue_free()
+
+
+## The real land round a ground (tools/grounds/terrain): a ground whose surrounds the game draws
+## itself lays its ring on the measured bare-earth heights, not flat. At Norwood the land falls about
+## 2 m from the ground to Beulah Road (Google Earth and Geoscience Australia's LiDAR agree); the
+## ring never rises above the model's street where it meets the model; trees and buildings stand
+## on the land.
+func _test_ground_terrain() -> void:
+	var fit: Array = GroundModels.FIT["norwood"]
+	var land := GroundTerrain.load_for("res://assets/grounds/norwood/", fit)
+	_check(land != null, "Norwood's land is in the game (assets/grounds/norwood/terrain.bin)")
+	if land == null:
+		return
+	# Model metres: x east, z south. Beulah Road is about 165 m north, 10 m west of the centre circle.
+	var turf := land.height(float(fit[0]), float(fit[1]))
+	var beulah := land.height(float(fit[0]) - 10.0, float(fit[1]) - 165.0)
+	_check(absf(turf - float(fit[2])) < 0.05, "The land at the centre circle is the turf (%.2f)" % turf)
+	_check(absf(beulah - turf + 2.0) < 0.3, "Beulah Road is about 2 m below the turf (%.2f)" % (beulah - turf))
+	var mcg := GroundModels.instantiate("mcg")
+	var ring: MeshInstance3D = mcg.get_node_or_null("Surrounds")
+	var mland := GroundTerrain.load_for("res://assets/grounds/mcg/", GroundModels.FIT["mcg"])
+	var s: Dictionary = GroundModels.SURROUNDS["mcg"]
+	var off := 0.0
+	var above := 0.0
+	var count := 0
+	if ring != null and mland != null:
+		var v: PackedVector3Array = ring.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+		for p in v:
+			var r := Vector2(p.x, p.z).length()
+			if r > float(s["inner"]) + GroundModels.LAND_BANK + 1.0 and r < 900.0:
+				off = maxf(off, absf(p.y - (mland.height(p.x, p.z) - 0.03)))
+				count += 1
+			if r < float(s["inner"]) + 0.5:
+				above = maxf(above, p.y - float(s["y"]))
+	_check(ring != null and mland != null and count > 1000 and off < 0.01,
+			"The MCG's Yarra Park ring lies on the real land (%d points, worst %.3f m)" % [count, off])
+	_check(above <= 0.001, "Where it meets the model the ring is never above the MCG's street (%.3f)" % above)
+	mcg.free()
 
 
 ## A ground whose boundary was traced on Google Earth (tools/grounds/boundary) plays on that line, not an ellipse:
@@ -2477,15 +2612,79 @@ func _test_graphics_levels(res: Dictionary) -> void:
 		_check(((rain.draw_pass_1 as QuadMesh).material as BaseMaterial3D).render_priority == Material.RENDER_PRIORITY_MAX,
 				"%s wet: the rain is drawn over the match film, not wiped by it" % level)
 		oval.turf.apply("", VignetteKickoff.DAY)
-		_check(oval.turf.rain == null and not oval._env.fog_enabled
+		var env: Environment = oval._env
+		var rain_haze := env.fog_enabled and env.fog_mode == Environment.FOG_MODE_DEPTH
+		_check(oval.turf.rain == null and not rain_haze
 				and oval.turf.wet_kit == 0.0 and not oval.turf.fill.visible,
-				"%s: a fine day after a wet one has no rain, haze or wet kit" % level)
+				"%s: a fine day after a wet one has no rain, rain haze or wet kit" % level)
+		# The air's own thin haze on a dry day (Oval3DTurf._haze): the seen sky's horizon colour,
+		# thin enough to leave the ground itself clear; none at night.
+		var sm: ShaderMaterial = env.sky.sky_material
+		var hc: Color = sm.get_shader_parameter("seen_horizon")
+		_check(env.fog_enabled and env.fog_mode == Environment.FOG_MODE_EXPONENTIAL
+				and is_equal_approx(env.fog_density, Oval3DTurf.HAZE_DENSITY) and env.fog_density * 150.0 < 0.01
+				and env.fog_light_color.is_equal_approx(Color(hc, 1.0)) and env.fog_sky_affect == 0.0,
+				"%s fine day: a thin haze in the sky's horizon colour (density %.6f)" % [level, env.fog_density])
+		_check(sm.get_shader_parameter("zenith") == Oval3DTurf.DAY_LIGHT_ZENITH
+				and (sm.get_shader_parameter("seen_zenith") as Color).b > Oval3DTurf.DAY_LIGHT_ZENITH.b,
+				"%s fine day: the sky's light a paler blue than the deep blue sky you see" % level)
+		oval.turf.apply("", VignetteKickoff.NIGHT)
+		_check(not env.fog_enabled, "%s night: no haze" % level)
+		oval.turf.apply("", VignetteKickoff.DAY)
 		vp.queue_free()
 
 
 ## The ground's big screens and fence signs (Oval3DScreens, row 202 2b): a match at a ground whose
 ## model has screens lays a face over each, facing the ground, that shows the score, a goal and
 ## the clock; the boards ring the fence in both clubs' colours; the inspector (no clubs) gets none.
+## Row 202 2b, background scenes: a ground with its surroundings builds them with its model, they
+## cast no shadow into the stadium, the cameras see out to them through a haze that starts well past
+## the stadium, and none of the scene's own ground is left over the arena (the park's ground once lay
+## 4 m over the MCG's turf). A ground without surroundings keeps the 900 m view and no haze.
+func _test_ground_backdrop() -> void:
+	_check(GroundModels.has_backdrop("mcg") and GroundModels.has_backdrop("gmhba"),
+			"The MCG and GMHBA Stadium have their surroundings")
+	_check(not GroundModels.has_backdrop("gabba"), "The Gabba has none (its own surrounds, #2020)")
+	for g in ["MCG", "The Gabba"]:
+		var d := MatchDirector.new()
+		var res := _result(42)
+		d.setup(res, res["events"])
+		var oval := Oval3D.new()
+		oval.ground = g
+		(Engine.get_main_loop() as SceneTree).root.add_child(oval)
+		oval.build(d, "COL", "GEE")
+		var bds := oval.find_children("Backdrop", "", true, false)
+		if g == "The Gabba":
+			_check(bds.is_empty() and oval.camera.far < 1000.0 and not oval._env.fog_enabled,
+					"A ground without surroundings keeps the 900 m view and no haze")
+			oval.free()
+			continue
+		_check(bds.size() == 1 and (bds[0] as Node).get_parent().name == "Ground",
+				"The MCG's surroundings are laid with its model (%d)" % bds.size())
+		if bds.size() != 1:
+			oval.free()
+			continue
+		var geo := (bds[0] as Node).find_children("*", "GeometryInstance3D", true, false)
+		_check(geo.size() > 10, "The surroundings have their pieces (%d)" % geo.size())
+		var shadow := geo.filter(func(n): return (n as GeometryInstance3D).cast_shadow != GeometryInstance3D.SHADOW_CASTING_SETTING_OFF)
+		_check(shadow.is_empty(), "The surroundings cast no shadow (%d do)" % shadow.size())
+		_check(oval.camera.far >= GroundModels.BACKDROP_FAR, "The camera sees out to the skyline (%.0f m)" % oval.camera.far)
+		_check(oval._env.fog_enabled and oval._env.fog_depth_begin >= 500.0,
+				"The haze starts well past the stadium (%.0f m)" % oval._env.fog_depth_begin)
+		var over := 0
+		var fence := GroundModels.match_fence() * 1.15
+		for n in geo:
+			var mi := n as MeshInstance3D
+			if mi == null or not str(mi.name).begins_with("bg_near_ground"):
+				continue
+			var xf := oval.global_transform.affine_inverse() * mi.global_transform
+			for i in mi.mesh.get_surface_count():
+				for v in mi.mesh.surface_get_arrays(i)[Mesh.ARRAY_VERTEX]:
+					var p: Vector3 = xf * v
+					if pow(p.x / fence.x, 2) + pow(p.z / fence.y, 2) < 1.0 and p.y > -1.0:
+						over += 1
+		_check(over == 0, "None of the park's ground lies over the arena (%d points)" % over)
+		oval.free()
 ## The stands' light (director, 2026-11-21: roof undersides "grey, a faint green tint"): the model's
 ## surfaces take the stand shader; a face turned up keeps the sky's light, one turned down loses the
 ## grass's green; at night nothing changes; the men and the turf keep their own materials.
@@ -2514,8 +2713,12 @@ func _test_stand_light() -> void:
 	var grey: Array = oval.turf.stand_light(sm, 1.0, Oval3DTurf.STAND_GREEN)
 	var sky: Array = oval.turf.stand_light(sm, 1.0, 1.0)
 	_check((grey[4] - sky[4]).length() < 0.002, "A face turned up is lit as before (%s)" % (grey[4] - sky[4]))
-	var down: Vector3 = grey[0] - sky[0]
-	_check(down.y < -0.02 and down.x > 0.0, "A face turned down loses the grass's green (%s)" % down)
+	# Turned down, a stand sees sunlit ground in the sun's colour, not the grass's green
+	# (Oval3DTurf._bounce_tint): much less green over red than the centre square's light.
+	var gd: Vector3 = grey[0]
+	var sd: Vector3 = sky[0]
+	_check(gd.y / gd.x < 1.15 and gd.y / gd.x < sd.y / sd.x - 0.3 and gd.z <= gd.x * 1.05,
+			"A face turned down loses the grass's green and is not blue (%s against %s)" % [gd, sd])
 	oval.turf.apply("", VignetteKickoff.NIGHT)
 	var m0: ShaderMaterial = oval.turf._stand_mats[0]
 	_check(m0.get_shader_parameter("amb_down") == Vector3.ZERO, "At night the stands' light is unchanged")
@@ -3341,6 +3544,7 @@ func _check_turf3d(oval: Oval3D) -> void:
 		_check(g.g > g.r and g.g > g.b and wet == (1.0 if look[0] == VignetteWeather.WET else 0.0)
 				and turf.env.tonemap_exposure >= 1.0,
 				"%s %s: the turf is green and the weather's sheen is set (%s, wet %.0f)" % [look[1], look[0], str(g), wet])
+	_check_sun_clock(turf)
 	# Rule 2.114: the broadcast colour, the turf's colour read once and the film's white balance
 	# (at night: the loop above ends on a hot day, whose balance is the day's).
 	turf.apply("", VignetteKickoff.NIGHT)
@@ -3379,6 +3583,34 @@ func _check_turf3d(oval: Oval3D) -> void:
 	var centre = turf._bmat.get_shader_parameter("centre")
 	_check(not turf.blades.visible or Vector2(centre).distance_to(Vector2(ball.position.x, ball.position.z)) < 0.01,
 			"The standing blades are round the ball")
+
+
+## The match clock's light (plan 2a.4): Sky3D's sun over the ground, and the approved looks it
+## blends between. A winter twilight game at the MCG starts in low sun and ends under the towers.
+func _check_sun_clock(turf: Oval3DTurf) -> void:
+	var noon := Oval3DSunClock.for_match("MCG", "Round 12", VignetteKickoff.DAY).sun_at(12.3)
+	_check(absf(noon.x - 30.3) < 1.0 and (noon.y < 5.0 or noon.y > 355.0),
+			"Sky3D's sun at the MCG at noon on 30 May is 30 degrees up in the north (%.1f, %.0f)" % [noon.x, noon.y])
+	var perth := Oval3DSunClock.for_match("Optus Stadium", "Opening Round", VignetteKickoff.NIGHT)
+	var mcg := Oval3DSunClock.for_match("MCG", "Opening Round", VignetteKickoff.NIGHT)
+	_check(is_equal_approx(perth.utc, 8.0) and is_equal_approx(mcg.utc, 11.0) and mcg.month == 3,
+			"Perth keeps no daylight saving; Melbourne's March games do (%.1f, %.1f)" % [perth.utc, mcg.utc])
+	_check(Oval3DTurf.look_weights(40.0)[1] == VignetteKickoff.DAY
+			and Oval3DTurf.look_weights(8.0) == [VignetteKickoff.TWILIGHT, VignetteKickoff.TWILIGHT, 0.0]
+			and Oval3DTurf.look_weights(-10.0)[0] == VignetteKickoff.NIGHT
+			and Oval3DTurf.look_weights(-10.0, true)[0] == VignetteKickoff.TWILIGHT,
+			"High sun is the day look, low sun the late game, after dusk the night; a hot day never the night")
+	var clock := Oval3DSunClock.for_match("MCG", "Round 12", VignetteKickoff.TWILIGHT)
+	turf.follow_clock("", clock)
+	_check(turf.env.sky != null and not turf.tower.visible and turf._shade,
+			"A winter twilight game starts in the late game's low sun with the stands' shade")
+	turf.set_hour(clock.hour_at(1, 25.0))
+	var dusk := turf.tower.visible and turf.fill.visible and turf.env.sky != null
+	turf.set_hour(clock.hour_at(4, 100.0))
+	_check(dusk and turf.env.sky == null and turf.fill.visible and not turf.tower.visible
+			and turf.env.background_mode == Environment.BG_COLOR,
+			"Through the first quarter the towers come on as the sun sets; by the last it is the night look")
+	turf.clock = null
 
 
 func _wear_total(turf: Oval3DTurf) -> float:

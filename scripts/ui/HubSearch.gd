@@ -27,11 +27,11 @@ static func open(from: Node, text := "") -> Control:
 	overlay.name = SHEET_NAME
 	UiKit.close_on_outside_tap(box)
 	var v: VBoxContainer = box["body"]
-	v.add_theme_constant_override("separation", 6)
+	v.add_theme_constant_override("separation", UiKit.Space.CLOSE)
 	var field := UiKit.search_field(text, "Search players and clubs")
 	field.name = "SearchField"
 	v.add_child(field)
-	var results := UiKit.vbox(2)
+	var results := UiKit.vbox(UiKit.Space.SLIM)
 	results.name = "SearchResults"
 	v.add_child(results)
 	field.text_changed.connect(func(_t: String): _fill(results, field.text))
@@ -152,7 +152,7 @@ static func _row(results: VBoxContainer, id: String, text: String) -> Button:
 	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	# One line each (lbl wraps by default, and a wrapping label in a row
 	# shrinks to nothing): the name gives way first, trimmed.
-	var h := UiKit.hbox(8)
+	var h := UiKit.hbox(UiKit.GAP)
 	h.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	b.add_child(h)
