@@ -279,6 +279,8 @@ var week_checks := {}
 ## id>": {"t", "log"}}. Missing means neutral. Saved; later phases add coaches,
 ## journalists, the board and club culture under their own keys, same shape.
 var relations := {}
+## Player-to-player bonds: mates, rivals, mentors, leaders, family (Bonds.gd).
+var bonds := {}
 ## What the stories remember (StoryEngine.new_state): cooldowns, flags, arcs.
 var story := {}
 ## Off only in tests and audits that measure the game without the cards.
@@ -1005,6 +1007,7 @@ func _save_state() -> Dictionary:
 		"week_events": week_events,
 		"week_checks": week_checks,
 		"relations": relations,
+		"bonds": bonds,
 		"story": story,
 		"media_conference": media_conference,
 		"backing_talk": backing_talk,
@@ -1286,6 +1289,7 @@ func _restore_career(state: Dictionary) -> bool:
 	if not state.has("week_events"):
 		week_event = state.get("week_event", {})
 	relations = state.get("relations", {})
+	bonds = Bonds.ensure(state.get("bonds", {}))
 	var raw_story: Variant = state.get("story", {})
 	var old_calendar := StoryEngine.is_old_calendar(raw_story)
 	if old_calendar:
@@ -1944,6 +1948,7 @@ func reset(next_dataset := Datasets.DEFAULT) -> void:
 	week_events = []
 	week_checks = {}
 	relations = {}
+	bonds = {}
 	story = StoryEngine.new_state()
 	media_conference = {}
 	match_stories = []
@@ -3231,6 +3236,7 @@ func _start_next_season(next_year: int, signed: int) -> void:
 	pending_label = ""
 	_open_board_season()
 	_captaincy_refresh()
+	_bonds_refresh()
 	_ground_rename_news()
 	_culture_rollover()
 	_build_season_wrap(next_year)
@@ -3737,6 +3743,7 @@ func start_season(club_code: String, list: Array) -> void:
 		department_budget_year = season_year
 	_open_board_season()
 	_captaincy_refresh()
+	_bonds_refresh()
 	_ground_rename_news()
 	last_phase = "regular"
 	last_label = "Round 1"
@@ -16908,6 +16915,57 @@ func _captain_name(id: String, roster: Array) -> String:
 ## (director 2026-10-12). A spot the coach emptied himself stays empty: nobody is
 ## added for him. A save from before this ("seeded" missing) is named once, by the
 ## rule, at the first round after it loads, unless it already has leaders.
+## Bonds once a season, after the captains are named (they seed the
+## leadership allies): ties to men who left go, ties apart fade, every club is
+## topped up by the same rule (Bonds.refresh). Its own seeded stream: no dice move.
+func _bonds_refresh() -> void:
+	if season == null:
+		return
+	bonds = Bonds.ensure(bonds)
+	var leaders := {}
+	for code in season.lists:
+		var rec: Dictionary = captaincy.get(code, {})
+		if not rec.is_empty():
+			leaders[code] = Captaincy.ids(rec, "captain") + Captaincy.ids(rec, "vice")
+	Bonds.refresh(bonds, season.lists, season_year, career_seed, leaders, free_agents)
+
+
+## Each listed player's club code, for the bond readers.
+func _bond_clubs() -> Dictionary:
+	var out := {}
+	if season != null:
+		for code in season.lists:
+			for p in season.lists[code]:
+				if p is Dictionary:
+					out[str(p.get("id", ""))] = str(code)
+	return out
+
+
+## His bonds for a profile (Bonds.ties): [{"id", "kind", "label", "what",
+## "strength", "since", "rel", "same_club"}], strongest first.
+func bond_ties(player_id: String) -> Array:
+	return Bonds.ties(Bonds.ensure(bonds), player_id, _bond_clubs())
+
+
+## What a call on him ("drop", "trade", "delist", "back") means to the men
+## tied to him, before it is made (Bonds.fallout): [{"id", "kind", "opinion",
+## "why"}]. Read only: nothing is applied here.
+func bond_fallout(player_id: String, action: String) -> Array:
+	return Bonds.fallout(Bonds.ensure(bonds), player_id, action, _bond_clubs())
+
+
+## The man a story card binds as `role` (close_mate, positional_rival, mentor,
+## protege, brother, incumbent) beside him, or "" so the card skips (Bonds.actor).
+func bond_actor(player_id: String, role: String) -> String:
+	var ovr := {}
+	if role == "incumbent" and season != null:
+		for code in season.lists:
+			for p in season.lists[code]:
+				if p is Dictionary:
+					ovr[str(p.get("id", ""))] = int(Rating.ovr(p, 0))
+	return Bonds.actor(Bonds.ensure(bonds), player_id, role, _bond_clubs(), ovr)
+
+
 func _captaincy_refresh() -> void:
 	if season == null:
 		return
