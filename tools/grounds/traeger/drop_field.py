@@ -1,5 +1,5 @@
 import bpy,os,sys,json
-S=r'C:/Users/DANTE/AppData/Local/Temp/claude/4a2d69a2e2816321/2e119eb6-c1b8-4f9d-a827-983cffaeebc1/scratchpad'
+S=os.getcwd()   # run from the build folder (chain.sh)
 out=sys.argv[-1]
 for o in [o for o in bpy.data.objects if o.name.startswith('ground_grass')]:print('DEL',o.name);bpy.data.objects.remove(o,do_unlink=True)
 exec(open(os.path.join(S,'ring.py')).read())

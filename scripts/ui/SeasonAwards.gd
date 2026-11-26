@@ -234,11 +234,6 @@ static func open(host: Control) -> Control:
 							StatsSide.ink(rc), 15, rc == GameState.my_club))
 		var last := int(state["stage"]) == stages.size() - 1
 		next.text = "Season review" if last else "Next award"
-		var animation = state["vignette"]
-		if is_instance_valid(animation):
-			var after := next.text
-			next.text = "Finish reveal"
-			animation.finished.connect(func(): next.text = after)
 	watch.pressed.connect(func() -> void:
 		var view = state["view"]
 		if is_instance_valid(view):
@@ -262,10 +257,6 @@ static func open(host: Control) -> Control:
 		if not bool(state["revealed"]):
 			state["revealed"] = true
 		else:
-			var scene = state["vignette"]
-			if is_instance_valid(scene) and not scene._done:
-				scene.finish_now()
-				return
 			state["stage"] = int(state["stage"]) + 1
 			state["revealed"] = false
 			state["paused"] = false
@@ -274,6 +265,13 @@ static func open(host: Control) -> Control:
 				return
 		build.call()
 		keep.call())
+	# The skip rule (director, 2026-11-26): Next moves on from the winner's
+	# first frame, and a tap anywhere else on the sheet puts his walk-on at its
+	# last frame, medal on and arms up. The count's board takes no tap.
+	SkipTap.arm(box["shell"], func() -> void:
+		var scene = state["vignette"]
+		if is_instance_valid(scene) and not scene._done:
+			scene.finish_now())
 	build.call()
 	# Without a count its controls never join the page. They go with the
 	# overlay, not before: the lambdas above hold them, and a lambda whose
