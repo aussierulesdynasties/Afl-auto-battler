@@ -100,7 +100,7 @@ number one development blocker.
   queue (45 cancelled PR runs on 26 Nov). Batch your commits locally and run the touched suites
   with `tools/run_tests.sh <suite>` before you push.
 - **Respect the open PR cap (Director Bible 7.48): at most 3 ready PRs.** Over the cap, open
-  yours as a draft (drafts skip the game tests) and mark it ready when a slot frees. Count with
+  yours as a draft (drafts skip the game tests) and mark it ready when a slot frees. Count
   the open PRs that are not drafts (GitHub MCP `list_pull_requests`, or `gh pr list`). The
   `PR cap` workflow enforces it: a PR over the cap goes back to draft and is released in turn.
 - **Check for a conflict before you ask for a merge, never after.** Run `git fetch origin main &&
