@@ -1,4 +1,4 @@
-# The open PR cap, enforced (Director Bible 1.48: at most 3 ready PRs; director 2026-11-26:
+# The open PR cap, enforced (Director Bible 7.48: at most 3 ready PRs; director 2026-11-26:
 # merges took days because 30+ ready PRs shared about 20 GitHub runners).
 #
 # Ready PRs beyond the 3 oldest go back to draft with the label "waiting-for-slot" and one
@@ -67,7 +67,7 @@ jobs:
           for num in $(echo "$all" | jq -r "$counted | sort_by(.createdAt) | .[$CAP:] | .[].number"); do
             if draft "$num"; then
               gh pr edit "$num" --add-label waiting-for-slot
-              gh pr comment "$num" --body "Held as a draft: $CAP older PRs are ready and the cap is $CAP (Director Bible 1.48). Drafts take no CI runners. This PR is marked ready again on its own when a slot frees, oldest waiting first. To wait, keep working on the branch. Marking it ready by hand puts it straight back."
+              gh pr comment "$num" --body "Held as a draft: $CAP older PRs are ready and the cap is $CAP (Director Bible 7.48). Drafts take no CI runners. This PR is marked ready again on its own when a slot frees, oldest waiting first. To wait, keep working on the branch. Marking it ready by hand puts it straight back."
               echo "#$num: held"
             else
               echo "::warning::could not turn #$num into a draft"
