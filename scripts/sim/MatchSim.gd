@@ -116,6 +116,10 @@ var _gathering := false
 ## The coach's set-shot call while it plays out ({"key"}): every event it
 ## produces carries "choice", and its result also "setshot".
 var _set_choice := {}
+## The jumper numbers of each side's men at the last centre bounce, until the next event carries
+## them ("bounce": [side 0's, side 1's]). Read only: the replay stands these men in the centre
+## square; nothing in the match reads it back.
+var _bounce_men: Array = []
 ## Who the last free kick was paid to ({"side", "id"}): inside his forward 50
 ## he takes it as a set shot (_free_set_shot).
 var _free_taker := {}
@@ -1563,6 +1567,9 @@ func _emit(kind: String, side: int, fp: float, actor, text: String) -> void:
 		"behinds": [behinds(0), behinds(1)],
 		"mom": snappedf(momentum, 0.01),
 	})
+	if not _bounce_men.is_empty():
+		events[events.size() - 1]["bounce"] = _bounce_men
+		_bounce_men = []
 	if not _set_choice.is_empty():
 		events[events.size() - 1]["choice"] = str(_set_choice["key"])
 		if ["goal", "behind", "rebound"].has(kind):
@@ -2798,9 +2805,17 @@ func _tackler_score(p: Dictionary) -> float:
 	return s
 
 
-func _pick_presser(side: int, zone: int):
+func _pick_presser(side: int, zone: int, at_bounce := false):
 	var w: Dictionary = PRESS_ZONES[zone]
 	var group: Array = (squads[side] as Squad).ground
+	if at_bounce:
+		# The man who wins the ball out of a centre bounce is tackled, pressed or smothered by
+		# one of the other side's four at that bounce (the ruck and three inside mids), as at a
+		# real 6-6-6 bounce: everyone else is held outside the square until the ball is bounced
+		# (director 2026-11-26, "Make all three").
+		var att := _centre_attendees(side)
+		if not att.is_empty():
+			group = att
 	var weights := []
 	# The pick context is still asked once a pick: the spare minder's stand-in is
 	# kept from the first pick that asks for him (_minder_memo).
@@ -3552,11 +3567,13 @@ func _stoppage(side: int, opp: int, from_bounce: bool, in_f50 := false):
 	# A centre bounce: the ruck and three inside mids from each side attend.
 	var attend := {}
 	if at_centre:
+		_bounce_men = [[], []]
 		for s2 in [side, opp]:
 			attend[s2] = _centre_attendees(s2)
 			_t(s2, "centre_bounces")
 			for p in attend[s2]:
 				_p(p, "cba")
+				(_bounce_men[s2] as Array).append(int(p["num"]))
 	if rng.randf() < float(T["clearance_per_stoppage"]):
 		_t(side, "clearances")
 		var mid
@@ -3858,7 +3875,7 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 				rush_cut += widened - tackle_cut
 				tackle_cut = widened
 		if press_roll < tackle_cut:
-			var tackler = _pick_presser(opp, zone)
+			var tackler = _pick_presser(opp, zone, chain_origin == "centre" and touches == 1)
 			_maybe_report(opp, tackler, carrier)
 			_t(opp, "tackles")
 			_p(tackler, "tackles")
@@ -3929,7 +3946,7 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 			# less ground, and sometimes goes straight to the opposition -
 			# likelier against a strong presser, less likely from a clean
 			# user of the ball.
-			var presser = _pick_presser(opp, zone)
+			var presser = _pick_presser(opp, zone, chain_origin == "centre" and touches == 1)
 			_t(opp, "pressure_acts")
 			_p(presser, "pressure_acts")
 			_press_where(opp, atk_fp, in_d50, false)
@@ -3972,7 +3989,7 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 		# the ball live at the contest, so the next chain is won as a loose
 		# ball rather than automatically handed to either side.
 		if disposal_kind == "kick" and not marked:
-			var smotherer = _pick_presser(opp, zone)
+			var smotherer = _pick_presser(opp, zone, chain_origin == "centre" and touches == 1)
 			var smother_p := SMOTHER_BASE * (0.55 + 0.90 * _a(smotherer, "pressure") / 100.0)
 			smother_p *= 1.35 if rushed else 0.85
 			if smother_rng.randf() < minf(SMOTHER_CAP, smother_p):
