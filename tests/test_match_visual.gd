@@ -2198,13 +2198,14 @@ func _test_farewell() -> void:
 
 
 ## The real sun over every ground (Oval3DSunClock.sun_basis): each ground's bearing is known and
-## agrees with its model's own axis (models are laid x east, z south) but for the three turned off
+## agrees with its model's own axis (models are laid x east, z south) but for the four turned off
 ## true north; and the light comes out of the north at an Australian ground, whichever way the
 ## ground lies, so its north side is the sunlit one.
 func _test_sun_bearing() -> void:
 	var places: Dictionary = Oval3DSunClock.place("MCG")
 	_check(places.has("axis"), "The MCG's bearing is known (%s)" % str(places))
-	var off_true := ["marvel", "ikon_park", "blacktown"]
+	# Traeger Park's model is turned 25.4 degrees to north (tools/grounds/traeger/measure/outline.py).
+	var off_true := ["marvel", "ikon_park", "blacktown", "traeger"]
 	var bad := []
 	for g in GroundModels.GROUNDS:
 		var slug: String = GroundModels.GROUNDS[g]
@@ -2348,8 +2349,12 @@ func _test_ground_models() -> void:
 	(Engine.get_main_loop() as SceneTree).root.add_child(oval)
 	oval.build(d, str(res.get("home", "ADE")), str(res.get("away", "MEL")))
 	var model: Node3D = oval.get_node_or_null("Ground")
-	_check(model != null and model.find_children("*", "MeshInstance3D", true, false).size() > 0 and oval.crowd == null,
-			"A match at Engie Stadium plays in its model, with no stand or crowd")
+	# Its crowd, if any, sits on the model's own seats (Engie has had seat files since #2037), as at
+	# the MCG (_test_mcg_crowd), never on the plain stand.
+	_check(model != null and model.find_children("*", "MeshInstance3D", true, false).size() > 0
+			and (oval.crowd == null or oval.crowd.get_parent() == model),
+			"A match at Engie Stadium plays in its model, with no plain stand; any crowd is on the model's seats (%s)" % [
+			"no model" if model == null else ("crowd on " + str(oval.crowd.get_parent().name) if oval.crowd != null else "no crowd")])
 	_check(oval._turf_mat.get_shader_parameter("fence_clip") == GroundModels.match_fence()
 			and GroundModels.stretch("engie").is_equal_approx(Vector2.ONE),
 			"The turf stops at the model's fence")
@@ -2655,8 +2660,11 @@ func _test_ground_backdrop() -> void:
 		oval.build(d, "COL", "GEE")
 		var bds := oval.find_children("Backdrop", "", true, false)
 		if g == "The Gabba":
-			_check(bds.is_empty() and oval.camera.far < 1000.0 and not oval._env.fog_enabled,
-					"A ground without surroundings keeps the 900 m view and no haze")
+			# The thin air haze every dry day has (Oval3DTurf._haze, _test_graphics_levels) is no backdrop's haze.
+			var far_haze := oval._env.fog_enabled and oval._env.fog_mode == Environment.FOG_MODE_DEPTH
+			_check(bds.is_empty() and oval.camera.far < 1000.0 and not far_haze,
+					"A ground without surroundings keeps the 900 m view and no distance haze (%d backdrops, far %.0f m, fog %s mode %d)" % [
+					bds.size(), oval.camera.far, str(oval._env.fog_enabled), oval._env.fog_mode])
 			oval.free()
 			continue
 		_check(bds.size() == 1 and (bds[0] as Node).get_parent().name == "Ground",

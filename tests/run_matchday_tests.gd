@@ -318,8 +318,10 @@ func _test_phone_match(sz: Vector2i) -> void:
 			"The lead line matches the scoreboard (%s: %s)" % [tag, score_text])
 
 	# The break: the score, what happened, then the calls.
-	_check(box.find_child("BreakScore", true, false) != null and box.find_child("QuarterFacts", true, false) != null,
-			"Quarter time says the score and what happened (%s)" % tag)
+	# A phone leaves the score to the scoreboard above the sheet (director, 2026-11-26, pick A).
+	_check((box.find_child("BreakScore", true, false) != null) == bool(m.call("_wide_break"))
+			and box.find_child("QuarterFacts", true, false) != null,
+			"Quarter time says what happened, and the score beside the title on a wide screen only (%s)" % tag)
 	var facts: Node = box.find_child("QuarterFacts", true, false)
 	_check(facts != null and facts.get_child_count() <= 3,
 			"What happened in the quarter is three things at most (%s)" % tag)
