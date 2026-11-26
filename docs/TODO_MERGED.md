@@ -213,3 +213,4 @@ What has landed toward each open row of docs/TODO.md and docs/TODO_RULINGS.md, o
 - 202: Merged #2016: GMHBA Stadium to the MCG standard: Selwood Stand roof in matches, solar roof, north and east walls, seats no longer black, Kardinia Park and Geelong (row 202 2b).
 - 202: Merged #2023: 3D match: background scenes for every match ground (row 202 2b, WIP, not shippable).
 - 198: Merged #2040: 3D match: real AFL move clips timed to the touch, reel fixes, run-down tackles.
+- 202: Merged #2041: 3D: Barossa Park rebuilt to the MCG standard (row 202).
