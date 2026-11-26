@@ -203,3 +203,4 @@ What has landed toward each open row of docs/TODO.md and docs/TODO_RULINGS.md, o
 - 202: Merged #1920: Mars Stadium (Ballarat): model (row 202 2b, WIP).
 - 201: Merged #1957: Match view: handballs drawn as handballs, not kicks (row 201 gap 7).
 - 202: Merged #1969: 3D inventory: save every session's work in progress to main.
+- 202: Merged #1976: 3D match: the MetaHuman footballer in every match, Club Forge hair refitted and trimmed to 20 cuts (row 202 2d).
