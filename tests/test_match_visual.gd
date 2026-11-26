@@ -2282,6 +2282,17 @@ func _test_night_towers() -> void:
 		for g in p0.find_children("*", "GeometryInstance3D", true, false):
 			on_layer = on_layer or (g.layers & Oval3DTowers.SHADOW_LAYER) != 0
 		_check(men_only and on_layer, "Only the men throw the towers' shadows, not the stadium")
+		# The beams light no land round the ground: it is left to the spill, which fades away.
+		var beams_off := true
+		for b in t.beams:
+			beams_off = beams_off and b.light_cull_mask & Oval3DTowers.SURROUND_LAYER == 0 and b.light_cull_mask & 1 != 0
+		var land_ok := true
+		var land := 0
+		for g in oval.find_children("*", "VisualInstance3D", true, false):
+			if g.has_meta("open_ground"):
+				land += 1
+				land_ok = land_ok and g.layers & Oval3DTowers.SURROUND_LAYER != 0 and g.layers & 1 == 0
+		_check(beams_off and land_ok, "The towers' beams leave the land round the ground to the spill (%d pieces)" % land)
 		oval.turf.apply("", VignetteKickoff.TWILIGHT)
 		_check(t.level > 0.0 and t.beams.all(func(b): return not b.visible) and oval._sun.visible,
 				"At a twilight game the towers are on but the sun still throws the shadows")

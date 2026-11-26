@@ -72,6 +72,7 @@ func build(p_slug: String, model: Node3D, oval: Node3D) -> void:
 	name = "Towers"
 	if slug in ROOF_LIT or model == null:
 		return
+	keep_off_beams(model)
 	var pts := _lamp_points(model, oval)
 	banks = bank_middles(pts)
 	if banks.is_empty():
@@ -114,6 +115,7 @@ func build(p_slug: String, model: Node3D, oval: Node3D) -> void:
 		beam.directional_shadow_max_distance = SHADOW_REACH
 		beam.shadow_normal_bias = 2.0
 		beam.shadow_caster_mask = SHADOW_LAYER
+		beam.light_cull_mask = 0xFFFFF & ~SURROUND_LAYER
 		beam.visible = false
 		_beam_k.append(1.0 / cos_in)
 		beams.append(beam)
@@ -157,6 +159,24 @@ static func spread_order(p_banks: Array[Vector3]) -> Array[int]:
 
 ## The visual layer the shadow-throwing men sit on (besides the camera's layer 1).
 const SHADOW_LAYER := 1 << 19
+
+
+## The visual layer of the land round a ground (GroundModels' surrounds, meta open_ground; the
+## kit's far pieces, named *_far, such as Blacktown's car park; anything under a node named
+## Backdrop), in place of the camera's layer 1. The beams leave it
+## out: they are directional, so they would light a car park 200 m out as brightly as the turf
+## (Blacktown QA, 2026-11-24), where a night broadcast shows the land round a ground dim. It
+## takes only the towers' spill, which fades with distance and stops past the far fence.
+const SURROUND_LAYER := 1 << 18
+
+
+## Put the land round a ground on SURROUND_LAYER, so the beams leave it to the spill.
+static func keep_off_beams(n: Node, inside := false) -> void:
+	var here := inside or n.has_meta("open_ground") or n.name == "Backdrop" or str(n.name).ends_with("_far")
+	if here and n is VisualInstance3D:
+		n.layers = (n.layers & ~1) | SURROUND_LAYER
+	for c in n.get_children():
+		keep_off_beams(c, here)
 
 
 ## Put a node and everything under it on the towers' shadow layer.
