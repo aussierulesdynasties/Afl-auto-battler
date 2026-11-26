@@ -1383,6 +1383,19 @@ func _shot_phases(k: int) -> Array:
 			else signf(_rng.randf() - 0.5) * _rng.randf_range(4.0, 8.5)
 	var target := Vector2(MatchMotion.GOAL_X * _dir(side), gy)
 	var out := []
+	# Rushed through by the defender who had it (P2-1): he gathers, runs it
+	# toward his own goal line and knocks it over, between the goal and behind
+	# posts. The ball never moves without him.
+	var rusher := _token_by_pid(str(ev.get("rusher_id", ""))) if bool(ev.get("rushed", false)) else -1
+	if rusher >= 0:
+		var near := (ball["pos"] as Vector2).lerp(target, 0.25)
+		var dr := near.distance_to(target)
+		return [{"t": "collect", "who": rusher, "roll": true}, {"t": "possess", "who": rusher, "quiet": true},
+				{"t": "hold", "who": rusher, "carry": near, "run": true, "max": 1.2},
+				{"t": "flight", "to": target, "dur": 0.25 + dr / 40.0, "apex": 1.0 + dr * 0.05,
+					"recv": -1, "mode": "shot"},
+				{"t": "emit", "log": true, "flash": "behind"},
+				{"t": "celebrate", "who": -1, "dur": 0.45}]
 	# A bomb that sailed over the pack is still in the air: no new kick.
 	var pk := _prev_real(k)
 	var over := pk >= 0 and str((events[pk] as Dictionary).get("kind", "")) == "pack" \
