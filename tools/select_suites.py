@@ -41,7 +41,9 @@ LEAF_DIRS = ("assets/",)
 # walker cannot see the link: a change under the folder selects the suite. ground_seats checks every
 # assets/grounds/<slug>/seats_*.bin against its model (tools/grounds/seat_rule.gd: SeatRule.grounds());
 # without this a ground's new seats or model ran no seat check before the merge queue.
-SCANNED = {"assets/grounds/": ("ground_seats",)}
+# The ground models themselves live in a private repo (docs/GROUND_ASSETS.md): a change to one shows
+# here as a change to their pin, tools/ground_assets.lock.
+SCANNED = {"assets/grounds/": ("ground_seats",), "tools/ground_assets.lock": ("ground_seats",)}
 IDENT = re.compile(r"\b[A-Za-z_][A-Za-z0-9_]*\b")
 RES = re.compile(r"res://[A-Za-z0-9_./\- ]*[A-Za-z0-9_./\-]")
 CLASS_NAME = re.compile(r"^\s*class_name\s+([A-Za-z_][A-Za-z0-9_]*)", re.M)
@@ -152,7 +154,7 @@ FIXTURE_DATA = (".txt", ".gz", ".csv", ".json", ".save")
 # Folders a suite lists at run time (DirAccess), so no path names the files inside and the walker
 # cannot trace them. A changed file under one selects its suites (director 2026-11-24: a change to a
 # ground's model files runs the seat check; the MCG seat fault reached main without it, #2052).
-SCANNED = {"assets/grounds/": ("ground_seats",)}
+SCANNED = {"assets/grounds/": ("ground_seats",), "tools/ground_assets.lock": ("ground_seats",)}
 
 
 PATHS = re.compile(r"[\w./-]+")
@@ -209,6 +211,12 @@ def select(changed, root=ROOT, smoke=SMOKE):
     for path in changed:
         base = path[:-len(".uid")] if path.endswith(".uid") else path
         if path.startswith(("docs/", "tools/audit/", "tools/visual/", "tools/lint/")) or path.endswith(".md"):
+            continue
+        if base == "tools/ground_assets.lock":
+            # A ground model changed in the private repo (docs/GROUND_ASSETS.md): the suites that name a
+            # ground's files, plus the seat check that lists the folder.
+            wanted |= {s for s, d in dists.items() if any(k.startswith("assets/grounds/") and v <= REACH for k, v in d.items())}
+            wanted |= {s for s in SCANNED["assets/grounds/"] if s in suites}
             continue
         if not base.startswith(GAME):
             if base in RUN_PLAN:

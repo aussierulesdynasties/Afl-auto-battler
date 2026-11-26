@@ -7,6 +7,7 @@ read it when you pick or close work, not otherwise (a brief that names your row 
 Godot 4 / GDScript. Run `tools/run_tests.sh` (or `tools/run_tests.sh draft_ui`
 for one suite) before pushing. MetaHuman files (and anything made from them) never go in this public
 repo: they live in a private repo and `tools/epic_assets.sh fetch` copies them in (docs/EPIC_ASSETS.md).
+Ground models (`assets/grounds/`) live there too: publish them with `tools/ground_assets.sh`, never `git add` (docs/GROUND_ASSETS.md).
 
 ## The design bible comes first (director, 2026-10-09)
 

@@ -47,6 +47,8 @@ git rev-parse --short=7 HEAD > build_info.txt
 # The MetaHuman body, crew, guernsey cuts, skin and heads live in a private repo (docs/EPIC_ASSETS.md):
 # a build without them would have no players, so copy them in and refuse to go on without them.
 bash tools/epic_assets.sh fetch
+# The ground models too (docs/GROUND_ASSETS.md): the Android and Windows builds carry every ground.
+bash tools/ground_assets.sh fetch
 
 mkdir -p builds
 if ! "$GODOT" --headless --path "$ROOT" --import > builds/import.log 2>&1; then

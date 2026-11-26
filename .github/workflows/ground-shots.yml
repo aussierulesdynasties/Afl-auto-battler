@@ -34,6 +34,7 @@ on:
     types: [opened, synchronize, reopened, ready_for_review, labeled]
     paths:
       - "assets/grounds/**"
+      - "tools/ground_assets.lock"
       - "scripts/ui/match/GroundModels.gd"
       - "scripts/ui/match/Oval3D*.gd"
       - "scripts/ui/match/oval3d_*.gdshader"
@@ -98,6 +99,8 @@ jobs:
           : > changed.txt
           if [ -n "$sha" ]; then
             git fetch -q --depth=1 origin "$sha" && git diff --name-only "$sha" HEAD > changed.txt || true
+            # A rebuilt model shows as its pin changing; name its files (docs/GROUND_ASSETS.md).
+            python3 tools/ground_assets_diff.py "$sha" HEAD >> changed.txt || true
           fi
           echo "$(wc -l < changed.txt) files changed since the baseline"
           # Nothing moved on main since the last good night: carry it forward, film nothing.
@@ -111,7 +114,8 @@ jobs:
           only=""
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             git fetch -q --depth=1 origin "${{ github.event.pull_request.base.sha }}"
-            git diff --name-only "${{ github.event.pull_request.base.sha }}" HEAD > pr_files.txt
+            git diff --name-only "${{ github.event.pull_request.base.sha }}" HEAD | grep -vx 'tools/ground_assets.lock' > pr_files.txt || true
+            python3 tools/ground_assets_diff.py "${{ github.event.pull_request.base.sha }}" HEAD >> pr_files.txt || true
             if [ -s pr_files.txt ] && ! grep -qv '^assets/grounds/' pr_files.txt; then
               only=$(sed -n 's#^assets/grounds/\([^/]*\)/.*#\1#p' pr_files.txt | sort -u | tr '\n' ' ')
             fi
