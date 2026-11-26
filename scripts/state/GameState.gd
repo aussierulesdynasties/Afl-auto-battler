@@ -7863,6 +7863,7 @@ func _after_round(results: Array) -> void:
 	_draft_class_news()
 	_board_after_round(results)
 	_rival_morale_after_round(results)
+	_opinion_after_round(results)
 	_familiarity_after_round(results)
 	_fade_press_lifts()
 	_prepare_media_conference(results)
@@ -14977,6 +14978,55 @@ func _board_after_round(results: Array) -> void:
 						"You promised him a game and left him out", season_year, last_label)
 				_culture_move(my_club, "together", -StoryEngine.BROKEN_TOGETHER, "You promised a player a game and left him out")
 	_after_match_talks(played, int(res.get("round", season.round_index)))
+
+
+## What each club's coach did this round, as his players take it (Opinion.gd,
+## relationship overhaul Phase 1): every live mark fades a round, a fit man
+## left out takes a mark (a bigger one as one of the club's best, a long-tail
+## one in a final), a man picked for a final takes a small lift, and every
+## player's morale drifts a step towards where his opinion of his coach puts
+## it (ClubLife.drift_morale). Every club by the same rules (2026-11-09); for
+## your club the coach is you. A man who changed clubs loses the marks his
+## old coach left (Opinion.drop_other_clubs).
+func _opinion_after_round(results: Array) -> void:
+	if season == null:
+		return
+	Opinion.fade_round(relations)
+	var club_of := {}
+	for code in season.lists:
+		for p in season.lists[code]:
+			club_of[str(p["id"])] = str(code)
+	Opinion.drop_other_clubs(relations, club_of)
+	var when := last_label if last_label != "" else "Round %d" % season.round_index
+	for res in results:
+		var roster: Array = res.get("roster", [[], []])
+		var final := (res as Dictionary).has("tag")
+		for side in range(2):
+			var code := str(res.get("home" if side == 0 else "away", ""))
+			if code == "" or not season.lists.has(code):
+				continue
+			var played := {}
+			if roster.size() > side:
+				for r in roster[side]:
+					played[str(r["id"])] = true
+			for p in season.lists[code]:
+				var id := str(p["id"])
+				var key := Opinion.player_key(id)
+				if played.has(id):
+					if final:
+						Opinion.add(relations, key, "picked_final", season_year, when, code)
+				elif int(p.get("injury_weeks", 0)) <= 0 and not _round_unavailable.has(id):
+					var k := Opinion.drop_mark(int(Rating.ovr(p, 0)), final, OPINION_STAR_OVR)
+					Opinion.add(relations, key, k, season_year, when, code)
+	for code in season.lists:
+		var mine := str(code) == my_club
+		for p in season.lists[code]:
+			ClubLife.drift_morale(p, Opinion.coach_opinion(relations, Opinion.player_key(str(p["id"])), mine))
+
+
+## The rating at which being left out stings as "one of our best", the same
+## line the morale sting uses (ClubLife.morale_after_match).
+const OPINION_STAR_OVR := 78
 
 
 ## Every rival club's players take the week the way yours do

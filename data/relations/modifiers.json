@@ -1,0 +1,18 @@
+{
+	"_about": "Opinion marks (relationship overhaul Phase 1, DIRECTOR_BIBLE 5.170). v: opinion points (of 100) the mark is worth when it lands; fade: points it loses each round towards 0 (0 = it stays); tag: what kind of moment it is (a temperament scales by tag); why: the reason as the profile shows it, no full stop; scar: a long-tail mark (fades half a point a round or less). Read by scripts/sim/Opinion.gd; checked by Opinion.check_defs. Sizes are proposals: balance is the director's call.",
+	"modifiers": {
+		"dropped": {"v": -4, "fade": 1, "tag": "selection", "why": "Left out while fit"},
+		"dropped_star": {"v": -8, "fade": 1, "tag": "selection", "why": "Left out while fit, as one of our best"},
+		"dropped_final": {"v": -20, "fade": 0.5, "tag": "selection", "why": "Left out of a final while fit", "scar": true},
+		"picked_final": {"v": 4, "fade": 0.25, "tag": "selection", "why": "Picked to play in a final"},
+		"promise_kept": {"v": 10, "fade": 0.25, "tag": "promise", "why": "You kept your word to him", "scar": true},
+		"promise_broken": {"v": -15, "fade": 0, "tag": "promise", "why": "You broke your word to him", "scar": true},
+		"saw_promise_broken": {"v": -3, "fade": 0.5, "tag": "promise", "why": "You broke your word to a teammate"},
+		"mate_dropped": {"v": -2, "fade": 1, "tag": "bond", "why": "His mate was left out"},
+		"mate_traded": {"v": -6, "fade": 0.5, "tag": "bond", "why": "His mate was traded away"},
+		"mate_backed": {"v": 2, "fade": 1, "tag": "bond", "why": "You backed his mate"},
+		"rival_picked": {"v": -3, "fade": 1, "tag": "bond", "why": "His rival for the spot was picked ahead of him"},
+		"rival_traded": {"v": 3, "fade": 1, "tag": "bond", "why": "His rival for the spot was traded away"},
+		"betrayal": {"v": -25, "fade": 0, "tag": "betrayal", "why": "He feels you betrayed him", "scar": true}
+	}
+}
