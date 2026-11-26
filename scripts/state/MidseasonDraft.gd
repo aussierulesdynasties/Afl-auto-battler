@@ -83,7 +83,7 @@ static func _carnival(gs) -> void:
 	rng.seed = hash("carnival|%d|%d" % [gs.career_seed, gs.season_year])
 	var scored := []
 	for p in cls:
-		scored.append([float(p.get("overall", 50)) + rng.randf_range(-10.0, 10.0), str(p["id"]), p])
+		scored.append([float(Rating.ovr(p, 50)) + rng.randf_range(-10.0, 10.0), str(p["id"]), p])
 	scored.sort_custom(func(a, b):
 		if a[0] != b[0]:
 			return a[0] > b[0]
@@ -140,8 +140,8 @@ static func pool(gs) -> Array:
 				and not gs.drafted_draftees.has(str(p["id"])):
 			out.append(p)
 	out.sort_custom(func(a, b):
-		if int(a.get("overall", 0)) != int(b.get("overall", 0)):
-			return int(a.get("overall", 0)) > int(b.get("overall", 0))
+		if int(Rating.ovr(a, 0)) != int(Rating.ovr(b, 0)):
+			return int(Rating.ovr(a, 0)) > int(Rating.ovr(b, 0))
 		if float(a.get("age", 25.0)) != float(b.get("age", 25.0)):
 			return float(a.get("age", 25.0)) < float(b.get("age", 25.0))
 		return str(a["id"]) < str(b["id"]))
@@ -181,7 +181,14 @@ static func _open_draft(gs) -> void:
 		# retirement left on a list now under the minimum (director, 2026-11-11).
 		# Before the rookie list (Legacy, the mid-season drafts to 1993) a
 		# pick fills an open senior spot.
-		if RookieList.rookie_spot_free(list) or _short(list) 				or (not RookieList.in_force() and RookieList.senior_spot_free(list)):
+		if not (RookieList.rookie_spot_free(list) or _short(list) \
+				or (not RookieList.in_force() and RookieList.senior_spot_free(list))):
+			continue
+		# Every pick is checked against the cap (director, 2026-11-25, "Hold
+		# room"): a club with no room for the wage sits this draft out.
+		var pay := Contracts.indexed_money_2027(Contracts.ROOKIE_MIN_2027, gs.season_year) \
+				if RookieList.rookie_spot_free(list) else RookieList.senior_wage(gs.season_year)
+		if gs.fits_cap(code, list, pay, Contracts.next_size(list) + 1):
 			order.append(code)
 	rec["order"] = order
 	rec["next"] = 0

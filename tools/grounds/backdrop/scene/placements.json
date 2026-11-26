@@ -1,0 +1,202 @@
+{
+ "scg": {
+  "origin": [
+   -33.89159,
+   151.2247974
+  ],
+  "yaw": 0.0,
+  "how": "stands on OSM buildings, oval on OSM pitch"
+ },
+ "engie": {
+  "origin": [
+   -33.8435161,
+   151.0675243
+  ],
+  "yaw": 6.0,
+  "how": "stands on OSM buildings, oval on OSM pitch"
+ },
+ "bellerive": {
+  "origin": [
+   -42.8773271,
+   147.3736877
+  ],
+  "yaw": -2.4000000000000057,
+  "how": "stands on OSM buildings, oval on OSM pitch"
+ },
+ "manuka": {
+  "origin": [
+   -35.3180633,
+   149.1345138
+  ],
+  "yaw": 0.0,
+  "how": "stands on OSM buildings, oval on OSM pitch"
+ },
+ "norwood": {
+  "origin": [
+   -34.9199235,
+   138.6304698
+  ],
+  "yaw": 0.0,
+  "how": "oval on OSM pitch"
+ },
+ "waverley_park": {
+  "origin": [
+   -37.9255173,
+   145.1887487
+  ],
+  "yaw": 0.0,
+  "how": "oval on OSM pitch"
+ },
+ "windy_hill": {
+  "origin": [
+   -37.7520471,
+   144.9195828
+  ],
+  "yaw": 0.0,
+  "how": "oval on OSM pitch"
+ },
+ "moorabbin": {
+  "origin": [
+   -37.9380475,
+   145.0437128
+  ],
+  "yaw": 0.0,
+  "how": "oval on OSM pitch"
+ },
+ "ikon_park": {
+  "origin": [
+   -37.7839538,
+   144.961459
+  ],
+  "yaw": -7.900000000000006,
+  "how": "stands on OSM buildings, oval on OSM pitch"
+ },
+ "whitten": {
+  "origin": [
+   -37.8007917,
+   144.8852738
+  ],
+  "yaw": 0.0,
+  "how": "oval on OSM pitch"
+ },
+ "football_park": {
+  "origin": [
+   -34.8799009,
+   138.4955704
+  ],
+  "yaw": 0.0,
+  "how": "oval on OSM pitch"
+ },
+ "subiaco": {
+  "origin": [
+   -31.944708,
+   115.8301644
+  ],
+  "yaw": 0.0,
+  "how": "oval on OSM pitch"
+ },
+ "waca": {
+  "origin": [
+   -31.9598867,
+   115.8794184
+  ],
+  "yaw": 0.0,
+  "how": "WACA cricket ground centre, model north-up"
+ },
+ "york_park": {
+  "origin": [
+   -41.4259095,
+   147.1389599
+  ],
+  "yaw": 0.0,
+  "how": "stands on OSM buildings, oval on OSM pitch"
+ },
+ "north_hobart": {
+  "origin": [
+   -42.8678438,
+   147.3162124
+  ],
+  "yaw": 0.0,
+  "how": "oval on OSM pitch"
+ },
+ "bruce": {
+  "origin": [
+   -35.2503166,
+   149.102347
+  ],
+  "yaw": 0.0,
+  "how": "stands on OSM buildings"
+ },
+ "barossa": {
+  "origin": [
+   -34.5983407,
+   138.8857651
+  ],
+  "yaw": 19.3,
+  "how": "oval on OSM pitch"
+ },
+ "sky": {
+  "origin": [
+   -41.272986,
+   174.7858677
+  ],
+  "yaw": 0.0,
+  "how": "stands on OSM buildings, oval on OSM pitch"
+ },
+ "jiangwan": {
+  "origin": [
+   31.3084171,
+   121.5110962
+  ],
+  "yaw": 0.0,
+  "how": "stands on OSM buildings"
+ },
+ "hands": {
+  "origin": [
+   -33.3462095,
+   115.6430473
+  ],
+  "yaw": 0.0,
+  "how": "stands on OSM buildings, oval on OSM pitch"
+ },
+ "blacktown": {
+  "origin": [
+   -33.7692997,
+   150.8593847
+  ],
+  "yaw": 0.0,
+  "how": "the Blacktown thread's measured model frame (GE tools grounds.json origin)"
+ },
+ "summit": {
+  "origin": [
+   -35.078,
+   138.8934659
+  ],
+  "yaw": -1.1999999999999886,
+  "how": "stands on OSM buildings, oval on OSM pitch"
+ },
+ "macpoint": {
+  "origin": [
+   -42.8801809,
+   147.3356121
+  ],
+  "yaw": 0.0,
+  "how": "construction site centre (no stadium mapped yet)"
+ },
+ "gabba": {
+  "origin": [
+   -27.4858548,
+   153.0380911
+  ],
+  "yaw": 0.0,
+  "how": "stands on OSM buildings, oval on OSM pitch"
+ },
+ "optus": {
+  "origin": [
+   -31.951075784871815,
+   115.88931398789981
+  ],
+  "yaw": 0.0,
+  "how": "Optus model's own 0,0 (survey/README on PR #1993: model (-30.38,-8.78) = -31.95115518870997, 115.88899235343283), model north-up"
+ }
+}

@@ -160,3 +160,37 @@ What has landed toward each open row of docs/TODO.md and docs/TODO_RULINGS.md, o
 - 198: Merged #2009: 3D match: planted feet stay put, the run's pace matches the picture (row 198).
 - 202: Merged #1991: 3D grounds: one seat rule for every ground; the ground kit's rows back on their steps (row 202 2b).
 - 202: Merged #2007: 3D match: goal replays go in and out behind a TV sting in the scoring club's colours (row 202 2e).
+- 202: Merged #2088: MCG: fix main's seat check (top tier keeps its back line) and the rear of the Great Southern Stand.
+- 202: Merged #2068: Match crew in 3D, round two: goal umpire's signals and flags, throw-in, trainer vest print.
+- 202: Merged #2084: Blacktown audit pass: roads, car park, LED screen, south buildings, south path and fence; seam and bank fixes.
+- 202: Merged #2070: 3D 1.0 plan: MetaHuman phone cost re-measured, build packaging owner (row 202).
+- 202: Merged #2036: Mars Stadium: the 2026 ground in matches, fence fitted to Google Earth, measured rings, real seat counts, Ballarat North surroundings (row 202).
+- 202: Merged #2037: ENGIE Stadium rebuilt to the MCG standard, with real Olympic Park surroundings.
+- 201: Merged #1998: Match sim: a shot on goal counts as a kick and a disposal (includes #1977).
+- 202: Merged #2052: The MCG of each era for Legacy matches: seasons, references, stands (row 202 2b, WIP).
+- 142: Merged #2059: Legacy ratings: honours worth 80, real peaks from best two seasons, Patton's ceiling, injured stars back.
+- 202: Merged #2048: Blacktown stages 1-3: fence on its real curve; stand, wing, indoor centre, bank and yard at Google Earth's sizes and heights; surroundings (row 202 2b).
+- 202: Merged #1993: Optus Stadium to the MCG standard: roof, bronze facade, surrounds.
+- 202: Merged #2033: 3D 1.0 release checklist: grounds, players, animations, presentation (row 202).
+- 202: Merged #2043: Match crew in 3D: boundary and goal umpires, trainers and runners.
+- 202: Merged #2027: MCG seats: take out the 405 still under the tiers, hold the MCG to the seat rule.
+- 202: Merged #2014: 3D view: turf and picture in real broadcast colour (Director Bible 2.114).
+- 202: Merged #2022: 3D match: the goal replay shows the kick: lead-up, kicker, ball through the posts (row 202 2e).
+- 207: Merged #1990: 3D match: the goal kicker's TV stat card over the picture (row 207).
+- 202: Merged #1945: Ground shots: film every ground nightly and flag what changed (row 202).
+- 202: Merged #1985: 3D match: holding-the-ball frees show the tackle; tackles that stop play cut close (row 202 2e, WIP).
+- 202: Merged #2038: 3D kit: clash guernseys for 17 clubs, guernseys hang from the chest, shorts lie flat (row 202 2d).
+- 204: Merged #2086: Training: gains stop at potential (director 2026-11-23).
+- 168: Merged #2112: UI Batches 2 and 3: team selection ground across at 960, stripes behind the title only, text floor 13, brighter grey.
+- 202: Merged #2019: People First Stadium to the MCG standard: finned walls, bronze podium, scoreboard lattice, entry pods, Carrara surroundings (row 202 2b, WIP).
+- 202: Merged #1992: 3D crowd fills to each match's real-world attendance (row 202 2c, WIP).
+- 197: Merged #2060: Builds carry the ground models and the 3D players; the phone app keeps every stadium offline.
+- 202: Merged #2062: MetaHuman files leave the public repo: private repo fetched at build time, CI blocks Epic files.
+- 202: Merged #2004: 3D match: through the banner before the first bounce; banner words are milestones only (row 202).
+- 202: Merged #2034: Cazaly's Stadium to the MCG standard: stand, club, towers, solar car park, ranges and Westcourt (row 202 2b).
+- 202: Merged #2035: Manuka Oval to the MCG standard: stands, seats, scoreboard, towers, the town round it and Canberra to 30 km (row 202 2b).
+- 202: Merged #2025: 3D match: interchanges jog off and run on, the free's umpire stands off the mark, far tackles run in (row 202 2e, WIP).
+- 202: Merged #2072: Real land round every ground: measured bare-earth terrain, the surrounds ring on it.
+- 171: Merged #2130: Screen sweep: the screens it never reached, and the Off-season open.
+- 202: Merged #2143: 3D 1.0 plan: catch-up for 24-26 Nov.
+- 168: Merged #2127: UI Batch 4: motion, focus ring, press feedback, and Team selection's oval on a phone.

@@ -84,8 +84,10 @@ Pick the suites for the code you changed and run just those (`tools/run_tests.sh
 | `coach_effects` | What coaching does: teaching, tactics, man-management |
 | `career_ui` | Main menu and save flow, Back, the Hub, Training, selection and trade screens, at 320, 360 and 430 wide |
 | `ui_motion` | Menu motion: tokens, hardened helpers, sheet_in, fill_bar, the result sheet on a win and a loss, Reduced motion, real taps during the rise and a land |
+| `premiership` | Row 170, the premiership ceremony (Full goosebumps): who gets one and what it says, its beats in order and its time to the final frame, the final frame for all 18 clubs and for a Club Forge club at the Forge's longest name (premiers or beaten) at standard and largest text, a tap jumping to the final frame, real taps on Continue, Back, Reduced motion, shake off, the cup before a farewell, full time still after it, another club's flag, the hub's sim path |
 | `potential` | Potential (POT) rules, rehab years, draft pedigree |
 | `ratings` | The overall rating model |
+| `attributes` | The one attribute list (scripts/sim/Attributes.gd) every screen reads, each attribute once in every list with the labels the screens show, and the one OVR door (Rating.ovr) returning every real player's stored OVR unchanged |
 | `ai` | Rival clubs' drafting and selection |
 | `training` | Training plans and the stat guide; the stat focus (row 97): once a season, the lock, unlock at rollover, old saves, a club move, real taps at 390x844 |
 | `selection` | Team selection and named sides |
@@ -205,7 +207,7 @@ survive a save (older saves get POT filled in).
 The AI suite runs all-AI career drafts (every club two or three rucks, no
 club hoarding good rucks while another has none, the best ruck and an elite
 player in round one), checks the national-draft AI prefers potential, and
-plays rounds to check rivals train after games, never well past potential,
+plays rounds to check rivals with room to grow train after games, never past potential,
 and never with your players' XP.
 
 The training suite checks the Position plan trains most of the list after a

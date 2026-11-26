@@ -25,7 +25,7 @@
 1 function-argument-name scripts/ui/match/PreMatchVignette.gd
 1 function-argument-name scripts/ui/match/StoppageVignette.gd
 1 unused-argument scripts/ui/stats/StatsCoach.gd
-2 unused-argument scripts/ui/stats/StatsLadder.gd
+1 unused-argument scripts/ui/stats/StatsLadder.gd
 1 unused-argument scripts/ui/stats/StatsRatings.gd
 2 class-variable-name tests/run_career_highs_tests.gd
 1 class-variable-name tests/run_combine_screen_tests.gd

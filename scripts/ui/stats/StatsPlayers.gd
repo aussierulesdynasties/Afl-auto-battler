@@ -64,7 +64,7 @@ static var _filters := {"club": "", "pos": "", "age": "", "role": "", "trait": "
 
 
 static func build(host: Control) -> Control:
-	var v := UiKit.vbox(8)
+	var v := UiKit.vbox(UiKit.GAP)
 	v.name = "StatsPlayers"
 	var wide: bool = host.call("wide")
 	if not GameState.season_stats.is_empty() and int(GameState.season_stats_from) > 0:
@@ -100,8 +100,8 @@ static func build(host: Control) -> Control:
 # Controls: the stat, totals or per game, filters
 # ---------------------------------------------------------------------------
 static func _controls(host: Control, wide: bool) -> Control:
-	var v := UiKit.vbox(6)
-	var row := UiKit.hbox(6)
+	var v := UiKit.vbox(UiKit.Space.CLOSE)
+	var row := UiKit.hbox(UiKit.Space.CLOSE)
 	row.name = "PlayersControls"
 	v.add_child(row)
 	# The stat, chosen by its name. The list is a sheet, not a pop-up menu:
@@ -129,7 +129,7 @@ static func _controls(host: Control, wide: bool) -> Control:
 	fb.pressed.connect(func(): open_filters(host))
 	row.add_child(fb)
 	if active != "":
-		var h := UiKit.hbox(8)
+		var h := UiKit.hbox(UiKit.GAP)
 		var t := UiKit.lbl("Showing " + active, UiKit.SECONDARY, UiKit.TEXT)
 		t.name = "ActiveFilters"
 		t.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -241,7 +241,7 @@ static func _board(host: Control, list: Array) -> Control:
 			_shown += PAGE
 			# The rows on show stay where they are; the next page comes in under them.
 			host.call("refresh", true))
-		v.add_child(UiKit.spacer(8))
+		v.add_child(UiKit.spacer(UiKit.GAP))
 		v.add_child(more)
 	return v
 
@@ -261,7 +261,7 @@ static func _board_row(host: Control, row: Dictionary, rank: int) -> Control:
 	for side in ["margin_top", "margin_bottom"]:
 		m.add_theme_constant_override(side, 6)
 	b.add_child(m)
-	var h := UiKit.hbox(10)
+	var h := UiKit.hbox(UiKit.Space.ROOM)
 	m.add_child(h)
 	var club := str(row["club"])
 	var mine := club == GameState.my_club
@@ -353,7 +353,7 @@ static func pick_group(key: String) -> void:
 
 
 static func _filter_row(host: Control) -> Control:
-	var flow := UiKit.vbox(8)
+	var flow := UiKit.vbox(UiKit.GAP)
 	flow.name = "FilterRow"
 	var clubs := [["", "All clubs"]]
 	for code in GameState.season.lists:
@@ -708,7 +708,7 @@ static func _table(host: Control, list: Array, cols: Array, wide: bool) -> Contr
 		while at + n < cols.size() and str(cols[at + n][3]) == g:
 			n += 1
 		groups.add_child(_fixed(_group_gap(wide)))
-		var span := UiKit.vbox(3)
+		var span := UiKit.vbox(UiKit.Space.THIN)
 		span.name = "PlayersGroup_" + g
 		span.custom_minimum_size.x = w * n
 		var gl := UiKit.ellipsis(g, UiKit.SMALL, UiKit.MUTED, true)
@@ -753,7 +753,7 @@ static func _table(host: Control, list: Array, cols: Array, wide: bool) -> Contr
 			_shown += PAGE
 			# The rows on show stay where they are; the next page comes in under them.
 			host.call("refresh", true))
-		v.add_child(UiKit.spacer(8))
+		v.add_child(UiKit.spacer(UiKit.GAP))
 		v.add_child(more)
 	return v
 
@@ -820,11 +820,8 @@ static func _editorial(b: Button, mine: bool) -> void:
 	var base := StyleBoxFlat.new()
 	base.bg_color = Color(0, 0, 0, 0)
 	if mine:
-		base.bg_color = Color(UiKit.club_vivid(GameState.my_club), 0.22)
-		base.border_width_left = 4
-		base.border_color = UiKit.club_vivid(GameState.my_club)
-	var over := StyleBoxFlat.new()
-	over.bg_color = Color(UiKit.TEXT, 0.05)
+		UiKit.mark_your_row(base, GameState.my_club)
+	var over := UiKit.row_hover()
 	for sb in [base, over]:
 		(sb as StyleBoxFlat).set_content_margin_all(0)
 	b.add_theme_stylebox_override("normal", base)
@@ -947,7 +944,7 @@ static func open_player(host: Control, id: String) -> void:
 			who.append("%d years old" % int(p["age"]))
 		v.add_child(UiKit.lbl(" · ".join(who), UiKit.SMALL, UiKit.MUTED))
 	# This season.
-	v.add_child(UiKit.spacer(6))
+	v.add_child(UiKit.spacer(UiKit.Space.CLOSE))
 	v.add_child(UiKit.section("This season"))
 	var games := int(row.get("games", 0))
 	if games <= 0:
@@ -963,7 +960,7 @@ static func open_player(host: Control, id: String) -> void:
 		v.add_child(UiKit.lbl(head, UiKit.BODY, UiKit.TEXT, true))
 		v.add_child(_season_grid(row, host.call("wide"), p))
 	# His career, season by season.
-	v.add_child(UiKit.spacer(6))
+	v.add_child(UiKit.spacer(UiKit.Space.CLOSE))
 	v.add_child(UiKit.section("Career"))
 	v.add_child(_career(p))
 	if not p.is_empty():
@@ -993,10 +990,10 @@ static func _season_grid(row: Dictionary, wide: bool, p := {}) -> Control:
 	var grid := GridContainer.new()
 	grid.name = "PlayerSeasonGrid"
 	grid.columns = 2 if wide else 1
-	grid.add_theme_constant_override("h_separation", 28)
-	grid.add_theme_constant_override("v_separation", 10)
+	grid.add_theme_constant_override("h_separation", UiKit.Space.SPREAD)
+	grid.add_theme_constant_override("v_separation", UiKit.Space.ROOM)
 	for g in GROUPS:
-		var box := UiKit.vbox(1)
+		var box := UiKit.vbox(UiKit.Space.HAIR)
 		box.custom_minimum_size.x = 320 if wide else 0
 		box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		box.add_child(UiKit.lbl(str(g[1]), UiKit.SMALL, UiKit.MUTED, true))
@@ -1008,7 +1005,7 @@ static func _season_grid(row: Dictionary, wide: bool, p := {}) -> Control:
 			if t < 0.0 or (t == 0.0 and not StatBook.RATES.has(key) and key != "kh"):
 				continue
 			any = true
-			var h := UiKit.hbox(6)
+			var h := UiKit.hbox(UiKit.Space.CLOSE)
 			var lab := UiKit.ellipsis(_cap(str(c[2])), UiKit.SMALL, UiKit.TEXT)
 			lab.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			h.add_child(lab)
@@ -1029,7 +1026,7 @@ static func _cap(t: String) -> String:
 ## games and goals of every season at each club, which reach back before
 ## records were kept.
 static func _career(p: Dictionary) -> Control:
-	var v := UiKit.vbox(2)
+	var v := UiKit.vbox(UiKit.Space.SLIM)
 	v.name = "PlayerCareer"
 	if p.is_empty():
 		v.add_child(UiKit.lbl("No career record.", UiKit.SMALL, UiKit.MUTED))
@@ -1037,13 +1034,13 @@ static func _career(p: Dictionary) -> Control:
 	var c := Career.of(p)
 	var lines: Array = c.get("lines", [])
 	if not lines.is_empty():
-		var head := UiKit.hbox(4)
+		var head := UiKit.hbox(UiKit.Space.TIGHT)
 		for col in [["Year", 48.0], ["Club", 56.0], ["GM", 34.0], ["G", 34.0], ["D", 40.0], ["CP", 40.0], ["M", 40.0], ["T", 40.0]]:
 			head.add_child(_cell(str(col[0]), float(col[1]), UiKit.MUTED, UiKit.SMALL))
 		v.add_child(head)
 		for line in lines:
 			var a: PackedInt32Array = line[3]
-			var h := UiKit.hbox(4)
+			var h := UiKit.hbox(UiKit.Space.TIGHT)
 			h.name = "CareerLine_%d" % int(line[0])
 			h.add_child(_cell(str(line[0]), 48.0, UiKit.TEXT, UiKit.SMALL))
 			h.add_child(_cell(str(line[1]), 56.0, UiKit.TEXT, UiKit.SMALL))

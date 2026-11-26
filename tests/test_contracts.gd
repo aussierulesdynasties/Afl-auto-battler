@@ -15,6 +15,8 @@ func run() -> void:
 	GameDB.reload()
 	GameState.replay_seed = SUITE_SEED
 	_t("_test_initial_contracts")
+	_t("_test_first_contracts_fit_the_cap")
+	_t("_test_rivals_keep_their_stars_2010")
 	_t("_test_real_money_scale")
 	_t("_test_offseason_flow")
 	_t("_test_offseason_books_are_next_seasons")
@@ -54,6 +56,9 @@ func run() -> void:
 	_t("_test_opposition_pot")
 	_t("_test_money_copy")
 	_t("_test_trade_reasons")
+	_t("_test_trade_cap_counts_dead_cap")
+	_t("_test_hold_room_refusals")
+	_t("_test_fa_close_lets_go_who_does_not_fit")
 	_t("_test_free_agent_reasons")
 	_t("_test_market_reasons_change_nothing")
 	_t("_test_rivals_act_in_their_interest")
@@ -320,6 +325,67 @@ func _test_initial_contracts() -> void:
 	_check(not GameState.offseason_open(), "Trades are closed during the season")
 	_check(not bool(GameState.release_player(str(GameState.my_list[0]["id"]))["ok"]),
 			"Nobody can be released mid-season")
+
+
+## Bug bash 2026-11-23: the 2010 lists priced at rating opened Geelong at 122%
+## of the cap. A list's first contracts fit under its cap, each cut by the
+## same share and never under the minimum; a list that fits keeps its prices.
+func _test_first_contracts_fit_the_cap() -> void:
+	var list := []
+	for i in range(40):
+		list.append({"id": "FIT_%d" % i, "age": 26.0, "value": 600000 if i < 10 else 200000, "overall": 70})
+	var fresh := Contracts.assign_initial(list)
+	_check(fresh.size() == 40, "Every player without a contract gets one (%d)" % fresh.size())
+	var priced := Contracts.payroll(list)
+	var copy := list.duplicate(true)
+	Contracts.fit_to_cap(copy, copy, priced + 1000)
+	_check(Contracts.payroll(copy) == priced, "A list that fits keeps its prices")
+	var room := int(priced * 0.8)
+	Contracts.fit_to_cap(list, fresh, room)
+	_check(Contracts.payroll(list) <= room, "A list over the cap is cut to fit (%d of %d)" % [Contracts.payroll(list), room])
+	_check(int(list[0]["salary"]) > int(list[39]["salary"]), "Its best paid are still its best paid")
+	var tight := []
+	for i in range(40):
+		tight.append({"id": "TIGHT_%d" % i, "age": 26.0, "value": 400000})
+	var t_fresh := Contracts.assign_initial(tight)
+	Contracts.fit_to_cap(tight, t_fresh, 1000)
+	var floor_ok := true
+	for p in tight:
+		if int(p["salary"]) < Contracts.senior_min():
+			floor_ok = false
+	_check(floor_ok, "Nobody is cut under the minimum wage")
+
+
+## Bug bash 2026-11-23 (Legacy lore audit): from the 2010 start Geelong let
+## Corey Enright and Matthew Scarlett go for want of cap room, and North
+## Melbourne signed both; both stayed at Geelong. Every club opens under its
+## cap, settles its best players first and measures room against the price
+## it re-signs at, so Geelong keeps both through the 2010 off-season.
+func _test_rivals_keep_their_stars_2010() -> void:
+	GameState.reset("2010")
+	GameState.career_seed = 1
+	GameState.replay_seed = 1
+	GameState.begin_real_lists()
+	GameState.choose_real_club("WBD")
+	GameState.draft.start_for_user("")
+	GameState.finish_intake_draft()
+	var over := []
+	for code in GameState.season.lists:
+		if Contracts.payroll(GameState.season.lists[code]) > GameState.cap_for(str(code)):
+			over.append("%s %d" % [code, Contracts.payroll(GameState.season.lists[code])])
+	_check(over.is_empty(), "Every club opens 2010 under its cap of %d (%s)" % [GameState.salary_cap, str(over)])
+	var stars := {}
+	for p in GameState.season.lists["GEE"]:
+		if str(p.get("real_name", "")) in ["Corey Enright", "Matthew Scarlett"]:
+			stars[str(p["id"])] = str(p["real_name"])
+	_check(stars.size() == 2, "Enright and Scarlett start at Geelong (%s)" % str(stars.values()))
+	_to_offseason()
+	GameState.open_offseason()
+	var kept := []
+	for p in GameState.season.lists["GEE"]:
+		if stars.has(str(p["id"])):
+			kept.append(stars[str(p["id"])])
+	_check(kept.size() == stars.size(), "Geelong keeps them through the off-season (kept %s)" % str(kept))
 
 
 ## Found 2026-11-15 (director: "my salary cap was also extremely tight
@@ -643,6 +709,7 @@ func _test_offseason_flow() -> void:
 	else:
 		GameState.start_next_season()
 	var ticked := true
+	var unticked := []
 	var sizes_ok := true
 	var off_sizes := []
 	for code in GameState.season.lists:
@@ -661,7 +728,9 @@ func _test_offseason_flow() -> void:
 		for p in list:
 			if int(p.get("contract_years", 0)) < 1 or p.has("resigned"):
 				ticked = false
-	_check(ticked, "Every contract ticks down at the rollover")
+				unticked.append("%s %s years %d%s" % [code, str(p["id"]), int(p.get("contract_years", 0)),
+						" resigned" if p.has("resigned") else ""])
+	_check(ticked, "Every contract ticks down at the rollover (%s)" % ", ".join(unticked.slice(0, 6)))
 	_check(sizes_ok, "Every list stays between %d and %d (%s)" % [Contracts.min_list(), Contracts.MAX_LIST, ", ".join(off_sizes)])
 	# The best young ones stay in the pool a year (_fa_staying, director
 	# 2026-11-11): only those kept players are left.
@@ -3390,6 +3459,84 @@ func _test_opposition_pot() -> void:
 
 ## P-18: every trade verdict carries the reason code of the branch it took,
 ## and the line is that code's sentence.
+## Bug bash batch B (director, 2026-11-25: "Batch B: cap and lists"): a trade
+## counts each side's dead cap, as cap_room does (a release leaves part of the
+## contract on the cap), in a trade with you and in one between two rivals; and
+## no club trades with itself.
+func _test_trade_cap_counts_dead_cap() -> void:
+	_new_season()
+	_to_offseason()
+	var me := GameState.my_club
+	var own := GameState.evaluate_trade(me, [str(GameState.my_list[0]["id"])], [str(GameState.my_list[1]["id"])])
+	_check(not bool(own["ok"]) and str(own.get("code", "")) == "trade_own_club"
+			and str(own["reason"]) == "You can't trade with your own club.",
+			"A trade with your own club is refused, in words (%s)" % str(own))
+	for code in [me, "COL", "CAR"]:
+		GameState.dead_cap.erase(code)
+	# [player from `a_club`, player from `b_club`, how much more the second earns]:
+	# the dearest swap whose rise still fits `room`.
+	var swap := func(a_club: String, b_club: String, room: int) -> Array:
+		var best := []
+		for a in RookieList.seniors(GameState.season.lists[a_club]):
+			for b in RookieList.seniors(GameState.season.lists[b_club]):
+				var rise := int(b.get("salary", 0)) - int(a.get("salary", 0))
+				if GameState.retiring_now(a) or GameState.retiring_now(b):
+					continue
+				if rise > 0 and rise <= room and (best.is_empty() or rise > int(best[2])):
+					best = [a, b, rise]
+		return best
+	# Yours: you take on more salary than you send, inside your room. Dead cap
+	# that leaves you 1,000 short of the rise is what says no.
+	var room := GameState.cap_room()
+	var s1: Array = swap.call(me, "COL", room)
+	_check(s1.size() == 3, "A swap that adds salary inside your room exists (room %d)" % room)
+	if s1.size() == 3:
+		var give := [str(s1[0]["id"])]
+		var take := [str(s1[1]["id"])]
+		var clear := GameState.evaluate_trade("COL", give, take)
+		GameState.dead_cap[me] = {"year": GameState.season_year + 1, "amount": room - int(s1[2]) + 1000}
+		var short := GameState.evaluate_trade("COL", give, take)
+		_check(str(clear.get("code", "")) != "trade_your_cap" and str(short.get("code", "")) == "trade_your_cap",
+				"Your dead cap counts in a trade: room %d, the swap adds %d; clear %s, with %d dead %s" % [
+				room, int(s1[2]), str(clear.get("code", "")), room - int(s1[2]) + 1000, str(short.get("code", ""))])
+		GameState.dead_cap.erase(me)
+	# Theirs: Collingwood takes on more salary than it sends.
+	var col_room := GameState.cap_for("COL") - Contracts.payroll(GameState.season.lists["COL"])
+	var s2: Array = swap.call("COL", me, col_room)
+	_check(s2.size() == 3, "A swap that adds salary inside Collingwood's room exists (room %d)" % col_room)
+	if s2.size() == 3:
+		var give := [str(s2[1]["id"])]
+		var take := [str(s2[0]["id"])]
+		var clear := GameState.evaluate_trade("COL", give, take)
+		GameState.dead_cap["COL"] = {"year": GameState.season_year + 1, "amount": col_room - int(s2[2]) + 1000}
+		var short := GameState.evaluate_trade("COL", give, take)
+		_check(str(clear.get("code", "")) != "trade_their_cap" and str(short.get("code", "")) == "trade_their_cap",
+				"Their dead cap counts in a trade with you: clear %s, with dead cap %s" % [
+				str(clear.get("code", "")), str(short.get("code", ""))])
+		GameState.dead_cap.erase("COL")
+	# Two rivals: Collingwood takes on more salary than it sends Carlton.
+	var s3: Array = swap.call("COL", "CAR", col_room)
+	_check(s3.size() == 3, "A rival swap that adds salary inside Collingwood's room exists (room %d)" % col_room)
+	if s3.size() == 3:
+		var read := GameState.trade_prospects()
+		var clear := GameState._club_verdict("COL", "CAR", [s3[0]], [s3[1]], 0.0, read)
+		GameState.dead_cap["COL"] = {"year": GameState.season_year + 1, "amount": col_room - int(s3[2]) + 1000}
+		var short := GameState._club_verdict("COL", "CAR", [s3[0]], [s3[1]], 0.0, read)
+		# Carlton, the other side, is held to its own dead cap the same way.
+		GameState.dead_cap.erase("COL")
+		var car_room := GameState.cap_for("CAR") - Contracts.payroll(GameState.season.lists["CAR"])
+		var s4: Array = swap.call("CAR", "COL", car_room)
+		var other_short := {}
+		if s4.size() == 3:
+			GameState.dead_cap["CAR"] = {"year": GameState.season_year + 1, "amount": car_room - int(s4[2]) + 1000}
+			other_short = GameState._club_verdict("COL", "CAR", [s4[1]], [s4[0]], 0.0, read)
+			GameState.dead_cap.erase("CAR")
+		_check(str(clear.get("code", "")) != "trade_their_cap" and str(short.get("code", "")) == "trade_their_cap"
+				and str(other_short.get("code", "")) == "trade_your_cap",
+				"Dead cap counts between two rivals, on both sides: clear %s, Collingwood's %s, Carlton's %s" % [
+				str(clear.get("code", "")), str(short.get("code", "")), str(other_short.get("code", ""))])
+
+
 func _test_trade_reasons() -> void:
 	var AR = load("res://scripts/sim/AiReasons.gd")
 	GameDB.reload()
@@ -3691,7 +3838,7 @@ func _test_rivals_act_in_their_interest() -> void:
 		q["contract_years"] = 1 if (q == spare_a or q == spare_b) else 3
 	var cap_before := GameState.salary_cap
 	var relief := GameState.cap_for(club) - GameState.salary_cap
-	var base := Contracts.payroll(list) - int(star.get("salary", 0)) + Contracts.asking_salary(star) - relief
+	var base := Contracts.payroll(list) - int(star.get("salary", 0)) + Contracts.ai_price(star, list) - relief
 	var sa := int(spare_a.get("salary", 0))
 	var sb := int(spare_b.get("salary", 0))
 	GameState.salary_cap = base - mini(sa, sb)
@@ -3884,3 +4031,143 @@ func _test_selection_bars_remembered() -> void:
 	TradeValue.selection_bars(list)
 	TradeValue.selection_bars(list)
 	_check(TradeValue.bars_built - b0 == 2, "Once the market moves, nothing is remembered")
+
+
+## Hold room (director, 2026-11-25, "Hold room": "Every offer, re-sign, signing
+## and trade must leave enough room to fill the list to the minimum and take the
+## three draftees"). Every club is given room to spare, then dead cap sets your
+## room exactly: a deal that fits the cap but not the room held is refused, in
+## words; with the room held it is not.
+func _test_hold_room_refusals() -> void:
+	_new_season()
+	_to_offseason()
+	var me := GameState.my_club
+	GameState.dead_cap.erase(me)
+	GameState.salary_cap += 5000000
+	var held := GameState.held_room(Contracts.next_size(GameState.my_list))
+	_check(GameState.offseason_open() and GameState.held_take() == 3 and held >= 3 * Contracts.held_wage(),
+			"The off-season holds room for three draftees: %s (%s each)" % [Contracts.money(held), Contracts.money(Contracts.held_wage())])
+	# Dead cap that leaves `room` of cap room.
+	var set_room := func(room: int) -> void:
+		GameState.dead_cap.erase(me)
+		GameState.dead_cap[me] = {"year": GameState.season_year + 1, "amount": GameState.cap_room() - room}
+	# Re-sign: one of ours out of contract, offered 10,000 more than he is paid.
+	var ooc := Contracts.expiring(GameState.my_list).filter(func(q): return not bool(q.get("resigned", false)) and not (q.get("talks", {}) as Dictionary).has("refused") and not bool(q.get("talks", {}).get("walked", false)) and not GameState.retiring_now(q))
+	_check(not ooc.is_empty(), "One of ours is out of contract (%d)" % ooc.size())
+	if not ooc.is_empty():
+		var p: Dictionary = ooc[0]
+		var salary := maxi(Contracts.senior_min(), int(p.get("salary", 0)) + 10000)
+		var rise := salary - int(p.get("salary", 0))
+		var need := rise + GameState.held_room(Contracts.next_size(GameState.my_list))
+		set_room.call(need - 1000)
+		var short := GameState.offer_contract(str(p["id"]), salary, 2)
+		_check(not bool(short["ok"]) and str(short.get("code", "")) == "held_room" and str(short["reason"]) == GameState.HELD_ROOM_LINE,
+				"A re-sign that fits the cap but not the room held is refused (rise %s, room %s): %s" % [
+				Contracts.money(rise), Contracts.money(need - 1000), str(short)])
+		set_room.call(need)
+		var clear := GameState.offer_contract(str(p["id"]), salary, 2)
+		_check(str(clear.get("code", "")) != "held_room", "With the room held, the re-sign is not refused for room (%s)" % str(clear))
+	# Free agent: one who would sign, at his asking price, with a senior spot open.
+	var fa := {}
+	for q in GameState.free_agents:
+		if Challenge.block_reason(GameState, q) == "" and not bool(GameState.free_agent_terms(str(q["id"]))["refuse"]) \
+				and not (q.get("talks", {}) as Dictionary).has("refused") and int(q.get("market_round", 0)) < Contracts.FA_ROUNDS:
+			fa = q
+			break
+	_check(not fa.is_empty(), "A free agent who would talk to us (%d on the market)" % GameState.free_agents.size())
+	if not fa.is_empty():
+		while RookieList.add_block(GameState.my_list, "senior") != "":
+			var senior: Array = GameState.my_list.filter(func(q): return not RookieList.is_rookie(q) and not Contracts.expiring(GameState.my_list).has(q))
+			GameState.my_list.erase(senior[-1])
+		var ask := maxi(Contracts.senior_min(), Contracts.asking_salary(fa))
+		var need := ask + GameState.held_room(Contracts.next_size(GameState.my_list) + 1)
+		set_room.call(need - 1000)
+		var short := GameState.offer_free_agent(str(fa["id"]), ask, 2)
+		_check(not bool(short["ok"]) and str(short.get("code", "")) == "held_room" and str(short["reason"]) == GameState.HELD_ROOM_LINE,
+				"A signing that fits the cap but not the room held is refused (ask %s, room %s): %s" % [
+				Contracts.money(ask), Contracts.money(need - 1000), str(short)])
+		set_room.call(need)
+		var clear := GameState.offer_free_agent(str(fa["id"]), ask, 2)
+		_check(str(clear.get("code", "")) != "held_room", "With the room held, the signing is not refused for room (%s)" % str(clear))
+	# Trade: we take on more salary than we send to Collingwood.
+	GameState.dead_cap.erase(me)
+	# The swaps that add salary, the most first; the first that reaches the cap
+	# checks with room to spare (no early refusal: a player who won't go, a
+	# full senior list) is the one tested.
+	var swaps := []
+	for a in RookieList.seniors(GameState.my_list):
+		for b in RookieList.seniors(GameState.season.lists["COL"]):
+			var rise := int(b.get("salary", 0)) - int(a.get("salary", 0))
+			if not GameState.retiring_now(a) and not GameState.retiring_now(b) and rise > 0:
+				swaps.append([a, b, rise])
+	swaps.sort_custom(func(x, y): return int(x[2]) > int(y[2]))
+	var early := ["trade_asked_elsewhere", "trade_banned", "trade_challenge", "trade_list_over",
+			"trade_senior_over", "trade_list_under", "trade_their_cap", "trade_your_cap", "trade_their_room"]
+	var best := []
+	for sw in swaps.slice(0, 40):
+		set_room.call(int(sw[2]) + GameState.held_room(Contracts.next_size(GameState.my_list)))
+		if not early.has(str(GameState.evaluate_trade("COL", [str(sw[0]["id"])], [str(sw[1]["id"])]).get("code", ""))):
+			best = sw
+			break
+	_check(best.size() == 3, "A swap that adds salary to our list reaches the cap checks (%d swaps)" % swaps.size())
+	if best.size() == 3:
+		var give := [str(best[0]["id"])]
+		var take := [str(best[1]["id"])]
+		var need := int(best[2]) + GameState.held_room(Contracts.next_size(GameState.my_list))
+		set_room.call(need - 1000)
+		var short := GameState.evaluate_trade("COL", give, take)
+		_check(str(short.get("code", "")) == "trade_your_room" and str(short["reason"]) == "That leaves us too little cap room to fill our list.",
+				"A trade that fits the cap but not the room held is refused (rise %s): %s" % [Contracts.money(int(best[2])), str(short)])
+		set_room.call(need)
+		var clear := GameState.evaluate_trade("COL", give, take)
+		_check(str(clear.get("code", "")) != "trade_your_room", "With the room held, the trade is not refused for room (%s)" % str(clear.get("code", "")))
+	GameState.dead_cap.erase(me)
+
+
+## At free agency's close (director, 2026-11-25, "Hold room": "At the close, a
+## player who doesn't fit leaves even at the minimum"): one who walked, on a
+## list at the minimum, re-signs for a season only when his rise fits the room
+## held; otherwise he leaves.
+func _test_fa_close_lets_go_who_does_not_fit() -> void:
+	_new_season()
+	_to_offseason()
+	var me := GameState.my_club
+	GameState.dead_cap.erase(me)
+	GameState.salary_cap += 5000000
+	var ooc := Contracts.expiring(GameState.my_list).filter(func(q): return not bool(q.get("resigned", false)) and not GameState.retiring_now(q))
+	_check(not ooc.is_empty(), "One of ours is out of contract (%d)" % ooc.size())
+	if ooc.is_empty():
+		return
+	var p: Dictionary = ooc[0]
+	p["talks"] = {"walked": true}
+	# The list down to the minimum, the out-of-contract players kept.
+	var n := 0
+	while GameState.my_list.size() > Contracts.min_list() and n < 80:
+		n += 1
+		var other: Array = GameState.my_list.filter(func(q): return not Contracts.expiring(GameState.my_list).has(q))
+		if other.is_empty():
+			break
+		GameState.my_list.erase(other[-1])
+	_check(GameState.my_list.size() == Contracts.min_list(), "Our list is at the minimum (%d)" % GameState.my_list.size())
+	var plan_of := func() -> String:
+		for step in GameState._fa_close_plan():
+			if str(step[0]["id"]) == str(p["id"]):
+				return str(step[1])
+		return ""
+	# He asks for no less than he is paid, so a dollar short is short.
+	if Contracts.asking_salary(p) < int(p.get("salary", 0)):
+		p["salary"] = Contracts.asking_salary(p)
+	var rise := Contracts.asking_salary(p) - int(p.get("salary", 0))
+	_check(rise >= 0, "(setup) his rise is %s" % Contracts.money(rise))
+	var size := GameState.my_list.size()
+	var gone := size - Contracts.next_size(GameState.my_list)
+	var need := rise + GameState.held_room(size - gone)
+	# The others are settled, so only he is planned.
+	for q in ooc:
+		if str(q["id"]) != str(p["id"]):
+			q["resigned"] = true
+	GameState.dead_cap[me] = {"year": GameState.season_year + 1, "amount": GameState.cap_room() - need}
+	_check(plan_of.call() == "resign1", "With the room held, he re-signs for a season (%s)" % plan_of.call())
+	GameState.dead_cap[me] = {"year": GameState.season_year + 1, "amount": int(GameState.dead_cap[me]["amount"]) + 1000}
+	_check(plan_of.call() == "release", "1,000 short of the room held, he leaves even at the minimum (%s)" % plan_of.call())
+	GameState.dead_cap.erase(me)

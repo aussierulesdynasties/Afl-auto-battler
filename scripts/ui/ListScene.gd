@@ -8,11 +8,14 @@ var _root: VBoxContainer
 var _squad: Squad = null
 var _pane := "shape"
 var _profile: Control
-## Built panes by key ("shape", "list" on a phone, "wide" on PC): a tab tap
-## shows the other pane, building it the first time, and never rebuilds.
+## A phone's built panes by key ("shape", "list"): a tab tap shows the other
+## pane, building it the first time, and never rebuilds.
 var _panes := {}
 var _built_narrow := false
 var _built_width := 0.0
+var _built_height := 0.0
+## A PC's stage on show: "best" (Best 23) or "full" (Full list).
+var _stage := "best"
 
 
 func _ready() -> void:
@@ -30,14 +33,16 @@ func _ready() -> void:
 	UiKit.apply_insets(margin, 12)
 	add_child(margin)
 
-	_root = UiKit.vbox(9)
+	_root = UiKit.vbox(UiKit.Space.EASY)
 	margin.add_child(_root)
 	get_viewport().size_changed.connect(func():
 		if is_inside_tree() and not UiKit.keyboard_resize(self):
 			# A phone's system bars showing or hiding change the height only:
 			# the page is the same, so it is not rebuilt (a rebuild is a stall
-			# on a phone). Width matters across the phone/PC line, and on PC.
-			if _narrow() == _built_narrow and (_narrow() or UiKit.view_width(self) == _built_width):
+			# on a phone). Width matters across the phone/PC line; on PC both do,
+			# as the page fits its window without scrolling.
+			if _narrow() == _built_narrow and (_narrow() or (UiKit.view_width(self) == _built_width
+					and UiKit.view_height(self) == _built_height)):
 				return
 			var places := UiKit.scroll_places(_root)
 			_build()
@@ -57,16 +62,268 @@ func _build() -> void:
 	_panes = {}
 	_built_narrow = _narrow()
 	_built_width = UiKit.view_width(self)
+	_built_height = UiKit.view_height(self)
 	var train := UiKit.btn("Train", 14)
 	train.custom_minimum_size = Vector2(72, 44)
 	train.pressed.connect(func(): Router.go("training"))
 	_root.add_child(UiKit.top_bar("My list", true, train))
+	if not _narrow():
+		_pc_stages()
+		return
 	_show_pane()
 
 
-## Show the pane the tabs ask for, building it the first time it is shown.
+## A PC: the page in two stages, neither scrolling (director's pick B, 2026-11-26).
+## Best 23: the oval, how we stack up, captaincy and scouting. Full list: every
+## man ranked best first, down then across in three columns.
+func _pc_stages() -> void:
+	var tabs := UiKit.hbox(UiKit.Space.TIGHT)
+	tabs.name = "ListStages"
+	_root.add_child(tabs)
+	for s in [["best", "Best 23"], ["full", "Full list"]]:
+		var t := UiKit.tab(str(s[1]), _stage == str(s[0]))
+		t.name = "Stage_" + str(s[0])
+		t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		t.pressed.connect(func():
+			_stage = str(s[0])
+			_build())
+		tabs.add_child(t)
+	if _stage == "full":
+		_root.add_child(_full_stage())
+		return
+	var row := UiKit.hbox(UiKit.Space.APART)
+	row.name = "BestStage"
+	row.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_root.add_child(row)
+	var oval := _shape_panel()
+	oval.size_flags_stretch_ratio = 1.9
+	row.add_child(oval)
+	row.add_child(_facts_column())
+
+
+## Beside the oval: how the side stacks up, a line each, the count, then captaincy and scouting.
+func _facts_column() -> Control:
+	var col := UiKit.vbox(UiKit.Space.EASY)
+	col.name = "ListFacts"
+	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	col.add_child(UiKit.section("How we stack up"))
+	var lines := UiKit.vbox(UiKit.Space.TIGHT)
+	lines.name = "LineStanding"
+	col.add_child(lines)
+	for r in GameState.my_line_standing():
+		var h := UiKit.hbox(UiKit.GAP)
+		var line_name := UiKit.lbl(str(r[0]), UiKit.BODY, UiKit.TEXT, true)
+		line_name.custom_minimum_size = Vector2(96, 0)
+		h.add_child(line_name)
+		var said := UiKit.lbl(str(r[1]), UiKit.BODY, UiKit.TEXT)
+		said.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		said.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		h.add_child(said)
+		lines.add_child(h)
+	col.add_child(UiKit.lbl(_count_line(), UiKit.SMALL, UiKit.MUTED))
+	col.add_child(UiKit.rule())
+	var cap := UiKit.section_link("Captaincy", _captains(false) + "  ›", "CaptaincyOpen")
+	cap.pressed.connect(func(): _open_captaincy())
+	var names := cap.find_child("SectionLeadsTo", true, false) as Label
+	if names != null:
+		names.add_theme_color_override("font_color", UiKit.TEXT)
+		names.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		names.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		names.size_flags_stretch_ratio = 2.0
+		names.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	col.add_child(cap)
+	col.add_child(_scouting_link())
+	return col
+
+
+## "30 senior  ·  7 rookie  ·  2 injured".
+func _count_line() -> String:
+	var injured := 0
+	for p in GameState.my_list:
+		if int(p.get("injury_weeks", 0)) > 0:
+			injured += 1
+	var count := "%d senior  ·  %d rookie" % [RookieList.senior_count(GameState.my_list),
+			RookieList.rookie_count(GameState.my_list)]
+	if injured > 0:
+		count += "  ·  %d injured" % injured
+	return count
+
+
+## The captain and his deputies by name (a phone row, by surname so all three fit).
+func _captains(surnames: bool) -> String:
+	var named := PackedStringArray()
+	for id in Captaincy.ids(GameState.captaincy_record(GameState.my_club)):
+		for q in GameState.my_list:
+			if str(q.get("id", "")) == str(id):
+				named.append(GameDB.player_surname(q) if surnames else GameDB.player_display_name(q))
+	return ", ".join(named) if not named.is_empty() else "No captain named"
+
+
+## The Full list stage: the lists' spots, then every man ranked best first, down then across.
+func _full_stage() -> Control:
+	var page := UiKit.vbox(UiKit.Space.CLOSE)
+	page.name = "FullStage"
+	page.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	var top := UiKit.hbox(UiKit.GAP)
+	page.add_child(top)
+	_spots(top, page)
+	var hint := UiKit.lbl("Tap a name for his profile", UiKit.SMALL, UiKit.MUTED)
+	hint.autowrap_mode = TextServer.AUTOWRAP_OFF
+	top.add_child(hint)
+	var ranked: Array = GameState.my_list.duplicate()
+	ranked.sort_custom(func(a, b): return int(Rating.ovr(a)) > int(Rating.ovr(b)))
+	var per := ceili(ranked.size() / 3.0)
+	var grid := UiKit.hbox(UiKit.Space.GUTTER)
+	grid.name = "FullColumns"
+	grid.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	page.add_child(grid)
+	for c in range(3):
+		var v := VBoxContainer.new()
+		v.name = "FullColumn_%d" % c
+		v.add_theme_constant_override("separation", 0)
+		v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		v.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		grid.add_child(v)
+		v.add_child(_numbers_head())
+		var men := ranked.slice(c * per, mini(ranked.size(), (c + 1) * per))
+		for q in men:
+			v.add_child(_compact_row(q))
+		# Every column has as many slots as the first, so rows line up across.
+		for i in range(per - men.size()):
+			var pad := Control.new()
+			pad.size_flags_vertical = Control.SIZE_EXPAND_FILL
+			pad.custom_minimum_size = Vector2(0, 22)
+			pad.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			v.add_child(pad)
+	return page
+
+
+## The lists' spots on one line, in the phone's words; a club over its Category B
+## spots says why under it, never "3 / 2" with no reason.
+func _spots(top: Control, page: Control) -> void:
+	var seniors := RookieList.seniors(GameState.my_list)
+	var rookies := RookieList.rookies(GameState.my_list).filter(func(q): return not RookieList.is_cat_b(q))
+	var cat_b := RookieList.rookies(GameState.my_list).filter(func(q): return RookieList.is_cat_b(q))
+	var heads := [["SeniorListHead", "Senior list  %d / %d" % [seniors.size(), RookieList.senior_spots()]],
+			["RookieListHead", "Rookie list  %d / %d" % [rookies.size(), RookieList.cat_a_spots()]]]
+	var over_b: bool = cat_b.size() > RookieList.cat_b_spots()
+	if not cat_b.is_empty():
+		heads.append(["CatBListHead", "Category B rookies  %d" % cat_b.size() if over_b
+				else "Category B rookies  %d / %d" % [cat_b.size(), RookieList.cat_b_spots()]])
+	var spots := UiKit.hbox(UiKit.Space.WIDER)
+	spots.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	top.add_child(spots)
+	for h in heads:
+		var l := UiKit.lbl(str(h[1]), UiKit.BODY, UiKit.EMPH, true)
+		l.name = str(h[0])
+		l.autowrap_mode = TextServer.AUTOWRAP_OFF
+		spots.add_child(l)
+	if over_b:
+		var why := UiKit.lbl("The club's real 2026 list had %d. A club usually has %d spots for them. They take no rookie list spot and don't count in the 44." % [
+				cat_b.size(), RookieList.cat_b_spots()], UiKit.SMALL, UiKit.MUTED)
+		why.name = "CatBListWhy"
+		why.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		page.add_child(why)
+
+
+## A column's head: OVR and POT over the rows' numbers.
+func _numbers_head() -> Control:
+	var hc := UiKit.hbox(UiKit.Space.CLOSE)
+	hc.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	hc.custom_minimum_size = Vector2(0, 22)
+	var push := Control.new()
+	push.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	hc.add_child(push)
+	for t in ["OVR", "POT"]:
+		var th := UiKit.line(t, UiKit.SMALL, UiKit.MUTED, true)
+		th.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		th.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
+		th.custom_minimum_size = Vector2(24, 0)
+		th.size_flags_vertical = Control.SIZE_SHRINK_END
+		hc.add_child(th)
+	return hc
+
+
+## One man in one line of the Full list stage: guernsey, name, then what stops him
+## playing if anything (else his marks and who he is), his rating and potential.
+func _compact_row(p: Dictionary) -> Control:
+	var row := Button.new()
+	row.name = "Row_" + str(p["id"])
+	row.custom_minimum_size = Vector2(0, 22)
+	row.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	row.focus_mode = Control.FOCUS_NONE
+	for state in ["normal", "hover", "pressed", "focus"]:
+		row.add_theme_stylebox_override(state, UiKit.line_row(state == "hover" or state == "pressed"))
+	row.pressed.connect(_open_profile.bind(str(p["id"])))
+	UiKit.feel(row, "soft")
+	var h := UiKit.hbox(UiKit.Space.CLOSE)
+	h.set_anchors_preset(Control.PRESET_FULL_RECT)
+	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(h)
+	var num := UiKit.figure(str(p["num"]), UiKit.NAME, UiKit.club_ink(GameState.my_club))
+	num.name = "Guernsey"
+	num.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	num.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	num.custom_minimum_size = Vector2(24, 0)
+	h.add_child(num)
+	var name_l := UiKit.ellipsis(GameDB.player_display_name(p), UiKit.SMALL, UiKit.TEXT, true)
+	name_l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	name_l.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	h.add_child(name_l)
+	var info := UiKit.hbox(0)
+	info.name = "RowInfo"
+	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	info.size_flags_stretch_ratio = 1.1
+	info.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	h.add_child(info)
+	_info_bits(info, p)
+	var ov := UiKit.line(str(int(Rating.ovr(p))), UiKit.BODY, UiKit.TEXT, true)
+	ov.name = "RowOvr"
+	ov.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	ov.custom_minimum_size = Vector2(24, 0)
+	ov.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	h.add_child(ov)
+	var pot := UiKit.line("%d" % int(p.get("potential", Rating.ovr(p))), UiKit.SMALL, UiKit.MUTED)
+	pot.name = "RowPot"
+	pot.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	pot.custom_minimum_size = Vector2(24, 0)
+	pot.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	h.add_child(pot)
+	for n in h.find_children("*", "Control", true, false):
+		(n as Control).mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return row
+
+
+## The compact row's middle: what keeps him out when anything does, else who he is.
+## His marks (untouchable, chemistry, past concussions) are on his profile only
+## (director's pick, 2026-11-26), so a PC row is never cut for them.
+func _info_bits(info: Control, p: Dictionary) -> void:
+	var status := _status(p)
+	var l: Label
+	if str(status[0]) != "":
+		l = UiKit.ellipsis(str(status[0]), UiKit.SMALL, status[1], true)
+		l.name = "RowStatus"
+	else:
+		var who := PackedStringArray()
+		if RookieList.is_cat_b(p):
+			who.append("Cat B")
+		elif RookieList.is_rookie(p):
+			who.append("Rookie")
+		who.append(Roles.label(p))
+		if float(p.get("age", 0.0)) > 0.0:
+			who.append("%d" % int(p["age"]))
+		l = UiKit.ellipsis(" · ".join(who), UiKit.SMALL, UiKit.MUTED)
+		l.name = "RowIdentity"
+	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	# A cut always ends in "…": Godot drops it when under six letters stay,
+	# and "Defe" then reads as a word.
+	l.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS_FORCE
+	info.add_child(l)
+
+
+## A phone: show the pane the tabs ask for, building it the first time it is shown.
 func _show_pane() -> void:
-	var key := _pane if _narrow() else "wide"
+	var key := _pane
 	if not _panes.has(key):
 		_panes[key] = _build_pane()
 		_root.add_child(_panes[key])
@@ -85,110 +342,71 @@ func _build_pane() -> Control:
 	# through every button inside a scroll. The Full list pane scrolls its
 	# own rows.
 	var host: BoxContainer
-	if _narrow() and _pane == "shape":
-		var page := UiKit.vbox(9)
+	if _pane == "shape":
+		var page := UiKit.vbox(UiKit.Space.EASY)
 		page.name = "ShapePage"
 		var page_scroll := UiKit.scroll(page)
 		page_scroll.name = "ShapeScroll"
 		pane_root = page_scroll
 		host = page
 	else:
-		host = UiKit.vbox(9)
-		host.name = "ListPage" if _narrow() else "WidePage"
+		host = UiKit.vbox(UiKit.Space.EASY)
+		host.name = "ListPage"
 		host.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		pane_root = host
 
 	# How the side stacks up, in words, and who is available.
-	var injured := 0
-	for p in GameState.my_list:
-		if int(p.get("injury_weeks", 0)) > 0:
-			injured += 1
 	var head := UiKit.lbl(GameState.my_line_standing_text(), UiKit.SMALL, UiKit.TEXT)
 	head.name = "LineStanding"
 	head.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	host.add_child(head)
-	var count := "%d senior  ·  %d rookie" % [RookieList.senior_count(GameState.my_list),
-			RookieList.rookie_count(GameState.my_list)]
-	if injured > 0:
-		count += "  ·  %d injured" % injured
-	host.add_child(UiKit.lbl(count, UiKit.SMALL, UiKit.MUTED))
-	var named := PackedStringArray()
-	var cap_rec := GameState.captaincy_record(GameState.my_club)
-	for id in Captaincy.ids(cap_rec):
-		for q in GameState.my_list:
-			if str(q.get("id", "")) == str(id):
-				# A phone row names them by surname, so all three fit beside the word.
-				named.append(GameDB.player_surname(q) if _narrow() else GameDB.player_display_name(q))
-	var cap_link := UiKit.section_link("Captaincy", (", ".join(named) if not named.is_empty() else "No captain named") + "  ›",
-			"CaptaincyOpen")
+	host.add_child(UiKit.lbl(_count_line(), UiKit.SMALL, UiKit.MUTED))
+	var cap_link := UiKit.section_link("Captaincy", _captains(true) + "  ›", "CaptaincyOpen")
 	cap_link.pressed.connect(func(): _open_captaincy())
-	if not _narrow():
-		# A PC row is a row of text, not a bar across the whole window (PC is
-		# not a big phone): it takes what its words need, left-aligned.
-		cap_link.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-		cap_link.custom_minimum_size = Vector2(460, 48)
-		# The names start a clear step after the label, and the row says it opens.
-		var title_l := cap_link.find_child("SectionTitle", true, false)
-		if title_l != null:
-			# The label keeps the width of its own word (a trimmed label with no
-			# room asked for collapses to nothing beside the names).
-			(title_l as Label).text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
-			(title_l as Control).size_flags_horizontal = Control.SIZE_FILL
-		var h := cap_link.find_child("SectionLeadsTo", true, false)
-		if h != null:
-			(h as Control).size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		(cap_link.get_child(0) as BoxContainer).add_theme_constant_override("separation", 16)
-	else:
-		# A phone keeps the word whole ("Captain…" said nothing, critic
-		# 2026-11-04): the names give way instead, and the chevron stays.
-		var title_n := cap_link.find_child("SectionTitle", true, false) as Label
-		var names_n := cap_link.find_child("SectionLeadsTo", true, false) as Label
-		if title_n != null and names_n != null:
-			title_n.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
-			title_n.size_flags_horizontal = Control.SIZE_FILL
-			names_n.text = names_n.text.trim_suffix("›").strip_edges()
-			names_n.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-			names_n.clip_text = true
-			names_n.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			names_n.custom_minimum_size.x = 0.0
-			var chev := UiKit.lbl("›", UiKit.NAME, UiKit.TEXT)
-			chev.name = "CaptaincyChevron"
-			chev.autowrap_mode = TextServer.AUTOWRAP_OFF
-			chev.mouse_filter = Control.MOUSE_FILTER_IGNORE
-			names_n.get_parent().add_child(chev)
+	# A phone keeps the word whole ("Captain…" said nothing, critic
+	# 2026-11-04): the names give way instead, and the chevron stays.
+	var title_n := cap_link.find_child("SectionTitle", true, false) as Label
+	var names_n := cap_link.find_child("SectionLeadsTo", true, false) as Label
+	if title_n != null and names_n != null:
+		title_n.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
+		title_n.size_flags_horizontal = Control.SIZE_FILL
+		names_n.text = names_n.text.trim_suffix("›").strip_edges()
+		names_n.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		names_n.clip_text = true
+		names_n.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		names_n.custom_minimum_size.x = 0.0
+		var chev := UiKit.lbl("›", UiKit.NAME, UiKit.TEXT)
+		chev.name = "CaptaincyChevron"
+		chev.autowrap_mode = TextServer.AUTOWRAP_OFF
+		chev.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		names_n.get_parent().add_child(chev)
 	host.add_child(cap_link)
 	var value: Node = cap_link.find_child("SectionLeadsTo", true, false)
 	if value is Label:
 		(value as Label).add_theme_color_override("font_color", UiKit.TEXT)
 	host.add_child(_scouting_link())
 
-	if _narrow():
-		var tabs := UiKit.hbox(2)
-		host.add_child(tabs)
-		var shape_tab := UiKit.tab("Shape", _pane == "shape")
-		shape_tab.name = "ListTabShape"
-		shape_tab.pressed.connect(func():
-			_pane = "shape"
-			_show_pane())
-		tabs.add_child(shape_tab)
-		var list_tab := UiKit.tab("Full list", _pane == "list")
-		list_tab.name = "ListTabFull"
-		list_tab.pressed.connect(func():
-			_pane = "list"
-			_show_pane())
-		tabs.add_child(list_tab)
+	var tabs := UiKit.hbox(UiKit.Space.SLIM)
+	host.add_child(tabs)
+	var shape_tab := UiKit.tab("Shape", _pane == "shape")
+	shape_tab.name = "ListTabShape"
+	shape_tab.pressed.connect(func():
+		_pane = "shape"
+		_show_pane())
+	tabs.add_child(shape_tab)
+	var list_tab := UiKit.tab("Full list", _pane == "list")
+	list_tab.name = "ListTabFull"
+	list_tab.pressed.connect(func():
+		_pane = "list"
+		_show_pane())
+	tabs.add_child(list_tab)
 
-	var body: BoxContainer
-	if _narrow():
-		body = UiKit.vbox(10)
-	else:
-		body = UiKit.hbox(10)
+	var body := UiKit.vbox(UiKit.Space.ROOM)
 	body.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	host.add_child(body)
-
-	if not _narrow() or _pane == "shape":
+	if _pane == "shape":
 		body.add_child(_shape_panel())
-	if not _narrow() or _pane == "list":
+	else:
 		body.add_child(_full_list_panel())
 	return pane_root
 
@@ -197,11 +415,11 @@ func _shape_panel() -> Control:
 	# On a phone the page's scroll rail takes 20 px of the width; the panel's
 	# padding gives some of it back so the cards keep their full names (the
 	# sweep: "Andy Moniz-Wakefield" needs 116 px, the squeezed card gave 114).
-	var left := UiKit.panel(UiKit.PANEL, 6 if _narrow() else 12)
+	var left := UiKit.panel(UiKit.PANEL, UiKit.Space.CLOSE if _narrow() else UiKit.Space.PAD)
 	left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	left.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	left.custom_minimum_size = Vector2(0, 220)
-	var lv := UiKit.vbox(5)
+	var lv := UiKit.vbox(UiKit.Space.SNUG)
 	lv.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	left.add_child(lv)
 	lv.add_child(UiKit.lbl("Best 23", UiKit.H2, UiKit.EMPH, true))
@@ -224,16 +442,18 @@ func _shape_panel() -> Control:
 	oval.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	oval.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	oval.custom_minimum_size = Vector2(0, 180)
+	# At 960 the oval shows numbers only (director's pick B, 2026-11-26): names can't be read there.
+	oval.names_shown = UiKit.view_height(self) >= 640.0
 	oval.setup(_squad.ground, _squad.bench, GameState.my_club, not GameState.my_selection().is_empty())
 	lv.add_child(oval)
 	return left
 
 
 func _full_list_panel() -> Control:
-	var right := UiKit.panel(UiKit.PANEL, 12)
+	var right := UiKit.panel(UiKit.PANEL, UiKit.Space.PAD)
 	right.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	right.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	var rv := UiKit.vbox(5)
+	var rv := UiKit.vbox(UiKit.Space.SNUG)
 	rv.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	right.add_child(rv)
 	rv.add_child(UiKit.lbl("Full list", UiKit.H2, UiKit.EMPH, true))
@@ -249,7 +469,7 @@ func _full_list_panel() -> Control:
 	sh.name = "SeniorListHead"
 	lbox.add_child(sh)
 	_role_groups(lbox, seniors, false)
-	lbox.add_child(UiKit.spacer(8))
+	lbox.add_child(UiKit.spacer(UiKit.GAP))
 	var rh := UiKit.lbl("Rookie list  %d / %d" % [rookies.size(), RookieList.cat_a_spots()], UiKit.BODY, UiKit.EMPH, true)
 	rh.name = "RookieListHead"
 	lbox.add_child(rh)
@@ -262,7 +482,7 @@ func _full_list_panel() -> Control:
 		_role_groups(lbox, rookies, true)
 	# Category B rookies have their own two spots, outside the 44 (real lists).
 	if not cat_b.is_empty():
-		lbox.add_child(UiKit.spacer(8))
+		lbox.add_child(UiKit.spacer(UiKit.GAP))
 		# A club that started with more than two, as its real 2026 list had
 		# (GWS: three), shows the count alone and says why: "3 / 2" is no rule.
 		var over_b: bool = cat_b.size() > RookieList.cat_b_spots()
@@ -295,8 +515,8 @@ func _role_groups(lbox: Control, players: Array, skip_empty: bool) -> void:
 		var g: Array = grouped[r]
 		if skip_empty and g.is_empty():
 			continue
-		g.sort_custom(func(a, b): return int(a["overall"]) > int(b["overall"]))
-		lbox.add_child(UiKit.spacer(4))
+		g.sort_custom(func(a, b): return int(Rating.ovr(a)) > int(Rating.ovr(b)))
+		lbox.add_child(UiKit.spacer(UiKit.Space.TIGHT))
 		# STYLE-05: each position heads its group in its role colour at name
 		# weight (role colours are ink only, style guide 2.1), not small grey.
 		var gh := UiKit.lbl("%s  (%d)" % [UiKit.ROLE_LABEL[r], g.size()],
@@ -305,7 +525,7 @@ func _role_groups(lbox: Control, players: Array, skip_empty: bool) -> void:
 		lbox.add_child(gh)
 		for p in g:
 			lbox.add_child(_list_row(p))
-		lbox.add_child(UiKit.spacer(6))
+		lbox.add_child(UiKit.spacer(UiKit.Space.CLOSE))
 
 
 ## His number on your club's guernsey: everyone on this list plays for you,
@@ -330,13 +550,11 @@ func _list_row(p: Dictionary) -> Control:
 	row.custom_minimum_size = Vector2(0, 56)
 	row.focus_mode = Control.FOCUS_NONE
 	for state in ["normal", "hover", "pressed", "focus"]:
-		var sb := StyleBoxFlat.new()
-		sb.bg_color = Color(1, 1, 1, 0.04) if state == "hover" or state == "pressed" else Color.TRANSPARENT
-		sb.border_color = UiKit.LINE
-		sb.border_width_bottom = 1
-		row.add_theme_stylebox_override(state, sb)
+		row.add_theme_stylebox_override(state, UiKit.line_row(state == "hover" or state == "pressed"))
 	row.pressed.connect(_open_profile.bind(str(p["id"])))
-	var h := UiKit.hbox(8)
+	# It answers a finger as every button does: it presses in, sounds and buzzes.
+	UiKit.feel(row, "soft")
+	var h := UiKit.hbox(UiKit.GAP)
 	h.set_anchors_preset(Control.PRESET_FULL_RECT)
 	h.offset_left = 2
 	h.offset_right = -2
@@ -403,11 +621,11 @@ func _list_row(p: Dictionary) -> Control:
 	nums.alignment = BoxContainer.ALIGNMENT_CENTER
 	nums.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	h.add_child(nums)
-	var ov := UiKit.line(str(int(p["overall"])), 20, UiKit.TEXT, true)
+	var ov := UiKit.line(str(int(Rating.ovr(p))), 20, UiKit.TEXT, true)
 	ov.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	ov.custom_minimum_size = Vector2(40, 0)
 	nums.add_child(ov)
-	var pot := UiKit.line("POT %d" % int(p.get("potential", p["overall"])), UiKit.TINY, UiKit.MUTED)
+	var pot := UiKit.line("POT %d" % int(p.get("potential", Rating.ovr(p))), UiKit.TINY, UiKit.MUTED)
 	pot.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	nums.add_child(pot)
 	return row
@@ -498,8 +716,9 @@ func _scouting_link() -> Control:
 	var b := UiKit.section_link("Scouting list", "%d of %d  ›" % [n, ScoutingList.LIMIT], "ScoutingOpen")
 	b.pressed.connect(func(): Router.go("scouting"))
 	if not _narrow():
-		b.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-		b.custom_minimum_size = Vector2(460, 48)
+		# A PC's link fills the facts column beside the oval, like the Captaincy row above it.
+		b.size_flags_horizontal = Control.SIZE_FILL
+		b.custom_minimum_size = Vector2(0, 48)
 	var value: Node = b.find_child("SectionLeadsTo", true, false)
 	if value is Label:
 		(value as Label).add_theme_color_override("font_color", UiKit.TEXT)

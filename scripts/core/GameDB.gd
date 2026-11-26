@@ -280,6 +280,7 @@ func reload(dataset := Datasets.DEFAULT) -> void:
 	override_hits = {}
 	for p in players:
 		Potential.assign(p)
+		Ratings.rate_on_rehab(p)
 	_apply_ovr_overrides(players)
 	_apply_potential_overrides(players)
 	# The lists first: the prospects below borrow their shapes from these players
@@ -317,12 +318,12 @@ func reload(dataset := Datasets.DEFAULT) -> void:
 	pristine = loaded
 	baseline_overall = 0.0
 	for p in players:
-		baseline_overall += float(p["overall"])
+		baseline_overall += float(Rating.ovr(p))
 	if loaded:
 		baseline_overall /= float(players.size())
 		var sq := 0.0
 		for p in players:
-			sq += pow(float(p["overall"]) - baseline_overall, 2.0)
+			sq += pow(float(Rating.ovr(p)) - baseline_overall, 2.0)
 		baseline_spread = sqrt(sq / float(players.size()))
 	if not loaded:
 		push_error("GameDB: no players loaded. Check that %s exists, is complete and that its import type is 'Keep File (exported as is)'." % PLAYERS_ENRICHED_CSV)
@@ -620,14 +621,14 @@ func player_sort_name(player: Dictionary) -> String:
 ## Every player in the competition, best-first. Used as the draft pool.
 func all_players_sorted() -> Array:
 	var out := players.duplicate()
-	out.sort_custom(func(a, b): return a["overall"] > b["overall"])
+	out.sort_custom(func(a, b): return Rating.ovr(a) > Rating.ovr(b))
 	return out
 
 
 ## The shipped draft class best-first (projections applied at load).
 func all_draftees_sorted() -> Array:
 	var out := draftees.duplicate()
-	out.sort_custom(func(a, b): return a["overall"] > b["overall"])
+	out.sort_custom(func(a, b): return Rating.ovr(a) > Rating.ovr(b))
 	return out
 
 
@@ -841,9 +842,9 @@ func _load_list_additions() -> Array:
 				p["role"] = listed
 				p["role2"] = Ratings.assign_secondary(p)
 				if p.has("apos"):
-					p["attr"] = Prospects.fit_attributes(p["attr"], listed, float(p["overall"]), float(p["gm"]))
+					p["attr"] = Prospects.fit_attributes(p["attr"], listed, float(Rating.ovr(p)), float(p["gm"]))
 				p["overall"] = Ratings.rate_overall(p["attr"], listed, float(p["gm"]))
-				p["value"] = Ratings.salary_value(int(p["overall"]))
+				p["value"] = Ratings.salary_value(int(Rating.ovr(p)))
 			p["career"] = Career.from_source("?")
 			p["data_club"] = str(p["club"])
 			Potential.assign(p)
@@ -1232,7 +1233,7 @@ func _apply_rating_stats(list: Array, adjust := true) -> void:
 		var a := {}
 		for k in Skills.KEYS:
 			a[k] = clampi(int(row.get(k, 50)), 1, 99)
-		var ovr := float(row.get("ovr", p.get("overall", 60)))
+		var ovr := float(row.get("ovr", Rating.ovr(p, 60)))
 		var games := float(p.get("gm", 14))
 		var role := str(p.get("role", "MID"))
 		p["apos"] = str(row.get("apos", ""))
@@ -1251,7 +1252,7 @@ func _apply_rating_stats(list: Array, adjust := true) -> void:
 				a[k] = clampi(int(round(float(a[k]) * adj)), 1, 99)
 		p["attr"] = a
 		p["overall"] = Ratings.rate_overall(a, role, games)
-		p["value"] = Ratings.salary_value(int(p["overall"]))
+		p["value"] = Ratings.salary_value(int(Rating.ovr(p)))
 
 
 func _read_rows(path: String) -> Array:
@@ -1576,15 +1577,46 @@ var _kits_today_tex: Texture2D = null
 
 func _today_kits() -> Dictionary:
 	if _kits_today == null:
-		_kits_today = {}
-		if FileAccess.file_exists(KITS_TODAY_CSV):
-			for r in _read_dicts(KITS_TODAY_CSV):
-				var trim := func(c: String) -> Color: return Color.from_string(c, Color(0, 0, 0, 0)) if c != "" else Color(0, 0, 0, 0)
-				_kits_today[str(r["code"])] = {"cell": int(r["cell"]), "collar": trim.call(str(r.get("collar", ""))),
-						"collar_cm": float(str(r.get("collar_cm", "0"))), "armholes": trim.call(str(r.get("armholes", ""))),
-						"armholes_cm": float(str(r.get("armholes_cm", "0"))), "shorts": trim.call(str(r.get("shorts", ""))),
-						"number": trim.call(str(r.get("number", ""))), "number_edge": trim.call(str(r.get("number_edge", "")))}
+		_kits_today = _read_kits(KITS_TODAY_CSV)
 	return _kits_today
+
+
+func _read_kits(path: String) -> Dictionary:
+	var out := {}
+	if FileAccess.file_exists(path):
+		for r in _read_dicts(path):
+			var trim := func(c: String) -> Color: return Color.from_string(c, Color(0, 0, 0, 0)) if c != "" else Color(0, 0, 0, 0)
+			out[str(r["code"])] = {"cell": int(r["cell"]), "collar": trim.call(str(r.get("collar", ""))),
+					"collar_cm": float(str(r.get("collar_cm", "0"))), "armholes": trim.call(str(r.get("armholes", ""))),
+					"armholes_cm": float(str(r.get("armholes_cm", "0"))), "shorts": trim.call(str(r.get("shorts", ""))),
+					"number": trim.call(str(r.get("number", ""))), "number_edge": trim.call(str(r.get("number_edge", "")))}
+	return out
+
+
+## Each club's current clash guernsey for the 3D match player, drawn from the club's shop photos onto
+## its home cut (tools/kits/guernsey3d/clash): data/kits_clash.csv, same fields as kits_today and the
+## same cells, in its own atlas. A club with none (Sydney) is missing.
+const KITS_CLASH_CSV := "res://data/kits_clash.csv"
+const KITS_CLASH_ATLAS := "res://assets/oval3d/kits_clash.png"
+var _kits_clash = null
+var _kits_clash_tex: Texture2D = null
+
+
+## The club's clash guernsey ({} when it has none), marked "clash" for Oval3D._kit.
+func club_clash_kit(code: String) -> Dictionary:
+	if _kits_clash == null:
+		_kits_clash = _read_kits(KITS_CLASH_CSV)
+	if not _kits_clash.has(code):
+		return {}
+	var k: Dictionary = (_kits_clash[code] as Dictionary).duplicate()
+	k["clash"] = true
+	return k
+
+
+func kits_clash_atlas() -> Texture2D:
+	if _kits_clash_tex == null and ResourceLoader.exists(KITS_CLASH_ATLAS):
+		_kits_clash_tex = load(KITS_CLASH_ATLAS)
+	return _kits_clash_tex
 
 
 ## The current guernseys' atlas and its cells a row and rows (kits_today.py: 4 a row, square sides).
@@ -2184,13 +2216,13 @@ func _apply_ovr_overrides(list: Array) -> void:
 		return
 	_each_override_row(OVR_CSV, "ovr", list, func(p, cell):
 		var text: String = str(cell).strip_edges()
-		var before_pot := int(p.get("potential", p["overall"]))
+		var before_pot := int(p.get("potential", Rating.ovr(p)))
 		var mult := 1.0
 		var target := 0
 		if (text.begins_with("+") or text.begins_with("-")) and text.ends_with("%"):
 			# A relative row (+10% or -10%): his computed OVR and the POT he had both scale.
 			mult = 1.0 + text.trim_suffix("%").to_float() / 100.0
-			target = int(round(float(p["overall"]) * mult))
+			target = int(round(float(Rating.ovr(p)) * mult))
 		else:
 			target = int(text)
 		if set_player_ovr(p, target):
@@ -2352,7 +2384,7 @@ func _apply_potential_overrides(list: Array) -> void:
 		var text: String = str(cell).strip_edges()
 		if (text.begins_with("+") or text.begins_with("-")) and text.ends_with("%"):
 			var mult := 1.0 + text.trim_suffix("%").to_float() / 100.0
-			Potential.set_override(p, int(round(float(p.get("potential", p["overall"])) * mult)))
+			Potential.set_override(p, int(round(float(p.get("potential", Rating.ovr(p))) * mult)))
 		else:
 			Potential.set_override(p, int(text)))
 

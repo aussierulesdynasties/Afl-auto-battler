@@ -18,7 +18,7 @@ const BATCH := 25
 
 
 static func build(host: Control) -> Control:
-	var v := UiKit.vbox(8)
+	var v := UiKit.vbox(UiKit.GAP)
 	v.name = "StatsRatings"
 	var wide: bool = host.call("wide")
 	# The heading and its rule start where the rows' words start, never on the
@@ -28,7 +28,7 @@ static func build(host: Control) -> Control:
 	intro.add_theme_constant_override("margin_left", ROW_INSET)
 	intro.add_theme_constant_override("margin_right", ROW_INSET)
 	v.add_child(intro)
-	var intro_box := UiKit.vbox(8)
+	var intro_box := UiKit.vbox(UiKit.GAP)
 	intro.add_child(intro_box)
 	intro_box.add_child(UiKit.heading("Player ratings", UiKit.HEADING))
 	var rule := UiKit.lbl("Ranked by rating a game among players who have played at least half their club's games. Everyone else is listed below them.",
@@ -74,7 +74,7 @@ static func _add_items(host: Control, body: Control, items: Array, from: int, to
 		if it.is_empty():
 			var gap := UiKit.lbl("Fewer than half their club's games", UiKit.SECONDARY, UiKit.MUTED, true)
 			gap.name = "RatingsUnranked"
-			body.add_child(UiKit.spacer(10))
+			body.add_child(UiKit.spacer(UiKit.Space.ROOM))
 			body.add_child(gap)
 			body.add_child(UiKit.rule())
 		else:
@@ -155,7 +155,7 @@ static func _row(host: Control, row: Dictionary, rank: int, wide: bool) -> Contr
 	StatsPlayers._editorial(b, mine)
 	var id := str(row["id"])
 	b.pressed.connect(func(): StatsPlayers.open_player(host, id))
-	var h := UiKit.hbox(10)
+	var h := UiKit.hbox(UiKit.Space.ROOM)
 	h.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	h.offset_left = ROW_INSET
 	h.offset_right = -10
@@ -168,11 +168,11 @@ static func _row(host: Control, row: Dictionary, rank: int, wide: bool) -> Contr
 		mark.name = "ClubMark"
 		mark.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		h.add_child(mark)
-	var who := UiKit.vbox(2)
+	var who := UiKit.vbox(UiKit.Space.SLIM)
 	who.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	who.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	h.add_child(who)
-	var top := UiKit.hbox(8)
+	var top := UiKit.hbox(UiKit.GAP)
 	who.add_child(top)
 	var name_text := str(row["name"])
 	var club_text := GameDB.club_short(club) if club != "" else ""
