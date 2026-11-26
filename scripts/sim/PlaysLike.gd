@@ -24,6 +24,7 @@ class_name PlaysLike
 ##      each centimetre, plus FAR_POINTS for each point beyond NEAR_LEVEL and
 ##      each centimetre beyond NEAR_CM.
 ## Lowest distance wins; a tie goes to the lower id, so the answer never moves.
+## In a draft class, each real player is named once (PER_CLASS, for_class()).
 ##
 ## The real players are the launch lists as loaded (GameDB.plays_like_pool, a
 ## copy taken before a career ages anyone) and every other AFL season from 2012
@@ -54,6 +55,10 @@ const FAR_POINTS := 2.0
 ## to that attribute's weight in the gap.
 const STRENGTH_WEIGHT := 0.3
 const LABEL := "Plays like: "
+## How many prospects of one draft class can carry the same real player's name
+## (director, 2026-11-27, "Once per class": without it the new Endurance named one
+## real defender for 18 of 569 prospects, over the 3% the suite allows).
+const PER_CLASS := 1
 
 
 ## A player's ratings at his peak: {id, real_name, generic_name, role, club,
@@ -216,6 +221,15 @@ static func _inside_both(me: Dictionary, e: Dictionary) -> bool:
 ## compare him with. Never himself: his own id, or his own real name at his own
 ## height (two different real players can share a name).
 static func nearest(p: Dictionary, pool: Array) -> Dictionary:
+	var c := _candidates(p, pool)
+	return {} if c.is_empty() else _closest(c["me"], c["near"], {})
+
+
+## nearest()'s working for `p`: {"me": his profile, "near": the real players he
+## is compared with, "wide": whether those are his whole position because nobody
+## is inside both bands, "himself": the test for his own entries}; {} when he has
+## no ratings.
+static func _candidates(p: Dictionary, pool: Array) -> Dictionary:
 	var me := profile(p)
 	if me.is_empty():
 		return {}
@@ -224,7 +238,8 @@ static func nearest(p: Dictionary, pool: Array) -> Dictionary:
 	var own_person := person_of(own_name, str(p.get("club", ""))) if own_name != "" else ""
 	var himself := func(e: Dictionary) -> bool:
 		return str(e["id"]) == str(me["id"]) or (own_name != "" and str(e["real_name"]) == own_name
-				and is_equal_approx(float(e["height"]), float(me["height"]))) 				or (own_person != "" and str(e.get("person", "")) == own_person)
+				and is_equal_approx(float(e["height"]), float(me["height"]))) \
+				or (own_person != "" and str(e.get("person", "")) == own_person)
 	# Most often a player of his position inside both bands exists: look only there.
 	var near := []
 	var idx := _index(pool)
@@ -237,16 +252,55 @@ static func nearest(p: Dictionary, pool: Array) -> Dictionary:
 			break
 		if _inside_both(me, rows[i]) and not himself.call(rows[i]):
 			near.append(rows[i])
-	if near.is_empty():
+	var wide := near.is_empty()
+	if wide:
 		near = _nearest_wider(me, pool, himself)
+	return {"me": me, "near": near, "wide": wide, "himself": himself}
+
+
+## The entry of `near` closest to `me` whose real player is named fewer than
+## PER_CLASS times in `used` ({real name: times}); {} when every one is taken.
+static func _closest(me: Dictionary, near: Array, used: Dictionary) -> Dictionary:
 	var best := {}
 	var best_d := INF
 	for e in near:
+		if int(used.get(str(e["real_name"]), 0)) >= PER_CLASS:
+			continue
 		var d := distance(me, e)
 		if d < best_d or (d == best_d and str(e["id"]) < str(best["id"])):
 			best = e
 			best_d = d
 	return best
+
+
+## The real player each prospect of one draft class plays like, {prospect id:
+## pool entry}: nearest()'s rule, with each real player named for at most
+## PER_CLASS prospects of the class (director, 2026-11-27). The class chooses in
+## order of POT, highest first (a tie to the lower id); a prospect whose closest
+## player is taken gets the closest one left, inside both bands while any is,
+## then from the rest of his position. With nobody left he keeps his closest.
+static func for_class(cls: Array, pool: Array) -> Dictionary:
+	var order := []
+	for p in cls:
+		var c := _candidates(p, pool)
+		if not c.is_empty():
+			order.append({"id": str(p.get("id", "")), "c": c})
+	order.sort_custom(func(x, y): return float(x["c"]["me"]["peak"]) > float(y["c"]["me"]["peak"]) \
+			or (float(x["c"]["me"]["peak"]) == float(y["c"]["me"]["peak"]) and str(x["id"]) < str(y["id"])))
+	var used := {}
+	var out := {}
+	for row in order:
+		var c: Dictionary = row["c"]
+		var e := _closest(c["me"], c["near"], used)
+		if e.is_empty() and not bool(c["wide"]):
+			e = _closest(c["me"], _nearest_wider(c["me"], pool, c["himself"]), used)
+		if e.is_empty():
+			e = _closest(c["me"], c["near"], {})
+		if e.is_empty():
+			continue
+		out[row["id"]] = e
+		used[str(e["real_name"])] = int(used.get(str(e["real_name"]), 0)) + 1
+	return out
 
 
 ## nearest()'s candidates when no player of his position is inside both bands: his
@@ -311,8 +365,50 @@ static var _by := {}
 ## The compared player's name as this career shows it. "" when there is none.
 static func name_of(p: Dictionary) -> String:
 	var pool: Array = GameDB.plays_like_pool
-	var e := _nearest_memoised(p, pool)
+	var e := _in_class(p, pool)
 	return "" if e.is_empty() else shown_name(e, pool)
+
+
+## The name `p`'s draft class gives him (for_class): his class is the career's
+## prospects of his draft year (GameState.draftee_pool keeps the drafted ones
+## until the season turns, so a pick never moves another prospect's name).
+## Anyone outside a class (a state league player) gets nearest().
+static func _in_class(p: Dictionary, pool: Array) -> Dictionary:
+	var year := int(p.get("draft_year", 0))
+	var pid := str(p.get("id", ""))
+	var cls := []
+	var ids := PackedStringArray()
+	var pots := 0.0
+	var found := false
+	if year != 0 and pid != "":
+		for q in GameState.draftee_pool:
+			if int(q.get("draft_year", 0)) != year:
+				continue
+			cls.append(q)
+			ids.append(str(q.get("id", "")))
+			pots += float(q.get("potential", 0.0))
+			found = found or str(q.get("id", "")) == pid
+	if not found:
+		return _nearest_memoised(p, pool)
+	var key := [year, ids, pots, pool.size()].hash()
+	var got: Dictionary = _classes.get(year, {})
+	if not is_same(pool, _classes_pool) or int(got.get("key", 0)) != key \
+			or int((got.get("facts", {}) as Dictionary).get(pid, 0)) != _facts(p):
+		if not is_same(pool, _classes_pool):
+			_classes.clear()
+			_classes_pool = pool
+		var facts := {}
+		for q in cls:
+			facts[str(q.get("id", ""))] = _facts(q)
+		got = {"key": key, "facts": facts, "names": for_class(cls, pool)}
+		_classes[year] = got
+	return (got["names"] as Dictionary).get(pid, {})
+
+
+## for_class() by draft year, kept while the class, its POTs, the pool and the
+## asking prospect's facts are unchanged.
+static var _classes := {}
+static var _classes_pool: Array = []
 
 
 ## nearest() for `p` against `pool`, kept for as long as the pool and the facts
@@ -323,14 +419,19 @@ static func _nearest_memoised(p: Dictionary, pool: Array) -> Dictionary:
 		_memo.clear()
 		_memo_pool = pool
 		_memo_size = pool.size()
-	var key := [str(p.get("id", "")), str(p.get("role", "")), p.get("potential"), Rating.ovr(p),
-			p.get("height_cm"), str(p.get("real_name", "")), str(p.get("club", "")),
-			(p.get("attr", {}) as Dictionary).hash()].hash()
+	var key := _facts(p)
 	if _memo.has(key):
 		return _memo[key]
 	var e := nearest(p, pool)
 	_memo[key] = e
 	return e
+
+
+## The facts about `p` the name is read from, as one hash.
+static func _facts(p: Dictionary) -> int:
+	return [str(p.get("id", "")), str(p.get("role", "")), p.get("potential"), Rating.ovr(p),
+			p.get("height_cm"), str(p.get("real_name", "")), str(p.get("club", "")),
+			(p.get("attr", {}) as Dictionary).hash()].hash()
 
 
 const MEMO_MAX := 20000
