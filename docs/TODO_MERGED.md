@@ -264,3 +264,4 @@ What has landed toward each open row of docs/TODO.md and docs/TODO_RULINGS.md, o
 - 202: Merged #2299: Marvel round 16b: real MARVEL STADIUM signs, plain street wall.
 - 202: Merged #2303: Marvel round 17: the real gates land, Gate 7 fit, Wurundjeri Way verge and banners.
 - 198: Merged #2304: 3D match: men walk, backpedal and side-step instead of a slow-motion jog.
+- 202: Merged #2310: 3D 1.0 plan: Marvel rounds 16b-17 and horizon, fault scan, new gaits.
