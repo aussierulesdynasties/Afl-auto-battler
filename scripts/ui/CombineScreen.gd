@@ -494,7 +494,7 @@ func _test_pc(t: Array, z: Dictionary, gap: int) -> Control:
 		best.add_child(UiKit.lbl(GameDB.player_display_name(p), z["name"], UiKit.TEXT, true))
 		var fig := UiKit.hbox(UiKit.Space.ROOM)
 		best.add_child(fig)
-		var f := UiKit.figure(Combine.text(key, float(rows[0]["result"])), z["res"], UiKit.HEAD_DARK)
+		var f := UiKit.figure(Combine.text(key, float(rows[0]["result"])), z["res"], UiKit.HEAD)
 		f.name = "Result"
 		fig.add_child(f)
 		var said := UiKit.line("Best in the class", UiKit.SMALL, UiKit.MUTED)
