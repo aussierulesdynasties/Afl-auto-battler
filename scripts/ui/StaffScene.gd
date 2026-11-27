@@ -204,8 +204,10 @@ func _rule_ink() -> Color:
 	return UiKit.club_vivid(_club, UiKit.PANEL)
 
 
-## His grades on his PC card, a line each under a rule, the grade at the
-## card's right edge, and how he fits this job.
+## His grades on his PC card, a line each under a rule, and how he fits this
+## job. Each grade sits in a column just after its name, not at the card's far
+## edge (director, 2026-10-14: space between them "divorces the number from the
+## source"; tests/run_rowgap_tests.gd).
 func _grades(c: Dictionary, job: String) -> Control:
 	var g := UiKit.vbox(UiKit.Space.HAIR)
 	g.name = "Grades_" + job
@@ -222,11 +224,9 @@ func _grade_row(label: String, value: String) -> Control:
 	var row := UiKit.hbox(UiKit.GAP)
 	var l := UiKit.lbl(label, UiKit.SMALL, UiKit.MUTED)
 	l.autowrap_mode = TextServer.AUTOWRAP_OFF
-	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	l.custom_minimum_size = Vector2(128, 0)
 	row.add_child(l)
-	var v := UiKit.line(value, UiKit.SMALL, UiKit.TEXT, true)
-	v.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	row.add_child(v)
+	row.add_child(UiKit.line(value, UiKit.SMALL, UiKit.TEXT, true))
 	return row
 
 
