@@ -85,6 +85,7 @@ func run() -> void:
 	_t("_test_play_through_back_on_in_his_line")
 	_t("_test_play_through_forced_changes")
 	_t("_test_play_through_out_of_position")
+	_t("_test_play_through_mid_not_ruck")
 	_t("_test_play_through_mid_stands_in_midfield")
 	_t("_test_view_slots_stand_in_their_zone")
 	_t("_test_tag_hold")
@@ -3526,6 +3527,40 @@ func _test_play_through_out_of_position() -> void:
 				% [club, GameDB.player_display_name(pick), _role_of(sim, pid)])
 		_check(sim.focus_active(0, "focus_mid"), "%s: on in the midfield, the call works" % club)
 	_check(tried >= 10, "Enough clubs have a forward who is no midfielder (%d)" % tried)
+
+
+## Played through the midfield, he goes back on in a midfielder's spot, and in
+## the ruck's only if he can play ruck (director, 2026-11-27: "Midfield spot
+## only"). With only the ruck tired, a pick who is no ruck stays on the bench.
+func _test_play_through_mid_not_ruck() -> void:
+	var tried := 0
+	var clubs: Array = GameDB.players_by_club.keys().filter(
+			func(c): return (GameDB.club_list(str(c)) as Array).size() >= 30)
+	clubs.sort()
+	for club in clubs:
+		var sim := _sim(9500 + tried, club, "SYD" if club != "SYD" else "GEE")
+		sim.moment_side = -1
+		var sq: Squad = sim.squads[0]
+		var pick = null
+		for p in sq.ground:
+			if str(p.get("role", "")) == "MID" and not Traits.plays(p, "RUCK"):
+				pick = p
+				break
+		var ri := _ground_index(sim, "RUCK")
+		if pick == null or ri < 0:
+			continue
+		tried += 1
+		var pid := str(pick["id"])
+		sim.tactics[0] = {"gameplan": "balanced", "focus_mid": pid}
+		sim._swap(0, sq.ground.find(pick), 0)
+		ri = _ground_index(sim, "RUCK")
+		for p in sq.ground + sq.bench:
+			sim.energy[str(p["id"])] = 100.0 if str(p["id"]) == pid else 90.0
+		sim.energy[str((sq.ground[ri] as Dictionary)["id"])] = 5.0
+		sim._auto_rotate(0)
+		_check(_role_of(sim, pid) != "RUCK", "%s: %s, played through the midfield and no ruck, is not sent on in the ruck's spot"
+				% [club, GameDB.player_display_name(pick)])
+	_check(tried >= 10, "Enough clubs have a midfielder who is no ruck (%d)" % tried)
 
 
 ## The same at full speed: Melbourne play through Kysaiah Pickett for whole

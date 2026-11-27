@@ -6366,6 +6366,10 @@ func _first_stint(side: int) -> void:
 			var focus_slot := str(focus.get(on_id, ""))
 			if focus_slot != "" and not (FOCUS_SLOT_ROLES[focus_slot] as Array).has(role):
 				continue
+			# Played through the midfield: a midfielder's spot, not the ruck's
+			# unless he can play ruck (director, 2026-11-27).
+			if focus_slot == "focus_mid" and role == "RUCK" and not Traits.plays(on, "RUCK"):
+				continue
 			if named != "" and on_id == named and role != "MID":
 				continue
 			var fits := Traits.plays(on, role) or focus_slot != ""
@@ -6422,8 +6426,11 @@ func _bench_for(side: int, role: String, min_energy: float, rotation := false) -
 		# forward played through the midfield) goes back on there too. A routine
 		# change never puts him in another line; a forced one (an injury, a
 		# rest the coach called) does only when no one else is on the bench.
+		# A man played through the midfield takes the ruck's spot only if he can
+		# play ruck (director, 2026-11-27: "Midfield spot only").
 		var focus_slot := str(focus.get(str(p["id"]), ""))
-		var in_his_line := focus_slot != "" and (FOCUS_SLOT_ROLES[focus_slot] as Array).has(role)
+		var in_his_line := focus_slot != "" and (FOCUS_SLOT_ROLES[focus_slot] as Array).has(role) \
+				and not (role == "RUCK" and focus_slot == "focus_mid" and not Traits.plays(p, "RUCK"))
 		var out_of_line := focus_slot != "" and not in_his_line
 		if out_of_line and rotation:
 			continue
