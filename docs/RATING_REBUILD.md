@@ -209,9 +209,10 @@ load after it. Lists and weight tables for his review go in `REVIEW.md` at the r
 | #2240 | `claude/endurance-blend` | #2239 plus Endurance 40/30/30 (re-scaled p2-p98), draft-night trades (seller uses his own board, 1% margin), the ruck pillar fix ("Midfield spot only") | Draft; landed through #2242 |
 | #2242 | `claude/rating-phase8-ui` | #2240 whole plus Phase 8 (card, colour cuts 85/52/33, PlaysLike, words), regenerated histories | Ready, auto-merge on; red on `promises` |
 
+`promises` (main's #2233) passes 79/79 on #2239 and #2240: its test now reads the rebuilt OVR, lets a backed run
+wait out the kid's injuries, and reads rival drops after round 3.
+
 Still open:
-- `promises` (main's #2233) on the #2240/#2242 tree: 7 checks fail. The backed kid's three-game run is never
-  played out, and no rival coach's Authority moves in two rounds. On #2239's own tree the suite passes 79/79.
 - #2240's paired `tools/balance.sh match 1000` table has not been run.
 - Calibration, the balance table and his playtest (Phase 4's proof) are his call.
 - #2239 and #2240 stay open after #2242 lands (squash-only repo); he closes them.
