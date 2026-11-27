@@ -22,7 +22,8 @@ What it does, in place, to every backdrop part (positions only; nothing is added
   building whose outline holds them;
 - everything else (trees, cars, masts, bridges) moves as one piece per connected part, by the shift under it;
 - open water (bg_water) moves as one flat sheet to the ring's water level (the LiDAR's water surface), and the
-  land and anything the scene stood below its water keep their depth under it.
+  land and anything the scene stood below its water keep their depth under it; a sheet that is only scattered
+  pieces (more than SCATTERED) leaves the scene, as the ground's texture already paints that water.
 Run it on the published glbs, then `tools/ground_assets.sh publish`. Running it twice is harmless: the second
 run finds the land already right (shift 0).
 """
@@ -46,6 +47,13 @@ FAR, WATER = "bg_far_terrain", "bg_water"
 # A building's foot stays at most this far under the lowest land along it (the old scene sank some 3 to 5 m into
 # its bumps, which took that much off their measured height).
 SINK_MAX = 0.3
+# A water sheet in more separate pieces than this is only scattered fragments over the painted water: left out.
+SCATTERED = 100
+# A ground's painted water brought to this colour (sRGB, on average), so the harbour draws in one colour with the
+# surrounds map's water across the backdrop's cut. Marvel's is fitted to renders (2026-11-27): its painted water
+# (51, 74, 84) drew (50, 88, 105) beside the surrounds' (45, 79, 98) and (28, 56, 67) drew (21, 68, 88), and the
+# straight line through the two (linear light) meets the surrounds at (47, 66, 77). The two layers are lit apart.
+WATER_TARGET = {"marvel": (47, 66, 77)}
 
 
 def fit(slug):
@@ -127,6 +135,14 @@ class Glb:
         a["min"] = [float(x) for x in P.min(0)]
         a["max"] = [float(x) for x in P.max(0)]
 
+    def write_vec3(self, ai, V):
+        a = self.J["accessors"][ai]
+        assert a["componentType"] == 5126 and a["type"] == "VEC3"
+        v = self.J["bufferViews"][a["bufferView"]]
+        off = v.get("byteOffset", 0) + a.get("byteOffset", 0)
+        b = np.ascontiguousarray(V, "<f4").tobytes()
+        self.bin[off:off + len(b)] = b
+
     def save(self):
         js = json.dumps(self.J, separators=(",", ":")).encode()
         js += b" " * (-len(js) % 4)
@@ -134,6 +150,135 @@ class Glb:
         blob = (struct.pack("<III", 0x46546C67, 2, 28 + len(js) + len(body)) + struct.pack("<II", len(js), 0x4E4F534A)
                 + js + struct.pack("<II", len(body), 0x004E4942) + body)
         open(self.path, "wb").write(blob)
+
+
+def _ground_texture(g, pr):
+    """The ground primitive's base colour image: (image index, RGB array 0-255), or None."""
+    import io
+    from PIL import Image
+    J = g.J
+    bt = J["materials"][pr["material"]].get("pbrMetallicRoughness", {}).get("baseColorTexture")
+    if bt is None:
+        return None
+    tx = J["textures"][bt["index"]]
+    ii = tx["source"] if "source" in tx else next(iter(tx["extensions"].values()))["source"]
+    bv = J["bufferViews"][J["images"][ii]["bufferView"]]
+    off = bv.get("byteOffset", 0)
+    return ii, np.asarray(Image.open(io.BytesIO(bytes(g.bin[off:off + bv["byteLength"]]))).convert("RGB"), float)
+
+
+def _water_texels(img):
+    """The scene's harbour and river blue in its ground texture."""
+    return (img[..., 2] - img[..., 0] > 22) & (img[..., 1] - img[..., 0] > 12) & (img.max(-1) < 120)
+
+
+def _lin(c):
+    c = np.asarray(c, float) / 255
+    return np.where(c <= 0.04045, c / 12.92, ((c + 0.055) / 1.055) ** 2.4)
+
+
+def tone_painted_water(g, target):
+    """Bring the ground texture's painted water to `target` (sRGB) on average, scaling it in linear light so its
+    small grain stays: it then meets the surrounds' water in one colour at the seam. The new image goes on the end of
+    the buffer; the old one's bytes stay unreferenced in it."""
+    import io
+    from PIL import Image
+    done = set()
+    for mi, m in enumerate(g.J["meshes"]):
+        if not g.name_of.get(mi, m.get("name", "")).startswith("bg_near_ground"):
+            continue
+        for pr in m["primitives"]:
+            got = _ground_texture(g, pr)
+            if got is None or got[0] in done:
+                continue
+            ii, img = got
+            done.add(ii)
+            w = _water_texels(img)
+            if not w.any():
+                continue
+            lin = _lin(img)
+            gain = _lin(target) / lin[w].mean(0)
+            lin[w] = np.clip(lin[w] * gain, 0, 1)
+            out = np.where(lin <= 0.0031308, lin * 12.92, 1.055 * np.power(lin, 1 / 2.4) - 0.055) * 255
+            b = io.BytesIO()
+            mime = g.J["images"][ii].get("mimeType", "image/webp")
+            Image.fromarray(np.clip(out + 0.5, 0, 255).astype(np.uint8)).save(
+                b, "WEBP" if "webp" in mime else "PNG", **({"quality": 92, "method": 6} if "webp" in mime else {}))
+            g.bin += b"\0" * (-len(g.bin) % 4)
+            g.J["bufferViews"].append({"buffer": 0, "byteOffset": len(g.bin), "byteLength": len(b.getvalue())})
+            g.bin += b.getvalue()
+            g.J["buffers"][0]["byteLength"] = len(g.bin)
+            g.J["images"][ii]["bufferView"] = len(g.J["bufferViews"]) - 1
+            # a new name: Godot keeps an image it once wrote out beside the model (<model>_<image>.webp) and drew
+            # that stale copy, not the toned one, after the model changed
+            g.J["images"][ii]["name"] = g.J["images"][ii].get("name", "ground") + "_toned"
+            print("%s: painted water %s brought to %s (%d texels)" % (
+                os.path.basename(g.path), img[w].mean(0).round().astype(int).tolist(), list(target), int(w.sum())))
+
+
+def flatten_painted_water(g, level):
+    """Lay the ground flat at the water's level wherever its own texture paints open water (the scene's harbour and
+    river blue): the scene's ground there wandered half a metre round the old sheet and fell into 15 m pits by the
+    bridges, which read as dark holes and a step at the seams once the scattered sheet is gone. The count."""
+    import io
+    from PIL import Image
+    n = 0
+    J = g.J
+    for mi, m in enumerate(J["meshes"]):
+        if not g.name_of.get(mi, m.get("name", "")).startswith("bg_near_ground"):
+            continue
+        for pr in m["primitives"]:
+            mat = J["materials"][pr["material"]]
+            bt = mat.get("pbrMetallicRoughness", {}).get("baseColorTexture")
+            if bt is None or "TEXCOORD_0" not in pr["attributes"]:
+                continue
+            tx = J["textures"][bt["index"]]
+            im = J["images"][tx["source"] if "source" in tx else next(iter(tx["extensions"].values()))["source"]]
+            bv = J["bufferViews"][im["bufferView"]]
+            off = bv.get("byteOffset", 0)
+            img = np.asarray(Image.open(io.BytesIO(bytes(g.bin[off:off + bv["byteLength"]]))).convert("RGB"), float)
+            h, w = img.shape[:2]
+            UV = g.read(pr["attributes"]["TEXCOORD_0"])
+            P = g.read(pr["attributes"]["POSITION"]).astype(np.float64)
+            c = np.clip((UV[:, 0] * w).astype(int), 1, w - 2)
+            r = np.clip((UV[:, 1] * h).astype(int), 1, h - 2)
+            tex = sum(img[r + dr, c + dc] for dr in (-1, 0, 1) for dc in (-1, 0, 1)) / 9
+            water = (tex[:, 2] - tex[:, 0] > 22) & (tex[:, 1] - tex[:, 0] > 12) & (tex.max(1) < 120)
+            P[water, 1] = level
+            n += int(water.sum())
+            g.write_pos(pr["attributes"]["POSITION"], P.astype(np.float32))
+            if "NORMAL" in pr["attributes"]:   # level water faces straight up: its old normals lit it in blotches
+                N = g.read(pr["attributes"]["NORMAL"])
+                N[water] = (0.0, 1.0, 0.0)
+                g.write_vec3(pr["attributes"]["NORMAL"], N.astype(np.float32))
+    return n
+
+
+def drop_scattered_water(g):
+    """Leave out a water sheet that is only scattered pieces. Marvel's bg_water was 2,181 triangles in 900 separate
+    pieces (62,000 m2 of the river and harbour's bed): the ground's own texture paints the water there, and the
+    pieces over it read from the orbit as a speckle of triangles. The mesh stays in the file (horizon.py reads its
+    level); only its node leaves the scene."""
+    from shapely.geometry import Polygon
+    from shapely.ops import unary_union
+    for ni, n in enumerate(g.J["nodes"]):
+        if "mesh" not in n or g.name_of.get(n["mesh"]) != WATER:
+            continue
+        pieces = 0
+        for name, a, ia in g.prims:
+            if name == WATER:
+                P = g.read(a)
+                I = g.read(ia).reshape(-1, 3).astype(np.int64) if ia is not None else np.arange(len(P)).reshape(-1, 3)
+                u = unary_union([Polygon(P[t][:, [0, 2]]).buffer(0.01) for t in I])
+                pieces += len(getattr(u, "geoms", [u]))
+        if pieces > SCATTERED:
+            for sc in g.J["scenes"]:
+                sc["nodes"] = [k for k in sc["nodes"] if k != ni]
+            for m in g.J["nodes"]:
+                if "children" in m:
+                    m["children"] = [k for k in m["children"] if k != ni]
+            print("%s: open water in %d separate pieces, left out (the ground's texture paints it)" % (
+                os.path.basename(g.path), pieces))
 
 
 def components(P, I):
@@ -313,7 +458,14 @@ def main():
             g.write_pos(a, P.astype(np.float32))
             st = stats.setdefault(kind, [])
             st.append(d)
+    if wat:
+        flat = sum(flatten_painted_water(g, wat_old + wat_shift) for g in glbs)
+        print("ground vertices on painted water laid flat at its level: %d" % flat)
+    if slug in WATER_TARGET:   # after the flattening, which finds the water by its old colour
+        for g in glbs:
+            tone_painted_water(g, WATER_TARGET[slug])
     for g in glbs:
+        drop_scattered_water(g)
         g.save()
     for kind, ds in stats.items():
         d = np.concatenate(ds)

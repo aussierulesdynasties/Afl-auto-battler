@@ -97,6 +97,16 @@ signal rival_on_clock(code: String, index: int)
 var comp_picks: Array = []
 ## Clubs with a seat but no regular pick (add_guest).
 var guests: Array = []
+## A draft run in a real order (the opening 2026 National Draft of a
+## real-lists career, set_real_order): [{"club": who makes the pick, "round",
+## "origin": the club it came from, "comp": {} or a compensation entry}], in
+## pick order; "matched": {"id", "name", "role", "overall"} for a pick a club
+## used to match a bid on its own academy or father-son man, who is already on
+## its list: the draft records it when it comes up and moves on. Empty: the
+## order is draft_order, round after round.
+var real_slots: Array = []
+## The matched-bid man at each pick of pick_sequence ({} for an open pick).
+var pick_matched: Array = []
 var pick_index := 0               # next pick in pick_sequence
 var league_mode := false
 var seed := 0
@@ -240,7 +250,16 @@ func _build_sequence(comps: Array) -> void:
 	# An extra pick before the first regular pick (a new club's pick 1).
 	for c in by_after.get(0, []):
 		slots.append([str(c["club"]), int(c.get("round", 1)), c, str(c.get("origin", c["club"]))])
-	for r in range(target_size):
+	# A real order: each pick as it was really held, traded picks and
+	# compensation picks included. Every one counts as a regular pick for
+	# where the extra picks land, so a new club's pick 3 is still pick 3.
+	for rs in real_slots:
+		slots.append([str(rs["club"]), int(rs["round"]), (rs.get("comp", {}) as Dictionary).duplicate(),
+				str(rs["origin"]), (rs.get("matched", {}) as Dictionary).duplicate()])
+		regular += 1
+		for c in by_after.get(regular, []):
+			slots.append([str(c["club"]), int(c.get("round", rs["round"])), c, str(c.get("origin", c["club"]))])
+	for r in range(0 if real_slots.is_empty() else target_size, target_size):
 		var round_order := draft_order.duplicate()
 		# The League Draft snakes. The National Draft runs the same order every
 		# round, worst club first (director, 2026-10-14).
@@ -261,17 +280,21 @@ func _build_sequence(comps: Array) -> void:
 		if int(after) > regular:
 			for c in by_after[after]:
 				slots.append([str(c["club"]), target_size, c, str(c["club"])])
-	# Too many picks for the pool: drop regular picks from the end.
+	# Too many picks for the pool: drop regular picks from the end. A matched
+	# bid takes nobody from the pool.
+	var open_slots := func() -> int:
+		return slots.filter(func(sl): return sl.size() <= 4 or (sl[4] as Dictionary).is_empty()).size()
 	var k := slots.size() - 1
-	while slots.size() > pool.size() and k >= 0:
-		if (slots[k][2] as Dictionary).is_empty():
+	while open_slots.call() > pool.size() and k >= 0:
+		if (slots[k][2] as Dictionary).is_empty() and (slots[k].size() <= 4 or (slots[k][4] as Dictionary).is_empty()):
 			slots.remove_at(k)
 		k = mini(k - 1, slots.size() - 1)
-	if slots.size() > pool.size():
-		slots.resize(pool.size())
+	while open_slots.call() > pool.size():
+		slots.resize(slots.size() - 1)
 	pick_sequence = []
 	pick_rounds = []
 	pick_origin = []
+	pick_matched = []
 	comp_picks = []
 	_planned_len = slots.size()
 	for slot in slots:
@@ -282,6 +305,7 @@ func _build_sequence(comps: Array) -> void:
 		pick_sequence.append(slot[0])
 		pick_rounds.append(slot[1])
 		pick_origin.append(slot[3])
+		pick_matched.append(slot[4] if slot.size() > 4 else {})
 
 
 ## The index of `origin`'s own regular pick in `rnd` if it has not been made
@@ -292,7 +316,7 @@ func pick_slot(rnd: int, origin: String) -> int:
 	for c in comp_picks:
 		comp[int(c["index"])] = true
 	for i in range(pick_index, mini(pick_sequence.size(), pick_origin.size())):
-		if comp.has(i):
+		if comp.has(i) or is_matched(i):
 			continue
 		if int(pick_rounds[i]) == rnd and str(pick_origin[i]) == origin:
 			return i
@@ -328,7 +352,39 @@ func set_pick_owners(owners: Dictionary) -> void:
 	if pick_index != 0:
 		return
 	pick_owners = owners.duplicate()
-	_build_sequence(comp_picks.map(func(c): return c))
+	_build_sequence(comp_picks.filter(func(c): return not bool(c.get("real", false))))
+
+
+## The pick at `index` was a matched bid (real_slots).
+func is_matched(index: int) -> bool:
+	return index >= 0 and index < pick_matched.size() and not (pick_matched[index] as Dictionary).is_empty()
+
+
+## Matched bids come up in their place: each is recorded as made, by the club
+## that matched, and the draft moves on to the next open pick.
+func _take_matched() -> void:
+	while pick_index < pick_sequence.size() and is_matched(pick_index):
+		var m: Dictionary = pick_matched[pick_index]
+		var code := str(pick_sequence[pick_index])
+		var entry := {"pick": pick_index + 1, "round": current_round(), "club": code,
+				"player_id": str(m.get("id", "")), "player_name": str(m.get("name", "Player")),
+				"role": str(m.get("role", "")), "overall": int(m.get("overall", 0)),
+				"value": 0, "source_club": code, "matched": true}
+		pick_history.append(entry)
+		_pick_by_player[str(m.get("id", ""))] = entry
+		pick_index += 1
+	_extend_if_needed()
+
+
+## Run this draft in a real order (before any pick is made): `slots` as
+## real_slots. Rounds after the last real one follow draft_order, as ever.
+func set_real_order(slots: Array) -> void:
+	if pick_index != 0 or slots.is_empty():
+		return
+	real_slots = slots.duplicate(true)
+	for rs in real_slots:
+		target_size = maxi(target_size, int(rs["round"]))
+	_build_sequence(comp_picks.filter(func(c): return not bool(c.get("real", false))))
 
 
 ## Slot this year's compensation picks into the order (before any pick is
@@ -366,6 +422,7 @@ func add_guest(code: String, size: int, counts: Dictionary, pairs: Array) -> voi
 
 func start_for_user(code: String) -> void:
 	user_club = code
+	_take_matched()
 	auto_until_user_turn()
 
 
@@ -492,6 +549,7 @@ func _skip_current_pick(why := "no_pick") -> void:
 		# the draft, so the extra rounds always end.
 		passed_clubs[code] = true
 	pick_index += 1
+	_take_matched()
 	_extend_if_needed()
 
 
@@ -795,6 +853,7 @@ func _draft_pick(code: String, p: Dictionary) -> bool:
 	pick_history.append(entry)
 	_pick_by_player[id] = entry
 	pick_index += 1
+	_take_matched()
 	_extend_if_needed()
 	return true
 

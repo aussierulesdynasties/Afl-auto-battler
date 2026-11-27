@@ -60,8 +60,11 @@ CITY_OUT = 4096.0
 LEVEL_M, LEVEL_BASE = 3.4, 1.0   # prep.py's storey height
 JOIN_BELOW = 20.0     # low buildings of one height band that touch are joined
 JOIN_BAND = 3.0
+TIER_M = 3.0         # m: a measured structure's parts with tops this close are one tier
+CANOPY_CELL = 6.0    # m: the far canopy's cell (canopy())
+CANOPY_TRIS = 70000  # its triangles after thinning (the old shards' count)
 JOIN_GAP = 2.0        # m: across a lane or a gap between neighbours narrower than twice this, they are one block
-LOW_SIMPLIFY = 2.0    # m: a low block's outline is kept to this
+LOW_SIMPLIFY = 3.0    # m: a low block's outline is kept to this
 WEDGES = 8
 FAR_ZONE = 2500.0     # past this (square distance) joins and outlines are twice as coarse: a 4 m step there is
                       # under a pixel from the orbit's 430 m circle
@@ -101,6 +104,7 @@ def fetch(slug):
         rows = [dict(zip(cols, r)) for r in cur.fetchall()]
         json.dump(rows, open(work(slug, "overture_%s.json" % kind), "w"), default=str)
         print(kind, len(rows))
+    fetch_water(slug, con)
     x, y = Transformer.from_crs(4326, "ESRI:54009", always_xy=True).transform(lon, lat)
     col, row = int((x + 18041000) // 1000000) + 1, int((9000000 - y) // 1000000) + 1
     z = work(slug, "ghsl.zip")
@@ -109,6 +113,72 @@ def fetch(slug):
         name = next(n for n in f.namelist() if n.endswith(".tif"))
         open(work(slug, "ghsl.tif"), "wb").write(f.read(name))
     print("ghsl tile R%d C%d" % (row, col))
+
+
+WATER_SUBTYPES = ("ocean", "water", "river", "lake", "reservoir", "canal", "pond", "human_made")
+WATER_SKIP_CLASSES = ("swimming_pool", "fountain")
+NEAR_WATER_FROM = 1028.0   # m: the surrounds' painted water runs to here (its outer edge and skirt, GroundModels)
+NEAR_WATER_STEP = 1.0      # m: the near water sheet's tracing grid (near_water())
+NEAR_WATER_LIFT = 0.3      # m: the sheet over the painted water, clear of it at the orbit's distance
+
+
+def fetch_water(slug, con=None):
+    """Open water to LAND_OUT from Overture's base water (OpenStreetMap's, with the coast's ocean): the sea, the bay,
+    the rivers, lakes and ponds, clipped to the horizon's square. Sentinel-2's own water flag (fmask) is not used: in
+    the city it calls tower shadows water and missed half of Victoria Harbour (2026-11-27)."""
+    if con is None:
+        import duckdb
+        con = duckdb.connect()
+        con.execute("INSTALL httpfs; LOAD httpfs; INSTALL spatial; LOAD spatial; SET enable_progress_bar=false;")
+        con.execute("CREATE OR REPLACE SECRET anon (TYPE s3, PROVIDER config, KEY_ID '', SECRET '', REGION 'us-west-2')")
+    g = ground(slug)
+    lat, lon = g["lat"], g["lon"]
+    d = LAND_OUT * 1.05
+    dx, dy = d / (R_EARTH * math.radians(1) * math.cos(math.radians(lat))), d / (R_EARTH * math.radians(1))
+    env = "ST_MakeEnvelope(%f, %f, %f, %f)" % (lon - dx, lat - dy, lon + dx, lat + dy)
+    q = ("select subtype, class, ST_AsText(ST_Intersection(geometry, %s)) as wkt from read_parquet('%s', hive_partitioning=1) "
+         "where bbox.xmin < %f and bbox.xmax > %f and bbox.ymin < %f and bbox.ymax > %f "
+         "and ST_GeometryType(geometry) in ('POLYGON', 'MULTIPOLYGON') and subtype in (%s) and class not in (%s)") % (
+        env, OVERTURE.replace("theme=buildings", "theme=base") % "water", lon + dx, lon - dx, lat + dy, lat - dy,
+        ", ".join("'%s'" % k for k in WATER_SUBTYPES), ", ".join("'%s'" % k for k in WATER_SKIP_CLASSES))
+    rows = [{"subtype": r[0], "class": r[1], "wkt": r[2]} for r in con.execute(q).fetchall() if r[2] and "EMPTY" not in r[2]]
+    json.dump(rows, open(work(slug, "overture_water.json"), "w"))
+    print("water polygons", len(rows))
+
+
+def water_grid(slug, frame, half, step):
+    """The share of each cell of a north-up grid (half size, cell, metres) that is open water (fetch_water), or None."""
+    path = work(slug, "overture_water.json")
+    if not os.path.exists(path):
+        return None
+    cache = work(slug, "water_%d_%d.npy" % (half, step))
+    if os.path.exists(cache) and os.path.getmtime(cache) > os.path.getmtime(path):
+        return np.load(cache)
+    from rasterio import features
+    from rasterio.transform import from_origin
+    from shapely import wkt
+    from shapely.geometry import Polygon, MultiPolygon
+    shapes = []
+    for r in json.load(open(path)):
+        geom = wkt.loads(r["wkt"])
+        for gg in getattr(geom, "geoms", [geom]):
+            if gg.geom_type != "Polygon" or gg.is_empty:
+                continue
+            ex = np.array(gg.exterior.coords)
+            e, n = frame.en(ex[:, 0], ex[:, 1])
+            holes = []
+            for ring in gg.interiors:
+                hr = np.array(ring.coords)
+                he, hn = frame.en(hr[:, 0], hr[:, 1])
+                holes.append(np.c_[he, hn])
+            shapes.append(Polygon(np.c_[e, n], holes))
+    k = 4   # supersampling: a cell's share of water
+    n = int(round(2 * half / step)) * k
+    grid = features.rasterize([(sh, 1) for sh in shapes], out_shape=(n, n),
+                              transform=from_origin(-half, half, step / k, step / k), dtype="uint8", all_touched=False)
+    W = grid.reshape(n // k, k, n // k, k).mean((1, 3)).astype(np.float32)
+    np.save(cache, W)
+    return W
 
 
 # ---- frames ---------------------------------------------------------------------------------------
@@ -185,11 +255,14 @@ class Heights:
 # ---- colour ---------------------------------------------------------------------------------------
 
 class S2:
-    def __init__(self, slug, name):
+    def __init__(self, slug, name, frame=None):
         self.M = np.load(work(slug, name + ".npy"))
         self.W = np.load(work(slug, name + "_water.npy"))
         meta = json.load(open(work(slug, name + ".json")))
         self.half, self.step = meta["half_m"], meta["m_per_px"]
+        mapped = water_grid(slug, frame, self.half, self.step) if frame is not None else None
+        if mapped is not None:
+            self.W = mapped   # the mapped water (fetch_water), not Sentinel-2's fmask
         bad = np.isnan(self.M).any(-1)
         if bad.any():   # no look at all (the tile edge): the nearest pixel that has one
             from scipy.ndimage import distance_transform_edt
@@ -238,8 +311,7 @@ def seam_gain(glb, frame, near):
     im = glb.J["images"][tx["source"] if "source" in tx else next(iter(tx["extensions"].values()))["source"]]
     bv = glb.J["bufferViews"][im["bufferView"]]
     img = np.asarray(Image.open(io.BytesIO(bytes(glb.bin[bv.get("byteOffset", 0):bv.get("byteOffset", 0) + bv["byteLength"]]))).convert("RGB"), float) / 255
-    A = np.c_[P[:, 0], P[:, 2], np.ones(len(P))]
-    cu, cv = np.linalg.lstsq(A, UV[:, 0], rcond=None)[0], np.linalg.lstsq(A, UV[:, 1], rcond=None)[0]
+    I = glb.read(pr["indices"]).reshape(-1, 3).astype(np.int64)
     blk = 60.0
     xs = np.arange(-1440, 1441, blk)
     X, Z = np.meshgrid(xs, xs)
@@ -248,9 +320,34 @@ def seam_gain(glb, frame, near):
     lin_img = lin_of(img)
     bake = []
     k = int(blk / (3000 / w) / 2)
-    for x, z in zip(X, Z):
-        u, v = cu @ [x, z, 1], cv @ [x, z, 1]
+    # each block's texture coordinates from the ground triangle under it (the ground's UVs are its own, not one plan
+    # projection); a block with no ground under it (inside the backdrop's cut) has no bake
+    from shapely import points
+    from shapely.geometry import Polygon
+    from shapely.strtree import STRtree
+    T = P[I][:, :, [0, 2]]
+    tree = STRtree([Polygon(t) for t in T])
+    pi, ti = tree.query(points(X, Z), predicate="intersects")
+    uv_at = {}
+    for p_, t_ in zip(pi, ti):
+        if p_ in uv_at:
+            continue
+        a_, b_, c_ = T[t_]
+        den = (b_[1] - c_[1]) * (a_[0] - c_[0]) + (c_[0] - b_[0]) * (a_[1] - c_[1])
+        if abs(den) < 1e-9:
+            continue
+        l1 = ((b_[1] - c_[1]) * (X[p_] - c_[0]) + (c_[0] - b_[0]) * (Z[p_] - c_[1])) / den
+        l2 = ((c_[1] - a_[1]) * (X[p_] - c_[0]) + (a_[0] - c_[0]) * (Z[p_] - c_[1])) / den
+        uv_at[p_] = np.array([l1, l2, 1 - l1 - l2]) @ UV[I[t_]]
+    for i in range(len(X)):
+        if i not in uv_at:
+            bake.append(np.full(3, np.nan))
+            continue
+        u, v = uv_at[i]
         c, r = int(u * w), int(v * h)
+        if not (0 <= c < w and 0 <= r < h):
+            bake.append(np.full(3, np.nan))
+            continue
         bake.append(lin_img[max(0, r - k):r + k, max(0, c - k):c + k].reshape(-1, 3).mean(0))
     bake = np.array(bake)
     e, n = frame.e_n_of(X, Z)
@@ -260,7 +357,12 @@ def seam_gain(glb, frame, near):
     gain = np.array([(bake[ok, c] * s2[ok, c]).sum() / (s2[ok, c] ** 2).sum() for c in range(3)])
     resid = np.abs(s2[ok] * gain - bake[ok]).mean(0)
     print("seam colour gain", gain.round(3), "mean miss (linear)", resid.round(4), "blocks", int(ok.sum()))
-    return gain
+    # open water takes the backdrop's own water (its ground paints the harbour and the river), not the land's gain:
+    # Sentinel-2's water times the land's gain read a pale grey-green against Google Earth's navy (2026-11-27)
+    wb = wat & np.isfinite(bake).all(1) & (np.hypot(X, Z) > 1060)   # where the backdrop's ground is (cut inside 1,024 m)
+    water = np.median(bake[wb], 0) if wb.sum() >= 4 else None
+    print("backdrop water (linear)", None if water is None else water.round(4), "blocks", int(wb.sum()))
+    return gain, water
 
 
 # ---- land mesh ------------------------------------------------------------------------------------
@@ -282,7 +384,7 @@ def ring_points(s):
     return e, n
 
 
-def land_mesh(slug, frame, H, water_y, gain, near, mid, far):
+def land_mesh(slug, frame, H, water_y, gain, near, mid, far, water=None):
     S = ring_sizes()
     E, N, SP = [], [], []
     for s in S:
@@ -320,6 +422,9 @@ def land_mesh(slug, frame, H, water_y, gain, near, mid, far):
     m = r < far.half - far.step
     col[m] = far.sample(e[m], n[m], blur_m=float(np.median(SP.ravel()[m]))) / 10000.0
     col = np.clip(col * gain, 0, 1)
+    if water is not None:
+        wf = np.clip(W.ravel(), 0, 1)[:, None]
+        col = col * (1 - wf) + water * wf
     surfaces = []
     ka = int(np.searchsorted(S, TEX_A - 1e-6))
     kb = int(np.searchsorted(S, TEX_B - 1e-6))
@@ -347,10 +452,13 @@ def land_mesh(slug, frame, H, water_y, gain, near, mid, far):
     return surfaces, {"rings": int(nr), "per_ring": int(nc), "water_vertices": int(wet.sum())}
 
 
-def texture_png(src, gain, size=1024):
-    """The Sentinel-2 grid as an sRGB png (the material's albedo), north up."""
+def texture_png(src, gain, water=None, size=1024):
+    """The Sentinel-2 grid as an sRGB png (the material's albedo), north up; open water the backdrop's own."""
     from PIL import Image
     M = src.M / 10000.0 * gain
+    if water is not None:
+        w = np.clip(src.W, 0, 1)[..., None]
+        M = M * (1 - w) + water * w
     img = (srgb(M) * 255 + 0.5).astype(np.uint8)
     if img.shape[0] != size:
         img = np.asarray(Image.fromarray(img).resize((size, size), Image.LANCZOS))
@@ -429,6 +537,235 @@ class HeightTable:
         return self._look(self.tab, self.tab2, self.key(r))
 
 
+def com_parts(slug, frame, local):
+    """The City of Melbourne's 2023 building footprints (CC BY), each a stacked part of a structure, heights AHD
+    (measured from its aerial survey): every part of a structure that stands in the ring. [] where it has none."""
+    path = work(slug, "com", "2023-building-footprints.geojson")
+    if not os.path.exists(path):
+        return []
+    from shapely.geometry import shape
+    out = []
+    for f in json.load(open(path))["features"]:
+        p = f["properties"]
+        if not f["geometry"] or p.get("footprint_type") != "Structure" or p.get("footprint_max_elevation") is None:
+            continue
+        for poly in local(shape(f["geometry"])):
+            c = poly.centroid
+            x, z = frame.xz(c.x, c.y)
+            if max(abs(float(x)), abs(float(z))) < INNER or max(abs(c.x), abs(c.y)) > CITY_OUT or poly.area < 4:
+                continue
+            out.append({"poly": poly, "sid": p["structure_id"], "fmin": float(p["footprint_min_elevation"]),
+                        "fmax": float(p["footprint_max_elevation"]), "smin": float(p["structure_min_elevation"])})
+    return out
+
+
+def photomesh_colours(slug, com):
+    """Each measured part's wall and roof colour (sRGB 0-1) from the council's photomesh (photomesh.py): the walls
+    from the photographed wall faces round the part and between its floor and top, sunlit (north-facing) ones first,
+    the roof from its upward faces near its top; a part with too few faces takes its structure's."""
+    path = work(slug, "photomesh.npz")
+    if not os.path.exists(path):
+        return [None] * len(com), {"photomesh": "not fetched"}
+    from shapely import points
+    from shapely.strtree import STRtree
+    D = np.load(path)
+    mid, nrm, col, area = D["mid"], D["nrm"], D["col"].astype(np.float64), D["area"]
+    tree = STRtree([c["poly"].buffer(1.5) for c in com])
+    pi, gi = tree.query(points(mid[:, 0], mid[:, 1]), predicate="within")
+    zc = mid[pi, 2]
+    fmin = np.array([c["fmin"] for c in com])[gi]
+    fmax = np.array([c["fmax"] for c in com])[gi]
+    inz = (zc > fmin - 1.0) & (zc < fmax + 1.0)
+    pi, gi, zc, fmax = pi[inz], gi[inz], zc[inz], fmax[inz]
+    nz = nrm[pi, 2]
+    wall_m = np.abs(nz) < 0.35
+    roof_m = (nz > 0.75) & (zc > fmax - 2.5)
+    lit = nrm[pi, 1] > 0.2
+
+    def med(sel):
+        if sel.sum() < 4:
+            return None
+        return np.median(col[pi[sel]], 0) / 255.0
+
+    by_g = collections.defaultdict(list)
+    for k, g in enumerate(gi):
+        by_g[g].append(k)
+    walls, roofs = [None] * len(com), [None] * len(com)
+    for g, ks in by_g.items():
+        ks = np.array(ks)
+        w = np.zeros(len(pi), bool); w[ks] = True
+        walls[g] = med(w & wall_m & lit)
+        if walls[g] is None:
+            walls[g] = med(w & wall_m)
+        roofs[g] = med(w & roof_m)
+    # a part with too few faces of its own: its structure's
+    sw, sr = collections.defaultdict(list), collections.defaultdict(list)
+    for c, wv, rv in zip(com, walls, roofs):
+        if wv is not None:
+            sw[c["sid"]].append(wv)
+        if rv is not None:
+            sr[c["sid"]].append(rv)
+    out, rep = [], collections.Counter()
+    for c, wv, rv in zip(com, walls, roofs):
+        wv = wv if wv is not None else (np.median(sw[c["sid"]], 0) if sw[c["sid"]] else None)
+        rv = rv if rv is not None else (np.median(sr[c["sid"]], 0) if sr[c["sid"]] else wv)
+        wv = wv if wv is not None else rv
+        out.append(None if wv is None else (wv, rv))
+        rep["from its own photographed faces" if wv is not None else "from its photographed neighbours"] += 1
+    # a part too small for the photomesh's 5 m faces (a shed, a narrow terrace): the median of the 8 nearest
+    # photographed parts, the street's own colours
+    from scipy.spatial import cKDTree
+    have = [i for i, o in enumerate(out) if o is not None]
+    if have:
+        cen = np.array([[c["poly"].centroid.x, c["poly"].centroid.y] for c in com])
+        kt = cKDTree(cen[have])
+        for i, o in enumerate(out):
+            if o is None:
+                _, nb = kt.query(cen[i], k=min(8, len(have)))
+                nb = np.atleast_1d(nb)
+                out[i] = (np.median([out[have[j]][0] for j in nb], 0), np.median([out[have[j]][1] for j in nb], 0))
+    return out, dict(rep)
+
+
+def com_tiers(com, colours):
+    """A measured structure's parts drawn as few tiers: parts whose tops are within TIER_M of each other (twice that
+    past FAR_ZONE) are one outline from the lowest floor among them, at their area-weighted top and colours. The
+    council maps every plant room and parapet as a part; 2 km out they are a pixel, and a tier keeps the skyline."""
+    from shapely.ops import unary_union
+    by = collections.defaultdict(list)
+    for c, cl in zip(com, colours):
+        by[c["sid"]].append((c, cl))
+    out = []
+    for sid, ps in by.items():
+        ps.sort(key=lambda t: -t[0]["fmax"])
+        c0 = ps[0][0]["poly"].centroid
+        tier = TIER_M * (2 if max(abs(c0.x), abs(c0.y)) > FAR_ZONE else 1)
+        groups = []
+        for t in ps:
+            if groups and groups[-1][0][0]["fmax"] - t[0]["fmax"] <= tier:
+                groups[-1].append(t)
+            else:
+                groups.append([t])
+        for g in groups:
+            ar = np.array([t[0]["poly"].area for t in g])
+            u = unary_union([t[0]["poly"].buffer(0.5, join_style=2) for t in g]).buffer(-0.5, join_style=2)
+            top = float((np.array([t[0]["fmax"] for t in g]) * ar).sum() / ar.sum()) - g[0][0]["smin"]
+            z0 = min(t[0]["fmin"] for t in g) - g[0][0]["smin"]
+            rc = [(t[1], a) for t, a in zip(g, ar) if t[1] is not None]
+            cl = None
+            if rc:
+                wa = sum(a for _, a in rc)
+                cl = (sum(c[0] * a for c, a in rc) / wa, sum(c[1] * a for c, a in rc) / wa)
+            for pl in getattr(u, "geoms", [u]):
+                if pl.geom_type == "Polygon" and not pl.is_empty:
+                    out.append((pl, z0, top, sid, cl, len(groups) == 1))
+    return out
+
+
+def canopy(slug, frame, H, com):
+    """The trees' real canopy from the photomesh's green faces (photomesh.py), where they stand at least 2 m over the
+    land and clear of every measured building, in the ring between the backdrop's square and CITY_OUT."""
+    path = work(slug, "photomesh.npz")
+    if not os.path.exists(path):
+        return None
+    D = np.load(path)
+    T = D["veg_tri"].astype(np.float64)
+    C = D["veg_col"]
+    if not len(T):
+        return None
+    c = T.mean(1)
+    x, z = frame.xz(c[:, 0], c[:, 1])
+    keep = (np.maximum(np.abs(x), np.abs(z)) > INNER) & (np.maximum(np.abs(c[:, 0]), np.abs(c[:, 1])) < CITY_OUT)
+    if com:
+        from shapely import points
+        from shapely.strtree import STRtree
+        tree = STRtree([p["poly"].buffer(2.0) for p in com])
+        hit = np.zeros(len(T), bool)
+        pi, _ = tree.query(points(c[:, 0], c[:, 1]), predicate="within")
+        hit[pi] = True
+        keep &= ~hit
+    land = H.at(c[:, 0], c[:, 1], 5.0)
+    ahd = lambda zz: frame.floor + zz - H.datum                                   # noqa: E731
+    keep &= ahd(c[:, 2]) > land + 2.0
+    T, C = T[keep], C[keep]
+    # The crowns as solid masses, not the photomesh's own faces: thinned, those were loose shards with sky between
+    # them (Westgate Park from the West Gate Bridge, 2026-11-27, where the real park is solid bush). Each CANOPY_CELL
+    # cell the faces fall in takes their highest top over the land and their mean colour; cells one apart are closed
+    # into one mass; each cell is drawn as a low pyramid (its corners shared with its neighbours, its middle at the
+    # top), so a lone tree is a peak and a park a canopy with its edge sloping to the ground.
+    from scipy import ndimage
+    c = T.mean(1)
+    top = ahd(c[:, 2]) - land[keep]
+    e0, n0 = c[:, 0].min() - CANOPY_CELL, c[:, 1].min() - CANOPY_CELL
+    ci = ((c[:, 0] - e0) // CANOPY_CELL).astype(int)
+    cj = ((c[:, 1] - n0) // CANOPY_CELL).astype(int)
+    ni, nj = ci.max() + 2, cj.max() + 2
+    hgt = np.zeros((ni, nj))
+    np.maximum.at(hgt, (ci, cj), top)
+    lc = lin_of(C.astype(np.float64) / 255.0)
+    csum = np.zeros((ni, nj, 3))
+    cnt = np.zeros((ni, nj))
+    np.add.at(csum, (ci, cj), lc)
+    np.add.at(cnt, (ci, cj), 1)
+    seen = cnt > 0
+    mask = ndimage.binary_closing(seen, np.ones((3, 3), bool)) | seen
+    # a closed-in cell takes its nearest photographed cell's height and colour
+    _, (ii, jj) = ndimage.distance_transform_edt(~seen, return_indices=True)
+    hgt = np.where(seen, hgt, hgt[ii, jj])
+    col = np.where(seen[..., None], csum / np.maximum(cnt, 1)[..., None], (csum / np.maximum(cnt, 1)[..., None])[ii, jj])
+    hgt = np.minimum(hgt, 40.0)
+    I, J = np.nonzero(mask)
+    m = len(I)
+    # corners: (ni + 1) x (nj + 1), each at the land plus the mean top of the masked cells round it (the others count 0)
+    mk = np.pad(mask.astype(float), 1)
+    hp = np.pad(hgt * mask, 1)
+    cp = np.pad(col * mask[..., None], ((1, 1), (1, 1), (0, 0)))
+    cn = mk[:-1, :-1] + mk[1:, :-1] + mk[:-1, 1:] + mk[1:, 1:]
+    corner_h = (hp[:-1, :-1] + hp[1:, :-1] + hp[:-1, 1:] + hp[1:, 1:]) / 4
+    corner_c = (cp[:-1, :-1] + cp[1:, :-1] + cp[:-1, 1:] + cp[1:, 1:]) / np.maximum(cn, 1)[..., None]
+    used = np.zeros(corner_h.shape, bool)
+    for di in (0, 1):
+        for dj in (0, 1):
+            used[I + di, J + dj] = True
+    ui, uj = np.nonzero(used)
+    vid = -np.ones(corner_h.shape, np.int64)
+    vid[ui, uj] = np.arange(len(ui))
+    ce, cnn = e0 + ui * CANOPY_CELL, n0 + uj * CANOPY_CELL
+    me, mn = e0 + (I + 0.5) * CANOPY_CELL, n0 + (J + 0.5) * CANOPY_CELL
+    E = np.r_[ce, me]
+    N = np.r_[cnn, mn]
+    L = H.at(E, N, CANOPY_CELL)
+    UP = np.r_[corner_h[ui, uj], hgt[I, J]]
+    X, Z = frame.xz(E, N)
+    V = np.stack([X, L + UP - drop(X, Z), Z], 1)
+    VC = np.r_[corner_c[ui, uj], col[I, J]]
+    mid = len(ui) + np.arange(m)
+    a0, a1, a2, a3 = vid[I, J], vid[I + 1, J], vid[I + 1, J + 1], vid[I, J + 1]
+    F = np.concatenate([np.c_[a0, a1, mid], np.c_[a1, a2, mid], np.c_[a2, a3, mid], np.c_[a3, a0, mid]])
+    # faces wound up (+y): e and n map to x and -z
+    import pyfqmr
+    from scipy.spatial import cKDTree
+    s = pyfqmr.Simplify()
+    s.setMesh(V, F.astype(np.int32))
+    s.simplify_mesh(target_count=CANOPY_TRIS, aggressiveness=7, preserve_border=False, verbose=False)
+    V2, F2, _ = s.getMesh()
+    V2 = np.asarray(V2, np.float64); F2 = np.asarray(F2, np.int64)
+    _, nb = cKDTree(V).query(V2, k=1)
+    colv = VC[nb]
+    fn = np.cross(V2[F2[:, 1]] - V2[F2[:, 0]], V2[F2[:, 2]] - V2[F2[:, 0]])
+    flip = fn[:, 1] < 0
+    F2[flip] = F2[flip][:, ::-1]
+    fn[flip] *= -1
+    vn = np.zeros_like(V2)
+    for k in range(3):
+        np.add.at(vn, F2[:, k], fn)
+    vn /= np.maximum(np.linalg.norm(vn, axis=1, keepdims=True), 1e-9)
+    print("canopy faces", len(T), "in", int(seen.sum()), "cells,", m, "closed; drawn in", len(F2), "triangles")
+    return {"name": "trees_far", "pos": V2.astype(np.float32), "nrm": vn.astype(np.float32),
+            "col": np.c_[colv, np.ones(len(colv))].astype(np.float32),
+            "idx": F2.ravel().astype(np.uint32), "material": "horizon_trees"}
+
+
 def city(slug, frame, H, gain, near):
     import rasterio
     from pyproj import Transformer
@@ -469,8 +806,18 @@ def city(slug, frame, H, gain, near):
     by_parts = collections.defaultdict(list)
     for p in parts:
         by_parts[p["building_id"]].append(p)
-    pieces = []   # (polygon in e/n, base above ground, top above ground, look id, tall?)
+    pieces = []   # (polygon in e/n, base above ground, top above ground, look id, tall?, (wall, roof) or None)
     src = collections.Counter()
+    com = com_parts(slug, frame, local)
+    from shapely.strtree import STRtree
+    com_tree = STRtree([c["poly"] for c in com]) if com else None
+    if com:
+        colours, crep = photomesh_colours(slug, com)
+        for poly, z0, top, sid, cl, alone in com_tiers(com, colours):
+            alone_low = alone and z0 < 0.5 and top < JOIN_BELOW
+            pieces.append((poly, 0.0 if alone_low else z0, top, ("com", sid), not alone_low, cl))
+        src["City of Melbourne measured parts"] = len(com)
+        print("photomesh colours:", crep)
     for r in rows:
         if r.get("is_underground") in (True, "True"):
             continue
@@ -480,6 +827,9 @@ def city(slug, frame, H, gain, near):
         if max(abs(x), abs(z)) < INNER or max(abs(e), abs(n)) > CITY_OUT:
             continue
         look = zlib.crc32(r["id"].encode()) & 0x7FFFFFFF
+        if com_tree is not None and any(len(com_tree.query(pl, predicate="intersects")) for pl in local(r["_geom"])):
+            src["left to the City of Melbourne's"] += 1
+            continue
         ps = by_parts.get(r["id"])
         if ps:
             for p in ps:
@@ -487,7 +837,7 @@ def city(slug, frame, H, gain, near):
                 if top is None:
                     continue
                 for poly in local(wkt.loads(p["wkt"])):
-                    pieces.append((poly, part_base(p), top, look, True))
+                    pieces.append((poly, part_base(p), top, look, True, None))
             src["mapped parts"] += 1
             continue
         h = r["_h"]
@@ -497,7 +847,7 @@ def city(slug, frame, H, gain, near):
         if h < 2.0:
             continue
         for poly in local(r["_geom"]):
-            pieces.append((poly, 0.0, h, look, h >= JOIN_BELOW))
+            pieces.append((poly, 0.0, h, look, h >= JOIN_BELOW, None))
     print("city buildings:", dict(src))
     # join touching low buildings of one height band (terraces, sheds side by side)
     low = collections.defaultdict(list)
@@ -528,17 +878,30 @@ def city(slug, frame, H, gain, near):
                     hm = float((hs[hit] * ar[hit]).sum() / ar[hit].sum())
                 else:
                     hm = hmean
-                out.append((g1, 0.0, hm, pcs[hit[0]][3] if len(hit) else 0, False))
+                # a block of photographed buildings keeps their area-weighted walls and roof
+                rc = [(pcs[i][5], ar[i]) for i in hit if pcs[i][5] is not None]
+                real = None
+                if rc and sum(a for _, a in rc) > 0.5 * ar[hit].sum():
+                    wa = sum(a for _, a in rc)
+                    real = (sum(c[0] * a for c, a in rc) / wa, sum(c[1] * a for c, a in rc) / wa)
+                lk = pcs[hit[0]][3] if len(hit) else 0
+                out.append((g1, 0.0, hm, lk if isinstance(lk, int) else zlib.crc32(str(lk).encode()) & 0x7FFFFFFF,
+                            False, real))
         joined += len(pcs)
     print("low buildings", joined, "joined into", sum(1 for p in out if not p[4] and p[1] == 0))
     # mesh
     pos, nrm, col, uv, idx = [], [], [], [], []
     base_cache = {}
+    kind_tris = collections.Counter()
     nv = 0
-    for poly, z0, top, look, tall in out:
+    outline = collections.defaultdict(list)     # a measured structure's parts, for one ground floor under them all
+    for pc in out:
+        if isinstance(pc[3], tuple):
+            outline[pc[3]].append(np.array(pc[0].exterior.coords))
+    for poly, z0, top, look, tall, real in out:
         cpt = poly.centroid
         k_far = 2.0 if max(abs(cpt.x), abs(cpt.y)) > FAR_ZONE else 1.0
-        poly = poly.simplify((0.5 if tall else LOW_SIMPLIFY) * k_far, preserve_topology=True)
+        poly = poly.simplify((1.0 if tall else LOW_SIMPLIFY) * k_far, preserve_topology=True)
         if poly.is_empty or poly.geom_type != "Polygon" or poly.area < 12:
             continue
         P = np.array(poly.exterior.coords)[:-1]
@@ -547,8 +910,8 @@ def city(slug, frame, H, gain, near):
         if np.sum(P[:, 0] * np.roll(P[:, 1], -1) - np.roll(P[:, 0], -1) * P[:, 1]) < 0:
             P = P[::-1]                        # anticlockwise in e/n
         # the ground floor at the lowest land under the outline (GroundModels' land.base), curve taken off
-        q = np.vstack([P, P.mean(0)])
-        key = (look, round(float(P[0, 0]), 1))
+        q = np.vstack(outline[look]) if isinstance(look, tuple) else np.vstack([P, P.mean(0)])
+        key = look if isinstance(look, tuple) else (look, round(float(P[0, 0]), 1))
         y0 = base_cache.get(key)
         if y0 is None:
             y0 = float(np.nanmin(H.at(q[:, 0], q[:, 1], 5.0))) - 0.1
@@ -557,14 +920,18 @@ def city(slug, frame, H, gain, near):
         cxm, czm = float(x.mean()), float(zz.mean())
         y0c = y0 - float(drop(cxm, czm))
         ya, yb = y0c + z0, y0c + top
-        if tall:
-            pick = look % 100003
+        if real is not None:
+            # its own photographed walls and roof (photomesh_colours), plain: the photo already holds the glass's sheen
+            wall = (real[0], 0.0)
+            roof = real[1]
+        elif tall:
+            pick = (look if isinstance(look, int) else zlib.crc32(str(look).encode())) % 100003
             glassy = (pick % 100) < (85 if top > 30 else 40)
             w = (TOWER_GLASS if glassy else TOWER_CONCRETE)[pick % 6]
             wall = (np.array(w) / 255.0, 1.0 if glassy else 0.5)
             roof = np.array((128, 128, 124)) / 255.0 if glassy else np.array(w) / 255.0 * 0.75
         else:
-            wall = (np.array(LOW_WALLS[look % 5]) / 255.0, 0.0)
+            wall = (np.array(LOW_WALLS[(look if isinstance(look, int) else 0) % 5]) / 255.0, 0.0)
             ee, nn = P[:, 0], P[:, 1]
             rl = near.sample(np.r_[ee, P[:, 0].mean()], np.r_[nn, P[:, 1].mean()]) / 10000.0 * gain
             roof = srgb(np.median(rl, 0))
@@ -586,6 +953,7 @@ def city(slug, frame, H, gain, near):
             nv += 4
             run += side
         tri = earcut.triangulate_float64(P.astype(np.float64), np.array([len(P)], np.uint32))
+        kind_tris[("measured part" if isinstance(look, tuple) else "tall" if tall else "low block")] += 3 * k - 2
         for i in range(k):
             pos.append((float(x[i]), yb, float(zz[i]))); nrm.append((0.0, 1.0, 0.0)); col.append((*roof, 0.0)); uv.append((0.0, -1.0))
         t = np.asarray(tri).reshape(-1, 3)
@@ -594,10 +962,100 @@ def city(slug, frame, H, gain, near):
     surf = {"name": "city_far", "pos": np.array(pos, np.float32), "nrm": np.array(nrm, np.float32),
             "col": np.array(col, np.float32), "uv": np.array(uv, np.float32), "idx": np.array(idx, np.uint32),
             "material": "city_towers"}
-    return surf, {"buildings": dict(src), "pieces_drawn": len(out), "height_check": table.report}
+    return surf, {"buildings": dict(src), "pieces_drawn": len(out), "triangles_by_kind": dict(kind_tris), "height_check": table.report}
+
+
+def _local_poly(frame, g):
+    from shapely.geometry import Polygon
+    lon, lat = np.array(g.exterior.coords).T
+    e, n = frame.en(lon, lat)
+    return Polygon(np.c_[e, n]).buffer(0)
 
 
 # ---- glb ------------------------------------------------------------------------------------------
+
+def near_water(G, water_y):
+    """The backdrop's painted harbour and river, past the surrounds' edge, as one flat sheet with a hard edge: traced
+    at NEAR_WATER_STEP from the ground's own painted water, so it lies exactly where the painting has it. Seen from
+    the orbit the painting alone smeared the quay by the paddock at the harbour's west end into a soft, ragged beige
+    fringe (its 1.5 m texels stretched over 30 m triangles; the PC's renders, 2026-11-27). Drawn in the painted
+    water's own mean colour, NEAR_WATER_LIFT over it, and lit as the ground is (GroundModels' matte backdrop)."""
+    import mapbox_earcut as earcut
+    from rasterio import features
+    from rasterio.transform import from_origin
+    from shapely.geometry import Point, box, shape
+    from shapely.ops import unary_union
+    for mi, m in enumerate(G.J["meshes"]):
+        if not G.name_of.get(mi, m.get("name", "")).startswith("bg_near_ground"):
+            continue
+        pr = m["primitives"][0]
+        got = reland._ground_texture(G, pr)
+        if got is None or "TEXCOORD_0" not in pr["attributes"]:
+            continue
+        img = got[1]
+        P = G.read(pr["attributes"]["POSITION"]).astype(np.float64)
+        UV = G.read(pr["attributes"]["TEXCOORD_0"]).astype(np.float64)
+        T = G.read(pr["indices"]).reshape(-1, 3)
+        break
+    else:
+        return None
+    wtex = reland._water_texels(img)
+    if not wtex.any():
+        return None
+    colour = lin_of(img[wtex].mean(0) / 255.0)
+    st, half = NEAR_WATER_STEP, SKIRT
+    xs = np.arange(-half + st / 2, half, st)
+    n = len(xs)
+    grid = np.zeros((n, n), np.uint8)
+    h, w = wtex.shape
+    # each ground triangle's own grid points, its UV taken across it (barycentric), the painted texel looked up
+    for a, b, cc in T:
+        A, B, C = P[a, [0, 2]], P[b, [0, 2]], P[cc, [0, 2]]
+        lo, hi = np.minimum(np.minimum(A, B), C), np.maximum(np.maximum(A, B), C)
+        i0, i1 = np.searchsorted(xs, [lo[0], hi[0]])
+        j0, j1 = np.searchsorted(xs, [lo[1], hi[1]])
+        if i1 <= i0 or j1 <= j0:
+            continue
+        gx, gz = np.meshgrid(xs[i0:i1], xs[j0:j1])
+        d = (B[1] - C[1]) * (A[0] - C[0]) + (C[0] - B[0]) * (A[1] - C[1])
+        if abs(d) < 1e-9:
+            continue
+        l1 = ((B[1] - C[1]) * (gx - C[0]) + (C[0] - B[0]) * (gz - C[1])) / d
+        l2 = ((C[1] - A[1]) * (gx - C[0]) + (A[0] - C[0]) * (gz - C[1])) / d
+        l3 = 1 - l1 - l2
+        inside = (l1 >= -1e-6) & (l2 >= -1e-6) & (l3 >= -1e-6) & (np.hypot(gx, gz) >= NEAR_WATER_FROM)
+        if not inside.any():
+            continue
+        u = l1[inside] * UV[a, 0] + l2[inside] * UV[b, 0] + l3[inside] * UV[cc, 0]
+        v = l1[inside] * UV[a, 1] + l2[inside] * UV[b, 1] + l3[inside] * UV[cc, 1]
+        jj, ii = np.nonzero(inside)
+        grid[j0 + jj, i0 + ii] = wtex[np.clip((v * h).astype(int), 0, h - 1), np.clip((u * w).astype(int), 0, w - 1)]
+    tf = from_origin(-half, -half, st, -st)   # row j is z = -half + j * st, column i is x = -half + i * st
+    polys = [shape(g) for g, v in features.shapes(grid, mask=grid > 0, transform=tf) if v == 1]
+    if not polys:
+        return None
+    sheet = unary_union(polys).simplify(st * 0.7).intersection(
+        box(-half, -half, half, half).difference(Point(0, 0).buffer(NEAR_WATER_FROM, 256)))
+    Vs, F, n0 = [], [], 0
+    for pg in getattr(sheet, "geoms", [sheet]):
+        if pg.geom_type != "Polygon" or pg.area < 20.0:
+            continue
+        rings = [np.array(pg.exterior.coords)[:-1]] + [np.array(q.coords)[:-1] for q in pg.interiors]
+        pts = np.concatenate(rings)
+        t = earcut.triangulate_float64(pts, np.cumsum([len(q) for q in rings]).astype(np.uint32)).reshape(-1, 3)
+        F.append(t + n0)
+        Vs.append(pts)
+        n0 += len(pts)
+    if not Vs:
+        return None
+    Q = np.concatenate(Vs)
+    F = np.concatenate(F)
+    pos = np.c_[Q[:, 0], water_y + NEAR_WATER_LIFT - drop(Q[:, 0], Q[:, 1]), Q[:, 1]].astype(np.float32)
+    print("near water sheet", round(sheet.area), "m2 in", len(F), "triangles, colour (linear)", colour.round(4))
+    return {"name": "water_near", "pos": pos, "nrm": np.tile([0.0, 1.0, 0.0], (len(pos), 1)).astype(np.float32),
+            "col": np.tile(np.r_[colour, 1.0], (len(pos), 1)).astype(np.float32),
+            "idx": F.ravel().astype(np.uint32), "material": "water_near"}
+
 
 def write_glb(path, surfaces, images):
     J = {"asset": {"version": "2.0", "generator": "tools/grounds/backdrop/horizon/horizon.py"},
@@ -681,19 +1139,24 @@ def build(slug, backdrop=None):
     G = reland.Glb(part1)
     wp = next(p for p in G.prims if p[0].startswith(reland.WATER))
     water_y = float(np.median(G.read(wp[1])[:, 1]))
-    near, mid, far = S2(slug, "near"), S2(slug, "mid"), S2(slug, "far")
-    gain = seam_gain(G, frame, near)
-    land, land_rep = land_mesh(slug, frame, H, water_y, gain, near, mid, far)
+    if not os.path.exists(work(slug, "overture_water.json")):
+        fetch_water(slug)
+    near, mid, far = S2(slug, "near", frame), S2(slug, "mid", frame), S2(slug, "far", frame)
+    gain, water = seam_gain(G, frame, near)
+    land, land_rep = land_mesh(slug, frame, H, water_y, gain, near, mid, far, water)
     city_s, city_rep = city(slug, frame, H, gain, near)
-    surfaces = land + [city_s]
-    images = {"near": texture_png(near, gain), "mid": texture_png(mid, gain)}
+    trees = canopy(slug, frame, H, com_parts(slug, frame, lambda g: [_local_poly(frame, gg) for gg in getattr(g, "geoms", [g])]))
+    sheet = near_water(G, water_y)
+    surfaces = land + [city_s] + ([trees] if trees is not None else []) + ([sheet] if sheet is not None else [])
+    images = {"near": texture_png(near, gain, water), "mid": texture_png(mid, gain, water)}
     out = os.path.join(ROOT, "assets", "grounds", slug, slug + "_horizon.glb")
     size = write_glb(out, surfaces, images)
     tris = {s["name"]: int(len(s["idx"]) // 3) for s in surfaces}
     rep = {"ground": slug, "file": os.path.relpath(out, ROOT), "bytes": size, "triangles": tris,
            "triangles_total": int(sum(tris.values())), "vertices_total": int(sum(len(s["pos"]) for s in surfaces)),
            "draw_calls": len(surfaces) * WEDGES, "draw_calls_note": "each surface cut into WEDGES; a camera faces about a third", "textures": {k: "1024 x 1024" for k in images}, "water_y": round(water_y, 2),
-           "seam_gain": gain.round(4).tolist(), "land": land_rep, "city": city_rep}
+           "seam_gain": gain.round(4).tolist(),
+           "water_colour_linear": None if water is None else water.round(4).tolist(), "land": land_rep, "city": city_rep}
     json.dump(rep, open(work(slug, "horizon_report.json"), "w"), indent=1)
     print(json.dumps(rep, indent=1))
 

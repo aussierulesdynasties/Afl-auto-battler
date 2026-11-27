@@ -92,3 +92,10 @@ Whitten, Windy Hill, Moorabbin, Hands, North Hobart, Bruce, Summit, Sky, Macquar
   historical imagery, 2000-2013): read or compared by eye in Google Earth; only heights, outlines and
   verdicts are kept, no imagery is shipped.
 - The land: see "The land round every ground" above.
+
+## Player movement
+
+- Walking, walking and running backwards, and side-stepping (the slow gaits): "The 100STYLE Dataset - Ian Mason"
+  (Ian Mason, Sebastian Starke, Taku Komura), Creative Commons Attribution 4.0,
+  https://www.ianxmason.com/100style/ . Retargeted onto our footballer (tools/oval3d/gaits/retarget_bvh.py);
+  the capture files are not shipped.
