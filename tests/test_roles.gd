@@ -227,10 +227,11 @@ func _test_engine_rewards_wings() -> void:
 			"Midfield contest is the three centre-square midfielders")
 
 
-## The match keeps each man's out-of-position cut the first time it asks
-## (MatchSim._spot_cuts, by id and line): after a full match every kept cut is
-## still what Rating.line_cut gives, and a copy of a man picked to another line
-## reads his cut at that line, not the line kept first.
+## The match keeps each man's attributes the first time it asks
+## (MatchSim._engine_cache, his out-of-position cut included, _a_fresh): after
+## a full match every kept number is still what _a_fresh gives, and a copy of a
+## man picked to another line reads his attributes with that line's cut, not
+## the line kept first.
 func _test_engine_kept_per_match() -> void:
 	var home := Squad.new("SYD", GameDB.club_list("SYD"), true, "SYD")
 	var away := Squad.new("COL", GameDB.club_list("COL"), false, "COL")
@@ -238,32 +239,33 @@ func _test_engine_kept_per_match() -> void:
 	sim.run()
 	var men: Array = home.ground + home.bench + away.ground + away.bench
 	_check(men.size() >= 44, "Both sides field their 22 (%d)" % men.size())
-	var by_id := {}
-	for p in men:
-		by_id[str(p["id"])] = p
 	var kept := 0
 	var wrong := 0
-	for k in sim._spot_cuts:
-		var parts := str(k).split("|")
-		if not by_id.has(parts[0]):
-			continue
-		kept += 1
-		if float(sim._spot_cuts[k]) != Rating.line_cut(by_id[parts[0]], parts[1]):
-			wrong += 1
-	_check(kept > 20 and wrong == 0,
-			"Every kept cut is Rating.line_cut's (%d kept, %d wrong)" % [kept, wrong])
-	# The same man picked to another line in a fresh match reads that line's cut.
+	for p in men:
+		var mine: Dictionary = sim._engine_cache.get(str(p["id"]), {})
+		var row: Dictionary = mine.get(p.get("role"), {})
+		for key in row:
+			kept += 1
+			if float(row[key]) != sim._a_fresh(p, key):
+				wrong += 1
+	_check(kept > 200 and wrong == 0,
+			"Every kept attribute is _a_fresh's (%d kept, %d wrong)" % [kept, wrong])
+	# The same man picked to two other lines in a fresh match.
 	var fresh := MatchSim.new(Squad.new("SYD", GameDB.club_list("SYD"), true, "SYD"),
 			Squad.new("COL", GameDB.club_list("COL"), false, "COL"), 7)
 	var man: Dictionary = (home.ground[0] as Dictionary).duplicate()
-	man["role"] = "DEF"
 	var other := man.duplicate()
+	man["role"] = "DEF"
 	other["role"] = "RUCK"
-	for key in Attributes.CUT_BY_POSITION:
-		_check(is_equal_approx(fresh._skill(man, key), Attributes.value(man.get("attr", {}), key) * (1.0 - Rating.line_cut(man, "DEF")))
-				and is_equal_approx(fresh._skill(other, key), Attributes.value(other.get("attr", {}), key) * (1.0 - Rating.line_cut(other, "RUCK"))),
-				"Each line's copy reads %s at its own line" % key)
-		break
+	var keys: Array = Attributes.CUT_BY_POSITION.keys()
+	_check(not keys.is_empty(), "Some attributes take the out-of-position cut (%d)" % keys.size())
+	var differs := false
+	for key in keys:
+		_check(fresh._a(man, key) == fresh._a_fresh(man, key) * fresh.fit(man)
+				and fresh._a(other, key) == fresh._a_fresh(other, key) * fresh.fit(other),
+				"Each line's copy reads %s with its own line's cut" % key)
+		differs = differs or fresh._a_fresh(man, key) != fresh._a_fresh(other, key)
+	_check(differs, "The two lines' cuts differ for at least one of those attributes")
 
 
 func _test_tagger() -> void:

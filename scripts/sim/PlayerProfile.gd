@@ -23,7 +23,6 @@ const ATTR_LABELS := Attributes.PROSE_LABELS
 const SCALE_KEYS := ["disposal"]
 
 static var _sorted := {}          # "ROLE|attr" -> sorted values of the loaded league
-static var _sorted_of := -1       # the GameDB load (GameDB.reloads) _sorted was built from
 static var _db: Node = null       # GameDB, looked up once on the main thread
 
 
@@ -34,21 +33,14 @@ static var _db: Node = null       # GameDB, looked up once on the main thread
 ## 2026 one in one session ranked the 2026 players against 2010 players.
 static func _values(role: String, key: String) -> Array:
 	var k := role + "|" + key
-	var main := OS.get_thread_caller_id() == OS.get_main_thread_id()
-	# Only the main thread swaps the cache, for a new one (never clears the old
-	# in place): a match still on a worker keeps reading the dictionary it has.
-	if main and _sorted_of != int(_game_db().reloads):
-		_sorted = {}
-		_sorted_of = int(_game_db().reloads)
-	var cache: Dictionary = _sorted
-	if cache.has(k):
-		return cache[k]
-	var vals := _scale(role, key)
-	# Off the main thread (a match on a worker) it is only read: warm()
-	# fills it first, and anything missed is worked out, not stored.
-	if main:
-		cache[k] = vals
-	return vals
+	if not _sorted.has(k):
+		var vals := _scale(role, key)
+		# Off the main thread (a match on a worker) it is only read: warm()
+		# fills it first, and anything missed is worked out, not stored.
+		if OS.get_thread_caller_id() != OS.get_main_thread_id():
+			return vals
+		_sorted[k] = vals
+	return _sorted[k]
 
 
 static func _scale(role: String, key: String) -> Array:
@@ -71,7 +63,6 @@ static func _scale(role: String, key: String) -> Array:
 ## been graded yet, so the scales stay to be filled as they are asked for.
 static func forget_cache() -> void:
 	if _sorted.is_empty():
-		_sorted_of = int(_game_db().reloads)
 		return
 	var fresh := {}
 	var keys := _keys()
@@ -97,7 +88,6 @@ static func forget_cache() -> void:
 			var cut := str(k).rfind("|")
 			fresh[k] = _scale(str(k).left(cut), str(k).substr(cut + 1))
 	_sorted = fresh
-	_sorted_of = int(_game_db().reloads)
 
 
 static func _keys() -> Array:
@@ -116,7 +106,7 @@ static func warm() -> void:
 	var roles := {}
 	for p in _game_db().players:
 		roles[str(p.get("role", ""))] = true
-	if _sorted_of == int(_game_db().reloads) and _sorted.size() > roles.size() * _keys().size():
+	if _sorted.size() > roles.size() * _keys().size():
 		return
 	for role in roles:
 		for key in _keys():

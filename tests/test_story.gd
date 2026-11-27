@@ -3338,17 +3338,31 @@ func _test_trial_rating_and_old_cards() -> void:
 ## first week. {} if the test list has nobody.
 func _dev_learner() -> Dictionary:
 	var side := GameState.current_side()
-	for q in GameState.my_list:
-		if _line_in(side, str(q["id"])) in ["", "BENCH"] or int(q.get("injury_weeks", 0)) > 0:
-			continue
-		var jobs := GameState.learnable_jobs(q)
-		if jobs.is_empty():
-			continue
-		GameState.set_player_plan(str(q["id"]), GameState.LEARN_PREFIX + str(jobs[0]))
-		if GameState.project_job(q) == "":
-			continue
-		(q["project"] as Dictionary)["weeks"] = 1
-		return q
+	# As the list stands first; then, if nobody in the side clears it, one
+	# player's POT is lifted to what one more position needs (the attribute
+	# ratings can leave a side with nobody over that bar). These tests read
+	# the talk, not the bar.
+	for lift in [false, true]:
+		for q in GameState.my_list:
+			if _line_in(side, str(q["id"])) in ["", "BENCH"] or int(q.get("injury_weeks", 0)) > 0:
+				continue
+			var was: Variant = q.get("potential")
+			var need: int = GameState.learn_pot_needed(q)
+			if lift and need >= 0:
+				q["potential"] = maxi(int(q.get("potential", 0)), need)
+			var jobs := GameState.learnable_jobs(q)
+			if jobs.is_empty():
+				if lift:
+					if was == null:
+						q.erase("potential")
+					else:
+						q["potential"] = was
+				continue
+			GameState.set_player_plan(str(q["id"]), GameState.LEARN_PREFIX + str(jobs[0]))
+			if GameState.project_job(q) == "":
+				continue
+			(q["project"] as Dictionary)["weeks"] = 1
+			return q
 	return {}
 
 
@@ -3361,12 +3375,24 @@ func _news_has(text: String) -> bool:
 
 ## The verdict now, learned or not (his own rating set either side of his
 ## rating there for the judgement, then put back).
+## Both ratings are read from the same attributes, so setting his OVR moves his
+## rating there too: it is set again until the verdict is the one asked for.
 func _judge(p: Dictionary, learned: bool) -> void:
-	var own := int(Ovr.of(p))
-	var there := GameState.rating_as(p, GameState.project_role(p))
-	Ovr.to(p, there if learned else there + GameState.PROJECT_PASS + 5)
+	var a: Dictionary = p["attr"]
+	var was := a.duplicate()
+	var role := GameState.project_role(p)
+	for _i in 12:
+		var own := int(Ovr.of(p))
+		var there := GameState.rating_as(p, role)
+		if (there >= own - GameState.PROJECT_PASS) == learned:
+			break
+		Ovr.to(p, there if learned else there + GameState.PROJECT_PASS + 5)
 	GameState._finish_project(p, true, "Round 6")
-	Ovr.to(p, own)
+	for k in a.keys():
+		if not was.has(k):
+			a.erase(k)
+	for k in was:
+		a[k] = was[k]
 
 
 func _dev_talk_fact(id: String) -> Array:

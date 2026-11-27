@@ -290,6 +290,12 @@ var _asked := {}             # one-off moment keys already offered
 ## on the bench) or "keep" (the rotations leave him out there).
 var _held := {}
 var _traits := {}            # player id -> Traits.of(), cached
+## His attribute before his legs (_skill) by player id, then his line on the
+## day, then attribute. It reads only his attributes and his AFL position (his line's when he has none of
+## record), and none of them change during a match; the line is in the key
+## because the same man can come in as a copy picked to another line
+## (Ratings._for_slot). So every result is as it was, only sooner.
+var _engine_cache := {}
 var synergies := [[], []]    # side -> active synergy keys (the starting 18)
 ## Team form (-1..1) from each club's recent results (Season.club_form), set
 ## from Squad.form. It touches two narrow things: composure (a side in form
@@ -5896,7 +5902,7 @@ func _trait(p: Dictionary, key: String) -> bool:
 ## the director's share for the spot (Rating.line_cut, RATING_REBUILD §2).
 ## Physical and Mental attributes are never cut.
 func _a(p: Dictionary, key: String) -> float:
-	return _a_fresh(p, key) * fit(p)
+	return _skill(p, key) * fit(p)
 
 
 ## His side of a one-on-one contest in the air: the contest attribute
@@ -5906,11 +5912,26 @@ func _contest_of(p: Dictionary, key: String) -> float:
 	return (1.0 - Attributes.STRENGTH_SHARE) * _a(p, key) + Attributes.STRENGTH_SHARE * _a(p, "strength")
 
 
-## His attribute before his legs on the day (fit): _a_fresh. A pick that reads
-## several of his ratings multiplies each by one fit(p), the same number _a
-## would ask for every time (bug bash M-10).
+## His attribute before his legs on the day (fit), out-of-position cut included
+## (_a_fresh), kept the first time a match asks. A pick that reads several of his
+## attributes multiplies each by one fit(p), the same number _a would ask for
+## every time (bug bash M-10).
 func _skill(p: Dictionary, key: String) -> float:
-	return _a_fresh(p, key)
+	var id: String = p["id"]
+	var mine = _engine_cache.get(id)
+	if mine == null:
+		mine = {}
+		_engine_cache[id] = mine
+	var role = p.get("role")
+	var row = mine.get(role)
+	if row == null:
+		row = {}
+		mine[role] = row
+	var v = row.get(key)
+	if v == null:
+		v = _a_fresh(p, key)
+		row[key] = v
+	return v
 
 
 ## His attribute in this spot on fresh legs: the out-of-position cut only
@@ -5973,7 +5994,8 @@ func _rebound_exit(side: int, carrier, from_atk: float, to_atk: float, how: Stri
 ## His use of the ball as he is playing right now: the kick-in taker's and
 ## the back-zone carrier's rating (BALL_USE).
 func _ball_use(p: Dictionary) -> float:
-	return BALL_USE_CARRY * _a(p, "work_rate") + BALL_USE_DISPOSAL * _a(p, "kicking")
+	var f := fit(p)
+	return BALL_USE_CARRY * (_skill(p, "work_rate") * f) + BALL_USE_DISPOSAL * (_skill(p, "kicking") * f)
 
 
 ## Mean fit of the on-ground midfielders and rucks: who wins the stoppages.
