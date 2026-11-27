@@ -69,7 +69,10 @@ const TEAM_BOOKKEEPING_PREFIXES := ["d50_end_"]
 ## three rounds, no score), and a boundary free records "intent" (false in every
 ## 2026 game). Linux from that PR's CI (run 45795434727, shard 12), Windows from a
 ## local run (main's Windows value had gone stale before it: ea5669a7 at its base).
-const GOLDEN_SEASON := {"Windows": "c70415d1b8837cb49a71c0f2216d39c4", "Linux": "549fec85d78c16db1f9c69919313589e"}
+## #2211 (load times, a faster match engine) and #2230 (tail check) were tested
+## before #2210 set the value above and merged after it, and main's season moved. Linux from a local run of main at c6bbd900c (the local value at
+## #2210's merge matched its CI value); Windows not re-measured.
+const GOLDEN_SEASON := {"Windows": "c70415d1b8837cb49a71c0f2216d39c4", "Linux": "fda0810ba0fbe165310a5af83c3aed1f"}
 
 ## A small league standing in for a legacy set until the 1990 files ship:
 ## 42 real players re-dated to a 1989 data season, a 1990 first season, and
