@@ -117,11 +117,13 @@
 						"who": "side"
 					},
 					{
-						"op": "heavy_legs",
+						"op": "loss_sting",
+						"chance": 20,
+						"d": -4,
 						"who": "side"
 					}
 				],
-				"result": "It's on the noticeboard. Training is fierce."
+				"result": "It's on the noticeboard. The group has made it personal."
 			},
 			{
 				"key": "calm",

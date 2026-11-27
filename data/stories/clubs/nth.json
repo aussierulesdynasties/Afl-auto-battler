@@ -9,8 +9,8 @@
 		"text": ["The past players are holding their annual lunch in the Arden Street rooms, and they want the whole senior list there. They want this group to hear what the jumper meant when the club had nothing."],
 		"choices": [
 			{"key": "all", "label": "Send the whole list",
-			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "The old Shinboners told them what the jumper meant"}, {"op": "morale", "d": 4, "who": "all"}, {"op": "heavy_legs", "who": "side"}],
-			 "result": "The stories go long into the afternoon. A long day on their feet midweek."},
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "The old Shinboners told them what the jumper meant"}, {"op": "morale", "d": 4, "who": "all"}, {"op": "forgo_xp", "d": 3, "who": "all"}],
+			 "result": "The stories go long into the afternoon. Training is cut short."},
 			{"key": "leaders", "label": "Send the leaders only",
 			 "effects": [{"op": "xp", "d": 3, "who": "side"}, {"op": "board", "d": -2, "was": "members"}, {"op": "morale", "d": -1, "who": "all"}],
 			 "result": "Training runs as planned. The old boys notice the empty chairs."}
@@ -201,8 +201,8 @@
 		"text": ["The old-timers still talk about the grand finals against Hawthorn as if they were last week. A past player has gone on radio to say this generation doesn't know what Hawthorn means."],
 		"choices": [
 			{"key": "stories", "label": "Bring the old boys in to tell the stories",
-			 "effects": [{"op": "morale", "d": 4, "who": "side"}, {"op": "heavy_legs", "who": "side"}],
-			 "result": "The side plays with history behind it. It's an emotional, draining week."},
+			 "effects": [{"op": "morale", "d": 4, "who": "side"}, {"op": "slow_start", "chance": 20, "who": "side", "on": "week"}],
+			 "result": "The side plays with history behind it. It's an emotional week."},
 			{"key": "past", "label": "Keep the past in the past",
 			 "effects": [{"op": "fresh", "who": "side"}, {"op": "board", "d": -2, "was": "members"}],
 			 "result": "A normal, fresh preparation. The past players feel brushed off."}
@@ -251,9 +251,9 @@
 		"title": ["The interstate supporters"],
 		"text": ["North supporters living interstate have formed their own group and asked for players at a members' night. It means a flight in the middle of the week."],
 		"choices": [
-			{"key": "fly", "label": "Fly three players over",
-			 "effects": [{"op": "board", "d": 3, "was": "members"}, {"op": "heavy_legs", "who": "side"}],
-			 "result": "The far-flung members feel looked after. The travellers come back tired."},
+			{"key": "fly", "label": "Fly three leaders over",
+			 "effects": [{"op": "board", "d": 3, "was": "members"}, {"op": "heavy_legs", "who": "leaders"}],
+			 "result": "The far-flung members feel looked after. The leaders come back tired."},
 			{"key": "video", "label": "Send a video message",
 			 "effects": [{"op": "fresh", "who": "side"}, {"op": "board", "d": -2, "was": "members"}],
 			 "result": "No disruption. It lands as a brush-off."}
@@ -340,7 +340,7 @@
 		"text": ["The members' forum turned ugly this week: years of high picks and still no finals. The board wants to hear a timeline."],
 		"choices": [
 			{"key": "promise", "label": "Promise finals next year",
-			 "effects": [{"op": "board", "d": 5}, {"op": "loss_sting", "chance": 25, "d": -5, "who": "side"}, {"op": "promise", "kind": "finals", "season": "next"}],
+			 "effects": [{"op": "board", "d": 5}, {"op": "promise", "kind": "finals", "season": "next"}],
 			 "result": "The room calms down. Every loss next year will be held up against the promise."},
 			{"key": "defend", "label": "Defend the rebuild",
 			 "effects": [{"op": "culture", "strand": "ambition", "d": 1, "why": "The coach backed the young list in public"}, {"op": "morale", "d": 3, "who": "all"}, {"op": "board", "d": -4}],

@@ -1243,6 +1243,8 @@ static func _effect_parts(e: Dictionary, facts: Dictionary) -> Array:
 			var short := 100 - HEAVY_LEGS_START
 			if who == "subject":
 				return [["cost", "Heavy legs on game day: he starts %d%% short of fresh. He is %d%% more likely to be injured." % [short, rise]]]
+			if who == "leaders":
+				return [["cost", "Heavy legs for the leadership group on game day: each leader starts %d%% short of fresh. Each is %d%% more likely to be injured." % [short, rise]]]
 			return [["cost", "Heavy legs across the %s on game day: each player starts %d%% short of fresh. Each is %d%% more likely to be injured." % [
 					"side" if who == "side" else "whole list", short, rise]]]
 		"expects_game":
@@ -1303,8 +1305,10 @@ static func _effect_parts(e: Dictionary, facts: Dictionary) -> Array:
 		"slow_start":
 			return [["cost", _slow_words(e)]]
 		"loss_sting":
-			return [["cost", "If we lose that final, about a %s chance our morale also falls %s." % [
-					_pct(int(e.get("chance", 0))), _pct(absi(int(e.get("d", 0))))]]]
+			# Outside the finals the sting is this week's game (GameState._settle_loss_sting).
+			var game := "that final" if int(facts.get("finals_week", 0)) > 0 else "this week's game"
+			return [["cost", "If we lose %s, about a %s chance our morale also falls %s." % [
+					game, _pct(int(e.get("chance", 0))), _pct(absi(int(e.get("d", 0))))]]]
 		"role_trial":
 			return [["gain", _trial_words(e)], ["cost", _trial_cost_words(e, facts)]]
 		# The development talk (T5.r93, GameState.dev_talk): games there if it takes.
@@ -1488,9 +1492,10 @@ static func _slow_words(e: Dictionary) -> String:
 	var legs := _pct(100 - roundi(ClubLife.SLOW_LEGS))
 	var chance := _pct(int(e.get("chance", 0)))
 	if who == "subject":
-		return "About a %s chance he starts %s slowly, %s short of fresh legs at the first bounce." % [chance, when, legs]
-	return "About a %s chance %s starts %s slowly, every one of them %s short of fresh legs at the first bounce." % [
-			chance, "the side" if who == "side" else "the whole list", when, legs]
+		return "About a %s chance he starts %s slowly: %s short of his best running at the first bounce, coming back as he gets a rest on the bench." % [chance, when, legs]
+	var group := {"side": "the side", "leaders": "the leadership group"}.get(who, "the whole list") as String
+	return "About a %s chance %s starts %s slowly: %s short of their best running at the first bounce, coming back as they rotate through the bench." % [
+			chance, group, when, legs]
 
 
 ## A culture strand's step: "Standards rises 1%."

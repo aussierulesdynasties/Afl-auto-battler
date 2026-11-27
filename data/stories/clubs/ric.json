@@ -167,8 +167,8 @@
 		"text": ["Carlton at the 'G, and a huge crowd expected. Both clubs' supporters treat it as more than four points, and the players know what a win in front of them means."],
 		"choices": [
 			{"key": "big", "label": "Make it a big week",
-			 "effects": [{"op": "morale", "d": 4, "who": "side"}, {"op": "odds", "chance": 30, "hit": [{"op": "heavy_legs", "who": "side"}], "hit_result": "The week runs hot. Legs are heavy by Saturday."}],
-			 "result": "The group lifts for the Blues."},
+			 "effects": [{"op": "morale", "d": 4, "who": "side"}, {"op": "slow_start", "chance": 15, "who": "side", "on": "week"}],
+			 "result": "The group lifts for the Blues. A few of them are too wound up."},
 			{"key": "normal", "label": "Treat it as just another game",
 			 "effects": [{"op": "fresh", "who": "side"}, {"op": "board", "d": -1, "was": "members"}],
 			 "result": "Fresh legs and clear heads. The supporters wanted fire."}
@@ -202,7 +202,7 @@
 		"text": ["The club's Indigenous youth leadership program has a camp at Punt Road this week, and it wants senior players as mentors for two nights."],
 		"choices": [
 			{"key": "leaders", "label": "Send the leadership group",
-			 "effects": [{"op": "culture", "strand": "together", "d": 2, "why": "The leaders mentored the next generation"}, {"op": "board", "d": 2}, {"op": "odds", "chance": 15, "hit": [{"op": "heavy_legs", "who": "side"}], "hit_result": "Two late nights, and the leaders are tired by game day."}],
+			 "effects": [{"op": "culture", "strand": "together", "d": 2, "why": "The leaders mentored the next generation"}, {"op": "board", "d": 2}, {"op": "odds", "chance": 15, "hit": [{"op": "heavy_legs", "who": "leaders"}], "hit_result": "Two late nights, and the leaders are tired by game day."}],
 			 "result": "The leaders spend two nights with the kids."},
 			{"key": "young", "label": "Send some of the younger players",
 			 "effects": [{"op": "morale", "d": 1, "who": "all"}, {"op": "board", "d": -1}],

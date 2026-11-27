@@ -117,9 +117,9 @@
 		"title": ["The fight for the west"],
 		"text": ["The Giants have stepped up junior clinics in Western Sydney. The community department wants three senior players out there for a day to show the kids the Swans are their club too."],
 		"choices": [
-			{"key": "seniors", "label": "Send three seniors",
-			 "effects": [{"op": "board", "d": 2, "was": "members"}, {"op": "culture", "strand": "together", "d": 1, "why": "The senior players went out west for the club"}, {"op": "forgo_xp", "d": 3, "who": "side"}, {"op": "odds", "chance": 10, "hit": [{"op": "heavy_legs", "who": "side"}], "miss": []}],
-			 "result": "The kids swarm the stars. The seniors come back tired."},
+			{"key": "seniors", "label": "Send three leaders",
+			 "effects": [{"op": "board", "d": 2, "was": "members"}, {"op": "culture", "strand": "together", "d": 1, "why": "The senior players went out west for the club"}, {"op": "forgo_xp", "d": 3, "who": "side"}, {"op": "odds", "chance": 10, "hit": [{"op": "heavy_legs", "who": "leaders"}], "miss": []}],
+			 "result": "The kids swarm the stars. The leaders come back tired."},
 			{"key": "rookies", "label": "Send the rookies",
 			 "effects": [{"op": "morale", "d": 1, "who": "all"}, {"op": "board", "d": -1, "was": "members"}],
 			 "result": "The rookies have a ball. Nobody out west knows who they are."}

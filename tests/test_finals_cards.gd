@@ -648,6 +648,14 @@ func _test_risks() -> void:
 		_check((after == 47) == expect_fall and (expect_fall or after == 55),
 				"Told the players, %s, the roll %s: morale %d (%s)" % ["lost" if lost else "won", "hit" if expect_fall else "didn't", after,
 				"net 47: it fell instead" if expect_fall else "stays 55"])
+	# Home and away (no finals tag): a loss stings too; a win or a draw spares it.
+	for ha in [[[60, 90], 47, "lost"], [[90, 60], 55, "won"], [[70, 70], 55, "drew"]]:
+		_finals_game(3033)
+		var hq: Dictionary = GameState.my_list[0]
+		hq["morale"] = 55
+		hq["loss_sting"] = [100, -8]
+		GameState._settle_loss_sting({"home": "GEE", "away": "ESS", "score": ha[0], "round": 5})
+		_check(ClubLife.morale(hq) == int(ha[1]), "Home and away, %s: morale %d, expected %d" % [ha[2], ClubLife.morale(hq), int(ha[1])])
 	# Rushed back: available, and at a sore player's risk; a concussion is refused.
 	_finals_game(3032)
 	var star: Dictionary = GameState.my_list[1]
