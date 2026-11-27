@@ -238,3 +238,6 @@ What has landed toward each open row of docs/TODO.md and docs/TODO_RULINGS.md, o
 - 202: Merged #2217: Legacy grounds: measurements for the 19 old grounds.
 - 202: Merged #2218: Bellerive round 7: one pass over the PC r6 defect list.
 - 202: Merged #2227: 3D match: in-match injuries on the ground (row 202 2e).
+- T8.87: Merged #2235: Audit scripts for T8.87, T8.88 and T8.50 (work in progress, no results yet).
+- T8.88: Merged #2235: Audit scripts for T8.87, T8.88 and T8.50 (work in progress, no results yet).
+- T8.50: Merged #2235: Audit scripts for T8.87, T8.88 and T8.50 (work in progress, no results yet).
