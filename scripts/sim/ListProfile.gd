@@ -18,10 +18,10 @@ const LABEL := {"contest": "Contest", "control": "Control", "running": "Running 
 const MEANS := {
 	"contest": "Winning it at the stoppages: your centre-square midfielders' contested ball and your ruck's tap work.",
 	"control": "Keeping the ball: disposal under pressure and discipline with it, right across the side.",
-	"running": "Carrying it forward: your runners' carry and their disposal on the move.",
+	"running": "Taking it forward on the run: your runners' work rate and their disposal on the move.",
 	"pressure": "Making them cough it up: your midfielders' and forwards' pressure.",
 	"aerial": "Winning it in the air: your best marks, at both ends.",
-	"finishing": "Turning entries into scores: your best forwards' goalkicking, accuracy and marking.",
+	"finishing": "Turning entries into scores: your best forwards' forward craft, goalkicking and contested marking.",
 }
 ## Where the words fall, as a share of the league from the top.
 ## Elite is the top three of eighteen (rank 2 is 0.111, rank 3 is 0.167; T8.Q2).

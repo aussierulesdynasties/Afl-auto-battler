@@ -118,7 +118,7 @@ func _aggregate() -> void:
 
 	var mids: Array = by_role["MID"]
 	# The centre square wins the ball at the stoppage; the wings do not
-	# (Roles). Every midfielder still counts for disposal and carry.
+	# (Roles). Every midfielder still counts for disposal and running.
 	var centre := []
 	for p in mids:
 		if not Roles.on_wing(p):

@@ -775,7 +775,15 @@ func _test_inspect(ui: Control) -> void:
 	ui.find_child("DetailAllRatings", true, false).emit_signal("pressed")
 	await _settle()
 	var attrs: Node = ui.find_child("DetailAttributes", true, false)
-	var readable := attrs != null and attrs.get_child_count() == (load("res://scripts/ui/PlayerSheet.gd").ATTR_ROWS as Array).size()
+	# Four groups, each a heading over its rows (RATING_REBUILD Phase 8).
+	var attr_rows := 0
+	var heads := 0
+	if attrs != null:
+		for g in attrs.find_children("AttrGrid_*", "GridContainer", false, false):
+			attr_rows += g.get_child_count()
+		heads = attrs.find_children("AttrGroup_*", "Label", false, false).size()
+	var readable := attrs != null and heads == 4 \
+			and attr_rows == (load("res://scripts/ui/PlayerSheet.gd").ATTR_ROWS as Array).size()
 	if attrs != null:
 		for l in attrs.find_children("*", "Label", true, false):
 			if (l as Label).size.y > 30.0 or (l as Label).size.x < 20.0:

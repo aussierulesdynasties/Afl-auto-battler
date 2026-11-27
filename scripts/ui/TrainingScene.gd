@@ -1990,9 +1990,8 @@ func _stat_row(p: Dictionary, key: String, label: String, useful := true) -> Con
 	var name := UiKit.ellipsis(label, UiKit.BODY, UiKit.TEXT, true)
 	name.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	h.add_child(name)
-	var unrecorded := (p.get("attr_unrecorded", []) as Array).has(key)
 	var value := UiKit.line(PlayerProfile.attr_text(p, key), UiKit.HEADING,
-			UiKit.MUTED if unrecorded else _attr_colour(float(cur)), true)
+			PlayerSheet.attr_colour(float(cur)), true)
 	value.custom_minimum_size.x = 32
 	value.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	h.add_child(value)
@@ -2001,7 +2000,7 @@ func _stat_row(p: Dictionary, key: String, label: String, useful := true) -> Con
 			12, UiKit.MUTED if useful else UiKit.BAD)
 	what.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(what)
-	v.add_child(_bar(0 if unrecorded else cur))
+	v.add_child(_bar(cur))
 	return card
 
 
@@ -2015,23 +2014,13 @@ func _bar(value: int) -> Control:
 	track.set_anchors_preset(Control.PRESET_FULL_RECT)
 	holder.add_child(track)
 	var fill := ColorRect.new()
-	fill.color = _attr_colour(float(value))
+	fill.color = PlayerSheet.attr_colour(float(value))
 	fill.set_anchors_preset(Control.PRESET_FULL_RECT)
 	fill.anchor_right = clampf(float(value) / 99.0, 0.0, 1.0)
 	holder.add_child(fill)
 	for bar_part in [track, fill]:
 		bar_part.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return holder
-
-
-func _attr_colour(v: float) -> Color:
-	if v >= 75.0:
-		return UiKit.GOOD
-	if v >= 55.0:
-		return UiKit.EMPH
-	if v >= 40.0:
-		return Color(0.80, 0.76, 0.55)
-	return UiKit.BAD
 
 
 func _ignore_mouse(node: Control) -> void:

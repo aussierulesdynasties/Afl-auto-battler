@@ -1605,9 +1605,11 @@ func _test_premiership_streamers() -> void:
 	fall.set_process(false)   # the test moves the clock
 	var want: Array = [kit.club_ink(premier), kit.club_ink_second(premier)]
 	var cols: Array = fall.get("colours")
+	# Whoever this seed's premier is: Collingwood's black and white both read
+	# white on the dark page, so two different inks are checked on a fixed club below.
 	_check(str(fall.get("club")) == premier and cols.size() == 2 and (cols[0] as Color).is_equal_approx(want[0])
-			and (cols[1] as Color).is_equal_approx(want[1]) and not (want[0] as Color).is_equal_approx(want[1]),
-			"The streamers are the premiers' two colours")
+			and (cols[1] as Color).is_equal_approx(want[1]),
+			"The streamers are the premiers' two colours (%s)" % premier)
 	_check(feel.moved.count("streamers") == 1, "They start once")
 	var done: Button = hub.find_child("FinalsDone", true, false)
 	var both := false
@@ -1665,6 +1667,15 @@ func _test_premiership_streamers() -> void:
 	await _settle()
 	_check(done_why == "" and hub.find_child("FinalsSheet", true, false) == null,
 			"Done closes the series under falling streamers (%s)" % done_why)
+	var box := Control.new()
+	root.add_child(box)
+	var two: Control = load("res://scripts/ui/PremiershipStreamers.gd").play_over(box, "GCS")
+	var gc: Array = two.get("colours") if two != null else []
+	_check(gc.size() == 2 and (gc[0] as Color).is_equal_approx(kit.club_ink("GCS"))
+			and (gc[1] as Color).is_equal_approx(kit.club_ink_second("GCS"))
+			and not (gc[0] as Color).is_equal_approx(gc[1]),
+			"A club with two inks gets streamers in both (Gold Coast)")
+	box.queue_free()
 	feel.test_motion = false
 	hub.queue_free()
 	await _settle()

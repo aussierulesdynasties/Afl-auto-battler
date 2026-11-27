@@ -299,32 +299,48 @@ static func profile_body(v: VBoxContainer, p: Dictionary, host: Control) -> Cont
 	if has_ratings:
 		v.add_child(UiKit.spacer(UiKit.Space.CLOSE))
 		v.add_child(UiKit.section("Ratings"))
-		var grid := GridContainer.new()
-		grid.name = "ProfileAttributes"
-		grid.columns = 1 if UiKit.view_width(host) < 520.0 else 2
-		grid.add_theme_constant_override("h_separation", UiKit.Space.LOOSE)
-		grid.add_theme_constant_override("v_separation", UiKit.Space.THIN)
-		v.add_child(grid)
-		var attr: Dictionary = p["attr"]
-		var unknown: Array = p.get("attr_unrecorded", [])
-		for r in ATTR_ROWS:
-			# Not recorded in his era: blank, never a stand-in number.
-			var val := -1.0 if unknown.has(r[0]) else float(attr.get(r[0], 0.0))
-			grid.add_child(attr_bar(str(r[0]), str(r[1]), val))
 		var lead := attr_bar("leadership", "Leadership", float(Leadership.of(p)))
 		lead.name = "ProfileLeadership"
-		grid.add_child(lead)
+		var groups := attr_groups(host, p["attr"], str(p.get("speed_src", "")) == "est", [lead])
+		groups.name = "ProfileAttributes"
+		v.add_child(groups)
 		v.add_child(UiKit.spacer(UiKit.Space.TIGHT))
 		var lead_note := UiKit.lbl(Leadership.basis_text(), UiKit.SMALL, UiKit.MUTED)
 		lead_note.name = "ProfileLeadershipNote"
 		lead_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(lead_note)
-		if not unknown.is_empty():
-			var blank_note := UiKit.lbl("A dash: not recorded in his era.", UiKit.SMALL, UiKit.MUTED)
-			blank_note.name = "ProfileUnrecordedNote"
-			blank_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-			v.add_child(blank_note)
 	return nickname_row
+
+
+## His attributes in their four groups (Attributes.GROUPS), each under its own
+## small heading: one column on a phone, two from 520 px. `speed_est` marks a
+## Speed judged from his game (no GPS or combine time, RATING_REBUILD §2);
+## `extra` rows (Leadership) close the last group. The profile sheet and the
+## draft detail share it, so every card reads the same.
+static func attr_groups(host: Control, attr: Dictionary, speed_est := false, extra: Array = []) -> VBoxContainer:
+	var box := UiKit.vbox(UiKit.Space.THIN)
+	for gi in Attributes.GROUPS.size():
+		var g: Array = Attributes.GROUPS[gi]
+		if gi > 0:
+			box.add_child(UiKit.spacer(UiKit.Space.TIGHT))
+		var head := UiKit.subhead(str(g[0]))
+		head.name = "AttrGroup_%d" % gi
+		box.add_child(head)
+		var grid := GridContainer.new()
+		grid.name = "AttrGrid_%d" % gi
+		grid.columns = 1 if UiKit.view_width(host) < 520.0 else 2
+		grid.add_theme_constant_override("h_separation", UiKit.Space.LOOSE)
+		grid.add_theme_constant_override("v_separation", UiKit.Space.THIN)
+		box.add_child(grid)
+		for key in g[1]:
+			var label := Attributes.label(str(key))
+			if key == "speed" and speed_est:
+				label = "Speed (est.)"
+			grid.add_child(attr_bar(str(key), label, float(attr.get(key, 0.0))))
+		if gi == Attributes.GROUPS.size() - 1:
+			for row in extra:
+				grid.add_child(row)
+	return box
 
 
 ## Top attributes and the Needs work line: his
@@ -501,26 +517,31 @@ static func attr_bar(key: String, label: String, value: float) -> Control:
 	holder.add_child(bar)
 	var fill := ColorRect.new()
 	fill.position = Vector2.ZERO
-	fill.size = Vector2(70.0 * clampf(value / 99.0, 0.0, 1.0), 7)   # 0 when unrecorded (-1)
+	fill.size = Vector2(70.0 * clampf(value / 99.0, 0.0, 1.0), 7)
 	fill.color = attr_colour(value)
 	holder.add_child(fill)
 	for bar_part in [bar, fill]:
 		bar_part.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	h.add_child(holder)
-	var n := UiKit.lbl("—" if value < 0.0 else str(int(round(value))), UiKit.SMALL,
-			UiKit.MUTED if value < 0.0 else UiKit.TEXT)
+	var n := UiKit.lbl(str(int(round(value))), UiKit.SMALL, UiKit.TEXT)
 	n.custom_minimum_size = Vector2(26, 0)
 	n.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	h.add_child(n)
 	return h
 
 
+## Where a rating's colour changes, every card and the training rows alike:
+## green from 85 (mid-80s reads as elite), white from 52, khaki from 33, red
+## below (director 2026-11-27, option D).
+const COLOUR_CUTS := [85.0, 52.0, 33.0]
+
+
 static func attr_colour(v: float) -> Color:
-	if v >= 75.0:
+	if v >= float(COLOUR_CUTS[0]):
 		return UiKit.GOOD
-	if v >= 55.0:
+	if v >= float(COLOUR_CUTS[1]):
 		return UiKit.EMPH
-	if v >= 40.0:
+	if v >= float(COLOUR_CUTS[2]):
 		return Color(0.80, 0.76, 0.55)
 	return UiKit.BAD
 
