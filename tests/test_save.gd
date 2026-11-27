@@ -1383,6 +1383,27 @@ func _test_save_costs() -> void:
 		s0 = GameState.saves_written
 		_check(GameState.finish_intake_draft() and GameState.saves_written - s0 == 1,
 				"Finishing the draft rolls into the new season with one save (%d saves)" % (GameState.saves_written - s0))
+	# The opening National Draft (a real-lists career) starts the first season
+	# with one save too.
+	GameState.replay_seed = SUITE_SEED
+	GameState.reset()
+	GameState.begin_real_lists()
+	GameState.choose_real_club("GEE")
+	GameState.close_first_offseason()
+	var opening: Draft = GameState.draft
+	var guard := 0
+	while opening != null and not opening.is_finished() and guard < 400:
+		guard += 1
+		if opening.is_user_turn():
+			var board: Array = opening.board("", "", "", "overall", true)
+			if board.is_empty() or not opening.pick(board[0]):
+				break
+		else:
+			opening.auto_until_user_turn()
+	s0 = GameState.saves_written
+	_check(opening != null and opening.is_finished() and GameState.finish_intake_draft()
+			and GameState.season_year == GameDB.START_YEAR and GameState.saves_written - s0 == 1,
+			"Finishing the opening draft starts the first season with one save (%d saves)" % (GameState.saves_written - s0))
 	GameState.autosave_enabled = false
 	GameState.delete_saved_career()
 
