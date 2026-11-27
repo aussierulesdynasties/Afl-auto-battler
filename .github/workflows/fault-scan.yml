@@ -51,7 +51,16 @@ jobs:
         run: |
           list="$WANT"
           [ -n "$list" ] || list=$(grep -v '^#' tools/fault_scan/grounds.txt | tr '\n' ' ')
-          json=$(python3 -c "import json,sys,re; g=[x for x in sys.argv[1].split() if re.fullmatch(r'[a-z0-9_]+', x)]; print(json.dumps(g))" "$list")
+          # "mcg/2" films the ground in 2 halves on 2 runners (fault-scan-mcg-1of2, fault-scan-mcg-2of2).
+          json=$(python3 -c "
+          import json, sys, re
+          out = []
+          for x in sys.argv[1].split():
+              m = re.fullmatch(r'([a-z0-9_]+)(?:/([1-9]))?', x)
+              if m:
+                  n = int(m.group(2) or 1)
+                  out += [{'slug': m.group(1), 'part': i, 'parts': n} for i in range(1, n + 1)]
+          print(json.dumps(out))" "$list")
           echo "grounds=$json" >> "$GITHUB_OUTPUT"
           echo "Grounds: $json"
 
@@ -65,7 +74,9 @@ jobs:
       matrix:
         ground: ${{ fromJSON(needs.plan.outputs.grounds) }}
     env:
-      SLUG: ${{ matrix.ground }}
+      SLUG: ${{ matrix.ground.slug }}
+      PART: ${{ matrix.ground.part }}
+      PARTS: ${{ matrix.ground.parts }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -136,14 +147,20 @@ jobs:
           mkdir -p out
           timeout 3000 python3 tools/fault_scan/analyse.py dump out
           wc -l out/views.txt
+          if [ "$PARTS" -gt 1 ]; then
+            awk -v p="$PART" -v n="$PARTS" '(NR - 1) % n == p - 1' out/views.txt > out/v && mv out/v out/views.txt
+            echo "part $PART of $PARTS: $(wc -l < out/views.txt) views"
+          fi
 
       - name: Film
         run: |
           icd=$(ls /usr/share/vulkan/icd.d/lvp_icd*.json | head -1)
           VK_ICD_FILENAMES="$icd" xvfb-run -a -s "-screen 0 1280x720x24" \
             timeout 6000 "$HOME/godot/godot" --path . --rendering-method mobile \
-            --script tools/fault_scan/scan.gd -- render "$SLUG" "$PWD/out/views.txt" "$PWD/shots" 1280 720 2>&1 \
-            | grep -E "FAULTSCAN|SCRIPT ERROR|TIMEOUT" || true
+            --script tools/fault_scan/scan.gd -- render "$SLUG" "$PWD/out/views.txt" "$PWD/shots" 1280 720 \
+            > film.log 2>&1 || echo "film stopped: exit $?"
+          grep -E "FAULTSCAN|SCRIPT ERROR|TIMEOUT" film.log || true
+          echo "$(ls shots 2>/dev/null | wc -l) shots; last lines of the log:"; tail -15 film.log
 
       - name: Report
         if: always()
@@ -152,6 +169,7 @@ jobs:
           python3 tools/fault_scan/report.py out shots report || true
           cp out/findings.json report/ 2>/dev/null || true
           cp out/views.txt report/ 2>/dev/null || true
+          tail -200 film.log > report/film_log.txt 2>/dev/null || true
           python3 - <<'EOF' >> "$GITHUB_STEP_SUMMARY" || true
           import json, collections
           f = json.load(open("out/findings.json"))
@@ -164,7 +182,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: fault-scan-${{ matrix.ground }}
+          name: fault-scan-${{ matrix.ground.slug }}${{ matrix.ground.parts > 1 && format('-{0}of{1}', matrix.ground.part, matrix.ground.parts) || '' }}
           path: report/
           if-no-files-found: warn
           retention-days: 14

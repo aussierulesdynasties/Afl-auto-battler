@@ -1,2 +1,3 @@
-# Grounds the fault scan runs on a push (one folder name per line). Marvel rescan on round 14.
-marvel
+# Grounds the fault scan runs on a push (one folder name per line; "mcg/2" films it in 2 halves).
+# MCG rescan in halves: the whole ground made no shots in 100 min on 27 Nov.
+mcg/2

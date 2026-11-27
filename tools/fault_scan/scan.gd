@@ -296,6 +296,8 @@ func _render(views: String, out: String) -> void:
 	var lines := f.get_as_text().split("\n", false)
 	var n := 0
 	var far := camera.far
+	var t0 := Time.get_ticks_msec()
+	print("FAULTSCAN filming %d lines" % lines.size())
 	for line in lines:
 		var w := line.strip_edges().split(" ", false)
 		if w.size() < 7 or w[0].begins_with("#"):
@@ -317,6 +319,6 @@ func _render(views: String, out: String) -> void:
 		await RenderingServer.frame_post_draw
 		root.get_viewport().get_texture().get_image().save_png(out.path_join("%s.png" % w[0]))
 		n += 1
-		if n % 20 == 0:
-			print("FAULTSCAN rendered %d views" % n)
+		if n <= 3 or n % 10 == 0:
+			print("FAULTSCAN rendered %d views in %.0f s" % [n, (Time.get_ticks_msec() - t0) / 1000.0])
 	print("FAULTSCAN rendered %d views" % n)
