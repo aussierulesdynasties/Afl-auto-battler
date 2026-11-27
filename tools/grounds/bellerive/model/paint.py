@@ -88,7 +88,8 @@ t = T(6.0, 4.0, (44, 56, 70), n=3, bl=(1.5, 6))
 for u in np.arange(0, 6, 1.5): t.vl(u, 0.07, col=(120, 130, 140))
 t.hl(2.0, 0.05, (100, 110, 120)); t.save('backwall')
 # ---- white roof deck: ribbed metal sheet, ribs every 0.19 m, sheet laps every 8 m, grime toward the gutter
-t = T(8.0, 8.0, (226, 228, 226), n=2.5, bl=(2.5, 7))
+# PC check r6: the south roof rendered 212 where GE is 236, so the sheet is lifted by that ratio (226 -> 248)
+t = T(8.0, 8.0, (248, 250, 248), n=2.5, bl=(2.5, 7))
 for u in np.arange(0, 8, 0.19): t.vl(u, 0.035, mul=0.86)
 t.hl(0.04, 0.08, mul=0.8); t.vl(0.03, 0.06, mul=0.78); t.streaks(10, 0, 8, mul=0.9, wid=(0.2, 0.6)); t.grime_bottom(1.5, 0.86)
 t.save('roof_white')
@@ -108,11 +109,15 @@ t.save('fac_boon')
 # ---- Members / north building (GE i330, x330): two glazed levels, white slab edges, tinted glass, mullions 1.5 m.
 # The glass reads slate grey-blue from the field (GE in_S median 37,63,85). On the PC 40,52,62 rendered navy at
 # half that and 66,86,98 at 26,48,79 (r5); scaled by GE over r5 channel by channel (the sky adds the blue)
-t = T(6.0, 11.0, (94, 113, 106), n=3, bl=(1.5, 6))
-for z0, z1 in ((0.0, 4.6), (5.6, 10.2)):
-    t.a[t.Y(z1):t.Y(z0)] *= np.linspace(1.25, 0.85, t.Y(z0) - t.Y(z1))[:, None, None]
-    for u in np.arange(0, 6, 1.5): t.vl(u, 0.08, z0, z1, (150, 158, 164))
-t.rect(0, 6, 4.6, 5.6, (214, 216, 214)); t.hl(5.0, 0.04, mul=0.8); t.rect(0, 6, 10.2, 11.0, (206, 208, 206))
+# PC check r6: that face rendered 38,61,83 where GE in_E reads 61,95,120 and showed pixel grain, the 0.08 m mullions
+# aliasing; the glass is lifted channel by channel by GE over r6, the mullions 0.14 m with a transom per level, the
+# grey concrete slab bands 1.2 m deep as GE shows them, and less noise
+t = T(6.0, 11.0, (140, 166, 150), n=1.5, bl=(1.5, 6))
+for z0, z1 in ((0.0, 4.4), (5.6, 10.0)):
+    t.a[t.Y(z1):t.Y(z0)] *= np.linspace(1.2, 0.88, t.Y(z0) - t.Y(z1))[:, None, None]
+    for u in np.arange(0, 6, 1.5): t.vl(u, 0.14, z0, z1, (170, 176, 180))
+    t.hl(z0 + 2.6, 0.1, (170, 176, 180))
+t.rect(0, 6, 4.4, 5.6, (196, 198, 196)); t.hl(5.0, 0.04, mul=0.85); t.rect(0, 6, 10.0, 11.0, (196, 198, 196))
 t.hl(1.05, 0.06, (190, 196, 198)); t.save('glass_members')
 # white rendered outer wall with small square windows in two rows (x330)
 t = T(8.0, 17.0, (222, 222, 216), n=3, bl=(2, 7))
@@ -128,7 +133,9 @@ t = T(3.0, 2.5, (150, 156, 160), n=3, bl=(1, 6))
 for z in np.arange(0.2, 2.3, 0.12): t.hl(z, 0.035, mul=0.75)
 t.vl(1.5, 0.05, mul=0.7); t.rect(0, 3, 2.35, 2.5, (176, 180, 182)); t.save('plant')
 # Ponting skylight wedges: translucent white panels with glazing bars, one face lit and one in shade
-for nm, base in (('skylight', (210, 222, 228)), ('skylight_dk', (120, 146, 166))):
+# PC check r6: the shade face baked dark rendered the pyramids blue-black; GE shows white tents on both faces,
+# so both get the same translucent white and the sun alone shades the far face
+for nm, base in (('skylight', (210, 222, 228)), ('skylight_dk', (210, 222, 228))):
     t = T(4.0, 4.0, base, n=3, bl=(1.5, 6))
     for u in np.arange(0, 4, 1.0): t.vl(u, 0.08, mul=0.7)
     for z in np.arange(0, 4, 1.0): t.hl(z, 0.06, mul=0.75)
@@ -147,7 +154,9 @@ for u in (0.0, 2.5): t.vl(u + 0.02, 0.04, mul=0.7)
 t.hl(0.9, 0.06, mul=0.82); t.save('terrace')
 # grass hill (GE f135, gate 2026-11-19): green grass with dry straw patches, faint mower stripes
 # 2026-11-22 (GE cs_090, summer): mostly dry olive-tan, green only in patches
-t = T(10.0, 10.0, (124, 126, 82), n=10, bl=(2.5, 16))
+# PC check r6: rendered straw (144,145,103) where GE out_E reads the bank 130-151,154-160,114-128; the base is
+# scaled by GE over r6 channel by channel
+t = T(10.0, 10.0, (121, 136, 96), n=10, bl=(2.5, 16))
 for u in np.arange(0, 10, 2.5): t.rect(u, u + 1.25, 0, 10, mul=np.array([1.04, 1.04, 1.02]))
 for _ in range(30):
     u, z, r = R.uniform(0, 10), R.uniform(0, 10), R.uniform(0.8, 2.6); t.rect(u, u + r, z, z + r * 0.6, mul=np.array([1.18, 1.1, 1.12]))
@@ -252,10 +261,14 @@ if __name__ == '__main__':
     t = T(2.0, 2.0, (34, 36, 40), n=3, bl=(1.0, 4)); t.save('vom_dark')
     # the tier front between the Ponting's tiers: grey precast concrete as Google Earth shows it (PC check r5: the
     # whole face dark read as a thick navy band), a 1 m LED ribbon board in it (blank: no sponsors), a pale capping
-    t = T(6.0, 3.6, (160, 162, 160), n=3, bl=(1.0, 6)); t.grime_bottom(0.6, 0.85)
-    t.rect(0, 6, 1.3, 2.3, (28, 30, 36))
-    for u in np.arange(0, 6, 0.6): t.vl(u, 0.02, 1.3, 2.3, mul=0.7)
-    t.rect(0, 6, 3.4, 3.6, (180, 182, 180)); t.hl(2.6, 0.04, mul=0.6); t.save('ribbon')
+    # PC check r6: the 1 m board read as one slate line (ours 61,84,109 with a 29 floor, GE 64,100,127); GE shows
+    # precast panels with a thin dark strip, so the board is 0.5 m, the panels jointed every 3 m with a horizontal
+    # joint, and the capping lighter
+    t = T(6.0, 3.6, (166, 172, 174), n=2, bl=(1.0, 6)); t.grime_bottom(0.6, 0.85)
+    t.rect(0, 6, 1.5, 2.0, (52, 56, 64))
+    for u in (0.0, 3.0): t.vl(u + 0.03, 0.05, mul=0.62)
+    t.hl(2.6, 0.04, mul=0.6); t.hl(0.9, 0.04, mul=0.7)
+    t.rect(0, 6, 3.35, 3.6, (206, 208, 206)); t.save('ribbon')
     # modelled facades (2026-11-22): each panel is its own face, so the textures are plain finishes only
     for name, col in (('skin_silver', (220, 226, 230)), ('skin_silver2', (196, 206, 214)), ('skin_pale', (184, 194, 202)),
                       ('skin_blue', (80, 113, 150)), ('skin_sky', (117, 154, 197)), ('skin_grey', (123, 141, 167))):
@@ -280,6 +293,10 @@ if __name__ == '__main__':
     for k in range(0, n, st):
         a[k:k + 2, :, 3] = 130; a[:, k:k + 2, 3] = 130
     Image.fromarray(a, 'RGBA').save(OUT + 'mesh.png'); TILE['mesh'] = (1.0, 1.0)
+    # shade cloth over the nets (GE 150 m 'w': 159-165,178-180,183-187 in sun): woven grey-blue, seams every 2 m
+    t = T(4.0, 4.0, (166, 182, 188), n=2.5, bl=(1.0, 5))
+    for u in (0.0, 2.0): t.vl(u + 0.03, 0.06, mul=0.85)
+    t.streaks(8, 0, 4, mul=0.92, wid=(0.2, 0.5)); t.save('shade_cloth')
     t = T(3.0, 4.0, (138, 150, 132), n=4, bl=(1.0, 4)); t.vl(0.05, 0.05, col=(214, 216, 210)); t.vl(2.95, 0.05, col=(214, 216, 210))
     t.save('syn_pitch')                                  # synthetic practice wicket, white edge lines
     # the forecourt at the indoor centre's west end: pale concrete pavers 0.6 x 0.3 m, staggered

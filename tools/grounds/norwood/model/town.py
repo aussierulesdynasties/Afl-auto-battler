@@ -41,6 +41,17 @@ def verandah(part, a, b, depth, z, posts_every=2.6, mat="roof_slate_grey"):
     box3(part, V(*c0, z - 0.72), V(*c1, z - 0.72), 0.14, 0.3, "timber_white")
 
 
+def blinds(part, x, y0, y1, z_top, z_bot, stripe=0.3):
+    """Striped canvas blinds hanging on a west-facing verandah edge at x, from y0 down to y1 (y0 > y1),
+    z_top to z_bot: white and grey-blue stripes, a stripe wide each, a slight bulge outwards at the foot."""
+    n = int((y0 - y1) / stripe)
+    for k in range(n):
+        ya, yb = y0 - k * stripe, y0 - (k + 1) * stripe
+        mat = "paint_white" if k % 2 == 0 else "awning_blue"
+        add(part, [V(x, ya, z_top), V(x, yb, z_top), V(x - 0.12, yb, z_bot), V(x - 0.12, ya, z_bot)], mat)
+        add(part, [V(x + 0.01, yb, z_top), V(x + 0.01, ya, z_top), V(x - 0.11, ya, z_bot), V(x - 0.11, yb, z_bot)], mat)
+
+
 def townhouses():
     """Six two-storey townhouses in a row (Google Earth e_270): orange-red brick, white-trimmed sash windows
     two to a floor on the gable end facing the ground, grey Colorbond gables, a low wing at the back.
@@ -87,6 +98,17 @@ def big_house():
         chimney(part, (104.5, y), 9.0, 12.6)
     gable_building(part, (110.0, -48.5), 0.0, 22.0, 8.0, 3.4, 5.4, "brick_terrace", "roof_slate_grey", over=0.4,
                    windows=(1.2, 1.0, 2.4, 3.2), hip=True)
+    # the two-level verandah across the north two-thirds of its west front (Google Earth gE_s, 2026-11-26):
+    # white posts, a balcony with a balustrade, and striped canvas blinds drawn halfway down the upper level
+    xw, ya, yb, dp = 98.7, -13.4, -35.0, 2.6
+    verandah(part, (xw, ya), (xw, yb), dp, 3.5)
+    verandah(part, (xw, ya), (xw, yb), dp, 7.1)
+    obox(part, (xw - dp / 2, (ya + yb) / 2), 0.0, dp, ya - yb, 3.55, 3.75, "timber_white", top="timber_dark",
+         bottom="timber_white")
+    box3(part, V(xw - dp + 0.15, ya, 4.75), V(xw - dp + 0.15, yb, 4.75), 0.08, 0.08, "timber_white")
+    for y in np.arange(yb + 0.2, ya, 0.16):
+        box3(part, V(xw - dp + 0.15, y, 3.75), V(xw - dp + 0.15, y, 4.75), 0.03, 0.03, "timber_white")
+    blinds(part, xw - dp + 0.05, ya - 0.2, yb + 0.2, 6.5, 5.3)
 
 
 def shed():
