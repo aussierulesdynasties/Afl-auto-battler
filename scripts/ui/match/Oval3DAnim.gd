@@ -32,6 +32,27 @@ const TURN := 9.0              # rad/s (about 520 degrees): the fastest he turns
 ## air between strides, so a cut reads as plant-and-go, not a spin on the spot.
 const TURN_PLANTED := 24.0     # rad/s with a foot held down
 const TURN_AIR := 12.0          # rad/s with both feet off the turf
+## The slow gaits (Oval3D.GAITS_GLB, motion capture). Below the run a man off the ball walks,
+## not a slow-motion jog (the run loop played at a third of its pace, about a quarter of every
+## match measured 2026-11-27, tools/visual/measure_oval3d_gaits.gd). Moving away from the ball or
+## across it at a walking or jogging pace, he keeps facing it: a backpedal or a side-step, the
+## body turned so the clip's own direction of travel is exactly his, the head on the ball.
+## Faster than a gait's top he turns and runs. Paces are drawn m/s (the picture's), as RUN_FROM.
+const GAITS := ClipLimits.GAITS
+const WALK_FROM := 0.6         # m/s drawn: slower than this he stands (and shuffles his feet)
+const WALK_TO := 2.0           # the walk's top (RUN_FROM: the run takes over)
+const BACKSTEP_TO := 1.4       # walking backwards up to this, then the backpedal
+const BACK_TO := 2.6           # the backpedal's top; faster, he turns and runs
+const SHUFFLE_TO := 1.2        # side-stepping up to this, then the side-run
+const SIDE_TO := 3.2           # the side-run's top
+const BACK_FROM := deg_to_rad(125.0)   # moving this far off the ball's way: backwards
+const SIDE_FROM := deg_to_rad(60.0)    # this far: side-on
+const GAIT_STAY := 0.1         # a gait is kept until its edge is passed by this share (no flicker)
+const GAIT_TURN := deg_to_rad(20.0)    # and an angle edge by this
+const GAIT_HOLD := 0.6         # s: the least he stays in a moving loop before changing to another
+## The way each gait carries him, against the way he faces, as a turn of his yaw (+ to his left).
+const GAIT_WAY := {"walk": 0.0, "backstep": PI, "backpedal": PI, "shuffle_l": PI / 2.0,
+		"shuffle_r": -PI / 2.0, "side_run_l": PI / 2.0, "side_run_r": -PI / 2.0}
 ## Eyes on the ball (plan §2.6): the neck takes part of the turn and the head the rest, inside a
 ## real person's range (about 80 degrees each way, 35 up or down), so nobody turns like an owl.
 ## The carrier looks where he runs, not at the ball in his hands.
@@ -173,6 +194,8 @@ var _once: Array = []          # per player: the scoop he is in, {anim, t, t0, t
 var _was: Array = []           # per player: where his node stood last frame (INF: nowhere yet)
 var _pace: Array = []          # per player: his drawn velocity on the turf, smoothed (m/s)
 var _loop_speed := {}          # loop name -> m/s its planted foot covers at rate 1
+var _lift := {}                # loop name -> the share of its cycle at which the left foot lifts
+var _gait_t: Array = []        # per player: s in his current clip
 var _floor := [INF, INF]       # each ball bone's lowest in the run loop, in the figure's space
 var _legs: Array = []          # bone indices [thigh, calf, foot, ball] per leg, [] if the rig has none
 ## per player, per foot: {at: world point the ball bone is held at, yaw: node yaw when it came
@@ -198,6 +221,7 @@ func _init(p_director: MatchDirector, p_players: Array) -> void:
 		_once.append({})
 		_was.append(Vector2.INF)
 		_pace.append(Vector2.ZERO)
+		_gait_t.append(0.0)
 		_feet.append([{}, {}])
 	var res = load(PAIRS)
 	if res is JSON:
@@ -216,7 +240,7 @@ func _init(p_director: MatchDirector, p_players: Array) -> void:
 			n = n.get_parent()
 		_read_takes(p)
 		_read_moments(p)
-		for name in ["jog", "carry"]:
+		for name in ["jog", "carry"] + GAITS:
 			_loop_speed[name] = _measure_loop(p, name)
 		var skel0: Skeleton3D = p["skel"]
 		for leg in LEGS:
@@ -282,6 +306,10 @@ func _measure_loop(p: Dictionary, name: String) -> float:
 	var sum := 0.0
 	var count := 0
 	for k in range(n):
+		var a0: Vector3 = at[k][0]
+		var b0: Vector3 = at[k + 1][0]
+		if a0.y < lo[0] + FOOT_DOWN and b0.y >= lo[0] + FOOT_DOWN and not _lift.has(name):
+			_lift[name] = float(k + 1) / n
 		for f in range(2):
 			var a: Vector3 = at[k][f]
 			var b: Vector3 = at[k + 1][f]
@@ -294,6 +322,42 @@ func _measure_loop(p: Dictionary, name: String) -> float:
 	if name == "jog":
 		_floor = [lo[0] / leg, lo[1] / leg]
 	return sum / count / leg if count > 0 else JOG_SPEED
+
+
+## A moving loop: the run, the run with the ball, or a slow gait.
+static func is_loop(name: String) -> bool:
+	return name in ["jog", "carry"] or name in GAITS
+
+
+## The slow gait for a man off the ball moving at `speed` (drawn m/s) along `vel`, or "" to run
+## facing his way (too fast for any gait, or the ball right on him). Moving roughly towards the
+## ball, or at a walk with the ball near the way he goes, he walks; well off it, he backpedals or
+## side-steps, facing so the gait's way is his (GAIT_WAY). `cur`, the gait he is in, is kept
+## until an edge is passed by GAIT_STAY or GAIT_TURN.
+func _gait(cur: String, pos: Vector2, vel: Vector2, speed: float) -> String:
+	var keep := func(name: String, edge: float) -> float:
+		return edge * (1.0 + GAIT_STAY if cur == name else 1.0 - GAIT_STAY)
+	var to: Vector2 = (director.ball["pos"] as Vector2) - pos
+	var off := 0.0
+	if to.length() > 2.0:
+		off = absf(angle_difference(atan2(to.x, to.y), atan2(vel.x, vel.y)))
+	var backing := cur in ["backstep", "backpedal"]
+	var siding := cur.begins_with("shuffle") or cur.begins_with("side_run")
+	if off > BACK_FROM - (GAIT_TURN if backing else 0.0) and speed < keep.call("backpedal", BACK_TO):
+		return "backstep" if speed < keep.call("backstep", BACKSTEP_TO) else "backpedal"
+	if off > SIDE_FROM - (GAIT_TURN if siding or backing else 0.0) and speed < SIDE_TO * (1.0 + GAIT_STAY if siding else 1.0 - GAIT_STAY):
+		# Side-on to the ball's way: face whichever side keeps the ball the more in front, and
+		# step the way he goes. His right, facing yaw y, is (-cos y, sin y).
+		var y1 := atan2(vel.x, vel.y) + PI / 2.0
+		var y2 := atan2(vel.x, vel.y) - PI / 2.0
+		var ball_y := atan2(to.x, to.y)
+		var y := y1 if absf(angle_difference(y1, ball_y)) < absf(angle_difference(y2, ball_y)) else y2
+		var right := Vector2(-cos(y), sin(y)).dot(vel) > 0.0
+		var quick := speed >= SHUFFLE_TO * (1.0 - GAIT_STAY if cur.begins_with("side_run") else 1.0 + GAIT_STAY)
+		return ("side_run_" if quick else "shuffle_") + ("r" if right else "l")
+	if speed < keep.call("walk", WALK_TO):
+		return "walk"
+	return ""
 
 
 ## 0 when his left foot is the lower, 1 when his right is.
@@ -588,7 +652,7 @@ func _start(who: int, v: int, arrived: bool, at := Vector2.INF) -> void:
 	var yk := _yaw_of(hk.basis)
 	var yv := _yaw_of(hv.basis)
 	var ap: AnimationPlayer = pk["anim"]
-	var running := ap.current_animation in ["jog", "carry"]
+	var running := is_loop(ap.current_animation)
 	var foot := _planted(pk)
 	var best := {}
 	for name in _pairs:
@@ -733,36 +797,55 @@ func step(i: int, p: Dictionary, holder: int, pos: Vector2, vel: Vector2, dt: fl
 	var ap: AnimationPlayer = p["anim"]
 	var want := "carry" if i == holder else "idle"
 	var rate := 0.0 if i == holder else 1.0
-	_still[i] = 0.0 if speed > RUN_FROM else float(_still[i]) + dt
+	# The carrier only runs (carry); a man off the ball walks from WALK_FROM when the gaits loaded.
+	var go := RUN_FROM if i == holder or not ap.has_animation("walk") else WALK_FROM
+	_still[i] = 0.0 if speed > go else float(_still[i]) + dt
 	# A check in his stride (slow for under STOP_HOLD) is still running: he doesn't stand up
 	# for three frames and set off again.
 	var hold := STOP_HOLD
 	if holder >= 0 and holder != i and holder < players.size() and here.distance_to(Vector2((players[holder]["node"] as Node3D).position.x, (players[holder]["node"] as Node3D).position.z)) < CLOSE_IN:
 		hold = CLOSE_HOLD
-	var running: bool = speed > RUN_FROM or (float(_still[i]) < hold
-			and ap.current_animation in ["jog", "carry"] and dt > 0.0)
+	var running: bool = speed > go or (float(_still[i]) < hold
+			and is_loop(ap.current_animation) and dt > 0.0)
 	# He turns at a footballer's pivot, never through half a turn in one frame. dt 0 (the
 	# first draw) sets him facing.
 	var turn := TURN * dt if dt > 0.0 else PI
 	if running:
-		if speed > RUN_FROM:
+		want = "carry" if i == holder else "jog"
+		var face := atan2(vel.x, vel.y)
+		if i != holder and go < RUN_FROM:
+			var g := _gait(ap.current_animation, pos, vel, maxf(speed, go))
+			var cur := str(ap.current_animation)
+			if g != "" and cur in GAITS and g != cur and float(_gait_t[i]) < GAIT_HOLD:
+				g = cur   # settled into a gait a moment before changing to another
+			if g != "":
+				want = g
+				face = wrapf(face - float(GAIT_WAY[g]), -PI, PI)
+		if speed > go:
 			var swing := turn
 			if dt > 0.0 and not _legs.is_empty():
 				swing = (TURN_PLANTED if _held(i) else TURN_AIR) * dt
-			node.rotation.y = rotate_toward(node.rotation.y, atan2(vel.x, vel.y), swing)
-		want = "carry" if i == holder else "jog"
-		rate = clampf(maxf(speed, RUN_FROM) / loop_speed(want, p), RATE_MIN, RATE_MAX)
+			node.rotation.y = rotate_toward(node.rotation.y, face, swing)
+		var least := RUN_FROM if want in ["jog", "carry"] else go
+		rate = clampf(maxf(speed, least) / loop_speed(want, p), RATE_MIN, RATE_MAX)
 	elif i != holder:
 		# Standing: face the ball (the carrier keeps his heading).
 		var to: Vector2 = (director.ball["pos"] as Vector2) - pos
 		if to.length() > 0.5:
 			node.rotation.y = rotate_toward(node.rotation.y, atan2(to.x, to.y), turn)
+	_gait_t[i] = float(_gait_t[i]) + dt if ap.current_animation == want else 0.0
 	if ap.current_animation != want:
 		# Spread over the 10 s stand loop so a standing line doesn't sway in step.
 		var at := fmod(float(i) * 1.37, 10.0)
-		if ap.current_animation in ["jog", "carry"]:
+		var was := str(ap.current_animation)
+		if was in ["jog", "carry"] and want in ["jog", "carry"]:
 			at = ap.current_animation_position
-		if ap.current_animation in ["jog", "carry", "idle"]:
+		elif is_loop(was) and is_loop(want) and _lift.has(was) and _lift.has(want):
+			# From one gait to another in step: the new loop joins at the same point of the
+			# stride (the left foot as far from lifting), so no foot jumps.
+			var u := ap.current_animation_position / maxf(ap.current_animation_length, 0.001) - float(_lift[was])
+			at = fposmod(u + float(_lift[want]), 1.0) * ap.get_animation(want).length
+		if was == "idle" or is_loop(was):
 			# Running to standing and back eases over BLEND: the capture's stride is too real to
 			# cut from mid-air to a stand in one frame.
 			_snap(i, p)
@@ -937,7 +1020,7 @@ func _snap(i: int, p: Dictionary) -> void:
 	_blend[i] = {"rots": rots, "hips": skel.get_bone_pose_position(_pelvis),
 			"yaw": (p["node"] as Node3D).rotation.y, "t": 0.0, "src": ""}
 	var ap: AnimationPlayer = p["anim"]
-	if (_in[i] as Dictionary).is_empty() and ap.current_animation in ["jog", "carry", "idle"]:
+	if (_in[i] as Dictionary).is_empty() and (ap.current_animation == "idle" or is_loop(ap.current_animation)):
 		# Out of running or standing: that clip keeps playing under the ease, so his legs keep
 		# stepping as they were instead of a frozen stride dragging along the turf.
 		_blend[i]["src"] = ap.current_animation
