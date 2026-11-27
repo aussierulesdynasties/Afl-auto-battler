@@ -242,3 +242,4 @@ What has landed toward each open row of docs/TODO.md and docs/TODO_RULINGS.md, o
 - T8.88: Merged #2235: Audit scripts for T8.87, T8.88 and T8.50 (work in progress, no results yet).
 - T8.50: Merged #2235: Audit scripts for T8.87, T8.88 and T8.50 (work in progress, no results yet).
 - 202: Merged #2232: 3D surroundings: Moorabbin, Windy Hill, North Hobart and WACA in their era; Google Earth heights (row 202 2b, WIP).
+- 171: Merged #2256: Training on a 32:9 screen: wide squad boxes keep position and status.
