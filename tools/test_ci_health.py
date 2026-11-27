@@ -12,8 +12,9 @@ def t(minutes_ago):
 
 
 def run(rid, status, branch="b", sha="s1", event="pull_request", age=10, started=None,
-        conclusion=None, name="Tests"):
+        conclusion=None, name="Tests", path=".github/workflows/tests.yml"):
     return {"id": rid, "name": name, "status": status, "conclusion": conclusion, "event": event,
+            "path": path,
             "head_branch": branch, "head_sha": sha, "created_at": t(age),
             "run_started_at": t(started if started is not None else age), "html_url": f"u/{rid}"}
 
@@ -30,11 +31,17 @@ class CiHealthTests(unittest.TestCase):
         self.assertEqual(out, {"problems": [], "cancel": []})
 
     def test_superseded_and_closed_pr_runs_are_cancelled(self):
-        out = analyse(NOW, [run(1, "in_progress", sha="old"), run(2, "queued", branch="gone")],
+        out = analyse(NOW, [run(1, "in_progress", sha="old", age=15), run(2, "queued", branch="gone", age=15)],
                       [pr(1)], [], [])
         self.assertEqual(out["cancel"], [1, 2])
         self.assertIn("newer commits", out["problems"][0])
         self.assertIn("PR is closed", out["problems"][1])
+
+    def test_other_workflows_and_young_runs_are_not_cancelled(self):
+        roadmap = run(1, "in_progress", branch="gone", age=30, name="Roadmap close",
+                      path=".github/workflows/roadmap_close.yml")
+        young = run(2, "queued", sha="old", age=3)
+        self.assertEqual(analyse(NOW, [roadmap, young], [pr(1)], [], []), {"problems": [], "cancel": []})
 
     def test_long_queue_and_long_run(self):
         out = analyse(NOW, [run(1, "queued", age=95), run(2, "in_progress", age=200, started=160),

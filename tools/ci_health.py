@@ -8,8 +8,8 @@ whichever account, session or person works on the repo.
 What it checks (thresholds below):
   - runs waiting for a runner for over QUEUED_MIN minutes
   - runs going for over RUNNING_MIN minutes (no job here should take that long)
-  - pull request runs that test a commit the PR has moved past, or a closed PR, and still hold
-    runners: force-cancelled (safe cleanup, director's standing rule 2026-11-26), then reported
+  - pull request Tests runs at least 10 min old that test a commit the PR has moved past, or a
+    closed PR, and still hold runners (the PR's head is read again just before): force-cancelled (safe cleanup, director's standing rule 2026-11-26), then reported
   - main: the newest finished push run of Tests failed
   - the newest nightly long-suite run failed
   - open ready PRs whose newest Tests run failed and that nobody has touched for RED_IDLE_H hours
@@ -39,6 +39,7 @@ RED_IDLE_H = 2
 STALE_READY_H = 24
 STALE_DRAFT_D = 3
 GHOST_DAYS = 7
+MIN_AGE_CANCEL = 10
 ISSUE_TITLE = "CI health check: problems found"
 TESTS = "Tests"
 NIGHTLY = "Nightly long suites"
@@ -92,7 +93,10 @@ def analyse(now: dt.datetime, active_runs: list, prs: list, recent_tests: list, 
         if age > GHOST_DAYS * 24 * 60:
             continue
         label = f'{r["name"]} run [{r["id"]}]({r["html_url"]}) on `{r["head_branch"]}`'
-        if r["event"] == "pull_request" and open_heads.get(r["head_branch"]) != r["head_sha"]:
+        # Only Tests runs: other workflows run on a closed PR on purpose (Roadmap close runs after
+        # a merge). Young runs are left alone: the PR list may be a moment older than the run.
+        if (r["event"] == "pull_request" and r.get("path", "").endswith("/tests.yml") and age >= MIN_AGE_CANCEL
+                and open_heads.get(r["head_branch"]) != r["head_sha"]):
             cancel.append(r["id"])
             why = "its PR is closed" if r["head_branch"] not in open_heads else "its PR has newer commits"
             problems.append(f"{label} was still {r['status'].replace('_', ' ')} although {why}: force-cancelled.")
@@ -183,6 +187,16 @@ def main() -> int:
     nightly = api.call("GET", "actions/workflows/nightly.yml/runs?per_page=10")["workflow_runs"]
 
     found = analyse(now, active, prs, recent_tests, nightly)
+    # Read each cancel candidate's PR head again, so a push made while this ran never loses its run.
+    owner = repo.split("/")[0]
+    keep = []
+    for r in [r for r in active if r["id"] in found["cancel"]]:
+        now_heads = api.call("GET", f'pulls?state=open&head={owner}:{r["head_branch"]}')
+        if any(p["head"]["sha"] == r["head_sha"] for p in now_heads):
+            keep.append(r["id"])
+    if keep:
+        found["cancel"] = [i for i in found["cancel"] if i not in keep]
+        found["problems"] = [p for p in found["problems"] if not any(f"[{i}]" in p for i in keep)]
     for p in found["problems"]:
         print(f"- {p}")
     if not found["problems"]:
