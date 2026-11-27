@@ -357,6 +357,36 @@ const MATERIAL_FIX := {
 	},
 }
 
+## The pre-game scene's opening shot at each ground, set by the director in the ground inspector (C copies
+## it): [x, y, z, facing, looking] exactly as the inspector prints them, in the ground's own metres (x along
+## the ground, y up from the turf, z across it; facing in degrees clockwise from looking up the ground to -z,
+## looking in degrees above level). Through-the-banner (Oval3DBanner) opens on it. Looks only.
+## 2026-11-27: Adelaide "x 163.4 y 30.0 z -91.8, facing 245 deg, looking -8 deg";
+## MCG "x 208.2 y 56.3 z 83.9, facing 305 deg, looking -13 deg".
+const PREGAME_VIEW := {
+	"adelaide": [163.4, 30.0, -91.8, 245.0, -8.0],
+	"mcg": [208.2, 56.3, 83.9, 305.0, -13.0],
+}
+
+
+static func has_pregame_view(slug: String) -> bool:
+	return PREGAME_VIEW.has(slug)
+
+
+## The pre-game camera at `slug` in the ground's frame (the Oval3D's, before it turns for the ends),
+## built as the inspector builds its camera from the same numbers. IDENTITY when the ground has none.
+static func pregame_view(slug: String) -> Transform3D:
+	if not PREGAME_VIEW.has(slug):
+		return Transform3D.IDENTITY
+	var v: Array = PREGAME_VIEW[slug]
+	return view_transform(float(v[0]), float(v[1]), float(v[2]), float(v[3]), float(v[4]))
+
+
+## A camera at (x, y, z) facing `facing` degrees and looking `looking` degrees up, the inspector's way.
+static func view_transform(x: float, y: float, z: float, facing: float, looking: float) -> Transform3D:
+	return Transform3D(Basis.from_euler(Vector3(deg_to_rad(looking), -deg_to_rad(facing), 0.0)), Vector3(x, y, z))
+
+
 ## Grounds with a roof that opens: the model's node for the roof shut over the field and the node for
 ## it slid back, of which instantiate() shows one. Marvel Stadium plays AFL with its roof shut (as the
 ## match scenes draw it, data/grounds.json "roof": "closed"); the fly-through can open it (set_roof).
