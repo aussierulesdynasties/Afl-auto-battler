@@ -47,6 +47,7 @@ func run() -> void:
 	_t("_test_save_costs")
 	_t("_test_honoured_ratings_survive_reload")
 	_t("_test_saves_are_packed")
+	_t("_test_resume_screen")
 	GameState.delete_saved_career()
 	GameState.replay_seed = 0
 	print(Ran.line("Save", self))
@@ -1450,3 +1451,26 @@ func _test_honoured_ratings_survive_reload() -> void:
 			"Every 1990 player keeps his rating and potential through a save and load (%d of %d seen; moved: %s)"
 			% [seen, before.size(), ", ".join(moved.slice(0, 5))])
 	GameState.delete_saved_career()
+
+
+## Where an opened save lands (bug bash P3-5). Continue on the menu and Open in
+## the options' saves both ask GameState.resume_screen(): the hub, or the draft
+## for a career with no season, a club yet to play, or the off-season before
+## the opening draft (row 199). Options used to send that last one to the hub.
+func _test_resume_screen() -> void:
+	GameState.replay_seed = SUITE_SEED
+	GameState.reset()
+	_check(GameState.resume_screen() == "draft", "No season yet: the draft")
+	GameState.start_season("COL", GameDB.club_list("COL"))
+	_check(GameState.resume_screen() == "hub", "A season under way: the hub")
+	GameState.first_offseason = 1
+	_check(GameState.save_career() and GameState.load_career(), "A career in the first off-season saves and loads")
+	_check(GameState.first_offseason == 1 and GameState.resume_screen() == "draft",
+			"The off-season before the opening draft, reloaded: the draft (%d)" % GameState.first_offseason)
+	GameState.first_offseason = 2
+	var club := GameState.my_club
+	GameState.my_club = "ZZZ"
+	_check(GameState.club_yet_to_play() and GameState.resume_screen() == "draft", "A club yet to play: the draft")
+	GameState.my_club = club
+	_check(GameState.resume_screen() == "hub", "Back to a club that plays: the hub")
+	GameState.reset()

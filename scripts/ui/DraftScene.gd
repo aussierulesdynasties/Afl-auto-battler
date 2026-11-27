@@ -591,8 +591,10 @@ func _show_first_offseason() -> void:
 	var v := UiKit.vbox(UiKit.Space.ROOM)
 	v.name = "FirstOffseason"
 	_root.add_child(v)
-	var open_l := UiKit.lbl("The trade period and free agency are open. Every club can trade players "
-			+ "and picks, and sign free agents, the players delisted this year among them.",
+	# Free agency from 2012 (EraRules); a Legacy start before it has the trade period alone.
+	var open_l := UiKit.lbl(("The trade period and free agency are open. Every club can trade players "
+			+ "and picks, and sign free agents, the players delisted this year among them.") if EraRules.on("free_agency")
+			else "The trade period is open. Every club can trade players and picks, and sign the players delisted this year.",
 			UiKit.BODY, UiKit.TEXT, true)
 	open_l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(open_l)
