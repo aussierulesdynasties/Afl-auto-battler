@@ -66,6 +66,7 @@ The GitHub Support request about the repo size figure was dropped on 27 Nov. Don
 | **Main push runs** | Pushes to main share one Tests group: only the newest waiting run is kept, older waiting ones are skipped (that's why many main runs show "cancelled"; it's on purpose). Web build runs nightly instead of on every push (#2190). | `tests.yml`, `web.yml` |
 | **Force-cancel tool** | Repo hygiene force-cancels runs from closed or superseded PRs by itself, and its `force_cancel: <run ids>` input force-cancels named runs (GitHub MCP `actions_run_trigger`). A normal cancel doesn't stop shards on branches last synced before 26 Nov. (#2224) | `repo_hygiene.yml` |
 | **Stale test checksums** | Main went red when two engine PRs both moved the seeded checksums (`GOLDEN_SEASON` in `tests/test_dataset.gd`, `GOLDEN played:*` in `tests/test_season_rules.gd`). Fixed by #2243 and #2245. | |
+| **CI health check** | Moved from a Claude account's scheduled task into the repo, so it runs for any account. `.github/workflows/ci_health.yml` runs every 2 hours and after pushes to main (GitHub's timer is unreliable here). It force-cancels runs still holding runners for a closed PR or an old commit, and reports long waits, stuck runs, a red main or nightly, and PRs nobody is driving on one issue, "CI health check: problems found". The issue closes itself when all is healthy. Rules: `tools/ci_health.py`. | Check that issue first |
 | **Self-hosted PC runners** | Removed 26 Nov. Everything runs on GitHub's runners. | [CI_RUNNER.md](CI_RUNNER.md) |
 
 ---
@@ -133,10 +134,8 @@ with `get_check_runs` on each.
   save so suites stop re-simulating the same season, the nightly fixture that runs twice, five legacy
   long careers that cover the same years (about 58 minutes a night), and two wall-clock checks that
   can flake. Deleting or merging tests needs Baggins's yes.
-- **The 2-hourly CI health check** was a scheduled task on the old account
-  (`trig_01VD4PrrQaEiXvwXKuGZT4jX`). It does not move with you. If you want it back, make a new
-  scheduled task on your account: every 2 hours, read-only apart from force-cancelling stuck runs,
-  and report only problems.
+- Nothing in this work is tied to a Claude account: every fix lives in the repo or in GitHub's
+  settings.
 
 ---
 
