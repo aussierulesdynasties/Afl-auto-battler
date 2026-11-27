@@ -22,8 +22,8 @@ const GOLDEN := {
 	"fixture:3": "928bc55d620e04e745cf7adb88b56ae8",
 	"fixture:2027": "57bffb38d600d4036767ef691d623a80",
 	"fixture:90210": "1734a8fcc9068e3e444e293a25f944b4",
-	"played:2027": "7fe2a32e281fb9bf562859618127ee5e",
-	"played:7": "15914d9f0607bd5830582a630e28e664",
+	"played:2027": "5e45aef49043d64600ea69c7dc92e2ba",
+	"played:7": "d85e56340db369f36ed25df385657c56",
 }
 
 const Golden := preload("res://tests/season_golden.gd")

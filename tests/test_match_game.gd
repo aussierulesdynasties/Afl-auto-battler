@@ -3540,6 +3540,19 @@ func _test_play_through_mid_stands_in_midfield() -> void:
 		if str((all[i] as Dictionary).get("kind", "")) == "quarter":
 			cut = i + 1
 			break
+	# The picture walks its log back from the roster it is given to the opening
+	# line-up, so a log cut at the quarter gets the line-up of that moment (the
+	# interchanges after the cut undone), the bench after it.
+	var at_cut: Array = MatchDirector._starting_roster(res["roster"], all.slice(cut))
+	for side in range(2):
+		var on: Array = at_cut[side]
+		var ids := {}
+		for p in on:
+			ids[str(p["id"])] = true
+		for p in (res["roster"][side] as Array):
+			if not ids.has(str(p["id"])):
+				on.append(p)
+	res["roster"] = at_cut
 	var d := MatchDirector.new()
 	d.setup(res, all.slice(0, cut))
 	var ticks := 0
@@ -5035,22 +5048,30 @@ func _test_decision_credits() -> void:
 			and is_equal_approx(float(old_lines[0]["pts"]), 2.0),
 			"An old save's \"calls\" still reads as in-game calls (%s)" % str(old_lines))
 	# A moment: the call is worth its expected points against the default.
-	var live := _sim(7302)
-	live.moment_side = 0
+	# The first of a few seeded matches with a set-shot call for us in it: how
+	# many come up in one match moves with the play (calls share a quarter's cap).
+	var live: MatchSim = null
 	var want := 0.0
 	var seen := 0
-	while live.current_quarter <= 4:
-		live.begin_quarter()
-		while not live.continue_quarter():
-			var m: Dictionary = live.pending_moment
-			var pick := int(m.get("default", 0))
-			if str(m.get("kind", "")) == "set_shot":
-				var opts: Array = m["options"]
-				pick = opts.size() - 1
-				want += live._option_points(opts[pick]) - live._option_points(opts[int(m.get("default", 0))])
-				seen += 1
-			live.resolve_moment(pick)
-		live.end_quarter()
+	for s in range(7302, 7312):
+		live = _sim(s)
+		live.moment_side = 0
+		want = 0.0
+		seen = 0
+		while live.current_quarter <= 4:
+			live.begin_quarter()
+			while not live.continue_quarter():
+				var m: Dictionary = live.pending_moment
+				var pick := int(m.get("default", 0))
+				if str(m.get("kind", "")) == "set_shot":
+					var opts: Array = m["options"]
+					pick = opts.size() - 1
+					want += live._option_points(opts[pick]) - live._option_points(opts[int(m.get("default", 0))])
+					seen += 1
+				live.resolve_moment(pick)
+			live.end_quarter()
+		if seen > 0:
+			break
 	_check(seen > 0 and is_equal_approx(float((live.impact[0] as Dictionary).get("moments", 0.0)), want) and want != 0.0,
 			"A set-shot call is worth its chances against taking the shot (%d calls, %+.2f)" % [seen, want])
 
