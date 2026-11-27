@@ -2949,7 +2949,7 @@ func finish_intake_draft() -> bool:
 		opening_draft = false
 		draft_meeting_year = 0
 		season_year = GameDB.START_YEAR
-		start_season(my_club, league_lists.get(my_club, []))
+		start_season(my_club, league_lists.get(my_club, []), false)   # saved once, below
 		# A Legacy start: a real list longer than its first season allows
 		# (Essendon's 55 in 1990, against 52) delists its least worth before
 		# the season (bug bash 4, L3); a short one is filled by the Rookie
@@ -3674,7 +3674,9 @@ func _next_jumper_number(list: Array) -> int:
 
 ## Commit the completed league draft and build the season from every club's
 ## new list. Original club lists are only used by the legacy/test fallback.
-func start_season(club_code: String, list: Array) -> void:
+## `save`: false when the caller saves once itself at the end of a bigger step
+## (Finish draft), so one tap writes the career once, not twice.
+func start_season(club_code: String, list: Array, save := true) -> void:
 	GameDB.pristine = false   # a career's data from here on: the next reset() reloads
 	my_club = club_code
 	if my_first_season == 0 and my_club != "" and not sim_ahead:
@@ -3777,7 +3779,8 @@ func start_season(club_code: String, list: Array) -> void:
 	last_label = "Round 1"
 	last_training_report = {}
 	_xp_grant_key = ""
-	autosave()
+	if save:
+		autosave()
 
 
 ## The match you are about to coach, from the clubs' sides as they stand now
