@@ -34,7 +34,8 @@ const TEXT := {
 		"Tap a player to see his profile, his contract and how he is developing.",
 	]],
 	"staff": ["Our staff", [
-		"You are the senior coach. These are the five people who work for you.",
+		"You are the senior coach. These are the seven people who work for you.",
+		"Each pushes for something. Take their advice and their loyalty grows.",
 		"Tap a coach to see what he is good at.",
 	]],
 	"offseason": ["The off-season", [

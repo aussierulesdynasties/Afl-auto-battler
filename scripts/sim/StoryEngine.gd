@@ -67,12 +67,13 @@ const REACTIVE_WITHIN_MAX := 4
 ## Who a card's second player can be, from the subject's ties (GameState.bond_actor),
 ## or "other": the other player of the event that triggered the card.
 const ACTOR_ROLES := ["close_mate", "positional_rival", "mentor", "protege", "brother", "incumbent",
-		"ally", "family", "other"]
+		"ally", "family", "other", "teammate"]
 ## A card's advisors: the council seat, and what the seat is called. A seat the
 ## club has nobody in (an older save, or a seat not yet filled) skips the card,
 ## unless the card says the seat is not required (then {x_name} is "the <role>").
 const ADVISOR_SEATS := {"list_manager": "list manager", "high_performance": "head of high performance",
-		"line_coach": "midfield coach", "senior_assistant": "senior assistant", "development": "development coach"}
+		"line_coach": "midfield coach", "senior_assistant": "senior assistant", "development": "development coach",
+		"fwd_coach": "forwards coach", "def_coach": "backline coach", "restless": "coach"}
 ## A result line may name players from a ranked list: {best3}, {worst2}.
 const RANKED_TOKEN := "\\{(best|worst)([1-9])\\}"
 
@@ -533,7 +534,7 @@ static func eligible_subject(t: Dictionary, ctx: Dictionary, story: Dictionary, 
 			add["_event"] = str(trig["event"])
 			add["_event_other"] = str(ev.get("other", ""))
 		if not (t.get("actor_b", {}) as Dictionary).is_empty():
-			var b := actor_b_facts(t, p, ctx.get("players", []), str(add.get("_event_other", "")), story)
+			var b := actor_b_facts(t, p, ctx.get("players", []), str(add.get("_event_other", "")), story, w)
 			if b.is_empty():
 				continue   # nobody fits the second part: the card cannot come for him
 			add.merge(b, true)
@@ -559,21 +560,40 @@ static func eligible_subject(t: Dictionary, ctx: Dictionary, story: Dictionary, 
 ## found on your list among `players`, and meeting the card's conditions on him.
 ## {"_b_id", "_bind": {player_b, first_b, first_b_s, b_id}}, or {} when nobody fits
 ## (an older save has no ties, so a card that needs one simply does not come).
-static func actor_b_facts(t: Dictionary, p: Dictionary, players: Array, event_other: String, story: Dictionary) -> Dictionary:
+static func actor_b_facts(t: Dictionary, p: Dictionary, players: Array, event_other: String, story: Dictionary, w := 0) -> Dictionary:
 	var ab: Dictionary = t.get("actor_b", {})
 	var role := str(ab.get("role", ""))
 	var bid := event_other if role == "other" else str((p.get("actors", {}) as Dictionary).get(role, ""))
+	if role == "teammate":
+		# Anyone on the list but him who fits, picked as a subject is (a bond
+		# the card is about to make, not one he already has).
+		var fits := players.filter(func(q): return str(q["id"]) != str(p["id"]) \
+				and meets(q, ab.get("where", {}), story["flags"].get(str(q["id"]), {})))
+		var rng := RandomNumberGenerator.new()
+		rng.seed = hash([str(t.get("id", "")), str(p["id"]), w])
+		bid = str(choose(fits, str(ab.get("pick", "random")), rng).get("id", ""))
 	if bid == "" or bid == str(p["id"]):
-		return {}
+		return _b_fallback(ab)
 	for q in players:
 		if str(q["id"]) != bid:
 			continue
 		if not meets(q, ab.get("where", {}), story["flags"].get(bid, {})):
-			return {}
+			return _b_fallback(ab)
 		var nm := str(q.get("name", ""))
 		var first := str(q.get("first", nm))
 		return {"_b_id": bid, "_bind": {"player_b": nm, "first_b": first, "first_b_s": CopyRules.possessive(first), "b_id": bid}}
-	return {}
+	return _b_fallback(ab)
+
+
+## No second player fits: a card that needs one is not dealt ({}); one marked
+## `"required": false` reads its `fallback` words ("a senior teammate") and
+## its "b" effects reach nobody.
+static func _b_fallback(ab: Dictionary) -> Dictionary:
+	if bool(ab.get("required", true)):
+		return {}
+	var words := str(ab.get("fallback", "a teammate"))
+	return {"_b_id": "", "_bind": {"player_b": words, "first_b": words,
+			"first_b_s": words + "'s", "b_id": ""}}
 
 
 ## The facts for the card's advisors ({advisor_name}, {advisor_role}, and
@@ -637,6 +657,16 @@ static func meets(facts: Dictionary, cond: Dictionary, flags: Dictionary) -> boo
 				return false
 		elif key.ends_with("_max"):
 			if float(facts.get(key.trim_suffix("_max"), INF)) > float(v):
+				return false
+		elif key.ends_with("_any") or key.ends_with("_none"):
+			# A list fact (his temperament): any of these, or none of them.
+			var any := key.ends_with("_any")
+			var have_list: Array = facts.get(key.trim_suffix("_any" if any else "_none"), [])
+			var hit := false
+			for x in (v if v is Array else [v]):
+				if have_list.has(str(x)):
+					hit = true
+			if hit != any:
 				return false
 		elif key.ends_with("_every"):
 			var n := int(facts.get(key.trim_suffix("_every"), 0))
@@ -857,7 +887,14 @@ static func lapse_arcs(story: Dictionary, w: int) -> void:
 static func effect_d(e: Dictionary, facts: Dictionary) -> int:
 	var d := int(e.get("d", 0))
 	if str(e.get("scale", "")) == "trust":
-		return Trust.scaled(d, int(facts.get("trust", 0)))
+		d = Trust.scaled(d, int(facts.get("trust", 0)))
+	# Sized by how he takes it (Temperament.scale, lever `temper`): his own
+	# move only, so the gate shows the number he will feel.
+	var lever := str(e.get("temper", ""))
+	if lever != "" and str(e.get("who", "subject")) == "subject":
+		var mult := float((facts.get("temper", {}) as Dictionary).get(lever, 1.0))
+		if mult != 1.0 and d != 0:
+			d = int(signf(d)) * maxi(1, roundi(absf(d) * mult))
 	return d
 
 
@@ -1079,6 +1116,8 @@ static func _spared_words(e: Dictionary, facts: Dictionary) -> String:
 			return "No promise to keep: he is not owed a game."
 		"back_kid":
 			return "No promise to keep: {kid_name} is not owed a game."
+		"promise":
+			return "No promise to keep." if str(e.get("kind", "")) in Promises.PLAYER_KINDS else "No promise to the board to keep."
 		"promise_win":
 			return "No promise to the board: a loss or draw costs %s less than a broken promise would." % _pct(PROMISE_WIN_DOWN)
 		"board":
@@ -1123,6 +1162,22 @@ static func _effect_parts(e: Dictionary, facts: Dictionary) -> Array:
 					for np in _effect_parts(ne, facts):
 						rolled.append([np[0], side[1] + str(np[1])])
 			return rolled
+		"council":
+			var mk := str(e.get("do", ""))
+			var v := int(round(float(Opinion.def(mk).get("v", 0))))
+			if v == 0:
+				return []
+			var coach_name := str(facts.get("restless_name", "the coach"))
+			return [["gain" if v > 0 else "cost", "%s loyalty to you %s %d." % [CopyRules.possessive(coach_name), "up" if v > 0 else "down", absi(v)]]]
+		"standing":
+			var parts: Array = []
+			for pair in [[int(e.get("r", 0)), "Your Respect"], [int(e.get("a", 0)), "Your Authority"]]:
+				if int(pair[0]) != 0:
+					parts.append(["gain" if int(pair[0]) > 0 else "cost", "%s %s %d." % [pair[1], "up" if int(pair[0]) > 0 else "down", absi(int(pair[0]))]])
+			return parts
+		"faction":
+			return Factions.effect_parts(str(e.get("do", "")), int(facts.get("faction_size", 0)),
+					str(facts.get("faction_state", "")) == "ultimatum")
 		"delegate":
 			# Left to the captain: where the group stands now, then what each
 			# outcome does, each under its own gain or cost.
@@ -1221,6 +1276,20 @@ static func _effect_parts(e: Dictionary, facts: Dictionary) -> Array:
 		"promise_win":
 			return [["gain", "Win and board confidence goes up %s more than a win alone." % _pct(PROMISE_WIN_UP)],
 					["cost", "Lose or draw and board confidence falls %s more than a loss alone." % _pct(PROMISE_WIN_DOWN)]]
+		"promise":
+			return _promise_parts(e, facts)
+		"bond":
+			var bk := str(e.get("kind", "mate"))
+			# A rivalry for a spot is a cost to the coach; every other tie is a gain.
+			var bond_side := "cost" if bk == "rival" else "gain"
+			if str(e.get("with", "b")) == "kid":
+				return [[bond_side, "{name} and {kid_name} become %s." % str(BOND_WORDS.get(bk, "close mates"))]]
+			if str(facts.get("b_id", "")) == "":
+				return []
+			return [[bond_side, "{first} and {first_b} become %s." % str(BOND_WORDS.get(bk, "close mates"))]]
+		"bond_seed":
+			var n := int(e.get("n", 1))
+			return [["gain", "%s new close mates in the group." % ("A pair of" if n == 1 else MatchNotes.count_word(n).capitalize() + " pairs of")]]
 		"captaincy_swap":
 			return [["gain", "{vice_name} takes the armband. {name} stays in the leadership group."],
 					["cost", "Taking it off {name} mid-season: his morale falls %s and his opinion of you falls %d. It uses your one change this season." % [
@@ -1363,9 +1432,45 @@ static func _injury_length_words() -> String:
 	return "%s of injuries are two weeks or less" % _pct(roundi(short * 100.0))
 
 
+## A tie a card makes between its two players (op "bond", Bonds.form).
+const BOND_WORDS := {"mate": "close mates", "rival": "rivals for the spot", "mentor": "mentor and protege",
+		"protege": "mentor and protege", "ally": "allies in the leadership group"}
+
+
+## A card's promise (op "promise", Promises.card_made): what is owed, by when,
+## and what breaking it costs, in the words of the gate.
+static func _promise_parts(e: Dictionary, facts: Dictionary) -> Array:
+	var kind := str(e.get("kind", ""))
+	var weeks := int(e.get("weeks", Promises.CARD_WEEKS.get(kind, 0)))
+	var by := (" within %s" % ("a week" if weeks == 1 else "%d weeks" % weeks)) if weeks > 0 else ""
+	var trust := int(Promises.CARD_BROKEN_TRUST.get(kind, 0))
+	var drop := -Trust.opinion_move(int(facts.get("trust", 0)), trust) if trust != 0 else 0
+	match kind:
+		"senior_game":
+			return [["cost", "He is promised a senior game%s. If it doesn't come, the promise breaks: his opinion of you falls %d." % [
+					by if by != "" else " this season", drop]]]
+		"deal":
+			return [["cost", "He is promised a new deal%s. If he isn't signed by then, the promise breaks: his opinion of you falls %d." % [
+					by if by != "" else " by season's end", drop]]]
+		"stays":
+			return [["cost", "He is promised a future here. Trade or delist him this season and the promise breaks: his opinion of you falls %d." % drop]]
+		"finals":
+			var when := "next season" if str(e.get("season", "this")) == "next" else "this season"
+			return [["gain", "Make finals %s and board confidence goes up %s." % [when, _pct(int(Promises.CARD_BOARD["finals"]))]],
+					["cost", "Miss them and board confidence falls %s." % _pct(int(Promises.CARD_BOARD["finals"]))]]
+		"wins":
+			var need := int(e.get("need", 2))
+			return [["gain", "Win %s of the next %s and board confidence goes up %s." % [
+					MatchNotes.count_word(need), MatchNotes.count_word(weeks), _pct(int(Promises.CARD_BOARD["wins"]))]],
+					["cost", "Fall short and board confidence falls %s." % _pct(int(Promises.CARD_BOARD["wins"]))]]
+	return []
+
+
 ## A broken promise's price, in the order it lands. `trust` is the move
 ## (negative); the opinion it costs is from his trust in `facts` today.
 static func _broken_words(sting: int, trust: int, facts: Dictionary) -> String:
+	# His temperament sizes it, as Promises.broken_trust charges it.
+	trust = clampi(roundi(float(trust) * float(facts.get("broken_scale", 1.0))), -Trust.STEP_MAX, Trust.STEP_MAX)
 	return "his morale falls up to %s, his opinion of you falls %d and the group's togetherness drops %s." % [
 			_pct(sting), -Trust.opinion_move(int(facts.get("trust", 0)), trust), _pct(BROKEN_TOGETHER)]
 

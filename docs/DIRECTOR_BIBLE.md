@@ -1082,6 +1082,9 @@ _The director's brief of 2026-11-26 ("Crusader Kings is the main inspiration"; "
 175. **Respect and Authority.** "Add live Respect and Authority scores for the senior coach that move dynamically based on your actual decisions (backing players and keeping promises builds Respect; ruthless drops, hardline discipline, and overruling dissent builds Authority). Starting coach archetypes set initial bias, not permanent rails." [2026-11-26]
 176. **Transparency on drill-down.** "Show exact modifiers, bond links, remaining decay weeks, and Respect/Authority impacts on profiles and selection previews." [2026-11-26]
 177. **A Club Politics screen.** "Make a first-class Club Politics / Inner Circle view part of the plan (showing Council loyalties, key locker-room cliques/bonds, active factions, and coach standing), surfaced cleanly without turning into weekly busywork." Supersedes the RPG-009 caveat's "no personality dashboard". [2026-11-26]
+178. **A broken promise builds no Authority.** "Hard selection and discipline calls build Authority; breaking your word should only hurt Respect and coach_word." [2026-11-26, Phase 1 integration]
+179. **Leaders are few.** The leader temperament sits at about four or five players a club (75 to 95 league-wide), every named captain among them. [2026-11-26]
+180. **Morale drift approved.** The opinion drift that moves mean morale from 86 to 82 stands as is: "82 gives healthier headroom across all 18 clubs." [2026-11-26]
 
 ## 5.S Superseded and cut
 

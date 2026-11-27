@@ -81,7 +81,7 @@ func _run() -> void:
 	var shots := [["bond_away_camp", {}, "01_camp"], ["bond_talent_quest", {}, "02_talent"],
 			["bond_community_week", {}, "03_community"], ["bond_beach_day", {}, "04_beach"],
 			["bond_cultural_day", {}, "05_cultural"], ["bond_leadership_workshop", {}, "06_workshop"],
-			["bond_families_day", {}, "07_families"], ["pre_leaders_vote", {}, "08_leaders"], ["pre_sim_heated", {}, "09_heated"]]
+			["bond_families_day", {}, "07_families"], ["pre_leaders_vote", {}, "08_leaders"]]
 	# Then the club's own bonding cards (10_<id> ...).
 	var n := 10
 	# Loaded at run time: a --script tool compiles before the autoloads exist.

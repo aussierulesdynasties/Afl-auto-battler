@@ -100,27 +100,6 @@
 		]
 	},
 	{
-		"id": "brl_homesick",
-		"club": "BRL",
-		"controversy": false,
-		"category": "family",
-		"private": true,
-		"subject": {"kind": "player", "pick": "random", "where": {"age_max": 21, "games_max": 20}},
-		"title": ["Missing home"],
-		"text": ["{name} came north and he's struggling. He misses his family and his mates, and the welfare staff think he could ask for a trade home at season's end."],
-		"choices": [
-			{"key": "family", "label": "Fly his family up for a fortnight",
-			 "effects": [{"op": "morale", "d": 8, "who": "subject"}, {"op": "board", "d": -2, "was": "funds"}, {"op": "forgo_xp", "d": 4, "who": "subject"}],
-			 "result": "His family arrives. {first} settles, and he's distracted for a week."},
-			{"key": "games", "label": "Give him games",
-			 "effects": [{"op": "morale", "d": 5, "who": "subject"}, {"op": "odds", "chance": 30, "hit": [{"op": "morale", "d": -8, "who": "subject"}], "hit_result": "He wasn't ready, got dropped, and took it hard."}],
-			 "result": "Feeling wanted on the field might be the cure."},
-			{"key": "weekend", "label": "Let him go home for a long weekend",
-			 "effects": [{"op": "morale", "d": 4, "who": "subject"}, {"op": "forgo_xp", "d": 6, "who": "subject"}],
-			 "result": "{first} gets a few days at home and misses a week's work."}
-		]
-	},
-	{
 		"id": "brl_go_home_whispers",
 		"club": "BRL",
 		"controversy": false,
@@ -173,7 +152,7 @@
 			 "effects": [{"op": "morale", "d": 3, "who": "subject"}, {"op": "board", "d": 2, "was": "members"}, {"op": "slow_start", "chance": 20, "who": "side"}],
 			 "result": "{first} plays and Queensland takes notice. The side has a rougher edge this week."},
 			{"key": "next", "label": "Tell him he's next",
-			 "effects": [{"op": "xp", "d": 6, "who": "subject"}, {"op": "morale", "d": -3, "who": "subject"}],
+			 "effects": [{"op": "xp", "d": 6, "who": "subject"}, {"op": "morale", "d": -3, "who": "subject"}, {"op": "promise", "kind": "senior_game", "weeks": 3}],
 			 "result": "The in-form player keeps his spot. {first} waits, and the papers say so."}
 		]
 	},
