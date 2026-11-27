@@ -403,6 +403,10 @@ Source tags: DB = DESIGN_BIBLE; RM26/27/28/29/30/32 = roadmap chapters 26, 27, 2
 
 **2.115** Through the banner in the 3D view, and banner words are milestones only (2026-11-21; row 202). He asked for "a 'running through the banners' scene, similar to our existing vignette but in the new 3d view", then: "the plan for banner text is simply milestone stuff / no jokes for now, no rhymes". On the 3D picture the run-through plays on the match's own ground before the first bounce (scripts/ui/match/Oval3DBanner.gd): the cheer squad holds the banner up on the far wing, your side bursts through, the crepe tears, the crowd rises, cut as the TV does (the wide, front-on, alongside); a tap ends it. data/banners.json's milestone set holds plain words (a debut, 50 to 350 games on the approved "200 games. Take a bow, {display_name}." pattern, a club milestone, a last game); every other set stays the club's name (rule 6.66).
 
+**2.116** A man goes down for every loose-ball pick-up (2026-11-27; row 217). The match view's check that nobody runs straight across a loose ball upright failed on Nightly 45916430137 (11 crossings in 8 matches). Asked whether a man goes down for the ball only on a rebound or on every pick-up, he chose "Every pick-up": the view's gathers cover inside-50 spills, goals, behinds and clangers as well as rebounds (#2254; 1 crossing left in the 8 matches, rule 2.117).
+
+**2.117** A ball fumbled at full sprint stays loose for a contest (2026-11-27; row 217). In match_visual's seed-555 match at 517 s a kick into the forward 50 spills off the pack and the defender sprinting under it (10.4 m/s) fumbles it; the view hands it straight back to him 0.08 s later, so he runs across it upright and has it within 5 frames. Asked "Should a ball fumbled at full sprint stay loose for a contest, or may he regather it at once?" (Stay loose: it stays on the ground long enough for nearby players to contest it, like a real spill; Regather OK: he scoops it up on the run, in a believable moment), he chose "Stay loose". Not built yet.
+
 ---
 
 ## 2.S Superseded and cut
