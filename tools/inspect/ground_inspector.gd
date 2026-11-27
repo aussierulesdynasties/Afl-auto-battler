@@ -54,6 +54,8 @@ var _failed := false
 var _show_oval := true
 var _match_parts: Array = []
 var _project := ""
+var _orbit: Oval3DOrbit       # the aerial orbit round the ground on show (H), planned on first use
+var _orbit_t := -1.0          # s into the orbit while it flies; < 0 off
 
 
 func _ready() -> void:
@@ -358,6 +360,8 @@ func _load(i: int) -> void:
 	if stage != null:
 		stage.queue_free()
 		oval = null
+	_orbit_stop()
+	_orbit = null
 	stage = Node3D.new()
 	stage.name = "Stage"
 	add_child(stage)
@@ -530,6 +534,15 @@ func _key(e: InputEventKey) -> void:
 				var shut := not GroundModels.roof_shut(gr, slug)
 				GroundModels.set_roof(gr, slug, shut)
 				_say("Roof " + ("shut, as in a match" if shut else "open"))
+		KEY_H:
+			if _orbit_t >= 0.0:
+				_orbit_stop()
+				_say("Orbit stopped")
+			elif stage != null:
+				if _orbit == null:
+					_orbit = Oval3DOrbit.plan(stage, GroundModels.match_fence(), str(grounds[current].get("dir", "")))
+				_orbit_t = 0.0
+				_say("Aerial orbit (H or any move key stops it)")
 		KEY_F1:
 			help.visible = not help.visible
 		KEY_F11:
@@ -566,7 +579,29 @@ func _apply_look() -> void:
 	camera.global_basis = Basis.from_euler(Vector3(pitch, yaw, 0.0))
 
 
+## Off the orbit: the fly-through's own lens again, from where the orbit left the camera.
+func _orbit_stop() -> void:
+	if _orbit_t < 0.0:
+		return
+	_orbit_t = -1.0
+	camera.keep_aspect = Camera3D.KEEP_HEIGHT
+	camera.fov = 70.0
+	camera.near = 0.05
+	var e := camera.global_basis.get_euler()
+	pitch = e.x
+	yaw = e.y
+
+
 func _process(dt: float) -> void:
+	if _orbit_t >= 0.0:
+		for k in [KEY_W, KEY_A, KEY_S, KEY_D, KEY_E, KEY_Q, KEY_SPACE, KEY_CTRL, KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT]:
+			if Input.is_physical_key_pressed(k):
+				_orbit_stop()
+		if _orbit_t >= 0.0:
+			_orbit_t += dt
+			_orbit.place(camera, _orbit_t)
+			_hud(dt)
+			return
 	# The keys fly whether or not the mouse is held for looking; not while the list is open.
 	var want := Vector3.ZERO
 	if not list_panel.visible:
@@ -615,7 +650,7 @@ func _build_ui() -> void:
 		"R: start view    V: pre-game shot    T: centre square at eye height    G: drop to the floor below",
 		"C: copy where you are (for the fault list)    P or F12: screenshot",
 		"O: show or hide the match's turf and goalposts (to check the model sits on them)",
-		"B: open or shut the roof (Marvel Stadium)",
+		"B: open or shut the roof (Marvel Stadium)    H: aerial orbit round the ground",
 		"F11: full screen    F1: hide this    Drop a .glb on the window to open it",
 	])
 	help.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
