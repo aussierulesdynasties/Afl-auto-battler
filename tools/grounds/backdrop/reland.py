@@ -49,6 +49,11 @@ FAR, WATER = "bg_far_terrain", "bg_water"
 SINK_MAX = 0.3
 # A water sheet in more separate pieces than this is only scattered fragments over the painted water: left out.
 SCATTERED = 100
+# A ground's painted water brought to this colour (sRGB, on average), so the harbour draws in one colour with the
+# surrounds map's water across the backdrop's cut. Marvel's is fitted to renders (2026-11-27): its painted water
+# (51, 74, 84) drew (50, 88, 105) beside the surrounds' (45, 79, 98) and (28, 56, 67) drew (21, 68, 88), and the
+# straight line through the two (linear light) meets the surrounds at (47, 66, 77). The two layers are lit apart.
+WATER_TARGET = {"marvel": (47, 66, 77)}
 
 
 def fit(slug):
@@ -130,6 +135,14 @@ class Glb:
         a["min"] = [float(x) for x in P.min(0)]
         a["max"] = [float(x) for x in P.max(0)]
 
+    def write_vec3(self, ai, V):
+        a = self.J["accessors"][ai]
+        assert a["componentType"] == 5126 and a["type"] == "VEC3"
+        v = self.J["bufferViews"][a["bufferView"]]
+        off = v.get("byteOffset", 0) + a.get("byteOffset", 0)
+        b = np.ascontiguousarray(V, "<f4").tobytes()
+        self.bin[off:off + len(b)] = b
+
     def save(self):
         js = json.dumps(self.J, separators=(",", ":")).encode()
         js += b" " * (-len(js) % 4)
@@ -137,6 +150,70 @@ class Glb:
         blob = (struct.pack("<III", 0x46546C67, 2, 28 + len(js) + len(body)) + struct.pack("<II", len(js), 0x4E4F534A)
                 + js + struct.pack("<II", len(body), 0x004E4942) + body)
         open(self.path, "wb").write(blob)
+
+
+def _ground_texture(g, pr):
+    """The ground primitive's base colour image: (image index, RGB array 0-255), or None."""
+    import io
+    from PIL import Image
+    J = g.J
+    bt = J["materials"][pr["material"]].get("pbrMetallicRoughness", {}).get("baseColorTexture")
+    if bt is None:
+        return None
+    tx = J["textures"][bt["index"]]
+    ii = tx["source"] if "source" in tx else next(iter(tx["extensions"].values()))["source"]
+    bv = J["bufferViews"][J["images"][ii]["bufferView"]]
+    off = bv.get("byteOffset", 0)
+    return ii, np.asarray(Image.open(io.BytesIO(bytes(g.bin[off:off + bv["byteLength"]]))).convert("RGB"), float)
+
+
+def _water_texels(img):
+    """The scene's harbour and river blue in its ground texture."""
+    return (img[..., 2] - img[..., 0] > 22) & (img[..., 1] - img[..., 0] > 12) & (img.max(-1) < 120)
+
+
+def _lin(c):
+    c = np.asarray(c, float) / 255
+    return np.where(c <= 0.04045, c / 12.92, ((c + 0.055) / 1.055) ** 2.4)
+
+
+def tone_painted_water(g, target):
+    """Bring the ground texture's painted water to `target` (sRGB) on average, scaling it in linear light so its
+    small grain stays: it then meets the surrounds' water in one colour at the seam. The new image goes on the end of
+    the buffer; the old one's bytes stay unreferenced in it."""
+    import io
+    from PIL import Image
+    done = set()
+    for mi, m in enumerate(g.J["meshes"]):
+        if not g.name_of.get(mi, m.get("name", "")).startswith("bg_near_ground"):
+            continue
+        for pr in m["primitives"]:
+            got = _ground_texture(g, pr)
+            if got is None or got[0] in done:
+                continue
+            ii, img = got
+            done.add(ii)
+            w = _water_texels(img)
+            if not w.any():
+                continue
+            lin = _lin(img)
+            gain = _lin(target) / lin[w].mean(0)
+            lin[w] = np.clip(lin[w] * gain, 0, 1)
+            out = np.where(lin <= 0.0031308, lin * 12.92, 1.055 * np.power(lin, 1 / 2.4) - 0.055) * 255
+            b = io.BytesIO()
+            mime = g.J["images"][ii].get("mimeType", "image/webp")
+            Image.fromarray(np.clip(out + 0.5, 0, 255).astype(np.uint8)).save(
+                b, "WEBP" if "webp" in mime else "PNG", **({"quality": 92, "method": 6} if "webp" in mime else {}))
+            g.bin += b"\0" * (-len(g.bin) % 4)
+            g.J["bufferViews"].append({"buffer": 0, "byteOffset": len(g.bin), "byteLength": len(b.getvalue())})
+            g.bin += b.getvalue()
+            g.J["buffers"][0]["byteLength"] = len(g.bin)
+            g.J["images"][ii]["bufferView"] = len(g.J["bufferViews"]) - 1
+            # a new name: Godot keeps an image it once wrote out beside the model (<model>_<image>.webp) and drew
+            # that stale copy, not the toned one, after the model changed
+            g.J["images"][ii]["name"] = g.J["images"][ii].get("name", "ground") + "_toned"
+            print("%s: painted water %s brought to %s (%d texels)" % (
+                os.path.basename(g.path), img[w].mean(0).round().astype(int).tolist(), list(target), int(w.sum())))
 
 
 def flatten_painted_water(g, level):
@@ -170,6 +247,10 @@ def flatten_painted_water(g, level):
             P[water, 1] = level
             n += int(water.sum())
             g.write_pos(pr["attributes"]["POSITION"], P.astype(np.float32))
+            if "NORMAL" in pr["attributes"]:   # level water faces straight up: its old normals lit it in blotches
+                N = g.read(pr["attributes"]["NORMAL"])
+                N[water] = (0.0, 1.0, 0.0)
+                g.write_vec3(pr["attributes"]["NORMAL"], N.astype(np.float32))
     return n
 
 
@@ -380,6 +461,9 @@ def main():
     if wat:
         flat = sum(flatten_painted_water(g, wat_old + wat_shift) for g in glbs)
         print("ground vertices on painted water laid flat at its level: %d" % flat)
+    if slug in WATER_TARGET:   # after the flattening, which finds the water by its old colour
+        for g in glbs:
+            tone_painted_water(g, WATER_TARGET[slug])
     for g in glbs:
         drop_scattered_water(g)
         g.save()

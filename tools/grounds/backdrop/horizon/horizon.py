@@ -61,7 +61,8 @@ LEVEL_M, LEVEL_BASE = 3.4, 1.0   # prep.py's storey height
 JOIN_BELOW = 20.0     # low buildings of one height band that touch are joined
 JOIN_BAND = 3.0
 TIER_M = 3.0         # m: a measured structure's parts with tops this close are one tier
-CANOPY_KEEP = 0.25   # share of the photographed canopy faces kept
+CANOPY_CELL = 6.0    # m: the far canopy's cell (canopy())
+CANOPY_TRIS = 70000  # its triangles after thinning (the old shards' count)
 JOIN_GAP = 2.0        # m: across a lane or a gap between neighbours narrower than twice this, they are one block
 LOW_SIMPLIFY = 3.0    # m: a low block's outline is kept to this
 WEDGES = 8
@@ -684,33 +685,79 @@ def canopy(slug, frame, H, com):
     ahd = lambda zz: frame.floor + zz - H.datum                                   # noqa: E731
     keep &= ahd(c[:, 2]) > land + 2.0
     T, C = T[keep], C[keep]
-    e, n, zz = T[..., 0].ravel(), T[..., 1].ravel(), T[..., 2].ravel()
-    X, Z = frame.xz(e, n)
-    Y = ahd(zz) - drop(X, Z)
-    P = np.stack([X, Y, Z], 1)
-    # weld the photomesh's shared corners, then thin the canopy to CANOPY_KEEP of its faces (quadric decimation):
-    # a tree 2 km out is a few pixels, and its crown's outline, height and colour are what stay
-    V, inv = np.unique(np.round(P, 2), axis=0, return_inverse=True)
-    F = inv.reshape(-1, 3)
-    F = F[(F[:, 0] != F[:, 1]) & (F[:, 1] != F[:, 2]) & (F[:, 0] != F[:, 2])]
+    # The crowns as solid masses, not the photomesh's own faces: thinned, those were loose shards with sky between
+    # them (Westgate Park from the West Gate Bridge, 2026-11-27, where the real park is solid bush). Each CANOPY_CELL
+    # cell the faces fall in takes their highest top over the land and their mean colour; cells one apart are closed
+    # into one mass; each cell is drawn as a low pyramid (its corners shared with its neighbours, its middle at the
+    # top), so a lone tree is a peak and a park a canopy with its edge sloping to the ground.
+    from scipy import ndimage
+    c = T.mean(1)
+    top = ahd(c[:, 2]) - land[keep]
+    e0, n0 = c[:, 0].min() - CANOPY_CELL, c[:, 1].min() - CANOPY_CELL
+    ci = ((c[:, 0] - e0) // CANOPY_CELL).astype(int)
+    cj = ((c[:, 1] - n0) // CANOPY_CELL).astype(int)
+    ni, nj = ci.max() + 2, cj.max() + 2
+    hgt = np.zeros((ni, nj))
+    np.maximum.at(hgt, (ci, cj), top)
+    lc = lin_of(C.astype(np.float64) / 255.0)
+    csum = np.zeros((ni, nj, 3))
+    cnt = np.zeros((ni, nj))
+    np.add.at(csum, (ci, cj), lc)
+    np.add.at(cnt, (ci, cj), 1)
+    seen = cnt > 0
+    mask = ndimage.binary_closing(seen, np.ones((3, 3), bool)) | seen
+    # a closed-in cell takes its nearest photographed cell's height and colour
+    _, (ii, jj) = ndimage.distance_transform_edt(~seen, return_indices=True)
+    hgt = np.where(seen, hgt, hgt[ii, jj])
+    col = np.where(seen[..., None], csum / np.maximum(cnt, 1)[..., None], (csum / np.maximum(cnt, 1)[..., None])[ii, jj])
+    hgt = np.minimum(hgt, 40.0)
+    I, J = np.nonzero(mask)
+    m = len(I)
+    # corners: (ni + 1) x (nj + 1), each at the land plus the mean top of the masked cells round it (the others count 0)
+    mk = np.pad(mask.astype(float), 1)
+    hp = np.pad(hgt * mask, 1)
+    cp = np.pad(col * mask[..., None], ((1, 1), (1, 1), (0, 0)))
+    cn = mk[:-1, :-1] + mk[1:, :-1] + mk[:-1, 1:] + mk[1:, 1:]
+    corner_h = (hp[:-1, :-1] + hp[1:, :-1] + hp[:-1, 1:] + hp[1:, 1:]) / 4
+    corner_c = (cp[:-1, :-1] + cp[1:, :-1] + cp[:-1, 1:] + cp[1:, 1:]) / np.maximum(cn, 1)[..., None]
+    used = np.zeros(corner_h.shape, bool)
+    for di in (0, 1):
+        for dj in (0, 1):
+            used[I + di, J + dj] = True
+    ui, uj = np.nonzero(used)
+    vid = -np.ones(corner_h.shape, np.int64)
+    vid[ui, uj] = np.arange(len(ui))
+    ce, cnn = e0 + ui * CANOPY_CELL, n0 + uj * CANOPY_CELL
+    me, mn = e0 + (I + 0.5) * CANOPY_CELL, n0 + (J + 0.5) * CANOPY_CELL
+    E = np.r_[ce, me]
+    N = np.r_[cnn, mn]
+    L = H.at(E, N, CANOPY_CELL)
+    UP = np.r_[corner_h[ui, uj], hgt[I, J]]
+    X, Z = frame.xz(E, N)
+    V = np.stack([X, L + UP - drop(X, Z), Z], 1)
+    VC = np.r_[corner_c[ui, uj], col[I, J]]
+    mid = len(ui) + np.arange(m)
+    a0, a1, a2, a3 = vid[I, J], vid[I + 1, J], vid[I + 1, J + 1], vid[I, J + 1]
+    F = np.concatenate([np.c_[a0, a1, mid], np.c_[a1, a2, mid], np.c_[a2, a3, mid], np.c_[a3, a0, mid]])
+    # faces wound up (+y): e and n map to x and -z
     import pyfqmr
     from scipy.spatial import cKDTree
     s = pyfqmr.Simplify()
     s.setMesh(V, F.astype(np.int32))
-    s.simplify_mesh(target_count=int(len(F) * CANOPY_KEEP), aggressiveness=5, preserve_border=False, verbose=False)
+    s.simplify_mesh(target_count=CANOPY_TRIS, aggressiveness=7, preserve_border=False, verbose=False)
     V2, F2, _ = s.getMesh()
     V2 = np.asarray(V2, np.float64); F2 = np.asarray(F2, np.int64)
-    # each corner's colour: the median of the photographed faces nearest it
-    mids = P.reshape(-1, 3, 3).mean(1)
-    _, nb = cKDTree(mids).query(V2, k=6)
-    colv = lin_of(np.median(C[nb].astype(np.float64), 1) / 255.0)
+    _, nb = cKDTree(V).query(V2, k=1)
+    colv = VC[nb]
     fn = np.cross(V2[F2[:, 1]] - V2[F2[:, 0]], V2[F2[:, 2]] - V2[F2[:, 0]])
+    flip = fn[:, 1] < 0
+    F2[flip] = F2[flip][:, ::-1]
+    fn[flip] *= -1
     vn = np.zeros_like(V2)
     for k in range(3):
         np.add.at(vn, F2[:, k], fn)
     vn /= np.maximum(np.linalg.norm(vn, axis=1, keepdims=True), 1e-9)
-    vn *= np.where(vn[:, 1:2] < 0, -1, 1)
-    print("canopy faces", len(F), "thinned to", len(F2))
+    print("canopy faces", len(T), "in", int(seen.sum()), "cells,", m, "closed; drawn in", len(F2), "triangles")
     return {"name": "trees_far", "pos": V2.astype(np.float32), "nrm": vn.astype(np.float32),
             "col": np.c_[colv, np.ones(len(colv))].astype(np.float32),
             "idx": F2.ravel().astype(np.uint32), "material": "horizon_trees"}
