@@ -228,3 +228,8 @@ What has landed toward each open row of docs/TODO.md and docs/TODO_RULINGS.md, o
 - 171: Merged #2220: Selection and Training on a PC: one-line rows, a band per position, two tabs.
 - 171: Merged #2221: UI Batch 5, Draft room and Combine on a PC.
 - 202: Merged #2215: 3D 1.0 plan: guernsey atlases, review imagery and ground models out of the public repo.
+- R: Merged #2156: Relationship overhaul phase 1: player temperaments.
+- R: Merged #2158: Player bonds: mates, rivals, mentors, leaders and family across every club.
+- R: Merged #2226: Relationship overhaul Phase 1 UI: profile breakdown and drop preview.
+- R: Merged #2233: Relationship overhaul phase 1: unify promises and add the coach's Respect and Authority.
+- R: Merged #2234: Relationship overhaul Phase 1: Opinion engine with fading marks.
