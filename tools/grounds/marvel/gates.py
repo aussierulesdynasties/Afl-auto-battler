@@ -120,12 +120,49 @@ def _stage1():
         t = (b % 360 * 2) % 1.0
         return lo + (hi - lo) * t
 
+    # The wall along Wurundjeri Way (marvel.glb, the Marvel thread's round 17): 7.95 m west of the centreline of the
+    # northbound ways 580628688 and 790397545 (3 lanes x 3.3 m / 2 + 0.3 m kerb + 2.7 m verge), each way offset on
+    # its own as landmarks.graffiti_wall does. The deck stops at it; past it lay the verge and the road.
+    WALL_OFF = 3 * 3.3 / 2 + 0.3 + 2.7
+    WAYS = json.load(open(os.path.join(HERE, "fit", "wurundjeri_ways.json")))["ways"]
+    WALL_SEGS = []
+    for wpts in WAYS.values():
+        wp = np.array(wpts, float)
+        line = []
+        for i in range(len(wp)):
+            dv = wp[min(i + 1, len(wp) - 1)] - wp[max(i - 1, 0)]
+            dv /= np.linalg.norm(dv)
+            line.append(wp[i] + np.array([-dv[1], dv[0]]) * WALL_OFF)    # left of a northbound way is west
+        WALL_SEGS += list(zip(line[:-1], line[1:]))
+
+    def wall_r(b):
+        """Distance out along the radial at bearing b to the Wurundjeri Way wall, or None if it misses."""
+        d = u(b)
+        best = None
+        for a, c in WALL_SEGS:
+            e = c - a
+            den = d[0] * (-e[1]) - d[1] * (-e[0])
+            if abs(den) < 1e-9:
+                continue
+            t = (a[0] * (-e[1]) - a[1] * (-e[0])) / den          # along the radial
+            s_ = (d[0] * a[1] - d[1] * a[0]) / den                 # along the segment
+            if t > 0 and -1e-6 <= s_ <= 1 + 1e-6:
+                best = t if best is None else min(best, t)
+        return best
+
     def r_out(b):
         bb = b if b >= 280 else b + 360
         xs, ys = zip(*OUTER)
         r = float(np.interp(bb, xs, ys))
         w = abut(b)
-        return min(r, w - 0.02) if w is not None else r
+        r = min(r, w - 0.02) if w is not None else r
+        wr = wall_r(b)
+        return min(r, wr) if wr is not None else r
+
+    def at_wall(b):
+        """The deck's edge is the Wurundjeri Way wall here (marvel.glb draws that wall and its coping)."""
+        wr = wall_r(b)
+        return wr is not None and r_out(b) >= wr - 1e-6
 
     def r_in(b):
         k = "%.1f" % ((round(b * 2) / 2) % 360)
@@ -223,6 +260,8 @@ def _stage1():
         if abs(((ba + bb) / 2) % 360 - STEPS_B) < steps_gap:
             continue
         if abut(ba) is not None and abut(bb) is not None:     # a building's wall is the edge here
+            continue
+        if at_wall(ba) and at_wall(bb):                       # so is the Wurundjeri Way wall
             continue
         a, b = pt(ba, r_out(ba)), pt(bb, r_out(bb))
         ai, bi = pt(ba, r_out(ba) - PAR_T), pt(bb, r_out(bb) - PAR_T)
@@ -794,7 +833,12 @@ def _stage2(pkl):
             tx = nt.nodes.new("ShaderNodeTexImage")
             tx.image = bpy.data.images.load(path)
             nt.links.new(tx.outputs["Color"], b.inputs["Base Color"])
-            if tx.image.channels == 4:     # wire mesh and bar screens: alpha clip, exported as glTF alphaMode MASK
+            # Wire mesh and bar screens (saved RGBA): alpha clip, exported as glTF alphaMode MASK. Blender holds
+            # every image with 4 channels, so the PNG's own colour type decides (byte 25: 6 = RGBA). Marked MASK,
+            # an opaque face is left off the stands' light in a match and a ceiling took the grass's green.
+            with open(path, "rb") as fh:
+                rgba = fh.read(26)[25] in (4, 6)
+            if rgba:
                 rd = nt.nodes.new("ShaderNodeMath")
                 rd.operation = "ROUND"
                 nt.links.new(tx.outputs["Alpha"], rd.inputs[0])
