@@ -25,6 +25,29 @@ How this page relates to the others: [3D_VIEW_PLAN.md](3D_VIEW_PLAN.md) stays th
 rulings; this page is the release checklist built from it; `docs/TODO.md` rows 197, 198, 201, 202,
 203 and 207 hold execution detail.
 
+## What changed around 3D since 23 Nov
+
+- **Where ground models live.** Main's history was rewritten on 26 Nov (#2199) and the ground models moved to the private
+  asset repo `gabebartolo-spec/ard-asset-pipeline`, pinned by `tools/ground_assets.lock`. A ground's work counts only once
+  its models are published there and the lock is pinned on main: merged code alone does not change what a match shows.
+  The lock has changed twice since (#2199; #2232 for the Legacy era surroundings). Bellerive round 7's publish is #2272
+  (open 27 Nov 13:10 UTC); Marvel round 13 and Norwood's Google Earth fixes were being published at the same time.
+- **CI.** The merge queue and the PC runners are gone: every check runs on GitHub's runners. There is no open-PR cap, and
+  every green PR is merged straight away (CLAUDE.md, the director, 27 Nov).
+- **The game around the match.** The director's own work since 23 Nov: the 18-attribute player rating rebuild (#2239,
+  #2240, #2242), the relationship overhaul (#2226, #2233, #2234, #2259), UI batches 1 to 5 with light mode
+  removed (dark only), and match engine fixes (#2210, #2211, #2225). None of it changes a 3D row's state, but the
+  rating rebuild changes the numbers the 3D match plays from (see the risks below).
+
+## Open risks
+
+- **The movement and shape figures predate the rating rebuild.** The feet-planted figure (skating 59% of steps to 11%,
+  #2009) and the team-shape harness (#1977) were measured before the sim moved onto 18 attributes on 27 Nov. They need
+  measuring again before anything leans on them.
+- **Team strength may be badly spread.** One test season after the rating rebuild had Fremantle going 23-0. That is one
+  hint, not a measurement; it affects what the 3D match shows week to week. Balance is the director's call: it gets
+  reported with numbers from the balance harness, not retuned here.
+
 ## Scope
 
 - **All 37 grounds** (the director, 2026-11-22, on the decision card: "Yes, all 37 grounds"). Every
@@ -136,8 +159,8 @@ The MCG of each era for Legacy matches: first part on main (#2052), thread "Buil
 | Ground and player models in the builds | On main (#2060, 2026-11-25): Android, Windows and the probe carry every ground and the players; web carries the players only. Per-ground download packs are built and tested but not used | Ship grounds and players in phone builds (closed) |
 | Download size of a 3D build | The APK is 913 MB with every stadium; the director chose one offline APK with a 4 GB ceiling (a 2.6 GB test APK installed). "Later we will try to get it smaller" The 913 MB was measured before the surroundings (#2023) landed; not re-measured since | Ship grounds and players in phone builds (closed); making it smaller is later work |
 | Licences of everything that ships | MetaHuman is decided: comply only. Where ground data may come from is now one rule in [MCG_STANDARD.md](MCG_STANDARD.md) ("Where shipped data may come from"): fidelity first, copying from Google Earth is fine, no raw imagery committed or baked into a shipped texture. The MetaHuman files left the public repo (#2062). The review boards and reference imagery (.claude/review and the photos under tools/grounds, 4.6 GB) moved to a private archive repo (#2192, 2026-11-26), so the current files no longer hold the third-party captures. Still open: motion clips (above); the credits screen (the list itself is docs/CREDITS_3D.md) | Ground threads (their data); this thread (the rule, the credits list); **nobody** for the rest |
-| Third-party images already in git history (Google Earth captures, Esri tiles, photos under .claude/review and tools/grounds; about 2.6 GB of review images in all) | Out of the current files since #2192 (2026-11-26: moved to the private archive aussierulesdynasties/afl-review-archive). They stay in history until a rewrite, which is a later item; the MetaHuman files left the public repo for a private one fetched at build time (#2062, 2026-11-25) | Move MetaHuman files out of the public repo; later item |
-| Tests and the nightly ground shots green on main | Most 3D PRs landed on 2026-11-25 | Fix CI |
+| Third-party images already in git history (Google Earth captures, Esri tiles, photos under .claude/review and tools/grounds; about 2.6 GB of review images in all) | Out of the current files since #2192 (2026-11-26: moved to the private archive aussierulesdynasties/afl-review-archive). Main's history was rewritten on 26 Nov (#2199) to drop the old ground models; whether the review images left history with it is not checked. They stay in history until a rewrite, which is a later item; the MetaHuman files left the public repo for a private one fetched at build time (#2062, 2026-11-25) | Move MetaHuman files out of the public repo; later item |
+| Tests and the nightly ground shots green on main | Every main push run green since 27 Nov 07:54 UTC (CI on GitHub's runners only; a CI health check runs in the repo every 2 h). The first nightly with the rating rebuild and relationship overhaul is not yet read | The CI health check; every thread fixes its own red |
 | His look on every item | Not started for grounds (fly-through) | He |
 
 ## Measured (2026-11-23, MetaHuman players on main)
@@ -199,3 +222,4 @@ and the smoothing buffers.
 - 2026-11-27 early: the momentum line over the 3D picture is thinner and dimmer, as the director asked (#2219). No row changes state.
 - 2026-11-27 morning: the 3D match stages a rushed behind as the defender running it back and knocking it over with the presser chasing, and a free kick with the man on the mark on the spot and the taker kicking over him (#2225). A rebound's gatherer comes in at his gather's pace (#2251). No row changes state.
 - 2026-11-27 midday: the code for Marvel round 13 (#2216), Bellerive round 7 (#2218) and Norwood's Google Earth gaps (#2214) merged (a ground counts only once its models are published and pinned in tools/ground_assets.lock; these three were being published at 13:00 UTC), measurements for the 19 Legacy grounds (#2217), era surroundings for six Legacy grounds (#2232, WIP) and in-match injuries (#2227, WIP) on main. Every loose-ball pick-up comes in at pick-up pace (#2254).
+- 2026-11-27 afternoon: full catch-up. New sections on what changed around 3D since 23 Nov (ground models published and pinned, CI on GitHub only, the director's rating rebuild, relationship overhaul and UI batches) and the open risks (movement figures predate the rating rebuild; a 23-0 test season). Bellerive round 7's publish is #2272.
