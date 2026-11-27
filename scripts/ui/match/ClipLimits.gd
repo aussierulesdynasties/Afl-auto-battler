@@ -31,8 +31,13 @@ const HINGE := Vector3(1.0, 0.0, 0.0)
 const PARENT := {"lowerarm_l": "upperarm_l", "lowerarm_r": "upperarm_r", "calf_l": "thigh_l", "calf_r": "thigh_r"}
 
 
+## The slow gait loops (Oval3DAnim.GAITS: optical motion capture, as the run and the stand), named
+## here so this file needs nothing that reaches the autoloads.
+const GAITS := ["walk", "backstep", "backpedal", "shuffle_l", "shuffle_r", "side_run_l", "side_run_r"]
+
+
 static func kept(clip: String) -> bool:
-	return clip in ["jog", "carry", "idle"] or clip.begins_with("tackle_")
+	return clip in ["jog", "carry", "idle"] or clip in GAITS or clip.begins_with("tackle_")
 
 
 static func apply(ap: AnimationPlayer, skel: Skeleton3D) -> void:

@@ -293,6 +293,7 @@ def paint(trees, ways):
                 continue
             d.polygon(poly(p), fill=ROOF)
     arr = np.asarray(im, float)
+    water = (np.abs(arr - np.array(WATER, float)).max(-1) < 0.5).astype(float)
     shade = Image.new("L", (SIZE, SIZE), 0)
     sd = ImageDraw.Draw(shade)
     for e, n, r, *_ in trees:
@@ -305,6 +306,10 @@ def paint(trees, ways):
     yy, xx = np.mgrid[0:SIZE, 0:SIZE]
     r = np.hypot(xx - SIZE / 2, yy - SIZE / 2)
     edge = np.clip((r - 900) / 120, 0, 1)[..., None]
+    # the land fades to a city grey for the backdrop to take over; the harbour and the river stay water to the edge,
+    # where the backdrop's own water meets them (a grey fade there read as a pale band across the water, 2026-11-27)
+    w = np.asarray(Image.fromarray((water * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(1.5)), float)[..., None] / 255
+    edge = edge * (1 - w)
     arr = arr * (1 - edge) + np.array(URBAN, float) * edge
     return Image.fromarray(np.clip(arr, 0, 255).astype(np.uint8), "RGB")
 

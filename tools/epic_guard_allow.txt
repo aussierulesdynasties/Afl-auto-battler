@@ -17,6 +17,7 @@ assets/oval3d/player_mh_soccer_cleat_3d_model_basecolor.jpg        the same Trip
 assets/oval3d/player_loops.glb                              run, carry and stand loops (#1689)
 assets/oval3d/crew_clips.glb                                umpire and crew clips keyed by hand, no mesh (tools/oval3d/crew/key_crew_clips.py, #2068)
 assets/oval3d/injury_clips.glb                              in-match injury clips, no mesh: Mixamo motion retargeted, and the help-off made in Blender (tools/oval3d/injury/, #2071)
+assets/oval3d/gait_clips.glb                                walk, backpedal and side-step loops, no mesh: 100STYLE motion capture (CC BY 4.0) retargeted (tools/oval3d/gaits/retarget_bvh.py)
 
 # Crowd: Mixamo bodies baked to vertex animation (tools/oval3d/build_crowd_set.gd)
 assets/oval3d/crowd_set.res                                 Mixamo crowd bodies, baked
