@@ -63,7 +63,7 @@ func _run() -> void:
 	gs.autosave_enabled = false
 	gs.save_path = "user://capture_club_page.save"
 	gs.settings_path = "user://capture_club_page.cfg"
-	UK.apply_appearance("dark")
+	UK.apply_palette()
 	if _w >= 760:
 		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
 		DisplayServer.window_set_size(Vector2i(_w, _h))

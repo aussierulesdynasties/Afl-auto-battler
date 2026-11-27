@@ -6,8 +6,8 @@
 #   tools/ground_packs/export.sh <android|windows|web> <out dir> [slug ...]
 #
 # Writes <out>/<slug>-<id>.pck per ground and <out>/ground_packs.json, the list a build carries:
-# {"platform", "godot", "packs": {slug: {"file", "bytes", "sha256"}}}. <id> is the ground folder's
-# git tree hash (first 10), so a pack's name changes exactly when its ground changes, and the
+# {"platform", "godot", "packs": {slug: {"file", "bytes", "sha256"}}}. <id> hashes the ground folder's
+# git tree and its pinned model hashes (tools/ground_assets.lock), so a pack's name changes exactly when its ground changes, and the
 # same commit gives the same names on any machine. Texture formats follow the platform
 # (Android ETC2/ASTC, Windows S3TC/BPTC, Web both), so each platform has its own packs.
 # Needs an imported project (godot --headless --import) and export templates.
@@ -42,11 +42,15 @@ json="$OUT/ground_packs.json"
 	echo "  \"packs\": {"
 } > "$json.tmp"
 first=1
+assets_ok=1
+bash tools/ground_assets.sh check >/dev/null 2>&1 || assets_ok=0
 for slug in "${slugs[@]}"; do
 	dir="assets/grounds/$slug"
 	[ -d "$dir" ] || { echo "no $dir" >&2; exit 1; }
-	id="$(git rev-parse --short=10 "HEAD:$dir" 2>/dev/null || echo untracked)"
-	if [ -n "$(git status --porcelain -- "$dir" ':!*.import')" ]; then
+	# The models themselves live in a private repo (docs/GROUND_ASSETS.md): the folder's tree here
+	# holds only the .import files, so the id also takes the folder's pinned hashes from the lock.
+	id="$({ git rev-parse "HEAD:$dir" 2>/dev/null || echo untracked; grep -F "  $dir/" tools/ground_assets.lock; } | sha1sum | cut -c1-10)"
+	if [ -n "$(git status --porcelain -- "$dir")" ] || [ "$assets_ok" = 0 ]; then
 		id="${id}-dirty"
 	fi
 	file="$slug-$id.pck"

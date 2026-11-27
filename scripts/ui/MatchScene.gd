@@ -127,7 +127,11 @@ var _card: StatCard = null   # the goal kicker's stat card on the picture (row 2
 var _mom_line: Button         # the line's tap (a tap still explains momentum)
 var _mom_line_meter: Control  # MomentumMeter, a few pixels tall
 var _bug_note: Label          # the first match's momentum line, over the picture
-const MOM_LINE_H := 5.0
+## The line's height in layout units and the strength it is drawn at (director,
+## 2026-11-26: "make it thinner and less bright"). It was sized as a type size, which
+## never goes under 13, so it stood 13 tall at full strength.
+const MOM_LINE_H := 3.0
+const MOM_LINE_STRENGTH := 0.6
 const MOM_LINE_TAP := 24.0
 const SCORE_BAND_PAD := 8
 ## The break is the PC sheet (four columns): player cards say their detail
@@ -631,6 +635,7 @@ func _sync_bug() -> void:
 		_mom_line_meter.name = "MomentumMeter"
 		_mom_line_meter.call("setup", UiKit.score_colour(str(_res["home"])), UiKit.score_colour(str(_res["away"])))
 		_mom_line_meter.custom_minimum_size = Vector2.ZERO
+		_mom_line_meter.modulate.a = MOM_LINE_STRENGTH
 		_mom_line.add_child(_mom_line_meter)
 		_bug_note = UiKit.lbl("", UiKit.SMALL, Color.WHITE)
 		_bug_note.name = "MomentumNoteOnPicture"
@@ -657,7 +662,7 @@ func _place_bug() -> void:
 	if _bug == null or not is_instance_valid(_bug) or _pitch == null:
 		return
 	var s := _pitch.size
-	var line_h := float(UiKit.px(MOM_LINE_H))
+	var line_h := MOM_LINE_H
 	var tap := float(UiKit.px(MOM_LINE_TAP))
 	_mom_line.position = Vector2(0, s.y - tap)
 	_mom_line.size = Vector2(s.x, tap)
@@ -1265,7 +1270,9 @@ func _show_coach_box() -> void:
 	if wide and q == 1:
 		head_row = UiKit.hbox(UiKit.Space.COLUMN)
 		bv.add_child(head_row)
-	var band := ClubDuel.band(str(_res["home"]), str(_res["away"]), bv, 6 if wide else 14)
+	# A phone's band at a break holds the title alone, so it is slimmer
+	# (director, 2026-11-26, pick A: the sheet fits without scrolling).
+	var band := ClubDuel.band(str(_res["home"]), str(_res["away"]), bv, 6 if wide else (8 if q > 1 else 14))
 	band.name = "BreakBand"
 	(band.get_child(0) as ClubDuel).live()   # match day's atmosphere settles in (Feel)
 	v.add_child(band)
@@ -1319,15 +1326,17 @@ func _show_coach_box() -> void:
 			ClubDuel.on_colour(fcl)
 			bv.add_child(fcl)
 	else:
-		var sc := UiKit.lbl(MatchNotes.break_score(str(_res["home"]), str(_res["away"]),
-				_res.get("goals", [0, 0]), _res.get("behinds", [0, 0]), not wide), UiKit.NAME, UiKit.TEXT, true)
-		sc.name = "BreakScore"
-		sc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		ClubDuel.on_colour(sc)
+		# On a phone the scoreboard above the sheet already says the score, so
+		# the band does not repeat it (director, 2026-11-26, pick A).
 		if wide:
+			var sc := UiKit.lbl(MatchNotes.break_score(str(_res["home"]), str(_res["away"]),
+					_res.get("goals", [0, 0]), _res.get("behinds", [0, 0])), UiKit.NAME, UiKit.TEXT, true)
+			sc.name = "BreakScore"
+			sc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			ClubDuel.on_colour(sc)
 			sc.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			sc.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		bv.add_child(sc)
+			bv.add_child(sc)
 		# The full numbers, both clubs, at every break (director's PC
 		# playtest, 2026-10-07): a tap, never a compulsory report.
 		# On a PC it is a word in the actions row, beside Skip to full time.
@@ -2095,6 +2104,7 @@ func _mount_one_line(c: Dictionary) -> void:
 		for key in order:
 			put.call(pane, bodies[key])
 		v.add_child(cols)
+	var did_link: Button = null
 	if q > 1:
 		# The weather's turn, when it turns at this break, leads the page (row 160).
 		var turn_news: Control = take.call("BreakWeatherTurn")
@@ -2143,7 +2153,11 @@ func _mount_one_line(c: Dictionary) -> void:
 			open_did.alignment = HORIZONTAL_ALIGNMENT_LEFT
 			var did_note: Node = store.find_child("CallsDidNote", true, false)
 			open_did.pressed.connect(func(): _open_break_sheet("did", "What our calls did", [did_note, did], store))
-			page.add_child(open_did)
+			# A phone puts it beside Next quarter, not on a row of its own (pick A).
+			if wide:
+				page.add_child(open_did)
+			else:
+				did_link = open_did
 	else:
 		# Before the bounce: the side (its row is added by _show_coach_box while
 		# the side can still change), then your calls. Nobody has played, so
@@ -2153,7 +2167,16 @@ func _mount_one_line(c: Dictionary) -> void:
 		page.add_child(side_row)
 	var calls_head := UiKit.section("Our calls" if q == 1 else "Next quarter")
 	calls_head.name = "CallsHeading"
-	page.add_child(calls_head)
+	if did_link != null:
+		var calls_line := UiKit.hbox(UiKit.GAP)
+		calls_line.name = "CallsHeadLine"
+		calls_head.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		calls_head.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		calls_line.add_child(calls_head)
+		calls_line.add_child(did_link)
+		page.add_child(calls_line)
+	else:
+		page.add_child(calls_head)
 	page.add_child(rows)
 	if q == 1:
 		put.call(page, legs)

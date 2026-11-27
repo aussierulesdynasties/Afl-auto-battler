@@ -85,7 +85,7 @@ func _run() -> void:
 	state.autosave_enabled = false
 	state.save_path = "user://capture_interview.save"
 	state.settings_path = "user://capture_interview.cfg"
-	load("res://scripts/ui/UiKit.gd").apply_appearance("dark")
+	load("res://scripts/ui/UiKit.gd").apply_palette()
 	DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
 	DisplayServer.window_set_size(Vector2i(W, H))
 	for i in range(10):

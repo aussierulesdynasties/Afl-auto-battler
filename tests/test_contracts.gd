@@ -631,9 +631,13 @@ func _test_offseason_flow() -> void:
 	GameState.salary_cap += 5000000
 	# A free agent no other club has offered for signs at his asking price;
 	# where rivals have offered, your offer goes on the table instead.
+	# Always exercise the signing, whatever this seeded market bid: rivals
+	# with cap room (#2065) can have an offer on every free agent, so the
+	# one signed here has theirs taken off first, as the cap rejection above
+	# sets its own terms.
 	for fa in GameState.free_agents.duplicate():
-		if str(fa.get("released_by", "")) != GameState.my_club and (fa.get("offers", []) as Array).is_empty() \
-				and not bool(GameState.free_agent_terms(str(fa["id"]))["refuse"]):
+		if str(fa.get("released_by", "")) != GameState.my_club:
+			fa["offers"] = []
 			var res := GameState.sign_free_agent(str(fa["id"]), int(Contracts.wants(fa)["years"]))
 			signed = bool(res["ok"]) and GameState.list_player(str(fa["id"])) == fa \
 					and str(fa["club"]) == GameState.my_club
@@ -1099,10 +1103,12 @@ func _test_opinion_never_drifts() -> void:
 		for l in entry.get("log", []):
 			logged += int(l.get("d", 0))
 		# Any move came with a reason (a choice); nothing else moved him.
-		if Trust.value(GameState.relations, key) != int(given[key]) + logged:
-			drifted.append("%s %d -> %d (logged %+d)" % [key, int(given[key]), Trust.value(GameState.relations, key), logged])
+		# The permanent part never drifts (DIRECTOR_BIBLE 5.170); the live marks
+		# on top of it fade by design (Opinion.gd, tests/run_opinion_tests.gd).
+		if Opinion.base(GameState.relations, key) != int(given[key]) + logged:
+			drifted.append("%s %d -> %d (logged %+d)" % [key, int(given[key]), Opinion.base(GameState.relations, key), logged])
 	_check(GameState.season_year == year + 1, "The season rolled over")
-	_check(drifted.is_empty(), "No player's opinion of you drifts on its own over a season and a rollover (%s)" % str(drifted))
+	_check(drifted.is_empty(), "The permanent part of no player's opinion of you drifts over a season and a rollover (%s)" % str(drifted))
 
 ## Part 2: a free agent weighs your club against his options, from facts the
 ## player can see. Cap room alone never signs anyone.
@@ -2983,7 +2989,13 @@ func _test_trade_market() -> void:
 		var reb := str(by_phase["rebuilding"])
 		var bld := str(by_phase["building"])
 		var con := str(by_phase["contending"])
-		var reb_star := str(Ratings.select_22(GameState.season.lists[reb])["ground"][0]["id"])
+		# The rebuilding club's best starter who is staying: a man retiring, or
+		# one who asked to go to another club, is off every market (_trade_pool).
+		var reb_star := ""
+		for q in Ratings.select_22(GameState.season.lists[reb])["ground"]:
+			if not GameState.retiring_now(q) and not GameState.trade_requests.has(str(q["id"])):
+				reb_star = str(q["id"])
+				break
 		var bld_star := str(Ratings.select_22(GameState.season.lists[bld])["ground"][0]["id"])
 		_check(ids.call(GameState._trade_pool(con, reb)).has(reb_star)
 				and not ids.call(GameState._fringe(reb)).has(reb_star),

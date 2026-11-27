@@ -33,6 +33,10 @@ cd "$(dirname "$0")/.." || exit 1
 if ! bash tools/epic_assets.sh check >/dev/null 2>&1 && ! bash tools/epic_assets.sh fetch; then
 	echo "WARNING: the Epic/MetaHuman files are not in place, so the 3D suites will fail (docs/EPIC_ASSETS.md)." >&2
 fi
+# The ground models live in the same private repo (docs/GROUND_ASSETS.md).
+if ! bash tools/ground_assets.sh check >/dev/null 2>&1 && ! bash tools/ground_assets.sh fetch; then
+	echo "WARNING: the ground models are not in place, so the ground suites will fail (docs/GROUND_ASSETS.md)." >&2
+fi
 
 GODOT="${GODOT:-godot}"
 # The suites play on the data without the director's hand-set OVR rows
@@ -182,7 +186,9 @@ for suite in ${SUITES[@]+"${SUITES[@]}"}; do
 		if [ "$status" = FAIL ]; then
 			kind=crash
 			fails=$(echo "$result" | grep -oE "[0-9]+ failures" | grep -oE "[0-9]+")
-			if [ "$code" = 0 ] && [ -z "$short" ] && [ "${fails:-0}" -gt 0 ] \
+			# A runner quits 1 when a check failed (tests/run_*_tests.gd), so exit 1 with a
+			# result line is a seeded check failure, not a crash: retrying it only repeats it.
+			if { [ "$code" = 0 ] || [ "$code" = 1 ]; } && [ -z "$short" ] && [ "${fails:-0}" -gt 0 ] \
 				&& ! grep -qE "SCRIPT ERROR|Parse Error|Compile Error" "$log"; then kind=checks; fi
 		fi
 		printf '%s %s\n' "$suite" "$kind" >> "$SUITE_RESULTS"

@@ -57,7 +57,7 @@ func _run() -> void:
 	state.autosave_enabled = false
 	state.save_path = "user://capture_year_step.save"
 	state.settings_path = "user://capture_year_step.cfg"
-	load("res://scripts/ui/UiKit.gd").apply_appearance("dark")
+	load("res://scripts/ui/UiKit.gd").apply_palette()
 	root.size = Vector2i(W, H)
 	root.gui_disable_input = true
 	DisplayServer.window_set_size(Vector2i(W, H))

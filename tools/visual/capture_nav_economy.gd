@@ -89,7 +89,7 @@ func _run() -> void:
 		state.advance()
 	state.skip_media_conference()
 	state.week_events = []
-	UK.apply_appearance("dark")
+	UK.apply_palette()
 	root.size = size
 	DisplayServer.window_set_size(size)
 	var bg := ColorRect.new()

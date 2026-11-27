@@ -64,7 +64,16 @@ const TEAM_BOOKKEEPING_KEYS := ["pressure_acts_dhalf", "tackles_i50", "poss_d50"
 		"d50_tackled", "d50_rushed", "d50_chips"]
 ## Team counts named by prefix (one key per way a defensive-50 chain ends).
 const TEAM_BOOKKEEPING_PREFIXES := ["d50_end_"]
-const GOLDEN_SEASON := {"Windows": "3a31d105f21a0536fbe1b09499ffd107", "Linux": "bf219aeb96e2f0fbc6fa30160822157c"}
+## Bug bash batch C redrew it (#2134): a kick-in marked without playing on is no
+## longer an effective disposal (P1-5; 22 effective_disposals counts move in the
+## three rounds, no score), and a boundary free records "intent" (false in every
+## 2026 game). Linux from that PR's CI (run 45795434727, shard 12), Windows from a
+## local run (main's Windows value had gone stale before it: ea5669a7 at its base).
+## #2211 (load times, a faster match engine) and #2230 (tail check) were tested
+## before #2210 set the value above and merged after it, and main's season moved. Linux from a local run of main at c6bbd900c (the local value at
+## #2210's merge matched its CI value); Windows not re-measured.
+## Bug bash batch E redrew it on top: rushed behinds at the 2026 rate (P2-1).
+const GOLDEN_SEASON := {"Windows": "c793e347c0cb20c2d3604d45713bcf0a", "Linux": "643c71a8d4cc6a73fd01b331a1c0b08b"}
 
 ## A small league standing in for a legacy set until the 1990 files ship:
 ## 42 real players re-dated to a 1989 data season, a 1990 first season, and

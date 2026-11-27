@@ -106,7 +106,7 @@ func _run() -> void:
 	_state.settings_path = "user://capture_sacked_jobs.cfg"
 	_state.set_setting("seen_training_intro", true)
 	_state.set_setting("seen_weekly_loop_intro", true)
-	UK.apply_appearance("dark")
+	UK.apply_palette()
 	root.size = _size
 	DisplayServer.window_set_size(_size)
 	var bg := ColorRect.new()

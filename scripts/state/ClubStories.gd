@@ -1080,13 +1080,16 @@ static func _apply(gs, e: Dictionary, p: Dictionary, facts: Dictionary, applied:
 			if StoryEngine.GROUP_TRUST.has(str(e.get("who", "subject"))):
 				# Each player in the group (the bonding deck's leaders, its Indigenous players).
 				for q in _targets(gs, e, p, facts):
-					applied["trust"] = int(applied.get("trust", 0)) + Trust.change(gs.relations, Trust.player_key(str(q["id"])),
-							d, StoryEngine.fill(str(e.get("why", "")), facts), int(gs.season_year), when)
+					applied["trust"] = int(applied.get("trust", 0)) + Opinion.card_move(gs.relations, Opinion.player_key(str(q["id"])),
+							d, StoryEngine.fill(str(e.get("why", "")), facts), int(gs.season_year), when,
+							bool(e.get("scar", false)), gs.my_club)
 				return ""
 			var key := Trust.player_key(str(p["id"]))
 			var before := Trust.opinion(Trust.value(gs.relations, key))
-			applied["trust"] = int(applied.get("trust", 0)) + Trust.change(gs.relations, key,
-					d, StoryEngine.fill(str(e.get("why", "")), facts), int(gs.season_year), when)
+			# A card's move fades unless the card marks it a scar (Opinion.card_move).
+			applied["trust"] = int(applied.get("trust", 0)) + Opinion.card_move(gs.relations, key,
+					d, StoryEngine.fill(str(e.get("why", "")), facts), int(gs.season_year), when,
+					bool(e.get("scar", false)), gs.my_club)
 			# His opinion of you before the first move and after the last.
 			applied["opinion"] = [int((applied.get("opinion", [before]) as Array)[0]),
 					Trust.opinion(Trust.value(gs.relations, key))]
@@ -1147,6 +1150,8 @@ static func _apply(gs, e: Dictionary, p: Dictionary, facts: Dictionary, applied:
 			# moment you accept the event"); auto-pick names him by itself.
 			var was_in: bool = gs.in_current_side(p)
 			var made_way: String = gs.name_promised(p)
+			if not p.has("expects_game") and not Backing.is_active(p) and gs._dev_owed(p).is_empty():
+				Promises.made(gs, p, "game")
 			p["expects_game"] = int(e.get("sting", 12))
 			# Named just now (not injured or suspended): say who made way.
 			var came_in: bool = not was_in and gs.in_current_side(p)
@@ -1183,6 +1188,8 @@ static func _apply(gs, e: Dictionary, p: Dictionary, facts: Dictionary, applied:
 		"new_club_go":
 			return ExpansionBuild.let_go(gs, p)
 		"promise_win":
+			if not bool(gs.board.get("promise", false)):
+				Promises.made(gs, {}, "win")
 			gs.board["promise"] = true
 		"explain":
 			return gs._explain_outcome(name, facts)
@@ -1255,7 +1262,7 @@ static func _extend(gs, p: Dictionary, name: String) -> String:
 		return "The cap no longer has room to extend %s now; it waits for the off-season." % name
 	# Under 50, he may refuse you (director 2026-11-08): the draw talks use.
 	if gs.resign_refused(p):
-		return gs.refuse_resign(p, Contracts.REFUSED_SEASON_END)
+		return gs.refuse_resign(p, Contracts.refused_season_end())
 	p["salary"] = cost
 	p["contract_years"] = years
 	ClubLife.add_morale(p, StoryEngine.EXTEND_MORALE)

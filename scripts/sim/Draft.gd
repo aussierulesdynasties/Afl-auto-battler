@@ -821,8 +821,9 @@ func upcoming_picks(code: String, limit := 3) -> Array:
 
 
 ## Coverage guidance, not new drafting restrictions. Match selection needs
-## 6 DEF / 6 MID / 1 RUCK / 6 FWD, plus a flexible bench. The existing draft
-## validity rule additionally requires a second ruck on the list.
+## 6 DEF / 6 MID / 1 RUCK / 6 FWD, plus a flexible bench. The draft's rule
+## asks one ruck (director, 2026-11-26); two is the depth guidance here, as
+## real lists carry two to four.
 func position_targets() -> Dictionary:
 	var out := {}
 	if intake_mode:
@@ -849,12 +850,11 @@ func position_needs() -> Dictionary:
 
 
 ## The match-day shape a list must be able to field: the ground positions,
-## and two rucks (the second covers the first).
+## one ruck among them (director, 2026-11-26: "make 1 ruckman the required rule").
 static func match_day_targets() -> Dictionary:
 	var out := {}
 	for slot in Ratings.GROUND_SLOTS:
 		out[str(slot[0])] = int(slot[1])
-	out["RUCK"] = 2
 	return out
 
 
@@ -917,8 +917,7 @@ func invalid_reason() -> String:
 		return "You have %d of %d players." % [count(), target_size]
 	if spent() > budget:
 		return "You are %s over the salary cap." % Contracts.money(spent() - budget)
-	return "You have %d ruck%s. Every list needs two." % [count_covering("RUCK"),
-			"" if count_covering("RUCK") == 1 else "s"]
+	return "You have no ruck. Every list needs one."
 
 
 ## [[role, role2], ...] for everyone on `code`'s list (kept players too).
@@ -1233,16 +1232,28 @@ func _first_ruck_public(code: String, p: Dictionary) -> bool:
 
 
 func _forced_role(code: String) -> String:
-	if intake_mode:
-		# Ruck cover is judged on the whole kept list, not this intake; the
-		# club already met the two-ruck rule at the career draft.
-		return ""
 	var counts := role_counts_for(code)
-	var slots_left := target_size - count_for(code)
-	var rucks_needed := maxi(0, 2 - int(counts["RUCK"]))
-	if rucks_needed > 0 and slots_left <= rucks_needed:
-		return "RUCK"
-	return ""
+	# One ruck on every list (director, 2026-11-26: "make 1 ruckman the required
+	# rule"), at the National Draft too: the kept list counts, and the places
+	# left are the list's open spots tonight. A class with no ruck left in it
+	# forces nothing.
+	var rucks_needed := maxi(0, 1 - int(counts["RUCK"]))
+	if rucks_needed == 0:
+		return ""
+	var slots_left := open_spots(code) if intake_mode else target_size - count_for(code)
+	if slots_left > rucks_needed:
+		return ""
+	if intake_mode and not _unpicked_plays("RUCK"):
+		return ""
+	return "RUCK"
+
+
+## Someone still in the pool can play `role` (first or second position).
+func _unpicked_plays(role: String) -> bool:
+	for p in pool:
+		if not picked.has(str(p["id"])) and Ratings.plays_role(p, role):
+			return true
+	return false
 
 
 # ---------------------------------------------------------------------------
@@ -1744,7 +1755,7 @@ func _need_by_count(code: String, role: String) -> float:
 func _need_weight(code: String, role: String) -> float:
 	var n := int(role_counts_for(code).get(role, 0))
 	if role == "RUCK" and not intake_mode and n == 1:
-		return 0.8  # the second ruck is required for a valid list
+		return 0.8  # a second ruck is still wanted: real lists carry two to four
 	if role == "RUCK" and not intake_mode and n >= 3:
 		# A fourth ruck is never worth a list spot, and the pool's rucks must
 		# stretch to every club's two (clubs' own opinions could otherwise
@@ -1940,9 +1951,9 @@ func user_stuck() -> bool:
 	return true
 
 
-## A finished list the rules refuse (over the cap, or short of two rucks) with
+## A finished list the rules refuse (over the cap, or without a ruck) with
 ## every place filled. Play cannot reach it - every pick is checked against
-## the cap and the two-ruck rule - but an older save can. Releasing a pick
+## the cap and the ruck rule - but an older save can. Releasing a pick
 ## reopens the draft with one extra pick at the end, so the coach can fix it
 ## without starting again. Never true for a list that is valid.
 func finished_list_refused() -> bool:
@@ -2009,7 +2020,7 @@ func pick_block_reason(p: Dictionary) -> String:
 					Contracts.money(price(p)), Contracts.money(remaining()), Contracts.money(reserve_for(user_club)), slots_after, Contracts.money(maxi(0, usable_cap_for(user_club)))]
 		var forced := _forced_role(user_club)
 		if forced != "" and not Ratings.plays_role(p, forced):
-			return "Your remaining places must go to rucks: every list needs two."
+			return "Your last place must go to a ruck: every list needs one."
 		return ""
 	if count() >= target_size:
 		return "Your list is full."
@@ -2071,9 +2082,9 @@ func all_lists() -> Dictionary:
 	return out
 
 
-## A list is signable at the target size within the cap. Also require at least
-## two ruckmen - a list with none cannot contest a centre bounce, and the engine
-## would quietly field a midfield ruck instead.
+## A list is signable at the target size within the cap, with a ruckman on it
+## (director, 2026-11-26: "make 1 ruckman the required rule") - a list with none
+## would have no ruck for the centre bounce.
 func is_valid() -> bool:
 	if intake_mode:
 		# The intake is valid the moment the whole league has taken its turns
@@ -2083,7 +2094,7 @@ func is_valid() -> bool:
 		return false
 	if spent() > budget:
 		return false
-	return count_covering("RUCK") >= 2
+	return count_covering("RUCK") >= 1
 
 
 func count_by_role(role: String) -> int:

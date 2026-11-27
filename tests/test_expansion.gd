@@ -921,7 +921,11 @@ func _test_real_lists_tasmania_2028() -> void:
 	_check(ExpansionBuild.has_package(GameState, "TAS"), "Tasmania have their new-club build")
 	var tas_picks := draft.upcoming_picks("TAS", 0)
 	var col_picks := draft.upcoming_picks("COL", 0)
-	_check(tas_picks.size() > col_picks.size(), "Tasmania have their priority picks (%s; Collingwood %s)" % [str(tas_picks), str(col_picks)])
+	# A free-agent compensation pick can give another club as many picks, so
+	# count the list-build picks themselves (concession comp picks) still to come.
+	var tas_build := draft.comp_picks.filter(func(c): return str(c.get("club", "")) == "TAS" and bool(c.get("concession", false)))
+	_check(tas_build.size() > 0 and tas_build.size() <= tas_picks.size(),
+			"Tasmania have their priority picks (%d list-build picks of %s; Collingwood %s)" % [tas_build.size(), str(tas_picks), str(col_picks)])
 	_check(GameState.choose_sim_ahead_club("TAS") and GameState.my_club == "TAS" and not GameState.sim_ahead
 			and GameState.has_career() and draft.user_club == "TAS" and str(GameState.challenge.get("kind", "")) == "youth",
 			"Tasmania are yours, and your challenge starts now")

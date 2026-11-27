@@ -47,6 +47,8 @@ git rev-parse --short=7 HEAD > build_info.txt
 # The MetaHuman body, crew, guernsey cuts, skin and heads live in a private repo (docs/EPIC_ASSETS.md):
 # a build without them would have no players, so copy them in and refuse to go on without them.
 bash tools/epic_assets.sh fetch
+# The ground models too (docs/GROUND_ASSETS.md): the Android and Windows builds carry every ground.
+bash tools/ground_assets.sh fetch
 
 mkdir -p builds
 if ! "$GODOT" --headless --path "$ROOT" --import > builds/import.log 2>&1; then
@@ -99,7 +101,16 @@ for p in "${platforms[@]}"; do
 		;;
 	web)
 		rm -rf builds/web
-		export_one "Web" "builds/web/index.html"
+		# The textures go in one pack per graphics family and the page fetches only its browser's,
+		# so no file passes itch's 200 MB limit (tools/web_texture_packs.py).
+		echo "== export Web, its main pack and two texture packs -> builds/web"
+		PY="$(command -v python || command -v python3)"
+		if "$PY" tools/web_texture_packs.py "$GODOT" builds/web; then
+			report+=("builds/web $(du -sh builds/web | cut -f1)")
+		else
+			echo "FAIL: the Web export did not finish (tools/web_texture_packs.py)" >&2
+			failed=1
+		fi
 		;;
 	*)
 		echo "unknown platform: $p (windows, android, web)" >&2
