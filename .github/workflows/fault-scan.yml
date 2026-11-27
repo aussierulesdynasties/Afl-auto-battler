@@ -155,10 +155,26 @@ jobs:
       - name: Film
         run: |
           icd=$(ls /usr/share/vulkan/icd.d/lvp_icd*.json | head -1)
+          mkdir -p shots
+          # Stall guard: stop if the first shot takes over 12 min or a later one over 5 min (every
+          # other ground films a view in seconds), so a stuck film ends in minutes with its log.
           VK_ICD_FILENAMES="$icd" xvfb-run -a -s "-screen 0 1280x720x24" \
             timeout 6000 "$HOME/godot/godot" --path . --rendering-method mobile \
             --script tools/fault_scan/scan.gd -- render "$SLUG" "$PWD/out/views.txt" "$PWD/shots" 1280 720 \
-            > film.log 2>&1 || echo "film stopped: exit $?"
+            > film.log 2>&1 &
+          pid=$!
+          last=0; since=$(date +%s); limit=720
+          while kill -0 "$pid" 2>/dev/null; do
+            sleep 20
+            now=$(ls shots | wc -l)
+            if [ "$now" != "$last" ]; then last=$now; since=$(date +%s); limit=300; fi
+            if [ $(( $(date +%s) - since )) -gt "$limit" ]; then
+              echo "::warning::film stalled at $now shots (no new shot in $limit s); stopping it"
+              pkill -f "scan.gd -- render" || true; sleep 5; pkill -9 -f "scan.gd -- render" || true
+              break
+            fi
+          done
+          wait "$pid" 2>/dev/null || echo "film stopped: exit $?"
           grep -E "FAULTSCAN|SCRIPT ERROR|TIMEOUT" film.log || true
           echo "$(ls shots 2>/dev/null | wc -l) shots; last lines of the log:"; tail -15 film.log
 

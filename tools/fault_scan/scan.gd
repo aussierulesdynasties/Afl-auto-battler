@@ -42,6 +42,7 @@ func _run() -> void:
 		OS.low_processor_usage_mode = false
 		DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
 	var t0 := Time.get_ticks_msec()
+	print("FAULTSCAN building ", slug)
 	if not _build(slug):
 		print("FAULTSCAN cannot build ", slug)
 		quit(1)
