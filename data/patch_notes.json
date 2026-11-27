@@ -58,5 +58,13 @@
 		"The match preview has the papers' tips for every game, and a 2026 start can begin before or after the National Draft.",
 		"When a young player's real career is ending, a card lets you ask him to retire, delist him or give him one more year.",
 		"Legacy starts rate honoured players nearer their real best, and the finals show each era's real system."
+	],
+	"1.0.22": [
+		"Player ratings are rebuilt on 18 skills, and a player's rating now comes straight from them, with a new card to match.",
+		"Every player has a temperament, and mates, rivals, mentors and family, and his opinion of you rises and fades with your calls.",
+		"Promises you keep or break move your Respect and Authority, and every club has a council with its own agendas.",
+		"Contracts, Staff, Coaching, Selection, Training, the draft room and the press are laid out for a PC window.",
+		"The menus take on your club's colours, and the game loads and answers more quickly.",
+		"Fixed: rushed behinds at the real rate, a ruck on every list, no freeze after a draft pick, and saves keep honoured ratings."
 	]
 }

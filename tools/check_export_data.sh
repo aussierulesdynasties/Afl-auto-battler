@@ -70,6 +70,9 @@ android_filter() {
 }
 INCLUDE="$(android_filter include_filter)"
 EXCLUDE="$(android_filter exclude_filter)"
+# Its features too: the itch presets carry "no_3d" until 3D 1.0 (docs/ITCH_BUILDS.md), and the
+# check then proves the 3D view and its files are out of the build instead of in it.
+FEATURES="$(android_filter custom_features)"
 if [ -z "$EXCLUDE" ]; then
 	echo "FAIL: no exclude_filter found for the Android preset in export_presets.cfg"
 	exit 1
@@ -77,12 +80,14 @@ fi
 echo "-- exported pack, with the Android preset's filters"
 echo "include: $INCLUDE"
 echo "exclude: $EXCLUDE"
+echo "features: $FEATURES"
 cat > "$WORK/project/export_presets.cfg" <<PRESET
 [preset.0]
 
 name="DataCheck"
 platform="Linux"
 runnable=true
+custom_features=${FEATURES:-""}
 export_filter="all_resources"
 include_filter=$INCLUDE
 exclude_filter=$EXCLUDE

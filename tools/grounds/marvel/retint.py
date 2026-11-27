@@ -42,7 +42,9 @@ TARGET = {
 # face away from that sun and take the sky's blue light, so the red falls away fastest. Google Earth's face reads
 # (46, 71, 105). A light grey-blue map renders a mid navy there without turning mauve where the sun does fall.
 # round 13 (PC check of round 12): (110, 120, 134) rendered (36, 57, 93) against (47, 71, 106), about 20% dark
-BOWL = {"band": (148, 162, 180), "glass": (148, 162, 180)}
+# round 15 (the person's photos of 27 Nov, west and east): the bowl's outer face is white-silver panel bands with a
+# darker strip of windows between them, not Google Earth's even navy (that was its shade and haze)
+BOWL = {"band": (214, 216, 218), "glass": (96, 108, 122)}
 
 
 # How much of each texture's own variation is kept (1 = all).
@@ -130,72 +132,123 @@ def flat():
 
 def label():
     """MARVEL STADIUM in white on black, the label over each small corner scoreboard (photos: Hawthorn v
-    Brisbane 2024, the curtain raiser, Ed Sheeran's stage 2026). Lettering on a flat sign, as the real one."""
-    from PIL import ImageDraw, ImageFont
-    w, h = 1024, 120
-    im = Image.new("RGB", (w, h), (14, 14, 16))
-    f = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 84)
-    d = ImageDraw.Draw(im)
-    tb = d.textbbox((0, 0), "MARVEL STADIUM", font=f)
-    d.text(((w - (tb[2] - tb[0])) / 2 - tb[0], (h - (tb[3] - tb[1])) / 2 - tb[1]), "MARVEL STADIUM", font=f, fill=(238, 238, 236))
-    im.save(os.path.join(TEX, "sign_mvst.png"))
+    Brisbane 2024, the curtain raiser, Ed Sheeran's stage 2026). Round 16: the letters are the venue's logo's
+    (fonts/marvel_stadium_logo.png), not a stock font; the boards are too small in those photos to check more."""
+    here = os.path.dirname(os.path.abspath(__file__))
+    logo = np.asarray(Image.open(os.path.join(here, "fonts", "marvel_stadium_logo.png")).convert("RGBA"), float)
+    rgb, al = logo[..., :3], logo[..., 3] / 255.0
+    mv = ((al > 0.5) & (rgb.min(2) > 200))[36:379, 484:1437]
+    st = ((al > 0.5) & (rgb.max(2) < 80))[479:896, 0:1920]
+    w, h, lh = 1024, 120, 84
+    parts = []
+    for m_ in (mv, st):
+        pw = int(round(lh * m_.shape[1] / m_.shape[0]))
+        parts.append(np.asarray(Image.fromarray((m_ * 255).astype(np.uint8)).resize((pw, lh), Image.LANCZOS), float) / 255)
+    gap = int(lh * 0.35)
+    tot = parts[0].shape[1] + gap + parts[1].shape[1]
+    if tot > w - 40:
+        k_ = (w - 40) / tot
+        parts = [np.asarray(Image.fromarray((q * 255).astype(np.uint8)).resize((int(q.shape[1] * k_), int(lh * k_)),
+                                                                             Image.LANCZOS), float) / 255 for q in parts]
+        gap = int(gap * k_)
+        tot = parts[0].shape[1] + gap + parts[1].shape[1]
+    a_ = np.zeros((h, w), float)
+    x = (w - tot) // 2
+    for q in parts:
+        y = (h - q.shape[0]) // 2
+        a_[y:y + q.shape[0], x:x + q.shape[1]] = q
+        x += q.shape[1] + gap
+    img = np.array((14, 14, 16), float) * (1 - a_[..., None]) + np.array((238, 238, 236), float) * a_[..., None]
+    Image.fromarray(np.clip(img, 0, 255).astype(np.uint8), "RGB").save(os.path.join(TEX, "sign_mvst.png"))
 
 
 def sign_panels():
-    """The MARVEL STADIUM board's two lettered faces, drawn fresh (round 13, PC check of round 12: Google Earth shows white
-    bold italic letters, MARVEL on a muted maroon-grey ground and STADIUM on a blue-grey one; ours were grey upright
-    letters on dark grounds). Each face's texture keeps the layout the build's UVs expect: the word wraps round the tile and
-    is mirrored, as the old hand-made textures were (measured on them: letters in rows 142-881, MARVEL starting at column
-    869, STADIUM at 919, after mirroring). One set for the west board (in shade under the PC check's sun, so lighter grounds,
-    measured below) and one for the east board."""
-    from PIL import ImageDraw, ImageFont
-    f = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 400)
+    """The MARVEL STADIUM board's two lettered faces (round 16, the person, 28 Nov, with a photo of the sign: "do the sign
+    properly, the same lettering, no italics no slim letters", "lazy"). The letters are the venue's own logo
+    (fonts/marvel_stadium_logo.png: Wikimedia Commons File:Marvel_Stadium_logo.svg, public domain as a text logo,
+    trademarked), and the layout is measured on the person's photo rectified on the red box's corners
+    (fonts/README.md): one black board 33.4 m long (the two faces side by side), a red box from 1.43 to 15.27 m
+    along and 0.69 to 6.39 m down holding MARVEL as in the logo, a thin white frame just inside the box, and STADIUM
+    in white from 16.3 to 31.7 m along and 1.75 to 6.33 m down. The letters are lit by tubes following their outlines,
+    white with fine dark lines between (the photo's inner lines). Each face's texture keeps the wrap and mirror the
+    build's UVs expect: the face starts at its UV seam, the board's left end (seen from outside) on the seam."""
+    from scipy.ndimage import distance_transform_edt
+    here = os.path.dirname(os.path.abspath(__file__))
+    logo = np.asarray(Image.open(os.path.join(here, "fonts", "marvel_stadium_logo.png")).convert("RGBA"), float)
+    rgb, al = logo[..., :3], logo[..., 3] / 255.0
+    # MARVEL: the white letters inside the logo's red box; STADIUM: the black letters below it
+    mv = (al > 0.5) & (rgb.min(2) > 200)
+    mv = mv[0:411, 452:1468]
+    st = (al > 0.5) & (rgb.max(2) < 80)
+    st = st[479:896, 0:1920]
+    P = 200.0                                               # canvas pixels a metre
+    L, Hm = 33.4, 7.08
+    CW, CH = int(L * P), int(Hm * P)
 
-    def face(word, start, width, ground, out):
-        # round 14 (the person, 27 Nov: "more vibrant and not stretched"). Two causes: the tile is 13.5 m (MARVEL) or
-        # 19.9 m (STADIUM) wide on 1024 pixels but 7.08 m tall on 1024, so across the board each pixel was 2-3 times
-        # wider than tall and the letters smeared sideways; and the word was squeezed to fill its box whatever the
-        # font's shape. Now the tile has as many pixels across as its metres need (square pixels on the board), and the
-        # letters are the real sign's: tall, heavy, condensed italic capitals filling the board's height.
-        tile_w = {"MARVEL": 13.5, "STADIUM": 19.9}[word]
-        TW = 2048 if word == "MARVEL" else 3072
-        k = TW / 1024.0
-        mx, my = tile_w / TW, 7.08 / 1024.0               # metres per pixel across and up (now nearly equal)
-        big = Image.new("L", (3600, 600), 0)
-        d = ImageDraw.Draw(big)
-        tb = d.textbbox((0, 0), word, font=f)
-        d.text((40 - tb[0], 60 - tb[1]), word, font=f, fill=255)
-        let0 = big.crop(big.getbbox())
-        H = 4.6                                                  # both words the same height on the board
-        room = (width * k - 80 * k) * mx
-        sh = 0.18                                                # italic lean, as the real sign
-        for cond in np.arange(0.46, 0.30, -0.01):                # condensed like the Marvel lettering; one width for both words
-            lw, lh = let0.size
-            let = let0.resize((int(lw * cond), lh), Image.LANCZOS)
-            lw, lh = let.size
-            let = let.transform((lw + int(sh * lh), lh), Image.AFFINE, (1, sh, -sh * lh, 0, 1, 0), Image.BICUBIC)
-            lw, lh = let.size
-            Wm = H * lw / lh
-            if Wm <= room:
-                break
-        pw, ph = int(round(Wm / mx)), int(round(H / my))
-        let = let.resize((pw, ph), Image.LANCZOS)
-        m = np.zeros((1024, TW), float)
-        x0, y0 = int((width * k - pw) // 2), 512 - ph // 2
-        m[y0:y0 + ph, x0:x0 + pw] = np.asarray(let, float) / 255.0
-        m = np.roll(m, int(start * k), axis=1)
-        g = np.array(ground, float)
+    def place(mask, x0, x1, y0, y1):
+        out = np.zeros((CH, CW), float)
+        im = Image.fromarray((mask * 255).astype(np.uint8)).resize((int((x1 - x0) * P), int((y1 - y0) * P)), Image.LANCZOS)
+        a_ = np.asarray(im, float) / 255.0
+        out[int(y0 * P):int(y0 * P) + a_.shape[0], int(x0 * P):int(x0 * P) + a_.shape[1]] = a_
+        return out > 0.5
+
+    def board(red, Hb):
+        """The board drawn on a 33.4 x 7.08 m canvas (the faces' tiles); `Hb` m of it from the top show (the west board
+        stands on its ledge: below that it is behind the ledge). The photo's layout is scaled to Hb, never stretched,
+        and centred along the board."""
+        k_ = Hb / Hm
+        ox = (L - L * k_) / 2
+
+        def X(v):
+            return ox + v * k_
+
+        img = np.zeros((CH, CW, 3)) + np.array(SIGN_BLACK, float)
+        rb = np.zeros((CH, CW), bool)
+        rx0, rx1, ry0, ry1 = X(1.43), X(15.27), 0.69 * k_, 6.39 * k_
+        rb[int(ry0 * P):int(ry1 * P), int(rx0 * P):int(rx1 * P)] = True
+        img[rb] = red
+        fr = np.zeros((CH, CW), bool)
+        i0, w = 0.16 * k_, 0.08 * k_
+        X0, X1, Y0, Y1 = [int(v * P) for v in (rx0 + i0, rx1 - i0, ry0 + i0, ry1 - i0)]
+        wp = max(2, int(w * P))
+        fr[Y0:Y0 + wp, X0:X1] = True; fr[Y1 - wp:Y1, X0:X1] = True
+        fr[Y0:Y1, X0:X0 + wp] = True; fr[Y0:Y1, X1 - wp:X1] = True
+        img[fr] = (246, 246, 244)
+        letters = place(mv, rx0, rx1, ry0, ry1) | place(st, X(16.3), X(31.7), 1.75 * k_, 6.33 * k_)
+        # the board's black face is LED modules (the photo's faint grid) with a light grey rim top and bottom (the ends' rims would bleed
+        # across the faces' UV wrap)
+        gy, gx = np.mgrid[0:CH, 0:CW] / P
+        grid = (((gx % 0.5) < 0.03) | ((gy % 0.5) < 0.03)) & ~rb
+        img[grid] = (30, 30, 33)
+        rim = int(0.1 * P)
+        img[:rim] = img[-rim:] = (150, 152, 156)
+        dist = distance_transform_edt(letters) / P
+        line = letters & ((dist % 0.14) > 0.125)          # the tubes' faint seams, light grey as in the photo
+        img[letters] = (250, 250, 248)
+        img[line] = (214, 214, 216)
         rng = np.random.default_rng(5)
-        img = np.zeros((1024, TW, 3)) + g
-        img += rng.normal(0, 1.5, (1024, TW, 1))
-        img[:, ::int(64 * k)] *= 0.96          # the board's panel joints
-        img = img * (1 - m[..., None]) + np.array((250, 250, 248)) * m[..., None]
-        Image.fromarray(np.clip(img, 0, 255).astype(np.uint8)[:, ::-1], "RGB").save(os.path.join(TEX, out + ".png"))
-        print(out, ground, "letters %.1f x %.1f m" % (Wm, H))
+        return img + rng.normal(0, 1.2, (CH, CW, 1))
 
-    for word, start, width, key in (("MARVEL", 869, 954, "marvel"), ("STADIUM", 919, 976, "stadium")):
-        face(word, start, width, SIGN["w_" + key], "sign_" + key)
-        face(word, start, width, SIGN["e_" + key], "sign_%s_e" % key)
+    def face(img, b0, b1, TW, seam, out, top=42.48):
+        seg = img[:, int(b0 * P):int(b1 * P)]
+        seg = np.asarray(Image.fromarray(np.clip(seg, 0, 255).astype(np.uint8)).resize((TW, 1024), Image.LANCZOS), float)
+        # texture row 0 is z 42.48 (v = z / 7.08 wraps there): a board topping out higher starts lower in the tile
+        seg = np.roll(seg, -int(round((top - 42.48) / Hm * 1024)), axis=0)
+        pre = np.zeros_like(seg)
+        cols = (seam + np.arange(TW)) % TW                   # the board's left end on the UV seam
+        pre[:, cols] = seg
+        Image.fromarray(np.clip(pre, 0, 255).astype(np.uint8)[:, ::-1], "RGB").save(os.path.join(TEX, out + ".png"))
+        print(out, "board %.1f-%.1f m" % (b0, b1))
+
+    for side in ("w", "e"):
+        # the west board's foot stands on its ledge (parts2.py SZ0 36.5) and it runs the full 7.08 m up to 43.58, over
+        # the fascia (the photo: nothing between its top and the trusses); the east board 30.4-37.48 (same layout)
+        img = board(np.array(SIGN[side + "_marvel"], float), Hm)
+        top = 42.48   # round 16b: each face now spans its texture once (parts2.py), so no roll
+        sfx = "" if side == "w" else "_e"
+        # each face takes its texture once, clamped, the board's left end at u 1 (parts2.py, build2.py)
+        face(img, 0.0, 13.5, 2048, 0, "sign_marvel" + sfx, top)
+        face(img, 13.5, 33.4, 3072, 0, "sign_stadium" + sfx, top)
 
 
 # Grounds behind the letters, per board. East (sun on, ext_270): (88, 57, 60) rendered (131, 113, 113) against Google Earth's
@@ -208,8 +261,9 @@ def sign_panels():
 # grounds are set for that.
 # round 14 (the person: "more vibrant"): the brand's own colours on both boards, white letters on Marvel red and on
 # black. The earlier grounds matched Google Earth's washed-out photo (grey and teal, dark red and navy).
-SIGN = {"e_marvel": (226, 30, 38), "e_stadium": (20, 20, 22),
-        "w_marvel": (226, 30, 38), "w_stadium": (20, 20, 22)}
+SIGN = {"e_marvel": (214, 28, 36), "e_stadium": (20, 20, 22),
+        "w_marvel": (214, 28, 36), "w_stadium": (20, 20, 22)}
+SIGN_BLACK = (20, 20, 22)   # round 16: the photo's board is black all over; MARVEL's red is a box on it
 
 
 def main():
@@ -223,7 +277,8 @@ def main():
     # 2026-11-22: (56, 68, 96) rendered near-black navy on the shaded east face, (1, 27, 70) against
     # Google Earth's (105, 119, 136); a greyer, lighter blue keeps the letters' dark ground in the sun too.
     # round 12 (item 6.4): (62, 68, 82) rendered (6, 25, 56) on the shaded faces against Google Earth's (47, 72, 107)
-    retint("upperwall", (128, 140, 160), src="soffit", out="upperwall")  # round 13: c_w pair read (28, 48, 85) against (47, 72, 107)
+    # round 15 (photos 2, 4, 7, 8): the recess over the braces shows the stand's grey undersides, lighter than this band was
+    retint("upperwall", (156, 160, 164), src="soffit", out="upperwall")  # round 13: c_w pair read (28, 48, 85) against (47, 72, 107)
     # the east offices' lobby walls, dark in the void under the boxes: the band's old dark grey-navy
     retint("lobbydark", (62, 68, 82), src="soffit", out="lobbydark")
     # Glazing: the dark glass rendered black in shade (Google Earth's office glass reads (96, 114, 132),
@@ -237,7 +292,7 @@ def main():
     label()
     # the blue blocks' plain cladding: the panel joints of the slate texture, a mid blue (Google Earth c_ne)
     CONTRAST["bluepanel"] = 0.5
-    retint("bluepanel", (52, 58, 74), src="slate", out="bluepanel")  # round 10: the photo's stair blocks (42, 47, 61) by white 207
+    retint("bluepanel", (46, 56, 86), src="slate", out="bluepanel")  # round 15: the person's photo 1 reads a clearer navy  # round 10: the photo's stair blocks (42, 47, 61) by white 207
     # the west podium's piers and spandrels: grey-blue panels, not white (Google Earth c_w, ferry_b).
     # PC check 2026-11-23: (126, 136, 148) rendered (118, 128, 142) against Google Earth's darker blue
     # (74, 103, 129); the west face renders about 0.94 of its colour.
@@ -247,7 +302,8 @@ def main():
     # glazing dark, Google Earth's darker blue was its glass and shade together
     retint("podiumpanel", (150, 156, 162), src="slate", out="podiumpanel")
     # the forecourt plinth's street front: blue-grey glass (PC check: Google Earth (76, 102, 118))
-    retint("fcglass", (81, 108, 124), src="curtain", out="fcglass")
+    # round 15 (the person's photos 1, 3, 4; Commons 2023): the forecourt glass reads pale grey-blue, light, in white frames
+    retint("fcglass", (150, 168, 178), src="curtain", out="fcglass")
     # round 13 (PC check of round 12, c_ne): the NE corner block's pale blue glass and its pale cyan plant room
     retint("paleglass", (150, 178, 192), src="curtain", out="paleglass")
     # the east office boxes' ribbon glass: light grey (PC check round 3: Google Earth's east boxes are pale grey/white)

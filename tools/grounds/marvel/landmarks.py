@@ -335,7 +335,7 @@ def make_textures():
     flat("white_band", (226, 228, 228))
     # round 12 (own audit of the round 11 PC renders): the round office read light blue-grey bands; Google Earth
     # (ext_045, c_sw) shows dark glass bands with thin pale rails
-    flat("round_glass", (40, 52, 64), noise=3.0)
+    flat("round_glass", (50, 76, 72), noise=3.0)   # round 15 (photos 2, Commons 2023): green-tinted glass
     flat("seven_glass", (66, 94, 124), noise=4.0)
     stripe_roof("stripe_roof")
     mural("mural")
@@ -370,6 +370,10 @@ def make_textures():
     graffiti("graffiti")
     TILE["graffiti"] = (48.0, 4.0)
     ivy("ivy")
+    # round 17: the verge's grass in the 2024 photo (own random stream, so the textures after it keep theirs)
+    _save("verge_grass", np.zeros((32, 32, 3)) + (92, 108, 60) + np.random.default_rng(17).normal(0, 6.0, (32, 32, 3)))
+    TILE["verge_grass"] = (4.0, 4.0)
+    banner_tex("street_banner")
     TILE["ivy"] = (6.0, 4.0)  # the low offices south of Bourke Street: white-grey walls (obl_s)
     # PC check round 2: Google Earth reads the two curved towers west of the ground as green-grey glass
     curtain("tower_glass", (84, 102, 98), (120, 132, 128), bay=1.5, floor=3.05, slab=0.0, noise=9.0)
@@ -397,6 +401,8 @@ def make_textures():
     flat("rail_steel", (150, 152, 154))
     st = RNG.bit_generator.state      # round 14: the new textures leave the shared noise as it was for the rest
     south_textures()
+    gate9_textures()
+    harbour_textures()
     RNG.bit_generator.state = st
     for n in ("bourke_edge", "home_frame", "home_glass", "near_wall", "tree_leaf", "fin_white", "corner_red", "roof_grey", "roof_dark", "sx_glass", "podium_glass", "white_band", "steel", "rock_a", "rock_b",
               "timber", "concrete_deck", "balustrade", "slab_grey", "steel_dark", "round_glass", "bourke_glass", "seven_glass", "roof_white", "navy_wall", "pool_blue", "solar", "pavilion_glass", "gable_glass", "rail_steel"):
@@ -404,19 +410,28 @@ def make_textures():
 
 
 # ---------------------------------------------------------------- mesh building
+# leaf materials: matte, soft-shaded, and lit through from behind in the game (GroundModels.gd _matte_foliage)
+FOLIAGE = ("pine_leaf", "tree_leaf")
+
+
 class Geo:
     """Faces gathered per material: vertices (x east, y north, z up), quads/polys, UVs in metres."""
 
     def __init__(self):
         self.parts = {}
+        self.soft = {}
         # Round 12 (real land): every z handed in is raised by `lift`, set per building to the land under its foot
         # (land.py). Heights read off Google Earth's 3D are already above sea level and keep lift 0.
         self.lift = 0.0
 
-    def poly(self, mat, pts, uvs=None):
+    def poly(self, mat, pts, uvs=None, soft=None):
+        """`soft` (a point): the face's normals point out from it, so a crown of leaves shades as one soft mass
+        instead of face by face (round 16, the person: the trees' lighting)."""
         pts = [(float(p[0]), float(p[1]), float(p[2]) + self.lift) for p in pts]
         if uvs is None:
             uvs = _auto_uv(pts)
+        if soft is not None:
+            self.soft.setdefault(mat, {})[len(self.parts.get(mat, []))] = (soft[0], soft[1], soft[2] + self.lift)
         self.parts.setdefault(mat, []).append((pts, [tuple(map(float, u)) for u in uvs]))
 
     def wall(self, mat, a, b, z0, z1, u0=0.0, mirror=False):
@@ -923,6 +938,17 @@ def round_office(g, ring, h=29.0):
     """The curved glass office south-west of the stadium on Harbour Esplanade (Google Earth
     ge_aflhouse_b, c_sw): eight floors of glass, each floor's slab edge a white band standing out."""
     banded(g, ring, 0.0, h, h / 6, 0.3, 3.4, 0.3, "white_band", "round_glass", parapet=1.2)  # round 12: thin pale rails
+    # round 15 (the person's photo 2 and Commons' 2023 south-west view): slim yellow vertical fins up the glass
+    P = np.array(ccw(ring), float)
+    L = np.r_[0, np.cumsum(np.linalg.norm(np.diff(np.r_[P, P[:1]], axis=0), axis=1))]
+    for s_ in np.arange(4.0, L[-1], 9.0):
+        i = int(np.searchsorted(L, s_) - 1)
+        a, b = P[i], P[(i + 1) % len(P)]
+        t = (b - a) / max(1e-6, np.linalg.norm(b - a))
+        n = np.array([t[1], -t[0]])
+        c = a + t * (s_ - L[i]) + n * 0.35
+        q = [tuple(c - t * 0.2), tuple(c + t * 0.2), tuple(c + t * 0.2 + n * 0.3), tuple(c - t * 0.2 + n * 0.3)]
+        g.prism(q, 0.5, h + 0.6, "fin_yellow", top="fin_yellow")
 
 
 def ferry(g, ring):
@@ -998,7 +1024,17 @@ def piles(g, start, along, out, rows, per_row, step=2.8, gap=3.0, h=1.1):
     for r in range(rows):
         for k in range(per_row):
             c = start + along * r * step + out * (1.5 + k * gap)
-            g.prism(cylinder_ring(c, 0.28, 6), WATER_Z - 0.5 - g.lift, WATER_Z + h - g.lift, "timber", top="timber")
+            # round 15: the land data runs on flat over the harbour with the water painted on it (about 1 m up, see
+            # rocks()), which had buried every pile; they now stand from it, 1.1-1.9 m proud
+            zw = float(land.z(*c)) - g.lift
+            ph = h + 0.8 * ((k * 7 + r * 3) % 5) / 4.0
+            g.prism(cylinder_ring(c, 0.28, 6), zw - 0.5, zw + ph, "timber", top="timber")
+            # round 15 (the person's photos 1 and 2, Commons 2023): each pile wears a white conical cap
+            zc = zw + ph
+            cr = cylinder_ring(c, 0.34, 8)
+            g.prism(cr, zc - 0.25, zc, "pile_cap", top=None)
+            for m in range(8):
+                g.poly("pile_cap", [(*cr[m], zc), (*cr[(m + 1) % 8], zc), (c[0], c[1], zc + 0.32)])
 
 
 def gangway(g, ring, edge):
@@ -1523,18 +1559,19 @@ def near_buildings(g, W):
                                 _lobe(g, q, top + 0.45 + 0.5, rng_.uniform(0.9, 1.5), rng_.uniform(0.5, 0.9), n=6)
 
 
-def _lobe(g, c, zc, r, rz, n=7):
+def _lobe(g, c, zc, r, rz, n=7, soft=None):
     """One rounded clump of leaves: a low-poly ellipsoid, `r` across and `rz` up from its middle, flattened below."""
     lats = (-0.75, -0.25, 0.3, 0.8)
     rings = [[(c[0] + r * math.cos(la) * math.cos(2 * math.pi * k / n + la), c[1] + r * math.cos(la) * math.sin(2 * math.pi * k / n + la),
                zc + rz * math.sin(la) * (0.7 if la < 0 else 1.0)) for k in range(n)] for la in lats]
     bot, top = (c[0], c[1], zc - rz * 0.62), (c[0], c[1], zc + rz)
+    soft = soft or (c[0], c[1], zc)
     for k in range(n):
         k1 = (k + 1) % n
-        g.poly("tree_leaf", [bot, rings[0][k1], rings[0][k]])
+        g.poly("tree_leaf", [bot, rings[0][k1], rings[0][k]], soft=soft)
         for j in range(len(rings) - 1):
-            g.poly("tree_leaf", [rings[j][k], rings[j][k1], rings[j + 1][k1], rings[j + 1][k]])
-        g.poly("tree_leaf", [rings[-1][k], rings[-1][k1], top])
+            g.poly("tree_leaf", [rings[j][k], rings[j][k1], rings[j + 1][k1], rings[j + 1][k]], soft=soft)
+        g.poly("tree_leaf", [rings[-1][k], rings[-1][k1], top], soft=soft)
 
 
 def tree(g, c, z, h, r):
@@ -1544,66 +1581,29 @@ def tree(g, c, z, h, r):
     g.prism(cylinder_ring(c, 0.22, 6), z, z + h * 0.5, "timber", top=None)
     rng = np.random.default_rng(int(abs(c[0] * 7919 + c[1] * 104729)) % (2 ** 31))
     zc = z + h * 0.66
-    _lobe(g, c, zc, r, h * 0.3)
+    mid = (c[0], c[1], zc)     # round 16: the clumps shade as one crown
+    _lobe(g, c, zc, r, h * 0.3, soft=mid)
     for _ in range(2):
         a = rng.uniform(0, 2 * math.pi); d = r * rng.uniform(0.35, 0.6)
-        _lobe(g, (c[0] + d * math.cos(a), c[1] + d * math.sin(a)), zc + h * rng.uniform(-0.06, 0.1), r * rng.uniform(0.55, 0.75), h * 0.22)
+        _lobe(g, (c[0] + d * math.cos(a), c[1] + d * math.sin(a)), zc + h * rng.uniform(-0.06, 0.1), r * rng.uniform(0.55, 0.75), h * 0.22,
+              soft=mid)
 
 
 def graffiti(name, px=24):
-    """The concrete wall along Wurundjeri Way (Google Earth c_e, c_ne; PC zoom_wall of round 11): pale grey precast
-    panels with separate painted pieces and bare stretches between them, not an even confetti. A piece is either
-    big bubble lettering (blue or white fill, dark outline), a cluster of dark tags, or a smaller coloured throw-up.
-    48 m by 4 m a tile, so the pieces do not repeat often."""
-    from PIL import ImageDraw, ImageFont, ImageFilter
+    """The concrete wall along Wurundjeri Way: pale grey precast panels 2.4 m wide under a coping, dirt at the foot.
+    Round 16 (the person, 28 Nov: "remove the graffiti and random posters, its ai slop"): nothing painted on it (the
+    name is kept so the wall's material and the pinned files stay the same)."""
     W, H = 48 * px, 4 * px
     rng = np.random.default_rng(48)
     base = np.zeros((H, W, 3), float) + (196, 194, 186) + rng.normal(0, 3.5, (H, W, 3))
     x = (np.arange(W) + 0.5) / px
     base[:, (x % 2.4) < 0.03] *= 0.82                     # precast panel joints
+    base[:, (x % 2.4) > 2.37] *= 0.94                     # a faint lip at each joint
     base[: int(0.25 * px)] *= 0.93                        # the coping's shadow line
     base[int(H * 0.9):] *= 0.9                            # dirt at the foot
-    im = Image.fromarray(np.clip(base, 0, 255).astype(np.uint8), "RGB")
-    d = ImageDraw.Draw(im)
-    font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", int(2.2 * px))
-    letters = "ABCDEKMORSTWZ"
-    pos = 1.0
-    while pos < 46.0:
-        # round 12 self-check against Google Earth offices_ne / c_e: most of the wall is painted, the bare stretches short
-        # round 13 (PC check of round 12: "poster boards"): continuous painting, no boards and no bare gaps
-        kind = rng.choice(["piece", "piece", "tags", "throw"])
-        span = float(rng.uniform(2.5, 6.5))
-        if kind == "bare":
-            pos += span
-            continue
-        x0, y0 = int(pos * px), int(rng.uniform(0.6, 1.4) * px)
-        if kind == "piece":
-            fill = [(96, 132, 196), (240, 240, 242), (120, 170, 220), (236, 170, 200)][rng.integers(4)]
-            # each piece on its own painted ground, as Google Earth's read as coloured blocks from the road
-            bg = [(70, 110, 180), (130, 170, 214), (60, 70, 96), (210, 150, 190), (230, 230, 232)][rng.integers(5)]
-            # its painted ground as overlapping splashes, not a board
-            for _ in range(int(span * 4) + 4):
-                ex, ey = x0 + rng.uniform(-0.3, span) * px, rng.uniform(0.4, 3.4) * px
-                rx, ry = rng.uniform(0.8, 1.6) * px, rng.uniform(0.6, 1.2) * px
-                d.ellipse((ex - rx, ey - ry, ex + rx, ey + ry), fill=bg)
-            word = "".join(rng.choice(list(letters), int(span / 1.3)))
-            for k, ch in enumerate(word):
-                cx = x0 + int(k * 1.25 * px)
-                d.text((cx, y0), ch, font=font, fill=(34, 36, 46), stroke_width=int(0.12 * px), stroke_fill=(34, 36, 46))
-                d.text((cx, y0), ch, font=font, fill=fill)
-        elif kind == "throw":
-            fill = [(214, 150, 176), (220, 204, 120), (150, 196, 170), (236, 236, 232)][rng.integers(4)]
-            for k in range(int(span / 1.6)):
-                cx, cy = x0 + int(k * 1.5 * px), y0 + int(0.4 * px)
-                d.ellipse((cx, cy, cx + int(1.3 * px), cy + int(1.4 * px)), fill=fill, outline=(40, 40, 46), width=int(0.08 * px))
-        else:   # dark tags: thin scribbled strokes
-            for _ in range(int(span * 3)):
-                cx, cy = x0 + rng.uniform(0, span * px), y0 + rng.uniform(0, 1.6 * px)
-                pts = [(cx + rng.uniform(-0.4, 0.4) * px, cy + rng.uniform(-0.3, 0.3) * px) for _ in range(5)]
-                d.line(pts, fill=(38, 38, 44), width=max(2, int(0.06 * px)))
-        pos += span + float(rng.uniform(0.0, 0.4))
-    im = im.filter(ImageFilter.GaussianBlur(0.6))
-    _save(name, np.asarray(im, float))
+    base += np.asarray(Image.fromarray((rng.random((8, 96)) * 255).astype(np.uint8)).resize((W, H), Image.BICUBIC),
+                       float)[..., None] / 255 * 10 - 5   # soft weathering
+    _save(name, base)
 
 
 def ivy(name, px=24):
@@ -1752,6 +1752,61 @@ def trains(g, W):
             g.prism([tuple(ca - nn2), tuple(cb - nn2), tuple(cb + nn2), tuple(ca + nn2)], z0 - 0.56, z0, "steel_dark", top=None)
 
 
+def street_banners(g, line, h, step=10.0):
+    """The MARVEL STADIUM pole banners over Wurundjeri Way (Flickr 53897019103, Jul 2024): dark lamp poles with a
+    lantern on top, each with one dark charcoal banner hung from an arm, the venue's logo (red MARVEL box, white
+    STADIUM) running up it. Spacing about 10 m (estimated from the photo's perspective, not measured). They stand on
+    the plaza behind the wall's top in the photo; our land behind the wall sits at road level (the plaza step is
+    not in the terrain), so they stand on the wall's coping instead of floating."""
+    pts = np.array(line, float)
+    seg = np.r_[0, np.cumsum(np.linalg.norm(np.diff(pts, axis=0), axis=1))]
+    for s_ in np.arange(4.0, seg[-1] - 2.0, step):
+        i = max(0, min(int(np.searchsorted(seg, s_)) - 1, len(pts) - 2))
+        t = (s_ - seg[i]) / max(seg[i + 1] - seg[i], 1e-6)
+        c = pts[i] + (pts[i + 1] - pts[i]) * t
+        tt = (pts[i + 1] - pts[i]) / np.linalg.norm(pts[i + 1] - pts[i])
+        g.lift = float(land.z(*c))
+        z0, z1 = h, h + 8.0
+        g.prism(cylinder_ring(tuple(c), 0.09, 10), z0, z1, "steel_dark", top=None)
+        g.prism(cylinder_ring(tuple(c), 0.2, 10), z1, z1 + 0.5, "lamp_head", top="steel_dark", bottom="steel_dark")
+        # the arm and the banner, hung along the road (its faces to the traffic both ways)
+        b0, b1 = c + tt * 0.12, c + tt * 1.02
+        g.poly("steel_dark", [(*b0, z1 - 0.9), (*b1, z1 - 0.9), (*b1, z1 - 0.84), (*b0, z1 - 0.84)])
+        zt, zb_, zs = z1 - 0.95, z1 - 4.55, z1 - 4.25
+        g.poly("street_banner", [(*b0, zb_), (*b1, zs), (*b1, zt), (*b0, zt)],
+               [(0.0, 0.0), (0.9, 0.3), (0.9, 3.6), (0.0, 3.6)])
+        g.poly("street_banner", [(*b1, zs), (*b0, zb_), (*b0, zt), (*b1, zt)],
+               [(0.0, 0.3), (0.9, 0.0), (0.9, 3.6), (0.0, 3.6)])
+
+
+def banner_tex(name, ppm=120):
+    """The pole banner (Flickr 53897019103): charcoal, the venue's logo (fonts/marvel_stadium_logo.png) in one line
+    turned to read downwards: the red MARVEL box at the top, STADIUM in white below it, nearly the banner's width."""
+    logo = np.asarray(Image.open(os.path.join(HERE, "fonts", "marvel_stadium_logo.png")).convert("RGBA"), float)
+    rgb, al = logo[..., :3], logo[..., 3] / 255.0
+    W_, H_ = int(0.9 * ppm), int(3.6 * ppm)
+    img = np.zeros((H_, W_, 3)) + np.array((38, 38, 42), float)
+    def put(mask_rgb, mask_a, y0, y1, x0, x1):
+        # turned 90 degrees clockwise: the word's start at the top
+        a_ = np.rot90(mask_a, -1); c_ = np.rot90(mask_rgb, -1)
+        w, hh = int((x1 - x0) * ppm), int((y1 - y0) * ppm)
+        a2 = np.asarray(Image.fromarray((a_ * 255).astype(np.uint8)).resize((w, hh), Image.LANCZOS), float)[..., None] / 255
+        c2 = np.asarray(Image.fromarray(c_.astype(np.uint8)).resize((w, hh), Image.LANCZOS), float)
+        Y0, X0 = int(y0 * ppm), int(x0 * ppm)
+        img[Y0:Y0 + hh, X0:X0 + w] = img[Y0:Y0 + hh, X0:X0 + w] * (1 - a2) + c2 * a2
+    # MARVEL box (logo rows 0-411) and STADIUM (rows 479-896, black letters drawn white)
+    mv_a, mv_c = al[0:411, 452:1468], rgb[0:411, 452:1468]
+    st_a = ((al > 0.5) & (rgb.max(2) < 80))[479:896, 0:1920].astype(float)
+    st_c = np.zeros(st_a.shape + (3,)) + 246.0
+    # image row 0 is the banner's top: MARVEL first, STADIUM under it (reading downwards)
+    ym = 0.15 + 0.6 * 1016 / 411
+    put(mv_c, mv_a, 0.15, ym, 0.15, 0.75)
+    put(st_c, st_a, ym + 0.12, ym + 0.12 + 0.38 * 1920 / 417, 0.26, 0.64)
+    img += np.random.default_rng(18).normal(0, 1.5, (H_, W_, 1))
+    _save(name, img)
+    TILE[name] = (0.9, 3.6)
+
+
 def graffiti_wall(g, W, h=3.4):
     """The painted wall along the stadium side of Wurundjeri Way: the west edge of the northbound carriageway
     (OpenStreetMap ways 580628691, four lanes, then 580628688, three lanes), from the NAB's corner to the stadium's
@@ -1769,7 +1824,12 @@ def graffiti_wall(g, W, h=3.4):
             if not cut.is_empty and cut.geom_type == "Point":
                 keep.append(np.array(cut.coords[0]))
             pts = np.array(keep, float)
-        off = lanes * 3.3 / 2 + 1.0
+        # round 17 (Flickr 53897019103, M. Wong, Jul 2024, from the La Trobe Street bridge looking south): along the
+        # stadium a grass verge about 2.7 m wide (0.8 of a lane) runs between the kerb and the wall; the NAB stretch
+        # (no photo) keeps its 1 m
+        verge = 2.7 if mat == "graffiti" else 0.0
+        kerb = lanes * 3.3 / 2 + 0.3
+        off = kerb + verge if verge else lanes * 3.3 / 2 + 1.0
         line = []
         for i in range(len(pts)):
             d = pts[min(i + 1, len(pts) - 1)] - pts[max(i - 1, 0)]
@@ -1778,9 +1838,31 @@ def graffiti_wall(g, W, h=3.4):
         assert line[0][0] < pts[0][0], "the wall must sit west of the carriageway"
         for a, b in zip(line[:-1], line[1:]):
             g.lift = float(min(land.z(*a), land.z(*b)))   # round 12: on the road's land
-            # round 13b (c_ne pair): the road face's lettering read backwards; its texture now runs the other way
-            g.wall(mat, a, b, -0.5, h, -u - float(np.hypot(*(b - a))), mirror=True)   # u runs -s along the wall
-            u += g.wall(mat, b, a, -0.5, h, u)
+            # round 16 (fault scan street_248-292: "RMTO", "SD", "RDZA" backwards from the road): round 13b's mirror
+            # had flipped the road face, which reads right when its texture runs a -> b (south to north, left to right
+            # for a driver looking west); only the stadium-side face below runs b -> a
+            # the two faces had shared one plane: drawn two-sided, the stadium face's back (mirror-image) won the
+            # depth test from the road, so each face now stands on its own side of a 0.3 m wall with a coping
+            tt = (b - a) / np.linalg.norm(b - a)
+            rn = np.array([tt[1], -tt[0]]) * 0.15          # right of a -> b: the road
+            g.wall(mat, a + rn, b + rn, -0.5, h, u)
+            u += g.wall(mat, b - rn, a - rn, -0.5, h, u)
+            g.poly("concrete_deck", [(*(a + rn), h), (*(b + rn), h), (*(b - rn), h), (*(a - rn), h)])
+            if verge:
+                # the verge: grass from the wall's foot to a low concrete kerb at the carriageway's edge
+                ka, kb = a + rn * (verge / 0.15), b + rn * (verge / 0.15)
+                ko = rn / 0.15 * 0.2
+                lz = lambda q, dz: (float(q[0]), float(q[1]), float(land.z(*q)) - g.lift + dz)   # each corner on its land
+                def up(q4):   # wound to face the sky (the landmarks' faces are one-sided)
+                    v = np.cross(np.subtract(q4[1], q4[0]), np.subtract(q4[2], q4[0]))
+                    return q4 if v[2] > 0 else q4[::-1]
+                # 0.3 up: the game's coarse ground mesh rides up to 0.25 over the land samples here and buried it
+                g.poly("verge_grass", up([lz(a + rn, 0.3), lz(ka, 0.3), lz(kb, 0.3), lz(b + rn, 0.3)]))
+                g.poly("concrete_deck", up([lz(ka, 0.32), lz(ka + ko, 0.32), lz(kb + ko, 0.32), lz(kb, 0.32)]))
+                # the kerb's face to the road (on the right of a -> b, like g.wall)
+                g.poly("concrete_deck", [lz(ka + ko, -0.1), lz(kb + ko, -0.1), lz(kb + ko, 0.32), lz(ka + ko, 0.32)])
+        if verge:
+            street_banners(g, line, h)
         if wid == "580628688":
             # ivy over the painted wall's first 9 m at the NAB end, on its road face (Google Earth c_e)
             a, b = line[0], line[1]
@@ -1812,31 +1894,26 @@ POD_Z = (15.0, 15.6, 23.0, 23.5)   # soffit, glass from, glass to (white band ab
 
 
 def sign_board(name, word, ground, w_m, h_m, letter_h, ppm=80):
-    """A lettered board in the stadium's own style (retint.py): white, heavy, condensed italic capitals on red or
-    black, square pixels, centred; read the right way round from in front (no mirroring: the landmarks' frame is
-    not the stadium's mirrored one)."""
-    from PIL import ImageDraw, ImageFont
-    f = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 400)
+    """A lettered board in the stadium's own lettering: round 16 (the person: "no italics no slim letters", "lazy"),
+    the letters are the venue's logo's (fonts/marvel_stadium_logo.png, as retint.sign_panels), white, upright, at the
+    logo's own proportions, centred on red or black; read the right way round from in front (no mirroring: the
+    landmarks' frame is not the stadium's mirrored one)."""
+    logo = np.asarray(Image.open(os.path.join(HERE, "fonts", "marvel_stadium_logo.png")).convert("RGBA"), float)
+    rgb, al = logo[..., :3], logo[..., 3] / 255.0
+    if word == "MARVEL":
+        mask = ((al > 0.5) & (rgb.min(2) > 200))[36:379, 484:1437]
+    else:
+        mask = ((al > 0.5) & (rgb.max(2) < 80))[479:896, 0:1920]
     W_, H_ = int(w_m * ppm), int(h_m * ppm)
-    big = Image.new("L", (3600, 600), 0)
-    d = ImageDraw.Draw(big)
-    tb = d.textbbox((0, 0), word, font=f)
-    d.text((40 - tb[0], 60 - tb[1]), word, font=f, fill=255)
-    let0 = big.crop(big.getbbox())
-    sh, room = 0.18, w_m - 1.2
-    for cond in np.arange(0.46, 0.30, -0.01):
-        lw, lh = let0.size
-        let = let0.resize((int(lw * cond), lh), Image.LANCZOS)
-        lw, lh = let.size
-        let = let.transform((lw + int(sh * lh), lh), Image.AFFINE, (1, sh, -sh * lh, 0, 1, 0), Image.BICUBIC)
-        lw, lh = let.size
-        if letter_h * lw / lh <= room:
-            break
-    pw, ph = int(letter_h * lw / lh * ppm), int(letter_h * ppm)
-    let = let.resize((pw, ph), Image.LANCZOS)
+    lw_m = letter_h * mask.shape[1] / mask.shape[0]
+    if lw_m > w_m - 1.2:
+        letter_h *= (w_m - 1.2) / lw_m
+        lw_m = w_m - 1.2
+    pw, ph = int(lw_m * ppm), int(letter_h * ppm)
+    let = np.asarray(Image.fromarray((mask * 255).astype(np.uint8)).resize((pw, ph), Image.LANCZOS), float) / 255.0
     m = np.zeros((H_, W_), float)
     x0, y0 = (W_ - pw) // 2, (H_ - ph) // 2
-    m[y0:y0 + ph, x0:x0 + pw] = np.asarray(let, float) / 255.0
+    m[y0:y0 + ph, x0:x0 + pw] = let
     img = np.zeros((H_, W_, 3)) + np.array(ground, float)
     img += np.random.default_rng(5).normal(0, 1.5, (H_, W_, 1))
     img = img * (1 - m[..., None]) + np.array((250, 250, 248)) * m[..., None]
@@ -1970,8 +2047,6 @@ def south_textures():
     flat("column_white", (232, 232, 230), noise=1.0)
     for n in ("soffit", "skylight", "mast_red", "column_white"):
         TILE[n] = (4.0, 4.0)
-    sign_board("lm_sign_marvel", "MARVEL", (226, 30, 38), 13.4, 5.4, 4.2)
-    sign_board("lm_sign_stadium", "STADIUM", (20, 20, 22), 19.2, 5.4, 4.2)
 
 
 def _rect(c, w, d, ang):
@@ -2039,7 +2114,7 @@ def plaza_deck(g):
     from shapely.geometry import Polygon as _P, LineString as _L
     from shapely.ops import unary_union as _U
     plaza = [(-14.0, -132.0), (-14.0, -152.0), (24.0, -154.0), (26.0, -161.0), (48.0, -160.0), (72.0, -158.0),
-             (80.0, -165.0), (86.0, -152.0), (100.0, -143.0), (112.0, -136.0), (110.0, -120.0), (100.0, -112.0)]
+             (80.0, -165.0), (86.0, -152.0), (100.0, -143.0), (112.0, -136.0), (110.0, -120.0), (114.9, -96.4), (96.1, -80.7), (92.0, -86.0), (100.0, -112.0)]
     P = _U([_P(plaza), _P(POD_OUT + POD_IN).buffer(0)])
     if P.geom_type == "MultiPolygon":
         P = max(P.geoms, key=lambda q: q.area)
@@ -2134,34 +2209,9 @@ def south_podium(g):
         c = (88.5 + dx, -106.7 + dy)
         g.prism(_rect(c, 4.0, 2.4, math.radians(35.0)), zr, zr + 1.6, "steel", top="roof_grey")
         g.prism(cylinder_ring(c, 0.8, 10), zr + 1.6, zr + 1.9, "steel_dark", top="roof_dark")
-    # the MARVEL STADIUM board, facing the plaza: red MARVEL west, black STADIUM east, 5.4 m tall. Round 14b (the
-    # person: it sat on the roof "like a separate billboard"): now a thin board fixed 0.3 m proud of the glass, following
-    # the podium's curve between x 27.5 and 60, from 17.4 to 22.8, so it reads as part of the building
-    from shapely.geometry import LineString as _LS
-    edge = _LS(POD_OUT)
-    s_a = edge.project(_Pt(27.5, -145.2)); s_b = edge.project(_Pt(60.0, -142.3))
-    Lb = s_b - s_a; split = 13.4 / (13.4 + 19.2) * Lb
-    ss = np.r_[np.linspace(s_a, s_a + split, 15), np.linspace(s_a + split, s_b, 21)[1:]]
-    pts = [np.array(edge.interpolate(v).coords[0]) for v in ss]
-    nrm = []
-    for k in range(len(pts)):
-        tt = pts[min(k + 1, len(pts) - 1)] - pts[max(k - 1, 0)]; tt /= np.linalg.norm(tt)
-        nrm.append(np.array((tt[1], -tt[0])))            # right of a west-to-east run: out to the plaza
-    Lb = s_b - s_a; split = 13.4 / (13.4 + 19.2) * Lb
-    zb0, zb1 = 17.4, 22.8
-    TILE["lm_sign_marvel"] = (split, 5.4); TILE["lm_sign_stadium"] = (Lb - split, 5.4)   # one texture per board
-    for k in range(len(pts) - 1):
-        u0, u1 = ss[k] - s_a, ss[k + 1] - s_a
-        fa, fb = pts[k] + nrm[k] * 0.3, pts[k + 1] + nrm[k + 1] * 0.3
-        ba, bb = pts[k] + nrm[k] * 0.05, pts[k + 1] + nrm[k + 1] * 0.05
-        mat, w0 = ("lm_sign_marvel", 0.0) if u1 <= split + 1e-6 else ("lm_sign_stadium", split)
-        g.poly(mat, [(fa[0], fa[1], zb0), (fb[0], fb[1], zb0), (fb[0], fb[1], zb1), (fa[0], fa[1], zb1)],
-               [(u0 - w0, 0.0), (u1 - w0, 0.0), (u1 - w0, 5.4), (u0 - w0, 5.4)])
-        g.poly("steel_dark", [(ba[0], ba[1], zb1), (bb[0], bb[1], zb1), (fb[0], fb[1], zb1), (fa[0], fa[1], zb1)])
-        g.poly("steel_dark", [(fa[0], fa[1], zb0), (fb[0], fb[1], zb0), (bb[0], bb[1], zb0), (ba[0], ba[1], zb0)])
-    for k in (0, len(pts) - 1):
-        fa, ba = pts[k] + nrm[k] * 0.3, pts[k] + nrm[k] * 0.05
-        g.poly("steel_dark", [(ba[0], ba[1], zb0), (fa[0], fa[1], zb0), (fa[0], fa[1], zb1), (ba[0], ba[1], zb1)])
+    # round 16b (coordinator, 28 Nov, under the realism rules): the round-14 MARVEL STADIUM board on the podium's
+    # front is gone. No recent photo shows a lettered board on the south frontage (venue, ByDesign and Grimshaw
+    # pages checked), and a detail we cannot verify is left out. sign_board() stays for a board a photo confirms.
     # plaza: banner poles and light poles along the podium's front (pod_c: tall thin poles, about 10 m)
     line = _offset_line(out_line, -6.0)
     pts, _ = _resample(line, 14.0)
@@ -2267,6 +2317,375 @@ def bourke_footbridge(g):
         column(g, p[i], float(land.z(*p[i])) - 0.5, zs[i] - 0.6, r=0.35, mat="concrete_deck")
 
 
+# ---------------------------------------------------------------- Gate 9 (harbour side, south-west)
+# Built from two Google Street View trekker photos of June 2019 (project files g9_trek2019_a/b; reference only, the
+# signage is 2019's and not checked as current): a tall navy-clad stair tower with a big glazed panel showing the
+# stairs zig-zagging up inside, a navy "Gate 9" box sign on a short arm, a purple "MEDALLION CLUB and CORPORATE
+# ENTRY" fascia over a glazed vestibule with a triangle graphic, timber-boarded doors either side, a white picket
+# fence on a navy floor patch, grey paving with a darker strip along the building, and a ticket booth with a white
+# triangle pattern and queue posts with "MARVEL STADIUM" tape further south-east (photo b). Google Earth is not used
+# for entrances (the person's rule). Position: OpenStreetMap's Gate 9 node (-59.2, -116.5); the facade faces bearing
+# 207 (photo a is square-on at heading 27) and stands on the stadium's base edge, hit by a ray at bearing 207 at
+# (-56.12, -110.14). Sizes come from the photo's proportions with a 2.6 m door and a 1.65 m walker as the scale: the
+# vestibule about 7.5 m wide, the fascia at 2.55-3.1 m, the sign about 1.4 by 1.6 m at 3.4-5.0 m, the stair glazing
+# about 6.3 m wide from 1.5 m up, the tower about 9.5 m wide; heights above the photo's top edge are estimates.
+G9_B = np.array([-56.12, -110.14])
+G9_N = np.array([-0.454, -0.891])   # outward, bearing 207
+G9_T = np.array([0.891, -0.454])    # along the facade, to the right seen from outside
+
+
+def _g9(s, d):
+    q = G9_B + s * G9_T + d * G9_N
+    return (float(q[0]), float(q[1]))
+
+
+def _g9box(g, s0, s1, d0, d1, z0, z1, wall, top="roof_grey", bottom=False):
+    g.prism([_g9(s0, d0), _g9(s1, d0), _g9(s1, d1), _g9(s0, d1)], z0, z1, wall, top=top, bottom=bottom)
+
+
+def _g9face(g, mat, s0, s1, d, z0, z1, uv=None):
+    """A face in the facade's plane at depth d, facing out (u along +s)."""
+    a, b = _g9(s0, d), _g9(s1, d)
+    g.poly(mat, [(a[0], a[1], z0), (b[0], b[1], z0), (b[0], b[1], z1), (a[0], a[1], z1)],
+           uv or [(0.0, z0), (s1 - s0, z0), (s1 - s0, z1), (0.0, z1)])
+
+
+def gate9_textures():
+    panels("g9_navy", (58, 66, 96), (40, 46, 70), w=3.0, h=2.4, noise=3.0)
+    TILE["g9_navy"] = (12.0, 9.6)
+    flat("g9_navy_floor", (40, 54, 110), noise=2.0)
+    flat("g9_picket", (236, 236, 232), noise=1.0)
+    flat("g9_mullion", (34, 40, 56), noise=1.0)
+    flat("g9_cavity", (24, 28, 38), noise=2.0)
+    flat("g9_stair", (150, 152, 154), noise=3.0)
+    flat("g9_strip", (104, 106, 110), noise=3.0)
+    flat("g9_tape", (52, 54, 120), noise=1.0)
+    for n_ in ("g9_navy_floor", "g9_picket", "g9_mullion", "g9_cavity", "g9_stair", "g9_strip", "g9_tape"):
+        TILE[n_] = (4.0, 4.0)
+    # the forecourt: grey square pavers (photo a)
+    panels("g9_pave", (158, 158, 156), (138, 138, 136), w=0.6, h=0.6, noise=4.0)
+    TILE["g9_pave"] = (2.4, 2.4)
+    # timber-boarded doors: vertical boards
+    n = 96
+    img = np.zeros((n, n, 3)) + np.array((150, 104, 62), float)
+    x = np.arange(n)
+    img[:, (x % 12) < 1] = (108, 72, 42)
+    img += np.random.default_rng(4).normal(0, 6, (n, 1, 1)) * 0 + np.random.default_rng(4).normal(0, 5, (1, n, 1))
+    _save("g9_timber", img)
+    TILE["g9_timber"] = (1.0, 1.0)
+    # round 16 (the person's rule, 28 Nov: no stock fonts, no made-up graphics; what can't be checked is left out): the
+    # fascia's and the box sign's lettering and the glass's and booth's triangle graphics can't be traced from the
+    # 2019 photos (too small) or checked as current, so they are plain: the fascia purple, the box navy, the glass dark
+    flat("g9_fascia", (92, 52, 132), noise=1.5)
+    flat("g9_sign", (40, 50, 104), noise=1.5)
+    flat("g9_vest_glass", (34, 40, 58), noise=1.5)
+    flat("g9_booth", (176, 180, 186), noise=2.0)
+    for n_ in ("g9_fascia", "g9_sign", "g9_vest_glass", "g9_booth"):
+        TILE[n_] = (4.0, 4.0)
+
+
+def gate9(g):
+    """Gate 9 on the harbour side (see the note above G9_B)."""
+    corners = [_g9(s_, d_) for s_ in (-19.0, 10.0) for d_ in (-5.0, 18.0)]
+    z0 = land.base(corners)
+    g.lift = z0
+    D0, DF, DT = -5.0, 5.5, 6.5       # back (inside the stadium's base), facade front, tower front
+    # paving draped on the land: grey pavers from the base out 18 m, a darker strip running south-east (photo a)
+    for s_ in np.arange(-20.0, 26.0, 2.0):
+        for d_ in np.arange(0.0, 18.0, 2.0):
+            q = [(s_, d_), (s_ + 2, d_), (s_ + 2, d_ + 2), (s_, d_ + 2)]
+            P = [_g9(*c) for c in q]
+            zz = [float(land.z(*p)) - z0 + 0.03 for p in P]
+            g.poly("g9_pave", [(p[0], p[1], z_) for p, z_ in zip(P, zz)], [(p[0], p[1]) for p in P])
+    for k in range(12):
+        a0, a1 = k / 12, (k + 1) / 12
+        sa, sb = 0.0 + 24 * a0, 0.0 + 24 * a1
+        da, db = 7.0 + 5 * a0, 7.0 + 5 * a1
+        P = [_g9(sa, da), _g9(sb, db), _g9(sb, db + 1.0), _g9(sa, da + 1.0)]
+        g.poly("g9_strip", [(p[0], p[1], float(land.z(*p)) - z0 + 0.05) for p in P])
+    # the navy floor patch the fence stands on
+    P = [_g9(-18.5, DF), _g9(-3.5, DF), _g9(-3.5, 11.0), _g9(-18.5, 11.0)]
+    g.poly("g9_navy_floor", [(p[0], p[1], float(land.z(*p)) - z0 + 0.06) for p in P])
+
+    # the navy block west of the tower: a lower level with the vestibule, louvres at 5.3-6.8 m (photo a)
+    _g9box(g, -19.0, -14.0, D0, DF, -1.0, 14.0, "g9_navy")
+    _g9box(g, -14.0, -3.5, D0, DF, 3.1, 14.0, "g9_navy", bottom="soffit")
+    _g9box(g, -14.0, -12.6, D0, DF, -1.0, 3.1, "g9_navy")
+    _g9box(g, -4.9, -3.5, D0, DF, -1.0, 3.1, "g9_navy")
+    _g9box(g, -3.5, 0.5, D0, DF, -1.0, 14.0, "g9_navy")
+    _g9face(g, "louvre_grey", -18.0, -6.0, DF + 0.02, 5.3, 6.8)
+    # the vestibule: glass with the triangle graphic set 2 m back, a soffit over it, the fascia on the front
+    _g9face(g, "g9_vest_glass", -12.6, -4.9, DF - 2.0, 0.0, 2.55, [(0, 0), (7.7, 0), (7.7, 2.55), (0, 2.55)])
+    _g9box(g, -12.6, -4.9, D0, DF - 2.0, 2.55, 3.1, "g9_navy", top=None)
+    _g9face(g, "g9_fascia", -12.6, -4.9, DF + 0.03, 2.55, 3.1, [(0, 0), (7.7, 0), (7.7, 0.55), (0, 0.55)])
+    P = [_g9(-12.6, DF - 2.0), _g9(-4.9, DF - 2.0), _g9(-4.9, DF), _g9(-12.6, DF)]
+    g.poly("soffit", [(p[0], p[1], 2.55) for p in P[::-1]])
+    # timber-boarded doors either side of the vestibule
+    _g9face(g, "g9_timber", -14.0 + 0.1, -12.6 - 0.1, DF + 0.03, 0.0, 2.6)
+    _g9face(g, "g9_timber", -4.9 + 0.1, -3.5 - 0.1, DF + 0.03, 0.0, 2.6)
+    # the Gate 9 box sign on a short arm, over the vestibule's middle
+    sc = -8.9
+    strut(g, "g9_mullion", (*_g9(sc, DF), 4.3), (*_g9(sc, DF + 0.55), 4.3), 0.12)
+    _g9box(g, sc - 0.7, sc + 0.7, DF + 0.55, DF + 0.95, 3.4, 5.0, "g9_navy", top="g9_navy", bottom="g9_navy")
+    _g9face(g, "g9_sign", sc - 0.7, sc + 0.7, DF + 0.96, 3.4, 5.0, [(0, 0), (1.4, 0), (1.4, 1.6), (0, 1.6)])
+
+    # the stair tower: navy piers and head round a 6.3 m glazed panel; the stairs zig-zag up behind the glazing
+    S0, S1, GS0, GS1 = 0.5, 10.0, 1.7, 8.0
+    ZG0, ZG1, ZT = 1.5, 20.0, 24.0
+    _g9box(g, S0, GS0, D0, DT, -1.0, ZT, "g9_navy")
+    _g9box(g, GS1, S1, D0, DT, -1.0, ZT, "g9_navy")
+    _g9box(g, GS0, GS1, D0, DT, -1.0, ZG0, "g9_navy")
+    _g9box(g, GS0, GS1, D0, DT, ZG1, ZT, "g9_navy", bottom="g9_cavity")
+    # the glazing's chamfered top corner (photo a): a navy wedge in the panel's top right
+    for d_ in (DT - 0.6, DT):
+        a, b, c = _g9(GS1 - 2.0, d_), _g9(GS1, d_), _g9(GS1, d_)
+        g.poly("g9_navy", [(a[0], a[1], ZG1), (b[0], b[1], ZG1), (c[0], c[1], ZG1 - 2.0)])
+    a, b = _g9(GS1 - 2.0, DT - 0.6), _g9(GS1 - 2.0, DT)
+    c_, d2 = _g9(GS1, DT), _g9(GS1, DT - 0.6)
+    g.poly("g9_navy", [(a[0], a[1], ZG1), (b[0], b[1], ZG1), (c_[0], c_[1], ZG1 - 2.0), (d2[0], d2[1], ZG1 - 2.0)])
+    DC = DT - 3.8   # the cavity's back wall
+    _g9face(g, "g9_cavity", GS0, GS1, DC, ZG0, ZG1)
+    # mullions and transoms of the glazing, 0.15 m dark frame (no glass pane: the stairs behind read through it)
+    DM = DT - 0.15
+    for s_ in np.linspace(GS0, GS1, 7):
+        top = ZG1 - 2.0 * max(0.0, (s_ - (GS1 - 2.0)) / 2.0)
+        strut(g, "g9_mullion", (*_g9(s_, DM), ZG0), (*_g9(s_, DM), top), 0.15)
+    for z_ in np.arange(ZG0, ZG1 + 0.01, 1.85):
+        s_end = GS1 if z_ <= ZG1 - 2.0 else GS1 - 2.0 * (z_ - (ZG1 - 2.0)) / 2.0
+        strut(g, "g9_mullion", (*_g9(GS0, DM), z_), (*_g9(s_end, DM), z_), 0.12)
+    # scissor flights: alternate flights side by side in depth, landings across both at each end
+    nfl, rise = 5, (ZG1 - 1.5 - ZG0) / 5
+    LA, LB = GS0 + 1.2, GS1 - 1.0   # flight run between the landings
+    for k in range(nfl + 1):
+        zl = ZG0 + k * rise
+        end = (GS0, LA) if k % 2 == 0 else (LB, GS1)
+        _g9box(g, end[0], end[1], DC, DM - 0.1, zl - 0.25, zl, "g9_stair", top="g9_stair", bottom="g9_stair")
+    for k in range(nfl):
+        zl = ZG0 + k * rise
+        dd = (DM - 1.45, DM - 0.15) if k % 2 == 0 else (DC, DC + 1.3)
+        nst = 14
+        for j in range(nst):
+            f0 = j / nst
+            s_a = LA + (LB - LA) * f0 if k % 2 == 0 else LB - (LB - LA) * f0
+            s_b = LA + (LB - LA) * (j + 1) / nst if k % 2 == 0 else LB - (LB - LA) * (j + 1) / nst
+            zt = zl + rise * (j + 1) / nst
+            lo, hi = min(s_a, s_b), max(s_a, s_b)
+            _g9box(g, lo, hi, dd[0], dd[1], zt - 0.3, zt, "g9_stair", top="g9_stair", bottom="g9_stair")
+        # handrail on the flight's open side
+        s_from, s_to = (LA, LB) if k % 2 == 0 else (LB, LA)
+        strut(g, "g9_mullion", (*_g9(s_from, dd[1] - 0.05), zl + 1.0), (*_g9(s_to, dd[1] - 0.05), zl + rise + 1.0), 0.06)
+
+    # the white picket fence in front of the vestibule, with a gap where people walk in (photo a)
+    DFe = 9.0
+    for sa, sb in ((-18.0, -9.6), (-8.2, -4.2)):
+        for s_ in np.arange(sa, sb - 0.05, 0.16):
+            zb = float(land.z(*_g9(s_, DFe))) - z0
+            _g9box(g, s_, s_ + 0.08, DFe - 0.015, DFe + 0.015, zb, zb + 1.0, "g9_picket", top="g9_picket")
+        for s_ in np.arange(sa, sb + 0.01, 2.4 if sb - sa > 3 else sb - sa):
+            zb = float(land.z(*_g9(s_, DFe))) - z0
+            _g9box(g, s_ - 0.05, s_ + 0.05, DFe - 0.05, DFe + 0.05, zb, zb + 1.12, "g9_picket", top="g9_picket")
+        for zr in (0.25, 0.8):
+            zb = float(land.z(*_g9(sa, DFe))) - z0
+            strut(g, "g9_picket", (*_g9(sa, DFe - 0.04), zb + zr), (*_g9(sb, DFe - 0.04), zb + zr), 0.08)
+
+    # photo b: a ticket booth with a white triangle pattern against the stadium further south-east, and queue posts
+    # with navy "MARVEL STADIUM" tape running out from it. Its place along the wall is an estimate from photo b.
+    bs = 14.0
+    zb = float(land.z(*_g9(bs, 12.0))) - z0
+    _g9box(g, bs, bs + 3.0, 10.0, 11.6, zb - 0.5, zb + 2.6, "g9_booth", top="roof_grey")
+    for i in range(5):
+        for row in (0, 1):
+            p_ = _g9(bs - 1.0 - 2.2 * i, 11.0 + 1.4 * row)
+            zp = float(land.z(*p_)) - z0
+            g.prism(cylinder_ring(p_, 0.03, 6), zp, zp + 0.95, "steel_dark", top="steel_dark")
+            g.prism(cylinder_ring(p_, 0.17, 10), zp, zp + 0.04, "steel_dark", top="steel_dark")
+            if i < 4:
+                q_ = _g9(bs - 1.0 - 2.2 * (i + 1), 11.0 + 1.4 * row)
+                a, b = p_, q_
+                g.poly("g9_tape", [(a[0], a[1], zp + 0.85), (b[0], b[1], zp + 0.85), (b[0], b[1], zp + 0.9), (a[0], a[1], zp + 0.9)])
+    g.lift = 0.0
+
+
+# ---------------------------------------------------------------- the harbour side, round 15
+# Checked against the person's 8 photos of 27 Nov (the west face from the water and the pier, from Harbour Esplanade
+# and from the air) and Wikimedia Commons' "Docklands Stadium, Melbourne, southwest view 20230219" 1 and 2 (DXR).
+# West deck furniture, placed in the stadium's own frame (parts2.py's u, v: the balustrade at v 126.5, the tables
+# between the face and it at v 118.5 and 122.5) and converted to the model frame here.
+WEST_TABLES = [(-123.7, -6.0), (-127.5, -7.3), (-121.7, -11.6), (-125.5, -12.9), (-119.7, -17.3), (-123.4, -18.6),
+               (-117.7, -22.9), (-121.4, -24.2), (-115.6, -28.6), (-119.4, -29.9), (-113.6, -34.2), (-117.4, -35.5),
+               (-109.6, -45.5), (-113.4, -46.9), (-107.6, -51.2), (-111.3, -52.5), (-105.5, -56.8), (-109.3, -58.2),
+               (-103.5, -62.5), (-107.3, -63.8), (-101.5, -68.1), (-105.3, -69.5), (-99.5, -73.8), (-103.3, -75.1)]
+WEST_FLAGS = [(-121.5, -36.0), (-119.1, -42.5), (-116.8, -49.1)]
+WEST_MASTS = [(-127.2, -19.9), (-111.1, -65.1)]
+WEST_U = np.array([0.3, -0.9]) / np.hypot(0.3, 0.9)      # the deck's run (stadium u) in the model frame
+DECK_Z = 8.6   # the concourse level all round (parts2 ZP, round 15)
+
+
+def _flag_tex(name, kind, px=120):
+    W_, H_ = 2 * px, px
+    img = np.zeros((H_, W_, 3), float)
+    y, x = np.mgrid[0:H_, 0:W_]
+    if kind == "aboriginal":
+        img[:H_ // 2] = (16, 16, 16); img[H_ // 2:] = (200, 30, 30)
+        img[(x - W_ / 2) ** 2 + (y - H_ / 2) ** 2 < (H_ * 0.27) ** 2] = (250, 205, 20)
+    else:   # the Australian flag: blue, the Union Jack in the canton, white stars
+        img[:] = (20, 34, 110)
+        cw, ch = W_ // 2, H_ // 2
+        cy, cx = y[:ch, :cw], x[:ch, :cw]
+        can = img[:ch, :cw]
+        d1 = np.abs(cy * cw - cx * ch) < 0.12 * cw * ch / 2
+        d2 = np.abs((ch - cy) * cw - cx * ch) < 0.12 * cw * ch / 2
+        can[d1 | d2] = (240, 240, 240)
+        can[(np.abs(cy - ch / 2) < ch * 0.17) | (np.abs(cx - cw / 2) < cw * 0.09)] = (240, 240, 240)
+        can[(np.abs(cy - ch / 2) < ch * 0.09) | (np.abs(cx - cw / 2) < cw * 0.05)] = (200, 30, 40)
+        for sx, sy, r in ((0.25, 0.75, 0.09), (0.75, 0.22, 0.05), (0.62, 0.48, 0.05), (0.88, 0.42, 0.05), (0.75, 0.82, 0.05)):
+            img[(x - sx * W_) ** 2 + (y - sy * H_) ** 2 < (r * H_) ** 2] = (245, 245, 245)
+    _save(name, img)
+    TILE[name] = (1.8, 0.9)
+
+
+def _pier_tex(name, px=20, tile=24.0):
+    """Docklands' Sunset plaza on the pier (photo 1): red-brown pavers crossed by blue-grey diagonal bands, with a
+    pale ring motif."""
+    n = int(tile * px)
+    y, x = np.mgrid[0:n, 0:n] / px
+    img = np.zeros((n, n, 3)) + np.array((168, 98, 82), float)
+    cell = np.floor(x / 0.6) + 41 * np.floor(y / 0.3)
+    img += ((np.sin(cell * 12.9898) * 43758.5453 % 1.0)[..., None] - 0.5) * 16.0
+    img[((x % 0.6) < 0.03) | ((y % 0.3) < 0.03)] -= 18
+    band = (((x + y) % 12.0) < 0.9) | (((x - y) % 12.0) < 0.9)
+    img[band] = (84, 104, 140)
+    r = np.hypot(x - 6.0, y - 18.0)
+    img[(np.abs(r - 3.0) < 0.25)] = (214, 196, 170)
+    img += np.random.default_rng(21).normal(0, 3.0, (n, n, 1))
+    _save(name, img)
+    TILE[name] = (tile, tile)
+
+
+def harbour_textures():
+    flat("pine_leaf", (50, 74, 42), noise=5.0)   # round 16: the photos' mid-dark green
+    flat("pine_bark", (84, 76, 68), noise=4.0)
+    flat("pile_cap", (240, 240, 236), noise=1.0)
+    flat("table_red", (186, 96, 84), noise=3.0)
+    flat("umbrella", (236, 232, 222), noise=2.0)
+    flat("mast_white", (230, 232, 232), noise=1.0)
+    flat("lamp_head", (60, 64, 70), noise=2.0)
+    flat("fin_yellow", (214, 180, 60), noise=3.0)
+    for n_ in ("pine_leaf", "pine_bark", "pile_cap", "table_red", "umbrella", "mast_white", "lamp_head", "fin_yellow"):
+        TILE[n_] = (4.0, 4.0)
+    _flag_tex("flag_aus", "aus")
+    _flag_tex("flag_abor", "aboriginal")
+    _pier_tex("pier_pave")
+
+
+def norfolk_pine(g, c, z, h, rng):
+    """A Norfolk Island pine: a straight trunk to the top and tiers of level branches, each tier a whorl of eight
+    drooping fronds with gaps between them, longest low down, the crown a slim cone (Harbour Esplanade's street trees;
+    round 16, the person's aerial photo: young, slim and see-through, about deck high)."""
+    g.prism(cylinder_ring(c, 0.05 + 0.012 * h, 6), z - 0.5, z + h, "pine_bark", top=None)
+    z0 = z + h * rng.uniform(0.22, 0.32)
+    nt = max(5, int(round((h - (z0 - z)) / 0.6)))
+    R = h * rng.uniform(0.19, 0.23)
+    soft = (c[0], c[1], z0 + (z + h - z0) * 0.4)     # the crown's middle: its fronds shade round it, not frond by frond
+    for k in range(nt):
+        zt = z0 + (z + h - z0) * k / max(1, nt)
+        f = 1.0 - k / max(1, nt)
+        rt = 0.35 + (R - 0.35) * f ** 0.9
+        a0 = rng.uniform(0, 2 * math.pi)
+        for j in range(8):
+            a = a0 + 2 * math.pi * j / 8 + rng.uniform(-0.15, 0.15)
+            d = np.array([math.cos(a), math.sin(a)])
+            s = np.array([-d[1], d[0]]) * max(0.35, 0.42 * rt)
+            base = np.array(c, float) + d * 0.1
+            mid = np.array(c, float) + d * rt * 0.55
+            tip = np.array(c, float) + d * rt
+            zm, ze = zt + 0.1, zt - 0.15 - 0.1 * rt
+            g.poly("pine_leaf", [(*base, zt), (*(mid - s), zm), (*tip, ze), (*(mid + s), zm)], soft=soft)
+    # the leader above the last tier
+    g.poly("pine_leaf", [(c[0] - 0.25, c[1], z + h - 0.9), (c[0] + 0.25, c[1], z + h - 0.9), (c[0], c[1], z + h + 0.4)], soft=soft)
+    g.poly("pine_leaf", [(c[0], c[1] - 0.25, z + h - 0.9), (c[0], c[1] + 0.25, z + h - 0.9), (c[0], c[1], z + h + 0.4)], soft=soft)
+
+
+def norfolk_pines(g):
+    """Round 16: the City of Melbourne tree register's conifers on Harbour Esplanade (surrounds.council_trees), each
+    at its surveyed spot and sized from its trunk (surrounds.tree_size); the register's figs, planes and palms there
+    are drawn with the other street trees (trees.bin)."""
+    rng = np.random.default_rng(57)
+    g.lift = 0.0
+    n = 0
+    for e, n_, name, dbh, age in sorted(S.council_trees(), key=lambda t: (t[0], t[1])):
+        if not S.is_harbour_conifer(e, n_, name):
+            continue
+        h, _r = S.tree_size(name, dbh, age)
+        norfolk_pine(g, (e, n_), float(land.z(e, n_)) - 0.05, h, rng)
+        n += 1
+    print("norfolk pines", n)
+
+
+def west_deck_dressing(g):
+    """On the west concourse deck (photos 1, 3, 4): rows of red picnic tables under white umbrellas, three flagpoles
+    by the balustrade (Australian and Aboriginal flags) and two tall white lamp masts with floodlight heads."""
+    g.lift = 0.0
+    u = WEST_U
+    v = np.array([-u[1], u[0]])
+    for i, c in enumerate(WEST_TABLES):
+        c = np.array(c)
+        q = [tuple(c + u * a + v * b) for a, b in ((-0.9, -0.4), (0.9, -0.4), (0.9, 0.4), (-0.9, 0.4))]
+        g.prism(q, DECK_Z + 0.70, DECK_Z + 0.76, "table_red", top="table_red", bottom="table_red")
+        for sb in (-0.75, 0.75):
+            qb = [tuple(c + u * a + v * b) for a, b in ((-0.9, sb - 0.14), (0.9, sb - 0.14), (0.9, sb + 0.14), (-0.9, sb + 0.14))]
+            g.prism(qb, DECK_Z + 0.42, DECK_Z + 0.47, "table_red", top="table_red", bottom="table_red")
+        for a in (-0.7, 0.7):
+            p = c + u * a
+            g.prism(cylinder_ring(tuple(p), 0.05, 4), DECK_Z, DECK_Z + 0.72, "steel_dark", top=None)
+        if i % 2 == 0:
+            g.prism(cylinder_ring(tuple(c), 0.04, 5), DECK_Z + 0.76, DECK_Z + 2.6, "steel_dark", top=None)
+            r = 1.5
+            corners = [c + (u * sa + v * sb) * r for sa, sb in ((-1, -1), (1, -1), (1, 1), (-1, 1))]
+            top = (c[0], c[1], DECK_Z + 3.0)
+            for k in range(4):
+                a_, b_ = corners[k], corners[(k + 1) % 4]
+                g.poly("umbrella", [(*a_, DECK_Z + 2.45), (*b_, DECK_Z + 2.45), top])
+    for i, c in enumerate(WEST_FLAGS):
+        g.prism(cylinder_ring(c, 0.07, 6), DECK_Z, DECK_Z + 11.0, "mast_white", top="mast_white")
+        a, b = np.array(c), np.array(c) - v * 1.8
+        mat = "flag_abor" if i == 1 else "flag_aus"
+        g.poly(mat, [(*a, DECK_Z + 9.9), (*b, DECK_Z + 9.9), (*b, DECK_Z + 10.8), (*a, DECK_Z + 10.8)],
+               [(0, 0), (1.8, 0), (1.8, 0.9), (0, 0.9)])
+    for c in WEST_MASTS:
+        g.prism(cylinder_ring(c, 0.32, 10), DECK_Z, DECK_Z + 18.0, "mast_white", top="mast_white")
+        c = np.array(c)
+        strut(g, "mast_white", (*(c - u * 1.4), DECK_Z + 18.0), (*(c + u * 1.4), DECK_Z + 18.0), 0.18)
+        for a in (-1.2, -0.4, 0.4, 1.2):
+            p = c + u * a - v * 0.25
+            q = [tuple(p + u * sa + v * sb) for sa, sb in ((-0.3, -0.2), (0.3, -0.2), (0.3, 0.2), (-0.3, 0.2))]
+            g.prism(q, DECK_Z + 18.1, DECK_Z + 18.6, "lamp_head", top="lamp_head", bottom="lamp_head")
+
+
+def sunset_plaza(g):
+    """Docklands' Sunset plaza on the pier (photo 1): its red-brown paving with blue bands, laid as a real surface on
+    the land, and three round planters."""
+    ring = ccw([tuple(q) for q in S.SUNSET_PLAZA])
+    g.lift = 0.0
+    from shapely.geometry import Polygon as _P
+    P = _P(ring)
+    lo, hi = np.array(P.bounds[:2]), np.array(P.bounds[2:])
+    for x0 in np.arange(lo[0], hi[0], 3.0):
+        for y0 in np.arange(lo[1], hi[1], 3.0):
+            cell = _P([(x0, y0), (x0 + 3, y0), (x0 + 3, y0 + 3), (x0, y0 + 3)]).intersection(P)
+            if cell.is_empty or cell.geom_type != "Polygon" or cell.area < 0.01:
+                continue
+            pts = list(cell.exterior.coords)[:-1]
+            pts = ccw(pts)
+            g.poly("pier_pave", [(x, y, float(land.z(x, y)) + 0.04) for x, y in pts], [(x, y) for x, y in pts])
+    for c in ((-205.0, -60.0), (-198.0, -80.0), (-212.0, -48.0)):
+        if not P.contains(_P(cylinder_ring(c, 2.2, 12))):
+            continue
+        z0 = float(land.z(*c))
+        g.prism(cylinder_ring(c, 2.2, 16), z0, z0 + 0.5, "concrete_deck", top=None)
+        g.cap("roof_garden", cylinder_ring(c, 2.0, 16), z0 + 0.45)
+
+
 def build():
     import bpy
     import bmesh  # noqa: F401
@@ -2284,6 +2703,10 @@ def build():
     plaza_deck(g)
     south_podium(g)
     bourke_footbridge(g)
+    gate9(g)
+    norfolk_pines(g)
+    west_deck_dressing(g)
+    sunset_plaza(g)
     # round 13b: the two round vent stacks on 9966's roof in c_sw's foreground, picked in Google Earth (2026-11-26):
     # flat ribbed caps at 45.4 m, about 4.6 m across, centred (-198.7, -219.8) and (-190.9, -215.8); the left stack's
     # foot picks 38.4 m. Steel shafts about 2.6 m across under the caps.
@@ -2358,6 +2781,26 @@ def build():
     piles(g, (-178.0, -108.0), t2, np.array([-t2[1], t2[0]]) * -1, 12, 9, step=2.6, gap=2.4)  # 12 storeys: from Google Earth's c_e it tops 50 m, from obl_ne well under OSM's 72 m
     bpy.ops.wm.read_factory_settings(use_empty=True)
     sc = bpy.context.scene
+    # round 15 (coordinator, 27 Nov): the 2023-24 Town Square frontage (Gates 2&3, south) is built complete by the gates
+    # thread in gates.glb; the round-14 podium, its sign and plant here give way to it
+    TOWN_SQ = {"column_white", "soffit", "mast_red", "podium_curtain", "white_band", "slab_grey", "steel", "steel_dark",
+               "podium_roof", "skylight", "atrium_glass", "roof_dark", "roof_grey", "plant_louvre", "fan_top",
+               "lm_sign_marvel", "lm_sign_stadium"}
+    ncut = 0
+    for mat in list(g.parts):
+        if mat not in TOWN_SQ or os.environ.get("MARVEL_GATE_CUTS", "1") != "1":   # on since gates.glb landed (round 17)
+            continue
+        keep = []
+        for pts, uvs in g.parts[mat]:
+            c = np.mean(np.array(pts, float), axis=0)
+            b = math.degrees(math.atan2(c[0], c[1])) % 360
+            if 131.5 <= b <= 186.5 and 121.0 <= math.hypot(c[0], c[1]) <= 160.0 and 8.7 <= c[2] <= 26.5:
+                ncut += 1
+                continue
+            keep.append((pts, uvs))
+        g.parts[mat] = keep
+    g.parts = {k: v for k, v in g.parts.items() if v}
+    print("Town Square cut", ncut, "faces")
     for mat, faces in g.parts.items():
         V, F, UV = [], [], []
         for pts, uvs in faces:
@@ -2368,6 +2811,22 @@ def build():
         me = bpy.data.meshes.new(mat)
         me.from_pydata(V, [], F)
         me.update()
+        if mat in g.soft:
+            # round 16: leaves shade round their crown's middle, a little upward, like a real crown's soft light
+            loops = []
+            for fi, (pts, _uv) in enumerate(faces):
+                c = g.soft[mat].get(fi)
+                P = np.array(pts, float)
+                if c is None:
+                    fn = np.cross(P[1] - P[0], P[2] - P[0])
+                    loops += [fn / (np.linalg.norm(fn) or 1.0)] * len(pts)
+                    continue
+                for q in P:
+                    v = q - np.array(c)
+                    v[2] *= 1.6
+                    v = v / (np.linalg.norm(v) or 1.0) + np.array([0.0, 0.0, 0.7])
+                    loops.append(v / np.linalg.norm(v))
+            me.normals_split_custom_set([tuple(map(float, v)) for v in loops])
         tu, tv = TILE.get(mat, (4.0, 4.0))
         ul = me.uv_layers.new(name="UVMap")
         for poly, uv in zip(me.polygons, UV):
@@ -2383,6 +2842,9 @@ def build():
         nt.links.new(tx.outputs["Color"], b.inputs["Base Color"])
         # grey_glass: matt enough that the sky does not turn the towers blue (PC check round 3)
         b.inputs["Roughness"].default_value = 0.7 if mat == "grey_glass" else (0.35 if ("glass" in mat or mat == "podium_curtain") else 0.85)
+        if mat in FOLIAGE:   # round 16 (the person: "the trees look too reflective"): leaves are matte
+            b.inputs["Roughness"].default_value = 1.0
+            b.inputs["Specular IOR Level"].default_value = 0.0
         if mat == "podium_curtain":   # round 14b: reflective, as Google Earth's dark glass
             b.inputs["Metallic"].default_value = 0.55
             b.inputs["Roughness"].default_value = 0.18

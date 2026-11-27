@@ -81,6 +81,7 @@ func run() -> void:
 	await _t("_test_three_d_cameras", [res])
 	_t("_test_contacts", [res])
 	_t("_test_feet_planted", [res])
+	_t("_test_slow_gaits", [res])
 	_t("_test_held_ball_after_ends_change", [res])
 	_t("_test_umpire_stoppages", [res])
 	_t("_test_match_crew", [res])
@@ -4347,6 +4348,54 @@ func _test_feet_planted(res: Dictionary) -> void:
 	var share := 100.0 * skate / maxf(1.0, n)
 	_check(n > 1000 and share < 25.0,
 			"A foot on the turf stays put: %.1f%% of %d planted-foot frames slide over 0.5 m/s (was 60%%)" % [share, n])
+	oval.queue_free()
+
+
+## The slow gaits (row 198): a man off the ball moving slowly walks, backpedals or side-steps
+## (motion-capture loops, Oval3D.GAITS_GLB), never a slow-motion run; each gait carries him the way
+## its feet go against the way he faces, and he faces so; and a gait is never the run played slow.
+func _test_slow_gaits(res: Dictionary) -> void:
+	var d := MatchDirector.new()
+	d.setup(res, res["events"])
+	var oval := Oval3D.new()
+	(Engine.get_main_loop() as SceneTree).root.add_child(oval)
+	oval.build(d, str(res.get("home", "")), str(res.get("away", "")))
+	var anim: Oval3DAnim = oval.anim
+	var ap0: AnimationPlayer = oval.players[0]["anim"]
+	var loaded := 0
+	for g in Oval3DAnim.GAITS:
+		var a: Animation = ap0.get_animation(g) if ap0.has_animation(g) else null
+		if a != null and a.loop_mode == Animation.LOOP_LINEAR and anim.loop_speed(g) > 0.2 and anim.loop_speed(g) < 2.0:
+			loaded += 1
+	_check(loaded == Oval3DAnim.GAITS.size(), "Every slow gait is loaded as a loop, its pace read off its feet (%d of %d)"
+			% [loaded, Oval3DAnim.GAITS.size()])
+	var dt := 1.0 / 60.0
+	var slow := 0         # frames a man off the ball is drawn moving between WALK_FROM and RUN_FROM
+	var slow_run := 0     # of those, in the run loop played slow
+	var gait := 0         # frames in a gait
+	var way_ok := 0       # of those, moving within 50 degrees of the gait's own way
+	for k in range(1800):
+		d.advance(dt)
+		oval.sync(dt)
+		var holder := int(d.ball.get("holder", -1)) if str(d.ball.get("mode", "")) == "held" else -1
+		for j in range(oval.players.size()):
+			if j == holder or not (anim._in[j] as Dictionary).is_empty() or not (anim._once[j] as Dictionary).is_empty():
+				continue
+			var cur := str((oval.players[j]["anim"] as AnimationPlayer).current_animation)
+			var v: Vector2 = anim._pace[j]
+			var sp := v.length()
+			if sp > Oval3DAnim.WALK_FROM * 1.2 and sp < Oval3DAnim.RUN_FROM * 0.8 and float(anim._still[j]) == 0.0:
+				slow += 1
+				slow_run += 1 if cur == "jog" and float(anim._gait_t[j]) > 0.5 else 0
+			if cur in Oval3DAnim.GAITS and sp > 0.8 and float(anim._gait_t[j]) > 0.3:
+				gait += 1
+				var face := (oval.players[j]["node"] as Node3D).rotation.y + float(Oval3DAnim.GAIT_WAY[cur])
+				if absf(angle_difference(face, atan2(v.x, v.y))) < deg_to_rad(50.0):
+					way_ok += 1
+	_check(slow > 500 and slow_run < slow / 20, "A man moving slowly off the ball walks, not a slow-motion run (%d of %d slow frames in the run loop)"
+			% [slow_run, slow])
+	_check(gait > 500 and way_ok > gait * 9 / 10, "Each gait carries him the way its feet go (%d of %d gait frames within 50 degrees)"
+			% [way_ok, gait])
 	oval.queue_free()
 
 

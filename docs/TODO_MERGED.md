@@ -256,3 +256,11 @@ What has landed toward each open row of docs/TODO.md and docs/TODO_RULINGS.md, o
 - 202: Merged #2276: Marvel round 13: publish the ground files.
 - 202: Merged #2282: 3D 1.0 plan: Marvel round 13 published; round 14 under way.
 - 202: Merged #2283: Marvel round 14: south podium, walk-in sign, raised plaza, Bourke Street footbridge.
+- 202: Merged #2285: Pre-game shot per ground: the director's cameras for Adelaide and the MCG.
+- 202: Merged #2289: Marvel round 15: Gate 9 on the harbour side, concourse at its measured height.
+- 202: Merged #2293: Marvel round 15b: the harbour side from the director's photos.
+- 202: Merged #2297: Marvel round 16: real trees, matte leaves, street wall, truss posts.
+- 202: Merged #2300: 3D 1.0 plan: Marvel rounds 14-16, pre-game shot, aerial orbit, no 3D on itch builds.
+- 202: Merged #2299: Marvel round 16b: real MARVEL STADIUM signs, plain street wall.
+- 202: Merged #2303: Marvel round 17: the real gates land, Gate 7 fit, Wurundjeri Way verge and banners.
+- 198: Merged #2304: 3D match: men walk, backpedal and side-step instead of a slow-motion jog.

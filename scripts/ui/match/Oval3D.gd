@@ -18,6 +18,11 @@ const LOOPS_GLB := PLAYER_GLB
 ## candidate body (the old MPFB footballer, player_average.glb, with player_loops.glb).
 static var player_glb := PLAYER_GLB
 static var loops_glb := LOOPS_GLB
+## The slow gaits on the same rig (row 198): walk, backpedal and side-step, each way. Optical
+## motion capture from 100STYLE (Ian Mason, CC BY 4.0), retargeted and cut into loops by
+## tools/oval3d/gaits/retarget_bvh.py; Oval3DAnim picks one by pace and by which way he moves
+## against the ball (Oval3DAnim.GAITS).
+const GAITS_GLB := "res://assets/oval3d/gait_clips.glb"
 ## m/s the old body's jog loop was taken to cover at rate 1; the rate now scales from the pace
 ## measured off each body's own loop (Oval3DAnim.loop_speed), this only when it cannot be read.
 const LOOP_SPEED := 5.83
@@ -2952,18 +2957,28 @@ static func scalp_for(style: String) -> int:
 static var _loops := {}
 
 
-## LOOPS_GLB's jog, carry and idle, looping, their tracks pointed at the skeleton at skel_path
-## (from the AnimationPlayer's root) by bone name. Loaded once; every player shares them.
+## LOOPS_GLB's jog, carry and idle and GAITS_GLB's slow gaits, looping, their tracks pointed at
+## the skeleton at skel_path (from the AnimationPlayer's root) by bone name. Loaded once; every
+## player shares them.
 static func _loop_anims(skel_path: NodePath) -> Dictionary:
 	var key := str(skel_path)
 	if _loops.has(key):
 		return _loops[key]
 	var out := {}
-	var ps: PackedScene = load(loops_glb)
+	for file in [[loops_glb, ["jog", "carry", "idle"]], [GAITS_GLB, Oval3DAnim.GAITS]]:
+		_read_loops(str(file[0]), file[1], key, out)
+	_loops[key] = out
+	return out
+
+
+static func _read_loops(file: String, names: Array, key: String, out: Dictionary) -> void:
+	if not ResourceLoader.exists(file):
+		return
+	var ps: PackedScene = load(file)
 	if ps:
 		var n := ps.instantiate()
 		var src: AnimationPlayer = n.find_children("*", "AnimationPlayer", true, false)[0]
-		for name in ["jog", "carry", "idle"]:
+		for name in names:
 			if not src.has_animation(name):
 				continue
 			var a: Animation = src.get_animation(name).duplicate(true)
@@ -2976,8 +2991,6 @@ static func _loop_anims(skel_path: NodePath) -> Dictionary:
 			a.loop_mode = Animation.LOOP_LINEAR
 			out[name] = a
 		n.free()
-	_loops[key] = out
-	return out
 
 
 ## Each club's guernsey cut to its own photo's outline (tools/kits/guernsey3d: recut5.py, then
@@ -3128,7 +3141,7 @@ func _player(scene: PackedScene, kit: ShaderMaterial, cols: Array, club := "") -
 	var ap: AnimationPlayer = node.find_children("*", "AnimationPlayer", true, false)[0]
 	var lib := ap.get_animation_library("")
 	var loops := _loop_anims(ap.get_node(ap.root_node).get_path_to(skel))
-	for n in ["jog", "carry", "idle"]:
+	for n in loops:
 		if loops.has(n):
 			if lib.has_animation(n):
 				lib.remove_animation(n)
