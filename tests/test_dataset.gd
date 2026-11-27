@@ -68,9 +68,10 @@ const TEAM_BOOKKEEPING_KEYS := ["pressure_acts_dhalf", "tackles_i50", "poss_d50"
 ## Team counts named by prefix (one key per way a defensive-50 chain ends).
 const TEAM_BOOKKEEPING_PREFIXES := ["d50_end_"]
 ## The rating rebuild (2026-11-26) redrew it (new attributes, plan-fit anchors, the match
-## retuned to the attributes), and bug bash batch C (#2210: a kick-in marked without
-## playing on is no longer an effective disposal; a boundary free records "intent") on top.
-## Windows from a local run on the merged branch, Linux from its CI run.
+## retuned to the attributes), with bug bash batch C (#2210: a kick-in marked without
+## playing on is no longer an effective disposal; a boundary free records "intent"),
+## #2211 (a faster match engine) and #2230 (tail check) on top. Windows from a local
+## run on the merged branch, Linux from its CI run.
 const GOLDEN_SEASON := {"Windows": "cf0bccb91d34b0fc38d8209d3c2f3960", "Linux": "bf219aeb96e2f0fbc6fa30160822157c"}
 
 ## A small league standing in for a legacy set until the 1990 files ship:
