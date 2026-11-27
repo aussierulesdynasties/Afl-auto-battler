@@ -26,8 +26,11 @@ const DISPOSALS := ["handball", "kick", "mark"]
 ## ground; seed 42, 1482 s: left out, he ran in flat out with the scrap and was upright on top
 ## of it, too fast to go down for it), and the man who takes it and kicks it inside 50, shoots
 ## at goal or turns it over. Each comes in at the pace he takes it on the run at (over 8 suite
-## matches, 11 men ran over the loose ball with disposals alone, 1 with all of these).
-const GATHERS := ["handball", "kick", "mark", "rebound", "inside50", "goal", "behind", "clanger"]
+## matches, 11 men ran over the loose ball with disposals alone, 1 with all of these). A clanger's
+## man is not one: on the rating rebuild's seeded match the man named for a clanger after a goal
+## was eased in at pick-up pace and never reached it, and the ball lay loose 6.2 s with nobody on
+## it (picture_truth, tick 4208).
+const GATHERS := ["handball", "kick", "mark", "rebound", "inside50", "goal", "behind"]
 ## Off-the-ball entries: an interchange, a coach's call, a player going off hurt.
 const META := ["sub", "moment", "injury"]
 ## In-match injuries (row 202 2e). MatchSim hurts a man at a minute of its own and logs it as

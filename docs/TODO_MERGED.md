@@ -243,3 +243,7 @@ What has landed toward each open row of docs/TODO.md and docs/TODO_RULINGS.md, o
 - T8.50: Merged #2235: Audit scripts for T8.87, T8.88 and T8.50 (work in progress, no results yet).
 - 202: Merged #2232: 3D surroundings: Moorabbin, Windy Hill, North Hobart and WACA in their era; Google Earth heights (row 202 2b, WIP).
 - 171: Merged #2256: Training on a 32:9 screen: wide squad boxes keep position and status.
+- 217: Merged #2254: Replay: every man named to take a loose ball comes in at pick-up pace (Director Bible 2.116).
+- 217: Merged #2232 (row 202): its WACA in-era surroundings cleared match_visual's WACA backdrop check.
+- 217: Merged #2257: GameState.reset() waits for the last round's worker matches before reloading the players (the matchday_breaks signal 11).
+- 171: Merged #2260: Docs: the director's UI picks (2026-11-25 to 11-27) in the Director Bible; row 171's state.

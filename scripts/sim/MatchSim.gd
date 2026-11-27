@@ -113,6 +113,13 @@ var _chain_from := {}
 ## carrier stream (rng) is where it was before the spoil had a gatherer.
 var gather_rng := RandomNumberGenerator.new()
 var _gathering := false
+## A centre bounce with no clean clearance: the first man to the ball is one
+## of his side's four at the bounce (director, 2026-11-27, "One of the four"),
+## not credited a clearance. Drawn on its own dice, so the carrier stream
+## (rng) is where it was before.
+var bounce_rng := RandomNumberGenerator.new()
+var _bouncing := false
+var _centre_first = null
 ## The coach's set-shot call while it plays out ({"key"}): every event it
 ## produces carries "choice", and its result also "setshot".
 var _set_choice := {}
@@ -666,6 +673,7 @@ func _init(home: Squad, away: Squad, seed: int = 0) -> void:
 	intent_rng.seed = seed * 199 + 211
 	lockup_rng.seed = seed * 107 + 109
 	gather_rng.seed = seed * 113 + 127
+	bounce_rng.seed = seed * 239 + 241
 	fumble_rng.seed = seed * 127 + 131
 	loose_rng.seed = seed * 181 + 191
 	rush_rng.seed = seed * 229 + 233
@@ -1890,7 +1898,8 @@ func _pick(group: Array, weights: Array):
 		total += w
 	if total <= 0.0:
 		return group[0]
-	var r := (gather_rng if _gathering else rng).randf() * total
+	var dice: RandomNumberGenerator = bounce_rng if _bouncing else (gather_rng if _gathering else rng)
+	var r := dice.randf() * total
 	var acc := 0.0
 	for i in range(group.size()):
 		acc += weights[i]
@@ -3665,6 +3674,12 @@ func _stoppage(side: int, opp: int, from_bounce: bool, in_f50 := false):
 			mid = _weighted_roles(atk.ground, "contested_ball", CLEARANCE_ROLES_F50 if in_f50 else CLEARANCE_ROLES, 2.0, side, "clearance")
 		_p(mid, "clearances")
 		return mid
+	if at_centre and not (attend[side] as Array).is_empty():
+		# No clean clearance, but the ball is still in the centre square: the
+		# first to it is one of the four who were there.
+		_bouncing = true
+		_centre_first = _weighted(attend[side], "contested_ball", 2.0, side, "clearance")
+		_bouncing = false
 	return null
 
 
@@ -3748,6 +3763,7 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 	_exit_open = false
 	_post_exit = false
 	var atk_fp := fp if side == 0 else -fp
+	_centre_first = null
 	var cleared = _stoppage(side, opp, from_bounce, atk_fp >= f50)
 	# A chain that starts inside its forward 50 (a ball-up won there) goes
 	# through the normal entry below on its first disposal, so it can score.
@@ -3777,6 +3793,8 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 		last_kicker = null
 		if touches == 1 and clearance_keeps and cleared != null and not is_kick_in:
 			carrier = cleared
+		elif touches == 1 and cleared == null and _centre_first != null and not is_kick_in:
+			carrier = _centre_first
 		# He marked it, so he takes the kick; or he won the ground ball off a
 		# spoil, so the first touch is his. The carrier pick is still drawn,
 		# so the rest of the chain's dice are where they were.

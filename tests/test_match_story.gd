@@ -677,11 +677,26 @@ func _test_no_repeats(size: Vector2i) -> void:
 			win = {"r": r, "rich": rich}
 		elif m < 0 and (loss.is_empty() or (rich and not bool(loss["rich"]))):
 			loss = {"r": r, "rich": rich}
+	# A side can win every match it plays (the rating rebuild's seeded Fremantle went 23-0): the
+	# loss is then read from the side that lost another match of the same season.
+	var loser := ""
+	if loss.is_empty():
+		for r in GameState.season_log:
+			var sc: Array = r["score"]
+			if str(r["home"]) == GameState.my_club or str(r["away"]) == GameState.my_club or int(sc[0]) == int(sc[1]):
+				continue
+			loser = str(r["home"]) if int(sc[0]) < int(sc[1]) else str(r["away"])
+			loss = {"r": r, "rich": false}
+			break
 	_check(not win.is_empty() and not loss.is_empty(), "%s: the season gives a win and a loss" % tag)
 	if not win.is_empty():
 		await _check_once(win["r"], tag + " win")
 	if not loss.is_empty():
+		var kept_club := GameState.my_club
+		if loser != "":
+			GameState.my_club = loser
 		await _check_once(loss["r"], tag + " loss")
+		GameState.my_club = kept_club
 	# Two debuts in the last match, as the director saw: each said once, in
 	# Milestones, in the fuller words; "made his debut" is gone.
 	var last: Dictionary = _my_matches()[-1]
