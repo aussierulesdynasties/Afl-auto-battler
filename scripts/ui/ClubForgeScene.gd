@@ -181,13 +181,16 @@ func _home(body: VBoxContainer) -> void:
 ## Beside the form on a wide screen.
 func _player_workspace(form: ScrollContainer) -> Control:
 	var wide := ScreenLayout.wide_view(UiKit.view_width(self), UiKit.view_height(self), 760.0)
-	var preview := PlayerPreview.new()
-	preview.name = "ForgePlayerPreview"
-	preview.spec = _spec
 	# The player you are making is the page's hero on a big screen.
 	var big := wide and UiKit.view_width(self) >= 1100.0
-	# On a phone tall enough that his hair reads at a glance (the 3D footballer, ruling 2.76).
-	preview.custom_minimum_size = Vector2(420, 530) if big else (Vector2(260, 330) if wide else Vector2(190, 240))
+	# The 3D footballer, only in a build with the 3D view (the itch builds leave it out until 3D 1.0).
+	var preview: PlayerPreview = null
+	if GameState.three_d_in_build():
+		preview = PlayerPreview.new()
+		preview.name = "ForgePlayerPreview"
+		preview.spec = _spec
+		# On a phone tall enough that his hair reads at a glance (the 3D footballer, ruling 2.76).
+		preview.custom_minimum_size = Vector2(420, 530) if big else (Vector2(260, 330) if wide else Vector2(190, 240))
 	var name_l := UiKit.lbl("", UiKit.H1 if wide else UiKit.H2, UiKit.TEXT, true)
 	name_l.name = "ForgePlayerPreviewName"
 	name_l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -202,7 +205,8 @@ func _player_workspace(form: ScrollContainer) -> Control:
 		var side := UiKit.vbox(UiKit.Space.ROOM)
 		side.name = "ForgePlayerPanel"
 		side.custom_minimum_size.x = 420 if big else 260
-		side.add_child(preview)
+		if preview != null:
+			side.add_child(preview)
 		side.add_child(name_l)
 		side.add_child(line)
 		out.add_child(side)
@@ -210,7 +214,8 @@ func _player_workspace(form: ScrollContainer) -> Control:
 		out = UiKit.vbox(UiKit.GAP)
 		var strip := UiKit.hbox(UiKit.Space.ROOM)
 		strip.name = "ForgePlayerPanel"
-		strip.add_child(preview)
+		if preview != null:
+			strip.add_child(preview)
 		var words := UiKit.vbox(UiKit.Space.SLIM)
 		words.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		words.size_flags_vertical = Control.SIZE_SHRINK_CENTER

@@ -9,6 +9,9 @@ extends SceneTree
 ## his moves and his hair), and a real tap on the button builds him there, and
 ## every ground's model the 3D match plays in (docs/ITCH_BUILDS.md, "What each
 ## build carries").
+## While the itch presets carry the "no_3d" feature (no 3D on itch until 3D 1.0, the director
+## 2026-11-22), it proves the opposite: no 3D file is in the pack, the 3D oval cannot be
+## switched on, and Create a player opens with no 3D figure.
 
 func _initialize() -> void:
 	_run.call_deferred()
@@ -40,12 +43,64 @@ func _run() -> void:
 		failures.append("%s is missing from the exported pack" % coach_csv)
 	elif (load("res://scripts/sim/Coaches.gd").seed("CAR") as Dictionary).size() < 100:
 		failures.append("the coaching seed loaded too few coaches from the exported pack")
-	await _check_forge_player(failures)
-	_check_grounds(failures)
+	if OS.has_feature("no_3d"):
+		await _check_no_3d(failures)
+	else:
+		await _check_forge_player(failures)
+		_check_grounds(failures)
 	for f in failures:
 		push_error("Export data check: " + f)
 	print("Export data check: %d players, %d failures" % [db.players.size(), failures.size()])
 	quit(0 if failures.is_empty() else 1)
+
+
+## A build without the 3D view: none of its files are packed, an old save's "3D oval" setting
+## is ignored, and Create a player still opens on a real tap, with no 3D figure.
+func _check_no_3d(failures: Array[String]) -> void:
+	var gm: GDScript = load("res://scripts/ui/match/GroundModels.gd")
+	var packed: Array[String] = []
+	for g in gm.grounds():
+		if not gm.files(gm.slug_for(g)).is_empty():
+			packed.append(gm.slug_for(g))
+	if not packed.is_empty():
+		failures.append("%d ground models are in a no-3D pack: %s" % [packed.size(), ", ".join(packed)])
+	var oval: GDScript = load("res://scripts/ui/match/Oval3D.gd")
+	for path in [oval.PLAYER_GLB, oval.LOOPS_GLB, oval.HAIR_GLB, "res://assets/oval3d/player_mh.glb",
+			"res://assets/oval3d/crew_mh.glb", "res://assets/oval3d/crowd_set.res", "res://assets/oval3d/heads/heads.json",
+			"res://assets/oval3d/kits_today.png"]:
+		if ResourceLoader.exists(path) or FileAccess.file_exists(path):
+			failures.append("%s is in a no-3D pack" % path)
+	if DirAccess.dir_exists_absolute("res://assets/grounds") and not DirAccess.get_files_at("res://assets/grounds").is_empty():
+		failures.append("res://assets/grounds has files in a no-3D pack")
+	var state = root.get_node("GameState")
+	state.autosave_enabled = false
+	state.save_path = "user://export_check.save"
+	state.settings_path = "user://export_check_settings.cfg"
+	state.set_match_3d_on(true)
+	if state.match_3d_on():
+		failures.append("a no-3D build turned the 3D oval on from an old setting")
+	state.set_match_3d_on(false)
+	state.set_forge_player({})
+	var tap: GDScript = load(get_script().resource_path.get_base_dir().path_join("tap.gd"))
+	root.size = Vector2i(390, 844)
+	var scene: Node = load("res://scenes/ClubForgeScene.tscn").instantiate()
+	root.add_child(scene)
+	for i in range(3):
+		await process_frame
+	var make := scene.find_child("ForgeCreatePlayer", true, false) as Control
+	var why: String = await tap.tap(make) if make != null else "no Create a player button"
+	for i in range(3):
+		await process_frame
+	if why != "":
+		failures.append("a tap on Create a player did not reach it (%s)" % why)
+	elif scene.find_child("ForgePlayerPreviewName", true, false) == null:
+		failures.append("Create a player did not open in a no-3D pack")
+	elif scene.find_child("ForgePlayerPreview", true, false) != null:
+		failures.append("Create a player drew the 3D figure in a no-3D pack")
+	else:
+		print("Export data check: no 3D in the pack; Create a player opened with no 3D figure")
+	scene.queue_free()
+	await process_frame
 
 
 ## Club Forge > Create a player in the exported pack: the files the 3D preview loads are

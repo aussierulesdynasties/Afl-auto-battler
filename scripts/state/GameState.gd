@@ -753,9 +753,17 @@ func set_match_figures_on(on: bool) -> void:
 	set_setting("match_figures", on)
 
 
-## The 3D oval (row 197): the match played on a real 3D ground. Off by default while it is built.
+## Whether this build has the 3D view at all. The itch builds leave it out until 3D 1.0 (the
+## director, 2026-11-22: "i dont want to push 3D to itch until we have everything"): their export
+## presets carry the "no_3d" feature and none of the 3D files (docs/ITCH_BUILDS.md).
+func three_d_in_build() -> bool:
+	return not OS.has_feature("no_3d")
+
+
+## The 3D oval (row 197): the match played on a real 3D ground. Off by default while it is built,
+## and never in a build without the 3D view, whatever an older save's setting says.
 func match_3d_on() -> bool:
-	return bool(get_setting("match_3d", false))
+	return three_d_in_build() and bool(get_setting("match_3d", false))
 
 
 func set_match_3d_on(on: bool) -> void:

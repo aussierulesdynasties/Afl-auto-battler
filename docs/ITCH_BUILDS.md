@@ -3,7 +3,7 @@
 Moved out of `docs/TODO.md` (2026-11-05) so it no longer loads into every session. Rows named here still live in `docs/TODO.md`.
 
 
-The itch page runs the browser build of main as of the last upload (live: 1.0.18, cd63704, threaded browser build with SharedArrayBuffer on). There are no feature switches (director 2026-11-06, #1074): everything merged to main goes into the next build. A build is worth uploading only when a player can see a difference: the listed rows are merged, CI is green and the web build ran. Sessions push with butler and post a short devlog in football words (docs/ITCH_UPLOAD.md). He says when (2026-11-09, which ends the 2026-11-06 standing permission): no upload, version bump or devlog without his word, and a devlog with every upload. At least three changes a player can see, or one big one.
+The itch page runs the browser build of main as of the last upload (threaded browser build with SharedArrayBuffer on; live on 2026-11-27: 1.0.21, uploaded 24 Nov). There are no feature switches (director 2026-11-06, #1074): everything merged to main goes into the next build. A build is worth uploading only when a player can see a difference: the listed rows are merged, CI is green and the web build ran. Sessions push with butler and post a short devlog in football words (docs/ITCH_UPLOAD.md). He says when (2026-11-09, which ends the 2026-11-06 standing permission): no upload, version bump or devlog without his word, and a devlog with every upload. At least three changes a player can see, or one big one.
 
 | Build | Name | Ready when (rows and switches) | What a player sees |
 |---|---|---|---|
@@ -32,7 +32,25 @@ Every upload goes to all three channels with the same `--userversion` (`<config/
 - `tools/export_builds.sh` refuses a tree with uncommitted changes, because the build label names HEAD; an upload is always exported from a clean commit (best: main after the version bump merged).
 - **Itch only when he says (2026-11-09).** "we dont need to push to itch after every day or every update / just whenever I say / and the build needs to climb sequentially". No upload, version bump or devlog without his word. Each build he calls gets the next number, with its own new devlog post; a post is never retitled to cover a later build. Overrules any earlier rule to refresh itch unprompted or edit the last post for a follow-up build.
 
+## No 3D on itch until 3D 1.0 (from build 1.0.22)
+
+The director, 2026-11-22: "i dont want to push 3D to itch until we have everything: grounds, animations,
+players, presentation (camera angles etc)" (docs/3D_1_0_RELEASE.md). So the three itch presets (`Android`,
+`Windows Desktop`, `Web`) carry the `no_3d` feature and leave the 3D files out: every ground model, the 3D
+players, crew, heads, hair, guernsey cuts and atlases, skin and the crowd set. With `no_3d`,
+`GameState.three_d_in_build()` is false: Settings offers only Tokens and Figures (no Graphics row, no 3D
+grounds row), an older save's "3D oval" setting is ignored, and Club Forge's Create a player shows the name
+and line with no 3D figure. The 3D scripts stay in the pack (the match screen's code names them), with the
+few small textures they preload (turf blades and patches, the crew vest print, the supporters' knit
+shader, about 4 MB), but nothing can open them. `tools/check_export_data.sh` exports a pack with the Android
+preset's filters and features and proves all of this.
+
+For the game with 3D on a phone, export the `Android with 3D` preset (the Android preset as it was, every ground and the 3D players; never uploaded to itch). The `Android 3D probe` preset is the phone cost-measuring app, not the game. When 3D 1.0 passes, take
+`no_3d` and the 3D excludes off the three itch presets and the table below applies again.
+
 ## What each build carries, and the size budget
+
+While the itch presets carry `no_3d` (above), this table describes a build with 3D (`Android with 3D`).
 
 Measured 2026-11-23 (Godot 4.7.2 exports of main plus PR #2058 and this change, 33 ground models).
 
