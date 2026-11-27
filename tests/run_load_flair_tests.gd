@@ -319,12 +319,13 @@ func _test_no_frames_by_hand_headless() -> void:
 func _test_boot_splash_is_ours() -> void:
 	var path := str(ProjectSettings.get_setting("application/boot_splash/image", ""))
 	_check(path.ends_with("boot_splash.png") and FileAccess.file_exists(path), "the boot splash is our image (%s)" % path)
-	var ui: GDScript = load("res://scripts/ui/UiKit.gd")
-	ui.call("apply_palette")
-	var cover: Color = ui.get("PANEL_ALT")
+	# The splash shows before any club is known, so it sits on the plain dark
+	# cover (24221e); the loading cover then wears your club's ground
+	# (UiKit.shade_ground, director 2026-11-26 "B: strong club shade").
+	var cover := Color("24221e")
 	var bg: Color = ProjectSettings.get_setting("application/boot_splash/bg_color", Color.BLACK)
 	_check(absf(bg.r - cover.r) < 0.01 and absf(bg.g - cover.g) < 0.01 and absf(bg.b - cover.b) < 0.01,
-			"on the loading cover's colour (%s, %s)" % [bg, cover])
+			"on the plain loading cover's colour, before a club's ground (%s, %s)" % [bg, cover])
 
 
 func _test_lines() -> void:
