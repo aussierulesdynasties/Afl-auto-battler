@@ -233,3 +233,13 @@ What has landed toward each open row of docs/TODO.md and docs/TODO_RULINGS.md, o
 - R: Merged #2226: Relationship overhaul Phase 1 UI: profile breakdown and drop preview.
 - R: Merged #2233: Relationship overhaul phase 1: unify promises and add the coach's Respect and Authority.
 - R: Merged #2234: Relationship overhaul Phase 1: Opinion engine with fading marks.
+- 202: Merged #2214: Norwood Oval: ground cover, trees, school, church and windows against Google Earth (row 202).
+- 202: Merged #2216: Marvel Stadium round 13: the round 12 PC check, NAB height, c_sw vents, backdrop cut past 1024 m.
+- 202: Merged #2217: Legacy grounds: measurements for the 19 old grounds.
+- 202: Merged #2218: Bellerive round 7: one pass over the PC r6 defect list.
+- 202: Merged #2227: 3D match: in-match injuries on the ground (row 202 2e).
+- T8.87: Merged #2235: Audit scripts for T8.87, T8.88 and T8.50 (work in progress, no results yet).
+- T8.88: Merged #2235: Audit scripts for T8.87, T8.88 and T8.50 (work in progress, no results yet).
+- T8.50: Merged #2235: Audit scripts for T8.87, T8.88 and T8.50 (work in progress, no results yet).
+- 202: Merged #2232: 3D surroundings: Moorabbin, Windy Hill, North Hobart and WACA in their era; Google Earth heights (row 202 2b, WIP).
+- 171: Merged #2256: Training on a 32:9 screen: wide squad boxes keep position and status.
