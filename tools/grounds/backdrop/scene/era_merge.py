@@ -14,6 +14,10 @@ lat0, lon0 = spec['lat'], spec['lon']; KX = 111320 * math.cos(math.radians(lat0)
 if not os.path.exists(os.path.join(D, 'osm_now.json')): shutil.copy(os.path.join(D, 'osm.json'), os.path.join(D, 'osm_now.json'))
 NOW = json.load(open(os.path.join(D, 'osm_now.json')))['elements']
 OLD = json.load(open(os.path.join(D, 'osm_%s.json' % tag)))['elements']
+_rv = json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'era_review.json'))).get(g, {})
+for e in OLD:   # land the era's own map cannot know: a pre-OSM era's map is today's without its buildings, so a site under
+    w = _rv.get('was', {}).get(str(e['id']))   # construction today gets the use it had then (era_review.json "was")
+    if w is not None: e['tags'] = dict(w)
 for e in OLD:   # tagging since retired: a riverbank or reservoir area is water today
     t = e.get('tags', {})
     if t.get('waterway') == 'riverbank': t.update(natural='water', water='river')
@@ -21,10 +25,14 @@ for e in OLD:   # tagging since retired: a riverbank or reservoir area is water 
 sj = json.load(open(os.path.join(PD, 'sat.json'))); hm, mp = sj['half_m'], sj['m_per_px']
 SA_OLD = np.asarray(Image.open(os.path.join(PD, 'sat_%s.png' % tag)).convert('RGB')).astype(np.float32)
 SA_NOW = np.asarray(Image.open(os.path.join(PD, 'sat_now.png')).convert('RGB')).astype(np.float32)
+# an era frame that covers only part of the square (a Google Earth history frame registered onto it) is black past its
+# edge: those pixels are no aerial at all, and a building over them is beyond the era's aerial
+VALID = SA_OLD.sum(2) > 0
 # the two aerials differ in colour cast (Ikon's 2013 release is green-tinted: grey roofs read as plants), so the era's
 # is matched to today's per channel (mean and spread over the whole frame) before any colour test
-_m = SA_OLD.reshape(-1, 3); _n = SA_NOW.reshape(-1, 3)
+_m = SA_OLD[VALID]; _n = SA_NOW.reshape(-1, 3)
 SA_OLD = np.clip((SA_OLD - _m.mean(0)) / (_m.std(0) + 1e-6) * _n.std(0) + _n.mean(0), 0, 255)
+SA_OLD[~VALID] = np.nan
 def poly(el):
     pts = [((p['lon'] - lon0) * KX, (p['lat'] - lat0) * KY) for p in el.get('geometry') or [] if p]
     if len(pts) < 4: return None
@@ -41,6 +49,7 @@ def med(SA, q):
     if x0 < 0 or y0 < 0 or x1 >= SA.shape[1] or y1 >= SA.shape[0]: return None
     mk = Image.new('L', (x1 - x0, y1 - y0)); ImageDraw.Draw(mk).polygon([(u - x0, v - y0) for u, v in zip(U, V)], fill=1)
     px = SA[y0:y1, x0:x1][np.asarray(mk) > 0]
+    if len(px) and np.isnan(px).any(): return None   # past the era frame's edge
     return np.median(px, 0) if len(px) >= 6 else None
 def frac(SA, q, paved):
     xs, ys = q.exterior.xy
@@ -49,7 +58,7 @@ def frac(SA, q, paved):
     if x0 < 0 or y0 < 0 or x1 >= SA.shape[1] or y1 >= SA.shape[0]: return None
     mk = Image.new('L', (x1 - x0, y1 - y0)); ImageDraw.Draw(mk).polygon([(u - x0, v - y0) for u, v in zip(U, V)], fill=1)
     px = SA[y0:y1, x0:x1][np.asarray(mk) > 0]
-    if len(px) < 6: return None
+    if len(px) < 6 or np.isnan(px).any(): return None
     R, G, B = px[:, 0], px[:, 1], px[:, 2]; Vv = px.max(1)
     veg = (2 * G - R - B > 12) & (Vv < 170)
     bare = (R - B > 25) & (R - G < 28) & (Vv > 100)
@@ -58,7 +67,6 @@ def frac(SA, q, paved):
 oldids = {e['id'] for e, _ in OB}
 # verdicts by eye on every block and tower OSM mapped after the snapshot (era_review.json, from contact sheets of the
 # era aerial beside today's): the colour tests below only decide ids nobody has looked at
-_rv = json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'era_review.json'))).get(g, {})
 REV, GONE, LOW = set(_rv.get('reviewed', [])), set(_rv.get('built_since', [])), set(_rv.get('low', []))
 # open land in the era's own map (a golf course, water, a building site): anything mapped on it since was built since
 # (not parks or woods: the zoo, pavilions and colleges stand inside them)
@@ -98,7 +106,16 @@ for e, q in bld(NOW):
     stood = not big or (same and not (fr >= 0.6 and fn < 0.4))
     if stood: add.append(e); late += 1
     else: drop += 1
+# traced era buildings (era_review.json "extra", below) replace whatever stands on their ground today
+XT = [Polygon(x['xy']).buffer(0) for x in _rv.get('extra', [])]
+def _on_traced(q): return any(t.intersection(q).area > 0.3 * min(t.area, q.area) for t in XT)
+add = [e for e in add if not _on_traced(poly(e) or Polygon())]
 out = OLD + add
+# buildings that stood in the era and are gone today, so no map has them: traced by eye from the era's aerial in metres
+# east/north of the spec origin, storeys judged from their shadows (era_review.json "extra")
+for i, x in enumerate(_rv.get('extra', [])):
+    out.append({'type': 'way', 'id': -(i + 1), 'tags': {'building': 'yes', 'building:levels': str(x['levels']), 'era': 'traced'},
+                'geometry': [{'lat': lat0 + v / KY, 'lon': lon0 + u / KX} for u, v in x['xy'] + x['xy'][:1]]})
 # Overture's Microsoft and Google footprints (traced from recent imagery) fill gaps in prep.py: the same test runs on
 # each big one, and those built since are listed in era_drop.json for prep to leave out
 ovd = []
@@ -112,13 +129,20 @@ if os.path.exists(_ovp):
         if q.geom_type == 'MultiPolygon': q = max(q.geoms, key=lambda z: z.area)
         if q.geom_type != 'Polygon': continue
         q = Polygon([((x - lon0) * KX, (y - lat0) * KY) for x, y in q.exterior.coords]).buffer(0)
-        if q.is_empty or q.area < 1500: continue
+        if q.is_empty: continue
+        if _on_traced(q): ovd.append('ov' + str(r['id'])); continue
+        if q.area < 1500: continue
         fr, fn = frac(SA_OLD, q, True), frac(SA_NOW, q, True)
         if fr is not None and fn is not None and fr >= 0.6 and fn < 0.4: ovd.append('ov' + str(r['id']))
 # today's measured heights (LiDAR, Google Earth, Overture) fit only buildings that are still the same building today
 nowids = {e['id'] for e in NOW}
 today = [e['id'] for e in out if e['type'] == 'way' and 'building' in e.get('tags', {}) and e['id'] in nowids and e['tags'].get('era') != 'low']
-json.dump({'overture_ids': ovd, 'today_ids': today}, open(os.path.join(D, 'era_drop.json'), 'w'))
+# the city's towers past the near square, judged on the era's frames of the city (era_review.json "_city_<city>_<year>",
+# named by this ground's "city"): those built since are left out of the skyline (towers_real.py)
+_cr = json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'era_review.json'))).get(_rv.get('city', ''), {})
+cdrop = list(_cr.get('built_since', []))
+print('era', tag, 'city towers built since', len(cdrop))
+json.dump({'overture_ids': ovd, 'today_ids': today, 'city_ids': cdrop}, open(os.path.join(D, 'era_drop.json'), 'w'))
 print('era', tag, 'overture footprints built since', len(ovd))
 json.dump({'elements': out}, open(os.path.join(D, 'osm.json'), 'w'))
-print('era', tag, 'old buildings', len(OB), 'late-mapped kept', late, 'built since dropped', drop)
+print('era', tag, 'old buildings', len(OB), 'late-mapped kept', late, 'built since dropped', drop, 'traced', len(_rv.get('extra', [])))
