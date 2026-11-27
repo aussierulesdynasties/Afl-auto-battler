@@ -325,8 +325,9 @@ func _test_unavailable_not_left_out() -> void:
 			continue
 		var q: Dictionary = pair[1]
 		seen += 1
-		if (rosters[pair[0]] as Dictionary).has(str(q["id"])) or not Backing.fit(q) or ClubLife.morale(q) != base:
+		if (rosters[pair[0]] as Dictionary).has(str(q["id"])) or not Backing.fit(q) or absi(ClubLife.morale(q) - base) > ClubLife.DRIFT_STEP:
 			stung.append("%s %s %d" % [pair[0], q["id"], ClubLife.morale(q)])
+	# As for yours: the round's drift moves him at most one step, a sting more.
 	_check(seen >= 8 and stung.is_empty(),
 			"A rival's man out this week is not stung either (%d checked; wrong: %s)" % [seen, str(stung)])
 
