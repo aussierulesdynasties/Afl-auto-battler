@@ -42,7 +42,9 @@ TARGET = {
 # face away from that sun and take the sky's blue light, so the red falls away fastest. Google Earth's face reads
 # (46, 71, 105). A light grey-blue map renders a mid navy there without turning mauve where the sun does fall.
 # round 13 (PC check of round 12): (110, 120, 134) rendered (36, 57, 93) against (47, 71, 106), about 20% dark
-BOWL = {"band": (148, 162, 180), "glass": (148, 162, 180)}
+# round 15 (the person's photos of 27 Nov, west and east): the bowl's outer face is white-silver panel bands with a
+# darker strip of windows between them, not Google Earth's even navy (that was its shade and haze)
+BOWL = {"band": (214, 216, 218), "glass": (96, 108, 122)}
 
 
 # How much of each texture's own variation is kept (1 = all).
@@ -189,7 +191,24 @@ def sign_panels():
         img = np.zeros((1024, TW, 3)) + g
         img += rng.normal(0, 1.5, (1024, TW, 1))
         img[:, ::int(64 * k)] *= 0.96          # the board's panel joints
-        img = img * (1 - m[..., None]) + np.array((250, 250, 248)) * m[..., None]
+        # round 15 (the person's photos 7 and 8, 27 Nov): the letters are LED tubes, white lines running inside each
+        # letter's outline about 0.16 m apart, the board showing between them, not solid white
+        from scipy.ndimage import distance_transform_edt
+        inside = m > 0.5
+        dist = distance_transform_edt(inside) * my
+        tube = inside & ((dist % 0.16) < 0.085)
+        body = inside & ~tube
+        img[body] = img[body] * 0.55 + np.array((250, 250, 248)) * 0.12
+        t = tube.astype(float)
+        img = img * (1 - t[..., None]) + np.array((252, 252, 250)) * t[..., None]
+        if word == "MARVEL":   # the red box's thin white frame
+            bw, ins = int(0.07 / my), int(0.16 / my)
+            fr = np.zeros(m.shape, bool)
+            fr[ins:ins + bw, :] = True; fr[-ins - bw:-ins, :] = True
+            we = int(width * k)
+            fr[:, we:] = False
+            fr[:, ins:ins + bw] = True; fr[:, we - ins - bw:we - ins] = True
+            img[np.roll(fr, int(start * k), axis=1)] = (250, 250, 248)
         Image.fromarray(np.clip(img, 0, 255).astype(np.uint8)[:, ::-1], "RGB").save(os.path.join(TEX, out + ".png"))
         print(out, ground, "letters %.1f x %.1f m" % (Wm, H))
 
@@ -223,7 +242,8 @@ def main():
     # 2026-11-22: (56, 68, 96) rendered near-black navy on the shaded east face, (1, 27, 70) against
     # Google Earth's (105, 119, 136); a greyer, lighter blue keeps the letters' dark ground in the sun too.
     # round 12 (item 6.4): (62, 68, 82) rendered (6, 25, 56) on the shaded faces against Google Earth's (47, 72, 107)
-    retint("upperwall", (128, 140, 160), src="soffit", out="upperwall")  # round 13: c_w pair read (28, 48, 85) against (47, 72, 107)
+    # round 15 (photos 2, 4, 7, 8): the recess over the braces shows the stand's grey undersides, lighter than this band was
+    retint("upperwall", (156, 160, 164), src="soffit", out="upperwall")  # round 13: c_w pair read (28, 48, 85) against (47, 72, 107)
     # the east offices' lobby walls, dark in the void under the boxes: the band's old dark grey-navy
     retint("lobbydark", (62, 68, 82), src="soffit", out="lobbydark")
     # Glazing: the dark glass rendered black in shade (Google Earth's office glass reads (96, 114, 132),
@@ -237,7 +257,7 @@ def main():
     label()
     # the blue blocks' plain cladding: the panel joints of the slate texture, a mid blue (Google Earth c_ne)
     CONTRAST["bluepanel"] = 0.5
-    retint("bluepanel", (52, 58, 74), src="slate", out="bluepanel")  # round 10: the photo's stair blocks (42, 47, 61) by white 207
+    retint("bluepanel", (46, 56, 86), src="slate", out="bluepanel")  # round 15: the person's photo 1 reads a clearer navy  # round 10: the photo's stair blocks (42, 47, 61) by white 207
     # the west podium's piers and spandrels: grey-blue panels, not white (Google Earth c_w, ferry_b).
     # PC check 2026-11-23: (126, 136, 148) rendered (118, 128, 142) against Google Earth's darker blue
     # (74, 103, 129); the west face renders about 0.94 of its colour.
@@ -247,7 +267,8 @@ def main():
     # glazing dark, Google Earth's darker blue was its glass and shade together
     retint("podiumpanel", (150, 156, 162), src="slate", out="podiumpanel")
     # the forecourt plinth's street front: blue-grey glass (PC check: Google Earth (76, 102, 118))
-    retint("fcglass", (81, 108, 124), src="curtain", out="fcglass")
+    # round 15 (the person's photos 1, 3, 4; Commons 2023): the forecourt glass reads pale grey-blue, light, in white frames
+    retint("fcglass", (150, 168, 178), src="curtain", out="fcglass")
     # round 13 (PC check of round 12, c_ne): the NE corner block's pale blue glass and its pale cyan plant room
     retint("paleglass", (150, 178, 192), src="curtain", out="paleglass")
     # the east office boxes' ribbon glass: light grey (PC check round 3: Google Earth's east boxes are pale grey/white)
