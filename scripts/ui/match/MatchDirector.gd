@@ -21,10 +21,13 @@ extends RefCounted
 ## sits loose; centre bounces set up 6-6-6; kick-ins face a zone.
 
 const DISPOSALS := ["handball", "kick", "mark"]
-## The events whose man gathers a ball knocked loose: a disposal's, and a rebound's (the man who
-## wins it back off the ground; seed 42, 1482 s: left out, he ran in flat out with the scrap and
-## was upright on top of it, too fast to go down for it).
-const GATHERS := ["handball", "kick", "mark", "rebound"]
+## The events whose man gathers a ball knocked loose: every pick-up the match names (director
+## 2026-11-27, "Every pick-up"): a disposal's, a rebound's (the man who wins it back off the
+## ground; seed 42, 1482 s: left out, he ran in flat out with the scrap and was upright on top
+## of it, too fast to go down for it), and the man who takes it and kicks it inside 50, shoots
+## at goal or turns it over. Each comes in at the pace he takes it on the run at (over 8 suite
+## matches, 11 men ran over the loose ball with disposals alone, 1 with all of these).
+const GATHERS := ["handball", "kick", "mark", "rebound", "inside50", "goal", "behind", "clanger"]
 ## Off-the-ball entries: an interchange, a coach's call, a player going off hurt.
 const META := ["sub", "moment", "injury"]
 const SUBSTEP := 1.0 / 60.0
