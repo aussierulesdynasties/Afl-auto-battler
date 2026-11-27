@@ -455,4 +455,4 @@ static func _open_saved(overlay: Control, say: Callable) -> void:
 		return
 	if is_instance_valid(overlay):
 		overlay.queue_free()
-	Router.go("hub" if GameState.season != null else "draft")
+	Router.go(GameState.resume_screen())

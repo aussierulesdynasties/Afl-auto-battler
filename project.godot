@@ -32,6 +32,7 @@ run/max_fps=60
 
 [autoload]
 
+WebPacks="*res://scripts/core/WebPacks.gd"
 ScreenLayout="*res://scripts/core/ScreenLayout.gd"
 
 GameDB="*res://scripts/core/GameDB.gd"

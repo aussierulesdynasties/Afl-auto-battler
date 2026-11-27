@@ -48,6 +48,8 @@ var test_main_thread_load := false
 ## cover's line was on screen when the last one started.
 var direct_loads := 0
 var direct_load_under_line := false
+## Tests: let warm() start its background load in a headless run.
+var test_warm := false
 
 
 func go(key: String) -> void:
@@ -69,6 +71,22 @@ func go(key: String) -> void:
 		wipe.call("cover", _covered_swap.bind(key, path, wipe), str(LINES.get(key, "")))
 		return
 	_swap(key, path, true)
+
+
+## Start loading a screen in the background, so opening it later finds it
+## loaded: the Hub's first opening of a launch took 3-6 s under the cover
+## (bug bash M-9), most of it loading its code and art. The screen and the
+## career are the same; only when the loading happens changes. A browser
+## loads on the main thread (load_on_main_thread), so there nothing starts,
+## and a headless run (the tests) starts nothing unless test_warm is set.
+## go() asks for the same path and takes this load over.
+func warm(key: String) -> void:
+	if load_on_main_thread() or (DisplayServer.get_name() == "headless" and not test_warm):
+		return
+	var path := str(SCENES.get(key, key))
+	if ResourceLoader.has_cached(path) or not ResourceLoader.exists(path):
+		return
+	ResourceLoader.load_threaded_request(path)
 
 
 ## True where the next screen loads on the main thread: every browser build.

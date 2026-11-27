@@ -15,8 +15,9 @@ MAP = {"disposals": "disposals", "kicks": "kicks", "handballs": "handballs",
        "inside50": "inside_50s", "clearances": "clearances", "hitouts": "hitouts",
        "frees_for": "frees_for", "goals": "goals", "behinds": "behinds",
        "rebound50": "rebound_50s", "rebounds": "rebound_50s",
-       "goal_assists": "goal_assists", "marks_inside_50": "marks_inside_50"}
-EXTRA = ["score", "clangers", "intercepts", "one_percenters", "metres_gained", "strength", "draftees",
+       "goal_assists": "goal_assists", "marks_inside_50": "marks_inside_50",
+       "score": "score", "rushed_behinds": "rushed_behinds"}
+EXTRA = ["clangers", "intercepts", "one_percenters", "metres_gained", "strength", "draftees",
          "contested_possessions", "ground_ball_gets", "pressure_acts", "i50_pass_goals", "mi50_mark", "mi50_receive", "mi50_pack", "ball_ups", "throw_ins", "stoppages"]
 # Real weather against a perfect day, AFL 2016-25 without 2020 (afl_weather_rates.json,
 # built by build_weather_rates.py from AFL Tables match totals and Open-Meteo weather at
@@ -74,12 +75,18 @@ def breeze_size(sa, sb, n_boot=1000):
 
 
 def load(run, arm):
+    """Seed -> match row. A team's "behinds" is made player-credited (its rushed
+    behinds taken off, kept apart as "rushed_behinds"), as the real reference and the
+    shot counts are; its "score" still counts them."""
     rows = {}
     for f in glob.glob(os.path.join(run, arm + "_*.jsonl")):
         with open(f, encoding="utf-8") as fh:
             for line in fh:
                 if line.strip():
                     r = json.loads(line)
+                    for t in r.get("teams", []):
+                        if "rushed_behinds" in t:
+                            t["behinds"] = float(t.get("behinds", 0)) - float(t["rushed_behinds"])
                     rows[r["i"]] = r
     return rows
 

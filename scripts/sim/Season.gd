@@ -53,6 +53,15 @@ func _init(club_codes: Array, club_lists: Dictionary, p_seed: int = 0, p_year: i
 	for c in clubs:
 		lists[c] = club_lists.get(c, [])
 	seed = p_seed
+	# A year's count no fixture can give every club (19 clubs at 2023's 23:
+	# 437 games for two clubs a match) plays one fewer in the fewest rounds
+	# that fit it, so every club plays the same: 22 each in 24 rounds, two
+	# byes each, in 2023 and 2024 (director, 2026-11-25: "All play 22";
+	# bug bash P1-8).
+	var games := int(rules.get("games", 0))
+	if games > clubs.size() - 1 and (games * clubs.size()) % 2 == 1:
+		rules["games"] = games - 1
+		rules["rounds"] = games - 1
 	rules["rounds"] = rounds_to_fit(int(rules.get("rounds", REGULAR_ROUNDS)), int(rules.get("games", 0)), clubs.size())
 	ladder = {}
 	for c in clubs:
@@ -1004,6 +1013,25 @@ func recalc_ladder() -> void:
 		row["pct"] = (100.0 * int(row["pf"]) / pa) if pa > 0 else 0.0
 
 
+## Which of two ladder rows has the better percentage: 1 when `a`, -1 when
+## `b`, 0 when level. Compared exactly (a's points for times b's against,
+## against b's for times a's against), so two percentages a hair apart are
+## never counted level. A club yet to concede that has scored is ahead of every
+## club that has conceded; one yet to play counts as 0.
+static func pct_order(a: Dictionary, b: Dictionary) -> int:
+	var fa := int(a.get("pf", 0))
+	var xa := int(a.get("pa", 0))
+	var fb := int(b.get("pf", 0))
+	var xb := int(b.get("pa", 0))
+	if fa == 0 and xa == 0:
+		xa = 1
+	if fb == 0 and xb == 0:
+		xb = 1
+	var left := fa * xb
+	var right := fb * xa
+	return 1 if left > right else (-1 if left < right else 0)
+
+
 ## Points first, then percentage - the actual AFL tiebreak order.
 func ladder_sorted() -> Array:
 	var out := []
@@ -1018,8 +1046,9 @@ func ladder_sorted() -> Array:
 	out.sort_custom(func(a, b):
 		if a["pts"] != b["pts"]:
 			return int(a["pts"]) > int(b["pts"])
-		if not is_equal_approx(a["pct"], b["pct"]):
-			return a["pct"] > b["pct"]
+		var by_pct := pct_order(a, b)
+		if by_pct != 0:
+			return by_pct > 0
 		if int(a["pf"]) != int(b["pf"]):
 			return int(a["pf"]) > int(b["pf"])
 		var na: String = names.get(str(a["code"]), str(a["code"]))
