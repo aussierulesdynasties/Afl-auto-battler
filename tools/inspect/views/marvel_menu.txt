@@ -1,0 +1,8 @@
+# Marvel Stadium: candidate cameras for the menu scene, where supporters walk in under the new MARVEL STADIUM sign on
+# the south podium (the director, 27 Nov 2026; not yet picked). Inspector frame, as its C key copies a view:
+# name x y z facing looking (x along the ground, y height above the turf, z across it; degrees).
+# Shoot them with: godot --path . --script tools/inspect/ground_inspector.gd -- --views=tools/inspect/views/marvel_menu.txt
+# Where the supporters walk: the south plaza is a deck 3.2 m above the turf (y 3.2; model z 8.6, landmarks.py
+# PLAZA_Z), about 7 m above Bourke Street, from the podium's columns out to Victoria Point's deck and 720 Bourke.
+menu_a 196.2 62.0 25.2 284 -32
+menu_b 187.8 61.2 51.1 301 -21

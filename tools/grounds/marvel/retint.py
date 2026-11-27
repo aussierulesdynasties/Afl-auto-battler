@@ -152,33 +152,46 @@ def sign_panels():
     f = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 400)
 
     def face(word, start, width, ground, out):
-        big = Image.new("L", (3200, 560), 0)
+        # round 14 (the person, 27 Nov: "more vibrant and not stretched"). Two causes: the tile is 13.5 m (MARVEL) or
+        # 19.9 m (STADIUM) wide on 1024 pixels but 7.08 m tall on 1024, so across the board each pixel was 2-3 times
+        # wider than tall and the letters smeared sideways; and the word was squeezed to fill its box whatever the
+        # font's shape. Now the tile has as many pixels across as its metres need (square pixels on the board), and the
+        # letters are the real sign's: tall, heavy, condensed italic capitals filling the board's height.
+        tile_w = {"MARVEL": 13.5, "STADIUM": 19.9}[word]
+        TW = 2048 if word == "MARVEL" else 3072
+        k = TW / 1024.0
+        mx, my = tile_w / TW, 7.08 / 1024.0               # metres per pixel across and up (now nearly equal)
+        big = Image.new("L", (3600, 600), 0)
         d = ImageDraw.Draw(big)
         tb = d.textbbox((0, 0), word, font=f)
-        d.text((40 - tb[0], 40 - tb[1]), word, font=f, fill=255)
-        bb = big.getbbox()
-        let = big.crop(bb).resize((width - 60, 740), Image.LANCZOS)
-        # italic: lean the letters 10 degrees
-        sh = 0.18
-        W = width
-        it = let.transform((W, 740), Image.AFFINE, (1, sh, -sh * 740, 0, 1, 0), Image.BICUBIC)
-        m = np.zeros((1024, 1024), float)
-        m[142:882, :W] = np.asarray(it, float)[:, :W] / 255.0
-        # a thin grey edge round each letter, as the old faces had
-        from PIL import ImageFilter
-        mi = Image.fromarray((m * 255).astype(np.uint8))
-        edge = np.asarray(mi.filter(ImageFilter.MaxFilter(9)), float) / 255.0
-        m = np.roll(m, start, axis=1)
-        edge = np.roll(edge, start, axis=1)
+        d.text((40 - tb[0], 60 - tb[1]), word, font=f, fill=255)
+        let0 = big.crop(big.getbbox())
+        H = 4.6                                                  # both words the same height on the board
+        room = (width * k - 80 * k) * mx
+        sh = 0.18                                                # italic lean, as the real sign
+        for cond in np.arange(0.46, 0.30, -0.01):                # condensed like the Marvel lettering; one width for both words
+            lw, lh = let0.size
+            let = let0.resize((int(lw * cond), lh), Image.LANCZOS)
+            lw, lh = let.size
+            let = let.transform((lw + int(sh * lh), lh), Image.AFFINE, (1, sh, -sh * lh, 0, 1, 0), Image.BICUBIC)
+            lw, lh = let.size
+            Wm = H * lw / lh
+            if Wm <= room:
+                break
+        pw, ph = int(round(Wm / mx)), int(round(H / my))
+        let = let.resize((pw, ph), Image.LANCZOS)
+        m = np.zeros((1024, TW), float)
+        x0, y0 = int((width * k - pw) // 2), 512 - ph // 2
+        m[y0:y0 + ph, x0:x0 + pw] = np.asarray(let, float) / 255.0
+        m = np.roll(m, int(start * k), axis=1)
         g = np.array(ground, float)
         rng = np.random.default_rng(5)
-        img = np.zeros((1024, 1024, 3)) + g
-        img += rng.normal(0, 2.0, (1024, 1024, 1))
-        img[:, ::64] *= 0.94          # the board's panel joints
-        img = img * (1 - edge[..., None]) + np.array((150, 152, 154)) * edge[..., None]
-        img = img * (1 - m[..., None]) + np.array((242, 242, 240)) * m[..., None]
+        img = np.zeros((1024, TW, 3)) + g
+        img += rng.normal(0, 1.5, (1024, TW, 1))
+        img[:, ::int(64 * k)] *= 0.96          # the board's panel joints
+        img = img * (1 - m[..., None]) + np.array((250, 250, 248)) * m[..., None]
         Image.fromarray(np.clip(img, 0, 255).astype(np.uint8)[:, ::-1], "RGB").save(os.path.join(TEX, out + ".png"))
-        print(out, ground)
+        print(out, ground, "letters %.1f x %.1f m" % (Wm, H))
 
     for word, start, width, key in (("MARVEL", 869, 954, "marvel"), ("STADIUM", 919, 976, "stadium")):
         face(word, start, width, SIGN["w_" + key], "sign_" + key)
@@ -193,8 +206,10 @@ def sign_panels():
 # read (148, 143, 136) against (93, 109, 120). The west face lit by the sky alone reaches only (113, 123, 149) for white
 # letters against Google Earth's (157, 163, 175), so the west boards are a lit sign (emission 0.15, build2.py) and their
 # grounds are set for that.
-SIGN = {"e_marvel": (79, 54, 56), "e_stadium": (48, 59, 64),
-        "w_marvel": (145, 147, 143), "w_stadium": (89, 124, 143)}
+# round 14 (the person: "more vibrant"): the brand's own colours on both boards, white letters on Marvel red and on
+# black. The earlier grounds matched Google Earth's washed-out photo (grey and teal, dark red and navy).
+SIGN = {"e_marvel": (226, 30, 38), "e_stadium": (20, 20, 22),
+        "w_marvel": (226, 30, 38), "w_stadium": (20, 20, 22)}
 
 
 def main():
