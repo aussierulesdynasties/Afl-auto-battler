@@ -26,6 +26,7 @@ def check(root=ROOT, observed=None):
         # ci_shards.txt groups above), so each observed shard is compared with the estimate
         # for the suites its own timing file lists.
         rows = []
+        drift = []
         for file in sorted(pathlib.Path(observed).glob("shard-*.tsv"), key=lambda f: int(f.stem.split("-")[1])):
             suites = [line.split("\t") for line in file.read_text().splitlines() if line.strip()]
             if not suites:
@@ -33,6 +34,7 @@ def check(root=ROOT, observed=None):
             est = sum(times.get(s, DEFAULT_SECONDS) for s, _ in suites)
             got = sum(int(sec) for _, sec in suites)
             rows.append((file.stem, est, got))
+            drift.extend((s, times.get(s, DEFAULT_SECONDS), int(sec)) for s, sec in suites)
         print("Observed shards (estimated -> actual suite seconds): "
               + ", ".join(f"{k} {e}->{a}" for k, e, a in rows))
         if len(rows) >= 2:
@@ -45,6 +47,11 @@ def check(root=ROOT, observed=None):
             if off:
                 print("::warning::Shards more than 25% off their estimate (stale tools/ci_suite_timings.json): "
                       + ", ".join(f"{k} {e}->{a}" for k, e, a in off))
+        # The suites behind a shard's miss: the ones to re-time (artifacts cannot be read everywhere).
+        moved = sorted((r for r in drift if abs(r[2] - r[1]) > max(30, 0.25 * r[1])), key=lambda r: -abs(r[2] - r[1]))
+        if moved:
+            print("Suites off their timing (estimated -> actual s): "
+                  + ", ".join(f"{s} {e}->{a}" for s, e, a in moved))
     return True
 
 
