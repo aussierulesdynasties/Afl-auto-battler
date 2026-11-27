@@ -52,7 +52,17 @@ static func after_game(gs) -> void:
 		return
 	if int(gs.training_report.get("year", -1)) == gs.season_year and int(gs.training_report.get("to", 0)) == done:
 		return
-	gs.training_report = build(gs, b, done)
+	# Built at the end of the round (after_round), once the round's age step is in,
+	# so the report reads what his card reads.
+	b["due"] = done
+
+
+## The block's report, at the end of a round whose game closed it (after_game).
+static func after_round(gs) -> void:
+	var b: Dictionary = gs.training_block
+	if b.is_empty() or gs.season == null or int(b.get("due", -1)) != gs.season.round_index:
+		return
+	gs.training_report = build(gs, b, int(b["due"]))
 	gs.training_block = {}
 
 

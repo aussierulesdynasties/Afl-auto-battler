@@ -93,7 +93,9 @@ ATTRS = ["speed", "endurance", "strength", "work_rate",
 # Attribute -> [(metric, weight)]: the approved recipes (§2). Speed, Strength
 # and Work Rate are worked out on their own below.
 RECIPES = {
-    "endurance": [("TimeOnGround", 100)],
+    # Director 2026-11-27: "Use the 40/30/30 blend (TOG%, uncontested
+    # possessions, pressure acts)"; re-scaled in rate().
+    "endurance": [("TimeOnGround", 40), ("uncontested_poss", 30), ("PressureActs", 30)],
     "kicking": [("KickingEfficiency", 50), ("KickMetresGainedPerKick", 50)],
     "handballing": [("HandballEfficiency", 60), ("HandballMetresGained", 40)],
     "marking": [("uncontested_marks", 100)],
@@ -258,7 +260,7 @@ class Season:
 # (kicks, handballs, marks: uncontested marks once contested marks are kept).
 # Reading the play (intercepts) was never kept: his position's average.
 TABLES_RECIPES = {
-    "endurance": [("pct_played", 100)],
+    "endurance": [("pct_played", 40), ("up", 30)],   # pressure acts were never kept
     "kicking": [("ki", 100)],
     "handballing": [("hb", 100)],
     "marking": [("unc_mk", 100)],
@@ -707,6 +709,19 @@ def rate(players, missed, data_season: int, ref: dict | None = None):
                 p.setdefault("filled", []).append(k)
     for k in list(RECIPES) + ["durability", "_cp", "_wr", "_bo", "_pa"]:
         fill(k)
+    # Endurance (director, 2026-11-27): "re-scale the blended result back onto
+    # the league's 2nd–98th percentile (1–99) scale so elite gut-runners still
+    # reach 95–99 Endurance instead of capping out around 80". The 2nd and 98th
+    # are over the start's players with 12+ games whose season kept a stat of
+    # the blend; a value taken from 2026's averages is on that scale already.
+    base = sorted(p["a01"]["endurance"] for p in rows
+                  if p["games"] >= M.NORM_GAMES and "endurance" not in p.get("filled", []))
+    if len(base) > 1:
+        elo, ehi = M._pct(base, 0.02), M._pct(base, 0.98)
+        if ehi > elo:
+            for p in rows:
+                if "endurance" not in p.get("never", []):
+                    p["a01"]["endurance"] = max(0.0, min(1.0, (p["a01"]["endurance"] - elo) / (ehi - elo)))
     # Strength: weight for his height against the list's line, and contested
     # possessions where the season kept them.
     body = [p for p in rows if p["h"] and p["kg"]]

@@ -23,7 +23,10 @@ const SUITE_SEED := 1990
 ## signing counts the opening-draft picks a club has already made toward its 44.
 ## The rating rebuild (2026-11-26: every player's attributes from the record, his line
 ## from his AFL position, OVR never stored) redrew the load and the real-lists print.
-const GOLDEN_LOAD := "790957653b404bc46322e04f468a9797"  # moved with Canberra's name and colours (the Owls), the real 2026 draft, then the rating rebuild
+## The Endurance blend (director 2026-11-27: time on ground 40, uncontested possessions 30,
+## pressure acts 30) redrew every player's Endurance, so the load, the real-lists print and
+## the seeded season moved again.
+const GOLDEN_LOAD := "8c6085e5773cdd69bdb538843d5fd22a"  # moved with Canberra's name and colours (the Owls), the real 2026 draft, the rating rebuild, then the Endurance blend
 ## It moved again with row 199 (2026-11-15): the off-season before the
 ## opening draft closes with the rivals signing free agents, so the lists differ;
 ## the level ladder going A-Z by club (#1633) then changed the order the clubs
@@ -33,7 +36,7 @@ const GOLDEN_LOAD := "790957653b404bc46322e04f468a9797"  # moved with Canberra's
 ## redrew it again. Hold room (bug bash batch B, 2026-11-25: every signing
 ## leaves a club the room to fill its list and take three draftees) changes
 ## who the rivals sign before the opening draft.
-const GOLDEN_REAL := "cf1c91f55f0a8e1d9bf75175bde91ff2"
+const GOLDEN_REAL := "d39c16d25d07ba830b0b85f4b8e1c609"
 ## A played match's floating point differs between Windows and Linux builds of
 ## Godot, so the season has one fingerprint per platform; each was taken on
 ## main before the change (Linux: run_on_github run 43024085570). Removing
@@ -68,11 +71,12 @@ const TEAM_BOOKKEEPING_KEYS := ["pressure_acts_dhalf", "tackles_i50", "poss_d50"
 ## Team counts named by prefix (one key per way a defensive-50 chain ends).
 const TEAM_BOOKKEEPING_PREFIXES := ["d50_end_"]
 ## The rating rebuild (2026-11-26) redrew it (new attributes, plan-fit anchors, the match
-## retuned to the attributes), with main through #2231 on top. Windows from a local run of the merged branch, Linux from a local run
-## after merging main at 058745e0 (opinion engine, free agency, bug bash E).
-## A centre bounce with no clean clearance going to one of the four at it (director, 2026-11-27)
-## redrew it again: Windows from a local run, Linux from run_on_github run 45966672511.
-const GOLDEN_SEASON := {"Windows": "2351361a2191d49194e4f7cb6126329e", "Linux": "0bd454e669215bbf46d64d0de341d0aa"}
+## retuned to the attributes), with bug bash batch C (#2210: a kick-in marked without
+## playing on is no longer an effective disposal; a boundary free records "intent"),
+## #2211 (a faster match engine) and #2230 (tail check) on top. Windows from a local
+## run on the merged branch, Linux from its CI run.
+## The centre-four first carrier (director, 2026-11-27) redrew it: Windows from a local run, Linux from run_on_github run 45968956250.
+const GOLDEN_SEASON := {"Windows": "9ed92c83f41cd9184d6e8b9910fccc14", "Linux": "8f143755f42ae35955a46526204643bf"}
 
 ## A small league standing in for a legacy set until the 1990 files ship:
 ## 42 real players re-dated to a 1989 data season, a 1990 first season, and

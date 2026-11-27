@@ -16,7 +16,8 @@ extends RefCounted
 ## 2026 lists as before (skills are now rated against the AFL position), and
 ## again for the rating rebuild (2026-11-26), when each trait came to read one of
 ## the 18 attributes: Engine was 91 Durability (36 men on the 2026 lists) and
-## is 80 Endurance (36 men; 91 would give 11).
+## became 80 Endurance (36 men; 91 would give 11). The 40/30/30 Endurance blend
+## (director 2026-11-27) made it 88 (34 men; 80 would give 67, 87 gives 40).
 const DEFS := {
 	"ball_magnet": {"label": "Ball magnet", "stat": "disposal", "min": 66, "roles": ["MID", "DEF"],
 			"text": "Wins 10% more of the ball in general play.",
@@ -48,7 +49,7 @@ const DEFS := {
 	"def_forward": {"label": "Defensive forward", "stat": "pressure", "min": 56, "roles": ["FWD"], "own_role": true,
 			"text": "Sent to their loose defender, keeps that player out of most contests (another forward sent does it less well).",
 			"scout": "Works up the ground and keeps a loose defender honest."},
-	"engine": {"label": "Engine", "stat": "endurance", "min": 80, "roles": [],
+	"engine": {"label": "Engine", "stat": "endurance", "min": 88, "roles": [],
 			"text": "Tires 25% slower.",
 			"scout": "Plays big minutes and keeps going late."},
 	"big_game": {"label": "Big-game player", "stat": "ovr", "min": 82, "roles": [],

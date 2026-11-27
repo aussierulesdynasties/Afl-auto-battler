@@ -59,10 +59,12 @@ static func description(p: Dictionary) -> String:
 
 static func recovery(p: Dictionary) -> float:
 	# Endurance: how fast he recovers his legs (RATING_REBUILD §2). 10.0 when this
-	# read the old Durability, which averaged 20 points higher (2026 lists).
+	# read the old Durability, which averaged 20 points higher (2026 lists); 12.0
+	# before the 40/30/30 blend (director 2026-11-27) lifted a side's 18 from 54.5
+	# to 57.5, so an average side recovers as before.
 	var endurance := clampf(float((p.get("attr", {}) as Dictionary).get("endurance", 70.0)), 0.0, 100.0)
 	var veteran := clampf(float(p.get("age", 25.0)) - 29.0, 0.0, 8.0)
-	return 12.0 + endurance * 0.10 - veteran * 0.5
+	return 11.7 + endurance * 0.10 - veteran * 0.5
 
 
 ## Byes, omitted players and injured players all get the same week's

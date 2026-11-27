@@ -82,6 +82,7 @@ func _run() -> void:
 	_t("_test_strengths_count_for_more")
 	_t("_test_pool_is_the_real_lists")
 	_t("_test_500_generated_prospects")
+	_t("_test_once_per_class")
 	_t("_test_never_himself")
 	_t("_test_two_real_players_one_name")
 	_t("_test_same_after_the_lists_age")
@@ -339,15 +340,29 @@ func _test_500_generated_prospects() -> void:
 	var worst_cm := 0.0
 	var lacks_strength := 0
 	var times := {}
+	# What the screens show: each draft class names its own, once per class (director 2026-11-27).
+	var by_year := {}
 	for p in _prospects:
-		var e: Dictionary = PL.nearest(p, pool)
+		var y := int(p["draft_year"])
+		if not by_year.has(y):
+			by_year[y] = []
+		(by_year[y] as Array).append(p)
+	var named := {}
+	var again := {}
+	for y in by_year:
+		named.merge(PL.for_class(by_year[y], pool))
+		again.merge(PL.for_class((by_year[y] as Array).duplicate(true), pool))
+	var held: Array = _state.draftee_pool
+	_state.draftee_pool = _prospects
+	for p in _prospects:
+		var e: Dictionary = named.get(str(p["id"]), {})
 		if e.is_empty() or not real_names.has(str(e["real_name"])):
 			not_real += 1
 			continue
 		names[str(e["real_name"])] = true
 		if str(e["role"]) != str(p["role"]):
 			wrong_role += 1
-		if str((PL.nearest(p.duplicate(true), pool) as Dictionary)["id"]) != str(e["id"]) \
+		if str((again.get(str(p["id"]), {}) as Dictionary).get("id", "")) != str(e["id"]) \
 				or PL.line(p) != PL.LABEL + str(PL.shown_name(e, pool)):
 			moved += 1
 		# Level is measured against his POT itself.
@@ -374,6 +389,7 @@ func _test_500_generated_prospects() -> void:
 		if mine[top] - float((e["vec"] as PackedFloat32Array)[top]) >= 15.0:
 			lacks_strength += 1
 		times[str(e["real_name"])] = int(times.get(str(e["real_name"]), 0)) + 1
+	_state.draftee_pool = held
 	var n := _prospects.size()
 	var most := 0
 	for k in times:
@@ -396,6 +412,41 @@ func _test_500_generated_prospects() -> void:
 	for p in intl:
 		_check(PL.line(p) != "", "International prospect %s has a line" % _db.player_display_name(p))
 	_check(near_cm >= int(ceil(n * 0.95)), "At least 95%% are likened to a player within 4 cm (%d of %d)" % [near_cm, n])
+
+
+## Director 2026-11-27, "Once per class": a real player is named for one prospect of a
+## draft class. The class chooses by POT, so whoever carries a prospect's closest
+## player instead of him has a POT at least his.
+func _test_once_per_class() -> void:
+	var pool: Array = _db.plays_like_pool
+	var cls: Array = _prospects.filter(func(p): return int(p["draft_year"]) == FIRST_YEAR + 5)
+	_check(cls.size() >= 40, "A generated class to name (%d prospects)" % cls.size())
+	var named: Dictionary = PL.for_class(cls, pool)
+	var times := {}
+	var holder := {}
+	for p in cls:
+		var e: Dictionary = named.get(str(p["id"]), {})
+		if e.is_empty():
+			continue
+		times[str(e["real_name"])] = int(times.get(str(e["real_name"]), 0)) + 1
+		holder[str(e["real_name"])] = float(PL.profile(p)["peak"])
+	var most := 0
+	for k in times:
+		most = maxi(most, int(times[k]))
+	var gave_way := 0
+	var to_lower := 0
+	for p in cls:
+		var closest: Dictionary = PL.nearest(p, pool)
+		var e: Dictionary = named.get(str(p["id"]), {})
+		if closest.is_empty() or str(closest["real_name"]) == str(e.get("real_name", "")):
+			continue
+		gave_way += 1
+		if float(holder.get(str(closest["real_name"]), -1.0)) < float(PL.profile(p)["peak"]):
+			to_lower += 1
+	_check(named.size() == cls.size(), "Every prospect of the class is named (%d of %d)" % [named.size(), cls.size()])
+	_check(most == 1, "No real player is named twice in one class (most %d)" % most)
+	_check(gave_way >= 1, "Some prospects share a closest player, so one gives way (%d did)" % gave_way)
+	_check(to_lower == 0, "A prospect's closest player goes to one of a higher or equal POT (%d went lower)" % to_lower)
 
 
 func _test_never_himself() -> void:
