@@ -70,13 +70,17 @@ func _build(slug: String) -> bool:
 	oval.ground = gname
 	root.add_child(oval)
 	oval._environment()
+	print("FAULTSCAN build step done: _environment")
 	oval._ground()
+	print("FAULTSCAN build step done: _ground")
 	oval._posts()
+	print("FAULTSCAN build step done: _posts")
 	oval.camera = camera
 	var ball := MeshInstance3D.new()
 	oval.add_child(ball)
 	oval.ball = ball
 	# FAULTSCAN_BASE: read the model from another folder (a draft in tools/grounds/<slug>/), as the inspector can.
+	print("FAULTSCAN build step: ground model")
 	oval._ground_model(slug, OS.get_environment("FAULTSCAN_BASE"))
 	var g := oval.get_node_or_null("Ground")
 	return g != null and g.get_child_count() > 0

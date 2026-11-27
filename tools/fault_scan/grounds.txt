@@ -1,3 +1,3 @@
-# Grounds the fault scan runs on a push (one folder name per line; "mcg/2" films it in 2 halves).
-# MCG rescan in halves: the whole ground made no shots in 100 min on 27 Nov.
-mcg/2
+# Grounds the fault scan runs on a push (one folder name per line; "mcg/2" films it in 2 halves,
+# "mcg/2:1" only the first half). MCG first half again: its build hung on 27 Nov.
+mcg/2:1
