@@ -30,8 +30,8 @@ rulings; this page is the release checklist built from it; `docs/TODO.md` rows 1
 - **Where ground models live.** Main's history was rewritten on 26 Nov (#2199) and the ground models moved to the private
   asset repo `gabebartolo-spec/ard-asset-pipeline`, pinned by `tools/ground_assets.lock`. A ground's work counts only once
   its models are published there and the lock is pinned on main: merged code alone does not change what a match shows.
-  The lock has changed twice since (#2199; #2232 for the Legacy era surroundings). Bellerive round 7's publish is #2272
-  (open 27 Nov 13:10 UTC); Marvel round 13 and Norwood's Google Earth fixes were being published at the same time.
+  The lock has changed twice since (#2199; #2232 for the Legacy era surroundings). Bellerive round 7 (#2272) and Norwood's
+  Google Earth fixes (#2274) are published; Marvel round 13's publish was still landing at 13:50 UTC on 27 Nov.
 - **CI.** The merge queue and the PC runners are gone: every check runs on GitHub's runners. There is no open-PR cap, and
   every green PR is merged straight away (CLAUDE.md, the director, 27 Nov).
 - **The game around the match.** The director's own work since 23 Nov: the 18-attribute player rating rebuild (#2239,
@@ -71,7 +71,7 @@ the machine pre-inspection clean, then his fly-through.
 | Ground | State 2026-11-22 | PR | Owner |
 |---|---|---|---|
 | MCG | Rebuilt to the standard (#1987 merged); the last 405 seats under the tiers removed (#2027, merged); Yarra Park from OSM; horizon past 2 km empty; not yet flown through by him | #2027 | Make the MCG look like the real MCG (closed); seats: Fix the shared seat generator |
-| Marvel Stadium | On main through #2072 (2026-11-25): true bearing, instanced seats, shut roof, Docklands; round 13's code merged (#2216, 2026-11-27: the round 12 PC check, NAB height, vents, the backdrop cut past 1024 m), its models being published to the asset repo, so a match still shows round 12; PC colour check rounds continue | #2011 (landed in #2072) #2216 | Make Marvel Stadium look real |
+| Marvel Stadium | On main through #2072 (2026-11-25): true bearing, instanced seats, shut roof, Docklands; round 13's code merged (#2216, 2026-11-27: the round 12 PC check, NAB height, vents, the backdrop cut past 1024 m), its publish still landing, so a match still shows round 12; the director found three faults (a mirrored sign, a floating canopy, roof gaps) and a full check and one fix pass is under way; PC colour check rounds continue | #2011 (landed in #2072) #2216 | Make Marvel Stadium look real |
 | Adelaide Oval | On main through #2072: arches with ivy, the main entrance rebuilt, his 11 faults fixed; ready for his review | #2010 #2015 (landed in #2072) | Fix Adelaide Oval's saved faults |
 | Optus Stadium | Roof, bronze facade, surrounds on main (#1993); the bowl's shape still has to match Google Earth | #1993 | Make Optus Stadium look real |
 | SCG | On main through #2072 (WIP): roofs rebuilt on Google Earth measurements, Moore Park, Allianz. Thread closed | #2017 (landed in #2072) | Make the SCG look real (closed) |
@@ -79,9 +79,9 @@ the machine pre-inspection clean, then his fly-through.
 | GMHBA Stadium | On main (#2016, 2026-11-25): Selwood Stand roof, solar roof, north and east walls, seats no longer black, Kardinia Park. Thread closed | #2016 | Make GMHBA Stadium look real (closed) |
 | People First Stadium | On main (#2019, WIP): finned walls, bronze podium, scoreboard lattice, Carrara; work continues | #2019 | Make People First Stadium look real |
 | ENGIE Stadium | On main (#2037, 2026-11-24): outline fitted to Google Earth, Olympic Park surroundings. Thread closed | #2037 | Make Engie Stadium look real (closed) |
-| Bellerive Oval | On main through #2072: facades, 3D seats, Hobart backdrop; round 7's code merged (#2218, 2026-11-27: one pass over the PC round 6 defect list, roofs, concourse, east bank, nets, houses), its models being published, so a match still shows round 6; PC colour rounds continue | #2018 (landed in #2072) #2218 | Make Bellerive Oval look real |
+| Bellerive Oval | On main through #2072: facades, 3D seats, Hobart backdrop; round 7 published and in matches (#2218, #2272, 2026-11-27: one pass over the PC round 6 defect list, roofs, concourse, east bank, nets, houses); PC colour rounds continue | #2018 (landed in #2072) #2218 | Make Bellerive Oval look real |
 | Manuka Oval | On main (#2035, 2026-11-25): stands, seats, scoreboard, towers, the town and Canberra to 30 km. Thread closed | #2035 | Make Manuka Oval look real (closed) |
-| Norwood Oval | On main: rebuild through #2072, then the north and south frontages modelled house by house on the measured land and towers to the published 34 m (#2145), its real boundary line (#2148), and ground cover, trees, school, church and windows against Google Earth (#2214, 2026-11-27: code merged, models being published, not yet in a match) | #2042 #2145 #2214 | Make Norwood Oval look real |
+| Norwood Oval | On main: rebuild through #2072, then the north and south frontages modelled house by house on the measured land and towers to the published 34 m (#2145), its real boundary line (#2148), and ground cover, trees, school, church and windows against Google Earth (#2214, published by #2274 on 2026-11-27) | #2042 #2145 #2214 | Make Norwood Oval look real |
 | Barossa Park | On main (#2041): own land, gums, far ranges, second oval. Thread closed | #2041 | Make Barossa Park look real (closed) |
 
 ### The 24 Legacy-mode grounds
