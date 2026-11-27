@@ -32,12 +32,13 @@ const NEEDS := {
 ## clubs' match-day sides on today's lists (bug bash 5, G15: the 2027 anchors
 ## had every plan's average fit at 1.13-1.22): 1.0 fit is an average list for
 ## that plan. tests/test_plan_know.gd holds the league's mean fit near 1.0.
-## Re-measured on the rebuilt attributes of 2026-11-26 (the rating rebuild).
+## Re-measured on the rebuilt attributes with Endurance's ratings of 2026-11-27
+## (#2240 moved endurance, so OVR, so who makes each side).
 const LEAGUE := {
-	"attacking": [59.0, 6.4],
-	"defensive": [67.4, 2.3],
-	"contest": [69.7, 4.5],
-	"controlled": [57.1, 2.0],
+	"attacking": [59.0, 6.1],
+	"defensive": [68.1, 2.1],
+	"contest": [69.8, 4.4],
+	"controlled": [57.1, 2.1],
 }
 ## How far one spread from the league moves a plan's upside, and its limits:
 ## the best-suited list gets about half as much again, the worst about half.
