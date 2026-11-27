@@ -260,6 +260,7 @@ const GAIN_WORDS := {
 	"rush_back": "cleared to play", "role_trial": "plays as a", "rest": "can't get hurt", "culture": "(Standards|Togetherness|Ambition) up [0-9]+%",
 	"running": "more weeks? of running", "drill": "on the game plan", "open_price": "early premium", "new_club_keep": "stays for",
 	"no_promise": "No promise to keep", "bond": "become (close mates|mentor|allies)", "bond_seed": "new close mates",
+	"council": "loyalty to you up [0-9]+", "standing": "Your (Respect|Authority) up [0-9]+",
 }
 const COST_WORDS := {
 	"morale": "(?i)morale", "board": "(?i)board confidence", "trust": "opinion of you (down (about )?[0-9]+|falls [0-9]+|slips a little)",
@@ -268,6 +269,7 @@ const COST_WORDS := {
 	"rush_back": "hurt again", "slow_start": "slowly", "loss_sting": "also falls", "role_trial": "away from his usual spot", "on_record": "on the record",
 	"culture": "(Standards|Togetherness|Ambition) down [0-9]+%", "running": "less running", "forgo_xp": "Slower growth",
 	"new_club_keep": "against our cap", "new_club_go": "when this season ends", "dev_promise": "expects his next three games",
+	"council": "loyalty to you down [0-9]+", "standing": "Your (Respect|Authority) down [0-9]+",
 }
 const SAMPLE_FACTS := {"sore_odds": "about 1 in 6", "take_odds": "about 6 in 10", "proj_word": "key forward", "proj_line": "up forward", "run_games": 3, "early_price": "$1m", "more_seasons": "two more seasons",
 		"new_club": "Tasmania", "keep_seasons": "three more seasons", "keep_price": "$600k", "comp_after": 20,
@@ -348,6 +350,21 @@ func _stakes_in(effects: Array) -> Array:
 		if op == "bond_seed":
 			if not gains.has(op):
 				gains.append(op)
+			continue
+		# A staff coach's loyalty to you (Council) and your own Respect or Authority.
+		if op == "council":
+			var cv := float(Opinion.def(str(e.get("do", ""))).get("v", 0))
+			if cv > 0 and not gains.has(op):
+				gains.append(op)
+			elif cv < 0 and not costs.has(op):
+				costs.append(op)
+			continue
+		if op == "standing":
+			for sv in [int(e.get("r", 0)), int(e.get("a", 0))]:
+				if sv > 0 and not gains.has(op):
+					gains.append(op)
+				elif sv < 0 and not costs.has(op):
+					costs.append(op)
 			continue
 		if op == "loss_sting":
 			costs.append_array([op, "morale"])
@@ -1015,6 +1032,20 @@ func _sum(d: Dictionary) -> int:
 
 # --- In a career -----------------------------------------------------------------
 
+## Every reason he holds, newest first: a card's move is a live, fading mark
+## since the relationship overhaul (Opinion.card_move); a scar keeps its reason
+## in the permanent log.
+func _whys(key: String) -> Array:
+	var out := []
+	var marks: Array = Trust.mods(GameState.relations, key).duplicate()
+	marks.reverse()
+	for m in marks:
+		out.append(str((m as Dictionary).get("why", "")))
+	for r in Trust.reasons(GameState.relations, key):
+		out.append(str(r["why"]))
+	return out
+
+
 func _test_trust_in_play() -> void:
 	_start()
 	var p: Dictionary = GameState.my_list[2]
@@ -1026,8 +1057,8 @@ func _test_trust_in_play() -> void:
 			and not hint.contains("{name_s}"), "The choice says what it does to his opinion of you (%s)" % hint)
 	_check(Trust.value(GameState.relations, key) == 10 and out.contains("'s opinion of you: 50 → 55 out of 100.") and not out.contains("His opinion"),
 			"Backing him in the papers: his opinion of you rises, and the result says so (%s)" % out)
-	_check(str(Trust.reasons(GameState.relations, key)[0]["why"]) == "You kept him in when the papers wanted him out",
-			"The reason is kept in plain words")
+	_check(_whys(key).has("You kept him in when the papers wanted him out"),
+			"The reason is kept in plain words (%s)" % str(_whys(key)))
 	# A promise broken after the match costs trust, with its reason.
 	var sulk: Dictionary = GameState.my_list[25]
 	sulk["morale"] = 30
@@ -1038,13 +1069,15 @@ func _test_trust_in_play() -> void:
 		(side[k] as Array).erase(str(sulk["id"]))
 	side["OUT"] = [str(sulk["id"])]
 	GameState.set_selection(side)
-	var before := Trust.value(GameState.relations, Trust.player_key(str(sulk["id"])))
+	# The permanent part (Trust.base), sized by his temperament (Promises.broken_trust):
+	# his live marks fade across the round on their own.
+	var before := Trust.base(GameState.relations, Trust.player_key(str(sulk["id"])))
 	GameState.advance()
 	GameState.set_selection({})
 	if int(sulk.get("injury_weeks", 0)) <= 0:
-		var r := Trust.reasons(GameState.relations, Trust.player_key(str(sulk["id"])))
-		_check(Trust.value(GameState.relations, Trust.player_key(str(sulk["id"]))) == before + ClubStories.BROKEN_PROMISE_TRUST
-				and str(r[0]["why"]) == "You promised him a game and left him out",
+		var r := _whys(Trust.player_key(str(sulk["id"])))
+		_check(Trust.base(GameState.relations, Trust.player_key(str(sulk["id"]))) == before + Promises.broken_trust(sulk, "game")
+				and r.has("You promised him a game and left him out"),
 				"Left out after a promise, his trust falls, and he says why")
 	# Trust changes what a talk does, and the card says so before you choose.
 	var fan: Dictionary = GameState.my_list[26]
@@ -1053,16 +1086,27 @@ func _test_trust_in_play() -> void:
 	Trust.change(GameState.relations, Trust.player_key(str(fan["id"])), 15, "t", 2027, "Round 1")
 	fan["morale"] = 30
 	var card := GameState.story_card("selection_unhappy", fan)
-	_check(str(card["options"][0]["detail"]).contains("It counts for more: his opinion of you is 78 out of 100."),
+	# His opinion as the card reads it: the 55 trust above plus the live marks he
+	# carries (relationship overhaul), and the talk sized by trust and temperament.
+	var op_now := int((card["facts"] as Dictionary).get("opinion", 0))
+	_check(op_now > 50 and str(card["options"][0]["detail"]).contains("It counts for more: his opinion of you is %d out of 100." % op_now),
 			"A talk with a player who trusts you says it lands harder, with his opinion of you (%s)" % str(card["options"][0]["detail"]))
+	var lift := 0
+	for e in card["options"][0]["effects"]:
+		if str(e.get("op", "")) == "morale" and str(e.get("scale", "")) == "trust":
+			lift = StoryEngine.effect_d(e, card["facts"])
 	GameState.week_event = card
 	GameState.resolve_week_event(0)
-	_check(ClubLife.morale(fan) == 30 + Trust.scaled(15, 55), "...and it does (%d)" % ClubLife.morale(fan))
-	# Rival clubs are untouched: trust is yours alone, and nothing else reads it.
+	_check(lift > 15 and ClubLife.morale(fan) == 30 + lift, "...and it does (%d, lift %d)" % [ClubLife.morale(fan), lift])
+	# Every club's people carry live marks (every club gets it, director 2026-11-09),
+	# but the trust you build, its permanent part and its reasons, is yours alone.
 	for k in GameState.relations:
 		if str(k).begins_with("k:"):
 			continue  # a club's culture strands, not a person's trust
-		_check(GameState.list_player(str(k).trim_prefix("p:")).size() > 0, "Only your players hold trust (%s)" % k)
+		if GameState.list_player(str(k).trim_prefix("p:")).size() > 0:
+			continue
+		_check(Trust.base(GameState.relations, str(k)) == 0 and Trust.reasons(GameState.relations, str(k)).is_empty(),
+				"Only your players hold the trust you build (%s)" % k)
 
 
 ## A season's results with the cards drawn but never answered match a season
@@ -1596,7 +1640,10 @@ func _test_front_group_words() -> void:
 		return
 	var d0 := str((card["options"] as Array)[0]["detail"])
 	var d1 := str((card["options"] as Array)[1]["detail"])
-	_check(d0.contains("opinion of you up 2, to 52 out of 100") and d0.contains("morale up 3%") and d0.contains("morale down 3%") and d0.contains("the group") and d1.contains("opinion of you down 1, to 49 out of 100"),
+	# From where his opinion of you stands now (his temperament and the marks
+	# he carries move it off 50).
+	var now := int((card["facts"] as Dictionary).get("opinion", 50))
+	_check(d0.contains("opinion of you up 2, to %d out of 100" % (now + 2)) and d0.contains("morale up 3%") and d0.contains("morale down 3%") and d0.contains("the group") and d1.contains("opinion of you down 1, to %d out of 100" % (now - 1)),
 			"Card 3's trust lines differ in size: '%s' / '%s'" % [d0, d1])
 
 
@@ -3245,7 +3292,7 @@ func _test_silent_defaults_announced() -> void:
 func _test_every_line_has_a_size() -> void:
 	_start()
 	var p: Dictionary = GameState.my_list[4]
-	var sized := RegEx.create_from_string("[0-9]+%|[0-9]+ out of 100|[0-9]+ (pre-season )?development points|[0-9.]+ weeks?|this week's game|takes the armband|cleared to play|next (one|two|three|four|five|six) game|games? away from his usual spot|for (one|two|three|four|five) more seasons?|[$][0-9.]+[km]? a season|pick [0-9]+|when this season ends|^No promise to keep[.]$|opinion of you falls [0-9]+|become (close mates|rivals for the spot|mentor and protege|allies)|new close mates")
+	var sized := RegEx.create_from_string("[0-9]+%|[0-9]+ out of 100|[0-9]+ (pre-season )?development points|[0-9.]+ weeks?|this week's game|takes the armband|cleared to play|next (one|two|three|four|five|six) game|games? away from his usual spot|for (one|two|three|four|five) more seasons?|[$][0-9.]+[km]? a season|pick [0-9]+|when this season ends|^No promise to keep[.]$|opinion of you falls [0-9]+|become (close mates|rivals for the spot|mentor and protege|allies)|new close mates|loyalty to you (up|down) [0-9]+|Your (Respect|Authority) (up|down) [0-9]+")
 	var bad := []
 	var parts_seen := 0
 	for t in StoryDeck.all():
