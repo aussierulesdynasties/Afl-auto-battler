@@ -1054,6 +1054,35 @@ func _centre_phases(k: int, a: int, loc: Vector2) -> Array:
 	var layout := {}
 	for t in tokens:
 		layout[int(t["id"])] = _centre_spot(t, a)
+	# The men the match had at this bounce ("bounce" on the chain's first event) stand in the
+	# centre square (director 2026-11-26, "Make all three"): after an interchange the man who
+	# came on for a winger can be one of the four, and his wing spot would leave him 36 m from
+	# the ball. A man holding a square spot who did not attend swaps with him. The ruck (listed
+	# first) gets the spot nearest the ball.
+	var men: Array = (events[k] as Dictionary).get("bounce", [])
+	if men.size() == 2:
+		for side in range(2):
+			var want := {}
+			var ins := []
+			for num in men[side]:
+				var id := int((_ids[side] as Dictionary).get(int(num), -1))
+				if id >= 0:
+					want[id] = true
+					var p: Vector2 = layout[id]
+					if id != a and (absf(p.x) > 25.0 or absf(p.y) > 25.0):
+						ins.append(id)
+			var outs := []
+			for t in tokens:
+				var id2 := int(t["id"])
+				var q: Vector2 = layout[id2]
+				if int(t["side"]) == side and id2 != a and not want.has(id2) \
+						and absf(q.x) <= 25.0 and absf(q.y) <= 25.0:
+					outs.append(id2)
+			outs.sort_custom(func(x, y): return (layout[x] as Vector2).length() < (layout[y] as Vector2).length())
+			for j in range(mini(ins.size(), outs.size())):
+				var tmp: Vector2 = layout[ins[j]]
+				layout[ins[j]] = layout[outs[j]]
+				layout[outs[j]] = tmp
 	return [
 		# At the start of a quarter the ball is with the umpire in the centre already (the break
 		# is off the picture): it is put there, never sent sliding from where the last quarter
@@ -1100,6 +1129,15 @@ func _kickin_phases(k: int, kicker: int, g: Vector2) -> Array:
 			layout[id] = Vector2(p.x * _dir(zone_side), p.y) + (t["jitter"] as Vector2) * 0.4
 		else:
 			layout[id] = _structure_spot(t, g, kside)
+	# When the match has the kicker tackled, pressed or smothered straight after the kick-in, the
+	# man it names stands the mark: 15 m in front of the kick-off line, the AFL rule since 2021
+	# (24 m out from goal; director 2026-11-26, "Make all three"). Otherwise he would start in
+	# his zone up the ground and the replay would show the tackle far from where it happened.
+	var nk := _next_real(k)
+	if kicker >= 0 and nk >= 0 and str((events[nk] as Dictionary).get("kind", "")) in ["tackle", "pressure", "smother"]:
+		var tk := _actor_id(events[nk])
+		if tk >= 0 and int(tokens[tk]["side"]) == zone_side:
+			layout[tk] = Vector2(-dir * (MatchMotion.GOAL_X - 24.0), g.y)
 	# The ball is not sent to the goal square on its own (it slid there at chest height with
 	# nobody holding it: bug bash 2026-11-23). As a full back does, the kicker fetches it from
 	# where it went over, then runs it to the square with it in his hands.
@@ -2757,8 +2795,11 @@ func _lead_receivers(k: int, cur: int) -> void:
 			prev_kind = kind
 			continue
 		# A clanger or a spoil is a touch of the ball where the log has it: the man who fumbles
-		# or punches it leads there as a receiver does, so he is on it when it comes loose.
-		if not _possession(kind) and not kind in ["rebound", "clanger", "spoil"]:
+		# or punches it leads there as a receiver does, so he is on it when it comes loose. So does
+		# the man a marked player passes to (a give inside 50, or a set shot played on): left out,
+		# he ran off to the goal square while the mark was held and the pass came down 32 m from
+		# him, put in his hands from there (picture truth suite match, event 1103).
+		if not _possession(kind) and not kind in ["rebound", "clanger", "spoil", "receive"]:
 			t += 0.5
 			continue
 		var restart := _restart(j)

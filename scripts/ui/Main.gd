@@ -163,6 +163,8 @@ func _ready() -> void:
 	if WebStorage.should_ask(WebStorage.on_web(), bool(GameState.get_setting(WebStorage.ASKED_KEY, false))):
 		WebStorage.ask()
 		_wait_for_storage_answer()
+	# Continue's Hub loads while the menu is up (bug bash M-9).
+	Router.warm("hub")
 
 
 ## Poll the browser's answer for a few seconds (a prompt may be open). A final answer is
