@@ -21,12 +21,51 @@ extends RefCounted
 ## sits loose; centre bounces set up 6-6-6; kick-ins face a zone.
 
 const DISPOSALS := ["handball", "kick", "mark"]
-## The events whose man gathers a ball knocked loose: a disposal's, and a rebound's (the man who
-## wins it back off the ground; seed 42, 1482 s: left out, he ran in flat out with the scrap and
-## was upright on top of it, too fast to go down for it).
-const GATHERS := ["handball", "kick", "mark", "rebound"]
+## The events whose man gathers a ball knocked loose: every pick-up the match names (director
+## 2026-11-27, "Every pick-up"): a disposal's, a rebound's (the man who wins it back off the
+## ground; seed 42, 1482 s: left out, he ran in flat out with the scrap and was upright on top
+## of it, too fast to go down for it), and the man who takes it and kicks it inside 50, shoots
+## at goal or turns it over. Each comes in at the pace he takes it on the run at (over 8 suite
+## matches, 11 men ran over the loose ball with disposals alone, 1 with all of these). A clanger's
+## man is not one: on the rating rebuild's seeded match the man named for a clanger after a goal
+## was eased in at pick-up pace and never reached it, and the ball lay loose 6.2 s with nobody on
+## it (picture_truth, tick 4208).
+const GATHERS := ["handball", "kick", "mark", "rebound", "inside50", "goal", "behind"]
 ## Off-the-ball entries: an interchange, a coach's call, a player going off hurt.
 const META := ["sub", "moment", "injury"]
+## In-match injuries (row 202 2e). MatchSim hurts a man at a minute of its own and logs it as
+## his interchange ("sub", or the substitute coming on) and then the "injury". On TV he goes down
+## in the last contest he was in, the play goes on around him, his trainers come out to him and
+## he is helped or limps off to the interchange gate; his replacement comes on as he gets there
+## (Laws of Australian Football 2026, 7.2(a): interchanges leave and enter through the
+## Interchange Area). So the director looks HURT_LOOK events ahead: once the hurt man has had his
+## last part in the play before the injury, he goes down where he is and takes no further part
+## (_on_feet is false for him, so no phase picks him), lies DOWN_S director seconds, then walks to
+## the gate at his kind's pace (HURT_WALK). The 3D oval draws the rest (Oval3DInjury). Looks only:
+## it changes no event, and draws nothing from the presentation stream.
+const HURT_LOOK := 60
+## Director seconds he is down before he walks: a concussion longest (the doctor's check), a
+## soft-tissue strain shortest (he is up and limping almost at once).
+const DOWN_S := {"concussion": 26.0, "knee": 20.0, "ankle": 16.0, "foot": 16.0, "hip": 12.0,
+		"back": 12.0, "shoulder": 12.0, "hand": 9.0, "hamstring": 9.0, "calf": 9.0, "quad": 9.0,
+		"groin": 9.0}
+const DOWN_DEFAULT := 12.0
+## m/s he walks off at: helped off on one leg slowest.
+const HURT_WALK := {"knee": 1.0, "ankle": 1.0, "foot": 1.0, "concussion": 1.1}
+const HURT_WALK_DEFAULT := 1.25
+## Director seconds a man running when he is hurt takes to come to a stop (about 2-3 m at a run).
+const PULL_UP := 0.8
+## Director seconds his two trainers are with him, once both have reached him, before he is up:
+## the AFL's own trainers take this long over a man at the minimum (2025 broadcasts: a strain
+## is checked and walked off, a knock to the head gets the doctor's questions).
+const ATTEND := {"concussion": 14.0, "knee": 12.0, "ankle": 10.0, "foot": 10.0, "shoulder": 8.0}
+const ATTEND_DEFAULT := 6.0
+## The interchange gate in the director's metres: on the wing across from the main camera
+## (Oval3D._gate; the 3D oval sets it as the ends change).
+var gate := Vector2.ZERO
+## token id -> {pid, kind, weeks, t0, at, k}: men hurt and going off, until their replacement
+## takes the slot (_sub).
+var hurt := {}
 const SUBSTEP := 1.0 / 60.0
 const STRUCTURE_EVERY := 0.45
 ## Presentation time runs this much faster than the movement model's own
@@ -173,11 +212,14 @@ func setup(result: Dictionary, p_events: Array) -> void:
 	_beat = {}
 	_phases = []
 	_out = []
+	hurt = {}
+	injuries = result.get("injuries", [])
 	_timeline = result.get("timeline", [])
 	_tl_i = 0
 	_tac = [{}, {}]
 	# The ground at its own size (row 202 2b): every spot below is set on it.
 	GroundModels.play_at(VignetteGround.ground_of(result))
+	gate = Vector2(0.0, -(MatchMotion.HALF_WID + 3.0))
 	# Presentation stream: seeded from the fixture, never from MatchSim.
 	_rng.seed = hash("%s|%s|%s|view" % [result.get("home", ""), result.get("away", ""),
 			result.get("label", "")])
@@ -614,10 +656,15 @@ func _tick(h: float) -> void:
 	# Motion limits (MatchMotion.SPRINT, WALK): whatever moved a token this
 	# step, it moved no faster than a sprint.
 	var from := []
+	var held := {}
 	var lying := {}
 	MatchMotion.avoid(tokens, _meant_now())
 	for t in tokens:
 		from.append(t["pos"])
+		if hurt.has(int(t["id"])):
+			_hurt_step(t, h)
+			held[int(t["id"])] = t["pos"]
+			continue
 		if not _on_feet(int(t["id"])):
 			lying[from.size() - 1] = true
 			# Still in his tackle's take (down, then back up): his body is where the take put
@@ -629,6 +676,9 @@ func _tick(h: float) -> void:
 	MatchMotion.separate(tokens, h)
 	MatchMotion.hold_apart(tokens, from, _meant_now())
 	MatchMotion.keep_off(tokens, from, lying_spots, lying, h)
+	# Nobody shoves a hurt man along the turf: the others keep clear of him.
+	for id in held:
+		tokens[id]["pos"] = held[id]
 	for i in range(tokens.size()):
 		MatchMotion.limit_step(tokens[i], from[i], h)
 	_update_ball(h)
@@ -716,6 +766,7 @@ func _brake_to(w: int) -> void:
 # ---------------------------------------------------------------------------
 func _start_beat(k: int) -> void:
 	_apply_timeline(k)
+	_plan_hurt(k)
 	var ev: Dictionary = events[k]
 	var kind := str(ev.get("kind", ""))
 	_beat = {"k": k, "kind": kind}
@@ -2186,7 +2237,7 @@ const TACKLE_FREE_REACH := 15.0
 
 ## Whether he is back on his feet from his last tackle (either man of it).
 func _on_feet(id: int) -> bool:
-	return time - float(tokens[id].get("tackle_t", -TAKE_UP)) >= TAKE_UP
+	return time - float(tokens[id].get("tackle_t", -TAKE_UP)) >= TAKE_UP and not hurt.has(id)
 
 
 
@@ -3264,7 +3315,7 @@ func _nearest_ruck(at: Vector2) -> int:
 	var best := -1
 	var bd := INF
 	for t in tokens:
-		if str(t["role"]) == "RUCK" and float(t["down"]) <= 0.0:
+		if str(t["role"]) == "RUCK" and float(t["down"]) <= 0.0 and not hurt.has(int(t["id"])):
 			var d := (t["pos"] as Vector2).distance_to(at)
 			if d < bd:
 				bd = d
@@ -3550,6 +3601,141 @@ func _log_arrival(k: int) -> void:
 	arrivals.append({"idx": k, "kind": kind, "pos": ball["pos"], "want_x": want})
 
 
+## Starting beat k: a man hurt within HURT_LOOK events whose part in the play is over goes
+## down now. Not before a break (he goes off at it with everyone), not one who plays on hurt (no
+## replacement: the log's "on" is empty) or is off the ground already (hurt on the bench).
+func _plan_hurt(k: int) -> void:
+	for i in range(k, mini(events.size(), k + HURT_LOOK)):
+		var ev: Dictionary = events[i]
+		var kind := str(ev.get("kind", ""))
+		if kind == "quarter" or kind == "final":
+			return
+		if kind != "injury" or str(ev.get("on", "")) == "":
+			continue
+		var pid := str(ev.get("player_id", ""))
+		var id := _token_by_pid(pid)
+		if id < 0 or hurt.has(id) or not _on_feet(id):
+			continue
+		var busy := false
+		for j in range(k, i):
+			if _names(events[j], pid):
+				busy = true
+				break
+		# ...nor while the beat now running has him (the ball in his hands, his lead).
+		if busy or _busy.has(id) or int(ball.get("holder", -1)) == id or _lead.has(id):
+			continue
+		var t: Dictionary = tokens[id]
+		var ikind := _injury_kind(i)
+		hurt[id] = {"pid": pid, "kind": ikind, "weeks": _injury_weeks(i), "t0": time,
+				"at": t["pos"], "k": i, "side": int(t["side"]),
+				"down": maxf(down_s(ikind), trainers_eta(t["pos"]) + float(ATTEND.get(ikind, ATTEND_DEFAULT)))
+						if waits_for_trainers(ikind) else down_s(ikind)}
+		hurt[id]["v0"] = t["vel"]
+		t["vel"] = Vector2.ZERO
+
+
+## Whether event ev has the man with id pid in the play (any player field of it).
+static func _names(ev: Dictionary, pid: String) -> bool:
+	if str(ev.get("kind", "")) in META:
+		return false
+	for key in ev:
+		var v = ev[key]
+		if v is String and v == pid and (str(key) == "player_id" or str(key).ends_with("_id")):
+			return true
+		if v is Dictionary and str(key) == "duel" and pid in (v as Dictionary).values():
+			return true
+	return false
+
+
+## The injury's kind and weeks: the log's own record of it (result "injuries", by man and
+## minute) when the director has it, else "" and 0.
+var injuries: Array = []
+
+
+func _injury_kind(i: int) -> String:
+	var r := _injury_rec(i)
+	return str(r.get("kind", ""))
+
+
+func _injury_weeks(i: int) -> int:
+	return int(_injury_rec(i).get("weeks", 0))
+
+
+func _injury_rec(i: int) -> Dictionary:
+	var ev: Dictionary = events[i]
+	for r in injuries:
+		if str(r.get("id", "")) == str(ev.get("player_id", "")) and int(r.get("min", -1)) == int(ev.get("min", -2)):
+			return r
+	return {}
+
+
+## Director seconds a man with this injury is down before he walks.
+## Whether a man hurt this way stays down until his trainers have reached him and seen to him.
+## A strain does not (real AFL broadcasts: he is back up within a few seconds and a trainer meets
+## him on his walk to the bench).
+static func waits_for_trainers(kind: String) -> bool:
+	return not kind in STRAINS
+
+
+## Injuries the match engine logs that are muscle strains (MatchSim's injury kinds).
+const STRAINS := ["hamstring", "calf", "quad", "groin", "hand"]
+
+
+static func down_s(kind: String) -> float:
+	return float(DOWN_S.get(kind, DOWN_DEFAULT))
+
+
+## Director seconds until the second of a hurt man's two trainers reaches him at `at`: they wait
+## where the 50-metre arcs meet the boundary (Oval3DCrewMotion.arc_spot, AFL Regulation
+## 12.2(g)(iv)), see him go down (TRAINER_REACT), and run (TRAINER_RUN).
+const TRAINER_REACT := 1.2
+const TRAINER_RUN := 6.0
+static var _arcs: Array = []
+static var _arcs_for := Vector2.ZERO
+
+
+static func trainers_eta(at: Vector2) -> float:
+	var field := Vector2(MatchMotion.HALF_LEN, MatchMotion.HALF_WID)
+	if _arcs.is_empty() or _arcs_for != field:
+		_arcs = []
+		for end in [-1.0, 1.0]:
+			for wing in [-1.0, 1.0]:
+				_arcs.append(Oval3DCrewMotion.arc_spot(end, wing))
+		_arcs_for = field
+	var ds := []
+	for a in _arcs:
+		ds.append((a as Vector2).distance_to(at))
+	ds.sort()
+	return TRAINER_REACT + float(ds[1]) / TRAINER_RUN
+
+
+static func walk_pace(kind: String) -> float:
+	return float(HURT_WALK.get(kind, HURT_WALK_DEFAULT))
+
+
+## A hurt man: down where he went down for down_s, then walking at his pace to the interchange
+## gate, where he waits for his replacement (_sub). Nothing else moves him.
+func _hurt_step(t: Dictionary, h: float) -> void:
+	var r: Dictionary = hurt[int(t["id"])]
+	t["vel"] = Vector2.ZERO
+	var e := time - float(r["t0"])
+	if e < PULL_UP:
+		# He was running: he pulls up (or goes down) over his next strides, never stops dead.
+		var v: Vector2 = (r.get("v0", Vector2.ZERO) as Vector2) * (1.0 - e / PULL_UP)
+		t["pos"] = MatchMotion.clamp_to_oval((t["pos"] as Vector2) + v * h, 1.0)
+		return
+	if e < float(r["down"]):
+		return
+	r["to"] = gate
+	var way: Vector2 = gate - (t["pos"] as Vector2)
+	var step := walk_pace(str(r["kind"])) * h
+	if way.length() <= step:
+		t["pos"] = gate
+		return
+	t["vel"] = way.normalized() * walk_pace(str(r["kind"]))
+	t["pos"] = (t["pos"] as Vector2) + way.normalized() * step
+
+
 func _sub(ev: Dictionary) -> void:
 	var side := int(ev.get("side", -1))
 	if side < 0 or side > 1:
@@ -3561,6 +3747,12 @@ func _sub(ev: Dictionary) -> void:
 	var id: int = ids[off]
 	ids.erase(off)
 	var t: Dictionary = tokens[id]
+	# A hurt man's replacement: the slot is his from here (the 3D oval walks the hurt man the
+	# rest of the way off).
+	if hurt.has(id):
+		hurt.erase(id)
+		t["vel"] = Vector2.ZERO
+		MatchMotion.set_goal(t, t["pos"], 0.5)
 	# The man coming off takes the bench place of the man coming on.
 	var sitting: Array = bench[side]
 	for b in range(sitting.size()):
@@ -3878,7 +4070,7 @@ func _refresh_structure() -> void:
 	for side in [_poss, 1 - _poss]:
 		var spots := {}
 		for t in tokens:
-			if int(t["side"]) == side and not _busy.has(int(t["id"])):
+			if int(t["side"]) == side and not _busy.has(int(t["id"])) and not hurt.has(int(t["id"])):
 				spots[int(t["id"])] = _structure_spot(t, ball_p, _poss)
 		_structure_limits(side, spots, ball_p, crash)
 		for id in spots:
@@ -4723,7 +4915,7 @@ func _pick_shadows(bp: Vector2) -> void:
 			continue
 		var cands := []
 		for t in tokens:
-			if int(t["side"]) == side and CONTEST_SHADOWS.has(str(t["slot"])):
+			if int(t["side"]) == side and CONTEST_SHADOWS.has(str(t["slot"])) and not hurt.has(int(t["id"])):
 				var dd := (t["pos"] as Vector2).distance_to(bp)
 				if (_shadow[side] as Array).has(int(t["id"])):
 					dd -= SHADOW_KEEP
@@ -5102,7 +5294,7 @@ func _nearest(at: Vector2, side: int, n: int, exclude: Array) -> Array:
 	var cands := []
 	for t in tokens:
 		var id := int(t["id"])
-		if int(t["side"]) == side and not exclude.has(id):
+		if int(t["side"]) == side and not exclude.has(id) and not hurt.has(id):
 			cands.append([(t["pos"] as Vector2).distance_squared_to(at), id])
 	cands.sort_custom(func(a, b): return a[0] < b[0])
 	var out := []

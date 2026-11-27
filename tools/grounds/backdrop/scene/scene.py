@@ -210,13 +210,20 @@ _pi = np.clip(((NE - _co[:, 1]) / (2 * NE) * _gn).astype(int), 0, _gn - 1); _pj 
 _isw = np.abs(_gimg[_pi, _pj] - _wc[None]).max(1) < 28
 _wmp = os.path.join(D, 'water_mask.npy')
 if os.path.exists(_wmp): _WM = np.load(_wmp); _isw = _WM[np.clip(_pi * _WM.shape[0] // _gn, 0, _WM.shape[0] - 1), np.clip(_pj * _WM.shape[1] // _gn, 0, _WM.shape[1] - 1)]
-_low = (~_isw) & (_co[:, 2] < ZSEA + 3.2)
-_co[_low, 2] = ZSEA + 3.2; _nm.vertices.foreach_set('co', _co.ravel()); _nm.update()
+# not on the model's own pad (prep.py pad_w): the lift fades in over the pad's bank, so the land round the stadium stays
+# at the turf (the WACA's pad sits 2 m over the river and was lifted 1.2 m over the arena's edge)
+_pwp = os.path.join(D, 'pad_w.npy')
+_pw = np.ones(len(_co))
+if os.path.exists(_pwp):
+    _PW = np.load(_pwp); _pw = _PW[np.clip(np.round((_co[:, 1] + NE) / NS).astype(int), 0, _PW.shape[0] - 1), np.clip(np.round((_co[:, 0] + NE) / NS).astype(int), 0, _PW.shape[1] - 1)]
+_lt = np.minimum(ZSEA + 3.2, _co[:, 2] + (ZSEA + 3.2 - _co[:, 2]) * _pw)
+_low = (~_isw) & (_co[:, 2] < _lt - 1e-4)
+_co[_low, 2] = _lt[_low]; _nm.vertices.foreach_set('co', _co.ravel()); _nm.update()
 print('near ground lifted over the water plane', int(_low.sum()))
 # everything laid on the ground after this (car parks, cars, roof plant, buildings) reads the lifted height, so it
 # stands on the ground the game draws and not under it
 _gi = np.clip(np.round((_co[_low, 0] + NE) / NS).astype(int), 0, near.shape[1] - 1); _gj = np.clip(np.round((_co[_low, 1] + NE) / NS).astype(int), 0, near.shape[0] - 1)
-near[_gj, _gi] = np.maximum(near[_gj, _gi], ZSEA + 3.2)
+near[_gj, _gi] = np.maximum(near[_gj, _gi], _lt[_low])
 d = np.hypot(VF[:, 0], VF[:, 1])
 hz = (1 - np.exp(-d / spec.get('haze_m', 22000)))[:, None] * 0.85
 if _S2ON: hz = hz * 0   # real colours: the game's own day haze does the distance (Oval3DTurf), not a second one baked in

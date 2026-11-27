@@ -147,6 +147,17 @@ var lead_s := LEAD_S          # s ahead the aim leads the ball (a tool may try o
 ## feet (MatchDirector.TAKE_UP), then back to the main camera. A tackle that spills the ball
 ## free stays on the main camera: real TV does not cut away from live play.
 var incident_cuts := true
+## A man down hurt (Oval3DInjury): at the first dead ball after he goes down (a stoppage, a free
+## or mark being taken), and again at the first after he starts walking off, the picture cuts to
+## the nearest clear wing camera, INJURY_WIDTH across on him and his trainers, for INJURY_HOLD
+## director seconds, as AFL TV shows the hurt man while play waits. Live play is never cut away
+## from for him.
+const INJURY_WIDTH := 9.0
+const INJURY_HOLD := 4.0
+var _hurt := {}               # {pid, t0}: the hurt man the picture is on; {} none
+var _hurt_seen := {}          # "pid|down" / "pid|walk" shown already
+var _hurt_eye := Vector3.ZERO
+var _hurt_trail: Array = []
 var _inc := {}                # {who, victim, t0}: the tackle the picture is on; {} none
 var _inc_eye := Vector3.ZERO
 var _inc_trail: Array = []
@@ -189,11 +200,16 @@ func frame(dt: float, wall := 0.0) -> void:
 		return
 	_set_close()
 	_set_incident()
-	if _close_who >= 0 or shot == "goals" or not _inc.is_empty():
+	_set_hurt()
+	var hurt_shot := not _hurt.is_empty() and shot == "main" and _inc.is_empty()
+	if _close_who >= 0 or shot == "goals" or not _inc.is_empty() or hurt_shot:
 		# Off the main camera, its operator sets his zoom for when the picture comes back.
 		tv_width = want_tv
 		_tv_vel = 0.0
-	if _close_who >= 0:
+	if hurt_shot:
+		var h := oval.injury.hips(oval.injury._scene_of_pid(str(_hurt["pid"])))
+		_shoot(_hurt_eye, _smooth(_hurt_trail, Vector3(h.x, 0.5, h.z), CLOSE_SMOOTH), INJURY_WIDTH)
+	elif _close_who >= 0:
 		var gp := ((oval.players[_close_who] as Dictionary)["node"] as Node3D).global_position
 		_shoot(_close_eye, _smooth(_close_trail, Vector3(gp.x, CLOSE_AIM_Y, gp.z), CLOSE_SMOOTH), CLOSE_WIDTH)
 	elif not _inc.is_empty() and shot == "main":
@@ -374,6 +390,30 @@ func _set_incident() -> void:
 	_inc_trail.clear()
 
 
+## The hurt man the picture cuts to (INJURY_HOLD), at a dead ball only.
+func _set_hurt() -> void:
+	var d = oval.director
+	if oval.injury == null:
+		return
+	if not _hurt.is_empty():
+		if d.time - float(_hurt["t0"]) < INJURY_HOLD and not oval.injury._scene_of_pid(str(_hurt["pid"])).is_empty():
+			return
+		_hurt = {}
+	var dead: bool = not d.stoppage_now().is_empty() or not d.free_now().is_empty() \
+			or str(d.ball.get("mode", "")) == "dead"
+	if not dead or shot != "main" or _close_who >= 0:
+		return
+	for sc in oval.injury.scenes:
+		var key := "%s|%s" % [sc["pid"], "walk" if str(sc["stage"]) == "walk" else "down"]
+		if _hurt_seen.has(key):
+			continue
+		_hurt_seen[key] = true
+		_hurt = {"pid": str(sc["pid"]), "t0": d.time}
+		_hurt_eye = _clear_eye_at(oval.injury.hips(sc), -1)
+		_hurt_trail.clear()
+		return
+
+
 ## Both men are in the same tackle clip, drawn where the director has them (a tackle the
 ## clip had to carry its tackler far to reach is not one to look at close).
 func _paired(who: int, victim: int) -> bool:
@@ -387,7 +427,10 @@ func _paired(who: int, victim: int) -> bool:
 ## The first wing camera (the centre one, then the nearer 50 m one, then the other) with a clear
 ## line to `who`: nobody else nearer that line than CLEAR between the lens and him.
 func _clear_eye(who: int) -> Vector3:
-	var at: Vector3 = ((oval.players[who] as Dictionary)["node"] as Node3D).global_position
+	return _clear_eye_at(((oval.players[who] as Dictionary)["node"] as Node3D).global_position, who)
+
+
+func _clear_eye_at(at: Vector3, who: int) -> Vector3:
 	var a2 := Vector2(at.x, at.z)
 	var side := signf(at.x) if at.x != 0.0 else 1.0
 	var eyes := [main_eye(), main_eye() + Vector3(side * wing_50(), 0.0, 0.0),
@@ -444,13 +487,19 @@ func _record() -> void:
 		while not _rec.is_empty() and now - float(_rec[0]["t"]) > REPLAY_BEFORE + 0.2:
 			_rec.pop_front()
 	var men := []
-	for f in oval.players + oval.umpires:
+	for f in _figs():
 		var skel: Skeleton3D = (f as Dictionary)["skel"]
 		var rots := []
 		for b in range(skel.get_bone_count()):
 			rots.append(skel.get_bone_pose_rotation(b))
 		men.append([((f as Dictionary)["node"] as Node3D).transform, rots, skel.get_bone_pose_position(0)])
 	_rec.append({"t": now, "men": men, "ball": oval.ball.transform})
+
+
+## Every figure a replay redraws: the players, the umpires and the clubs' trainers and runners
+## (a trainer walking a hurt man off is with him in the replay, not walking on live without him).
+func _figs() -> Array:
+	return oval.players + oval.umpires + (oval.crew.crew if oval.crew != null else [])
 
 
 ## The ball has reached the goals: a goal's replay now; the deciding behind's after the siren.
@@ -588,7 +637,7 @@ func _play_replay(wall: float) -> void:
 	var r1: Dictionary = _replay[j + 1]
 	var span := float(r1["t"]) - float(r0["t"])
 	var u := clampf((_replay_t - float(r0["t"])) / span, 0.0, 1.0) if span > 0.0 else 0.0
-	var figs: Array = oval.players + oval.umpires
+	var figs: Array = _figs()
 	for i in range(mini(figs.size(), (r0["men"] as Array).size())):
 		var f: Dictionary = figs[i]
 		var m0: Array = r0["men"][i]

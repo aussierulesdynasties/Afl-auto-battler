@@ -3,6 +3,8 @@
 
 Each file holds the session's own handoff notes (copied verbatim below the line) and a note on where its work lives now. Big binaries that git cannot hold are in C:/Users/DANTE/Documents/AFL3D_archive/ on the PC.
 
+Current handoffs for a fresh account (2026-11-27): [GitHub, CI and repo health](../HANDOFF_github_ci.md) and [the relationship overhaul](../HANDOFF_relationship_overhaul.md).
+
 | File | Session |
 |---|---|
 | [stadium_lead.md](stadium_lead.md) | Resume stadium lead (row 202 2b grounds) |
