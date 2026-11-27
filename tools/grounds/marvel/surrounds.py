@@ -289,7 +289,7 @@ def paint(trees, ways):
     arr = np.asarray(im, float)
     shade = Image.new("L", (SIZE, SIZE), 0)
     sd = ImageDraw.Draw(shade)
-    for e, n, r in trees:
+    for e, n, r, *_ in trees:
         x, y = px(e, n)
         sd.ellipse((x - r, y - r, x + r, y + r), fill=150)
     shade = np.asarray(shade.filter(ImageFilter.GaussianBlur(2.5)), float) / 255
@@ -303,11 +303,66 @@ def paint(trees, ways):
     return Image.fromarray(np.clip(arr, 0, 255).astype(np.uint8), "RGB")
 
 
+# Round 16 (the person, 27 Nov: "theres too many trees there in our model"): the trees come from the City of Melbourne's
+# tree register (Trees, with species and dimensions (Urban Forest), CC BY 4.0): every council tree's real position, species
+# and trunk girth. Its 2019 canopy map shows our old crowns were not too few but too big and too even: every tree was drawn
+# 7-15 m tall with a 2-6 m crown, where Docklands' trees are mostly young (Harbour Esplanade's pines measure 17-32 cm
+# across the trunk, the photos show them slim and about deck high). Each tree is now sized from its trunk.
+COM_TREES_URL = ("https://data.melbourne.vic.gov.au/api/explore/v2.1/catalog/datasets/trees-with-species-and-dimensions-"
+                 "urban-forest/exports/json?where=within_distance(geolocation%2C%20geom%27POINT(144.9475565%20-37.8164953)"
+                 "%27%2C%201400m)")
+COM_TREES_CACHE = "/tmp/marvel_com_trees.json"
+# the conifers of Harbour Esplanade's rows, drawn one by one in landmarks.py (norfolk_pine)
+HARBOUR_CONIFERS = ("Norfolk Island Pine", "Hoop Pine", "Brown Pine")
+PALMS = ("Palm",)
+
+
+def council_trees():
+    """The register's trees round the stadium: (east, north, common name, trunk cm or None, age)."""
+    import json
+    import time
+    if not os.path.exists(COM_TREES_CACHE):
+        for k in range(5):     # the city's portal drops long exports now and then
+            try:
+                fetch(COM_TREES_URL, COM_TREES_CACHE)
+                break
+            except OSError:
+                time.sleep(10 * (k + 1))
+    out = []
+    for r in json.load(open(COM_TREES_CACHE)):
+        e, n = xy(float(r["latitude"]), float(r["longitude"]))
+        out.append((e, n, r.get("common_name") or "", r.get("diameter_breast_height"), r.get("age_description") or ""))
+    return out
+
+
+def tree_size(name, dbh, age):
+    """Height and crown radius (m) from the trunk's girth at chest height (cm); by age where the register has no girth."""
+    if dbh is None or dbh <= 0:
+        dbh = {"Unestablished": 5, "Juvenile": 10, "Semi-mature": 20, "Mature": 35}.get(age, 20)
+    h = float(np.clip(2.5 + 0.30 * dbh, 3.0, 24.0))
+    r = float(np.clip(0.8 + 0.075 * dbh, 0.9, 8.0))
+    if any(p in name for p in PALMS):
+        r = min(r, 2.0)
+    return h, r
+
+
+def is_harbour_conifer(e, n, name):
+    return in_harbour_pines(e, n) and name in HARBOUR_CONIFERS
+
+
 def all_trees(mapped, ways):
-    """Every mapped tree, plus trees scattered through the mapped woods (one per 90 m2) and scrub
-    (one per 260 m2): (east, north, shade radius)."""
+    """Every tree: the council's register, then the mapped trees and woods where the register has nothing within 25 m
+    (private land and land outside the city, which the register does not cover): (east, north, shade radius, height,
+    crown radius), height and crown None for a mapped tree (no size known)."""
+    from scipy.spatial import cKDTree
     rng = np.random.default_rng(11)
-    out = [(e, n, 4.5) for e, n in mapped]
+    com = council_trees()
+    out = []
+    for e, n, name, dbh, age in com:
+        h, r = tree_size(name, dbh, age)
+        out.append((e, n, r, h, r))
+    near = cKDTree(np.array([(e, n) for e, n, *_ in com]))
+    extra = [(e, n, 4.5, None, None) for e, n in mapped]
     for t, p in ways:
         dens = 90.0 if t.get("natural") == "wood" or t.get("landuse") == "forest" else \
             260.0 if t.get("natural") in ("scrub", "heath") else 0.0
@@ -321,27 +376,37 @@ def all_trees(mapped, ways):
                 break
             q = (rng.uniform(lo[0], hi[0]), rng.uniform(lo[1], hi[1]))
             if _inside(q, p):
-                out.append((q[0], q[1], 3.5))
+                extra.append((q[0], q[1], 3.5, None, None))
                 k -= 1
+    d, _ = near.query(np.array([(e, n) for e, n, *_ in extra]))
+    out += [t for t, dd in zip(extra, d) if dd > 25.0]
     return out
+
+
+def in_harbour_pines(e, n):
+    """Harbour Esplanade's street trees west of the stadium: Norfolk Island pines (the person's photos, 27 Nov, and
+    Wikimedia Commons' 2023 south-west views), drawn as pines in landmarks.py instead of round crowns."""
+    return -215.0 < e < -120.0 and -260.0 < n < 260.0
 
 
 def tree_list(trees, st):
     rng = np.random.default_rng(13)
     out = []
-    for e, n, _r in trees:
+    names = {(round(e, 2), round(n, 2)): name for e, n, name, *_ in council_trees()}
+    for e, n, _r, h, r in trees:
         x, z = model_xz(e, n)
         if (st and _inside((e, n), st)) or abs(x) > 950 or abs(z) > 950:
             continue
         if 115.0 < e < 165.0 and 0.0 < n < 100.0:
             # mapped along Wurundjeri Way under the east offices, but Google Earth (c_e, c_ne, ext_270) shows the strip bare
             continue
-        h = rng.uniform(7.0, 15.0)
-        r = h * rng.uniform(0.3, 0.4)
-        if -215.0 < e < -120.0 and -260.0 < n < 260.0:
-            # Harbour Esplanade's street trees: tall and slim (Google Earth ge_ferry_b, c_w)
-            h = rng.uniform(10.0, 13.0)
-            r = h * rng.uniform(0.17, 0.21)
+        if is_harbour_conifer(e, n, names.get((round(e, 2), round(n, 2)), "")):
+            # round 15: Harbour Esplanade's Norfolk Island pines are modelled one by one in landmarks.py (norfolk_pines)
+            continue
+        if h is None:
+            # a mapped tree off the register: a middling street tree
+            h = rng.uniform(6.0, 10.0)
+            r = h * rng.uniform(0.25, 0.33)
         out.append((x, z, h, r, rng.uniform(0.0, 1.0)))
     return np.array(out, "<f4")
 
@@ -512,7 +577,7 @@ def main():
     # (landmarks.py plaza_deck, south_podium, garden_block; outlines repeated here)
     deck = deck + [
         [(-14.0, -132.0), (-14.0, -152.0), (24.0, -154.0), (26.0, -161.0), (48.0, -160.0), (72.0, -158.0), (80.0, -165.0),
-         (86.0, -152.0), (100.0, -143.0), (112.0, -136.0), (110.0, -120.0), (100.0, -112.0)],
+         (86.0, -152.0), (100.0, -143.0), (112.0, -136.0), (110.0, -120.0), (114.9, -96.4), (96.1, -80.7), (92.0, -86.0), (100.0, -112.0)],
         [(-8.1, -146.4), (6.4, -146.6), (26.2, -145.4), (44.0, -144.6), (59.8, -142.4), (75.7, -137.9), (89.5, -131.9),
          (96.5, -127.4), (102.4, -122.0), (105.4, -116.7), (105.8, -111.1), (105.0, -101.2), (96.5, -94.3), (92.0, -86.0),
          (41.6, -108.0), (-9.1, -118.8)],
