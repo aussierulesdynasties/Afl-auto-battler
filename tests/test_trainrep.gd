@@ -361,7 +361,13 @@ func _test_taps(size: Vector2i) -> void:
 			var grid: Node = tr.find_child("PlayerLearn", true, false)
 			_check(grid != null, "%s: on his new-position choices" % tag)
 			var learn_b: Button = grid.find_child("PlayerLearn_" + GameState.LEARN_PREFIX + key0, false, false) as Button if grid != null else null
-			_check(learn_b != null and learn_b.text == "Learn " + word0, "%s: his \"Learn %s\" choice is there" % [tag, word0])
+			# On a PC the choices are a stat sheet (row 171): the words sit in the
+			# row's SheetWords line and the button itself has no text.
+			var shown_w := ""
+			if learn_b != null:
+				var sw := learn_b.find_child("SheetWords", true, false) as Label
+				shown_w = sw.text if sw != null else learn_b.text
+			_check(shown_w == "Learn " + word0, "%s: his \"Learn %s\" choice is there (reads \"%s\")" % [tag, word0, shown_w])
 			var cost: Control = tr.find_child("LearnCost", true, false)
 			_check(cost != null, "%s: what learning costs is said before the tap" % tag)
 			if learn_b != null:
