@@ -244,11 +244,11 @@ def sign_panels():
         # the west board's foot stands on its ledge (parts2.py SZ0 36.5) and it runs the full 7.08 m up to 43.58, over
         # the fascia (the photo: nothing between its top and the trusses); the east board 30.4-37.48 (same layout)
         img = board(np.array(SIGN[side + "_marvel"], float), Hm)
-        top = 43.58   # the east faces are the west faces moved, with their UVs: the same roll
+        top = 42.48   # round 16b: each face now spans its texture once (parts2.py), so no roll
         sfx = "" if side == "w" else "_e"
-        # the seams: UV u starts at 2.5 m on both faces (parts2.py sign_red/sign_black), on a 13.5 m and a 19.9 m tile
-        face(img, 0.0, 13.5, 2048, 2048 - 1 - int(round((2.5 / 13.5) % 1.0 * 2048)), "sign_marvel" + sfx, top)
-        face(img, 13.5, 33.4, 3072, 3072 - 1 - int(round((2.5 / 19.9) % 1.0 * 3072)), "sign_stadium" + sfx, top)
+        # each face takes its texture once, clamped, the board's left end at u 1 (parts2.py, build2.py)
+        face(img, 0.0, 13.5, 2048, 0, "sign_marvel" + sfx, top)
+        face(img, 13.5, 33.4, 3072, 0, "sign_stadium" + sfx, top)
 
 
 # Grounds behind the letters, per board. East (sun on, ext_270): (88, 57, 60) rendered (131, 113, 113) against Google Earth's
