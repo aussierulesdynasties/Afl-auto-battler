@@ -287,12 +287,6 @@ var coach_standing := {}
 var club_standing := {}
 ## Player-to-player bonds: mates, rivals, mentors, leaders, family (Bonds.gd).
 var bonds := {}
-## Every promise's record and the senior coach's Respect and Authority
-## (Promises.gd). Saved; an old save fills them in on load.
-var coach_word := {}
-var coach_standing := {}
-## Every other club's senior coach's Respect and Authority, by club code.
-var club_standing := {}
 ## What the stories remember (StoryEngine.new_state): cooldowns, flags, arcs.
 var story := {}
 ## Off only in tests and audits that measure the game without the cards.
@@ -1029,9 +1023,6 @@ func _save_state() -> Dictionary:
 		"coach_standing": coach_standing,
 		"club_standing": club_standing,
 		"bonds": bonds,
-		"coach_word": coach_word,
-		"coach_standing": coach_standing,
-		"club_standing": club_standing,
 		"story": story,
 		"media_conference": media_conference,
 		"backing_talk": backing_talk,
@@ -1324,9 +1315,6 @@ func _restore_career(state: Dictionary) -> bool:
 	coach_standing = state.get("coach_standing", {}) if state.get("coach_standing") is Dictionary else {}
 	club_standing = state.get("club_standing", {}) if state.get("club_standing") is Dictionary else {}
 	bonds = Bonds.ensure(state.get("bonds", {}))
-	coach_word = state.get("coach_word", {}) if state.get("coach_word") is Dictionary else {}
-	coach_standing = state.get("coach_standing", {}) if state.get("coach_standing") is Dictionary else {}
-	club_standing = state.get("club_standing", {}) if state.get("club_standing") is Dictionary else {}
 	var raw_story: Variant = state.get("story", {})
 	var old_calendar := StoryEngine.is_old_calendar(raw_story)
 	if old_calendar:
@@ -1989,9 +1977,6 @@ func reset(next_dataset := Datasets.DEFAULT) -> void:
 	coach_standing = {}
 	club_standing = {}
 	bonds = {}
-	coach_word = {}
-	coach_standing = {}
-	club_standing = {}
 	story = StoryEngine.new_state()
 	media_conference = {}
 	match_stories = []

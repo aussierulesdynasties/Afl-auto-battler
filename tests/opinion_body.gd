@@ -267,7 +267,7 @@ func _test_card_moves() -> void:
 	var got := Opinion.card_move(rel, k, -10, "You called him out", 2027, "Round 2")
 	_check(got == -10 and Opinion.base(rel, k) == 0 and Opinion.live(rel, k) == -5.0,
 			"A card's trust move is a live mark: -5 points, permanent part untouched")
-	_check(int(Opinion.breakdown(rel, k)[0]["weeks"]) == 9, "It fades over 9 rounds")
+	_check(int(Opinion.breakdown(rel, k)[0]["weeks"]) == 10, "It fades over 10 rounds (-5 at 0.5 a round, gone under half a point)")
 	Opinion.card_move(rel, k, -10, "You called him out", 2027, "Round 3")
 	_check(Opinion.mods(rel, k).size() == 1, "The same card again renews its mark")
 	Opinion.card_move(rel, k, 6, "You backed him in the papers", 2027, "Round 3")
