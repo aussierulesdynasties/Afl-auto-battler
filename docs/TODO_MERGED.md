@@ -256,3 +256,4 @@ What has landed toward each open row of docs/TODO.md and docs/TODO_RULINGS.md, o
 - 202: Merged #2276: Marvel round 13: publish the ground files.
 - 202: Merged #2282: 3D 1.0 plan: Marvel round 13 published; round 14 under way.
 - 202: Merged #2283: Marvel round 14: south podium, walk-in sign, raised plaza, Bourke Street footbridge.
+- 202: Merged #2285: Pre-game shot per ground: the director's cameras for Adelaide and the MCG.
