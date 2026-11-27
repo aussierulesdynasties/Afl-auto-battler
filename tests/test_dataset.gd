@@ -70,7 +70,9 @@ const TEAM_BOOKKEEPING_PREFIXES := ["d50_end_"]
 ## The rating rebuild (2026-11-26) redrew it (new attributes, plan-fit anchors, the match
 ## retuned to the attributes), with main through #2231 on top. Windows from a local run of the merged branch, Linux from a local run
 ## after merging main at 058745e0 (opinion engine, free agency, bug bash E).
-const GOLDEN_SEASON := {"Windows": "b90943769bf51941c6c22231be295e9f", "Linux": "d040748e089ef2b505c3c2037af7a421"}
+## A centre bounce with no clean clearance going to one of the four at it (director, 2026-11-27)
+## redrew it again: Windows from a local run, Linux from run_on_github run 45966672511.
+const GOLDEN_SEASON := {"Windows": "2351361a2191d49194e4f7cb6126329e", "Linux": "2076436407db45837ebbcc2beeff67b5"}
 
 ## A small league standing in for a legacy set until the 1990 files ship:
 ## 42 real players re-dated to a 1989 data season, a 1990 first season, and
