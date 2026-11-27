@@ -29,8 +29,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: fault-scan-${{ github.ref }}
-  cancel-in-progress: true
+  group: fault-scan-${{ github.sha }}
+  cancel-in-progress: false
 
 env:
   GODOT_VERSION: "4.7.2"
@@ -61,7 +61,7 @@ jobs:
     timeout-minutes: 170
     strategy:
       fail-fast: false
-      max-parallel: 6
+      max-parallel: 9
       matrix:
         ground: ${{ fromJSON(needs.plan.outputs.grounds) }}
     env:

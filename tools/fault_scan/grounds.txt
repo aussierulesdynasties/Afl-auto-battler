@@ -1,3 +1,10 @@
 # Grounds the fault scan runs on a push (tools/fault_scan/README.md)
-marvel
-gabba
+mcg
+optus
+gmhba
+adelaide
+people_first
+engie
+macpoint
+scg
+manuka
