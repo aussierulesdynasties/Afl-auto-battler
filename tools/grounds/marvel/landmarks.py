@@ -1586,59 +1586,20 @@ def tree(g, c, z, h, r):
 
 
 def graffiti(name, px=24):
-    """The concrete wall along Wurundjeri Way (Google Earth c_e, c_ne; PC zoom_wall of round 11): pale grey precast
-    panels with separate painted pieces and bare stretches between them, not an even confetti. A piece is either
-    big bubble lettering (blue or white fill, dark outline), a cluster of dark tags, or a smaller coloured throw-up.
-    48 m by 4 m a tile, so the pieces do not repeat often."""
-    from PIL import ImageDraw, ImageFont, ImageFilter
+    """The concrete wall along Wurundjeri Way: pale grey precast panels 2.4 m wide under a coping, dirt at the foot.
+    Round 16 (the person, 28 Nov: "remove the graffiti and random posters, its ai slop"): nothing painted on it (the
+    name is kept so the wall's material and the pinned files stay the same)."""
     W, H = 48 * px, 4 * px
     rng = np.random.default_rng(48)
     base = np.zeros((H, W, 3), float) + (196, 194, 186) + rng.normal(0, 3.5, (H, W, 3))
     x = (np.arange(W) + 0.5) / px
     base[:, (x % 2.4) < 0.03] *= 0.82                     # precast panel joints
+    base[:, (x % 2.4) > 2.37] *= 0.94                     # a faint lip at each joint
     base[: int(0.25 * px)] *= 0.93                        # the coping's shadow line
     base[int(H * 0.9):] *= 0.9                            # dirt at the foot
-    im = Image.fromarray(np.clip(base, 0, 255).astype(np.uint8), "RGB")
-    d = ImageDraw.Draw(im)
-    font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", int(2.2 * px))
-    letters = "ABCDEKMORSTWZ"
-    pos = 1.0
-    while pos < 46.0:
-        # round 12 self-check against Google Earth offices_ne / c_e: most of the wall is painted, the bare stretches short
-        # round 13 (PC check of round 12: "poster boards"): continuous painting, no boards and no bare gaps
-        kind = rng.choice(["piece", "piece", "tags", "throw"])
-        span = float(rng.uniform(2.5, 6.5))
-        if kind == "bare":
-            pos += span
-            continue
-        x0, y0 = int(pos * px), int(rng.uniform(0.6, 1.4) * px)
-        if kind == "piece":
-            fill = [(96, 132, 196), (240, 240, 242), (120, 170, 220), (236, 170, 200)][rng.integers(4)]
-            # each piece on its own painted ground, as Google Earth's read as coloured blocks from the road
-            bg = [(70, 110, 180), (130, 170, 214), (60, 70, 96), (210, 150, 190), (230, 230, 232)][rng.integers(5)]
-            # its painted ground as overlapping splashes, not a board
-            for _ in range(int(span * 4) + 4):
-                ex, ey = x0 + rng.uniform(-0.3, span) * px, rng.uniform(0.4, 3.4) * px
-                rx, ry = rng.uniform(0.8, 1.6) * px, rng.uniform(0.6, 1.2) * px
-                d.ellipse((ex - rx, ey - ry, ex + rx, ey + ry), fill=bg)
-            word = "".join(rng.choice(list(letters), int(span / 1.3)))
-            for k, ch in enumerate(word):
-                cx = x0 + int(k * 1.25 * px)
-                d.text((cx, y0), ch, font=font, fill=(34, 36, 46), stroke_width=int(0.12 * px), stroke_fill=(34, 36, 46))
-                d.text((cx, y0), ch, font=font, fill=fill)
-        elif kind == "throw":
-            fill = [(214, 150, 176), (220, 204, 120), (150, 196, 170), (236, 236, 232)][rng.integers(4)]
-            for k in range(int(span / 1.6)):
-                cx, cy = x0 + int(k * 1.5 * px), y0 + int(0.4 * px)
-                d.ellipse((cx, cy, cx + int(1.3 * px), cy + int(1.4 * px)), fill=fill, outline=(40, 40, 46), width=int(0.08 * px))
-        else:   # dark tags: thin scribbled strokes
-            for _ in range(int(span * 3)):
-                cx, cy = x0 + rng.uniform(0, span * px), y0 + rng.uniform(0, 1.6 * px)
-                pts = [(cx + rng.uniform(-0.4, 0.4) * px, cy + rng.uniform(-0.3, 0.3) * px) for _ in range(5)]
-                d.line(pts, fill=(38, 38, 44), width=max(2, int(0.06 * px)))
-        pos += span + float(rng.uniform(0.0, 0.4))
-    im = im.filter(ImageFilter.GaussianBlur(0.6))
-    _save(name, np.asarray(im, float))
+    base += np.asarray(Image.fromarray((rng.random((8, 96)) * 255).astype(np.uint8)).resize((W, H), Image.BICUBIC),
+                       float)[..., None] / 255 * 10 - 5   # soft weathering
+    _save(name, base)
 
 
 def ivy(name, px=24):
@@ -1854,31 +1815,26 @@ POD_Z = (15.0, 15.6, 23.0, 23.5)   # soffit, glass from, glass to (white band ab
 
 
 def sign_board(name, word, ground, w_m, h_m, letter_h, ppm=80):
-    """A lettered board in the stadium's own style (retint.py): white, heavy, condensed italic capitals on red or
-    black, square pixels, centred; read the right way round from in front (no mirroring: the landmarks' frame is
-    not the stadium's mirrored one)."""
-    from PIL import ImageDraw, ImageFont
-    f = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 400)
+    """A lettered board in the stadium's own lettering: round 16 (the person: "no italics no slim letters", "lazy"),
+    the letters are the venue's logo's (fonts/marvel_stadium_logo.png, as retint.sign_panels), white, upright, at the
+    logo's own proportions, centred on red or black; read the right way round from in front (no mirroring: the
+    landmarks' frame is not the stadium's mirrored one)."""
+    logo = np.asarray(Image.open(os.path.join(HERE, "fonts", "marvel_stadium_logo.png")).convert("RGBA"), float)
+    rgb, al = logo[..., :3], logo[..., 3] / 255.0
+    if word == "MARVEL":
+        mask = ((al > 0.5) & (rgb.min(2) > 200))[36:379, 484:1437]
+    else:
+        mask = ((al > 0.5) & (rgb.max(2) < 80))[479:896, 0:1920]
     W_, H_ = int(w_m * ppm), int(h_m * ppm)
-    big = Image.new("L", (3600, 600), 0)
-    d = ImageDraw.Draw(big)
-    tb = d.textbbox((0, 0), word, font=f)
-    d.text((40 - tb[0], 60 - tb[1]), word, font=f, fill=255)
-    let0 = big.crop(big.getbbox())
-    sh, room = 0.18, w_m - 1.2
-    for cond in np.arange(0.46, 0.30, -0.01):
-        lw, lh = let0.size
-        let = let0.resize((int(lw * cond), lh), Image.LANCZOS)
-        lw, lh = let.size
-        let = let.transform((lw + int(sh * lh), lh), Image.AFFINE, (1, sh, -sh * lh, 0, 1, 0), Image.BICUBIC)
-        lw, lh = let.size
-        if letter_h * lw / lh <= room:
-            break
-    pw, ph = int(letter_h * lw / lh * ppm), int(letter_h * ppm)
-    let = let.resize((pw, ph), Image.LANCZOS)
+    lw_m = letter_h * mask.shape[1] / mask.shape[0]
+    if lw_m > w_m - 1.2:
+        letter_h *= (w_m - 1.2) / lw_m
+        lw_m = w_m - 1.2
+    pw, ph = int(lw_m * ppm), int(letter_h * ppm)
+    let = np.asarray(Image.fromarray((mask * 255).astype(np.uint8)).resize((pw, ph), Image.LANCZOS), float) / 255.0
     m = np.zeros((H_, W_), float)
     x0, y0 = (W_ - pw) // 2, (H_ - ph) // 2
-    m[y0:y0 + ph, x0:x0 + pw] = np.asarray(let, float) / 255.0
+    m[y0:y0 + ph, x0:x0 + pw] = let
     img = np.zeros((H_, W_, 3)) + np.array(ground, float)
     img += np.random.default_rng(5).normal(0, 1.5, (H_, W_, 1))
     img = img * (1 - m[..., None]) + np.array((250, 250, 248)) * m[..., None]
@@ -2344,44 +2300,6 @@ def _g9face(g, mat, s0, s1, d, z0, z1, uv=None):
            uv or [(0.0, z0), (s1 - s0, z0), (s1 - s0, z1), (0.0, z1)])
 
 
-def _text_tex(name, lines, ground, fg, w_m, h_m, ppm=100, size=0.8, box=None):
-    from PIL import ImageDraw, ImageFont
-    W_, H_ = int(w_m * ppm), int(h_m * ppm)
-    im = Image.new("RGB", (W_, H_), tuple(int(c) for c in ground))
-    d = ImageDraw.Draw(im)
-    if box:
-        d.rectangle([int(box[0] * W_), int(box[1] * H_), int(box[2] * W_), int(box[3] * H_)], outline=fg, width=3)
-    for txt, cy, hf, bold in lines:
-        f = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans%s.ttf" % ("-Bold" if bold else ""),
-                               max(8, int(hf * H_)))
-        tb = d.textbbox((0, 0), txt, font=f)
-        tw = tb[2] - tb[0]
-        if tw > W_ * 0.94:
-            f = ImageFont.truetype(f.path, max(8, int(hf * H_ * W_ * 0.94 / tw)))
-            tb = d.textbbox((0, 0), txt, font=f)
-        d.text(((W_ - (tb[2] - tb[0])) / 2 - tb[0], cy * H_ - (tb[3] + tb[1]) / 2), txt, font=f, fill=fg)
-    a = np.asarray(im, float) + np.random.default_rng(9).normal(0, 1.5, (H_, W_, 1))
-    _save(name, a)
-    TILE[name] = (w_m, h_m)
-
-
-def _tri_tex(name, ground, line, w_m, h_m, ppm=60, n=5, seed=3, alpha=1.0):
-    """A white triangulated graphic: lines joining points scattered on the panel's edges (photos a and b)."""
-    from PIL import ImageDraw
-    W_, H_ = int(w_m * ppm), int(h_m * ppm)
-    im = Image.new("RGB", (W_, H_), tuple(int(c) for c in ground))
-    d = ImageDraw.Draw(im)
-    r = np.random.default_rng(seed)
-    pts = [(r.uniform(0, W_), 0) for _ in range(n)] + [(r.uniform(0, W_), H_) for _ in range(n)] + \
-          [(0, r.uniform(0, H_)) for _ in range(2)] + [(W_, r.uniform(0, H_)) for _ in range(2)]
-    for i in range(len(pts)):
-        for j in r.choice(len(pts), 2, replace=False):
-            if j != i:
-                d.line([pts[i], pts[j]], fill=tuple(int(c) for c in line), width=max(2, int(0.06 * ppm)))
-    _save(name, np.asarray(im, float))
-    TILE[name] = (w_m, h_m)
-
-
 def gate9_textures():
     panels("g9_navy", (58, 66, 96), (40, 46, 70), w=3.0, h=2.4, noise=3.0)
     TILE["g9_navy"] = (12.0, 9.6)
@@ -2405,11 +2323,15 @@ def gate9_textures():
     img += np.random.default_rng(4).normal(0, 6, (n, 1, 1)) * 0 + np.random.default_rng(4).normal(0, 5, (1, n, 1))
     _save("g9_timber", img)
     TILE["g9_timber"] = (1.0, 1.0)
-    _text_tex("g9_fascia", [("MEDALLION CLUB and CORPORATE ENTRY", 0.5, 0.42, True)], (92, 52, 132), (245, 245, 245), 7.7, 0.55)
-    _text_tex("g9_sign", [("Gate", 0.22, 0.17, True), ("9", 0.62, 0.62, True)], (40, 50, 104), (245, 245, 245), 1.4, 1.6,
-              box=(0.06, 0.05, 0.94, 0.95))
-    _tri_tex("g9_vest_glass", (34, 40, 58), (150, 120, 196), 7.5, 2.55)
-    _tri_tex("g9_booth", (176, 180, 186), (246, 246, 246), 3.0, 2.6, seed=8, n=4)
+    # round 16 (the person's rule, 28 Nov: no stock fonts, no made-up graphics; what can't be checked is left out): the
+    # fascia's and the box sign's lettering and the glass's and booth's triangle graphics can't be traced from the
+    # 2019 photos (too small) or checked as current, so they are plain: the fascia purple, the box navy, the glass dark
+    flat("g9_fascia", (92, 52, 132), noise=1.5)
+    flat("g9_sign", (40, 50, 104), noise=1.5)
+    flat("g9_vest_glass", (34, 40, 58), noise=1.5)
+    flat("g9_booth", (176, 180, 186), noise=2.0)
+    for n_ in ("g9_fascia", "g9_sign", "g9_vest_glass", "g9_booth"):
+        TILE[n_] = (4.0, 4.0)
 
 
 def gate9(g):
