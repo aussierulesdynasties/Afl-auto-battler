@@ -1473,11 +1473,13 @@ func ball_at(i: int) -> Vector3:
 		if left > fall:
 			return Vector3.INF if float(hands["w"]) <= 0.0 else hands["at"]
 		o["drop"] = hands["at"]
+		o["drop_base"] = xf.origin
 		o["drop_clock"] = _clock
 		o["drop_span"] = maxf(left, 0.01)
 		o["drop_fall"] = o["drop_span"]   # the fall as first timed (measure_oval3d_moves)
 		o["drop_g"] = GRAVITY
 		o["drop_v0"] = ((to.y - (hands["at"] as Vector3).y) + 0.5 * GRAVITY * left * left) / maxf(left, 0.01)
+	_carry_drop(o, xf)
 	var from: Vector3 = o["drop"]
 	var span := float(o["drop_span"])
 	if _clock - float(o["drop_clock"]) >= span:
@@ -1489,6 +1491,19 @@ func ball_at(i: int) -> Vector3:
 	var g := float(o["drop_g"])
 	o["drop_to"] = to
 	return Vector3(lerpf(from.x, to.x, u), from.y + float(o["drop_v0"]) * tau - 0.5 * g * tau * tau, lerpf(from.z, to.z, u))
+
+
+## A dropped ball goes on with the man who let it go: its fall starts where his hand was on him,
+## and his figure is carried on to the contact (his run's spot is re-aimed every frame,
+## _track_move). Left where the hand was on the ground, it fell up to 1.5 m behind his hips as he
+## ran on to it (seed 42, held ball after the ends change).
+func _carry_drop(o: Dictionary, xf: Transform3D) -> void:
+	var base: Vector3 = o.get("drop_base", xf.origin)
+	var moved := Vector3(xf.origin.x - base.x, 0.0, xf.origin.z - base.z)
+	o["drop"] = (o["drop"] as Vector3) + moved
+	if o.has("drop_to"):
+		o["drop_to"] = (o["drop_to"] as Vector3) + moved
+	o["drop_base"] = xf.origin
 
 
 ## A falling kick's ball now: [where it is, how fast it is falling (m/s, up +)].
@@ -1581,6 +1596,7 @@ func _arrive(i: int, o: Dictionary) -> void:
 	if o.has("drop") and to_go > 0.0:
 		# The ball is already falling to his boot: the clip hurries to the contact and the fall
 		# is re-timed to meet it from where the ball is now, never slower than gravity.
+		_carry_drop(o, (players[i]["node"] as Node3D).transform)
 		var now := _drop_now(o)
 		var span := to_go / MOVE_RATE_MAX
 		var to: Vector3 = (players[i]["node"] as Node3D).transform * ((_moments[str(o["anim"])] as Dictionary)["at"] as Vector3)
