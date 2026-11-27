@@ -1204,7 +1204,8 @@ static func _effect_parts(e: Dictionary, facts: Dictionary) -> Array:
 					["cost", "Locked in at {early_price} a season, whatever he does next. That is %s over his worth today." % _pct(EARLY_PREMIUM_PCT)]]
 			# Under 50 he may refuse (director 2026-11-08): the odds before you ask.
 			if str(facts.get("refuse_line", "")) != "":
-				extend.append(["cost", "{refuse_line} If he refuses, he goes to free agency when the season ends."])
+				extend.append(["cost", "{refuse_line} If he refuses, %s when the season ends." % (
+						"he goes to free agency" if EraRules.on("free_agency") else "he is delisted")])
 			return extend
 		"new_club_keep":
 			var keep := [["gain", NEW_CLUB_KEEP_GAIN], ["cost", NEW_CLUB_KEEP_COST

@@ -42,7 +42,7 @@ func _run() -> void:
 	state.autosave_enabled = false
 	state.save_path = "user://capture_matchstats.save"
 	state.settings_path = "user://capture_matchstats.cfg"
-	load("res://scripts/ui/UiKit.gd").apply_appearance("dark")
+	load("res://scripts/ui/UiKit.gd").apply_palette()
 	# The scene is drawn in its own viewport of exactly the size asked for, whatever
 	# this machine's screen and scaling.
 	_vp = SubViewport.new()

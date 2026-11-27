@@ -133,7 +133,8 @@ const PHONE_REF_W := 480.0
 static var web_ratio_test := 0.0
 
 
-## The browser's devicePixelRatio (the page caps it at 2, export_presets.cfg).
+## The browser's devicePixelRatio (the page caps it at 3 with a mouse, 2 on a touch screen:
+## export_presets.cfg).
 func _web_ratio() -> float:
 	if web_ratio_test > 0.0:
 		return web_ratio_test

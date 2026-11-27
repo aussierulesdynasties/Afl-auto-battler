@@ -92,6 +92,11 @@ func _run() -> void:
 	await _t("_test_old_key_moments_setting")
 	for sz in [Vector2i(390, 844), Vector2i(1280, 720)]:
 		await _t("_test_event_card_then_the_week", [sz])
+	# A PC (UI batch 5): the preview, the press conference and the interview.
+	for sz in [Vector2i(1280, 720), Vector2i(960, 540)]:
+		await _t("_test_preview_pc", [sz])
+		await _t("_test_press_pc", [sz])
+		await _t("_test_interview_pc", [sz])
 	_t("_test_appearance")
 	# Battery: nothing is redrawn unless it changes, and never above 60 fps.
 	_t("_test_battery")
@@ -4860,3 +4865,184 @@ func _test_pc_oval_left(sz: Vector2i) -> void:
 	m.queue_free()
 	_state.pending_sim = null
 	await _settle()
+
+
+## A PC's match preview (UI batch 5, the director's board B): the four lines in a
+## band across the top, each line against the same line (director, 2026-11-27:
+## "compare def to def and fwd to fwd, its about lines strength not matchup"),
+## the rest under them, Continue sized to its word at the right, and nothing
+## scrolls. A real tap on Continue goes on to the match-day setup.
+func _test_preview_pc(sz: Vector2i) -> void:
+	_state.set_vignettes_on(false)
+	_state.set_match_way("watch")
+	var db = root.get_node("GameDB")
+	var router = root.get_node("Router")
+	_state.reset()
+	_state.replay_seed = SUITE_SEED
+	_state.start_season("COL", db.club_list("COL"))
+	_state.set_setting("seen_weekly_loop_intro", true)
+	_state.tutorials = false
+	var size_before := root.size
+	root.size = sz
+	var tag := "%dx%d" % [sz.x, sz.y]
+	router.stack = []
+	router.go("hub")
+	await _settle()
+	var play: Button = current_scene.find_child("PlayMatch", true, false) if current_scene != null else null
+	var why: String = await Tap.tap(play) if play != null else "no Play match"
+	await _settle()
+	var pv: Node = current_scene
+	_check(why == "" and pv != null and pv.name == "MatchPreviewScene",
+			"PC %s: a real tap on Play match opens the preview (%s)" % [tag, why])
+	if pv == null or pv.name != "MatchPreviewScene":
+		root.size = size_before
+		return
+	var lines: Control = pv.find_child("HeadToHead", true, false)
+	var labels: Array = []
+	for key in ["midfield", "ruck", "attack", "defence"]:
+		var col: Control = lines.find_child("H2H_" + key, false, false) if lines != null else null
+		labels.append((col.get_child(0) as Label).text if col != null and col.get_child(0) is Label else "-")
+	_check(lines is HBoxContainer and labels == ["Midfield", "Ruck", "Forwards", "Defence"],
+			"PC %s: the four lines run across the top, each against the same line (%s)" % [tag, labels])
+	var scroll: ScrollContainer = pv.find_child("PreviewScroll", true, false)
+	var page_h: float = (scroll.get_child(0) as Control).get_combined_minimum_size().y if scroll != null else INF
+	_check(scroll != null and page_h <= scroll.size.y + 0.5,
+			"PC %s: the preview fits the window, nothing scrolls (%.0f in %.0f)" % [tag, page_h, scroll.size.y if scroll != null else 0.0])
+	var cont: Button = pv.find_child("PreviewContinue", true, false)
+	var view := Rect2(Vector2.ZERO, Vector2(root.size))
+	var at: Rect2 = cont.get_global_rect() if cont != null else Rect2()
+	_check(cont != null and at.size.x < 300.0 and view.encloses(at) and at.end.x > view.size.x * 0.9,
+			"PC %s: Continue is sized to its word, at the right and on screen (%s)" % [tag, str(at)])
+	why = await Tap.tap(cont) if cont != null else "missing"
+	await _settle()
+	var ms: Node = current_scene
+	_check(why == "" and ms != null and ms.name == "MatchScene" and _state.match_day_setup_open(),
+			"PC %s: a real tap on Continue opens the match-day setup (%s)" % [tag, why])
+	if ms != null and ms.name == "MatchScene":
+		ms.queue_free()
+	_state.pending_sim = null
+	_state.pending_match = {}
+	await _settle()
+	root.size = size_before
+
+
+## A PC's press conference (UI batch 5, the director's board B): the room a band
+## across the top, the question under it, the four answers two by two with their
+## effects, where and when at the right of the journalist's line, Skip sized to
+## its word, all on screen and nothing scrolling. A real tap on an answer lands
+## it; its Continue is sized to its word and a real tap on it returns to the hub.
+func _test_press_pc(sz: Vector2i) -> void:
+	var MC = load("res://scripts/sim/MediaConference.gd")
+	var db = root.get_node("GameDB")
+	var router = root.get_node("Router")
+	_state.reset()
+	_state.replay_seed = SUITE_SEED
+	_state.start_season("COL", db.club_list("COL"))
+	_state.set_setting("seen_weekly_loop_intro", true)
+	_state.tutorials = false
+	_state.set_vignettes_on(true)
+	var size_before := root.size
+	root.size = sz
+	var tag := "%dx%d" % [sz.x, sz.y]
+	var named: Dictionary = _state.my_list[3]
+	_state.media_conference = MC.pick({"club": "COL", "opponent_name": "Carlton", "round": 8, "year": _state.season_year,
+			"result": {"home": "COL", "away": "CAR", "score": [55, 101]},
+			"named": {"heavy_loss": {"id": str(named["id"]), "name": str(db.player_display_name(named))}}}, {})
+	_state.media_conference["opp"] = "Carlton"
+	router.stack = []
+	router.go("hub")
+	await _settle()
+	await _settle()
+	var press: Node = current_scene
+	_check(press != null and press.name == "PressScene", "PC %s: the press conference opens" % tag)
+	if press == null or press.name != "PressScene":
+		_state.set_vignettes_on(false)
+		_state.media_conference = {}
+		root.size = size_before
+		return
+	# The coach sits, then the question shows (MediaConferenceVignette.SIT_END, 1.45 s).
+	for f in range(120):
+		await process_frame
+	var view := Rect2(Vector2.ZERO, Vector2(root.size))
+	var stage: Control = press.find_child("MediaConferenceStage", true, false)
+	var room: Control = press.find_child("MediaConferenceRoom", true, false)
+	_check(stage != null and room != null and stage.size.x >= view.size.x * 0.9 and stage.size.y >= 100.0
+			and view.encloses(room.get_global_rect().grow(-0.5)),
+			"PC %s: the room is a band across the window, framed inside it (%s, %s)" % [tag,
+			str(stage.get_global_rect()) if stage != null else "-", str(room.get_global_rect()) if room != null else "-"])
+	var grid: GridContainer = press.find_child("MediaAnswerGrid", true, false)
+	var answers: Array = []
+	for i in range(4):
+		var a: Button = press.find_child("MediaAnswer_%d" % i, true, false)
+		if a != null and a.is_visible_in_tree() and view.encloses(a.get_global_rect()):
+			answers.append(a)
+	_check(grid != null and grid.columns == 2 and answers.size() == 4
+			and is_equal_approx(answers[0].get_global_rect().position.y, answers[1].get_global_rect().position.y)
+			and answers[2].get_global_rect().position.y > answers[0].get_global_rect().end.y,
+			"PC %s: the four answers sit two by two, on screen (%d)" % [tag, answers.size()])
+	var where: Control = press.find_child("MediaWhere", true, false)
+	var byline: Control = press.find_child("MediaByline", true, false)
+	_check(where != null and byline != null and where.get_parent() == byline.get_parent()
+			and where.get_global_rect().position.x > byline.get_global_rect().position.x,
+			"PC %s: where and when sit at the right of the journalist's line" % tag)
+	var skip: Button = press.find_child("MediaSkip", true, false)
+	_check(skip != null and skip.size.x < 300.0 and view.encloses(skip.get_global_rect()),
+			"PC %s: Skip is sized to its word and on screen (%s)" % [tag, str(skip.size) if skip != null else "-"])
+	var column: Control = press.find_child("MediaAnswers", true, false)
+	var sheet: ScrollContainer = column.get_parent() as ScrollContainer if column != null else null
+	_check(sheet != null and column.get_combined_minimum_size().y <= sheet.size.y + 0.5,
+			"PC %s: the question and answers fit, nothing scrolls (%.0f in %.0f)" % [tag,
+			column.get_combined_minimum_size().y if column != null else 0.0, sheet.size.y if sheet != null else 0.0])
+	var why: String = await Tap.tap(answers[0]) if answers.size() == 4 else "missing"
+	await _settle()
+	var head: Control = press.find_child("MediaOutcomeLine", true, false)
+	var done: Button = press.find_child("MediaOutcomeDone", true, false)
+	_check(why == "" and head != null and head.is_visible_in_tree() and not _state.media_conference_pending(),
+			"PC %s: a real tap on an answer lands it (%s)" % [tag, why])
+	_check(done != null and done.size.x < 300.0 and view.encloses(done.get_global_rect())
+			and done.get_global_rect().end.x > view.size.x * 0.9,
+			"PC %s: Continue is sized to its word, at the right and on screen (%s)" % [tag, str(done.get_global_rect()) if done != null else "-"])
+	why = await Tap.tap(done) if done != null else "missing"
+	await _settle()
+	await _settle()
+	_check(why == "" and router.current() == "hub", "PC %s: a real tap on Continue returns to the hub (%s)" % [tag, why])
+	_state.set_vignettes_on(false)
+	_state.media_conference = {}
+	root.size = size_before
+
+
+## A PC's job interview (UI batch 5): "Face the press" is sized to its words at
+## the right, as Continue sits, and a real tap on it goes on to the questions.
+func _test_interview_pc(sz: Vector2i) -> void:
+	var db = root.get_node("GameDB")
+	_state.reset()
+	_state.replay_seed = SUITE_SEED
+	_state.start_season("COL", db.club_list("COL"))
+	_state.set_vignettes_on(false)
+	_state.interview_due = true
+	var size_before := root.size
+	root.size = sz
+	var tag := "%dx%d" % [sz.x, sz.y]
+	var iv: Control = load("res://scenes/InterviewScene.tscn").instantiate()
+	root.add_child(iv)
+	await _settle()
+	var view := Rect2(Vector2.ZERO, Vector2(root.size))
+	var field: LineEdit = iv.find_child("CoachName", true, false)
+	var go: Button = iv.find_child("InterviewStart", true, false)
+	var at: Rect2 = go.get_global_rect() if go != null else Rect2()
+	_check(field != null and go != null and at.size.x < 300.0 and view.encloses(at)
+			and at.end.x >= field.get_global_rect().end.x - 1.0,
+			"PC %s: Face the press is sized to its words, at the right (%s)" % [tag, str(at)])
+	if field != null:
+		field.text = "Pat Reid"
+		field.text_changed.emit(field.text)
+		await _settle()
+	var why: String = await Tap.tap(go) if go != null else "missing"
+	await _settle()
+	_check(why == "" and is_instance_valid(iv) and iv.find_child("InterviewStart", true, false) == null,
+			"PC %s: a real tap on Face the press goes on to the questions (%s)" % [tag, why])
+	if is_instance_valid(iv):
+		iv.queue_free()
+	_state.interview_due = false
+	await _settle()
+	root.size = size_before

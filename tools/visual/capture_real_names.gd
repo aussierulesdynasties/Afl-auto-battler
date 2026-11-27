@@ -36,7 +36,7 @@ func _run() -> void:
 	state.reset()
 	for key in load("res://scripts/ui/FirstVisitIntro.gd").TEXT:
 		state.set_setting("seen_%s_intro" % key, true)
-	load("res://scripts/ui/UiKit.gd").apply_appearance("dark")
+	load("res://scripts/ui/UiKit.gd").apply_palette()
 	# The canvas is the size a player's screen gives the game (capture_culture.gd),
 	# not this machine's own display scaling.
 	DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)

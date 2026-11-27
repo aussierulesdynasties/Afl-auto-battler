@@ -1,0 +1,7 @@
+# The ground models, seat files and baked textures live in a private repo (docs/GROUND_ASSETS.md):
+# tools/ground_assets.sh fetch copies the pinned ones in; publish adds or updates them. Only Godot's
+# .import settings for them are committed here.
+*
+!.gitignore
+!*/
+!*.import

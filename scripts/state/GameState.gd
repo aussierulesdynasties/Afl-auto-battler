@@ -279,6 +279,12 @@ var week_checks := {}
 ## id>": {"t", "log"}}. Missing means neutral. Saved; later phases add coaches,
 ## journalists, the board and club culture under their own keys, same shape.
 var relations := {}
+## Every promise's record and the senior coach's Respect and Authority
+## (Promises.gd). Saved; an old save fills them in on load.
+var coach_word := {}
+var coach_standing := {}
+## Every other club's senior coach's Respect and Authority, by club code.
+var club_standing := {}
 ## Player-to-player bonds: mates, rivals, mentors, leaders, family (Bonds.gd).
 var bonds := {}
 ## Every promise's record and the senior coach's Respect and Authority
@@ -345,7 +351,10 @@ var season_year := 2026:
 		EraRules.list_ahead = offseason_year != 0 and offseason_year == value
 ## Rolled once per career: decides each generated draft class's quality tier
 ## (Prospects.class_tier), so a reload never re-rolls a class.
-var career_seed := 0
+var career_seed := 0:
+	set(v):
+		career_seed = v
+		_career_seed_from_clock = false
 ## Season conditioning (Conditioning.gd): club code -> this season's record
 ## {"year", "changes": [[week, plan]], "offset"}. Missing = Steady.
 var conditioning := {}
@@ -460,7 +469,18 @@ var event_sheets := true
 ## A new draft or season is seeded from the clock, so no two careers play
 ## alike. Measurement tools set this so a career replays exactly: each of
 ## those seeds then comes from it and the year (_clock_seed). 0 in the game.
-var replay_seed := 0
+## Set after reset() (as most tests do) it also seeds the career reset() just
+## gave a clock seed, unless career_seed was set by hand since: with the clock
+## seed left in, the first career of a run played a different league every run
+## (test suite audit, 2026-11-26).
+var replay_seed := 0:
+	set(v):
+		replay_seed = v
+		if v != 0 and _career_seed_from_clock:
+			_career_seed_from_clock = false
+			career_seed = 1 + posmod(v * 7919 + 101, 999999)
+## True from a reset() with no replay_seed until career_seed is set any other way.
+var _career_seed_from_clock := false
 ## Set by small edits (training, draft picks) that save on the next screen
 ## change or when the app is backgrounded, rather than on every tap.
 var _dirty := false
@@ -471,7 +491,7 @@ func _ready() -> void:
 	PreSeason.data()   # its sizes are read once, before any scouting read needs one
 	var cfg := ConfigFile.new()
 	cfg.load(settings_path)
-	UiKit.apply_appearance(str(cfg.get_value("ui", "appearance", "dark")))
+	UiKit.apply_palette()
 	UiKit.apply_text_size(str(cfg.get_value("ui", "text_size", "standard")))
 	_carry_old_sound_levels(cfg)
 	_apply_sound_mute(bool(cfg.get_value("ui", "mute_sounds", false)))
@@ -532,22 +552,6 @@ func set_setting(key: String, value) -> void:
 	cfg.load(settings_path)
 	cfg.set_value("ui", key, value)
 	cfg.save(settings_path)
-
-
-func appearance() -> String:
-	var mode := str(get_setting("appearance", "dark"))
-	return mode if mode in ["dark", "light"] else "dark"
-
-
-## Change the shared UI palette. The caller rebuilds the current screen when
-## this returns true so no old-theme controls remain on screen.
-func set_appearance(mode: String) -> bool:
-	if mode != "dark" and mode != "light":
-		return false
-	var changed := appearance() != mode
-	set_setting("appearance", mode)
-	UiKit.apply_appearance(mode)
-	return changed
 
 
 ## Standard, Larger or Largest (row 118): an unknown saved value reads as
@@ -648,13 +652,18 @@ func set_confirm_sim_round(enabled: bool) -> void:
 
 ## Playtest aid (ARD-M8-007): the centre-bounce scene in every match you
 ## coach, at the first centre bounce of the last quarter whatever the score.
-## Off by default; it changes when the call comes, not the football.
+## It changes when the call comes, not the football. For tests and capture
+## tools only (its Options row went, director 2026-11-26): never saved, off at
+## every launch.
+var _bounce_every_match := false
+
+
 func bounce_scene_every_match() -> bool:
-	return bool(get_setting("bounce_scene_every_match", false))
+	return _bounce_every_match
 
 
 func set_bounce_scene_every_match(enabled: bool) -> void:
-	set_setting("bounce_scene_every_match", enabled)
+	_bounce_every_match = enabled
 
 
 ## Vignettes (ROADMAP §1.11): the match-day scenes - the run through the
@@ -1016,6 +1025,9 @@ func _save_state() -> Dictionary:
 		"week_events": week_events,
 		"week_checks": week_checks,
 		"relations": relations,
+		"coach_word": coach_word,
+		"coach_standing": coach_standing,
+		"club_standing": club_standing,
 		"bonds": bonds,
 		"coach_word": coach_word,
 		"coach_standing": coach_standing,
@@ -1114,6 +1126,13 @@ func _save_meta() -> Dictionary:
 	return {"club": club, "club_name": GameDB.club_name(club) if club != "" else "",
 			"year": season_year, "stage": stage,
 			"saved_at": Time.get_datetime_string_from_system()}
+
+
+## Where a loaded career opens: the hub, or the draft screen while there is no
+## hub to go back to yet (no season, a club yet to play, or the off-season
+## before the opening draft, row 199). Continue and Options both use it.
+func resume_screen() -> String:
+	return "hub" if season != null and not club_yet_to_play() and first_offseason != 1 else "draft"
 
 
 ## Replace the in-memory career with the saved one. Returns false (and leaves
@@ -1301,6 +1320,9 @@ func _restore_career(state: Dictionary) -> bool:
 	if not state.has("week_events"):
 		week_event = state.get("week_event", {})
 	relations = state.get("relations", {})
+	coach_word = state.get("coach_word", {}) if state.get("coach_word") is Dictionary else {}
+	coach_standing = state.get("coach_standing", {}) if state.get("coach_standing") is Dictionary else {}
+	club_standing = state.get("club_standing", {}) if state.get("club_standing") is Dictionary else {}
 	bonds = Bonds.ensure(state.get("bonds", {}))
 	coach_word = state.get("coach_word", {}) if state.get("coach_word") is Dictionary else {}
 	coach_standing = state.get("coach_standing", {}) if state.get("coach_standing") is Dictionary else {}
@@ -1963,6 +1985,9 @@ func reset(next_dataset := Datasets.DEFAULT) -> void:
 	week_events = []
 	week_checks = {}
 	relations = {}
+	coach_word = {}
+	coach_standing = {}
+	club_standing = {}
 	bonds = {}
 	coach_word = {}
 	coach_standing = {}
@@ -1989,6 +2014,7 @@ func reset(next_dataset := Datasets.DEFAULT) -> void:
 	# random one made the same league play out differently each run.
 	career_seed = randi_range(1, 999999) if replay_seed == 0 \
 			else 1 + posmod(replay_seed * 7919 + 101, 999999)
+	_career_seed_from_clock = replay_seed == 0
 	conditioning = {}
 	preseason = {}
 	plan_known = {}
@@ -9675,7 +9701,8 @@ func offer_contract(player_id: String, salary: int, years: int) -> Dictionary:
 	if talks.has("refused"):
 		return {"ok": false, "answer": "walk", "reason": Contracts.REFUSED_TALKS % int(talks["refused"])}
 	if bool(talks.get("walked", false)):
-		return {"ok": false, "answer": "walk", "reason": "Talks have broken down: he will test free agency."}
+		return {"ok": false, "answer": "walk", "reason": "Talks have broken down: he will test free agency."
+				if EraRules.on("free_agency") else "Talks have broken down: he will be delisted."}
 	years = clampi(years, 1, Contracts.MAX_YEARS)
 	salary = maxi(Contracts.senior_min(), salary)
 	if my_payroll() - int(p.get("salary", 0)) + salary > cap_for(my_club):
@@ -9684,7 +9711,7 @@ func offer_contract(player_id: String, salary: int, years: int) -> Dictionary:
 		return {"ok": false, "answer": "", "code": "held_room", "reason": HELD_ROOM_LINE}
 	# Under 50, he may refuse you whatever you offer (director 2026-11-08).
 	if resign_refused(p):
-		refuse_resign(p, Contracts.REFUSED_GOES)
+		refuse_resign(p, Contracts.refused_goes())
 		return {"ok": false, "answer": "walk", "reason": Contracts.REFUSED_TALKS % int(p["talks"]["refused"])}
 	var name := GameDB.player_display_name(p)
 	var snap := RecruitUndo.snapshot(self, player_id)
@@ -9706,7 +9733,8 @@ func offer_contract(player_id: String, salary: int, years: int) -> Dictionary:
 		"walk":
 			talks["walked"] = true
 			p["talks"] = talks
-			out["reason"] = "Talks have broken down: %s will test free agency." % name
+			out["reason"] = ("Talks have broken down: %s will test free agency." if EraRules.on("free_agency")
+					else "Talks have broken down: %s will be delisted.") % name
 	if bool(reply["insult"]):
 		ClubLife.add_morale(p, -Contracts.INSULT_MORALE)
 	if bool(out["ok"]):
@@ -10247,7 +10275,8 @@ func fa_market_stage(player_id: String) -> String:
 ## "reject" | "", "salary", "reason", "responses": [lines]}.
 func offer_free_agent(player_id: String, salary: int, years: int) -> Dictionary:
 	if not offseason_open():
-		return {"ok": false, "answer": "", "reason": "Free agency is only open in the off-season."}
+		return {"ok": false, "answer": "", "reason": "Free agency is only open in the off-season."
+				if EraRules.on("free_agency") else "Delisted players can only be signed in the off-season."}
 	var p := free_agent(player_id)
 	if p.is_empty():
 		return {"ok": false, "answer": "", "reason": "He has already signed elsewhere."}
@@ -12705,7 +12734,7 @@ func _close_free_agency() -> void:
 		var talks: Dictionary = p.get("talks", {})
 		var told := talks.has("refused")
 		if str(step[1]) == "release" and not bool(talks.get("walked", false)) and resign_refused(p):
-			refuse_resign(p, Contracts.REFUSED_GOES)
+			refuse_resign(p, Contracts.refused_goes())
 			told = true
 		match str(step[1]):
 			"resign1":
