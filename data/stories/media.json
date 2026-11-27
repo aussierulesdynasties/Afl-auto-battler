@@ -39,7 +39,8 @@
 					{
 						"op": "trust",
 						"d": -6,
-						"why": "You dropped him after the papers pushed"
+						"why": "You dropped him after the papers pushed",
+						"scar": true
 					}
 				],
 				"result": "{name} sits out this week."

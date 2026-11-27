@@ -44,7 +44,8 @@
 					{
 						"op": "trust",
 						"d": -10,
-						"why": "You asked him to play the week his first child was born"
+						"why": "You asked him to play the week his first child was born",
+						"scar": true
 					},
 					{
 						"op": "culture",
@@ -102,7 +103,8 @@
 					{
 						"op": "trust",
 						"d": -10,
-						"why": "You asked him to play while his dad was in hospital"
+						"why": "You asked him to play while his dad was in hospital",
+						"scar": true
 					},
 					{
 						"op": "morale",
