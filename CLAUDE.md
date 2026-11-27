@@ -8,7 +8,7 @@ any account. They win over anything older in this file, the Director Bible or a 
 1. **Merge every PR without asking.** "stop asking me dumb questions merge everything right away" (26 Nov);
    "merge every SINGLE PR" (27 Nov). Green and conflict-free: squash-merge it or turn on squash auto-merge.
    Don't park a PR for a design or balance call; resolve it sensibly and merge. No balance re-runs unless
-   Baggins asks for one. No PR cap or batching for now (27 Nov).
+   Baggins asks for one. No PR cap and no batching: the cap is removed (27 Nov).
 2. **A red PR is fixed at once, by you.** "i dont want to hear if it breaks, i want you to fix it the second
    it breaks" (27 Nov). Read the failing log and push the fix, even on a PR another session drives (merge
    their pushes in, never force-push). Don't wait for another session or owner, and don't just report the
@@ -136,10 +136,7 @@ number one development blocker.
 - **Cancel with force-cancel.** A branch last synced before 26 Nov keeps running its shards
   after a plain cancel. Use `POST actions/runs/<id>/force-cancel`, or run the `Repo hygiene`
   workflow with `force_cancel: <run ids>` (MCP `actions_run_trigger`), or merge main in.
-- **Open PR cap: suspended (rule 1 above, 27 Nov).** When it is back (Director Bible 7.48): at most 3 ready PRs. Over the cap, open
-  yours as a draft (drafts skip the game tests) and mark it ready when a slot frees. Count
-  the open PRs that are not drafts (GitHub MCP `list_pull_requests`, or `gh pr list`). No bot
-  enforces it (the director removed the PR cap bot, 2026-11-26): you do.
+- **There is no open PR cap.** The director removed it (27 Nov, rule 1 above; Director Bible 7.48).
 - **Check for a conflict before you ask for a merge, never after.** Run `git fetch origin main &&
   git merge-tree --write-tree origin/main HEAD`. If it reports a conflict, merge main in and fix
   it first (never rebase or force-push, 7.48). Do not turn on auto-merge or ask for a merge on a
