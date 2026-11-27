@@ -71,7 +71,7 @@ const TEAM_BOOKKEEPING_PREFIXES := ["d50_end_"]
 ## retuned to the attributes), and bug bash batch C (#2210: a kick-in marked without
 ## playing on is no longer an effective disposal; a boundary free records "intent") on top.
 ## Windows from a local run on the merged branch, Linux from its CI run.
-const GOLDEN_SEASON := {"Windows": "945f94432b7b7f82ee8237e90bac6c9a", "Linux": "bf219aeb96e2f0fbc6fa30160822157c"}
+const GOLDEN_SEASON := {"Windows": "cf0bccb91d34b0fc38d8209d3c2f3960", "Linux": "bf219aeb96e2f0fbc6fa30160822157c"}
 
 ## A small league standing in for a legacy set until the 1990 files ship:
 ## 42 real players re-dated to a 1989 data season, a 1990 first season, and
