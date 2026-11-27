@@ -208,13 +208,25 @@ func _test_folded_sizes() -> void:
 const FINALS_WEEK_FACTS := ["forecast_line", "last_final_year", "lost_final", "best_line", "history_line", "margin_line"]
 
 
+## A faction's card is dealt only on a group's leader and reads the group's own
+## facts (its size, its demand), which an ordinary player does not have:
+## tests/test_factions.gd deals and checks those.
+func _faction_card(t: Dictionary) -> bool:
+	return (t.get("subject", {}).get("where", {}) as Dictionary).has("faction")
+
+
 ## A choice's hint is made from its effects and fully filled in.
 func _test_hints_in_words() -> void:
 	_start()
 	var p: Dictionary = GameState.my_list[4]
 	var bad := []
 	for t in StoryDeck.all():
+		if _faction_card(t):
+			continue
 		var card := GameState.story_card(str(t["id"]), p if str(t["subject"].get("kind", "")) == "player" else {})
+		# A card whose second player nobody on this list fits is never dealt.
+		if t.has("actor_b") and str(card["facts"].get("b_id", "")) == "":
+			continue
 		for o in card["options"]:
 			var d := str(o["detail"])
 			# A scripted result card has one button and no effects to describe.
@@ -402,6 +414,8 @@ func _test_choice_stakes_are_stated() -> void:
 	var both := 0
 	var nothing := []
 	for t in StoryDeck.all():
+		if _faction_card(t):
+			continue
 		var card := GameState.story_card(str(t["id"]), p if str(t["subject"].get("kind", "")) == "player" else {})
 		for o in card["options"]:
 			choices += 1
@@ -3232,10 +3246,12 @@ func _test_silent_defaults_announced() -> void:
 func _test_every_line_has_a_size() -> void:
 	_start()
 	var p: Dictionary = GameState.my_list[4]
-	var sized := RegEx.create_from_string("[0-9]+%|[0-9]+ out of 100|[0-9]+ (pre-season )?development points|[0-9.]+ weeks?|this week's game|takes the armband|cleared to play|next (one|two|three|four|five|six) game|games? away from his usual spot|for (one|two|three|four|five) more seasons?|[$][0-9.]+[km]? a season|pick [0-9]+|when this season ends|^No promise to keep[.]$")
+	var sized := RegEx.create_from_string("[0-9]+%|[0-9]+ out of 100|[0-9]+ (pre-season )?development points|[0-9.]+ weeks?|this week's game|takes the armband|cleared to play|next (one|two|three|four|five|six) game|games? away from his usual spot|for (one|two|three|four|five) more seasons?|[$][0-9.]+[km]? a season|pick [0-9]+|when this season ends|^No promise to keep[.]$|opinion of you falls [0-9]+|become (close mates|rivals for the spot|mentor and protege|allies)|new close mates")
 	var bad := []
 	var parts_seen := 0
 	for t in StoryDeck.all():
+		if _faction_card(t):
+			continue
 		var card := GameState.story_card(str(t["id"]), p if str(t["subject"].get("kind", "")) == "player" else {})
 		for o in card["options"]:
 			for e in o["effects"]:
@@ -3267,6 +3283,8 @@ func _test_line_numbers_match_effects() -> void:
 	var bad := []
 	var checked := 0
 	for t in StoryDeck.all():
+		if _faction_card(t):
+			continue
 		var card := GameState.story_card(str(t["id"]), p if str(t["subject"].get("kind", "")) == "player" else {})
 		for o in card["options"]:
 			for e in o["effects"]:
@@ -3295,8 +3313,11 @@ func _test_line_numbers_match_effects() -> void:
 					"loss_sting":
 						want = "about a %d%% chance our morale also falls %d%%" % [int(e["chance"]), absi(int(e["d"]))]
 					"expects_game":
+						# His temperament sizes it (Promises.broken_trust, StoryEngine._broken_words).
+						var bt := clampi(roundi(float(ClubStories.BROKEN_PROMISE_TRUST) * float(card["facts"].get("broken_scale", 1.0))),
+								-Trust.STEP_MAX, Trust.STEP_MAX)
 						want = "morale falls up to %d%%, his opinion of you falls %d" % [int(e.get("sting", 12)),
-								-Trust.opinion_move(int(card["facts"].get("trust", 0)), ClubStories.BROKEN_PROMISE_TRUST)]
+								-Trust.opinion_move(int(card["facts"].get("trust", 0)), bt)]
 					# The pre-season cards' levers, against the pre-season's own sizes.
 					"culture":
 						want = "%s %d%%" % ["up" if int(e["d"]) > 0 else "down", absi(int(e["d"]))]

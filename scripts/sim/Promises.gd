@@ -472,7 +472,10 @@ static func _card_settle(gs, o: Dictionary, out: String) -> void:
 static func _card_of(gs, player_id: String) -> Array:
 	var out := []
 	var now := int(gs.story_week())
-	for o in open(gs):
+	# Read only: a preview must not add the "open" list to the record.
+	var w: Variant = gs.coach_word
+	var opens: Variant = w.get("open", []) if w is Dictionary else []
+	for o in (opens if opens is Array else []):
 		if str(o.get("who", "")) != player_id:
 			continue
 		var kind := str(o.get("k", ""))

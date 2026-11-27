@@ -307,7 +307,9 @@ func _test_unavailable_not_left_out() -> void:
 			why.append(str(r["why"]))
 		_check(not on.has(id) and Backing.fit(p) and not p.has("expects_game"),
 				"(setup) %s sat out, his week ran out at the tick, and the promise was settled" % id)
-		_check(ClubLife.morale(p) == base and not why.has(promised),
+		# The round's drift (his opinion of you, a group he stands with) moves him
+		# at most one step; a sting for being left out is bigger.
+		_check(absi(ClubLife.morale(p) - base) <= ClubLife.DRIFT_STEP and not why.has(promised),
 				"Out this week, so not left out: no sting, no broken promise (morale %d, trust %s)" % [ClubLife.morale(p), str(why)])
 	# Rivals: only the clubs that played this round.
 	var rosters := {}
@@ -1610,12 +1612,14 @@ func _test_promise_no_room() -> void:
 	_check(not _named_ids(GameState.my_selection()).has(str(kid["id"]))
 			and (GameState.my_selection().get("BENCH", []) as Array).size() == Ratings.bench_size,
 			"...he is not a sixth bench name")
-	var trust := Trust.value(GameState.relations, Trust.player_key(str(kid["id"])))
+	# The promise's own cost is permanent (Trust.base); a fading mark from the
+	# round (a mate left out, a group's mood) is not the promise breaking.
+	var trust := Trust.base(GameState.relations, Trust.player_key(str(kid["id"])))
 	GameState.week_events = []
 	_advance_mine()
 	_check(Backing.is_active(kid) and int(Backing.current(kid).get("played", -1)) == 0,
 			"Left out of a match he could not be named in: the run waits, unbroken (%s)" % str(Backing.current(kid)))
-	_check(Trust.value(GameState.relations, Trust.player_key(str(kid["id"]))) >= trust,
+	_check(Trust.base(GameState.relations, Trust.player_key(str(kid["id"]))) >= trust,
 			"...and his opinion of you does not fall for it")
 
 
