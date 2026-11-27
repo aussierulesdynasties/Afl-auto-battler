@@ -2,7 +2,7 @@
 # tools/ground_assets.sh fetch copies this commit's files into place; publish updates the pin.
 repo https://github.com/gabebartolo-spec/ard-asset-pipeline
 branch ground-assets
-commit 2bc9cdd57bbf139b6eddefde9a0b5c8990a71672
+commit 18e0497ed9af41b05bcb9dfd66d11b35a7985d73
 3d4ecca7192b687a2a02b37e007159594e8f37cefabc5822341ed9e6601fc566  assets/grounds/accor/accor_backdrop_part1.glb
 953a9240e98d002bf0e0a9421d6768fd0838f663c05c7749861759d31f2b1eae  assets/grounds/accor/accor_backdrop_part2.glb
 193d756d6ca16bce580d61ab72c5baecdeeee89389c94ba13df225d009b74e07  assets/grounds/adelaide/adelaide.glb
@@ -234,7 +234,7 @@ ab18803c82e26675e5ac89b8615593eea729f27b46d350d4ebc5bde9c56f6580  assets/grounds
 26b9b5dc8e5ca27780e21038c26313467b9843547b9a96db0ee45ba5e8c68b19  assets/grounds/mars/seats_seat_white.bin
 aed710fe336254c6e7bf7d3b42cd5522a1c17cbbf375c9e748018749c6f869cc  assets/grounds/mars/surrounds.webp
 d6b01fbb16d75b9711a06908b267763a893e5648fd6da719cccaa7f44ba0ea4d  assets/grounds/mars/trees.bin
-adf4c8309a899fc344cc8adbfa9f2040d9870f82dd78fedca0d0324c4ab22215  assets/grounds/marvel/bridges.glb
+ca288c27fa63191d78d44698d1337dd165d3c579dc309f6236fc89ee1f8acf28  assets/grounds/marvel/bridges.glb
 48b4343fa97123234d3617213ab061dd6b4587fd933273403331baef3216cecf  assets/grounds/marvel/buildings.bin
 450e05c3c51544387c3566e6ec513c0d1ef012efffa6f2546b121220b80ac102  assets/grounds/marvel/gates.glb
 6f32aa17aad30501213149001cad9e06ab6fa8ffc461adf6b91b26152bc80b19  assets/grounds/marvel/landmarks.glb
