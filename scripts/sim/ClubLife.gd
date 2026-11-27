@@ -320,6 +320,32 @@ static func morale_after_match(list: Array, played: Dictionary, won: bool, softe
 			add_morale(p, signi(MORALE_BASE - morale(p)))
 
 
+## Morale drifts towards where his opinion of his coach puts it (relationship
+## overhaul Phase 1, DIRECTOR_BIBLE 5.167): settled (MORALE_BASE) at an opinion
+## of 50, this much higher or lower per point of opinion away from it, never
+## more than DRIFT_SPAN either way, one DRIFT_STEP a round. The match still
+## reads only morale (form, +/-3%), so opinion reaches the field through this
+## one hook. Every club, once a round (GameState._opinion_after_round).
+const DRIFT_PER_POINT := 0.3
+const DRIFT_SPAN := 15
+const DRIFT_STEP := 1
+
+
+## Where his morale settles for an opinion of his coach of `opinion` (0..100).
+static func morale_target(opinion: int) -> int:
+	return MORALE_BASE + clampi(roundi(float(opinion - 50) * DRIFT_PER_POINT), -DRIFT_SPAN, DRIFT_SPAN)
+
+
+## One round's drift towards that: at most DRIFT_STEP, never past it. An
+## injured player is left to the injured rule (morale_after_match).
+static func drift_morale(p: Dictionary, opinion: int) -> void:
+	if int(p.get("injury_weeks", 0)) > 0:
+		return
+	var gap := morale_target(opinion) - int(p.get("morale", MORALE_BASE))
+	if gap != 0:
+		add_morale(p, signi(gap) * mini(DRIFT_STEP, absi(gap)))
+
+
 static func mood(m: int) -> String:
 	if m >= 85:
 		return "Flying"

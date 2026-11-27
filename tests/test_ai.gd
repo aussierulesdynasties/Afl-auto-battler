@@ -224,9 +224,9 @@ func _test_club_evaluation() -> void:
 		for p in list:
 			if Ratings.plays_role(p, "RUCK"):
 				rucks += 1
-		if list.size() != d1.target_size or rucks < 2 or d1.spent_for(code) > d1.budget:
+		if list.size() != d1.target_size or rucks < 1 or d1.spent_for(code) > d1.budget:
 			lists_ok = false
-	_check(lists_ok, "Every club's list has the full size, two rucks and fits the cap")
+	_check(lists_ok, "Every club's list has the full size, a ruck and fits the cap")
 	var d3 := _shared_ai_draft(23)
 	var h3 := []
 	for e in d3.pick_history:

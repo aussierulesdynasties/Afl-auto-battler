@@ -182,7 +182,9 @@ for suite in ${SUITES[@]+"${SUITES[@]}"}; do
 		if [ "$status" = FAIL ]; then
 			kind=crash
 			fails=$(echo "$result" | grep -oE "[0-9]+ failures" | grep -oE "[0-9]+")
-			if [ "$code" = 0 ] && [ -z "$short" ] && [ "${fails:-0}" -gt 0 ] \
+			# A runner quits 1 when a check failed (tests/run_*_tests.gd), so exit 1 with a
+			# result line is a seeded check failure, not a crash: retrying it only repeats it.
+			if { [ "$code" = 0 ] || [ "$code" = 1 ]; } && [ -z "$short" ] && [ "${fails:-0}" -gt 0 ] \
 				&& ! grep -qE "SCRIPT ERROR|Parse Error|Compile Error" "$log"; then kind=checks; fi
 		fi
 		printf '%s %s\n' "$suite" "$kind" >> "$SUITE_RESULTS"
