@@ -63,6 +63,8 @@ const PC_BAND_MAX := 6
 const PC_SHEET_ROW_H := 36.0
 ## The narrowest list column that still shows a man's position beside his name.
 const PC_POS_MIN_W := 200.0
+## The widest a squad-list name runs on a PC before the figures follow it.
+const PC_NAME_MAX_W := 150.0
 var _pc_fit_rows := 99
 var _pc_area_w := 0.0
 var _pc_grid: GridContainer = null
@@ -528,6 +530,13 @@ func _pc_item(it: Array, colw: float) -> Control:
 	var n := UiKit.ellipsis(full_name, 13, UiKit.TEXT, true)
 	n.name = "TraineeName"
 	n.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	# A wide column (a 2560 screen) keeps the name beside his figure: the name
+	# stops at PC_NAME_MAX_W and the row's spare width goes after the figures
+	# (director, 2026-10-14: space between divorces the number from the name).
+	var capped := colw > PC_NAME_MAX_W + 120.0
+	if capped:
+		n.size_flags_horizontal = Control.SIZE_FILL
+		n.custom_minimum_size.x = PC_NAME_MAX_W
 	n.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	n.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS_FORCE
 	n.resized.connect(func():
@@ -554,6 +563,11 @@ func _pc_item(it: Array, colw: float) -> Control:
 		st.size_flags_horizontal = Control.SIZE_FILL
 		st.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		face.add_child(st)
+	if capped:
+		var spare := Control.new()
+		spare.name = "RowSpare"
+		spare.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		face.add_child(spare)
 	b.tooltip_text = full_name
 	_ignore_mouse(face)
 	b.button_down.connect(_begin_player_hold.bind(id))
