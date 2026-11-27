@@ -43,8 +43,6 @@ func run() -> void:
 	_t("_test_youth_no_cycle")
 	GameState.delete_saved_career()
 	GameState.replay_seed = 0
-	GameDB.skip_ovr_overrides = false
-	GameDB.reload()
 	print(Ran.line("Selection", self))
 
 

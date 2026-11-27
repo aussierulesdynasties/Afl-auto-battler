@@ -11,6 +11,10 @@ Big files that git cannot hold (scene_bg.glb, scene.blend, over 100 MB) are copi
 `C:/Users/DANTE/Documents/AFL3D_archive/<ground>_bg/` on the PC (6.8 GB). Each `.claude/review/<ground>_bg/`
 folder has a `MANIFEST.txt` with the md5 of every big file left behind. Session notes: [handoffs/](handoffs/README.md).
 
+**`.claude/review/` moved out of this repo on 2026-11-26.** Every path below under `.claude/review/` is now in the
+private repo `aussierulesdynasties/afl-review-archive`, at the same path: clone it and copy (or link) its
+`.claude/review` into your checkout. New boards are committed there; this repo ignores the folder.
+
 ## Grounds
 
 | Ground | Stadium model | In a match | Background scene (surroundings) |

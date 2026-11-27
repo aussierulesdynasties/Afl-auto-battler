@@ -332,5 +332,16 @@ class TheRealTablesParse(unittest.TestCase):
         self.assertIn("GameDB", autoload_reach.autoload_names(ROOT))
 
 
+class TheClaudeHooksHold(unittest.TestCase):
+    """.claude/hooks/pr_guard.py (the PR-rule hooks) passes its own tests; CI's lint job runs this file."""
+
+    def test_pr_guard(self):
+        import subprocess
+        import sys
+        r = subprocess.run([sys.executable, "-I", os.path.join(ROOT, ".claude/hooks/test_pr_guard.py")],
+                           capture_output=True, text=True)
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=1)

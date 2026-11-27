@@ -627,8 +627,9 @@ static func _ladder_sorted(ctx: Dictionary) -> Array:
 	rows.sort_custom(func(a, b):
 		if int(a["pts"]) != int(b["pts"]):
 			return int(a["pts"]) > int(b["pts"])
-		if not is_equal_approx(float(a["pct"]), float(b["pct"])):
-			return float(a["pct"]) > float(b["pct"])
+		var by_pct := Season.pct_order(a, b)
+		if by_pct != 0:
+			return by_pct > 0
 		return int(a["pf"]) > int(b["pf"]))
 	return rows
 

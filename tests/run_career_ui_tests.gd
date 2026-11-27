@@ -16,6 +16,29 @@ var _failures: Array[String] = []
 ## Every season in this suite starts from a fixed seed (C15), never the clock.
 const SUITE_SEED := 2027
 
+## The slower half runs as its own suite (tests/run_career_ui_2_tests.gd), so a
+## full CI run isn't held up by one 700 s shard (test suite audit, 26 Nov). Each
+## function here starts its own career; they run in this order after the setup.
+const PART_TWO := [
+	"_test_event_sheet_fits_every_card",
+	"_test_sacked_job_choice_taps",
+	"_test_season_review_keeps_the_save",
+	"_test_rival_letter_taps",
+	"_test_sim_asks_only_before_your_match",
+	"_test_skip_long_press",
+	"_test_skip_hold_wide",
+	"_test_skip_season",
+	"_test_skip_home_away",
+	"_test_skip_home_away_kids",
+	"_test_skip_orders",
+	"_test_list_tabs_kept",
+	"_test_remembered",
+	"_test_list_problem_and_ask_around",
+	"_test_ask_around_red_club_ink",
+	"_test_ask_price_tap",
+	"_test_names_fit",
+]
+
 
 func _initialize() -> void:
 	_run.call_deferred()
@@ -1633,15 +1656,17 @@ func _test_old_sound_levels_carry_over() -> void:
 
 
 func _run() -> void:
-	_t("_test_rivalry_catalogue")
+	if not _part_two():
+		_t("_test_rivalry_catalogue")
 	await process_frame
 	_state = root.get_node("GameState")
 	_router = root.get_node("Router")
 	_db = root.get_node("GameDB")
-	_t("_test_history_records_are_stored_facts")
-	await _t("_test_sheets_fit_their_content")
-	_t("_test_player_goal_milestones")
-	_t("_test_media_conference_rules")
+	if not _part_two():
+		_t("_test_history_records_are_stored_facts")
+		await _t("_test_sheets_fit_their_content")
+		_t("_test_player_goal_milestones")
+		_t("_test_media_conference_rules")
 	# Never touch a real career save or settings file from a test run.
 	_state.autosave_enabled = false
 	_state.save_path = "user://test_career.save"
@@ -1652,6 +1677,14 @@ func _run() -> void:
 	# Return visits: the first-visit intros (FirstVisitIntro.gd) have their own suite.
 	for key in load("res://scripts/ui/FirstVisitIntro.gd").TEXT:
 		_state.set_setting("seen_%s_intro" % key, true)
+	if _part_two():
+		# Part one's walk through a new career reads the weekly-loop intro; these
+		# flows start from a career already under way.
+		_state.set_setting("seen_weekly_loop_intro", true)
+		for test in PART_TWO:
+			await _t(test)
+		_finish("Career UI part two", _defined_here().filter(func(t): return not PART_TWO.has(t)))
+		return
 	_t("_test_press_rolls")
 	_t("_test_press_caps_and_fade")
 	_t("_test_press_loss_lift")
@@ -1675,23 +1708,6 @@ func _run() -> void:
 	await _t("_test_event_sheet")
 	await _t("_test_tribunal_verdict")
 	await _t("_test_event_sheet_flows")
-	await _t("_test_event_sheet_fits_every_card")
-	await _t("_test_sacked_job_choice_taps")
-	await _t("_test_season_review_keeps_the_save")
-	await _t("_test_rival_letter_taps")
-	await _t("_test_sim_asks_only_before_your_match")
-	await _t("_test_skip_long_press")
-	await _t("_test_skip_hold_wide")
-	await _t("_test_skip_season")
-	await _t("_test_skip_home_away")
-	await _t("_test_skip_home_away_kids")
-	await _t("_test_skip_orders")
-	await _t("_test_list_tabs_kept")
-	await _t("_test_remembered")
-	await _t("_test_list_problem_and_ask_around")
-	await _t("_test_ask_around_red_club_ink")
-	await _t("_test_ask_price_tap")
-	await _t("_test_names_fit")
 	_state.delete_saved_career()
 	await _t("_test_new_career_keeps_the_save")
 	await _t("_test_new_career_canberra_choice")
@@ -1713,9 +1729,23 @@ func _run() -> void:
 		await _t("_test_contracts_pc", [sz])
 	await _t("_test_restore_earlier_save_tap")
 	await _t("_test_top_up_sheet_taps")
-	print(Ran.line("Career UI", self))
+	_finish("Career UI", PART_TWO)
+
+
+## The summary line, leaving out the functions the other half runs.
+func _finish(label: String, elsewhere: Array) -> void:
+	print(Ran.line(label, self, [], elsewhere))
 	_state.replay_seed = 0
 	quit(0 if _failures.is_empty() else 1)
+
+
+func _defined_here() -> Array:
+	return Ran.defined_tests(self)
+
+
+## tests/run_career_ui_2_tests.gd says true: it runs PART_TWO and nothing else.
+func _part_two() -> bool:
+	return false
 
 
 ## The menu, a new career and the screens a coach meets, in order (the checks written in _run).
@@ -1860,27 +1890,19 @@ func _test_menu_and_career() -> void:
 			"The line is not shown again on a later visit")
 	# The Android save backup preset (user_data_backup/allow=true) is a static lint: tools/lint/boundaries.py.
 
-	# --- settings: appearance and player names apply at once -----------------
+	# --- settings: no appearance choice, no ball-up scene switch; names --------
+	# Light mode and the centre ball-up scene switch went (director, 2026-11-26).
 	current_scene.find_child("MenuSettings", true, false).emit_signal("pressed")
 	await _settle()
-	var light_setting: Button = current_scene.find_child("SettingsAppearance_light", true, false)
-	var dark_setting: Button = current_scene.find_child("SettingsAppearance_dark", true, false)
-	_check(light_setting != null and dark_setting != null, "Settings offers Dark and Light appearance")
-	if light_setting != null:
-		light_setting.emit_signal("pressed")
-		await _settle()
-	var kit = load("res://scripts/ui/UiKit.gd")
-	_check(_state.appearance() == "light" and kit.appearance() == "light"
-			and kit.BG.r > 0.8 and _router.current() == "main",
-			"Light appearance applies immediately and rebuilds the current screen")
-	current_scene.find_child("MenuSettings", true, false).emit_signal("pressed")
+	var opened := current_scene.find_child("Settings", true, false)
+	_check(opened != null and current_scene.find_child("SettingsTextSize_standard", true, false) != null
+			and current_scene.find_child("SettingsAppearance_light", true, false) == null
+			and current_scene.find_child("SettingsAppearance_dark", true, false) == null
+			and current_scene.find_child("SettingsBounceScene_on", true, false) == null,
+			"Settings offers no appearance choice and no centre ball-up scene switch")
+	if opened != null:
+		opened.queue_free()
 	await _settle()
-	dark_setting = current_scene.find_child("SettingsAppearance_dark", true, false)
-	if dark_setting != null:
-		dark_setting.emit_signal("pressed")
-		await _settle()
-	_check(_state.appearance() == "dark" and kit.appearance() == "dark"
-			and kit.BG.r < 0.2, "Dark appearance restores the original palette")
 	current_scene.find_child("MenuSettings", true, false).emit_signal("pressed")
 	await _settle()
 	_check(current_scene.find_child("SettingsNames_real", true, false) == null

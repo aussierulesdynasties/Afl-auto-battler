@@ -33,7 +33,7 @@ func _run() -> void:
 	state.autosave_enabled = false
 	state.save_path = "user://capture_rows.save"
 	state.settings_path = "user://capture_rows.cfg"
-	load("res://scripts/ui/UiKit.gd").apply_appearance("dark")
+	load("res://scripts/ui/UiKit.gd").apply_palette()
 	for key in SCREENS:
 		state.reset()
 		state.career_seed = 2026

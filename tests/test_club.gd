@@ -55,8 +55,6 @@ func run() -> void:
 	_t("_test_board_goal_said_aloud")
 	GameState.delete_saved_career()
 	GameState.replay_seed = 0
-	GameDB.skip_ovr_overrides = false
-	GameDB.reload()
 	print(Ran.line("Club", self))
 
 

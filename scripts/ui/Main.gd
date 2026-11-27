@@ -90,18 +90,9 @@ func _logo_art() -> TextureRect:
 	_logo.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	_logo.size_flags_horizontal = Control.SIZE_FILL
 	_logo.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	if UiKit.appearance() == "light":
-		# The logo file has a black ground. In light mode key only
-		# that near-black ground out so the lettering keeps its real colours.
-		var shader := Shader.new()
-		shader.code = "shader_type canvas_item;\nvoid fragment(){ vec4 c=texture(TEXTURE,UV); float hi=max(c.r,max(c.g,c.b)); c.a*=smoothstep(0.04,0.16,hi); COLOR=c; }"
-		var mat := ShaderMaterial.new()
-		mat.shader = shader
-		_logo.material = mat
-	else:
-		var mat := CanvasItemMaterial.new()
-		mat.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
-		_logo.material = mat
+	var mat := CanvasItemMaterial.new()
+	mat.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
+	_logo.material = mat
 	_fit_logo()
 	return _logo
 
@@ -148,7 +139,7 @@ func _ready() -> void:
 	add_child(_pitch)
 	var shade := ColorRect.new()
 	shade.color = UiKit.BG
-	shade.color.a = 0.92 if UiKit.appearance() == "light" else 0.78
+	shade.color.a = 0.78
 	shade.set_anchors_preset(Control.PRESET_FULL_RECT)
 	shade.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(shade)
@@ -172,6 +163,8 @@ func _ready() -> void:
 	if WebStorage.should_ask(WebStorage.on_web(), bool(GameState.get_setting(WebStorage.ASKED_KEY, false))):
 		WebStorage.ask()
 		_wait_for_storage_answer()
+	# Continue's Hub loads while the menu is up (bug bash M-9).
+	Router.warm("hub")
 
 
 ## Poll the browser's answer for a few seconds (a prompt may be open). A final answer is
@@ -372,8 +365,7 @@ func _on_continue() -> void:
 	ScreenTransition.run("Loading your career...", func():
 		if GameState.load_career():
 			# The off-season before the opening draft (row 199) is reached from the draft.
-			Router.go("hub" if GameState.season != null and not GameState.club_yet_to_play()
-					and GameState.first_offseason != 1 else "draft")
+			Router.go(GameState.resume_screen())
 		else:
 			_show_load_error())
 
@@ -831,8 +823,9 @@ func _forged_line() -> String:
 		tail = " You coach against it."
 	# A past season has no draft before it: the picks wait a year (ExpansionBuild).
 	var when := "after its first season" if _past_start() else "before it"
-	return ("It joins as a new club and plays the %d season with everyone: %d players from the state leagues, %d extra first-round picks in the National Draft %s, and up to %s outside the salary cap for the free agents it signs, %s at most in one season." % [
-			year, Expansion.FOUNDATION_SIZE, Expansion.FIRST_DRAFT_PICKS.size(), when, pool, most]) + tail
+	return ("It joins as a new club and plays the %d season with everyone: %d players from the state leagues, %d extra first-round picks in the National Draft %s, and up to %s outside the salary cap for %s, %s at most in one season." % [
+			year, Expansion.FOUNDATION_SIZE, Expansion.FIRST_DRAFT_PICKS.size(), when, pool,
+			"the free agents it signs" if EraRules.on("free_agency", year) else "the players it signs", most]) + tail
 
 
 ## Where your Forge prospect is drafted, for the start picked: the career's
@@ -1409,7 +1402,8 @@ func _show_help() -> void:
 			+ ("6. %s Win them all for the flag. The season's awards, the honour roll and league records are in the Season Review.\n\n"
 			% SeasonRules.how_finals_work(GameState.season.finals_format() if GameState.season != null
 					else str(SeasonRules.DEFAULT["finals"])))
-			+ "7. In the off-season, re-sign, release, sign free agents and trade in Trades & Contracts, then draft the next class. The hub's League news follows the whole league.\n\n"
+			+ ("7. In the off-season, re-sign, release, sign %s and trade in Trades & Contracts, then draft the next class. The hub's League news follows the whole league.\n\n"
+			% ("free agents" if EraRules.on("free_agency") else "delisted players"))
 			+ "Two dials are set when you start a new career. Board patience is how many poor seasons the board puts up with before it warns you, and then moves on you. Rival recruiting is how hard the other clubs bargain when they trade with you. Players develop by the same rules whatever you pick.\n\n"
 			+ "Rotate your device at any time. Your draft picks, search and filters stay intact.", 16)
 	v.add_child(UiKit.scroll(text))
