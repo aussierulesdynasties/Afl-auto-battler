@@ -297,6 +297,7 @@ def main():
     gardens = [(x, z) for x, z in garden_trees(Image.fromarray(arr.astype(np.uint8)), trees, ways, foot)
                if math.hypot(x, z) > IMG_R]
     trees += [(x + S.PITCH_E, -z + S.PITCH_N) for x, z in gardens]
+    arr = land_cover(arr, open_ground(trees, ways) & ~foot)
     im = Image.fromarray(np.clip(arr, 0, 255).astype(np.uint8))
     im.save(os.path.join(OUT, "surrounds.webp"), quality=88, method=6)
     t = S.tree_list(trees)
@@ -311,7 +312,9 @@ def main():
     img = canopy_trees([tuple(q) for q in t[:, :2]], blocked)
     t = np.concatenate([t.reshape(-1, 5), img]).astype("<f4")
     print("canopy trees", len(img))
+    t, gums = sort_trees(t)
     t.astype("<f4").tofile(os.path.join(OUT, "trees.bin"))
+    gums.astype("<f4").tofile(os.path.join(OUT, "gums.bin"))
     b = building_list(ways, in_foot)
     b = np.concatenate([b, ms_buildings(ways, in_foot)]).astype("<f4")
     b.tofile(os.path.join(OUT, "buildings.bin"))
@@ -319,6 +322,108 @@ def main():
     rc.tofile(os.path.join(OUT, "roofs.bin"))
     print("roof colours", len(rc) // 3)
     print("surrounds.webp", im.size, "trees", len(t), "building floats", len(b))
+
+
+# The ground between the buildings. OpenStreetMap maps the streets and the houses but not what lies between them,
+# which the map painted one dry tan: in Google Earth it is grey paving and drives, lawn, the shade of the yards'
+# trees and some dry straw. Each metre of open ground (not a street, path, park, roof or water the map already
+# paints) takes one of five classes read from the aerial imagery (Esri World Imagery, zoom 18) and is painted in
+# that class's own flat colour, the median the imagery gives the class round the ground, mottled like the rest of
+# the map. Only the class is kept, never the imagery's pixels (docs/MCG_STANDARD.md: sampled colours are fine).
+# Measured 110-400 m from the centre (2026-11-26): grey 29%, straw 12%, lawn 20%, tree shade 25%, dark 12%.
+COVER = {0: (150, 147, 139), 1: (138, 124, 100), 2: (112, 122, 84), 3: (74, 84, 56), 4: (150, 147, 139)}
+SENTINEL = (255, 0, 255)
+
+
+def open_ground(trees, ways):
+    """The map's own open ground: the pixels it paints in its base or residential colour (painted again with
+    those two in a colour nothing else uses)."""
+    keep = S.BASE, S.URBAN
+    S.BASE, S.URBAN = SENTINEL, SENTINEL
+    try:
+        im, _ = S.paint(list(trees), ways)
+    finally:
+        S.BASE, S.URBAN = keep
+    a = np.asarray(im).astype(int)
+    return (a[..., 0] > 150) & (a[..., 1] < 100) & (a[..., 2] > 150)
+
+
+def cover_classes():
+    """The imagery's class for every metre of the map (rows north to south, the origin in the middle):
+    0 grey (paving, drives, unmapped roofs), 1 straw, 2 lawn, 3 tree shade, 4 dark (asphalt or shadow)."""
+    from scipy import ndimage
+    img, _, _ = ortho_z(S.SIZE / 2, ROOF_Z, 1.0)
+    c = np.clip((img.astype(float) - 14.0) * 1.08, 0, 255)
+    r, g, b = c[..., 0], c[..., 1], c[..., 2]
+    L, exg = c.mean(-1), 2 * g - r - b
+    cls = np.zeros(L.shape, np.uint8)
+    cls[(r - b > 28) & (exg <= 14)] = 1
+    cls[exg > 14] = 2
+    cls[(exg > 14) & (L < 75)] = 3
+    cls[(cls == 0) & (L < 70)] = 4
+    cls = ndimage.median_filter(cls, size=3)
+    # A building's shadow is not the ground's colour: a dark patch smaller than a car park takes the class
+    # most common round it.
+    dark = cls == 4
+    lab, n = ndimage.label(dark)
+    big = np.isin(lab, 1 + np.nonzero(ndimage.sum(dark, lab, range(1, n + 1)) >= 150)[0])
+    small = dark & ~big
+    votes = np.stack([ndimage.uniform_filter((cls == k).astype(float), 9) for k in range(4)])
+    cls[small] = np.argmax(votes, 0)[small]
+    return cls
+
+
+def land_cover(arr, ground):
+    """`arr` (the painted map) with its open ground painted by class."""
+    cls = cover_classes()
+    rng = np.random.default_rng(11)
+    n1 = np.asarray(Image.fromarray((rng.random((128, 128)) * 255).astype(np.uint8)).resize((S.SIZE, S.SIZE), Image.BICUBIC), float) / 255
+    mott = 1.0 + (n1 - 0.5) * 0.16 + (rng.random((S.SIZE, S.SIZE)) - 0.5) * 0.06
+    pal = np.array([COVER[k] for k in range(5)], float)
+    paint = pal[cls] * mott[..., None]
+    out = arr.copy()
+    out[ground] = paint[ground]
+    for k in range(5):
+        print("open ground class %d: %.0f%%" % (k, 100.0 * (cls[ground] == k).mean()))
+    return out
+
+
+# Trees seen from above. Within IMG_R the list stood 44% of the land under a crown where the imagery shows about
+# 28% (dark canopy 25%, Meta's canopy map 20% at 2 m and up; 110-400 m, 2026-11-26): a crown is kept only where
+# the imagery shows leaves under most of it, and no wider than its leaves reach. A crown the imagery shows grey-green
+# and broad is a eucalypt, drawn as one (GroundModels SURROUNDS "gum_trees"); the bright green ones are the planes,
+# elms and garden trees.
+def sort_trees(t):
+    from scipy import ndimage
+    cls = cover_classes()
+    img, _, _ = ortho_z(S.SIZE / 2, ROOF_Z, 1.0)
+    c = img.astype(float)
+    exg = 2 * c[..., 1] - c[..., 0] - c[..., 2]
+    leaf = (cls == 2) | (cls == 3)
+    reach = ndimage.distance_transform_edt(leaf)
+    keep, gum = [], []
+    for row in t:
+        x, z, h, rad, shade = row
+        i, j = int(z + S.SIZE / 2), int(x + S.SIZE / 2)
+        if not (0 <= i < S.SIZE and 0 <= j < S.SIZE) or math.hypot(x, z) > IMG_R:
+            keep.append(True); gum.append(False)
+            continue
+        rr = max(1, int(rad))
+        win = (slice(max(0, i - rr), i + rr + 1), slice(max(0, j - rr), j + rr + 1))
+        yy, xx = np.mgrid[win[0], win[1]]
+        disc = (yy - i) ** 2 + (xx - j) ** 2 <= rad * rad
+        on = leaf[win][disc]
+        ok = on.mean() >= 0.55 if on.size else False
+        keep.append(ok)
+        if ok:
+            row[3] = float(np.clip(min(rad, reach[i, j] * 1.15 + 1.0), 2.2, rad))
+            g = exg[win][disc & leaf[win]]
+            gum.append(shade < 2.0 and h >= 8.0 and row[3] >= 3.5 and g.size > 0 and np.median(g) < 22)
+        else:
+            gum.append(False)
+    keep, gum = np.array(keep), np.array(gum)
+    print("trees kept %d of %d, %d of them eucalypts" % (keep.sum(), len(t), (keep & gum).sum()))
+    return t[keep & ~gum], t[keep & gum]
 
 
 def building_list(ways, in_foot):
@@ -465,6 +570,14 @@ def roof_colours(buf):
         if mm.sum() < 4:
             mm = np.asarray(m.crop((bx0, by0, bx1, by1))) > 0
         px = img[by0:by1, bx0:bx1][mm] if mm.any() else np.array([[150, 150, 146]])
+        # A footprint's overhanging trees and the shadow of its neighbour are not its roof (a quarter of the roofs
+        # came out olive or brown, 2026-11-26): only the roof's own grey, white or red is sampled.
+        f = px.astype(float)
+        roof = (2 * f[:, 1] - f[:, 0] - f[:, 2] <= 10) & (f.mean(-1) >= 70)
+        if roof.sum() >= max(4, 0.15 * len(f)):
+            px = px[roof]
+        else:
+            px = np.array([[150, 150, 146]])
         c = np.median(px.astype(float), axis=0)
         # The aerial's haze lifts the darks and greys the colours: take 14 off and stretch back.
         c = np.clip((c - 14.0) * 1.08, 8, 255) / 255.0

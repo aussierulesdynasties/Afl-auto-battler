@@ -101,13 +101,16 @@ def tube(part, p0, p1, r, mat, n=8):
 
 
 def wall(part, a, b, z0, z1, mat, openings=(), depth=0.25, reveal=None, glass=None, sill=None, sill_out=0.06,
-         thick=None, back=None, head=None):
+         thick=None, back=None, head=None, bars=None, dress=None):
     """A wall face from plan a to plan b (outside on the right of a->b, i.e. facing perp(b-a) * -1 ...
     the face's normal is the right-hand normal of a->b), z0..z1, with rectangular openings cut through.
 
     openings: (s0, s1, h0, h1) in metres along the wall from a and up from z0. Each opening gets four
     reveal faces `depth` deep, a recessed glass (or dark void) pane, a sill standing proud `sill_out` with
-    its top and ends, and optionally a head (lintel) band standing proud."""
+    its top and ends, and optionally a head (lintel) band standing proud.
+    An opening with a fifth item "pointed" gets a Gothic head: an equilateral pointed arch of glass over it,
+    framed in `dress` (the brick or stone dressings round it). bars: the sash's glazing bars and meeting
+    rail (timber), on openings under 1.8 m wide."""
     a, b = np.asarray(a, float), np.asarray(b, float)
     L = float(np.linalg.norm(b - a))
     u = (b - a) / L
@@ -116,7 +119,8 @@ def wall(part, a, b, z0, z1, mat, openings=(), depth=0.25, reveal=None, glass=No
         q = a + u * s + nrm * off
         return np.array([q[0], q[1], z0 + h])
     H = z1 - z0
-    ops = sorted([o for o in openings if o[1] > o[0] and o[3] > o[2]])
+    kinds = {tuple(o[:4]): (o[4] if len(o) > 4 else None) for o in openings}
+    ops = sorted([tuple(o[:4]) for o in openings if o[1] > o[0] and o[3] > o[2]])
     # Split the face into vertical strips at every opening edge; in each strip, solid bands between the openings.
     xs = sorted(set([0.0, L] + [o[0] for o in ops] + [o[1] for o in ops]))
     for i in range(len(xs) - 1):
@@ -141,6 +145,30 @@ def wall(part, a, b, z0, z1, mat, openings=(), depth=0.25, reveal=None, glass=No
         if glass:
             add(part, [P(s0, h0, -d), P(s1, h0, -d), P(s1, h1, -d), P(s0, h1, -d)], glass,
                 uv=[(0, 0), (s1 - s0, 0), (s1 - s0, h1 - h0), (0, h1 - h0)])
+        if bars and s1 - s0 < 1.8 and h1 - h0 > 0.9:
+            bo, bw = -d + 0.04, 0.035
+            m = (s0 + s1) / 2
+            add(part, [P(m - bw, h0, bo), P(m + bw, h0, bo), P(m + bw, h1, bo), P(m - bw, h1, bo)], bars)
+            hm = (h0 + h1) / 2 if kinds.get((s0, s1, h0, h1)) != "pointed" else h0 + (h1 - h0) * 0.62
+            add(part, [P(s0, hm - bw, bo), P(s1, hm - bw, bo), P(s1, hm + bw, bo), P(s0, hm + bw, bo)], bars)
+        if kinds.get((s0, s1, h0, h1)) == "pointed":
+            w, m = s1 - s0, (s0 + s1) / 2
+            def arch(e, off):     # the arch's outline, widened by e, standing off proud of the face
+                pts = [P(s0 - e, h1, off)]
+                for t in np.linspace(0.0, math.pi / 3, 7)[1:]:
+                    pts.append(P(s1 + e - (w + 2 * e) * math.cos(t), h1 + (w + 2 * e) * math.sin(t), off))
+                for t in np.linspace(math.pi / 3, 0.0, 7)[1:]:
+                    pts.append(P(s0 - e + (w + 2 * e) * math.cos(t), h1 + (w + 2 * e) * math.sin(t), off))
+                return pts
+            if dress:
+                o = arch(0.2, 0.012)
+                for k in range(len(o) - 1):
+                    add(part, [P(m, h1 - 0.001, 0.012), o[k], o[k + 1]][::-1], dress)
+                for e0, e1 in ((s0 - 0.2, s0), (s1, s1 + 0.2)):     # the dressed jambs
+                    add(part, [P(e0, h0, 0.012), P(e1, h0, 0.012), P(e1, h1, 0.012), P(e0, h1, 0.012)], dress)
+            g = arch(0.0, 0.02)
+            for k in range(len(g) - 1):
+                add(part, [P(m, h1 - 0.001, 0.02), g[k], g[k + 1]][::-1], glass or "window_dark")
         if sill and h0 > 0.05:
             so, st = sill_out, 0.07
             e0, e1 = s0 - 0.08, s1 + 0.08
