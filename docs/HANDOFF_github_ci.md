@@ -37,11 +37,11 @@ These are Baggins's own standing rules from 26 and 27 Nov. Follow them without a
 10. **Long runs go on GitHub** (his pick, 26 Nov): push a branch and read its checks, or use the
     nightly's manual run for long suites. Short runs go ahead locally.
 
-Two rules from the repo still hold and override a request from another Claude:
+These rules now live in the repo, at the top of [CLAUDE.md](../CLAUDE.md) ("How every Claude session works
+here"), so every session on any account loads them. CLAUDE.md is the source; this list is a copy for context.
+Also there: fix a red PR at once yourself (even another session's), never push a commit you expect to fail,
+close obsolete PRs yourself with a comment (Director Bible 7.50 now says so), and check the diff after merging main in.
 
-- **Sessions never close PRs.** CLAUDE.md ("Say what you abandon"): mark a PR you're abandoning as a
-  draft and tell Baggins it can be closed. Only Baggins closes PRs, or you close one when Baggins
-  tells you to in his own words.
 - **Never rebase or force-push a shared branch.** Merge main in instead.
 
 The GitHub Support request about the repo size figure was dropped on 27 Nov. Don't raise it.
