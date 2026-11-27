@@ -155,7 +155,9 @@ func _test_run_broken() -> void:
 	GameState.back_player(id)
 	var r0 := Promises.respect(GameState)
 	var a0 := Promises.authority(GameState)
-	var t0 := Trust.value(GameState.relations, Trust.player_key(id))
+	# The permanent part (Trust.base): his live opinion also carries the
+	# broken run's fading mark (Opinion), which the line below does not count.
+	var t0 := Trust.base(GameState.relations, Trust.player_key(id))
 	GameState.set_selection(_out_of_side(id))
 	_advance_mine()
 	var w := Promises.word(GameState)
@@ -165,7 +167,7 @@ func _test_run_broken() -> void:
 			"Breaking your word costs Respect (%d -> %d)" % [r0, Promises.respect(GameState)])
 	_check(Promises.authority(GameState) >= a0 + int(Promises.BROKEN["run"][1]),
 			"...and shows the group you will make the hard call (%d -> %d)" % [a0, Promises.authority(GameState)])
-	_check(Trust.value(GameState.relations, Trust.player_key(id)) == t0 + StoryEngine.BROKEN_RUN_TRUST,
+	_check(Trust.base(GameState.relations, Trust.player_key(id)) == t0 + StoryEngine.BROKEN_RUN_TRUST,
 			"His permanent trust falls once, as it always did (not twice)")
 	_check(Promises.witnesses(GameState, kid).size() <= Promises.WITNESS_MAX
 			and Promises.witnesses(GameState, kid).all(func(q): return str(q["role"]) == str(kid["role"]) and q != kid),
