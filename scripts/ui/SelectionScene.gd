@@ -427,7 +427,48 @@ func _open_profile(id: String) -> void:
 						else "A run of %s senior games, starting with the next.") % run
 						+ " Leave the player out while he is fit and the promise breaks. It stings.",
 				"run": _back.bind(id)})
-	_sheet = PlayerSheet.open(self, p, func(): _sheet = null, actions)
+	_sheet = PlayerSheet.open(self, p, func(): _sheet = null, actions, drop_preview(p))
+
+
+## What leaving a fit man in the side out this week would cost, before you
+## move him (relationship overhaul, Phase 1): his opinion of you, any word it
+## breaks, how his mates and rivals take it, and your Respect and Authority.
+## Read-only, and the same numbers the round applies. null when he is not in
+## the side, not fit, or there is no match to pick for.
+static func drop_preview(p: Dictionary) -> Control:
+	if GameState.season == null or GameState.my_next_opponent().is_empty() \
+			or not GameState.in_current_side(p) or int(p.get("injury_weeks", 0)) > 0:
+		return null
+	var cost := RelationsView.drop_preview(GameState, p, GameState.relations, not GameState.season.finals.is_empty())
+	var box := UiKit.vbox(UiKit.Space.SLIM)
+	box.name = "DropPreview"
+	box.add_child(UiKit.spacer(UiKit.Space.TIGHT))
+	box.add_child(UiKit.subhead("If we leave him out this week"))
+	var lines := []
+	if int(cost["opinion"]) != 0:
+		lines.append(["DropOpinion", "Being left out: opinion of you %+d." % int(cost["opinion"])])
+	if int(cost["promise"]) != 0 or not (cost["broken"] as Array).is_empty():
+		lines.append(["DropPromise", "Breaking your word: opinion of you %+d." % int(cost["promise"])])
+		for i in range((cost["broken"] as Array).size()):
+			var b = cost["broken"][i]
+			lines.append(["DropBroken_%d" % i, "It breaks: %s" % str(b).trim_suffix(".") + "."])
+	for f in cost["fallout"]:
+		var tie := ", his " + str(f["what"]) if str(f.get("what", "")) != "" else ""
+		lines.append(["DropFallout_" + str(f["id"]), "%s%s: opinion of you %+d." % [str(f["name"]), tie, int(f["opinion"])]])
+	var st: Dictionary = cost["standing"]
+	for pair in [["respect", "Respect"], ["authority", "Authority"]]:
+		var d := int(cost[pair[0]])
+		if d != 0 and st.has(pair[0]):
+			var now := int(st[pair[0]])
+			lines.append(["Drop" + str(pair[1]), "%s: %d to %d." % [pair[1], now, clampi(now + d, 0, 100)]])
+	if lines.is_empty():
+		lines.append(["DropNothing", "No one takes it to heart."])
+	for l in lines:
+		var lb := UiKit.lbl(str(l[1]), UiKit.SMALL, UiKit.TEXT)
+		lb.name = str(l[0])
+		lb.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		box.add_child(lb)
+	return box
 
 
 ## Promise a player a run: the profile closes and the screen says what changed.
