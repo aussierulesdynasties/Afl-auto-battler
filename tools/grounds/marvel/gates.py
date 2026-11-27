@@ -1066,6 +1066,85 @@ def _stage1():
             g.poly("link_steel", [(p_[0], p_[1], p_[2] + DECK_Z) for p_ in P], [tuple(map(float, x_)) for x_ in UV])
             NRM["link_steel"].append([tuple(map(float, n_)) for n_ in N])
 
+    # ------------------------------------------------------------ the needle (Gate 7)
+    # Part of the same work: a polished steel needle 12 m long, round, 0.95 m across at the deck, plunged into it
+    # point up and leaning 27 degrees towards the east-north-east. Its line comes from two photos (c006,
+    # c008), the Street View pano south of it (June 2019) and its shadow on the aerial; its outline was fitted in all
+    # three views (within 3 px): a gentle taper to 0.88 m over the lower 9 m, then a tangent ogive 3 m long.
+    # A fine welded seam runs its full length.
+    NEEDLE = (-59.05, 125.23, -53.86, 126.95, 10.69)    # base on the deck x, y; point x, y, height
+    def needle_steel(name, circ, tile_u=2.0, px=256):
+        """Brushed steel along the needle, faint smudges, and the long seam at v = 0 (Street View south, c008)."""
+        nu, nv = int(tile_u * px), int(circ * px)
+        ky = np.fft.fftfreq(nv)[:, None] * nv / circ
+        kx = np.fft.fftfreq(nu)[None, :] * nu / tile_u
+
+        def smooth(su, sv):
+            f = np.fft.fft2(rng.normal(0, 1, (nv, nu)))
+            o = np.real(np.fft.ifft2(f * np.exp(-(kx * su) ** 2 - (ky * sv) ** 2)))
+            return (o - o.mean()) / o.std()
+        img = np.zeros((nv, nu, 3)) + np.array([170.0, 169.0, 165.0])
+        img += smooth(0.5, 0.002)[..., None] * 5.0                             # brushing along the needle
+        img += smooth(0.15, 0.15)[..., None] * np.array([6.0, 6.0, 5.0])       # smudges
+        img += rng.normal(0, 1.5, (nv, nu, 1))
+        vv = (np.arange(nv) + 0.5) / px
+        dv = np.minimum(vv, circ - vv)
+        img -= (np.exp(-(dv / 0.006) ** 2) * 38.0)[:, None, None]              # the weld seam, about 1 cm wide
+        save(name, img, (tile_u, circ))
+
+    ND_B = np.array(NEEDLE[:2] + (0.0,))                   # where its axis meets the deck
+    ND_T = np.array(NEEDLE[2:5])                           # the point
+    ND_R0, ND_R, ND_LO = 0.476, 0.438, 2.96             # radius at the deck, where the nose starts; nose length
+    nax = ND_T - ND_B
+    ND_L = float(np.linalg.norm(nax))
+    nax /= ND_L
+    nd_circ = 2 * math.pi * ND_R0
+    needle_steel("needle_steel", nd_circ)
+    NRM["needle_steel"] = []
+    sb = np.array([math.sin(math.radians(120.0)), math.cos(math.radians(120.0)), 0.0])   # the seam faces south-east
+    e1 = sb - nax * float(np.dot(sb, nax))
+    e1 /= np.linalg.norm(e1)
+    e2 = np.cross(nax, e1)
+    rho_ = (ND_R ** 2 + ND_LO ** 2) / (2 * ND_R)          # tangent ogive: an arc of radius rho_ meeting the body
+
+    def nd_r(a):
+        """Radius and its slope at distance a along the axis from the deck."""
+        x_ = a - (ND_L - ND_LO)
+        if x_ <= 0:
+            return ND_R0 + (ND_R - ND_R0) * a / (ND_L - ND_LO), (ND_R - ND_R0) / (ND_L - ND_LO)
+        r_ = math.sqrt(max(0.0, rho_ ** 2 - x_ ** 2)) - (rho_ - ND_R)
+        return max(r_, 0.0), -x_ / math.sqrt(max(1e-9, rho_ ** 2 - x_ ** 2))
+    stations = list(np.linspace(-1.0, ND_L - ND_LO, 12)) + list(ND_L - ND_LO + ND_LO * np.sin(np.linspace(0, 1, 30)[1:] * math.pi / 2) * 0.995)
+    ns_ = 32
+    an = np.linspace(0, 2 * math.pi, ns_ + 1)
+    RG, NG = [], []
+    for a in stations:
+        r_, dr = nd_r(a)
+        rad = np.cos(an)[:, None] * e1[None] + np.sin(an)[:, None] * e2[None]
+        nr = rad - dr * nax[None]
+        NG.append(nr / np.linalg.norm(nr, axis=1)[:, None])
+        RG.append(ND_B[None] + a * nax[None] + r_ * rad)
+    for i in range(len(stations) - 1):
+        for j in range(ns_):
+            P = [RG[i][j], RG[i][j + 1], RG[i + 1][j + 1], RG[i + 1][j]]
+            N = [NG[i][j], NG[i][j + 1], NG[i + 1][j + 1], NG[i + 1][j]]
+            UV = [np.array((stations[i], nd_circ * j / ns_)), np.array((stations[i], nd_circ * (j + 1) / ns_)),
+                  np.array((stations[i + 1], nd_circ * (j + 1) / ns_)), np.array((stations[i + 1], nd_circ * j / ns_))]
+            if max(p_[2] for p_ in P) <= 0:
+                continue
+            if min(p_[2] for p_ in P) < 0:
+                P, N, UV = clip_up(P, N, UV)
+                if len(P) < 3:
+                    continue
+            g.poly("needle_steel", [(p_[0], p_[1], p_[2] + DECK_Z) for p_ in P], [tuple(map(float, x_)) for x_ in UV])
+            NRM["needle_steel"].append([tuple(map(float, n_)) for n_ in N])
+    for j in range(ns_):                                   # the last sliver closes to the point
+        P = [RG[-1][j], RG[-1][j + 1], ND_T]
+        N = [NG[-1][j], NG[-1][j + 1], nax]
+        UV = [(stations[-1], nd_circ * j / ns_), (stations[-1], nd_circ * (j + 1) / ns_), (ND_L, nd_circ * (j + 0.5) / ns_)]
+        g.poly("needle_steel", [(p_[0], p_[1], p_[2] + DECK_Z) for p_ in P], [tuple(map(float, x_)) for x_ in UV])
+        NRM["needle_steel"].append([tuple(map(float, n_)) for n_ in N])
+
     # ------------------------------------------------------------ hand over to Blender
     data = {"parts": g.parts, "tile": TILE, "text": TEXT, "tex": TEX, "out": OUT, "nrm": NRM}
     pkl = os.path.join(TEX, "_gates.pkl")
