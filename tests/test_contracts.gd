@@ -1,4 +1,5 @@
 extends RefCounted
+const Ovr := preload("res://tests/ovr.gd")
 ## Contracts, free agency and trades. Run through tests/run_contracts_tests.gd.
 
 var failures: Array[String] = []
@@ -87,15 +88,13 @@ func _new_season() -> void:
 	GameState.start_season("GEE", GameDB.club_list("GEE"))
 
 
-## Your players at `role` drop to 40, so a free agent there would start for you.
-## Their attributes drop too: a load rates every player from them again.
+## Your players at `role` drop to 30 in every attribute (their OVR is read from
+## them), so a free agent there would start for you.
 func _thin_line(role: String) -> void:
 	for q in GameState.my_list:
 		if str(q["role"]) == role:
 			for k in q["attr"]:
 				q["attr"][k] = mini(int(q["attr"][k]), 30)
-			q["overall"] = mini(int(q["overall"]),
-					Ratings.rate_overall(q["attr"], role, Ratings.effective_games(q)))
 	GameState._bars = {}
 
 
@@ -333,7 +332,8 @@ func _test_initial_contracts() -> void:
 func _test_first_contracts_fit_the_cap() -> void:
 	var list := []
 	for i in range(40):
-		list.append({"id": "FIT_%d" % i, "age": 26.0, "value": 600000 if i < 10 else 200000, "overall": 70})
+		# Pay is read from his OVR (Ratings.value_of): the ten best paid are the ten best.
+		list.append(Ovr.to({"id": "FIT_%d" % i, "age": 26.0}, 85 if i < 10 else 62))
 	var fresh := Contracts.assign_initial(list)
 	_check(fresh.size() == 40, "Every player without a contract gets one (%d)" % fresh.size())
 	var priced := Contracts.payroll(list)
@@ -429,13 +429,13 @@ func _test_offseason_books_are_next_seasons() -> void:
 ## delisted him, and his contract ends then (_test_real_delistings; found
 ## 2026-11-15: a 1990 start retired 12 a club, nine of them 26 or younger).
 func _test_real_retirements_are_retirements() -> void:
-	var vet := {"id": "rr_vet", "age": 31.0, "overall": 70, "real_last": 1990}
-	var kid := {"id": "rr_kid", "age": 22.0, "overall": 50, "real_last": 1990}
+	var vet := Ovr.to({"id": "rr_vet", "age": 31.0,  "real_last": 1990}, 70)
+	var kid := Ovr.to({"id": "rr_kid", "age": 22.0,  "real_last": 1990}, 50)
 	# Due in 1992 at the latest (his real last season, one late at most).
 	_check(Prospects.should_retire(vet, 1992), "A 31-year-old whose real career ended in 1990 retires by 1992")
 	_check(not Prospects.should_retire(kid, 1992),
 			"A 22-year-old whose real career ended in 1990 (delisted) is not retired by the record")
-	var edge := {"id": "rr_edge", "age": Prospects.REAL_RETIRE_AGE + 2.0, "overall": 60, "real_last": 1990}
+	var edge := Ovr.to({"id": "rr_edge", "age": Prospects.REAL_RETIRE_AGE + 2.0,  "real_last": 1990}, 60)
 	_check(Prospects.should_retire(edge, 1992), "Aged %d in his last real season, it was his retirement" % int(Prospects.REAL_RETIRE_AGE))
 
 
@@ -446,12 +446,12 @@ func _test_real_retirements_are_retirements() -> void:
 ## off-season at every club. A rival lets him go, even one of its best; on
 ## your list he is out of contract and you decide.
 func _test_real_delistings() -> void:
-	var kid := {"id": "rd_kid", "age": 22.0, "overall": 50, "real_last": 1990}
-	var vet := {"id": "rd_vet", "age": 31.0, "overall": 70, "real_last": 1990}
+	var kid := Ovr.to({"id": "rd_kid", "age": 22.0,  "real_last": 1990}, 50)
+	var vet := Ovr.to({"id": "rd_vet", "age": 31.0,  "real_last": 1990}, 70)
 	_check(Prospects.real_delisting_due(kid, 1992) and not Prospects.real_delisting_due(kid, 1990),
 			"A 22-year-old whose real career ended in 1990 is delisted by 1992, not before his last season")
 	_check(not Prospects.real_delisting_due(vet, 1992), "A 31-year-old's last real season is his retirement, not a delisting")
-	_check(not Prospects.real_delisting_due({"id": "rd_none", "age": 22.0, "overall": 50}, 1992),
+	_check(not Prospects.real_delisting_due(Ovr.to({"id": "rd_none", "age": 22.0}, 50), 1992),
 			"A player with no real record is the sim's")
 	_new_season()
 	var rival := ""
@@ -461,11 +461,11 @@ func _test_real_delistings() -> void:
 			break
 	var theirs: Dictionary = {}
 	for p in GameState.season.lists[rival]:
-		if theirs.is_empty() or int(p.get("overall", 0)) > int(theirs.get("overall", 0)):
+		if theirs.is_empty() or int(Ovr.of(p, 0)) > int(Ovr.of(theirs, 0)):
 			theirs = p
 	var mine: Dictionary = {}
 	for p in GameState.my_list:
-		if mine.is_empty() or int(p.get("overall", 0)) > int(mine.get("overall", 0)):
+		if mine.is_empty() or int(Ovr.of(p, 0)) > int(Ovr.of(mine, 0)):
 			mine = p
 	# His real career ended last season, at 22.
 	for p in [theirs, mine]:
@@ -664,17 +664,17 @@ func _test_offseason_flow() -> void:
 	var rival := "COL"
 	var their_best: Dictionary = {}
 	for p in GameState.season.lists[rival]:
-		if their_best.is_empty() or int(p["overall"]) > int(their_best["overall"]):
+		if their_best.is_empty() or int(Ovr.of(p)) > int(Ovr.of(their_best)):
 			their_best = p
 	var sorted_mine := GameState.my_list.duplicate()
-	sorted_mine.sort_custom(func(a, b): return int(a["overall"]) < int(b["overall"]))
+	sorted_mine.sort_custom(func(a, b): return int(Ovr.of(a)) < int(Ovr.of(b)))
 	var two_weak := [str(sorted_mine[0]["id"]), str(sorted_mine[1]["id"])]
 	_check(not bool(GameState.evaluate_trade(rival, two_weak, [str(their_best["id"])])["ok"]),
 			"Two fringe players do not buy a star")
 	var my_best: Dictionary = sorted_mine[sorted_mine.size() - 1]
 	var their_weak: Dictionary = {}
 	for p in GameState.season.lists[rival]:
-		if their_weak.is_empty() or int(p["overall"]) < int(their_weak["overall"]):
+		if their_weak.is_empty() or int(Ovr.of(p)) < int(Ovr.of(their_weak)):
 			their_weak = p
 	GameState.set_selection(GameState.current_side())
 	var t := GameState.make_trade(rival, [str(my_best["id"])], [str(their_weak["id"])])
@@ -768,7 +768,7 @@ func _test_market_test() -> void:
 	GameState.salary_cap += 5000000
 	# Room above the minimum: three more depth players under contract.
 	var spare: Array = GameState.my_list.duplicate()
-	spare.sort_custom(func(a, b): return int(a["overall"]) < int(b["overall"]))
+	spare.sort_custom(func(a, b): return int(Ovr.of(a)) < int(Ovr.of(b)))
 	for i in range(3):
 		var extra: Dictionary = (spare[i] as Dictionary).duplicate(true)
 		extra["id"] = "%s_spare%d" % [str(extra["id"]), i]
@@ -817,17 +817,17 @@ func _test_market_test() -> void:
 ## ARD-M6-004: what a player wants is shown; how far he bends follows his
 ## leverage and the term; the same offer always gets the same answer.
 func _test_negotiation_rules() -> void:
-	var star := {"id": "n_star", "overall": 84, "potential": 86, "age": 26.0, "morale": 70}
-	var regular := {"id": "n_reg", "overall": 70, "potential": 72, "age": 27.0, "morale": 70}
-	var fringe := {"id": "n_fringe", "overall": 52, "potential": 55, "age": 31.0, "morale": 70}
-	var kid := {"id": "n_kid", "overall": 66, "potential": 85, "age": 21.0, "morale": 70}
+	var star := Ovr.to({"id": "n_star",  "potential": 86, "age": 26.0, "morale": 70}, 84)
+	var regular := Ovr.to({"id": "n_reg",  "potential": 72, "age": 27.0, "morale": 70}, 70)
+	var fringe := Ovr.to({"id": "n_fringe",  "potential": 55, "age": 31.0, "morale": 70}, 52)
+	var kid := Ovr.to({"id": "n_kid",  "potential": 85, "age": 21.0, "morale": 70}, 66)
 	_check(int(Contracts.wants(regular)["years"]) == 3 and int(Contracts.wants(fringe)["years"]) == 2
 			and int(Contracts.wants(regular)["salary"]) == Contracts.asking_salary(regular),
 			"He asks his price over three seasons, or two once he is 30")
 	_check(Contracts.leverage(star) > Contracts.leverage(kid) and Contracts.leverage(kid) > Contracts.leverage(fringe)
 			and Contracts.stance(star).contains("won't take less") and Contracts.stance(fringe).contains("fighting"),
 			"Better and younger players have more leverage, and he says so")
-	var min_wage := {"id": "n_min", "overall": 40, "potential": 40, "age": 32.0, "morale": 70}
+	var min_wage := Ovr.to({"id": "n_min",  "potential": 40, "age": 32.0, "morale": 70}, 40)
 	_check(Contracts.asking_salary(min_wage) == Contracts.SENIOR_MIN_2027
 			and Contracts.stance(min_wage).contains("fighting"),
 			"A minimum-wage fringe player is fighting for a spot, not firm on his worth")
@@ -842,7 +842,7 @@ func _test_negotiation_rules() -> void:
 	var smooth := true
 	var prev := {}
 	for ovr in range(55, 92):
-		var q := {"id": "n_s", "overall": ovr, "potential": ovr, "age": 26.0, "morale": 70}
+		var q := Ovr.to({"id": "n_s",  "potential": ovr, "age": 26.0, "morale": 70}, ovr)
 		if not prev.is_empty():
 			if Contracts.leverage(q) - Contracts.leverage(prev) > 0.05 or absi(Contracts.lowest(q, 3) - Contracts.lowest(prev, 3)) > 200000:
 				smooth = false
@@ -1113,7 +1113,7 @@ func _test_opinion_never_drifts() -> void:
 ## Part 2: a free agent weighs your club against his options, from facts the
 ## player can see. Cap room alone never signs anyone.
 func _test_free_agent_terms() -> void:
-	var p := {"id": "fa_t", "overall": 70, "potential": 72, "age": 27.0, "morale": 70}
+	var p := Ovr.to({"id": "fa_t",  "potential": 72, "age": 27.0, "morale": 70}, 70)
 	var bench := Contracts.free_agent_terms(p, {"in_best22": false, "rivals": 1})
 	_check(bool(bench["refuse"]) and str(bench["reasons"]).contains("best 23"),
 			"He won't sit outside your best 23 while a club that would play him has an offer")
@@ -1214,7 +1214,7 @@ func _test_free_agents() -> void:
 	# A generated player goes through exactly the same market.
 	var gen: Dictionary = (GameDB.draftees[0] as Dictionary).duplicate(true)
 	gen["id"] = "fa_generated"
-	gen["overall"] = 84
+	Ovr.to(gen, 84)
 	gen["age"] = 24.0
 	gen["contract_years"] = 0
 	gen["released_by"] = str(keys[0])
@@ -1232,11 +1232,11 @@ func _test_free_agents() -> void:
 	var saved := {}
 	for q in GameState.my_list:
 		if str(q["role"]) == "RUCK":
-			saved[str(q["id"])] = int(q["overall"])
-			q["overall"] = 40
+			saved[str(q["id"])] = int(Ovr.of(q))
+			Ovr.to(q, 40)
 	var all_ovr := []
 	for q in GameState.my_list:
-		all_ovr.append(int(q["overall"]))
+		all_ovr.append(int(Ovr.of(q)))
 	all_ovr.sort()
 	all_ovr.reverse()
 	var cut := int(all_ovr[21])
@@ -1247,14 +1247,14 @@ func _test_free_agents() -> void:
 			break
 	if not big.is_empty():
 		big["id"] = "fa_ruck"
-		big["overall"] = cut - 5
+		Ovr.to(big, cut - 5)
 		big.erase("role2")
 		GameState._bars = {}
 		_check(GameState.fa_role(big, me) == "ground",
-				"A ruckman rated below your top 22 starts when your rucks are weak (%d v cut %d)" % [int(big["overall"]), cut])
+				"A ruckman rated below your top 22 starts when your rucks are weak (%d v cut %d)" % [int(Ovr.of(big)), cut])
 	for q in GameState.my_list:
 		if saved.has(str(q["id"])):
-			q["overall"] = saved[str(q["id"])]
+			Ovr.to(q, saved[str(q["id"])])
 	GameState._bars = {}
 	# Refusal: he won't sit outside your best 22 while a club that would play
 	# him has an offer.
@@ -1276,7 +1276,7 @@ func _test_free_agents() -> void:
 		var real := (fa.get("offers", []) as Array).size() >= 1
 		for o in fa.get("offers", []):
 			real = real and not bool(o.get("filler", false))
-		if real and (contested.is_empty() or int(fa["overall"]) > int(contested["overall"])):
+		if real and (contested.is_empty() or int(Ovr.of(fa)) > int(Ovr.of(contested))):
 			contested = fa
 	if not contested.is_empty():
 		_thin_line(str(contested["role"]))
@@ -1286,7 +1286,7 @@ func _test_free_agents() -> void:
 			var ok := true
 			for o in fa["offers"]:
 				ok = ok and not bool(o.get("filler", false))
-			if ok and (target.is_empty() or int(fa["overall"]) > int(target["overall"])):
+			if ok and (target.is_empty() or int(Ovr.of(fa)) > int(Ovr.of(target))):
 				target = fa
 	_check(not target.is_empty(), "A starter for you has rival offers to beat")
 	if target.is_empty():
@@ -1345,7 +1345,7 @@ func _test_free_agents() -> void:
 		if code == me:
 			continue
 		for q in GameState.season.lists[code]:
-			if not q.has("joined") and (star.is_empty() or int(q["overall"]) > int(star["overall"])):
+			if not q.has("joined") and (star.is_empty() or int(Ovr.of(q)) > int(Ovr.of(star))):
 				star = q
 				a_club = code
 	GameState._release(a_club, star, true)
@@ -1408,7 +1408,7 @@ func _test_market_marks() -> void:
 		room.append(str(code))
 	_check(room.size() >= 2, "Two rival clubs have list room (%d)" % room.size())
 	var pool: Array = gs.free_agents.duplicate()
-	pool.sort_custom(func(a, b): return int(a["overall"]) > int(b["overall"]))
+	pool.sort_custom(func(a, b): return int(Ovr.of(a)) > int(Ovr.of(b)))
 	var keep_rookie: Dictionary = gs.rookie_draft
 	var keep_mid: Dictionary = gs.midseason
 	gs.rookie_draft = {"picks": [], "round": 1}
@@ -1489,15 +1489,15 @@ func _offer_book() -> String:
 ## bigger deal earns an earlier pick; nothing jumps between neighbours.
 func _test_compensation_rules() -> void:
 	var clubs := 18
-	var star := {"id": "c_star", "overall": 86, "age": 25.0}
-	var fringe := {"id": "c_fringe", "overall": 56, "age": 30.0}
+	var star := Ovr.to({"id": "c_star",  "age": 25.0}, 86)
+	var fringe := Ovr.to({"id": "c_fringe",  "age": 30.0}, 56)
 	var v_star := Contracts.compensation_value(star, Contracts.old_points_to_salary(9), 3)
 	var v_fringe := Contracts.compensation_value(fringe, Contracts.old_points_to_salary(3), 1)
 	var a_star := Contracts.compensation_after(v_star, clubs)
 	var a_fringe := Contracts.compensation_after(v_fringe, clubs)
 	_check(a_star > 0 and (a_fringe == 0 or a_fringe > a_star),
 			"Losing a star earns a far better pick than losing a fringe player (after %d v %d)" % [a_star, a_fringe])
-	var mid := {"id": "c_mid", "overall": 72, "age": 27.0}
+	var mid := Ovr.to({"id": "c_mid",  "age": 27.0}, 72)
 	var base := Contracts.compensation_value(mid, Contracts.old_points_to_salary(6), 2)
 	var young := mid.duplicate()
 	young["age"] = 23.0
@@ -1512,7 +1512,7 @@ func _test_compensation_rules() -> void:
 	var prev := -1
 	var notes := []
 	for ovr in range(55, 93):
-		var q := {"id": "c_s", "overall": ovr, "age": 26.0}
+		var q := Ovr.to({"id": "c_s",  "age": 26.0}, ovr)
 		var after := Contracts.compensation_after(Contracts.compensation_value(q, Ratings.salary_value(ovr), 3), clubs)
 		if prev > 0 and after > 0 and (absi(after - prev) > 3 or after > prev):
 			smooth = false
@@ -1596,7 +1596,7 @@ func _test_compensation_flow() -> void:
 	var best := func(code: String, skip: Array) -> Dictionary:
 		var top := {}
 		for q in GameState.season.lists[code]:
-			if not skip.has(q) and not q.has("joined") and (top.is_empty() or int(q["overall"]) > int(top["overall"])):
+			if not skip.has(q) and not q.has("joined") and (top.is_empty() or int(Ovr.of(q)) > int(Ovr.of(top))):
 				top = q
 		return top
 	var star: Dictionary = best.call(a, [])
@@ -1641,7 +1641,7 @@ func _test_compensation_flow() -> void:
 	# signs him at the draft you get the pick under the same rule.
 	var mine := {}
 	for p in Contracts.expiring(GameState.my_list):
-		if not p.has("joined") and (mine.is_empty() or int(p["overall"]) > int(mine["overall"])):
+		if not p.has("joined") and (mine.is_empty() or int(Ovr.of(p)) > int(Ovr.of(mine))):
 			mine = p
 	if not mine.is_empty():
 		var proj := GameState.projected_compensation(mine)
@@ -1730,7 +1730,11 @@ func _by_name(list: Array, last: String, first: String) -> Dictionary:
 func _with(p: Dictionary, changes: Dictionary) -> Dictionary:
 	var q := p.duplicate(true)
 	for k in changes:
-		q[k] = changes[k]
+		if k != "overall":
+			q[k] = changes[k]
+	# OVR is read from his attributes: an "overall" change moves them (tests/ovr.gd).
+	if changes.has("overall"):
+		Ovr.to(q, float(changes["overall"]))
 	return q
 
 
@@ -1738,7 +1742,7 @@ func _with(p: Dictionary, changes: Dictionary) -> Dictionary:
 func _trade(ai_list: Array, give: Array, take: Array, phase: String, margin := 0.0) -> Dictionary:
 	var ai := ai_list.duplicate()
 	var spare := ai.filter(func(q): return not give.has(q))
-	spare.sort_custom(func(x, y): return int(x["overall"]) < int(y["overall"]))
+	spare.sort_custom(func(x, y): return int(Ovr.of(x)) < int(Ovr.of(y)))
 	while ai.size() - give.size() + take.size() > 40 and not spare.is_empty():
 		ai.erase(spare.pop_front())
 	var mine: Array = _padded(GameDB.club_list("GEE").duplicate())
@@ -1759,7 +1763,7 @@ func _trade_as_is(ai_list: Array, give: Array, take: Array, phase: String, margi
 ## `n`: room for a test's signings now that lists start at the minimum.
 func _trim_to(list: Array, n: int, keep := []) -> void:
 	var low := list.filter(func(q): return not keep.has(q))
-	low.sort_custom(func(x, y): return int(x["overall"]) < int(y["overall"]))
+	low.sort_custom(func(x, y): return int(Ovr.of(x)) < int(Ovr.of(y)))
 	while list.size() > n and not low.is_empty():
 		list.erase(low.pop_front())
 
@@ -1770,7 +1774,7 @@ func _trim_to(list: Array, n: int, keep := []) -> void:
 func _padded(list: Array) -> Array:
 	var out := list.duplicate()
 	var low: Array = list.duplicate()
-	low.sort_custom(func(x, y): return int(x["overall"]) < int(y["overall"]))
+	low.sort_custom(func(x, y): return int(Ovr.of(x)) < int(Ovr.of(y)))
 	var i := 0
 	while out.size() < Contracts.min_list() + 3 and not low.is_empty():
 		var q: Dictionary = (low[i % low.size()] as Dictionary).duplicate()
@@ -1787,10 +1791,10 @@ func _test_trade_value() -> void:
 	# ruck, Adelaide down to two rucks, the easiest trade margin.
 	var ade: Array = GameDB.club_list("ADE").duplicate()
 	var butler := _with(_by_name(GameDB.draftees, "Butler", "Arki"),
-			{"overall": 72, "potential": 92, "age": 19.0, "salary": Contracts.old_points_to_salary(2), "contract_years": 2, "club": "ADE"})
+			{"potential": 92, "age": 19.0, "salary": Contracts.old_points_to_salary(2), "contract_years": 2, "club": "ADE", "overall": 72})
 	ade.append(butler)
 	var rucks := ade.filter(func(q): return str(q["role"]) == "RUCK")
-	rucks.sort_custom(func(x, y): return int(x["overall"]) < int(y["overall"]))
+	rucks.sort_custom(func(x, y): return int(Ovr.of(x)) < int(Ovr.of(y)))
 	ade.erase(rucks[0])
 	var sweet := _with(_by_name(GameDB.club_list("PAD"), "Sweet", "Jord"), {"overall": 72})
 	var lester := _by_name(GameDB.club_list("BRL"), "Lester", "Ryan")
@@ -1809,7 +1813,7 @@ func _test_trade_value() -> void:
 	# Bundles of ordinary or older players for a club's best young player.
 	var gee: Array = GameDB.club_list("GEE")
 	# (Not a star in his rehab year: his rating is about to jump.)
-	var ordinary := gee.filter(func(q): return int(q["overall"]) >= 58 and int(q["overall"]) <= 68 and float(q["age"]) >= 26.0 \
+	var ordinary := gee.filter(func(q): return int(Ovr.of(q)) >= 58 and int(Ovr.of(q)) <= 68 and float(q["age"]) >= 26.0 \
 			and not bool(q.get("rehab", false)))
 	var bundles_refused := true
 	var tried := 0
@@ -1844,13 +1848,13 @@ func _test_trade_value() -> void:
 	var rehab_club := ""
 	for code in GameDB.CLUB_ORDER:
 		for q in GameDB.club_list(code):
-			if bool(q.get("rehab", false)) and int(q["potential"]) - int(q["overall"]) >= 15 \
+			if bool(q.get("rehab", false)) and int(q["potential"]) - int(Ovr.of(q)) >= 15 \
 					and (rehab.is_empty() or int(q["potential"]) > int(rehab["potential"])):
 				rehab = q
 				rehab_club = code
-	var back := float(rehab.get("overall", 0)) + (float(rehab.get("potential", 0)) - float(rehab.get("overall", 0))) * Potential.REHAB_PULL
+	var back := float(Ovr.of(rehab, 0)) + (float(rehab.get("potential", 0)) - float(Ovr.of(rehab, 0))) * Potential.REHAB_PULL
 	_check(not rehab.is_empty() and absf(TradeValue.rating(rehab) - back) < 0.01
-			and TradeValue.now_rating(rehab) >= float(rehab["overall"]) + 10.0,
+			and TradeValue.now_rating(rehab) >= float(Ovr.of(rehab)) + 10.0,
 			"A star in his rehab year is valued at the rating he comes back at (%s, %.0f)" % [
 			GameDB.player_display_name(rehab) if not rehab.is_empty() else "none", back])
 	var fringe := ordinary.slice(0, 2)
@@ -1864,7 +1868,7 @@ func _test_trade_value() -> void:
 	# Quality-aware needs: a club with a poor ruckman pays more for a good one;
 	# a club whose ruck is better than him barely wants him.
 	var base: Array = GameDB.club_list("COL")
-	var ruck := _with(base.filter(func(q): return str(q["role"]) == "RUCK")[0], {"id": "t_ruck", "overall": 76, "age": 26.0, "role2": ""})
+	var ruck := _with(base.filter(func(q): return str(q["role"]) == "RUCK")[0], {"id": "t_ruck",  "age": 26.0, "role2": "", "overall": 76})
 	var weakest := ""
 	var strongest := ""
 	for code in GameDB.CLUB_ORDER:
@@ -1882,15 +1886,15 @@ func _test_trade_value() -> void:
 	# A position he learned in training counts in a trade like his own: a
 	# forward who can also play back is worth more to a club short in defence.
 	var bars := {"FWD": 90, "MID": 90, "DEF": 50, "RUCK": 90, "bench": 60}
-	var versatile := {"id": "t_learn", "role": "FWD", "role2": "MID", "overall": 70, "age": 25.0, "potential": 72}
+	var versatile := Ovr.to({"id": "t_learn", "role": "FWD", "role2": "MID",  "age": 25.0, "potential": 72}, 70)
 	var before_learning := TradeValue.fit(versatile, bars)
 	versatile["learned"] = ["DEF"]
 	_check(TradeValue.fit(versatile, bars) > before_learning,
 			"A learned position counts in a trade (%.2f v %.2f)" % [TradeValue.fit(versatile, bars), before_learning])
 	# A strong, young forward line: another forward wouldn't get a game.
 	var fwd_bar := int(TradeValue.selection_bars(base).get("FWD", 60))
-	var forward := _with(base.filter(func(q): return str(q["role"]) == "FWD")[0], {"id": "t_fwd", "overall": fwd_bar + 3, "age": 28.0, "role2": ""})
-	var young_line := base.map(func(q): return _with(q, {"age": 21.0, "potential": int(q["overall"]) + 15}) if str(q["role"]) == "FWD" else q)
+	var forward := _with(base.filter(func(q): return str(q["role"]) == "FWD")[0], {"id": "t_fwd",  "age": 28.0, "role2": "", "overall": fwd_bar + 3})
+	var young_line := base.map(func(q): return _with(q, {"age": 21.0, "potential": int(Ovr.of(q)) + 15}) if str(q["role"]) == "FWD" else q)
 	_check(TradeValue.cover(forward, TradeValue.selection_bars(base, true)) == 1.0
 			and TradeValue.cover(forward, TradeValue.selection_bars(young_line, true)) < 1.0,
 			"A forward with a future at an ordinary forward line is covered by a strong young one")
@@ -1904,7 +1908,7 @@ func _test_trade_value() -> void:
 		sensible = sensible and bool(_trade(club_vet, [vet], [kid], "rebuilding", m)["ok"]) \
 				and not bool(_trade(club_vet, [vet], [kid], "contending", m)["ok"])
 	_check(sensible, "On every difficulty a rebuilder moves a 30-year-old star for a young talent; a contender keeps him")
-	var prospect := _with(base[2], {"id": "t_prospect", "overall": 66, "potential": 90, "age": 20.0})
+	var prospect := _with(base[2], {"id": "t_prospect", "overall": 69, "potential": 90, "age": 20.0})
 	var starter := _with(base[3], {"id": "t_starter", "overall": 80, "potential": 80, "age": 27.0})
 	var club_kid: Array = base.duplicate()
 	club_kid.append(prospect)
@@ -1931,7 +1935,7 @@ func _test_trade_value() -> void:
 	# market price in real money - not all or nothing.
 	var fair := Ratings.salary_value(80)
 	var deal := func(salary: int) -> float:
-		return TradeValue.contract_factor({"overall": 80, "salary": salary, "contract_years": 3})
+		return TradeValue.contract_factor(Ovr.to({"salary": salary, "contract_years": 3}, 80))
 	_check(is_equal_approx(deal.call(fair), 1.0) and absf(deal.call(fair - 5000) - 1.0) < 0.005
 			and absf(deal.call(fair + 5000) - 1.0) < 0.005,
 			"A contract a few thousand dollars from his market price barely moves his trade value")
@@ -1949,7 +1953,7 @@ func _test_trade_packages_and_needs() -> void:
 	var base: Array = GameDB.club_list("COL").duplicate().slice(0, 35)
 	var gee: Array = GameDB.club_list("GEE")
 	# (Not a star in his rehab year: his rating is about to jump.)
-	var ordinary := gee.filter(func(q): return int(q["overall"]) >= 58 and int(q["overall"]) <= 68 and float(q["age"]) >= 26.0 \
+	var ordinary := gee.filter(func(q): return int(Ovr.of(q)) >= 58 and int(Ovr.of(q)) <= 68 and float(q["age"]) >= 26.0 \
 			and not bool(q.get("rehab", false)))
 	var young := base.filter(func(q): return float(q["age"]) <= 23.0)
 	young.sort_custom(func(x, y): return TradeValue.future_rating(x) > TradeValue.future_rating(y))
@@ -1964,7 +1968,7 @@ func _test_trade_packages_and_needs() -> void:
 	# Two players for one gap don't both fill it: a second ruck adds less
 	# than the first.
 	var bars := TradeValue.selection_bars(base)
-	var r1 := _with(base.filter(func(q): return str(q["role"]) == "RUCK")[0], {"id": "t_r1", "overall": int(bars.get("RUCK", 60)) + 8, "age": 26.0, "role2": ""})
+	var r1 := _with(base.filter(func(q): return str(q["role"]) == "RUCK")[0], {"id": "t_r1", "age": 26.0, "role2": "", "overall": int(bars.get("RUCK", 60)) + 8})
 	var r2 := _with(r1, {"id": "t_r2"})
 	var one := _trade_as_is(base, [base[6]], [r1], "building", 0.0)
 	var two := _trade_as_is(base, [base[6]], [r1, r2], "building", 0.0)
@@ -1979,9 +1983,9 @@ func _test_trade_packages_and_needs() -> void:
 	_check(pair > solo * 1.4, "Two starters at separate weak spots both count (%.2f v %.2f alone)" % [pair, solo])
 	# A promising young forward line that is weak now - and has shown it:
 	# an unseen ceiling is only half banked (TradeValue.proven).
-	var kids := base.map(func(q): return _with(q, {"overall": 58, "potential": 86, "age": 20.0,
+	var kids := base.map(func(q): return _with(q, {"overall": 61, "potential": 86, "age": 20.0,
 			"career": {"games": 60}}) if str(q["role"]) == "FWD" else q)
-	var vet := _with(base.filter(func(q): return str(q["role"]) == "FWD")[0], {"id": "t_vetfwd", "overall": 72, "potential": 72, "age": 27.0, "role2": ""})
+	var vet := _with(base.filter(func(q): return str(q["role"]) == "FWD")[0], {"id": "t_vetfwd",  "potential": 72, "age": 27.0, "role2": "", "overall": 72})
 	var now_bars := TradeValue.selection_bars(kids)
 	var proj_bars := TradeValue.selection_bars(kids, true)
 	var c_ctx := {"phase": "contending", "bars": now_bars, "proj": proj_bars}
@@ -2011,10 +2015,10 @@ func _test_phase_cache() -> void:
 	var rival := "COL"
 	var their_weak: Dictionary = {}
 	for p in GameState.season.lists[rival]:
-		if their_weak.is_empty() or int(p["overall"]) < int(their_weak["overall"]):
+		if their_weak.is_empty() or int(Ovr.of(p)) < int(Ovr.of(their_weak)):
 			their_weak = p
 	var sorted_mine := GameState.my_list.duplicate()
-	sorted_mine.sort_custom(func(a, b): return int(a["overall"]) > int(b["overall"]))
+	sorted_mine.sort_custom(func(a, b): return int(Ovr.of(a)) > int(Ovr.of(b)))
 	for code in GameState.season.lists:
 		GameState.club_phase(code)
 	var before_key := str(GameState._phase_cache.get("key", ""))
@@ -2076,10 +2080,10 @@ func _test_trade_picks() -> void:
 	var my_first := GameState.pick_id(year, 1, me)
 	var my_last := GameState.pick_id(year, rounds, me)
 	var sorted_mine := GameState.my_list.duplicate()
-	sorted_mine.sort_custom(func(a, b): return int(a["overall"]) < int(b["overall"]))
+	sorted_mine.sort_custom(func(a, b): return int(Ovr.of(a)) < int(Ovr.of(b)))
 	var my_weak := str(sorted_mine[0]["id"])
 	var theirs := (GameState.season.lists[rival] as Array).duplicate()
-	theirs.sort_custom(func(a, b): return int(a["overall"]) < int(b["overall"]))
+	theirs.sort_custom(func(a, b): return int(Ovr.of(a)) < int(Ovr.of(b)))
 	var their_weak := str(theirs[0]["id"])
 	var their_star := str(theirs[theirs.size() - 1]["id"])
 	_check(not bool(GameState.evaluate_trade(rival, [their_first], [their_weak])["ok"]),
@@ -2389,63 +2393,75 @@ func _night_rival_deals(seed: int) -> int:
 ## a rival's offer to you, a deal you put up - names a pick already made, and
 ## the pick log shows every deal before the pick it was struck before.
 func _test_night_trades_never_name_called_picks() -> void:
-	GameState.reset()
-	GameState.career_seed = 5
-	GameState.replay_seed = 5
-	GameState.start_season("GEE", GameDB.club_list("GEE"))
-	_to_offseason()
-	var me := GameState.my_club
-	var year := GameState.season_year
-	_check(GameState.begin_intake_draft(), "Row 175: the national draft opens")
-	var d: Draft = GameState.draft
 	var tonight := RegEx.create_from_string("pick (\\d+) tonight")
 	var bad := []   # what named a called pick, in words
 	var user_turns := 0
 	var offers_seen := 0
 	var guard := 0
-	while not d.is_finished() and guard < 2000:
-		guard += 1
-		if not d.is_user_turn():
-			d.auto_until_user_turn()
-			continue
-		user_turns += 1
-		var clock := int(d.pick_index) + 1   # the pick on the clock: every pick before it is made
-		# Every club's picks on the table: none already made.
-		for code in GameDB.active_clubs(year):
-			for pk in GameState.club_picks(str(code)):
-				if int(pk["year"]) == year and int(pk["spot"]) < clock:
-					bad.append("%s holds made pick %d at pick %d" % [code, int(pk["spot"]), clock])
-		# A pick already made cannot be put up, by you or for you. (A compensation
-		# pick has no id of its own: its round and club name the club's regular
-		# pick, which may still be to come.)
-		var comp := {}
-		for c in d.comp_picks:
-			comp[int(c["index"])] = true
-		for i in range(int(d.pick_index)):
-			var id := GameState.pick_id(year, int(d.pick_rounds[i]), str(d.pick_origin[i]))
-			var pk := GameState.pick_asset(id)
-			if not pk.is_empty() and (not comp.has(i) or int(pk["spot"]) < clock):
-				bad.append("made pick %d is still an asset (as pick %d) at pick %d" % [i + 1, int(pk["spot"]), clock])
-		# Offers rivals put to you for this pick: picks still to come, in words too.
-		GameState.make_night_offers()
-		for i in GameState.open_trade_offers():
-			offers_seen += 1
-			var o: Dictionary = GameState.trade_offers[i]
-			for id in (o["give"] as Array) + (o["take"] as Array):
-				var pk := GameState.pick_asset(str(id))
-				if pk.is_empty() or (int(pk["year"]) == year and int(pk["spot"]) < clock):
-					bad.append("offer %d names %s at pick %d" % [i, str(id), clock])
-			for m in tonight.search_all(GameState.trade_offer_text(i)):
-				if int(m.get_string(1)) < clock:
-					bad.append("offer text names pick %s at pick %d" % [m.get_string(1), clock])
-		var made_id := GameState.pick_id(year, int(d.pick_rounds[d.pick_index]), str(d.pick_origin[d.pick_index]))
-		if not d.pick_for_me():
-			d.user_pass()
-		# Once your pick is made, no offer for it is left standing.
-		for i in GameState.open_trade_offers():
-			if (GameState.trade_offers[i]["take"] as Array).has(made_id):
-				bad.append("an offer for %s outlived the pick" % made_id)
-	_check(d.is_finished(), "Row 175: the draft runs to the end (%d steps)" % guard)
+	var me := ""
+	var year := 0
+	var d: Draft = null
+	var nights := []
+	# Not every night has deals (seed 5 has one, and none after this suite's earlier
+	# tests): a quiet night is still checked, then the next seed's night, so the
+	# deal checks below always have deals to read.
+	for night_seed in [5, 3, 6, 7]:
+		GameState.reset()
+		GameState.career_seed = night_seed
+		GameState.replay_seed = night_seed
+		GameState.start_season("GEE", GameDB.club_list("GEE"))
+		_to_offseason()
+		me = GameState.my_club
+		year = GameState.season_year
+		_check(GameState.begin_intake_draft(), "Row 175: the national draft opens")
+		d = GameState.draft
+		guard = 0
+		nights.append(night_seed)
+		while not d.is_finished() and guard < 2000:
+			guard += 1
+			if not d.is_user_turn():
+				d.auto_until_user_turn()
+				continue
+			user_turns += 1
+			var clock := int(d.pick_index) + 1   # the pick on the clock: every pick before it is made
+			# Every club's picks on the table: none already made.
+			for code in GameDB.active_clubs(year):
+				for pk in GameState.club_picks(str(code)):
+					if int(pk["year"]) == year and int(pk["spot"]) < clock:
+						bad.append("%s holds made pick %d at pick %d" % [code, int(pk["spot"]), clock])
+			# A pick already made cannot be put up, by you or for you. (A compensation
+			# pick has no id of its own: its round and club name the club's regular
+			# pick, which may still be to come.)
+			var comp := {}
+			for c in d.comp_picks:
+				comp[int(c["index"])] = true
+			for i in range(int(d.pick_index)):
+				var id := GameState.pick_id(year, int(d.pick_rounds[i]), str(d.pick_origin[i]))
+				var pk := GameState.pick_asset(id)
+				if not pk.is_empty() and (not comp.has(i) or int(pk["spot"]) < clock):
+					bad.append("made pick %d is still an asset (as pick %d) at pick %d" % [i + 1, int(pk["spot"]), clock])
+			# Offers rivals put to you for this pick: picks still to come, in words too.
+			GameState.make_night_offers()
+			for i in GameState.open_trade_offers():
+				offers_seen += 1
+				var o: Dictionary = GameState.trade_offers[i]
+				for id in (o["give"] as Array) + (o["take"] as Array):
+					var pk := GameState.pick_asset(str(id))
+					if pk.is_empty() or (int(pk["year"]) == year and int(pk["spot"]) < clock):
+						bad.append("offer %d names %s at pick %d" % [i, str(id), clock])
+				for m in tonight.search_all(GameState.trade_offer_text(i)):
+					if int(m.get_string(1)) < clock:
+						bad.append("offer text names pick %s at pick %d" % [m.get_string(1), clock])
+			var made_id := GameState.pick_id(year, int(d.pick_rounds[d.pick_index]), str(d.pick_origin[d.pick_index]))
+			if not d.pick_for_me():
+				d.user_pass()
+			# Once your pick is made, no offer for it is left standing.
+			for i in GameState.open_trade_offers():
+				if (GameState.trade_offers[i]["take"] as Array).has(made_id):
+					bad.append("an offer for %s outlived the pick" % made_id)
+		_check(d.is_finished(), "Row 175: the draft runs to the end (%d steps)" % guard)
+		if not d.night_trades.is_empty():
+			break
 	# Every deal of the night, in its own words: the picks it names this year are
 	# the one on the clock or later.
 	var named := 0
@@ -2455,7 +2471,7 @@ func _test_night_trades_never_name_called_picks() -> void:
 			if int(m.get_string(1)) < int(tr["at"]):
 				bad.append("deal before pick %d names pick %s: %s" % [int(tr["at"]), m.get_string(1), str(tr["text"])])
 	print("contracts: row 175 night deals = %d, your turns = %d, offers = %d" % [d.night_trades.size(), user_turns, offers_seen])
-	_check(d.night_trades.size() > 0 and named > 0, "Row 175: the night has deals naming tonight's picks (%d)" % d.night_trades.size())
+	_check(d.night_trades.size() > 0 and named > 0, "Row 175: the night has deals naming tonight's picks (%d, seeds %s)" % [d.night_trades.size(), str(nights)])
 	_check(bad.is_empty(), "Row 175: no trade names a pick already called (%s)" % str(bad.slice(0, 4)))
 	# The pick log: each deal sits before the pick it was struck before, by the
 	# pick's number in the order, so a skipped pick (a full list, a pass) cannot
@@ -2538,9 +2554,9 @@ func _test_future_picks() -> void:
 	var rival := "COL"
 	var my_future := GameState.pick_id(next, 1, me)
 	var sorted_mine := GameState.my_list.duplicate()
-	sorted_mine.sort_custom(func(a, b): return int(a["overall"]) < int(b["overall"]))
+	sorted_mine.sort_custom(func(a, b): return int(Ovr.of(a)) < int(Ovr.of(b)))
 	var theirs := (GameState.season.lists[rival] as Array).duplicate()
-	theirs.sort_custom(func(a, b): return int(a["overall"]) < int(b["overall"]))
+	theirs.sort_custom(func(a, b): return int(Ovr.of(a)) < int(Ovr.of(b)))
 	var t := GameState.make_trade(rival, [my_future], [str(theirs[0]["id"])])
 	if not bool(t["ok"]):
 		t = GameState.make_trade(rival, [my_future, str(sorted_mine[0]["id"])], [str(theirs[0]["id"])])
@@ -2590,13 +2606,16 @@ func _test_mixed_packages() -> void:
 	var valued := 0
 	for rival in ["COL", "WCE", "SYD", "NTH"]:
 		var theirs := (GameState.season.lists[rival] as Array).duplicate()
-		theirs.sort_custom(func(a, b): return int(a["overall"]) > int(b["overall"]))
+		theirs.sort_custom(func(a, b): return int(Ovr.of(a)) > int(Ovr.of(b)))
 		var mine := GameState.my_list.duplicate()
-		mine.sort_custom(func(a, b): return int(a["overall"]) > int(b["overall"]))
-		# A package the club can deal in (no retiring man, a pick it still holds), so what is
-		# compared is its valuation, not which fault it finds first.
-		mine = mine.filter(func(q): return not GameState.retiring_now(q))
-		theirs = theirs.filter(func(q): return not GameState.retiring_now(q))
+		mine.sort_custom(func(a, b): return int(Ovr.of(a)) > int(Ovr.of(b)))
+		# A package the club can deal in (no retiring man, nobody who has asked to go to
+		# another club, a pick it still holds), so what is compared is its valuation, not
+		# which fault it finds first.
+		var dealable := func(q): return not GameState.retiring_now(q) \
+				and not GameState.trade_requests.has(str(q["id"]))
+		mine = mine.filter(dealable)
+		theirs = theirs.filter(dealable)
 		var their_pick := ""
 		for y in [year, year + 1]:
 			for rd in [1, 2]:
@@ -2629,9 +2648,9 @@ func _test_mixed_packages() -> void:
 	var full := 0
 	for rival in ["COL", "WCE", "SYD", "NTH"]:
 		var theirs := (GameState.season.lists[rival] as Array).duplicate()
-		theirs.sort_custom(func(a, b): return int(a["overall"]) > int(b["overall"]))
+		theirs.sort_custom(func(a, b): return int(Ovr.of(a)) > int(Ovr.of(b)))
 		var mine := GameState.my_list.duplicate()
-		mine.sort_custom(func(a, b): return int(a["overall"]) < int(b["overall"]))
+		mine.sort_custom(func(a, b): return int(Ovr.of(a)) < int(Ovr.of(b)))
 		var pile := [str(mine[0]["id"]), str(mine[1]["id"]), str(mine[2]["id"]),
 				GameState.pick_id(year, GameState.trade_pick_rounds(year), me), GameState.pick_id(year + 1, GameState.trade_pick_rounds(year), me)]
 		for m in [0.0, Contracts.TRADE_MARGIN, 0.12]:
@@ -2643,7 +2662,7 @@ func _test_mixed_packages() -> void:
 			# Room on every list and cap, so only value can refuse it.
 			var padded := GameState.my_list.duplicate()
 			for k in range(4):
-				padded.append({"id": "pad%d" % k, "overall": 40, "salary": 0})
+				padded.append(Ovr.to({"id": "pad%d" % k,  "salary": 0}, 40))
 			var roomy: Array = (GameState.season.lists[rival] as Array).duplicate()
 			_trim_to(roomy, RookieList.SENIOR_SPOTS - 3, [theirs[0]])
 			var v := Contracts.evaluate_trade(roomy, [theirs[0]], give_assets,
@@ -2859,7 +2878,7 @@ func _test_ask_price() -> void:
 						continue
 					var p := GameState.list_player(str(id))
 					spare = spare and not p.is_empty() and _next_overall(p) < line26 \
-							and not (float(p.get("age", 25.0)) <= 22.0 and int(p.get("potential", 0)) - int(p["overall"]) >= 6)
+							and not (float(p.get("age", 25.0)) <= 22.0 and int(p.get("potential", 0)) - int(Ovr.of(p)) >= 6)
 				if spare and bool(GameState.make_trade(str(rival), r["mine"], r["theirs"])["ok"]):
 					dealt += 1
 					break
@@ -2880,7 +2899,7 @@ const ASK_PRICE_FLOOR := 1.4   # real AFL, about 1.4 trades a club a year; trade
 ## A player's rating next season, as a coach reads it off the screens (age
 ## and POT): tools/balance/dynasty.gd expected_overall, one year.
 static func _next_overall(p: Dictionary) -> float:
-	var ov := float(p["overall"])
+	var ov := float(Ovr.of(p))
 	var pot := maxf(ov, float(p.get("potential", ov)))
 	var age := float(p.get("age", 25.0)) + 1.0
 	var d := 4.25 if age <= 20.0 else (2.5 if age <= 23.0 else (1.0 if age <= 27.0 else (0.0 if age <= 30.0 \
@@ -3054,9 +3073,9 @@ func _test_trade_market() -> void:
 	var rival := "COL"
 	# Retirees can't be traded: leave them out of both sides.
 	var theirs := (GameState.season.lists[rival] as Array).filter(func(q): return not GameState.retiring_now(q))
-	theirs.sort_custom(func(a, b): return int(a["overall"]) > int(b["overall"]))
+	theirs.sort_custom(func(a, b): return int(Ovr.of(a)) > int(Ovr.of(b)))
 	var mine := GameState.my_list.filter(func(q): return not GameState.retiring_now(q))
-	mine.sort_custom(func(a, b): return int(a["overall"]) < int(b["overall"]))
+	mine.sort_custom(func(a, b): return int(Ovr.of(a)) < int(Ovr.of(b)))
 	var countered := 0
 	var good := true
 	for k in [6, 10, 14]:
@@ -3098,7 +3117,7 @@ func _test_trade_market() -> void:
 
 	# The trade table: put a player or a pick on it and see who comes.
 	var shop_list := GameState.my_list.filter(func(q): return not GameState.retiring_now(q))
-	shop_list.sort_custom(func(a, b): return int(a["overall"]) > int(b["overall"]))
+	shop_list.sort_custom(func(a, b): return int(Ovr.of(a)) > int(Ovr.of(b)))
 	var shop := str(shop_list[5]["id"])
 	var before := GameState.trade_offers.size()
 	var r := GameState.put_on_trade_table(shop)
@@ -3170,13 +3189,13 @@ func _test_pick_provenance() -> void:
 
 	# You send a pick away for a fringe player: the rival's record says so.
 	var theirs := (GameState.season.lists[rival] as Array).duplicate()
-	theirs.sort_custom(func(a, b): return int(a["overall"]) < int(b["overall"]))
+	theirs.sort_custom(func(a, b): return int(Ovr.of(a)) < int(Ovr.of(b)))
 	var their_weak: Dictionary = theirs[0]
 	var my_first := GameState.pick_id(year, 1, me)
 	var t := GameState.make_trade(rival, [my_first], [str(their_weak["id"])])
 	if not bool(t["ok"]):
 		var mine := GameState.my_list.duplicate()
-		mine.sort_custom(func(a, b): return int(a["overall"]) < int(b["overall"]))
+		mine.sort_custom(func(a, b): return int(Ovr.of(a)) < int(Ovr.of(b)))
 		t = GameState.make_trade(rival, [my_first, str(mine[0]["id"])], [str(their_weak["id"])])
 	_check(bool(t["ok"]), "A first-round pick buys a fringe player (%s)" % str(t["reason"]))
 	var gone := GameState.pick_story(year, 1, me)
@@ -3186,7 +3205,7 @@ func _test_pick_provenance() -> void:
 
 	# You buy a rival's pick with a player: yours now, with the player named.
 	var mine_sorted := GameState.my_list.duplicate()
-	mine_sorted.sort_custom(func(a, b): return int(a["overall"]) > int(b["overall"]))
+	mine_sorted.sort_custom(func(a, b): return int(Ovr.of(a)) > int(Ovr.of(b)))
 	var bought := ""
 	var paid: Dictionary = {}
 	for rnd in [3, 2]:
@@ -3421,11 +3440,11 @@ func _test_money_copy() -> void:
 ## longer buy an established 25-year-old star from a rebuilding club, while
 ## the same two with fifty senior games behind them still carry real value.
 func _test_unproven_potential() -> void:
-	var star := {"id": "S", "overall": 83, "potential": 85, "age": 25.0, "role": "MID",
-			"attr": {"durability": 80}, "career": {"games": 110}}
+	var star := Ovr.to({"id": "S",  "potential": 85, "age": 25.0, "role": "MID",
+			"attr": {"durability": 80}, "career": {"games": 110}}, 83)
 	var kid := func(ovr: int, games: int) -> Dictionary:
-		return {"id": "K%d%d" % [ovr, games], "overall": ovr, "potential": 90, "age": 18.0, "role": "MID",
-				"attr": {"durability": 70}, "career": {"games": games}}
+		return Ovr.to({"id": "K%d%d" % [ovr, games],  "potential": 90, "age": 18.0, "role": "MID",
+				"attr": {"durability": 70}, "career": {"games": games}}, ovr)
 	_check(is_equal_approx(TradeValue.proven(kid.call(67, 0)), 0.5)
 			and is_equal_approx(TradeValue.proven(kid.call(67, 60)), 1.0), "Proven runs from a half to all of the ceiling")
 	var ctx := {"phase": "rebuilding"}
@@ -3446,7 +3465,7 @@ func _test_opposition_pot() -> void:
 	GameState.start_season("COL", GameDB.club_list("COL"))
 	var own: Dictionary = GameState.my_list[0]
 	var ov := GameState.pot_view(own)
-	_check(bool(ov["exact"]) and str(ov["text"]) == str(maxi(int(own["overall"]), int(own.get("potential", own["overall"])))),
+	_check(bool(ov["exact"]) and str(ov["text"]) == str(maxi(int(Ovr.of(own)), int(own.get("potential", Ovr.of(own))))),
 			"Your own player's POT is exact (%s)" % str(ov["text"]))
 	var fresh := {}
 	var veteran := {}
@@ -3572,7 +3591,7 @@ func _test_trade_reasons() -> void:
 			and str(v["reason"]) == "Collingwood said no: Weak Link wouldn't get a game in their side.",
 			"A newcomer who wouldn't get a game is the reason given (%s)" % str(v.get("reason", "")))
 	# A rebuilder keeps its young cornerstone.
-	var prospect := _with(base[2], {"id": "t_prospect", "overall": 66, "potential": 90, "age": 20.0})
+	var prospect := _with(base[2], {"id": "t_prospect", "overall": 69, "potential": 90, "age": 20.0})
 	var club_kid: Array = base.duplicate()
 	club_kid.append(prospect)
 	var reb := {"phase": "rebuilding", "name": "Collingwood", "names": {"t_prospect": "Kid Prospect"}}
@@ -3617,13 +3636,16 @@ func _test_trade_reasons() -> void:
 	# A counter carries the refusal it answers.
 	# (Mirrors the counter fixture in _test_trade_market: Collingwood, matched by rank.)
 	var col := (GameState.season.lists["COL"] as Array).duplicate()
-	col.sort_custom(func(a, b): return int(a["overall"]) > int(b["overall"]))
+	col.sort_custom(func(a, b): return int(Ovr.of(a)) > int(Ovr.of(b)))
 	# Seniors only: a rookie traded for a senior can hit the senior list cap (row 88).
 	var ours := RookieList.seniors(GameState.my_list)
-	ours.sort_custom(func(a, b): return int(a["overall"]) < int(b["overall"]))
+	ours.sort_custom(func(a, b): return int(Ovr.of(a)) < int(Ovr.of(b)))
 	var counters := 0
 	var counter_ok := true
-	for k in [4, 6, 8, 10, 12, 14]:
+	# On the 2026 scale our weakest against their best is mostly "wouldn't get a
+	# game", which has no counter; the pairs further down are close enough to be
+	# refused on value, and those are countered.
+	for k in range(4, mini(mini(ours.size(), col.size()), 26), 2):
 		var r := GameState.evaluate_trade("COL", [str(ours[k]["id"])], [str(col[k]["id"])])
 		if bool(r["ok"]) or not r.has("in"):
 			continue
@@ -3701,13 +3723,13 @@ func _test_free_agent_reasons() -> void:
 	GameState.salary_cap += 10000000
 	var best_fa := {}
 	for fa in GameState.free_agents:
-		if best_fa.is_empty() or int(fa["overall"]) > int(best_fa["overall"]):
+		if best_fa.is_empty() or int(Ovr.of(fa)) > int(Ovr.of(best_fa)):
 			best_fa = fa
 	if not best_fa.is_empty():
 		_thin_line(str(best_fa["role"]))   # rivals keep their starters: make room for him
 	var target := {}
 	for fa in GameState.free_agents:
-		if GameState.fa_role(fa, me) == "ground" and (target.is_empty() or int(fa["overall"]) > int(target["overall"])):
+		if GameState.fa_role(fa, me) == "ground" and (target.is_empty() or int(Ovr.of(fa)) > int(Ovr.of(target))):
 			target = fa
 	_check(not target.is_empty(), "A free agent who would start for you is on the market")
 	if target.is_empty():
@@ -4034,7 +4056,7 @@ func _test_selection_bars_remembered() -> void:
 			"Frozen, the same list is worked out once and gives the same bars")
 	second["x"] = 1
 	_check(str(TradeValue.selection_bars(list)) == str(plain), "A caller changing its copy changes nothing remembered")
-	list[0]["overall"] = int(list[0].get("overall", 0)) + 9
+	Ovr.to(list[0], int(Ovr.of(list[0], 0)) + 9)
 	b0 = TradeValue.bars_built
 	TradeValue.selection_bars(list)
 	_check(TradeValue.bars_built - b0 == 1, "A changed list is worked out again")

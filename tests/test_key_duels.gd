@@ -36,7 +36,6 @@ func _t(test: String, args := []) -> Variant:
 func run(tree: SceneTree) -> void:
 	_tree = tree
 	await _tree.process_frame
-	GameDB.skip_ovr_overrides = true
 	GameDB.reload()
 	_t("_test_key_target")
 	_t("_test_more_contests")

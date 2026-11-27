@@ -15,6 +15,7 @@ extends RefCounted
 ## Env: OVR_YEARS (generated class years, default 2028..2032), OVR_SEED
 ## (career seed for the class tiers, default 4242).
 ## godot --headless --path . --script tools/audit/run_audit.gd -- ovr_economy_impl
+const Ovr := preload("res://tests/ovr.gd")
 
 const ROLES := ["MID", "FWD", "DEF", "RUCK"]
 const BANDS := [[1, 5, "picks 1-5"], [6, 20, "picks 6-20"], [21, 40, "picks 21-40"], [41, 999, "picks 41+"]]
@@ -130,12 +131,12 @@ func run() -> void:
 			if not stage.has(key):
 				stage[key] = []
 				stage_pot[key] = []
-			stage[key].append(int(p.get("overall", 0)))
+			stage[key].append(int(Ovr.of(p, 0)))
 			stage_pot[key].append(int(p.get("potential", 0)))
 		if games >= 50 and age >= 24.0 and float(p.get("gm", 0.0)) >= 15.0:
 			if not regulars.has(role):
 				regulars[role] = []
-			regulars[role].append(int(p.get("overall", 0)))
+			regulars[role].append(int(Ovr.of(p, 0)))
 			reg_players.append(p)
 	print("## 1. Real lists at the start, OVR by career stage")
 	for st in ["young (<50 games)", "early pro (<24, 50+ games)", "established (24-28, 50+ games)", "veteran (29+, 50+ games)"]:
@@ -161,12 +162,12 @@ func run() -> void:
 			for p in cls:
 				var r := int(p.get("draft_rank", 999))
 				if r >= int(b[0]) and r <= int(b[1]):
-					o.append(int(p.get("overall", 0)))
+					o.append(int(Ovr.of(p, 0)))
 					pt.append(int(p.get("potential", 0)))
 					if str(label).begins_with("generated"):
 						if not band_ovr.has(b[2]):
 							band_ovr[b[2]] = []
-						band_ovr[b[2]].append(int(p.get("overall", 0)))
+						band_ovr[b[2]].append(int(Ovr.of(p, 0)))
 			parts.append("%s %d/%d" % [b[2], int(_q(o, 0.5)), int(_q(pt, 0.5))])
 		for p in cls:
 			if int(p.get("draft_rank", 999)) <= 10:
@@ -178,7 +179,7 @@ func run() -> void:
 	var est_p50 := _q(est_all, 0.5)
 	for e in top10:
 		top_n += 1
-		if int((e[0] as Dictionary).get("overall", 0)) >= est_p50:
+		if int(Ovr.of((e[0] as Dictionary), 0)) >= est_p50:
 			ready += 1
 	print("top-10 picks rated at or above the median established player (%.0f): %d of %d" % [est_p50, ready, top_n])
 
@@ -194,7 +195,7 @@ func run() -> void:
 			continue
 		var below := 0
 		for o in regs:
-			if int(o) < int(p.get("overall", 0)):
+			if int(o) < int(Ovr.of(p, 0)):
 				below += 1
 		var share := float(below) / regs.size()
 		shares.append(share)
@@ -207,12 +208,12 @@ func run() -> void:
 	var outrank := []
 	for code in GameDB.clubs:
 		var lst: Array = GameDB.club_list(str(code)).duplicate()
-		lst.sort_custom(func(a, b): return int(a.get("overall", 0)) > int(b.get("overall", 0)))
+		lst.sort_custom(func(a, b): return int(Ovr.of(a, 0)) > int(Ovr.of(b, 0)))
 		var best22 := lst.slice(0, 22).filter(func(q): return _career_games(q) >= 50 and float(q.get("age", 0.0)) >= 24.0)
 		for e in top10:
 			var n := 0
 			for q in best22:
-				if int((e[0] as Dictionary).get("overall", 0)) > int(q.get("overall", 0)):
+				if int(Ovr.of((e[0] as Dictionary), 0)) > int(Ovr.of(q, 0)):
 					n += 1
 			outrank.append(n)
 	print("a top-10 pick is rated above this many of a club's best-22 established players: p50 %d, p90 %d (of about %d)" % [
@@ -226,7 +227,7 @@ func run() -> void:
 		var pr := []
 		for p in reg_players:
 			if str(p.get("role", "")) == role:
-				o.append(float(p.get("overall", 0)))
+				o.append(float(Ovr.of(p, 0)))
 				pr.append(_production(p))
 		print("%-5s n %3d  OVR p10-p90 %4.1f-%4.1f  Spearman(OVR, production a game) %.2f" % [
 				role, o.size(), _q(o, 0.1), _q(o, 0.9), _pearson(_ranks(o), _ranks(pr))])

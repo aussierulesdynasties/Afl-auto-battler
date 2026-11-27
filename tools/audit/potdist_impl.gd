@@ -4,6 +4,7 @@ extends RefCounted
 ## position: true POT >= 90, your League Draft read's midpoint >= 90, and its
 ## upper bound >= 90; which source set each POT (age headroom, recent peak,
 ## draft pedigree, override); and the director's named examples.
+const Ovr := preload("res://tests/ovr.gd")
 
 const NAMES := ["Patrick Voss", "Josh Treacy", "Cody Walker", "Noah Anderson", "Jake Waterman",
 		"Jack Viney", "Josh Worrell", "Tom Stewart", "Max Hall", "Sam Darcy", "Jagga Smith",
@@ -30,7 +31,7 @@ func run() -> void:
 	var cuts := {}
 	for p in players:
 		n += 1
-		var pot := int(p.get("potential", p.get("overall", 0)))
+		var pot := int(p.get("potential", Ovr.of(p, 0)))
 		pots.append(pot)
 		var v: Dictionary = draft.user_view(p)
 		var age := int(p.get("age", 25))
@@ -80,8 +81,8 @@ func run() -> void:
 		if NAMES.has(nm):
 			var v: Dictionary = draft.user_view(p)
 			print("potdist: %-20s age %2d %-4s OVR %2d POT %2d  read OVR %s POT %s  peak %.0f  pick %s  source %s" % [nm,
-					int(p.get("age", 0)), str(p.get("role", "")), int(p.get("overall", 0)), int(p.get("potential", 0)),
-					DraftScouting.range_text(v["overall"]), DraftScouting.range_text(v["potential"]),
+					int(p.get("age", 0)), str(p.get("role", "")), int(Ovr.of(p, 0)), int(p.get("potential", 0)),
+					DraftScouting.range_text(Ovr.of(v)), DraftScouting.range_text(v["potential"]),
 					Potential.recent_peak(p), str(p.get("drafted_pick", "-")), _source(p)])
 
 
@@ -100,7 +101,7 @@ func _source(p: Dictionary) -> String:
 	var peak := Potential.recent_peak(p)
 	if peak > 0.0 and absf(roundf(peak) - pot) <= 0.5:
 		return "peak"
-	var head := float(p.get("overall", 0)) + Potential._headroom(float(p.get("age", 26.0)))
+	var head := float(Ovr.of(p, 0)) + Potential._headroom(float(p.get("age", 26.0)))
 	if pot <= head + 3.5:
 		return "headroom"
 	return "pedigree"

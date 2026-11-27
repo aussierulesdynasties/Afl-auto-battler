@@ -21,6 +21,7 @@ extends SceneTree
 ##   --call KEY      shoot, pass or bomb at every home set shot (live match)
 ##   --showplan SIDE:KEY the oval shows that side on plan KEY all match (the sim
 ##                   untouched; the match marks suite's set-up)
+const Ovr := preload("res://tests/ovr.gd")
 
 ##   --movie         also write every frame at 30 fps (<out>_f0000.png ...),
 ##                   for capture.yml to make <out>.mp4
@@ -92,7 +93,7 @@ func _run() -> void:
 		# --tag SIDE: that side tags the other side's best midfielder.
 		var ts := int(args["tag"])
 		var mids: Array = (sim.squads[1 - ts].ground as Array).filter(func(p): return str(p["role"]) == "MID")
-		mids.sort_custom(func(a, b): return int(a["overall"]) > int(b["overall"]))
+		mids.sort_custom(func(a, b): return int(Ovr.of(a)) > int(Ovr.of(b)))
 		if not mids.is_empty():
 			sim.set_tactics(ts, {"gameplan": "balanced", "tag_id": str(mids[0]["id"])})
 

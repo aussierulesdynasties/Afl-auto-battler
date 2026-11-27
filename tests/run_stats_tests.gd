@@ -1,4 +1,5 @@
 extends SceneTree
+const Ovr := preload("res://tests/ovr.gd")
 ## godot --headless --path . --script tests/run_stats_tests.gd
 ## Season stats (the Stats patch, ROADMAP §1.11): the hub's Season stats
 ## button, every section, and the numbers behind them.
@@ -1669,7 +1670,7 @@ func _test_team_rating(sz: Vector2i) -> void:
 			var picked: Array = (side["ground"] as Array) + (side["bench"] as Array)
 			var sum := 0.0
 			for p in picked:
-				sum += float(p["overall"])
+				sum += float(Ovr.of(p))
 			if int(TR.rating(list)) != int(round(sum / float(picked.size()))):
 				rating_ok = false
 			var standing: Array = _state._standing(code)
@@ -1797,11 +1798,15 @@ func _test_ladder_rating_is_preview() -> void:
 			odd = str(c)
 			break
 	var saved: Array = (season.lists[odd] as Array).duplicate(true)
-	# High OVR on paper, poor at everything the match engine reads.
+	# High OVR on paper, poor at everything the match engine reads. OVR is read from
+	# the attributes now, so every player is a key defender, great at what his OVR
+	# weighs (one-on-one, marking, reading the play) and poor at the contest, attack
+	# and pressure the side's strength is read from (Squad).
+	var kd: Dictionary = Rating.WEIGHTS["Key Defender"]
 	for p in season.lists[odd]:
-		p["overall"] = 99
+		p["apos"] = "Key Defender"
 		for k in (p["attr"] as Dictionary):
-			p["attr"][k] = 30
+			p["attr"][k] = 99 if kd.has(k) and not ["pressure", "discipline"].has(k) else 1
 	var ovr_better := 0
 	for c in season.lists:
 		if str(c) != odd and TR.rating(season.lists[c]) > TR.rating(season.lists[odd]):

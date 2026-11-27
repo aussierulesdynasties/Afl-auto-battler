@@ -1,4 +1,5 @@
 extends RefCounted
+const Ovr := preload("res://tests/ovr.gd")
 ## Career records (Career.gd): games, goals and club stints across a dynasty.
 ## Totals must count every match (finals too) for every club, exactly once a
 ## season, through saves, reloads and rollovers; club moves must read as a
@@ -172,8 +173,8 @@ func _test_dataset() -> void:
 	# His seasons as data/player_history_2026.csv rates them: the ratings from
 	# the real record (#1659, part of row 200) re-rated every season.
 	var dawson := _find_real("Jordan Dawson")
-	_check(not dawson.is_empty() and str(dawson.get("history", [])) == str([[2021, 89, 23],
-			[2022, 88, 22], [2023, 78, 23], [2024, 73, 22], [2025, 77, 25]]),
+	_check(not dawson.is_empty() and str(dawson.get("history", [])) == str([[2021, 76, 23],
+			[2022, 79, 22], [2023, 74, 23], [2024, 72, 22], [2025, 73, 25]]),
 			"p[\"history\"] (potential's input) is unchanged (%s)" % str(dawson.get("history", [])))
 	var none := 0
 	for p in GameDB.draftees:
@@ -287,7 +288,7 @@ func _test_three_seasons_and_club_change() -> void:
 		if y == y0 + 1:
 			var best := {}
 			for p in GameState.season.lists[from]:
-				if best.is_empty() or int(p["overall"]) > int(best["overall"]):
+				if best.is_empty() or int(Ovr.of(p)) > int(Ovr.of(best)):
 					best = p
 			mover = best
 			(GameState.season.lists[from] as Array).erase(mover)

@@ -475,9 +475,7 @@ const WAIT_FLAT := "At the off-season he asks what his rating is worth then. The
 static func wait_words(p: Dictionary, lift: int) -> String:
 	var ovr := int(Rating.ovr(p, 0))
 	lift = maxi(0, lift)
-	var up := p.duplicate()
-	up["overall"] = ovr + lift
-	var more := Contracts.asking_salary(up) - Contracts.asking_salary(p)
+	var more := Contracts.asking_at(p, ovr + lift) - Contracts.asking_salary(p)
 	if lift <= 0 or more <= 0:
 		return WAIT_FLAT
 	return WAIT_LIFT % [lift, "point" if lift == 1 else "points", Contracts.money(more)]

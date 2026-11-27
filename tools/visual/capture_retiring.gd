@@ -3,6 +3,7 @@ extends SceneTree
 ## on a phone (390x844):
 ##   godot --path . --script tools/visual/capture_retiring.gd -- --out /tmp/retiring
 ## Writes <out>_sheet.png: the Retiring section before and after asking.
+const Ovr := preload("res://tests/ovr.gd")
 
 const W := 390
 const H := 844
@@ -37,7 +38,7 @@ func _run() -> void:
 	root.size = Vector2i(W, H)
 	DisplayServer.window_set_size(Vector2i(W, H))
 	var best: Array = state.my_list.duplicate()
-	best.sort_custom(func(x, y): return int(x["overall"]) > int(y["overall"]))
+	best.sort_custom(func(x, y): return int(Ovr.of(x)) > int(Ovr.of(y)))
 	for k in range(2):
 		var p: Dictionary = best[k]
 		p["age"] = 37.0

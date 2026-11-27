@@ -22,10 +22,6 @@ func _run() -> void:
 		push_error("Usage: --script tools/rival_identity_dump.gd -- <out.json>")
 		quit(1)
 		return
-	var db = root.get_node("GameDB")
-	if not db.skip_ovr_overrides:
-		db.skip_ovr_overrides = true
-		db.reload()
 	var gs = root.get_node("GameState")
 	gs.autosave_enabled = false
 	gs.save_path = "user://rival_identity_dump.save"

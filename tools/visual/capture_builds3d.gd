@@ -11,6 +11,7 @@ extends SceneTree
 ##   "heads": Melbourne v Fremantle from the first bounce, and the close test view follows Max Gawn
 ##   (MEL_11, his own Tripo head) instead of the ball, 3 m of ground across at his head height.
 ## The look is rule 2.80-2.81's fine day, as capture_cameras3d.gd sets it.
+const Ovr := preload("res://tests/ovr.gd")
 
 const DT := 1.0 / 60.0
 const HALF_WID := 67.4
@@ -72,8 +73,7 @@ func _run() -> void:
 		home_list = home_list.duplicate()
 		for i in range(home_list.size()):
 			if str(home_list[i].get("id", "")) == _follow:
-				home_list[i] = home_list[i].duplicate()
-				home_list[i]["overall"] = 99.0
+				home_list[i] = Ovr.to(home_list[i].duplicate(true), 99)
 	var res: Dictionary = load("res://scripts/sim/MatchSim.gd").new(Squad_.new(_home, home_list, true, _home),
 			Squad_.new(_away, gdb.club_list(_away), false, _away), 31).run()
 	_make_clouds()

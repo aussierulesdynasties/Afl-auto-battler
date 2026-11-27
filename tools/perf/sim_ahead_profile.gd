@@ -2,6 +2,7 @@ extends SceneTree
 ## Time the years played without you, by step, and print a fingerprint of the
 ## league at the end, so a speed-up can be proved not to change the results.
 ##   godot --headless --path . --script tools/perf/sim_ahead_profile.gd -- [--tas] [--seed N]
+const Ovr := preload("res://tests/ovr.gd")
 
 
 func _initialize() -> void:
@@ -56,7 +57,7 @@ func _run() -> void:
 	var ps := []
 	for code in gs.season.lists:
 		for p in gs.season.lists[code]:
-			ps.append("%s|%s|%s|%s|%s" % [code, p.get("id"), p.get("overall"), p.get("xp"), p.get("attr")])
+			ps.append("%s|%s|%s|%s|%s" % [code, p.get("id"), Ovr.of(p), p.get("xp"), p.get("attr")])
 	ps.sort()
 	print("FINGERPRINT ", gs.career_seed, " ", gs.season_year, " ", "\n".join(parts).md5_text(),
 			" ", "\n".join(ps).md5_text(), " players ", ps.size())

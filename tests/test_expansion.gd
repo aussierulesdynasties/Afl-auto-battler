@@ -1,4 +1,5 @@
 extends RefCounted
+const Ovr := preload("res://tests/ovr.gd")
 ## Expansion suite: Tasmania enters in 2028 and Canberra in 2030. Each club
 ## is inactive before its entry year (no fixtures, ladder, draft or selection
 ## presence) and a normal active club from it - including odd-club fixtures,
@@ -488,7 +489,7 @@ func _test_expansion_ceilings() -> void:
 		var young_n := 0
 		for p in lst:
 			var age := float(p["age"])
-			var room := int(p["potential"]) - int(p["overall"])
+			var room := int(p["potential"]) - int(Ovr.of(p))
 			if age > Potential.MAX_PROSPECT_AGE:
 				old_n += 1
 				if room > int(Potential._headroom(age)) + 3:
@@ -937,7 +938,7 @@ func _test_real_lists_tasmania_2028() -> void:
 	var top_signed := 0
 	for p in tas_list:
 		if (GameState.expansion["TAS"]["signings"] as Array).has(str(p["id"])):
-			top_signed = maxi(top_signed, int(p["overall"]))
+			top_signed = maxi(top_signed, int(Ovr.of(p)))
 	_check(top_signed > 0 and top_signed < Expansion.STAR_STAYS_OVERALL + 4, "Rivals' stars stay put: their best signing is rated %d" % top_signed)
 	var academy_ok := true
 	for row in GameState.intake_assignments:

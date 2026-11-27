@@ -11,6 +11,7 @@ extends RefCounted
 ## stat (or, for off, in the stat the top arm would pick), mean stat points
 ## bought, mean XP still banked at the season's end and the club's finish.
 ## Args after the impl name: arm seasons club. Env FOCUS_SEEDS=a,b,c (default 301,302,303).
+const Ovr := preload("res://tests/ovr.gd")
 
 var arm := "off"
 var club := "MEL"
@@ -61,7 +62,7 @@ func _career(seed: int, seasons: int) -> void:
 		var start := {}
 		for p in GameState.my_list:
 			var k := str(keys.get(str(p["id"]), ""))
-			start[str(p["id"])] = [int(p["overall"]), float(p.get("age", 25.0)),
+			start[str(p["id"])] = [int(Ovr.of(p)), float(p.get("age", 25.0)),
 					k, int((p.get("attr", {}) as Dictionary).get(k, 0)),
 				(p.get("attr", {}) as Dictionary).duplicate()]
 		while not GameState.season.is_season_over():
@@ -77,7 +78,7 @@ func _career(seed: int, seasons: int) -> void:
 			if not start.has(id):
 				continue
 			var st: Array = start[id]
-			var d := int(p["overall"]) - int(st[0])
+			var d := int(Ovr.of(p)) - int(st[0])
 			all_d.append(d)
 			if float(st[1]) <= 23.0:
 				young_d.append(d)

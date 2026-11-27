@@ -1,4 +1,5 @@
 extends SceneTree
+const Ovr := preload("res://tests/ovr.gd")
 const Tap := preload("res://tests/tap.gd")
 ## godot --headless --path . --script tests/run_roles_tests.gd
 ## Roles (tests/test_roles.gd), then the Selection screen on a phone: the
@@ -215,17 +216,18 @@ func _test_selection_tests() -> void:
 				"Back closes the synergy guide first")
 		await _settle()
 	# Complete synergy: one tap switches it on, says who came in, and can be
-	# undone (director, 2026-10-07). Collingwood can complete its Lockdown unit.
+	# undone (director, 2026-10-07). Collingwood can complete its Supply line
+	# (on the rebuilt ratings its list no longer holds three stoppers).
 	(ui.find_child("SynergyRules", true, false) as Button).emit_signal("pressed")
 	await _settle()
-	var complete: Button = ui.find_child("Complete_lockdown_unit", true, false)
+	var complete: Button = ui.find_child("Complete_supply_line", true, false)
 	var blocked: Node = ui.find_child("CompleteWhy_engine_room", true, false)
 	_check(complete != null and not complete.disabled and blocked != null,
 			"The guide offers Complete where the list can, and says why where it can't")
 	if complete != null:
 		complete.emit_signal("pressed")
 		await _settle()
-		_check(_screen_text(ui).contains("Lockdown unit on:") and ui.find_child("UndoPick", true, false) != null,
+		_check(_screen_text(ui).contains("Supply line on:") and ui.find_child("UndoPick", true, false) != null,
 				"Completing it changes the side, says who came in, and offers Undo")
 		(ui.find_child("UndoPick", true, false) as Button).emit_signal("pressed")
 		await _settle()
@@ -1188,9 +1190,9 @@ func _test_backing_ui_tests() -> void:
 	var kid: Dictionary = {}
 	var best: Dictionary = {}
 	for p in _state.my_list:
-		if str(p["role"]) != "RUCK" and (kid.is_empty() or int(p["overall"]) < int(kid["overall"])):
+		if str(p["role"]) != "RUCK" and (kid.is_empty() or int(Ovr.of(p)) < int(Ovr.of(kid))):
 			kid = p
-		if best.is_empty() or int(p["overall"]) > int(best["overall"]):
+		if best.is_empty() or int(Ovr.of(p)) > int(Ovr.of(best)):
 			best = p
 	var through: int = _state.season_year - 1
 	kid["career"] = {"games": 2, "goals": 0, "stints": [], "through": through, "unknown": []}
