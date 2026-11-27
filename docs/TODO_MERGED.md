@@ -251,3 +251,4 @@ What has landed toward each open row of docs/TODO.md and docs/TODO_RULINGS.md, o
 - 202: Merged #2271: 3D 1.0 plan: Marvel, Bellerive and Norwood code merged, models still being published.
 - 202: Merged #2272: Bellerive round 7: publish the ground files.
 - 202: Merged #2277: 3D 1.0 plan: what changed around 3D since 23 Nov, and the open risks.
+- 202: Merged #2274: Norwood Oval: pin the rebuilt ground files (row 202, follows #2214).
