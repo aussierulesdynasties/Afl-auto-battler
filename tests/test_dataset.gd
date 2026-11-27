@@ -72,7 +72,7 @@ const TEAM_BOOKKEEPING_PREFIXES := ["d50_end_"]
 ## playing on is no longer an effective disposal; a boundary free records "intent"),
 ## #2211 (a faster match engine) and #2230 (tail check) on top. Windows from a local
 ## run on the merged branch, Linux from its CI run.
-const GOLDEN_SEASON := {"Windows": "cf0bccb91d34b0fc38d8209d3c2f3960", "Linux": "bf219aeb96e2f0fbc6fa30160822157c"}
+const GOLDEN_SEASON := {"Windows": "b90943769bf51941c6c22231be295e9f", "Linux": "bf219aeb96e2f0fbc6fa30160822157c"}
 
 ## A small league standing in for a legacy set until the 1990 files ship:
 ## 42 real players re-dated to a 1989 data season, a 1990 first season, and
