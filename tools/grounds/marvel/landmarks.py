@@ -2709,7 +2709,7 @@ def build():
                "lm_sign_marvel", "lm_sign_stadium"}
     ncut = 0
     for mat in list(g.parts):
-        if mat not in TOWN_SQ or os.environ.get("MARVEL_GATE_CUTS") != "1":   # held until gates.glb lands with it
+        if mat not in TOWN_SQ or os.environ.get("MARVEL_GATE_CUTS", "1") != "1":   # on since gates.glb landed (round 17)
             continue
         keep = []
         for pts, uvs in g.parts[mat]:

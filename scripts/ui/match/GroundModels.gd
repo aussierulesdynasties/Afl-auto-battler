@@ -223,7 +223,9 @@ const SURROUNDS := {
 	# deck in 3D (tools/grounds/marvel/bridges.py).
 	"marvel": {"y": -0.03, "inner": 120.0, "colour": Color(0.42, 0.43, 0.43),
 			"map": "surrounds.webp", "span": 2048.0, "trees": "trees.bin", "buildings": "buildings.bin",
-			"models": ["bridges.glb", "landmarks.glb"], "tint": Color(0.84, 0.84, 0.84), "building_tint": Color.WHITE, "building_style": "towers",
+			# gates.glb (tools/grounds/marvel/gates.py): the real gates, built to the 2019-26 photos
+			"models": ["bridges.glb", "landmarks.glb", "gates.glb"], "tint": Color(0.84, 0.84, 0.84),
+			"building_tint": Color.WHITE, "building_style": "towers",
 			# Round 12: the real land (terrain.bin, tools/grounds/marvel/land.py) right up to `inner`. The model's own
 			# pad follows the same land, from 0.9 m under the old street by the harbour to 4.4 m over it on the east.
 			"follow_land": true,
