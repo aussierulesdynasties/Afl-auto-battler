@@ -22,7 +22,8 @@ What it does, in place, to every backdrop part (positions only; nothing is added
   building whose outline holds them;
 - everything else (trees, cars, masts, bridges) moves as one piece per connected part, by the shift under it;
 - open water (bg_water) moves as one flat sheet to the ring's water level (the LiDAR's water surface), and the
-  land and anything the scene stood below its water keep their depth under it.
+  land and anything the scene stood below its water keep their depth under it; a sheet that is only scattered
+  pieces (more than SCATTERED) leaves the scene, as the ground's texture already paints that water.
 Run it on the published glbs, then `tools/ground_assets.sh publish`. Running it twice is harmless: the second
 run finds the land already right (shift 0).
 """
@@ -46,6 +47,8 @@ FAR, WATER = "bg_far_terrain", "bg_water"
 # A building's foot stays at most this far under the lowest land along it (the old scene sank some 3 to 5 m into
 # its bumps, which took that much off their measured height).
 SINK_MAX = 0.3
+# A water sheet in more separate pieces than this is only scattered fragments over the painted water: left out.
+SCATTERED = 100
 
 
 def fit(slug):
@@ -134,6 +137,67 @@ class Glb:
         blob = (struct.pack("<III", 0x46546C67, 2, 28 + len(js) + len(body)) + struct.pack("<II", len(js), 0x4E4F534A)
                 + js + struct.pack("<II", len(body), 0x004E4942) + body)
         open(self.path, "wb").write(blob)
+
+
+def flatten_painted_water(g, level):
+    """Lay the ground flat at the water's level wherever its own texture paints open water (the scene's harbour and
+    river blue): the scene's ground there wandered half a metre round the old sheet and fell into 15 m pits by the
+    bridges, which read as dark holes and a step at the seams once the scattered sheet is gone. The count."""
+    import io
+    from PIL import Image
+    n = 0
+    J = g.J
+    for mi, m in enumerate(J["meshes"]):
+        if not g.name_of.get(mi, m.get("name", "")).startswith("bg_near_ground"):
+            continue
+        for pr in m["primitives"]:
+            mat = J["materials"][pr["material"]]
+            bt = mat.get("pbrMetallicRoughness", {}).get("baseColorTexture")
+            if bt is None or "TEXCOORD_0" not in pr["attributes"]:
+                continue
+            tx = J["textures"][bt["index"]]
+            im = J["images"][tx["source"] if "source" in tx else next(iter(tx["extensions"].values()))["source"]]
+            bv = J["bufferViews"][im["bufferView"]]
+            off = bv.get("byteOffset", 0)
+            img = np.asarray(Image.open(io.BytesIO(bytes(g.bin[off:off + bv["byteLength"]]))).convert("RGB"), float)
+            h, w = img.shape[:2]
+            UV = g.read(pr["attributes"]["TEXCOORD_0"])
+            P = g.read(pr["attributes"]["POSITION"]).astype(np.float64)
+            c = np.clip((UV[:, 0] * w).astype(int), 1, w - 2)
+            r = np.clip((UV[:, 1] * h).astype(int), 1, h - 2)
+            tex = sum(img[r + dr, c + dc] for dr in (-1, 0, 1) for dc in (-1, 0, 1)) / 9
+            water = (tex[:, 2] - tex[:, 0] > 22) & (tex[:, 1] - tex[:, 0] > 12) & (tex.max(1) < 120)
+            P[water, 1] = level
+            n += int(water.sum())
+            g.write_pos(pr["attributes"]["POSITION"], P.astype(np.float32))
+    return n
+
+
+def drop_scattered_water(g):
+    """Leave out a water sheet that is only scattered pieces. Marvel's bg_water was 2,181 triangles in 900 separate
+    pieces (62,000 m2 of the river and harbour's bed): the ground's own texture paints the water there, and the
+    pieces over it read from the orbit as a speckle of triangles. The mesh stays in the file (horizon.py reads its
+    level); only its node leaves the scene."""
+    from shapely.geometry import Polygon
+    from shapely.ops import unary_union
+    for ni, n in enumerate(g.J["nodes"]):
+        if "mesh" not in n or g.name_of.get(n["mesh"]) != WATER:
+            continue
+        pieces = 0
+        for name, a, ia in g.prims:
+            if name == WATER:
+                P = g.read(a)
+                I = g.read(ia).reshape(-1, 3).astype(np.int64) if ia is not None else np.arange(len(P)).reshape(-1, 3)
+                u = unary_union([Polygon(P[t][:, [0, 2]]).buffer(0.01) for t in I])
+                pieces += len(getattr(u, "geoms", [u]))
+        if pieces > SCATTERED:
+            for sc in g.J["scenes"]:
+                sc["nodes"] = [k for k in sc["nodes"] if k != ni]
+            for m in g.J["nodes"]:
+                if "children" in m:
+                    m["children"] = [k for k in m["children"] if k != ni]
+            print("%s: open water in %d separate pieces, left out (the ground's texture paints it)" % (
+                os.path.basename(g.path), pieces))
 
 
 def components(P, I):
@@ -313,7 +377,11 @@ def main():
             g.write_pos(a, P.astype(np.float32))
             st = stats.setdefault(kind, [])
             st.append(d)
+    if wat:
+        flat = sum(flatten_painted_water(g, wat_old + wat_shift) for g in glbs)
+        print("ground vertices on painted water laid flat at its level: %d" % flat)
     for g in glbs:
+        drop_scattered_water(g)
         g.save()
     for kind, ds in stats.items():
         d = np.concatenate(ds)

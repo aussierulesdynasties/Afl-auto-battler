@@ -772,11 +772,14 @@ static func _add_surrounds(root: Node3D, s: Dictionary, dir := "", fit: Array = 
 				var q := inner + off
 				off += LAND_STEP if q < inner + 300.0 else (LAND_STEP * 3.0 if q < inner + 900.0 else LAND_STEP * 10.0)
 			rs.append(outer)
+			if s.has("outer"):
+				rs.append(outer + RING_SKIRT[0])   # tucked under the background scene's edge (_ring_mesh)
 		if near != null:
 			rs = [r_near] + rs.filter(func(r): return r > r_near + 1.0)
 		return rs
 	var follow: bool = s.get("follow_land", false)
-	var mesh := _ring_mesh(radii, n, y, span if map != null else -60.0, relief, land, inner, follow)
+	var mesh := _ring_mesh(radii, n, y, span if map != null else -60.0, relief, land, inner, follow,
+			outer if s.has("outer") else INF)
 	if map != null:
 		var mm := StandardMaterial3D.new()
 		mm.resource_name = "surrounds"
@@ -881,8 +884,15 @@ static func _add_surrounds(root: Node3D, s: Dictionary, dir := "", fit: Array = 
 ## map `span` m a side centred on the middle (clamped at its edge), or for a negative span a texture
 ## tiling every -span m. With `relief` the ring follows the land's rise and fall (relief_at); with
 ## `land` it follows the real land, banked up to it from `y` at `inner` (or on it throughout, `follow`).
+## Past `outer` the ring goes on this far (m) and this much lower (m), under the background scene's edge: the scene's
+## ground was cut on the same circle in straight steps, and from the aerial orbit the sky showed through the slivers
+## between (Marvel's harbour, 2026-11-27).
+const RING_SKIRT := [4.0, 0.6]
+
+
 static func _ring_mesh(radii: Callable, n: int, y: float, span: float,
-		relief := PackedFloat32Array(), land: GroundTerrain = null, inner := 0.0, follow := false) -> ArrayMesh:
+		relief := PackedFloat32Array(), land: GroundTerrain = null, inner := 0.0, follow := false,
+		skirt_from := INF) -> ArrayMesh:
 	var v := PackedVector3Array()
 	var uv := PackedVector2Array()
 	var nrm := PackedVector3Array()
@@ -905,6 +915,8 @@ static func _ring_mesh(radii: Callable, n: int, y: float, span: float,
 				var real := land.height(p.x, p.z) - 0.03
 				var w := smoothstep(inner, inner + LAND_BANK, r)
 				p.y = real if follow else lerpf(minf(real, y), real, w)
+				if r > skirt_from:
+					p.y -= RING_SKIRT[1]
 			v.append(p)
 			uv.append(Vector2(p.x, p.z) / span + Vector2(0.5, 0.5) if span > 0.0 else Vector2(p.x, p.z) / -span)
 			nrm.append(up)
@@ -2474,7 +2486,7 @@ static func _backdrop_materials(model: Node, plain := "") -> void:
 					lm.set_shader_parameter("tex", mat.albedo_texture)
 					made[key] = lm
 				(mi as MeshInstance3D).set_surface_override_material(i, made[key])
-			elif key.begins_with("horizon_land"):
+			elif key.begins_with("horizon_land") or key == "horizon_trees":
 				# the horizon's land (tools/grounds/backdrop/horizon): lit at its corners, 47 m to 2 km apart (a light
 				# worked out per pixel over that much of the screen cost a phone's GPU about a third more, for a shade
 				# no one can tell from this), and never shadowed (per corner, the towers' shadows smeared over km)
