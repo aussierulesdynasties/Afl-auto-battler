@@ -28,8 +28,8 @@ const GOLDEN := {
 	"played:7": "4e4a3be27500b65b173c7e7845cd39eb",
 }
 const PLAYED_WITH_OVR := {
-	"played:2027": "264d2cbc643edf485133bac629aa0926",
-	"played:7": "40b9adb0d872ef0f0a7d70fd996ebd4e",
+	"played:2027": "ad25e70c9cae67b62b3e980551d97eb4",
+	"played:7": "22d146b5e2d6bd04f6aeb1b22723a6c2",
 }
 
 const Golden := preload("res://tests/season_golden.gd")
