@@ -119,18 +119,23 @@ const TRAIN_COST_SCALE := 1.25
 
 ## His match XP for the week before his club's multipliers. `game`: 1.0 an
 ## ordinary senior game (his game's XP over ORDINARY_GAME_XP), VFL_SHARE a
-## reserves game, 0 when he did not play.
-static func match_xp(p: Dictionary, game: float) -> float:
+## reserves game, 0 when he did not play. `per_point`: his xp_per_point when
+## the caller has it already (a week prices it once for both XPs).
+static func match_xp(p: Dictionary, game: float, per_point := -1.0) -> float:
 	if game <= 0.0:
 		return 0.0
+	if per_point < 0.0:
+		per_point = xp_per_point(p)
 	return points_per_game(int(p.get("potential", Rating.ovr(p, 60)))) * MATCH_SHARE \
-			* game * xp_per_point(p)
+			* game * per_point
 
 
 ## His training XP for the week before his club's multipliers.
-static func train_xp(p: Dictionary) -> float:
+static func train_xp(p: Dictionary, per_point := -1.0) -> float:
+	if per_point < 0.0:
+		per_point = xp_per_point(p)
 	return points_per_game(int(p.get("potential", Rating.ovr(p, 60)))) * TRAIN_SHARE \
-			* xp_per_point(p)
+			* per_point
 
 
 # ---------------------------------------------------------------------------

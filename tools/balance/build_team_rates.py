@@ -7,6 +7,9 @@ players played (home-and-away plus finals). The standings (data/raw/standings_20
 home-and-away only) cross-check goals for clubs that missed the finals.
 The league figure is the mean of the club averages; min and max are the lowest and
 highest club. Goals and behinds are checked against the standings' own totals.
+Two rows come from the standings alone (home-and-away): score (points for a game,
+all clubs) and rushed behinds (the standings' behinds less the players' behinds a
+game, for the clubs that missed the finals, whose player totals are home-and-away too).
 
     python3 tools/balance/build_team_rates.py
 """
@@ -29,11 +32,13 @@ def main() -> None:
             clubs[r["short"]] = r["code"]
     played = {}
     check = {}
+    points = {}
     with open(os.path.join(ROOT, "data", "raw", "standings_2026.json"), encoding="utf-8") as f:
         for r in json.load(f)["standings"]:
             code = clubs.get(r["name"]) or {"Greater Western Sydney": "GWS", "GWS Giants": "GWS", "Sydney Swans": "SYD", "Geelong Cats": "GEE", "Adelaide Crows": "ADE", "Gold Coast Suns": "GCS", "West Coast Eagles": "WCE", "Hawthorn Hawks": "HAW", "Melbourne Demons": "MEL", "Carlton Blues": "CAR", "Essendon Bombers": "ESS", "Fremantle Dockers": "FRE", "Collingwood Magpies": "COL", "Richmond Tigers": "RIC", "St Kilda Saints": "STK", "Port Adelaide Power": "PAD", "North Melbourne Kangaroos": "NTH", "Western Bulldogs": "WBD"}[r["name"]]
             played[code] = int(r["played"])
             check[code] = (int(r["goals_for"]), int(r["behinds_for"]))
+            points[code] = int(r["for"])
     totals = {c: {k: 0 for k in STATS} for c in played}
     games = {c: 0 for c in played}
     with open(os.path.join(ROOT, "data", "players_2026.csv"), encoding="utf-8") as f:
@@ -52,13 +57,18 @@ def main() -> None:
         # below its team total in the standings.
         assert totals[c]["behinds"] <= b or games[c] > played[c], f"{c} behinds above the standings"
     per_club = {c: {k: totals[c][k] / games[c] for k in STATS} for c in played}
+    standings_rows = {
+        "score": {c: points[c] / played[c] for c in played},
+        "rushed_behinds": {c: (check[c][1] - totals[c]["behinds"]) / played[c]
+                           for c in played if games[c] == played[c]},
+    }
     league = {}
-    for k in STATS:
-        vals = [per_club[c][k] for c in per_club]
+    for k in list(STATS) + list(standings_rows):
+        vals = [per_club[c][k] for c in per_club] if k in STATS else list(standings_rows[k].values())
         league[k] = {"mean": round(statistics.mean(vals), 2), "min": round(min(vals), 2),
                      "max": round(max(vals), 2), "sd": round(statistics.pstdev(vals), 2)}
     doc = {
-        "source": "data/players_2026.csv (AFL Tables 2026 totals) summed per club (finals included) and divided by the club's games (the most games any of its players played, home-and-away plus finals); for clubs that missed the finals goals match data/raw/standings_2026.json exactly. Behinds are player-credited and leave out rushed behinds (about 2 a game below a team's own total). Per team per match; mean, lowest, highest and spread across the %d clubs. 2025 is not included: no 2025 per-player cache is in the repo. Regenerate with tools/balance/build_team_rates.py." % len(played),
+        "source": "data/players_2026.csv (AFL Tables 2026 totals) summed per club (finals included) and divided by the club's games (the most games any of its players played, home-and-away plus finals); for clubs that missed the finals goals match data/raw/standings_2026.json exactly. Behinds are player-credited and leave out rushed behinds (about 2 a game below a team's own total). Per team per match; mean, lowest, highest and spread across the %d clubs. Score and rushed_behinds are home-and-away, from the standings: score for every club, rushed_behinds (standings behinds less player behinds) for the clubs that missed the finals. 2025 is not included: no 2025 per-player cache is in the repo. Regenerate with tools/balance/build_team_rates.py." % len(played),
         "clubs": len(played),
         "team_games": sum(games.values()),
         "per_team_match": league,

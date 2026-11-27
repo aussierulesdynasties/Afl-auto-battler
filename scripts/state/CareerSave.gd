@@ -1,6 +1,9 @@
 class_name CareerSave
 extends RefCounted
-## The career save file: one Variant blob written with FileAccess.store_var.
+## The career save file: one Variant blob written with FileAccess.store_var,
+## packed (ZSTD) inside a small envelope that keeps its version outside
+## (director, 2026-11-26, P2-6: a 12-season save went from 11.4 MB to 1.4 MB).
+## A save from before packing is the blob itself and still opens.
 ##
 ## Player dictionaries are shared by reference all over a career (the season
 ## lists, your list, the draft pool and picks, the prospect pool, GameDB's
@@ -131,7 +134,7 @@ static func _write_blob(blob: Dictionary, path: String) -> bool:
 		return false
 	# The same bytes store_var writes (a 32-bit length, then the encoded
 	# value), kept in hand so the check below needs no decode.
-	var bytes := var_to_bytes(blob)
+	var bytes := var_to_bytes(_packed(blob))
 	var head := PackedByteArray()
 	head.resize(4)
 	head.encode_u32(0, bytes.size())
@@ -169,6 +172,26 @@ static func _write_blob(blob: Dictionary, path: String) -> bool:
 		return false
 	_note_current(path, blob.get("meta", {}))
 	return true
+
+
+## The envelope a save is written in: the blob's version and header, and the
+## blob itself compressed. Only the envelope is read without unpacking.
+static func _packed(blob: Dictionary) -> Dictionary:
+	var raw := var_to_bytes(blob)
+	return {"version": blob.get("version", VERSION), "meta": blob.get("meta", {}),
+			"size": raw.size(), "packed": raw.compress(FileAccess.COMPRESSION_ZSTD)}
+
+
+## What a save file holds, unpacked: the blob from an envelope, or a save
+## from before packing as it is. {} if an envelope does not unpack.
+static func unpacked(v: Variant) -> Variant:
+	if not (v is Dictionary and (v as Dictionary).has("packed")):
+		return v
+	var packed = v["packed"]
+	if not (packed is PackedByteArray) or (packed as PackedByteArray).is_empty():
+		return {}
+	var blob = bytes_to_var((packed as PackedByteArray).decompress(int(v.get("size", 0)), FileAccess.COMPRESSION_ZSTD))
+	return blob if blob is Dictionary else {}
 
 
 static func _wrote(p: String, head: PackedByteArray, bytes: PackedByteArray) -> bool:
@@ -287,7 +310,7 @@ static func _blob_at(path: String) -> Dictionary:
 	var f := FileAccess.open(path, FileAccess.READ)
 	if f == null:
 		return {}
-	var blob = f.get_var()
+	var blob = unpacked(f.get_var())
 	f.close()
 	if not (blob is Dictionary) or not (blob as Dictionary).has("state"):
 		return {}
@@ -427,6 +450,11 @@ static func _is_player(d: Dictionary) -> bool:
 	return d.has("id") and d.has("attr") and d.has("role")
 
 
+## Every dictionary and array is copied, never shared with the live career. The
+## engine makes each copy (duplicate) and only the containers inside it are
+## walked here: an autosave walks thousands of players, and copying their
+## numbers and strings one at a time in script was most of its cost. The copy
+## is the same as one built key by key (same keys, order and values).
 func _encode(v):
 	if v is Dictionary:
 		var d: Dictionary = v
@@ -436,22 +464,31 @@ func _encode(v):
 				_next_sid += 1
 				d[WRITE_TAG] = sid
 				_tagged.append(d)
-				var body := {}
+				var body := _copy_dict(d)
+				body.erase(WRITE_TAG)
+				for k in SKIP_PLAYER_KEYS:
+					body.erase(k)
 				for k in d:
-					if k != WRITE_TAG and not SKIP_PLAYER_KEYS.has(k):
-						var x = d[k]
-						body[k] = _encode(x) if _is_container(x) else x
+					var x = d[k]
+					var t := typeof(x)
+					if (t == TYPE_DICTIONARY or t == TYPE_ARRAY) and not SKIP_PLAYER_KEYS.has(k):
+						body[k] = _encode(x)
 				_players[sid] = body
 			return {PLAYER_REF: int(d[WRITE_TAG])}
-		var out := {}
+		var out := _copy_dict(d)
 		for k in d:
 			var x = d[k]
-			out[k] = _encode(x) if _is_container(x) else x
+			var t := typeof(x)
+			if t == TYPE_DICTIONARY or t == TYPE_ARRAY:
+				out[k] = _encode(x)
 		return out
 	if v is Array:
-		var out := []
-		for x in v:
-			out.append(_encode(x) if _is_container(x) else x)
+		var a: Array = v
+		var out := _copy_array(a)
+		for i in range(a.size()):
+			var t := typeof(a[i])
+			if t == TYPE_DICTIONARY or t == TYPE_ARRAY:
+				out[i] = _encode(a[i])
 		return out
 	return v
 
@@ -460,6 +497,25 @@ func _encode(v):
 static func _is_container(x) -> bool:
 	var t := typeof(x)
 	return t == TYPE_DICTIONARY or t == TYPE_ARRAY
+
+
+## A plain (untyped) copy of one level, as the save has always held: a typed
+## container's copy is rebuilt untyped key by key.
+static func _copy_dict(d: Dictionary) -> Dictionary:
+	if not d.is_typed():
+		return d.duplicate()
+	var out := {}
+	for k in d:
+		out[k] = d[k]
+	return out
+
+
+static func _copy_array(a: Array) -> Array:
+	if not a.is_typed():
+		return a.duplicate()
+	var out := []
+	out.append_array(a)
+	return out
 
 
 func _untag() -> void:
@@ -478,22 +534,30 @@ func _decode(v):
 				# keeps its ball moving between them (draws no random numbers).
 				if beat_hook.is_valid():
 					beat_hook.call()
-				var live := {}
-				_decoded[sid] = live
 				var raw: Dictionary = _players.get(sid, {})
+				var live := _copy_dict(raw)
+				# Known before his parts are read, so a reference back to him is him.
+				_decoded[sid] = live
 				for k in raw:
 					var x = raw[k]
-					live[k] = _decode(x) if _is_container(x) else x
+					var t := typeof(x)
+					if t == TYPE_DICTIONARY or t == TYPE_ARRAY:
+						live[k] = _decode(x)
 			return _decoded[sid]
-		var out := {}
+		var out := _copy_dict(d)
 		for k in d:
 			var x = d[k]
-			out[k] = _decode(x) if _is_container(x) else x
+			var t := typeof(x)
+			if t == TYPE_DICTIONARY or t == TYPE_ARRAY:
+				out[k] = _decode(x)
 		return out
 	if v is Array:
-		var out := []
-		for x in v:
-			out.append(_decode(x) if _is_container(x) else x)
+		var a: Array = v
+		var out := _copy_array(a)
+		for i in range(a.size()):
+			var t := typeof(a[i])
+			if t == TYPE_DICTIONARY or t == TYPE_ARRAY:
+				out[i] = _decode(a[i])
 		return out
 	return v
 

@@ -80,6 +80,10 @@ func play(from: int, count: int, out: String, weather: String,
 	for i in range(args.size() - 1):
 		if str(args[i]) == "--year":
 			year = int(args[i + 1])
+	# And that season's rules (EraRules, read by the engine as the season being
+	# played: the substitute, the last-disposal free), as GameState sets them in a career.
+	if year > 0:
+		EraRules.year = year
 	var lists := {}
 	var class_ids := {}
 	if start == "real":

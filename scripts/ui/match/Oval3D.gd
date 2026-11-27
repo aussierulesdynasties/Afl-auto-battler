@@ -243,7 +243,9 @@ func sync(dt: float) -> void:
 		# ruckmen's tap: drawn where it is, not dropped to the turf (or into a man's hands) for
 		# that frame and thrown back up by the tap (bug bash 2026-11-23).
 		var up := float(director.ball.get("h", 0.0)) > DEAD_HANDS
-		holder = -1 if up else _nearest(director.ball["pos"], 1.0)
+		# Put down by the man who had it (a rushed behind): it lies on the turf.
+		var down := bool(director.ball.get("down", false))
+		holder = -1 if up or down else _nearest(director.ball["pos"], 1.0)
 		resting = holder < 0 and not up
 	_move_leavers(dt)
 	# The umpires first: the players are drawn clear of where they are this frame (_spaced).

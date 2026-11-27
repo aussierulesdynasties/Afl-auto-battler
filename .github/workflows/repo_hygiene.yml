@@ -8,8 +8,9 @@
 #   - a gh-readonly-queue/* branch left behind for a PR that is no longer open.
 # A branch with an open PR, or one with no PR at all, is never touched; this lists them.
 #
-# Runs. Cancels pull_request runs that test a commit the PR has already moved past, or a PR
-# that is closed, and force-cancels any run still queued after 24 hours (runs from 11 Nov
+# Runs. Force-cancels pull_request runs that test a commit the PR has already moved past, or a
+# PR that is closed (a plain cancel doesn't stop a branch synced before 26 Nov: its shards were
+# `if: always()` and kept running, run 45882198106), and force-cancels any run still queued after 24 hours (runs from 11 Nov
 # sat "queued" for 12 days and a normal cancel refuses them). A run that even force-cancel
 # refuses ("has not been queued yet", HTTP 409) and is over 7 days old is a dead record that
 # holds no runner; it is deleted so it stops showing as queued.
@@ -21,6 +22,11 @@
 # "git checkout -b <name> archive/<name>" brings it back. Lines can be removed once done.
 #
 # DRY_RUN=1 (workflow_dispatch input) only prints what it would do.
+#
+# force_cancel (workflow_dispatch input): run ids, space separated. Only those runs are
+# force-cancelled and nothing else is swept. For a run that is still "in_progress" minutes after
+# a plain cancel; the API shows no sign of a cancel request, so the sweep can't find these itself.
+# A session with only GitHub MCP tools starts it with actions_run_trigger (repo_hygiene.yml, main).
 name: Repo hygiene
 on:
   schedule:
@@ -31,6 +37,10 @@ on:
         description: "Only print what would be deleted or cancelled"
         type: boolean
         default: false
+      force_cancel:
+        description: "Only force-cancel these run ids (space separated)"
+        type: string
+        default: ""
 concurrency:
   group: repo-hygiene
   cancel-in-progress: false
@@ -39,7 +49,28 @@ permissions:
   actions: write
   pull-requests: read
 jobs:
+  force-cancel:
+    if: inputs.force_cancel != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Force-cancel the named runs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          IDS: ${{ inputs.force_cancel }}
+        run: |
+          set -uo pipefail
+          for id in $IDS; do
+            case "$id" in *[!0-9]*) echo "skipped $id: not a run id"; continue;; esac
+            if gh api -X POST "repos/$GH_REPO/actions/runs/$id/force-cancel" >/dev/null; then
+              echo "force-cancelled $id" | tee -a "$GITHUB_STEP_SUMMARY"
+            else
+              echo "failed: force-cancel $id ($(gh api "repos/$GH_REPO/actions/runs/$id" --jq .status 2>/dev/null))" | tee -a "$GITHUB_STEP_SUMMARY"
+            fi
+          done
   sweep:
+    if: inputs.force_cancel == '' || inputs.force_cancel == null
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -129,7 +160,7 @@ jobs:
             [ "$event" = pull_request ] || continue
             cur=$(awk -F'\t' -v b="$branch" '$2 == b {print $3}' open.tsv | head -1)
             if [ -z "$cur" ] || [ "$cur" != "$sha" ]; then
-              act gh api -X POST "repos/$GH_REPO/actions/runs/$id/cancel"; cancelled=$((cancelled+1))
+              act gh api -X POST "repos/$GH_REPO/actions/runs/$id/force-cancel"; cancelled=$((cancelled+1))
             fi
           done < runs.tsv
 

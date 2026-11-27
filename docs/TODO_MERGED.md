@@ -225,3 +225,4 @@ What has landed toward each open row of docs/TODO.md and docs/TODO_RULINGS.md, o
 - 202: Merged #2146: Night towers: the beams light the field and the men; the stadium and the land round it take the spill.
 - 202: Merged #2174: 3D 1.0 plan: surroundings, Norwood frontages, real boundary lines.
 - 171: Merged #2188: UI Batch 5, Merger cut: list three across + his card on a PC.
+- 171: Merged #2220: Selection and Training on a PC: one-line rows, a band per position, two tabs.

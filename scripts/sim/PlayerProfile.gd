@@ -18,6 +18,9 @@ const WEAK_SHARE := 0.25          # bottom quarter of his role: a weakness
 const MIN_WEIGHT := 0.10
 
 const ATTR_LABELS := Attributes.PROSE_LABELS
+## Every key a scale is kept for: the labelled attributes, and disposal, which
+## Roles grades a midfielder on (is_wing, tag_profile) during a match.
+const SCALE_KEYS := ["disposal"]
 
 static var _sorted := {}          # "ROLE|attr" -> sorted 2026 values
 static var _db: Node = null       # GameDB, looked up once on the main thread
@@ -27,18 +30,64 @@ static var _db: Node = null       # GameDB, looked up once on the main thread
 static func _values(role: String, key: String) -> Array:
 	var k := role + "|" + key
 	if not _sorted.has(k):
-		var vals := []
-		var apos := role.trim_prefix(APOS_PEERS) if role.begins_with(APOS_PEERS) else ""
-		for p in _game_db().players:
-			if (str(p.get("apos", "")) == apos) if apos != "" else (str(p.get("role", "")) == role):
-				vals.append(Skills.value(p["attr"], key, 0.0))
-		vals.sort()
+		var vals := _scale(role, key)
 		# Off the main thread (a match on a worker) it is only read: warm()
 		# fills it first, and anything missed is worked out, not stored.
 		if OS.get_thread_caller_id() != OS.get_main_thread_id():
 			return vals
 		_sorted[k] = vals
 	return _sorted[k]
+
+
+static func _scale(role: String, key: String) -> Array:
+	var vals := []
+	var apos := role.trim_prefix(APOS_PEERS) if role.begins_with(APOS_PEERS) else ""
+	for p in _game_db().players:
+		if (str(p.get("apos", "")) == apos) if apos != "" else (str(p.get("role", "")) == role):
+			vals.append(Skills.value(p["attr"], key, 0.0))
+	vals.sort()
+	return vals
+
+
+## Forget the graded scales: GameDB.reload calls it, so a career on another
+## dataset (a 2026 career after a 1990 one) grades against its own players,
+## as it would after a fresh launch (bug bash P1-6).
+## The new scales are built in full here, on the main thread, and swapped in
+## at once: a match still running on a worker thread then reads a complete
+## scale, old or new, and never has to work one out from GameDB while the
+## main thread reloads or frees it (CI 45655943455). At launch nothing has
+## been graded yet, so the scales stay to be filled as they are asked for.
+static func forget_cache() -> void:
+	if _sorted.is_empty():
+		return
+	var fresh := {}
+	var keys := _keys()
+	for p in _game_db().players:
+		var role := str(p.get("role", ""))
+		for key in keys:
+			var k: String = role + "|" + key
+			if not fresh.has(k):
+				fresh[k] = []
+			fresh[k].append(Skills.value(p["attr"], key, 0.0))
+		var apos := str(p.get("apos", ""))
+		if apos != "":
+			var ka := APOS_PEERS + apos + "|contested_marking"
+			if not fresh.has(ka):
+				fresh[ka] = []
+			fresh[ka].append(Skills.value(p["attr"], "contested_marking", 0.0))
+	for k in fresh:
+		fresh[k].sort()
+	# Any other scale already asked for is rebuilt too, so the swap never
+	# leaves a match one to work out.
+	for k in _sorted:
+		if not fresh.has(k):
+			var cut := str(k).rfind("|")
+			fresh[k] = _scale(str(k).left(cut), str(k).substr(cut + 1))
+	_sorted = fresh
+
+
+static func _keys() -> Array:
+	return ATTR_LABELS.keys() + SCALE_KEYS
 
 
 static func _game_db() -> Node:
@@ -53,10 +102,10 @@ static func warm() -> void:
 	var roles := {}
 	for p in _game_db().players:
 		roles[str(p.get("role", ""))] = true
-	if _sorted.size() > roles.size() * ATTR_LABELS.size():
+	if _sorted.size() > roles.size() * _keys().size():
 		return
 	for role in roles:
-		for key in ATTR_LABELS:
+		for key in _keys():
 			_values(role, key)
 	for p in _game_db().players:
 		if str(p.get("apos", "")) != "":

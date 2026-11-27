@@ -109,7 +109,7 @@ COLOUR_CUES = {
         ["Ratings.available(p)", "why he is out, in words", 1],
         ["fill.color = UiKit.BAD", "his Form figure beside the bar, well below his season's (director, 2026-11-25)", 1]],
     "TrainingScene.gd": [
-        ["rise.size() > 0", "the rise mark and its words", 2],
+        ["rise.size() > 0", "the rise mark and its words", 4],
         ["Traits.is_bad(trait_keys[0])", "the weakness mark", 1],
         ["\"Injured %d wk%s\"", "Injured N wks", 1],
         ["useful else UiKit.BAD", "Does little for a ...", 1],
