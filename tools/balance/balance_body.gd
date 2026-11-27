@@ -97,6 +97,10 @@ func play(from: int, count: int, out: String, weather: String,
 			or not Attributes.KEYS.has(str(bump[1]))):
 		push_error("balance: --bump is APOS:KEY:N, APOS one of %s, KEY one of Attributes.KEYS" % str(Rating.WEIGHTS.keys()))
 		return 1
+	# And that season's rules (EraRules, read by the engine as the season being
+	# played: the substitute, the last-disposal free), as GameState sets them in a career.
+	if year > 0:
+		EraRules.year = year
 	var lists := {}
 	var class_ids := {}
 	if start == "real":

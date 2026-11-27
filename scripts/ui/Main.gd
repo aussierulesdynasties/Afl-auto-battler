@@ -163,6 +163,8 @@ func _ready() -> void:
 	if WebStorage.should_ask(WebStorage.on_web(), bool(GameState.get_setting(WebStorage.ASKED_KEY, false))):
 		WebStorage.ask()
 		_wait_for_storage_answer()
+	# Continue's Hub loads while the menu is up (bug bash M-9).
+	Router.warm("hub")
 
 
 ## Poll the browser's answer for a few seconds (a prompt may be open). A final answer is
@@ -363,8 +365,7 @@ func _on_continue() -> void:
 	ScreenTransition.run("Loading your career...", func():
 		if GameState.load_career():
 			# The off-season before the opening draft (row 199) is reached from the draft.
-			Router.go("hub" if GameState.season != null and not GameState.club_yet_to_play()
-					and GameState.first_offseason != 1 else "draft")
+			Router.go(GameState.resume_screen())
 		else:
 			_show_load_error())
 
@@ -822,8 +823,9 @@ func _forged_line() -> String:
 		tail = " You coach against it."
 	# A past season has no draft before it: the picks wait a year (ExpansionBuild).
 	var when := "after its first season" if _past_start() else "before it"
-	return ("It joins as a new club and plays the %d season with everyone: %d players from the state leagues, %d extra first-round picks in the National Draft %s, and up to %s outside the salary cap for the free agents it signs, %s at most in one season." % [
-			year, Expansion.FOUNDATION_SIZE, Expansion.FIRST_DRAFT_PICKS.size(), when, pool, most]) + tail
+	return ("It joins as a new club and plays the %d season with everyone: %d players from the state leagues, %d extra first-round picks in the National Draft %s, and up to %s outside the salary cap for %s, %s at most in one season." % [
+			year, Expansion.FOUNDATION_SIZE, Expansion.FIRST_DRAFT_PICKS.size(), when, pool,
+			"the free agents it signs" if EraRules.on("free_agency", year) else "the players it signs", most]) + tail
 
 
 ## Where your Forge prospect is drafted, for the start picked: the career's
@@ -1394,13 +1396,14 @@ func _show_help() -> void:
 			("1. Choose your club. All %d clubs start with empty lists.\n\n"
 			% GameDB.active_clubs(GameDB.START_YEAR).size())
 			+ "2. Draft from one shared player pool under the same cap. The random order reverses each round. Rivals pick between your turns. Tap a player to see what kind of footballer he is; only the Draft button picks him.\n\n"
-			+ "3. Track every selection in Picks. The position cards in the pool show your list's coverage; tap one to filter the pool. Carry at least two rucks.\n\n"
+			+ "3. Track every selection in Picks. The position cards in the pool show your list's coverage; tap one to filter the pool. Carry at least one ruck.\n\n"
 			+ "4. Play the home-and-away season, with matches driven by your players' rated abilities. Set your tactics in the coach box. After each game every player develops: his development (By position to start) decides the kind of footballer he becomes, and fit players you leave out develop in the reserves at about half the senior rate. Choose each player's development in Training.\n\n"
 			+ "5. Pick your own side on the Team screen, or let the best 23 be picked around injuries. Two of your five midfielders play the wings: a runner suits it, a ball-winner is wasted there. A tagger makes a tag bite.\n\n"
 			+ ("6. %s Win them all for the flag. The season's awards, the honour roll and league records are in the Season Review.\n\n"
 			% SeasonRules.how_finals_work(GameState.season.finals_format() if GameState.season != null
 					else str(SeasonRules.DEFAULT["finals"])))
-			+ "7. In the off-season, re-sign, release, sign free agents and trade in Trades & Contracts, then draft the next class. The hub's League news follows the whole league.\n\n"
+			+ ("7. In the off-season, re-sign, release, sign %s and trade in Trades & Contracts, then draft the next class. The hub's League news follows the whole league.\n\n"
+			% ("free agents" if EraRules.on("free_agency") else "delisted players"))
 			+ "Two dials are set when you start a new career. Board patience is how many poor seasons the board puts up with before it warns you, and then moves on you. Rival recruiting is how hard the other clubs bargain when they trade with you. Players develop by the same rules whatever you pick.\n\n"
 			+ "Rotate your device at any time. Your draft picks, search and filters stay intact.", 16)
 	v.add_child(UiKit.scroll(text))

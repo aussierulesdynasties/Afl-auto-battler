@@ -19,6 +19,7 @@ func run() -> void:
 	_t("_test_named_wings")
 	_t("_test_named_players")
 	_t("_test_engine_rewards_wings")
+	_t("_test_engine_kept_per_match")
 	_t("_test_tagger")
 	_t("_test_tag_targets")
 	_t("_test_no_prescriptions")
@@ -224,6 +225,45 @@ func _test_engine_rewards_wings() -> void:
 	mean /= maxf(1.0, centre.size())
 	_check(is_equal_approx(good.mid_contest, mean) and centre.size() == 3,
 			"Midfield contest is the three centre-square midfielders")
+
+
+## The match keeps each man's out-of-position cut the first time it asks
+## (MatchSim._spot_cuts, by id and line): after a full match every kept cut is
+## still what Rating.line_cut gives, and a copy of a man picked to another line
+## reads his cut at that line, not the line kept first.
+func _test_engine_kept_per_match() -> void:
+	var home := Squad.new("SYD", GameDB.club_list("SYD"), true, "SYD")
+	var away := Squad.new("COL", GameDB.club_list("COL"), false, "COL")
+	var sim := MatchSim.new(home, away, 7)
+	sim.run()
+	var men: Array = home.ground + home.bench + away.ground + away.bench
+	_check(men.size() >= 44, "Both sides field their 22 (%d)" % men.size())
+	var by_id := {}
+	for p in men:
+		by_id[str(p["id"])] = p
+	var kept := 0
+	var wrong := 0
+	for k in sim._spot_cuts:
+		var parts := str(k).split("|")
+		if not by_id.has(parts[0]):
+			continue
+		kept += 1
+		if float(sim._spot_cuts[k]) != Rating.line_cut(by_id[parts[0]], parts[1]):
+			wrong += 1
+	_check(kept > 20 and wrong == 0,
+			"Every kept cut is Rating.line_cut's (%d kept, %d wrong)" % [kept, wrong])
+	# The same man picked to another line in a fresh match reads that line's cut.
+	var fresh := MatchSim.new(Squad.new("SYD", GameDB.club_list("SYD"), true, "SYD"),
+			Squad.new("COL", GameDB.club_list("COL"), false, "COL"), 7)
+	var man: Dictionary = (home.ground[0] as Dictionary).duplicate()
+	man["role"] = "DEF"
+	var other := man.duplicate()
+	other["role"] = "RUCK"
+	for key in Attributes.CUT_BY_POSITION:
+		_check(is_equal_approx(fresh._skill(man, key), Attributes.value(man.get("attr", {}), key) * (1.0 - Rating.line_cut(man, "DEF")))
+				and is_equal_approx(fresh._skill(other, key), Attributes.value(other.get("attr", {}), key) * (1.0 - Rating.line_cut(other, "RUCK"))),
+				"Each line's copy reads %s at its own line" % key)
+		break
 
 
 func _test_tagger() -> void:

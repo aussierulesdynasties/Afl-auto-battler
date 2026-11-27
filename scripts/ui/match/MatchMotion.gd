@@ -322,8 +322,14 @@ static func make_token(pos: Vector2, top: float, reaction: float) -> Dictionary:
 ## Ask a token to head for `goal`. The token keeps its current goal until its
 ## reaction delay has passed; `immediate` skips the delay (a set play the
 ## player already knows, such as walking back for a centre bounce).
-static func set_goal(t: Dictionary, goal: Vector2, urgency: float, immediate := false) -> void:
-	goal = clamp_to_oval(goal, 2.0)
+## `past_line` lets him leave the ground for it (a defender running the ball
+## over his own goal line, a kick-in man fetching it from there): step() stops
+## holding him inside until he is back on the ground with a goal on it.
+static func set_goal(t: Dictionary, goal: Vector2, urgency: float, immediate := false, past_line := false) -> void:
+	if past_line:
+		t["over_line"] = true
+	else:
+		goal = clamp_to_oval(goal, 2.0)
 	if immediate:
 		t["goal"] = goal
 		t["pending"] = goal
@@ -378,10 +384,18 @@ static func step(t: Dictionary, dt: float) -> void:
 	# Steering round the bodies ahead (avoid), within the braking limit.
 	vel += (t.get("avoid", Vector2.ZERO) as Vector2) * dt
 	vel = vel.limit_length(SPRINT)
-	vel = _fence_brake(pos, vel, float(t.get("reset", 1.0)))
+	var free := bool(t.get("over_line", false))
+	if not free:
+		vel = _fence_brake(pos, vel, float(t.get("reset", 1.0)))
 	pos += vel * dt
 	var clamped := clamp_to_oval(pos, 1.0)
-	if clamped != pos:
+	if free:
+		# Off the ground on purpose (set_goal's past_line): held in again only once he
+		# is back on it, heading somewhere on it (no jump back over the line).
+		var g: Vector2 = t["goal"]
+		if clamped == pos and clamp_to_oval(g, 1.0) == g:
+			t.erase("over_line")
+	elif clamped != pos:
 		# On the fence he slides along it: only the speed into it goes
 		# (row 201 gap 13: halving the whole speed each step was a dead stop).
 		var n := fence_normal(clamped)

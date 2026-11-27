@@ -50,8 +50,10 @@ func run() -> void:
 	_t("_test_wind_and_heat")
 	_t("_test_weather_follows_the_real_games")
 	_t("_test_metres_and_efficiency")
+	_t("_test_kick_in_mark_not_his_disposal")
 	_t("_test_gps_distance")
 	_t("_test_ruck_integrity")
+	_t("_test_backup_ruck")
 	_t("_test_ruck_taps")
 	_t("_test_stat_credits")
 	_t("_test_m2_stats")
@@ -274,6 +276,14 @@ func _test_boundary_rules() -> void:
 			"Ordinary out of bounds inside a 50m arc is a throw-in")
 	_check(MatchSim.boundary_restart(f50 + 5.0, f50, "kick", true, false) == "free",
 			"Out on the full is a free anywhere on the ground")
+	# Before 2026 (bug bash P1-7) the same exit is the umpire's call on intent;
+	# touched, inside 50 or on the full it is as from 2026.
+	_check(MatchSim.boundary_restart(0.0, f50, "kick", false, false, false) == "intent",
+			"Before 2026 a kick out between the arcs is a throw-in unless it was insufficient intent")
+	_check(MatchSim.boundary_restart(0.0, f50, "kick", false, true, false) == "throwin"
+			and MatchSim.boundary_restart(f50 + 5.0, f50, "kick", false, false, false) == "throwin"
+			and MatchSim.boundary_restart(f50 + 5.0, f50, "kick", true, false, false) == "free",
+			"Before 2026 a touched exit or one inside 50 is a throw-in, out on the full a free")
 
 	var counts := {"throwin": 0, "last_disposal": 0, "out_on_full": 0}
 	var legal_last := true
@@ -1904,6 +1914,60 @@ func _test_ruck_taps() -> void:
 			and float(shares[1][1]) < 0.75, "better ruck share"),
 			"A far better ruck wins more taps to advantage and more of the ball, not all of it (%s)" % str(shares))
 
+## A key forward rucks when no ruck is there (director, 2026-11-26: "allow
+## key forwards to ruck in substitute IF they have done so IRL or are at a
+## minimum height threshold as the default backup"): one with a hit-out on his
+## real stats sheet, or one 196 cm or taller, at selection and at the bounce.
+func _test_backup_ruck() -> void:
+	var kf := func(id: String, h: float, ho: float, role := "FWD", apos := "Key Forward") -> Dictionary:
+		return {"id": id, "role": role, "role2": "", "apos": apos, "height_cm": h, "ho": ho, "gm": 20.0,
+			"attr": {"ruck": 20, "contested_marking": 80}}
+	_check(Ratings.BACKUP_RUCK_CM == GameState.RUCK_CM, "The backup's height is the height to learn the ruck")
+	_check(Ratings.backup_ruck(kf.call("a", 190.0, 12.0)), "A key forward with real hit-outs is a backup ruck")
+	_check(Ratings.backup_ruck(kf.call("b", 196.0, 0.0)), "A 196 cm key forward with none is a backup ruck")
+	_check(not Ratings.backup_ruck(kf.call("c", 195.0, 0.0)), "A 195 cm key forward with none is not")
+	_check(not Ratings.backup_ruck(kf.call("d", 201.0, 9.0, "DEF", "Key Defender")), "A tall key defender is not")
+	_check(not Ratings.backup_ruck(kf.call("e", 200.0, 9.0, "FWD", "Forward")), "A tall general forward is not")
+	var slotted: Dictionary = kf.call("f", 197.0, 0.0)
+	slotted["own_role"] = "FWD"
+	slotted["role"] = "RUCK"
+	_check(Ratings.backup_ruck(slotted), "...and he still is standing in the ruck spot")
+	# At the bounce, no ruckman on the ground: the backup key forward goes up
+	# ahead of a midfielder with a better tap, and with no backup, the midfielder.
+	var sim := _sim(91)
+	var sq: Squad = sim.squads[0]
+	var mid_i := -1
+	var fwd_i := -1
+	for i in range(sq.ground.size()):
+		var g: Dictionary = sq.ground[i]
+		g["own_role"] = "MID" if str(g["role"]) == "RUCK" else str(g["role"])
+		g["role2"] = ""
+		g["learned"] = []
+		g["unicorn"] = false
+		g["ho"] = 0.0
+		g["height_cm"] = 185.0
+		g["attr"]["ruck"] = 30
+		if str(g["role"]) == "MID" and mid_i < 0:
+			mid_i = i
+		if str(g["role"]) == "FWD" and fwd_i < 0:
+			fwd_i = i
+	_check(mid_i >= 0 and fwd_i >= 0, "The side has a midfielder and a forward on the ground")
+	sq.ground[mid_i]["attr"]["ruck"] = 90
+	sq.ground[fwd_i]["apos"] = "Key Forward"
+	sq.ground[fwd_i]["height_cm"] = 197.0
+	sim._backup_cache = {}
+	_check(str(sim._contestant(sq)[0]["id"]) == str(sq.ground[fwd_i]["id"]),
+			"No ruckman out there: the 197 cm key forward goes up, not the midfielder with the better tap")
+	sq.ground[fwd_i]["height_cm"] = 193.0
+	sim._backup_cache = {}
+	_check(str(sim._contestant(sq)[0]["id"]) == str(sq.ground[mid_i]["id"]),
+			"A 193 cm key forward with no hit-outs is no backup: the best tap man goes up")
+	sq.ground[fwd_i]["ho"] = 4.0
+	sim._backup_cache = {}
+	_check(str(sim._contestant(sq)[0]["id"]) == str(sq.ground[fwd_i]["id"]),
+			"...but with real hit-outs he is, and goes up")
+
+
 ## The ruck contest is decided by, and credited to, the player actually at
 ## the bounce. With the ruck resting, the ruckman on the ground goes up, not
 ## whoever came off the bench, and an empty ruck spot is filled by the best
@@ -1954,11 +2018,15 @@ func _test_ruck_integrity() -> void:
 	for g in side["ground"]:
 		if str(g["role"]) == "RUCK":
 			in_ruck = g
+	# A backup key forward first (Ratings.backup_ruck, director 2026-11-26),
+	# the best of them at the taps; with none, the best tap man.
+	var backups := list.filter(func(p): return Ratings.backup_ruck(p))
 	var best_ruck := 0.0
-	for p in list:
+	for p in (backups if not backups.is_empty() else list):
 		best_ruck = maxf(best_ruck, float(p["attr"]["ruck"]))
-	_check(in_ruck != null and float(in_ruck["attr"]["ruck"]) == best_ruck,
-			"With no ruckman listed, the best tap man goes into the ruck")
+	_check(in_ruck != null and float(in_ruck["attr"]["ruck"]) == best_ruck
+			and (backups.is_empty() or Ratings.backup_ruck(in_ruck)),
+			"With no ruckman listed, the best backup key forward goes into the ruck (%d backups)" % backups.size())
 	# Over whole matches, hit-outs go to ruckmen (before: half of them did not).
 	var tot := 0.0
 	var off := 0.0
@@ -2136,8 +2204,9 @@ func _test_play_through_three() -> void:
 	_check(off.focus_active(0, "focus_fwd") == false and probe.focus_active(0, "focus_fwd"),
 			"...and the screen can tell a working call from a waiting one")
 	# Real matches, paired seeds: each man gets more of his job, none an absurd share.
-	# 80 games: over 24 the target's shots are inside the noise.
-	var n := 80
+	# 200 games, the focus audit's floor (director, 2026-11-27): the target's
+	# extra shots (about +0.16 a game) are inside the noise over 80.
+	var n := 200
 	var on := {"md": 0.0, "fs": 0.0, "dk": 0.0, "td": 0.0, "top": 0.0}
 	var base := {"md": 0.0, "fs": 0.0, "dk": 0.0, "td": 0.0}
 	# Both arms coach the same plan, the club's usual game: the plan is the
@@ -2167,8 +2236,8 @@ func _test_play_through_three() -> void:
 			"The calls move who gets it, not how much the side has (%.0f v %.0f disposals)" % [on["td"] / n, base["td"] / n])
 	# 45 was set when a side had 358 disposals a game; the defensive-50
 	# clearing kick (2026-11-07) gives a side 384 (real 367.6), so the same
-	# share is 48. Over these 80 games the pillar's two 40+ games are 42 and 46
-	# (38 on main); the real one-game record is 54.
+	# share is 48. Over these 200 games the most any of the three has in a game
+	# is 33 (2026-11-27); the real one-game record is 54.
 	_check(BalanceGate.held(on["top"] < 48.0, "top player use share"), "Nobody becomes the only one who gets it (most in a game %d)" % int(on["top"]))
 
 
@@ -5448,3 +5517,58 @@ func _test_synergies_follow_the_ground() -> void:
 		for k in (r["synergy_share"][side] as Dictionary):
 			ok = ok and (r["synergies"][side] as Array).has(k) and float(r["synergy_share"][side][k]) <= 1.0
 	_check(ok, "The result lists every synergy a side had on, with its share of the match")
+
+
+## Bug bash P1-5: a kick-in he does not play on from is the team's, not his
+## disposal, so a mark it brings is no effective disposal of his. A safe
+## kick-in marked in a contest comes up about once in 25 matches, so this
+## match forces it: every kick-in safe, every contest after one marked.
+func _test_kick_in_mark_not_his_disposal() -> void:
+	var sim := _SafeKickInMarks.new(Squad.new("GEE", GameDB.club_list("GEE"), true, "GEE"),
+			Squad.new("COL", GameDB.club_list("COL"), false, "COL"), 6101)
+	var res := sim.run()
+	_check(sim.marks >= 1, "The match has safe kick-ins marked in a contest (%d)" % sim.marks)
+	_check(sim.credited == 0, "None is his effective disposal (%d of %d were)" % [sim.credited, sim.marks])
+	var over := []
+	for side in range(2):
+		for r in res["roster"][side]:
+			var st: Dictionary = res["players"].get(str(r["id"]), {})
+			if float(st.get("effective_disposals", 0.0)) > float(st.get("disposals", 0.0)):
+				over.append(str(r["id"]))
+	_check(over.is_empty(), "Nobody has more effective disposals than disposals (%s)" % str(over))
+
+
+## Every kick-in safe, every marking contest after one won by his side;
+## `credited` counts the marks that were made his effective disposal.
+class _SafeKickInMarks extends MatchSim:
+	var marks := 0
+	var credited := 0
+	var _taker := ""
+
+	func _kick_in_play_on(_taker_p) -> bool:
+		return false
+
+	func _general_aerial_contest(side: int, mark_fp: float, carrier) -> Dictionary:
+		var k := events.size() - 1
+		while k >= 0 and not ["kick", "handball", "mark"].has(str(events[k].get("kind", ""))):
+			k -= 1
+		if k >= 0 and bool(events[k].get("kick_in", false)) and carrier != null:
+			marks += 1
+			_taker = str(carrier["id"])
+			return {"outcome": "mark"}
+		return super(side, mark_fp, carrier)
+
+	# The credit for that mark comes before the next touch picks a carrier.
+	func _effective(side: int, player) -> void:
+		if _taker != "" and player != null and str(player["id"]) == _taker:
+			credited += 1
+		_taker = ""
+		super(side, player)
+
+	func kick_receiver(side: int, from_fp: float, to_fp: float, kicker):
+		_taker = ""
+		return super(side, from_fp, to_fp, kicker)
+
+	func kick_in_taker(side: int):
+		_taker = ""
+		return super(side)
