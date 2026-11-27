@@ -249,3 +249,4 @@ What has landed toward each open row of docs/TODO.md and docs/TODO_RULINGS.md, o
 - 171: Merged #2260: Docs: the director's UI picks (2026-11-25 to 11-27) in the Director Bible; row 171's state.
 - 202: Merged #2266: 3D 1.0 plan: Marvel r13, Bellerive r7, Norwood, Legacy measurements and era surroundings, injuries on main.
 - 202: Merged #2271: 3D 1.0 plan: Marvel, Bellerive and Norwood code merged, models still being published.
+- 202: Merged #2272: Bellerive round 7: publish the ground files.
