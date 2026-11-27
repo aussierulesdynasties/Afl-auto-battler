@@ -68,6 +68,8 @@ class ShardLayoutTests(unittest.TestCase):
             self.assertTrue(check(root, observed=obs))
         self.assertIn("shard-1 100->300", out.getvalue())
         self.assertIn("25% off their estimate", out.getvalue())
+        self.assertIn("Suites off their timing (estimated -> actual s): b 100->300", out.getvalue())
+        self.assertNotIn("a 100->100", out.getvalue())
 
 
 if __name__ == "__main__":
