@@ -1968,8 +1968,6 @@ def south_textures():
     flat("column_white", (232, 232, 230), noise=1.0)
     for n in ("soffit", "skylight", "mast_red", "column_white"):
         TILE[n] = (4.0, 4.0)
-    sign_board("lm_sign_marvel", "MARVEL", (226, 30, 38), 13.4, 5.4, 4.2)
-    sign_board("lm_sign_stadium", "STADIUM", (20, 20, 22), 19.2, 5.4, 4.2)
 
 
 def _rect(c, w, d, ang):
@@ -2132,36 +2130,9 @@ def south_podium(g):
         c = (88.5 + dx, -106.7 + dy)
         g.prism(_rect(c, 4.0, 2.4, math.radians(35.0)), zr, zr + 1.6, "steel", top="roof_grey")
         g.prism(cylinder_ring(c, 0.8, 10), zr + 1.6, zr + 1.9, "steel_dark", top="roof_dark")
-    # the MARVEL STADIUM board, facing the plaza: red MARVEL west, black STADIUM east, 5.4 m tall. Round 14b (the
-    # person: it sat on the roof "like a separate billboard"): now a thin board fixed 0.3 m proud of the glass, following
-    # the podium's curve between x 27.5 and 60, from 17.4 to 22.8, so it reads as part of the building
-    from shapely.geometry import LineString as _LS
-    edge = _LS(POD_OUT)
-    s_a = edge.project(_Pt(27.5, -145.2)); s_b = edge.project(_Pt(60.0, -142.3))
-    Lb = s_b - s_a; split = 13.4 / (13.4 + 19.2) * Lb
-    ss = np.r_[np.linspace(s_a, s_a + split, 15), np.linspace(s_a + split, s_b, 21)[1:]]
-    pts = [np.array(edge.interpolate(v).coords[0]) for v in ss]
-    nrm = []
-    for k in range(len(pts)):
-        tt = pts[min(k + 1, len(pts) - 1)] - pts[max(k - 1, 0)]; tt /= np.linalg.norm(tt)
-        nrm.append(np.array((tt[1], -tt[0])))            # right of a west-to-east run: out to the plaza
-    Lb = s_b - s_a; split = 13.4 / (13.4 + 19.2) * Lb
-    zb0, zb1 = 17.4, 22.8
-    TILE["lm_sign_marvel"] = (split, 5.4); TILE["lm_sign_stadium"] = (Lb - split, 5.4)   # one texture per board
-    for k in range(len(pts) - 1):
-        u0, u1 = ss[k] - s_a, ss[k + 1] - s_a
-        fa, fb = pts[k] + nrm[k] * 0.3, pts[k + 1] + nrm[k + 1] * 0.3
-        ba, bb = pts[k] + nrm[k] * 0.05, pts[k + 1] + nrm[k + 1] * 0.05
-        mat, w0 = ("lm_sign_marvel", 0.0) if u1 <= split + 1e-6 else ("lm_sign_stadium", split)
-        g.poly(mat, [(fa[0], fa[1], zb0), (fb[0], fb[1], zb0), (fb[0], fb[1], zb1), (fa[0], fa[1], zb1)],
-               [(u0 - w0, 0.0), (u1 - w0, 0.0), (u1 - w0, 5.4), (u0 - w0, 5.4)])
-        g.poly("steel_dark", [(ba[0], ba[1], zb1), (bb[0], bb[1], zb1), (fb[0], fb[1], zb1), (fa[0], fa[1], zb1)])
-        g.poly("steel_dark", [(fa[0], fa[1], zb0), (fb[0], fb[1], zb0), (bb[0], bb[1], zb0), (ba[0], ba[1], zb0)])
-        # round 16 (fault scan f051: the print showed mirror-image from behind): a plain steel back
-        g.poly("steel_dark", [(bb[0], bb[1], zb0), (ba[0], ba[1], zb0), (ba[0], ba[1], zb1), (bb[0], bb[1], zb1)])
-    for k in (0, len(pts) - 1):
-        fa, ba = pts[k] + nrm[k] * 0.3, pts[k] + nrm[k] * 0.05
-        g.poly("steel_dark", [(ba[0], ba[1], zb0), (fa[0], fa[1], zb0), (fa[0], fa[1], zb1), (ba[0], ba[1], zb1)])
+    # round 16b (coordinator, 28 Nov, under the realism rules): the round-14 MARVEL STADIUM board on the podium's
+    # front is gone. No recent photo shows a lettered board on the south frontage (venue, ByDesign and Grimshaw
+    # pages checked), and a detail we cannot verify is left out. sign_board() stays for a board a photo confirms.
     # plaza: banner poles and light poles along the podium's front (pod_c: tall thin poles, about 10 m)
     line = _offset_line(out_line, -6.0)
     pts, _ = _resample(line, 14.0)
