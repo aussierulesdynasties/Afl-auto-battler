@@ -130,7 +130,11 @@ func _test_run_kept() -> void:
 	var owed := Promises.of(GameState, id)
 	_check(owed.size() == 1 and str(owed[0]["kind"]) == "run" and int(owed[0]["weeks_left"]) == Backing.RUN_GAMES,
 			"His promises read as one run of three games (%s)" % str(owed))
-	for i in Backing.RUN_GAMES:
+	# Three games he plays, however many rounds that takes: a round he misses
+	# injured waits, as the rule says (seed 2031 hurts him in his first game).
+	for i in Backing.RUN_GAMES + 6:
+		if str(Backing.ledger(kid)[0]["state"]) != "active":
+			break
 		_advance_mine()
 	_check(str(Backing.ledger(kid)[0]["state"]) == "done", "(setup) the run is played out")
 	_check(int(w["kept"]) == 1 and int(w["broken"]) == 0, "The record says kept (%s)" % str(w))
@@ -237,8 +241,13 @@ func _test_drops_build_authority() -> void:
 
 func _test_rival_parity() -> void:
 	_fresh()
-	GameState.advance()
-	GameState.advance()
+	# A drop needs a fit man who played last week and not this one: play on until
+	# some rival coach has made one (seed 2031: none in two rounds, 9 of 17 in three).
+	for i in 6:
+		GameState.advance()
+		if i >= 1 and GameState.club_standing.values().any(
+				func(s): return int(s["authority"]) != int(s["base"][1])):
+			break
 	var clubs: Dictionary = GameState.club_standing
 	_check(clubs.size() >= 16 and not clubs.has("GEE"),
 			"Every rival club's senior coach has a standing of his own (%d)" % clubs.size())
