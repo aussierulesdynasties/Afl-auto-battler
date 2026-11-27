@@ -22,6 +22,12 @@ func run() -> void:
 	var mid90 := 0
 	var up90 := 0
 	var pots := []
+	# T8.50: the same counts by age, role, club and source, as parseable lines:
+	#   POTROW dim key n true90 mid90 upper90
+	var overridden := {}
+	GameDB._each_override_row(GameDB.POTENTIAL_CSV, "potential", players, func(q, _cell):
+		overridden[str(q["id"])] = true)
+	var cuts := {}
 	for p in players:
 		n += 1
 		var pot := int(p.get("potential", p.get("overall", 0)))
@@ -45,7 +51,20 @@ func run() -> void:
 			up90 += 1
 		if pot >= 90:
 			src[_source(p)] += 1
+		var how := "override" if overridden.has(str(p["id"])) else _source(p)
+		for cut in [["all", "all"], ["age", _band(bands, age)], ["role", role], ["club", str(p.get("club", "-"))], ["src", how]]:
+			var c_key := "%s %s" % cut
+			if not cuts.has(c_key):
+				cuts[c_key] = [0, 0, 0, 0]
+			cuts[c_key][0] += 1
+			cuts[c_key][1] += 1 if pot >= 90 else 0
+			cuts[c_key][2] += 1 if int(v["potential_mid"]) >= 90 else 0
+			cuts[c_key][3] += 1 if int((v["potential"] as Array)[1]) >= 90 else 0
 	pots.sort()
+	var cut_keys := cuts.keys()
+	cut_keys.sort()
+	for c_key in cut_keys:
+		print("POTROW %s %d %d %d %d" % [c_key, cuts[c_key][0], cuts[c_key][1], cuts[c_key][2], cuts[c_key][3]])
 	print("potdist: %d players. True POT >= 90: %d (%.0f%%); your read's midpoint >= 90: %d (%.0f%%); its upper bound >= 90: %d (%.0f%%)"
 			% [n, tp90, 100.0 * tp90 / n, mid90, 100.0 * mid90 / n, up90, 100.0 * up90 / n])
 	print("potdist: POT percentiles p10 %d, p25 %d, p50 %d, p75 %d, p90 %d, p99 %d" % [pots[n / 10], pots[n / 4], pots[n / 2],
