@@ -30,6 +30,7 @@ FONTS = os.path.join(ROOT, "assets", "fonts")
 BLENDER = os.environ.get("BLENDER", r"C:\Program Files\Blender Foundation\Blender 5.2\blender.exe")
 
 TILE = {}
+NRM = {}           # smooth-shaded parts for stage 2: material -> per face, a normal per vertex
 TEXT = []          # 3D lettering for stage 2: (text, font, size, centre xyz, outward normal xy, depth, material)
 
 
@@ -276,7 +277,7 @@ def _stage1():
     # Built from Street View, June 2019 (gates/refs g7_doors2019, g7_west2019, g7_east2019, g7_ticketbay2019,
     # cameras fitted to marvel.glb's columns to half a degree) and the undated photosphere g7_photosphere, which
     # shows the same booths. West to east: a triangle-clad wall with a black board (336.2-334.9); a bank of
-    # full-height turnstiles under the "Gate 7" sign (345.86-336.2); one more turnstile and three double grilled
+    # grilled turnstile lanes with waist-high ticket gates under the "Gate 7" sign (345.86-336.2); one more turnstile and three double grilled
     # doors (348.67-345.86), all opening into a vestibule where marvel.glb's glass is cut away
     # (MARVEL_GATE_CUTS, 335.34-349.09); then three Ticket Sales booths built out between columns C5 to C8
     # (348.8-0.7), windows 1-12 numbered eastward. Columns C4, C3 and C2 carry the red-topped "Gate 7" wrap.
@@ -431,23 +432,26 @@ def _stage1():
     louvre("louvre_hi", 1.4, 0.76)
 
     def grille_door(name, w=0.70, hgt=2.30, px=200):
-        """One leaf of the grilled doors (g7_doors2019): black frame and mid rail round a diamond wire mesh
-        you can see through (alpha clip)."""
+        """One leaf of the grilled doors and lane gates (g7_doors2019, vid2026_t448): a black frame round a square
+        welded mesh of 50 mm cells you can see through (alpha clip), with rails 0.80 and 1.55 m up."""
         W_, H_ = int(w * px), int(hgt * px)
         im = Image.new("RGBA", (W_, H_), (0, 0, 0, 0))
         dr = ImageDraw.Draw(im)
         col = (22, 22, 24, 255)
         step = int(0.05 * px)
-        for k in range(-H_, W_ + H_, step):
-            dr.line([(k, 0), (k + H_, H_)], fill=col, width=2)
-            dr.line([(k, 0), (k - H_, H_)], fill=col, width=2)
+        for x in range(0, W_, step):
+            dr.line([(x, 0), (x, H_)], fill=col, width=2)
+        for y in range(0, H_, step):
+            dr.line([(0, y), (W_, y)], fill=col, width=2)
         f = int(0.05 * px)
         dr.rectangle([0, 0, W_ - 1, H_ - 1], outline=col, width=f)
-        ym = H_ - int(1.05 * px)
-        dr.rectangle([0, ym - f // 2, W_, ym + f // 2], fill=col)
+        for zr in (0.80, 1.55):
+            ym = H_ - int(zr * px)
+            dr.rectangle([0, ym - f // 2, W_, ym + f // 2], fill=col)
         save_pil(name, im, (w, hgt))
 
     grille_door("grille_door")
+    grille_door("grille_lane", w=1.10)          # one leaf across each turnstile lane
 
     def bars(name, w=1.0, hgt=2.3, px=120):
         """The vertical bar screens between the turnstile lanes (alpha clip)."""
@@ -731,19 +735,27 @@ def _stage1():
     fbox("dark_frame", DB_W, 0.0, 0.09, 0.12, 0.0, 2.30)
     strip("dark_frame", DB_E, DB_W, 2.24, 2.30, 0.07)                                  # head rail
 
-    # --- the turnstile bank, 345.86 to 336.2: one lane every ~1.2 m between black posts
+    # --- the turnstile bank, 345.86 to 336.2: one lane every ~1.2 m between black posts. Each lane is closed by
+    # a grilled leaf (g7_doors2019, vid2026_t448: mesh with a mid rail, a scanning plate at its head); behind it,
+    # inside, stand the waist-high ticket gates (g7in y350_t95, y350_t125 and through the grilles in both
+    # outside views): a steel pedestal on every post line with a dark reader on its outer end and two guide
+    # rails running on into the concourse.
     TB_E, TB_W = DB_W, VB_W
     nl = max(1, int(round(span(TB_E, TB_W, 0.0) / 1.2)))
     lane = span(TB_E, TB_W, 0.0) / nl
     lb = [deg(TB_E, lane * k, 0.0) for k in range(nl)] + [TB_W]
     for k in range(nl):
         be, bw = lb[k], lb[k + 1]
-        rotor((be + bw) / 2, -0.55)
+        panel("grille_lane", (be + bw) / 2, 0.03, lane - 0.10, 0.0, 2.12)
         panel("lane_plate", (be + bw) / 2, 0.05, 0.46, 2.12, 2.24)
     for bb in lb:
         fbox("dark_frame", bb, 0.0, 0.10, 0.12, 0.0, 2.30)
-        radial("bars_v", bb, -1.1, -0.06, 0.0, 2.30, +1, fit=1.0)
-        radial("bars_v", bb, -1.1, -0.06, 0.0, 2.30, -1, fit=1.0)
+        r_ = u(bb)
+        hbox("steel", glass(bb, -0.80), r_, 0.90, 0.22, 0.0, 0.95)                    # the pedestal
+        hbox("board_black", glass(bb, -0.49), r_, 0.28, 0.24, 0.95, 1.07)             # the reader
+        for zz in (0.48, 0.86):                                                      # guide rails
+            hbox("steel", glass(bb, -1.65), r_, 0.80, 0.04, zz, zz + 0.04, bottom=True)
+        hbox("steel", glass(bb, -2.03), r_, 0.04, 0.04, 0.0, 0.90)                    # the rails' end post
     strip("dark_frame", TB_E, TB_W, 2.24, 2.30, 0.07)
 
     # --- over the doors and lanes: louvres (two tiers), the Gate 7 sign, the lintel
@@ -804,8 +816,113 @@ def _stage1():
         for off in (-1.70, 0.0, 1.70):
             panel("notice", deg(mid, off, BD), BD + 0.012, 0.48, 1.61, 2.07)
 
+    # ------------------------------------------------------------ Threaded Field (Simon Perry, 1999-2000)
+    # The green coil on the north-west forecourt, in front of Gate 7: one painted steel tube about 0.32 m thick wound
+    # into a conical spiral. Its open end stands in the air at the big end; the first loop rests on the deck and the
+    # three smaller ones dive into it, each cut off at the deck (the pointed ends in the photos are the tube meeting
+    # the floor at a slant). Shape and size: fitted to the photo c008 (row scans of the tube, every loop's top and
+    # cut ends, rms about 10 px). Plan position: the Esri aerial, whose footprint agrees with the fit's length to
+    # 5 %; the photo's camera sat about 4.7 m from where the facade fit put it, so the fit is moved 3.24 m west and
+    # 3.36 m north onto the aerial. Tube diameter from c008's widths at the fit's depths.
+    def coil_paint(name, tile_u=2.0, tile_v=2 * math.pi * 0.16, px=200):
+        """Green semi-gloss paint, chipped in places down to a paler yellow-green coat (c008 close crops)."""
+        nu, nv = int(tile_u * px), int(round(tile_v * px))
+        ky = np.fft.fftfreq(nv)[:, None] * nv / tile_v
+        kx = np.fft.fftfreq(nu)[None, :] * nu / tile_u
+        k = np.hypot(kx, ky)
+
+        def fbm(scale, octaves=4):          # FFT-filtered noise: wraps both ways, so the tube shows no seam
+            out = np.zeros((nv, nu))
+            for o in range(octaves):
+                f = np.fft.fft2(rng.normal(0, 1, (nv, nu)))
+                out += np.real(np.fft.ifft2(f * np.exp(-(k * scale / 2 ** o) ** 2))) * 0.5 ** o
+            return (out - out.mean()) / out.std()
+        img = np.zeros((nv, nu, 3)) + np.array([62.0, 128.0, 44.0])
+        img += fbm(0.6, 2)[..., None] * np.array([4.0, 7.0, 3.0])              # brushing and fade
+        chip = fbm(0.35)
+        m = chip > 1.55                                                         # the chipped patches
+        rim = (chip > 1.35) & ~m
+        img[rim] = img[rim] * 0.8
+        img[m] = np.array([150.0, 180.0, 108.0]) + rng.normal(0, 6, (int(m.sum()), 3))
+        img[rng.random((nv, nu)) > 0.9985] = (172.0, 190.0, 140.0)             # small chips
+        img += rng.normal(0, 2.0, (nv, nu, 1))
+        save(name, img, (tile_u, tile_v))
+
+    coil_paint("coil_paint")
+    NRM["coil_paint"] = []
+    CX = [-35.004 - 3.24, 127.724 + 3.36, 240.139]                             # first loop's centre, axis heading
+    CR = [2.523, 2.373, 2.221, 1.778, 1.402, 1.044, 0.913]                     # loop radius at the knots
+    CH = [2.571, 2.495, 2.284, 1.687, 0.925, 0.271, -0.032]                    # loop centre height at the knots
+    CS = [0.443, 1.249, 2.215, 2.104, 2.110, 1.000]                            # advance along the axis between knots
+    CK = [0, 0.25, 0.75, 1.75, 2.75, 3.75, 4.3]                                # knots, in turns from the open end
+    LAM, ELL, TUBE_R = -0.042, 1.113, 0.16
+    COIL_Z = DECK_Z + 0.04            # c008's fit rested the first loop for a 0.13 m tube; this one is 0.16
+    ax = u(CX[2])
+    nn = -np.array([ax[1], -ax[0]])                     # winds clockwise seen from the open end (c008)
+    sk = np.r_[0, np.cumsum(CS)]
+    tt = np.linspace(0, 4.3, 1300)
+    Rt, Ht, St = np.interp(tt, CK, CR), np.interp(tt, CK, CH), np.interp(tt, CK, sk)
+    ph = -2 * np.pi * tt
+    xy = (np.array(CX[:2])[None] + ax[None] * (St + LAM * Rt * np.sin(ph))[:, None]
+          + nn[None] * (ELL * Rt * np.cos(ph))[:, None])
+    C = np.c_[xy, Ht + Rt * np.sin(ph)]
+    T = np.gradient(C, axis=0)
+    T /= np.linalg.norm(T, axis=1)[:, None]
+    seg = np.r_[0, np.cumsum(np.linalg.norm(np.diff(C, axis=0), axis=1))]
+    NS = 20
+    rings, norms = [], []
+    ref = np.cross(T[0], (0.0, 0.0, 1.0))
+    ref /= np.linalg.norm(ref)
+    ang = np.linspace(0, 2 * np.pi, NS + 1)
+    for i in range(len(C)):                                # parallel transport: the tube does not twist
+        ref = ref - T[i] * float(np.dot(ref, T[i]))
+        ref /= np.linalg.norm(ref)
+        b2 = np.cross(T[i], ref)
+        nr = np.cos(ang)[:, None] * ref[None] + np.sin(ang)[:, None] * b2[None]
+        norms.append(nr)
+        rings.append(C[i][None] + nr * TUBE_R)
+    CIRC = 2 * math.pi * TUBE_R
+
+    def clip_up(P, N, UV):
+        """Sutherland-Hodgman against the deck: keeps the part of a face above the floor."""
+        oP, oN, oU = [], [], []
+        for k_ in range(len(P)):
+            a, b = k_, (k_ + 1) % len(P)
+            za, zb = P[a][2], P[b][2]
+            if za >= 0:
+                oP.append(P[a])
+                oN.append(N[a])
+                oU.append(UV[a])
+            if (za >= 0) != (zb >= 0):
+                f = za / (za - zb)
+                oP.append(P[a] + (P[b] - P[a]) * f)
+                nv_ = N[a] + (N[b] - N[a]) * f
+                oN.append(nv_ / np.linalg.norm(nv_))
+                oU.append(UV[a] + (UV[b] - UV[a]) * f)
+        return oP, oN, oU
+
+    def coil_face(P, N, UV):
+        g.poly("coil_paint", [(p_[0], p_[1], p_[2] + COIL_Z) for p_ in P], [tuple(map(float, x_)) for x_ in UV])
+        NRM["coil_paint"].append([tuple(map(float, n_)) for n_ in N])
+
+    for i in range(len(C) - 1):
+        for j in range(NS):
+            P = [rings[i][j], rings[i][j + 1], rings[i + 1][j + 1], rings[i + 1][j]]
+            N = [norms[i][j], norms[i][j + 1], norms[i + 1][j + 1], norms[i + 1][j]]
+            UV = [np.array((seg[i], CIRC * j / NS)), np.array((seg[i], CIRC * (j + 1) / NS)),
+                  np.array((seg[i + 1], CIRC * (j + 1) / NS)), np.array((seg[i + 1], CIRC * j / NS))]
+            if min(p_[2] for p_ in P) >= 0:
+                coil_face(P, N, UV)
+            elif max(p_[2] for p_ in P) > 0:
+                P, N, UV = clip_up(P, N, UV)
+                if len(P) >= 3:
+                    coil_face(P, N, UV)
+    # the open end, cut square (c008): a disc facing back along the tube
+    disc = [np.array((0.15 + 0.15 * math.cos(a_), 0.15 + 0.15 * math.sin(a_))) for a_ in ang[:NS]]
+    coil_face([rings[0][j] for j in range(NS)][::-1], [-T[0]] * NS, disc[::-1])
+
     # ------------------------------------------------------------ hand over to Blender
-    data = {"parts": g.parts, "tile": TILE, "text": TEXT, "tex": TEX, "out": OUT}
+    data = {"parts": g.parts, "tile": TILE, "text": TEXT, "tex": TEX, "out": OUT, "nrm": NRM}
     pkl = os.path.join(TEX, "_gates.pkl")
     with open(pkl, "wb") as f:
         pickle.dump(data, f)
@@ -843,7 +960,7 @@ def _stage2(pkl):
                 rd.operation = "ROUND"
                 nt.links.new(tx.outputs["Alpha"], rd.inputs[0])
                 nt.links.new(rd.outputs[0], b.inputs["Alpha"])
-        b.inputs["Roughness"].default_value = 0.3 if "glass" in name else (0.4 if "steel" in name else 0.85)
+        b.inputs["Roughness"].default_value = 0.3 if "glass" in name else (0.4 if ("steel" in name or "paint" in name) else 0.85)
         b.inputs["Metallic"].default_value = 1.0 if "steel" in name else 0.0
         if name.endswith("_lit"):          # downlights: emissive, exported as glTF emissive + strength
             b.inputs["Emission Color"].default_value = (1.0, 0.95, 0.86, 1.0)
@@ -866,6 +983,8 @@ def _stage2(pkl):
         for poly, uv in zip(me.polygons, UV):
             for k, li in enumerate(poly.loop_indices):
                 ul.data[li].uv = (uv[k][0] / tu, uv[k][1] / tv)
+        if mat in data.get("nrm", {}):
+            me.normals_split_custom_set([n for fn in data["nrm"][mat] for n in fn])
         me.materials.append(material(mat))
         ob = bpy.data.objects.new("gates_" + mat, me)
         sc.collection.objects.link(ob)
