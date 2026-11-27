@@ -76,7 +76,7 @@ const TEAM_BOOKKEEPING_PREFIXES := ["d50_end_"]
 ## #2211 (a faster match engine) and #2230 (tail check) on top. Windows from a local
 ## run on the merged branch, Linux from its CI run. Endurance (#2240: the play-through midfielder
 ## goes on in a midfielder's spot) and Phase 8 (#2242) redrew it on top; Windows local, Linux from CI.
-const GOLDEN_SEASON := {"Windows": "066e219c84a18262d9e17e8a201436f2", "Linux": "bf219aeb96e2f0fbc6fa30160822157c"}
+const GOLDEN_SEASON := {"Windows": "066e219c84a18262d9e17e8a201436f2", "Linux": "24d2eacea5b47a9a5f82f6137534ecbe"}
 
 ## A small league standing in for a legacy set until the 1990 files ship:
 ## 42 real players re-dated to a 1989 data season, a 1990 first season, and
