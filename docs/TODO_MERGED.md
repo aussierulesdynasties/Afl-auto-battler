@@ -246,3 +246,4 @@ What has landed toward each open row of docs/TODO.md and docs/TODO_RULINGS.md, o
 - 217: Merged #2254: Replay: every man named to take a loose ball comes in at pick-up pace (Director Bible 2.116).
 - 217: Merged #2232 (row 202): its WACA in-era surroundings cleared match_visual's WACA backdrop check.
 - 217: Merged #2257: GameState.reset() waits for the last round's worker matches before reloading the players (the matchday_breaks signal 11).
+- 171: Merged #2260: Docs: the director's UI picks (2026-11-25 to 11-27) in the Director Bible; row 171's state.
