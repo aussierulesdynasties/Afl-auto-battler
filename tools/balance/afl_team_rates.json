@@ -1,5 +1,5 @@
 {
- "source": "data/players_2026.csv (AFL Tables 2026 totals) summed per club (finals included) and divided by the club's games (the most games any of its players played, home-and-away plus finals); for clubs that missed the finals goals match data/raw/standings_2026.json exactly. Behinds are player-credited and leave out rushed behinds (about 2 a game below a team's own total). Per team per match; mean, lowest, highest and spread across the 18 clubs. 2025 is not included: no 2025 per-player cache is in the repo. Regenerate with tools/balance/build_team_rates.py.",
+ "source": "data/players_2026.csv (AFL Tables 2026 totals) summed per club (finals included) and divided by the club's games (the most games any of its players played, home-and-away plus finals); for clubs that missed the finals goals match data/raw/standings_2026.json exactly. Behinds are player-credited and leave out rushed behinds (about 2 a game below a team's own total). Per team per match; mean, lowest, highest and spread across the 18 clubs. Score and rushed_behinds are home-and-away, from the standings: score for every club, rushed_behinds (standings behinds less player behinds) for the clubs that missed the finals. 2025 is not included: no 2025 per-player cache is in the repo. Regenerate with tools/balance/build_team_rates.py.",
  "clubs": 18,
  "team_games": 434,
  "per_team_match": {
@@ -92,6 +92,18 @@
    "min": 9.7,
    "max": 14.0,
    "sd": 1.36
+  },
+  "score": {
+   "mean": 89.11,
+   "min": 64.48,
+   "max": 110.57,
+   "sd": 12.67
+  },
+  "rushed_behinds": {
+   "mean": 2.12,
+   "min": 1.83,
+   "max": 2.48,
+   "sd": 0.24
   }
  }
 }

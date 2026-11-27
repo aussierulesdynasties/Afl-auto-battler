@@ -39,6 +39,9 @@ func _run() -> void:
 	await _t("_test_league_draft_has_none")
 	await _t("_test_meeting_door")
 	await _t("_test_widths")
+	for sz in [Vector2i(1280, 720), Vector2i(960, 540)]:
+		await _t("_test_pc", [sz])
+	root.size = Vector2i(390, 844)
 	print(Ran.line("CombineScreen", self))
 	quit(0 if _failures.is_empty() else 1)
 
@@ -362,6 +365,145 @@ func _test_widths() -> void:
 		_check(entry != null and Rect2(Vector2.ZERO, root.get_visible_rect().size).grow(1).encloses(entry.get_global_rect()),
 				"The way in stays on screen at %d" % w)
 	root.size = Vector2i(390, 844)
+
+
+## A PC (UI batch 5, the director's board A, "four tests across"): the day's four
+## tests side by side and the turned heads in a row, nothing scrolling; a test's
+## class in one-line rows, two columns, a page at a time; every step a real tap.
+func _test_pc(sz: Vector2i) -> void:
+	root.size = sz
+	var tag := "PC %dx%d" % [sz.x, sz.y]
+	await _open_room()
+	await _tap("CombineEntry", "%s: Combine" % tag)
+	var view := Rect2(Vector2.ZERO, root.get_visible_rect().size).grow(1)
+	await _tap("CombineTab_day", "%s: the day" % tag)
+	await _settle()
+	var tabs := _find("CombineTabs")
+	var widths := []
+	for t in tabs.get_children():
+		if t is Button:
+			widths.append(int((t as Control).size.x))
+			_check((t as Control).size.x < 200.0 and (t as Control).size.y >= 44.0
+					and view.encloses((t as Control).get_global_rect()),
+					"%s: %s is sized to its words, on screen (%s)" % [tag, t.name, str((t as Control).size)])
+	_check(widths.size() == 5, "%s: five tabs (%s)" % [tag, widths])
+	var across := _find("CombineDay") as HBoxContainer
+	var blocks := []
+	for key in ["sprint", "trial", "leap", "kick"]:
+		var b := _find("Headline_" + key) as Control
+		if b != null:
+			blocks.append(b)
+	_check(across != null and blocks.size() == 4, "%s: the four tests are on the day (%d)" % [tag, blocks.size()])
+	if blocks.size() == 4:
+		var row_ok := true
+		for i in range(1, 4):
+			var a: Rect2 = blocks[i - 1].get_global_rect()
+			var b: Rect2 = blocks[i].get_global_rect()
+			row_ok = row_ok and is_equal_approx(a.position.y, b.position.y) and b.position.x > a.end.x
+		_check(row_ok, "%s: the four tests sit side by side" % tag)
+		var w0: float = blocks[0].size.x
+		_check(blocks.all(func(b): return absf(b.size.x - w0) <= 1.0), "%s: the four tests are the same width" % tag)
+	var heads := _find("TurnedHeads") as Control
+	var three := []
+	if heads != null:
+		three = heads.get_children().filter(func(c): return str(c.name).begins_with("TurnedHeads_"))
+	_check(three.size() >= 1 and three.size() <= 3
+			and three.all(func(c): return is_equal_approx(c.get_global_rect().position.y, three[0].get_global_rect().position.y)),
+			"%s: the turned heads sit in a row (%d)" % [tag, three.size()])
+	var body := _find("CombineBody") as Control
+	var sc := _find("CombineScroll") as Control
+	_check(body != null and sc != null and body.get_combined_minimum_size().y <= sc.size.y + 0.5,
+			"%s: the day fits the window, nothing scrolls (%.0f in %.0f)" % [tag,
+			body.get_combined_minimum_size().y if body != null else 0.0, sc.size.y if sc != null else 0.0])
+	var note := _find("CombineCaveat") as Control
+	_check(note != null and view.encloses(note.get_global_rect()), "%s: the caveat is on screen" % tag)
+	# All results opens that test's class.
+	await _tap("AllResults_sprint", "%s: All results" % tag)
+	_check(_find("CombineTest") != null and (_find("CombineTest") as Label).text == "20 m sprint",
+			"%s: All results opens the sprint" % tag)
+	_check(_find("CombineScroll") == null, "%s: a test's class doesn't scroll" % tag)
+	var room := _find("CombineRoom") as Control
+	var cols := []
+	for c in 2:
+		var col := _find("CombineColumn_%d" % c) as Control
+		if col != null:
+			cols.append(col)
+	_check(room != null and cols.size() == 2 and cols[1].get_global_rect().position.x > cols[0].get_global_rect().end.x,
+			"%s: the class runs in two columns (%d)" % [tag, cols.size()])
+	if room == null or cols.size() < 2:
+		_ui.handle_back()
+		await _settle()
+		return
+	var per := int(room.size.y / 26.0)
+	var shown: int = cols[0].get_child_count() + cols[1].get_child_count()
+	var total: int = _state.draft.pool.filter(func(p): return bool(p.get("projected", false))).size()
+	_check(cols[0].get_child_count() == mini(per, total) and shown == mini(per * 2, total),
+			"%s: as many to a column as the window holds (%d a column, %d shown, %d tall)" % [tag, per, shown, int(room.size.y)])
+	var on_screen := true
+	for c in cols:
+		for r in (c as Control).get_children():
+			on_screen = on_screen and view.encloses((r as Control).get_global_rect()) and is_equal_approx((r as Control).size.y, 26.0)
+	_check(on_screen, "%s: every row is one line and on screen" % tag)
+	var page := _find("CombinePager") as Control
+	_check(page != null and view.encloses(page.get_global_rect()), "%s: the page's foot is on screen" % tag)
+	var info := _find("CombinePageInfo") as Label
+	_check(info != null and info.text == "Fastest first  ·  1-%d of %d" % [shown, total],
+			"%s: the foot says where you are (%s)" % [tag, info.text if info != null else "-"])
+	var first := cols[0].get_child(0) as Button
+	var res := first.find_child("Result", true, false) as Label
+	var st := first.find_child("Standing", true, false) as Label
+	_check(res != null and res.text.ends_with(" s") and st != null and st.text == "Best in the class",
+			"%s: a row reads his time and where it stands" % tag)
+	if shown < total:
+		await _tap("CombineNext", "%s: Next" % tag)
+		info = _find("CombinePageInfo") as Label
+		_check(info != null and info.text.begins_with("Fastest first  ·  %d-" % (shown + 1)),
+				"%s: Next turns the page (%s)" % [tag, info.text if info != null else "-"])
+		_check(_find("CombinePrev") != null, "%s: ...and there's a way back" % tag)
+		await _tap("CombinePrev", "%s: Previous" % tag)
+		info = _find("CombinePageInfo") as Label
+		_check(info != null and info.text.begins_with("Fastest first  ·  1-"), "%s: Previous turns it back" % tag)
+	# A row opens his sheet over the class, and back comes back to the same page.
+	if shown < total:
+		await _tap("CombineNext", "%s: Next again" % tag)
+	var at := (_find("CombinePageInfo") as Label).text
+	# The page's last row: a short last page may fill only the first column.
+	var last := _find("CombineColumn_1") as Control
+	if last == null or last.get_child_count() == 0:
+		last = _find("CombineColumn_0") as Control
+	var row := last.get_child(last.get_child_count() - 1) as Button
+	var id := str(row.get_meta("prospect_id", ""))
+	_check((await Tap.tap(row)) == "", "%s: a row takes a finger" % tag)
+	await _settle()
+	_check(_find("PlayerDetail") != null and _ui._detail_id == id, "%s: a row opens his sheet" % tag)
+	_check(_ui.handle_back(), "%s: Back closes the sheet" % tag)
+	await _settle()
+	_check(_find("CombineTest") != null and (_find("CombinePageInfo") as Label).text == at,
+			"%s: ...back on the same page (%s)" % [tag, at])
+	# The position filter and the search.
+	await _tap("CombineRole_RUCK", "%s: RUCK filter" % tag)
+	var only := true
+	var seen := 0
+	for c in 2:
+		var col := _find("CombineColumn_%d" % c)
+		if col == null:
+			continue
+		for r in col.get_children():
+			seen += 1
+			only = only and str(_ui._player_by_id(str(r.get_meta("prospect_id", ""))).get("role", "")) == "RUCK"
+	_check(seen > 0 and only, "%s: only rucks (%d)" % [tag, seen])
+	var chip := _find("CombineRole_RUCK") as Control
+	_check(chip != null and chip.size.x < 120.0 and chip.size.y >= 32.0, "%s: a filter is sized to its word (%s)" % [tag,
+			str(chip.size) if chip != null else "-"])
+	var field := _find("CombineSearch") as LineEdit
+	field.text = "zzzz"
+	field.text_changed.emit("zzzz")
+	await _settle()
+	_check(_find("CombineNone") != null, "%s: no match says so" % tag)
+	await _tap("CombineClear", "%s: Clear" % tag)
+	_check(_find("CombineNone") == null and (_find("CombineSearch") as LineEdit).text == "", "%s: ...and the class is back" % tag)
+	_check(_ui.handle_back(), "%s: Back closes the Combine" % tag)
+	await _settle()
 
 
 ## Where a row's first column after the rank starts.

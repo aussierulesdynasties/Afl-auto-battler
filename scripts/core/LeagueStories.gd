@@ -387,13 +387,14 @@ static func _order(ladder: Dictionary) -> Array:
 	for c in ladder:
 		var r: Dictionary = ladder[c]
 		var pa := int(r.get("pa", 0))
-		rows.append({"code": str(c), "pts": int(r.get("pts", 0)), "pf": int(r.get("pf", 0)),
+		rows.append({"code": str(c), "pts": int(r.get("pts", 0)), "pf": int(r.get("pf", 0)), "pa": pa,
 				"pct": (100.0 * int(r.get("pf", 0)) / pa) if pa > 0 else 0.0})
 	rows.sort_custom(func(a, b):
 		if int(a["pts"]) != int(b["pts"]):
 			return int(a["pts"]) > int(b["pts"])
-		if not is_equal_approx(float(a["pct"]), float(b["pct"])):
-			return float(a["pct"]) > float(b["pct"])
+		var by_pct := Season.pct_order(a, b)
+		if by_pct != 0:
+			return by_pct > 0
 		if int(a["pf"]) != int(b["pf"]):
 			return int(a["pf"]) > int(b["pf"])
 		return str(a["code"]) < str(b["code"]))
