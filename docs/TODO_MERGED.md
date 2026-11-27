@@ -233,3 +233,4 @@ What has landed toward each open row of docs/TODO.md and docs/TODO_RULINGS.md, o
 - R: Merged #2226: Relationship overhaul Phase 1 UI: profile breakdown and drop preview.
 - R: Merged #2233: Relationship overhaul phase 1: unify promises and add the coach's Respect and Authority.
 - R: Merged #2234: Relationship overhaul Phase 1: Opinion engine with fading marks.
+- 202: Merged #2214: Norwood Oval: ground cover, trees, school, church and windows against Google Earth (row 202).
