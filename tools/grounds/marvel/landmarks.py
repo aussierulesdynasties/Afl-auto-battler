@@ -1709,6 +1709,8 @@ def esplanade_textures(px=24, tile=12.0):
     TILE["kerb_stone"] = (4.0, 4.0)
     flat("footpath", (118, 118, 116), noise=5.0)
     TILE["footpath"] = (4.0, 4.0)
+    flat("tram_pole", (44, 46, 50), noise=2.0)                       # the photos' poles: dark charcoal steel
+    TILE["tram_pole"] = (4.0, 4.0)
 
 
 def _strip(g, mat, pts, x0, x1, z, step=5.0):
@@ -1767,7 +1769,7 @@ def _chaikin(P, n=3):
 def tram_overhead(g, trams, y0, y1, step=32.0):
     """Round 17c (PC check: no tram poles or wires): the tram reserve's overhead, from the Harbour Esplanade photos
     (Wikimedia Commons "Harbour Esplanade, Docklands.jpg" and "2061 at Central Pier, Harbour Esp.jpg", reference
-    only): dark steel centre poles between the two tracks about every 32 m, each with a bracket arm out over each
+    only): dark charcoal steel centre poles between the two tracks about every 32 m, each with a bracket arm out over each
     track holding its contact wire at 5.8 m, and at the top (about 10 m) a street-light arm out over each
     carriageway with a flat lamp head."""
     from shapely.geometry import LineString as _LS
@@ -1784,17 +1786,17 @@ def tram_overhead(g, trams, y0, y1, step=32.0):
     g.lift = 0.0
     for c, p, q in poles:
         z = float(land.z(*c))
-        g.prism(cylinder_ring(tuple(c), 0.13, 8), z - 0.3, z + 10.0, "steel_dark", top="steel_dark")
+        g.prism(cylinder_ring(tuple(c), 0.13, 8), z - 0.3, z + 10.0, "tram_pole", top="tram_pole")
         across = (q - p) / np.linalg.norm(q - p)
         for side in (-1.0, 1.0):
             t = c + across * side * np.linalg.norm(q - p) / 2         # over the track
-            strut(g, "steel_dark", (*c, z + 6.1), (*t, z + 6.1), 0.08)
+            strut(g, "tram_pole", (*c, z + 6.1), (*t, z + 6.1), 0.08)
             lamp = c + across * side * 5.5                            # over the carriageway
-            strut(g, "steel_dark", (*c, z + 9.9), (*lamp, z + 9.6), 0.1)
+            strut(g, "tram_pole", (*c, z + 9.9), (*lamp, z + 9.6), 0.1)
             sd = np.array([-across[1], across[0]]) * 0.25
             head = [tuple(lamp - across * side * 0.7 - sd), tuple(lamp - across * side * 0.7 + sd),
                     tuple(lamp + sd), tuple(lamp - sd)]
-            g.prism(ccw(head), z + 9.45, z + 9.6, "lamp_head", top="steel_dark", bottom="lamp_head")
+            g.prism(ccw(head), z + 9.45, z + 9.6, "lamp_head", top="tram_pole", bottom="lamp_head")
     # the contact wire over each track, 5.8 m up, a 3 cm strip seen from below and the side
     for t in trams:
         for part in _clip_y(t, y0, y1):
@@ -1806,8 +1808,46 @@ def tram_overhead(g, trams, y0, y1, step=32.0):
                     continue
                 n = np.array([-d[1], d[0]]) / Ld * 0.015
                 za, zb = float(land.z(*a)) + 5.8, float(land.z(*b)) + 5.8
-                g.poly("steel_dark", [(*(a - n), za), (*(b - n), zb), (*(b + n), zb), (*(a + n), za)])
-                g.poly("steel_dark", [(*a, za - 0.015), (*b, zb - 0.015), (*b, zb + 0.015), (*a, za + 0.015)])
+                g.poly("tram_pole", [(*(a - n), za), (*(b - n), zb), (*(b + n), zb), (*(a + n), za)])
+                g.poly("tram_pole", [(*a, za - 0.015), (*b, zb - 0.015), (*b, zb + 0.015), (*a, za + 0.015)])
+
+
+def wurundjeri_median(g, W, step=2.0):
+    """Round 17d (PC check of 17c: a blurred olive smear between Wurundjeri Way's carriageways, the satellite map
+    showing through): the median as the Esri aerial shows it, pale concrete from the northbound carriageway's right
+    edge (580628691, 580628688, 790397545) to the southbound's (787871246, 580628689, 580628690), 0.12 m over the land,
+    where the two run within 30 m of each other."""
+    from shapely.geometry import LineString as _LS, Point as _Pt
+    nb = [(np.array(W[w][1], float), int(W[w][0].get("lanes", "3"))) for w in ("580628691", "580628688", "790397545")]
+    sb = [(_LS([tuple(q) for q in W[w][1]]), int(W[w][0].get("lanes", "3"))) for w in ("787871246", "580628689", "580628690")]
+    g.lift = 0.0
+    for P, lanes in nb:
+        line = _LS([tuple(q) for q in P])
+        L = line.length
+        prev = None
+        s_ = 0.0
+        while s_ <= L:
+            p = np.array(line.interpolate(s_).coords[0])
+            p2 = np.array(line.interpolate(min(s_ + 0.5, L)).coords[0]) - np.array(line.interpolate(max(s_ - 0.5, 0.0)).coords[0])
+            d = p2 / np.linalg.norm(p2)
+            right = np.array([d[1], -d[0]])
+            a = p + right * (lanes * 1.65 + 0.8)
+            best = min(sb, key=lambda t: t[0].distance(_Pt(*p)))
+            q = np.array(best[0].interpolate(best[0].project(_Pt(*p))).coords[0])
+            D = float(np.linalg.norm(q - p))
+            toward = (p - q) / max(D, 1e-6)
+            b = q + toward * (best[1] * 1.65 + 0.8)
+            ok = D < 30.0 and float(np.dot(b - a, right)) > 0.2
+            cur = (a, b) if ok else None
+            if cur is not None and prev is not None:
+                (a0, b0), (a1, b1) = prev, cur
+                q4 = [(*a0, float(land.z(*a0)) + 0.12), (*b0, float(land.z(*b0)) + 0.12),
+                      (*b1, float(land.z(*b1)) + 0.12), (*a1, float(land.z(*a1)) + 0.12)]
+                if np.cross(np.subtract(q4[1], q4[0]), np.subtract(q4[2], q4[0]))[2] < 0:
+                    q4 = q4[::-1]
+                g.poly("concrete_deck", q4)
+            prev = cur
+            s_ += step
 
 
 def harbour_esplanade(g, W, y0=-300.0, y1=170.0):
@@ -2793,12 +2833,12 @@ def _out(q, ctr):
     return q if float(np.dot(n, m)) >= 0.0 else q[::-1]
 
 
-def _pine_pad(g, base, d, sd, L, w, up_, dn, zt, soft):
+def _pine_pad(g, base, d, sd, L, w, up_, dn, zt, soft, rise=0.1):
     """One pad of Norfolk pine foliage: a wedge from `base` out `L` along `d`, a ridge `up_` over the branch over two
     lower edges `w` either side and `dn` under it, its full section 0.4 along, a blunt end turning up at the tip."""
     p0, p1, p2 = base, base + d * L * 0.4, base + d * L
-    zr1, zr2 = zt + up_, zt + 0.1 * L + up_ * 0.4
-    ze1, ze2 = zt - dn, zt + 0.1 * L - dn * 0.5
+    zr1, zr2 = zt + up_, zt + rise * L + up_ * 0.4
+    ze1, ze2 = zt - dn, zt + rise * L - dn * 0.5
     ridge = [(*p0, zt + 0.05), (*p1, zr1), (*p2, zr2)]
     left = [(*p0, zt - 0.05), (*(p1 - sd * w), ze1), (*(p2 - sd * w * 0.45), ze2)]
     right = [(*p0, zt - 0.05), (*(p1 + sd * w), ze1), (*(p2 + sd * w * 0.45), ze2)]
@@ -2842,10 +2882,13 @@ def norfolk_pine(g, c, z, h, rng):
             up_, dn = max(0.1, 0.04 * L), max(0.25, 0.11 * L)   # its depth over and under the branch
             # the pad: a wedge, a ridge along the branch over two lower edges either side, from a point at the trunk
             # through its full section 0.4 along to a blunt end at the tip turning up a little
-            _pine_pad(g, c + d * 0.1, d, sd, L, w, up_, dn, zt, soft)
+            # round 17d PC check (the lowest tiers read as wide flat plates): the bottom tiers hang, their tips
+            # dipping instead of turning up, and carry deeper foliage, as old lower whorls do in the photos
+            low = f > 0.8
+            _pine_pad(g, c + d * 0.1, d, sd, L, w, up_, dn * (1.5 if low else 1.0), zt, soft, -0.12 if low else 0.1)
             # round 17c PC check ("each tier a flat cut-out pad"): the lower tiers carry a side spray
             # off each branch (the crown's lower half), turned 30 degrees out, so a tier's edge breaks up into tufts as in the photos
-            if f > 0.5:
+            if f > 0.6:
                 for sgn in (-1.0, 1.0):
                     an = a + sgn * math.radians(30.0 + rng.uniform(-8, 8))
                     d2 = np.array([math.cos(an), math.sin(an)])
@@ -2976,6 +3019,7 @@ def build():
     street_wall(g, W)
     g.lift = 0.0
     road_strips(g, W)
+    wurundjeri_median(g, W)
     harbour_esplanade(g, W)
     track_strips(g, W)
     trains(g, W)

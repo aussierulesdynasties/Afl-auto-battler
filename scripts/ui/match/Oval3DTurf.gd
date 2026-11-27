@@ -516,10 +516,11 @@ const INDOOR_AMBIENT_ENERGY := 0.65
 const INDOOR_SHADE := [0.8, 0.6, 0.3, 0.05, 0.0]
 ## The same for the roof itself (GroundModels.ROOF_LAYER), whose lamps hang under it: the 2019 roof-shut photo shows
 ## its underside dark charcoal and its trusses only a dim grey over the lit bowl, whichever way a face turns.
-const INDOOR_ROOF_SHADE := [0.7, 0.75, 0.8, 0.75, 0.7]
+const INDOOR_ROOF_SHADE := [0.45, 0.7, 0.87, 0.85, 0.8]
 ## The share of the roof's colour taken toward grey under it shut: the photo's underside is a warm grey (median sRGB
-## 78, 72, 58), where the olive soffit under the lamps' warm light went brown (PC check of 17c: 39, 27, 6).
-const INDOOR_ROOF_GREY := 0.6
+## 78, 72, 58), where the olive soffit under the lamps' warm light went brown (PC checks: 39, 27, 6 in 17c, 58, 46, 33
+## in 17d with its trusses at 121, 105, 97, twice the underside; the photo's truss lines reach about 113).
+const INDOOR_ROOF_GREY := 0.85
 const INDOOR_LIGHT := Color(1.0, 0.97, 0.92)
 const INDOOR_LIGHT_ENERGY := 0.7
 ## The roof's lamps on the far side, which light the near stands' seats from the front (no shadow).
