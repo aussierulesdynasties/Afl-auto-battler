@@ -74,9 +74,9 @@ const TEAM_BOOKKEEPING_PREFIXES := ["d50_end_"]
 ## retuned to the attributes), with bug bash batch C (#2210: a kick-in marked without
 ## playing on is no longer an effective disposal; a boundary free records "intent"),
 ## #2211 (a faster match engine) and #2230 (tail check) on top. Windows from a local
-## run on the merged branch, Linux from its CI run. Endurance (#2240: the play-through midfielder
-## goes on in a midfielder's spot) and Phase 8 (#2242) redrew it on top; Windows local, Linux from CI.
-const GOLDEN_SEASON := {"Windows": "066e219c84a18262d9e17e8a201436f2", "Linux": "bf219aeb96e2f0fbc6fa30160822157c"}
+## run on the merged branch, Linux from its CI run.
+## The centre-four first carrier (director, 2026-11-27) redrew it: Windows from a local run, Linux from run_on_github run 45968956250.
+const GOLDEN_SEASON := {"Windows": "5e3fe548a2477ced73337364b8fcc110", "Linux": "288270ada3a109746b65d71212cac66d"}
 
 ## A small league standing in for a legacy set until the 1990 files ship:
 ## 42 real players re-dated to a 1989 data season, a 1990 first season, and
