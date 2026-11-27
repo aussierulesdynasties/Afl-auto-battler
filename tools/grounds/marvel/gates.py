@@ -352,38 +352,20 @@ def _stage1():
     # ------------------------------------------------------------ Gate 7 textures
     RED = (204, 52, 58)          # the red top stripes (sign band, booth headers, column wraps)
     SIGN_GREY = (80, 82, 88)
+    LABEL_SLATE = (78, 84, 104)  # the column labels are bluer than the band (vid2026_t422 sampled)
     WHITE = (246, 246, 244)
     CLAD = (150, 152, 158)
 
-    def tri_clad(name, W_, H_, px=80, seed=7):
-        """The triangle cladding (g7_doors2019, g7_ticketbay2019): light grey panels with faint joints, crossed
-        by long white lines 8 cm wide that meet at nodes. Tiles across, spans the full 4.6 m height."""
-        r = np.random.default_rng(seed)
+    def tri_clad(name, W_, H_, px=80):
+        """The cladding round the doors and booths: light grey panels with faint joints. The white line
+        graphic of 2019 (g7_doors2019, g7_ticketbay2019) is gone in Nov 2026 (vid2026_t422, t429, t441):
+        the walls and booth fronts are plain."""
         im = Image.new("RGB", (int(W_ * px), int(H_ * px)), CLAD)
         dr = ImageDraw.Draw(im)
         for x in np.arange(0, W_, 0.75):
             dr.line([(x * px, 0), (x * px, H_ * px)], fill=(140, 142, 148), width=1)
         for y in np.arange(0, H_, 1.15):
             dr.line([(0, y * px), (W_ * px, y * px)], fill=(140, 142, 148), width=1)
-        nodes = [(r.uniform(0, W_), r.uniform(0.3, H_ - 0.3)) for _ in range(9)]
-        ends = [(r.uniform(0, W_), 0.0) for _ in range(4)] + [(r.uniform(0, W_), H_) for _ in range(4)]
-
-        def wrap_d2(p, q):
-            return min(abs(q[0] - p[0] + s * W_) for s in (-1, 0, 1)) ** 2 + (q[1] - p[1]) ** 2
-        segs = []
-        for i, p in enumerate(nodes):
-            near = sorted(range(len(nodes)), key=lambda j: wrap_d2(p, nodes[j]))
-            for j in near[1:3]:
-                segs.append((p, nodes[j]))
-        for e in ends:
-            j = min(range(len(nodes)), key=lambda j: wrap_d2(e, nodes[j]))
-            segs.append((e, nodes[j]))
-        for (x0, y0), (x1, y1) in segs:
-            if abs(x1 - x0) > W_ / 2:                 # take the short way round the tile
-                x1 += W_ if x1 < x0 else -W_
-            for sh in (-W_, 0, W_):
-                dr.line([((x0 + sh) * px, (H_ - y0) * px), ((x1 + sh) * px, (H_ - y1) * px)], fill=WHITE,
-                        width=max(2, int(0.08 * px)))
         save_pil(name, im, (W_, H_))
 
     tri_clad("tri_clad", 6.0, 4.6)
@@ -474,15 +456,22 @@ def _stage1():
         dr = ImageDraw.Draw(im)
         dr.rectangle([0, 0, W_, int(0.08 * px)], fill=RED)
         wheelchair(dr, int(0.82 * px), int(0.20 * px), int(0.40 * px), WHITE)
-        dr.text((6.33 * px, 0.40 * px), "Gate 7", font=font("Barlow-SemiBold.ttf", 0.42 * px), fill=WHITE,
+        # Nov 2026 front view (vid2026_t422, scaled from columns C4, C3, C2): "Gate 7" centred 7.25 m in, caps
+        # 0.32 m tall, the first arrow 5.85 m in; the second sits behind C3 from there, placed symmetrically
+        dr.text((7.25 * px, 0.40 * px), "Gate 7", font=font("Barlow-SemiBold.ttf", 0.42 * px), fill=WHITE,
                 anchor="mm")
-        for ax in (5.0, 7.76):
+        for ax in (6.05, 8.45):  # left arrow 0.5 text-widths before the text (vid2026_t422 sign crop)
             arrow_down(dr, ax * px, 0.22 * px, 0.60 * px, WHITE, max(3, int(0.035 * px)))
-        mw, mh = int(0.90 * px), int(0.34 * px)
-        mx, my = W_ - mw - int(0.10 * px), int(0.26 * px)
+        # the west end reads "[MARVEL] STADIUM" (vid2026_t422, t452): the red box 0.80 m, then STADIUM 1.0 m wide
+        sw_ = int(1.00 * px)
+        sx_ = W_ - sw_ - int(0.08 * px)
+        mw, mh = int(0.80 * px), int(0.30 * px)
+        mx, my = sx_ - mw - int(0.06 * px), int(0.28 * px)
         dr.rectangle([mx, my, mx + mw, my + mh], fill=(196, 30, 38))
-        dr.text((mx + mw / 2, my + mh / 2), "MARVEL", font=font("BarlowCondensed-Bold.ttf", 0.30 * px), fill=WHITE,
+        dr.text((mx + mw / 2, my + mh / 2), "MARVEL", font=font("BarlowCondensed-Bold.ttf", 0.27 * px), fill=WHITE,
                 anchor="mm")
+        dr.text((sx_ + sw_ / 2, my + mh / 2), "STADIUM", font=font("BarlowCondensed-Bold.ttf", 0.27 * px),
+                fill=WHITE, anchor="mm")
         save_pil("gate7_sign", im, (sign_len, 0.70))
 
     gate7_sign()
@@ -491,19 +480,19 @@ def _stage1():
 
     def col_wrap(px=300):
         """The wrap on columns C4, C3, C2 (+2.87 to +3.58, measured against the sign in g7_doors2019): a red ring 0.17 m deep over a dark grey band with
-        "Gate" up the column and a large "7" (g7_doors2019, g7_west2019); three repeats round the column."""
+        a large "7" with "Gate" down the column to its right, on slate blue (vid2026_t422, t448); three repeats round the column."""
         w = WRAP_C / 3
         W_, H_ = int(w * px), int(0.71 * px)
-        im = Image.new("RGB", (W_, H_), SIGN_GREY)
+        im = Image.new("RGB", (W_, H_), LABEL_SLATE)
         dr = ImageDraw.Draw(im)
         dr.rectangle([0, 0, W_, int(0.17 * px)], fill=RED)
         g = Image.new("RGBA", (int(0.50 * px), int(0.22 * px)), (0, 0, 0, 0))
         ImageDraw.Draw(g).text((g.width / 2, g.height / 2), "Gate", font=font("Barlow-SemiBold.ttf", 0.17 * px),
                                fill=WHITE + (255,), anchor="mm")
-        g = g.rotate(90, expand=True)
-        im.paste(g, (int(0.19 * px), int(0.19 * px)), g)
-        dr.text((int(0.55 * px), int(0.44 * px)), "7", font=font("Barlow-SemiBold.ttf", 0.50 * px), fill=WHITE,
+        g = g.rotate(-90, expand=True)                  # reads top to bottom, right of the 7 (vid2026_t422, t448)
+        dr.text((int(0.30 * px), int(0.44 * px)), "7", font=font("Barlow-SemiBold.ttf", 0.50 * px), fill=WHITE,
                 anchor="mm")
+        im.paste(g, (int(0.45 * px), int(0.19 * px)), g)
         save_pil("col_wrap7", im, (w, 0.71))
 
     col_wrap()
@@ -608,16 +597,69 @@ def _stage1():
             face("dark_frame", [(*p0, Z(2.87)), (*p1, Z(2.87)), (*q1, Z(2.87)), (*q0, Z(2.87))], (0.0, 0.0, -1.0))
             face("col_red", [(*p0, Z(3.58)), (*p1, Z(3.58)), (*q1, Z(3.58)), (*q0, Z(3.58))], UP)
 
-    # --- the vestibule behind the doors and lanes (glass cut 335.34-349.09 in marvel.glb)
-    VB_E, VB_W, VD = 348.67, 336.2, -2.0
-    strip("interior_dark", VB_E, VB_W, 0.0, 2.30, VD)                                  # back wall
-    ms = marks(VB_E, VB_W)
+    # CCTV on C4, C3, C2 (vid2026_t422): two white box cameras under the soffit (+4.60), one looking straight
+    # out, one turned 60 degrees east, each on a short drop from the soffit
+    flat("cctv_white", (228, 228, 226), 2.0)
+    for key in ("C4", "C3", "C2"):
+        bc, (cx, cy) = COLS[key]
+        o = np.array(u(bc), float)
+        e = np.array([math.cos(math.radians(bc)), -math.sin(math.radians(bc))])
+        for d_ in (o, o * math.cos(math.radians(60)) + e * math.sin(math.radians(60))):
+            d_ = d_ / np.linalg.norm(d_)
+            c_ = np.array([cx, cy]) + d_ * (0.415 + 0.16)
+            hbox("cctv_white", c_, d_, 0.32, 0.15, 4.26, 4.42, bottom=True)
+            hbox("dark_frame", c_ + d_ * 0.165, d_, 0.01, 0.11, 4.28, 4.40)
+            hbox("cctv_white", np.array([cx, cy]) + d_ * 0.50, d_, 0.05, 0.05, 4.42, 4.60, top=False)
+
+    # --- the Level 1 concourse behind the doors and lanes (glass cut 335.34-349.09 in marvel.glb).
+    # Measured on the Jun 2019 indoor pano (S8e-zEW8Ht0ZIZPprEsBoA, camera P(342.5, r108.8)) and checked against
+    # the Nov 2026 concourse photo (white ceiling, round downlights): a flat white ceiling band at +3.00 runs
+    # 3.8 m in from the glass, ending in a white bulkhead up to +4.60; past it the underside of the Level 2 tier
+    # (marvel.glb). The concrete floor runs level to the bar railing at the back of the lower tier, r 100.
+    # Floor and ceiling run 1.5 degrees past each end of the cut so the view along the concourse never ends.
+    VB_E, VB_W = 348.67, 336.2
+    CC_E, CC_W = 350.6, 333.8
+    WB = -3.8                                                       # white ceiling band depth
+    flat("conc_floor", (120, 120, 118), 3.0)
+    flat("ceiling_white", (236, 236, 233), 1.5)
+    flat("lamp_lit", (255, 246, 228), 0.0)
+    flat("rail_dark", (46, 48, 50), 2.0)
+
+    def d_back(b):
+        return 100.0 - float(np.linalg.norm(glass(b, 0.0)))
+
+    ms = marks(CC_E, CC_W)
     for a, c in zip(ms, ms[1:]):
-        pa0, pc0, pa1, pc1 = glass(a, VD), glass(c, VD), glass(a, 0.0), glass(c, 0.0)
-        face("interior_floor", [(*pa0, Z(0.0)), (*pc0, Z(0.0)), (*pc1, Z(0.0)), (*pa1, Z(0.0))], UP)
-        face("interior_dark", [(*pa0, Z(2.30)), (*pc0, Z(2.30)), (*pc1, Z(2.30)), (*pa1, Z(2.30))], (0.0, 0.0, -1.0))
-    radial("interior_dark", VB_E, VD, 0.0, 0.0, 2.30, -1)                              # east end, facing in
-    radial("interior_dark", VB_W, VD, 0.0, 0.0, 2.30, +1)                              # west end, facing in
+        fa, fc = glass(a, -0.12), glass(c, -0.12)
+        ba, bc_ = glass(a, d_back(a)), glass(c, d_back(c))
+        face("conc_floor", [(*fa, Z(0.0)), (*fc, Z(0.0)), (*bc_, Z(0.0)), (*ba, Z(0.0))], UP)
+        wa, wc = glass(a, WB), glass(c, WB)
+        face("ceiling_white", [(*fa, Z(3.00)), (*fc, Z(3.00)), (*wc, Z(3.00)), (*wa, Z(3.00))], (0.0, 0.0, -1.0))
+    strip("ceiling_white", CC_E, CC_W, 3.00, 4.60, WB, inward=True)                 # bulkhead, facing in
+    strip("interior_dark", CC_E, CC_W, 2.30, 3.00, -0.12, inward=True)              # back of the sign band
+
+    # round downlights, 0.2 m, two rows 2.4 m apart along the band
+    n_lamp = max(1, int(span(CC_E, CC_W, -1.3) / 2.4))
+    for k in range(n_lamp):
+        for dd in (-1.3, -3.0):
+            bl = deg(CC_E, 1.2 + 2.4 * k, dd)
+            cpt = glass(bl, dd)
+            ring = [(cpt[0] + 0.1 * math.cos(t), cpt[1] + 0.1 * math.sin(t), Z(2.995))
+                    for t in np.linspace(0, 2 * math.pi, 13)[:-1]]
+            face("lamp_lit", ring, (0.0, 0.0, -1.0))
+
+    # the bar railing at the back of the lower tier: posts every 2 m, top rail at 1.0 m, mid rail at 0.5 m
+    rb = marks(CC_E, CC_W)
+    for a, c in zip(rb, rb[1:]):
+        pa, pc = glass(a, d_back(a)), glass(c, d_back(c))
+        dv = pc - pa
+        L = float(np.linalg.norm(dv))
+        for zz in (0.50, 0.97):
+            hbox("rail_dark", (pa + pc) / 2, dv, L, 0.05, zz, zz + 0.05, bottom=True)
+    n_post = int(span(CC_E, CC_W, d_back(342.0)) / 2.0)
+    for k in range(n_post + 1):
+        bp = deg(CC_E, 2.0 * k, d_back(342.0))
+        hbox("rail_dark", glass(bp, d_back(bp)), tang(bp), 0.05, 0.05, 0.0, 1.02)
 
     def rotor(b, d):
         """A full-height turnstile rotor: a steel post and three wings of horizontal bars, 0.5 m long."""
@@ -759,6 +801,9 @@ def _stage2(pkl):
                 nt.links.new(rd.outputs[0], b.inputs["Alpha"])
         b.inputs["Roughness"].default_value = 0.3 if "glass" in name else (0.4 if "steel" in name else 0.85)
         b.inputs["Metallic"].default_value = 1.0 if "steel" in name else 0.0
+        if name.endswith("_lit"):          # downlights: emissive, exported as glTF emissive + strength
+            b.inputs["Emission Color"].default_value = (1.0, 0.95, 0.86, 1.0)
+            b.inputs["Emission Strength"].default_value = 4.0
         mats[name] = m
         return m
 
