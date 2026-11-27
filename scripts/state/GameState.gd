@@ -279,6 +279,12 @@ var week_checks := {}
 ## id>": {"t", "log"}}. Missing means neutral. Saved; later phases add coaches,
 ## journalists, the board and club culture under their own keys, same shape.
 var relations := {}
+## Every promise's record and the senior coach's Respect and Authority
+## (Promises.gd). Saved; an old save fills them in on load.
+var coach_word := {}
+var coach_standing := {}
+## Every other club's senior coach's Respect and Authority, by club code.
+var club_standing := {}
 ## Player-to-player bonds: mates, rivals, mentors, leaders, family (Bonds.gd).
 var bonds := {}
 ## What the stories remember (StoryEngine.new_state): cooldowns, flags, arcs.
@@ -1010,6 +1016,9 @@ func _save_state() -> Dictionary:
 		"week_events": week_events,
 		"week_checks": week_checks,
 		"relations": relations,
+		"coach_word": coach_word,
+		"coach_standing": coach_standing,
+		"club_standing": club_standing,
 		"bonds": bonds,
 		"story": story,
 		"media_conference": media_conference,
@@ -1292,6 +1301,9 @@ func _restore_career(state: Dictionary) -> bool:
 	if not state.has("week_events"):
 		week_event = state.get("week_event", {})
 	relations = state.get("relations", {})
+	coach_word = state.get("coach_word", {}) if state.get("coach_word") is Dictionary else {}
+	coach_standing = state.get("coach_standing", {}) if state.get("coach_standing") is Dictionary else {}
+	club_standing = state.get("club_standing", {}) if state.get("club_standing") is Dictionary else {}
 	bonds = Bonds.ensure(state.get("bonds", {}))
 	var raw_story: Variant = state.get("story", {})
 	var old_calendar := StoryEngine.is_old_calendar(raw_story)
@@ -1951,6 +1963,9 @@ func reset(next_dataset := Datasets.DEFAULT) -> void:
 	week_events = []
 	week_checks = {}
 	relations = {}
+	coach_word = {}
+	coach_standing = {}
+	club_standing = {}
 	bonds = {}
 	story = StoryEngine.new_state()
 	media_conference = {}
@@ -3113,6 +3128,8 @@ func _start_next_season(next_year: int, signed: int) -> void:
 	# takes it to another club.
 	for code in league_lists:
 		for p in league_lists[code]:
+			if str(code) == my_club and Backing.is_active(p):
+				Promises.settle(self, p, "run", "lapsed")
 			Backing.lapse(p)
 	for p in free_agents:
 		Backing.lapse(p)
@@ -7578,6 +7595,8 @@ func dev_talk(p: Dictionary, said: String) -> void:
 	var round_no := season.round_index + 1
 	p["dev_talk"] = {"year": season_year, "round": round_no, "job": job, "role": project_role(p),
 			"said": said, "state": "heard"}
+	if said == "promise":
+		Promises.made(self, p, "dev_games")
 	CareerFacts.add(career_facts, str(p["id"]), CareerFacts.row(season_year, season.round_name(round_no - 1), "talk",
 			my_club, "project|" + said, "heard"))
 	mark_dirty()
@@ -7658,6 +7677,7 @@ func _dev_promise_after_match(played: Dictionary, no_room := {}) -> void:
 func _dev_promise_broken(p: Dictionary, t: Dictionary, sting: bool) -> void:
 	t["state"] = "broken"
 	_dev_talk_out(p, "broken")
+	Promises.settle(self, p, "dev_games", "broken")
 	if not role_trial.is_empty() and str(role_trial.get("id", "")) == str(p["id"]):
 		_end_role_trial(true)
 	var word := str((LEARN_JOBS.get(str(t.get("job", "")), {}) as Dictionary).get("word", "new position"))
@@ -7680,6 +7700,7 @@ func _dev_promises_lapse() -> void:
 			continue
 		t["state"] = "lapsed"
 		_dev_talk_out(p, "lapsed")
+		Promises.settle(self, p, "dev_games", "lapsed")
 		p.erase("expects_game")
 		var word := str((LEARN_JOBS.get(str(t.get("job", "")), {}) as Dictionary).get("word", "new position"))
 		add_news("training", "The season ended before %s's games as a %s, so that promise lapses." % [
@@ -8987,6 +9008,7 @@ func open_offseason(keep_staff := false) -> void:
 			if project_job(p) != "":
 				_finish_project(p, str(code) == my_club)
 	_dev_promises_lapse()
+	Promises.season_end(self)
 	offseason_year = season_year
 	# Every deal from here is for next season, so the cap is next season's
 	# (1990's off-season signs under 1991's $1.6m, 2020's under 2021's
@@ -13110,6 +13132,7 @@ func _finish_role_trial() -> void:
 		if not t.is_empty():
 			t["state"] = "kept"
 			_dev_talk_out(p, "kept")
+			Promises.settle(self, p, "dev_games", "kept")
 			p.erase("expects_game")
 	_end_role_trial(true)
 
@@ -14834,6 +14857,8 @@ func _open_board_season() -> void:
 	board["clubs"] = ranks.size()
 	board["last_finish"] = int(_last_finish.get(my_club, 0))
 	board["year"] = season_year
+	if bool(board.get("promise", false)):
+		Promises.settle(self, {}, "win", "lapsed")
 	board.erase("promise")
 	losing_streak = 0
 	StoryEngine.new_season(story)
@@ -14951,6 +14976,7 @@ func _board_after_round(results: Array) -> void:
 	if bool(board.get("promise", false)):
 		conf = clampi(conf + (StoryEngine.PROMISE_WIN_UP if margin > 0 else -StoryEngine.PROMISE_WIN_DOWN), 0, 100)
 		board.erase("promise")
+		Promises.settle(self, {}, "win", "kept" if margin > 0 else "broken")
 		board["why"] = ("You promised the board a win over %s, and delivered." if margin > 0
 				else "You promised the board a win over %s, and did not deliver.") % GameDB.club_name(opp)
 	board["confidence"] = conf
@@ -14983,6 +15009,7 @@ func _board_after_round(results: Array) -> void:
 				{"year": season_year, "label": str(res.get("label", ""))}, stats_all.get(pid, {}))
 		if run_state == "done" or run_state == "broken":
 			Backing.mark_asked(p, story_week())   # no new ask for a while (Backing.ASK_GAP)
+			Promises.settle(self, p, "run", "kept" if run_state == "done" else "broken")
 		if backing_talk.is_empty() and (run_state == "done" or run_state == "broken"):
 			backing_talk = Backing.talk(p, Backing.ledger(p).back())
 		if run_state == "broken":
@@ -14992,6 +15019,11 @@ func _board_after_round(results: Array) -> void:
 			_culture_move(my_club, "together", -StoryEngine.BROKEN_TOGETHER, "You broke your word on a player's run of games")
 		p.erase("expects_game")
 	# Games promised in a development talk (T5.r93): left out of them fit breaks it.
+	# Their week's expectation is part of that promise, not a game of its own.
+	var dev_promised := {}
+	for p in my_list:
+		if not _dev_owed(p).is_empty():
+			dev_promised[str(p["id"])] = true
 	_dev_promise_after_match(played, no_room)
 	# A player promised a game (a talk, or a kid given his chance): leaving
 	# him out fit sours it. Once: the promise ends with the round.
@@ -14999,12 +15031,19 @@ func _board_after_round(results: Array) -> void:
 		if p.has("expects_game"):
 			var sting := int(p["expects_game"]) if typeof(p["expects_game"]) == TYPE_INT else 12
 			p.erase("expects_game")
+			var own_game := not dev_promised.has(str(p["id"]))
 			if not played.has(str(p["id"])) and int(p.get("injury_weeks", 0)) <= 0 \
 					and not _round_unavailable.has(str(p["id"])) and not no_room.has(str(p["id"])):
 				ClubLife.add_morale(p, -CoachEffects.softened(sting, float(soft.get(str(p["id"]), 0.0))))
 				Trust.change(relations, Trust.player_key(str(p["id"])), ClubStories.BROKEN_PROMISE_TRUST,
 						"You promised him a game and left him out", season_year, last_label)
 				_culture_move(my_club, "together", -StoryEngine.BROKEN_TOGETHER, "You promised a player a game and left him out")
+				if own_game:
+					Promises.settle(self, p, "game", "broken")
+			elif own_game and played.has(str(p["id"])):
+				Promises.settle(self, p, "game", "kept")
+	# Who you dropped, for the coach's Authority (Promises.after_match).
+	Promises.after_match(self, played, _round_unavailable)
 	_after_match_talks(played, int(res.get("round", season.round_index)))
 
 
@@ -15037,6 +15076,8 @@ func _rival_morale_after_round(results: Array) -> void:
 					soft[str(p["id"])] = CoachEffects.soften(staff, p)
 			ClubLife.morale_after_match(list, played, int(score[side]) > int(score[1 - side]), soft, culture_effect(code, "sting"),
 					_round_unavailable, str(CoachEffects.arch_of(code)[1]))
+			# Their senior coach's Authority, by the rule yours follows.
+			Promises.after_match(self, played, _round_unavailable, code)
 
 
 ## Keep your match's story (hero, turning point, reasons) and put its
@@ -15868,6 +15909,7 @@ func _start_backing(p: Dictionary) -> String:
 	var dropped := name_promised(p)
 	var round_no := 0 if season.is_regular_done() else season.round_index + 1
 	Backing.start(p, season_year, round_no, games_played(p))
+	Promises.made(self, p, "run")
 	ClubLife.add_morale(p, Backing.THRILL)
 	p["expects_game"] = Backing.STING
 	mark_dirty()
