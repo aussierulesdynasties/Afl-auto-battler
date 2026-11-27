@@ -367,8 +367,8 @@ def make_textures():
     # contrast, so the sub-pixel bands at range average to Google Earth's grey instead of a moire of white on dark
     # round 12 (PC check of round 11): white wavy bands, crisp (the grey of round 11 lost them)
     flat("bourke_edge", (226, 228, 228), noise=2.0)
-    graffiti("graffiti")
-    TILE["graffiti"] = (48.0, 4.0)
+    street_wall_tex("street_wall")
+    TILE["street_wall"] = (48.0, 4.0)
     ivy("ivy")
     # round 17: the verge's grass in the 2024 photo (own random stream, so the textures after it keep theirs)
     _save("verge_grass", np.zeros((32, 32, 3)) + (92, 108, 60) + np.random.default_rng(17).normal(0, 6.0, (32, 32, 3)))
@@ -1589,10 +1589,10 @@ def tree(g, c, z, h, r):
               soft=mid)
 
 
-def graffiti(name, px=24):
+def street_wall_tex(name, px=24):
     """The concrete wall along Wurundjeri Way: pale grey precast panels 2.4 m wide under a coping, dirt at the foot.
-    Round 16 (the person, 28 Nov: "remove the graffiti and random posters, its ai slop"): nothing painted on it (the
-    name is kept so the wall's material and the pinned files stay the same)."""
+    Round 16 (the person, 28 Nov: "remove the graffiti and random posters, its ai slop"): nothing painted on it.
+    Round 17b (PC check: the material was still called "graffiti"): renamed street_wall."""
     W, H = 48 * px, 4 * px
     rng = np.random.default_rng(48)
     base = np.zeros((H, W, 3), float) + (196, 194, 186) + rng.normal(0, 3.5, (H, W, 3))
@@ -1756,8 +1756,8 @@ def street_banners(g, line, h, step=10.0):
     """The MARVEL STADIUM pole banners over Wurundjeri Way (Flickr 53897019103, Jul 2024): dark lamp poles with a
     lantern on top, each with one dark charcoal banner hung from an arm, the venue's logo (red MARVEL box, white
     STADIUM) running up it. Spacing about 10 m (estimated from the photo's perspective, not measured). They stand on
-    the plaza behind the wall's top in the photo; our land behind the wall sits at road level (the plaza step is
-    not in the terrain), so they stand on the wall's coping instead of floating."""
+    the plaza behind the wall's top in the photo: round 17b stands them on the wall's line at the plaza's height h
+    (absolute), the wall now retaining the plaza."""
     pts = np.array(line, float)
     seg = np.r_[0, np.cumsum(np.linalg.norm(np.diff(pts, axis=0), axis=1))]
     for s_ in np.arange(4.0, seg[-1] - 2.0, step):
@@ -1765,8 +1765,8 @@ def street_banners(g, line, h, step=10.0):
         t = (s_ - seg[i]) / max(seg[i + 1] - seg[i], 1e-6)
         c = pts[i] + (pts[i + 1] - pts[i]) * t
         tt = (pts[i + 1] - pts[i]) / np.linalg.norm(pts[i + 1] - pts[i])
-        g.lift = float(land.z(*c))
-        z0, z1 = h, h + 8.0
+        g.lift = 0.0
+        z0, z1 = h, h + 8.0       # round 17b: h is the plaza's own height (absolute), not over the land
         g.prism(cylinder_ring(tuple(c), 0.09, 10), z0, z1, "steel_dark", top=None)
         g.prism(cylinder_ring(tuple(c), 0.2, 10), z1, z1 + 0.5, "lamp_head", top="steel_dark", bottom="steel_dark")
         # the arm and the banner, hung along the road (its faces to the traffic both ways)
@@ -1807,7 +1807,7 @@ def banner_tex(name, ppm=120):
     TILE[name] = (0.9, 3.6)
 
 
-def graffiti_wall(g, W, h=3.4):
+def street_wall(g, W, h=3.4):
     """The painted wall along the stadium side of Wurundjeri Way: the west edge of the northbound carriageway
     (OpenStreetMap ways 580628691, four lanes, then 580628688, three lanes), from the NAB's corner to the stadium's
     north-east corner. Google Earth c_e: rail yards, both carriageways, then the wall under the stadium's east
@@ -1815,7 +1815,7 @@ def graffiti_wall(g, W, h=3.4):
     u = 0.0
     # round 13 (c_ne pair): Google Earth's painted wall runs on north past the stadium's offices to the podium at
     # 150 m north; ours stopped where OpenStreetMap's way ends (128.6, 73.1). It continues along the next northbound way
-    for wid, lanes, mat in (("580628691", 4, "concrete_deck"), ("580628688", 3, "graffiti"), ("790397545", 3, "graffiti")):
+    for wid, lanes, mat in (("580628691", 4, "concrete_deck"), ("580628688", 3, "street_wall"), ("790397545", 3, "street_wall")):
         pts = np.array(W[wid][1], float)
         if wid == "790397545":
             from shapely.geometry import LineString as _LS
@@ -1827,7 +1827,7 @@ def graffiti_wall(g, W, h=3.4):
         # round 17 (Flickr 53897019103, M. Wong, Jul 2024, from the La Trobe Street bridge looking south): along the
         # stadium a grass verge about 2.7 m wide (0.8 of a lane) runs between the kerb and the wall; the NAB stretch
         # (no photo) keeps its 1 m
-        verge = 2.7 if mat == "graffiti" else 0.0
+        verge = 2.7 if mat == "street_wall" else 0.0
         kerb = lanes * 3.3 / 2 + 0.3
         off = kerb + verge if verge else lanes * 3.3 / 2 + 1.0
         line = []
@@ -1845,9 +1845,13 @@ def graffiti_wall(g, W, h=3.4):
             # depth test from the road, so each face now stands on its own side of a 0.3 m wall with a coping
             tt = (b - a) / np.linalg.norm(b - a)
             rn = np.array([tt[1], -tt[0]]) * 0.15          # right of a -> b: the road
-            g.wall(mat, a + rn, b + rn, -0.5, h, u)
-            u += g.wall(mat, b - rn, a - rn, -0.5, h, u)
-            g.poly("concrete_deck", [(*(a + rn), h), (*(b + rn), h), (*(b - rn), h), (*(a - rn), h)])
+            # round 17b (PC check: plain panels, then the plaza's edge as a green slope over them; Flickr 53897019103:
+            # one wall from the road up to the plaza, the banner poles on the plaza at its top): along the stadium
+            # the wall retains the plaza (PLAZA_Z, the gates' deck), its coping 0.3 m over the deck
+            hw = max(h, PLAZA_Z + 0.3 - g.lift) if verge else h
+            g.wall(mat, a + rn, b + rn, -0.5, hw, u)
+            u += g.wall(mat, b - rn, a - rn, -0.5, hw, u)
+            g.poly("concrete_deck", [(*(a + rn), hw), (*(b + rn), hw), (*(b - rn), hw), (*(a - rn), hw)])
             if verge:
                 # the verge: grass from the wall's foot to a low concrete kerb at the carriageway's edge
                 ka, kb = a + rn * (verge / 0.15), b + rn * (verge / 0.15)
@@ -1862,7 +1866,7 @@ def graffiti_wall(g, W, h=3.4):
                 # the kerb's face to the road (on the right of a -> b, like g.wall)
                 g.poly("concrete_deck", [lz(ka + ko, -0.1), lz(kb + ko, -0.1), lz(kb + ko, 0.32), lz(ka + ko, 0.32)])
         if verge:
-            street_banners(g, line, h)
+            street_banners(g, line, PLAZA_Z)
         if wid == "580628688":
             # ivy over the painted wall's first 9 m at the NAB end, on its road face (Google Earth c_e)
             a, b = line[0], line[1]
@@ -2579,31 +2583,49 @@ def harbour_textures():
 
 
 def norfolk_pine(g, c, z, h, rng):
-    """A Norfolk Island pine: a straight trunk to the top and tiers of level branches, each tier a whorl of eight
-    drooping fronds with gaps between them, longest low down, the crown a slim cone (Harbour Esplanade's street trees;
-    round 16, the person's aerial photo: young, slim and see-through, about deck high)."""
-    g.prism(cylinder_ring(c, 0.05 + 0.012 * h, 6), z - 0.5, z + h, "pine_bark", top=None)
-    z0 = z + h * rng.uniform(0.22, 0.32)
-    nt = max(5, int(round((h - (z0 - z)) / 0.6)))
-    R = h * rng.uniform(0.19, 0.23)
-    soft = (c[0], c[1], z0 + (z + h - z0) * 0.4)     # the crown's middle: its fronds shade round it, not frond by frond
+    """A Norfolk Island pine on Harbour Esplanade. Round 17b (PC check: "spruce cones with dense skirts"; Wikimedia
+    Commons "Harbour Esplanade, Docklands.jpg" and "2061 at Central Pier, Harbour Esp.jpg", reference only): a
+    straight trunk bare for its lower quarter, then level tiers about 0.08 of the height apart with sky between
+    them. Each tier is a whorl of seven or eight branches straight out from the trunk, near level and turning up a
+    little at the tip, each carrying a long brush of foliage (a flat blade crossed with an upright one so it has
+    body from the side and from below); the lowest tiers reach about 0.35 of the height, the top a short leader."""
+    g.prism(cylinder_ring(c, 0.06 + 0.014 * h, 8), z - 0.5, z + h, "pine_bark", top=None)
+    c = np.array(c, float)
+    z0 = z + h * rng.uniform(0.24, 0.3)
+    gap = h * rng.uniform(0.075, 0.09)
+    nt = max(4, int((z + h - 1.0 - z0) / gap) + 1)
+    R = h * rng.uniform(0.33, 0.38)
+    soft = (c[0], c[1], z0 + (z + h - z0) * 0.45)
+    a0 = rng.uniform(0, 2 * math.pi)
     for k in range(nt):
-        zt = z0 + (z + h - z0) * k / max(1, nt)
-        f = 1.0 - k / max(1, nt)
-        rt = 0.35 + (R - 0.35) * f ** 0.9
-        a0 = rng.uniform(0, 2 * math.pi)
-        for j in range(8):
-            a = a0 + 2 * math.pi * j / 8 + rng.uniform(-0.15, 0.15)
+        zt = z0 + gap * k
+        f = 1.0 - (zt - z0) / max(z + h - z0, 1e-3)
+        rt = 0.5 + (R - 0.5) * f ** 1.1
+        nb = 8 if k % 2 == 0 else 7
+        a0 += math.pi / nb + rng.uniform(-0.2, 0.2)      # each tier turned from the one under it
+        for j in range(nb):
+            a = a0 + 2 * math.pi * j / nb + rng.uniform(-0.12, 0.12)
             d = np.array([math.cos(a), math.sin(a)])
-            s = np.array([-d[1], d[0]]) * max(0.35, 0.42 * rt)
-            base = np.array(c, float) + d * 0.1
-            mid = np.array(c, float) + d * rt * 0.55
-            tip = np.array(c, float) + d * rt
-            zm, ze = zt + 0.1, zt - 0.15 - 0.1 * rt
-            g.poly("pine_leaf", [(*base, zt), (*(mid - s), zm), (*tip, ze), (*(mid + s), zm)], soft=soft)
-    # the leader above the last tier
-    g.poly("pine_leaf", [(c[0] - 0.25, c[1], z + h - 0.9), (c[0] + 0.25, c[1], z + h - 0.9), (c[0], c[1], z + h + 0.4)], soft=soft)
-    g.poly("pine_leaf", [(c[0], c[1] - 0.25, z + h - 0.9), (c[0], c[1] + 0.25, z + h - 0.9), (c[0], c[1], z + h + 0.4)], soft=soft)
+            sd = np.array([-d[1], d[0]])
+            L = rt * rng.uniform(0.88, 1.05)
+            w = max(0.3, 0.24 * L)                   # half the brush's width
+            hv = max(0.2, 0.11 * L)                  # half the brush's depth
+            p0 = c + d * 0.15
+            p1 = c + d * L * 0.25
+            p2 = c + d * L * 0.7
+            p3 = c + d * L
+            z1, z2, z3 = zt, zt + 0.04 * L, zt + 0.12 * L   # level, then turning up at the tip
+            # the flat blade: narrow at the trunk, full width along the branch, a point at the tip
+            g.poly("pine_leaf", [(*p0, zt), (*(p1 - sd * w), z1), (*(p2 - sd * w), z2), (*p3, z3),
+                                 (*(p2 + sd * w), z2), (*(p1 + sd * w), z1)], soft=soft)
+            # the upright blade along it, hanging a little more than it stands
+            g.poly("pine_leaf", [(*p0, zt), (*p1, z1 + hv * 0.8), (*p2, z2 + hv * 0.8), (*p3, z3),
+                                 (*p2, z2 - hv * 1.2), (*p1, z1 - hv * 1.2)], soft=soft)
+    # the leader over the last tier
+    zl = z0 + gap * (nt - 1)
+    for dd in ((0.22, 0.0), (0.0, 0.22)):
+        g.poly("pine_leaf", [(c[0] - dd[0], c[1] - dd[1], zl), (c[0] + dd[0], c[1] + dd[1], zl),
+                             (c[0], c[1], z + h + 0.3)], soft=soft)
 
 
 def norfolk_pines(g):
@@ -2715,7 +2737,7 @@ def build():
         # round 14 (scan): the shafts started at 38.0 over 9966's roof at 32.4, 5.6 m in the air: they run down to it
         g.prism(cylinder_ring(c_, 1.3, 16), 32.3, 44.8, "steel", top=None)
         g.prism(cylinder_ring(c_, 2.3, 24), 44.8, 45.4, "steel", top="roof_grey", bottom="steel_dark")
-    graffiti_wall(g, W)
+    street_wall(g, W)
     g.lift = 0.0
     road_strips(g, W)
     track_strips(g, W)

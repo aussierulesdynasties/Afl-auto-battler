@@ -533,6 +533,8 @@ func _key(e: InputEventKey) -> void:
 			if gr != null and GroundModels.ROOFS.has(slug):
 				var shut := not GroundModels.roof_shut(gr, slug)
 				GroundModels.set_roof(gr, slug, shut)
+				if oval.turf != null:
+					oval.turf.roof_changed()
 				_say("Roof " + ("shut, as in a match" if shut else "open"))
 		KEY_H:
 			if _orbit_t >= 0.0:
