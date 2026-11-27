@@ -230,7 +230,7 @@ var trade_declined := {}
 ## that want one say so with an offer. See put_on_trade_table.
 var trade_table: Array = []
 ## Players who have asked to be traded this off-season (TradeRequests):
-## {player id: {"club", "why": "home" or "games", "to": [clubs]}}. Met by a
+## {player id: {"club", "why": "home", "games" or "unsettled", "to": [clubs]}}. Met by a
 ## trade, or lapsing when the next off-season opens.
 var trade_requests := {}
 var offseason_staff := {}        # your staff (job -> cid) when the off-season opened
@@ -291,6 +291,13 @@ var coach_standing := {}
 var club_standing := {}
 ## Player-to-player bonds: mates, rivals, mentors, leaders, family (Bonds.gd).
 var bonds := {}
+## The Council (Council.gd): every club's list manager and head of high
+## performance, {"office": {club: {job: person}}, "hired": n}. The coaches'
+## agendas live on their records; every member's loyalty in relations ("s:").
+var council := {}
+## Groups of unhappy players at every club, and when each kind last ended
+## (Factions.gd). Saved; a save without it has none.
+var factions := {}
 ## What the stories remember (StoryEngine.new_state): cooldowns, flags, arcs.
 var story := {}
 ## Off only in tests and audits that measure the game without the cards.
@@ -1031,6 +1038,8 @@ func _save_state() -> Dictionary:
 		"coach_standing": coach_standing,
 		"club_standing": club_standing,
 		"bonds": bonds,
+		"council": council,
+		"factions": factions,
 		"story": story,
 		"media_conference": media_conference,
 		"backing_talk": backing_talk,
@@ -1323,6 +1332,8 @@ func _restore_career(state: Dictionary) -> bool:
 	coach_standing = state.get("coach_standing", {}) if state.get("coach_standing") is Dictionary else {}
 	club_standing = state.get("club_standing", {}) if state.get("club_standing") is Dictionary else {}
 	bonds = Bonds.ensure(state.get("bonds", {}))
+	council = state.get("council", {}) if state.get("council") is Dictionary else {}
+	factions = state.get("factions", {}) if state.get("factions") is Dictionary else {}
 	var raw_story: Variant = state.get("story", {})
 	var old_calendar := StoryEngine.is_old_calendar(raw_story)
 	if old_calendar:
@@ -1458,6 +1469,9 @@ func _restore_career(state: Dictionary) -> bool:
 	honour_boards = state.get("honour_boards", {}) if state.get("honour_boards") is Dictionary else {}
 	if not state.has("honour_board"):
 		HonourBoard.backfill(self, func(id: String) -> Dictionary: return _any_player(id))
+	# A save from before the Council fills its office seats in (Council.ensure).
+	Council.ensure(self)
+	Ambitions.ensure(self)
 	return true
 
 
@@ -1955,6 +1969,8 @@ func reset(next_dataset := Datasets.DEFAULT) -> void:
 	coach_standing = {}
 	club_standing = {}
 	bonds = {}
+	council = {}
+	factions = {}
 	story = StoryEngine.new_state()
 	media_conference = {}
 	match_stories = []
@@ -3244,6 +3260,8 @@ func _start_next_season(next_year: int, signed: int) -> void:
 	_open_board_season()
 	_captaincy_refresh()
 	_bonds_refresh()
+	Council.ensure(self)
+	Ambitions.ensure(self)
 	_ground_rename_news()
 	_culture_rollover()
 	_build_season_wrap(next_year)
@@ -3753,6 +3771,8 @@ func start_season(club_code: String, list: Array, save := true) -> void:
 	_open_board_season()
 	_captaincy_refresh()
 	_bonds_refresh()
+	Council.ensure(self)
+	Ambitions.ensure(self)
 	_ground_rename_news()
 	last_phase = "regular"
 	last_label = "Round 1"
@@ -4896,6 +4916,7 @@ func papers_answer(choice: int) -> String:
 		return ""
 	choice = clampi(choice, 0, (card["options"] as Array).size() - 1)
 	var out := ClubStories.apply_choice(self, card, choice)
+	Council.answered(self, card, choice)
 	StoryEngine.record_choice(story, card, choice, story_week())
 	rec["answered"] = true
 	rec["choice"] = choice
@@ -5373,6 +5394,7 @@ func _preseason_cards() -> bool:
 	if not preseason.has("round1"):
 		preseason["round1"] = week_events
 	week_events = drawn
+	Council.pitch_cards(self, week_events)
 	preseason["story_pending"] = true
 	mark_dirty()
 	return true
@@ -7679,7 +7701,7 @@ func _dev_promise_broken(p: Dictionary, t: Dictionary, sting: bool) -> void:
 	if sting:
 		p.erase("expects_game")
 		ClubLife.add_morale(p, -DEV_PROMISE_STING)
-		Trust.change(relations, Trust.player_key(str(p["id"])), ClubStories.BROKEN_PROMISE_TRUST,
+		Trust.change(relations, Trust.player_key(str(p["id"])), Promises.broken_trust(p, "dev_games"),
 				"You promised him games in his new position and left him out", season_year, last_label)
 		_culture_move(my_club, "together", -StoryEngine.BROKEN_TOGETHER, "You promised a player games and left him out")
 
@@ -7907,6 +7929,7 @@ func _after_round(results: Array) -> void:
 	OwnProspect.check(self)
 	_draft_class_news()
 	_board_after_round(results)
+	_card_promises_after_round(results)
 	_rival_morale_after_round(results)
 	_opinion_after_round(results)
 	_familiarity_after_round(results)
@@ -9004,7 +9027,12 @@ func open_offseason(keep_staff := false) -> void:
 			if project_job(p) != "":
 				_finish_project(p, str(code) == my_club)
 	_dev_promises_lapse()
+	Promises.card_season_end(self)
 	Promises.season_end(self)
+	# Ambitions still open are judged where they stand (Ambitions.season_end).
+	for ev in Ambitions.season_end(self):
+		_ambition_news(str(ev["club"]), ev["p"], str(ev["e"]))
+	_factions_season_end()
 	offseason_year = season_year
 	# Every deal from here is for next season, so the cap is next season's
 	# (1990's off-season signs under 1991's $1.6m, 2020's under 2021's
@@ -9579,6 +9607,33 @@ func _resign(p: Dictionary, years: int, salary := -1, floor_price := -1) -> void
 	p["contract_years"] = years + 1
 	p["resigned"] = true
 	p.erase("talks")
+	# A man who wanted his club to sign him on has it (Ambitions).
+	Ambitions.contract_signed(self, _club_code_of(p), p)
+
+
+## The club whose list he is on ("" for none).
+func _club_code_of(p: Dictionary) -> String:
+	if season == null:
+		return ""
+	var id := str(p.get("id", ""))
+	for code in season.lists:
+		for q in season.lists[code]:
+			if str(q["id"]) == id:
+				return str(code)
+	return ""
+
+
+## An ambition met or gone sour at your club is news; a rival's is not.
+func _ambition_news(club: String, p: Dictionary, how: String) -> void:
+	if club != my_club or how == "lapsed":
+		return
+	var a: Dictionary = p.get(Ambitions.KEY, {})
+	var label := str(Ambitions.kind_cfg(str(a.get("k", ""))).get("label", "")).to_lower()
+	var who := GameDB.player_display_name(p)
+	if how == "met":
+		add_news("club", "%s got what he wanted this season: %s." % [who, label])
+	else:
+		add_news("club", "%s has given up on %s this season, and holds it against you." % [who, label])
 
 
 ## Off a list and into free agency. `wanted`: the club wanted him (he walked,
@@ -9588,6 +9643,10 @@ func _release(code: String, p: Dictionary, wanted := false, announce := true) ->
 	var dead := ListCosts.dead_money(p) if offseason_open() and not retiring_now(p) else 0
 	if dead > 0:
 		dead_cap[code] = {"year": season_year + 1, "amount": dead_for(code) + dead}
+	# Delisted (not a man you wanted who went to market, nor a career ending):
+	# the men tied to him take it (Phase 1 integration).
+	if not wanted and not retiring_now(p) and not p.has("real_end"):
+		apply_bond_fallout(str(p["id"]), "delist")
 	(season.lists[code] as Array).erase(p)
 	p["released_by"] = code
 	# A delisted rookie is a free agent: whoever signs him, his old club
@@ -11794,7 +11853,10 @@ func _collect_trade_requests() -> void:
 		for p in season.lists[code]:
 			var id := str(p["id"])
 			var starts := []
-			if not side.has(id):
+			# Told he can go when his group broke up (Factions), or his ambition
+			# for the season went sour and he has had enough (Ambitions): he asks out.
+			var unsettled := int(p.get("faction_out", 0)) == season_year or Ambitions.asks_out(p, season_year)
+			if not side.has(id) or unsettled:
 				var keen := []
 				for other in bars:
 					var f := TradeValue.fit(p, bars[other])
@@ -11807,6 +11869,8 @@ func _collect_trade_requests() -> void:
 				starts = keen.map(func(k): return str(k[0]))
 			var games := int((season_tally.get(id, {}) as Dictionary).get("games", 0))
 			var ask := TradeRequests.asks(p, str(code), season_year, states, starts, side.has(id), games)
+			if ask.is_empty() and unsettled:
+				ask = TradeRequests.unsettled(p, starts, bars.keys().filter(func(c): return str(c) != str(code)), season_year)
 			if ask.is_empty():
 				continue
 			ask["club"] = str(code)
@@ -11847,6 +11911,8 @@ func _request_line(p: Dictionary, ask: Dictionary) -> String:
 	var to := str(names[-1]) if names.size() < 2 else ", ".join(names.slice(0, -1)) + " or " + str(names[-1])
 	if str(ask["why"]) == "home":
 		return "%s (%s) has asked to be traded home: %s." % [who, at, to]
+	if str(ask["why"]) == "unsettled":
+		return "%s (%s) has asked for a trade after falling out with the coach: %s." % [who, at, to]
 	return "%s (%s) has asked for a trade to get a game: %s." % [who, at, to]
 
 
@@ -12659,6 +12725,12 @@ func _execute_trade(a: String, b: String, a_gives: Array, b_gives: Array) -> voi
 	# What each side gave, as the other side will remember it (pick_story).
 	var a_gave := _trail_assets(a_gives)
 	var b_gave := _trail_assets(b_gives)
+	# The men tied to a player traded away take it, at the club that let him go
+	# (Phase 1 integration, every club by the same rule).
+	var club_of := _bond_clubs()
+	for x in a_gives + b_gives:
+		if not Contracts.is_pick(x):
+			apply_bond_fallout(str(x["id"]), "trade", club_of)
 	for x in a_gives:
 		_move_asset(x, a, b)
 		_note_pick_got(x, a, b, b_gave)
@@ -14991,12 +15063,15 @@ func _board_after_round(results: Array) -> void:
 	if roster.size() > side:
 		for r in roster[side]:
 			played[str(r["id"])] = true
-	# Your man-managers soften what being left out costs (CoachEffects).
+	# Your man-managers soften what being left out costs (CoachEffects); a
+	# line or development coach gone restless no longer does it for his men
+	# (Council.withheld).
 	var soft := {}
 	if not coaches.is_empty():
 		var staff: Dictionary = club_staff(my_club)
+		var held := Council.withheld(self, my_club)
 		for p in my_list:
-			soft[str(p["id"])] = CoachEffects.soften(staff, p)
+			soft[str(p["id"])] = 0.0 if Council.soften_withheld(p, held) else CoachEffects.soften(staff, p)
 	ClubLife.morale_after_match(my_list, played, margin > 0, soft, culture_effect(my_club, "sting"), _round_unavailable,
 			str(CoachEffects.arch_of(my_club)[1]))
 	# A promised man left out because every place was held by another promised
@@ -15021,7 +15096,7 @@ func _board_after_round(results: Array) -> void:
 			backing_talk = Backing.talk(p, Backing.ledger(p).back())
 		if run_state == "broken":
 			ClubLife.add_morale(p, -CoachEffects.softened(Backing.STING, float(soft.get(pid, 0.0))))
-			Trust.change(relations, Trust.player_key(pid), ClubStories.BROKEN_RUN_TRUST,
+			Trust.change(relations, Trust.player_key(pid), Promises.broken_trust(p, "run"),
 					"You broke your word on his run of games", season_year, last_label)
 			_culture_move(my_club, "together", -StoryEngine.BROKEN_TOGETHER, "You broke your word on a player's run of games")
 		p.erase("expects_game")
@@ -15042,7 +15117,7 @@ func _board_after_round(results: Array) -> void:
 			if not played.has(str(p["id"])) and int(p.get("injury_weeks", 0)) <= 0 \
 					and not _round_unavailable.has(str(p["id"])) and not no_room.has(str(p["id"])):
 				ClubLife.add_morale(p, -CoachEffects.softened(sting, float(soft.get(str(p["id"]), 0.0))))
-				Trust.change(relations, Trust.player_key(str(p["id"])), ClubStories.BROKEN_PROMISE_TRUST,
+				Trust.change(relations, Trust.player_key(str(p["id"])), Promises.broken_trust(p, "game"),
 						"You promised him a game and left him out", season_year, last_label)
 				_culture_move(my_club, "together", -StoryEngine.BROKEN_TOGETHER, "You promised a player a game and left him out")
 				if own_game:
@@ -15052,6 +15127,17 @@ func _board_after_round(results: Array) -> void:
 	# Who you dropped, for the coach's Authority (Promises.after_match).
 	Promises.after_match(self, played, _round_unavailable)
 	_after_match_talks(played, int(res.get("round", season.round_index)))
+
+
+## The promises your cards made (Promises.card_made): each one its test can
+## settle after this round, kept or broken (Card Pass 1, 2026-11-26).
+func _card_promises_after_round(results: Array) -> void:
+	var res := _my_result(results)
+	var won: Variant = null
+	if not res.is_empty():
+		var side := 0 if str(res["home"]) == my_club else 1
+		won = int(res["score"][side]) > int(res["score"][1 - side])
+	Promises.check_open(self, won)
 
 
 ## What each club's coach did this round, as his players take it (Opinion.gd,
@@ -15067,9 +15153,11 @@ func _opinion_after_round(results: Array) -> void:
 		return
 	Opinion.fade_round(relations)
 	var club_of := {}
+	_players_now = {}
 	for code in season.lists:
 		for p in season.lists[code]:
 			club_of[str(p["id"])] = str(code)
+			_players_now[str(p["id"])] = p
 	Opinion.drop_other_clubs(relations, club_of)
 	var when := last_label if last_label != "" else "Round %d" % season.round_index
 	for res in results:
@@ -15091,17 +15179,104 @@ func _opinion_after_round(results: Array) -> void:
 				var key := Opinion.player_key(id)
 				if no_room.has(id):
 					continue
+				# His temperament sizes the mark and how long he holds it
+				# (Phase 1 integration): the same rule at every club.
+				var fade := Temperament.scale(p, "decay")
 				if played.has(id):
 					if final:
-						Opinion.add(relations, key, "picked_final", season_year, when, code)
+						Opinion.add(relations, key, "picked_final", season_year, when, code,
+								Temperament.scale(p, "backed"), "", fade)
 				elif int(p.get("injury_weeks", 0)) <= 0 and not _round_unavailable.has(id):
 					var k := Opinion.drop_mark(int(Rating.ovr(p, 0)), final, OPINION_STAR_OVR)
-					Opinion.add(relations, key, k, season_year, when, code)
+					Opinion.add(relations, key, k, season_year, when, code, Temperament.scale(p, "dropped"), "", fade)
+					# The men tied to him take it too (Bonds.fallout).
+					apply_bond_fallout(id, "drop", club_of)
 	_round_no_room = {}
+	_players_now = {}
+	_factions_after_round()
 	for code in season.lists:
 		var mine := str(code) == my_club
 		for p in season.lists[code]:
-			ClubLife.drift_morale(p, Opinion.coach_opinion(relations, Opinion.player_key(str(p["id"])), mine))
+			ClubLife.drift_morale(p, Opinion.coach_opinion(relations, Opinion.player_key(str(p["id"])), mine),
+					Factions.morale_shift(self, str(code), str(p["id"])))
+	# Every club's council reads the side it picked (Council.after_round).
+	Council.after_round(self, results)
+	# Every club's players' ambitions move (Ambitions.gd); yours make the news.
+	for ev in Ambitions.after_round(self, results):
+		_ambition_news(str(ev["club"]), ev["p"], str(ev["e"]))
+
+
+## Groups of unhappy players, every club by the same rules (Factions.gd): who
+## stands with whom, pressure, demands and ultimatums. Yours come to you as
+## cards on the group's leader (StoryEngine.note_event: faction_demand,
+## faction_ultimatum); a rival's coach answers his own by his standing
+## (Factions.ai_answer), and the league hears when one breaks.
+func _factions_after_round() -> void:
+	if season == null:
+		return
+	var week := story_week()
+	for code in season.lists:
+		var club := str(code)
+		var list: Array = season.lists[code]
+		var games_of := {}
+		for p in list:
+			games_of[str(p["id"])] = games_played(p)
+		var mine := club == my_club
+		for ev in Factions.round_tick(self, club, list, mine, games_of, week):
+			var f: Dictionary = ev["f"]
+			match str(ev["e"]):
+				"demand":
+					_culture_move(club, "together", int((Factions.cfg()["together"] as Dictionary).get("demanding", 0)),
+							"%s want something from the coach" % str(Factions.kind_cfg(str(f["k"]))["group_word"]).capitalize())
+					if mine:
+						StoryEngine.note_event(story, "faction_demand", str(f["leader"]), week)
+					else:
+						faction_answer(club, f, Factions.ai_answer(self, club, f))
+				"ultimatum":
+					if mine:
+						StoryEngine.note_event(story, "faction_ultimatum", str(f["leader"]), week)
+					else:
+						faction_answer(club, f, Factions.ai_answer(self, club, f))
+				"broken":
+					faction_answer(club, f, "broken")
+
+
+## The season is over: a group still on its final word gives up on the coach
+## (its leader asks out, before the trade requests are gathered); every other
+## group breaks up for the summer, and a new season starts clean.
+func _factions_season_end() -> void:
+	if season == null:
+		factions = {}
+		return
+	for club in Factions.clubs(self):
+		for f in Factions.of_club(self, str(club)).duplicate():
+			if str(f["state"]) == "ultimatum":
+				faction_answer(str(club), f, "broken")
+	factions = {}
+
+
+## A coach answers a group (Factions.answer): the members' opinion and the
+## coach's standing move there; here, Togetherness, the leader's trade ask on a
+## split or a break, and a line in the news for a rival club's break.
+func faction_answer(club: String, f: Dictionary, how: String) -> Dictionary:
+	var leader_id := str(f.get("leader", ""))
+	var leader: Dictionary = {}
+	for p in season.lists.get(club, []):
+		if str(p["id"]) == leader_id:
+			leader = p
+	var res := Factions.answer(self, club, f, how, int(season_year), last_label if last_label != "" else "Round %d" % season.round_index,
+			story_week())
+	if int(res["together"]) != 0:
+		_culture_move(club, "together", int(res["together"]), Factions.why_line(f, str(res["key"])))
+	if (how == "split" or how == "broken") and not leader.is_empty():
+		leader["faction_out"] = int(season_year)
+	if club != my_club:
+		var line := Factions.news_line(GameDB.club_name(club), f, how,
+				GameDB.player_display_name(leader) if not leader.is_empty() else "Its leader")
+		if line != "":
+			add_news("club", line)
+	mark_dirty()
+	return res
 
 
 ## The rating at which being left out stings as "one of our best", the same
@@ -15134,8 +15309,9 @@ func _rival_morale_after_round(results: Array) -> void:
 			var soft := {}
 			var staff: Dictionary = staffs.get(code, {})
 			if not staff.is_empty():
+				var held := Council.withheld(self, code)
 				for p in list:
-					soft[str(p["id"])] = CoachEffects.soften(staff, p)
+					soft[str(p["id"])] = 0.0 if Council.soften_withheld(p, held) else CoachEffects.soften(staff, p)
 			ClubLife.morale_after_match(list, played, int(score[side]) > int(score[1 - side]), soft, culture_effect(code, "sting"),
 					_round_unavailable, str(CoachEffects.arch_of(code)[1]))
 			# Their senior coach's Authority, by the rule yours follows.
@@ -15618,6 +15794,8 @@ func _next_week_event() -> void:
 	if season == null or is_sacked() or not stories_on or my_club == "":
 		return
 	week_events = ClubStories.pick(self)
+	# A council member may back one choice on a card, in his own words.
+	Council.pitch_cards(self, week_events)
 	for i in range(year_cards.size() - 1, -1, -1):
 		week_events.push_front(year_cards[i])
 	ClubArcs.week(self)
@@ -15848,6 +16026,7 @@ func resolve_card(index: int, choice: int) -> String:
 		return ""
 	choice = clampi(choice, 0, options.size() - 1)
 	var out := ClubStories.apply_choice(self, card, choice)
+	Council.answered(self, card, choice)
 	StoryEngine.record_choice(story, card, choice, story_week())
 	card["resolved"] = true
 	card["choice"] = choice
@@ -15972,6 +16151,7 @@ func _start_backing(p: Dictionary) -> String:
 	var round_no := 0 if season.is_regular_done() else season.round_index + 1
 	Backing.start(p, season_year, round_no, games_played(p))
 	Promises.made(self, p, "run")
+	apply_bond_fallout(str(p["id"]), "back")
 	ClubLife.add_morale(p, Backing.THRILL)
 	p["expects_game"] = Backing.STING
 	mark_dirty()
@@ -16145,6 +16325,13 @@ func coach(cid: String) -> Dictionary:
 	return coaches.get(cid, {})
 
 
+## Your council as the cards' advisors name it, {seat: {"name", "role"}}
+## (ClubStories.advisors reads it): every filled seat, the list manager and
+## the head of high performance included.
+func council_seats() -> Dictionary:
+	return Council.advisor_seats(self)
+
+
 ## The coaching world moves once a season, at its close (CoachMarket): AI
 ## senior coaches are judged against where their list ranked preseason -
 ## the same goal the board sets you - and every vacancy is filled. Your
@@ -16160,6 +16347,16 @@ func _coaching_offseason() -> void:
 		if not bool(a.get("kept", false)):
 			promised[str(a["cid"])] = [str(a["club"]), str(a["job"])]
 	ctx["promised"] = promised
+	# The Council first: a member at the end of his tether walks out, at every
+	# club (Council.season_end); then the market moves everyone else.
+	var walked := {}
+	for w in Council.season_end(self):
+		walked[str(w["id"])] = true
+		if str(w["club"]) == my_club:
+			if Coaches.JOBS.has(str(w["job"])):
+				staff_vacancies.append({"job": str(w["job"]), "reason": "%s has walked out." % str(w["name"])})
+			add_news("coaching", "Your %s, %s, has walked out on the club." % [Council.role_word(str(w["job"])), str(w["name"])])
+	var before := Council.posts(self)
 	var out := CoachMarket.offseason(ctx)
 	for v in out["vacancies"]:
 		if not _vacancy_open(str(v["job"])):
@@ -16167,6 +16364,10 @@ func _coaching_offseason() -> void:
 	for t in out["news"]:
 		add_news("coaching", str(t))
 	coach_approaches = []
+	# The men whose coach left take it; a coach at a new club starts afresh.
+	Council.after_market(self, before, walked)
+	Council.ensure(self)
+	Ambitions.ensure(self)
 
 
 ## Your club's season as a coach weighs it when a rival approaches him
@@ -16463,6 +16664,9 @@ func release_staff(cid: String) -> void:
 	CoachMarket.ensure_fields(c, season_year)
 	var job := CoachMarket.release(coaches, cid, season_year)
 	staff_vacancies.append({"job": job, "reason": "You released %s." % GameDB.player_display_name(c)})
+	# The men he coached take it (Council.staff_gone); his loyalty goes with him.
+	Council.staff_gone(self, my_club, job, GameDB.player_display_name(c), "sacked")
+	relations.erase(Council.KEY_PREFIX + cid)
 	_dirty = true
 
 
@@ -17047,6 +17251,71 @@ func _bond_clubs() -> Dictionary:
 				if p is Dictionary:
 					out[str(p.get("id", ""))] = str(code)
 	return out
+
+
+## id -> player, filled only while a round's opinion is settled (_opinion_after_round).
+var _players_now := {}
+
+
+## The player dictionary for an id wherever he is now (a club's list, free
+## agency), {} when he is not in the game.
+func _player_now(player_id: String) -> Dictionary:
+	if not _players_now.is_empty():
+		return _players_now.get(player_id, {})
+	if season != null:
+		for code in season.lists:
+			for q in season.lists[code]:
+				if str(q.get("id", "")) == player_id:
+					return q
+	for q in free_agents:
+		if str(q.get("id", "")) == player_id:
+			return q
+	return {}
+
+
+## What a call on one man does to the men tied to him, as it will land
+## (Phase 1 integration): each row of Bonds.fallout, sized by the tie's
+## strength and the other man's own temperament ("bond"), fading at his pace
+## ("decay"). Only the men at his club take it: a live mark is about the
+## coach at his own club. With `apply` false nothing changes and each row's "opinion" is the
+## exact move his shown opinion would make (a mark he already carries renews,
+## never stacks). `club_of` is _bond_clubs() (pass one in when looping).
+## Returns [{"id", "kind", "opinion", "mark", "why"}], biggest first.
+func bond_fallout_moves(player_id: String, action: String, apply := false, club_of := {}) -> Array:
+	if club_of.is_empty():
+		club_of = _bond_clubs()
+	var out := []
+	var club := str(club_of.get(player_id, ""))
+	for f in Bonds.fallout(Bonds.ensure(bonds), player_id, action, club_of):
+		var oid := str(f["id"])
+		var mark := str(f.get("mark", ""))
+		# A live mark is about the coach at his own club: only the men at the
+		# club that made the call take it (a brother elsewhere has nothing
+		# against his own coach for it).
+		if mark == "" or Opinion.def(mark).is_empty() or str(club_of.get(oid, "")) != club:
+			continue
+		var q := _player_now(oid)
+		var scale := float(f.get("scale", 1.0)) * (Temperament.scale(q, "bond") if not q.is_empty() else 1.0)
+		var key := Opinion.player_key(oid)
+		var mine := str(club_of.get(oid, "")) == my_club
+		var before := Opinion.coach_opinion(relations, key, mine)
+		if apply:
+			Opinion.add(relations, key, mark, season_year, last_label, str(club_of.get(oid, "")), scale, player_id,
+					Temperament.scale(q, "decay") if not q.is_empty() else 1.0, str(f.get("why", "")))
+		var rel := relations
+		if not apply:
+			rel = {key: (relations.get(key, {}) as Dictionary).duplicate(true)}
+			Opinion.add(rel, key, mark, 0, "", "", scale, player_id, 1.0, str(f.get("why", "")))
+		var moved := Opinion.coach_opinion(rel, key, mine) - before
+		if moved != 0:
+			out.append({"id": oid, "kind": str(f["kind"]), "opinion": moved, "mark": mark, "why": str(f.get("why", ""))})
+	out.sort_custom(func(a, b): return absi(int(a["opinion"])) > absi(int(b["opinion"])))
+	return out
+
+
+## Apply a call's fallout to the men tied to him (bond_fallout_moves).
+func apply_bond_fallout(player_id: String, action: String, club_of := {}) -> Array:
+	return bond_fallout_moves(player_id, action, true, club_of)
 
 
 ## His bonds for a profile (Bonds.ties): [{"id", "kind", "label", "what",

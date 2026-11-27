@@ -534,12 +534,36 @@ static func is_rival(p: Dictionary) -> bool:
 	return c != "" and c != GameState.my_club
 
 
+## His ambition for the season: what he wants in his own terms, then where it
+## stands. A met one reads GOOD, a soured one BAD; an open one plain TEXT.
+static func _ambition(block: VBoxContainer, want: Dictionary) -> void:
+	var av := UiKit.vbox(UiKit.Space.SLIM)
+	av.name = "ProfileAmbition"
+	var head := UiKit.lbl("Ambition: " + str(want["want"]) + ".", UiKit.SMALL, UiKit.HEAD, true)
+	head.name = "AmbitionWant"
+	head.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	av.add_child(head)
+	var ink := UiKit.TEXT
+	match str(want["state"]):
+		"met":
+			ink = UiKit.GOOD
+		"soured":
+			ink = UiKit.BAD
+	var st := UiKit.lbl(str(want["status"]), UiKit.SMALL, ink)
+	st.name = "AmbitionStatus"
+	st.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	av.add_child(st)
+	block.add_child(av)
+
+
 static func _trust(v: VBoxContainer, p: Dictionary) -> void:
 	var id := str(p.get("id", ""))
 	var mine := not GameState.list_player(id).is_empty()
 	var temps := RelationsView.temperaments(p)
 	var ties := RelationsView.bonds(GameState, id)
 	var words := RelationsView.promises(GameState, id) if mine else []
+	var group := RelationsView.faction(GameState, id) if mine else ""
+	var want := RelationsView.ambition(GameState, p) if mine else {}
 	if not mine and temps.is_empty() and ties.is_empty():
 		return
 	var block := UiKit.vbox(UiKit.Space.TIGHT)
@@ -564,6 +588,15 @@ static func _trust(v: VBoxContainer, p: Dictionary) -> void:
 			block.add_child(dl)
 	if mine:
 		_opinion(block, p, temps)
+	# What he wants from his season (Ambitions), and where it stands.
+	if not want.is_empty():
+		_ambition(block, want)
+	# The group of unhappy players he stands with (Factions), in words.
+	if group != "":
+		var gl := UiKit.lbl(group, UiKit.SMALL, UiKit.TEXT)
+		gl.name = "ProfileFaction"
+		gl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		block.add_child(gl)
 	# His mates and rivals, each name a tap to his profile.
 	if not ties.is_empty():
 		var bl := UiKit.vbox(UiKit.Space.SLIM)

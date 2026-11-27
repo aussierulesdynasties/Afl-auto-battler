@@ -320,27 +320,6 @@
 		]
 	},
 	{
-		"id": "syd_go_home",
-		"club": "SYD",
-		"controversy": false,
-		"category": "family",
-		"phase": ["season_end"],
-		"subject": {"kind": "player", "pick": "random", "where": {"age_max": 21, "real_named": false}},
-		"title": ["The go-home factor"],
-		"text": ["{name} is homesick. His family is on the other side of the country, the Sydney rent is brutal and his manager is hinting at a trade home."],
-		"choices": [
-			{"key": "extend", "label": "Extend him now, with help on housing",
-			 "effects": [{"op": "trust", "d": 2, "why": "You backed him with a new deal"}, {"op": "board", "d": -2, "was": "funds"}],
-			 "result": "{first} signs on. Others on the list want the same deal."},
-			{"key": "week", "label": "Give him a week at home",
-			 "effects": [{"op": "morale", "d": 3, "who": "subject"}, {"op": "forgo_xp", "d": 3, "who": "subject"}, {"op": "odds", "chance": 30, "hit": [{"op": "trust", "d": -3, "why": "He still asked about a trade home"}], "miss": [], "hit_result": "He came back and still asked about a trade."}],
-			 "result": "{first} flies home and comes back brighter."},
-			{"key": "shop", "label": "Let the manager shop him",
-			 "effects": [{"op": "board", "d": 2, "was": "list"}, {"op": "culture", "strand": "together", "d": -1, "why": "The group watched a teammate shopped around"}],
-			 "result": "The manager makes calls. The club will get something back."}
-		]
-	},
-	{
 		"id": "syd_wa_recruits",
 		"club": "SYD",
 		"controversy": false,

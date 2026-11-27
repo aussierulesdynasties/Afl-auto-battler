@@ -224,7 +224,7 @@
 			"{name} has offered to help in the rehab group"
 		],
 		"text": [
-			"One of the kids is facing months out. {first} has been through the same injury."
+			"{player_b} is facing months out. {first} has been through a long rehab of his own."
 		],
 		"choices": [
 			{
@@ -245,9 +245,14 @@
 						"who": "subject",
 						"chance": 10,
 						"on": "week"
+					},
+					{
+						"op": "bond",
+						"kind": "protege",
+						"s": 1
 					}
 				],
-				"result": "{name} spends the week with the kid in rehab."
+				"result": "{name} spends the week with {player_b} in rehab."
 			},
 			{
 				"key": "own",
@@ -264,7 +269,15 @@
 				],
 				"result": "{name} sticks to his own program."
 			}
-		]
+		],
+		"actor_b": {
+			"role": "teammate",
+			"where": {
+				"age_max": 22,
+				"injured_weeks_min": 6
+			},
+			"pick": "highest:potential"
+		}
 	},
 	{
 		"id": "finals_fitness_test",

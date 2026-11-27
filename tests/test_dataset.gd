@@ -72,7 +72,7 @@ const TEAM_BOOKKEEPING_PREFIXES := ["d50_end_"]
 ## after merging main at 058745e0 (opinion engine, free agency, bug bash E).
 ## A centre bounce with no clean clearance going to one of the four at it (director, 2026-11-27)
 ## redrew it again: Windows from a local run, Linux from run_on_github run 45966672511.
-const GOLDEN_SEASON := {"Windows": "2351361a2191d49194e4f7cb6126329e", "Linux": "2076436407db45837ebbcc2beeff67b5"}
+const GOLDEN_SEASON := {"Windows": "2351361a2191d49194e4f7cb6126329e", "Linux": "0bd454e669215bbf46d64d0de341d0aa"}
 
 ## A small league standing in for a legacy set until the 1990 files ship:
 ## 42 real players re-dated to a 1989 data season, a 1990 first season, and

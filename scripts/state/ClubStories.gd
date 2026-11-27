@@ -237,6 +237,16 @@ static func club_facts(gs, week: int, ph: String) -> Dictionary:
 			"club_deck": deck_code(str(gs.my_club)), "opp_deck": _opponent_deck(gs),
 			"controversies": 0 if gs.get("controversies") != null and not bool(gs.get("controversies")) else 1,
 			"advisors": advisors(gs)}
+	# A line or development coach gone restless, and the group he backs (Council).
+	var rl: Dictionary = Council.restless(gs, str(gs.my_club)) if gs.get("council") != null else {}
+	var rb: Dictionary = Council.restless_backs(gs, str(gs.my_club)) if not rl.is_empty() else {}
+	facts["restless_staff"] = 0 if rl.is_empty() else 1
+	facts["restless_backing"] = 0 if rb.is_empty() else 1
+	facts["restless_group"] = str(Factions.kind_cfg(str(rb.get("k", ""))).get("label", "the unhappy players")).to_lower()
+	# The card's own advisor facts name him when he is there (StoryEngine.advisor_facts);
+	# these only stand in when a card is shown without him (a preview, a test).
+	facts["restless_name"] = str(rl.get("name", "the line coach"))
+	facts["restless_role"] = str(rl.get("role", "line coach"))
 	facts.merge(_leader_facts(gs), true)
 	facts.merge(_finals_facts(gs, ph), true)
 	facts.merge(papers_facts(gs), true)
@@ -719,6 +729,8 @@ static func player_fact(gs, p: Dictionary, selected: bool, i: Dictionary, fit_ra
 			"games": gs.games_played(p), "fit": fit, "selected": selected, "overall": ovr, "potential": pot,
 			"pot_gap": pot - ovr, "contract_years": int(p.get("contract_years", 2)), "morale": ClubLife.morale(p),
 			"trust": t, "trust_band": Trust.band(t), "opinion": Trust.opinion(t),
+			# How hard a broken promise lands with him (Promises.broken_trust).
+			"broken_scale": Temperament.scale(p, "promise_broken"),
 			# Under 50 he may refuse to re-sign (director 2026-11-08); "" at 50 or over.
 			"refuse_line": Contracts.REFUSE_ODDS % [Trust.opinion(t), gs.resign_refuse_chance(p), name]
 					if gs.resign_refuse_chance(p) > 0 else "",
@@ -765,6 +777,14 @@ static func player_fact(gs, p: Dictionary, selected: bool, i: Dictionary, fit_ra
 			"injury_word": Injuries.wording(str(p.get("injury_kind", ""))) if int(p.get("injury_weeks", 0)) > 0 else "",
 			# Injured in the pre-season: the Round 1 games the physio's plan costs him (preseason_miss).
 			"pre_miss_rounds": int(miss["rounds"])}
+	# The group he stands with (Factions.gd), for its demand and ultimatum cards.
+	var grp := Factions.of_player(gs, gs.my_club, id)
+	out["faction"] = str(grp.get("k", ""))
+	out["faction_state"] = str(grp.get("state", ""))
+	out["faction_leader"] = not grp.is_empty() and str(grp["leader"]) == id
+	out["faction_size"] = (grp.get("members", []) as Array).size()
+	out["faction_group"] = str(Factions.kind_cfg(str(grp.get("k", ""))).get("label", "")).to_lower()
+	out["faction_demand"] = str(Factions.kind_cfg(str(grp.get("k", ""))).get("demand", ""))
 	# International prospects' cards: where he comes from and how far into his career he is.
 	var country: Dictionary = InternationalProspects.country(str(p.get("intl", "")))
 	var career := Career.of(p)
@@ -803,6 +823,16 @@ static func player_fact(gs, p: Dictionary, selected: bool, i: Dictionary, fit_ra
 		else:
 			out["trial_tail"] = back
 	out["actors"] = actors(gs, id)
+	# How he takes things (Temperament): the keys, for a card's conditions, and
+	# each lever's size, so a card's own move on him is sized as he feels it.
+	var temper := Temperament.of(p)
+	out["temperament"] = temper
+	var levers := {}
+	for lever in Temperament.LEVERS:
+		var m := Temperament.scale(p, str(lever))
+		if m != 1.0:
+			levers[str(lever)] = m
+	out["temper"] = levers
 	return out
 
 
@@ -810,13 +840,39 @@ static func player_fact(gs, p: Dictionary, selected: bool, i: Dictionary, fit_ra
 ## some card in the deck asks for (StoryDeck.actor_roles). The ties come from
 ## GameState.bond_actor once the bonds are in the game; until then (and in an
 ## older save) there are none, and a card that needs one does not come.
+## `n` new mateships on a list (op bond_seed): fit players within
+## Bonds.MATE_MAX_AGE_GAP years of each other, neither tied to the other and
+## both with room for a tie. Returns "A and B" for each pair made.
+static func bond_seed(state: Dictionary, roster: Array, n: int, year: int, seed: int) -> Array:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = seed
+	var pool := roster.filter(func(q): return int(q.get("injury_weeks", 0)) <= 0)
+	var out := []
+	var tries := 0
+	while out.size() < n and pool.size() >= 2 and tries < 60:
+		tries += 1
+		var a: Dictionary = pool[rng.randi_range(0, pool.size() - 1)]
+		var b: Dictionary = pool[rng.randi_range(0, pool.size() - 1)]
+		var ia := str(a["id"])
+		var ib := str(b["id"])
+		if ia == ib or absf(float(a.get("age", 0)) - float(b.get("age", 0))) > Bonds.MATE_MAX_AGE_GAP:
+			continue
+		if Bonds.kind(state, ia, ib) != "" or Bonds.count(state, ia) >= Bonds.cap() or Bonds.count(state, ib) >= Bonds.cap():
+			continue
+		Bonds.form(state, ia, ib, "mate", 1, year)
+		out.append("%s and %s" % [GameDB.player_display_name(a), GameDB.player_display_name(b)])
+		pool.erase(a)
+		pool.erase(b)
+	return out
+
+
 static func actors(gs, id: String) -> Dictionary:
 	var out := {}
 	if not gs.has_method("bond_actor"):
 		return out
 	for role in StoryDeck.actor_roles():
-		if role == "other":
-			continue   # the event's own other player, stamped with the event
+		if role == "other" or role == "teammate":
+			continue   # the event's own other player, or one the card picks itself
 		var bid := str(gs.call("bond_actor", id, role))
 		if bid != "" and bid != id:
 			out[role] = bid
@@ -1004,6 +1060,17 @@ static func card_for(gs, tid: String, p: Dictionary = {}, extra: Dictionary = {}
 	if not extra.is_empty():
 		subj = subj.duplicate()
 		subj.merge(extra, true)
+	# The card's second player, found as the deck would find him (actor_b).
+	if not p.is_empty() and not (t.get("actor_b", {}) as Dictionary).is_empty() and not subj.has("_b_id") \
+			and gs.story is Dictionary:
+		StoryEngine.ensure(gs.story)
+		var b := StoryEngine.actor_b_facts(t, subj, ctx["players"], "", gs.story, gs.story_week())
+		if not b.is_empty():
+			subj = subj.duplicate()
+			var bind: Dictionary = (subj.get("_bind", {}) as Dictionary).duplicate()
+			bind.merge(b["_bind"], true)
+			subj["_b_id"] = b["_b_id"]
+			subj["_bind"] = bind
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash(tid)
 	return StoryEngine.build(deck, t, subj, ctx["club"], rng, gs.story_week())
@@ -1192,6 +1259,17 @@ static func _apply(gs, e: Dictionary, p: Dictionary, facts: Dictionary, applied:
 		"fresh", "heavy_legs":
 			for q in _targets(gs, e, p):
 				q[str(e["op"])] = true
+		"council":
+			# The restless coach the card seats: pulled into line or won back.
+			Council.card_loyalty(gs, gs.my_club, str(e.get("do", "")))
+		"standing":
+			Promises.move(gs, int(e.get("r", 0)), int(e.get("a", 0)), StoryEngine.fill(str(e.get("why", "")), facts))
+		"faction":
+			# The coach answers the group the card's player leads (Factions).
+			var grp := Factions.of_player(gs, gs.my_club, str(p["id"]))
+			if grp.is_empty():
+				return "The group has broken up by itself since."
+			gs.faction_answer(gs.my_club, grp, str(e.get("do", "meet")))
 		"expects_game":
 			# The game you promised: a side you named takes him in now, as a run
 			# does (director, 2026-11-12: "he should show as on the team the
@@ -1235,6 +1313,24 @@ static func _apply(gs, e: Dictionary, p: Dictionary, facts: Dictionary, applied:
 			return ExpansionBuild.keep(gs, p)
 		"new_club_go":
 			return ExpansionBuild.let_go(gs, p)
+		"promise":
+			# A promise the choice made out loud: on the record, settled by its test.
+			Promises.card_made(gs, p, e)
+		"bond":
+			# The card's two players: a tie between them (Bonds.form, both sides).
+			var bid := str(facts.get("kid_id" if str(e.get("with", "b")) == "kid" else "b_id", ""))
+			if bid != "" and not p.is_empty() and gs.has_method("bond_actor"):
+				gs.bonds = Bonds.ensure(gs.bonds)
+				Bonds.form(gs.bonds, str(p["id"]), bid, str(e.get("kind", "mate")), int(e.get("s", 1)), int(gs.season_year))
+		"bond_seed":
+			# A club card where new mates are made (the away camp): `n` pairs of
+			# fit teammates close in age who have no tie yet become mates.
+			if gs.has_method("bond_actor"):
+				gs.bonds = Bonds.ensure(gs.bonds)
+				var made := bond_seed(gs.bonds, gs.my_list, int(e.get("n", 1)), int(gs.season_year),
+						hash(["bond_seed", int(gs.career_seed), int(gs.season_year), gs.story_week()]))
+				if not made.is_empty():
+					return "%s came home close mates." % ", and ".join(PackedStringArray(made))
 		"promise_win":
 			if not bool(gs.board.get("promise", false)):
 				Promises.made(gs, {}, "win")

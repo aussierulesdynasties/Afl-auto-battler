@@ -1,0 +1,71 @@
+{
+	"_about": "The Council's agendas (relationship overhaul, the Council phase, DIRECTOR_BIBLE 5.169-5.177). Every staff member at every club pushes for one. label: what he pushes for, as the Staff screen says it; about: one line on what he wants; jobs: how likely each job is to hold it (weights, 0 = never); weigh: how much a card choice's effects suit him (op, op:+ / op:- by the sign of its d, culture:<strand>:+ / -); voice: what he says when he backs a choice, by manner (blunt, measured, warm), signed in his own name on the card. Read by scripts/sim/Council.gd; checked by Council.check_agendas. Sizes are proposals: balance is the director's call.",
+	"agendas": {
+		"youth": {
+			"label": "Bring the kids through",
+			"about": "Wants young players picked, backed and taught",
+			"jobs": {"DEV": 6, "LM": 3, "SA": 1, "MID": 1, "FWD": 1, "DEF": 1},
+			"weigh": {"start_backing": 3, "back_kid": 3, "dev_promise": 2, "expects_game": 1, "xp:+": 1, "forgo_xp": -2},
+			"voice": {
+				"blunt": ["The kids have to see a way in, or they'll stop believing there is one", "We didn't draft them to sit them in the twos"],
+				"measured": ["This is how the young ones learn what the club is about", "It's a small cost now for a better list in three years"],
+				"warm": ["He'll remember who backed him when it counted", "Give the young fella something to hold on to"]
+			}
+		},
+		"win_now": {
+			"label": "Win now",
+			"about": "Wants the best side on the park every week, whoever it upsets",
+			"jobs": {"SA": 4, "MID": 3, "FWD": 3, "DEF": 3, "LM": 1},
+			"weigh": {"board:+": 1, "board:-": -1, "slow_start": -2, "heavy_legs": -2, "forgo_xp": 1, "rest": -1, "keep_out": -1},
+			"voice": {
+				"blunt": ["Points on the board. Everything else can wait", "We're here to win this week, not next year"],
+				"measured": ["The ladder doesn't care how we feel. This gives us the best side", "It's the call that keeps us in the hunt"],
+				"warm": ["The boys want to win more than anything. Give them the best chance"]
+			}
+		},
+		"standards": {
+			"label": "Hold the line on standards",
+			"about": "Wants the rules kept, the same for everyone",
+			"jobs": {"SA": 3, "DEF": 2, "MID": 1, "FWD": 1, "HP": 1},
+			"weigh": {"culture:standards:+": 3, "culture:standards:-": -3, "explain": -1},
+			"voice": {
+				"blunt": ["Let this slide and you'll be dealing with it every week", "Rules are rules. The group is watching what we do here"],
+				"measured": ["If the standard moves for one, it moves for all of them", "Consistency now saves us a harder conversation later"],
+				"warm": ["They actually want us to be firm. It makes them feel safe"]
+			}
+		},
+		"player_care": {
+			"label": "Look after the players",
+			"about": "Wants the group happy and heard",
+			"jobs": {"SA": 3, "MID": 2, "FWD": 2, "DEF": 2, "DEV": 2, "HP": 1},
+			"weigh": {"morale:+": 1, "morale:-": -1, "culture:together:+": 3, "culture:together:-": -3, "trust:+": 1, "trust:-": -1, "explain": 1},
+			"voice": {
+				"blunt": ["Look after your people. They'll run through walls for you", "You lose the room, you lose everything"],
+				"measured": ["A happy group plays better footy. That's not soft, it's true", "This keeps the group together, and that's worth more than one week"],
+				"warm": ["Have a heart here, coach. He needs it", "These boys are people first"]
+			}
+		},
+		"fitness": {
+			"label": "Mind the bodies",
+			"about": "Wants no risks taken with tired or sore players",
+			"jobs": {"HP": 8, "DEV": 1},
+			"weigh": {"rest": 3, "fresh": 2, "running": 1, "heavy_legs": -3, "sore": -2, "rush_back": -3, "slow_start": -1, "keep_out": 2},
+			"voice": {
+				"blunt": ["The numbers say he's cooked. Push him and he breaks", "I'm not signing off on that risk"],
+				"measured": ["A week's care now beats six weeks on the sidelines", "The load data's clear. Give the body what it needs"],
+				"warm": ["Let's keep him in one piece. He's got a long career ahead"]
+			}
+		},
+		"list_value": {
+			"label": "Build the list",
+			"about": "Wants every call made with the list in five years in mind",
+			"jobs": {"LM": 6, "DEV": 1, "SA": 1},
+			"weigh": {"extend_early": 2, "new_club_keep": 2, "new_club_go": -2, "xp:+": 1, "board:-": -1},
+			"voice": {
+				"blunt": ["Lock in the talent. Players like him don't come cheap", "Think about the list, not the week"],
+				"measured": ["This protects what we've built on the list", "The long game says this one"],
+				"warm": ["He's part of what we're building. Keep him close"]
+			}
+		}
+	}
+}

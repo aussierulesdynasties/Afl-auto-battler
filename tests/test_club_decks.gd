@@ -10,7 +10,8 @@ var checks := 0
 
 const SUITE_SEED := 157
 ## "25ish cards for each club" (director 2026-11-11).
-const DECK_MIN := 23
+## Adelaide gave its homesick card to the shared one (family_homesick, Card Pass 1).
+const DECK_MIN := 22
 const DECK_MAX := 28
 
 

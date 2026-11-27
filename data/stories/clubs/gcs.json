@@ -36,27 +36,6 @@
 		]
 	},
 	{
-		"id": "gcs_go_home",
-		"club": "GCS",
-		"controversy": false,
-		"category": "contracts",
-		"phase": ["season_end"],
-		"subject": {"kind": "player", "pick": "highest:potential", "where": {"age_max": 24, "contract_years_max": 1}},
-		"title": ["The go-home question"],
-		"text": ["{name} is out of contract, and every week the southern papers write that he wants to go home. His manager says nothing has been decided."],
-		"choices": [
-			{"key": "family", "label": "Bring his family up for a week",
-			 "effects": [{"op": "morale", "d": 8, "who": "subject"}, {"op": "trust", "d": 3, "why": "The club flew his family up to show him the life here"}, {"op": "board", "d": -2, "was": "funds"}],
-			 "result": "His family spend a week on the Coast. The board winces at the bill."},
-			{"key": "space", "label": "Give him space",
-			 "effects": [{"op": "board", "d": 2}, {"op": "morale", "d": -4, "who": "subject"}],
-			 "result": "No drama in the press. {first} wonders why nobody is fighting for him."},
-			{"key": "nowhere", "label": "Tell the press he's going nowhere",
-			 "effects": [{"op": "board", "d": 4, "was": "members"}, {"op": "morale", "d": -6, "who": "subject"}],
-			 "result": "The members cheer the headline. {first} didn't want it made public."}
-		]
-	},
-	{
 		"id": "gcs_grown_on_the_coast",
 		"club": "GCS",
 		"controversy": false,
@@ -88,23 +67,6 @@
 			{"key": "late", "label": "Fly up the day before",
 			 "effects": [{"op": "xp", "d": 6, "who": "side"}, {"op": "board", "d": -2, "was": "members"}],
 			 "result": "A normal week at home, then in and out. The Territory notices."}
-		]
-	},
-	{
-		"id": "gcs_long_way_home",
-		"club": "GCS",
-		"controversy": false,
-		"category": "family",
-		"subject": {"kind": "player", "pick": "random", "where": {"age_max": 21}},
-		"title": ["A long way from home"],
-		"text": ["{name} has the quickest hands at the club but he's a long way from his family. His old junior coach has rung to say the kid's gone quiet."],
-		"choices": [
-			{"key": "home", "label": "Send him home for a weekend",
-			 "effects": [{"op": "morale", "d": 10, "who": "subject"}, {"op": "forgo_xp", "d": 4, "who": "subject"}],
-			 "result": "{first} gets a weekend with his family and misses a session."},
-			{"key": "house", "label": "Move him in with a senior player",
-			 "effects": [{"op": "morale", "d": 5, "who": "subject"}, {"op": "loss_sting", "chance": 15, "d": -4, "who": "subject"}],
-			 "result": "{first} has a senior housemate and keeps training every day. A bad loss could still knock him around."}
 		]
 	},
 	{

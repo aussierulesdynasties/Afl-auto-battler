@@ -155,9 +155,7 @@ func _test_run_broken() -> void:
 	GameState.back_player(id)
 	var r0 := Promises.respect(GameState)
 	var a0 := Promises.authority(GameState)
-	# The permanent part (Trust.base): his live opinion also carries the
-	# broken run's fading mark (Opinion), which the line below does not count.
-	var t0 := Trust.base(GameState.relations, Trust.player_key(id))
+	var b0 := Trust.base(GameState.relations, Trust.player_key(id))
 	GameState.set_selection(_out_of_side(id))
 	_advance_mine()
 	var w := Promises.word(GameState)
@@ -165,10 +163,17 @@ func _test_run_broken() -> void:
 	_check(int(w["broken"]) == 1 and int(w["kept"]) == 0, "The record says broken (%s)" % str(w))
 	_check(Promises.respect(GameState) == r0 + int(Promises.BROKEN["run"][0]),
 			"Breaking your word costs Respect (%d -> %d)" % [r0, Promises.respect(GameState)])
-	_check(Promises.authority(GameState) >= a0 + int(Promises.BROKEN["run"][1]),
-			"...and shows the group you will make the hard call (%d -> %d)" % [a0, Promises.authority(GameState)])
-	_check(Trust.base(GameState.relations, Trust.player_key(id)) == t0 + StoryEngine.BROKEN_RUN_TRUST,
-			"His permanent trust falls once, as it always did (not twice)")
+	_check(int(Promises.BROKEN["run"][1]) == 0 and int(Promises.BROKEN["game"][1]) == 0 and int(Promises.BROKEN["dev_games"][1]) == 0,
+			"Breaking your word builds no Authority (director 2026-11-26)")
+	var drops_a := 0
+	for r in Promises.standing_reasons(GameState):
+		if str(r.get("why", "")).begins_with("You broke"):
+			drops_a += int(r.get("a", 0))
+	_check(drops_a == 0, "The broken promise's reason moves no Authority (%d)" % drops_a)
+	_check(Promises.authority(GameState) >= a0, "Authority moves only by the drop rule (%d -> %d)" % [a0, Promises.authority(GameState)])
+	_check(Trust.base(GameState.relations, Trust.player_key(id)) == b0 + Promises.broken_trust(kid, "run"),
+			"His permanent trust falls once, sized by his temperament (%d -> %d, temperament x%.2f)" % [
+			b0, Trust.base(GameState.relations, Trust.player_key(id)), Temperament.scale(kid, "promise_broken")])
 	_check(Promises.witnesses(GameState, kid).size() <= Promises.WITNESS_MAX
 			and Promises.witnesses(GameState, kid).all(func(q): return str(q["role"]) == str(kid["role"]) and q != kid),
 			"The players who saw it are his line-mates")
@@ -188,7 +193,7 @@ func _test_preview_drop_is_read_only() -> void:
 			"The preview changes nothing")
 	_check((pv["broken"] as Array).size() == 1 and int(pv["respect"]) == int(Promises.BROKEN["run"][0]),
 			"Dropping him would break his run and cost Respect (%s)" % str(pv))
-	_check(int(pv["opinion"]) == Trust.opinion_move(Trust.value(GameState.relations, Trust.player_key(id)), StoryEngine.BROKEN_RUN_TRUST),
+	_check(int(pv["opinion"]) == Trust.opinion_move(Trust.value(GameState.relations, Trust.player_key(id)), Promises.broken_trust(kid, "run")),
 			"...and says what it does to his opinion of you (%s)" % str(pv))
 	var other := ""
 	for q in GameState.my_list:

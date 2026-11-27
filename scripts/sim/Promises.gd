@@ -22,8 +22,8 @@ extends RefCounted
 ##                      [{"y", "w", "r", "a", "why"}], "side": [ids]}: two
 ##                      scores out of 100 that move with what you actually do.
 ##                      Backing players and keeping your word builds Respect;
-##                      ruthless drops build Authority; a broken promise costs
-##                      Respect. The senior coach's archetype only sets where
+##                      ruthless drops build Authority; a broken promise only
+##                      costs Respect. The senior coach's archetype only sets where
 ##                      they start (and where they settle back to between
 ##                      seasons), never where they must stay.
 ##   gs.club_standing   {code: the same shape} for every other club's senior
@@ -37,10 +37,9 @@ extends RefCounted
 ## A kept promise leaves a lasting mark on his opinion of you, a broken one a
 ## permanent one (Trust.change, as it always has, at the call site), and the
 ## players in his line who watched it get a smaller mark of their own. Marks
-## go through the Opinion API when the game has it (Opinion.add), and the
-## player's temperament sizes them when the game has temperaments
-## (Temperament.scale): both are looked up, so this class works on either side
-## of those merges.
+## go through Opinion.add, and the player's temperament sizes them and how
+## long he holds them (Temperament.scale; a broken promise's permanent cost too,
+## broken_trust).
 
 const KINDS := ["run", "game", "dev_games", "win"]
 
@@ -60,10 +59,13 @@ const ARCH_LEAN := {
 
 ## What each moment moves: [Respect, Authority].
 const MADE := [1, 0]
-const KEPT := {"run": [4, 0], "game": [2, 0], "dev_games": [4, 0], "win": [0, 2]}
-## Breaking your word costs Respect; it also shows the group you will make the
-## hard call, which is Authority of a kind.
-const BROKEN := {"run": [-6, 1], "game": [-4, 1], "dev_games": [-6, 1], "win": [0, -2]}
+const KEPT := {"run": [4, 0], "game": [2, 0], "dev_games": [4, 0], "win": [0, 2],
+		"senior_game": [2, 0], "deal": [3, 0], "stays": [2, 0], "finals": [0, 3], "wins": [0, 2]}
+## Breaking your word costs Respect, and builds no Authority: hard selection
+## and discipline calls build that, a broken promise only costs (director,
+## 2026-11-26).
+const BROKEN := {"run": [-6, 0], "game": [-4, 0], "dev_games": [-6, 0], "win": [0, -2],
+		"senior_game": [-4, 0], "deal": [-6, 0], "stays": [-4, 0], "finals": [-2, -3], "wins": [0, -2]}
 ## Dropping a fit player who played last week: the hard call.
 const DROP := [0, 1]
 ## The most drops that count towards Authority in one round.
@@ -71,9 +73,6 @@ const DROP_ROUND_MAX := 2
 ## Between seasons each score settles this share of the way back to its base.
 const SETTLE := 0.25
 
-## A kept promise's lasting mark when the game has no Opinion API yet, as a
-## move of the permanent trust (Trust.change; opinion +3).
-const KEPT_TRUST := 6
 ## The trust a broken promise costs him (the call sites' own constants).
 const BROKEN_TRUST := {"run": StoryEngine.BROKEN_RUN_TRUST, "game": StoryEngine.BROKEN_PROMISE_TRUST,
 		"dev_games": StoryEngine.BROKEN_PROMISE_TRUST}
@@ -83,7 +82,29 @@ const LOG_KEEP := 12
 
 ## What a kept or broken promise is called on the profile.
 const KIND_WORDS := {"run": "a run of games", "game": "a game", "dev_games": "games in a new position",
-		"win": "a win"}
+		"win": "a win", "senior_game": "a senior game", "deal": "a new deal", "stays": "a future at the club",
+		"finals": "finals", "wins": "wins"}
+
+## A card's promise (card op "promise", Card Pass 1, 2026-11-26): what a choice
+## says out loud that nothing tracked before. Each sits in gs.coach_word["open"]
+## until its test settles it after a round (check_open) or at season's end:
+##   "senior_game"  he plays a senior game within `weeks` rounds (or this season)
+##   "deal"         he is signed on (his contract runs longer) by the deadline
+##   "stays"        he is still on your list at the deadline (you did not move him on)
+##   "finals"       the club plays finals this season, or next ("season": "next")
+##   "wins"         the side wins `need` of its next `weeks` games
+## A player who leaves the list before a player promise settles lapses it,
+## except "deal" and "stays", which he leaving breaks.
+const CARD_KINDS := ["senior_game", "deal", "stays", "finals", "wins"]
+## The promises made to a player (the rest are made to the board and members).
+const PLAYER_KINDS := ["senior_game", "deal", "stays"]
+## How long a card's promise runs when the card does not say, in rounds.
+const CARD_WEEKS := {"senior_game": 4, "deal": 8, "stays": 0, "finals": 0, "wins": 3}
+## A card's broken promise to a player costs his trust, as a card's game does.
+const CARD_BROKEN_TRUST := {"senior_game": StoryEngine.BROKEN_PROMISE_TRUST, "deal": StoryEngine.BROKEN_RUN_TRUST,
+		"stays": StoryEngine.BROKEN_RUN_TRUST}
+## A promise to the board, kept or broken, moves its confidence this much.
+const CARD_BOARD := {"finals": 6, "wins": 4}
 
 
 # ---------------------------------------------------------------------------
@@ -273,7 +294,7 @@ static func settle(gs, p: Dictionary, kind: String, out: String) -> void:
 			var m: Array = BROKEN.get(kind, [0, 0])
 			move(gs, int(m[0]), int(m[1]), "You broke your word to %s on %s" % [who, what])
 			for q in ([] if p.is_empty() else witnesses(gs, p)):
-				_opinion_add(gs, q, "saw_promise_broken")
+				_opinion_add(gs, q, "saw_promise_broken", "promise_broken")
 
 
 ## The players who saw it: his line-mates on your list, up to WITNESS_MAX.
@@ -289,11 +310,191 @@ static func witnesses(gs, p: Dictionary) -> Array:
 
 
 static func _mark_kept(gs, p: Dictionary) -> void:
-	if _opinion_add(gs, p, "promise_kept"):
-		return
-	var t := roundi(KEPT_TRUST * _temper(p, "promise_kept"))
-	Trust.change(gs.relations, Trust.player_key(str(p.get("id", ""))), t,
-			"You kept your word to him", int(gs.season_year), str(gs.last_label))
+	_opinion_add(gs, p, "promise_kept", "promise_kept")
+
+
+## What breaking a `kind` promise costs his trust, permanently, sized by his
+## temperament ("promise_broken"): what the call sites charge and every
+## preview and card shows.
+static func broken_trust(p: Dictionary, kind: String) -> int:
+	var t := int(BROKEN_TRUST.get(kind, 0))
+	if t == 0:
+		return 0
+	return clampi(roundi(float(t) * Temperament.scale(p, "promise_broken")), -Trust.STEP_MAX, Trust.STEP_MAX)
+
+
+# ---------------------------------------------------------------------------
+# A card's promise: made on the card, settled by its own test
+# ---------------------------------------------------------------------------
+
+## The promises a card made that have not settled yet.
+static func open(gs) -> Array:
+	var w := word(gs)
+	if not (w.get("open") is Array):
+		w["open"] = []
+	return w["open"]
+
+
+## A card's choice promises something (card op "promise"): it goes on the
+## record now and is settled by check_open. `p` is {} for a promise to the
+## board. Returns the entry, or {} when the same promise is already open.
+static func card_made(gs, p: Dictionary, e: Dictionary) -> Dictionary:
+	var kind := str(e.get("kind", ""))
+	if not (kind in CARD_KINDS):
+		return {}
+	var pid := str(p.get("id", "")) if kind in PLAYER_KINDS else ""
+	if kind in PLAYER_KINDS and pid == "":
+		return {}
+	# One open promise of a kind to each man (or to the board), but a finals
+	# promise for this season and one for next are two promises.
+	var for_season := int(gs.season_year) + (1 if kind == "finals" and str(e.get("season", "this")) == "next" else 0)
+	for o in open(gs):
+		if str(o.get("k", "")) == kind and str(o.get("who", "")) == pid \
+				and (kind != "finals" or int(o.get("season", 0)) == for_season):
+			return {}
+	var now := int(gs.story_week())
+	var weeks := int(e.get("weeks", CARD_WEEKS.get(kind, 0)))
+	var entry := {"k": kind, "who": pid, "y": int(gs.season_year), "at": now,
+			"by": now + weeks if weeks > 0 else -1}
+	match kind:
+		"senior_game":
+			entry["base"] = int(gs.season_games(pid))
+		"deal":
+			entry["base"] = int(p.get("contract_years", 1))
+		"finals":
+			entry["season"] = for_season
+		"wins":
+			entry["need"] = clampi(int(e.get("need", 2)), 1, maxi(1, weeks))
+			entry["got"] = 0
+			entry["left"] = weeks
+	open(gs).append(entry)
+	made(gs, p if pid != "" else {}, kind)
+	return entry
+
+
+## After your round: each open card promise its test can settle now. `won`
+## is your result this round (null when you did not play).
+static func check_open(gs, won: Variant = null) -> void:
+	var now := int(gs.story_week())
+	var keep := []
+	for o in open(gs):
+		var out := _card_test(gs, o, now, won)
+		if out == "":
+			keep.append(o)
+		else:
+			_card_settle(gs, o, out)
+	word(gs)["open"] = keep
+
+
+## At season's end: a promise that runs to the season's end settles now, and
+## the finals promise for this season is judged on who played finals.
+static func card_season_end(gs) -> void:
+	var finalists: Array = []
+	if gs.season != null:
+		finalists = gs.season.finals.get("top", [])
+	var keep := []
+	for o in open(gs):
+		var kind := str(o.get("k", ""))
+		var out := ""
+		if kind == "finals":
+			if int(o.get("season", 0)) <= int(gs.season_year):
+				out = "kept" if finalists.has(str(gs.my_club)) else "broken"
+		elif int(o.get("by", -1)) < 0:
+			out = _card_test(gs, o, 1 << 30, null)
+			if out == "":
+				out = "kept" if kind == "stays" else "broken"
+		if out == "":
+			keep.append(o)
+		else:
+			_card_settle(gs, o, out)
+	word(gs)["open"] = keep
+
+
+## "kept", "broken", "lapsed" or "" (still open) for one card promise.
+static func _card_test(gs, o: Dictionary, now: int, won: Variant) -> String:
+	var kind := str(o.get("k", ""))
+	var by := int(o.get("by", -1))
+	var due := by >= 0 and now >= by
+	if kind in PLAYER_KINDS:
+		var p: Dictionary = gs.list_player(str(o.get("who", "")))
+		if p.is_empty():
+			return "lapsed" if kind == "senior_game" else "broken"
+		match kind:
+			"senior_game":
+				if int(o.get("y", 0)) != int(gs.season_year):
+					return "broken"   # the season he was promised has gone
+				if int(gs.season_games(str(p["id"]))) > int(o.get("base", 0)):
+					return "kept"
+			"deal":
+				if int(p.get("contract_years", 1)) > int(o.get("base", 1)):
+					return "kept"
+			"stays":
+				if due:
+					return "kept"
+		return "broken" if due else ""
+	match kind:
+		"wins":
+			if won == null:
+				return ""
+			o["left"] = int(o.get("left", 0)) - 1
+			if bool(won):
+				o["got"] = int(o.get("got", 0)) + 1
+			if int(o["got"]) >= int(o.get("need", 1)):
+				return "kept"
+			if int(o["got"]) + int(o["left"]) < int(o.get("need", 1)):
+				return "broken"
+	return ""
+
+
+static func _card_settle(gs, o: Dictionary, out: String) -> void:
+	var kind := str(o.get("k", ""))
+	var p: Dictionary = {}
+	if kind in PLAYER_KINDS:
+		p = gs.list_player(str(o.get("who", "")))
+		if p.is_empty():
+			# He has gone: the record still counts it; nobody is left to mark.
+			_log_word(gs, {"id": str(o.get("who", ""))}, kind, out)
+			var m: Array = (KEPT if out == "kept" else BROKEN).get(kind, [0, 0]) if out != "lapsed" else [0, 0]
+			if m[0] != 0 or m[1] != 0:
+				move(gs, int(m[0]), int(m[1]), "You %s your word on %s" % ["kept" if out == "kept" else "broke", KIND_WORDS.get(kind, "a promise")])
+			return
+	settle(gs, p, kind, out)
+	if out == "broken" and not p.is_empty():
+		Trust.change(gs.relations, Trust.player_key(str(p["id"])), int(CARD_BROKEN_TRUST.get(kind, 0)),
+				"You promised him %s and it didn't come" % KIND_WORDS.get(kind, "something"),
+				int(gs.season_year), str(gs.last_label))
+	if CARD_BOARD.has(kind) and not gs.board.is_empty() and out != "lapsed":
+		var d := int(CARD_BOARD[kind]) * (1 if out == "kept" else -1)
+		gs.board["confidence"] = clampi(gs.board_confidence() + d, 0, 100)
+
+
+## His card promises under way, for of(): [{"kind", "text", "weeks_left"}].
+static func _card_of(gs, player_id: String) -> Array:
+	var out := []
+	var now := int(gs.story_week())
+	# Read only: a preview must not add the "open" list to the record.
+	var w: Variant = gs.coach_word
+	var opens: Variant = w.get("open", []) if w is Dictionary else []
+	for o in (opens if opens is Array else []):
+		if str(o.get("who", "")) != player_id:
+			continue
+		var kind := str(o.get("k", ""))
+		var by := int(o.get("by", -1))
+		var left := maxi(0, by - now) if by >= 0 else -1
+		var text := ""
+		match kind:
+			"senior_game":
+				text = "Promised a senior game%s." % (" within %s" % _weeks(left) if left >= 0 else " this season")
+			"deal":
+				text = "Promised a new deal%s." % (" within %s" % _weeks(left) if left >= 0 else " by season's end")
+			"stays":
+				text = "Promised a future at the club."
+		out.append({"kind": kind, "weeks_left": left, "text": text})
+	return out
+
+
+static func _weeks(n: int) -> String:
+	return "a week" if n == 1 else "%s weeks" % MatchNotes.count_word(n)
 
 
 # ---------------------------------------------------------------------------
@@ -323,6 +524,7 @@ static func of(gs, player_id: String) -> Array:
 	# only a card's game stands on its own.
 	if p.has("expects_game") and run.is_empty() and dev.is_empty():
 		out.append({"kind": "game", "weeks_left": 1, "text": "Promised a game this week."})
+	out.append_array(_card_of(gs, player_id))
 	return out
 
 
@@ -341,11 +543,14 @@ static func preview_drop(gs, player_id: String) -> Dictionary:
 	var t0 := t
 	for pr in of(gs, player_id):
 		var k := str(pr["kind"])
+		# A card's promise has its own deadline: one week left out breaks none.
+		if k in CARD_KINDS:
+			continue
 		var m: Array = BROKEN.get(k, [0, 0])
 		r = clampi(r + int(m[0]), LOWEST, HIGHEST)
 		a = clampi(a + int(m[1]), LOWEST, HIGHEST)
 		(out["broken"] as Array).append(str(pr["text"]))
-		t = clampi(t + clampi(int(BROKEN_TRUST.get(k, 0)), -Trust.STEP_MAX, Trust.STEP_MAX), Trust.LOWEST, Trust.HIGHEST)
+		t = clampi(t + broken_trust(p, k), Trust.LOWEST, Trust.HIGHEST)
 	if (s.get("side", []) as Array).has(player_id):
 		a = clampi(a + int(DROP[1]), LOWEST, HIGHEST)
 	out["respect"] = r - int(s["respect"])
@@ -390,7 +595,7 @@ static func after_match(gs, played: Dictionary, unavailable := {}, club := "") -
 
 
 # ---------------------------------------------------------------------------
-# The sibling systems, looked up by name so either merge order works
+# Marks on his opinion
 # ---------------------------------------------------------------------------
 
 static func _arch_p(code: String) -> String:
@@ -399,28 +604,8 @@ static func _arch_p(code: String) -> String:
 	return str(CoachEffects.arch_of(code)[1])
 
 
-static func _global_class(name: String) -> Script:
-	for c in ProjectSettings.get_global_class_list():
-		if str(c.get("class", "")) == name:
-			return load(str(c["path"]))
-	return null
-
-
-## His temperament's multiplier for a moment (Temperament.scale), 1.0 when
-## the game has no temperaments.
-static func _temper(p: Dictionary, what: String) -> float:
-	var t := _global_class("Temperament")
-	if t == null or not t.has_method("scale"):
-		return 1.0
-	return float(t.call("scale", p, what))
-
-
-## A fading mark on his opinion (Opinion.add, data/relations/modifiers.json);
-## false when the game has no Opinion API, so the caller can fall back.
-static func _opinion_add(gs, p: Dictionary, mark: String) -> bool:
-	var o := _global_class("Opinion")
-	if o == null or not o.has_method("add"):
-		return false
-	o.call("add", gs.relations, Trust.player_key(str(p.get("id", ""))), mark, int(gs.season_year),
-			str(gs.last_label), str(gs.my_club), _temper(p, mark), "promise", 1.0)
-	return true
+## A mark on his opinion (Opinion.add, data/relations/modifiers.json), sized by
+## his temperament's `lever` and fading at his pace ("decay").
+static func _opinion_add(gs, p: Dictionary, mark: String, lever: String) -> void:
+	Opinion.add(gs.relations, Opinion.player_key(str(p.get("id", ""))), mark, int(gs.season_year),
+			str(gs.last_label), str(gs.my_club), Temperament.scale(p, lever), "promise", Temperament.scale(p, "decay"))
