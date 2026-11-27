@@ -824,7 +824,7 @@ def _stage1():
     # cut ends, rms about 10 px). Plan position: the Esri aerial, whose footprint agrees with the fit's length to
     # 5 %; the photo's camera sat about 4.7 m from where the facade fit put it, so the fit is moved 3.24 m west and
     # 3.36 m north onto the aerial. Tube diameter from c008's widths at the fit's depths.
-    def coil_paint(name, tile_u=2.0, tile_v=2 * math.pi * 0.16, px=200):
+    def coil_paint(name, base=(62.0, 128.0, 44.0), tile_u=2.0, tile_v=2 * math.pi * 0.16, px=200):
         """Green semi-gloss paint, chipped in places down to a paler yellow-green coat (c008 close crops)."""
         nu, nv = int(tile_u * px), int(round(tile_v * px))
         ky = np.fft.fftfreq(nv)[:, None] * nv / tile_v
@@ -837,7 +837,7 @@ def _stage1():
                 f = np.fft.fft2(rng.normal(0, 1, (nv, nu)))
                 out += np.real(np.fft.ifft2(f * np.exp(-(k * scale / 2 ** o) ** 2))) * 0.5 ** o
             return (out - out.mean()) / out.std()
-        img = np.zeros((nv, nu, 3)) + np.array([62.0, 128.0, 44.0])
+        img = np.zeros((nv, nu, 3)) + np.array(base)
         img += fbm(0.6, 2)[..., None] * np.array([4.0, 7.0, 3.0])              # brushing and fade
         chip = fbm(0.35)
         m = chip > 1.55                                                         # the chipped patches
@@ -848,8 +848,12 @@ def _stage1():
         img += rng.normal(0, 2.0, (nv, nu, 1))
         save(name, img, (tile_u, tile_v))
 
+    # Everything below about 2.05 m has been repainted a deeper green; above it the old coat has faded to a paler
+    # olive green, with a sharp level line between them (c008 on the coil: 2.16 and 1.96 m; c006 on the hairpin: 2.02).
+    PAINT_LINE = 2.05
     coil_paint("coil_paint")
-    NRM["coil_paint"] = []
+    coil_paint("coil_paint_faded", base=(96.0, 146.0, 66.0))
+    NRM["coil_paint"], NRM["coil_paint_faded"] = [], []
     CX = [-35.004 - 3.24, 127.724 + 3.36, 240.139]                             # first loop's centre, axis heading
     CR = [2.523, 2.373, 2.221, 1.778, 1.402, 1.044, 0.913]                     # loop radius at the knots
     CH = [2.571, 2.495, 2.284, 1.687, 0.925, 0.271, -0.032]                    # loop centre height at the knots
@@ -883,12 +887,12 @@ def _stage1():
         rings.append(C[i][None] + nr * TUBE_R)
     CIRC = 2 * math.pi * TUBE_R
 
-    def clip_up(P, N, UV):
-        """Sutherland-Hodgman against the deck: keeps the part of a face above the floor."""
+    def clip_up(P, N, UV, h=0.0, sg=1.0):
+        """Sutherland-Hodgman against a level plane: keeps the part of a face above height h (below, if sg is -1)."""
         oP, oN, oU = [], [], []
         for k_ in range(len(P)):
             a, b = k_, (k_ + 1) % len(P)
-            za, zb = P[a][2], P[b][2]
+            za, zb = sg * (P[a][2] - h), sg * (P[b][2] - h)
             if za >= 0:
                 oP.append(P[a])
                 oN.append(N[a])
@@ -901,9 +905,20 @@ def _stage1():
                 oU.append(UV[a] + (UV[b] - UV[a]) * f)
         return oP, oN, oU
 
+    def paint_face(P, N, UV, z0):
+        """A face of green tube, split at the paint line into the fresh coat below and the faded one above."""
+        for mat, sg in (("coil_paint", -1.0), ("coil_paint_faded", 1.0)):
+            if all(sg * (p_[2] + z0 - DECK_Z - PAINT_LINE) >= 0 for p_ in P):
+                Pk, Nk, Uk = P, N, UV
+            else:
+                Pk, Nk, Uk = clip_up(P, N, UV, PAINT_LINE + DECK_Z - z0, sg)
+                if len(Pk) < 3:
+                    continue
+            g.poly(mat, [(p_[0], p_[1], p_[2] + z0) for p_ in Pk], [tuple(map(float, x_)) for x_ in Uk])
+            NRM[mat].append([tuple(map(float, n_)) for n_ in Nk])
+
     def coil_face(P, N, UV):
-        g.poly("coil_paint", [(p_[0], p_[1], p_[2] + COIL_Z) for p_ in P], [tuple(map(float, x_)) for x_ in UV])
-        NRM["coil_paint"].append([tuple(map(float, n_)) for n_ in N])
+        paint_face(P, N, UV, COIL_Z)
 
     for i in range(len(C) - 1):
         for j in range(NS):
@@ -920,6 +935,136 @@ def _stage1():
     # the open end, cut square (c008): a disc facing back along the tube
     disc = [np.array((0.15 + 0.15 * math.cos(a_), 0.15 + 0.15 * math.sin(a_))) for a_ in ang[:NS]]
     coil_face([rings[0][j] for j in range(NS)][::-1], [-T[0]] * NS, disc[::-1])
+
+    # ------------------------------------------------------------ the green hairpin and the stainless link (Gate 7)
+    # Part of the same work: a green painted tube bent into a tall hairpin, both legs standing side by side on the
+    # deck east of the link, its bend hooked through a leaning stainless U of flat bar. Each leg of the hairpin is a
+    # cubic in its own leaning plane, fitted to six Street View views (E1TS, OQM2, sJAT, LE0L) and the photo c006:
+    # within 1 px on Street View, 4 px on c006. The link is a bent flat bar fitted to its outline in five views.
+    HP_F = (-0.007, -0.001, 263.311, -0.322, 3.558, 5.026, 6.302, 7.611, 2.188)    # dfx, dfy, plane bearing, plane lean, h1, s2, z2, s3, z3
+    HP_B = (-0.051, 0.070, 266.676, -3.232, 4.112, 5.964, 7.050, 7.170, 2.081)
+    LINK = (-27.540, 134.100, 89.953, 61.955, -87.520, 2.835, 0.426, 0.429, 0.934, 0.374)    # foot x, y, lean bearing, elevation, roll, leg length, half spacing at the bend, width, depth, half spacing at the deck
+    def link_steel(name, tile_u=1.0, tile_v=1.0, px=256):
+        """Brushed stainless: fine streaks along the bar, soft grey smudges, darker grime near the deck (c006, E1TS)."""
+        nu, nv = int(tile_u * px), int(tile_v * px)
+        ky = np.fft.fftfreq(nv)[:, None] * nv / tile_v
+        kx = np.fft.fftfreq(nu)[None, :] * nu / tile_u
+
+        def smooth(su, sv):                 # FFT-filtered noise, wraps both ways; su, sv: blur in metres along u, v
+            f = np.fft.fft2(rng.normal(0, 1, (nv, nu)))
+            o = np.real(np.fft.ifft2(f * np.exp(-(kx * su) ** 2 - (ky * sv) ** 2)))
+            return (o - o.mean()) / o.std()
+        img = np.zeros((nv, nu, 3)) + np.array([168.0, 168.0, 164.0])
+        img += smooth(0.4, 0.002)[..., None] * 5.0                             # brushing runs along u (the bar)
+        img += smooth(0.08, 0.08)[..., None] * np.array([7.0, 7.0, 6.0])       # handling smudges
+        img += rng.normal(0, 1.5, (nv, nu, 1))
+        save(name, img, (tile_u, tile_v))
+
+    link_steel("link_steel")
+    NRM["link_steel"] = []
+
+    def sweep(Cc, rad, ns, z0):
+        """A round green tube along the polyline Cc (deck-relative), clipped at the deck, split at the paint line."""
+        T = np.gradient(Cc, axis=0)
+        T /= np.linalg.norm(T, axis=1)[:, None]
+        sg = np.r_[0, np.cumsum(np.linalg.norm(np.diff(Cc, axis=0), axis=1))]
+        ref = np.cross(T[0], (1.0, 0.0, 0.0))
+        ref /= np.linalg.norm(ref)
+        an = np.linspace(0, 2 * np.pi, ns + 1)
+        RG, NG = [], []
+        for i in range(len(Cc)):
+            ref = ref - T[i] * float(np.dot(ref, T[i]))
+            ref /= np.linalg.norm(ref)
+            b2 = np.cross(T[i], ref)
+            nr = np.cos(an)[:, None] * ref[None] + np.sin(an)[:, None] * b2[None]
+            NG.append(nr)
+            RG.append(Cc[i][None] + nr * rad)
+        circ = 2 * math.pi * rad
+        for i in range(len(Cc) - 1):
+            for j in range(ns):
+                P = [RG[i][j], RG[i][j + 1], RG[i + 1][j + 1], RG[i + 1][j]]
+                N = [NG[i][j], NG[i][j + 1], NG[i + 1][j + 1], NG[i + 1][j]]
+                UV = [np.array((sg[i], circ * j / ns)), np.array((sg[i], circ * (j + 1) / ns)),
+                      np.array((sg[i + 1], circ * (j + 1) / ns)), np.array((sg[i + 1], circ * j / ns))]
+                if max(p_[2] for p_ in P) <= 0:
+                    continue
+                if min(p_[2] for p_ in P) < 0:
+                    P, N, UV = clip_up(P, N, UV)
+                    if len(P) < 3:
+                        continue
+                paint_face(P, N, UV, z0)
+
+    def bez3(Pc, t):
+        t = t[:, None]
+        return (1 - t) ** 3 * Pc[0] + 3 * (1 - t) ** 2 * t * Pc[1] + 3 * (1 - t) * t ** 2 * Pc[2] + t ** 3 * Pc[3]
+
+    HP_FEET = np.array([-18.88, 134.78])                   # where both legs meet the deck (aerial shadow)
+    ha = math.radians(260.0)
+    HP_NR = -np.array([-math.cos(ha), math.sin(ha)])       # south, across the pair
+    if HP_NR[1] > 0:
+        HP_NR = -HP_NR
+    HP_R = 0.2
+    legs = []
+    for side, (dfx, dfy, phi, tau, h1, s2, z2, s3, z3) in ((1, HP_F), (-1, HP_B)):
+        f = HP_FEET + side * HP_NR * 0.2 + np.array([dfx, dfy])
+        a_ = math.radians(phi)
+        es = np.array([math.sin(a_), math.cos(a_), 0.0])
+        nh = np.array([es[1], -es[0], 0.0])
+        tt_ = math.radians(tau)
+        ez = np.array([0, 0, 1.0]) * math.cos(tt_) + nh * math.sin(tt_)
+        Qb = bez3(np.array([(0, 0), (0, h1), (s2, z2), (s3, z3)]), np.linspace(0, 1, 140))
+        Qb = np.vstack([[(0, -0.6), (0, -0.3)], Qb])      # carried straight on below the deck, then cut by it
+        legs.append(np.r_[f, 0.0][None] + Qb[:, 0:1] * es[None] + Qb[:, 1:2] * ez[None])
+    # the bend: the two leg ends joined through the link, leaving each along its own tangent
+    eF, eB = legs[0][-1], legs[1][-1]
+    tF = legs[0][-1] - legs[0][-2]
+    tB = legs[1][-1] - legs[1][-2]
+    k_ = 0.55 * np.linalg.norm(eF - eB) + 0.25
+    hook = bez3(np.array([eF, eF + tF / np.linalg.norm(tF) * k_, eB + tB / np.linalg.norm(tB) * k_, eB]),
+                np.linspace(0, 1, 40))
+    sweep(np.vstack([legs[0], hook[1:-1], legs[1][::-1]]), HP_R, 20, DECK_Z)
+
+    # the stainless link: a flat bar bent into a U, leaning east, cut by the deck
+    lfx, lfy, laz, lel, lrho, LL, LC, LW, LT, LCF = LINK
+    a_, e_ = math.radians(laz), math.radians(lel)
+    ld = np.array([math.sin(a_) * math.cos(e_), math.cos(a_) * math.cos(e_), math.sin(e_)])
+    le0 = np.cross(ld, (0, 0, 1.0))
+    le0 /= np.linalg.norm(le0)
+    ln0 = np.cross(ld, le0)
+    r_ = math.radians(lrho)
+    le = math.cos(r_) * le0 + math.sin(r_) * ln0
+    ln = np.cross(ld, le)
+    LF = np.array([lfx, lfy, 0.0])
+    sl = np.linspace(-1.5, LL, 10)[:, None] / LL               # the legs close in slightly towards the deck
+    th_ = np.linspace(0, math.pi, 40)[1:-1]
+    Cl = np.vstack([LF + (LCF + (LC - LCF) * sl) * le + sl * LL * ld,
+                    LF + LL * ld + LC * (np.cos(th_)[:, None] * le + np.sin(th_)[:, None] * ld),
+                    LF - (LCF + (LC - LCF) * sl[::-1]) * le + sl[::-1] * LL * ld])
+    Tl = np.gradient(Cl, axis=0)
+    Tl /= np.linalg.norm(Tl, axis=1)[:, None]
+    rl = np.cross(ln[None], Tl)
+    rl /= np.linalg.norm(rl, axis=1)[:, None]
+    sgl = np.r_[0, np.cumsum(np.linalg.norm(np.diff(Cl, axis=0), axis=1))]
+    corner = [(1, 1), (1, -1), (-1, -1), (-1, 1)]
+    off = [0.0, LT, LT + LW, 2 * LT + LW]                  # u runs along the bar, v around its section
+    sides = [Cl + a * LW / 2 * rl + b * LT / 2 * ln[None] for a, b in corner]
+    for i in range(len(Cl) - 1):
+        for k in range(4):
+            P = [sides[k][i], sides[(k + 1) % 4][i], sides[(k + 1) % 4][i + 1], sides[k][i + 1]]
+            w_ = LW if k % 2 == 0 else LT
+            UV = [np.array((sgl[i], off[k])), np.array((sgl[i], off[k] + w_)),
+                  np.array((sgl[i + 1], off[k] + w_)), np.array((sgl[i + 1], off[k]))]
+            nf = (rl[i], -ln, -rl[i], ln)[k]
+            nf2 = (rl[i + 1], -ln, -rl[i + 1], ln)[k]
+            N = [nf, nf, nf2, nf2]
+            if max(p_[2] for p_ in P) <= 0:
+                continue
+            if min(p_[2] for p_ in P) < 0:
+                P, N, UV = clip_up(P, N, UV)
+                if len(P) < 3:
+                    continue
+            g.poly("link_steel", [(p_[0], p_[1], p_[2] + DECK_Z) for p_ in P], [tuple(map(float, x_)) for x_ in UV])
+            NRM["link_steel"].append([tuple(map(float, n_)) for n_ in N])
 
     # ------------------------------------------------------------ hand over to Blender
     data = {"parts": g.parts, "tile": TILE, "text": TEXT, "tex": TEX, "out": OUT, "nrm": NRM}
