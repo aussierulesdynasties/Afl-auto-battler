@@ -73,7 +73,7 @@ const TEAM_BOOKKEEPING_PREFIXES := ["d50_end_"]
 ## before #2210 set the value above and merged after it, and main's season moved. Linux from a local run of main at c6bbd900c (the local value at
 ## #2210's merge matched its CI value); Windows not re-measured.
 ## Bug bash batch E redrew it on top: rushed behinds at the 2026 rate (P2-1).
-const GOLDEN_SEASON := {"Windows": "c793e347c0cb20c2d3604d45713bcf0a", "Linux": "LINUX_PENDING"}
+const GOLDEN_SEASON := {"Windows": "c793e347c0cb20c2d3604d45713bcf0a", "Linux": "50b96b226680e347bb929fd63ec6a250"}
 
 ## A small league standing in for a legacy set until the 1990 files ship:
 ## 42 real players re-dated to a 1989 data season, a 1990 first season, and
