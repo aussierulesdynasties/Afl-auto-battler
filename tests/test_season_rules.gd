@@ -15,21 +15,15 @@ const SUITE_SEED := 2027
 
 ## tests/season_golden.gd's digest of the game's league, recorded from the
 ## code before season rules (commit 6e3e96a8). Any change is a change to the
-## 2026 fixture or finals. The played seasons depend on the ratings data:
-## GOLDEN as tools/run_tests.sh and CI run it (AFL_SKIP_OVR_ROWS=1, the
-## ratings overrides off), PLAYED_WITH_OVR when the suite runs on its own.
+## 2026 fixture or finals. The played seasons depend on the ratings data.
 const GOLDEN := {
 	"fixture:1": "88379d64dfcfdf22f88fcc1bbcc1bab4",
 	"fixture:2": "15aab1f43b8c605b37bc9eef32c73406",
 	"fixture:3": "928bc55d620e04e745cf7adb88b56ae8",
 	"fixture:2027": "57bffb38d600d4036767ef691d623a80",
 	"fixture:90210": "1734a8fcc9068e3e444e293a25f944b4",
-	"played:2027": "7ab2ad0d721bf816332c761bc81951a1",
-	"played:7": "402e1febb45c2a0dc4bae498bb661f44",
-}
-const PLAYED_WITH_OVR := {
-	"played:2027": "264d2cbc643edf485133bac629aa0926",
-	"played:7": "40b9adb0d872ef0f0a7d70fd996ebd4e",
+	"played:2027": "4d9a301634a8763ec831a78b9ad368ca",
+	"played:7": "8ce4c0ed8d898bfb7a36110bc2d010e5",
 }
 
 const Golden := preload("res://tests/season_golden.gd")
@@ -57,6 +51,7 @@ func run() -> void:
 	_t("_test_week_titles")
 	_t("_test_past_season_played_through")
 	_t("_test_save_round_trip")
+	_t("_test_percentage_order")
 	GameState.replay_seed = 0
 	print(Ran.line("Season rules", self))
 
@@ -77,8 +72,12 @@ func _t(test: String, args := []) -> Variant:
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+## `n` clubs from the game's league; past its 18, Tasmania makes a 19th (a
+## Forge club in a past season makes the league odd the same way).
 func _codes(n: int) -> Array:
 	var all: Array = GameDB.active_clubs(2027).duplicate()
+	if n > all.size():
+		all.append("TAS")
 	return all.slice(0, n)
 
 
@@ -202,7 +201,11 @@ func _test_fixture_shapes() -> void:
 	# [year, clubs, rounds, games each]
 	var cases := [[1990, 14, 22, 22], [1991, 15, 24, 22], [1993, 15, 22, 20], [1994, 15, 24, 22],
 			[1997, 16, 22, 22], [2005, 16, 22, 22], [2012, 18, 23, 22], [2020, 18, 18, 17],
-			[2023, 18, 24, 23], [2024, 18, 25, 23]]
+			[2023, 18, 24, 23], [2024, 18, 25, 23],
+			# 19 clubs can't all play 23 (19 x 23 is odd), so all play 22 in
+			# 24 rounds, two byes each (director, 2026-11-25: "All play 22";
+			# bug bash P1-8).
+			[2023, 19, 24, 22], [2024, 19, 24, 22]]
 	for c in cases:
 		var y := int(c[0])
 		var n := int(c[1])
@@ -476,6 +479,33 @@ func _test_golden_2026() -> void:
 	_check(GOLDEN.size() == Golden.FIXTURE_SEEDS.size() + Golden.PLAYED_SEEDS.size(), "The golden digest is recorded")
 	for k in GOLDEN:
 		var want := str(GOLDEN[k])
-		if not GameDB.skip_ovr_overrides and PLAYED_WITH_OVR.has(k):
-			want = str(PLAYED_WITH_OVR[k])
 		_check(str(d.get(k, "")) == want, "2026 league unchanged: %s (%s, was %s)" % [k, d.get(k, ""), want])
+
+
+## Level on points, the better percentage is ahead, compared exactly (bug bash
+## P3-7): 1000 for and 999 against (100.1001%) beats 1001 and 1000 (100.0999%),
+## which the old near-enough compare called level and gave to the club with
+## more points for; and a club yet to concede is ahead of one that has.
+func _test_percentage_order() -> void:
+	var s := _season(2026, 18)
+	var codes: Array = s.ladder.keys()
+	_check(codes.size() == 18, "A ladder of 18 clubs (%d)" % codes.size())
+	if codes.size() < 4:
+		return
+	var rows := {codes[0]: [1000, 999], codes[1]: [1001, 1000], codes[2]: [50, 0], codes[3]: [500, 100]}
+	for c in codes:
+		var r: Dictionary = s.ladder[c]
+		var fp: Array = rows.get(c, [0, 0])
+		r["w"] = 2 if rows.has(c) else 0
+		r["d"] = 0
+		r["l"] = 0
+		r["pf"] = fp[0]
+		r["pa"] = fp[1]
+	s.recalc_ladder()
+	var order: Array = s.ladder_sorted().map(func(r): return str(r["code"]))
+	_check(order.slice(0, 4) == [codes[2], codes[3], codes[0], codes[1]],
+			"On 8 points: no points against, then 500%%, then 100.1001%%, then 100.0999%% (%s)" % str(order.slice(0, 4)))
+	_check(Season.pct_order(s.ladder[codes[0]], s.ladder[codes[1]]) == 1, "100.1001% is ahead of 100.0999%")
+	_check(Season.pct_order(s.ladder[codes[3]], s.ladder[codes[2]]) == -1, "500% is behind a club yet to concede")
+	_check(Season.pct_order({"pf": 0, "pa": 0}, {"pf": 0, "pa": 80}) == 0, "A club yet to play is level with one yet to score")
+	_check(Season.pct_order({"pf": 900, "pa": 900}, {"pf": 450, "pa": 450}) == 0, "100% is level with 100%")

@@ -10,6 +10,7 @@ extends RefCounted
 ##                     deal an AI club accepts that lifts your best 22
 ##   policy "fa"     - AI-style draft; each off-season you bid the asking price
 ##                     for the best free agents the cap allows
+const Ovr := preload("res://tests/ovr.gd")
 
 var policy := "ai"
 var club := "MEL"
@@ -17,7 +18,7 @@ var club := "MEL"
 func _strength(list: Array) -> float:
 	var ovr := []
 	for p in list:
-		ovr.append(int(p["overall"]))
+		ovr.append(int(Ovr.of(p)))
 	ovr.sort()
 	ovr.reverse()
 	var t := 0.0
@@ -46,7 +47,7 @@ func _strength_after(out_ids: Dictionary, in_players: Array) -> float:
 func _next_strength(list: Array) -> float:
 	var ovr := []
 	for p in list:
-		ovr.append(float(p["overall"]) - 1.5 * maxf(0.0, float(p.get("age", 25.0)) + 1.0 - 29.0))
+		ovr.append(float(Ovr.of(p)) - 1.5 * maxf(0.0, float(p.get("age", 25.0)) + 1.0 - 29.0))
 	ovr.sort()
 	ovr.reverse()
 	var t := 0.0
@@ -74,9 +75,9 @@ func _games(p: Dictionary) -> int:
 
 func _ledger_entry(p: Dictionary, side: String, year: int) -> Dictionary:
 	return {"id": str(p["id"]), "name": GameDB.player_display_name(p), "side": side, "year": year,
-		"age": float(p.get("age", 25.0)), "ovr": int(p["overall"]), "pot": int(p.get("potential", p["overall"])),
+		"age": float(p.get("age", 25.0)), "ovr": int(Ovr.of(p)), "pot": int(p.get("potential", Ovr.of(p))),
 		"projected": TradeValue.future_rating(p), "games_at": _games(p),
-		"peak": int(p["overall"]), "last": int(p["overall"]), "games_now": _games(p), "seen": true}
+		"peak": int(Ovr.of(p)), "last": int(Ovr.of(p)), "games_now": _games(p), "seen": true}
 
 ## Each season's end: where every traded player has got to.
 func _ledger_update() -> void:
@@ -86,8 +87,8 @@ func _ledger_update() -> void:
 			e["seen"] = false
 			continue
 		e["seen"] = true
-		e["last"] = int(p["overall"])
-		e["peak"] = maxi(int(e["peak"]), int(p["overall"]))
+		e["last"] = int(Ovr.of(p))
+		e["peak"] = maxi(int(e["peak"]), int(Ovr.of(p)))
 		e["games_now"] = _games(p)
 
 func _ledger_report() -> void:
@@ -122,9 +123,9 @@ func _trade_bot() -> void:
 		if str(code) == club or made >= 4:
 			continue
 		var theirs: Array = (GameState.season.lists[code] as Array).duplicate()
-		theirs.sort_custom(func(a, b): return int(a["overall"]) > int(b["overall"]))
+		theirs.sort_custom(func(a, b): return int(Ovr.of(a)) > int(Ovr.of(b)))
 		var mine: Array = GameState.my_list.duplicate()
-		mine.sort_custom(func(a, b): return int(a["overall"]) > int(b["overall"]))
+		mine.sort_custom(func(a, b): return int(Ovr.of(a)) > int(Ovr.of(b)))
 		var gives := []
 		for i in range(10, mini(40, mine.size())):
 			gives.append([mine[i]])
@@ -145,8 +146,8 @@ func _trade_bot() -> void:
 				if bool(v.get("ok", false)):
 					best_gain = gain
 					best = {"mine": out_ids.keys(), "theirs": [str(t["id"])], "gain": gain,
-						"desc": "%s (%d, age %d) for %s" % [GameDB.player_display_name(t), int(t["overall"]), int(t.get("age", 0)),
-							", ".join(g.map(func(p): return "%d/age %d" % [int(p["overall"]), int(p.get("age", 0))]))]}
+						"desc": "%s (%d, age %d) for %s" % [GameDB.player_display_name(t), int(Ovr.of(t)), int(t.get("age", 0)),
+							", ".join(g.map(func(p): return "%d/age %d" % [int(Ovr.of(p)), int(p.get("age", 0))]))]}
 		if not best.is_empty():
 			var entries := []
 			for p in GameState.my_list:
@@ -164,12 +165,12 @@ func _trade_bot() -> void:
 
 func _fa_bot() -> void:
 	var fas: Array = GameState.free_agents.duplicate()
-	fas.sort_custom(func(a, b): return int(a["overall"]) > int(b["overall"]))
+	fas.sort_custom(func(a, b): return int(Ovr.of(a)) > int(Ovr.of(b)))
 	var bids := 0
 	for p in fas.slice(0, 12):
 		if bids >= 4:
 			break
-		if int(p["overall"]) <= int(_weakest_22()):
+		if int(Ovr.of(p)) <= int(_weakest_22()):
 			continue
 		var terms: Dictionary = GameState.free_agent_terms(str(p["id"]))
 		if bool(terms.get("refuse", false)):
@@ -178,12 +179,12 @@ func _fa_bot() -> void:
 		var r: Dictionary = GameState.offer_free_agent(str(p["id"]), int(want["salary"]) + int(terms.get("premium", 0)), int(want["years"]))
 		if bool(r.get("ok", false)):
 			bids += 1
-			print("%s seed %d      FA bid: %s (%d, age %d) %s" % [policy, seed_n, GameDB.player_display_name(p), int(p["overall"]), int(p.get("age", 0)), str(r.get("reason", ""))])
+			print("%s seed %d      FA bid: %s (%d, age %d) %s" % [policy, seed_n, GameDB.player_display_name(p), int(Ovr.of(p)), int(p.get("age", 0)), str(r.get("reason", ""))])
 
 func _weakest_22() -> int:
 	var ovr := []
 	for p in GameState.my_list:
-		ovr.append(int(p["overall"]))
+		ovr.append(int(Ovr.of(p)))
 	ovr.sort()
 	ovr.reverse()
 	return int(ovr[mini(21, ovr.size() - 1)])
@@ -223,7 +224,7 @@ func run() -> void:
 	GameState.reset()
 	GameState.autosave_enabled = false
 	var pool: Array = GameDB.all_players_sorted() + GameDB.all_draftees_sorted()
-	pool.sort_custom(func(a, b): return a["overall"] > b["overall"])
+	pool.sort_custom(func(a, b): return Ovr.of(a) > Ovr.of(b))
 	GameState.draft = Draft.new(pool, GameDB.active_clubs(GameState.season_year).duplicate(), seed)
 	GameState.draft.start_for_user(club)
 	_run_draft(GameState.draft)

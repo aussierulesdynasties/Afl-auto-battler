@@ -90,7 +90,7 @@ func _test_words() -> void:
 	_check(_tl.markup("Lockdown unit").contains("trait:lockdown_unit"), "Lockdown unit is not read as Lockdown")
 	_check(_tl.markup("Lockdowns").find("[url") < 0, "a name inside a longer word is left alone")
 	_check(_tl.earn_text("hothead").contains(str(Traits.DEFS["hothead"]["max"])), "Hothead says its line")
-	_check(_tl.earn_text("wet_weather").contains(str(Traits.WET_WEATHER["contested"])), "Wet-weather says its line")
+	_check(_tl.earn_text("wet_weather").contains(str(Traits.WET_WEATHER["contested_ball"])), "Wet-weather says its line")
 	# Bug bash 5: an earned trait's sheet says a player carries up to five.
 	_check(_tl.earn_text("bull").contains("up to five") and not _tl.earn_text("hothead").contains("up to five"),
 			"An earned trait's sheet names the five-trait cap; a weakness's does not")
@@ -114,8 +114,8 @@ func _touch(pos: Vector2, down: bool) -> void:
 func _test_sheet_flow(club: String, sz: Vector2i) -> void:
 	var tag := "%s %dx%d" % [club, sz.x, sz.y]
 	_gs.reset()
-	_gs.start_season(club, _db.club_list(club))
 	_gs.replay_seed = SUITE_SEED
+	_gs.start_season(club, _db.club_list(club))
 	root.size = sz
 	var host := Control.new()
 	host.name = "Screen"
@@ -215,9 +215,9 @@ func _test_line_flow(sz: Vector2i) -> void:
 func _test_training_news(sz: Vector2i) -> void:
 	var tag := "news %dx%d" % [sz.x, sz.y]
 	_gs.reset()
+	_gs.replay_seed = SUITE_SEED
 	_gs.set_setting("seen_training_intro", true)
 	_gs.start_season("FRE", _db.club_list("FRE"))
-	_gs.replay_seed = SUITE_SEED
 	var a: Dictionary = _gs.my_list[0]
 	_gs.last_training_report = {"count": 1, "label": "Round 1", "auto": {
 			"rises": [], "traits": [[str(a["id"]), "sharpshooter"]], "at_pot": []}}
@@ -308,7 +308,7 @@ func _test_synergy_fit(sz: Vector2i) -> void:
 				break
 		if not p.is_empty():
 			break
-	p["attr"]["contested"] = 95
+	p["attr"]["contested_ball"] = 95
 	_check(Traits.of(p).has("bull"), "%s: the recruit is a contested bull" % tag)
 	var ground: Array = _gs.my_squad().ground
 	var rows: Array = _gs.synergy_fit(p)

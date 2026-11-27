@@ -27,7 +27,7 @@ func _run() -> void:
 	await process_frame
 	var state = root.get_node("GameState")
 	var db = root.get_node("GameDB")
-	load("res://scripts/ui/UiKit.gd").apply_appearance("dark")
+	load("res://scripts/ui/UiKit.gd").apply_palette()
 	state.autosave_enabled = false
 	state.save_path = "user://capture_coty.save"
 	state.settings_path = "user://capture_coty.cfg"

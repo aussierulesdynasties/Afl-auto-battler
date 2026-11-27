@@ -150,11 +150,14 @@ func _test_high_pressure_forward() -> void:
 		if str(p["role"]) == "FWD":
 			target = str(p["id"])
 			break
-	# Sixteen matches: four left the ratio a coin toss. Main measures x1.55 and
-	# the under-10-games ratings (director 2026-11-17) x1.39 (9.6 -> 13.4): the
-	# kids around him rate lower, so he already presses more at 40.
-	var ordinary := _player_acts(target, 40.0, 16)
-	var elite := _player_acts(target, 95.0, 16)
+	# Sixty-four matches (director 2026-11-26, "64 matches"): sixteen read x1.24
+	# once the centre-clearance tackler came from the four at the bounce (a
+	# forward isn't there), where sixty-four read x1.42 (x1.44 before), so the
+	# sixteen-match figure was the luck of the seeds. Under-10-games ratings
+	# (director 2026-11-17): the kids around him rate lower, so he already
+	# presses more at 40.
+	var ordinary := _player_acts(target, 40.0, 64)
+	var elite := _player_acts(target, 95.0, 64)
 	_check(elite > ordinary * 1.3,
 			"A high-Pressure forward generates far more pressure acts (%.1f -> %.1f a game)" % [ordinary, elite])
 	_check(elite < 40.0, "...but not every one on the ground (%.1f a game)" % elite)
@@ -249,8 +252,10 @@ func _test_player_rating() -> void:
 func _test_creating() -> void:
 	var sim := _sim(5)
 	var shooter: Dictionary = sim.squads[0].ground.filter(func(p): return str(p["role"]) == "FWD")[0]
-	var low := {"id": "f_low", "role": "MID", "attr": {"creating": 30.0}}
-	var high := {"id": "f_high", "role": "MID", "attr": {"creating": 70.0}}
+	var low := {"id": "f_low", "role": "MID", "attr": {"vision": 30.0}}
+	# One under the Playmaker line (Vision 70 since the rebuild), so the trait's
+	# own lift stays out of this ratio.
+	var high := {"id": "f_high", "role": "MID", "attr": {"vision": float(Traits.DEFS["playmaker"]["min"]) - 1.0}}
 	var p_low := sim.shot_chance(0, shooter, true, false, false, low)
 	var p_high := sim.shot_chance(0, shooter, true, false, false, high)
 	_check(p_high > p_low, "A creative inside-50 kick makes a better shot")

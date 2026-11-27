@@ -28,7 +28,7 @@ func _run() -> void:
 	state.autosave_enabled = false
 	state.save_path = "user://capture_copy_voice_draft.save"
 	state.settings_path = "user://capture_copy_voice_draft.cfg"
-	load("res://scripts/ui/UiKit.gd").apply_appearance("dark")
+	load("res://scripts/ui/UiKit.gd").apply_palette()
 	state.replay_seed = 2027
 	state.reset()
 	state.start_season(_club, db.club_list(_club))

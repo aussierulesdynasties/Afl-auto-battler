@@ -1,4 +1,5 @@
 extends RefCounted
+const Ovr := preload("res://tests/ovr.gd")
 ## Run by tests/run_trainrep_tests.gd (suite "trainrep").
 ## The monthly training report (TrainingReport.gd, TrainingReportSheet.gd;
 ## director, 2026-10-14: "A report every 4 rounds"): the block snapshot, a
@@ -33,8 +34,8 @@ func _settle(n := 6) -> void:
 
 func _fresh() -> void:
 	GameState.reset()
-	GameState.start_season("FRE", GameDB.club_list("FRE"))
 	GameState.replay_seed = SUITE_SEED
+	GameState.start_season("FRE", GameDB.club_list("FRE"))
 	GameState.tutorials = false
 	# The club cards have their own test below: none opens over these unless asked.
 	GameState.event_sheets = false
@@ -63,6 +64,7 @@ func _report_landed() -> void:
 	_skip_rounds(1)
 	GameState.last_phase = "regular"
 	TrainingReport.after_game(GameState)
+	TrainingReport.after_round(GameState)
 	_check(TrainingReport.hub_due(GameState), "(setup) the round-4 report is due")
 
 
@@ -108,7 +110,7 @@ func _test_snapshot_and_report() -> void:
 	_fresh()
 	var before := {}
 	for p in GameState.my_list:
-		before[str(p["id"])] = {"ovr": int(p["overall"]), "attr": (p["attr"] as Dictionary).duplicate()}
+		before[str(p["id"])] = {"ovr": int(Ovr.of(p)), "attr": (p["attr"] as Dictionary).duplicate()}
 	_rounds(1)
 	_check(not GameState.training_block.is_empty(), "the block begins with the first game")
 	_check(int(GameState.training_block.get("from", 0)) == 1, "the block starts at round 1")
@@ -361,7 +363,13 @@ func _test_taps(size: Vector2i) -> void:
 			var grid: Node = tr.find_child("PlayerLearn", true, false)
 			_check(grid != null, "%s: on his new-position choices" % tag)
 			var learn_b: Button = grid.find_child("PlayerLearn_" + GameState.LEARN_PREFIX + key0, false, false) as Button if grid != null else null
-			_check(learn_b != null and learn_b.text == "Learn " + word0, "%s: his \"Learn %s\" choice is there" % [tag, word0])
+			# On a PC the choices are a stat sheet (row 171): the words sit in the
+			# row's SheetWords line and the button itself has no text.
+			var shown_w := ""
+			if learn_b != null:
+				var sw := learn_b.find_child("SheetWords", true, false) as Label
+				shown_w = sw.text if sw != null else learn_b.text
+			_check(shown_w == "Learn " + word0, "%s: his \"Learn %s\" choice is there (reads \"%s\")" % [tag, word0, shown_w])
 			var cost: Control = tr.find_child("LearnCost", true, false)
 			_check(cost != null, "%s: what learning costs is said before the tap" % tag)
 			if learn_b != null:

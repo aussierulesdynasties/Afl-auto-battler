@@ -54,14 +54,12 @@ ALLOW = {
 ## lines they replaced.
 STATS_PASS = {
     "scripts/ui/StatGuide.gd": [[
-        "Wins the clearance and holds the ball in a tackle. Our inside mids win or lose the stoppages.",
+        "Wins the clearance and holds the ball in a tackle or the wet. Our inside mids win or lose the stoppages.",
         "Wins the hit-outs at the bounce and stoppages. Our first ruck matters.",
-        "Runs the ball forward. Good carriers through the middle feed our attack.",
-        "Gets the shots inside 50 and kicks the goals. Most of our scoring comes from it.",
+        "Kicks straight. Turns his shots into goals instead of behinds.",
         "Tackles and hurries the opposition. Most of our defence comes from it.",
-        "Match-winning class. Lifts our side at the stoppages. It weighs heavily in his overall.",
         "Where we expect him to peak. It is not a limit. His growth slows as he nears it.",
-        "Contest is our stoppage work. Attack is our forwards and carry. Defence is our pressure and intercept.",
+        "Contest is our stoppage work. Attack is our forwards and our midfielders' running. Defence is our defenders' pressure and how they read the play.",
         "A standout stat earns a trait. The right mix of them on the ground switches on a synergy. The Team screen shows ours, and when one is a player short",
         "Every player risks injury each game. Durability lowers the risk. Tired players win less ball. Rotate them from the coach's box.",
         "Players earn development every game. What each one is developing as decides where it goes. A stat costs more the higher it already is. Past POT it costs much more.",
@@ -80,7 +78,6 @@ STATS_PASS = {
     ]],
     "scripts/ui/OptionsSheet.gd": [[
         "Copies the build, the round, this screen and the last 20 lines of the match feed. Paste it into a message. Nothing is sent from the game.",
-        "Changes the screens only. Club colours and the ground stay as they are.",
         "A light buzz when you press a button. A firmer one when a result lands.",
         "Sim the week and Sim to Round 1 play our match without you. With this on, they ask first.",
         "Fullscreen fills the screen with no border. Window opens maximised. Alt+Enter switches.",
@@ -88,7 +85,6 @@ STATS_PASS = {
         "Draws 30 frames a second instead of 60. Uses less battery. Matches and scenes play the same, a little less smoothly.",
         "Off skips the scenes. Every call and result stays the same.",
         "Prototypes for judging on a phone. The match plays the same either way.",
-        "For playtesting. The centre ball-up call comes at the first centre ball-up of every last quarter you coach, whatever the score.",
         "Back up writes your career to a file you keep. Use it to move devices or keep the career safe. Loading a backup or an earlier save keeps the career it replaces in the list below. You can go back to it.",
     ], [
         "Copies the build, your round, this screen and the last twenty lines of the match feed, ready to paste into a message. Nothing is sent from the game.",
@@ -314,7 +310,7 @@ DRAFT_PASS = {
         "your recruiters' read", "Your listed players", "of the side's drilling", "the plan plays part of the way up"]],
     "scripts/ui/FirstVisitIntro.gd": [[
         "Here we pick the kids who will carry our club in five years.", "When our pick comes up, choose a player from the pool.",
-        "Each player we take costs his salary. Our list must fit under the cap. It must have at least two rucks.",
+        "Each player we take costs his salary. Our list must fit under the cap. It must have at least one ruck.",
         "The position counts show where we're short.", "Four tests on the day. Every club sees the same results.",
         "They tell us about the athlete: speed, running, spring, kicking. They don't tell us he can play.",
         "His junior numbers are on his sheet, with our scouts' guess at OVR and POT. Tap a name to weigh him up.",
@@ -409,7 +405,7 @@ PROFILE_PASS = {
     "scripts/state/GameState.gd": [[
         "\"Near his potential\"", "\"At his potential\"", "\"Beyond his potential\"",
     ], ["\"Near his projected peak\"", "\"At his projected peak\"", "\"Past his projection\""]],
-    "scripts/sim/Trust.gd": [[
+    "scripts/sim/Opinion.gd": [[
         "%s's opinion of you: %d out of 100", "The player's opinion of you: %d out of 100",
     ], ["Opinion of you %d/100", "Opinion of you %d out of 100", "His opinion of you: %d"]],
 }

@@ -109,27 +109,6 @@
 		]
 	},
 	{
-		"id": "brb_homesick",
-		"club": "BRB",
-		"controversy": false,
-		"category": "family",
-		"private": true,
-		"subject": {"kind": "player", "pick": "random"},
-		"title": ["Homesick"],
-		"text": ["{name}'s family is a two-hour flight south. He has asked for a week at home in the middle of the season."],
-		"choices": [
-			{"key": "send", "label": "Send him home for the week",
-			 "effects": [{"op": "trust", "d": 4, "why": "You let him go home when he needed it"}, {"op": "morale", "d": 2, "who": "subject"}, {"op": "rest"}, {"op": "slow_start", "chance": 25, "who": "side"}],
-			 "result": "{first} flies home and misses a game."},
-			{"key": "fly", "label": "Fly his family up instead",
-			 "effects": [{"op": "trust", "d": 2, "why": "The club brought his family to him"}, {"op": "board", "d": -1, "was": "funds"}],
-			 "result": "His family arrives on Thursday. {first} plays."},
-			{"key": "wait", "label": "Ask him to wait until season's end",
-			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The season comes first"}, {"op": "morale", "d": -3, "who": "subject"}, {"op": "odds", "chance": 30, "hit": [{"op": "trust", "d": -3, "why": "He was told to wait"}], "hit_result": "{first} has started talking about a trade home."}],
-			 "result": "{first} plays. He isn't happy about it."}
-		]
-	},
-	{
 		"id": "brb_owner_wants_a_say",
 		"club": "BRB",
 		"controversy": false,
@@ -344,7 +323,7 @@
 			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The coach sold a plan"}],
 			 "result": "The members heard a plan. Some wanted more."},
 			{"key": "finals", "label": "Promise them finals",
-			 "effects": [{"op": "culture", "strand": "ambition", "d": 1, "why": "The coach promised the members finals"}, {"op": "board", "d": 3}, {"op": "morale", "d": -2, "who": "all"}],
+			 "effects": [{"op": "culture", "strand": "ambition", "d": 1, "why": "The coach promised the members finals"}, {"op": "board", "d": 3}, {"op": "morale", "d": -2, "who": "all"}, {"op": "promise", "kind": "finals"}],
 			 "result": "Finals, the coach said. The players feel the weight of it."}
 		]
 	},

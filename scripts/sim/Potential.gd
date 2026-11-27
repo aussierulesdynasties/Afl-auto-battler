@@ -321,8 +321,18 @@ static func _headroom(age: float) -> float:
 	return 0.0
 
 
-## Room above the projection by draft rank: +22 for the top pick, about +8
-## at the end of a 56-player class (a late pick can still be a gem).
+## A draftee's POT by his pick (director 2026-11-26, question box): "Set Pick
+## 1 POT to ~84-90, Picks 2-5 to ~80-86, First Round (6-18) to ~74-82, and
+## Rounds 2-3 to ~64-76 (with rare late-pick gems)". [last pick, lowest,
+## highest], drawn evenly in his pick's range; a prospect with no rank (0) is
+## a late pick.
+const DRAFT_POT := [[1, 84.0, 90.0], [5, 80.0, 86.0], [18, 74.0, 82.0], [9999, 64.0, 76.0]]
+## A late pick's gem: 1 in 30 of picks past the first round draws from picks
+## 2-5's range instead (about one a class).
+const GEM_CHANCE := 1.0 / 30.0
+const GEM_FROM := 19
+
+
 static func _draftee_potential(p: Dictionary, rng: RandomNumberGenerator) -> float:
 	# A seasoned player on an expansion list is projected like a draftee but
 	# is not an 18-year-old pick: past 21 his ceiling is the one any player
@@ -330,13 +340,20 @@ static func _draftee_potential(p: Dictionary, rng: RandomNumberGenerator) -> flo
 	var age := float(p.get("age", 18.0))
 	if age > MAX_PROSPECT_AGE:
 		return float(int(Rating.ovr(p, 50))) + _headroom(age) + rng.randf_range(-2.0, 3.0)
-	var rank := clampi(int(p.get("draft_rank", 40)), 1, 80)
-	var room := maxf(6.0, 22.0 - 0.25 * float(rank - 1))
+	var rank := int(p.get("draft_rank", 0))
+	if rank <= 0:
+		rank = 9999
+	var band: Array = DRAFT_POT[DRAFT_POT.size() - 1]
+	for b in DRAFT_POT:
+		if rank <= int(b[0]):
+			band = b
+			break
+	var pot := rng.randf_range(float(band[1]), float(band[2]))
+	if rank >= GEM_FROM and rng.randf() < GEM_CHANCE:
+		pot = rng.randf_range(float(DRAFT_POT[1][1]), float(DRAFT_POT[1][2]))
 	# A strong or weak generated class moves its best prospects' ceilings
-	# (Prospects.CLASS_TIERS); the per-player roll still makes busts.
-	room += float(p.get("class_ceiling", 0.0))
-	room += float(p.get("night_drop", 0.0))  # a lower draft-night rating keeps the same ceiling
-	return float(int(Rating.ovr(p, 50))) + room + rng.randf_range(-3.0, 3.0)
+	# (Prospects.CLASS_TIERS); an international's raw code adds room.
+	return pot + float(p.get("class_ceiling", 0.0))
 
 
 static func _rng(p: Dictionary) -> RandomNumberGenerator:

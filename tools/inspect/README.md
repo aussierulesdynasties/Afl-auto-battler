@@ -29,6 +29,7 @@ It opens on the MCG. Press **L** for the list of every ground and click one, or 
 | T | The centre square at a man's eye height |
 | G | Drop to the floor below you at eye height (a stand, a concourse) |
 | O | Show or hide the match's turf and goalposts |
+| H | The aerial orbit: the camera circles outside the ground as from a helicopter (`Oval3DOrbit`); H or any move key stops it |
 | C | Copy where you are to the clipboard, for the fault list |
 | P or F12 | Screenshot (and copy where you are); the saved path shows on screen |
 | F11 | Full screen or window |

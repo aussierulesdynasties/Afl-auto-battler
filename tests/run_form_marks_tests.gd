@@ -1,4 +1,5 @@
 extends SceneTree
+const Ovr := preload("res://tests/ovr.gd")
 ## godot --headless --path . --script tests/run_form_marks_tests.gd
 ## Form marks on Team selection (director, 2026-11-12: "team select should
 ## highlight the 3 players in the side in the worst form, and the 3 players in
@@ -80,7 +81,7 @@ func _fresh(club: String) -> void:
 ## The same player, match and career roll the same game; the rating is on the
 ## senior scale and the words are football's.
 func _test_game_is_seeded() -> void:
-	var p := {"id": "x", "role": "FWD", "overall": 70}
+	var p := Ovr.to({"id": "x", "role": "FWD"}, 70)
 	var a: Dictionary = _rf.game(p, _rf.seed_for(1, "2026|R1", "x"))
 	var b: Dictionary = _rf.game(p, _rf.seed_for(1, "2026|R1", "x"))
 	_check(a == b, "One seed, one game (%s, %s)" % [str(a), str(b)])
@@ -94,7 +95,7 @@ func _test_game_is_seeded() -> void:
 	_check(differs, "Another week rolls another game")
 	var mean := sum / 200.0
 	_check(mean > 40.0 and mean < 140.0, "A forward's twos game rates on the senior scale (mean %.1f)" % mean)
-	var ruck: Dictionary = _rf.game({"id": "r", "role": "RUCK", "overall": 72}, 99)
+	var ruck: Dictionary = _rf.game(Ovr.to({"id": "r", "role": "RUCK"}, 72), 99)
 	_check(int(ruck["h"]) >= 10 and _rf.line(ruck).contains("hitouts"), "A ruck's line counts his hitouts (%s)" % _rf.line(ruck))
 	var words: String = _rf.line({"pts": 80, "d": 22, "g": 3, "h": 0})
 	_check(words == "Kicked 3 and 22 touches in the twos", "The line in football words (%s)" % words)
@@ -216,7 +217,7 @@ func _senior_sig() -> String:
 	for res in _gs.season.results:
 		parts.append(str(str(res).hash()))
 	for p in _gs.my_list:
-		parts.append("%s:%d:%d" % [str(p["id"]), int(p.get("xp", 0)), int(p.get("overall", 0))])
+		parts.append("%s:%d:%d" % [str(p["id"]), int(p.get("xp", 0)), int(Ovr.of(p, 0))])
 	return str(hash(str(parts) + JSON.stringify(_gs.form_log, "", true)))
 
 

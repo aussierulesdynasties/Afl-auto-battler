@@ -5,7 +5,7 @@ extends RefCounted
 ## nothing here changes a player, a draft or any random stream.
 ##
 ## Strengths come from the attributes the match engine rewards in his role
-## (Ratings.ROLE_WEIGHTS, the same core OVR is built from), graded against
+## (Rating.WEIGHTS at his AFL position, the weights his OVR is read with), graded against
 ## 2026 players of that role. His type is the training archetype
 ## (GameState.TRAIN_PLANS) his strengths fit best, so the draft and the
 ## Training screen speak the same language.
@@ -18,27 +18,80 @@ const WEAK_SHARE := 0.25          # bottom quarter of his role: a weakness
 const MIN_WEIGHT := 0.10
 
 const ATTR_LABELS := Attributes.PROSE_LABELS
+## Every key a scale is kept for: the labelled attributes, and disposal, which
+## Roles grades a midfielder on (is_wing, tag_profile) during a match.
+const SCALE_KEYS := ["disposal"]
 
-static var _sorted := {}          # "ROLE|attr" -> sorted 2026 values
+static var _sorted := {}          # "ROLE|attr" -> sorted values of the loaded league
 static var _db: Node = null       # GameDB, looked up once on the main thread
 
 
-## 2026 players of this role (the scale every rating is anchored to).
+## The loaded league's players of this role (the scale every rating is
+## anchored to: 2026 players in a 2026 career, 2010 players in a 2010 one).
+## Built again after the league data reloads, so a career reads the same
+## scale whatever ran before it in the session. Example: a 2010 career then a
+## 2026 one in one session ranked the 2026 players against 2010 players.
 static func _values(role: String, key: String) -> Array:
 	var k := role + "|" + key
 	if not _sorted.has(k):
-		var vals := []
-		var apos := role.trim_prefix(APOS_PEERS) if role.begins_with(APOS_PEERS) else ""
-		for p in _game_db().players:
-			if (str(p.get("apos", "")) == apos) if apos != "" else (str(p.get("role", "")) == role):
-				vals.append(Skills.value(p["attr"], key, 0.0))
-		vals.sort()
+		var vals := _scale(role, key)
 		# Off the main thread (a match on a worker) it is only read: warm()
 		# fills it first, and anything missed is worked out, not stored.
 		if OS.get_thread_caller_id() != OS.get_main_thread_id():
 			return vals
 		_sorted[k] = vals
 	return _sorted[k]
+
+
+static func _scale(role: String, key: String) -> Array:
+	var vals := []
+	var apos := role.trim_prefix(APOS_PEERS) if role.begins_with(APOS_PEERS) else ""
+	for p in _game_db().players:
+		if (str(p.get("apos", "")) == apos) if apos != "" else (str(p.get("role", "")) == role):
+			vals.append(Attributes.value(p["attr"], key, 0.0))
+	vals.sort()
+	return vals
+
+
+## Forget the graded scales: GameDB.reload calls it, so a career on another
+## dataset (a 2026 career after a 1990 one) grades against its own players,
+## as it would after a fresh launch (bug bash P1-6).
+## The new scales are built in full here, on the main thread, and swapped in
+## at once: a match still running on a worker thread then reads a complete
+## scale, old or new, and never has to work one out from GameDB while the
+## main thread reloads or frees it (CI 45655943455). At launch nothing has
+## been graded yet, so the scales stay to be filled as they are asked for.
+static func forget_cache() -> void:
+	if _sorted.is_empty():
+		return
+	var fresh := {}
+	var keys := _keys()
+	for p in _game_db().players:
+		var role := str(p.get("role", ""))
+		for key in keys:
+			var k: String = role + "|" + key
+			if not fresh.has(k):
+				fresh[k] = []
+			fresh[k].append(Attributes.value(p["attr"], key, 0.0))
+		var apos := str(p.get("apos", ""))
+		if apos != "":
+			var ka := APOS_PEERS + apos + "|contested_marking"
+			if not fresh.has(ka):
+				fresh[ka] = []
+			fresh[ka].append(Attributes.value(p["attr"], "contested_marking", 0.0))
+	for k in fresh:
+		fresh[k].sort()
+	# Any other scale already asked for is rebuilt too, so the swap never
+	# leaves a match one to work out.
+	for k in _sorted:
+		if not fresh.has(k):
+			var cut := str(k).rfind("|")
+			fresh[k] = _scale(str(k).left(cut), str(k).substr(cut + 1))
+	_sorted = fresh
+
+
+static func _keys() -> Array:
+	return ATTR_LABELS.keys() + SCALE_KEYS
 
 
 static func _game_db() -> Node:
@@ -53,10 +106,10 @@ static func warm() -> void:
 	var roles := {}
 	for p in _game_db().players:
 		roles[str(p.get("role", ""))] = true
-	if _sorted.size() > roles.size() * ATTR_LABELS.size():
+	if _sorted.size() > roles.size() * _keys().size():
 		return
 	for role in roles:
-		for key in ATTR_LABELS:
+		for key in _keys():
 			_values(role, key)
 	for p in _game_db().players:
 		if str(p.get("apos", "")) != "":
@@ -70,7 +123,7 @@ static func percentile(p: Dictionary, key: String, strict := false) -> float:
 	var vals := _values(str(p.get("role", "MID")), key)
 	if vals.is_empty():
 		return 0.5
-	var v := Skills.value(p.get("attr", {}), key, 0.0)
+	var v := Attributes.value(p.get("attr", {}), key, 0.0)
 	var below := vals.bsearch(v, strict)
 	return float(below) / float(vals.size())
 
@@ -83,11 +136,11 @@ static func grade(pct: float) -> String:
 
 
 ## The attributes his rating rests on: those carrying at least MIN_WEIGHT of
-## his position's share in Ratings.ROLE_WEIGHTS (the line rate_overall rates
-## him on, his first role), heaviest first. A midfielder: contested ball and
-## creating. Shown in bold on the pre-season meeting's stat focus.
+## his OVR at his AFL position (Rating.shares), heaviest first. A midfielder:
+## contested ball, kicking, handballing, endurance, vision and pressure.
+## Shown in bold on the pre-season meeting's stat focus.
 static func rated_on(p: Dictionary) -> Array:
-	var core: Dictionary = Ratings.ROLE_WEIGHTS.get(str(p.get("role", "MID")), Ratings.ROLE_WEIGHTS["MID"])
+	var core: Dictionary = Rating.shares(p)
 	var keys := []
 	for key in core:
 		if float(core[key]) >= MIN_WEIGHT:
@@ -99,11 +152,10 @@ static func rated_on(p: Dictionary) -> Array:
 ## Up to three strengths among what his role is judged on, best first:
 ## [{"key", "label", "grade"}]. Empty when nothing stands out.
 static func strengths(p: Dictionary, limit := 3) -> Array:
-	var core: Dictionary = Ratings.ROLE_WEIGHTS.get(str(p.get("role", "MID")), {})
+	var core: Dictionary = Rating.shares(p)
 	var rows := []
-	var unknown: Array = p.get("attr_unrecorded", [])
 	for key in core:
-		if float(core[key]) < MIN_WEIGHT or unknown.has(key):
+		if float(core[key]) < MIN_WEIGHT:
 			continue
 		var pct := percentile(p, key)
 		var g := grade(pct)
@@ -122,11 +174,10 @@ static func strengths(p: Dictionary, limit := 3) -> Array:
 ## attributes that carry real weight in his role (a fifth of the core or
 ## more), and only if he sits in the bottom quarter of his role.
 static func weakness(p: Dictionary) -> Dictionary:
-	var core: Dictionary = Ratings.ROLE_WEIGHTS.get(str(p.get("role", "MID")), {})
+	var core: Dictionary = Rating.shares(p)
 	var worst := {}
-	var unknown: Array = p.get("attr_unrecorded", [])
 	for key in core:
-		if float(core[key]) < 0.2 or unknown.has(key):
+		if float(core[key]) < 0.2:
 			continue
 		var pct := percentile(p, key)
 		if pct < WEAK_SHARE and (worst.is_empty() or pct < float(worst["pct"])):
@@ -136,16 +187,13 @@ static func weakness(p: Dictionary) -> Dictionary:
 
 ## The football attributes a card ranks for his top three (director,
 ## 2026-10-07: "EVERY player card must display that player's top THREE rated
-## attributes"): all 16 (Skills.KEYS), in this order, which also breaks
+## attributes"): all 16 (Attributes.KEYS), in this order, which also breaks
 ## a tie. Durability and Star power are ranked too (director ruling 2026-11-03).
-const TOP_KEYS := Skills.KEYS
+const TOP_KEYS := Attributes.KEYS
 
 
-## His attribute as a card prints it: a dash when his era never recorded it
-## (Ratings.unknown_attrs; director 2026-11-15, "I never okayed invented stats").
+## His attribute as a card prints it.
 static func attr_text(p: Dictionary, key: String) -> String:
-	if (p.get("attr_unrecorded", []) as Array).has(key):
-		return "—"
 	return str(int(round(float((p.get("attr", {}) as Dictionary).get(key, 0)))))
 
 
@@ -155,10 +203,9 @@ static func attr_text(p: Dictionary, key: String) -> String:
 static func top_attributes(p: Dictionary, limit := 3) -> Array:
 	var attr: Dictionary = p.get("attr", {}) if p.get("attr") is Dictionary else {}
 	var rows := []
-	var unknown: Array = p.get("attr_unrecorded", [])
 	for i in TOP_KEYS.size():
 		var key: String = TOP_KEYS[i]
-		if attr.has(key) and not unknown.has(key):
+		if attr.has(key):
 			rows.append({"key": key, "label": str(ATTR_LABELS[key]), "value": int(attr[key]), "i": i})
 	rows.sort_custom(func(a, b):
 		if int(a["value"]) != int(b["value"]):
@@ -176,7 +223,7 @@ static func needs_work_line(p: Dictionary) -> String:
 	var weak := weakness(p)
 	if not weak.is_empty():
 		return "Needs work: %s is below average for his position." % str(weak["label"])
-	var core: Dictionary = Ratings.ROLE_WEIGHTS.get(str(p.get("role", "MID")), {})
+	var core: Dictionary = Rating.shares(p)
 	var assessed := 0
 	for key in core:
 		if float(core[key]) < 0.2:

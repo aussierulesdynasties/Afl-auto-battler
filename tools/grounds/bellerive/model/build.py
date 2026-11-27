@@ -762,28 +762,49 @@ def video_board(col):
 # Three outdoor practice lanes on the lawn by Derwent Street's footpath, parallel to the street: a
 # synthetic wicket in each, netted sides, back and roof on galvanised posts. The indoor centre's west end
 # opens onto a paved forecourt; the yard west of its service wing is asphalt with marked bays.
-NETS = dict(c=(-120.2, 4.0), a=65.0, L=30.0, lane=3.2, n=3, H=3.6)
+# PC check r6: drawn as one 30 m cage of open net the nets read as a grey stepped plaza. The GE 150 m shot 'w'
+# (2026-11-24, 0.84 scale corrected) shows two blocks under opaque grey shade cloth with a strip of lawn between
+# them: the west block 23.5 x 6.0 m on (-120.9, 2.1), the east 20.5 x 4.6 m on (-113.7, -0.3), both along 71 deg.
+NETS = [dict(c=(-120.9, 2.1), a=70.8, L=23.5, W=6.0, n=2), dict(c=(-113.7, -0.3), a=71.0, L=20.5, W=4.6, n=1)]
+NETS_H = 3.6
 
 
 def practice_nets(col):
-    mb = MB('practice_nets'); N = NETS; W = N['lane'] * N['n']
-    F = Frame(dict(c=N['c'], a=N['a'], L=N['L'], W=W)); h = N['L'] / 2; q = F.P; H = N['H']
-    vs = [-W / 2 + k * N['lane'] for k in range(N['n'] + 1)]
-    gr = MB('nets_ground')                                    # the wickets: open ground (GroundModels.OPEN_GROUND)
-    for k in range(N['n']):
-        v0, v1 = vs[k] + 0.1, vs[k + 1] - 0.1
-        gr.face([q(-h, v1, 0.03), q(h, v1, 0.03), q(h, v0, 0.03), q(-h, v0, 0.03)], 'syn_pitch',
-                uv=[(1, 0), (1, N['L'] / 4.0), (0, N['L'] / 4.0), (0, 0)])
-    gr.build(col)
-    us = np.linspace(-h, h, 9)
-    for v in vs:                                              # posts, top rails and the netted sides
-        for u in us: mb.beam(q(u, v, 0.0), q(u, v, H), 0.08, 0.08, 'steel_galv')
-        mb.beam(q(-h, v, H), q(h, v, H), 0.06, 0.06, 'steel_galv')
-        mb.face([q(-h, v, 0.0), q(h, v, 0.0), q(h, v, H), q(-h, v, H)], 'mesh')
-    for u in (-h, h):
-        mb.beam(q(u, vs[0], H), q(u, vs[-1], H), 0.06, 0.06, 'steel_galv')
-    mb.face([q(h, vs[0], 0.0), q(h, vs[-1], 0.0), q(h, vs[-1], H), q(h, vs[0], H)], 'mesh')   # the batting end
-    mb.face([q(-h, vs[0], H), q(h, vs[0], H), q(h, vs[-1], H), q(-h, vs[-1], H)], 'mesh')   # the roof net
+    mb = MB('practice_nets'); gr = MB('nets_ground'); H = NETS_H   # the wickets: open ground (GroundModels.OPEN_GROUND)
+    for N in NETS:
+        F = Frame(dict(c=N['c'], a=N['a'], L=N['L'], W=N['W'])); h = N['L'] / 2; q = F.P
+        vs = [-N['W'] / 2 + k * N['W'] / N['n'] for k in range(N['n'] + 1)]
+        for k in range(N['n']):
+            v0, v1 = vs[k] + 0.1, vs[k + 1] - 0.1
+            gr.face([q(-h, v1, 0.03), q(h, v1, 0.03), q(h, v0, 0.03), q(-h, v0, 0.03)], 'syn_pitch',
+                    uv=[(1, 0), (1, N['L'] / 4.0), (0, N['L'] / 4.0), (0, 0)])
+        us = np.linspace(-h, h, max(2, int(round(N['L'] / 3.5)) + 1))
+        for v in vs:                                          # posts, top rails and the netted sides
+            for u in us: mb.beam(q(u, v, 0.0), q(u, v, H), 0.08, 0.08, 'steel_galv')
+            mb.beam(q(-h, v, H), q(h, v, H), 0.06, 0.06, 'steel_galv')
+            mb.face([q(-h, v, 0.0), q(h, v, 0.0), q(h, v, H), q(-h, v, H)], 'mesh')
+        for u in us:
+            mb.beam(q(u, vs[0], H), q(u, vs[-1], H), 0.06, 0.06, 'steel_galv')
+        mb.face([q(h, vs[0], 0.0), q(h, vs[-1], 0.0), q(h, vs[-1], H), q(h, vs[0], H)], 'mesh')   # the batting end
+        # the shade-cloth roof, opaque from above as GE shows it (materials are two-sided)
+        roof = [q(-h, vs[0], H + 0.05), q(h, vs[0], H + 0.05), q(h, vs[-1], H + 0.05), q(-h, vs[-1], H + 0.05)]
+        mb.face(roof, 'shade_cloth', uv=[(0, 0), (N['L'] / 4.0, 0), (N['L'] / 4.0, N['W'] / 4.0), (0, N['W'] / 4.0)])
+    gr.build(col); mb.build(col)
+
+
+# The fenced court east of the ground (GE 150 m shot 'ef', 2026-11-24, 0.84 scale corrected): a chain-link fence
+# about 3.6 m high round the white court, its corners read off the shot (PC check r6: the court and its fence missing).
+COURT_FENCE = [(110.5, 21.6), (141.5, 19.4), (137.0, -4.6), (110.5, -4.6)]
+
+
+def court_fence(col):
+    mb = MB('court_fence'); H = 3.6; P = COURT_FENCE
+    for k in range(len(P)):
+        a, b = np.array(P[k]), np.array(P[(k + 1) % len(P)]); L = float(np.linalg.norm(b - a))
+        for t in np.linspace(0.0, 1.0, max(2, int(round(L / 3.0)) + 1))[:-1]:
+            p = a + (b - a) * t; mb.beam((p[0], p[1], 0.0), (p[0], p[1], H), 0.06, 0.06, 'steel_galv')
+        mb.beam((a[0], a[1], H), (b[0], b[1], H), 0.05, 0.05, 'steel_galv')
+        mb.face([(a[0], a[1], 0.0), (b[0], b[1], 0.0), (b[0], b[1], H), (a[0], a[1], H)], 'mesh')
     mb.build(col)
 
 
@@ -801,7 +822,7 @@ def forecourt(col):
 
 def build_all():
     clear(); col = bpy.context.scene.collection
-    main_all(col); vomitories(col); skylights(col); members_all(col); nstand(col); terrace(col); scoreboard(col); towers(col); apron(col); indoor_centre(col); video_board(col); practice_nets(col); forecourt(col)
+    main_all(col); vomitories(col); skylights(col); members_all(col); nstand(col); terrace(col); scoreboard(col); towers(col); apron(col); indoor_centre(col); video_board(col); practice_nets(col); court_fence(col); forecourt(col)
     fence_only(col, D['members']['b1'], 360 + D['terrace']['b0'])
 
 

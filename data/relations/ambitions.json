@@ -1,0 +1,61 @@
+{
+	"_about": "Player ambitions (Ambitions.gd; relationship overhaul, director 2026-11-26). When a season starts, every club's players are read the same way: a player who fits one or more kinds below (his age, games, place in the side, contract, leadership) may hold one ambition for the season, picked by the kinds' weights times his temperament's lean (temper: a multiplier per temperament, 1.0 when not listed). hold_chance is the chance an eligible player holds one at all. Goals: 'games' (play need games this season), 'milestone' (reach his next career milestone this season), 'wins' (the club wins need games), 'leader' (named captain or vice-captain this season), 'contract' (his club signs him on). Progress is read after every round; an ambition that can no longer be met in the rounds left sours, unless he is injured (then it lapses with no hard feelings). Met: his opinion of the coach lifts (ambition_met) and the senior coach gains met_respect Respect. Soured: a lasting grievance (ambition_soured, tag 'ambition') that the fringe faction reads, and at season's end he asks to be traded with ask_out chance (times his temperament's 'faction' lever). Sizes are proposals: balance is the director's call.",
+	"hold_chance": 0.55,
+	"met_respect": 1,
+	"ask_out": 0.4,
+	"order": ["senior_spot", "bigger_role", "milestone_push", "win_now", "leadership_role", "big_contract"],
+	"kinds": {
+		"senior_spot": {
+			"label": "A senior spot",
+			"want": "Wants to play senior football",
+			"goal": "games",
+			"need": 6,
+			"weight": 1.0,
+			"who": {"age_max": 22, "career_max": 20},
+			"temper": {"competitor": 1.5, "mercurial": 1.2, "quiet_achiever": 0.8}
+		},
+		"bigger_role": {
+			"label": "A bigger role",
+			"want": "Wants to be a regular in the best 22",
+			"goal": "games",
+			"need": 15,
+			"weight": 1.0,
+			"who": {"age_min": 22, "age_max": 30, "career_min": 20, "out_of_side": true},
+			"temper": {"competitor": 1.4, "fiery": 1.3, "mercenary": 1.2, "quiet_achiever": 0.7}
+		},
+		"milestone_push": {
+			"label": "A milestone",
+			"want": "Wants to reach {target} games this season",
+			"goal": "milestone",
+			"window": 20,
+			"weight": 1.2,
+			"who": {"career_min": 30},
+			"temper": {"clubman": 1.5, "professional": 1.2}
+		},
+		"win_now": {
+			"label": "Winning now",
+			"want": "Wants the club to win now",
+			"goal": "wins",
+			"need": 12,
+			"weight": 0.9,
+			"who": {"age_min": 28, "career_min": 100},
+			"temper": {"competitor": 2.0, "leader": 1.3, "mercenary": 0.6}
+		},
+		"leadership_role": {
+			"label": "A leadership role",
+			"want": "Wants a place in the leadership group",
+			"goal": "leader",
+			"weight": 0.8,
+			"who": {"age_min": 23, "leadership_min": 60, "not_leader": true},
+			"temper": {"leader": 3.0, "clubman": 1.2, "quiet_achiever": 0.5}
+		},
+		"big_contract": {
+			"label": "A big contract",
+			"want": "Wants the club to sign him on",
+			"goal": "contract",
+			"weight": 0.8,
+			"who": {"age_min": 22, "age_max": 31, "contract_max": 1, "in_side": true},
+			"temper": {"mercenary": 3.0, "professional": 1.2, "clubman": 0.7}
+		}
+	}
+}

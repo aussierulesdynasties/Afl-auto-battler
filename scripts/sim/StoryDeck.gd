@@ -36,9 +36,11 @@ const CAPS := {"morale": 15, "xp": 26, "board": 8, "trust": Trust.STEP_MAX}
 ## The bonding deck adds: the leadership group (captain and vice-captains), the
 ## rest of the list, the club's Indigenous players, and one fit player picked at
 ## random when the card is dealt ("one": a sore on a club card).
-const WHO := ["subject", "side", "all", "others", "vice", "leaders", "rest", "indigenous", "one"]
+const WHO := ["subject", "side", "all", "others", "vice", "leaders", "rest", "indigenous", "one", "b"]
+## What can reach a card's second player (who: "b").
+const B_OPS := ["morale", "trust", "xp", "forgo_xp"]
 ## Targets that let a player's lever (trust, sore) sit on a club card.
-const GROUP_PLAYER_WHO := {"trust": ["leaders", "indigenous"], "sore": ["one"]}
+const GROUP_PLAYER_WHO := {"trust": ["leaders", "indigenous", "b"], "sore": ["one"]}
 ## Every effect a card can carry. Ops marked true need a player subject.
 const OPS := {
 	"morale": false, "xp": false, "board": false, "trust": true, "rest": true, "sore": true,
@@ -76,9 +78,20 @@ const OPS := {
 	# The development talk (T5.r93): games in his new position promised if it
 	# takes (a role trial when it does), or told it is for depth (no promise).
 	"dev_promise": true, "no_promise": true,
+	# Card Pass 1 (2026-11-26): a promise the choice says out loud, kept on the
+	# coach's record and settled by its own test (Promises.card_made); a tie
+	# between the card's two players (Bonds.form).
+	"promise": false, "bond": true, "bond_seed": false,
 	# A roll with its odds on the card (the club decks, row 157): `chance` percent of
 	# the time the `hit` effects land, otherwise the `miss` effects.
 	"odds": false,
+	# A group of unhappy players (Factions.gd): the coach meets its demand,
+	# refuses it, or breaks it up ("do"), on a card about its leader.
+	"faction": true,
+	# The restless coach the card seats (Council.restless): you pull him into line
+	# or win him back ("do": called_out or won_back), and your standing as senior
+	# coach moves ("r" Respect, "a" Authority).
+	"council": false, "standing": false,
 }
 ## The odds a rolled outcome may carry, in percent.
 const ODDS_MIN := 5
@@ -106,7 +119,7 @@ const HOLDS_AT := 60
 const HOLDS_WITH_TRUST := 45
 
 ## Facts a player card can test and print (GameState._story_player_facts).
-const PLAYER_FACTS := ["name", "first", "age", "games", "fit", "selected", "overall", "potential",
+const PLAYER_FACTS := ["temperament", "name", "first", "age", "games", "fit", "selected", "overall", "potential",
 		"pot_gap", "contract_years", "morale", "trust", "trust_band", "discipline", "backed", "back_wait", "back_out",
 		"fit_rank", "talk_case", "kpi", "kpi_or_need", "explain_label", "talk_text", "sore_odds",
 		"sore_pct", "injury_pct", "trial_ovr", "ask", "early_price", "more_seasons", "extension_ok", "intl_extension_ok", "job", "real_named",
@@ -137,7 +150,11 @@ const PLAYER_FACTS := ["name", "first", "age", "games", "fit", "selected", "over
 		# the job's word, the week, his ratings there and in his own spot, the pass
 		# margin, the odds it takes and where the line plays ("up forward").
 		"dev_talk_due", "proj_word", "proj_week", "proj_weeks", "proj_there", "proj_own", "proj_pass",
-		"take_odds", "proj_line"]
+		"take_odds", "proj_line",
+		# The group he stands with (Factions.gd): its kind ("" for none), where it
+		# is (forming, demanding, ultimatum), whether he leads it, how many stand
+		# with it, what it is called and what it wants.
+		"faction", "faction_state", "faction_leader", "faction_size", "faction_group", "faction_demand"]
 ## Facts about the club and the week (GameState._story_club_facts).
 const CLUB_FACTS := ["club", "opp", "has_opp", "round", "year", "losing_run", "winning_run", "ladder",
 		"board", "fit_count", "run_games", "finals_week", "captain_name", "vice_name", "vice_id",
@@ -164,6 +181,10 @@ const CLUB_FACTS := ["club", "opp", "has_opp", "round", "year", "losing_run", "w
 		# The club decks: your deck and this week's opponent's (ClubStories.deck_code),
 		# and whether the Controversies switch is on (1) or off (0).
 		"club_deck", "opp_deck", "controversies",
+		# A line or development coach gone restless (Council.restless): 1 when there is
+		# one, 1 when he is backing one of the club's groups of unhappy players, and
+		# what that group is called.
+		"restless_staff", "restless_backing", "restless_group", "restless_name", "restless_role",
 		# The bonding deck: the club's Indigenous players (the cultural day needs one,
 		# director 2026-11-17), and the player a card's sore falls on, with his odds.
 		"indigenous", "sore_one_name", "sore_one_pct"]
@@ -188,6 +209,25 @@ static func all() -> Array:
 
 static func reload() -> void:
 	_cache = []
+	_roles = []
+
+
+static var _roles: Array = []
+
+
+## The second-player roles the deck's cards ask for (ClubStories.actors works
+## out only these). Cached with the deck.
+static func actor_roles() -> Array:
+	if _roles.is_empty():
+		var seen := {}
+		for t in all():
+			var role := str((t.get("actor_b", {}) as Dictionary).get("role", ""))
+			if role != "":
+				seen[role] = true
+		_roles = seen.keys()
+		if _roles.is_empty():
+			_roles = [""]   # none asked for: never look again
+	return _roles.filter(func(r): return str(r) != "")
 
 
 ## The cards in one folder, one file per category, with defaults filled in.
@@ -283,9 +323,31 @@ static func validate(deck: Array) -> Array:
 	return errs
 
 
+## The words a card's second player and advisors add ({player_b}, {advisor_name}):
+## set while one card is checked.
+static var _bind_facts: Array = []
+static var _has_b := false
+
+
+static func bind_facts(t: Dictionary) -> Array:
+	var out := []
+	if not (t.get("actor_b", {}) as Dictionary).is_empty():
+		out.append_array(["player_b", "first_b", "first_b_s", "b_id"])
+	var advisors: Array = t.get("advisors", [])
+	if not advisors.is_empty():
+		out.append_array(["advisor_name", "advisor_role"])
+	for a in advisors:
+		var seat := str(a.get("seat", "")) if a is Dictionary else str(a)
+		out.append_array(["%s_name" % seat, "%s_role" % seat])
+	return out
+
+
 static func _check_card(t: Dictionary) -> Array:
 	var errs := []
 	var id := str(t["id"])
+	_bind_facts = bind_facts(t)
+	_has_b = not (t.get("actor_b", {}) as Dictionary).is_empty()
+	errs.append_array(_check_engine_fields(t))
 	if not CATEGORIES.has(str(t.get("category", ""))):
 		errs.append("%s: unknown category '%s'" % [id, str(t.get("category", ""))])
 	var subject: Dictionary = t.get("subject", {})
@@ -361,6 +423,98 @@ static func _check_card(t: Dictionary) -> Array:
 		errs.append("%s: saying nothing costs more than the board cap" % id)
 	if int(un.get("trust", 0)) != 0 and (not player or str(un.get("why", "")) == ""):
 		errs.append("%s: saying nothing can cost trust only on a player card, with a reason" % id)
+	if un.has("scar") and (not (un["scar"] is bool) or int(un.get("trust", 0)) == 0):
+		errs.append("%s: a scar (true or false) marks only a trust cost" % id)
+	return errs
+
+
+## The engine's card fields (director, 2026-11-26): its tier, the event that
+## triggers it, its second player, its advisors and each club's own words.
+static func _check_engine_fields(t: Dictionary) -> Array:
+	var errs := []
+	var id := str(t["id"])
+	var player := str((t.get("subject", {}) as Dictionary).get("kind", "club")) == "player"
+	if t.has("tier") and not StoryEngine.CARD_TIERS.has(str(t["tier"])):
+		errs.append("%s: unknown tier '%s' (urgent, reactive or ambient)" % [id, str(t["tier"])])
+	var trig: Variant = t.get("trigger", {})
+	if not (trig is Dictionary):
+		errs.append("%s: a trigger must be an object" % id)
+		trig = {}
+	if not (trig as Dictionary).is_empty():
+		if str(trig.get("event", "")) == "":
+			errs.append("%s: a trigger needs the event it answers" % id)
+		var wn := int(trig.get("within", StoryEngine.REACTIVE_WITHIN))
+		if wn < 0 or wn > StoryEngine.REACTIVE_WITHIN_MAX:
+			errs.append("%s: a trigger stays fresh 0..%d weeks, not %d" % [id, StoryEngine.REACTIVE_WITHIN_MAX, wn])
+	elif str(t.get("tier", "")) == "reactive" and not bool(t.get("topical", false)):
+		errs.append("%s: a reactive card needs a trigger (or the club's run, topical)" % id)
+	var ab: Variant = t.get("actor_b", {})
+	if not (ab is Dictionary):
+		errs.append("%s: actor_b must be an object" % id)
+		ab = {}
+	if not (ab as Dictionary).is_empty():
+		if not player:
+			errs.append("%s: a second player needs a card about a player" % id)
+		var role := str(ab.get("role", ""))
+		if not StoryEngine.ACTOR_ROLES.has(role):
+			errs.append("%s: unknown second-player role '%s'" % [id, role])
+		if role == "other" and (trig as Dictionary).is_empty():
+			errs.append("%s: the event's other player needs a trigger" % id)
+		for k in (ab.get("where", {}) as Dictionary):
+			if not _known_condition(str(k), PLAYER_FACTS):
+				errs.append("%s: unknown second-player condition '%s'" % [id, str(k)])
+		if ab.has("pick") and (role != "teammate" or not _known_pick(str(ab["pick"]))):
+			errs.append("%s: a second player is picked ('%s') only as a teammate, by a known pick" % [id, str(ab["pick"])])
+		if ab.has("required") and not (ab["required"] is bool):
+			errs.append("%s: actor_b required must be true or false" % id)
+		if not bool(ab.get("required", true)) and str(ab.get("fallback", "")) == "":
+			errs.append("%s: a second player who may be missing needs fallback words" % id)
+	var advisors: Variant = t.get("advisors", [])
+	if not (advisors is Array):
+		errs.append("%s: advisors must be a list" % id)
+		advisors = []
+	for a in advisors:
+		var seat := str(a.get("seat", "")) if a is Dictionary else str(a)
+		if not StoryEngine.ADVISOR_SEATS.has(seat):
+			errs.append("%s: unknown advisor seat '%s'" % [id, seat])
+	var cv: Variant = t.get("club_variants", {})
+	if not (cv is Dictionary):
+		return errs + ["%s: club_variants must be an object" % id]
+	if not (cv as Dictionary).is_empty() and t.has("club"):
+		errs.append("%s: a club's own card needs no club variants" % id)
+	var keys := {}
+	for c in t.get("choices", []):
+		keys[str((c as Dictionary).get("key", ""))] = true
+	for code in cv:
+		var where := "%s[%s]" % [id, str(code)]
+		if not CLUB_DECKS.has(str(code)):
+			errs.append("%s: unknown club deck" % where)
+		var v: Variant = cv[code]
+		if not (v is Dictionary):
+			errs.append("%s: a club's words must be an object" % where)
+			continue
+		for field in ["title", "text"]:
+			if not (v as Dictionary).has(field):
+				continue
+			if not (v[field] is Array) or (v[field] as Array).is_empty():
+				errs.append("%s: %s needs at least one variant" % [where, field])
+				continue
+			for line in v[field]:
+				errs.append_array(_check_text(where, str((line as Dictionary).get("text", "")) if line is Dictionary else str(line), player))
+		errs.append_array(_check_text(where, str(v.get("stakes", "")), player))
+		var ch: Variant = v.get("choices", {})
+		if not (ch is Dictionary):
+			errs.append("%s: a club's choice words must be an object" % where)
+			continue
+		for k in ch:
+			if not keys.has(str(k)):
+				errs.append("%s: no choice '%s' to reword" % [where, str(k)])
+				continue
+			for f in (ch[k] as Dictionary):
+				if not ["label", "result", "note"].has(str(f)):
+					errs.append("%s/%s: a club may reword the label, result or note only, not '%s'" % [where, str(k), str(f)])
+				else:
+					errs.append_array(_check_text("%s/%s" % [where, str(k)], str(ch[k][f]), player, str(f) == "result"))
 	return errs
 
 
@@ -374,6 +528,40 @@ static func _check_effect(where: String, e, player: bool) -> Array:
 	var who := str(e.get("who", "subject"))
 	if not WHO.has(who):
 		errs.append("%s: unknown target '%s'" % [where, who])
+	if who == "b" and (not _has_b or not B_OPS.has(op)):
+		errs.append("%s: only %s can reach a card's second player, and only on a card that has one" % [where, ", ".join(B_OPS)])
+	if op == "promise":
+		var pk := str(e.get("kind", ""))
+		if not (pk in Promises.CARD_KINDS):
+			errs.append("%s: a promise's kind '%s' is not one of %s" % [where, pk, ", ".join(Promises.CARD_KINDS)])
+		elif pk in Promises.PLAYER_KINDS and not player:
+			errs.append("%s: a promise to a player needs a player card" % where)
+		var pw := int(e.get("weeks", Promises.CARD_WEEKS.get(pk, 0)))
+		if pw < 0 or pw > 26 or (pk == "wins" and pw < 1):
+			errs.append("%s: a promise runs 0..26 weeks (wins at least one), not %d" % [where, pw])
+		if pk == "wins" and (int(e.get("need", 2)) < 1 or int(e.get("need", 2)) > pw):
+			errs.append("%s: wins needed must be 1..%d" % [where, pw])
+		if e.has("season") and not (str(e["season"]) in ["this", "next"]):
+			errs.append("%s: a finals promise is for this season or next" % where)
+	if op == "bond_seed" and (int(e.get("n", 1)) < 1 or int(e.get("n", 1)) > 3):
+		errs.append("%s: a camp makes 1..3 new mateships" % where)
+	if op == "bond":
+		var to_kid := str(e.get("with", "b")) == "kid"
+		if not (str(e.get("with", "b")) in ["b", "kid"]) or (not to_kid and not _has_b) or str(e.get("who", "subject")) != "subject":
+			errs.append("%s: a bond ties the card's player to its second player (or the young player it names)" % where)
+		if not (str(e.get("kind", "")) in StoryEngine.BOND_WORDS):
+			errs.append("%s: a bond's kind '%s' is not one of %s" % [where, str(e.get("kind", "")), ", ".join(StoryEngine.BOND_WORDS.keys())])
+		if int(e.get("s", 1)) < 1 or int(e.get("s", 1)) > Bonds.STRENGTH_MAX:
+			errs.append("%s: a bond's strength is 1..%d" % [where, Bonds.STRENGTH_MAX])
+	if e.has("temper"):
+		# Morale only: his opinion of you is sized by his temperament in Opinion itself.
+		if not (str(e["temper"]) in Temperament.LEVERS) or op != "morale" or str(e.get("who", "subject")) != "subject":
+			errs.append("%s: temper sizes his own morale move by one of %s" % [where, ", ".join(Temperament.LEVERS)])
+	# A permanent mark (director, 2026-11-26): only a trust move can leave one.
+	if e.has("scar") and (not (e["scar"] is bool) or op != "trust"):
+		errs.append("%s: a scar (true or false) marks only a trust move" % where)
+	if op == "faction" and not Factions.ANSWERS.has(str(e.get("do", ""))):
+		errs.append("%s: a faction answer is one of %s" % [where, ", ".join(Factions.ANSWERS)])
 	var group_ok: bool = (GROUP_PLAYER_WHO.get(op, []) as Array).has(who)
 	if who == "one" and op != "sore":
 		errs.append("%s: only a sore can fall on one player picked at random" % where)
@@ -461,7 +649,7 @@ static func _check_text(where: String, s: String, player: bool, ranked := false)
 	var re := RegEx.create_from_string("\\{([a-z_]+)\\}")
 	for m in re.search_all(s):
 		var f: String = m.get_string(1)
-		if CLUB_FACTS.has(f):
+		if CLUB_FACTS.has(f) or _bind_facts.has(f):
 			continue
 		if player and PLAYER_FACTS.has(f):
 			continue
@@ -472,7 +660,7 @@ static func _check_text(where: String, s: String, player: bool, ranked := false)
 static func _known_condition(k: String, facts: Array) -> bool:
 	if k == "flag" or k == "no_flag":
 		return true
-	for suffix in ["_min", "_max", "_every"]:
+	for suffix in ["_min", "_max", "_every", "_any", "_none"]:
 		if k.ends_with(suffix):
 			return facts.has(k.trim_suffix(suffix))
 	return facts.has(k)

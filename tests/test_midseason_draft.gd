@@ -1,4 +1,5 @@
 extends RefCounted
+const Ovr := preload("res://tests/ovr.gd")
 ## Row 54: the under-18 carnival week and the mid-season rookie draft
 ## (MidseasonDraft). A seeded career plays to round
 ## 10 (carnival) and 11 (draft); each beat survives a save and load, the hub
@@ -79,7 +80,7 @@ func _test_carnival_and_draft() -> void:
 	for i in 25:
 		(class_now[class_now.size() - 1 - i] as Dictionary)["draft_year"] = year - 1
 	var old: Dictionary = class_now[class_now.size() - 1]
-	old["overall"] = 99   # so an AI club is sure to take him
+	Ovr.to(old, 99)   # so an AI club is sure to take him
 	var old_id := str(old["id"])
 
 	_play_to(MidseasonDraft.CARNIVAL_AFTER)
@@ -146,12 +147,12 @@ func _test_carnival_and_draft() -> void:
 			_check(int(p["contract_years"]) == 2, "A rookie deal to the end of next season")
 	var best_left := 0
 	for q in MidseasonDraft.pool(gs):
-		best_left = maxi(best_left, int(q.get("overall", 0)))
+		best_left = maxi(best_left, int(Ovr.of(q, 0)))
 	var taken := []
 	for k in picks:
 		for q in gs.season.lists[str(k["club"])]:
 			if str(q["id"]) == str(k["id"]):
-				taken.append(int(q.get("overall", 0)))
+				taken.append(int(Ovr.of(q, 0)))
 	_check(taken.all(func(o): return o >= best_left), "Each club ahead of us took a player rated at least as high as any left")
 
 	# Save and load with our pick waiting.

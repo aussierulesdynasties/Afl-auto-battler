@@ -204,23 +204,45 @@ def school():
     # the white annex and its lower pale wing
     flat(part, (64.3, 76.7, 116.7, 125.0), "north", 3.8, "render_white", "render_white", parapet=0.3)
     flat(part, (65.0, 69.0, 110.0, 116.7), "north", 3.0, "render_white", "roof_pale")
-    # the old school: red-brick walls, tall single storey, long pale corrugated roofs (west wing and east wing
-    # north-south, the main range east-west between them), a chimney and the bell turret
-    w = [(1.4, 1.0, 3.6, 3.2)]
-    house(part, (49.3, 58.7, 130.7, 155.0), "north", 5.2, 9.4, "brick_red", "roof_zinc", windows=w)
-    house(part, (58.0, 97.0, 138.5, 155.0), "north", 5.2, 9.8, "brick_red", "roof_zinc", ns=False, windows=w)
-    house(part, (96.7, 106.7, 134.3, 156.5), "north", 5.2, 9.4, "brick_red", "roof_zinc", windows=w)
+    # the old school (Google Earth sN_tur, 2026-11-26): rubble-stone walls with red-brick quoins and
+    # dressings, pointed (Gothic) windows, steep pale corrugated roofs with gables (west wing and east wing
+    # north-south, the main range east-west between them), a chimney and the slate spire
+    w = [(1.2, 1.2, 3.4, 3.2, "pointed")]
+    kw = dict(windows=w, hip=False, quoins="brick_red", dress="brick_red")
+    house(part, (49.3, 58.7, 130.7, 155.0), "north", 5.2, 10.4, "rubble_stone", "roof_zinc", **kw)
+    house(part, (58.0, 97.0, 138.5, 155.0), "north", 5.2, 10.6, "rubble_stone", "roof_zinc", ns=False, **kw)
+    house(part, (96.7, 106.7, 134.3, 156.5), "north", 5.2, 10.4, "rubble_stone", "roof_zinc", **kw)
     flat(part, (93.0, 103.0, 134.0, 140.0), "north", 3.4, "brick_red", "roof_pale")
     bs = LAST[0]
     q = lean(76.75, 154.0, 12.0, "north")
     turret = on_land(part, level=bs).__enter__()
-    obox(part, q, 0.0, 3.4, 3.0, 0.0, 12.5, "brick_red", top="brick_red")
+    obox(part, q, 0.0, 3.4, 3.0, 0.0, 12.5, "rubble_stone", top="rubble_stone")
     tip = V(q[0], q[1], 17.0)
     c = [V(q[0] + dx, q[1] + dy, 12.5) for dx, dy in ((-1.9, -1.7), (1.9, -1.7), (1.9, 1.7), (-1.9, 1.7))]
     for k in range(4):
         add(part, [c[k], c[(k + 1) % 4], tip], "roof_slate_grey")
     turret.__exit__(None, None, None)
     chimney(part, lean(71.0, 141.5, 10.0, "north"), 8.0, 11.8, "brick_red", base=bs)
+
+
+def lancet(part, c, w, z0, z1, dress, glass="window_dark"):
+    """A tall pointed window on a north-facing gable wall at plan c: glass from z0 to z1 (the arch's apex),
+    framed in its dressings, standing a hand proud of the wall."""
+    def outline(e, y):
+        r = w + 2 * e
+        h = z1 - r * math.sin(math.pi / 3)          # the springing line
+        pts = [V(c[0] + w / 2 + e, y, z0 - e), V(c[0] + w / 2 + e, y, h)]
+        for t in np.linspace(0.0, math.pi / 3, 7)[1:]:
+            pts.append(V(c[0] - w / 2 - e + r * math.cos(t), y, h + r * math.sin(t)))
+        for t in np.linspace(math.pi / 3, 0.0, 7)[1:]:
+            pts.append(V(c[0] + w / 2 + e - r * math.cos(t), y, h + r * math.sin(t)))
+        pts.append(V(c[0] - w / 2 - e, y, z0 - e))
+        return pts
+    for e, y, mat in ((0.22, c[1] + 0.012, dress), (0.0, c[1] + 0.024, glass)):
+        o = outline(e, y)
+        ctr = V(c[0], y, (z0 + z1) / 2)
+        for k in range(len(o)):
+            add(part, [ctr, o[(k + 1) % len(o)], o[k]], mat)
 
 
 def path(part, a, b, w, mat="concrete", z=0.03):
@@ -307,9 +329,14 @@ def south_buildings():
     # (Google Earth c180, ses_180; west of it the top-down shows only its shadow and trees)
     # (steep: eave 4.8 m, ridge 12.5 m, measured against the stand's roof in ses_180), a white-roofed porch
     # across its north end
-    x0, x1, y0, y1 = house(part, (37.3, 52.0, -150.0, -131.7), "south", 4.8, 12.5, "sandstone", "roof_slate_grey",
-                           hip=False, windows=(1.2, 1.4, 4.0, 4.0))
-    flat(part, (38.0, 51.3, -131.7, -129.3), "south", 3.4, "render_white", "roof_zinc")
+    # (sS_ch, 2026-11-26: grey rubble stone, sandstone dressings, lancet windows, a tall lancet in the gable)
+    x0, x1, y0, y1 = house(part, (37.3, 52.0, -150.0, -131.7), "south", 4.8, 12.5, "church_stone", "roof_slate_grey",
+                           hip=False, windows=(1.0, 1.2, 3.6, 3.0, "pointed"), quoins="sandstone", dress="sandstone")
+    with on_land(part, level=LAST[0]):
+        lancet(part, ((x0 + x1) / 2, y1 - 0.45), 1.5, 4.0, 8.2, "sandstone")
+    px0, px1, py0, py1 = flat(part, (38.0, 51.3, -131.7, -129.3), "south", 3.4, "church_stone", "roof_zinc")
+    with on_land(part, level=LAST[0]):     # its pointed doorway
+        lancet(part, ((px0 + px1) / 2, py1), 1.4, 0.0, 2.9, "sandstone", glass="timber_dark")
     # 81 The Parade: a two-storey red-brick house under a pale hipped roof, and the white block east of it
     house(part, (56.3, 71.3, -150.0, -130.3), "south", 7.0, 10.0, "brick_red", "roof_pale", quoins="render_cream")
     flat(part, (72.0, 83.0, -158.7, -132.3), "south", 7.0, "render_white", "roof_zinc", parapet=0.4)

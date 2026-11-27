@@ -1,4 +1,5 @@
 extends SceneTree
+const Ovr := preload("res://tests/ovr.gd")
 ## godot --headless --path . --script tests/run_draft_ui_tests.gd
 ## Layout/state regressions using actual Godot containers. Browser/device touch
 ## smoke tests are documented separately in tests/README.md.
@@ -51,6 +52,8 @@ func _run() -> void:
 	await _t("_test_redraft_wears_club")
 	for sz in [Vector2i(390, 844), Vector2i(360, 800), Vector2i(320, 568), Vector2i(2560, 1440)]:
 		await _t("_test_subtitle_whole", [sz])
+	await _t("_test_pc", [Vector2i(1280, 720)])
+	await _t("_test_pc", [Vector2i(960, 540)])
 	print(Ran.line("Draft UI", self))
 	quit(0 if _failures.is_empty() else 1)
 
@@ -477,7 +480,7 @@ func _finished_draft(cover: bool) -> Control:
 				board = others
 		if board.is_empty():
 			break
-		board.sort_custom(func(a, b): return int(a["value"]) < int(b["value"]))
+		board.sort_custom(func(a, b): return d.price(a) < d.price(b))
 		# The picks before the last are the model's (the screen is not under
 		# test until the list is whole); the last goes through the screen's
 		# own pick, so it lands as a coach's would.
@@ -667,7 +670,7 @@ func _test_projected_row(ui: Control) -> void:
 	var scouting = load("res://scripts/sim/DraftScouting.gd")
 	_check(row != null and bool(view["scouted"]) and line.contains("projected")
 			and line.contains(scouting.range_text(view["potential"]) + " POT")
-			and line.contains(scouting.range_text(view["overall"]) + " OVR"),
+			and line.contains(scouting.range_text(Ovr.of(view)) + " OVR"),
 			"A League Draft projected prospect's row shows a scouted range (%s)" % line)
 	p.erase("projected")
 	p.erase("draft_team")
@@ -714,7 +717,7 @@ func _test_inspect(ui: Control) -> void:
 	# Undrafted in the League Draft: your recruiters' read, as a range.
 	var read: Dictionary = draft.user_view(p)
 	_check(ovr != null and bool(read["scouted"])
-			and (ovr.get_child(0) as Label).text.contains(str(int(read["overall"][0])))
+			and (ovr.get_child(0) as Label).text.contains(str(int(Ovr.of(read)[0])))
 			and (ovr.get_child(1) as Label).text == "OVR"
 			and pot != null and (pot.get_child(0) as Label).text.contains(str(int(read["potential"][0]))),
 			"His OVR and POT are your recruiters' read")
@@ -772,7 +775,15 @@ func _test_inspect(ui: Control) -> void:
 	ui.find_child("DetailAllRatings", true, false).emit_signal("pressed")
 	await _settle()
 	var attrs: Node = ui.find_child("DetailAttributes", true, false)
-	var readable := attrs != null and attrs.get_child_count() == (load("res://scripts/ui/PlayerSheet.gd").ATTR_ROWS as Array).size()
+	# Four groups, each a heading over its rows (RATING_REBUILD Phase 8).
+	var attr_rows := 0
+	var heads := 0
+	if attrs != null:
+		for g in attrs.find_children("AttrGrid_*", "GridContainer", false, false):
+			attr_rows += g.get_child_count()
+		heads = attrs.find_children("AttrGroup_*", "Label", false, false).size()
+	var readable := attrs != null and heads == 4 \
+			and attr_rows == (load("res://scripts/ui/PlayerSheet.gd").ATTR_ROWS as Array).size()
 	if attrs != null:
 		for l in attrs.find_children("*", "Label", true, false):
 			if (l as Label).size.y > 30.0 or (l as Label).size.x < 20.0:
@@ -836,7 +847,7 @@ func _test_inspect(ui: Control) -> void:
 	# A dear player still in the pool (an early row may have gone to a rival).
 	var dear: Dictionary = rows[3]
 	for r in rows:
-		if not draft.has(str(r["id"])) and int(r["value"]) > 3:
+		if not draft.has(str(r["id"])) and draft.price(r) > 3:
 			dear = r
 			break
 	ui.call("_open_player", str(dear["id"]))
@@ -863,11 +874,11 @@ func _test_inspect(ui: Control) -> void:
 	_check(blocked != null and blocked.text.begins_with("Not your pick"), "Between your picks, the details say so")
 	ui.call("_close_player")
 	draft.pick_index = idx
-	# Ruck rule: with only two places left and no ruck, a midfielder is off
+	# Ruck rule: with one place left and no ruck, a midfielder is off
 	# limits and the details say why.
 	var mine: Array = draft.club_lists[draft.user_club]
 	var saved := mine.duplicate()
-	while mine.size() < draft.target_size - 2:
+	while mine.size() < draft.target_size - 1:
 		var filler: Dictionary = rows[0].duplicate()
 		filler["id"] = "filler_%d" % mine.size()
 		filler["role"] = "MID"
@@ -893,7 +904,7 @@ func _test_inspect(ui: Control) -> void:
 	ui.call("_open_player", str(non_ruck["id"]))
 	await _settle()
 	blocked = ui.find_child("DetailBlocked", true, false)
-	_check(blocked != null and blocked.text.contains("rucks"), "The two-ruck rule is given as the reason (%s)" % (blocked.text if blocked else "-"))
+	_check(blocked != null and blocked.text.contains("every list needs one"), "The ruck rule is given as the reason (%s)" % (blocked.text if blocked else "-"))
 	ui.call("_close_player")
 	draft.club_lists[draft.user_club] = saved
 	draft.club_spend[draft.user_club] = spend2
@@ -1057,6 +1068,10 @@ func _check_layout(ui: Control, label: String) -> void:
 		for text in card.find_children("*", "Label", true, false):
 			_check(card.get_global_rect().grow(1).encloses(text.get_global_rect()),
 					label + ": position text stays inside its card")
+	# A finger's 44 units on touch layouts; the PC layout's buttons are sized to
+	# their words (row 171) and _test_pc taps them.
+	if bool(ui.get("_pc")):
+		return
 	for prefix in ["Position_", "Tab_", "SideTab_", "Filter_"]:
 		for node in ui.find_children(prefix + "*", "Button", true, false):
 			if node.is_visible_in_tree():
@@ -1150,7 +1165,9 @@ func _test_stage() -> void:
 			var stage: Control = ui.find_child("DraftStage", true, false)
 			var hung: Control = stage.find_child("DraftGuernsey", true, false) if stage != null else null
 			var marker: Control = hung.find_child("ClubMarker", true, false) if hung != null else null
-			_check(marker != null and marker.size.x >= (64.0 if sz.x >= 760 else 53.0) and is_equal_approx(marker.size.x, marker.size.y),
+			# The PC layout's clock is one line (row 171, board A), its guernsey sized to the line.
+			var want := 24.0 if bool(ui.get("_pc")) else (64.0 if sz.x >= 760 else 53.0)
+			_check(marker != null and marker.size.x >= want and is_equal_approx(marker.size.x, marker.size.y),
 					"%s: the board shows the guernsey on the clock, as big as it was under the hanger (%d)" % [tag, int(marker.size.x) if marker != null else 0])
 			if stage == null or marker == null:
 				ui.queue_free()
@@ -1188,7 +1205,10 @@ func _test_stage() -> void:
 					whole = false
 			_check(whole and quiet, "%s: the guernsey sits on the live board, takes no tap, and the words beside it are whole" % tag)
 			var back: Button = ui.find_child("BackToMenu", true, false)
-			_check(back != null and back.size.x >= 44.0 and back.size.y >= 44.0, "%s: the back button is still a thumb wide and tall" % tag)
+			if not bool(ui.get("_pc")):
+				_check(back != null and back.size.x >= 44.0 and back.size.y >= 44.0, "%s: the back button is still a thumb wide and tall" % tag)
+			else:
+				_check(back != null and back.is_visible_in_tree(), "%s: the back button shows" % tag)
 			if sz.x < 600 and club == "FRE":
 				for c in back.pressed.get_connections():
 					back.pressed.disconnect(c["callable"])
@@ -1630,9 +1650,13 @@ func _sign_waits_for_the_draft(ui: Control) -> void:
 		if ok != null and ok.is_visible_in_tree():
 			await Tap.tap(ok)
 			await _settle()
+	# Choosing the club ran the rival picks before its first turn
+	# (Draft.start_for_user), so the Combine's best may already be gone: his
+	# sheet says where he went and has no Sign. The first one still there.
 	var row: BaseButton = null
 	for c in ui.find_children("Prospect_*", "BaseButton", true, false):
-		if (c as BaseButton).is_visible_in_tree():
+		if (c as BaseButton).is_visible_in_tree() \
+				and not _state.draft.has(str(c.name).trim_prefix("Prospect_")):
 			row = c
 			break
 	_check(why == "" and row != null, "The Combine opens in the off-season with its prospects (%s)" % why)
@@ -1946,4 +1970,111 @@ func _test_rivals_land_a_few_a_frame() -> void:
 			"Every pick button reads as a fresh row's, and Pick for me is open again")
 	scene.spread_in_runner = false
 	ui.queue_free()
+	await _settle()
+
+
+## The PC layout (row 171, board A "one-line rows + his card"; director,
+## 2026-11-26: "No scrolling: split a screen into stages instead"), at 1280x720
+## and 960x540 units, with real taps: nothing scrolls and everything fits; a row
+## tap puts him on the card; Next and Previous turn the pool's pages; the card's
+## button drafts him; His sheet opens his sheet; at 960 the picks so far are a
+## stage of their own, in two columns; Older picks turns the log.
+func _test_pc(sz: Vector2i) -> void:
+	var tag := "PC %dx%d" % [sz.x, sz.y]
+	root.size = sz
+	_state.reset()
+	_state.replay_seed = 12345
+	_state.draft = load("res://scripts/sim/Draft.gd").new(_db.all_players_sorted(),
+			_db.active_clubs(2026).duplicate(), 12345)
+	var ui: Control = load("res://scenes/DraftScene.tscn").instantiate()
+	root.add_child(ui)
+	ui.call("_on_club_chosen", "COL")
+	await _settle()
+	_check(bool(ui.get("_pc")), tag + ": the PC layout is on")
+	_check(bool(ui.get("_pc_small")) == (sz.x < 1100), tag + ": the 960 layout only under 1100 units")
+	var scrolls := ui.find_children("*", "ScrollContainer", true, false).filter(
+			func(s): return (s as Control).is_visible_in_tree())
+	_check(scrolls.is_empty(), "%s: nothing scrolls (%d scroll boxes)" % [tag, scrolls.size()])
+	var viewport := Rect2(Vector2.ZERO, root.get_visible_rect().size)
+	for node_name in ["LiveBoard", "DraftPool", "DraftCard", "DraftFooter", "StartSeason", "PickForMe", "PoolPager"]:
+		var node: Control = ui.find_child(node_name, true, false)
+		_check(node != null and node.is_visible_in_tree() and viewport.grow(1).encloses(node.get_global_rect()),
+				"%s: %s shows whole" % [tag, node_name])
+	for node_name in ["PickForMe", "StartSeason"]:
+		var b: Button = ui.find_child(node_name, true, false)
+		_check(b.size.x < 260.0, "%s: %s is sized to its words (%d wide)" % [tag, node_name, int(b.size.x)])
+	var box = ui.get("_board_box")
+	var rows: Array = ui.find_children("Player_*", "PanelContainer", true, false).filter(
+			func(r): return (r as Control).is_visible_in_tree())
+	_check(rows.size() >= 8 and rows.size() == int(box.shown),
+			"%s: a page holds %d one-line rows (pager says %d)" % [tag, rows.size(), int(box.shown)])
+	if rows.size() < 3:
+		return
+	for r in rows:
+		_check(absf((r as Control).size.y - 26.0) < 1.5, "%s: %s is one 26-unit line" % [tag, r.name])
+	# A real tap on the third row puts him on the card.
+	var id := str(rows[2].name).substr(7)
+	var why: String = await Tap.tap(rows[2].find_child("Inspect_*", true, false))
+	await _settle()
+	_check(why == "" and str(ui.get("_pc_sel")) == id, "%s: a real tap on a row puts him on the card (%s)" % [tag, why])
+	_check(ui.find_child("Pick_" + id, true, false) != null, tag + ": the card's button is his")
+	# Next, then Previous, with real taps.
+	var first_page := int(box.shown)
+	why = await Tap.tap(ui.find_child("PoolNext", true, false))
+	await _settle()
+	_check(why == "" and int(box.first) == first_page, "%s: Next shows the next page (first %d, %s)" % [tag, int(box.first), why])
+	_check(str(ui.get("_pc_sel")) != id, tag + ": the card follows the page")
+	_check(str(ui.get("_board_info").text).contains("%d-" % (first_page + 1)),
+			"%s: the pager line says where we are (%s)" % [tag, ui.get("_board_info").text])
+	why = await Tap.tap(ui.find_child("PoolPrev", true, false))
+	await _settle()
+	_check(why == "" and int(box.first) == 0, "%s: Previous goes back (%s)" % [tag, why])
+	# His sheet, then the card's button drafts him.
+	why = await Tap.tap(ui.find_child("HisSheet", true, false))
+	await _settle()
+	_check(why == "" and is_instance_valid(ui.get("_detail")), "%s: His sheet opens his sheet (%s)" % [tag, why])
+	if is_instance_valid(ui.get("_detail")):
+		ui.call("_close_player")
+		await _settle()
+	var sel := str(ui.get("_pc_sel"))
+	var pick: Button = ui.find_child("Pick_" + sel, true, false)
+	_check(pick != null and not pick.disabled, "%s: the card's button can draft him (%s)" % [tag, pick.text if pick else "none"])
+	var count_before: int = _state.draft.count()
+	if pick != null and not pick.disabled:
+		why = await Tap.tap(pick)
+		for i in range(120):
+			await process_frame
+		_check(why == "" and _state.draft.count() == count_before + 1, "%s: a real tap on the card's button drafts him (%s)" % [tag, why])
+		_check(_state.draft.has(sel), tag + ": the player on the card is the one drafted")
+	await _settle()
+	if bool(ui.get("_pc_small")):
+		# 960: the picks so far are their own stage, two columns across the width.
+		why = await Tap.tap(ui.find_child("Tab_picks", true, false))
+		await _settle()
+		var pool: Control = ui.get("_pool_panel")
+		var log_box = ui.get("_history_box")
+		_check(why == "" and not pool.is_visible_in_tree() and (log_box as Control).is_visible_in_tree(),
+				"%s: The picks so far is a stage of its own (%s)" % [tag, why])
+		_check(int(log_box.columns) == 2, tag + ": the picks so far run in two columns")
+		why = await Tap.tap(ui.find_child("Tab_pool", true, false))
+		await _settle()
+		_check(why == "" and pool.is_visible_in_tree(), "%s: Draft pool comes back (%s)" % [tag, why])
+		var latest := ui.find_children("LatestPick_*", "", true, false)
+		_check(not latest.is_empty(), "%s: the latest picks sit under the card (%d)" % [tag, latest.size()])
+		ui.call("_select_tab", "picks")
+		await _settle()
+	var log_rows = ui.get("_history_box")
+	var more: Button = ui.find_child("LogMore", true, false)
+	var logged := int(ui.get("_history_total"))
+	_check(logged > 0, "%s: the log has the night's picks (%d)" % [tag, logged])
+	if more != null and more.is_visible_in_tree():
+		why = await Tap.tap(more)
+		await _settle()
+		_check(why == "" and int(log_rows.first) > 0, "%s: Older picks turns the log (%s)" % [tag, why])
+	else:
+		_check(logged <= int(log_rows.shown), "%s: the whole log fits one page (%d of %d)" % [tag, int(log_rows.shown), logged])
+	root.remove_child(ui)
+	ui.queue_free()
+	_state.reset()
+	root.size = Vector2i(1280, 720)
 	await _settle()

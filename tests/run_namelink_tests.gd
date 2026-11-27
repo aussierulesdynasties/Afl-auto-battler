@@ -87,9 +87,9 @@ func _sheet_name(sheet: Control) -> String:
 func _test_training(club: String, sz: Vector2i) -> void:
 	var tag := "%s %dx%d" % [club, sz.x, sz.y]
 	_gs.reset()
+	_gs.replay_seed = SUITE_SEED
 	_gs.set_setting("seen_training_intro", true)
 	_gs.start_season(club, _db.club_list(club))
-	_gs.replay_seed = SUITE_SEED
 	var mine: Array = _gs.my_list
 	# A rise in the last game's news, for two of his players.
 	var a: Dictionary = mine[0]
@@ -250,9 +250,9 @@ func _test_drag_over_name(sz: Vector2i) -> void:
 func _test_hub_tribunal(sz: Vector2i) -> void:
 	var tag := "hub %dx%d" % [sz.x, sz.y]
 	_gs.reset()
+	_gs.replay_seed = SUITE_SEED
 	_gs.set_setting("seen_training_intro", true)
 	_gs.start_season("MEL", _db.club_list("MEL"))
-	_gs.replay_seed = SUITE_SEED
 	_gs.tutorials = false
 	var p: Dictionary = _gs.my_list[2]
 	_gs.last_mro = [{"id": str(p["id"]), "name": _db.player_display_name(p), "club": "MEL",

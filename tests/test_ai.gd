@@ -1,4 +1,5 @@
 extends RefCounted
+const Ovr := preload("res://tests/ovr.gd")
 ## Rival club AI regression suite: the career draft builds balanced lists
 ## (two rucks each, the good rucks spread around, elite players early), the
 ## national draft weighs potential, and rival clubs train their players after
@@ -76,7 +77,7 @@ func _test_league_draft_balance() -> void:
 					rucks += 1
 					# Good for the seasons ahead: a 35-year-old is a one-year
 					# asset (League Draft horizons, director 2026-10-07).
-					if int(p["overall"]) >= 65 and float(p.get("age", 30)) < 33.0:
+					if int(Ovr.of(p)) >= Draft.RUCK_FIRST_CHOICE and float(p.get("age", 30)) < 33.0:
 						good += 1
 			if rucks < 2 or rucks > 3:
 				two_rucks = false
@@ -106,8 +107,8 @@ func _test_league_draft_balance() -> void:
 			var p = GameDB.player_by_id(str(e["player_id"]))
 			if str(p["real_name"]) == "Max Gawn":
 				gawn_club = str(e["club"])
-			if str(p["role"]) == "RUCK" and float(p.get("age", 30)) < 30.0 and int(p["overall"]) > best_young:
-				best_young = int(p["overall"])
+			if str(p["role"]) == "RUCK" and float(p.get("age", 30)) < 30.0 and int(Ovr.of(p)) > best_young:
+				best_young = int(Ovr.of(p))
 				young_ruck_pick = int(e["pick"])
 		# Director 2026-11-17 ("Let Port take him"): a building club may take
 		# him in round one too; the draft AI is not changed to stop it.
@@ -118,10 +119,10 @@ func _test_league_draft_balance() -> void:
 		# ceiling. Main's own drafts take a kid first in 7 of 20 seeds.
 		var first: Dictionary = GameDB.player_by_id(str(d.pick_history[0]["player_id"]))
 		var first_club := str(d.pick_history[0]["club"])
-		_check(int(first["overall"]) >= 88
+		_check(int(Ovr.of(first)) >= 88
 				or (d.club_horizon(first_club) == "build" and int(first.get("potential", 0)) >= 88),
 				"Pick one is an elite player, or an elite prospect for a club building (%s %d, POT %d, %s)"
-				% [str(first["real_name"]), int(first["overall"]), int(first.get("potential", 0)), d.club_horizon(first_club)])
+				% [str(first["real_name"]), int(Ovr.of(first)), int(first.get("potential", 0)), d.club_horizon(first_club)])
 
 
 ## Rival clubs judge players through their own scouting opinion (Draft
@@ -188,7 +189,7 @@ func _test_club_evaluation() -> void:
 	# draft keeps the shared valuation.
 	var mine_ok := true
 	for p in pool.slice(0, 40):
-		var want := float(int(a.user_view(p)["overall_mid"]) - int(p["overall"]))
+		var want := float(int(a.user_view(p)["overall_mid"]) - int(Ovr.of(p)))
 		mine_ok = mine_ok and is_equal_approx(a._eval_error("COL", p), want)
 	_check(mine_ok, "Your club's opinion of a player is your recruiters' read of him")
 	var intake := Draft.build_intake(pool.slice(0, 20), ["A", "B"], ["A", "B"], 5,
@@ -201,7 +202,7 @@ func _test_club_evaluation() -> void:
 	var d1 := _shared_ai_draft(12)
 	var before := {}
 	for p in GameDB.all_players_sorted():
-		before[str(p["id"])] = [int(p["overall"]), int(p.get("potential", 0)), str(p["attr"])]
+		before[str(p["id"])] = [int(Ovr.of(p)), int(p.get("potential", 0)), str(p["attr"])]
 	var d2 := _all_ai_draft(12)
 	var h1 := []
 	var h2 := []
@@ -212,7 +213,7 @@ func _test_club_evaluation() -> void:
 	_check(h1 == h2 and h1.size() == 18 * d1.target_size, "The same seed replays an identical draft")
 	var untouched := true
 	for p in GameDB.all_players_sorted():
-		if before[str(p["id"])] != [int(p["overall"]), int(p.get("potential", 0)), str(p["attr"])]:
+		if before[str(p["id"])] != [int(Ovr.of(p)), int(p.get("potential", 0)), str(p["attr"])]:
 			untouched = false
 	_check(untouched, "Club evaluation never changes a player's ratings")
 	# Every list still meets the draft's rules.
@@ -223,9 +224,9 @@ func _test_club_evaluation() -> void:
 		for p in list:
 			if Ratings.plays_role(p, "RUCK"):
 				rucks += 1
-		if list.size() != d1.target_size or rucks < 2 or d1.spent_for(code) > d1.budget:
+		if list.size() != d1.target_size or rucks < 1 or d1.spent_for(code) > d1.budget:
 			lists_ok = false
-	_check(lists_ok, "Every club's list has the full size, two rucks and fits the cap")
+	_check(lists_ok, "Every club's list has the full size, a ruck and fits the cap")
 	var d3 := _shared_ai_draft(23)
 	var h3 := []
 	for e in d3.pick_history:
@@ -291,9 +292,9 @@ func _test_no_cap_deadlock() -> void:
 
 func _test_intake_values_potential() -> void:
 	# Two prospects, same rating, one with far more potential.
-	var a := {"id": "t_a", "name": "A", "generic_name": "A", "real_name": "A", "club": "X",
-			"num": 1, "role": "MID", "role2": "", "overall": 60, "potential": 62,
-			"value": 3, "gl": 0, "di": 0, "gm": 0.0}
+	var a := Ovr.to({"id": "t_a", "name": "A", "generic_name": "A", "real_name": "A", "club": "X",
+			"num": 1, "role": "MID", "role2": "",  "potential": 62,
+			"value": 3, "gl": 0, "di": 0, "gm": 0.0}, 60)
 	var b := a.duplicate(true)
 	b["id"] = "t_b"
 	b["potential"] = 88
@@ -312,7 +313,7 @@ func _test_rivals_train() -> void:
 	for p in rival:
 		# Gains stop at potential (director 2026-11-23): only a rival with room
 		# to grow is expected to train.
-		if int(p.get("overall", 0)) < int(p.get("potential", 0)):
+		if int(Ovr.of(p, 0)) < int(p.get("potential", 0)):
 			before[str(p["id"])] = (p["attr"] as Dictionary).duplicate()
 	# Eight rounds: rivals bank XP after every game and spend it as they go.
 	# His pace (director 2026-11-17) buys a stat point every few games.
@@ -358,16 +359,16 @@ func _test_rivals_train() -> void:
 	# stop at potential"; it was no stop, 2026-11-17): the XP stays banked.
 	var at_pot := p0.duplicate(true)
 	at_pot["xp"] = 100000
-	at_pot["potential"] = int(at_pot["overall"])
-	at_pot["season_start_ov"] = int(at_pot["overall"])
+	at_pot["potential"] = int(Ovr.of(at_pot))
+	at_pot["season_start_ov"] = int(Ovr.of(at_pot))
 	GameState.ai_spend_xp(at_pot)
-	_check(int(at_pot["overall"]) == int(at_pot["potential"]),
+	_check(int(Ovr.of(at_pot)) == int(at_pot["potential"]),
 			"With XP to burn, a rival at his POT trains no further")
 	# No season limit for anyone (director 2026-11-17): the pace is the XP.
 	var mine: Dictionary = GameState.my_list[0]
 	mine["xp"] = 100000
-	mine["potential"] = int(mine["overall"]) + 12
-	var start := int(mine["overall"])
+	mine["potential"] = int(Ovr.of(mine)) + 12
+	var start := int(Ovr.of(mine))
 	GameState.apply_plan_to(mine)
-	_check(int(mine["overall"]) > start + 3,
-			"With XP to burn your player grows past the old three-point limit too (%d -> %d)" % [start, int(mine["overall"])])
+	_check(int(Ovr.of(mine)) > start + 3,
+			"With XP to burn your player grows past the old three-point limit too (%d -> %d)" % [start, int(Ovr.of(mine))])

@@ -1,4 +1,5 @@
 extends SceneTree
+const Ovr := preload("res://tests/ovr.gd")
 ## godot --headless --path . --script tests/run_merger_cut_tests.gd
 ## After the Fitzroy merger your list is over the era's spots and you pick who
 ## goes (director 2026-11-15: "I pick, delist screen"): the count each list kind
@@ -64,6 +65,10 @@ func _run() -> void:
 	_t("_test_list_cut_any_year")
 	_t("_test_opening_list_cut")
 	await _t("_test_list_cut_screen_taps")
+	# A PC (UI batch 5): the whole list across the window and his card beside it.
+	for sz in [Vector2i(1280, 720), Vector2i(960, 540)]:
+		await _t("_test_merger_pc", [sz])
+	root.size = PHONE
 	_db.reload()
 	print(Ran.line("Merger cut", self))
 	quit(1 if not _failures.is_empty() else 0)
@@ -117,7 +122,7 @@ func _test_refusals() -> void:
 	_setup()
 	var n: int = _gs.merger_cut_left()
 	var list := _list().duplicate()
-	list.sort_custom(func(a, b): return int(a.get("overall", 0)) < int(b.get("overall", 0)))
+	list.sort_custom(func(a, b): return int(Ovr.of(a, 0)) < int(Ovr.of(b, 0)))
 	var ids := list.slice(0, n).map(func(q): return str(q["id"]))
 	var short := ids.slice(0, n - 1)
 	var out: Dictionary = _gs.merger_delist(short)
@@ -143,7 +148,7 @@ func _test_refusals() -> void:
 func _test_club_cut_before_round_one() -> void:
 	_setup()
 	var n: int = _gs.merger_cut_left()
-	var held: Dictionary = _list().reduce(func(a, q): return q if a.is_empty() or int(q.get("overall", 0)) < int(a.get("overall", 0)) else a, {})
+	var held: Dictionary = _list().reduce(func(a, q): return q if a.is_empty() or int(Ovr.of(q, 0)) < int(Ovr.of(a, 0)) else a, {})
 	held["play_on"] = int(_gs.season_year)
 	var before: int = _list().size()
 	_gs._merger_cut_by_club()
@@ -194,7 +199,7 @@ func _test_screen_taps() -> void:
 	_setup()
 	var n: int = _gs.merger_cut_left()
 	var list := _list().duplicate()
-	list.sort_custom(func(a, b): return int(a.get("overall", 0)) < int(b.get("overall", 0)))
+	list.sort_custom(func(a, b): return int(Ovr.of(a, 0)) < int(Ovr.of(b, 0)))
 	# One talked round to play on: no Delist button on his row.
 	var held: Dictionary = list[n + 1]
 	held["play_on"] = int(_gs.season_year)
@@ -331,3 +336,103 @@ func _test_list_cut_screen_taps() -> void:
 		await process_frame
 	_check(current_scene != null and str(current_scene.name) != "MergerCutScene",
 			"Confirm leaves the list cut (%s)" % str(current_scene.name if current_scene else null))
+
+## A PC (UI batch 5, the director's board A): the list in one-line rows across
+## the window (three columns at 1280 x 720; two, a page at a time, at 960 x 540)
+## with the clicked man's card beside it, and nothing scrolls. A real tap on a
+## row puts him on the card, a real tap on the card's Delist marks him, and
+## once enough are marked a real tap on Confirm delists them.
+func _test_merger_pc(sz: Vector2i) -> void:
+	_setup()
+	root.size = sz
+	var tag := "%dx%d" % [sz.x, sz.y]
+	var n: int = _gs.merger_cut_left()
+	var kinds: Array = _gs.merger_cut_needs().keys()
+	var listed := _list().filter(func(q): return kinds.has(str(q.get("rookie_list", ""))))
+	_router.go("hub")
+	var scene: Node = await _scene_named("MergerCutScene")
+	_check(scene != null, "PC %s: the hub opens the merger screen" % tag)
+	if scene == null:
+		return
+	await _settle(6)
+	var view := Rect2(Vector2.ZERO, Vector2(root.size))
+	var cols: Control = scene.find_child("MergerColumns", true, false)
+	var room: Control = scene.find_child("MergerRoom", true, false)
+	var columns: Array = cols.get_children().filter(func(c): return str(c.name).begins_with("MergerColumn_")) if cols != null else []
+	var want := 3 if sz.x >= 1000 else 2
+	_check(columns.size() == want, "PC %s: the list runs in %d columns (%d)" % [tag, want, columns.size()])
+	_check(room != null and cols.get_combined_minimum_size().y <= room.size.y + 0.5,
+			"PC %s: the list fits its room (%.0f in %.0f)" % [tag, cols.get_combined_minimum_size().y if cols != null else 0.0, room.size.y if room != null else 0.0])
+	var page: Control = room.get_parent().get_parent().get_parent() if room != null else null
+	_check(page != null and page.get_combined_minimum_size().y <= view.size.y,
+			"PC %s: the page fits the window, nothing scrolls (%.0f in %.0f)" % [tag, page.get_combined_minimum_size().y if page != null else 0.0, view.size.y])
+	var pages := scene.find_child("MergerPages", true, false)
+	var shown: Array = cols.find_children("MergerRow_*", "Button", true, false) if cols != null else []
+	if want == 3:
+		_check(pages == null and shown.size() == listed.size(), "PC %s: all %d players on one page (%d)" % [tag, listed.size(), shown.size()])
+	else:
+		_check(pages != null and pages.get_child_count() == 2 and shown.size() < listed.size(),
+				"PC %s: the list splits into two pages (%d of %d shown)" % [tag, shown.size(), listed.size()])
+	_check(not shown.is_empty() and shown.all(func(b): return view.encloses((b as Control).get_global_rect()) and (b as Control).size.y <= 44.5),
+			"PC %s: every row is one line and on screen" % tag)
+	var card: Control = scene.find_child("MergerCard", true, false)
+	_check(card != null and room != null and card.get_global_rect().position.x > room.get_global_rect().end.x and view.encloses(card.get_global_rect()),
+			"PC %s: the card sits beside the list, on screen" % tag)
+	if want == 2 and pages != null and pages.get_child_count() == 2:
+		var first_ids: Array = shown.map(func(r): return str(r.name))
+		var why_p: String = await _tap(pages.get_child(1) as Button)
+		var now: Array = scene.find_children("MergerRow_*", "Button", true, false)
+		_check(why_p == "" and not now.is_empty() and now.all(func(r): return not first_ids.has(str(r.name)))
+				and first_ids.size() + now.size() == listed.size(),
+				"PC %s: a real tap on the second page shows the other %d players (%s)" % [tag, now.size(), why_p])
+		var back := scene.find_child("MergerPages", true, false)
+		why_p = await _tap(back.get_child(0) as Button if back != null else null)
+		_check(why_p == "" and scene.find_children("MergerRow_*", "Button", true, false).size() == first_ids.size(),
+				"PC %s: ...and the first page brings them back" % tag)
+	# The lowest n, picked as a coach would: find him (turning the page if he is
+	# on the other one), click his row, then Delist on his card.
+	var list := _list().duplicate()
+	list.sort_custom(func(a, b): return int(a.get("overall", 0)) < int(b.get("overall", 0)))
+	var going := list.filter(func(q): return kinds.has(str(q.get("rookie_list", ""))) \
+			and int(q.get("play_on", 0)) != int(_gs.season_year)).slice(0, n).map(func(q): return str(q["id"]))
+	for id in going:
+		var row := scene.find_child("MergerRow_" + id, true, false) as Button
+		if row == null:
+			# A page tap rebuilds the screen, so find each page button afresh by name.
+			var turn := scene.find_child("MergerPages", true, false)
+			var names: Array = (turn.get_children() if turn != null else []).map(func(c): return str(c.name))
+			for nm in names:
+				if scene.find_child("MergerRow_" + id, true, false) == null:
+					await _tap(scene.find_child(nm, true, false) as Button)
+			row = scene.find_child("MergerRow_" + id, true, false) as Button
+		var why: String = await _tap(row)
+		var name_on := scene.find_child("CardName", true, false) as Label
+		_check(why == "" and name_on != null and name_on.text == _db.player_display_name(_player(id)),
+				"PC %s: a real tap on %s's row puts him on the card (%s)" % [tag, id, why])
+		var act := (scene.find_child("MergerCard", true, false) as Node).find_child("Delist", true, false) as Button
+		why = await _tap(act)
+		_check(why == "", "PC %s: a real tap on the card's Delist for %s lands (%s)" % [tag, id, why])
+		var crossed := scene.find_child("MergerRow_" + id, true, false)
+		_check(crossed != null and crossed.find_child("CrossedOff", true, false) != null,
+				"PC %s: %s's row is crossed off once he is marked" % [tag, id])
+	var marked := scene.find_child("MergerCard", true, false)
+	_check(marked != null and marked.find_child("DelistGain", true, false) != null and marked.find_child("DelistCost", true, false) != null
+			and marked.find_child("Keep", true, false) != null, "PC %s: the card states the gain and the cost, then Keep" % tag)
+	var confirm := scene.find_child("ConfirmCut", true, false) as Button
+	var at: Rect2 = confirm.get_global_rect() if confirm != null else Rect2()
+	_check(confirm != null and not confirm.disabled and confirm.text == "Delist %d players" % n and at.size.x < 400.0
+			and view.encloses(at) and at.end.x > view.size.x * 0.9,
+			"PC %s: Confirm reads Delist %d players, sized to its words at the right (%s)" % [tag, n, str(at)])
+	var why_go: String = await _tap(confirm)
+	_check(why_go == "" and not _gs.merger_cut_due and _fits(), "PC %s: a real tap on Confirm delists them and the list fits (%s)" % [tag, why_go])
+	for i in range(900):
+		if current_scene != null and str(current_scene.name) != "MergerCutScene":
+			break
+		await process_frame
+
+
+func _player(id: String) -> Dictionary:
+	for p in _list():
+		if str(p["id"]) == id:
+			return p
+	return {}

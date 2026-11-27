@@ -4,6 +4,7 @@ extends SceneTree
 ## Writes DIR/<W>x<H>_<screen>.png: setup_goal, setup_rebuild, draft_rebuild,
 ## almanac_goal, rookie_youth, agents_youth, trade_youth.
 ## Needs a real renderer: run windowed (override.cfg), never --headless.
+const Ovr := preload("res://tests/ovr.gd")
 
 var W := 390
 var H := 844
@@ -80,7 +81,7 @@ func _run() -> void:
 	state.autosave_enabled = false
 	state.save_path = "user://capture_challenge.save"
 	state.settings_path = "user://capture_challenge.cfg"
-	load("res://scripts/ui/UiKit.gd").apply_appearance("dark")
+	load("res://scripts/ui/UiKit.gd").apply_palette()
 	root.size = Vector2i(W, H)
 	# No hover tooltips from wherever the real cursor happens to be.
 	root.gui_disable_input = true
@@ -160,7 +161,7 @@ func _run() -> void:
 		var src: Dictionary = db.club_list(code)[0].duplicate(true)
 		src["id"] = "capture_vet_" + code
 		src["age"] = 29.0
-		src["overall"] = 90
+		Ovr.to(src, 90)
 		src["club"] = ""
 		src["released_by"] = code
 		vets.append(src)

@@ -225,7 +225,7 @@ static func assign_initial(list: Array) -> Array:
 		else:
 			years = rng.randi_range(1, 2)
 		p["contract_years"] = years
-		p["salary"] = pay(int(p.get("value", 3)))
+		p["salary"] = pay(Ratings.value_of(p))
 	return fresh
 
 
@@ -301,7 +301,14 @@ static func next_size(list: Array) -> int:
 
 ## What re-signing (or signing) this player costs now.
 static func asking_salary(p: Dictionary) -> int:
-	var price := pay(Ratings.salary_value(int(Rating.ovr(p, 50))))
+	return asking_at(p, int(Rating.ovr(p, 50)))
+
+
+## What he would ask at an OVR of `ovr` (ClubLife.wait_words: his rating at
+## the off-season). OVR is read from the attributes, so a later rating is
+## passed in, never written onto him.
+static func asking_at(p: Dictionary, ovr: int) -> int:
+	var price := pay(Ratings.salary_value(ovr))
 	# An unhappy player wants paying to stay.
 	if ClubLife.morale(p) < 40:
 		price = ceili(price * 1.25)
@@ -334,6 +341,21 @@ const REFUSED := "%s won't re-sign with us. Opinion of you: %d out of 100."
 const REFUSED_GOES := "He goes to free agency."
 const REFUSED_SEASON_END := "He goes to free agency when the season ends."
 const REFUSED_STAYS := "He stays on the market."
+## Before free agency (to 2011, EraRules) a player who won't re-sign is delisted.
+const REFUSED_DELISTED := "He is delisted."
+const REFUSED_DELISTED_SEASON_END := "He is delisted when the season ends."
+
+
+## Where a player who refuses you goes now: free agency, or before it, off the list.
+static func refused_goes() -> String:
+	return REFUSED_GOES if EraRules.on("free_agency") else REFUSED_DELISTED
+
+
+## Where he goes when the season ends: free agency, or before it, off the list.
+static func refused_season_end() -> String:
+	return REFUSED_SEASON_END if EraRules.on("free_agency") else REFUSED_DELISTED_SEASON_END
+
+
 ## What talks with him say once he has refused.
 const REFUSED_TALKS := "Won't re-sign with us. Opinion of you: %d out of 100."
 ## On his contract card once he has refused.
@@ -796,7 +818,7 @@ static func payroll(list: Array) -> int:
 	for p in list:
 		if retired_by(p, money_year):
 			continue
-		total += int(p["salary"]) if p.has("salary") else pay(int(p.get("value", SENIOR_MIN_2027)))
+		total += int(p["salary"]) if p.has("salary") else pay(Ratings.value_of(p))
 	return total
 
 

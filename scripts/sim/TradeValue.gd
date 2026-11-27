@@ -100,12 +100,13 @@ static func contract_factor(p: Dictionary) -> float:
 static func selection_bars(list: Array, projected := false) -> Dictionary:
 	if not _bars_memo_on:
 		return _selection_bars(list, projected)
-	var key := PackedStringArray(["1" if projected else "0"])
-	for q in list:
-		key.append("%s:%d" % [str(q["id"]), int(Rating.ovr(q, 0))])
-	var k := ",".join(key)
+	var side_k := _side_key(list)
+	var k := ("1," if projected else "0,") + side_k
 	if not _bars_memo.has(k):
-		_bars_memo[k] = _selection_bars(list, projected)
+		# The bars now and projected read the same side: it is picked once.
+		if not _side_memo.has(side_k):
+			_side_memo[side_k] = Ratings.select_22(list)
+		_bars_memo[k] = _bars_of(_side_memo[side_k], projected)
 	return (_bars_memo[k] as Dictionary).duplicate()
 
 
@@ -115,19 +116,48 @@ static func selection_bars(list: Array, projected := false) -> Dictionary:
 ## the same list's bars thousands of times; remember them until it closes.
 ## A trade changes the list, so it changes the key: nothing to invalidate.
 static var _bars_memo := {}
+static var _side_memo := {}
 static var _bars_memo_on := false
+
+
+## A list's best 22 (Ratings.select_22): while the market is frozen, picked
+## once per list and shared by everyone who asks, the bars included. Read
+## it, never change it.
+static func side_of(list: Array) -> Dictionary:
+	if not _bars_memo_on:
+		return Ratings.select_22(list)
+	var side_k := _side_key(list)
+	if not _side_memo.has(side_k):
+		_side_memo[side_k] = Ratings.select_22(list)
+	return _side_memo[side_k]
+
+
+static func _side_key(list: Array) -> String:
+	var key := PackedStringArray()
+	for q in list:
+		key.append("%s:%d" % [str(q["id"]), int(Rating.ovr(q, 0))])
+	return ",".join(key)
 ## How many times the bars were worked out from scratch (perf guard in tests).
 static var bars_built := 0
+
+
+## Whether the lists' best 22 are being remembered (remember_bars).
+static func remembering() -> bool:
+	return _bars_memo_on
 
 
 static func remember_bars(on: bool) -> void:
 	_bars_memo_on = on
 	_bars_memo.clear()
+	_side_memo.clear()
 
 
 static func _selection_bars(list: Array, projected: bool) -> Dictionary:
+	return _bars_of(Ratings.select_22(list), projected)
+
+
+static func _bars_of(side: Dictionary, projected: bool) -> Dictionary:
 	bars_built += 1
-	var side := Ratings.select_22(list)
 	var bars := {}
 	for q in side["ground"]:
 		var r := str(q["role"])
@@ -259,25 +289,9 @@ static func _pick_value(positions: Array, prospects: Array, phase: String) -> fl
 		var hi := mini(prospects.size() - 1, at + 1)
 		var sum := 0.0
 		for i in range(lo, hi + 1):
-			sum += float(value(_held(prospects[i]), {"phase": phase})["total"])
+			sum += float(value(prospects[i], {"phase": phase})["total"])
 		total += w * sum / float(hi - lo + 1)
 	return total / maxf(weight, 0.0001)
-
-
-## A pick is read by the player it buys, not by his lower first-year rating (director
-## 2026-10-14, "hold pick values where they are"): a draftee whose draft-night rating was
-## lowered (Prospects.DRAFT_NIGHT_SCALE, `night_drop`) is valued at the rating the old
-## curve gave him, with the same ceiling. Pick values, and the AI trades around them, do
-## not move with the scale.
-static func _held(p: Dictionary) -> Dictionary:
-	var drop := float(p.get("night_drop", 0.0))
-	if drop <= 0.0:
-		return p
-	var h: Dictionary = p.duplicate()
-	h["overall"] = int(Rating.ovr(p, 50)) + int(round(drop))
-	if h.has("salary"):
-		h["salary"] = Ratings.salary_value(int(Rating.ovr(h)))
-	return h
 
 
 ## Prospects best first by what a club can see of them (projected rating).
@@ -285,7 +299,7 @@ static func rank_prospects(pool: Array) -> Array:
 	# Each prospect's projection once, not once a comparison (the same order).
 	var rows := []
 	for p in pool:
-		rows.append([future_rating(_held(p)), str(p["id"]), p])
+		rows.append([future_rating(p), str(p["id"]), p])
 	rows.sort_custom(func(a, b):
 		if a[0] != b[0]:
 			return a[0] > b[0]

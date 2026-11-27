@@ -17,15 +17,27 @@ const ATTR_ROWS := Attributes.CARD_ROWS
 ## close on Back). `on_close` runs when Close is pressed. `actions` are what the
 ## host offers for this player, each {"name", "label", "detail", "run"} (and
 ## "disabled" when the detail says why it cannot be done now): a line
-## of what it does and an outline button above Close.
+## of what it does and an outline button above Close. `lead` is a read-only
+## block the host puts right under his availability (Team selection: what
+## leaving him out would cost).
 static func open(host: Control, p: Dictionary, on_close: Callable = Callable(),
-		actions: Array = []) -> Control:
+		actions: Array = [], lead: Control = null) -> Control:
 	var box := UiKit.modal_box(host, 560.0, 0.0)
 	var overlay: Control = box["overlay"]
 	overlay.name = "PlayerProfile"
 	UiKit.close_on_outside_tap(box, on_close)
 	var v: VBoxContainer = box["body"]
 	var nickname_row := profile_body(v, p, host)
+	if lead != null:
+		# Under how he is now: his availability, and his load and readiness when shown.
+		var after: Node = null
+		for n in ["ProfileReadiness", "ProfileState"]:
+			after = v.find_child(n, false, false)
+			if after != null:
+				break
+		v.add_child(lead)
+		if after != null:
+			v.move_child(lead, after.get_index() + 1)
 	if nickname_row != null:
 		v.add_child(UiKit.spacer(UiKit.Space.ROOM))
 		v.add_child(nickname_row)
@@ -287,32 +299,48 @@ static func profile_body(v: VBoxContainer, p: Dictionary, host: Control) -> Cont
 	if has_ratings:
 		v.add_child(UiKit.spacer(UiKit.Space.CLOSE))
 		v.add_child(UiKit.section("Ratings"))
-		var grid := GridContainer.new()
-		grid.name = "ProfileAttributes"
-		grid.columns = 1 if UiKit.view_width(host) < 520.0 else 2
-		grid.add_theme_constant_override("h_separation", UiKit.Space.LOOSE)
-		grid.add_theme_constant_override("v_separation", UiKit.Space.THIN)
-		v.add_child(grid)
-		var attr: Dictionary = p["attr"]
-		var unknown: Array = p.get("attr_unrecorded", [])
-		for r in ATTR_ROWS:
-			# Not recorded in his era: blank, never a stand-in number.
-			var val := -1.0 if unknown.has(r[0]) else float(attr.get(r[0], 0.0))
-			grid.add_child(attr_bar(str(r[0]), str(r[1]), val))
 		var lead := attr_bar("leadership", "Leadership", float(Leadership.of(p)))
 		lead.name = "ProfileLeadership"
-		grid.add_child(lead)
+		var groups := attr_groups(host, p["attr"], str(p.get("speed_src", "")) == "est", [lead])
+		groups.name = "ProfileAttributes"
+		v.add_child(groups)
 		v.add_child(UiKit.spacer(UiKit.Space.TIGHT))
 		var lead_note := UiKit.lbl(Leadership.basis_text(), UiKit.SMALL, UiKit.MUTED)
 		lead_note.name = "ProfileLeadershipNote"
 		lead_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(lead_note)
-		if not unknown.is_empty():
-			var blank_note := UiKit.lbl("A dash: not recorded in his era.", UiKit.SMALL, UiKit.MUTED)
-			blank_note.name = "ProfileUnrecordedNote"
-			blank_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-			v.add_child(blank_note)
 	return nickname_row
+
+
+## His attributes in their four groups (Attributes.GROUPS), each under its own
+## small heading: one column on a phone, two from 520 px. `speed_est` marks a
+## Speed judged from his game (no GPS or combine time, RATING_REBUILD §2);
+## `extra` rows (Leadership) close the last group. The profile sheet and the
+## draft detail share it, so every card reads the same.
+static func attr_groups(host: Control, attr: Dictionary, speed_est := false, extra: Array = []) -> VBoxContainer:
+	var box := UiKit.vbox(UiKit.Space.THIN)
+	for gi in Attributes.GROUPS.size():
+		var g: Array = Attributes.GROUPS[gi]
+		if gi > 0:
+			box.add_child(UiKit.spacer(UiKit.Space.TIGHT))
+		var head := UiKit.subhead(str(g[0]))
+		head.name = "AttrGroup_%d" % gi
+		box.add_child(head)
+		var grid := GridContainer.new()
+		grid.name = "AttrGrid_%d" % gi
+		grid.columns = 1 if UiKit.view_width(host) < 520.0 else 2
+		grid.add_theme_constant_override("h_separation", UiKit.Space.LOOSE)
+		grid.add_theme_constant_override("v_separation", UiKit.Space.THIN)
+		box.add_child(grid)
+		for key in g[1]:
+			var label := Attributes.label(str(key))
+			if key == "speed" and speed_est:
+				label = "Speed (est.)"
+			grid.add_child(attr_bar(str(key), label, float(attr.get(key, 0.0))))
+		if gi == Attributes.GROUPS.size() - 1:
+			for row in extra:
+				grid.add_child(row)
+	return box
 
 
 ## Top attributes and the Needs work line: his
@@ -489,26 +517,31 @@ static func attr_bar(key: String, label: String, value: float) -> Control:
 	holder.add_child(bar)
 	var fill := ColorRect.new()
 	fill.position = Vector2.ZERO
-	fill.size = Vector2(70.0 * clampf(value / 99.0, 0.0, 1.0), 7)   # 0 when unrecorded (-1)
+	fill.size = Vector2(70.0 * clampf(value / 99.0, 0.0, 1.0), 7)
 	fill.color = attr_colour(value)
 	holder.add_child(fill)
 	for bar_part in [bar, fill]:
 		bar_part.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	h.add_child(holder)
-	var n := UiKit.lbl("—" if value < 0.0 else str(int(round(value))), UiKit.SMALL,
-			UiKit.MUTED if value < 0.0 else UiKit.TEXT)
+	var n := UiKit.lbl(str(int(round(value))), UiKit.SMALL, UiKit.TEXT)
 	n.custom_minimum_size = Vector2(26, 0)
 	n.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	h.add_child(n)
 	return h
 
 
+## Where a rating's colour changes, every card and the training rows alike:
+## green from 85 (mid-80s reads as elite), white from 52, khaki from 33, red
+## below (director 2026-11-27, option D).
+const COLOUR_CUTS := [85.0, 52.0, 33.0]
+
+
 static func attr_colour(v: float) -> Color:
-	if v >= 75.0:
+	if v >= float(COLOUR_CUTS[0]):
 		return UiKit.GOOD
-	if v >= 55.0:
+	if v >= float(COLOUR_CUTS[1]):
 		return UiKit.EMPH
-	if v >= 40.0:
+	if v >= float(COLOUR_CUTS[2]):
 		return Color(0.80, 0.76, 0.55)
 	return UiKit.BAD
 
@@ -522,17 +555,114 @@ static func is_rival(p: Dictionary) -> bool:
 	return c != "" and c != GameState.my_club
 
 
+## His ambition for the season: what he wants in his own terms, then where it
+## stands. A met one reads GOOD, a soured one BAD; an open one plain TEXT.
+static func _ambition(block: VBoxContainer, want: Dictionary) -> void:
+	var av := UiKit.vbox(UiKit.Space.SLIM)
+	av.name = "ProfileAmbition"
+	var head := UiKit.lbl("Ambition: " + str(want["want"]) + ".", UiKit.SMALL, UiKit.HEAD, true)
+	head.name = "AmbitionWant"
+	head.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	av.add_child(head)
+	var ink := UiKit.TEXT
+	match str(want["state"]):
+		"met":
+			ink = UiKit.GOOD
+		"soured":
+			ink = UiKit.BAD
+	var st := UiKit.lbl(str(want["status"]), UiKit.SMALL, ink)
+	st.name = "AmbitionStatus"
+	st.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	av.add_child(st)
+	block.add_child(av)
+
+
 static func _trust(v: VBoxContainer, p: Dictionary) -> void:
 	var id := str(p.get("id", ""))
-	if GameState.list_player(id).is_empty():
+	var mine := not GameState.list_player(id).is_empty()
+	var temps := RelationsView.temperaments(p)
+	var ties := RelationsView.bonds(GameState, id)
+	var words := RelationsView.promises(GameState, id) if mine else []
+	var group := RelationsView.faction(GameState, id) if mine else ""
+	var want := RelationsView.ambition(GameState, p) if mine else {}
+	if not mine and temps.is_empty() and ties.is_empty():
 		return
-	var key := Trust.player_key(id)
+	var block := UiKit.vbox(UiKit.Space.TIGHT)
+	block.name = "ProfileRelations"
+	v.add_child(UiKit.spacer(UiKit.Space.TIGHT))
+	v.add_child(block)
+	# His temperament: who he is in the rooms, any club's man, a fact.
+	if not temps.is_empty():
+		var labels := PackedStringArray()
+		for t in temps:
+			labels.append(str(t["label"]))
+		var tl := UiKit.lbl(" and ".join(labels) + ".", UiKit.BODY, UiKit.HEAD, true)
+		tl.name = "TemperamentWords"
+		tl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		block.add_child(tl)
+		for t in temps:
+			if str(t["text"]) == "":
+				continue
+			var dl := UiKit.lbl(str(t["text"]), UiKit.SMALL, UiKit.TEXT)
+			dl.name = "Temperament_" + str(t["key"])
+			dl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			block.add_child(dl)
+	if mine:
+		_opinion(block, p, temps)
+	# What he wants from his season (Ambitions), and where it stands.
+	if not want.is_empty():
+		_ambition(block, want)
+	# The group of unhappy players he stands with (Factions), in words.
+	if group != "":
+		var gl := UiKit.lbl(group, UiKit.SMALL, UiKit.TEXT)
+		gl.name = "ProfileFaction"
+		gl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		block.add_child(gl)
+	# His mates and rivals, each name a tap to his profile.
+	if not ties.is_empty():
+		var bl := UiKit.vbox(UiKit.Space.SLIM)
+		bl.name = "ProfileBonds"
+		for b in ties:
+			var club := str(b["club"])
+			var ink := UiKit.club_name_colour(UiKit.club_ink(club)) if club != "" else UiKit.TEXT
+			var row := UiKit.hbox(UiKit.GAP)
+			row.name = "Bond_" + str(b["id"])
+			var kl := UiKit.lbl(str(b["label"]) + ":", UiKit.SMALL, UiKit.TEXT)
+			# The kind keeps its width: the name beside it is the one that wraps.
+			kl.autowrap_mode = TextServer.AUTOWRAP_OFF
+			kl.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+			row.add_child(kl)
+			var nl := UiKit.lbl(str(b["name"]), UiKit.SMALL, ink, true)
+			nl.name = "BondName"
+			nl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			nl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			nl.custom_minimum_size.y = 32
+			nl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+			NameLink.tappable(nl, str(b["id"]))
+			row.add_child(nl)
+			bl.add_child(row)
+		block.add_child(bl)
+	# Your word to him, beyond a run (Backing says that one above).
+	for w in words:
+		var wl := UiKit.lbl(str(w), UiKit.SMALL, UiKit.TEXT)
+		wl.name = "ProfilePromise"
+		wl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		block.add_child(wl)
+
+
+## Your player's opinion of you out of 100, with Why: the rule, what is
+## fading and how long it has left, what he will not forget, and how his
+## temperament weighs your calls.
+static func _opinion(block: VBoxContainer, p: Dictionary, temps: Array) -> void:
+	var id := str(p.get("id", ""))
+	var o := RelationsView.opinion(GameState.relations, id)
+	var name := GameDB.player_display_name(p)
 	var row := UiKit.hbox(UiKit.GAP)
 	row.name = "ProfileTrust"
 	# "50 out of 100" wraps as one piece, never "out of" on one line and "100." on the next.
 	var nb := String.chr(0xA0)
-	var tl := UiKit.lbl(Trust.opinion_line(Trust.value(GameState.relations, key), GameDB.player_display_name(p)).replace(" out of ",
-			nb + "out" + nb + "of" + nb) + ".", UiKit.BODY, UiKit.TEXT)
+	var tl := UiKit.lbl(Trust.OPINION_LINE.replace(" out of ", nb + "out" + nb + "of" + nb) % [name, int(o["shown"])] + ".",
+			UiKit.BODY, UiKit.TEXT)
 	tl.name = "TrustWords"
 	tl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	tl.size_flags_vertical = Control.SIZE_SHRINK_CENTER
@@ -542,21 +672,43 @@ static func _trust(v: VBoxContainer, p: Dictionary) -> void:
 	why.name = "TrustWhy"
 	why.custom_minimum_size = Vector2(72, 48)
 	row.add_child(why)
-	v.add_child(row)
+	block.add_child(row)
 	var list := UiKit.vbox(UiKit.Space.TIGHT)
 	list.name = "TrustReasons"
 	list.visible = false
-	var rule := UiKit.lbl(OPINION_RULE % [GameDB.player_display_name(p), Contracts.REFUSE_BELOW, Contracts.REFUSE_PER_POINT], UiKit.SMALL, UiKit.MUTED)
+	var rule := UiKit.lbl(OPINION_RULE % [name, Contracts.REFUSE_BELOW, Contracts.REFUSE_PER_POINT], UiKit.SMALL, UiKit.MUTED)
 	rule.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	list.add_child(rule)
-	for r in Trust.reasons(GameState.relations, key):
-		var rl := UiKit.lbl(Trust.reason_text(r), UiKit.SMALL, UiKit.TEXT)
-		rl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		list.add_child(rl)
-	v.add_child(list)
+	# Scars (a mark that never fades) are set apart from what fades: bold, and
+	# listed with what he remembers.
+	_lines(list, "OpinionMarks", "Fading", o["marks"].filter(func(m): return int(m["weeks"]) >= 0)
+			.map(func(m): return str(m["text"])))
+	_lines(list, "OpinionScars", "Scars: these never fade", o["marks"].filter(func(m): return int(m["weeks"]) < 0)
+			.map(func(m): return str(m["text"])), true)
+	_lines(list, "OpinionMemory", "He remembers", o["reasons"])
+	var weighs := []
+	for t in temps:
+		for r in (t["reactions"] as Array):
+			weighs.append(str(r))
+	_lines(list, "TemperamentReactions", "How he takes your calls", weighs)
+	block.add_child(list)
 	why.pressed.connect(func():
 		list.visible = not list.visible
 		why.text = "Hide" if list.visible else "Why")
+
+
+## A small heading and its lines, into `list`; nothing when there are none.
+static func _lines(list: VBoxContainer, node_name: String, head: String, lines: Array, bold := false) -> void:
+	if lines.is_empty():
+		return
+	var box := UiKit.vbox(UiKit.Space.SLIM)
+	box.name = node_name
+	box.add_child(UiKit.subhead(head))
+	for t in lines:
+		var l := UiKit.lbl(str(t), UiKit.SMALL, UiKit.TEXT, bold)
+		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		box.add_child(l)
+	list.add_child(box)
 
 
 ## FL-005: his nickname beside the full name, and one thing he does outside

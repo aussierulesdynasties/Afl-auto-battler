@@ -54,7 +54,7 @@ func _run() -> void:
 		print("  ", l)
 	state.season_wrap = {"year": state.season_year, "seen": false, "ins": [], "outs": [],
 			"staff": [], "trades": lines, "goal": "", "reason": ""}
-	UK.apply_appearance("dark")
+	UK.apply_palette()
 	root.size = Vector2i(W, H)
 	DisplayServer.window_set_size(Vector2i(W, H))
 	var hub = load("res://scenes/HubScene.tscn").instantiate()

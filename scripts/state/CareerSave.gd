@@ -1,6 +1,9 @@
 class_name CareerSave
 extends RefCounted
-## The career save file: one Variant blob written with FileAccess.store_var.
+## The career save file: one Variant blob written with FileAccess.store_var,
+## packed (ZSTD) inside a small envelope that keeps its version outside
+## (director, 2026-11-26, P2-6: a 12-season save went from 11.4 MB to 1.4 MB).
+## A save from before packing is the blob itself and still opens.
 ##
 ## Player dictionaries are shared by reference all over a career (the season
 ## lists, your list, the draft pool and picks, the prospect pool, GameDB's
@@ -15,11 +18,14 @@ extends RefCounted
 
 ## Bump VERSION whenever the save layout changes, and add the step that
 ## lifts the previous version to upgrade(): an older career is upgraded on
-## load, never dropped (T5.Q24).
+## load (T5.Q24), back to FIRST_LOADABLE.
 ##   1 -> 2: St Kilda's club code SKN became STK.
-##   2 -> 3: the 16 skills (director's interview, 2026-11-15): disposal became
-##           kicking and handballing, marking contested and uncontested marking.
-const VERSION := 3
+##   2 -> 3: the 16 skills (2026-11-15).
+##   4: the 18 attributes and a worked-out OVR (Director Bible 4.2.30a). A
+##      career saved before it does not load (director, 2026-11-25: "i dont
+##      care about old saves"; docs/RATING_REBUILD.md §5).
+const VERSION := 4
+const FIRST_LOADABLE := 4
 const DEFAULT_PATH := "user://career.save"
 
 ## A reference to an entry in the player table.
@@ -30,9 +36,9 @@ const WRITE_TAG := "__save_sid"
 ## Match results keep only what the ladder, the finals bracket and the season
 ## review read. The event log (~1,100 events a match), box score and coach
 ## snapshots only serve the replay of a match you have just watched.
-## Derived once from raw stats when the dataset loads (Ratings.derive_all)
-## and never read again, so they are not worth half of every player's bytes.
-const SKIP_PLAYER_KEYS := ["rates", "norm"]
+## A player's OVR and salary value are read from his attributes, never saved
+## (Bible 4.2.30a); the rest are the old rating system's, gone with it.
+const SKIP_PLAYER_KEYS := ["overall", "value", "rates", "norm", "role_scores", "attr_unrecorded"]
 const RESULT_KEYS := ["home", "away", "score", "goals", "behinds", "quarters",
 		"q_goals", "q_behinds", "winner", "margin", "round", "label", "tag",
 		"venue", "decided_on_ladder", "extra_time", "scoring"]
@@ -131,7 +137,7 @@ static func _write_blob(blob: Dictionary, path: String) -> bool:
 		return false
 	# The same bytes store_var writes (a 32-bit length, then the encoded
 	# value), kept in hand so the check below needs no decode.
-	var bytes := var_to_bytes(blob)
+	var bytes := var_to_bytes(_packed(blob))
 	var head := PackedByteArray()
 	head.resize(4)
 	head.encode_u32(0, bytes.size())
@@ -169,6 +175,26 @@ static func _write_blob(blob: Dictionary, path: String) -> bool:
 		return false
 	_note_current(path, blob.get("meta", {}))
 	return true
+
+
+## The envelope a save is written in: the blob's version and header, and the
+## blob itself compressed. Only the envelope is read without unpacking.
+static func _packed(blob: Dictionary) -> Dictionary:
+	var raw := var_to_bytes(blob)
+	return {"version": blob.get("version", VERSION), "meta": blob.get("meta", {}),
+			"size": raw.size(), "packed": raw.compress(FileAccess.COMPRESSION_ZSTD)}
+
+
+## What a save file holds, unpacked: the blob from an envelope, or a save
+## from before packing as it is. {} if an envelope does not unpack.
+static func unpacked(v: Variant) -> Variant:
+	if not (v is Dictionary and (v as Dictionary).has("packed")):
+		return v
+	var packed = v["packed"]
+	if not (packed is PackedByteArray) or (packed as PackedByteArray).is_empty():
+		return {}
+	var blob = bytes_to_var((packed as PackedByteArray).decompress(int(v.get("size", 0)), FileAccess.COMPRESSION_ZSTD))
+	return blob if blob is Dictionary else {}
 
 
 static func _wrote(p: String, head: PackedByteArray, bytes: PackedByteArray) -> bool:
@@ -244,7 +270,8 @@ static func read_meta(path := DEFAULT_PATH) -> Dictionary:
 
 
 ## Why there is no usable save at `path`: "" (a usable save, or no file at
-## all), "newer" (written by a newer build) or "unreadable" (damaged).
+## all), "newer" (written by a newer build), "older" (written before
+## FIRST_LOADABLE) or "unreadable" (damaged).
 static func problem(path := DEFAULT_PATH) -> String:
 	if exists(path):
 		return ""
@@ -255,7 +282,8 @@ static func problem(path := DEFAULT_PATH) -> String:
 		var v := _version_at(p)
 		if v > VERSION:
 			return "newer"
-		found = "unreadable"
+		if found == "":
+			found = "older" if v > 0 and v < FIRST_LOADABLE else "unreadable"
 	return found
 
 
@@ -287,7 +315,7 @@ static func _blob_at(path: String) -> Dictionary:
 	var f := FileAccess.open(path, FileAccess.READ)
 	if f == null:
 		return {}
-	var blob = f.get_var()
+	var blob = unpacked(f.get_var())
 	f.close()
 	if not (blob is Dictionary) or not (blob as Dictionary).has("state"):
 		return {}
@@ -295,52 +323,19 @@ static func _blob_at(path: String) -> Dictionary:
 
 
 ## An older save lifted step by step to VERSION, or {} if no step reaches it
-## (a newer build's save, or a version this build never wrote).
+## (a newer build's save, one from before FIRST_LOADABLE, or a version this
+## build never wrote).
 static func upgrade(blob: Dictionary) -> Dictionary:
 	var v := int(blob.get("version", 0))
+	if v < FIRST_LOADABLE:
+		return {}
 	while v < VERSION:
 		match v:
-			1:
-				blob = _migrate_1_to_2(blob)
-			2:
-				_migrate_skills(blob)
 			_:
 				return {}
 		v += 1
 		blob["version"] = v
 	return blob if v == VERSION else {}
-
-
-## The raw blob, players table included, renamed in place (shared player
-## bodies stay shared).
-static func _migrate_1_to_2(blob: Dictionary) -> Dictionary:
-	migrate_club_codes(blob)
-	return blob
-
-
-## Every player's attributes to the 16 skills (Skills.migrate), and any
-## other skill-keyed table (training gains, start-of-season snapshots) renamed
-## the same way without filling. In place, so shared player dicts stay shared.
-static func _migrate_skills(v: Variant) -> void:
-	if v is Dictionary:
-		var d: Dictionary = v
-		if d.get("attr") is Dictionary:
-			Skills.migrate(d["attr"])
-		elif d.has("disposal") and d.has("contested") or d.has("marking") and d.has("contested"):
-			for pair in [["disposal", ["kicking", "handballing"]],
-					["marking", ["contested_marking", "uncontested_marking"]]]:
-				if d.has(pair[0]):
-					for k in pair[1]:
-						if not d.has(k):
-							d[k] = d[pair[0]]
-					d.erase(pair[0])
-		for val in d.values():
-			if val is Dictionary or val is Array:
-				_migrate_skills(val)
-	elif v is Array:
-		for x in v:
-			if x is Dictionary or x is Array:
-				_migrate_skills(x)
 
 
 ## Slim copies of match results for the save. Accepts a result, or arrays of
@@ -427,6 +422,11 @@ static func _is_player(d: Dictionary) -> bool:
 	return d.has("id") and d.has("attr") and d.has("role")
 
 
+## Every dictionary and array is copied, never shared with the live career. The
+## engine makes each copy (duplicate) and only the containers inside it are
+## walked here: an autosave walks thousands of players, and copying their
+## numbers and strings one at a time in script was most of its cost. The copy
+## is the same as one built key by key (same keys, order and values).
 func _encode(v):
 	if v is Dictionary:
 		var d: Dictionary = v
@@ -436,22 +436,31 @@ func _encode(v):
 				_next_sid += 1
 				d[WRITE_TAG] = sid
 				_tagged.append(d)
-				var body := {}
+				var body := _copy_dict(d)
+				body.erase(WRITE_TAG)
+				for k in SKIP_PLAYER_KEYS:
+					body.erase(k)
 				for k in d:
-					if k != WRITE_TAG and not SKIP_PLAYER_KEYS.has(k):
-						var x = d[k]
-						body[k] = _encode(x) if _is_container(x) else x
+					var x = d[k]
+					var t := typeof(x)
+					if (t == TYPE_DICTIONARY or t == TYPE_ARRAY) and not SKIP_PLAYER_KEYS.has(k):
+						body[k] = _encode(x)
 				_players[sid] = body
 			return {PLAYER_REF: int(d[WRITE_TAG])}
-		var out := {}
+		var out := _copy_dict(d)
 		for k in d:
 			var x = d[k]
-			out[k] = _encode(x) if _is_container(x) else x
+			var t := typeof(x)
+			if t == TYPE_DICTIONARY or t == TYPE_ARRAY:
+				out[k] = _encode(x)
 		return out
 	if v is Array:
-		var out := []
-		for x in v:
-			out.append(_encode(x) if _is_container(x) else x)
+		var a: Array = v
+		var out := _copy_array(a)
+		for i in range(a.size()):
+			var t := typeof(a[i])
+			if t == TYPE_DICTIONARY or t == TYPE_ARRAY:
+				out[i] = _encode(a[i])
 		return out
 	return v
 
@@ -460,6 +469,25 @@ func _encode(v):
 static func _is_container(x) -> bool:
 	var t := typeof(x)
 	return t == TYPE_DICTIONARY or t == TYPE_ARRAY
+
+
+## A plain (untyped) copy of one level, as the save has always held: a typed
+## container's copy is rebuilt untyped key by key.
+static func _copy_dict(d: Dictionary) -> Dictionary:
+	if not d.is_typed():
+		return d.duplicate()
+	var out := {}
+	for k in d:
+		out[k] = d[k]
+	return out
+
+
+static func _copy_array(a: Array) -> Array:
+	if not a.is_typed():
+		return a.duplicate()
+	var out := []
+	out.append_array(a)
+	return out
 
 
 func _untag() -> void:
@@ -478,22 +506,30 @@ func _decode(v):
 				# keeps its ball moving between them (draws no random numbers).
 				if beat_hook.is_valid():
 					beat_hook.call()
-				var live := {}
-				_decoded[sid] = live
 				var raw: Dictionary = _players.get(sid, {})
+				var live := _copy_dict(raw)
+				# Known before his parts are read, so a reference back to him is him.
+				_decoded[sid] = live
 				for k in raw:
 					var x = raw[k]
-					live[k] = _decode(x) if _is_container(x) else x
+					var t := typeof(x)
+					if t == TYPE_DICTIONARY or t == TYPE_ARRAY:
+						live[k] = _decode(x)
 			return _decoded[sid]
-		var out := {}
+		var out := _copy_dict(d)
 		for k in d:
 			var x = d[k]
-			out[k] = _decode(x) if _is_container(x) else x
+			var t := typeof(x)
+			if t == TYPE_DICTIONARY or t == TYPE_ARRAY:
+				out[k] = _decode(x)
 		return out
 	if v is Array:
-		var out := []
-		for x in v:
-			out.append(_decode(x) if _is_container(x) else x)
+		var a: Array = v
+		var out := _copy_array(a)
+		for i in range(a.size()):
+			var t := typeof(a[i])
+			if t == TYPE_DICTIONARY or t == TYPE_ARRAY:
+				out[i] = _decode(a[i])
 		return out
 	return v
 
@@ -736,7 +772,8 @@ static func export_bytes(path := DEFAULT_PATH) -> PackedByteArray:
 
 
 ## Make `bytes` (an exported file) the career save. Returns "" on success,
-## "newer" (a newer build wrote it) or "unreadable". The career it replaces
+## "newer" (a newer build wrote it), "older" (from before FIRST_LOADABLE) or
+## "unreadable". The career it replaces
 ## joins the earlier saves, so an import can be undone with Restore. A bad
 ## file never touches the save in place.
 static func import_bytes(bytes: PackedByteArray, path := DEFAULT_PATH) -> String:
@@ -751,5 +788,7 @@ static func import_bytes(bytes: PackedByteArray, path := DEFAULT_PATH) -> String
 	var v := _version_at(probe)
 	DirAccess.remove_absolute(probe)
 	if blob.is_empty():
-		return "newer" if v > VERSION else "unreadable"
+		if v > VERSION:
+			return "newer"
+		return "older" if v > 0 and v < FIRST_LOADABLE else "unreadable"
 	return "" if _write_blob(blob, path) else "unreadable"

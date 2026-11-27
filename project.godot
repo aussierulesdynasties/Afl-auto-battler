@@ -18,7 +18,7 @@ config/icon="res://assets/ui/app_icon/app_icon_512.png"
 config/windows_native_icon="res://assets/ui/app_icon/app_icon.ico"
 ; The first thing on screen, before the engine can draw anything itself: the
 ; logo on the loading cover's colour, so the title and the load screens follow on.
-boot_splash/bg_color=Color(0.141, 0.133, 0.118, 1)
+boot_splash/bg_color=Color(0.0678, 0.1301, 0.2485, 1)
 boot_splash/image="res://assets/ui/boot_splash.png"
 boot_splash/use_filter=true
 ; Android's back button goes through Router.handle_back() instead of quitting.
@@ -32,6 +32,7 @@ run/max_fps=60
 
 [autoload]
 
+WebPacks="*res://scripts/core/WebPacks.gd"
 ScreenLayout="*res://scripts/core/ScreenLayout.gd"
 
 GameDB="*res://scripts/core/GameDB.gd"

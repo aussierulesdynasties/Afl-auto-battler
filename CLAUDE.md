@@ -1,12 +1,46 @@
 # AFL Auto-Battler: working rules
 
+## How every Claude session works here (director, 26-27 Nov 2026)
+
+These are Baggins's (the director's, GitHub `gabebartolo-spec`) standing rules for every Claude session on
+any account. They win over anything older in this file, the Director Bible or a skill. Don't ask about them again.
+
+1. **Merge every PR without asking.** "stop asking me dumb questions merge everything right away" (26 Nov);
+   "merge every SINGLE PR" (27 Nov). Green and conflict-free: squash-merge it or turn on squash auto-merge.
+   Don't park a PR for a design or balance call; resolve it sensibly and merge. No balance re-runs unless
+   Baggins asks for one. No PR cap and no batching: the cap is removed (27 Nov).
+2. **A red PR is fixed at once, by you.** "i dont want to hear if it breaks, i want you to fix it the second
+   it breaks" (27 Nov). Read the failing log and push the fix, even on a PR another session drives (merge
+   their pushes in, never force-push). Don't wait for another session or owner, and don't just report the
+   failure. Report merges. Never go idle with your PR unmerged: watch it until it lands.
+3. **Never push a commit you expect to fail.** Run the touched suites locally (`tools/run_tests.sh <suite>`)
+   before every push. When told to finish up: stabilise and merge what is open; start nothing new.
+4. **Close obsolete PRs yourself, with a comment saying why** ("fix it yourself", 27 Nov). Never hand a
+   GitHub chore to Baggins.
+5. **No claim without evidence.** Never call something fixed without before/after evidence from real runs.
+   Say plainly when something failed or is unverified.
+6. **After merging main into a branch, check the diff** (`git diff origin/main...HEAD`) for fixes the merge
+   dropped, before you push.
+7. **Find CI and GitHub problems yourself**: red checks, stuck runs, cancelled runs still holding runners.
+   Fix them without waiting to be asked. Force-cancel stuck or stale runs without asking.
+8. **Plain, short messages to Baggins.** No jargon, no engine terms, no bare PR numbers; say what each is.
+   No personal or wellbeing comments.
+9. **Nothing may depend on one Claude account.** Anything recurring lives in the repo, for example the CI
+   health check `.github/workflows/ci_health.yml`. Handoff for GitHub and CI work: docs/HANDOFF_github_ci.md.
+
+
 The design bible is read on demand (below). `docs/TODO.md` is the one list of work not done:
 read it when you pick or close work, not otherwise (a brief that names your row is enough). Director rulings are in
 `docs/DIRECTOR_BIBLE.md` (513 KB: search it, never read it whole). Must-read files stay under 60 KB (CI: `tools/check_doc_sizes.py`).
 
 Godot 4 / GDScript. Run `tools/run_tests.sh` (or `tools/run_tests.sh draft_ui`
-for one suite) before pushing. MetaHuman files (and anything made from them) never go in this public
+for one suite) before pushing. Hooks in `.claude/hooks/pr_guard.py` enforce the PR rules: they refuse a merge of a
+conflicting PR, a merge of main that isn't needed, a second push within 20 min, cancelling a main push run, merging a
+workflow change with no green run of it on the PR's head, and ending a turn
+after a push with nothing set to wake you; each refusal names its override. In a cloud session they
+install Godot and gdlint at start, so run the suites there too. MetaHuman files (and anything made from them) never go in this public
 repo: they live in a private repo and `tools/epic_assets.sh fetch` copies them in (docs/EPIC_ASSETS.md).
+Ground models (`assets/grounds/`) live there too: publish them with `tools/ground_assets.sh`, never `git add` (docs/GROUND_ASSETS.md).
 
 ## The design bible comes first (director, 2026-10-09)
 
@@ -83,6 +117,42 @@ supplies the vision, taste, AFL knowledge, priorities and final judgement.
 - **Change approach after repeated failure.** After two similar failed fixes of the same problem, stop patching: gather different evidence (a capture, a trace, a measurement) and rethink the approach before trying again.
 - **Balance is measured locally (director, 2026-11-04).** Any balance-gated row, match-engine change or play-touching feature is screened with `tools/balance.sh match 1000` (paired: main vs the branch, `--a-root <main checkout> --b ""`; there are no feature switches, director 2026-11-06), about 85 s for 1,000 paired matches on 14 parallel Godot workers; the report marks each stat IN/NEAR/OUT of real AFL 2026 team rates and gives B-A with its standard error. Paste the table in the PR. Improve the harness (new modes, stats, references) instead of writing one-off probes; see tools/balance/README.md.
 
+## Getting a PR merged (director, 2026-11-26)
+
+CI is a shared pool of about 20 GitHub runners. A full Tests run needs up to 30 jobs, so every
+extra push or PR makes every other PR wait. On 26 Nov PRs waited hours for runners while
+the jobs themselves took about 30 min. Merges took days, and the director calls it the
+number one development blocker.
+
+- **Never end a turn with CI pending and nothing to wake you.** After you push, subscribe to the
+  PR's activity (`subscribe_pr_activity`) or schedule a check-in (`send_later`); on a machine
+  with a full `gh`, `gh pr checks <n> --watch` also works. A red check that sits for hours
+  because nobody looked is the most common failure here.
+- **A red check is the next job.** Read the failed job's log, fix it, push once. Do not start
+  other work, open another PR or ask the director to merge while your PR is red.
+- **Push once, not in drips.** Each push cancels the run in progress and goes to the back of the
+  queue (45 cancelled PR runs on 26 Nov). Batch your commits locally and run the touched suites
+  with `tools/run_tests.sh <suite>` before you push.
+- **Cancel with force-cancel.** A branch last synced before 26 Nov keeps running its shards
+  after a plain cancel. Use `POST actions/runs/<id>/force-cancel`, or run the `Repo hygiene`
+  workflow with `force_cancel: <run ids>` (MCP `actions_run_trigger`), or merge main in.
+- **There is no open PR cap.** The director removed it (27 Nov, rule 1 above; Director Bible 7.48).
+- **Check for a conflict before you ask for a merge, never after.** Run `git fetch origin main &&
+  git merge-tree --write-tree origin/main HEAD`. If it reports a conflict, merge main in and fix
+  it first (never rebase or force-push, 7.48). Do not turn on auto-merge or ask for a merge on a
+  PR you know conflicts: it cannot land, and it wastes a full test run.
+- **Before you open a PR, check the open set** for one that already touches the same files or row
+  (list the open PRs and read their titles and files). Add to it or wait for it rather than
+  opening a rival.
+- **Say what you abandon.** A PR you are not finishing: finish it, or close it with a comment if it is
+  obsolete (rule 4 above; replaces the old "never close it yourself", Director Bible 7.50).
+
+## Review boards and imagery (director, 2026-11-26)
+
+Review boards, WIP films, reference photos and aerial or satellite imagery go to the private repo
+`aussierulesdynasties/afl-review-archive` (same `.claude/review/` paths), never to this public repo, and never
+as a "save work in progress to main" commit. `.claude/review/` is ignored here.
+
 ## UI and writing
 
 Before touching any screen, copy or vignette, load the `afl-ui-writing` skill (visual identity, readability, colour, consistency, review test).
@@ -90,7 +160,7 @@ Before touching any screen, copy or vignette, load the `afl-ui-writing` skill (v
 ## Assigned flavour and styling work (director, 2026-10-06)
 
 - **Flavour FL-001-FL-008:** scope and rulings in [the Director Bible](docs/DIRECTOR_BIBLE.md). Every addition has zero gameplay effects and must look distinct from real game information; new ritual/farewell vignette scenes are authorised (shared 2.5D art, tactical-scene gates kept).
-- **Styling STYLE-01-STYLE-08:** scope and rulings in [the Director Bible](docs/DIRECTOR_BIBLE.md). Dark Android first. Light theme parked (director 2026-10-13: "im also happy to abandon 'light mode' for now"): no new light-theme work, captures or tests; the code stays. A visual treatment merges only after the director approves its look; green CI is not enough.
+- **Styling STYLE-01-STYLE-08:** scope and rulings in [the Director Bible](docs/DIRECTOR_BIBLE.md). Dark Android first. Light theme removed (director 2026-11-26: "please remove 'light mode' from the game"): dark is the only appearance. A visual treatment merges only after the director approves its look; green CI is not enough.
 - The Training player-row name/secondary-line stack is a confirmed vertical-alignment defect.
 
 ## Skills

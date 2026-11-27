@@ -6,6 +6,7 @@ extends SceneTree
 ## A fresh career fast-forwarded to the off-season, with two pick trades made
 ## so every kind of line shows: your own pick, one bought from a rival for a
 ## player, one sent to a rival, one traded on. Never touches a real save.
+const Ovr := preload("res://tests/ovr.gd")
 
 const W := 390
 const H := 844
@@ -54,7 +55,7 @@ func _run() -> void:
 	state.set_setting("seen_training_intro", true)
 	state.start_season(club, db.club_list(club))
 	state.set_setting("seen_weekly_loop_intro", true)
-	UK.apply_appearance("dark")
+	UK.apply_palette()
 	root.size = Vector2i(W, H)
 	DisplayServer.window_set_size(Vector2i(W, H))
 	var bg := ColorRect.new()
@@ -90,7 +91,7 @@ func _run() -> void:
 	state.trade_requests = {}
 	var year: int = state.season_year
 	var mine: Array = state.my_list.duplicate()
-	mine.sort_custom(func(a, b): return int(a["overall"]) < int(b["overall"]))
+	mine.sort_custom(func(a, b): return int(Ovr.of(a)) < int(Ovr.of(b)))
 	var rival := "CAR" if club != "CAR" else "ESS"
 	var other := "GEE" if club != "GEE" and rival != "GEE" else "SYD"
 	# A first-round pick bought from the rival for a depth player.
@@ -98,7 +99,7 @@ func _run() -> void:
 	state._execute_trade(rival, club, [state.pick_asset(state.pick_id(year, 1, rival))], [paid])
 	# Your second-round pick sent to another club for one of its fringe players.
 	var their: Array = (state.season.lists[other] as Array).duplicate()
-	their.sort_custom(func(a, b): return int(a["overall"]) < int(b["overall"]))
+	their.sort_custom(func(a, b): return int(Ovr.of(a)) < int(Ovr.of(b)))
 	state._execute_trade(club, other, [state.pick_asset(state.pick_id(year, 2, club))], [their[1]])
 	# Next year's first from a third club, for two players.
 	var third := "RIC" if club != "RIC" and rival != "RIC" and other != "RIC" else "WCE"
@@ -159,7 +160,7 @@ func _run() -> void:
 	state.start_season(club, db.club_list(club))
 	var star: Dictionary = state.my_list[0]
 	var lst: Array = state.my_list.duplicate()
-	lst.sort_custom(func(a, b): return int(a["overall"]) > int(b["overall"]))
+	lst.sort_custom(func(a, b): return int(Ovr.of(a)) > int(Ovr.of(b)))
 	state.set_untouchable(str(lst[1]["id"]), true)
 	var ls = load("res://scenes/ListScene.tscn").instantiate()
 	ls.set("_pane", "list")

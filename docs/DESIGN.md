@@ -177,7 +177,7 @@ rucks and unlisted players keep the numbers' reading. `Ratings.listed_secondary`
 for players the listing does not lead. Match-day selection
 fills each slot from primary players first, then from the secondary. The
 on-ground copy's `role` is the slot, so the oval still groups them; `list_tag`
-keeps the natural tag for the list screen. Draft filters and the two-ruck rule
+keeps the natural tag for the list screen. Draft filters and the ruck rule
 treat either role as cover. Position totals stay primary-only, so they still
 sum to the list size.
 
@@ -319,8 +319,7 @@ the target, so prospects are expressed in exactly the same units as real
 players and feed the same engine. `Ratings.effective_games()` carries the
 "sample" override: projections skip the small-sample confidence shrink, and a
 player who has completed a simulated season keeps a full-season sample so a
-fringe 2026 games count cannot suppress them forever. `tools/intake_harness.py`
-mirrors these constants the way `sim_harness.py` mirrors the match engine.
+fringe 2026 games count cannot suppress them forever.
 
 **Class quality.** Generated future classes (never the real 2026 class) get a
 quality tier, rolled once per career and draft year from `career_seed` (a
@@ -341,7 +340,7 @@ at 80+ where a normal one produces none to two, with a top 20 peaking about
 twenty years on the league's count of 80+ players is the same whatever that
 class was - a cohort advantage, not inflation. The tier of every generated
 class is recorded in `class_tiers` for a future draft-history view; the game
-does not announce it. `tools/intake_harness.py` mirrors the normal tier only.
+does not announce it.
 
 ---
 
@@ -530,7 +529,8 @@ table, shot conversion, every best and quiet player with his numbers and
   player pool and one salary cap. Every list has the same target size:
   `min(44, floor(pool_size / club_count))`, currently **37**. The human selects
   on their turns; rivals select between turns. Coverage needs and cap pressure
-  make the draft a decision rather than a queue. Only two rucks are mandatory.
+  make the draft a decision rather than a queue. Only one ruck is mandatory
+  (director, 2026-11-26; it was two).
   `Draft.pick_history` records successful selections in sequence (overall pick,
   round, destination club, player ID/name, original club, role, rating, cost).
   Failed selections never create a record. Player ownership comes from this
@@ -796,8 +796,9 @@ table, shot conversion, every best and quiet player with his numbers and
   **reversed-ladder order**, worst club first, and the draft simply ends when
   the pool runs dry — the last clubs' spare turns never happen, mirroring the
   real draft's final partial rounds. It is the same `Draft` object in
-  `intake_mode`: the salary cap is a formality (rookie contracts), the two-ruck
-  rule does not re-apply to an intake, and a club at the 44-man cap has its
+  `intake_mode`: the salary cap is a formality (rookie contracts), the ruck
+  rule counts the whole kept list (a club with no ruck uses its last open place
+  on one), and a club at the 44-man cap has its
   turn skipped rather than stalling the board. Rival AI picks between your
   turns exactly like the career draft, and the shared DraftScene shows
   projected OVR tooltips and scouting notes (the pool filters were cut
@@ -815,7 +816,7 @@ table, shot conversion, every best and quiet player with his numbers and
   a few per-game numbers from his real season (or his U18 / state-league
   season, ranking, pathway and scouting note for a prospect). The full
   ratings sit behind a button. `Draft.pick_block_reason` says why a player
-  cannot be picked (taken, not your turn, cap, two-ruck rule, list full).
+  cannot be picked (taken, not your turn, cap, ruck rule, list full).
   Back closes the details before leaving the draft.
 * **Rollover** — `finish_intake_draft()` merges each club's intakes into its
   list (rookie jumper numbers assigned from 41 up), ages every player by a
@@ -914,7 +915,7 @@ scripts/
 scenes/                thin .tscn wrappers - a root Control + its script
 tools/
   sim_harness.py       ratings mirror; match half stale (run the calibration suite instead)
-  intake_harness.py    projection/intake/rollover harness + draft-class CSV checks
+  intake_harness.py    draft-class CSV checks (data/draftees_2026.csv)
   scrape_afltables.py  re-harvests the dataset, with the <6-game 2025 fallback
   validate_data.py     checks 220 club x column aggregates vs published totals
   visual/capture_match.gd  renders match-view frames and movement trails (review)

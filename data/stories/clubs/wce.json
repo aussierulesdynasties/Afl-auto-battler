@@ -34,26 +34,6 @@
 		]
 	},
 	{
-		"id": "wce_homesick_kid",
-		"club": "WCE",
-		"controversy": false,
-		"category": "family",
-		"subject": {"kind": "player", "pick": "random", "where": {"age_max": 20, "new_here": true, "real_named": false}},
-		"title": ["Homesick in Perth"],
-		"text": ["{name}, drafted from interstate, has gone quiet. His host family says he's ringing home every night and talking about the other side of the Nullarbor."],
-		"choices": [
-			{"key": "send", "label": "Send him home for a week",
-			 "effects": [{"op": "trust", "d": 3, "why": "You let him go home when he needed it"}, {"op": "morale", "d": 4, "who": "subject"}, {"op": "forgo_xp", "d": 4, "who": "subject"}, {"op": "culture", "strand": "standards", "d": -1, "why": "The senior players noticed the special treatment"}],
-			 "result": "{first} goes home for a week. The senior group notices."},
-			{"key": "busy", "label": "Keep him busy here",
-			 "effects": [{"op": "xp", "d": 4, "who": "subject"}, {"op": "culture", "strand": "standards", "d": 1, "why": "The club held the line with a homesick kid"}, {"op": "morale", "d": -3, "who": "subject"}, {"op": "odds", "chance": 15, "hit": [{"op": "trust", "d": -4, "why": "He asked about a trade home"}], "miss": [], "hit_result": "He's asking about a trade home at season's end."}],
-			 "result": "Training, more training, and dinner with the host family."},
-			{"key": "family", "label": "Fly his family over",
-			 "effects": [{"op": "morale", "d": 3, "who": "subject"}, {"op": "trust", "d": 2, "why": "The club brought his family to him"}, {"op": "board", "d": -2, "was": "funds"}],
-			 "result": "His mum and dad land on Friday. The club pays the fares."}
-		]
-	},
-	{
 		"id": "wce_bring_him_home",
 		"club": "WCE",
 		"controversy": false,

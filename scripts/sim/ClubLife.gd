@@ -313,11 +313,38 @@ static func morale_after_match(list: Array, played: Dictionary, won: bool, softe
 		if played.has(id):
 			add_morale(p, (MATCH_MORALE_WIN if won else MATCH_MORALE_LOSS) + swing)
 		elif int(p.get("injury_weeks", 0)) <= 0 and not unavailable.has(id):
-			var loss := 6 if int(Rating.ovr(p, 0)) >= 78 else 3
+			var loss := 6 if int(Rating.ovr(p, 0)) >= EXTENSION_MIN_OVR else 3
 			add_morale(p, -int(round(sting * CoachEffects.softened(loss, _sting_share(float(soften.get(id, 0.0)), culture_s)))))
 		else:
 			# Injured players drift back toward settled.
 			add_morale(p, signi(MORALE_BASE - morale(p)))
+
+
+## Morale drifts towards where his opinion of his coach puts it (relationship
+## overhaul Phase 1, DIRECTOR_BIBLE 5.167): settled (MORALE_BASE) at an opinion
+## of 50, this much higher or lower per point of opinion away from it, never
+## more than DRIFT_SPAN either way, one DRIFT_STEP a round. The match still
+## reads only morale (form, +/-3%), so opinion reaches the field through this
+## one hook. Every club, once a round (GameState._opinion_after_round).
+const DRIFT_PER_POINT := 0.3
+const DRIFT_SPAN := 15
+const DRIFT_STEP := 1
+
+
+## Where his morale settles for an opinion of his coach of `opinion` (0..100).
+static func morale_target(opinion: int) -> int:
+	return MORALE_BASE + clampi(roundi(float(opinion - 50) * DRIFT_PER_POINT), -DRIFT_SPAN, DRIFT_SPAN)
+
+
+## One round's drift towards that: at most DRIFT_STEP, never past it. An
+## injured player is left to the injured rule (morale_after_match). `shift`
+## moves where it settles: a group he stands with pushing (Factions.morale_shift).
+static func drift_morale(p: Dictionary, opinion: int, shift := 0) -> void:
+	if int(p.get("injury_weeks", 0)) > 0:
+		return
+	var gap := morale_target(opinion) + shift - int(p.get("morale", MORALE_BASE))
+	if gap != 0:
+		add_morale(p, signi(gap) * mini(DRIFT_STEP, absi(gap)))
 
 
 static func mood(m: int) -> String:
@@ -449,9 +476,7 @@ const WAIT_FLAT := "At the off-season he asks what his rating is worth then. The
 static func wait_words(p: Dictionary, lift: int) -> String:
 	var ovr := int(Rating.ovr(p, 0))
 	lift = maxi(0, lift)
-	var up := p.duplicate()
-	up["overall"] = ovr + lift
-	var more := Contracts.asking_salary(up) - Contracts.asking_salary(p)
+	var more := Contracts.asking_at(p, ovr + lift) - Contracts.asking_salary(p)
 	if lift <= 0 or more <= 0:
 		return WAIT_FLAT
 	return WAIT_LIFT % [lift, "point" if lift == 1 else "points", Contracts.money(more)]

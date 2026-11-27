@@ -4,6 +4,7 @@ extends RefCounted
 ## position: true POT >= 90, your League Draft read's midpoint >= 90, and its
 ## upper bound >= 90; which source set each POT (age headroom, recent peak,
 ## draft pedigree, override); and the director's named examples.
+const Ovr := preload("res://tests/ovr.gd")
 
 const NAMES := ["Patrick Voss", "Josh Treacy", "Cody Walker", "Noah Anderson", "Jake Waterman",
 		"Jack Viney", "Josh Worrell", "Tom Stewart", "Max Hall", "Sam Darcy", "Jagga Smith",
@@ -22,9 +23,15 @@ func run() -> void:
 	var mid90 := 0
 	var up90 := 0
 	var pots := []
+	# T8.50: the same counts by age, role, club and source, as parseable lines:
+	#   POTROW dim key n true90 mid90 upper90
+	var overridden := {}
+	GameDB._each_override_row(GameDB.POTENTIAL_CSV, "potential", players, func(q, _cell):
+		overridden[str(q["id"])] = true)
+	var cuts := {}
 	for p in players:
 		n += 1
-		var pot := int(p.get("potential", p.get("overall", 0)))
+		var pot := int(p.get("potential", Ovr.of(p, 0)))
 		pots.append(pot)
 		var v: Dictionary = draft.user_view(p)
 		var age := int(p.get("age", 25))
@@ -45,7 +52,20 @@ func run() -> void:
 			up90 += 1
 		if pot >= 90:
 			src[_source(p)] += 1
+		var how := "override" if overridden.has(str(p["id"])) else _source(p)
+		for cut in [["all", "all"], ["age", _band(bands, age)], ["role", role], ["club", str(p.get("club", "-"))], ["src", how]]:
+			var c_key := "%s %s" % cut
+			if not cuts.has(c_key):
+				cuts[c_key] = [0, 0, 0, 0]
+			cuts[c_key][0] += 1
+			cuts[c_key][1] += 1 if pot >= 90 else 0
+			cuts[c_key][2] += 1 if int(v["potential_mid"]) >= 90 else 0
+			cuts[c_key][3] += 1 if int((v["potential"] as Array)[1]) >= 90 else 0
 	pots.sort()
+	var cut_keys := cuts.keys()
+	cut_keys.sort()
+	for c_key in cut_keys:
+		print("POTROW %s %d %d %d %d" % [c_key, cuts[c_key][0], cuts[c_key][1], cuts[c_key][2], cuts[c_key][3]])
 	print("potdist: %d players. True POT >= 90: %d (%.0f%%); your read's midpoint >= 90: %d (%.0f%%); its upper bound >= 90: %d (%.0f%%)"
 			% [n, tp90, 100.0 * tp90 / n, mid90, 100.0 * mid90 / n, up90, 100.0 * up90 / n])
 	print("potdist: POT percentiles p10 %d, p25 %d, p50 %d, p75 %d, p90 %d, p99 %d" % [pots[n / 10], pots[n / 4], pots[n / 2],
@@ -61,8 +81,8 @@ func run() -> void:
 		if NAMES.has(nm):
 			var v: Dictionary = draft.user_view(p)
 			print("potdist: %-20s age %2d %-4s OVR %2d POT %2d  read OVR %s POT %s  peak %.0f  pick %s  source %s" % [nm,
-					int(p.get("age", 0)), str(p.get("role", "")), int(p.get("overall", 0)), int(p.get("potential", 0)),
-					DraftScouting.range_text(v["overall"]), DraftScouting.range_text(v["potential"]),
+					int(p.get("age", 0)), str(p.get("role", "")), int(Ovr.of(p, 0)), int(p.get("potential", 0)),
+					DraftScouting.range_text(Ovr.of(v)), DraftScouting.range_text(v["potential"]),
 					Potential.recent_peak(p), str(p.get("drafted_pick", "-")), _source(p)])
 
 
@@ -81,7 +101,7 @@ func _source(p: Dictionary) -> String:
 	var peak := Potential.recent_peak(p)
 	if peak > 0.0 and absf(roundf(peak) - pot) <= 0.5:
 		return "peak"
-	var head := float(p.get("overall", 0)) + Potential._headroom(float(p.get("age", 26.0)))
+	var head := float(Ovr.of(p, 0)) + Potential._headroom(float(p.get("age", 26.0)))
 	if pot <= head + 3.5:
 		return "headroom"
 	return "pedigree"

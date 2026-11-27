@@ -1,4 +1,5 @@
 extends RefCounted
+const Ovr := preload("res://tests/ovr.gd")
 ## The career's dataset (Legacy mode, TODO row 142, step P1): GameDB loads the
 ## set a career chose, a save keeps it, and the 2026 career behaves exactly as
 ## it did before the dataset became a choice. The golden fingerprints below
@@ -20,7 +21,12 @@ const SUITE_SEED := 1990
 ## Both moved again with the real 2026 National Draft (2026-11-21): the class
 ## gained the 21 men drafted from outside the rankings, and an off-season
 ## signing counts the opening-draft picks a club has already made toward its 44.
-const GOLDEN_LOAD := "490f9cee806122afc1502cd7c8c79b58"  # moved with Canberra's name and colours (the Owls), then the real 2026 draft
+## The rating rebuild (2026-11-26: every player's attributes from the record, his line
+## from his AFL position, OVR never stored) redrew the load and the real-lists print.
+## The Endurance blend (director 2026-11-27: time on ground 40, uncontested possessions 30,
+## pressure acts 30) redrew every player's Endurance, so the load, the real-lists print and
+## the seeded season moved again.
+const GOLDEN_LOAD := "8c6085e5773cdd69bdb538843d5fd22a"  # moved with Canberra's name and colours (the Owls), the real 2026 draft, the rating rebuild, then the Endurance blend
 ## It moved again with row 199 (2026-11-15): the off-season before the
 ## opening draft closes with the rivals signing free agents, so the lists differ;
 ## the level ladder going A-Z by club (#1633) then changed the order the clubs
@@ -30,7 +36,7 @@ const GOLDEN_LOAD := "490f9cee806122afc1502cd7c8c79b58"  # moved with Canberra's
 ## redrew it again. Hold room (bug bash batch B, 2026-11-25: every signing
 ## leaves a club the room to fill its list and take three draftees) changes
 ## who the rivals sign before the opening draft.
-const GOLDEN_REAL := "442a0a1858bf8f009a6a49c76e067961"
+const GOLDEN_REAL := "d39c16d25d07ba830b0b85f4b8e1c609"
 ## A played match's floating point differs between Windows and Linux builds of
 ## Godot, so the season has one fingerprint per platform; each was taken on
 ## main before the change (Linux: run_on_github run 43024085570). Removing
@@ -64,7 +70,13 @@ const TEAM_BOOKKEEPING_KEYS := ["pressure_acts_dhalf", "tackles_i50", "poss_d50"
 		"d50_tackled", "d50_rushed", "d50_chips"]
 ## Team counts named by prefix (one key per way a defensive-50 chain ends).
 const TEAM_BOOKKEEPING_PREFIXES := ["d50_end_"]
-const GOLDEN_SEASON := {"Windows": "3a31d105f21a0536fbe1b09499ffd107", "Linux": "bf219aeb96e2f0fbc6fa30160822157c"}
+## The rating rebuild (2026-11-26) redrew it (new attributes, plan-fit anchors, the match
+## retuned to the attributes), with bug bash batch C (#2210: a kick-in marked without
+## playing on is no longer an effective disposal; a boundary free records "intent"),
+## #2211 (a faster match engine) and #2230 (tail check) on top. Windows from a local
+## run on the merged branch, Linux from its CI run.
+## The centre-four first carrier (director, 2026-11-27) redrew it: Windows from a local run, Linux from run_on_github run 45968956250.
+const GOLDEN_SEASON := {"Windows": "9ed92c83f41cd9184d6e8b9910fccc14", "Linux": "8f143755f42ae35955a46526204643bf"}
 
 ## A small league standing in for a legacy set until the 1990 files ship:
 ## 42 real players re-dated to a 1989 data season, a 1990 first season, and
@@ -84,7 +96,6 @@ func run() -> void:
 	_t("_test_golden_season")
 	_t("_test_the_2026_row")
 	_t("_test_ladder_of")
-	_t("_test_record_weights")
 	_t("_test_club_years_today")
 	_t("_test_real_1990")
 	_t("_test_legacy_start_1990")
@@ -128,7 +139,7 @@ static func _player_line(p: Dictionary) -> String:
 	for k in keys:
 		a.append("%s=%.4f" % [k, float(attr[k])])
 	return "%s|%s|%s|%d|%.4f|%d|%d|%s|%s|%d|%s|%s|%s|%s|%s" % [str(p.get("id", "")), str(p.get("real_name", "")),
-			str(p.get("club", "")), int(p.get("num", 0)), float(p.get("age", 0.0)), int(p.get("overall", 0)),
+			str(p.get("club", "")), int(p.get("num", 0)), float(p.get("age", 0.0)), int(Ovr.of(p, 0)),
 			int(p.get("potential", 0)), str(p.get("role", "")), str(p.get("role2", "")), int(p.get("draft_year", 0)),
 			str(p.get("rated_on_record", false)), str(p.get("generic_name", "")), str(p.get("home_state", "")),
 			str(p.get("career", "")), ",".join(a)]
@@ -147,8 +158,7 @@ static func _lists_line(lists: Dictionary) -> String:
 
 func _load_print() -> String:
 	var out := PackedStringArray()
-	out.append("%d|%d|%s|%.6f|%.6f" % [GameDB.DATA_SEASON, GameDB.START_YEAR, GameDB.START_DATE,
-			GameDB.baseline_overall, GameDB.baseline_spread])
+	out.append("%d|%d|%s" % [GameDB.DATA_SEASON, GameDB.START_YEAR, GameDB.START_DATE])
 	for p in GameDB.players + GameDB.list_additions + GameDB.draftees:
 		out.append(_player_line(p))
 	var codes: Array = GameDB.clubs.keys()
@@ -340,20 +350,6 @@ func _test_ladder_of() -> void:
 	_check(GameDB.ladder_of(1789).is_empty(), "A season with no data has no ladder")
 
 
-## The record weights count back from the data season: the same three
-## seasons weigh the same in 1989 as in 2026.
-func _test_record_weights() -> void:
-	var p26 := {"gm": 6.0, "overall": 60, "history": [[2025, 80, 20], [2024, 78, 18], [2023, 90, 22]]}
-	var p89 := {"gm": 6.0, "overall": 60, "history": [[1988, 80, 20], [1987, 78, 18], [1986, 90, 22]]}
-	var a := Ratings.record_level(p26, 2026)
-	var b := Ratings.record_level(p89, 1989)
-	_check(a > 0.0 and is_equal_approx(a, b),
-			"The same three seasons weigh the same counted back from 1989 as from 2026 (%.3f, %.3f)" % [a, b])
-	_check(is_equal_approx(Ratings.record_level(p26), a), "Without a season named, the record counts back from 2026")
-	_check(not is_equal_approx(Ratings.record_level(p89, 2026), a),
-			"Seasons from another era weigh nothing in his record")
-
-
 func _test_fixture_load() -> void:
 	GameDB.reload(FIXTURE)
 	_check(GameDB.dataset_id == FIXTURE and GameDB.DATA_SEASON == 1989 and GameDB.START_YEAR == 1990
@@ -366,7 +362,7 @@ func _test_fixture_load() -> void:
 	var rated_ok := true
 	var off := 0
 	for p in GameDB.players:
-		if int(p.get("overall", 0)) <= 0 or not p.has("potential"):
+		if int(Ovr.of(p, 0)) <= 0 or not p.has("potential"):
 			rated_ok = false
 		var want := float(Prospects.days_between(str(p["dob"]), "1990-03-01")) / 365.25
 		if not is_equal_approx(float(p["age"]), want) or want < 17.0 or want > 40.0:
@@ -645,8 +641,8 @@ func _test_guernseys_by_year() -> void:
 	GameDB.reload()
 
 
-## The real 1990 start (TODO row 142, L1): the 14 clubs' lists rated on 1989,
-## each position scaled on its own season (director 2026-11-13), and a real
+## The real 1990 start (TODO row 142, L1): the 14 clubs' lists rated on 1989's
+## nearest stats on that season's own scale (director 2026-11-13, 2026-11-25), and a real
 ## player's ceiling set by his real peak, give or take luck.
 func _test_real_1990() -> void:
 	_check(Datasets.ready("1990"), "The 1990 start's files ship")
@@ -655,18 +651,13 @@ func _test_real_1990() -> void:
 			"The 1990 set loads on 1989's season")
 	var per_club := {}
 	var ovr := []
-	var top := 0
-	var stars := 0
 	var peaked := 0
 	var peak_ok := true
 	for p in GameDB.players:
 		var c := str(p.get("club", ""))
 		per_club[c] = int(per_club.get(c, 0)) + 1
-		var o := int(p.get("overall", 0))
+		var o := int(Rating.ovr(p, 0))
 		ovr.append(o)
-		top = maxi(top, o)
-		if o >= 80:
-			stars += 1
 		if int(p.get("real_peak", 0)) > 0:
 			peaked += 1
 			var pot := int(p.get("potential", 0))
@@ -702,68 +693,14 @@ func _test_real_1990() -> void:
 			% [no_height.size(), blank_in_file.size()])
 	ovr.sort()
 	var median := int(ovr[ovr.size() / 2])
-	_check(median >= 57 and median <= 65, "The 1990 median sits where 2026's does (%d)" % median)
-	var share := float(stars) / float(ovr.size())
-	_check(share >= 0.04 and share <= 0.12 and top < 99,
-			"About 7%% of the 1990 lists rate 80 or more and nobody tops out (%d of %d, best %d)" % [stars, ovr.size(), top])
+	var p90 := int(ovr[int(ovr.size() * 0.9)])
 	_check(peaked > 200 and peak_ok, "A real peak sets each ceiling, give or take luck (%d players)" % peaked)
 	_check(Potential.peak_from_year == 1986, "Recent seasons count from the 1990 set's own data season")
-	# Honours lift the decorated to a floor (director 2026-11-13, "Add honours").
-	var by_id := {}
-	var honoured := 0
-	var floor_ok := true
-	for p in GameDB.players:
-		by_id[str(p.get("id", ""))] = p
-		if float(p.get("honours", 0.0)) > 0.0:
-			honoured += 1
-			if int(p["overall"]) < Ratings.honours_floor(float(p["honours"])):
-				floor_ok = false
-	_check(honoured >= 60 and floor_ok, "Every honoured 1990 player rates at least his honours floor (%d honoured)" % honoured)
-	var roos: Dictionary = by_id.get("FIT_1", {})   # Paul Roos
-	# His recorded stats alone may clear the floor (unrecorded stats count for nothing, director
-	# 2026-11-15); either way he rates at least what his honours say.
-	_check(not roos.is_empty() and int(roos["overall"]) >= 78
-			and int(roos["overall"]) >= Ratings.honours_floor(float(roos.get("honours", 0.0))),
-			"Paul Roos, twice All-Australian, rates at least his honours floor (%d)" % int(roos.get("overall", 0)))
-	# Which honoured players sit under their floor moves with the ratings (row
-	# 200), so the rule is checked both ways rather than on two names.
-	var on_honours := 0
-	var own_rating := 0
-	var on_skills := 0
-	for p in GameDB.players:
-		if float(p.get("honours", 0.0)) > 0.0:
-			if bool(p.get("rated_on_honours", false)):
-				on_honours += 1
-				if int(p["overall"]) == Ratings.rate_overall(p["attr"], str(p["role"]), Ratings.effective_games(p)):
-					on_skills += 1
-			elif int(p["overall"]) >= Ratings.honours_floor(float(p["honours"])):
-				own_rating += 1
-	_check(on_honours > 0, "An honoured player rated under his floor rates on his honours (%d)" % on_honours)
-	# His rating is what his skills say, so a load (which re-rates from the
-	# skills) keeps it: 30 here sat a point over their skills and lost it at
-	# the first load (bug bash 2026-11-25; director: "Top up his skills").
-	_check(on_skills == on_honours, "Every player rated on his honours has the skills for that rating (%d of %d)" % [on_skills, on_honours])
-	_check(own_rating > 0, "A star already above his floor keeps his own rating (%d)" % own_rating)
-	# One honour is worth 80 (bug bash 2026-11-23: 1989's All-Australians and
-	# club champions sat on a wall of 77).
-	_check(Ratings.honours_floor(1.0) == 80, "One honour sets a floor of 80 (%d)" % Ratings.honours_floor(1.0))
-	# Back from injury, the 1990 Brownlow medallist starts at his rehab level,
-	# not on his one 1989 game (bug bash 2026-11-23).
-	var lib := {}
-	for p in GameDB.players:
-		if str(p.get("first", "")) == "Tony" and str(p.get("last", "")) == "Liberatore":
-			lib = p
-	_check(not lib.is_empty() and bool(lib.get("rated_on_rehab", false)) and int(lib["overall"]) >= 80
-			and not lib.has("rehab"),
-			"Tony Liberatore starts 1990 back from injury (%d)" % int(lib.get("overall", 0)))
-	# A real peak is his level at his best, not one freak season: an
-	# established man with no honours and a fringe rating has no 99 peak (a
-	# teenager may: Wayne Carey, 18 in 1990).
 	var freak := true
 	for p in GameDB.players:
 		if float(p.get("age", 0.0)) < 25.0 or float(p.get("real_peak", 0)) <= 0.0:
 			continue
-		if float(p.get("real_peak", 0)) >= 99.0 and float(p.get("honours", 0.0)) <= 0.0 and int(p["overall"]) < 70:
+		if float(p.get("real_peak", 0)) >= 99.0 and float(p.get("honours", 0.0)) <= 0.0 and int(Rating.ovr(p, 0)) < 70:
 			freak = false
 	_check(freak, "No unhonoured fringe player carries a 99 real peak")
 	GameDB.reload()
@@ -772,6 +709,16 @@ func _test_real_1990() -> void:
 		if p.has("honours") or bool(p.get("rated_on_honours", false)):
 			none = false
 	_check(none, "Today's set carries no honours: a 2026 start is untouched")
+	# Each season is rated on its own season's scale (director 2026-11-13,
+	# "Nearest stats" 2026-11-25): 1990's spread sits where 2026's does.
+	var now := []
+	for p in GameDB.players:
+		now.append(int(Rating.ovr(p, 0)))
+	now.sort()
+	var now_median := int(now[now.size() / 2])
+	var now_p90 := int(now[int(now.size() * 0.9)])
+	_check(absi(median - now_median) <= 3 and absi(p90 - now_p90) <= 3,
+			"The 1990 lists spread as 2026's do (median %d v %d, top tenth from %d v %d)" % [median, now_median, p90, now_p90])
 	_check(Potential.peak_from_year == 2023, "Back on 2026, recent seasons count from 2026's data season again")
 	_golden("load after the 1990 set", _load_print(), GOLDEN_LOAD)
 

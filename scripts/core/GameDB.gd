@@ -32,15 +32,10 @@ var POTENTIAL_CSV := "res://data/potential_overrides.csv"
 ## The season's coaching staff and captains (Datasets keys coaches, leadership).
 var COACHES_CSV := "res://data/coaches_2026.csv"
 var LEADERSHIP_CSV := "res://data/leadership_2026.csv"
-var OVR_CSV := "res://data/ovr_overrides.csv"
-## Which override rows (file|club|first|last) found their player, and the rows
-## that found nobody in the players or the list additions.
+## Which POT override rows (file|club|first|last) found their player, and the
+## rows that found nobody in the players or the list additions.
 var override_hits := {}
 var override_unmatched: Array = []
-## Tests that measure how the rules spread players over the underlying data (not
-## the director's hand-set numbers) turn the OVR rows off for a reload; tools/run_tests.sh
-## turns them off for every suite but the ratings one (AFL_SKIP_OVR_ROWS=1).
-var skip_ovr_overrides := OS.get_environment("AFL_SKIP_OVR_ROWS") == "1"
 ## Draft pedigree and rated past seasons, built by tools/build_history.py.
 var HISTORY_CSV := "res://data/player_history_2026.csv"
 ## How real players look on the vignette figures (Appearance.gd): skin tone and
@@ -150,14 +145,14 @@ var list_additions := []
 var LIST_ADDITIONS_CSV := "res://data/list_additions_2026.csv"
 ## Senior numbers for the additions who have played AFL before (built by
 ## tools/build_addition_stats.py from AFL Tables, season in the "src" column):
-## they are rated from that record through Ratings.derive_all, like any listed
-## player, not as draft prospects.
+## their attributes come from that season (ATTRIBUTES_CSV), like any listed
+## player's, not from a draft projection.
 var LIST_ADDITION_STATS_CSV := "res://data/list_additions_stats.csv"
-## Each rated player's season the director's way (interview 2026-11-15,
-## tools/wheelo/build.py): his AFL position, his overall (2012 on, his AFL
-## Player Rating against his position) and his 16 skills, each against his
-## position. Read over Ratings.derive_all by _apply_rating_stats.
-var RATING_STATS_CSV := "res://data/rating_stats_2026.csv"
+## Every listed player's AFL position that season, his second line and his 18
+## attributes, 1-99 on that season's league scale (Director Bible 4.2.30a,
+## docs/RATING_REBUILD.md §2; tools/wheelo/attributes.py). The attributes are
+## the only thing a rating is: OVR is worked out from them (Rating.ovr).
+var ATTRIBUTES_CSV := "res://data/attributes_2026.csv"
 ## Which players who played a 2026 game were on a rookie list, not the senior
 ## list (data/list_types_2026.csv, from DraftGuru's 2026 lists, club by club):
 ## "rookie" (Category A) or "cat_b" (Category B). Everyone else in
@@ -197,9 +192,6 @@ var loaded := false
 ## True from a reload until a career takes the data (GameState.reset() clears it):
 ## a career mutates the player dicts in place, so only an untouched load is reused.
 var pristine := false
-## The 2026 league's mean overall and spread.
-var baseline_overall := 0.0
-var baseline_spread := 0.0   # standard deviation of the 2026 overalls
 
 ## Fictional alias cursor shared by the season pool, the draft class and every
 ## generated intake, so no two displayed players ever collide on an alias.
@@ -267,25 +259,18 @@ func reload(dataset := Datasets.DEFAULT) -> void:
 	_apply_list_types(players)
 	_load_appearance()
 	_apply_origin(players)
-	var past_start := DATA_SEASON != int(Datasets.get_set(Datasets.DEFAULT).get("data_season", DATA_SEASON))
-	Ratings.listed_lines = Ratings.PAST_LISTED_LINES if past_start else Ratings.TODAY_LISTED_LINES
-	Ratings.set_unrecorded(Ratings.find_unrecorded(players))
-	Ratings.derive_all(players)
-	_rating_stats = _load_rating_stats()
-	_apply_rating_stats(players)
+	_attributes = _load_attributes()
+	var unrated := _apply_attributes(players)
 	_apply_history(players)
-	for p in players:
-		Ratings.rate_on_record(p, DATA_SEASON)
-		Ratings.rate_on_honours(p)
+	# A listed player his season's file has no row for (a namesake's season
+	# given to him in the list file, or no season found) is rated as the
+	# prospect he would be with no senior record.
+	for p in unrated:
+		_rate_as_prospect(p)
 	override_hits = {}
 	for p in players:
 		Potential.assign(p)
-		Ratings.rate_on_rehab(p)
-	_apply_ovr_overrides(players)
 	_apply_potential_overrides(players)
-	# The lists first: the prospects below borrow their shapes from these players
-	# (Prospects._shape_for). Built later, the boot load drew them from nothing and
-	# every reload from the lists of the load before it.
 	players_by_club = {}
 	for code in club_order:
 		players_by_club[code] = []
@@ -293,15 +278,12 @@ func reload(dataset := Datasets.DEFAULT) -> void:
 		if not players_by_club.has(p["club"]):
 			players_by_club[p["club"]] = []
 		players_by_club[p["club"]].append(p)
-	Prospects.forget_cache()
-	_rate_few_games(players)
 	national_draft = _load_national_draft()
 	draftees = _load_draftees()
 	list_additions = _load_list_additions()
 	_apply_indigenous(players, list_additions, draftees)
-	# List additions become real players here, so the hand-set numbers reach
+	# List additions become real players here, so the hand-set POTs reach
 	# them too; a row that matched nobody in either list is reported.
-	_apply_ovr_overrides(list_additions)
 	_apply_potential_overrides(list_additions)
 	override_unmatched = _report_unmatched_overrides()
 	departures = _load_departures()
@@ -312,19 +294,15 @@ func reload(dataset := Datasets.DEFAULT) -> void:
 	late_draftees = []
 	# Last, so every AFL list, rating and alias above is drawn as before.
 	_load_state_leagues()
+	# Graded against this dataset's players, as after a fresh launch (P1-6).
+	# Here, once every player is rated: a match still on a worker thread works
+	# a missing scale out from `players`, and cleared at the start it read the
+	# new list before any player had his attributes (CI 45648543132).
+	PlayerProfile.forget_cache()
 
 
 	loaded = not players.is_empty()
 	pristine = loaded
-	baseline_overall = 0.0
-	for p in players:
-		baseline_overall += float(Rating.ovr(p))
-	if loaded:
-		baseline_overall /= float(players.size())
-		var sq := 0.0
-		for p in players:
-			sq += pow(float(Rating.ovr(p)) - baseline_overall, 2.0)
-		baseline_spread = sqrt(sq / float(players.size()))
 	if not loaded:
 		push_error("GameDB: no players loaded. Check that %s exists, is complete and that its import type is 'Keep File (exported as is)'." % PLAYERS_ENRICHED_CSV)
 	else:
@@ -349,13 +327,12 @@ func _use_dataset(id: String, row: Dictionary) -> void:
 	INDIGENOUS_CSV = str(row.get("indigenous", ""))
 	LIST_ADDITIONS_CSV = str(row.get("list_additions", ""))
 	LIST_ADDITION_STATS_CSV = str(row.get("list_addition_stats", ""))
-	RATING_STATS_CSV = str(row.get("rating_stats", ""))
+	ATTRIBUTES_CSV = str(row.get("attributes", ""))
 	LIST_TYPES_CSV = str(row.get("list_types", ""))
 	DEPARTURES_CSV = str(row.get("departures", ""))
 	CLUB_MOVES_CSV = str(row.get("club_moves", ""))
 	NATIONAL_DRAFT_CSV = str(row.get("national_draft", ""))
 	LADDER_PATH = str(row.get("ladder", ""))
-	OVR_CSV = str(row.get("ovr_overrides", ""))
 	POTENTIAL_CSV = str(row.get("potential_overrides", ""))
 	# A set that names no staff or captains (a test league) keeps 2026's.
 	COACHES_CSV = str(row.get("coaches", Coaches.SEED_CSV))
@@ -634,8 +611,8 @@ func all_draftees_sorted() -> Array:
 
 ## data/draftees_2026.csv - the real 2026 national-draft class (Rookie Me
 ## Central August-2026 top 50 plus six names it missed). These players have
-## no AFL season line, so Ratings.derive_all is skipped in favour of a
-## projection from draft rank, role and reported U18 production.
+## no AFL season line, so their attributes are a projection from draft
+## rank, role and reported U18 production.
 ## The Unicorns at the start of a career, picked by the director
 ## (2026-10-08): real players and the 2026 draft class, by their own names.
 ## Traits.is_unicorn reads the flag this sets.
@@ -720,10 +697,10 @@ func _load_draftees() -> Array:
 		p["u18_ho"] = _cell_float(cells, idx, "u18_ho")
 		p["note"] = _cell_str(cells, idx, "note")
 		p["data_src"] = _cell_str(cells, idx, "data_src")
-		p["draft_class"] = true  # a draft class: rated on Prospects.DRAFT_NIGHT_SCALE (row 65)
+		p["draft_class"] = true
 		# A man the pre-draft rankings missed and a club took at the real
-		# National Draft: rated from the pick he went at, the public verdict
-		# on him, and not said to be ranked (Prospects.pedigree).
+		# National Draft: built from the pick he went at (Prospects.project)
+		# and not said to be ranked.
 		if p["data_src"] == "afl-draft-nov26":
 			var row := national_pick(p)
 			if not row.is_empty():
@@ -809,42 +786,14 @@ func _load_list_additions() -> Array:
 			p["note"] = ""
 			established.append(p)
 			continue
-		# Rated as the prospect he still is: a recent draftee about where a
-		# mid-first-round pick sits, an older or rookie-listed player lower.
-		var h := absi(hash(str(p["id"])))
-		var age := float(p["age"])
-		var rank := 22 + h % 20
-		if age >= 21.5 or list_type == "cat_b" or list_type == "catb":
-			rank = 45 + h % 15
-		elif list_type == "rookie" or age >= 20.5:
-			rank = 35 + h % 15
-		p["draft_year"] = DATA_SEASON
-		p["draft_rank"] = rank
-		p["draft_team"] = ""
-		p["draft_league"] = ""
-		p["draft_state"] = ""
-		p["tied_club"] = ""
-		p["tied_type"] = ""
-		for k in ["u18_gm", "u18_di", "u18_gl", "u18_mk", "u18_tk", "u18_if50", "u18_ho"]:
-			p[k] = 0.0
-		p["note"] = ""
-		p["data_src"] = "listed %d, no senior game" % DATA_SEASON
-		Prospects.project(p)
+		_rate_as_prospect(p)
 		out.append(p)
 	if not established.is_empty():
-		Ratings.derive_all(established, players)
-		_apply_rating_stats(established)
+		# His attributes come from that season's row; one the file lacks is
+		# rated as a prospect, as a list addition with no senior game is.
+		for p in _apply_attributes(established):
+			_rate_as_prospect(p)
 		for p in established:
-			# A position the list gives him is his first position, whatever
-			# one season's numbers read (Powell-Pepper is a midfielder).
-			var listed := str(p.get("real_pos", ""))
-			if listed in ["RUCK", "MID", "DEF", "FWD"] and listed != str(p["role"]):
-				p["role"] = listed
-				p["role2"] = Ratings.assign_secondary(p)
-				if p.has("apos"):
-					p["attr"] = Prospects.fit_attributes(p["attr"], listed, float(Rating.ovr(p)), float(p["gm"]))
-				p["overall"] = Ratings.rate_overall(p["attr"], listed, float(p["gm"]))
-				p["value"] = Ratings.salary_value(int(Rating.ovr(p)))
 			p["career"] = Career.from_source("?")
 			p["data_club"] = str(p["club"])
 			Potential.assign(p)
@@ -852,6 +801,38 @@ func _load_list_additions() -> Array:
 		out.append_array(established)
 	_assign_fictional_names(out)
 	return out
+
+
+## Rated as the prospect he still is (Prospects.project): a recent draftee
+## about where a mid-first-round pick sits, an older or rookie-listed player
+## lower. For a listed player with no senior season on record.
+func _rate_as_prospect(p: Dictionary) -> void:
+	var h := absi(hash(str(p["id"])))
+	var age := float(p.get("age", 20.0))
+	var list_type := str(p.get("list_type", ""))
+	var rank := 22 + h % 20
+	if age >= 21.5 or list_type == "cat_b" or list_type == "catb":
+		rank = 45 + h % 15
+	elif list_type == "rookie" or age >= 20.5:
+		rank = 35 + h % 15
+	p["draft_year"] = DATA_SEASON
+	p["draft_rank"] = rank
+	p["draft_team"] = ""
+	p["draft_league"] = ""
+	p["draft_state"] = ""
+	p["tied_club"] = ""
+	p["tied_type"] = ""
+	for k in ["u18_gm", "u18_di", "u18_gl", "u18_mk", "u18_tk", "u18_if50", "u18_ho"]:
+		p[k] = 0.0
+	p["note"] = ""
+	p["data_src"] = "listed %d, no senior game" % DATA_SEASON
+	# No attributes row gave him a line: the list's position, else his height,
+	# as a list addition takes it (_load_list_additions).
+	if str(p.get("role", "")) == "":
+		var pos := str(p.get("real_pos", ""))
+		p["role"] = pos if pos in ["RUCK", "MID", "DEF", "FWD"] else listed_role(p)
+		p["role2"] = ""
+	Prospects.project(p)
 
 
 ## club|first|last -> the stats row (strings read as numbers) for each
@@ -1206,53 +1187,40 @@ func _load_appearance() -> void:
 		skin_mix = counts
 
 
-## RATING_STATS_CSV keyed "club|first|last" (see there).
-var _rating_stats := {}
+## ATTRIBUTES_CSV keyed "club|first|last" (see there).
+var _attributes := {}
 
 
-func _load_rating_stats() -> Dictionary:
+func _load_attributes() -> Dictionary:
 	var out := {}
-	if RATING_STATS_CSV == "" or not FileAccess.file_exists(RATING_STATS_CSV):
+	if ATTRIBUTES_CSV == "" or not FileAccess.file_exists(ATTRIBUTES_CSV):
 		return out
-	for row in _read_dicts(RATING_STATS_CSV):
+	for row in _read_dicts(ATTRIBUTES_CSV):
 		out["%s|%s|%s" % [row.get("club", ""), row.get("first", ""), row.get("last", "")]] = row
 	return out
 
 
-## Each player the rating file names takes its skills, his AFL position (apos)
-## and its overall; his skills are then nudged together so the game's overall
-## formula (Ratings.rate_overall) gives that overall on his games, so he plays
-## to it. A player it does not name keeps what Ratings.derive_all gave him.
-## Then the director's named corrections (Ratings.ATTR_ADJUSTMENTS), unless
-## `adjust` is false (the ratings suite's uncorrected copy).
-func _apply_rating_stats(list: Array, adjust := true) -> void:
+## Each player the attributes file names takes his 18 attributes, his AFL
+## position (apos), his line from it and his second line (docs/RATING_REBUILD.md
+## §2, Lines), and how his Speed was found (speed_src: gps, 20m or est, an
+## estimate his card marks). Returns the players it does not name.
+func _apply_attributes(list: Array) -> Array:
+	var missing := []
 	for p in list:
-		var row: Dictionary = _rating_stats.get("%s|%s|%s" % [p.get("club", ""), p.get("first", ""), p.get("last", "")], {})
+		var row: Dictionary = _attributes.get("%s|%s|%s" % [p.get("club", ""), p.get("first", ""), p.get("last", "")], {})
 		if row.is_empty():
+			missing.append(p)
 			continue
 		var a := {}
-		for k in Skills.KEYS:
+		for k in Attributes.KEYS:
 			a[k] = clampi(int(row.get(k, 50)), 1, 99)
-		var ovr := float(row.get("ovr", Rating.ovr(p, 60)))
-		var games := float(p.get("gm", 14))
-		var role := str(p.get("role", "MID"))
-		p["apos"] = str(row.get("apos", ""))
-		a = Prospects.fit_attributes(a, role, ovr, games)
-		# A skill his era never recorded stays at his position's average and
-		# shows as a dash (director 2026-11-15, "I never okayed invented stats").
-		for k in Ratings.unknown_attrs:
-			a[k] = 50
-		if Ratings.unknown_attrs.is_empty():
-			p.erase("attr_unrecorded")
-		else:
-			p["attr_unrecorded"] = Ratings.unknown_attrs.keys()
-		var adj := float(Ratings.ATTR_ADJUSTMENTS.get("%s|%s %s" % [p.get("club", ""), p.get("first", ""), p.get("last", "")], 1.0))
-		if adjust and adj != 1.0:
-			for k in a:
-				a[k] = clampi(int(round(float(a[k]) * adj)), 1, 99)
 		p["attr"] = a
-		p["overall"] = Ratings.rate_overall(a, role, games)
-		p["value"] = Ratings.salary_value(int(Rating.ovr(p)))
+		p["apos"] = str(row.get("apos", ""))
+		p["speed_src"] = str(row.get("speed_src", ""))
+		p["role"] = Rating.line_of(str(p["apos"]))
+		var line2 := str(row.get("line2", ""))
+		p["role2"] = line2 if line2 != str(p["role"]) else ""
+	return missing
 
 
 func _read_rows(path: String) -> Array:
@@ -2089,9 +2057,9 @@ func _load_players() -> Array:
 			var cell := str(cells[idx[k]]).strip_edges() if idx.has(k) else "0"
 			p[k] = float(cell)
 			if cell == "":
-				blank.append(k)   # not recorded that season (Ratings.unrecorded)
+				blank.append(k)   # not recorded that season
 		p["blank"] = blank
-		# Optional enriched fields — defaults keep Ratings.gd backward-compatible
+		# Optional enriched fields
 		p["real_pos"] = str(cells[idx["real_pos"]]) if idx.has("real_pos") else ""
 		p["dob"] = str(cells[idx["dob"]]) if idx.has("dob") else ""
 		p["age"] = float(str(cells[idx["age"]])) if idx.has("age") and str(cells[idx["age"]]) != "" else 0.0
@@ -2155,9 +2123,6 @@ func _apply_history_rows(list: Array) -> void:
 		var p = by_id.get(key)
 		if p == null:
 			continue
-		# A past start's honours score (Ratings.rate_on_honours).
-		if idx.has("honours") and str(cells[idx["honours"]]) != "":
-			p["honours"] = float(str(cells[idx["honours"]]))
 		var pick := str(cells[idx["draft_pick"]])
 		if pick != "":
 			p["drafted_year"] = int(str(cells[idx["draft_year"]]))
@@ -2185,53 +2150,6 @@ func _apply_history_rows(list: Array) -> void:
 				hist.append([int(parts[0]), int(parts[1]), int(parts[2])])
 		if not hist.is_empty():
 			p["history"] = hist
-
-
-## Players of under Prospects.FEW_GAMES senior games are rated from their
-## draft pick, not their few games (director 2026-11-17): projected for life.
-## Run once the lists exist (the shapes are borrowed from them); the hand-set
-## numbers are applied again on top, as for everyone.
-func _rate_few_games(list: Array) -> void:
-	var few := []
-	for p in list:
-		if bool(p.get("projected", false)) or bool(p.get("generated", false)):
-			continue
-		var g := Prospects.senior_games(p, DATA_SEASON)
-		if g < 0 or g >= Prospects.FEW_GAMES:
-			continue
-		Prospects.project_few_games(p)
-		Potential.assign(p)
-		few.append(p)
-	if not few.is_empty():
-		_apply_ovr_overrides(few)
-		_apply_potential_overrides(few)
-
-
-## Hand-set OVR (data/ovr_overrides.csv), matched on club + first + last name.
-## Every attribute is shifted by the same amount (capped 1-99) until the rating
-## in his own position lands on the target, so his profile keeps its gaps. POT
-## is the one he had before, raised to the new OVR. An unmatched row is reported.
-func _apply_ovr_overrides(list: Array) -> void:
-	if skip_ovr_overrides:
-		return
-	_each_override_row(OVR_CSV, "ovr", list, func(p, cell):
-		var text: String = str(cell).strip_edges()
-		var before_pot := int(p.get("potential", Rating.ovr(p)))
-		var mult := 1.0
-		var target := 0
-		if (text.begins_with("+") or text.begins_with("-")) and text.ends_with("%"):
-			# A relative row (+10% or -10%): his computed OVR and the POT he had both scale.
-			mult = 1.0 + text.trim_suffix("%").to_float() / 100.0
-			target = int(round(float(Rating.ovr(p)) * mult))
-		else:
-			target = int(text)
-		if set_player_ovr(p, target):
-			if HOLDS_ON_EVERY_LINE.has(_override_key(p)):
-				hold_on_every_line(p, target)
-			# His POT is the one he had before, raised to his new OVR (a veteran
-			# is not a rehab case because his rating moved).
-			var pot := int(round(float(before_pot) * mult))
-			p["potential"] = clampi(maxi(pot, target), 1, Potential.MAX_POT))
 
 
 ## Walks a hand-set csv (club, first, last + one value column), matching on
@@ -2266,11 +2184,11 @@ func _each_override_row(path: String, column: String, list: Array, apply: Callab
 		apply.call(by_key[key], str(cells[idx[column]]))
 
 
-## Rows in either file that matched no player, warned about and kept in
+## POT rows that matched no player, warned about and kept in
 ## override_unmatched for the tests.
 func _report_unmatched_overrides() -> Array:
 	var out := []
-	for path in [OVR_CSV, POTENTIAL_CSV]:
+	for path in [POTENTIAL_CSV]:
 		if not FileAccess.file_exists(path):
 			continue
 		var rows := _read_rows(path)
@@ -2280,100 +2198,10 @@ func _report_unmatched_overrides() -> Array:
 				continue
 			var key := "%s|%s|%s" % [str(c[0]).strip_edges(),
 					str(c[1]).strip_edges().to_lower(), str(c[2]).strip_edges().to_lower()]
-			if not override_hits.has(path + "|" + key) and not (skip_ovr_overrides and path == OVR_CSV):
+			if not override_hits.has(path + "|" + key):
 				out.append(path.get_file() + ": " + key)
 				push_warning("GameDB: override matches no player: %s %s" % [path.get_file(), key])
 	return out
-
-
-## club|first|last, lower case: who a hand-set rating belongs to.
-static func _override_key(p: Dictionary) -> String:
-	return "%s|%s|%s" % [p["club"], str(p["first"]).to_lower(), str(p["last"]).to_lower()]
-
-
-## Hand-set ratings that hold wherever he plays: no line rates him above the
-## number. Director, 2026-11-08: Blicavs is a 65, not a 65 ruck who is 81 in the
-## midfield and 93 in defence.
-const HOLDS_ON_EVERY_LINE := {"GEE|mark|blicavs": true}
-
-
-## Brings down what his other lines read until none rates him above target,
-## the highest attribute first so the profile keeps its order. His own line
-## stays on target: when an attribute it shares comes down (a ruck's contested
-## work), its heaviest attribute comes up to cover it. Star, durability and
-## discipline are who he is and stay.
-static func hold_on_every_line(p: Dictionary, target: int) -> void:
-	var a: Dictionary = p["attr"]
-	var role := str(p.get("role", "MID"))
-	var games := Ratings.effective_games(p)
-	var own: Dictionary = Ratings.ROLE_WEIGHTS.get(role, Ratings.ROLE_WEIGHTS["MID"])
-	var heaviest := ""
-	for k in own:
-		if heaviest == "" or float(own[k]) > float(own[heaviest]):
-			heaviest = k
-	for _guard in range(4000):
-		var over := ""
-		for line in Ratings.ROLE_WEIGHTS:
-			if line != role and Ratings.rate_overall(a, line, games) > target:
-				over = line
-				break
-		if over == "":
-			return
-		var top := ""
-		for k in Ratings.ROLE_WEIGHTS[over]:
-			if k != heaviest and (top == "" or int(a[k]) > int(a[top])):
-				top = k
-		a[top] = maxi(1, int(a[top]) - 1)
-		while Ratings.rate_overall(a, role, games) < target and int(a[heaviest]) < 99:
-			a[heaviest] = int(a[heaviest]) + 1
-	push_warning("GameDB: cannot hold %s %s at %d on every line" % [p["first"], p["last"], target])
-
-
-static func set_player_ovr(p: Dictionary, target: int) -> bool:
-	if not p.has("attr"):
-		return false
-	var role := str(p.get("role", "MID"))
-	var games := float(p.get("sample", p.get("gm", 0.0)))
-	if games <= 0.0:
-		games = 14.0     # a prospect with no senior game is rated on 14
-	var base: Dictionary = p["attr"]
-	var best: Dictionary = {}
-	var best_miss := 1000
-	var best_shift := 1000
-	# The same shift on every attribute (clamped 1-99): the one that lands
-	# nearest the target, the smaller shift on a tie. His profile keeps its gaps.
-	for shift in range(-98, 99):
-		var a := {}
-		for k in base:
-			a[k] = clampi(int(base[k]) + shift, 1, 99)
-		var miss := absi(Ratings.rate_overall(a, role, games) - target)
-		if miss < best_miss or (miss == best_miss and absi(shift) < best_shift):
-			best_miss = miss
-			best_shift = absi(shift)
-			best = a
-	# One shift step can move the rating by two (the position scale is steeper
-	# than one for a forward); close the last point one attribute at a time.
-	var guard := 0
-	while best_miss > 0 and guard < 60:
-		guard += 1
-		var dir := 1 if Ratings.rate_overall(best, role, games) < target else -1
-		for k in best:
-			var v := int(best[k]) + dir
-			if v < 1 or v > 99:
-				continue
-			best[k] = v
-			best_miss = absi(Ratings.rate_overall(best, role, games) - target)
-			if best_miss == 0:
-				break
-		if best_miss == 0:
-			break
-	if best_miss > 0:
-		push_warning("GameDB: ovr override cannot reach %d for %s %s" % [target, p["first"], p["last"]])
-		return false
-	p["attr"] = best
-	p["overall"] = target
-	p["value"] = Ratings.salary_value(target)
-	return true
 
 
 ## Hand-set potentials, matched on club + first + last name: a number, or a

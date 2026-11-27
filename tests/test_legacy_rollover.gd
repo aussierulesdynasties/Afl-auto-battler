@@ -1,4 +1,5 @@
 extends RefCounted
+const Ovr := preload("res://tests/ovr.gd")
 ## A Legacy career's rollovers (TODO row 142, phase L8; LegacyRollover): a
 ## seeded 1990 career, coached at Fitzroy, drafts the real 1990 class in the
 ## open draft, rolls into 1991 with 15 clubs and Adelaide on a list built by
@@ -47,6 +48,7 @@ func run() -> void:
 	_t("_test_canon_retire", ["rioli_home", "rival"])
 	_t("_test_canon_retire", ["rioli_home", "let_go"])
 	_t("_test_canon_retire", ["jurrah_home", "fight"])
+	_t("_test_canon_retire_missing")
 	_t("_test_campaign")
 	GameState.replay_seed = 0
 	GameDB.reload()
@@ -99,14 +101,15 @@ func _test_class_rows() -> void:
 	var aged := Prospects.age_pool(cls.duplicate(true), 1990, {})
 	_check(aged.size() == cls.size(), "No real 1990 draftee is too old for his own draft (%d of %d)" % [aged.size(), cls.size()])
 	var peaked := cls.filter(func(p): return int(p.get("real_peak", 0)) > 0)
-	_check(not peaked.is_empty() and peaked.all(func(p): return int(p["potential"]) >= int(p["overall"])),
+	_check(not peaked.is_empty() and peaked.all(func(p): return int(p["potential"]) >= int(Ovr.of(p))),
 			"A draftee with a real best season has his ceiling from it (%d)" % peaked.size())
 	# The 2011 first pick's ceiling is his real career, not pick 1's (bug bash
 	# 2026-11-23: "jon patton 99 pot is INSANE"; his class row had lost his
-	# AFL Tables id).
+	# AFL Tables id): his real peak, give or take Potential's luck.
 	var patton := LegacyRollover.real_class(2011).filter(func(p): return str(p["real_name"]) == "Jonathon Patton")
-	_check(patton.size() == 1 and int(patton[0].get("real_peak", 0)) > 0 and int(patton[0]["potential"]) <= 70,
-			"Jonathon Patton's ceiling is his real peak (%s)" % (str(patton[0].get("potential", "")) if patton.size() == 1 else "missing"))
+	_check(patton.size() == 1 and int(patton[0].get("real_peak", 0)) > 0
+			and absf(float(patton[0]["potential"]) - float(patton[0]["real_peak"])) <= Potential.REAL_PEAK_LUCK,
+			"Jonathon Patton's ceiling is his real peak (%s, peak %s)" % ([str(patton[0].get("potential", "")), str(patton[0].get("real_peak", ""))] if patton.size() == 1 else ["missing", ""]))
 
 
 ## The talks give the odds for each of Fitzroy's records.
@@ -309,7 +312,7 @@ func _test_colours_apart() -> void:
 func _list_sum(list: Array) -> Array:
 	var ovr := 0
 	for p in list:
-		ovr += int(p.get("overall", 0))
+		ovr += int(Ovr.of(p, 0))
 	return [list.size(), ovr]
 
 
@@ -579,7 +582,7 @@ func _entered(code: String, year: int, offered: Dictionary) -> void:
 	_check(GameDB.active_clubs(year).has(code), "%s plays in %d" % [code, year])
 	_check(list.size() >= 30 and list.all(func(p): return str(p.get("club", code)) == code),
 			"%s enter %d on a full list (%d)" % [code, year, list.size()])
-	var rated := list.filter(func(p): return int(p.get("overall", 0)) > 30)
+	var rated := list.filter(func(p): return int(Ovr.of(p, 0)) > 30)
 	_check(rated.size() == list.size(), "Every %s player is rated" % code)
 	var everywhere := {}
 	for c in GameState.league_lists:
@@ -726,8 +729,24 @@ func _test_new_club_from_the_save() -> void:
 	_check(pool.all(func(p): return str(p["club"]) == "" and int(p["draft_year"]) == 1990), "The rest are in the 1990 draft")
 	var low := 99
 	for p in list:
-		low = mini(low, int(p["overall"]))
-	_check(pool.all(func(p): return int(p["overall"]) <= low), "Adelaide sign the best of them")
+		low = mini(low, int(Ovr.of(p)))
+	_check(pool.all(func(p): return int(Ovr.of(p)) <= low), "Adelaide sign the best of them")
+	# An established man takes his 18 attributes from his last AFL season
+	# (entry_attributes.csv, tools/wheelo/attributes.py): Grantley Fielke, 1987.
+	var src: Dictionary = {}
+	for r in GameDB._read_dicts(LegacyRollover.ENTRY_ATTRIBUTES_CSV):
+		if str(r["club"]) == "ADE" and int(r["year"]) == 1991 and str(r["last"]) == "Fielke":
+			src = r
+	var fielke: Array = (list + pool).filter(func(p): return str(p.get("real_name", "")) == "Grantley Fielke")
+	var same := not src.is_empty() and fielke.size() == 1
+	if same:
+		for k in Attributes.KEYS:
+			if int((fielke[0]["attr"] as Dictionary).get(k, -1)) != clampi(int(src[k]), 1, 99):
+				same = false
+	_check(same and str(fielke[0]["apos"]) == str(src["apos"]) and str(fielke[0]["role"]) == Rating.line_of(str(src["apos"]))
+			and not fielke[0].has("overall") and not fielke[0].has("projected"),
+			"Fielke joins Adelaide on his %s attributes as a %s (OVR %s, read from them)" % [
+				str(src.get("src", "?")), str(src.get("apos", "?")), str(Ovr.of(fielke[0]) if fielke.size() == 1 else "-")])
 	GameDB.reload("1990")
 
 
@@ -763,7 +782,7 @@ func _story_setup(id: String, from: String, mine: String, seed := 1) -> Dictiona
 	var list: Array = GameState.league_lists[from]
 	var star: Dictionary = list[0]
 	for p in list:
-		if int(p.get("overall", 0)) > int(star.get("overall", 0)):
+		if int(Ovr.of(p, 0)) > int(Ovr.of(star, 0)):
 			star = p
 	star["real_name"] = "%s %s" % [str(m["first"]), str(m["last"])]
 	star["dob"] = str(m["dob"])
@@ -859,12 +878,12 @@ func _test_story_none() -> void:
 	# Grundy asks to be a club's first ruck: Hawthorn's best ruck already is.
 	star = _story_setup("grundy_mel", "HAW", "HAW")
 	star["role"] = "RUCK"
-	star["overall"] = 99
+	Ovr.to(star, 99)
 	cards = _canon_cards(LegacyRollover.canon("grundy_mel"))
 	_check(cards.is_empty() and bool(_story("grundy_mel").get("none", false)), "Grundy, Hawthorn's first ruck: no story")
 	# First ruck: no other ruckman on the list as good as him.
-	var as_good := {"id": "x1", "role": "MID", "role2": "RUCK", "overall": 99}
-	var below := {"id": "x2", "role": "RUCK", "overall": 98}
+	var as_good: Dictionary = Ovr.to({"id": "x1", "role": "MID", "role2": "RUCK"}, 99)
+	var below: Dictionary = Ovr.to({"id": "x2", "role": "RUCK", "role2": ""}, 98)
 	_check(not LegacyRollover._first_ruck(star, [star, as_good]) and LegacyRollover._first_ruck(star, [star, below]),
 			"A club with a ruckman as good as him would not make him its first ruck")
 	GameDB.reload("1990")
@@ -1198,4 +1217,23 @@ func _test_canon_retire(id: String, how: String) -> void:
 			break
 	if how == "fight":
 		_check(seen.size() == 2, "%s: over the seeds, talking to him both keeps and loses him (%s)" % [id, str(seen.keys())])
+	GameDB.reload("1990")
+
+
+## A canon retirement whose player is on no list (the save made its own history:
+## he was never drafted, or was delisted): nobody is asked and no news of his
+## retirement follows (bug bash P3-6; it used to post "Cyril Rioli has retired").
+func _test_canon_retire_missing() -> void:
+	var m := LegacyRollover.canon("rioli_home")
+	GameState.reset("1990")
+	_start("HAW")
+	_check(LegacyRollover.canon_find(GameState, m).is_empty(), "Rioli is on no list in this save")
+	var cards := _canon_cards(m)
+	_check(cards.is_empty(), "Nobody gets his card (%d)" % cards.size())
+	var e: Dictionary = LegacyRollover._canon_st(GameState).get("rioli_home", {})
+	_check(not e.has("asked"), "He is not marked asked (%s)" % str(e))
+	GameState.news = []
+	LegacyRollover.canon_moves(GameState, int(m["year"]))
+	var news := GameState.news.filter(func(n): return str(m["last"]) in str(n.get("text", "")))
+	_check(news.is_empty(), "No news of his retirement (%s)" % str(news))
 	GameDB.reload("1990")

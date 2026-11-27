@@ -11,6 +11,7 @@ extends RefCounted
 ##   arm "fair"    - every coach Fair in all three (60)
 ## Per season: young players' (22 and under) rating gain, the whole list's,
 ## ladder finish, mean margin, and the list's mean morale at the end.
+const Ovr := preload("res://tests/ovr.gd")
 
 var club := "MEL"
 var arm := "base"
@@ -58,7 +59,7 @@ func _career(seed: int, seasons: int) -> void:
 	GameState.replay_seed = seed
 	GameState.autosave_enabled = false
 	var pool: Array = GameDB.all_players_sorted() + GameDB.all_draftees_sorted()
-	pool.sort_custom(func(a, b): return a["overall"] > b["overall"])
+	pool.sort_custom(func(a, b): return Ovr.of(a) > Ovr.of(b))
 	GameState.draft = Draft.new(pool, GameDB.active_clubs(GameState.season_year).duplicate(), seed)
 	GameState.draft.start_for_user(club)
 	_run_draft(GameState.draft)
@@ -69,7 +70,7 @@ func _career(seed: int, seasons: int) -> void:
 		var year := GameState.season_year
 		var start := {}
 		for p in GameState.my_list:
-			start[str(p["id"])] = [int(p["overall"]), float(p.get("age", 25.0))]
+			start[str(p["id"])] = [int(Ovr.of(p)), float(p.get("age", 25.0))]
 		var margin := 0
 		var games := 0
 		while not GameState.season.is_season_over():
@@ -90,7 +91,7 @@ func _career(seed: int, seasons: int) -> void:
 			var st = start.get(str(p["id"]))
 			if st == null:
 				continue
-			var d := float(int(p["overall"]) - int(st[0]))
+			var d := float(int(Ovr.of(p)) - int(st[0]))
 			all.append(d)
 			if float(st[1]) <= 22.0:
 				young.append(d)

@@ -55,9 +55,9 @@ func _run() -> void:
 	state.save_path = "user://capture_break_panes.save"
 	state.settings_path = "user://capture_break_panes.cfg"
 	var kit = load("res://scripts/ui/UiKit.gd")
+	kit.apply_palette()
 	if head != "":
-		kit.HEAD_DARK = Color(head)
-	kit.apply_appearance("dark")
+		kit.HEAD = Color(head)
 	_vp = SubViewport.new()
 	_vp.size = Vector2i(_w, _h)
 	_vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS

@@ -1,4 +1,5 @@
 extends SceneTree
+const Ovr := preload("res://tests/ovr.gd")
 const Tap := preload("res://tests/tap.gd")
 ## godot --headless --path . --script tests/run_roles_tests.gd
 ## Roles (tests/test_roles.gd), then the Selection screen on a phone: the
@@ -215,17 +216,18 @@ func _test_selection_tests() -> void:
 				"Back closes the synergy guide first")
 		await _settle()
 	# Complete synergy: one tap switches it on, says who came in, and can be
-	# undone (director, 2026-10-07). Collingwood can complete its Lockdown unit.
+	# undone (director, 2026-10-07). Collingwood can complete its Supply line
+	# (on the rebuilt ratings its list no longer holds three stoppers).
 	(ui.find_child("SynergyRules", true, false) as Button).emit_signal("pressed")
 	await _settle()
-	var complete: Button = ui.find_child("Complete_lockdown_unit", true, false)
+	var complete: Button = ui.find_child("Complete_supply_line", true, false)
 	var blocked: Node = ui.find_child("CompleteWhy_engine_room", true, false)
 	_check(complete != null and not complete.disabled and blocked != null,
 			"The guide offers Complete where the list can, and says why where it can't")
 	if complete != null:
 		complete.emit_signal("pressed")
 		await _settle()
-		_check(_screen_text(ui).contains("Lockdown unit on:") and ui.find_child("UndoPick", true, false) != null,
+		_check(_screen_text(ui).contains("Supply line on:") and ui.find_child("UndoPick", true, false) != null,
 				"Completing it changes the side, says who came in, and offers Undo")
 		(ui.find_child("UndoPick", true, false) as Button).emit_signal("pressed")
 		await _settle()
@@ -745,6 +747,9 @@ func _test_selection_pages_tests() -> void:
 			_check(col2 != null and lsc != null and col2.is_ancestor_of(lsc) and grid2 != null and grid2.columns == 2
 					and lsc.size.y >= size.y * 0.5,
 					"PC: the players not picked take the right column, two across, %d tall (%s)" % [int(lsc.size.y) if lsc != null else 0, ptag])
+			# One line a man (Batch 5, the director's board): the old card's extras stay in his tooltip and profile.
+			_check(grid2.get_child_count() > 0 and (grid2.get_child(0) as Control).size.y <= 30.0,
+					"PC: a player not picked is a one-line row (%s, %d tall)" % [ptag, int((grid2.get_child(0) as Control).size.y) if grid2.get_child_count() > 0 else 0])
 			var tl: String = await Tap.tap(grid2.get_child(0))
 			await _settle()
 			_check(tl == "" and ui.find_child("PickedBar", true, false) != null,
@@ -799,13 +804,31 @@ func _test_selection_pages_tests() -> void:
 		if ap != null:
 			ap.get_popup().hide()
 			await _settle()
+		# Our side | Not picked (Batch 5, the director's board): the players not
+		# picked have a stage of their own, and Back from it goes to the oval.
+		var field9: Control = ui.find_child("BuilderField", true, false)
+		var rest9: Control = ui.find_child("NotPickedStage", true, false)
+		var tap_rest: String = await Tap.tap(ui.find_child("SelectionStages_rest", true, false))
+		await _settle()
+		_check(tap_rest == "" and rest9 != null and rest9.is_visible_in_tree() and not field9.is_visible_in_tree(),
+				"PC 960x540: a real click on Not picked shows the players not picked on a stage of their own (%s: %s)" % [club, tap_rest])
+		_check(ui.call("handle_back") == true and field9.is_visible_in_tree() and not rest9.is_visible_in_tree(),
+				"PC 960x540: Back from the players not picked goes to the oval (%s)" % club)
+		tap_rest = await Tap.tap(ui.find_child("SelectionStages_rest", true, false))
+		await _settle()
+		# ...and a real click on one takes him back to the oval, held, his line under the switch.
 		var grid9: GridContainer = ui.find_child("NotSelected", true, false)
 		var tap_np: String = "no player not picked"
-		if grid9 != null and grid9.get_child_count() > 0:
+		if tap_rest != "":
+			tap_np = "Not picked: " + tap_rest
+		elif grid9 != null and grid9.get_child_count() > 0:
 			tap_np = await Tap.tap(grid9.get_child(0))
 		await _settle()
-		_check(tap_np == "" and ui.find_child("PickedBar", true, false) != null,
-				"PC 960x540: a real tap on a player not picked picks him up (%s: %s)" % [club, tap_np])
+		var bar9: Control = ui.find_child("PickedBar", true, false)
+		var note9: Control = ui.find_child("StageNote", true, false)
+		_check(tap_np == "" and bar9 != null and note9 != null and note9.is_ancestor_of(bar9) and bar9.is_visible_in_tree()
+				and field9.is_visible_in_tree() and str(ui.get("_stage")) == "side",
+				"PC 960x540: a real click on a player not picked takes him back to the oval, held (%s: %s)" % [club, tap_np])
 		ui.queue_free()
 		await _settle()
 	root.size = Vector2i(420, 860)
@@ -940,6 +963,14 @@ func _list_tests() -> void:
 		_check(prof != null and prof.find_child("ProfileLeadership", true, false) != null
 				and prof.find_child("ProfileLeadershipNote", true, false) != null,
 				"The profile shows Leadership beside his other ratings, with what it comes from")
+		var groups: Node = prof.find_child("ProfileAttributes", true, false) if prof != null else null
+		var group_rows := 0
+		if groups != null:
+			for g in groups.find_children("AttrGrid_*", "GridContainer", false, false):
+				group_rows += g.get_child_count()
+		_check(groups != null and groups.find_children("AttrGroup_*", "Label", false, false).size() == 4
+				and group_rows == Attributes.CARD_ROWS.size() + 1,
+				"The profile lists every rating in four groups under their headings, Leadership last (%d rows)" % group_rows)
 		_check(ls.call("handle_back") == true, "Back is handled on the profile")
 		await _settle()
 		_check(ls.find_child("PlayerProfile", true, false) == null, "Back closes the profile")
@@ -1167,9 +1198,9 @@ func _test_backing_ui_tests() -> void:
 	var kid: Dictionary = {}
 	var best: Dictionary = {}
 	for p in _state.my_list:
-		if str(p["role"]) != "RUCK" and (kid.is_empty() or int(p["overall"]) < int(kid["overall"])):
+		if str(p["role"]) != "RUCK" and (kid.is_empty() or int(Ovr.of(p)) < int(Ovr.of(kid))):
 			kid = p
-		if best.is_empty() or int(p["overall"]) > int(best["overall"]):
+		if best.is_empty() or int(Ovr.of(p)) > int(Ovr.of(best)):
 			best = p
 	var through: int = _state.season_year - 1
 	kid["career"] = {"games": 2, "goals": 0, "stints": [], "through": through, "unknown": []}

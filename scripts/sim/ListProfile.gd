@@ -18,10 +18,10 @@ const LABEL := {"contest": "Contest", "control": "Control", "running": "Running 
 const MEANS := {
 	"contest": "Winning it at the stoppages: your centre-square midfielders' contested ball and your ruck's tap work.",
 	"control": "Keeping the ball: disposal under pressure and discipline with it, right across the side.",
-	"running": "Carrying it forward: your runners' carry and their disposal on the move.",
+	"running": "Taking it forward on the run: your runners' work rate and their disposal on the move.",
 	"pressure": "Making them cough it up: your midfielders' and forwards' pressure.",
 	"aerial": "Winning it in the air: your best marks, at both ends.",
-	"finishing": "Turning entries into scores: your best forwards' goalkicking, accuracy and marking.",
+	"finishing": "Turning entries into scores: your best forwards' forward craft, goalkicking and contested marking.",
 }
 ## Where the words fall, as a share of the league from the top.
 ## Elite is the top three of eighteen (rank 2 is 0.111, rank 3 is 0.167; T8.Q2).
@@ -31,11 +31,11 @@ const AVERAGE := 0.72
 const MARKERS := 6
 const CONTROL_W := {"disposal": 0.65, "discipline": 0.35}
 const FINISHERS := 5
-const FINISH_W := {"goalkicking": 0.5, "accuracy": 0.3, "contested_marking": 0.2}
+const FINISH_W := {"forward_craft": 0.5, "goalkicking": 0.3, "contested_marking": 0.2}
 
 
 static func _a(p: Dictionary, key: String) -> float:
-	return Skills.value(p.get("attr", {}), key, 0.0)
+	return Attributes.value(p.get("attr", {}), key, 0.0)
 
 
 static func _control(p: Dictionary) -> float:

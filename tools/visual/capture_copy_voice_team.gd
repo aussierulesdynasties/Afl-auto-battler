@@ -7,6 +7,7 @@ extends SceneTree
 ## Writes <prefix>_<state>.png for: team_intro, team, team_hint, team_menu, team_dual, team_one_ruck,
 ## team_saved, team_undo_row, team_undo, team_rest, team_no_best23, team_opp, team_back, coaching_intro,
 ## coaching, coaching_trait, coaching_cap, sim_orders.
+const Ovr := preload("res://tests/ovr.gd")
 
 const CLUB := "FRE"
 var _out := "copy_voice_team"
@@ -34,7 +35,7 @@ func _run() -> void:
 	_state.autosave_enabled = false
 	_state.save_path = "user://capture_copy_voice.save"
 	_state.settings_path = "user://capture_copy_voice.cfg"
-	load("res://scripts/ui/UiKit.gd").apply_appearance("dark")
+	load("res://scripts/ui/UiKit.gd").apply_palette()
 	root.size = Vector2i(390, 844)
 	DisplayServer.window_set_size(Vector2i(390, 844))
 	var intro_keys: Array = load("res://scripts/ui/FirstVisitIntro.gd").TEXT.keys()
@@ -104,7 +105,7 @@ func _run() -> void:
 		# Nobody young near a senior spot: every player 21 or under is well short.
 		for p in _state.my_list:
 			if _state.is_young(p):
-				p["overall"] = 40
+				Ovr.to(p, 40)
 		var ui6: Node = await _open("selection", "Selection")
 		ui6.call("_apply_strategy", "youth")
 		await _raise()
@@ -122,7 +123,7 @@ func _run() -> void:
 		_fresh(intro_keys)
 		var kid := {}
 		for p in _state.my_list:
-			if _state.can_back(p) and (kid.is_empty() or int(p["overall"]) > int(kid["overall"])):
+			if _state.can_back(p) and (kid.is_empty() or int(Ovr.of(p)) > int(Ovr.of(kid))):
 				kid = p
 		var ui8: Node = await _open("selection", "Selection")
 		if not kid.is_empty():

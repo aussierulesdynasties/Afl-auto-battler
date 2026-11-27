@@ -1,0 +1,67 @@
+{
+	"_about": "Football temperaments (Temperament.gd). Every player holds one or two. start_weight: where a temperament's odds start before the record tilts them (1.0 when not listed); leader_from: the Leadership rating from which the record leans to leader. Levers are multipliers other systems read through Temperament.scale(p, lever): over 1 he feels it more, under 1 less. 'decay' over 1 means his opinion marks fade faster; 'faction' over 1 means he is quicker to stand with unhappy teammates (Factions.gd). Grounded in on-field and locker-room personality only.",
+	"order": ["leader", "clubman", "competitor", "professional", "quiet_achiever", "fiery", "mercurial", "mercenary"],
+	"second_chance": 0.5,
+	"start_weight": {"leader": 0.05},
+	"leader_from": 62,
+	"scale_min": 0.5,
+	"scale_max": 2.0,
+	"temperaments": {
+		"leader": {
+			"label": "Leader",
+			"describe": "A voice in the rooms. Rates a coach who backs his players, and the group takes its lead from how you treat him.",
+			"ambition": "Wants a say in how the club is run and a spot in the leadership group.",
+			"levers": {"backed": 1.2, "promise_broken": 1.25, "bond": 1.2, "respect": 1.3, "authority": 0.9, "faction": 1.25},
+			"clashes": []
+		},
+		"clubman": {
+			"label": "Clubman",
+			"describe": "Lives for the jumper. Being backed means a lot to him, and he takes a broken promise personally and is slow to let it go.",
+			"ambition": "Wants to finish his career at the club.",
+			"levers": {"backed": 1.25, "promise_kept": 1.2, "promise_broken": 1.4, "bond": 1.3, "decay": 0.8, "faction": 0.8},
+			"clashes": ["mercenary"]
+		},
+		"competitor": {
+			"label": "Competitor",
+			"describe": "Hates losing, hates sitting out even more. A drop hits him hard and being backed fires him up.",
+			"ambition": "Wants to play finals and win a flag.",
+			"levers": {"dropped": 1.35, "backed": 1.2, "praised": 1.1, "authority": 1.1, "faction": 1.1},
+			"clashes": []
+		},
+		"professional": {
+			"label": "Professional",
+			"describe": "Turns up, does the work and takes a hard call in his stride. Expects you to do what you said you would.",
+			"ambition": "Wants a settled role and a coach he can trust.",
+			"levers": {"dropped": 0.8, "discipline": 0.75, "promise_kept": 1.2, "promise_broken": 1.2, "praised": 0.85, "decay": 1.15, "faction": 0.6},
+			"clashes": ["mercurial"]
+		},
+		"quiet_achiever": {
+			"label": "Quiet achiever",
+			"describe": "Goes about his footy without any fuss. Rarely rattled by a drop, quietly grateful for a pat on the back.",
+			"ambition": "Wants to hold his spot in the side.",
+			"levers": {"dropped": 0.8, "praised": 1.25, "backed": 1.1, "bond": 0.9, "respect": 1.1, "authority": 0.85, "faction": 0.6},
+			"clashes": ["fiery"]
+		},
+		"fiery": {
+			"label": "Fiery",
+			"describe": "Wears his heart on his sleeve. Bristles at a hard line from the coach and remembers a slight for a long time.",
+			"ambition": "Wants to be the one the side looks to when the game is on the line.",
+			"levers": {"dropped": 1.25, "discipline": 1.4, "authority": 1.3, "decay": 0.8, "faction": 1.4},
+			"clashes": ["quiet_achiever"]
+		},
+		"mercurial": {
+			"label": "Mercurial",
+			"describe": "Up and down, on the field and off it. Everything you do lands harder with him, but he moves on quickly.",
+			"ambition": "Wants freedom to play his own game.",
+			"levers": {"dropped": 1.2, "backed": 1.2, "praised": 1.25, "discipline": 1.15, "decay": 1.3, "faction": 1.3},
+			"clashes": ["professional"]
+		},
+		"mercenary": {
+			"label": "Mercenary",
+			"describe": "Plays for the next contract. A drop or a broken promise stings him less, and loyalty buys you less too.",
+			"ambition": "Wants the best deal on offer, wherever it is.",
+			"levers": {"backed": 0.8, "promise_kept": 0.8, "promise_broken": 0.8, "bond": 0.7, "respect": 0.85, "decay": 1.2},
+			"clashes": ["clubman"]
+		}
+	}
+}

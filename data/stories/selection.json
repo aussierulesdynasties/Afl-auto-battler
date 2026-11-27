@@ -57,7 +57,8 @@
 					{
 						"op": "morale",
 						"d": 15,
-						"scale": "trust"
+						"scale": "trust",
+						"temper": "backed"
 					},
 					{
 						"op": "expects_game",
@@ -80,7 +81,8 @@
 				"effects": [
 					{
 						"op": "morale",
-						"d": -5
+						"d": -5,
+						"temper": "dropped"
 					},
 					{
 						"op": "trust",
@@ -263,7 +265,8 @@
 					{
 						"op": "morale",
 						"d": 15,
-						"scale": "trust"
+						"scale": "trust",
+						"temper": "backed"
 					},
 					{
 						"op": "expects_game",
@@ -286,7 +289,8 @@
 				"effects": [
 					{
 						"op": "morale",
-						"d": -5
+						"d": -5,
+						"temper": "dropped"
 					},
 					{
 						"op": "trust",
@@ -360,7 +364,8 @@
 				"effects": [
 					{
 						"op": "morale",
-						"d": -5
+						"d": -5,
+						"temper": "dropped"
 					},
 					{
 						"op": "morale",
@@ -426,7 +431,8 @@
 					{
 						"op": "trust",
 						"d": -4,
-						"why": "You left him out of the final"
+						"why": "You left him out of the final",
+						"scar": true
 					},
 					{
 						"op": "culture",
@@ -556,9 +562,14 @@
 						"op": "morale",
 						"d": -2,
 						"who": "subject"
+					},
+					{
+						"op": "bond",
+						"kind": "mentor",
+						"s": 1
 					}
 				],
-				"result": "{first} shadows a senior player all week: meetings, recovery, the walk-through. He's quieter by Thursday."
+				"result": "{first} shadows {player_b} all week: meetings, recovery, the walk-through. He's quieter by Thursday."
 			},
 			{
 				"key": "alone",
@@ -577,7 +588,19 @@
 				],
 				"result": "Nobody makes a fuss. {first} backs himself."
 			}
-		]
+		],
+		"actor_b": {
+			"role": "teammate",
+			"where": {
+				"fit": true,
+				"selected": true,
+				"age_min": 26,
+				"games_min": 100
+			},
+			"pick": "highest:leadership",
+			"required": false,
+			"fallback": "a senior player"
+		}
 	},
 	{
 		"id": "gf_debut_year",

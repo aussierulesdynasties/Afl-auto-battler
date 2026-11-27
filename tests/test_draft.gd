@@ -1,4 +1,5 @@
 extends RefCounted
+const Ovr := preload("res://tests/ovr.gd")
 ## Model regression suite. Uses the real GDScript implementation, not a mirror.
 ## Run through run_draft_tests.gd, or call run() in an in-engine test runner.
 
@@ -14,8 +15,6 @@ func run() -> void:
 	failures.clear()
 	checks = 0
 	GameState.replay_seed = SUITE_SEED
-	# The draft rules are read on the data without the hand-set OVR rows (data/ovr_overrides.csv).
-	GameDB.skip_ovr_overrides = true
 	GameDB.reload()
 	_t("_test_history_and_snake_order")
 	_t("_test_ai_draft_logic")
@@ -43,8 +42,6 @@ func run() -> void:
 	_t("_test_rival_pick_reads_whole_pool")
 	_t("_test_rivals_step_same_picks")
 	GameState.replay_seed = 0
-	GameDB.skip_ovr_overrides = false
-	GameDB.reload()
 	print(Ran.line("Draft", self))
 
 
@@ -66,17 +63,15 @@ func _pool() -> Array:
 	# Two clubs, ten players each, enough rucks for both. Source clubs are
 	# deliberately different from the clubs doing the drafting.
 	for i in range(20):
-		out.append({
+		out.append(Ovr.to({
 			"id": "player_%d" % i,
 			"name": "Player %d" % i,
 			"last": "Player %02d" % i,
 			"club": "ORIGINAL",
 			"role": ["DEF", "MID", "RUCK", "FWD", "MID"][i % 5],
-			"overall": 80 - i,
-			"value": 1,
 			"gl": i,
 			"di": 100 - i,
-		})
+		}, 80 - i))
 	return out
 
 
@@ -107,8 +102,12 @@ func _test_history_and_snake_order() -> void:
 	_check(not draft.unpick(str(selected["id"])), "League selections cannot be rewound")
 	var expensive := selected.duplicate()
 	expensive["id"] = "too_expensive"
-	expensive["value"] = draft.budget + 1
+	# His price is read from his OVR (RATING_REBUILD): the cap is cut to just
+	# under it instead.
+	var budget_before := draft.budget
+	draft.budget = draft.spent() + Draft.cost_of(expensive) - 1
 	_check(not draft.pick(expensive), "An unaffordable pick is rejected")
+	draft.budget = budget_before
 	_check(draft.pick_history.size() == size_before, "Rejected picks never add phantom log entries")
 	_check(draft.spent() == spend_before, "Rejected picks do not change cap usage")
 	_verify_log(draft)
@@ -118,7 +117,7 @@ func _test_position_guidance() -> void:
 	var draft := Draft.new(_pool(), ["A", "B"], 42)
 	draft.start_for_user(str(draft.draft_order[0]))
 	_check(draft.position_targets() == {"RUCK": 2, "MID": 5, "DEF": 6, "FWD": 6},
-			"Coverage agrees with the 6-6-6 ground slots and two-ruck rule")
+			"Coverage agrees with the 6-6-6 ground slots and a list's two rucks of depth")
 	_check(draft.position_needs() == draft.position_targets(), "An empty list needs every target slot")
 	var defender: Dictionary = draft.board("DEF", "", "", "overall", true)[0]
 	_check(draft.pick(defender), "Can select a defender")
@@ -134,11 +133,11 @@ func _test_position_guidance() -> void:
 
 
 func _dual(id: String, role: String, role2 := "") -> Dictionary:
-	return {"id": id, "name": id, "last": id, "club": "ORIGINAL", "role": role, "role2": role2,
-			"overall": 60, "value": 1, "gl": 0, "di": 0,
-			"attr": {"ruck": 10, "contested": 50, "kicking": 50, "handballing": 50, "carry": 50, "intercept": 40,
-				"pressure": 40, "goalkicking": 40, "contested_marking": 40, "uncontested_marking": 40, "speed": 50, "accuracy": 50, "creating": 40,
-				"discipline": 50, "durability": 60, "star": 20}}
+	return Ovr.to({"id": id, "name": id, "last": id, "club": "ORIGINAL", "role": role, "role2": role2,
+			"gl": 0, "di": 0,
+			"attr": {"ruck": 10, "contested_ball": 50, "kicking": 50, "handballing": 50, "speed": 50, "work_rate": 50,
+				"strength": 50, "endurance": 60, "reading_play": 40, "one_on_one": 40, "pressure": 40, "forward_craft": 40,
+				"contested_marking": 40, "marking": 40, "goalkicking": 50, "vision": 40, "discipline": 50, "durability": 60}}, 60)
 
 
 ## Needs follow who can actually play a role (primary or secondary, the rule
@@ -167,7 +166,7 @@ func _test_dual_position_coverage() -> void:
 	_check(cov["DEF"] == 1 and cov["MID"] == 1, "A DEF/MID counts as cover for both lines")
 	_check(int(needs["DEF"]) + int(needs["MID"]) == 6 + 5 - 1,
 			"...but fills only one spot between them")
-	# A MID/RUCK is ruck cover, as the two-ruck rule already says.
+	# A MID/RUCK is ruck cover, as the ruck rule already says.
 	list.clear()
 	for i in range(5):
 		list.append(_dual("m%d" % i, "MID"))
@@ -180,7 +179,7 @@ func _test_dual_position_coverage() -> void:
 		side.append(_dual("d%d" % i, "DEF"))
 	for i in range(6):
 		var m := _dual("m%d" % i, "MID")
-		m["overall"] = 70  # pure midfielders first, as select_22 fills lines greedily
+		Ovr.to(m, 70)  # pure midfielders first, as select_22 fills lines greedily
 		side.append(m)
 	side.append(_dual("r0", "RUCK"))
 	for i in range(6):
@@ -219,7 +218,7 @@ func _test_real_money_cap() -> void:
 	var d := _career_draft(17)
 	_check(d.budget == Contracts.CAP_2027,
 			"The opening career draft uses the 2027 AFL cap")
-	_check(d.pool.all(func(p): return int(p["value"]) >= 125000),
+	_check(d.pool.all(func(p): return Draft.cost_of(p) >= 125000),
 			"Draft costs are annual-dollar salaries, not 1-10 cap points")
 
 
@@ -249,7 +248,7 @@ func _test_real_pool() -> void:
 
 func _test_real_player_names() -> void:
 	var p: Dictionary = GameDB.players[0]
-	var overall := int(p["overall"])
+	var overall := int(Ovr.of(p))
 	_check(str(p["name"]) == str(p["generic_name"]),
 			"The loaded pool does not expose a real name as its default field")
 	var seen := {}
@@ -283,7 +282,7 @@ func _test_real_player_names() -> void:
 			"Jordan Dawson is written as Jordan Dawson, not a plays-like label")
 	_check(GameDB.player_display_name_by_id(str(dawson["id"])) == "Jordan Dawson",
 			"Pick/result lookups resolve the real name by stable player ID")
-	_check(int(p["overall"]) == overall, "Showing a name never changes the player rating")
+	_check(int(Ovr.of(p)) == overall, "Showing a name never changes the player rating")
 	var generated := {"generic_name": "Ari Bramble", "name": "Ari Bramble", "real_name": ""}
 	_check(GameDB.player_display_name(generated) == "Ari Bramble",
 			"Players with no real AFL name keep the name they were given")
@@ -466,7 +465,7 @@ func _verify_log(draft: Draft) -> void:
 ## The career draft's pool: the 2026 league plus its draft class.
 func _career_draft(seed: int) -> Draft:
 	var pool: Array = GameDB.all_players_sorted() + GameDB.all_draftees_sorted()
-	pool.sort_custom(func(a, b): return a["overall"] > b["overall"])
+	pool.sort_custom(func(a, b): return Ovr.of(a) > Ovr.of(b))
 	return Draft.new(pool, GameDB.active_clubs(GameDB.START_YEAR).duplicate(), seed)
 
 
@@ -523,11 +522,11 @@ func _strategy_pick(d: Draft, strat: String) -> Dictionary:
 		var better := best.is_empty()
 		if not better:
 			match strat:
-				"cheapest": better = int(p["value"]) < int(best["value"])
-				"dearest": better = int(p["value"]) > int(best["value"])
+				"cheapest": better = Draft.cost_of(p) < Draft.cost_of(best)
+				"dearest": better = Draft.cost_of(p) > Draft.cost_of(best)
 				"noruck":
 					var rb := Ratings.plays_role(best, "RUCK")
-					better = (rb and not rp) or (rb == rp and int(p["value"]) < int(best["value"]))
+					better = (rb and not rp) or (rb == rp and Draft.cost_of(p) < Draft.cost_of(best))
 		if better:
 			best = p
 	return best
@@ -571,12 +570,12 @@ func _force_pick(d: Draft, code: String, p: Dictionary) -> void:
 	var id := str(p["id"])
 	d.picked[id] = p
 	(d.club_lists[code] as Array).append(p)
-	d.club_spend[code] = int(d.club_spend[code]) + int(p["value"])
+	d.club_spend[code] = int(d.club_spend[code]) + Draft.cost_of(p)
 	if code == d.user_club:
 		d.order.append(id)
 	var entry := {"pick": d.pick_index + 1, "round": d.current_round(), "club": code, "player_id": id,
-			"player_name": str(p.get("name", "")), "role": Ratings.role_tag(p), "overall": int(p["overall"]),
-			"value": int(p["value"]), "source_club": str(p["club"])}
+			"player_name": str(p.get("name", "")), "role": Ratings.role_tag(p), "overall": int(Ovr.of(p)),
+			"value": Draft.cost_of(p), "source_club": str(p["club"])}
 	d.pick_history.append(entry)
 	d._pick_by_player[id] = entry
 	d.pick_index += 1
@@ -589,7 +588,7 @@ func _test_stuck_draft_recovery() -> void:
 	# four clubs drafting the career pool are enough: the rivals' picks fall
 	# between yours as they do in an 18-club draft, at a fraction of the cost.
 	var pool: Array = GameDB.all_players_sorted() + GameDB.all_draftees_sorted()
-	pool.sort_custom(func(a, b): return a["overall"] > b["overall"])
+	pool.sort_custom(func(a, b): return Ovr.of(a) > Ovr.of(b))
 	var clubs: Array = GameDB.active_clubs(GameDB.START_YEAR).slice(0, 4)
 	_check(clubs.size() == 4, "(setup) four clubs draft (%d)" % clubs.size())
 	var d := Draft.new(pool, clubs, 47)
@@ -602,7 +601,7 @@ func _test_stuck_draft_recovery() -> void:
 		for p in d.pool:
 			if d.picked.has(str(p["id"])) or Ratings.plays_role(p, "RUCK"):
 				continue
-			if int(p["value"]) <= d.remaining() and (star.is_empty() or int(p["value"]) > int(star["value"])):
+			if Draft.cost_of(p) <= d.remaining() and (star.is_empty() or Draft.cost_of(p) > Draft.cost_of(star)):
 				star = p
 		if star.is_empty():
 			break
@@ -619,7 +618,7 @@ func _test_stuck_draft_recovery() -> void:
 	var seq := d.pick_sequence.size()
 	var dear: Dictionary = d.list()[0]
 	for p in d.list():
-		if int(p["value"]) > int(dear["value"]):
+		if Draft.cost_of(p) > Draft.cost_of(dear):
 			dear = p
 	_check(not d.release_for_room("nobody") and d.release_for_room(str(dear["id"])),
 			"You can release one of your picks when stuck")
@@ -641,7 +640,7 @@ func _test_stuck_draft_recovery() -> void:
 		if r.user_stuck():
 			var cheap: Dictionary = r.list()[0]
 			for p in r.list():
-				if int(p["value"]) > int(cheap["value"]):
+				if Draft.cost_of(p) > Draft.cost_of(cheap):
 					cheap = p
 			r.release_for_room(str(cheap["id"]))
 			continue
@@ -661,10 +660,10 @@ func _test_position_status() -> void:
 	var d := Draft.new(_pool(), ["A", "B"], 5)
 	d.start_for_user("A")
 	var st := d.position_status()
-	_check(int(st["FWD"]["short"]) == 6 and int(st["RUCK"]["short"]) == 2,
-			"An empty list is short the whole match-day side")
-	_check(Draft.need_word(st["RUCK"], "RUCK") == "need 2" and Draft.need_word(st["FWD"], "FWD") == "short 6",
-			"Shortages read in a word: need 2, short 6")
+	_check(int(st["FWD"]["short"]) == 6 and int(st["RUCK"]["short"]) == 1,
+			"An empty list is short the whole match-day side (one ruck, director 2026-11-26)")
+	_check(Draft.need_word(st["RUCK"], "RUCK") == "need 1" and Draft.need_word(st["FWD"], "FWD") == "short 6",
+			"Shortages read in a word: need 1, short 6")
 	# Five MID/FWD players: they cover the midfield, so the forwards stay short.
 	var pairs := []
 	for i in range(5):
@@ -694,13 +693,13 @@ func _test_funded_scouting() -> void:
 	var p: Dictionary = pool[10]
 	var minimal := DraftScouting.projection(p, "A", 90210, ClubBudget.scouting_mult(0))
 	var elite := DraftScouting.projection(p, "A", 90210, ClubBudget.scouting_mult(3))
-	var minimal_width := int(minimal["overall"][1]) - int(minimal["overall"][0]) 			+ int(minimal["potential"][1]) - int(minimal["potential"][0])
-	var elite_width := int(elite["overall"][1]) - int(elite["overall"][0]) 			+ int(elite["potential"][1]) - int(elite["potential"][0])
+	var minimal_width := int(Ovr.of(minimal)[1]) - int(Ovr.of(minimal)[0]) 			+ int(minimal["potential"][1]) - int(minimal["potential"][0])
+	var elite_width := int(Ovr.of(elite)[1]) - int(Ovr.of(elite)[0]) 			+ int(elite["potential"][1]) - int(elite["potential"][0])
 	_check(elite_width < minimal_width,
 			"Elite Recruiting produces narrower OVR/POT ranges than Minimal (%d v %d)" % [
 			elite_width, minimal_width])
-	_check(absi(int(elite["overall_mid"]) - int(p["overall"]))
-			<= absi(int(minimal["overall_mid"]) - int(p["overall"])),
+	_check(absi(int(elite["overall_mid"]) - int(Ovr.of(p)))
+			<= absi(int(minimal["overall_mid"]) - int(Ovr.of(p))),
 			"Better Recruiting cannot increase the same club/prospect OVR error")
 
 	var clubs := ["A", "B"]
@@ -772,7 +771,7 @@ func _test_combine_scouting() -> void:
 	var first: Dictionary = scouting.projection(p, "A", d.seed)
 	var again: Dictionary = scouting.projection(p, "A", d.seed)
 	_check(first == again, "A club's scouting report is deterministic across reads")
-	_check((first["overall"] as Array).size() == 2 and int(first["overall"][0]) < int(first["overall"][1])
+	_check((Ovr.of(first) as Array).size() == 2 and int(Ovr.of(first)[0]) < int(Ovr.of(first)[1])
 			and (first["potential"] as Array).size() == 2 and int(first["potential"][0]) < int(first["potential"][1]),
 			"Prospect OVR and POT are scouting ranges, not exact single ratings")
 	_check(int(first["potential_mid"]) >= int(first["overall_mid"]),
@@ -823,10 +822,10 @@ func _test_asset_valuation() -> void:
 	var pool := []
 	for i in range(24):
 		var role: String = ["MID", "DEF", "FWD", "RUCK"][i % 4]
-		pool.append({"id": "pr_%d" % i, "name": "Prospect %d" % i, "club": "U18",
+		pool.append(Ovr.to({"id": "pr_%d" % i, "name": "Prospect %d" % i, "club": "U18",
 				"role": "MID" if i == 0 else role, "role2": "",
-				"overall": 78 if i == 0 else 66 - i / 3, "potential": 92 if i == 0 else 74,
-				"value": 1, "gl": 0, "di": 0})
+				"potential": 92 if i == 0 else 74,
+				"gl": 0, "di": 0}, 78 if i == 0 else 66 - i / 3))
 	var clubs := ["A", "B", "C", "D"]
 	var sizes := {}
 	var counts := {}
@@ -912,9 +911,12 @@ func _test_scouted_league_board() -> void:
 		var v := draft.user_view(p)
 		if bool(v["scouted"]):
 			scouted += 1
-		if int(v["overall_mid"]) != int(p["overall"]):
+		if int(v["overall_mid"]) != int(Ovr.of(p)):
 			off += 1
-		if i < 10 and int(v["overall"][1]) - int(v["overall"][0]) > 2:
+		# The league's ten best by consensus: since OVR is read from the
+		# attributes (RATING_REBUILD) the top hundred sit within about ten
+		# points, so a deep player's miss can lift him into the board's top ten.
+		if int(draft._consensus_rank.get(str(p["id"]), 999)) <= 10 and int(Ovr.of(v)[1]) - int(Ovr.of(v)[0]) > 2:
 			top_wide += 1
 		mids.append(int(v["overall_mid"]))
 	var sorted_ok := true
@@ -937,13 +939,21 @@ func _test_scouted_league_board() -> void:
 	var copy_ok := true
 	for p in board.slice(0, 60):
 		var v := draft.user_view(p)
-		price_ok = price_ok and draft.price(p) == int(p["value"]) and draft.price_for("CAR", p) == int(p["value"])
+		price_ok = price_ok and draft.price(p) == Draft.cost_of(p) and draft.price_for("CAR", p) == Draft.cost_of(p)
 		var seen := draft.scouted_copy(p)
-		var shift := int(v["overall_mid"]) - int(p["overall"])
+		# The miss in the points of his weighted sum (the stretch's inverse).
+		var shift := Rating.unstretch(float(int(v["overall_mid"]))) - Rating.unstretch(float(int(Ovr.of(p))))
 		for k in (p["attr"] as Dictionary).keys():
 			var want := clampf(float(p["attr"][k]) + shift, 1.0, 99.0)
 			copy_ok = copy_ok and absf(float(seen["attr"][k]) - want) <= 0.5
-		copy_ok = copy_ok and int(seen["overall"]) == int(v["overall_mid"])
+		# His OVR is read from the moved attributes: the read to within the
+		# point a whole-number shift allows, unless one his position weighs
+		# stopped at 1 or 99.
+		var stopped := false
+		for k in Rating.WEIGHTS[Rating.apos_of(p)]:
+			var moved := float(p["attr"].get(k, 50)) + shift
+			stopped = stopped or moved > 99.0 or moved < 1.0
+		copy_ok = copy_ok and (stopped or absi(int(Ovr.of(seen)) - int(v["overall_mid"])) <= 1)
 	_check(price_ok, "His price is his real salary, the same for every club, whatever the read")
 	# ...and at every scouting level: the redraft's salaries are never blurred.
 	var levels_ok := true
@@ -951,7 +961,7 @@ func _test_scouted_league_board() -> void:
 	for lvl in range(4):
 		draft.scouting_mults[draft.user_club] = ClubBudget.scouting_mult(lvl)
 		for p in board.slice(0, 60):
-			levels_ok = levels_ok and draft.price(p) == int(p["value"])
+			levels_ok = levels_ok and draft.price(p) == Draft.cost_of(p)
 	draft.scouting_mults = keep
 	_check(levels_ok, "A redraft salary is the same at every scouting level")
 	_check(copy_ok, "His ratings as you see them miss by exactly what his OVR read misses by")
@@ -962,7 +972,7 @@ func _test_scouted_league_board() -> void:
 		_check(draft.spent_for(draft.user_club) - spent_before == shown,
 				"You are charged the price you were shown (%d)" % shown)
 		var v := draft.user_view(pick)
-		_check(not bool(v["scouted"]) and int(v["overall_mid"]) == int(pick["overall"]),
+		_check(not bool(v["scouted"]) and int(v["overall_mid"]) == int(Ovr.of(pick)),
 				"Once drafted he is known exactly")
 	var same := Draft.new(GameDB.all_players_sorted(), GameDB.active_clubs(2026).duplicate(), 777)
 	same.start_for_user(mine)
@@ -1008,7 +1018,7 @@ func _test_finished_list_reachability() -> void:
 			"Over the cap and finished: refused, and Release is offered")
 	var dear: Dictionary = o.list()[0]
 	for p in o.list():
-		if int(p["value"]) > int(dear["value"]):
+		if Draft.cost_of(p) > Draft.cost_of(dear):
 			dear = p
 	_check(o.release_for_room(str(dear["id"])) and o.pick_sequence.size() == seq + 1 and not o.is_finished()
 			and o.is_user_turn() and not o.picked.has(str(dear["id"])),
@@ -1017,7 +1027,7 @@ func _test_finished_list_reachability() -> void:
 	_check(o.spent() <= o.budget and ((not cheap.is_empty() and o.pick(cheap) and o.spent() <= o.budget) or o.can_release()),
 			"The replacement is checked against the cap like any pick, or Release is still offered")
 
-	# An older save: finished with one ruck. Release, and the places left must go to rucks.
+	# An older save: finished with no ruck. Release, and the place left must go to a ruck.
 	var r := _copy_draft(cheapest)
 	var mr := str(r.draft_order[3])
 	_check(r.is_finished() and r.is_valid(), "A second copy of the finished draft, untouched by the first")
@@ -1027,15 +1037,16 @@ func _test_finished_list_reachability() -> void:
 	for i in range(lst.size()):
 		if Ratings.plays_role(lst[i], "RUCK"):
 			kept += 1
-			if kept >= 2:
+			if kept >= 1:
 				var fake: Dictionary = (lst[i] as Dictionary).duplicate()
 				fake["id"] = "legacy_fill"
 				fake["role"] = "DEF"
 				fake["role2"] = ""
 				lst[i] = fake
 				swapped = true
-	_check(swapped and not r.is_valid() and r.count_covering("RUCK") < 2 and r.finished_list_refused(),
-			"Finished with fewer than two rucks: refused (%s)" % r.invalid_reason())
+	_check(swapped and not r.is_valid() and r.count_covering("RUCK") == 0 and r.finished_list_refused()
+			and r.invalid_reason() == "You have no ruck. Every list needs one.",
+			"Finished with no ruck: refused (%s)" % r.invalid_reason())
 	var any_id := ""
 	for p in r.list():
 		if str(p["id"]) != "legacy_fill" and not Ratings.plays_role(p, "RUCK"):
@@ -1047,8 +1058,8 @@ func _test_finished_list_reachability() -> void:
 
 ## A fake player already on a club's list, for the P-18 fixtures.
 func _held(id: String, role: String, ovr := 60) -> Dictionary:
-	return {"id": id, "name": id, "last": id, "club": "ORIGINAL", "role": role, "overall": ovr,
-		"value": 1, "age": 25.0}
+	return Ovr.to({"id": id, "name": id, "last": id, "club": "ORIGINAL", "role": role,
+		"age": 25.0}, ovr)
 
 
 ## P-18: a rival that passes on, or takes, a prospect you opened says why, and
@@ -1056,24 +1067,25 @@ func _held(id: String, role: String, ovr := 60) -> Dictionary:
 func _test_rival_says_why() -> void:
 	var AR = load("res://scripts/sim/AiReasons.gd")
 	var name_of := func(q: Dictionary) -> String: return str(q.get("name", ""))
-	# The two-ruck rule: with two places left and no ruck, Carlton must take a
+	# The ruck rule: with one place left and no ruck, Carlton must take a
 	# ruck, so it passes on the best defender in the draft.
 	var d := Draft.new(_pool(), ["CAR", "GEE"], 123)
 	d.wanted()["player_0"] = true
-	for i in range(8):
+	for i in range(d.target_size - 1):
 		(d.club_lists["CAR"] as Array).append(_held("held_%d" % i, ["DEF", "MID", "FWD"][i % 3]))
 	var why := {}
 	var got := d._best_ai_pick("CAR", why)
 	_check(str(got.get("role", "")) == "RUCK" and str(why.get("player_0", "")) == "draft_must_ruck",
-			"Two places left and no ruck: Carlton takes a ruck and its reason is the two-ruck rule (%s)" % str(why))
+			"One place left and no ruck: Carlton takes a ruck and its reason is the ruck rule (%s)" % str(why))
 	var e := {"pick": 9, "club": "CAR", "player_id": "player_0", "other_id": str(got.get("id", "")), "code": "draft_must_ruck", "gap": ""}
-	_check(d.wanted_line(e, name_of) == "Carlton passed on Player 0: they had to take a ruck, and every list needs two.",
-			"The two-ruck sentence names the club and the player: " + d.wanted_line(e, name_of))
+	_check(d.wanted_line(e, name_of) == "Carlton passed on Player 0: they had to take a ruck, and every list needs one.",
+			"The ruck sentence names the club and the player: " + d.wanted_line(e, name_of))
 	# His price: a prospect the club can't afford is passed on for the cap.
 	d = Draft.new(_pool(), ["CAR", "GEE"], 123)
+	# His price is read from his OVR: the cap is cut to just under it.
 	for q in d.pool:
 		if str(q["id"]) == "player_0":
-			q["value"] = d.budget + 1
+			d.budget = Draft.cost_of(q) - 1
 	d.wanted()["player_0"] = true
 	why = {}
 	d._best_ai_pick("CAR", why)
@@ -1101,7 +1113,7 @@ func _test_rival_says_why() -> void:
 	# A first-choice ruck already: a second star ruck would sit behind him.
 	d = Draft.new(_pool(), ["CAR", "GEE"], 123)
 	d.wanted()["player_2"] = true
-	(d.club_lists["CAR"] as Array).append(_held("ruck_star", "RUCK", 72))
+	(d.club_lists["CAR"] as Array).append(_held("ruck_star", "RUCK", Draft.RUCK_FIRST_CHOICE + 2))
 	why = {}
 	d._best_ai_pick("CAR", why)
 	_check(str(why.get("player_2", "")) == "draft_first_ruck", "A first-choice ruck on the list: a star ruck is passed on (%s)" % str(why))
@@ -1242,9 +1254,9 @@ func _real_draft(kind: String) -> Draft:
 func _ai_test_pool() -> Array:
 	var pool := []
 	for i in range(24):
-		pool.append({"id": "bf_%d" % i, "name": "P %d" % i, "club": "U18",
+		pool.append(Ovr.to({"id": "bf_%d" % i, "name": "P %d" % i, "club": "U18",
 				"role": ["MID", "DEF", "FWD", "RUCK"][i % 4], "role2": "",
-				"overall": 50 + (i * 7) % 20, "potential": 65 + (i * 11) % 25, "value": 1, "gl": 0, "di": 0})
+				"potential": 65 + (i * 11) % 25, "gl": 0, "di": 0}, 50 + (i * 7) % 20))
 	return pool
 
 

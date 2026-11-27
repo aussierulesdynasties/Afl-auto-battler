@@ -1,4 +1,6 @@
 """Regression checks for the CI shard layout and balance report, without running Godot."""
+import contextlib
+import io
 import json
 import pathlib
 import tempfile
@@ -53,6 +55,21 @@ class ShardLayoutTests(unittest.TestCase):
 
     def test_estimated_imbalance_is_not_a_failure(self):
         self.assertTrue(check(self.fixture("1: a\n2: b\n", {"a": 347, "b": 778}, ["a", "b"])))
+
+    def test_observed_shards_are_compared_with_their_own_suites(self):
+        # The matrix packs suites afresh each run, so shard 1 here holds b, not the plan's a.
+        root = self.fixture("1: a\n2: b\n", {"a": 100, "b": 100}, ["a", "b"])
+        obs = root / "obs"
+        obs.mkdir()
+        (obs / "shard-1.tsv").write_text("b\t300\n")
+        (obs / "shard-2.tsv").write_text("a\t100\n")
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            self.assertTrue(check(root, observed=obs))
+        self.assertIn("shard-1 100->300", out.getvalue())
+        self.assertIn("25% off their estimate", out.getvalue())
+        self.assertIn("Suites off their timing (estimated -> actual s): b 100->300", out.getvalue())
+        self.assertNotIn("a 100->100", out.getvalue())
 
 
 if __name__ == "__main__":

@@ -106,26 +106,6 @@
 		]
 	},
 	{
-		"id": "gws_go_home_factor",
-		"club": "GWS",
-		"controversy": false,
-		"category": "leadership",
-		"subject": {"kind": "player", "pick": "random", "where": {"age_max": 21}},
-		"title": ["The go-home factor"],
-		"text": ["{name} has gone quiet. His mates say he's homesick, and his family keep asking when he's coming back. His contract runs out next year."],
-		"choices": [
-			{"key": "family", "label": "Fly his family up for a week",
-			 "effects": [{"op": "morale", "d": 10, "who": "subject"}, {"op": "trust", "d": 3, "why": "The club flew his family up"}, {"op": "board", "d": -3, "was": "funds"}],
-			 "result": "{name} has his family around him for a week. The board notes the cost, and the precedent."},
-			{"key": "housemate", "label": "Pair him with a senior housemate",
-			 "effects": [{"op": "morale", "d": 5, "who": "subject"}, {"op": "culture", "strand": "together", "d": 1, "why": "A senior player took a young one in"}, {"op": "forgo_xp", "d": 3, "who": "subject"}],
-			 "result": "{name} moves in with a senior player. The month goes on settling in, not extra work."},
-			{"key": "adjust", "label": "\"He's a professional, he'll adjust.\"",
-			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "No player got special treatment"}, {"op": "morale", "d": -6, "who": "subject"}],
-			 "result": "No special treatment. {name} is still homesick, and his contract is still running down."}
-		]
-	},
-	{
 		"id": "gws_too_many_to_pay",
 		"club": "GWS",
 		"controversy": false,

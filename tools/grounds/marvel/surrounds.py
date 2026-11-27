@@ -38,7 +38,7 @@ STADIUM_WAY = "22971441"
 SUNSET_PLAZA = [(-198.1, -34.0), (-223.8, -42.3), (-220.1, -53.6), (-206.7, -92.3), (-202.4, -104.2), (-176.7, -95.2)]
 # Buildings modelled one by one from Google Earth in tools/grounds/marvel/landmarks.py (landmarks.glb):
 # left out of buildings.bin so they are not drawn twice.
-LANDMARK_WAYS = {"33261083", "221441430", "33261092", "44158938", "1246185747", "296368687", "332358301", "221441428", "992236548",
+LANDMARK_WAYS = {"1499822179", "33261083", "221441430", "33261092", "44158938", "1246185747", "296368687", "332358301", "221441428", "992236548",
                  "57019580",  # AFL House: a 2 m strip along the stadium's own west building, which the model has
                  "1507403839", "1507403840"}  # HOME Docklands' two towers (101 m): OpenStreetMap has no height for them
 # City of Melbourne structures modelled in landmarks.py instead (round 10 audit: plain boxes within 250 m), and the
@@ -51,22 +51,22 @@ DROP_SIDS = {8392} | set(range(1044, 1056))
 # Colours: Google Earth's over Docklands, painted through the match light's measured response (GroundModels
 # SURROUNDS tint 2.0, 1.4, 0.95, then about R 0.95x - 10, G 0.84x, B 0.85x on screen), so each renders as
 # Google Earth shows it: dry summer grass, green irrigated lawns, the dark river.
-BASE = (160, 164, 152)         # Docklands is paved and built over: the city's grey between mapped areas
+BASE = (132, 134, 132)  # round 13 (PC check of round 12: the ground read beige-cream, Google Earth mid grey)         # Docklands is paved and built over: the city's grey between mapped areas
 LAWN = (108, 156, 70)          # the irrigated lawns: Stadium Park, Pelican Lawns, the river parks
 PITCH = (102, 152, 62)
 SCRUB = (137, 137, 100)
 WETLAND = (105, 119, 82)
 SAND = (221, 220, 176)
-ASPHALT = (105, 110, 108)
-PARKING = (132, 137, 132)
-PATH = (216, 220, 194)
-PAVED = (184, 190, 176)        # concrete plazas, promenades and the stadium's concourse
+ASPHALT = (88, 90, 92)
+PARKING = (118, 120, 120)
+PATH = (158, 158, 152)
+PAVED = (150, 150, 146)        # concrete plazas, promenades and the stadium's concourse
 PLAZA = (218, 186, 170)        # the promenades' pavers (Harbour Esplanade, Docklands Park): pale salmon-tan; (206, 150, 128) rendered terracotta against GE (203, 165, 149) (PC check 2026-11-23)
-BALLAST = (144, 130, 116)       # the Southern Cross yards; round 11 (PC check): about 14 too dark and too cold against Google Earth's warm rust
+BALLAST = (124, 116, 108)       # the Southern Cross yards; round 11 (PC check): about 14 too dark and too cold against Google Earth's warm rust
 RAIL = (92, 80, 70)             # a track: sleepers and rails together, 2.6 m wide (drawn smoothed)
 ROOF = (168, 179, 174)
 WATER = (36, 68, 82)            # round 10: Google Earth's harbour reads navy (32, 64, 82); (62, 79, 76) rendered grey-green
-URBAN = (160, 164, 152)
+URBAN = (132, 134, 132)
 WOOD = (84, 101, 59)
 DRY = (148, 140, 120)           # unwatered verges by the rail yards: dry brown in Google Earth (c_e, c_ne), not green
 DRY_EAST = 50.0                 # grass east of this (metres east) is the rail-side verge
@@ -508,6 +508,16 @@ def main():
     t = tree_list(trees, st)
     # trees under Victoria Point's forecourt deck (9.5 m, drawn in landmarks.py with its own planted beds) are buried
     deck = [r for b, _, r in com_parts({10757}).get(10757, []) if b < 0.5]
+    # round 14: and under the stadium's raised south plaza and podium and the garden block by the footbridge
+    # (landmarks.py plaza_deck, south_podium, garden_block; outlines repeated here)
+    deck = deck + [
+        [(-14.0, -132.0), (-14.0, -152.0), (24.0, -154.0), (26.0, -161.0), (48.0, -160.0), (72.0, -158.0), (80.0, -165.0),
+         (86.0, -152.0), (100.0, -143.0), (112.0, -136.0), (110.0, -120.0), (100.0, -112.0)],
+        [(-8.1, -146.4), (6.4, -146.6), (26.2, -145.4), (44.0, -144.6), (59.8, -142.4), (75.7, -137.9), (89.5, -131.9),
+         (96.5, -127.4), (102.4, -122.0), (105.4, -116.7), (105.8, -111.1), (105.0, -101.2), (96.5, -94.3), (92.0, -86.0),
+         (41.6, -108.0), (-9.1, -118.8)],
+        [(215.6, -132.0), (180.5, -136.6), (185.4, -159.2), (182.8, -166.4), (222.8, -151.3), (232.8, -145.7)]]
+    deck = [list(d) + [d[0]] if d[0] != d[-1] else d for d in deck]   # _inside wants closed rings
     if deck:
         t = t.reshape(-1, 5)
         t = t[[not any(_inside((x, -z), d) for d in deck) for x, z in t[:, :2]]].reshape(-1)

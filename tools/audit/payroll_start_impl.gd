@@ -1,6 +1,7 @@
 extends RefCounted
 ## Payroll against the cap for every club at a real-lists start (bug bash
 ## 2026-11-23). Args: starts (comma-separated, default 2010).
+const Ovr := preload("res://tests/ovr.gd")
 
 func run() -> void:
 	var args := OS.get_cmdline_user_args()
@@ -22,7 +23,7 @@ func run() -> void:
 			var top := 0
 			var sum_ovr := 0
 			for p in list:
-				sum_ovr += int(p.get("overall", 0))
+				sum_ovr += int(Ovr.of(p, 0))
 				top = maxi(top, int(p.get("salary", 0)))
 			rows.append("%s pay %.2fm (%.0f%%) list %d meanOVR %.1f top %dk" % [code,
 					Contracts.payroll(list) / 1e6, 100.0 * Contracts.payroll(list) / gs.cap_for(str(code)),
