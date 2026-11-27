@@ -287,6 +287,10 @@ def paint(trees, ways):
         d.line(poly([q0, (q0[0] - 24.0, q0[1] - 8.0)]), fill=(222, 196, 170), width=2)
     for t, p in ways:
         if "building" in t and len(p) > 2 and t.get("building") not in ("roof",) and t.get("_id") != STADIUM_WAY:
+            # A roof's grey only under a solid building: an open canopy or shelter stands over the ground it shades, and a
+            # feature left out (osm_structures "omit") left a grey footprint on the grass or the ballast (2026-11-27 renders)
+            if len(p) > 3 and p[0] == p[-1] and osm_structures.kind(t, abs(_area(p))) != "solid":
+                continue
             d.polygon(poly(p), fill=ROOF)
     arr = np.asarray(im, float)
     shade = Image.new("L", (SIZE, SIZE), 0)
@@ -494,7 +498,7 @@ def building_list(ways, st):
     return np.array(out, "<f4")
 
 
-OPEN_ID0 = 90000   # look ids for open structures, clear of the City of Melbourne's structure ids (mod 100000 below)
+OPEN_ID0 = 90000   # GroundModels.OPEN_STRUCTURE_ID; the City of Melbourne's structure ids here run to about 19,400
 
 
 def _open_structure(t, ring, salt):
@@ -502,13 +506,8 @@ def _open_structure(t, ring, salt):
     then each post from the land to the roof's underside. Heights are above the land under each part, as
     com_massing's are, so the posts meet the roof on sloping land."""
     top, thick = osm_structures.open_roof(t)
-    # The look: GroundModels._add_towers picks glass or concrete, and its shade, from the id. A canopy is neither a
-    # curtain wall nor a windowed block: take the first id from the way's own that gives the palette's palest plain
-    # concrete (pick % 100 >= 80, pick % 6 == 2; MPavilion's petals are translucent white).
-    sid = OPEN_ID0 + int(t.get("_id", salt)) % 9000
-    while not ((sid * 7919 % 100003) % 100 >= 80 and (sid * 7919 % 100003) % 6 == 2):
-        sid += 1
-    sid = float(sid)
+    # GroundModels._add_towers draws ids from OPEN_ID0 (its OPEN_STRUCTURE_ID) plain off-white, with no windows.
+    sid = float(OPEN_ID0 + int(t.get("_id", salt)) % 9000)
     lb = land.base(ring)
     out = [-float(len(ring)), top, top - thick, sid]
     for q in ring:

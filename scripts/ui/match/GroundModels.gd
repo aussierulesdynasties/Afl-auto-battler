@@ -1839,6 +1839,13 @@ static func _hip_roof(foot: PackedVector2Array, eave: float, roof: Color, v: Pac
 			_front(v, nrm, col, t[0], t[1], t[2], nn, lit)
 
 
+## Stacked parts with an id from here up are open structures (a canopy and its stalks, tools/grounds/marvel/surrounds.py
+## OPEN_ID0): Marvel's is MPavilion 2015, whose petals are white translucent fibreglass on white stalks (the architects'
+## and Dezeen's photographs, 2015), drawn off-white so it is not read as a lit sheet.
+const OPEN_STRUCTURE_ID := 90000
+const OPEN_STRUCTURE_COLOUR := Color8(226, 228, 224)
+
+
 ## Docklands' towers (SURROUNDS "building_style": "towers"): glass curtain walls with a mullion every
 ## 1.5 m and a slab at every floor, or concrete with rows of windows, from TOWER_SHADER.
 static func _add_towers(root: Node3D, buf: PackedFloat32Array, y0: float, tint := Color.WHITE, style := "",
@@ -1886,7 +1893,12 @@ static func _add_towers(root: Node3D, buf: PackedFloat32Array, y0: float, tint :
 		var y := y0 if land == null else land.base(foot) - 0.1
 		var wall: Color = WALLS[b % WALLS.size()]
 		var roof := wall.darkened(0.18)
-		if towers:
+		if towers and id >= OPEN_STRUCTURE_ID:
+			# An open structure's roof and posts (tools/grounds/osm_structures.py): plain, no windows or curtain wall.
+			wall = OPEN_STRUCTURE_COLOUR
+			wall.a = 0.0
+			roof = OPEN_STRUCTURE_COLOUR
+		elif towers:
 			# The same building gets the same look every match: its pick hangs on its own corner.
 			var pick := absi(int(foot[0].x * 7.0) * 31 + int(foot[0].y * 3.0) * 17 + b) if id < 0 else id * 7919 % 100003
 			var glassy := (pick % 100) < ((85 if h > 30.0 else 40) if id < 0 else 80)
