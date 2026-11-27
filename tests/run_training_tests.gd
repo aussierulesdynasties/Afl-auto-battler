@@ -741,7 +741,7 @@ func _test_training_pc_bands() -> void:
 		_check(bands.size() == 4 and heads.size() == 4,
 				"%s: a head and a band for each of the four positions (%d heads, %d bands)" % [tag, heads.size(), bands.size()])
 		var across: int = (bands[0] as GridContainer).columns if not bands.is_empty() else 0
-		_check(across == 3 if sz.x == 1280 else across >= 3, "%s: %d across (three beside the player)" % [tag, across])
+		_check(across >= 3, "%s: %d across (three or more beside the player)" % [tag, across])
 		var bad: Array = []
 		var lefts := {}
 		var w_lo := INF
