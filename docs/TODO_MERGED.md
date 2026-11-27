@@ -234,3 +234,4 @@ What has landed toward each open row of docs/TODO.md and docs/TODO_RULINGS.md, o
 - R: Merged #2233: Relationship overhaul phase 1: unify promises and add the coach's Respect and Authority.
 - R: Merged #2234: Relationship overhaul Phase 1: Opinion engine with fading marks.
 - 202: Merged #2214: Norwood Oval: ground cover, trees, school, church and windows against Google Earth (row 202).
+- 202: Merged #2216: Marvel Stadium round 13: the round 12 PC check, NAB height, c_sw vents, backdrop cut past 1024 m.
