@@ -7194,8 +7194,9 @@ func _grant_xp(club: String, list: Array, res: Dictionary, staffs = null) -> Dic
 			game = Growth.VFL_SHARE
 		var trains := int(p.get("injury_weeks", 0)) <= 0 and not bool(p.get("rested", false))
 		var mult := _club_mult(club, p, staff, on_ground, plan)
-		var m_xp := Growth.match_xp(p, game) * mult
-		var t_xp := Growth.train_xp(p) * mult if trains else 0.0
+		var per_point := Growth.xp_per_point(p) if game > 0.0 or trains else 0.0
+		var m_xp := Growth.match_xp(p, game, per_point) * mult
+		var t_xp := Growth.train_xp(p, per_point) * mult if trains else 0.0
 		p["xp_match"] = float(p.get("xp_match", 0.0)) + m_xp
 		p["xp"] = float(p.get("xp", 0.0)) + t_xp
 		p["xp_games"] = int(p.get("xp_games", 0)) + 1
