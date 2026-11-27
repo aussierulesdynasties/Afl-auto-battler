@@ -1262,7 +1262,7 @@ static func _extend(gs, p: Dictionary, name: String) -> String:
 		return "The cap no longer has room to extend %s now; it waits for the off-season." % name
 	# Under 50, he may refuse you (director 2026-11-08): the draw talks use.
 	if gs.resign_refused(p):
-		return gs.refuse_resign(p, Contracts.REFUSED_SEASON_END)
+		return gs.refuse_resign(p, Contracts.refused_season_end())
 	p["salary"] = cost
 	p["contract_years"] = years
 	ClubLife.add_morale(p, StoryEngine.EXTEND_MORALE)
