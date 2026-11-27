@@ -464,6 +464,31 @@ func _test_draft_rules() -> void:
 	_check(is_equal_approx(r._intake_ruck_need("A", raw), Draft.INTAKE_RUCK_THIRD), "A third ruck early is marked down")
 	_check(is_equal_approx(r._intake_ruck_need("A", {"potential": 85, "overall": 60}), Draft.INTAKE_COVERED), "A third ruck who is a clear project is not")
 	_check(r._intake_ruck_need("B", raw) == 0.0, "A fourth ruck is never wanted")
+	# One ruck on every list, at the National Draft too (director, 2026-11-26):
+	# a club with no ruck and one place left must take a ruck, yours included,
+	# and is told why.
+	var no_ruck := {"RUCK": 0, "MID": 15, "DEF": 14, "FWD": 14}
+	var one_ruck := {"RUCK": 1, "MID": 14, "DEF": 14, "FWD": 14}
+	var k := _blank(["A", "B"], {"A": full - 1, "B": full - 1}, 6, {"A": no_ruck, "B": one_ruck})
+	k.start_for_user("A")
+	var by_id := {}
+	for p in k.pool:
+		by_id[str(p["id"])] = p
+	_check(by_id.size() == 6 and str(by_id["tiny_0"]["role"]) == "MID" and str(by_id["tiny_2"]["role"]) == "RUCK", "The test class has its midfielder and ruck")
+	_check(k._forced_role("A") == "RUCK" and k._forced_role("B") == "", "No ruck and one place left forces a ruck; one ruck forces nothing")
+	_check(not k.can_pick_player(by_id["tiny_0"])
+			and k.pick_block_reason(by_id["tiny_0"]) == "Your last place must go to a ruck: every list needs one.",
+			"Your midfielder pick is refused with the reason (%s)" % k.pick_block_reason(by_id["tiny_0"]))
+	_check(k.can_pick_player(by_id["tiny_2"]), "Your ruck pick is allowed")
+	var m := _blank(["B", "A"], {"B": full - 1, "A": full}, 6, {"B": no_ruck, "A": one_ruck})
+	m.start_for_user("")
+	var b_list: Array = m.club_lists.get("B", [])
+	_check(m.is_finished() and b_list.size() == 1 and str(b_list[0]["role"]) == "RUCK",
+			"A rival with no ruck and one place left passes the best player for a ruck (%s)" % [b_list])
+	var two := _blank(["A", "B"], {"A": full - 2, "B": full}, 6, {"A": {"RUCK": 0, "MID": 14, "DEF": 14, "FWD": 14}, "B": one_ruck})
+	_check(two._forced_role("A") == "", "No ruck with two places left forces nothing yet")
+	var q := _blank(["A", "B"], {"A": full - 1, "B": full}, 2, {"A": no_ruck, "B": one_ruck})
+	_check(q._forced_role("A") == "", "A class with no ruck left in it forces nothing")
 	# Save and load in the middle; an old save without the new fields.
 	var s1 := _blank(["A", "B", "C", "D"], {"A": 38, "B": full, "C": 36, "D": 40}, 14)
 	s1.start_for_user("A")

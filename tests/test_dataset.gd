@@ -72,7 +72,8 @@ const TEAM_BOOKKEEPING_PREFIXES := ["d50_end_"]
 ## #2211 (load times, a faster match engine) and #2230 (tail check) were tested
 ## before #2210 set the value above and merged after it, and main's season moved. Linux from a local run of main at c6bbd900c (the local value at
 ## #2210's merge matched its CI value); Windows not re-measured.
-const GOLDEN_SEASON := {"Windows": "c70415d1b8837cb49a71c0f2216d39c4", "Linux": "96a67fb73b0c07d674df934beef28308"}
+## Bug bash batch E redrew it on top: rushed behinds at the 2026 rate (P2-1).
+const GOLDEN_SEASON := {"Windows": "c793e347c0cb20c2d3604d45713bcf0a", "Linux": "643c71a8d4cc6a73fd01b331a1c0b08b"}
 
 ## A small league standing in for a legacy set until the 1990 files ship:
 ## 42 real players re-dated to a 1989 data season, a 1990 first season, and

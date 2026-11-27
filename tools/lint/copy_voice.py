@@ -312,7 +312,7 @@ DRAFT_PASS = {
         "your recruiters' read", "Your listed players", "of the side's drilling", "the plan plays part of the way up"]],
     "scripts/ui/FirstVisitIntro.gd": [[
         "Here we pick the kids who will carry our club in five years.", "When our pick comes up, choose a player from the pool.",
-        "Each player we take costs his salary. Our list must fit under the cap. It must have at least two rucks.",
+        "Each player we take costs his salary. Our list must fit under the cap. It must have at least one ruck.",
         "The position counts show where we're short.", "Four tests on the day. Every club sees the same results.",
         "They tell us about the athlete: speed, running, spring, kicking. They don't tell us he can play.",
         "His junior numbers are on his sheet, with our scouts' guess at OVR and POT. Tap a name to weigh him up.",

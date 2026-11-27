@@ -272,6 +272,8 @@ func _test_rival_shows_none() -> void:
 	await _settle()
 
 
+## On a PC the players not picked are one-line rows (his board, row 171): the
+## three numbers follow the name, and the key on screen names them in order.
 func _test_pc_cards_name_them() -> void:
 	root.size = Vector2i(1920, 1080)
 	await _settle(8)
@@ -283,12 +285,14 @@ func _test_pc_cards_name_them() -> void:
 	var card: Control = grid.get_child(0)
 	var id := str(card.name).trim_prefix("Card_")
 	var strip: Control = card.find_child("Condition_" + id, true, false)
-	var words: Array = []
-	if strip != null:
-		for l in strip.find_children("*", "Label", true, false):
-			words.append((l as Label).text)
-	_check(words.has("Fatigue") and words.has("Morale") and words.has("Form"), "PC: a card names each number (%s)" % str(words))
-	_check(strip != null and card.get_global_rect().grow(0.5).encloses(strip.get_global_rect()), "PC: the numbers sit inside the card")
+	var key: Control = scene.find_child("ConditionKey", true, false)
+	var key_words := ""
+	if key != null:
+		for l in key.find_children("*", "Label", true, false):
+			key_words += (l as Label).text + " "
+	_check(key != null and key.is_visible_in_tree() and key_words.contains("Fatigue · Morale · Form"),
+			"PC: the key on screen names the row's numbers in order (%s)" % key_words.strip_edges())
+	_check(strip != null and card.get_global_rect().grow(0.5).encloses(strip.get_global_rect()), "PC: the numbers sit inside the row")
 	var fat := _shown(card, "Fatigue", id)
 	var p: Dictionary = _gs.list_player(id)
 	_check(fat != null and fat.text == str(int(round(_workload.value(p)))), "PC: the card's fatigue is his load")

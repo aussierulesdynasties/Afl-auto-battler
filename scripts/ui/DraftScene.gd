@@ -2827,7 +2827,7 @@ func _refresh_status() -> void:
 		_finish_btn.tooltip_text = \
 				"The draft ends when every pick is made or the pool runs dry."
 	else:
-		_finish_btn.tooltip_text = "Fill our list under the cap, with at least 2 rucks."
+		_finish_btn.tooltip_text = "Fill our list under the cap, with at least one ruck."
 	if _draft.user_stuck():
 		_next_picks.text = "No player fits our cap and list.\nRelease a pick on My list."
 	if done:
@@ -3159,9 +3159,11 @@ func _on_finish() -> void:
 		return
 	if not _draft.is_finished() or not _draft.is_valid():
 		return
-	GameState.start_season(_club, _draft.list())
+	# One tap, one save: the season and its pre-season are written together.
+	GameState.start_season(_club, _draft.list(), false)
 	# A new career's first season starts with a pre-season, like every other.
-	GameState.open_preseason()
+	GameState.open_preseason(false)
+	GameState.autosave()
 	# A created club hires its first staff next (director 2026-11-15); Back
 	# from it is the Hub.
 	if GameState.first_staff_open():

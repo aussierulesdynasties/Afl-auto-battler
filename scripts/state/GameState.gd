@@ -2952,7 +2952,7 @@ func finish_intake_draft() -> bool:
 		opening_draft = false
 		draft_meeting_year = 0
 		season_year = GameDB.START_YEAR
-		start_season(my_club, league_lists.get(my_club, []))
+		start_season(my_club, league_lists.get(my_club, []), false)   # saved once, below
 		# A Legacy start: a real list longer than its first season allows
 		# (Essendon's 55 in 1990, against 52) delists its least worth before
 		# the season (bug bash 4, L3); a short one is filled by the Rookie
@@ -3677,7 +3677,9 @@ func _next_jumper_number(list: Array) -> int:
 
 ## Commit the completed league draft and build the season from every club's
 ## new list. Original club lists are only used by the legacy/test fallback.
-func start_season(club_code: String, list: Array) -> void:
+## `save`: false when the caller saves once itself at the end of a bigger step
+## (Finish draft), so one tap writes the career once, not twice.
+func start_season(club_code: String, list: Array, save := true) -> void:
 	GameDB.pristine = false   # a career's data from here on: the next reset() reloads
 	my_club = club_code
 	if my_first_season == 0 and my_club != "" and not sim_ahead:
@@ -3780,7 +3782,8 @@ func start_season(club_code: String, list: Array) -> void:
 	last_label = "Round 1"
 	last_training_report = {}
 	_xp_grant_key = ""
-	autosave()
+	if save:
+		autosave()
 
 
 ## The match you are about to coach, from the clubs' sides as they stand now
@@ -7197,8 +7200,9 @@ func _grant_xp(club: String, list: Array, res: Dictionary, staffs = null) -> Dic
 			game = Growth.VFL_SHARE
 		var trains := int(p.get("injury_weeks", 0)) <= 0 and not bool(p.get("rested", false))
 		var mult := _club_mult(club, p, staff, on_ground, plan)
-		var m_xp := Growth.match_xp(p, game) * mult
-		var t_xp := Growth.train_xp(p) * mult if trains else 0.0
+		var per_point := Growth.xp_per_point(p) if game > 0.0 or trains else 0.0
+		var m_xp := Growth.match_xp(p, game, per_point) * mult
+		var t_xp := Growth.train_xp(p, per_point) * mult if trains else 0.0
 		p["xp_match"] = float(p.get("xp_match", 0.0)) + m_xp
 		p["xp"] = float(p.get("xp", 0.0)) + t_xp
 		p["xp_games"] = int(p.get("xp_games", 0)) + 1
@@ -9820,7 +9824,7 @@ func fa_role(p: Dictionary, code: String) -> String:
 
 
 func _selection_bars(list: Array) -> Dictionary:
-	var side := Ratings.select_22(list)
+	var side := TradeValue.side_of(list)
 	var bars := {}
 	for q in side["ground"]:
 		var r := str(q["role"])
@@ -9936,6 +9940,14 @@ func _open_market(players: Array) -> void:
 			players.erase(p)
 			free_agents.erase(p)
 			_career_over(p, "delisted" if delisted else "retired")
+	# From here the market only makes offers: no list, rating or ladder
+	# changes, so the league is frozen while it opens (_freeze_league). Every
+	# club's phase reads one fingerprint of the league, and each list's best
+	# 22 is picked once for its phase and its bars, instead of once per club
+	# and again for the bars. A caller's own freeze is left as it is.
+	var thaw := _frozen_fingerprint == "" and not TradeValue.remembering()
+	if thaw:
+		_freeze_league(true)
 	_bars = {}
 	_fa_phase = {}
 	var depth_held := {}
@@ -9974,15 +9986,19 @@ func _open_market(players: Array) -> void:
 	var chasers := {}
 	for p in players:
 		chasers[str(p["id"])] = chased_by(p)
+	# Each club's finish once (_finish_t sorts the ladder at every call).
+	var finish := {}
+	for code in clubs:
+		finish[code] = _finish_t(code)
 	var by_finish := clubs.duplicate()
 	by_finish.sort_custom(func(a, b):
-		if _finish_t(a) != _finish_t(b):
-			return _finish_t(a) > _finish_t(b)
+		if float(finish[a]) != float(finish[b]):
+			return float(finish[a]) > float(finish[b])
 		return str(a) < str(b))
 	for code in by_finish:
 		var room := _cap_room_of(code)
 		var aims := FA_TARGETS - int(targets_held.get(code, 0)) - int(_targets_signed.get(code, 0))
-		var ft := _finish_t(code)
+		var ft: float = finish[code]
 		var wanted := []
 		for p in ranked:
 			if str(p.get("released_by", "")) != code and _offer_of(p, code).is_empty() and fa_role(p, code) != "depth":
@@ -10017,6 +10033,8 @@ func _open_market(players: Array) -> void:
 			if not bool(o.get("filler", false)) and not bool(o.get("withdrawn", false)):
 				targeted[str(p["id"])] = true
 	_place_fillers(clubs, ranked, targeted, depth_held)
+	if thaw:
+		_freeze_league(false)
 
 
 ## List fillers: each club short of its usual list size fills the position it
