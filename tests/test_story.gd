@@ -3368,12 +3368,24 @@ func _news_has(text: String) -> bool:
 
 ## The verdict now, learned or not (his own rating set either side of his
 ## rating there for the judgement, then put back).
+## Both ratings are read from the same attributes, so setting his OVR moves his
+## rating there too: it is set again until the verdict is the one asked for.
 func _judge(p: Dictionary, learned: bool) -> void:
-	var own := int(Ovr.of(p))
-	var there := GameState.rating_as(p, GameState.project_role(p))
-	Ovr.to(p, there if learned else there + GameState.PROJECT_PASS + 5)
+	var a: Dictionary = p["attr"]
+	var was := a.duplicate()
+	var role := GameState.project_role(p)
+	for _i in 12:
+		var own := int(Ovr.of(p))
+		var there := GameState.rating_as(p, role)
+		if (there >= own - GameState.PROJECT_PASS) == learned:
+			break
+		Ovr.to(p, there if learned else there + GameState.PROJECT_PASS + 5)
 	GameState._finish_project(p, true, "Round 6")
-	Ovr.to(p, own)
+	for k in a.keys():
+		if not was.has(k):
+			a.erase(k)
+	for k in was:
+		a[k] = was[k]
 
 
 func _dev_talk_fact(id: String) -> Array:

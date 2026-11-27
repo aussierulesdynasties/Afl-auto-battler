@@ -2145,8 +2145,9 @@ func _test_play_through_three() -> void:
 	_check(off.focus_active(0, "focus_fwd") == false and probe.focus_active(0, "focus_fwd"),
 			"...and the screen can tell a working call from a waiting one")
 	# Real matches, paired seeds: each man gets more of his job, none an absurd share.
-	# 80 games: over 24 the target's shots are inside the noise.
-	var n := 80
+	# 200 games, the focus audit's floor (director, 2026-11-27): the target's
+	# extra shots (about +0.16 a game) are inside the noise over 80.
+	var n := 200
 	var on := {"md": 0.0, "fs": 0.0, "dk": 0.0, "td": 0.0, "top": 0.0}
 	var base := {"md": 0.0, "fs": 0.0, "dk": 0.0, "td": 0.0}
 	# Both arms coach the same plan, the club's usual game: the plan is the
@@ -2176,8 +2177,8 @@ func _test_play_through_three() -> void:
 			"The calls move who gets it, not how much the side has (%.0f v %.0f disposals)" % [on["td"] / n, base["td"] / n])
 	# 45 was set when a side had 358 disposals a game; the defensive-50
 	# clearing kick (2026-11-07) gives a side 384 (real 367.6), so the same
-	# share is 48. Over these 80 games the pillar's two 40+ games are 42 and 46
-	# (38 on main); the real one-game record is 54.
+	# share is 48. Over these 200 games the most any of the three has in a game
+	# is 33 (2026-11-27); the real one-game record is 54.
 	_check(BalanceGate.held(on["top"] < 48.0, "top player use share"), "Nobody becomes the only one who gets it (most in a game %d)" % int(on["top"]))
 
 
@@ -3539,6 +3540,19 @@ func _test_play_through_mid_stands_in_midfield() -> void:
 		if str((all[i] as Dictionary).get("kind", "")) == "quarter":
 			cut = i + 1
 			break
+	# The picture walks its log back from the roster it is given to the opening
+	# line-up, so a log cut at the quarter gets the line-up of that moment (the
+	# interchanges after the cut undone), the bench after it.
+	var at_cut: Array = MatchDirector._starting_roster(res["roster"], all.slice(cut))
+	for side in range(2):
+		var on: Array = at_cut[side]
+		var ids := {}
+		for p in on:
+			ids[str(p["id"])] = true
+		for p in (res["roster"][side] as Array):
+			if not ids.has(str(p["id"])):
+				on.append(p)
+	res["roster"] = at_cut
 	var d := MatchDirector.new()
 	d.setup(res, all.slice(0, cut))
 	var ticks := 0
@@ -5034,22 +5048,30 @@ func _test_decision_credits() -> void:
 			and is_equal_approx(float(old_lines[0]["pts"]), 2.0),
 			"An old save's \"calls\" still reads as in-game calls (%s)" % str(old_lines))
 	# A moment: the call is worth its expected points against the default.
-	var live := _sim(7302)
-	live.moment_side = 0
+	# The first of a few seeded matches with a set-shot call for us in it: how
+	# many come up in one match moves with the play (calls share a quarter's cap).
+	var live: MatchSim = null
 	var want := 0.0
 	var seen := 0
-	while live.current_quarter <= 4:
-		live.begin_quarter()
-		while not live.continue_quarter():
-			var m: Dictionary = live.pending_moment
-			var pick := int(m.get("default", 0))
-			if str(m.get("kind", "")) == "set_shot":
-				var opts: Array = m["options"]
-				pick = opts.size() - 1
-				want += live._option_points(opts[pick]) - live._option_points(opts[int(m.get("default", 0))])
-				seen += 1
-			live.resolve_moment(pick)
-		live.end_quarter()
+	for s in range(7302, 7312):
+		live = _sim(s)
+		live.moment_side = 0
+		want = 0.0
+		seen = 0
+		while live.current_quarter <= 4:
+			live.begin_quarter()
+			while not live.continue_quarter():
+				var m: Dictionary = live.pending_moment
+				var pick := int(m.get("default", 0))
+				if str(m.get("kind", "")) == "set_shot":
+					var opts: Array = m["options"]
+					pick = opts.size() - 1
+					want += live._option_points(opts[pick]) - live._option_points(opts[int(m.get("default", 0))])
+					seen += 1
+				live.resolve_moment(pick)
+			live.end_quarter()
+		if seen > 0:
+			break
 	_check(seen > 0 and is_equal_approx(float((live.impact[0] as Dictionary).get("moments", 0.0)), want) and want != 0.0,
 			"A set-shot call is worth its chances against taking the shot (%d calls, %+.2f)" % [seen, want])
 
