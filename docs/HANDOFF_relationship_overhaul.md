@@ -39,6 +39,12 @@ The director ("Baggins", GitHub `gabebartolo-spec`) designs; Claude builds. Proj
 10. Be fast. Baggins dislikes slow, over-thorough document work ("its just a document not the bible").
 11. Every club gets every buff/cost; options are equal (CLAUDE.md). Numbers are first guesses; balance is the
     director's call after their own playtest - never declare balance settled.
+12. **Fix CI the moment it fails, without being asked** (2026-11-27: "fix it the very second it fails. ill be
+    furious if i have to ask again"). After every push, subscribe to the PR's activity and also schedule a
+    check-in about every 15 minutes, because events can be missed. Watch the checks until the PR merges.
+13. **Before you push, check main and the other open PRs for overlapping changes** (2026-11-27). Seeded-season
+    checksums (`tests/fixtures/awards_round4_snapshot.txt`, `GOLDEN_SEASON` in `tests/test_dataset.gd`) clash
+    with any PR that changes the season: merge main in the moment anything lands, re-record, then push.
 
 Also read the repo's `CLAUDE.md` (PR cap of 3 ready PRs, push once not in drips, check for conflicts
 with `git merge-tree` before asking to merge, never rebase/force-push shared branches, never close a PR yourself).
