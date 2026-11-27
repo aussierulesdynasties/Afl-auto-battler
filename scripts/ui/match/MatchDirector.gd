@@ -21,6 +21,10 @@ extends RefCounted
 ## sits loose; centre bounces set up 6-6-6; kick-ins face a zone.
 
 const DISPOSALS := ["handball", "kick", "mark"]
+## The events whose man gathers a ball knocked loose: a disposal's, and a rebound's (the man who
+## wins it back off the ground; seed 42, 1482 s: left out, he ran in flat out with the scrap and
+## was upright on top of it, too fast to go down for it).
+const GATHERS := ["handball", "kick", "mark", "rebound"]
 ## Off-the-ball entries: an interchange, a coach's call, a player going off hurt.
 const META := ["sub", "moment", "injury"]
 const SUBSTEP := 1.0 / 60.0
@@ -3231,7 +3235,7 @@ func _done(p: Dictionary) -> bool:
 					# match, 1353 s), too fast for his gather to start.
 					var gk := _next_real(int(_beat.get("k", -1)))
 					var g := _actor_id(events[gk]) if gk >= 0 else -1
-					if g >= 0 and g != out and DISPOSALS.has(str((events[gk] as Dictionary).get("kind", ""))) \
+					if g >= 0 and g != out and GATHERS.has(str((events[gk] as Dictionary).get("kind", ""))) \
 							and _on_feet(g):
 						_ease_near(g, _pace_in(g))
 						_busy[g] = true
@@ -3240,7 +3244,7 @@ func _done(p: Dictionary) -> bool:
 					return false
 				var nk0 := _next_real(int(_beat.get("k", -1)))
 				var w := _actor_id(events[nk0]) if nk0 >= 0 else -1
-				if w >= 0 and DISPOSALS.has(str((events[nk0] as Dictionary).get("kind", ""))) and _on_feet(w):
+				if w >= 0 and GATHERS.has(str((events[nk0] as Dictionary).get("kind", ""))) and _on_feet(w):
 					# The man MatchSim has gather it is on his way already, at the pace he takes it
 					# on the run at, not flat out past it with the rest (seed 42: he came through at
 					# 3.9 m/s as it stopped, too fast to go down for it, and ran over it); the
