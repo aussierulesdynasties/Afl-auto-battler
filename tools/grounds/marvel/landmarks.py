@@ -1858,23 +1858,117 @@ def lens_paving(name, px=24, tile=16.0):
     TILE[name] = (tile, tile)
 
 
+def podium_glass_tex(name, px=24):
+    """The podium's glass (Google Earth pod_c, the person: "ugly"): dark tinted panes that carry the sky and the
+    towers opposite, a soft lighter band of reflected sky high up, faint mullions and one transom a storey. One tile
+    is 12 m by the glass's whole 7.4 m height, so the reflection reads the same all round."""
+    W, H = int(12.0 * px), int(7.4 * px)
+    y, x = np.mgrid[0:H, 0:W] / px
+    t = y / 7.4                                     # 0 at the top of the glass
+    sky = np.array((118, 140, 162), float); deep = np.array((34, 44, 58), float)
+    k = np.clip(0.75 - 1.3 * t, 0, 1)[..., None] ** 1.5
+    img = deep + (sky - deep) * k
+    # reflected towers: soft vertical blocks of lighter and darker tone, a few metres wide
+    for x0, w_, a in ((0.6, 2.4, 14), (4.2, 1.6, -10), (6.9, 3.1, 18), (10.4, 1.2, -8)):
+        m = ((x - x0) % 12.0 < w_) & (t > 0.18)
+        img[m] += a
+    img += RNG.normal(0, 2.5, (H, W, 1))
+    pane = np.floor(x / 1.5) + 7 * np.floor(y / 3.7)
+    img += (np.sin(pane * 12.9898) * 43758.5453 % 1.0)[..., None] * 6.0 - 3.0
+    img[(x % 1.5) < 0.05] = (70, 78, 86)
+    img[np.abs(y - 3.7) < 0.04] = (70, 78, 86)
+    _save(name, img)
+    TILE[name] = (12.0, 7.4)
+
+
+def pavers(name, px=24, tile=12.0):
+    """The plaza (Google Earth pod_top, pk_d): grey-beige pavers about 1.2 by 0.6 m in a running bond, a darker
+    band every 6 m, some weathering."""
+    n = int(tile * px)
+    y, x = np.mgrid[0:n, 0:n] / px
+    row = np.floor(y / 0.6)
+    xo = x + (row % 2) * 0.6
+    cell = np.floor(xo / 1.2) + 37 * row
+    img = np.zeros((n, n, 3)) + np.array((170, 166, 158), float)
+    img += ((np.sin(cell * 12.9898) * 43758.5453 % 1.0)[..., None] - 0.5) * 14.0
+    img[((xo % 1.2) < 0.03) | ((y % 0.6) < 0.03)] -= 22
+    band = (y % 6.0) < 0.6
+    img[band] -= 14
+    img += RNG.normal(0, 3.0, (n, n, 1))
+    blot = np.zeros((n, n))
+    for _ in range(6):
+        cx, cy, r = RNG.uniform(0, tile, 3)
+        blot += np.exp(-(((x - cx) % tile) ** 2 + ((y - cy) % tile) ** 2) / (2 * (0.6 + r * 0.25) ** 2))
+    img -= (np.clip(blot, 0, 1) * 10)[..., None]
+    _save(name, img)
+    TILE[name] = (tile, tile)
+
+
+def membrane_roof(name, px=24, tile=16.0):
+    """The podium's roof (Google Earth pod_top): off-white membrane in 2 m wide sheets with lapped seams, grey with
+    weather in patches, not a bright flat white."""
+    n = int(tile * px)
+    y, x = np.mgrid[0:n, 0:n] / px
+    img = np.zeros((n, n, 3)) + np.array((192, 193, 189), float)
+    img[(x % 2.0) < 0.06] -= 18
+    img[((x - 0.06) % 2.0) < 0.04] += 6
+    blot = np.zeros((n, n))
+    for _ in range(10):
+        cx, cy, r = RNG.uniform(0, tile, 3)
+        blot += np.exp(-(((x - cx) % tile) ** 2 + ((y - cy) % tile) ** 2) / (2 * (1.0 + r * 0.3) ** 2))
+    img -= (np.clip(blot, 0, 1.2) * 16)[..., None]
+    img += RNG.normal(0, 2.5, (n, n, 1))
+    _save(name, img)
+    TILE[name] = (tile, tile)
+
+
+def louvre_box(name, px=32):
+    """Rooftop plant enclosures (Google Earth pod_c): pale grey louvres, 0.15 m slats with dark gaps, a frame every 2 m."""
+    W, H = int(4.0 * px), int(3.0 * px)
+    y, x = np.mgrid[0:H, 0:W] / px
+    img = np.zeros((H, W, 3)) + np.array((176, 180, 182), float)
+    img[(y % 0.15) < 0.05] = (92, 98, 104)
+    img[((y % 0.15) >= 0.05) & ((y % 0.15) < 0.07)] += 18
+    img[(x % 2.0) < 0.08] = (150, 154, 158)
+    img += RNG.normal(0, 2.0, (H, W, 1))
+    _save(name, img)
+    TILE[name] = (4.0, 3.0)
+
+
+def fan_top(name, px=32):
+    """A plant box's top: grey deck with two round fan grilles (Google Earth pod_c)."""
+    n = int(6.3 * px)
+    y, x = np.mgrid[0:n, 0:n] / px
+    img = np.zeros((n, n, 3)) + np.array((150, 152, 150), float)
+    for cx, cy in ((1.75, 3.15), (4.55, 3.15)):
+        r = np.hypot(x - cx, y - cy)
+        img[r < 1.2] = (64, 68, 72)
+        img[(r < 1.2) & ((r % 0.2) < 0.06)] = (120, 124, 126)
+        img[(r < 1.2) & (np.abs(x - cx) < 0.05)] = (120, 124, 126)
+    img[(x < 0.1) | (x > 6.2) | (y < 0.1) | (y > 6.2)] = (176, 178, 178)
+    img += RNG.normal(0, 2.0, (n, n, 1))
+    _save(name, img)
+    TILE[name] = (6.3, 6.3)
+
+
 def south_textures():
     # Google Earth pod_c: dark reflective glass, thin dark-grey mullions every 1.5 m and one transom a storey
-    curtain("podium_curtain", (44, 58, 78), (96, 104, 112), bay=1.5, floor=3.7, slab=0.05, noise=9.0, nb=8, nf=2)
+    podium_glass_tex("podium_curtain")
     flat("bridge_glass", (168, 182, 190), noise=2.0)   # the footbridge's balustrades read pale grey (br_b)
     TILE["bridge_glass"] = (4.0, 4.0)
     TILE["podium_curtain"] = (12.0, 7.4)
-    panels("plaza_pave", (186, 180, 170), (156, 152, 144), w=6.0, h=6.0, noise=3.0)
-    TILE["plaza_pave"] = (24.0, 24.0)
+    pavers("plaza_pave")
     panels("boardwalk", (96, 98, 102), (76, 78, 82), w=3.0, h=1.0, noise=3.0)
     TILE["boardwalk"] = (12.0, 4.0)
     lens_paving("lens_pave")
-    flat("podium_roof", (224, 224, 218), noise=4.0)
+    membrane_roof("podium_roof")
+    louvre_box("plant_louvre")
+    fan_top("fan_top")
     flat("soffit", (198, 200, 200), noise=2.0)
     flat("skylight", (206, 218, 228), noise=2.0)
     flat("mast_red", (186, 38, 34), noise=2.0)
     flat("column_white", (232, 232, 230), noise=1.0)
-    for n in ("podium_roof", "soffit", "skylight", "mast_red", "column_white"):
+    for n in ("soffit", "skylight", "mast_red", "column_white"):
         TILE[n] = (4.0, 4.0)
     sign_board("lm_sign_marvel", "MARVEL", (226, 30, 38), 13.4, 5.4, 4.2)
     sign_board("lm_sign_stadium", "STADIUM", (20, 20, 22), 19.2, 5.4, 4.2)
@@ -1995,7 +2089,7 @@ def south_podium(g):
         a, b, c, d = out_line[i], out_line[i + 1], inner[i + 1], inner[i]
         g.wall("white_band", a, b, zr, zr + 0.8)
         g.wall("white_band", c, d, zr, zr + 0.8)
-        g.poly("white_band", [(a[0], a[1], zr + 0.8), (b[0], b[1], zr + 0.8), (c[0], c[1], zr + 0.8), (d[0], d[1], zr + 0.8)])
+        g.poly("slab_grey", [(a[0], a[1], zr + 0.8), (b[0], b[1], zr + 0.8), (c[0], c[1], zr + 0.8), (d[0], d[1], zr + 0.8)])
     # the colonnade: white round columns 2.5 m inside the edge about every 12 m, and a second row 12 m in
     P = _P(ring)
     for off in (2.5, 12.0):
@@ -2007,9 +2101,8 @@ def south_podium(g):
     # roof: four louvred plant boxes 6.3 m square to 26.4 (picks), along the inner edge
     for c in ((34.7, -122.0), (42.4, -120.0), (49.9, -117.5), (57.5, -113.7)):
         sq = _rect(c, 6.3, 6.3, math.radians(20.0))
-        g.prism(sq, zr, 26.4, "louvre_grey", top="roof_grey")
-        for k in (-1, 1):
-            g.prism(cylinder_ring((c[0] + k * 1.5, c[1] + k * 0.6), 1.0, 12), 26.4, 26.8, "steel_dark", top="roof_dark")
+        g.prism(sq, zr, 26.4, "plant_louvre", top=None)
+        g.poly("fan_top", [(q[0], q[1], 26.4) for q in sq], [(0.0, 0.0), (6.3, 0.0), (6.3, 6.3), (0.0, 6.3)])
     # the barrel-vaulted skylight: 30 x 11 m, seven vaults rising 1.6 m, on a 0.4 m white upstand
     C, ang = np.array((50.5, -130.0)), math.radians(21.5)
     ax, bx = np.array((math.cos(ang), math.sin(ang))), np.array((-math.sin(ang), math.cos(ang)))
@@ -2028,37 +2121,47 @@ def south_podium(g):
             g.poly("skylight", [(*(p + bx * 5.5 * sgn), h) for p, h in (arc if sgn > 0 else arc[::-1])])
         strut(g, "white_band", (*(ck + ax * r - bx * 5.5), z0), (*(ck + ax * r + bx * 5.5), z0), 0.25)
     # the louvred shed (11 x 14 m, 2 m) and two small glazed lights
-    g.prism(_rect((10.7, -135.9), 11.0, 14.0, math.radians(3.0)), zr, zr + 2.0, "louvre_grey", top="roof_grey")
+    g.prism(_rect((10.7, -135.9), 11.0, 14.0, math.radians(3.0)), zr, zr + 2.0, "plant_louvre", top="roof_grey")
     for c, w, d, a in (((21.2, -138.9), 4.0, 3.0, 3.0), ((76.7, -112.5), 5.0, 5.0, 30.0)):
         g.prism(_rect(c, w, d, math.radians(a)), zr, zr + 0.5, "steel", top="atrium_glass")
     # the louvred plant yard (about 20 m square, walls to 25.5) with its units inside
     yard = _rect((88.5, -106.7), 20.0, 20.0, math.radians(35.0))
     yin = [tuple(q) for q in inset(ccw(yard), 0.2)]
     for i in range(4):
-        g.wall("louvre_grey", yard[i], yard[(i + 1) % 4], zr, 25.5)
-        g.wall("louvre_grey", yin[(i + 1) % 4], yin[i], zr, 25.5)
+        g.wall("plant_louvre", yard[i], yard[(i + 1) % 4], zr, 25.5)
+        g.wall("plant_louvre", yin[(i + 1) % 4], yin[i], zr, 25.5)
     for dx, dy in ((-5, -4), (4, -5), (-4, 5), (5, 4)):
         c = (88.5 + dx, -106.7 + dy)
         g.prism(_rect(c, 4.0, 2.4, math.radians(35.0)), zr, zr + 1.6, "steel", top="roof_grey")
         g.prism(cylinder_ring(c, 0.8, 10), zr + 1.6, zr + 1.9, "steel_dark", top="roof_dark")
-    # the MARVEL STADIUM board on the roof edge, facing the plaza: red MARVEL west, black STADIUM east, 5.4 m tall
-    # from 24.2 on steel legs, set along the chord of the edge from (27.5, -144.4) to (60.0, -141.6)
-    p0, p1 = np.array((27.5, -144.4)), np.array((60.0, -141.6))
-    t = (p1 - p0) / np.linalg.norm(p1 - p0); nrm = np.array((t[1], -t[0]))   # nrm: out to the plaza (south)
-    Lb = float(np.linalg.norm(p1 - p0)); split = 13.4 / (13.4 + 19.2) * Lb
-    zb0, zb1, dep = zr + 0.7, zr + 0.7 + 5.4, 0.8
-    for mat, s0, s1 in (("lm_sign_marvel", 0.0, split), ("lm_sign_stadium", split, Lb)):
-        a, b = p0 + t * s0, p0 + t * s1
-        box = [tuple(a), tuple(b), tuple(b + nrm * -dep), tuple(a + nrm * -dep)]   # front on the edge side
-        g.prism(box, zb0, zb1, "steel", top="steel", bottom="steel")
-        fa, fb = a + nrm * 0.03, b + nrm * 0.03
-        w = s1 - s0
+    # the MARVEL STADIUM board, facing the plaza: red MARVEL west, black STADIUM east, 5.4 m tall. Round 14b (the
+    # person: it sat on the roof "like a separate billboard"): now a thin board fixed 0.3 m proud of the glass, following
+    # the podium's curve between x 27.5 and 60, from 17.4 to 22.8, so it reads as part of the building
+    from shapely.geometry import LineString as _LS
+    edge = _LS(POD_OUT)
+    s_a = edge.project(_Pt(27.5, -145.2)); s_b = edge.project(_Pt(60.0, -142.3))
+    Lb = s_b - s_a; split = 13.4 / (13.4 + 19.2) * Lb
+    ss = np.r_[np.linspace(s_a, s_a + split, 15), np.linspace(s_a + split, s_b, 21)[1:]]
+    pts = [np.array(edge.interpolate(v).coords[0]) for v in ss]
+    nrm = []
+    for k in range(len(pts)):
+        tt = pts[min(k + 1, len(pts) - 1)] - pts[max(k - 1, 0)]; tt /= np.linalg.norm(tt)
+        nrm.append(np.array((tt[1], -tt[0])))            # right of a west-to-east run: out to the plaza
+    Lb = s_b - s_a; split = 13.4 / (13.4 + 19.2) * Lb
+    zb0, zb1 = 17.4, 22.8
+    TILE["lm_sign_marvel"] = (split, 5.4); TILE["lm_sign_stadium"] = (Lb - split, 5.4)   # one texture per board
+    for k in range(len(pts) - 1):
+        u0, u1 = ss[k] - s_a, ss[k + 1] - s_a
+        fa, fb = pts[k] + nrm[k] * 0.3, pts[k + 1] + nrm[k + 1] * 0.3
+        ba, bb = pts[k] + nrm[k] * 0.05, pts[k + 1] + nrm[k + 1] * 0.05
+        mat, w0 = ("lm_sign_marvel", 0.0) if u1 <= split + 1e-6 else ("lm_sign_stadium", split)
         g.poly(mat, [(fa[0], fa[1], zb0), (fb[0], fb[1], zb0), (fb[0], fb[1], zb1), (fa[0], fa[1], zb1)],
-               [(0.0, 0.0), (w, 0.0), (w, 5.4), (0.0, 5.4)])
-        for s in np.linspace(s0 + 1.0, s1 - 1.0, max(2, int(w / 4.0))):
-            for dd in (-0.15, -dep + 0.15):
-                q = p0 + t * s + nrm * dd
-                strut(g, "steel_dark", (q[0], q[1], zr), (q[0], q[1], zb0), 0.18)
+               [(u0 - w0, 0.0), (u1 - w0, 0.0), (u1 - w0, 5.4), (u0 - w0, 5.4)])
+        g.poly("steel_dark", [(ba[0], ba[1], zb1), (bb[0], bb[1], zb1), (fb[0], fb[1], zb1), (fa[0], fa[1], zb1)])
+        g.poly("steel_dark", [(fa[0], fa[1], zb0), (fb[0], fb[1], zb0), (bb[0], bb[1], zb0), (ba[0], ba[1], zb0)])
+    for k in (0, len(pts) - 1):
+        fa, ba = pts[k] + nrm[k] * 0.3, pts[k] + nrm[k] * 0.05
+        g.poly("steel_dark", [(ba[0], ba[1], zb0), (fa[0], fa[1], zb0), (fa[0], fa[1], zb1), (ba[0], ba[1], zb1)])
     # plaza: banner poles and light poles along the podium's front (pod_c: tall thin poles, about 10 m)
     line = _offset_line(out_line, -6.0)
     pts, _ = _resample(line, 14.0)
@@ -2280,9 +2383,12 @@ def build():
         nt.links.new(tx.outputs["Color"], b.inputs["Base Color"])
         # grey_glass: matt enough that the sky does not turn the towers blue (PC check round 3)
         b.inputs["Roughness"].default_value = 0.7 if mat == "grey_glass" else (0.35 if ("glass" in mat or mat == "podium_curtain") else 0.85)
+        if mat == "podium_curtain":   # round 14b: reflective, as Google Earth's dark glass
+            b.inputs["Metallic"].default_value = 0.55
+            b.inputs["Roughness"].default_value = 0.18
         if mat.startswith("lm_sign"):   # round 14: the new board glows a little, like the stadium's own (build2.py, 0.25)
             nt.links.new(tx.outputs["Color"], b.inputs["Emission Color"])
-            b.inputs["Emission Strength"].default_value = 0.25
+            b.inputs["Emission Strength"].default_value = 0.12   # round 14b: 0.25 read too bright against the podium
         me.materials.append(m)
         ob = bpy.data.objects.new(mat, me)
         sc.collection.objects.link(ob)
