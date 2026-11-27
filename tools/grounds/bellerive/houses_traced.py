@@ -14,7 +14,14 @@ scale and 0.5 m west, 1.0 m south; both shots agree to 0.5-1 m after that (the d
 both). A roof stands h metres up, so it sits (H - h)/H as far from the shot's centre as drawn (H = 150/0.84 m).
 
 Storeys and roofs from the oblique Google Earth view (qa/views.json st_house): flat2 two storeys under a flat roof
-(the townhouses), flat1 one storey flat (units, garages), hip1/hip2 hipped houses, gable2."""
+(the townhouses), flat1 one storey flat (units, garages), hip1/hip2 hipped houses, gable2.
+
+Walls, windows and solar panels from the same oblique (PC check r6: the townhouses were blank white boxes). Its
+walls face the camera in shade, so their colour is named by eye (white render, red brick, blue weatherboard ...)
+and set as the finish's colour in sun, linear as the game's other walls; never sampled pixels. Each house's
+detail flags (GroundModels._add_buildings, SURROUNDS "house_detail"): WINDOWS a window per 3.4 m of wall on each
+storey, PARAPET a 0.5 m parapet round a flat roof, SOLAR a rack of panels on the roof (on a pitched roof, the slope
+facing most north)."""
 import json, math, os, sys
 import numpy as np
 
@@ -23,6 +30,25 @@ SCALE, H = 0.84, 150.0 / 0.84
 SHOT = {"c": (250.0, 150.0, -0.5, -1.0), "d": (260.0, 200.0, 0.0, -1.0)}   # centre east, north; registration
 KIND = {"flat2": 6.4, "flat1": 3.2, "hip1": -2.7, "hip2": -5.6, "gable2": -105.6}
 TOP = {"flat2": 6.4, "flat1": 3.2, "hip1": 4.5, "hip2": 7.5, "gable2": 8.0}  # roof height for the lean
+
+WINDOWS, PARAPET, SOLAR = 1, 2, 4
+RENDER, CREAM, BRICK, BROWN = (0.84, 0.85, 0.84), (0.86, 0.82, 0.74), (0.56, 0.33, 0.27), (0.6, 0.44, 0.36)
+WALL = {"33": BROWN, "31 dark block": (0.3, 0.33, 0.36), "31 north-west": (0.62, 0.64, 0.66), "4 front": BRICK,
+        "4 rear": BRICK, "6 front": BRICK, "6 rear": BRICK, "27": (0.62, 0.7, 0.8), "27 garage": (0.6, 0.62, 0.62),
+        "29": CREAM, "29 shed": (0.6, 0.62, 0.62), "25": (0.88, 0.86, 0.8), "8A": (0.78, 0.8, 0.82),
+        "53": (0.5, 0.52, 0.54), "61": (0.6, 0.64, 0.7)}                   # the rest white render
+SOLAR_ON = {"31 south-west", "31 east, south", "27", "8A"}
+NO_WINDOWS = {"27 annex", "27 garage", "29 shed", "31 south annex"}
+
+
+def detail(name, kind):
+    f = 0 if name in NO_WINDOWS else WINDOWS
+    if kind == "flat2":
+        f |= PARAPET
+    if name in SOLAR_ON:
+        f |= SOLAR
+    return f
+
 
 # name, shot, kind, outline (east, north as read off the shot's grid)
 TRACED = [
@@ -91,7 +117,8 @@ def main(work):
         mm = np.asarray(m.filter(ImageFilter.MinFilter(3))) > 0
         col = np.median(np.asarray(im).astype(float)[mm], axis=0)
         col = np.clip((col - 14.0) * 1.08, 8, 255) / 255.0                 # as houses_ge.py: the aerial's haze
-        out.append({"name": name, "kind": kind, "h": KIND[kind],
+        out.append({"name": name, "kind": kind, "h": KIND[kind], "wall": list(WALL.get(name, RENDER)),
+                    "flags": detail(name, kind),
                     "rgb": [round(float(v) ** 2.2, 4) for v in col],
                     "pts": [[round(e, 2), round(-n, 2)] for e, n in en]})        # model x (east), z (south)
     json.dump(out, open(os.path.join(HERE, "houses_traced.json"), "w"), indent=0)
