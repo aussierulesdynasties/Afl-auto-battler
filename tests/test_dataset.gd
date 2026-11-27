@@ -70,7 +70,7 @@ const TEAM_BOOKKEEPING_PREFIXES := ["d50_end_"]
 ## 2026 game). Linux from that PR's CI (run 45795434727, shard 12), Windows from a
 ## local run (main's Windows value had gone stale before it: ea5669a7 at its base).
 ## Bug bash batch E redrew it on top: rushed behinds at the 2026 rate (P2-1).
-const GOLDEN_SEASON := {"Windows": "WIN_PENDING", "Linux": "LINUX_PENDING"}
+const GOLDEN_SEASON := {"Windows": "c793e347c0cb20c2d3604d45713bcf0a", "Linux": "LINUX_PENDING"}
 
 ## A small league standing in for a legacy set until the 1990 files ship:
 ## 42 real players re-dated to a 1989 data season, a 1990 first season, and

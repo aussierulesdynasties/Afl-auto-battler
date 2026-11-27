@@ -118,6 +118,11 @@ func _result(seed: int) -> Dictionary:
 	return res
 
 
+## How far past the line a rushed behind's man may be: sent RUSH_OVER (3 m) past it, he pulls
+## up (2.3 m at most measured, seed 42 at the MCG).
+const OVER_LINE_ROOM := 5.0
+
+
 ## Play `events` through a director in steps of `dt` until everything is
 ## released. Returns the released events and what was seen on the way.
 func _play(res: Dictionary, events: Array, dt: float, watch := true) -> Dictionary:
@@ -142,7 +147,11 @@ func _play(res: Dictionary, events: Array, dt: float, watch := true) -> Dictiona
 			if not p.is_finite():
 				nan += 1
 			elif not MatchMotion.inside_oval(p, -0.01):
-				outside += 1
+				# Over the line on purpose: a rushed behind's man runs it over the line and his
+				# presser follows (director 2026-11-27: "hed simply run over the line"). Only a man
+				# flagged over the line, and no further than his pull-up past it.
+				if not (bool(d.tokens[i].get("over_line", false)) and MatchMotion.inside_oval(p, -OVER_LINE_ROOM)):
+					outside += 1
 			max_step = maxf(max_step, p.distance_to(prev[i]))
 			prev[i] = p
 		if not (d.ball["pos"] as Vector2).is_finite() or not is_finite(float(d.ball["h"])):
