@@ -36,9 +36,11 @@ const CAPS := {"morale": 15, "xp": 26, "board": 8, "trust": Trust.STEP_MAX}
 ## The bonding deck adds: the leadership group (captain and vice-captains), the
 ## rest of the list, the club's Indigenous players, and one fit player picked at
 ## random when the card is dealt ("one": a sore on a club card).
-const WHO := ["subject", "side", "all", "others", "vice", "leaders", "rest", "indigenous", "one"]
+const WHO := ["subject", "side", "all", "others", "vice", "leaders", "rest", "indigenous", "one", "b"]
+## What can reach a card's second player (who: "b").
+const B_OPS := ["morale", "trust", "xp", "forgo_xp"]
 ## Targets that let a player's lever (trust, sore) sit on a club card.
-const GROUP_PLAYER_WHO := {"trust": ["leaders", "indigenous"], "sore": ["one"]}
+const GROUP_PLAYER_WHO := {"trust": ["leaders", "indigenous", "b"], "sore": ["one"]}
 ## Every effect a card can carry. Ops marked true need a player subject.
 const OPS := {
 	"morale": false, "xp": false, "board": false, "trust": true, "rest": true, "sore": true,
@@ -188,6 +190,25 @@ static func all() -> Array:
 
 static func reload() -> void:
 	_cache = []
+	_roles = []
+
+
+static var _roles: Array = []
+
+
+## The second-player roles the deck's cards ask for (ClubStories.actors works
+## out only these). Cached with the deck.
+static func actor_roles() -> Array:
+	if _roles.is_empty():
+		var seen := {}
+		for t in all():
+			var role := str((t.get("actor_b", {}) as Dictionary).get("role", ""))
+			if role != "":
+				seen[role] = true
+		_roles = seen.keys()
+		if _roles.is_empty():
+			_roles = [""]   # none asked for: never look again
+	return _roles.filter(func(r): return str(r) != "")
 
 
 ## The cards in one folder, one file per category, with defaults filled in.
@@ -283,9 +304,31 @@ static func validate(deck: Array) -> Array:
 	return errs
 
 
+## The words a card's second player and advisors add ({player_b}, {advisor_name}):
+## set while one card is checked.
+static var _bind_facts: Array = []
+static var _has_b := false
+
+
+static func bind_facts(t: Dictionary) -> Array:
+	var out := []
+	if not (t.get("actor_b", {}) as Dictionary).is_empty():
+		out.append_array(["player_b", "first_b", "first_b_s", "b_id"])
+	var advisors: Array = t.get("advisors", [])
+	if not advisors.is_empty():
+		out.append_array(["advisor_name", "advisor_role"])
+	for a in advisors:
+		var seat := str(a.get("seat", "")) if a is Dictionary else str(a)
+		out.append_array(["%s_name" % seat, "%s_role" % seat])
+	return out
+
+
 static func _check_card(t: Dictionary) -> Array:
 	var errs := []
 	var id := str(t["id"])
+	_bind_facts = bind_facts(t)
+	_has_b = not (t.get("actor_b", {}) as Dictionary).is_empty()
+	errs.append_array(_check_engine_fields(t))
 	if not CATEGORIES.has(str(t.get("category", ""))):
 		errs.append("%s: unknown category '%s'" % [id, str(t.get("category", ""))])
 	var subject: Dictionary = t.get("subject", {})
@@ -361,6 +404,92 @@ static func _check_card(t: Dictionary) -> Array:
 		errs.append("%s: saying nothing costs more than the board cap" % id)
 	if int(un.get("trust", 0)) != 0 and (not player or str(un.get("why", "")) == ""):
 		errs.append("%s: saying nothing can cost trust only on a player card, with a reason" % id)
+	if un.has("scar") and (not (un["scar"] is bool) or int(un.get("trust", 0)) == 0):
+		errs.append("%s: a scar (true or false) marks only a trust cost" % id)
+	return errs
+
+
+## The engine's card fields (director, 2026-11-26): its tier, the event that
+## triggers it, its second player, its advisors and each club's own words.
+static func _check_engine_fields(t: Dictionary) -> Array:
+	var errs := []
+	var id := str(t["id"])
+	var player := str((t.get("subject", {}) as Dictionary).get("kind", "club")) == "player"
+	if t.has("tier") and not StoryEngine.CARD_TIERS.has(str(t["tier"])):
+		errs.append("%s: unknown tier '%s' (urgent, reactive or ambient)" % [id, str(t["tier"])])
+	var trig: Variant = t.get("trigger", {})
+	if not (trig is Dictionary):
+		errs.append("%s: a trigger must be an object" % id)
+		trig = {}
+	if not (trig as Dictionary).is_empty():
+		if str(trig.get("event", "")) == "":
+			errs.append("%s: a trigger needs the event it answers" % id)
+		var wn := int(trig.get("within", StoryEngine.REACTIVE_WITHIN))
+		if wn < 0 or wn > StoryEngine.REACTIVE_WITHIN_MAX:
+			errs.append("%s: a trigger stays fresh 0..%d weeks, not %d" % [id, StoryEngine.REACTIVE_WITHIN_MAX, wn])
+	elif str(t.get("tier", "")) == "reactive" and not bool(t.get("topical", false)):
+		errs.append("%s: a reactive card needs a trigger (or the club's run, topical)" % id)
+	var ab: Variant = t.get("actor_b", {})
+	if not (ab is Dictionary):
+		errs.append("%s: actor_b must be an object" % id)
+		ab = {}
+	if not (ab as Dictionary).is_empty():
+		if not player:
+			errs.append("%s: a second player needs a card about a player" % id)
+		var role := str(ab.get("role", ""))
+		if not StoryEngine.ACTOR_ROLES.has(role):
+			errs.append("%s: unknown second-player role '%s'" % [id, role])
+		if role == "other" and (trig as Dictionary).is_empty():
+			errs.append("%s: the event's other player needs a trigger" % id)
+		for k in (ab.get("where", {}) as Dictionary):
+			if not _known_condition(str(k), PLAYER_FACTS):
+				errs.append("%s: unknown second-player condition '%s'" % [id, str(k)])
+	var advisors: Variant = t.get("advisors", [])
+	if not (advisors is Array):
+		errs.append("%s: advisors must be a list" % id)
+		advisors = []
+	for a in advisors:
+		var seat := str(a.get("seat", "")) if a is Dictionary else str(a)
+		if not StoryEngine.ADVISOR_SEATS.has(seat):
+			errs.append("%s: unknown advisor seat '%s'" % [id, seat])
+	var cv: Variant = t.get("club_variants", {})
+	if not (cv is Dictionary):
+		return errs + ["%s: club_variants must be an object" % id]
+	if not (cv as Dictionary).is_empty() and t.has("club"):
+		errs.append("%s: a club's own card needs no club variants" % id)
+	var keys := {}
+	for c in t.get("choices", []):
+		keys[str((c as Dictionary).get("key", ""))] = true
+	for code in cv:
+		var where := "%s[%s]" % [id, str(code)]
+		if not CLUB_DECKS.has(str(code)):
+			errs.append("%s: unknown club deck" % where)
+		var v: Variant = cv[code]
+		if not (v is Dictionary):
+			errs.append("%s: a club's words must be an object" % where)
+			continue
+		for field in ["title", "text"]:
+			if not (v as Dictionary).has(field):
+				continue
+			if not (v[field] is Array) or (v[field] as Array).is_empty():
+				errs.append("%s: %s needs at least one variant" % [where, field])
+				continue
+			for line in v[field]:
+				errs.append_array(_check_text(where, str((line as Dictionary).get("text", "")) if line is Dictionary else str(line), player))
+		errs.append_array(_check_text(where, str(v.get("stakes", "")), player))
+		var ch: Variant = v.get("choices", {})
+		if not (ch is Dictionary):
+			errs.append("%s: a club's choice words must be an object" % where)
+			continue
+		for k in ch:
+			if not keys.has(str(k)):
+				errs.append("%s: no choice '%s' to reword" % [where, str(k)])
+				continue
+			for f in (ch[k] as Dictionary):
+				if not ["label", "result", "note"].has(str(f)):
+					errs.append("%s/%s: a club may reword the label, result or note only, not '%s'" % [where, str(k), str(f)])
+				else:
+					errs.append_array(_check_text("%s/%s" % [where, str(k)], str(ch[k][f]), player, str(f) == "result"))
 	return errs
 
 
@@ -374,6 +503,11 @@ static func _check_effect(where: String, e, player: bool) -> Array:
 	var who := str(e.get("who", "subject"))
 	if not WHO.has(who):
 		errs.append("%s: unknown target '%s'" % [where, who])
+	if who == "b" and (not _has_b or not B_OPS.has(op)):
+		errs.append("%s: only %s can reach a card's second player, and only on a card that has one" % [where, ", ".join(B_OPS)])
+	# A permanent mark (director, 2026-11-26): only a trust move can leave one.
+	if e.has("scar") and (not (e["scar"] is bool) or op != "trust"):
+		errs.append("%s: a scar (true or false) marks only a trust move" % where)
 	var group_ok: bool = (GROUP_PLAYER_WHO.get(op, []) as Array).has(who)
 	if who == "one" and op != "sore":
 		errs.append("%s: only a sore can fall on one player picked at random" % where)
@@ -461,7 +595,7 @@ static func _check_text(where: String, s: String, player: bool, ranked := false)
 	var re := RegEx.create_from_string("\\{([a-z_]+)\\}")
 	for m in re.search_all(s):
 		var f: String = m.get_string(1)
-		if CLUB_FACTS.has(f):
+		if CLUB_FACTS.has(f) or _bind_facts.has(f):
 			continue
 		if player and PLAYER_FACTS.has(f):
 			continue

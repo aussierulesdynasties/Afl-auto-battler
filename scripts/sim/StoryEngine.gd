@@ -51,9 +51,28 @@ const YEAR_SPAN := OFFSEASON_WEEKS + PRESEASON_WEEKS + SEASON_WEEKS
 ## The calendar's version in a saved story; saves without it used year * 30 + week.
 const CALENDAR := 2
 ## A trust move on a group (the bonding deck): whose opinion moves.
-const GROUP_TRUST := {"leaders": "Each leader's", "indigenous": "Each of our Indigenous players'"}
+const GROUP_TRUST := {"leaders": "Each leader's", "indigenous": "Each of our Indigenous players'", "b": "{first_b_s}"}
 const NEVER := -99999
 const TIERS := ["beat", "start", "one_off"]
+## The week's three tiers (director, 2026-11-26): urgent cards (a due arc beat, an
+## ultimatum, a broken promise come home) come first, then reactive ones (what you
+## did this week has a consequence: a mate dropped, a clash), then ambient flavour
+## fills a calm week. A card may name its tier; otherwise an arc follow-up is
+## urgent, a card about the club's run (topical) reactive, and the rest ambient.
+const CARD_TIERS := ["urgent", "reactive", "ambient"]
+## A reactive card's trigger stays fresh this many played weeks after the event
+## unless the card says otherwise: then it has passed.
+const REACTIVE_WITHIN := 1
+const REACTIVE_WITHIN_MAX := 4
+## Who a card's second player can be, from the subject's ties (GameState.bond_actor),
+## or "other": the other player of the event that triggered the card.
+const ACTOR_ROLES := ["close_mate", "positional_rival", "mentor", "protege", "brother", "incumbent",
+		"ally", "family", "other"]
+## A card's advisors: the council seat, and what the seat is called. A seat the
+## club has nobody in (an older save, or a seat not yet filled) skips the card,
+## unless the card says the seat is not required (then {x_name} is "the <role>").
+const ADVISOR_SEATS := {"list_manager": "list manager", "high_performance": "head of high performance",
+		"line_coach": "midfield coach", "senior_assistant": "senior assistant", "development": "development coach"}
 ## A result line may name players from a ranked list: {best3}, {worst2}.
 const RANKED_TOKEN := "\\{(best|worst)([1-9])\\}"
 
@@ -132,7 +151,7 @@ static func migrate_calendar(story: Dictionary) -> void:
 
 
 static func new_state() -> Dictionary:
-	return {"flags": {}, "last": {}, "subj": {}, "cats": [], "seen": {}, "season": {}, "arcs": {}, "calendar": CALENDAR}
+	return {"flags": {}, "last": {}, "subj": {}, "cats": [], "seen": {}, "season": {}, "arcs": {}, "events": {}, "calendar": CALENDAR}
 
 
 ## An older save, or a partial one: every key present.
@@ -172,6 +191,14 @@ static func pick_week(deck: Array, ctx: Dictionary, story: Dictionary) -> Array:
 		return out
 	out.append(first)
 	_record_pick(story, first, w)
+	# A crisis week: an urgent card took the week while a reactive one is fresh. The
+	# reactive card comes too, or its moment would pass unseen.
+	if str(first.get("tier", "")) == "urgent":
+		var react := _pick_one(deck, ctx, story, rng, w, false, "", str(first.get("player_id", "")), "reactive")
+		if not react.is_empty():
+			out.append(react)
+			_record_pick(story, react, w)
+			return out
 	var second_chance := 1.0 if int((ctx.get("club", {}) as Dictionary).get("finals_week", 0)) == 5 else SECOND_CHANCE
 	if bool(ctx.get("big", false)) and rng.randf() < second_chance:
 		var second := _pick_one(deck, ctx, story, rng, w, false, str(first["category"]), str(first.get("player_id", "")))
@@ -224,20 +251,46 @@ static func names_opp(t: Dictionary) -> bool:
 	return JSON.stringify(t).contains("{opp}")
 
 
+## One card for the week, by tier: urgent first, then reactive, then the
+## club's run (topical), then ambient arc starts and one-offs (a quiet week has
+## none of those). `only` "reactive" draws from the fresh reactive cards alone.
 static func _pick_one(deck: Array, ctx: Dictionary, story: Dictionary, rng: RandomNumberGenerator, w: int,
-		quiet: bool, skip_cat: String, skip_pid: String) -> Dictionary:
+		quiet: bool, skip_cat: String, skip_pid: String, only := "") -> Dictionary:
 	var tiers := {"beat": [], "start": [], "one_off": []}
 	var topical := []
+	var reactive := []
 	for t in deck:
 		if str(t["category"]) == skip_cat:
+			continue
+		var ct := card_tier(t)
+		if only != "" and ct != only:
 			continue
 		var subj := eligible_subject(t, ctx, story, w, rng, skip_pid)
 		if subj.is_empty():
 			continue
-		if bool(t.get("topical", false)) and int(story["season"].get(str(t["id"]), 0)) == 0:
+		if ct == "urgent":
+			tiers["beat"].append([t, subj])
+		elif bool(t.get("topical", false)) and int(story["season"].get(str(t["id"]), 0)) == 0:
 			topical.append([t, subj])
-		else:
+		elif ct == "reactive" and not (t.get("trigger", {}) as Dictionary).is_empty():
+			reactive.append([t, subj])
+		elif only == "":
 			tiers[tier(t)].append([t, subj])
+	if only == "" and not (tiers["beat"] as Array).is_empty():
+		_middle_before_end(deck, tiers, story, w)
+		var urgent := _weighted(tiers["beat"], rng, true)
+		if not urgent.is_empty():
+			return _tagged(build(deck, urgent[0], urgent[1], ctx.get("club", {}), rng, w), "urgent")
+	# What you did this week comes home: the freshest event first.
+	if not reactive.is_empty():
+		var newest := NEVER
+		for c in reactive:
+			newest = maxi(newest, int((c[1] as Dictionary).get("_event_at", NEVER)))
+		var fresh: Array = reactive.filter(func(c): return int((c[1] as Dictionary).get("_event_at", NEVER)) == newest)
+		var r := _weighted(fresh, rng, true)
+		return _tagged(build(deck, r[0], r[1], ctx.get("club", {}), rng, w), "reactive")
+	if only != "":
+		return {}
 	# A card about the run the club is on right now (a losing or winning streak) is
 	# this week's story: it comes before the running stories and in a quiet week too.
 	# Behind them it was never drawn, there is always an older story waiting. Each
@@ -255,8 +308,7 @@ static func _pick_one(deck: Array, ctx: Dictionary, story: Dictionary, rng: Rand
 			elif last == oldest:
 				pool.append(c)
 		var c: Array = pool[rng.randi_range(0, pool.size() - 1)]
-		return build(deck, c[0], c[1], ctx.get("club", {}), rng, w)
-	_middle_before_end(deck, tiers, story, w)
+		return _tagged(build(deck, c[0], c[1], ctx.get("club", {}), rng, w), "reactive")
 	# A priority card (the Grand Final week's, a week off's) comes before the older ones.
 	for name in TIERS:
 		var first: Array = (tiers[name] as Array).filter(func(c): return bool(c[0].get("priority", false)))
@@ -275,8 +327,70 @@ static func _pick_one(deck: Array, ctx: Dictionary, story: Dictionary, rng: Rand
 		for c in pool:
 			roll -= maxi(1, int(c[0].get("weight", 1)))
 			if roll <= 0:
-				return build(deck, c[0], c[1], ctx.get("club", {}), rng, w)
+				return _tagged(build(deck, c[0], c[1], ctx.get("club", {}), rng, w), "ambient")
 	return {}
+
+
+## One of the candidates by weight ([card, subject]); a priority card first.
+static func _weighted(pool: Array, rng: RandomNumberGenerator, priority_first: bool) -> Array:
+	if pool.is_empty():
+		return []
+	if priority_first:
+		var first: Array = pool.filter(func(c): return bool(c[0].get("priority", false)))
+		if not first.is_empty():
+			pool = first
+	var total := 0
+	for c in pool:
+		total += maxi(1, int(c[0].get("weight", 1)))
+	var roll := rng.randi_range(1, total)
+	for c in pool:
+		roll -= maxi(1, int(c[0].get("weight", 1)))
+		if roll <= 0:
+			return c
+	return pool[pool.size() - 1]
+
+
+static func _tagged(card: Dictionary, t: String) -> Dictionary:
+	if not card.is_empty():
+		card["tier"] = t
+	return card
+
+
+## A card's tier: its own, else an arc follow-up is urgent, a card about the
+## club's run reactive, and the rest ambient.
+static func card_tier(t: Dictionary) -> String:
+	var own := str(t.get("tier", ""))
+	if CARD_TIERS.has(own):
+		return own
+	if not (t.get("needs", {}) as Dictionary).is_empty():
+		return "urgent"
+	if bool(t.get("topical", false)):
+		return "reactive"
+	return "ambient"
+
+
+## Something happened that a reactive card answers (a mate dropped, a clash at
+## training): stamped on its holder (a player id, or "club") with the week and,
+## if it has one, the other player in it. A newer one of the same name replaces it.
+static func note_event(story: Dictionary, name: String, who: String, w: int, other := "") -> void:
+	ensure(story)
+	if not story["events"].has(who):
+		story["events"][who] = {}
+	story["events"][who][name] = {"w": w, "other": other}
+
+
+## The event a card's trigger names, still fresh for this holder and not yet
+## answered by a card: {"w", "other"}, or {} when there is none.
+static func fresh_event(t: Dictionary, story: Dictionary, who: String, w: int) -> Dictionary:
+	var trig: Dictionary = t.get("trigger", {})
+	var ev: Dictionary = (story.get("events", {}) as Dictionary).get(who, {})
+	var rec: Variant = ev.get(str(trig.get("event", "")), {})
+	if not (rec is Dictionary) or (rec as Dictionary).is_empty() or bool((rec as Dictionary).get("used", false)):
+		return {}
+	var at := int((rec as Dictionary).get("w", NEVER))
+	if at <= NEVER / 2 or played_between(at, w) > clampi(int(trig.get("within", REACTIVE_WITHIN)), 0, REACTIVE_WITHIN_MAX):
+		return {}
+	return rec
 
 
 ## An arc is told in order: while its middle beat can still come for him (its
@@ -364,11 +478,26 @@ static func eligible_subject(t: Dictionary, ctx: Dictionary, story: Dictionary, 
 	if not bool(club.get("has_opp", true)) and names_opp(t):
 		return {}
 	var subject: Dictionary = t.get("subject", {})
+	var trig: Dictionary = t.get("trigger", {})
+	# The council seats the card speaks through: none filled, no card.
+	var bind := advisor_facts(t, club)
+	if bind.is_empty() and not (t.get("advisors", []) as Array).is_empty():
+		return {}
 	if str(subject.get("kind", "club")) != "player":
 		if not _arc_open_ok(t, story, "club", w):
 			return {}
-		return {"kind": "club"}
+		var cs := {"kind": "club"}
+		if not trig.is_empty():
+			var ev := fresh_event(t, story, "club", w)
+			if ev.is_empty():
+				return {}
+			cs["_event_at"] = int(ev["w"])
+			cs["_event"] = str(trig["event"])
+		if not bind.is_empty():
+			cs["_bind"] = bind
+		return cs
 	var fits := []
+	var extra := {}
 	for p in ctx.get("players", []):
 		var pid := str(p["id"])
 		if pid == skip_pid:
@@ -395,8 +524,80 @@ static func eligible_subject(t: Dictionary, ctx: Dictionary, story: Dictionary, 
 			continue
 		if not _arc_open_ok(t, story, pid, w):
 			continue
+		var add := {}
+		if not trig.is_empty():
+			var ev := fresh_event(t, story, pid, w)
+			if ev.is_empty():
+				continue
+			add["_event_at"] = int(ev["w"])
+			add["_event"] = str(trig["event"])
+			add["_event_other"] = str(ev.get("other", ""))
+		if not (t.get("actor_b", {}) as Dictionary).is_empty():
+			var b := actor_b_facts(t, p, ctx.get("players", []), str(add.get("_event_other", "")), story)
+			if b.is_empty():
+				continue   # nobody fits the second part: the card cannot come for him
+			add.merge(b, true)
+		extra[pid] = add
 		fits.append(p)
-	return choose(fits, str(subject.get("pick", "random")), rng)
+	var got := choose(fits, str(subject.get("pick", "random")), rng)
+	if got.is_empty():
+		return got
+	var add2: Dictionary = extra.get(str(got["id"]), {})
+	if add2.is_empty() and bind.is_empty():
+		return got
+	got = got.duplicate()
+	var b2: Dictionary = (add2.get("_bind", {}) as Dictionary).duplicate()
+	b2.merge(bind, true)
+	add2.erase("_bind")
+	got.merge(add2, true)
+	if not b2.is_empty():
+		got["_bind"] = b2
+	return got
+
+
+## The card's second player for the subject `p`: who he is to him (the role),
+## found on your list among `players`, and meeting the card's conditions on him.
+## {"_b_id", "_bind": {player_b, first_b, first_b_s, b_id}}, or {} when nobody fits
+## (an older save has no ties, so a card that needs one simply does not come).
+static func actor_b_facts(t: Dictionary, p: Dictionary, players: Array, event_other: String, story: Dictionary) -> Dictionary:
+	var ab: Dictionary = t.get("actor_b", {})
+	var role := str(ab.get("role", ""))
+	var bid := event_other if role == "other" else str((p.get("actors", {}) as Dictionary).get(role, ""))
+	if bid == "" or bid == str(p["id"]):
+		return {}
+	for q in players:
+		if str(q["id"]) != bid:
+			continue
+		if not meets(q, ab.get("where", {}), story["flags"].get(bid, {})):
+			return {}
+		var nm := str(q.get("name", ""))
+		var first := str(q.get("first", nm))
+		return {"_b_id": bid, "_bind": {"player_b": nm, "first_b": first, "first_b_s": CopyRules.possessive(first), "b_id": bid}}
+	return {}
+
+
+## The facts for the card's advisors ({advisor_name}, {advisor_role}, and
+## {<seat>_name} / {<seat>_role} for each seat), from the club's council
+## (club facts "advisors": {seat: {"name", "role"}}). {} when a required seat is empty.
+static func advisor_facts(t: Dictionary, club: Dictionary) -> Dictionary:
+	var out := {}
+	var seated: Dictionary = club.get("advisors", {})
+	for a in (t.get("advisors", []) as Array):
+		var seat := str(a.get("seat", "")) if a is Dictionary else str(a)
+		var required := bool(a.get("required", true)) if a is Dictionary else true
+		var who: Dictionary = seated.get(seat, {})
+		var role := str(who.get("role", ADVISOR_SEATS.get(seat, seat)))
+		var nm := str(who.get("name", ""))
+		if nm == "":
+			if required:
+				return {}
+			nm = "the " + role
+		out["%s_name" % seat] = nm
+		out["%s_role" % seat] = role
+		if not out.has("advisor_name"):
+			out["advisor_name"] = nm
+			out["advisor_role"] = role
+	return out
 
 
 ## Arc rules for one subject: a follow-up needs his flag inside its window and
@@ -491,6 +692,12 @@ static func _record_pick(story: Dictionary, card: Dictionary, w: int) -> void:
 	story["seen"][id] = int(story["seen"].get(id, 0)) + 1
 	story["season"][id] = int(story["season"].get(id, 0)) + 1
 	var pid := str(card.get("player_id", ""))
+	# The event the card answers is answered: it never brings another card.
+	if str(card.get("event", "")) != "":
+		var holder := pid if pid != "" else "club"
+		var ev: Variant = ((story.get("events", {}) as Dictionary).get(holder, {}) as Dictionary).get(str(card["event"]), {})
+		if ev is Dictionary and not (ev as Dictionary).is_empty():
+			ev["used"] = true
 	if pid != "":
 		story["subj"][pid] = w
 		var k := _always_key(id, pid)
@@ -509,10 +716,20 @@ static func build(deck: Array, t: Dictionary, subj: Dictionary, club: Dictionary
 	var facts: Dictionary = club.duplicate()
 	if player:
 		facts.merge(subj, true)
-	var titles: Array = t["title"]
-	var texts: Array = t["text"]
+	# The second player's and the advisors' names, for the card's words.
+	facts.merge(subj.get("_bind", {}), true)
+	# One mechanic, each club's own words (club_variants): the club's title,
+	# text, stakes and choice words over the shared card's.
+	var cv: Dictionary = (t.get("club_variants", {}) as Dictionary).get(str(club.get("club_deck", "")), {})
+	var titles: Array = cv.get("title", t["title"])
+	var texts: Array = cv.get("text", t["text"])
+	var cv_choices: Dictionary = cv.get("choices", {})
 	var options := []
-	for c in t["choices"]:
+	for c0 in t["choices"]:
+		var c: Dictionary = c0
+		if cv_choices.has(str(c["key"])):
+			c = c.duplicate()
+			c.merge(cv_choices[str(c["key"])], true)
 		if not meets(facts, c.get("when", {}), {}):
 			continue
 		var detail := " ".join(PackedStringArray([describe(c, facts), fill(str(c.get("note", "")), facts)])).strip_edges()
@@ -524,8 +741,13 @@ static func build(deck: Array, t: Dictionary, subj: Dictionary, club: Dictionary
 			"title": variant(titles, facts, rng),
 			"text": variant(texts, facts, rng),
 			"options": options}
-	if str(t.get("stakes", "")) != "":
-		card["stakes"] = fill(str(t["stakes"]), facts)
+	var stakes := str(cv.get("stakes", t.get("stakes", "")))
+	if stakes != "":
+		card["stakes"] = fill(stakes, facts)
+	if subj.has("_b_id"):
+		card["player_b_id"] = str(subj["_b_id"])
+	if str(subj.get("_event", "")) != "":
+		card["event"] = str(subj["_event"])
 	if bool(t.get("choice_notes", false)):
 		card["choice_notes"] = true
 	if player:
@@ -943,7 +1165,7 @@ static func _effect_parts(e: Dictionary, facts: Dictionary) -> Array:
 				tw += " " + _refuse_words(d, int(facts.get("trust", 0)))
 			return [["gain" if d > 0 else "cost", tw]]
 		"xp":
-			var whom: String = "He gets" if who == "subject" else ("Each player in the side gets" if who == "side" else ("Each of the others gets" if who == "others" else "Every player gets"))
+			var whom: String = "He gets" if who == "subject" else ("{first_b} gets" if who == "b" else ("Each player in the side gets" if who == "side" else ("Each of the others gets" if who == "others" else "Every player gets")))
 			return [["gain", "%s %d development points. A senior game gives %d." % [whom, d, SENIOR_GAME_XP]]]
 		"fresh":
 			return [["gain", "Fresh legs: %d%% less likely to be injured this week." % roundi((1.0 - ClubLife.FRESH_RISK) * 100.0)]]
@@ -1038,7 +1260,7 @@ static func _effect_parts(e: Dictionary, facts: Dictionary) -> Array:
 		# A choice that holds a player back from development the other choice gives.
 		"forgo_xp":
 			var without: String = {"side": "each player in the side goes", "all": "every player goes",
-					"others": "each of the others goes"}.get(who, "he goes")
+					"others": "each of the others goes", "b": "{first_b} goes"}.get(who, "he goes")
 			return [] if d <= 0 else [["cost", "Slower growth: %s without %d development points. A senior game gives %d." % [without, d, SENIOR_GAME_XP]]]
 		# The physio's plan in the pre-season: he stays out as long as the injury runs.
 		"keep_out":
@@ -1266,6 +1488,8 @@ static func _morale_words(d: int, who: String) -> String:
 		return "His morale %s." % move
 	if who == "vice":
 		return "{vice_name}'s morale %s." % move
+	if who == "b":
+		return "{first_b_s} morale %s." % move
 	var group: String = {"side": "across the side", "all": "across the whole list", "others": "in the rest of the group",
 			"leaders": "in the leadership group", "rest": "for everyone outside the leadership group",
 			"indigenous": "among our Indigenous players"}.get(who, "in the group")
