@@ -22,6 +22,8 @@ import xml.etree.ElementTree as ET
 import numpy as np
 from PIL import Image, ImageDraw, ImageFilter
 import land  # noqa: E402  (tools/grounds/marvel/land.py: the real land under each building)
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+import osm_structures  # noqa: E402  (tools/grounds/osm_structures.py: shelters, canopies and the like are not solid blocks)
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(ROOT, "..", "..", "..", "assets", "grounds", "marvel")
@@ -473,6 +475,15 @@ def building_list(ways, st):
         pts = [model_xz(*q) for q in p[:-1]]
         if max(max(abs(x), abs(z)) for x, z in pts) > 950:
             continue
+        # 2026-11-27 (the person's inspection: a gear-shaped 8 m office block in Docklands Park): a shelter, canopy
+        # or open pavilion is a roof on posts, and an unmeasured artwork or trackside cabinet a metre or two across
+        # is not a building at this distance (tools/grounds/osm_structures.py).
+        what = osm_structures.kind(t, abs(_area(p)))
+        if what == "omit":
+            continue
+        if what == "open":
+            out += _open_structure(t, p[:-1], len(out))
+            continue
         h = building_height(t)
         if h < 2.5:
             continue
@@ -481,6 +492,33 @@ def building_list(ways, st):
         for x, z in pts:
             out += [x, z]
     return np.array(out, "<f4")
+
+
+OPEN_ID0 = 90000   # look ids for open structures, clear of the City of Melbourne's structure ids (mod 100000 below)
+
+
+def _open_structure(t, ring, salt):
+    """buildings.bin stacked records for a roof on posts: the roof from its underside to its top over the outline,
+    then each post from the land to the roof's underside. Heights are above the land under each part, as
+    com_massing's are, so the posts meet the roof on sloping land."""
+    top, thick = osm_structures.open_roof(t)
+    # The look: GroundModels._add_towers picks glass or concrete, and its shade, from the id. A canopy is neither a
+    # curtain wall nor a windowed block: take the first id from the way's own that gives the palette's palest plain
+    # concrete (pick % 100 >= 80, pick % 6 == 2; MPavilion's petals are translucent white).
+    sid = OPEN_ID0 + int(t.get("_id", salt)) % 9000
+    while not ((sid * 7919 % 100003) % 100 >= 80 and (sid * 7919 % 100003) % 6 == 2):
+        sid += 1
+    sid = float(sid)
+    lb = land.base(ring)
+    out = [-float(len(ring)), top, top - thick, sid]
+    for q in ring:
+        out += list(model_xz(*q))
+    for post in osm_structures.supports(t, ring):
+        pb = land.base(post)
+        out += [-4.0, lb + top - thick - pb, 0.0, sid]
+        for q in post:
+            out += list(model_xz(*q))
+    return out
 
 
 def main():
