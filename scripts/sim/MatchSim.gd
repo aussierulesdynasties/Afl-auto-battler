@@ -668,7 +668,7 @@ func _init(home: Squad, away: Squad, seed: int = 0) -> void:
 	gather_rng.seed = seed * 113 + 127
 	fumble_rng.seed = seed * 127 + 131
 	loose_rng.seed = seed * 181 + 191
-	rush_rng.seed = seed * 199 + 211
+	rush_rng.seed = seed * 229 + 233
 	rundown_rng.seed = seed * 193 + 197
 	lead_rng.seed = seed * 109 + 113
 	# Its own seed: it once shared lead_rng's, so the mid-kick intercept dice
