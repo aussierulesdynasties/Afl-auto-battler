@@ -1,0 +1,4 @@
+hist_00 20 Oct 2024  traced; registration weak (39 inliers, 10.8 px shift), not used
+hist_01 19 Dec 2024  used
+hist_02  2 Jan 2026  used
+hist_03 23 Jan 2026  used; registration reference
