@@ -162,10 +162,19 @@ jobs:
           # three tries hung while building, the third built in 2.5 s), so a build that has not finished
           # in 4 min is killed and started again, up to 3 tries. Once filming, a view that takes over
           # 5 min stops the film, so a stuck film ends in minutes with its log.
+          # MCG's build hung in the ground model on 4 of 5 runners (27 Nov), so each retry changes
+          # something: try 1 as before with Godot's loading log, try 2 with the software GPU on one
+          # thread, try 3 on the compatibility renderer (OpenGL; the shading differs a little).
           for attempt in 1 2 3; do
             : > film.log
-            VK_ICD_FILENAMES="$icd" xvfb-run -a -s "-screen 0 1280x720x24" \
-              timeout 6000 "$HOME/godot/godot" --path . --rendering-method mobile \
+            case $attempt in
+              1) extra="--verbose"; method=mobile; lp="";;
+              2) extra=""; method=mobile; lp=1;;
+              3) extra=""; method=gl_compatibility; lp="";;
+            esac
+            echo "try $attempt: $method ${lp:+LP_NUM_THREADS=$lp} $extra"
+            env ${lp:+LP_NUM_THREADS=$lp} VK_ICD_FILENAMES="$icd" xvfb-run -a -s "-screen 0 1280x720x24" \
+              timeout 6000 "$HOME/godot/godot" --path . --rendering-method $method $extra \
               --script tools/fault_scan/scan.gd -- render "$SLUG" "$PWD/out/views.txt" "$PWD/shots" 1280 720 \
               >> film.log 2>&1 &
             pid=$!
@@ -188,6 +197,7 @@ jobs:
             done
             wait "$pid" 2>/dev/null || echo "film stopped: exit $?"
             cp film.log "film_try$attempt.log"
+            grep -v "^ALSA\|libpulse" film.log | tail -40
             [ "$retry" = 1 ] || break
           done
           grep -E "FAULTSCAN|SCRIPT ERROR|TIMEOUT" film.log || true
@@ -200,7 +210,7 @@ jobs:
           python3 tools/fault_scan/report.py out shots report || true
           cp out/findings.json report/ 2>/dev/null || true
           cp out/views.txt report/ 2>/dev/null || true
-          tail -200 film.log > report/film_log.txt 2>/dev/null || true
+          for f in film_try*.log; do [ -f "$f" ] && tail -300 "$f" > "report/$f.txt"; done 2>/dev/null || true
           python3 - <<'EOF' >> "$GITHUB_STEP_SUMMARY" || true
           import json, collections
           f = json.load(open("out/findings.json"))
