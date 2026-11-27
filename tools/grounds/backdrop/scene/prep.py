@@ -129,6 +129,20 @@ rF, bF = _fpb(X, Y)
 RK = _fp_fill(json.load(open(_fp)))[bF] if os.path.exists(_fp) else R0
 w = np.clip((rF - RK - 2.0) / BK, 0, 1); w = w * w * (3 - 2 * w)
 near = near * w
+np.save(os.path.join(OUT, 'pad_w.npy'), w.astype(np.float32))   # scene.py: the river-plane lift fades to nothing on the pad
+# the arena: inside the model's fence ellipse (GroundModels FIT: centre x, -z; yaw; half axes) the park's land lies under
+# the model's own ground, and out to 15% past it (the stands, the WACA's end banks) never over the turf
+# (tests/test_match_visual.gd _test_ground_backdrop; the backdrop is laid 0.1 m under the model)
+import re as _re
+_gms = open(os.path.join(os.environ.get('REPO', '/home/user/Afl-auto-battler'), 'scripts/ui/match/GroundModels.gd')).read()
+_FIT = {m[0]: [float(v) for v in m[1].split(',')] for m in _re.findall(r'"(\w+)": \[([-\d., ]+)\],', _gms.split('const FIT')[1].split('}')[0])}
+if spec['name'] in _FIT and abs(float(spec.get('yaw') or 0.0)) < 1e-6:
+    _f = _FIT[spec['name']]; _a = math.radians(-_f[3])
+    _u = (X - _f[0]) * math.cos(_a) + (Y + _f[1]) * math.sin(_a); _v = -(X - _f[0]) * math.sin(_a) + (Y + _f[1]) * math.cos(_a)
+    _e = (_u / _f[4]) ** 2 + (_v / _f[5]) ** 2
+    _n0 = int(((_e < 1.0) & (near > -0.15)).sum() + ((_e < 1.3225) & (near > 0.05)).sum())
+    near = np.where(_e < 1.0, np.minimum(near, -0.15), np.where(_e < 1.3225, np.minimum(near, 0.05), near))
+    print('arena: %d near cells kept under the turf' % _n0)
 BANK = None
 if spec.get('rail_cut'):
     rc = spec['rail_cut']
@@ -847,7 +861,12 @@ for el in js + PARTS + OVB:
         _hb = _BH[0](pts)
         if _hb is not None: h = _hb; _src = 'lidar' if _BH[1] else 'height map'
     if _GEH and _now_ok and _src != 'lidar' and str(el.get('id')) in _GEH:   # rooftop minus bare earth, read off Google Earth's 3D (ge_heights.py)
-        h = _GEH[str(el.get('id'))]; _src = 'google earth'
+        _gh = _GEH[str(el.get('id'))]
+        # an OCR misread can repeat on both reads (a "37 m" elevation read as 371 at Ikon Park and Moorabbin): a reading
+        # over 45 m stands only where the map or Overture puts a building of at least half that height there
+        _ref = h if h is not None else (_OVH(cx, cy, pts) if _OVH is not None else None)
+        if _gh <= 45 or (_ref is not None and _ref >= 0.5 * _gh): h = _gh; _src = 'google earth'
+        else: print('google earth reading rejected', el.get('id'), _gh, 'm (no other source near it)')
     if h is None and _OVH is not None and _now_ok:
         h = _OVH(cx, cy, pts); _src = 'overture' if h is not None else None
     if h is None: h = LV.get(kind, LV['*']); _src = 'GUESSED'

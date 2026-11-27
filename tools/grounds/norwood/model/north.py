@@ -12,7 +12,7 @@ P = "north"
 
 
 def gable_building(part, c, ang, L, W, z_eave, z_ridge, wallmat, roofmat, over=0.5, windows=None, hip=False,
-                   quoins=None, gable_mat=None):
+                   quoins=None, gable_mat=None, dress=None, bars="timber_white"):
     """A rectangular building centred on c, its ridge along bearing ang (rad), L long and W wide: walls with
     real window openings, a gable (or hipped) roof overhanging `over`, fascias, barge boards."""
     u = np.array([math.cos(ang), math.sin(ang)])
@@ -21,16 +21,18 @@ def gable_building(part, c, ang, L, W, z_eave, z_ridge, wallmat, roofmat, over=0
     corners = [c - u * L / 2 - v * W / 2, c + u * L / 2 - v * W / 2, c + u * L / 2 + v * W / 2, c - u * L / 2 + v * W / 2]
     # walls: the long sides with windows, the gable ends up to the ridge
     for k in range(4):
-        a, b = corners[(k + 1) % 4], corners[k]
+        a, b = corners[k], corners[(k + 1) % 4]      # anticlockwise: the outside on the right, as wall() wants
         side_len = float(np.linalg.norm(b - a))
         ops = []
         rows = windows if isinstance(windows, list) else ([windows] if windows else [])
-        for w, h0, h1, step in rows:          # one row of openings per storey
+        for row in rows:                      # one row of openings per storey (a fifth item: "pointed")
+            w, h0, h1, step = row[:4]
             n = int(side_len // step)
             for j in range(n):
                 m = (j + 0.5) * side_len / n
-                ops.append((m - w / 2, m + w / 2, h0, h1))
-        wall(part, a, b, 0.0, z_eave, wallmat, openings=ops, depth=0.25, reveal=wallmat, glass="window_dark", sill="render_cream")
+                ops.append((m - w / 2, m + w / 2, h0, h1) + tuple(row[4:]))
+        wall(part, a, b, 0.0, z_eave, wallmat, openings=ops, depth=0.25, reveal=wallmat, glass="window_dark",
+             sill=dress or "render_cream", bars=bars, dress=dress)
         if quoins:
             for q in (a, b):
                 for z in np.arange(0.0, z_eave - 0.3, 0.6):

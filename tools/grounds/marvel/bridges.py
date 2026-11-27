@@ -79,7 +79,8 @@ def tower(bm, ring, h):
 def main():
     ways = load(sys.argv[1:])
     bpy.ops.wm.read_factory_settings(use_empty=True)
-    parts = {"bridge_deck": (ob.material("bridge_deck", (0.72, 0.71, 0.68)), bmesh.new()),
+    # round 13 (PC check of round 12, obl_w: a wide white slab where Google Earth shows a dark road): asphalt grey
+    parts = {"bridge_deck": (ob.material("bridge_deck", (0.42, 0.43, 0.44)), bmesh.new()),
              "bridge_tower": (ob.material("bridge_tower", (0.78, 0.78, 0.76)), bmesh.new())}
     deck = parts["bridge_deck"][1]
     for wid in BOLTE_TOWERS:

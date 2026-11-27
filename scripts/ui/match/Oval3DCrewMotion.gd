@@ -27,6 +27,8 @@ var oval: Oval3D
 var crew: Array = []          # {node, anim, skel, role, side, home: Vector2, job: int, k}
 var _time := -1.0
 var _runner_on := false       # a goal has been signalled and the centre bounce is not yet near
+## Trainers out with a hurt man (Oval3DInjury): crew index k -> true. step leaves them alone.
+var _caring := {}
 
 
 func _init(p_oval: Oval3D) -> void:
@@ -195,7 +197,7 @@ func step(frame_dt: float) -> void:
 		var tr := _nearest_trainer(side, bp) if drinks else -1
 		var taken := {}
 		for c in crew:
-			if int(c["side"]) != side:
+			if int(c["side"]) != side or _caring.has(int(c["k"])):
 				continue
 			var want := -1
 			if str(c["role"]) == "trainer" and (int(c["k"]) == tr or runner_on):
@@ -207,7 +209,102 @@ func step(frame_dt: float) -> void:
 				want = int(c["job"]) if int(c["job"]) >= 0 else _nearest_man(side, Vector2.ZERO, bp, 0.0, {}, INF)
 			c["job"] = want
 	for c in crew:
-		_move(c, dt, bp)
+		if not _caring.has(int(c["k"])):
+			_move(c, dt, bp)
+
+
+## A hurt man of club side at `at` (Oval3DInjury): the n trainers of his club whose places are
+## nearest him go out to him, whatever they were doing. Returned for move_to; release_trainers
+## gives them back.
+func take_trainers(side: int, at: Vector2, n: int) -> Array:
+	var cands := []
+	for c in crew:
+		if int(c["side"]) == side and str(c["role"]) == "trainer" and not _caring.has(int(c["k"])):
+			cands.append([(c["home"] as Vector2).distance_to(at), int(c["k"])])
+	cands.sort()
+	var out := []
+	for i in range(mini(n, cands.size())):
+		var c: Dictionary = _by_k(int(cands[i][1]))
+		c["job"] = -1
+		_caring[int(c["k"])] = true
+		out.append(c)
+	return out
+
+
+func release_trainers(cs: Array) -> void:
+	for c in cs:
+		_caring.erase(int((c as Dictionary)["k"]))
+		(c as Dictionary).erase("help_off")
+
+
+func _by_k(k: int) -> Dictionary:
+	for c in crew:
+		if int(c["k"]) == k:
+			return c
+	return {}
+
+
+## A trainer with a hurt man: to `want` at `pace` m/s (director seconds ddt), facing the man at
+## `man` once there; walking beside him (walk: the walk loop, else the run).
+func move_to(c: Dictionary, want: Vector2, man: Vector2, pace: float, ddt: float, walk: bool,
+		pose := "") -> void:
+	var n: Node3D = c["node"]
+	var ap: AnimationPlayer = c["anim"]
+	var at := Vector2(n.position.x, n.position.z)
+	var step := want - at
+	var vel := Vector2.ZERO
+	if ddt > 0.0 and step.length() > 0.05:
+		var mv := step.limit_length(pace * ddt)
+		at += mv
+		vel = mv / ddt
+	n.position = Vector3(at.x, 0.0, at.y)
+	var turn := Oval3DAnim.TURN * ddt if ddt > 0.0 else PI
+	var clip := "idle"
+	var rate := 1.0
+	var speed := vel.length()
+	var walking: bool = walk and ap.has_animation(WALK_CLIP)
+	if pose != "" and ap.has_animation(pose):
+		# Kneeling by him (Oval3DInjury's clips), facing him.
+		clip = pose
+		var face := man - at
+		if face.length() > 0.2:
+			n.rotation.y = rotate_toward(n.rotation.y, atan2(face.x, face.y), turn)
+	elif speed > (0.3 if walking else RUN_FROM):
+		n.rotation.y = rotate_toward(n.rotation.y, atan2(vel.x, vel.y), turn)
+		if walking:
+			clip = WALK_CLIP
+			rate = clampf(speed / WALK_SPEED, 0.3, 2.0)
+		else:
+			clip = "jog"
+			rate = clampf(speed / oval.anim.loop_speed("jog", c), Oval3DAnim.RATE_MIN, Oval3DAnim.RATE_MAX)
+	else:
+		var face := man - at
+		if face.length() > 0.2:
+			n.rotation.y = rotate_toward(n.rotation.y, atan2(face.x, face.y), turn)
+	if ap.current_animation != clip:
+		ap.play(clip, 0.2)
+	c["posed"] = true
+	ap.advance(maxf(ddt * rate, 1e-4))
+
+
+## A trainer holding a hurt man up (Oval3DInjury's help-off): placed where his frame says, in the
+## clip made with the hurt man's, at the hurt man's clip time t (adv: the time his clip moved on).
+func carry(c: Dictionary, xf: Transform3D, clip: String, t: float, adv: float) -> void:
+	var n: Node3D = c["node"]
+	var ap: AnimationPlayer = c["anim"]
+	n.transform = xf
+	if ap.current_animation != clip:
+		ap.play(clip, 0.3)
+		ap.seek(t, true)
+	else:
+		ap.advance(maxf(adv, 1e-4))
+	c["posed"] = true
+
+
+## The plain walk a trainer walks a hurt man off at: the match crew's own walk (Oval3DCrew's
+## crew_walk, an in-place loop at 1.36 m/s at rate 1).
+const WALK_CLIP := "crew_walk"
+const WALK_SPEED := 1.36
 
 
 ## The trainer of club side nearest the ball.

@@ -94,6 +94,7 @@ var film: MeshInstance3D  # the broadcast film look (_film)
 var anim: Oval3DAnim          # the animation session's controller (row 198)
 var umpires: Array = []        # [{node, anim, ring, role, k}]: the vignettes' umpire set
 var crew: Oval3DCrewMotion     # the clubs' trainers and runners
+var injury: Oval3DInjury       # a hurt man going down and off (row 202 2e)
 var crowd: Oval3DCrowd
 ## The ground's big screens and fence signs (Oval3DScreens): live score, GOAL card, replay.
 var screens: Oval3DScreens
@@ -168,6 +169,10 @@ func build(p_director: MatchDirector, home: String, away: String) -> void:
 	_add_umpires(scene)
 	crew = Oval3DCrewMotion.new(self)
 	crew.build(scene, kits, [home, away])
+	injury = Oval3DInjury.new(self)
+	if not players.is_empty():
+		injury.load_clips(players[0])
+	director.gate = _gate()
 	ball = MeshInstance3D.new()
 	var bm := SphereMesh.new()
 	bm.radius = BALL_R
@@ -248,6 +253,8 @@ func sync(dt: float) -> void:
 		holder = -1 if up or down else _nearest(director.ball["pos"], 1.0)
 		resting = holder < 0 and not up
 	_move_leavers(dt)
+	if injury != null:
+		injury.step(dt)
 	# The umpires first: the players are drawn clear of where they are this frame (_spaced).
 	_move_umpires(dt)
 	if crew != null:
@@ -260,9 +267,13 @@ func sync(dt: float) -> void:
 		# off jogs to the gate, and the man coming on runs to the slot's spot from it.
 		if str(t.get("pid", "")) != str(p.get("pid", "")):
 			if str(p.get("pid", "")) != "":
-				_send_off(i, p)
+				# A hurt man walks off on his own (Oval3DInjury); a rotation jogs to the gate.
+				if injury == null or not injury.hand_off(i, p):
+					_send_off(i, p)
 				anim.run_on(i, _gate())
 			_dress(p, t)
+		if injury != null and injury.owns(i):
+			continue
 		var pos: Vector2 = at[i]
 		var vel: Vector2 = t["vel"]
 		var node: Node3D = p["node"]
@@ -508,6 +519,8 @@ func _sync_crowd(dt: float) -> void:
 ## camera stays put, so the home side then attacks the other way up the screen.
 func set_ends(sign: float) -> void:
 	rotation.y = 0.0 if sign > 0.0 else PI
+	if director != null:
+		director.gate = _gate()
 	umpires_after_cut()
 
 
@@ -526,6 +539,8 @@ func umpires_after_cut() -> void:
 		if anim != null and (anim._in[i] as Dictionary).is_empty():
 			anim._gap[i] = Vector2.ZERO
 	_leavers.clear()
+	if injury != null:
+		injury.after_cut()
 
 
 func _world(v: Vector3) -> Vector3:
@@ -961,6 +976,23 @@ func _send_off(i: int, p: Dictionary) -> void:
 	node.visible = true
 	(q["anim"] as AnimationPlayer).play("jog")
 	_leavers.append({"p": q, "side": side, "to": _gate(), "slot": i})
+
+
+## A spare figure of `side` dressed as the man figure p is now, in his place and pose
+## (Oval3DInjury.hand_off: a hurt man going on off the ground after his replacement has the slot).
+func take_spare(side: int, p: Dictionary) -> Dictionary:
+	var pool: Array = _spares[side]
+	var q: Dictionary = pool.pop_back() if not pool.is_empty() else _spare(side)
+	_dress(q, {"pid": str(p.get("pid", "")), "num": int(p.get("num", -1))})
+	var node: Node3D = q["node"]
+	node.transform = (p["node"] as Node3D).transform
+	node.visible = true
+	return q
+
+
+func return_spare(side: int, q: Dictionary) -> void:
+	(q["node"] as Node3D).visible = false
+	(_spares[side] as Array).append(q)
 
 
 ## The men coming off jog to the gate, and are gone once there.
