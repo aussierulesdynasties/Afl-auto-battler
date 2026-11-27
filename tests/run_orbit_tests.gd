@@ -4,7 +4,8 @@ extends SceneTree
 ## made-up ground (a stadium of known size, a tower beside the camera's path and one between the path and
 ## the stadium), the circle is sized from the stadium, holds one height, climbs smoothly over the tower
 ## by its path and never passes through anything. Then Marvel Stadium as the match builds it, when its
-## model is on this machine. Seeded by design: nothing random runs.
+## model is on this machine.
+## Seeded by design: nothing random runs; the made-up ground and Marvel are fixed geometry.
 
 const STADIUM_R := 120.0     # the made-up stadium's outer radius
 const STADIUM_H := 40.0
