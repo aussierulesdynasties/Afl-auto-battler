@@ -432,7 +432,8 @@ func _contract_parts(p: Dictionary, row: HBoxContainer, info: VBoxContainer, siz
 		return
 	var talks: Dictionary = p.get("talks", {})
 	if bool(talks.get("walked", false)):
-		var gone := "Talks broke down. He'll test free agency"
+		var gone := "Talks broke down. He'll test free agency" if EraRules.on("free_agency") \
+				else "Talks broke down. He'll be delisted"
 		if talks.has("refused"):
 			gone = Contracts.REFUSED_CARD % int(talks["refused"])
 		row.add_child(UiKit.line(gone, UiKit.SECONDARY, UiKit.BAD, true))
@@ -482,7 +483,8 @@ func _confirm_release(p: Dictionary) -> void:
 		var memory := _para(kept, 14, UiKit.TEXT)
 		memory.name = "ReleaseRemembered"
 		box["body"].add_child(memory)
-	box["body"].add_child(_para("He leaves our list and becomes a free agent. We get no draft pick if he signs elsewhere.", 14, UiKit.TEXT))
+	box["body"].add_child(_para("He leaves our list and becomes a free agent. We get no draft pick if he signs elsewhere."
+			if EraRules.on("free_agency") else "He leaves our list, and any club may sign him.", 14, UiKit.TEXT))
 	var gc := ListCosts.release_lines(p)
 	box["body"].add_child(UiKit.stake_row(str(gc[0]), "ReleaseGain"))
 	box["body"].add_child(UiKit.stake_row(str(gc[1]), "ReleaseCost"))
@@ -618,7 +620,8 @@ func _show_talks() -> void:
 		v.add_child(r)
 	var left := Contracts.MAX_OFFERS - int(talks.get("failed", 0))
 	if talks.has("failed") and left == 1:
-		v.add_child(_para("One more failed offer and he'll test free agency.", 13, UiKit.BAD))
+		v.add_child(_para("One more failed offer and he'll test free agency." if EraRules.on("free_agency")
+				else "One more failed offer and he'll be delisted.", 13, UiKit.BAD))
 	v.add_child(UiKit.lbl("Seasons", 14, UiKit.EMPH, true))
 	var term_opts := []
 	for y in range(1, Contracts.MAX_YEARS + 1):
@@ -733,7 +736,8 @@ func _offers_table(v: VBoxContainer) -> void:
 	var note := "Rivals see our offer and can answer it once. Our second offer is final." if stage == "open" \
 			else ("Our next offer is final. Rivals answer, then he decides." if stage == "final" else "")
 	if note != "" and not rows.is_empty():
-		v.add_child(_para(note + " Otherwise he decides when free agency closes.", 12, UiKit.MUTED))
+		v.add_child(_para(note + (" Otherwise he decides when free agency closes." if EraRules.on("free_agency")
+				else " Otherwise he decides when the draft starts."), 12, UiKit.MUTED))
 
 
 func _make_offer(salary: int, years: int) -> void:
@@ -818,7 +822,9 @@ func _agents(body: VBoxContainer) -> void:
 			return str(a.get("id", "")) < str(b.get("id", ""))
 		return av > bv if _fa_sort_desc else av < bv)
 	if fas.is_empty():
-		body.add_child(_para("No free agents right now. Rivals let players go when the season ends.", 13, UiKit.MUTED))
+		body.add_child(_para("No free agents right now. Rivals let players go when the season ends."
+				if EraRules.on("free_agency") else "No delisted players right now. Rivals delist players when the season ends.",
+				13, UiKit.MUTED))
 	# Each card is built as it scrolls into view, not all 98 on every tap
 	# (0.3 s, bug bash 2026-11-25; director, batch F): the list looks the same.
 	_agent_body = body

@@ -2644,6 +2644,12 @@ func _test_score_bug() -> void:
 	m.call("_track_momentum", {"mom": 0.6})
 	_check(meter != null and is_equal_approx(float(meter.get("_v")), float(m.get("_momentum"))),
 			"The line follows momentum")
+	# Thinner and less bright (director, 2026-11-26): 3.0 tall (it stood 13), drawn at 0.6 strength.
+	var shade_h: float = (line.get_node("Shade") as Control).size.y if line != null else -1.0
+	_check(meter != null and is_equal_approx(meter.size.y, 3.0) and is_equal_approx(shade_h, 3.0)
+			and is_equal_approx(meter.modulate.a, 0.6),
+			"The line is 3.0 tall at 0.6 strength (%.1f tall, shade %.1f, %.2f strength)" % [
+			meter.size.y if meter else -1.0, shade_h, meter.modulate.a if meter else -1.0])
 	# A goal's stat card (row 207, rules 2.94-2.95): on the picture's foot, over the bug.
 	m.call("_show_stat_card", {"kind": "goal", "name": "Nick Daicos", "club": "COL",
 			"card": {"role": "MID", "disposals": 18, "effective_disposals": 16, "clearances": 5,

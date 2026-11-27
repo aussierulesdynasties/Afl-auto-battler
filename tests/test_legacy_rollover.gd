@@ -48,6 +48,7 @@ func run() -> void:
 	_t("_test_canon_retire", ["rioli_home", "rival"])
 	_t("_test_canon_retire", ["rioli_home", "let_go"])
 	_t("_test_canon_retire", ["jurrah_home", "fight"])
+	_t("_test_canon_retire_missing")
 	_t("_test_campaign")
 	GameState.replay_seed = 0
 	GameDB.reload()
@@ -1216,4 +1217,23 @@ func _test_canon_retire(id: String, how: String) -> void:
 			break
 	if how == "fight":
 		_check(seen.size() == 2, "%s: over the seeds, talking to him both keeps and loses him (%s)" % [id, str(seen.keys())])
+	GameDB.reload("1990")
+
+
+## A canon retirement whose player is on no list (the save made its own history:
+## he was never drafted, or was delisted): nobody is asked and no news of his
+## retirement follows (bug bash P3-6; it used to post "Cyril Rioli has retired").
+func _test_canon_retire_missing() -> void:
+	var m := LegacyRollover.canon("rioli_home")
+	GameState.reset("1990")
+	_start("HAW")
+	_check(LegacyRollover.canon_find(GameState, m).is_empty(), "Rioli is on no list in this save")
+	var cards := _canon_cards(m)
+	_check(cards.is_empty(), "Nobody gets his card (%d)" % cards.size())
+	var e: Dictionary = LegacyRollover._canon_st(GameState).get("rioli_home", {})
+	_check(not e.has("asked"), "He is not marked asked (%s)" % str(e))
+	GameState.news = []
+	LegacyRollover.canon_moves(GameState, int(m["year"]))
+	var news := GameState.news.filter(func(n): return str(m["last"]) in str(n.get("text", "")))
+	_check(news.is_empty(), "No news of his retirement (%s)" % str(news))
 	GameDB.reload("1990")

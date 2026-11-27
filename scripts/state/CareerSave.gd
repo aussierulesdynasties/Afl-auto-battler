@@ -1,6 +1,9 @@
 class_name CareerSave
 extends RefCounted
-## The career save file: one Variant blob written with FileAccess.store_var.
+## The career save file: one Variant blob written with FileAccess.store_var,
+## packed (ZSTD) inside a small envelope that keeps its version outside
+## (director, 2026-11-26, P2-6: a 12-season save went from 11.4 MB to 1.4 MB).
+## A save from before packing is the blob itself and still opens.
 ##
 ## Player dictionaries are shared by reference all over a career (the season
 ## lists, your list, the draft pool and picks, the prospect pool, GameDB's
@@ -134,7 +137,7 @@ static func _write_blob(blob: Dictionary, path: String) -> bool:
 		return false
 	# The same bytes store_var writes (a 32-bit length, then the encoded
 	# value), kept in hand so the check below needs no decode.
-	var bytes := var_to_bytes(blob)
+	var bytes := var_to_bytes(_packed(blob))
 	var head := PackedByteArray()
 	head.resize(4)
 	head.encode_u32(0, bytes.size())
@@ -172,6 +175,26 @@ static func _write_blob(blob: Dictionary, path: String) -> bool:
 		return false
 	_note_current(path, blob.get("meta", {}))
 	return true
+
+
+## The envelope a save is written in: the blob's version and header, and the
+## blob itself compressed. Only the envelope is read without unpacking.
+static func _packed(blob: Dictionary) -> Dictionary:
+	var raw := var_to_bytes(blob)
+	return {"version": blob.get("version", VERSION), "meta": blob.get("meta", {}),
+			"size": raw.size(), "packed": raw.compress(FileAccess.COMPRESSION_ZSTD)}
+
+
+## What a save file holds, unpacked: the blob from an envelope, or a save
+## from before packing as it is. {} if an envelope does not unpack.
+static func unpacked(v: Variant) -> Variant:
+	if not (v is Dictionary and (v as Dictionary).has("packed")):
+		return v
+	var packed = v["packed"]
+	if not (packed is PackedByteArray) or (packed as PackedByteArray).is_empty():
+		return {}
+	var blob = bytes_to_var((packed as PackedByteArray).decompress(int(v.get("size", 0)), FileAccess.COMPRESSION_ZSTD))
+	return blob if blob is Dictionary else {}
 
 
 static func _wrote(p: String, head: PackedByteArray, bytes: PackedByteArray) -> bool:
@@ -292,7 +315,7 @@ static func _blob_at(path: String) -> Dictionary:
 	var f := FileAccess.open(path, FileAccess.READ)
 	if f == null:
 		return {}
-	var blob = f.get_var()
+	var blob = unpacked(f.get_var())
 	f.close()
 	if not (blob is Dictionary) or not (blob as Dictionary).has("state"):
 		return {}

@@ -10,6 +10,8 @@ extends BoxContainer
 
 signal changed(note: String)
 signal inspect(id: String)
+## A player was tapped or clicked (a screen that shows the list as its own stage goes back to the oval).
+signal tapped
 
 ## Selection lines -> the oval's spots, in order (FormationView.SLOTS). The
 ## centre square is MID (centre, two inside mids); the wings are WING.
@@ -107,6 +109,16 @@ var rest_host: Control = null
 ## the right-hand column (director, 2026-11-25: "A · ground across"). null keeps
 ## it under the oval. Set before setup().
 var bench_host: Control = null
+## A PC's players not picked as one-line rows, down then across in as many
+## columns as their box needs, at most three (director's board, Batch 5).
+var list_rows := false
+const LIST_ROW_H := 26.0
+var _row_cols := 1
+var _rows_n := 0
+## Where the line under the filter goes up to while the list is out of
+## sight (a PC's Our side stage): the picked player's line and the note
+## after a swap, as a phone lifts them over its list.
+var note_lift_host: Control = null
 ## A phone's list pulls up (director, 2026-11-11: "List pulls up"): tap or drag
 ## its top edge and it rises over the bottom half of the oval; a tap on the
 ## oval, or picking a player, drops it back. Set before setup().
@@ -374,11 +386,17 @@ func _build() -> void:
 		_grid.columns = 2 if rest_host != null else clampi(int(UiKit.view_width(self) / 400.0), 3, 8)
 	_grid.add_theme_constant_override("h_separation", UiKit.Space.CLOSE)
 	_grid.add_theme_constant_override("v_separation", UiKit.Space.CLOSE)
+	if list_rows:
+		_grid.columns = _row_cols
+		_grid.add_theme_constant_override("v_separation", 2)
 	_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	if stacked:
 		var gs := UiKit.scroll(_grid)
 		gs.name = "NotSelectedScroll"
 		rest.add_child(gs)
+		if list_rows:
+			gs.size_flags_vertical = Control.SIZE_EXPAND_FILL
+			gs.resized.connect(_fit_rows.bind(gs))
 	else:
 		rest.add_child(_grid)
 	_fill_grid()
@@ -395,7 +413,8 @@ func _fill_note() -> void:
 	_note_lifted = null
 	var rest := _note_box
 	# At rest a pull-up phone list shows one line (director, 2026-11-25).
-	var lift := pull_up and stacked and rest_host == null
+	var host := is_instance_valid(note_lift_host)
+	var lift := host or (pull_up and stacked and rest_host == null)
 	if _read_only:
 		var ro := UiKit.lbl("Their side as it would take the field: tap a player to see him.", UiKit.SMALL, UiKit.MUTED)
 		ro.name = "ReadOnlyHint"
@@ -406,7 +425,8 @@ func _fill_note() -> void:
 		var bar := UiKit.hbox(UiKit.Space.CLOSE)
 		bar.name = "PickedBar"
 		# His name whole: the line wraps rather than cut it.
-		var who := UiKit.lbl("%s picked: tap who he swaps with." % GameDB.player_display_name(_player(_picked)),
+		var who := UiKit.lbl("%s picked: %s who he swaps with." % [GameDB.player_display_name(_player(_picked)),
+				"tap" if (ScreenLayout.is_touch() or not _wide) else "click"],
 				UiKit.SMALL, UiKit.TEXT, true)
 		who.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		who.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -446,8 +466,9 @@ func _fill_note() -> void:
 			# Just after a swap the list rests as his note, in the filter row's
 			# place and height, so the oval does not move; pulled up, the note
 			# sits above the filter row (director, 2026-11-25).
-			hint.custom_minimum_size.y = ((_role_tabs[0] as Control).get_parent() as Control).get_combined_minimum_size().y
-			hint.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+			if not host:
+				hint.custom_minimum_size.y = ((_role_tabs[0] as Control).get_parent() as Control).get_combined_minimum_size().y
+				hint.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 			_lift_note(hint)
 		if memory_note != "" and start_note != "":
 			# A fact, not a state: plain text, not the note's green.
@@ -457,11 +478,20 @@ func _fill_note() -> void:
 			rest.add_child(mem)
 	# The box keeps no gap open under the filter row once its line has gone up.
 	_note_box.visible = _note_box.get_child_count() > 0
+	if host:
+		note_lift_host.visible = is_instance_valid(_note_lifted)
 
 
-## A line of the note moved to the top of the list, over the filter row.
+## The line under the filter built again, where the screen now wants it
+## (note_lift_host set or cleared).
+func refill_note() -> void:
+	_fill_note()
+
+
+## A line of the note moved to the top of the list, over the filter row, or
+## to note_lift_host.
 func _lift_note(n: Control) -> void:
-	var top := _note_box.get_parent()
+	var top := note_lift_host if is_instance_valid(note_lift_host) else _note_box.get_parent()
 	_note_box.remove_child(n)
 	top.add_child(n)
 	top.move_child(n, 0)
@@ -663,6 +693,9 @@ func _fill_grid() -> void:
 		if ha != hot.has(str(b["id"])):
 			return ha
 		return int(Rating.ovr(a)) > int(Rating.ovr(b)))
+	if list_rows:
+		_lay_rows(out, keep)
+		return
 	for p in out:
 		var id := str(p["id"])
 		var c: Control = keep.get(id)
@@ -675,8 +708,132 @@ func _fill_grid() -> void:
 		_grid.add_child(UiKit.lbl("Nobody else here.", UiKit.SMALL, UiKit.MUTED))
 
 
+## A PC's rows down then across: as many to a column as share the list out
+## evenly over the columns its box needs, the cells after the last row of a
+## shorter column left empty.
+func _lay_rows(out: Array, keep: Dictionary) -> void:
+	_rows_n = out.size()
+	if out.is_empty():
+		_grid.columns = 1
+		_grid.add_child(UiKit.lbl("Nobody else here.", UiKit.SMALL, UiKit.MUTED))
+		return
+	var r := int(ceil(out.size() / float(clampi(_row_cols, 1, 3))))
+	var k := int(ceil(out.size() / float(r)))
+	_grid.columns = k
+	var at := 0
+	for i in range(r):
+		for j in range(k):
+			var idx := j * r + i
+			var c: Control = null
+			if idx < out.size():
+				var id := str(out[idx]["id"])
+				c = keep.get(id)
+				if c == null:
+					c = _list_row(id)
+					_grid.add_child(c)
+			else:
+				c = Control.new()
+				c.custom_minimum_size.y = UiKit.px(LIST_ROW_H)
+				c.mouse_filter = Control.MOUSE_FILTER_IGNORE
+				_grid.add_child(c)
+			_grid.move_child(c, at)
+			at += 1
+
+
+## Two columns, as the director's board shows them (one for a lone man); a
+## third only when the box is too short for two.
+func _fit_rows(gs: Control) -> void:
+	if gs.size.y <= 0.0:
+		return
+	var sep := float(_grid.get_theme_constant("v_separation"))
+	var fit := maxi(1, int((gs.size.y + sep) / (UiKit.px(LIST_ROW_H) + sep)))
+	var k := clampi(int(ceil(float(_rows_n) / float(fit))), mini(2, maxi(_rows_n, 1)), 3)
+	if k != _row_cols:
+		_row_cols = k
+		_fill_grid.call_deferred()
+
+
+## A player not picked, on one line: his name, position, OVR/POT and his
+## fatigue, morale and form (or why he can't play). The rest of his card is
+## his tooltip and his profile.
+func _list_row(id: String) -> Button:
+	var b := Button.new()
+	b.focus_mode = Control.FOCUS_NONE
+	b.mouse_filter = Control.MOUSE_FILTER_PASS
+	var p := _player(id)
+	b.name = "Card_" + id
+	b.set_meta("id", id)
+	b.set_meta("place", "")
+	b.set_meta("sig", _card_sig(id))
+	UiKit.paint_choice(b, id == _picked)
+	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	b.custom_minimum_size = Vector2(0, UiKit.px(LIST_ROW_H))
+	var face := UiKit.hbox(UiKit.Space.CLOSE)
+	face.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	face.offset_left = 8
+	face.offset_right = -8
+	b.add_child(face)
+	var full_name := GameDB.player_display_name(p)
+	var n := UiKit.ellipsis(full_name, 13, UiKit.TEXT, true)
+	n.name = "Name_" + id
+	n.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	n.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	n.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS_FORCE
+	n.resized.connect(func():
+		n.text = BenchDrawer._fit_name(full_name, n.size.x, n.get_theme_font_size("font_size")))
+	face.add_child(n)
+	var tag := Ratings.role_tag(p)
+	if tag.length() > 8:
+		tag = str(p.get("role", tag))
+	var t := UiKit.lbl(tag, 12, UiKit.MUTED)
+	t.autowrap_mode = TextServer.AUTOWRAP_OFF
+	t.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	t.custom_minimum_size.x = 30
+	face.add_child(t)
+	var figs := "%d/%d" % [int(Rating.ovr(p)), pot(p)] if _shows_condition() else "%d" % int(Rating.ovr(p))
+	var nums := UiKit.lbl(figs, 13, UiKit.TEXT, true)
+	nums.autowrap_mode = TextServer.AUTOWRAP_OFF
+	nums.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	nums.custom_minimum_size.x = 40
+	nums.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	face.add_child(nums)
+	b.tooltip_text = full_name
+	if not Ratings.available(p):
+		var out := UiKit.lbl(_why_out(p), 12, UiKit.BAD)
+		out.name = "Out_" + id
+		out.autowrap_mode = TextServer.AUTOWRAP_OFF
+		out.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		out.custom_minimum_size.x = 60
+		out.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		face.add_child(out)
+	elif _shows_condition():
+		var strip := PlayerCondition.strip(p, GameState.form_log, GameState.reserves_log, UiKit.TINY)
+		strip.custom_minimum_size.x = 60
+		strip.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		face.add_child(strip)
+		b.tooltip_text = PlayerCondition.tooltip(PlayerCondition.read(p, GameState.form_log, GameState.reserves_log))
+	if (_marks["hot"] as Dictionary).has(id):
+		b.tooltip_text = ReservesForm.hot_full(_marks["hot"][id]) + "\n" + b.tooltip_text
+	_ignore_mouse(face)
+	if _read_only:
+		b.pressed.connect(func(): inspect.emit(id))
+		return b
+	b.pressed.connect(_tap.bind(id, ""))
+	b.set_drag_forwarding(
+			func(_at: Vector2):
+				b.set_drag_preview(drag_preview(full_name))
+				return {"team_builder": id},
+			func(_at: Vector2, data) -> bool:
+				return data is Dictionary and (data as Dictionary).has("team_builder"),
+			func(_at: Vector2, data) -> void:
+				_swap(str(data["team_builder"]), id, ""))
+	return b
+
+
 ## A card in the list of players not picked.
 func _list_card(id: String) -> Button:
+	if list_rows:
+		return _list_row(id)
 	var c := _card(id, false, "")
 	c.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	# Two columns share the width: the cards shrink (their lines cut short)
@@ -1124,6 +1281,7 @@ func _why_out(p: Dictionary) -> String:
 ## First tap picks a player; the second swaps him with that player or spot.
 ## Tapping him again lets him go.
 func _tap(id: String, place: String) -> void:
+	tapped.emit()
 	_note_up = false
 	# A raised list has done its job once a player is tapped: the whole side shows again.
 	if _raised:

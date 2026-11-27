@@ -245,10 +245,11 @@ static func select_22(list_players: Array, dual := -1) -> Dictionary:
 					ground.append(_for_slot(p, role))
 					used[p["id"]] = true
 					added += 1
-		# No recognised ruck on the list: the best tap player available goes
-		# up as an emergency, not simply the best overall player.
+		# No recognised ruck on the list: a backup key forward goes up
+		# (backup_ruck), else the best tap player available, not simply the
+		# best overall player.
 		if role == "RUCK" and added < need:
-			for p in by_ruck(pool):
+			for p in ruck_fill_order(pool):
 				if added >= need:
 					break
 				if not used.has(p["id"]):
@@ -429,7 +430,7 @@ static func select_side(list_players: Array, selection: Dictionary = {}) -> Dict
 							ground.append(_for_slot(p, role))
 							used[id] = true
 							have += 1
-			for p in (by_ruck(pool) if role == "RUCK" else pool):
+			for p in (ruck_fill_order(pool) if role == "RUCK" else pool):
 				if have >= int(slot[1]):
 					break
 				var id := str(p["id"])
@@ -565,6 +566,44 @@ static func _merit_swaps(pool: Array, ground: Array, used: Dictionary, promised:
 			ground[weak] = _for_slot(by_id[best], line)
 			used[best] = true
 			starters[best] = best_v
+
+
+## A key forward who goes up when no ruck is there (director, 2026-11-26:
+## "allow key forwards to ruck in substitute IF they have done so IRL or are at
+## a minimum height threshold as the default backup"): a key forward by his own
+## position with a hit-out on his real AFL stats sheet (the real season he is
+## rated on), or one BACKUP_RUCK_CM or taller, the height the game asks of a
+## player learning the ruck (GameState.RUCK_CM).
+const BACKUP_RUCK_CM := 196.0
+
+
+static func backup_ruck(p: Dictionary) -> bool:
+	var own := str(p.get("own_role", p.get("role", "")))
+	if own != "FWD":
+		return false
+	var view := p
+	if str(p.get("role", "")) != "FWD":
+		view = p.duplicate()
+		view["role"] = "FWD"
+	if not Matchups.is_key_forward(view):
+		return false
+	return float(p.get("ho", 0.0)) > 0.0 or float(p.get("height_cm", 0.0)) >= BACKUP_RUCK_CM
+
+
+## Who fills an empty ruck spot, in order: rucks, then the backup key
+## forwards (backup_ruck), then everyone else, each by ruck work (by_ruck).
+static func ruck_fill_order(players: Array) -> Array:
+	var rucks := []
+	var backups := []
+	var rest := []
+	for p in by_ruck(players):
+		if plays_role(p, "RUCK"):
+			rucks.append(p)
+		elif backup_ruck(p):
+			backups.append(p)
+		else:
+			rest.append(p)
+	return rucks + backups + rest
 
 
 ## Players ordered by ruck work, best first (ties by overall), for filling

@@ -123,6 +123,9 @@ var _bounce_men: Array = []
 ## Who the last free kick was paid to ({"side", "id"}): inside his forward 50
 ## he takes it as a set shot (_free_set_shot).
 var _free_taker := {}
+## The man the free that started this chain was paid to, when it was not a set
+## shot: he takes the kick himself (play_chain's first carrier).
+var _free_man := {}
 ## The side whose disposal last went loose (spoiled, smothered) or astray (a
 ## clanger): a loose-ball win off it in the next chain is an intercept.
 var _lost_by := -1
@@ -259,6 +262,8 @@ var lockup_rng := RandomNumberGenerator.new()
 var fumble_rng := RandomNumberGenerator.new()
 ## Where a ball knocked loose comes to rest (_comes_to_rest): its own stream.
 var loose_rng := RandomNumberGenerator.new()
+## A defender rushing it through near his own goal (_rushed_through).
+var rush_rng := RandomNumberGenerator.new()
 ## Whether a held tackle was a run-down (_run_down): its own stream, so every other roll in
 ## the match draws exactly as before.
 var rundown_rng := RandomNumberGenerator.new()
@@ -663,6 +668,7 @@ func _init(home: Squad, away: Squad, seed: int = 0) -> void:
 	gather_rng.seed = seed * 113 + 127
 	fumble_rng.seed = seed * 127 + 131
 	loose_rng.seed = seed * 181 + 191
+	rush_rng.seed = seed * 229 + 233
 	rundown_rng.seed = seed * 193 + 197
 	lead_rng.seed = seed * 109 + 113
 	# Its own seed: it once shared lead_rng's, so the mid-kick intercept dice
@@ -2727,6 +2733,56 @@ const HB_ROLL := 1.15
 static func _tv(key: String, value: float) -> float:
 	return float(tune.get(key, value))
 const PRESS_RUSH_GAIN := 0.96
+## Rushed behinds (director, 2026-11-26, P2-1: "Add at the 2026 rate"): a
+## defender closed down within RUSH_DEPTH metres of his own goal line rushes it
+## through this often, unless he marked it or was paid a free (_holds_mark). Only when he is backed
+## up on the line (director, 2026-11-27: "players only revert to rushing the
+## behind if they have no other choice"; asked how close, he chose "Within 5 m"
+## and, told that gives fewer than the real 2.12 a team a game, "Fewer is fine").
+## Measured over 612 paired matches, every time (1.0): 5 m gives 0.4, 9 m 0.7,
+## 20 m 2.2 (afl_team_rates.json "rushed_behinds": real 2.12, AFL Tables).
+const RUSH_DEPTH := 5.0
+const RUSH_THROUGH := 1.0
+
+
+## `side`'s man, closed down near his own goal, rushes it through: a behind to
+## the other side that no one of theirs kicked, and `side` kicks in.
+## A man who has marked it, or been paid a free, takes his kick: the protected
+## area keeps the opposition off him, so he is never the one who rushes it
+## through. His events since he got the ball say whether one was a mark or a free.
+func _holds_mark(carrier: Dictionary) -> bool:
+	var pid := str(carrier.get("id", ""))
+	var k := events.size() - 1
+	while k >= 0:
+		var ev: Dictionary = events[k]
+		k -= 1
+		# A change off the bench or an injury logged in between is not play (seed 38: the free to
+		# WCE_42, a sub, then he rushed it).
+		if str(ev.get("kind", "")) in ["sub", "moment", "injury"]:
+			continue
+		if str(ev.get("player_id", "")) != pid:
+			return false
+		if str(ev.get("kind", "")) in ["mark", "free", "fifty"]:
+			return true
+	return false
+
+
+func _rushed_through(side: int, carrier: Dictionary, at_fp: float, presser) -> Dictionary:
+	var opp := 1 - side
+	_t(opp, "behinds")
+	_t(opp, "rushed_behinds")
+	_scored(opp, 1, null)
+	q_behinds[current_quarter - 1][opp] += 1
+	_emit("behind", opp, at_fp, null, _scoreline(opp, "Rushed behind"))
+	var ev: Dictionary = events[events.size() - 1]
+	ev["rushed"] = true
+	ev["setshot"] = false
+	ev["rusher_id"] = str(carrier.get("id", ""))
+	if presser != null:
+		ev["presser_id"] = str(presser.get("id", ""))
+	_tag_shot(false)
+	_last_disp["end"] = "rushed"
+	return {"outcome": "behind", "fp": kick_in_fp(opp), "actor": carrier, "next_side": side}
 ## A close defender occasionally gets boot to ball. Around one or two per
 ## match across both sides; pressure and the smotherer's ability move it.
 const SMOTHER_BASE := 0.008
@@ -3440,10 +3496,28 @@ func _contestant(sq: Squad) -> Array:
 			best = p
 	if best != null:
 		return [best]
+	# No ruck out there: a backup key forward goes up (Ratings.backup_ruck,
+	# director 2026-11-26), else the best tap man on the ground.
+	for p in sq.ground:
+		if _backup_ruck(p) and (best == null or float(p["attr"]["ruck"]) > float(best["attr"]["ruck"])):
+			best = p
+	if best != null:
+		return [best]
 	for p in sq.ground:
 		if best == null or float(p["attr"]["ruck"]) > float(best["attr"]["ruck"]):
 			best = p
 	return [] if best == null else [best]
+
+
+## Ratings.backup_ruck, worked out once a player a match.
+var _backup_cache := {}
+
+
+func _backup_ruck(p: Dictionary) -> bool:
+	var id := str(p.get("id", ""))
+	if not _backup_cache.has(id):
+		_backup_cache[id] = Ratings.backup_ruck(p)
+	return bool(_backup_cache[id])
 
 
 ## A ruckman by his own listing (any position he can be picked in), whatever
@@ -3711,6 +3785,12 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 			var marker := _on_ground(side, str(_chain_from.get("gatherer", _chain_from.get("id", ""))))
 			if not marker.is_empty():
 				carrier = marker
+		# The free was paid to him, so he takes the kick (a teammate 1 m away
+		# took it 242 times in 281 frees over 10 matches, and the 3D drew a
+		# 1 m lob to him: director, 2026-11-27, "Weddles kick is the one that
+		# makes no sense here"). The pick is still drawn, as for a mark.
+		if touches == 1 and chain_origin == "free" and not _free_man.is_empty():
+			carrier = _free_man
 		var kick_in_play_on := _kick_in_play_on(carrier) if is_kick_in else false
 		# The loose ball won off the other side's spoiled, smothered or
 		# astray disposal is an intercept possession (Champion Data), by
@@ -3959,6 +4039,20 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 			_press_where(opp, atk_fp, in_d50, false)
 			if in_d50:
 				_t(side, "d50_rushed")
+				# Near his own goal he rushes it through (director,
+				# 2026-11-26, P2-1): a behind to them, and we kick in.
+				if (not is_kick_in and atk_fp <= -(gline - _tv("RUSH_DEPTH", RUSH_DEPTH))
+						and not _holds_mark(carrier) and rush_rng.randf() < _tv("RUSH_THROUGH", RUSH_THROUGH)):
+					# He runs it over the line, so the kick or handball written
+					# above never happened (director, 2026-11-26, "hed simply run
+					# over the line"): it goes from the log and from the counts.
+					if disposal_event == events.size() - 1:
+						events.remove_at(disposal_event)
+						# Not a kick-in (above), so it was counted as a disposal.
+						for undone in ["kicks" if disposal_kind == "kick" else "handballs", "disposals"]:
+							_t(side, undone, -1.0)
+							_p(carrier, undone, -1.0)
+					return _rushed_through(side, carrier, fp, presser)
 			var turn_p: float = (_tv("PRESS_TURNOVER", PRESS_TURNOVER_FLOW)
 					* (0.766 + 0.40 * _a(presser, "pressure") / 100.0)
 					* (1.170 - 0.40 * _a(carrier, "disposal") / 100.0))
@@ -5328,6 +5422,7 @@ func run_extra_time() -> Dictionary:
 			var i50_1 := float(team_stats[1].get("inside50", 0.0))
 			var side := 1 if i50_1 > i50_0 else 0
 			_t(side, "behinds")
+			_t(side, "rushed_behinds")
 			# Awarded, not played: no chain earned it, so the last chain's
 			# touches and origin get no credit for it.
 			_chain_touch = {}
@@ -5421,6 +5516,9 @@ func _play_one_chain(T: Dictionary) -> void:
 	var res := {}
 	_last_disp = {}
 	var taker := _free_set_taker(side, start_fp) if chain_origin == "free" else {}
+	_free_man = {}
+	if chain_origin == "free" and taker.is_empty() and int(_free_taker.get("side", -1)) == side:
+		_free_man = _on_ground(side, str(_free_taker.get("id", "")))
 	_free_taker = {}
 	if not taker.is_empty():
 		res = _free_set_shot(side, start_fp, taker)
@@ -5446,6 +5544,8 @@ func _play_one_chain(T: Dictionary) -> void:
 	next_side = (1 - side) if ["turnover", "behind", "free"].has(outcome) else -1
 	if outcome == "free" and res.has("free_side"):
 		next_side = int(res["free_side"])
+	if res.has("next_side"):
+		next_side = int(res["next_side"])  # a rushed behind: the side that conceded it kicks in
 	_prev_end = outcome
 	_prev_locked = outcome == "stoppage" and res.get("actor") != null
 	if outcome == "loose":
@@ -7320,6 +7420,7 @@ func _bomb(side: int, shooter: Dictionary, defender: Dictionary) -> Dictionary:
 		# Rushed through for a behind: no one's shot.
 		_scored(side, 1, null)
 		_t(side, "behinds")
+		_t(side, "rushed_behinds")
 		q_behinds[current_quarter - 1][side] += 1
 		_emit("behind", side, fp, null, _scoreline(side, "Rushed behind"))
 		events[events.size() - 1]["rushed"] = true

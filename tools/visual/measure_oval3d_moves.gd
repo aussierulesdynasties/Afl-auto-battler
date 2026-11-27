@@ -6,7 +6,8 @@ extends SceneTree
 ## every touch the director makes (MatchDirector.contacts: kick, handball, mark): which clip was
 ## playing, whether it started before the touch (planned) or at it (late: no warning), how far the
 ## clip's contact frame was from the touch (s), and in the frame of the touch how far the drawn ball
-## was from the boot or the palms (m). Summary lines MOVES (one per kind) for a PR or a test.
+## was from the boot or the palms (m), and how far his drawn hips were from his token (m: the clip
+## drawn somewhere his token is not). Summary lines MOVES (one per kind) for a PR or a test.
 
 const DT := 1.0 / 60.0
 
@@ -65,7 +66,7 @@ func _run() -> void:
 			var who := int(c["who"])
 			if kind in ["kick", "handball", "mark"] and who >= 0:
 				if not stats.has(kind):
-					stats[kind] = {"n": 0, "clip": 0, "planned": 0, "off": [], "gap": []}
+					stats[kind] = {"n": 0, "clip": 0, "planned": 0, "off": [], "gap": [], "hips": []}
 				stats[kind]["n"] = int(stats[kind]["n"]) + 1
 				var o0: Dictionary = anim._once[who]
 				touched[who] = [kind, t, not o0.is_empty() and str(o0.get("how", "")) == kind]
@@ -131,7 +132,10 @@ func _run() -> void:
 			if before < float(o["touch"]) and now >= float(o["touch"]):
 				var m: Dictionary = anim._moments[str(o["anim"])]
 				var limb: Vector3 = (anim.players[who]["node"] as Node3D).transform * anim._limb(anim.players[who], str(m["limb"]))
-				crossed[who] = [str(o["how"]), t, oval.ball.position.distance_to(limb), str(o["anim"]), float(o.get("held", 0.0))]
+				var hw: Vector3 = anim._hips_world(anim.players[who]).origin
+				var tok: Vector2 = anim.director.tokens[who]["pos"]
+				crossed[who] = [str(o["how"]), t, oval.ball.position.distance_to(limb), str(o["anim"]), float(o.get("held", 0.0)),
+						Vector2(hw.x, hw.z).distance_to(tok)]
 				if o.has("drop") and drop_at.has(who):
 					# The drop from his hands to the boot, in real seconds: the fall's own g.
 					# The fall as timed when he let go (real s); a touch that came early re-times
@@ -158,9 +162,10 @@ func _run() -> void:
 			var lag := float(crossed[who][1]) - float(touched[who][1])
 			(st["off"] as Array).append(lag)
 			(st["gap"] as Array).append(float(crossed[who][2]))
+			(st["hips"] as Array).append(float(crossed[who][5]))
 			held.append(float(crossed[who][4]))
 			if OS.get_environment("MOVES_EACH") != "":
-				print("  %s t=%.2f who=%d %s lag=%.3f gap=%.3f ahead=%s held=%.2f" % [kind, t, who, crossed[who][3], lag, crossed[who][2], touched[who][2], crossed[who][4]])
+				print("  %s t=%.2f who=%d %s lag=%.3f gap=%.3f ahead=%s held=%.2f hips-token=%.2f" % [kind, t, who, crossed[who][3], lag, crossed[who][2], touched[who][2], crossed[who][4], crossed[who][5]])
 			touched.erase(who)
 			crossed.erase(who)
 	for kind in stats:
@@ -169,11 +174,14 @@ func _run() -> void:
 		gaps.sort()
 		var offs: Array = st["off"]
 		offs.sort()
+		var hips: Array = st["hips"]
+		hips.sort()
 		var med := func(a: Array) -> float: return float(a[a.size() / 2]) if a.size() > 0 else -1.0
 		var p90 := func(a: Array) -> float: return float(a[int(a.size() * 0.9)]) if a.size() > 0 else -1.0
-		print("MOVES %s: %d touches, %d reached their contact with the clip (%d started ahead of the touch), picture lags the touch (negative: early) median %.3f s p90 %.3f s, ball to %s median %.3f m p90 %.3f m" % [
+		print("MOVES %s: %d touches, %d reached their contact with the clip (%d started ahead of the touch), picture lags the touch (negative: early) median %.3f s p90 %.3f s, ball to %s median %.3f m p90 %.3f m, hips to his token median %.2f m p90 %.2f m max %.2f m" % [
 				kind, st["n"], st["clip"], st["planned"], med.call(offs), p90.call(offs),
-				"boot" if kind == "kick" else "palms", med.call(gaps), p90.call(gaps)])
+				"boot" if kind == "kick" else "palms", med.call(gaps), p90.call(gaps),
+				med.call(hips), p90.call(hips), float(hips[-1]) if hips.size() > 0 else -1.0])
 	if drops.size() > 0:
 		var ts: Array = drops.map(func(d): return float(d[0]))
 		var hs: Array = drops.map(func(d): return float(d[1]))

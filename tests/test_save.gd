@@ -46,6 +46,8 @@ func run() -> void:
 	_t("_test_earlier_saves_restore")
 	_t("_test_save_costs")
 	_t("_test_honoured_ratings_survive_reload")
+	_t("_test_saves_are_packed")
+	_t("_test_resume_screen")
 	GameState.delete_saved_career()
 	GameState.replay_seed = 0
 	print(Ran.line("Save", self))
@@ -1258,6 +1260,46 @@ func _test_earlier_saves_restore() -> void:
 ## once, not once per question; a new season is saved once per tap; a
 ## Continue from a fresh start does not parse the data files twice; and a
 ## the new save is read, not a remembered answer.
+## Saves are packed (director, 2026-11-26, P2-6): the file is an envelope
+## around the compressed career, several times smaller, and opens as the same
+## career. A save from before, written unpacked, still opens and is packed
+## the next time it saves.
+func _test_saves_are_packed() -> void:
+	_new_season("GEE")
+	_check(GameState.save_career(), "(setup) the career saves")
+	var f := FileAccess.open(GameState.save_path, FileAccess.READ)
+	var env = f.get_var()
+	var on_disk := f.get_length()
+	f.close()
+	_check(env is Dictionary and (env as Dictionary).has("packed") and not (env as Dictionary).has("state")
+			and int(env.get("version", 0)) == CareerSave.VERSION,
+			"The save on disk is packed, its version outside")
+	var blob = CareerSave.unpacked(env)
+	var plain := var_to_bytes(blob).size()
+	_check(blob is Dictionary and (blob as Dictionary).has("state") and on_disk * 3 < plain,
+			"Packed, it is at least three times smaller: %d KB on disk, %d KB unpacked" % [on_disk / 1024, plain / 1024])
+	var ids := func(): return GameState.my_list.map(func(p): return str(p["id"]))
+	var before: Array = ids.call()
+	_check(before.size() > 30, "(setup) a full list to compare: %d" % before.size())
+	GameState.reset()
+	_check(GameState.load_career() and ids.call() == before and GameState.my_club == "GEE",
+			"The packed save opens as the same career")
+	# A save from before packing: the blob itself, stored plain.
+	f = FileAccess.open(GameState.save_path, FileAccess.WRITE)
+	f.store_var(blob)
+	f.close()
+	GameState.reset()
+	_check(GameState.has_saved_career() and GameState.saved_career_problem() == "",
+			"A plain save from before is offered on the menu")
+	_check(GameState.load_career() and ids.call() == before, "...and opens as the same career")
+	_check(GameState.save_career(), "...and saves again")
+	f = FileAccess.open(GameState.save_path, FileAccess.READ)
+	env = f.get_var()
+	f.close()
+	_check(env is Dictionary and (env as Dictionary).has("packed"), "...packed this time")
+	GameState.delete_saved_career()
+
+
 func _test_save_costs() -> void:
 	var path := "user://test_save_costs_%d.save" % OS.get_process_id()
 	CareerSave.delete(path)
@@ -1291,6 +1333,27 @@ func _test_save_costs() -> void:
 		s0 = GameState.saves_written
 		_check(GameState.finish_intake_draft() and GameState.saves_written - s0 == 1,
 				"Finishing the draft rolls into the new season with one save (%d saves)" % (GameState.saves_written - s0))
+	# The opening National Draft (a real-lists career) starts the first season
+	# with one save too.
+	GameState.replay_seed = SUITE_SEED
+	GameState.reset()
+	GameState.begin_real_lists()
+	GameState.choose_real_club("GEE")
+	GameState.close_first_offseason()
+	var opening: Draft = GameState.draft
+	var guard := 0
+	while opening != null and not opening.is_finished() and guard < 400:
+		guard += 1
+		if opening.is_user_turn():
+			var board: Array = opening.board("", "", "", "overall", true)
+			if board.is_empty() or not opening.pick(board[0]):
+				break
+		else:
+			opening.auto_until_user_turn()
+	s0 = GameState.saves_written
+	_check(opening != null and opening.is_finished() and GameState.finish_intake_draft()
+			and GameState.season_year == GameDB.START_YEAR and GameState.saves_written - s0 == 1,
+			"Finishing the opening draft starts the first season with one save (%d saves)" % (GameState.saves_written - s0))
 	GameState.autosave_enabled = false
 	GameState.delete_saved_career()
 
@@ -1349,3 +1412,26 @@ func _test_honoured_ratings_survive_reload() -> void:
 			"Every 1990 player keeps his rating and potential through a save and load (%d of %d seen; moved: %s)"
 			% [seen, before.size(), ", ".join(moved.slice(0, 5))])
 	GameState.delete_saved_career()
+
+
+## Where an opened save lands (bug bash P3-5). Continue on the menu and Open in
+## the options' saves both ask GameState.resume_screen(): the hub, or the draft
+## for a career with no season, a club yet to play, or the off-season before
+## the opening draft (row 199). Options used to send that last one to the hub.
+func _test_resume_screen() -> void:
+	GameState.replay_seed = SUITE_SEED
+	GameState.reset()
+	_check(GameState.resume_screen() == "draft", "No season yet: the draft")
+	GameState.start_season("COL", GameDB.club_list("COL"))
+	_check(GameState.resume_screen() == "hub", "A season under way: the hub")
+	GameState.first_offseason = 1
+	_check(GameState.save_career() and GameState.load_career(), "A career in the first off-season saves and loads")
+	_check(GameState.first_offseason == 1 and GameState.resume_screen() == "draft",
+			"The off-season before the opening draft, reloaded: the draft (%d)" % GameState.first_offseason)
+	GameState.first_offseason = 2
+	var club := GameState.my_club
+	GameState.my_club = "ZZZ"
+	_check(GameState.club_yet_to_play() and GameState.resume_screen() == "draft", "A club yet to play: the draft")
+	GameState.my_club = club
+	_check(GameState.resume_screen() == "hub", "Back to a club that plays: the hub")
+	GameState.reset()
