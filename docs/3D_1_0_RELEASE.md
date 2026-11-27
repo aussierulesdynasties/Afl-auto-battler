@@ -48,7 +48,7 @@ the machine pre-inspection clean, then his fly-through.
 | Ground | State 2026-11-22 | PR | Owner |
 |---|---|---|---|
 | MCG | Rebuilt to the standard (#1987 merged); the last 405 seats under the tiers removed (#2027, merged); Yarra Park from OSM; horizon past 2 km empty; not yet flown through by him | #2027 | Make the MCG look like the real MCG (closed); seats: Fix the shared seat generator |
-| Marvel Stadium | On main through #2072 (2026-11-25): true bearing, instanced seats, shut roof, Docklands; roofs from above still read pale; PC colour check rounds continue | #2011 (landed in #2072) | Make Marvel Stadium look real |
+| Marvel Stadium | On main through #2072 (2026-11-25): true bearing, instanced seats, shut roof, Docklands; round 13 on main (#2216, 2026-11-27: the round 12 PC check, NAB height, vents, the backdrop cut past 1024 m); PC colour check rounds continue | #2011 (landed in #2072) #2216 | Make Marvel Stadium look real |
 | Adelaide Oval | On main through #2072: arches with ivy, the main entrance rebuilt, his 11 faults fixed; ready for his review | #2010 #2015 (landed in #2072) | Fix Adelaide Oval's saved faults |
 | Optus Stadium | Roof, bronze facade, surrounds on main (#1993); the bowl's shape still has to match Google Earth | #1993 | Make Optus Stadium look real |
 | SCG | On main through #2072 (WIP): roofs rebuilt on Google Earth measurements, Moore Park, Allianz. Thread closed | #2017 (landed in #2072) | Make the SCG look real (closed) |
@@ -56,9 +56,9 @@ the machine pre-inspection clean, then his fly-through.
 | GMHBA Stadium | On main (#2016, 2026-11-25): Selwood Stand roof, solar roof, north and east walls, seats no longer black, Kardinia Park. Thread closed | #2016 | Make GMHBA Stadium look real (closed) |
 | People First Stadium | On main (#2019, WIP): finned walls, bronze podium, scoreboard lattice, Carrara; work continues | #2019 | Make People First Stadium look real |
 | ENGIE Stadium | On main (#2037, 2026-11-24): outline fitted to Google Earth, Olympic Park surroundings. Thread closed | #2037 | Make Engie Stadium look real (closed) |
-| Bellerive Oval | On main through #2072: facades, 3D seats, Hobart backdrop; seat colour still off, PC colour rounds continue | #2018 (landed in #2072) | Make Bellerive Oval look real |
+| Bellerive Oval | On main through #2072: facades, 3D seats, Hobart backdrop; round 7 on main (#2218, 2026-11-27: one pass over the PC round 6 defect list, roofs, concourse, east bank, nets, houses); PC colour rounds continue | #2018 (landed in #2072) #2218 | Make Bellerive Oval look real |
 | Manuka Oval | On main (#2035, 2026-11-25): stands, seats, scoreboard, towers, the town and Canberra to 30 km. Thread closed | #2035 | Make Manuka Oval look real (closed) |
-| Norwood Oval | On main: rebuild through #2072, then the north and south frontages modelled house by house on the measured land and towers to the published 34 m (#2145), and its real boundary line (#2148) | #2042 #2145 | Make Norwood Oval look real |
+| Norwood Oval | On main: rebuild through #2072, then the north and south frontages modelled house by house on the measured land and towers to the published 34 m (#2145), its real boundary line (#2148), and ground cover, trees, school, church and windows against Google Earth (#2214, 2026-11-27) | #2042 #2145 #2214 | Make Norwood Oval look real |
 | Barossa Park | On main (#2041): own land, gums, far ranges, second oval. Thread closed | #2041 | Make Barossa Park look real (closed) |
 
 ### The 24 Legacy-mode grounds
@@ -66,7 +66,7 @@ the machine pre-inspection clean, then his fly-through.
 On main: York Park (through #2072, thread closed), Mars Stadium (#2036, in matches), Cazaly's Stadium (#2034, ready for his review), Traeger Park (through #2072), Blacktown (#2048, the audit pass #2084 and the PC-check fixes #2150; work continues). Each has its own "Make ... look real" thread.
 The MCG of each era for Legacy matches: first part on main (#2052), thread "Build the MCG of each era".
 
-**Owner since 2026-11-23: "Build Legacy mode's old grounds"** for the other 19: Waverley Park, Windy Hill, Moorabbin Oval, Ikon Park, Whitten Oval, Football Park, Subiaco Oval, WACA, North Hobart Oval, Bruce Stadium, Riverway Stadium, Sky Stadium, Jiangwan Stadium, Hands Oval, Summit Park, Macquarie Point Stadium, Accor Stadium, Marrara Oval and Victoria Park. On 2026-11-26: 14 measured and written up, Hands Oval's heights in progress, Riverway, Bruce, Summit and Macquarie Point still to measure; no models rebuilt yet. Subiaco has a draft PR (#2069).
+**Owner since 2026-11-23: "Build Legacy mode's old grounds"** for the other 19: Waverley Park, Windy Hill, Moorabbin Oval, Ikon Park, Whitten Oval, Football Park, Subiaco Oval, WACA, North Hobart Oval, Bruce Stadium, Riverway Stadium, Sky Stadium, Jiangwan Stadium, Hands Oval, Summit Park, Macquarie Point Stadium, Accor Stadium, Marrara Oval and Victoria Park. Measurements for all 19 on main (#2217, 2026-11-27), including Subiaco's roofs from solved photos and shadows; Macquarie Point has no stadium in the 2026 imagery. The surroundings of Moorabbin, Windy Hill, Ikon Park, Whitten Oval, North Hobart and the WACA are in their era from Google Earth's 2000-2005 frames, with towers built since dropped (#2232, WIP). No ground model rebuilt yet.
 
 ### Across every ground
 
@@ -102,7 +102,7 @@ The MCG of each era for Legacy matches: first part on main (#2052), thread "Buil
 | The ball: kicks, set shot routine, handball, ground balls, marks, pack marks, smother, spoil, kick-in | Partly covered (asset plan: 123 clips); set shot routine, pack marks, smother, kick-in missing; kick, handball and mark clips open (#2040) | Make player animations look like real AFL |
 | Contests: tackles, bumps, ruck, stoppage jostle, getting up | Tackles (12), ruck jump, get-ups; no stoppage set-up or pressure clips | Make player animations look like real AFL |
 | Umpire signals (free, 50, play on, goal and behind flags), throw-in throw | None: only the bounce clip exists | Make player animations look like real AFL (test clips) |
-| Injuries: down, trainers, helped off | Draft PR #2071 (in-match injuries) | Make player animations look like real AFL (test clips) |
+| Injuries: down, trainers, helped off | On main as WIP (#2227, 2026-11-27): concussion goes down face first, a knee writhes, knee and ankle helped off between two trainers; interchanges jog off and run on; the free's umpire stands off the mark. Not yet checked by him | Make player animations look like real AFL (test clips) |
 | After a goal: celebration, dejection | A few gestures only | **Nobody yet** (follows the pipeline) |
 | Interchange jog off and run on; free's umpire off the mark; far tackles run in | On main (#2025, WIP) | Make free kicks and tackles read like TV (closed) |
 | The team plays real football (row 201: shape per phase, coach's calls visible) | Harness built; gaps 6-8 fixed (#1977); the director's "numbers and your watch" check not done | Fix football proof gap list (review ready) |
@@ -196,5 +196,6 @@ and the smoothing buffers.
 - 2026-11-26 evening: review boards and reference imagery moved out of the public repo to a private archive (#2192).
 - 2026-11-26 night: the ground models moved to a private asset repo fetched by a pinned lock (#2199; main's history was rewritten for it). The builds and tests fetch them; the packaging result (#2060) stands.
 - 2026-11-27: lighter launch (#2211): the 3D ground now compiles at the first 3D match rather than at start-up, ground shaders load when needed, and the web build fetches one texture pack for its graphics family. The web sky add-on was fixed (#2222). No row changes state.
-- 2026-11-27 early: the momentum line over the 3D picture is thinner and dimmer, as the director asked (#2219). Menus shown on your club's ground are in review (#2241). No row changes state.
+- 2026-11-27 early: the momentum line over the 3D picture is thinner and dimmer, as the director asked (#2219). No row changes state.
 - 2026-11-27 morning: the 3D match stages a rushed behind as the defender running it back and knocking it over with the presser chasing, and a free kick with the man on the mark on the spot and the taker kicking over him (#2225). A rebound's gatherer comes in at his gather's pace (#2251). No row changes state.
+- 2026-11-27 midday: Marvel round 13 (#2216), Bellerive round 7 (#2218), Norwood's Google Earth gaps (#2214), measurements for the 19 Legacy grounds (#2217), era surroundings for six Legacy grounds (#2232, WIP) and in-match injuries (#2227, WIP) on main. Every loose-ball pick-up comes in at pick-up pace (#2254).
