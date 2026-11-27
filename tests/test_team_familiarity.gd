@@ -126,7 +126,6 @@ func _test_team_step() -> void:
 
 
 func _test_reaches_fit() -> void:
-	GameDB.skip_ovr_overrides = true
 	GameDB.reload()
 	var plain_h := Squad.new("MEL", GameDB.club_list("MEL"), true, "MEL")
 	var plain_a := Squad.new("FRE", GameDB.club_list("FRE"), false, "FRE")
@@ -252,10 +251,7 @@ func _test_save_and_old_save() -> void:
 
 
 func _test_career_start_clears() -> void:
-	# The histories are stamped against the game's own data: the director's OVR rows on
-	# for this function only, then back to the suite's setting (AFL_SKIP_OVR_ROWS).
-	var skip: bool = GameDB.skip_ovr_overrides
-	GameDB.skip_ovr_overrides = false
+	# The histories are stamped against the game's own data.
 	GameDB.reload()
 	GameState.reset()
 	GameState.replay_seed = 0
@@ -273,8 +269,6 @@ func _test_career_start_clears() -> void:
 	TF.arrive_club(list[0])
 	_check(GameState.choose_sim_ahead_club(code), "A club can be taken on")
 	_check(TF.value(list[0]) == 100.0, "Everyone on a list when your career starts begins at 100")
-	GameDB.skip_ovr_overrides = skip
-	GameDB.reload()
 
 
 func _settle() -> void:

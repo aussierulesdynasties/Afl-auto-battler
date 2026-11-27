@@ -12,6 +12,7 @@ extends RefCounted
 ##       the middle-rated; "next" start comes from the following season's line
 ## Args after the impl name: seeds (comma list) club seasons
 ## godot --headless --path . --script tools/audit/run_audit.gd -- league_growth_impl 1,2 MEL 10 [2010]
+const Ovr := preload("res://tests/ovr.gd")
 
 const BANDS := [[17, 22, "22 and under"], [23, 27, "23-27"], [28, 30, "28-30"], [31, 45, "31+"]]
 
@@ -46,7 +47,7 @@ func _snap(year: int, phase: String) -> Dictionary:
 	for code in lists:
 		var club_ovs: Array = []
 		for p in lists[code]:
-			var o := int(p["overall"])
+			var o := int(Ovr.of(p))
 			out[str(p["id"])] = [o, float(p.get("age", 25.0))]
 			ovs.append(o)
 			club_ovs.append(o)
@@ -126,7 +127,7 @@ func _pick_traced() -> void:
 			for p in GameState.season.lists[code]:
 				if _band(float(p.get("age", 25.0))) == str(b[2]):
 					band.append(p)
-		band.sort_custom(func(x, y): return int(x["overall"]) > int(y["overall"]))
+		band.sort_custom(func(x, y): return int(Ovr.of(x)) > int(Ovr.of(y)))
 		if band.size() > 1:
 			traced.append(str(band[0]["id"]))
 			traced.append(str(band[band.size() / 2]["id"]))
@@ -141,7 +142,7 @@ func _trace(year: int, start: Dictionary) -> void:
 		if p.is_empty() or not start.has(id):
 			continue
 		print("TRACE|%d|%d|%s|%.0f|%d|%d|%d|%.1f|%d" % [seed_n, year, GameDB.player_display_name(p),
-				float(start[id][1]), int(start[id][0]), int(p["overall"]), int(p.get("potential", 0)),
+				float(start[id][1]), int(start[id][0]), int(Ovr.of(p)), int(p.get("potential", 0)),
 				float(p.get("career_last", 0.0)), int(over)])
 
 
@@ -150,10 +151,10 @@ func _top(year: int) -> void:
 	var all: Array = []
 	for code in GameState.season.lists:
 		all += GameState.season.lists[code]
-	all.sort_custom(func(a, b): return int(a["overall"]) > int(b["overall"]))
+	all.sort_custom(func(a, b): return int(Ovr.of(a)) > int(Ovr.of(b)))
 	var bits := PackedStringArray()
 	for i in range(mini(10, all.size())):
-		bits.append("%s %s %d/%d" % [all[i].get("first", ""), all[i].get("last", ""), int(all[i]["overall"]), int(all[i].get("potential", 0))])
+		bits.append("%s %s %d/%d" % [all[i].get("first", ""), all[i].get("last", ""), int(Ovr.of(all[i])), int(all[i].get("potential", 0))])
 	print("TOP|%d|%d|%s" % [seed_n, year, ", ".join(bits)])
 
 
@@ -209,5 +210,5 @@ func _career(club: String, seasons: int) -> void:
 		var next := {}
 		for code in GameState.season.lists:
 			for p in GameState.season.lists[code]:
-				next[str(p["id"])] = [int(p["overall"]), float(p.get("age", 25.0))]
+				next[str(p["id"])] = [int(Ovr.of(p)), float(p.get("age", 25.0))]
 		_change("SUMMER", year, end, next, false)

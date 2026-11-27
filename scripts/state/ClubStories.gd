@@ -990,9 +990,7 @@ static func _last_season(gs, p: Dictionary) -> bool:
 		return false
 	# A player without his ratings (a bare test fixture) can't be aged by the rule.
 	var rated: Dictionary = p.get("attr", {})
-	var role: String = str(p.get("role", "MID"))
-	var needs: Array = (Ratings.ROLE_WEIGHTS.get(role, Ratings.ROLE_WEIGHTS["MID"]) as Dictionary).keys() + ["star", "durability"]
-	for k in needs:
+	for k in Attributes.KEYS:
 		if not rated.has(k):
 			return false
 	return Retirement.intends(p, int(gs.season_year) + 1)

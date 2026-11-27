@@ -1061,7 +1061,10 @@ func _best_ai_pick(code: String, why := {}) -> Dictionary:
 # so it is worked out once per position (terms), not once per player.
 func _pass_begin(code: String, why: Dictionary) -> Dictionary:
 	_refresh_ai_cache()   # the terms read it: brought up to this pick first
-	return {"code": code, "why": why, "usable": usable_cap_for(code), "forced": _forced_role(code),
+	var forced := _forced_role(code)
+	var third := forced == "" and _third_ruck_due(code)
+	return {"code": code, "why": why, "usable": usable_cap_for(code),
+			"forced": "RUCK" if third else forced, "forced_main": third,
 			"watch": AiReasons.enabled and not wanted().is_empty(),
 			"mine": code == user_club and user_max_age > 0, "scored": {}, "best": {},
 			"best_score": -INF, "k": 0, "terms": {}}
@@ -1088,6 +1091,7 @@ func _pass_run(scan: Dictionary, until_usec: int) -> bool:
 	var scored: Dictionary = scan["scored"]
 	var usable := int(scan["usable"])
 	var forced_role := str(scan["forced"])
+	var forced_main := bool(scan.get("forced_main", false))
 	var watch := bool(scan["watch"])
 	var mine := bool(scan["mine"])
 	var best: Dictionary = scan["best"]
@@ -1104,7 +1108,8 @@ func _pass_run(scan: Dictionary, until_usec: int) -> bool:
 			continue
 		if mine and too_old_for_user(p):
 			continue
-		if forced_role != "" and not Ratings.plays_role(p, forced_role):
+		if forced_role != "" and not (str(p["role"]) == forced_role if forced_main
+				else Ratings.plays_role(p, forced_role)):
 			if watch and wanted().has(id):
 				why[id] = "draft_must_ruck"
 			continue
@@ -1113,10 +1118,15 @@ func _pass_run(scan: Dictionary, until_usec: int) -> bool:
 			if watch and wanted().has(id):
 				why[id] = "draft_cap"
 			continue
-		if intake_mode and str(p["role"]) == "RUCK" and _intake_ruck_need(code, p) <= 0.0:
+		# A fourth ruck: no use to this club, in either draft. A need of 0
+		# alone is not enough late in a League Draft, where the players left
+		# score below 0 and his 0 would beat them (or his second position
+		# would carry him on).
+		if str(p["role"]) == "RUCK" and (_intake_ruck_need(code, p) if intake_mode
+				else float(_role_terms(code, "RUCK")[0])) <= 0.0:
 			if watch and wanted().has(id):
 				why[id] = "draft_ruck_full"
-			continue   # a fourth ruck: no use to this club
+			continue
 		# The parts of his score only for a prospect you opened (P-18 reasons;
 		# _why_scored works out the pick's own).
 		var detail = {} if watch and wanted().has(id) else null
@@ -1144,9 +1154,11 @@ func _pass_end(scan: Dictionary) -> Dictionary:
 	var forced_role := str(scan["forced"])
 	var best: Dictionary = scan["best"]
 	var best_score := float(scan["best_score"])
-	# If a forced role cannot be filled, keep the draft moving with the best
-	# affordable player. This should be rare, but protects small custom datasets.
-	if best.is_empty() and forced_role != "":
+	# If a forced role cannot be filled, or a League Draft club has only fourth
+	# rucks left to choose from, keep the draft moving with the best affordable
+	# player: a full list comes first. This should be rare, but protects small
+	# custom datasets.
+	if best.is_empty() and (forced_role != "" or not intake_mode):
 		for p in pool:
 			var id := str(p["id"])
 			if picked.has(id):
@@ -1254,6 +1266,41 @@ func _unpicked_plays(role: String) -> bool:
 		if not picked.has(str(p["id"])) and Ratings.plays_role(p, role):
 			return true
 	return false
+
+
+## True when this rival club must take a third ruck now (League Draft). Nearly
+## the whole pool is drafted and no club takes a fourth ruck, so the rucks left
+## beyond the few players who go undrafted must find a list among the clubs
+## still under three. When those rucks fill every such spot, a club under three
+## takes its rucks once its list has no other place to spare. Example: the 2026
+## league is 669 players, 50 of them rucks, and 666 are drafted (37 a club): 3
+## go undrafted. With 6 rucks left, 3 must still be drafted; once the clubs
+## under three rucks have only 3 places left between them, each of those clubs
+## takes a ruck with the place it has left.
+func _third_ruck_due(code: String) -> bool:
+	if intake_mode or not league_mode or code == user_club:
+		return false
+	var slots_left := target_size - count_for(code)
+	var my_room := mini(3 - int(role_counts_for(code)["RUCK"]), slots_left)
+	if my_room <= 0 or slots_left > my_room:
+		return false
+	var left := 0
+	var rucks_left := 0
+	for p in pool:
+		if picked.has(str(p["id"])):
+			continue
+		left += 1
+		if str(p["role"]) == "RUCK":
+			rucks_left += 1
+	var must_go := rucks_left - (left - (pick_sequence.size() - pick_index))
+	if must_go <= 0:
+		return false
+	var room := 0
+	for c in clubs:
+		if str(c) == user_club:
+			continue
+		room += maxi(0, mini(3 - int(role_counts_for(str(c))["RUCK"]), target_size - count_for(str(c))))
+	return must_go >= room
 
 
 # ---------------------------------------------------------------------------
@@ -1559,7 +1606,7 @@ func price_for(_code: String, p: Dictionary) -> int:
 ## His salary in the opening season's dollars (the budget's year,
 ## compute_budget): Legacy mode prices a 1990 draft in 1990 dollars.
 static func cost_of(p: Dictionary) -> int:
-	return Contracts.pay(int(p["value"]), GameDB.START_YEAR)
+	return Contracts.pay(Ratings.value_of(p), GameDB.START_YEAR)
 
 
 ## Your price for him (price_for your club).
@@ -1569,14 +1616,17 @@ func price(p: Dictionary) -> int:
 
 ## A player as your scouts see him (row T1.R26 L1, "everything follows the
 ## read"): every rating moved by the read's miss on his OVR, so his strengths,
-## traits and full ratings miss exactly as often as the OVR range does. Only
-## what you see uses it; the player underneath never changes. `p` itself when
-## your read of him is exact.
+## traits and full ratings miss exactly as often as the OVR range does. The
+## miss is moved in the points of his weighted sum (Rating.unstretch), so the
+## copy reads the scouts' OVR to within the point a whole-number shift allows:
+## a read of 75 on a 72 (sums 62.3 and 60.0) moves every rating up 2.3, to 2.
+## Only what you see uses it; the player underneath never changes. `p` itself
+## when your read of him is exact.
 func scouted_copy(p: Dictionary) -> Dictionary:
 	var view := user_view(p)
 	if not bool(view["scouted"]) or not p.has("attr"):
 		return p
-	var shift := float(int(view["overall_mid"]) - int(Rating.ovr(p, 50)))
+	var shift := Rating.unstretch(float(int(view["overall_mid"]))) - Rating.unstretch(float(int(Rating.ovr(p, 50))))
 	var c := p.duplicate(true)
 	var attr: Dictionary = c["attr"]
 	for k in attr.keys():
@@ -1655,7 +1705,8 @@ const HORIZON_WEIGHTS := {
 }
 ## Share of rival clubs going for the flag now; the rest build.
 const HORIZON_NOW_SHARE := 0.25
-const HORIZON_REPLACEMENT := 58.0
+## Replacement level (director 2026-11-26: "replacement player at 60").
+const HORIZON_REPLACEMENT := 60.0
 ## Share of a season after he retires that still dilutes a building club's
 ## view of a veteran (1.0 = full, the old rule).
 static var BUILD_RETIRED_SHARE := 0.35
@@ -1712,8 +1763,9 @@ const INTAKE_RUCK_PROJECT_GAP := 12
 
 
 ## A first-choice ruck (League Draft): rated this or better and young enough
-## to be one for the seasons ahead.
-const RUCK_FIRST_CHOICE := 65
+## to be one for the seasons ahead. 73 on the rebuilt scale picks the same ten
+## or so young rucks the old scale's 65 did (2026 rucks under 33, ranked).
+const RUCK_FIRST_CHOICE := 73
 const SECOND_STAR_RUCK := 0.6
 
 
@@ -1871,7 +1923,7 @@ func spent_for(code: String) -> int:
 		return int(club_spend.get(code, 0))
 	var total := 0
 	for id in order:
-		total += int(picked[id]["value"])
+		total += Ratings.value_of(picked[id])
 	return total
 
 

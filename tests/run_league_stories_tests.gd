@@ -1,4 +1,5 @@
 extends SceneTree
+const Ovr := preload("res://tests/ovr.gd")
 ## godot --headless --path . --script tests/run_league_stories_tests.gd
 ## The round's league stories (LeagueStories.gd; director 2026-11-10: "use
 ## procedural stories in the news too to highlight big comebacks, huge margins,
@@ -134,7 +135,7 @@ func _res(home: String, away: String, hq: Array, aq: Array, kickers := {}) -> Di
 ## A player lookup for the tests: "<code>_k<n>" is a named forward, overall 80.
 func _ctx(extra := {}) -> Dictionary:
 	var ctx := {"seed": 7, "year": 2027, "my_club": "", "ladder": {}, "injuries": [], "named": {},
-			"player": func(id): return {"id": id, "name": "Kicker " + str(id).to_upper(), "overall": 80}}
+			"player": func(id): return Ovr.to({"id": id, "name": "Kicker " + str(id).to_upper()}, 80)}
 	ctx.merge(extra, true)
 	return ctx
 
@@ -287,7 +288,7 @@ func _test_injury() -> void:
 		_check(str(out[0]["club"]) == "BRL" and str(out[0]["id"]) == "BRL_x", "it is his club's story")
 	var short := [{"id": "BRL_x", "club": "BRL", "weeks": 3, "kind": "hamstring"}]
 	_check((_ls.round_stories([res], _ctx({"injuries": short})) as Array).is_empty(), "three weeks is not a story")
-	var low := _ctx({"injuries": inj, "player": func(id): return {"id": id, "name": "Depth", "overall": 71}})
+	var low := _ctx({"injuries": inj, "player": func(id): return Ovr.to({"id": id, "name": "Depth"}, 71)})
 	_check((_ls.round_stories([res], low) as Array).is_empty(), "a player under 72 is not a story")
 
 

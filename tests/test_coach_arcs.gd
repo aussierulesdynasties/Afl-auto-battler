@@ -1,4 +1,5 @@
 extends RefCounted
+const Ovr := preload("res://tests/ovr.gd")
 ## Run by tests/run_coach_arcs_tests.gd (suite "coach_arcs").
 ## The coach's career arcs (CoachArcs.gd, ClubArcs.gd; director, 2026-11-03,
 ## phase 1): the arcs file is fit to play, arcs start only from real game
@@ -995,7 +996,7 @@ func _check_joined(tag: String, from: String, year: int, their_id: String) -> vo
 	if ((GameState.expansion["TAS"]["signings"]) as Array).is_empty():
 		var best := {}
 		for p in GameState.free_agents:
-			if float(p.get("age", 30.0)) < Expansion.TARGET_MAX_AGE and (best.is_empty() or int(p["overall"]) > int(best["overall"])):
+			if float(p.get("age", 30.0)) < Expansion.TARGET_MAX_AGE and (best.is_empty() or int(Ovr.of(p)) > int(Ovr.of(best))):
 				best = p
 		# At the draft free agency has closed and the pool keeps only its unsigned under-26s,
 		# often none (#1748's copied players): then a rival's player young enough, taken off
@@ -1007,7 +1008,7 @@ func _check_joined(tag: String, from: String, year: int, their_id: String) -> vo
 				if str(code) == "TAS" or list.size() <= Contracts.min_list():
 					continue
 				for p in list:
-					if float(p.get("age", 30.0)) < Expansion.TARGET_MAX_AGE and (best.is_empty() or int(p["overall"]) > int(best["overall"])):
+					if float(p.get("age", 30.0)) < Expansion.TARGET_MAX_AGE and (best.is_empty() or int(Ovr.of(p)) > int(Ovr.of(best))):
 						best = p
 						from_list = list
 		_check(not best.is_empty(), "%s: a player Tasmania can sign" % tag)

@@ -90,7 +90,7 @@ func _test_words() -> void:
 	_check(_tl.markup("Lockdown unit").contains("trait:lockdown_unit"), "Lockdown unit is not read as Lockdown")
 	_check(_tl.markup("Lockdowns").find("[url") < 0, "a name inside a longer word is left alone")
 	_check(_tl.earn_text("hothead").contains(str(Traits.DEFS["hothead"]["max"])), "Hothead says its line")
-	_check(_tl.earn_text("wet_weather").contains(str(Traits.WET_WEATHER["contested"])), "Wet-weather says its line")
+	_check(_tl.earn_text("wet_weather").contains(str(Traits.WET_WEATHER["contested_ball"])), "Wet-weather says its line")
 	# Bug bash 5: an earned trait's sheet says a player carries up to five.
 	_check(_tl.earn_text("bull").contains("up to five") and not _tl.earn_text("hothead").contains("up to five"),
 			"An earned trait's sheet names the five-trait cap; a weakness's does not")
@@ -308,7 +308,7 @@ func _test_synergy_fit(sz: Vector2i) -> void:
 				break
 		if not p.is_empty():
 			break
-	p["attr"]["contested"] = 95
+	p["attr"]["contested_ball"] = 95
 	_check(Traits.of(p).has("bull"), "%s: the recruit is a contested bull" % tag)
 	var ground: Array = _gs.my_squad().ground
 	var rows: Array = _gs.synergy_fit(p)

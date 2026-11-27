@@ -11,6 +11,7 @@ extends RefCounted
 ##             over seeds first..first+seeds-1; prints raw sums to pool shards.
 ## Both clubs run their AI calls (plan, loose man, tags, defensive forward).
 ## Moments take their default call (no bursts, no set-shot calls).
+const Ovr := preload("res://tests/ovr.gd")
 
 const PAIRS := [["MEL", "CAR"], ["GEE", "COL"], ["SYD", "WCE"], ["BRL", "ADE"], ["HAW", "ESS"], ["FRE", "STK"]]
 const CAUSES := ["moments", "gameplan", "loose", "tag", "pep", "bursts", "minder"]
@@ -47,7 +48,7 @@ func _arm(h: String, a: String, seed: int, call: String, on: bool) -> MatchSim:
 	if on and call == "tag":
 		var best := {}
 		for p in away.ground:
-			if MatchSim.taggable(p) and (best.is_empty() or int(p["overall"]) > int(best["overall"])):
+			if MatchSim.taggable(p) and (best.is_empty() or int(Ovr.of(p)) > int(Ovr.of(best))):
 				best = p
 		sim.set_tactics(0, {"gameplan": "balanced", "tag_id": str(best.get("id", ""))})
 	sim.run()

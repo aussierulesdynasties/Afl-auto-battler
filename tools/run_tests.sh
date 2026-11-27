@@ -39,10 +39,6 @@ if ! bash tools/ground_assets.sh check >/dev/null 2>&1 && ! bash tools/ground_as
 fi
 
 GODOT="${GODOT:-godot}"
-# The suites play on the data without the director's hand-set OVR rows
-# (data/ovr_overrides.csv): they check the rules, not those numbers. Only the
-# ratings suite turns the rows back on, because it tests them.
-export AFL_SKIP_OVR_ROWS=1
 # A caller's SUITE_TIMEOUT applies to every suite. Left unset, a suite listed in
 # tools/ci_long_suites.txt gets the nightly's 3000 s and every other suite 900 s:
 # story needs 488-857 s on a CI runner, so 900 s left no headroom on a machine
@@ -264,7 +260,7 @@ else
 fi
 
 if [ "${SKIP_STATIC:-0}" != 1 ]; then
-say "== Intake / development harness"
+say "== Draft-class data check"
 if python3 tools/intake_harness.py --quiet > "$LOG_DIR/intake_harness.log" 2>&1; then
 	summary+=("| intake_harness | pass | |")
 else

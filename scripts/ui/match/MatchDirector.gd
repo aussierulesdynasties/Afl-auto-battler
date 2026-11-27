@@ -26,8 +26,11 @@ const DISPOSALS := ["handball", "kick", "mark"]
 ## ground; seed 42, 1482 s: left out, he ran in flat out with the scrap and was upright on top
 ## of it, too fast to go down for it), and the man who takes it and kicks it inside 50, shoots
 ## at goal or turns it over. Each comes in at the pace he takes it on the run at (over 8 suite
-## matches, 11 men ran over the loose ball with disposals alone, 1 with all of these).
-const GATHERS := ["handball", "kick", "mark", "rebound", "inside50", "goal", "behind", "clanger"]
+## matches, 11 men ran over the loose ball with disposals alone, 1 with all of these). A clanger's
+## man is not one: on the rating rebuild's seeded match the man named for a clanger after a goal
+## was eased in at pick-up pace and never reached it, and the ball lay loose 6.2 s with nobody on
+## it (picture_truth, tick 4208).
+const GATHERS := ["handball", "kick", "mark", "rebound", "inside50", "goal", "behind"]
 ## Off-the-ball entries: an interchange, a coach's call, a player going off hurt.
 const META := ["sub", "moment", "injury"]
 ## In-match injuries (row 202 2e). MatchSim hurts a man at a minute of its own and logs it as
@@ -347,8 +350,8 @@ func _make_token(p: Dictionary, side: int, role: String, slot: String, base: Vec
 	var carry := 50.0
 	var pl = GameDB.player_by_id(str(p.get("id", "")))
 	if pl != null and pl.has("attr"):
-		carry = float((pl["attr"] as Dictionary).get("carry", 50.0))
-	# Speed from the carry rating (run-and-carry players are the quick ones);
+		carry = float((pl["attr"] as Dictionary).get("speed", 50.0))
+	# How fast he runs on screen comes from his Speed attribute;
 	# presentation only, it never feeds back into the match.
 	var top := 11.6 + 2.6 * clampf((carry - 50.0) / 50.0, -1.0, 1.0) + _rng.randf_range(-0.4, 0.4)
 	if role == "RUCK":

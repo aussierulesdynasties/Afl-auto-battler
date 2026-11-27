@@ -1,4 +1,5 @@
 extends RefCounted
+const Ovr := preload("res://tests/ovr.gd")
 ## The 2000 start (Legacy mode, TODO row 142: "then the 2000, 2010 and 2020
 ## starts"): the 16 clubs' real 2000 lists rated on 1999, the 2000 senior
 ## coaches rated from their records, the 2000 captains, and a seeded career at
@@ -63,8 +64,8 @@ func _test_set_loads() -> void:
 	_check(short.is_empty(), "Every club has its real 2000 list of 40 or more (%s)" % str(short))
 	var buckley := _find("COL", "Nathan", "Buckley")
 	var pavlich := _find("FRE", "Matthew", "Pavlich")
-	_check(not buckley.is_empty() and int(buckley.get("overall", 0)) >= 85,
-			"Nathan Buckley is at Collingwood, rated on his 1999 (%d)" % int(buckley.get("overall", 0)))
+	_check(not buckley.is_empty() and int(Ovr.of(buckley, 0)) >= 85,
+			"Nathan Buckley is at Collingwood, rated on his 1999 (%d)" % int(Ovr.of(buckley, 0)))
 	_check(not pavlich.is_empty(), "Matthew Pavlich, the 1999 draftee, is on Fremantle's list")
 
 

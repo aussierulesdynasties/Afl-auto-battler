@@ -47,8 +47,6 @@ func _run() -> void:
 	await process_frame
 	var db = root.get_node("GameDB")
 	# Engine against the real 2026 numbers: plays on the data without the director's
-	# hand-set OVR rows (data/ovr_overrides.csv), which are not 2026 form.
-	db.skip_ovr_overrides = true
 	db.reload()
 	var squad_script = load("res://scripts/sim/Squad.gd")
 	var sim_script = load("res://scripts/sim/MatchSim.gd")

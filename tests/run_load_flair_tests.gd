@@ -1,4 +1,5 @@
 extends SceneTree
+const Ovr := preload("res://tests/ovr.gd")
 ## godot --headless --path . --script tests/run_load_flair_tests.gd
 ## The load screens (row 121): the logo and the set shot go up on every wait with
 ## a line and on no plain wipe; the ball really flies and turns, and every kick
@@ -440,7 +441,7 @@ func _rollover() -> String:
 	for code in _state.league_lists:
 		var sum := 0
 		for p in _state.league_lists[code]:
-			sum += int(p["overall"]) + hash(str(p["id"])) % 1000
+			sum += int(Ovr.of(p)) + hash(str(p["id"])) % 1000
 		bits.append("%s:%d:%d" % [code, (_state.league_lists[code] as Array).size(), sum])
 	bits.sort()
 	return str(hash(",".join(bits)))

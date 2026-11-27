@@ -1,4 +1,5 @@
 extends RefCounted
+const Ovr := preload("res://tests/ovr.gd")
 ## The pre-season papers (director, 2026-10-13: "Predict, and you answer"): the
 ## ladder they print in week 8, the one story they ask you, and the three ways
 ## to answer (back it, deflect, talk it up). Talking the club up lifts the
@@ -122,8 +123,8 @@ func _breakout_kid() -> String:
 			continue
 		if int(p.get("injury_weeks", 0)) > 0 or not Backing.can_back(p, GameState.games_played(p)):
 			continue
-		var pot := int(p.get("potential", p.get("overall", 0)))
-		var best_pot := int(best.get("potential", best.get("overall", 0)))
+		var pot := int(p.get("potential", Ovr.of(p, 0)))
+		var best_pot := int(best.get("potential", Ovr.of(best, 0)))
 		if best.is_empty() or pot > best_pot or (pot == best_pot and str(p["id"]) < str(best["id"])):
 			best = p
 	# Every kid the papers could tip is already picked (St Kilda's two under the

@@ -1,5 +1,6 @@
 extends RefCounted
 ## Body of tools/measure_scout_miss.gd, loaded at run time so the autoloads exist.
+const Ovr := preload("res://tests/ovr.gd")
 
 
 func run(db: Node) -> void:
@@ -13,10 +14,10 @@ func run(db: Node) -> void:
 		for year in range(2027, 2037):
 			for p in Prospects.generate_class(year, 1000 + year):
 				var v := DraftScouting.projection(p, "COL", 77 + year, mult)
-				var ov := int(p["overall"])
+				var ov := int(Ovr.of(p))
 				var pot := maxi(ov, int(p.get("potential", ov)))
 				n += 1
-				var om := _out(ov, v["overall"])
+				var om := _out(ov, Ovr.of(v))
 				var pm := _out(pot, v["potential"])
 				ov_miss += int(om > 0)
 				pot_miss += int(pm > 0)
@@ -34,8 +35,8 @@ func run(db: Node) -> void:
 					continue
 				var v := d.user_view(p)
 				ln += 1
-				var lm := maxi(_out(int(p["overall"]), v["overall"]),
-						_out(maxi(int(p["overall"]), int(p.get("potential", p["overall"]))), v["potential"]))
+				var lm := maxi(_out(int(Ovr.of(p)), Ovr.of(v)),
+						_out(maxi(int(Ovr.of(p)), int(p.get("potential", Ovr.of(p)))), v["potential"]))
 				l_miss += int(lm > 0)
 				l_worst = maxi(l_worst, lm)
 		print("level %d (x%.2f): national n=%d OVR miss %.1f%% POT miss %.1f%% worst %d | league n=%d miss %.1f%% worst %d" % [

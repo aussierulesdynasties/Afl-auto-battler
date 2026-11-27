@@ -1,4 +1,5 @@
 extends RefCounted
+const Ovr := preload("res://tests/ovr.gd")
 ## No real player goes missing in a Legacy career (TODO row 142; director,
 ## 2026-11-13: "please make sure that no players are missing or prematurely
 ## axed etc").
@@ -113,7 +114,7 @@ func _snapshot() -> Dictionary:
 		if out.has(id):
 			twice.append("%s %s in %s and %s" % [id, str(p.get("real_name", "")), str(out[id]["loc"]), loc])
 			return
-		out[id] = {"loc": loc, "age": float(p.get("age", 0.0)), "ovr": int(p.get("overall", 0)),
+		out[id] = {"loc": loc, "age": float(p.get("age", 0.0)), "ovr": int(Ovr.of(p, 0)),
 			"name": str(p.get("real_name", "")), "key": _key(p),
 			"real_class": bool(p.get("real_class", false)), "draft_year": int(p.get("draft_year", 0)),
 			"tied": str(p.get("tied_club", "")), "tie_type": str(p.get("tied_type", "")),
@@ -255,7 +256,7 @@ func _trace(year: int, before: Dictionary, after: Dictionary, life: Dictionary) 
 			var r: Dictionary = retired[id]
 			if int(was["retiring"]) == year + 1 or int(was["retiring"]) == year:
 				how = "retired: chose to"
-			elif int(r.get("overall", 99)) <= 32:
+			elif int(Ovr.of(r, 99)) <= 32:
 				how = "retired: rating"
 			elif float(r.get("age", 0)) >= 37.0:
 				how = "retired: 37 or older"

@@ -1,4 +1,5 @@
 extends SceneTree
+const Ovr := preload("res://tests/ovr.gd")
 ## godot --headless --path . --script tests/run_big_call_tests.gd
 ## The Hub's weekly "one big call" (director 2026-11-03, plan 3a): a due
 ## coach-arc beat, else the most pressing of the press, an assistant approach,
@@ -102,7 +103,7 @@ func _test_backing_from_state() -> void:
 			"Backed: the call is ticked, still this week's")
 	for p in _state.club_roster("MEL"):
 		if _state.can_back(p):
-			p["overall"] = 1
+			Ovr.to(p, 1)
 	_check(BigCalls.ready_to_back(_state).is_empty(), "Weak young players are not ready")
 
 
@@ -135,7 +136,7 @@ func _ready_kid() -> Dictionary:
 			else:
 				(side[k] as Array).remove_at(i)
 	_state.set_selection(side)
-	kid["overall"] = 99
+	Ovr.to(kid, 99)
 	return kid
 
 
@@ -401,7 +402,7 @@ func _test_promise_shows_on_list() -> void:
 			if str(p["role"]) == "RUCK" or named.has(str(p["id"])) or int(p.get("injury_weeks", 0)) > 0 \
 					or int(p.get("suspension_weeks", 0)) > 0:
 				continue
-			if kid.is_empty() or int(p["overall"]) < int(kid["overall"]):
+			if kid.is_empty() or int(Ovr.of(p)) < int(Ovr.of(kid)):
 				kid = p
 		kid["career"] = {"games": 0, "goals": 0, "stints": [], "through": _state.season_year - 1, "unknown": []}
 		kid["age"] = 19.0

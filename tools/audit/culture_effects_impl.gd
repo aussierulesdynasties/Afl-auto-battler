@@ -14,6 +14,7 @@ extends RefCounted
 ## top and bottom thirds by culture did the NEXT season (the snowball). SUMMARY averages them and
 ## adds where free agents went (share of signings to clubs that were "pushing to win now" or
 ## "all in" against their share of the league).
+const Ovr := preload("res://tests/ovr.gd")
 
 
 func _run_draft(d: Draft) -> void:
@@ -65,7 +66,7 @@ func run() -> void:
 	GameState.autosave_enabled = false
 	GameState.culture_effects_on = on
 	var pool: Array = GameDB.all_players_sorted() + GameDB.all_draftees_sorted()
-	pool.sort_custom(func(a, b): return a["overall"] > b["overall"])
+	pool.sort_custom(func(a, b): return Ovr.of(a) > Ovr.of(b))
 	GameState.draft = Draft.new(pool, GameDB.active_clubs(GameState.season_year).duplicate(), seed)
 	GameState.draft.start_for_user(club)
 	_run_draft(GameState.draft)
@@ -95,7 +96,7 @@ func run() -> void:
 		var young_start := {}
 		for p in GameState.my_list:
 			if Culture.young_for_growth(p, year):
-				young_start[str(p["id"])] = int(p.get("overall", 0))
+				young_start[str(p["id"])] = int(Ovr.of(p, 0))
 		while not GameState.season.is_season_over() and not GameState.is_sacked():
 			if GameState.week_event_pending():
 				GameState.resolve_week_event(0)
@@ -111,7 +112,7 @@ func run() -> void:
 			var n := 0
 			for p in GameState.my_list:
 				if young_start.has(str(p["id"])):
-					gain += float(int(p.get("overall", 0)) - int(young_start[str(p["id"])]))
+					gain += float(int(Ovr.of(p, 0)) - int(young_start[str(p["id"])]))
 					n += 1
 			var mm := 0.0
 			for p in GameState.my_list:

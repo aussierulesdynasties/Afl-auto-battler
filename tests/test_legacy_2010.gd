@@ -1,4 +1,5 @@
 extends RefCounted
+const Ovr := preload("res://tests/ovr.gd")
 ## The 2010 start (Legacy mode, TODO row 142: "then the 2000, 2010 and 2020
 ## starts"): a career starts at a real 2010 club on its real list, rated on
 ## 2009, takes over from that club's real 2010 senior coach, plays the season
@@ -93,7 +94,7 @@ func _test_start_2010() -> void:
 			"St Kilda start on their real 2010 list (%d of %d on it)" % [want.size() - missing, want.size()])
 	var names := {}
 	for p in GameState.my_list:
-		names[str(p.get("real_name", ""))] = int(p.get("overall", 0))
+		names[str(p.get("real_name", ""))] = int(Ovr.of(p, 0))
 	_check(names.has("Nick Riewoldt") and names.has("Lenny Hayes"),
 			"Riewoldt and Hayes are on it")
 	# Rated on 2009: Gary Ablett, the 2009 Brownlow medallist, is among the best.
@@ -101,10 +102,10 @@ func _test_start_2010() -> void:
 	var better := 0
 	for p in (GameState.season.lists["GEE"] as Array):
 		if str(p.get("real_name", "")) == "Gary Ablett":
-			ablett = int(p.get("overall", 0))
+			ablett = int(Ovr.of(p, 0))
 	for club in GameState.season.clubs:
 		for p in (GameState.season.lists[club] as Array):
-			if int(p.get("overall", 0)) > ablett:
+			if int(Ovr.of(p, 0)) > ablett:
 				better += 1
 	_check(ablett >= 80 and better <= 10, "Gary Ablett rates among the league's best (%d, %d above him)" % [ablett, better])
 	# You replace Ross Lyon; the other fifteen keep their real senior coach.

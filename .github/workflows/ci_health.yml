@@ -1,0 +1,53 @@
+# CI health check (moved here from a Claude account's scheduled task, 2026-11-27, so it runs
+# whichever account or person works on the repo; Baggins: "if your fixes dont also apply to the
+# other claude acc then theyre not real fixes").
+#
+# Finds runs stuck waiting or running, runs still holding runners for a closed PR or an old commit
+# (force-cancelled), red main or nightly, and PRs nobody is driving. Problems go on one issue,
+# "CI health check: problems found", rewritten each check and closed when healthy.
+# The rules and thresholds are in tools/ci_health.py.
+#
+# When: every 2 hours, but GitHub drops or delays most scheduled runs on this repo (measured
+# 2026-11-26), so every push to main also runs it, skipped when a check finished under 60 min ago.
+# A pull request that changes the check runs it in dry-run mode (reports, changes nothing).
+# Cheap: one small job, a 1-file checkout and stdlib Python, about 20 seconds.
+name: CI health check
+on:
+  schedule:
+    - cron: "43 */2 * * *"
+  push:
+    branches: [main]
+  pull_request:
+    paths:
+      - .github/workflows/ci_health.yml
+      - tools/ci_health.py
+      - tools/test_ci_health.py
+  workflow_dispatch:
+concurrency:
+  group: ci-health-${{ github.event_name == 'pull_request' && github.head_ref || 'main' }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+  actions: write
+  issues: write
+  pull-requests: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            tools/ci_health.py
+            tools/test_ci_health.py
+          sparse-checkout-cone-mode: false
+      - name: Test the check's rules
+        if: github.event_name == 'pull_request'
+        run: cd tools && python3 test_ci_health.py
+      - name: Check CI health
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          THROTTLE_MIN: ${{ github.event_name == 'push' && '60' || '' }}
+        run: python3 tools/ci_health.py ${{ github.event_name == 'pull_request' && '--dry-run' || '' }} | tee -a "$GITHUB_STEP_SUMMARY"

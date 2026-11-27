@@ -821,6 +821,8 @@ func has_saved_career() -> bool:
 
 ## One sentence per line, so a narrow phone never leaves one word alone.
 const SAVE_UNREADABLE := "Your saved career could not be read.\nStarting a new career will overwrite it."
+## A save from before the player ratings were rebuilt (CareerSave.FIRST_LOADABLE).
+const SAVE_TOO_OLD := "Your saved career is from before the new player ratings.\nThis version cannot open it.\nStarting a new career will overwrite it."
 
 
 ## Why a career file on disk cannot be continued, in the coach's words, or
@@ -829,6 +831,8 @@ func saved_career_problem() -> String:
 	match CareerSave.problem(save_path):
 		"newer":
 			return "Your saved career is from a newer version.\nUpdate the game to keep playing it.\nStarting a new career will overwrite it."
+		"older":
+			return SAVE_TOO_OLD
 		"unreadable":
 			return SAVE_UNREADABLE
 	return ""
@@ -1408,7 +1412,6 @@ func _restore_career(state: Dictionary) -> bool:
 	real_after_draft = bool(state.get("real_after_draft", false))
 	user_dual_ruck = bool(state.get("user_dual_ruck", false))
 	_sync_dual()
-	_recompute_ratings()
 	_migrate_money_units()
 	var saved_version := int(state.get("career_version", 0))
 	if saved_version < 1:
@@ -1604,41 +1607,6 @@ func _migrate_careers() -> void:
 				Career.migrate(p, base, Career.before_game() + 1, gap_to)
 
 
-## Overall is derived data: rebuild it from the attributes on load, so a
-## save written under an older rating formula never keeps stale ratings.
-## What is pinned to a player's old overall - his POT and the season-start
-## mark for the rival training cap - moves by the same amount, so his
-## headroom is kept. With an unchanged formula nothing moves.
-func _recompute_ratings() -> void:
-	var groups: Array = [my_list, draftee_pool, free_agents, GameDB.late_draftees]
-	if season != null:
-		for code in season.lists:
-			groups.append(season.lists[code])
-	for code in league_lists:
-		groups.append(league_lists[code])
-	if draft != null:
-		groups.append(draft.pool)
-		for code in draft.club_lists:
-			groups.append(draft.club_lists[code])
-	for arr in groups:
-		for p in arr:
-			if not (p is Dictionary) or not (p as Dictionary).has("attr") or not (p as Dictionary).has("role"):
-				continue
-			var old := int(Rating.ovr(p, 0))
-			var ov := Ratings.rate_overall(p["attr"], str(p["role"]), Ratings.effective_games(p))
-			# Salary value is derived data too. Always refresh it so old saves
-			# cannot retain the retired 1-10 cap-point scale when OVR itself
-			# happens not to change.
-			p["value"] = Ratings.salary_value(ov)
-			if ov == old:
-				continue
-			p["overall"] = ov
-			if p.has("potential"):
-				p["potential"] = clampi(int(p["potential"]) + ov - old, 1, Potential.MAX_POT)
-			if p.has("season_start_ov"):
-				p["season_start_ov"] = int(p["season_start_ov"]) + ov - old
-
-
 ## Careers saved before potential existed: give every player a POT, taking
 ## the dataset's (with its hand-set overrides) where the player came from it.
 func _backfill_potential() -> void:
@@ -1694,8 +1662,6 @@ func _migrate_money_units() -> void:
 			if seen.has(token):
 				continue
 			seen[token] = true
-			if p.has("overall"):
-				p["value"] = Ratings.salary_value(int(Rating.ovr(p)))
 			if old_units and int(p.get("salary", 0)) > 0 and int(p.get("salary", 0)) < 1000:
 				p["salary"] = Contracts.old_points_to_salary(int(p["salary"]))
 			var talks: Dictionary = p.get("talks", {})
@@ -1719,7 +1685,7 @@ func _migrate_money_units() -> void:
 			for code in draft.club_lists:
 				draft.club_spend[code] = 0
 				for p in draft.club_lists[code]:
-					draft.club_spend[code] = int(draft.club_spend[code]) + int(p.get("value", Ratings.salary_value(int(Rating.ovr(p, 50)))))
+					draft.club_spend[code] = int(draft.club_spend[code]) + Ratings.value_of(p)
 			for entry in draft.pick_history:
 				entry["value"] = Ratings.salary_value(int(entry.get("overall", 50)))
 
@@ -1761,6 +1727,8 @@ func import_career(bytes: PackedByteArray) -> String:
 			return ""
 		"newer":
 			return "That backup is from a newer version of the game.\nUpdate the game to load it."
+		"older":
+			return "That backup is from before the new player ratings.\nThis version cannot load it. Your career is unchanged."
 	return "That file is not a career backup, or it is damaged.\nYour career is unchanged."
 
 
@@ -1870,12 +1838,12 @@ func reset(next_dataset := Datasets.DEFAULT) -> void:
 
 	# Mid-career seasons mutate the loaded player dicts in place (intake,
 	# ageing, XP training). A new career must start from the pristine
-	# dataset, so reload the data files before rebuilding anything. The caches
-	# built from the players (prospect shapes, story cards) are dropped with it,
-	# so a new career never reads one built under the last. PlayerProfile's rating
-	# scale stays: matches on worker threads only read it (Season warms it first),
-	# and clearing it let a worker rebuild it and crash (CI 38237786675).
-	Prospects.forget_cache()
+	# dataset, so reload the data files before rebuilding anything. The cache
+	# built from the players (story cards) is dropped with it, so a new career
+	# never reads one built under the last. PlayerProfile's rating scale is not
+	# cleared here: matches on worker threads only read it (Season warms it
+	# first), and clearing it let a worker rebuild it and crash (CI
+	# 38237786675). It rebuilds itself on the main thread after a reload.
 	StoryDeck.reload()
 	# Boot already loaded the data and no career has touched it yet (the cold
 	# Continue, or the first New career): reuse it rather than parse every
@@ -3172,7 +3140,6 @@ func _start_next_season(next_year: int, signed: int) -> void:
 		# Not on a list, so the summer never read his season: a stale record
 		# must not count again next season.
 		p.erase("season_gains")
-		p.erase("over_gains")
 		p.erase("games_missed_injured")
 	# Brownlow eligibility is season-specific. A new season starts clean.
 	var seen_brownlow := {}
@@ -3249,7 +3216,6 @@ func _start_next_season(next_year: int, signed: int) -> void:
 			p["season_start_ov"] = int(Rating.ovr(p))
 			# The summer (Growth.summer, in age_league) has read the season.
 			p.erase("season_gains")
-			p.erase("over_gains")
 			p.erase("games_missed_injured")
 	my_list = lists.get(my_club, [])
 	# The season simulates only this year's active clubs; `lists` keeps an
@@ -7110,7 +7076,9 @@ func train_stat_label(key: String) -> String:
 		if str(row[0]) == key:
 			return str(row[1])
 	if key == "disposal":
-		return "Kicking and handballing"   # the derived ball use (Skills.value)
+		return "Kicking and handballing"   # the derived ball use (Attributes.value)
+	if key == "ovr":
+		return "OVR"   # the Big-game player's line (Traits.stat_of)
 	return key
 
 
@@ -7299,11 +7267,11 @@ func _club_mult(club: String, p: Dictionary, staff: Dictionary, on_ground: bool,
 ## A plan is a kind of footballer. Each spends XP on what the match engine
 ## actually rewards for that job - never on an attribute that does nothing
 ## for the role (tests/test_training.gd checks every plan against
-## Ratings.ROLE_WEIGHTS and the trait table). Each point goes to the best
+## Rating.WEIGHTS and the trait table). Each point goes to the best
 ## weight per XP, so spending spreads as the cheap stats climb.
 ##
-## "position" trains the role core that OVR is built from
-## (Ratings.ROLE_WEIGHTS) - the safe default, and what rival clubs use. The
+## "position" trains the weights his OVR is read with at his AFL position
+## (Rating.WEIGHTS) - the safe default, and what rival clubs use. The
 ## archetypes lean a player toward one job (and the traits that go with it).
 ## Manual (spend XP by hand) was cut 2026-11-03: old saves map to the
 ## closest plan (_closest_plan).
@@ -7311,27 +7279,27 @@ const TRAIN_PLANS := [
 	{"key": "position", "label": "By position", "roles": []},
 	{"key": "inside_mid", "label": "Inside midfielder", "roles": ["MID"],
 			"text": "Wins the ball at stoppages and keeps it in the tackle.",
-			"weights": {"contested": 3.0, "handballing": 1.0}},
+			"weights": {"contested_ball": 3.0, "handballing": 1.0}},
 	{"key": "outside_mid", "label": "Wing", "roles": ["MID"],
 			"text": "Runs the wing: carries it from defence to attack and hits targets inside 50.",
-			"weights": {"carry": 3.0, "kicking": 2.0, "creating": 1.0}},
+			"weights": {"work_rate": 3.0, "kicking": 2.0, "vision": 1.0}},
 	{"key": "key_def", "label": "Key defender", "roles": ["DEF"],
 			"text": "Stops the opposition: spoils and marks inside 50, tackles hard.",
-			"weights": {"intercept": 3.0, "pressure": 2.0}},
+			"weights": {"reading_play": 3.0, "pressure": 2.0}},
 	{"key": "rebound_def", "label": "Small defender", "roles": ["DEF"],
 			"text": "Wins it back, then runs it out of defence.",
-			"weights": {"carry": 3.0, "intercept": 2.0}},
+			"weights": {"work_rate": 3.0, "reading_play": 2.0}},
 	{"key": "key_fwd", "label": "Key forward", "roles": ["FWD"],
 			"text": "The target: marks inside 50 and kicks the goals.",
-			"weights": {"contested_marking": 3.0, "goalkicking": 3.0, "accuracy": 1.0}},
+			"weights": {"contested_marking": 3.0, "forward_craft": 3.0, "goalkicking": 1.0}},
 	{"key": "small_fwd", "label": "Small forward", "roles": ["FWD"],
 			"text": "Goals from the ground: kicks straight and creates, and stays small enough to crumb.",
-			"weights": {"goalkicking": 3.0, "accuracy": 2.0, "carry": 1.0, "creating": 1.0}},
+			"weights": {"forward_craft": 3.0, "goalkicking": 2.0, "work_rate": 1.0, "vision": 1.0}},
 	# Rucks need this for a second-role ruck (a defender or forward who
 	# pinch-hits), whose Position plan trains his first role.
 	{"key": "ruck", "label": "Ruck", "roles": ["RUCK"],
 			"text": "Wins the hit-out, then the ball at the stoppage.",
-			"weights": {"ruck": 3.0, "contested": 1.0}},
+			"weights": {"ruck": 3.0, "contested_ball": 1.0}},
 ]
 # ---------------------------------------------------------------------------
 # Learning another position (roadmap M5-003, director-selected RC-003)
@@ -7364,7 +7332,8 @@ const PROJECT_REACH := 6
 ## passed (tools/audit/passmargin_impl.gd).
 const PROJECT_PASS := 1
 const PROJECT_MAX := 2
-const PROJECT_POT := {1: 70, 2: 90}      # positions he has -> POT to learn another
+# Positions he has -> POT to learn another (director 2026-11-26: "third-position POT at 88").
+const PROJECT_POT := {1: 70, 2: 88}
 const MAX_POSITIONS := 3
 const KEY_FWD_CM := 192.0
 const SMALL_FWD_CM := 181.0
@@ -7372,13 +7341,13 @@ const KEY_DEF_CM := PlayerProfile.KEY_DEF_CM
 const RUCK_CM := 196.0
 ## The jobs a player can learn, by line, with what each trains.
 const LEARN_JOBS := {
-	"mid": {"role": "MID", "word": "midfielder", "weights": {"contested": 3.0, "kicking": 0.5, "handballing": 0.5, "carry": 1.0}},
-	"key_fwd": {"role": "FWD", "word": "key forward", "weights": {"contested_marking": 3.0, "goalkicking": 3.0, "accuracy": 1.0}},
-	"fwd": {"role": "FWD", "word": "forward", "weights": {"goalkicking": 3.0, "contested_marking": 2.0, "accuracy": 1.0, "pressure": 1.0}},
-	"small_fwd": {"role": "FWD", "word": "small forward", "weights": {"goalkicking": 3.0, "accuracy": 2.0, "carry": 1.0, "creating": 1.0}},
-	"key_def": {"role": "DEF", "word": "key defender", "weights": {"intercept": 3.0, "pressure": 2.0}},
-	"small_def": {"role": "DEF", "word": "small defender", "weights": {"pressure": 3.0, "carry": 2.0, "intercept": 1.0}},
-	"ruck": {"role": "RUCK", "word": "ruck", "weights": {"ruck": 3.0, "contested": 1.0}},
+	"mid": {"role": "MID", "word": "midfielder", "weights": {"contested_ball": 3.0, "kicking": 0.5, "handballing": 0.5, "work_rate": 1.0}},
+	"key_fwd": {"role": "FWD", "word": "key forward", "weights": {"contested_marking": 3.0, "forward_craft": 3.0, "goalkicking": 1.0}},
+	"fwd": {"role": "FWD", "word": "forward", "weights": {"forward_craft": 3.0, "contested_marking": 2.0, "goalkicking": 1.0, "pressure": 1.0}},
+	"small_fwd": {"role": "FWD", "word": "small forward", "weights": {"forward_craft": 3.0, "goalkicking": 2.0, "work_rate": 1.0, "vision": 1.0}},
+	"key_def": {"role": "DEF", "word": "key defender", "weights": {"reading_play": 3.0, "pressure": 2.0}},
+	"small_def": {"role": "DEF", "word": "small defender", "weights": {"pressure": 3.0, "work_rate": 2.0, "reading_play": 1.0}},
+	"ruck": {"role": "RUCK", "word": "ruck", "weights": {"ruck": 3.0, "contested_ball": 1.0}},
 }
 
 
@@ -7393,10 +7362,9 @@ func project_role(p: Dictionary) -> String:
 	return str((LEARN_JOBS.get(job, {}) as Dictionary).get("role", ""))
 
 
-## His rating were he to play `role`, from his attributes (the scale his own
-## rating is on).
+## His rating were he to play `role`: his OVR at the slot (Rating.at_line).
 func rating_as(p: Dictionary, role: String) -> int:
-	return Ratings.rate_overall(p["attr"], role, Ratings.effective_games(p))
+	return Rating.at_line(p, role)
 
 
 func active_projects() -> int:
@@ -7938,6 +7906,9 @@ func _after_round(results: Array) -> void:
 			recovery_mults[my_club] = float(recovery_mults.get(my_club, 1.0)) * ClubBudget.recovery_mult(
 					department_budget_level("high_performance"))
 		Workload.advance_week(season.lists, results, week, recovery_mults)
+		# Age curves, a little each regular round (RATING_REBUILD §4).
+		if regular:
+			Growth.age_round(season.lists, season.regular_rounds())
 	_process_injuries(results)
 	_process_discipline(results)
 	_count_finals(results)
@@ -9430,7 +9401,7 @@ func replacement_worth(code: String, p: Dictionary) -> float:
 		for i in range(spot - 1, ranked.size()):
 			var q: Dictionary = ranked[i]
 			if str(q.get("role", "")) == role or str(q.get("role2", "")) == role:
-				best = maxf(best, Contracts.worth(TradeValue._held(q)))
+				best = maxf(best, Contracts.worth(q))
 				break   # ranked best first: the first at his position is the best left
 	return best
 
@@ -13943,7 +13914,7 @@ func plan_weights(p: Dictionary, key := "") -> Dictionary:
 	var row := _plan_row(key)
 	if row.has("weights"):
 		return row["weights"]
-	return Ratings.ROLE_WEIGHTS.get(str(p.get("role", "MID")), Ratings.ROLE_WEIGHTS["MID"])
+	return Rating.shares(p)
 
 
 ## Give one player his own plan ("" = follow the club plan). Banked XP is
@@ -14036,7 +14007,7 @@ func _closest_plan(p: Dictionary) -> String:
 		var sum := 0.0
 		for k in w:
 			tot += float(w[k])
-			sum += float(w[k]) * Skills.value(attr, k, 0.0)
+			sum += float(w[k]) * Attributes.value(attr, k, 0.0)
 		return sum / tot if tot > 0.0 else 0.0
 	var best := "position"
 	var best_score: float = score.call(plan_weights(p, "position")) + 3.0
@@ -14210,17 +14181,19 @@ func _ai_trait_focus(p: Dictionary) -> String:
 
 
 ## Whether an attribute does anything for this player's role in a match:
-## the role core OVR is built from (Ratings.ROLE_WEIGHTS), a trait his role
-## can earn from it, or star power and durability (every role).
+## a weight of his OVR at a position of his line (Rating.WEIGHTS), a trait
+## his role can earn from it, durability, or Work Rate (every role: the match
+## reads it for every carrier through the middle and out of defence, while
+## its OVR weight waits on Phase 4's measurement, RATING_REBUILD §3).
 func stat_useful_for(p: Dictionary, key: String) -> bool:
 	return stat_useful_for_role(str(p.get("role", "MID")), key) \
 			or (str(p.get("role2", "")) != "" and stat_useful_for_role(str(p["role2"]), key))
 
 
 static func stat_useful_for_role(role: String, key: String) -> bool:
-	if key == "star" or key == "durability":
+	if key == "durability" or key == "work_rate":
 		return true
-	if (Ratings.ROLE_WEIGHTS.get(role, {}) as Dictionary).has(key):
+	if Rating.line_weighs(role, key):
 		return true
 	for t in Traits.DEFS:
 		var d: Dictionary = Traits.DEFS[t]
@@ -14274,7 +14247,7 @@ func _spend_banks(p: Dictionary, train_weights: Dictionary, learning := false) -
 				left += float(split[k])
 			p["xp"] = float(p.get("xp", 0.0)) + left
 			p.erase("xp_split")
-		_buy(p, p, "xp_match", Ratings.ROLE_WEIGHTS.get(str(p.get("role", "MID")), Ratings.ROLE_WEIGHTS["MID"]), gains)
+		_buy(p, p, "xp_match", Rating.shares(p), gains)
 		_buy(p, p, "xp", train_weights, gains)
 	return gains
 
@@ -14338,9 +14311,6 @@ func _buy(p: Dictionary, holder: Dictionary, bank: String, weights: Dictionary, 
 		var sg: Dictionary = p.get("season_gains", {})
 		sg[best_key] = int(sg.get(best_key, 0)) + 1
 		p["season_gains"] = sg
-		_recalc_player_overall(p)
-		if pot > 0 and not p.has("peak_year") and int(Rating.ovr(p)) >= pot:
-			p["peak_year"] = season_year
 
 
 ## After a round: every rival club's players are paid for the game and their
@@ -14379,7 +14349,7 @@ func _train_rivals(results: Array) -> void:
 func ai_spend_xp(p: Dictionary) -> int:
 	var learning := project_job(p) != ""
 	var focus := "" if learning else _ai_trait_focus(p)
-	var w: Dictionary = {focus: 1.0} if focus != "" else Ratings.ROLE_WEIGHTS.get(str(p.get("role", "MID")), Ratings.ROLE_WEIGHTS["MID"])
+	var w: Dictionary = {focus: 1.0} if focus != "" else Rating.shares(p)
 	var bought := 0
 	for n in _spend_banks(p, w, learning).values():
 		bought += int(n)
@@ -14414,12 +14384,6 @@ func _xp_amount(stats: Dictionary, on_ground: bool, on_bench: bool, reserves := 
 ## What one stat point costs (Growth.cost).
 func _cost_for(cur: int, games: float) -> int:
 	return Growth.cost(cur, games)
-
-
-func _recalc_player_overall(p: Dictionary) -> void:
-	p["overall"] = Ratings.rate_overall(p["attr"], str(p["role"]),
-			Ratings.effective_games(p))
-	p["value"] = Ratings.salary_value(int(Rating.ovr(p)))
 
 
 # ---------------------------------------------------------------------------

@@ -3,6 +3,7 @@ extends RefCounted
 ## aged five seasons by the development rules (no matches), their synergy
 ## traits against the real 2026 lists' share, and the classes' OVR and
 ## position mix - before and after a change to how prospects are made.
+const Ovr := preload("res://tests/ovr.gd")
 const TRAITS := ["ball_magnet", "bull", "aerial", "crumber", "sharpshooter", "playmaker",
 		"interceptor", "lockdown", "engine", "big_game", "ruck_king"]
 
@@ -26,14 +27,14 @@ func run() -> void:
 	for y in range(2027, 2037):
 		for p in Prospects.age_pool(Prospects.generate_class(y, 4242 + y), y, {}):
 			n += 1
-			ovr0 += float(p["overall"])
+			ovr0 += float(Ovr.of(p))
 			roles[str(p["role"])] = int(roles.get(str(p["role"]), 0)) + 1
 			for t in Traits.of(p):
 				at_draft[t] = int(at_draft.get(t, 0)) + 1
 			var q: Dictionary = p.duplicate(true)
 			for k in range(1, 6):
 				Prospects.age_player(q, y + k)
-			ovr5 += float(q["overall"])
+			ovr5 += float(Ovr.of(q))
 			_grown_all.append(q)
 			for t in Traits.of(q):
 				grown[t] = int(grown.get(t, 0)) + 1
@@ -46,13 +47,13 @@ func run() -> void:
 			var rt := 0
 			for c in GameDB.club_order:
 				for p in GameDB.club_list(c):
-					if int(p["overall"]) >= int(b[0]) and int(p["overall"]) < int(b[1]):
+					if int(Ovr.of(p)) >= int(b[0]) and int(Ovr.of(p)) < int(b[1]):
 						rn += 1
 						rt += 1 if Traits.of(p).has(t) else 0
 			var gn := 0
 			var gt := 0
 			for q in _grown_all:
-				if int(q["overall"]) >= int(b[0]) and int(q["overall"]) < int(b[1]):
+				if int(Ovr.of(q)) >= int(b[0]) and int(Ovr.of(q)) < int(b[1]):
 					gn += 1
 					gt += 1 if Traits.of(q).has(t) else 0
 			line += " | %d-%d real %4.1f%% (%d) gen %4.1f%% (%d)" % [b[0], b[1], 100.0 * rt / maxi(1, rn), rn, 100.0 * gt / maxi(1, gn), gn]

@@ -61,8 +61,7 @@ func run() -> void:
 			in_ovr / maxf(1, changed_players), out_ovr / maxf(1, changed_players)])
 
 
-## His rating in the slot he was picked for (slot copies carry own_role).
+## His rating in the slot he was picked for (slot copies carry own_role):
+## Rating.at_line, out-of-position cut included.
 func _slot_rating(g: Dictionary, line: String) -> float:
-	if str(g.get("own_role", g.get("role", ""))) == line or (g.get("attr", {}) as Dictionary).is_empty():
-		return float(g.get("overall", 0))
-	return float(Ratings.rate_overall(g["attr"], line, Ratings.effective_games(g)))
+	return Ratings.line_rating(g, line)

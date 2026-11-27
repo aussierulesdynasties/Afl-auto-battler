@@ -3,6 +3,7 @@ extends RefCounted
 ## consensus top eight (the tests/test_draft.gd check). Args after the impl
 ## name: n (number of draft seeds, default 400).
 ## godot --headless --path . --script tools/audit/run_audit.gd -- firstpick_impl 400
+const Ovr := preload("res://tests/ovr.gd")
 
 
 func run() -> void:
@@ -16,7 +17,7 @@ func run() -> void:
 	for i in range(12):
 		var q: Dictionary = by_worth[i]
 		print("RANK %d %s %s %s ov=%s pot=%s age=%s worth=%.2f" % [i + 1, q.get("club", ""),
-				q.get("first", q.get("name", "")), q.get("last", ""), q.get("overall"),
+				q.get("first", q.get("name", "")), q.get("last", ""), Ovr.of(q),
 				q.get("potential"), q.get("age", "?"), real._worth(q)])
 		if i < 8:
 			top[str(q["id"])] = true

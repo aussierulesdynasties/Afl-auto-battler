@@ -1,4 +1,5 @@
 extends RefCounted
+const Ovr := preload("res://tests/ovr.gd")
 ## The board, morale and the weekly event card. Run through
 ## tests/run_club_tests.gd.
 
@@ -15,8 +16,6 @@ func run() -> void:
 	checks = 0
 	GameState.replay_seed = SUITE_SEED
 	# These fixtures (Geelong's second ruck off the 18, a club's 21st man) are about the rules, not
-	# the director's hand-set ratings (data/ovr_overrides.csv): they play on the data without them.
-	GameDB.skip_ovr_overrides = true
 	GameDB.reload()
 	_t("_test_rules")
 	_t("_test_season_flow")
@@ -98,14 +97,14 @@ func _test_rules() -> void:
 			and ClubLife.goal_met({"wins": 7}, 15, 7), "Goals are judged on position or wins")
 	_check(int(ClubLife.after_match(60, 45)["confidence"]) == 63 and int(ClubLife.after_match(60, -10)["confidence"]) == 58,
 			"Wins lift the board, losses cost it, a thrashing counts one more")
-	var star := {"id": "s", "overall": 85, "morale": 70}
-	var kid := {"id": "k", "overall": 60, "morale": 70}
+	var star := Ovr.to({"id": "s",  "morale": 70}, 85)
+	var kid := Ovr.to({"id": "k",  "morale": 70}, 60)
 	ClubLife.morale_after_match([star, kid], {"k": true}, true)
 	_check(int(star["morale"]) == 64 and int(kid["morale"]) == 74,
 			"Playing and winning lifts morale; a star left out sulks")
 	# Suspended, or healed only as the week ticked over: he could not play,
 	# so he was not left out.
-	var banned := {"id": "b", "overall": 85, "morale": 70}
+	var banned := Ovr.to({"id": "b",  "morale": 70}, 85)
 	ClubLife.morale_after_match([banned], {"k": true}, true, {}, 0.0, {"b": true})
 	_check(int(banned["morale"]) == 70, "A star who could not play this week does not sulk (%d)" % int(banned["morale"]))
 	star["morale"] = 30
@@ -512,7 +511,7 @@ func _test_event_decisions() -> void:
 	GameState.start_season("GEE", GameDB.club_list("GEE"))
 	# --- Contract: a real premium for certainty, only when affordable ------
 	var star: Dictionary = GameState.my_list[2]
-	star["overall"] = 80
+	Ovr.to(star, 80)
 	star["contract_years"] = 1
 	star["morale"] = 70
 	star["age"] = 24.0
@@ -521,8 +520,8 @@ func _test_event_decisions() -> void:
 	_check(early >= ask + 1 and float(early) >= float(ask) * 1.12,
 			"Extending early costs materially more than today's price (%d v %d)" % [early, ask])
 	_check(ClubLife.extension_wanted(star, {}), "A star out of contract asks to extend")
-	var good: Dictionary = star.duplicate()
-	good["overall"] = ClubLife.EXTENSION_MIN_OVR - 4
+	var good: Dictionary = star.duplicate(true)   # deep: OVR is read from his attr dict
+	Ovr.to(good, ClubLife.EXTENSION_MIN_OVR - 4)
 	_check(not ClubLife.extension_wanted(good, {}), "A good player below star level waits for the off-season")
 	_check(not ClubLife.extension_wanted(star, {"extension|someone_else": true}),
 			"Only one star asks to extend early in a season")
@@ -538,9 +537,9 @@ func _test_event_decisions() -> void:
 	_check(int(star["contract_years"]) == 1 and int(star["salary"]) == sal_before and ClubLife.morale(star) == 65,
 			"Waiting commits nothing and costs a little morale")
 	# Waiting's upside and its risk, sized from the price curve (bible §4).
-	var flat := {"id": "w_flat", "overall": 84, "age": 26.0, "morale": 70}
-	var up := flat.duplicate()
-	up["overall"] = 84 + 3
+	var flat := Ovr.to({"id": "w_flat",  "age": 26.0, "morale": 70}, 84)
+	var up := flat.duplicate(true)   # deep: OVR is read from his attr dict
+	Ovr.to(up, 84 + 3)
 	var rise := Contracts.asking_salary(up) - Contracts.asking_salary(flat)
 	var waits := ClubLife.wait_words(flat, 3)
 	_check(waits.contains("about 3 points") and waits.contains(Contracts.money(rise))
@@ -654,7 +653,7 @@ func _test_event_decisions() -> void:
 		last = k
 	_check(repeats == 0, "No card twice in a row (%d repeats)" % repeats)
 	# --- A player who has left before the card resolves ---------------------
-	var gone := {"id": "gone_player", "overall": 80, "attr": {"durability": 50}}
+	var gone := Ovr.to({"id": "gone_player",  "attr": {"durability": 50}}, 80)
 	GameState.week_event = GameState.story_card("health_pulled_up_sore", gone)
 	var outcome := GameState.resolve_week_event(1)
 	_check(outcome.begins_with("The moment has passed"), "A card about a departed player resolves harmlessly")
@@ -1146,7 +1145,7 @@ func _spare_kid(skip := []) -> Dictionary:
 	for p in GameState.my_list:
 		if str(p["role"]) == "RUCK" or skip.has(str(p["id"])):
 			continue
-		if best.is_empty() or int(p["overall"]) < int(best["overall"]):
+		if best.is_empty() or int(Ovr.of(p)) < int(Ovr.of(best)):
 			best = p
 	return best
 
@@ -1424,7 +1423,7 @@ func _test_backing_card_guard() -> void:
 		list.append(p)
 	var young: Dictionary = (GameState.my_list[8] as Dictionary).duplicate(true)
 	young["age"] = 19.0
-	young["potential"] = int(young["overall"]) + 12
+	young["potential"] = int(Ovr.of(young)) + 12
 	young.erase("injury_weeks")
 	list.append(young)
 	var kid_card := StoryDeck.by_id(StoryDeck.all(), "training_kid_pushing")
@@ -1653,7 +1652,7 @@ func _test_auto_pick_keeps_promised() -> void:
 		var weak := {}
 		for id in side.get(line, []):
 			var q := GameState.list_player(str(id))
-			if not GameState.is_young(q) and (weak.is_empty() or int(q["overall"]) < int(weak["overall"])):
+			if not GameState.is_young(q) and (weak.is_empty() or int(Ovr.of(q)) < int(Ovr.of(weak))):
 				weak = q
 		if not weak.is_empty():
 			weak["expects_game"] = 12
@@ -1686,8 +1685,8 @@ func _test_promise_keeps_trial_player() -> void:
 		if k != "OUT" and (sel[k] as Array).has(str(t["id"])):
 			line = str(k)
 	_check(line != "" and line != "BENCH", "(setup) the trial player is named on the ground (%s)" % line)
-	var own := int(t["overall"])
-	t["overall"] = 1   # the lowest-rated in his line: the one who would make way
+	var own := int(Ovr.of(t))
+	Ovr.to(t, 1)   # the lowest-rated in his line: the one who would make way
 	var kid := _kid(_spare_kid([str(t["id"])]), 0)
 	kid["age"] = 19.0
 	for k in sel:
@@ -1698,7 +1697,7 @@ func _test_promise_keeps_trial_player() -> void:
 	_check(_named_ids(GameState.my_selection()).has(str(t["id"])) and str(GameState.role_trial.get("id", "")) == str(t["id"]),
 			"The trial player keeps his place and his trial (%s)" % str(GameState.role_trial))
 	_check(_named_ids(GameState.my_selection()).has(str(kid["id"])), "...and the promised kid is named in place of another")
-	t["overall"] = own
+	Ovr.to(t, own)
 
 
 ## "Pushing for games" (and the finals-gone run home) is only for a kid who is
@@ -1713,7 +1712,7 @@ func _test_pushing_for_games_needs_no_games() -> void:
 		var p: Dictionary = src.duplicate(true)
 		p["id"] = id
 		p["age"] = 20.0
-		p["potential"] = int(p["overall"]) + 12
+		p["potential"] = int(Ovr.of(p)) + 12
 		p.erase("injury_weeks")
 		p.erase("backing")
 		if last_round > 0:
@@ -1765,7 +1764,7 @@ func _test_pushing_for_games_needs_no_games() -> void:
 func _test_backing_lasts_the_season() -> void:
 	_fresh_season()
 	var ranked := GameState.my_list.duplicate()
-	ranked.sort_custom(func(a, b): return int(a["overall"]) > int(b["overall"]))
+	ranked.sort_custom(func(a, b): return int(Ovr.of(a)) > int(Ovr.of(b)))
 	var kid := _kid(ranked[10], 2)
 	kid["age"] = 20.0
 	var id := str(kid["id"])

@@ -8,6 +8,7 @@ extends SceneTree
 ##   <out>_card.png    the card: a new club has approached your player
 ##   <out>_order.png   the draft order before the new club's first season
 ##   <out>_news.png    the league news after the new club joins
+const Ovr := preload("res://tests/ovr.gd")
 
 var W := 390
 var H := 844
@@ -97,7 +98,7 @@ func _run() -> void:
 	state.career_seed = 7
 	state.replay_seed = 7
 	var pool: Array = db.all_players_sorted() + db.all_draftees_sorted()
-	pool.sort_custom(func(x, y): return x["overall"] > y["overall"])
+	pool.sort_custom(func(x, y): return Ovr.of(x) > Ovr.of(y))
 	state.draft = draft_class.new(pool, db.active_clubs(state.season_year).duplicate(), 7)
 	state.draft.start_for_user(club)
 	_run_draft(state.draft)
