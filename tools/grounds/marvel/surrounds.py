@@ -326,6 +326,12 @@ def all_trees(mapped, ways):
     return out
 
 
+def in_harbour_pines(e, n):
+    """Harbour Esplanade's street trees west of the stadium: Norfolk Island pines (the person's photos, 27 Nov, and
+    Wikimedia Commons' 2023 south-west views), drawn as pines in landmarks.py instead of round crowns."""
+    return -215.0 < e < -120.0 and -260.0 < n < 260.0
+
+
 def tree_list(trees, st):
     rng = np.random.default_rng(13)
     out = []
@@ -338,6 +344,9 @@ def tree_list(trees, st):
             continue
         h = rng.uniform(7.0, 15.0)
         r = h * rng.uniform(0.3, 0.4)
+        if in_harbour_pines(e, n):
+            # round 15: Harbour Esplanade's Norfolk Island pines are modelled one by one in landmarks.py (norfolk_pines)
+            continue
         if -215.0 < e < -120.0 and -260.0 < n < 260.0:
             # Harbour Esplanade's street trees: tall and slim (Google Earth ge_ferry_b, c_w)
             h = rng.uniform(10.0, 13.0)
@@ -512,7 +521,7 @@ def main():
     # (landmarks.py plaza_deck, south_podium, garden_block; outlines repeated here)
     deck = deck + [
         [(-14.0, -132.0), (-14.0, -152.0), (24.0, -154.0), (26.0, -161.0), (48.0, -160.0), (72.0, -158.0), (80.0, -165.0),
-         (86.0, -152.0), (100.0, -143.0), (112.0, -136.0), (110.0, -120.0), (100.0, -112.0)],
+         (86.0, -152.0), (100.0, -143.0), (112.0, -136.0), (110.0, -120.0), (114.9, -96.4), (96.1, -80.7), (92.0, -86.0), (100.0, -112.0)],
         [(-8.1, -146.4), (6.4, -146.6), (26.2, -145.4), (44.0, -144.6), (59.8, -142.4), (75.7, -137.9), (89.5, -131.9),
          (96.5, -127.4), (102.4, -122.0), (105.4, -116.7), (105.8, -111.1), (105.0, -101.2), (96.5, -94.3), (92.0, -86.0),
          (41.6, -108.0), (-9.1, -118.8)],
