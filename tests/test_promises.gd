@@ -130,9 +130,13 @@ func _test_run_kept() -> void:
 	var owed := Promises.of(GameState, id)
 	_check(owed.size() == 1 and str(owed[0]["kind"]) == "run" and int(owed[0]["weeks_left"]) == Backing.RUN_GAMES,
 			"His promises read as one run of three games (%s)" % str(owed))
-	for i in Backing.RUN_GAMES:
+	# A run waits while he is hurt (Backing.after_match), so play rounds until
+	# his three games are in: at SUITE_SEED the kid misses two weeks injured.
+	var rounds := 0
+	while Backing.is_active(kid) and rounds < 12:
 		_advance_mine()
-	_check(str(Backing.ledger(kid)[0]["state"]) == "done", "(setup) the run is played out")
+		rounds += 1
+	_check(str(Backing.ledger(kid)[0]["state"]) == "done", "(setup) the run is played out (%d rounds)" % rounds)
 	_check(int(w["kept"]) == 1 and int(w["broken"]) == 0, "The record says kept (%s)" % str(w))
 	_check(Promises.respect(GameState) >= r0 + int(Promises.MADE[0]) + int(Promises.KEPT["run"][0]),
 			"Keeping your word builds Respect (%d -> %d)" % [r0, Promises.respect(GameState)])
@@ -237,8 +241,10 @@ func _test_drops_build_authority() -> void:
 
 func _test_rival_parity() -> void:
 	_fresh()
-	GameState.advance()
-	GameState.advance()
+	# Three rounds: a fit man is dropped most often when a team-mate comes back
+	# from injury (at SUITE_SEED, round 3).
+	for i in 3:
+		GameState.advance()
 	var clubs: Dictionary = GameState.club_standing
 	_check(clubs.size() >= 16 and not clubs.has("GEE"),
 			"Every rival club's senior coach has a standing of his own (%d)" % clubs.size())
