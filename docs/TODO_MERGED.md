@@ -260,3 +260,4 @@ What has landed toward each open row of docs/TODO.md and docs/TODO_RULINGS.md, o
 - 202: Merged #2289: Marvel round 15: Gate 9 on the harbour side, concourse at its measured height.
 - 202: Merged #2293: Marvel round 15b: the harbour side from the director's photos.
 - 202: Merged #2297: Marvel round 16: real trees, matte leaves, street wall, truss posts.
+- 202: Merged #2300: 3D 1.0 plan: Marvel rounds 14-16, pre-game shot, aerial orbit, no 3D on itch builds.
