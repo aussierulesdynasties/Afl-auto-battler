@@ -1999,9 +1999,12 @@ def street_banners(g, line, h, step=10.0):
         b0, b1 = c + tt * 0.12, c + tt * 1.02
         g.poly("steel_dark", [(*b0, z1 - 0.9), (*b1, z1 - 0.9), (*b1, z1 - 0.84), (*b0, z1 - 0.84)])
         zt, zb_, zs = z1 - 0.95, z1 - 4.55, z1 - 4.25
-        g.poly("street_banner", [(*b0, zb_), (*b1, zs), (*b1, zt), (*b0, zt)],
+        # round 17e (cloud render from the deck: STADIUM read backwards): the two faces had shared one plane, so the back
+        # of one (mirrored) could win the depth test; each now stands 1 cm out on its own side
+        r = np.array([tt[1], -tt[0]]) * 0.01
+        g.poly("street_banner", [(*(b0 + r), zb_), (*(b1 + r), zs), (*(b1 + r), zt), (*(b0 + r), zt)],
                [(0.0, 0.0), (0.9, 0.3), (0.9, 3.6), (0.0, 3.6)])
-        g.poly("street_banner", [(*b1, zs), (*b0, zb_), (*b0, zt), (*b1, zt)],
+        g.poly("street_banner", [(*(b1 - r), zs), (*(b0 - r), zb_), (*(b0 - r), zt), (*(b1 - r), zt)],
                [(0.0, 0.3), (0.9, 0.0), (0.9, 3.6), (0.0, 3.6)])
 
 
