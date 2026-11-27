@@ -1,10 +1,2 @@
-# Grounds the fault scan runs on a push (tools/fault_scan/README.md)
-mcg
-optus
-gmhba
-adelaide
-people_first
-engie
-macpoint
-scg
-manuka
+# Grounds the fault scan runs on a push (one folder name per line). Marvel rescan on round 14.
+marvel
