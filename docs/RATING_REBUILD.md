@@ -200,3 +200,18 @@ load after it. Lists and weight tables for his review go in `REVIEW.md` at the r
 | 6 | Generation: type ranges, classes, Forge, expansion, depth pools, state leagues | Intake and Forge-on-every-start tests |
 | 7 | Progression: XP into attributes, POT cap, age curves, breakouts, trait retest | Multi-season audit |
 | 8 | UI and words: card in four groups, colour cuts, grades, PlaysLike, Roles, story thresholds; `.hist` careers regenerated | Real taps; captures to him |
+
+### Where it stands (2026-11-27, 18:30 AEDT)
+
+| PR | Branch | Holds | State |
+|---|---|---|---|
+| #2239 | `claude/rating-rebuild-phase4` | Phases 1, 3, 4, 6, 7 | Ready, auto-merge on, head 966a8c86 |
+| #2240 | `claude/endurance-blend` | #2239 plus Endurance 40/30/30 (re-scaled p2-p98), draft-night trades (seller uses his own board, 1% margin), the ruck pillar fix ("Midfield spot only") | Draft; landed through #2242 |
+| #2242 | `claude/rating-phase8-ui` | #2240 whole plus Phase 8 (card, colour cuts 85/52/33, PlaysLike, words), regenerated histories | Ready, auto-merge on; red on `promises` |
+
+Still open:
+- `promises` (main's #2233) on the #2240/#2242 tree: 7 checks fail. The backed kid's three-game run is never
+  played out, and no rival coach's Authority moves in two rounds. On #2239's own tree the suite passes 79/79.
+- #2240's paired `tools/balance.sh match 1000` table has not been run.
+- Calibration, the balance table and his playtest (Phase 4's proof) are his call.
+- #2239 and #2240 stay open after #2242 lands (squash-only repo); he closes them.

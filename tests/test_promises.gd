@@ -64,7 +64,7 @@ func _spare() -> Dictionary:
 	for p in GameState.my_list:
 		if str(p["role"]) == "RUCK" or not Ratings.available(p):
 			continue
-		if best.is_empty() or int(Rating.ovr(p)) < int(Rating.ovr(best)):
+		if best.is_empty() or int(Rating.ovr(p, 0)) < int(Rating.ovr(best, 0)):
 			best = p
 	return best
 
