@@ -74,3 +74,21 @@ These lines go on the game's credits screen before 1.0.
   from Copernicus GLO-30 (© DLR e.V. 2010-2014 and © Airbus Defence and Space GmbH 2014-2018,
   provided under COPERNICUS by the European Union and ESA).
 - Delivered through Mapterhorn terrain tiles (mapterhorn.com, Copernicus GLO-30 past the LiDAR).
+
+## The surroundings beyond each ground (tools/grounds/backdrop/scene)
+
+Covers the grounds whose surroundings come from this tool: Subiaco, Football Park, WACA, Optus, Ikon Park,
+Whitten, Windy Hill, Moorabbin, Hands, North Hobart, Bruce, Summit, Sky, Macquarie Point, Jiangwan, Blacktown.
+
+- Streets, buildings, water, parks and mapped trees: © OpenStreetMap contributors (ODbL).
+- Buildings OpenStreetMap lacks, and building heights: Overture Maps Foundation buildings (ODbL), including
+  Microsoft and Google footprints.
+- Land and tree colours: Contains modified Copernicus Sentinel-2 data 2025 (via Digital Earth Australia and
+  Element 84 Earth Search).
+- Building heights at Sky Stadium: New Zealand LiDAR 1m DSM and DEM, Toitū Te Whenua Land Information New
+  Zealand, CC BY 4.0.
+- Building heights at Jiangwan: CNBH-10m (Wu et al., 2023, CC BY 4.0).
+- Roof heights of big buildings and towers elsewhere, and the era checks at the closed grounds (Google Earth
+  historical imagery, 2000-2013): read or compared by eye in Google Earth; only heights, outlines and
+  verdicts are kept, no imagery is shipped.
+- The land: see "The land round every ground" above.

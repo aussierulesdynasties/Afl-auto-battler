@@ -1,0 +1,9 @@
+early/hist_00 12 Aug 2017
+early/hist_01  9 Sep 2017
+early/hist_02 13 Oct 2017
+early/hist_03 21 Sep 2018   used
+early/hist_04 12 Jan 2020   used; registration reference
+early/hist_05 15 Jan 2020   used
+hist_00        4 May 2020   used
+hist_01       23 Jun 2020   used
+hist_02..09   Jan 2022 to 2 Feb 2026 (hist_09 traced alone for comparison)

@@ -63,8 +63,12 @@ const PC_BAND_MAX := 6
 const PC_SHEET_ROW_H := 36.0
 ## The narrowest list column that still shows a man's position beside his name.
 const PC_POS_MIN_W := 200.0
-## The widest a squad-list name runs on a PC before the figures follow it.
-const PC_NAME_MAX_W := 150.0
+## The narrowest list column that also shows where he stands (injured, omitted...).
+const PC_STATUS_MIN_W := 380.0
+## The same beside the player: a 32:9 screen's boxes (357 units) keep where he
+## plays and where he stands instead of a long gap between name and OVR
+## (director's pick B, 2026-11-27).
+const PC_STATUS_MIN_W_BESIDE := 300.0
 var _pc_fit_rows := 99
 var _pc_area_w := 0.0
 var _pc_grid: GridContainer = null
@@ -358,7 +362,8 @@ func _band() -> Control:
 
 ## The squad: the tabs, the search and the group hint on one line, then every
 ## man as a one-line row in a band per position (_pc_fill).
-## `compact`: the list beside the player, name and OVR only.
+## `compact`: the list beside the player: name and OVR, plus where he plays
+## and stands when the boxes are wide (a 32:9 screen).
 func _pc_list(compact: bool) -> Control:
 	_pc_compact = compact
 	var panel := UiKit.panel(UiKit.PANEL, UiKit.Space.PAD, 8)
@@ -530,19 +535,12 @@ func _pc_item(it: Array, colw: float) -> Control:
 	var n := UiKit.ellipsis(full_name, 13, UiKit.TEXT, true)
 	n.name = "TraineeName"
 	n.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	# A wide column (a 2560 screen) keeps the name beside his figure: the name
-	# stops at PC_NAME_MAX_W and the row's spare width goes after the figures
-	# (director, 2026-10-14: space between divorces the number from the name).
-	var capped := colw > PC_NAME_MAX_W + 120.0
-	if capped:
-		n.size_flags_horizontal = Control.SIZE_FILL
-		n.custom_minimum_size.x = PC_NAME_MAX_W
 	n.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	n.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS_FORCE
 	n.resized.connect(func():
 		n.text = BenchDrawer._fit_name(full_name, n.size.x, n.get_theme_font_size("font_size")))
 	face.add_child(n)
-	if not _pc_compact and colw >= PC_POS_MIN_W:
+	if colw >= PC_POS_MIN_W:
 		var pos := UiKit.line(_card_position(p), 12, UiKit.MUTED)
 		pos.custom_minimum_size.x = 48
 		pos.size_flags_vertical = Control.SIZE_SHRINK_CENTER
@@ -555,7 +553,7 @@ func _pc_item(it: Array, colw: float) -> Control:
 	ovr.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	ovr.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	face.add_child(ovr)
-	if not _pc_compact and colw >= 380.0:
+	if colw >= (PC_STATUS_MIN_W_BESIDE if _pc_compact else PC_STATUS_MIN_W):
 		# Where he stands (injured, omitted, reserves, developing); the name keeps the rest of the row.
 		var status := _card_status(p, id, 132.0)
 		var st := UiKit.ellipsis(str(status[0]), 12, status[1])
@@ -563,11 +561,6 @@ func _pc_item(it: Array, colw: float) -> Control:
 		st.size_flags_horizontal = Control.SIZE_FILL
 		st.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		face.add_child(st)
-	if capped:
-		var spare := Control.new()
-		spare.name = "RowSpare"
-		spare.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		face.add_child(spare)
 	b.tooltip_text = full_name
 	_ignore_mouse(face)
 	b.button_down.connect(_begin_player_hold.bind(id))

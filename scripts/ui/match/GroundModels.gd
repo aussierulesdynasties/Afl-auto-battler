@@ -147,6 +147,9 @@ const SURROUNDS := {
 					Color(0.9, 0.9, 0.88), Color(0.66, 0.5, 0.4), Color(0.72, 0.76, 0.78)],
 			# Each roof's own colour from above (Google Earth, tools/grounds/bellerive/houses_ge.py), linear.
 			"roof_colours": "roofs.bin",
+			# The houses traced off Google Earth: each one's wall colour, windows, parapet and solar panels
+			# (tools/grounds/bellerive/houses_traced.py; PC check r6: the townhouses were blank white boxes).
+			"house_detail": "house_detail.bin",
 			# Its gums' crowns hang deep (Google Earth fac_200, out_SE): see _add_trees.
 			"deep_crowns": true,
 			# Its trees fill Google Earth's canopy (13,000 crowns): the far blocks draw a ball a crown (_add_trees).
@@ -190,7 +193,8 @@ const SURROUNDS := {
 				62.8, 63.2, 63.8, 64.7, 66.0, 68.1, 70.8, 73.9, 77.7, 82.2, 86.2, 86.6, 87.6, 90.1, 92.4, 95.4,
 				97.1, 98.1, 98.9, 99.6, 100.0, 100.2, 100.3, 100.2, 100.1, 99.2, 98.2, 97.1, 95.9, 94.5, 93.9, 92.3,
 				90.6, 89.1, 87.4, 85.6, 83.6, 81.5, 79.3, 77.1, 74.9, 72.9, 71.1, 69.6, 68.3, 67.4, 66.9, 66.8],
-			"map": "surrounds.webp", "span": 2048.0, "trees": "trees.bin", "buildings": "buildings.bin",
+			"map": "surrounds.webp", "span": 2048.0, "trees": "trees.bin", "gum_trees": "gums.bin", "deep_crowns": true,
+			"buildings": "buildings.bin",
 			# Norwood in Google Earth: bluestone and sandstone villa fronts, red brick, cream render, white townhouses.
 			# (linear, as the vertex colours are read; each roof's own colour is in roofs.bin)
 			"walls": [Color(0.181, 0.19, 0.199), Color(0.579, 0.428, 0.237), Color(0.349, 0.133, 0.082), Color(0.681, 0.612, 0.456),
@@ -217,12 +221,16 @@ const SURROUNDS := {
 	# Marvel Stadium in Docklands: Victoria Harbour, the Southern Cross rail yards, the streets and towers
 	# round it from OpenStreetMap (tools/grounds/marvel/surrounds.py), and the Bolte Bridge's towers and
 	# deck in 3D (tools/grounds/marvel/bridges.py).
-	"marvel": {"y": -0.03, "inner": 120.0, "colour": Color(0.55, 0.56, 0.52),
+	"marvel": {"y": -0.03, "inner": 120.0, "colour": Color(0.42, 0.43, 0.43),
 			"map": "surrounds.webp", "span": 2048.0, "trees": "trees.bin", "buildings": "buildings.bin",
-			"models": ["bridges.glb", "landmarks.glb"], "tint": Color(0.86, 0.84, 0.82), "building_tint": Color.WHITE, "building_style": "towers",
+			"models": ["bridges.glb", "landmarks.glb"], "tint": Color(0.84, 0.84, 0.84), "building_tint": Color.WHITE, "building_style": "towers",
 			# Round 12: the real land (terrain.bin, tools/grounds/marvel/land.py) right up to `inner`. The model's own
 			# pad follows the same land, from 0.9 m under the old street by the harbour to 4.4 m over it on the east.
-			"follow_land": true},
+			"follow_land": true,
+			# Round 13b: the backdrop (#2072, marvel_backdrop_part*.glb) is cut back to past 1024 m
+			# (tools/grounds/backdrop/cut_inner.py), as reduce.py's `inner` does for the MCG: inside it this ring,
+			# the measured landmarks and the OpenStreetMap buildings are the ground's own; the two drew everything twice.
+			"outer": 1024.0},
 	# Adelaide Oval in the North Adelaide parklands: the River Torrens and Torrens Lake, Pennington and
 	# Creswell Gardens, the CBD's towers to the south (tools/grounds/adelaide/surrounds.py), and in 3D
 	# the Adelaide Oval footbridge, the river's other bridges and St Peter's Cathedral
@@ -782,6 +790,11 @@ static func _add_surrounds(root: Node3D, s: Dictionary, dir := "", fit: Array = 
 			_add_trees(root, FileAccess.get_file_as_bytes(dir + str(s["trees"])).to_float32_array(), y, 5,
 					str(s.get("tree_kind", "")), bool(s.get("deep_crowns", false)), bool(s.get("tree_lod", false)),
 					relief, land, reach)
+		# `gum_trees`: a second list drawn as eucalypts (grey-green, pale limbs) among the ground's other trees
+		# (Norwood: the crowns the imagery shows grey-green and broad, tools/grounds/norwood/surrounds.py).
+		if s.has("gum_trees") and FileAccess.file_exists(dir + str(s["gum_trees"])):
+			_add_trees(root, FileAccess.get_file_as_bytes(dir + str(s["gum_trees"])).to_float32_array(), y, 5,
+					"gum", true, bool(s.get("tree_lod", false)), relief, land, reach)
 		if s.has("buildings") and FileAccess.file_exists(dir + str(s["buildings"])):
 			# `building_colours`: each building's wall and roof colour (6 bytes, the map's order), from
 			# OpenStreetMap's building:colour and roof:colour where mapped (Adelaide).
@@ -791,10 +804,15 @@ static func _add_surrounds(root: Node3D, s: Dictionary, dir := "", fit: Array = 
 			var rgb := PackedFloat32Array()
 			if s.has("roof_colours") and FileAccess.file_exists(dir + str(s["roof_colours"])):
 				rgb = FileAccess.get_file_as_bytes(dir + str(s["roof_colours"])).to_float32_array()
+			var detail := {}
+			if s.has("house_detail") and FileAccess.file_exists(dir + str(s["house_detail"])):
+				var d := FileAccess.get_file_as_bytes(dir + str(s["house_detail"])).to_float32_array()
+				for k in range(0, d.size() - 4, 5):
+					detail[int(d[k])] = [Color(d[k + 1], d[k + 2], d[k + 3]), int(d[k + 4])]
 			_add_buildings(root, FileAccess.get_file_as_bytes(dir + str(s["buildings"])).to_float32_array(), y,
 					s.get("walls", []), s.get("roofs", []), rgb, s.get("building_tint", s.get("tint", Color.WHITE)),
 					bcol, float(s.get("facades", 0.0)),
-					str(s.get("building_style", "")), land, reach)
+					str(s.get("building_style", "")), land, reach, detail)
 		for m in s.get("models", []):
 			var extra := load_glb(dir + str(m))
 			if extra != null:
@@ -1164,7 +1182,8 @@ static func _add_trees(root: Node3D, buf: PackedFloat32Array, y: float, stride :
 ## of their own ("facade_detail"); Low swaps in their plain walls ("facade_plain", Oval3DQuality).
 static func _add_buildings(root: Node3D, buf: PackedFloat32Array, y0: float, walls: Array = [],
 		roofs: Array = [], roof_rgb := PackedFloat32Array(), tint := Color.WHITE,
-		colours := PackedByteArray(), facade_r := 0.0, style := "", land: GroundTerrain = null, reach := INF) -> void:
+		colours := PackedByteArray(), facade_r := 0.0, style := "", land: GroundTerrain = null, reach := INF,
+		detail := {}) -> void:
 	if style == "towers":
 		_add_towers(root, buf, y0, tint, style, land)
 		return
@@ -1234,7 +1253,12 @@ static func _add_buildings(root: Node3D, buf: PackedFloat32Array, y0: float, wal
 			var o := (b - 1) * 6
 			wall = Color8(colours[o], colours[o + 1], colours[o + 2])
 			roof = Color8(colours[o + 3], colours[o + 4], colours[o + 5])
-		if hipped:
+		# A house traced by eye (SURROUNDS "house_detail"): its own wall colour and HOUSE_* detail flags.
+		var flags := HOUSE_WINDOWS if hipped else 0
+		if detail.has(b):
+			wall = detail[b][0]
+			flags = int(detail[b][1])
+		if hipped or detail.has(b):
 			# Walls face out whichever way round the footprint was drawn.
 			var ccw := 0.0
 			for k in n:
@@ -1246,10 +1270,22 @@ static func _add_buildings(root: Node3D, buf: PackedFloat32Array, y0: float, wal
 				var shade := wall * (0.92 + 0.08 * absf(out.x))
 				_front(v, nrm, col, Vector3(a.x, y, a.y), Vector3(c.x, y, c.y), Vector3(c.x, y + h, c.y), out, shade)
 				_front(v, nrm, col, Vector3(a.x, y, a.y), Vector3(c.x, y + h, c.y), Vector3(a.x, y + h, a.y), out, shade)
-				if hipped and foot[k].length() < HOUSE_DETAIL_R:
+				if flags & HOUSE_WINDOWS and foot[k].length() < HOUSE_DETAIL_R:
 					_house_windows(a, c, y, out, v, nrm, col)
 					if h > 5.0:                        # a two-storey house: the upper floor's windows too
 						_house_windows(a, c, y + h - 3.0, out, v, nrm, col)
+				if flags & HOUSE_PARAPET and not hipped:   # a flat roof's parapet, 0.5 m above it
+					_front(v, nrm, col, Vector3(a.x, y + h, a.y), Vector3(c.x, y + h, c.y), Vector3(c.x, y + h + 0.5, c.y), out, shade)
+					_front(v, nrm, col, Vector3(a.x, y + h, a.y), Vector3(c.x, y + h + 0.5, c.y), Vector3(a.x, y + h + 0.5, a.y), out, shade)
+			if not hipped:                             # a traced flat-roofed house: its roof and panels
+				var tri := Geometry2D.triangulate_polygon(foot)
+				for k in range(0, tri.size() - 2, 3):
+					_front(v, nrm, col, Vector3(foot[tri[k]].x, y + h, foot[tri[k]].y),
+							Vector3(foot[tri[k + 1]].x, y + h, foot[tri[k + 1]].y),
+							Vector3(foot[tri[k + 2]].x, y + h, foot[tri[k + 2]].y), Vector3.UP, roof)
+				if flags & HOUSE_SOLAR:
+					_solar_panels(foot, y + h, 0, v, nrm, col)
+				continue
 			# The roof oversails the walls by HOUSE_EAVE (a boxed eave, its soffit seen from the street).
 			var cen := Vector2.ZERO
 			for p in foot:
@@ -1272,7 +1308,9 @@ static func _add_buildings(root: Node3D, buf: PackedFloat32Array, y0: float, wal
 				_gable_roof(eave, y + h, roof, wall, v, nrm, col)
 			else:
 				_hip_roof(eave, y + h, roof, v, nrm, col)
-			if b % 3 == 0:                         # a brick chimney through the roof on one house in three
+			if flags & HOUSE_SOLAR:
+				_solar_panels(eave, y + h, 2 if gable else 1, v, nrm, col)
+			if b % 3 == 0 and not detail.has(b):   # a brick chimney on one house in three (a traced one has none in GE)
 				var ch := cen + (foot[0] - cen) * 0.45
 				_box(Vector3(ch.x, y + h, ch.y), Vector2(0.55, 0.75), 3.6, Color(0.55, 0.32, 0.26), v, nrm, col)
 			continue
@@ -1542,6 +1580,10 @@ static func _front(v: PackedVector3Array, nrm: PackedVector3Array, col: PackedCo
 ## houses read as houses from the stands' upper rows and the blimp. Past that a window is under a pixel.
 const HOUSE_EAVE := 0.45
 const HOUSE_DETAIL_R := 450.0
+## house_detail.bin flags (tools/grounds/bellerive/houses_traced.py).
+const HOUSE_WINDOWS := 1
+const HOUSE_PARAPET := 2
+const HOUSE_SOLAR := 4
 
 
 ## Windows along one house wall from a to c (outward normal `out`): 1.0 m wide, 1.3 m tall on a 0.9 m
@@ -1666,6 +1708,83 @@ static func _gable_roof(foot: PackedVector2Array, eave: float, roof: Color, wall
 			_front(v, nrm, col, t[0], t[1], t[2], nn, lit)
 
 
+## A rack of solar panels (1.0 x 1.7 m modules, 5 cm apart) on a roof: on a flat roof (`foot` its outline at
+## height `top`) across its middle, a metre in from its edges; on a pitched one (`foot` the eave outline at `top`,
+## the eaves, as _hip_roof and _gable_roof pitch it) on the long slope facing most north (model -z), the sun's side
+## in Tasmania, between a fifth and four fifths of the way up. `pitch`: 0 flat, 1 hipped, 2 gabled (its slope runs
+## the roof's whole length, so the rack does too, on both slopes as Google Earth shows Bellerive's no. 27).
+static func _solar_panels(foot: PackedVector2Array, top: float, pitch: int, v: PackedVector3Array,
+		nrm: PackedVector3Array, col: PackedColorArray) -> void:
+	var c := Vector2.ZERO
+	for p in foot:
+		c += p
+	c /= foot.size()
+	var ax := Vector2.RIGHT
+	var best := 0.0
+	for k in foot.size():
+		var e := foot[(k + 1) % foot.size()] - foot[k]
+		if e.length() > best:
+			best = e.length()
+			ax = e.normalized()
+	var across := Vector2(-ax.y, ax.x)
+	var lo_a := INF
+	var hi_a := -INF
+	var lo_b := INF
+	var hi_b := -INF
+	for p in foot:
+		lo_a = minf(lo_a, (p - c).dot(ax))
+		hi_a = maxf(hi_a, (p - c).dot(ax))
+		lo_b = minf(lo_b, (p - c).dot(across))
+		hi_b = maxf(hi_b, (p - c).dot(across))
+	var half_w := (hi_b - lo_b) * 0.5
+	var mid := c + across * (lo_b + hi_b) * 0.5
+	var amid := (lo_a + hi_a) * 0.5
+	var rise := minf(half_w * 0.45, 3.0)
+	var pitched := pitch > 0
+	var side := 1.0 if across.dot(Vector2(0.0, -1.0)) >= 0.0 else -1.0
+	var a0 := lo_a + 1.0
+	var a1 := hi_a - 1.0
+	var d0 := -half_w + 1.0
+	var d1 := half_w - 1.0
+	if pitched:
+		var ridge_half := maxf(0.0, (hi_a - lo_a) * 0.5 - half_w)
+		a0 = amid - ridge_half - half_w * 0.35 if pitch == 1 else lo_a + 0.6
+		a1 = amid + ridge_half + half_w * 0.35 if pitch == 1 else hi_a - 0.6
+		d0 = half_w * (0.2 if pitch == 1 else 0.1)
+		d1 = half_w * (0.8 if pitch == 1 else 0.9)
+	if pitch == 2:
+		_solar_panels(foot, top, 3, v, nrm, col)            # the other slope (3: gabled, the far side)
+	if pitch == 3:
+		side = -side
+		pitch = 2
+	var P := func(u: float, d: float) -> Vector3:
+		var q: Vector2 = mid + ax * u + across * d * (side if pitched else 1.0)
+		var z := top + 0.06
+		if pitched:
+			z = top + rise * (1.0 - d / half_w) + 0.08
+		return Vector3(q.x, z, q.y)
+	var panel := Color(0.035, 0.05, 0.09)
+	var nu := int(floor((a1 - a0 + 0.05) / 1.05))
+	var nd := int(floor((d1 - d0 + 0.05) / 1.75))
+	if nu < 1 or nd < 1:
+		return
+	var u_start := (a0 + a1) * 0.5 - nu * 1.05 * 0.5
+	var d_start := (d0 + d1) * 0.5 - nd * 1.75 * 0.5
+	for i in nu:
+		for j in nd:
+			var u0 := u_start + i * 1.05
+			var dd0 := d_start + j * 1.75
+			var p00: Vector3 = P.call(u0, dd0)
+			var p10: Vector3 = P.call(u0 + 1.0, dd0)
+			var p11: Vector3 = P.call(u0 + 1.0, dd0 + 1.7)
+			var p01: Vector3 = P.call(u0, dd0 + 1.7)
+			var n := (p10 - p00).cross(p01 - p00).normalized()
+			if n.y < 0.0:
+				n = -n
+			_front(v, nrm, col, p00, p10, p11, n, panel)
+			_front(v, nrm, col, p00, p11, p01, n, panel)
+
+
 static func _hip_roof(foot: PackedVector2Array, eave: float, roof: Color, v: PackedVector3Array,
 		nrm: PackedVector3Array, col: PackedColorArray) -> void:
 	var c := Vector2.ZERO
@@ -1739,8 +1858,9 @@ static func _add_towers(root: Node3D, buf: PackedFloat32Array, y0: float, tint :
 	# Marvel round 12 (own audit of the round 11 PC renders): the concrete towers read near-white with punched
 	# windows from every side (ext_180, obl_s, obl_se, obl_e), where Google Earth's read mid grey-blue: darker
 	# concrete, and more of the towers glass.
-	const TOWER_CONCRETE := [Color8(150, 152, 150), Color8(132, 134, 134), Color8(160, 158, 150), Color8(128, 118, 108),
-			Color8(142, 148, 152), Color8(116, 120, 122)]
+	# Round 13 (PC check of round 12: the massing read tan and beige, Google Earth grey-blue glass): no warm concrete.
+	const TOWER_CONCRETE := [Color8(146, 150, 152), Color8(130, 134, 138), Color8(150, 154, 156), Color8(122, 128, 134),
+			Color8(140, 146, 152), Color8(116, 120, 126)]
 	var i := 0
 	var b := 0
 	while i + 1 < buf.size():
@@ -1769,7 +1889,7 @@ static func _add_towers(root: Node3D, buf: PackedFloat32Array, y0: float, tint :
 		if towers:
 			# The same building gets the same look every match: its pick hangs on its own corner.
 			var pick := absi(int(foot[0].x * 7.0) * 31 + int(foot[0].y * 3.0) * 17 + b) if id < 0 else id * 7919 % 100003
-			var glassy := (pick % 100) < ((85 if h > 30.0 else 40) if id < 0 else 70)
+			var glassy := (pick % 100) < ((85 if h > 30.0 else 40) if id < 0 else 80)
 			wall = TOWER_GLASS[pick % TOWER_GLASS.size()] if glassy else TOWER_CONCRETE[pick % TOWER_CONCRETE.size()]
 			wall.a = 1.0 if glassy else 0.5
 			roof = Color8(128, 128, 124) if glassy else wall.darkened(0.25)  # Google Earth's grey roofs (top view)

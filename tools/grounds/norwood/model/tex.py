@@ -205,6 +205,11 @@ def main():
     flat("court_surround", (150, 78, 60), amp=5)
     flat("timber_white", (232, 230, 222), amp=3)                         # verandah posts, frieze, balustrades
     flat("bluestone", (96, 100, 104), amp=10)
+    # Norwood Primary's old school and the Presbyterian church (Google Earth sN_tur, sS_ch, 2026-11-26):
+    # rough rubble stone, brown-grey at the school, paler grey at the church
+    stone("rubble_stone", (126, 108, 92))
+    stone("church_stone", (140, 134, 124))
+    flat("awning_blue", (120, 140, 156), amp=3)                          # the east house's striped blinds (gE_s)
     json.dump(SPEC, open(os.path.join(OUT, "spec.json"), "w"), indent=1)
     print(len(SPEC), "textures")
 

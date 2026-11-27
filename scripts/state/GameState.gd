@@ -39,7 +39,11 @@ var real_after_draft := false
 ## seasons; copied into each season's selection for your club (_sync_dual).
 var user_dual_ruck := false
 
-var my_club := ""
+## Your club. A change puts the screens on its ground (UiKit.shade_ground).
+var my_club := "":
+	set(v):
+		my_club = v
+		UiKit.shade_ground()
 var my_list: Array = []
 var season: Season = null
 var draft: Draft = null
@@ -1858,6 +1862,12 @@ func _unlinked_lists(lists: Dictionary) -> Dictionary:
 ## `next_dataset` is the real league the next career starts from (Datasets):
 ## today's 2026 set unless a start or a save names another.
 func reset(next_dataset := Datasets.DEFAULT) -> void:
+	# The last career's round may still be playing on worker threads: wait for
+	# it before anything below reloads the players or swaps the rating scale
+	# they read (nightly 45916430137: a worker read PlayerProfile's scale while
+	# GameDB.reload replaced it, signal 11). Its results are dropped.
+	_collect_others()
+
 	# Mid-career seasons mutate the loaded player dicts in place (intake,
 	# ageing, XP training). A new career must start from the pristine
 	# dataset, so reload the data files before rebuilding anything. The caches

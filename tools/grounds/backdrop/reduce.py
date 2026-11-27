@@ -425,6 +425,26 @@ for im in list(bpy.data.images):
         nim = bpy.data.images.new(im.name + '_rgb', w, h, alpha=True); nim.pixels.foreach_set(rgba.ravel())
         nim.pack(); im.user_remap(nim); print('grey image made RGBA', im.name)
 
+# the arena, after every decimation (a collapse moves corners, up to 0.4 m up the WACA's banks): inside the model's
+# fence ellipse (GroundModels FIT: centre x, -z; yaw; half axes, the model's own frame) the park's ground lies under
+# the model's own ground, out to 15% past it never over the turf (the game lays the backdrop 0.1 m under the model;
+# tests/test_match_visual.gd _test_ground_backdrop)
+_slug = os.path.basename(OUT).split('_backdrop')[0]
+_gms = os.path.join(os.environ.get('REPO', os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..'))), 'scripts/ui/match/GroundModels.gd')
+_FIT = {}
+if os.path.exists(_gms):
+    _FIT = {m_[0]: [float(v) for v in m_[1].split(',')] for m_ in re.findall(r'"(\w+)": \[([-\d., ]+)\],', open(_gms).read().split('const FIT')[1].split('}')[0])}
+_gnd = bpy.data.objects.get('bg_near_ground')
+if _slug in _FIT and _gnd is not None:
+    _f = _FIT[_slug]; _a = math.radians(-_f[3]); M = _gnd.matrix_world; Mi = M.inverted(); _k = 0
+    for v in _gnd.data.vertices:
+        w = M @ v.co; dx, dy = w.x - _f[0], w.y + _f[1]
+        u = dx * math.cos(_a) + dy * math.sin(_a); q = -dx * math.sin(_a) + dy * math.cos(_a)
+        e = (u / _f[4]) ** 2 + (q / _f[5]) ** 2
+        top = -0.15 if e < 1.0 else (0.05 if e < 1.3225 else None)
+        if top is not None and w.z > top:
+            w.z = top; v.co = Mi @ w; _k += 1
+    print('arena: ground corners kept under the turf', _k)
 tot = 0
 for o in bpy.context.scene.objects:
     if o.type == 'MESH': t = tris(o); tot += t
