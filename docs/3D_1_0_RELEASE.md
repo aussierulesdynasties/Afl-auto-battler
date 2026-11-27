@@ -31,7 +31,7 @@ rulings; this page is the release checklist built from it; `docs/TODO.md` rows 1
   asset repo `gabebartolo-spec/ard-asset-pipeline`, pinned by `tools/ground_assets.lock`. A ground's work counts only once
   its models are published there and the lock is pinned on main: merged code alone does not change what a match shows.
   The lock has changed twice since (#2199; #2232 for the Legacy era surroundings). Bellerive round 7 (#2272) and Norwood's
-  Google Earth fixes (#2274) are published; Marvel round 13's publish was still landing at 13:50 UTC on 27 Nov.
+  Google Earth fixes (#2274) are published; Marvel round 13 (#2276) is published.
 - **CI.** The merge queue and the PC runners are gone: every check runs on GitHub's runners. There is no open-PR cap, and
   every green PR is merged straight away (CLAUDE.md, the director, 27 Nov).
 - **The game around the match.** The director's own work since 23 Nov: the 18-attribute player rating rebuild (#2239,
@@ -71,7 +71,7 @@ the machine pre-inspection clean, then his fly-through.
 | Ground | State 2026-11-22 | PR | Owner |
 |---|---|---|---|
 | MCG | Rebuilt to the standard (#1987 merged); the last 405 seats under the tiers removed (#2027, merged); Yarra Park from OSM; horizon past 2 km empty; not yet flown through by him | #2027 | Make the MCG look like the real MCG (closed); seats: Fix the shared seat generator |
-| Marvel Stadium | On main through #2072 (2026-11-25): true bearing, instanced seats, shut roof, Docklands; round 13's code merged (#2216, 2026-11-27: the round 12 PC check, NAB height, vents, the backdrop cut past 1024 m), its publish still landing, so a match still shows round 12; the director found three faults (a mirrored sign, a floating canopy, roof gaps) and a full check and one fix pass is under way; PC colour check rounds continue | #2011 (landed in #2072) #2216 | Make Marvel Stadium look real |
+| Marvel Stadium | On main through #2072 (2026-11-25): true bearing, instanced seats, shut roof, Docklands; round 13 published and in matches (#2216, #2276, 2026-11-27: the round 12 PC check, NAB height, vents, the backdrop cut past 1024 m); round 14 under way: the director's three faults (a mirrored sign, a floating canopy, roof gaps) plus a full check (south podium, raised plaza, Bourke Street footbridge); PC colour check rounds continue | #2011 (landed in #2072) #2216 | Make Marvel Stadium look real |
 | Adelaide Oval | On main through #2072: arches with ivy, the main entrance rebuilt, his 11 faults fixed; ready for his review | #2010 #2015 (landed in #2072) | Fix Adelaide Oval's saved faults |
 | Optus Stadium | Roof, bronze facade, surrounds on main (#1993); the bowl's shape still has to match Google Earth | #1993 | Make Optus Stadium look real |
 | SCG | On main through #2072 (WIP): roofs rebuilt on Google Earth measurements, Moore Park, Allianz. Thread closed | #2017 (landed in #2072) | Make the SCG look real (closed) |
