@@ -71,7 +71,6 @@ Replaces weekly +/- cards and flat morale with fading opinion marks, temperament
 | 213 | Ambitions and Council-faction wiring (PR #2223, draft, branch claude/project-thread-9czkkr; was #2209): Ambitions.gd on p["ambition"], two-advisor clashes on card["clash"], the restless/disloyal coach in-season (loyalty 35 or under withholds soften), Factions.council_sway calls Council.faction_sway, faction climate and club_wait escalation tuning. After: 211 and 212. | merged on green CI with the balance table in the PR |
 | 214 | Phase 4, the full card overhaul: rewrite the event deck on the new systems (Council voices, faction and discipline cards, ambitions), retire the weekly +/- cards (audit in project files event-card-audit/). Not started. After: 210, 213. | the deck reads on Opinion, promises, Council and factions; the owner's playtest |
 | 215 | Phase 5, the Club Politics screen: one screen for Council seats and loyalty, factions and their demands, and players' ambitions and opinion of the coach. Not started. After: 213. | captures shown to the owner, and the owner passes the look |
-| 216 | CI: the "PR cap" check fails without a token that can read the org (needs `read:org`). The cap bot was removed 2026-11-26 and the cap is now kept by hand (CLAUDE.md); either give the check a read:org token or remove the check. | no PR run fails on the PR cap check |
 
 ## B. Built and ON: his playtest judges
 
