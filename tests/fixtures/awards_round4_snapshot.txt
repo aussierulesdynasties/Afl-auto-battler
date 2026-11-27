@@ -1,138 +1,132 @@
-390x844 Coleman_1 | 1 | Jye Amiss | Dockers | 13
-390x844 Coleman_2 | 2 | Ben King | Suns | 12
-390x844 Coleman_3 | 2 | Callum Brown | Giants | 12
-390x844 Coleman_4 | 2 | Brody Mihocek | Demons | 12
-390x844 Coleman_5 | 2 | Arthur Jones | Bulldogs | 12
-390x844 Coleman_6 | 2 | Aaron Naughton | Bulldogs | 12
-390x844 Coleman_7 | 7 | Nate Caddy | Bombers | 11
-390x844 Coleman_8 | 7 | Jack Gunston | Hawks | 11
-390x844 Coleman_9 | 7 | Charlie Curnow | Swans | 11
-390x844 CoachesAward_1 | 1 | Lachie Ash | Giants | 36
-390x844 CoachesAward_2 | 2 | Josh Battle | Hawks | 34
-390x844 CoachesAward_3 | 3 | Nick Daicos | Magpies | 30
-390x844 CoachesAward_4 | 3 | Callum Wilkie | Saints | 30
-390x844 CoachesAward_5 | 5 | Kane Farrell | Power | 28
-390x844 CoachesAward_6 | 6 | Ben Miller | Tigers | 26
-390x844 CoachesAward_7 | 7 | Marcus Bontempelli | Bulldogs | 25
-390x844 CoachesAward_8 | 8 | Ryan Lester | Lions | 24
-390x844 CoachesAward_9 | 8 | Bailey Smith | Cats | 24
-390x844 CoachesAward_10 | 8 | Ed Richards | Bulldogs | 24
-390x844 RisingStar_4 | Round 4 | Daniel Annable | Lions | 
-390x844 RisingStar_3 | Round 3 | Sullivan Robey | Bombers | 
+390x844 Coleman_1 | 1 | Jye Amiss | Dockers | 18
+390x844 Coleman_2 | 2 | Charlie Curnow | Swans | 17
+390x844 Coleman_3 | 3 | Jake Stringer | Giants | 13
+390x844 Coleman_4 | 3 | Aaron Cadman | Giants | 13
+390x844 Coleman_5 | 3 | Aaron Naughton | Bulldogs | 13
+390x844 Coleman_6 | 6 | Logan Morris | Lions | 12
+390x844 Coleman_7 | 6 | Patrick Voss | Dockers | 12
+390x844 Coleman_8 | 6 | Jack Gunston | Hawks | 12
+390x844 Coleman_9 | 6 | Mitch Owens | Saints | 12
+390x844 Coleman_10 | 6 | Arthur Jones | Bulldogs | 12
+390x844 CoachesAward_1 | 1 | Ryan Lester | Lions | 28
+390x844 CoachesAward_2 | 1 | Zach Merrett | Bombers | 28
+390x844 CoachesAward_3 | 1 | Josh Battle | Hawks | 28
+390x844 CoachesAward_4 | 1 | Nick Blakey | Swans | 28
+390x844 CoachesAward_5 | 5 | Bailey Smith | Cats | 26
+390x844 CoachesAward_6 | 5 | Callum Wilkie | Saints | 26
+390x844 CoachesAward_7 | 7 | Max Holmes | Cats | 24
+390x844 RisingStar_4 | Round 4 | Cody Angove | Giants | 
+390x844 RisingStar_3 | Round 3 | Jobe Shanahan | Eagles | 
 390x844 RisingStar_2 | Round 2 | Jacob Farrow | Bombers | 
 390x844 RisingStar_1 | Round 1 | Finn O'Sullivan | Kangaroos | 
 390x844 Spot_RUCK | Jackson | Dockers | id FRE_9 at 138.00,231.28 size 70.00,44.00
-390x844 Spot_C | Daicos | Magpies | id COL_35 at 138.00,330.56 size 70.00,44.00
-390x844 Spot_IL | Bontempelli | Bulldogs | id WBD_4 at 58.80,278.13 size 70.00,44.00
-390x844 Spot_IR | Richards | Bulldogs | id WBD_20 at 217.20,278.13 size 70.00,44.00
-390x844 Spot_WL | Sheezel | Kangaroos | id NTH_3 at 12.95,226.03 size 70.00,44.00
-390x844 Spot_WR | Callaghan | Giants | id GWS_17 at 263.05,226.03 size 70.00,44.00
+390x844 Spot_C | Bontempelli | Bulldogs | id WBD_4 at 138.00,330.56 size 70.00,44.00
+390x844 Spot_IL | Daicos | Magpies | id COL_35 at 58.80,278.13 size 70.00,44.00
+390x844 Spot_IR | Neale | Lions | id BRL_9 at 217.20,278.13 size 70.00,44.00
+390x844 Spot_WL | Callaghan | Giants | id GWS_17 at 12.95,226.03 size 70.00,44.00
+390x844 Spot_WR | Oliver | Giants | id GWS_10 at 263.05,226.03 size 70.00,44.00
 390x844 Spot_FB | Ash | Giants | id GWS_7 at 138.00,511.60 size 70.00,44.00
 390x844 Spot_HBFL | Blakey | Swans | id SYD_22 at 29.67,403.12 size 70.00,44.00
-390x844 Spot_HBFR | Miller | Tigers | id RIC_12 at 246.33,403.12 size 70.00,44.00
-390x844 Spot_BPL | Whitfield | Giants | id GWS_6 at 75.30,459.04 size 70.00,44.00
-390x844 Spot_BPR | Clark | Dockers | id FRE_6 at 200.70,459.04 size 70.00,44.00
-390x844 Spot_CB | Battle | Hawks | id HAW_24 at 138.00,407.04 size 70.00,44.00
-390x844 Spot_FF | Naughton | Bulldogs | id WBD_33 at 138.00,44.40 size 70.00,44.00
-390x844 Spot_HFFL | Treacy | Dockers | id FRE_35 at 30.11,152.00 size 70.00,44.00
-390x844 Spot_HFFR | Trembath | Kangaroos | id NTH_47 at 245.89,152.00 size 70.00,44.00
-390x844 Spot_FPL | King | Suns | id GCS_34 at 78.60,96.96 size 70.00,44.00
-390x844 Spot_FPR | Walter | Suns | id GCS_4 at 197.40,96.96 size 70.00,44.00
-390x844 Spot_HFF | Morris | Lions | id BRL_13 at 138.00,148.96 size 70.00,44.00
-390x844 BenchSpot_0 | Neale | Lions | id BRL_9 at 0.00,0.00 size 112.00,44.00
-390x844 BenchSpot_1 | Oliver | Giants | id GWS_10 at 118.00,0.00 size 111.00,44.00
-390x844 BenchSpot_2 | Smith | Cats | id GEE_3 at 235.00,0.00 size 111.00,44.00
-390x844 BenchSpot_3 | Anderson | Suns | id GCS_15 at 0.00,50.00 size 112.00,44.00
-390x844 BenchSpot_4 | Davies-Uniacke | Kangaroos | id NTH_9 at 118.00,50.00 size 111.00,44.00
-360x800 Coleman_1 | 1 | Jye Amiss | Dockers | 13
-360x800 Coleman_2 | 2 | Ben King | Suns | 12
-360x800 Coleman_3 | 2 | Callum Brown | Giants | 12
-360x800 Coleman_4 | 2 | Brody Mihocek | Demons | 12
-360x800 Coleman_5 | 2 | Arthur Jones | Bulldogs | 12
-360x800 Coleman_6 | 2 | Aaron Naughton | Bulldogs | 12
-360x800 Coleman_7 | 7 | Nate Caddy | Bombers | 11
-360x800 Coleman_8 | 7 | Jack Gunston | Hawks | 11
-360x800 Coleman_9 | 7 | Charlie Curnow | Swans | 11
-360x800 CoachesAward_1 | 1 | Lachie Ash | Giants | 36
-360x800 CoachesAward_2 | 2 | Josh Battle | Hawks | 34
-360x800 CoachesAward_3 | 3 | Nick Daicos | Magpies | 30
-360x800 CoachesAward_4 | 3 | Callum Wilkie | Saints | 30
-360x800 CoachesAward_5 | 5 | Kane Farrell | Power | 28
-360x800 CoachesAward_6 | 6 | Ben Miller | Tigers | 26
-360x800 CoachesAward_7 | 7 | Marcus Bontempelli | Bulldogs | 25
-360x800 CoachesAward_8 | 8 | Ryan Lester | Lions | 24
-360x800 CoachesAward_9 | 8 | Bailey Smith | Cats | 24
-360x800 CoachesAward_10 | 8 | Ed Richards | Bulldogs | 24
-360x800 RisingStar_4 | Round 4 | Daniel Annable | Lions | 
-360x800 RisingStar_3 | Round 3 | Sullivan Robey | Bombers | 
+390x844 Spot_HBFR | Lester | Lions | id BRL_35 at 246.33,403.12 size 70.00,44.00
+390x844 Spot_BPL | Wilkie | Saints | id STK_44 at 75.30,459.04 size 70.00,44.00
+390x844 Spot_BPR | Aliir | Power | id PAD_21 at 200.70,459.04 size 70.00,44.00
+390x844 Spot_CB | Clark | Dockers | id FRE_6 at 138.00,407.04 size 70.00,44.00
+390x844 Spot_FF | Cadman | Giants | id GWS_5 at 138.00,44.40 size 70.00,44.00
+390x844 Spot_HFFL | Stringer | Giants | id GWS_20 at 30.11,152.00 size 70.00,44.00
+390x844 Spot_HFFR | Naughton | Bulldogs | id WBD_33 at 245.89,152.00 size 70.00,44.00
+390x844 Spot_FPL | Neale | Cats | id GEE_33 at 78.60,96.96 size 70.00,44.00
+390x844 Spot_FPR | Curnow | Swans | id SYD_35 at 197.40,96.96 size 70.00,44.00
+390x844 Spot_HFF | van Rooyen | Demons | id MEL_2 at 138.00,148.96 size 70.00,44.00
+390x844 BenchSpot_0 | Smith | Cats | id GEE_3 at 0.00,0.00 size 112.00,44.00
+390x844 BenchSpot_1 | Richards | Bulldogs | id WBD_20 at 118.00,0.00 size 111.00,44.00
+390x844 BenchSpot_2 | Davies-Uniacke | Kangaroos | id NTH_9 at 235.00,0.00 size 111.00,44.00
+390x844 BenchSpot_3 | Butters | Power | id PAD_9 at 0.00,50.00 size 112.00,44.00
+390x844 BenchSpot_4 | Heeney | Swans | id SYD_5 at 118.00,50.00 size 111.00,44.00
+360x800 Coleman_1 | 1 | Jye Amiss | Dockers | 18
+360x800 Coleman_2 | 2 | Charlie Curnow | Swans | 17
+360x800 Coleman_3 | 3 | Jake Stringer | Giants | 13
+360x800 Coleman_4 | 3 | Aaron Cadman | Giants | 13
+360x800 Coleman_5 | 3 | Aaron Naughton | Bulldogs | 13
+360x800 Coleman_6 | 6 | Logan Morris | Lions | 12
+360x800 Coleman_7 | 6 | Patrick Voss | Dockers | 12
+360x800 Coleman_8 | 6 | Jack Gunston | Hawks | 12
+360x800 Coleman_9 | 6 | Mitch Owens | Saints | 12
+360x800 Coleman_10 | 6 | Arthur Jones | Bulldogs | 12
+360x800 CoachesAward_1 | 1 | Ryan Lester | Lions | 28
+360x800 CoachesAward_2 | 1 | Zach Merrett | Bombers | 28
+360x800 CoachesAward_3 | 1 | Josh Battle | Hawks | 28
+360x800 CoachesAward_4 | 1 | Nick Blakey | Swans | 28
+360x800 CoachesAward_5 | 5 | Bailey Smith | Cats | 26
+360x800 CoachesAward_6 | 5 | Callum Wilkie | Saints | 26
+360x800 CoachesAward_7 | 7 | Max Holmes | Cats | 24
+360x800 RisingStar_4 | Round 4 | Cody Angove | Giants | 
+360x800 RisingStar_3 | Round 3 | Jobe Shanahan | Eagles | 
 360x800 RisingStar_2 | Round 2 | Jacob Farrow | Bombers | 
 360x800 RisingStar_1 | Round 1 | Finn O'Sullivan | Kangaroos | 
 360x800 Spot_RUCK | Jackson | Dockers | id FRE_9 at 123.00,225.90 size 70.00,44.00
-360x800 Spot_C | Daicos | Magpies | id COL_35 at 123.00,332.79 size 70.00,44.00
-360x800 Spot_IL | Bontempelli | Bulldogs | id WBD_4 at 51.00,279.58 size 70.00,44.00
-360x800 Spot_IR | Richards | Bulldogs | id WBD_20 at 195.00,279.58 size 70.00,44.00
-360x800 Spot_WL | Sheezel | Kangaroos | id NTH_3 at 11.97,225.97 size 70.00,44.00
-360x800 Spot_WR | Callaghan | Giants | id GWS_17 at 234.03,225.97 size 70.00,44.00
+360x800 Spot_C | Bontempelli | Bulldogs | id WBD_4 at 123.00,332.79 size 70.00,44.00
+360x800 Spot_IL | Daicos | Magpies | id COL_35 at 51.00,279.58 size 70.00,44.00
+360x800 Spot_IR | Neale | Lions | id BRL_9 at 195.00,279.58 size 70.00,44.00
+360x800 Spot_WL | Callaghan | Giants | id GWS_17 at 11.97,225.97 size 70.00,44.00
+360x800 Spot_WR | Oliver | Giants | id GWS_10 at 234.03,225.97 size 70.00,44.00
 360x800 Spot_FB | Ash | Giants | id GWS_7 at 123.00,511.60 size 70.00,44.00
 360x800 Spot_HBFL | Blakey | Swans | id SYD_22 at 27.49,402.88 size 70.00,44.00
-360x800 Spot_HBFR | Miller | Tigers | id RIC_12 at 218.51,402.88 size 70.00,44.00
-360x800 Spot_BPL | Whitfield | Giants | id GWS_6 at 66.00,459.04 size 70.00,44.00
-360x800 Spot_BPR | Clark | Dockers | id FRE_6 at 180.00,459.04 size 70.00,44.00
-360x800 Spot_CB | Battle | Hawks | id HAW_24 at 123.00,407.04 size 70.00,44.00
-360x800 Spot_FF | Naughton | Bulldogs | id WBD_33 at 123.00,44.40 size 70.00,44.00
-360x800 Spot_HFFL | Treacy | Dockers | id FRE_35 at 27.60,152.32 size 70.00,44.00
-360x800 Spot_HFFR | Trembath | Kangaroos | id NTH_47 at 218.40,152.32 size 70.00,44.00
-360x800 Spot_FPL | King | Suns | id GCS_34 at 69.00,96.96 size 70.00,44.00
-360x800 Spot_FPR | Walter | Suns | id GCS_4 at 177.00,96.96 size 70.00,44.00
-360x800 Spot_HFF | Morris | Lions | id BRL_13 at 123.00,148.96 size 70.00,44.00
-360x800 BenchSpot_0 | Neale | Lions | id BRL_9 at 0.00,0.00 size 102.00,44.00
-360x800 BenchSpot_1 | Oliver | Giants | id GWS_10 at 108.00,0.00 size 101.00,44.00
-360x800 BenchSpot_2 | Smith | Cats | id GEE_3 at 215.00,0.00 size 101.00,44.00
-360x800 BenchSpot_3 | Anderson | Suns | id GCS_15 at 0.00,50.00 size 102.00,44.00
-360x800 BenchSpot_4 | Davies-Uniacke | Kangaroos | id NTH_9 at 108.00,50.00 size 101.00,44.00
-1280x720 Coleman_1 | 1 | Jye Amiss | Dockers | 13
-1280x720 Coleman_2 | 2 | Ben King | Suns | 12
-1280x720 Coleman_3 | 2 | Callum Brown | Giants | 12
-1280x720 Coleman_4 | 2 | Brody Mihocek | Demons | 12
-1280x720 Coleman_5 | 2 | Arthur Jones | Bulldogs | 12
-1280x720 Coleman_6 | 2 | Aaron Naughton | Bulldogs | 12
-1280x720 Coleman_7 | 7 | Nate Caddy | Bombers | 11
-1280x720 Coleman_8 | 7 | Jack Gunston | Hawks | 11
-1280x720 Coleman_9 | 7 | Charlie Curnow | Swans | 11
-1280x720 CoachesAward_1 | 1 | Lachie Ash | Giants | 36
-1280x720 CoachesAward_2 | 2 | Josh Battle | Hawks | 34
-1280x720 CoachesAward_3 | 3 | Nick Daicos | Magpies | 30
-1280x720 CoachesAward_4 | 3 | Callum Wilkie | Saints | 30
-1280x720 CoachesAward_5 | 5 | Kane Farrell | Power | 28
-1280x720 CoachesAward_6 | 6 | Ben Miller | Tigers | 26
-1280x720 CoachesAward_7 | 7 | Marcus Bontempelli | Bulldogs | 25
-1280x720 CoachesAward_8 | 8 | Ryan Lester | Lions | 24
-1280x720 CoachesAward_9 | 8 | Bailey Smith | Cats | 24
-1280x720 CoachesAward_10 | 8 | Ed Richards | Bulldogs | 24
-1280x720 RisingStar_4 | Round 4 | Daniel Annable | Lions | 
-1280x720 RisingStar_3 | Round 3 | Sullivan Robey | Bombers | 
+360x800 Spot_HBFR | Lester | Lions | id BRL_35 at 218.51,402.88 size 70.00,44.00
+360x800 Spot_BPL | Wilkie | Saints | id STK_44 at 66.00,459.04 size 70.00,44.00
+360x800 Spot_BPR | Aliir | Power | id PAD_21 at 180.00,459.04 size 70.00,44.00
+360x800 Spot_CB | Clark | Dockers | id FRE_6 at 123.00,407.04 size 70.00,44.00
+360x800 Spot_FF | Cadman | Giants | id GWS_5 at 123.00,44.40 size 70.00,44.00
+360x800 Spot_HFFL | Stringer | Giants | id GWS_20 at 27.60,152.32 size 70.00,44.00
+360x800 Spot_HFFR | Naughton | Bulldogs | id WBD_33 at 218.40,152.32 size 70.00,44.00
+360x800 Spot_FPL | Neale | Cats | id GEE_33 at 69.00,96.96 size 70.00,44.00
+360x800 Spot_FPR | Curnow | Swans | id SYD_35 at 177.00,96.96 size 70.00,44.00
+360x800 Spot_HFF | van Rooyen | Demons | id MEL_2 at 123.00,148.96 size 70.00,44.00
+360x800 BenchSpot_0 | Smith | Cats | id GEE_3 at 0.00,0.00 size 102.00,44.00
+360x800 BenchSpot_1 | Richards | Bulldogs | id WBD_20 at 108.00,0.00 size 101.00,44.00
+360x800 BenchSpot_2 | Davies-Uniacke | Kangaroos | id NTH_9 at 215.00,0.00 size 101.00,44.00
+360x800 BenchSpot_3 | Butters | Power | id PAD_9 at 0.00,50.00 size 102.00,44.00
+360x800 BenchSpot_4 | Heeney | Swans | id SYD_5 at 108.00,50.00 size 101.00,44.00
+1280x720 Coleman_1 | 1 | Jye Amiss | Dockers | 18
+1280x720 Coleman_2 | 2 | Charlie Curnow | Swans | 17
+1280x720 Coleman_3 | 3 | Jake Stringer | Giants | 13
+1280x720 Coleman_4 | 3 | Aaron Cadman | Giants | 13
+1280x720 Coleman_5 | 3 | Aaron Naughton | Bulldogs | 13
+1280x720 Coleman_6 | 6 | Logan Morris | Lions | 12
+1280x720 Coleman_7 | 6 | Patrick Voss | Dockers | 12
+1280x720 Coleman_8 | 6 | Jack Gunston | Hawks | 12
+1280x720 Coleman_9 | 6 | Mitch Owens | Saints | 12
+1280x720 Coleman_10 | 6 | Arthur Jones | Bulldogs | 12
+1280x720 CoachesAward_1 | 1 | Ryan Lester | Lions | 28
+1280x720 CoachesAward_2 | 1 | Zach Merrett | Bombers | 28
+1280x720 CoachesAward_3 | 1 | Josh Battle | Hawks | 28
+1280x720 CoachesAward_4 | 1 | Nick Blakey | Swans | 28
+1280x720 CoachesAward_5 | 5 | Bailey Smith | Cats | 26
+1280x720 CoachesAward_6 | 5 | Callum Wilkie | Saints | 26
+1280x720 CoachesAward_7 | 7 | Max Holmes | Cats | 24
+1280x720 RisingStar_4 | Round 4 | Cody Angove | Giants | 
+1280x720 RisingStar_3 | Round 3 | Jobe Shanahan | Eagles | 
 1280x720 RisingStar_2 | Round 2 | Jacob Farrow | Bombers | 
 1280x720 RisingStar_1 | Round 1 | Finn O'Sullivan | Kangaroos | 
 1280x720 Spot_RUCK | Jackson | Dockers | id FRE_9 at 525.12,163.00 size 84.00,44.00
-1280x720 Spot_C | Daicos | Magpies | id COL_35 at 361.24,163.00 size 84.00,44.00
-1280x720 Spot_IL | Bontempelli | Bulldogs | id WBD_4 at 467.28,92.20 size 84.00,44.00
-1280x720 Spot_IR | Richards | Bulldogs | id WBD_20 at 467.28,233.80 size 84.00,44.00
-1280x720 Spot_WL | Sheezel | Kangaroos | id NTH_3 at 496.20,24.94 size 84.00,44.00
-1280x720 Spot_WR | Callaghan | Giants | id GWS_17 at 496.20,301.06 size 84.00,44.00
+1280x720 Spot_C | Bontempelli | Bulldogs | id WBD_4 at 361.24,163.00 size 84.00,44.00
+1280x720 Spot_IL | Daicos | Magpies | id COL_35 at 467.28,92.20 size 84.00,44.00
+1280x720 Spot_IR | Neale | Lions | id BRL_9 at 467.28,233.80 size 84.00,44.00
+1280x720 Spot_WL | Callaghan | Giants | id GWS_17 at 496.20,24.94 size 84.00,44.00
+1280x720 Spot_WR | Oliver | Giants | id GWS_10 at 496.20,301.06 size 84.00,44.00
 1280x720 Spot_FB | Ash | Giants | id GWS_7 at 62.40,163.00 size 84.00,44.00
 1280x720 Spot_HBFL | Blakey | Swans | id SYD_22 at 235.92,35.56 size 84.00,44.00
-1280x720 Spot_HBFR | Miller | Tigers | id RIC_12 at 235.92,290.44 size 84.00,44.00
-1280x720 Spot_BPL | Whitfield | Giants | id GWS_6 at 149.16,95.74 size 84.00,44.00
-1280x720 Spot_BPR | Clark | Dockers | id FRE_6 at 149.16,230.26 size 84.00,44.00
-1280x720 Spot_CB | Battle | Hawks | id HAW_24 at 207.00,163.00 size 84.00,44.00
-1280x720 Spot_FF | Naughton | Bulldogs | id WBD_33 at 833.60,163.00 size 84.00,44.00
-1280x720 Spot_HFFL | Treacy | Dockers | id FRE_35 at 660.08,39.10 size 84.00,44.00
-1280x720 Spot_HFFR | Trembath | Kangaroos | id NTH_47 at 660.08,286.90 size 84.00,44.00
-1280x720 Spot_FPL | King | Suns | id GCS_34 at 746.84,99.28 size 84.00,44.00
-1280x720 Spot_FPR | Walter | Suns | id GCS_4 at 746.84,226.72 size 84.00,44.00
-1280x720 Spot_HFF | Morris | Lions | id BRL_13 at 679.36,163.00 size 84.00,44.00
-1280x720 BenchSpot_0 | Neale | Lions | id BRL_9 at 0.00,0.00 size 192.00,44.00
-1280x720 BenchSpot_1 | Oliver | Giants | id GWS_10 at 198.00,0.00 size 191.00,44.00
-1280x720 BenchSpot_2 | Smith | Cats | id GEE_3 at 395.00,0.00 size 191.00,44.00
-1280x720 BenchSpot_3 | Anderson | Suns | id GCS_15 at 592.00,0.00 size 191.00,44.00
-1280x720 BenchSpot_4 | Davies-Uniacke | Kangaroos | id NTH_9 at 789.00,0.00 size 191.00,44.00
+1280x720 Spot_HBFR | Lester | Lions | id BRL_35 at 235.92,290.44 size 84.00,44.00
+1280x720 Spot_BPL | Wilkie | Saints | id STK_44 at 149.16,95.74 size 84.00,44.00
+1280x720 Spot_BPR | Aliir | Power | id PAD_21 at 149.16,230.26 size 84.00,44.00
+1280x720 Spot_CB | Clark | Dockers | id FRE_6 at 207.00,163.00 size 84.00,44.00
+1280x720 Spot_FF | Cadman | Giants | id GWS_5 at 833.60,163.00 size 84.00,44.00
+1280x720 Spot_HFFL | Stringer | Giants | id GWS_20 at 660.08,39.10 size 84.00,44.00
+1280x720 Spot_HFFR | Naughton | Bulldogs | id WBD_33 at 660.08,286.90 size 84.00,44.00
+1280x720 Spot_FPL | Neale | Cats | id GEE_33 at 746.84,99.28 size 84.00,44.00
+1280x720 Spot_FPR | Curnow | Swans | id SYD_35 at 746.84,226.72 size 84.00,44.00
+1280x720 Spot_HFF | van Rooyen | Demons | id MEL_2 at 679.36,163.00 size 84.00,44.00
+1280x720 BenchSpot_0 | Smith | Cats | id GEE_3 at 0.00,0.00 size 192.00,44.00
+1280x720 BenchSpot_1 | Richards | Bulldogs | id WBD_20 at 198.00,0.00 size 191.00,44.00
+1280x720 BenchSpot_2 | Davies-Uniacke | Kangaroos | id NTH_9 at 395.00,0.00 size 191.00,44.00
+1280x720 BenchSpot_3 | Butters | Power | id PAD_9 at 592.00,0.00 size 191.00,44.00
+1280x720 BenchSpot_4 | Heeney | Swans | id SYD_5 at 789.00,0.00 size 191.00,44.00
