@@ -235,7 +235,8 @@ static func club_facts(gs, week: int, ph: String) -> Dictionary:
 			"finals_week": finals_stage(gs, week) if ph == "finals" or ph == "season_end" else 0,
 			"pre_week": gs.preseason_week() if ph == "preseason" or ph == "bonding" else 0, "premiers": _premiers_last_year(gs),
 			"club_deck": deck_code(str(gs.my_club)), "opp_deck": _opponent_deck(gs),
-			"controversies": 0 if gs.get("controversies") != null and not bool(gs.get("controversies")) else 1}
+			"controversies": 0 if gs.get("controversies") != null and not bool(gs.get("controversies")) else 1,
+			"advisors": advisors(gs)}
 	facts.merge(_leader_facts(gs), true)
 	facts.merge(_finals_facts(gs, ph), true)
 	facts.merge(papers_facts(gs), true)
@@ -801,7 +802,52 @@ static func player_fact(gs, p: Dictionary, selected: bool, i: Dictionary, fit_ra
 					if bool(tr["trained"]) else "%s He cannot start training there just now." % back)
 		else:
 			out["trial_tail"] = back
+	out["actors"] = actors(gs, id)
 	return out
+
+
+## Who the cards' second players are to him: {role: player id}, for the roles
+## some card in the deck asks for (StoryDeck.actor_roles). The ties come from
+## GameState.bond_actor once the bonds are in the game; until then (and in an
+## older save) there are none, and a card that needs one does not come.
+static func actors(gs, id: String) -> Dictionary:
+	var out := {}
+	if not gs.has_method("bond_actor"):
+		return out
+	for role in StoryDeck.actor_roles():
+		if role == "other":
+			continue   # the event's own other player, stamped with the event
+		var bid := str(gs.call("bond_actor", id, role))
+		if bid != "" and bid != id:
+			out[role] = bid
+	return out
+
+
+## The club's council, as the cards' advisors name them: {seat: {"name", "role"}}.
+## The coaching panel fills the seats it has (senior assistant, the midfield and
+## development coaches); a seat the club has nobody in is left out, so a card
+## that needs it waits (the list manager and high performance seats come with
+## the council). A seat filled elsewhere in the game wins (gs.council_seats).
+static func advisors(gs) -> Dictionary:
+	var out := {}
+	var staff: Dictionary = gs.club_staff(str(gs.my_club)) if gs.has_method("club_staff") else {}
+	for pair in [["senior_assistant", "SA"], ["line_coach", "MID"], ["development", "DEV"]]:
+		var c: Dictionary = staff.get(pair[1], {})
+		if not c.is_empty():
+			out[pair[0]] = {"name": GameDB.player_display_name(c), "role": str(StoryEngine.ADVISOR_SEATS[pair[0]])}
+	if gs.has_method("council_seats"):
+		var more: Variant = gs.call("council_seats")
+		if more is Dictionary:
+			out.merge(more, true)
+	return out
+
+
+## Something happened that a reactive card answers (StoryEngine.note_event),
+## stamped with this week: on a player (his id) or on the club ("").
+static func note_event(gs, name: String, pid := "", other := "") -> void:
+	if not (gs.story is Dictionary):
+		return
+	StoryEngine.note_event(gs.story, name, pid if pid != "" else "club", gs.story_week(), other)
 
 
 
@@ -1045,6 +1091,10 @@ static func _targets(gs, e: Dictionary, p: Dictionary, facts := {}) -> Array:
 			return gs.my_list.filter(func(q): return vid != "" and str(q["id"]) == vid)
 		"leaders", "rest", "indigenous":
 			return group_targets(gs.my_list, str(e["who"]), leader_ids(gs, gs.my_club, gs.my_list))
+		"b":
+			# The card's second player, named when it was dealt (StoryEngine.actor_b_facts).
+			var bid := str(facts.get("b_id", ""))
+			return gs.my_list.filter(func(q): return bid != "" and str(q["id"]) == bid)
 		"one":
 			# The player the card named when it was dealt (club_facts, sore_one_id).
 			var oid := str(facts.get("sore_one_id", ""))
@@ -1061,7 +1111,7 @@ static func _apply(gs, e: Dictionary, p: Dictionary, facts: Dictionary, applied:
 				ClubLife.add_morale(q, d)
 			applied["morale"] = int(applied.get("morale", 0)) + d
 		"xp":
-			for q in _targets(gs, e, p):
+			for q in _targets(gs, e, p, facts):
 				q["xp"] = int(q.get("xp", 0)) + d
 			if str(e.get("who", "subject")) == "subject":
 				gs.apply_plan_to(p)
