@@ -160,7 +160,8 @@ GODOT=<godot console exe> tools/balance.sh match 1000 --a "--weather perfect" --
   of the position's real gains (more than 2 se above 0), out of 100. 127 single-arm runs, about 45 s each on 14
   workers; a stopped run carries on with the same `OUT`. `BUMP=` sets the size.
 - **Year mode** (`tools/balance.sh year 1000 --years "1990 2000 2010 2020 2026"`, legacy row 142 L5): one arm
-  per season, each played with `--year Y` (the match takes that season's era row, `EraFootball`); every stat is
+  per season, each played with `--year Y` (the match takes that season's era row, `EraFootball`, and its rules,
+  `EraRules.year`: the substitute, the last-disposal free); every stat is
   marked against that season's real rates (`afl_year_rates.json`, built from `data/legacy/*/season_stats.csv` by
   `build_year_rates.py`; 2026 is copied from `afl_team_rates.json`). `year_report.py` writes
   `<run>/year_report.md`, with a shift-against-2026 table when 2026 is in the list. Lists stay the real 2026 ones:

@@ -38,7 +38,7 @@ platform="Linux"
 runnable=true
 export_filter="all_resources"
 include_filter="ground_packs.json"
-exclude_filter="docs/*, tools/*, tests/*, addons/*, assets/grounds/*"
+exclude_filter="docs/*, tools/*, tests/*, addons/debug_draw_3d/*, addons/openvat_animated/*, assets/grounds/*"
 export_path=""
 
 [preset.0.options]
