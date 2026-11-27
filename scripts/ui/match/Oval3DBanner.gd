@@ -34,6 +34,10 @@ const ROW_GAP := 0.32          # s: each rank of the pack behind the one in fron
 const CUT_FRONT := 1.1
 const CUT_BACK := 2.0
 const LAST_SHOT := 2.4
+## Where the ground has a pre-game shot (GroundModels.PREGAME_VIEW, set by the director in the ground
+## inspector), the scene opens on it for PREGAME_HOLD seconds, at the inspector's lens, before the wide.
+const PREGAME_HOLD := 3.0
+const PREGAME_FOV := 70.0
 const PAPER_FACE := "res://scripts/ui/match/oval3d_banner.gdshader"
 
 var oval: Oval3D
@@ -54,6 +58,8 @@ var _mat: ShaderMaterial
 var _face_vp: SubViewport
 var _rng := RandomNumberGenerator.new()
 var _hidden: Array = []        # nodes shown again at the end (the rings, the ball)
+var _opening := Transform3D.IDENTITY   # the pre-game shot, world (the scene runs from -PREGAME_HOLD)
+var _has_opening := false
 
 
 ## The banner for `p_side` (0 home, 1 away) with `text` (lines split on "\n"), in `club`'s colours.
@@ -72,6 +78,12 @@ func build(p_oval: Oval3D, p_side: int, text: String, club: String, seed := 0) -
 	_build_squad(club, cols)
 	_build_runners()
 	_plan_tear()
+	var slug := GroundModels.slug_for(oval.ground) if oval.ground != "" else ""
+	if GroundModels.has_pregame_view(slug):
+		# In the ground's own frame, so it turns with the ground when the ends change.
+		_opening = oval.global_transform * GroundModels.pregame_view(slug)
+		_has_opening = true
+		t = -PREGAME_HOLD
 	for n in [oval.ball]:
 		if n != null and n.visible:
 			n.visible = false
@@ -472,6 +484,11 @@ func _camera() -> void:
 	var eye: Vector3
 	var at: Vector3
 	var fov: float
+	if _has_opening and t < 0.0:
+		# The pre-game shot: the ground and the crowd, the squad on the far wing with the banner up.
+		cam.global_transform = _opening
+		cam.fov = PREGAME_FOV
+		return
 	if t < cut_front:
 		# The wide: from up the wing on the ground side, the squad, the paper and the stand behind.
 		var k := t / maxf(0.1, cut_front)

@@ -2565,6 +2565,20 @@ func _test_banner_3d() -> void:
 	_check(m.find_child("CoachBox", true, false) == null, "The pre-match calls wait for the run-through")
 	var face = banner.get("_mat") if banner != null else null
 	_check(banner != null and face != null and want != "", "The banner carries this match's words (%s)" % want.replace("\n", " / "))
+	# A ground with the director's pre-game shot (GroundModels.PREGAME_VIEW) opens on it, at the
+	# numbers the inspector printed: facing and looking read back off the camera as the inspector reads them.
+	var oval3d = banner.get("oval") if banner != null else null
+	var gslug := GroundModels.slug_for(str(oval3d.get("ground"))) if oval3d != null else ""
+	if banner != null and GroundModels.has_pregame_view(gslug):
+		var cam: Camera3D = oval3d.get("camera")
+		var v: Array = GroundModels.PREGAME_VIEW[gslug]
+		var want_at: Vector3 = (oval3d as Node3D).global_transform * Vector3(float(v[0]), float(v[1]), float(v[2]))
+		var f := -((oval3d as Node3D).global_transform.basis.inverse() * cam.global_basis).z
+		var facing := wrapf(rad_to_deg(-atan2(-f.x, -f.z)), 0.0, 360.0)
+		var looking := rad_to_deg(asin(clampf(f.y, -1.0, 1.0)))
+		_check(float(banner.get("t")) < 0.0 and cam.global_position.distance_to(want_at) < 0.01
+				and absf(facing - float(v[3])) < 0.1 and absf(looking - float(v[4])) < 0.1,
+				"%s: the scene opens on the pre-game shot (facing %.1f, looking %.1f)" % [gslug, facing, looking])
 	# The paper tears where the men go through, and stays up on the rope and the poles.
 	if banner != null:
 		var burst_at := float(banner.get("_burst_at"))

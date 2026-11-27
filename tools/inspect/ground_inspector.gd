@@ -494,6 +494,14 @@ func _key(e: InputEventKey) -> void:
 			_show_list(not list_panel.visible)
 		KEY_R:
 			_go(start_view)
+		KEY_V:
+			# The pre-game scene's opening shot (GroundModels.PREGAME_VIEW), where it has one.
+			var slug := str(grounds[current].get("dir", "")) if current >= 0 else ""
+			if GroundModels.has_pregame_view(slug):
+				_go(GroundModels.pregame_view(slug))
+				_say("The pre-game shot")
+			else:
+				_say("No pre-game shot saved for this ground")
 		KEY_T:
 			# The centre square at a man's height, looking down the ground.
 			_go(Transform3D(Basis.IDENTITY, Vector3(0, EYE, 0)).looking_at(Vector3(-50, EYE, 0), Vector3.UP))
@@ -604,7 +612,7 @@ func _build_ui() -> void:
 		"W A S D: move    Space or E: up    Ctrl or Q: down",
 		"Shift: x%d fast    Alt: slow    Wheel or + -: cruise speed" % int(BOOST),
 		"Tab / Shift+Tab: next / previous ground    L: list of grounds",
-		"R: start view    T: centre square at eye height    G: drop to the floor below",
+		"R: start view    V: pre-game shot    T: centre square at eye height    G: drop to the floor below",
 		"C: copy where you are (for the fault list)    P or F12: screenshot",
 		"O: show or hide the match's turf and goalposts (to check the model sits on them)",
 		"B: open or shut the roof (Marvel Stadium)",
