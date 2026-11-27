@@ -141,6 +141,11 @@ static func _side_key(list: Array) -> String:
 static var bars_built := 0
 
 
+## Whether the lists' best 22 are being remembered (remember_bars).
+static func remembering() -> bool:
+	return _bars_memo_on
+
+
 static func remember_bars(on: bool) -> void:
 	_bars_memo_on = on
 	_bars_memo.clear()

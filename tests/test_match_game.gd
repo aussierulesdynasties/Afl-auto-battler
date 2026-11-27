@@ -53,6 +53,7 @@ func run() -> void:
 	_t("_test_kick_in_mark_not_his_disposal")
 	_t("_test_gps_distance")
 	_t("_test_ruck_integrity")
+	_t("_test_backup_ruck")
 	_t("_test_ruck_taps")
 	_t("_test_stat_credits")
 	_t("_test_m2_stats")
@@ -1913,6 +1914,60 @@ func _test_ruck_taps() -> void:
 			and float(shares[1][1]) < 0.75, "better ruck share"),
 			"A far better ruck wins more taps to advantage and more of the ball, not all of it (%s)" % str(shares))
 
+## A key forward rucks when no ruck is there (director, 2026-11-26: "allow
+## key forwards to ruck in substitute IF they have done so IRL or are at a
+## minimum height threshold as the default backup"): one with a hit-out on his
+## real stats sheet, or one 196 cm or taller, at selection and at the bounce.
+func _test_backup_ruck() -> void:
+	var kf := func(id: String, h: float, ho: float, role := "FWD", apos := "Key Forward") -> Dictionary:
+		return {"id": id, "role": role, "role2": "", "apos": apos, "height_cm": h, "ho": ho, "gm": 20.0,
+			"attr": {"ruck": 20, "contested_marking": 80}}
+	_check(Ratings.BACKUP_RUCK_CM == GameState.RUCK_CM, "The backup's height is the height to learn the ruck")
+	_check(Ratings.backup_ruck(kf.call("a", 190.0, 12.0)), "A key forward with real hit-outs is a backup ruck")
+	_check(Ratings.backup_ruck(kf.call("b", 196.0, 0.0)), "A 196 cm key forward with none is a backup ruck")
+	_check(not Ratings.backup_ruck(kf.call("c", 195.0, 0.0)), "A 195 cm key forward with none is not")
+	_check(not Ratings.backup_ruck(kf.call("d", 201.0, 9.0, "DEF", "Key Defender")), "A tall key defender is not")
+	_check(not Ratings.backup_ruck(kf.call("e", 200.0, 9.0, "FWD", "Forward")), "A tall general forward is not")
+	var slotted: Dictionary = kf.call("f", 197.0, 0.0)
+	slotted["own_role"] = "FWD"
+	slotted["role"] = "RUCK"
+	_check(Ratings.backup_ruck(slotted), "...and he still is standing in the ruck spot")
+	# At the bounce, no ruckman on the ground: the backup key forward goes up
+	# ahead of a midfielder with a better tap, and with no backup, the midfielder.
+	var sim := _sim(91)
+	var sq: Squad = sim.squads[0]
+	var mid_i := -1
+	var fwd_i := -1
+	for i in range(sq.ground.size()):
+		var g: Dictionary = sq.ground[i]
+		g["own_role"] = "MID" if str(g["role"]) == "RUCK" else str(g["role"])
+		g["role2"] = ""
+		g["learned"] = []
+		g["unicorn"] = false
+		g["ho"] = 0.0
+		g["height_cm"] = 185.0
+		g["attr"]["ruck"] = 30
+		if str(g["role"]) == "MID" and mid_i < 0:
+			mid_i = i
+		if str(g["role"]) == "FWD" and fwd_i < 0:
+			fwd_i = i
+	_check(mid_i >= 0 and fwd_i >= 0, "The side has a midfielder and a forward on the ground")
+	sq.ground[mid_i]["attr"]["ruck"] = 90
+	sq.ground[fwd_i]["apos"] = "Key Forward"
+	sq.ground[fwd_i]["height_cm"] = 197.0
+	sim._backup_cache = {}
+	_check(str(sim._contestant(sq)[0]["id"]) == str(sq.ground[fwd_i]["id"]),
+			"No ruckman out there: the 197 cm key forward goes up, not the midfielder with the better tap")
+	sq.ground[fwd_i]["height_cm"] = 193.0
+	sim._backup_cache = {}
+	_check(str(sim._contestant(sq)[0]["id"]) == str(sq.ground[mid_i]["id"]),
+			"A 193 cm key forward with no hit-outs is no backup: the best tap man goes up")
+	sq.ground[fwd_i]["ho"] = 4.0
+	sim._backup_cache = {}
+	_check(str(sim._contestant(sq)[0]["id"]) == str(sq.ground[fwd_i]["id"]),
+			"...but with real hit-outs he is, and goes up")
+
+
 ## The ruck contest is decided by, and credited to, the player actually at
 ## the bounce. With the ruck resting, the ruckman on the ground goes up, not
 ## whoever came off the bench, and an empty ruck spot is filled by the best
@@ -1963,11 +2018,15 @@ func _test_ruck_integrity() -> void:
 	for g in side["ground"]:
 		if str(g["role"]) == "RUCK":
 			in_ruck = g
+	# A backup key forward first (Ratings.backup_ruck, director 2026-11-26),
+	# the best of them at the taps; with none, the best tap man.
+	var backups := list.filter(func(p): return Ratings.backup_ruck(p))
 	var best_ruck := 0.0
-	for p in list:
+	for p in (backups if not backups.is_empty() else list):
 		best_ruck = maxf(best_ruck, float(p["attr"]["ruck"]))
-	_check(in_ruck != null and float(in_ruck["attr"]["ruck"]) == best_ruck,
-			"With no ruckman listed, the best tap man goes into the ruck")
+	_check(in_ruck != null and float(in_ruck["attr"]["ruck"]) == best_ruck
+			and (backups.is_empty() or Ratings.backup_ruck(in_ruck)),
+			"With no ruckman listed, the best backup key forward goes into the ruck (%d backups)" % backups.size())
 	# Over whole matches, hit-outs go to ruckmen (before: half of them did not).
 	var tot := 0.0
 	var off := 0.0

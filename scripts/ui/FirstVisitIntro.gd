@@ -13,7 +13,7 @@ const TEXT := {
 	]],
 	"league_draft": ["The League redraft", [
 		"Every club starts from nothing. Each drafts a list of 44 from the league's players.",
-		"Each player we take costs his salary. Our list must fit under the cap. It must have at least two rucks.",
+		"Each player we take costs his salary. Our list must fit under the cap. It must have at least one ruck.",
 		"When our pick comes up, take a player from the pool. The position counts show where we're short.",
 	]],
 	"combine": ["The Combine", [
@@ -72,6 +72,25 @@ const TEXT := {
 }
 
 
+## Before free agency (to 2011, EraRules): the off-season pages as they were.
+const BEFORE_FREE_AGENCY := {
+	"offseason": [
+		"Between the Grand Final and the draft, we rebuild the list. Contracts, delisted players and trades all happen here.",
+		"Keep the players we want first. Then fill the gaps.",
+	],
+	"contracts": [
+		"He names a salary and a term. Meet his terms and he signs on the spot.",
+		"Offer less and he names his lowest. Three failed offers and he is delisted.",
+		"Offer under two-thirds of his lowest and he's insulted. It counts as two failed offers and costs morale.",
+	],
+	"postseason": [
+		"First the Season review: awards night, then how your year went.",
+		"Then Trades & Contracts: re-sign players, sign delisted players, do deals. It all stays open until you start the draft.",
+		"After the National Draft comes the pre-season, then Round 1.",
+	],
+}
+
+
 const GROUP := "first_visit_intro"
 
 
@@ -94,9 +113,16 @@ static func show_if_due(host: Control, key: String) -> Control:
 	return show(host, key)
 
 
+## A page's lines; before free agency (to 2011) the off-season pages as they were.
+static func lines_for(key: String) -> Array:
+	if not EraRules.on("free_agency") and BEFORE_FREE_AGENCY.has(key):
+		return BEFORE_FREE_AGENCY[key]
+	return TEXT[key][1]
+
+
 static func show(host: Control, key: String) -> Control:
 	var title: String = TEXT[key][0]
-	var lines: Array = TEXT[key][1]
+	var lines: Array = lines_for(key)
 	var box := UiKit.modal_box(host, 520.0, 0.0)
 	var overlay: Control = box["overlay"]
 	var node := "".join(Array(key.split("_")).map(func(s: String) -> String: return s.capitalize()))
