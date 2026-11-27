@@ -63,13 +63,15 @@ LET_U = (-44.4, 36.5); LET_Z = (FIELD_Z + 0.3, FIELD_Z + 3.4)
 
 
 def _letter_mask():
-    from PIL import Image, ImageDraw, ImageFont
+    """MARVEL in the venue's own letters (fonts/marvel_stadium_logo.png, as retint.sign_panels), not a stock font
+    (round 17: the person's audit; the modelling rules ban stock fonts)."""
+    from PIL import Image
     w, h = 324, 20  # 0.25 m across, 0.23 m up
-    font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 120)
-    box = font.getbbox("MARVEL")
-    im = Image.new("L", (box[2] - box[0], box[3] - box[1]), 0)
-    ImageDraw.Draw(im).text((-box[0], -box[1]), "MARVEL", fill=255, font=font)
-    im = im.resize((w - 8, h - 4), Image.LANCZOS)
+    logo = np.asarray(Image.open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "fonts",
+                                              "marvel_stadium_logo.png")).convert("RGBA"), float)
+    rgb, al = logo[..., :3], logo[..., 3] / 255.0
+    mv = ((al > 0.5) & (rgb.min(2) > 200))[36:379, 484:1437]
+    im = Image.fromarray((mv * 255).astype(np.uint8)).resize((w - 8, h - 4), Image.LANCZOS)
     out = Image.new("L", (w, h), 0); out.paste(im, (4, 2))
     return np.array(out) > 110
 

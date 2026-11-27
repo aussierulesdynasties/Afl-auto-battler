@@ -370,6 +370,10 @@ def make_textures():
     graffiti("graffiti")
     TILE["graffiti"] = (48.0, 4.0)
     ivy("ivy")
+    # round 17: the verge's grass in the 2024 photo (own random stream, so the textures after it keep theirs)
+    _save("verge_grass", np.zeros((32, 32, 3)) + (92, 108, 60) + np.random.default_rng(17).normal(0, 6.0, (32, 32, 3)))
+    TILE["verge_grass"] = (4.0, 4.0)
+    banner_tex("street_banner")
     TILE["ivy"] = (6.0, 4.0)  # the low offices south of Bourke Street: white-grey walls (obl_s)
     # PC check round 2: Google Earth reads the two curved towers west of the ground as green-grey glass
     curtain("tower_glass", (84, 102, 98), (120, 132, 128), bay=1.5, floor=3.05, slab=0.0, noise=9.0)
@@ -1748,6 +1752,61 @@ def trains(g, W):
             g.prism([tuple(ca - nn2), tuple(cb - nn2), tuple(cb + nn2), tuple(ca + nn2)], z0 - 0.56, z0, "steel_dark", top=None)
 
 
+def street_banners(g, line, h, step=10.0):
+    """The MARVEL STADIUM pole banners over Wurundjeri Way (Flickr 53897019103, Jul 2024): dark lamp poles with a
+    lantern on top, each with one dark charcoal banner hung from an arm, the venue's logo (red MARVEL box, white
+    STADIUM) running up it. Spacing about 10 m (estimated from the photo's perspective, not measured). They stand on
+    the plaza behind the wall's top in the photo; our land behind the wall sits at road level (the plaza step is
+    not in the terrain), so they stand on the wall's coping instead of floating."""
+    pts = np.array(line, float)
+    seg = np.r_[0, np.cumsum(np.linalg.norm(np.diff(pts, axis=0), axis=1))]
+    for s_ in np.arange(4.0, seg[-1] - 2.0, step):
+        i = max(0, min(int(np.searchsorted(seg, s_)) - 1, len(pts) - 2))
+        t = (s_ - seg[i]) / max(seg[i + 1] - seg[i], 1e-6)
+        c = pts[i] + (pts[i + 1] - pts[i]) * t
+        tt = (pts[i + 1] - pts[i]) / np.linalg.norm(pts[i + 1] - pts[i])
+        g.lift = float(land.z(*c))
+        z0, z1 = h, h + 8.0
+        g.prism(cylinder_ring(tuple(c), 0.09, 10), z0, z1, "steel_dark", top=None)
+        g.prism(cylinder_ring(tuple(c), 0.2, 10), z1, z1 + 0.5, "lamp_head", top="steel_dark", bottom="steel_dark")
+        # the arm and the banner, hung along the road (its faces to the traffic both ways)
+        b0, b1 = c + tt * 0.12, c + tt * 1.02
+        g.poly("steel_dark", [(*b0, z1 - 0.9), (*b1, z1 - 0.9), (*b1, z1 - 0.84), (*b0, z1 - 0.84)])
+        zt, zb_, zs = z1 - 0.95, z1 - 4.55, z1 - 4.25
+        g.poly("street_banner", [(*b0, zb_), (*b1, zs), (*b1, zt), (*b0, zt)],
+               [(0.0, 0.0), (0.9, 0.3), (0.9, 3.6), (0.0, 3.6)])
+        g.poly("street_banner", [(*b1, zs), (*b0, zb_), (*b0, zt), (*b1, zt)],
+               [(0.0, 0.3), (0.9, 0.0), (0.9, 3.6), (0.0, 3.6)])
+
+
+def banner_tex(name, ppm=120):
+    """The pole banner (Flickr 53897019103): charcoal, the venue's logo (fonts/marvel_stadium_logo.png) in one line
+    turned to read downwards: the red MARVEL box at the top, STADIUM in white below it, nearly the banner's width."""
+    logo = np.asarray(Image.open(os.path.join(HERE, "fonts", "marvel_stadium_logo.png")).convert("RGBA"), float)
+    rgb, al = logo[..., :3], logo[..., 3] / 255.0
+    W_, H_ = int(0.9 * ppm), int(3.6 * ppm)
+    img = np.zeros((H_, W_, 3)) + np.array((38, 38, 42), float)
+    def put(mask_rgb, mask_a, y0, y1, x0, x1):
+        # turned 90 degrees clockwise: the word's start at the top
+        a_ = np.rot90(mask_a, -1); c_ = np.rot90(mask_rgb, -1)
+        w, hh = int((x1 - x0) * ppm), int((y1 - y0) * ppm)
+        a2 = np.asarray(Image.fromarray((a_ * 255).astype(np.uint8)).resize((w, hh), Image.LANCZOS), float)[..., None] / 255
+        c2 = np.asarray(Image.fromarray(c_.astype(np.uint8)).resize((w, hh), Image.LANCZOS), float)
+        Y0, X0 = int(y0 * ppm), int(x0 * ppm)
+        img[Y0:Y0 + hh, X0:X0 + w] = img[Y0:Y0 + hh, X0:X0 + w] * (1 - a2) + c2 * a2
+    # MARVEL box (logo rows 0-411) and STADIUM (rows 479-896, black letters drawn white)
+    mv_a, mv_c = al[0:411, 452:1468], rgb[0:411, 452:1468]
+    st_a = ((al > 0.5) & (rgb.max(2) < 80))[479:896, 0:1920].astype(float)
+    st_c = np.zeros(st_a.shape + (3,)) + 246.0
+    # image row 0 is the banner's top: MARVEL first, STADIUM under it (reading downwards)
+    ym = 0.15 + 0.6 * 1016 / 411
+    put(mv_c, mv_a, 0.15, ym, 0.15, 0.75)
+    put(st_c, st_a, ym + 0.12, ym + 0.12 + 0.38 * 1920 / 417, 0.26, 0.64)
+    img += np.random.default_rng(18).normal(0, 1.5, (H_, W_, 1))
+    _save(name, img)
+    TILE[name] = (0.9, 3.6)
+
+
 def graffiti_wall(g, W, h=3.4):
     """The painted wall along the stadium side of Wurundjeri Way: the west edge of the northbound carriageway
     (OpenStreetMap ways 580628691, four lanes, then 580628688, three lanes), from the NAB's corner to the stadium's
@@ -1765,7 +1824,12 @@ def graffiti_wall(g, W, h=3.4):
             if not cut.is_empty and cut.geom_type == "Point":
                 keep.append(np.array(cut.coords[0]))
             pts = np.array(keep, float)
-        off = lanes * 3.3 / 2 + 1.0
+        # round 17 (Flickr 53897019103, M. Wong, Jul 2024, from the La Trobe Street bridge looking south): along the
+        # stadium a grass verge about 2.7 m wide (0.8 of a lane) runs between the kerb and the wall; the NAB stretch
+        # (no photo) keeps its 1 m
+        verge = 2.7 if mat == "graffiti" else 0.0
+        kerb = lanes * 3.3 / 2 + 0.3
+        off = kerb + verge if verge else lanes * 3.3 / 2 + 1.0
         line = []
         for i in range(len(pts)):
             d = pts[min(i + 1, len(pts) - 1)] - pts[max(i - 1, 0)]
@@ -1784,6 +1848,21 @@ def graffiti_wall(g, W, h=3.4):
             g.wall(mat, a + rn, b + rn, -0.5, h, u)
             u += g.wall(mat, b - rn, a - rn, -0.5, h, u)
             g.poly("concrete_deck", [(*(a + rn), h), (*(b + rn), h), (*(b - rn), h), (*(a - rn), h)])
+            if verge:
+                # the verge: grass from the wall's foot to a low concrete kerb at the carriageway's edge
+                ka, kb = a + rn * (verge / 0.15), b + rn * (verge / 0.15)
+                ko = rn / 0.15 * 0.2
+                lz = lambda q, dz: (float(q[0]), float(q[1]), float(land.z(*q)) - g.lift + dz)   # each corner on its land
+                def up(q4):   # wound to face the sky (the landmarks' faces are one-sided)
+                    v = np.cross(np.subtract(q4[1], q4[0]), np.subtract(q4[2], q4[0]))
+                    return q4 if v[2] > 0 else q4[::-1]
+                # 0.3 up: the game's coarse ground mesh rides up to 0.25 over the land samples here and buried it
+                g.poly("verge_grass", up([lz(a + rn, 0.3), lz(ka, 0.3), lz(kb, 0.3), lz(b + rn, 0.3)]))
+                g.poly("concrete_deck", up([lz(ka, 0.32), lz(ka + ko, 0.32), lz(kb + ko, 0.32), lz(kb, 0.32)]))
+                # the kerb's face to the road (on the right of a -> b, like g.wall)
+                g.poly("concrete_deck", [lz(ka + ko, -0.1), lz(kb + ko, -0.1), lz(kb + ko, 0.32), lz(ka + ko, 0.32)])
+        if verge:
+            street_banners(g, line, h)
         if wid == "580628688":
             # ivy over the painted wall's first 9 m at the NAB end, on its road face (Google Earth c_e)
             a, b = line[0], line[1]
