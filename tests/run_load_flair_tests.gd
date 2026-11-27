@@ -73,6 +73,7 @@ func _run() -> void:
 	await _t("_test_async_preseason_changes_nothing")
 	await _t("_test_tap_after_cover")
 	await _t("_test_browser_loads_under_the_line")
+	await _t("_test_hub_warms_behind_the_menu")
 	print(Ran.line("Load flair", self))
 	if not _failures.is_empty():
 		for f in _failures:
@@ -508,3 +509,34 @@ func _test_browser_loads_under_the_line() -> void:
 	_check(queued == ResourceLoader.THREAD_LOAD_INVALID_RESOURCE, "the screen is loaded straight away, never queued (status %d)" % queued)
 	_check(current_scene != null and current_scene.scene_file_path == path,
 			"and the screen still opens (%s)" % (current_scene.scene_file_path if current_scene else "none"))
+
+
+## The main menu starts loading the Hub in the background (bug bash M-9), so
+## Continue opens it without the 3-6 s load. A browser starts nothing (it loads
+## on the main thread), nor does a headless run unless a test asks.
+func _test_hub_warms_behind_the_menu() -> void:
+	var path := str(_router.SCENES["hub"])
+	_check(not ResourceLoader.has_cached(path), "(setup) the Hub is not loaded yet")
+	_router.set("test_warm", true)
+	_router.set("test_main_thread_load", true)
+	_router.warm("hub")
+	var browser := ResourceLoader.load_threaded_get_status(path)
+	_router.set("test_main_thread_load", false)
+	_router.set("test_warm", false)
+	_router.warm("hub")
+	var headless := ResourceLoader.load_threaded_get_status(path)
+	_check(browser == ResourceLoader.THREAD_LOAD_INVALID_RESOURCE and headless == ResourceLoader.THREAD_LOAD_INVALID_RESOURCE,
+			"a browser, and a headless run, start no background load (status %d, %d)" % [browser, headless])
+	_router.set("test_warm", true)
+	_router.warm("hub")
+	_router.set("test_warm", false)
+	var started := ResourceLoader.load_threaded_get_status(path)
+	var t0 := Time.get_ticks_msec()
+	while ResourceLoader.load_threaded_get_status(path) == ResourceLoader.THREAD_LOAD_IN_PROGRESS and Time.get_ticks_msec() - t0 < 30000:
+		await process_frame
+	var done := ResourceLoader.load_threaded_get_status(path)
+	var scene := ResourceLoader.load_threaded_get(path) as PackedScene
+	_check(started != ResourceLoader.THREAD_LOAD_INVALID_RESOURCE and done == ResourceLoader.THREAD_LOAD_LOADED and scene != null,
+			"elsewhere the Hub loads in the background, ready to open (status %d then %d)" % [started, done])
+	var main_src := FileAccess.get_file_as_string("res://scripts/ui/Main.gd")
+	_check(main_src.contains("Router.warm(\"hub\")"), "the main menu starts it")
