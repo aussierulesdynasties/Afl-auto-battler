@@ -56,11 +56,11 @@ var _search_field: LineEdit
 var _search_timer: Timer
 var _board_info: Label
 var _pool_total: Label
-var _board_box: VBoxContainer
-var _history_box: VBoxContainer
+var _board_box: Container
+var _history_box: Container
 var _history_info: Label
-var _mine_box: VBoxContainer
-var _order_box: VBoxContainer
+var _mine_box: Container
+var _order_box: Container
 var _board_scroll: ScrollContainer
 var _history_scroll: ScrollContainer
 var _mine_scroll: ScrollContainer
@@ -194,8 +194,8 @@ func _usable_size() -> Vector2:
 
 func _layout_signature() -> String:
 	var area := _usable_size()
-	return "%s/%s/%s/%d" % [ScreenLayout.wide_view(area.x, area.y, 760.0),
-			area.y < 680.0, area.y < RECENT_TALL, _grid_columns()]
+	return "%s/%s/%s/%d/%s/%s" % [ScreenLayout.wide_view(area.x, area.y, 760.0),
+			area.y < 680.0, area.y < RECENT_TALL, _grid_columns(), _pc_gate(area), area.x < PC_SMALL_W]
 
 
 func _build_layout() -> void:
@@ -204,7 +204,9 @@ func _build_layout() -> void:
 	_club_backdrop()
 	var area := _usable_size()
 	_wide = ScreenLayout.wide_view(area.x, area.y, 760.0)
-	_short = area.y < 680.0
+	_pc = _pc_gate(area)
+	_pc_small = _pc and area.x < PC_SMALL_W
+	_short = area.y < 680.0 and not _pc
 	_layout_key = _layout_signature()
 	_built_width = UiKit.view_width(self)
 	_apply_margins()
@@ -218,6 +220,8 @@ func _build_layout() -> void:
 func _apply_margins() -> void:
 	var safe := ScreenLayout.safe_insets()
 	var pad := 10 if UiKit.view_width(self) < 600.0 or UiKit.view_height(self) < 680.0 else 18
+	if _pc:
+		pad = 16
 	_margin.add_theme_constant_override("margin_left", pad + ceili(safe.x))
 	_margin.add_theme_constant_override("margin_top", 8 + ceili(safe.y))
 	_margin.add_theme_constant_override("margin_right", pad + ceili(safe.z))
@@ -537,6 +541,8 @@ func _open_combine() -> void:
 ## Decoration: it takes no tap.
 const STAGE_NARROW := 60.0
 const STAGE_WIDE := 72.0
+## PC (row 171, board A): the guernsey sits in the one-line clock strip.
+const STAGE_PC := 32.0
 ## The guernsey's square against the stage's height: the size and the place it
 ## had under the hanger, standing on the stage's foot.
 const GUERNSEY_SHARE := 0.89
@@ -545,6 +551,8 @@ var _hung_code := ""
 
 
 func _stage_h() -> float:
+	if _pc:
+		return STAGE_PC
 	return STAGE_WIDE if _wide else STAGE_NARROW
 
 
@@ -660,6 +668,14 @@ func _show_board() -> void:
 	_role_labels.clear()
 	_role_buttons.clear()
 	_need_labels.clear()
+	_pc_side = null
+	_pc_card = null
+	_pc_latest = null
+	_pc_reason = null
+	_pc_dot = null
+	if _pc:
+		_show_board_pc()
+		return
 	if _short:
 		_root.add_child(_compact_header())
 	else:
@@ -712,6 +728,828 @@ func _show_board() -> void:
 	_root.add_child(_footer())
 	_refresh()
 	_update_visibility()
+
+
+# ---------------------------------------------------------------------------
+# The PC layout (row 171, board A "one-line rows + his card"; director,
+# 2026-11-26: "every sheet gets a wide layout", "No scrolling: split a screen
+# into stages instead"). 1280 units wide: the pool, the card of the player you
+# picked out and the pick log side by side. 960: the pool and the card, and
+# the picks so far as a second stage across the whole width. Lists turn pages.
+# ---------------------------------------------------------------------------
+const PagedRows := preload("res://scripts/ui/PagedRows.gd")
+const PC_ROW := 26.0
+## Narrower than this (in units) the PC layout splits into two stages.
+const PC_SMALL_W := 1100.0
+var _pc := false
+var _pc_small := false
+var _pc_sel := ""              # the player on the card
+var _pc_side: VBoxContainer
+var _pc_card: VBoxContainer
+var _pc_latest: Container      # 960: the latest picks under the card
+var _pc_prev: Button
+var _pc_next: Button
+var _pc_reason: Label          # the footer's second line: why, or what to do
+var _pc_dot: Label
+var _history_total := 0        # pick log entries in all, built or not
+var _pc_row_on: StyleBoxFlat
+var _pc_row_off: StyleBoxFlat
+
+
+func _pc_gate(area: Vector2) -> bool:
+	return ScreenLayout.roomy(area.x, area.y) and area.y >= 500.0
+
+
+func _pc_fit_window() -> void:
+	if is_instance_valid(_margin):
+		_margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+
+
+func _show_board_pc() -> void:
+	# A room grows to its contents and never shrinks back: the club chooser, and
+	# the board's first layout before its text knows its width, leave it
+	# thousands of units tall. The PC board fits the window, so the room snaps
+	# back now and again on the next frame, once the layout has settled.
+	_margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	if is_inside_tree() and not get_tree().process_frame.is_connected(_pc_fit_window):
+		get_tree().process_frame.connect(_pc_fit_window, CONNECT_ONE_SHOT)
+	_root.add_theme_constant_override("separation", 8)
+	if _draft.intake_mode:
+		_root.add_child(_pc_header("%d National Draft" % GameState.season_year,
+				"Lowest on the ladder picks first."))
+	else:
+		_root.add_child(_pc_header("League draft", "%d  /  %d clubs  /  Snake draft" % [
+				GameState.season_year, _draft.clubs.size()]))
+	_board = _pc_clock()
+	_root.add_child(_board)
+	_why_box = UiKit.vbox(0)
+	_why_box.name = "RivalWhy"
+	_why_box.visible = false
+	_root.add_child(_why_box)
+	if _draft.intake_mode:
+		var fam := UiKit.lbl(TeamFamiliarity.draft_line(), UiKit.SMALL, UiKit.TEXT)
+		fam.name = "DraftFamiliarity"
+		fam.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		_root.add_child(fam)
+	var rule := Challenge.stated_line(GameState) if Challenge.kind(GameState) in ["youth", "rebuild"] else ""
+	if rule != "":
+		var said := UiKit.lbl(rule, UiKit.SMALL, UiKit.EMPH)
+		said.name = "ChallengeRule"
+		said.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		_root.add_child(said)
+	var body := UiKit.hbox(24)
+	body.name = "DraftWorkspace"
+	body.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_root.add_child(body)
+	var left := UiKit.vbox(8)
+	left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	left.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	body.add_child(left)
+	_main_tabs = UiKit.hbox(6)
+	_main_tabs.visible = _pc_small
+	left.add_child(_main_tabs)
+	_pool_panel = _pc_pool()
+	left.add_child(_pool_panel)
+	_pc_side = UiKit.vbox(12)
+	_pc_side.name = "DraftSide"
+	_pc_side.custom_minimum_size.x = 330 if _pc_small else 400
+	_pc_side.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	body.add_child(_pc_side)
+	_pc_card = UiKit.vbox(4)
+	_pc_card.name = "DraftCard"
+	_pc_side.add_child(_pc_card)
+	_activity_panel = _build_activity()
+	_activity_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_activity_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	if _pc_small:
+		left.add_child(_activity_panel)
+		_pc_side.add_child(_pc_latest_box())
+	else:
+		_pc_side.add_child(_activity_panel)
+	_root.add_child(_pc_footer())
+	_refresh()
+	_update_visibility()
+
+
+func _pc_header(title_text: String, sub: String) -> Control:
+	var h := UiKit.hbox(12)
+	var back := UiKit.btn("‹", UiKit.GLYPH)
+	back.name = "BackToMenu"
+	back.custom_minimum_size = Vector2(40, 40)
+	back.tooltip_text = "Back to the menu. The draft waits for you to come back."
+	back.pressed.connect(back_to_menu)
+	h.add_child(back)
+	var v := UiKit.vbox(0)
+	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	v.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	h.add_child(v)
+	v.add_child(UiKit.heading(title_text, UiKit.H1))
+	var sub_l := UiKit.lbl(sub, UiKit.SMALL, UiKit.TEXT)
+	sub_l.name = "DraftSubtitle"
+	sub_l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	v.add_child(sub_l)
+	if _draft.intake_mode:
+		var c := _combine_button()
+		c.custom_minimum_size = Vector2(0, 40)
+		_pad_sides(c, 20)
+		h.add_child(c)
+	return h
+
+
+## The clock as one strip: the guernsey, "Pick 16: Melbourne", the round, your
+## next pick and the prospects left. A click opens the picks so far.
+func _pc_clock() -> PanelContainer:
+	var p := PanelContainer.new()
+	var sb := UiKit.style(UiKit.PANEL, 8, 4)
+	sb.content_margin_top = 4
+	sb.content_margin_bottom = 4
+	p.add_theme_stylebox_override("panel", sb)
+	p.name = "LiveBoard"
+	p.mouse_filter = Control.MOUSE_FILTER_STOP
+	p.tooltip_text = "Tap to see every club's selections."
+	p.gui_input.connect(_on_board_input)
+	var col := UiKit.vbox(2)
+	p.add_child(col)
+	var top := UiKit.hbox(10)
+	top.name = "OnTheClock"
+	col.add_child(top)
+	top.add_child(_stage())
+	_status = UiKit.line("", UiKit.BODY, UiKit.TEXT, true)
+	_status.name = "DraftStatus"
+	_status.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	top.add_child(_status)
+	_round_info = UiKit.line("", UiKit.SMALL, UiKit.TEXT)
+	_round_info.name = "ClockRound"
+	_round_info.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	top.add_child(_round_info)
+	_pc_dot = UiKit.line("·", UiKit.SMALL, UiKit.MUTED)
+	_pc_dot.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	top.add_child(_pc_dot)
+	_your_pick = UiKit.lbl("", UiKit.SMALL, UiKit.EMPH, true)
+	_your_pick.name = "YourNextPick"
+	_your_pick.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_your_pick.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_your_pick.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	top.add_child(_your_pick)
+	_cap = UiKit.line("", UiKit.SMALL, UiKit.TEXT, true)
+	_cap.name = "SalaryCap"
+	_cap.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_cap.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	top.add_child(_cap)
+	_passed_line = UiKit.lbl("", UiKit.SMALL, UiKit.BAD, true)
+	_passed_line.name = "YourPicksPassed"
+	_passed_line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_passed_line.visible = false
+	col.add_child(_passed_line)
+	_ignore_mouse(col)
+	return p
+
+
+func _pc_pool() -> PanelContainer:
+	var panel := PanelContainer.new()
+	panel.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
+	panel.name = "DraftPool"
+	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	var v := UiKit.vbox(6)
+	panel.add_child(v)
+	if not _pc_small:
+		v.add_child(UiKit.heading("Draft pool", UiKit.H2))
+	_pool_total = UiKit.line("", 12, UiKit.MUTED)
+	_pool_total.visible = false
+	v.add_child(_pool_total)
+	v.add_child(_pc_filters())
+	_refresh_role_tabs()
+	var search_row := UiKit.hbox(8)
+	v.add_child(search_row)
+	_search_field = UiKit.search_field(_search)
+	_search_field.name = "PlayerSearch"
+	var col_w := _usable_size().x - 32.0 - (330.0 if _pc_small else 400.0) - 24.0
+	_search_field.custom_minimum_size = Vector2(minf(320.0, col_w * 0.55), 32)
+	_search_field.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	UiKit.set_font_size(_search_field, UiKit.BODY)
+	for st in ["normal", "focus"]:
+		var sb := UiKit.style(UiKit.INK, 8, 4, UiKit.MUTED if st == "focus" else UiKit.LINE)
+		sb.content_margin_top = 4
+		sb.content_margin_bottom = 4
+		_search_field.add_theme_stylebox_override(st, sb)
+	_search_field.text_changed.connect(func(text: String):
+		_search = text
+		_shown = PAGE_SIZE
+		_search_timer.start())
+	search_row.add_child(_search_field)
+	var sort := _sort_picker()
+	sort.custom_minimum_size = Vector2(170, 32)
+	sort.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	search_row.add_child(sort)
+	var rows := PagedRows.new()
+	rows.name = "PlayerRows"
+	rows.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	rows.paged.connect(_pc_pool_paged)
+	v.add_child(rows)
+	_board_box = rows
+	var pager := UiKit.hbox(8)
+	pager.name = "PoolPager"
+	pager.custom_minimum_size.y = 30
+	v.add_child(pager)
+	_board_info = UiKit.lbl("", UiKit.SMALL, UiKit.MUTED)
+	_board_info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_board_info.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	pager.add_child(_board_info)
+	_pc_prev = _pc_link("‹ Previous")
+	_pc_prev.name = "PoolPrev"
+	_pc_prev.pressed.connect(func(): (_board_box as PagedRows).prev_page())
+	pager.add_child(_pc_prev)
+	_pc_next = _pc_link("Next ›")
+	_pc_next.name = "PoolNext"
+	_pc_next.pressed.connect(_pc_pool_next)
+	pager.add_child(_pc_next)
+	_board_scroll = null
+	return panel
+
+
+## All, then a button per position sized to its words: "DEF 12  light".
+func _pc_filters() -> Control:
+	var h := UiKit.hbox(6)
+	h.name = "PositionFilters"
+	_all_button = UiKit.btn("All", UiKit.SMALL)
+	_all_button.name = "Filter_ALL"
+	_all_button.custom_minimum_size = Vector2(44, 32)
+	_all_button.tooltip_text = "Show every position."
+	_all_button.pressed.connect(_set_role.bind(""))
+	h.add_child(_all_button)
+	for role in ROLES:
+		var b := UiKit.btn("", UiKit.SMALL)
+		b.name = "Position_" + role
+		_role_buttons[role] = b
+		b.custom_minimum_size = Vector2(0, 32)
+		var inner := UiKit.hbox(8)
+		inner.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		inner.alignment = BoxContainer.ALIGNMENT_CENTER
+		b.add_child(inner)
+		var count_label := UiKit.line("", UiKit.SMALL, UiKit.ROLE_COLOUR[role], true)
+		count_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		inner.add_child(count_label)
+		_role_labels[role] = count_label
+		var need := UiKit.line("", UiKit.SMALL, UiKit.MUTED)
+		need.name = "Need_" + role
+		need.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		inner.add_child(need)
+		_need_labels[role] = need
+		b.tooltip_text = "Tap to show only %s; tap again for all." % str(UiKit.ROLE_LABEL[role]).to_lower()
+		_ignore_mouse(inner)
+		inner.minimum_size_changed.connect(func():
+			b.custom_minimum_size.x = inner.get_combined_minimum_size().x + 24.0)
+		b.pressed.connect(func(): _set_role("" if _role == role else role))
+		h.add_child(b)
+	return h
+
+
+## What a pool row and the card say of him: age, the read of his OVR and POT
+## (a range while your scouts only have a read), where from and his price.
+func _pc_facts(p: Dictionary) -> Dictionary:
+	var out := {"age": "", "ovr": "", "pot": "", "where": "", "price": "", "word": ""}
+	if float(p.get("age", 0.0)) > 0.0:
+		out["age"] = "%d yo" % int(p["age"])
+	var ovr := ""
+	var pot := ""
+	if bool(p.get("projected", false)):
+		var where := str(p.get("draft_team", p["club"]))
+		if InternationalProspects.is_international(p):
+			where = "%s, %s" % [where, str(p.get("draft_state", ""))]
+		out["where"] = where
+		if _draft.intake_mode:
+			var scout := DraftScouting.projection(p, _club, _draft.seed, _draft.scouting_mult_for(_club))
+			ovr = DraftScouting.range_text(scout["overall"])
+			pot = DraftScouting.range_text(scout["potential"])
+			out["word"] = "scouted"
+		else:
+			var proj_view := _draft.user_view(p)
+			if bool(proj_view["scouted"]):
+				ovr = DraftScouting.range_text(proj_view["overall"])
+				pot = DraftScouting.range_text(proj_view["potential"])
+			else:
+				ovr = "%d" % int(Rating.ovr(p))
+				pot = "%d" % int(p.get("potential", Rating.ovr(p)))
+			out["word"] = "projected"
+	else:
+		out["where"] = GameDB.club_short(str(p["club"]))
+		var view := _draft.user_view(p)
+		if bool(view["scouted"]):
+			ovr = DraftScouting.range_text(view["overall"])
+			pot = DraftScouting.range_text(view["potential"])
+		else:
+			ovr = "%d" % int(Rating.ovr(p))
+			pot = "%d" % int(p.get("potential", Rating.ovr(p)))
+		out["price"] = Contracts.money(_draft.price(p))
+	out["ovr"] = ovr + " OVR"
+	out["pot"] = pot + " POT"
+	return out
+
+
+func _pc_cell(text: String, fs: int, colour: Color, bold: bool, w: float) -> Label:
+	var l := UiKit.line(text, fs, colour, bold)
+	l.custom_minimum_size.x = w
+	l.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	return l
+
+
+## A pool row on one line (board A): role, name, age, OVR, POT and, at 1280,
+## where from and his type, then his fit. A click puts him on the card; the
+## card's button drafts him.
+func _pc_player_row(p: Dictionary) -> Control:
+	var id := str(p["id"])
+	var row := PanelContainer.new()
+	row.name = "Player_" + id
+	row.mouse_filter = Control.MOUSE_FILTER_PASS
+	row.add_theme_stylebox_override("panel", _pc_row_style(id == _pc_sel))
+	var inspect := Button.new()
+	inspect.name = "Inspect_" + id
+	inspect.flat = true
+	inspect.focus_mode = Control.FOCUS_NONE
+	inspect.mouse_filter = Control.MOUSE_FILTER_PASS
+	inspect.custom_minimum_size.y = PC_ROW
+	inspect.tooltip_text = GameDB.player_display_name(p)
+	inspect.pressed.connect(_pc_pick_row.bind(id))
+	row.add_child(inspect)
+	var h := UiKit.hbox(0)
+	h.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	inspect.add_child(h)
+	var f := _pc_facts(p)
+	var role := str(p["role"])
+	h.add_child(_pc_cell(Ratings.role_tag(p), UiKit.SMALL, UiKit.ROLE_COLOUR.get(role, UiKit.TEXT), true, 62))
+	var name_l := UiKit.ellipsis(GameDB.player_display_name(p), UiKit.BODY, UiKit.TEXT, true)
+	name_l.custom_minimum_size.x = 138
+	if not _pc_small:
+		name_l.size_flags_horizontal = Control.SIZE_FILL
+	name_l.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	h.add_child(name_l)
+	h.add_child(_pc_cell(str(f["age"]), UiKit.SMALL, UiKit.TEXT, false, 44))
+	h.add_child(_pc_cell(str(f["ovr"]), UiKit.SMALL, UiKit.TEXT, true, 74))
+	h.add_child(_pc_cell(str(f["pot"]), UiKit.SMALL, UiKit.TEXT, false, 72))
+	if not _pc_small:
+		var kind: PackedStringArray = []
+		if str(f["price"]) != "":
+			kind.append(str(f["price"]))
+		kind.append(str(f["where"]))
+		kind.append(PlayerProfile.player_type(_draft.scouted_copy(p)))
+		var kind_l := UiKit.ellipsis(" · ".join(kind), UiKit.SMALL, UiKit.MUTED)
+		kind_l.name = "Kind_" + id
+		kind_l.custom_minimum_size.x = 120
+		kind_l.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		h.add_child(kind_l)
+		var fits := _fit_of(p)
+		var push: Control
+		if not fits.is_empty():
+			var m: Dictionary = fits[0]
+			push = _pc_cell(str(m["text"]), UiKit.SMALL, _fit_colour(), true, 200)
+			push.name = "Fit_%s_%s" % [id, str(m["arch"])]
+		else:
+			push = Control.new()
+			push.custom_minimum_size.x = 200
+		h.add_child(push)
+	var own := OwnProspect.tag(p)
+	if own != "":
+		var own_l := _pc_cell(own, UiKit.SMALL, UiKit.EMPH, true, 0)
+		own_l.name = "Own_" + id
+		h.add_child(own_l)
+	_ignore_mouse(h)
+	return row
+
+
+func _pc_row_style(selected: bool) -> StyleBoxFlat:
+	if _pc_row_on == null:
+		_pc_row_on = StyleBoxFlat.new()
+		_pc_row_on.bg_color = UiKit.PANEL_ALT
+		_pc_row_on.set_border_width_all(1)
+		_pc_row_on.border_color = UiKit.TEXT
+		_pc_row_on.set_corner_radius_all(3)
+		_pc_row_off = StyleBoxFlat.new()
+		_pc_row_off.bg_color = Color.TRANSPARENT
+		_pc_row_off.border_width_bottom = 1
+		_pc_row_off.border_color = UiKit.LINE
+		for sb in [_pc_row_on, _pc_row_off]:
+			sb.content_margin_left = 6
+			sb.content_margin_right = 6
+			sb.content_margin_top = 0
+			sb.content_margin_bottom = 0
+	return _pc_row_on if selected else _pc_row_off
+
+
+func _pc_pick_row(id: String) -> void:
+	_pc_sel = id
+	_pc_paint_rows()
+	_pc_card_refresh()
+
+
+func _pc_paint_rows() -> void:
+	if not is_instance_valid(_board_box):
+		return
+	for c in _board_box.get_children():
+		var n := str(c.name)
+		if n.begins_with("Player_") and c is PanelContainer:
+			(c as PanelContainer).add_theme_stylebox_override("panel", _pc_row_style(n.substr(7) == _pc_sel))
+
+
+## The card keeps its player while he is on the page; otherwise it takes the
+## page's first.
+func _pc_sync_sel() -> void:
+	if not _pc or not is_instance_valid(_board_box):
+		return
+	var box := _board_box as PagedRows
+	var on_page: Array = []
+	var rows := box.rows()
+	for i in range(rows.size()):
+		var n := str(rows[i].name)
+		if n.begins_with("Player_") and (box.shown == 0 or (i >= box.first and i < box.first + box.shown)):
+			on_page.append(n.substr(7))
+	if not on_page.has(_pc_sel):
+		_pc_sel = str(on_page[0]) if not on_page.is_empty() else ""
+	_pc_paint_rows()
+	_pc_card_refresh()
+
+
+## The pool's page changed: its line ("Best scouted · 1-14 of 37"), the page
+## buttons and the card.
+func _pc_pool_paged() -> void:
+	if not is_instance_valid(_board_box) or not is_instance_valid(_pc_next):
+		return
+	var box := _board_box as PagedRows
+	_refresh_pool_info()
+	var left := _pool_rows_n + _hidden_in_filter() - (box.first + box.shown)
+	_pc_next.text = "Next %d ›" % mini(maxi(box.shown, 1), maxi(left, 0))
+	_pc_next.visible = left > 0
+	_pc_prev.visible = box.first > 0
+	_pc_sync_sel()
+
+
+func _pc_pool_next() -> void:
+	var box := _board_box as PagedRows
+	if box.can_next():
+		box.next_page()
+	elif _shown < _last_rows.size():
+		# The next page is past the rows built so far: build the next lot first.
+		_shown += PAGE_SIZE
+		_keep_rows = true
+		_refresh_board()
+		_keep_rows = false
+		box.next_page(true)
+
+
+func _pc_page_words(n: int, sort_label: String) -> String:
+	var lead := sort_label.left(1).to_upper() + sort_label.substr(1)
+	if _search.strip_edges() != "":
+		lead = "\"%s\"  ·  %s" % [_search.strip_edges(), lead]
+	if not _role.is_empty():
+		lead = "%s  ·  %s" % [_role, lead]
+	var box := _board_box as PagedRows
+	if n > 0 and box != null and box.shown > 0:
+		return "%s  ·  %d-%d of %d" % [lead, box.first + 1, mini(box.first + box.shown, n), n]
+	return lead
+
+
+## His card: name, the facts that decide a pick, how he plays, his fit, and
+## the button that drafts him.
+func _pc_card_refresh() -> void:
+	if not is_instance_valid(_pc_card):
+		return
+	UiKit.clear(_pc_card)
+	var rule := ColorRect.new()
+	rule.color = UiKit.LINE
+	rule.custom_minimum_size.y = 1
+	rule.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_pc_card.add_child(rule)
+	var p := _player_by_id(_pc_sel) if _pc_sel != "" else {}
+	if p.is_empty():
+		_pc_card.add_child(UiKit.lbl("No player selected.", UiKit.SMALL, UiKit.MUTED))
+		return
+	var id := str(p["id"])
+	var name_l := UiKit.name_label(GameDB.player_display_name(p), UiKit.H1, UiKit.TEXT)
+	name_l.name = "CardName"
+	name_l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_pc_card.add_child(name_l)
+	var f := _pc_facts(p)
+	var line := UiKit.hbox(8)
+	_pc_card.add_child(line)
+	var role := str(p["role"])
+	var role_l := UiKit.line(Ratings.role_tag(p), UiKit.SMALL, UiKit.ROLE_COLOUR.get(role, UiKit.TEXT), true)
+	role_l.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	line.add_child(role_l)
+	var bits: PackedStringArray = []
+	if str(f["age"]) != "":
+		bits.append(str(f["age"]))
+	var word := str(f["word"])
+	bits.append((word + " " if word != "" else "") + str(f["ovr"]))
+	bits.append(str(f["pot"]))
+	if str(f["price"]) != "":
+		bits.append(str(f["price"]))
+	if _draft.has(id):
+		bits = ["Pick %d to %s" % [int(_draft.pick_details(id).get("pick", 0)),
+				GameDB.club_short(_draft.drafted_by(id))]]
+	var facts := UiKit.lbl(" · ".join(bits), UiKit.SMALL, UiKit.TEXT)
+	facts.name = "CardFacts"
+	facts.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	facts.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	line.add_child(facts)
+	var seen := _draft.scouted_copy(p)
+	var kind: PackedStringArray = [str(f["where"]), PlayerProfile.player_type(seen)]
+	for t in _traits_of(seen):
+		kind.append(_trait_label(str(t)))
+	var kind_l := UiKit.lbl(" · ".join(kind), UiKit.SMALL, UiKit.TEXT)
+	kind_l.name = "CardKind"
+	kind_l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_pc_card.add_child(kind_l)
+	var like := PlaysLikeLine.make(p)
+	if like != null:
+		_pc_card.add_child(like)
+	for m in _fit_of(p):
+		var fit_l := UiKit.lbl(str(m["text"]), UiKit.SMALL, _fit_colour(), true)
+		fit_l.name = "CardFit_" + str(m["arch"])
+		fit_l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		_pc_card.add_child(fit_l)
+	var own := OwnProspect.tag(p)
+	if own != "":
+		var own_l := UiKit.lbl(own, UiKit.SMALL, UiKit.EMPH, true)
+		own_l.name = "Own_" + id
+		_pc_card.add_child(own_l)
+	var acts := UiKit.hbox(8)
+	acts.name = "CardActions"
+	_pc_card.add_child(UiKit.spacer(4))
+	_pc_card.add_child(acts)
+	var b := UiKit.btn("", UiKit.BODY)
+	b.name = "Pick_" + id
+	b.custom_minimum_size = Vector2(0, 40)
+	b.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	b.set_meta("outline", b.get_theme_stylebox("normal"))
+	b.pressed.connect(_on_pick.bind(p))
+	acts.add_child(b)
+	_set_pick_state(b, b, p)
+	_pad_sides(b, 24)
+	var push := Control.new()
+	push.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	acts.add_child(push)
+	var sheet := _pc_link("His sheet ›")
+	sheet.name = "HisSheet"
+	sheet.pressed.connect(_open_player.bind(id))
+	acts.add_child(sheet)
+
+
+## A text button: words only, no box.
+func _pc_link(text: String) -> Button:
+	var b := UiKit.btn(text, UiKit.BODY)
+	b.flat = true
+	b.add_theme_color_override("font_color", UiKit.TEXT)
+	b.size_flags_horizontal = Control.SIZE_SHRINK_END
+	b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	return b
+
+
+## `n` units either side of a button's words (board A: buttons sized to their words).
+func _pad_sides(b: Button, n: float) -> void:
+	for st in ["normal", "hover", "pressed", "disabled"]:
+		var sb := b.get_theme_stylebox(st)
+		if sb == null:
+			continue
+		sb = sb.duplicate()
+		sb.content_margin_left = n
+		sb.content_margin_right = n
+		b.add_theme_stylebox_override(st, sb)
+
+
+func _pc_act(text: String, node_name: String, call: Callable, primary := false) -> Button:
+	var b := UiKit.btn(text, UiKit.BODY, primary)
+	b.name = node_name
+	b.custom_minimum_size = Vector2(0, 40)
+	b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	b.pressed.connect(call)
+	_pad_sides(b, 14 if _pc_small else 20)
+	return b
+
+
+## The footer: what you have signed and your next picks, the reason line
+## under them, and the night's buttons, each sized to its words.
+func _pc_footer() -> Control:
+	var h := UiKit.hbox(8)
+	h.name = "DraftFooter"
+	var v := UiKit.vbox(0)
+	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	v.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	h.add_child(v)
+	_next_picks = UiKit.lbl("", UiKit.SMALL, UiKit.TEXT, true)
+	_next_picks.name = "UpcomingPicks"
+	_next_picks.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	v.add_child(_next_picks)
+	_pc_reason = UiKit.lbl("", UiKit.SMALL, UiKit.TEXT)
+	_pc_reason.name = "UpcomingWhy"
+	_pc_reason.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_pc_reason.visible = false
+	v.add_child(_pc_reason)
+	_pick_me_btn = _pc_act("Pick for me", "PickForMe", _on_pick_for_me)
+	h.add_child(_pick_me_btn)
+	if _draft.intake_mode:
+		_pass_btn = _pc_act("Pass", "PassPick", _on_pass)
+		h.add_child(_pass_btn)
+		_trade_btn = _pc_act("Trade picks", "TradePicks", _on_trade_picks)
+		h.add_child(_trade_btn)
+	_finish_btn = _pc_act("Finish draft" if _draft.intake_mode else "Start season", "StartSeason", _on_finish, true)
+	UiKit.feel(_finish_btn, "end")     # the end of the draft: the siren
+	h.add_child(_finish_btn)
+	return h
+
+
+## The footer's words on two lines: the first line and the next picks, then
+## the rest (why a button waits, what to fix). The cap reads on one line.
+func _pc_footer_words() -> void:
+	if is_instance_valid(_cap):
+		_cap.text = _cap.text.replace("\n", "  ·  ")
+	if not is_instance_valid(_pc_reason):
+		return
+	var lines := _next_picks.text.split("\n")
+	var head := lines[0]
+	var rest := lines.slice(1)
+	if not rest.is_empty() and (rest[0].begins_with("Our next pick") or rest[0].begins_with("Our picks")):
+		head += "  ·  " + rest[0]
+		rest = rest.slice(1)
+	_next_picks.text = head
+	_pc_reason.text = "\n".join(rest)
+	_pc_reason.visible = not rest.is_empty()
+
+
+## The tabs: at 960 the two stages ("Draft pool" / "The picks so far"); the
+## log's own tabs (Picks, My list, Order) at both widths.
+func _pc_tabs() -> void:
+	if _pc_small:
+		var pool := _pc_stage_btn("Draft pool", _tab == "pool")
+		pool.name = "Tab_pool"
+		pool.pressed.connect(_select_tab.bind("pool"))
+		_main_tabs.add_child(pool)
+		var picks := _pc_stage_btn("The picks so far", _tab != "pool")
+		picks.name = "Tab_picks"
+		picks.pressed.connect(func(): _select_tab(_side_tab))
+		_main_tabs.add_child(picks)
+	var called := _shown_picks() + _shown_passes()
+	for item in [["picks", "Picks"], ["squad", "My list"], ["order", "Order"]]:
+		var key: String = item[0]
+		var label := str(item[1])
+		if key == "picks" and called > 0:
+			label += " (%d)" % called
+		var side := UiKit.tab(label, _side_tab == key)
+		side.name = "SideTab_" + key
+		side.pressed.connect(_select_tab.bind(key))
+		_side_tabs.add_child(side)
+
+
+func _pc_stage_btn(text: String, on: bool) -> Button:
+	var b := UiKit.btn(text, UiKit.BODY)
+	b.custom_minimum_size = Vector2(0, 36)
+	var sb := UiKit.style(UiKit.PANEL_ALT if on else UiKit.INK, 20, 6, UiKit.TEXT if on else UiKit.LINE)
+	if on:
+		sb.set_border_width_all(2)
+	sb.content_margin_top = 4
+	sb.content_margin_bottom = 4
+	for st in ["normal", "hover", "pressed"]:
+		b.add_theme_stylebox_override(st, sb)
+	b.add_theme_color_override("font_color", UiKit.TEXT if on else UiKit.MUTED)
+	b.add_theme_color_override("font_hover_color", UiKit.TEXT)
+	return b
+
+
+func _pc_rows_box(node_name: String, gap := 0.0) -> Container:
+	var box := PagedRows.new()
+	box.name = node_name
+	box.gap = gap
+	box.columns = 2 if _pc_small else 1
+	box.col_gap = 32.0
+	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	box.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	return box
+
+
+## "‹ Newer picks" and "Older picks ›" under a paged list, each shown only
+## when there is a page that way.
+func _pc_pager(box: Container, prefix: String, more_text: String, back_text: String) -> Control:
+	var h := UiKit.hbox(8)
+	h.name = prefix + "Pager"
+	h.custom_minimum_size.y = 30
+	var back := _pc_link("‹ " + back_text)
+	back.name = prefix + "Back"
+	back.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	back.pressed.connect(func(): (box as PagedRows).prev_page())
+	h.add_child(back)
+	var push := Control.new()
+	push.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	h.add_child(push)
+	var more := _pc_link(more_text + " ›")
+	more.name = prefix + "More"
+	more.pressed.connect(_pc_more.bind(box))
+	h.add_child(more)
+	back.visible = false
+	more.visible = false
+	var rows := box as PagedRows
+	rows.paged.connect(func():
+		var total := _history_total if box == _history_box else rows.total
+		more.visible = total - rows.first - rows.shown > 0
+		back.visible = rows.first > 0)
+	return h
+
+
+func _pc_more(box: Container) -> void:
+	var rows := box as PagedRows
+	if rows.can_next():
+		rows.next_page()
+	elif box == _history_box and _history_shown < _history_total:
+		# Older picks than the log has built: build the next lot first.
+		_history_shown += PAGE_SIZE
+		_refresh_history()
+		rows.next_page(true)
+
+
+## A pick in the log on one line: number, club, name (or why it passed), and
+## his position at the right. A click on a pick opens his sheet.
+func _pc_log_row(entry: Dictionary, prefix := "History") -> Control:
+	var code := str(entry["club"])
+	var mine := code == _club
+	var passed := entry.has("why")
+	var no := int(entry["pick"])
+	var row := PanelContainer.new()
+	row.name = "%s%s_%d" % [prefix, "Pass" if passed else "Pick", no]
+	row.mouse_filter = Control.MOUSE_FILTER_PASS
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = UiKit.PANEL_ALT if mine else Color.TRANSPARENT
+	sb.border_width_bottom = 1
+	sb.border_color = UiKit.LINE
+	sb.content_margin_left = 6
+	sb.content_margin_right = 6
+	sb.content_margin_top = 0
+	sb.content_margin_bottom = 0
+	row.add_theme_stylebox_override("panel", sb)
+	row.custom_minimum_size.y = PC_ROW
+	var h := UiKit.hbox(8)
+	if passed:
+		row.add_child(h)
+	else:
+		var tap := Button.new()
+		tap.name = "%sInspect_%d" % [prefix, no]
+		tap.flat = true
+		tap.focus_mode = Control.FOCUS_NONE
+		tap.mouse_filter = Control.MOUSE_FILTER_PASS
+		tap.custom_minimum_size.y = PC_ROW
+		tap.pressed.connect(_open_player.bind(str(entry.get("player_id", ""))))
+		row.add_child(tap)
+		h.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		tap.add_child(h)
+	h.add_child(_pc_cell("%d" % no, UiKit.SMALL, UiKit.EMPH if mine else UiKit.MUTED, false, 26))
+	h.add_child(_pc_cell(code, UiKit.SMALL, UiKit.club_name_colour(UiKit.club_ink(code)), true, 36))
+	if passed:
+		var why := UiKit.ellipsis("passed: " + str(PASS_WHY.get(str(entry["why"]), "passed")),
+				UiKit.SMALL, UiKit.EMPH if mine else UiKit.MUTED)
+		why.name = "%sPassWhy_%d" % [prefix, no]
+		why.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		why.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		h.add_child(why)
+	else:
+		var who := _entry_player_name(entry)
+		if bool(entry.get("released", false)):
+			who += "  ·  released"
+		var name_l := UiKit.ellipsis(who, UiKit.BODY, UiKit.TEXT, true)
+		name_l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		name_l.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		h.add_child(name_l)
+		var role := str(entry.get("role", ""))
+		var role_l := _pc_cell(role, UiKit.SMALL, UiKit.ROLE_COLOUR.get(role.split("/")[0], UiKit.MUTED), true, 0)
+		role_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		h.add_child(role_l)
+	_ignore_mouse(h)
+	return row
+
+
+## 960: the newest picks under the card, and the way to all of them.
+func _pc_latest_box() -> Control:
+	var v := UiKit.vbox(6)
+	v.name = "LatestPicks"
+	v.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	v.add_child(UiKit.lbl("Latest picks", UiKit.BODY, UiKit.HEAD, true))
+	var rows := _pc_rows_box("LatestRows")
+	rows.columns = 1
+	_pc_latest = rows
+	v.add_child(rows)
+	var all := _pc_link("All picks ›")
+	all.name = "AllPicks"
+	all.pressed.connect(_select_tab.bind("picks"))
+	v.add_child(all)
+	return v
+
+
+func _pc_latest_refresh(upto: int) -> void:
+	if not is_instance_valid(_pc_latest):
+		return
+	UiKit.clear(_pc_latest)
+	var events := _night_events(upto, true).filter(func(e): return not e.has("buyer"))
+	events.reverse()
+	for e in events.slice(0, 8):
+		_pc_latest.add_child(_pc_log_row(e, "Latest"))
+	if events.is_empty():
+		_pc_latest.add_child(UiKit.lbl("No picks yet.", UiKit.SMALL, UiKit.MUTED))
 
 
 func _compact_header() -> Control:
@@ -958,9 +1796,18 @@ func _select_tab(key: String) -> void:
 
 
 func _update_visibility() -> void:
-	_pool_panel.visible = _wide or _tab == "pool"
-	_activity_panel.visible = _wide or _tab != "pool"
 	var active := _side_tab if _wide else _tab
+	if _pc:
+		# 960: two stages, the pool (with the card) or the picks so far across
+		# the width. 1280: everything at once.
+		var stage2 := _pc_small and _tab != "pool"
+		_pool_panel.visible = not stage2
+		_pc_side.visible = not stage2
+		_activity_panel.visible = stage2 or not _pc_small
+		active = _side_tab
+	else:
+		_pool_panel.visible = _wide or _tab == "pool"
+		_activity_panel.visible = _wide or _tab != "pool"
 	_history_view.visible = active == "picks"
 	_squad_view.visible = active == "squad"
 	_order_view.visible = active == "order"
@@ -979,6 +1826,9 @@ func _update_visibility() -> void:
 func _refresh_tabs() -> void:
 	UiKit.clear(_main_tabs)
 	UiKit.clear(_side_tabs)
+	if _pc:
+		_pc_tabs()
+		return
 	for item in [["pool", "Pool"], ["picks", "Picks"], ["squad", "My list"], ["order", "Order"]]:
 		var key: String = item[0]
 		var label := str(item[1])
@@ -1048,6 +1898,13 @@ func _filters() -> Control:
 		_shown = PAGE_SIZE
 		_search_timer.start())
 	search_row.add_child(_search_field)
+	search_row.add_child(_sort_picker())
+	_board_info = UiKit.lbl("", UiKit.SMALL, UiKit.MUTED)
+	v.add_child(_board_info)
+	return v
+
+
+func _sort_picker() -> OptionButton:
 	var sort_option := UiKit.option()
 	sort_option.name = "SortPlayers"
 	var sort_options := _sort_options()
@@ -1059,10 +1916,7 @@ func _filters() -> Control:
 		_sort = str(sort_options[idx][0])
 		_shown = PAGE_SIZE
 		_refresh_board(true))
-	search_row.add_child(sort_option)
-	_board_info = UiKit.lbl("", UiKit.SMALL, UiKit.MUTED)
-	v.add_child(_board_info)
-	return v
+	return sort_option
 
 
 func _refresh_role_tabs() -> void:
@@ -1111,8 +1965,11 @@ func _refresh_pool_info() -> void:
 	for sort_entry in _sort_options():
 		if str(sort_entry[0]) == _sort:
 			sort_label = str(sort_entry[1]).to_lower()
+	if _pc:
+		_board_info.text = _pc_page_words(n, sort_label)
+		return
 	var role_text := "" if _role.is_empty() else _role + " "
-	_board_info.text = "%d %savailable · %s" % [n, role_text, sort_label]
+	_board_info.text ="%d %savailable · %s" % [n, role_text, sort_label]
 	if _draft.intake_mode and _role.is_empty() and _search.strip_edges() == "":
 		# The board already says how many are left: the line keeps only the order.
 		_board_info.text = sort_label.left(1).to_upper() + sort_label.substr(1)
@@ -1150,7 +2007,7 @@ func _refresh_board(reset_scroll := false) -> void:
 		for i in range(shown):
 			wanted["Player_" + str(rows[i]["id"])] = true
 		for child in _board_box.get_children():
-			if wanted.has(str(child.name)) and (child as CanvasItem).visible:
+			if wanted.has(str(child.name)) and not child.is_queued_for_deletion():
 				keep[str(child.name)] = child
 	_clear_except(_board_box, keep)
 	_pool_total.text = "%d available" % (_draft.pool.size() - _draft.picked.size())
@@ -1162,7 +2019,7 @@ func _refresh_board(reset_scroll := false) -> void:
 		if row == null:
 			row = _player_row(p)
 			_board_box.add_child(row)
-		else:
+		elif row.has_meta("pick"):
 			_set_pick_state(row, row.get_meta("pick"), p)
 		_board_box.move_child(row, i)
 	if rows.is_empty():
@@ -1171,14 +2028,20 @@ func _refresh_board(reset_scroll := false) -> void:
 		var reset := UiKit.btn("Clear filters", 14)
 		reset.pressed.connect(_clear_filters)
 		_board_box.add_child(reset)
-	elif shown < rows.size():
+	elif shown < rows.size() and not _pc:
 		var more := UiKit.btn("Show more  ·  %d of %d" % [shown, rows.size()], 14)
 		more.name = "MorePlayers"
 		more.pressed.connect(func():
 			_shown += PAGE_SIZE
 			_refresh_board())
 		_board_box.add_child(more)
-	if reset_scroll:
+	if _pc:
+		# Pages, not a scroll: a new filter or sort starts at page one.
+		if reset_scroll:
+			(_board_box as PagedRows).to_start()
+		(_board_box as PagedRows).repage()
+		_pc_sync_sel()
+	elif reset_scroll:
 		_board_scroll.set_deferred("scroll_vertical", 0)
 
 
@@ -1210,6 +2073,8 @@ func _clear_filters() -> void:
 
 
 func _player_row(p: Dictionary) -> Control:
+	if _pc:
+		return _pc_player_row(p)
 	var row := _row_panel(false)
 	row.name = "Player_" + str(p["id"])
 	var h := UiKit.hbox(UiKit.GAP)
@@ -1491,7 +2356,7 @@ func _process(_delta: float) -> void:
 		"buttons":
 			# Each row's button as the draft now stands, a slice a frame.
 			var rows: Array = _board_box.get_children().filter(
-					func(c): return str(c.name).begins_with("Player_") and (c as CanvasItem).visible) \
+					func(c): return str(c.name).begins_with("Player_") and not c.is_queued_for_deletion()) \
 					if is_instance_valid(_board_box) else []
 			var by_id := {}
 			for p in _last_rows:
@@ -1539,12 +2404,15 @@ func _land_done() -> void:
 		_refresh_pool_info()
 		var more := _board_box.get_node_or_null("MorePlayers") as Button
 		var shown := _board_box.get_children().filter(
-				func(c): return str(c.name).begins_with("Player_") and (c as CanvasItem).visible).size()
+				func(c): return str(c.name).begins_with("Player_") and not c.is_queued_for_deletion()).size()
 		if more != null:
 			if shown >= left:
 				more.queue_free()
 			else:
 				more.text = "Show more  ·  %d of %d" % [shown, left]
+		if _pc:
+			_pc_card_refresh()
+			(_board_box as PagedRows).repage()
 	_refresh_side_views()
 
 
@@ -1575,7 +2443,7 @@ func _land_rivals(build := true) -> bool:
 	var n := 0
 	for c in _board_box.get_children():
 		var name_s := str(c.name)
-		if not name_s.begins_with("Player_") or not (c as CanvasItem).visible:
+		if not name_s.begins_with("Player_") or c.is_queued_for_deletion():
 			continue
 		if not _draft.has(name_s.substr(7)):
 			n += 1
@@ -2261,10 +3129,12 @@ func _big_range(values: Array, label: String, node_name: String) -> Control:
 func _build_activity() -> PanelContainer:
 	var p := UiKit.panel(UiKit.PANEL, UiKit.Space.ROOM, 10)
 	p.name = "DraftActivity"
-	var v := UiKit.vbox(UiKit.GAP)
+	if _pc:
+		p.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
+	var v := UiKit.vbox(8 if _pc else UiKit.GAP)
 	p.add_child(v)
 	_side_tabs = UiKit.hbox(UiKit.Space.SLIM)
-	_side_tabs.visible = _wide
+	_side_tabs.visible = _wide or _pc
 	v.add_child(_side_tabs)
 
 	_history_view = UiKit.vbox(UiKit.Space.CLOSE)
@@ -2290,41 +3160,68 @@ func _build_activity() -> PanelContainer:
 		_history_club = "" if idx == 0 else str(_draft.clubs[idx - 1])
 		_history_shown = PAGE_SIZE
 		_refresh_history()
-		_history_scroll.set_deferred("scroll_vertical", 0))
+		if _pc:
+			(_history_box as PagedRows).to_start()
+		else:
+			_history_scroll.set_deferred("scroll_vertical", 0))
 	_history_view.add_child(clubs)
-	_history_box = UiKit.vbox(UiKit.Space.TIGHT)
-	_history_box.name = "PickLogRows"
-	if _short:
-		# Filters scroll with the log on low-height screens as well.
-		_history_view.remove_child(head)
-		_history_view.remove_child(clubs)
-		var content := UiKit.vbox(UiKit.Space.CLOSE)
+	if _pc:
+		# Pages, not a scroll (row 171): "Older picks ›" turns the log.
 		head.visible = false
-		content.add_child(head)
-		content.add_child(clubs)
-		content.add_child(_history_box)
-		_history_scroll = UiKit.scroll(content)
+		clubs.custom_minimum_size = Vector2(300 if _pc_small else 0, 30)
+		if _pc_small:
+			clubs.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+		_history_box = _pc_rows_box("PickLogRows")
+		_history_view.add_child(_history_box)
+		_history_view.add_child(_pc_pager(_history_box, "Log", "Older picks", "Newer picks"))
+		_history_scroll = null
 	else:
-		_history_scroll = UiKit.scroll(_history_box)
-	_history_view.add_child(_history_scroll)
+		var log_rows := UiKit.vbox(UiKit.Space.TIGHT)
+		log_rows.name = "PickLogRows"
+		_history_box = log_rows
+		if _short:
+			# Filters scroll with the log on low-height screens as well.
+			_history_view.remove_child(head)
+			_history_view.remove_child(clubs)
+			var content := UiKit.vbox(UiKit.Space.CLOSE)
+			head.visible = false
+			content.add_child(head)
+			content.add_child(clubs)
+			content.add_child(_history_box)
+			_history_scroll = UiKit.scroll(content)
+		else:
+			_history_scroll = UiKit.scroll(_history_box)
+		_history_view.add_child(_history_scroll)
 
 	_squad_view = UiKit.vbox(UiKit.Space.CLOSE)
 	_squad_view.name = "MySquad"
 	_squad_view.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	v.add_child(_squad_view)
-	_squad_view.add_child(UiKit.heading("Our list", UiKit.H1))
-	_mine_box = UiKit.vbox(UiKit.Space.SNUG)
-	_mine_scroll = UiKit.scroll(_mine_box)
-	_squad_view.add_child(_mine_scroll)
+	if _pc:
+		_mine_box = _pc_rows_box("MineRows", 4.0)
+		_squad_view.add_child(_mine_box)
+		_squad_view.add_child(_pc_pager(_mine_box, "Mine", "Next", "Previous"))
+		_mine_scroll = null
+	else:
+		_squad_view.add_child(UiKit.heading("Our list", UiKit.H1))
+		_mine_box = UiKit.vbox(UiKit.Space.SNUG)
+		_mine_scroll = UiKit.scroll(_mine_box)
+		_squad_view.add_child(_mine_scroll)
 
 	_order_view = UiKit.vbox(UiKit.Space.CLOSE)
 	_order_view.name = "DraftOrder"
 	_order_view.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	v.add_child(_order_view)
-	_order_view.add_child(UiKit.heading("Draft order", UiKit.H1))
-	_order_box = UiKit.vbox(UiKit.Space.TIGHT)
-	_order_scroll = UiKit.scroll(_order_box)
-	_order_view.add_child(_order_scroll)
+	if _pc:
+		_order_box = _pc_rows_box("OrderRows", 4.0)
+		_order_view.add_child(_order_box)
+		_order_view.add_child(_pc_pager(_order_box, "Order", "Next", "Previous"))
+		_order_scroll = null
+	else:
+		_order_view.add_child(UiKit.heading("Draft order", UiKit.H1))
+		_order_box = UiKit.vbox(UiKit.Space.TIGHT)
+		_order_scroll = UiKit.scroll(_order_box)
+		_order_view.add_child(_order_scroll)
 	return p
 
 
@@ -2393,6 +3290,7 @@ func _refresh_history() -> void:
 			else:
 				picks_n += 1
 	entries.reverse()
+	_history_total = entries.size()
 	_history_info.text = "%d %s" % [picks_n, "pick" if picks_n == 1 else "picks"]
 	if passed_n > 0:
 		_history_info.text += ", %d passed" % passed_n
@@ -2419,6 +3317,8 @@ func _refresh_history() -> void:
 		else:
 			if e.has("buyer"):
 				row = _history_trade_row(e)
+			elif _pc:
+				row = _pc_log_row(e)
 			elif e.has("why"):
 				row = _history_pass_row(e)
 			else:
@@ -2434,7 +3334,9 @@ func _refresh_history() -> void:
 		_history_box.add_child(UiKit.lbl("No picks yet" if _history_club.is_empty() else "No picks for this club yet", UiKit.HEADING, UiKit.TEXT, true))
 		_history_box.add_child(UiKit.lbl(
 				"Every pick shows here, from all %d rival clubs too. The newest come first." % maxi(1, _draft.clubs.size() - 1), 15, UiKit.MUTED))
-	if _history_shown < entries.size():
+	if _pc:
+		(_history_box as PagedRows).repage()
+	elif _history_shown < entries.size():
 		var more := UiKit.btn("Earlier picks  ·  %d more" % (entries.size() - _history_shown), 14)
 		more.name = "EarlierPicks"
 		more.pressed.connect(func():
@@ -2827,7 +3729,7 @@ func _refresh_status() -> void:
 		_finish_btn.tooltip_text = \
 				"The draft ends when every pick is made or the pool runs dry."
 	else:
-		_finish_btn.tooltip_text = "Fill our list under the cap, with at least 2 rucks."
+		_finish_btn.tooltip_text = "Fill our list under the cap, with at least one ruck."
 	if _draft.user_stuck():
 		_next_picks.text = "No player fits our cap and list.\nRelease a pick on My list."
 	if done:
@@ -2844,6 +3746,8 @@ func _refresh_status() -> void:
 		else:
 			_next_picks.text = "Our list is ready.\nTime for Round 1."
 
+	if _pc:
+		_pc_footer_words()
 	_refresh_live()
 	_refresh_why()
 
@@ -2896,8 +3800,14 @@ func _refresh_live(settle := false) -> void:
 		_round_info.text = "Round %d of %d" % [mini(clock_round, _draft.target_size), _draft.target_size]
 	if is_instance_valid(_your_pick):
 		_your_pick.text = "" if _stage_pick >= 0 else _your_pick_words(clock_pick, done)
+		if _pc:
+			_your_pick.text = _your_pick.text.replace("\n", "  ·  ")
 		_your_pick.visible = _your_pick.text != ""
+		if is_instance_valid(_pc_dot):
+			_pc_dot.visible = _your_pick.visible
 	_refresh_passed(clock_pick, done)
+	if _pc:
+		_pc_latest_refresh(upto)
 	if is_instance_valid(_recent_box):
 		_recent_rows(hist, upto, settle)
 		_recent_box.visible = _recent_wanted()
@@ -3159,9 +4069,11 @@ func _on_finish() -> void:
 		return
 	if not _draft.is_finished() or not _draft.is_valid():
 		return
-	GameState.start_season(_club, _draft.list())
+	# One tap, one save: the season and its pre-season are written together.
+	GameState.start_season(_club, _draft.list(), false)
 	# A new career's first season starts with a pre-season, like every other.
-	GameState.open_preseason()
+	GameState.open_preseason(false)
+	GameState.autosave()
 	# A created club hires its first staff next (director 2026-11-15); Back
 	# from it is the Hub.
 	if GameState.first_staff_open():
