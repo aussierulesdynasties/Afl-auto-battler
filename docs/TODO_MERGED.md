@@ -237,3 +237,4 @@ What has landed toward each open row of docs/TODO.md and docs/TODO_RULINGS.md, o
 - 202: Merged #2216: Marvel Stadium round 13: the round 12 PC check, NAB height, c_sw vents, backdrop cut past 1024 m.
 - 202: Merged #2217: Legacy grounds: measurements for the 19 old grounds.
 - 202: Merged #2218: Bellerive round 7: one pass over the PC r6 defect list.
+- 202: Merged #2227: 3D match: in-match injuries on the ground (row 202 2e).
