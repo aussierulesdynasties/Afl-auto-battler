@@ -1529,16 +1529,13 @@ func _test_broadcast_vignettes() -> void:
 ## A live score is painted in a club's own colour only where it can be read.
 ## Sydney's black accent on the dark panel was invisible (1.00:1).
 func _test_score_colour() -> void:
-	var was: String = UiKit.appearance()
 	var unreadable: Array = []
-	for mode in ["dark", "light"]:
-		UiKit.apply_appearance(mode)
-		for code in GameDB.club_order:
-			if UiKit.contrast(UiKit.score_colour(str(code)), UiKit.PANEL) < 4.5:
-				unreadable.append("%s (%s)" % [code, mode])
+	UiKit.apply_palette()
+	for code in GameDB.club_order:
+		if UiKit.contrast(UiKit.score_colour(str(code)), UiKit.PANEL) < 4.5:
+			unreadable.append(str(code))
 	# Collected and checked once: a floor counts rules, not data.
-	_check(unreadable.is_empty(), "Every club's live score reads at 4.5:1 on the panel, in both appearances (%s)" % ", ".join(unreadable))
-	UiKit.apply_appearance("dark")
+	_check(unreadable.is_empty(), "Every club's live score reads at 4.5:1 on the panel (%s)" % ", ".join(unreadable))
 	var syd: Color = UiKit.score_colour("SYD")
 	_check(syd != (GameDB.club_colours("SYD") as Array)[2], "Sydney's black accent is not used for its score on the dark panel")
 	var legible: String = ""
@@ -1549,7 +1546,6 @@ func _test_score_colour() -> void:
 			break
 	_check(legible != "" and UiKit.score_colour(legible) == (GameDB.club_colours(legible) as Array)[2],
 			"A club whose accent reads keeps its own colour for its score")
-	UiKit.apply_appearance(was)
 
 
 ## ARD-M4-013: the three set-shot calls are three visibly different

@@ -192,8 +192,8 @@ const SCREENS := [
 
 func _fresh_career() -> void:
 	_state.reset()
-	_state.start_season("COL", _db.club_list("COL"))
 	_state.replay_seed = SUITE_SEED
+	_state.start_season("COL", _db.club_list("COL"))
 	# First-visit tips off: a tip over the screen would take the clicks (the
 	# cases that test an intro open it themselves).
 	_state.tutorials = false

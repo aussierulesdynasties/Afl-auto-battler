@@ -17,9 +17,9 @@ const DISPLAY := preload("res://assets/fonts/ARDSignwriter-Display.ttf")
 ## of the font size (the drawn shade layer sits at +30, -30 per 1000).
 const SHADE := 0.03
 
-## Shared palette. Dark is the default so boot/import remains identical until
-## GameState reads the user's appearance preference. These are runtime values
-## rather than constants so every screen can rebuild cleanly in light mode.
+## Shared palette: the dark ground, the game's only one (light mode removed,
+## director 2026-11-26). Static vars rather than constants so a capture tool can
+## try a value; apply_palette() puts them back.
 const AUTO_COLOUR := Color(-1, -1, -1, -1)
 ## The five surfaces are one elevation scale (row V4), lowest first: each step
 ## is lighter than the one under it on the dark ground. elevation() is the
@@ -44,51 +44,29 @@ static var EMPH := Color("f1eee6")        # emphasis is weight, not a colour
 ## Section headings and titles: a shade off the body text so a heading never
 ## blends into the copy under it (director, 2026-11-12: "titles of sections tend
 ## to blend with the body text and nothing stands out").
-static var HEAD := Color("f1eee6")
-static var HEAD_DARK := Color("e8cf9c")
+static var HEAD := Color("e8cf9c")
 static var GOOD := Color("8cc49a")        # a genuinely good state, never decoration
 static var BAD := Color("e38b73")
 static var ACCENT := Color("c8412b")      # the primary action, and nothing else
-static var _appearance := "dark"
 
 
-static func apply_appearance(mode: String) -> void:
-	_appearance = "light" if mode == "light" else "dark"
-	if _appearance == "light":
-		BG = Color("f3f0e8")
-		PANEL = Color("e9e4da")
-		PANEL_ALT = Color("ddd7cb")
-		INK = Color("ffffff")
-		LINE = Color("c4bbad")
-		TEXT = Color("1d1a16")
-		MUTED = Color("6f685f")
-		FAINT = Color("9a9287")
-		EMPH = TEXT
-		HEAD = TEXT
-		GOOD = Color("3f7650")
-		BAD = Color("a74734")
-		ACCENT = Color("b63c29")
-		SURFACE = Color("e2dccf")
-	else:
-		BG = Color("121110")
-		PANEL = Color("1b1a17")
-		PANEL_ALT = Color("24221e")
-		INK = Color("0d0c0b")
-		LINE = Color("363229")
-		TEXT = Color("f1eee6")
-		MUTED = Color("b4afa4")
-		FAINT = Color("6e695f")
-		EMPH = TEXT
-		HEAD = HEAD_DARK
-		GOOD = Color("8cc49a")
-		BAD = Color("e38b73")
-		ACCENT = Color("c8412b")
-		SURFACE = Color("2a2823")
+## The dark palette, as boot and every capture tool start from.
+static func apply_palette() -> void:
+	BG = Color("121110")
+	PANEL = Color("1b1a17")
+	PANEL_ALT = Color("24221e")
+	INK = Color("0d0c0b")
+	LINE = Color("363229")
+	TEXT = Color("f1eee6")
+	MUTED = Color("b4afa4")
+	FAINT = Color("6e695f")
+	EMPH = TEXT
+	HEAD = Color("e8cf9c")
+	GOOD = Color("8cc49a")
+	BAD = Color("e38b73")
+	ACCENT = Color("c8412b")
+	SURFACE = Color("2a2823")
 	RenderingServer.set_default_clear_color(BG)
-
-
-static func appearance() -> String:
-	return _appearance
 
 
 ## The elevation scale as colours, lowest step first (ELEVATION names them).
@@ -694,8 +672,7 @@ static func subhead(text: String) -> Label:
 ## lists the Bulldogs' red before their blue and Essendon's black before its
 ## red; every other club's first colour is the one. -1 = no hue at all
 ## (Collingwood: black and white), so its ink is plain TEXT. Used only to
-## compute an ink for a club with none picked (a created club), and on the
-## light ground.
+## compute an ink for a club with none picked (a created club).
 const INK_SLOT := {"WBD": 1, "ESS": 1, "COL": -1}
 
 ## Each club's two hand-picked inks on the dark page (director, 2026-10-13:
@@ -739,7 +716,7 @@ const INK_CLASH := 25.0
 ## The club's primary identity colour as text on `surface` (the screen's ground
 ## by default, the panel, a little lighter than the page): the first of its two
 ## hand-picked inks (CLUB_INKS). A single-club screen shows this one; a screen
-## with two sides uses club_ink_pair. A created club, or the light ground, has
+## with two sides uses club_ink_pair. A created club has
 ## no picked ink: its colour is lifted (or deepened) along its own hue only as
 ## far as it takes to read at 4.5:1. A name or a bar that is the club's; never
 ## body text and never a rating (those stay TEXT, not GOOD/BAD).
@@ -810,7 +787,7 @@ static func _lift_on(colour: Color, surface: Color) -> Color:
 
 
 static func _ink(code: String, which: int, surface) -> Color:
-	if CLUB_INKS.has(code) and _appearance == "dark":
+	if CLUB_INKS.has(code):
 		var picked := Color(str((CLUB_INKS[code] as Array)[which]))
 		if surface == AUTO_COLOUR:
 			return picked
@@ -1406,7 +1383,7 @@ static func _press_in(b: Control) -> void:
 ## The painted drop shade under display type.
 static func shade(l: Label, fs: int) -> void:
 	var off := maxi(1, roundi(fs * SHADE))
-	l.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.8) if _appearance == "dark" else Color(0, 0, 0, 0.22))
+	l.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.8))
 	l.add_theme_constant_override("shadow_offset_x", off)
 	l.add_theme_constant_override("shadow_offset_y", off)
 
@@ -1612,11 +1589,8 @@ const _LABEL_DARK := Color("161512")
 ## chroma only shrinks to stay inside sRGB) just far enough: lighter until it
 ## stands 3:1 off the page and a panel, darker until it is INK_CLASH clear of
 ## BAD, then lighter or darker until its label (primary_label) reads at 4.5:1.
-## tests/run_contrast_tests.gd walks every club through it. The light ground
-## is left as it was.
+## tests/run_contrast_tests.gd walks every club through it.
 static func primary_fill(c: Color) -> Color:
-	if _appearance != "dark":
-		return c
 	var out := c
 	var grounds := [BG, PANEL]
 	var guard := 0

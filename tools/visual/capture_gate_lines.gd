@@ -53,7 +53,7 @@ func _run() -> void:
 	sim0.set_interceptor(them, str(spare.get("id", "")), false)
 	sim0.run_quarter()
 	sim0.set_interceptor(them, str(spare.get("id", "")), true)
-	UK.apply_appearance("dark")
+	UK.apply_palette()
 	root.size = Vector2i(_w, _h)
 	DisplayServer.window_set_size(Vector2i(_w, _h))
 	var scene = load("res://scenes/MatchScene.tscn").instantiate()

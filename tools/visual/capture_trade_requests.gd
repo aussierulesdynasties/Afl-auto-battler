@@ -19,7 +19,6 @@ func _initialize() -> void:
 
 func _run() -> void:
 	var out := OS.get_environment("CAP_OUT") if OS.get_environment("CAP_OUT") != "" else "trade_requests_section.png"
-	var mode := OS.get_environment("CAP_MODE") if OS.get_environment("CAP_MODE") != "" else "dark"
 	await process_frame
 	var state = root.get_node("GameState")
 	var db = root.get_node("GameDB")
@@ -40,7 +39,7 @@ func _run() -> void:
 		var theirs: Dictionary = state.season.lists["COL"][state.season.lists["COL"].size() - 3]
 		state.trade_requests[str(theirs["id"])] = {"club": "COL", "why": "games", "to": ["MEL", "NM"]}
 	print("requests: ", state.my_trade_requests())
-	UK.apply_appearance(mode)
+	UK.apply_palette()
 	root.size = Vector2i(W, H)
 	DisplayServer.window_set_size(Vector2i(W, H))
 	var bg := ColorRect.new()

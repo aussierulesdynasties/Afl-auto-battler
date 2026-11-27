@@ -80,8 +80,8 @@ func _run() -> void:
 
 func _open(key: String) -> void:
 	_state.reset()
-	_state.start_season("MEL", _db.club_list("MEL"))
 	_state.replay_seed = SUITE_SEED
+	_state.start_season("MEL", _db.club_list("MEL"))
 	_state.tutorials = false
 	_router.stack = []
 	_router.go("main")

@@ -3,7 +3,6 @@ extends SceneTree
 ## club's name in club_ink, its 4 px bar, the two hand-picked inks as
 ## swatches with hex and contrast. One image, <out>.png:
 ##   gh workflow run capture.yml --ref <branch> -f tool=capture_club_ink
-##   --light   the light ground
 
 func _initialize() -> void:
 	_run.call_deferred()
@@ -11,18 +10,15 @@ func _initialize() -> void:
 
 func _run() -> void:
 	var out := "club_ink"
-	var mode := "dark"
 	var a := OS.get_cmdline_user_args()
 	for i in range(a.size()):
 		match str(a[i]):
 			"--out":
 				out = str(a[i + 1])
-			"--light":
-				mode = "light"
 	await process_frame
 	var db = root.get_node("GameDB")
 	var UK = load("res://scripts/ui/UiKit.gd")
-	UK.apply_appearance(mode)
+	UK.apply_palette()
 	# Drawn into its own viewport, so the board is the same size whatever the
 	# window (or the runner's screen) is: nothing cropped.
 	var vp := SubViewport.new()

@@ -90,18 +90,9 @@ func _logo_art() -> TextureRect:
 	_logo.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	_logo.size_flags_horizontal = Control.SIZE_FILL
 	_logo.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	if UiKit.appearance() == "light":
-		# The logo file has a black ground. In light mode key only
-		# that near-black ground out so the lettering keeps its real colours.
-		var shader := Shader.new()
-		shader.code = "shader_type canvas_item;\nvoid fragment(){ vec4 c=texture(TEXTURE,UV); float hi=max(c.r,max(c.g,c.b)); c.a*=smoothstep(0.04,0.16,hi); COLOR=c; }"
-		var mat := ShaderMaterial.new()
-		mat.shader = shader
-		_logo.material = mat
-	else:
-		var mat := CanvasItemMaterial.new()
-		mat.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
-		_logo.material = mat
+	var mat := CanvasItemMaterial.new()
+	mat.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
+	_logo.material = mat
 	_fit_logo()
 	return _logo
 
@@ -148,7 +139,7 @@ func _ready() -> void:
 	add_child(_pitch)
 	var shade := ColorRect.new()
 	shade.color = UiKit.BG
-	shade.color.a = 0.92 if UiKit.appearance() == "light" else 0.78
+	shade.color.a = 0.78
 	shade.set_anchors_preset(Control.PRESET_FULL_RECT)
 	shade.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(shade)
@@ -172,6 +163,8 @@ func _ready() -> void:
 	if WebStorage.should_ask(WebStorage.on_web(), bool(GameState.get_setting(WebStorage.ASKED_KEY, false))):
 		WebStorage.ask()
 		_wait_for_storage_answer()
+	# Continue's Hub loads while the menu is up (bug bash M-9).
+	Router.warm("hub")
 
 
 ## Poll the browser's answer for a few seconds (a prompt may be open). A final answer is

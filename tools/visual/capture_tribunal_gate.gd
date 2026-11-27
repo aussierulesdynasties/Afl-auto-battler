@@ -39,7 +39,7 @@ func _run() -> void:
 	state.settings_path = "user://capture_tribunal_gate.cfg"
 	for key in load("res://scripts/ui/FirstVisitIntro.gd").TEXT:
 		state.set_setting("seen_%s_intro" % key, true)
-	UK.apply_appearance("dark")
+	UK.apply_palette()
 	root.size = Vector2i(_w, _h)
 	DisplayServer.window_set_size(Vector2i(_w, _h))
 	feel.force_phone = _w < _h

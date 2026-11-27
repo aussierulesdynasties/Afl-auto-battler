@@ -1150,6 +1150,8 @@ static func _apply(gs, e: Dictionary, p: Dictionary, facts: Dictionary, applied:
 			# moment you accept the event"); auto-pick names him by itself.
 			var was_in: bool = gs.in_current_side(p)
 			var made_way: String = gs.name_promised(p)
+			if not p.has("expects_game") and not Backing.is_active(p) and gs._dev_owed(p).is_empty():
+				Promises.made(gs, p, "game")
 			p["expects_game"] = int(e.get("sting", 12))
 			# Named just now (not injured or suspended): say who made way.
 			var came_in: bool = not was_in and gs.in_current_side(p)
@@ -1186,6 +1188,8 @@ static func _apply(gs, e: Dictionary, p: Dictionary, facts: Dictionary, applied:
 		"new_club_go":
 			return ExpansionBuild.let_go(gs, p)
 		"promise_win":
+			if not bool(gs.board.get("promise", false)):
+				Promises.made(gs, {}, "win")
 			gs.board["promise"] = true
 		"explain":
 			return gs._explain_outcome(name, facts)

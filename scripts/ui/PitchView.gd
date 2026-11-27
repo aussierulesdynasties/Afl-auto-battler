@@ -112,8 +112,8 @@ const SHAKE_MAX_PX := 4.0   # and never more than this, on any screen
 ## it over.
 const RESTARTS := ["goal", "behind", "quarter", "ballup", "throwin", "free", "fifty",
 		"last_disposal", "out_on_full"]
-## The turf is green in both appearances, so the ring is the dark theme's text
-## colour fixed, not UiKit.TEXT, which turns dark in light mode.
+## The ring is the page's text colour, fixed here so the turf ring never
+## follows a capture tool's palette tryout.
 const RING_COLOUR := Color(0.945, 0.933, 0.902)
 ## A player's disc, half as big again as it was (director, 2026-11-12: "Bigger
 ## discs, bench drawer", about 1.5x, the jumper number readable): never under a
@@ -215,11 +215,19 @@ var _looks := {}
 ## flat drawing. Settings > Match view; the match screen sets it before setup().
 var three_d := false
 var graphics := Oval3DQuality.HIGH   # Settings > Graphics (Oval3DQuality), read at each new match
-var _oval3d: Oval3D = null
+## The 3D ground's code (Oval3D and what it names: the stands, crowd, crew, turf and their
+## shaders) loads with the first 3D match, not with the game: the main menu draws this view
+## flat, and naming these classes here compiled all of it at every launch (bug bash M-12).
+## So these four fields are untyped and the objects are made from these paths.
+const OVAL3D_SCRIPT := "res://scripts/ui/match/Oval3D.gd"
+const BROADCAST_SCRIPT := "res://scripts/ui/match/Oval3DBroadcast.gd"
+const BANNER_SCRIPT := "res://scripts/ui/match/Oval3DBanner.gd"
+const SUN_CLOCK_SCRIPT := "res://scripts/ui/match/Oval3DSunClock.gd"
+var _oval3d = null  # an Oval3D
 var _vp3d: SubViewport = null
 var _view3d: TextureRect = null
-var _tv: Oval3DBroadcast = null  # the TV coverage: which camera, where it points
-var _banner: Oval3DBanner = null  # through the banner before the first bounce (run_banner)
+var _tv = null  # an Oval3DBroadcast: the TV coverage: which camera, where it points
+var _banner = null  # an Oval3DBanner: through the banner before the first bounce (run_banner)
 var _siren_replay := false     # the deciding behind's replay is on after the siren
 const REPLAY_TAG := "Replay: tap to skip"
 const REPLAY_TAG_W := 150.0    # px: the tag's pill, as the director picked it on the board
@@ -359,7 +367,7 @@ func _setup_3d() -> void:
 		move_child(_view3d, 0)
 	if _figs != null:
 		_figs.visible = false
-	_oval3d = Oval3D.new()
+	_oval3d = load(OVAL3D_SCRIPT).new()
 	# Settings > Graphics: how much detail the 3D picture draws (looks only, Oval3DQuality).
 	_oval3d.quality = graphics
 	Oval3DQuality.apply_viewport(graphics, _vp3d)
@@ -370,14 +378,14 @@ func _setup_3d() -> void:
 	# How many came (MatchAttendance: fitted to real AFL crowds); the stands fill to it.
 	_oval3d.attendance = MatchAttendance.of_match(result, _oval3d.ground, time_of_day(weather))
 	_oval3d.build(director, home_code, away_code)
-	_tv = Oval3DBroadcast.new(_oval3d)
+	_tv = load(BROADCAST_SCRIPT).new(_oval3d)
 	# The turf and light for the day, as the flat oval and the vignettes draw it.
 	_sun = null
 	if time_override != "":
 		_oval3d.turf.apply(weather, time_of_day(weather))
 	else:
 		# The real sun over the ground from the bounce (plan 2a.4): the light moves with the clock.
-		_sun = Oval3DSunClock.for_match(_oval3d.ground, str(result.get("label", "")), time_of_day(weather))
+		_sun = load(SUN_CLOCK_SCRIPT).for_match(_oval3d.ground, str(result.get("label", "")), time_of_day(weather))
 		_oval3d.turf.follow_clock(weather, _sun)
 	_make_paint_3d()
 	_oval3d.set_ends(end_sign(period))
@@ -537,7 +545,7 @@ func _full_time() -> void:
 func run_banner(text: String, side: int) -> bool:
 	if _oval3d == null or _banner != null:
 		return false
-	_banner = Oval3DBanner.new()
+	_banner = load(BANNER_SCRIPT).new()
 	_banner.name = "Banner"
 	_oval3d.add_child(_banner)
 	_banner.build(_oval3d, side, text, home_code if side == 0 else away_code, hash(result.get("label", "")))
@@ -553,7 +561,7 @@ func banner_running() -> bool:
 func _end_banner() -> void:
 	if _banner == null:
 		return
-	var b := _banner
+	var b = _banner
 	_banner = null
 	b.finish()
 	b.queue_free()
@@ -594,8 +602,8 @@ var _painting = null                         # the material of the surface being
 ## A point of the 3D ground (Oval3D's own frame: metres up the ground, up, across)
 ## in this view's pixels; far off the view when it is behind the camera.
 func _project3d(v: Vector3) -> Vector2:
-	var cam := _oval3d.camera
-	var w := _oval3d.global_transform * v
+	var cam: Camera3D = _oval3d.camera
+	var w: Vector3 = _oval3d.global_transform * v
 	if cam.is_position_behind(w):
 		return Vector2(-100000.0, -100000.0)
 	return cam.unproject_position(w) * (size / Vector2(_vp3d.size))
@@ -615,7 +623,7 @@ func _layout_3d() -> void:
 		var head := _project3d(Vector3(p.x, BODY3D_H, p.y))
 		_disc[i] = (feet + head) * 0.5
 		_r3d[i] = maxf(3.0, feet.distance_to(head) * 0.5)
-	var at := _oval3d._look
+	var at: Vector3 = _oval3d._look
 	var f := _project3d(Vector3(at.x, 0.0, at.z))
 	var h := _project3d(Vector3(at.x, BODY3D_H, at.z))
 	_tr3d = maxf(6.0, f.distance_to(h) * 0.5)
@@ -767,7 +775,7 @@ func _draw_3d() -> void:
 ## left to right, covering it whole at its middle, where the picture cuts. "REPLAY" rides on it
 ## going in; nothing going out.
 func _draw_sting() -> void:
-	var p := _tv.sting() if _tv != null else -1.0
+	var p: float = _tv.sting() if _tv != null else -1.0
 	if p < 0.0:
 		return
 	var w := size.x
@@ -2711,7 +2719,7 @@ func close_bench() -> bool:
 ## test may set `time_override`).
 var time_override := ""
 ## The match's sun clock while the 3D oval follows it (null when a slot is forced).
-var _sun: Oval3DSunClock
+var _sun = null  # an Oval3DSunClock
 
 func time_of_day(weather := "") -> String:
 	return time_override if time_override != "" else OvalStadium.time_of_day(weather)
