@@ -38,7 +38,7 @@ STADIUM_WAY = "22971441"
 SUNSET_PLAZA = [(-198.1, -34.0), (-223.8, -42.3), (-220.1, -53.6), (-206.7, -92.3), (-202.4, -104.2), (-176.7, -95.2)]
 # Buildings modelled one by one from Google Earth in tools/grounds/marvel/landmarks.py (landmarks.glb):
 # left out of buildings.bin so they are not drawn twice.
-LANDMARK_WAYS = {"33261083", "221441430", "33261092", "44158938", "1246185747", "296368687", "332358301", "221441428", "992236548",
+LANDMARK_WAYS = {"1499822179", "33261083", "221441430", "33261092", "44158938", "1246185747", "296368687", "332358301", "221441428", "992236548",
                  "57019580",  # AFL House: a 2 m strip along the stadium's own west building, which the model has
                  "1507403839", "1507403840"}  # HOME Docklands' two towers (101 m): OpenStreetMap has no height for them
 # City of Melbourne structures modelled in landmarks.py instead (round 10 audit: plain boxes within 250 m), and the
@@ -508,6 +508,16 @@ def main():
     t = tree_list(trees, st)
     # trees under Victoria Point's forecourt deck (9.5 m, drawn in landmarks.py with its own planted beds) are buried
     deck = [r for b, _, r in com_parts({10757}).get(10757, []) if b < 0.5]
+    # round 14: and under the stadium's raised south plaza and podium and the garden block by the footbridge
+    # (landmarks.py plaza_deck, south_podium, garden_block; outlines repeated here)
+    deck = deck + [
+        [(-14.0, -132.0), (-14.0, -152.0), (24.0, -154.0), (26.0, -161.0), (48.0, -160.0), (72.0, -158.0), (80.0, -165.0),
+         (86.0, -152.0), (100.0, -143.0), (112.0, -136.0), (110.0, -120.0), (100.0, -112.0)],
+        [(-8.1, -146.4), (6.4, -146.6), (26.2, -145.4), (44.0, -144.6), (59.8, -142.4), (75.7, -137.9), (89.5, -131.9),
+         (96.5, -127.4), (102.4, -122.0), (105.4, -116.7), (105.8, -111.1), (105.0, -101.2), (96.5, -94.3), (92.0, -86.0),
+         (41.6, -108.0), (-9.1, -118.8)],
+        [(215.6, -132.0), (180.5, -136.6), (185.4, -159.2), (182.8, -166.4), (222.8, -151.3), (232.8, -145.7)]]
+    deck = [list(d) + [d[0]] if d[0] != d[-1] else d for d in deck]   # _inside wants closed rings
     if deck:
         t = t.reshape(-1, 5)
         t = t[[not any(_inside((x, -z), d) for d in deck) for x, z in t[:, :2]]].reshape(-1)
