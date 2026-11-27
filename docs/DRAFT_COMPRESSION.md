@@ -30,7 +30,7 @@ changes **one** mechanism:
 | Drafting competence | each club draws its own error SD from U[0, 4], U[0, 8] or U[0, 12] |
 | Human | the shipped AI with one naive human (the `board` policy), against an all-AI league |
 
-- The two-ruck rule and the hard budget check always apply.
+- The ruck rule (one on every list) and the hard budget check always apply.
 - At shipped settings the subclass reproduces the shipped draft pick for pick. The CI smoke suite pins this.
 
 **Draft sweep.** 16 drafts per variant measure the preseason spread and the

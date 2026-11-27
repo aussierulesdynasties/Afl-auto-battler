@@ -191,6 +191,7 @@ static func find_unrecorded(players: Array) -> Dictionary:
 static func set_unrecorded(stats: Dictionary) -> void:
 	unrecorded = stats
 	unknown_attrs = {}
+	_kept_share = {}
 	for attr in ATTR_BLENDS:
 		var any := false
 		for t in ATTR_BLENDS[attr]:
@@ -697,14 +698,23 @@ static func overall_per_point(role: String, key: String, games: float) -> float:
 	if not w.has(key) or unknown_attrs.has(key):
 		return 0.0
 	var f: Dictionary = LINE_FIT.get(role, LINE_FIT["MID"])
-	var total := 0.0
-	var kept := 0.0
-	for k in w:
-		total += float(w[k])
-		if not unknown_attrs.has(k):
-			kept += float(w[k])
+	if not _kept_share.has(role):
+		var total := 0.0
+		var kept := 0.0
+		for k in w:
+			total += float(w[k])
+			if not unknown_attrs.has(k):
+				kept += float(w[k])
+		_kept_share[role] = total / kept
 	var conf: float = minf(1.0, games / 14.0)
-	return float(f["slope"]) * float(w[key]) / 98.0 * (total / kept) * (0.40 + 0.60 * conf)
+	return float(f["slope"]) * float(w[key]) / 98.0 * float(_kept_share[role]) * (0.40 + 0.60 * conf)
+
+
+## Each line's weight over the weight of its skills that have a record
+## (overall_per_point), summed once a line: growth prices every skill of every
+## player each week, and the sum was redone for each one (~45 ms a round).
+## Cleared when the unrecorded skills change (set_unrecorded).
+static var _kept_share := {}
 
 
 ## Second role only when the season numbers clear a gate. Empty string means
@@ -912,10 +922,11 @@ static func select_22(list_players: Array, dual := -1) -> Dictionary:
 					ground.append(_for_slot(p, role))
 					used[p["id"]] = true
 					added += 1
-		# No recognised ruck on the list: the best tap player available goes
-		# up as an emergency, not simply the best overall player.
+		# No recognised ruck on the list: a backup key forward goes up
+		# (backup_ruck), else the best tap player available, not simply the
+		# best overall player.
 		if role == "RUCK" and added < need:
-			for p in by_ruck(pool):
+			for p in ruck_fill_order(pool):
 				if added >= need:
 					break
 				if not used.has(p["id"]):
@@ -1096,7 +1107,7 @@ static func select_side(list_players: Array, selection: Dictionary = {}) -> Dict
 							ground.append(_for_slot(p, role))
 							used[id] = true
 							have += 1
-			for p in (by_ruck(pool) if role == "RUCK" else pool):
+			for p in (ruck_fill_order(pool) if role == "RUCK" else pool):
 				if have >= int(slot[1]):
 					break
 				var id := str(p["id"])
@@ -1233,6 +1244,44 @@ static func _merit_swaps(pool: Array, ground: Array, used: Dictionary, promised:
 			ground[weak] = _for_slot(by_id[best], line)
 			used[best] = true
 			starters[best] = best_v
+
+
+## A key forward who goes up when no ruck is there (director, 2026-11-26:
+## "allow key forwards to ruck in substitute IF they have done so IRL or are at
+## a minimum height threshold as the default backup"): a key forward by his own
+## position with a hit-out on his real AFL stats sheet (the real season he is
+## rated on), or one BACKUP_RUCK_CM or taller, the height the game asks of a
+## player learning the ruck (GameState.RUCK_CM).
+const BACKUP_RUCK_CM := 196.0
+
+
+static func backup_ruck(p: Dictionary) -> bool:
+	var own := str(p.get("own_role", p.get("role", "")))
+	if own != "FWD":
+		return false
+	var view := p
+	if str(p.get("role", "")) != "FWD":
+		view = p.duplicate()
+		view["role"] = "FWD"
+	if not Matchups.is_key_forward(view):
+		return false
+	return float(p.get("ho", 0.0)) > 0.0 or float(p.get("height_cm", 0.0)) >= BACKUP_RUCK_CM
+
+
+## Who fills an empty ruck spot, in order: rucks, then the backup key
+## forwards (backup_ruck), then everyone else, each by ruck work (by_ruck).
+static func ruck_fill_order(players: Array) -> Array:
+	var rucks := []
+	var backups := []
+	var rest := []
+	for p in by_ruck(players):
+		if plays_role(p, "RUCK"):
+			rucks.append(p)
+		elif backup_ruck(p):
+			backups.append(p)
+		else:
+			rest.append(p)
+	return rucks + backups + rest
 
 
 ## Players ordered by ruck work, best first (ties by overall), for filling
