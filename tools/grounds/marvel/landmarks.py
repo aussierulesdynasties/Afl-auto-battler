@@ -397,6 +397,7 @@ def make_textures():
     flat("rail_steel", (150, 152, 154))
     st = RNG.bit_generator.state      # round 14: the new textures leave the shared noise as it was for the rest
     south_textures()
+    gate9_textures()
     RNG.bit_generator.state = st
     for n in ("bourke_edge", "home_frame", "home_glass", "near_wall", "tree_leaf", "fin_white", "corner_red", "roof_grey", "roof_dark", "sx_glass", "podium_glass", "white_band", "steel", "rock_a", "rock_b",
               "timber", "concrete_deck", "balustrade", "slab_grey", "steel_dark", "round_glass", "bourke_glass", "seven_glass", "roof_white", "navy_wall", "pool_blue", "solar", "pavilion_glass", "gable_glass", "rail_steel"):
@@ -2267,6 +2268,229 @@ def bourke_footbridge(g):
         column(g, p[i], float(land.z(*p[i])) - 0.5, zs[i] - 0.6, r=0.35, mat="concrete_deck")
 
 
+# ---------------------------------------------------------------- Gate 9 (harbour side, south-west)
+# Built from two Google Street View trekker photos of June 2019 (project files g9_trek2019_a/b; reference only, the
+# signage is 2019's and not checked as current): a tall navy-clad stair tower with a big glazed panel showing the
+# stairs zig-zagging up inside, a navy "Gate 9" box sign on a short arm, a purple "MEDALLION CLUB and CORPORATE
+# ENTRY" fascia over a glazed vestibule with a triangle graphic, timber-boarded doors either side, a white picket
+# fence on a navy floor patch, grey paving with a darker strip along the building, and a ticket booth with a white
+# triangle pattern and queue posts with "MARVEL STADIUM" tape further south-east (photo b). Google Earth is not used
+# for entrances (the person's rule). Position: OpenStreetMap's Gate 9 node (-59.2, -116.5); the facade faces bearing
+# 207 (photo a is square-on at heading 27) and stands on the stadium's base edge, hit by a ray at bearing 207 at
+# (-56.12, -110.14). Sizes come from the photo's proportions with a 2.6 m door and a 1.65 m walker as the scale: the
+# vestibule about 7.5 m wide, the fascia at 2.55-3.1 m, the sign about 1.4 by 1.6 m at 3.4-5.0 m, the stair glazing
+# about 6.3 m wide from 1.5 m up, the tower about 9.5 m wide; heights above the photo's top edge are estimates.
+G9_B = np.array([-56.12, -110.14])
+G9_N = np.array([-0.454, -0.891])   # outward, bearing 207
+G9_T = np.array([0.891, -0.454])    # along the facade, to the right seen from outside
+
+
+def _g9(s, d):
+    q = G9_B + s * G9_T + d * G9_N
+    return (float(q[0]), float(q[1]))
+
+
+def _g9box(g, s0, s1, d0, d1, z0, z1, wall, top="roof_grey", bottom=False):
+    g.prism([_g9(s0, d0), _g9(s1, d0), _g9(s1, d1), _g9(s0, d1)], z0, z1, wall, top=top, bottom=bottom)
+
+
+def _g9face(g, mat, s0, s1, d, z0, z1, uv=None):
+    """A face in the facade's plane at depth d, facing out (u along +s)."""
+    a, b = _g9(s0, d), _g9(s1, d)
+    g.poly(mat, [(a[0], a[1], z0), (b[0], b[1], z0), (b[0], b[1], z1), (a[0], a[1], z1)],
+           uv or [(0.0, z0), (s1 - s0, z0), (s1 - s0, z1), (0.0, z1)])
+
+
+def _text_tex(name, lines, ground, fg, w_m, h_m, ppm=100, size=0.8, box=None):
+    from PIL import ImageDraw, ImageFont
+    W_, H_ = int(w_m * ppm), int(h_m * ppm)
+    im = Image.new("RGB", (W_, H_), tuple(int(c) for c in ground))
+    d = ImageDraw.Draw(im)
+    if box:
+        d.rectangle([int(box[0] * W_), int(box[1] * H_), int(box[2] * W_), int(box[3] * H_)], outline=fg, width=3)
+    for txt, cy, hf, bold in lines:
+        f = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans%s.ttf" % ("-Bold" if bold else ""),
+                               max(8, int(hf * H_)))
+        tb = d.textbbox((0, 0), txt, font=f)
+        tw = tb[2] - tb[0]
+        if tw > W_ * 0.94:
+            f = ImageFont.truetype(f.path, max(8, int(hf * H_ * W_ * 0.94 / tw)))
+            tb = d.textbbox((0, 0), txt, font=f)
+        d.text(((W_ - (tb[2] - tb[0])) / 2 - tb[0], cy * H_ - (tb[3] + tb[1]) / 2), txt, font=f, fill=fg)
+    a = np.asarray(im, float) + np.random.default_rng(9).normal(0, 1.5, (H_, W_, 1))
+    _save(name, a)
+    TILE[name] = (w_m, h_m)
+
+
+def _tri_tex(name, ground, line, w_m, h_m, ppm=60, n=5, seed=3, alpha=1.0):
+    """A white triangulated graphic: lines joining points scattered on the panel's edges (photos a and b)."""
+    from PIL import ImageDraw
+    W_, H_ = int(w_m * ppm), int(h_m * ppm)
+    im = Image.new("RGB", (W_, H_), tuple(int(c) for c in ground))
+    d = ImageDraw.Draw(im)
+    r = np.random.default_rng(seed)
+    pts = [(r.uniform(0, W_), 0) for _ in range(n)] + [(r.uniform(0, W_), H_) for _ in range(n)] + \
+          [(0, r.uniform(0, H_)) for _ in range(2)] + [(W_, r.uniform(0, H_)) for _ in range(2)]
+    for i in range(len(pts)):
+        for j in r.choice(len(pts), 2, replace=False):
+            if j != i:
+                d.line([pts[i], pts[j]], fill=tuple(int(c) for c in line), width=max(2, int(0.06 * ppm)))
+    _save(name, np.asarray(im, float))
+    TILE[name] = (w_m, h_m)
+
+
+def gate9_textures():
+    panels("g9_navy", (44, 58, 100), (30, 40, 76), w=3.0, h=2.4, noise=3.0)
+    TILE["g9_navy"] = (12.0, 9.6)
+    flat("g9_navy_floor", (40, 54, 110), noise=2.0)
+    flat("g9_picket", (236, 236, 232), noise=1.0)
+    flat("g9_mullion", (34, 40, 56), noise=1.0)
+    flat("g9_cavity", (24, 28, 38), noise=2.0)
+    flat("g9_stair", (150, 152, 154), noise=3.0)
+    flat("g9_strip", (104, 106, 110), noise=3.0)
+    flat("g9_tape", (52, 54, 120), noise=1.0)
+    for n_ in ("g9_navy_floor", "g9_picket", "g9_mullion", "g9_cavity", "g9_stair", "g9_strip", "g9_tape"):
+        TILE[n_] = (4.0, 4.0)
+    # the forecourt: grey square pavers (photo a)
+    panels("g9_pave", (158, 158, 156), (138, 138, 136), w=0.6, h=0.6, noise=4.0)
+    TILE["g9_pave"] = (2.4, 2.4)
+    # timber-boarded doors: vertical boards
+    n = 96
+    img = np.zeros((n, n, 3)) + np.array((150, 104, 62), float)
+    x = np.arange(n)
+    img[:, (x % 12) < 1] = (108, 72, 42)
+    img += np.random.default_rng(4).normal(0, 6, (n, 1, 1)) * 0 + np.random.default_rng(4).normal(0, 5, (1, n, 1))
+    _save("g9_timber", img)
+    TILE["g9_timber"] = (1.0, 1.0)
+    _text_tex("g9_fascia", [("MEDALLION CLUB and CORPORATE ENTRY", 0.5, 0.42, True)], (92, 52, 132), (245, 245, 245), 7.7, 0.55)
+    _text_tex("g9_sign", [("Gate", 0.22, 0.17, True), ("9", 0.62, 0.62, True)], (40, 50, 104), (245, 245, 245), 1.4, 1.6,
+              box=(0.06, 0.05, 0.94, 0.95))
+    _tri_tex("g9_vest_glass", (34, 40, 58), (150, 120, 196), 7.5, 2.55)
+    _tri_tex("g9_booth", (176, 180, 186), (246, 246, 246), 3.0, 2.6, seed=8, n=4)
+
+
+def gate9(g):
+    """Gate 9 on the harbour side (see the note above G9_B)."""
+    corners = [_g9(s_, d_) for s_ in (-19.0, 10.0) for d_ in (-5.0, 18.0)]
+    z0 = land.base(corners)
+    g.lift = z0
+    D0, DF, DT = -5.0, 5.5, 6.5       # back (inside the stadium's base), facade front, tower front
+    # paving draped on the land: grey pavers from the base out 18 m, a darker strip running south-east (photo a)
+    for s_ in np.arange(-20.0, 26.0, 2.0):
+        for d_ in np.arange(0.0, 18.0, 2.0):
+            q = [(s_, d_), (s_ + 2, d_), (s_ + 2, d_ + 2), (s_, d_ + 2)]
+            P = [_g9(*c) for c in q]
+            zz = [float(land.z(*p)) - z0 + 0.03 for p in P]
+            g.poly("g9_pave", [(p[0], p[1], z_) for p, z_ in zip(P, zz)], [(p[0], p[1]) for p in P])
+    for k in range(12):
+        a0, a1 = k / 12, (k + 1) / 12
+        sa, sb = 0.0 + 24 * a0, 0.0 + 24 * a1
+        da, db = 7.0 + 5 * a0, 7.0 + 5 * a1
+        P = [_g9(sa, da), _g9(sb, db), _g9(sb, db + 1.0), _g9(sa, da + 1.0)]
+        g.poly("g9_strip", [(p[0], p[1], float(land.z(*p)) - z0 + 0.05) for p in P])
+    # the navy floor patch the fence stands on
+    P = [_g9(-18.5, DF), _g9(-3.5, DF), _g9(-3.5, 11.0), _g9(-18.5, 11.0)]
+    g.poly("g9_navy_floor", [(p[0], p[1], float(land.z(*p)) - z0 + 0.06) for p in P])
+
+    # the navy block west of the tower: a lower level with the vestibule, louvres at 5.3-6.8 m (photo a)
+    _g9box(g, -19.0, -14.0, D0, DF, -1.0, 14.0, "g9_navy")
+    _g9box(g, -14.0, -3.5, D0, DF, 3.1, 14.0, "g9_navy", bottom="soffit")
+    _g9box(g, -14.0, -12.6, D0, DF, -1.0, 3.1, "g9_navy")
+    _g9box(g, -4.9, -3.5, D0, DF, -1.0, 3.1, "g9_navy")
+    _g9box(g, -3.5, 0.5, D0, DF, -1.0, 14.0, "g9_navy")
+    _g9face(g, "louvre_grey", -18.0, -6.0, DF + 0.02, 5.3, 6.8)
+    # the vestibule: glass with the triangle graphic set 2 m back, a soffit over it, the fascia on the front
+    _g9face(g, "g9_vest_glass", -12.6, -4.9, DF - 2.0, 0.0, 2.55, [(0, 0), (7.7, 0), (7.7, 2.55), (0, 2.55)])
+    _g9box(g, -12.6, -4.9, D0, DF - 2.0, 2.55, 3.1, "g9_navy", top=None)
+    _g9face(g, "g9_fascia", -12.6, -4.9, DF + 0.03, 2.55, 3.1, [(0, 0), (7.7, 0), (7.7, 0.55), (0, 0.55)])
+    P = [_g9(-12.6, DF - 2.0), _g9(-4.9, DF - 2.0), _g9(-4.9, DF), _g9(-12.6, DF)]
+    g.poly("soffit", [(p[0], p[1], 2.55) for p in P[::-1]])
+    # timber-boarded doors either side of the vestibule
+    _g9face(g, "g9_timber", -14.0 + 0.1, -12.6 - 0.1, DF + 0.03, 0.0, 2.6)
+    _g9face(g, "g9_timber", -4.9 + 0.1, -3.5 - 0.1, DF + 0.03, 0.0, 2.6)
+    # the Gate 9 box sign on a short arm, over the vestibule's middle
+    sc = -8.9
+    strut(g, "g9_mullion", (*_g9(sc, DF), 4.3), (*_g9(sc, DF + 0.55), 4.3), 0.12)
+    _g9box(g, sc - 0.7, sc + 0.7, DF + 0.55, DF + 0.95, 3.4, 5.0, "g9_navy", top="g9_navy", bottom="g9_navy")
+    _g9face(g, "g9_sign", sc - 0.7, sc + 0.7, DF + 0.96, 3.4, 5.0, [(0, 0), (1.4, 0), (1.4, 1.6), (0, 1.6)])
+
+    # the stair tower: navy piers and head round a 6.3 m glazed panel; the stairs zig-zag up behind the glazing
+    S0, S1, GS0, GS1 = 0.5, 10.0, 1.7, 8.0
+    ZG0, ZG1, ZT = 1.5, 20.0, 24.0
+    _g9box(g, S0, GS0, D0, DT, -1.0, ZT, "g9_navy")
+    _g9box(g, GS1, S1, D0, DT, -1.0, ZT, "g9_navy")
+    _g9box(g, GS0, GS1, D0, DT, -1.0, ZG0, "g9_navy")
+    _g9box(g, GS0, GS1, D0, DT, ZG1, ZT, "g9_navy", bottom="g9_cavity")
+    # the glazing's chamfered top corner (photo a): a navy wedge in the panel's top right
+    for d_ in (DT - 0.6, DT):
+        a, b, c = _g9(GS1 - 2.0, d_), _g9(GS1, d_), _g9(GS1, d_)
+        g.poly("g9_navy", [(a[0], a[1], ZG1), (b[0], b[1], ZG1), (c[0], c[1], ZG1 - 2.0)])
+    a, b = _g9(GS1 - 2.0, DT - 0.6), _g9(GS1 - 2.0, DT)
+    c_, d2 = _g9(GS1, DT), _g9(GS1, DT - 0.6)
+    g.poly("g9_navy", [(a[0], a[1], ZG1), (b[0], b[1], ZG1), (c_[0], c_[1], ZG1 - 2.0), (d2[0], d2[1], ZG1 - 2.0)])
+    DC = DT - 3.8   # the cavity's back wall
+    _g9face(g, "g9_cavity", GS0, GS1, DC, ZG0, ZG1)
+    # mullions and transoms of the glazing, 0.15 m dark frame (no glass pane: the stairs behind read through it)
+    DM = DT - 0.15
+    for s_ in np.linspace(GS0, GS1, 7):
+        top = ZG1 - 2.0 * max(0.0, (s_ - (GS1 - 2.0)) / 2.0)
+        strut(g, "g9_mullion", (*_g9(s_, DM), ZG0), (*_g9(s_, DM), top), 0.15)
+    for z_ in np.arange(ZG0, ZG1 + 0.01, 1.85):
+        s_end = GS1 if z_ <= ZG1 - 2.0 else GS1 - 2.0 * (z_ - (ZG1 - 2.0)) / 2.0
+        strut(g, "g9_mullion", (*_g9(GS0, DM), z_), (*_g9(s_end, DM), z_), 0.12)
+    # scissor flights: alternate flights side by side in depth, landings across both at each end
+    nfl, rise = 5, (ZG1 - 1.5 - ZG0) / 5
+    LA, LB = GS0 + 1.2, GS1 - 1.0   # flight run between the landings
+    for k in range(nfl + 1):
+        zl = ZG0 + k * rise
+        end = (GS0, LA) if k % 2 == 0 else (LB, GS1)
+        _g9box(g, end[0], end[1], DC, DM - 0.1, zl - 0.25, zl, "g9_stair", top="g9_stair", bottom="g9_stair")
+    for k in range(nfl):
+        zl = ZG0 + k * rise
+        dd = (DM - 1.45, DM - 0.15) if k % 2 == 0 else (DC, DC + 1.3)
+        nst = 14
+        for j in range(nst):
+            f0 = j / nst
+            s_a = LA + (LB - LA) * f0 if k % 2 == 0 else LB - (LB - LA) * f0
+            s_b = LA + (LB - LA) * (j + 1) / nst if k % 2 == 0 else LB - (LB - LA) * (j + 1) / nst
+            zt = zl + rise * (j + 1) / nst
+            lo, hi = min(s_a, s_b), max(s_a, s_b)
+            _g9box(g, lo, hi, dd[0], dd[1], zt - 0.3, zt, "g9_stair", top="g9_stair", bottom="g9_stair")
+        # handrail on the flight's open side
+        s_from, s_to = (LA, LB) if k % 2 == 0 else (LB, LA)
+        strut(g, "g9_mullion", (*_g9(s_from, dd[1] - 0.05), zl + 1.0), (*_g9(s_to, dd[1] - 0.05), zl + rise + 1.0), 0.06)
+
+    # the white picket fence in front of the vestibule, with a gap where people walk in (photo a)
+    DFe = 9.0
+    for sa, sb in ((-18.0, -9.6), (-8.2, -4.2)):
+        for s_ in np.arange(sa, sb - 0.05, 0.16):
+            zb = float(land.z(*_g9(s_, DFe))) - z0
+            _g9box(g, s_, s_ + 0.08, DFe - 0.015, DFe + 0.015, zb, zb + 1.0, "g9_picket", top="g9_picket")
+        for s_ in np.arange(sa, sb + 0.01, 2.4 if sb - sa > 3 else sb - sa):
+            zb = float(land.z(*_g9(s_, DFe))) - z0
+            _g9box(g, s_ - 0.05, s_ + 0.05, DFe - 0.05, DFe + 0.05, zb, zb + 1.12, "g9_picket", top="g9_picket")
+        for zr in (0.25, 0.8):
+            zb = float(land.z(*_g9(sa, DFe))) - z0
+            strut(g, "g9_picket", (*_g9(sa, DFe - 0.04), zb + zr), (*_g9(sb, DFe - 0.04), zb + zr), 0.08)
+
+    # photo b: a ticket booth with a white triangle pattern against the stadium further south-east, and queue posts
+    # with navy "MARVEL STADIUM" tape running out from it. Its place along the wall is an estimate from photo b.
+    bs = 14.0
+    zb = float(land.z(*_g9(bs, 12.0))) - z0
+    _g9box(g, bs, bs + 3.0, 10.0, 11.6, zb - 0.5, zb + 2.6, "g9_booth", top="roof_grey")
+    for i in range(5):
+        for row in (0, 1):
+            p_ = _g9(bs - 1.0 - 2.2 * i, 11.0 + 1.4 * row)
+            zp = float(land.z(*p_)) - z0
+            g.prism(cylinder_ring(p_, 0.03, 6), zp, zp + 0.95, "steel_dark", top="steel_dark")
+            g.prism(cylinder_ring(p_, 0.17, 10), zp, zp + 0.04, "steel_dark", top="steel_dark")
+            if i < 4:
+                q_ = _g9(bs - 1.0 - 2.2 * (i + 1), 11.0 + 1.4 * row)
+                a, b = p_, q_
+                g.poly("g9_tape", [(a[0], a[1], zp + 0.85), (b[0], b[1], zp + 0.85), (b[0], b[1], zp + 0.9), (a[0], a[1], zp + 0.9)])
+    g.lift = 0.0
+
+
 def build():
     import bpy
     import bmesh  # noqa: F401
@@ -2284,6 +2508,7 @@ def build():
     plaza_deck(g)
     south_podium(g)
     bourke_footbridge(g)
+    gate9(g)
     # round 13b: the two round vent stacks on 9966's roof in c_sw's foreground, picked in Google Earth (2026-11-26):
     # flat ribbed caps at 45.4 m, about 4.6 m across, centred (-198.7, -219.8) and (-190.9, -215.8); the left stack's
     # foot picks 38.4 m. Steel shafts about 2.6 m across under the caps.
