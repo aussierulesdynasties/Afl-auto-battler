@@ -769,7 +769,7 @@ func _pc_sheet(grid: GridContainer, across: int, chosen: String, p: Dictionary) 
 
 
 ## His background and every stat, as the Stats button shows them: two columns
-## down then across, a third or fourth only when the box is too short for two.
+## down then across, more (up to six) only when the box is too short for two.
 func _pc_stats(p: Dictionary) -> Control:
 	var v := UiKit.vbox(UiKit.Space.SLIM)
 	v.name = "PlayerStats"
@@ -820,7 +820,7 @@ func _pc_stats(p: Dictionary) -> Control:
 		await get_tree().process_frame
 		if not is_instance_valid(g) or sc.size.y <= 0.0:
 			return
-		if g.get_combined_minimum_size().y > sc.size.y + 0.5 and g.columns < 4:
+		if g.get_combined_minimum_size().y > sc.size.y + 0.5 and g.columns < 6:
 			fill.call(g.columns + 1)
 			sc.resized.emit())
 	return v
