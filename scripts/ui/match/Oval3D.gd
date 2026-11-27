@@ -724,8 +724,9 @@ func _ground_model(slug: String, base := "", home := "", away := "") -> void:
 	add_child(root)
 	Oval3DQuality.apply_model(quality, root)
 	if GroundModels.has_backdrop(slug, base):
-		_far_m = GroundModels.backdrop_far(slug)
-		_haze_to = GroundModels.backdrop_haze(slug, HAZE_TO)
+		_far_m = GroundModels.backdrop_far(slug, base)
+		_haze_to = GroundModels.backdrop_haze(slug, HAZE_TO, base)
+		_haze_curve = GroundModels.backdrop_haze_curve(slug, base)
 		_backdrop_view()
 	towers = Oval3DTowers.new()
 	add_child(towers)
@@ -769,6 +770,7 @@ const HAZE_TO := 9000.0
 var _far_view := false
 var _far_m := GroundModels.BACKDROP_FAR
 var _haze_to := HAZE_TO
+var _haze_curve := GroundModels.BACKDROP_HAZE_CURVE
 
 
 func _backdrop_view() -> void:
@@ -789,7 +791,7 @@ func _backdrop_haze() -> void:
 	_env.fog_mode = Environment.FOG_MODE_DEPTH
 	_env.fog_depth_begin = HAZE_FROM
 	_env.fog_depth_end = _haze_to
-	_env.fog_depth_curve = 0.8
+	_env.fog_depth_curve = _haze_curve
 	_env.fog_density = 1.0
 	_env.fog_aerial_perspective = 0.0
 	_env.fog_sky_affect = 0.0
