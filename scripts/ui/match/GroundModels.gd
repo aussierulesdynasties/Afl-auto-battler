@@ -223,7 +223,9 @@ const SURROUNDS := {
 	# deck in 3D (tools/grounds/marvel/bridges.py).
 	"marvel": {"y": -0.03, "inner": 120.0, "colour": Color(0.42, 0.43, 0.43),
 			"map": "surrounds.webp", "span": 2048.0, "trees": "trees.bin", "buildings": "buildings.bin",
-			"models": ["bridges.glb", "landmarks.glb"], "tint": Color(0.84, 0.84, 0.84), "building_tint": Color.WHITE, "building_style": "towers",
+			# gates.glb (tools/grounds/marvel/gates.py): the real gates, built to the 2019-26 photos
+			"models": ["bridges.glb", "landmarks.glb", "gates.glb"], "tint": Color(0.84, 0.84, 0.84),
+			"building_tint": Color.WHITE, "building_style": "towers",
 			# Round 12: the real land (terrain.bin, tools/grounds/marvel/land.py) right up to `inner`. The model's own
 			# pad follows the same land, from 0.9 m under the old street by the harbour to 4.4 m over it on the east.
 			"follow_land": true,
@@ -852,6 +854,7 @@ static func _add_surrounds(root: Node3D, s: Dictionary, dir := "", fit: Array = 
 				extra.name = str(m).get_basename()
 				for gi in extra.find_children("*", "GeometryInstance3D", true, false):
 					(gi as GeometryInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+				_matte_foliage(extra)
 				root.add_child(extra)
 		return
 	var noise := FastNoiseLite.new()
@@ -1128,12 +1131,14 @@ static func _add_trees(root: Node3D, buf: PackedFloat32Array, y: float, stride :
 	leaf.albedo_color = Color(1, 1, 1) if gum else Color(0.27, 0.34, 0.19)
 	leaf.vertex_color_is_srgb = gum
 	leaf.roughness = 1.0
+	_leaf_look(leaf)
 	leaf.disable_receive_shadows = true
 	var bark := StandardMaterial3D.new()
 	bark.resource_name = "tree_bark"
 	# River red gum and sugar gum bark in Google Earth's Kardinia Park: pale grey, not brown.
 	bark.albedo_color = Color(0.6, 0.57, 0.52) if gum else Color(0.33, 0.29, 0.24)
 	bark.roughness = 1.0
+	bark.metallic_specular = 0.0
 	bark.disable_receive_shadows = true
 	var blocks := {}
 	# Each tree's x, z (and its own ground height when stride is 6) begin its record.
@@ -2796,6 +2801,39 @@ static func _open_ground(model: Node, names: Array) -> void:
 				own.disable_receive_shadows = true
 				own.roughness = 1.0
 				mi.set_surface_override_material(i, own)
+
+
+## Leaves are matte and let a little sun through from behind (Marvel, the person 2026-11-27:
+## "the trees look too reflective, i dont like how theyre lit"): no sky sheen on their tops,
+## and a crown against the sun glows a little green instead of going flat dark, as real
+## foliage does.
+static func _leaf_look(m: BaseMaterial3D) -> void:
+	m.roughness = 1.0
+	m.metallic = 0.0
+	m.metallic_specular = 0.0
+	m.backlight_enabled = true
+	m.backlight = Color(0.16, 0.2, 0.08)
+
+
+## A landmark model's leaf materials (tools/grounds/marvel/landmarks.py FOLIAGE) take the leaf look.
+static func _matte_foliage(model: Node) -> void:
+	var done := {}
+	for mi: MeshInstance3D in model.find_children("*", "MeshInstance3D", true, false):
+		if mi.mesh == null:
+			continue
+		for i in mi.mesh.get_surface_count():
+			var m := mi.get_active_material(i) as BaseMaterial3D
+			if m == null or not (m.resource_name.ends_with("_leaf") or m.resource_name.begins_with("pine_")):
+				continue
+			if not done.has(m):
+				var own := m.duplicate() as BaseMaterial3D
+				if own.resource_name.ends_with("_leaf"):
+					_leaf_look(own)
+				else:
+					own.roughness = 1.0
+					own.metallic_specular = 0.0
+				done[m] = own
+			mi.set_surface_override_material(i, done[m])
 
 
 static func _fix_materials(model: Node, fixes: Dictionary) -> void:
