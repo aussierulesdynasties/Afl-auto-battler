@@ -191,6 +191,7 @@ static func find_unrecorded(players: Array) -> Dictionary:
 static func set_unrecorded(stats: Dictionary) -> void:
 	unrecorded = stats
 	unknown_attrs = {}
+	_kept_share = {}
 	for attr in ATTR_BLENDS:
 		var any := false
 		for t in ATTR_BLENDS[attr]:
@@ -697,14 +698,23 @@ static func overall_per_point(role: String, key: String, games: float) -> float:
 	if not w.has(key) or unknown_attrs.has(key):
 		return 0.0
 	var f: Dictionary = LINE_FIT.get(role, LINE_FIT["MID"])
-	var total := 0.0
-	var kept := 0.0
-	for k in w:
-		total += float(w[k])
-		if not unknown_attrs.has(k):
-			kept += float(w[k])
+	if not _kept_share.has(role):
+		var total := 0.0
+		var kept := 0.0
+		for k in w:
+			total += float(w[k])
+			if not unknown_attrs.has(k):
+				kept += float(w[k])
+		_kept_share[role] = total / kept
 	var conf: float = minf(1.0, games / 14.0)
-	return float(f["slope"]) * float(w[key]) / 98.0 * (total / kept) * (0.40 + 0.60 * conf)
+	return float(f["slope"]) * float(w[key]) / 98.0 * float(_kept_share[role]) * (0.40 + 0.60 * conf)
+
+
+## Each line's weight over the weight of its skills that have a record
+## (overall_per_point), summed once a line: growth prices every skill of every
+## player each week, and the sum was redone for each one (~45 ms a round).
+## Cleared when the unrecorded skills change (set_unrecorded).
+static var _kept_share := {}
 
 
 ## Second role only when the season numbers clear a gate. Empty string means
