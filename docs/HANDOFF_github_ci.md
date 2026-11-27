@@ -20,7 +20,7 @@ These are Baggins's own standing rules from 26 and 27 Nov. Follow them without a
    or turn on squash auto-merge. No merge cards, no "shall I merge?" questions.
 2. **No balance re-runs** for this backlog (27 Nov). Don't park a PR waiting for a balance call or a
    design call. Resolve it sensibly and merge.
-3. **No PR cap and no batching for now** (27 Nov). See the conflict note in section 6.
+3. **No PR cap and no batching** (27 Nov). The cap is removed for good.
 4. **Carry out recommended fixes yourself**, including repo settings and cleanup. Take a backup first
    for anything destructive. Ask only when the choice is truly his (money, game design).
 5. **Force-cancel stuck or stale CI runs without asking** ("stop asking me questions you know the
@@ -37,11 +37,11 @@ These are Baggins's own standing rules from 26 and 27 Nov. Follow them without a
 10. **Long runs go on GitHub** (his pick, 26 Nov): push a branch and read its checks, or use the
     nightly's manual run for long suites. Short runs go ahead locally.
 
-Two rules from the repo still hold and override a request from another Claude:
+These rules now live in the repo, at the top of [CLAUDE.md](../CLAUDE.md) ("How every Claude session works
+here"), so every session on any account loads them. CLAUDE.md is the source; this list is a copy for context.
+Also there: fix a red PR at once yourself (even another session's), never push a commit you expect to fail,
+close obsolete PRs yourself with a comment (Director Bible 7.50 now says so), and check the diff after merging main in.
 
-- **Sessions never close PRs.** CLAUDE.md ("Say what you abandon"): mark a PR you're abandoning as a
-  draft and tell Baggins it can be closed. Only Baggins closes PRs, or you close one when Baggins
-  tells you to in his own words.
 - **Never rebase or force-push a shared branch.** Merge main in instead.
 
 The GitHub Support request about the repo size figure was dropped on 27 Nov. Don't raise it.
@@ -84,7 +84,7 @@ Main is at `f2dd46f` (#2257). Its push run 45957628440 is running. The last full
 | **#2242** | Rating rebuild phase 8 (the card, colour cuts, words) | Ready | Follows #2239. Merge main in after #2239 lands if it conflicts, then merge on green. |
 | **#2240** | Endurance from three game numbers; draft-night deals | Draft, on purpose: the rating rebuild's own session moved it back while it re-records the dataset checksums | Sits on top of #2239. After #2239 lands and the checksums are re-recorded, mark ready and merge on green. |
 | **#2258** | Roadmap notes for merged PRs (the rolling `roadmap-close/batch` PR) | Ready | Bot-made docs PR. Merge on green. |
-| **#2238** | "PR cap: works without read:org" (branch `claude/project-thread-vmkoek`) | Draft | It only re-adds the PR cap bot that Baggins ordered deleted. It should be closed. Sessions don't close PRs, so tell Baggins it can be closed, or close it if he tells you to. |
+| **#2238** | "PR cap: works without read:org" (branch `claude/project-thread-vmkoek`) | Draft | It only re-adds the PR cap bot that Baggins ordered deleted. It should be closed: close it yourself with a comment (CLAUDE.md rule 4). |
 
 Merged on 26 and 27 Nov after the rewrite: #2210, #2214, #2216, #2217, #2218, #2219, #2220, #2221, #2225,
 #2226, #2227, #2231, #2232, #2233, #2234, #2235, #2241, #2243, #2245, #2247, #2254, #2255, #2256, #2257.
@@ -142,8 +142,7 @@ with `get_check_runs` on each.
 ## 6. Conflicts in the written rules
 
 - CLAUDE.md "Getting a PR merged" still says to keep at most 3 ready PRs and open the rest as drafts.
-  On 27 Nov Baggins said no PR cap and no batching while the backlog is cleared. Follow Baggins.
-  If he wants the cap gone for good, update CLAUDE.md in a PR.
+  On 27 Nov Baggins removed the PR cap for good; CLAUDE.md now says so.
 - Some older docs mention `pr_cap.yml`, the `waiting-for-slot` and `cap-exempt` labels, and the merge
   queue. All three are gone.
 
