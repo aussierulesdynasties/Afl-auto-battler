@@ -7887,6 +7887,7 @@ func _after_round(results: Array) -> void:
 		# Age curves, a little each regular round (RATING_REBUILD §4).
 		if regular:
 			Growth.age_round(season.lists, season.regular_rounds())
+		TrainingReport.after_round(self)
 	_process_injuries(results)
 	_process_discipline(results)
 	_count_finals(results)

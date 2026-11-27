@@ -64,6 +64,7 @@ func _report_landed() -> void:
 	_skip_rounds(1)
 	GameState.last_phase = "regular"
 	TrainingReport.after_game(GameState)
+	TrainingReport.after_round(GameState)
 	_check(TrainingReport.hub_due(GameState), "(setup) the round-4 report is due")
 
 
