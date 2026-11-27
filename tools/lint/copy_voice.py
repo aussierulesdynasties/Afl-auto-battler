@@ -407,7 +407,7 @@ PROFILE_PASS = {
     "scripts/state/GameState.gd": [[
         "\"Near his potential\"", "\"At his potential\"", "\"Beyond his potential\"",
     ], ["\"Near his projected peak\"", "\"At his projected peak\"", "\"Past his projection\""]],
-    "scripts/sim/Trust.gd": [[
+    "scripts/sim/Opinion.gd": [[
         "%s's opinion of you: %d out of 100", "The player's opinion of you: %d out of 100",
     ], ["Opinion of you %d/100", "Opinion of you %d out of 100", "His opinion of you: %d"]],
 }

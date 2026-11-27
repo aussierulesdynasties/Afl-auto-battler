@@ -326,6 +326,9 @@ var _backing_unavailable := {}
 ## The same for every listed player at every club: injured or suspended for
 ## this round's game, so not "left out while fit" (morale, a promised game).
 var _round_unavailable := {}
+## Your fit players owed a game who could not be named this round (_no_room_ids),
+## kept from the promise check for the opinion marks that follow it.
+var _round_no_room := {}
 
 ## Career loop: season 1 is the 2026 season. Every completed season ends with
 ## a national intake draft (keep your list, sign the rookies), then the same
@@ -4938,8 +4941,8 @@ func papers_say_nothing() -> void:
 	if int(cost.get("board", 0)) != 0 and not board.is_empty():
 		board["confidence"] = clampi(board_confidence() + int(cost["board"]), 0, 100)
 	if int(cost.get("trust", 0)) != 0 and str(card.get("player_id", "")) != "":
-		Trust.change(relations, Trust.player_key(str(card["player_id"])), int(cost["trust"]),
-				str(cost.get("why", "You said nothing")), int(season_year), "Pre-season")
+		Opinion.card_move(relations, Opinion.player_key(str(card["player_id"])), int(cost["trust"]),
+				str(cost.get("why", "You said nothing")), int(season_year), "Pre-season", bool(cost.get("scar", false)), my_club)
 	rec["choice"] = -1
 	rec["result"] = str(cost.get("text", "Business as usual."))
 	StoryEngine.record_choice(story, card, -1, story_week())
@@ -7924,6 +7927,7 @@ func _after_round(results: Array) -> void:
 	_draft_class_news()
 	_board_after_round(results)
 	_rival_morale_after_round(results)
+	_opinion_after_round(results)
 	_familiarity_after_round(results)
 	_fade_press_lifts()
 	_prepare_media_conference(results)
@@ -15024,6 +15028,7 @@ func _board_after_round(results: Array) -> void:
 	# A promised man left out because every place was held by another promised
 	# man could not have been named: no promise of his breaks for this match.
 	var no_room := _no_room_ids(played)
+	_round_no_room = no_room   # read again by _opinion_after_round, after the promises are settled
 	# A player promised a run (Backing): each game he plays counts towards it.
 	# Left out while fit, the promise breaks and it stings, once, and the run
 	# is over; unable to play, the run waits. His one-week expectation is
@@ -15073,6 +15078,61 @@ func _board_after_round(results: Array) -> void:
 	# Who you dropped, for the coach's Authority (Promises.after_match).
 	Promises.after_match(self, played, _round_unavailable)
 	_after_match_talks(played, int(res.get("round", season.round_index)))
+
+
+## What each club's coach did this round, as his players take it (Opinion.gd,
+## relationship overhaul Phase 1): every live mark fades a round, a fit man
+## left out takes a mark (a bigger one as one of the club's best, a long-tail
+## one in a final), a man picked for a final takes a small lift, and every
+## player's morale drifts a step towards where his opinion of his coach puts
+## it (ClubLife.drift_morale). Every club by the same rules (2026-11-09); for
+## your club the coach is you. A man who changed clubs loses the marks his
+## old coach left (Opinion.drop_other_clubs).
+func _opinion_after_round(results: Array) -> void:
+	if season == null:
+		return
+	Opinion.fade_round(relations)
+	var club_of := {}
+	for code in season.lists:
+		for p in season.lists[code]:
+			club_of[str(p["id"])] = str(code)
+	Opinion.drop_other_clubs(relations, club_of)
+	var when := last_label if last_label != "" else "Round %d" % season.round_index
+	for res in results:
+		var roster: Array = res.get("roster", [[], []])
+		var final := (res as Dictionary).has("tag")
+		for side in range(2):
+			var code := str(res.get("home" if side == 0 else "away", ""))
+			if code == "" or not season.lists.has(code):
+				continue
+			var played := {}
+			if roster.size() > side:
+				for r in roster[side]:
+					played[str(r["id"])] = true
+			# A man owed a game who could not be named (every place held by
+			# another owed one) was not left out by choice (_no_room_ids).
+			var no_room: Dictionary = _round_no_room if code == my_club else {}
+			for p in season.lists[code]:
+				var id := str(p["id"])
+				var key := Opinion.player_key(id)
+				if no_room.has(id):
+					continue
+				if played.has(id):
+					if final:
+						Opinion.add(relations, key, "picked_final", season_year, when, code)
+				elif int(p.get("injury_weeks", 0)) <= 0 and not _round_unavailable.has(id):
+					var k := Opinion.drop_mark(int(Rating.ovr(p, 0)), final, OPINION_STAR_OVR)
+					Opinion.add(relations, key, k, season_year, when, code)
+	_round_no_room = {}
+	for code in season.lists:
+		var mine := str(code) == my_club
+		for p in season.lists[code]:
+			ClubLife.drift_morale(p, Opinion.coach_opinion(relations, Opinion.player_key(str(p["id"])), mine))
+
+
+## The rating at which being left out stings as "one of our best", the same
+## line the morale sting uses (ClubLife.morale_after_match).
+const OPINION_STAR_OVR := 78
 
 
 ## Every rival club's players take the week the way yours do
@@ -15783,8 +15843,8 @@ func _settle_week_event() -> void:
 		if int(cost.get("trust", 0)) != 0 and str(card.get("player_id", "")) != "":
 			var facts: Dictionary = card.get("facts", {})
 			var when := season.round_name(int(facts.get("round", 1)) - 1) if int(facts.get("finals_week", 0)) == 0 else "Finals"
-			Trust.change(relations, Trust.player_key(str(card["player_id"])), int(cost["trust"]),
-					str(cost.get("why", "You said nothing")), int(season_year), when)
+			Opinion.card_move(relations, Opinion.player_key(str(card["player_id"])), int(cost["trust"]),
+					str(cost.get("why", "You said nothing")), int(season_year), when, bool(cost.get("scar", false)), my_club)
 		card["resolved"] = true
 		card["choice"] = -1
 		card["outcome"] = str(cost.get("text", "Business as usual."))
