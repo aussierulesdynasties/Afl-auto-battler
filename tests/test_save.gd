@@ -46,6 +46,7 @@ func run() -> void:
 	_t("_test_earlier_saves_restore")
 	_t("_test_save_costs")
 	_t("_test_honoured_ratings_survive_reload")
+	_t("_test_saves_are_packed")
 	_t("_test_resume_screen")
 	GameState.delete_saved_career()
 	GameState.replay_seed = 0
@@ -1309,6 +1310,46 @@ func _test_earlier_saves_restore() -> void:
 ## once, not once per question; a new season is saved once per tap; a
 ## Continue from a fresh start does not parse the data files twice; and a
 ## the new save is read, not a remembered answer.
+## Saves are packed (director, 2026-11-26, P2-6): the file is an envelope
+## around the compressed career, several times smaller, and opens as the same
+## career. A save from before, written unpacked, still opens and is packed
+## the next time it saves.
+func _test_saves_are_packed() -> void:
+	_new_season("GEE")
+	_check(GameState.save_career(), "(setup) the career saves")
+	var f := FileAccess.open(GameState.save_path, FileAccess.READ)
+	var env = f.get_var()
+	var on_disk := f.get_length()
+	f.close()
+	_check(env is Dictionary and (env as Dictionary).has("packed") and not (env as Dictionary).has("state")
+			and int(env.get("version", 0)) == CareerSave.VERSION,
+			"The save on disk is packed, its version outside")
+	var blob = CareerSave.unpacked(env)
+	var plain := var_to_bytes(blob).size()
+	_check(blob is Dictionary and (blob as Dictionary).has("state") and on_disk * 3 < plain,
+			"Packed, it is at least three times smaller: %d KB on disk, %d KB unpacked" % [on_disk / 1024, plain / 1024])
+	var ids := func(): return GameState.my_list.map(func(p): return str(p["id"]))
+	var before: Array = ids.call()
+	_check(before.size() > 30, "(setup) a full list to compare: %d" % before.size())
+	GameState.reset()
+	_check(GameState.load_career() and ids.call() == before and GameState.my_club == "GEE",
+			"The packed save opens as the same career")
+	# A save from before packing: the blob itself, stored plain.
+	f = FileAccess.open(GameState.save_path, FileAccess.WRITE)
+	f.store_var(blob)
+	f.close()
+	GameState.reset()
+	_check(GameState.has_saved_career() and GameState.saved_career_problem() == "",
+			"A plain save from before is offered on the menu")
+	_check(GameState.load_career() and ids.call() == before, "...and opens as the same career")
+	_check(GameState.save_career(), "...and saves again")
+	f = FileAccess.open(GameState.save_path, FileAccess.READ)
+	env = f.get_var()
+	f.close()
+	_check(env is Dictionary and (env as Dictionary).has("packed"), "...packed this time")
+	GameState.delete_saved_career()
+
+
 func _test_save_costs() -> void:
 	var path := "user://test_save_costs_%d.save" % OS.get_process_id()
 	CareerSave.delete(path)

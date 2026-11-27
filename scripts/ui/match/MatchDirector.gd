@@ -869,8 +869,27 @@ func _possession_phases(k: int) -> Array:
 			var taker := _free_taker_of(k)
 			var take := _take_free(taker)
 			if taker >= 0 and taker == a:
-				return take + [{"t": "hold", "who": a, "carry": loc, "run": true,
-						"max": (ball["pos"] as Vector2).distance_to(loc) / float(tokens[a]["top"]) * 1.6 + 0.5}] + tail
+				var to_mark := [{"t": "hold", "who": a, "carry": loc, "run": true,
+						"max": (ball["pos"] as Vector2).distance_to(loc) / float(tokens[a]["top"]) * 1.6 + 0.5}]
+				var kick: Dictionary = tail[tail.size() - 1]
+				var mm := _mark_man(a, loc)
+				if mm >= 0 and str(kick.get("how", "")) == "kick" and _next_real(k) >= 0:
+					kick["aim"] = _kick_to(_next_real(k), loc)
+					# He kicks it over the man on the mark (director, the call scenes: "the man on the
+					# mark in front of the kicker"). Paid it at the mark, he goes back behind it, away
+					# from where his kick is going, runs in and kicks; the nearest of the other side
+					# comes to stand on the mark, facing him, until the ball has gone. With nobody on
+					# the mark, Weddle ran on past Clark, who gave the free away, 1.5 m off him (seed
+					# 20 ev 258). The free is still paid where it was logged (the 3 m release check).
+					var back := _behind_mark(a, loc, kick["aim"])
+					tail[tail.size() - 1] = {"t": "hold", "who": a, "carry": back, "run": true,
+							"stand": mm, "mark": loc,
+							"max": loc.distance_to(back) / float(tokens[a]["top"]) * 1.6 + 0.5}
+					kick["carry"] = back + (loc - back).normalized() * MARK_RUN_IN
+					kick["stand"] = mm
+					kick["mark"] = loc
+					tail.append(kick)
+				return take + to_mark + tail
 			# The ball comes to the mark as a kick would: 0.4 s when it is close,
 			# and a kick's own time when it is not (a fixed 0.4 s sent it 52 m
 			# from the boundary line in one frame at 8x).
@@ -1151,7 +1170,7 @@ func _ballup_phases(k: int) -> Array:
 		out.append({"t": "wait", "dur": _flight_shape("kick", (_ballup_pin[k] as Vector2).length()).x,
 				"drop": at})
 	var nk := _next_real(k)
-	var winner := _actor_id(events[nk]) if nk >= 0 else -1
+	var winner := _taker_id(events[nk]) if nk >= 0 else -1
 	var members := _nearest(at, 0, _pack_n(0), [winner]) + _nearest(at, 1, _pack_n(1), [winner])
 	for t in tokens:
 		if str(t["role"]) == "RUCK" and not members.has(int(t["id"])):
@@ -1178,7 +1197,7 @@ func _throwin_phases(k: int) -> Array:
 				"recv": -1, "mode": "stoppage"})
 	var infield := Vector2(at.x, at.y * 0.78)
 	var nk := _next_real(k)
-	var winner := _actor_id(events[nk]) if nk >= 0 else -1
+	var winner := _taker_id(events[nk]) if nk >= 0 else -1
 	var members := _nearest(infield, 0, _pack_n(0), [winner]) + _nearest(infield, 1, _pack_n(1), [winner])
 	for t in tokens:
 		if str(t["role"]) == "RUCK" and not members.has(int(t["id"])):
@@ -1369,7 +1388,7 @@ func _inside50_phases(k: int) -> Array:
 		out += [{"t": "collect", "who": a}, {"t": "possess", "who": a, "quiet": true}]
 	var loc := _loc(k)
 	var nk := _next_real(k)
-	var recv := _actor_id(events[nk]) if nk >= 0 else -1
+	var recv := _taker_id(events[nk]) if nk >= 0 else -1
 	var src: Vector2 = ball["pos"]
 	if nk >= 0 and str(events[nk].get("kind", "")) == "mark" and (events[nk] as Dictionary).has("band"):
 		# He marks where he kicks from (T2.24): the entry lands on the set
@@ -1412,6 +1431,17 @@ func _inside50_phases(k: int) -> Array:
 	return out
 
 
+## A rushed behind: the defender runs over his own goal line inside the behind posts (9.6 m out), at
+## least this far in from them (metres), and pulls up this far past it.
+const RUSH_POSTS_IN := 1.0
+const RUSH_OVER := 3.0
+## A rusher pulls up before he lets the ball go: below this (m/s) he puts it down, and the
+## umpire's call waits at most DOWN_WAIT_MAX (s) past its own length for him to slow to it.
+const DOWN_SPEED := 1.0
+const DOWN_WAIT_MAX := 0.8
+const DOWN_AHEAD := 0.5
+
+
 func _shot_phases(k: int) -> Array:
 	var ev: Dictionary = events[k]
 	var s := _actor_id(ev)
@@ -1421,6 +1451,33 @@ func _shot_phases(k: int) -> Array:
 			else signf(_rng.randf() - 0.5) * _rng.randf_range(4.0, 8.5)
 	var target := Vector2(MatchMotion.GOAL_X * _dir(side), gy)
 	var out := []
+	# Rushed through by the defender who had it (P2-1): backed up on his own goal
+	# line, he gathers it and runs straight over the line with it in his hands
+	# (director 2026-11-27: "hed simply run over the line", "he would take the
+	# straightest path to the line"), square to it and inside the behind posts,
+	# with the man who closed him down at his back. The ball never leaves him.
+	var rusher := _token_by_pid(str(ev.get("rusher_id", ""))) if bool(ev.get("rushed", false)) else -1
+	if rusher >= 0:
+		var from: Vector2 = ball["pos"]
+		var gx := MatchMotion.GOAL_X * _dir(side)
+		var posts := 9.6 - RUSH_POSTS_IN
+		var line := Vector2(gx, clampf(from.y, -posts, posts))
+		var over := line + Vector2(RUSH_OVER * _dir(side), 0.0)
+		var chaser := _token_by_pid(str(ev.get("presser_id", "")))
+		var run := {"t": "hold", "who": rusher, "carry": over, "run": true, "past_line": true, "square": posts,
+				"reach": RUSH_OVER - 1.0, "max": from.distance_to(over) / float(tokens[rusher]["top"]) * 1.6 + 0.5}
+		if chaser >= 0 and chaser != rusher:
+			# He chases him all the way, over the line a stride behind him.
+			run["chaser"] = chaser
+			run["chase_to"] = line + Vector2(1.0 * _dir(side), 0.0)
+		# Done once he is a stride over the line (RUSH_OVER less the reach): the umpire's call.
+		# After the call he pulls up and puts the ball down in front of him, unless he takes the
+		# kick-in himself, so it is on the turf before anyone moves off for the kick-in.
+		var nk := _next_real(k)
+		var keeps := nk >= 0 and str((events[nk] as Dictionary).get("player_id", "")) == str(ev.get("rusher_id", ""))
+		return [{"t": "collect", "who": rusher, "roll": true}, {"t": "possess", "who": rusher, "quiet": true}, run,
+				{"t": "emit", "log": true, "flash": "behind"},
+				{"t": "celebrate", "who": -1, "dur": 0.45, "down": not keeps}]
 	# A bomb that sailed over the pack is still in the air: no new kick.
 	var pk := _prev_real(k)
 	var over := pk >= 0 and str((events[pk] as Dictionary).get("kind", "")) == "pack" \
@@ -1470,7 +1527,7 @@ func _pass_phases(k: int) -> Array:
 	if nk < 0:
 		return out
 	var nev: Dictionary = events[nk]
-	var r := _actor_id(nev)
+	var r := _taker_id(nev)
 	var to_r := _token_by_pid(str(events[k].get("to_id", "")))
 	if r < 0 and to_r >= 0 and str(nev.get("player_id", "")) == "":
 		# The log names who it goes to, and the next event (a ball-up off his chance) doesn't
@@ -1633,6 +1690,53 @@ func _take_free(who: int) -> Array:
 	return [{"t": "collect", "who": who, "roll": true}, {"t": "possess", "who": who, "quiet": true}]
 
 
+## A free's kick: he goes back this far behind the mark before he runs in, the five metres the
+## after-the-siren shot gives him (BroadcastVignette.KICK_BEHIND), and kicks MARK_RUN_IN on
+## from there, a couple of strides short of the man on the mark.
+const MARK_BACK := 5.0
+## Where the kick that opens possession k lands, kicked from src: its own spot, or for an entry
+## the set shot's spot when the next act is a mark kicked for goal (the same rule as
+## _inside50_phases, which flies it there). Seed 20: Weddle lined up on the entry's logged spot
+## and the ball went 30 degrees off his line over the man on the mark, to the set shot's spot.
+func _kick_to(k: int, src: Vector2) -> Vector2:
+	var loc := _loc(k)
+	if str((events[k] as Dictionary).get("kind", "")) != "inside50":
+		return loc
+	var nk := _next_real(k)
+	if nk >= 0 and str(events[nk].get("kind", "")) == "mark" and (events[nk] as Dictionary).has("band"):
+		var spot := _set_spot(int(events[nk].get("side", 0)), str(events[nk]["band"]), loc.y)
+		if (spot.x - src.x) * _dir(int((events[k] as Dictionary).get("side", 0))) > -SET_SPOT_BACK:
+			return spot
+	return loc
+
+
+const MARK_RUN_IN := 2.0
+
+
+## Who stands the mark a free is kicked over: the nearest man of the other side to it (-1 when
+## there is none).
+func _mark_man(kicker: int, mark: Vector2) -> int:
+	var best := -1
+	var near := INF
+	for t in tokens:
+		if int(t["side"]) == int(tokens[kicker]["side"]):
+			continue
+		var d := (t["pos"] as Vector2).distance_to(mark)
+		if d < near:
+			near = d
+			best = int(t["id"])
+	return best
+
+
+## Where he takes a free's kick from: MARK_BACK behind the mark, on the line from where his
+## kick is going through the mark (away from his goal when that is the mark itself).
+func _behind_mark(kicker: int, mark: Vector2, aim: Vector2) -> Vector2:
+	var away := mark - aim
+	if away.length() < MARK_BACK:
+		away = mark - Vector2(MatchMotion.GOAL_X * _dir(int(tokens[kicker]["side"])), 0.0)
+	return MatchMotion.clamp_to_oval(mark + away.normalized() * MARK_BACK, 1.0)
+
+
 ## Who takes the free a possession beat restarts from: the man the free
 ## before it was paid to (-1 when there is none).
 func _free_taker_of(k: int) -> int:
@@ -1707,6 +1811,15 @@ func _clanger_phases(k: int) -> Array:
 		"kickin":
 			# An error logged before the kick-in: shown at the goal square.
 			return _kickin_phases(k, -1, loc) + [{"t": "emit", "log": true}]
+	var nk := _next_real(k)
+	if out.is_empty() and nk >= 0 and str(ball["mode"]) == "held" \
+			and bool((events[nk] as Dictionary).get("rushed", false)) \
+			and _taker_id(events[nk]) == int(ball["holder"]):
+		# The error that lost the ball is only logged when the man who won it is about to rush
+		# it: he keeps it in his hands. Seed 25 ev 41: Worrell ran 5.7 m in to take the ball out
+		# of Banfield's hands and fumble it, Banfield chased it past and turned back, 1.2 s, and
+		# the rush was called on the line.
+		return [{"t": "emit", "log": true}]
 	var d := (ball["pos"] as Vector2).distance_to(loc)
 	if out.is_empty() and str(ball["mode"]) in ["dead", "loose"] and e >= 0 and not _on_feet(e):
 		# He is the man tackled, still on the deck: his clanger is the ball coming free of that
@@ -1852,8 +1965,8 @@ func _loc(k: int) -> Vector2:
 		# whoever the log says wins it next, so he is not left running 30 m
 		# to a ball his team-mates are standing over.
 		var nk := _next_real(k)
-		if nk >= 0 and _actor_id(events[nk]) >= 0:
-			a = _actor_id(events[nk])
+		if nk >= 0 and _taker_id(events[nk]) >= 0:
+			a = _taker_id(events[nk])
 	var ry: float = (tokens[a]["pos"] as Vector2).y if a >= 0 else src.y
 	var p: Vector2
 	if kind in ["throwin", "last_disposal", "out_on_full"]:
@@ -1993,12 +2106,57 @@ func _anticipate(k: int) -> void:
 			elif kind == "inside50":
 				var nk := _next_real(j)
 				if nk >= 0:
-					_contest(_loc(j), _actor_id(events[nk]), 0.95)
+					_contest(_loc(j), _taker_id(events[nk]), 0.95)
 	if str(ev.get("kind", "")) == "inside50":
 		var nk2 := _next_real(k)
 		if nk2 >= 0:
-			_contest(_loc(k), _actor_id(events[nk2]), 1.0)
+			_contest(_loc(k), _taker_id(events[nk2]), 1.0)
+	_press_rusher(k)
 	_lead_receivers(k, cur)
+
+
+## How many real events ahead the man who closes a rusher down sets off, and how far off the
+## rusher's spot on the goal line he aims (on his own side of it: at the rusher's back as he
+## gathers it there).
+const RUSH_PRESS_AHEAD := 5
+const RUSH_PRESS_BACK := 3.5
+
+
+## A rushed behind coming up (P2-1): the man MatchSim says closed the defender down (its
+## presser_id) runs from as far back as the build-up for the spot on the goal line where the
+## rusher will gather it, so he is at his back as he does (director 2026-11-27: "players only
+## revert to rushing the behind if they have no other choice"). Seed 20 HAW v FRE: left to the
+## structure he stood 34 m off as Day rushed it; aimed at Day himself each beat, he trailed him
+## by 7 m. Not across a quarter's end, and not while he has the ball himself on the way.
+func _press_rusher(k: int) -> void:
+	var j := k
+	for _i in range(RUSH_PRESS_AHEAD):
+		j = _next_real(j)
+		if j < 0:
+			return
+		var nev: Dictionary = events[j]
+		if not bool(nev.get("rushed", false)):
+			continue
+		var p := _token_by_pid(str(nev.get("presser_id", "")))
+		var r := _token_by_pid(str(nev.get("rusher_id", "")))
+		if p < 0 or r < 0 or p == r or _busy.has(p):
+			return
+		for i in range(k, j):
+			if str((events[i] as Dictionary).get("kind", "")) == "quarter" or _actor_id(events[i]) == p:
+				return
+		var posts := 9.6 - RUSH_POSTS_IN
+		var line := Vector2(MatchMotion.GOAL_X * _dir(int(nev.get("side", 0))),
+				clampf((tokens[r]["pos"] as Vector2).y, -posts, posts))
+		var from: Vector2 = tokens[p]["pos"]
+		var spot := line + (from - line).limit_length(RUSH_PRESS_BACK)
+		# Paced to get there as the rusher does: at full tilt from five out he stood 4 s in the
+		# goal square before Day came (seed 20). Each beat re-reads both distances.
+		var his := from.distance_to(spot) / float(tokens[p]["top"])
+		var theirs := (tokens[r]["pos"] as Vector2).distance_to(line) / float(tokens[r]["top"])
+		var share := clampf(his / maxf(theirs, 0.01), MatchMotion.JOG_SHARE, 1.0)
+		MatchMotion.set_goal(tokens[p], spot, (share - MatchMotion.JOG_SHARE) / (1.0 - MatchMotion.JOG_SHARE))
+		_busy[p] = true
+		return
 
 
 ## A loose ball goes where MatchSim says it comes to rest (its loose_to) and nowhere else: the
@@ -2388,7 +2546,7 @@ func _next_knocker(p: Dictionary) -> int:
 	var bk := int(_beat.get("k", -1))
 	var kid := int(p.get("_kid", -1))
 	var nk := _next_real(bk)
-	var w := _actor_id(events[nk]) if nk >= 0 else -1
+	var w := _taker_id(events[nk]) if nk >= 0 else -1
 	var at := _ball_rest()
 	var best := -1
 	var bd := INF
@@ -2573,7 +2731,7 @@ func _lead_receivers(k: int, cur: int) -> void:
 			# where the entry lands, as a receiver leads. Left to start at the
 			# entry, he was 22-44 m off a ball lying dead (seed 42 RIC v SYD,
 			# six shots).
-			var sa := _actor_id(nev)
+			var sa := _taker_id(nev)
 			if prev_kind == "inside50" and not bool(nev.get("set_shot", true)) 					and sa >= 0 and sa != cur and not _busy.has(sa) and int(_lead.get(sa, j)) >= j:
 				var stok: Dictionary = tokens[sa]
 				if _lead.has(sa) or n < 2 or MatchMotion.eta(stok, prev_loc) + LEAD_SLACK >= t:
@@ -2742,16 +2900,25 @@ func _enter(p: Dictionary) -> void:
 					layout[id] = p["layout"][id]
 			p["layout"] = layout
 			var fetch := int(p.get("fetch", -1))
-			if layout.has(fetch) and str(ball["mode"]) in ["dead", "loose"]:
+			# A rushed behind leaves the ball in the hands of the man who ran it over the line.
+			var held_over := str(ball["mode"]) == "held" 					and bool((tokens[int(ball["holder"])] as Dictionary).get("over_line", false))
+			if layout.has(fetch) and held_over and int(ball["holder"]) == fetch:
+				# He takes the kick-in himself: he has it, and walks it back to the square (hold).
+				layout[fetch] = tokens[fetch]["pos"]
+			elif layout.has(fetch) and (held_over or str(ball["mode"]) in ["dead", "loose"]):
 				# A kick-in: the kicker goes to the ball where it lies (collect, hold), and the ball
-				# stays there until he has it.
+				# stays there until he has it. The man who ran it over puts it down where he stands.
+				if held_over:
+					_drop_held(ball["pos"])
 				layout[fetch] = ball["pos"]
 			else:
 				fetch = -1
 			for id in layout:
 				# The kick-in's man runs to the ball (the umpire calls play on if he dawdles); at the
 				# others' walk it lay 6 s with nobody on it (picture truth, bug bash 2026-11-23).
-				MatchMotion.set_goal(tokens[id], layout[id], 1.0 if id == fetch else 0.45, true)
+				# Put down over the line, he goes over the line for it.
+				MatchMotion.set_goal(tokens[id], layout[id], 1.0 if id == fetch else 0.45, true,
+						id == fetch and (held_over or bool(ball.get("down", false))))
 				tokens[id]["reset"] = SETUP_PACE
 				_busy[id] = true
 			if p.get("place", false):
@@ -2828,7 +2995,7 @@ func _enter(p: Dictionary) -> void:
 		"collect":
 			var who := int(p.get("who", -1))
 			if who >= 0:
-				MatchMotion.set_goal(tokens[who], ball["pos"], 1.0, true)
+				MatchMotion.set_goal(tokens[who], ball["pos"], 1.0, true, bool(tokens[who].get("over_line", false)))
 				_busy[who] = true
 		"possess":
 			var who2 := int(p.get("who", -1))
@@ -2852,8 +3019,38 @@ func _enter(p: Dictionary) -> void:
 					goal = goal + (goal - att).normalized() * 3.0
 				elif carry.is_finite():
 					goal = carry
-				MatchMotion.set_goal(t3, goal, 0.8, true)
+					if p.has("square"):
+						# Square to the line from where he gathered it, not from where the ball
+						# lay at the start of the beat (seed 20: 1.3 m apart, a run 25 degrees off).
+						var sq := float(p["square"])
+						goal.y = clampf((t3["pos"] as Vector2).y, -sq, sq)
+						# Done, and timed, from there too: a cap timed from the loose ball's spot at
+						# the start of the beat ended his run on the line, not a stride over it
+						# (seed 25: he gathered it behind where it lay).
+						p["carry"] = goal
+						p["max"] = (t3["pos"] as Vector2).distance_to(goal) / float(t3["top"]) * 1.6 + 0.5
+						if p.has("chase_to"):
+							p["chase_to"] = Vector2((p["chase_to"] as Vector2).x, goal.y)
+				MatchMotion.set_goal(t3, goal, 0.8, true, bool(p.get("past_line", false)))
 				_busy[who3] = true
+				if p.has("chaser"):
+					MatchMotion.set_goal(tokens[int(p["chaser"])], p["chase_to"], 1.0, true, true)
+					_busy[int(p["chaser"])] = true
+				if int(p.get("stand", -1)) >= 0 and str(p.get("how", "")) == "kick":
+					# He lines up on the line from where his kick is going back through the mark: the
+					# spot it goes to can be worked out again after the beat was planned (seed 20: the
+					# ball left 30 degrees off the line over the man on the mark).
+					var nk := _next_real(int(_beat.get("k", -1)))
+					if nk >= 0:
+						var aim := _kick_to(nk, p["mark"])
+						if aim.distance_to(p["mark"]) >= MARK_BACK:
+							p["aim"] = aim
+							p["carry"] = MatchMotion.clamp_to_oval((p["mark"] as Vector2)
+									+ ((p["mark"] as Vector2) - aim).normalized() * (MARK_BACK - MARK_RUN_IN), 1.0)
+				if int(p.get("stand", -1)) >= 0:
+					# The man on the mark comes to it and stands on it (standing men face the ball).
+					MatchMotion.set_goal(tokens[int(p["stand"])], p["mark"], 0.8, true)
+					_busy[int(p["stand"])] = true
 			if p.has("mode"):
 				mode = str(p["mode"])
 		"chase":
@@ -2948,6 +3145,11 @@ func _enter(p: Dictionary) -> void:
 		"celebrate":
 			var who4 := int(p.get("who", -1))
 			mode = "shot"
+			if bool(p.get("down", false)) and not _down_if_still():
+				# Still running out of his run over the line: he lets it go once he pulls up
+				# (seed 25: put down at the call, it hung in the air behind him for 0.7 s as he
+				# ran on 1.5 m).
+				p["_down_wait"] = true
 			if who4 >= 0 and float(p["dur"]) > 1.0:
 				var at3: Vector2 = tokens[who4]["pos"]
 				for id in _nearest(at3, int(tokens[who4]["side"]), 3, [who4]):
@@ -3158,14 +3360,15 @@ func _done(p: Dictionary) -> bool:
 					# ball is a loose ball like any other).
 					_scrap_in(p, who)
 			else:
-				MatchMotion.set_goal(t, ball["pos"], 1.0, true)
+				var off := bool(t.get("over_line", false))
+				MatchMotion.set_goal(t, ball["pos"], 1.0, true, off)
 				if d <= 1.4:
 					return true
 				# Over the line (a kick-in's ball where it went through) his goal is held inside the
 				# ground, short of it: there, it is his as soon as he reaches it, not after the 1.5 s
 				# below (a kick-in's fetch stood 1.5 m off it for a second: bug bash 2026-11-23).
 				var reach := MatchMotion.clamp_to_oval(ball["pos"], 2.0)
-				if reach.distance_to(ball["pos"]) > 0.05 and (t["pos"] as Vector2).distance_to(reach) <= 0.5 and d <= 3.0:
+				if not off and reach.distance_to(ball["pos"]) > 0.05 and (t["pos"] as Vector2).distance_to(reach) <= 0.5 and d <= 3.0:
 					return true
 			if p.has("max") and _pt >= float(p["max"]):
 				return true
@@ -3200,7 +3403,20 @@ func _done(p: Dictionary) -> bool:
 		"hold":
 			if p.get("run", false):
 				var c: Dictionary = tokens[int(p["who"])]
-				return (c["pos"] as Vector2).distance_to(p["carry"]) <= 1.5 or _pt >= float(p["max"])
+				if p.has("chaser"):
+					# At his back the whole way, a stride behind him and no further than chase_to:
+					# aimed once at the line, the man chasing him ran past him and over it first
+					# (seed 25: 1.5 m ahead of him as he crossed).
+					var at: Vector2 = (c["pos"] as Vector2) - Vector2(signf((p["carry"] as Vector2).x), 0.0)
+					if absf(at.x) > absf((p["chase_to"] as Vector2).x):
+						at.x = (p["chase_to"] as Vector2).x
+					MatchMotion.set_goal(tokens[int(p["chaser"])], at, 1.0, true, true)
+				if p.get("past_line", false):
+					# Over the line by a stride, measured square to it (a ring round the spot past
+					# it is not: off that spot's line, he runs on further before the call).
+					return absf((p["carry"] as Vector2).x - (c["pos"] as Vector2).x) <= float(p["reach"]) \
+							or _pt >= float(p["max"])
+				return (c["pos"] as Vector2).distance_to(p["carry"]) <= float(p.get("reach", 1.5)) or _pt >= float(p["max"])
 			return _pt >= float(p.get("dur", 0.0))
 		"flight":
 			return _pt >= float(p["dur"])
@@ -3208,6 +3424,14 @@ func _done(p: Dictionary) -> bool:
 			return _pt >= 0.7
 		"throwup":
 			return _pt >= 0.45
+		"celebrate":
+			if p.get("_down_wait", false):
+				if _down_if_still() or _pt >= float(p.get("dur", 0.0)) + DOWN_WAIT_MAX:
+					_put_down()
+					p.erase("_down_wait")
+				else:
+					return false
+			return _pt >= float(p.get("dur", 0.0))
 		"wait":
 			if p.has("scoop"):
 				_scrap_in(p, int(p["scoop"]))
@@ -3394,7 +3618,36 @@ func _drop_held(at: Vector2) -> void:
 	_ball_carry(at, TOSS_SPEED)
 
 
+## The man holding it puts it down (a rushed behind, once he pulls up after the call). It
+## lies on the turf ("down") until someone picks it up: the 3D draws it there, not in the hands
+## of whoever is within a metre of it, and lets it fall from his hands as he lets go.
+func _put_down() -> void:
+	if str(ball["mode"]) != "held":
+		return
+	var t: Dictionary = tokens[int(ball["holder"])]
+	var v: Vector2 = t["vel"]
+	if v.length() > 0.05:
+		# Half a metre in front of him, where his hands let it go.
+		ball["pos"] = (t["pos"] as Vector2) + v.normalized() * DOWN_AHEAD
+	ball["mode"] = "dead"
+	ball["holder"] = -1
+	ball["down"] = true
+
+
+## Puts the ball down now if the man holding it has all but stopped (true), else leaves it in
+## his hands (false). True when nobody holds it.
+func _down_if_still() -> bool:
+	if str(ball["mode"]) != "held":
+		return true
+	if ((tokens[int(ball["holder"])]["vel"]) as Vector2).length() > DOWN_SPEED:
+		return false
+	_put_down()
+	return true
+
+
 func _update_ball(h: float) -> void:
+	if str(ball["mode"]) != "dead":
+		ball.erase("down")
 	match str(ball["mode"]):
 		"held":
 			var t: Dictionary = tokens[int(ball["holder"])]
@@ -4817,6 +5070,14 @@ func _actor_id(ev: Dictionary) -> int:
 	if side < 0 or side > 1:
 		return -1
 	return int((_ids[side] as Dictionary).get(int(ev.get("num", -1)), -1))
+
+
+## Who has the ball in this event, for reading ahead: a rushed behind's log line
+## names nobody, but the defender who runs it over the line has it (P2-1).
+func _taker_id(ev: Dictionary) -> int:
+	if bool(ev.get("rushed", false)):
+		return _token_by_pid(str(ev.get("rusher_id", "")))
+	return _actor_id(ev)
 
 
 ## The token an event is about (-1 for none): the scorer of a goal, say.
