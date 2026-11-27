@@ -117,6 +117,9 @@ def fetch(slug):
 
 WATER_SUBTYPES = ("ocean", "water", "river", "lake", "reservoir", "canal", "pond", "human_made")
 WATER_SKIP_CLASSES = ("swimming_pool", "fountain")
+NEAR_WATER_FROM = 1028.0   # m: the surrounds' painted water runs to here (its outer edge and skirt, GroundModels)
+NEAR_WATER_STEP = 1.0      # m: the near water sheet's tracing grid (near_water())
+NEAR_WATER_LIFT = 0.3      # m: the sheet over the painted water, clear of it at the orbit's distance
 
 
 def fetch_water(slug, con=None):
@@ -971,6 +974,89 @@ def _local_poly(frame, g):
 
 # ---- glb ------------------------------------------------------------------------------------------
 
+def near_water(G, water_y):
+    """The backdrop's painted harbour and river, past the surrounds' edge, as one flat sheet with a hard edge: traced
+    at NEAR_WATER_STEP from the ground's own painted water, so it lies exactly where the painting has it. Seen from
+    the orbit the painting alone smeared the quay by the paddock at the harbour's west end into a soft, ragged beige
+    fringe (its 1.5 m texels stretched over 30 m triangles; the PC's renders, 2026-11-27). Drawn in the painted
+    water's own mean colour, NEAR_WATER_LIFT over it, and lit as the ground is (GroundModels' matte backdrop)."""
+    import mapbox_earcut as earcut
+    from rasterio import features
+    from rasterio.transform import from_origin
+    from shapely.geometry import Point, box, shape
+    from shapely.ops import unary_union
+    for mi, m in enumerate(G.J["meshes"]):
+        if not G.name_of.get(mi, m.get("name", "")).startswith("bg_near_ground"):
+            continue
+        pr = m["primitives"][0]
+        got = reland._ground_texture(G, pr)
+        if got is None or "TEXCOORD_0" not in pr["attributes"]:
+            continue
+        img = got[1]
+        P = G.read(pr["attributes"]["POSITION"]).astype(np.float64)
+        UV = G.read(pr["attributes"]["TEXCOORD_0"]).astype(np.float64)
+        T = G.read(pr["indices"]).reshape(-1, 3)
+        break
+    else:
+        return None
+    wtex = reland._water_texels(img)
+    if not wtex.any():
+        return None
+    colour = lin_of(img[wtex].mean(0) / 255.0)
+    st, half = NEAR_WATER_STEP, SKIRT
+    xs = np.arange(-half + st / 2, half, st)
+    n = len(xs)
+    grid = np.zeros((n, n), np.uint8)
+    h, w = wtex.shape
+    # each ground triangle's own grid points, its UV taken across it (barycentric), the painted texel looked up
+    for a, b, cc in T:
+        A, B, C = P[a, [0, 2]], P[b, [0, 2]], P[cc, [0, 2]]
+        lo, hi = np.minimum(np.minimum(A, B), C), np.maximum(np.maximum(A, B), C)
+        i0, i1 = np.searchsorted(xs, [lo[0], hi[0]])
+        j0, j1 = np.searchsorted(xs, [lo[1], hi[1]])
+        if i1 <= i0 or j1 <= j0:
+            continue
+        gx, gz = np.meshgrid(xs[i0:i1], xs[j0:j1])
+        d = (B[1] - C[1]) * (A[0] - C[0]) + (C[0] - B[0]) * (A[1] - C[1])
+        if abs(d) < 1e-9:
+            continue
+        l1 = ((B[1] - C[1]) * (gx - C[0]) + (C[0] - B[0]) * (gz - C[1])) / d
+        l2 = ((C[1] - A[1]) * (gx - C[0]) + (A[0] - C[0]) * (gz - C[1])) / d
+        l3 = 1 - l1 - l2
+        inside = (l1 >= -1e-6) & (l2 >= -1e-6) & (l3 >= -1e-6) & (np.hypot(gx, gz) >= NEAR_WATER_FROM)
+        if not inside.any():
+            continue
+        u = l1[inside] * UV[a, 0] + l2[inside] * UV[b, 0] + l3[inside] * UV[cc, 0]
+        v = l1[inside] * UV[a, 1] + l2[inside] * UV[b, 1] + l3[inside] * UV[cc, 1]
+        jj, ii = np.nonzero(inside)
+        grid[j0 + jj, i0 + ii] = wtex[np.clip((v * h).astype(int), 0, h - 1), np.clip((u * w).astype(int), 0, w - 1)]
+    tf = from_origin(-half, -half, st, -st)   # row j is z = -half + j * st, column i is x = -half + i * st
+    polys = [shape(g) for g, v in features.shapes(grid, mask=grid > 0, transform=tf) if v == 1]
+    if not polys:
+        return None
+    sheet = unary_union(polys).simplify(st * 0.7).intersection(
+        box(-half, -half, half, half).difference(Point(0, 0).buffer(NEAR_WATER_FROM, 256)))
+    Vs, F, n0 = [], [], 0
+    for pg in getattr(sheet, "geoms", [sheet]):
+        if pg.geom_type != "Polygon" or pg.area < 20.0:
+            continue
+        rings = [np.array(pg.exterior.coords)[:-1]] + [np.array(q.coords)[:-1] for q in pg.interiors]
+        pts = np.concatenate(rings)
+        t = earcut.triangulate_float64(pts, np.cumsum([len(q) for q in rings]).astype(np.uint32)).reshape(-1, 3)
+        F.append(t + n0)
+        Vs.append(pts)
+        n0 += len(pts)
+    if not Vs:
+        return None
+    Q = np.concatenate(Vs)
+    F = np.concatenate(F)
+    pos = np.c_[Q[:, 0], water_y + NEAR_WATER_LIFT - drop(Q[:, 0], Q[:, 1]), Q[:, 1]].astype(np.float32)
+    print("near water sheet", round(sheet.area), "m2 in", len(F), "triangles, colour (linear)", colour.round(4))
+    return {"name": "water_near", "pos": pos, "nrm": np.tile([0.0, 1.0, 0.0], (len(pos), 1)).astype(np.float32),
+            "col": np.tile(np.r_[colour, 1.0], (len(pos), 1)).astype(np.float32),
+            "idx": F.ravel().astype(np.uint32), "material": "water_near"}
+
+
 def write_glb(path, surfaces, images):
     J = {"asset": {"version": "2.0", "generator": "tools/grounds/backdrop/horizon/horizon.py"},
          "scene": 0, "scenes": [{"nodes": []}], "nodes": [], "meshes": [], "materials": [], "accessors": [],
@@ -1060,7 +1146,8 @@ def build(slug, backdrop=None):
     land, land_rep = land_mesh(slug, frame, H, water_y, gain, near, mid, far, water)
     city_s, city_rep = city(slug, frame, H, gain, near)
     trees = canopy(slug, frame, H, com_parts(slug, frame, lambda g: [_local_poly(frame, gg) for gg in getattr(g, "geoms", [g])]))
-    surfaces = land + [city_s] + ([trees] if trees is not None else [])
+    sheet = near_water(G, water_y)
+    surfaces = land + [city_s] + ([trees] if trees is not None else []) + ([sheet] if sheet is not None else [])
     images = {"near": texture_png(near, gain, water), "mid": texture_png(mid, gain, water)}
     out = os.path.join(ROOT, "assets", "grounds", slug, slug + "_horizon.glb")
     size = write_glb(out, surfaces, images)
