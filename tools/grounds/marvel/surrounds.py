@@ -22,6 +22,8 @@ import xml.etree.ElementTree as ET
 import numpy as np
 from PIL import Image, ImageDraw, ImageFilter
 import land  # noqa: E402  (tools/grounds/marvel/land.py: the real land under each building)
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+import osm_structures  # noqa: E402  (tools/grounds/osm_structures.py: shelters, canopies and the like are not solid blocks)
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(ROOT, "..", "..", "..", "assets", "grounds", "marvel")
@@ -285,6 +287,10 @@ def paint(trees, ways):
         d.line(poly([q0, (q0[0] - 24.0, q0[1] - 8.0)]), fill=(222, 196, 170), width=2)
     for t, p in ways:
         if "building" in t and len(p) > 2 and t.get("building") not in ("roof",) and t.get("_id") != STADIUM_WAY:
+            # A roof's grey only under a solid building: an open canopy or shelter stands over the ground it shades, and a
+            # feature left out (osm_structures "omit") left a grey footprint on the grass or the ballast (2026-11-27 renders)
+            if len(p) > 3 and p[0] == p[-1] and osm_structures.kind(t, abs(_area(p))) != "solid":
+                continue
             d.polygon(poly(p), fill=ROOF)
     arr = np.asarray(im, float)
     shade = Image.new("L", (SIZE, SIZE), 0)
@@ -538,6 +544,15 @@ def building_list(ways, st):
         pts = [model_xz(*q) for q in p[:-1]]
         if max(max(abs(x), abs(z)) for x, z in pts) > 950:
             continue
+        # 2026-11-27 (the person's inspection: a gear-shaped 8 m office block in Docklands Park): a shelter, canopy
+        # or open pavilion is a roof on posts, and an unmeasured artwork or trackside cabinet a metre or two across
+        # is not a building at this distance (tools/grounds/osm_structures.py).
+        what = osm_structures.kind(t, abs(_area(p)))
+        if what == "omit":
+            continue
+        if what == "open":
+            out += _open_structure(t, p[:-1], len(out))
+            continue
         h = building_height(t)
         if h < 2.5:
             continue
@@ -546,6 +561,28 @@ def building_list(ways, st):
         for x, z in pts:
             out += [x, z]
     return np.array(out, "<f4")
+
+
+OPEN_ID0 = 90000   # GroundModels.OPEN_STRUCTURE_ID; the City of Melbourne's structure ids here run to about 19,400
+
+
+def _open_structure(t, ring, salt):
+    """buildings.bin stacked records for a roof on posts: the roof from its underside to its top over the outline,
+    then each post from the land to the roof's underside. Heights are above the land under each part, as
+    com_massing's are, so the posts meet the roof on sloping land."""
+    top, thick = osm_structures.open_roof(t)
+    # GroundModels._add_towers draws ids from OPEN_ID0 (its OPEN_STRUCTURE_ID) plain off-white, with no windows.
+    sid = float(OPEN_ID0 + int(t.get("_id", salt)) % 9000)
+    lb = land.base(ring)
+    out = [-float(len(ring)), top, top - thick, sid]
+    for q in ring:
+        out += list(model_xz(*q))
+    for post in osm_structures.supports(t, ring):
+        pb = land.base(post)
+        out += [-4.0, lb + top - thick - pb, 0.0, sid]
+        for q in post:
+            out += list(model_xz(*q))
+    return out
 
 
 def main():

@@ -53,3 +53,14 @@ walls and roofs), none receiving shadows (past the shadow map's reach that reads
 `Oval3D._backdrop_view()` opens the camera to 7 km and hazes everything past 600 m
 into the horizon's colour. Check a ground from the broadcast cameras and from outside with
 `tools/visual/capture_backdrop.gd`.
+
+## Past the backdrop: the horizon (`horizon/`)
+
+A backdrop ends at its ±1.5 km square. `horizon/horizon.py` builds `<slug>_horizon.glb`: the real land and water out
+to 64 km (terrain.bin, then Mapterhorn; the earth's curve taken off), coloured from Sentinel-2 (`horizon/s2grid.py`,
+Digital Earth Australia, CC BY 4.0) and matched to the backdrop's ground bake at the seam, and the city between the
+square and 4 km from Overture's buildings (heights mapped, or read from the EU's GHS-BUILT-H map through this ground's
+own mapped neighbours). When the file is there, `GroundModels.backdrop()` loads it in place of the scene's far terrain
+and the camera and haze open to 60 km (`HORIZON_RANGE`). Run `reland.py` on the backdrop first, so the seam meets.
+Marvel (2026-11-27): 326,000 triangles in 32 pieces, two 1024 px textures; on the match camera +4% triangles,
++3% draw calls, +30 MB video memory, drawing time +3 to 4% (cloud measure, docs/PHONE_3D_BUDGET.md's method).
