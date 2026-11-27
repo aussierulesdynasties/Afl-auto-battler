@@ -195,3 +195,4 @@ and the smoothing buffers.
 - 2026-11-26 afternoon: guernsey atlases at half size (#2165, about 168 MB less) and a faster first 3D player build (#2155) on main.
 - 2026-11-26 evening: review boards and reference imagery moved out of the public repo to a private archive (#2192).
 - 2026-11-26 night: the ground models moved to a private asset repo fetched by a pinned lock (#2199; main's history was rewritten for it). The builds and tests fetch them; the packaging result (#2060) stands.
+- 2026-11-27: lighter launch (#2211): the 3D ground now compiles at the first 3D match rather than at start-up, ground shaders load when needed, and the web build fetches one texture pack for its graphics family. The web sky add-on was fixed (#2222). No row changes state.
