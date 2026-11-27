@@ -2,7 +2,7 @@
 # tools/ground_assets.sh fetch copies this commit's files into place; publish updates the pin.
 repo https://github.com/gabebartolo-spec/ard-asset-pipeline
 branch ground-assets
-commit 992c8208866add01c1e0debb8434d2cc55bd3cf9
+commit d391e07871863a26d888a2e70a2a0161653fef2b
 3d4ecca7192b687a2a02b37e007159594e8f37cefabc5822341ed9e6601fc566  assets/grounds/accor/accor_backdrop_part1.glb
 953a9240e98d002bf0e0a9421d6768fd0838f663c05c7749861759d31f2b1eae  assets/grounds/accor/accor_backdrop_part2.glb
 193d756d6ca16bce580d61ab72c5baecdeeee89389c94ba13df225d009b74e07  assets/grounds/adelaide/adelaide.glb
@@ -237,7 +237,7 @@ d6b01fbb16d75b9711a06908b267763a893e5648fd6da719cccaa7f44ba0ea4d  assets/grounds
 adf4c8309a899fc344cc8adbfa9f2040d9870f82dd78fedca0d0324c4ab22215  assets/grounds/marvel/bridges.glb
 48b4343fa97123234d3617213ab061dd6b4587fd933273403331baef3216cecf  assets/grounds/marvel/buildings.bin
 450e05c3c51544387c3566e6ec513c0d1ef012efffa6f2546b121220b80ac102  assets/grounds/marvel/gates.glb
-d06887f254b19eb7de5c76b846991038dfbc735b9cfd8dd0d3d8d2c2508bcc31  assets/grounds/marvel/landmarks.glb
+6b6bdc8b299c66588b9ffde4081c9deb407ce758a38e81d7b9e9b748bb944d65  assets/grounds/marvel/landmarks.glb
 9dd864d06c550b81a11155d5cb867d2a3683e66d6d29f9fa5e95d2ff4ad7652d  assets/grounds/marvel/landmarks_atrium_glass.png
 abe1fc989df08fb362dd59402bfa64b785f71d921e9b7a1266774b6cce1ca75a  assets/grounds/marvel/landmarks_balustrade.png
 9bf47ce35cb4017adc89d93372bcba48e5b475b4264aec858171886088d57069  assets/grounds/marvel/landmarks_band_panel.png

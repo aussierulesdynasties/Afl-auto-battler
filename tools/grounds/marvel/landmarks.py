@@ -1750,6 +1750,66 @@ def _clip_y(pts, y0, y1):
     return [list(c.coords)] if c.geom_type == "LineString" else [list(p.coords) for p in c.geoms]
 
 
+def _chaikin(P, n=3):
+    """Polyline `P` with its corners rounded off (Chaikin's cutting, `n` times; the ends kept)."""
+    P = np.array(P, float)
+    for _ in range(n):
+        if len(P) < 3:
+            return P
+        Q = [P[0]]
+        for a, b in zip(P[:-1], P[1:]):
+            Q += [0.75 * a + 0.25 * b, 0.25 * a + 0.75 * b]
+        Q.append(P[-1])
+        P = np.array(Q)
+    return P
+
+
+def tram_overhead(g, trams, y0, y1, step=32.0):
+    """Round 17c (PC check: no tram poles or wires): the tram reserve's overhead, from the Harbour Esplanade photos
+    (Wikimedia Commons "Harbour Esplanade, Docklands.jpg" and "2061 at Central Pier, Harbour Esp.jpg", reference
+    only): dark steel centre poles between the two tracks about every 32 m, each with a bracket arm out over each
+    track holding its contact wire at 5.8 m, and at the top (about 10 m) a street-light arm out over each
+    carriageway with a flat lamp head."""
+    from shapely.geometry import LineString as _LS
+    a_, b_ = _LS([tuple(q) for q in trams[0]]), _LS([tuple(q) for q in trams[1]])
+    L = a_.length
+    poles = []
+    s = 4.0
+    while s < L:
+        p = np.array(a_.interpolate(s).coords[0])
+        q = np.array(b_.interpolate(b_.project(a_.interpolate(s))).coords[0])
+        if y0 <= p[1] <= y1 and np.linalg.norm(q - p) < 8.0:
+            poles.append(((p + q) / 2, p, q))
+        s += step
+    g.lift = 0.0
+    for c, p, q in poles:
+        z = float(land.z(*c))
+        g.prism(cylinder_ring(tuple(c), 0.13, 8), z - 0.3, z + 10.0, "steel_dark", top="steel_dark")
+        across = (q - p) / np.linalg.norm(q - p)
+        for side in (-1.0, 1.0):
+            t = c + across * side * np.linalg.norm(q - p) / 2         # over the track
+            strut(g, "steel_dark", (*c, z + 6.1), (*t, z + 6.1), 0.08)
+            lamp = c + across * side * 5.5                            # over the carriageway
+            strut(g, "steel_dark", (*c, z + 9.9), (*lamp, z + 9.6), 0.1)
+            sd = np.array([-across[1], across[0]]) * 0.25
+            head = [tuple(lamp - across * side * 0.7 - sd), tuple(lamp - across * side * 0.7 + sd),
+                    tuple(lamp + sd), tuple(lamp - sd)]
+            g.prism(ccw(head), z + 9.45, z + 9.6, "lamp_head", top="steel_dark", bottom="lamp_head")
+    # the contact wire over each track, 5.8 m up, a 3 cm strip seen from below and the side
+    for t in trams:
+        for part in _clip_y(t, y0, y1):
+            P = np.array(part, float)
+            for a, b in zip(P[:-1], P[1:]):
+                d = b - a
+                Ld = float(np.linalg.norm(d))
+                if Ld < 0.05:
+                    continue
+                n = np.array([-d[1], d[0]]) / Ld * 0.015
+                za, zb = float(land.z(*a)) + 5.8, float(land.z(*b)) + 5.8
+                g.poly("steel_dark", [(*(a - n), za), (*(b - n), zb), (*(b + n), zb), (*(a + n), za)])
+                g.poly("steel_dark", [(*a, za - 0.015), (*b, zb - 0.015), (*b, zb + 0.015), (*a, za + 0.015)])
+
+
 def harbour_esplanade(g, W, y0=-300.0, y1=170.0):
     """Round 17c (PC check of 17b: the pines stood on plain beige, with no road, kerbs or tram tracks): Harbour
     Esplanade beside the stadium as the photos show it, laid on OpenStreetMap's ways. Two one-way carriageways
@@ -1760,14 +1820,16 @@ def harbour_esplanade(g, W, y0=-300.0, y1=170.0):
     esplanade_textures()
     RNG.bit_generator.state = st
     g.lift = 0.0
-    trams = [np.array(W[w][1], float) for w in ("46228158", "56723838")]
+    # round 17c PC check: the edge lines kinked at OpenStreetMap's corners; each way is rounded first (Chaikin)
+    trams = [_chaikin(np.array(W[w][1], float)) for w in ("46228158", "56723838")]
     from shapely.geometry import LineString as _LS, Point as _Pt
     tl = _LS([tuple(q) for q in trams[0]])
     for k, t in enumerate(trams):
         for part in _clip_y(t, y0 - 10, y1):
             _strip(g, "tramway", part, -2.1, 2.1, 0.06 + 0.005 * k)
+    tram_overhead(g, trams, y0, y1)
     for wid in ("135951295", "569460355"):
-        for part in _clip_y(np.array(W[wid][1], float), y0, y1):
+        for part in _clip_y(_chaikin(np.array(W[wid][1], float)), y0, y1):
             P = np.array(part, float)
             if len(P) < 2:
                 continue
@@ -1961,12 +2023,27 @@ def street_wall(g, W, h=3.4):
             d /= np.linalg.norm(d)
             line.append(pts[i] + np.array([-d[1], d[0]]) * off)    # left of a northbound way is west
         assert line[0][0] < pts[0][0], "the wall must sit west of the carriageway"
-        # round 17c (PC check of 17b: a block stood above the wall where the NAB stretch met the stadium's): each
-        # stretch starts where the last one ended, so the wall runs on unbroken
-        if prev_end is not None:
+        # the stadium's two stretches meet end to end
+        if prev_end is not None and wid == "790397545":
             line[0] = prev_end
         prev_end = line[-1]
+        # round 17c (PC check, with the Esri aerial: the wall left the deck's east face at (147.9, 22) and ran on up to
+        # 9 m east of it, across what the aerial shows as a grass verge and pale paving, so the gates' parapet on the
+        # real deck edge stood over it like a block): south of y 22 the deck's face turns away south and the wall ends
+        # there; the verge and kerb run on along the road
+        WALL_FROM = 22.0
+        if wid == "580628688":
+            out = [line[0]]
+            for a, b in zip(line[:-1], line[1:]):
+                if (a[1] - WALL_FROM) * (b[1] - WALL_FROM) < 0:
+                    out.append(a + (b - a) * (WALL_FROM - a[1]) / (b[1] - a[1]))
+                out.append(b)
+            line = out
+        walled = []
         for a, b in zip(line[:-1], line[1:]):
+            has_wall = wid != "580628688" or min(a[1], b[1]) >= WALL_FROM - 1e-6
+            if has_wall:
+                walled += [a, b] if not walled or np.linalg.norm(walled[-1] - a) > 1e-6 else [b]
             g.lift = float(min(land.z(*a), land.z(*b)))   # round 12: on the road's land
             # round 16 (fault scan street_248-292: "RMTO", "SD", "RDZA" backwards from the road): round 13b's mirror
             # had flipped the road face, which reads right when its texture runs a -> b (south to north, left to right
@@ -1979,10 +2056,12 @@ def street_wall(g, W, h=3.4):
             # one wall from the road up to the plaza, the banner poles on the plaza at its top): along the stadium
             # the wall retains the plaza (PLAZA_Z, the gates' deck), its coping 0.3 m over the deck
             # round 17c: the NAB stretch too, so the coping runs level at the joint (it was 0.7 m lower there)
-            hw = max(h, PLAZA_Z + 0.3 - g.lift)
-            g.wall(mat, a + rn, b + rn, -0.5, hw, u)
-            u += g.wall(mat, b - rn, a - rn, -0.5, hw, u)
-            g.poly("concrete_deck", [(*(a + rn), hw), (*(b + rn), hw), (*(b - rn), hw), (*(a - rn), hw)])
+            # round 17c PC check: the coping stood 0.3 m over the gates' deck; it is the deck's edge, flush with it
+            hw = max(h, PLAZA_Z - 0.01 - g.lift) if verge else h
+            if has_wall:
+                g.wall(mat, a + rn, b + rn, -0.5, hw, u)
+                u += g.wall(mat, b - rn, a - rn, -0.5, hw, u)
+                g.poly("concrete_deck", [(*(a + rn), hw), (*(b + rn), hw), (*(b - rn), hw), (*(a - rn), hw)])
             if verge:
                 # the verge: grass from the wall's foot to a low concrete kerb at the carriageway's edge
                 ka, kb = a + rn * (verge / 0.15), b + rn * (verge / 0.15)
@@ -1996,16 +2075,10 @@ def street_wall(g, W, h=3.4):
                 g.poly("concrete_deck", up([lz(ka, 0.32), lz(ka + ko, 0.32), lz(kb + ko, 0.32), lz(kb, 0.32)]))
                 # the kerb's face to the road (on the right of a -> b, like g.wall)
                 g.poly("concrete_deck", [lz(ka + ko, -0.1), lz(kb + ko, -0.1), lz(kb + ko, 0.32), lz(ka + ko, 0.32)])
-        if verge:
-            street_banners(g, line, PLAZA_Z)
-        if wid == "580628688":
-            # ivy over the painted wall's first 9 m at the NAB end, on its road face (Google Earth c_e)
-            a, b = line[0], line[1]
-            g.lift = float(land.z(*a))
-            t = (b - a) / np.linalg.norm(b - a)
-            nrm = np.array([t[1], -t[0]])          # east, to the road
-            a2, b2 = a + nrm * 0.06, a + t * 9.0 + nrm * 0.06
-            g.wall("ivy", b2, a2, -0.5, h - 0.2) if np.dot(nrm, [1, 0]) > 0 else g.wall("ivy", a2, b2, -0.5, h - 0.2)
+        if verge and len(walled) > 1:
+            street_banners(g, walled, PLAZA_Z)
+        # round 17c: the ivy round 13 put on this stretch's first 9 m stood on the wall that is no longer there (the
+        # aerial shows verge and paving at that end); it is left out until a photo shows where it grows
 
 
 
@@ -2720,11 +2793,27 @@ def _out(q, ctr):
     return q if float(np.dot(n, m)) >= 0.0 else q[::-1]
 
 
+def _pine_pad(g, base, d, sd, L, w, up_, dn, zt, soft):
+    """One pad of Norfolk pine foliage: a wedge from `base` out `L` along `d`, a ridge `up_` over the branch over two
+    lower edges `w` either side and `dn` under it, its full section 0.4 along, a blunt end turning up at the tip."""
+    p0, p1, p2 = base, base + d * L * 0.4, base + d * L
+    zr1, zr2 = zt + up_, zt + 0.1 * L + up_ * 0.4
+    ze1, ze2 = zt - dn, zt + 0.1 * L - dn * 0.5
+    ridge = [(*p0, zt + 0.05), (*p1, zr1), (*p2, zr2)]
+    left = [(*p0, zt - 0.05), (*(p1 - sd * w), ze1), (*(p2 - sd * w * 0.45), ze2)]
+    right = [(*p0, zt - 0.05), (*(p1 + sd * w), ze1), (*(p2 + sd * w * 0.45), ze2)]
+    ctr = (*(base + d * L * 0.5), zt - dn * 0.3)
+    for e1, e2 in ((ridge, left), (right, ridge), (left, right)):
+        g.poly("pine_leaf", _out([e1[0], e2[1], e1[1]], ctr), soft=soft)
+        g.poly("pine_leaf", _out([e1[1], e2[1], e2[2], e1[2]], ctr), soft=soft)
+    g.poly("pine_leaf", _out([ridge[2], left[2], right[2]], ctr), soft=soft)
+
+
 def norfolk_pine(g, c, z, h, rng):
     """A Norfolk Island pine on Harbour Esplanade, from the Harbour Esplanade photos (Wikimedia Commons "Harbour
     Esplanade, Docklands.jpg" and "2061 at Central Pier, Harbour Esp.jpg", reference only). Round 17c (PC check of
     17b: "thin, separate cones with gaps", where the photos show full, broad, dense crowns that close up along the
-    footpath): a straight trunk bare for its lowest fifth, then whorls of eight or nine branches about 0.075 of the
+    footpath): a straight trunk bare for its lowest fifth, then whorls of eight branches about 0.075 of the
     height apart. Each branch carries a thick pad of foliage (a solid wedge, hanging more below the branch than it
     stands above it, as the photos' layered pads do), so the tiers read as stacked dense layers with only slits of
     sky between them; the crown is about 0.55 of the height across at its foot and narrows to a short leader."""
@@ -2734,14 +2823,16 @@ def norfolk_pine(g, c, z, h, rng):
     gap = h * rng.uniform(0.07, 0.08)
     nt = max(4, int((z + h - 1.0 - z0) / gap) + 1)
     R = h * rng.uniform(0.26, 0.3)
-    soft = (c[0], c[1], z0 + (z + h - z0) * 0.4)
     a0 = rng.uniform(0, 2 * math.pi)
     for k in range(nt):
         zt = z0 + gap * k
         f = 1.0 - (zt - z0) / max(z + h - z0, 1e-3)
         rt = 0.45 + (R - 0.45) * f ** 0.7
-        nb = 9 if k % 2 == 0 else 8
+        nb = 8
         a0 += math.pi / nb + rng.uniform(-0.2, 0.2)      # each tier turned from the one under it
+        # round 17c PC check (pale sage upper tiers over dark lower ones): each tier shades from the trunk at its
+        # own height, so every tier takes the light alike, as the photos' crowns do
+        soft = (c[0], c[1], zt - 0.3)
         for j in range(nb):
             a = a0 + 2 * math.pi * j / nb + rng.uniform(-0.12, 0.12)
             d = np.array([math.cos(a), math.sin(a)])
@@ -2751,17 +2842,16 @@ def norfolk_pine(g, c, z, h, rng):
             up_, dn = max(0.1, 0.04 * L), max(0.25, 0.11 * L)   # its depth over and under the branch
             # the pad: a wedge, a ridge along the branch over two lower edges either side, from a point at the trunk
             # through its full section 0.4 along to a blunt end at the tip turning up a little
-            p0, p1, p2 = c + d * 0.1, c + d * L * 0.4, c + d * L
-            zr1, zr2 = zt + up_, zt + 0.1 * L + up_ * 0.4
-            ze1, ze2 = zt - dn, zt + 0.1 * L - dn * 0.5
-            ridge = [(*p0, zt + 0.05), (*p1, zr1), (*p2, zr2)]
-            left = [(*p0, zt - 0.05), (*(p1 - sd * w), ze1), (*(p2 - sd * w * 0.45), ze2)]
-            right = [(*p0, zt - 0.05), (*(p1 + sd * w), ze1), (*(p2 + sd * w * 0.45), ze2)]
-            ctr = (*(c + d * L * 0.5), zt - dn * 0.3)
-            for e1, e2 in ((ridge, left), (right, ridge), (left, right)):
-                g.poly("pine_leaf", _out([e1[0], e2[1], e1[1]], ctr), soft=soft)
-                g.poly("pine_leaf", _out([e1[1], e2[1], e2[2], e1[2]], ctr), soft=soft)
-            g.poly("pine_leaf", _out([ridge[2], left[2], right[2]], ctr), soft=soft)
+            _pine_pad(g, c + d * 0.1, d, sd, L, w, up_, dn, zt, soft)
+            # round 17c PC check ("each tier a flat cut-out pad"): the lower tiers carry a side spray
+            # off each branch (the crown's lower half), turned 30 degrees out, so a tier's edge breaks up into tufts as in the photos
+            if f > 0.5:
+                for sgn in (-1.0, 1.0):
+                    an = a + sgn * math.radians(30.0 + rng.uniform(-8, 8))
+                    d2 = np.array([math.cos(an), math.sin(an)])
+                    L2 = L * rng.uniform(0.38, 0.48)
+                    _pine_pad(g, c + d * L * 0.45, d2, np.array([-d2[1], d2[0]]), L2, w * 0.55, up_ * 0.7, dn * 0.7,
+                              zt + 0.04 * L - 0.1, soft)
     # the leader over the last tier
     zl = z0 + gap * (nt - 1)
     for dd in ((0.25, 0.0), (0.0, 0.25)):

@@ -242,9 +242,9 @@ func apply(p_weather: String, p_slot: String) -> void:
 		mat.set_shader_parameter("grass_b", g[1] * _tint)
 		mat.set_shader_parameter("hot", 0.4)
 	if indoor:
-		# Under the shut roof's even light the cut shows faintly (the 2019 roof-shut photo; PC check of round
-		# 17b: the day's full stripes read as wide dark bands from the wing).
-		mat.set_shader_parameter("grass_b", (g[0] as Color).lerp(g[1], 0.4) * _tint)
+		# Under the shut roof's even light the cut shows faintly (the 2019 roof-shut photo; PC checks of rounds
+		# 17b and 17c: the day's full stripes, then a fifth of them, read as wide dark bands from the wing).
+		mat.set_shader_parameter("grass_b", (g[0] as Color).lerp(g[1], 0.2) * _tint)
 		mat.set_shader_parameter("stripe_amount", INDOOR_STRIPES)
 	_copy_look()
 
@@ -516,13 +516,16 @@ const INDOOR_AMBIENT_ENERGY := 0.65
 const INDOOR_SHADE := [0.8, 0.6, 0.3, 0.05, 0.0]
 ## The same for the roof itself (GroundModels.ROOF_LAYER), whose lamps hang under it: the 2019 roof-shut photo shows
 ## its underside dark charcoal and its trusses only a dim grey over the lit bowl, whichever way a face turns.
-const INDOOR_ROOF_SHADE := [0.82, 0.8, 0.78, 0.7, 0.6]
+const INDOOR_ROOF_SHADE := [0.7, 0.75, 0.8, 0.75, 0.7]
+## The share of the roof's colour taken toward grey under it shut: the photo's underside is a warm grey (median sRGB
+## 78, 72, 58), where the olive soffit under the lamps' warm light went brown (PC check of 17c: 39, 27, 6).
+const INDOOR_ROOF_GREY := 0.6
 const INDOOR_LIGHT := Color(1.0, 0.97, 0.92)
 const INDOOR_LIGHT_ENERGY := 0.7
 ## The roof's lamps on the far side, which light the near stands' seats from the front (no shadow).
 const INDOOR_FILL_ENERGY := 0.45
 ## How much the mown stripes show under the shut roof (stripe_amount; 0.16-0.24 outdoors).
-const INDOOR_STRIPES := 0.08
+const INDOOR_STRIPES := 0.04
 
 
 func _indoor() -> void:
@@ -735,6 +738,7 @@ func _light_stands() -> void:
 	var e_amb := env.ambient_light_energy * env.ambient_light_sky_contribution
 	for m in _stand_mats:
 		var own_amb: Array = roof_amb if m.has_meta("roof") and not roof_amb.is_empty() else amb
+		m.set_shader_parameter("grey_out", INDOOR_ROOF_GREY if m.has_meta("roof") and not roof_amb.is_empty() else 0.0)
 		for k in AMB_KEYS.size():
 			m.set_shader_parameter(AMB_KEYS[k], own_amb[k])
 		var sky_lit := env.ambient_light_source == Environment.AMBIENT_SOURCE_SKY
