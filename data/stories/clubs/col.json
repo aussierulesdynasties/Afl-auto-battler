@@ -79,7 +79,7 @@
 		"text": ["The biggest supporter base in the game is restless for a premiership. The board wants to know if you're building for a flag or treading water."],
 		"choices": [
 			{"key": "now", "label": "Promise a crack at it now",
-			 "effects": [{"op": "board", "d": 5}, {"op": "culture", "strand": "ambition", "d": 1, "why": "You promised a crack at the flag"}, {"op": "loss_sting", "chance": 30, "d": -5, "who": "side"}],
+			 "effects": [{"op": "board", "d": 5}, {"op": "culture", "strand": "ambition", "d": 1, "why": "You promised a crack at the flag"}, {"op": "loss_sting", "chance": 30, "d": -5, "who": "side"}, {"op": "promise", "kind": "finals"}],
 			 "result": "The board loves it. Every loss now gets measured against your promise."},
 			{"key": "time", "label": "Ask for time to rebuild",
 			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "The club is building something together"}, {"op": "board", "d": -6, "was": "members"}, {"op": "odds", "chance": 33, "hit": [{"op": "morale", "d": -3, "who": "all"}], "hit_result": "A senior player asks where he fits in a rebuild."}],

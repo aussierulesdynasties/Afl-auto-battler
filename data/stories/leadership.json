@@ -57,7 +57,10 @@
 			"kind": "player",
 			"where": {
 				"fit": true,
-				"games_min": 150
+				"games_min": 150,
+				"temperament_any": [
+					"leader"
+				]
 			},
 			"pick": "random"
 		},
@@ -91,9 +94,14 @@
 						"who": "subject",
 						"chance": 10,
 						"on": "week"
+					},
+					{
+						"op": "bond",
+						"kind": "protege",
+						"s": 1
 					}
 				],
-				"result": "{name} takes the young players on Wednesday. It's on top of his own week."
+				"result": "{name} takes the young players on Wednesday, and {first_b} sticks by him all session. It's on top of his own week."
 			},
 			{
 				"key": "no",
@@ -112,19 +120,31 @@
 				],
 				"result": "The coaches keep the session."
 			}
-		]
+		],
+		"actor_b": {
+			"role": "teammate",
+			"where": {
+				"fit": true,
+				"age_max": 21
+			},
+			"pick": "highest:potential"
+		}
 	},
 	{
 		"id": "leadership_late_to_meeting",
 		"category": "leadership",
 		"subject": {
-			"kind": "club"
+			"kind": "player",
+			"where": {
+				"fit": true
+			},
+			"pick": "random"
 		},
 		"title": [
-			"Two players were late to the team meeting"
+			"{name} and {player_b} were late to the team meeting"
 		],
 		"text": [
-			"Not the first time this year. The group's waiting to see what you do."
+			"Not the first time this year for the two mates. The group's waiting to see what you do."
 		],
 		"choices": [
 			{
@@ -144,7 +164,7 @@
 						"why": "Two players were made an example of in front of the group"
 					}
 				],
-				"result": "The pair train on their own on Sunday."
+				"result": "{first} and {first_b} train on their own on Sunday."
 			},
 			{
 				"key": "quiet",
@@ -165,60 +185,13 @@
 				],
 				"result": "A quiet word, and it's done."
 			}
-		]
-	},
-	{
-		"id": "leadership_players_meeting",
-		"topical": true,
-		"cooldown": 60,
-		"category": "leadership",
-		"subject": {
-			"kind": "club"
-		},
-		"title": [
-			"The players have called their own meeting"
 		],
-		"text": [
-			"After the losing run, the senior players want the room to themselves."
-		],
-		"choices": [
-			{
-				"key": "room",
-				"label": "Give them the room",
-				"effects": [
-					{
-						"op": "morale",
-						"d": 5,
-						"who": "all"
-					},
-					{
-						"op": "forgo_xp",
-						"d": 3,
-						"who": "all"
-					}
-				],
-				"result": "The players meet alone. They come out talking."
-			},
-			{
-				"key": "stay",
-				"label": "The coaches stay in",
-				"effects": [
-					{
-						"op": "morale",
-						"d": -3,
-						"who": "all"
-					},
-					{
-						"op": "xp",
-						"d": 3,
-						"who": "all"
-					}
-				],
-				"result": "The coaches stay. The meeting is short."
+		"private": true,
+		"actor_b": {
+			"role": "close_mate",
+			"where": {
+				"fit": true
 			}
-		],
-		"when": {
-			"losing_run_min": 3
 		}
 	},
 	{
@@ -229,7 +202,11 @@
 			"where": {
 				"fit": true,
 				"age_max": 23,
-				"games_min": 30
+				"games_min": 30,
+				"temperament_any": [
+					"fiery",
+					"leader"
+				]
 			},
 			"pick": "random"
 		},
@@ -251,7 +228,8 @@
 					},
 					{
 						"op": "morale",
-						"d": 4
+						"d": 4,
+						"temper": "praised"
 					},
 					{
 						"op": "morale",
@@ -272,7 +250,8 @@
 					},
 					{
 						"op": "morale",
-						"d": -4
+						"d": -4,
+						"temper": "discipline"
 					},
 					{
 						"op": "culture",
@@ -591,6 +570,12 @@
 						"op": "trust",
 						"d": 3,
 						"why": "You backed the young player he put forward"
+					},
+					{
+						"op": "bond",
+						"kind": "protege",
+						"s": 1,
+						"with": "kid"
 					}
 				],
 				"result": ""
@@ -1326,6 +1311,11 @@
 						"op": "trust",
 						"d": -2,
 						"why": "You told the group his deal was done before it was"
+					},
+					{
+						"op": "promise",
+						"kind": "deal",
+						"weeks": 0
 					}
 				],
 				"result": "The group takes you at your word."
@@ -2085,6 +2075,515 @@
 					}
 				],
 				"result": "You tell them to be proud of the year. Summer can start."
+			}
+		]
+	},
+	{
+		"id": "faction_fringe_demand",
+		"category": "leadership",
+		"tier": "urgent",
+		"trigger": {
+			"event": "faction_demand",
+			"within": 2
+		},
+		"subject": {
+			"kind": "player",
+			"where": {
+				"faction": "fringe",
+				"faction_leader": true,
+				"faction_state": "demanding"
+			}
+		},
+		"advisors": [
+			{
+				"seat": "development",
+				"required": false
+			}
+		],
+		"cooldown": 6,
+		"subject_cooldown": 0,
+		"title": [
+			"The fringe players want a fair go"
+		],
+		"text": [
+			"{name} has spoken up for the {faction_size} players stuck out of the side. They want one of them picked next week. It has reached {advisor_name} as well."
+		],
+		"choices": [
+			{
+				"key": "meet",
+				"label": "Pick {first} next week",
+				"effects": [
+					{
+						"op": "faction",
+						"do": "meet"
+					},
+					{
+						"op": "expects_game",
+						"sting": 12
+					}
+				],
+				"result": "{first} is in the side. The group backs off."
+			},
+			{
+				"key": "refuse",
+				"label": "Selection stays as it is",
+				"effects": [
+					{
+						"op": "faction",
+						"do": "refuse"
+					}
+				],
+				"result": "The side stays as picked. The fringe players are not happy."
+			}
+		]
+	},
+	{
+		"id": "faction_fringe_ultimatum",
+		"category": "leadership",
+		"tier": "urgent",
+		"trigger": {
+			"event": "faction_ultimatum",
+			"within": 2
+		},
+		"subject": {
+			"kind": "player",
+			"where": {
+				"faction": "fringe",
+				"faction_leader": true,
+				"faction_state": "ultimatum"
+			}
+		},
+		"advisors": [
+			{
+				"seat": "development",
+				"required": false
+			}
+		],
+		"cooldown": 6,
+		"subject_cooldown": 0,
+		"title": [
+			"The fringe players have had enough"
+		],
+		"text": [
+			"{name} and the {faction_size} players out of the side say this is their last word: a fair go, or they start looking elsewhere."
+		],
+		"choices": [
+			{
+				"key": "meet",
+				"label": "Pick {first} and hear them out",
+				"effects": [
+					{
+						"op": "faction",
+						"do": "meet"
+					},
+					{
+						"op": "expects_game",
+						"sting": 12
+					}
+				],
+				"result": "{first} is in the side. The group lets it go, for now."
+			},
+			{
+				"key": "split",
+				"label": "Tell {first} he can look elsewhere",
+				"effects": [
+					{
+						"op": "faction",
+						"do": "split"
+					}
+				],
+				"result": "{first} knows where he stands. The group breaks up."
+			}
+		]
+	},
+	{
+		"id": "faction_word_demand",
+		"category": "leadership",
+		"tier": "urgent",
+		"trigger": {
+			"event": "faction_demand",
+			"within": 2
+		},
+		"subject": {
+			"kind": "player",
+			"where": {
+				"faction": "broken_word",
+				"faction_leader": true,
+				"faction_state": "demanding"
+			}
+		},
+		"advisors": [
+			{
+				"seat": "senior_assistant",
+				"required": false
+			}
+		],
+		"cooldown": 6,
+		"subject_cooldown": 0,
+		"title": [
+			"Some of the group say your word means nothing"
+		],
+		"text": [
+			"{name} speaks for {faction_size} players who watched you break a promise. They want you to front them and own it. {advisor_name} has heard the same in the rooms."
+		],
+		"choices": [
+			{
+				"key": "meet",
+				"label": "Front the group and own it",
+				"effects": [
+					{
+						"op": "faction",
+						"do": "meet"
+					}
+				],
+				"result": "You fronted them. It was uncomfortable, and it cleared the air."
+			},
+			{
+				"key": "refuse",
+				"label": "Tell them it's done",
+				"effects": [
+					{
+						"op": "faction",
+						"do": "refuse"
+					}
+				],
+				"result": "You told them it's done. Not everyone agrees."
+			}
+		]
+	},
+	{
+		"id": "faction_word_ultimatum",
+		"category": "leadership",
+		"tier": "urgent",
+		"trigger": {
+			"event": "faction_ultimatum",
+			"within": 2
+		},
+		"subject": {
+			"kind": "player",
+			"where": {
+				"faction": "broken_word",
+				"faction_leader": true,
+				"faction_state": "ultimatum"
+			}
+		},
+		"advisors": [
+			{
+				"seat": "senior_assistant",
+				"required": false
+			}
+		],
+		"cooldown": 6,
+		"subject_cooldown": 0,
+		"title": [
+			"The group that stopped believing you wants it settled"
+		],
+		"text": [
+			"{name} says the {faction_size} of them are done waiting. Own it, or he wants out."
+		],
+		"choices": [
+			{
+				"key": "meet",
+				"label": "Sit down with them and own it",
+				"effects": [
+					{
+						"op": "faction",
+						"do": "meet"
+					}
+				],
+				"result": "You owned it. Late, but they heard it."
+			},
+			{
+				"key": "split",
+				"label": "Tell {first} he can look elsewhere",
+				"effects": [
+					{
+						"op": "faction",
+						"do": "split"
+					}
+				],
+				"result": "{first} will ask to go. The group breaks up."
+			}
+		]
+	},
+	{
+		"id": "faction_senior_demand",
+		"category": "leadership",
+		"tier": "urgent",
+		"trigger": {
+			"event": "faction_demand",
+			"within": 2
+		},
+		"subject": {
+			"kind": "player",
+			"where": {
+				"faction": "senior",
+				"faction_leader": true,
+				"faction_state": "demanding"
+			}
+		},
+		"advisors": [
+			{
+				"seat": "line_coach",
+				"required": false
+			}
+		],
+		"cooldown": 6,
+		"subject_cooldown": 0,
+		"title": [
+			"The senior players want a say"
+		],
+		"text": [
+			"{name} and {faction_size} senior players want a say in how the side is picked and how it plays. {advisor_name} has been hearing it at training."
+		],
+		"choices": [
+			{
+				"key": "meet",
+				"label": "Give the senior players a say",
+				"effects": [
+					{
+						"op": "faction",
+						"do": "meet"
+					}
+				],
+				"result": "The senior players are in the conversation from this week."
+			},
+			{
+				"key": "refuse",
+				"label": "The coaches run the footy",
+				"effects": [
+					{
+						"op": "faction",
+						"do": "refuse"
+					}
+				],
+				"result": "The coaches keep the footy. The senior group goes quiet, and not in a good way."
+			}
+		]
+	},
+	{
+		"id": "faction_senior_ultimatum",
+		"category": "leadership",
+		"tier": "urgent",
+		"trigger": {
+			"event": "faction_ultimatum",
+			"within": 2
+		},
+		"subject": {
+			"kind": "player",
+			"where": {
+				"faction": "senior",
+				"faction_leader": true,
+				"faction_state": "ultimatum"
+			}
+		},
+		"advisors": [
+			{
+				"seat": "line_coach",
+				"required": false
+			}
+		],
+		"cooldown": 6,
+		"subject_cooldown": 0,
+		"title": [
+			"The senior players have given you their last word"
+		],
+		"text": [
+			"{name} says the {faction_size} senior players have lost patience. A real say, or he wants to finish his career somewhere else."
+		],
+		"choices": [
+			{
+				"key": "meet",
+				"label": "Give them a real say",
+				"effects": [
+					{
+						"op": "faction",
+						"do": "meet"
+					}
+				],
+				"result": "The senior players get their say. The tension goes out of the rooms."
+			},
+			{
+				"key": "split",
+				"label": "Tell {first} he can look elsewhere",
+				"effects": [
+					{
+						"op": "faction",
+						"do": "split"
+					}
+				],
+				"result": "{first} will ask to go. The senior group breaks up."
+			}
+		]
+	},
+	{
+		"id": "staff_restless_leak",
+		"category": "leadership",
+		"subject": {
+			"kind": "club"
+		},
+		"when": {
+			"restless_staff": 1
+		},
+		"advisors": [
+			{
+				"seat": "restless"
+			}
+		],
+		"cooldown": 10,
+		"title": [
+			"Our side was in the paper before we named it"
+		],
+		"text": [
+			"The team got out a day early, and everyone in the rooms says it came from {restless_name}, the {restless_role}. {restless_name} has not been happy with you for a while."
+		],
+		"choices": [
+			{
+				"key": "line",
+				"label": "Pull {restless_name} into line",
+				"effects": [
+					{
+						"op": "council",
+						"do": "called_out"
+					},
+					{
+						"op": "standing",
+						"a": 2,
+						"why": "You pulled {restless_name} into line over a leak"
+					},
+					{
+						"op": "board",
+						"d": 2
+					}
+				],
+				"result": "You have it out behind closed doors. Nothing else gets out, but {restless_name} is sore about it."
+			},
+			{
+				"key": "back",
+				"label": "Win {restless_name} back over",
+				"effects": [
+					{
+						"op": "council",
+						"do": "won_back"
+					},
+					{
+						"op": "standing",
+						"a": -1,
+						"why": "You let a leak go to keep {restless_name} onside"
+					}
+				],
+				"result": "A coffee, a long talk, and {restless_name} feels heard. A few people in the rooms think you went soft."
+			}
+		]
+	},
+	{
+		"id": "staff_restless_board",
+		"category": "leadership",
+		"subject": {
+			"kind": "club"
+		},
+		"when": {
+			"restless_staff": 1
+		},
+		"advisors": [
+			{
+				"seat": "restless"
+			}
+		],
+		"cooldown": 10,
+		"title": [
+			"{restless_name} has been in the board's ear"
+		],
+		"text": [
+			"Word is {restless_name}, the {restless_role}, has been telling a board member how {restless_name} would run the footy department."
+		],
+		"choices": [
+			{
+				"key": "first",
+				"label": "Get to the board first",
+				"effects": [
+					{
+						"op": "board",
+						"d": 3
+					},
+					{
+						"op": "council",
+						"do": "called_out"
+					}
+				],
+				"result": "You put your side to the board before the whispers do. {restless_name} knows you know."
+			},
+			{
+				"key": "back",
+				"label": "Win {restless_name} back over",
+				"effects": [
+					{
+						"op": "council",
+						"do": "won_back"
+					},
+					{
+						"op": "board",
+						"d": -2
+					}
+				],
+				"result": "You bring {restless_name} into the tent. The board has heard the grumbles, and it remembers them."
+			}
+		]
+	},
+	{
+		"id": "staff_restless_backs_group",
+		"category": "leadership",
+		"subject": {
+			"kind": "club"
+		},
+		"when": {
+			"restless_staff": 1,
+			"restless_backing": 1
+		},
+		"advisors": [
+			{
+				"seat": "restless"
+			}
+		],
+		"cooldown": 8,
+		"title": [
+			"{restless_name} is standing with the players"
+		],
+		"text": [
+			"{restless_name}, the {restless_role}, has been backing {restless_group} in front of the group. Every week {restless_name} sides with them, they push harder."
+		],
+		"choices": [
+			{
+				"key": "line",
+				"label": "Pull {restless_name} into line",
+				"effects": [
+					{
+						"op": "council",
+						"do": "called_out"
+					},
+					{
+						"op": "standing",
+						"a": 2,
+						"why": "You pulled {restless_name} into line in front of the players"
+					}
+				],
+				"result": "You make it plain where the line is. {restless_name} goes quiet in the meetings, and quieter with you."
+			},
+			{
+				"key": "back",
+				"label": "Win {restless_name} back over",
+				"effects": [
+					{
+						"op": "council",
+						"do": "won_back"
+					},
+					{
+						"op": "standing",
+						"r": -1,
+						"why": "You gave ground to keep {restless_name} onside"
+					}
+				],
+				"result": "You give {restless_name} more say. The players notice who moved."
 			}
 		]
 	}

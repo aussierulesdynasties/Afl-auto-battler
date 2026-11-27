@@ -39,6 +39,12 @@ The director ("Baggins", GitHub `gabebartolo-spec`) designs; Claude builds. Proj
 10. Be fast. Baggins dislikes slow, over-thorough document work ("its just a document not the bible").
 11. Every club gets every buff/cost; options are equal (CLAUDE.md). Numbers are first guesses; balance is the
     director's call after their own playtest - never declare balance settled.
+12. **Fix CI the moment it fails, without being asked** (2026-11-27: "fix it the very second it fails. ill be
+    furious if i have to ask again"). After every push, subscribe to the PR's activity and also schedule a
+    check-in about every 15 minutes, because events can be missed. Watch the checks until the PR merges.
+13. **Before you push, check main and the other open PRs for overlapping changes** (2026-11-27). Seeded-season
+    checksums (`tests/fixtures/awards_round4_snapshot.txt`, `GOLDEN_SEASON` in `tests/test_dataset.gd`) clash
+    with any PR that changes the season: merge main in the moment anything lands, re-record, then push.
 
 Also read the repo's `CLAUDE.md` (PR cap of 3 ready PRs, push once not in drips, check for conflicts
 with `git merge-tree` before asking to merge, never rebase/force-push shared branches, never close a PR yourself).
@@ -265,7 +271,77 @@ weekly busywork. Load the `afl-ui-writing` skill first; mobile portrait first; B
 
 ---
 
-## 4. Live PR / merge state (checked 2026-11-27 ~06:35 UTC)
+## 4. Merge session status (updated 2026-11-27 ~07:30 UTC, supersedes the table below)
+
+**Merged:** #2231 card engine (06:29Z). Everything else (Card Pass 1, integration, Council, Factions, Ambitions)
+is on ONE combined branch, `claude/project-thread-ucazbs`, opened as one PR to main (see the PR list; title starts
+"Relationship overhaul: Card Pass 1, integration, Council, Factions and Ambitions"). Card Pass 1 has no other PR:
+it was applied from the saved patch, not the old commit.
+
+### What is in the combined PR (branch `claude/project-thread-ucazbs`)
+
+One branch on top of main holds everything else, because the stacked draft branches were made
+before main's history was rewritten for the repo-size clean-up and no longer merge cleanly:
+
+1. **Card Pass 1** (`9f886c54`, applied from the saved patch `card-pass-1/0001-...patch`): retires five
+   cards, card promises (senior game, new deal, a future here, finals, wins) settled by
+   `Promises.check_open` / `Promises.card_season_end`, bond cards with `actor_b`, the 14 club homesick
+   cards folded into one `family_homesick` with `club_variants`.
+2. **Phase 1 integration** (from draft PR #2229, branch `claude/project-thread-ep2z5b`): temperaments size
+   opinion marks, bond fallout on drop/back/trade/delist at the acting club, live Respect/Authority in the
+   drop preview, a broken promise builds no Authority (director 2026-11-26), about 4-5 leaders a club.
+3. **The Council** (from draft PR #2204, branch `claude/project-thread-tagzda`): `scripts/sim/Council.gd`, eight
+   seats at all 18 clubs, agendas (`data/relations/agendas.json`), loyalty at relations `s:<id>`, signed
+   pitches, walk-outs at loyalty 25 or less at season end. Includes the Staff screen redesign.
+4. **Factions** (from draft PR #2203, branch `claude/project-thread-k6d7jr`): `scripts/sim/Factions.gd`,
+   `data/relations/factions.json`, kinds fringe / broken_word / senior, `faction_*` cards in leadership.json.
+5. **Ambitions and Council-faction wiring** (from draft PR #2223, branch `claude/project-thread-9czkkr`):
+   `scripts/sim/Ambitions.gd` on `p["ambition"]`, two-advisor clashes on `card["clash"]`, restless coaches,
+   `Factions.council_sway` calls `Council.faction_sway`.
+
+How it was built: main, then the patch, then `git cherry-pick` of only each branch's own commits
+(3ab72aa8, 47839653; 436d6a70, 3887bf44, 262cbbb3; 59ad34f4, ebd1c8a9; 093a4d5c). Conflicts resolved:
+`Promises.gd` KEPT/BROKEN tables (Card Pass kinds kept, run/game/dev_games break for 0 Authority),
+`GameState.gd` (bonds, council and factions state all kept; `_opinion_after_round` passes
+`Factions.morale_shift` and then calls `Council.after_round`), `modifiers.json` (every mark kept once).
+The resulting Council/Factions/Ambitions code is identical to branch 9czkkr.
+
+Once the combined PR merges, draft PRs #2229, #2204, #2203 and #2223 are superseded and can be closed
+(agents do not close PRs: tell the owner).
+
+### Tests fixed on the combined branch
+
+The draft branches skipped the game tests in CI, so these had never run with the overhaul in. Failing on
+9czkkr alone too, so not caused by the combining:
+
+- `tests/test_story.gd`: faction cards read a group's facts (`{faction_size}`), so the generic card-wording
+  tests skip them (`_faction_card`; tests/test_factions.gd covers them). Hints skip a card whose second
+  player nobody fits. The size test accepts bond lines and "opinion of you falls N". The expects-game size
+  is scaled by the player's temperament (`facts.broken_scale`), as `StoryEngine._broken_words` does.
+- `tests/test_club.gd`: a man out this week may drift one step (his opinion, a faction), which is not a
+  sting; the no-room promise check reads the permanent part (`Trust.base`), not fading marks.
+- `scripts/sim/Promises.gd` `_card_of`: reads the open card promises without creating the list, so
+  `preview_drop` stays read-only (tests/test_promises.gd).
+
+Still to confirm on CI: the full `story` suite (over 20 minutes locally on 4 cores, it timed out there) and
+`_test_trust_in_play` (it fails when run alone even on main, so it needs the full suite to judge).
+
+### Match engine
+
+No MatchSim or match file changes in the diff (`git diff --stat origin/main -- scripts/sim/MatchSim*.gd`
+is empty). Run `tools/balance.sh match 1000 --a-root <main checkout> --b ""` and paste the table in the PR
+before merging, per CLAUDE.md.
+
+### Next steps (merge session)
+
+1. Get the combined PR green (read failed shard logs; fix; push once). Merge it (squash).
+2. Tell the owner #2229, #2204, #2203, #2223 can be closed.
+3. Not built yet: temperament levers "respect"/"authority" are still unread (Phase 2 follow-up). Captain
+   succession and `star_wants_out` scars need a trust op or a scar in Captaincy.gd.
+4. Visuals awaiting the owner's look are in the project files (council/, factions/, ambitions/,
+   relations-ui/, relations-wiring/ captures).
+
+## 4b. Live PR / merge state as it was at ~06:35 UTC (before the merge session)
 
 History: on 2026-11-26 15:04Z Baggins (or their CI session) drafted every open PR; at ~22:06Z main's history was
 rewritten (CI/asset cleanup moving review imagery and ground models to private repos) and the open overhaul PRs
@@ -316,8 +392,9 @@ paired `tools/balance.sh match 1000 --a-root <main checkout> --b ""`, paste the 
 
 ## 6. Next steps for the new account
 
-1. Check what the merge session landed (`git log origin/main --oneline -30`, open PR list). Finish the merge order in section 4.
-2. Open Card Pass 1 as its own PR (cherry-pick `85e7a8429`), test, balance, merge.
+1. Check what the merge session landed (`git log origin/main --oneline -30`, open PR list). If the combined PR from
+   `claude/project-thread-ucazbs` is not merged, finish it (section 4, "Next steps (merge session)").
+2. Card Pass 1 is in that combined PR (no separate PR needed).
 3. Get Baggins' verdict on the Staff screen redesign (one decision card, screenshots attached, recommendation first),
    unless it has already been given.
 4. Phase 4 (card overhaul) in narrow parallel sessions per pass (section 3), then Phase 5 Club Politics screen.

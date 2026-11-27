@@ -97,7 +97,9 @@ COLOUR_CUES = {
         ["weeks > 0", "Out for N weeks", 1],
         ["Traits.is_bad(str(t))", "the weakness mark", 1],
         ["return UiKit.GOOD", "the rating's number", 1],
-        ["return UiKit.BAD", "the rating's number", 1]],
+        ["return UiKit.BAD", "the rating's number", 1],
+        ["ink = UiKit.GOOD", "the ambition's status says He got it in words", 1],
+        ["ink = UiKit.BAD", "the ambition's status says It has gone sour in words", 1]],
     "SeasonReviewScene.gd": [
         ["mine_won", "the result in words", 1],
         ["\"met\"", "met / missed", 1],

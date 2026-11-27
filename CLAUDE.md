@@ -1,5 +1,34 @@
 # AFL Auto-Battler: working rules
 
+## How every Claude session works here (director, 26-27 Nov 2026)
+
+These are Baggins's (the director's, GitHub `gabebartolo-spec`) standing rules for every Claude session on
+any account. They win over anything older in this file, the Director Bible or a skill. Don't ask about them again.
+
+1. **Merge every PR without asking.** "stop asking me dumb questions merge everything right away" (26 Nov);
+   "merge every SINGLE PR" (27 Nov). Green and conflict-free: squash-merge it or turn on squash auto-merge.
+   Don't park a PR for a design or balance call; resolve it sensibly and merge. No balance re-runs unless
+   Baggins asks for one. No PR cap and no batching: the cap is removed (27 Nov).
+2. **A red PR is fixed at once, by you.** "i dont want to hear if it breaks, i want you to fix it the second
+   it breaks" (27 Nov). Read the failing log and push the fix, even on a PR another session drives (merge
+   their pushes in, never force-push). Don't wait for another session or owner, and don't just report the
+   failure. Report merges. Never go idle with your PR unmerged: watch it until it lands.
+3. **Never push a commit you expect to fail.** Run the touched suites locally (`tools/run_tests.sh <suite>`)
+   before every push. When told to finish up: stabilise and merge what is open; start nothing new.
+4. **Close obsolete PRs yourself, with a comment saying why** ("fix it yourself", 27 Nov). Never hand a
+   GitHub chore to Baggins.
+5. **No claim without evidence.** Never call something fixed without before/after evidence from real runs.
+   Say plainly when something failed or is unverified.
+6. **After merging main into a branch, check the diff** (`git diff origin/main...HEAD`) for fixes the merge
+   dropped, before you push.
+7. **Find CI and GitHub problems yourself**: red checks, stuck runs, cancelled runs still holding runners.
+   Fix them without waiting to be asked. Force-cancel stuck or stale runs without asking.
+8. **Plain, short messages to Baggins.** No jargon, no engine terms, no bare PR numbers; say what each is.
+   No personal or wellbeing comments.
+9. **Nothing may depend on one Claude account.** Anything recurring lives in the repo, for example the CI
+   health check `.github/workflows/ci_health.yml`. Handoff for GitHub and CI work: docs/HANDOFF_github_ci.md.
+
+
 The design bible is read on demand (below). `docs/TODO.md` is the one list of work not done:
 read it when you pick or close work, not otherwise (a brief that names your row is enough). Director rulings are in
 `docs/DIRECTOR_BIBLE.md` (513 KB: search it, never read it whole). Must-read files stay under 60 KB (CI: `tools/check_doc_sizes.py`).
@@ -107,10 +136,7 @@ number one development blocker.
 - **Cancel with force-cancel.** A branch last synced before 26 Nov keeps running its shards
   after a plain cancel. Use `POST actions/runs/<id>/force-cancel`, or run the `Repo hygiene`
   workflow with `force_cancel: <run ids>` (MCP `actions_run_trigger`), or merge main in.
-- **Respect the open PR cap (Director Bible 7.48): at most 3 ready PRs.** Over the cap, open
-  yours as a draft (drafts skip the game tests) and mark it ready when a slot frees. Count
-  the open PRs that are not drafts (GitHub MCP `list_pull_requests`, or `gh pr list`). No bot
-  enforces it (the director removed the PR cap bot, 2026-11-26): you do.
+- **There is no open PR cap.** The director removed it (27 Nov, rule 1 above; Director Bible 7.48).
 - **Check for a conflict before you ask for a merge, never after.** Run `git fetch origin main &&
   git merge-tree --write-tree origin/main HEAD`. If it reports a conflict, merge main in and fix
   it first (never rebase or force-push, 7.48). Do not turn on auto-merge or ask for a merge on a
@@ -118,8 +144,8 @@ number one development blocker.
 - **Before you open a PR, check the open set** for one that already touches the same files or row
   (list the open PRs and read their titles and files). Add to it or wait for it rather than
   opening a rival.
-- **Say what you abandon.** A PR you are not finishing: mark it draft (it stops taking runners)
-  and tell the director it can be closed. Never close it yourself (Director Bible 7.50).
+- **Say what you abandon.** A PR you are not finishing: finish it, or close it with a comment if it is
+  obsolete (rule 4 above; replaces the old "never close it yourself", Director Bible 7.50).
 
 ## Review boards and imagery (director, 2026-11-26)
 

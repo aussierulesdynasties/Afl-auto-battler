@@ -221,6 +221,10 @@
 					{
 						"op": "board",
 						"d": -1
+					},
+					{
+						"op": "promise",
+						"kind": "stays"
 					}
 				],
 				"result": "The club starts looking for work for {first}'s partner here. The board signs off on the cost."
@@ -311,126 +315,6 @@
 		"stakes": "A lighter week means {first} misses a full week's training."
 	},
 	{
-		"id": "family_partner_graduation",
-		"category": "family",
-		"subject": {
-			"kind": "player",
-			"where": {
-				"fit": true
-			},
-			"pick": "random"
-		},
-		"title": [
-			"{name}'s partner graduates on Thursday"
-		],
-		"text": [
-			"It's right in the middle of main training."
-		],
-		"choices": [
-			{
-				"key": "go",
-				"label": "Give {first} the afternoon",
-				"effects": [
-					{
-						"op": "morale",
-						"d": 3
-					},
-					{
-						"op": "trust",
-						"d": 3,
-						"why": "You gave him the afternoon for his partner's graduation"
-					},
-					{
-						"op": "slow_start",
-						"who": "subject",
-						"chance": 15,
-						"on": "week"
-					}
-				],
-				"result": "{first} is at the graduation."
-			},
-			{
-				"key": "train",
-				"label": "Training's training",
-				"effects": [
-					{
-						"op": "morale",
-						"d": -3
-					},
-					{
-						"op": "trust",
-						"d": -2,
-						"why": "You kept him at training for his partner's graduation"
-					},
-					{
-						"op": "xp",
-						"d": 4
-					}
-				],
-				"result": "{first} trains."
-			}
-		],
-		"private": true
-	},
-	{
-		"id": "family_house_settlement",
-		"category": "family",
-		"subject": {
-			"kind": "player",
-			"where": {
-				"fit": true,
-				"age_min": 22
-			},
-			"pick": "random"
-		},
-		"title": [
-			"{name} settles on his first house on Thursday"
-		],
-		"text": [
-			"He needs the morning off to sign everything."
-		],
-		"choices": [
-			{
-				"key": "go",
-				"label": "Give {first} the morning",
-				"effects": [
-					{
-						"op": "morale",
-						"d": 3
-					},
-					{
-						"op": "trust",
-						"d": 2,
-						"why": "You gave him the morning to buy his first house"
-					},
-					{
-						"op": "slow_start",
-						"who": "subject",
-						"chance": 10,
-						"on": "week"
-					}
-				],
-				"result": "{first} gets the keys."
-			},
-			{
-				"key": "train",
-				"label": "Do it after training",
-				"effects": [
-					{
-						"op": "morale",
-						"d": -2
-					},
-					{
-						"op": "xp",
-						"d": 4
-					}
-				],
-				"result": "{first} signs after training, a bit flat about it."
-			}
-		],
-		"private": true
-	},
-	{
 		"id": "finals_family_tickets",
 		"category": "family",
 		"phase": [
@@ -484,5 +368,335 @@
 				"result": "Same four as every club. A few players are working the phones."
 			}
 		]
+	},
+	{
+		"id": "family_homesick",
+		"category": "family",
+		"private": true,
+		"cooldown": 20,
+		"subject_cooldown": 52,
+		"subject": {
+			"kind": "player",
+			"where": {
+				"fit": true,
+				"age_max": 21,
+				"games_max": 40
+			},
+			"pick": "random"
+		},
+		"actor_b": {
+			"role": "teammate",
+			"where": {
+				"fit": true,
+				"age_min": 26,
+				"games_min": 100
+			},
+			"pick": "highest:leadership",
+			"required": false,
+			"fallback": "a senior player"
+		},
+		"title": [
+			"A long way from home"
+		],
+		"text": [
+			"{name} has gone quiet. His family is a long way away, and his manager says the word \"home\" keeps coming up."
+		],
+		"choices": [
+			{
+				"key": "family",
+				"label": "Fly his family over",
+				"effects": [
+					{
+						"op": "morale",
+						"d": 8,
+						"temper": "backed"
+					},
+					{
+						"op": "trust",
+						"d": 3,
+						"why": "The club flew his family over when he was homesick"
+					},
+					{
+						"op": "board",
+						"d": -2,
+						"was": "funds"
+					}
+				],
+				"result": "His family arrives. {first} settles, and the board notes the cost."
+			},
+			{
+				"key": "home",
+				"label": "Send him home for a week",
+				"effects": [
+					{
+						"op": "morale",
+						"d": 6,
+						"temper": "backed"
+					},
+					{
+						"op": "trust",
+						"d": 4,
+						"why": "You let him go home when he needed it"
+					},
+					{
+						"op": "rest"
+					}
+				],
+				"result": "{first} flies home and misses a game."
+			},
+			{
+				"key": "housemate",
+				"label": "Move him in with {player_b}",
+				"effects": [
+					{
+						"op": "morale",
+						"d": 5
+					},
+					{
+						"op": "bond",
+						"kind": "mentor",
+						"s": 1
+					},
+					{
+						"op": "culture",
+						"strand": "together",
+						"d": 1,
+						"why": "A senior player took a homesick kid in"
+					},
+					{
+						"op": "forgo_xp",
+						"d": 3
+					}
+				],
+				"result": "{first} moves in with {player_b}. The month goes on settling in, not extra work."
+			},
+			{
+				"key": "hold",
+				"label": "Ask him to stick it out",
+				"effects": [
+					{
+						"op": "morale",
+						"d": -4
+					},
+					{
+						"op": "culture",
+						"strand": "standards",
+						"d": 1,
+						"why": "No player got special treatment"
+					},
+					{
+						"op": "odds",
+						"chance": 30,
+						"hit": [
+							{
+								"op": "trust",
+								"d": -3,
+								"why": "He was told to stick it out when he was homesick"
+							}
+						],
+						"miss": [],
+						"hit_result": "{first} has started talking about a trade home."
+					}
+				],
+				"result": "{first} plays. He isn't happy about it."
+			}
+		],
+		"club_variants": {
+			"ADE": {
+				"title": [
+					"The kid wants to go home"
+				],
+				"text": [
+					"{name} has had a rough few months a long way from his family. His manager rings: the Melbourne clubs are circling and the word \"home\" keeps coming up."
+				]
+			},
+			"BRB": {
+				"title": [
+					"Homesick"
+				],
+				"text": [
+					"{name}'s family is a two-hour flight south. He has asked for a week at home in the middle of the season."
+				],
+				"choices": {
+					"home": {
+						"label": "Send him home for the week"
+					},
+					"family": {
+						"label": "Fly his family up instead"
+					},
+					"hold": {
+						"label": "Ask him to wait until season's end"
+					}
+				}
+			},
+			"BRL": {
+				"title": [
+					"Missing home"
+				],
+				"text": [
+					"{name} came north and he's struggling. He misses his family and his mates, and the welfare staff think he could ask for a trade home at season's end."
+				],
+				"choices": {
+					"family": {
+						"label": "Fly his family up for a fortnight"
+					}
+				}
+			},
+			"CANB": {
+				"title": [
+					"A long way from his mates"
+				],
+				"text": [
+					"{name} has gone quiet. Canberra is cold, small and a long way from his mates, and his manager has started saying the words \"go home\"."
+				],
+				"choices": {
+					"family": {
+						"label": "Fly his family up for a week"
+					}
+				}
+			},
+			"FRE": {
+				"title": [
+					"The long way home"
+				],
+				"text": [
+					"{name} has been quiet all month, a long way from his family on the other side of the country. His manager says he's homesick, and the Melbourne clubs will come knocking when his contract is up."
+				],
+				"choices": {
+					"family": {
+						"label": "Fly his family over for a fortnight"
+					}
+				}
+			},
+			"GCS": {
+				"title": [
+					"A long way from home"
+				],
+				"text": [
+					"{name} has the quickest hands at the club but he's a long way from his family. His old junior coach has rung to say the kid's gone quiet."
+				]
+			},
+			"GEE": {
+				"title": [
+					"A long way from home"
+				],
+				"text": [
+					"{name} is struggling: no family nearby, few mates, and a quiet regional town. His manager says he's thinking about asking to go home."
+				],
+				"choices": {
+					"housemate": {
+						"label": "Move him in with {player_b}'s family"
+					},
+					"family": {
+						"label": "Fly his family over for a week"
+					},
+					"hold": {
+						"label": "Give him time; he'll adjust"
+					}
+				}
+			},
+			"GWS": {
+				"title": [
+					"The go-home factor"
+				],
+				"text": [
+					"{name} has gone quiet. His mates say he's homesick, and his family keep asking when he's coming back. His contract runs out next year."
+				],
+				"choices": {
+					"family": {
+						"label": "Fly his family up for a week"
+					},
+					"housemate": {
+						"label": "Pair him with {player_b} as a housemate"
+					},
+					"hold": {
+						"label": "\"He's a professional, he'll adjust.\""
+					}
+				}
+			},
+			"MEL": {
+				"title": [
+					"He wants to go home for a week"
+				],
+				"text": [
+					"{name} is homesick. There's a big family occasion back home in the middle of the season, and he wants a week off to be there. He's under contract."
+				],
+				"choices": {
+					"home": {
+						"label": "Let him go"
+					},
+					"hold": {
+						"label": "Hold him to his contract"
+					},
+					"family": {
+						"label": "Fly his family out instead"
+					}
+				}
+			},
+			"PAD": {
+				"title": [
+					"Homesick in Adelaide"
+				],
+				"text": [
+					"{name} has moved out of home for the first time and is struggling to settle. His manager says he might ask to go home when his contract is up."
+				],
+				"choices": {
+					"family": {
+						"label": "Fly his family over for a fortnight, on the club"
+					},
+					"housemate": {
+						"label": "Pair him with {player_b} and keep him busy"
+					}
+				}
+			},
+			"SYD": {
+				"title": [
+					"The go-home factor"
+				],
+				"text": [
+					"{name} is homesick. His family is on the other side of the country, the Sydney rent is brutal and his manager is hinting at a trade home."
+				],
+				"choices": {
+					"home": {
+						"label": "Give him a week at home"
+					}
+				}
+			},
+			"TAS": {
+				"title": [
+					"Homesick across the Strait"
+				],
+				"text": [
+					"{name} came over from the mainland and is struggling. He's never lived away from home, his family are a flight away and his form has dropped off."
+				],
+				"choices": {
+					"home": {
+						"label": "Fly him home for a week"
+					},
+					"hold": {
+						"label": "Keep him busy with more footy"
+					}
+				}
+			},
+			"WCE": {
+				"title": [
+					"Homesick in Perth"
+				],
+				"text": [
+					"{name}, drafted from interstate, has gone quiet. His host family says he's ringing home every night and talking about the other side of the Nullarbor."
+				],
+				"choices": {
+					"home": {
+						"label": "Send him home for a week"
+					},
+					"hold": {
+						"label": "Keep him busy here"
+					},
+					"family": {
+						"label": "Fly his family over"
+					}
+				}
+			}
+		}
 	}
 ]

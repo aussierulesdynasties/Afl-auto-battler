@@ -1,5 +1,5 @@
 {
-	"_about": "Opinion marks (relationship overhaul Phase 1, DIRECTOR_BIBLE 5.170). v: opinion points (of 100) the mark is worth when it lands; fade: points it loses each round towards 0 (0 = it stays); tag: what kind of moment it is (a temperament scales by tag); why: the reason as the profile shows it, no full stop; scar: a long-tail mark (fades half a point a round or less). Read by scripts/sim/Opinion.gd; checked by Opinion.check_defs. Sizes are proposals: balance is the director's call.",
+	"_about": "Opinion marks (relationship overhaul Phase 1, DIRECTOR_BIBLE 5.170; the Council phase adds the staff and council marks: a council member's loyalty is his opinion of his senior coach, keyed s:<id>). v: opinion points (of 100) the mark is worth when it lands; fade: points it loses each round towards 0 (0 = it stays); tag: what kind of moment it is (a temperament scales by tag); why: the reason as the profile shows it, no full stop; scar: a long-tail mark (fades half a point a round or less). Read by scripts/sim/Opinion.gd; checked by Opinion.check_defs. Sizes are proposals: balance is the director's call.",
 	"modifiers": {
 		"dropped": {"v": -4, "fade": 1, "tag": "selection", "why": "Left out while fit"},
 		"dropped_star": {"v": -8, "fade": 1, "tag": "selection", "why": "Left out while fit, as one of our best"},
@@ -13,6 +13,21 @@
 		"mate_backed": {"v": 2, "fade": 1, "tag": "bond", "why": "You backed his mate"},
 		"rival_picked": {"v": -3, "fade": 1, "tag": "bond", "why": "His rival for the spot was picked ahead of him"},
 		"rival_traded": {"v": 3, "fade": 1, "tag": "bond", "why": "His rival for the spot was traded away"},
-		"betrayal": {"v": -25, "fade": 0, "tag": "betrayal", "why": "He feels you betrayed him", "scar": true}
+		"faction_heard": {"v": 6, "fade": 0.5, "tag": "faction", "why": "You heard out the group he stands with"},
+		"faction_rebuffed": {"v": -5, "fade": 0.5, "tag": "faction", "why": "You knocked back the group he stands with"},
+		"faction_split": {"v": -8, "fade": 0.25, "tag": "faction", "why": "You broke up the group he stood with"},
+		"betrayal": {"v": -25, "fade": 0, "tag": "betrayal", "why": "He feels you betrayed him", "scar": true},
+		"coach_sacked": {"v": -5, "fade": 0.5, "tag": "staff", "why": "You let his coach go"},
+		"coach_left": {"v": -2, "fade": 0.5, "tag": "staff", "why": "His coach left the club"},
+		"advice_taken": {"v": 4, "fade": 0.5, "tag": "council", "why": "You took the advice"},
+		"advice_overruled": {"v": -4, "fade": 0.5, "tag": "council", "why": "You went against the advice"},
+		"agenda_served": {"v": 2, "fade": 0.5, "tag": "council", "why": "The club is going the way wanted"},
+		"agenda_crossed": {"v": -2, "fade": 0.5, "tag": "council", "why": "The club is not going the way wanted"},
+		"ambition_met": {"v": 8, "fade": 0.25, "tag": "ambition", "why": "He got what he wanted this season"},
+		"ambition_soured": {"v": -8, "fade": 0.2, "tag": "ambition", "why": "He did not get what he wanted this season"},
+		"advice_passed_over": {"v": -3, "fade": 0.5, "tag": "council", "why": "You took the other side's advice"},
+		"advice_both_overruled": {"v": -2, "fade": 0.5, "tag": "council", "why": "You went your own way over the advice"},
+		"called_out": {"v": -5, "fade": 0.5, "tag": "council", "why": "You pulled him into line"},
+		"won_back": {"v": 6, "fade": 0.5, "tag": "council", "why": "You went out of your way to win him back"}
 	}
 }
