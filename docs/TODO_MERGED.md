@@ -267,3 +267,5 @@ What has landed toward each open row of docs/TODO.md and docs/TODO_RULINGS.md, o
 - 202: Merged #2310: 3D 1.0 plan: Marvel rounds 16b-17 and horizon, fault scan, new gaits.
 - 202: Merged #2314: 3D 1.0 plan: Marvel backdrop and far horizon in matches.
 - 202: Merged #2313: Marvel round 17c-17f: shut-roof light, pines, Harbour Esplanade, street wall, Bolte Bridge, Gate 5 box.
+- 202: Merged #2296: Marvel gates.glb: deck stops at the Wurundjeri Way wall, opaque materials lit as stands.
+- 202: Merged #2317: Marvel Gate 7: the bolt sculpture.
