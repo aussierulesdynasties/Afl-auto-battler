@@ -59,6 +59,11 @@ const DUR_PULSE_BACK := 0.45
 static func prepare(f: Dictionary) -> void:
 	if not UiKit.motion_on():
 		return
+	if bool(f.get("still", false)):
+		var lad: Variant = f.get("ladder")
+		if is_instance_valid(lad) and lad is Control:
+			(lad as Control).modulate.a = 0.0
+		return
 	for c in _heroes(f):
 		(c as Control).modulate.a = 0.0
 
@@ -69,6 +74,9 @@ static func prepare(f: Dictionary) -> void:
 static func play(f: Dictionary) -> void:
 	var v: Variant = f.get("verdict")
 	if not is_instance_valid(v) or not (v is Control) or not (v as Control).is_inside_tree():
+		return
+	if bool(f.get("still", false)):
+		_still(f)
 		return
 	var result := str(f.get("result", ""))
 	var sting := result != "loss"
@@ -96,6 +104,20 @@ static func play(f: Dictionary) -> void:
 				UiKit.land(fin, 0.0, true, true)
 			else:
 				_settle(fin, 0.0, false))
+
+
+## After the premiership ceremony (director, 2026-11-25: "open still"): the
+## sheet is all there, with no slam, flash, shake or sting; only the ladder
+## move still counts when it comes into view.
+static func _still(f: Dictionary) -> void:
+	Feel.moved.append("ft_still")
+	var ladder: Variant = f.get("ladder")
+	if not (is_instance_valid(ladder) and ladder is Label):
+		return
+	if not UiKit.motion_on():
+		(ladder as Label).modulate.a = 1.0
+		return
+	_when_seen(ladder, f.get("scroll") as ScrollContainer, LADDER_AT, func() -> void: _ladder(ladder, f))
 
 
 static func _heroes(f: Dictionary) -> Array:

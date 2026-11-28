@@ -362,6 +362,7 @@ func _test_postseason_when_knocked_out() -> void:
 		weeks += 1
 		hub.call("_sim_week")
 		await _settle()
+		await _past_ceremony(hub)
 		_check(hub.find_child("PostseasonIntro", true, false) == null, "No intro over week %d's results" % weeks)
 		var go: Button = hub.find_child("ResultsContinue", true, false)
 		if not _state.season.is_season_over() and go != null:
@@ -467,6 +468,18 @@ func _test_postseason_not_used_without_you() -> void:
 	_state.my_club = "COL"
 	_state.sim_ahead = false
 	_check(_state.intro_due("postseason"), "...and the sheet still due")
+
+
+## A simmed Grand Final opens the premiers' flag ceremony before the week's
+## results (director, 2026-11-25): a real tap on its Continue.
+func _past_ceremony(hub: Node) -> void:
+	var cer: Variant = hub.get("_ceremony")
+	if cer == null or not is_instance_valid(cer):
+		return
+	var cont: Control = (cer as Node).find_child("CeremonyContinue", true, false)
+	var why: String = await Tap.tap(cont) if cont != null else "no Continue"
+	await _settle()
+	_check(why == "", "The Grand Final's flag ceremony comes first, and its Continue takes a finger's tap (%s)" % why)
 
 
 func _settle() -> void:

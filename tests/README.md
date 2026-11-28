@@ -84,6 +84,7 @@ Pick the suites for the code you changed and run just those (`tools/run_tests.sh
 | `coach_effects` | What coaching does: teaching, tactics, man-management |
 | `career_ui` | Main menu and save flow, Back, the Hub, Training, selection and trade screens, at 320, 360 and 430 wide |
 | `ui_motion` | Menu motion: tokens, hardened helpers, sheet_in, fill_bar, the result sheet on a win and a loss, Reduced motion, real taps during the rise and a land |
+| `premiership` | Row 170, the premiership ceremony (Full goosebumps): who gets one and what it says, its beats in order and its time to the final frame, the final frame for all 18 clubs and for a Club Forge club at the Forge's longest name (premiers or beaten) at standard and largest text, a tap jumping to the final frame, real taps on Continue, Back, Reduced motion, shake off, the cup before a farewell, full time still after it, another club's flag, the hub's sim path |
 | `potential` | Potential (POT) rules, rehab years, draft pedigree |
 | `ratings` | The overall rating model |
 | `ai` | Rival clubs' drafting and selection |
