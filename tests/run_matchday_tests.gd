@@ -1109,6 +1109,13 @@ func _test_one_line_break(sz: Vector2i) -> void:
 	var sim = _state.pending_sim
 	var me := int(sim.moment_side)
 	var them := str((sim.squads[1 - me] as Object).code)
+	# The coach has called no tag himself, so his assistant leaves it be
+	# (MatchSim._assistant_calls): with a tagger on the list (#1659's ratings
+	# made one of Fremantle's) the assistant would tag at quarter time.
+	var no_tag: Dictionary = (sim.tactics[me] as Dictionary).duplicate()
+	no_tag["tag_id"] = ""
+	no_tag["tag_set"] = true
+	sim.set_tactics(me, no_tag)
 	sim.run_quarter()
 	sim.run_quarter()
 	var m: Control = load("res://scenes/MatchScene.tscn").instantiate()
