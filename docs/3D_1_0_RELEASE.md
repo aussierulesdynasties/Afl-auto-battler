@@ -17,6 +17,8 @@ An item is **passed** only when all of these hold:
 3. It runs on a phone at Low, Medium and High inside the budget below.
 4. The director has looked at it and passed it. For a ground that is his fly-through in the ground
    inspector, his fault list fixed, and his approval.
+   Before he sees a finished ground it also passes an independent review and a Gemini audit with an
+   audit pack (director, 2026-11-28).
 
 Nothing below is passed yet. On 2026-11-22 no ground has his approval (the Stadium DONE List holds
 no reviews), and the MetaHuman footballer is not yet in a match on main.
@@ -65,6 +67,11 @@ Each ground: model to the [MCG standard](MCG_STANDARD.md) (modelled detail, no p
 geometry, real seat colours, seat rule), real surroundings copied from Google Earth (no generic
 OSM blocks), turf cut, live screen, crowd seated on its seats, night towers from its own lamps,
 the machine pre-inspection clean, then his fly-through.
+
+Order (director, 2026-11-27): one ground at a time, Marvel, MCG, Optus, GMHBA, Gabba, Adelaide,
+People First, Engie, Macquarie Point, SCG, Manuka. Marvel is current. At each ground the real gates
+are built first, then the fan's-eye pre-game shot at a real gate (2026-11-28). Rulings and their
+status: the project decision log.
 
 ### The 13 a 2026 career plays at
 
@@ -149,7 +156,7 @@ The MCG of each era for Legacy matches: first part on main (#2052), thread "Buil
 | Wet matches | On main (#2003) | | |
 | Turf and picture in broadcast colour | On main | #2014 | Make the turf colour look like TV |
 | Graphics levels in Settings | On main (#1953) | | |
-| Pre-game shot per ground | The director's inspector cameras for Adelaide and the MCG; the banner scene opens on it (#2285). Other grounds still to get theirs | |
+| Pre-game shot per ground | The banner scene opens on a per-ground shot (#2285). The first 11 high drone-style angles were rejected (28 Nov): each ground's real gates are built first, then a fan's-eye shot at a real gate with supporters in view. Marvel's gates are in matches (#2313); no shot is chosen yet | |
 | Aerial orbit round each ground | A steady helicopter circle that never passes through anything; Marvel first (#2288). "Before" laps of all 11 grounds filmed with a fault list each (27 Nov, checked by eye only); each ground is filmed again with a side-by-side once its fixes land | Make Marvel Stadium look real |
 
 ## Release gates (across all four)
@@ -225,6 +232,7 @@ and the smoothing buffers.
 - 2026-11-27 early: the momentum line over the 3D picture is thinner and dimmer, as the director asked (#2219). No row changes state.
 - 2026-11-27 morning: the 3D match stages a rushed behind as the defender running it back and knocking it over with the presser chasing, and a free kick with the man on the mark on the spot and the taker kicking over him (#2225). A rebound's gatherer comes in at his gather's pace (#2251). No row changes state.
 - 2026-11-27 midday: the code for Marvel round 13 (#2216), Bellerive round 7 (#2218) and Norwood's Google Earth gaps (#2214) merged (a ground counts only once its models are published and pinned in tools/ground_assets.lock; these three were being published at 13:00 UTC), measurements for the 19 Legacy grounds (#2217), era surroundings for six Legacy grounds (#2232, WIP) and in-match injuries (#2227, WIP) on main. Every loose-ball pick-up comes in at pick-up pace (#2254).
+- 2026-11-28 08:00: the bar adds the independent review and Gemini audit; the ground order and gates-first rule recorded; pre-game shot row corrected (high angles rejected).
 - 2026-11-28 07:30: "before" orbit laps and fault lists for all 11 grounds recorded; Marvel open items listed (Gate 6, west roof sign, navy face west of Gate 7).
 - 2026-11-28 morning: Marvel round 17c to 17f published with the real gates (#2296, #2313); Gate 7 bolt sculpture built, awaiting publish (#2317).
 - 2026-11-28 early: Marvel's backdrop and far horizon published and in matches, harbour one colour across the join (#2309, #2312).
