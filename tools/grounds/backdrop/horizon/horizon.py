@@ -57,7 +57,6 @@ SKIRT = 1480.0        # the first ring tucks under the backdrop's edge, so no cr
 LAND_OUT = 64000.0
 SIDE = 64             # vertices along each side of a ring
 TEX_A, TEX_B = 5120.0, 20480.0
-SQUARE_FADE = 150.0  # m: the land past the backdrop's square fades from its ground's colour to Sentinel-2 (square_fade)
 CITY_OUT = 4096.0
 LEVEL_M, LEVEL_BASE = 3.4, 1.0   # prep.py's storey height
 JOIN_BELOW = 20.0     # low buildings of one height band that touch are joined
@@ -477,38 +476,6 @@ def land_mesh(slug, frame, H, water_y, gain, near, mid, far, water=None):
             surf["col"] = np.c_[col[used], np.ones(len(used))].astype(np.float32)
         surfaces.append(surf)
     return surfaces, {"rings": int(nr), "per_ring": int(nc), "water_vertices": int(wet.sum())}
-
-
-def square_fade(src, frame, part1, gain, band=SQUARE_FADE):
-    """A copy of the near Sentinel-2 grid whose land just outside the backdrop's square takes the colour of the
-    backdrop's own ground at the square's edge (its bake, near_bake.py), fading to Sentinel-2 over band metres: from
-    above, the square edge was a hard line between two maps (PC check, 28 Nov)."""
-    import copy
-    sys.path.insert(0, os.path.join(HERE, ".."))
-    from near_bake import _near_ground, _lin
-    from scipy.ndimage import uniform_filter
-    img, cu, cv = _near_ground(part1)
-    m_px = 1.0 / max(abs(cu[0]), 1e-12) / img.shape[1]
-    blur = uniform_filter(_lin(img), (int(40 / m_px), int(40 / m_px), 1), mode="nearest")   # 40 m: no streaks outward
-    out = copy.copy(src)
-    nr, nc = src.M.shape[:2]
-    rr, cc = np.mgrid[0:nr, 0:nc]
-    n = src.half - (rr + 0.5) * src.step
-    e = (cc + 0.5) * src.step - src.half
-    x, z = frame.xz(e, n)
-    d = np.maximum(np.abs(x), np.abs(z))
-    w = np.clip(1.0 - (d - INNER) / band, 0.0, 1.0)
-    sel = w > 0
-    xc = np.clip(x[sel], -(INNER - 30), INNER - 30)
-    zc = np.clip(z[sel], -(INNER - 30), INNER - 30)
-    u = cu[0] * xc + cu[1] * zc + cu[2]
-    v = cv[0] * xc + cv[1] * zc + cv[2]
-    h, wd = img.shape[:2]
-    edge = blur[np.clip((v * h).astype(int), 0, h - 1), np.clip((u * wd).astype(int), 0, wd - 1)]
-    M = src.M.copy()
-    M[sel] = M[sel] * (1 - w[sel, None]) + (edge / np.maximum(gain, 1e-6) * 10000.0) * w[sel, None]
-    out.M = M
-    return out
 
 
 def texture_png(src, gain, water=None, size=1024):
@@ -1534,7 +1501,7 @@ def build(slug, backdrop=None):
     trees = canopy(slug, frame, H, com_parts(slug, frame, lambda g: [_local_poly(frame, gg) for gg in getattr(g, "geoms", [g])]))
     sheet = near_water(G, water_y, slug)
     surfaces = land + city_s + ([trees] if trees is not None else []) + ([sheet] if sheet is not None else [])
-    images = {"near": texture_png(square_fade(near, frame, part1, gain), gain, water), "mid": texture_png(mid, gain, water)}
+    images = {"near": texture_png(near, gain, water), "mid": texture_png(mid, gain, water)}
     out = os.path.join(ROOT, "assets", "grounds", slug, slug + "_horizon.glb")
     size = write_glb(out, surfaces, images)
     write_image_imports(out, images)
