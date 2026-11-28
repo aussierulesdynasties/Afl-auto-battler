@@ -104,6 +104,10 @@ static func feed_line(ev: Dictionary, home: String, away: String) -> Dictionary:
 			var res := _result_words(home, away, score)
 			return {"text": ("Full time after extra time: " if extra else "Full time: ") + res, "tier": "break"}
 		"quarter":
+			# The last quarter's siren: the "final" line says full time with the
+			# result, so it is not called twice (bug bash 4).
+			if str(ev.get("text", "")).begins_with("End of quarter") and int(ev.get("q", 1)) == 4:
+				return {}
 			return {"text": _break_words(ev, home, away), "tier": "break"}
 	return {}
 

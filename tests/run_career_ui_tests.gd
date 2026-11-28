@@ -138,7 +138,7 @@ func _test_media_conference_rules() -> void:
 	# turns, and the day's other stories each have a journalist of their own.
 	var hl_ctx := {"club": "COL", "opponent_name": "Carlton", "round": 8, "year": 2027,
 			"result": {"home": "COL", "away": "CAR", "score": [55, 101], "goals": [8, 15], "behinds": [7, 11]}}
-	var v0: Dictionary = MCY.pick(hl_ctx, {"asked": {"heavy_loss": 3}})
+	var v0: Dictionary = MCY.pick(hl_ctx, {"asked": {"heavy_loss": 6}})
 	var v1: Dictionary = MCY.pick(hl_ctx, {"asked": {"heavy_loss": 1}})
 	var v2: Dictionary = MCY.pick(hl_ctx, {"asked": {"heavy_loss": 2}})
 	_check(str(v0.get("qid", "")) == "heavy_loss.0" and str(v1.get("qid", "")) == "heavy_loss.1"
@@ -147,6 +147,16 @@ func _test_media_conference_rules() -> void:
 			and str(v2.get("question", "")).begins_with("That's a 46-point hiding from Carlton."),
 			"A question's three versions take turns (%s / %s / %s)" % [str(v0.get("question", "")),
 			str(v1.get("question", "")), str(v2.get("question", ""))])
+	# Bug bash 4: a struggling side met the three again within a season. Six
+	# versions, every one different, with the same four kinds of answer.
+	var hl_texts := {}
+	var hl_kinds_ok := true
+	for n in range(6):
+		var q: Dictionary = MCY.pick(hl_ctx, {"asked": {"heavy_loss": n}})
+		hl_texts[str(q.get("question", ""))] = true
+		var ks := (q.get("options", []) as Array).slice(0, 3).map(func(o): return str(o["kind"]))
+		hl_kinds_ok = hl_kinds_ok and str(q.get("qid", "")) == "heavy_loss.%d" % n and ks == ["criticise", "method", "back"]
+	_check(hl_texts.size() == 6 and hl_kinds_ok, "The heavy-loss question has six different versions (%s)" % str(hl_texts.keys()))
 	# Audit 19/60: the most-asked questions each have three versions, every
 	# one different, with the same four kinds of answer.
 	var third_ctx := {
@@ -541,8 +551,22 @@ func _test_press_personas() -> void:
 			and MC.chance("criticise", {"journalist": "muckraker"}) == MC.chance("criticise", {}) - 10,
 			"The Muckraker: a board move that depends on how it lands grows by one, a sure one never does")
 	var m_ctx := {"journalist": "muckraker", "facts": {"journalist": "muckraker"}}
-	_check(MC.odds_line("criticise", 40, MC.effects("criticise", m_ctx), m_ctx).contains("His headline: 10% less likely"),
+	_check(MC.odds_line("criticise", 40, MC.effects("criticise", m_ctx), m_ctx).contains("Gary's headline: 10% less likely"),
 			"The Muckraker's odds twist is named on the gate with its size")
+	# Bug bash 4: "The spotlight weighed on Josh Treacy: Josh Treacy's morale -1%".
+	var spot: String = MC.after_line("back_named", "b", {}, "Josh Treacy")
+	_check(spot.count("Josh Treacy") == 1 and spot.contains("his morale"),
+			"The press outcome names the player once (%s)" % spot)
+	# Bug bash 4: "Credit to him" stood bare in the news; the news says who.
+	var star_q: Dictionary = MC.pick({"club": "COL", "opponent_name": "Carlton", "round": 9, "year": 2027,
+			"star": {"id": "COL_x", "name": "Isaiah Dudley", "line": "kicked five"},
+			"result": {"home": "COL", "away": "CAR", "score": [90, 80]}}, {"asked": {"star": 0}})
+	_check(str(star_q.get("key", "")) == "star" and (MC.news_lead(star_q, "Credit to him and the whole group.") == "Post-match, on Isaiah Dudley"
+			and MC.news_lead(star_q, "Our structure set the side up.") == "Post-match"),
+			"A quoted answer that says him names the player (%s)" % MC.news_lead(star_q, "Credit to him and the whole group."))
+	_check(MC.news_lead({"key": "milestone", "options": [{"player": "p", "name": "Jack Smith"}]}, "The rest have to match his standards.")
+			== "Post-match, on Jack Smith" and MC.news_lead({"key": "heavy_loss", "options": []}, "Credit to him.") == "Post-match",
+			"Only answers about one named player are told with his name")
 	var y_ctx := {"journalist": "sycophant", "facts": {"journalist": "sycophant"}}
 	_check(MC.chance("back", {"journalist": "sycophant"}) == MC.chance("back", {}) - 5
 			and MC.odds_line("back", 55, MC.effects("back", y_ctx), y_ctx).contains("Praise is expected: 5% less likely"),

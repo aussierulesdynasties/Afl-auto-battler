@@ -350,7 +350,11 @@ static func plan_story(subject: String, plans: Array, span := "game") -> String:
 		elif j == 1:
 			s += ", switched to " + bit
 		elif j == segs.size() - 1:
-			s += ", then " + bit
+			# A verb of its own (bug bash 4): "then a plan of their own" had none.
+			var back := false
+			for e in range(j - 1):
+				back = back or str(segs[e][0]) == str(segs[j][0])
+			s += (", then went back to " if back else ", then switched to ") + bit
 		else:
 			s += ", " + bit
 	return s + "."

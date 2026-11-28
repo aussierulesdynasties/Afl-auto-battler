@@ -39,7 +39,7 @@
 			"slots": ["win", "lose", "lead", "lead_adj", "margin"],
 			"news": [
 				"{win} hang on as a {lead_adj} lead shrinks to {margin}",
-				"{win} survive a {lose} charge",
+				"{win} survive a late {lose} charge",
 				"{lose} nearly run down {win}"
 			]
 		},
@@ -143,17 +143,17 @@
 			]
 		},
 		"ladder_into": {
-			"slots": ["club", "pos"],
+			"slots": ["club", "pos", "top"],
 			"news": [
-				"{club} move into the ten, {pos} on the ladder.",
-				"It lifts {club} into the ten, up to {pos}."
+				"{club} move into the {top}, {pos} on the ladder.",
+				"It lifts {club} into the {top}, up to {pos}."
 			]
 		},
 		"ladder_out": {
-			"slots": ["club", "pos"],
+			"slots": ["club", "pos", "top"],
 			"news": [
-				"{club} drop out of the ten, to {pos}.",
-				"{club} fall to {pos}, outside the ten."
+				"{club} drop out of the {top}, to {pos}.",
+				"{club} fall to {pos}, outside the {top}."
 			]
 		},
 		"ladder_up": {
