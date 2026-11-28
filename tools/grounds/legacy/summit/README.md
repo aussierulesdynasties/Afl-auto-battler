@@ -39,8 +39,13 @@ stand and tower heights.
 
 ## Fence refit (2026-11-28)
 
-`tools/grounds/legacy/fence_fourier.py summit measure/turf_2024_2026_enu.json 6 --write` puts the model's fence on
-the measured turf edge pushed out 0.3 m to the rail line (Blacktown's offset), as a K=6 Fourier curve (`fence_fourier`
-in `summit/model/summit.json`, 0.02 m rms to the offset trace). The old ellipse ran from 5.4 m inside the turf to
-3.5 m outside it, its axis about 8° off. The closest ellipse, now the plan's `fence`, is 175.6 x 146.1 m, long axis
-75.9° from east, centre (-3.38, -1.79), 0.34 m rms off the curve. Every building and tower clears it by 3.1 m or more.
+The model's fence follows `measure/fence_line_enu.json`: the 2024-26 turf trace, corrected on the kit's satellite
+mosaic (`tools/grounds/legacy/retrace_mosaic.py summit measure/turf_2024_2026_enu.json measure/fence_line_enu.json
+grey 150-320 --clip -3,0.5`). From the south round to the west (bearings 150-320) the Google Earth trace ran on the
+outer side of the 2 m grey path; it is moved in to the path's inner edge, the grass edge (1-2.3 m). Elsewhere it
+already sat there. Coaches' boxes on the path at bearings 270-310 are dropped from the trace by the clip.
+`tools/grounds/legacy/fence_fourier.py summit measure/fence_line_enu.json 6 --write` fits it (+0.3 m to the rail line,
+Blacktown's offset) as a K=6 Fourier fence (0.22 m rms). The closest ellipse, now the plan's `fence`, is 174.1 x
+144.6 m, long axis 75.7 deg from east, centre (-2.59, -1.13), 0.45 m rms off the curve. The old ellipse ran up to
+2.6 m inside the edge. Every building and tower clears the new fence by 3.1 m or more. Checked by eye on zoomed mosaic
+boards at 12 bearings.

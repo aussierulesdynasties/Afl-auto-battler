@@ -4,11 +4,11 @@
  "lon": 115.6430106,
  "half": 200,
  "fence": [
-  -0.69,
-  -1.65,
-  75.34,
-  93.51,
-  -32.24
+  -0.88,
+  -0.7,
+  74.11,
+  94.19,
+  -32.7
  ],
  "fence_h": 1.0,
  "stands": [
@@ -339,37 +339,37 @@
  },
  "fence_fourier": {
   "c": [
-   -0.663,
-   -1.664
+   -0.884,
+   -0.705
   ],
-  "a0": 83.63922175074651,
+  "a0": 83.1849109224078,
   "ab": [
    [
-    -1.5099747678528947e-05,
-    -6.137602056009254e-06
+    -1.2118743889933573e-05,
+    -6.627837965746408e-06
    ],
    [
-    -3.9460049178460306,
-    8.209429897708848
+    -4.220626340402188,
+    9.18411028860831
    ],
    [
-    -0.25759803160169387,
-    -1.077617994370989
+    0.06340949898812304,
+    0.20048581736457483
    ],
    [
-    -0.19227579434055195,
-    0.6417652056953168
+    0.6418433015661893,
+    0.896874923014358
    ],
    [
-    -0.5466668864649108,
-    0.1702070055549548
+    -0.1250080699853785,
+    0.031592969792196675
    ],
    [
-    0.17946619391908178,
-    0.0908924931871277
+    0.5498952772327003,
+    0.051798523577691706
    ]
   ],
   "K": 6,
-  "how": "K=6 polar Fourier about c (x east, y north, model metres) fitted to the measured turf edge (legacy/hands/measure/turf_2024_2025_enu.json) pushed out 0.3 m to the rail line; tools/grounds/legacy/fence_fourier.py"
+  "how": "K=6 polar Fourier about c (x east, y north, model metres) fitted to the measured turf edge (legacy/hands/measure/fence_line_enu.json) pushed out 0.3 m to the rail line; tools/grounds/legacy/fence_fourier.py"
  }
 }
