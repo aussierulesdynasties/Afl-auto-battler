@@ -133,15 +133,16 @@ class Glb:
         self.head, self.bin = raw[:20 + jl + 8], bytearray(raw[28 + jl:28 + jl + bl])
         self.tail = raw[28 + jl + bl:]
         for n in self.J["nodes"]:
-            assert "mesh" not in n or not any(k in n for k in ("matrix", "translation", "rotation", "scale")), \
-                "%s: a mesh node with a transform" % path
+            if "mesh" in n and any(k in n for k in ("matrix", "translation", "rotation", "scale")):
+                raise RuntimeError("%s: a mesh node with a transform" % path)
         self.name_of = {n["mesh"]: n.get("name", "") for n in self.J["nodes"] if "mesh" in n}
         seen = {}
         self.prims = []   # (mesh name, position accessor, indices accessor)
         for mi, m in enumerate(self.J["meshes"]):
             for p in m["primitives"]:
                 a = p["attributes"]["POSITION"]
-                assert a not in seen, "%s: position accessor shared by two meshes" % path
+                if a in seen:
+                    raise RuntimeError("%s: position accessor shared by two meshes" % path)
                 seen[a] = mi
                 self.prims.append((self.name_of.get(mi, m.get("name", "")), a, p.get("indices")))
 
@@ -150,13 +151,15 @@ class Glb:
         v = self.J["bufferViews"][a["bufferView"]]
         dt = np.dtype(CT[a["componentType"]])
         n = NC[a["type"]]
-        assert v.get("byteStride", dt.itemsize * n) == dt.itemsize * n, "interleaved"
+        if v.get("byteStride", dt.itemsize * n) != dt.itemsize * n:
+            raise RuntimeError("accessor %d: interleaved buffer view" % ai)
         off = v.get("byteOffset", 0) + a.get("byteOffset", 0)
         return np.frombuffer(bytes(self.bin), dt, a["count"] * n, off).reshape(a["count"], n).copy()
 
     def write_pos(self, ai, P):
         a = self.J["accessors"][ai]
-        assert a["componentType"] == 5126 and a["type"] == "VEC3"
+        if a["componentType"] != 5126 or a["type"] != "VEC3":
+            raise RuntimeError("accessor %d: not float VEC3" % ai)
         v = self.J["bufferViews"][a["bufferView"]]
         off = v.get("byteOffset", 0) + a.get("byteOffset", 0)
         b = np.ascontiguousarray(P, "<f4").tobytes()
@@ -166,7 +169,8 @@ class Glb:
 
     def write_vec3(self, ai, V):
         a = self.J["accessors"][ai]
-        assert a["componentType"] == 5126 and a["type"] == "VEC3"
+        if a["componentType"] != 5126 or a["type"] != "VEC3":
+            raise RuntimeError("accessor %d: not float VEC3" % ai)
         v = self.J["bufferViews"][a["bufferView"]]
         off = v.get("byteOffset", 0) + a.get("byteOffset", 0)
         b = np.ascontiguousarray(V, "<f4").tobytes()
@@ -177,7 +181,8 @@ class Glb:
         v = self.J["bufferViews"][a["bufferView"]]
         off = v.get("byteOffset", 0) + a.get("byteOffset", 0)
         b = np.ascontiguousarray(F, CT[a["componentType"]]).tobytes()
-        assert len(b) == a["count"] * np.dtype(CT[a["componentType"]]).itemsize
+        if len(b) != a["count"] * np.dtype(CT[a["componentType"]]).itemsize:
+            raise RuntimeError("accessor %d: %d indices written over %d" % (ai, len(b) // np.dtype(CT[a["componentType"]]).itemsize, a["count"]))
         self.bin[off:off + len(b)] = b
 
     def compact(self):
@@ -191,7 +196,8 @@ class Glb:
                 refs |= {pr["indices"]} if "indices" in pr else set()
                 for tg in pr.get("targets", []):
                     refs |= set(tg.values())
-        assert not J.get("skins") and not J.get("animations"), "compact() knows meshes only"
+        if J.get("skins") or J.get("animations"):
+            raise RuntimeError("compact() knows meshes only")
         keep = sorted(refs)
         amap = {k: i for i, k in enumerate(keep)}
         J["accessors"] = [J["accessors"][k] for k in keep]

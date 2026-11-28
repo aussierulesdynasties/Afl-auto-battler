@@ -1265,11 +1265,12 @@ def build(slug, backdrop=None):
     G = reland.Glb(part1)
     # the seam colour, the water and the near water sheet read the near ground from part1, its one primitive
     near_prims = [n for n, _, _ in G.prims if n.startswith("bg_near_ground")]
-    assert len(near_prims) == 1, "%s: near ground in %d primitives; seam_gain/near_water read one" % (part1, len(near_prims))
+    if len(near_prims) != 1:
+        raise RuntimeError("%s: near ground in %d primitives; seam_gain/near_water read one" % (part1, len(near_prims)))
     for other in sorted(glob.glob(os.path.join(os.path.dirname(part1), slug + "_backdrop_part*.glb"))):
         if os.path.abspath(other) != os.path.abspath(part1):
-            assert not any(n.startswith("bg_near_ground") for n, _, _ in reland.Glb(other).prims), \
-                "%s carries near ground too; seam_gain/near_water read part1's only" % other
+            if any(n.startswith("bg_near_ground") for n, _, _ in reland.Glb(other).prims):
+                raise RuntimeError("%s carries near ground too; seam_gain/near_water read part1's only" % other)
     # the measured city (City of Melbourne footprints and photomesh): a ground that has it must not build without
     for need in MEASURED_CITY.get(slug, ()):
         if not os.path.exists(work(slug, *need.split("/"))):
