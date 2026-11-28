@@ -223,17 +223,18 @@
 		"club": "BRB",
 		"controversy": false,
 		"category": "training",
-		"phase": ["preseason"],
+		"phase": ["bonding"],
+		"per_season": 1,
 		"subject": {"kind": "club"},
 		"title": ["The Queensland summer"],
 		"text": ["The pre-season is in the Queensland heat and humidity. The fitness staff say the players are getting fitter than any southern club; the medical staff say two of them are cooked."],
 		"choices": [
-			{"key": "heat", "label": "Keep the heat on",
-			 "effects": [{"op": "xp", "d": 4, "who": "all"}, {"op": "odds", "chance": 30, "hit": [{"op": "forgo_xp", "d": 4, "who": "side"}], "hit_result": "A strained hamstring cost a player a block of training."}],
-			 "result": "They train in the full heat."},
 			{"key": "dawn", "label": "Move sessions to dawn",
-			 "effects": [{"op": "xp", "d": 1, "who": "all"}, {"op": "fresh", "who": "side"}, {"op": "morale", "d": -1, "who": "all"}],
-			 "result": "The bodies hold up. The early starts wear thin."}
+			 "effects": [{"op": "morale", "d": 2, "who": "all"}],
+			 "result": "Early starts and fresh legs. The group liked it."},
+			{"key": "heat", "label": "Keep the heat on",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "They trained through the heat"}, {"op": "culture", "strand": "together", "d": 1, "why": "They got through the heat together"}, {"op": "sore", "who": "one"}],
+			 "result": "Hard, hot sessions. One of them pulled up sore."}
 		]
 	},
 	{
@@ -278,17 +279,18 @@
 		"club": "BRB",
 		"controversy": false,
 		"category": "training",
-		"phase": ["preseason"],
+		"phase": ["bonding"],
+		"per_season": 1,
 		"subject": {"kind": "club"},
 		"title": ["Toughen them up"],
 		"text": ["The group has been called soft for too long. The coach can run a hard-edged camp in the bush, or keep building the side week by week."],
 		"choices": [
+			{"key": "day", "label": "A day in the bush",
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "A day in the bush together"}],
+			 "result": "A long day out bush. The group enjoyed it."},
 			{"key": "camp", "label": "Run the camp",
-			 "effects": [{"op": "culture", "strand": "standards", "d": 2, "why": "The group came out of the bush harder"}, {"op": "culture", "strand": "together", "d": 1, "why": "They got through the camp together"}, {"op": "forgo_xp", "d": 4, "who": "all"}],
-			 "result": "A week of mud and hills. No footy skills, a harder group."},
-			{"key": "normal", "label": "Keep the normal program",
-			 "effects": [{"op": "xp", "d": 3, "who": "all"}, {"op": "odds", "chance": 30, "hit": [{"op": "morale", "d": -1, "who": "all"}], "hit_result": "The soft talk kept coming."}],
-			 "result": "The side keeps building, week by week."}
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "A hard camp set the standard"}, {"op": "culture", "strand": "together", "d": 1, "why": "They got through the camp together"}, {"op": "morale", "d": -3, "who": "all"}],
+			 "result": "Three hard days in the bush. Nobody calls them soft now."}
 		]
 	},
 	{
@@ -313,17 +315,18 @@
 		"club": "BRB",
 		"controversy": false,
 		"category": "board",
-		"phase": ["preseason"],
+		"phase": ["bonding"],
+		"per_season": 1,
 		"subject": {"kind": "club"},
 		"title": ["Summer sport has the ground"],
 		"text": ["The home ground is still booked for summer sport, and the oval is off limits for the last weeks of the pre-season. A suburban ground is free, but its surface is hard."],
 		"choices": [
-			{"key": "suburban", "label": "Train at the suburban ground",
-			 "effects": [{"op": "xp", "d": 3, "who": "all"}, {"op": "odds", "chance": 25, "hit": [{"op": "forgo_xp", "d": 3, "who": "side"}], "hit_result": "A player was jarred on the hard deck and missed a block."}],
-			 "result": "Full ball work on a rock-hard oval."},
 			{"key": "beach", "label": "Train on the beach and in the pool",
-			 "effects": [{"op": "morale", "d": 1, "who": "all"}, {"op": "forgo_xp", "d": 3, "who": "all"}],
-			 "result": "Sand and water, and no ball work on grass."}
+			 "effects": [{"op": "morale", "d": 2, "who": "all"}],
+			 "result": "Sand, surf and the pool. The players loved it."},
+			{"key": "suburban", "label": "Train at the suburban ground",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "Match-day work on a hard ground"}, {"op": "culture", "strand": "ambition", "d": 1, "why": "Ready for Round 1"}, {"op": "sore", "who": "one"}],
+			 "result": "Real match-day work. The hard ground took a toll."}
 		]
 	},
 	{
@@ -331,17 +334,18 @@
 		"club": "BRB",
 		"controversy": false,
 		"category": "members",
-		"phase": ["preseason"],
+		"phase": ["bonding"],
+		"per_season": 1,
 		"subject": {"kind": "club"},
 		"title": ["September feels a long way off"],
 		"text": ["Finals have been a long way off for the Bears. At the season launch the members want to hear a promise."],
 		"choices": [
-			{"key": "promise", "label": "Promise them finals",
-			 "effects": [{"op": "board", "d": 3, "was": "members"}, {"op": "morale", "d": 2, "who": "all"}, {"op": "loss_sting", "chance": 20, "d": -3, "who": "side"}],
-			 "result": "The room erupts. Every loss will hurt more now."},
 			{"key": "plan", "label": "Promise a plan, not a result",
-			 "effects": [{"op": "culture", "strand": "ambition", "d": 1, "why": "The club has a plan to get there"}, {"op": "board", "d": -1, "was": "members"}],
-			 "result": "The board nods along. The members wanted more."}
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The coach sold a plan"}],
+			 "result": "The members heard a plan. Some wanted more."},
+			{"key": "finals", "label": "Promise them finals",
+			 "effects": [{"op": "culture", "strand": "ambition", "d": 1, "why": "The coach promised the members finals"}, {"op": "board", "d": 3}, {"op": "morale", "d": -2, "who": "all"}],
+			 "result": "Finals, the coach said. The players feel the weight of it."}
 		]
 	},
 	{
@@ -366,17 +370,18 @@
 		"club": "BRB",
 		"controversy": false,
 		"category": "members",
-		"phase": ["preseason"],
+		"phase": ["bonding"],
+		"per_season": 1,
 		"subject": {"kind": "club"},
 		"title": ["What a membership costs"],
 		"text": ["Membership sales are slow again. The membership manager wants to halve the price of a family membership to fill the ground; the money people say the club can't afford to give seats away."],
 		"choices": [
-			{"key": "halve", "label": "Halve the price",
-			 "effects": [{"op": "culture", "strand": "together", "d": 2, "why": "More families came through the gate"}, {"op": "board", "d": -3, "was": "funds"}],
-			 "result": "More families through the gate, and less money in the till."},
 			{"key": "hold", "label": "Hold the price",
-			 "effects": [{"op": "board", "d": 2, "was": "funds"}, {"op": "culture", "strand": "together", "d": -1, "why": "Families say the Bears priced them out"}, {"op": "odds", "chance": 30, "hit": [{"op": "board", "d": -2}], "hit_result": "Another season of empty seats had the papers asking questions."}],
-			 "result": "The money people are pleased. The seats stay empty."}
+			 "effects": [{"op": "board", "d": 2}],
+			 "result": "The price holds. The money people are happy."},
+			{"key": "halve", "label": "Halve the price",
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "Families back at the footy"}, {"op": "morale", "d": 2, "who": "all"}, {"op": "board", "d": -2}],
+			 "result": "Families fill the ground. The books take the hit."}
 		]
 	},
 	{

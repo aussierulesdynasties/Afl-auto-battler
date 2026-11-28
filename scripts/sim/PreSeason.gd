@@ -1,50 +1,36 @@
 class_name PreSeason
 extends RefCounted
-## The pre-season (director, 2026-10-13): eight weeks between the off-season
-## wrap and Round 1, planned in three blocks (weeks 1-3, 4-5, 6-7) with a
-## quiet week 8. Each block has a training load and a focus.
+## The pre-season (director, 2026-11-17, DIRECTOR_BIBLE 5.7 rule 69a): eight
+## weeks between the off-season wrap and Round 1. It opens on the player
+## meetings (each player's stat focus for the season, and any position he sets
+## out to learn, which starts at the pre-season game), then the season fitness
+## plan, which books the weeks of running it needs (Peak for September 5, Fast
+## start 4, Steady all year 3, Develop and manage 2). Each of the seven training
+## weeks is then one action: Running, Game plan drilling or Team bonding (one
+## card from the bonding deck). Week 8 is the quiet week of the papers.
 ##
-## It adds no system of its own. Running work becomes one word on the club's
-## season fitness record (Conditioning: thin / sound / strong); skills work is
-## development XP spent by each player's training plan inside the season's
-## training limit; a heavy or light last block is the existing heavy-legs or
-## fresh week for Round 1. Every club runs it by these rules.
+## The booked running is never missed: once the weeks left are only enough for
+## it, Running is the one action open. No extra running is offered past it. The
+## summer pays no skill development ("No, starts at the game"), and there are
+## no loads, training injuries or fitness base.
+##
+## Every club runs it by these rules. A rival club (and the coach who presses
+## Sim to Round 1) runs its booked weeks first, drills the plan it plays until
+## the side knows it well, then bonds (ai_action).
 ##
 ## The rules only: no state of the career, no clock. Every size is in
-## data/preseason.json (the director's balance call). The only dice are the
-## time trial's, from their own seed (trial_seed), so the pre-season never
-## moves a match, a draft or a story card.
-##
-## The game-plan focus drills plans (plan familiarity, at the foot of this
-## file). Seams left for later slices: the stops after blocks 2 and 3 (STOPS),
-## cards and the papers.
+## data/preseason.json. The time trial's dice come from their own seed
+## (trial_seed), so the pre-season never moves a match or a draft.
 
 const DATA_PATH := "res://data/preseason.json"
 ## The same sizes, should the file be missing from a build.
 const DEFAULTS := {
 	"weeks": 8,
-	"blocks": [[1, 3], [4, 5], [6, 7]],
-	"loads": ["light", "solid", "heavy"],
-	"focuses": ["running", "skills", "plan"],
-	"load_work": {"light": 0.5, "solid": 1.0, "heavy": 1.5},
-	"focus_share": 1.0,
-	"other_share": 0.5,
-	"skills_week_xp": 8,
-	"base_thin_below": 4.5,
-	"base_strong_from": 6.0,
-	"thin_early": 0.25,
-	"thin_weeks": 6,
-	"thin_peak_share": 0.85,
-	"strong_early": 0.15,
-	"strong_weeks": 4,
-	"strong_peak_share": 1.0,
+	"train_weeks": 7,
+	"plan_run_weeks": {"peak": 5, "fast": 4, "steady": 3, "develop": 2},
 	"trial_best": 5,
 	"trial_worst": 3,
 	"trial_noise": 6.0,
-	"heavy_week_injury": 0.008,
-	"light_heal_extra": 1,
-	"soft_tissue_kinds": ["hamstring", "calf", "groin", "quad"],
-	"ai_old_age": 28.0,
 	"papers_claim_up": 4,
 	"papers_breakout_age": 22.0,
 	"papers_short_wins_pos": 14,
@@ -62,29 +48,18 @@ const DEFAULTS := {
 	"familiar_default": 1,
 	"familiar_mult": {"well": 1.0, "partly": 0.95, "barely": 0.9},
 	"drill_step_weeks": 2.0,
-	"drill_max_plans": 2,
+	"drill_max_plans": 1,
 	"fade_rounds": 8,
-	"ai_plan_block": {"contending": 2, "building": 2, "rebuilding": 1},
-	"default_blocks": [["solid", "running"], ["solid", "skills"], ["solid", "skills"]],
-	"ai_blocks": {
-		"contending": [["heavy", "running"], ["solid", "running"], ["solid", "skills"]],
-		"building": [["solid", "running"], ["heavy", "skills"], ["solid", "skills"]],
-		"rebuilding": [["heavy", "skills"], ["solid", "skills"], ["solid", "running"]],
-	},
 }
 
-const LOAD_LABEL := {"light": "Light", "solid": "Solid", "heavy": "Heavy"}
-const FOCUS_LABEL := {"running": "Running", "skills": "Skills", "plan": "Game plan"}
-const BASES := ["thin", "sound", "strong"]
-const DEFAULT_BASE := "sound"
+## The three things a training week can be (director, 2026-11-17).
+const ACTIONS := ["run", "drill", "bond"]
+const ACTION_LABEL := {"run": "Running", "drill": "Game plan drilling", "bond": "Team bonding"}
 ## The weeks after which the pre-season stops for the coach: {week: stop}.
 ## The time trial, then the one pre-season match (director, 2026-11-03: the
-## intra-club match and the practice match merged) against another club at the
-## end of the last block; the papers in the quiet last week.
+## intra-club match and the practice match merged) at the end of the last
+## training week; the papers in the quiet last week.
 const STOPS := {3: "trial", 7: "practice", 8: "papers"}
-## The weeks after which a story card may stop the pre-season: the end of each
-## block (a card never comes in the quiet last week). At most one a block.
-const STORY_WEEKS := [3, 5, 7]
 
 static var _data := {}
 
@@ -117,114 +92,92 @@ static func weeks() -> int:
 	return int(tune("weeks"))
 
 
-static func block_count() -> int:
-	return (tune("blocks") as Array).size()
+## The weeks that take an action (1..train_weeks); the rest are quiet.
+static func train_weeks() -> int:
+	return int(tune("train_weeks"))
 
 
-## [first week, last week] of block `i`.
-static func block_weeks(i: int) -> Array:
-	var b: Array = (tune("blocks") as Array)[i]
-	return [int(b[0]), int(b[1])]
+## The weeks of running a season fitness plan books (director, 2026-11-17:
+## Peak 5, Fast 4, Steady 3, Develop 2), plus `extra` (the flag celebration's
+## one more week), never more than there are training weeks.
+static func run_needed(plan: String, extra := 0) -> int:
+	var table: Dictionary = tune("plan_run_weeks")
+	var n := int(table.get(plan, table.get("steady", 3)))
+	return clampi(n + maxi(0, extra), 0, train_weeks())
 
 
-## The block training week `w` (1-based) belongs to, or -1 for a quiet week.
-static func block_of_week(w: int) -> int:
-	for i in range(block_count()):
-		var b := block_weeks(i)
-		if w >= int(b[0]) and w <= int(b[1]):
-			return i
-	return -1
-
-
-static func is_last_block(i: int) -> bool:
-	return i == block_count() - 1
-
-
-static func loads() -> Array:
-	return tune("loads")
-
-
-static func focuses() -> Array:
-	return tune("focuses")
-
-
-static func valid_block(load: String, focus: String) -> bool:
-	return loads().has(load) and focuses().has(focus)
-
-
-static func _blocks(src: Variant) -> Array:
-	var out := []
-	var fallback: Array = DEFAULTS["default_blocks"]
-	for i in range(block_count()):
-		var b: Array = fallback[mini(i, fallback.size() - 1)]
-		if src is Array and i < (src as Array).size() and (src as Array)[i] is Array 				and ((src as Array)[i] as Array).size() >= 2 				and valid_block(str((src as Array)[i][0]), str((src as Array)[i][1])):
-			b = (src as Array)[i]
-		var row := [str(b[0]), str(b[1])]
-		if str(b[1]) == "plan":
-			row.append(clean_drills(b[2] if b.size() > 2 else []))
-		out.append(row)
-	return out
-
-
-## The plan a coach's pre-season opens on.
-static func default_blocks() -> Array:
-	return _blocks(tune("default_blocks"))
-
-
-## What an AI club runs, from its own situation: where it is in its cycle
-## (TradeValue.phase) sets the focus and where it pushes, and an older list
-## (`best22_age` at or over ai_old_age) does not push at all: its Heavy blocks
-## are Solid. The same loads, by the same rules and risks, as the coach's.
-static func ai_blocks(phase: String, best22_age := 0.0) -> Array:
-	var table: Dictionary = tune("ai_blocks")
-	var out := _blocks(table.get(phase, table.get("building", [])))
-	if best22_age >= float(tune("ai_old_age")):
-		for b in out:
-			if str(b[0]) == "heavy":
-				b[0] = "solid"
-	return out
-
-
-## A fresh pre-season for `year`: `club_blocks` is club code -> its blocks.
-static func new_state(year: int, club_blocks: Dictionary) -> Dictionary:
+## A fresh pre-season for `year`: `club_need` is club code -> the running
+## weeks its plan books (the coach's is booked again once he picks his plan).
+static func new_state(year: int, club_need: Dictionary) -> Dictionary:
 	var clubs := {}
-	for code in club_blocks:
-		clubs[str(code)] = {"blocks": _blocks(club_blocks[code]), "run": 0.0}
-	return {"year": year, "week": 0, "clubs": clubs, "trial": {}, "trial_seen": false, "done": false,
-			"injuries": []}
+	for code in club_need:
+		clubs[str(code)] = {"need": int(club_need[code]), "run": 0, "acts": []}
+	return {"year": year, "week": 0, "clubs": clubs, "trial": {}, "trial_seen": false, "done": false}
 
 
-## A week's work in one area ("running" or "skills") under a block's load and
-## focus: 1.0 is a full Solid week on it.
-static func work(load: String, focus: String, area: String) -> float:
-	var share := float(tune("focus_share")) if focus == area else float(tune("other_share"))
-	return float((tune("load_work") as Dictionary).get(load, 1.0)) * share
+## The running weeks still owed.
+static func run_left(entry: Dictionary) -> int:
+	return maxi(0, int(entry.get("need", 0)) - int(entry.get("run", 0)))
 
 
-## Development XP a fit player earns from one week of the block, before his
-## club's teachers and departments (the same multipliers a match's XP gets).
-static func week_xp(load: String, focus: String) -> int:
-	return int(round(float(tune("skills_week_xp")) * work(load, focus, "skills")))
+## The actions open in training week `w` (1-based) with `left` running weeks
+## still owed (director, 2026-11-17): once the weeks left are only enough for
+## the running, Running is the one action; once it is done, Running is not
+## offered ("No extra running"). [] for a quiet week.
+static func actions_open(w: int, left: int) -> Array:
+	var weeks_left := train_weeks() - w + 1
+	if w < 1 or weeks_left <= 0:
+		return []
+	if left >= weeks_left:
+		return ["run"]
+	if left <= 0:
+		return ["drill", "bond"]
+	return ACTIONS.duplicate()
 
 
-## The weeks of running work a whole plan adds up to.
-static func planned_run(blocks: Array) -> float:
-	var run := 0.0
-	for w in range(1, weeks() + 1):
-		var i := block_of_week(w)
-		if i >= 0 and i < blocks.size():
-			run += work(str(blocks[i][0]), str(blocks[i][1]), "running")
-	return run
+## What a rival club does in week `w` (director, 2026-11-17, "Drill, then
+## bond"): its booked running first, then drilling the plan it plays while the
+## side knows it less than well (`fluency`, drilling so far counted), then
+## bonding. A side whose plan is Balanced has nothing to drill.
+static func ai_action(w: int, left: int, plan: String, fluency: float) -> String:
+	var open := actions_open(w, left)
+	if open.is_empty():
+		return ""
+	if open.has("run"):
+		return "run"
+	if DRILL_PLANS.has(plan) and fluency < float(WELL):
+		return "drill"
+	return "bond"
+
+
+## A week's record, cleaned: {"a": "run"} / {"a": "drill", "d": [plan], "s":
+## {group: [plan]}} / {"a": "bond", "card": id}. A drilling week with no plan
+## given drills `fallback`. {} for anything else.
+static func clean_week(src: Variant, fallback := []) -> Dictionary:
+	if not (src is Dictionary) or not ACTIONS.has(str((src as Dictionary).get("a", ""))):
+		return {}
+	var a := str(src["a"])
+	if a != "drill":
+		var out := {"a": a}
+		if a == "bond" and str((src as Dictionary).get("card", "")) != "":
+			out["card"] = str(src["card"])
+		return out
+	var d := clean_drills((src as Dictionary).get("d", []))
+	if d.is_empty():
+		d = clean_drills(fallback)
+	var row := {"a": "drill", "d": d}
+	var split := week_split(src)
+	if not split.is_empty():
+		row["s"] = split
+	return row
 
 
 # ---------------------------------------------------------------------------
 # Position groups (director, 2026-11-06, row 101: "split it between position
-# groups"). A Game plan block's drill plan can differ for the mids,
-# defenders, forwards and rucks. The block is [load, "plan", drills], plus
-# (once a group drills something else) a fourth item {group: drills}; a group
-# not in it drills the block's own plans. Load and focus stay the side's.
-# Plan fluency is the side's, so a split block's weeks of drilling count each
-# group by its share of the list. A block with no split is exactly as before.
+# groups"). A drilling week can drill a different plan for the mids,
+# defenders, forwards and rucks: the week holds {group: drills} under "s"; a
+# group not in it drills the week's own plan. Plan fluency is the side's, so a
+# split week counts each group by its share of the list.
 # ---------------------------------------------------------------------------
 const GROUPS := ["MID", "DEF", "FWD", "RUCK"]
 const GROUP_LABEL := {"MID": "Mids", "DEF": "Defenders", "FWD": "Forwards", "RUCK": "Rucks"}
@@ -236,25 +189,25 @@ static func group_of(p: Dictionary) -> String:
 	return r if GROUPS.has(r) else "MID"
 
 
-## A Game plan block's drills for groups of their own, cleaned: {group: drills}
-## ({} when every group drills the block's plans).
-static func block_split(block: Array) -> Dictionary:
+## A drilling week's drills for groups of their own, cleaned: {group: drills}
+## ({} when every group drills the week's plan).
+static func week_split(week: Variant) -> Dictionary:
 	var out := {}
-	if block.size() < 4 or str(block[1]) != "plan" or not (block[3] is Dictionary):
+	if not (week is Dictionary) or not ((week as Dictionary).get("s") is Dictionary):
 		return out
 	for g in GROUPS:
-		var d := clean_drills((block[3] as Dictionary).get(g, []))
+		var d := clean_drills(((week as Dictionary)["s"] as Dictionary).get(g, []))
 		if not d.is_empty():
 			out[g] = d
 	return out
 
 
-## What `group` drills in a Game plan block: its own plans, or the block's.
-static func group_drills(block: Array, group: String) -> Array:
-	if block.size() < 3 or str(block[1]) != "plan":
+## What `group` drills in a drilling week: its own plan, or the week's.
+static func group_drills(week: Dictionary, group: String) -> Array:
+	if str(week.get("a", "")) != "drill":
 		return []
-	var split := block_split(block)
-	return split[group] if split.has(group) else clean_drills(block[2])
+	var split := week_split(week)
+	return split[group] if split.has(group) else clean_drills(week.get("d", []))
 
 
 ## Each group's share of a list: its players over the list's (each 0 for an
@@ -271,54 +224,6 @@ static func group_shares(list: Array) -> Dictionary:
 	for g in GROUPS:
 		out[g] = float(out[g]) / float(list.size())
 	return out
-
-
-## The fitness base that much running work gives: thin / sound / strong.
-static func base_band(run: float) -> String:
-	if run < float(tune("base_thin_below")):
-		return "thin"
-	if run >= float(tune("base_strong_from")):
-		return "strong"
-	return "sound"
-
-
-## The week flag a club's players carry into Round 1 from the last block's
-## load: the existing heavy-legs or fresh week (ClubLife), or "" for Solid.
-static func round_one_flag(blocks: Array) -> String:
-	if blocks.is_empty():
-		return ""
-	match str(blocks[blocks.size() - 1][0]):
-		"heavy":
-			return "heavy_legs"
-		"light":
-			return "fresh"
-	return ""
-
-
-static func injury_seed(career_seed: int, year: int, club: String, id: String, week: int) -> int:
-	return hash(["preseason", "injury", career_seed, year, club, id, week])
-
-
-## A Heavy training week's risk for one player: {} or {"weeks", "kind"}, a
-## soft-tissue injury of the game's usual lengths (Injuries.SEVERITY). His
-## durability moves the chance as it moves a match injury. The roll is his
-## own for that week (injury_seed), so a reload replays it and nobody else's
-## dice move. Light and Solid weeks carry no risk.
-static func training_injury(p: Dictionary, load: String, career_seed: int, year: int,
-		club: String, week: int) -> Dictionary:
-	var base := float(tune("heavy_week_injury")) if load == "heavy" else 0.0
-	if base <= 0.0 or int(p.get("injury_weeks", 0)) > 0:
-		return {}
-	var dur := float((p.get("attr", {}) as Dictionary).get("durability", 50))
-	var rng := RandomNumberGenerator.new()
-	rng.seed = injury_seed(career_seed, year, club, str(p["id"]), week)
-	if rng.randf() >= base * clampf(1.5 - dur / 100.0, 0.5, 1.3):
-		return {}
-	var kinds: Array = tune("soft_tissue_kinds")
-	if kinds.is_empty():
-		return {}
-	return {"weeks": Injuries._severity(rng), "kind": str(kinds[rng.randi_range(0, kinds.size() - 1)])}
-
 
 # ---------------------------------------------------------------------------
 # The prospects a pre-season match trials: copies of this year's National
@@ -360,7 +265,7 @@ static func prospect_line(stats: Dictionary) -> String:
 	if d >= 12:
 		return "Found the ball %d times against senior bodies." % d
 	if d >= 1:
-		return "Had a quiet day against senior bodies: %d disposals." % d
+		return "Had a quiet day against senior bodies: %d disposal%s." % [d, "" if d == 1 else "s"]
 	return "Saw almost nothing of the ball."
 
 
@@ -412,105 +317,6 @@ static func _faster(a: Dictionary, b: Dictionary) -> bool:
 	if float(a["v"]) != float(b["v"]):
 		return float(a["v"]) > float(b["v"])
 	return str(a["id"]) < str(b["id"])
-
-
-# ---------------------------------------------------------------------------
-# In words (the plan screen): what each choice gains and costs, nothing hidden.
-# ---------------------------------------------------------------------------
-## "Weeks 1 to 3".
-static func block_title(i: int) -> String:
-	var b := block_weeks(i)
-	return "Weeks %d to %d" % [int(b[0]), int(b[1])] if int(b[0]) != int(b[1]) else "Week %d" % int(b[0])
-
-
-## What a block's load and focus gain, in a coach's words. The sizes behind
-## them are in the data (the focus gets a full share of the week, the other
-## area half of one; Heavy is half as much again of both, Light half of both),
-## and each line says only what is true of them.
-const _GAIN := {
-	"running": {
-		"solid": "Running first, for the fitness base. Skills work gets half the time.",
-		"heavy": "A bigger fitness base than a Solid block builds, and more Skills work too.",
-	},
-	"skills": {
-		"solid": "Skills first, so every fit player develops. Running gets half the time.",
-		"heavy": "More development than a Solid block gives, and more Running too.",
-	},
-}
-
-
-## What block `i`'s load and focus gain. `plans` are the plans a Game plan
-## block drills.
-static func gain_line(load: String, focus: String, i: int, plans := []) -> String:
-	if focus == "plan":
-		var drill := drill_sentence(plans)
-		match load:
-			"light":
-				return "%s %s" % [gain_line("light", "running", i), drill]
-			"heavy":
-				return "%s More Running and Skills work than a Solid block on the plan." % drill
-		return drill
-	if load == "light":
-		# Director, 2026-10-19: a Light block needs a real gain in every block,
-		# so a Light week heals the injured a week faster (light_heal_extra).
-		var heal := "Injured players heal twice as fast in these weeks."
-		if is_last_block(i):
-			return "Fresh legs and less soft-tissue risk in Round 1. %s" % heal
-		return heal
-	return str((_GAIN.get(focus, {}) as Dictionary).get(load, ""))
-
-
-## What it costs, or "" when it costs nothing (a Solid block).
-static func cost_line(load: String, focus: String, i: int) -> String:
-	var line := ""
-	match load:
-		"light":
-			line = "Half the Running and half the Skills work of a Solid block."
-			if focus == "plan":
-				line = "Half the Running and Skills work of a Solid block on the plan."
-		"heavy":
-			if is_last_block(i):
-				line = "A risk of soft-tissue injuries in these weeks, and sore legs in Round 1."
-			else:
-				line = "A risk of soft-tissue injuries in these weeks."
-	if focus == "plan" and load != "light":
-		var share := "Running and Skills work both get half the time."
-		line = share if line == "" else "%s %s" % [line, share]
-	return line
-
-
-const BASE_LABEL := {"thin": "a thin fitness base", "sound": "a sound fitness base", "strong": "a strong fitness base"}
-
-
-## Weeks of running as a coach would say them: "5", "4.5", "5.3".
-static func run_weeks_text(run: float) -> String:
-	var r := snappedf(run, 0.1)
-	return str(int(r)) if is_equal_approx(r, roundf(r)) else "%.1f" % r
-
-
-## How the base is built, with this plan's own total (director, 2026-10-19:
-## say what builds it, in plain football maths).
-static func base_rule(run: float) -> String:
-	return "Running by Round 1: %s weeks. Under %s is thin, %s or more strong." % [
-			run_weeks_text(run), run_weeks_text(float(tune("base_thin_below"))), run_weeks_text(float(tune("base_strong_from")))]
-
-
-## What the base does in Round 1, with its real sizes: the season curve's
-## tiring and soft-tissue sizes (Conditioning DRAIN_K, INJURY_K) at the base's
-## early value, fading over its rounds.
-static func base_effect(base: String) -> String:
-	match base:
-		"thin":
-			var early := float(tune("thin_early"))
-			return "Round 1: tires %d%% faster, %d%% more soft-tissue injuries, fading over %d rounds; a peak reaches only %d%%." % [
-					roundi(Conditioning.DRAIN_K * early * 100.0), roundi(Conditioning.INJURY_K * early * 100.0),
-					int(tune("thin_weeks")), roundi(float(tune("thin_peak_share")) * 100.0)]
-		"strong":
-			var early := float(tune("strong_early"))
-			return "Round 1: tires %d%% slower, %d%% fewer soft-tissue injuries, fading over %d rounds." % [
-					roundi(Conditioning.DRAIN_K * early * 100.0), roundi(Conditioning.INJURY_K * early * 100.0),
-					int(tune("strong_weeks"))]
-	return "Round 1 at normal fitness: no early lift, no early cost."
 
 
 # ---------------------------------------------------------------------------
@@ -732,34 +538,31 @@ static func default_drill(usual: String, levels: Dictionary) -> Array:
 	return [best]
 
 
-## The weeks of drilling each plan gets from a whole plan of blocks: a block's
-## weeks are shared between the plans it drills. A block split between the
-## position groups counts each group's plans by its share in `shares`
-## (group_shares); without shares (or an empty list) the block's own plans.
-static func drill_credit(blocks: Array, shares := {}) -> Dictionary:
+## The weeks of drilling each plan gets from a pre-season's weeks (week
+## records, clean_week's): each drilling week is one week on its plan. A week
+## split between the position groups counts each group's plan by its share in
+## `shares` (group_shares); without shares (or an empty list) the week's own plan.
+static func drill_credit(weeks_done: Array, shares := {}) -> Dictionary:
 	var total := 0.0
 	for g in shares:
 		total += float(shares[g])
 	var out := {}
-	for i in range(mini(blocks.size(), block_count())):
-		var b: Array = blocks[i]
-		if str(b[1]) != "plan" or b.size() < 3:
+	for wk in weeks_done:
+		if not (wk is Dictionary) or str((wk as Dictionary).get("a", "")) != "drill":
 			continue
-		var w := block_weeks(i)
-		var span := float(int(w[1]) - int(w[0]) + 1)
 		var parts := []   # [weight, drills]
-		if total > 0.0 and not block_split(b).is_empty():
+		if total > 0.0 and not week_split(wk).is_empty():
 			for g in GROUPS:
-				parts.append([float(shares.get(g, 0.0)) / total, group_drills(b, str(g))])
+				parts.append([float(shares.get(g, 0.0)) / total, group_drills(wk, str(g))])
 		else:
-			parts.append([1.0, clean_drills(b[2])])
+			parts.append([1.0, clean_drills((wk as Dictionary).get("d", []))])
 		for part in parts:
 			var drills: Array = part[1]
 			if drills.is_empty() or float(part[0]) <= 0.0:
 				continue
-			var weeks := span * float(part[0]) / float(drills.size())
+			var share := float(part[0]) / float(drills.size())
 			for plan in drills:
-				out[plan] = float(out.get(plan, 0.0)) + weeks
+				out[plan] = float(out.get(plan, 0.0)) + share
 	return out
 
 
@@ -771,18 +574,6 @@ static func drilled_fluency(f: float, credit: float) -> float:
 ## The level (low, medium, high) after `credit` weeks of drilling.
 static func drilled_level(f: float, credit: float) -> int:
 	return int(drilled_fluency(f, credit))
-
-
-## An AI club's blocks with its usual plan drilled in the block its phase
-## sets aside (the same blocks, the same rules, as the coach's).
-static func with_plan_block(blocks: Array, phase: String, usual: String) -> Array:
-	if not DRILL_PLANS.has(usual):
-		return blocks
-	var table: Dictionary = tune("ai_plan_block")
-	var i := clampi(int(table.get(phase, table.get("building", 2))), 0, blocks.size() - 1)
-	var out := blocks.duplicate(true)
-	out[i] = [str(out[i][0]), "plan", [usual]]
-	return out
 
 
 ## "Fluency in High Press rises a step for every 2 weeks on it."

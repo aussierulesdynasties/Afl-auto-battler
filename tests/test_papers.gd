@@ -45,6 +45,7 @@ func _check(ok: bool, message: String) -> void:
 
 ## Runs one test function; it must make at least one check (tests/functions_ran.gd).
 const Ran := preload("res://tests/functions_ran.gd")
+const Press := preload("res://tests/preseason_press.gd")
 func _t(test: String, args := []) -> Variant:
 	return await Ran.one(self, test, args)
 
@@ -61,9 +62,9 @@ func _career(club := CLUB) -> void:
 ## the way, as pressing on does).
 func _to_papers() -> bool:
 	var guard := 0
-	while GameState.preseason_active() and GameState.preseason_stop() != "papers" and guard < 12:
+	while GameState.preseason_active() and GameState.preseason_stop() != "papers" and guard < 24:
 		guard += 1
-		GameState.preseason_advance()
+		Press.advance()
 	return GameState.preseason_stop() == "papers"
 
 
@@ -621,7 +622,7 @@ func _test_flow() -> void:
 	_check(GameState.papers_record()["order"] == order1 and str(GameState.papers_record()["kind"]) == kind1,
 			"The same career prints the same ladder and runs the same story")
 	var goal_before := (GameState.board["goal"] as Dictionary).duplicate()
-	GameState.preseason_advance()
+	Press.advance()
 	_check(not GameState.preseason_active() and GameState.board["goal"] == goal_before,
 			"Pressing on without an answer goes to Round 1, and the board's goal is as it was")
 	# The papers never touch the match: the same pre-season, with and without
@@ -632,7 +633,7 @@ func _test_flow() -> void:
 	_restore(at_papers)
 	_force("finish")
 	GameState.papers_answer(2)
-	GameState.preseason_advance()
+	Press.advance()
 	GameState.advance()
 	_check(str(GameState.season_log.back()["score"]) == sig_a,
 			"What you tell the papers does not change the first match's result")
@@ -747,7 +748,7 @@ func _test_reckoning() -> void:
 	_to_papers()
 	_force("finish")
 	GameState.papers_answer(2)
-	GameState.preseason_advance()
+	Press.advance()
 	_check(not GameState.preseason_active(), "Into the season")
 	var deck := StoryDeck.all()
 	var t := StoryDeck.by_id(deck, "media_papers_reckoning")
@@ -800,7 +801,7 @@ func _test_silence_and_sim() -> void:
 	_at_papers()
 	_force("finish")
 	var b0 := GameState.board_confidence()
-	GameState.preseason_advance()
+	Press.advance()
 	_check(GameState.board_confidence() == b0 - 3 and str(GameState.papers_record()["result"]).begins_with("You say nothing"),
 			"Saying nothing costs the board three, as on any card, and the result says so")
 	# A hands-off run goes through the papers on silence (from the papers as
@@ -823,7 +824,7 @@ func _test_saves() -> void:
 	var guard := 0
 	while GameState.preseason_week() < 5 and guard < 12:
 		guard += 1
-		GameState.preseason_advance()
+		Press.advance()
 	var week5 := _snap()
 	var w5 := GameState.preseason_week()
 	_to_papers()
@@ -836,7 +837,7 @@ func _test_saves() -> void:
 			and GameState.papers_record()["order"] == order and int(GameState.papers_record()["claim"]) > 0
 			and bool(GameState.papers_record()["answered"]),
 			"...and loads back to the same papers, the same answer, the same claim")
-	GameState.preseason_advance()
+	Press.advance()
 	_check(not GameState.preseason_active(), "...and goes on to Round 1")
 	# A pre-season saved before the papers existed (it stood mid pre-season) plays on to them.
 	_check(GameState._restore_career(week5.duplicate(true)) and GameState.preseason_week() == w5,

@@ -2,7 +2,7 @@ extends SceneTree
 ## The pre-season drill plan by position group (row 101), for the director's look.
 ## Needs a real renderer and a window (keep it out of the way with an override.cfg):
 ##   godot --path . --script tools/visual/capture_group_plans.gd -- --out /tmp/gp --club FRE [--size 360x800]
-## Weeks 1 to 3 go on Game plan. Writes <out>_whole.png (the drill row on the
+## Week 1 goes on Game plan drilling (rule 69a). Writes <out>_whole.png (the drill row on the
 ## whole side), <out>_forwards.png (the forwards' tab, Win Contest added to
 ## their drills) and <out>_split.png (the whole side again, the line naming
 ## the split). Nothing here touches a real save.
@@ -69,19 +69,26 @@ func _run() -> void:
 		await process_frame
 	state.start_season(club, db.club_list(club))
 	state.open_preseason()
+	# Past the meetings and the plan to week 1, on Game plan drilling (rule 69a).
+	state.preseason_meetings_done()
+	state.set_preseason_plan("develop")
+	var guard := 0
+	while state.preseason_stop() != "week" and guard < 10:
+		guard += 1
+		state.preseason_advance()
 	root.get_node("Router").go("hub")
 	await _frames(10)
-	await _press("Focus0_plan")
-	await _scroll_to("Drill0")
+	await _press("ActionTap_drill")
+	await _scroll_to("DrillPicker")
 	await _shot(out + "_whole.png")
-	await _press("DrillFor0_FWD")
-	await _press("Drill0_contest")
-	await _scroll_to("Drill0")
+	await _press("DrillFor_FWD")
+	await _press("Drill_contest")
+	await _scroll_to("DrillPicker")
 	await _shot(out + "_forwards.png")
-	await _press("DrillFor0_ALL")
-	await _scroll_to("Drill0")
+	await _press("DrillFor_ALL")
+	await _scroll_to("DrillPicker")
 	await _shot(out + "_split.png")
-	print("forwards ", state.preseason_drills(0, "FWD"), " mids ", state.preseason_drills(0, "MID"))
+	print("forwards ", state.preseason_drills("FWD"), " mids ", state.preseason_drills("MID"))
 	quit(0)
 
 

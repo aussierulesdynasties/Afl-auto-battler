@@ -1,0 +1,246 @@
+<title>Club Bonding Cards</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Inter:wght@400;600&display=swap">
+<style>
+/* Layout: one column of cards, the 18 that fit first, the 50 that go below, grouped by why. */
+:root{
+  --bg:#f3f4f2; --panel:#ffffff; --fg:#14171a; --muted:#4d5560; --line:#d5d9dd;
+  --gain:#1d6b3a; --cost:#a1311f; --accent:#0b4f8a; --chosen:#14171a;
+  --display:"Barlow Condensed","Arial Narrow",Arial,sans-serif; --body:Inter,system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#101316; --panel:#181c20; --fg:#eef1f3; --muted:#a8b0b8; --line:#2c3338;
+  --gain:#6fcf8e; --cost:#ff8a75; --accent:#7db8ee; --chosen:#eef1f3; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#101316; --panel:#181c20; --fg:#eef1f3; --muted:#a8b0b8; --line:#2c3338;
+  --gain:#6fcf8e; --cost:#ff8a75; --accent:#7db8ee; --chosen:#eef1f3; color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font:15px/1.5 var(--body);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:24px 48px}
+main{max-width:860px;margin:0 auto;display:flex;flex-direction:column;gap:28px}
+h1,h2,h3{font-family:var(--display);letter-spacing:.01em;margin:0;text-wrap:balance}
+h1{font-size:40px;line-height:1.05}
+h2{font-size:28px;border-bottom:3px solid var(--fg);padding-bottom:4px}
+h3{font-size:22px}
+p{margin:0;max-width:68ch}
+.intro{display:flex;flex-direction:column;gap:10px}
+.tally{font-weight:600}
+.list{display:flex;flex-direction:column;gap:16px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:16px;display:flex;flex-direction:column;gap:10px}
+.club{font:600 12px var(--body);text-transform:uppercase;letter-spacing:.08em;color:var(--accent)}
+.text{color:var(--fg)}
+.choices{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:640px){.choices{grid-template-columns:1fr}}
+.choice{border-top:2px solid var(--line);padding-top:8px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.choice b{font-size:16px}
+.kind{font:600 11px var(--body);text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.g::before{content:"Gain: ";font-weight:600;color:var(--gain)}
+.c::before{content:"Cost: ";font-weight:600;color:var(--cost)}
+.was{color:var(--muted);font-size:13px}
+.answer{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+button{font:600 14px var(--body);color:var(--fg);background:transparent;border:1px solid var(--line);border-radius:4px;padding:8px 14px;cursor:pointer;min-height:40px}
+button[aria-pressed="true"]{border:2px solid var(--chosen);padding:7px 13px}
+button:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+textarea{width:100%;box-sizing:border-box;font:14px var(--body);color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:8px;min-height:40px;resize:vertical}
+.saved{font-size:13px;color:var(--muted)}
+.cutrow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+.cutrow .t{font-weight:600}
+.cutrow .d{color:var(--muted);font-size:13px}
+.status{font-size:13px;color:var(--muted)}
+</style>
+
+<main>
+  <section class="intro">
+    <h1>Club bonding cards</h1>
+    <p>You said: keep the club pre-season cards that fit as team bonding. 18 fit. Each would join its own club's bonding deck, next to the nine cards every club has. A rival club's bonding week could draw its own club's cards too.</p>
+    <p>A bonding card has two choices, as you ruled: one with a smaller gain only, one with a bigger gain and a cost. The summer has no development, no loads and no running in a card, so every card's old development, running and fresh-legs parts are gone. The new choices are below each card, with what the card used to do in grey.</p>
+    <p>The other 50 go. They are listed at the bottom with the reason. Tap any one to keep it instead.</p>
+    <p class="tally" id="tally">Loading your answers…</p>
+  </section>
+
+  <section class="list" id="keep"><h2>The 18 that fit</h2></section>
+  <section class="list" id="cut"><h2>The 50 that go</h2></section>
+</main>
+
+<script>
+const T = (s)=>"Together up 1 (the group's closeness)";
+const KEEP = [
+ {id:"ade_resilience_camp",club:"Adelaide",title:"The resilience camp",text:"An outside firm pitches a mental resilience camp: sleep deprivation, confronting sessions, no phones.",
+  small:{l:"Run your own leadership camp",g:["Together up 1"]},
+  big:{l:"Book the camp",g:["Together up 1","Standards up 1"],c:["Every player's morale down 3"]},
+  was:"Book the camp: a gamble. Own camp: Together up 1, less development. No camp: more development, board down 1."},
+ {id:"ade_interstate_kids",club:"Adelaide",title:"Settling the interstate kids",text:"Four teenagers from interstate. The welfare manager wants money for host families and trips home.",
+  small:{l:"Put them in a share house",g:["Together up 1"]},
+  big:{l:"Fund the full program",g:["Together up 1","Every player's morale up 2"],c:["Board confidence down 2 (the money)"]},
+  was:"Fund it: morale up 2, board down 2. Share house: Together up 1, a gamble."},
+ {id:"brb_toughen_up",club:"Brisbane Bears",title:"Toughen them up",text:"The group has been called soft for too long. A hard-edged camp in the bush?",
+  small:{l:"A day in the bush",g:["Together up 1"]},
+  big:{l:"Run the camp",g:["Standards up 1","Together up 1"],c:["Every player's morale down 3"]},
+  was:"Run the camp: Standards up 2, Together up 1, less development. Normal program: more development, a gamble."},
+ {id:"brl_medal_winners",club:"Brisbane Lions",title:"The medal winners' morning",text:"Past club champions want to address the squad before the season.",
+  small:{l:"Ten minutes at the end",g:["Standards up 1"]},
+  big:{l:"Give them the whole day",g:["Standards up 1","Together up 1"],c:["Board confidence down 2 (their travel and the lunch)"]},
+  was:"The morning: Standards up 2, morale up 2, one less running week. Ten minutes: Standards up 1, board down 1."},
+ {id:"canb_army_camp",club:"Canberra",title:"Boot camp across the lake",text:"The military college offers three days with its instructors: logs, tents, early mornings.",
+  small:{l:"A day's visit",g:["Standards up 1"]},
+  big:{l:"Send them for three days",g:["Together up 1","Standards up 1"],c:["Every player's morale down 3"]},
+  was:"Send them: Together up 3, one less running week, a gamble. Day visit: Standards up 1, morale down 2."},
+ {id:"canb_thunder_day",club:"Canberra",title:"Thunder Day",text:"The members want a club day: families on the lawns, signings, the club song.",
+  small:{l:"A short signing",g:["Board confidence up 2"]},
+  big:{l:"Make it a tradition",g:["Together up 1","Board confidence up 3"],c:["Every player's morale down 2 (a long day)"]},
+  was:"Tradition: Together up 2, board up 3, less development. Short signing: more development, board down 2."},
+ {id:"canb_league_town",club:"Canberra",title:"A league town",text:"Go into the league schools and fight for the kids, or build our own patch first.",
+  small:{l:"Our own clubs first",g:["Board confidence up 2"]},
+  big:{l:"Clinics in every league school",g:["Together up 1","Board confidence up 3"],c:["Every player's morale down 2"]},
+  was:"Every school: board up 6, less development. Own clubs: Together up 2, board up 2, side's morale down 1."},
+ {id:"fre_goldfields_trip",club:"Fremantle",title:"The Goldfields trip",text:"The fundraising trip to Kalgoorlie: a dinner and a junior clinic. A long way from base.",
+  small:{l:"Fly a few seniors up",g:["Board confidence up 2"]},
+  big:{l:"Take a full bus",g:["Together up 1","Board confidence up 3"],c:["Every player's morale down 2 (the long trip)"]},
+  was:"Full bus: board up 5, Together up 1, one less running week. Fly a few: more development, board down 2."},
+ {id:"fre_session_in_the_port",club:"Fremantle",title:"A session for the port",text:"An open session on a public oval by the harbour. Cramped, tired surface, big crowd.",
+  small:{l:"Stay behind the fences",g:["Standards up 1"]},
+  big:{l:"Open session in the port",g:["Board confidence up 3","Every player's morale up 2"],c:["One player pulls up sore on the tired surface"]},
+  was:"Open session: board up 4, morale up 3, one less running week. Behind the fences: more development, board down 2."},
+ {id:"gcs_league_town",club:"Gold Coast",title:"Rugby league town",text:"Push a schools program hard this summer, at the cost of the players' time.",
+  small:{l:"Development staff run it",g:["Board confidence up 2"]},
+  big:{l:"Players in every school",g:["Together up 1","Board confidence up 4"],c:["Every player's morale down 2"]},
+  was:"Every school: board up 5, less development. Staff run it: more development, board down 1."},
+ {id:"gws_riverina_trip",club:"GWS",title:"The Riverina road trip",text:"A clinic in Wagga and a night with the country clubs.",
+  small:{l:"Two country boys run it",g:["Board confidence up 2"]},
+  big:{l:"Send a full bus",g:["Together up 1","Board confidence up 3"],c:["Every player's morale down 2 (the long trip)"]},
+  was:"Full bus: board up 4, Together up 1, one less running week. Two boys: board up 1, Together down 1."},
+ {id:"gws_membership_drive",club:"GWS",title:"Membership drive in the suburbs",text:"Players in shopping centres from Penrith to Parramatta for a weekend.",
+  small:{l:"The leadership group only",g:["Board confidence up 2"]},
+  big:{l:"Every player does a shift",g:["Together up 1","Board confidence up 4"],c:["Every player's morale down 2"]},
+  was:"Every player: board up 5, less development. Leaders only: board up 2, Together down 1."},
+ {id:"gws_where_we_came_from",club:"GWS",title:"Where the club came from",text:"One of the club's founders offers to tell the group where the Giants came from.",
+  small:{l:"A quick hello at the end",g:["Every player's morale up 2"]},
+  big:{l:"Give him the floor for an hour",g:["Together up 1","Every player's morale up 3"],c:["Standards down 1 (training ran short)"]},
+  was:"The floor: Together up 2, morale up 4, less development. Quick hello: more development, Together down 1."},
+ {id:"haw_glenferrie_session",club:"Hawthorn",title:"Back to Glenferrie",text:"The heritage committee asks for one open session at the old ground.",
+  small:{l:"Keep the session closed",g:["Standards up 1"]},
+  big:{l:"Open session at Glenferrie",g:["Together up 1","Board confidence up 3"],c:["Standards down 1 (a show, not a session)"]},
+  was:"Open session: board up 3, Together up 1, less development. Closed: more development, board down 1."},
+ {id:"haw_commando_camp",club:"Hawthorn",title:"Commando camp",text:"The leadership group wants a punishing camp in the bush, like the hard men of old.",
+  small:{l:"A team-building weekend",g:["Together up 1"]},
+  big:{l:"Run the camp",g:["Standards up 1","Together up 1"],c:["One player pulls up sore"]},
+  was:"Run the camp: Standards up 2, more development, heavy legs. Team weekend: Together up 1, less development."},
+ {id:"tas_bushfire",club:"Tasmania",title:"Bushfire appeal",text:"Fires through the east. Towns that sent kids to our academy have lost sheds and stock.",
+  small:{l:"Donate the match-day takings",g:["Board confidence up 2"]},
+  big:{l:"The list goes to help clean up",g:["Together up 1","Board confidence up 4"],c:["Every player's morale down 2 (hard, dirty days)"]},
+  was:"Clean up: board up 6, Together up 1, less development. Donate: board up 2, morale down 1."},
+ {id:"wbd_membership_tour",club:"Western Bulldogs",title:"The membership drive in the west",text:"A membership tour of the western suburbs, with the coach and the players.",
+  small:{l:"The coach goes, players stay home",g:["Board confidence up 2"]},
+  big:{l:"Players at every event",g:["Together up 1","Board confidence up 4"],c:["Every player's morale down 2"]},
+  was:"Every event: board up 5, slow start. Coach only: board up 2, less development. No tour (cut): more development, board down 4."},
+ {id:"wce_community_camp",club:"West Coast",title:"Community camp",text:"The community camp heads to a country town: the Goldfields, the Pilbara or the South West.",
+  small:{l:"Send the leaders only",g:["Board confidence up 2"]},
+  big:{l:"Take the whole list",g:["Together up 1","Board confidence up 3"],c:["Every player's morale down 2"]},
+  was:"Whole list: Together up 2, board up 1, less development. Leaders only: more development, board down 1."}
+];
+const CUT_WHY = {
+ launch:"A season launch speech: the coach talks to the members, not a team bonding week.",
+ weather:"Heat, wind or smoke at training: it changes how we train, not a bonding week.",
+ ground:"Which ground we train on: a training question, not a bonding week.",
+ running:"A running or altitude camp: running is its own week now.",
+ select:"A selection or captaincy call: not a bonding week.",
+ business:"Club business (money, members, home games, the list): not a bonding week.",
+ practice:"An extra practice match: the pre-season already has its one practice match.",
+ coach:"Only the coach goes: not the group.",
+ season:"Also a regular-season card: it stays there, out of the pre-season only."
+};
+const CUT = [
+ ["ade_preseason_showdown","Adelaide","A Showdown in the pre-season","practice"],["ade_membership_record","Adelaide","Chasing a membership record","business"],
+ ["ade_country_tour","Adelaide","The country tour","practice"],["ade_one_voice_or_two","Adelaide","One voice or two","select"],
+ ["brb_summer_heat","Brisbane Bears","The Queensland summer","weather"],["brb_summer_sport","Brisbane Bears","Summer sport has the ground","ground"],
+ ["brb_never_seen_september","Brisbane Bears","September feels a long way off","launch"],["brb_membership_price","Brisbane Bears","What a membership costs","business"],
+ ["brl_two_histories","Brisbane Lions","Two clubs in one jumper","launch"],["brl_brisbane_heat","Brisbane Lions","Brisbane heat","weather"],
+ ["brl_cricket_on","Brisbane Lions","The cricket's on","ground"],["brl_up_the_coast","Brisbane Lions","Pre-season up the coast","practice"],
+ ["canb_never_get_a_team","Canberra","They said we'd never get a team","launch"],["canb_leaning_lights","Canberra","Lights that lean","business"],
+ ["canb_home_of_the_founder","Canberra","Home of the founder","business"],["canb_riverina_academy","Canberra","The bush or the suburbs","business"],
+ ["canb_up_the_mountain","Canberra","Up the mountain","running"],["canb_smoke","Canberra","Smoke on the horizon","weather"],
+ ["car_number_one_pick","Carlton","The whole city wants to see {name}","select"],["fre_is_this_the_year","Fremantle","Is this the year?","launch"],
+ ["fre_the_doctor","Fremantle","The Doctor's in","weather"],["fre_fortress_or_fun","Fremantle","Fortress defence or fun footy","launch"],
+ ["gcs_the_flag","Gold Coast","When's the flag coming?","launch"],["gcs_summer_heat","Gold Coast","Summer heat","weather"],
+ ["gcs_young_list","Gold Coast","Always a young list","select"],["gcs_local_club_debt","Gold Coast","The local club that backed us","coach"],
+ ["gcs_up_north","Gold Coast","Take a game north","practice"],["gcs_heritage_night","Gold Coast","Red, gold and blue","business"],
+ ["gcs_captains_call","Gold Coast","Captain's call","select"],["gee_surf_coast_sandhills","Geelong","Sandhills on the Surf Coast","running"],
+ ["gws_summer_heat","GWS","Summer in the west","weather"],["gws_showground_in_summer","GWS","The Showground in summer","ground"],
+ ["gws_is_this_the_year","GWS","Is this the year?","launch"],["gws_sharing_the_oval","GWS","Sharing the main oval","ground"],
+ ["nth_famous_number","North Melbourne","A great's number","select"],["pad_exist_to_win","Port Adelaide","We exist to win premierships","launch"],
+ ["pad_summer_hills","Port Adelaide","The Port way: summer hills","running"],["pad_overseas_game","Port Adelaide","An overseas partner wants a game","practice"],
+ ["syd_cricket_ground","Sydney","The cricket's on","ground"],["syd_riverina_trip","Sydney","Up the road to the Riverina","practice"],
+ ["tas_north_or_south","Tasmania","North or south?","launch"],["tas_whole_state","Tasmania","A whole state of members","launch"],
+ ["tas_academy_kid","Tasmania","The island's kid","select"],["tas_list_spots","Tasmania","Room on the list","business"],
+ ["wbd_kennel_open_gates","Western Bulldogs","Open the gates at the Kennel","season"],["wbd_regional_home_games","Western Bulldogs","A regional city wants home games","business"],
+ ["wbd_northern_home_game","Western Bulldogs","Sell a home game to the Top End?","business"],["wbd_local_kid_trial","Western Bulldogs","A kid from the western suburbs wants a go","business"],
+ ["wbd_local_sponsor","Western Bulldogs","The local business or the big one","business"],["wce_perth_heat","West Coast","Perth heat","weather"]
+];
+
+const answers = {};
+let db = null;
+const el = (tag, cls, txt)=>{const e=document.createElement(tag); if(cls) e.className=cls; if(txt!==undefined) e.textContent=txt; return e;};
+
+function choiceBox(kind, c){
+  const b = el("div","choice");
+  b.append(el("span","kind",kind), el("b","",c.l));
+  (c.g||[]).forEach(x=>b.append(el("span","g",x)));
+  (c.c||[]).forEach(x=>b.append(el("span","c",x)));
+  return b;
+}
+function save(id, patch){
+  answers[id] = Object.assign({}, answers[id]||{}, patch);
+  render();
+  if(db){ db.doc("answers/"+id).set(answers[id]).catch(()=>{ document.getElementById("tally").textContent = "Could not save. Reload and try again."; }); }
+}
+function answerRow(id, opts, dflt){
+  const row = el("div","answer");
+  const cur = (answers[id]||{}).v || dflt;
+  opts.forEach(([v,label])=>{
+    const b = el("button","",label); b.type="button"; b.id="b_"+id+"_"+v;
+    b.setAttribute("aria-pressed", String(cur===v));
+    b.onclick=()=>save(id,{v});
+    row.append(b);
+  });
+  return row;
+}
+function render(){
+  const keep = document.getElementById("keep"); const cut = document.getElementById("cut");
+  keep.querySelectorAll(".card").forEach(n=>n.remove());
+  cut.querySelectorAll(".cutrow,.card").forEach(n=>n.remove());
+  KEEP.forEach(k=>{
+    const c = el("article","card");
+    c.append(el("span","club",k.club), el("h3","",k.title), el("p","text",k.text));
+    const ch = el("div","choices"); ch.append(choiceBox("Smaller gain",k.small), choiceBox("Bigger gain, with a cost",k.big)); c.append(ch);
+    c.append(el("p","was","Was: "+k.was));
+    c.append(answerRow(k.id,[["keep","Keep as written"],["change","Keep, but change it"],["cut","Cut it"]],null));
+    const a = answers[k.id]||{};
+    if(a.v==="change"){
+      const t = el("textarea"); t.id="n_"+k.id; t.placeholder="What to change"; t.value=a.note||"";
+      t.onchange=()=>save(k.id,{note:t.value}); c.append(t);
+    }
+    keep.append(c);
+  });
+  CUT.forEach(([id,club,title,why])=>{
+    const r = el("div","cutrow");
+    const left = el("div",""); left.append(el("div","t",club+": "+title), el("div","d",CUT_WHY[why]));
+    r.append(left, answerRow(id,[["cut","Cut"],["keep","Keep it"]],"cut"));
+    cut.append(r);
+  });
+  const done = KEEP.filter(k=>(answers[k.id]||{}).v).length;
+  const kept = CUT.filter(([id])=>(answers[id]||{}).v==="keep").length;
+  document.getElementById("tally").textContent = db
+    ? `Answered ${done} of the 18. Of the 50, ${kept} kept instead. Your answers save as you tap.`
+    : "Saving is not available in this view. Your taps show here only.";
+}
+render();
+(async()=>{
+  const timer = setTimeout(()=>render(), 10000);
+  try{ db = await claude.use("db"); }catch(e){ db = null; }
+  if(!db){ clearTimeout(timer); render(); return; }
+  db.collection("answers").onSnapshot(snap=>{
+    clearTimeout(timer);
+    snap.docs.forEach(d=>{ answers[d.id] = d.data()||{}; });
+    render();
+  }, ()=>{ clearTimeout(timer); render(); });
+})();
+</script>
