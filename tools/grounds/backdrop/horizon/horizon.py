@@ -29,6 +29,7 @@ What it builds, all in the model's own frame (x east, z south, y up, the arena f
   Sentinel-2 colour.
 """
 import collections
+import glob
 import json
 import math
 import os
@@ -60,11 +61,21 @@ CITY_OUT = 4096.0
 LEVEL_M, LEVEL_BASE = 3.4, 1.0   # prep.py's storey height
 JOIN_BELOW = 20.0     # low buildings of one height band that touch are joined
 JOIN_BAND = 3.0
-TIER_M = 3.0         # m: a measured structure's parts with tops this close are one tier
-CANOPY_CELL = 6.0    # m: the far canopy's cell (canopy())
+TIER_M = 6.0         # m: a measured structure's parts with tops this close are one tier (3 m drew 168k
+                     # triangles of plant rooms and parapets 1.5 km out; 6 m keeps the skyline at a third of that)
+CANOPY_CELL = 8.0    # m: the far canopy's cell (canopy()); 6 m cells thinned to CANOPY_TRIS left big facets and spikes
 CANOPY_TRIS = 70000  # its triangles after thinning (the old shards' count)
+# The canopy's colour (sRGB), its median brought to this, each cell keeping its own shade round it: the photomesh's
+# own faces (2020, sunlit, with the sky's haze in them) drew the far bush pale grey-green, near white, where the
+# real bush is dark (review, 2026-11-28). Marvel's is measured from the West Gate Bridge photo (March 2026, Westgate
+# Park's canopy, its median over 145,000 pixels).
+CANOPY_TARGET = {"marvel": (41, 60, 44)}
 JOIN_GAP = 2.0        # m: across a lane or a gap between neighbours narrower than twice this, they are one block
-LOW_SIMPLIFY = 3.0    # m: a low block's outline is kept to this
+LOW_SIMPLIFY = 6.0    # m: a low block's outline is kept to this (a pixel at 1.5 km in a phone's picture is ~2 m)
+TALL_SIMPLIFY = 2.0   # m: a tall building's or a measured tier's outline is kept to this
+MIN_AREA = 40.0       # m2: a smaller outline is not drawn (twice this past FAR_ZONE)
+FAR_HOUSES_BELOW = 8.0  # m: past FAR_ZONE a low block under this (houses, one-storey sheds) is left to the land's
+                        # own photo: a pixel high from the orbit, and 40% of the far city's triangles
 WEDGES = 8
 FAR_ZONE = 2500.0     # past this (square distance) joins and outlines are twice as coarse: a 4 m step there is
                       # under a pixel from the orbit's 430 m circle
@@ -117,7 +128,11 @@ def fetch(slug):
 
 WATER_SUBTYPES = ("ocean", "water", "river", "lake", "reservoir", "canal", "pond", "human_made")
 WATER_SKIP_CLASSES = ("swimming_pool", "fountain")
-NEAR_WATER_FROM = 1028.0   # m: the surrounds' painted water runs to here (its outer edge and skirt, GroundModels)
+# The near water sheet starts where the surrounds' painted water ends (GroundModels: SURROUNDS outer plus its skirt,
+# reland.surrounds_outer), on FIT's centre, and its inner edge dives under the ring by NEAR_WATER_DIVE: the ring's
+# water lies under the backdrop's (Marvel: 0.55 m) and its skirt drops away, so the orbit saw the sky through the
+# step as a thin white line along the join (review, 2026-11-28).
+NEAR_WATER_DIVE = (6.0, 1.0)   # m: inward from the sheet's edge, and down under the backdrop's water
 NEAR_WATER_STEP = 1.0      # m: the near water sheet's tracing grid (near_water())
 NEAR_WATER_LIFT = 0.3      # m: the sheet over the painted water, clear of it at the orbit's distance
 
@@ -295,7 +310,7 @@ def lin_of(s):
     return np.where(s <= 0.04045, s / 12.92, np.power((s + 0.055) / 1.055, 2.4))
 
 
-def seam_gain(glb, frame, near):
+def seam_gain(glb, frame, near, slug):
     """Per channel: reflectance -> the backdrop's own ground bake (linear), least squares over 60 m blocks of the
     backdrop's square, so the two meet in one colour."""
     from PIL import Image
@@ -319,7 +334,8 @@ def seam_gain(glb, frame, near):
     h, w = img.shape[:2]
     lin_img = lin_of(img)
     bake = []
-    k = int(blk / (3000 / w) / 2)
+    m_per_texel = (P[:, 0].max() - P[:, 0].min()) / max(UV[:, 0].max() - UV[:, 0].min(), 1e-9) / w
+    k = int(blk / m_per_texel / 2)
     # each block's texture coordinates from the ground triangle under it (the ground's UVs are its own, not one plan
     # projection); a block with no ground under it (inside the backdrop's cut) has no bake
     from shapely import points
@@ -359,7 +375,10 @@ def seam_gain(glb, frame, near):
     print("seam colour gain", gain.round(3), "mean miss (linear)", resid.round(4), "blocks", int(ok.sum()))
     # open water takes the backdrop's own water (its ground paints the harbour and the river), not the land's gain:
     # Sentinel-2's water times the land's gain read a pale grey-green against Google Earth's navy (2026-11-27)
-    wb = wat & np.isfinite(bake).all(1) & (np.hypot(X, Z) > 1060)   # where the backdrop's ground is (cut inside 1,024 m)
+    cx, cz = reland.fit(slug)[:2]
+    outer = reland.surrounds_outer(slug)[0]
+    # where the backdrop's ground is (it is cut inside the ring's outer edge), a block clear of the cut
+    wb = wat & np.isfinite(bake).all(1) & (np.hypot(X - cx, Z - cz) > outer + blk / 2 + 6)
     water = np.median(bake[wb], 0) if wb.sum() >= 4 else None
     print("backdrop water (linear)", None if water is None else water.round(4), "blocks", int(wb.sum()))
     return gain, water
@@ -714,6 +733,21 @@ def canopy(slug, frame, H, com):
     hgt = np.where(seen, hgt, hgt[ii, jj])
     col = np.where(seen[..., None], csum / np.maximum(cnt, 1)[..., None], (csum / np.maximum(cnt, 1)[..., None])[ii, jj])
     hgt = np.minimum(hgt, 40.0)
+    # no cell on open water (Overture's): the closing ran the masses over the park's lakes
+    W = water_grid(slug, frame, CITY_OUT, CANOPY_CELL)
+    if W is not None:
+        ce_, cn_ = e0 + (np.arange(ni) + 0.5) * CANOPY_CELL, n0 + (np.arange(nj) + 0.5) * CANOPY_CELL
+        wr = np.clip(((CITY_OUT - cn_) / CANOPY_CELL).astype(int), 0, W.shape[0] - 1)
+        wc = np.clip(((ce_ + CITY_OUT) / CANOPY_CELL).astype(int), 0, W.shape[1] - 1)
+        mask &= ~(W[wr[None, :], wc[:, None]] > 0.3)
+    # a crown's top smoothed over its neighbours (a lone tall face read as a spike): the median, then a soft blur
+    # inside the mass, so a park reads as rounded bush, not tents
+    hgt = np.where(mask, ndimage.median_filter(np.where(mask, hgt, 0.0), size=3), 0.0)
+    wsum = ndimage.gaussian_filter(mask.astype(float), 1.0)
+    hgt = np.where(mask, ndimage.gaussian_filter(hgt, 1.0) / np.maximum(wsum, 1e-6), 0.0)
+    if slug in CANOPY_TARGET:
+        med = np.median(col[mask], 0)
+        col = col * (lin_of(np.array(CANOPY_TARGET[slug]) / 255.0) / np.maximum(med, 1e-6))
     I, J = np.nonzero(mask)
     m = len(I)
     # corners: (ni + 1) x (nj + 1), each at the land plus the mean top of the masked cells round it (the others count 0)
@@ -730,18 +764,16 @@ def canopy(slug, frame, H, com):
     ui, uj = np.nonzero(used)
     vid = -np.ones(corner_h.shape, np.int64)
     vid[ui, uj] = np.arange(len(ui))
-    ce, cnn = e0 + ui * CANOPY_CELL, n0 + uj * CANOPY_CELL
-    me, mn = e0 + (I + 0.5) * CANOPY_CELL, n0 + (J + 0.5) * CANOPY_CELL
-    E = np.r_[ce, me]
-    N = np.r_[cnn, mn]
+    E, N = e0 + ui * CANOPY_CELL, n0 + uj * CANOPY_CELL
     L = H.at(E, N, CANOPY_CELL)
-    UP = np.r_[corner_h[ui, uj], hgt[I, J]]
+    # a mass with a rounded top and sloped edges: each corner at the mean top of the masked cells round it (a corner
+    # on the mass's edge comes down toward the ground), no peak in each cell's middle
+    UP = corner_h[ui, uj]
     X, Z = frame.xz(E, N)
     V = np.stack([X, L + UP - drop(X, Z), Z], 1)
-    VC = np.r_[corner_c[ui, uj], col[I, J]]
-    mid = len(ui) + np.arange(m)
+    VC = corner_c[ui, uj]
     a0, a1, a2, a3 = vid[I, J], vid[I + 1, J], vid[I + 1, J + 1], vid[I, J + 1]
-    F = np.concatenate([np.c_[a0, a1, mid], np.c_[a1, a2, mid], np.c_[a2, a3, mid], np.c_[a3, a0, mid]])
+    F = np.concatenate([np.c_[a0, a1, a2], np.c_[a0, a2, a3]])
     # faces wound up (+y): e and n map to x and -z
     import pyfqmr
     from scipy.spatial import cKDTree
@@ -760,6 +792,10 @@ def canopy(slug, frame, H, com):
     for k in range(3):
         np.add.at(vn, F2[:, k], fn)
     vn /= np.maximum(np.linalg.norm(vn, axis=1, keepdims=True), 1e-9)
+    # lit mostly from above: the masses' own facets lit one by one read as folded paper, where real bush is one dark
+    # mass with its crowns' shade in its colour
+    vn = 0.3 * vn + 0.7 * np.array([0.0, 1.0, 0.0])
+    vn /= np.linalg.norm(vn, axis=1, keepdims=True)
     print("canopy faces", len(T), "in", int(seen.sum()), "cells,", m, "closed; drawn in", len(F2), "triangles")
     return {"name": "trees_far", "pos": V2.astype(np.float32), "nrm": vn.astype(np.float32),
             "col": np.c_[colv, np.ones(len(colv))].astype(np.float32),
@@ -890,19 +926,25 @@ def city(slug, frame, H, gain, near):
         joined += len(pcs)
     print("low buildings", joined, "joined into", sum(1 for p in out if not p[4] and p[1] == 0))
     # mesh
-    pos, nrm, col, uv, idx = [], [], [], [], []
+    acc = {k: ([], [], [], [], [], [0]) for k in ("city_far", "city_far_low")}   # pos, nrm, col, uv, idx, nv
     base_cache = {}
     kind_tris = collections.Counter()
-    nv = 0
     outline = collections.defaultdict(list)     # a measured structure's parts, for one ground floor under them all
     for pc in out:
         if isinstance(pc[3], tuple):
             outline[pc[3]].append(np.array(pc[0].exterior.coords))
     for poly, z0, top, look, tall, real in out:
         cpt = poly.centroid
-        k_far = 2.0 if max(abs(cpt.x), abs(cpt.y)) > FAR_ZONE else 1.0
-        poly = poly.simplify((1.0 if tall else LOW_SIMPLIFY) * k_far, preserve_topology=True)
-        if poly.is_empty or poly.geom_type != "Polygon" or poly.area < 12:
+        far_zone = max(abs(cpt.x), abs(cpt.y)) > FAR_ZONE
+        k_far = 2.0 if far_zone else 1.0
+        low_block = not tall and not isinstance(look, tuple)
+        if low_block and far_zone and top < FAR_HOUSES_BELOW:
+            kind_tris["far house left to the land"] += 1
+            continue
+        pos, nrm, col, uv, idx, nvb = acc["city_far_low" if low_block else "city_far"]
+        nv = nvb[0]
+        poly = poly.simplify((TALL_SIMPLIFY if tall else LOW_SIMPLIFY) * k_far, preserve_topology=True)
+        if poly.is_empty or poly.geom_type != "Polygon" or poly.area < MIN_AREA * k_far:
             continue
         P = np.array(poly.exterior.coords)[:-1]
         if len(P) < 3:
@@ -959,9 +1001,12 @@ def city(slug, frame, H, gain, near):
         t = np.asarray(tri).reshape(-1, 3)
         idx += (nv + t[:, [0, 2, 1]]).ravel().tolist()
         nv += k
-    surf = {"name": "city_far", "pos": np.array(pos, np.float32), "nrm": np.array(nrm, np.float32),
-            "col": np.array(col, np.float32), "uv": np.array(uv, np.float32), "idx": np.array(idx, np.uint32),
-            "material": "city_towers"}
+        nvb[0] = nv
+    # two surfaces: the towers and measured structures, and the low blocks (which a phone on Low leaves out,
+    # Oval3DQuality.apply_model)
+    surf = [{"name": name, "pos": np.array(a[0], np.float32), "nrm": np.array(a[1], np.float32),
+             "col": np.array(a[2], np.float32), "uv": np.array(a[3], np.float32), "idx": np.array(a[4], np.uint32),
+             "material": "city_towers"} for name, a in acc.items() if a[4]]
     return surf, {"buildings": dict(src), "pieces_drawn": len(out), "triangles_by_kind": dict(kind_tris), "height_check": table.report}
 
 
@@ -974,7 +1019,7 @@ def _local_poly(frame, g):
 
 # ---- glb ------------------------------------------------------------------------------------------
 
-def near_water(G, water_y):
+def near_water(G, water_y, slug):
     """The backdrop's painted harbour and river, past the surrounds' edge, as one flat sheet with a hard edge: traced
     at NEAR_WATER_STEP from the ground's own painted water, so it lies exactly where the painting has it. Seen from
     the orbit the painting alone smeared the quay by the paddock at the harbour's west end into a soft, ragged beige
@@ -1002,6 +1047,9 @@ def near_water(G, water_y):
     wtex = reland._water_texels(img)
     if not wtex.any():
         return None
+    outer, reach, _ = reland.surrounds_outer(slug)
+    near_from = outer + reach
+    cx, cz = reland.fit(slug)[:2]
     colour = lin_of(img[wtex].mean(0) / 255.0)
     st, half = NEAR_WATER_STEP, SKIRT
     xs = np.arange(-half + st / 2, half, st)
@@ -1023,7 +1071,7 @@ def near_water(G, water_y):
         l1 = ((B[1] - C[1]) * (gx - C[0]) + (C[0] - B[0]) * (gz - C[1])) / d
         l2 = ((C[1] - A[1]) * (gx - C[0]) + (A[0] - C[0]) * (gz - C[1])) / d
         l3 = 1 - l1 - l2
-        inside = (l1 >= -1e-6) & (l2 >= -1e-6) & (l3 >= -1e-6) & (np.hypot(gx, gz) >= NEAR_WATER_FROM)
+        inside = (l1 >= -1e-6) & (l2 >= -1e-6) & (l3 >= -1e-6) & (np.hypot(gx - cx, gz - cz) >= near_from - 3 * st)
         if not inside.any():
             continue
         u = l1[inside] * UV[a, 0] + l2[inside] * UV[b, 0] + l3[inside] * UV[cc, 0]
@@ -1035,8 +1083,8 @@ def near_water(G, water_y):
     if not polys:
         return None
     sheet = unary_union(polys).simplify(st * 0.7).intersection(
-        box(-half, -half, half, half).difference(Point(0, 0).buffer(NEAR_WATER_FROM, 256)))
-    Vs, F, n0 = [], [], 0
+        box(-half, -half, half, half).difference(Point(cx, cz).buffer(near_from, 256)))
+    Vs, F, n0, spans = [], [], 0, []
     for pg in getattr(sheet, "geoms", [sheet]):
         if pg.geom_type != "Polygon" or pg.area < 20.0:
             continue
@@ -1045,12 +1093,44 @@ def near_water(G, water_y):
         t = earcut.triangulate_float64(pts, np.cumsum([len(q) for q in rings]).astype(np.uint32)).reshape(-1, 3)
         F.append(t + n0)
         Vs.append(pts)
+        for c0, c1 in zip(np.r_[0, np.cumsum([len(q) for q in rings])[:-1]], np.cumsum([len(q) for q in rings])):
+            spans.append((n0 + c0, n0 + c1))
         n0 += len(pts)
     if not Vs:
         return None
     Q = np.concatenate(Vs)
     F = np.concatenate(F)
-    pos = np.c_[Q[:, 0], water_y + NEAR_WATER_LIFT - drop(Q[:, 0], Q[:, 1]), Q[:, 1]].astype(np.float32)
+    Y = water_y + NEAR_WATER_LIFT - drop(Q[:, 0], Q[:, 1])
+    # the edge along the ring: a band from it, NEAR_WATER_DIVE in and down, under the ring's own water (the sheet is
+    # traced from inside the circle and cut on it, so its whole inner edge lies on the circle and carries the band;
+    # traced from the circle, its edge was a 1 m staircase just outside it, and the band only on the steps that touched)
+    rq = np.hypot(Q[:, 0] - cx, Q[:, 1] - cz)
+    on = rq < near_from + 0.3
+    band, nb = [], 0
+    for s0, s1 in spans:   # each ring, closed
+        for i in range(s0, s1):
+            j = i + 1 if i + 1 < s1 else s0
+            if on[i] and on[j]:
+                band.append((i, j))
+    if band:
+        e = np.array(band)
+        k0 = len(Q)
+        pin = Q[np.unique(e)]
+        idx_of = {v: k0 + j for j, v in enumerate(np.unique(e))}
+        rr = np.hypot(pin[:, 0] - cx, pin[:, 1] - cz)
+        sc = (rr - NEAR_WATER_DIVE[0]) / rr
+        low = np.c_[cx + (pin[:, 0] - cx) * sc, cz + (pin[:, 1] - cz) * sc]
+        Q = np.r_[Q, low]
+        Y = np.r_[Y, water_y - NEAR_WATER_DIVE[1] - drop(low[:, 0], low[:, 1])]
+        quads = [(a, b, idx_of[b], idx_of[a]) for a, b in e]
+        F = np.r_[F, [(a, b, c) for a, b, c, d in quads], [(a, c, d) for a, b, c, d in quads]]
+        # wound up (+y) like the sheet: a triangle facing down flips
+        P3 = np.c_[Q[:, 0], Y, Q[:, 1]]
+        nrm_y = np.cross(P3[F[:, 1]] - P3[F[:, 0]], P3[F[:, 2]] - P3[F[:, 0]])[:, 1]
+        F[nrm_y < 0] = F[nrm_y < 0][:, ::-1]
+        nb = len(quads)
+    pos = np.c_[Q[:, 0], Y, Q[:, 1]].astype(np.float32)
+    print("near water: edge along the ring dives under it in", nb, "quads")
     print("near water sheet", round(sheet.area), "m2 in", len(F), "triangles, colour (linear)", colour.round(4))
     return {"name": "water_near", "pos": pos, "nrm": np.tile([0.0, 1.0, 0.0], (len(pos), 1)).astype(np.float32),
             "col": np.tile(np.r_[colour, 1.0], (len(pos), 1)).astype(np.float32),
@@ -1083,7 +1163,10 @@ def write_glb(path, surfaces, images):
 
     tex_of = {}
     for name, png in images.items():
-        J["images"].append({"bufferView": view(png), "mimeType": "image/png", "name": "horizon_" + name})
+        # the name carries the picture's own hash: Godot writes an embedded image out beside the model once
+        # (<model>_<image>.png) and keeps drawing that copy after the model changes
+        J["images"].append({"bufferView": view(png), "mimeType": "image/png",
+                            "name": "horizon_%s_%08x" % (name, zlib.crc32(png))})
         J["textures"].append({"source": len(J["images"]) - 1, "sampler": 0})
         tex_of[name] = len(J["textures"]) - 1
     for s in surfaces:
@@ -1132,25 +1215,81 @@ def write_glb(path, surfaces, images):
     return len(out)
 
 
+IMAGE_IMPORT = """[remap]
+
+importer="texture"
+type="CompressedTexture2D"
+
+[params]
+
+compress/mode=2
+compress/high_quality=false
+mipmaps/generate=true
+mipmaps/limit=-1
+detect_3d/compress_to=0
+"""
+
+
+def write_image_imports(glb, images):
+    """The land's pictures as Godot would write them out of the model, each with its import settings: mipmaps (or the
+    10 m and 40 m land shimmers as the orbit turns) and VRAM compression. A picture fetched or written before the
+    model's import took a plain 2D picture's settings, no mipmaps (review, 2026-11-28); the horizon's shader material
+    is not one Godot's 3D detection sees. Publish the pictures with the model (tools/ground_assets.sh publish ... PATH)
+    and commit their settings. The old pictures' copies and settings go."""
+    import glob
+    stem = os.path.splitext(glb)[0]
+    keep = set()
+    for name, png in images.items():
+        f = "%s_horizon_%s_%08x.png" % (stem, name, zlib.crc32(png))
+        keep.add(f)
+        # written here, not left for Godot to write out of the model: with its settings file present and the picture
+        # missing, Godot's import of the model fails to find it (and a fresh checkout has the settings from git and
+        # the picture from the lock, tools/ground_assets.lock)
+        open(f, "wb").write(png)
+        open(f + ".import", "w").write(IMAGE_IMPORT)
+    for f in glob.glob(stem + "_horizon_*.png"):
+        if f not in keep:
+            for g in (f, f + ".import"):
+                if os.path.exists(g):
+                    os.remove(g)
+
+
+# The inputs a ground's horizon needs beyond the open data every ground has (build() stops without them).
+MEASURED_CITY = {"marvel": ("com/2023-building-footprints.geojson", "photomesh.npz")}
+
+
 def build(slug, backdrop=None):
     frame = Frame(slug)
     H = Heights(slug, frame)
     part1 = backdrop or os.path.join(ROOT, "assets", "grounds", slug, slug + "_backdrop_part1.glb")
     G = reland.Glb(part1)
+    # the seam colour, the water and the near water sheet read the near ground from part1, its one primitive
+    near_prims = [n for n, _, _ in G.prims if n.startswith("bg_near_ground")]
+    assert len(near_prims) == 1, "%s: near ground in %d primitives; seam_gain/near_water read one" % (part1, len(near_prims))
+    for other in sorted(glob.glob(os.path.join(os.path.dirname(part1), slug + "_backdrop_part*.glb"))):
+        if os.path.abspath(other) != os.path.abspath(part1):
+            assert not any(n.startswith("bg_near_ground") for n, _, _ in reland.Glb(other).prims), \
+                "%s carries near ground too; seam_gain/near_water read part1's only" % other
+    # the measured city (City of Melbourne footprints and photomesh): a ground that has it must not build without
+    for need in MEASURED_CITY.get(slug, ()):
+        if not os.path.exists(work(slug, *need.split("/"))):
+            raise SystemExit("%s: %s missing from %s (fetch it first: see com_parts() and photomesh.py); without it "
+                             "the far city loses its measured heights and the trees" % (slug, need, work(slug)))
     wp = next(p for p in G.prims if p[0].startswith(reland.WATER))
     water_y = float(np.median(G.read(wp[1])[:, 1]))
     if not os.path.exists(work(slug, "overture_water.json")):
         fetch_water(slug)
     near, mid, far = S2(slug, "near", frame), S2(slug, "mid", frame), S2(slug, "far", frame)
-    gain, water = seam_gain(G, frame, near)
+    gain, water = seam_gain(G, frame, near, slug)
     land, land_rep = land_mesh(slug, frame, H, water_y, gain, near, mid, far, water)
     city_s, city_rep = city(slug, frame, H, gain, near)
     trees = canopy(slug, frame, H, com_parts(slug, frame, lambda g: [_local_poly(frame, gg) for gg in getattr(g, "geoms", [g])]))
-    sheet = near_water(G, water_y)
-    surfaces = land + [city_s] + ([trees] if trees is not None else []) + ([sheet] if sheet is not None else [])
+    sheet = near_water(G, water_y, slug)
+    surfaces = land + city_s + ([trees] if trees is not None else []) + ([sheet] if sheet is not None else [])
     images = {"near": texture_png(near, gain, water), "mid": texture_png(mid, gain, water)}
     out = os.path.join(ROOT, "assets", "grounds", slug, slug + "_horizon.glb")
     size = write_glb(out, surfaces, images)
+    write_image_imports(out, images)
     tris = {s["name"]: int(len(s["idx"]) // 3) for s in surfaces}
     rep = {"ground": slug, "file": os.path.relpath(out, ROOT), "bytes": size, "triangles": tris,
            "triangles_total": int(sum(tris.values())), "vertices_total": int(sum(len(s["pos"]) for s in surfaces)),

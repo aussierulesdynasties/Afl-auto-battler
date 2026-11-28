@@ -91,6 +91,12 @@ static func apply_model(level: String, root: Node) -> void:
 			g.visible = level != LOW
 		elif g.has_meta("facade_plain"):
 			g.visible = level == LOW
+	# The far horizon's low blocks and its trees past 1.5 km (tools/grounds/backdrop/horizon: city_far_low,
+	# trees_far): Low leaves them to the land's own photo. 138k of Marvel's 260k horizon triangles, a pixel
+	# high in Low's three-quarter picture.
+	for pattern in ["city_far_low*", "trees_far*"]:
+		for g: Node3D in root.find_children(pattern, "Node3D", true, false):
+			g.visible = level != LOW
 	# A roof's lattice trusses (the Gabba's rafters, a model object named "lattice"): thousands of thin members drawn
 	# again into every shadow band for a shade the roof sheet already casts; High keeps their shadows.
 	if level != HIGH:

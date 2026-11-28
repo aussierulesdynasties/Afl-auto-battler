@@ -43,6 +43,18 @@ These lines go on the game's credits screen before 1.0.
   from Google Earth on OpenStreetMap footprints; no imagery is shipped.
 - Buildings out to 950 m: City of Melbourne, 2023 Building Footprints (3D massing),
   data.melbourne.vic.gov.au, CC BY.
+- The far horizon (tools/grounds/backdrop/horizon), out to 64 km:
+  - Measured building heights and outlines to 4 km: City of Melbourne, 2023 Building Footprints, CC BY.
+  - Wall, roof and tree colours and the trees' canopy: "City of Melbourne 3D textured mesh (photomesh) 2020",
+    City of Melbourne, CC BY 4.0.
+  - Other buildings: Overture Maps Foundation buildings (ODbL), including OpenStreetMap, Microsoft and Google
+    footprints; heights it lacks are read from GHS-BUILT-H R2023A (European Commission, Joint Research Centre,
+    CC BY 4.0).
+  - Land and water colours: Digital Earth Australia Sentinel-2 ARD (Geoscience Australia, CC BY 4.0); contains
+    modified Copernicus Sentinel data.
+  - Open water outlines: Overture Maps Foundation base water (ODbL, from OpenStreetMap).
+  - The land: see "The land round every ground" below (Geoscience Australia 5 m LiDAR; Mapterhorn tiles and
+    Copernicus GLO-30 past it).
 
 ## Adelaide Oval
 

@@ -24,8 +24,13 @@ What it does, in place, to every backdrop part (positions only; nothing is added
 - open water (bg_water) moves as one flat sheet to the ring's water level (the LiDAR's water surface), and the
   land and anything the scene stood below its water keep their depth under it; a sheet that is only scattered
   pieces (more than SCATTERED) leaves the scene, as the ground's texture already paints that water.
-Run it on the published glbs, then `tools/ground_assets.sh publish`. Running it twice is harmless: the second
-run finds the land already right (shift 0).
+- the flat overlays (roads, lines, kerbs, paving, rails) are then laid on the near ground's own triangles
+  (lay_overlays), and any overlay lying on the painted water, not on a deck, is left out.
+Run it once on the scene's own export, then `tools/ground_assets.sh publish`. It is not to be run twice: the old
+land it reads the second time is the new land read across its corners, not the measured land under them, and things
+move by up to a few metres (measured 2026-11-28). On a backdrop already relanded, `reland.py <slug> --overlays-only
+[glbs]` lays its overlays again and nothing else; the water's tone is never applied twice (tone_painted_water), and
+the image it replaces leaves the file (Glb.compact).
 """
 import json
 import math
@@ -54,6 +59,12 @@ SCATTERED = 100
 # (51, 74, 84) drew (50, 88, 105) beside the surrounds' (45, 79, 98) and (28, 56, 67) drew (21, 68, 88), and the
 # straight line through the two (linear light) meets the surrounds at (47, 66, 77). The two layers are lit apart.
 WATER_TARGET = {"marvel": (47, 66, 77)}
+# The flat overlays (roads, their lines, kerbs, paving, rails) are laid on the near ground's own triangles, this far
+# over them. Laid on the measured land under each of their vertices instead, they ran up to half a metre over and
+# under the ground's 30 m triangles between its corners and broke into dashes from the orbit (review, 2026-11-28).
+OVERLAY_LIFT = (("road_lines", 0.30), ("oval_lines", 0.30), ("rails", 0.30), ("kerbs", 0.22), ("rail_bed", 0.18),
+                ("roads", 0.18), ("carparks", 0.15), ("paved", 0.15), ("paths", 0.15))
+OVERLAY_RAISED = 2.5   # m: a vertex this far over the ground is on a deck (a bridge, a ramp) and stays where it is
 
 
 def fit(slug):
@@ -61,6 +72,24 @@ def fit(slug):
     src = open(os.path.join(ROOT, "scripts", "ui", "match", "GroundModels.gd")).read()
     i = src.index('"%s": [' % slug, src.index("const FIT :="))
     return [float(v) for v in src[src.index("[", i) + 1:src.index("]", i)].split(",")]
+
+
+def surrounds_outer(slug):
+    """GroundModels.SURROUNDS[slug]["outer"] (where the background scene takes over from the ring) plus the ring's
+    skirt past it (RING_SKIRT: [reach, drop]), read from the game's own source: (outer, skirt reach, skirt drop)."""
+    src = open(os.path.join(ROOT, "scripts", "ui", "match", "GroundModels.gd")).read()
+    i = src.index('"%s": {' % slug, src.index("const SURROUNDS :="))
+    depth, j = 0, src.index("{", i)
+    for j in range(j, len(src)):
+        depth += {"{": 1, "}": -1}.get(src[j], 0)
+        if depth == 0:
+            break
+    block = src[i:j]
+    k = block.index('"outer":')
+    outer = float(block[k + 8:].split(",")[0].split("}")[0])
+    sk = src[src.index("const RING_SKIRT := [") + 21:]
+    reach, drop = (float(v) for v in sk[:sk.index("]")].split(","))
+    return outer, reach, drop
 
 
 class Land:
@@ -143,7 +172,64 @@ class Glb:
         b = np.ascontiguousarray(V, "<f4").tobytes()
         self.bin[off:off + len(b)] = b
 
+    def write_idx(self, ai, F):
+        a = self.J["accessors"][ai]
+        v = self.J["bufferViews"][a["bufferView"]]
+        off = v.get("byteOffset", 0) + a.get("byteOffset", 0)
+        b = np.ascontiguousarray(F, CT[a["componentType"]]).tobytes()
+        assert len(b) == a["count"] * np.dtype(CT[a["componentType"]]).itemsize
+        self.bin[off:off + len(b)] = b
+
+    def compact(self):
+        """Drop buffer views nothing refers to (an image replaced by tone_painted_water) and close the gaps."""
+        J = self.J
+        # accessors no mesh uses (reduce.py leaves some, pointing past the last buffer view) leave too
+        refs = set()
+        for m in J["meshes"]:
+            for pr in m["primitives"]:
+                refs |= set(pr["attributes"].values())
+                refs |= {pr["indices"]} if "indices" in pr else set()
+                for tg in pr.get("targets", []):
+                    refs |= set(tg.values())
+        assert not J.get("skins") and not J.get("animations"), "compact() knows meshes only"
+        keep = sorted(refs)
+        amap = {k: i for i, k in enumerate(keep)}
+        J["accessors"] = [J["accessors"][k] for k in keep]
+        for m in J["meshes"]:
+            for pr in m["primitives"]:
+                pr["attributes"] = {k: amap[v] for k, v in pr["attributes"].items()}
+                if "indices" in pr:
+                    pr["indices"] = amap[pr["indices"]]
+                if "targets" in pr:
+                    pr["targets"] = [{k: amap[v] for k, v in tg.items()} for tg in pr["targets"]]
+        self.prims = [(n, amap[a], None if i is None else amap[i]) for n, a, i in self.prims]
+        used = sorted({a["bufferView"] for a in J["accessors"] if "bufferView" in a}
+                      | {im["bufferView"] for im in J.get("images", []) if "bufferView" in im})
+        new, remap = bytearray(), {}
+        views = []
+        for k in used:
+            v = dict(J["bufferViews"][k])
+            new += b"\0" * (-len(new) % 4)
+            off = v.get("byteOffset", 0)
+            chunk = self.bin[off:off + v["byteLength"]]
+            v["byteOffset"] = len(new)
+            new += chunk
+            remap[k] = len(views)
+            views.append(v)
+        for a in J["accessors"]:
+            if "bufferView" in a:
+                a["bufferView"] = remap[a["bufferView"]]
+        for im in J.get("images", []):
+            if "bufferView" in im:
+                im["bufferView"] = remap[im["bufferView"]]
+        dropped = len(self.bin) - len(new)
+        J["bufferViews"] = views
+        self.bin = new
+        J["buffers"][0]["byteLength"] = len(new)
+        return dropped
+
     def save(self):
+        self.compact()
         js = json.dumps(self.J, separators=(",", ":")).encode()
         js += b" " * (-len(js) % 4)
         body = bytes(self.bin) + b"\0" * (-len(self.bin) % 4)
@@ -180,7 +266,8 @@ def _lin(c):
 def tone_painted_water(g, target):
     """Bring the ground texture's painted water to `target` (sRGB) on average, scaling it in linear light so its
     small grain stays: it then meets the surrounds' water in one colour at the seam. The new image goes on the end of
-    the buffer; the old one's bytes stay unreferenced in it."""
+    the buffer and the old one's bytes leave it when the file is saved (Glb.compact). A second run finds the water
+    already toned and leaves it."""
     import io
     from PIL import Image
     done = set()
@@ -194,8 +281,8 @@ def tone_painted_water(g, target):
             ii, img = got
             done.add(ii)
             w = _water_texels(img)
-            if not w.any():
-                continue
+            if not w.any() or np.abs(img[w].mean(0) - target).max() < 1.5:
+                continue   # none, or already toned (a second run)
             lin = _lin(img)
             gain = _lin(target) / lin[w].mean(0)
             lin[w] = np.clip(lin[w] * gain, 0, 1)
@@ -211,7 +298,10 @@ def tone_painted_water(g, target):
             g.J["images"][ii]["bufferView"] = len(g.J["bufferViews"]) - 1
             # a new name: Godot keeps an image it once wrote out beside the model (<model>_<image>.webp) and drew
             # that stale copy, not the toned one, after the model changed
-            g.J["images"][ii]["name"] = g.J["images"][ii].get("name", "ground") + "_toned"
+            import re
+            import zlib
+            base = re.sub(r"(_toned)+(_[0-9a-f]{8})?$", "", g.J["images"][ii].get("name", "ground"))
+            g.J["images"][ii]["name"] = "%s_toned_%08x" % (base, zlib.crc32(b.getvalue()))
             print("%s: painted water %s brought to %s (%d texels)" % (
                 os.path.basename(g.path), img[w].mean(0).round().astype(int).tolist(), list(target), int(w.sum())))
 
@@ -281,6 +371,102 @@ def drop_scattered_water(g):
                 os.path.basename(g.path), pieces))
 
 
+def mesh_surface(P, I, step=1.0):
+    """A sampler of a triangle mesh's own surface (its triangles, not a re-triangulation of its corners):
+    at(x, z) -> (y, triangle index), nan and -1 off the mesh."""
+    x0, z0 = P[:, 0].min() - step, P[:, 2].min() - step
+    nx, nz = int((P[:, 0].max() - x0) / step) + 2, int((P[:, 2].max() - z0) / step) + 2
+    tid = -np.ones((nx, nz), np.int64)
+    A, B, C = P[I[:, 0]], P[I[:, 1]], P[I[:, 2]]
+    for t in range(len(I)):
+        q = np.array([A[t], B[t], C[t]])[:, [0, 2]]
+        i0, j0 = np.floor((q.min(0) - (x0, z0)) / step).astype(int)
+        i1, j1 = np.ceil((q.max(0) - (x0, z0)) / step).astype(int)
+        gx, gz = np.meshgrid(x0 + (np.arange(i0, i1 + 1) + 0.5) * step, z0 + (np.arange(j0, j1 + 1) + 0.5) * step,
+                             indexing="ij")
+        a, b, c = q
+        den = (b[1] - c[1]) * (a[0] - c[0]) + (c[0] - b[0]) * (a[1] - c[1])
+        if abs(den) < 1e-9:
+            continue
+        l1 = ((b[1] - c[1]) * (gx - c[0]) + (c[0] - b[0]) * (gz - c[1])) / den
+        l2 = ((c[1] - a[1]) * (gx - c[0]) + (a[0] - c[0]) * (gz - c[1])) / den
+        sub = tid[i0:i1 + 1, j0:j1 + 1]
+        sub[(l1 >= -0.02) & (l2 >= -0.02) & (1 - l1 - l2 >= -0.02)] = t
+
+    def at(x, z):
+        """A cell holds one triangle, the last drawn over its middle: a point near the cell's edge may lie in a
+        neighbour's, so the cell's own triangle and then its 8 neighbours' are tried, and the first that holds the
+        point (to 1 cm) gives its height."""
+        x, z = np.atleast_1d(np.asarray(x, float)), np.atleast_1d(np.asarray(z, float))
+        ci = ((x - x0) / step).astype(int)
+        cj = ((z - z0) / step).astype(int)
+        y = np.full(len(x), np.nan)
+        tri = -np.ones(len(x), np.int64)
+        todo = np.ones(len(x), bool)
+        for di, dj in [(0, 0), (-1, 0), (1, 0), (0, -1), (0, 1), (-1, -1), (-1, 1), (1, -1), (1, 1)]:
+            k = np.nonzero(todo)[0]
+            if not len(k):
+                break
+            t = tid[np.clip(ci[k] + di, 0, nx - 1), np.clip(cj[k] + dj, 0, nz - 1)]
+            tt = np.maximum(t, 0)
+            a, b, c = A[tt], B[tt], C[tt]
+            den = (b[:, 2] - c[:, 2]) * (a[:, 0] - c[:, 0]) + (c[:, 0] - b[:, 0]) * (a[:, 2] - c[:, 2])
+            den = np.where(np.abs(den) < 1e-9, 1e-9, den)
+            l1 = ((b[:, 2] - c[:, 2]) * (x[k] - c[:, 0]) + (c[:, 0] - b[:, 0]) * (z[k] - c[:, 2])) / den
+            l2 = ((c[:, 2] - a[:, 2]) * (x[k] - c[:, 0]) + (a[:, 0] - c[:, 0]) * (z[k] - c[:, 2])) / den
+            l3 = 1 - l1 - l2
+            # inside to 1 cm along the triangle's own size
+            tol = 0.01 / np.maximum(np.sqrt(np.abs(den)), 1e-6)
+            ok = (t >= 0) & (l1 >= -tol) & (l2 >= -tol) & (l3 >= -tol)
+            y[k[ok]] = (l1 * a[:, 1] + l2 * b[:, 1] + l3 * c[:, 1])[ok]
+            tri[k[ok]] = t[ok]
+            todo[k[ok]] = False
+        return y, tri
+    return at
+
+
+def lay_overlays(glbs, level):
+    """Lay the flat overlays on the near ground's own surface (OVERLAY_LIFT over it), and leave out any overlay
+    triangle lying wholly on the painted water (not on a deck): a guard; at Marvel none does (2026-11-28; the white
+    line the review saw on its harbour was the sky through the step at the ring's edge, horizon.near_water). A count
+    per layer."""
+    P, I, n = [], [], 0
+    for g in glbs:
+        for name, a, ia in g.prims:
+            if name.startswith("bg_near_ground") and ia is not None:
+                P.append(g.read(a).astype(np.float64))
+                I.append(g.read(ia).reshape(-1, 3).astype(np.int64) + n)
+                n += len(P[-1])
+    if not P:
+        return {}
+    P, I = np.vstack(P), np.vstack(I)
+    at = mesh_surface(P, I)
+    wet_tri = (np.abs(P[I][:, :, 1] - level) < 0.01).all(1) if level is not None else np.zeros(len(I), bool)
+    out = {}
+    for g in glbs:
+        for name, a, ia in g.prims:
+            lift = next((v for k, v in OVERLAY_LIFT if k in name), None)
+            if lift is None or name.startswith("bg_near_ground") or name == FAR:
+                continue
+            V = g.read(a).astype(np.float64)
+            y, t = at(V[:, 0], V[:, 2])
+            lay = ~np.isnan(y) & (V[:, 1] - np.nan_to_num(y) < OVERLAY_RAISED)
+            V[lay, 1] = y[lay] + lift
+            g.write_pos(a, V.astype(np.float32))
+            gone = 0
+            if ia is not None:
+                F = g.read(ia).reshape(-1, 3)
+                on_water = (lay[F] & wet_tri[np.maximum(t[F], 0)] & (t[F] >= 0)).all(1)
+                if on_water.any():
+                    F = F.copy()
+                    F[on_water] = F[on_water][:, :1]   # degenerate: drawn as nothing
+                    g.write_idx(ia, F.ravel())
+                    gone = int(on_water.sum())
+            r = out.setdefault(name, [0, 0, 0])
+            r[0] += int(lay.sum()); r[1] += int((~lay).sum()); r[2] += gone
+    return out
+
+
 def components(P, I):
     """Connected parts of a triangle mesh (vertices welded at 5 cm): a label per triangle."""
     key = np.round(P * 20).astype(np.int64)
@@ -299,12 +485,25 @@ def is_ground(name):
 
 
 def main():
-    slug = sys.argv[1]
-    paths = sys.argv[2:] or sorted(
+    args = sys.argv[1:]
+    overlays_only = "--overlays-only" in args
+    args = [a for a in args if a != "--overlays-only"]
+    slug = args[0]
+    paths = args[1:] or sorted(
         os.path.join(ROOT, "assets", "grounds", slug, f) for f in os.listdir(os.path.join(ROOT, "assets", "grounds", slug))
         if f.startswith(slug + "_backdrop_part") and f.endswith(".glb"))
     land = Land(slug)
     glbs = [Glb(p) for p in paths]
+    if overlays_only:
+        # a backdrop already relanded: only lay its overlays again (lay_overlays) at its water's level
+        wat = [g.read(a) for g in glbs for name, a, _ in g.prims if name == WATER]
+        laid = lay_overlays(glbs, float(np.median(np.vstack(wat)[:, 1])) if wat else None)
+        for name, (n_laid, n_deck, n_gone) in sorted(laid.items()):
+            print("%-16s %7d vertices laid on the ground, %6d on decks left, %5d triangles on open water left out" % (
+                name, n_laid, n_deck, n_gone))
+        for g in glbs:
+            g.save()
+        return
     # The old land: the backdrop's own near ground, then its far terrain where the near ground has none.
     pts = []
     for g in glbs:
@@ -325,8 +524,8 @@ def main():
         return np.where(np.isnan(y), old_any(x, z), y)
 
     reach = land.reach()
-    ring = far[(np.maximum(np.abs(far[:, 0]), np.abs(far[:, 2])) > reach - 500) &
-               (np.maximum(np.abs(far[:, 0]), np.abs(far[:, 2])) < reach - 20)]
+    sq = np.maximum(np.abs(far[:, 0] - land.cx), np.abs(far[:, 2] - land.cz))   # terrain.bin's square is on FIT's centre
+    ring = far[(sq > reach - 500) & (sq < reach - 20)]
     far_shift = float(np.median(land.height(ring[:, 0], ring[:, 2]) - ring[:, 1])) if len(ring) else 0.0
 
     def shift(x, z):
@@ -461,6 +660,10 @@ def main():
     if wat:
         flat = sum(flatten_painted_water(g, wat_old + wat_shift) for g in glbs)
         print("ground vertices on painted water laid flat at its level: %d" % flat)
+    laid = lay_overlays(glbs, (wat_old + wat_shift) if wat else None)
+    for name, (n_laid, n_deck, n_gone) in sorted(laid.items()):
+        print("%-16s %7d vertices laid on the ground, %6d on decks left, %5d triangles on open water left out" % (
+            name, n_laid, n_deck, n_gone))
     if slug in WATER_TARGET:   # after the flattening, which finds the water by its old colour
         for g in glbs:
             tone_painted_water(g, WATER_TARGET[slug])
