@@ -277,3 +277,4 @@ What has landed toward each open row of docs/TODO.md and docs/TODO_RULINGS.md, o
 - 202: Merged #2331: 3D 1.0 plan: sprint in review, Marvel backdrop fixes in draft.
 - 202: Merged #2335: 3D 1.0 plan: Marvel round 18, WACA, faces colour redo, held grounds.
 - 202: Merged #2334: 3D crowd: clear error when the crowd bodies are missing; capture tools grade the picture once.
+- 202: Merged #2339: 3D 1.0 plan: Marvel round 18 still in its fix pass.
