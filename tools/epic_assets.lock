@@ -2,8 +2,9 @@
 # tools/epic_assets.sh fetch copies this commit's files into place; publish updates the pin.
 repo https://github.com/gabebartolo-spec/ard-asset-pipeline
 branch epic-assets
-commit 7616352c04e01e23d436f4bf48fef13fbe6ead07
+commit e0fda9b1f86d773ac2612069cc18d3e416d599e4
 cceb9376a80059c2c087629ed606cf67eae4f69e9f96c9cb817fc5816647c654  assets/oval3d/crew_mh.glb
+e5297f8b33a526e3ebd2a4813d2568db2eadb69221ef2601dfb92c28ebe3b228  assets/oval3d/crowd_set.res
 e208b4238b12a3339498474f6e0a5e93b242dd190e1483a73c2fd824a2baf1e5  assets/oval3d/cuts/ADE.res
 b0bf1f1f2b4826d1707b861a38820f713c81187bd10df585ed7e901f31919cb6  assets/oval3d/cuts/BRL.res
 a341aba2b22a5989f66c20a722cb6d8309412108fa8cc6063f514fb3b5819284  assets/oval3d/cuts/CAR.res
@@ -29,6 +30,7 @@ a3104c9a58dc3cf8df8915015c96a162ec398678c9e94dde230c0c0f069e0b15  assets/oval3d/
 bf8e4685e4524f83b9d385928f325aabb09747410a071df7e80f64002f25dbed  assets/oval3d/heads/MEL_37_MEL_37_tex.jpg
 7f077acaba5786a38be36d818a42c020f61bb86cb2d72c09fb7fcf15725348a6  assets/oval3d/heads/MEL_41.glb
 b1ab5f750466469aac94dafc89e1be8a6d55b4e5610a0f2047f48d1ae8398816  assets/oval3d/heads/MEL_41_MEL_41_tex.jpg
+20636f84800ebe56ffeaad749b9739c82c469d9241aed95e8e1fe58357a70641  assets/oval3d/injury_clips.glb
 16dcb91892716524d8de476997f95e84f8c47f7f728b4c8ee56a82a751c9840c  assets/oval3d/player_mh.glb
 a8775a0596fa353f2a9b0fb8e1349ebe55349b7cdec4dbe8b11d7f4c60021ce4  assets/oval3d/skin/Body_Basecolor.png
 7ddb095f5d6557b8a51e009bf035c566e0ae2bab0f94be6b0b428afb8d7c5319  assets/oval3d/skin/Body_Normal.png
