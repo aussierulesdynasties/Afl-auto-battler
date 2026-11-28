@@ -319,8 +319,7 @@ the target, so prospects are expressed in exactly the same units as real
 players and feed the same engine. `Ratings.effective_games()` carries the
 "sample" override: projections skip the small-sample confidence shrink, and a
 player who has completed a simulated season keeps a full-season sample so a
-fringe 2026 games count cannot suppress them forever. `tools/intake_harness.py`
-mirrors these constants the way `sim_harness.py` mirrors the match engine.
+fringe 2026 games count cannot suppress them forever.
 
 **Class quality.** Generated future classes (never the real 2026 class) get a
 quality tier, rolled once per career and draft year from `career_seed` (a
@@ -341,7 +340,7 @@ at 80+ where a normal one produces none to two, with a top 20 peaking about
 twenty years on the league's count of 80+ players is the same whatever that
 class was - a cohort advantage, not inflation. The tier of every generated
 class is recorded in `class_tiers` for a future draft-history view; the game
-does not announce it. `tools/intake_harness.py` mirrors the normal tier only.
+does not announce it.
 
 ---
 
@@ -916,7 +915,7 @@ scripts/
 scenes/                thin .tscn wrappers - a root Control + its script
 tools/
   sim_harness.py       ratings mirror; match half stale (run the calibration suite instead)
-  intake_harness.py    projection/intake/rollover harness + draft-class CSV checks
+  intake_harness.py    draft-class CSV checks (data/draftees_2026.csv)
   scrape_afltables.py  re-harvests the dataset, with the <6-game 2025 fallback
   validate_data.py     checks 220 club x column aggregates vs published totals
   visual/capture_match.gd  renders match-view frames and movement trails (review)

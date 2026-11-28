@@ -8,6 +8,7 @@ extends SceneTree
 ## "FRE"), CAP_RIVAL (default "SYD"), CAP_W / CAP_H (default 390 x 844).
 ## A fresh career fast-forwarded to the off-season; you offer a fringe player
 ## for the rival's best. Never touches a real save.
+const Ovr := preload("res://tests/ovr.gd")
 
 
 func _initialize() -> void:
@@ -73,9 +74,9 @@ func _run() -> void:
 	state.trade_requests = {}
 	state.trade_offers = []
 	var mine: Array = state.my_list.duplicate()
-	mine.sort_custom(func(a, b): return int(a["overall"]) < int(b["overall"]))
+	mine.sort_custom(func(a, b): return int(Ovr.of(a)) < int(Ovr.of(b)))
 	var theirs: Array = (state.season.lists[rival] as Array).duplicate()
-	theirs.sort_custom(func(a, b): return int(a["overall"]) > int(b["overall"]))
+	theirs.sort_custom(func(a, b): return int(Ovr.of(a)) > int(Ovr.of(b)))
 	var give := [str(mine[2]["id"])]
 	var ask := [str(theirs[0]["id"])]
 	var v: Dictionary = state.evaluate_trade(rival, give, ask)
@@ -98,7 +99,7 @@ func _run() -> void:
 	# market closes and the wrap says why the ones you lost went elsewhere.
 	var CT = load("res://scripts/sim/Contracts.gd")   # loaded late: autoloads come first
 	var fas: Array = state.free_agents.duplicate()
-	fas.sort_custom(func(a, b): return int(a["overall"]) > int(b["overall"]))
+	fas.sort_custom(func(a, b): return int(Ovr.of(a)) > int(Ovr.of(b)))
 	for fa in fas.slice(0, 6):
 		var years := int(CT.wants(fa)["years"])
 		state._add_offer(fa, club, {"salary": CT.lowest(fa, years), "years": years},

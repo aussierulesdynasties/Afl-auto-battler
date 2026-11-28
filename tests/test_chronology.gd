@@ -1,4 +1,5 @@
 extends RefCounted
+const Ovr := preload("res://tests/ovr.gd")
 ## Chronology: the completed 2026 season is history, a career starts in
 ## 2027, and every system agrees - drafts, ages, careers, coaches, saves.
 ## Run through tests/run_chronology_tests.gd.
@@ -114,7 +115,7 @@ func _test_first_class() -> void:
 	var b := GameState._first_class(2027)
 	var same := a.size() == b.size()
 	for i in range(mini(a.size(), b.size())):
-		if str(a[i]["id"]) != str(b[i]["id"]) or int(a[i]["overall"]) != int(b[i]["overall"]) \
+		if str(a[i]["id"]) != str(b[i]["id"]) or int(Ovr.of(a[i])) != int(Ovr.of(b[i])) \
 				or not is_equal_approx(float(a[i]["age"]), float(b[i]["age"])):
 			same = false
 	_check(same, "The first class is deterministic for a career seed")

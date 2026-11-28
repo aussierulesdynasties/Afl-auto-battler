@@ -7,7 +7,7 @@
       "id": "IRL", "region": "ireland", "name": "Ireland", "demonym": "Irish", "weight": 3,
       "age": [18, 20], "height": [183, 196],
       "roles": {"DEF": 4, "MID": 4, "FWD": 2},
-      "bias": {"kicking": 4, "handballing": 4, "accuracy": 3, "carry": 3, "contested_marking": 2, "uncontested_marking": 2, "contested": -2, "intercept": -1},
+      "bias": {"kicking": 4, "handballing": 4, "goalkicking": 3, "work_rate": 3, "contested_marking": 2, "marking": 2, "contested_ball": -2, "reading_play": -1},
       "u18": {"gm": [3, 6], "di": [12, 20], "mk": [2, 5], "tk": [1, 4]},
       "reason": "a Gaelic footballer who kicks cleanly off both sides and runs all day",
       "pathways": [
@@ -28,7 +28,7 @@
       "id": "NZL", "region": "nz", "name": "New Zealand", "demonym": "New Zealander", "weight": 3, "raw_shift": 3.0, "raw_ceiling": 15.0,
       "age": [18, 20], "height": [185, 200],
       "roles": {"MID": 4, "DEF": 3, "FWD": 2, "RUCK": 1},
-      "bias": {"contested": 5, "pressure": 4, "kicking": -2, "handballing": -2, "accuracy": -3, "creating": -1},
+      "bias": {"contested_ball": 5, "pressure": 4, "kicking": -2, "handballing": -2, "goalkicking": -3, "vision": -1},
       "u18": {"gm": [3, 6], "di": [10, 18], "mk": [1, 4], "tk": [4, 7]},
       "reason": "a rugby player who wins the ball in a pack and tackles with real strength",
       "pathways": [
@@ -53,7 +53,7 @@
       "id": "USA", "region": "usa", "name": "USA", "from": "the USA", "demonym": "American", "weight": 3,
       "age": [19, 20], "height": [190, 208],
       "roles": {"RUCK": 3, "FWD": 3, "DEF": 2},
-      "bias": {"contested_marking": 4, "uncontested_marking": 4, "contested": 2, "ruck": 2, "kicking": -4, "handballing": -4, "accuracy": -4, "creating": -3, "carry": -1},
+      "bias": {"contested_marking": 4, "marking": 4, "contested_ball": 2, "ruck": 2, "kicking": -4, "handballing": -4, "goalkicking": -4, "vision": -3, "work_rate": -1},
       "u18": {"gm": [2, 5], "di": [8, 14], "mk": [3, 7], "tk": [1, 4]},
       "reason": "a college athlete with elite size and bounce who is still learning the game",
       "pathways": [
@@ -80,7 +80,7 @@
       "id": "KEN", "region": "africa", "name": "Kenya", "demonym": "Kenyan", "weight": 1,
       "age": [18, 20], "height": [184, 200],
       "roles": {"MID": 3, "DEF": 3, "FWD": 2},
-      "bias": {"carry": 6, "pressure": 2, "kicking": -5, "handballing": -5, "accuracy": -5, "creating": -3, "contested_marking": -1, "uncontested_marking": -1},
+      "bias": {"work_rate": 6, "pressure": 2, "kicking": -5, "handballing": -5, "goalkicking": -5, "vision": -3, "contested_marking": -1, "marking": -1},
       "u18": {"gm": [1, 4], "di": [6, 12], "mk": [1, 4], "tk": [1, 4]},
       "reason": "a runner with a huge engine who has only just picked up the game",
       "pathways": [
@@ -100,7 +100,7 @@
       "id": "NGA", "region": "africa", "name": "Nigeria", "demonym": "Nigerian", "weight": 1,
       "age": [18, 20], "height": [188, 206],
       "roles": {"FWD": 3, "DEF": 3, "RUCK": 2, "MID": 1},
-      "bias": {"carry": 4, "contested": 2, "contested_marking": 2, "uncontested_marking": 2, "kicking": -5, "handballing": -5, "accuracy": -5, "creating": -3},
+      "bias": {"work_rate": 4, "contested_ball": 2, "contested_marking": 2, "marking": 2, "kicking": -5, "handballing": -5, "goalkicking": -5, "vision": -3},
       "u18": {"gm": [1, 4], "di": [6, 12], "mk": [2, 5], "tk": [1, 4]},
       "reason": "a long, quick basketballer who jumps at the ball and is still raw with it in hand",
       "pathways": [
@@ -120,7 +120,7 @@
       "id": "RSA", "region": "africa", "name": "South Africa", "demonym": "South African", "weight": 1,
       "age": [18, 20], "height": [184, 202],
       "roles": {"DEF": 3, "MID": 3, "FWD": 2, "RUCK": 1},
-      "bias": {"contested": 4, "pressure": 3, "carry": 2, "kicking": -3, "handballing": -3, "accuracy": -3, "creating": -2},
+      "bias": {"contested_ball": 4, "pressure": 3, "work_rate": 2, "kicking": -3, "handballing": -3, "goalkicking": -3, "vision": -2},
       "u18": {"gm": [2, 5], "di": [8, 14], "mk": [1, 4], "tk": [3, 6]},
       "reason": "a rugby or cricket product who is strong, fit and brave in a contest",
       "pathways": [
@@ -140,7 +140,7 @@
       "id": "GHA", "region": "africa", "name": "Ghana", "demonym": "Ghanaian", "weight": 1,
       "age": [18, 20], "height": [186, 204],
       "roles": {"DEF": 3, "FWD": 3, "MID": 2, "RUCK": 1},
-      "bias": {"carry": 5, "pressure": 2, "kicking": -5, "handballing": -5, "accuracy": -5, "creating": -3},
+      "bias": {"work_rate": 5, "pressure": 2, "kicking": -5, "handballing": -5, "goalkicking": -5, "vision": -3},
       "u18": {"gm": [1, 4], "di": [6, 12], "mk": [1, 4], "tk": [1, 4]},
       "reason": "a fast, springy athlete who covers the ground quickly and is learning the finer points",
       "pathways": [

@@ -1,4 +1,5 @@
 extends RefCounted
+const Ovr := preload("res://tests/ovr.gd")
 ## Legacy mode season rules by year (row 142, phase L4): list sizes, the
 ## rookie list (1997 on), Category B, free agency (2012 on), the mid-season
 ## draft, the interchange bench and the substitute each follow the season
@@ -328,14 +329,16 @@ func _test_smart_delisting() -> void:
 			kid = p
 		elif vet.is_empty():
 			vet = p
-	kid.merge({"overall": 69, "potential": 75, "age": 20.0, "contract_years": 3}, true)
-	vet.merge({"overall": 70, "potential": 70, "age": 35.0, "contract_years": 3}, true)
+	kid.merge({"potential": 75, "age": 20.0, "contract_years": 3}, true)
+	Ovr.to(kid, 69)
+	vet.merge({"potential": 70, "age": 35.0, "contract_years": 3}, true)
+	Ovr.to(vet, 70)
 	vet.erase("retiring")
 	# Everyone else outranks both, so one of the two must go to reach 42.
 	var others := 0
 	for p in list:
 		if p != kid and p != vet:
-			p["overall"] = maxi(int(p.get("overall", 0)), 80)
+			Ovr.to(p, maxi(int(Ovr.of(p, 0)), 80))
 			p["age"] = minf(float(p.get("age", 25.0)), 27.0)
 			others += 1
 	var base: Dictionary = {}

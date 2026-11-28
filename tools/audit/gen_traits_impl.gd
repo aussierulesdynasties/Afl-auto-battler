@@ -6,8 +6,7 @@ extends RefCounted
 ## branch (same classes, same seeds).
 ##
 ##   godot --headless --path . --script tools/audit/run_audit.gd -- gen_traits_impl [classes] [grow] [seed_base]
-##   (default 30 classes from 2027, career seed seed_base + year, seed_base 4242 (the seeds
-##   GEN_NUDGE was sized on; 9000 is held out); grow 5)
+##   (default 30 classes from 2027, career seed seed_base + year, seed_base 4242; grow 5)
 ##
 ## Lines:
 ##   REAL <trait> <pct> (<n>/<N>)                     every real listed player with a senior
@@ -20,6 +19,7 @@ extends RefCounted
 ##     so this is what a league of grown generated players would show.
 ##   RATE <trait> | real x | draft w, grown y, matched z   (the table)
 ## Measurement only: it never changes a rule.
+const Ovr := preload("res://tests/ovr.gd")
 const TRAITS := ["bull", "ball_magnet", "ruck_king", "aerial", "crumber", "sharpshooter",
 		"playmaker", "interceptor", "lockdown", "def_forward", "engine", "big_game", "hothead"]
 const BAND := 4
@@ -40,7 +40,6 @@ func run() -> void:
 			n += 1 if Traits.of(p).has(t) else 0
 		real_share[t] = 100.0 * n / maxi(1, real.size())
 		print("REAL %-12s %5.1f%% (%d/%d)" % [t, real_share[t], n, real.size()])
-	Prospects.forget_cache()
 	var drafted := []
 	var grown := []
 	for y in range(2027, 2027 + classes):
@@ -53,8 +52,8 @@ func run() -> void:
 	var ovr0 := 0.0
 	var ovr1 := 0.0
 	for i in range(drafted.size()):
-		ovr0 += float(drafted[i]["overall"])
-		ovr1 += float(grown[i]["overall"])
+		ovr0 += float(Ovr.of(drafted[i]))
+		ovr1 += float(Ovr.of(grown[i]))
 	print("GEN %d players: mean OVR at the draft %.1f, %d seasons on %.1f (real %.1f)" % [
 			drafted.size(), ovr0 / drafted.size(), grow, ovr1 / grown.size(), _mean_ovr(real)])
 	var row := {}
@@ -68,7 +67,6 @@ func run() -> void:
 		row[t] = [100.0 * nd / drafted.size(), 100.0 * ng / grown.size(), m]
 		print("GEN %-12s draft %5.1f%% grown %5.1f%% matched %5.1f%% (%d/%d)" % [t,
 				row[t][0], row[t][1], m, ng, grown.size()])
-	Prospects.forget_cache()
 	print("RATE | trait | real | draft, grown, matched")
 	for t in TRAITS:
 		var n: Array = row[t]
@@ -86,7 +84,7 @@ func _real_players() -> Array:
 
 
 func _band(p: Dictionary) -> int:
-	return int(p.get("overall", 0)) / BAND
+	return int(Ovr.of(p, 0)) / BAND
 
 
 func _bands(players: Array) -> Dictionary:
@@ -99,7 +97,7 @@ func _bands(players: Array) -> Dictionary:
 func _mean_ovr(players: Array) -> float:
 	var s := 0.0
 	for p in players:
-		s += float(p.get("overall", 0))
+		s += float(Ovr.of(p, 0))
 	return s / maxi(1, players.size())
 
 

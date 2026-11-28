@@ -42,6 +42,7 @@ extends RefCounted
 ## Each season also prints NZSTATE for each New Zealander on the list, with what the
 ## rugby card asks of him, and FINISH <year> <club> ladder <position> finals <status>.
 ## Measurement only: it never changes a rule.
+const Ovr := preload("res://tests/ovr.gd")
 
 var deck: Array = []
 var seen := {}
@@ -121,7 +122,7 @@ func _keep_list() -> void:
 	if not keep or not GameState.offseason_open():
 		return
 	var best := GameState.my_list.duplicate()
-	best.sort_custom(func(a, b): return float(a.get("overall", 0)) > float(b.get("overall", 0)))
+	best.sort_custom(func(a, b): return float(Ovr.of(a, 0)) > float(Ovr.of(b, 0)))
 	best = best.slice(0, 30)
 	for p in Contracts.expiring(GameState.my_list).duplicate():
 		if float(p.get("age", 30)) >= 31.0 or not best.has(p):
@@ -136,7 +137,6 @@ func _strengthen() -> void:
 	if strong <= 0:
 		return
 	for p in GameState.my_list:
-		p["overall"] = mini(99, int(p.get("overall", 50)) + strong)
 		var attr: Dictionary = p.get("attr", {})
 		for k in attr:
 			attr[k] = minf(99.0, float(attr[k]) + strong)
@@ -148,7 +148,7 @@ func _print_nz() -> void:
 			var room: int = GameState.cap_for(str(GameState.my_club)) - GameState.my_payroll()
 			var over: int = ClubLife.early_price(p) - int(p.get("salary", 0))
 			print("NZSTATE %d %s ovr %d pot %d years %d morale %d drafted %d wanted %s price_over %d cap_room %d" % [GameState.season_year, str(p["id"]),
-					int(p.get("overall", 0)), int(p.get("potential", 0)), int(p.get("contract_years", 0)),
+					int(Ovr.of(p, 0)), int(p.get("potential", 0)), int(p.get("contract_years", 0)),
 					int(ClubLife.morale(p)), int(p.get("drafted_year", -1)),
 					str(ClubLife.extension_wanted(p, {}, ClubLife.INTL_EXTENSION_MIN_OVR)), over, room])
 			var f: Dictionary = ClubStories.player_fact(GameState, p, true, {}, 99, room)
@@ -169,7 +169,7 @@ func run() -> void:
 		GameState.start_season(club, GameDB.club_list(club))
 	else:
 		var pool: Array = GameDB.all_players_sorted() + GameDB.all_draftees_sorted()
-		pool.sort_custom(func(a, b): return a["overall"] > b["overall"])
+		pool.sort_custom(func(a, b): return Ovr.of(a) > Ovr.of(b))
 		GameState.draft = Draft.new(pool, GameDB.active_clubs(GameState.season_year).duplicate(), seed)
 		GameState.draft.start_for_user(club)
 		_run_draft(GameState.draft)

@@ -6,6 +6,7 @@ extends RefCounted
 ## best player alone (B3). Prints the home side's win rate, mean margin and first-quarter
 ## margin for each arm, and the effect of the card's chance on a whole final.
 ## Measurement only: it never changes a rule.
+const Ovr := preload("res://tests/ovr.gd")
 
 
 func _arm(sea: Season, home: String, away: String, matches: int, flag: String) -> Dictionary:
@@ -17,7 +18,7 @@ func _arm(sea: Season, home: String, away: String, matches: int, flag: String) -
 	elif flag == "star":
 		var best: Dictionary = sea.lists[home][0]
 		for p in sea.lists[home]:
-			if int(p["overall"]) > int(best["overall"]):
+			if int(Ovr.of(p)) > int(Ovr.of(best)):
 				best = p
 		best["slow_start"] = true
 	var wins := 0

@@ -1,4 +1,5 @@
 extends RefCounted
+const Ovr := preload("res://tests/ovr.gd")
 ## This week's opponent facts (Matchup): at most three, deterministic, drawn
 ## from the sides the engine fields, in football words with no internal
 ## numbers - and quiet when there is nothing worth saying.
@@ -133,7 +134,7 @@ func _test_missing_player() -> void:
 	var list: Array = lists["GEE"]
 	var best: Dictionary = list[0]
 	for p in list:
-		if int(p["overall"]) > int(best["overall"]):
+		if int(Ovr.of(p)) > int(Ovr.of(best)):
 			best = p
 	best["injury_weeks"] = 3
 	var f := Matchup.facts("GEE", lists)
@@ -150,7 +151,7 @@ func _test_missing_player() -> void:
 	var lists2 := _league()
 	var list2: Array = lists2["GEE"]
 	var by_ovr := list2.duplicate()
-	by_ovr.sort_custom(func(a, b): return int(a["overall"]) < int(b["overall"]))
+	by_ovr.sort_custom(func(a, b): return int(Ovr.of(a)) < int(Ovr.of(b)))
 	by_ovr[0]["injury_weeks"] = 4
 	var fringe := false
 	for x in Matchup.facts("GEE", lists2):
@@ -165,7 +166,7 @@ func _test_danger() -> void:
 	var top_club := ""
 	for code in lists:
 		for p in lists[code]:
-			if top.is_empty() or int(p["overall"]) > int(top["overall"]):
+			if top.is_empty() or int(Ovr.of(p)) > int(Ovr.of(top)):
 				top = p
 				top_club = code
 	var found := false
@@ -280,7 +281,7 @@ func _test_own_notes() -> void:
 	_check(Matchup.own_notes(list).is_empty(), "A fit list has nothing to report")
 	var best: Dictionary = list[0]
 	for p in list:
-		if int(p["overall"]) > int(best["overall"]):
+		if int(Ovr.of(p)) > int(Ovr.of(best)):
 			best = p
 	best["injury_weeks"] = 1
 	var notes := Matchup.own_notes(list)

@@ -11,6 +11,7 @@ extends RefCounted
 ## losing run, whether he is fit and in the side. Prints MORALE and LOSING
 ## histograms, JOINT (weeks each trigger is met), EPISODE (per candidate trigger, a
 ## new episode needs 80 weeks since the last, the card's cooldown) and SUMMARY.
+const Ovr := preload("res://tests/ovr.gd")
 
 const MORALE_CUTS := [45, 58, 70, 75, 105]  # 105 = any morale (the losing run alone)
 const RUN_CUTS := [0, 1, 2, 3, 4]
@@ -38,7 +39,7 @@ func run() -> void:
 		GameState.start_season(club, GameDB.club_list(club))
 	else:
 		var pool: Array = GameDB.all_players_sorted() + GameDB.all_draftees_sorted()
-		pool.sort_custom(func(a, b): return a["overall"] > b["overall"])
+		pool.sort_custom(func(a, b): return Ovr.of(a) > Ovr.of(b))
 		GameState.draft = Draft.new(pool, GameDB.active_clubs(GameState.season_year).duplicate(), seed)
 		GameState.draft.start_for_user(club)
 		_run_draft(GameState.draft)

@@ -1,4 +1,5 @@
 extends RefCounted
+const Ovr := preload("res://tests/ovr.gd")
 ## The pre-season (PreSeason.gd, rule 69a): the player meetings, the season
 ## fitness plan and the running it books, one action a week (Running, Game plan
 ## drilling, Team bonding), the rivals by the same rules, its own dice, saves
@@ -100,7 +101,7 @@ func _sig() -> String:
 	for code in GameState.season.clubs:
 		var rows := []
 		for p in GameState.season.lists[code]:
-			rows.append("%s/%d/%d/%d/%s" % [str(p["id"]), int(p["overall"]), int(p.get("xp", 0)),
+			rows.append("%s/%d/%d/%d/%s" % [str(p["id"]), int(Ovr.of(p)), int(p.get("xp", 0)),
 					int(p.get("injury_weeks", 0)), str(p.get("morale", ""))])
 		rows.sort()
 		parts.append("%s[%s|%s|%s]%s" % [str(code), GameState.fitness_plan(str(code)),
@@ -139,7 +140,7 @@ func _mean_rating() -> float:
 	var n := 0
 	for code in GameState.season.clubs:
 		for p in GameState.season.lists[code]:
-			total += float(p["overall"])
+			total += float(Ovr.of(p))
 			n += 1
 	return total / float(maxi(1, n))
 
@@ -623,8 +624,15 @@ func _test_meeting_focus() -> void:
 	if p.is_empty():
 		return
 	var pid := str(p["id"])
-	_check(PlayerProfile.rated_on(p) == ["contested", "creating"],
-			"A midfielder is rated most on contested ball and creating (%s)" % str(PlayerProfile.rated_on(p)))
+	# What his position weighs 10% or more, heaviest first (Rating.WEIGHTS).
+	var w: Dictionary = Rating.WEIGHTS[Rating.apos_of(p)]
+	var on: Array = PlayerProfile.rated_on(p)
+	var heavy: Array = w.keys().filter(func(k): return float(w[k]) / 100.0 >= PlayerProfile.MIN_WEIGHT)
+	var desc := true
+	for i in range(1, on.size()):
+		desc = desc and int(w[on[i - 1]]) >= int(w[on[i]])
+	_check(on.size() == heavy.size() and heavy.all(func(k): return on.has(k)) and desc,
+			"A midfielder is rated on what his position weighs most, heaviest first (%s)" % str(on))
 	var scene: Control = await _open(tree)
 	var row_tap := scene.find_child("MeetTap_" + pid, true, false) as Control
 	await _into_view(tree, row_tap)
@@ -679,7 +687,7 @@ func _test_meeting_focus() -> void:
 	tree.root.size = Vector2i(390, 844)
 	await _frames(tree, 6)
 	scene = tree.current_scene as Control
-	var phone_b := scene.find_child("MeetFocus_contested", true, false) as Button
+	var phone_b := scene.find_child("MeetFocus_contested_ball", true, false) as Button
 	_check(scene.find_child("MeetProfile", true, false) == null and phone_b != null
 			and phone_b.get_theme_font("font") == UiKit.BOLD and _fits(scene, 390.0),
 			"On a phone the meeting stays one column, the rated stats still bold, nothing cut")
@@ -791,7 +799,7 @@ func _dice() -> String:
 	var klass := Prospects.generate_class(GameState.season_year + 1, GameState.career_seed)
 	var ids := []
 	for p in klass:
-		ids.append("%s/%d" % [str(p["id"]), int(p.get("overall", 0))])
+		ids.append("%s/%d" % [str(p["id"]), int(Ovr.of(p, 0))])
 	return str(hash([GameState.season.seed, str(GameState.season.fixture), cards,
 			GameState.season.next_seed(3), ids]))
 

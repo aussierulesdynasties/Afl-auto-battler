@@ -1,4 +1,5 @@
 extends SceneTree
+const Ovr := preload("res://tests/ovr.gd")
 ## godot --headless --path . --script tests/run_matchup_tests.gd
 ## Opponent facts (tests/test_matchup.gd), then the weekly hub on a phone:
 ## this week first, at most three facts, an obvious next action, the ladder at
@@ -151,7 +152,7 @@ func _test_hub_tests() -> void:
 	# Your best player injured: the week says so.
 	var best: Dictionary = _state.my_list[0]
 	for p in _state.my_list:
-		if int(p["overall"]) > int(best["overall"]):
+		if int(Ovr.of(p)) > int(Ovr.of(best)):
 			best = p
 	best["injury_weeks"] = 2
 	hub = await _open_hub()
@@ -500,7 +501,7 @@ func _test_season_wrap_trades() -> void:
 	var lists: Dictionary = _state.season.lists
 	var best := func(code: String, n: int) -> Dictionary:
 		var l: Array = (lists[code] as Array).duplicate()
-		l.sort_custom(func(a, b): return int(a["overall"]) > int(b["overall"]))
+		l.sort_custom(func(a, b): return int(Ovr.of(a)) > int(Ovr.of(b)))
 		return l[n]
 	# [buyer, seller, the player the buyer gets, what it gives]
 	var pick: Dictionary = _state.pick_asset(_state.pick_id(_state.season_year + 1, 1, "STK"))
@@ -857,7 +858,7 @@ func _test_former_player() -> void:
 	var mine: Array = _state.season.lists["FRE"]
 	var best_i := 0
 	for i in range(mine.size()):
-		if int(mine[i].get("overall", 0)) > int(mine[best_i].get("overall", 0)):
+		if int(Ovr.of(mine[i], 0)) > int(Ovr.of(mine[best_i], 0)):
 			best_i = i
 	var gone: Dictionary = mine[best_i]
 	var never: Dictionary = mine[(best_i + 1) % mine.size()]
@@ -1098,7 +1099,10 @@ func _test_facts_without_options() -> void:
 	# Two clubs whose first opponent (seed 2031) has two or more facts, one
 	# naming a player: on the director's ratings (row 200) Brisbane's, Gold
 	# Coast, sits mid-table in every line, so the Bulldogs (v Adelaide) stand in.
-	for club in ["FRE", "WBD"]:
+	# On the rebuilt ratings (2026-11-26) Fremantle's, Collingwood, has no
+	# defender who reads the ball well enough to play loose and no top-ten
+	# player, so no fact names anyone: Geelong (v Melbourne) stands in.
+	for club in ["GEE", "WBD"]:
 		_reset()
 		_state.set_setting("seen_weekly_loop_intro", true)
 		_state.start_season(club, db.club_list(club))
@@ -1900,7 +1904,7 @@ func _gate_odds() -> void:
 	_check(str(push[0]).contains(pct.call(Ms.PUSH_GOAL - 1.0)) and str(push[0]).contains(pct.call(Ms.PUSH_GAIN - 1.0)) and str(push[0]).ends_with(GO.TO_SIREN)
 			and str(push[1]).contains(pct.call(Ms.PUSH_OPP_GOAL - 1.0)), "Push numbers forward: to the siren, both sides from its constants (%s / %s)" % push)
 	var fwd := {"id": "f", "role": "FWD", "height_cm": 196, "attr": {"contested_marking": 80}}
-	var back := {"id": "d", "role": "DEF", "height_cm": 192, "attr": {"intercept": 74, "contested_marking": 68}}
+	var back := {"id": "d", "role": "DEF", "height_cm": 192, "attr": {"reading_play": 74, "one_on_one": 68}}
 	var edge: float = MU.AERIAL_EDGE if load("res://scripts/sim/Traits.gd").has(fwd, "aerial") else 0.0
 	var want := clampf(MU.MARK_BASE + edge + (MU.forward_air(fwd) - MU.defender_air(back) - MU.DUEL_CENTRE) / MU.DUEL_SCALE,
 			MU.MARK_FLOOR, MU.DUEL_CAP)

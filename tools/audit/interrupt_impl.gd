@@ -6,6 +6,7 @@ extends RefCounted
 ## Args after the impl name: seed club seasons
 ## Prints one line per season and a summary: weeks with 0/1/2/3 asks, which
 ## asks collide, and the same for losing streaks (three or more straight).
+const Ovr := preload("res://tests/ovr.gd")
 
 var club := "MEL"
 
@@ -36,7 +37,7 @@ func run() -> void:
 	GameState.replay_seed = seed
 	GameState.autosave_enabled = false
 	var pool: Array = GameDB.all_players_sorted() + GameDB.all_draftees_sorted()
-	pool.sort_custom(func(a, b): return a["overall"] > b["overall"])
+	pool.sort_custom(func(a, b): return Ovr.of(a) > Ovr.of(b))
 	GameState.draft = Draft.new(pool, GameDB.active_clubs(GameState.season_year).duplicate(), seed)
 	GameState.draft.start_for_user(club)
 	_run_draft(GameState.draft)
