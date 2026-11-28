@@ -17,9 +17,11 @@ sbox('crownred',-8.1,8.6,-2.0,0.0,16.5,19.1)               # crown band body
 for s,(o) in ((-3.5,0),(3.5,0)):sbox('concrete',s-0.5,s+0.5,-1.5,-0.5,0,10.8)            # legs
 # arched yellow pediment over the crown (ends 19.1, peak 20.2 at s -0.5)
 ARC=[(s,19.1+1.1*max(0,1-((s+0.5)/8.6)**2)) for s in [8.6-k*16.7/16 for k in range(17)]]
-sq('yellow',[(s,0.06,z) for s,z in ARC]+[(-8.1,0.06,19.1)])               # front (ARC[0] is already (8.6,19.1))
-sq('yellow',[(-8.1,-2.0,19.1)]+[(s,-2.0,z) for s,z in reversed(ARC)])     # back, facing east, opposite winding
-for (s0,z0),(s1,z1) in zip(ARC,ARC[1:]):sq('yellow',[(s0,0.06,z0),(s1,0.06,z1),(s1,-2.0,z1),(s0,-2.0,z0)])
+# Front at d 0.09, flush with the crown sign: at 0.06 it left a 3 cm slit above the sign that showed the red crown as crawling specks.
+sq('yellow',[(-8.1,0.09,19.1)]+[(s,0.09,z) for s,z in reversed(ARC)])   # front, facing west (ARC[0] is already (8.6,19.1))
+sq('yellow',[(s,-2.0,z) for s,z in ARC]+[(-8.1,-2.0,19.1)])               # back, facing east
+for (s0,z0),(s1,z1) in zip(ARC,ARC[1:]):sq('yellow',[(s0,0.09,z0),(s1,0.09,z1),(s1,-2.0,z1),(s0,-2.0,z0)])   # top, facing up
+sq('yellow',[(-8.1,-2.0,19.1),(-8.1,-2.0,ARC[-1][1]),(-8.1,0.09,ARC[-1][1]),(-8.1,0.09,19.1)])   # south end, 0.24 m tall, facing south (the north end meets the crown at 19.1)
 # hand-drawn faces, explicit UVs, read left to right in the photo (s decreasing)
 F0=SBP(7.6,0.08,10.8);quad('sbface',[F0,SBP(-7.6,0.08,10.8),SBP(-7.6,0.08,16.5),(F0[0],F0[1],16.5+DZ)])   # 8 cm proud of the box (3 cm z-fought); stops under the crown sign
 SIGNS['sbface']=(F0,(-SL[0],-SL[1]),15.2,10.8+DZ,6.3)
