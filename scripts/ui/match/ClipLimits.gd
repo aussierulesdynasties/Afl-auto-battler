@@ -37,7 +37,7 @@ const GAITS := ["walk", "backstep", "backpedal", "shuffle_l", "shuffle_r", "side
 
 
 static func kept(clip: String) -> bool:
-	return clip in ["jog", "carry", "idle"] or clip in GAITS or clip.begins_with("tackle_")
+	return clip in ["jog", "carry", "idle", "sprint"] or clip in GAITS or clip.begins_with("tackle_")
 
 
 static func apply(ap: AnimationPlayer, skel: Skeleton3D) -> void:

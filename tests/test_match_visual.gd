@@ -82,6 +82,7 @@ func run() -> void:
 	_t("_test_contacts", [res])
 	_t("_test_feet_planted", [res])
 	_t("_test_slow_gaits", [res])
+	_t("_test_sprint_blend", [res])
 	_t("_test_held_ball_after_ends_change", [res])
 	_t("_test_umpire_stoppages", [res])
 	_t("_test_match_crew", [res])
@@ -4396,6 +4397,101 @@ func _test_slow_gaits(res: Dictionary) -> void:
 			% [slow_run, slow])
 	_check(gait > 500 and way_ok > gait * 9 / 10, "Each gait carries him the way its feet go (%d of %d gait frames within 50 degrees)"
 			% [way_ok, gait])
+	oval.queue_free()
+
+
+## A man flat out off the ball runs the sprint (row 198): it is loaded as a loop, it takes over
+## the run loop as he speeds up, and laid over the run its feet reach the turf where the sprint's
+## own do (its hips scaled to his legs as the player scales them, not sunk into the ground).
+func _test_sprint_blend(res: Dictionary) -> void:
+	var d := MatchDirector.new()
+	d.setup(res, res["events"])
+	var oval := Oval3D.new()
+	(Engine.get_main_loop() as SceneTree).root.add_child(oval)
+	oval.build(d, str(res.get("home", "")), str(res.get("away", "")))
+	var anim: Oval3DAnim = oval.anim
+	var p: Dictionary = oval.players[0]
+	var ap: AnimationPlayer = p["anim"]
+	if not ap.has_animation(Oval3DAnim.FAST):
+		_check(false, "The sprint is loaded (assets/oval3d/sprint_clips.glb, fetched from the private repo)")
+		oval.queue_free()
+		return
+	_check(ap.get_animation(Oval3DAnim.FAST).loop_mode == Animation.LOOP_LINEAR
+			and anim._fast_stride.size() == Oval3DAnim.FAST_STEPS + 1,
+			"The sprint is a loop and its strides laid over the run are measured (%d of %d)"
+			% [anim._fast_stride.size(), Oval3DAnim.FAST_STEPS + 1])
+	_check(int(anim._cycles.get(Oval3DAnim.FAST, 0)) == 1, "The sprint loop is one stride (%d)" % int(anim._cycles.get(Oval3DAnim.FAST, 0)))
+	# A man whose legs are not the average build's: the hips scaled to his legs are what is checked.
+	for j in range(oval.players.size()):
+		if absf(float(oval.players[j].get("leg", 1.0)) - 1.0) > 0.03:
+			p = oval.players[j]
+			break
+	ap = p["anim"]
+	_check(absf(float(p.get("leg", 1.0)) - 1.0) > 0.03, "A man of other than average build is checked (legs %.2f)" % float(p.get("leg", 1.0)))
+	var skel: Skeleton3D = p["skel"]
+	var node: Node3D = p["node"]
+	var feet := [skel.find_bone("ball_l"), skel.find_bone("ball_r")]
+	var low := func(blend: bool) -> float:
+		ap.play("jog" if blend else Oval3DAnim.FAST)
+		var length := ap.current_animation_length
+		var lo := INF
+		for k in range(241):
+			ap.seek(length * k / 240, true)
+			if blend:
+				anim._blend_fast(p, 1.0)
+			for f in feet:
+				lo = minf(lo, (skel.global_transform * skel.get_bone_global_pose(f).origin).y - node.global_position.y)
+		ap.play("idle")
+		return lo
+	var played: float = low.call(false)
+	var laid: float = low.call(true)
+	_check(absf(laid - played) < 0.01, "Laid over the run, the sprint's feet reach the turf where its own do (%.3f m vs %.3f m)"
+			% [laid, played])
+	var dt := 1.0 / 60.0
+	var flat := 0       # frames a man off the ball runs at the sprint's full speed
+	var sprinting := 0  # of those, with the sprint fully laid over his run
+	var planted := 0    # frames a foot of a man mostly sprinting is down (at his blend's floor)
+	var slid := 0       # of those, sliding over the turf faster than 0.5 m/s
+	var last := {}
+	var eased := 0      # frames a man has just come out of a full sprint (easing into another clip)
+	var eased_ok := 0   # of those, with the planted-foot test still at the sprint's feet
+	for k in range(1800):
+		d.advance(dt)
+		oval.sync(dt)
+		for j in range(oval.players.size()):
+			var pj: Dictionary = oval.players[j]
+			var cur := str((pj["anim"] as AnimationPlayer).current_animation)
+			var bl: Dictionary = anim._blend[j]
+			if not bl.is_empty() and float(bl.get("fast", 0.0)) > 0.9 and float(bl["t"]) < Oval3DAnim.BLEND * 0.25:
+				# Just out of a sprint: the planted-foot test still has the sprint's lower feet.
+				eased += 1
+				eased_ok += 1 if anim.foot_floor(j, 0) < float(anim._floor[0]) - 0.02 else 0
+			if cur != "jog" or not bl.is_empty() or float(anim._fast[j]) < 0.5:
+				last.erase(j)
+				continue
+			if (anim._pace[j] as Vector2).length() > Oval3DAnim.FAST_FULL * 1.05:
+				flat += 1
+				sprinting += 1 if float(anim._fast[j]) > 0.99 else 0
+			var sk: Skeleton3D = pj["skel"]
+			var y0 := (pj["node"] as Node3D).global_position.y
+			var now := []
+			for f in range(2):
+				now.append(sk.global_transform * sk.get_bone_global_pose(feet[f]).origin)
+			if last.has(j):
+				for f in range(2):
+					var lo := anim.foot_floor(j, f) * float(pj.get("leg", 1.0)) + 0.03
+					var a: Vector3 = last[j][f]
+					var b: Vector3 = now[f]
+					if a.y - y0 < lo and b.y - y0 < lo:
+						planted += 1
+						slid += 1 if Vector2(b.x - a.x, b.z - a.z).length() / dt > 0.5 else 0
+			last[j] = now
+	_check(flat > 100 and sprinting > flat * 9 / 10, "A man flat out off the ball sprints (%d of %d flat-out frames)"
+			% [sprinting, flat])
+	_check(eased > 0 and eased_ok == eased, "Easing out of a sprint, his feet are judged at the sprint's height, not snapped up to the run's (%d of %d frames)"
+			% [eased_ok, eased])
+	_check(planted > 500 and slid < planted / 10, "A sprinting man's planted feet stay put (%d of %d planted-foot frames sliding)"
+			% [slid, planted])
 	oval.queue_free()
 
 

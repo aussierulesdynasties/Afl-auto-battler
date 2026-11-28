@@ -41,6 +41,16 @@ const TURN_AIR := 12.0          # rad/s with both feet off the turf
 const GAITS := ClipLimits.GAITS
 const WALK_FROM := 0.6         # m/s drawn: slower than this he stands (and shuffles his feet)
 const WALK_TO := 2.0           # the walk's top (RUN_FROM: the run takes over)
+## The sprint (Oval3D.SPRINT_GLB, Mixamo motion capture). A man off the ball running hard runs a
+## blend of it and the run loop, in step (the same point of the stride), the sprint's share 0 up to
+## FAST_FROM and all of it from FAST_FULL: he leans in and drives his arms as he speeds up, instead
+## of the run loop played two or three times over (about half of every match is run at over half a
+## man's top speed, the loop at rate 2 to 3.3, measured 2026-11-27). A blend, not a change of clip:
+## changing clips at a pace men pass through slides the planted feet (measured 2026-11-27).
+const FAST := "sprint"
+const FAST_FROM := 8.0         # m/s drawn
+const FAST_FULL := 12.0
+const FAST_STEPS := 4          # the blend's stride is measured at shares 0, 1/4 ... 1
 const BACKSTEP_TO := 1.4       # walking backwards up to this, then the backpedal
 const BACK_TO := 2.6           # the backpedal's top; faster, he turns and runs
 const SHUFFLE_TO := 1.2        # side-stepping up to this, then the side-run
@@ -196,6 +206,10 @@ var _pace: Array = []          # per player: his drawn velocity on the turf, smo
 var _loop_speed := {}          # loop name -> m/s its planted foot covers at rate 1
 var _lift := {}                # loop name -> the share of its cycle at which the left foot lifts
 var _gait_t: Array = []        # per player: s in his current clip
+var _fast: Array = []          # per player: the sprint's share of his run this frame (0 none)
+var _fast_stride: Array = []   # m the run loop with the sprint laid over covers, average build, at share k / FAST_STEPS
+var _cycles := {}              # loop name -> strides (left-foot lifts) in one play of it
+var _fast_floor: Array = []    # [l, r] each ball bone's lowest in the run loop at sprint share k / FAST_STEPS
 var _floor := [INF, INF]       # each ball bone's lowest in the run loop, in the figure's space
 var _legs: Array = []          # bone indices [thigh, calf, foot, ball] per leg, [] if the rig has none
 ## per player, per foot: {at: world point the ball bone is held at, yaw: node yaw when it came
@@ -222,6 +236,7 @@ func _init(p_director: MatchDirector, p_players: Array) -> void:
 		_was.append(Vector2.INF)
 		_pace.append(Vector2.ZERO)
 		_gait_t.append(0.0)
+		_fast.append(0.0)
 		_feet.append([{}, {}])
 	var res = load(PAIRS)
 	if res is JSON:
@@ -240,8 +255,14 @@ func _init(p_director: MatchDirector, p_players: Array) -> void:
 			n = n.get_parent()
 		_read_takes(p)
 		_read_moments(p)
-		for name in ["jog", "carry"] + GAITS:
+		for name in ["jog", "carry", FAST] + GAITS:
 			_loop_speed[name] = _measure_loop(p, name)
+		# The run loop with the sprint laid over it: metres a stride at each share (FAST_STEPS).
+		if _lift.has("jog") and _lift.has(FAST):
+			var len_run := (p["anim"] as AnimationPlayer).get_animation("jog").length
+			_fast_floor = [_floor.duplicate()]
+			for k in range(FAST_STEPS + 1):
+				_fast_stride.append(_measure_loop(p, "jog", float(k) / FAST_STEPS) * len_run)
 		var skel0: Skeleton3D = p["skel"]
 		for leg in LEGS:
 			var ids := []
@@ -282,7 +303,7 @@ func loop_speed(name: String, p := {}) -> float:
 	return float(_loop_speed.get(name, JOG_SPEED)) * float(p.get("leg", 1.0))
 
 
-func _measure_loop(p: Dictionary, name: String) -> float:
+func _measure_loop(p: Dictionary, name: String, fast := 0.0) -> float:
 	var ap: AnimationPlayer = p["anim"]
 	if not ap.has_animation(name):
 		return JOG_SPEED
@@ -297,6 +318,8 @@ func _measure_loop(p: Dictionary, name: String) -> float:
 	var lo := [INF, INF]
 	for k in range(n + 1):
 		ap.seek(length * k / n, true)
+		if fast > 0.0:
+			_blend_fast(p, fast)
 		var row := []
 		for f in range(2):
 			var q := _rig * skel.get_bone_global_pose(feet[f]).origin
@@ -305,11 +328,14 @@ func _measure_loop(p: Dictionary, name: String) -> float:
 		at.append(row)
 	var sum := 0.0
 	var count := 0
+	var lifts := 0
 	for k in range(n):
 		var a0: Vector3 = at[k][0]
 		var b0: Vector3 = at[k + 1][0]
-		if a0.y < lo[0] + FOOT_DOWN and b0.y >= lo[0] + FOOT_DOWN and not _lift.has(name):
-			_lift[name] = float(k + 1) / n
+		if a0.y < lo[0] + FOOT_DOWN and b0.y >= lo[0] + FOOT_DOWN:
+			lifts += 1
+			if not _lift.has(name) and fast == 0.0:
+				_lift[name] = float(k + 1) / n
 		for f in range(2):
 			var a: Vector3 = at[k][f]
 			var b: Vector3 = at[k + 1][f]
@@ -317,10 +343,14 @@ func _measure_loop(p: Dictionary, name: String) -> float:
 				sum += Vector2(b.x - a.x, b.z - a.z).length() / (length / n)
 				count += 1
 	ap.play("idle")
+	if fast == 0.0:
+		_cycles[name] = maxi(lifts, 1)
 	# Read off this man's build: brought back to the average one (loop_speed, _plant).
 	var leg := float(p.get("leg", 1.0))
-	if name == "jog":
+	if name == "jog" and fast == 0.0:
 		_floor = [lo[0] / leg, lo[1] / leg]
+	if name == "jog" and fast > 0.0:
+		_fast_floor.append([lo[0] / leg, lo[1] / leg])
 	return sum / count / leg if count > 0 else JOG_SPEED
 
 
@@ -358,6 +388,41 @@ func _gait(cur: String, pos: Vector2, vel: Vector2, speed: float) -> String:
 	if speed < keep.call("walk", WALK_TO):
 		return "walk"
 	return ""
+
+
+## The sprint's share of a man's run (FAST): only off the ball, in the run loop, and only when the
+## sprint is loaded and the blend's strides measured.
+func _fast_share(i: int, holder: int, want: String, speed: float, ap: AnimationPlayer) -> float:
+	if i == holder or want != "jog" or not ap.has_animation(FAST) or _fast_stride.size() <= FAST_STEPS:
+		return 0.0
+	return smoothstep(FAST_FROM, FAST_FULL, speed)
+
+
+## Lay the sprint over the run loop just played, at the same point of the stride (each loop's left
+## foot as far from lifting), by share w.
+func _blend_fast(p: Dictionary, w: float) -> void:
+	var ap: AnimationPlayer = p["anim"]
+	var skel: Skeleton3D = p["skel"]
+	var a := ap.get_animation(FAST)
+	var t := _fast_time(ap, ap.current_animation_position)
+	var tr := _bone_tracks(FAST, a, skel)
+	for bone in tr:
+		if bone is int:
+			var q := a.rotation_track_interpolate(int(tr[bone]), t)
+			skel.set_bone_pose_rotation(bone, skel.get_bone_pose_rotation(bone).slerp(q, w))
+	if int(tr["hips"]) >= 0:
+		# The player applies the clip's hips scaled to his legs (Skeleton3D.motion_scale): so here.
+		var h := a.position_track_interpolate(int(tr["hips"]), t) * skel.motion_scale
+		skel.set_bone_pose_position(_pelvis, skel.get_bone_pose_position(_pelvis).lerp(h, w))
+
+
+## The sprint's time at the point of the stride the run loop is at, `pos` seconds in: each loop's
+## left foot as far from lifting. The run loop holds several strides; so may the sprint.
+func _fast_time(ap: AnimationPlayer, pos: float) -> float:
+	var run := ap.get_animation("jog")
+	var a := ap.get_animation(FAST)
+	var u := (pos / maxf(run.length, 0.001) - float(_lift["jog"])) * float(_cycles.get("jog", 1))
+	return fposmod(u / float(_cycles.get(FAST, 1)) + float(_lift[FAST]), 1.0) * a.length
 
 
 ## 0 when his left foot is the lower, 1 when his right is.
@@ -805,6 +870,7 @@ func step(i: int, p: Dictionary, holder: int, pos: Vector2, vel: Vector2, dt: fl
 	var hold := STOP_HOLD
 	if holder >= 0 and holder != i and holder < players.size() and here.distance_to(Vector2((players[holder]["node"] as Node3D).position.x, (players[holder]["node"] as Node3D).position.z)) < CLOSE_IN:
 		hold = CLOSE_HOLD
+	var fast := 0.0
 	var running: bool = speed > go or (float(_still[i]) < hold
 			and is_loop(ap.current_animation) and dt > 0.0)
 	# He turns at a footballer's pivot, never through half a turn in one frame. dt 0 (the
@@ -828,6 +894,14 @@ func step(i: int, p: Dictionary, holder: int, pos: Vector2, vel: Vector2, dt: fl
 			node.rotation.y = rotate_toward(node.rotation.y, face, swing)
 		var least := RUN_FROM if want in ["jog", "carry"] else go
 		rate = clampf(maxf(speed, least) / loop_speed(want, p), RATE_MIN, RATE_MAX)
+		fast = _fast_share(i, holder, want, speed, ap)
+		if fast > 0.0:
+			# In step: one stride of the blend covers the blend of the two strides, so the loop
+			# plays as many strides a second as his pace needs.
+			var x := fast * FAST_STEPS
+			var k := mini(int(x), FAST_STEPS - 1)
+			var stride := lerpf(float(_fast_stride[k]), float(_fast_stride[k + 1]), x - k) * float(p.get("leg", 1.0))
+			rate = clampf(speed / stride * ap.get_animation("jog").length, RATE_MIN, RATE_MAX)
 	elif i != holder:
 		# Standing: face the ball (the carrier keeps his heading).
 		var to: Vector2 = (director.ball["pos"] as Vector2) - pos
@@ -859,6 +933,9 @@ func step(i: int, p: Dictionary, holder: int, pos: Vector2, vel: Vector2, dt: fl
 	# arms), so a still pose still advances by a sliver.
 	ap.advance(maxf(dt * rate, 1e-4))
 	_rate[i] = rate
+	_fast[i] = fast if ap.current_animation == "jog" else 0.0
+	if float(_fast[i]) > 0.0:
+		_blend_fast(p, float(_fast[i]))
 	_ease(i, p, dt)
 	_plant(i, p, dt, not running)
 	_look_at_ball(i, i == holder, dt)
@@ -1025,6 +1102,8 @@ func _snap(i: int, p: Dictionary) -> void:
 		# stepping as they were instead of a frozen stride dragging along the turf.
 		_blend[i]["src"] = ap.current_animation
 		_blend[i]["st"] = ap.current_animation_position
+		# Sprinting out of the run: the sprint stays laid over it while he eases out.
+		_blend[i]["fast"] = float(_fast[i]) if ap.current_animation == "jog" else 0.0
 
 
 ## Ease from the held pose into the one the clip just set. The hips keep the clip's place on
@@ -1051,7 +1130,17 @@ func _ease(i: int, p: Dictionary, dt: float) -> void:
 			if bone is int:
 				rots[bone] = a.rotation_track_interpolate(int(tr[bone]), float(b["st"]))
 		if int(tr["hips"]) >= 0:
-			hips_from = a.position_track_interpolate(int(tr["hips"]), float(b["st"]))
+			hips_from = a.position_track_interpolate(int(tr["hips"]), float(b["st"])) * skel.motion_scale
+		var fast := float(b.get("fast", 0.0))
+		if fast > 0.0:
+			var sa := (p["anim"] as AnimationPlayer).get_animation(FAST)
+			var st := _fast_time(p["anim"], float(b["st"]))
+			var sprint_tr := _bone_tracks(FAST, sa, skel)
+			for bone in sprint_tr:
+				if bone is int:
+					rots[bone] = (rots[bone] as Quaternion).slerp(sa.rotation_track_interpolate(int(sprint_tr[bone]), st), fast)
+			if int(sprint_tr["hips"]) >= 0:
+				hips_from = hips_from.lerp(sa.position_track_interpolate(int(sprint_tr["hips"]), st) * skel.motion_scale, fast)
 	for k in range(rots.size()):
 		if k != _pelvis:
 			skel.set_bone_pose_rotation(k, (rots[k] as Quaternion).slerp(skel.get_bone_pose_rotation(k), w))
@@ -1098,7 +1187,7 @@ func _plant(i: int, p: Dictionary, dt: float, standing: bool) -> void:
 	for f in range(2):
 		var leg: Array = _legs[f]
 		var q := g * skel.get_bone_global_pose(leg[3]).origin
-		var down := q.y - node.global_position.y < float(_floor[f]) * float(p.get("leg", 1.0)) + FOOT_DOWN
+		var down := q.y - node.global_position.y < foot_floor(i, f) * float(p.get("leg", 1.0)) + FOOT_DOWN
 		var lk: Dictionary = feet[f]
 		if lk.is_empty():
 			if down:
@@ -1150,6 +1239,20 @@ func _plant(i: int, p: Dictionary, dt: float, standing: bool) -> void:
 			continue
 		var want := q.lerp(at, w)
 		_reach(skel, g, leg, want - q, wrapf(float(lk["yaw"]) - node.rotation.y, -PI, PI) * w)
+
+
+## Foot f's lowest in his run loop (average build), with the sprint's share of it laid over.
+func foot_floor(i: int, f: int) -> float:
+	var w := float(_fast[i]) if i < _fast.size() else 0.0
+	# Easing out of a sprint (_ease): the sprint's share of the pose fades with the ease.
+	if i < _blend.size() and not (_blend[i] as Dictionary).is_empty():
+		var b: Dictionary = _blend[i]
+		w = maxf(w, float(b.get("fast", 0.0)) * (1.0 - smoothstep(0.0, BLEND, float(b["t"]))))
+	if w <= 0.0 or _fast_floor.size() <= FAST_STEPS:
+		return float(_floor[f])
+	var x := w * FAST_STEPS
+	var k := mini(int(x), FAST_STEPS - 1)
+	return lerpf(float(_fast_floor[k][f]), float(_fast_floor[k + 1][f]), x - k)
 
 
 ## Whether a foot of his is held on the turf now (last frame's plant).

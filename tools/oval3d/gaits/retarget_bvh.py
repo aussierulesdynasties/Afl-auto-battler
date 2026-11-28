@@ -3,6 +3,10 @@ backpedal and side-step, so a man moving slowly is not a slow-motion jog).
 
   python3.11 (bpy 5.0.1) retarget_bvh.py -- OUT.blend NAME=SOURCE.bvh:START:FRAMES[:mirror] ...
 
+SOURCE may also be a Mixamo FBX (30 fps, mixamorig bones), for the sprint (Mixamo's terms allow
+its motion in a game but not the raw files: the FBX stays out of every repo, and the baked clip is
+private too, tools/epic_assets.sh).
+
 Source: 100STYLE (Ian Mason, Daniel Holden, Taku Komura: https://www.ianxmason.com/100style/),
 Creative Commons Attribution 4.0 ("For creative or commercial work please credit ... 'The
 100STYLE Dataset - Ian Mason'"). The BVH files never go in the repo; only the motion baked onto
@@ -31,7 +35,7 @@ from mathutils import Matrix, Quaternion, Vector
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 RIG_GLB = os.path.join(HERE, "..", "..", "..", "assets", "oval3d", "player_mh.glb")
-FPS = 30
+FPS = int(os.environ.get("GAIT_FPS", "30"))   # keys a second; 60 for a fast clip (fewer slips between keys)
 SRC_FPS = 60
 UPRIGHT = {"neck_01", "head"}   # level, not the capture's (the neck half the chest's lean)
 
@@ -41,6 +45,15 @@ for s, t in (("Left", "l"), ("Right", "r")):
     MAP.update({s + "Collar": "clavicle_" + t, s + "Shoulder": "upperarm_" + t, s + "Elbow": "lowerarm_" + t,
                 s + "Wrist": "hand_" + t, s + "Hip": "thigh_" + t, s + "Knee": "calf_" + t,
                 s + "Ankle": "foot_" + t, s + "Toe": "ball_" + t})
+
+
+# A Mixamo FBX (mixamorig names) read as the same skeleton: renamed to these, clavicles first so
+# "LeftShoulder" is free for the upper arm.
+MIXAMO = [("Spine", "Chest"), ("Spine1", "Chest3"), ("Spine2", "Chest4")]
+for _s in ("Left", "Right"):
+    MIXAMO = [(_s + "Shoulder", _s + "Collar")] + MIXAMO + [
+        (_s + "Arm", _s + "Shoulder"), (_s + "ForeArm", _s + "Elbow"), (_s + "Hand", _s + "Wrist"),
+        (_s + "UpLeg", _s + "Hip"), (_s + "Leg", _s + "Knee"), (_s + "Foot", _s + "Ankle"), (_s + "ToeBase", _s + "Toe")]
 
 
 def other(n):
@@ -82,10 +95,23 @@ def main():
         path, start, length = parts[0], int(parts[1]), int(parts[2])
         mirror = len(parts) > 3 and parts[3] == "mirror"
         before = set(bpy.data.objects)
-        sc.render.fps = SRC_FPS
-        bpy.ops.import_anim.bvh(filepath=path, global_scale=0.01, frame_start=1, use_fps_scale=False,
-                                update_scene_fps=False, rotate_mode="NATIVE", axis_forward="-Z", axis_up="Y")
-        src = next(o for o in bpy.data.objects if o not in before and o.type == "ARMATURE")
+        if path.lower().endswith(".fbx"):
+            src_fps = 30   # Mixamo, downloaded at 30 frames a second
+            sc.render.fps = src_fps
+            bpy.ops.import_scene.fbx(filepath=path)
+            src = next(o for o in bpy.data.objects if o not in before and o.type == "ARMATURE")
+            for b in src.data.bones:
+                b.name = b.name.split(":")[-1]
+            for a, b in MIXAMO:
+                if a in src.data.bones:
+                    src.data.bones[a].name = b
+            src.animation_data.action.use_fake_user = True
+        else:
+            src_fps = SRC_FPS
+            sc.render.fps = src_fps
+            bpy.ops.import_anim.bvh(filepath=path, global_scale=0.01, frame_start=1, use_fps_scale=False,
+                                    update_scene_fps=False, rotate_mode="NATIVE", axis_forward="-Z", axis_up="Y")
+            src = next(o for o in bpy.data.objects if o not in before and o.type == "ARMATURE")
         sb = {b.name: b for b in src.data.bones}
         sp = {p.name: p for p in src.pose.bones}
         f0 = start + 1   # BVH frame k is Blender frame k + 1
@@ -111,9 +137,9 @@ def main():
         S_dir = {k: (src.matrix_world.to_3x3() @ (b.tail_local - b.head_local)).normalized() for k, b in sb.items()}
         # Rest alignment is taken with both rigs facing forward: their rest faces the take's
         # start facing turned onto ours (G0), so R maps their rest bone onto ours.
-        n_out = max(2, round(length * FPS / SRC_FPS))
+        n_out = max(2, round(length * FPS / src_fps))
         # Their standing hip height: the rest legs (hip to ankle) plus the ankle height in the take.
-        leg_s = (sb["LeftHip"].head_local - sb["LeftAnkle"].head_local).length
+        leg_s = (src.matrix_world.to_3x3() @ (sb["LeftHip"].head_local - sb["LeftAnkle"].head_local)).length
         leg_t = (tb["thigh_l"].head_local - tb["foot_l"].head_local).length
         scale = leg_t / leg_s
         act = bpy.data.actions.new(name)
@@ -234,7 +260,7 @@ def main():
             pel.location = pel.location + local_dir
             pel.keyframe_insert("location", frame=i + 1)
         travel = (h1 - h0)
-        pace = Vector((travel.x, travel.y, 0)).length * scale / (length / SRC_FPS)
+        pace = Vector((travel.x, travel.y, 0)).length * scale / (length / src_fps)
         # Which way the cycle carries him, in his own frame (he faces -Y; his right is -X).
         g0 = Quaternion((0, 0, 1), math.atan2(t_fwd.y, t_fwd.x)).to_matrix() @ Quaternion((0, 0, 1), -yaw0).to_matrix()
         tv = g0 @ Vector((travel.x, travel.y, 0.0))
