@@ -656,25 +656,46 @@ func _test_created_club_career() -> void:
 	var season: Season = GameState.season
 	_check(GameState.my_club == "PMB" and season.ladder.size() == 19 and season.ladder.has("PMB"),
 			"You coach the created club on a 19-club ladder in 2027 (Tasmania join in 2028)")
-	# The director's PC playtest (2026-10-07): a created club started with
-	# every coaching job vacant. It hires before its first season, from
-	# coaches out of work; you are its senior coach.
-	var staff := Coaches.staff(GameState.coaches, "PMB")
-	_check(not staff.has("SC") and staff.size() == 5
-			and ["SA", "MID", "FWD", "DEF", "DEV"].all(func(j): return staff.has(j)),
-			"The created club starts with its five assistants (%s)" % str(staff.keys()))
+	# Director 2026-11-15: "you orchestrate the hiring of your coaching
+	# staff, rather than being given automatic standins". The created club
+	# starts with its five assistants' jobs open for you; you are its senior
+	# coach. Every other club keeps its 2026 staff.
+	_check(Coaches.staff(GameState.coaches, "PMB").is_empty() and GameState.staff_vacancies.size() == 5
+			and GameState.first_staff_open(),
+			"The created club starts with five open jobs for you to fill (%d)" % GameState.staff_vacancies.size())
 	var seeded := Coaches.seed("PMB")
-	var taken := false
-	for cid in staff.values():
-		var was: Dictionary = seeded.get(cid, {})
-		taken = taken or str(was.get("status", "")) == "club"
-	_check(not taken, "Nobody is taken from another club's staff")
 	var others_same := true
 	for club in GameDB.active_clubs(GameState.season_year):
 		# Tasmania has no 2026 staff: it hires, like the created club.
 		if club != "PMB" and club != "TAS" and Coaches.staff(GameState.coaches, club) != Coaches.staff(seeded, club):
 			others_same = false
 	_check(others_same, "Every other club keeps its 2026 staff")
+	# The shortlist is the market's: coaches out of work, never another club's.
+	var sl := GameState.staff_shortlist("SA")
+	var poached := sl.any(func(c): return str(c.get("status", "")) == "club")
+	_check(sl.size() == 4 and not poached, "The senior assistant's shortlist is four coaches out of work")
+	var pick := str(sl[sl.size() - 1]["cid"])
+	GameState.appoint_staff("SA", pick)
+	_check(str(Coaches.staff(GameState.coaches, "PMB").get("SA", "")) == pick
+			and GameState.staff_vacancies.size() == 4 and GameState.first_staff_open(),
+			"You appoint any of the four, not just the club's pick; four jobs stay open")
+	for c in GameState.staff_shortlist("MID"):
+		_check(str(c["cid"]) != pick, "A coach you hired leaves the other shortlists")
+	# The first bounce: what you left open goes to the club's pick, and the
+	# news says so.
+	GameState.advance()
+	var first_played := GameState.last_results.filter(func(r): return str(r.get("home", "")) == "PMB" 			or str(r.get("away", "")) == "PMB").size()
+	var staff := Coaches.staff(GameState.coaches, "PMB")
+	_check(not staff.has("SC") and staff.size() == 5 and str(staff["SA"]) == pick
+			and GameState.staff_vacancies.is_empty() and not GameState.first_staff_open(),
+			"Round 1 fills the four you left open; your hire stays (%s)" % str(staff.keys()))
+	var told := GameState.news.any(func(n): return str(n.get("text", "")).contains("filled our 4 open coaching jobs"))
+	_check(told, "The news says the club filled them")
+	var taken := false
+	for cid in staff.values():
+		var was: Dictionary = seeded.get(cid, {})
+		taken = taken or str(was.get("status", "")) == "club"
+	_check(not taken, "Nobody is taken from another club's staff")
 	# One player per number on every list after the League Draft (director's
 	# PC playtest, 2026-10-07: two players on his club both wore 35).
 	var clashes := 0
@@ -689,9 +710,9 @@ func _test_created_club_career() -> void:
 	var mine: Array = season.lists["PMB"]
 	_check(mine.size() >= Contracts.min_list() and mine.size() <= Ratings.LIST_SIZE,
 			"The created club drafts a full list (%d)" % mine.size())
-	var played := 0
+	var played := first_played
 	var home_ground_ok := true
-	for i in range(3):
+	for i in range(2):
 		# Gather Round (Rounds 3 to 7) plays every match in one state.
 		var gather := season.round_index == season.gather_round()
 		GameState.advance()
