@@ -113,3 +113,81 @@ the new mesh instead. The MCG has two:
 4. Seating.
 5. Textures and materials.
 6. Surrounds (Yarra Park, the rail yards) and screens.
+
+## Optus Stadium, the second ground (2026-11-21)
+
+Optus went through the same gate. What it added to the method:
+
+- **Cameras in the model's own frame.** `PREINSPECT_MODEL_FRAME=1` makes `preinspect_look.gd` read
+  `x east, y north, z up` positions, so a Google Earth view's camera goes in unchanged
+  (`PREINSPECT_SIZE=1280x720`). Optus's model 0, 0 is lat -31.9510758, lon 115.8893142 (its drum lines
+  up with OpenStreetMap way 695799456); the field's centre is at -30.38, -8.78.
+- **Rendering in the cloud.** The mobile renderer runs on Mesa's software Vulkan (`mesa-vulkan-drivers`,
+  `VK_ICD_FILENAMES=.../lvp_icd.json`) under `xvfb-run`, about a minute a ground plus seconds a view.
+- **Read the facade close.** Twelve views every 30 degrees, 260 m out at tilt 80, found what the four
+  wide views hid: #1867 had the bronze low from the south-east to the west, where the real ribbon is tall
+  in the north and south and dips over the east lobby and the west. Its profile is
+  `tools/grounds/optus/facade.json`; `tools/grounds/optus/build.py` rebuilds the model from it.
+- **Signature material first.** The bronze fins (`tools/grounds/optus/bronze.py`) are drawn from the
+  director's photo: 0.31 m fins in runs of 1 to 7 m, bronze to sand with the odd copper-red, thin
+  pale-blue slivers, a soft drift of tone, metal sheen through `MATERIAL_FIX`.
+- **The match light cools the map.** A painted map under the match light lost most of its red. Optus's
+  map takes a `tint` (2.0, 1.4, 0.95) and colours worked back from the measured response, so lawns, river
+  and paving render as Google Earth shows them.
+- **Bridges are models.** `SURROUNDS[...]["models"]` loads extra glbs into the ground (Optus:
+  `bridges.glb`, Matagarup's two 72 m arches and the river bridges on piers).
+
+- **Second facade pass (close views).** Zoom Google Earth's facade views to a third of the frame before
+  judging a material: at full frame the Optus bronze read as brown noise, close up it is a dark base with
+  thin bright streaks, and the "white Y columns" were slim posts in a dark strip under the roof. The glass
+  band, street glazing and the north's glazed storey are drawn by `bronze.py` (`glass`, `entrance`, `storey`).
+
+Open at Optus: seat colours from Street View (stage 4), on top of the seat fix (#1991).
+
+## Marvel Stadium, the third ground (2026-11-21)
+
+Marvel went through the same gate against Google Earth (obliques from eight sides, twelve facade views,
+straight down, into the bowl). What it added to the method:
+
+- **Check the bearing first.** The first model had been turned so its long axis ran north-south; the
+  real ground runs at bearing 160 (OpenStreetMap pitch 158). Side by side with Google Earth every facade
+  read about 20 degrees off. The model is now exported in its measured frame (x east, y north) and
+  `GroundModels.FIT` turns it onto the field. Compare a model's long axis with OpenStreetMap's pitch
+  before anything else.
+- **Seats drawn once, many times.** The baked 3D seats (two meshes of a million triangles) became
+  `seat_tmpl.bin` plus one `seats_seat_marvel_<level>.bin` per level (`tools/grounds/marvel/seats.py`),
+  then `seat_check.gd --write` (55,890 of 57,535 kept: 954 inside the fence, 669 without headroom).
+  The crowd now sits on them.
+- **A roof that opens.** `GroundModels.ROOFS` names a model's shut and open roof nodes; a match shows
+  Marvel shut, as the match scenes draw it (data/grounds.json). Shut, nothing of the stadium throws a
+  sun shadow: the roof's lights light the field evenly. The fly-through's B key opens it, and
+  `PREINSPECT_ROOF=open` renders it open for Google Earth (which shows it open).
+- **Colours by mean, detail kept.** `tools/grounds/marvel/retint.py` moves each hand-made texture's mean
+  to Google Earth's (pale grey-green trusses, light end roofs, blue-grey cladding, grey paving) and keeps
+  each pixel's difference from the mean. Undersides face the match light's dim blue-violet, so they are
+  painted warm and green to render the grey with a faint green tint.
+- **Broadcast checks clip like the broadcast.** The main and goal cameras sit inside the stand and draw
+  nothing nearer than 20 m (`Oval3DBroadcast.NEAR`); `PREINSPECT_NEAR=20` renders what they see.
+- **Surroundings** from OpenStreetMap in nine tiles (the API's node limit in a city):
+  `tools/grounds/marvel/surrounds.py` (Victoria Harbour, the Southern Cross yards, the streets, the towers
+  to their mapped heights) and `bridges.py` (the Bolte Bridge's 140 m towers and deck, 1.35 km west).
+
+Close-up pass (2026-11-21, same day), what a harsh look found and fixed:
+
+- The land round the ground was orange: the map took Optus's warm `tint` (2.0, 1.4, 0.95), but
+  Marvel's map is already painted grey. Measured against Google Earth's top view (rail yards, water)
+  it now takes (0.86, 0.84, 0.82). Check a copied setting against your own map's colours.
+- The bowl's top band (over the braces, under the MARVEL STADIUM letters) shared the undersides'
+  texture, painted warm for the dim light under a roof, and read khaki outside. It is its own dark
+  blue now (`upperwall`). A texture tuned for one light must not be shared with a face in another.
+- The east office boxes are pale with a spandrel band and fins over ribbon glazing, on an open
+  colonnade (`office`, `undercroft`), as Google Earth's close views show; the corner blocks a muted blue.
+- Inside: the aisle stairs read as white ladders (the treads were the outside's white concrete; now
+  a mid grey `tread`), and the middle and top tiers' fronts carry dark ribbon screens.
+- The surrounding towers: `building_style: "towers"` draws them as blue-grey glass curtain walls
+  (a mullion every 1.5 m, a slab every floor) or concrete with rows of windows, in one shader that
+  fades the pattern with distance (GroundModels.TOWER_SHADER); same mesh, same draw call.
+
+Still open at Marvel: from above, building roofs read paler than Google Earth's under the match sun;
+the Street View panoramas inside the bowl could not be reached headless, so the inside was checked
+against Google Earth's 3D from the centre (low detail) and the known look of the ground.

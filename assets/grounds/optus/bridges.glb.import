@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://bk35pxhijf8di"
-path="res://.godot/imported/marvel_part1.glb-c783edc0ab25e231e307b2c83ed7dd5d.scn"
+uid="uid://dvsfooh50gy3h"
+path="res://.godot/imported/bridges.glb-36e6d3d182a1be4e45c9b501b48804c4.scn"
 
 [deps]
 
-source_file="res://assets/grounds/marvel/marvel_part1.glb"
-dest_files=["res://.godot/imported/marvel_part1.glb-c783edc0ab25e231e307b2c83ed7dd5d.scn"]
+source_file="res://assets/grounds/optus/bridges.glb"
+dest_files=["res://.godot/imported/bridges.glb-36e6d3d182a1be4e45c9b501b48804c4.scn"]
 
 [params]
 
@@ -41,5 +41,5 @@ materials/extract_format=0
 materials/extract_path=""
 _subresources={}
 gltf/naming_version=2
-gltf/embedded_image_handling=2
+gltf/embedded_image_handling=1
 gltf/texture_map_mode=1
