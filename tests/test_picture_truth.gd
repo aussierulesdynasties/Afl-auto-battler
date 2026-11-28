@@ -277,6 +277,13 @@ func _tick(pitch, m: Control) -> void:
 	var d: MatchDirector = pitch.director
 	var h := FRAME * float(pitch.speed) * MatchDirector.TEMPO * pace
 	_ok("speed set", is_equal_approx(float(pitch.speed), SPEED), "The match is still at 8x (%.2f)" % float(pitch.speed))
+	var bk := int(d._beat.get("k", -1))
+	if bk >= 1100 and bk <= 1104 and d.tokens.size() > 15:
+		var t15: Dictionary = d.tokens[15]
+		var cp: Dictionary = d._phases[d._pi] if d._pi < d._phases.size() else {}
+		print("DIAG2 k%d %s pi%d %s pt%.2f t15 %s goal %s busy %s ball %s %s h%d" % [bk, str(d._beat.get("kind", "")), d._pi,
+				str(cp.get("t", "")), float(d._pt), str(t15["pos"]), str(t15.get("goal", "-")), str(d._busy.has(15)),
+				str(d.ball["mode"]), str(d.ball["pos"]), int(d.ball["holder"])])
 
 	# 1. Nobody outruns a footballer, on the ground or on the screen.
 	var tok := PackedVector2Array()
@@ -312,6 +319,21 @@ func _tick(pitch, m: Control) -> void:
 	if not _prev_ball.is_empty():
 		_peak("ball_ratio", (ball["pos"] as Vector2).distance_to(_prev_ball["pos"]) / (Truth.KICK_SPEED * h))
 	if int(pitch.period) == period_before:
+		if bs != "":
+			var kinds := []
+			for j in range(maxi(0, d.cursor - 4), mini(d.events.size(), d.cursor + 2)):
+				var ev: Dictionary = d.events[j]
+				var ex := {}
+				for key in ["num", "player_id", "to_id", "passer_id", "set_shot", "setshot", "choice", "hand", "outcome"]:
+					if ev.has(key):
+						ex[key] = ev[key]
+				kinds.append("%d:%s s%d tok%d fp%s %s" % [j, str(ev.get("kind", "")), int(ev.get("side", -1)), d._actor_id(ev), str(ev.get("fp", "")), str(ex)])
+			var ph := []
+			for p in d._phases:
+				ph.append(str(p.get("t", "")) + ("/" + str(p.get("who", "")) if p.has("who") else ""))
+			print("DIAG ball jump: cursor %d beat %s pi %d phases %s holder %d from %s to %s events %s" % [d.cursor,
+					str(d._beat.get("kind", "")), d._pi, str(ph), int(ball.get("holder", -1)),
+					str(_prev_ball.get("pos")), str(ball.get("pos")), str(kinds)])
 		_ok("ball speed", bs == "", "The ball moves no faster than a kick (%s; %s)" % [bs, _where(d)])
 	else:
 		# A new quarter's ball is with the umpire in the centre (MatchDirector "place"): the

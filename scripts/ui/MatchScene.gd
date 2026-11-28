@@ -1337,6 +1337,8 @@ func _show_coach_box() -> void:
 			sc.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			sc.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 			bv.add_child(sc)
+		if not wide and OS.get_environment("BRK_OPT") == "A":
+			sc.visible = false
 		# The full numbers, both clubs, at every break (director's PC
 		# playtest, 2026-10-07): a tap, never a compulsory report.
 		# On a PC it is a word in the actions row, beside Skip to full time.
