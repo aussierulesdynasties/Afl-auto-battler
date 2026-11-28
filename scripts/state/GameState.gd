@@ -184,9 +184,10 @@ var expansion := {}
 ## without it); a career saved before the choice existed keeps Canberra.
 var canberra_on := true
 ## The year the new clubs (Tasmania, and Canberra while the career has it)
-## enter instead of their data years; 0 keeps the data years. A League
-## redraft takes them into the 2027 draft as equals (director, 2026-11-08):
-## no list build, no priority picks, no cap relief. Saved only when set.
+## enter instead of their data years; 0 keeps the data years. Only a League
+## redraft saved before 2026-11-12 sets it (2027: they drafted with everyone).
+## A redraft now keeps the data years like the real lists (director,
+## 2026-11-12: the Devils "Join in 2028"). Saved only when set.
 var expansion_from := 0
 ## Real 2026 lists with Canberra (director, 2026-11-08): 2027-2029 are played
 ## without you, every club run by its own staff, and you choose your club at
@@ -2212,14 +2213,29 @@ func _hold_years_without_you(first_season: int) -> void:
 ## 2027 start with Canberra on; any other real-lists start with Canberra plays
 ## 2027-2029 without you first (row T5.Q25).
 func waiting_clubs() -> Array:
-	if not opening_draft or my_club != "" or sim_ahead:
+	if my_club != "" or sim_ahead:
 		return []
 	var out := []
+	if _redraft_unclaimed():
+		# A League redraft (director, 2026-11-12): every club that joins after
+		# 2027, Tasmania and Canberra when the career has them.
+		for code in GameDB.club_order:
+			var y := GameDB.enter_year(str(code))
+			if y > GameDB.START_YEAR and y < Expansion.NEVER:
+				out.append(str(code))
+		return out
+	if not opening_draft:
+		return []
 	if GameDB.enter_year("TAS") == GameDB.START_YEAR + 1:
 		out.append("TAS")
 	if Challenge.kind(self) == "rebuild" and GameDB.enter_year("CANB") == SIM_AHEAD_TO:
 		out.append("CANB")
 	return out
+
+
+## The 2027 League redraft is open and no club is yours yet.
+func _redraft_unclaimed() -> bool:
+	return season == null and draft != null and draft.league_mode and not draft.intake_mode 			and draft.user_club == "" and not opening_draft
 
 
 ## The first of waiting_clubs(), or "".
@@ -2256,6 +2272,13 @@ func choosing_club() -> bool:
 func sim_ahead_step() -> String:
 	if not sim_ahead or my_club != "" or choosing_club():
 		return ""
+	if season == null and draft != null and draft.league_mode and not draft.intake_mode:
+		# The 2027 League redraft, every club's staff picking (a club that
+		# joins later was taken): then 2027 starts with its pre-season.
+		draft.start_for_user("")
+		start_season("", [])
+		open_preseason(false)
+		return "Starting the %d season..." % season_year
 	if draft != null and draft.intake_mode:
 		# A draft between seasons (the 2026 one first): every club picks.
 		draft.start_for_user("")
@@ -2351,11 +2374,10 @@ func begin_draft() -> void:
 	# drafted before the 2027 season.
 	var pool: Array = GameDB.all_players_sorted() + GameDB.all_draftees_sorted()
 	pool.sort_custom(func(a, b): return a["overall"] > b["overall"])
-	# Every club drafts as an equal (director, 2026-11-08): Tasmania, and
-	# Canberra when the career has it, are in the 2027 redraft with the
-	# founding eighteen and a created club, with no new-club concessions.
-	expansion_from = GameDB.START_YEAR
-	_apply_entry_years()
+	# The founding eighteen and a created club draft for 2027. Tasmania join
+	# in 2028 and Canberra (when the career has them) in 2030, each building
+	# its first list as on the real lists (director, 2026-11-12: "Join in
+	# 2028"); taking one plays the years before it without you.
 	var clubs: Array = GameDB.active_clubs(GameDB.START_YEAR)
 	var short: int = Ratings.LIST_SIZE * clubs.size() - pool.size()
 	if short > 0:

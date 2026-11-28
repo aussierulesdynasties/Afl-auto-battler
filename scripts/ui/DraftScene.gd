@@ -316,8 +316,11 @@ func _show_club_select() -> void:
 		_root.add_child(UiKit.subtitle("Your first pick in the 2026 National Draft is shown on each card." if waiting == ""
 				else "Your first pick in the 2026 National Draft is shown on each card. %s join in %d." % [
 					GameDB.club_name(waiting), GameDB.enter_year(waiting)]))
-	else:
+	elif waiting == "":
 		_root.add_child(UiKit.subtitle("Every club drafts %d players. Your first pick is shown on each card." % _draft.target_size))
+	else:
+		_root.add_child(UiKit.subtitle("Every club drafts %d players. Your first pick is shown on each card. %s join in %d." % [
+				_draft.target_size, GameDB.club_name(waiting), GameDB.enter_year(waiting)]))
 
 
 
@@ -369,7 +372,9 @@ func _wait_for_club(code: String) -> void:
 	var playing := "%d" % (first_season - 1) if first_season - 1 == GameDB.START_YEAR else "%d to %d" % [GameDB.START_YEAR, first_season - 1]
 	ScreenTransition.run("Playing %s..." % playing, func():
 		await ScreenTransition.drawn()
-		if GameState.begin_from_history(first_season):
+		# Shipped histories are real-lists careers: a League redraft plays its
+		# years live.
+		if GameState.opening_draft and GameState.begin_from_history(first_season):
 			GameState.choose_sim_ahead_club(code)
 			Router.go("draft")
 			return

@@ -4098,8 +4098,9 @@ func _find_named(n: Node, named: String, out: Array) -> void:
 
 
 ## The Canberra question on New career (director, 2026-11-08): "Canberra
-## joins?" answers No by default, and a real tap on Yes puts Canberra in the
-## League redraft with Tasmania, both as equals.
+## joins?" answers No by default. A League redraft drafts the founding
+## eighteen for 2027 either way (director, 2026-11-12: Tasmania "Join in
+## 2028"); a real tap on Yes brings Canberra in for 2030.
 func _test_new_career_canberra_choice() -> void:
 	_state.delete_saved_career()
 	for pick_it in [false, true]:
@@ -4120,12 +4121,15 @@ func _test_new_career_canberra_choice() -> void:
 		await _settle()
 		await _settle()
 		var clubs: Array = _state.draft.clubs if _state.draft != null else []
+		var waits: Array = _state.waiting_clubs()
 		_check(both_there and t1 == "" and t2 == "" and _router.current() == "draft"
-				and bool(_state.canberra_on) == pick_it and clubs.has("CANB") == pick_it and clubs.has("TAS")
-				and clubs.size() == (20 if pick_it else 19),
-				("A tap on Yes puts Canberra and Tasmania in the 2027 League redraft (%s %s, %d clubs)" if pick_it
-				else "Left at No, the 2027 League redraft has Tasmania and no Canberra (%s %s, %d clubs)") % [
-					t1, t2, clubs.size()])
+				and bool(_state.canberra_on) == pick_it and not clubs.has("CANB") and not clubs.has("TAS")
+				and clubs.size() == 18 and int(_db.enter_year("TAS")) == 2028
+				and (int(_db.enter_year("CANB")) == 2030 if pick_it else int(_db.enter_year("CANB")) > 2100)
+				and waits == (["TAS", "CANB"] if pick_it else ["TAS"]),
+				("A tap on Yes: 18 clubs draft for 2027, Tasmania 2028 and Canberra 2030 wait (%s %s, %d clubs, %s)" if pick_it
+				else "Left at No: 18 clubs draft for 2027, Tasmania wait for 2028, no Canberra (%s %s, %d clubs, %s)") % [
+					t1, t2, clubs.size(), str(waits)])
 	_state.reset()
 	_router.stack = []
 
@@ -4341,7 +4345,9 @@ func _test_every_start_reaches_interview() -> void:
 			await process_frame
 		await _settle()
 		_check(_router.current() != "interview" and _router.current() != "draft" and not _state.interview_due,
-				"%s: after the draft the career goes on without a second interview (at %s)" % [label, _router.current()])
+				"%s: after the draft the career goes on without a second interview (at %s; draft finished %s, valid %s, %d of %d, %d clubs, guard %d)" % [
+					label, _router.current(), str(d != null and d.is_finished()), str(d != null and d.is_valid()),
+					d.count() if d != null else -1, d.target_size if d != null else -1, d.clubs.size() if d != null else -1, guard])
 	_state.replay_seed = seed_was
 	_state.delete_saved_career()
 	_state.reset()

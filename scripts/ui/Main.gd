@@ -557,16 +557,16 @@ func _forged_joins() -> bool:
 
 
 ## The Canberra question's rule, for the start picked (director, 2026-11-08):
-## a redraft takes Tasmania, and Canberra on Yes, into the 2027 draft as
-## equals; the real lists with Canberra play 2027-2029 without you and start
+## a redraft drafts the founding clubs for 2027, Tasmania join in 2028 and
+## Canberra on Yes in 2030 (director, 2026-11-12); the real lists with Canberra play 2027-2029 without you and start
 ## in 2030; Rebuild keeps its 2027 start.
 func _canberra_line(k: String) -> String:
 	var fixed := " It cannot be changed once the career starts."
 	if _pick_start != "real" and _pick_challenge != "rebuild":
-		var n := 19 + (1 if k == "yes" else 0) + (1 if _forged_joins() else 0)
+		var n := 18 + (1 if _forged_joins() else 0)
 		if k == "yes":
-			return ("Tasmania and Canberra draft in the 2027 League redraft as equals: no priority picks and no extra cap room. %d clubs from 2027, and either new club can be yours." % n) + fixed
-		return ("Tasmania drafts in the 2027 League redraft as an equal and can be yours. %d clubs from 2027; Canberra never join." % n) + fixed
+			return ("%d clubs draft for 2027. Tasmania join in 2028 and Canberra in 2030, each building its first list with the picks and cap room every new club gets. Take either and the seasons before it play out without you." % n) + fixed
+		return ("%d clubs draft for 2027. Tasmania join in 2028, building their first list with the picks and cap room every new club gets; take them and 2027 plays out without you. Canberra never join." % n) + fixed
 	if _pick_challenge == "rebuild":
 		if k == "yes":
 			return "Rebuild starts in 2027, or take Tasmania (2028) or Canberra (2030) and build from nothing. 20 clubs from 2030." + fixed

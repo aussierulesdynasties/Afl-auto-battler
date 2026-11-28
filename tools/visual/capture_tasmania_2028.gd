@@ -1,9 +1,13 @@
 extends SceneTree
 ## Take Tasmania from the real 2026 lists (director, 2026-11-09). Needs a real renderer:
-##   godot --path . --resolution 390x844 --windowed --script tools/visual/capture_tasmania_2028.gd -- --out <dir>
+##   godot --path . --resolution 390x844 --windowed --script tools/visual/capture_tasmania_2028.gd -- --out <dir> [--size WxH] [--redraft]
 ## Writes tas_1_choose, tas_2_sheet, tas_3_before_draft, tas_4_board.
+## --redraft: the 2027 League redraft instead (director, 2026-11-12: Tasmania
+## "Join in 2028"), its Choose your club and the sheet only.
 
 var out := "C:/Users/DANTE/Documents/GitHub/afl-wt/caps/tas-2028"
+var W := 390
+var H := 844
 
 
 func _initialize() -> void:
@@ -15,6 +19,11 @@ func _run() -> void:
 	for i in range(a.size()):
 		if str(a[i]) == "--out" and i + 1 < a.size():
 			out = str(a[i + 1])
+		if str(a[i]) == "--size" and i + 1 < a.size():
+			var wh := str(a[i + 1]).split("x")
+			W = int(wh[0])
+			H = int(wh[1])
+	var redraft := a.has("--redraft")
 	DirAccess.make_dir_recursive_absolute(out)
 	await process_frame
 	var state = root.get_node("GameState")
@@ -22,10 +31,13 @@ func _run() -> void:
 	state.save_path = "user://capture.save"
 	state.settings_path = "user://capture_settings.cfg"
 	state.reset()
-	root.size = Vector2i(390, 844)
-	DisplayServer.window_set_size(Vector2i(390, 844))
+	root.size = Vector2i(W, H)
+	DisplayServer.window_set_size(Vector2i(W, H))
 	state.set_canberra(false)
-	state.begin_real_lists()
+	if redraft:
+		state.begin_draft()
+	else:
+		state.begin_real_lists()
 	state.set_setting("seen_draft_intro", true)
 	var ui: Control = load("res://scenes/DraftScene.tscn").instantiate()
 	root.add_child(ui)
@@ -45,6 +57,9 @@ func _run() -> void:
 	await _frames(4)
 	ui.queue_free()
 	await _frames(2)
+	if redraft:
+		quit(0)
+		return
 	var t0 := Time.get_ticks_msec()
 	state.begin_wait_for_club("TAS")
 	while state.sim_ahead_step() != "":
@@ -74,4 +89,4 @@ func _frames(n: int) -> void:
 func _shot(name: String) -> void:
 	await process_frame
 	await process_frame
-	root.get_texture().get_image().save_png("%s/%s_390x844.png" % [out, name])
+	root.get_texture().get_image().save_png("%s/%s_%dx%d.png" % [out, name, W, H])
