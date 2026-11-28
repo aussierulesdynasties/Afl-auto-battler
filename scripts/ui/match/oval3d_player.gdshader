@@ -361,8 +361,12 @@ void fragment() {
 	if (edged) {
 		float below = 1.0 - over(kit_edge.z, 0.0);
 		if (kit_edge.w > 0.75) {
-			top = 1.0;
-			bottom = 1.0;
+			// Its open edge (the armholes, the neck) fades to the skin over the last pixel inside it:
+			// the mesh edge alone draws a pixel staircase (no multisampling in the match view).
+			// kit_g.x is 0 on the cut edge's own corners and 1 on every other corner.
+			float dd = kit_g.x;
+			top = smoothstep(0.0, max(fwidth(dd), 1e-5), dd);
+			bottom = step(1.0, top);
 		} else if (on_skin) {
 			top = over(min(kit_edge.x, kit_edge.y), 0.0);
 		}
@@ -373,8 +377,9 @@ void fragment() {
 	c = mix(c, jumper, top);
 	ALBEDO = c;
 	// Where bare skin shows: its own bumps and sheen. Kit and hair keep the flat cloth.
+	// (The kit as drawn: a guernsey cut past the body's old guernsey colours took the skin's sheen in patches.)
 	float bare = (1.0 - region(UV2.x)) * (1.0 - region(COLOR.a))
-		* (1.0 - region(COLOR.b + COLOR.a * step(0.02, COLOR.b))) * (1.0 - region(COLOR.g + COLOR.r))
+		* (1.0 - region(COLOR.b + COLOR.a * step(0.02, COLOR.b))) * (1.0 - max(top, bottom))
 		* has_maps;
 	NORMAL_MAP = vec3(s_nrm.r, 1.0 - s_nrm.g, 1.0);
 	NORMAL_MAP_DEPTH = bare;

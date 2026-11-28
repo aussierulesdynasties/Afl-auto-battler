@@ -7,15 +7,21 @@ from scipy import ndimage as nd
 code, side, pal, boxes, out = sys.argv[1:6]
 hole_pts = sys.argv[6] if len(sys.argv) > 6 else ''
 a = np.array(Image.open(f'ref/{code}_{side}.png').convert('RGB')).astype(float)
-P = np.array([[int(h[i:i+2], 16) for i in (1, 3, 5)] for h in pal.split(',')], float)
+# "#src=#dst": a shade the photo's lighting gives a colour (a sheen, a shadow), drawn as that colour
+_hx = lambda h: [int(h[i:i+2], 16) for i in (1, 3, 5)]
+P = np.array([_hx(h.split('=')[0]) for h in pal.split(',')], float)
+Q = np.array([_hx(h.split('=')[-1]) for h in pal.split(',')], float)
 light = a.min(-1) > 200
-lab, _ = nd.label(light)
+# the background is the studio white (~255); a white stripe in the cloth (~220) can touch it at a thin
+# armhole binding, so the background flood only runs through near-pure white
+lab, _ = nd.label(a.min(-1) > 245)
 edge = set(np.unique(np.r_[lab[0], lab[-1], lab[:, 0], lab[:, -1]])) - {0}
 bg = np.isin(lab, list(edge))
+bg = nd.binary_dilation(bg, iterations=2) & light | bg
 # light areas enclosed by cloth: a logo if it lies inside a box, else the neck's lining seen through the neck
 logo = np.zeros(light.shape, bool)
 for b in [x for x in boxes.split(';') if x]:
-    x0, y0, x1, y1 = map(int, b.split(','))
+    x0, y0, x1, y1 = map(int, b.split('@')[0].split(','))
     x0, y0, x1, y1 = x0 - 20, y0 - 20, x1 + 20, y1 + 20
     logo[y0:y1, x0:x1] = True
 hole = light & ~bg & ~logo
@@ -35,23 +41,76 @@ if lining.any():
 if hole_pts:
     # the neck opening traced off the photo's grid (the inner edge of the front binding)
     from matplotlib.path import Path
-    pts = np.array([[float(v) for v in p.split(',')] for p in hole_pts.split(';')])
+    # several openings (the neck, the hem's lining seen under the front) are separated by '|'
     gy, gx = np.mgrid[0:a.shape[0], 0:a.shape[1]]
-    lining = Path(pts).contains_points(np.c_[gx.ravel(), gy.ravel()]).reshape(gy.shape)
+    lining = np.zeros(gy.shape, bool)
+    for shape in hole_pts.split('|'):
+        pts = np.array([[float(v) for v in p.split(',')] for p in shape.split(';')])
+        lining |= Path(pts).contains_points(np.c_[gx.ravel(), gy.ravel()]).reshape(gy.shape)
 cloth = ~bg & ~lining
 cloth = nd.binary_opening(nd.binary_closing(cloth, iterations=2), iterations=2)
+import os
+TRIM = os.environ.get('TRIM', '')
+if TRIM:
+    th, tdist, tymax = TRIM.split(',')
+    P = np.vstack([P, _hx(th)]); Q = np.vstack([Q, _hx(th)])
 d = ((a[..., None, :] - P[None, None]) ** 2).sum(-1)
+if TRIM:
+    d[..., -1] = 1e12  # the binding is drawn by its shape below, never picked by colour
 k = d.argmin(-1)
 known = cloth & ~logo & (np.sqrt(d.min(-1)) < 70)
+# the silhouette's outer pixels are blended with the background: coloured from just inside instead
+known &= nd.distance_transform_edt(cloth) > 6
 _, (iy, ix) = nd.distance_transform_edt(~known, return_indices=True)
 k = k[iy, ix]
+if TRIM:
+    # the armhole binding: a band of even width along each side's outer edge, from the shoulder to the armpit
+    band = np.zeros(k.shape, bool)
+    W, ymax = int(float(tdist)), int(float(tymax))
+    for y in range(ymax):
+        xs = np.nonzero(cloth[y])[0]
+        if len(xs) > 2 * W:
+            band[y, xs[0]:xs[0] + W] = True
+            band[y, xs[-1] - W + 1:xs[-1] + 1] = True
+# a box with "@dx,dy": each pixel takes the colour met first walking along that line either way
+walk = known & ~band if TRIM else known
+for b in [x for x in boxes.split(';') if '@' in x]:
+    x0, y0, x1, y1 = map(int, b.split('@')[0].split(','))
+    dx, dy = map(float, b.split('@')[1].split(','))
+    n = np.hypot(dx, dy); dx, dy = dx / n, dy / n
+    x0, y0, x1, y1 = x0 - 20, y0 - 20, x1 + 20, y1 + 20
+    gy, gx = np.mgrid[y0:y1, x0:x1]
+    best = np.full(gy.shape, 1e9); val = k[y0:y1, x0:x1].copy()
+    for sgn in (1, -1):
+        found = np.zeros(gy.shape, bool)
+        for st in range(1, 600):
+            py = np.clip(np.round(gy + sgn * st * dy).astype(int), 0, k.shape[0] - 1)
+            px = np.clip(np.round(gx + sgn * st * dx).astype(int), 0, k.shape[1] - 1)
+            # a hit counts only if the same colour carries on 10 px further along the line (a stripe,
+            # not a thin binding at the cloth's edge)
+            qy = np.clip(np.round(gy + sgn * (st + 10) * dy).astype(int), 0, k.shape[0] - 1)
+            qx = np.clip(np.round(gx + sgn * (st + 10) * dx).astype(int), 0, k.shape[1] - 1)
+            ok = walk[py, px] & walk[qy, qx] & (k[py, px] == k[qy, qx])
+            hit = ok & ~found & (st < best)
+            val[hit] = k[py, px][hit]; best[hit] = st; found |= ok
+            if found.all():
+                break
+    sel = cloth[y0:y1, x0:x1]
+    k[y0:y1, x0:x1][sel] = val[sel]
+if TRIM:
+    k[band] = len(P) - 1
 # Vector redraw: every colour region's edge is traced as a curve, the stretches inside a sponsor
 # box are bridged by a cubic carried on from the edge either side, every edge is smoothed (no pixel
 # steps), and the regions are drawn again at 4x and scaled down (clean edges, no photo speckle).
+# shades mapped to one colour are one region: smoothed apart, the gaps between them fell to colour 0
+_canon = np.array([next(j for j in range(len(Q)) if (Q[j] == Q[i]).all()) for i in range(len(Q))])
+k = _canon[k]
 import cv2
 boxl = []
 for bx in [x for x in boxes.split(';') if x]:
-    x0, y0, x1, y1 = map(int, bx.split(','))
+    x0, y0, x1, y1 = map(int, bx.split('@')[0].split(','))
+    if '@' in bx:
+        continue  # filled along its stripes already: keep those edges, no bridging
     boxl.append((x0 - 20, y0 - 20, x1 + 20, y1 + 20))
 def in_box(p):
     return any(x0 <= p[0] <= x1 and y0 <= p[1] <= y1 for x0, y0, x1, y1 in boxl)
@@ -100,10 +159,11 @@ def raster(mask):
     return out
 shape = raster(cloth).astype(np.float32)
 layers = [shape * 0 + 1] + [raster(cloth & (k == c)).astype(np.float32) for c in range(1, len(P))]
-kk = np.zeros((Hh * U, Ww * U), np.uint8)
+# a pixel no smoothed region covers (where two regions' smoothed edges part) takes its own traced colour, not colour 0
+kk = cv2.resize(k.astype(np.uint8), (Ww * U, Hh * U), interpolation=cv2.INTER_NEAREST)
 for c in range(1, len(P)):
     kk[layers[c] > 0] = c
-col = P[kk].astype(np.float32)
+col = Q[kk].astype(np.float32)
 img4 = np.dstack([col, shape[..., None] * 255])
 img = cv2.resize(img4, (Ww, Hh), interpolation=cv2.INTER_AREA)
 Image.fromarray(np.clip(img, 0, 255).astype(np.uint8)).save(out)
