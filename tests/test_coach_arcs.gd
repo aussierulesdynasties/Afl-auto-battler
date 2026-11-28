@@ -56,6 +56,9 @@ func run(tree: SceneTree) -> void:
 	GameState.save_path = "user://test_coach_arcs.save"
 	GameState.settings_path = "user://test_coach_arcs.cfg"
 	GameState.delete_saved_career()
+	_probe()
+	if true:
+		return
 	_t("_test_file_fit")
 	_t("_test_triggers_from_state")
 	_t("_test_beats_only_active")
@@ -76,6 +79,38 @@ func run(tree: SceneTree) -> void:
 	print(Ran.line("Coach arcs", self))
 	for f in failures:
 		print("  FAIL: " + f)
+
+
+## Row 87 probe (never merged): the exact opening of _test_triggers_from_state,
+## traced. arm "bug": replay_seed set after start_season as _fresh does.
+## arm "pinned": same, confidence held at 25 each week. arm "seeded": replay_seed
+## set before reset.
+func _probe() -> void:
+	for arm in ["bug", "pinned", "seeded", "seeded_pinned"]:
+		var trials := 25 if arm in ["bug", "pinned"] else 3
+		for t in range(trials):
+			GameState.replay_seed = SUITE_SEED if arm.begins_with("seeded") else 0
+			GameState.reset()
+			GameState.start_season("FRE", GameDB.club_list("FRE"))
+			GameState.replay_seed = SUITE_SEED
+			GameState.tutorials = false
+			Router.stack = []
+			var cs := int(GameState.career_seed)
+			var rng := RandomNumberGenerator.new()
+			rng.seed = SUITE_SEED + 1
+			for i in range(3):
+				_week(rng)
+			var st: Dictionary = GameState.coach_arcs
+			GameState.board["confidence"] = 25
+			var trace := []
+			for i in range(8):
+				if arm.ends_with("pinned"):
+					GameState.board["confidence"] = 25
+				_week(rng)
+				var ctx := ClubStories.context(GameState)
+				trace.append("r%d:%d" % [int((ctx["club"] as Dictionary).get("round", 0)), GameState.board_confidence()])
+			var hot: bool = (st["active"] as Dictionary).has("hot_seat") or (st["done"] as Dictionary).has("hot_seat")
+			print("PROBE %s t=%d career_seed=%d hot=%s %s active=%s" % [arm, t, cs, str(hot), " ".join(PackedStringArray(trace)), str((st["active"] as Dictionary).keys())])
 
 
 func _test_file_fit() -> void:
