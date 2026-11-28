@@ -1,0 +1,229 @@
+name: Ground fault scan
+
+# A machine fault scan of each stadium before the director looks at it in the ground inspector
+# (tools/fault_scan/README.md). Each ground is built exactly as the inspector builds it, measured
+# (mirrored or stretched signs, floating pieces, legs short of the floor, seats off their treads or
+# coloured at random, stale seat legs, gaps in the roof over the seats, the stadium or buildings on
+# real roads, missing bridges and buildings, shelters built solid, broken outlines) and filmed from
+# the broadcast cameras, an aerial orbit, the street, the seats and straight down. Information only:
+# it never fails a pull request and never comments.
+#
+# Runs when tools/fault_scan changes on a claude/ branch (the grounds in tools/fault_scan/grounds.txt),
+# or by hand: gh workflow run fault-scan.yml --ref <branch> -f grounds="marvel mcg"
+# Results: one artifact per ground, fault-scan-<slug> (<slug>.md, its screenshots, findings.json).
+on:
+  workflow_dispatch:
+    inputs:
+      grounds:
+        description: "Ground folders, separated by spaces (blank: tools/fault_scan/grounds.txt)"
+        required: false
+        default: ""
+        type: string
+  push:
+    branches: ["claude/**"]
+    paths:
+      - "tools/fault_scan/**"
+      - ".github/workflows/fault-scan.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fault-scan-${{ github.sha }}
+  cancel-in-progress: false
+
+env:
+  GODOT_VERSION: "4.7.2"
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      grounds: ${{ steps.p.outputs.grounds }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: tools/fault_scan
+      - id: p
+        env:
+          WANT: ${{ inputs.grounds }}
+        run: |
+          list="$WANT"
+          [ -n "$list" ] || list=$(grep -v '^#' tools/fault_scan/grounds.txt | tr '\n' ' ')
+          # "mcg/2" films the ground in 2 halves on 2 runners (fault-scan-mcg-1of2, fault-scan-mcg-2of2);
+          # "mcg/2:1" films only the first half.
+          json=$(python3 -c "
+          import json, sys, re
+          out = []
+          for x in sys.argv[1].split():
+              m = re.fullmatch(r'([a-z0-9_]+)(?:/([1-9])(?::([1-9]))?)?', x)
+              if m:
+                  n = int(m.group(2) or 1)
+                  parts = [int(m.group(3))] if m.group(3) else range(1, n + 1)
+                  out += [{'slug': m.group(1), 'part': i, 'parts': n} for i in parts if i <= n]
+          print(json.dumps(out))" "$list")
+          echo "grounds=$json" >> "$GITHUB_OUTPUT"
+          echo "Grounds: $json"
+
+  scan:
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 170
+    strategy:
+      fail-fast: false
+      max-parallel: 9
+      matrix:
+        ground: ${{ fromJSON(needs.plan.outputs.grounds) }}
+    env:
+      SLUG: ${{ matrix.ground.slug }}
+      PART: ${{ matrix.ground.part }}
+      PARTS: ${{ matrix.ground.parts }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /*
+            !/.claude/review/
+
+      - name: Ground models (private repo, docs/GROUND_ASSETS.md)
+        uses: ./.github/actions/epic-assets
+        with:
+          token: ${{ secrets.EPIC_ASSETS_TOKEN || secrets.MERGE_TOKEN }}
+
+      - name: Virtual display, software Vulkan, OCR and the measuring tools
+        run: |
+          for try in 1 2 3; do
+            sudo apt-get -o Acquire::Retries=5 update -qq && sudo apt-get -o Acquire::Retries=5 install -y -qq --fix-missing \
+              xvfb mesa-vulkan-drivers libvulkan1 fonts-dejavu-core tesseract-ocr > /dev/null && break
+            [ "$try" = 3 ] && exit 1
+            echo "apt failed (try $try), retrying in 20 s"; sleep 20
+          done
+          python3 -m pip install --quiet numpy scipy trimesh embreex shapely pillow pytesseract
+
+      - name: Cache Godot
+        id: godot-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/godot
+          key: godot-${{ env.GODOT_VERSION }}-linux-x86_64
+
+      - name: Download Godot ${{ env.GODOT_VERSION }}
+        if: steps.godot-cache.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/godot && cd ~/godot
+          name="Godot_v${GODOT_VERSION}-stable_linux.x86_64"
+          curl -fsSL --retry 3 -o godot.zip \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/${name}.zip" \
+          || curl -fsSL --retry 3 -o godot.zip \
+            "https://downloads.godotengine.org/?version=${GODOT_VERSION}&flavor=stable&slug=linux.x86_64.zip&platform=linux.64"
+          unzip -q godot.zip && rm godot.zip
+          mv "${name}" godot && chmod +x godot
+
+      - name: Import the project
+        run: |
+          timeout 1200 "$HOME/godot/godot" --headless --path . --editor --import > import.log 2>&1 || true
+          if grep -qE "SCRIPT ERROR|Parse Error|Compile Error" import.log; then
+            grep -E -A3 "SCRIPT ERROR|Parse Error|Compile Error" import.log | head -40
+            echo "::error::scripts failed to compile during import"
+            exit 1
+          fi
+
+      - name: OpenStreetMap round the ground
+        continue-on-error: true
+        run: |
+          mkdir -p dump
+          timeout 1200 python3 tools/fault_scan/osm.py "$SLUG" dump/osm.json 800
+
+      - name: Export the ground as the inspector builds it
+        run: |
+          mkdir -p dump
+          timeout 1800 "$HOME/godot/godot" --headless --path . --script tools/fault_scan/scan.gd -- dump "$SLUG" "$PWD/dump" 2>&1 \
+            | grep -vE "^GameDB" | tail -20
+          test -s dump/surfaces.json
+
+      - name: Measure
+        run: |
+          mkdir -p out
+          timeout 3000 python3 tools/fault_scan/analyse.py dump out
+          wc -l out/views.txt
+          if [ "$PARTS" -gt 1 ]; then
+            awk -v p="$PART" -v n="$PARTS" '(NR - 1) % n == p - 1' out/views.txt > out/v && mv out/v out/views.txt
+            echo "part $PART of $PARTS: $(wc -l < out/views.txt) views"
+          fi
+
+      - name: Film
+        run: |
+          icd=$(ls /usr/share/vulkan/icd.d/lvp_icd*.json | head -1)
+          mkdir -p shots
+          # Stall guard. Building the ground for filming sometimes never finishes (MCG, 27 Nov: two of
+          # three tries hung while building, the third built in 2.5 s), so a build that has not finished
+          # in 4 min is killed and started again, up to 3 tries. Once filming, a view that takes over
+          # 5 min stops the film, so a stuck film ends in minutes with its log.
+          # MCG's build hung in the ground model on 4 of 5 runners (27 Nov), so each retry changes
+          # something: try 1 as before with Godot's loading log, try 2 with the software GPU on one
+          # thread, try 3 on the compatibility renderer (OpenGL; the shading differs a little).
+          for attempt in 1 2 3; do
+            : > film.log
+            case $attempt in
+              1) extra="--verbose"; method=mobile; lp="";;
+              2) extra=""; method=mobile; lp=1;;
+              3) extra=""; method=gl_compatibility; lp="";;
+            esac
+            echo "try $attempt: $method ${lp:+LP_NUM_THREADS=$lp} $extra"
+            env ${lp:+LP_NUM_THREADS=$lp} VK_ICD_FILENAMES="$icd" xvfb-run -a -s "-screen 0 1280x720x24" \
+              timeout 6000 "$HOME/godot/godot" --path . --rendering-method $method $extra \
+              --script tools/fault_scan/scan.gd -- render "$SLUG" "$PWD/out/views.txt" "$PWD/shots" 1280 720 \
+              >> film.log 2>&1 &
+            pid=$!
+            last=$(ls shots | wc -l); since=$(date +%s); retry=0
+            while kill -0 "$pid" 2>/dev/null; do
+              sleep 15
+              now=$(ls shots | wc -l)
+              if [ "$now" != "$last" ]; then last=$now; since=$(date +%s); fi
+              idle=$(( $(date +%s) - since ))
+              if ! grep -q "FAULTSCAN built" film.log && [ "$idle" -gt 240 ]; then
+                echo "::warning::try $attempt: building the ground did not finish in 4 min ($(grep 'build step' film.log | tail -1)); restarting"
+                retry=1
+              elif grep -q "FAULTSCAN built" film.log && [ "$idle" -gt 300 ]; then
+                echo "::warning::film stalled at $now shots (no new shot in 5 min); stopping it"
+              else
+                continue
+              fi
+              pkill -f "scan.gd -- render" || true; sleep 5; pkill -9 -f "scan.gd -- render" || true
+              break
+            done
+            wait "$pid" 2>/dev/null || echo "film stopped: exit $?"
+            cp film.log "film_try$attempt.log"
+            grep -v "^ALSA\|libpulse" film.log | tail -40
+            [ "$retry" = 1 ] || break
+          done
+          grep -E "FAULTSCAN|SCRIPT ERROR|TIMEOUT" film.log || true
+          echo "$(ls shots 2>/dev/null | wc -l) shots; last lines of the log:"; tail -15 film.log
+
+      - name: Report
+        if: always()
+        run: |
+          mkdir -p report
+          python3 tools/fault_scan/report.py out shots report || true
+          cp out/findings.json report/ 2>/dev/null || true
+          cp out/views.txt report/ 2>/dev/null || true
+          for f in film_try*.log; do [ -f "$f" ] && tail -300 "$f" > "report/$f.txt"; done 2>/dev/null || true
+          python3 - <<'EOF' >> "$GITHUB_STEP_SUMMARY" || true
+          import json, collections
+          f = json.load(open("out/findings.json"))
+          print("## %s: %d findings" % (f["ground"], len(f["findings"])))
+          for k, n in collections.Counter(x["check"] for x in f["findings"]).most_common():
+              print("- %s: %d" % (k, n))
+          EOF
+
+      - name: Upload
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fault-scan-${{ matrix.ground.slug }}${{ matrix.ground.parts > 1 && format('-{0}of{1}', matrix.ground.part, matrix.ground.parts) || '' }}
+          path: report/
+          if-no-files-found: warn
+          retention-days: 14

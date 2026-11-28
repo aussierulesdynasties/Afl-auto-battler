@@ -223,7 +223,9 @@ const SURROUNDS := {
 	# deck in 3D (tools/grounds/marvel/bridges.py).
 	"marvel": {"y": -0.03, "inner": 120.0, "colour": Color(0.42, 0.43, 0.43),
 			"map": "surrounds.webp", "span": 2048.0, "trees": "trees.bin", "buildings": "buildings.bin",
-			"models": ["bridges.glb", "landmarks.glb"], "tint": Color(0.84, 0.84, 0.84), "building_tint": Color.WHITE, "building_style": "towers",
+			# gates.glb (tools/grounds/marvel/gates.py): the real gates, built to the 2019-26 photos
+			"models": ["bridges.glb", "landmarks.glb", "gates.glb"], "tint": Color(0.84, 0.84, 0.84),
+			"building_tint": Color.WHITE, "building_style": "towers",
 			# Round 12: the real land (terrain.bin, tools/grounds/marvel/land.py) right up to `inner`. The model's own
 			# pad follows the same land, from 0.9 m under the old street by the harbour to 4.4 m over it on the east.
 			"follow_land": true,
@@ -391,7 +393,14 @@ static func view_transform(x: float, y: float, z: float, facing: float, looking:
 ## it slid back, of which instantiate() shows one. Marvel Stadium plays AFL with its roof shut (as the
 ## match scenes draw it, data/grounds.json "roof": "closed"); the fly-through can open it (set_roof).
 ## Shut, the stadium casts no sun shadow: under it the ground is lit by the roof's own lights. Looks only.
-const ROOFS := {"marvel": {"shut": "roofshut", "open": "roofopen"}}
+const ROOFS := {"marvel": {"shut": "roofshut", "open": "roofopen",
+		"under": ["roofshut", "roofopen", "slab", "end", "truss", "nocast"]}}
+## The render layer of a roofed ground's roof (ROOFS "under": its plates, fixed slabs, end roofs and trusses) and
+## nothing else. Under the shut roof its lights (Oval3DTurf._indoor) leave this layer out: the roof's lamps hang
+## under it and shine down, so the roof's underside and trusses take only the light thrown back from the bowl
+## (PC check of round 17b: lit by the key light through the roof they read tan with bright white trusses, where
+## the 2019 roof-shut photo shows a dark charcoal underside with only the lamp banks bright).
+const ROOF_LAYER := 1 << 17
 
 ## Models that carry their colours on the vertices (glTF COLOR_0) under a tiling detail texture.
 ## Godot's glTF reader keeps the colours but does not paint with them, so the loader turns that on.
@@ -680,6 +689,9 @@ static func instantiate(slug: String, base := "") -> Node3D:
 	var fit: Array = FIT.get(slug, [0.0, 0.0])
 	_add_seats(root, dir, Vector2(float(fit[0]), float(fit[1])))
 	if ROOFS.has(slug):
+		for pre: String in ROOFS[slug].get("under", []):
+			for n in root.find_children(pre + "*", "VisualInstance3D", true, false):
+				(n as VisualInstance3D).layers = ROOF_LAYER
 		set_roof(root, slug, true)
 	# A "fallback" ring stands in only until the ground's background scene (#2023) is in the game.
 	if SURROUNDS.has(slug) and not (SURROUNDS[slug].get("fallback", false)
@@ -772,11 +784,14 @@ static func _add_surrounds(root: Node3D, s: Dictionary, dir := "", fit: Array = 
 				var q := inner + off
 				off += LAND_STEP if q < inner + 300.0 else (LAND_STEP * 3.0 if q < inner + 900.0 else LAND_STEP * 10.0)
 			rs.append(outer)
+			if s.has("outer"):
+				rs.append(outer + RING_SKIRT[0])   # tucked under the background scene's edge (_ring_mesh)
 		if near != null:
 			rs = [r_near] + rs.filter(func(r): return r > r_near + 1.0)
 		return rs
 	var follow: bool = s.get("follow_land", false)
-	var mesh := _ring_mesh(radii, n, y, span if map != null else -60.0, relief, land, inner, follow)
+	var mesh := _ring_mesh(radii, n, y, span if map != null else -60.0, relief, land, inner, follow,
+			outer if s.has("outer") else INF)
 	if map != null:
 		var mm := StandardMaterial3D.new()
 		mm.resource_name = "surrounds"
@@ -849,6 +864,7 @@ static func _add_surrounds(root: Node3D, s: Dictionary, dir := "", fit: Array = 
 				extra.name = str(m).get_basename()
 				for gi in extra.find_children("*", "GeometryInstance3D", true, false):
 					(gi as GeometryInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+				_matte_foliage(extra)
 				root.add_child(extra)
 		return
 	var noise := FastNoiseLite.new()
@@ -881,8 +897,15 @@ static func _add_surrounds(root: Node3D, s: Dictionary, dir := "", fit: Array = 
 ## map `span` m a side centred on the middle (clamped at its edge), or for a negative span a texture
 ## tiling every -span m. With `relief` the ring follows the land's rise and fall (relief_at); with
 ## `land` it follows the real land, banked up to it from `y` at `inner` (or on it throughout, `follow`).
+## Past `outer` the ring goes on this far (m) and this much lower (m), under the background scene's edge: the scene's
+## ground was cut on the same circle in straight steps, and from the aerial orbit the sky showed through the slivers
+## between (Marvel's harbour, 2026-11-27).
+const RING_SKIRT := [4.0, 0.6]
+
+
 static func _ring_mesh(radii: Callable, n: int, y: float, span: float,
-		relief := PackedFloat32Array(), land: GroundTerrain = null, inner := 0.0, follow := false) -> ArrayMesh:
+		relief := PackedFloat32Array(), land: GroundTerrain = null, inner := 0.0, follow := false,
+		skirt_from := INF) -> ArrayMesh:
 	var v := PackedVector3Array()
 	var uv := PackedVector2Array()
 	var nrm := PackedVector3Array()
@@ -905,6 +928,8 @@ static func _ring_mesh(radii: Callable, n: int, y: float, span: float,
 				var real := land.height(p.x, p.z) - 0.03
 				var w := smoothstep(inner, inner + LAND_BANK, r)
 				p.y = real if follow else lerpf(minf(real, y), real, w)
+				if r > skirt_from:
+					p.y -= RING_SKIRT[1]
 			v.append(p)
 			uv.append(Vector2(p.x, p.z) / span + Vector2(0.5, 0.5) if span > 0.0 else Vector2(p.x, p.z) / -span)
 			nrm.append(up)
@@ -1116,12 +1141,14 @@ static func _add_trees(root: Node3D, buf: PackedFloat32Array, y: float, stride :
 	leaf.albedo_color = Color(1, 1, 1) if gum else Color(0.27, 0.34, 0.19)
 	leaf.vertex_color_is_srgb = gum
 	leaf.roughness = 1.0
+	_leaf_look(leaf)
 	leaf.disable_receive_shadows = true
 	var bark := StandardMaterial3D.new()
 	bark.resource_name = "tree_bark"
 	# River red gum and sugar gum bark in Google Earth's Kardinia Park: pale grey, not brown.
 	bark.albedo_color = Color(0.6, 0.57, 0.52) if gum else Color(0.33, 0.29, 0.24)
 	bark.roughness = 1.0
+	bark.metallic_specular = 0.0
 	bark.disable_receive_shadows = true
 	var blocks := {}
 	# Each tree's x, z (and its own ground height when stride is 6) begin its record.
@@ -1869,6 +1896,13 @@ static func _hip_roof(foot: PackedVector2Array, eave: float, roof: Color, v: Pac
 			_front(v, nrm, col, t[0], t[1], t[2], nn, lit)
 
 
+## Stacked parts with an id from here up are open structures (a canopy and its stalks, tools/grounds/marvel/surrounds.py
+## OPEN_ID0): Marvel's is MPavilion 2015, whose petals are white translucent fibreglass on white stalks (the architects'
+## and Dezeen's photographs, 2015), drawn off-white so it is not read as a lit sheet.
+const OPEN_STRUCTURE_ID := 90000
+const OPEN_STRUCTURE_COLOUR := Color8(226, 228, 224)
+
+
 ## Docklands' towers (SURROUNDS "building_style": "towers"): glass curtain walls with a mullion every
 ## 1.5 m and a slab at every floor, or concrete with rows of windows, from TOWER_SHADER.
 static func _add_towers(root: Node3D, buf: PackedFloat32Array, y0: float, tint := Color.WHITE, style := "",
@@ -1916,7 +1950,12 @@ static func _add_towers(root: Node3D, buf: PackedFloat32Array, y0: float, tint :
 		var y := y0 if land == null else land.base(foot) - 0.1
 		var wall: Color = WALLS[b % WALLS.size()]
 		var roof := wall.darkened(0.18)
-		if towers:
+		if towers and id >= OPEN_STRUCTURE_ID:
+			# An open structure's roof and posts (tools/grounds/osm_structures.py): plain, no windows or curtain wall.
+			wall = OPEN_STRUCTURE_COLOUR
+			wall.a = 0.0
+			roof = OPEN_STRUCTURE_COLOUR
+		elif towers:
 			# The same building gets the same look every match: its pick hangs on its own corner.
 			var pick := absi(int(foot[0].x * 7.0) * 31 + int(foot[0].y * 3.0) * 17 + b) if id < 0 else id * 7919 % 100003
 			var glassy := (pick % 100) < ((85 if h > 30.0 else 40) if id < 0 else 80)
@@ -1985,6 +2024,24 @@ static func _add_towers(root: Node3D, buf: PackedFloat32Array, y0: float, tint :
 
 
 static var _tower_sh: Shader
+static var _horizon_sh: Shader
+
+
+## The horizon's land: its Sentinel-2 texture (land_a, land_b) or its vertex colours (land_c, linear), lit per vertex.
+static func _horizon_land_shader() -> Shader:
+	if _horizon_sh == null:
+		_horizon_sh = Shader.new()
+		_horizon_sh.code = """
+shader_type spatial;
+render_mode vertex_lighting, shadows_disabled, specular_disabled;
+uniform sampler2D tex : source_color, filter_linear_mipmap_anisotropic, repeat_disable;
+uniform bool has_tex = false;
+void fragment() {
+	ALBEDO = has_tex ? texture(tex, UV).rgb : COLOR.rgb;
+	ROUGHNESS = 1.0;
+}
+"""
+	return _horizon_sh
 
 ## The towers' walls: UV is (metres round the footprint, metres up), COLOR.a picks the wall (1 glass
 ## curtain wall, 0.5 concrete with windows, 0 a roof). Past a few hundred metres the pattern fades to
@@ -2025,7 +2082,9 @@ void fragment() {
 		vec3 detail = mix(glass, base * 1.45 + vec3(0.04), frame);
 		vec3 avg = base * 1.08;
 		ALBEDO = mix(avg, detail, fade);
-		ROUGHNESS = mix(0.9, mix(0.3, 0.8, frame), fade);
+		// Faded out, a curtain wall still shines like the glass it mostly is (0.3 glass, 0.8 frames, by share): at 0.9
+		// the far city's glass towers lost the sky in them and read as near-black slabs (the horizon's orbit, 2026-11-27).
+		ROUGHNESS = mix(0.42, mix(0.3, 0.8, frame), fade);
 		SPECULAR = 0.6;
 	} else {
 		vec2 cell = vec2(UV.x / 3.0, UV.y / 3.4);
@@ -2309,12 +2368,38 @@ const BACKDROP_RANGE := {
 		"traeger": [24000.0, 90000.0]}
 
 
-static func backdrop_far(slug: String) -> float:
+## A ground with a horizon (<slug>_horizon.glb, tools/grounds/backdrop/horizon): the real land, the bay and the far
+## city run out to 64 km, so the camera sees to HORIZON_RANGE[0] and the haze thickens like real air (fast near, slow
+## far: depth curve HORIZON_RANGE[2]) until it has taken everything at HORIZON_RANGE[1]. Past that the land is the
+## horizon's own colour, so its edge never shows. Near the ground the haze is what it was (a third at 3 km).
+const HORIZON_RANGE := [66000.0, 60000.0, 0.4]
+## The depth haze's curve without a horizon.
+const BACKDROP_HAZE_CURVE := 0.8
+
+
+static func backdrop_far(slug: String, base := "") -> float:
+	if has_horizon(slug, base):
+		return HORIZON_RANGE[0]
 	return float(BACKDROP_RANGE[slug][0]) if BACKDROP_RANGE.has(slug) else float(BACKDROP_FAR_AT.get(slug, BACKDROP_FAR))
 
 
-static func backdrop_haze(slug: String, default_to: float) -> float:
+static func backdrop_haze(slug: String, default_to: float, base := "") -> float:
+	if has_horizon(slug, base):
+		return HORIZON_RANGE[1]
 	return float(BACKDROP_RANGE[slug][1]) if BACKDROP_RANGE.has(slug) else default_to
+
+
+static func backdrop_haze_curve(slug: String, base := "") -> float:
+	return HORIZON_RANGE[2] if has_horizon(slug, base) else BACKDROP_HAZE_CURVE
+
+
+static func horizon_path(slug: String, base := "") -> String:
+	return (base if base != "" else DIR + slug + "/") + slug + "_horizon.glb"
+
+
+static func has_horizon(slug: String, base := "") -> bool:
+	var p := horizon_path(slug, base)
+	return ResourceLoader.exists(p) or FileAccess.file_exists(p)
 
 
 ## The ground's surroundings past its own street (row 202 2b, the background scenes): the park,
@@ -2328,12 +2413,21 @@ static func backdrop(slug: String, base := "") -> Node3D:
 	var paths := files(slug + "_backdrop", dir)
 	if paths.is_empty():
 		return null
+	var horizon := has_horizon(slug, base)
+	if horizon:
+		paths.append(horizon_path(slug, base))
 	var root := Node3D.new()
 	root.name = "Backdrop"
 	for path in paths:
 		var model := load_glb(path)
 		if model == null:
 			continue
+		if horizon:
+			# the scene's own far land (one flat olive colour, clipped at 7 km) gives way to the horizon's
+			for n: String in HORIZON_REPLACES:
+				for old in model.find_children(n + "*", "", true, false):
+					old.get_parent().remove_child(old)
+					old.free()
 		for gi in model.find_children("*", "GeometryInstance3D", true, false):
 			(gi as GeometryInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		_backdrop_materials(model, dir + slug + "_plain.webp")
@@ -2348,6 +2442,9 @@ const BACKDROP_HIDES := {"adelaide": ["ao_ground"], "barossa": ["concourse"], "s
 	"jiangwan": ["concourse"], "hands": ["concourse"], "blacktown": ["concourse_far"], "summit": ["concourse"],
 	"macpoint": ["concourse"], "waca": ["land", "road", "brick"], "bruce": ["g_ground"], "north_hobart": ["ground"],
 	"traeger": ["ground_dirt"]}
+
+## The backdrop's parts a horizon draws instead (tools/grounds/backdrop/horizon): the Blender scene's far terrain.
+const HORIZON_REPLACES := ["bg_far_terrain"]
 
 ## Paths, loaded where used (see SEAT_FAR_SHADER).
 const BACKDROP_SHADER := "res://scripts/ui/match/oval3d_backdrop.gdshader"
@@ -2403,6 +2500,26 @@ static func _backdrop_materials(model: Node, plain := "") -> void:
 					lm.shader = load(BACKDROP_LEAF_SHADER)
 					lm.set_shader_parameter("tex", mat.albedo_texture)
 					made[key] = lm
+				(mi as MeshInstance3D).set_surface_override_material(i, made[key])
+			elif key.begins_with("horizon_land") or key == "horizon_trees":
+				# the horizon's land (tools/grounds/backdrop/horizon): lit at its corners, 47 m to 2 km apart (a light
+				# worked out per pixel over that much of the screen cost a phone's GPU about a third more, for a shade
+				# no one can tell from this), and never shadowed (per corner, the towers' shadows smeared over km)
+				if not made.has(key):
+					var hm := ShaderMaterial.new()
+					hm.shader = _horizon_land_shader()
+					hm.set_shader_parameter("tex", mat.albedo_texture)
+					hm.set_shader_parameter("has_tex", mat.albedo_texture != null)
+					made[key] = hm
+				(mi as MeshInstance3D).set_surface_override_material(i, made[key])
+			elif key == "city_towers":
+				# the horizon's far city (tools/grounds/backdrop/horizon): the ring's own towers' look, its vertex
+				# colours written as _add_towers writes them (sRGB, alpha the wall: 1 glass, 0.5 windows, 0 plain)
+				if not made.has(key):
+					var tm := ShaderMaterial.new()
+					tm.shader = _tower_shader()
+					tm.set_shader_parameter("tint", Color.WHITE)
+					made[key] = tm
 				(mi as MeshInstance3D).set_surface_override_material(i, made[key])
 			elif key.begins_with("facade_") or key.begins_with("roof_"):
 				if not made.has(key):
@@ -2694,6 +2811,39 @@ static func _open_ground(model: Node, names: Array) -> void:
 				own.disable_receive_shadows = true
 				own.roughness = 1.0
 				mi.set_surface_override_material(i, own)
+
+
+## Leaves are matte and let a little sun through from behind (Marvel, the person 2026-11-27:
+## "the trees look too reflective, i dont like how theyre lit"): no sky sheen on their tops,
+## and a crown against the sun glows a little green instead of going flat dark, as real
+## foliage does.
+static func _leaf_look(m: BaseMaterial3D) -> void:
+	m.roughness = 1.0
+	m.metallic = 0.0
+	m.metallic_specular = 0.0
+	m.backlight_enabled = true
+	m.backlight = Color(0.16, 0.2, 0.08)
+
+
+## A landmark model's leaf materials (tools/grounds/marvel/landmarks.py FOLIAGE) take the leaf look.
+static func _matte_foliage(model: Node) -> void:
+	var done := {}
+	for mi: MeshInstance3D in model.find_children("*", "MeshInstance3D", true, false):
+		if mi.mesh == null:
+			continue
+		for i in mi.mesh.get_surface_count():
+			var m := mi.get_active_material(i) as BaseMaterial3D
+			if m == null or not (m.resource_name.ends_with("_leaf") or m.resource_name.begins_with("pine_")):
+				continue
+			if not done.has(m):
+				var own := m.duplicate() as BaseMaterial3D
+				if own.resource_name.ends_with("_leaf"):
+					_leaf_look(own)
+				else:
+					own.roughness = 1.0
+					own.metallic_specular = 0.0
+				done[m] = own
+			mi.set_surface_override_material(i, done[m])
 
 
 static func _fix_materials(model: Node, fixes: Dictionary) -> void:

@@ -12,6 +12,7 @@ render_mode cull_disabled;
 uniform sampler2D albedo_tex : source_color, hint_default_white, filter_linear_mipmap, repeat_enable;
 uniform bool use_vcol = false;   // the model paints with its vertex colours (Adelaide)
 uniform vec4 albedo_col : source_color = vec4(1.0);
+uniform float grey_out = 0.0;   // takes this share of the colour toward grey (a shut roof over its own lamps)
 uniform float roughness_v = 0.85;
 // The model's occlusion map, when it has one (glTF occlusion, red): it dims the sky's light and not the sun's.
 uniform bool use_ao = false;
@@ -46,6 +47,7 @@ void fragment() {
 	if (use_vcol) {
 		a.rgb *= COLOR.rgb;
 	}
+	a.rgb = mix(a.rgb, vec3(dot(a.rgb, vec3(0.3, 0.59, 0.11))), grey_out);
 	ALBEDO = a.rgb;
 	ROUGHNESS = roughness_v;
 	float ao = use_ao ? texture(ao_tex, UV * uv_scale.xy + uv_offset.xy).r : 1.0;
