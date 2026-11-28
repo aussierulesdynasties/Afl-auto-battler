@@ -2,19 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bxgycnlcyifbs"
-path="res://.godot/imported/landmarks_graffiti.png-77c3256a225d228c732a2fbf56e6244f.ctex"
+uid="uid://dc2x6ysrw7ptu"
+path="res://.godot/imported/landmarks_street_wall.png-4d7ac2419525dfe40004199dfae0b1f6.ctex"
 metadata={
 "vram_texture": false
-}
-generator_parameters={
-"md5": "9671f98d4bfbf4c49a1f4904008c9c7b"
 }
 
 [deps]
 
-source_file="res://assets/grounds/marvel/landmarks_graffiti.png"
-dest_files=["res://.godot/imported/landmarks_graffiti.png-77c3256a225d228c732a2fbf56e6244f.ctex"]
+source_file="res://assets/grounds/marvel/landmarks_street_wall.png"
+dest_files=["res://.godot/imported/landmarks_street_wall.png-4d7ac2419525dfe40004199dfae0b1f6.ctex"]
 
 [params]
 
@@ -26,7 +23,7 @@ compress/rdo_quality_loss=0.0
 compress/hdr_compression=1
 compress/normal_map=0
 compress/channel_pack=0
-mipmaps/generate=true
+mipmaps/generate=false
 mipmaps/limit=-1
 roughness/mode=0
 roughness/src_normal=""

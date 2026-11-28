@@ -393,7 +393,14 @@ static func view_transform(x: float, y: float, z: float, facing: float, looking:
 ## it slid back, of which instantiate() shows one. Marvel Stadium plays AFL with its roof shut (as the
 ## match scenes draw it, data/grounds.json "roof": "closed"); the fly-through can open it (set_roof).
 ## Shut, the stadium casts no sun shadow: under it the ground is lit by the roof's own lights. Looks only.
-const ROOFS := {"marvel": {"shut": "roofshut", "open": "roofopen"}}
+const ROOFS := {"marvel": {"shut": "roofshut", "open": "roofopen",
+		"under": ["roofshut", "roofopen", "slab", "end", "truss", "nocast"]}}
+## The render layer of a roofed ground's roof (ROOFS "under": its plates, fixed slabs, end roofs and trusses) and
+## nothing else. Under the shut roof its lights (Oval3DTurf._indoor) leave this layer out: the roof's lamps hang
+## under it and shine down, so the roof's underside and trusses take only the light thrown back from the bowl
+## (PC check of round 17b: lit by the key light through the roof they read tan with bright white trusses, where
+## the 2019 roof-shut photo shows a dark charcoal underside with only the lamp banks bright).
+const ROOF_LAYER := 1 << 17
 
 ## Models that carry their colours on the vertices (glTF COLOR_0) under a tiling detail texture.
 ## Godot's glTF reader keeps the colours but does not paint with them, so the loader turns that on.
@@ -682,6 +689,9 @@ static func instantiate(slug: String, base := "") -> Node3D:
 	var fit: Array = FIT.get(slug, [0.0, 0.0])
 	_add_seats(root, dir, Vector2(float(fit[0]), float(fit[1])))
 	if ROOFS.has(slug):
+		for pre: String in ROOFS[slug].get("under", []):
+			for n in root.find_children(pre + "*", "VisualInstance3D", true, false):
+				(n as VisualInstance3D).layers = ROOF_LAYER
 		set_roof(root, slug, true)
 	# A "fallback" ring stands in only until the ground's background scene (#2023) is in the game.
 	if SURROUNDS.has(slug) and not (SURROUNDS[slug].get("fallback", false)

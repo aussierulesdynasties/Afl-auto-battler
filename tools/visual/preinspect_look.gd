@@ -50,6 +50,7 @@ func _run() -> void:
 		var gr: Node = oval.find_child("Ground", true, false)
 		if gr != null:
 			GroundModels.set_roof(gr, GroundModels.slug_for(g), OS.get_environment("PREINSPECT_ROOF") == "shut")
+			oval.turf.roof_changed()   # shut, the roof's own lights (Oval3DTurf._indoor); open, the sky's
 	# PREINSPECT_NO_HUD=1 hides the score panel and the other overlays (a ground check, not a broadcast).
 	if OS.get_environment("PREINSPECT_NO_HUD") != "":
 		for c in oval.find_children("*", "CanvasItem", true, false):
