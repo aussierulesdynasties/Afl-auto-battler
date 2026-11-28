@@ -3359,7 +3359,7 @@ func _test_menu_and_career() -> void:
 	var opp_line: Label = current_scene.find_child("OppTeamOutlook", true, false)
 	var own_o: Dictionary = _state.team_outlook(_state.my_club)
 	var opp_o: Dictionary = _state.team_outlook(str(_state.my_next_opponent().get("code", "")))
-	var rating_tail := "%s. Team rating %d. On this list, %d in three years."
+	var rating_tail := "%s. Team rating %.1f. On this list, %.1f in three years."
 	_check(own_line != null and opp_line != null
 			and own_line.text == rating_tail % [own_o["category"], own_o["rating"], own_o["forecast"]]
 			and opp_line.text.ends_with(rating_tail % [opp_o["category"], opp_o["rating"], opp_o["forecast"]])

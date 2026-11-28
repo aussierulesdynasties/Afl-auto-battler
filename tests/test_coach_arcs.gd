@@ -796,7 +796,7 @@ func _ratings_only(line: String, code: String) -> bool:
 	for word in ["Contender", "Wildcard", "Rebuilding"]:
 		if line.find(word) >= 0:
 			return false
-	return line == TeamRating.rating_line(int(o["rating"]), int(o["forecast"]))
+	return line == TeamRating.rating_line(float(o["rating"]), float(o["forecast"]))
 
 
 func _test_rival_letter() -> void:

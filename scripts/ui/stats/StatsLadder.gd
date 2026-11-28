@@ -22,9 +22,10 @@ const END_PAD := 8
 ## wide screen the table is as wide as its columns and sits at the left, the
 ## club right beside its numbers (WIDE_CLUB).
 const WIDE_CLUB := 190
-## "Rating": the club's match-day side today on the OVR scale (TeamRating). A
-## tap on a club says it in full: where the club is in its cycle (Contender,
-## Wildcard, Rebuilding) and the list in three years.
+## "Rating": the club's best side as the match preview ranks it
+## (GameState.club_strength: the best 23, or 22 in a four-man-bench season), to
+## one decimal so the order reads as the preview's (row 177). A tap on a club
+## says the rest: where it is in its cycle and the list in three years.
 const CLUB_NAME_INSET := 26
 const LADDER_PHONE := [["pos", "#", 24], ["club", "Club", 0], ["p", "P", 26], ["w", "W", 26],
 		["l", "L", 26], ["d", "D", 24], ["pct", "%", 42], ["pts", "Pts", 34], ["rating", "Rating", 46]]
@@ -679,8 +680,7 @@ static func rows(season: Season) -> Array:
 				"d": int(l["d"]), "pf": int(l["pf"]), "pa": int(l["pa"]), "pct": float(l["pct"]),
 				"pts": int(l["pts"]), "home": home.get(code, [0, 0, 0]), "away": away.get(code, [0, 0, 0]),
 				"form": "".join(PackedStringArray((season.club_results(code) as Array).slice(-5)))}
-		var outlook := GameState.team_outlook(code)
-		row["rating"] = int(outlook.get("rating", 0))
+		row["rating"] = GameState.club_strength(code)
 		var t: Dictionary = GameState.season_team.get(code, {})
 		row["games"] = int(t.get("games", 0))
 		# A game each over the games that stat was counted for
@@ -707,8 +707,10 @@ static func _tally(into: Dictionary, code: String, diff: int) -> void:
 ## a team stat per game.
 static func cell_text(r: Dictionary, key: String) -> String:
 	match key:
-		"pos", "p", "w", "l", "d", "pf", "pa", "pts", "rating":
+		"pos", "p", "w", "l", "d", "pf", "pa", "pts":
 			return str(int(r[key]))
+		"rating":
+			return "-" if float(r["rating"]) < 0.0 else "%.1f" % float(r["rating"])
 		"pct":
 			return "%.0f" % float(r["pct"])
 		"home", "away":
@@ -735,8 +737,8 @@ static func sort_value(r: Dictionary, key: String) -> Variant:
 		"home", "away":
 			var rec: Array = r[key]
 			return int(rec[0]) * 1000 + int(rec[2]) * 10 - int(rec[1])
-		"pct":
-			return float(r["pct"])
+		"pct", "rating":
+			return float(r[key])
 		"for", "against", "disposals", "marks", "tackles", "inside50", "clearances", "hitouts", \
 		"rebounds", "clangers", "metres_gained":
 			return float(r["t_" + key])
