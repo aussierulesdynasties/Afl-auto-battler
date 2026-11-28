@@ -39,7 +39,11 @@ var real_after_draft := false
 ## seasons; copied into each season's selection for your club (_sync_dual).
 var user_dual_ruck := false
 
-var my_club := ""
+## Your club. A change puts the screens on its ground (UiKit.shade_ground).
+var my_club := "":
+	set(v):
+		my_club = v
+		UiKit.shade_ground()
 var my_list: Array = []
 var season: Season = null
 var draft: Draft = null
