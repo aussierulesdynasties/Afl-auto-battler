@@ -217,17 +217,20 @@ func _expose(oval, cam: Camera3D, eye: Vector3, aim0: Vector3, width: float, tur
 	cam.look_at(aim0, Vector3.UP)
 	cam.fov = rad_to_deg(2.0 * atan(width * 0.5 / eye.distance_to(aim0)))
 	var env: Environment = oval._env
+	# The exposure is the match film's, which applies the tone (Oval3DTurf._tone_to_film); the
+	# environment is linear at 1.0, so moving its exposure would only brighten the toned picture.
+	var fm: ShaderMaterial = oval.film.material_override
 	for it in range(5):
 		for w in range(3):
 			await process_frame
 		await RenderingServer.frame_post_draw
 		var got := _grass(root.get_viewport().get_texture().get_image())
 		if it < 4:
-			env.tonemap_exposure *= pow(turf / maxf(got, 0.01), 1.6)
+			fm.set_shader_parameter("exposure", float(fm.get_shader_parameter("exposure")) * pow(turf / maxf(got, 0.01), 1.6))
 		var skm: ShaderMaterial = env.sky.sky_material
 		var hz: Color = RenderingServer.shader_get_parameter_default(skm.shader.get_rid(), "horizon")
 		var lum := 0.2126 * hz.r + 0.7152 * hz.g + 0.0722 * hz.b
-		skm.set_shader_parameter("view", 0.75 / (env.tonemap_exposure * 1.4 * lum))
+		skm.set_shader_parameter("view", 0.75 / (float(fm.get_shader_parameter("exposure")) * 1.4 * lum))
 
 
 ## True when the stand's rake rises above the sight line from the eye to `p` (sampled).

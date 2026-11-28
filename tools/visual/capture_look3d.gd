@@ -234,11 +234,28 @@ func _reset(oval, weather: String, slot: String) -> void:
 
 
 ## The environment's tone option is the only tone: the match film passes the picture through
-## untoned, at the exposure the environment had before the film took it over.
+## untoned (and without its white balance, which it applies only with its tone), at the
+## exposure the film had.
 func _film_tone_off(oval) -> void:
 	var fm: ShaderMaterial = oval.film.material_override
-	fm.set_shader_parameter("tone", false)
 	oval._env.tonemap_exposure = float(fm.get_shader_parameter("exposure"))
+	fm.set_shader_parameter("tone", false)
+
+
+## The picture's exposure: the match film's while it applies the tone (Oval3DTurf._tone_to_film;
+## the environment is then linear at 1.0), else the environment's. Moving the environment's
+## while the film tones only brightens the toned picture, after the tone.
+func _expo(oval) -> float:
+	var fm: ShaderMaterial = oval.film.material_override
+	return float(fm.get_shader_parameter("exposure")) if bool(fm.get_shader_parameter("tone")) else oval._env.tonemap_exposure
+
+
+func _set_expo(oval, v: float) -> void:
+	var fm: ShaderMaterial = oval.film.material_override
+	if bool(fm.get_shader_parameter("tone")):
+		fm.set_shader_parameter("exposure", v)
+	else:
+		oval._env.tonemap_exposure = v
 
 
 ## Every mesh of the crowd (the stands are built in pieces), with today's or the prototype shader.
@@ -311,7 +328,7 @@ func _sky_view(oval) -> void:
 		hzv = RenderingServer.shader_get_parameter_default(sm.shader.get_rid(), "horizon")
 	var hz: Color = hzv
 	var lum := 0.2126 * hz.r + 0.7152 * hz.g + 0.0722 * hz.b
-	var v := float(sm.get_meta("target")) / (env.tonemap_exposure * float(sm.get_shader_parameter("energy")) * lum)
+	var v := float(sm.get_meta("target")) / (_expo(oval) * float(sm.get_shader_parameter("energy")) * lum)
 	sm.set_shader_parameter("view", v)
 	print("SKY VIEW %.3f" % v)
 
@@ -328,14 +345,13 @@ func _match_exposure(oval) -> void:
 	if OS.get_environment("TURF") == "" and OS.get_environment("EXPO") == "":
 		return
 	var want := float(OS.get_environment("TURF")) if OS.get_environment("TURF") != "" else 0.0
-	var env: Environment = oval._env
 	_size(SIZE)
 	oval.aim_end(UP, BACK)
 	# EXPO=x fixes the exposure instead: a weather that changes the grass, not the light (hot,
 	# rain under the same towers), keeps the fine day's camera, or the men are over- or under-lit
 	# to make the grass match.
 	if OS.get_environment("EXPO") != "":
-		env.tonemap_exposure = float(OS.get_environment("EXPO"))
+		_set_expo(oval, float(OS.get_environment("EXPO")))
 	for i in range(0 if OS.get_environment("EXPO") != "" else 4):
 		for f in range(3):
 			await process_frame
@@ -346,8 +362,8 @@ func _match_exposure(oval) -> void:
 		# holds men and their rings, which the tonemappers treat differently from grass).
 		var c: Vector2 = oval.camera.unproject_position(Vector3(b.x, 0.0, b.z))
 		var got := _patch(img, Vector2(clampf(c.x - 500.0, 60.0, img.get_width() - 60.0), c.y))
-		env.tonemap_exposure *= pow(want / maxf(got, 0.01), 1.6)
-	print("EXPOSURE %.3f for turf %.2f" % [env.tonemap_exposure, want])
+		_set_expo(oval, _expo(oval) * pow(want / maxf(got, 0.01), 1.6))
+	print("EXPOSURE %.3f for turf %.2f" % [_expo(oval), want])
 	# With CROWD=0.2 the crowd at the top of the phone frame is held to that brightness (a copy of
 	# the crowd shader with a brightness dial, found by halving), so options differ in the
 	# field's light, not in how bright the stands happen to come out.
@@ -479,7 +495,7 @@ func _apply(oval, look: String) -> void:
 			# Late afternoon: the clouds warm on the sun's side, the sky paler toward it.
 			_sky_look(oval, {"cover": 0.4, "cloud_lit": Color(1.0, 0.93, 0.82), "cloud_dark": Color(0.56, 0.57, 0.64), "sun_halo": 0.55, "cloud_sun": 0.8, "target": 0.8})
 		# The picture's tone (post-processing), on top of a light above. Godot's tonemappers turn
-		# the scene's light into screen colour: filmic (today), ACES (punchy, saturated), AgX
+		# the scene's light into screen colour: filmic, ACES (punchy, saturated), AgX
 		# (natural, keeps bright colours from blowing out), and AgX with a broadcast grade.
 		# The match film already applies today's tone (Oval3DTurf._tone_to_film, since #1839), so a
 		# tone option first turns the film's off: otherwise the picture is toned twice.
@@ -564,6 +580,11 @@ func _apply(oval, look: String) -> void:
 				gt.width = 256
 				env.adjustment_enabled = true
 				env.adjustment_color_correction = gt
+				# Only the gold gradient: the TV grade's contrast and saturation, which turf.apply
+				# leaves on the environment, are the match film's (applied once there).
+				env.adjustment_brightness = 1.0
+				env.adjustment_contrast = 1.0
+				env.adjustment_saturation = 1.0
 			# The sunset itself: clouds lit rose and gold from below, violet in their bellies,
 			# the first stars overhead.
 			if ss:

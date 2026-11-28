@@ -138,7 +138,7 @@ func _run() -> void:
 	var img := root.get_viewport().get_texture().get_image()
 	if out != "":
 		img.save_png(out)
-	print("%s %s: exposure %.2f, ambient %s x %.2f, sun %s x %.2f" % [ground, slot, oval.turf.env.tonemap_exposure,
+	print("%s %s: exposure %.2f, ambient %s x %.2f, sun %s x %.2f" % [ground, slot, float(oval.film.material_override.get_shader_parameter("exposure")),
 			oval.turf.env.ambient_light_color, oval.turf.env.ambient_light_energy,
 			oval.turf.sun.light_color, oval.turf.sun.light_energy])
 	_report("sky above the horizon", img, Vector2i(SIZE.x / 2, 60))
