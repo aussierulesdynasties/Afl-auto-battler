@@ -1224,28 +1224,143 @@ def _stage1():
     Rh = np.r_[HK_R0 + (HK_R1 - HK_R0) * (hu[h0:][::-1] - hu[h0]) / (1 - hu[h0]), np.full(len(HKk) - 1, HK_R0)]
     ns_ = 24
     RG, NG, Th = hook_sweep(HKc, Rh, ns_)
-    # the open end: green rim to 0.8 of the radius, the inside wall 6 cm deep, a pale steel plate at its foot
+    def open_end(HKc, RG, NG, Th, ns_):
+        """The open end at HKc[0]: green rim to 0.8 of the radius, the inside wall 6 cm deep, a pale steel plate."""
+        an = np.linspace(0, 2 * np.pi, ns_ + 1)
+        out_n = -Th[0]
+        rr = RG[0] - HKc[0][None]                            # rim ring offsets, radius Rh[0]
+        inner = HKc[0][None] + rr * 0.8
+        deep = inner + Th[0][None] * 0.06
+        for j in range(ns_):
+            P = [RG[0][j + 1], RG[0][j], inner[j], inner[j + 1]]
+            UV = [np.array((0.0, 0.0)), np.array((0.05, 0.0)), np.array((0.05, 0.03)), np.array((0.0, 0.03))]
+            paint_face(P, [out_n] * 4, UV, DECK_Z)
+            P = [inner[j + 1], inner[j], deep[j], deep[j + 1]]
+            N = [-NG[0][j + 1], -NG[0][j], -NG[0][j], -NG[0][j + 1]]
+            UV = [np.array((0.0, 0.0)), np.array((0.05, 0.0)), np.array((0.05, 0.06)), np.array((0.0, 0.06))]
+            paint_face(P, N, UV, DECK_Z)
+        ctr = HKc[0] + Th[0] * 0.06
+        e1_ = rr[0] / np.linalg.norm(rr[0])
+        e2_ = np.cross(out_n, e1_)
+        for j in range(ns_):
+            P = [ctr, deep[j + 1], deep[j]]
+            UV = [(float(np.dot(p_ - ctr, e1_)), float(np.dot(p_ - ctr, e2_))) for p_ in P]
+            g.poly("link_steel", [(p_[0], p_[1], p_[2] + DECK_Z) for p_ in P], UV)
+            NRM["link_steel"].append([tuple(map(float, out_n))] * 3)
+
+    open_end(HKc, RG, NG, Th, ns_)
+
+    # ------------------------------------------------------------ the bolt (Gate 7)
+    # Part of the same work: a straight green tube leaning out of the deck, wound four touching turns round a
+    # horizontal stainless bar, its open end turning down beside the bar's flat free end. At the other end of the bar
+    # a big hexagonal nut and a stainless paddle, a rounded slab whose plane holds the bar. Fitted to three Street
+    # View views (CLZQ, VF8X, XPCU) bundle-adjusted on the piece itself, foot from the aerial: the stem's lean comes
+    # out the same (16 deg, foot within 5 cm of the aerial's) from two independent pairs of views, its width 0.32 m in
+    # two; the paddle outline within 1-8 px in two views.
+    BT_FOOT = (-74.76, 111.23)
+    BT_LEAN = (16.0, 51.0)                       # stem lean from upright, toward this bearing
+    BT_J = (-73.393, 111.563, 4.158)             # bar axis: the point the coil, nut and paddle are placed from
+    BT_E = (-72.730, 113.720, 3.990)             # the bar's free end (heights above the deck)
+    BT_RB, BT_RT = 0.26, 0.16                    # bar and tube radius
+    BT_COIL = (0.245, 4.0, 2.391, 0.42)          # start along the bar from BT_J, turns, start angle (rad), radius
+    BT_END = (-73.610, 113.420, 3.740)           # the tube's open end
+    BT_PADDLE = (48.87, 1.548, 2.295, 0.939, 0.196)   # roll, depth along the bar, width, centre behind BT_J, thickness
+    BT_NUT = (-0.165, 0.085, 0.62)               # nut from, to (along the bar from BT_J), across flats
+
+    def steel(P, N, UV):
+        g.poly("link_steel", [(p_[0], p_[1], p_[2] + DECK_Z) for p_ in P], [tuple(map(float, x_)) for x_ in UV])
+        NRM["link_steel"].append([tuple(map(float, n_)) for n_ in N])
+
+    def bez(P0, P1, P2, P3, n):
+        t = np.linspace(0, 1, n)[:, None]
+        return (1 - t) ** 3 * P0 + 3 * (1 - t) ** 2 * t * P1 + 3 * (1 - t) * t ** 2 * P2 + t ** 3 * P3
+
+    bJ, bE = np.array(BT_J), np.array(BT_E)
+    bL = float(np.linalg.norm(bE - bJ))
+    ba_ = (bE - bJ) / bL
+    bw = np.cross(ba_, (0.0, 0.0, 1.0))
+    bw /= np.linalg.norm(bw)
+    bn = np.cross(ba_, bw)
+    # the green tube: coil, then the stem down to the deck, then the free end out to its open end
+    c0_, turns_, th0_, rc_ = BT_COIL
+    th = np.linspace(0, 2 * np.pi * turns_, int(60 * turns_))
+    Cb = (bJ + (c0_ + th[:, None] / (2 * np.pi) * 2 * BT_RT) * ba_
+          + rc_ * (np.cos(th + th0_)[:, None] * bw + np.sin(th + th0_)[:, None] * bn))
+    la_, lb_ = math.radians(BT_LEAN[0]), math.radians(BT_LEAN[1])
+    sd = np.array([math.sin(la_) * math.sin(lb_), math.sin(la_) * math.cos(lb_), math.cos(la_)])
+    bF = np.array(BT_FOOT + (0.0,))
+    t0_ = (Cb[1] - Cb[0]) / np.linalg.norm(Cb[1] - Cb[0])
+    zs = Cb[0][2] - 0.45
+    Ps = bF + sd * zs / sd[2]
+    stem = np.vstack([bF + sd * (np.linspace(-0.6, zs, 60)[:, None] / sd[2]),
+                      bez(Ps, Ps + sd * 0.25, Cb[0] - t0_ * 0.25, Cb[0], 30)[1:-1]])
+    t1_ = (Cb[-1] - Cb[-2]) / np.linalg.norm(Cb[-1] - Cb[-2])
+    bT = np.array(BT_END)
+    tail = bez(Cb[-1], Cb[-1] + t1_ * 0.35, bT + (Cb[-1] - bT) * 0.3, bT, 30)
+    BTc = np.vstack([tail[::-1], Cb[::-1][1:], stem[::-1]])   # from the open end back to the foot
+    RG, NG, Tb = hook_sweep(BTc, np.full(len(BTc), BT_RT), 24)
+    open_end(BTc, RG, NG, Tb, 24)
+    # the bar: a stainless cylinder from inside the nut to its flat free end
+    ns_ = 32
     an = np.linspace(0, 2 * np.pi, ns_ + 1)
-    out_n = -Th[0]
-    rr = RG[0] - HKc[0][None]                            # rim ring offsets, radius Rh[0]
-    inner = HKc[0][None] + rr * 0.8
-    deep = inner + Th[0][None] * 0.06
+    ring = np.cos(an)[:, None] * bw + np.sin(an)[:, None] * bn
+    s0_, s1_ = BT_NUT[0], bL
+    arc = 2 * math.pi * BT_RB / ns_
     for j in range(ns_):
-        P = [RG[0][j + 1], RG[0][j], inner[j], inner[j + 1]]
-        UV = [np.array((0.0, 0.0)), np.array((0.05, 0.0)), np.array((0.05, 0.03)), np.array((0.0, 0.03))]
-        paint_face(P, [out_n] * 4, UV, DECK_Z)
-        P = [inner[j + 1], inner[j], deep[j], deep[j + 1]]
-        N = [-NG[0][j + 1], -NG[0][j], -NG[0][j], -NG[0][j + 1]]
-        UV = [np.array((0.0, 0.0)), np.array((0.05, 0.0)), np.array((0.05, 0.06)), np.array((0.0, 0.06))]
-        paint_face(P, N, UV, DECK_Z)
-    ctr = HKc[0] + Th[0] * 0.06
-    e1_ = rr[0] / np.linalg.norm(rr[0])
-    e2_ = np.cross(out_n, e1_)
-    for j in range(ns_):
-        P = [ctr, deep[j + 1], deep[j]]
-        UV = [(float(np.dot(p_ - ctr, e1_)), float(np.dot(p_ - ctr, e2_))) for p_ in P]
-        g.poly("link_steel", [(p_[0], p_[1], p_[2] + DECK_Z) for p_ in P], UV)
-        NRM["link_steel"].append([tuple(map(float, out_n))] * 3)
+        P = [bJ + s0_ * ba_ + ring[j] * BT_RB, bJ + s0_ * ba_ + ring[j + 1] * BT_RB,
+             bJ + s1_ * ba_ + ring[j + 1] * BT_RB, bJ + s1_ * ba_ + ring[j] * BT_RB]
+        steel(P, [ring[j], ring[j + 1], ring[j + 1], ring[j]],
+              [(s0_, arc * j), (s0_, arc * (j + 1)), (s1_, arc * (j + 1)), (s1_, arc * j)])
+        P = [bE, bE + ring[j] * BT_RB, bE + ring[j + 1] * BT_RB]
+        steel(P, [ba_] * 3, [(float(np.dot(p_ - bE, bw)), float(np.dot(p_ - bE, bn))) for p_ in P])
+    # the nut: a hexagonal prism round the bar, a flat on top
+    n0_, n1_, af = BT_NUT
+    rc6 = af / 2 / math.cos(math.radians(30))
+    hx = [math.cos(math.radians(30 + 60 * k)) * bw + math.sin(math.radians(30 + 60 * k)) * bn for k in range(7)]
+    for k in range(6):
+        fn = math.cos(math.radians(60 * k + 60)) * bw + math.sin(math.radians(60 * k + 60)) * bn
+        P = [bJ + n0_ * ba_ + hx[k] * rc6, bJ + n0_ * ba_ + hx[k + 1] * rc6,
+             bJ + n1_ * ba_ + hx[k + 1] * rc6, bJ + n1_ * ba_ + hx[k] * rc6]
+        steel(P, [fn] * 4, [(n0_, 0.0), (n0_, rc6), (n1_, rc6), (n1_, 0.0)])
+        for s_e, nn in ((n0_, -ba_), (n1_, ba_)):
+            ce = bJ + s_e * ba_
+            if s_e == n1_:
+                P = [ce, ce + hx[k] * rc6, ce + hx[k + 1] * rc6]
+            else:
+                P = [ce, ce + hx[k + 1] * rc6, ce + hx[k] * rc6]
+            steel(P, [nn] * 3, [(float(np.dot(p_ - ce, bw)), float(np.dot(p_ - ce, bn))) for p_ in P])
+    # the paddle: a rounded slab, its plane holding the bar, the bar meeting the middle of its near straight edge
+    roll_, D_, W_, off_, tp_ = BT_PADDLE
+    r_ = math.radians(roll_)
+    pw = math.cos(r_) * bw + math.sin(r_) * bn
+    pn = np.cross(ba_, pw)
+    pc = bJ - ba_ * off_
+    rad_, half_ = D_ / 2, W_ / 2 - D_ / 2
+    ol = []
+    for ang in np.linspace(0, 2 * np.pi, 97)[:-1]:
+        u_ = (half_ if math.cos(ang) >= 0 else -half_) + math.cos(ang) * rad_
+        ol.append((u_, math.sin(ang) * rad_))
+    ol.append(ol[0])
+    for sgn in (1.0, -1.0):
+        fc = pc + pn * sgn * tp_ / 2
+        for k in range(len(ol) - 1):
+            P = [fc, fc + ol[k][0] * pw + ol[k][1] * ba_, fc + ol[k + 1][0] * pw + ol[k + 1][1] * ba_]
+            if sgn < 0:
+                P = [P[0], P[2], P[1]]
+            steel(P, [pn * sgn] * 3, [(float(np.dot(p_ - pc, pw)), float(np.dot(p_ - pc, ba_))) for p_ in P])
+    per = 0.0
+    for k in range(len(ol) - 1):
+        A_ = pc + ol[k][0] * pw + ol[k][1] * ba_
+        B_ = pc + ol[k + 1][0] * pw + ol[k + 1][1] * ba_
+        ed = B_ - A_
+        on = np.cross(ed, pn)
+        on /= np.linalg.norm(on)
+        if np.dot(on, (A_ + B_) / 2 - pc) < 0:
+            on = -on
+        dl = float(np.linalg.norm(ed))
+        P = [A_ - pn * tp_ / 2, B_ - pn * tp_ / 2, B_ + pn * tp_ / 2, A_ + pn * tp_ / 2]
+        steel(P, [on] * 4, [(per, 0.0), (per + dl, 0.0), (per + dl, tp_), (per, tp_)])
+        per += dl
 
     # ------------------------------------------------------------ hand over to Blender
     data = {"parts": g.parts, "tile": TILE, "text": TEXT, "tex": TEX, "out": OUT, "nrm": NRM}
