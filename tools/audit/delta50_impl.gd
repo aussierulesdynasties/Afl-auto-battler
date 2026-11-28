@@ -35,6 +35,8 @@ extends RefCounted
 ##              2026-11-28, option A) or "off" (no traits). The synergies follow,
 ##              since they are counted from the same traits when the match starts.
 ##              Traits.of reads the fixed list, so every trait read sees it.
+##   from       first match index (default 0), to split one cell's matches over
+##              processes: "250 ... 0", "250 ... 250", ... give seeds 700000+i.
 ## Prints: CELL|position|attribute|lo|hi|matches|mean margin|se|mean HI score|mean LO score
 ## and STATS|position|attribute|each STATS key, HI side minus LO side a match
 ## godot --headless --path . --script tools/audit/run_audit.gd -- delta50_impl Ruck 200 weighted 30:80 0/1 median
@@ -180,6 +182,7 @@ func run() -> void:
 	var k_part := int(part[0])
 	var n_part := int(part[1])
 	_traits_mode = str(args[6]) if args.size() > 6 else "on"
+	var from := int(args[7]) if args.size() > 7 else 0
 	if not ["on", "median", "off"].has(_traits_mode):
 		push_error("delta50: traits must be on, median or off, not %s" % _traits_mode)
 		return
@@ -213,7 +216,7 @@ func run() -> void:
 		var sum_d := {}
 		for k in STATS:
 			sum_d[k] = 0.0
-		for i in range(n):
+		for i in range(from, from + n):
 			var sc := _match(i, apos, key, lo, hi)
 			margins.append(float(sc[0] - sc[1]))
 			sum_hi += float(sc[0])

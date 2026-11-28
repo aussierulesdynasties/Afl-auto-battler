@@ -2801,13 +2801,14 @@ const SMOTHER_CAP := 0.022
 ## arcs ran far under real, contested marks over).
 ## Most ordinary kicks still use the calibrated chain model unchanged.
 const GENERAL_AERIAL_P := 0.15
-## 2026-11-28 (director review 3, fix b): re-centred for the new edges, so the
-## league's average chance holds (measured over 180 picked-side matches: the old
-## mark edge averaged -0.0367 and the new -0.0172; one-on-one less contested
-## marking averaged +11.5 at the spoil, /300 then, /240 now).
-const GENERAL_SPOIL_BASE := 0.804
+## 2026-11-28 (director review 3, fix b, then option B): re-centred for the new
+## edges, so the league's average chance holds (measured over 180 picked-side
+## matches: the original mark edge averaged -0.0376 and option B's -0.0723;
+## one-on-one less contested marking averaged +11.2 at the spoil, /300 then,
+## /220 now).
+const GENERAL_SPOIL_BASE := 0.800
 ## A general-play marking contest's mark chance, level players.
-const GENERAL_MARK_P := 0.168
+const GENERAL_MARK_P := 0.222
 ## Clamp bounds, kept well clear of the bases (2026-11-10: the bases had come
 ## to sit on a bound and the players' edge did nothing on that side).
 const GENERAL_MARK_MIN := 0.05
@@ -3401,10 +3402,11 @@ func _kick_in_play_on(taker) -> bool:
 ## GENERAL_MARK_P so the players' edge (and the loose man's shift) always moves
 ## it; _credit_general_loose reads the same chance.
 ## The defender's own marking counts as well as his one-on-one (director
-## review 3, 2026-11-28, fix b): 0.7 one-on-one, 0.3 contested marking, /200.
+## review 3, 2026-11-28, fix b; option B the same day: one-on-one 0.8 so it
+## keeps its per-point weight, contested marking 0.4, over 200).
 func _general_mark_chance(target: Dictionary, defender: Dictionary, roam_shift: float) -> float:
 	var edge := (_contest_of(target, "contested_marking")
-			- (0.7 * _contest_of(defender, "one_on_one") + 0.3 * _contest_of(defender, "contested_marking"))) / 200.0
+			- (0.8 * _contest_of(defender, "one_on_one") + 0.4 * _contest_of(defender, "contested_marking"))) / 200.0
 	if _trait(target, "aerial"):
 		edge += 0.05
 	return clampf(_tv("GENERAL_MARK_P", GENERAL_MARK_P) + edge + roam_shift,
@@ -3415,7 +3417,7 @@ func _general_mark_chance(target: Dictionary, defender: Dictionary, roam_shift: 
 ## GENERAL_SPOIL_BASE so defender quality and the Interceptor trait count.
 func _general_spoil_chance(target: Dictionary, defender: Dictionary) -> float:
 	return clampf(_tv("GENERAL_SPOIL_BASE", GENERAL_SPOIL_BASE)
-			+ (_contest_of(defender, "one_on_one") - _contest_of(target, "contested_marking")) / 240.0
+			+ (_contest_of(defender, "one_on_one") - _contest_of(target, "contested_marking")) / 220.0
 			+ (0.06 if _trait(defender, "interceptor") else 0.0),
 			GENERAL_SPOIL_MIN, GENERAL_SPOIL_MAX)
 
@@ -3616,6 +3618,9 @@ const RUCK_WEIGHT := 0.27          # Squad.contest's ruck share
 const TAP_ADV_EDGE := 0.22
 const TAP_ADV_BASE := 0.40         # a league-average ruck's first taps to advantage
 const TAP_ADV_SLOPE := 0.008       # per ruck point above the league's 70
+## Every first tap won is worth a little, to advantage or not (director, option
+## B, 2026-11-28: the reserve edge on; even rucks cancel, so the league holds).
+const TAP_HIT_EDGE := 0.06
 ## Ruck king: the ruck's share of the hit-outs, as a relative change (5% more),
 ## and the share of them that go to advantage (25% more), so the side wins
 ## more of the clearances that follow (bug bash 5).
@@ -3651,8 +3656,8 @@ func _ruck_tap() -> void:
 		if not (ruck[first] as Array).is_empty() and _trait(ruck[first][0], "ruck_king"):
 			adv_p *= RUCK_KING_ADV
 		adv = rng.randf() < adv_p
-		if adv:
-			edge = TAP_ADV_EDGE if first == 0 else -TAP_ADV_EDGE
+		var won := TAP_HIT_EDGE + (TAP_ADV_EDGE if adv else 0.0)
+		edge = won if first == 0 else -won
 	# The bulls at the stoppage win the ball out of it for their side.
 	edge += BULL_STOPPAGE * float(_bulls(0) - _bulls(1))
 	_tap = {"side": first, "hits": hits, "adv": adv, "edge": edge}
@@ -5976,16 +5981,17 @@ func _trait_note(p) -> void:
 ## (180 matches, the Work Rate anchor's method), so the league rates hold and
 ## only the gap between players moves.
 ## (b) The lead: reading the ball and one-on-one count the same.
-## 0.418 and 0.275 before: the new stop averages 1.48 below the old one.
-const LEAD_MARK_BASE := 0.412
-const LEAD_SPOIL_BASE := 0.282
+## 0.418 and 0.275 with 0.62 reading + 0.38 one-on-one: option B's 0.40 / 0.60
+## stop averages 2.71 below that (one-on-one averages 12.3 under reading).
+const LEAD_MARK_BASE := 0.407
+const LEAD_SPOIL_BASE := 0.287
 func _lead_stop(defender: Dictionary) -> float:
-	return 0.50 * _a(defender, "reading_play") + 0.50 * _contest_of(defender, "one_on_one")
+	return 0.40 * _a(defender, "reading_play") + 0.60 * _contest_of(defender, "one_on_one")
 
 ## (c) Clean ball use keeps the ball: the chain's last disposer's Disposal
-## moves the end-of-chain clanger (CLANGER_SKILL 1.0: 30 v 80 is about 25%
+## moves the end-of-chain clanger (CLANGER_SKILL 1.5, option B: 30 v 80 is about 37%
 ## each way), and moves the pressured turnover more than before.
-const CLANGER_SKILL := 1.0
+const CLANGER_SKILL := 1.5
 ## The chain's last disposer averages 51.5 (180 matches, 28,663 chain ends).
 const DISPOSAL_LEAGUE := 51.5
 func _clanger_ball_use(side: int) -> float:
@@ -6003,9 +6009,9 @@ func _press_ball_use(carrier: Dictionary) -> float:
 	return PRESS_USE_BASE - 0.65 * _a(carrier, "disposal") / 100.0
 
 ## (d) Vision: a field kick outside forward 50 finds a better target, so it
-## goes further (VISION_GAIN 0.30: 30 v 80 is about 7.5% a kick each way),
+## goes further (VISION_GAIN 0.45, option B: 30 v 80 is about 11% a kick each way),
 ## before his kicking range caps it.
-const VISION_GAIN := 0.30
+const VISION_GAIN := 0.45
 ## Field kickers outside forward 50 average Vision 44.3 (43,992 kicks).
 const VISION_LEAGUE := 44.3
 func _vision_gain(carrier: Dictionary) -> float:
