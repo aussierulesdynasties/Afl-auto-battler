@@ -7,6 +7,7 @@ skeleton by bone name, as Oval3D._loop_anims does with the loops).
 Clips retargeted in later runs (MORE.blend) join the first file's rig as NLA tracks of their own.
 """
 import sys
+import os
 import bpy
 
 argv = sys.argv[sys.argv.index("--") + 1:]
@@ -34,7 +35,7 @@ lost = keep - {tr.name for tr in rig.animation_data.nla_tracks}
 if lost:
     raise SystemExit(f"missing clips {sorted(lost)}")
 rig.animation_data.action = None
-bpy.context.scene.render.fps = 30
+bpy.context.scene.render.fps = int(os.environ.get("BAKE_FPS", "30"))   # 60 for a clip keyed at 60 (the sprint)
 bpy.ops.export_scene.gltf(filepath=out, export_format="GLB", export_animations=True,
                           export_animation_mode="NLA_TRACKS", export_skins=True,
                           export_force_sampling=True, export_frame_step=1, export_optimize_animation_size=True,

@@ -6,7 +6,7 @@ public repo.** They live in a private repo and are copied in when you build, tes
 
 ## What is private
 
-`tools/epic_assets.lock` lists every file (35 today) with its sha256, and pins one commit of the
+`tools/epic_assets.lock` lists every file (36 today) with its sha256, and pins one commit of the
 private repo (`gabebartolo-spec/ard-asset-pipeline`, branch `epic-assets`, same paths as here):
 
 | Files | What they are |
@@ -16,7 +16,7 @@ private repo (`gabebartolo-spec/ard-asset-pipeline`, branch `epic-assets`, same 
 | `assets/oval3d/cuts/*.res` (19) | each club's guernsey cut from that body |
 | `assets/oval3d/skin/*.png` (6) | MetaHuman skin maps (colour, normal, roughness) for head and body |
 | `assets/oval3d/heads/MEL_11, MEL_37, MEL_41` (`.glb` and `_tex.jpg`) | MetaHuman heads (Chandler, Cross) |
-| `assets/oval3d/injury_clips.glb`, `assets/oval3d/crowd_set.res` | Mixamo motion (injuries) and Mixamo crowd bodies: Mixamo allows them in a game but not shared as raw files, so they are private too (2026-11-28) |
+| `assets/oval3d/injury_clips.glb`, `assets/oval3d/sprint_clips.glb`, `assets/oval3d/crowd_set.res` | Mixamo motion (injuries, the flat-out sprint) and Mixamo crowd bodies: Mixamo allows them in a game but not shared as raw files, so they are private too (2026-11-28) |
 
 Their `.import` files stay here (Godot's import settings only). Measurements we took from the body
 (`player_mh_builds.json` joint offsets, `heads/socket.json` neck ring) are numbers, not Epic's art, and

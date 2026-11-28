@@ -2,7 +2,7 @@
 # tools/epic_assets.sh fetch copies this commit's files into place; publish updates the pin.
 repo https://github.com/gabebartolo-spec/ard-asset-pipeline
 branch epic-assets
-commit e0fda9b1f86d773ac2612069cc18d3e416d599e4
+commit 7ed8740aad5c6e8f37ef9e3c3391718246a2edbd
 cceb9376a80059c2c087629ed606cf67eae4f69e9f96c9cb817fc5816647c654  assets/oval3d/crew_mh.glb
 e5297f8b33a526e3ebd2a4813d2568db2eadb69221ef2601dfb92c28ebe3b228  assets/oval3d/crowd_set.res
 e208b4238b12a3339498474f6e0a5e93b242dd190e1483a73c2fd824a2baf1e5  assets/oval3d/cuts/ADE.res
@@ -38,3 +38,4 @@ a8775a0596fa353f2a9b0fb8e1349ebe55349b7cdec4dbe8b11d7f4c60021ce4  assets/oval3d/
 06925fc3e39288a3ae99aabe9bf7b25ada3f07ce8a4f7b1f59d3c6c3e6d36d3f  assets/oval3d/skin/Head_Basecolor.png
 d7b1710cce4aba234fcf54e8755fef67c02c484c8d8918a01ca10e2c59f50a2a  assets/oval3d/skin/Head_Normal.png
 02d24cb976c69d265847b119472cbc626e59000e0f81771e92d7902dd550ecc7  assets/oval3d/skin/Head_SRMF.png
+87129b5ab3f6e858af6af0db0cc469a36e33b92fa2846142ee64d9d687f10ad5  assets/oval3d/sprint_clips.glb

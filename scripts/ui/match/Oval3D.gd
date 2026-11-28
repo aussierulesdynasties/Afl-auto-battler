@@ -23,6 +23,10 @@ static var loops_glb := LOOPS_GLB
 ## tools/oval3d/gaits/retarget_bvh.py; Oval3DAnim picks one by pace and by which way he moves
 ## against the ball (Oval3DAnim.GAITS).
 const GAITS_GLB := "res://assets/oval3d/gait_clips.glb"
+## The sprint on the same rig: Mixamo motion capture, retargeted by retarget_bvh.py. Mixamo's terms
+## allow it in a game but not shared as raw files, so it is private (tools/epic_assets.sh); without
+## it a man at speed runs the run loop alone (Oval3DAnim.FAST).
+const SPRINT_GLB := "res://assets/oval3d/sprint_clips.glb"
 ## m/s the old body's jog loop was taken to cover at rate 1; the rate now scales from the pace
 ## measured off each body's own loop (Oval3DAnim.loop_speed), this only when it cannot be read.
 const LOOP_SPEED := 5.83
@@ -2965,7 +2969,7 @@ static func _loop_anims(skel_path: NodePath) -> Dictionary:
 	if _loops.has(key):
 		return _loops[key]
 	var out := {}
-	for file in [[loops_glb, ["jog", "carry", "idle"]], [GAITS_GLB, Oval3DAnim.GAITS]]:
+	for file in [[loops_glb, ["jog", "carry", "idle"]], [GAITS_GLB, Oval3DAnim.GAITS], [SPRINT_GLB, [Oval3DAnim.FAST]]]:
 		_read_loops(str(file[0]), file[1], key, out)
 	_loops[key] = out
 	return out
