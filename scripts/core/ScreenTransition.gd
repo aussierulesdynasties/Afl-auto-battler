@@ -21,6 +21,11 @@ const DOT_PX := 36.0
 ## The line a slow screen load shows when the caller gave none.
 const LOADING := "Loading..."
 
+## While blocking work runs the cover is drawn by hand no more often than this
+## (keep_moving): about 12 frames a second, which costs the work only the draw.
+const PUMP_MS := 80
+const FLAIR := preload("res://scripts/ui/LoadFlair.gd")
+
 ## Tests: put the cover up in a headless run (still, as with Reduced motion).
 static var test_cover := false
 
@@ -29,9 +34,17 @@ enum Phase { IDLE, COVERING, HELD, REVEALING }
 var busy := false
 ## How many lines were drawn on the cover; tests read it.
 var lines_shown := 0
+## Frames keep_moving drew by hand and the time they took; tests read them.
+var pumped_frames := 0
+var pumped_us := 0
+## False draws no frames by hand, for measuring a wait without them.
+var pump_on := true
 var _phase := Phase.IDLE
 var _rect: ColorRect
 var _label: Label
+var _flair: Control
+var _last_pump_ms := 0
+var _pumping := false
 var _mat: ShaderMaterial
 var _tween: Tween
 var _swap := Callable()
@@ -61,12 +74,15 @@ func _ready() -> void:
 	_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_rect.visible = false
 	add_child(_rect)
+	_flair = FLAIR.new()
+	add_child(_flair)
 	# The one line on a long wait: the house heading type, in your club's
 	# colour, centred on the cover.
 	_label = UiKit.lbl("", UiKit.H1, UiKit.TEXT, true)
 	_label.name = "CoverLine"
 	_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_label.vertical_alignment = VERTICAL_ALIGNMENT_TOP
+	_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_label.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_label.offset_left = 16.0
 	_label.offset_right = -16.0
@@ -130,8 +146,40 @@ func show_line(text: String) -> void:
 	var club := str(GameState.my_club)
 	_label.add_theme_color_override("font_color",
 			UiKit.club_ink(club, UiKit.PANEL_ALT) if club != "" else UiKit.TEXT)
+	if not _label.visible:
+		_flair.call("open", club, not should_run())
+		_label.offset_top = float(_flair.call("fit"))
+		Season.wait_hook = keep_moving
 	_label.visible = true
 	lines_shown += 1
+
+
+## Blocking work calls this as it goes (a match waiting on its threads, a long
+## screen build), so the ball keeps turning instead of freezing mid-air: moves
+## the ball and draws one frame by hand, at most every PUMP_MS. Nothing else in
+## the game runs, only the frame. A browser cannot show a frame until the script
+## returns, and with Reduced motion nothing moves, so there it does nothing.
+func keep_moving() -> void:
+	if _pumping or not pump_on or not _label.visible or not should_run():
+		return
+	if OS.has_feature("web") or DisplayServer.get_name() == "headless":
+		return
+	var now := Time.get_ticks_msec()
+	if now - _last_pump_ms < PUMP_MS:
+		return
+	_pumping = true
+	var t0 := Time.get_ticks_usec()
+	_flair.call("tick")
+	RenderingServer.force_draw(true, 0.0)
+	pumped_us += Time.get_ticks_usec() - t0
+	pumped_frames += 1
+	_last_pump_ms = Time.get_ticks_msec()
+	_pumping = false
+
+
+## The flair on the cover; tests read it.
+func flair() -> Control:
+	return _flair
 
 
 ## Whether the line is on the cover; tests read it.
@@ -146,6 +194,7 @@ func drawn() -> void:
 		await get_tree().process_frame
 		await get_tree().process_frame
 		return
+	_last_pump_ms = Time.get_ticks_msec()
 	await RenderingServer.frame_post_draw
 
 
@@ -190,7 +239,7 @@ func _hold() -> void:
 	if _swap.is_valid():
 		_hold()     # asked for during those frames
 		return
-	_label.visible = false
+	_hide_line()
 	if not should_run():
 		_done()
 		return
@@ -207,10 +256,16 @@ func _hold() -> void:
 func _done() -> void:
 	_phase = Phase.IDLE
 	_rect.visible = false
-	_label.visible = false
+	_hide_line()
 	_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_set_factor(0.0)
 	busy = false
+
+
+func _hide_line() -> void:
+	_label.visible = false
+	_flair.call("close")
+	Season.wait_hook = Callable()
 
 
 func _set_factor(f: float) -> void:
@@ -230,6 +285,8 @@ func _fit() -> void:
 	if size.x <= 0.0 or size.y <= 0.0:
 		return
 	_mat.set_shader_parameter("node_resolution", size)
+	if _flair != null and _flair.visible:
+		_label.offset_top = float(_flair.call("fit"))
 	_mat.set_shader_parameter("shape_tiling", maxf(8.0, size.x / DOT_PX))
 
 

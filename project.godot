@@ -15,6 +15,11 @@ run/main_scene="res://scenes/Main.tscn"
 config/features=PackedStringArray("4.7")
 config/icon="res://assets/ui/app_icon/app_icon_512.png"
 config/windows_native_icon="res://assets/ui/app_icon/app_icon.ico"
+; The first thing on screen, before the engine can draw anything itself: the
+; logo on the loading cover's colour, so the title and the load screens follow on.
+boot_splash/bg_color=Color(0.141, 0.133, 0.118, 1)
+boot_splash/image="res://assets/ui/boot_splash.png"
+boot_splash/use_filter=true
 ; Android's back button goes through Router.handle_back() instead of quitting.
 config/quit_on_go_back=false
 ; Battery: redraw only when something on screen changes (an idle hub or
