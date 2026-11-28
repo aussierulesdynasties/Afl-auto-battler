@@ -167,6 +167,9 @@ func _test_full_playback(res: Dictionary) -> void:
 		worst = maxf(worst, err)
 		if err <= 3.0:
 			close += 1
+		else:
+			print("DBGA idx=%d kind=%s err=%.2f" % [int(a["idx"]), str(a["kind"]), err])
+	print("DBGA close %d of %d" % [close, arrivals.size()])
 	_check(arrivals.size() > 800, "Arrivals are logged (%d)" % arrivals.size())
 	_check(float(close) >= 0.99 * float(arrivals.size()),
 			"The ball is at the logged spot when the event is released (%d of %d within 3 m)" % [close, arrivals.size()])

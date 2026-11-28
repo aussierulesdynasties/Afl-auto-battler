@@ -2543,7 +2543,24 @@ func _done(p: Dictionary) -> bool:
 				if kind >= 0:
 					t["scoop_k"] = kind
 					return true
-				if dr <= scoop_lead(SCOOP_AT_PACE):
+				# Too near and too quick to slow to the near gather's pace before he is on it, even
+				# braking hard, and quicker than the scoop on the run allows (a ball rolling at him: suite match, 7.9 m/s at 2.2 m, over it upright
+				# at 2.3 m/s): he runs on past it beside it, like any man in on it, and comes again
+				# (director 2026-11-17: "run past and return").
+				var passes: Dictionary = p.get("_pass", {})
+				p["_pass"] = passes
+				var rest := _ball_rest()
+				var pl: Array = passes.get(who, [])
+				var on_line := pl.size() == 3 and (pl[1] as Vector2).distance_to(rest) <= 1.5 						and (t["pos"] as Vector2).distance_to(pl[0]) > 1.0
+				var vn := scoop_speed(SCOOP_NEAR) + SCOOP_EASE
+				var v := (t["vel"] as Vector2).length()
+				var too_quick := dr <= scoop_lead(SCOOP_AT_PACE) and v > scoop_speed(SCOOP_AT_PACE) + SCOOP_EASE 						and v > sqrt(vn * vn + 2.0 * MatchMotion.BRAKE * maxf(dr - KEEP_OFF, 0.0))
+				if on_line or too_quick:
+					t.erase("cap")
+					MatchMotion.set_goal(t, _pass_line(passes, who, rest), 1.0, true)
+				else:
+					passes.erase(who)
+				if not (on_line or too_quick) and dr <= scoop_lead(SCOOP_AT_PACE):
 					# Too near now to take it on the run (a close knock lands it a near gather's length
 					# ahead): he brakes the last of the way to the near gather's pace, in a stride, and
 					# takes it from there, rather than walking straight over it (suite match: the winner
