@@ -499,8 +499,15 @@ func _test_season_wrap_trades() -> void:
 	_state.open_offseason()
 	_state.offseason_log = []
 	var lists: Dictionary = _state.season.lists
+	# A namesake (two Bailey Williamses on the lists) is left uninked on purpose
+	# (NameInk._index drops a clash), so the deals use men whose name is theirs alone.
+	var seen := {}
+	for c in lists:
+		for p in lists[c]:
+			var nm := str(db.player_display_name(p))
+			seen[nm] = int(seen.get(nm, 0)) + 1
 	var best := func(code: String, n: int) -> Dictionary:
-		var l: Array = (lists[code] as Array).duplicate()
+		var l: Array = (lists[code] as Array).filter(func(p): return int(seen.get(str(db.player_display_name(p)), 0)) == 1)
 		l.sort_custom(func(a, b): return int(Ovr.of(a)) > int(Ovr.of(b)))
 		return l[n]
 	# [buyer, seller, the player the buyer gets, what it gives]

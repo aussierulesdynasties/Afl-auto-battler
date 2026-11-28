@@ -4841,7 +4841,10 @@ func _test_set_shot_calls() -> void:
 							_:
 								pack_ok = false
 			live.end_quarter()
-		if n["shoot"] >= 15 and n["pass"] >= 15 and n["bomb"] >= 25:
+		# Enough of each call, and every pack result seen at least once (a defence
+		# win is about one pack in five, so 25 bombs can miss it by chance).
+		if n["shoot"] >= 15 and n["pass"] >= 15 and n["bomb"] >= 25 \
+				and outcomes.has("marked") and outcomes.has("spoiled") and outcomes.has("defence"):
 			break
 	_check(n["shoot"] > 0 and n["pass"] > 0 and n["bomb"] > 0, "Each set-shot call gets played (%s)" % str(n))
 	_check(tagged, "Every event a set-shot call makes names that call")

@@ -5973,7 +5973,7 @@ func _trait_note(p) -> void:
 
 ## Skill fixes, director review 3 (2026-11-28, #2344). Each is centred on the
 ## league's own average at that read, measured over real picked sides
-## (36 matches, the Work Rate anchor's method), so the league rates hold and
+## (180 matches, the Work Rate anchor's method), so the league rates hold and
 ## only the gap between players moves.
 ## (b) The lead: reading the ball and one-on-one count the same.
 ## 0.418 and 0.275 before: the new stop averages 1.48 below the old one.
