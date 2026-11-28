@@ -56,6 +56,12 @@ jobs:
       AUDIT_ENV: ${{ inputs.env }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          filter: blob:none   # fetch only the files checked out
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |   # .claude/review (5 GB of review boards) is never read by CI
+            /*
+            !/.claude/review/
 
       - name: Check the inputs
         run: |

@@ -32,6 +32,7 @@ extends RefCounted
 ## e.g. expansion_impl 301 MEL 8 "p1=1,3,5,7;p2=5,9;unc=8;rank=2"
 ## PACK lines say who moved. Not modelled: rivals sliding down the draft
 ## order, compensation picks, must-trade picks, cap or list allowances.
+const Ovr := preload("res://tests/ovr.gd")
 
 const NEW_CLUBS := ["TAS", "CANB"]
 
@@ -55,14 +56,14 @@ func _top(list: Array, n: int) -> Array:
 	var ovr := []
 	for p in list:
 		ovr.append(p)
-	ovr.sort_custom(func(a, b): return int(a["overall"]) > int(b["overall"]))
+	ovr.sort_custom(func(a, b): return int(Ovr.of(a)) > int(Ovr.of(b)))
 	return ovr.slice(0, mini(n, ovr.size()))
 
 
 func _strength(list: Array) -> float:
 	var t := 0.0
 	for p in _top(list, 22):
-		t += float(p["overall"])
+		t += float(Ovr.of(p))
 	return t / 22.0
 
 
@@ -115,7 +116,7 @@ func _entry(seed: int) -> void:
 		var pot85 := 0
 		var best := 0
 		for p in arr:
-			var o := int(p["overall"])
+			var o := int(Ovr.of(p))
 			best = maxi(best, o)
 			if o >= 80: n80 += 1
 			if o >= 75: n75 += 1
@@ -131,7 +132,7 @@ func _entry(seed: int) -> void:
 			k += 1
 			sizes += float((lists[c] as Array).size())
 			for p in lists[c]:
-				if int(p["overall"]) >= 80: l80 += 1.0
+				if int(Ovr.of(p)) >= 80: l80 += 1.0
 		_build_line(seed, code, arr)
 		print("ENTRY %d %d %s | list %d (rivals %.1f) | best 22 %.1f (rivals %.1f), rank %d of %d | best player %d | 80+ %d (rivals %.1f) | 75+ %d | 70+ %d | under 22 %d | POT 85+ %d | best-22 age %.1f" % [
 				seed, year, code, arr.size(), sizes / maxf(1.0, k), _strength(arr), _league_mean(lists, code),
@@ -152,11 +153,11 @@ func _build_line(seed: int, code: String, arr: Array) -> void:
 		if id.begins_with("FND_"):
 			state_league += 1
 		elif (st.get("signings", []) as Array).has(id):
-			signed.append(int(p["overall"]))
+			signed.append(int(Ovr.of(p)))
 		elif p.has("joined"):
-			traded.append(int(p["overall"]))
+			traded.append(int(Ovr.of(p)))
 		else:
-			drafted.append("%d>%d" % [int(p["overall"]), int(p.get("potential", p["overall"]))])
+			drafted.append("%d>%d" % [int(Ovr.of(p)), int(p.get("potential", Ovr.of(p)))])
 	var asked := 0
 	for t in st.get("targets", []):
 		asked += 1
@@ -228,7 +229,7 @@ func _move(id: String, to: String, why: String, seed: int) -> bool:
 			p["num"] = n
 			(lists[to] as Array).append(p)
 			print("PACK %d %d %s | %s | from %s: age %.0f, OVR %d, POT %d" % [seed, GameState.season_year, to, why,
-					str(c), float(p.get("age", 0.0)), int(p["overall"]), int(p.get("potential", p["overall"]))])
+					str(c), float(p.get("age", 0.0)), int(Ovr.of(p)), int(p.get("potential", Ovr.of(p)))])
 			return true
 	return false
 
@@ -239,7 +240,7 @@ func _trim(code: String) -> void:
 	while arr.size() > Contracts.MAX_LIST:
 		var worst := 0
 		for i in range(arr.size()):
-			if int(arr[i]["overall"]) < int(arr[worst]["overall"]):
+			if int(Ovr.of(arr[i])) < int(Ovr.of(arr[worst])):
 				worst = i
 		arr.remove_at(worst)
 
@@ -251,10 +252,10 @@ func _note_expiring() -> void:
 		for p in Contracts.expiring(GameState.season.lists[c]):
 			if float(p.get("age", 0.0)) < 29.0:   # under 30 when he joins
 				out.append(p)
-		out.sort_custom(func(a, b): return int(a["overall"]) > int(b["overall"]))
+		out.sort_custom(func(a, b): return int(Ovr.of(a)) > int(Ovr.of(b)))
 		var k := int(pack.get("rank", "1")) - 1
 		if k < out.size():
-			_expiring.append({"id": str(out[k]["id"]), "club": str(c), "ovr": int(out[k]["overall"])})
+			_expiring.append({"id": str(out[k]["id"]), "club": str(c), "ovr": int(Ovr.of(out[k]))})
 	_expiring.sort_custom(func(a, b): return int(a["ovr"]) > int(b["ovr"]))
 
 
@@ -274,7 +275,7 @@ func _apply_pack(seed: int) -> void:
 	if cy == 1 and pack.has("room"):
 		for p in GameState.season.lists[code]:
 			if bool(p.get("generated", false)) and str(p.get("id", "")).begins_with("EXP_"):
-				p["potential"] = mini(int(p.get("potential", p["overall"])), int(p["overall"]) + int(pack["room"]))
+				p["potential"] = mini(int(p.get("potential", Ovr.of(p))), int(Ovr.of(p)) + int(pack["room"]))
 	if cy == 1:
 		var want := int(pack.get("unc", "0"))
 		var got := 0
@@ -297,7 +298,7 @@ func _career(seed: int, club: String, seasons: int) -> void:
 	if real_build:
 		GameState.set_canberra(true)
 	var pool: Array = GameDB.all_players_sorted() + GameDB.all_draftees_sorted()
-	pool.sort_custom(func(a, b): return a["overall"] > b["overall"])
+	pool.sort_custom(func(a, b): return Ovr.of(a) > Ovr.of(b))
 	GameState.draft = Draft.new(pool, GameDB.active_clubs(GameState.season_year).duplicate(), seed)
 	GameState.draft.start_for_user(club)
 	_run_draft(GameState.draft)
@@ -399,13 +400,13 @@ func _lists() -> void:
 		var ovr := 0.0
 		for i in range(arr.size()):
 			var p: Dictionary = arr[i]
-			var pot := int(p.get("potential", p["overall"]))
-			pots.append("%d>%d@%d" % [int(p["overall"]), pot, int(float(p.get("age", 0.0)))])
+			var pot := int(p.get("potential", Ovr.of(p)))
+			pots.append("%d>%d@%d" % [int(Ovr.of(p)), pot, int(float(p.get("age", 0.0)))])
 			if float(p.get("age", 0.0)) < 22.0: young += 1
 			if pot >= 80: p80 += 1
 			if pot >= 85: p85 += 1
 			if i < 22: top += float(pot)
-			ovr += float(p["overall"])
+			ovr += float(Ovr.of(p))
 		print("LIST %s %d | players %d | mean OVR %.1f | under 22 %d | POT 80+ %d | POT 85+ %d | mean POT of the best 22 by POT %.1f | OVR>POT@age %s" % [
 				code, year, arr.size(), ovr / float(arr.size()), young, p80, p85, top / 22.0, str(pots)])
 

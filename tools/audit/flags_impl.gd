@@ -7,6 +7,7 @@ extends RefCounted
 ## how often the side finishing higher won (home and away, and finals), and the
 ## spread of season wins. Args after the impl name: seed seasons
 ##   FLAGS_SUMMARY=1 prints only the closing summary line.
+const Ovr := preload("res://tests/ovr.gd")
 
 const CLUB := "MEL"
 
@@ -20,7 +21,7 @@ var _win_sd := []
 func _strength(list: Array) -> float:
 	var ovr := []
 	for p in list:
-		ovr.append(int(p["overall"]))
+		ovr.append(int(Ovr.of(p)))
 	ovr.sort()
 	ovr.reverse()
 	var t := 0.0
@@ -74,7 +75,7 @@ func run() -> void:
 	GameState.autosave_enabled = false
 	GameState.replay_seed = seed
 	var pool: Array = GameDB.all_players_sorted() + GameDB.all_draftees_sorted()
-	pool.sort_custom(func(a, b): return a["overall"] > b["overall"])
+	pool.sort_custom(func(a, b): return Ovr.of(a) > Ovr.of(b))
 	GameState.draft = Draft.new(pool, GameDB.active_clubs(GameState.season_year).duplicate(), seed)
 	GameState.draft.start_for_user(CLUB)
 	_run_draft(GameState.draft)

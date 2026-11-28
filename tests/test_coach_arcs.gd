@@ -1,4 +1,5 @@
 extends RefCounted
+const Ovr := preload("res://tests/ovr.gd")
 ## Run by tests/run_coach_arcs_tests.gd (suite "coach_arcs").
 ## The coach's career arcs (CoachArcs.gd, ClubArcs.gd; director, 2026-11-03,
 ## phase 1): the arcs file is fit to play, arcs start only from real game
@@ -28,8 +29,8 @@ func _t(test: String, args := []) -> Variant:
 
 func _fresh() -> void:
 	GameState.reset()
-	GameState.start_season("FRE", GameDB.club_list("FRE"))
 	GameState.replay_seed = SUITE_SEED
+	GameState.start_season("FRE", GameDB.club_list("FRE"))
 	GameState.tutorials = false
 	Router.stack = []
 
@@ -97,12 +98,19 @@ func _test_triggers_from_state() -> void:
 	_check(not st.is_empty(), "on: the arc state is kept")
 	_check(not (st["active"] as Dictionary).has("hot_seat") and not (st["active"] as Dictionary).has("drought") \
 			and not (st["active"] as Dictionary).has("legacy"), "a new coach is not on the hot seat, in a drought or a legend")
-	# The board really loses faith: the hot seat follows by round 8.
-	GameState.board["confidence"] = 25
+	# The board really loses faith: the hot seat follows by round 8. Held below
+	# 40 every week, so a winning run in the seeded season cannot lift it back.
 	for i in range(8):
+		GameState.board["confidence"] = 25
 		_week(rng)
-	_check((st["active"] as Dictionary).has("hot_seat") or (st["done"] as Dictionary).has("hot_seat"),
-			"a board below 40 by round 8 puts the coach on the hot seat")
+	var hot := CoachArcs.by_id(CoachArcs.all(), "hot_seat")
+	_check(not ClubArcs.trigger(GameState, st, hot, ClubStories.context(GameState), false).is_empty(),
+			"a board below 40 by round 8 holds the hot seat's trigger")
+	# It starts unless the coach already has as many arcs running as he can
+	# (CoachArcs.MAX_ACTIVE): the seeded season fills them by round 7.
+	_check((st["active"] as Dictionary).has("hot_seat") or (st["done"] as Dictionary).has("hot_seat")
+			or (st["active"] as Dictionary).size() >= CoachArcs.MAX_ACTIVE,
+			"a board below 40 by round 8 puts the coach on the hot seat, with an arc free (%s)" % str((st["active"] as Dictionary).keys()))
 	# A real trade request: the star-wants-out trigger names that player.
 	var star: Dictionary = GameState.my_list[0]
 	GameState.trade_requests[str(star["id"])] = {"year": GameState.season_year}
@@ -988,7 +996,7 @@ func _check_joined(tag: String, from: String, year: int, their_id: String) -> vo
 	if ((GameState.expansion["TAS"]["signings"]) as Array).is_empty():
 		var best := {}
 		for p in GameState.free_agents:
-			if float(p.get("age", 30.0)) < Expansion.TARGET_MAX_AGE and (best.is_empty() or int(p["overall"]) > int(best["overall"])):
+			if float(p.get("age", 30.0)) < Expansion.TARGET_MAX_AGE and (best.is_empty() or int(Ovr.of(p)) > int(Ovr.of(best))):
 				best = p
 		# At the draft free agency has closed and the pool keeps only its unsigned under-26s,
 		# often none (#1748's copied players): then a rival's player young enough, taken off
@@ -1000,7 +1008,7 @@ func _check_joined(tag: String, from: String, year: int, their_id: String) -> vo
 				if str(code) == "TAS" or list.size() <= Contracts.min_list():
 					continue
 				for p in list:
-					if float(p.get("age", 30.0)) < Expansion.TARGET_MAX_AGE and (best.is_empty() or int(p["overall"]) > int(best["overall"])):
+					if float(p.get("age", 30.0)) < Expansion.TARGET_MAX_AGE and (best.is_empty() or int(Ovr.of(p)) > int(Ovr.of(best))):
 						best = p
 						from_list = list
 		_check(not best.is_empty(), "%s: a player Tasmania can sign" % tag)

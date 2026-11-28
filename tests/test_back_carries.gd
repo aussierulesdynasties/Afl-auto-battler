@@ -76,7 +76,7 @@ func _test_weights() -> void:
 		for p in ground:
 			var r := str(p["role"])
 			on_use[r] = float(on_use.get(r, 0.0)) + float(roles[r]) * pow(maxf(1.0, sim._ball_use(p)), 2.0)
-			on_int[r] = float(on_int.get(r, 0.0)) + float(tuned[r]) * pow(maxf(1.0, sim._a(p, "intercept")), 2.0)
+			on_int[r] = float(on_int.get(r, 0.0)) + float(tuned[r]) * pow(maxf(1.0, sim._a(p, "reading_play")), 2.0)
 		for r in on_int:
 			same = same and absf(float(on_use[r]) - float(on_int[r])) <= 1e-6 * float(on_int[r])
 	_check(same, "each line's back-zone weight on ball use equals its weight on intercept (row 92's split)")
@@ -107,11 +107,11 @@ func _test_back_carrier_follows_ball_use() -> void:
 		return
 	var user: Dictionary = (defs[0] as Dictionary).duplicate(true)
 	var spoiler: Dictionary = (defs[1] as Dictionary).duplicate(true)
-	for k in ["carry", "kicking", "handballing"]:
+	for k in ["work_rate", "kicking", "handballing"]:
 		user["attr"][k] = 90.0
 		spoiler["attr"][k] = 30.0
-	user["attr"]["intercept"] = 30.0
-	spoiler["attr"]["intercept"] = 90.0
+	user["attr"]["reading_play"] = 30.0
+	spoiler["attr"]["reading_play"] = 90.0
 	user["apos"] = "Gen. Defender"
 	spoiler["apos"] = "Gen. Defender"
 	var bu_user := pow(sim._ball_use(user), 2.0)
@@ -124,7 +124,7 @@ func _test_back_carrier_follows_ball_use() -> void:
 	_check(share > 0.7 and absf(share - expected) < 0.05,
 			"the back-zone ball goes to the ball user, not the spoiler (%.1f%%, ball use squared gives %.1f%%)"
 			% [100 * share, 100 * expected])
-	_check(is_equal_approx(sim._ball_use(user), 0.58 * sim._a(user, "carry") + 0.42 * sim._a(user, "kicking")),
+	_check(is_equal_approx(sim._ball_use(user), 0.58 * sim._a(user, "work_rate") + 0.42 * sim._a(user, "kicking")),
 			"ball use is kick_in_taker's carry/kicking blend")
 
 

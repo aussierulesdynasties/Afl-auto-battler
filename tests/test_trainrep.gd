@@ -1,4 +1,5 @@
 extends RefCounted
+const Ovr := preload("res://tests/ovr.gd")
 ## Run by tests/run_trainrep_tests.gd (suite "trainrep").
 ## The monthly training report (TrainingReport.gd, TrainingReportSheet.gd;
 ## director, 2026-10-14: "A report every 4 rounds"): the block snapshot, a
@@ -33,8 +34,8 @@ func _settle(n := 6) -> void:
 
 func _fresh() -> void:
 	GameState.reset()
-	GameState.start_season("FRE", GameDB.club_list("FRE"))
 	GameState.replay_seed = SUITE_SEED
+	GameState.start_season("FRE", GameDB.club_list("FRE"))
 	GameState.tutorials = false
 	# The club cards have their own test below: none opens over these unless asked.
 	GameState.event_sheets = false
@@ -108,7 +109,7 @@ func _test_snapshot_and_report() -> void:
 	_fresh()
 	var before := {}
 	for p in GameState.my_list:
-		before[str(p["id"])] = {"ovr": int(p["overall"]), "attr": (p["attr"] as Dictionary).duplicate()}
+		before[str(p["id"])] = {"ovr": int(Ovr.of(p)), "attr": (p["attr"] as Dictionary).duplicate()}
 	_rounds(1)
 	_check(not GameState.training_block.is_empty(), "the block begins with the first game")
 	_check(int(GameState.training_block.get("from", 0)) == 1, "the block starts at round 1")

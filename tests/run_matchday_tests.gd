@@ -1,4 +1,5 @@
 extends SceneTree
+const Ovr := preload("res://tests/ovr.gd")
 ## godot --headless --path . --script tests/run_matchday_tests.gd
 ## Matchday words (tests/test_matchday.gd), then your match on a phone: the
 ## score, clock and leader at a glance, a feed of what matters, the breaks
@@ -2734,8 +2735,8 @@ func _first_pick(box: Node, prefix: String) -> String:
 func _test_appearance() -> void:
 	var db = root.get_node("GameDB")
 	# Generated players: from the id alone - stable, and the same whatever the ratings say.
-	var fake := {"id": "GEN_1", "generated": true, "overall": 50, "role": "MID"}
-	var again := {"id": "GEN_1", "generated": true, "overall": 95, "role": "RUCK", "potential": 99}
+	var fake := Ovr.to({"id": "GEN_1", "generated": true,  "role": "MID"}, 50)
+	var again := Ovr.to({"id": "GEN_1", "generated": true,  "role": "RUCK", "potential": 99}, 95)
 	var counts := [0, 0, 0, 0, 0, 0]
 	for i in range(3000):
 		counts[int(db.player_looks({"id": "gen_%d" % i, "generated": true})["skin"])] += 1

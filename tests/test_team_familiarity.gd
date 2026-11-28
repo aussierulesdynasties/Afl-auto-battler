@@ -126,7 +126,6 @@ func _test_team_step() -> void:
 
 
 func _test_reaches_fit() -> void:
-	GameDB.skip_ovr_overrides = true
 	GameDB.reload()
 	var plain_h := Squad.new("MEL", GameDB.club_list("MEL"), true, "MEL")
 	var plain_a := Squad.new("FRE", GameDB.club_list("FRE"), false, "FRE")
@@ -152,9 +151,6 @@ func _test_plain_lists_unchanged() -> void:
 	var sim := MatchSim.new(Squad.new("MEL", GameDB.club_list("MEL"), true, "MEL"),
 			Squad.new("FRE", GameDB.club_list("FRE"), false, "FRE"), 7)
 	_check(sim._fam_cut.is_empty() and sim.team_fam_cut == [0.0, 0.0], "A settled list carries no cut at all")
-	# The histories are stamped against the game's own data.
-	GameDB.skip_ovr_overrides = false
-	GameDB.reload()
 
 
 func _test_ways_onto_a_list() -> void:
@@ -255,6 +251,8 @@ func _test_save_and_old_save() -> void:
 
 
 func _test_career_start_clears() -> void:
+	# The histories are stamped against the game's own data.
+	GameDB.reload()
 	GameState.reset()
 	GameState.replay_seed = 0
 	GameState.set_canberra(true)

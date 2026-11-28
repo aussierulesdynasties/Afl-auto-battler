@@ -87,8 +87,8 @@ func _test_loads_three_leagues() -> void:
 
 ## The AFL side of a load, everything a career is built from.
 func _afl_digest() -> String:
-	return "%s|%s|%s|%s|%s|%s|%s|%s" % [str(GameDB.players), str(GameDB.draftees), str(GameDB.list_additions),
-			str(GameDB.baseline_overall), str(GameDB.baseline_spread), str(GameDB.club_order),
+	return "%s|%s|%s|%s|%s|%s" % [str(GameDB.players), str(GameDB.draftees), str(GameDB.list_additions),
+			str(GameDB.club_order),
 			str(GameDB.clubs.keys()), str(GameDB._alias_next)]
 
 

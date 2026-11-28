@@ -1,4 +1,5 @@
 extends RefCounted
+const Ovr := preload("res://tests/ovr.gd")
 ## Intake-draft model regression suite: the shipped 2026 draft class, the
 ## projection maths, the reversed-ladder intake flow, and the season rollover
 ## (development, retirement, next year's class). Uses the shipped GDScript.
@@ -37,7 +38,7 @@ func run() -> void:
 	_t("_test_real_lists_after_draft")
 	_t("_test_rebuild_walkouts_sign")
 	_t("_test_gen_traits_rates")
-	_t("_test_copied_from_2012_on")
+	_t("_test_draftee_types")
 	# Last: generated classes draw names from a shared counter, and a surname
 	# clash changes an international prospect's role, so running this earlier
 	# moved _test_class_tiers' comparison.
@@ -95,7 +96,6 @@ func _test_draft_class_data() -> void:
 		aliases[str(p.get("generic_name", ""))] = true
 	var ranks := {}
 	var rucks := 0
-	var strong_ruck := false
 	var ties_ok := true
 	for p in pool:
 		var id := str(p["id"])
@@ -112,27 +112,27 @@ func _test_draft_class_data() -> void:
 			ranks[rank] = true
 		_check(str(p["role"]) in ["RUCK", "MID", "DEF", "FWD"], "Role is one of the four")
 		_check(bool(p.get("projected", false)), "Prospects are flagged as projections")
-		var ov := int(p["overall"])
-		_check(ov >= 36 and ov <= 76, "Projected overall %d sits in the rookie band" % ov)
-		_check(int(p["value"]) >= Contracts.SENIOR_MIN_2027 and int(p["value"]) <= Ratings.salary_value(99), "Salary value stays on the AFL scale")
+		# His attributes are his type's baseline moved to his pick's level, each
+		# ± SPREAD of its range (RATING_REBUILD §4).
+		var t := Prospects.type_named(str(p.get("type", "")))
+		_check(not t.is_empty() and str(t["line"]) == str(p["role"]),
+				"%s is one of his line's types (%s, %s)" % [id, str(p.get("type", "")), str(p["role"])])
+		if not t.is_empty() and not p.has("attr_bias"):
+			_check(_in_type_envelope(p, t), "%s's attributes sit around the %s baseline at his pick" % [id, str(t["name"])])
+		_check(Ratings.value_of(p) >= Contracts.SENIOR_MIN_2027 and Ratings.value_of(p) <= Ratings.salary_value(99), "Salary value stays on the AFL scale")
 		var a: Dictionary = p["attr"]
 		var attrs_ok := a.size() == Prospects.ATTR_KEYS.size()
 		for key in Prospects.ATTR_KEYS:
 			var v := int(a.get(key, 0))
 			if v < 1 or v > 99:
 				attrs_ok = false
-		_check(attrs_ok, "All 13 attributes are present and in range for %s" % id)
+		_check(attrs_ok, "All %d attributes are present and in range for %s" % [Prospects.ATTR_KEYS.size(), id])
 		if str(p["role"]) == "RUCK":
 			rucks += 1
-			# A ruck specialist: his tap work is his best part and senior-ready. Draft-night
-			# ratings run lower since row 65 (picks 6-20 about 55-58), so 60, not 65.
-			if int(a.get("ruck", 0)) >= 60 and int(a.get("ruck", 0)) > ov:
-				strong_ruck = true
 		var tie := str(p.get("tied_club", ""))
 		if tie != "" and not GameDB.CLUB_ORDER.has(tie):
 			ties_ok = false
 	_check(rucks >= 3, "The class carries enough rucks for a league-wide intake")
-	_check(strong_ruck, "At least one prospect projects as a genuine ruck option")
 	_check(ties_ok, "Every father-son/NGA tag names a real club code")
 	var first: Dictionary = pool[0]
 	for p in pool:
@@ -142,28 +142,115 @@ func _test_draft_class_data() -> void:
 	for p in pool:
 		if not bool(p.get("unranked", false)) and int(p["draft_rank"]) == ranks.size():
 			last = p
-	_check(int(first["overall"]) >= int(last["overall"]),
+	_check(int(Ovr.of(first)) >= int(Ovr.of(last)),
 			"The consensus number one out-rates the last-ranked prospect")
 
 
+## Prospects.attrs_for then project's class shift: his type's baseline moved
+## to his pick's level (every attribute but Discipline), plus his class's
+## shift, each attribute ± SPREAD of its range, rounded and within 1-99. Every
+## attribute of `p` inside that envelope.
+func _in_type_envelope(p: Dictionary, t: Dictionary) -> bool:
+	var apos := Rating.apos_of(p)
+	var base := Prospects.baseline(t)
+	var w: Dictionary = Rating.WEIGHTS.get(apos, Rating.WEIGHTS["Midfielder"])
+	var moved := 1.0 - float(w.get("discipline", 0)) / 100.0
+	var lift := (Rating.unstretch(Prospects.pick_level(int(p.get("draft_rank", 0)))) - Rating.raw_of(base, apos)) / moved
+	var shift := float(p.get("class_shift", 0.0))
+	var a: Dictionary = p["attr"]
+	for key in Prospects.ATTR_KEYS:
+		var r: Array = (t["ranges"] as Dictionary).get(key, [50.0, 50.0])
+		var half := Prospects.SPREAD * (float(r[1]) - float(r[0]))
+		# Generation clamps the draw to 1-99 before the class shift lands.
+		var mid := float(base[key]) + (lift if key != "discipline" else 0.0)
+		var moved_by := shift if key != "discipline" else 0.0
+		var v := float(a.get(key, -1))
+		var lo := clampf(clampf(mid - half, 1.0, 99.0) + moved_by, 1.0, 99.0) - 0.5
+		var hi := clampf(clampf(mid + half, 1.0, 99.0) + moved_by, 1.0, 99.0) + 0.5
+		if v < lo or v > hi:
+			return false
+	return true
+
+
 func _test_projection_model() -> void:
-	_check(Prospects.rank_base_overall(1) > Prospects.rank_base_overall(25),
-			"Rank taper falls monotonically at the top")
-	_check(Prospects.rank_base_overall(25) > Prospects.rank_base_overall(49),
-			"Rank taper falls monotonically in the middle")
-	_check(Prospects.rank_base_overall(49) > Prospects.rank_base_overall(60),
-			"Rank taper keeps sliding past the published list")
-	_check(Prospects.rank_base_overall(1) <= 71.0 and Prospects.rank_base_overall(1) >= 68.0,
-			"The top prospect projects near the low 70s")
+	# The 12 types (RATING_REBUILD §4), each with every attribute's p10-p90 range.
+	var ts: Array = Prospects.types()
+	var lines := {}
+	var ranges_ok := ts.size() == 12
+	for t in ts:
+		lines[str(t["line"])] = int(lines.get(str(t["line"]), 0)) + 1
+		var rs: Dictionary = t["ranges"]
+		if rs.size() != Prospects.ATTR_KEYS.size() or int(t["n"]) <= 0:
+			ranges_ok = false
+		for k in rs:
+			if float(rs[k][0]) > float(rs[k][1]):
+				ranges_ok = false
+	_check(ranges_ok and lines.size() == 4 and int(lines.get("RUCK", 0)) == 2,
+			"Twelve types, each with all %d ranges, across the four lines (%s)" % [Prospects.ATTR_KEYS.size(), str(lines)])
+	# His pick's level (director 2026-11-26): pick 1 at 61, the first round
+	# 57 down to 53, later picks 51 down to 45, never rising with the pick.
+	_check(is_equal_approx(Prospects.pick_level(1), 61.0) and is_equal_approx(Prospects.pick_level(10), 55.0)
+			and is_equal_approx(Prospects.pick_level(19), 51.0) and is_equal_approx(Prospects.pick_level(60), 45.0),
+			"Pick levels: 1 = 61, 10 = 55, 19 = 51, 60 = 45 (%.1f, %.1f, %.1f, %.1f)" % [
+				Prospects.pick_level(1), Prospects.pick_level(10), Prospects.pick_level(19), Prospects.pick_level(60)])
+	var falling := true
+	for r in range(2, 90):
+		if Prospects.pick_level(r) > Prospects.pick_level(r - 1):
+			falling = false
+	_check(falling and is_equal_approx(Prospects.pick_level(0), 45.0) and is_equal_approx(Prospects.pick_level(90), 45.0),
+			"A later pick never sits higher; no rank and a rank past 60 read as a late pick")
+	# A Wing at pick 10: every attribute around his baseline at that level,
+	# each drawn on its own, and his OVR read from them lands near 55.
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 41
+	var wing := Prospects.type_named("Wing")
+	var probe := {"role": "MID", "role2": "", "draft_rank": 10}
+	var inside := not wing.is_empty()
+	var raws := 0.0
+	var kick_up := 0
+	var kick_up_hand_down := 0
+	# The middle of each attribute's draw at pick 10: the mean of many draws.
+	var mids := {"kicking": 0.0, "handballing": 0.0}
+	var draws := []
+	for i in 200:
+		var a := Prospects.attrs_for(wing, 10, "Midfielder", rng)
+		draws.append(a)
+		mids["kicking"] += float(a["kicking"]) / 200.0
+		mids["handballing"] += float(a["handballing"]) / 200.0
+	for a in draws:
+		probe["attr"] = a
+		if not _in_type_envelope(probe, wing):
+			inside = false
+		raws += Rating.stretch(Rating.raw_of(a, "Midfielder"))
+		if float(a["kicking"]) > float(mids["kicking"]):
+			kick_up += 1
+			if float(a["handballing"]) < float(mids["handballing"]):
+				kick_up_hand_down += 1
+	_check(inside, "200 Wings at pick 10 sit around their baseline at that level")
+	_check(kick_up_hand_down > 20 and kick_up_hand_down < kick_up,
+			"Each attribute is drawn on its own: a Wing's Kicking above its middle leaves his Handball either side (%d of %d)" % [kick_up_hand_down, kick_up])
+	_check(absf(raws / 200.0 - 55.0) <= 1.0, "A Wing at pick 10 reads %.1f on average, his pick's 55" % (raws / 200.0))
 	_check(Prospects.days_between("2000-01-01", "2001-01-01") == 366,
 			"Date maths honours the leap year")
 	_check(Prospects.days_between("2008-02-28", "2008-03-01") == 2,
 			"Date maths handles Feb 29")
 	# Projection is deterministic per id and never outruns its band.
 	var row := pool_sample()
-	var before := int(row["overall"])
+	var before := int(Ovr.of(row))
+	var kept := str(row.get("type", ""))
 	Prospects.project(row)
-	_check(int(row["overall"]) == before, "Re-projecting the same prospect is idempotent")
+	_check(int(Ovr.of(row)) == before and str(row["type"]) == kept, "Re-projecting the same prospect is idempotent")
+	# A type is kept while it is his line's (the Forge's style, a later season's type), redrawn when not.
+	var fwd := pool_sample()
+	fwd["role"] = "FWD"
+	fwd["type"] = "Key forward"
+	Prospects.project(fwd)
+	var moved := pool_sample()
+	moved["role"] = "DEF"
+	moved["type"] = "Key forward"
+	Prospects.project(moved)
+	_check(str(fwd["type"]) == "Key forward" and str(Prospects.type_named(str(moved["type"])).get("line", "")) == "DEF",
+			"A forward keeps his Key forward type; moved to defence he takes a defender's (%s)" % str(moved["type"]))
 
 
 func pool_sample() -> Dictionary:
@@ -460,9 +547,9 @@ func _test_draft_rules() -> void:
 	_check(h.is_user_turn(), "After one pick it is your turn again in round two")
 	# Rucks: AI stops at two, a third late or as a project, never a fourth.
 	var r := _blank(["A", "B"], {"A": 40, "B": 40}, 6, {"A": {"RUCK": 2, "MID": 10, "DEF": 14, "FWD": 14}, "B": {"RUCK": 3, "MID": 10, "DEF": 14, "FWD": 13}})
-	var raw := {"potential": 70, "overall": 60}
+	var raw := Ovr.to({"potential": 70}, 60)
 	_check(is_equal_approx(r._intake_ruck_need("A", raw), Draft.INTAKE_RUCK_THIRD), "A third ruck early is marked down")
-	_check(is_equal_approx(r._intake_ruck_need("A", {"potential": 85, "overall": 60}), Draft.INTAKE_COVERED), "A third ruck who is a clear project is not")
+	_check(is_equal_approx(r._intake_ruck_need("A", Ovr.to({"potential": 85}, 60)), Draft.INTAKE_COVERED), "A third ruck who is a clear project is not")
 	_check(r._intake_ruck_need("B", raw) == 0.0, "A fourth ruck is never wanted")
 	# Save and load in the middle; an old save without the new fields.
 	var s1 := _blank(["A", "B", "C", "D"], {"A": 38, "B": full, "C": 36, "D": 40}, 14)
@@ -483,17 +570,30 @@ func _test_draft_rules() -> void:
 	var heeney: Dictionary = GameDB.player_by_id("SYD_5")
 	if not gawn.is_empty():
 		var dd := Draft.new([gawn, heeney], ["A", "B"], 1)
-		_check(dd.horizon_worth(gawn, "now") > 85.0, "A win-now club values a 35-year-old star near his rating (%.1f)" % dd.horizon_worth(gawn, "now"))
+		_check(dd.horizon_worth(gawn, "now") > float(Ovr.of(gawn)) - 4.0,
+				"A win-now club values a 35-year-old star near his rating (%.1f, OVR %d)" % [dd.horizon_worth(gawn, "now"), int(Ovr.of(gawn))])
 		# Gawn carries Fine Wine (the director's list), so the discount is
 		# measured on the same rating without it; the trait must lift it.
 		var plain := gawn.duplicate(true)
 		plain.erase("fine_wine")
 		plain["real_name"] = "Not On The List"
 		var dp := Draft.new([plain, heeney], ["A", "B"], 1)
-		_check(dp.horizon_worth(plain, "build") < 70.0, "A building club still discounts a 35-year-old star without Fine Wine (%.1f)" % dp.horizon_worth(plain, "build"))
+		_check(dp.horizon_worth(plain, "build") < float(Ovr.of(plain)) - 5.0,
+				"A building club still discounts a 35-year-old star without Fine Wine (%.1f, OVR %d)" % [dp.horizon_worth(plain, "build"), int(Ovr.of(plain))])
 		if Traits.fine_wine(gawn):
 			_check(dd.horizon_worth(gawn, "build") > dp.horizon_worth(plain, "build"), "Fine Wine lifts what a building club sees in him (%.1f against %.1f)" % [dd.horizon_worth(gawn, "build"), dp.horizon_worth(plain, "build")])
-		_check(absf(dd.horizon_worth(heeney, "now") - 88.8) < 1.0, "A 30-year-old's win-now worth is unchanged (%.1f)" % dd.horizon_worth(heeney, "now"))
+		# A win-now club counts only the seasons he plays: his outlook's seasons,
+		# each weighted by the chance he plays it, nothing after.
+		var seasons := Potential.outlook(heeney, Draft.HORIZON_YEARS)
+		var weights: Array = Draft.HORIZON_WEIGHTS["now"]
+		var played := 0.0
+		var above := 0.0
+		for t in range(Draft.HORIZON_YEARS):
+			played += float(weights[t]) * float(seasons[t][1])
+			above += float(weights[t]) * float(seasons[t][1]) * (float(seasons[t][0]) - Draft.HORIZON_REPLACEMENT)
+		var want := Draft.HORIZON_REPLACEMENT + above / maxf(0.001, played)
+		_check(absf(dd.horizon_worth(heeney, "now") - want) < 0.01,
+				"A 30-year-old's win-now worth counts only the seasons he plays (%.1f, his outlook %.1f)" % [dd.horizon_worth(heeney, "now"), want])
 
 
 func _finish_sig(d: Draft) -> String:
@@ -513,16 +613,16 @@ func _finish_sig(d: Draft) -> String:
 func _tiny_pool(n: int) -> Array:
 	var out := []
 	for i in range(n):
-		out.append({
+		out.append(Ovr.to({
 			"id": "tiny_%d" % i,
 			"name": "Tiny %d" % i, "generic_name": "Tiny %d" % i,
 			"real_name": "Tiny %d" % i,
 			"club": "ORIGINAL", "num": i,
 			"role": ["MID", "DEF", "RUCK", "FWD", "MID", "DEF"][i % 6],
 			"role2": "",
-			"overall": 70 - i, "value": 2,
+			"value": 2,
 			"gl": i, "di": 100 - i, "gm": 0.0,
-		})
+		}, 70 - i))
 	return out
 
 
@@ -598,10 +698,10 @@ func _test_career_rollover() -> void:
 	for p in GameState.my_list:
 		var age := float(p.get("age", 0.0))
 		if int(p.get("contract_years", 1)) >= 2 and age >= 26.0 and age <= 30.0 \
-				and int(p["overall"]) > vet_ovr:
+				and int(Ovr.of(p)) > vet_ovr:
 			vet_id = str(p["id"])
 			vet_start = age
-			vet_ovr = int(p["overall"])
+			vet_ovr = int(Ovr.of(p))
 	var season: Season = GameState.season
 	season.round_index = season.fixture.size()  # Fast-forward: the H&A is done.
 	# Generated classes carry no father-son/NGA ties (only the real 2026 class
@@ -635,7 +735,7 @@ func _test_career_rollover() -> void:
 	# Lists start at the minimum (37), so make room on yours for national
 	# picks beside the two ties: drop its weakest men to two under the minimum.
 	var mine_low: Array = GameState.my_list.duplicate()
-	mine_low.sort_custom(func(x, y): return int(x["overall"]) < int(y["overall"]))
+	mine_low.sort_custom(func(x, y): return int(Ovr.of(x)) < int(Ovr.of(y)))
 	while GameState.my_list.size() > Contracts.min_list() - 2 and not mine_low.is_empty():
 		var gone: Dictionary = mine_low.pop_front()
 		GameState.my_list.erase(gone)
@@ -702,11 +802,16 @@ func _test_career_rollover() -> void:
 	_check(GameState.needs_season_wrap(), "Finishing the draft leads to the off-season wrap, not straight to Round 1")
 	var picks := (wrap.get("ins", []) as Array).filter(func(r): return str(r["how"]).begins_with("pick "))
 	var mine_drafted := 0
+	var on_list := {}
 	for p in GameState.my_list:
+		on_list[str(p["id"])] = "%s %s %s" % [str(p.get("drafted_type", "")), str(p.get("drafted_year", "")), str(p.get("draft_pick", ""))]
 		if int(p.get("draft_pick", 0)) > 0 and str(p.get("drafted_type", "")) == "national" \
 				and int(p.get("drafted_year", 0)) == 2027:
 			mine_drafted += 1
-	_check(picks.size() == mine_drafted, "Every draft pick is in the wrap with its number (%d of %d)" % [picks.size(), mine_drafted])
+	var where := []
+	for r in picks:
+		where.append("%s %s: %s" % [str(r["id"]), str(r["how"]), str(on_list.get(str(r["id"]), "not on the list"))])
+	_check(picks.size() == mine_drafted, "Every draft pick is in the wrap with its number (%d of %d: %s)" % [picks.size(), mine_drafted, "; ".join(where)])
 	var retired_here := (GameState.intake_summary.get("retired", []) as Array).filter(func(r): return str(r["club"]) == me).size()
 	var retired_wrap := (wrap.get("outs", []) as Array).filter(func(r): return str(r["how"]) == "retired").size()
 	_check(retired_here == retired_wrap, "Every retirement from the list is in the wrap (%d)" % retired_here)
@@ -782,12 +887,15 @@ func _test_career_rollover() -> void:
 		_check(not str(p["generic_name"]).to_lower().begins_with("squadmate") \
 				and not str(p["generic_name"]).to_lower().begins_with("player "),
 				"Generated prospects never get placeholder names (%s)" % str(p["generic_name"]))
-		_check(int(p["overall"]) >= 36 and int(p["overall"]) <= 76,
-				"Generated prospects stay in the rookie band")
+		# His type's baseline at his pick's level, plus his class's shift (RATING_REBUILD
+		# §4); a country's lean reshapes him on purpose.
+		var pt := Prospects.type_named(str(p.get("type", "")))
+		_check(not pt.is_empty() and (p.has("attr_bias") or _in_type_envelope(p, pt)),
+				"Generated prospects sit around their type's baseline at their pick (%s, %s)" % [pid, str(p.get("type", ""))])
 	var repeats := Prospects.generate_class(2028)
 	_check(repeats.size() == next_class.size(), "Class generation is deterministic in size")
 	for i in range(mini(10, repeats.size())):
-		_check(int(repeats[i]["overall"]) == int(next_class[i]["overall"]),
+		_check(int(Ovr.of(repeats[i])) == int(Ovr.of(next_class[i])),
 				"Class generation is deterministic in ratings")
 	# Forward lines need all three sizes (MatchSim.fwd_size): over five
 	# generated classes there are small, general and key forwards.
@@ -874,14 +982,14 @@ func _test_class_tiers() -> void:
 	var top := func(cls: Array, key: String) -> float:
 		var t := 0.0
 		for p in cls.slice(0, 20):
-			t += float(p[key])
+			t += float(Ovr.of(p)) if key == "overall" else float(p[key])
 		return t / 20.0
 	_check(float(top.call(sup, "overall")) > float(top.call(nor, "overall")) + 1.0
 			and float(top.call(sup, "potential")) > float(top.call(nor, "potential")) + 2.0,
 			"A superdraft's top 20 rate higher now and higher later")
 	var tail_rookies := true
 	for p in sup.slice(sup.size() - 5):
-		if int(p["overall"]) > 64:
+		if int(Ovr.of(p)) > 64:
 			tail_rookies = false
 	_check(tail_rookies, "A superdraft still has ordinary late picks")
 	var untouched := true
@@ -919,7 +1027,7 @@ func _test_retirement_talk() -> void:
 	GameState.reset()
 	GameState.start_season("ADE", GameDB.club_list("ADE"))
 	var best := GameState.my_list.duplicate()
-	best.sort_custom(func(a, b): return int(a["overall"]) > int(b["overall"]))
+	best.sort_custom(func(a, b): return int(Ovr.of(a)) > int(Ovr.of(b)))
 	var keen: Dictionary = best[0]     # fit, happy, played: he stays
 	var sore: Dictionary = best[1]     # injured: he goes
 	var fringe: Dictionary = best[best.size() - 1]  # not in the best 22: not asked
@@ -930,7 +1038,7 @@ func _test_retirement_talk() -> void:
 		_tally(str(p["id"]), 18)
 	sore["injury_weeks"] = 4
 	sore["injury_kind"] = "hamstring"
-	fringe["overall"] = 40
+	Ovr.to(fringe, 40)
 	sore["contract_years"] = 1
 	# A rival veteran out of contract and retiring: not for free agency.
 	var rival_vet := {}
@@ -1049,8 +1157,8 @@ func _test_custom_prospect() -> void:
 	# No extra power from the choices: one or two weaknesses, same overall.
 	var p1 := Prospects.make_custom(spec, 2026, 777)
 	var p2 := Prospects.make_custom(two, 2026, 777)
-	_check(absi(int(p1["overall"]) - int(p2["overall"])) <= 1 and int(p1["potential"]) == int(p2["potential"]),
-			"A second weakness changes his shape, not his overall (%d vs %d)" % [p1["overall"], p2["overall"]])
+	_check(absi(int(Ovr.of(p1)) - int(Ovr.of(p2))) <= 1 and int(p1["potential"]) == int(p2["potential"]),
+			"A second weakness changes his shape, not his overall (%d vs %d)" % [Ovr.of(p1), Ovr.of(p2)])
 
 	GameState.reset()
 	# A fixed career (C15): never the clock's.
@@ -1075,14 +1183,14 @@ func _test_custom_prospect() -> void:
 	# believable spread across careers, never chosen.
 	var again := Prospects.make_custom(spec, GameState.season_year, seed)
 	var first := Prospects.make_custom(spec, GameState.season_year, seed)
-	_check(int(again["overall"]) == int(first["overall"]) and int(again["potential"]) == int(first["potential"]),
+	_check(int(Ovr.of(again)) == int(Ovr.of(first)) and int(again["potential"]) == int(first["potential"]),
 			"His ceiling is rolled once: the same career gives the same player")
 	var ovr := []
 	var stars := 0
 	var gen := 0
 	for s in range(1, 401):
 		var c := Prospects.make_custom(spec, GameState.season_year, s * 7919)
-		ovr.append(int(c["overall"]))
+		ovr.append(int(Ovr.of(c)))
 		stars += 1 if int(c["potential"]) >= 85 else 0
 		gen += 1 if int(c["potential"]) >= 92 else 0
 	ovr.sort()
@@ -1090,10 +1198,10 @@ func _test_custom_prospect() -> void:
 	# tier moves its top and bottom a little).
 	var cls_ovr := []
 	for cs in [11, 22, 33, 44, 55]:
-		cls_ovr.append_array(Prospects.generate_class(GameState.season_year, cs).map(func(x): return int(x["overall"])))
+		cls_ovr.append_array(Prospects.generate_class(GameState.season_year, cs).map(func(x): return int(Ovr.of(x))))
 	_check(int(ovr[0]) >= int(cls_ovr.min()) - 2 and int(ovr[-1]) <= int(cls_ovr.max()) + 2,
 			"Custom prospects stay inside a class's power band (%d-%d vs %d-%d)" % [ovr[0], ovr[-1], cls_ovr.min(), cls_ovr.max()])
-	# Draft-night ratings run at DRAFT_NIGHT_SCALE of the old curve (director 2026-10-14), so a modest one starts in the high 30s.
+	# His attributes are his type's ranges at his talent (RATING_REBUILD §4).
 	_check(BalanceGate.held(int(ovr[40]) >= 36, "custom prospect 10th percentile OVR"), "Even a modest one is a usable role-player prospect (10th percentile OVR %d)" % ovr[40])
 	_check(BalanceGate.held(stars > 8 and stars < 140 and gen < 20, "custom prospect star and generational rates"),
 			"A star is uncommon and a generational ceiling rare (%d of 400 at POT 85+, %d at 92+)" % [stars, gen])
@@ -1108,11 +1216,11 @@ func _test_custom_prospect() -> void:
 	var pm := Prospects.make_custom(m, GameState.season_year, seed)
 	var pg := Prospects.make_custom(g, GameState.season_year, seed)
 	_check(int(pm["attr"]["contested_marking"]) > int(pg["attr"]["contested_marking"]) and int(pg["attr"]["goalkicking"]) > int(pm["attr"]["goalkicking"])
-			and absi(int(pm["overall"]) - int(pg["overall"])) <= 1,
+			and absi(int(Ovr.of(pm)) - int(Ovr.of(pg))) <= 1,
 			"Strengths reshape the footballer without lifting his overall")
 
 	# He survives a reload with the same roll.
-	var before := [GameState.custom_prospect_id, int(p["overall"]), int(p["potential"])]
+	var before := [GameState.custom_prospect_id, int(Ovr.of(p)), int(p["potential"])]
 	GameState.start_season("ADE", GameDB.club_list("ADE"))
 	GameState.save_career()
 	GameState.load_career()
@@ -1121,7 +1229,7 @@ func _test_custom_prospect() -> void:
 		if str(d["id"]) == GameState.custom_prospect_id:
 			back = d
 	_check(GameState.custom_prospect_id == before[0] and not back.is_empty()
-			and int(back["overall"]) == before[1] and int(back["potential"]) == before[2],
+			and int(Ovr.of(back)) == before[1] and int(back["potential"]) == before[2],
 			"He and his roll survive a reload")
 	_check(GameState.add_custom_prospect(spec) != "", "No second prospect once the career has started")
 	GameState.reset()
@@ -1372,7 +1480,7 @@ func _test_real_lists_start() -> void:
 		if str(q["id"]) == str(vet["id"]):
 			same_vet = q
 	_check(not same_vet.is_empty() and is_equal_approx(float(same_vet.get("age", 0.0)), float(vet.get("age", 0.0)))
-			and int(same_vet["overall"]) == int(vet["overall"]),
+			and int(Ovr.of(same_vet)) == int(Ovr.of(vet)),
 			"Real players start 2027 as the data has them: nothing aged or developed twice")
 	GameState.reset()
 	_check(GameState.start_mode == "redraft" and not GameState.opening_draft, "A new career is a redraft unless chosen")
@@ -1445,73 +1553,45 @@ func _test_real_lists_after_draft() -> void:
 	GameState.replay_seed = 0
 
 
-func _test_copied_from_2012_on() -> void:
-	var pool: Dictionary = Prospects._copy_pool()
-	var years := {}
-	var rows := 0
-	for role in ["DEF", "MID", "FWD", "RUCK"]:
-		var got: Array = (pool.get(role, {}) as Dictionary).get("rows", [])
-		_check(got.size() > 300, "The copy pool has %s player-seasons (%d)" % [role, got.size()])
-		rows += got.size()
-		for r in got:
-			years[int(r["_year"])] = true
-	var ys := years.keys()
-	ys.sort()
-	_check(ys.size() == 15 and int(ys[0]) == 2012 and int(ys[-1]) == 2026,
-			"Every season 2012-2026 is in the copy pool and none earlier (%s, %d rows)" % [str(ys), rows])
-	# The pick: one of the 10 player-seasons of his role nearest his level by overall.
-	var pick_rng := RandomNumberGenerator.new()
-	pick_rng.seed = 41
-	var near := Prospects.copy_candidates("MID", 75.0, pick_rng)
-	var far := 0.0
-	for r in near:
-		far = maxf(far, absf(float(r["_ovr"]) - 75.0))
-	var beyond := 0
-	for r in (pool["MID"] as Dictionary)["rows"]:
-		if absf(float(r["_ovr"]) - 75.0) < far:
-			beyond += 1
-	_check(near.size() == Prospects.SHAPE_NEAREST and beyond <= Prospects.SHAPE_NEAREST,
-			"He is copied from the %d midfielders nearest a 75 (furthest %.0f away)" % [near.size(), far])
-	# Dozens of player-seasons share a whole-number overall: the draw reaches every season,
-	# not only the first in the file.
-	var drawn := {}
-	for n in 200:
-		var r := RandomNumberGenerator.new()
-		r.seed = 1000 + n
-		for c in Prospects.copy_candidates("MID", 75.3, r):
-			drawn[int(c["_year"])] = true
-	_check(drawn.size() >= 12, "Copies of a 75 come from %d of the 15 seasons" % drawn.size())
-	# The fingerprint, on a draft-class player: every skill within 5% of the copied one's.
-	var p := {"id": "copytest", "draft_year": 2030, "generated": true}
-	var seed_rng := RandomNumberGenerator.new()
-	seed_rng.seed = 41
-	var shape: Dictionary = Prospects._copy_for("MID", seed_rng, 75.0, p)
-	var d: Dictionary = near[pick_rng.randi_range(0, near.size() - 1)]
-	var within := true
-	var moved := 0
-	for key in Prospects.ATTR_KEYS:
-		var real := float(d[key])
-		var mine := float(shape[key]) + float(d["_ovr"])
-		if mine < clampf(real * 0.95, 1.0, 99.0) - 0.001 or mine > clampf(real * 1.05, 1.0, 99.0) + 0.001:
-			within = false
-		if absf(mine - real) > 0.001:
-			moved += 1
-	_check(within and moved >= Prospects.ATTR_KEYS.size() - 1,
-			"Each copied skill is moved by its own roll within 5%% (%d of %d moved)" % [moved, Prospects.ATTR_KEYS.size()])
-	var again_rng := RandomNumberGenerator.new()
-	again_rng.seed = 41
-	_check(Prospects._copy_for("MID", again_rng, 75.0, p) == shape, "The same player is copied with the same fingerprint every time")
-	var other := p.duplicate()
-	other["id"] = "copytest2"
-	var other_rng := RandomNumberGenerator.new()
-	other_rng.seed = 41
-	_check(Prospects._copy_for("MID", other_rng, 75.0, other) != shape,
-			"Two players copied from the same real player carry different fingerprints")
+## RATING_REBUILD §4: a generated draftee is one of his line's types, each drawn as often
+## as real first-season players of it were, and a class's level falls with the pick.
+func _test_draftee_types() -> void:
+	var seen := {}
+	var by_band := {"1-5": [], "6-20": [], "21-40": [], "41+": []}
+	var lines_ok := true
+	var inside := true
+	var n := 0
+	for y in range(2031, 2041):
+		for p in Prospects.generate_class(y, 777):
+			n += 1
+			var t := Prospects.type_named(str(p.get("type", "")))
+			if t.is_empty() or str(t["line"]) != str(p["role"]):
+				lines_ok = false
+			elif not p.has("attr_bias") and not _in_type_envelope(p, t):
+				inside = false
+			seen[str(p.get("type", ""))] = int(seen.get(str(p.get("type", "")), 0)) + 1
+			var r := int(p["draft_rank"])
+			by_band["1-5" if r <= 5 else "6-20" if r <= 20 else "21-40" if r <= 40 else "41+"].append(int(Ovr.of(p)))
+	_check(n > 400, "Ten classes are drawn (%d prospects)" % n)
+	_check(lines_ok, "Every generated prospect is one of his line's types")
+	_check(inside, "Every prospect but an international sits around his type's baseline at his pick")
+	_check(seen.size() == Prospects.types().size(), "Every type turns up across ten classes (%s)" % str(seen))
+	var med := []
+	for b in ["1-5", "6-20", "21-40", "41+"]:
+		var v: Array = by_band[b]
+		v.sort()
+		med.append(int(v[v.size() / 2]) if not v.is_empty() else 0)
+	_check(med[0] > med[1] and med[1] > med[2] and med[2] > med[3],
+			"Talent runs in rank order: median OVR by picks 1-5, 6-20, 21-40, 41+ is %s" % str(med))
+	# Seeded by the prospect alone: the same class twice is the same class.
+	var one: Array = Prospects.generate_class(2031, 777)
+	var two: Array = Prospects.generate_class(2031, 777)
+	_check(one.size() == two.size() and one[0]["attr"] == two[0]["attr"] and str(one[-1]["type"]) == str(two[-1]["type"]),
+			"The same class is drawn the same way twice")
 
 
 ## Row 104 (4.Q10): generated players carry the special traits at the
-## real players' rates. Eight seeded classes (career seed 9000 + year: not the seeds
-## GEN_NUDGE was sized on, so this is out of sample), each grown five
+## real players' rates. Eight seeded classes (career seed 9000 + year), each grown five
 ## seasons by the development rules; a trait's "matched" share weights the grown players
 ## in each 4-point OVR band by the real 2026 players' mix (the in-career league is
 ## re-anchored to the 2026 spread every rollover). tools/audit/gen_traits_impl runs the
@@ -1519,13 +1599,7 @@ func _test_copied_from_2012_on() -> void:
 func _test_gen_traits_rates() -> void:
 	# The 2026 lists as the game loads them: the hand-set OVR rows on (run_tests.sh plays
 	# the suites without them), and none of the earlier tests' career changes.
-	var skipped: bool = GameDB.skip_ovr_overrides
-	GameDB.skip_ovr_overrides = false
-	# Twice: a list player's projection borrows shapes from the lists loaded before it,
-	# so the second load is the one every later load repeats.
-	for i in 2:
-		Prospects.forget_cache()
-		GameDB.reload()
+	GameDB.reload()
 	# Reference: real players with senior games (a list player projected from no senior
 	# game got his temperament from the old formula, never a hothead).
 	var real := []
@@ -1543,11 +1617,10 @@ func _test_gen_traits_rates() -> void:
 	var real_hot := 0
 	var real_bull := 0
 	for p in real:
-		var b := int(p["overall"]) / 4
+		var b := int(Ovr.of(p)) / 4
 		bands[b] = int(bands.get(b, 0)) + 1
 		real_hot += 1 if Traits.of(p).has("hothead") else 0
 		real_bull += 1 if Traits.of(p).has("bull") else 0
-	Prospects.forget_cache()
 	var drafted := []
 	var grown := []
 	for y in range(2027, 2035):
@@ -1563,7 +1636,6 @@ func _test_gen_traits_rates() -> void:
 	var on := {"n": drafted.size(), "hot": 100.0 * hot / grown.size(),
 			"bull": _matched_share(grown, "bull", bands),
 			"disc": [drafted[0]["attr"]["discipline"], drafted[1]["attr"]["discipline"]]}
-	Prospects.forget_cache()
 	var rh := 100.0 * real_hot / real.size()
 	var rb := 100.0 * real_bull / real.size()
 	_check(on["n"] > 300, "Eight classes are drawn (%d players)" % on["n"])
@@ -1572,23 +1644,19 @@ func _test_gen_traits_rates() -> void:
 	_check(BalanceGate.held(absf(on["bull"] - rb) <= 1.5, "generated contested bull rate vs real"),
 			"Contested bulls at a real player's level match the real rate: %.1f%% against %.1f%%" % [on["bull"], rb])
 	# The same seeds give the same prospects: the temperament draw is seeded per player.
-	Prospects.forget_cache()
 	var again: Array = Prospects.generate_class(2027, 9000 + 2027)
 	# Only generated players take the real rates: real-list players projected from no
 	# senior game load the same every time, and a coach's Forge prospect is his own.
 	var forge := {"first": "Gabe", "last": "Tester", "role": "MID", "height_cm": 184,
 			"style": "inside", "strengths": ["contested"], "weaknesses": ["running"]}
 	var forge_a: Dictionary = Prospects.make_custom(forge, 2027, 777)
-	Prospects.forget_cache()
 	GameDB.reload()
 	var same_listed := listed_attr.size() > 0
 	for p in GameDB.list_additions:
 		if not listed_attr.has(str(p.get("id", ""))) or p["attr"] != listed_attr[str(p["id"])] \
 				or (bool(p.get("generated", false)) and not bool(p.get("user_created", false))):
 			same_listed = false
-	Prospects.forget_cache()
 	var forge_b: Dictionary = Prospects.make_custom(forge, 2027, 777)
-	GameDB.skip_ovr_overrides = skipped
 	GameDB.reload()
 	_check(same_listed, "The real-list players projected from no senior game are not generated and load unchanged (%d)" % listed_attr.size())
 	_check(bool(forge_a.get("user_created", false)) and forge_a["attr"] == forge_b["attr"],
@@ -1602,7 +1670,7 @@ func _matched_share(grown: Array, t: String, bands: Dictionary) -> float:
 	var have := {}
 	var tot := {}
 	for q in grown:
-		var b := int(q["overall"]) / 4
+		var b := int(Ovr.of(q)) / 4
 		tot[b] = int(tot.get(b, 0)) + 1
 		if Traits.of(q).has(t):
 			have[b] = int(have.get(b, 0)) + 1

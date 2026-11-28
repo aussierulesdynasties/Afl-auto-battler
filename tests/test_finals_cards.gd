@@ -1,4 +1,5 @@
 extends RefCounted
+const Ovr := preload("res://tests/ovr.gd")
 ## The finals and Grand Final cards (open requirements 35 and 36, slice 1): each
 ## trigger is true when it fires, each choice does what its lines say, nothing
 ## comes up outside its week, and the same save gives the same September. Part of
@@ -198,7 +199,7 @@ func _test_facts() -> void:
 	for i in range(mine.size()):
 		var p: Dictionary = mine[i]
 		p["age"] = 31.0 + float(i % 8)
-		p["overall"] = 30 + (i * 7) % 50
+		Ovr.to(p, 30 + (i * 7) % 50)
 	var predicted := {}
 	for p in mine:
 		predicted[str(p["id"])] = bool(_fact(p)["last_season"])

@@ -54,12 +54,10 @@ ALLOW = {
 ## lines they replaced.
 STATS_PASS = {
     "scripts/ui/StatGuide.gd": [[
-        "Wins the clearance and holds the ball in a tackle. Our inside mids win or lose the stoppages.",
+        "Wins the clearance and holds the ball in a tackle or the wet. Our inside mids win or lose the stoppages.",
         "Wins the hit-outs at the bounce and stoppages. Our first ruck matters.",
-        "Runs the ball forward. Good carriers through the middle feed our attack.",
-        "Gets the shots inside 50 and kicks the goals. Most of our scoring comes from it.",
+        "Kicks straight. Turns his shots into goals instead of behinds.",
         "Tackles and hurries the opposition. Most of our defence comes from it.",
-        "Match-winning class. Lifts our side at the stoppages. It weighs heavily in his overall.",
         "Where we expect him to peak. It is not a limit. His growth slows as he nears it.",
         "Contest is our stoppage work. Attack is our forwards and carry. Defence is our pressure and intercept.",
         "A standout stat earns a trait. The right mix of them on the ground switches on a synergy. The Team screen shows ours, and when one is a player short",
@@ -80,7 +78,6 @@ STATS_PASS = {
     ]],
     "scripts/ui/OptionsSheet.gd": [[
         "Copies the build, the round, this screen and the last 20 lines of the match feed. Paste it into a message. Nothing is sent from the game.",
-        "Changes the screens only. Club colours and the ground stay as they are.",
         "A light buzz when you press a button. A firmer one when a result lands.",
         "Sim the week and Sim to Round 1 play our match without you. With this on, they ask first.",
         "Fullscreen fills the screen with no border. Window opens maximised. Alt+Enter switches.",
@@ -88,7 +85,6 @@ STATS_PASS = {
         "Draws 30 frames a second instead of 60. Uses less battery. Matches and scenes play the same, a little less smoothly.",
         "Off skips the scenes. Every call and result stays the same.",
         "Prototypes for judging on a phone. The match plays the same either way.",
-        "For playtesting. The centre ball-up call comes at the first centre ball-up of every last quarter you coach, whatever the score.",
         "Back up writes your career to a file you keep. Use it to move devices or keep the career safe. Loading a backup or an earlier save keeps the career it replaces in the list below. You can go back to it.",
     ], [
         "Copies the build, your round, this screen and the last twenty lines of the match feed, ready to paste into a message. Nothing is sent from the game.",

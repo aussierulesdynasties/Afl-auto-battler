@@ -3,7 +3,8 @@ name: Web build
 # Builds the browser version for itch.io: the threaded Web export, so a week's
 # matches run on threads while the loading screen keeps playing (director,
 # 2026-11-10). It needs itch's "SharedArrayBuffer support" ticked.
-# Start it by hand against any branch, or it runs on every push to main:
+# Start it by hand against any branch; it also builds main every night (director 2026-11-26:
+# "web build nightly"; on every push to main, 18 of 35 builds were cancelled by the next merge):
 #
 #   gh workflow run web.yml --ref <branch>
 #   gh run download <run-id> -n aussie-rules-dynasties-web
@@ -12,13 +13,8 @@ name: Web build
 # exactly what itch's "HTML" project type wants (docs/ITCH_UPLOAD.md).
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    # A docs-only merge builds nothing new, and starting a run here would
-    # cancel the build of the last code merge (concurrency below).
-    paths-ignore:
-      - "docs/**"
-      - "**/*.md"
+  schedule:
+    - cron: "30 15 * * *"   # 02:30 Melbourne (AEDT), before the long suites at 03:00
 
 permissions:
   contents: read
@@ -36,6 +32,12 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+        with:
+          filter: blob:none   # fetch only the files checked out
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |   # .claude/review (5 GB of review boards) is never read by CI
+            /*
+            !/.claude/review/
 
       - name: Epic/MetaHuman files (private repo, docs/EPIC_ASSETS.md)
         uses: ./.github/actions/epic-assets

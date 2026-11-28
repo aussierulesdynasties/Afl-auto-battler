@@ -24,6 +24,7 @@ extends RefCounted
 ## Every off-season also records the trade market (see _market): every trade
 ## and what changed hands, each club's tradeable picks, and whether the
 ## National Draft gave each pick to the club that owns it.
+const Ovr := preload("res://tests/ovr.gd")
 
 var lb = load("res://tools/balance/league_balance.gd").new()
 ## Every player traded so far this career: each season start records where
@@ -60,7 +61,7 @@ func run_career(draft_seed: int, policy: String, seasons: int, top_n := 5, coach
 		for id in _traded:
 			var q: Dictionary = gs._find_player(str(id))
 			if not q.is_empty():
-				seen[id] = int(q["overall"])
+				seen[id] = int(Ovr.of(q))
 		snap["traded"] = seen
 		var coached := 0
 		while not gs.season.is_season_over():
@@ -82,7 +83,7 @@ func run_career(draft_seed: int, policy: String, seasons: int, top_n := 5, coach
 			end_morale[c] = morale22(Squad.new(str(c), list, true, str(c)))
 			var g := 0.0
 			for p in list:
-				g += float(p["overall"]) - float(p.get("season_start_ov", p["overall"]))
+				g += float(Ovr.of(p)) - float(p.get("season_start_ov", Ovr.of(p)))
 			gain[c] = g / float(maxi(1, list.size()))
 		snap["morale_end"] = end_morale
 		snap["train_gain"] = gain
@@ -250,14 +251,14 @@ func _trade_up(gs, user: String, mgmt: Dictionary) -> void:
 				var gave := []
 				for id in pkg:
 					var q: Dictionary = gs.list_player(str(id))
-					gave.append(str(id) if q.is_empty() else "%d/%d age %d" % [int(q["overall"]),
+					gave.append(str(id) if q.is_empty() else "%d/%d age %d" % [int(Ovr.of(q)),
 							int(q.get("potential", 0)), int(float(q.get("age", 0.0)))])
 				if bool(gs.make_trade(str(club), pkg, [tid]).get("ok", false)):
 					mgmt["trades"] += 1
-					mgmt["trade_in"].append(int(target["overall"]))
+					mgmt["trade_in"].append(int(Ovr.of(target)))
 					mgmt["trade_out"] += pkg.size()
 					mgmt["trade_log"] = mgmt.get("trade_log", []) + ["%s: %d/%d age %d for %s (%s)" % [str(club),
-							int(target["overall"]), int(target.get("potential", 0)), int(float(target.get("age", 0.0))),
+							int(Ovr.of(target)), int(target.get("potential", 0)), int(float(target.get("age", 0.0))),
 							", ".join(gave), gs.club_phase(str(club))]]
 				break
 			if step == 2:
@@ -287,7 +288,7 @@ func _trade_up(gs, user: String, mgmt: Dictionary) -> void:
 
 ## A kid still growing: 22 or under with six points or more to his POT.
 static func _kid(q: Dictionary) -> bool:
-	return float(q.get("age", 25.0)) <= 22.0 and int(q.get("potential", 0)) - int(q.get("overall", 0)) >= 6
+	return float(q.get("age", 25.0)) <= 22.0 and int(q.get("potential", 0)) - int(Ovr.of(q, 0)) >= 6
 
 
 ## A player a club can spare: outside next season's best 26, and not a kid.
@@ -370,9 +371,9 @@ func _snapshot(gs, user: String) -> Dictionary:
 		var n := 0
 		for p in sq.ground + sq.bench:
 			age22 += float(p.get("age", 25.0))
-			ovr22 += float(p["overall"])
+			ovr22 += float(Ovr.of(p))
 			n += 1
-		var ovrs := list.map(func(p): return float(p["overall"]))
+		var ovrs := list.map(func(p): return float(Ovr.of(p)))
 		ovrs.sort()
 		ovrs.reverse()
 		clubs[c] = {
@@ -417,7 +418,7 @@ static func morale22(sq: Squad) -> float:
 ## game's own development bands (Prospects.age_player: mean of each age band)
 ## and growth toward his POT, never past it. Public information only.
 static func expected_overall(p: Dictionary, years: int) -> float:
-	var ov := float(p["overall"])
+	var ov := float(Ovr.of(p))
 	var pot := maxf(ov, float(p.get("potential", ov)))
 	var age := float(p.get("age", 25.0))
 	for y in range(years):
@@ -527,7 +528,7 @@ func _asset(gs, id: String, from: String, best22: Dictionary, prospects: Diction
 	if p.is_empty():
 		return {"pick": false, "missing": true}
 	_traded[id] = true
-	return {"pick": false, "id": id, "ovr": int(p["overall"]), "pot": int(p.get("potential", 0)),
+	return {"pick": false, "id": id, "ovr": int(Ovr.of(p)), "pot": int(p.get("potential", 0)),
 			"age": snappedf(float(p.get("age", 0.0)), 0.1), "starter": (best22.get(from, []) as Array).has(id),
 			"value": snappedf(float(TradeValue.value(p, {"phase": "building"})["total"]), 0.01)}
 
@@ -570,14 +571,14 @@ func _exploit(gs, user: String, mgmt: Dictionary) -> void:
 			continue
 		var targets: Array = (gs.season.lists.get(club, []) as Array).filter(func(q):
 			return float(q.get("age", 30.0)) <= 24.0 \
-					and (int(q["overall"]) >= 80 or int(q.get("potential", 0)) >= 86))
+					and (int(Ovr.of(q)) >= 80 or int(q.get("potential", 0)) >= 86))
 		targets.sort_custom(func(a, b): return int(a.get("potential", 0)) > int(b.get("potential", 0)))
 		for target in targets.slice(0, 2):
 			var line26 := nth_value(gs.my_list, 25)
 			var junk: Array = gs.my_list.filter(func(q):
 				return _spare(q, line26) or float(q.get("age", 0.0)) >= 30.0)
 			# The best-looking junk first: the most a bundle can show.
-			junk.sort_custom(func(a, b): return int(a["overall"]) > int(b["overall"]))
+			junk.sort_custom(func(a, b): return int(Ovr.of(a)) > int(Ovr.of(b)))
 			var late: Array = gs.club_picks(user).filter(func(pk): return int(pk["round"]) >= 2)
 			var tid := str(target["id"])
 			var done := false
@@ -592,10 +593,10 @@ func _exploit(gs, user: String, mgmt: Dictionary) -> void:
 						continue
 					if bool(gs.make_trade(str(club), t, [tid]).get("ok", false)):
 						mgmt["trades"] += 1
-						mgmt["trade_in"].append(int(target["overall"]))
+						mgmt["trade_in"].append(int(Ovr.of(target)))
 						mgmt["trade_out"] += t.size()
 						mgmt["trade_log"] = mgmt.get("trade_log", []) + ["%s: %d/%d age %d for %d assets (%s)" % [
-								str(club), int(target["overall"]), int(target.get("potential", 0)),
+								str(club), int(Ovr.of(target)), int(target.get("potential", 0)),
 								int(float(target.get("age", 0.0))), t.size(), gs.club_phase(str(club))]]
 						done = true
 					break

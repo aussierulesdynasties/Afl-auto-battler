@@ -1,4 +1,5 @@
 extends RefCounted
+const Ovr := preload("res://tests/ovr.gd")
 ## Smoke checks for the competitive-balance harness (tools/balance). It must
 ## stay reproducible and keep exercising the real game code - this suite does
 ## not assert any balance target. The full measurement is a manual run: see
@@ -158,14 +159,14 @@ func _test_sensitivity(lb) -> void:
 			margin[10] / n[10], margin[0] / n[0]])
 	var original := 0.0
 	for p in lists[subject]:
-		original += float(p["overall"])
+		original += float(Ovr.of(p))
 	var shifted: Array = lb.shifted_list(lists[subject], 10)
 	var after := 0.0
 	for p in shifted:
-		after += float(p["overall"])
+		after += float(Ovr.of(p))
 	var still := 0.0
 	for p in lists[subject]:
-		still += float(p["overall"])
+		still += float(Ovr.of(p))
 	_check(after / shifted.size() - original / shifted.size() > 8.0,
 			"The shift raises the list's ratings through the game's own refit")
 	_check(is_equal_approx(still, original), "Shifting works on copies, not the league's players")

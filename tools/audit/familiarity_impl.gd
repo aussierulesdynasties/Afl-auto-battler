@@ -14,6 +14,7 @@ extends RefCounted
 ##
 ## Args after the impl name: seeds (default 301), seasons (default 6), auto|active.
 ## godot --headless --path . --script tools/audit/run_audit.gd -- familiarity_impl 301,302 6 active
+const Ovr := preload("res://tests/ovr.gd")
 
 var dyn = load("res://tools/balance/dynasty.gd").new()
 var gs: Node
@@ -163,16 +164,16 @@ func _trade_bot(most: int) -> void:
 		if str(code) == user or made >= most:
 			continue
 		var theirs: Array = (gs.season.lists[code] as Array).duplicate()
-		theirs.sort_custom(func(a, b): return int(a["overall"]) > int(b["overall"]))
+		theirs.sort_custom(func(a, b): return int(Ovr.of(a)) > int(Ovr.of(b)))
 		var mine: Array = gs.my_list.duplicate()
-		mine.sort_custom(func(a, b): return int(a["overall"]) > int(b["overall"]))
+		mine.sort_custom(func(a, b): return int(Ovr.of(a)) > int(Ovr.of(b)))
 		var done := false
 		# Their best 22 for a man of ours a little under him: what a rival would take.
 		for t in theirs.slice(0, 22):
 			if done or float(t.get("age", 25.0)) > 30.0:
 				continue
 			for i in range(5, mini(30, mine.size())):
-				if int(t["overall"]) <= int(mine[i]["overall"]):
+				if int(Ovr.of(t)) <= int(Ovr.of(mine[i])):
 					continue
 				var v: Dictionary = gs.evaluate_trade(str(code), [str(mine[i]["id"])], [str(t["id"])])
 				if bool(v.get("ok", false)) and bool(gs.make_trade(str(code), [str(mine[i]["id"])], [str(t["id"])]).get("ok", false)):
@@ -184,7 +185,7 @@ func _trade_bot(most: int) -> void:
 
 func _fa_bot(most: int) -> void:
 	var fas: Array = gs.free_agents.duplicate()
-	fas.sort_custom(func(a, b): return int(a["overall"]) > int(b["overall"]))
+	fas.sort_custom(func(a, b): return int(Ovr.of(a)) > int(Ovr.of(b)))
 	var bids := 0
 	for p in fas.slice(0, 12):
 		if bids >= most:

@@ -1,0 +1,217 @@
+type,positions,attribute,p10,p90,n
+Mobile ruck,Ruck,speed,34.0,44.6,13
+Mobile ruck,Ruck,endurance,35.4,61.0,13
+Mobile ruck,Ruck,strength,33.0,69.2,13
+Mobile ruck,Ruck,work_rate,33.4,50.2,13
+Mobile ruck,Ruck,kicking,2.4,59.6,13
+Mobile ruck,Ruck,handballing,39.4,63.6,13
+Mobile ruck,Ruck,marking,23.2,41.2,13
+Mobile ruck,Ruck,contested_marking,26.0,52.0,13
+Mobile ruck,Ruck,one_on_one,31.0,59.8,13
+Mobile ruck,Ruck,contested_ball,32.2,57.6,13
+Mobile ruck,Ruck,goalkicking,41.4,79.6,13
+Mobile ruck,Ruck,ruck,18.8,66.8,13
+Mobile ruck,Ruck,vision,36.4,43.8,13
+Mobile ruck,Ruck,reading_play,17.2,30.0,13
+Mobile ruck,Ruck,pressure,41.0,57.4,13
+Mobile ruck,Ruck,forward_craft,13.4,51.8,13
+Mobile ruck,Ruck,discipline,15.6,52.4,13
+Mobile ruck,Ruck,durability,5.8,84.0,13
+Tap ruck,Ruck,speed,34.0,47.0,16
+Tap ruck,Ruck,endurance,33.0,61.0,16
+Tap ruck,Ruck,strength,26.5,68.5,16
+Tap ruck,Ruck,work_rate,34.0,48.0,16
+Tap ruck,Ruck,kicking,7.5,60.0,16
+Tap ruck,Ruck,handballing,28.0,57.5,16
+Tap ruck,Ruck,marking,23.5,45.0,16
+Tap ruck,Ruck,contested_marking,31.0,61.0,16
+Tap ruck,Ruck,one_on_one,27.5,58.5,16
+Tap ruck,Ruck,contested_ball,29.5,56.0,16
+Tap ruck,Ruck,goalkicking,26.0,80.5,16
+Tap ruck,Ruck,ruck,13.0,67.0,16
+Tap ruck,Ruck,vision,35.0,44.0,16
+Tap ruck,Ruck,reading_play,15.5,30.0,16
+Tap ruck,Ruck,pressure,37.0,51.5,16
+Tap ruck,Ruck,forward_craft,12.5,52.5,16
+Tap ruck,Ruck,discipline,16.0,57.0,16
+Tap ruck,Ruck,durability,7.0,42.0,16
+Inside midfielder,Midfielder|Mid-Forward,speed,60.0,66.8,73
+Inside midfielder,Midfielder|Mid-Forward,endurance,6.2,53.8,73
+Inside midfielder,Midfielder|Mid-Forward,strength,36.2,69.6,73
+Inside midfielder,Midfielder|Mid-Forward,work_rate,11.0,61.2,73
+Inside midfielder,Midfielder|Mid-Forward,kicking,12.4,52.0,73
+Inside midfielder,Midfielder|Mid-Forward,handballing,24.0,68.8,73
+Inside midfielder,Midfielder|Mid-Forward,marking,35.2,62.0,73
+Inside midfielder,Midfielder|Mid-Forward,contested_marking,12.0,39.8,73
+Inside midfielder,Midfielder|Mid-Forward,one_on_one,8.0,33.8,73
+Inside midfielder,Midfielder|Mid-Forward,contested_ball,33.2,61.8,73
+Inside midfielder,Midfielder|Mid-Forward,goalkicking,14.2,68.8,73
+Inside midfielder,Midfielder|Mid-Forward,ruck,4.0,14.0,73
+Inside midfielder,Midfielder|Mid-Forward,vision,38.0,56.0,73
+Inside midfielder,Midfielder|Mid-Forward,reading_play,22.2,45.8,73
+Inside midfielder,Midfielder|Mid-Forward,pressure,52.4,80.6,73
+Inside midfielder,Midfielder|Mid-Forward,forward_craft,10.2,27.8,73
+Inside midfielder,Midfielder|Mid-Forward,discipline,33.4,66.8,73
+Inside midfielder,Midfielder|Mid-Forward,durability,19.4,99.0,73
+Wing,Midfielder|Mid-Forward,speed,60.0,67.0,87
+Wing,Midfielder|Mid-Forward,endurance,5.2,50.0,87
+Wing,Midfielder|Mid-Forward,strength,31.6,65.8,87
+Wing,Midfielder|Mid-Forward,work_rate,10.6,56.8,87
+Wing,Midfielder|Mid-Forward,kicking,17.2,60.4,87
+Wing,Midfielder|Mid-Forward,handballing,24.0,72.0,87
+Wing,Midfielder|Mid-Forward,marking,36.0,62.4,87
+Wing,Midfielder|Mid-Forward,contested_marking,10.0,40.0,87
+Wing,Midfielder|Mid-Forward,one_on_one,8.0,39.0,87
+Wing,Midfielder|Mid-Forward,contested_ball,29.2,59.4,87
+Wing,Midfielder|Mid-Forward,goalkicking,12.6,68.4,87
+Wing,Midfielder|Mid-Forward,ruck,3.0,13.4,87
+Wing,Midfielder|Mid-Forward,vision,32.6,56.0,87
+Wing,Midfielder|Mid-Forward,reading_play,21.0,49.4,87
+Wing,Midfielder|Mid-Forward,pressure,44.0,79.0,87
+Wing,Midfielder|Mid-Forward,forward_craft,7.2,30.0,87
+Wing,Midfielder|Mid-Forward,discipline,35.0,68.0,87
+Wing,Midfielder|Mid-Forward,durability,14.0,96.6,87
+Defensive midfielder,Midfielder|Mid-Forward,speed,60.0,66.4,87
+Defensive midfielder,Midfielder|Mid-Forward,endurance,7.0,52.4,87
+Defensive midfielder,Midfielder|Mid-Forward,strength,31.0,63.8,87
+Defensive midfielder,Midfielder|Mid-Forward,work_rate,11.0,51.2,87
+Defensive midfielder,Midfielder|Mid-Forward,kicking,14.0,57.4,87
+Defensive midfielder,Midfielder|Mid-Forward,handballing,24.0,69.0,87
+Defensive midfielder,Midfielder|Mid-Forward,marking,35.6,64.0,87
+Defensive midfielder,Midfielder|Mid-Forward,contested_marking,11.2,40.4,87
+Defensive midfielder,Midfielder|Mid-Forward,one_on_one,8.0,37.2,87
+Defensive midfielder,Midfielder|Mid-Forward,contested_ball,31.0,60.4,87
+Defensive midfielder,Midfielder|Mid-Forward,goalkicking,13.6,69.4,87
+Defensive midfielder,Midfielder|Mid-Forward,ruck,3.0,13.4,87
+Defensive midfielder,Midfielder|Mid-Forward,vision,36.0,56.0,87
+Defensive midfielder,Midfielder|Mid-Forward,reading_play,21.0,46.8,87
+Defensive midfielder,Midfielder|Mid-Forward,pressure,46.2,78.4,87
+Defensive midfielder,Midfielder|Mid-Forward,forward_craft,10.0,32.4,87
+Defensive midfielder,Midfielder|Mid-Forward,discipline,35.0,68.0,87
+Defensive midfielder,Midfielder|Mid-Forward,durability,13.0,95.0,87
+Key defender,Key Defender|Gen. Defender,speed,47.0,72.6,85
+Key defender,Key Defender|Gen. Defender,endurance,14.0,68.8,85
+Key defender,Key Defender|Gen. Defender,strength,22.4,52.6,85
+Key defender,Key Defender|Gen. Defender,work_rate,5.4,51.6,85
+Key defender,Key Defender|Gen. Defender,kicking,35.0,80.6,85
+Key defender,Key Defender|Gen. Defender,handballing,32.8,84.6,85
+Key defender,Key Defender|Gen. Defender,marking,41.0,68.0,85
+Key defender,Key Defender|Gen. Defender,contested_marking,13.0,50.4,85
+Key defender,Key Defender|Gen. Defender,one_on_one,20.4,62.6,85
+Key defender,Key Defender|Gen. Defender,contested_ball,20.0,34.0,85
+Key defender,Key Defender|Gen. Defender,goalkicking,14.8,66.6,85
+Key defender,Key Defender|Gen. Defender,ruck,2.0,6.6,85
+Key defender,Key Defender|Gen. Defender,vision,20.4,43.0,85
+Key defender,Key Defender|Gen. Defender,reading_play,22.4,70.2,85
+Key defender,Key Defender|Gen. Defender,pressure,33.0,52.0,85
+Key defender,Key Defender|Gen. Defender,forward_craft,4.0,31.2,85
+Key defender,Key Defender|Gen. Defender,discipline,48.4,68.6,85
+Key defender,Key Defender|Gen. Defender,durability,5.0,90.0,85
+Interceptor,Key Defender|Gen. Defender,speed,47.0,76.4,74
+Interceptor,Key Defender|Gen. Defender,endurance,10.3,60.7,74
+Interceptor,Key Defender|Gen. Defender,strength,22.0,52.0,74
+Interceptor,Key Defender|Gen. Defender,work_rate,3.9,52.4,74
+Interceptor,Key Defender|Gen. Defender,kicking,29.3,78.1,74
+Interceptor,Key Defender|Gen. Defender,handballing,24.9,79.8,74
+Interceptor,Key Defender|Gen. Defender,marking,41.3,67.7,74
+Interceptor,Key Defender|Gen. Defender,contested_marking,12.3,46.7,74
+Interceptor,Key Defender|Gen. Defender,one_on_one,12.3,62.2,74
+Interceptor,Key Defender|Gen. Defender,contested_ball,21.0,37.7,74
+Interceptor,Key Defender|Gen. Defender,goalkicking,11.2,66.7,74
+Interceptor,Key Defender|Gen. Defender,ruck,2.0,8.7,74
+Interceptor,Key Defender|Gen. Defender,vision,20.6,47.7,74
+Interceptor,Key Defender|Gen. Defender,reading_play,21.3,69.0,74
+Interceptor,Key Defender|Gen. Defender,pressure,33.0,61.0,74
+Interceptor,Key Defender|Gen. Defender,forward_craft,3.3,30.0,74
+Interceptor,Key Defender|Gen. Defender,discipline,50.3,68.0,74
+Interceptor,Key Defender|Gen. Defender,durability,10.6,93.8,74
+Small defender,Key Defender|Gen. Defender,speed,47.0,76.4,84
+Small defender,Key Defender|Gen. Defender,endurance,13.3,68.0,84
+Small defender,Key Defender|Gen. Defender,strength,25.3,52.7,84
+Small defender,Key Defender|Gen. Defender,work_rate,10.0,56.7,84
+Small defender,Key Defender|Gen. Defender,kicking,30.3,79.7,84
+Small defender,Key Defender|Gen. Defender,handballing,27.9,84.1,84
+Small defender,Key Defender|Gen. Defender,marking,38.9,68.7,84
+Small defender,Key Defender|Gen. Defender,contested_marking,11.3,52.7,84
+Small defender,Key Defender|Gen. Defender,one_on_one,11.3,57.4,84
+Small defender,Key Defender|Gen. Defender,contested_ball,22.0,37.0,84
+Small defender,Key Defender|Gen. Defender,goalkicking,13.3,72.4,84
+Small defender,Key Defender|Gen. Defender,ruck,2.0,8.0,84
+Small defender,Key Defender|Gen. Defender,vision,19.3,47.0,84
+Small defender,Key Defender|Gen. Defender,reading_play,19.3,69.7,84
+Small defender,Key Defender|Gen. Defender,pressure,33.0,60.4,84
+Small defender,Key Defender|Gen. Defender,forward_craft,4.0,35.4,84
+Small defender,Key Defender|Gen. Defender,discipline,49.0,68.0,84
+Small defender,Key Defender|Gen. Defender,durability,10.0,90.0,84
+Key forward,Gen. Forward|Key Forward,speed,47.0,67.0,73
+Key forward,Gen. Forward|Key Forward,endurance,14.4,62.8,73
+Key forward,Gen. Forward|Key Forward,strength,20.4,57.0,73
+Key forward,Gen. Forward|Key Forward,work_rate,15.0,45.8,73
+Key forward,Gen. Forward|Key Forward,kicking,15.2,59.8,73
+Key forward,Gen. Forward|Key Forward,handballing,8.8,67.6,73
+Key forward,Gen. Forward|Key Forward,marking,35.0,60.8,73
+Key forward,Gen. Forward|Key Forward,contested_marking,14.4,58.6,73
+Key forward,Gen. Forward|Key Forward,one_on_one,8.0,44.0,73
+Key forward,Gen. Forward|Key Forward,contested_ball,23.0,41.8,73
+Key forward,Gen. Forward|Key Forward,goalkicking,25.6,84.0,73
+Key forward,Gen. Forward|Key Forward,ruck,2.0,10.0,73
+Key forward,Gen. Forward|Key Forward,vision,31.0,55.8,73
+Key forward,Gen. Forward|Key Forward,reading_play,13.0,35.8,73
+Key forward,Gen. Forward|Key Forward,pressure,34.4,62.8,73
+Key forward,Gen. Forward|Key Forward,forward_craft,18.2,55.0,73
+Key forward,Gen. Forward|Key Forward,discipline,41.8,69.8,73
+Key forward,Gen. Forward|Key Forward,durability,9.2,80.2,73
+Small forward,Gen. Forward|Key Forward,speed,47.0,75.0,73
+Small forward,Gen. Forward|Key Forward,endurance,14.0,61.8,73
+Small forward,Gen. Forward|Key Forward,strength,23.4,57.8,73
+Small forward,Gen. Forward|Key Forward,work_rate,14.0,53.8,73
+Small forward,Gen. Forward|Key Forward,kicking,16.4,54.0,73
+Small forward,Gen. Forward|Key Forward,handballing,12.4,59.0,73
+Small forward,Gen. Forward|Key Forward,marking,33.2,60.8,73
+Small forward,Gen. Forward|Key Forward,contested_marking,8.2,54.8,73
+Small forward,Gen. Forward|Key Forward,one_on_one,8.2,43.6,73
+Small forward,Gen. Forward|Key Forward,contested_ball,26.0,40.6,73
+Small forward,Gen. Forward|Key Forward,goalkicking,19.4,76.0,73
+Small forward,Gen. Forward|Key Forward,ruck,3.0,10.0,73
+Small forward,Gen. Forward|Key Forward,vision,37.2,56.8,73
+Small forward,Gen. Forward|Key Forward,reading_play,14.2,32.8,73
+Small forward,Gen. Forward|Key Forward,pressure,34.2,65.0,73
+Small forward,Gen. Forward|Key Forward,forward_craft,17.2,56.6,73
+Small forward,Gen. Forward|Key Forward,discipline,42.2,67.8,73
+Small forward,Gen. Forward|Key Forward,durability,9.2,90.0,73
+Pressure forward,Gen. Forward|Key Forward,speed,47.0,75.0,102
+Pressure forward,Gen. Forward|Key Forward,endurance,18.0,61.8,102
+Pressure forward,Gen. Forward|Key Forward,strength,24.1,57.9,102
+Pressure forward,Gen. Forward|Key Forward,work_rate,14.1,54.0,102
+Pressure forward,Gen. Forward|Key Forward,kicking,16.1,58.0,102
+Pressure forward,Gen. Forward|Key Forward,handballing,8.2,65.9,102
+Pressure forward,Gen. Forward|Key Forward,marking,32.0,57.0,102
+Pressure forward,Gen. Forward|Key Forward,contested_marking,12.0,54.9,102
+Pressure forward,Gen. Forward|Key Forward,one_on_one,8.0,36.9,102
+Pressure forward,Gen. Forward|Key Forward,contested_ball,25.0,39.0,102
+Pressure forward,Gen. Forward|Key Forward,goalkicking,23.0,78.8,102
+Pressure forward,Gen. Forward|Key Forward,ruck,2.0,10.0,102
+Pressure forward,Gen. Forward|Key Forward,vision,31.1,54.0,102
+Pressure forward,Gen. Forward|Key Forward,reading_play,13.1,31.9,102
+Pressure forward,Gen. Forward|Key Forward,pressure,36.1,67.9,102
+Pressure forward,Gen. Forward|Key Forward,forward_craft,16.1,56.8,102
+Pressure forward,Gen. Forward|Key Forward,discipline,37.1,67.0,102
+Pressure forward,Gen. Forward|Key Forward,durability,9.0,81.0,102
+High half forward,Gen. Forward|Key Forward|Mid-Forward,speed,47.0,75.0,89
+High half forward,Gen. Forward|Key Forward|Mid-Forward,endurance,12.0,60.2,89
+High half forward,Gen. Forward|Key Forward|Mid-Forward,strength,23.8,62.0,89
+High half forward,Gen. Forward|Key Forward|Mid-Forward,work_rate,11.8,54.4,89
+High half forward,Gen. Forward|Key Forward|Mid-Forward,kicking,16.8,57.2,89
+High half forward,Gen. Forward|Key Forward|Mid-Forward,handballing,11.6,65.2,89
+High half forward,Gen. Forward|Key Forward|Mid-Forward,marking,33.8,60.2,89
+High half forward,Gen. Forward|Key Forward|Mid-Forward,contested_marking,11.8,53.2,89
+High half forward,Gen. Forward|Key Forward|Mid-Forward,one_on_one,8.0,42.4,89
+High half forward,Gen. Forward|Key Forward|Mid-Forward,contested_ball,24.8,46.4,89
+High half forward,Gen. Forward|Key Forward|Mid-Forward,goalkicking,21.8,77.2,89
+High half forward,Gen. Forward|Key Forward|Mid-Forward,ruck,3.0,11.0,89
+High half forward,Gen. Forward|Key Forward|Mid-Forward,vision,33.6,58.6,89
+High half forward,Gen. Forward|Key Forward|Mid-Forward,reading_play,14.0,37.6,89
+High half forward,Gen. Forward|Key Forward|Mid-Forward,pressure,36.0,65.4,89
+High half forward,Gen. Forward|Key Forward|Mid-Forward,forward_craft,15.8,53.2,89
+High half forward,Gen. Forward|Key Forward|Mid-Forward,discipline,37.4,67.2,89
+High half forward,Gen. Forward|Key Forward|Mid-Forward,durability,14.0,91.0,89

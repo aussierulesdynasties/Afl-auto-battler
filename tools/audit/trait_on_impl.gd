@@ -197,7 +197,7 @@ func _prevalence(lists: Dictionary) -> void:
 							ok = true
 					if not ok:
 						continue
-				if int(Skills.value(attr, str(d["stat"]), 0.0)) < int(d["min"]):
+				if int(Attributes.value(attr, str(d["stat"]), 0.0)) < int(d["min"]):
 					continue
 				if bool(d.get("small", false)) and int(attr.get("contested_marking", 0)) >= Traits.SMALL_MAX_CM:
 					continue

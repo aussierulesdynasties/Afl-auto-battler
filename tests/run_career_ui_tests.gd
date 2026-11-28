@@ -1,4 +1,5 @@
 extends SceneTree
+const Ovr := preload("res://tests/ovr.gd")
 ## godot --headless --path . --script tests/run_career_ui_tests.gd
 ## Main menu save flow (Continue Career, New Career confirmation) and the
 ## Android back button / Escape routing, driven through the real scenes.
@@ -1860,27 +1861,19 @@ func _test_menu_and_career() -> void:
 			"The line is not shown again on a later visit")
 	# The Android save backup preset (user_data_backup/allow=true) is a static lint: tools/lint/boundaries.py.
 
-	# --- settings: appearance and player names apply at once -----------------
+	# --- settings: no appearance choice, no ball-up scene switch; names --------
+	# Light mode and the centre ball-up scene switch went (director, 2026-11-26).
 	current_scene.find_child("MenuSettings", true, false).emit_signal("pressed")
 	await _settle()
-	var light_setting: Button = current_scene.find_child("SettingsAppearance_light", true, false)
-	var dark_setting: Button = current_scene.find_child("SettingsAppearance_dark", true, false)
-	_check(light_setting != null and dark_setting != null, "Settings offers Dark and Light appearance")
-	if light_setting != null:
-		light_setting.emit_signal("pressed")
-		await _settle()
-	var kit = load("res://scripts/ui/UiKit.gd")
-	_check(_state.appearance() == "light" and kit.appearance() == "light"
-			and kit.BG.r > 0.8 and _router.current() == "main",
-			"Light appearance applies immediately and rebuilds the current screen")
-	current_scene.find_child("MenuSettings", true, false).emit_signal("pressed")
+	var opened := current_scene.find_child("Settings", true, false)
+	_check(opened != null and current_scene.find_child("SettingsTextSize_standard", true, false) != null
+			and current_scene.find_child("SettingsAppearance_light", true, false) == null
+			and current_scene.find_child("SettingsAppearance_dark", true, false) == null
+			and current_scene.find_child("SettingsBounceScene_on", true, false) == null,
+			"Settings offers no appearance choice and no centre ball-up scene switch")
+	if opened != null:
+		opened.queue_free()
 	await _settle()
-	dark_setting = current_scene.find_child("SettingsAppearance_dark", true, false)
-	if dark_setting != null:
-		dark_setting.emit_signal("pressed")
-		await _settle()
-	_check(_state.appearance() == "dark" and kit.appearance() == "dark"
-			and kit.BG.r < 0.2, "Dark appearance restores the original palette")
 	current_scene.find_child("MenuSettings", true, false).emit_signal("pressed")
 	await _settle()
 	_check(current_scene.find_child("SettingsNames_real", true, false) == null
@@ -3736,7 +3729,7 @@ func _test_list_problem_and_ask_around() -> void:
 	var why_side: String = await Tap.tap(scene.find_child("TradeSide_mine", true, false))
 	await _settle()
 	var side: Array = _state.my_list.duplicate()
-	side.sort_custom(func(a, b): return int(a["overall"]) > int(b["overall"]))
+	side.sort_custom(func(a, b): return int(Ovr.of(a)) > int(Ovr.of(b)))
 	var pid := str(side[3]["id"])
 	var why_pick: String = await Tap.tap(scene.find_child("Mine_" + pid, true, false))
 	await _settle()
@@ -3903,8 +3896,8 @@ func _ask_price_tap_in_offseason() -> void:
 	var club := str(scene.get("_trade_club"))
 	var theirs: Array = (_state.season.lists[club] as Array).duplicate()
 	theirs.sort_custom(func(a, b):
-		if int(a["overall"]) != int(b["overall"]):
-			return int(a["overall"]) > int(b["overall"])
+		if int(Ovr.of(a)) != int(Ovr.of(b)):
+			return int(Ovr.of(a)) > int(Ovr.of(b))
 		return str(a["id"]) < str(b["id"]))
 	var pid := ""
 	var expect := {}
@@ -4972,10 +4965,10 @@ func _test_new_career_challenge_taps() -> void:
 	_check(all_gone, "The three are off the list and in free agency")
 	var best_left := 0
 	for q in _state.league_lists.get(club, []):
-		best_left = maxi(best_left, int(q.get("overall", 0)))
+		best_left = maxi(best_left, int(Ovr.of(q, 0)))
 	var worst_gone := 999
 	for g in gone:
-		worst_gone = mini(worst_gone, int(freed.get(str(g["id"]), {}).get("overall", 0)))
+		worst_gone = mini(worst_gone, int(Ovr.of(freed.get(str(g["id"]), {}), 0)))
 	_check(worst_gone >= best_left, "They were the club's three best (%d gone, %d left)" % [worst_gone, best_left])
 	var back: Dictionary = freed.get(str(gone[0]["id"]), {}) if not gone.is_empty() else {}
 	_check(not back.is_empty() and CH.block_reason(_state, back).begins_with("Rebuild:"),

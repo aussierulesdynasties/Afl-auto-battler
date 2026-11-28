@@ -24,8 +24,10 @@ INK = (235, 230, 220)
 
 def label_of(path: str) -> str:
     stem = os.path.splitext(os.path.basename(path))[0]
-    # capture_screens_light writes <prefix>_<mode>_<screen>.png
-    return stem.split("_dark_", 1)[-1].replace("_", " ")
+    # capture_screens writes screens_<screen>.png
+    if stem.startswith("screens_"):
+        stem = stem[len("screens_"):]
+    return stem.replace("_", " ")
 
 
 def main() -> int:

@@ -7,6 +7,7 @@ extends SceneTree
 ## Writes merger_cut_390x844.png (the screen as it opens) and
 ## merger_cut_marked_390x844.png (all but one picked, scrolled to them).
 ## Never touches a real save.
+const Ovr := preload("res://tests/ovr.gd")
 
 
 func _initialize() -> void:
@@ -47,7 +48,7 @@ func _run() -> void:
 	LegacyRollover._merge(gs, false)
 	gs.merger_cut_due = true
 	var UK = load("res://scripts/ui/UiKit.gd")
-	UK.apply_appearance("dark")
+	UK.apply_palette()
 	DisplayServer.window_set_size(Vector2i(w, h))
 	root.size = Vector2i(w, h)
 	var bg := ColorRect.new()
@@ -61,7 +62,7 @@ func _run() -> void:
 	await _shot("%s/merger_cut_%dx%d.png" % [dir, w, h])
 	# All but one picked: the lowest rated, as a coach would start.
 	var list: Array = gs.season.lists[gs.my_club].duplicate()
-	list.sort_custom(func(a, b): return int(a.get("overall", 0)) < int(b.get("overall", 0)))
+	list.sort_custom(func(a, b): return int(Ovr.of(a, 0)) < int(Ovr.of(b, 0)))
 	var n: int = gs.merger_cut_left()
 	scene.set("_going", list.slice(0, n - 1).map(func(q): return str(q["id"])))
 	scene.call("_build")

@@ -1,4 +1,5 @@
 extends RefCounted
+const Ovr := preload("res://tests/ovr.gd")
 ## The league's real year events, 1990 to 2026 (Legacy L10, TODO row 142):
 ## the data is whole, its cards are valid story cards, a 1990 campaign fires a
 ## sample across the decades in their real seasons with their real penalties,
@@ -305,7 +306,7 @@ func _test_switch_off_fires_no_controversy() -> void:
 func _test_forfeited_pick_skipped() -> void:
 	var pool := []
 	for i in range(6):
-		pool.append({"id": "p%d" % i, "overall": 60 - i})
+		pool.append(Ovr.to({"id": "p%d" % i}, 60 - i))
 	var d := Draft.build_intake(pool, ["CAR", "ESS", "GEE"], ["CAR", "ESS", "GEE"], SUITE_SEED, {}, {})
 	d.set_pick_owners({"1:CAR": YearEvents.FORFEIT, "2:CAR": YearEvents.FORFEIT})
 	_check(d.pick_sequence.size() == 4 and not d.pick_sequence.has("CAR") and not d.pick_sequence.has(YearEvents.FORFEIT),
