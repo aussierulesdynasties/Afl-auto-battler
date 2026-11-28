@@ -602,7 +602,10 @@ func _test_free_causes_follow_the_play() -> void:
 						and MatchSim._is_ruckman(to) and MatchSim._is_ruckman(by)
 			elif cause == "marking" and str(ev.get("free_context", "")) == "forward50":
 				mark_frees += 1
-				if to != null and str(to.get("role", "")) == "FWD":
+				# The free goes to a man in a forward slot at the time: a midfielder
+				# resting forward on a rotation counts (the map above is the
+				# selection, so read the positions he can be picked in).
+				if to != null and (str(to.get("role", "")) == "FWD" or Traits.plays(to, "FWD")):
 					mark_to_fwd += 1
 	_check(ruck_frees > 0 and ruck_to_ruck,
 			"A ruck-contest free is paid ruckman to ruckman (%d frees)" % ruck_frees)
@@ -1177,9 +1180,11 @@ func _test_bash5_traits() -> void:
 	sim._traits[str(mid["id"])] = ["bull"]
 	_check(sim._bulls(0) == 1 and sim._bulls(1) == 0, "A midfield bull is counted at the stoppage")
 	sim._ruck_tap()
+	# The tap's own edge: every first tap won (TAP_HIT_EDGE), more to advantage.
 	var adv := 0.0
-	if bool(sim._tap["adv"]):
-		adv = MatchSim.TAP_ADV_EDGE if int(sim._tap["side"]) == 0 else -MatchSim.TAP_ADV_EDGE
+	if int(sim._tap["side"]) >= 0:
+		adv = MatchSim.TAP_HIT_EDGE + (MatchSim.TAP_ADV_EDGE if bool(sim._tap["adv"]) else 0.0)
+		adv = adv if int(sim._tap["side"]) == 0 else -adv
 	_check(is_equal_approx(float(sim._tap["edge"]) - adv, MatchSim.BULL_STOPPAGE),
 			"The bull's stoppage edge goes to the bull's side (%.3f)" % (float(sim._tap["edge"]) - adv))
 	sim._tap = {}
