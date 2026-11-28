@@ -266,3 +266,4 @@ What has landed toward each open row of docs/TODO.md and docs/TODO_RULINGS.md, o
 - 198: Merged #2304: 3D match: men walk, backpedal and side-step instead of a slow-motion jog.
 - 202: Merged #2310: 3D 1.0 plan: Marvel rounds 16b-17 and horizon, fault scan, new gaits.
 - 202: Merged #2314: 3D 1.0 plan: Marvel backdrop and far horizon in matches.
+- 202: Merged #2313: Marvel round 17c-17f: shut-roof light, pines, Harbour Esplanade, street wall, Bolte Bridge, Gate 5 box.
