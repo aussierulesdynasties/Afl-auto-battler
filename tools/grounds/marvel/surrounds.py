@@ -69,9 +69,6 @@ RAIL = (92, 80, 70)             # a track: sleepers and rails together, 2.6 m wi
 ROOF = (168, 179, 174)
 WATER = (36, 68, 82)            # round 10: Google Earth's harbour reads navy (32, 64, 82); (62, 79, 76) rendered grey-green
 URBAN = (132, 134, 132)
-# The backdrop's ground draws each colour this much (linear, per channel) as bright as this map does: medians of the land
-# either side of the 1,024 m join on the PC's straight-down render (pc3, 28 Nov: 141, 148, 140 inside, 128, 135, 134 out)
-BACKDROP_GAIN = (0.797, 0.779, 1.007)
 WOOD = (84, 101, 59)
 DRY = (148, 140, 120)           # unwatered verges by the rail yards: dry brown in Google Earth (c_e, c_ne), not green
 DRY_EAST = 50.0                 # grass east of this (metres east) is the rail-side verge
@@ -229,9 +226,7 @@ def paint(trees, ways):
     rng = np.random.default_rng(7)
     n1 = np.asarray(Image.fromarray((rng.random((64, 64)) * 255).astype(np.uint8)).resize((SIZE, SIZE), Image.BICUBIC), float) / 255
     n2 = np.asarray(Image.fromarray((rng.random((256, 256)) * 255).astype(np.uint8)).resize((SIZE, SIZE), Image.BICUBIC), float) / 255
-    # the 64-cell layer (n1) left grey clouds over every wide unmapped area (the rail land north of the yards, the pier):
-    # the PC check's "smudges" (28 Nov). Only the fine mottle stays; n1 is still drawn so the grain after keeps its seed.
-    mott = (n1 - 0.5) * 0.0 + (n2 - 0.5) * 0.12
+    mott = (n1 - 0.5) * 0.22 + (n2 - 0.5) * 0.12
     base = np.clip(np.array(BASE, float)[None, None, :] * (1.0 + mott[..., None]), 0, 255).astype(np.uint8)
     im = Image.fromarray(base, "RGB")
     d = ImageDraw.Draw(im)
@@ -315,15 +310,7 @@ def paint(trees, ways):
     # where the backdrop's own water meets them (a grey fade there read as a pale band across the water, 2026-11-27)
     w = np.asarray(Image.fromarray((water * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(1.5)), float)[..., None] / 255
     edge = edge * (1 - w)
-    # ... and to the backdrop's own ground there (tools/grounds/backdrop/near_bake.py) rather than one flat grey, which
-    # drew the 1,024 m join as a pale circle from above (PC check, 28 Nov); flat grey only with no backdrop built
-    far = np.array(URBAN, float)
-    part1 = os.path.join(OUT, "marvel_backdrop_part1.glb")
-    if os.path.exists(part1):
-        sys.path.insert(0, os.path.join(ROOT, "..", "backdrop"))
-        from near_bake import matched_bake
-        far = matched_bake(part1, SIZE, BACKDROP_GAIN)
-    arr = arr * (1 - edge) + far * edge
+    arr = arr * (1 - edge) + np.array(URBAN, float) * edge
     return Image.fromarray(np.clip(arr, 0, 255).astype(np.uint8), "RGB")
 
 

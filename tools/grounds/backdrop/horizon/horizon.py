@@ -64,19 +64,16 @@ JOIN_BAND = 3.0
 TIER_M = 6.0         # m: a measured structure's parts with tops this close are one tier (3 m drew 168k
                      # triangles of plant rooms and parapets 1.5 km out; 6 m keeps the skyline at a third of that)
 CANOPY_CELL = 8.0    # m: the far canopy's cell (canopy()); 6 m cells thinned to CANOPY_TRIS left big facets and spikes
-CANOPY_TRIS = 70000  # its top's triangles after thinning (its border is kept whole, so Marvel's stops at about 92k)
+CANOPY_TRIS = 80000  # the far canopy's triangles after thinning
 CANOPY_MIN_UP = 2.5  # m: a photomesh face this far over the land (and no building) can be a crown
 CANOPY_SHARE = 0.25  # a cell is a tree where at least this share of its faces are crowns (canopy())
 CANOPY_MIN_CELLS = 3  # a mass of fewer cells is a pole or a sign, not a tree
-CANOPY_WALL_SHADE = 0.8  # a crown's side under the canopy's top: its own shade
 CANOPY_OUTLINE_PASSES = 4  # smoothing passes over the canopy's outline (8 m cells' stairs into curves)
-CANOPY_RIM_DROP = 0.8   # the outline's top, as a share of the mass's height there
-CANOPY_WALL_TOL = 1.5    # m: a crown's side is drawn straight where the top's edge strays less than this from a line
 # The canopy's colour (sRGB), its median brought to this, each cell keeping its own shade round it: the photomesh's
 # own faces (2020, sunlit, with the sky's haze in them) drew the far bush pale grey-green, near white, where the
 # real bush is dark (review, 2026-11-28). Marvel's is measured from the West Gate Bridge photo (March 2026, Westgate
 # Park's canopy, its median over 145,000 pixels).
-CANOPY_TARGET = {"marvel": (41, 60, 44)}
+CANOPY_TARGET = {"marvel": (41, 60, 36)}
 JOIN_GAP = 2.0        # m: across a lane or a gap between neighbours narrower than twice this, they are one block
 LOW_SIMPLIFY = 6.0    # m: a low block's outline is kept to this (a pixel at 1.5 km in a phone's picture is ~2 m)
 TALL_SIMPLIFY = 2.0   # m: a tall building's or a measured tier's outline is kept to this
@@ -795,24 +792,27 @@ def canopy(slug, frame, H, com):
     if nl:
         size = ndimage.sum(mask, lab, np.arange(1, nl + 1))
         mask &= np.r_[False, size >= CANOPY_MIN_CELLS][lab]
-    # a crown's top smoothed over its neighbours (a lone tall face read as a spike): the median, then a soft blur
-    hgt = np.where(mask, ndimage.median_filter(np.where(mask, hgt, 0.0), size=3), 0.0)
-    wsum = ndimage.gaussian_filter(mask.astype(float), 1.0)
-    hgt = np.where(mask, ndimage.gaussian_filter(hgt, 1.0) / np.maximum(wsum, 1e-6), 0.0)
+    # each crown at its own photographed top (a lone spike, over half again its neighbours' median, cut to that)
+    med3 = ndimage.median_filter(np.where(mask, hgt, 0.0), size=3)
+    hgt = np.where(mask, np.minimum(hgt, np.maximum(med3, CANOPY_MIN_UP + 1.0) * 1.5), 0.0)
     hgt = np.where(mask, np.maximum(hgt, CANOPY_MIN_UP + 1.0), 0.0)
     if slug in CANOPY_TARGET:
         med = np.median(col[mask], 0)
         col = col * (lin_of(np.array(CANOPY_TARGET[slug]) / 255.0) / np.maximum(med, 1e-6))
-    I, J = np.nonzero(mask)
-    m = len(I)
-    # the top's corners: (ni + 1) x (nj + 1), each at the land plus the mean top of the tree cells round it (bare cells
-    # left out, so a mass keeps its height to its edge)
+    # the masses slope down to the land over one cell round them (no upright sides: they read as cut-out slabs)
+    grown = ndimage.binary_dilation(mask, np.ones((3, 3), bool))
+    I, J = np.nonzero(grown)
+    m = int(mask.sum())
+    # the corners: (ni + 1) x (nj + 1), each at the land plus the mean top of the tree cells round it; a corner with
+    # no tree cell round it (the slope's foot) on the land
     mk = np.pad(mask.astype(float), 1)
     hp = np.pad(hgt * mask, 1)
-    cp = np.pad(col * mask[..., None], ((1, 1), (1, 1), (0, 0)))
+    cp = np.pad(col * grown[..., None], ((1, 1), (1, 1), (0, 0)))
+    gk = np.pad(grown.astype(float), 1)
     cn4 = mk[:-1, :-1] + mk[1:, :-1] + mk[:-1, 1:] + mk[1:, 1:]
+    gn4 = gk[:-1, :-1] + gk[1:, :-1] + gk[:-1, 1:] + gk[1:, 1:]
     corner_h = (hp[:-1, :-1] + hp[1:, :-1] + hp[:-1, 1:] + hp[1:, 1:]) / np.maximum(cn4, 1)
-    corner_c = (cp[:-1, :-1] + cp[1:, :-1] + cp[:-1, 1:] + cp[1:, 1:]) / np.maximum(cn4, 1)[..., None]
+    corner_c = (cp[:-1, :-1] + cp[1:, :-1] + cp[:-1, 1:] + cp[1:, 1:]) / np.maximum(gn4, 1)[..., None]
     used = np.zeros(corner_h.shape, bool)
     for di in (0, 1):
         for dj in (0, 1):
@@ -824,21 +824,18 @@ def canopy(slug, frame, H, com):
     UP = corner_h[ui, uj]
     a0, a1, a2, a3 = vid[I, J], vid[I + 1, J], vid[I + 1, J + 1], vid[I, J + 1]
     F = np.concatenate([np.c_[a0, a1, a2], np.c_[a0, a2, a3]])
-    # the masses' outline: the cells' stairs smoothed into the crowns' own curves (each corner on the outline drawn
-    # towards its two neighbours on it), and the outline's top a little under the mass's, so a crown's edge rounds off
+    # the slopes' feet: the cells' stairs smoothed into the crowns' own curves, and sunk under the land (no seam)
     E, N, rim = _smooth_outline(F, E, N, CANOPY_OUTLINE_PASSES)
-    UP = np.where(rim, UP * CANOPY_RIM_DROP, UP)
+    UP = np.where(rim, -0.5, UP)
     L = H.at(E, N, CANOPY_CELL)
     X, Z = frame.xz(E, N)
     V = np.stack([X, L + UP - drop(X, Z), Z], 1)
-    VL = np.stack([X, L - 0.5 - drop(X, Z), Z], 1)     # the same corner on the land, for the walls
     VC = corner_c[ui, uj]
-    # thinned with its border kept (thinning the border left slivers standing off the masses: the shards)
     import pyfqmr
     from scipy.spatial import cKDTree
     s = pyfqmr.Simplify()
     s.setMesh(V, F.astype(np.int32))
-    s.simplify_mesh(target_count=CANOPY_TRIS, aggressiveness=7, preserve_border=True, verbose=False)
+    s.simplify_mesh(target_count=CANOPY_TRIS, aggressiveness=7, preserve_border=False, verbose=False)
     V2, F2, _ = s.getMesh()
     V2 = np.asarray(V2, np.float64); F2 = np.asarray(F2, np.int64)
     _, nb = cKDTree(V).query(V2, k=1)
@@ -851,49 +848,12 @@ def canopy(slug, frame, H, com):
     for k in range(3):
         np.add.at(vn, F2[:, k], fn)
     vn /= np.maximum(np.linalg.norm(vn, axis=1, keepdims=True), 1e-9)
-    # lit mostly from above: the masses' own facets lit one by one read as folded paper
-    vn = 0.3 * vn + 0.7 * np.array([0.0, 1.0, 0.0])
+    # half the slope's own shade, half from above: rounded crowns, not folded paper
+    vn = 0.5 * vn + 0.5 * np.array([0.0, 1.0, 0.0])
     vn /= np.linalg.norm(vn, axis=1, keepdims=True)
-    # the walls: every top edge used by one triangle only, dropped to the land
-    ed = np.sort(np.concatenate([F2[:, [0, 1]], F2[:, [1, 2]], F2[:, [2, 0]]]), 1)
-    ed_t = np.tile(np.arange(len(F2)), 3)
-    ue, inv, ec = np.unique(ed, axis=0, return_inverse=True, return_counts=True)
-    inv = inv.ravel()
-    once = ec[inv] == 1
-    border, border_t, top_y, sub = _wall_runs(ed[once], ed_t[once], V2, CANOPY_WALL_TOL)
-    low = VL[nb[border.ravel()]].reshape(-1, 2, 3)
-    low[..., 1] -= 1.5                                  # under the land between a run's ends too
-    nw = len(border)
-    base = len(V2)
-    t0, t1 = V2[border[:, 0]].copy(), V2[border[:, 1]].copy()
-    t0[:, 1] = top_y; t1[:, 1] = top_y                  # the run's highest top: a lip, never a gap under the top
-    WV = np.concatenate([t0, t1, low[:, 1], low[:, 0]])
-    WC = np.concatenate([colv[border[:, 0]], colv[border[:, 1]], colv[border[:, 1]], colv[border[:, 0]]]) * CANOPY_WALL_SHADE
-    k = np.arange(nw)
-    q0, q1, q2, q3 = base + k, base + nw + k, base + 2 * nw + k, base + 3 * nw + k
-    WF = np.concatenate([np.c_[q0, q1, q2], np.c_[q0, q2, q3]])
-    # each wall faces out of its mass: away from the mass's middle there (the top triangle on its edge)
-    P3 = np.concatenate([V2, WV])
-    wn = np.cross(P3[WF[:, 1]] - P3[WF[:, 0]], P3[WF[:, 2]] - P3[WF[:, 0]])
-    tc = V2[F2[border_t]].mean(1)
-    em = (V2[sub[:, 0]] + V2[sub[:, 1]]) / 2           # the run's first top edge, outward from its own triangle
-    out = np.tile(em - tc, (2, 1))
-    inward = (wn[:, [0, 2]] * out[:, [0, 2]]).sum(1) < 0
-    WF[inward] = WF[inward][:, ::-1]
-    wn[inward] *= -1
-    wn[:, 1] = 0.0
-    wn /= np.maximum(np.linalg.norm(wn, axis=1, keepdims=True), 1e-9)
-    WN = np.zeros_like(WV)
-    for kk in range(3):
-        np.add.at(WN, WF[:, kk] - base, wn)
-    WN = 0.6 * WN / np.maximum(np.linalg.norm(WN, axis=1, keepdims=True), 1e-9) + 0.4 * np.array([0.0, 1.0, 0.0])
-    WN /= np.linalg.norm(WN, axis=1, keepdims=True)
-    pos = np.concatenate([V2, WV])
-    nrm = np.concatenate([vn, WN])
-    colall = np.concatenate([colv, WC])
-    idx = np.concatenate([F2, WF])
-    print("canopy: %d green faces, %d shaded crown faces; %d cells (%d closed); drawn in %d top and %d wall triangles"
-          % (len(vc), int(cand.sum()), int(seen.sum()), m, len(F2), len(WF)))
+    pos, nrm, colall, idx = V2, vn, colv, F2
+    print("canopy: %d green faces, %d shaded crown faces; %d cells (%d after closing), %d with their slopes; drawn in %d "
+          "triangles" % (len(vc), int(cand.sum()), int(seen.sum()), m, len(I), len(F2)))
     return {"name": "trees_far", "pos": pos.astype(np.float32), "nrm": nrm.astype(np.float32),
             "col": np.c_[colall, np.ones(len(colall))].astype(np.float32),
             "idx": idx.ravel().astype(np.uint32), "material": "horizon_trees"}
@@ -919,77 +879,6 @@ def _smooth_outline(F, E, N, passes):
         E = np.where(move, 0.5 * E + 0.25 * nsum_e, E)
         N = np.where(move, 0.5 * N + 0.25 * nsum_n, N)
     return E, N, rim
-
-
-def _wall_runs(edges, owner, V, tol):
-    """The canopy top's border edges (index pairs into V, each with the top triangle it belongs to) joined into
-    straight runs: each chain of the border (broken where more than two edges meet) thinned by Douglas-Peucker in
-    plan to within tol. Returns the runs' end pairs, a top triangle on each, each run's highest top and its first edge."""
-    from collections import defaultdict
-    adj = defaultdict(list)
-    for k, (a, b) in enumerate(edges):
-        adj[a].append(k)
-        adj[b].append(k)
-    used = np.zeros(len(edges), bool)
-    out_e, out_t, out_y, out_s = [], [], [], []
-
-    def dp(pts, i0, i1, keep):
-        if i1 <= i0 + 1:
-            return
-        p, q = pts[i0], pts[i1]
-        d = q - p
-        L = math.hypot(d[0], d[1])
-        r = pts[i0 + 1:i1] - p
-        dist = np.abs(r[:, 0] * d[1] - r[:, 1] * d[0]) / L if L > 1e-9 else np.hypot(r[:, 0], r[:, 1])
-        m = int(np.argmax(dist))
-        if dist[m] > tol:
-            keep.append(i0 + 1 + m)
-            dp(pts, i0, i0 + 1 + m, keep)
-            dp(pts, i0 + 1 + m, i1, keep)
-
-    for k0 in range(len(edges)):
-        if used[k0]:
-            continue
-        # walk back to a chain end (a vertex not of degree two), or round a loop
-        k, v = k0, edges[k0][0]
-        for _ in range(len(edges)):
-            if len(adj[v]) != 2:
-                break
-            nk = adj[v][0] if adj[v][1] == k else adj[v][1]
-            if nk == k0:
-                break
-            k = nk
-            v = edges[k][1] if edges[k][0] == v else edges[k][0]
-        start, verts, ks = k, [v], []
-        while True:
-            used[k] = True
-            ks.append(k)
-            v = edges[k][1] if edges[k][0] == v else edges[k][0]
-            verts.append(v)
-            if len(adj[v]) != 2:
-                break
-            nk = adj[v][0] if adj[v][1] == k else adj[v][1]
-            if used[nk] or nk == start:
-                break
-            k = nk
-        pts = V[verts][:, [0, 2]]
-        keep = [0, len(verts) - 1]
-        if verts[0] == verts[-1] and len(verts) > 3:      # a loop: split it at its far point first
-            far = int(np.argmax(np.hypot(*(pts - pts[0]).T)))
-            keep.append(far)
-            dp(pts, 0, far, keep)
-            dp(pts, far, len(verts) - 1, keep)
-        else:
-            dp(pts, 0, len(verts) - 1, keep)
-        keep = sorted(set(keep))
-        ys = V[verts][:, 1]
-        for i0, i1 in zip(keep[:-1], keep[1:]):
-            out_e.append((verts[i0], verts[i1]))
-            out_t.append(owner[ks[i0]])
-            out_s.append(edges[ks[i0]])
-            out_y.append(float(ys[i0:i1 + 1].max()))
-    return (np.array(out_e, np.int64).reshape(-1, 2), np.array(out_t, np.int64), np.array(out_y),
-            np.array(out_s, np.int64).reshape(-1, 2))
 
 
 def _overture_footprints(slug, frame):
