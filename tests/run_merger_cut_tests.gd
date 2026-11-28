@@ -1,4 +1,5 @@
 extends SceneTree
+const Ovr := preload("res://tests/ovr.gd")
 ## godot --headless --path . --script tests/run_merger_cut_tests.gd
 ## After the Fitzroy merger your list is over the era's spots and you pick who
 ## goes (director 2026-11-15: "I pick, delist screen"): the count each list kind
@@ -117,7 +118,7 @@ func _test_refusals() -> void:
 	_setup()
 	var n: int = _gs.merger_cut_left()
 	var list := _list().duplicate()
-	list.sort_custom(func(a, b): return int(a.get("overall", 0)) < int(b.get("overall", 0)))
+	list.sort_custom(func(a, b): return int(Ovr.of(a, 0)) < int(Ovr.of(b, 0)))
 	var ids := list.slice(0, n).map(func(q): return str(q["id"]))
 	var short := ids.slice(0, n - 1)
 	var out: Dictionary = _gs.merger_delist(short)
@@ -143,7 +144,7 @@ func _test_refusals() -> void:
 func _test_club_cut_before_round_one() -> void:
 	_setup()
 	var n: int = _gs.merger_cut_left()
-	var held: Dictionary = _list().reduce(func(a, q): return q if a.is_empty() or int(q.get("overall", 0)) < int(a.get("overall", 0)) else a, {})
+	var held: Dictionary = _list().reduce(func(a, q): return q if a.is_empty() or int(Ovr.of(q, 0)) < int(Ovr.of(a, 0)) else a, {})
 	held["play_on"] = int(_gs.season_year)
 	var before: int = _list().size()
 	_gs._merger_cut_by_club()
@@ -194,7 +195,7 @@ func _test_screen_taps() -> void:
 	_setup()
 	var n: int = _gs.merger_cut_left()
 	var list := _list().duplicate()
-	list.sort_custom(func(a, b): return int(a.get("overall", 0)) < int(b.get("overall", 0)))
+	list.sort_custom(func(a, b): return int(Ovr.of(a, 0)) < int(Ovr.of(b, 0)))
 	# One talked round to play on: no Delist button on his row.
 	var held: Dictionary = list[n + 1]
 	held["play_on"] = int(_gs.season_year)

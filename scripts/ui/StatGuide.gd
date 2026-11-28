@@ -7,23 +7,27 @@ extends RefCounted
 ## the screens that show it, not here.
 
 ## key -> [one line]
+## The 18 attributes in card order, each from what it drives in the match
+## (docs/RATING_REBUILD.md §2).
 const STATS := {
+	"speed": ["Pace. Breaks the lines in open play, gets clear of his man and runs down the ball carrier."],
+	"endurance": ["Running power. He tires more slowly, so he stays at his best deeper into the game."],
+	"strength": ["Body strength. Breaks tackles and holds his ground in one-on-one and ruck contests."],
+	"work_rate": ["Runs both ways. Spreads from the contest to link up, then works back to keep the pressure on."],
 	"kicking": ["Kicks the ball long and to a team-mate. Good kicks move it forward and find targets inside 50."],
 	"handballing": ["Gets the handball away cleanly, most of all in a tackle. Fewer holding-the-ball frees."],
-	"contested": ["Wins the clearance and holds the ball in a tackle. Our inside mids win or lose the stoppages."],
+	"marking": ["Clean hands. Marks on the lead and on the switch, so team-mates can kick to him and we keep it."],
+	"contested_marking": ["Wins the ball in the air in a pack or one-on-one, most of all inside 50. Key forwards live on it."],
+	"one_on_one": ["Beats his man in the air. Spoils, and stops forwards marking in packs and on the lead."],
+	"contested_ball": ["Wins the clearance and holds the ball in a tackle or the wet. Our inside mids win or lose the stoppages."],
+	"goalkicking": ["Kicks straight. Turns his shots into goals instead of behinds."],
 	"ruck": ["Wins the hit-outs at the bounce and stoppages. Our first ruck matters."],
-	"carry": ["Runs the ball forward. Good carriers through the middle feed our attack."],
-	"contested_marking": ["Marks in a pack or one-on-one, most of all inside 50. Key forwards and key defenders need it."],
-	"uncontested_marking": ["Marks on the lead and on the switch, so the ball is kept."],
-	"speed": ["Pace. Runs down the ball carrier and gets to the contest first."],
-	"creating": ["Sets up goals for team-mates and makes better shots for the whole forward line."],
-	"goalkicking": ["Gets the shots inside 50 and kicks the goals. Most of our scoring comes from it."],
-	"accuracy": ["Turns shots into goals instead of behinds."],
+	"vision": ["Finds the team-mate in the better spot. Hits targets going inside 50 and sets up shots."],
+	"reading_play": ["Reads the play. Cuts off their kicks, roams off his man to intercept and starts our attack from half-back."],
 	"pressure": ["Tackles and hurries the opposition. Most of our defence comes from it."],
-	"intercept": ["Reads the play, takes marks in defence and spoils forward entries."],
-	"discipline": ["Fewer clangers and free kicks against. Higher is cleaner."],
+	"forward_craft": ["Finds space inside 50. Leads, crumbs and gets to the right spot, so he is the one who gets the shot."],
+	"discipline": ["Fewer clangers, free kicks against, 50s and reports. Higher is cleaner."],
 	"durability": ["Stays on the park. Durable players get hurt less often."],
-	"star": ["Match-winning class. Lifts our side at the stoppages. It weighs heavily in his overall."],
 }
 
 ## [heading, [stat keys]] in the order they read.
@@ -32,7 +36,7 @@ const GROUPS := Attributes.GROUPS
 const TOPICS := [
 	["Overall (OVR)", "A player's rating, mostly from the stats his position relies on. Clubs value players by it at the draft and the trade table."],
 	["Potential (POT)", "Where we expect him to peak. It is not a limit. His growth slows as he nears it."],
-	["Team strengths", "Contest is our stoppage work. Attack is our forwards and carry. Defence is our pressure and intercept."],
+	["Team strengths", "Contest is our stoppage work. Attack is our forwards and our midfielders' running. Defence is our defenders' pressure and how they read the play."],
 	["Traits and synergies", "A standout stat earns a trait. The right mix of them on the ground switches on a synergy. The Team screen shows ours, and when one is a player short (\"Lockdown unit: 1 lockdown player short\")."],
 	["Injuries and legs", "Every player risks injury each game. Durability lowers the risk. Tired players win less ball. Rotate them from the coach's box."],
 	["Development and training", "Players earn development every game. What each one is developing as decides where it goes. A stat costs more the higher it already is. Past POT it costs much more."],

@@ -7,6 +7,7 @@ extends SceneTree
 ##   <prefix>_log.png    the draft's Picks log after the draft, passes as rows
 ## Never touches a real save.
 ##   godot --path . --script tools/visual/capture_forge_picks.gd -- --out PREFIX [--size 390x844]
+const Ovr := preload("res://tests/ovr.gd")
 
 var W := 390
 var H := 844
@@ -84,7 +85,7 @@ func _run() -> void:
 	await _shot(out + "_brief.png")
 	var fa_id := ""
 	for p in gs.free_agents:
-		if int(p.get("overall", 0)) >= 60:
+		if int(Ovr.of(p, 0)) >= 60:
 			fa_id = str(p["id"])
 			break
 	if fa_id == "" and not gs.free_agents.is_empty():

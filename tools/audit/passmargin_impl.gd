@@ -10,6 +10,7 @@ extends RefCounted
 ## facts. Run the same seeds before and after a margin change to pair them.
 ## Args after the impl name: seeds (comma-separated) club seasons
 ## Prints a SEED line per seed and a TOTAL line.
+const Ovr := preload("res://tests/ovr.gd")
 
 var club := "MEL"
 
@@ -49,7 +50,7 @@ func _career(seed: int, seasons: int) -> Dictionary:
 	GameState.autosave_enabled = false
 	GameState.replay_seed = seed
 	var pool: Array = GameDB.all_players_sorted() + GameDB.all_draftees_sorted()
-	pool.sort_custom(func(a, b): return a["overall"] > b["overall"])
+	pool.sort_custom(func(a, b): return Ovr.of(a) > Ovr.of(b))
 	GameState.draft = Draft.new(pool, GameDB.active_clubs(GameState.season_year).duplicate(), seed)
 	GameState.draft.start_for_user(club)
 	_run_draft(GameState.draft)
@@ -108,7 +109,7 @@ func _judged(before: Dictionary, rivals: Array) -> void:
 		if GameState.project_job(p) != "":
 			continue
 		var role := str(before[id][1])
-		var gap := int(p.get("overall", 0)) - GameState.rating_as(p, role)
+		var gap := int(Ovr.of(p, 0)) - GameState.rating_as(p, role)
 		var learned := Ratings.positions(p).has(role)
 		rivals.append([learned, gap])
 

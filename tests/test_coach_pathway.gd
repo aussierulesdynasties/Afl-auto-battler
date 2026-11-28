@@ -1,4 +1,5 @@
 extends RefCounted
+const Ovr := preload("res://tests/ovr.gd")
 ## Retired players becoming coaches (CoachPathway.gd, Coaching Phase 4): the
 ## snapshot taken at retirement, identity and names, the once-only interest
 ## roll, the pathway, skills that ignore playing ability, specialty, fading
@@ -48,15 +49,15 @@ const Ran := preload("res://tests/functions_ran.gd")
 func _t(test: String, args := []) -> Variant:
 	return await Ran.one(self, test, args)
 func _player(id: String, games: int, goals: int, role := "MID", ovr := 70) -> Dictionary:
-	return {
+	return Ovr.to({
 		"id": id, "real_name": "", "generic_name": "Lachlan Mercer", "name": "Lachlan Mercer",
-		"role": role, "own_role": role, "role2": "", "age": 34.0, "overall": ovr, "potential": ovr + 2,
+		"role": role, "own_role": role, "role2": "", "age": 34.0,  "potential": ovr + 2,
 		"attr": {"kicking": 70, "contested_marking": 60}, "xp": 400, "morale": 0.4, "salary": 900,
 		"contract_years": 1, "plan": "balanced", "injury": {"weeks": 2}, "history": [[2039, ovr]],
 		"drafted_year": 2024, "drafted_type": "national", "drafted_pick": 31,
 		"career": {"games": games, "goals": goals, "unknown": [], "through": Y,
 				"stints": [["ADE", 2025, 2036, games - 40, goals - 10], ["FRE", 2037, Y, 40, 10]]},
-	}
+	}, ovr)
 
 
 func _test_snapshot() -> void:

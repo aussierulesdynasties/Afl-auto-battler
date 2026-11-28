@@ -13,6 +13,7 @@ extends RefCounted
 ##   seeds  per pairing (default 40); six pairings
 ## One line per arm: the paired home margin and the process the copy names,
 ## each as mean ± standard error of the paired difference.
+const Ovr := preload("res://tests/ovr.gd")
 
 const PAIRS := [["MEL", "CAR"], ["GEE", "COL"], ["SYD", "WCE"], ["BRL", "ADE"], ["HAW", "ESS"], ["FRE", "STK"]]
 const ALL := ["plan_attacking", "plan_defensive", "plan_contest", "plan_controlled",
@@ -76,15 +77,15 @@ func _best(ps: Array, role: String) -> String:
 	var best := ""
 	var top := -1
 	for p in ps:
-		if str(p.get("role", "")) == role and int(p.get("overall", 0)) > top:
-			top = int(p["overall"])
+		if str(p.get("role", "")) == role and int(Ovr.of(p, 0)) > top:
+			top = int(Ovr.of(p))
 			best = str(p["id"])
 	return best
 
 
 func _top3(ps: Array) -> Dictionary:
 	var s := ps.duplicate()
-	s.sort_custom(func(a, b): return int(a["overall"]) > int(b["overall"]))
+	s.sort_custom(func(a, b): return int(Ovr.of(a)) > int(Ovr.of(b)))
 	var out := {}
 	for p in s.slice(0, 3):
 		out[str(p["id"])] = true

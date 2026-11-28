@@ -15,11 +15,11 @@ extends RefCounted
 ## plan -> the attributes that carry it (weights), which lines can carry it,
 ## how many players count, and what a coach calls them.
 const NEEDS := {
-	"attacking": {"attr": {"carry": 0.6, "disposal": 0.4}, "lines": ["MID", "FWD", "DEF"],
+	"attacking": {"attr": {"work_rate": 0.6, "disposal": 0.4}, "lines": ["MID", "FWD", "DEF"],
 			"n": 6, "word": "runners"},
 	"defensive": {"attr": {"pressure": 1.0}, "lines": ["MID", "FWD"], "n": 8,
 			"word": "pressure players"},
-	"contest": {"attr": {"contested": 1.0}, "lines": ["MID"], "n": 4, "ruck": true,
+	"contest": {"attr": {"contested_ball": 1.0}, "lines": ["MID"], "n": 4, "ruck": true,
 			"word": "ball-winners"},
 	# Controlled Tempo holds the ball against a press: it needs ball users
 	# right across the ground - disposal under pressure, and the discipline
@@ -32,13 +32,12 @@ const NEEDS := {
 ## clubs' match-day sides on today's lists (bug bash 5, G15: the 2027 anchors
 ## had every plan's average fit at 1.13-1.22): 1.0 fit is an average list for
 ## that plan. tests/test_plan_know.gd holds the league's mean fit near 1.0.
-## Re-measured on the Wheelo ratings of 2026-11-16 (skills rated against the
-## AFL position).
+## Re-measured on the rebuilt attributes of 2026-11-26 (the rating rebuild).
 const LEAGUE := {
-	"attacking": [54.8, 3.6],
-	"defensive": [71.6, 2.4],
-	"contest": [68.3, 5.6],
-	"controlled": [55.9, 2.0],
+	"attacking": [59.0, 6.4],
+	"defensive": [67.4, 2.3],
+	"contest": [69.7, 4.5],
+	"controlled": [57.1, 2.0],
 }
 ## How far one spread from the league moves a plan's upside, and its limits:
 ## the best-suited list gets about half as much again, the worst about half.
@@ -54,7 +53,7 @@ static func _value(p: Dictionary, weights: Dictionary) -> float:
 	var a: Dictionary = p.get("attr", {})
 	var v := 0.0
 	for k in weights:
-		v += float(weights[k]) * Skills.value(a, k, 0.0)
+		v += float(weights[k]) * Attributes.value(a, k, 0.0)
 	return v
 
 

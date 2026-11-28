@@ -31,7 +31,6 @@ func run() -> void:
 	var arm := str(a[1]) if a.size() > 1 else "none"
 	var from := int(a[2]) if a.size() > 2 else 0
 	var count := int(a[3]) if a.size() > 3 else 10
-	GameDB.skip_ovr_overrides = true
 	GameDB.reload()
 	var codes: Array = GameDB.active_clubs(2026).duplicate()
 	var pairs := []

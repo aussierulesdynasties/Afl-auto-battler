@@ -6,6 +6,7 @@ extends SceneTree
 ## Writes <out>_1_delisted.png (the notice and the Undo row after a delisting),
 ## <out>_2_undone.png (after Undo), <out>_3_signed_other_tab.png (a free-agent
 ## signing seen from another tab, the row naming it). Nothing touches a save.
+const Ovr := preload("res://tests/ovr.gd")
 
 const W := 390
 const H := 844
@@ -64,7 +65,7 @@ func _run() -> void:
 	# Release sits on the out-of-contract rows: the weakest of them.
 	for q in C.expiring(state.my_list):
 		if not state.retiring_now(q) and not bool(q.get("resigned", false)) \
-				and (p.is_empty() or int(q["overall"]) < int(p["overall"])):
+				and (p.is_empty() or int(Ovr.of(q)) < int(Ovr.of(p))):
 			p = q
 	var scene: Control = load("res://scenes/OffseasonScene.tscn").instantiate()
 	root.add_child(scene)

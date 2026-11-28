@@ -313,7 +313,7 @@ static func morale_after_match(list: Array, played: Dictionary, won: bool, softe
 		if played.has(id):
 			add_morale(p, (MATCH_MORALE_WIN if won else MATCH_MORALE_LOSS) + swing)
 		elif int(p.get("injury_weeks", 0)) <= 0 and not unavailable.has(id):
-			var loss := 6 if int(Rating.ovr(p, 0)) >= 78 else 3
+			var loss := 6 if int(Rating.ovr(p, 0)) >= EXTENSION_MIN_OVR else 3
 			add_morale(p, -int(round(sting * CoachEffects.softened(loss, _sting_share(float(soften.get(id, 0.0)), culture_s)))))
 		else:
 			# Injured players drift back toward settled.
@@ -449,9 +449,7 @@ const WAIT_FLAT := "At the off-season he asks what his rating is worth then. The
 static func wait_words(p: Dictionary, lift: int) -> String:
 	var ovr := int(Rating.ovr(p, 0))
 	lift = maxi(0, lift)
-	var up := p.duplicate()
-	up["overall"] = ovr + lift
-	var more := Contracts.asking_salary(up) - Contracts.asking_salary(p)
+	var more := Contracts.asking_at(p, ovr + lift) - Contracts.asking_salary(p)
 	if lift <= 0 or more <= 0:
 		return WAIT_FLAT
 	return WAIT_LIFT % [lift, "point" if lift == 1 else "points", Contracts.money(more)]

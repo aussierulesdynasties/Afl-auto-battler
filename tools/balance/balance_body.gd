@@ -28,6 +28,7 @@ extends RefCounted
 ## with the man `tag` names on tag_order: "first" (the tightest hold), "median", "last" (the
 ## loosest), "tagger" (first on the list, only if he is a Tagger) or "none" (no tag, the paired
 ## baseline: same man followed). The match line then carries "tag" (_tag_record).
+const Ovr := preload("res://tests/ovr.gd")
 
 var start := ""
 var setup := ""
@@ -45,7 +46,6 @@ const LEAGUE_DRAFTEES := [279.0, 595.0, 318.0, 76.0, 7.0, 3.0]
 
 func play(from: int, count: int, out: String, weather: String,
 		sets: Dictionary = {}, echo := false) -> int:
-	GameDB.skip_ovr_overrides = true
 	GameDB.reload()
 	# --tune KEY=V,KEY=V: MatchSim tunables (MatchSim.tune, read through _tv) for
 	# sizing a constant before it is written into the code.
@@ -80,6 +80,19 @@ func play(from: int, count: int, out: String, weather: String,
 	for i in range(args.size() - 1):
 		if str(args[i]) == "--year":
 			year = int(args[i + 1])
+	# --bump APOS:KEY:N (docs/RATING_REBUILD.md §3, measuring the OVR weights): side
+	# i % 2 plays with every player at that AFL position (Rating.apos_of; "_" for a
+	# space, "Key_Defender") N points up on that attribute, within 1-99; the rival
+	# as listed. Paired against a run without it, side_compare.py's margin is what
+	# the attribute buys at that position.
+	var bump := []
+	for i in range(args.size() - 1):
+		if str(args[i]) == "--bump":
+			bump = str(args[i + 1]).replace("_", " ").split(":")
+	if not bump.is_empty() and (bump.size() != 3 or not Rating.WEIGHTS.has(str(bump[0]))
+			or not Attributes.KEYS.has(str(bump[1]))):
+		push_error("balance: --bump is APOS:KEY:N, APOS one of %s, KEY one of Attributes.KEYS" % str(Rating.WEIGHTS.keys()))
+		return 1
 	var lists := {}
 	var class_ids := {}
 	if start == "real":
@@ -110,8 +123,15 @@ func play(from: int, count: int, out: String, weather: String,
 		var ground: Callable = func(c): return str(GameDB.club(str(c)).get("ground", ""))
 		var v := str(GatherRound.venues_for([{"home": h, "away": a}], 500000 + i, ground)[0])
 		var at_home := [ground.call(h) == v, ground.call(a) == v]
-		var sq_h := Squad.new(h, lists.get(h, GameDB.club_list(h)), bool(at_home[0]), h)
-		var sq_a := Squad.new(a, lists.get(a, GameDB.club_list(a)), bool(at_home[1]), a)
+		var list_h: Array = lists.get(h, GameDB.club_list(h))
+		var list_a: Array = lists.get(a, GameDB.club_list(a))
+		if not bump.is_empty():
+			if i % 2 == 0:
+				list_h = _bumped(list_h, bump)
+			else:
+				list_a = _bumped(list_a, bump)
+		var sq_h := Squad.new(h, list_h, bool(at_home[0]), h)
+		var sq_a := Squad.new(a, list_a, bool(at_home[1]), a)
 		if plan_know >= 0.0:
 			for sq in [sq_h, sq_a]:
 				for plan in PreSeason.DRILL_PLANS:
@@ -452,7 +472,7 @@ func _set_through(sim: MatchSim, side: int, which: String) -> Dictionary:
 			return {}
 		var best := {}
 		for p in (sim.squads[side] as Squad).ground:
-			if (MatchSim.FOCUS_SLOT_ROLES[slot] as Array).has(str(p["role"])) and not out.values().has(str(p["id"])) 					and (best.is_empty() or int(p["overall"]) > int(best["overall"])):
+			if (MatchSim.FOCUS_SLOT_ROLES[slot] as Array).has(str(p["role"])) and not out.values().has(str(p["id"])) 					and (best.is_empty() or int(Ovr.of(p)) > int(Ovr.of(best))):
 				best = p
 		if not best.is_empty():
 			t[slot] = str(best["id"])
@@ -499,7 +519,7 @@ func _set_switch(sim: MatchSim, side: int, on: bool) -> Dictionary:
 	var best := func(sq: Squad, role: String) -> Dictionary:
 		var b := {}
 		for p in sq.ground:
-			if str(p["role"]) == role and (b.is_empty() or int(p["overall"]) > int(b["overall"])):
+			if str(p["role"]) == role and (b.is_empty() or int(Ovr.of(p)) > int(Ovr.of(b))):
 				b = p
 		return b
 	var d: Dictionary = best.call(sim.squads[side] as Squad, "DEF")
@@ -646,19 +666,29 @@ static func ruck1(roster: Array, stats: Dictionary, sq: Squad) -> Array:
 ## generation in matches (main against the branch). Classes 2027 on (career seed 4242 +
 ## year) are generated on the game's data (the hand-set OVR rows on) and grown
 ## GEN_GROW seasons by the development rules; each real 2026 list player's place is
-## taken by the next unused generated player of his position, re-rated to his OVR on
-## the harness's own data
-## (GameDB.set_player_ovr, one shift on every rated attribute; discipline kept, as the
-## career's refit keeps it), as the in-career league is
-## re-anchored to the 2026 spread every rollover. Every worker builds the same league,
-## so two checkouts differ only in what generation does with the same draws.
+## taken by the next unused generated player of his line, as generated and grown (OVR
+## is read from the attributes, so nothing re-rates him; Director Bible 4.2.30a).
+## Every worker builds the same league, so two checkouts differ only in what
+## generation does with the same draws.
+## A copy of `list` with every player at AFL position bump[0] N = bump[2] points up
+## on attribute bump[1], within 1-99 (--bump).
+func _bumped(list: Array, bump: Array) -> Array:
+	var out := []
+	for p in list:
+		if Rating.apos_of(p) == str(bump[0]):
+			var q: Dictionary = (p as Dictionary).duplicate(true)
+			var at: Dictionary = q["attr"]
+			at[str(bump[1])] = clampi(int(at.get(str(bump[1]), 50)) + int(bump[2]), 1, 99)
+			out.append(q)
+		else:
+			out.append(p)
+	return out
+
+
 const GEN_CLASSES := 40
 const GEN_GROW := 5
 func generated_lists(codes: Array) -> Dictionary:
-	var skipped: bool = GameDB.skip_ovr_overrides
-	GameDB.skip_ovr_overrides = false
 	GameDB.reload()
-	Prospects.forget_cache()
 	var pool := {}
 	for y in range(2027, 2027 + GEN_CLASSES):
 		for q in Prospects.generate_class(y, 4242 + y):
@@ -669,14 +699,12 @@ func generated_lists(codes: Array) -> Dictionary:
 			if not pool.has(r):
 				pool[r] = []
 			(pool[r] as Array).append(q)
-	GameDB.skip_ovr_overrides = skipped
 	GameDB.reload()
-	Prospects.forget_cache()
 	var targets := {}
 	for code in codes:
 		targets[code] = []
 		for p in GameDB.club_list(code):
-			(targets[code] as Array).append([str(p.get("role", "MID")), int(p.get("overall", 50))])
+			(targets[code] as Array).append([str(p.get("role", "MID"))])
 	var used := {}
 	var out := {}
 	for code in codes:
@@ -687,16 +715,6 @@ func generated_lists(codes: Array) -> Dictionary:
 			used[t[0]] = at + 1
 			var q: Dictionary = (from[at] as Dictionary).duplicate(true)
 			q["club"] = code
-			# The career's re-anchor (Prospects.fit_attributes) leaves the attributes outside
-			# the rating alone; set_player_ovr shifts them too, so put them back: the league
-			# keeps the temperaments generation rolled (the hothead share the audit measures).
-			var keep := {}
-			for k in Prospects.UNRATED_KEYS:
-				keep[k] = (q["attr"] as Dictionary).get(k)
-			GameDB.set_player_ovr(q, int(t[1]))
-			for k in keep:
-				if keep[k] != null:
-					q["attr"][k] = keep[k]
 			(out[code] as Array).append(q)
 	return out
 

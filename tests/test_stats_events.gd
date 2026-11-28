@@ -184,8 +184,8 @@ func _test_broken_tackles(results: Array) -> void:
 	_check(bad == "" and total > 0, "Broken tackles are counted, fends and evades, and the side's are its players' (%s)" % bad)
 	var sim := MatchSim.new(Squad.new("GEE", GameDB.club_list("GEE"), true, "GEE"),
 			Squad.new("COL", GameDB.club_list("COL"), false, "COL"), 4199)
-	var bull := {"attr": {"contested": 95, "carry": 30}}
-	var runner := {"attr": {"contested": 30, "carry": 95}}
+	var bull := {"attr": {"strength": 95, "speed": 30}}
+	var runner := {"attr": {"strength": 30, "speed": 95}}
 	var fends := [0, 0]
 	for i in range(400):
 		if sim._break_kind(bull) == "dont_argues":
@@ -193,7 +193,7 @@ func _test_broken_tackles(results: Array) -> void:
 		if sim._break_kind(runner) == "dont_argues":
 			fends[1] += 1
 	_check(fends[0] > 300 and fends[1] < 100 and fends[1] > 0,
-			"A strong contested player mostly fends, a runner mostly evades, neither always (%d and %d of 400)" % fends)
+			"A strong player mostly fends, a quick one mostly evades, neither always (%d and %d of 400)" % fends)
 
 
 ## A match packed before the two were recorded reads back as it was: the

@@ -27,6 +27,7 @@ extends RefCounted
 ##              (the highest-POT eligible player, his first job), row 67.
 ## SUMMARY adds flags, grand finals and top-four finishes (row 67).
 ## Args after the impl name: seeds (comma-separated) seasons.
+const Ovr := preload("res://tests/ovr.gd")
 
 var dyn = load("res://tools/balance/dynasty.gd").new()
 var trade_mode := "list"
@@ -233,7 +234,7 @@ func _manage(gs, user: String) -> Dictionary:
 				mgmt["resigned"] += 1
 				if kid:
 					tracked[id] = true
-					kid_terms.append("%s:%d@%d/%d" % [id, years, int(p.get("salary", 0)), int(p["overall"])])
+					kid_terms.append("%s:%d@%d/%d" % [id, years, int(p.get("salary", 0)), int(Ovr.of(p))])
 		elif (gs.my_list as Array).size() > Contracts.min_list():
 			if bool(gs.release_player(id).get("ok", false)):
 				mgmt["released"] += 1
@@ -285,7 +286,7 @@ func _offseason(gs, seed: int, user: String, mgmt: Dictionary) -> bool:
 			prices[spot] = TradeValue.pick_value([[spot, 1.0]], ranked, "building")
 		print("PICK seed %d year %d pick %d round %d club %s mine %d id %s age %.1f ovr %d pot %d role %s price %.3f" % [
 				seed, gs.season_year, spot, int(r[1]), str(r[2]), 1 if str(r[2]) == user else 0, id,
-				float(p.get("age", 0.0)), int(p["overall"]), int(p.get("potential", 0)), str(p.get("role", "")),
+				float(p.get("age", 0.0)), int(Ovr.of(p)), int(p.get("potential", 0)), str(p.get("role", "")),
 				float(prices[spot])])
 	return gs.start_next_season()
 
@@ -312,7 +313,7 @@ func _track(gs, seed: int, when: String) -> void:
 		var games := int((gs.season_tally.get(str(id), {}) as Dictionary).get("games", 0)) if when == "end" else -1
 		print("TRACK seed %d year %d %s id %s club %s age %.1f ovr %d pot %d salary %d years %d in22 %d games %d" % [
 				seed, gs.season_year, when, str(id), str(p.get("club", "")), float(p.get("age", 0.0)),
-				int(p["overall"]), int(p.get("potential", 0)), int(p.get("salary", 0)),
+				int(Ovr.of(p)), int(p.get("potential", 0)), int(p.get("salary", 0)),
 				int(p.get("contract_years", 0)), 1 if in22.has(str(id)) else 0, games])
 
 
@@ -322,9 +323,9 @@ func _track(gs, seed: int, when: String) -> void:
 func _probes(gs, seed: int, user: String) -> void:
 	var line26: float = dyn.nth_value(gs.my_list, 25)
 	var spares: Array = (gs.my_list as Array).filter(func(q): return dyn._spare(q, line26))
-	spares.sort_custom(func(a, b): return int(a["overall"]) > int(b["overall"]))
+	spares.sort_custom(func(a, b): return int(Ovr.of(a)) > int(Ovr.of(b)))
 	var vets: Array = (gs.my_list as Array).filter(func(q): return float(q.get("age", 0.0)) >= 30.0)
-	vets.sort_custom(func(a, b): return int(a["overall"]) > int(b["overall"]))
+	vets.sort_custom(func(a, b): return int(Ovr.of(a)) > int(Ovr.of(b)))
 	var picks: Array = gs.club_picks(user)
 	var this_year: Array = picks.filter(func(pk): return int(pk["year"]) == int(gs.season_year))
 	for club in GameDB.active_clubs(gs.season_year):
@@ -333,7 +334,7 @@ func _probes(gs, seed: int, user: String) -> void:
 		var phase: String = gs.club_phase(str(club))
 		var list: Array = gs.season.lists.get(club, [])
 		var by_ovr := list.duplicate()
-		by_ovr.sort_custom(func(a, b): return int(a["overall"]) > int(b["overall"]))
+		by_ovr.sort_custom(func(a, b): return int(Ovr.of(a)) > int(Ovr.of(b)))
 		# 1. Quantity for quality: their best player for 2..5 of your best spares.
 		var star: Dictionary = by_ovr[0]
 		var bought := 0
@@ -344,14 +345,14 @@ func _probes(gs, seed: int, user: String) -> void:
 				break
 		var spare_ovr := 0.0
 		for q in spares.slice(0, 5):
-			spare_ovr += float(q["overall"])
+			spare_ovr += float(Ovr.of(q))
 		print("PROBE qty seed %d year %d club %s phase %s star %d/%d age %.0f spares_mean %.1f accepted_at %d" % [
-				seed, gs.season_year, str(club), phase, int(star["overall"]), int(star.get("potential", 0)),
+				seed, gs.season_year, str(club), phase, int(Ovr.of(star)), int(star.get("potential", 0)),
 				float(star.get("age", 0.0)), spare_ovr / float(maxi(1, mini(5, spares.size()))), bought])
 		# 2. An old star for their best kid (22 or under, the most POT), and
 		# the same kid for your best spare; both sides then tracked.
 		var kids: Array = list.filter(func(q): return float(q.get("age", 30.0)) <= 22.0 \
-				and int(q.get("potential", 0)) - int(q["overall"]) >= 6)
+				and int(q.get("potential", 0)) - int(Ovr.of(q)) >= 6)
 		kids.sort_custom(func(a, b): return int(a.get("potential", 0)) > int(b.get("potential", 0)))
 		if not kids.is_empty() and not vets.is_empty():
 			var kid: Dictionary = kids[0]
@@ -360,8 +361,8 @@ func _probes(gs, seed: int, user: String) -> void:
 				tracked[str(kid["id"])] = true
 				tracked[str(v["id"])] = true
 				print("PROBE vet seed %d year %d club %s phase %s kid %s %d/%d age %.1f vet %s %d/%d age %.1f ok %d reason %s" % [
-						seed, gs.season_year, str(club), phase, str(kid["id"]), int(kid["overall"]),
-						int(kid.get("potential", 0)), float(kid.get("age", 0.0)), str(v["id"]), int(v["overall"]),
+						seed, gs.season_year, str(club), phase, str(kid["id"]), int(Ovr.of(kid)),
+						int(kid.get("potential", 0)), float(kid.get("age", 0.0)), str(v["id"]), int(Ovr.of(v)),
 						int(v.get("potential", 0)), float(v.get("age", 0.0)), 1 if bool(r.get("ok", false)) else 0,
 						_short(str(r.get("reason", ""))).replace(" ", "_")])
 		# 3. What each of this year's picks buys alone: their best player
@@ -375,7 +376,7 @@ func _probes(gs, seed: int, user: String) -> void:
 					break
 			print("PROBE pick seed %d year %d club %s phase %s round %d spot %d buys %s" % [
 					seed, gs.season_year, str(club), phase, int(pk["round"]), spot,
-					"none" if got.is_empty() else "%d/%d age %.1f" % [int(got["overall"]),
+					"none" if got.is_empty() else "%d/%d age %.1f" % [int(Ovr.of(got)),
 					int(got.get("potential", 0)), float(got.get("age", 0.0))]])
 
 

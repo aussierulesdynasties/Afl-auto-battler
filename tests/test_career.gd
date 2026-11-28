@@ -1,4 +1,5 @@
 extends RefCounted
+const Ovr := preload("res://tests/ovr.gd")
 ## Career records (Career.gd): games, goals and club stints across a dynasty.
 ## Totals must count every match (finals too) for every club, exactly once a
 ## season, through saves, reloads and rollovers; club moves must read as a
@@ -287,7 +288,7 @@ func _test_three_seasons_and_club_change() -> void:
 		if y == y0 + 1:
 			var best := {}
 			for p in GameState.season.lists[from]:
-				if best.is_empty() or int(p["overall"]) > int(best["overall"]):
+				if best.is_empty() or int(Ovr.of(p)) > int(Ovr.of(best)):
 					best = p
 			mover = best
 			(GameState.season.lists[from] as Array).erase(mover)

@@ -4,6 +4,7 @@ extends RefCounted
 ## PROJECT_POT) with forward, midfield and back within reach. Counts the
 ## opening pool (every 2027 list) and the 2026 National Draft class. Reads;
 ## changes nothing. No arguments.
+const Ovr := preload("res://tests/ovr.gd")
 
 func run() -> void:
 	GameState.reset()
@@ -34,10 +35,10 @@ func run() -> void:
 		var gaps: PackedStringArray = []
 		for l in Traits.UNICORN_LINES:
 			if not Traits.plays(p, l):
-				var g := int(p.get("overall", 0)) - int(GameState.rating_as(p, l))
+				var g := int(Ovr.of(p, 0)) - int(GameState.rating_as(p, l))
 				gaps.append("%s -%d%s" % [l, g, " ok" if g <= GameState.PROJECT_REACH else " too far"])
 		var s := "%s %s %d/%d %s%s   %s" % [GameDB.player_display_name(p), str(p.get("club", "")),
-				int(p.get("overall", 0)), pot, str(p.get("role", "")),
+				int(Ovr.of(p, 0)), pot, str(p.get("role", "")),
 				("/" + str(p.get("role2", ""))) if str(p.get("role2", "")) != "" else "", ", ".join(gaps)]
 		if lines >= 2:
 			two_lines_ready.append(s)

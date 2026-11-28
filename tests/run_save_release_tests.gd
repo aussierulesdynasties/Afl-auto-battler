@@ -2,7 +2,8 @@ extends SceneTree
 ## godot --headless --path . --script tests/run_save_release_tests.gd
 ## Release engineering for saves (row T7.R84):
 ##  - every save version this game has written keeps a frozen fixture, a real
-##    file from that build, and each one still opens, plays on and saves;
+##    file from that build; each one from CareerSave.FIRST_LOADABLE on still
+##    opens, plays on and saves, and each older one is refused in words;
 ##  - "Restore last good save" on the main menu goes back to the save before
 ##    the last one (real taps), and can be undone the same way;
 ##  - a version's patch notes open once on the menu, close with a tap, and
@@ -28,6 +29,9 @@ const FROZEN := {
 	"career_v3_2026-11-16.save.gz": {"version": 3, "club": "FRE", "stage": "Round 3",
 		"ladder": ["GWS 8", "GCS 8", "SYD 8", "NTH 8", "GEE 8", "HAW 8", "MEL 4", "STK 4", "CAR 4",
 			"ADE 4", "ESS 4", "WBD 4", "COL 0", "FRE 0", "BRL 0", "PAD 0", "RIC 0", "WCE 0"]},
+	"career_v4_2026-11-26.save.gz": {"version": 4, "club": "FRE", "stage": "Round 3",
+		"ladder": ["WBD 8", "WCE 8", "PAD 8", "GEE 6", "COL 6", "FRE 4", "ESS 4", "NTH 4", "STK 4",
+			"CAR 4", "RIC 4", "SYD 4", "BRL 4", "GWS 4", "ADE 0", "MEL 0", "GCS 0", "HAW 0"]},
 }
 
 
@@ -113,6 +117,7 @@ func _test_frozen_fixtures() -> void:
 		versions[int(name.trim_prefix("career_v").get_slice("_", 0))] = true
 	for v in range(1, CareerSave.VERSION + 1):
 		_check(versions.has(v), "Save version %d has a frozen fixture in tests/fixtures (tools/make_save_fixture.gd)" % v)
+	var loadable := 0
 	for name in names:
 		_check(FROZEN.has(name), "%s has its frozen facts in FROZEN" % name)
 		if not FROZEN.has(name):
@@ -121,6 +126,15 @@ func _test_frozen_fixtures() -> void:
 		_put_fixture(name)
 		_check(_version_on_disk() == int(want["version"]) and name.begins_with("career_v%d_" % int(want["version"])),
 				"%s really is a version %d save" % [name, int(want["version"])])
+		if int(want["version"]) < CareerSave.FIRST_LOADABLE:
+			# From before the rating rebuild (director, 2026-11-25: "i dont care
+			# about old saves"): refused in words, never shown as damaged.
+			_check(not _state.has_saved_career() and str(_state.saved_career_problem()).contains("before the new player ratings"),
+					"%s: no Continue, and the menu says it is from before the new player ratings (%s)" % [name, _state.saved_career_problem()])
+			_state.reset()
+			_check(not _state.load_career(), "%s does not open" % name)
+			continue
+		loadable += 1
 		_check(_state.has_saved_career() and _state.saved_career_problem() == "",
 				"%s: the menu offers Continue, with no problem line" % name)
 		var meta: Dictionary = _state.saved_career_meta()
@@ -156,6 +170,7 @@ func _test_frozen_fixtures() -> void:
 				"%s saves again as the current version" % name)
 		_state.reset()
 		_check(_state.load_career() and _state.season.round_index == 3, "%s reloads after that" % name)
+	_check(loadable >= 1, "At least one frozen fixture (version %d on) opens (%d)" % [CareerSave.FIRST_LOADABLE, loadable])
 	_state.delete_saved_career()
 
 

@@ -9,6 +9,7 @@ extends RefCounted
 ## Prints one UPGRADE line per off-season: rivals, rivals holding an upgrade,
 ## rivals with a deal on spare assets, how many such players, and the
 ## refusal codes for the cheapest spare package tried on each target.
+const Ovr := preload("res://tests/ovr.gd")
 
 var dyn = load("res://tools/balance/dynasty.gd").new()
 
@@ -133,7 +134,7 @@ func _ask(gs, seed: int, user: String) -> void:
 				continue
 			if bool(gs.make_trade(str(club), r["mine"], r["theirs"]).get("ok", false)):
 				made += 1
-				log.append("%s %d/%d for %s" % [club, int(q["overall"]), int(q.get("potential", 0)), ",".join(r["mine"])])
+				log.append("%s %d/%d for %s" % [club, int(Ovr.of(q)), int(q.get("potential", 0)), ",".join(r["mine"])])
 				break
 	print("ASK seed %d year %d asked %d priced %d trades %d ms %d %s" % [seed, gs.season_year, asked, priced, made,
 			Time.get_ticks_msec() - t0, " | ".join(log)])

@@ -19,11 +19,11 @@ const MARKED := 6
 ## PlanFit.NEEDS for his plan). FATH and GAMB read the projection instead.
 const WEIGHTS := {
 	"DS": {"pressure": 1.0},
-	"TA": {"carry": 0.6, "disposal": 0.4},
-	"CC": {"contested": 1.0},
+	"TA": {"work_rate": 0.6, "disposal": 0.4},
+	"CC": {"contested_ball": 1.0},
 	"PC": {"disposal": 0.65, "discipline": 0.35},
 	"HARD": {"discipline": 1.0},
-	"ANA": {"intercept": 0.5, "creating": 0.5},
+	"ANA": {"reading_play": 0.5, "vision": 0.5},
 }
 
 ## The lines a Strategic archetype's plan counts (PlanFit.NEEDS): a ruck is
@@ -37,7 +37,7 @@ const LINES := {
 ## then the rating's name ("" when the fit already names it).
 const SUITS := {
 	"DS": ["Presses like your side", "pressure"],
-	"TA": ["Runs and carries like your side", ""],
+	"TA": ["Runs and uses it like your side", ""],
 	"CC": ["Wins it in close", "contested ball"],
 	"PC": ["Looks after the ball", "ball use"],
 	"HARD": ["Plays to your standards", "discipline"],
@@ -102,7 +102,7 @@ static func read(p: Dictionary, id: String, club: String, seed: int, mult := 1.0
 		return {}
 	var score := 0.0
 	for k in WEIGHTS[id]:
-		score += float(WEIGHTS[id][k]) * Skills.value(a, k)
+		score += float(WEIGHTS[id][k]) * Attributes.value(a, k)
 	var seen := clampf(score + DraftScouting._normal(DraftScouting._key(p, club, seed, "fit_" + id))
 			* DraftScouting.COMBINE_NOISE * u, 1.0, 99.0)
 	var value := int(round(seen))

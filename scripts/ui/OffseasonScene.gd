@@ -1628,16 +1628,14 @@ func _ratings_grid(pv: VBoxContainer, p: Dictionary) -> void:
 	grid.add_theme_constant_override("h_separation", UiKit.Space.SPREAD)
 	grid.add_theme_constant_override("v_separation", 0)
 	pv.add_child(grid)
-	var unknown: Array = p.get("attr_unrecorded", [])
 	var rows: Array = PlayerSheet.ATTR_ROWS.duplicate()
 	rows.append(["leadership", "Leadership"])
 	for r in rows:
-		var v := float(Leadership.of(p)) if r[0] == "leadership" else \
-				(-1.0 if unknown.has(r[0]) else float(attr.get(r[0], 0.0)))
+		var v := float(Leadership.of(p)) if r[0] == "leadership" else float(attr.get(r[0], 0.0))
 		var cell := UiKit.hbox(UiKit.Space.SNUG)
 		cell.name = "Rating_" + str(r[0])
 		cell.add_child(UiKit.line(str(r[1]), UiKit.SMALL, UiKit.TEXT))
-		cell.add_child(UiKit.line("—" if v < 0.0 else str(int(round(v))), UiKit.SMALL, UiKit.MUTED))
+		cell.add_child(UiKit.line(str(int(round(v))), UiKit.SMALL, UiKit.MUTED))
 		grid.add_child(cell)
 
 

@@ -1,4 +1,5 @@
 extends SceneTree
+const Ovr := preload("res://tests/ovr.gd")
 ## godot --headless --path . --script tests/run_draft_ui_tests.gd
 ## Layout/state regressions using actual Godot containers. Browser/device touch
 ## smoke tests are documented separately in tests/README.md.
@@ -477,7 +478,7 @@ func _finished_draft(cover: bool) -> Control:
 				board = others
 		if board.is_empty():
 			break
-		board.sort_custom(func(a, b): return int(a["value"]) < int(b["value"]))
+		board.sort_custom(func(a, b): return d.price(a) < d.price(b))
 		# The picks before the last are the model's (the screen is not under
 		# test until the list is whole); the last goes through the screen's
 		# own pick, so it lands as a coach's would.
@@ -667,7 +668,7 @@ func _test_projected_row(ui: Control) -> void:
 	var scouting = load("res://scripts/sim/DraftScouting.gd")
 	_check(row != null and bool(view["scouted"]) and line.contains("projected")
 			and line.contains(scouting.range_text(view["potential"]) + " POT")
-			and line.contains(scouting.range_text(view["overall"]) + " OVR"),
+			and line.contains(scouting.range_text(Ovr.of(view)) + " OVR"),
 			"A League Draft projected prospect's row shows a scouted range (%s)" % line)
 	p.erase("projected")
 	p.erase("draft_team")
@@ -714,7 +715,7 @@ func _test_inspect(ui: Control) -> void:
 	# Undrafted in the League Draft: your recruiters' read, as a range.
 	var read: Dictionary = draft.user_view(p)
 	_check(ovr != null and bool(read["scouted"])
-			and (ovr.get_child(0) as Label).text.contains(str(int(read["overall"][0])))
+			and (ovr.get_child(0) as Label).text.contains(str(int(Ovr.of(read)[0])))
 			and (ovr.get_child(1) as Label).text == "OVR"
 			and pot != null and (pot.get_child(0) as Label).text.contains(str(int(read["potential"][0]))),
 			"His OVR and POT are your recruiters' read")
@@ -772,7 +773,15 @@ func _test_inspect(ui: Control) -> void:
 	ui.find_child("DetailAllRatings", true, false).emit_signal("pressed")
 	await _settle()
 	var attrs: Node = ui.find_child("DetailAttributes", true, false)
-	var readable := attrs != null and attrs.get_child_count() == (load("res://scripts/ui/PlayerSheet.gd").ATTR_ROWS as Array).size()
+	# Four groups, each a heading over its rows (RATING_REBUILD Phase 8).
+	var attr_rows := 0
+	var heads := 0
+	if attrs != null:
+		for g in attrs.find_children("AttrGrid_*", "GridContainer", false, false):
+			attr_rows += g.get_child_count()
+		heads = attrs.find_children("AttrGroup_*", "Label", false, false).size()
+	var readable := attrs != null and heads == 4 \
+			and attr_rows == (load("res://scripts/ui/PlayerSheet.gd").ATTR_ROWS as Array).size()
 	if attrs != null:
 		for l in attrs.find_children("*", "Label", true, false):
 			if (l as Label).size.y > 30.0 or (l as Label).size.x < 20.0:
@@ -836,7 +845,7 @@ func _test_inspect(ui: Control) -> void:
 	# A dear player still in the pool (an early row may have gone to a rival).
 	var dear: Dictionary = rows[3]
 	for r in rows:
-		if not draft.has(str(r["id"])) and int(r["value"]) > 3:
+		if not draft.has(str(r["id"])) and draft.price(r) > 3:
 			dear = r
 			break
 	ui.call("_open_player", str(dear["id"]))
@@ -1630,9 +1639,13 @@ func _sign_waits_for_the_draft(ui: Control) -> void:
 		if ok != null and ok.is_visible_in_tree():
 			await Tap.tap(ok)
 			await _settle()
+	# Choosing the club ran the rival picks before its first turn
+	# (Draft.start_for_user), so the Combine's best may already be gone: his
+	# sheet says where he went and has no Sign. The first one still there.
 	var row: BaseButton = null
 	for c in ui.find_children("Prospect_*", "BaseButton", true, false):
-		if (c as BaseButton).is_visible_in_tree():
+		if (c as BaseButton).is_visible_in_tree() \
+				and not _state.draft.has(str(c.name).trim_prefix("Prospect_")):
 			row = c
 			break
 	_check(why == "" and row != null, "The Combine opens in the off-season with its prospects (%s)" % why)
