@@ -31,6 +31,7 @@ func run() -> void:
 	_t("_test_work_rate_in_match")
 	_t("_test_worth_economy")
 	_t("_test_ageing_clean_up")
+	_t("_test_draftee_hybrids")
 	_t("_test_selection_and_pay_read_it")
 	_t("_test_save_carries_no_ovr")
 	GameState.delete_saved_career()
@@ -304,6 +305,20 @@ func _test_team_strength_reads_the_cut() -> void:
 ## second disposal on harder, and its own runners take the pressure off an
 ## uncontested receive. A side of league-average runners plays as before.
 func _test_work_rate_in_match() -> void:
+	# Measured first, before the sides below change their players. The neutral
+	# point is the picked sides' average, not the list's (issue #2344): the 18
+	# clubs' auto-picked 18 average 41.9 before the day's tiredness, 41.35 as the
+	# match reads them.
+	var total := 0.0
+	var count := 0
+	for code in GameDB.club_order:
+		if GameDB.club_list(code).is_empty():
+			continue
+		for q in Squad.new(code, GameDB.club_list(code), false, code).ground:
+			total += float(q["attr"].get("work_rate", 50))
+			count += 1
+	var picked := total / float(maxi(1, count))
+	_check(absf(picked - MatchSim.WORK_RATE_LEAGUE) < 1.0, "the Work Rate anchor sits at the picked sides' average (%.2f vs %.1f)" % [picked, MatchSim.WORK_RATE_LEAGUE])
 	var make := func(home_wr: float, away_wr: float) -> MatchSim:
 		var sim := MatchSim.new(Squad.new("GEE", GameDB.club_list("GEE"), true, "GEE"),
 				Squad.new("COL", GameDB.club_list("COL"), false, "COL"), SUITE_SEED)
@@ -395,6 +410,34 @@ func _test_ageing_clean_up() -> void:
 
 ## Selection rates a man at a slot by Rating.at_line, and the salary curve
 ## prices his derived OVR.
+## Generated draftees get a second line about as often as real players do, and
+## only in pairs real players of their position have (director review
+## 2026-11-28, issue #2344: "plausible hybrid archetypes", tighten if over 30%).
+func _test_draftee_hybrids() -> void:
+	var real_pairs := {
+		"Gen. Defender": ["MID", "FWD"], "Key Defender": ["FWD", "RUCK"],
+		"Gen. Forward": ["MID", "DEF"], "Key Forward": ["RUCK", "DEF"],
+		"Midfielder": ["DEF", "FWD"], "Ruck": ["FWD", "DEF"]}
+	var n := 0
+	var hybrids := 0
+	var odd := []
+	for y in range(2027, 2032):
+		var pool: Array = Prospects.generate_class(y, 11)
+		pool.append_array(Prospects.generate_expansion_list("TAS", y, 36, "t%d" % y))
+		for p in pool:
+			n += 1
+			var r2 := str(p.get("role2", ""))
+			if r2 == "":
+				continue
+			hybrids += 1
+			var apos := Rating.apos_of(p)
+			if not (real_pairs.get(apos, []) as Array).has(r2):
+				odd.append("%s+%s" % [apos, r2])
+	var rate := float(hybrids) / float(maxi(1, n))
+	_check(n >= 300 and rate >= 0.15 and rate <= 0.30, "draftees with a second line: %.1f%% of %d" % [rate * 100.0, n])
+	_check(odd.is_empty(), "draftee second lines are real pairs (%s)" % ", ".join(odd))
+
+
 func _test_selection_and_pay_read_it() -> void:
 	var n := 0
 	var same := true

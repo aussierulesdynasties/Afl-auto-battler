@@ -2848,9 +2848,14 @@ func _zone_pressure(side: int, zone: int) -> float:
 
 ## Work Rate in the match (Bible 4.2.30a: "transition spread, uncontested
 ## link-up chains, AND repeat defensive pressure"; director 2026-11-28, plan
-## step 2). Around the league's average Work Rate (WORK_RATE_LEAGUE, the mean
-## of the 724 players in data/attributes_2026.csv, 32.9) neither moves
-## anything, so a side of average runners plays as before.
+## step 2). Around the league's average Work Rate (WORK_RATE_LEAGUE) neither
+## moves anything, so a side of average runners plays as before. The average is
+## the picked sides', not the whole list's (director review 2026-11-28, issue
+## #2344): over 36 matches between the 18 clubs' auto-picked sides on the 2026
+## lists, _zone_work returned 41.35 on average (32,616 reads, tiredness and
+## rotation included); the picked 18's plain Work Rate averages 41.9, all 669
+## rated players 33.6. The first anchor, 32.9, was the list mean and pushed every
+## side's repeat pressure up about 2.5%.
 ## Repeat pressure: from a chain's second disposal on, the pressure on the
 ## ball moves REPEAT_PRESS per point of the pressing side's Work Rate in that
 ## zone (PRESS_ZONES' weights) above or below the average, per 100.
@@ -2861,7 +2866,7 @@ func _zone_pressure(side: int, zone: int) -> float:
 ## league, presses a chain's third kick 3% harder.
 const REPEAT_PRESS := 0.30
 const LINK_UP := 0.30
-const WORK_RATE_LEAGUE := 32.9
+const WORK_RATE_LEAGUE := 41.4
 func _work_press(side: int, opp: int, zone: int, touches: int, got: String) -> float:
 	var m := 1.0
 	if touches > 1:

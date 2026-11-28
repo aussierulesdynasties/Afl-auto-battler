@@ -164,6 +164,7 @@ static func _make(p: Dictionary, c: Dictionary, year: int, rng: RandomNumberGene
 	p["role"] = role
 	p["role2"] = Prospects._generated_secondary(role, rng)
 	p["height_cm"] = h
+	Prospects._plausible_secondary(p)
 	p["dob"] = "%04d-%02d-%02d" % [year - age_years, rng.randi_range(1, 12), rng.randi_range(1, 28)]
 	p["age"] = float(Prospects.days_between(str(p["dob"]), "%d-11-20" % year)) / 365.25
 	p["club"] = str(way["team"])

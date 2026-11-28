@@ -413,6 +413,7 @@ static func generate_class(year: int, career_seed := 0) -> Array:
 			"DEF": height = float(rng.randi_range(182, 198))
 			_: height = float(rng.randi_range(173, 192))
 		p["height_cm"] = height
+		_plausible_secondary(p)
 		var over_age := rng.randf() < 0.15
 		var birth_year := year - (19 if over_age else 18)
 		var m := rng.randi_range(1, 12)
@@ -760,6 +761,7 @@ static func generate_expansion_list(code: String, year: int, size := 36, salt :=
 			"DEF": height = float(rng.randi_range(182, 198))
 			_: height = float(rng.randi_range(173, 192))
 		p["height_cm"] = height
+		_plausible_secondary(p)
 		var band := rng.randf()
 		var birth_year: int
 		if band < 0.45:
@@ -896,6 +898,29 @@ static func _mature_entry(p: Dictionary) -> void:
 		p["draft_league"] = str(club[1])
 	if age > Potential.MAX_PROSPECT_AGE:
 		p["draft_rank"] = 0
+
+
+## A generated player's second line, kept to pairs the real list has (director
+## review 2026-11-28, issue #2344: hybrids "only on plausible hybrid archetypes").
+## The draw in `_generated_secondary` is by line, before his height is known; once
+## his AFL position is set, a pair no real player of that position has is moved to
+## the one real players of it do: a key defender's Midfield becomes Forward, a
+## general forward's Ruck becomes Defence, a key forward's Midfield becomes Ruck
+## (197 cm and up) or Defence. No extra random draw, so the stream is unchanged.
+static func _plausible_secondary(p: Dictionary) -> void:
+	var r2 := str(p.get("role2", ""))
+	if r2 == "":
+		return
+	match Rating.apos_of(p):
+		"Key Defender":
+			if r2 == "MID":
+				p["role2"] = "FWD"
+		"Gen. Forward":
+			if r2 == "RUCK":
+				p["role2"] = "DEF"
+		"Key Forward":
+			if r2 == "MID":
+				p["role2"] = "RUCK" if float(p.get("height_cm", 0.0)) >= 197.0 else "DEF"
 
 
 static func _generated_secondary(role: String, rng: RandomNumberGenerator) -> String:
