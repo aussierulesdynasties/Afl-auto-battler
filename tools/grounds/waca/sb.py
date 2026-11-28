@@ -18,5 +18,5 @@ for (s0,z0),(s1,z1) in zip(ARC,ARC[1:]):sq('yellow',[(s0,0.06,z0),(s1,0.06,z1),(
 # hand-drawn faces, explicit UVs, read left to right in the photo (s decreasing)
 F0=SBP(7.6,0.08,10.8);quad('sbface',[F0,SBP(-7.6,0.08,10.8),SBP(-7.6,0.08,17.1),(F0[0],F0[1],17.1+DZ)])   # 8 cm proud of the box: 3 cm z-fought
 SIGNS['sbface']=(F0,(-SL[0],-SL[1]),15.2,10.8+DZ,6.3)
-C0=SBP(8.6,0.08,16.5);quad('sbcrown',[C0,SBP(-8.1,0.08,16.5),SBP(-8.1,0.08,19.1),(C0[0],C0[1],19.1+DZ)])
+C0=SBP(8.6,0.09,16.5);quad('sbcrown',[C0,SBP(-8.1,0.09,16.5),SBP(-8.1,0.09,19.1),(C0[0],C0[1],19.1+DZ)])
 SIGNS['sbcrown']=(C0,(-SL[0],-SL[1]),16.7,16.5+DZ,2.6)
