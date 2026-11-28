@@ -35,6 +35,10 @@ extends SceneTree
 ##   --surge SIDE / --hold SIDE  that side throws numbers at it / slows it down
 ##                   (held on until the first break, as --flood)
 ##   --kside S       with --kind, only events by side S
+##   --lane L        with --kind kick or mark, only kicks down lane L (corridor,
+##                   switch, line; row T2.25)
+##   --clean         with --kind, only events the same side keeps (its next event
+##                   is that side's mark, kick or handball)
 ##   --shake F       the turnover shake's size as a share of the oval's height
 ##   --movie also prints each frame's largest disc move (MOTION lines, metres,
 ##                   as drawn) and, over the window, the home side's shape from
@@ -48,6 +52,14 @@ extends SceneTree
 ## --size WxH: the window (default 900x700; 390x330 is the oval's share of a phone).
 var W := 900
 var H := 700
+
+
+## Event i's side has the ball at the next event (a mark, kick or handball).
+func _kept(evs: Array, i: int) -> bool:
+	if i + 1 >= evs.size():
+		return false
+	var n: Dictionary = evs[i + 1]
+	return int(n.get("side", -1)) == int((evs[i] as Dictionary).get("side", -2)) 			and str(n.get("kind", "")) in ["mark", "kick", "handball"]
 
 
 func _initialize() -> void:
@@ -204,7 +216,7 @@ func _run() -> void:
 		# Start a few events before the n-th event of this kind.
 		var seen := 0
 		for i in range(res["events"].size()):
-			if str(res["events"][i]["kind"]) == str(args["kind"]) 					and (not args.has("kside") or int(res["events"][i].get("side", -1)) == int(args["kside"])):
+			if str(res["events"][i]["kind"]) == str(args["kind"]) 					and (not args.has("kside") or int(res["events"][i].get("side", -1)) == int(args["kside"])) 					and (not args.has("lane") or str(res["events"][i].get("lane", "")) == str(args["lane"])) 					and (not args.has("clean") or _kept(res["events"], i)):
 				seen += 1
 				if seen == int(args.get("nth", "1")):
 					from = maxi(0, i - int(args.get("lead", "3")))
