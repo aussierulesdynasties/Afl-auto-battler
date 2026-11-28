@@ -270,3 +270,4 @@ What has landed toward each open row of docs/TODO.md and docs/TODO_RULINGS.md, o
 - 202: Merged #2296: Marvel gates.glb: deck stops at the Wurundjeri Way wall, opaque materials lit as stands.
 - 202: Merged #2317: Marvel Gate 7: the bolt sculpture.
 - 202: Merged #2319: 3D 1.0 plan: Marvel round 17c-17f and real gates in matches.
+- 202: Merged #2322: 3D 1.0 plan: before-orbits of all 11 grounds, Marvel open items.
