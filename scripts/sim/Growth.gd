@@ -252,8 +252,8 @@ static func _first_season(p: Dictionary, season_year: int) -> int:
 # ---------------------------------------------------------------------------
 # The summer
 # ---------------------------------------------------------------------------
-## One player's summer after season `year` (the one just played): an injured
-## season shortens his career; once his career is over, the season's gains go
+## One player's summer after season `year` (the one just played): a rehab
+## year's bounce (rehab_bounce); an injured season shortens his career; once his career is over, the season's gains go
 ## and he falls, every attribute but Discipline by the same points
 ## (Rating.shift_to). Returns the rating change.
 static func summer(p: Dictionary, year: int) -> int:
@@ -261,6 +261,8 @@ static func summer(p: Dictionary, year: int) -> int:
 	var ov := int(Rating.ovr(p, 0))
 	if a.is_empty():
 		return 0
+	rehab_bounce(p)
+	a = p["attr"]
 	var last := career_last(p, year)
 	if int(p.get("games_missed_injured", 0)) >= INJURY_GAMES:
 		last -= INJURY_CUT
@@ -269,12 +271,42 @@ static func summer(p: Dictionary, year: int) -> int:
 		# His career is over: the season's gains were temporary, and he falls.
 		_take_back(a, p.get("season_gains", {}), 1.0)
 		p["attr"] = a
-		var now := int(Rating.ovr(p))
+		# His own position's OVR: shift_to sets that one, and a hybrid's
+		# headline can sit above it (independent review, 2026-11-28).
+		var now := int(Rating.ovr_at_own(p, 0))
 		var n := int(p.get("decline_n", 0))
 		var fall := int(FALL[n % FALL.size()])
 		p["decline_n"] = n + 1
 		p["attr"] = Rating.shift_to(a, Rating.apos_of(p), float(now - fall))
 	return int(Rating.ovr(p)) - ov
+
+
+## The rehab year's bounce (director 2026-11-28, plan step 4: "actually
+## implement rehab recovery in Growth"; Bible 4.52: "a star in his rehab year
+## is valued at the rating he comes back at"): the summer after his injury
+## season a player flagged "rehab" closes Potential.rehab_pull(age) of the gap
+## to his POT, every attribute but Discipline moved evenly (Rating.shift_to),
+## and the flag goes. At least 2 points, or the whole gap. Returns the rise.
+## Example: 60 with POT 80 at 27 rises 0.9 x 20 = 18, to 78.
+static func rehab_bounce(p: Dictionary) -> int:
+	if not bool(p.get("rehab", false)):
+		return 0
+	p.erase("rehab")
+	var a: Dictionary = p.get("attr", {})
+	if a.is_empty():
+		return 0
+	var ov := int(Rating.ovr(p, 0))
+	var gap := float(int(p.get("potential", ov)) - ov)
+	if gap <= 0.0:
+		return 0
+	var rise := maxf(gap * Potential.rehab_pull(float(p.get("age", 26.0))), minf(gap, 2.0))
+	var own := int(Rating.ovr_at_own(p, 0))
+	p["attr"] = Rating.shift_to(a, Rating.apos_of(p), float(own) + rise)
+	# A hybrid's headline can move more than his own position did: never past POT.
+	var over := int(Rating.ovr(p, 0)) - int(p.get("potential", ov))
+	if over > 0:
+		p["attr"] = Rating.shift_to(a, Rating.apos_of(p), float(own) + rise - float(over))
+	return int(Rating.ovr(p, 0)) - ov
 
 
 ## Grow him as if he played `games` ordinary senior games on his position
@@ -385,7 +417,41 @@ static func _load_curves() -> Dictionary:
 		if not _curves.has(key):
 			_curves[key] = {}
 		(_curves[key] as Dictionary)[int(r[col["age"]])] = float(r[col["change"]])
+		if not _curve_n.has(key):
+			_curve_n[key] = {}
+		(_curve_n[key] as Dictionary)[int(r[col["age"]])] = float(r[col["n"]]) if col.has("n") else 0.0
+	_pool_old_ages()
 	return _curves
+
+
+## Past AGE_POOL_FROM the measured changes rest on a handful of players (at 38
+## two: Kicking +20.5, One-on-one +30.5), so every age past it reads the same
+## change: the n-weighted mean of the measured changes from AGE_POOL_FROM on,
+## never a rise (director 2026-11-28, plan step 4: "Smooth/clamp
+## data/age_curves.csv past age 34 ... to realistic steady decline"). The file
+## keeps what was measured.
+## Example: Kicking from 34 (31 players -0.84, 12 +1.08, 6 -12.17, 3 -8.0,
+## 2 +20.5) reads -1.28 a season at 35 and on.
+const AGE_POOL_FROM := 34
+static var _curve_n := {}
+static func _pool_old_ages() -> void:
+	for key in _curves:
+		var c: Dictionary = _curves[key]
+		var n: Dictionary = _curve_n.get(key, {})
+		var total := 0.0
+		var weight := 0.0
+		for age in c:
+			if int(age) >= AGE_POOL_FROM:
+				total += float(c[age]) * float(n.get(age, 0.0))
+				weight += float(n.get(age, 0.0))
+		if weight <= 0.0:
+			continue
+		var pooled := minf(0.0, total / weight)
+		for age in c.keys():
+			if int(age) > AGE_POOL_FROM:
+				c[age] = pooled
+		for age in range(AGE_POOL_FROM + 1, 46):
+			c[age] = pooled
 
 
 ## One regular round of ageing for every listed player: each attribute moves
@@ -401,16 +467,37 @@ static func age_round(lists: Dictionary, rounds: int) -> void:
 			age_step(p, share)
 
 
+## How far `key` moves in the season he plays at `age`, for him: a Fine Wine
+## player (director 2026-11-28, plan step 4: "Wire Fine Wine into
+## Growth.age_round()") ages Traits.FINE_WINE_YEARS behind past the growing
+## years (Potential.ageing_age) and loses Traits.FINE_WINE_SLOPE of a normal
+## season's fall, as the old development rule had it. The measured curves
+## are not smooth (Kicking: -0.49 at 30, +0.17 at 33), so he takes the better
+## of his own age's change and the younger age's: Fine Wine never ages a man
+## faster than the rest.
+## Example: Fine Wine at 33 reads the curve at 30 and at 33, the better of
+## the two; a -2.0 there is -1.4.
+static func season_change(key: String, age: float, fine_wine: bool) -> float:
+	var c := age_change(key, int(floor(age)))
+	if not fine_wine or age <= Potential.DECLINE_FROM:
+		return c
+	c = maxf(c, age_change(key, int(floor(Potential.ageing_age(age, true)))))
+	if c < 0.0:
+		c *= Traits.FINE_WINE_SLOPE
+	return c
+
+
 ## Move one player `share` of a season along his age curves.
 static func age_step(p: Dictionary, share: float) -> void:
 	var a: Dictionary = p.get("attr", {})
 	if a.is_empty():
 		return
-	var age := int(floor(float(p.get("age", 25.0))))
+	var age := float(p.get("age", 25.0))
+	var fine := Traits.fine_wine(p)
 	var pot := int(p.get("potential", 0))
 	var carry: Dictionary = p.get("age_carry", {})
 	for key in Attributes.KEYS:
-		var c := age_change(key, age) * share
+		var c := season_change(key, age, fine) * share
 		if c == 0.0:
 			continue
 		if c > 0.0 and pot > 0 and int(Rating.ovr(p, 0)) >= pot:

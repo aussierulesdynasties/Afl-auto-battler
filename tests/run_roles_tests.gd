@@ -63,7 +63,10 @@ func _run() -> void:
 func _test_selection_tests() -> void:
 	var db = root.get_node("GameDB")
 	_state.reset()
-	_state.start_season("COL", db.club_list("COL"))
+	# Melbourne: its auto-picked side can complete Supply line (Collingwood's
+	# already has it on since every Mid-Forward can be picked forward, director
+	# 2026-11-28).
+	_state.start_season("MEL", db.club_list("MEL"))
 	# A PC window: the side and the week are both in view (a phone's two pages
 	# are tested in run_selection_pages_tests.gd).
 	root.size = Vector2i(1280, 720)
@@ -216,8 +219,7 @@ func _test_selection_tests() -> void:
 				"Back closes the synergy guide first")
 		await _settle()
 	# Complete synergy: one tap switches it on, says who came in, and can be
-	# undone (director, 2026-10-07). Collingwood can complete its Supply line
-	# (on the rebuilt ratings its list no longer holds three stoppers).
+	# undone (director, 2026-10-07). Melbourne can complete its Supply line.
 	(ui.find_child("SynergyRules", true, false) as Button).emit_signal("pressed")
 	await _settle()
 	var complete: Button = ui.find_child("Complete_supply_line", true, false)

@@ -26,6 +26,11 @@ func run() -> void:
 	_t("_test_derived_not_stored")
 	_t("_test_out_of_position")
 	_t("_test_match_reads_the_cut")
+	_t("_test_dual_roles")
+	_t("_test_team_strength_reads_the_cut")
+	_t("_test_work_rate_in_match")
+	_t("_test_worth_economy")
+	_t("_test_ageing_clean_up")
 	_t("_test_selection_and_pay_read_it")
 	_t("_test_save_carries_no_ovr")
 	GameState.delete_saved_career()
@@ -152,10 +157,14 @@ func _test_derived_not_stored() -> void:
 	for p in players:
 		if (p as Dictionary).has("overall"):
 			stored += 1
-		if int(Rating.ovr(p)) != Rating.of_attrs(p["attr"], Rating.apos_of(p)):
+		var best := Rating.of_attrs(p["attr"], Rating.apos_of(p))
+		for line in Rating.second_lines(p):
+			for apos in Rating.LINE_POSITIONS[line]:
+				best = maxi(best, Rating.of_attrs(p["attr"], apos))
+		if int(Rating.ovr(p)) != best:
 			wrong += 1
 	_check(stored == 0, "no real player carries a stored OVR (%d do)" % stored)
-	_check(wrong == 0, "every real player's OVR is his attributes at his position (%d differ)" % wrong)
+	_check(wrong == 0, "every real player's OVR is his attributes at his best eligible position (%d differ)" % wrong)
 	var p: Dictionary = (players[0] as Dictionary).duplicate(true)
 	var right := int(Rating.ovr(p))
 	p["overall"] = 99
@@ -219,6 +228,169 @@ func _test_match_reads_the_cut() -> void:
 	var mid := {"id": "cut_mid", "apos": "Midfielder", "role": "MID", "attr": _flat(80)}
 	_check(is_equal_approx(sim._a(mid, "kicking"), sim._a(home, "kicking")),
 			"the same 80 Kicking kicks the same for a midfielder and a key defender in their own spots")
+
+
+## Dual roles (director 2026-11-28, decisions 1-3): a Mid-Forward plays
+## forward; a ruck who kicks goals and a key forward who rucks get the other
+## line; no cut in a second or learned line, where he counts as the line's
+## position he rates best at; his headline OVR is the best of them; an
+## unlearned line still takes the cut.
+func _test_dual_roles() -> void:
+	var by := {}
+	for p in GameDB.players:
+		by[str(p["id"])] = p
+	var wright: Dictionary = by.get("ESS_20", {})
+	var jackson: Dictionary = by.get("FRE_9", {})
+	var thilthorpe: Dictionary = by.get("ADE_7", {})
+	_check(str(wright.get("apos", "")) == "Ruck" and str(wright.get("role2", "")) == "FWD",
+			"Peter Wright is a ruck with a second line forward")
+	_check(Rating.line_cut(wright, "FWD") == 0.0, "no cut for him up forward (%.2f)" % Rating.line_cut(wright, "FWD"))
+	_check(Rating.at_line(wright, "FWD") == Rating.of_attrs(wright["attr"], "Key Forward"),
+			"up forward he counts as a key forward (%d)" % Rating.at_line(wright, "FWD"))
+	_check(int(Rating.ovr(wright)) == Rating.of_attrs(wright["attr"], "Key Forward")
+			and int(Rating.ovr(wright)) > Rating.of_attrs(wright["attr"], "Ruck"),
+			"his headline OVR is his key forward OVR (%d), not his ruck OVR (%d)" % [
+					int(Rating.ovr(wright)), Rating.of_attrs(wright["attr"], "Ruck")])
+	var card := PlayerSheet.line_ratings_text(wright)
+	_check(card == "Forward %d, Ruck %d." % [Rating.of_attrs(wright["attr"], "Key Forward"), Rating.of_attrs(wright["attr"], "Ruck")],
+			"his card shows both lines, best first (%s)" % card)
+	_check(str(jackson.get("role2", "")) == "FWD",
+			"Luke Jackson's goals (%s in %s games) make him a ruck-forward" % [jackson.get("gl"), jackson.get("gm")])
+	_check(str(thilthorpe.get("role2", "")) == "RUCK",
+			"Riley Thilthorpe's hitouts (%s in %s games) make him a forward-ruck" % [thilthorpe.get("ho"), thilthorpe.get("gm")])
+	var mf := 0
+	var mf_fwd := 0
+	for p in GameDB.players:
+		if str(p.get("apos", "")) == "Mid-Forward":
+			mf += 1
+			if Ratings.positions(p).has("FWD") and Ratings.plays_role(p, "FWD") and Traits.plays(p, "FWD") \
+					and Rating.line_cut(p, "FWD") == 0.0:
+				mf_fwd += 1
+	_check(mf > 30 and mf_fwd == mf, "every Mid-Forward can be picked forward with no cut (%d of %d)" % [mf_fwd, mf])
+	# A Midfielder who learned the back line: no cut there, rated his best back
+	# position; the forward line he never learned still takes the cut.
+	var mid := {"id": "learn_mid", "apos": "Midfielder", "role": "MID", "learned": ["DEF"], "attr": _flat(70)}
+	mid["attr"]["reading_play"] = 90
+	_check(Rating.line_cut(mid, "DEF") == 0.0, "a learned line takes no cut")
+	_check(Rating.at_line(mid, "DEF") == maxi(Rating.of_attrs(mid["attr"], "Key Defender"), Rating.of_attrs(mid["attr"], "Gen. Defender")),
+			"in a learned line he counts as the line's position he rates best at")
+	_check(is_equal_approx(Rating.line_cut(mid, "FWD"), Rating.cut("Midfielder", Rating.spot_position("Midfielder", "FWD"))),
+			"a line he never learned still takes the cut (%.2f)" % Rating.line_cut(mid, "FWD"))
+	_check(GameState.rating_as(mid, "FWD") == Rating.best_in_line(mid["attr"], "FWD"),
+			"learning a line is judged without the cut (%d)" % GameState.rating_as(mid, "FWD"))
+	# The match reads the same: no cut in his second line.
+	var sim := MatchSim.new(Squad.new("GEE", GameDB.club_list("GEE"), true, "GEE"),
+			Squad.new("COL", GameDB.club_list("COL"), false, "COL"), SUITE_SEED)
+	var w_fwd: Dictionary = wright.duplicate()
+	w_fwd["role"] = "FWD"
+	w_fwd["own_role"] = "RUCK"
+	_check(is_equal_approx(sim._a_fresh(w_fwd, "goalkicking"), float(wright["attr"]["goalkicking"])),
+			"Peter Wright kicks for goal at his own %d up forward (%.1f)" % [wright["attr"]["goalkicking"], sim._a_fresh(w_fwd, "goalkicking")])
+
+
+## Team strength reads the out-of-position cut the match plays (plan step 1):
+## a key defender in the midfield adds less contested ball than his raw 80.
+func _test_team_strength_reads_the_cut() -> void:
+	var kd := {"id": "ts_kd", "apos": "Key Defender", "role": "MID", "attr": _flat(80)}
+	var mid := {"id": "ts_mid", "apos": "Midfielder", "role": "MID", "attr": _flat(80)}
+	var v_kd := Squad._mean([kd], "contested_ball")
+	var v_mid := Squad._mean([mid], "contested_ball")
+	_check(is_equal_approx(v_kd, 64.0) and is_equal_approx(v_mid, 80.0),
+			"a key defender's 80 contested ball counts 64 in the midfield, a midfielder's 80 (%.1f, %.1f)" % [v_kd, v_mid])
+	_check(is_equal_approx(Squad._mean([kd], "speed"), 80.0), "his speed counts in full")
+
+
+## Work Rate plays (plan step 2): a hard-running side presses a chain's
+## second disposal on harder, and its own runners take the pressure off an
+## uncontested receive. A side of league-average runners plays as before.
+func _test_work_rate_in_match() -> void:
+	var make := func(home_wr: float, away_wr: float) -> MatchSim:
+		var sim := MatchSim.new(Squad.new("GEE", GameDB.club_list("GEE"), true, "GEE"),
+				Squad.new("COL", GameDB.club_list("COL"), false, "COL"), SUITE_SEED)
+		for side in range(2):
+			for q in (sim.squads[side] as Squad).ground:
+				var a: Dictionary = (q["attr"] as Dictionary).duplicate()
+				a["work_rate"] = home_wr if side == 0 else away_wr
+				q["attr"] = a
+		return sim
+	var avg: MatchSim = make.call(MatchSim.WORK_RATE_LEAGUE, MatchSim.WORK_RATE_LEAGUE)
+	var hard: MatchSim = make.call(MatchSim.WORK_RATE_LEAGUE, 80.0)
+	var soft: MatchSim = make.call(MatchSim.WORK_RATE_LEAGUE, 10.0)
+	_check(absf(avg._work_press(0, 1, 1, 3, "up") - 1.0) < 0.005, "league-average runners (attributes are whole numbers) change next to nothing (%.3f)" % avg._work_press(0, 1, 1, 3, "up"))
+	_check(is_equal_approx(hard._work_press(0, 1, 1, 1, ""), 1.0), "a chain's first disposal takes no repeat pressure")
+	var h := hard._work_press(0, 1, 1, 3, "")
+	var l := soft._work_press(0, 1, 1, 3, "")
+	_check(h > 1.0 and l < 1.0, "the hard-running side presses the third kick harder, the soft side less (%.3f, %.3f)" % [h, l])
+	var up: MatchSim = make.call(80.0, MatchSim.WORK_RATE_LEAGUE)
+	_check(up._work_press(0, 1, 1, 1, "up") < 1.0, "our own runners ease an uncontested receive (%.3f)" % up._work_press(0, 1, 1, 1, "up"))
+
+
+## Worth (plan step 5, RATING_REBUILD.md Economy): 0.50 OVR + 0.20 Form +
+## 0.30 POT, less 1.5 a year past 29, times the durability factor; asking
+## salary from Worth; the trade value reads the same durability factor.
+func _test_worth_economy() -> void:
+	_check(is_equal_approx(Contracts.durability_factor(20.0), 0.85) and is_equal_approx(Contracts.durability_factor(75.0), 1.0)
+			and is_equal_approx(Contracts.durability_factor(95.0), 1.05), "durability 20, 75, 95 is 0.85, 1.00, 1.05")
+	_check(is_equal_approx(Contracts.durability_factor(0.0), 0.85) and is_equal_approx(Contracts.durability_factor(99.0), 1.05),
+			"and holds past the ends")
+	var p := {"id": "w_1", "apos": "Midfielder", "role": "MID", "age": 31.0, "potential": 80, "attr": _flat(70)}
+	p["attr"]["durability"] = 75
+	var ov := float(Rating.ovr(p))
+	_check(is_equal_approx(Contracts.form(p), ov), "under five games his Form is his OVR")
+	for i in range(12):
+		Contracts.note_form(p, 50.0 + i)
+	_check((p["worth_form"] as Array).size() == Contracts.FORM_GAMES and is_equal_approx(Contracts.form(p), 56.5),
+			"Form is his last ten games (%.1f)" % Contracts.form(p))
+	var want := 0.5 * ov + 0.2 * 56.5 + 0.3 * maxf(ov, 80.0) - 1.5 * 2.0
+	_check(is_equal_approx(Contracts.worth(p), want), "Worth is the plan's blend (%.2f, %.2f)" % [Contracts.worth(p), want])
+	var frail := p.duplicate(true)
+	frail["attr"]["durability"] = 20
+	_check(is_equal_approx(Contracts.worth(frail), want * 0.85), "an injury-prone man is worth 15% less")
+	_check(Contracts.asking_salary(p) == Contracts.asking_at(p, roundi(want)), "he asks the price of his Worth")
+	_check(Contracts.asking_salary(frail) < Contracts.asking_salary(p), "and the frail one asks less")
+	var tv_frail := float(TradeValue.value(frail, {"phase": "rebuilding", "games": -1})["total"])
+	var tv := float(TradeValue.value(p, {"phase": "rebuilding", "games": -1})["total"])
+	var tc_frail := float(TradeValue.value(frail, {"phase": "contending", "games": -1})["total"])
+	var tc := float(TradeValue.value(p, {"phase": "contending", "games": -1})["total"])
+	_check(is_equal_approx(tv_frail / tv, 0.85) and is_equal_approx(tc_frail / tc, 0.85),
+			"a trade takes the same 15%% off his whole value, rebuilder or contender (%.3f, %.3f)" % [tv_frail / tv, tc_frail / tc])
+
+
+## The ageing clean-up (plan step 4): past 34 every attribute takes the pooled
+## old-age change, never a rise; Fine Wine never ages faster than a normal
+## player; a rehab player comes back toward his potential at the summer.
+func _test_ageing_clean_up() -> void:
+	var rises := []
+	for k in Attributes.KEYS:
+		for age in [35, 37, 40]:
+			if Growth.season_change(k, age, false) > 0.0:
+				rises.append("%s %d" % [k, age])
+	_check(rises.is_empty(), "no attribute rises past 34 (%s)" % ", ".join(rises))
+	var faster := []
+	for k in Attributes.KEYS:
+		for age in range(27, 38):
+			if Growth.season_change(k, age, true) < Growth.season_change(k, age, false) - 0.0001:
+				faster.append("%s %d" % [k, age])
+	_check(faster.is_empty(), "Fine Wine never ages faster than normal (%s)" % ", ".join(faster))
+	var r := {"id": "rb_1", "apos": "Midfielder", "role": "MID", "age": 24.0, "potential": 80, "rehab": true, "attr": _flat(50)}
+	var before := int(Rating.ovr(r))
+	Growth.rehab_bounce(r)
+	_check(not r.has("rehab") and int(Rating.ovr(r)) > before, "a rehab player comes back higher (%d to %d)" % [before, int(Rating.ovr(r))])
+	_check(int(Rating.ovr(r)) <= 80, "never past his potential (%d)" % int(Rating.ovr(r)))
+	# A retiring hybrid falls from his own position, not his headline
+	# (independent review, 2026-11-28): Peter Wright, ruck 47 and forward 65.
+	var wright := {}
+	for q in GameDB.players:
+		if str(q.get("real_name", "")) == "Peter Wright":
+			wright = (q as Dictionary).duplicate(true)
+	_check(not wright.is_empty(), "Peter Wright is on a list")
+	if not wright.is_empty():
+		wright["career_last"] = 2000.0
+		var head := int(Rating.ovr(wright))
+		var own := int(Rating.ovr_at_own(wright))
+		Growth.summer(wright, 2027)
+		_check(int(Rating.ovr(wright)) < head and int(Rating.ovr_at_own(wright)) < own,
+				"his last summer brings him down, both lines (%d to %d, ruck %d to %d)" % [head, int(Rating.ovr(wright)), own, int(Rating.ovr_at_own(wright))])
 
 
 ## Selection rates a man at a slot by Rating.at_line, and the salary curve

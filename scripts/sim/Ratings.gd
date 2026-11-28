@@ -114,7 +114,9 @@ static func positions(p: Dictionary) -> Array:
 	return out
 
 
-## His second position and any learned after it.
+## His second position and any learned after it, then any other line his
+## own AFL position belongs to (a Mid-Forward plays forward, director
+## 2026-11-28, decision 1).
 static func second_positions(p: Dictionary) -> Array:
 	var out := []
 	var r2 := str(p.get("role2", ""))
@@ -123,6 +125,11 @@ static func second_positions(p: Dictionary) -> Array:
 	for r in p.get("learned", []):
 		if str(r) != "" and not out.has(str(r)):
 			out.append(str(r))
+	if p.has("attr"):
+		var own_line := str(p.get("own_role", p.get("role", "")))
+		for line in Rating.natural_lines(Rating.apos_of(p)):
+			if line != own_line and not out.has(line):
+				out.append(line)
 	# A Unicorn plays forward, midfield and back (Traits.is_unicorn).
 	if Traits.is_unicorn(p):
 		var own := str(p.get("own_role", p.get("role", "")))
@@ -230,7 +237,11 @@ static func select_22(list_players: Array, dual := -1) -> Dictionary:
 				used[p["id"]] = true
 				added += 1
 		else:
-			for p in pool:
+			# Each line is filled by rating in that line (director 2026-11-28,
+			# decision 3: "selection uses slot OVR"): a man whose headline OVR
+			# comes from his second line is ordered here by his rating in this one.
+			var order := _line_order(pool, role, promised)
+			for p in order:
 				if added >= need:
 					break
 				if str(p["role"]) == role and not used.has(p["id"]):
@@ -238,7 +249,7 @@ static func select_22(list_players: Array, dual := -1) -> Dictionary:
 					used[p["id"]] = true
 					added += 1
 			# A MID/FWD can fill a forward slot once the primary forwards are gone.
-			for p in pool:
+			for p in order:
 				if added >= need:
 					break
 				if second_positions(p).has(role) and not used.has(p["id"]):
@@ -517,6 +528,25 @@ static func line_rating(p: Dictionary, line: String) -> float:
 	if (p.get("attr", {}) as Dictionary).is_empty():
 		return 0.0
 	return float(Rating.at_line(p, line))
+
+
+## `pool` (already in selection order) ordered for a spot in `line`: a
+## promised player first, then by his rating there (line_rating) and
+## workload; the pool's order breaks ties. A player with no second or learned
+## line rates his headline OVR in his own line, so for most sides this is the
+## pool's own order.
+static func _line_order(pool: Array, line: String, promised: Dictionary) -> Array:
+	var keyed := []
+	for i in range(pool.size()):
+		var p: Dictionary = pool[i]
+		keyed.append([promised.has(p["id"]), line_rating(p, line) * Workload.selection_factor(p), i, p])
+	keyed.sort_custom(func(a, b):
+		if a[0] != b[0]:
+			return a[0]
+		if a[1] != b[1]:
+			return a[1] > b[1]
+		return a[2] < b[2])
+	return keyed.map(func(e): return e[3])
 
 
 ## The merit pass of the auto-pick: in the midfield, back and forward lines,

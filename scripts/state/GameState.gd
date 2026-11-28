@@ -103,6 +103,7 @@ var training_block := {}
 var training_report := {}
 var trial_result := {}          # the last trial's result until its card is dealt: {id, role, word, avg, par, ok, trained}
 var pos_ratings := {}           # this season, the league's starters' ratings by position: role -> [sum, games]
+var pos_ovrs := {}              # this season, the same starters' OVRs by position: role -> [sum, games] (Contracts.form)
 var season_team := {}            # club -> {"games": n, stat: season total}
 var season_awards := {}          # the finished season's awards
 ## This season's Rising Star nominations, one a home-and-away round:
@@ -993,6 +994,7 @@ func _save_state() -> Dictionary:
 		"role_trial": role_trial,
 		"trial_result": trial_result,
 		"pos_ratings": pos_ratings,
+		"pos_ovrs": pos_ovrs,
 		"season_team": season_team,
 		"season_awards": season_awards,
 		"rising_star_noms": rising_star_noms,
@@ -1266,6 +1268,7 @@ func _restore_career(state: Dictionary) -> bool:
 	role_trial = state.get("role_trial", {}) if state.get("role_trial") is Dictionary else {}
 	trial_result = state.get("trial_result", {}) if state.get("trial_result") is Dictionary else {}
 	pos_ratings = state.get("pos_ratings", {}) if state.get("pos_ratings") is Dictionary else {}
+	pos_ovrs = state.get("pos_ovrs", {}) if state.get("pos_ovrs") is Dictionary else {}
 	Season.beat()
 	season_team = state.get("season_team", {})
 	if not state.has("season_stats"):
@@ -1914,6 +1917,7 @@ func reset(next_dataset := Datasets.DEFAULT) -> void:
 	training_report = {}
 	trial_result = {}
 	pos_ratings = {}
+	pos_ovrs = {}
 	season_team = {}
 	season_awards = {}
 	rising_star_noms = {"from": 1, "rounds": []}
@@ -3230,6 +3234,7 @@ func _start_next_season(next_year: int, signed: int) -> void:
 	training_report = {}
 	trial_result = {}
 	pos_ratings = {}
+	pos_ovrs = {}
 	season_team = {}
 	rival_plans = {}
 	CoachEffects.usual = {}
@@ -7395,8 +7400,12 @@ const PROJECT_REACH := 6
 ## He earns the position when his rating there is within PROJECT_PASS of his
 ## own. Tightened from 3 to 1 (row 93, T8.Q15, director 2026-11-06: "Tighten
 ## pass margin"; reach and the price unchanged): at 3 about 92% of projects
-## passed (tools/audit/passmargin_impl.gd).
-const PROJECT_PASS := 1
+## passed (tools/audit/passmargin_impl.gd). Set to 2 (director 2026-11-28,
+## ratings rebuild decision 2): with the rebuilt league-wide ratings, the
+## learning check judged without the out-of-position cut and the headline OVR
+## (best eligible position) as his own, 236 verdicts (passmargin_impl seeds
+## 301-304, one season each) passed 35.6% at 1, 44.1% at 2, 55.5% at 3.
+const PROJECT_PASS := 2
 const PROJECT_MAX := 2
 # Positions he has -> POT to learn another (director 2026-11-26: "third-position POT at 88").
 const PROJECT_POT := {1: 70, 2: 88}
@@ -7428,9 +7437,15 @@ func project_role(p: Dictionary) -> String:
 	return str((LEARN_JOBS.get(job, {}) as Dictionary).get("role", ""))
 
 
-## His rating were he to play `role`: his OVR at the slot (Rating.at_line).
+## His rating in `role` once it is his: his OVR at the slot with no
+## out-of-position cut, as a learned position plays (director 2026-11-28,
+## plan decision 4: learning is judged "without the unlearned OOP cut").
+## In a line he already plays, his OVR there (Rating.at_line); in a new one,
+## his best OVR at the line's positions (Rating.best_in_line).
 func rating_as(p: Dictionary, role: String) -> int:
-	return Rating.at_line(p, role)
+	if Rating.uncut_lines(p).has(role):
+		return Rating.at_line(p, role)
+	return Rating.best_in_line(p.get("attr", {}), role)
 
 
 func active_projects() -> int:
@@ -11863,7 +11878,7 @@ func _trade_ban_breaks(buyer: String, seller: String, pkg: Array, got: Array) ->
 
 
 ## A trade between two rival clubs: done, logged and in the news. `why`: the
-## request it met ("home", "games") or "".
+## request it met ("home", "games", or "story" from _story_trade) or "".
 func _log_ai_trade(buyer: String, seller: String, target: Dictionary, pkg: Array, why: String) -> void:
 	# Where each club stood when it dealt: a phase ranks a list against the
 	# league's, so earlier trades can move it.
@@ -13249,16 +13264,58 @@ func position_average(role: String) -> int:
 func _note_position_ratings(res: Dictionary) -> void:
 	var roster: Array = res.get("roster", [])
 	var players: Dictionary = res.get("players", {})
+	# Every player's last Contracts.FORM_GAMES games on the OVR scale, every
+	# club's (his Form, Contracts.form: plan step 5, RATING_REBUILD.md). The
+	# league's starters set the scale first: a game at his line's average
+	# rating is his line's average OVR.
+	var by_id := {}
+	if season != null:
+		for code in [str(res.get("home", "")), str(res.get("away", ""))]:
+			for q in season.lists.get(code, []):
+				by_id[str(q["id"])] = q
 	for side in range(mini(2, roster.size())):
 		var r: Array = roster[side]
 		for i in range(mini(18, r.size())):
 			var role := str((r[i] as Dictionary).get("role", ""))
 			if role == "":
 				continue
+			var id := str((r[i] as Dictionary)["id"])
+			if not by_id.has(id):
+				continue  # no attributes to read an OVR from: leave him out of both tallies
 			var row: Array = pos_ratings.get(role, [0, 0])
-			row[0] = int(row[0]) + MatchNotes.rating(players.get(str((r[i] as Dictionary)["id"]), {}))
+			row[0] = int(row[0]) + MatchNotes.rating(players.get(id, {}))
 			row[1] = int(row[1]) + 1
 			pos_ratings[role] = row
+			var orow: Array = pos_ovrs.get(role, [0, 0])
+			orow[0] = int(orow[0]) + int(Rating.ovr(by_id[id], 0))
+			orow[1] = int(orow[1]) + 1
+			pos_ovrs[role] = orow
+	for side in range(mini(2, roster.size())):
+		for q in roster[side]:
+			var id := str((q as Dictionary)["id"])
+			if not by_id.has(id) or not players.has(id):
+				continue
+			var p: Dictionary = by_id[id]
+			var role := str((q as Dictionary).get("role", ""))
+			if role == "":
+				role = Rating.line_of(Rating.apos_of(p))
+			var v := form_game(role, MatchNotes.rating(players.get(id, {})))
+			if v >= 0.0:
+				Contracts.note_form(p, v)
+
+
+## One game on the OVR scale for Form (Contracts.form): his Player Rating
+## against the season's average for starters in that line, times that line's
+## average OVR. -1 until the line has FORM_SCALE_GAMES games this season.
+const FORM_SCALE_GAMES := 50
+func form_game(role: String, rating: int) -> float:
+	var row: Array = pos_ratings.get(role, [0, 0])
+	var orow: Array = pos_ovrs.get(role, [0, 0])
+	if int(row[1]) < FORM_SCALE_GAMES or int(row[0]) <= 0 or int(orow[1]) <= 0:
+		return -1.0
+	var mean_rating := float(row[0]) / float(row[1])
+	var mean_ovr := float(orow[0]) / float(orow[1])
+	return clampf(mean_ovr * float(rating) / mean_rating, 1.0, 99.0)
 
 
 ## The three games are played: his average Player Rating over them against

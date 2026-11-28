@@ -1000,7 +1000,7 @@ func _test_rival_projects() -> void:
 ## passed at the old margin of 3 and no longer takes; one that ends within
 ## PROJECT_PASS still does. Reach and the price stay where they were.
 func _test_pass_margin_tightened() -> void:
-	_check(GameState.PROJECT_PASS == 1, "The pass margin is 1 (was 3)")
+	_check(GameState.PROJECT_PASS == 2, "The pass margin is 2 (3, then 1 on 6 Nov, 2 on 28 Nov)")
 	_check(GameState.PROJECT_REACH == 6, "Reach is unchanged: a move within 6 may be tried")
 	_learning_season()
 	var cand := {}

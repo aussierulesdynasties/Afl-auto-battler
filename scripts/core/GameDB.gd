@@ -1220,7 +1220,36 @@ func _apply_attributes(list: Array) -> Array:
 		p["role"] = Rating.line_of(str(p["apos"]))
 		var line2 := str(row.get("line2", ""))
 		p["role2"] = line2 if line2 != str(p["role"]) else ""
+		if str(p["role2"]) == "":
+			p["role2"] = played_line2(p)
 	return missing
+
+
+## Second lines from how he plays (director 2026-11-28, decision 1: "Keep CD
+## prior-season lines as the base, plus: all Mid-Forward players
+## automatically get FWD as role2; Rucks with meaningful forward output get
+## FWD; Key Forwards with meaningful ruck work (hitouts) get RUCK"), for a
+## player Champion Data gave no second line. Read from his season's row
+## (gm, gl, ho), at least HYBRID_GAMES games.
+## RUCK_FWD_GOALS: goals a game, about a regular general forward's (the 2026
+## median general forward with 5+ games kicked 0.78 a game).
+## KF_RUCK_HITOUTS: hitouts a game, about a sixth of a first ruck's (the 2026
+## median ruck with 5+ games had 21.3).
+const HYBRID_GAMES := 5.0
+const RUCK_FWD_GOALS := 0.75
+const KF_RUCK_HITOUTS := 3.5
+static func played_line2(p: Dictionary) -> String:
+	var apos := str(p.get("apos", ""))
+	if apos == "Mid-Forward":
+		return "FWD"
+	var gm := float(p.get("gm", 0.0))
+	if gm < HYBRID_GAMES:
+		return ""
+	if apos == "Ruck" and float(p.get("gl", 0.0)) / gm >= RUCK_FWD_GOALS:
+		return "FWD"
+	if apos == "Key Forward" and float(p.get("ho", 0.0)) / gm >= KF_RUCK_HITOUTS:
+		return "RUCK"
+	return ""
 
 
 func _read_rows(path: String) -> Array:

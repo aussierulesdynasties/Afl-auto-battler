@@ -254,6 +254,10 @@ static func _positions(p: Dictionary) -> Array:
 	for r in p.get("learned", []):
 		if not out.has(str(r)):
 			out.append(str(r))
+	if p.has("attr"):
+		for line in Rating.natural_lines(Rating.apos_of(p)):
+			if not out.has(line):
+				out.append(line)
 	if is_unicorn(p):
 		for line in UNICORN_LINES:
 			if not out.has(line):

@@ -164,14 +164,14 @@ Age curves a little each round: Endurance, Durability, technical and Footy IQ me
 Breakouts: same rate, +4 to +6 on his three most heavily weighted attributes. Types retested each season.
 
 **Economy.** Worth = 0.50 × OVR at his best position + 0.20 × Form + 0.30 × POT − 1.5 a year past 29, with a
-**Durability factor (amendment)** so injury-prone players take a contract and trade discount. *Its form and
-size open: ask before Phase 5.* Form = last 10 `MatchNotes.match_rating` against his position's league
+**Durability factor (amendment)** so injury-prone players take a contract and trade discount: 0.85 at Durability 20
+or less, 1.00 at 75, 1.05 at 95 or more, straight lines between (director, 2026-11-28, decision 6). Form = last 10 `MatchNotes.match_rating` against his position's league
 average, on the OVR scale; under 5 games, Form = OVR.
 
 | Consumer | Uses |
 |---|---|
 | Contracts | Asking salary from Worth |
-| Trades | (Worth ÷ 70)^5 |
+| Trades | Now and future kept apart (director, 2026-11-28, ratings decision 3, option B; supersedes "(Worth ÷ 70)^5"): `TradeValue.value` = (phase weight × now + phase weight × future) × contract × durability factor. Now = curve(0.8 × OVR + 0.2 × Form, less 1 a year past 30) × availability (last season's games, current injury) × fit; future = curve(part of the way to POT) × runway × cover; curve = (rating ÷ 70)^5. The durability factor (0.85 at 20, 1.00 at 75, 1.05 at 95) multiplies the total once, outside the curve, so rebuilders and contenders take the same discount. |
 | Draft ranking | OVR·(1−w) + POT·w (w 0.25 and 0.65), from fogged attributes |
 | AI selection | Best 0.8 × OVR at the slot + 0.2 × Form; ruck and key posts by position OVR |
 | Scouting blur | ±6 per attribute at full uncertainty, scout tiers ×1.25/1.00/0.80/0.65; shown OVR from fogged attributes |

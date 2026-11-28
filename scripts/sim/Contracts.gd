@@ -301,7 +301,21 @@ static func next_size(list: Array) -> int:
 
 ## What re-signing (or signing) this player costs now.
 static func asking_salary(p: Dictionary) -> int:
-	return asking_at(p, int(Rating.ovr(p, 50)))
+	return asking_at(p, clampi(int(round(worth(p))), 1, 99))
+
+
+## What he would ask once his OVR is `lift` points higher (ClubLife.wait_words):
+## the OVR part of Worth moves; Form moves with it while Form is still his OVR
+## (under FORM_MIN_GAMES games); POT moves once he would pass it.
+static func asking_after(p: Dictionary, lift: int) -> int:
+	var dur := durability_factor(float((p.get("attr", {}) as Dictionary).get("durability", 75)))
+	var ov := float(Rating.ovr(p, 50))
+	var pot := maxf(ov, float(p.get("potential", ov)))
+	var up := 0.5 * float(lift)
+	if (p.get("worth_form", []) as Array).size() < FORM_MIN_GAMES:
+		up += 0.2 * float(lift)
+	up += 0.3 * maxf(0.0, ov + float(lift) - pot)
+	return asking_at(p, clampi(int(round(worth(p) + up * dur)), 1, 99))
 
 
 ## What he would ask at an OVR of `ovr` (ClubLife.wait_words: his rating at
@@ -835,14 +849,53 @@ static func expiring(list: Array) -> Array:
 	return out
 
 
-## Worth to a club, for re-signing and trades: rating blended with potential,
-## discounted for age past 29.
+## Worth to a club, for re-signing and trades (RATING_REBUILD.md, Economy):
+## 0.50 x his OVR at his best position (the headline, Rating.ovr) + 0.20 x
+## Form + 0.30 x POT, less 1.5 a year past 29, times the durability factor
+## (director, 2026-11-28, decision 6).
 static func worth(p: Dictionary) -> float:
 	var ov := float(Rating.ovr(p, 50))
 	var pot := maxf(ov, float(p.get("potential", ov)))
-	var w := ov * 0.65 + pot * 0.35
+	var w := ov * 0.50 + form(p) * 0.20 + pot * 0.30
 	w -= 1.5 * maxf(0.0, float(p.get("age", 25.0)) - 29.0)
-	return w
+	return w * durability_factor(float((p.get("attr", {}) as Dictionary).get("durability", 75)))
+
+
+## Games of Form kept on a player ("worth_form", newest last).
+const FORM_GAMES := 10
+## Under this many games, Form is his OVR.
+const FORM_MIN_GAMES := 5
+
+
+## One game on the OVR scale (GameState.form_game) onto his Form record.
+static func note_form(p: Dictionary, v: float) -> void:
+	var f: Array = (p.get("worth_form", []) as Array).duplicate()
+	f.append(snappedf(v, 0.1))
+	while f.size() > FORM_GAMES:
+		f.pop_front()
+	p["worth_form"] = f
+
+
+## His Form on the OVR scale: the mean of his last FORM_GAMES games against
+## his line's league average (GameState.form_game); his OVR under
+## FORM_MIN_GAMES games.
+static func form(p: Dictionary) -> float:
+	var f: Array = p.get("worth_form", [])
+	if f.size() < FORM_MIN_GAMES:
+		return float(Rating.ovr(p, 50))
+	var t := 0.0
+	for v in f:
+		t += float(v)
+	return t / float(f.size())
+
+
+## The durability discount (director, 2026-11-28, decision 6): 0.85 at
+## Durability 20 or less, 1.00 at 75, 1.05 at 95 or more, straight lines between.
+## The same factor in TradeValue.availability.
+static func durability_factor(dur: float) -> float:
+	if dur <= 75.0:
+		return lerpf(0.85, 1.00, clampf((dur - 20.0) / 55.0, 0.0, 1.0))
+	return lerpf(1.00, 1.05, clampf((dur - 75.0) / 20.0, 0.0, 1.0))
 
 
 ## Would a rival keep this expiring player at his asking price? Keep good

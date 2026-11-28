@@ -200,6 +200,13 @@ static func profile_body(v: VBoxContainer, p: Dictionary, host: Control) -> Cont
 	dev.size_flags_vertical = Control.SIZE_SHRINK_END
 	dev.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	nums.add_child(dev)
+	# His rating in each line he plays, when they differ (director 2026-11-28,
+	# decision 3: "show secondary line OVR on the card"); the headline is the best.
+	var by_line := line_ratings_text(p)
+	if by_line != "":
+		var bl := UiKit.lbl(by_line, UiKit.SMALL, UiKit.TEXT)
+		bl.name = "ProfileLines"
+		v.add_child(bl)
 	var plan := GameState.train_plan_label(GameState.plan_for(p))
 	if plan != "" and not rival:
 		v.add_child(UiKit.lbl("Development focus: %s" % plan, UiKit.SMALL, UiKit.MUTED))
@@ -821,3 +828,23 @@ static func synergy_fit_block(v: Control, p: Dictionary, size: int) -> void:
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		TraitLink.tappable(l, str(r["key"]))
 		box.add_child(l)
+
+
+const LINE_WORDS := {"DEF": "Back", "MID": "Midfield", "FWD": "Forward", "RUCK": "Ruck"}
+
+
+## "Forward 65, Ruck 47.": his OVR in each line he plays, best first; "" when
+## he plays one line or rates the same in all of them.
+static func line_ratings_text(p: Dictionary) -> String:
+	var lines := Rating.line_ovrs(p)
+	var vals := {}
+	for l in lines:
+		vals[int(lines[l])] = true
+	if lines.size() < 2 or vals.size() < 2:
+		return ""
+	var keys: Array = lines.keys()
+	keys.sort_custom(func(a, b): return int(lines[a]) > int(lines[b]) or (int(lines[a]) == int(lines[b]) and str(a) < str(b)))
+	var parts := []
+	for l in keys:
+		parts.append("%s %d" % [LINE_WORDS.get(l, str(l)), int(lines[l])])
+	return ", ".join(parts) + "."

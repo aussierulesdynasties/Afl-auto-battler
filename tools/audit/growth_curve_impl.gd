@@ -10,9 +10,10 @@ extends RefCounted
 ##   MED|seed|year|league median OVR of the best-22 players over clubs (season end)
 ##   COH|seed|draft year|year|pick|OVR at pick|age|OVR now|MED (every drafted player still listed, season end)
 ##   USER|seed|year|wins|games   (the autopilot user club, for AI v coach)
-## Args after the impl name: seeds (comma list) club seasons arms (comma list of step:gap, the
-## Potential.YOUTH_STEP_PACE / YOUTH_GAP_PACE to try; default the shipped values). Careers run in turn.
-## godot --headless --path . --script tools/audit/run_audit.gd -- growth_curve_impl 11,12 MEL 10 1:1,0.5:0.7
+## Args after the impl name: seeds (comma list) club seasons. Careers run in turn. (The old
+## pace arms, Potential.YOUTH_STEP_PACE / YOUTH_GAP_PACE, went with the old growth model,
+## 2026-11-28: growth is XP and the age curves, Growth.gd.)
+## godot --headless --path . --script tools/audit/run_audit.gd -- growth_curve_impl 11,12 MEL 10
 const Ovr := preload("res://tests/ovr.gd")
 
 var seed_n := 1
@@ -153,17 +154,11 @@ func run() -> void:
 	var seeds := str(args[1]).split(",") if args.size() > 1 else PackedStringArray(["1"])
 	var club := str(args[2]) if args.size() > 2 else "MEL"
 	var seasons := int(args[3]) if args.size() > 3 else 10
-	var arms := str(args[4]).split(",") if args.size() > 4 else PackedStringArray([""])
-	for arm in arms:
-		if arm != "":
-			var sp := arm.split(":")
-			Potential.YOUTH_STEP_PACE = float(sp[0])
-			Potential.YOUTH_GAP_PACE = float(sp[1])
-		for sd in seeds:
-			seed_n = int(sd)
-			gen_ids = {}
-			cohort = []
-			_career(club, seasons)
+	for sd in seeds:
+		seed_n = int(sd)
+		gen_ids = {}
+		cohort = []
+		_career(club, seasons)
 
 
 func _career(club: String, seasons: int) -> void:
@@ -171,7 +166,7 @@ func _career(club: String, seasons: int) -> void:
 	GameState.autosave_enabled = false
 	GameState.career_seed = seed_n
 	GameState.replay_seed = seed_n
-	print("GA|%d|%s|%d|step %.2f|gap %.2f" % [seed_n, club, seasons, Potential.YOUTH_STEP_PACE, Potential.YOUTH_GAP_PACE])
+	print("GA|%d|%s|%d" % [seed_n, club, seasons])
 	GameState.begin_real_lists()
 	_snapshot("pre", GameDB.DATA_SEASON, GameState.league_lists)
 	GameState.choose_real_club(club)

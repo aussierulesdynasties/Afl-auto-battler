@@ -69,12 +69,89 @@ const LINE_POSITIONS := {
 const KEY_POS_CM := 191.0
 
 
-## His OVR at his AFL position, or `fallback` when he has no attributes.
+## His headline OVR, or `fallback` when he has no attributes: the best of
+## his OVR at his AFL position and his OVR in each second or learned line
+## (director 2026-11-28, decision 3: "best OVR across his eligible (apos /
+## role2 / learned) positions only (never an unplayed line)"). A Unicorn's
+## extra lines are not among them. Selection still rates him at the slot
+## (at_line). Example: Peter Wright, Ruck 47 with a second line forward,
+## reads 64, his Key Forward OVR.
 static func ovr(p: Dictionary, fallback: Variant = null) -> Variant:
 	var a: Dictionary = p.get("attr", {})
 	if a.is_empty():
 		return fallback
+	var own := apos_of(p)
+	var best := of_attrs(a, own)
+	if str(p.get("role2", "")) == "" and (p.get("learned", []) as Array).is_empty():
+		return best
+	for line in second_lines(p):
+		best = maxi(best, best_in_line(a, str(line)))
+	return best
+
+
+## His OVR at his own AFL position only (the position of record), or
+## `fallback`.
+static func ovr_at_own(p: Dictionary, fallback: Variant = null) -> Variant:
+	var a: Dictionary = p.get("attr", {})
+	if a.is_empty():
+		return fallback
 	return of_attrs(a, apos_of(p))
+
+
+## The lines his own AFL position belongs to (LINE_POSITIONS): a
+## Mid-Forward's are the midfield and the forward line, everyone else's one.
+static func natural_lines(apos: String) -> Array:
+	var out := []
+	for line in LINE_POSITIONS:
+		if (LINE_POSITIONS[line] as Array).has(apos):
+			out.append(line)
+	return out
+
+
+## His second line and any learned, other than his position's own lines:
+## where he plays with no out-of-position cut and counts as whichever of the
+## line's positions he rates best at (director 2026-11-28, decision 2: "0%
+## cut in a learned position, and 0% cut in a natural role2 line").
+static func second_lines(p: Dictionary) -> Array:
+	var own := natural_lines(apos_of(p))
+	var out := []
+	var r2 := str(p.get("role2", ""))
+	if r2 != "" and not own.has(r2):
+		out.append(r2)
+	for r in p.get("learned", []):
+		var l := str(r)
+		if l != "" and not own.has(l) and not out.has(l):
+			out.append(l)
+	return out
+
+
+## Every line he plays with no cut: his position's lines, then his second
+## and learned lines.
+static func uncut_lines(p: Dictionary) -> Array:
+	return natural_lines(apos_of(p)) + second_lines(p)
+
+
+## The best OVR these attributes make at any AFL position of `line`, no cut.
+static func best_in_line(a: Dictionary, line: String) -> int:
+	var best := 0
+	for apos in LINE_POSITIONS.get(line, []):
+		best = maxi(best, of_attrs(a, str(apos)))
+	return best
+
+
+## His OVR in each line he plays with no cut, {"FWD": 64, "RUCK": 47}: the
+## card's per-line ratings (decision 3).
+static func line_ovrs(p: Dictionary) -> Dictionary:
+	var out := {}
+	var a: Dictionary = p.get("attr", {})
+	if a.is_empty():
+		return out
+	var own := apos_of(p)
+	for line in natural_lines(own):
+		out[line] = of_attrs(a, own)
+	for line in second_lines(p):
+		out[line] = best_in_line(a, str(line))
+	return out
 
 
 ## His OVR at `apos` (one of POSITIONS).
@@ -220,8 +297,12 @@ static func spot_position(own: String, line: String) -> String:
 	return best
 
 
-## The cut he plays under in a spot of `line` (the match-day copy's "role").
+## The cut he plays under in a spot of `line` (the match-day copy's "role"):
+## none in his position's lines, his second line or a learned one (decision
+## 2), else his own position's cut to the spot.
 static func line_cut(p: Dictionary, line: String) -> float:
+	if uncut_lines(p).has(line):
+		return 0.0
 	var own := apos_of(p)
 	return cut(own, spot_position(own, line))
 
@@ -246,9 +327,12 @@ static func line_weighs(line: String, key: String) -> bool:
 ## His OVR in a spot of `line`: the position the spot counts as
 ## (spot_position), with his Technical and Footy IQ attributes at (1 - cut)
 ## (blueprint: AI selection uses "OVR at the slot"; out of position cuts those
-## two groups only). In his own line, his OVR there.
+## two groups only). In his own line, his OVR there; in a second or learned
+## line, his best OVR at the line's positions with no cut (decision 2).
 static func at_line(p: Dictionary, line: String) -> int:
 	var a: Dictionary = p.get("attr", {})
+	if second_lines(p).has(line):
+		return best_in_line(a, line)
 	var own := apos_of(p)
 	var spot := spot_position(own, line)
 	var c := cut(own, spot)

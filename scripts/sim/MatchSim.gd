@@ -2846,6 +2846,50 @@ func _zone_pressure(side: int, zone: int) -> float:
 	return total / weight if weight > 0.0 else 45.0
 
 
+## Work Rate in the match (Bible 4.2.30a: "transition spread, uncontested
+## link-up chains, AND repeat defensive pressure"; director 2026-11-28, plan
+## step 2). Around the league's average Work Rate (WORK_RATE_LEAGUE, the mean
+## of the 724 players in data/attributes_2026.csv, 32.9) neither moves
+## anything, so a side of average runners plays as before.
+## Repeat pressure: from a chain's second disposal on, the pressure on the
+## ball moves REPEAT_PRESS per point of the pressing side's Work Rate in that
+## zone (PRESS_ZONES' weights) above or below the average, per 100.
+## Link-up: an uncontested receive ("up") is pressured LINK_UP per point less
+## for the carrying side's Work Rate near the ball (PRESS_ZONES with the back
+## and forward lines swapped: their forwards press where our defenders run).
+## Example: a pressing side averaging Work Rate 43 in the zone, 10 above the
+## league, presses a chain's third kick 3% harder.
+const REPEAT_PRESS := 0.30
+const LINK_UP := 0.30
+const WORK_RATE_LEAGUE := 32.9
+func _work_press(side: int, opp: int, zone: int, touches: int, got: String) -> float:
+	var m := 1.0
+	if touches > 1:
+		m *= 1.0 + REPEAT_PRESS * (_zone_work(opp, zone, false) - WORK_RATE_LEAGUE) / 100.0
+	if got == "up":
+		m *= 1.0 - LINK_UP * (_zone_work(side, zone, true) - WORK_RATE_LEAGUE) / 100.0
+	return m
+
+
+## A side's on-ground Work Rate in `zone` (counted from the carrier's end),
+## weighted as PRESS_ZONES weights the pressers; `carrying` swaps the back and
+## forward lines, for the side with the ball.
+func _zone_work(side: int, zone: int, carrying: bool) -> float:
+	var w: Dictionary = PRESS_ZONES[zone]
+	var total := 0.0
+	var weight := 0.0
+	for p in (squads[side] as Squad).ground:
+		var role := str(p["role"])
+		if carrying and role == "DEF":
+			role = "FWD"
+		elif carrying and role == "FWD":
+			role = "DEF"
+		var rw := float(w.get(role, 0.0))
+		total += rw * _a(p, "work_rate")
+		weight += rw
+	return total / weight if weight > 0.0 else WORK_RATE_LEAGUE
+
+
 ## Who applies the pressure: zone opportunity x Pressure to this power, so the
 ## best pressers do more of it without doing all of it. Of 2, 1.75, 1.5 and
 ## 1.25, 1.5 puts the most tackle rows IN of real AFL (the spread of tackles a
@@ -3927,6 +3971,10 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 		var zone := _press_zone(atk_fp)
 		var pressure: float = (float(T["pressure_base"])
 				* (0.705 + 0.56 * _zone_pressure(opp, zone) / 100.0))
+		# Work Rate (Bible 4.2.30a, plan step 2): their repeat efforts keep the
+		# pressure on past the chain's first disposal, and our runners find
+		# the ball uncontested in space, pressured less (_work_press).
+		pressure *= _work_press(side, opp, zone, touches, got)
 		pressure *= 1.10 if atk_fp < 0.0 else 0.95
 		if in_d50:
 			pressure *= _tv("D50_PRESSURE", D50_PRESSURE)

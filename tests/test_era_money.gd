@@ -136,7 +136,9 @@ func _test_1990_contracts() -> void:
 		if salary > _scaled(model, 1500000, 52) \
 				or salary < mini(Contracts.senior_min(), _scaled(model, 1500000, 52)):
 			bad.append("%s salary %d" % [str(p["id"]), salary])
-		if Contracts.asking_salary(p) < _scaled(model, 1500000, 52):
+		# He asks the price of his Worth (RATING_REBUILD.md Economy, plan step 5).
+		var ask_model := Ratings.salary_value(clampi(roundi(Contracts.worth(p)), 1, 99))
+		if Contracts.asking_salary(p) < _scaled(ask_model, 1500000, 52):
 			bad.append("%s ask %d" % [str(p["id"]), Contracts.asking_salary(p)])
 	_check(bad.is_empty(), "Every 1990 contract and asking price is in 1990 dollars: %s" % str(bad.slice(0, 5)))
 	var payroll := GameState.my_payroll()
@@ -181,7 +183,7 @@ func _test_2027_career_unchanged() -> void:
 	var bad := []
 	for code in GameState.season.lists:
 		for p in GameState.season.lists[code]:
-			if Contracts.asking_salary(p) < Ratings.salary_value(int(Ovr.of(p))):
+			if Contracts.asking_salary(p) < Ratings.salary_value(clampi(roundi(Contracts.worth(p)), 1, 99)):
 				bad.append(str(p["id"]))
 	_check(bad.is_empty(), "Every 2027 asking price is today's model: %s" % str(bad.slice(0, 5)))
 

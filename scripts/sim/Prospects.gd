@@ -685,7 +685,7 @@ static func _shape_custom(p: Dictionary, spec: Dictionary) -> void:
 	for t in spec.get("weaknesses", []):
 		var k: String = CUSTOM_TRAITS[str(t)]
 		a[k] = float(a[k]) - CUSTOM_TRAIT_PUSH
-	p["attr"] = Rating.shift_to(a, Rating.apos_of(p), float(Rating.ovr(p)))
+	p["attr"] = Rating.shift_to(a, Rating.apos_of(p), float(Rating.ovr_at_own(p, 0)))
 	p["potential"] = maxi(int(p.get("potential", Rating.ovr(p))), int(Rating.ovr(p)))
 
 

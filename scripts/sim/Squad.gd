@@ -155,14 +155,22 @@ func _aggregate() -> void:
 			+ 0.18 * team_discipline)
 
 
-## Average attribute across a role group. Falls back to 45 (league-average) when
-## a list has nobody in that group, so a malformed list still fields a side.
+## Average attribute across a role group, each player's Technical and Footy
+## IQ attributes at (1 - his out-of-position cut) in the line he is in (his
+## "role"), as the match reads them (MatchSim._a_fresh; director 2026-11-28,
+## plan step 1: "Wire Rating.line_cut into Squad._mean()"). Falls back to 45
+## (league-average) when a list has nobody in that group, so a malformed list
+## still fields a side.
 static func _mean(group: Array, key: String, fallback := 45.0) -> float:
 	if group.is_empty():
 		return fallback
+	var cut := Attributes.CUT_BY_POSITION.has(key)
 	var total := 0.0
 	for p in group:
-		total += Attributes.value(p.get("attr", {}), key)
+		var v := Attributes.value(p.get("attr", {}), key)
+		if cut:
+			v *= 1.0 - Rating.line_cut(p, str(p.get("role", "MID")))
+		total += v
 	return total / float(group.size())
 
 

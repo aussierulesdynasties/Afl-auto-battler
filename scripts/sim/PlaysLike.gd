@@ -77,6 +77,9 @@ static func profile(p: Dictionary, real := false) -> Dictionary:
 	if real:
 		peak = maxf(peak, Potential.recent_peak(p))
 	peak = maxf(peak, float(Rating.ovr(p, 0)))
+	# The peak is on the headline scale; shift_to sets his own position, so
+	# take off what the headline adds over it (a hybrid's best line).
+	peak -= maxf(0.0, float(Rating.ovr(p, 0)) - float(Rating.ovr_at_own(p, 0)))
 	var at_peak := Rating.shift_to(attr, Rating.apos_of(p), peak)
 	var vec := PackedFloat32Array()
 	for key in KEYS:

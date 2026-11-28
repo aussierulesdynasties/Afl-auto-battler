@@ -1042,6 +1042,9 @@ func _test_finished_list_reachability() -> void:
 				fake["id"] = "legacy_fill"
 				fake["role"] = "DEF"
 				fake["role2"] = ""
+				# A defender by his AFL position too: a position's own lines count
+				# (Rating.natural_lines), so a "Ruck" left on him would still ruck.
+				fake["apos"] = "Gen. Defender"
 				lst[i] = fake
 				swapped = true
 	_check(swapped and not r.is_valid() and r.count_covering("RUCK") == 0 and r.finished_list_refused()

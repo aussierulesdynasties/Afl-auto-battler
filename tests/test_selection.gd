@@ -286,10 +286,22 @@ func _test_complete_synergy_reentry() -> void:
 ## Complete synergy (director, 2026-10-07): it switches the synergy on with a
 ## legal 23 from available players, or leaves the side alone and says why.
 func _test_complete_synergy() -> void:
-	# Collingwood's real list can switch on its Lockdown unit; most real lists
-	# are short of the traits for the others, and say so.
+	# Most real lists are short of the traits for most synergies, and say so;
+	# the first club (in club order) whose side has one to complete shows it
+	# done. Collingwood's auto-picked side already has Supply line on since
+	# every Mid-Forward can be picked forward (director 2026-11-28), so it is
+	# not assumed to be the one.
+	var done := 0
+	for code in GameDB.club_order:
+		if done >= 1:
+			break
+		done += _complete_synergy_for(str(code))
+	_check(done >= 1, "At least one synergy can be completed from a real list (%d)" % done)
+
+
+func _complete_synergy_for(code: String) -> int:
 	GameState.reset()
-	GameState.start_season("COL", GameDB.club_list("COL"))
+	GameState.start_season(code, GameDB.club_list(code))
 	var side := GameState.current_side()
 	var done := 0
 	for key in Traits.SYNERGIES:
@@ -312,7 +324,7 @@ func _test_complete_synergy() -> void:
 					fit = false
 		_check(Traits.active(ground).has(key) and count == 23 and ids.size() == 23 and fit,
 				"%s: completed with 23 different available players (%s)" % [key, r["note"]])
-	_check(done >= 1, "At least one synergy can be completed from a real list (%d)" % done)
+	return done
 
 
 func _test_named_side() -> void:
@@ -691,12 +703,13 @@ func _test_merit_second_position() -> void:
 		return
 	# He has learned to play forward, and has a forward's best skills there: what
 	# the forward line's positions weigh and a defender's rating does not
-	# (goalkicking, forward craft) is 99. His own rating (what orders his own
-	# line) is read from the same attributes and is unchanged, so only the merit
-	# pass can bring him in. A midfielder would not do: a Mid-Forward's forward
-	# rating is his own.
+	# (goalkicking, forward craft) is 99. His rating at his own position is
+	# unchanged; his headline OVR is now his forward one (director 2026-11-28,
+	# decision 3), so without the merit pass he plays his own line, and only the
+	# merit pass moves him forward. A midfielder would not do: a Mid-Forward's
+	# forward rating is his own.
 	spare["role2"] = "FWD"
-	var own_before := int(Ovr.of(spare))
+	var own_before := int(Rating.ovr_at_own(spare))
 	var own_w: Dictionary = Rating.WEIGHTS[Rating.apos_of(spare)]
 	for apos in Rating.LINE_POSITIONS["FWD"]:
 		for k in Rating.WEIGHTS[apos]:
@@ -708,9 +721,10 @@ func _test_merit_second_position() -> void:
 			for q in list:
 				if str(q["id"]) == str(g["id"]):
 					weakest = minf(weakest, Ratings.line_rating(q, "FWD"))
-	_check(int(Ovr.of(spare)) == own_before and Ratings.line_rating(spare, "FWD") > weakest,
-			"(setup) his own rating is unchanged (%d) and he rates above the weakest forward there (%.0f v %.0f)" % [
-				int(Ovr.of(spare)), Ratings.line_rating(spare, "FWD"), weakest])
+	_check(int(Rating.ovr_at_own(spare)) == own_before and int(Ovr.of(spare)) == int(Ratings.line_rating(spare, "FWD"))
+			and Ratings.line_rating(spare, "FWD") > weakest,
+			"(setup) his own-position rating is unchanged (%d), his headline is his forward one (%d) and he rates above the weakest forward there (%.0f v %.0f)" % [
+				int(Rating.ovr_at_own(spare)), int(Ovr.of(spare)), Ratings.line_rating(spare, "FWD"), weakest])
 	Ratings.merit_lines = false
 	var before := Ratings.select_22(list)
 	Ratings.merit_lines = true
@@ -727,7 +741,11 @@ func _test_merit_second_position() -> void:
 	for g in after["ground"]:
 		if str(g["role"]) == "RUCK":
 			ruck_a = str(g["id"])
-	_check(not _ids(before["ground"]).has(str(spare["id"])), "Without the merit pass a second position waits for a line to run short")
+	var where_before := ""
+	for g in before["ground"]:
+		if str(g["id"]) == str(spare["id"]):
+			where_before = str(g["role"])
+	_check(where_before != "FWD", "Without the merit pass a second position waits for a line to run short (%s)" % where_before)
 	_check(where == "FWD", "On merit, a player who has learned forward is picked there ahead of a weaker forward")
 	_check(after["ground"].size() == 18 and after["bench"].size() == Ratings.bench_size and ruck_a == ruck_b,
 			"The ruck and the bench's size are untouched")

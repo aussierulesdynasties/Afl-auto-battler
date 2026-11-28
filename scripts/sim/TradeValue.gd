@@ -38,8 +38,13 @@ static func rating(p: Dictionary) -> float:
 
 
 ## His football now: rating less an ageing decline past 30.
+## Form (Contracts.form) takes a fifth of it, as in the plan's AI selection
+## (RATING_REBUILD.md Economy: 0.8 x OVR + 0.2 x Form); under five games
+## Form is his OVR, so nothing moves.
 static func now_rating(p: Dictionary) -> float:
-	return rating(p) - 1.0 * maxf(0.0, float(p.get("age", 25.0)) - 30.0)
+	var r := rating(p)
+	r += 0.2 * (Contracts.form(p) - float(Rating.ovr(p, 50)))
+	return r - 1.0 * maxf(0.0, float(p.get("age", 25.0)) - 30.0)
 
 
 ## What he could become: part of the gap to his potential, the younger the
@@ -69,11 +74,13 @@ static func runway(p: Dictionary) -> float:
 	return clampf((33.0 - float(p.get("age", 25.0))) / 7.0, 0.15, 1.0)
 
 
-## How available he is: durability, and last season's games when the club
-## has seen him play a season (`games` < 0: no season to go on).
+## How available he is this season: last season's games when the club has
+## seen him play a season (`games` < 0: no season to go on), and a current
+## injury. Durability is not here: it is one factor on his whole value
+## (`value`), so a rebuilder discounts a fragile young player the same 15% a
+## contender does (director 2026-11-28, ratings decision 3, option B).
 static func availability(p: Dictionary, games: int) -> float:
-	var dur := float((p.get("attr", {}) as Dictionary).get("durability", 70))
-	var a := 0.9 + 0.15 * clampf(dur / 100.0, 0.0, 1.0)
+	var a := 1.0
 	if games >= 0 and float(p.get("age", 25.0)) > 20.0:
 		a *= 0.85 + 0.15 * clampf(float(games) / 15.0, 0.0, 1.0)
 	if int(p.get("injury_weeks", 0)) > 0:
@@ -219,7 +226,10 @@ static func value(p: Dictionary, ctx: Dictionary) -> Dictionary:
 	var future := curve(future_rating(p)) * runway(p)
 	if ctx.has("proj"):
 		future *= cover(p, ctx["proj"])
-	var total := (float(w[0]) * now + float(w[1]) * future) * contract_factor(p)
+	# Durability once, on the whole value and outside the curve (decision 3):
+	# Contracts.durability_factor, 0.85 at 20 to 1.05 at 95.
+	var total := (float(w[0]) * now + float(w[1]) * future) * contract_factor(p) \
+			* Contracts.durability_factor(float((p.get("attr", {}) as Dictionary).get("durability", 75)))
 	# A rebuilding club guards the young talent it already has: giving away
 	# a player with real growth ahead of him costs it a quarter more.
 	if bool(ctx.get("own", false)) and str(ctx.get("phase", "")) == "rebuilding" \

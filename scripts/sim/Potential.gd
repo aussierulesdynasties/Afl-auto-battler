@@ -54,45 +54,13 @@ const PEAK_AGE_EASE := 1.5
 const MAX_PROSPECT_AGE := 21.0
 const AGE_HEADROOM := [[20.0, 16.0], [22.0, 12.0], [24.0, 8.0], [26.0, 4.0], [28.0, 2.0]]
 
-## Share of the gap to POT closed in one off-season, by age. Young players
-## close ground fastest; past 28 the age curve (decline) takes over again,
-## except in a rehab year.
-const GAP_PULL := [[21.0, 0.30], [24.0, 0.22], [28.0, 0.15]]
 ## The rehab year: a star back from an injury season closes most of the gap
 ## at the next rollover, whatever his age.
 const REHAB_PULL := 0.9
-const MIN_STEP := 2.0
-
-## Youth pace (director, 2026-10-13: "slow the kids down to match real AFL"; settled 2026-10-14 as a lower draft-night rating, the climb at the old pace 1.0).
-## The yearly development step by age: [oldest age, lowest, highest]. Rolled
-## fresh each off-season (Prospects.age_player); `outlook` uses the middle.
-const AGE_STEP := [[20.0, 2.5, 6.0], [23.0, 1.0, 4.0], [27.0, 0.0, 2.0],
-		[30.0, -1.0, 1.0], [33.0, -3.0, 0.0], [99.0, -6.0, -1.5]]
-## Growth up to this age is scaled by the two paces below; decline, training,
-## the rehab year and breakouts are not. 1.0 is the old pace.
-const YOUTH_PACE_UNTIL := 24.0
-## Multiplies the age-band step when it is a gain.
-## (static var, not const, only so tools/audit/growth_curve_impl.gd can try arms in one run.)
-static var YOUTH_STEP_PACE := 1.0
-## Multiplies the share of the gap to POT closed in one off-season.
-static var YOUTH_GAP_PACE := 1.0
 ## Past 30 a player comes back from an injury season less of the way: the
 ## rehab pull eases this much per year, never below REHAB_PULL_FLOOR of it.
 const REHAB_AGE_EASE := 0.12
 const REHAB_PULL_FLOOR := 0.4
-
-
-## The age-band step for a player turning `age`: `roll` in 0..1 picks a point
-## in the band (0.5 is the middle). A gain up to YOUTH_PACE_UNTIL is slowed.
-static func age_step(age: float, roll: float) -> float:
-	var d := 0.0
-	for band in AGE_STEP:
-		if age <= float(band[0]):
-			d = lerpf(float(band[1]), float(band[2]), roll)
-			break
-	if d > 0.0 and age <= YOUTH_PACE_UNTIL:
-		d *= YOUTH_STEP_PACE
-	return d
 
 
 ## The age a player's development step is read at: Fine Wine runs his decline
@@ -105,15 +73,6 @@ static func ageing_age(age: float, fine_wine: bool) -> float:
 	if not fine_wine or age <= DECLINE_FROM:
 		return age
 	return maxf(DECLINE_FROM, age - Traits.FINE_WINE_YEARS)
-
-
-## The age-band step for him: a Fine Wine player's band comes three years
-## later, and a loss is Traits.FINE_WINE_SLOPE of a normal one.
-static func age_step_for(age: float, roll: float, fine_wine: bool) -> float:
-	var d := age_step(ageing_age(age, fine_wine), roll)
-	if fine_wine and d < 0.0:
-		d *= Traits.FINE_WINE_SLOPE
-	return d
 
 
 ## The age the retirement rules read for him (Prospects.should_retire): Fine
@@ -220,39 +179,24 @@ static func set_override(p: Dictionary, pot: int) -> void:
 		p["rehab"] = true
 
 
-## The share of the gap to POT closed in one off-season at this age.
-static func gap_pull(age: float) -> float:
-	for band in GAP_PULL:
-		if age <= float(band[0]):
-			var pull := float(band[1])
-			return pull * YOUTH_GAP_PACE if age <= YOUTH_PACE_UNTIL else pull
-	return 0.0
-
-
-## How far a player's rating moves toward POT in one off-season. Positive
-## only; decline with age is handled by the caller. Consumes the rehab flag.
-static func growth(p: Dictionary, age: float) -> float:
-	var gap := float(int(p.get("potential", Rating.ovr(p, 0))) - int(Rating.ovr(p, 0)))
-	if gap <= 0.0:
-		return 0.0
-	var pull := gap_pull(age)
-	if bool(p.get("rehab", false)):
-		pull = maxf(pull, rehab_pull(age))
-		p.erase("rehab")
-	if pull <= 0.0:
-		return 0.0
-	# Ratings are rebuilt from whole-number attributes, which lands about a
-	# point under the target, so a sub-2 step would never show. Move at
-	# least 2 (or the whole gap) while a player is still growing.
-	return maxf(gap * pull, minf(gap, MIN_STEP))
-
-
-## What a player is expected to be worth, season by season, from now: the
-## game's own development (Prospects.age_player's age bands and growth toward
-## POT, rehab year included) and retirement (Prospects.should_retire), taken
-## at their expected values instead of rolled. [[rating, chance he is still
-## playing], ...] for `years` seasons, the first the one about to be played.
-## Breakouts are left out: nobody can plan on one.
+## What a player is expected to be worth, season by season, from now, by the
+## game's own development today (director 2026-11-28, plan step 4: "Replace
+## stale Potential.outlook with a projection that matches the actual XP +
+## age-curve growth system"), taken at expected values instead of rolled:
+## - XP: OUTLOOK_GAMES ordinary senior games a season at his POT's pace
+##   (Growth.points_per_game), never past POT (GameState._buy);
+## - ageing: each weighted attribute's age-curve change for the season
+##   (Growth.age_change), at its share of his OVR and the stretch's slope, a
+##   rise only while he is below POT, Fine Wine's decline later and gentler
+##   (Growth.age_step);
+## - the rehab year: rehab_pull(age) of the gap closed the summer he is back
+##   (Growth.summer);
+## - and retirement (Prospects.should_retire's ages).
+## [[rating, chance he is still playing], ...] for `years` seasons, the first
+## the one about to be played. Breakouts are left out: nobody can plan on one.
+## Example: a 22-year-old 60 with POT 75 gains 15 x 0.12 = 1.8 a season from
+## XP plus his age curves' share, and stops at 75.
+const OUTLOOK_GAMES := 15.0
 static func outlook(p: Dictionary, years: int) -> Array:
 	var r := float(Rating.ovr(p, 50))
 	var pot := maxf(r, float(p.get("potential", r)))
@@ -260,28 +204,28 @@ static func outlook(p: Dictionary, years: int) -> Array:
 	var rehab := bool(p.get("rehab", false))
 	var fine := Traits.fine_wine(p)
 	var shift := Traits.FINE_WINE_YEARS if fine else 0.0
+	var w: Dictionary = Rating.WEIGHTS.get(Rating.apos_of(p), Rating.WEIGHTS["Midfielder"])
 	var alive := 1.0
 	var out := []
 	for t in range(years):
 		out.append([r, alive])
-		age += 1.0
-		var d := age_step_for(age, 0.5, fine)
-		if age <= 25.0 and r < 55.0:
-			d += 1.0
-		if age <= 23.0 and r >= 80.0:
-			d += 1.0
-		var gap := pot - r
-		if gap > 0.0:
-			var pull := gap_pull(age)
+		var raw := 0.0
+		for k in w:
+			raw += float(w[k]) * Growth.season_change(str(k), age, fine) / 100.0
+		var d := raw * Rating.slope(Rating.unstretch(r))
+		if d > 0.0 and r >= pot:
+			d = 0.0
+		var g := 0.0
+		if r < pot:
+			g = minf(pot - r, OUTLOOK_GAMES * Growth.points_per_game(int(round(pot))))
 			if rehab:
-				pull = maxf(pull, rehab_pull(age))
-			if pull > 0.0:
-				d = maxf(d, maxf(gap * pull, minf(gap, MIN_STEP)))
+				g = maxf(g, (pot - r) * rehab_pull(age))
 		rehab = false
-		var next := clampf(r + d, 25.0, float(MAX_POT))
-		if d > 0.0:
+		var next := clampf(r + g + d, 25.0, float(MAX_POT))
+		if g + d > 0.0:
 			next = minf(next, maxf(r, pot))
 		r = next
+		age += 1.0
 		var go := 0.0
 		var ra := age - shift
 		if r <= 32.0 or ra >= 37.0:

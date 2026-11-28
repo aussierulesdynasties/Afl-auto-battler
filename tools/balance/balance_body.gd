@@ -133,13 +133,15 @@ func play(from: int, count: int, out: String, weather: String,
 		var at_home := [ground.call(h) == v, ground.call(a) == v]
 		var list_h: Array = lists.get(h, GameDB.club_list(h))
 		var list_a: Array = lists.get(a, GameDB.club_list(a))
-		if not bump.is_empty():
-			if i % 2 == 0:
-				list_h = _bumped(list_h, bump)
-			else:
-				list_a = _bumped(list_a, bump)
 		var sq_h := Squad.new(h, list_h, bool(at_home[0]), h)
 		var sq_a := Squad.new(a, list_a, bool(at_home[1]), a)
+		# The bump goes on after selection, so both runs field the same 22: a
+		# bump that lifts his OVR would otherwise change who is picked (a third
+		# key defender for a midfielder at 9 of 18 clubs with +10 One-on-one,
+		# director 2026-11-28, plan step 3) and the margin would measure a
+		# different side, not the attribute.
+		if not bump.is_empty():
+			_bump_squad(sq_h if i % 2 == 0 else sq_a, bump)
 		if plan_know >= 0.0:
 			for sq in [sq_h, sq_a]:
 				for plan in PreSeason.DRILL_PLANS:
@@ -669,6 +671,24 @@ static func ruck1(roster: Array, stats: Dictionary, sq: Squad) -> Array:
 	return best
 
 
+## Every named player of `sq` (the 22, the bench and the substitute) at AFL
+## position bump[0] N = bump[2] points up on attribute bump[1], within 1-99,
+## on a copy of his attributes (the list's own player is untouched), then the
+## side's strength read again (--bump).
+func _bump_squad(sq: Squad, bump: Array) -> void:
+	for group in [sq.ground, sq.bench, sq.sub]:
+		for j in range((group as Array).size()):
+			var p: Dictionary = group[j]
+			if Rating.apos_of(p) != str(bump[0]):
+				continue
+			var q: Dictionary = p.duplicate()
+			var at: Dictionary = (p["attr"] as Dictionary).duplicate()
+			at[str(bump[1])] = clampi(int(at.get(str(bump[1]), 50)) + int(bump[2]), 1, 99)
+			q["attr"] = at
+			group[j] = q
+	sq._aggregate()
+
+
 ## "a=1,b=0.5" -> {"a": 1.0, "b": 0.5}
 ## --lists generated (row 104): a league of generated players, to screen a change to
 ## generation in matches (main against the branch). Classes 2027 on (career seed 4242 +
@@ -678,19 +698,6 @@ static func ruck1(roster: Array, stats: Dictionary, sq: Squad) -> Array:
 ## is read from the attributes, so nothing re-rates him; Director Bible 4.2.30a).
 ## Every worker builds the same league, so two checkouts differ only in what
 ## generation does with the same draws.
-## A copy of `list` with every player at AFL position bump[0] N = bump[2] points up
-## on attribute bump[1], within 1-99 (--bump).
-func _bumped(list: Array, bump: Array) -> Array:
-	var out := []
-	for p in list:
-		if Rating.apos_of(p) == str(bump[0]):
-			var q: Dictionary = (p as Dictionary).duplicate(true)
-			var at: Dictionary = q["attr"]
-			at[str(bump[1])] = clampi(int(at.get(str(bump[1]), 50)) + int(bump[2]), 1, 99)
-			out.append(q)
-		else:
-			out.append(p)
-	return out
 
 
 const GEN_CLASSES := 40

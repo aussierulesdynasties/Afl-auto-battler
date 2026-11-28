@@ -2811,7 +2811,9 @@ func _test_trade_requests() -> void:
 	var met := GameState.offseason_log.filter(func(e): return e.has("request"))
 	var met_ok := true
 	for e in met:
-		met_ok = met_ok and str(e["request"]) in ["home", "games"]
+		# Every request kind GameState.trade_requests holds (home, games,
+		# unsettled), and a story request (GameState._story_trade).
+		met_ok = met_ok and str(e["request"]) in ["home", "games", "unsettled", "story"]
 	_check(met_ok, "Trades that met a request say so (%d)" % met.size())
 	# His club lets him go for less, and only to a club he named.
 	var rival := ""
