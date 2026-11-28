@@ -81,6 +81,11 @@ MIN_AREA = 40.0       # m2: a smaller outline is not drawn (twice this past FAR_
 FAR_HOUSES_BELOW = 8.0  # m: past FAR_ZONE a low block under this (houses, one-storey sheds) is left to the land's
                         # own photo: a pixel high from the orbit, and 40% of the far city's triangles
 WEDGES = 8
+SHORT_CELL = 8.0      # m: grid of the backdrop's drawn tops, for short_towers()
+SHORT_MIN = 60.0      # m: only structures this tall are checked against the backdrop
+SHORT_BY = 20.0       # m: a structure the backdrop draws this much short is drawn here too
+SHORT_GROW = 0.4      # m: its outline grows this much so the backdrop's short block stays inside
+BACKDROP_FROM = 1024.0  # m: the backdrop is cut back to past this circle; the stadium model draws inside it
 FAR_ZONE = 2500.0     # past this (square distance) joins and outlines are twice as coarse: a 4 m step there is
                       # under a pixel from the orbit's 430 m circle
 
@@ -582,6 +587,65 @@ def com_parts(slug, frame, local):
     return out
 
 
+def backdrop_tops(paths, cell=SHORT_CELL):
+    """The tallest thing the backdrop's own glbs draw in each SHORT_CELL cell of its square (model x, z), for
+    short_towers(). Its ground and water are left out."""
+    n = int(2 * INNER // cell) + 1
+    top = np.zeros((n, n), np.float32)
+    for path in paths:
+        G = reland.Glb(path)
+        for name, pa, _ in G.prims:
+            if name.startswith("bg_near_ground") or name.startswith(reland.WATER):
+                continue
+            P = G.read(pa).astype(float)
+            i = np.clip(((P[:, 0] + INNER) // cell).astype(int), 0, n - 1)
+            j = np.clip(((P[:, 2] + INNER) // cell).astype(int), 0, n - 1)
+            np.maximum.at(top, (i, j), P[:, 1].astype(np.float32))
+    return top
+
+
+def short_towers(slug, frame, local, tops, cell=SHORT_CELL):
+    """Measured structures (City of Melbourne) in the backdrop's square, outside the stadium model's own circle
+    (BACKDROP_FROM), whose real top stands SHORT_BY over the tallest thing the backdrop draws on their footprint.
+    The backdrop missed them: the PC check of 2026-11-28 found Australia 108 drawn as a 12 m block and Eureka Tower
+    at 206 m. They are drawn whole here, a touch wider (SHORT_GROW) so the backdrop's short block hides inside."""
+    path = work(slug, "com", "2023-building-footprints.geojson")
+    if not os.path.exists(path):
+        return [], []
+    from shapely.geometry import shape
+    by = collections.defaultdict(list)
+    for f in json.load(open(path))["features"]:
+        p = f["properties"]
+        if not f["geometry"] or p.get("footprint_type") != "Structure" or p.get("footprint_max_elevation") is None:
+            continue
+        for poly in local(shape(f["geometry"])):
+            c = poly.centroid
+            x, z = frame.xz(c.x, c.y)
+            x, z = float(x), float(z)
+            if max(abs(x), abs(z)) >= INNER or math.hypot(x, z) < BACKDROP_FROM or poly.area < 4:
+                continue
+            by[p["structure_id"]].append({"poly": poly.buffer(SHORT_GROW, join_style=2), "sid": p["structure_id"],
+                                          "fmin": float(p["footprint_min_elevation"]),
+                                          "fmax": float(p["footprint_max_elevation"]),
+                                          "smin": float(p["structure_min_elevation"]), "_xz": (x, z)})
+    n = tops.shape[0]
+    out, named = [], []
+    for sid, ps in by.items():
+        real = max(q["fmax"] for q in ps) - ps[0]["smin"]
+        if real < SHORT_MIN:
+            continue
+        drawn = 0.0
+        for q in ps:
+            x, z = q["_xz"]
+            r = int(math.ceil(math.sqrt(q["poly"].area) / cell)) + 1
+            i, j = int((x + INNER) // cell), int((z + INNER) // cell)
+            drawn = max(drawn, float(tops[max(0, i - r):min(n, i + r + 1), max(0, j - r):min(n, j + r + 1)].max()))
+        if real - drawn >= SHORT_BY:
+            out += ps
+            named.append((sid, round(real, 1), round(drawn, 1)))
+    return out, named
+
+
 def photomesh_colours(slug, com):
     """Each measured part's wall and roof colour (sRGB 0-1) from the council's photomesh (photomesh.py): the walls
     from the photographed wall faces round the part and between its floor and top, sunlit (north-facing) ones first,
@@ -695,11 +759,10 @@ def canopy(slug, frame, H, com):
     only the sunlit crowns: the PC check of 2026-11-28 drew Westgate Park as half-bare mounds against the photo's
     near-continuous bush.
 
-    How they are drawn: each cell's top is its crowns' height over the land (median then softly blurred); the top's
-    corners take the mean of the tree cells round them only, so a mass keeps its height to its edge; its edge drops
-    to the land as a wall (a crown's side). The old corners counted bare cells as 0 and sloped each mass to the
-    ground, so from the West Gate Bridge (2 to 4 km, a degree above it) a park read as low tents with bare ground
-    between them, where real crowns hide what lies behind them."""
+    How they are drawn (director review, 2026-11-28): each cell's top is its crowns' own height over the land, not
+    smoothed, capped only where a lone cell stands half again over its 3 x 3 median (a stray spike). The top's corners
+    take the mean of the tree cells round them only, so a mass keeps its height to its edge, and the edge slopes to
+    the land over one cell: no vertical walls, which read as green slabs from the West Gate Bridge (pc4)."""
     path = work(slug, "photomesh.npz")
     if not os.path.exists(path):
         return None
@@ -905,7 +968,7 @@ def _local_poly_all(frame, geom):
     return out
 
 
-def city(slug, frame, H, gain, near):
+def city(slug, frame, H, gain, near, extra_com=()):
     import rasterio
     from pyproj import Transformer
     from shapely import wkt
@@ -947,7 +1010,7 @@ def city(slug, frame, H, gain, near):
         by_parts[p["building_id"]].append(p)
     pieces = []   # (polygon in e/n, base above ground, top above ground, look id, tall?, (wall, roof) or None)
     src = collections.Counter()
-    com = com_parts(slug, frame, local)
+    com = com_parts(slug, frame, local) + list(extra_com)
     from shapely.strtree import STRtree
     com_tree = STRtree([c["poly"] for c in com]) if com else None
     if com:
@@ -1386,7 +1449,12 @@ def build(slug, backdrop=None):
     near, mid, far = S2(slug, "near", frame), S2(slug, "mid", frame), S2(slug, "far", frame)
     gain, water = seam_gain(G, frame, near, slug)
     land, land_rep = land_mesh(slug, frame, H, water_y, gain, near, mid, far, water)
-    city_s, city_rep = city(slug, frame, H, gain, near)
+    parts = sorted(glob.glob(os.path.join(os.path.dirname(part1), slug + "_backdrop_part*.glb")))
+    short, short_named = short_towers(slug, frame, lambda g: [_local_poly(frame, gg) for gg in getattr(g, "geoms", [g])],
+                                      backdrop_tops(parts))
+    print("towers the backdrop draws short, drawn here (structure, real m, backdrop m):", short_named)
+    city_s, city_rep = city(slug, frame, H, gain, near, short)
+    city_rep["backdrop_short_towers"] = short_named
     trees = canopy(slug, frame, H, com_parts(slug, frame, lambda g: [_local_poly(frame, gg) for gg in getattr(g, "geoms", [g])]))
     sheet = near_water(G, water_y, slug)
     surfaces = land + city_s + ([trees] if trees is not None else []) + ([sheet] if sheet is not None else [])
