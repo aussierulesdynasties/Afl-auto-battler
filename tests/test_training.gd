@@ -1005,13 +1005,17 @@ func _test_pass_margin_tightened() -> void:
 	_learning_season()
 	var cand := {}
 	var job := ""
+	# A job whose spot is another AFL position, so his rating there can differ
+	# from his own (a Mid-Forward learning the forward line keeps his own).
 	for q in GameState.my_list:
-		var jobs := GameState.learnable_jobs(q)
-		if not jobs.is_empty():
-			cand = q
-			job = str(jobs[0])
+		for j in GameState.learnable_jobs(q):
+			var at := Rating.spot_position(Rating.apos_of(q), str(GameState.LEARN_JOBS[j]["role"]))
+			if cand.is_empty() and at != Rating.apos_of(q):
+				cand = q
+				job = str(j)
+		if not cand.is_empty():
 			break
-	_check(not cand.is_empty(), "Someone on the list can learn a position")
+	_check(not cand.is_empty(), "Someone on the list can learn a position in another AFL position")
 	if cand.is_empty():
 		return
 	var role := str(GameState.LEARN_JOBS[job]["role"])

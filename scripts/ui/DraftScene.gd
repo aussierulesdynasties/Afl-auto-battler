@@ -3949,7 +3949,9 @@ func _recent_trade_row(t: Dictionary) -> Control:
 	var buyer := str(t["buyer"])
 	var involved := buyer == _club or str(t["seller"]) == _club
 	var row := UiKit.hbox(UiKit.GAP)
-	row.name = "RecentTrade_%d" % int(t["at"])
+	# Two deals can come before the same pick: the deal's place in the night keeps
+	# each row's name its own (a repeated name is renamed out of reach).
+	row.name = "RecentTrade_%d_%d" % [int(t["at"]), _draft.night_trades.find(t)]
 	var tag := UiKit.line("Trade", UiKit.FINE, UiKit.EMPH, true)
 	tag.custom_minimum_size.x = 26
 	row.add_child(tag)
@@ -3975,7 +3977,7 @@ func _trade_short(t: Dictionary) -> String:
 func _history_trade_row(t: Dictionary) -> Control:
 	var involved := str(t["buyer"]) == _club or str(t["seller"]) == _club
 	var p := _row_panel(involved)
-	p.name = "HistoryTrade_%d" % int(t["at"])
+	p.name = "HistoryTrade_%d_%d" % [int(t["at"]), _draft.night_trades.find(t)]
 	var h := UiKit.hbox(UiKit.Space.NEAT)
 	p.add_child(h)
 	var tag := UiKit.line("Trade", UiKit.FINE, UiKit.EMPH, true)

@@ -47,7 +47,7 @@ percentile 99. A stat a season does not record is left out. Height and weight st
 | Group | Attribute | Real-player recipe (Wheelo) | What it drives in the match |
 |---|---|---|---|
 | Physical | Speed | GPS top speed, 32.5 km/h = 70 up to 36.0+ km/h = 98 (`C:/kt/speed`); no GPS, a combine 20 m time: 2.80 s = 90 up to 3.10 s = 50; neither: estimate (below) | Open-field separation, line-breaking runs, chase-down tackles (tackling 20%) |
-| | Endurance | Time on ground | How fast he tires (`MatchSim:5844`, `Workload:61`); tackling 20% |
+| | Endurance | Time on ground 40 + uncontested possessions 30 + pressure acts 30, the blend re-scaled onto the 2nd-98th percentile 1-99 (director, 2026-11-27: "re-scale the blended result back onto the league's 2nd–98th percentile (1–99) scale so elite gut-runners still reach 95–99") | How fast he tires (`MatchSim:5899`, `Workload:65`); tackling 20% |
 | | Strength | Weight for height 50 + contested possessions a game 50 | Breaking tackles, one-on-one and ruck contests |
 | | Work Rate | Pressure acts 30 + bounces 25 + (inside 50s + rebound 50s) 25 + uncontested possessions 20, against what his position, height and weight usually produce | Transition spread, uncontested link-up chains, repeat defensive pressure |
 | Technical | Kicking | Efficiency 50 + metres gained per kick 50 | Kick range, ball use, disposal (56%) |
@@ -181,7 +181,7 @@ average, on the OVR scale; under 5 games, Form = OVR.
 handballs for Handballing, marks for Marking, goals per shot for Goalkicking, goals and marks inside 50 for Forward
 craft, tackles for Pressure, hitouts for Ruck, frees against and clangers for Discipline, contested possessions and
 clearances for Contested ball, contested marks for Contested marking, one percenters for One-on-one defence, goal
-assists and inside 50s for Vision, % of game played for Endurance), a game, on that season's league scale; an
+assists and inside 50s for Vision, % of game played 40 and uncontested possessions 30 for Endurance, AFL Tables keeping no pressure acts), a game, on that season's league scale; an
 attribute the season never recorded takes his position's average. The 2020 start (2019 season) is in Wheelo.
 
 ## 5. Phases (each its own PR, green CI, auto-merge)
@@ -200,3 +200,19 @@ load after it. Lists and weight tables for his review go in `REVIEW.md` at the r
 | 6 | Generation: type ranges, classes, Forge, expansion, depth pools, state leagues | Intake and Forge-on-every-start tests |
 | 7 | Progression: XP into attributes, POT cap, age curves, breakouts, trait retest | Multi-season audit |
 | 8 | UI and words: card in four groups, colour cuts, grades, PlaysLike, Roles, story thresholds; `.hist` careers regenerated | Real taps; captures to him |
+
+### Where it stands (2026-11-27, 18:30 AEDT)
+
+| PR | Branch | Holds | State |
+|---|---|---|---|
+| #2239 | `claude/rating-rebuild-phase4` | Phases 1, 3, 4, 6, 7 | Ready, auto-merge on, head 966a8c86 |
+| #2240 | `claude/endurance-blend` | #2239 plus Endurance 40/30/30 (re-scaled p2-p98), draft-night trades (seller uses his own board, 1% margin), the ruck pillar fix ("Midfield spot only") | Draft; landed through #2242 |
+| #2242 | `claude/rating-phase8-ui` | #2240 whole plus Phase 8 (card, colour cuts 85/52/33, PlaysLike, words), regenerated histories | Ready, auto-merge on; red on `promises` |
+
+`promises` (main's #2233) passes 79/79 on #2239 and #2240: its test now reads the rebuilt OVR, lets a backed run
+wait out the kid's injuries, and reads rival drops after round 3.
+
+Still open:
+- #2240's paired `tools/balance.sh match 1000` table has not been run.
+- Calibration, the balance table and his playtest (Phase 4's proof) are his call.
+- #2239 and #2240 stay open after #2242 lands (squash-only repo); he closes them.

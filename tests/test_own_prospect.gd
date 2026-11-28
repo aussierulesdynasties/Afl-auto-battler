@@ -129,13 +129,15 @@ func _test_redraft_first_draft() -> void:
 	gs.season.finals = {"done": true}
 	_check(gs.begin_intake_draft(), "(setup) the first National Draft opens")
 	var year: int = gs.season_year
-	var before: int = _mine(gs).size()
 	_run_draft(gs)
 	_check(gs.draft.is_finished() and gs.finish_intake_draft(), "(setup) the draft finishes")
 	# One line for the National Draft; a second only when the Rookie Draft
 	# that opens straight after it has already taken him.
 	var rookie := str(OwnProspect.locate(gs)["p"].get("drafted_type", "")) == RookieList.KIND
-	_check(_mine(gs).size() == before + (2 if rookie else 1),
+	# Counted by the draft-day lines themselves: the feed keeps the newest
+	# GameState.MAX_NEWS lines, so a busy season can push the nomination off it.
+	var day := _mine(gs).filter(func(n): return not str(n["text"]).contains("has nominated"))
+	_check(day.size() == (2 if rookie else 1),
 			"Draft day tells one line about him per draft, and no season he never had (%s)" % str(_mine(gs).map(func(n): return n["text"])))
 	_draft_beat(gs, year, "redraft")
 

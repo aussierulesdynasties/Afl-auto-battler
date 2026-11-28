@@ -298,9 +298,10 @@ func _test_budget_one_spend_drives_plan() -> void:
 
 
 func _test_recovery() -> void:
-	# Endurance 50 recovers what the old Durability 70 did (Workload.recovery):
-	# Endurance reads 20 lower on the same men.
-	var p := {"id": "test", "age": 25, "attr": {"endurance": 50}}
+	# Endurance 53 recovers what the old Durability 70 did (Workload.recovery,
+	# 17.0 a week): Endurance reads about 17 lower on the same men since the
+	# 40/30/30 blend (50 before it).
+	var p := {"id": "test", "age": 25, "attr": {"endurance": 53}}
 	var lists := {"GEE": [p]}
 	_check(Workload.label(p) == "Fresh" and Workload.energy_cap(p) == 100.0,
 			"Older players without workload fields start fresh")
