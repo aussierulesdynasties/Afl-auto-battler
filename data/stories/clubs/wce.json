@@ -80,8 +80,8 @@
 		"text": ["Western Derby week. The whole state has an opinion, and every workplace in Perth is split between blue and gold and purple."],
 		"choices": [
 			{"key": "lean", "label": "Lean into it",
-			 "effects": [{"op": "morale", "d": 4, "who": "side"}, {"op": "heavy_legs", "who": "side"}, {"op": "odds", "chance": 10, "hit": [{"op": "board", "d": -2}], "miss": [], "hit_result": "A player's comment ended up on the back page."}],
-			 "result": "Training is ferocious all week."},
+			 "effects": [{"op": "morale", "d": 4, "who": "side"}, {"op": "slow_start", "chance": 20, "who": "side", "on": "week"}, {"op": "odds", "chance": 10, "hit": [{"op": "board", "d": -2}], "miss": [], "hit_result": "A player's comment ended up on the back page."}],
+			 "result": "The group is wound up all week. Some might come out too hot."},
 			{"key": "normal", "label": "Treat it like any other week",
 			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The group kept to its own routine in derby week"}, {"op": "board", "d": -1, "was": "members"}, {"op": "slow_start", "chance": 10, "who": "side"}],
 			 "result": "Business as usual. The supporters think you've gone soft."}
@@ -224,8 +224,8 @@
 			 "effects": [{"op": "morale", "d": 3, "who": "side"}, {"op": "board", "d": -1}, {"op": "loss_sting", "chance": 20, "d": -3, "who": "side"}],
 			 "result": "The clip goes around. Lose on the road and they'll play it again."},
 			{"key": "pin", "label": "Say nothing; pin it up",
-			 "effects": [{"op": "morale", "d": 2, "who": "side"}, {"op": "culture", "strand": "standards", "d": 1, "why": "The group let its footy do the answering"}, {"op": "odds", "chance": 10, "hit": [{"op": "heavy_legs", "who": "side"}], "miss": []}],
-			 "result": "It's on the wall in the rooms. Training is fired up."}
+			 "effects": [{"op": "morale", "d": 2, "who": "side"}, {"op": "culture", "strand": "standards", "d": 1, "why": "The group let its footy do the answering"}, {"op": "slow_start", "chance": 10, "who": "side", "on": "week"}],
+			 "result": "It's on the wall in the rooms. The group might press too hard early."}
 		]
 	},
 	{

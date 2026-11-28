@@ -24,5 +24,9 @@ for k,x,y,H in P['towers']:
         w=abs(proj(x+px,y+py,z)[0]-proj(x-px,y-py,z)[0])
         v=int(round(v));
         if v<5:continue
-        l,rr=run(int(round(u)),v);out.append('z%.0f v%d model c%.0f w%.0f | photo c%.0f w%d'%(z,v,u,w,(l+rr)/2,rr-l))
+        l,rr=run(int(round(u)),v);pw=rr-l
+        # A run more than 1.5x wider or narrower than the projected column is a different
+        # structure (or the camera is off here): flag it rather than call it a match.
+        bad=w<=0 or pw<=0 or not (1/1.5<=pw/w<=1.5)
+        out.append('z%.0f v%d model c%.0f w%.0f | photo c%.0f w%d%s'%(z,v,u,w,(l+rr)/2,pw,' WIDTH-MISMATCH' if bad else ''))
     print(k,'; '.join(out))

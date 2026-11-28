@@ -131,8 +131,8 @@
 		"text": ["It's Carlton, the oldest grudge in the game. Supporters stop you in the street to tell you what this one means."],
 		"choices": [
 			{"key": "season", "label": "Make it the game of the season",
-			 "effects": [{"op": "morale", "d": 5, "who": "side"}, {"op": "heavy_legs", "who": "side"}, {"op": "loss_sting", "chance": 30, "d": -5, "who": "side"}],
-			 "result": "Training is a war all week. Lose this and it will hurt."},
+			 "effects": [{"op": "morale", "d": 5, "who": "side"}, {"op": "slow_start", "chance": 15, "who": "side", "on": "week"}, {"op": "loss_sting", "chance": 30, "d": -5, "who": "side"}],
+			 "result": "The group is wound up all week. Lose this and it will hurt."},
 			{"key": "another", "label": "Treat it as just another game",
 			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The week ran to the plan, Carlton or not"}, {"op": "board", "d": -3, "was": "members"}, {"op": "slow_start", "who": "side", "chance": 20, "on": "week"}],
 			 "result": "A normal week. The supporters can't believe it."}

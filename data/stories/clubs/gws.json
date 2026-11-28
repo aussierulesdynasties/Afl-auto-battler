@@ -187,8 +187,8 @@
 		"text": ["A rival club's president has called the Giants a plastic club with no history and no supporters, the old line. The players have seen it."],
 		"choices": [
 			{"key": "pin", "label": "Pin it to the noticeboard",
-			 "effects": [{"op": "morale", "d": 6, "who": "side"}, {"op": "odds", "chance": 20, "hit": [{"op": "heavy_legs", "who": "side"}], "hit_result": "Training goes too hard, and the legs pay for it."}],
-			 "result": "It's on the noticeboard by lunchtime. Training is fierce."},
+			 "effects": [{"op": "morale", "d": 6, "who": "side"}, {"op": "loss_sting", "chance": 20, "d": -4, "who": "side"}],
+			 "result": "It's on the noticeboard by lunchtime. Training is fierce, and a loss would hurt."},
 			{"key": "calm", "label": "\"Our history is being written.\"",
 			 "effects": [{"op": "board", "d": 3}, {"op": "morale", "d": -1, "who": "side"}],
 			 "result": "The board likes the answer. The players wanted the coach to bite."}

@@ -1115,8 +1115,8 @@ static func apply_choice(gs, card: Dictionary, choice: int) -> String:
 
 
 ## Your players who could run a time trial, fittest first. The rating is the
-## one the match uses for running fitness: durability sets how fast a player
-## tires on the ground and how he recovers between games. An injured player
+## one the match uses for running fitness: endurance sets how fast a player
+## tires on the ground (MatchSim, Workload). An injured player
 ## sits it out; ties go to the name, so the same list gives the same answer.
 static func running_fitness(gs) -> Array:
 	var rows := []
@@ -1124,7 +1124,7 @@ static func running_fitness(gs) -> Array:
 		if int(p.get("injury_weeks", 0)) > 0:
 			continue
 		rows.append({"id": str(p["id"]), "name": GameDB.player_display_name(p),
-				"v": int((p.get("attr", {}) as Dictionary).get("durability", 0))})
+				"v": int((p.get("attr", {}) as Dictionary).get("endurance", 0))})
 	rows.sort_custom(func(a, b): return int(a["v"]) > int(b["v"]) or (int(a["v"]) == int(b["v"]) and str(a["id"]) < str(b["id"])))
 	return rows
 
@@ -1179,7 +1179,8 @@ static func _apply(gs, e: Dictionary, p: Dictionary, facts: Dictionary, applied:
 			applied["morale"] = int(applied.get("morale", 0)) + d
 		"xp":
 			for q in _targets(gs, e, p, facts):
-				q["xp"] = int(q.get("xp", 0)) + d
+				# A cost (a session missed) takes development away, never below none.
+				q["xp"] = maxi(int(q.get("xp", 0)) + d, 0)
 			if str(e.get("who", "subject")) == "subject":
 				gs.apply_plan_to(p)
 			else:

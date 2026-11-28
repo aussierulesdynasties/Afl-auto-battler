@@ -266,6 +266,7 @@ const COST_WORDS := {
 	"morale": "(?i)morale", "board": "(?i)board confidence", "trust": "opinion of you (down (about )?[0-9]+|falls [0-9]+|slips a little)",
 	"rest": "misses", "heavy_legs": "Heavy legs", "sore": "chance he is injured", "expects_game": "expects a game",
 	"start_backing": "expects to be picked", "back_kid": "is promised the next", "promise": "is promised a (senior|new|future)", "rival": "become rivals", "promise_win": "Lose or draw and", "extend_early": "Locked in", "captaincy_swap": "mid-season",
+	"xp": "(?i)loses [0-9]+ development",
 	"rush_back": "hurt again", "slow_start": "slowly", "loss_sting": "also falls", "role_trial": "away from his usual spot", "on_record": "on the record",
 	"culture": "(Standards|Togetherness|Ambition) down [0-9]+%", "running": "less running", "forgo_xp": "Slower growth",
 	"new_club_keep": "against our cap", "new_club_go": "when this season ends", "dev_promise": "expects his next three games",
@@ -373,6 +374,10 @@ func _stakes_in(effects: Array) -> Array:
 			if d > 0 and not gains.has(op):
 				gains.append(op)
 			elif d < 0 and not costs.has(op):
+				costs.append(op)
+		elif op == "xp" and d < 0:
+			# A missed session: development taken away (the sponsor shoot).
+			if not costs.has(op):
 				costs.append(op)
 		elif op in ["xp", "fresh", "drill", "promise_win", "extend_early", "new_club_keep"] and not gains.has(op):
 			gains.append(op)
@@ -2854,9 +2859,9 @@ func _test_culture_runs_once() -> void:
 
 # --- A result that names players (the time trial) --------------------------------
 
-func _by_durability(a: Dictionary, b: Dictionary) -> bool:
-	var da := int(a["attr"]["durability"])
-	var db := int(b["attr"]["durability"])
+func _by_endurance(a: Dictionary, b: Dictionary) -> bool:
+	var da := int(a["attr"]["endurance"])
+	var db := int(b["attr"]["endurance"])
 	return da > db or (da == db and str(a["id"]) < str(b["id"]))
 
 
@@ -2892,7 +2897,7 @@ func _test_time_trial_names() -> void:
 	var injured: Dictionary = list[0]
 	injured["injury_weeks"] = 3
 	var avail := list.filter(func(q): return int(q.get("injury_weeks", 0)) <= 0)
-	avail.sort_custom(_by_durability)
+	avail.sort_custom(_by_endurance)
 	var morale_before := ClubLife.morale(avail[10])
 	var card := GameState.story_card("training_time_trial")
 	var want := "Best over the two k: %s. Off the pace: %s." % [
@@ -3353,7 +3358,7 @@ func _test_line_numbers_match_effects() -> void:
 							want = ("opinion of you %s, still %d out of 100" % ["warms a little" if StoryEngine.effect_d(e, card["facts"]) > 0 else "slips a little", Trust.opinion(t0)]) if mv == 0 else \
 								"opinion of you %s %d, to %d out of 100" % ["up" if mv > 0 else "down", absi(mv), Trust.opinion(t0) + mv]
 					"xp":
-						want = "%d development points. A senior game gives %d" % [int(e["d"]), GameState.XP_SENIOR_GAME]
+						want = "%d development points. A senior game gives %d" % [absi(int(e["d"])), GameState.XP_SENIOR_GAME]
 					"slow_start":
 						want = "About a %d%% chance" % int(e["chance"])
 					"loss_sting":

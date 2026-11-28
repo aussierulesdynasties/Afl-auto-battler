@@ -10,7 +10,7 @@
 		"text": ["It's Showdown week and the whole state has picked a side. Workmates won't speak, the papers run a countdown, and the players can feel it at the supermarket."],
 		"choices": [
 			{"key": "lean", "label": "Tell them it's the biggest game in the state",
-			 "effects": [{"op": "morale", "d": 4, "who": "all"}, {"op": "odds", "chance": 30, "hit": [{"op": "heavy_legs", "who": "side"}], "hit_result": "A wild week caught up with them by Saturday."}, {"op": "loss_sting", "chance": 20, "d": -3, "who": "side"}],
+			 "effects": [{"op": "morale", "d": 4, "who": "all"}, {"op": "slow_start", "chance": 15, "who": "side", "on": "week"}, {"op": "loss_sting", "chance": 20, "d": -3, "who": "side"}],
 			 "result": "The group is up and about. Everyone knows what a loss would mean now."},
 			{"key": "calm", "label": "Call it four points, same as any week",
 			 "effects": [{"op": "board", "d": 2}, {"op": "morale", "d": -1, "who": "all"}],
@@ -109,7 +109,7 @@
 			 "effects": [{"op": "board", "d": 3, "was": "members"}, {"op": "slow_start", "chance": 20, "who": "side"}],
 			 "result": "The Melbourne Crows feel part of the club. It's a late night on the road."},
 			{"key": "leaders", "label": "Send the captain and two leaders",
-			 "effects": [{"op": "board", "d": 1, "was": "members"}, {"op": "culture", "strand": "together", "d": 1, "why": "The leaders gave up their night for the supporters"}, {"op": "slow_start", "chance": 10, "who": "side"}],
+			 "effects": [{"op": "board", "d": 1, "was": "members"}, {"op": "culture", "strand": "together", "d": 1, "why": "The leaders gave up their night for the supporters"}, {"op": "heavy_legs", "who": "leaders"}],
 			 "result": "The supporters get a few faces. Most of the group rests."},
 			{"key": "clear", "label": "Keep the night clear",
 			 "effects": [{"op": "fresh", "who": "side"}, {"op": "board", "d": -2, "was": "members"}],
@@ -264,8 +264,8 @@
 			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The players got tools for finals pressure"}, {"op": "odds", "chance": 30, "hit": [{"op": "board", "d": -1}], "hit_result": "The press ran it as the Crows calling in the shrink."}],
 			 "result": "The players get tools for the pressure."},
 			{"key": "pin", "label": "Pin the column to the noticeboard",
-			 "effects": [{"op": "morale", "d": 4, "who": "side"}, {"op": "heavy_legs", "who": "side"}],
-			 "result": "The group is fired up. They burnt energy all week."},
+			 "effects": [{"op": "morale", "d": 4, "who": "side"}, {"op": "loss_sting", "chance": 30, "d": -6, "who": "side"}],
+			 "result": "The group is fired up. Lose now and the column gets quoted back at them."},
 			{"key": "laugh", "label": "Laugh it off",
 			 "effects": [{"op": "board", "d": 1}, {"op": "loss_sting", "chance": 30, "d": -4, "who": "side"}],
 			 "result": "Nobody overthinks it. Lose this week and the tag sticks harder."}

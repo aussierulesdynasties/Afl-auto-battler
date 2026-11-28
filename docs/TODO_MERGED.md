@@ -273,3 +273,10 @@ What has landed toward each open row of docs/TODO.md and docs/TODO_RULINGS.md, o
 - 202: Merged #2322: 3D 1.0 plan: before-orbits of all 11 grounds, Marvel open items.
 - 202: Merged #2291: WACA surroundings: the park's ground stays under the arena edge (nightly match_visual).
 - 202: Merged #2324: 3D 1.0 plan: match the decision log.
+- 202: Merged #2327: Cazaly's: delete the one-off measure scripts, now in the shared Google Earth tool.
+- 202: Merged #2331: 3D 1.0 plan: sprint in review, Marvel backdrop fixes in draft.
+- 202: Merged #2335: 3D 1.0 plan: Marvel round 18, WACA, faces colour redo, held grounds.
+- 202: Merged #2334: 3D crowd: clear error when the crowd bodies are missing; capture tools grade the picture once.
+- 202: Merged #2339: 3D 1.0 plan: Marvel round 18 still in its fix pass.
+- 202: Merged #2350: 3D 1.0 plan: review issues, sprint, speccy parked, Marvel roof.
+- 202: Merged #2333: WACA scoreboard: move it out of the playing area to its real spot, with the SE light tower [hold: director sign-off on #2346].
