@@ -38,32 +38,24 @@ func page() -> Control:
 ## verdict. How they play is in the assistant's report.
 func fill(v: VBoxContainer) -> void:
 	var nxt := GameState.my_next_opponent()
+	if with_report:
+		# The page's own spacing (a window that left the PC layout drops its 20).
+		v.add_theme_constant_override("separation", _gap())
+	if with_report and not nxt.is_empty() and _roomy():
+		_fill_wide(v, str(nxt["code"]), nxt)
+		return
 	if not with_report:
 		pass
 	elif nxt.is_empty():
 		v.add_child(_strength_line())
 	else:
 		var code := str(nxt["code"])
-		# One phrase, and the opponent is named once: under "Them" below.
-		var heading := UiKit.hbox(UiKit.Space.CLOSE)
-		heading.name = "WeekHeading"
-		# Gather Round names the event and the host ground (rule 2.38): "at home"
-		# only for a club at its own ground.
-		var where := ("at home" if str(nxt["venue"]) == "home" else "away")
-		if nxt.has("event"):
-			where = "%s at %s" % [str(nxt["event"]), GameDB.ground_shown(str(nxt["ground"]))]
-		heading.add_child(UiKit.line("%s, %s" % [GameState.season.round_name(GameState.season.round_index), where],
-				UiKit.TITLE, UiKit.TEXT, true))
-		v.add_child(heading)
+		v.add_child(_heading(nxt))
 		# Who plays whom: you and them, each club's ink and guernsey (director,
 		# 2026-11-07: the key forwards and defenders here are cut, "It's pointless").
 		v.add_child(_club_sides(code))
 		v.add_child(_rule())
-		# What your assistant has seen of them - said there, and only there.
-		var report := _link_btn("Assistant's report ›")
-		report.name = "AssistantReport"
-		report.pressed.connect(show_report.bind(code))
-		v.add_child(report)
+		v.add_child(_report_link(code))
 		var lines := UiKit.vbox(UiKit.Space.WIDER)
 		lines.name = "HeadToHead"
 		v.add_child(lines)
@@ -77,7 +69,96 @@ func fill(v: VBoxContainer) -> void:
 			v.add_child(_rule())
 			v.add_child(tips)
 	v.add_child(_synergy_view())
-	# What the week says about your own people, set apart from the facts above.
+	var notes := _notes_box()
+	if notes != null:
+		# Your own news is not a synergy: a rule sets it apart, no heading.
+		v.add_child(_rule())
+		v.add_child(notes)
+
+
+## The match preview on a PC window (director, 2026-11-27, his pick "B: matchups
+## across the top"): the round, you and them and the report on one line; overall
+## and every line side by side across the page; the tips under them on the left,
+## the synergies and your own news on the right. One page at 1920 and at 960:
+## nothing scrolls.
+func _fill_wide(v: VBoxContainer, code: String, nxt: Dictionary) -> void:
+	var short := UiKit.view_height(host) < 600.0
+	var top := UiKit.hbox(UiKit.Space.ROOM)
+	top.name = "WeekTop"
+	v.add_child(top)
+	v.add_theme_constant_override("separation", UiKit.GAP if short else 20)
+	var heading := _heading(nxt)
+	# As tall as the report link at the other end, so the two read on one line.
+	heading.custom_minimum_size = Vector2(0, 48)
+	(heading.get_child(0) as Control).size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	heading.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	top.add_child(heading)
+	# You and them in the middle, never wider than 520: the heading and the
+	# report share the rest equally, so the two clubs sit centred.
+	var sides := _club_sides(code)
+	sides.custom_minimum_size = Vector2(minf(520.0, (UiKit.view_width(host) - 64.0) * 0.46), 0)
+	sides.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	top.add_child(sides)
+	var right := UiKit.hbox(0)
+	right.alignment = BoxContainer.ALIGNMENT_END
+	right.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	right.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	right.add_child(_report_link(code))
+	top.add_child(right)
+	var lines := UiKit.hbox(24)
+	lines.name = "HeadToHead"
+	v.add_child(lines)
+	for row in GameState.my_head_to_head(code):
+		lines.add_child(_h2h_col(row, code, UiKit.Space.CLOSE if short else UiKit.Space.ROOM))
+	v.add_child(_rule())
+	var low := UiKit.hbox(40)
+	low.name = "WeekLow"
+	v.add_child(low)
+	var tips := _tips_view(true, short)
+	if tips != null:
+		tips.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		tips.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+		low.add_child(tips)
+	var rest := UiKit.vbox(_gap())
+	rest.name = "WeekRest"
+	rest.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	# At 960 the tips take two fifths, so the synergy sentences keep their width.
+	rest.size_flags_stretch_ratio = 1.5 if short else 1.0
+	rest.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	low.add_child(rest)
+	rest.add_child(_synergy_view())
+	var notes := _notes_box()
+	if notes != null:
+		rest.add_child(_rule())
+		rest.add_child(notes)
+
+
+## The round and where, one phrase; the opponent is named once, under "Them".
+func _heading(nxt: Dictionary) -> HBoxContainer:
+	var heading := UiKit.hbox(UiKit.Space.CLOSE)
+	heading.name = "WeekHeading"
+	# Gather Round names the event and the host ground (rule 2.38): "at home"
+	# only for a club at its own ground.
+	var where := ("at home" if str(nxt["venue"]) == "home" else "away")
+	if nxt.has("event"):
+		where = "%s at %s" % [str(nxt["event"]), GameDB.ground_shown(str(nxt["ground"]))]
+	heading.add_child(UiKit.line("%s, %s" % [GameState.season.round_name(GameState.season.round_index), where],
+			UiKit.TITLE, UiKit.TEXT, true))
+	return heading
+
+
+## What your assistant has seen of them - said there, and only there.
+func _report_link(code: String) -> Button:
+	var report := _link_btn("Assistant's report ›")
+	report.name = "AssistantReport"
+	report.pressed.connect(show_report.bind(code))
+	return report
+
+
+## What the week says about your own people, set apart from the facts above;
+## null when there is nothing to say.
+func _notes_box() -> VBoxContainer:
 	var notes := UiKit.vbox(UiKit.GAP)
 	notes.name = "WeekNotes"
 	var own := GameState.my_week_notes()
@@ -100,11 +181,9 @@ func fill(v: VBoxContainer) -> void:
 		ch.name = "TeamChanges"
 		notes.add_child(ch)
 	if notes.get_child_count() > 0:
-		# Your own news is not a synergy: a rule sets it apart, no heading.
-		v.add_child(_rule())
-		v.add_child(notes)
-	else:
-		notes.free()
+		return notes
+	notes.free()
+	return null
 
 
 ## One spacing scale for the week: 8 inside a block, 16 between blocks.
@@ -161,35 +240,61 @@ func _h2h_row(row: Dictionary, opp: String) -> Control:
 	one.name = "H2H_" + str(row["key"])
 	one.set_meta("plain", str(row["text"]))
 	one.add_child(UiKit.lbl(str(row["label"]), UiKit.NAME, UiKit.TEXT, true))
-	var inks: Array = UiKit.club_ink_pair(GameState.my_club, opp)
 	var cols := UiKit.hbox(GAP)
-	# Each side: its word (a line) and its league rank, "Yours good · 5th".
-	var sides := [["Yours", "mine", inks[0]], ["Theirs", "theirs", inks[1]]]
-	for side in sides:
-		var said := "%s %s" % [side[0], Almanac.ordinal(int(row[side[1] + "_rank"]))]
-		if row.has(side[1] + "_word"):
-			said = "%s %s · %s" % [side[0], str(row[side[1] + "_word"]),
-					Almanac.ordinal(int(row[side[1] + "_rank"]))]
-		var c := UiKit.vbox(UiKit.Space.TIGHT)
-		c.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		var bar := ColorRect.new()
-		bar.color = side[2]
-		bar.custom_minimum_size = Vector2(0, 3)
-		bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		c.add_child(bar)
-		var l := UiKit.lbl(said, UiKit.SECONDARY, UiKit.club_name_colour(side[2]), true)
-		l.name = "H2H_" + str(side[1])
-		c.add_child(l)
-		cols.add_child(c)
+	for side in _h2h_sides(opp):
+		cols.add_child(_h2h_side(row, side))
 	one.add_child(cols)
 	return one
+
+
+## One line on a PC window: its name over yours, then theirs under it, so five
+## stand side by side across the page (Preview B, director 2026-11-27).
+func _h2h_col(row: Dictionary, opp: String, step: int) -> Control:
+	var one := UiKit.vbox(UiKit.Space.CLOSE)
+	one.name = "H2H_" + str(row["key"])
+	one.set_meta("plain", str(row["text"]))
+	one.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	one.add_child(UiKit.lbl(str(row["label"]), UiKit.NAME, UiKit.TEXT, true))
+	var stack := UiKit.vbox(step)
+	for side in _h2h_sides(opp):
+		stack.add_child(_h2h_side(row, side))
+	one.add_child(stack)
+	return one
+
+
+## ["Yours", "mine", your ink] and ["Theirs", "theirs", their ink].
+func _h2h_sides(opp: String) -> Array:
+	var inks: Array = UiKit.club_ink_pair(GameState.my_club, opp)
+	return [["Yours", "mine", inks[0]], ["Theirs", "theirs", inks[1]]]
+
+
+## One side of a line: a bar in the club's colour over its word (a line) and its
+## league rank, "Yours good · 5th".
+func _h2h_side(row: Dictionary, side: Array) -> Control:
+	var said := "%s %s" % [side[0], Almanac.ordinal(int(row[side[1] + "_rank"]))]
+	if row.has(side[1] + "_word"):
+		said = "%s %s · %s" % [side[0], str(row[side[1] + "_word"]),
+				Almanac.ordinal(int(row[side[1] + "_rank"]))]
+	var c := UiKit.vbox(UiKit.Space.TIGHT)
+	c.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var bar := ColorRect.new()
+	bar.color = side[2]
+	bar.custom_minimum_size = Vector2(0, 3)
+	bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	c.add_child(bar)
+	var l := UiKit.lbl(said, UiKit.SECONDARY, UiKit.club_name_colour(side[2]), true)
+	l.name = "H2H_" + str(side[1])
+	c.add_child(l)
+	return c
 
 
 ## The papers' tips for this match (Tipping, director 2026-11-21): who each
 ## journalist tips to win and by how much, under one line of how the panel
 ## splits. Each pick in its club's colour beside its guernsey. null with no
-## match to tip.
-func _tips_view() -> Control:
+## match to tip. On a PC window (`wide`) the picks are one column as wide as the
+## widest, so it ends at the column's edge; `one_line` (a short PC window) puts
+## each journalist's outlet beside the name instead of under it.
+func _tips_view(wide := false, one_line := false) -> Control:
 	var m := MatchKickoff.upcoming_match()
 	var tips := GameState.match_tips(m)
 	if tips.is_empty():
@@ -201,7 +306,13 @@ func _tips_view() -> Control:
 	var ink := {GameState.my_club: inks[0], opp: inks[1]}
 	var box := UiKit.vbox(UiKit.GAP)
 	box.name = "Tips"
-	box.add_child(UiKit.lbl("The tips", UiKit.NAME, UiKit.TEXT, true))
+	var title := UiKit.lbl("The tips", UiKit.NAME, UiKit.TEXT, true)
+	title.name = "TipsTitle"
+	if wide:
+		# As tall as the Synergies link beside it, so the two headings share a line.
+		title.custom_minimum_size = Vector2(0, 48)
+		title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	box.add_child(title)
 	var names := {h: GameDB.club_name(h), a: GameDB.club_name(a)}
 	var t := Tipping.tally(tips, h, a)
 	var lead := h if int(t[h]) > int(t[a]) else a
@@ -213,17 +324,27 @@ func _tips_view() -> Control:
 	var rows := UiKit.vbox(UiKit.Space.CLOSE)
 	rows.name = "TipsPanel"
 	box.add_child(rows)
+	var pick_w := 132.0
+	if wide:
+		pick_w = 0.0
+		for tip in tips:
+			pick_w = maxf(pick_w, UiKit.BOLD.get_string_size(_tip_said(tip), HORIZONTAL_ALIGNMENT_LEFT, -1,
+					UiKit.px(UiKit.SECONDARY)).x)
+		pick_w = ceilf(pick_w) + 2.0
 	for tip in tips:
 		var pick := str(tip["pick"])
 		var row := UiKit.hbox(UiKit.Space.ROOM)
 		row.name = "Tip_" + str(tip["journalist"])
 		row.set_meta("pick", pick)
 		row.set_meta("margin", int(tip["margin"]))
-		var who := UiKit.vbox(0)
+		var who: BoxContainer = UiKit.hbox(UiKit.GAP) if one_line else UiKit.vbox(0)
 		who.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		who.add_child(UiKit.lbl(str(tip["name"]), UiKit.SECONDARY, UiKit.TEXT, true))
-		var outlet := UiKit.lbl(str(tip["outlet"]), UiKit.FINE, Color(SOFT, 0.8))
-		who.add_child(outlet)
+		if one_line:
+			who.add_child(UiKit.line(str(tip["name"]), UiKit.SECONDARY, UiKit.TEXT, true))
+			who.add_child(UiKit.line(str(tip["outlet"]), UiKit.FINE, Color(SOFT, 0.8)))
+		else:
+			who.add_child(UiKit.lbl(str(tip["name"]), UiKit.SECONDARY, UiKit.TEXT, true))
+			who.add_child(UiKit.lbl(str(tip["outlet"]), UiKit.FINE, Color(SOFT, 0.8)))
 		row.add_child(who)
 		# The pick's guernsey, so two clubs in like colours (Eagles, Tigers)
 		# still read apart at a glance.
@@ -231,14 +352,18 @@ func _tips_view() -> Control:
 		crest.name = "TipCrest"
 		crest.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		row.add_child(crest)
-		var said := UiKit.lbl("%s by %d" % [GameDB.club_short(pick), int(tip["margin"])], UiKit.SECONDARY,
-				UiKit.club_name_colour(ink[pick]), true)
+		var said := UiKit.lbl(_tip_said(tip), UiKit.SECONDARY, UiKit.club_name_colour(ink[pick]), true)
 		said.name = "TipPick"
-		said.custom_minimum_size = Vector2(132, 0)
+		said.custom_minimum_size = Vector2(pick_w, 0)
 		said.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		row.add_child(said)
 		rows.add_child(row)
 	return box
+
+
+## "Demons by 13": the pick and the margin.
+func _tip_said(tip: Dictionary) -> String:
+	return "%s by %d" % [GameDB.club_short(str(tip["pick"])), int(tip["margin"])]
 
 
 ## A fact about your own people with a short bar in `ink` at its left: its own

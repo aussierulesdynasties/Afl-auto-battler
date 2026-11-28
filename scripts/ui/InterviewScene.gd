@@ -190,6 +190,9 @@ func _name_page() -> void:
 	var go := UiKit.btn("Face the press", UiKit.BODY, true)
 	go.name = "InterviewStart"
 	go.disabled = true
+	if _wide:
+		# On a PC, sized to its words, at the right as Continue sits.
+		go.size_flags_horizontal = Control.SIZE_SHRINK_END
 	field.text_changed.connect(func(t: String): go.disabled = t.strip_edges() == "")
 	go.pressed.connect(func():
 		_name = field.text.strip_edges()
