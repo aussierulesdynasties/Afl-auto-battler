@@ -708,7 +708,7 @@ func _test_coach_descriptions(sz: Vector2i) -> void:
 	var usual := roundi(float(load("res://scripts/sim/Roles.gd").TAG_USUAL_TOUCHES))
 	var no_tag_ok := func() -> bool:
 		var t := _plain(tn)
-		return t.begins_with("Gain: your midfielders play their own game") and t.contains("\nCost: ") 				and t.contains("usual %d touches" % usual) and tn.find_child("TagGain", true, false) != null 				and tn.find_child("TagCost", true, false) != null
+		return t.begins_with("Gain: our midfielders play their own game") and t.contains("\nCost: ") 				and t.contains("usual %d touches" % usual) and tn.find_child("TagGain", true, false) != null 				and tn.find_child("TagCost", true, false) != null
 	_check(tn != null and none != null and no_tag_ok.call(), "With no tag, the tag call says its gain and its cost (%s: %s)" % [tag, _plain(tn) if tn else "-"])
 	var named: Button = null
 	for b in m.find_child("TagPicker", true, false).find_children("TagPickerGrid_*", "Button", true, false):
@@ -793,10 +793,10 @@ func _test_coach_descriptions(sz: Vector2i) -> void:
 			var mine_name: String = words.call(mine_btn).split("\n")[0].strip_edges()
 			var ww: String = await _tap_call(m, mine_btn)
 			await _settle()
-			_check(ww == "" and _plain(tn).contains("with %s on him" % mine_name), "The midfielder you tap is the one who goes (%s: %s; tapped %s)" % [tag, _plain(tn), mine_name])
+			_check(ww == "" and _plain(tn).containsn("with %s on him" % mine_name), "The midfielder you tap is the one who goes (%s: %s; tapped %s)" % [tag, _plain(tn), mine_name])
 			var wd: String = await _tap_call(m, who_box.find_child("TaggerPickerGrid_", true, false))
 			await _settle()
-			_check(wd == "" and not _plain(tn).contains("with %s on him" % mine_name), "Back to your assistant's man (%s: %s; was %s)" % [tag, _plain(tn), mine_name])
+			_check(wd == "" and not _plain(tn).containsn("with %s on him" % mine_name), "Back to your assistant's man (%s: %s; was %s)" % [tag, _plain(tn), mine_name])
 
 	# Start with a tag: the plan line names every call, in full, and nothing
 	# it sits above is pushed off the screen.
