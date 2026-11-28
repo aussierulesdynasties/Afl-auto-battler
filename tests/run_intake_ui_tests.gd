@@ -434,7 +434,7 @@ func _test_trade_picks_sheet(size: Vector2i) -> void:
 		ui.queue_free()
 		return
 	var viewport := Rect2(Vector2.ZERO, Vector2(size))
-	_check(viewport.grow(1).encloses(trade.get_global_rect()) and trade.size.y >= 44.0,
+	_check(viewport.grow(1).encloses(trade.get_global_rect()) and (trade.size.y >= 44.0 or bool(ui.get("_pc"))),
 			"The button is on screen and thumb-sized (%s)" % tag)
 	await _press(trade, "Trade picks (%s)" % tag)
 	await _settle()
@@ -796,6 +796,10 @@ func _check_layout(ui: Control, label: String) -> void:
 		var node: Control = ui.find_child(node_name, true, false)
 		if node != null and node.is_visible_in_tree():
 			_check(viewport.grow(1).encloses(node.get_global_rect()), label + ": " + node_name + " fits")
+	# A finger's 44 units on touch layouts; the PC layout's buttons are sized to
+	# their words (row 171).
+	if bool(ui.get("_pc")):
+		return
 	for prefix in ["Position_", "Tab_", "SideTab_", "Filter_"]:
 		for node in ui.find_children(prefix + "*", "Button", true, false):
 			if node.is_visible_in_tree():
@@ -956,10 +960,21 @@ func _test_draft_night_screen(size: Vector2i) -> void:
 	for t in draft.night_trades:
 		if int(t["at"]) <= draft.pick_index + 1:
 			events += 1
-	var rows_want := mini(3 if size.y >= 780 or size.x >= 760 else 2, events)
-	_check(recent.size() == rows_want, "The last picks are under it: three, two on a shorter screen (%s: %d)" % [tag, recent.size()])
+	var pc := bool(ui.get("_pc"))
 	var strip: Control = ui.find_child("RecentPicks", true, false)
-	if size.x >= 760:
+	if pc:
+		# PC (row 171, board A): the pick log beside the pool lists the picks; no
+		# strip under the board.
+		var log_box: Control = ui.get("_history_box")
+		_check(recent.is_empty() and strip == null and log_box != null and log_box.is_visible_in_tree()
+				and not log_box.find_children("HistoryPick_*", "", true, false).is_empty(),
+				"PC: the pick log beside the pool lists the picks, with no strip (%s: %d)" % [tag, recent.size()])
+	else:
+		var rows_want := mini(3 if size.y >= 780 or size.x >= 760 else 2, events)
+		_check(recent.size() == rows_want, "The last picks are under it: three, two on a shorter screen (%s: %d)" % [tag, recent.size()])
+	if pc:
+		pass   # checked above
+	elif size.x >= 760:
 		# PC: the pick log beside the board already lists the picks; the strip shows
 		# only when the log is not on screen.
 		_check(strip != null and not strip.is_visible_in_tree(), "PC: no last-picks strip beside the pick log (%s)" % tag)
@@ -989,6 +1004,10 @@ func _test_draft_night_screen(size: Vector2i) -> void:
 		if draft.can_pick_player(p):
 			target = p
 			break
+	if pc:
+		# PC: the pick button is on his card; put him there.
+		ui.call("_pc_pick_row", str(target.get("id", "")))
+		await _settle()
 	var pick_btn: Button = ui.find_child("Pick_" + str(target.get("id", "")), true, false)
 	_check(pick_btn != null, "A pick button for a prospect (%s)" % tag)
 	if pick_btn == null:
@@ -1038,7 +1057,7 @@ func _test_draft_night_screen(size: Vector2i) -> void:
 	_check(ui.call("replaying") and status.text == "Pick %d: Fremantle" % mine_no and not yours.is_visible_in_tree(),
 			"While the stage reads your pick the board stays on it and holds the rivals' picks back (%s: %s)" % [tag, status.text])
 	var strip_now: Control = ui.find_child("RecentPicks", true, false)
-	_check(strip_now != null and not strip_now.is_visible_in_tree(),
+	_check((pc and strip_now == null) or (strip_now != null and not strip_now.is_visible_in_tree()),
 			"The last-picks strip steps aside while the stage reads your pick (%s)" % tag)
 	var cap_l: Label = ui.find_child("SalaryCap", true, false)
 	_check(cap_l != null and cap_l.text == "%d prospects left" % pool_info_want,
