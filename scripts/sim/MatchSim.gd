@@ -463,6 +463,7 @@ func _init(home: Squad, away: Squad, seed: int = 0) -> void:
 	# Its own seed: it once shared lead_rng's, so the mid-kick intercept dice
 	# replayed the key-lead dice. Every stream here needs a seed of its own.
 	mid_ic_rng.seed = seed * 137 + 139
+	lane_rng.seed = seed * 163 + 167
 	injury_rng.seed = seed * 13 + 7
 	breeze_side = posmod(hash("breeze|%d" % seed), 2)
 	arch_rng.seed = seed * 151 + 157
@@ -941,6 +942,63 @@ const PLANS := {
 	"contest": {"contest": 0.025, "gain": 0.95, "exposed": 1.04},
 	"controlled": {"taken": 0.96, "gain": 0.94, "goal": 1.01, "clangers": 0.93, "pace": 0.95},
 }
+
+
+## Kick lanes (row T2.25, ARD-M4-014; the director: "lanes are recorded and
+## affect play, not presentation only"). Every kick goes down one of three
+## lanes, weighted by the game plan: through the corridor, a switch across the
+## ground, or down the line. Each lane is a trade: the corridor gains the most
+## ground but is the easiest to read and pick off; down the line is safe from
+## the interceptor but runs out of bounds more; the switch gives up ground for
+## space, so the next touch is under less pressure. The lane is drawn from its
+## own stream (lane_rng), and each lane only scales a threshold, so the other
+## dice stay where they were. Weights and sizes are first values; the paired
+## lanes audit and any tuning wait in TODO section Z.
+const LANES := ["corridor", "switch", "line"]
+const LANE_PLAN := {
+	"balanced": {"corridor": 0.30, "switch": 0.15, "line": 0.55},
+	"attacking": {"corridor": 0.55, "switch": 0.10, "line": 0.35},
+	"defensive": {"corridor": 0.20, "switch": 0.15, "line": 0.65},
+	"contest": {"corridor": 0.25, "switch": 0.10, "line": 0.65},
+	"controlled": {"corridor": 0.25, "switch": 0.35, "line": 0.40},
+}
+## Per lane: gain (metres of the kick), turn (a rushed kick going to the
+## opposition), read (the mid-kick intercept through the middle), out (the
+## kick running over the boundary).
+const LANE_FX := {
+	"corridor": {"gain": 1.10, "turn": 1.20, "read": 1.40, "out": 0.50},
+	"switch": {"gain": 0.70, "turn": 1.00, "read": 1.00, "out": 1.00},
+	"line": {"gain": 1.00, "turn": 0.90, "read": 0.50, "out": 1.60},
+}
+## After a switch, the next touch's pressure (the ground opened up).
+const LANE_SWITCH_SPACE := 0.80
+var lane_rng := RandomNumberGenerator.new()
+## The weights this match draws from (a copy of LANE_PLAN; a test can force one lane).
+var lane_plan: Dictionary = LANE_PLAN.duplicate(true)
+## Kicks per lane, and "<lane>_m" the metres they gained, for each side; bookkeeping for the balance harness, no dice.
+var lane_log := [{}, {}]
+## The lane of the kick in flight, "" after a handball; the switch's space waits
+## for the next touch of the same chain.
+var _lane_now := ""
+var _switch_open := false
+
+
+## The lane of `side`'s next kick, drawn from lane_rng by its game plan.
+func _pick_lane(side: int) -> String:
+	var w: Dictionary = lane_plan.get(_plan(side), lane_plan["balanced"])
+	var r := lane_rng.randf()
+	var acc := 0.0
+	for lane in LANES:
+		acc += float(w[lane])
+		if r < acc:
+			return lane
+	return "line"
+
+
+func _lane_fx(key: String) -> float:
+	if _lane_now == "":
+		return 1.0
+	return float((LANE_FX[_lane_now] as Dictionary)[key])
 
 
 ## How much of a plan's upside the day allows (ARD-M4-016, the director:
@@ -3085,6 +3143,8 @@ func _boundary_exit(side: int, cross_fp: float, carrier, disposal_kind: String,
 	if marked:
 		return {}
 	var chance := BOUNDARY_EXIT_P + (BOUNDARY_RUSHED_BONUS if rushed else 0.0)
+	if disposal_kind == "kick":
+		chance *= _lane_fx("out")
 	if boundary_rng.randf() >= chance:
 		return {}
 	var out_on_full := disposal_kind == "kick" and boundary_rng.randf() < OUT_ON_FULL_SHARE
@@ -3133,6 +3193,8 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 	_broke_press = -1
 	_exit_open = false
 	_post_exit = false
+	_lane_now = ""
+	_switch_open = false
 	var atk_fp := fp if side == 0 else -fp
 	var cleared = _stoppage(side, opp, from_bounce, atk_fp >= f50)
 	# A chain that starts inside its forward 50 (a ball-up won there) goes
@@ -3225,6 +3287,7 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 				+ 0.30 * (100.0 - _a(carrier, "marking")) / 100.0)
 		var disposal_kind := "handball"
 		var marked := false
+		_lane_now = ""
 		# A kick-in is kicked: no handball roll for its first disposal.
 		if not (from_kick_in and touches == 1) \
 				and rng.randf() < float(T["handball_share"]) * hb_bias \
@@ -3237,6 +3300,8 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 			disposal_kind = "kick"
 			last_kicker = carrier
 			last_kick_fp = fp
+			_lane_now = _pick_lane(side)
+			lane_log[side][_lane_now] = int((lane_log[side] as Dictionary).get(_lane_now, 0)) + 1
 			if counts_disposal:
 				_t(side, "kicks")
 				_p(carrier, "kicks")
@@ -3250,6 +3315,7 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 			else:
 				_emit("kick", side, fp, carrier, "%s kicks" % GameDB.player_display_name(carrier))
 			disposal_event = events.size() - 1
+			events[disposal_event]["lane"] = _lane_now
 			if is_kick_in:
 				var kev: Dictionary = events[events.size() - 1]
 				kev["kick_in"] = true
@@ -3289,6 +3355,10 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 		if _burst(side, "hold"):
 			_credit(side, "bursts", pressure * (1.0 - HOLD_TAKEN) * TURNOVER_VALUE)
 			pressure *= HOLD_TAKEN
+		if _switch_open:
+			# The switch found space: this touch is under less pressure.
+			pressure *= LANE_SWITCH_SPACE
+			_switch_open = false
 
 		# One roll, three outcomes: a tackle, a pressured (rushed) disposal,
 		# or no pressure at all. Both of the first two are pressure acts.
@@ -3363,6 +3433,7 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 				turn_p *= PRESS_ZONE_TURNOVER
 			if in_d50:
 				turn_p *= _tv("D50_TURNOVER", D50_TURNOVER)
+			turn_p *= _lane_fx("turn")
 			if rng.randf() < turn_p:
 				# Rushed into a pack: sometimes nobody gets it clean and the
 				# umpire calls a ball-up where it locked up.
@@ -3419,7 +3490,7 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 		if disposal_kind == "kick":
 			if in_d50:
 				gain *= _tv("D50_KICK_GAIN", D50_KICK_GAIN)
-			gain = minf(gain, kick_range(carrier))
+			gain = minf(gain * _lane_fx("gain"), kick_range(carrier))
 		if is_kick_in:
 			gain *= 0.82 if not kick_in_play_on else 1.12
 		if rushed:
@@ -3433,6 +3504,9 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 		atk_fp = fp if side == 0 else -fp
 		_last_disp["kind"] = disposal_kind
 		_metres(side, carrier, atk_fp - prev_atk_fp)
+		if _lane_now != "":
+			var lm := _lane_now + "_m"
+			lane_log[side][lm] = float((lane_log[side] as Dictionary).get(lm, 0.0)) + atk_fp - prev_atk_fp
 		_run_and_carry(side, carrier, atk_fp - prev_atk_fp, rushed or tackled, is_kick_in, disposal_event, prev_atk_fp)
 		# Rebound 50 (Champion Data): his kick or handball takes the ball from
 		# inside his defensive 50 out of it, however his side came by it (a
@@ -3445,6 +3519,8 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 		# the ball). The genuine contests - an aerial ball, a stoppage, a
 		# spill - set their own below and at the chain's start.
 		next_gain = "up"
+		# A clean switch opens the ground for whoever takes it.
+		_switch_open = _lane_now == "switch" and not rushed
 
 		# Outside forward 50, a genuine long kick can become a contested
 		# aerial ball. A mark retains it; a spoil makes the next chain loose.
@@ -3479,7 +3555,7 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 				continue
 			# Row 89: a kick through the middle with no contest can be read
 			# and taken outright by one of their midfielders.
-			if aerial.is_empty() and _aerial_zone(opp, fp) == "middle" 					and mid_ic_rng.randf() < _tv("MID_KICK_INTERCEPT", MID_KICK_INTERCEPT):
+			if aerial.is_empty() and _aerial_zone(opp, fp) == "middle" 					and mid_ic_rng.randf() < _tv("MID_KICK_INTERCEPT", MID_KICK_INTERCEPT) * _lane_fx("read"):
 				var taken := _mid_kick_intercept(side, fp)
 				if not taken.is_empty():
 					_last_disp["end"] = "aerial"

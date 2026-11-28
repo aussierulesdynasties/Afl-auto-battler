@@ -1049,17 +1049,38 @@ func _loc(k: int) -> Vector2:
 			dy = clampf(dy_raw * 0.7, -32.0, 32.0) + _rng.randf_range(-5.0, 5.0)
 			if absf(x - src.x) < 12.0 and absf(dy) < 10.0:
 				dy = (signf(dy_raw) if dy_raw != 0.0 else 1.0) * _rng.randf_range(10.0, 18.0)
-			# (The roll is made as before whatever the plan, so the stream is unchanged.)
-			if absf(src.y) > 22.0 and _rng.randf() < 0.1 and _plan_of(int(ev.get("side", 0))) != "attacking":
-				dy = -src.y * 1.3 + _rng.randf_range(-5.0, 5.0)   # a switch of play (never down the corridor)
+			# The kick's lane is MatchSim's (row T2.25: chosen by the game plan
+			# and logged on the kick). A replay from before lanes has none and
+			# keeps the old random switch. (The roll is made either way, so the
+			# stream is unchanged.)
+			var lane := str((events[pk] as Dictionary).get("lane", "")) if pk >= 0 else ""
+			var roll := _rng.randf()
+			var wing := signf(src.y) if absf(src.y) > 4.0 else (signf(ry) if ry != 0.0 else 1.0)
+			match lane:
+				"corridor":
+					dy = -src.y * 0.8 + _rng.randf_range(-6.0, 6.0)
+				"switch":
+					# Across to the far wing.
+					dy = -wing * _rng.randf_range(22.0, 30.0) - src.y
+				"line":
+					# Along his own boundary line (the clamp below keeps it in play).
+					dy = wing * _rng.randf_range(28.0, 36.0) - src.y
+				_:
+					if absf(src.y) > 22.0 and roll < 0.1 and _plan_of(int(ev.get("side", 0))) != "attacking":
+						dy = -src.y * 1.3 + _rng.randf_range(-5.0, 5.0)   # a switch of play
+			if lane != "" and a >= 0:
+				# The lane aims the kick; it still lands within LANE_REACH of
+				# the player the log says wins it, so play never waits on him.
+				dy = clampf(src.y + dy, ry - LANE_REACH, ry + LANE_REACH) - src.y
 		var y := src.y + dy
 		var side := int(ev.get("side", 0))
-		if _plan_of(side) == "attacking" and a >= 0 and int(tokens[a]["side"]) == side and _lane.has(a):
+		var kick_lane := str((events[pk] as Dictionary).get("lane", "")) if pk >= 0 and not hb else ""
+		if _plan_of(side) == "attacking" and kick_lane in ["", "corridor"] and a >= 0 				and int(tokens[a]["side"]) == side and _lane.has(a) and absf(float(_lane[a])) < 16.0:
 			# Attack Corridor: the ball goes to the receiver's lane. He leads
 			# from his slot, up his lane, never across to the ball, so the
 			# receivers never converge on one column.
 			y = float(_lane[a]) + _rng.randf_range(-1.0, 1.0)
-		elif x * _dir(side) < -45.0:
+		elif kick_lane == "" and x * _dir(side) < -45.0:
 			y *= 1.15   # clearing from defence: toward the boundary, away from the corridor
 		p = Vector2(x, y)
 		if hb and p.distance_to(src) < 3.0:
@@ -1189,6 +1210,9 @@ func _scrap(p: Dictionary, who: int) -> void:
 	ball["h"] = 0.3
 
 
+## How far across the ground a kick's lane (MatchSim, row T2.25) may put the
+## ball from the player who wins it next: the lane aims it, he is within reach.
+const LANE_REACH := 12.0
 ## The longest a player is left collecting before the ball is his.
 const COLLECT_LIMIT := 6.0
 ## How much longer than its flat flight a kick may hang so its receiver gets
