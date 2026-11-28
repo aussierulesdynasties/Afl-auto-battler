@@ -65,6 +65,7 @@ TIER_M = 6.0         # m: a measured structure's parts with tops this close are 
                      # triangles of plant rooms and parapets 1.5 km out; 6 m keeps the skyline at a third of that)
 CANOPY_CELL = 8.0    # m: the far canopy's cell (canopy()); 6 m cells thinned to CANOPY_TRIS left big facets and spikes
 CANOPY_TRIS = 80000  # the far canopy's triangles after thinning
+CANOPY_KEEP_BORDER = False  # kept outlines thinned worse: 100k triangles and 2,114 folds (pc5 trial)
 CANOPY_MIN_UP = 2.5  # m: a photomesh face this far over the land (and no building) can be a crown
 CANOPY_SHARE = 0.25  # a cell is a tree where at least this share of its faces are crowns (canopy())
 CANOPY_MIN_CELLS = 3  # a mass of fewer cells is a pole or a sign, not a tree
@@ -898,15 +899,17 @@ def canopy(slug, frame, H, com):
     from scipy.spatial import cKDTree
     s = pyfqmr.Simplify()
     s.setMesh(V, F.astype(np.int32))
-    s.simplify_mesh(target_count=CANOPY_TRIS, aggressiveness=7, preserve_border=False, verbose=False)
+    s.simplify_mesh(target_count=CANOPY_TRIS, aggressiveness=7, preserve_border=CANOPY_KEEP_BORDER, verbose=False)
     V2, F2, _ = s.getMesh()
     V2 = np.asarray(V2, np.float64); F2 = np.asarray(F2, np.int64)
     _, nb = cKDTree(V).query(V2, k=1)
     colv = VC[nb]
     fn = np.cross(V2[F2[:, 1]] - V2[F2[:, 0]], V2[F2[:, 2]] - V2[F2[:, 0]])
-    flip = fn[:, 1] < 0
-    F2[flip] = F2[flip][:, ::-1]
-    fn[flip] *= -1
+    # a triangle the thinning turned face-down lies folded over its neighbours (an overhang, a hook): left out, the
+    # land shows through a gap a few metres wide, where the fold drew a dark shelf (pc5's West Gate view)
+    keep = fn[:, 1] > 1e-6 * np.linalg.norm(fn, axis=1)
+    folded = int((~keep).sum())
+    F2, fn = F2[keep], fn[keep]
     vn = np.zeros_like(V2)
     for k in range(3):
         np.add.at(vn, F2[:, k], fn)
@@ -916,7 +919,7 @@ def canopy(slug, frame, H, com):
     vn /= np.linalg.norm(vn, axis=1, keepdims=True)
     pos, nrm, colall, idx = V2, vn, colv, F2
     print("canopy: %d green faces, %d shaded crown faces; %d cells (%d after closing), %d with their slopes; drawn in %d "
-          "triangles" % (len(vc), int(cand.sum()), int(seen.sum()), m, len(I), len(F2)))
+          "triangles (%d folded over by the thinning, left out)" % (len(vc), int(cand.sum()), int(seen.sum()), m, len(I), len(F2), folded))
     return {"name": "trees_far", "pos": pos.astype(np.float32), "nrm": nrm.astype(np.float32),
             "col": np.c_[colall, np.ones(len(colall))].astype(np.float32),
             "idx": idx.ravel().astype(np.uint32), "material": "horizon_trees"}
@@ -935,12 +938,26 @@ def _smooth_outline(F, E, N, passes):
     nsum_e, nsum_n = np.zeros(len(E)), np.zeros(len(E))
     E, N = E.astype(np.float64).copy(), N.astype(np.float64).copy()
     move = deg == 2
+    def turn(E, N):   # each triangle's winding in plan: its sign must never change (a fold reads as an overhang)
+        return (E[F[:, 1]] - E[F[:, 0]]) * (N[F[:, 2]] - N[F[:, 0]]) - (N[F[:, 1]] - N[F[:, 0]]) * (E[F[:, 2]] - E[F[:, 0]])
+    side = np.sign(turn(E, N))
     for _ in range(passes):
         nsum_e[:] = 0; nsum_n[:] = 0
         np.add.at(nsum_e, b[:, 0], E[b[:, 1]]); np.add.at(nsum_e, b[:, 1], E[b[:, 0]])
         np.add.at(nsum_n, b[:, 0], N[b[:, 1]]); np.add.at(nsum_n, b[:, 1], N[b[:, 0]])
-        E = np.where(move, 0.5 * E + 0.25 * nsum_e, E)
-        N = np.where(move, 0.5 * N + 0.25 * nsum_n, N)
+        E2 = np.where(move, 0.5 * E + 0.25 * nsum_e, E)
+        N2 = np.where(move, 0.5 * N + 0.25 * nsum_n, N)
+        # a corner whose move would fold (or flatten) a triangle of its own stays where it was (the small masses
+        # shrank to mushrooms and hooks at the West Gate, pc5)
+        for _k in range(8):
+            bad = np.sign(turn(E2, N2)) * side <= 0
+            if not bad.any():
+                break
+            back = np.zeros(len(E), bool)
+            back[F[bad].ravel()] = True
+            E2 = np.where(back, E, E2)
+            N2 = np.where(back, N, N2)
+        E, N = E2, N2
     return E, N, rim
 
 
