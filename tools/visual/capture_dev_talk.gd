@@ -6,6 +6,7 @@ extends SceneTree
 ##   godot --path . --script tools/visual/capture_dev_talk.gd -- --out PREFIX [--club FRE] [--seed 2031]
 ## Writes <prefix>_card.png, <prefix>_answered.png, <prefix>_news.png and
 ## <prefix>_result.png, and prints TAP lines (empty reason = the button got it).
+const Ovr := preload("res://tests/ovr.gd")
 
 const Tap := preload("res://tests/tap.gd")
 const W := 390
@@ -127,10 +128,10 @@ func _run() -> void:
 	print("TAP done '", why, "'")
 	await _frames(10)
 	# It takes: the verdict's news line, on the hub.
-	var own := int(p["overall"])
-	p["overall"] = gs.rating_as(p, gs.project_role(p))
+	var own: Dictionary = (p["attr"] as Dictionary).duplicate()
+	Ovr.to(p, gs.rating_as(p, gs.project_role(p)))
 	gs._finish_project(p, true, "Round %d" % (gs.season.round_index + 1))
-	p["overall"] = own
+	p["attr"] = own
 	print("NEWS ", gs.news[0]["text"])
 	gs.week_events = []
 	router.go("hub")

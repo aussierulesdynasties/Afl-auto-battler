@@ -1,14 +1,12 @@
 class_name Prospects
 extends RefCounted
-## End-of-season intake support: draft-class projections, generated future
-## classes, and season-over-season development (growth, decline, retirement).
+## End-of-season intake support: draft classes, the Forge's prospect,
+## expansion lists and depth pools, and the season's ageing and retirements.
 ##
-## Draftees have no AFL season stats, so their ratings are PROJECTED rather
-## than derived: a consensus-rank band sets a target overall, a role template
-## and the prospect's reported U18 numbers shape the attribute profile, and a
-## bisection fits those attributes to the target through the shipped
-## Ratings model. From there the match engine treats prospects exactly like
-## real players - same attributes, roles, salary bands and maths.
+## Every prospect is one of 12 types (RATING_REBUILD §4): a talent percentile,
+## his type's real first-season ranges read at it, ±6 on each attribute. His
+## OVR is whatever those attributes make (Rating.ovr); nothing fits them to a
+## number. The match engine treats prospects exactly like real players.
 ##
 ## The 2026 class ships from data/draftees_2026.csv; every later class is
 ## generated deterministically from its year so careers can loop forever.
@@ -24,14 +22,7 @@ const REAL_RETIRE_AGE := 27.0
 ## turned tall (ARD-M3-002).
 const FWD_MIN_CM := 172
 
-const ATTR_KEYS := Skills.KEYS
-
-## Consensus-rank taper: pick 1 projects as an impact rookie, the back half of
-## the draft as fringe/development talent. Deliberately below the best 2026
-## pros (90s) - a top pick should enter the list around a solid rotation
-## player, and the training/development loop carries them up from there.
-const RANK_BANDS := [[1, 70.0], [10, 64.0], [20, 61.0], [30, 58.0],
-		[40, 55.0], [50, 52.0], [64, 47.0]]
+const ATTR_KEYS := Attributes.KEYS
 
 ## Future classes differ year to year as a cohort, not only player by
 ## player. Most years are ordinary; a strong crop lifts the top end most,
@@ -39,7 +30,8 @@ const RANK_BANDS := [[1, 70.0], [10, 64.0], [20, 61.0], [30, 58.0],
 ## does that harder; a weak one the reverse. Busts, role spread and ordinary
 ## late picks stay, because each prospect's own rolls are unchanged.
 ##   [key, chance, top-end shift, depth shift, ceiling shift]
-## The top-end shift is full at pick 1 and tapers to the depth shift by
+## The shifts move every attribute but Discipline evenly (so OVR by the
+## same); the top-end shift is full at pick 1 and tapers to the depth shift by
 ## CLASS_TOP_RANKS; the ceiling shift (extra POT room) tapers to nothing by
 ## the same rank. The real 2026 class is data, never tiered.
 const CLASS_TIERS := [
@@ -50,54 +42,6 @@ const CLASS_TIERS := [
 	["super", 0.03, 4.5, 2.0, 9.0],
 ]
 const CLASS_TOP_RANKS := 30
-
-## Draft-night rating scale for every draft class (director 2026-10-14, "A: gentle": young
-## draftees arrive lower and climb like real AFL ones; 2026-11-04, 4.Q9 / row 65: picks 1-5
-## about 60-62, picks 6-20 about 55-58, POT kept). 1.0 is the old curve. New draft classes use
-## it, generated and the real 2026 class alike (`draft_class`); players already on a list are
-## not rescaled. The rank-base rating is multiplied by this and the points taken off are added
-## back to the prospect's room, so his POT (his ceiling) does not move.
-## (static var, not const, only so tools/audit can try arms in one run.)
-static var DRAFT_NIGHT_SCALE := 0.87
-## Readiness (director 2026-10-13: "some players are more ready-made than others"): with the scale
-## below 1, a few prospects keep most of the old draft-night rating (ready-made: senior footy in
-## year 1, less climb left), most lose it all, and some lose more (long-term projects, a big
-## climb). Over-age prospects are likelier to be ready-made. The class average drop is unchanged.
-static var DRAFT_READINESS := true
-const READY_DROP := [0.25, 0.93, 1.5]  # share of the drop kept: ready-made, typical, project
-
-
-## 0 ready-made, 1 typical, 2 project: seeded by the prospect alone.
-static func readiness(p: Dictionary) -> int:
-	var rng := _rng_for("ready|%s|%s" % [str(p.get("id", "")), str(p.get("draft_year", 2026))])
-	var roll := rng.randf()
-	var over_age := float(p.get("age", 18.0)) >= 19.0
-	var ready_p := 0.40 if over_age else 0.08
-	var project_p := 0.10 if over_age else 0.32
-	if roll < ready_p:
-		return 0
-	if roll < ready_p + project_p:
-		return 2
-	return 1
-
-const ROLE_DELTAS := {
-	"MID": {"kicking": 6.0, "handballing": 6.0, "contested": 5.0, "pressure": 3.0, "carry": 4.0,
-			"creating": 2.0, "contested_marking": -1.0, "uncontested_marking": -1.0, "goalkicking": -3.0, "intercept": 0.0,
-			"accuracy": -4.0, "discipline": -1.0, "star": 0.0, "speed": 0.0, "durability": 0.0,
-			"ruck": -30.0},
-	"DEF": {"intercept": 8.0, "pressure": 6.0, "contested_marking": 4.0, "uncontested_marking": 4.0, "kicking": 1.0, "handballing": 1.0,
-			"accuracy": -5.0, "goalkicking": -8.0, "creating": -4.0, "carry": -3.0,
-			"contested": 1.0, "discipline": 0.0, "star": 0.0, "speed": 0.0, "durability": 0.0,
-			"ruck": -30.0},
-	"FWD": {"goalkicking": 8.0, "contested_marking": 5.0, "uncontested_marking": 5.0, "accuracy": 3.0, "creating": 4.0,
-			"kicking": -1.0, "handballing": -1.0, "intercept": -4.0, "pressure": 2.0, "carry": 1.0,
-			"contested": 0.0, "discipline": 0.0, "star": 0.0, "speed": 0.0, "durability": 0.0,
-			"ruck": -24.0},
-	"RUCK": {"ruck": 26.0, "contested": 8.0, "contested_marking": 3.0, "uncontested_marking": 3.0, "kicking": -5.0, "handballing": -5.0,
-			"goalkicking": -1.0, "intercept": -3.0, "pressure": 0.0, "carry": -5.0,
-			"accuracy": -5.0, "creating": -2.0, "discipline": -2.0, "star": 0.0,
-			"speed": 0.0, "durability": 1.0},
-}
 
 const JUNIOR_TEAMS := [
 	["Sandringham Dragons", "Talent League", "VICM"],
@@ -130,418 +74,158 @@ const JUNIOR_TEAMS := [
 
 
 # ---------------------------------------------------------------------------
-# Projection
+# Types, talent and the projection (RATING_REBUILD §4)
 # ---------------------------------------------------------------------------
-## A listed player with under FEW_GAMES senior games is rated from his real
-## draft pick on the prospect scale (rank_base_overall); with no pick, 80 in
-## 100 are bad (42-47), 18 role players (53-58) and 2 gems (63-68). His skills
-## are borrowed from a real player of his role at that level (project), and he
-## keeps the rating for life, growing only by XP, like a kid drafted in a save
-## (director 2026-11-17).
-const FEW_GAMES := 10
-const NO_PICK_TIERS := [[80, 42, 47], [18, 53, 58], [2, 63, 68]]
+## The 12 types' ranges: each attribute's 10th-90th percentile among real
+## first-season players of that type, aged 18-20, Wheelo 2012-25 (a ruck's at
+## any debut age), built by tools/wheelo/league.py.
+const RANGES_CSV := "res://data/draftee_ranges.csv"
+## A draftee's level by his pick (director 2026-11-26, question box): "derived
+## starting OVRs land around ~58-64 for Pick 1, ~52-58 for First Rounders
+## (2-18), and ~44-52 for later picks". [pick, OVR] points, a straight line
+## between each pair and flat past the last: his archetype's rookie baseline
+## is moved to this level, then each attribute varies on its own, and his OVR
+## is read from what that makes (never drawn first).
+## Example: pick 10 sits 57 - 4 x 8 / 16 = 55.
+const PICK_LEVEL := [[1, 61.0], [2, 57.0], [18, 53.0], [19, 51.0], [60, 45.0]]
+## How far each attribute varies around his baseline: this share of his
+## type's p10-p90 range, uniform, each attribute drawn on its own.
+## Example: a Wing's Kicking runs 17.2 to 60.4 (43.2 wide): ±8.6.
+const SPREAD := 0.2
+
+## [{"name", "line", "n", "ranges": {attribute: [p10, p90]}}], file order. A
+## type's line is its first position's.
+static var _types := []
 
 
-## His senior games before the save: his AFL career, plus the data season's
-## games when the career column stops before it. -1 when his career is unknown.
-static func senior_games(p: Dictionary, data_season: int) -> int:
-	var c = p.get("career")
-	if not (c is Dictionary):
-		return int(p.get("gm", 0.0))
-	if not (c.get("unknown", []) as Array).is_empty():
-		return -1
-	var last := 0
-	for s in c.get("stints", []):
-		last = maxi(last, int(s[2]))
-	var games := int(c.get("games", 0))
-	if last < data_season:
-		games += int(p.get("gm", 0.0))
-	return games
-
-
-## The set rating of a player of few games: his pick on the prospect scale,
-## or a seeded roll on NO_PICK_TIERS.
-static func few_games_rating(p: Dictionary) -> float:
-	var pick := int(p.get("drafted_pick", 0))
-	if pick > 0:
-		return rank_base_overall(pick)
-	var rng := _rng_for("%s|nopick" % str(p.get("id", "")))
-	var roll := rng.randi_range(1, 100)
-	var acc := 0
-	for t in NO_PICK_TIERS:
-		acc += int(t[0])
-		if roll <= acc:
-			return float(rng.randi_range(int(t[1]), int(t[2])))
-	return float(NO_PICK_TIERS[0][1])
-
-
-## Rate a player of few games on few_games_rating: projected for life.
-static func project_few_games(p: Dictionary) -> void:
-	p["fixed_target"] = few_games_rating(p)
-	p["draft_rank"] = int(p.get("drafted_pick", 0))
-	project(p)
-	p.erase("fixed_target")
-
-
-## Piecewise-linear rank taper with a floor; ranks beyond the list keep
-## sliding down so generated classes and bubble names use the same curve.
-static func rank_base_overall(rank: int) -> float:
-	if rank <= 1:
-		return float(RANK_BANDS[0][1])
-	var prev_r := int(RANK_BANDS[0][0])
-	var prev_v := float(RANK_BANDS[0][1])
-	for band in RANK_BANDS.slice(1):
-		var r := int(band[0])
-		var v := float(band[1])
-		if rank <= r:
-			return prev_v + (v - prev_v) * float(rank - prev_r) / float(r - prev_r)
-		prev_r = r
-		prev_v = v
-	return maxf(42.0, prev_v - float(rank - prev_r) * 0.18)
-
-
-## Mutates a prospect dict with projected attr / role / overall / value.
-static func project(p: Dictionary) -> void:
-	var rng := _rng_for("%s|%s" % [str(p.get("id", "")), str(p.get("draft_year", 2026))])
-	var rank := int(p.get("draft_rank", 0))
-	var role := str(p.get("role", "MID"))
-	var target := rank_base_overall(rank)
-	# A listed player of few games is rated on a set number (few_games_rating):
-	# no draft night, no junior numbers, no age step or noise on it.
-	var fixed := float(p.get("fixed_target", 0.0))
-	p.erase("night_drop")
-	if DRAFT_NIGHT_SCALE != 1.0 and (p.has("class_shift") or bool(p.get("draft_class", false))):
-		var drop := target * (1.0 - DRAFT_NIGHT_SCALE)
-		if DRAFT_READINESS:
-			var rd := readiness(p)
-			drop *= float(READY_DROP[rd])
-			p["readiness"] = ["ready", "typical", "project"][rd]
-		target -= drop
-		p["night_drop"] = drop
-
-	# Reported U18 production lifts the floor, capped so a stat-stuffing
-	# Talent League season can never out-project a 20-game AFL pro.
-	var gm := float(p.get("u18_gm", 0.0))
-	var di := float(p.get("u18_di", 0.0))
-	var gl := float(p.get("u18_gl", 0.0))
-	var ho := float(p.get("u18_ho", 0.0))
-	var tk := float(p.get("u18_tk", 0.0))
-	var mk := float(p.get("u18_mk", 0.0))
-	if di >= 18.0:
-		target += minf(3.0, (di - 18.0) * 0.25)
-	if role == "FWD" and gl >= 1.5:
-		target += minf(3.0, (gl - 1.5) * 0.8)
-	if role == "RUCK" and ho >= 15.0:
-		target += minf(3.0, (ho - 15.0) * 0.15)
-	if tk >= 5.0:
-		target += minf(2.0, (tk - 5.0) * 0.3)
-	if (role == "DEF" or role == "FWD") and mk >= 5.0:
-		target += minf(2.0, (mk - 5.0) * 0.25)
-	var height := float(p.get("height_cm", 0.0))
-	if role == "RUCK":
-		if height >= 200.0:
-			target += 1.5
-		elif height > 0.0 and height < 192.0:
-			target -= 1.5
-	elif height >= 190.0 and (role == "FWD" or role == "DEF"):
-		target += 1.0
-	var age := float(p.get("age", 18.0))
-	if age >= 19.0:
-		target += 1.0  # over-age means proven, at a small trade-off in ceiling
-	target += rng.randf_range(-1.5, 1.5)
-	target += float(p.get("class_shift", 0.0))
-	if fixed > 0.0:
-		target = fixed
-	var unscaled := target + float(p.get("night_drop", 0.0))
-	target = clampf(target, 38.0, 74.0)
-	if p.has("night_drop"):
-		# Only the points actually taken off count (the floor stops the lowest picks).
-		p["night_drop"] = clampf(unscaled, 38.0, 74.0) - target
-
-	# Attributes: centre on the target with the shape of a real player of his
-	# role (a specialist's spike and weak spot, not a flat template - director,
-	# 2026-10-06: "widen player spread"), then let the raw season numbers nudge
-	# the parts the projection actually claims. The fit below puts him back on
-	# his target, so only the shape is borrowed, never the level.
-	var a := {}
-	# Borrowed from someone at the level he's expected to grow to (his likely
-	# ceiling: Potential's draftee room), since development lifts every
-	# attribute alike - a grown prospect then looks like a real player there.
-	# The draft-night drop is added back: it lowers where he starts, not where he can grow to.
-	var level := target + float(p.get("night_drop", 0.0)) + maxf(6.0, 22.0 - 0.25 * float(clampi(rank, 1, 80) - 1)) \
-			+ float(p.get("class_ceiling", 0.0))
-	# The game's own generated players copy a real player of 2012-2026 with his
-	# fingerprint (director, 2026-11-17); real-list players and a coach's Forge
-	# prospect copy from the start's lists as before.
-	var shape := _copy_for(role, rng, level, p) if _is_game_made(p) else _shape_for(role, rng, level)
-	for key in ATTR_KEYS:
-		a[key] = target + float(shape.get(key, 0.0))
-	# Temperament is his own: a donor's poor discipline on a lesser prospect
-	# made hotheads of half the class. (Star and durability stay borrowed:
-	# setting them apart moved the fit, which pulled every skill down.)
-	a["discipline"] = target + float((ROLE_DELTAS.get(role, ROLE_DELTAS["MID"]) as Dictionary).get("discipline", 0.0))
-	if di > 0.0:
-		var use := clampf((di - 16.0) * 0.4, -2.0, 5.0)
-		a["kicking"] = float(a["kicking"]) + use
-		a["handballing"] = float(a["handballing"]) + use
-	if gl > 0.0:
-		a["goalkicking"] = float(a["goalkicking"]) + clampf((gl - 1.2) * 1.1, -1.5, 6.0)
-	if mk > 0.0:
-		a["uncontested_marking"] = float(a["uncontested_marking"]) + clampf((mk - 3.0) * 0.75, -1.0, 4.0)
-	if ho > 0.0 and role == "RUCK":
-		a["ruck"] = float(a["ruck"]) + clampf((ho - 10.0) * 0.4, 0.0, 7.0)
-	if tk > 0.0:
-		a["pressure"] = float(a["pressure"]) + clampf((tk - 3.0) * 0.5, 0.0, 4.0)
-
-	# An international's code shapes his game (Gaelic footballers kick, rugby
-	# players contest); absent for everyone else, so nothing moves for them.
-	var bias: Dictionary = p.get("attr_bias", {})
-	for key in bias:
-		a[key] = float(a.get(key, target)) + float(bias[key])
-	# Only the game's own generated players: real-list players projected from no
-	# senior game, the real draft class and a coach's Forge prospect stay as they were.
-	if _is_game_made(p):
-		_real_trait_rates(a, p, role)
-
-	a = fit_attributes(a, role, target)
-	for key in a:
-		a[key] = int(a[key])
-	p["attr"] = a
-	p["projected"] = true
-	p["sample"] = 14.0  # projections skip the low-games confidence shrink
-	p["overall"] = Ratings.rate_overall(a, role, 14.0)
-	p["value"] = Ratings.salary_value(int(Rating.ovr(p)))
-	p.erase("potential")  # re-projection re-derives it (deterministically)
-	Potential.assign(p)
-
-
-## Row 104 (4.Q10, director): generated players carry each synergy trait at the real
-## players' rate at the same overall, contested bulls included, and a real share of
-## hotheads (there were none: temperament came from his projected rating, never 20 or
-## below).
-## Per role, points added to an attribute before the fit puts him back on his target
-## (so his overall does not move, only his shape). Sized with tools/audit/gen_traits_impl.gd
-## so a grown generated player carries each trait as often as a real player of his overall:
-## interceptors and aerial forwards came out too often, lockdown and defensive forwards
-## too rarely. (static var, not const, only so tools/audit can try arms in one run.)
-static var GEN_NUDGE := {
-	"DEF": {"intercept": -6.0, "pressure": -0.5, "accuracy": 1.0, "durability": -1.5},
-	"MID": {"contested": -6.0, "kicking": -2.0, "handballing": -2.0, "pressure": -1.0, "durability": -1.5},
-	"FWD": {"contested_marking": -3.0, "pressure": 3.5, "accuracy": 1.0, "goalkicking": 1.5, "durability": -1.5},
-	"RUCK": {"ruck": -10.0, "contested": -6.0, "durability": -1.5},
-}
-
-
-## Row 104: his temperament is a real player's of his role (each real player's own
-## discipline, not relative to his rating), so hotheads come at the real share; and the
-## GEN_NUDGE shape correction. Seeded by the prospect alone, on its own dice, so nothing
-## else about him rolls differently.
-static func _real_trait_rates(a: Dictionary, p: Dictionary, role: String) -> void:
-	for key in (GEN_NUDGE.get(role, {}) as Dictionary):
-		a[key] = float(a.get(key, 0.0)) + float(GEN_NUDGE[role][key])
-	# His temperament is a real 2012-2026 player's too (none before 2012, director 2026-11-17).
-	var pool: Array = (_copy_pool().get(role, {}) as Dictionary).get("disc", [])
-	if pool.is_empty():
-		return
-	var rng := _rng_for("disc|%s|%s" % [str(p.get("id", "")), str(p.get("draft_year", 2026))])
-	a["discipline"] = float(pool[rng.randi_range(0, pool.size() - 1)])
-
-
-## Each role's real players' shapes: every attribute less his overall, and that
-## overall ("_ovr"), from the 2026 lists (GameDB's own rows, in list order, so
-## it's the same every run).
-static var _shapes := {}
-## How many of the nearest real players, by overall, a shape is drawn from.
-const SHAPE_NEAREST := 10
-
-
-## Forget the cached shapes: a new career rebuilds them from the 2026 players.
-## (The 2012-2026 copy pool is fixed data and stays loaded.)
-static func forget_cache() -> void:
-	_shapes = {}
-
-
-## The real players a game-made player is copied from (director, 2026-11-17: "im happy
-## for generated players to be based on real players, but we have to make sure that they
-## arent based on players pre-2012"; which seasons: "every other year"): every player of
-## every AFL season 2012-2026, each season rated on its own (tools/wheelo/copy_pool.py).
-const COPY_POOL_CSV := "res://data/copy_pool.csv"
-## His fingerprint (director, 2026-11-17: "10% different ... to give a fingerprint", then
-## "5%"): each of the copied player's skills times its own roll between 0.95 and 1.05.
-const FINGERPRINT := 0.05
-## Per role: "rows" (each a real player-season's skills, "_ovr", "_year", his Wheelo "_id",
-## "_name", "_club" and "_height", 0 when unknown), sorted by overall,
-## "ovr" (those overalls, for the search) and "disc" (their disciplines).
-static var _copy := {}
-
-
-## The game's own generated players: a draft class, an expansion list, a state-league
-## depth pool. Not a coach's Forge prospect, not a real-list player.
-static func _is_game_made(p: Dictionary) -> bool:
-	return bool(p.get("generated", false)) and not bool(p.get("user_created", false))
-
-
-static func _copy_pool() -> Dictionary:
-	if not _copy.is_empty():
-		return _copy
-	var f := FileAccess.open(COPY_POOL_CSV, FileAccess.READ)
+static func types() -> Array:
+	if not _types.is_empty():
+		return _types
+	var f := FileAccess.open(RANGES_CSV, FileAccess.READ)
 	if f == null:
-		return _copy
+		return _types
 	var head := f.get_csv_line()
 	var col := {}
 	for i in head.size():
 		col[head[i]] = i
-	var by_role := {}
+	var by_name := {}
 	while not f.eof_reached():
-		var line := f.get_csv_line()
-		if line.size() < head.size():
+		var r := f.get_csv_line()
+		if r.size() < head.size() or str(r[0]) == "":
 			continue
-		var r := {"_ovr": float(line[col["ovr"]]), "_year": int(line[col["year"]]),
-				"_id": str(line[col["id"]]), "_name": str(line[col["name"]]), "_club": str(line[col["club"]]),
-				"_height": float(line[col["height_cm"]]) if str(line[col["height_cm"]]) != "" else 0.0,
-				"_fit": float(line[col["fit_shift"]]) if col.has("fit_shift") else 0.0}
-		for key in ATTR_KEYS:
-			r[key] = float(line[col[key]])
-		var role := str(line[col["line"]])
-		if not by_role.has(role):
-			by_role[role] = []
-		(by_role[role] as Array).append(r)
-	for role in by_role:
-		var rows: Array = by_role[role]
-		# File order (season, player id) breaks ties, so the pick is the same every run.
-		for i in rows.size():
-			rows[i]["_i"] = i
-		rows.sort_custom(func(x, y): return x["_ovr"] < y["_ovr"] or (x["_ovr"] == y["_ovr"] and x["_i"] < y["_i"]))
-		var ovr := PackedFloat32Array()
-		var disc := []
-		for r in rows:
-			ovr.append(float(r["_ovr"]))
-			disc.append(float(r["discipline"]))
-		_copy[role] = {"rows": rows, "ovr": ovr, "disc": disc}
-	return _copy
+		var name := str(r[col["type"]])
+		if not by_name.has(name):
+			var first := str(r[col["positions"]]).split("|")[0]
+			by_name[name] = {"name": name, "line": Rating.line_of(first), "n": int(r[col["n"]]), "ranges": {}}
+			_types.append(by_name[name])
+		(by_name[name]["ranges"] as Dictionary)[str(r[col["attribute"]])] = \
+				[float(r[col["p10"]]), float(r[col["p90"]])]
+	return _types
 
 
-## The real 2012-2026 player-seasons of `role` whose overall is nearest `level`, the
-## SHAPE_NEAREST of them (as _shape_for picks from the start's lists). Fifteen seasons put
-## dozens of players on the same whole-number overall, so the last places among equally
-## near players go by `rng`'s draw, not file order (which would only ever copy 2012-2014).
-static func copy_candidates(role: String, level: float, rng: RandomNumberGenerator) -> Array:
-	var got: Dictionary = _copy_pool().get(role, {})
-	var rows: Array = got.get("rows", [])
-	var want := mini(SHAPE_NEAREST, rows.size())
-	if want == 0:
-		return []
-	var ovr: PackedFloat32Array = got["ovr"]
-	# The distance of the SHAPE_NEAREST-th nearest player.
-	var hi := ovr.bsearch(level)
-	var lo := hi - 1
-	var edge := 0.0
-	for n in want:
-		if hi >= rows.size() or (lo >= 0 and absf(ovr[lo] - level) <= absf(ovr[hi] - level)):
-			edge = absf(ovr[lo] - level)
-			lo -= 1
-		else:
-			edge = absf(ovr[hi] - level)
-			hi += 1
-	# Everyone nearer than that is in; the rest of the places are drawn from those at it.
-	var out := []
-	var tied := []
-	var i := ovr.bsearch(level - edge - 0.5)
-	while i < rows.size() and ovr[i] <= level + edge + 0.5:
-		var dist := absf(ovr[i] - level)
-		if dist < edge - 0.0001:
-			out.append(rows[i])
-		elif dist <= edge + 0.0001:
-			tied.append(rows[i])
-		i += 1
-	while out.size() < want and not tied.is_empty():
-		out.append(tied.pop_at(rng.randi_range(0, tied.size() - 1)))
-	return out
+## The type called `name`; {} when there is none.
+static func type_named(name: String) -> Dictionary:
+	for t in types():
+		if str(t["name"]) == name:
+			return t
+	return {}
 
 
-## A game-made player's shape: one of the real 2012-2026 players of his role nearest
-## `level` (picked by `rng`, as _shape_for), each skill moved by its own fingerprint roll
-## (seeded by the player alone, so nothing else about him rolls differently).
-## Example: the copied player kicks 70 with an overall of 75; a roll of 1.03 makes it
-## 72.1, so the shape is 72.1 - 75 = -2.9 (the fit then sets his level as before).
-static func _copy_for(role: String, rng: RandomNumberGenerator, level: float, p: Dictionary) -> Dictionary:
-	var near := copy_candidates(role, level, rng)
-	if near.is_empty():
-		return _shape_for(role, rng, level)
-	var d: Dictionary = near[rng.randi_range(0, near.size() - 1)]
-	var frng := _rng_for("fp|%s|%s" % [str(p.get("id", "")), str(p.get("draft_year", 2026))])
-	var ovr := float(d["_ovr"])
-	var out := {}
-	for key in ATTR_KEYS:
-		out[key] = clampf(float(d[key]) * frng.randf_range(1.0 - FINGERPRINT, 1.0 + FINGERPRINT), 1.0, 99.0) - ovr
-	return out
-
-
-## The shape of one of the real players of `role` nearest `level` overall,
-## picked by `rng`; the role template when there are no real players to
-## borrow from (a test database).
-static func _shape_for(role: String, rng: RandomNumberGenerator, level: float) -> Dictionary:
-	if _shapes.is_empty():
-		var db = Engine.get_main_loop().root.get_node_or_null("GameDB") if Engine.get_main_loop() is SceneTree else null
-		if db != null:
-			for code in db.club_order:
-				for q in db.club_list(code):
-					var at: Dictionary = q.get("attr", {})
-					if at.is_empty() or bool(q.get("generated", false)):
-						continue
-					var d := {}
-					for key in ATTR_KEYS:
-						d[key] = float(at.get(key, 0)) - float(Rating.ovr(q, 0))
-					d["_ovr"] = float(Rating.ovr(q, 0))
-					var r := str(q.get("role", "MID"))
-					if not _shapes.has(r):
-						_shapes[r] = []
-					(_shapes[r] as Array).append(d)
-	var pool: Array = (_shapes.get(role, []) as Array).duplicate()
+## One of `line`'s types, each as likely as real first-season players of it
+## were (its n). {} when the line has none.
+static func draw_type(line: String, rng: RandomNumberGenerator) -> Dictionary:
+	var pool := []
+	var weights := []
+	for t in types():
+		if str(t["line"]) == line:
+			pool.append(t)
+			weights.append(float(t["n"]))
 	if pool.is_empty():
-		return ROLE_DELTAS.get(role, ROLE_DELTAS["MID"])
-	pool.sort_custom(func(x, y): return absf(float(x["_ovr"]) - level) < absf(float(y["_ovr"]) - level))
-	var d: Dictionary = pool[rng.randi_range(0, mini(SHAPE_NEAREST, pool.size()) - 1)]
-	var out := d.duplicate()
-	out.erase("_ovr")
-	return out
+		return {}
+	return pool[_weighted_index(rng.randf(), weights)]
 
 
-## Shift every attribute by a uniform offset so rate_overall lands on target.
-## Bisection over a monotone function - at most ~14 cheap evaluations.
-## Attributes outside the overall rating: a refit leaves them where they are.
-const UNRATED_KEYS := ["discipline"]
+## The OVR level of the prospect ranked `rank` (PICK_LEVEL). A prospect with
+## no rank (0) is a late pick's.
+static func pick_level(rank: int) -> float:
+	var last: Array = PICK_LEVEL[PICK_LEVEL.size() - 1]
+	if rank <= 0 or rank >= int(last[0]):
+		return float(last[1])
+	for i in range(PICK_LEVEL.size() - 1):
+		var a: Array = PICK_LEVEL[i]
+		var b: Array = PICK_LEVEL[i + 1]
+		if rank <= int(b[0]):
+			return float(a[1]) + (float(rank) - float(a[0])) * (float(b[1]) - float(a[1])) / (float(b[0]) - float(a[0]))
+	return float(last[1])
 
 
-static func fit_attributes(a: Dictionary, role: String, target: float,
-		games: float = 14.0) -> Dictionary:
-	var lo := -40.0
-	var hi := 40.0
-	for i in range(14):
-		var mid := (lo + hi) * 0.5
-		if _shifted_overall(a, role, mid, games) < target:
-			lo = mid
-		else:
-			hi = mid
-	var offset := (lo + hi) * 0.5
+## His archetype's rookie baseline: each attribute in the middle of his type's
+## p10-p90 range.
+static func baseline(t: Dictionary) -> Dictionary:
 	var out := {}
-	for key in a:
-		# Temperament isn't in the rating, so refitting the rating must not
-		# move it: shifting it with every decline and every league re-anchor
-		# made hotheads of a third of the real players by 2034 (backlog 21).
-		if key in UNRATED_KEYS:
-			out[key] = clampi(int(round(float(a[key]))), 1, 99)
-			continue
-		out[key] = clampi(int(round(float(a[key]) + offset)), 1, 99)
+	var ranges: Dictionary = t.get("ranges", {})
+	for key in ATTR_KEYS:
+		var r: Array = ranges.get(key, [50.0, 50.0])
+		out[key] = (float(r[0]) + float(r[1])) / 2.0
 	return out
 
 
-static func _shifted_overall(a: Dictionary, role: String, offset: float,
-		games: float) -> float:
-	var shifted := {}
+## A type's attributes for the prospect ranked `rank` at `apos`: the baseline
+## moved evenly, every attribute but Discipline, to his pick's level, then
+## each attribute ± SPREAD of its own range, drawn on its own, within 1-99.
+## Example: pick 10's level 55 is a weighted sum of 48.1 (Rating.unstretch);
+## a Wing whose baseline sums to 46.0 there, Discipline carrying 4 of the 100
+## weight, moves every other attribute up 2.1 / 0.96 = 2.2; his Kicking then
+## lands anywhere in ±8.6 of that.
+static func attrs_for(t: Dictionary, rank: int, apos: String, rng: RandomNumberGenerator) -> Dictionary:
+	var a := baseline(t)
+	var w: Dictionary = Rating.WEIGHTS.get(apos, Rating.WEIGHTS["Midfielder"])
+	var moved := 1.0 - float(w.get("discipline", 0)) / 100.0
+	var lift := (Rating.unstretch(pick_level(rank)) - Rating.raw_of(a, apos)) / moved
+	var ranges: Dictionary = t.get("ranges", {})
+	for key in ATTR_KEYS:
+		var r: Array = ranges.get(key, [50.0, 50.0])
+		var v := float(a[key]) + (lift if key != "discipline" else 0.0)
+		v += rng.randf_range(-SPREAD, SPREAD) * (float(r[1]) - float(r[0]))
+		a[key] = clampf(v, 1.0, 99.0)
+	return a
+
+
+## A prospect's attributes, type and POT. His type is kept once he has one
+## (the Forge sets it from his play style); otherwise drawn from his line's.
+## His attributes are his pick's (attrs_for). A strong or weak class moves
+## every attribute but Discipline evenly (`class_shift`); an international's
+## code reshapes him at the same level (`attr_bias`). Seeded by the prospect
+## alone.
+static func project(p: Dictionary) -> void:
+	var rng := _rng_for("%s|%s" % [str(p.get("id", "")), str(p.get("draft_year", 2026))])
+	var role := str(p.get("role", "MID"))
+	# The draw is made even when his type is kept, so a re-projection reads the
+	# same talent and attributes off the same stream.
+	var drawn := draw_type(role, rng)
+	var t := type_named(str(p.get("type", "")))
+	if t.is_empty() or str(t["line"]) != role:
+		t = drawn
+	var a := attrs_for(t, int(p.get("draft_rank", 0)), Rating.apos_of(p), rng)
+	var shift := float(p.get("class_shift", 0.0))
 	for key in a:
-		shifted[key] = float(a[key]) if key in UNRATED_KEYS else clampf(float(a[key]) + offset, 1.0, 99.0)
-	return float(Ratings.rate_overall(shifted, role, games))
+		if key != "discipline":
+			a[key] = float(a[key]) + shift
+	var bias: Dictionary = p.get("attr_bias", {})
+	if not bias.is_empty():
+		var apos := Rating.apos_of(p)
+		var level := Rating.of_attrs(a, apos)
+		for key in bias:
+			a[key] = float(a.get(key, 50.0)) + float(bias[key])
+		a = Rating.shift_to(a, apos, float(level))
+	for key in a:
+		a[key] = clampi(int(round(float(a[key]))), 1, 99)
+	p["attr"] = a
+	p["type"] = str(t.get("name", ""))
+	p["projected"] = true
+	p["sample"] = 14.0
+	p.erase("potential")  # re-projection re-derives it (deterministically)
+	Potential.assign(p)
 
 
 # ---------------------------------------------------------------------------
@@ -606,6 +290,10 @@ static func age_league(lists: Dictionary, year: int, min_left := 0) -> Dictionar
 static func should_retire(p: Dictionary, year: int) -> bool:
 	var age := Potential.retire_age(p)   # Fine Wine: three years later
 	var ov := int(Rating.ovr(p, 50))
+	# Under 22 he is never retired for his rating (director 2026-11-26: "Exempt
+	# players under age 22 from auto-retirement so rookies and 1991 foundation
+	# players like Mark Bickley are never retired before Round 1").
+	var under_22 := float(p.get("age", 26.0)) < 22.0
 	# A real player of a Legacy start retires about when he did (director,
 	# 2026-11-13: "make all historical players retirement start roughly when
 	# it did irl"), a year either side, whatever his age or rating; a coach
@@ -619,7 +307,7 @@ static func should_retire(p: Dictionary, year: int) -> bool:
 	# the club that signed him (a new club's foundation man, real_first).
 	if last > 0 and float(p.get("age", 26.0)) - float(year - last) >= REAL_RETIRE_AGE:
 		return year > maxi(last + real_slack(p), int(p.get("real_first", 0)))
-	if ov <= 32:
+	if ov <= 32 and not under_22:
 		return true
 	if age >= 37.0:
 		return true
@@ -659,12 +347,6 @@ static func age_player(p: Dictionary, _year: int) -> float:
 		p["sample"] = 16.0
 	else:
 		p["sample"] = maxf(18.0, float(p.get("gm", 0.0)))
-	var a: Dictionary = p.get("attr", {})
-	if not a.is_empty():
-		var ov := int(Rating.ovr(p, 50))
-		p["overall"] = Ratings.rate_overall(a, str(p.get("role", "MID")), Ratings.effective_games(p))
-		p["value"] = Ratings.salary_value(int(Rating.ovr(p)))
-		return float(int(Rating.ovr(p)) - ov)
 	return 0.0
 
 
@@ -700,8 +382,8 @@ static func age_pool(pool: Array, year: int, drafted: Dictionary) -> Array:
 # Future draft classes
 # ---------------------------------------------------------------------------
 ## Deterministic fictional intake for years after the shipped data ends.
-## Same projection pipeline as the real class, so a 2031 career keeps getting
-## plausible rookies without inventing anyone real.
+## Same projection as the real class (project: type, talent, ranges), so a
+## 2031 career keeps getting plausible rookies without inventing anyone real.
 ## `career_seed` picks the class's quality tier (class_tier); everything
 ## else about the class is seeded by the year alone, as before.
 static func generate_class(year: int, career_seed := 0) -> Array:
@@ -785,6 +467,7 @@ static func generate_class(year: int, career_seed := 0) -> Array:
 				p["role"] = "RUCK"
 				p["role2"] = "FWD"
 				p["u18_ho"] = 18.0
+				p.erase("type")
 				project(p)
 				rucks += 1
 	_maybe_unicorn(out, year, career_seed)
@@ -845,8 +528,8 @@ static func roll_fine_wine(cls: Array, salt: String) -> void:
 ## attribute each moves. A play style is two strengths for one role.
 const CUSTOM_TRAITS := {
 	"marking": "contested_marking", "kicking": "kicking", "goalkicking": "goalkicking",
-	"contested": "contested", "pressure": "pressure", "reading": "intercept",
-	"running": "carry", "vision": "creating", "ruckwork": "ruck",
+	"contested": "contested_ball", "pressure": "pressure", "reading": "reading_play",
+	"running": "work_rate", "vision": "vision", "ruckwork": "ruck",
 }
 const CUSTOM_STYLES := {
 	"FWD": {"key_forward": ["marking", "goalkicking"], "small_forward": ["goalkicking", "pressure"],
@@ -857,9 +540,17 @@ const CUSTOM_STYLES := {
 			"lockdown": ["pressure", "contested"], "interceptor": ["reading", "marking"]},
 	"RUCK": {"tap_ruck": ["ruckwork", "contested"], "mobile_ruck": ["ruckwork", "running"]},
 }
+## A play style that names one of the 12 types (ClubForgeScene.STYLE_LABELS:
+## "Small defender" is the rebounder) makes him that type; the others take
+## one of his line's types, as any prospect does (project).
+const STYLE_TYPES := {
+	"key_forward": "Key forward", "small_forward": "Small forward", "inside": "Inside midfielder",
+	"key_defender": "Key defender", "rebounder": "Small defender", "interceptor": "Interceptor",
+	"tap_ruck": "Tap ruck", "mobile_ruck": "Mobile ruck",
+}
 const CUSTOM_HEIGHT := {"RUCK": [197, 210], "FWD": [168, 205], "DEF": [175, 202], "MID": [168, 195]}
 ## How hard a style, strength or weakness pushes its attribute before the
-## projection refits the whole profile to the same overall.
+## whole profile moves back evenly to the same OVR (Rating.shift_to).
 const CUSTOM_STYLE_PUSH := 5.0
 const CUSTOM_TRAIT_PUSH := 7.0
 ## Where a custom prospect sits in his class, rolled once per career: a
@@ -966,6 +657,8 @@ static func make_custom(spec: Dictionary, year: int, career_seed: int) -> Dictio
 	p["num"] = 0
 	p["class_shift"] = 0.0
 	p["class_ceiling"] = 0.0
+	if STYLE_TYPES.has(str(spec.get("style", ""))):
+		p["type"] = str(STYLE_TYPES[str(spec["style"])])
 	for key in Ratings.STATS_ZERO_KEYS:
 		p[key] = 0.0
 	p["weight_kg"] = 0.0
@@ -976,8 +669,8 @@ static func make_custom(spec: Dictionary, year: int, career_seed: int) -> Dictio
 
 
 ## Move the projected attributes toward his style and strengths and away from
-## his weaknesses, then refit to the same overall: a different footballer,
-## not a better one. Potential stays as projected.
+## his weaknesses, then back evenly to the same OVR (Rating.shift_to): a
+## different footballer, not a better one. Potential stays as projected.
 static func _shape_custom(p: Dictionary, spec: Dictionary) -> void:
 	var role := str(p["role"])
 	var a: Dictionary = (p["attr"] as Dictionary).duplicate()
@@ -992,13 +685,7 @@ static func _shape_custom(p: Dictionary, spec: Dictionary) -> void:
 	for t in spec.get("weaknesses", []):
 		var k: String = CUSTOM_TRAITS[str(t)]
 		a[k] = float(a[k]) - CUSTOM_TRAIT_PUSH
-	var target := float(Rating.ovr(p))
-	a = fit_attributes(a, role, target)
-	for key in a:
-		a[key] = int(a[key])
-	p["attr"] = a
-	p["overall"] = Ratings.rate_overall(a, role, 14.0)
-	p["value"] = Ratings.salary_value(int(Rating.ovr(p)))
+	p["attr"] = Rating.shift_to(a, Rating.apos_of(p), float(Rating.ovr(p)))
 	p["potential"] = maxi(int(p.get("potential", Rating.ovr(p))), int(Rating.ovr(p)))
 
 
@@ -1125,6 +812,7 @@ static func generate_expansion_list(code: String, year: int, size := 36, salt :=
 		p["weight_kg"] = 0.0
 		p["real_pos"] = Ratings.ROLE_SHORT_TO_POS.get(str(p["role"]), "MID")
 		project(p)
+		_age_into(p)
 		_mature_entry(p)
 		out.append(p)
 	roll_fine_wine(out, "expansion-%s-%d%s-%d" % [code, year, salt, first_rank])
@@ -1174,12 +862,29 @@ static func state_league_clubs(state: String) -> Array:
 	return out
 
 
+## The type ranges are first-season players' (18 to 20): an expansion player
+## older than that has played the seasons between, so his attributes move by
+## the age curves of each (Growth.age_attrs, from FIRST_SEASON_AGE to his age)
+## and his POT is worked out again at the new level.
+## Example: a 24-year-old moves by his curves at 19, 20, 21, 22 and 23.
+const FIRST_SEASON_AGE := 19
+
+
+static func _age_into(p: Dictionary) -> void:
+	var age := int(floor(float(p.get("age", 18.0))))
+	if age <= FIRST_SEASON_AGE:
+		return
+	p["attr"] = Growth.age_attrs(p["attr"], FIRST_SEASON_AGE, age)
+	p.erase("potential")
+	Potential.assign(p)
+
+
 ## An expansion player of 20 or more did not come out of the under-18s in the
 ## club's first year: his record is a senior state-league season, and past
 ## draft age (Potential.MAX_PROSPECT_AGE) no draft-class ranking either. Only
-## the history changes: his ratings and ceiling were already set by project()
-## (a ceiling past 21 is his age's, never his rank's), and the pick of club is
-## seeded by his id so no later player's rolls move.
+## the history changes: his ratings and ceiling were already set (project,
+## _age_into; a ceiling past 21 is his age's, never his rank's), and the pick
+## of club is seeded by his id so no later player's rolls move.
 static func _mature_entry(p: Dictionary) -> void:
 	var age := float(p.get("age", 18.0))
 	if age < 20.0:

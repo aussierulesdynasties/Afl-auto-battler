@@ -3,8 +3,7 @@ extends RefCounted
 ## A match-day side: the best 18 of a drafted list plus five on the bench,
 ## rolled up into the handful of team strengths the match engine actually uses.
 ##
-## Port of tools/sim_harness.py::Squad. The aggregate weights below were tuned
-## there against real 2026 team totals - change them in both places.
+## The aggregate weights below were tuned against real 2026 team totals.
 
 var name := ""
 var code := ""
@@ -71,7 +70,6 @@ var team_discipline := 45.0
 var team_pressure := 45.0
 var team_disposal := 45.0
 var team_intercept := 45.0
-var team_star := 45.0
 
 ## The three numbers the engine actually rolls against.
 var contest := 45.0
@@ -130,24 +128,26 @@ func _aggregate() -> void:
 	var fwds: Array = by_role["FWD"]
 	var rucks: Array = by_role["RUCK"]
 
-	ruck = _mean(rucks, "ruck")
-	mid_contest = _mean(centre, "contested")
+	# The ruck contest reads Ruck and Strength (MatchSim._ruck_of).
+	ruck = ((1.0 - Attributes.STRENGTH_SHARE) * _mean(rucks, "ruck")
+			+ Attributes.STRENGTH_SHARE * _mean(rucks, "strength"))
+	mid_contest = _mean(centre, "contested_ball")
 	mid_disposal = _mean(mids, "disposal")
-	mid_carry = _mean(mids, "carry")
+	mid_carry = _mean(mids, "work_rate")   # the running game
 	def_pressure = _mean(defs, "pressure")
-	def_intercept = _mean(defs, "intercept")
-	fwd_goal = _mean(fwds, "goalkicking")
+	def_intercept = _mean(defs, "reading_play")
+	fwd_goal = _mean(fwds, "forward_craft")
 	fwd_mark = _mean(fwds, "contested_marking")
-	fwd_create = _mean(fwds, "creating")
+	fwd_create = _mean(fwds, "vision")
 
 	team_discipline = _mean(ground, "discipline")
 	team_pressure = _mean(ground, "pressure")
 	team_disposal = _mean(ground, "disposal")
-	team_intercept = _mean(ground, "intercept")
-	team_star = _top(ground, "star", 5)
+	team_intercept = _mean(ground, "reading_play")
 
-	contest = (0.42 * mid_contest + 0.24 * ruck + 0.22 * mid_disposal
-			+ 0.12 * team_star)
+	# Star power is gone (OVR's job): the other three keep their proportions
+	# (RATING_REBUILD §2).
+	contest = 0.48 * mid_contest + 0.27 * ruck + 0.25 * mid_disposal
 	attack = (0.40 * fwd_goal + 0.26 * mid_carry + 0.20 * fwd_create
 			+ 0.14 * fwd_mark)
 	defence = (0.50 * def_pressure + 0.32 * def_intercept
@@ -161,7 +161,7 @@ static func _mean(group: Array, key: String, fallback := 45.0) -> float:
 		return fallback
 	var total := 0.0
 	for p in group:
-		total += Skills.engine(p, key)
+		total += Attributes.value(p.get("attr", {}), key)
 	return total / float(group.size())
 
 
@@ -172,7 +172,7 @@ static func _top(group: Array, key: String, n: int, fallback := 45.0) -> float:
 		return fallback
 	var vals := []
 	for p in group:
-		vals.append(Skills.engine(p, key))
+		vals.append(Attributes.value(p.get("attr", {}), key))
 	vals.sort()
 	vals.reverse()
 	var take := mini(n, vals.size())

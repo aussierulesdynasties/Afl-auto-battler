@@ -11,10 +11,10 @@ Sources
 * Wikipedia "<year> AFL draft" pages (raw wikitext) for the
   national, rookie, pre-season and mid-season drafts 2006-2025.
 
-Each past season is rated with the same model as 2026 (tools/sim_harness.py
-derive_ratings, the Python mirror of Ratings.gd, including the key position
-stretch), against that season's own player pool, so a 2024 rating means the
-same as a 2026 one.
+Each past season's rating is his OVR read from that season's attributes at
+his AFL position, on the same scale as 2026 (tools/wheelo/history.py, the
+rating rebuild, docs/RATING_REBUILD.md), so a 2024 rating means the same as a
+2026 one.
 
 Output columns: club,num,slug,draft_year,draft_type,draft_pick,seasons,career
   seasons = "2023:84:22;2024:86:23" (year:overall:games), 8+ game seasons.
@@ -56,7 +56,6 @@ CACHE = os.path.join(DATA, "cache")
 OUT = os.path.join(DATA, "player_history_2026.csv")
 sys.path.insert(0, os.path.join(ROOT, "tools"))
 
-import sim_harness as H  # noqa: E402  (ratings mirror)
 from scrape_afltables import SLUG_TO_CODE  # noqa: E402
 
 SEASONS = [2021, 2022, 2023, 2024, 2025]
@@ -196,19 +195,18 @@ def merge_by_slug(rows: list[dict]) -> list[dict]:
     return list(by.values())
 
 
-def rate_season(rows: list[dict]) -> dict:
-    """slug -> (overall, games) using the game's rating model on that pool."""
-    players = []
-    for r in rows:
-        if r["gm"] <= 0:
-            continue
-        p = {"club": r["club"], "num": r["num"], "name": r["first"] + " " + r["last"],
-             "surname": r["last"], "id": r["slug"]}
-        for k in H.STAT_KEYS:
-            p[k] = float(r.get(k, 0.0))
-        players.append(p)
-    H.derive_ratings(players)
-    return {p["id"]: (int(p["overall"]), int(p["gm"])) for p in players}
+def rate_season(rows: list[dict], season: dict) -> dict:
+    """slug -> (overall, games): his OVR that season (tools/wheelo/history.py,
+    `season` its {slug: (ovr, games, AFL position)}), his games on this page."""
+    return {r["slug"]: (season[r["slug"]][0], int(r["gm"])) for r in rows
+            if r["gm"] > 0 and r["slug"] in season}
+
+
+def rated_seasons(years) -> dict:
+    """tools/wheelo/history.py's season ratings, {year: {slug: (ovr, games, AFL position)}}."""
+    sys.path.insert(0, os.path.join(ROOT, "tools", "wheelo"))
+    import history  # noqa: E402
+    return history.rated_seasons(set(years))
 
 
 # ---------------------------------------------------------------------------
@@ -351,6 +349,7 @@ def main() -> int:
 
     # 2. Rate each past season.
     history = {}  # slug -> [(year, overall, games)]
+    by_year = rated_seasons(SEASONS)
     for year in SEASONS:
         body = fetch(f"https://afltables.com/afl/stats/{year}.html",
                      f"afltables_{year}.html", args.offline)
@@ -358,7 +357,7 @@ def main() -> int:
             print(f"  {year}: page unavailable, skipped", file=sys.stderr)
             continue
         rows = merge_by_slug(parse_season(body))
-        rated = rate_season(rows)
+        rated = rate_season(rows, by_year.get(year, {}))
         for slug, (ov, gm) in rated.items():
             if gm >= MIN_SEASON_GAMES:
                 history.setdefault(slug, []).append((year, ov, gm))

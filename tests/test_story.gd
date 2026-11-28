@@ -1,4 +1,5 @@
 extends RefCounted
+const Ovr := preload("res://tests/ovr.gd")
 ## The week's story cards: the deck (data/stories), the engine that picks and
 ## remembers them, player trust, and the save. Run through
 ## tests/run_story_tests.gd.
@@ -895,10 +896,8 @@ func _test_private_cards() -> void:
 	_check(leaks.is_empty() and reachable == private.size() * 2,
 			"Real names are treated like any other: every card can pick either (director, 2026-11-09) (%s, %d of %d)" % [
 			str(leaks), reachable, private.size() * 2])
-	var named_fact := ClubStories.player_fact(GameState, {"id": "r", "real_name": "Real Person", "name": "Fake Name",
-			"overall": 60}, false, {}, 1, 0)
-	var made_fact := ClubStories.player_fact(GameState, {"id": "g", "generated": true, "name": "Made Up",
-			"overall": 60}, false, {}, 1, 0)
+	var named_fact := ClubStories.player_fact(GameState, Ovr.to({"id": "r", "real_name": "Real Person", "name": "Fake Name"}, 60), false, {}, 1, 0)
+	var made_fact := ClubStories.player_fact(GameState, Ovr.to({"id": "g", "generated": true, "name": "Made Up"}, 60), false, {}, 1, 0)
 	_check(bool(named_fact["real_named"]) and not bool(made_fact["real_named"]),
 			"A player is real-named when he has a real name; a generated player is not")
 
@@ -1193,7 +1192,7 @@ func _test_papers_cards_are_football() -> void:
 			_check(bool(who["has_role2"]) and bool(who["starting"]),
 					"The role card only picks a starter who has a second position")
 	# No second position, no role card.
-	var none := ClubStories.player_fact(GameState, {"id": "x", "role": "MID", "role2": "", "overall": 60}, true, {}, 1, 0)
+	var none := ClubStories.player_fact(GameState, Ovr.to({"id": "x", "role": "MID", "role2": ""}, 60), true, {}, 1, 0)
 	_check(not bool(none["has_role2"]), "A player with no second position is not offered the role card")
 	# The cards' own effects.
 	# Each effect follows from the story (director, 2026-10-14): he asked about the move,
@@ -1627,11 +1626,11 @@ func _test_leadership() -> void:
 	_check(bad.is_empty() and lines.size() > 80,
 			"Every leadership-record row is one real player with a known role (%s)" % ", ".join(PackedStringArray(bad)))
 
-	var twin := {"real_name": "Pat Example", "id": "x1", "age": 27.0, "club": "GEE", "gm": 20,
-			"career": {"games": 150, "stints": [["GEE", 2019, 2025, 150, 10]]}, "overall": 70,
-			"attr": {"kicking": 80}}
+	var twin := Ovr.to({"real_name": "Pat Example", "id": "x1", "age": 27.0, "club": "GEE", "gm": 20,
+			"career": {"games": 150, "stints": [["GEE", 2019, 2025, 150, 10]]},
+			"attr": {"kicking": 80}}, 70)
 	var higher := twin.duplicate(true)
-	higher["overall"] = 95
+	Ovr.to(higher, 95)
 	higher["attr"] = {"kicking": 99, "star": 99}
 	_check(Leadership.of(twin) == Leadership.of(higher),
 			"Leadership ignores his playing quality (OVR and attributes)")
@@ -1698,7 +1697,7 @@ func _test_leadership() -> void:
 		lo = mini(lo, v)
 		hi = maxi(hi, v)
 		xs.append(float(v))
-		ys.append(float(p.get("overall", 0)))
+		ys.append(float(Ovr.of(p, 0)))
 	_check(lo >= 1 and hi <= 99 and hi - lo >= 30, "Across the league it spans a real range (%d-%d)" % [lo, hi])
 	_check(absf(_corr(xs, ys)) < 0.6, "It is not just OVR in disguise (r = %.2f)" % _corr(xs, ys))
 	var trainable := false
@@ -2612,14 +2611,14 @@ func _test_culture_effects() -> void:
 	Workload.advance_week({"AAA": [b]}, [], "w1", {"AAA": 1.05})
 	_check(absf((float(a["workload"]) - float(b["workload"])) - Workload.recovery(a) * 0.05) < 0.001, "Standards 5% more recovery is exactly 5% of a week's recovery")
 	# Togetherness: the sting of a missed game.
-	var star := {"id": "s", "overall": 80, "morale": 70}
-	var role := {"id": "r", "overall": 60, "morale": 70}
+	var star := Ovr.to({"id": "s",  "morale": 70}, 80)
+	var role := Ovr.to({"id": "r",  "morale": 70}, 60)
 	ClubLife.morale_after_match([star, role], {}, false, {}, 0.2)
 	_check(int(star["morale"]) == 70 - CoachEffects.softened(6, 0.2) and int(role["morale"]) == 70 - CoachEffects.softened(3, 0.2), "A very tight group softens the sting by a fifth")
-	var star2 := {"id": "s", "overall": 80, "morale": 70}
+	var star2 := Ovr.to({"id": "s",  "morale": 70}, 80)
 	ClubLife.morale_after_match([star2], {}, false, {}, -0.2)
 	_check(int(star2["morale"]) == 70 - CoachEffects.softened(6, -0.2) and int(star2["morale"]) < 64, "A divided group sharpens it")
-	var played := {"id": "p", "overall": 60, "morale": 70}
+	var played := Ovr.to({"id": "p",  "morale": 70}, 60)
 	ClubLife.morale_after_match([played], {"p": true}, false, {}, 0.2)
 	_check(int(played["morale"]) == 71, "Culture does not touch a player who played")
 	# Ambition: the re-sign floor and the free agent's weighing.
@@ -2654,8 +2653,8 @@ func _test_culture_effects() -> void:
 			"Rivals re-sign at the culture floor too")
 	# Development: a rebuilding club's young players earn 5% more XP on the same game; a veteran does not.
 	GameState.relations[Culture.key("GEE", "ambition")] = {"t": -60, "log": []}
-	var kid := {"id": "k", "age": 19.0, "overall": 60}
-	var old := {"id": "o", "age": 29.0, "overall": 70}
+	var kid := Ovr.to({"id": "k", "age": 19.0}, 60)
+	var old := Ovr.to({"id": "o", "age": 29.0}, 70)
 	var on_kid: int = GameState._club_xp("GEE", kid, 40, {}, true)
 	var on_old: int = GameState._club_xp("GEE", old, 40, {}, true)
 	GameState.culture_effects_on = false
@@ -3356,11 +3355,11 @@ func _news_has(text: String) -> bool:
 ## The verdict now, learned or not (his own rating set either side of his
 ## rating there for the judgement, then put back).
 func _judge(p: Dictionary, learned: bool) -> void:
-	var own := int(p["overall"])
+	var own := int(Ovr.of(p))
 	var there := GameState.rating_as(p, GameState.project_role(p))
-	p["overall"] = there if learned else there + GameState.PROJECT_PASS + 5
+	Ovr.to(p, there if learned else there + GameState.PROJECT_PASS + 5)
 	GameState._finish_project(p, true, "Round 6")
-	p["overall"] = own
+	Ovr.to(p, own)
 
 
 func _dev_talk_fact(id: String) -> Array:
@@ -3391,7 +3390,7 @@ func _test_dev_talk() -> void:
 	_check(not bool(ClubStories.project_facts(GameState, p)["dev_talk_due"]), "Not while he is injured")
 	p["injury_weeks"] = 0
 	var role := GameState.project_role(p)
-	var gap := clampi(int(p["overall"]) - GameState.rating_as(p, role), 0, GameState.TAKE_GAP_MAX)
+	var gap := clampi(int(Ovr.of(p)) - GameState.rating_as(p, role), 0, GameState.TAKE_GAP_MAX)
 	_check(GameState.take_odds(p) == GameState.odds_in_ten(int(GameState.TAKE_PCT[1][gap])), "The odds are the measured table's, week 2 (%s)" % GameState.take_odds(p))
 	_check(GameState.odds_in_ten(0) == "fewer than 1 in 10" and GameState.odds_in_ten(100) == "more than 9 in 10"
 			and GameState.odds_in_ten(64) == "about 6 in 10", "Odds read true at the ends and round in between")

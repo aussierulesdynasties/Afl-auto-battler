@@ -156,9 +156,6 @@ func _sim(known0: Dictionary, known1: Dictionary, plan0: String, plan1: String, 
 ## average club's fit for each plan is about 1.0 and few sit at a limit.
 func _test_fit_anchors() -> void:
 	# The anchors describe the game's own lists, with the director's OVR rows
-	# (tools/run_tests.sh turns them off for suites; AFL_SKIP_OVR_ROWS).
-	var skipped := GameDB.skip_ovr_overrides
-	GameDB.skip_ovr_overrides = false
 	GameDB.reload()
 	var off := []
 	var capped := 0
@@ -176,7 +173,6 @@ func _test_fit_anchors() -> void:
 				capped += 1
 		if n == 0 or absf(sum / n - 1.0) > 0.08:
 			off.append("%s %.2f" % [plan, sum / maxi(n, 1)])
-	GameDB.skip_ovr_overrides = skipped
 	GameDB.reload()
 	_check(off.is_empty(), "Each plan's average fit across the league is about 1.0 (%s)" % str(off))
 	_check(capped <= GameDB.club_order.size(), "Few club-plan fits sit at the top limit (%d)" % capped)

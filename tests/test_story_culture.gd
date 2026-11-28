@@ -69,7 +69,7 @@ func _culture_fixture_run(on: bool, run_seed := SUITE_SEED, growth_only := false
 	var young_sg := {}
 	for p in GameState.my_list:
 		if Culture.young_for_growth(p, GameState.season_year):
-			young_ids[str(p["id"])] = int(p.get("overall", 0))
+			young_ids[str(p["id"])] = int(Rating.ovr(p, 0))
 			young_sg[str(p["id"])] = (p.get("season_gains", {}) as Dictionary).duplicate()
 	var morale := 0.0
 	# Morale each player lost in a game he was left out of while fit: the
@@ -117,15 +117,15 @@ func _culture_fixture_run(on: bool, run_seed := SUITE_SEED, growth_only := false
 	for p in GameState.my_list:
 		var pid := str(p["id"])
 		if young_ids.has(pid):
-			young_gain += float(int(p.get("overall", 0)) - int(young_ids[pid]))
+			young_gain += float(int(Rating.ovr(p, 0)) - int(young_ids[pid]))
 			young_n += 1
 			# The same OVR his new skill points bought, before it is rounded to
-			# a whole number (Ratings.overall_per_point).
+			# a whole number: each point times its share of his OVR (Rating.shares).
 			var sg: Dictionary = p.get("season_gains", {})
 			var sg0: Dictionary = young_sg[pid]
+			var share := Rating.shares(p)
 			for k in sg:
-				young_exact += float(int(sg[k]) - int(sg0.get(k, 0))) * Ratings.overall_per_point(
-						str(p.get("role", "MID")), str(k), Ratings.effective_games(p))
+				young_exact += float(int(sg[k]) - int(sg0.get(k, 0))) * float(share.get(str(k), 0.0))
 	var bands := "%s/%s/%s" % [Culture.band_key("standards", Culture.value(GameState.relations, "MEL", "standards")),
 			Culture.band_key("together", Culture.value(GameState.relations, "MEL", "together")),
 			Culture.band_key("ambition", Culture.value(GameState.relations, "MEL", "ambition"))]

@@ -1,4 +1,5 @@
 extends RefCounted
+const Ovr := preload("res://tests/ovr.gd")
 ## Roles: wings and taggers are real jobs the engine rewards, not labels.
 ## Two of the five midfield spots are wings; the centre square alone wins
 ## the stoppage; a tagger makes a tag bite; vocabulary is one set of words.
@@ -47,18 +48,18 @@ func _t(test: String, args := []) -> Variant:
 	return await Ran.one(self, test, args)
 
 
-func _mid(id: String, carry: int, disposal: int, contested: int, pressure := 50) -> Dictionary:
+func _mid(id: String, run: int, disposal: int, contested: int, pressure := 50) -> Dictionary:
 	var attr := {}
 	for k in PlayerProfile.ATTR_LABELS:
 		attr[k] = 50
-	attr["carry"] = carry
+	attr["work_rate"] = run
 	attr["kicking"] = disposal
 	attr["handballing"] = disposal
-	attr["contested"] = contested
+	attr["contested_ball"] = contested
 	attr["pressure"] = pressure
-	return {"id": id, "role": "MID", "role2": "", "overall": 70, "attr": attr,
+	return Ovr.to({"id": id, "role": "MID", "role2": "",  "attr": attr,
 			"name": "Player " + ["Ash", "Birch", "Cedar", "Dune", "Elm"][id.length() % 5] + id.substr(0, 1),
-			"real_name": "Player " + id.substr(0, 1)}
+			"real_name": "Player " + id.substr(0, 1)}, 70)
 
 
 func _test_identity() -> void:
@@ -132,7 +133,7 @@ func _test_named_wings() -> void:
 		for p in list:
 			if str(p["id"]) == id:
 				by_contest.append(p)
-	by_contest.sort_custom(func(a, b): return int(a["attr"]["contested"]) > int(b["attr"]["contested"]))
+	by_contest.sort_custom(func(a, b): return int(a["attr"]["contested_ball"]) > int(b["attr"]["contested_ball"]))
 	ids["WING"] = [str(by_contest[0]["id"]), str(by_contest[1]["id"])]
 	for p in by_contest.slice(2):
 		ids["MID"].append(str(p["id"]))
@@ -176,20 +177,17 @@ func _test_named_players() -> void:
 	# Read on the director's own OVR rows, as the game plays them (the suites
 	# turn them off): his row (Dawson 90) is part of who he is. On his 2026
 	# stats alone Dawson's pressure outruns his handballs and bounces.
-	var skip: bool = GameDB.skip_ovr_overrides
-	GameDB.skip_ovr_overrides = false
 	GameDB.reload()
 	for n in [["SYD", "Errol Gulden"], ["GWS", "Finn Callaghan"], ["GEE", "Max Holmes"], ["ADE", "Jordan Dawson"]]:
 		var star := _find(n[0], n[1])
 		_check(not star.is_empty() and Roles.label(star) == "Inside midfielder",
 				"%s, a top ball-winner, is an inside midfielder (%s)" % [n[1], Roles.label(star)])
-	GameDB.skip_ovr_overrides = skip
 	GameDB.reload()
 	_check(str(_find("GWS", "Josh Kelly").get("role", "")) == "MID" and str(_find("MEL", "Steven May").get("role", "")) == "DEF",
 			"Listed veterans take their real position, not a height roll")
 	var green_rated := _find("GWS", "Tom Green")
-	_check(int(green_rated.get("overall", 0)) >= 80 and int(green_rated.get("stats_year", 0)) == 2025,
-			"Tom Green is rated on his 2025 season, not as a prospect (OVR %d)" % int(green_rated.get("overall", 0)))
+	_check(int(Ovr.of(green_rated, 0)) >= 80 and int(green_rated.get("stats_year", 0)) == 2025,
+			"Tom Green is rated on his 2025 season, not as a prospect (OVR %d)" % int(Ovr.of(green_rated, 0)))
 	var tall_small := 0
 	for p in GameDB.players:
 		if str(p.get("role", "")) == "DEF" and PlayerProfile.player_type(p) == "Small defender" 				and float(p.get("height_cm", 0.0)) > PlayerProfile.SMALL_DEF_CM:
@@ -219,7 +217,7 @@ func _test_engine_rewards_wings() -> void:
 	var centre := []
 	for p in good.ground:
 		if str(p["role"]) == "MID" and not Roles.on_wing(p):
-			centre.append(Skills.engine(p, "contested"))
+			centre.append(Attributes.value(p.get("attr", {}), "contested_ball"))
 	var mean := 0.0
 	for v in centre:
 		mean += v
@@ -233,17 +231,11 @@ func _test_tagger() -> void:
 	var star := _mid("S", 70, 80, 95, 95)
 	_check(Roles.is_tagger(stopper) and Roles.label(stopper) == "Tagger", "A stopper is a tagger")
 	_check(not Roles.is_tagger(star), "A star ball-winner who tackles is not a tagger")
-	# How rare a tagger is, on the data without the hand-set OVR rows.
-	var skip: bool = GameDB.skip_ovr_overrides
-	GameDB.skip_ovr_overrides = true
 	GameDB.reload()
 	var n := 0
 	for p in GameDB.players:
 		if Roles.is_tagger(p):
 			n += 1
-	# Back to the suite's own setting (AFL_SKIP_OVR_ROWS), not "rows on": every
-	# later function would otherwise play on the director's hand-set rows.
-	GameDB.skip_ovr_overrides = skip
 	GameDB.reload()
 	_check(BalanceGate.held(n >= 8 and n <= 40, "tagger count 8-40"), "Taggers are a specialist few (%d)" % n)
 	# In a match, a tagger on the ground makes the tag bite harder.
@@ -443,12 +435,15 @@ func _test_forward_types() -> void:
 			"A prolific medium forward who marks well is not a key forward")
 	_check(PlayerProfile.forward_type(fwd.call(200.0, 5, 40)) == "Forward",
 			"Height alone does not make a key forward")
-	_check(PlayerProfile.forward_type(fwd.call(190.0, 99, 80)) == "Key forward"
+	# 191 cm: the best mark in the league (one 2026 forward has 99, so 99 itself
+	# sits just under the top) is key just under the rule of thumb.
+	_check(PlayerProfile.forward_type(fwd.call(191.0, 99, 80)) == "Key forward"
 			and PlayerProfile.forward_type(fwd.call(193.0, 20, 80)) != "Key forward",
 			"192 cm is not a cut-off: a great mark just under it is key, a weak one over it is not")
 	_check(PlayerProfile.forward_type(fwd.call(0.0, 95, 95)) == "Forward", "No height on record: plain Forward")
 	# Jamie Elliott is 178 cm (his height once came from a 1991 namesake).
-	var want := {"Toby Greene": "Forward", "Charlie Cameron": "Forward", "Jamie Elliott": "Small forward",
+	# (Toby Greene is a Mid-Forward, so a midfielder first: _test_listed_second_positions.)
+	var want := {"Charlie Cameron": "Forward", "Jamie Elliott": "Small forward",
 			"Charlie Curnow": "Key forward", "Jeremy Cameron": "Key forward", "Harry McKay": "Key forward",
 			"Maurice Rioli": "Small forward", "Cody Weightman": "Small forward",
 			# Three games cannot make him a key defender or a rebounder.
@@ -505,33 +500,31 @@ func _test_identities() -> void:
 	_check(fwds >= 180, "Forwards are forwards first: enough for six a side and cover (%d)" % fwds)
 
 
-## His club's listing is his first position (director, 2026-11-06, T8.Q11,
-## row 91): a listed forward or defender is never a midfielder or the other
-## line on the numbers; only a ruck reading (real hit-out volume) stands. A
-## listed forward who also gets plenty of the ball keeps MID as a second
-## position.
+## His line is his AFL position's, and his second line is where Champion Data
+## rated him (director, 2026-11-25, question box: "Where CD rated him"): a line
+## he played 5+ games in for a season of the three before the data season. A
+## general forward CD never rated in the midfield keeps one line, however much
+## of the ball he gets; a Mid-Forward is a midfielder who can play forward.
 func _test_listed_second_positions() -> void:
 	var by_name := {}
 	for p in GameDB.players:
 		by_name[str(p.get("real_name", ""))] = p
 	var tag := func(n: String) -> String:
 		return Ratings.role_tag(by_name[n]) if by_name.has(n) else "?"
-	for n in ["Joe Richards", "Connor Macdonald", "Murphy Reid"]:
-		_check(tag.call(n) == "FWD/MID", "%s is a listed forward who goes through the middle (%s)" % [n, tag.call(n)])
+	for n in ["Joe Richards", "Connor Macdonald", "Murphy Reid", "Gryan Miers"]:
+		_check(tag.call(n) == "FWD", "%s is a forward, with no second line CD rated him in (%s)" % [n, tag.call(n)])
 	for n in ["Beau McCreery", "Milan Murdock", "Jack Ginnivan", "Kade Chandler", "Max King",
 			"Colby McKercher", "Chris Scerri", "Todd Marshall"]:
 		_check(tag.call(n).begins_with("FWD"), "%s is a forward (%s)" % [n, tag.call(n)])
-	_check(tag.call("Gryan Miers") == "FWD/MID", "Gryan Miers is a forward who can go through the middle (%s)" % tag.call("Gryan Miers"))
+	_check(tag.call("Toby Greene") == "MID/FWD", "Toby Greene (Mid-Forward) is a midfielder who plays forward too (%s)" % tag.call("Toby Greene"))
 	for n in ["Zac Williams", "Liam Baker", "Jhye Clark", "Sam De Koning"]:
 		_check(tag.call(n).begins_with("DEF"), "%s is a defender (%s)" % [n, tag.call(n)])
-	var lp := func(listed: String, numbers: String) -> String:
-		return Ratings.listed_primary({"real_pos": listed}, numbers)
-	_check(lp.call("FWD", "MID") == "FWD", "Midfield numbers never move a listed forward")
-	_check(lp.call("DEF", "MID") == "DEF", "Midfield numbers never move a listed defender")
-	_check(lp.call("FWD", "DEF") == "FWD" and lp.call("DEF", "FWD") == "DEF", "Nor does the other line's game")
-	_check(lp.call("FWD", "RUCK") == "RUCK", "A ruck reading (hit-out volume) stands")
-	_check(lp.call("", "MID") == "MID" and lp.call("MID", "DEF") == "DEF" and lp.call("RUC", "MID") == "MID",
-			"Without a forward or back listing, the numbers decide")
+	# His line is his AFL position's (docs/RATING_REBUILD.md §2, Lines).
+	var off_line := ""
+	for p in GameDB.players:
+		if str(p["role"]) != Rating.line_of(Rating.apos_of(p)):
+			off_line += "%s (%s, %s) " % [p.get("real_name", ""), Rating.apos_of(p), p["role"]]
+	_check(off_line == "", "Every player's line is his AFL position's: %s" % off_line)
 	var ld := 0
 	var misread := ""
 	for p in GameDB.players:
@@ -554,16 +547,9 @@ func _test_listed_second_positions() -> void:
 			bad = str(p.get("real_name", ""))
 	_check(fwd >= 210 and def >= 230, "The draft has forward and defensive depth (%d FWD, %d DEF)" % [fwd, def])
 	_check(bad == "", "A second position is never the first (%s)" % bad)
-	var mid := {"role": "MID", "real_pos": "FWD", "gm": 10.0, "gl": 5.0, "mi": 0.0, "rb": 0.0, "onepct": 0.0}
-	_check(Ratings.listed_secondary(mid) == "FWD", "A goalkicking listed forward gets FWD")
-	mid["gl"] = 1.0
-	_check(Ratings.listed_secondary(mid) == "", "A listed forward who does not kick goals or mark inside 50 does not")
-	_check(Ratings.listed_secondary({"role": "DEF", "real_pos": "FWD", "gm": 10.0, "gl": 9.0}) == "",
-			"Only a midfielder on the numbers takes his listed line")
 
-## Save contract (W7, row 91): a career saved before the listing led keeps the
-## positions and OVRs it was saved with. Player dicts are saved whole and never
-## re-derived on load, so no upgrade step: the new reading reaches new careers.
+## Save contract (W7, row 91): a career keeps the positions it was saved with.
+## Its OVRs are read from the saved attributes (Rating.gd), never stored.
 func _test_old_save_keeps_positions() -> void:
 	GameState.reset()
 	GameState.start_season("NTH", GameDB.club_list("NTH"))
@@ -575,20 +561,18 @@ func _test_old_save_keeps_positions() -> void:
 	if him.is_empty():
 		return
 	var id := str(him["id"])
-	# As the build before row 91 rated him (the career holds its own copy).
+	# As a build before row 91 placed him (the career holds its own copy).
 	him["role"] = "MID"
 	him["role2"] = ""
-	var was := Ratings.rate_overall(him["attr"], "MID", Ratings.effective_games(him))
-	him["overall"] = was
 	_check(GameState.save_career(), "The career saves")
 	GameState.reset()
-	_check(GameState.load_career(), "A career saved with the old reading loads")
+	_check(GameState.load_career(), "A career saved with him in the midfield loads")
 	var back: Dictionary = {}
 	for p in GameState.my_list:
 		if str(p.get("id", "")) == id:
 			back = p
-	_check(not back.is_empty() and str(back["role"]) == "MID" and int(back["overall"]) == was,
-			"It keeps the position and OVR it was saved with (%s %s)" % [back.get("role", "?"), back.get("overall", "?")])
+	_check(not back.is_empty() and str(back["role"]) == "MID",
+			"It keeps the position it was saved with (%s)" % back.get("role", "?"))
 	GameState.reset()
 
 
@@ -607,15 +591,15 @@ func _test_formation_wings() -> void:
 	# A strong ball-winner rated second-best of the five is inside, not on a
 	# wing: before, the oval filled C, W, W, IM, IM in rating order.
 	var boss := _mid("boss", 50, 70, 95)
-	boss["overall"] = 90
+	Ovr.to(boss, 90)
 	var bull := _mid("bull", 50, 69, 90)       # Wardlaw-style: contested first
-	bull["overall"] = 85
+	Ovr.to(bull, 85)
 	var run1 := _mid("run1", 80, 75, 40)
-	run1["overall"] = 60
+	Ovr.to(run1, 60)
 	var run2 := _mid("run2", 78, 74, 42)
-	run2["overall"] = 58
+	Ovr.to(run2, 58)
 	var mid5 := _mid("mid5", 55, 60, 70)
-	mid5["overall"] = 70
+	Ovr.to(mid5, 70)
 	var ruck := _mid("ruck", 30, 40, 60)
 	ruck["role"] = "RUCK"
 	var ground := [boss, bull, run1, run2, mid5, ruck]
@@ -692,7 +676,7 @@ func _test_list_profile() -> void:
 			seen[str(r["word"])] = true
 	_check(seen.size() == 4, "Across the league, every word is used (%s)" % str(seen.keys()))
 	# The list changes: better ball-winners lift Contest to the top.
-	var better: Array = _boosted(grounds[mine], ["contested", "ruck"], 30)
+	var better: Array = _boosted(grounds[mine], ["contested_ball", "ruck"], 30)
 	var g2 := grounds.duplicate()
 	g2[mine] = better
 	_check(_word(ListProfile.profile(g2, mine), "contest") == "Elite",
@@ -711,20 +695,20 @@ func _test_list_profile() -> void:
 	_check(is_equal_approx(ListProfile.score(markers, "control"), ListProfile.score(grounds[mine], "control"))
 			and ListProfile.score(markers, "aerial") > ListProfile.score(grounds[mine], "aerial"),
 			"Aerial power and Control are different things")
-	# Finishing: the best five forwards' goalkicking, accuracy and marking.
+	# Finishing: the best five forwards' forward craft, goalkicking and contested marking.
 	var fwds: Array = grounds[mine].filter(func(p): return str(p["role"]) == "FWD")
 	var vals: Array = fwds.map(func(p):
-		return 0.5 * float(p["attr"]["goalkicking"]) + 0.3 * float(p["attr"]["accuracy"]) + 0.2 * float(p["attr"]["contested_marking"]))
+		return 0.5 * float(p["attr"]["forward_craft"]) + 0.3 * float(p["attr"]["goalkicking"]) + 0.2 * float(p["attr"]["contested_marking"]))
 	vals.sort()
 	vals.reverse()
 	var top: Array = vals.slice(0, 5)
 	var want: float = top.reduce(func(a, b): return a + b, 0.0) / float(top.size())
 	_check(is_equal_approx(ListProfile.score(grounds[mine], "finishing"), want),
-			"Finishing is the best five forwards' goalkicking, accuracy and marking")
+			"Finishing is the best five forwards' forward craft, goalkicking and contested marking")
 	_check(ListProfile.leaders(grounds[mine], "finishing").all(func(p): return str(p["role"]) == "FWD"),
 			"Finishing is led by forwards")
 	# Better kicks for goal lift it to the top; better defenders do not move it.
-	var kickers: Array = _boosted(grounds[mine], ["goalkicking", "accuracy"], 30)
+	var kickers: Array = _boosted(grounds[mine], ["forward_craft", "goalkicking"], 30)
 	var g4 := grounds.duplicate()
 	g4[mine] = kickers
 	_check(_word(ListProfile.profile(g4, mine), "finishing") == "Elite",
@@ -794,30 +778,30 @@ func _test_top_attributes() -> void:
 	for p in GameDB.players:
 		if (p.get("attr", {}) as Dictionary).is_empty():
 			continue
-		if weakest.is_empty() or int(p["overall"]) < int(weakest["overall"]):
+		if weakest.is_empty() or int(Rating.ovr(p)) < int(Rating.ovr(weakest)):
 			weakest = p
 	_check(PlayerProfile.top_attributes(weakest).size() == 3,
-			"The lowest-rated player in the league still gets three (OVR %d)" % int(weakest.get("overall", 0)))
+			"The lowest-rated player in the league still gets three (OVR %d)" % int(Rating.ovr(weakest, 0)))
 	var tied := _mid("T1", 50, 50, 50, 50)
 	var order := []
 	for t in PlayerProfile.top_attributes(tied):
 		order.append(str(t["key"]))
-	_check(order == ["kicking", "handballing", "contested_marking"], "Level ratings keep a fixed order (%s)" % str(order))
-	tied["attr"]["star"] = 99
+	_check(order == Attributes.KEYS.slice(0, 3), "Level ratings keep a fixed order (%s)" % str(order))
+	tied["attr"]["discipline"] = 99
 	tied["attr"]["durability"] = 99
 	var sd := []
 	for t in PlayerProfile.top_attributes(tied):
 		sd.append(str(t["key"]))
-	_check(sd == ["durability", "star", "kicking"], "Durability and Star power are ranked with the rest (%s)" % str(sd))
-	_check(PlayerProfile.TOP_KEYS.size() == 16, "All 16 skills are ranked")
-	_check(PlayerProfile.top_attributes({"attr": {"contested_marking": 61, "carry": 70}}).size() == 2
+	_check(sd == ["discipline", "durability", Attributes.KEYS[0]], "Discipline and Durability are ranked with the rest (%s)" % str(sd))
+	_check(PlayerProfile.TOP_KEYS.size() == 18, "All 18 attributes are ranked")
+	_check(PlayerProfile.top_attributes({"attr": {"contested_marking": 61, "speed": 70}}).size() == 2
 			and PlayerProfile.top_attributes({}).is_empty(), "Missing ratings are never made up")
 
 
 ## Needs work against players of his position, in a sentence; all above
 ## average says so; in between says nothing.
 func _test_needs_work_line() -> void:
-	var core: Dictionary = Ratings.ROLE_WEIGHTS["MID"]
+	var core: Dictionary = Rating.shares({"role": "MID"})
 	var low := _mid("N1", 50, 50, 50)
 	var high := _mid("N2", 50, 50, 50)
 	for k in core:

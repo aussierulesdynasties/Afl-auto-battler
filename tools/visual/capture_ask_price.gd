@@ -7,6 +7,7 @@ extends SceneTree
 ## <prefix>_after.png (after the button: their price filled in).
 ## A fresh Melbourne career at the off-season, trading with the Western
 ## Bulldogs for the best of theirs who has a price. Never touches a real save.
+const Ovr := preload("res://tests/ovr.gd")
 
 const W := 390
 const H := 844
@@ -40,7 +41,7 @@ func _run() -> void:
 	state.open_offseason()
 	var club := "WBD"
 	var theirs: Array = (state.season.lists[club] as Array).duplicate()
-	theirs.sort_custom(func(a, b): return int(a["overall"]) > int(b["overall"]))
+	theirs.sort_custom(func(a, b): return int(Ovr.of(a)) > int(Ovr.of(b)))
 	var pid := ""
 	for q in theirs:
 		if bool(state.ask_price(club, str(q["id"]))["ok"]):

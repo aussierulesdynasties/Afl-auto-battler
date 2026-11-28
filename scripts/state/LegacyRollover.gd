@@ -7,10 +7,12 @@ extends RefCounted
 ## 2026-11-10). A career on today's data never reaches any of this.
 ##
 ## Data: data/legacy/classes.csv and entry_lists.csv, built by
-## tools/legacy_1990s/build_rollovers.py.
+## tools/legacy_1990s/build_rollovers.py; entry_attributes.csv, the
+## established foundation players' 18 attributes, by tools/wheelo/attributes.py.
 
 const CLASSES_CSV := "res://data/legacy/classes.csv"
 const ENTRY_CSV := "res://data/legacy/entry_lists.csv"
+const ENTRY_ATTRIBUTES_CSV := "res://data/legacy/entry_attributes.csv"
 
 ## The Fitzroy merger (director 2026-11-11): "it always happens unless you are
 ## regularly competing in finals, and even then, the story beat still happens
@@ -29,6 +31,7 @@ const LIONS_TAKE := 8
 
 static var _classes := {}   # year -> Array of class rows
 static var _entries := {}   # "code|year" -> Array of entry rows
+static var _entry_attrs := {}   # "year|code|first|last" -> attributes row
 static var _later := {}     # "real name|dob" -> the last off-season a real list took him
 
 
@@ -50,6 +53,9 @@ static func _load() -> void:
 		if not _entries.has(key):
 			_entries[key] = []
 		(_entries[key] as Array).append(r)
+	for r in GameDB._read_dicts(ENTRY_ATTRIBUTES_CSV):
+		_entry_attrs["%s|%s|%s|%s" % [str(r.get("year", "")), str(r.get("club", "")), str(r.get("first", "")),
+				str(r.get("last", ""))]] = r
 	# When a real list last took each man: his class's draft, or the
 	# off-season before a new club's first list (career_ahead).
 	for y in _classes:
@@ -139,7 +145,9 @@ static func real_class(year: int) -> Array:
 		p["real_class"] = true
 		var role := str(r.get("role", ""))
 		p["role"] = role if role in ["RUCK", "MID", "DEF", "FWD"] else GameDB.listed_role(p)
-		p["role2"] = ""
+		# A line he played as many AFL games in as his own (build_rollovers).
+		var role2 := str(r.get("role2", ""))
+		p["role2"] = role2 if role2 in ["RUCK", "MID", "DEF", "FWD"] and role2 != str(p["role"]) else ""
 		p["real_pos"] = Ratings.ROLE_SHORT_TO_POS.get(str(p["role"]), "MID")
 		p["debut"] = ""
 		p["height_source"] = "draft class"
@@ -164,6 +172,9 @@ static func real_class(year: int) -> Array:
 			p["real_last"] = int(str(r["last_season"]))
 		Prospects.project(p)
 		out.append(p)
+	# A hand-picked Unicorn is one from the day his class arrives, as on a
+	# start list (GameDB.mark_unicorns).
+	GameDB.mark_unicorns(out)
 	GameDB.assign_aliases(out)
 	return out
 
@@ -177,8 +188,8 @@ static func real_class(year: int) -> Array:
 ## its concession picks in the open draft and the out-of-contract players it
 ## signs, from wherever the save has them. Nobody joins it because he really
 ## did (director, 2026-11-13: "the sim will not replicate historical draftee
-## clubs"). Each is rated on his last AFL season before `year`, fitted to his
-## rating on that season's own scale, or as a prospect if he has none. At most
+## clubs"). Each takes his 18 attributes from his last AFL season before
+## `year` (entry_attributes.csv), or is rated as a prospect if he has none. At most
 ## Expansion.foundation_size (a club entering before the expansion
 ## concessions signs its whole first senior list), the best of them; the rest go into the draft
 ## before `year` (returned as "pool"); fewer, and the club tops up with
@@ -195,38 +206,35 @@ static func foundation(gs, code: String, year: int) -> Dictionary:
 		if str(r.get("src", "")) != "":
 			established.append([p, r])
 		list.append(p)
-	if not established.is_empty():
-		# Each data season is rated on what it recorded (director 2026-11-15,
-		# "I never okayed invented stats"): a 1997 line lacks rebound 50s, a
-		# 2005 one has them. The career's own set comes back afterwards.
-		var by_src := {}
-		for e in established:
-			var y := int((e[0] as Dictionary).get("stats_year", 0))
-			if not by_src.has(y):
-				by_src[y] = []
-			by_src[y].append(e[0])
-		var keep: Dictionary = Ratings.unrecorded.duplicate()
-		for y in by_src:
-			Ratings.set_unrecorded(Ratings.find_unrecorded(by_src[y]))
-			Ratings.derive_all(by_src[y], GameDB.players)
-		Ratings.set_unrecorded(keep)
-		for e in established:
-			var p: Dictionary = e[0]
-			var r: Dictionary = e[1]
-			var role := str(r.get("role", ""))
-			if role in ["RUCK", "MID", "DEF", "FWD"] and role != str(p["role"]):
-				p["role"] = role
-				p["role2"] = Ratings.assign_secondary(p)
-			# His rating that season on that season's own scale.
-			var ovr := str(r.get("ovr", ""))
-			if ovr != "":
-				p["attr"] = Prospects.fit_attributes(p["attr"], str(p["role"]), float(ovr.to_int()), float(p["gm"]))
-			p["overall"] = Ratings.rate_overall(p["attr"], str(p["role"]), float(p["gm"]))
-			p["value"] = Ratings.salary_value(int(Rating.ovr(p)))
-			# Unknown up to the season he joins; every season after is counted.
-			p["career"] = Career.from_source("?", year - 1)
-			p["data_club"] = code
-			Potential.assign(p)
+	# Each on his src season's stats (tools/wheelo/attributes.py), as the
+	# starts' listed players are (GameDB._apply_attributes).
+	for e in established:
+		var p: Dictionary = e[0]
+		var r: Dictionary = e[1]
+		var role := str(r.get("role", ""))
+		if role in ["RUCK", "MID", "DEF", "FWD"]:
+			p["role"] = role
+		var row: Dictionary = _entry_attrs.get("%d|%s|%s|%s" % [year, code, str(r.get("first", "")),
+				str(r.get("last", ""))], {})
+		if row.is_empty():
+			push_warning("LegacyRollover: no attributes for %s %s (%s %d); rated as a prospect" % [
+					str(r.get("first", "")), str(r.get("last", "")), code, year])
+			Prospects.project(p)
+			p.erase("projected")
+		else:
+			var a := {}
+			for k in Attributes.KEYS:
+				a[k] = clampi(int(row.get(k, 50)), 1, 99)
+			p["attr"] = a
+			p["apos"] = str(row.get("apos", ""))
+			p["speed_src"] = str(row.get("speed_src", ""))
+			p["role"] = Rating.line_of(str(p["apos"]))
+			var line2 := str(row.get("line2", ""))
+			p["role2"] = line2 if line2 != str(p["role"]) else ""
+		# Unknown up to the season he joins; every season after is counted.
+		p["career"] = Career.from_source("?", year - 1)
+		p["data_club"] = code
+		Potential.assign(p)
 	GameDB.assign_aliases(list)
 	GameDB.register_draftees(list)
 	list.sort_custom(func(a, b): return int(Rating.ovr(a, 0)) > int(Rating.ovr(b, 0)))
@@ -284,7 +292,9 @@ static func _new_player(code: String, year: int, n: int, r: Dictionary) -> Dicti
 		p["real_first"] = year
 	var role := str(r.get("role", ""))
 	p["role"] = role if role in ["RUCK", "MID", "DEF", "FWD"] else GameDB.listed_role(p)
-	p["role2"] = ""
+	# A line he played as many AFL games in as his own (build_rollovers).
+	var role2 := str(r.get("role2", ""))
+	p["role2"] = role2 if role2 in ["RUCK", "MID", "DEF", "FWD"] and role2 != str(p["role"]) else ""
 	p["real_pos"] = Ratings.ROLE_SHORT_TO_POS.get(str(p["role"]), "MID")
 	p["draft_year"] = year - 1
 	p["draft_team"] = ""
@@ -302,7 +312,7 @@ static func _new_player(code: String, year: int, n: int, r: Dictionary) -> Dicti
 			if r.has(k) and str(r[k]) != "":
 				p[k] = float(str(r[k]))
 			else:
-				blank.append(k)   # not recorded that season (Ratings.unrecorded)
+				blank.append(k)   # not recorded that season
 		p["blank"] = blank
 		p["stats_year"] = int(src)
 		p["draft_rank"] = 0
@@ -320,6 +330,9 @@ static func _new_player(code: String, year: int, n: int, r: Dictionary) -> Dicti
 	p["draft_rank"] = rank
 	p["data_src"] = "listed %d, no senior game" % year
 	Prospects.project(p)
+	# An expansion list's player past his first season's age is aged by the
+	# curves, as the generated top-ups beside him are (blueprint §4).
+	Prospects._age_into(p)
 	return p
 
 
@@ -802,7 +815,7 @@ static func _first_ruck(p: Dictionary, list: Array) -> bool:
 		if q == p or str(q.get("id", "")) == str(p.get("id", "")):
 			continue
 		if (str(q.get("role", "")) == "RUCK" or str(q.get("role2", "")) == "RUCK") \
-				and int(q.get("overall", 0)) >= int(p.get("overall", 0)):
+				and Rating.ovr(q, 0) >= Rating.ovr(p, 0):
 			return false
 	return true
 

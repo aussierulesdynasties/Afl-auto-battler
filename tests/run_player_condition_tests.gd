@@ -1,4 +1,5 @@
 extends SceneTree
+const Ovr := preload("res://tests/ovr.gd")
 ## godot --headless --path . --script tests/run_player_condition_tests.gd
 ## Fatigue, morale and form as numbers (TODO row 183; director, 2026-11-14:
 ## team selection "should show a numerical value of their fatigue level", and
@@ -199,7 +200,7 @@ func _test_pot_on_tiles() -> void:
 	for line in ["RUCK", "MID", "WING", "DEF", "FWD"]:
 		for id in side.get(line, []):
 			var p: Dictionary = _gs.list_player(str(id))
-			var want := "%d/%d" % [int(p["overall"]), maxi(int(p["overall"]), int(p.get("potential", p["overall"])))]
+			var want := "%d/%d" % [int(Ovr.of(p)), maxi(int(Ovr.of(p)), int(p.get("potential", Ovr.of(p))))]
 			var sub := scene.find_child("Sub_" + str(id), true, false) as Label
 			if sub == null:
 				_check(scene.find_child("Trial_" + str(id), true, false) != null, "%s's tile has its OVR/POT line" % id)
@@ -222,7 +223,7 @@ func _test_pot_on_tiles() -> void:
 	var cid := str(card.name).trim_prefix("Card_")
 	var q: Dictionary = _gs.list_player(cid)
 	var pot := scene.find_child("Pot_" + cid, true, false) as Label
-	_check(pot != null and pot.text == "/%d" % maxi(int(q["overall"]), int(q.get("potential", q["overall"]))),
+	_check(pot != null and pot.text == "/%d" % maxi(int(Ovr.of(q)), int(q.get("potential", Ovr.of(q)))),
 			"The card's POT is his potential (%s)" % (pot.text if pot else "-"))
 	_check(pot != null and card.get_global_rect().grow(0.5).encloses(pot.get_global_rect()), "...inside his card")
 	_check(pot != null and pot.get_global_rect().end.x <= 390.5, "...and on the screen")

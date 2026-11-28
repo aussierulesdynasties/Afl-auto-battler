@@ -9,6 +9,7 @@ extends RefCounted
 ## clubs, how many clubs sit in each named band, and how many are pinned
 ## (|value| >= 90). SUMMARY gives the worst season for pinning and the count of
 ## distinct (standards, together, ambition) triples among the clubs at the end.
+const Ovr := preload("res://tests/ovr.gd")
 
 
 func _run_draft(d: Draft) -> void:
@@ -56,7 +57,7 @@ func run() -> void:
 	GameState.replay_seed = seed
 	GameState.autosave_enabled = false
 	var pool: Array = GameDB.all_players_sorted() + GameDB.all_draftees_sorted()
-	pool.sort_custom(func(a, b): return a["overall"] > b["overall"])
+	pool.sort_custom(func(a, b): return Ovr.of(a) > Ovr.of(b))
 	GameState.draft = Draft.new(pool, GameDB.active_clubs(GameState.season_year).duplicate(), seed)
 	GameState.draft.start_for_user(club)
 	_run_draft(GameState.draft)

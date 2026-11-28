@@ -133,8 +133,7 @@ sample can't produce a 99-rated freak:
 rate = (season_total + K * league_player_rate) / (games + K),   K = 5
 ```
 
-The shrink target must be the **per-player** league rate (`tools/sim_harness.py:
-player_league_rates`), *not* the per-team-game rate. Shrinking an individual
+The shrink target must be the **per-player** league rate, *not* the per-team-game rate. Shrinking an individual
 toward a whole team's output (364 disposals/game) inflates fringe players above
 Nick Daicos — this was a real bug caught by the harness.
 
@@ -319,8 +318,7 @@ the target, so prospects are expressed in exactly the same units as real
 players and feed the same engine. `Ratings.effective_games()` carries the
 "sample" override: projections skip the small-sample confidence shrink, and a
 player who has completed a simulated season keeps a full-season sample so a
-fringe 2026 games count cannot suppress them forever. `tools/intake_harness.py`
-mirrors these constants the way `sim_harness.py` mirrors the match engine.
+fringe 2026 games count cannot suppress them forever.
 
 **Class quality.** Generated future classes (never the real 2026 class) get a
 quality tier, rolled once per career and draft year from `career_seed` (a
@@ -341,7 +339,7 @@ at 80+ where a normal one produces none to two, with a top 20 peaking about
 twenty years on the league's count of 80+ players is the same whatever that
 class was - a cohort advantage, not inflation. The tier of every generated
 class is recorded in `class_tiers` for a future draft-history view; the game
-does not announce it. `tools/intake_harness.py` mirrors the normal tier only.
+does not announce it.
 
 ---
 
@@ -398,7 +396,7 @@ had a realistic game (`usage_multiplier`: unfocused fade from 18 disposals,
 focused from 21). Playing through a star (the Through stars plan) is a 1.14x early weight on him (`FOCUS_CARRY`),
 not a 1.55x magnet, so a focused game stays in the low 30s (hard ceiling mid-30s
 in the probe) instead of 50–80. Team disposal volume is unchanged — the fade
-only changes who is chosen. The same curve is in `tools/sim_harness.py`.
+only changes who is chosen.
 
 `tests/run_calibration_tests.gd` (the `calibration` suite) plays seeded games of
 the shipped engine and compares per-team-per-game totals with the real 2026
@@ -411,11 +409,6 @@ later rolls; they were already the soft stats before the fade.
 A 200-match check against the full 18-club file (seed 1234): disposals 1.01,
 kicks 1.00, handballs 1.01, marks 1.02, inside 50s 1.00, score 0.94. Behinds
 0.86 and rebound 50s 0.87 are the outliers. Average margin about 29 points.
-
-> `tools/sim_harness.py` is **not shipped game code**. Its match half (a Python
-> mirror of `scripts/sim/MatchSim.gd`) is stale since 2026-10-08 and is not
-> maintained; `Ratings.T` is the source of truth. Its ratings half stays a live
-> mirror of `Ratings.gd` (`build_history.py` and `render_preview.py` import it).
 
 ### Matchday screen
 The live match answers five questions at a glance: the score, the clock, who
@@ -913,8 +906,7 @@ scripts/
     SeasonReviewScene.gd  the flag, your record, final ladder, awards, club achievements
 scenes/                thin .tscn wrappers - a root Control + its script
 tools/
-  sim_harness.py       ratings mirror; match half stale (run the calibration suite instead)
-  intake_harness.py    projection/intake/rollover harness + draft-class CSV checks
+  intake_harness.py    draft-class CSV checks (data/draftees_2026.csv)
   scrape_afltables.py  re-harvests the dataset, with the <6-game 2025 fallback
   validate_data.py     checks 220 club x column aggregates vs published totals
   visual/capture_match.gd  renders match-view frames and movement trails (review)

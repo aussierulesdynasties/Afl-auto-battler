@@ -54,12 +54,10 @@ ALLOW = {
 ## lines they replaced.
 STATS_PASS = {
     "scripts/ui/StatGuide.gd": [[
-        "Wins the clearance and holds the ball in a tackle. Our inside mids win or lose the stoppages.",
+        "Wins the clearance and holds the ball in a tackle or the wet. Our inside mids win or lose the stoppages.",
         "Wins the hit-outs at the bounce and stoppages. Our first ruck matters.",
-        "Runs the ball forward. Good carriers through the middle feed our attack.",
-        "Gets the shots inside 50 and kicks the goals. Most of our scoring comes from it.",
+        "Kicks straight. Turns his shots into goals instead of behinds.",
         "Tackles and hurries the opposition. Most of our defence comes from it.",
-        "Match-winning class. Lifts our side at the stoppages. It weighs heavily in his overall.",
         "Where we expect him to peak. It is not a limit. His growth slows as he nears it.",
         "Contest is our stoppage work. Attack is our forwards and carry. Defence is our pressure and intercept.",
         "A standout stat earns a trait. The right mix of them on the ground switches on a synergy. The Team screen shows ours, and when one is a player short",

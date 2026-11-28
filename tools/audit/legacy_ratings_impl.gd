@@ -7,6 +7,7 @@ extends RefCounted
 ## flags: R rated on record, H lifted by honours, O hand-set override.
 ## tools/audit/legacy_ratings_report.py joins these to honours and listed positions.
 ## Reads; changes nothing. Args: starts (default 1990 2000 2010 2020).
+const Ovr := preload("res://tests/ovr.gd")
 
 
 func run() -> void:
@@ -25,7 +26,7 @@ func run() -> void:
 			print("ROW %s|%s|%s|%s|%d|%s|%s|%d|%d|%d|%d|%d|%d|%s" % [str(s), str(p.get("id", "")),
 					str(p.get("club", "")), str(p.get("real_name", p.get("name", ""))),
 					int(p.get("age", 0)), str(p.get("role", "")), str(p.get("role2", "")),
-					int(p.get("overall", 0)), int(p.get("potential", 0)), int(p.get("real_peak", 0)),
-					int(p.get("gm", 0)), int(p.get("gl", 0)), int(p.get("season_overall", p.get("overall", 0))),
+					int(Ovr.of(p, 0)), int(p.get("potential", 0)), int(p.get("real_peak", 0)),
+					int(p.get("gm", 0)), int(p.get("gl", 0)), int(p.get("season_overall", Ovr.of(p, 0))),
 					flags])
 	GameDB.reload(Datasets.DEFAULT)

@@ -225,7 +225,7 @@ static func assign_initial(list: Array) -> Array:
 		else:
 			years = rng.randi_range(1, 2)
 		p["contract_years"] = years
-		p["salary"] = pay(int(p.get("value", 3)))
+		p["salary"] = pay(Ratings.value_of(p))
 	return fresh
 
 
@@ -301,7 +301,14 @@ static func next_size(list: Array) -> int:
 
 ## What re-signing (or signing) this player costs now.
 static func asking_salary(p: Dictionary) -> int:
-	var price := pay(Ratings.salary_value(int(Rating.ovr(p, 50))))
+	return asking_at(p, int(Rating.ovr(p, 50)))
+
+
+## What he would ask at an OVR of `ovr` (ClubLife.wait_words: his rating at
+## the off-season). OVR is read from the attributes, so a later rating is
+## passed in, never written onto him.
+static func asking_at(p: Dictionary, ovr: int) -> int:
+	var price := pay(Ratings.salary_value(ovr))
 	# An unhappy player wants paying to stay.
 	if ClubLife.morale(p) < 40:
 		price = ceili(price * 1.25)
@@ -796,7 +803,7 @@ static func payroll(list: Array) -> int:
 	for p in list:
 		if retired_by(p, money_year):
 			continue
-		total += int(p["salary"]) if p.has("salary") else pay(int(p.get("value", SENIOR_MIN_2027)))
+		total += int(p["salary"]) if p.has("salary") else pay(Ratings.value_of(p))
 	return total
 
 

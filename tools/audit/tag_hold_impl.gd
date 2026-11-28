@@ -8,6 +8,7 @@ extends RefCounted
 ## and the margin. Run on the PR and on its base to show a high-Pressure
 ## tagger holds no tighter than before (no new power at the top).
 ## Args after the impl name: seeds (per pairing, default 40).
+const Ovr := preload("res://tests/ovr.gd")
 
 const PAIRS := [["MEL", "CAR"], ["GEE", "COL"], ["SYD", "WCE"], ["BRL", "ADE"], ["HAW", "ESS"], ["FRE", "STK"]]
 
@@ -19,8 +20,8 @@ func _play(h: String, a: String, seed: int, arm: String) -> Dictionary:
 	var star := ""
 	var best := -1
 	for p in away.ground:
-		if MatchSim.midfielder_on_ground(p) and int(p["overall"]) > best:
-			best = int(p["overall"])
+		if MatchSim.midfielder_on_ground(p) and int(Ovr.of(p)) > best:
+			best = int(Ovr.of(p))
 			star = str(p["id"])
 	var who := ""
 	var pick := -1.0 if arm == "hi" else 999.0

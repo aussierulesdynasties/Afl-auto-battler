@@ -41,7 +41,6 @@ OUT_DIR = os.path.join(LEG, "2010")
 sys.path.insert(0, os.path.join(ROOT, "tools"))
 sys.path.insert(0, os.path.join(ROOT, "tools", "legacy_1990s"))
 import build_start as B  # noqa: E402  (the 1990 builder: one rating model for every start)
-import sim_harness as H  # noqa: E402
 
 START = 2010
 DATA_SEASON = 2009
@@ -205,17 +204,6 @@ def build(by_year, rated):
 
 
 # ------------------------------------------------------------- era report --
-def harness_from_enriched(rows):
-    hp = []
-    for r in rows:
-        e = {("one_pct" if k == "onepct" else "pct_played" if k == "pctp" else k): (r[k] if r[k] == "" else float(r[k]))
-             for k in B.ENRICHED[4:28]}
-        hp.append(B.harness_player({**e, "first": r["first"], "last": r["last"]}, r["club"], r["num"]))
-    H.set_unrecorded(B.unrecorded_in(hp))
-    H.derive_ratings(hp)
-    return hp
-
-
 def spread(hp):
     by_club = defaultdict(list)
     for p in hp:
@@ -225,7 +213,7 @@ def spread(hp):
     return by_club, allv, meds
 
 
-def era_report(by_year, rated, players):
+def era_report(by_year, rated):
     stats = ["di", "ki", "hb", "mk", "tk", "gl", "cl", "cp", "if50", "rb"]
     lines = ["# The 2010 start against today (Legacy mode, row 142)", "",
              "Built by `tools/legacy_2010s/build_start.py --report`, on the rating model of the 1990 start "
@@ -255,10 +243,8 @@ def era_report(by_year, rated, players):
     base, d09 = rows["2020-25 (base)"], rows["2009 (the data season)"]
     lines.append("| 2009 vs base | %s | | |" % " | ".join("%+.0f%%" % (100 * (d09[k] / base[k] - 1)) for k in stats))
 
-    hp10 = harness_from_enriched(players)
-    with open(os.path.join(ROOT, "data", "players_enriched_2026.csv"), newline="", encoding="utf-8") as fh:
-        today = list(csv.DictReader(fh))
-    hp26 = harness_from_enriched(today)
+    hp10 = B.start_ratings(os.path.join(OUT_DIR, "attributes_2010.csv"))
+    hp26 = B.start_ratings(os.path.join(ROOT, "data", "attributes_2026.csv"))
     c10, a10, m10 = spread(hp10)
     c26, a26, m26 = spread(hp26)
 
@@ -266,8 +252,8 @@ def era_report(by_year, rated, players):
         return v[min(len(v) - 1, int(q * len(v)))]
 
     lines += ["", "## The 2010 lists as the game loads them, against today's", "",
-              "Both rated by `tools/sim_harness.py` (the game rates again at load, the same model): the 2010 "
-              "lists on 2009, today's on 2026. Players with a game in the data season.", "",
+              "Both as the game rates them at load, each OVR read from the start's attributes file at his "
+              "AFL position: the 2010 lists on 2009, today's on 2026. Every listed player.", "",
               "| Lists | players | rated 80+ | 80+ per club | 70+ | median | 90th pct | best | club medians |",
               "|---|---|---|---|---|---|---|---|---|"]
     for label, v, c, m in (("2010 (on 2009)", a10, c10, m10), ("2026 (on 2026)", a26, c26, m26)):
@@ -304,7 +290,7 @@ def main():
     if a.report:
         path = os.path.join(ROOT, "docs", "research", "LEGACY_ERA_REPORT_2010.md")
         with open(path, "w", newline="\n", encoding="utf-8") as fh:
-            fh.write(era_report(by_year, rated, players))
+            fh.write(era_report(by_year, rated))
         print("wrote", os.path.relpath(path, ROOT))
 
 

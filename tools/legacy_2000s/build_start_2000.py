@@ -42,7 +42,6 @@ sys.path.insert(0, os.path.join(ROOT, "tools", "legacy_1990s"))
 sys.path.insert(0, os.path.join(ROOT, "tools"))
 import build_start as BS  # noqa: E402
 import build as B90  # noqa: E402
-import sim_harness as H  # noqa: E402
 
 YEAR = 2000
 DATA_SEASON = 1999
@@ -259,33 +258,22 @@ def captains(cache, lists):
 
 
 # ------------------------------------------------------------- era report --
-def era_report(players, by_year, rated):
+def era_report(by_year, rated):
     """The 2000 lists as the game loads them, beside the 2026 base."""
-    def rate_rows(rows, era):
-        hp = []
-        for i, r in enumerate(rows):
-            e = {}
-            for k in BS.ENRICHED[4:28]:
-                e["one_pct" if k == "onepct" else "pct_played" if k == "pctp" else k] = (r[k] if r[k] == "" else float(r[k]))
-            hp.append(BS.harness_player({**e, "first": r["first"], "last": r["last"]}, r["club"], r.get("num", i)))
-        H.set_unrecorded(BS.unrecorded_in(hp))
-        H.derive_ratings(hp)
-        return hp
-
-    with open(os.path.join(ROOT, "data", "players_enriched_2026.csv"), newline="", encoding="utf-8") as fh:
-        base = list(csv.DictReader(fh))
     out = {}
-    for label, rows, era in (("2000 (rated on 1999)", players, True), ("2026 base", base, False)):
-        hp = rate_rows(rows, era)
+    for label, path in (("2000 (rated on 1999)", os.path.join(OUT_DIR, "attributes_2000.csv")),
+                        ("2026 base", os.path.join(ROOT, "data", "attributes_2026.csv"))):
+        hp = BS.start_ratings(path)
         by_club = defaultdict(list)
         for p in hp:
             by_club[p["club"]].append(p["overall"])
         allv = sorted(p["overall"] for p in hp)
         out[label] = (hp, by_club, allv)
     lines = ["# The 2000 start against the 2026 base (Legacy mode, row 142)", "",
-             "Built by `tools/legacy_2000s/build_start_2000.py --report`. Ratings by `tools/sim_harness.py`, "
-             "the Python mirror of Ratings.gd: 2000's lists on their 1999 season, each position scaled on its "
-             "own season (director 2026-11-13, 'Scale each position per season'); the 2026 base as it ships. "
+             "Built by `tools/legacy_2000s/build_start_2000.py --report`. Each OVR read from the start's "
+             "attributes file at his AFL position, as the game rates it: 2000's lists on their 1999 season, "
+             "each position scaled on its own season (director 2026-11-13, 'Scale each position per season'); "
+             "the 2026 base as it ships. "
              "Decade stat averages are in `LEGACY_ERA_REPORT.md`.", "",
              "| Set | players | rated 80+ | 75+ | 70+ | median | 90th pct | best |", "|---|---|---|---|---|---|---|---|"]
     for label, (hp, by_club, v) in out.items():
@@ -301,7 +289,7 @@ def era_report(players, by_year, rated):
                                                               sum(x >= 80 for x in v), w[len(w) // 2],
                                                               sum(x >= 80 for x in w)))
     # The decades' per-game averages, the 1990 report's table (2020-25 is the 2026 base's era).
-    decades = BS.era_report(by_year, rated, players).split("\n## ")[0].split("\n")
+    decades = BS.era_report(by_year, rated).split("\n## ")[0].split("\n")
     lines += ["", "## Each decade's stats per player per game", ""] + [x for x in decades if x.startswith("|")]
     top = sorted(out["2000 (rated on 1999)"][0], key=lambda p: -p["overall"])[:15]
     lines += ["", "Top 15 in 2000: " + ", ".join("%s (%s) %d" % (p["name"], p["club"], p["overall"]) for p in top)]
@@ -343,7 +331,7 @@ def main():
     if a.report:
         path = os.path.join(ROOT, "docs", "research", "LEGACY_ERA_REPORT_2000.md")
         with open(path, "w", newline="\n", encoding="utf-8") as fh:
-            fh.write(era_report(players, by_year, rated))
+            fh.write(era_report(by_year, rated))
         print("wrote", os.path.relpath(path, ROOT))
 
 

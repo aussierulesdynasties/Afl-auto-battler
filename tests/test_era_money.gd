@@ -1,4 +1,5 @@
 extends RefCounted
+const Ovr := preload("res://tests/ovr.gd")
 ## Legacy mode money (row 142, phase L3; director 2026-11-12, "Dollars of the
 ## time"): an era season shows salaries, the cap and every money figure in
 ## its own dollars (data/legacy/era_rules.csv); today's seasons are untouched.
@@ -125,15 +126,15 @@ func _test_1990_contracts() -> void:
 	_check(list.size() > 30, "Geelong has a list (%d)" % list.size())
 	var bad := []
 	for p in list:
-		var model := Ratings.salary_value(int(p["overall"]))
+		var model := Ratings.salary_value(int(Ovr.of(p)))
 		# A player on a real contract carries only its term; payroll counts his
 		# worth in the season's dollars (Contracts.payroll).
 		var salary := int(p["salary"]) if p.has("salary") else Contracts.payroll([p])
 		# Priced at his rating, or under it where his club's first contracts
 		# were cut to fit its cap (Contracts.fit_to_cap: Geelong opens 1990
 		# over it at rating prices).
-		if int(p["value"]) == model and (salary > _scaled(model, 1500000, 52)
-				or salary < mini(Contracts.senior_min(), _scaled(model, 1500000, 52))):
+		if salary > _scaled(model, 1500000, 52) \
+				or salary < mini(Contracts.senior_min(), _scaled(model, 1500000, 52)):
 			bad.append("%s salary %d" % [str(p["id"]), salary])
 		if Contracts.asking_salary(p) < _scaled(model, 1500000, 52):
 			bad.append("%s ask %d" % [str(p["id"]), Contracts.asking_salary(p)])
@@ -141,7 +142,7 @@ func _test_1990_contracts() -> void:
 	var payroll := GameState.my_payroll()
 	_check(payroll > 0 and payroll <= GameState.salary_cap,
 			"A 1990 payroll fits a 1990 cap: %s of %s" % [Contracts.money(payroll), Contracts.money(GameState.salary_cap)])
-	var star := {"overall": 99, "age": 25.0}
+	var star := Ovr.to({"age": 25.0}, 99)
 	_check(Contracts.asking_salary(star) == _scaled(1250000, 1500000, 52),
 			"A 1990 star asks %s, not $1.25m" % Contracts.money(Contracts.asking_salary(star)))
 	_check(Contracts.senior_min() == 11000 and Contracts.salary_step() == 7000,
@@ -157,7 +158,7 @@ func _test_1990_contracts() -> void:
 ## Offers weigh the same in any era, and the club budget shows in 1990 dollars.
 func _test_1990_talks_and_budget() -> void:
 	_career(1990)
-	var p := {"overall": 75, "age": 26.0}
+	var p := Ovr.to({"age": 26.0}, 75)
 	var ask := Contracts.asking_salary(p)
 	var score_1990 := Contracts.salary_score(ask)
 	Contracts.money_year = 2027
@@ -180,7 +181,7 @@ func _test_2027_career_unchanged() -> void:
 	var bad := []
 	for code in GameState.season.lists:
 		for p in GameState.season.lists[code]:
-			if Contracts.asking_salary(p) < Ratings.salary_value(int(p["overall"])):
+			if Contracts.asking_salary(p) < Ratings.salary_value(int(Ovr.of(p))):
 				bad.append(str(p["id"]))
 	_check(bad.is_empty(), "Every 2027 asking price is today's model: %s" % str(bad.slice(0, 5)))
 
@@ -260,7 +261,7 @@ func _test_campaign_rolls_through_the_eras() -> void:
 					and cap == Contracts.contract_cap(y), "%d has its own cap on record" % y)
 			var want_min: int = int(GameDB.era_rule("senior_min", y)) if EraRules.has("senior_min", y) 					else _scaled(Contracts.SENIOR_MIN_2027, cap, EraRules.list_max(y))
 			_check(Contracts.senior_min() == want_min, "%d minimum %s" % [y, Contracts.money(Contracts.senior_min())])
-			var star := {"overall": 99, "age": 25.0}
+			var star := Ovr.to({"age": 25.0}, 99)
 			_check(Contracts.asking_salary(star) == _scaled(1250000, cap, EraRules.list_max(y)),
 					"%d: a star asks %s" % [y, Contracts.money(Contracts.asking_salary(star))])
 		else:

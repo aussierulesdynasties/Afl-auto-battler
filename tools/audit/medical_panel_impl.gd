@@ -11,6 +11,7 @@ extends RefCounted
 ## in the five-season window at season's end. SITTING lines name each one.
 ## SUMMARY totals the seasons played; a career that stops rolling over (the
 ## autopilot coach sacked) prints STOPPED and is totalled to there.
+const Ovr := preload("res://tests/ovr.gd")
 
 
 func _run_draft(d: Draft) -> void:
@@ -64,7 +65,7 @@ func run() -> void:
 				if not bool(row["cleared"]):
 					retired += 1
 				print("SITTING seed %d %d %s | %s (%s, OVR %d) | concussion %d in 5 years | %s" % [
-						seed, year, str(row.get("at", "")), str(row["name"]), str(row["club"]), int(row["overall"]),
+						seed, year, str(row.get("at", "")), str(row["name"]), str(row["club"]), int(Ovr.of(row)),
 						int(row["count"]), "cleared" if bool(row["cleared"]) else "retired"])
 		var conc := _concussions(year)
 		var on := {3: 0, 4: 0, 5: 0}

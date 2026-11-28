@@ -1,4 +1,5 @@
 extends SceneTree
+const Ovr := preload("res://tests/ovr.gd")
 ## godot --headless --path . --script tests/run_recruit_undo_tests.gd
 ## Undo for a delisting, a free-agent signing and a re-signing (TODO row 119,
 ## 4.R76 / P-09): each undo restores the list, the cap, the contracts, the
@@ -123,7 +124,7 @@ func _releasable() -> Dictionary:
 	for p in _state.my_list:
 		if _state.retiring_now(p) or str(p["id"]).begins_with("undo_extra"):
 			continue
-		if best.is_empty() or int(p["overall"]) > int(best["overall"]):
+		if best.is_empty() or int(Ovr.of(p)) > int(Ovr.of(best)):
 			best = p
 	return best
 

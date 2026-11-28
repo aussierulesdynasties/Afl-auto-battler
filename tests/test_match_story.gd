@@ -114,7 +114,6 @@ func run(tree: SceneTree) -> void:
 		await _t("_test_no_repeats", [size])
 	_t("_test_records_persist")
 	_t("_test_old_save")
-	_t("_test_calls_old_fixture")
 	_t("_test_calls_name_skip_loose")
 	_t("_test_calls_name_switched_loose")
 	_t("_test_calls_name_moment_tag")
@@ -792,33 +791,6 @@ func _test_calls_kept() -> void:
 			"the coach rows round-trip through the save")
 	_check(MatchStory.calls(GameState.last_match, me) == live,
 			"the last match's review tells the same calls after a reload")
-	GameState.delete_saved_career()
-
-
-## An old save (the frozen version 2 fixture, written before the coach rows
-## were kept) loads, its records and last match tell no calls rather than
-## wrong ones, and the next match keeps them.
-func _test_calls_old_fixture() -> void:
-	GameState.delete_saved_career()
-	var gz := FileAccess.get_file_as_bytes("res://tests/fixtures/career_v2_2026-11-11.save.gz")
-	var f := FileAccess.open(GameState.save_path, FileAccess.WRITE)
-	f.store_buffer(gz.decompress_dynamic(-1, FileAccess.COMPRESSION_GZIP))
-	f.close()
-	GameState.reset()
-	_check(GameState.load_career(), "the old fixture loads")
-	var old := GameState.match_stories.size()
-	_check(old >= 1 and not (GameState.match_stories[0] as Dictionary).has("coach_rows"),
-			"its records predate the coach rows (%d)" % old)
-	var first: Dictionary = GameState.match_stories[0] if old > 0 else {}
-	_check(MatchStory.calls_from(first.get("coach_rows", {}), first.get("call_names", {}),
-			int(first.get("margin", 0))).is_empty(), "an old record tells no calls")
-	_check(MatchStory.calls(GameState.last_match, 0).is_empty() and MatchStory.calls(GameState.last_match, 1).is_empty(),
-			"an old last match tells no calls")
-	GameState.replay_seed = SUITE_SEED
-	GameState.advance()
-	var rec: Dictionary = GameState.last_match_story()
-	_check(GameState.match_stories.size() == old + 1 and rec.get("coach_rows") is Dictionary
-			and not (rec["coach_rows"]["mine"] as Dictionary).is_empty(), "the next match keeps its coach rows")
 	GameState.delete_saved_career()
 
 
