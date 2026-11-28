@@ -2480,7 +2480,7 @@ func _test_menu_and_career() -> void:
 			and back_mark != null and back_mark.text == "Gain:" and cost_mark != null and cost_mark.text == "Cost:"
 			and cost_mark.get_theme_font("font") != rest_cost.get_theme_font("font") and cost_mark.get_theme_color("font_color") == load("res://scripts/ui/UiKit.gd").label_ink()
 			and back_gain != null and back_cost != null and back_cost.text.contains("promise breaks")
-			and rest_gain != null and rest_cost != null and rest_cost.text.contains("'s opinion of you down") and not rest_cost.text.begins_with("His ") and rest_cost.text.contains("re-sign with you")
+			and rest_gain != null and rest_cost != null and rest_cost.text.contains("'s opinion of you down") and not rest_cost.text.begins_with("His ") and rest_cost.text.contains("re-sign with us")
 			and same_style and rest_btn != null and rest_cost.get_global_rect().position.y >= rest_gain.get_global_rect().end.y - 1.0
 			and rest_gain.get_global_rect().position.y >= rest_btn.get_global_rect().end.y - 1.0,
 			"Each answer says its gains then its costs under its own button, in the same full-strength text (%s / %s)" % [back_cost.text if back_cost != null else "none", rest_cost.text if rest_cost != null else "none"])
@@ -2509,22 +2509,22 @@ func _test_menu_and_career() -> void:
 	var twords: Label = tsheet.find_child("TrustWords", true, false)
 	var twhy: Button = tsheet.find_child("TrustWhy", true, false)
 	var treasons: Control = tsheet.find_child("TrustReasons", true, false)
-	_check(twords != null and twords.text == "Opinion of you 61/100." and treasons != null and not treasons.visible,
+	_check(twords != null and twords.text == "Opinion of you 61 out of 100." and treasons != null and not treasons.visible,
 			"The profile shows his opinion of you out of 100, with the reasons folded away (%s)" % (twords.text if twords != null else "missing"))
 	var why_tap: String = await Tap.tap(twhy) if twhy != null else "missing"
 	await _settle()
 	var first_reason: Label = treasons.get_child(1) if treasons != null and treasons.get_child_count() > 2 else null
 	_check(why_tap == "" and treasons.visible and twhy.size.y >= 44 and first_reason != null
 			and first_reason.text.begins_with("Round 5, ") and first_reason.text.ends_with("Opinion of you +5.")
-			and (treasons.get_child(0) as Label).text.contains("he may refuse to re-sign with you"),
+			and (treasons.get_child(0) as Label).text.contains("he may refuse to re-sign with us"),
 			"A tap on Why shows the rule, then his reasons newest first with their size (%s, %s)" % [why_tap,
 					first_reason.text if first_reason != null else "missing"])
 	tsheet.queue_free()
 	var ssheet: Control = load("res://scripts/ui/PlayerSheet.gd").open(current_scene, stranger)
 	await _settle()
 	var swords: Label = ssheet.find_child("TrustWords", true, false)
-	_check(swords != null and swords.text == "Opinion of you 50/100.",
-			"A player you've had nothing to do with is at 50/100 (%s)" % (swords.text if swords != null else "missing"))
+	_check(swords != null and swords.text == "Opinion of you 50 out of 100.",
+			"A player you've had nothing to do with is at 50 out of 100 (%s)" % (swords.text if swords != null else "missing"))
 	ssheet.queue_free()
 	_state.relations = saved_rel
 	await _settle()

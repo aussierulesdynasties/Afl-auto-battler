@@ -8,7 +8,7 @@ extends RefCounted
 ## selection.
 
 ## What his opinion of you does, under the Why button (REFUSE_BELOW, REFUSE_PER_POINT).
-const OPINION_RULE := "The higher his opinion of you, the more a talk lifts his mood. Under %d, he may refuse to re-sign with you: %d%% for every point under."
+const OPINION_RULE := "The higher his opinion of you, the more a talk lifts his mood. Under %d, he may refuse to re-sign with us: %d%% for every point under."
 
 const ATTR_ROWS := [
 	["disposal", "Disposal"], ["contested", "Contested"], ["marking", "Marking"],

@@ -14,7 +14,9 @@
 			"The board wants answers"
 		],
 		"text": [
-			"Another loss, and the president's on the phone. He wants to know what happens next."
+			"Another loss, and the president's on the phone. He wants to know what happens next.",
+			"That's {losing_run} losses in a row. The president wants to sit down with you this week and hear the plan.",
+			"The board meets on Thursday after {losing_run} losses in a row. The president wants to hear from you before it does."
 		],
 		"default": 1,
 		"choices": [
