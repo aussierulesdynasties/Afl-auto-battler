@@ -12,6 +12,7 @@ extends RefCounted
 ##   POOL  the players the start draws on (the redraft pool differs from the
 ##         real lists: it holds no untried listed players)
 ##   DP    one line per AI draft pick: the pick against the best still available
+##   ROLE  per club per snapshot: players, mean OVR and best-23 count by role
 ##   DC    each draft pick followed one and three seasons on
 ## Args after the impl name: mode seed club seasons (default redraft 1 MEL 10).
 ## godot --headless --path . --script tools/audit/run_audit.gd -- draft_strategy_impl real 11 MEL 10
@@ -71,11 +72,34 @@ func _measures(list: Array, code: String, tag: String, year: int) -> void:
 			list.size(), best, depth, u23.size(), mid, old, _mean(pots), _mean(ovs), sq.strength(), depth32])
 
 
+## ROLE line: per club per snapshot, for each role: players on the list, their
+## mean OVR, and how many are in the club's best 23 (by OVR).
+func _roles(list: Array, code: String, tag: String, year: int) -> void:
+	var sorted_list: Array = list.duplicate()
+	sorted_list.sort_custom(func(a, b): return float(a["overall"]) > float(b["overall"]))
+	var n := {}
+	var ov := {}
+	var top := {}
+	for i in sorted_list.size():
+		var r := str(sorted_list[i].get("role", "?"))
+		n[r] = int(n.get(r, 0)) + 1
+		ov[r] = float(ov.get(r, 0.0)) + float(sorted_list[i]["overall"])
+		if i < 23:
+			top[r] = int(top.get(r, 0)) + 1
+	var parts: Array = []
+	var keys: Array = n.keys()
+	keys.sort()
+	for r in keys:
+		parts.append("%s=%d/%.1f/%d" % [r, int(n[r]), float(ov[r]) / int(n[r]), int(top.get(r, 0))])
+	print("ROLE|%s|%d|%s|%d|%s|%s" % [mode, seed_n, tag, year, code, ",".join(parts)])
+
+
 func _snapshot(tag: String, year: int, lists: Dictionary) -> void:
 	var by_age := {}
 	for code in GameDB.active_clubs(GameState.season_year):
 		if lists.has(code):
 			_measures(lists[code], str(code), tag, year)
+			_roles(lists[code], str(code), tag, year)
 			for p in lists[code]:
 				var a := clampi(int(float(p.get("age", 25.0))), 17, 26)
 				if not by_age.has(a):

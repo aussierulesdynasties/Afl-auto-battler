@@ -13,7 +13,7 @@ import re
 import sys
 from collections import defaultdict
 
-LINE = re.compile(r"(?:^|\s)(LIST|POOL|DP|DC|AGE|DA)\|(.*)$")
+LINE = re.compile(r"(?:^|\s)(LIST|POOL|DP|DC|AGE|DA|ROLE)\|(.*)$")
 M = ["best", "depth", "u23", "mid", "old", "potu", "ovru", "sq", "d32"]
 
 
@@ -68,6 +68,46 @@ def rank_corr(x, y):
     num = sum((i - ma) * (j - mb) for i, j in zip(a, b))
     den = math.sqrt(sum((i - ma) ** 2 for i in a) * sum((j - mb) ** 2 for j in b))
     return num / den if den else float("nan")
+
+
+def role_tables(rec, users):
+    """E. Roles: list make-up by role, AI clubs only, against the real 2026 lists."""
+    snaps = defaultdict(lambda: defaultdict(list))  # (mode, tag, year) -> role -> [(n, ovr, top)] per club-seed
+    for r in rec["ROLE"]:
+        mode, seed, tag, year, code = r[0], int(r[1]), r[2], int(r[3]), r[4]
+        if tag != "pre" and users.get((mode, seed)) == code:
+            continue
+        have = {}
+        for part in r[5].split(","):
+            role, vals = part.split("=")
+            n, ovr, top = vals.split("/")
+            have[role] = (int(n), float(ovr), int(top))
+        snaps[(mode, tag, year)]
+        for role in ROLES:
+            n, ovr, top = have.get(role, (0, float("nan"), 0))
+            snaps[(mode, tag, year)][role].append((n, ovr, top))
+    if not snaps:
+        return
+    cols = [("real", "pre", 2026, "Real 2026 (pre-draft)")]
+    for mode in ("real", "redraft"):
+        ends = sorted(k for k in snaps if k[0] == mode and k[1] == "end")
+        if ends:
+            cols.append((mode, "end", ends[-1][2], "%s end S%d" % (mode, len(ends))))
+    cols = [c for c in cols if c[:3] in snaps]
+    print("### E. Roles: per list, AI clubs (players on the list / mean OVR of them / in the best 23)")
+    print("| Role | " + " | ".join(c[3] for c in cols) + " |")
+    print("|---|" + "---|" * len(cols))
+    for role in ROLES:
+        cells = []
+        for c in cols:
+            xs = snaps[c[:3]][role]
+            ovs = [x[1] for x in xs if x[0] > 0]
+            cells.append("%.1f / %.1f / %.1f" % (mean(x[0] for x in xs), mean(ovs), mean(x[2] for x in xs)))
+        print("| %s | %s |" % (role, " | ".join(cells)))
+    print()
+
+
+ROLES = ["KEY_FWD", "KEY_DEF", "RUCK", "MID", "WING", "SMALL_FWD", "SMALL_DEF", "GEN"]
 
 
 def main():
@@ -300,6 +340,7 @@ def main():
             lo, hi if hi < 999 else "end", len(xs), 100 * len(on) / len(xs), mean(d["ovr0"] for d in on),
             mean(d["ovr"] for d in on), mean(d["pot0"] for d in on), mean(d["ovr"] - d["ovr0"] for d in on)))
     print()
+    role_tables(rec, users)
     if bench:
         print("Real 2026 lists by age (players, OVR, POT): " + "; ".join("%d: %d, %.1f, %.1f" % ((a,) + bench[a]) for a in sorted(bench)))
 
