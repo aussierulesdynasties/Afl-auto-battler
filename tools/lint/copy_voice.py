@@ -31,10 +31,8 @@ ALLOW = {
     "scripts/sim/SkipOrders.gd": [2, "auto-pick", "kept: names the Auto-pick button (director, 2026-11-12)"],
 
     "scripts/state/GameState.gd": [1, "projection", "row 138"],
-    "scripts/ui/DraftScene.gd": [1, "projection", "row 136: draft"],
     "scripts/ui/FirstVisitIntro.gd": [1, "auto-pick", "kept: names the Auto-pick button (director, 2026-11-12)"],
     "scripts/ui/OffseasonScene.gd": [1, "payroll", "row 137: contracts and trades"],
-    "scripts/ui/PreSeasonScene.gd": [10, "starter", "row 136: pre-season"],
     "scripts/ui/SelectionScene.gd": [5, "auto-pick", "kept: the Auto-pick button and the lines that name it (director, 2026-11-12)"],
     "scripts/ui/StatGuide.gd": [1, "projection", "row 139: stats and menus"],
 }
@@ -141,10 +139,49 @@ TRAINING_OLD = [
     "further past its line", "his own game %d", "\"up to the standard", "\"within %d by week",
 ]
 
+## The draft and pre-season pass (copy voice pass 7, with the draft, League draft, Combine and
+## pre-season intros): per file, the rewritten lines and the lines they replaced. A trialled
+## prospect takes the place of "our weakest player in his line", never a "starter".
+DRAFT_PASS = {
+    "scripts/ui/DraftScene.gd": [[
+        "Testing is one part of our scouts' read. Junior football still counts.",
+        "Our scouts' read. Each rating can be out as far as his OVR range.", "\"On our list\"", "\"Our list\"",
+        "Every pick shows here, from all %d rival clubs too. The newest come first.", "\"Our pick\"",
+        "Our list starts here.", "Take a player from the pool. Tap a position to find the cover we lack.",
+        "Our side so far, against the league", "Our club is highlighted.", "Waiting for our next pick.",
+        "We're short of %s.\\nOthers will fill in.", "Our list is ready.\\nTime for Round 1.",
+        "We have passed: no more picks", "Our list is full: %s %s will pass", "We take no more players in this draft.",
+        "Each card shows the club's first pick in the %d National Draft.",
+    ], ["part of the projection", "Your scouts' read", "\"On your list\"", "UiKit.heading(\"Your list\"",
+        "Every selection appears here", "\"Your pick\"", "Your list starts here", "the cover you need",
+        "\"Your side so far", "Highlighted club = you", "Waiting for your", "Others will have to fill in",
+        "Time for round one", "You have passed", "\"Your list is full", "You take no more players",
+        "Your first pick in the", "fits your cap", "The assistant takes", "list you kept"]],
+    "scripts/ui/PreSeasonScene.gd": [[
+        "\"Our side and plan\"", "Our side as named in Selection, or our best available. Injured players sit out.",
+        "Our recruiters' read of his rating gets %d%% tighter. He cannot be hurt.",
+        "He takes the place of our weakest player in his line. He rates no lower than that player.",
+        "Each takes the place of our weakest player in his line.", "Our side is weaker on the day.",
+        "Our listed players carry %d%% of a normal match's injury risk. A trialled prospect cannot be hurt.",
+        "The %s: %d of our list, %d%% of our drilling.",
+    ], ["weakest starter", "below the starter","your side is weaker", "\"Your side and plan\"", "The side you have named",
+        "your recruiters' read", "Your listed players", "of the side's drilling", "the plan plays part of the way up"]],
+    "scripts/ui/FirstVisitIntro.gd": [[
+        "Here we pick the kids who will carry our club in five years.", "When our pick comes up, choose a player from the pool.",
+        "Each player we take costs his salary. Our list must fit under the cap. It must have at least two rucks.",
+        "The position counts show where we're short.", "Four tests on the day. Every club sees the same results.",
+        "They tell us about the athlete: speed, running, spring, kicking. They don't tell us he can play.",
+        "His junior numbers are on his sheet, with our scouts' guess at OVR and POT. Tap a name to weigh him up.",
+        "The weeks before Round 1. Get our squad fit and try our ideas out.",
+    ], ["carry your club", "When your pick comes up", "Each player you take", "where you're short",
+        "They tell you about", "your scouts' guess", "try your ideas out"]],
+}
+
 ## Every pinned pass: (file, the pass, its rewritten lines, the lines they replaced).
 PASSES = [(HUB, "copy voice pass 2, hub", HUB_NEW, HUB_OLD)] + [
     (path, "copy voice pass 5, team and coaching", v[0], v[1]) for path, v in TEAM_PASS.items()] + [
-    (TRAINING, "copy voice pass 6, training", TRAINING_NEW, TRAINING_OLD)]
+    (TRAINING, "copy voice pass 6, training", TRAINING_NEW, TRAINING_OLD)] + [
+    (path, "copy voice pass 7, draft and pre-season", v[0], v[1]) for path, v in DRAFT_PASS.items()]
 
 LITERAL = re.compile(r'"([^"\n]*)"')
 
