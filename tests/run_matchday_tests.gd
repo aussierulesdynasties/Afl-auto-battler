@@ -329,7 +329,7 @@ func _test_phone_match(sz: Vector2i) -> void:
 			"The break says what your calls did, your tag among them (%s)" % tag)
 	var dn: Node = box.find_child("CallsDidNote", true, false)
 	_check(dn != null and _plain(dn) == load("res://scripts/ui/match/MatchNotes.gd").CALLS_DID_NOTE,
-			"What your calls did says what its numbers are (%s)" % tag)
+			"What our calls did says what its numbers are (%s)" % tag)
 	var qh: Label = box.find_child("QuarterHeading", true, false)
 	_check(qh != null and qh.text == "First quarter" and not bt.contains("What's happening"),
 			"Quarter time leads with the quarter just played, by name (%s)" % tag)
@@ -750,7 +750,7 @@ func _test_coach_descriptions(sz: Vector2i) -> void:
 		var gives := func(t: String) -> bool:
 			var gv: String = load("res://scripts/sim/GateOdds.gd").tag_gives()
 			return t.contains("Gives up " + gv.left(1).to_upper() + gv.substr(1) + " (") and t.contains("their man: Usually ") and t.contains(" touches. Tagged, about ") and not t.get_slice("Gives up", 1).contains("disposals") 					and (t.contains("season rating ") or t.contains("yet to play this season"))
-		_check(dflt != null and gives.call(words.call(dflt)) and words.call(dflt).contains("Your assistant's pick")
+		_check(dflt != null and gives.call(words.call(dflt)) and words.call(dflt).contains("Assistant's pick")
 				and mine_btn != null and gives.call(words.call(mine_btn)),
 				"Your assistant's tagger shows what he gives up, like the others, marked as the pick (%s: %s)" % [tag, words.call(dflt).replace("\n", " / ") if dflt else "-"])
 		# Name bold on top, two labelled facts, their man's touches on a line of
@@ -820,7 +820,7 @@ func _test_coach_descriptions(sz: Vector2i) -> void:
 	m.call("_show_setup", calls)
 	await _settle()
 	var line: Control = m.find_child("SetupLine", true, false)
-	var full := "Your plan: High Press  ·  tagging %s  ·  %s loose behind the ball" % [
+	var full := "Our plan: High Press  ·  tagging %s  ·  %s loose behind the ball" % [
 			db.player_display_name_by_id(str(calls["tag_id"]), ""), db.player_display_name_by_id(str(calls["interceptor_id"]), "")]
 	_check(line != null and line.visible and _plain(line) == full, "The plan line names every call (%s)" % tag)
 	_check(line.autowrap_mode != TextServer.AUTOWRAP_OFF and (line is RichTextLabel or line.text_overrun_behavior == TextServer.OVERRUN_NO_TRIMMING),
@@ -1429,7 +1429,7 @@ func _test_every_break_fits(club: String, vs: String, sz: Vector2i) -> void:
 			var did_sheet: Node = m.find_child("CallSheet_did", true, false)
 			var did_list: Node = did_sheet.find_child("CallsDid", true, false) if did_sheet != null else null
 			_check(w_did == "" and did_list != null and (did_list as Control).is_visible_in_tree() and did_list.get_child_count() > 0,
-					"What your calls did opens in a sheet on a real tap (%s%s)" % [tag, (", " + w_did) if w_did != "" else ""])
+					"What our calls did opens in a sheet on a real tap (%s%s)" % [tag, (", " + w_did) if w_did != "" else ""])
 			m.call("handle_back")
 			await _settle()
 		m.queue_free()
@@ -4448,9 +4448,9 @@ func _test_pre_match_one_screen(sz: Vector2i) -> void:
 			"Every call is a thumb-sized row that says its pick, none marked changed (%s: missing %s, wrong %s)" % [tag, str(lost), str(blank)])
 	var head: Label = box.find_child("CallsHeading", true, false)
 	var words := _text(box)
-	_check(head != null and head.text == "Your calls" and head.is_visible_in_tree()
+	_check(head != null and head.text == "Our calls" and head.is_visible_in_tree()
 			and not words.contains("this break") and not words.contains("Next quarter"),
-			"The rows stand under Your calls, with no word of a break (%s: %s)" % [tag, head.text if head != null else "-"])
+			"The rows stand under Our calls, with no word of a break (%s: %s)" % [tag, head.text if head != null else "-"])
 	_check(box.find_child("QuarterHeading", true, false) == null and box.find_child("BestSoFarOpen", true, false) == null
 			and box.find_child("CallsDidOpen", true, false) == null and box.find_child("BreakStats", true, false) == null,
 			"Nobody has played: no quarter, no Best so far, no Match stats (%s)" % tag)

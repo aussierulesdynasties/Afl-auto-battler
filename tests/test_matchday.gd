@@ -69,6 +69,21 @@ func _lines(res: Dictionary) -> Array:
 
 func _test_feed(res: Dictionary) -> void:
 	var lines := _lines(res)
+	# Copy voice pass 3 (row 132): the sim's own break and free-kick lines use one mark, " · ", and
+	# the feed's break parse (MatchNotes._break_words) still reads the sim's line as a break.
+	var breaks := 0
+	for ev in res["events"]:
+		var raw := str(ev.get("text", ""))
+		if str(ev.get("kind", "")) == "quarter" and raw.begins_with("End of Q"):
+			breaks += 1
+			var l := MatchNotes.feed_line(ev, str(res["home"]), str(res["away"]))
+			_check(raw.begins_with("End of Q%d · " % int(ev.get("q", 0))) and not raw.contains("|") and not raw.contains(" - ")
+					and not str(l.get("text", "")).begins_with("End of"),
+					"A sim break line reads End of Q, one mark, and the feed turns it into the break's name (%s -> %s)" % [raw, str(l.get("text", ""))])
+		if raw.contains("free kick to"):
+			_check(raw.contains(" · free kick to ") and not raw.contains(" - free") and not raw.contains("— free"),
+					"A free kick line uses the one mark (%s)" % raw)
+	_check(breaks >= 3, "The sim emits its quarter breaks as End of Q lines (%d)" % breaks)
 	var goals := int(res["goals"][0]) + int(res["goals"][1])
 	var behinds := int(res["behinds"][0]) + int(res["behinds"][1])
 	_check(lines.size() <= goals + behinds + 12,
@@ -157,10 +172,10 @@ func _test_lead_and_breaks() -> void:
 			"A break states the score and the lead (%s)" % b)
 	_check(not b.to_lower().contains("def"), "A break never says defeated")
 	_check(MatchNotes.break_score("COL", "CAR", [2, 2], [1, 1]).ends_with("scores level."), "A level break")
-	var qt := MatchNotes.feed_line({"kind": "quarter", "q": 2, "text": "End of quarter 2 - ...",
+	var qt := MatchNotes.feed_line({"kind": "quarter", "q": 2, "text": "End of Q2 · ...",
 			"score": [30, 30]}, "COL", "CAR")
 	_check(str(qt["text"]) == "Half time: scores level", "A level half time (%s)" % str(qt["text"]))
-	var et := MatchNotes.feed_line({"kind": "quarter", "q": 5, "text": "Scores level at full time - we are going to extra time!",
+	var et := MatchNotes.feed_line({"kind": "quarter", "q": 5, "text": "Scores level at full time · we are going to extra time!",
 			"score": [60, 60]}, "COL", "CAR")
 	_check(str(et["text"]) == "Scores level at full time: extra time", "Extra time is called plainly")
 
