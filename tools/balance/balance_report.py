@@ -1144,7 +1144,7 @@ def tag_section(A, B):
     print("\n## Tags (row 120)\n")
     if keeps:
         n = len(keeps)
-        print(f"What a tagged man keeps on fresh legs, over {n} starting midfield slots: lowest {100 * keeps[0]:.0f}%, "
+        print(f"The tag multiplier on his chance to carry, on fresh legs, over {n} starting midfield slots: lowest {100 * keeps[0]:.0f}%, "
               f"median {100 * keeps[n // 2]:.0f}%, highest {100 * keeps[-1]:.0f}%; at a Tagger's 42%: {100 * sum(x <= 0.42 for x in keeps) / n:.1f}%, "
               f"at 55% or more: {100 * sum(x >= 0.55 for x in keeps) / n:.1f}%. "
               f"Sides with a Tagger: {100 * sum(r['tag']['has_tagger'] for r in A.values() if 'tag' in r) / max(1, sum('tag' in r for r in A.values())):.1f}%.\n")
@@ -1173,7 +1173,7 @@ def tag_section(A, B):
     source = B if B else A
     keep = [source[i]["tag"].get("keep", 1.0) for i in common]
     if keep:
-        print(f"\nMatches compared {len(common)}; the man keeps {100 * st.mean(keep):.1f}% of his ball on the tag's first "
+        print(f"\nMatches compared {len(common)}; the tag multiplies his chance to carry by {100 * st.mean(keep):.1f}% on the tagger's first "
               f"legs (lowest {100 * min(keep):.1f}%, highest {100 * max(keep):.1f}%); "
               f"tagger is a Tagger in {100 * sum(source[i]['tag']['specialist'] for i in common) / len(common):.1f}%.")
         wins = [source[i]["tag"]["margin"] > 0 for i in common]

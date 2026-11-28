@@ -115,12 +115,29 @@ func _run() -> void:
 				tagged = b
 				break
 	if tagged != null:
+		# From quarter time each call is a row that opens its sheet: open the Tag one.
+		var tag_row: Button = scene.find_child("CallRow_tag", true, false)
+		if tag_row != null:
+			tag_row.emit_signal("pressed")
+			await _frames(8)
 		tagged.emit_signal("pressed")
 		await _frames(8)
+		# The Who tags cards are a sheet of their own behind Change.
+		var change: Button = scene.find_child("WhoTagsChange", true, false)
+		if change != null:
+			change.emit_signal("pressed")
+			await _frames(8)
 		await _shoot(scene.find_child("TaggerPicker", true, false), out + "_tagger.png")
 		await _frames(8)
 		scene.find_child("TagPickerGrid_", true, false).emit_signal("pressed")
 		await _frames(6)
+		if tag_row != null:
+			# Android Back closes the sheet; the break stays.
+			var back := InputEventAction.new()
+			back.action = "ui_cancel"
+			back.pressed = true
+			Input.parse_input_event(back)
+			await _frames(8)
 	# The Defensive set-up call: question, shapes, his intercepts so far.
 	await _shoot(scene.find_child("DefenceBlock", true, false), out + "_defence.png")
 	await _frames(8)

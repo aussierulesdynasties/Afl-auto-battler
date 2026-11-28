@@ -2532,11 +2532,13 @@ func _test_hot_player_moment() -> void:
 	# The call says what each answer does and costs, sized from what the sim plays
 	# (row 120): what he keeps with this man on him, and what this man gives up.
 	var legs := float(sim.energy.get(str(tagger["id"]), 100.0))
-	var want := GateOdds.pct(Roles.tag_keep(tagger, legs))
+	var want := roundi(Roles.tag_touches(tagger, legs))
+	var usual := roundi(Roles.TAG_USUAL_TOUCHES)
 	var tag_o: Dictionary = m["options"][0]
 	var leave_o: Dictionary = m["options"][1]
-	_check(str(tag_o["gain"]).begins_with("Gain: ") and str(tag_o["gain"]).contains(want + " of his ball"),
-			"The tag call sizes what he keeps with this man on him (%s: %s)" % [want, tag_o["gain"]])
+	_check(str(tag_o["gain"]).begins_with("Gain: ") and str(tag_o["gain"]).contains("usually gets %d touches" % usual)
+			and str(tag_o["gain"]).contains("on him, about %d," % want) and str(leave_o["cost"]).contains("his usual %d touches" % usual),
+			"The tag call says his touches, usual and with this man on him (%d: %s)" % [want, tag_o["gain"]])
 	_check(str(tag_o["cost"]).begins_with("Cost: ") and str(tag_o["cost"]).contains(GateOdds.tag_gives()),
 			"The tag call sizes what the man who goes gives up (%s)" % tag_o["cost"])
 	_check(str(leave_o["gain"]).begins_with("Gain: ") and str(leave_o["cost"]).begins_with("Cost: "),
@@ -2726,7 +2728,21 @@ func _test_tag_hold() -> void:
 	_check(lowest_tired < 0.8, "Every tagger takes ball off his man, even the lowest presser out of legs (%.3f kept)" % lowest_tired)
 	_check(hard_tired > hard, "The same man holds less once he tires (%.3f fresh, %.3f tired)" % [hard, hard_tired])
 	_check(plain - spec > hard - spec, "Pressure scales the hold")
-	_check(GateOdds.tag_kept(m, 80.0) == Roles.tag_keep(m, 80.0), "The card shows what the sim plays")
+	_check(GateOdds.tag_kept(m, 80.0) == roundi(Roles.touches_at(Roles.tag_keep(m, 80.0))), "The card shows what the sim plays, as his touches")
+	# The table is the audit's: one row per measured multiplier, kept rising with it,
+	# and the card reads between the rows.
+	var tk: Array = Roles.TAG_TOUCHES
+	var rising := true
+	for i in range(1, tk.size()):
+		rising = rising and float(tk[i][0]) > float(tk[i - 1][0]) and float(tk[i][1]) > float(tk[i - 1][1])
+	_check(rising and float(tk[0][0]) <= Roles.TAG_WITH_TAGGER and float(tk[tk.size() - 1][0]) >= Roles.TAG_LOOSEST + Roles.TAG_TIRED,
+			"The tagged-touches table rises and covers every hold a tagger can play")
+	_check(is_equal_approx(float(tk[tk.size() - 1][1]), Roles.TAG_USUAL_TOUCHES) and float(tk[tk.size() - 1][0]) == 1.0,
+			"No tag, no touches lost: the table ends on his usual count")
+	var mid_m := 0.5 * (float(tk[1][0]) + float(tk[2][0]))
+	var mid_k := Roles.touches_at(mid_m)
+	_check(mid_k > float(tk[1][1]) and mid_k < float(tk[2][1]) and is_equal_approx(Roles.touches_at(float(tk[1][0])), float(tk[1][1])),
+			"Between two measured holds the card reads between their touches (%.2f)" % mid_k)
 	# The break screen's order is the rule's own measure: tightest hold on his
 	# legs now, then the least given up; the assistant sends the first.
 	var order := MatchSim.tag_order(sq.ground, sim.energy)
@@ -2741,11 +2757,11 @@ func _test_tag_hold() -> void:
 			"Your assistant sends the first man on that list")
 	var card := MatchNotes.tagger_card_detail(order[0], 60.0, false)
 	_check(card.contains("Pressure") and card.contains("Gives up " + GateOdds.tag_gives() + " (yet to play this season)") and card.contains(GateOdds.pct(MatchSim.TAGGER_COST)) and card.contains("Tiring")
-			and card.contains("Tagger") == Roles.is_tagger(order[0]) and not card.contains("disposals"),
+			and card.contains("Tagger") == Roles.is_tagger(order[0]) and card.contains("Their man: " + GateOdds.tag_touches(order[0], 60.0)) and GateOdds.tag_touches(order[0], 60.0) == "Usually %d touches. Tagged, about %d." % [GateOdds.usual_touches(), GateOdds.tag_kept(order[0], 60.0)],
 			"A card shows his Pressure, his legs in words, Tagger only with the trait, and before a season says he is yet to play (%s)" % card.replace("
 ", " / "))
 	var played := MatchNotes.tagger_card_detail(order[0], 60.0, false, 71.38)
-	_check(played.contains("Gives up " + GateOdds.tag_gives() + " (season rating 71.4)") and played.contains("Their man keeps " + GateOdds.pct(GateOdds.tag_kept(order[0], 60.0))) and not played.contains("disposals"),
+	_check(played.contains("Gives up " + GateOdds.tag_gives() + " (season rating 71.4)") and played.contains("Their man: " + GateOdds.tag_touches(order[0], 60.0)),
 			"Once he has a season, the card says what tagging costs: his season rating, the figure the Ratings screen shows (%s)" % played.replace("
 ", " / "))
 	var parts := MatchNotes.tagger_card(order[0], 40.0, 71.38)
