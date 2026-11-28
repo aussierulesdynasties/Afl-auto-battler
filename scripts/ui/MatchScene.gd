@@ -258,7 +258,7 @@ func _build() -> void:
 	UiKit.apply_insets(_margin, 10)
 	add_child(_margin)
 
-	_root = UiKit.vbox(8)
+	_root = UiKit.vbox(UiKit.GAP)
 	_margin.add_child(_root)
 
 	_mount_body(UiKit.view_width(self) < 640.0)
@@ -391,10 +391,10 @@ func _mount_body(stack: bool) -> void:
 	_pc = not stack and _wide_break()
 	_right = null
 	if stack:
-		_body = UiKit.vbox(8)
+		_body = UiKit.vbox(UiKit.GAP)
 	else:
 		_body = HBoxContainer.new()
-		_body.add_theme_constant_override("separation", 10)
+		_body.add_theme_constant_override("separation", UiKit.Space.ROOM)
 	_body.size_flags_vertical = Control.SIZE_EXPAND_FILL
 
 	if _pitch == null:
@@ -412,8 +412,8 @@ func _mount_body(stack: bool) -> void:
 	_body.add_child(_pitch)
 
 	if _side_panel == null:
-		_side_panel = UiKit.panel(UiKit.PANEL, 10)
-		var sv := UiKit.vbox(6)
+		_side_panel = UiKit.panel(UiKit.PANEL, UiKit.Space.ROOM)
+		var sv := UiKit.vbox(UiKit.Space.CLOSE)
 		_side_panel.add_child(sv)
 		# Your match: the calls you have on, so the setup is never a guess.
 		# Every call in full: a long name or several calls wrap, never trim.
@@ -427,7 +427,7 @@ func _mount_body(stack: bool) -> void:
 		_feed_waiting.name = "FeedWaiting"
 		_feed_waiting.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		sv.add_child(_feed_waiting)
-		_feed = UiKit.vbox(4)
+		_feed = UiKit.vbox(UiKit.Space.TIGHT)
 		_feed.name = "Feed"
 		_feed.child_entered_tree.connect(func(_n: Node) -> void:
 			if is_instance_valid(_feed_waiting):
@@ -442,14 +442,14 @@ func _mount_body(stack: bool) -> void:
 		# a tag left the feed one clipped line on a phone).
 		_feed_scroll.custom_minimum_size.y = ceil(UiKit.px(UiKit.SMALL) * 2.7)
 		sv.add_child(_feed_scroll)
-		_live_stats = UiKit.vbox(2)
+		_live_stats = UiKit.vbox(UiKit.Space.SLIM)
 		_live_stats.name = "LiveStats"
 		sv.add_child(_live_stats)
 		sv.add_child(_controls())
 	_fit_side_panel()
 	if _pc:
 		# The column beside the oval: the scoreboard (_place_board), then the panel.
-		_right = UiKit.vbox(8)
+		_right = UiKit.vbox(UiKit.GAP)
 		_right.name = "MatchColumn"
 		_right.custom_minimum_size = Vector2(PC_COLUMN_MIN_W, 0)
 		_right.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -501,9 +501,9 @@ func _fit_side_panel() -> void:
 func _scoreboard() -> Control:
 	var narrow := _board_narrow()
 	# Both clubs' colours behind the score (director, 2026-10-08: not boring).
-	var v := UiKit.vbox(4)
+	var v := UiKit.vbox(UiKit.Space.TIGHT)
 	var p := ClubDuel.band(str(_res["home"]), str(_res["away"]), v, SCORE_BAND_PAD, 0.35)
-	var h := UiKit.hbox(6)
+	var h := UiKit.hbox(UiKit.Space.CLOSE)
 	h.alignment = BoxContainer.ALIGNMENT_CENTER
 	v.add_child(h)
 	h.add_child(_score_column(str(_res["home"]), true, narrow))
@@ -555,12 +555,12 @@ func _momentum_bar() -> Control:
 	b.custom_minimum_size = Vector2(0, 44)
 	b.pressed.connect(_show_momentum_info)
 	_mom_bar = b
-	var v := UiKit.vbox(2)
+	var v := UiKit.vbox(UiKit.Space.SLIM)
 	v.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	v.alignment = BoxContainer.ALIGNMENT_CENTER
 	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	b.add_child(v)
-	var h := UiKit.hbox(6)
+	var h := UiKit.hbox(UiKit.Space.CLOSE)
 	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var label := UiKit.line("Momentum", UiKit.SMALL, UiKit.MUTED)
 	ClubDuel.on_colour(label)
@@ -575,7 +575,7 @@ func _momentum_bar() -> Control:
 	_mom_meter = MomentumMeter.new()
 	_mom_meter.call("setup", UiKit.score_colour(str(_res["home"])), UiKit.score_colour(str(_res["away"])))
 	v.add_child(_mom_meter)
-	var box := UiKit.vbox(2)
+	var box := UiKit.vbox(UiKit.Space.SLIM)
 	box.add_child(b)
 	_mom_note = UiKit.lbl("", UiKit.SMALL, UiKit.MUTED)
 	_mom_note.name = "MomentumNote"
@@ -830,7 +830,7 @@ func _paint_live_stats() -> void:
 		_live_i50 = [int(round(float((team[0] as Dictionary).get("inside50", 0.0)))),
 				int(round(float((team[1] as Dictionary).get("inside50", 0.0))))]
 	var inks := UiKit.club_ink_pair(str(_res["home"]), str(_res["away"]))
-	var head := UiKit.hbox(4)
+	var head := UiKit.hbox(UiKit.Space.TIGHT)
 	head.name = "LiveStatsHead"
 	for side in [0, 1]:
 		var club := UiKit.ellipsis(GameDB.club_short(str(_res["home"] if side == 0 else _res["away"])),
@@ -858,7 +858,7 @@ func _paint_live_stats() -> void:
 ## One number for each side, home on the left as on the scoreboard, the larger
 ## in bold (more is not always better, so no good or bad colour).
 func _live_row(key: String, label: String, home: int, away: int) -> Control:
-	var h := UiKit.hbox(4)
+	var h := UiKit.hbox(UiKit.Space.TIGHT)
 	h.name = "LiveRow_" + key
 	var a := UiKit.figure(str(home), UiKit.NAME, UiKit.TEXT if home >= away else UiKit.MUTED)
 	a.name = "Home"
@@ -887,7 +887,7 @@ func _track_momentum(ev: Dictionary) -> void:
 
 
 func _score_column(code: String, home: bool, narrow: bool) -> Control:
-	var v := UiKit.vbox(1)
+	var v := UiKit.vbox(UiKit.Space.HAIR)
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var name_text := GameDB.club_short(code) if narrow else GameDB.club_name(code)
 	var name := UiKit.ellipsis(name_text, UiKit.SECONDARY if narrow else UiKit.NAME, UiKit.TEXT, true)
@@ -941,11 +941,11 @@ func _venue() -> String:
 
 
 func _controls() -> Control:
-	var v := UiKit.vbox(6)
+	var v := UiKit.vbox(UiKit.Space.CLOSE)
 	v.name = "MatchControls"
 	_controls_box = v
 
-	var row := UiKit.hbox(5)
+	var row := UiKit.hbox(UiKit.Space.SNUG)
 	v.add_child(row)
 	_play_btn = UiKit.btn("Pause", UiKit.SECONDARY)
 	_play_btn.custom_minimum_size = Vector2(0, 44)
@@ -963,7 +963,7 @@ func _controls() -> Control:
 		_speed_btns.append(b)
 		row.add_child(b)
 
-	var row2 := UiKit.hbox(5)
+	var row2 := UiKit.hbox(UiKit.Space.SNUG)
 	v.add_child(row2)
 	var skip := UiKit.btn("Skip to full time", UiKit.SECONDARY)
 	skip.custom_minimum_size = Vector2(0, 44)
@@ -1084,7 +1084,7 @@ func _on_skip_to_break() -> void:
 
 func _close_moment() -> void:
 	if _moment_overlay != null and is_instance_valid(_moment_overlay):
-		if _moment_overlay.has_meta("scene") and not _skipping:
+		if _moment_overlay.has_meta("scene") and not _skipping and UiKit.motion_on():
 			# Cut back to the match: the scene fades out over play resuming.
 			var leaving := _moment_overlay
 			leaving.name = "MomentLeaving"
@@ -1095,6 +1095,8 @@ func _close_moment() -> void:
 			tw.tween_property(leaving, "modulate:a", 0.0, 0.3)
 			tw.tween_callback(leaving.queue_free)
 		else:
+			# Without the fade it goes at once, and is no longer the call on screen.
+			_moment_overlay.name = "MomentLeaving"
 			_moment_overlay.queue_free()
 	_moment_overlay = null
 
@@ -1244,8 +1246,8 @@ func _show_coach_box() -> void:
 		if shell != null:
 			var edge := (shell as PanelContainer).get_theme_stylebox("panel").duplicate() as StyleBoxFlat
 			if edge != null:
-				edge.content_margin_top = 8.0
-				edge.content_margin_bottom = 8.0
+				edge.content_margin_top = UiKit.GAP
+				edge.content_margin_bottom = UiKit.GAP
 				(shell as PanelContainer).add_theme_stylebox_override("panel", edge)
 	_dock(overlay)
 	if q == 1:
@@ -1256,10 +1258,10 @@ func _show_coach_box() -> void:
 	# On a PC the title and the score share one line: the band is wide. Before
 	# the bounce the title shares its line with the fixture, and the forecast
 	# takes the line under them: three across cut the fixture short at 960x540.
-	var bv: BoxContainer = UiKit.hbox(16) if wide and q != 1 else UiKit.vbox(2)
+	var bv: BoxContainer = UiKit.hbox(UiKit.Space.COLUMN) if wide and q != 1 else UiKit.vbox(UiKit.Space.SLIM)
 	var head_row: BoxContainer = bv
 	if wide and q == 1:
-		head_row = UiKit.hbox(16)
+		head_row = UiKit.hbox(UiKit.Space.COLUMN)
 		bv.add_child(head_row)
 	var band := ClubDuel.band(str(_res["home"]), str(_res["away"]), bv, 6 if wide else 14)
 	band.name = "BreakBand"
@@ -1272,7 +1274,7 @@ func _show_coach_box() -> void:
 	# How many from the game so far each player call shows before "Other
 	# player...": two on a wide screen, so every call fits without scrolling.
 	var quick := 2 if wide else 0
-	var store := UiKit.vbox(6)
+	var store := UiKit.vbox(UiKit.Space.CLOSE)
 	store.name = "CallStore"
 	store.visible = false
 	var rep: VBoxContainer = store
@@ -1362,7 +1364,7 @@ func _show_coach_box() -> void:
 			dnote.name = "CallsDidNote"
 			dnote.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			rep.add_child(dnote)
-			var dv := UiKit.vbox(4)
+			var dv := UiKit.vbox(UiKit.Space.TIGHT)
 			dv.name = "CallsDid"
 			for t in did:
 				var dl := _say(str(t), UiKit.BODY, UiKit.TEXT)
@@ -1405,7 +1407,7 @@ func _show_coach_box() -> void:
 	plan_known.visible = false
 	# The plan under the buttons, in short separate lines: what it does, what
 	# it gains and costs, what it beats, and who makes it work.
-	var plan_note := UiKit.vbox(3)
+	var plan_note := UiKit.vbox(UiKit.Space.THIN)
 	plan_note.name = "PlanNote"
 	var my_ground: Array = (sim.squads[_my_side] as Squad).ground
 	var sync_note := func(key: String) -> void:
@@ -1437,7 +1439,7 @@ func _show_coach_box() -> void:
 			judged.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			who.add_child(judged)
 			who.add_child(_plan_row("Best for it:", str(fit["names"]), "PlanBest"))
-			plan_note.add_child(UiKit.spacer(2))
+			plan_note.add_child(UiKit.spacer(UiKit.Space.SLIM))
 			plan_note.add_child(who)
 		# How well the side knows it (plan familiarity): a decision, so at full strength.
 		var known := GameState.plan_known_line(key)
@@ -1494,11 +1496,11 @@ func _show_coach_box() -> void:
 	# What the tag does and costs, as labelled Gain / Cost rows like every other
 	# break call (director 2026-11-10, "Gain / Cost everywhere"), the touches
 	# inside the line. A name in either line opens his profile on a tap.
-	var tag_note := UiKit.vbox(2)
+	var tag_note := UiKit.vbox(UiKit.Space.SLIM)
 	tag_note.name = "TagNote"
 	var tag_rows: Array = []
 	for mark in ["Gain:", "Cost:"]:
-		var row := UiKit.hbox(6)
+		var row := UiKit.hbox(UiKit.Space.CLOSE)
 		row.name = "Tag" + mark.trim_suffix(":")
 		var mk := UiKit.lbl(mark, UiKit.NOTE, UiKit.label_ink(), true)
 		mk.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
@@ -1631,7 +1633,7 @@ func _show_coach_box() -> void:
 		note.name = "FocusNote_" + slot
 		note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		# What the call gains and costs (M5, director 2026-11-10), as the plan's rows.
-		var gc_rows := UiKit.vbox(2)
+		var gc_rows := UiKit.vbox(UiKit.Space.SLIM)
 		gc_rows.name = "FocusGainCost_" + slot
 		var sync := func(id: String) -> void:
 			note.text = _focus_note_text(slot, id)
@@ -1681,7 +1683,7 @@ func _show_coach_box() -> void:
 	def_note.name = "DefenceNote"
 	def_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	var df_how: Array = [null]
-	var def_rows := UiKit.vbox(2)
+	var def_rows := UiKit.vbox(UiKit.Space.SLIM)
 	def_rows.name = "DefenceGainCost"
 	var sync_def := func(key: String) -> void:
 		var loose_on := key == "loose" or key == "both"
@@ -1719,7 +1721,7 @@ func _show_coach_box() -> void:
 		tally.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		def_block.add_child(tally)
 	if q > 1 and not opp_spare.is_empty():
-		var how := UiKit.vbox(4)
+		var how := UiKit.vbox(UiKit.Space.TIGHT)
 		how.name = "DfHowItsGoing"
 		def_block.add_child(how)
 		df_how[0] = how
@@ -1737,7 +1739,7 @@ func _show_coach_box() -> void:
 	# screen. Rotations are no longer a call (director, 2026-11-03): they
 	# follow the season plan and the legs (MatchSim.auto_rotation).
 	var tail: VBoxContainer = col_b
-	var pep_note := UiKit.vbox(3)
+	var pep_note := UiKit.vbox(UiKit.Space.THIN)
 	pep_note.name = "PepNote"
 	var sync_pep := func(key: String) -> void:
 		# What the talk does and costs this quarter, sized (M3).
@@ -1868,7 +1870,7 @@ func _fill_df_duel(box: VBoxContainer, sim: MatchSim, calls: Dictionary, roamer:
 	var head := UiKit.lbl("How it's going", UiKit.SMALL, UiKit.TEXT, true)
 	head.name = "DfHeading"
 	box.add_child(head)
-	var row := UiKit.hbox(12)
+	var row := UiKit.hbox(UiKit.Space.PAD)
 	row.name = "DfRatings"
 	var who := [[df_id, _my_side], [roamer_id, 1 - _my_side]]
 	for w in who:
@@ -1882,7 +1884,7 @@ func _fill_df_duel(box: VBoxContainer, sim: MatchSim, calls: Dictionary, roamer:
 		col.add_child(nm)
 		var rr := UiKit.figure(MatchNotes.rating_text(MatchNotes.match_rating(_res, str(w[0]))), UiKit.NUMBER)
 		rr.name = "DfRating_" + str(w[0])
-		var rrow := UiKit.hbox(6)
+		var rrow := UiKit.hbox(UiKit.Space.CLOSE)
 		rrow.add_child(rr)
 		var rtag := UiKit.lbl("rating", UiKit.SECONDARY, UiKit.MUTED)
 		rtag.autowrap_mode = TextServer.AUTOWRAP_OFF
@@ -1920,7 +1922,7 @@ func _mount_one_line(c: Dictionary) -> void:
 	if not wide:
 		# A phone's half time holds seven rows (the talks share one): 6 px
 		# between its parts keeps the break on one screen.
-		v.add_theme_constant_override("separation", 6)
+		v.add_theme_constant_override("separation", UiKit.Space.CLOSE)
 	var sim: MatchSim = c["sim"]
 	var take := func(nm: String, parent := false) -> Control:
 		var n: Control = store.find_child(nm, true, false)
@@ -1930,7 +1932,7 @@ func _mount_one_line(c: Dictionary) -> void:
 	var bodies := {}
 	var order: Array = []
 	var body := func(key: String, parts: Array) -> void:
-		var b := UiKit.vbox(4 if wide else 6)
+		var b := UiKit.vbox(UiKit.Space.TIGHT if wide else UiKit.Space.CLOSE)
 		b.name = "CallBody_" + key
 		for p in parts:
 			if p == null:
@@ -1958,7 +1960,7 @@ func _mount_one_line(c: Dictionary) -> void:
 	var who_sub: Label = null
 	var who_change: Button = null
 	if who_wb != null:
-		who_line = UiKit.hbox(8)
+		who_line = UiKit.hbox(UiKit.GAP)
 		who_line.name = "WhoTagsLine"
 		var wc := UiKit.vbox(0)
 		wc.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -2068,15 +2070,15 @@ func _mount_one_line(c: Dictionary) -> void:
 	var pane: MarginContainer = null
 	var pane_title: Label = null
 	if wide:
-		var cols := UiKit.hbox(24)
+		var cols := UiKit.hbox(UiKit.Space.GUTTER)
 		cols.name = "BreakColumns"
-		page = UiKit.vbox(6)
+		page = UiKit.vbox(UiKit.Space.CLOSE)
 		page.name = "BreakPage"
 		page.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		page.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 		page.size_flags_stretch_ratio = 0.85
 		cols.add_child(page)
-		var right := UiKit.vbox(6)
+		var right := UiKit.vbox(UiKit.Space.CLOSE)
 		right.name = "BreakOpenCall"
 		right.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		right.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
@@ -2096,7 +2098,7 @@ func _mount_one_line(c: Dictionary) -> void:
 		var turn_news: Control = take.call("BreakWeatherTurn")
 		if turn_news != null:
 			put.call(page, turn_news)
-		var head := UiKit.hbox(8)
+		var head := UiKit.hbox(UiKit.GAP)
 		if quarter_head != null:
 			quarter_head.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			put.call(head, quarter_head)
@@ -2108,7 +2110,7 @@ func _mount_one_line(c: Dictionary) -> void:
 			# the sheet's heading and Match stats beside Start.
 			var links: HBoxContainer = null
 			if not wide:
-				links = UiKit.hbox(8)
+				links = UiKit.hbox(UiKit.GAP)
 				links.name = "BreakLinks"
 				var stats: Control = take.call("BreakStats")
 				var all_link: Control = best.find_child("BestSoFarAll", true, false)
@@ -2160,7 +2162,7 @@ func _mount_one_line(c: Dictionary) -> void:
 		for key in order:
 			var k := str(key)
 			(row_of[key] as Button).pressed.connect(func(): _open_break_sheet(k, str(titles[k]), [bodies[k]], store))
-		var one := UiKit.hbox(8)
+		var one := UiKit.hbox(UiKit.GAP)
 		start.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		skip.custom_minimum_size = Vector2(0, 48)
 		one.add_child(skip)
@@ -2169,9 +2171,9 @@ func _mount_one_line(c: Dictionary) -> void:
 	else:
 		# A PC: the chosen call sits open beside the rows. The pane keeps the
 		# room of its tallest call, so choosing another row never moves the sheet.
-		var plain := UiKit.style(Color.TRANSPARENT, 8, 0)
+		var plain := UiKit.style(Color.TRANSPARENT, UiKit.GAP, 0)
 		plain.set_border_width_all(0)
-		var chosen_sb := UiKit.style(Color.TRANSPARENT, 8, UiKit.RADIUS, UiKit.TEXT)
+		var chosen_sb := UiKit.style(Color.TRANSPARENT, UiKit.GAP, UiKit.RADIUS, UiKit.TEXT)
 		chosen_sb.set_border_width_all(2)
 		var select := func(key: String) -> void:
 			pane_title.text = str(titles[key])
@@ -2186,7 +2188,7 @@ func _mount_one_line(c: Dictionary) -> void:
 			var k := str(key)
 			(row_of[key] as Button).pressed.connect(func(): select.call(k))
 		# A PC sheet's actions sit together at the right, not as full-width bars.
-		var acts := UiKit.hbox(12)
+		var acts := UiKit.hbox(UiKit.Space.PAD)
 		acts.name = "BreakActions"
 		acts.alignment = BoxContainer.ALIGNMENT_END
 		# What Skip does reads beside it, at the left of the same row.
@@ -2233,7 +2235,7 @@ func _call_row(key: String, label: String) -> Button:
 	b.name = "CallRow_" + key
 	b.custom_minimum_size = Vector2(0, 44)
 	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var h := UiKit.hbox(8)
+	var h := UiKit.hbox(UiKit.GAP)
 	b.add_child(h)
 	h.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	h.offset_left = 2.0
@@ -2246,7 +2248,7 @@ func _call_row(key: String, label: String) -> Button:
 	var col := UiKit.vbox(0)
 	col.alignment = BoxContainer.ALIGNMENT_CENTER
 	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var top := UiKit.hbox(6)
+	var top := UiKit.hbox(UiKit.Space.CLOSE)
 	var what := UiKit.line(label, UiKit.SECONDARY, UiKit.MUTED)
 	what.name = "RowLabel"
 	top.add_child(what)
@@ -2345,9 +2347,9 @@ const TALK_WORDS := {"big": "a big lift", "lift": "a lift", "small": "a small li
 func _sit_block(sim: MatchSim, calls: Dictionary) -> Control:
 	var mine := _roster_side(_my_side).filter(func(r): return sim.talk_ok(_my_side, str(r["id"])))
 	var sq: Squad = sim.squads[_my_side]
-	var edge_box := UiKit.vbox(2)
+	var edge_box := UiKit.vbox(UiKit.Space.SLIM)
 	edge_box.name = "SitEdge"
-	var gc := UiKit.vbox(2)
+	var gc := UiKit.vbox(UiKit.Space.SLIM)
 	gc.name = "SitGainCost"
 	var go := UiKit.btn("Sit down", UiKit.BODY)
 	go.name = "SitDown"
@@ -2410,18 +2412,18 @@ func _sit_block(sim: MatchSim, calls: Dictionary) -> Control:
 func _speech_block(sim: MatchSim) -> Control:
 	var sq: Squad = sim.squads[_my_side]
 	var e := sim.talk_edge(_my_side, "speech")
-	var block := UiKit.vbox(4 if _pc_break else 6)
+	var block := UiKit.vbox(UiKit.Space.TIGHT if _pc_break else UiKit.Space.CLOSE)
 	block.name = "SpeechBlock"
 	block.add_child(_call_heading("Half-time speech"))
 	var ask := UiKit.lbl("The whole group, once, at half time. Two dice say how it lands.", UiKit.BODY, UiKit.TEXT, true)
 	ask.name = "SpeechQuestion"
 	ask.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	block.add_child(ask)
-	var edge_box := UiKit.vbox(2)
+	var edge_box := UiKit.vbox(UiKit.Space.SLIM)
 	edge_box.name = "SpeechEdge"
 	_talk_edge_lines(edge_box, "speech", sq, e, sim.talk_trust(_my_side))
 	block.add_child(edge_box)
-	var gc := UiKit.vbox(2)
+	var gc := UiKit.vbox(UiKit.Space.SLIM)
 	gc.name = "SpeechGainCost"
 	_gain_cost_rows(gc, BreakTalks.gate_texts("speech", e), "Speech")
 	block.add_child(gc)
@@ -2600,7 +2602,7 @@ func _open_break_sheet(node_name: String, title: String, parts: Array, home: Nod
 		_break_sheets.append({"overlay": ov, "close": _best_close(parts, home, ov)})
 		return
 	# Done stands 16 px clear of the links above it (the body's own gap is 8).
-	v.add_child(UiKit.spacer(8))
+	v.add_child(UiKit.spacer(UiKit.GAP))
 	_club_fill_button(done)
 	box["footer"].add_child(done)
 	var wash_col := UiKit.team_wash() if _wash() == UiKit.AUTO_COLOUR else _wash()
@@ -2649,7 +2651,7 @@ func _best_close(parts: Array, home: Node, ov: Control) -> Callable:
 func _outline_link(b: Button) -> void:
 	b.flat = false
 	b.custom_minimum_size = Vector2(0, 48)
-	var sb := UiKit.style(UiKit.SURFACE, 8, UiKit.RADIUS, Color(UiKit.TEXT, 0.45))
+	var sb := UiKit.style(UiKit.SURFACE, UiKit.GAP, UiKit.RADIUS, Color(UiKit.TEXT, 0.45))
 	sb.set_border_width_all(1)
 	var hover := sb.duplicate() as StyleBoxFlat
 	hover.bg_color = UiKit.SURFACE.lightened(0.06)
@@ -2685,7 +2687,7 @@ func _wide_break() -> bool:
 ## The quarter just played: what stood out, what they ran, how your calls
 ## and your tag came off. Facts only.
 func _quarter_view(q: int) -> Control:
-	var v := UiKit.vbox(4)
+	var v := UiKit.vbox(UiKit.Space.TIGHT)
 	v.name = "QuarterFacts"
 	# The few things that stood out, readable in a glance: no more than
 	# three, their plan kept (it is what the next quarter's calls answer).
@@ -2797,7 +2799,7 @@ func _gain_cost_rows(box: Control, gc: Array, prefix: String) -> void:
 
 
 func _plan_row(mark: String, text: String, node_name: String, traits := false, size := UiKit.SECONDARY) -> Control:
-	var item := UiKit.hbox(6)
+	var item := UiKit.hbox(UiKit.Space.CLOSE)
 	item.name = node_name
 	var mk := UiKit.lbl(mark, size, UiKit.label_ink(), true)
 	mk.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
@@ -2837,9 +2839,9 @@ func _calls_record(kind: String) -> Control:
 	if hist.is_empty():
 		return null
 	var inks := UiKit.club_ink_pair(str(_res["home"]), str(_res["away"]))
-	var v := UiKit.vbox(3)
+	var v := UiKit.vbox(UiKit.Space.THIN)
 	v.name = "CallsRecord_" + kind
-	v.add_child(UiKit.spacer(6))
+	v.add_child(UiKit.spacer(UiKit.Space.CLOSE))
 	v.add_child(UiKit.subhead("Calls so far"))
 	for e in hist:
 		var plans: Array = e["plans"]
@@ -2889,7 +2891,7 @@ func _synergy_names(keys: Array) -> String:
 ## The two sides' synergies, a block of their own under a heading: yours, then theirs.
 func _synergy_block() -> Control:
 	var syn: Array = GameState.pending_sim.synergies
-	var v := UiKit.vbox(3)
+	var v := UiKit.vbox(UiKit.Space.THIN)
 	v.name = "SynergyBlock"
 	v.add_child(UiKit.subhead("Synergies"))
 	v.add_child(_plan_row("Ours:", _synergy_names(syn[_my_side]), "SynYours", true))
@@ -2908,7 +2910,7 @@ func _opp_last_plan() -> String:
 ## "What our calls did" for quarter `q` (0 = the whole match): what each cause was
 ## worth in expected points, the moments and how they came off, and the tag.
 func _calls_view(q: int) -> Control:
-	var v := UiKit.vbox(3)
+	var v := UiKit.vbox(UiKit.Space.THIN)
 	v.name = "CallsReadout"
 	var snaps: Array = _res.get("quarter_teams", [])
 	var now: Array = _res.get("impact", [{}, {}])
@@ -2929,8 +2931,8 @@ func _calls_view(q: int) -> Control:
 	var worth := GridContainer.new()
 	worth.name = "CallsWorth"
 	worth.columns = 2
-	worth.add_theme_constant_override("h_separation", 24)
-	worth.add_theme_constant_override("v_separation", 3)
+	worth.add_theme_constant_override("h_separation", UiKit.Space.GUTTER)
+	worth.add_theme_constant_override("v_separation", UiKit.Space.THIN)
 	worth.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	for l in lines.slice(0, 5):
 		var pts := float(l["pts"])
@@ -2949,7 +2951,7 @@ func _calls_view(q: int) -> Control:
 			last_q = mq
 			var qh := UiKit.lbl("Q%d" % mq if mq <= 4 else "Extra time", UiKit.SMALL, UiKit.MUTED, true)
 			qh.name = "CallsQuarter_%d" % mq
-			v.add_child(UiKit.spacer(4))
+			v.add_child(UiKit.spacer(UiKit.Space.TIGHT))
 			v.add_child(qh)
 		var clock := _clock_text(mq, int(m["min"]))
 		if q == 0:
@@ -3000,7 +3002,7 @@ func _tag_line(q: int) -> String:
 
 ## Legs in words: how both midfields are going, and who is running on empty.
 func _legs_view() -> Control:
-	var v := UiKit.vbox(2)
+	var v := UiKit.vbox(UiKit.Space.SLIM)
 	v.name = "LegsView"
 	var l := UiKit.lbl(MatchNotes.legs_line(_group_energy(_my_side), _group_energy(1 - _my_side),
 			_opp_legs_reason()), UiKit.NOTE, UiKit.MUTED)
@@ -3125,10 +3127,10 @@ func _show_bounce_moment(m: Dictionary) -> void:
 	spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	hold.add_child(spacer)
-	var panel := UiKit.panel(UiKit.PANEL, 14)
+	var panel := UiKit.panel(UiKit.PANEL, UiKit.Space.LOOSE)
 	panel.name = "BounceCall"
 	hold.add_child(panel)
-	var call := UiKit.vbox(6)
+	var call := UiKit.vbox(UiKit.Space.CLOSE)
 	panel.add_child(call)
 	# The run-of-goals call is about the goals, not the stoppages: no ruck line.
 	for f in ([] if bool(m.get("moves", false)) else vignette.facts):
@@ -3145,14 +3147,14 @@ func _show_bounce_moment(m: Dictionary) -> void:
 	# the scene shows above it. A phone stacks them, as ever.
 	var across: HBoxContainer = null
 	if _pc and options.size() > 1:
-		across = UiKit.hbox(12)
+		across = UiKit.hbox(UiKit.Space.PAD)
 		across.name = "MomentOptions"
 		call.add_child(across)
 	for i in range(options.size()):
 		var o: Dictionary = options[i]
 		var into: Container = call
 		if across != null:
-			into = UiKit.vbox(6)
+			into = UiKit.vbox(UiKit.Space.CLOSE)
 			into.name = "MomentOption_%d" % i
 			into.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			across.add_child(into)
@@ -3185,6 +3187,11 @@ func _show_bounce_moment(m: Dictionary) -> void:
 		panel.modulate.a = 1.0
 		call_up[0] = true
 		tell_room.call()
+		# With Reduced motion the call is simply up; otherwise it rises into place.
+		if not UiKit.motion_on():
+			margin.add_theme_constant_override("margin_bottom", 0)
+			return
+		Feel.moved.append("call")
 		var tw := margin.create_tween().set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 		tw.tween_method(func(v: float) -> void: margin.add_theme_constant_override("margin_bottom", int(v)),
 				-600.0, 0.0, 0.3))
@@ -3234,7 +3241,7 @@ func _call_heading(label: String) -> Label:
 
 
 func _call_block(label: String, control: Control) -> Control:
-	var v := UiKit.vbox(4 if _pc_break else 6)
+	var v := UiKit.vbox(UiKit.Space.TIGHT if _pc_break else UiKit.Space.CLOSE)
 	v.add_child(_call_heading(label))
 	v.add_child(control)
 	return v
@@ -3380,12 +3387,12 @@ func _dress_tagger_card(b: Button, who_name: String, c: Dictionary, is_pick: boo
 	grid.move_child(wrap, at)
 	wrap.add_child(b)
 	var pad := MarginContainer.new()
-	pad.add_theme_constant_override("margin_left", 10)
-	pad.add_theme_constant_override("margin_right", 10)
-	pad.add_theme_constant_override("margin_top", 10)
-	pad.add_theme_constant_override("margin_bottom", 10)
+	pad.add_theme_constant_override("margin_left", UiKit.Space.ROOM)
+	pad.add_theme_constant_override("margin_right", UiKit.Space.ROOM)
+	pad.add_theme_constant_override("margin_top", UiKit.Space.ROOM)
+	pad.add_theme_constant_override("margin_bottom", UiKit.Space.ROOM)
 	wrap.add_child(pad)
-	var row := UiKit.hbox(10)
+	var row := UiKit.hbox(UiKit.Space.ROOM)
 	pad.add_child(row)
 	# Your side's colour, in the shade of it that reads on the card.
 	var rule := ColorRect.new()
@@ -3393,11 +3400,11 @@ func _dress_tagger_card(b: Button, who_name: String, c: Dictionary, is_pick: boo
 	rule.color = UiKit.club_vivid(str(GameState.my_club), UiKit.SURFACE)
 	rule.custom_minimum_size = Vector2(4, 0)
 	row.add_child(rule)
-	var col := UiKit.vbox(6)
+	var col := UiKit.vbox(UiKit.Space.CLOSE)
 	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(col)
 	var head := HFlowContainer.new()
-	head.add_theme_constant_override("h_separation", 8)
+	head.add_theme_constant_override("h_separation", UiKit.GAP)
 	head.add_theme_constant_override("v_separation", 0)
 	var nm := UiKit.line(who_name, UiKit.NAME, UiKit.TEXT, true)
 	nm.name = "CardName"
@@ -3418,17 +3425,17 @@ func _dress_tagger_card(b: Button, who_name: String, c: Dictionary, is_pick: boo
 		rows.append(["Season", season.trim_prefix("season rating ").replace("yet to play this season", "yet to play"), false])
 	var facts := HFlowContainer.new()
 	facts.name = "CardFacts"
-	facts.add_theme_constant_override("h_separation", 16)
+	facts.add_theme_constant_override("h_separation", UiKit.Space.COLUMN)
 	facts.add_theme_constant_override("v_separation", 0)
 	for f in rows:
-		var one := UiKit.hbox(5)
+		var one := UiKit.hbox(UiKit.Space.SNUG)
 		one.add_child(UiKit.line(str(f[0]), UiKit.SECONDARY, UiKit.MUTED))
 		one.add_child(UiKit.line(str(f[1]), UiKit.BODY, UiKit.BAD if bool(f[2]) else UiKit.TEXT))
 		facts.add_child(one)
 	col.add_child(facts)
 	# Their man's touches: the label quiet, the counts clear, wrapping inside
 	# the card rather than pushing it past the screen's edge.
-	var holds := UiKit.hbox(5)
+	var holds := UiKit.hbox(UiKit.Space.SNUG)
 	holds.name = "CardHolds"
 	holds.add_child(UiKit.line(str(c["holds_label"]), UiKit.SECONDARY, UiKit.MUTED))
 	var holds_value := UiKit.lbl(str(c["holds"]), UiKit.BODY, UiKit.TEXT)
@@ -3626,9 +3633,9 @@ const BEST_ROW_GAP_PC := 2
 
 
 func _best_so_far() -> Control:
-	var box := UiKit.vbox(4 if _pc_break else VOTES_STEP)
+	var box := UiKit.vbox(UiKit.Space.TIGHT if _pc_break else VOTES_STEP)
 	box.name = "BestSoFar"
-	var head := UiKit.hbox(8)
+	var head := UiKit.hbox(UiKit.GAP)
 	var title := UiKit.section("Best so far")
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	head.add_child(title)
@@ -3660,7 +3667,7 @@ func _best_so_far() -> Control:
 		(wrap.get_child(1) as Node).name = "BestSideBox_%d" % side
 		box.add_child(wrap)
 	if not _pc_break:
-		box.add_child(UiKit.spacer(8))   # with the body's 8: 16 clear of the buttons
+		box.add_child(UiKit.spacer(UiKit.GAP))   # with the body's 8: 16 clear of the buttons
 		box.add_child(all)
 	return box
 
@@ -3670,7 +3677,7 @@ func _glance_section(v: VBoxContainer, title: String, node_name: String, lines: 
 		return
 	v.add_child(UiKit.spacer(UiKit.GAP))
 	v.add_child(UiKit.section(title))
-	var box := UiKit.vbox(4)
+	var box := UiKit.vbox(UiKit.Space.TIGHT)
 	box.name = node_name
 	for t in lines:
 		var l: Control = TraitLink.line(str(t), UiKit.BODY, UiKit.TEXT) if traits else _say(str(t), UiKit.BODY, UiKit.TEXT)
@@ -3684,7 +3691,7 @@ func _glance_people(v: VBoxContainer, title: String, node_name: String, people: 
 		return
 	v.add_child(UiKit.spacer(UiKit.GAP))
 	v.add_child(UiKit.section(title))
-	var box := UiKit.vbox(6)
+	var box := UiKit.vbox(UiKit.Space.CLOSE)
 	box.name = node_name
 	for p in people:
 		var row := UiKit.vbox(0)
@@ -4064,7 +4071,7 @@ func _track_run(side: int) -> void:
 func _goal_row(ev: Dictionary, stamp: String) -> Control:
 	var side := int(ev.get("side", 0))
 	var code := str(_res["home"] if side == 0 else _res["away"])
-	var row := UiKit.hbox(8)
+	var row := UiKit.hbox(UiKit.GAP)
 	row.name = "GoalRow"
 	row.set_meta("feed_kind", "goal")
 	var stripe := ColorRect.new()
@@ -4103,8 +4110,9 @@ func _goal_row(ev: Dictionary, stamp: String) -> Control:
 ## The scoring side's score swells for a moment on a goal.
 func _flash_score(side: int) -> void:
 	var l: Label = _score_home if side == 0 else _score_away
-	if l == null or not is_instance_valid(l) or _skipping:
+	if l == null or not is_instance_valid(l) or _skipping or not UiKit.motion_on():
 		return
+	Feel.moved.append("score")
 	l.pivot_offset = l.size / 2.0
 	l.scale = Vector2(1.35, 1.35)
 	var tw := create_tween()
@@ -4460,7 +4468,7 @@ func _show_fulltime(play_now := true) -> void:
 	_ft_tab = "summary"
 	# The tabs sit above the scrolling body, so they never scroll away.
 	var outer: Node = (box["body"] as Control).get_parent().get_parent()
-	_ft_tabs = UiKit.hbox(2)
+	_ft_tabs = UiKit.hbox(UiKit.Space.SLIM)
 	_ft_tabs.name = "ReviewTabs"
 	outer.add_child(_ft_tabs)
 	outer.move_child(_ft_tabs, 0)
@@ -4477,7 +4485,7 @@ func _show_fulltime(play_now := true) -> void:
 		var row := HBoxContainer.new()
 		row.name = "FullTimeActions"
 		row.alignment = BoxContainer.ALIGNMENT_END
-		row.add_theme_constant_override("separation", 12)
+		row.add_theme_constant_override("separation", UiKit.Space.PAD)
 		actions.add_child(row)
 		actions = row
 	if mine and (_interactive or _review):
@@ -4595,7 +4603,7 @@ func _render_ft() -> void:
 			_ft_stats(v)
 		_:
 			if _stats_wide():
-				var inner := UiKit.vbox(8)
+				var inner := UiKit.vbox(UiKit.GAP)
 				v.add_child(UiKit.reading_column(inner, 640.0))
 				_ft_summary(inner)
 			else:
@@ -4613,7 +4621,7 @@ func _ft_story(v: VBoxContainer, me: int) -> Dictionary:
 	var st := MatchStory.build(_res, me)
 	if st.is_empty():
 		return {}
-	var box := UiKit.vbox(4)
+	var box := UiKit.vbox(UiKit.Space.TIGHT)
 	box.name = "MatchStory"
 	box.add_child(UiKit.spacer(UiKit.GAP))
 	# Best players above already gives a player's numbers: the hero's line
@@ -4657,7 +4665,7 @@ func _ft_story(v: VBoxContainer, me: int) -> Dictionary:
 	if not why.is_empty():
 		box.add_child(UiKit.section("Why we won" if bool(st["won"])
 				else ("Why it was a draw" if bool(st["drawn"]) else "Why we lost")))
-		var rv := UiKit.vbox(4)
+		var rv := UiKit.vbox(UiKit.Space.TIGHT)
 		rv.name = "WhyReasons"
 		for r in why:
 			var rl := UiKit.lbl(str(r["text"]), UiKit.BODY, UiKit.TEXT)
@@ -4685,8 +4693,8 @@ func _ft_calls(box: VBoxContainer, me: int) -> void:
 	var grid := GridContainer.new()
 	grid.name = "CallsStory"
 	grid.columns = 2
-	grid.add_theme_constant_override("h_separation", 16)
-	grid.add_theme_constant_override("v_separation", 4)
+	grid.add_theme_constant_override("h_separation", UiKit.Space.COLUMN)
+	grid.add_theme_constant_override("v_separation", UiKit.Space.TIGHT)
 	for r in c["rows"]:
 		var pts := int(r["pts"])
 		var nm := UiKit.lbl(str(r["name"]), UiKit.BODY, UiKit.TEXT if str(r["kind"]) == "call" else UiKit.MUTED)
@@ -4736,7 +4744,7 @@ func _ft_summary(v: VBoxContainer) -> void:
 	v.add_child(vl)
 	var score_inks := UiKit.club_ink_pair(home, away)
 	for side in [0, 1]:
-		var row := UiKit.hbox(8)
+		var row := UiKit.hbox(UiKit.GAP)
 		row.name = "FinalScore_%d" % side
 		# Both clubs read in full text; the winner is bold, the loser plain, and
 		# each name carries its club's colour (a red club's is white).
@@ -4819,7 +4827,7 @@ func _ft_summary(v: VBoxContainer) -> void:
 			told = told.slice(0, Firsts.MAX_LINES)
 			if not told.is_empty():
 				v.add_child(UiKit.spacer(UiKit.GAP))
-				var payoffs := UiKit.vbox(4)
+				var payoffs := UiKit.vbox(UiKit.Space.TIGHT)
 				payoffs.name = "PayoffLines"
 				for line in told:
 					var pl := UiKit.lbl(str(line), UiKit.BODY, UiKit.TEXT)
@@ -4852,7 +4860,7 @@ func _ft_summary(v: VBoxContainer) -> void:
 	v.add_child(hiw_head)
 	var factors := VBoxContainer.new()
 	factors.name = "MatchFactors"
-	factors.add_theme_constant_override("separation", 4)
+	factors.add_theme_constant_override("separation", UiKit.Space.TIGHT)
 	var shown_factors := MatchNotes.match_factors(_res, me if mine else 0, told_above)
 	# What is now said on the screen, for the notes below to leave out.
 	var said_now := told_above.duplicate()
@@ -4903,7 +4911,7 @@ func _ft_summary(v: VBoxContainer) -> void:
 
 	# Your week: who is hurt, who improved.
 	if mine and (_interactive or _review):
-		var week := UiKit.vbox(4)
+		var week := UiKit.vbox(UiKit.Space.TIGHT)
 		week.name = "YourWeek"
 		var hurt := GameState.my_new_injuries()
 		if not hurt.is_empty():
@@ -4951,7 +4959,7 @@ const VOTES_STEP := 12          # one spacing step between blocks and rows
 
 ## One club's block: its crest (and name when `named`), then its voted players.
 func _votes_side(code: String, ink: Color, players: Array, votes: Dictionary, pc := false, named := true) -> Control:
-	var side_box := UiKit.vbox(4 if pc else VOTES_STEP)
+	var side_box := UiKit.vbox(UiKit.Space.TIGHT if pc else VOTES_STEP)
 	var rows_box := UiKit.vbox(BEST_ROW_GAP_PC if pc else VOTES_STEP)
 	var sh := UiKit.club_heading(code, null, UiKit.BODY if pc else UiKit.NAME, 22.0 if pc else VOTES_MARKER, ink, false, named)
 	side_box.add_child(sh)
@@ -4963,7 +4971,7 @@ func _votes_side(code: String, ink: Color, players: Array, votes: Dictionary, pc
 		if pc and shown == 3:
 			row.set_meta("best_third", true)
 		# Name and votes share one line, bottom-aligned so their baselines meet.
-		var top := UiKit.hbox(8)
+		var top := UiKit.hbox(UiKit.GAP)
 		var pn := UiKit.lbl(str(p["name"]), UiKit.BODY if pc else UiKit.NAME, UiKit.TEXT, true)
 		pn.name = "StandoutName"
 		pn.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -5068,7 +5076,7 @@ func _ranked_row(p: Dictionary, votes: Dictionary, ink: Color) -> Control:
 	var row := UiKit.vbox(0)
 	row.name = "BestRow_%s" % str(p["id"])
 	row.set_meta("side", side)
-	var top := UiKit.hbox(8)
+	var top := UiKit.hbox(UiKit.GAP)
 	var name_ink := UiKit.readable_ink(UiKit.club_name_colour(ink), UiKit.tinted("sheet", _wash_col()))
 	var pn := UiKit.lbl(str(p["name"]), UiKit.NAME, name_ink, true)
 	pn.name = "StandoutName"
@@ -5096,10 +5104,10 @@ func _ranked_row(p: Dictionary, votes: Dictionary, ink: Color) -> Control:
 
 
 func _key_stats_view(me: int) -> Control:
-	var v := UiKit.vbox(2)
+	var v := UiKit.vbox(UiKit.Space.SLIM)
 	v.name = "KeyStats"
 	var codes := [str(_res["home"]), str(_res["away"])]
-	var h0 := UiKit.hbox(4)
+	var h0 := UiKit.hbox(UiKit.Space.TIGHT)
 	h0.add_child(_qcell(GameDB.club_short(codes[me]), 64, UiKit.MUTED, UiKit.SMALL, true))
 	var gap := UiKit.line("", UiKit.SMALL, UiKit.MUTED)
 	gap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -5107,7 +5115,7 @@ func _key_stats_view(me: int) -> Control:
 	h0.add_child(_qcell(GameDB.club_short(codes[1 - me]), 64, UiKit.MUTED, UiKit.SMALL, true))
 	v.add_child(h0)
 	for row in MatchNotes.key_stats(_res, me):
-		var h := UiKit.hbox(4)
+		var h := UiKit.hbox(UiKit.Space.TIGHT)
 		var a := int(row[1])
 		var b := int(row[2])
 		h.add_child(_qcell(str(a), 64, UiKit.TEXT, UiKit.BODY, a > b))
@@ -5147,7 +5155,7 @@ func _stats_page(host: VBoxContainer, live: bool, players_first: bool, calls: Co
 	if _stats_wide():
 		bs.compact = true
 		msv.compact = true
-		var cols := UiKit.hbox(20)
+		var cols := UiKit.hbox(UiKit.Space.WIDE)
 		cols.name = "StatsColumns"
 		var gaps := 20.0 * (2.0 if calls != null else 1.0)
 		var room := UiKit.view_width(self) - 24.0 - 40.0 - gaps
@@ -5184,7 +5192,7 @@ func _stats_page(host: VBoxContainer, live: bool, players_first: bool, calls: Co
 ## (MatchStatsView, the same view as at the breaks), and what your calls did - on a
 ## PC a third column beside them, so the whole page shows at once.
 func _ft_stats(v: VBoxContainer) -> void:
-	var box := UiKit.vbox(8)
+	var box := UiKit.vbox(UiKit.GAP)
 	box.name = "MatchStats"
 	v.add_child(box)
 	_stats_page(box, false, false, _calls_view(0) if _interactive else null)

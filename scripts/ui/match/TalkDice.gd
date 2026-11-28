@@ -38,8 +38,15 @@ func show_faces(values: Array) -> void:
 	queue_redraw()
 
 
-## Tumble, then land on `values`; `done` runs once they have landed.
+## Tumble, then land on `values`; `done` runs once they have landed. With
+## Reduced motion on (or no motion, as in a headless run) they land at once.
 func roll(values: Array, done: Callable = Callable()) -> void:
+	if not UiKit.motion_on():
+		show_faces(values)
+		if done.is_valid():
+			done.call()
+		return
+	Feel.moved.append("dice")
 	visible = true
 	_landed = false
 	var steps := int(TUMBLE / STEP)

@@ -12,7 +12,7 @@ static func make(p: Dictionary, host: Control) -> Control:
 		return null
 	var flow := HFlowContainer.new()
 	flow.name = "FamilyTies"
-	flow.add_theme_constant_override("h_separation", 5)
+	flow.add_theme_constant_override("h_separation", UiKit.Space.SNUG)
 	flow.add_theme_constant_override("v_separation", 0)
 	for i in range(ties.size()):
 		var t: Dictionary = ties[i]
