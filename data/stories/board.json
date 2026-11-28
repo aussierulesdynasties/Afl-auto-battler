@@ -126,8 +126,8 @@
 						"d": 4
 					},
 					{
-						"op": "forgo_xp",
-						"d": 4
+						"op": "xp",
+						"d": -4
 					}
 				],
 				"result": "{name} does the shoot and misses Wednesday's session. The sponsor is thrilled."

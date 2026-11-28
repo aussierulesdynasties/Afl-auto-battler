@@ -329,7 +329,7 @@
 		"text": ["The cheer squad paints its banner in a shed near the Kennel the night before every game. This week they've asked if a few players could help with the last letters."],
 		"choices": [
 			{"key": "leaders", "label": "Send the leadership group",
-			 "effects": [{"op": "board", "d": 4, "was": "members"}, {"op": "culture", "strand": "together", "d": 1, "why": "The leaders painted the banner with the cheer squad"}, {"op": "slow_start", "chance": 10, "who": "leaders", "on": "week"}],
+			 "effects": [{"op": "board", "d": 4, "was": "members"}, {"op": "culture", "strand": "together", "d": 1, "why": "The leaders painted the banner with the cheer squad"}, {"op": "heavy_legs", "who": "leaders"}],
 			 "result": "The squad is over the moon. The leaders get home late."},
 			{"key": "ball", "label": "Send a signed ball and a thank-you",
 			 "effects": [{"op": "fresh", "who": "side"}, {"op": "culture", "strand": "together", "d": -1, "why": "The cheer squad wanted players, not a signed ball"}],

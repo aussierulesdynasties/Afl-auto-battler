@@ -1150,7 +1150,7 @@ static func _effect_parts(e: Dictionary, facts: Dictionary) -> Array:
 		return []
 	if str(e.get("line", "")) != "":
 		# A card may word an effect itself; it is still a gain or a cost by its sign.
-		var k := "gain" if d > 0 or op in ["xp", "fresh"] else "cost"
+		var k := "gain" if d > 0 or (op == "xp" and d >= 0) or op == "fresh" else "cost"
 		return [[k, str(e["line"])]]
 	match op:
 		"odds":
@@ -1220,6 +1220,10 @@ static func _effect_parts(e: Dictionary, facts: Dictionary) -> Array:
 				tw += " " + _refuse_words(d, int(facts.get("trust", 0)))
 			return [["gain" if d > 0 else "cost", tw]]
 		"xp":
+			if d < 0 and who == "subject":
+				# A session he misses: development he already had in hand is lost
+				# (never below none, ClubStories.apply_choice).
+				return [["cost", "He loses %d development points. A senior game gives %d." % [-d, SENIOR_GAME_XP]]]
 			var whom: String = "He gets" if who == "subject" else ("{first_b} gets" if who == "b" else ("Each player in the side gets" if who == "side" else ("Each of the others gets" if who == "others" else "Every player gets")))
 			return [["gain", "%s %d development points. A senior game gives %d." % [whom, d, SENIOR_GAME_XP]]]
 		"fresh":
@@ -1303,10 +1307,10 @@ static func _effect_parts(e: Dictionary, facts: Dictionary) -> Array:
 					["cost", "He plays sore: %s chance he is hurt again, by any injury. %s. He starts %s short of fresh legs." % [
 						_sore_chance(facts), _injury_length_words(), _pct(100 - roundi(ClubLife.SORE_LEGS))]]]
 		"slow_start":
-			return [["cost", _slow_words(e)]]
+			return [["cost", _slow_words(e, facts)]]
 		"loss_sting":
 			# Outside the finals the sting is this week's game (GameState._settle_loss_sting).
-			var game := "that final" if int(facts.get("finals_week", 0)) > 0 else "this week's game"
+			var game := "this week's game" if facts.has("finals_week") and int(facts["finals_week"]) == 0 else "that final"
 			return [["cost", "If we lose %s, about a %s chance our morale also falls %s." % [
 					game, _pct(int(e.get("chance", 0))), _pct(absi(int(e.get("d", 0))))]]]
 		"role_trial":
@@ -1480,14 +1484,15 @@ static func _broken_words(sting: int, trust: int, facts: Dictionary) -> String:
 
 
 ## A slow start: the chance, the match it is for and what it costs at the first bounce.
-static func _slow_words(e: Dictionary) -> String:
+static func _slow_words(e: Dictionary, facts: Dictionary = {}) -> String:
 	var who := str(e.get("who", "subject"))
 	# "on": "week" is this week's game (a card in the season), "grand_final" is
-	# Saturday; a finals card's chance is for the next final.
+	# Saturday; a finals card's chance is for the next final. A card with no
+	# "on" dealt outside the finals is for this week's game too.
 	var when := "his next final" if who == "subject" else "its next final"
 	if str(e.get("on", "")) == "grand_final":
 		when = "Saturday"
-	elif str(e.get("on", "")) == "week":
+	elif str(e.get("on", "")) == "week" or (facts.has("finals_week") and int(facts["finals_week"]) == 0):
 		when = "this week's game"
 	var legs := _pct(100 - roundi(ClubLife.SLOW_LEGS))
 	var chance := _pct(int(e.get("chance", 0)))

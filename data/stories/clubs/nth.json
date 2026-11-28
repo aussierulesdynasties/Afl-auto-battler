@@ -9,7 +9,7 @@
 		"text": ["The past players are holding their annual lunch in the Arden Street rooms, and they want the whole senior list there. They want this group to hear what the jumper meant when the club had nothing."],
 		"choices": [
 			{"key": "all", "label": "Send the whole list",
-			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "The old Shinboners told them what the jumper meant"}, {"op": "morale", "d": 4, "who": "all"}, {"op": "forgo_xp", "d": 3, "who": "all"}],
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "The old Shinboners told them what the jumper meant"}, {"op": "morale", "d": 4, "who": "all"}, {"op": "forgo_xp", "d": 3, "who": "side"}],
 			 "result": "The stories go long into the afternoon. Training is cut short."},
 			{"key": "leaders", "label": "Send the leaders only",
 			 "effects": [{"op": "xp", "d": 3, "who": "side"}, {"op": "board", "d": -2, "was": "members"}, {"op": "morale", "d": -1, "who": "all"}],
@@ -446,8 +446,8 @@
 		"text": ["The local traders and supporters want the coach and a few players at a members' night in a North Melbourne pub, the night before a light session."],
 		"choices": [
 			{"key": "go", "label": "Go, and bring the captain",
-			 "effects": [{"op": "board", "d": 3, "was": "members"}, {"op": "morale", "d": 2, "who": "all"}, {"op": "heavy_legs", "who": "side"}],
-			 "result": "The locals love it. It's a late night before training."},
+			 "effects": [{"op": "board", "d": 3, "was": "members"}, {"op": "morale", "d": 2, "who": "all"}, {"op": "heavy_legs", "who": "leaders"}],
+			 "result": "The locals love it. It's a late night for the captain before training."},
 			{"key": "message", "label": "Send a recorded message",
 			 "effects": [{"op": "fresh", "who": "side"}, {"op": "board", "d": -2, "was": "members"}],
 			 "result": "The group stays fresh. The locals feel ignored."}

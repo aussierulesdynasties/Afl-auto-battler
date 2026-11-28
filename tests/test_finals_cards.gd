@@ -648,6 +648,22 @@ func _test_risks() -> void:
 		_check((after == 47) == expect_fall and (expect_fall or after == 55),
 				"Told the players, %s, the roll %s: morale %d (%s)" % ["lost" if lost else "won", "hit" if expect_fall else "didn't", after,
 				"net 47: it fell instead" if expect_fall else "stays 55"])
+	# Outside the finals, a slow start and a loss sting are for this week's game, not "the next final".
+	var ss := {"op": "slow_start", "who": "side", "chance": 10}
+	_check(StoryEngine._slow_words(ss, {"finals_week": 0}).contains("this week's game")
+			and StoryEngine._slow_words(ss, {"finals_week": 2}).contains("its next final"),
+			"A slow start names this week's game in the season and the next final in the finals")
+	var ls := {"op": "loss_sting", "who": "side", "chance": 20, "d": -4}
+	_check(str(StoryEngine._effect_parts(ls, {"finals_week": 0})[0][1]).begins_with("If we lose this week's game")
+			and str(StoryEngine._effect_parts(ls, {"finals_week": 2})[0][1]).begins_with("If we lose that final"),
+			"A loss sting names this week's game in the season and that final in the finals")
+	var hl := StoryEngine._effect_parts({"op": "heavy_legs", "who": "leaders"}, {"finals_week": 0})
+	_check(str(hl[0][1]).begins_with("Heavy legs for the leadership group"), "Heavy legs aimed at the leaders say so (%s)" % str(hl))
+	var sl := StoryEngine._slow_words({"op": "slow_start", "who": "leaders", "chance": 10, "on": "week"}, {"finals_week": 0})
+	_check(sl.contains("the leadership group starts this week's game slowly"), "A slow start aimed at the leaders says so (%s)" % sl)
+	# A missed session takes development away, never below none, and the card says it as a cost.
+	var lose := StoryEngine._effect_parts({"op": "xp", "d": -4}, {})
+	_check(str(lose[0][0]) == "cost" and str(lose[0][1]).begins_with("He loses 4 development points"), "Development lost reads as a cost (%s)" % str(lose))
 	# Home and away (no finals tag): a loss stings too; a win or a draw spares it.
 	for ha in [[[60, 90], 47, "lost"], [[90, 60], 55, "won"], [[70, 70], 55, "drew"]]:
 		_finals_game(3033)

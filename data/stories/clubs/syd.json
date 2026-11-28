@@ -118,7 +118,7 @@
 		"text": ["The Giants have stepped up junior clinics in Western Sydney. The community department wants three senior players out there for a day to show the kids the Swans are their club too."],
 		"choices": [
 			{"key": "seniors", "label": "Send three leaders",
-			 "effects": [{"op": "board", "d": 2, "was": "members"}, {"op": "culture", "strand": "together", "d": 1, "why": "The senior players went out west for the club"}, {"op": "forgo_xp", "d": 3, "who": "side"}, {"op": "odds", "chance": 10, "hit": [{"op": "heavy_legs", "who": "leaders"}], "miss": []}],
+			 "effects": [{"op": "board", "d": 2, "was": "members"}, {"op": "culture", "strand": "together", "d": 1, "why": "The senior players went out west for the club"}, {"op": "heavy_legs", "who": "leaders"}],
 			 "result": "The kids swarm the stars. The leaders come back tired."},
 			{"key": "rookies", "label": "Send the rookies",
 			 "effects": [{"op": "morale", "d": 1, "who": "all"}, {"op": "board", "d": -1, "was": "members"}],

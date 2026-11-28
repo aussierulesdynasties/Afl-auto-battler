@@ -573,6 +573,8 @@ static func _check_effect(where: String, e, player: bool) -> Array:
 		var dv := int(e.get("d", 0))
 		if dv == 0 or absi(dv) > int(CAPS[op]):
 			errs.append("%s: %s of %d is outside 1..%d" % [where, op, dv, int(CAPS[op])])
+	if op == "xp" and int(e.get("d", 0)) < 0 and who != "subject":
+		errs.append("%s: development can only be taken from the card's own player" % where)
 	if op == "forgo_xp" and (int(e.get("d", 0)) < 1 or int(e.get("d", 0)) > int(CAPS["xp"])):
 		errs.append("%s: development given up of %d is outside 1..%d" % [where, int(e.get("d", 0)), int(CAPS["xp"])])
 	if op == "slow_start" or op == "loss_sting":

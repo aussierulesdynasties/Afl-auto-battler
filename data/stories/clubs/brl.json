@@ -237,7 +237,7 @@
 		"text": ["It's rugby league's biggest week in Queensland and the footy has vanished from the back page. Marketing wants players in maroon at a city stunt to grab some attention."],
 		"choices": [
 			{"key": "stunt", "label": "Send three players to the stunt",
-			 "effects": [{"op": "board", "d": 4, "was": "members"}, {"op": "odds", "chance": 15, "hit": [{"op": "board", "d": -2}], "hit_result": "League fans laugh at footy players in maroon, and the papers run it."}],
+			 "effects": [{"op": "board", "d": 4, "was": "members"}, {"op": "odds", "chance": 30, "hit": [{"op": "board", "d": -3}], "hit_result": "League fans laugh at footy players in maroon, and the papers run it."}],
 			 "result": "The Lions get seen in a league town."},
 			{"key": "footy", "label": "Stay out of it",
 			 "effects": [{"op": "xp", "d": 3, "who": "side"}, {"op": "board", "d": -1, "was": "members"}],
