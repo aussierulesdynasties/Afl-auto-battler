@@ -1036,7 +1036,8 @@ static func card_detail(p: Dictionary, trait_name: String, ratings: PackedString
 ## running on empty), what going to the tag gives up of his own game and what
 ## their man's touches with him on (GateOdds), with his Player rating for the
 ## season so far beside the cost (`rating` is -1 before he has played).
-static func tagger_card(p: Dictionary, legs: float, rating := -1.0) -> Dictionary:
+## `target` is their man, whose own touches the hold is sized on (row 178).
+static func tagger_card(p: Dictionary, legs: float, rating := -1.0, target: Dictionary = {}) -> Dictionary:
 	var places := PackedStringArray()
 	for r in Ratings.positions(p):
 		places.append(str(UiKit.ROLE_LABEL.get(str(r), str(r))))
@@ -1047,7 +1048,7 @@ static func tagger_card(p: Dictionary, legs: float, rating := -1.0) -> Dictionar
 	var lw := legs_word(legs)
 	# What the job costs him and what it holds their man to, sized from the
 	# sim's constants (GateOdds; bible §4). The cost is the same whoever goes;
-	# the hold is his Pressure and his legs, in their man's touches
+	# the hold is his Pressure and his legs, in their man's own touches
 	# (Roles.tag_touches).
 	# His season Player rating stays beside it (director, 2026-10-13).
 	var season := " (yet to play this season)"
@@ -1056,13 +1057,13 @@ static func tagger_card(p: Dictionary, legs: float, rating := -1.0) -> Dictionar
 	return {"where": where, "pressure": str(roundi(float(a.get("pressure", 0)))),
 			"legs": lw.left(1).to_upper() + lw.substr(1), "legs_bad": legs < TIRING,
 			"gives_label": "Gives up", "gives": GateOdds.tag_gives() + season,
-			"holds_label": "Their man", "holds": GateOdds.tag_touches(p, legs)}
+			"holds_label": "Their man", "holds": GateOdds.tag_touches(p, legs, target)}
 
 
 ## The same card in one run of words, for the long list ("Other player...")
 ## where each man is one tap row: wide puts it on one line.
-static func tagger_card_detail(p: Dictionary, legs: float, wide: bool, rating := -1.0) -> String:
-	var c := tagger_card(p, legs, rating)
+static func tagger_card_detail(p: Dictionary, legs: float, wide: bool, rating := -1.0, target: Dictionary = {}) -> String:
+	var c := tagger_card(p, legs, rating, target)
 	# No-break spaces hold each "·" to the words either side, so a line
 	# never ends on one.
 	var dot := " · "
