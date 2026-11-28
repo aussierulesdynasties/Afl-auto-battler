@@ -375,9 +375,6 @@ func _test_rating() -> void:
 	var by := {"DEF": [], "MID": [], "FWD": [], "RUCK": []}
 	var best := {}
 	var clubs := ["COL", "CAR", "GEE", "SYD", "BRL", "MEL", "HAW", "ESS", "FRE", "ADE", "GWS", "PAD"]
-	# This reads the engine's spread across positions, not the director's hand-set
-	# stars (data/ovr_overrides.csv), so it plays on the data without them.
-	GameDB.skip_ovr_overrides = true
 	GameDB.reload()
 	for i in range(16):  # 16 games: 8 left the parity read to a few big days
 		var res := _match(40 + i, clubs[i % 8], clubs[i % 8 + 4])
@@ -387,7 +384,6 @@ func _test_rating() -> void:
 				(by[str(p["role"])] as Array).append(int(p["rating"]))
 			for p in rated.slice(0, 3):
 				best[str(p["role"])] = int(best.get(str(p["role"]), 0)) + 1
-	GameDB.skip_ovr_overrides = false
 	GameDB.reload()
 	var p90 := {}
 	for role in by:

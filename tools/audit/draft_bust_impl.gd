@@ -9,6 +9,7 @@ extends RefCounted
 ##   BP|seed|draft_year|pick|id|club|src|age0|ovr0|pot0     one per pick
 ##   BT|seed|draft_year|k|id|on_list|ovr|best_so_far       each season end
 ## godot --headless --path . --script tools/audit/run_audit.gd -- draft_bust_impl 11,12 9
+const Ovr := preload("res://tests/ovr.gd")
 
 var cohort := {}      # id -> {year, best}
 
@@ -43,9 +44,9 @@ func _draft(d: Draft, year: int, seed_n: int, user: String) -> void:
 		var club := "USER" if str(e["club"]) == user else str(e["club"])
 		print("BP|%d|%d|%d|%s|%s|%s|%.1f|%d|%d" % [seed_n, year, int(e["pick"]), str(p["id"]), club,
 				"real" if not bool(p.get("generated", false)) else "gen", float(p.get("age", 0)),
-				int(p["overall"]), maxi(int(p["overall"]), int(p.get("potential", p["overall"])))])
+				int(Ovr.of(p)), maxi(int(Ovr.of(p)), int(p.get("potential", Ovr.of(p))))])
 		if club != "USER":
-			cohort[str(p["id"])] = {"year": year, "best": int(p["overall"])}
+			cohort[str(p["id"])] = {"year": year, "best": int(Ovr.of(p))}
 
 
 func _track(year: int, seed_n: int) -> void:
@@ -58,7 +59,7 @@ func _track(year: int, seed_n: int) -> void:
 		var p = on.get(id)
 		var ovr := 0
 		if p != null:
-			ovr = int(p["overall"])
+			ovr = int(Ovr.of(p))
 			c["best"] = maxi(int(c["best"]), ovr)
 		print("BT|%d|%d|%d|%s|%d|%d|%d" % [seed_n, int(c["year"]), k, id, 1 if p != null else 0, ovr, int(c["best"])])
 

@@ -9,6 +9,7 @@ extends RefCounted
 ## true but the player stayed), the intake and releases, and the age profile.
 ## Args after the impl name: seed club seasons (default 1 MEL 12).
 ## godot --headless --path . --script tools/audit/run_audit.gd -- long_career_impl 1 MEL 12
+const Ovr := preload("res://tests/ovr.gd")
 
 
 func _run_draft(d: Draft) -> void:
@@ -58,7 +59,7 @@ func run() -> void:
 	GameState.reset()
 	GameState.autosave_enabled = false
 	var pool: Array = GameDB.all_players_sorted() + GameDB.all_draftees_sorted()
-	pool.sort_custom(func(a, b): return a["overall"] > b["overall"])
+	pool.sort_custom(func(a, b): return Ovr.of(a) > Ovr.of(b))
 	GameState.draft = Draft.new(pool, GameDB.active_clubs(GameState.season_year).duplicate(), seed)
 	GameState.draft.start_for_user(club)
 	_run_draft(GameState.draft)

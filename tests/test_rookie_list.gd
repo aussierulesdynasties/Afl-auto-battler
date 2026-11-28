@@ -1,4 +1,5 @@
 extends RefCounted
+const Ovr := preload("res://tests/ovr.gd")
 ## Row 88: the rookie list (RookieList). Row 64: a prospect the National
 ## Draft passed over gets his rookie list chance in the Rookie Draft. A seeded career
 ## rolls over through the National Draft, which now fills the senior list
@@ -420,7 +421,7 @@ func _test_midseason_pool_after_offseason() -> void:
 		var fa: Dictionary = model.duplicate(true)
 		fa["id"] = "T_FA_%02d" % i
 		fa["age"] = 20.0 + float(i % 4)
-		fa["overall"] = 40 + i
+		Ovr.to(fa, 40 + i)
 		fa.erase("retiring")
 		made.append(fa)
 	(made[13] as Dictionary)["age"] = 26.0
@@ -444,9 +445,9 @@ func _test_midseason_pool_after_offseason() -> void:
 	var kept: Array = gs.free_agents.duplicate()
 	# Two more who stayed: one every club wants, one nobody does.
 	var star: Dictionary = made[0]
-	star["overall"] = 99
+	Ovr.to(star, 99)
 	var spare: Dictionary = made[1]
-	spare["overall"] = 26
+	Ovr.to(spare, 26)
 	for p in [star, spare]:
 		p["age"] = 22.0
 		p["fa_kept"] = gs.season_year
@@ -690,7 +691,7 @@ func _test_youth_only_drafts() -> void:
 	if draft == null:
 		return
 	_check(draft.user_max_age == Challenge.MAX_AGE, "Youth only: the National Draft carries the age line (%d)" % draft.user_max_age)
-	var old := {"id": "youth_test_old", "age": 25.4, "value": 0, "overall": 99}
+	var old := Ovr.to({"id": "youth_test_old", "age": 25.4, "value": 0}, 99)
 	_check(draft.too_old_for_user(old) and not draft.can_pick_player(old),
 			"Youth only: a 25-year-old cannot be drafted")
 	_check(draft.pick_block_reason(old).contains(" is 25, and you cannot"),
@@ -1165,19 +1166,31 @@ func _test_the_44_national_draft() -> void:
 		sheet += str(line[0]) + " "
 	_check(sheet.contains("will hold 46 of 44") and sheet.contains("44 on its senior and Category A rookie lists together"),
 			"...and so does the sheet before the draft (%s)" % sheet)
+	var col_ids := {}
+	for q in gs.season.lists["COL"]:
+		col_ids[str(q["id"])] = true
 	_check(gs.begin_intake_draft(), "(setup) the National Draft opens")
 	var draft: Draft = gs.draft
 	if draft == null:
 		return
+	# As the draft opens, a club building its list trades its pick for a listed
+	# player (ExpansionBuild.draft_picks, after the ties). When that player is
+	# Collingwood's (seed 8801 on the 2026 scale: Tasmania's pick 13 for
+	# Lachlan Sullivan), Collingwood is one short of 44 again, with that spot open.
+	var to_new := 0
+	for code in ExpansionBuild.building(gs):
+		for q in ExpansionBuild.list_of(gs, str(code)):
+			to_new += 1 if col_ids.has(str(q["id"])) else 0
 	_check(not gs.drafted_draftees.has(str(gee_tie["id"])) and draft.pool.any(func(q): return str(q["id"]) == str(gee_tie["id"])),
 			"A club at 46 lists no father-son player: he is in the open draft")
-	_check(str(gs.drafted_draftees.get(str(col_tie["id"]), "")) == "COL" and RookieList.list_size(gs.league_lists["COL"]) == 44,
-			"A club at 43 lists its father-son player and is then at 44 (taken by %s, COL at %d)" % [
-				str(gs.drafted_draftees.get(str(col_tie["id"]), "nobody")), RookieList.list_size(gs.league_lists["COL"])])
+	_check(str(gs.drafted_draftees.get(str(col_tie["id"]), "")) == "COL" and RookieList.list_size(gs.league_lists["COL"]) == 44 - to_new,
+			"A club at 43 lists its father-son player and is then at 44, less any player a new club traded for (taken by %s, COL at %d, %d to a new club)" % [
+				str(gs.drafted_draftees.get(str(col_tie["id"]), "nobody")), RookieList.list_size(gs.league_lists["COL"]), to_new])
 	_check(gs.ties_without_a_spot(CLUB).size() == 1 and gs.news.any(func(n): return str(n.get("text", n)).contains("No list spot for")),
 			"Your own tied player with no spot is named in the news (%s)" % str(gs.ties_without_a_spot(CLUB)))
-	_check(draft.open_spots("GEE") == 0 and draft.open_spots(CLUB) == 0 and draft.open_spots("COL") == 0,
-			"Clubs at 46, 46 and 44 have no open spot (%d, %d, %d; retiring %s)" % [draft.open_spots("GEE"), draft.open_spots(CLUB), draft.open_spots("COL"), str(draft.leaving_44)])
+	_check(draft.open_spots("GEE") == 0 and draft.open_spots(CLUB) == 0 and draft.open_spots("COL") == to_new,
+			"Clubs at 46, 46 and 44 have no open spot, bar one a new club's trade opened (%d, %d, %d; %d traded; retiring %s)" % [
+				draft.open_spots("GEE"), draft.open_spots(CLUB), draft.open_spots("COL"), to_new, str(draft.leaving_44)])
 	_check(draft.full_at_44(CLUB) and draft.full_words(CLUB).contains("holds 46") and draft.full_words(CLUB).contains("limit is 44"),
 			"Your club is told why its picks pass (%s)" % draft.full_words(CLUB))
 	while not draft.is_finished():

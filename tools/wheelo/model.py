@@ -173,7 +173,8 @@ def speed_records():
     """{(norm name): [(kind, value, club, season)]} from the speed searches
     (C:/kt/speed). gps_top_kmh is a season-best GPS speed, sprint20_s a 20 m
     sprint time; a descriptor is a scout's or reporter's words."""
-    paths = ["C:/kt/speed/speed_real.csv"] + sorted(glob.glob("C:/kt/speed/pass2/b*_found.csv"))
+    paths = (["C:/kt/speed/speed_real.csv"] + sorted(glob.glob("C:/kt/speed/pass2/b*_found.csv"))
+             + ["C:/kt/speed/pass3/found.csv"])
     out = defaultdict(list)
     for path in paths:
         if not os.path.exists(path):

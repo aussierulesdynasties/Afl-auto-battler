@@ -9,6 +9,7 @@ extends SceneTree
 ## medical_cleared.png, medical_retired.png and medical_two.png (the hub the
 ## week the panel sat on your player, each way, and on two at once), each with
 ## a _summary.png of the match summary's Your week. Never touches a real save.
+const Ovr := preload("res://tests/ovr.gd")
 
 
 func _initialize() -> void:
@@ -62,7 +63,7 @@ func _pick(state, want: bool) -> Dictionary:
 			continue
 		if MP.cleared(state.career_seed, str(p["id"]), state.season_year, 5) != want:
 			continue
-		if best.is_empty() or int(p.get("overall", 0)) > int(best.get("overall", 0)):
+		if best.is_empty() or int(Ovr.of(p, 0)) > int(Ovr.of(best, 0)):
 			best = p
 	return best
 

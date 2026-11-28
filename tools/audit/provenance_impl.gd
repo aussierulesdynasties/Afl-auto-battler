@@ -1,4 +1,5 @@
 extends RefCounted
+const Ovr := preload("res://tests/ovr.gd")
 
 func _band(age: float) -> String:
 	if age < 22.0: return "18-21"
@@ -12,11 +13,11 @@ func _summ(label: String, list: Array) -> void:
 		if not bands.has(b):
 			bands[b] = {"n": 0, "ovr": 0.0, "pot": 0.0, "gap": 0.0, "pot85": 0, "maxpot": 0}
 		var r: Dictionary = bands[b]
-		var pot := int(p.get("potential", p["overall"]))
+		var pot := int(p.get("potential", Ovr.of(p)))
 		r["n"] += 1
-		r["ovr"] += float(p["overall"])
+		r["ovr"] += float(Ovr.of(p))
 		r["pot"] += float(pot)
-		r["gap"] += float(pot - int(p["overall"]))
+		r["gap"] += float(pot - int(Ovr.of(p)))
 		if pot >= 85: r["pot85"] += 1
 		r["maxpot"] = maxi(int(r["maxpot"]), pot)
 	for b in ["18-21", "22-26", "27-30"]:
@@ -38,7 +39,7 @@ func run() -> void:
 		for p in lst:
 			if float(p["age"]) >= 26.0:
 				worst.append("%s age %.0f OVR %d POT %d rank %d draft_year %d hist=%s" % [db.player_display_name(p),
-					float(p["age"]), int(p["overall"]), int(p.get("potential", 0)), int(p["draft_rank"]),
+					float(p["age"]), int(Ovr.of(p)), int(p.get("potential", 0)), int(p["draft_rank"]),
 					int(p["draft_year"]), str(p.get("history", p.get("career", "none")))])
 		for w in worst.slice(0, 6):
 			print("   ", w)

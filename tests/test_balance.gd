@@ -1,4 +1,5 @@
 extends RefCounted
+const Ovr := preload("res://tests/ovr.gd")
 ## Long-career balance guard: three simulated seasons (every round, the
 ## national draft, rollovers). The league must not inflate - ratings are
 ## re-anchored to the 2026 league every off-season - and the elite tail must
@@ -79,7 +80,7 @@ func _league() -> Dictionary:
 	var all := []
 	for code in GameState.season.lists:
 		for p in GameState.season.lists[code]:
-			all.append(int(p["overall"]))
+			all.append(int(Ovr.of(p)))
 	all.sort()
 	all.reverse()
 	var total := 0.0

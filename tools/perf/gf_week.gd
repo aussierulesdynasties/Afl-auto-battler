@@ -5,6 +5,7 @@ extends SceneTree
 ## selection bars, and a fingerprint of everything the market decides.
 ##   godot --headless --path . --script tools/perf/gf_week.gd -- [--club GEE] [--seed 4242]
 ## Isolate the save folder with APPDATA. Nothing touches a real save.
+const Ovr := preload("res://tests/ovr.gd")
 
 
 func _initialize() -> void:
@@ -38,6 +39,6 @@ func _run() -> void:
 	var h := hash(var_to_str(gs.offseason_log)) ^ hash(var_to_str(gs.trade_offers))
 	for code in gs.season.lists:
 		for q in gs.season.lists[code]:
-			h = hash([h, code, str(q["id"]), int(q.get("overall", 0)), var_to_str(q.get("contract", {}))])
+			h = hash([h, code, str(q["id"]), int(Ovr.of(q, 0)), var_to_str(q.get("contract", {}))])
 	print("PERF fingerprint %d weeks %d" % [h, weeks])
 	quit()

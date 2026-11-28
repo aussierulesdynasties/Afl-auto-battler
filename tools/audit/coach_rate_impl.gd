@@ -11,6 +11,7 @@ extends RefCounted
 ## Args after the impl name: seed club seasons (default 1 MEL 32: the first season is 2027, so the last rollover is into 2058, the
 ## DESIGN.md horizon). COACH_SEEDS=a,b,c plays one career per seed.
 ## godot --headless --path . --script tools/audit/run_audit.gd -- coach_rate_impl 1 MEL 2
+const Ovr := preload("res://tests/ovr.gd")
 
 var club := "MEL"
 
@@ -57,7 +58,7 @@ func _career(seed: int, seasons: int) -> void:
 	GameState.replay_seed = seed
 	GameState.autosave_enabled = false
 	var pool: Array = GameDB.all_players_sorted() + GameDB.all_draftees_sorted()
-	pool.sort_custom(func(a, b): return a["overall"] > b["overall"])
+	pool.sort_custom(func(a, b): return Ovr.of(a) > Ovr.of(b))
 	GameState.draft = Draft.new(pool, GameDB.active_clubs(GameState.season_year).duplicate(), seed)
 	GameState.draft.start_for_user(club)
 	_run_draft(GameState.draft)

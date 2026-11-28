@@ -13,45 +13,49 @@ extends RefCounted
 ## for ([] = any), what it does, and how a recruiter would put it ("scout").
 ## "max" marks a bad trait (at or below). The thresholds were re-solved for the
 ## Wheelo ratings of 2026-11-16 so each trait has as many holders on the real
-## 2026 lists as before (skills are now rated against the AFL position).
+## 2026 lists as before (skills are now rated against the AFL position), and
+## again for the rating rebuild (2026-11-26), when each trait came to read one of
+## the 18 attributes: Engine was 91 Durability (36 men on the 2026 lists) and
+## became 80 Endurance (36 men; 91 would give 11). The 40/30/30 Endurance blend
+## (director 2026-11-27) made it 88 (34 men; 80 would give 67, 87 gives 40).
 const DEFS := {
-	"ball_magnet": {"label": "Ball magnet", "stat": "disposal", "min": 65, "roles": ["MID", "DEF"],
+	"ball_magnet": {"label": "Ball magnet", "stat": "disposal", "min": 66, "roles": ["MID", "DEF"],
 			"text": "Wins 10% more of the ball in general play.",
 			"scout": "Finds the footy all day."},
-	"bull": {"label": "Contested bull", "stat": "contested", "min": 74, "roles": ["MID", "RUCK"],
+	"bull": {"label": "Contested bull", "stat": "contested_ball", "min": 70, "roles": ["MID", "RUCK"],
 			"text": "Wins 15% more clearances, and the side wins about one more clearance a game. Keeps the ball when tackled 10% more often.",
 			"scout": "Wins it at the coalface and gets it out."},
-	"ruck_king": {"label": "Ruck king", "stat": "ruck", "min": 63, "roles": ["RUCK"],
+	"ruck_king": {"label": "Ruck king", "stat": "ruck", "min": 72, "roles": ["RUCK"],
 			"text": "Wins 5% more of the hit-outs, and 25% more of them go to a team-mate's advantage, so the side wins more of the clearances that follow.",
 			"scout": "Dominates the hit-outs."},
-	"aerial": {"label": "Aerial threat", "stat": "contested_marking", "min": 57, "roles": ["FWD"],
+	"aerial": {"label": "Aerial threat", "stat": "contested_marking", "min": 58, "roles": ["FWD"],
 			"text": "Marks 9% more often in marking contests all over the ground, on the lead and in a pack, and takes more spectacular marks.",
 			"scout": "A strong contested mark inside 50."},
-	"crumber": {"label": "Crumber", "stat": "goalkicking", "min": 54, "roles": ["FWD"], "small": true,
+	"crumber": {"label": "Crumber", "stat": "forward_craft", "min": 39, "roles": ["FWD"], "small": true,
 			"text": "A small forward: twice as often the one at the fall of the ball, and 12% more likely to kick a goal from any shot that is not from a mark.",
 			"scout": "Lives at the feet of the pack."},
-	"sharpshooter": {"label": "Sharpshooter", "stat": "accuracy", "min": 69, "roles": [],
+	"sharpshooter": {"label": "Sharpshooter", "stat": "goalkicking", "min": 85, "roles": [],
 			"text": "Every shot is 6% more likely to be a goal.",
 			"scout": "Reliable set shot."},
-	"playmaker": {"label": "Playmaker", "stat": "creating", "min": 77, "roles": [],
+	"playmaker": {"label": "Playmaker", "stat": "vision", "min": 70, "roles": [],
 			"text": "Shots from this player's inside-50 deliveries are 5% more likely to be goals.",
 			"scout": "Sets up goals with clever ball use going inside 50."},
-	"interceptor": {"label": "Interceptor", "stat": "intercept", "min": 82, "roles": ["DEF"],
+	"interceptor": {"label": "Interceptor", "stat": "reading_play", "min": 85, "roles": ["DEF"],
 			"text": "Takes 30% more intercept marks, in contests inside defensive 50, on the opposition's leads and in general play: marks many of the balls another defender would only spoil. Drawn to the loose man's job.",
 			"scout": "Reads the play and cuts off forward entries."},
-	"lockdown": {"label": "Lockdown", "stat": "pressure", "min": 78, "roles": ["DEF", "MID"],
+	"lockdown": {"label": "Lockdown", "stat": "pressure", "min": 80, "roles": ["DEF", "MID"],
 			"text": "Every shot by the player's direct opponent, from anywhere on the ground, is less likely to be a goal. A defender's opponent is the forward it is matched on: 4% less. A midfielder's is their best midfielder not already picked up, who shoots far less often: 20% less.",
 			"scout": "Can shut down a dangerous opponent."},
-	"def_forward": {"label": "Defensive forward", "stat": "pressure", "min": 71, "roles": ["FWD"], "own_role": true,
+	"def_forward": {"label": "Defensive forward", "stat": "pressure", "min": 56, "roles": ["FWD"], "own_role": true,
 			"text": "Sent to their loose defender, keeps that player out of most contests (another forward sent does it less well).",
 			"scout": "Works up the ground and keeps a loose defender honest."},
-	"engine": {"label": "Engine", "stat": "durability", "min": 91, "roles": [],
+	"engine": {"label": "Engine", "stat": "endurance", "min": 88, "roles": [],
 			"text": "Tires 25% slower.",
 			"scout": "Plays big minutes and keeps going late."},
-	"big_game": {"label": "Big-game player", "stat": "star", "min": 77, "roles": [],
+	"big_game": {"label": "Big-game player", "stat": "ovr", "min": 82, "roles": [],
 			"text": "In the last quarter and in finals, every rating plays 5% higher in the player's own contests (not the side's team ratings).",
 			"scout": "Lifts when it matters: last quarters and finals."},
-	"hothead": {"label": "Hothead", "stat": "discipline", "max": 18, "roles": [],
+	"hothead": {"label": "Hothead", "stat": "discipline", "max": 29, "roles": [],
 			"text": "Gives away 50% more clangers and free kicks, 65% more 50-metre penalties, and is 75% more likely to be reported, on heavier charges.",
 			"scout": "Gives away too many free kicks."},
 }
@@ -104,7 +108,7 @@ const UNICORN_LINES := ["FWD", "MID", "DEF"]
 ## ball-winner with clean hands. Earned from the stats like any trait, but on
 ## top of the five, so it never pushes another trait or a synergy out; it does
 ## something only when it's wet.
-const WET_WEATHER := {"label": "Wet-weather player", "contested": 60, "disposal": 57,
+const WET_WEATHER := {"label": "Wet-weather player", "contested_ball": 51, "disposal": 48,
 		"text": "In the wet: wins 10% more of the ball and makes 20% fewer clangers.",
 		"scout": "Thrives when it's greasy."}
 ## Measured to land the copy's 10% more of the ball in the wet (bug bash 5
@@ -126,7 +130,7 @@ static func wet_weather(p: Dictionary) -> bool:
 	if str(WET_NAMED.get(str(p.get("id", "")), "-")) == str(p.get("real_name", "")):
 		return true
 	var attr: Dictionary = p.get("attr", {})
-	return int(attr.get("contested", 0)) >= int(WET_WEATHER["contested"]) 			and int(Skills.disposal_of(attr, 0.0)) >= int(WET_WEATHER["disposal"])
+	return int(attr.get("contested_ball", 0)) >= int(WET_WEATHER["contested_ball"]) 			and int(Attributes.disposal_of(attr, 0.0)) >= int(WET_WEATHER["disposal"])
 
 
 ## Fine Wine (director, 2026-11-13: "when a player has unnatural longevity
@@ -215,7 +219,7 @@ static var power_tune := {}
 const MAX_GOOD := 5
 ## A small forward for Crumber marks below this contested (re-solved with the
 ## thresholds above: the same share of forwards as before).
-const SMALL_MAX_CM := 37
+const SMALL_MAX_CM := 22
 ## Good traits that come on top of the five.
 const ON_TOP := ["unicorn", "wet_weather", "fine_wine"]
 const LINE_NAMES := {"RUCK": "ruck", "MID": "midfield", "DEF": "defence", "FWD": "forward line"}
@@ -272,6 +276,15 @@ static func is_unicorn(p: Dictionary) -> bool:
 	return bool(p.get("unicorn", false))
 
 
+## A trait's stat as he has it: an attribute, or "ovr", his OVR read from
+## the attributes (the Big-game player: star power is OVR's job,
+## RATING_REBUILD §2).
+static func stat_of(p: Dictionary, stat: String) -> int:
+	if stat == "ovr":
+		return int(Rating.ovr(p, 0))
+	return int(Attributes.value(p.get("attr", {}), stat, 0.0))
+
+
 static func is_bad(key: String) -> bool:
 	return (DEFS.get(key, {}) as Dictionary).has("max")
 
@@ -297,7 +310,7 @@ static func of(p: Dictionary) -> Array:
 					ok = true
 			if not ok:
 				continue
-		var v := int(Skills.value(attr, str(d["stat"]), 0.0))
+		var v := stat_of(p, str(d["stat"]))
 		if d.has("max"):
 			if v <= int(d["max"]):
 				bad.append(key)
@@ -551,13 +564,13 @@ static func near(p: Dictionary) -> Array:
 	var roles := [str(p.get("role", "")), str(p.get("role2", ""))]
 	for key in DEFS:
 		var d: Dictionary = DEFS[key]
-		if d.has("max") or have.has(key):
+		if d.has("max") or have.has(key) or str(d["stat"]) == "ovr":
 			continue
 		if not role_can_earn(p, key, roles):
 			continue
 		if bool(d.get("small", false)) and int(attr.get("contested_marking", 0)) >= SMALL_MAX_CM:
 			continue
-		var gap := int(d["min"]) - int(Skills.value(attr, str(d["stat"]), 0.0))
+		var gap := int(d["min"]) - int(Attributes.value(attr, str(d["stat"]), 0.0))
 		if gap >= 1 and gap <= 6:
 			out.append({"key": key, "gap": gap, "stat": str(d["stat"])})
 	out.sort_custom(func(a, b): return int(a["gap"]) < int(b["gap"]))

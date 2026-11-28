@@ -1,4 +1,5 @@
 extends RefCounted
+const Ovr := preload("res://tests/ovr.gd")
 ## The coach's two archetypes (Archetypes.gd, row 119): the appointment
 ## interview's totals and tie rule, the drift cases from the spec, the match
 ## levers, save and reload, and an older save earning its way in.
@@ -195,8 +196,8 @@ func _test_levers() -> void:
 func _test_gambler_swing() -> void:
 	_check(Archetypes.SWING_WIN == 2 and Archetypes.SWING_LOSS == -2, "swing +2 / -2")
 	for won in [true, false]:
-		var plain := [{"id": "a", "morale": 50, "overall": 70}]
-		var gamb := [{"id": "a", "morale": 50, "overall": 70}]
+		var plain := [Ovr.to({"id": "a", "morale": 50}, 70)]
+		var gamb := [Ovr.to({"id": "a", "morale": 50}, 70)]
 		ClubLife.morale_after_match(plain, {"a": true}, won)
 		ClubLife.morale_after_match(gamb, {"a": true}, won, {}, 0.0, {}, "GAMB")
 		var gap := ClubLife.morale(gamb[0]) - ClubLife.morale(plain[0])

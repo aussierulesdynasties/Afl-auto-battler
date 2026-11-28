@@ -32,7 +32,7 @@ var _state: Node
 var _db: Node
 var PL
 var Pr
-var Rt
+var Rg
 var _checks := 0
 var _failures: Array[String] = []
 var _prospects: Array = []
@@ -65,7 +65,7 @@ func _run() -> void:
 	_db = root.get_node("GameDB")
 	PL = load("res://scripts/sim/PlaysLike.gd")
 	Pr = load("res://scripts/sim/Prospects.gd")
-	Rt = load("res://scripts/sim/Ratings.gd")
+	Rg = load("res://scripts/sim/Rating.gd")
 	_state.autosave_enabled = false
 	_state.save_path = "user://test_plays_like.save"
 	_state.settings_path = "user://test_plays_like.cfg"
@@ -82,6 +82,7 @@ func _run() -> void:
 	_t("_test_strengths_count_for_more")
 	_t("_test_pool_is_the_real_lists")
 	_t("_test_500_generated_prospects")
+	_t("_test_once_per_class")
 	_t("_test_never_himself")
 	_t("_test_two_real_players_one_name")
 	_t("_test_same_after_the_lists_age")
@@ -104,13 +105,14 @@ func _run() -> void:
 # --- made-up players: one fact differs at a time ---------------------------
 
 ## A player with every rated attribute at `base`, then `bumps` added.
-func _man(id: String, role: String, cm: float, pot: int, bumps := {}, base := 60) -> Dictionary:
+func _man(id: String, role: String, cm: float, pot: int, bumps := {}, base := 45) -> Dictionary:
+	# 45 everywhere reads about OVR 51 (Rating.stretch), under every ceiling these tests give.
 	var a := {}
 	for key in Pr.ATTR_KEYS:
 		a[key] = base + int(bumps.get(key, 0))
-	var ovr: int = Rt.rate_overall(a, role, 14.0)
+	# His OVR is read from these attributes (Rating.ovr), never stored.
 	return {"id": id, "real_name": "Real " + id, "generic_name": "Alias " + id, "role": role,
-			"height_cm": cm, "attr": a, "overall": mini(ovr, pot), "potential": pot}
+			"height_cm": cm, "attr": a, "potential": pot}
 
 
 func _named(p: Dictionary, men: Array) -> String:
@@ -118,8 +120,8 @@ func _named(p: Dictionary, men: Array) -> String:
 	return str(e.get("id", ""))
 
 
-const BULL := {"contested": 18, "pressure": 8, "carry": -10, "kicking": -8, "handballing": -8}
-const RUNNER := {"carry": 18, "kicking": 10, "handballing": 10, "contested": -12, "pressure": -8}
+const BULL := {"contested_ball": 18, "pressure": 8, "work_rate": -10, "kicking": -8, "handballing": -8}
+const RUNNER := {"work_rate": 18, "kicking": 10, "handballing": 10, "contested_ball": -12, "pressure": -8}
 
 
 func _test_position_decides() -> void:
@@ -141,7 +143,7 @@ func _test_height_decides() -> void:
 	me["real_name"] = ""
 	# Similar height first: the exact ratings 10 cm away lose to near ratings 2 cm away.
 	var twin_tall := _man("twin_tall", "DEF", 200.0, 80, BULL)
-	var close := _man("close", "DEF", 192.0, 82, {"contested": 14, "pressure": 8, "carry": -8, "kicking": -8, "handballing": -8})
+	var close := _man("close", "DEF", 192.0, 82, {"contested_ball": 14, "pressure": 8, "work_rate": -8, "kicking": -8, "handballing": -8})
 	_check(_named(me, [twin_tall, close]) == "close", "A real player within 4 cm is preferred to one 10 cm taller with the exact ratings")
 	# Inside the band, height is still part of the distance.
 	var plus1 := _man("plus1", "DEF", 191.0, 80, BULL)
@@ -159,7 +161,7 @@ func _test_height_decides() -> void:
 	var small := _man("me", "FWD", 176.0, 91, RUNNER)
 	small["real_name"] = ""
 	var key_fwd := _man("key_fwd", "FWD", 196.0, 91, RUNNER)
-	var small_fwd := _man("small_fwd", "FWD", 170.0, 89, {"carry": 14, "kicking": 8, "handballing": 8, "contested": -8, "pressure": -4})
+	var small_fwd := _man("small_fwd", "FWD", 170.0, 89, {"work_rate": 14, "kicking": 8, "handballing": 8, "contested_ball": -8, "pressure": -4})
 	_check(_named(small, [key_fwd, small_fwd]) == "small_fwd",
 			"A 176 cm forward with 91 POT is likened to the 170 cm forward of 89, not the 196 cm forward with his exact ratings")
 	var tall_small: float = PL.distance(PL.profile(small), PL.profile(key_fwd, true))
@@ -179,8 +181,8 @@ func _test_spread_decides() -> void:
 	# The spread is read at his max potential, not at tonight's rating.
 	var raw := _man("me", "MID", 186.0, 82, BULL, 40)
 	raw["real_name"] = ""
-	_check(int(raw["overall"]) < 70 and _named(raw, [runner, bull]) == "bull",
-			"A raw prospect (%d now, 82 POT) is compared as he will be at 82" % int(raw["overall"]))
+	_check(int(Rg.ovr(raw)) < 70 and _named(raw, [runner, bull]) == "bull",
+			"A raw prospect (%d now, 82 POT) is compared as he will be at 82" % int(Rg.ovr(raw)))
 
 
 func _test_level_decides() -> void:
@@ -194,25 +196,20 @@ func _test_level_decides() -> void:
 		named.append(_named(me, men))
 	_check(named == ["pot62", "pot70", "pot78", "pot86", "pot94"],
 			"The same build at five ceilings names five real players, each of about that level (%s)" % str(named))
-	# Level is his POT itself, not what his ratings can be lifted to. A raw
-	# ruck's ratings cannot be lifted 40 points, and he is still likened to a
-	# real ruck of about his POT (the real lists).
+	# Level is his POT itself, not his rating now: a raw ruck 40 points short
+	# of his POT is likened to a real ruck of about his POT (the real lists).
 	for case in [[200.0, 81], [206.0, 92]]:
-		var raw := _man("me", "RUCK", float(case[0]), int(case[1]), {"ruck": 20, "contested": 10}, 22)
+		var raw := _man("me", "RUCK", float(case[0]), int(case[1]), {"ruck": 20, "contested_ball": 10}, 22)
 		raw["real_name"] = ""
 		var prof: Dictionary = PL.profile(raw)
-		var lifted := 0.0
-		for x in prof["vec"]:
-			lifted += float(x)
-		lifted /= float((prof["vec"] as PackedFloat32Array).size())
 		var got: Dictionary = PL.nearest(raw, _db.plays_like_pool)
 		var best_gap := INF
 		for e in _db.plays_like_pool:
 			if str(e["role"]) == "RUCK":
 				best_gap = minf(best_gap, absf(float(e["peak"]) - float(case[1])))
-		_check(int(raw["overall"]) <= int(case[1]) - 30 and float(prof["peak"]) == float(case[1]) and lifted < float(case[1]) - 8.0,
-				"A raw ruck (%d now, %d POT) is compared at %d although his ratings only lift to about %d" % [
-				int(raw["overall"]), int(case[1]), int(prof["peak"]), int(lifted)])
+		_check(int(Rg.ovr(raw)) <= int(case[1]) - 30 and float(prof["peak"]) == float(case[1]),
+				"A raw ruck (%d now, %d POT) is compared at %d, his POT" % [
+				int(Rg.ovr(raw)), int(case[1]), int(prof["peak"])])
 		_check(not got.is_empty() and absf(float(got["peak"]) - float(case[1])) <= maxf(PL.NEAR_LEVEL, best_gap + 1.0),
 				"He is likened to a real ruck of about %d: %s, peak %d (the nearest real ruck is %d away)" % [
 				int(case[1]), str(got.get("real_name", "")), int(got.get("peak", 0)), int(best_gap)])
@@ -248,10 +245,10 @@ func _test_level_decides() -> void:
 func _test_durability_is_not_compared() -> void:
 	var left_out := []
 	for key in Pr.ATTR_KEYS:
-		if not PL.KEYS.has(key) and not Pr.UNRATED_KEYS.has(key):
+		if not PL.KEYS.has(key):
 			left_out.append(key)
-	_check(left_out == ["durability"] and PL.KEYS.size() == Pr.ATTR_KEYS.size() - Pr.UNRATED_KEYS.size() - 1,
-			"Durability is the one rated attribute left out (%s; %d compared)" % [str(left_out), PL.KEYS.size()])
+	_check(left_out == ["discipline", "durability"] and PL.KEYS.size() == Pr.ATTR_KEYS.size() - 2,
+			"Discipline and Durability are the two attributes left out (%s; %d compared)" % [str(left_out), PL.KEYS.size()])
 	var me := _man("me", "MID", 186.0, 82, BULL)
 	me["real_name"] = ""
 	me["attr"]["durability"] = 95
@@ -266,12 +263,12 @@ func _test_durability_is_not_compared() -> void:
 func _test_strengths_count_for_more() -> void:
 	# Each real player misses him by 20 points in one attribute: one in the
 	# thing he is best at, the other in something he is ordinary at.
-	var me := _man("me", "MID", 186.0, 80, {"carry": 25})
+	var me := _man("me", "MID", 186.0, 80, {"work_rate": 25})
 	me["real_name"] = ""
-	var no_run := _man("no_run", "MID", 186.0, 80, {"carry": 5})
-	var no_mark := _man("no_mark", "MID", 186.0, 80, {"carry": 25, "contested_marking": -20})
+	var no_run := _man("no_run", "MID", 186.0, 80, {"work_rate": 5})
+	var no_mark := _man("no_mark", "MID", 186.0, 80, {"work_rate": 25, "contested_marking": -20})
 	for q in [me, no_run, no_mark]:
-		q["overall"] = 80   # compared as rated: nobody is lifted
+		q["potential"] = int(Rg.ovr(q))   # compared as rated: nobody is lifted
 	var a: Dictionary = PL.profile(me)
 	_check(PL.rating_gap(a, PL.profile(no_run, true)) > PL.rating_gap(a, PL.profile(no_mark, true)) + 2.0,
 			"A 20 point miss in his best attribute is a wider gap than a 20 point miss in an ordinary one (%.1f against %.1f)" % [
@@ -296,9 +293,9 @@ func _test_pool_is_the_real_lists() -> void:
 		roles[str(e["role"])] = true
 		var q: Dictionary = real.get(str(e["id"]), {})
 		if q.is_empty() or str(q["real_name"]) != str(e["real_name"]) or float(e["height"]) <= 0.0 \
-				or bool(q.get("projected", false)) or float(e["peak"]) < float(q["overall"]) - 1.0:
+				or bool(q.get("projected", false)) or float(e["peak"]) < float(Rg.ovr(q, 0)) - 1.0:
 			bad += 1
-			eg = "%s peak %d, today %d" % [str(e["real_name"]), int(e["peak"]), int(q.get("overall", 0))]
+			eg = "%s peak %d, today %d" % [str(e["real_name"]), int(e["peak"]), int(Rg.ovr(q, 0))]
 	_check(bad == 0, "Every entry is a listed real player with a height, senior ratings and a peak no lower than today (%d are not: %s)" % [bad, eg])
 	_check(roles.size() == 4, "All four positions have real players (%s)" % str(roles.keys()))
 	# Every other 2012-2026 season: a real player-season with a height, one man's seasons one person.
@@ -343,15 +340,29 @@ func _test_500_generated_prospects() -> void:
 	var worst_cm := 0.0
 	var lacks_strength := 0
 	var times := {}
+	# What the screens show: each draft class names its own, once per class (director 2026-11-27).
+	var by_year := {}
 	for p in _prospects:
-		var e: Dictionary = PL.nearest(p, pool)
+		var y := int(p["draft_year"])
+		if not by_year.has(y):
+			by_year[y] = []
+		(by_year[y] as Array).append(p)
+	var named := {}
+	var again := {}
+	for y in by_year:
+		named.merge(PL.for_class(by_year[y], pool))
+		again.merge(PL.for_class((by_year[y] as Array).duplicate(true), pool))
+	var held: Array = _state.draftee_pool
+	_state.draftee_pool = _prospects
+	for p in _prospects:
+		var e: Dictionary = named.get(str(p["id"]), {})
 		if e.is_empty() or not real_names.has(str(e["real_name"])):
 			not_real += 1
 			continue
 		names[str(e["real_name"])] = true
 		if str(e["role"]) != str(p["role"]):
 			wrong_role += 1
-		if str((PL.nearest(p.duplicate(true), pool) as Dictionary)["id"]) != str(e["id"]) \
+		if str((again.get(str(p["id"]), {}) as Dictionary).get("id", "")) != str(e["id"]) \
 				or PL.line(p) != PL.LABEL + str(PL.shown_name(e, pool)):
 			moved += 1
 		# Level is measured against his POT itself.
@@ -378,6 +389,7 @@ func _test_500_generated_prospects() -> void:
 		if mine[top] - float((e["vec"] as PackedFloat32Array)[top]) >= 15.0:
 			lacks_strength += 1
 		times[str(e["real_name"])] = int(times.get(str(e["real_name"]), 0)) + 1
+	_state.draftee_pool = held
 	var n := _prospects.size()
 	var most := 0
 	for k in times:
@@ -400,6 +412,41 @@ func _test_500_generated_prospects() -> void:
 	for p in intl:
 		_check(PL.line(p) != "", "International prospect %s has a line" % _db.player_display_name(p))
 	_check(near_cm >= int(ceil(n * 0.95)), "At least 95%% are likened to a player within 4 cm (%d of %d)" % [near_cm, n])
+
+
+## Director 2026-11-27, "Once per class": a real player is named for one prospect of a
+## draft class. The class chooses by POT, so whoever carries a prospect's closest
+## player instead of him has a POT at least his.
+func _test_once_per_class() -> void:
+	var pool: Array = _db.plays_like_pool
+	var cls: Array = _prospects.filter(func(p): return int(p["draft_year"]) == FIRST_YEAR + 5)
+	_check(cls.size() >= 40, "A generated class to name (%d prospects)" % cls.size())
+	var named: Dictionary = PL.for_class(cls, pool)
+	var times := {}
+	var holder := {}
+	for p in cls:
+		var e: Dictionary = named.get(str(p["id"]), {})
+		if e.is_empty():
+			continue
+		times[str(e["real_name"])] = int(times.get(str(e["real_name"]), 0)) + 1
+		holder[str(e["real_name"])] = float(PL.profile(p)["peak"])
+	var most := 0
+	for k in times:
+		most = maxi(most, int(times[k]))
+	var gave_way := 0
+	var to_lower := 0
+	for p in cls:
+		var closest: Dictionary = PL.nearest(p, pool)
+		var e: Dictionary = named.get(str(p["id"]), {})
+		if closest.is_empty() or str(closest["real_name"]) == str(e.get("real_name", "")):
+			continue
+		gave_way += 1
+		if float(holder.get(str(closest["real_name"]), -1.0)) < float(PL.profile(p)["peak"]):
+			to_lower += 1
+	_check(named.size() == cls.size(), "Every prospect of the class is named (%d of %d)" % [named.size(), cls.size()])
+	_check(most == 1, "No real player is named twice in one class (most %d)" % most)
+	_check(gave_way >= 1, "Some prospects share a closest player, so one gives way (%d did)" % gave_way)
+	_check(to_lower == 0, "A prospect's closest player goes to one of a higher or equal POT (%d went lower)" % to_lower)
 
 
 func _test_never_himself() -> void:
@@ -426,8 +473,7 @@ func _test_same_after_the_lists_age() -> void:
 	# A career ages and retrains the listed players in place; the comparison
 	# is with the lists as they were at the start.
 	for q in _db.players:
-		q["overall"] = maxi(30, int(q["overall"]) - 15)
-		q["potential"] = int(q["overall"])
+		q["potential"] = maxi(30, int(Rg.ovr(q, 45)) - 15)
 		q["age"] = float(q["age"]) + 15.0
 		for key in q["attr"]:
 			q["attr"][key] = maxi(1, int(q["attr"][key]) - 15)

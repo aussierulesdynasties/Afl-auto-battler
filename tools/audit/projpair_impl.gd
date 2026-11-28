@@ -9,6 +9,7 @@ extends RefCounted
 ## there.
 ## Args after the impl name: seeds (comma-separated) club seasons
 ## Prints a PAIR line per project player and a summary.
+const Ovr := preload("res://tests/ovr.gd")
 
 var club := "MEL"
 
@@ -43,7 +44,7 @@ func _fill_projects(log: Dictionary) -> void:
 		if not log.has(str(best["id"])):
 			log[str(best["id"])] = {"year": GameState.season_year, "job": job,
 					"role": str(GameState.LEARN_JOBS[job]["role"]), "age": float(best.get("age", 0.0)),
-					"ovr0": int(best["overall"]), "pot0": int(best.get("potential", 0))}
+					"ovr0": int(Ovr.of(best)), "pot0": int(best.get("potential", 0))}
 
 
 ## One career. Returns {"snap": {year: {id: [ovr, pot]}}, "log": project log,
@@ -54,7 +55,7 @@ func _career(seed: int, seasons: int, projects: bool) -> Dictionary:
 	GameState.career_seed = seed
 	GameState.replay_seed = seed
 	var pool: Array = GameDB.all_players_sorted() + GameDB.all_draftees_sorted()
-	pool.sort_custom(func(a, b): return a["overall"] > b["overall"])
+	pool.sort_custom(func(a, b): return Ovr.of(a) > Ovr.of(b))
 	GameState.draft = Draft.new(pool, GameDB.active_clubs(GameState.season_year).duplicate(), seed)
 	GameState.draft.start_for_user(club)
 	_run_draft(GameState.draft)
@@ -74,7 +75,7 @@ func _career(seed: int, seasons: int, projects: bool) -> Dictionary:
 				_fill_projects(log)
 		var row := {}
 		for p in GameState.my_list:
-			row[str(p["id"])] = [int(p["overall"]), int(p.get("potential", 0)), Ratings.positions(p).size()]
+			row[str(p["id"])] = [int(Ovr.of(p)), int(p.get("potential", 0)), Ratings.positions(p).size()]
 		snap[GameState.season_year] = row
 		if s == seasons - 1:
 			break

@@ -15,6 +15,7 @@ extends RefCounted
 ## seeds (comma-separated, default 1) seasons (default 3) min_ovr (default 80).
 ## godot --headless --path . --script tools/audit/run_audit.gd -- star_keep_impl 2010,1995 1,2 3 80
 ## One STAR line per star who left, one YEAR line per off-season, SUMMARY last.
+const Ovr := preload("res://tests/ovr.gd")
 
 var total_stars := 0
 var total_lost := {}
@@ -55,8 +56,8 @@ func _career(start: String, seed: int, seasons: int, min_ovr: int) -> void:
 			if code == gs.my_club:
 				continue
 			for p in gs.season.lists[code]:
-				if int(p.get("overall", 0)) >= min_ovr:
-					stars[str(p["id"])] = {"club": str(code), "p": p, "ovr": int(p["overall"]),
+				if int(Ovr.of(p, 0)) >= min_ovr:
+					stars[str(p["id"])] = {"club": str(code), "p": p, "ovr": int(Ovr.of(p)),
 							"age": float(p.get("age", 0)), "years": int(p.get("contract_years", 1)),
 							"salary": int(p.get("salary", 0))}
 		# A rival board's letter holds the off-season until it is answered:
