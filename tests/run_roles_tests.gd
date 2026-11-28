@@ -173,7 +173,7 @@ func _test_selection_tests() -> void:
 	for t in load("res://scripts/ui/StatGuide.gd").TOPICS:
 		if str(t[0]) == "Traits and synergies":
 			guide_copy = str(t[1])
-	_check(guide_copy.contains("a single player short") and guide_copy.contains(Traits.short_text(lock.call(2)).trim_suffix(".")),
+	_check(guide_copy.contains("when one is a player short") and guide_copy.contains(Traits.short_text(lock.call(2)).trim_suffix(".")),
 			"The Stat Guide says what Selection shows, in the same words")
 	if rules_btn != null:
 		rules_btn.emit_signal("pressed")

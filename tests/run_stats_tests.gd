@@ -1150,7 +1150,7 @@ func _test_ladder(sz: Vector2i) -> void:
 	_check(names == az, "The club column sorts A to Z first (%s)" % tag)
 	_check(_text(s.find_child("ActiveState", true, false)).contains("Club, A–Z first"), "The club sort reads A–Z, not fewest first (%s)" % tag)
 
-	# Filters, by finger: Top 10, Near you, and Reset.
+	# Filters, by finger: Top 10, Near us, and Reset.
 	await Tap.tap(s.find_child("Filter_top10", true, false))
 	await _settle()
 	var top8 := _row_codes(s)
@@ -1170,7 +1170,7 @@ func _test_ladder(sz: Vector2i) -> void:
 		expect_near.append(true_order[i])
 	near.sort()
 	expect_near.sort()
-	_check(near == expect_near and near.has(mine), "Near you is two places either side of your club (%s)" % tag)
+	_check(near == expect_near and near.has(mine), "Near us is two places either side of our club (%s)" % tag)
 	await Tap.tap(s.find_child("ResetLadder", true, false))
 	await _settle()
 	_check(_row_codes(s) == true_order and s.find_child("ResetLadder", true, false) == null,

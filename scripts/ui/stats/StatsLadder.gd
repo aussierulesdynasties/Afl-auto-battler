@@ -79,7 +79,7 @@ const TEAM_TENTHS := ["goals"]
 ## The longest a bar gets (the league's best), so it reads the same on a phone and a PC.
 const TEAM_BAR_MAX := 360.0
 
-const FILTERS := [["all", "All"], ["top10", "Top 10"], ["near", "Near you"]]
+const FILTERS := [["all", "All"], ["top10", "Top 10"], ["near", "Near us"]]
 const VIEWS := [["ladder", "Ladder"], ["team", "Team stats"]]
 
 ## Kept across a rebuild and a visit to a club's side. "" sorts nothing: the
