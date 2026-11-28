@@ -120,7 +120,7 @@ d.rectangle([q(0,0),q(16.7,0.28)],fill=(250,195,45));d.rectangle([q(0,2.45),q(16
 f2=ImageFont.truetype('C:/Windows/Fonts/arialbd.ttf',150)
 bb=d.textbbox((0,0),'EMU EXPORT LAGER',font=f2);sx=(q(16.2,0)[0]-q(5.0,0)[0])/(bb[2]-bb[0])
 tx=Image.new('RGBA',(bb[2]-bb[0]+4,bb[3]-bb[1]+4),(0,0,0,0));ImageDraw.Draw(tx).text((-bb[0]+2,-bb[1]+2),'EMU EXPORT LAGER',font=f2,fill=(250,205,60,255))
-bb=d.textbbox((0,0),'WACA',font=f2);d.text(((q(5.0,0)[0]+q(16.2,0)[0]-(bb[2]-bb[0]))//2-bb[0],(q(0,2.6)[1]-(bb[3]-bb[1]))//2-bb[1]),'WACA',font=f2,fill=(250,205,60))
+# no lettering on the crown (director 2026-11-18, README): the committed sbcrown.png is plain red with the stripes
 im.save(os.path.join(out,'sbcrown.png'));SIZE['sbcrown']=16.7
 # billboard 1, 14.8 x 6.6 m (mostly behind a light tower): white, a blue O at the right
 im,d,q=canvas(14.8,6.6,96,(238,236,230))
