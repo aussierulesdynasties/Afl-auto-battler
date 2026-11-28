@@ -2375,10 +2375,10 @@ func _credit_aerial_loose(def_side: int, fp: float, receiver: Dictionary) -> voi
 		if str(p["id"]) == loose:
 			wl *= 1.0 + LOOSE_READ * _a(p, "reading_play") / 100.0
 			found = true
-		var stop := 0.62 * _a(p, "reading_play") + 0.38 * _contest_of(p, "one_on_one")
-		var mp := clampf(0.418 + (receive - stop) / 240.0
+		var stop := _lead_stop(p)
+		var mp := clampf(LEAD_MARK_BASE + (receive - stop) / 240.0
 				+ (0.05 if _trait(receiver, "aerial") else 0.0), 0.16, 0.55) * _wx("aerial")
-		var sp := clampf(0.275 + (stop - receive) / 220.0
+		var sp := clampf(LEAD_SPOIL_BASE + (stop - receive) / 220.0
 				+ (0.07 if _trait(p, "interceptor") else 0.0), 0.20, 0.65)
 		var ip := sp * INTERCEPT_MARK * (0.529 + 0.8 * _a(p, "reading_play") / 100.0) * _wx("aerial")
 		var ours := ip + 0.5 * (1.0 - mp - ip)
@@ -2589,7 +2589,7 @@ func _deck_ev(side: int) -> Array:
 		var b := float(T["inside50_behind"]) * (0.835 + 0.40 * _a(p, "forward_craft") / 100.0)
 		var c := CRUMB_P * (0.683 + 0.6 * _a(p, "pressure") / 100.0)
 		var size: String = fwd_size(p) if str(p.get("role", "")) == "FWD" else "general"
-		var win := float(GROUND_WIN[size]) * (0.841 + 0.30 * _a(p, "pressure") / 100.0)
+		var win := float(GROUND_WIN[size]) * _ground_win_skill(p, GROUND_WIN_DECK)
 		w_sum += w
 		crumb += w * c * (6.0 * g * CRUMB_SNAP + b)
 		gg += w * win * g
@@ -2801,9 +2801,13 @@ const SMOTHER_CAP := 0.022
 ## arcs ran far under real, contested marks over).
 ## Most ordinary kicks still use the calibrated chain model unchanged.
 const GENERAL_AERIAL_P := 0.15
-const GENERAL_SPOIL_BASE := 0.814
+## 2026-11-28 (director review 3, fix b): re-centred for the new edges, so the
+## league's average chance holds (measured over 180 picked-side matches: the old
+## mark edge averaged -0.0367 and the new -0.0172; one-on-one less contested
+## marking averaged +11.5 at the spoil, /300 then, /240 now).
+const GENERAL_SPOIL_BASE := 0.804
 ## A general-play marking contest's mark chance, level players.
-const GENERAL_MARK_P := 0.187
+const GENERAL_MARK_P := 0.168
 ## Clamp bounds, kept well clear of the bases (2026-11-10: the bases had come
 ## to sit on a bound and the players' edge did nothing on that side).
 const GENERAL_MARK_MIN := 0.05
@@ -3139,8 +3143,8 @@ func _general_aerial(side: int, mark_fp: float, carrier, gain: float, rushed: bo
 	if defender == null:
 		return {}
 	var receive := _contest_of(receiver, "contested_marking")
-	var stop := 0.62 * _a(defender, "reading_play") + 0.38 * _contest_of(defender, "one_on_one")
-	var mark_p := clampf(0.418 + (receive - stop) / 240.0
+	var stop := _lead_stop(defender)
+	var mark_p := clampf(LEAD_MARK_BASE + (receive - stop) / 240.0
 			+ (0.05 if _trait(receiver, "aerial") else 0.0), 0.16, 0.55) * _wx("aerial")
 	var roll := aerial_rng.randf()
 	if roll < mark_p:
@@ -3159,7 +3163,7 @@ func _general_aerial(side: int, mark_fp: float, carrier, gain: float, rushed: bo
 			mev["against_id"] = str(man["id"])
 			_log_duel(side, receiver, man, true, mev)
 		return {"outcome": "mark", "actor": receiver, "contested": contested}
-	var spoil_p := clampf(0.275 + (stop - receive) / 220.0
+	var spoil_p := clampf(LEAD_SPOIL_BASE + (stop - receive) / 220.0
 			+ (0.07 if _trait(defender, "interceptor") else 0.0), 0.20, 0.65)
 	if roll < mark_p + spoil_p:
 		var take_p := _tv("INTERCEPT_MARK", INTERCEPT_MARK) * (0.529 + 0.8 * _a(defender, "reading_play") / 100.0) * _wx("aerial")
@@ -3396,8 +3400,11 @@ func _kick_in_play_on(taker) -> bool:
 ## A general-play marking contest's mark chance. The bounds sit well clear of
 ## GENERAL_MARK_P so the players' edge (and the loose man's shift) always moves
 ## it; _credit_general_loose reads the same chance.
+## The defender's own marking counts as well as his one-on-one (director
+## review 3, 2026-11-28, fix b): 0.7 one-on-one, 0.3 contested marking, /200.
 func _general_mark_chance(target: Dictionary, defender: Dictionary, roam_shift: float) -> float:
-	var edge := (_contest_of(target, "contested_marking") - _contest_of(defender, "one_on_one")) / 260.0
+	var edge := (_contest_of(target, "contested_marking")
+			- (0.7 * _contest_of(defender, "one_on_one") + 0.3 * _contest_of(defender, "contested_marking"))) / 200.0
 	if _trait(target, "aerial"):
 		edge += 0.05
 	return clampf(_tv("GENERAL_MARK_P", GENERAL_MARK_P) + edge + roam_shift,
@@ -3408,7 +3415,7 @@ func _general_mark_chance(target: Dictionary, defender: Dictionary, roam_shift: 
 ## GENERAL_SPOIL_BASE so defender quality and the Interceptor trait count.
 func _general_spoil_chance(target: Dictionary, defender: Dictionary) -> float:
 	return clampf(_tv("GENERAL_SPOIL_BASE", GENERAL_SPOIL_BASE)
-			+ (_contest_of(defender, "one_on_one") - _contest_of(target, "contested_marking")) / 300.0
+			+ (_contest_of(defender, "one_on_one") - _contest_of(target, "contested_marking")) / 240.0
 			+ (0.06 if _trait(defender, "interceptor") else 0.0),
 			GENERAL_SPOIL_MIN, GENERAL_SPOIL_MAX)
 
@@ -3602,11 +3609,13 @@ func _ruck_of(contestant: Array) -> float:
 ## advantage. A tap to advantage swings the stoppage by TAP_ADV_EDGE; a
 ## tap that is not, by nothing - the mids still have to win it. The lists'
 ## ruck on paper comes out of the stoppage contest (contest_winner), so on
-## average ruck quality counts as much as it did; the tap now decides where.
+## average ruck quality counts about as much as it did (within 10%, at
+## TAP_ADV_SLOPE 0.008; director review 3, 2026-11-28: 0.004 left 80 v 30
+## at about 2.4 points of stoppage edge against the paper term's 3.0).
 const RUCK_WEIGHT := 0.27          # Squad.contest's ruck share
 const TAP_ADV_EDGE := 0.22
 const TAP_ADV_BASE := 0.40         # a league-average ruck's first taps to advantage
-const TAP_ADV_SLOPE := 0.004       # per ruck point above the league's 70
+const TAP_ADV_SLOPE := 0.008       # per ruck point above the league's 70
 ## Ruck king: the ruck's share of the hit-outs, as a relative change (5% more),
 ## and the share of them that go to advantage (25% more), so the side wins
 ## more of the clearances that follow (bug bash 5).
@@ -4126,7 +4135,7 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 					return _rushed_through(side, carrier, fp, presser)
 			var turn_p: float = (_tv("PRESS_TURNOVER", PRESS_TURNOVER_FLOW)
 					* (0.766 + 0.40 * _a(presser, "pressure") / 100.0)
-					* (1.170 - 0.40 * _a(carrier, "disposal") / 100.0))
+					* _press_ball_use(carrier))
 			if zone == 0 and _pv(opp, "press") > 1.0:
 				turn_p *= PRESS_ZONE_TURNOVER
 			if in_d50:
@@ -4205,6 +4214,8 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 				max_touches += 1
 			elif in_d50:
 				gain *= _tv("D50_KICK_GAIN", D50_KICK_GAIN)
+			if not chip and not keep and not is_kick_in and (fp if side == 0 else -fp) < f50:
+				gain *= _vision_gain(carrier)
 			gain = minf(gain, kick_range(carrier))
 		if is_kick_in:
 			gain *= 0.82 if not kick_in_play_on else 1.12
@@ -4512,7 +4523,7 @@ func resolve_forward50(side: int, fp: float, feeder) -> Dictionary:
 			shooter = ground_fwd
 			crumbed = true
 			var size: String = fwd_size(ground_fwd) if str(ground_fwd.get("role", "")) == "FWD" else "general"
-			ground_lost = rng.randf() >= float(GROUND_WIN[size]) * (0.808 + 0.30 * _a(ground_fwd, "pressure") / 100.0)
+			ground_lost = rng.randf() >= float(GROUND_WIN[size]) * _ground_win_skill(ground_fwd, GROUND_WIN_SPILL)
 	# Spoiled to the deck, or spilled out of the pack: it comes to rest where the footage
 	# says, and the snap, the crumb, the rebound or the ball-up is played from there.
 	if not marked and (spoilt or crumbed):
@@ -5647,6 +5658,7 @@ func _play_one_chain(T: Dictionary) -> void:
 	if _burst(side, "hold"):
 		_credit(side, "bursts", clanger_p * (1.0 - HOLD_CLANGERS) * CLANGER_VALUE)
 		clanger_p *= HOLD_CLANGERS
+	clanger_p *= _clanger_ball_use(side)
 	if rng.randf() < clanger_p:
 		var err = _pick(squads[side].ground, cw[0])
 		# Row 12: the error is the last disposal's (when the chain ran out on
@@ -5957,6 +5969,55 @@ func _trait_note(p) -> void:
 		ev["trait"] = "crumber"
 	elif (current_quarter >= 4 or finals_mode) and _trait(p, "big_game"):
 		ev["trait"] = "big_game"
+
+
+## Skill fixes, director review 3 (2026-11-28, #2344). Each is centred on the
+## league's own average at that read, measured over real picked sides
+## (36 matches, the Work Rate anchor's method), so the league rates hold and
+## only the gap between players moves.
+## (b) The lead: reading the ball and one-on-one count the same.
+## 0.418 and 0.275 before: the new stop averages 1.48 below the old one.
+const LEAD_MARK_BASE := 0.412
+const LEAD_SPOIL_BASE := 0.282
+func _lead_stop(defender: Dictionary) -> float:
+	return 0.50 * _a(defender, "reading_play") + 0.50 * _contest_of(defender, "one_on_one")
+
+## (c) Clean ball use keeps the ball: the chain's last disposer's Disposal
+## moves the end-of-chain clanger (CLANGER_SKILL 1.0: 30 v 80 is about 25%
+## each way), and moves the pressured turnover more than before.
+const CLANGER_SKILL := 1.0
+## The chain's last disposer averages 51.5 (180 matches, 28,663 chain ends).
+const DISPOSAL_LEAGUE := 51.5
+func _clanger_ball_use(side: int) -> float:
+	if _last_disp.is_empty() or _last_disp.get("carrier") == null:
+		return 1.0
+	var c = _last_disp["carrier"]
+	if not ((squads[side] as Squad).ground.has(c) or (squads[side] as Squad).bench.has(c)):
+		return 1.0
+	return maxf(0.0, 1.0 + CLANGER_SKILL * (DISPOSAL_LEAGUE - _a(c, "disposal")) / 100.0)
+
+## Pressured carriers average Disposal 53.1: 1.303 - 0.65 x 0.531 is the old
+## 1.170 - 0.40 x 0.531.
+const PRESS_USE_BASE := 1.303
+func _press_ball_use(carrier: Dictionary) -> float:
+	return PRESS_USE_BASE - 0.65 * _a(carrier, "disposal") / 100.0
+
+## (d) Vision: a field kick outside forward 50 finds a better target, so it
+## goes further (VISION_GAIN 0.30: 30 v 80 is about 7.5% a kick each way),
+## before his kicking range caps it.
+const VISION_GAIN := 0.30
+## Field kickers outside forward 50 average Vision 44.3 (43,992 kicks).
+const VISION_LEAGUE := 44.3
+func _vision_gain(carrier: Dictionary) -> float:
+	return 1.0 + VISION_GAIN * (_a(carrier, "vision") - VISION_LEAGUE) / 100.0
+
+## (e) The forward's ground ball at the fall: Pressure and Speed, half each.
+## Was 0.841 and 0.808 with 0.30 x Pressure: the forwards at these reads average
+## 6.5 (deck) and 7.8 (spill) points more Speed than Pressure.
+const GROUND_WIN_DECK := 0.831
+const GROUND_WIN_SPILL := 0.796
+func _ground_win_skill(p: Dictionary, base: float) -> float:
+	return base + 0.15 * _a(p, "pressure") / 100.0 + 0.15 * _a(p, "speed") / 100.0
 
 
 func _trait(p: Dictionary, key: String) -> bool:

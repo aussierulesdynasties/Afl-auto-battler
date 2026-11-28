@@ -297,6 +297,11 @@ static func is_bad(key: String) -> bool:
 ## to MAX_GOOD (the furthest past their line first), then the wet-weather
 ## player, Fine Wine and Hothead if they apply.
 static func of(p: Dictionary) -> Array:
+	# Audits only (tools/audit/delta50_impl.gd, traits median/off): the player's
+	# traits held fixed, so a skill can be measured on its own. No list or save
+	# player carries this key.
+	if p.has("traits_fixed"):
+		return p["traits_fixed"]
 	var attr: Dictionary = p.get("attr", {})
 	var roles := [str(p.get("role", "")), str(p.get("list_tag", ""))] + _positions(p)
 	var good := []

@@ -29,9 +29,15 @@ extends RefCounted
 ##   levels     "30:80" (default); "30:55" or "55:80" for a linearity check
 ##   part       "k/n": only cells k, k+n, k+2n, ... (0-based), to split a run
 ##              over n processes; the NULL cell is cell 0
+##   traits     "on" (default: worked out from the cell's attributes, as in a real
+##              match), "median" (each player keeps the traits of the median player
+##              at his position, whatever the cell sets; director review 3,
+##              2026-11-28, option A) or "off" (no traits). The synergies follow,
+##              since they are counted from the same traits when the match starts.
+##              Traits.of reads the fixed list, so every trait read sees it.
 ## Prints: CELL|position|attribute|lo|hi|matches|mean margin|se|mean HI score|mean LO score
 ## and STATS|position|attribute|each STATS key, HI side minus LO side a match
-## godot --headless --path . --script tools/audit/run_audit.gd -- delta50_impl Ruck 200 weighted 30:80 0/1
+## godot --headless --path . --script tools/audit/run_audit.gd -- delta50_impl Ruck 200 weighted 30:80 0/1 median
 
 const LINEUP := {
 	"RUCK": ["Ruck"],
@@ -49,6 +55,7 @@ const STATS := ["hitouts", "clearances", "contested_possessions", "inside50", "m
 var _median := {}     # apos -> {attr: median}
 var _template := {}   # apos -> a real player of that position (for the fields a match reads)
 var _size := {}       # apos -> [height, weight]
+var _traits_mode := "on"
 
 
 func _build_medians() -> void:
@@ -118,12 +125,32 @@ func _side(tag: String, apos_bump: String, key: String, level: int) -> Dictionar
 	return {"list": list, "sel": sel}
 
 
+## Traits held fixed on a match-day player (the slotted copy, so his slot and
+## position count as they do in a real match): off, none; median, the traits he
+## would have with his position's median attributes.
+func _fix_traits(p: Dictionary) -> void:
+	if _traits_mode == "off":
+		p["traits_fixed"] = []
+		return
+	var base := p.duplicate()
+	base.erase("traits_fixed")
+	var a := {}
+	for k in Attributes.KEYS:
+		a[k] = clampi(int(round(float(_median[str(p["apos"])][k]))), 1, 99)
+	base["attr"] = a
+	p["traits_fixed"] = Traits.of(base)
+
+
 func _match(i: int, apos: String, key: String, lo: int, hi: int) -> Array:
 	var hi_home := i % 2 == 0
 	var h := _side("HOM", apos, key, hi if hi_home else lo)
 	var a := _side("AWY", apos, key, lo if hi_home else hi)
 	var sq_h := Squad.new("HOM", h["list"], false, "HOM", h["sel"])
 	var sq_a := Squad.new("AWY", a["list"], false, "AWY", a["sel"])
+	if _traits_mode != "on":
+		for sq in [sq_h, sq_a]:
+			for p in (sq as Squad).ground + (sq as Squad).bench + (sq as Squad).sub:
+				_fix_traits(p)
 	var sim := MatchSim.new(sq_h, sq_a, 700000 + i)
 	sim.season_plans = ["steady", "steady"]
 	sim.run()
@@ -152,6 +179,11 @@ func run() -> void:
 	var hi := int(levels[1])
 	var k_part := int(part[0])
 	var n_part := int(part[1])
+	_traits_mode = str(args[6]) if args.size() > 6 else "on"
+	if not ["on", "median", "off"].has(_traits_mode):
+		push_error("delta50: traits must be on, median or off, not %s" % _traits_mode)
+		return
+	print("TRAITS|%s" % _traits_mode)
 	GameDB.reload()
 	_build_medians()
 	var positions: Array = Rating.POSITIONS.duplicate() if pos_arg == "all" else \
