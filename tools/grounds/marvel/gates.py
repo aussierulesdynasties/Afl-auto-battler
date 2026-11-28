@@ -1145,6 +1145,108 @@ def _stage1():
         g.poly("needle_steel", [(p_[0], p_[1], p_[2] + DECK_Z) for p_ in P], [tuple(map(float, x_)) for x_ in UV])
         NRM["needle_steel"].append([tuple(map(float, n_)) for n_ in N])
 
+    # ------------------------------------------------------------ the S-hook (Gate 7)
+    # Part of the same work: a green tube rising from an overhand knot on the deck into a tall S, its open end hanging
+    # at about 4.8 m. The stem is a spline fitted to two Street View views (VF8X, XPCU) within a few px, the tube
+    # tapering from 0.37 m to 0.24 m across. The knot is fitted jointly to those two views and the photos p02 and c010
+    # (silhouette overlap 0.76 to 0.80 in each), keeping the tube clear of itself; its end runs down into the deck
+    # under the last lobe. The repaint line is the field's (p02 changes colour between 1.9 and 2.1 m, c010 at 1.8-1.9).
+    # The open end (VF8X close up): a green rim, the dark inside wall, then a pale steel plate set back in the tube.
+    HK_STEM = ((-64.534, 107.173, 0.445),
+               (-64.203, 107.278, 1.140),
+               (-64.132, 106.230, 2.280),
+               (-64.449, 105.479, 3.298),
+               (-64.827, 105.539, 4.283),
+               (-64.858, 106.358, 5.233),
+               (-64.601, 107.251, 5.432),
+               (-63.579, 107.689, 5.456),
+               (-63.602, 108.296, 4.824))    # x, y, height above the deck
+    HK_R0, HK_R1 = 0.187, 0.120    # tube radius at the foot and at the open end
+    HK_KNOT = ((-64.126, 107.231, 0.259),
+               (-63.882, 107.221, 0.265),
+               (-64.063, 107.603, 0.244),
+               (-64.353, 107.617, 0.264),
+               (-64.616, 107.457, 0.332),
+               (-64.729, 107.152, 0.509),
+               (-64.731, 107.025, 0.594),
+               (-64.447, 106.936, 0.626),
+               (-64.237, 106.908, 0.531),
+               (-64.357, 106.868, 0.286),
+               (-64.580, 106.829, 0.285),
+               (-64.536, 107.080, 0.147),
+               (-64.638, 107.177, -0.323))    # the last one below the deck
+    from scipy.interpolate import CubicSpline
+
+    def hook_sweep(Cc, R, ns):
+        """A round green tube along Cc (deck-relative) whose radius R varies along it; clipped at the deck."""
+        T = np.gradient(Cc, axis=0)
+        T /= np.linalg.norm(T, axis=1)[:, None]
+        sg = np.r_[0, np.cumsum(np.linalg.norm(np.diff(Cc, axis=0), axis=1))]
+        ref = np.cross(T[0], (1.0, 0.0, 0.0))
+        ref /= np.linalg.norm(ref)
+        an = np.linspace(0, 2 * np.pi, ns + 1)
+        RG, NG = [], []
+        for i in range(len(Cc)):
+            ref = ref - T[i] * float(np.dot(ref, T[i]))
+            ref /= np.linalg.norm(ref)
+            b2 = np.cross(T[i], ref)
+            nr = np.cos(an)[:, None] * ref[None] + np.sin(an)[:, None] * b2[None]
+            NG.append(nr)
+            RG.append(Cc[i][None] + nr * R[i])
+        for i in range(len(Cc) - 1):
+            c0, c1 = 2 * math.pi * R[i], 2 * math.pi * R[i + 1]
+            for j in range(ns):
+                P = [RG[i][j], RG[i][j + 1], RG[i + 1][j + 1], RG[i + 1][j]]
+                N = [NG[i][j], NG[i][j + 1], NG[i + 1][j + 1], NG[i + 1][j]]
+                UV = [np.array((sg[i], c0 * j / ns)), np.array((sg[i], c0 * (j + 1) / ns)),
+                      np.array((sg[i + 1], c1 * (j + 1) / ns)), np.array((sg[i + 1], c1 * j / ns))]
+                if max(p_[2] for p_ in P) <= 0:
+                    continue
+                if min(p_[2] for p_ in P) < 0:
+                    P, N, UV = clip_up(P, N, UV)
+                    if len(P) < 3:
+                        continue
+                paint_face(P, N, UV, DECK_Z)
+        return RG, NG, T
+
+    HKp = np.array(HK_STEM)
+    s_ = np.r_[0, np.cumsum(np.linalg.norm(np.diff(HKp, axis=0), axis=1))]
+    t_ = np.linspace(0, s_[-1], 300)
+    HKs = CubicSpline(s_, HKp, bc_type="natural")(t_)
+    hu = t_ / s_[-1]
+    h0 = int(np.argmin(np.abs(HKs[:, 2] - 1.0)))         # the knot takes over from the stem about 1 m up
+    hts = HKs[h0] - HKs[h0 + 3]
+    hts /= np.linalg.norm(hts)
+    Kp = np.vstack([HKs[h0], np.array(HK_KNOT)])
+    s_ = np.r_[0, np.cumsum(np.linalg.norm(np.diff(Kp, axis=0), axis=1))]
+    HKk = CubicSpline(s_, Kp, bc_type=((1, hts), (2, np.zeros(3))))(np.linspace(0, s_[-1], 260))
+    HKc = np.vstack([HKs[h0:][::-1], HKk[1:]])           # from the open end down the stem and through the knot
+    Rh = np.r_[HK_R0 + (HK_R1 - HK_R0) * (hu[h0:][::-1] - hu[h0]) / (1 - hu[h0]), np.full(len(HKk) - 1, HK_R0)]
+    ns_ = 24
+    RG, NG, Th = hook_sweep(HKc, Rh, ns_)
+    # the open end: green rim to 0.8 of the radius, the inside wall 6 cm deep, a pale steel plate at its foot
+    an = np.linspace(0, 2 * np.pi, ns_ + 1)
+    out_n = -Th[0]
+    rr = RG[0] - HKc[0][None]                            # rim ring offsets, radius Rh[0]
+    inner = HKc[0][None] + rr * 0.8
+    deep = inner + Th[0][None] * 0.06
+    for j in range(ns_):
+        P = [RG[0][j + 1], RG[0][j], inner[j], inner[j + 1]]
+        UV = [np.array((0.0, 0.0)), np.array((0.05, 0.0)), np.array((0.05, 0.03)), np.array((0.0, 0.03))]
+        paint_face(P, [out_n] * 4, UV, DECK_Z)
+        P = [inner[j + 1], inner[j], deep[j], deep[j + 1]]
+        N = [-NG[0][j + 1], -NG[0][j], -NG[0][j], -NG[0][j + 1]]
+        UV = [np.array((0.0, 0.0)), np.array((0.05, 0.0)), np.array((0.05, 0.06)), np.array((0.0, 0.06))]
+        paint_face(P, N, UV, DECK_Z)
+    ctr = HKc[0] + Th[0] * 0.06
+    e1_ = rr[0] / np.linalg.norm(rr[0])
+    e2_ = np.cross(out_n, e1_)
+    for j in range(ns_):
+        P = [ctr, deep[j + 1], deep[j]]
+        UV = [(float(np.dot(p_ - ctr, e1_)), float(np.dot(p_ - ctr, e2_))) for p_ in P]
+        g.poly("link_steel", [(p_[0], p_[1], p_[2] + DECK_Z) for p_ in P], UV)
+        NRM["link_steel"].append([tuple(map(float, out_n))] * 3)
+
     # ------------------------------------------------------------ hand over to Blender
     data = {"parts": g.parts, "tile": TILE, "text": TEXT, "tex": TEX, "out": OUT, "nrm": NRM}
     pkl = os.path.join(TEX, "_gates.pkl")
