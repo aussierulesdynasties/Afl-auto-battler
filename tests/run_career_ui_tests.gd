@@ -1890,6 +1890,7 @@ func _test_menu_and_career() -> void:
 	await _settle()
 	_press("ForgeCreatePlayer")
 	await _settle()
+	await _check_forge_preview_look()
 	# T8.Q12: one weakness is compulsory, a second optional, never a third.
 	var save_b: Button = current_scene.find_child("ForgeSavePlayer", true, false)
 	_check(save_b != null and save_b.disabled and current_scene.find_child("ForgeNeedWeakness", true, false) != null,
@@ -4256,6 +4257,68 @@ func _test_season_awards() -> void:
 
 ## Press a named button in the current scene, or fail the check if it is missing.
 ## How many weaknesses the open Forge form holds.
+## Create a player's preview is the 3D footballer (ruling 2.76), and he wears the look as the
+## coach picks it: a real tap on a hair style, a skin tone and a hair colour, then every style
+## in Appearance.HAIR_STYLES on both men (front and back), and his favourite club's guernsey.
+func _check_forge_preview_look() -> void:
+	# By path, not class name: this suite starts before the autoloads (tools/lint/autoload_reach.py).
+	var preview_gd: Script = load("res://scripts/ui/PlayerPreview.gd")
+	var shells: Dictionary = load("res://scripts/ui/match/Oval3D.gd").hair_shells()
+	var pv = current_scene.find_child("ForgePlayerPreview", true, false)
+	_check(pv != null and pv.get_script() == preview_gd and (pv.get("figures") as Array).size() == 2,
+			"Create a player shows the 3D footballer, front and back")
+	if pv == null or pv.get_script() != preview_gd:
+		return
+	var sc: ScrollContainer = current_scene.get("_scroll")
+	var taps := []
+	for n in ["ForgeHair_quiff", "ForgeSkin_3", "ForgeHairColour_2"]:
+		var b: Control = current_scene.find_child(n, true, false)
+		if b != null and sc != null:
+			sc.ensure_control_visible(b)
+			await _settle()
+		taps.append(await Tap.tap(b) if b != null else "missing")
+		await _settle()
+		# A colour swatch rebuilds the form: find the preview again.
+		pv = current_scene.find_child("ForgePlayerPreview", true, false)
+	var shown: Dictionary = pv.call("shown")
+	var worn := true
+	for p in (pv.get("figures") as Array):
+		var hair: Node = p.get("hair_node")
+		worn = worn and str(p.get("hair_style", "")) == "quiff" and hair != null and hair.find_child("hair_quiff", true, false) != null
+		for mi in (p["node"] as Node3D).find_children("*", "MeshInstance3D", true, false):
+			if (mi as MeshInstance3D).has_meta("kit"):
+				worn = worn and (mi as GeometryInstance3D).get_instance_shader_parameter("skin") == Appearance.SKIN[3] \
+						and (mi as GeometryInstance3D).get_instance_shader_parameter("hair") == Appearance.HAIR[2]
+	_check(taps == ["", "", ""] and str(shown.get("hair_style")) == "quiff" and int(shown.get("skin", -1)) == 3
+			and int(shown.get("hair", -1)) == 2 and worn,
+			"A real tap on Quiff, a skin tone and a hair colour puts them on the 3D preview (%s, %s)" % [str(taps), str(shown)])
+	# Every style live, on both men, no rebuild of the form needed.
+	var look: Dictionary = current_scene.get("_spec")["look"]
+	var missed := []
+	for style in Appearance.HAIR_STYLES:
+		look["hair_style"] = style
+		await process_frame
+		await process_frame
+		for p in (pv.get("figures") as Array):
+			var on: Node = p.get("hair_node")
+			var has_shell := shells.has(style)
+			if str(p.get("hair_style", "")) != style or (has_shell and (on == null or on.find_child("hair_" + style, true, false) == null)):
+				missed.append(style)
+				break
+	_check(missed.is_empty(), "The 3D preview wears every one of the %d hair styles (missed %s)" % [Appearance.HAIR_STYLES.size(), str(missed)])
+	# His favourite club's guernsey; none picked, the prospect's own.
+	current_scene.get("_spec")["fav_club"] = "FRE"
+	await _settle()
+	var club_on := str(pv.call("shown").get("club", "")) == "FRE"
+	current_scene.get("_spec")["fav_club"] = ""
+	await _settle()
+	_check(club_on and str(pv.call("shown").get("club", "x")) == "",
+			"The 3D preview wears his favourite club's guernsey, or the prospect's own")
+	look["hair_style"] = "short_crop"
+	look["skin"] = 1
+	look["hair"] = 1
+
+
 func _forge_weaknesses() -> int:
 	return (current_scene.get("_spec")["weaknesses"] as Array).size()
 
