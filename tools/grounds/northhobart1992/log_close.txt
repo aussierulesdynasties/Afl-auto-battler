@@ -1,0 +1,9 @@
+<string>:11: DeprecationWarning: 'Material.use_nodes' is expected to be removed in Blender 6.0
+C:\Users\DANTE\Documents\GitHub\Afl-auto-battler\.claude\worktrees\north-hobart-1992\tools\grounds\northhobart1992\world2.py:44: DeprecationWarning: 'World.use_nodes' is expected to be removed in Blender 6.0
+  w=bpy.data.worlds.new('w');sc.world=w;w.use_nodes=True;bg=w.node_tree.nodes['Background'];bg.inputs[0].default_value=(0.55,0.65,0.8,1);bg.inputs[1].default_value=1.1
+02:13.234  render           | Saved: 'C:\Users\DANTE\Documents\GitHub\Afl-auto-battler\.claude\worktrees\north-hobart-1992\.claude\review\north_hobart\renders\r_close.png'
+DISSOLVE gor_roof 3635
+DISSOLVE gor_ceiling 3612
+Blender 5.2.2 LTS (hash d13f752e3b9c built 2026-09-15 01:37:04)
+
+Blender quit
