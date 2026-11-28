@@ -654,7 +654,7 @@ func _fill_rows(rows: Node) -> void:
 			group.append(p)
 		if group.is_empty():
 			continue
-		group.sort_custom(func(a, b): return int(a["overall"]) > int(b["overall"]))
+		group.sort_custom(func(a, b): return int(Rating.ovr(a)) > int(Rating.ovr(b)))
 		# A plain heading in the text colour: position is not a state, so
 		# no green or gold here.
 		var head := UiKit.lbl("%s (%d)" % [UiKit.ROLE_LABEL[role], group.size()], UiKit.SECONDARY + 1, UiKit.TEXT, true)
@@ -751,7 +751,7 @@ func _player_card(p: Dictionary) -> Control:
 	var ovr_word := UiKit.line("OVR", CARD_FS, UiKit.MUTED)
 	ovr_word.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	top.add_child(ovr_word)
-	var ovr := UiKit.line(("▲ " if rise.size() > 0 else "") + str(int(p["overall"])), UiKit.NAME,
+	var ovr := UiKit.line(("▲ " if rise.size() > 0 else "") + str(int(Rating.ovr(p))), UiKit.NAME,
 			UiKit.GOOD if rise.size() > 0 else UiKit.TEXT, true)
 	ovr.name = "Rating"
 	ovr.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -1108,7 +1108,7 @@ func _detail_panel() -> Control:
 		# (director, 2026-10-10: no empty space on a PC).
 		var best: Dictionary = GameState.my_list[0]
 		for q in GameState.my_list:
-			if int(q.get("overall", 0)) > int(best.get("overall", 0)):
+			if int(Rating.ovr(q, 0)) > int(Rating.ovr(best, 0)):
 				best = q
 		_selected = str(best["id"])
 		p = best
@@ -1133,7 +1133,7 @@ func _detail_panel() -> Control:
 			13, UiKit.MUTED))
 	var standing := UiKit.hbox(10)
 	body.add_child(standing)
-	standing.add_child(UiKit.line("OVR %d" % int(p["overall"]), 22, UiKit.EMPH, true))
+	standing.add_child(UiKit.line("OVR %d" % int(Rating.ovr(p)), 22, UiKit.EMPH, true))
 	var rise := _last_rise(_selected)
 	var state := GameState.development_state(p)
 	var state_l := UiKit.lbl(state + ("  ·  up from %d last game" % int(rise[0]) if rise.size() > 0 else ""), 14,
@@ -1170,9 +1170,9 @@ func _detail_panel() -> Control:
 	var pid := _selected
 	var on_pick := func(key: String):
 		var q := GameState.list_player(pid)
-		var before := int(q.get("overall", 0))
+		var before := int(Rating.ovr(q, 0))
 		var gains := GameState.set_player_plan(pid, key)
-		_notice = _spend_notice(gains, before, int(GameState.list_player(pid).get("overall", 0)))
+		_notice = _spend_notice(gains, before, int(Rating.ovr(GameState.list_player(pid), 0)))
 		_build()
 	fv.add_child(_plan_picker(p, on_pick))
 	var learn := _learn_picker(p, on_pick)
@@ -1213,7 +1213,7 @@ func _detail_panel() -> Control:
 		_build())
 	body.add_child(adv)
 	if _advanced:
-		var pot := UiKit.lbl("Potential %d  ·  %s" % [int(p.get("potential", p["overall"])), _potential_note(p)],
+		var pot := UiKit.lbl("Potential %d  ·  %s" % [int(p.get("potential", Rating.ovr(p))), _potential_note(p)],
 				12, UiKit.MUTED)
 		pot.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		body.add_child(pot)
@@ -1285,9 +1285,9 @@ func _stat_focus_panel(p: Dictionary) -> Control:
 		lock.custom_minimum_size = Vector2(0, GRID_TOUCH)
 		var pid := str(p["id"])
 		lock.pressed.connect(func():
-			var before := int(GameState.list_player(pid).get("overall", 0))
+			var before := int(Rating.ovr(GameState.list_player(pid), 0))
 			if GameState.set_stat_focus(pid, chosen):
-				var after := int(GameState.list_player(pid).get("overall", 0))
+				var after := int(Rating.ovr(GameState.list_player(pid), 0))
 				_focus_notice = "Banked development lifted his OVR from %d to %d." % [before, after] if after > before else ""
 			_focus_choice = ""
 			_build())
@@ -1321,7 +1321,7 @@ static func _project_line(p: Dictionary) -> String:
 		return ""
 	var role := GameState.project_role(p)
 	var there := GameState.rating_as(p, role)
-	var own := int(p.get("overall", 0))
+	var own := int(Rating.ovr(p, 0))
 	var head := "%s. As a %s he rates %d. In his own position, %d. " % [
 		GameState.project_progress(p), str(GameState.LEARN_JOBS[job]["word"]), there, own]
 	if there >= own - GameState.PROJECT_PASS:
@@ -1403,7 +1403,7 @@ func _ignore_mouse(node: Control) -> void:
 
 ## What his potential means for his development now (Growth).
 func _potential_note(p: Dictionary) -> String:
-	var gap := int(p.get("potential", p["overall"])) - int(p["overall"])
+	var gap := int(p.get("potential", Rating.ovr(p))) - int(Rating.ovr(p))
 	if gap <= 0:
 		return "At his potential: each summer takes back part of what he trains past it."
 	return "Every game he plays brings him closer."

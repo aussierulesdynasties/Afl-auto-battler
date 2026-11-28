@@ -47,7 +47,7 @@ static func focus_mult(p: Dictionary, club: String) -> float:
 
 
 static func projection(p: Dictionary, club: String, seed: int, uncertainty_mult := 1.0) -> Dictionary:
-	var ov := int(p.get("overall", 50))
+	var ov := int(Rating.ovr(p, 50))
 	var pot := maxi(ov, int(p.get("potential", ov)))
 	var certainty := _certainty(p)
 	# A club that saw him in its pre-season match reads him more tightly
@@ -89,7 +89,7 @@ static func scouted_worth(p: Dictionary, club: String, seed: int, pot_weight: fl
 ## prospect's; every senior game narrows it, to under a third by 150 games,
 ## and the recruiting budget sharpens or blurs it ({"mid", "range"}).
 static func pot_read(p: Dictionary, club: String, seed: int, uncertainty_mult := 1.0) -> Dictionary:
-	var ov := int(p.get("overall", 50))
+	var ov := int(Rating.ovr(p, 50))
 	var pot := maxi(ov, int(p.get("potential", ov)))
 	var games := float((p.get("career", {}) as Dictionary).get("games", p.get("gm", 0.0)))
 	var sd := POT_SD * clampf(1.0 - games / 150.0, 0.3, 1.0) * maxf(0.25, float(uncertainty_mult))

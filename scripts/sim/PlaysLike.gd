@@ -36,8 +36,7 @@ class_name PlaysLike
 
 ## The attributes compared: those in the overall rating that say how he plays
 ## (not durability, and not temperament, which is not in the rating).
-const KEYS := ["kicking", "handballing", "contested", "contested_marking", "uncontested_marking",
-		"pressure", "intercept", "speed", "carry", "goalkicking", "accuracy", "creating", "ruck", "star"]
+const KEYS := Attributes.PLAY_STYLE_KEYS
 ## "Similar height": real players this close are preferred over all others.
 const NEAR_CM := 4.0
 ## "About his level": real players whose peak overall is this close to the
@@ -69,10 +68,10 @@ static func profile(p: Dictionary, real := false) -> Dictionary:
 		if not attr.has(key):
 			return {}
 	var role := str(p.get("role", "MID"))
-	var peak := float(p.get("potential", p.get("overall", 0)))
+	var peak := float(p.get("potential", Rating.ovr(p, 0)))
 	if real:
 		peak = maxf(peak, Potential.recent_peak(p))
-	peak = maxf(peak, float(p.get("overall", 0)))
+	peak = maxf(peak, float(Rating.ovr(p, 0)))
 	var at_peak := Prospects.fit_attributes(attr, role, peak)
 	var vec := PackedFloat32Array()
 	for key in KEYS:
@@ -303,7 +302,7 @@ static func _nearest_memoised(p: Dictionary, pool: Array) -> Dictionary:
 		_memo.clear()
 		_memo_pool = pool
 		_memo_size = pool.size()
-	var key := [str(p.get("id", "")), str(p.get("role", "")), p.get("potential"), p.get("overall"),
+	var key := [str(p.get("id", "")), str(p.get("role", "")), p.get("potential"), Rating.ovr(p),
 			p.get("height_cm"), str(p.get("real_name", "")), str(p.get("club", "")),
 			(p.get("attr", {}) as Dictionary).hash()].hash()
 	if _memo.has(key):

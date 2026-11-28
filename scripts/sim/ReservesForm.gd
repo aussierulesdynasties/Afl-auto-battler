@@ -43,7 +43,7 @@ static func game(p: Dictionary, seed: int) -> Dictionary:
 	var role := str(p.get("role", "MID"))
 	var base: Dictionary = LINE.get(role, LINE["MID"])
 	# A better player stands out more against the twos; the day can go either way.
-	var q := clampf((float(p.get("overall", 60)) - 55.0) / 30.0, 0.0, 1.3)
+	var q := clampf((float(Rating.ovr(p, 60)) - 55.0) / 30.0, 0.0, 1.3)
 	var m := clampf(0.75 + 0.5 * q + rng.randfn(0.0, 0.22), 0.3, 1.8)
 	var st := {}
 	for k in base:
