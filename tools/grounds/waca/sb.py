@@ -7,7 +7,7 @@ SL=(0.05,0.999);SN=(-0.999,0.05);SC=(120.3,-21.0);DZ=-2.8     # SN faces the gro
 def SBP(s,d,z):return (SC[0]+SL[0]*s+SN[0]*d,SC[1]+SL[1]*s+SN[1]*d,z+DZ if z>0 else z)
 def sq(m,pts):quad(m,[SBP(*p) for p in pts])
 def sbox(m,s0,s1,d0,d1,z0,z1,top=None):boxpts(m,[SBP(s0,d0,0)[:2],SBP(s1,d0,0)[:2],SBP(s1,d1,0)[:2],SBP(s0,d1,0)[:2]],z0+DZ if z0>0 else z0,z1+DZ,top)
-sbox('board',-7.6,7.6,-2.0,0.0,10.8,17.1)                 # black face box
+sbox('board',-7.6,7.6,-2.0,0.0,10.8,16.5)                 # black face box (stops under the crown: 17.1 z-fought its back)
 sbox('white',7.6,8.6,-2.0,0.05,10.8,16.5);sbox('white',-8.1,-7.6,-2.0,0.05,10.8,16.5)   # white end pillars
 sbox('crownred',-8.1,8.6,-2.0,0.0,16.5,19.1)               # crown band body
 for s,(o) in ((-3.5,0),(3.5,0)):sbox('concrete',s-0.5,s+0.5,-1.5,-0.5,0,10.8)            # legs
