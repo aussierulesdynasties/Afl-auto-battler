@@ -37,10 +37,12 @@
 						"why": "You found him a host family when he was homesick"
 					},
 					{
-						"op": "heavy_legs"
+						"op": "slow_start",
+						"chance": 10,
+						"on": "week"
 					}
 				],
-				"result": "{first} moves in with a family near the club. The first week is all boxes and a new bed."
+				"result": "{first} moves in with a family near the club. The first week is all boxes and a new bed, and he's unsettled."
 			},
 			{
 				"key": "parent",

@@ -186,8 +186,8 @@
 		"text": ["Hawthorn next. Neither club's supporters have to be told why it matters, and the players want a big week."],
 		"choices": [
 			{"key": "big", "label": "Make it a big week",
-			 "effects": [{"op": "morale", "d": 4, "who": "side"}, {"op": "heavy_legs", "who": "side"}],
-			 "result": "The group lifts. Training runs hot all week."},
+			 "effects": [{"op": "morale", "d": 4, "who": "side"}, {"op": "slow_start", "chance": 20, "who": "side", "on": "week"}],
+			 "result": "The group lifts. Some of them might come out too wound up."},
 			{"key": "four", "label": "\"Just another four points.\"",
 			 "effects": [{"op": "fresh", "who": "side"}, {"op": "board", "d": -1, "was": "members"}],
 			 "result": "Fresh legs and clear heads. The supporters wanted fire."}

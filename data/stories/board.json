@@ -126,10 +126,11 @@
 						"d": 4
 					},
 					{
-						"op": "heavy_legs"
+						"op": "xp",
+						"d": -4
 					}
 				],
-				"result": "{name} does the shoot. The sponsor is thrilled."
+				"result": "{name} does the shoot and misses Wednesday's session. The sponsor is thrilled."
 			},
 			{
 				"key": "no",

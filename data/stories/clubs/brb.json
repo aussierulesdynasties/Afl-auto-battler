@@ -44,8 +44,8 @@
 		"text": ["After another loss the southern papers have dusted off the old nickname: the Bad News Bears. The group has seen the headline pinned up in the canteen."],
 		"choices": [
 			{"key": "pin", "label": "Pin it on the noticeboard",
-			 "effects": [{"op": "morale", "d": 4, "who": "side"}, {"op": "heavy_legs", "who": "side"}],
-			 "result": "The group trains angry all week."},
+			 "effects": [{"op": "morale", "d": 4, "who": "side"}, {"op": "loss_sting", "chance": 20, "d": -4, "who": "side"}],
+			 "result": "The group trains angry all week. Lose again and the name sticks."},
 			{"key": "ignore", "label": "Tell them to ignore it",
 			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "You kept the group on its own game"}, {"op": "slow_start", "chance": 15, "who": "side"}],
 			 "result": "Nobody mentions it at training. The sting might still be there on Saturday."},
@@ -427,8 +427,8 @@
 		"text": ["{opp} came into the competition the same year as the Bears, and the press is billing this week as the expansion derby: which of the two new clubs is the real thing?"],
 		"choices": [
 			{"key": "personal", "label": "Make it personal",
-			 "effects": [{"op": "morale", "d": 4, "who": "side"}, {"op": "heavy_legs", "who": "side"}],
-			 "result": "The group is wound up all week."},
+			 "effects": [{"op": "morale", "d": 4, "who": "side"}, {"op": "slow_start", "chance": 20, "who": "side", "on": "week"}],
+			 "result": "The group is wound up all week. They might come out too hot."},
 			{"key": "normal", "label": "Treat it like any other week",
 			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The group kept to its own game"}, {"op": "slow_start", "chance": 15, "who": "side"}],
 			 "result": "Just another week, as far as the coach is concerned."}

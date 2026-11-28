@@ -15063,15 +15063,21 @@ func _my_result(results: Array) -> Dictionary:
 	return {}
 
 
-## A finals card's sting: lose the final it was set for, and one roll from the
-## save's seed says whether the side's morale also falls (by the card's size), on
-## top of the lift the card already gave.
+## A card's sting: lose the game it was set for (a final, or this week's
+## home-and-away game), and one roll from the save's seed says whether the side's
+## morale also falls (by the card's size), on top of the lift the card already gave.
 func _settle_loss_sting(res: Dictionary) -> void:
-	if res.is_empty() or not res.has("tag") or season == null:
+	if res.is_empty() or season == null:
 		return
-	# Lost: the bracket says who went through (a level final is settled on the ladder).
-	if str((season.finals.get("slots", {}) as Dictionary).get("W_" + str(res["tag"]), "")) == my_club:
-		return
+	if res.has("tag"):
+		# Lost: the bracket says who went through (a level final is settled on the ladder).
+		if str((season.finals.get("slots", {}) as Dictionary).get("W_" + str(res["tag"]), "")) == my_club:
+			return
+	else:
+		# Home and away: a loss is a loss; a draw or a win spares it.
+		var side := 0 if str(res.get("home", "")) == my_club else 1
+		if int(res["score"][side]) >= int(res["score"][1 - side]):
+			return
 	var rule: Array = []
 	for p in my_list:
 		if p.has("loss_sting"):

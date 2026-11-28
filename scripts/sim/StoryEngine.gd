@@ -1150,7 +1150,7 @@ static func _effect_parts(e: Dictionary, facts: Dictionary) -> Array:
 		return []
 	if str(e.get("line", "")) != "":
 		# A card may word an effect itself; it is still a gain or a cost by its sign.
-		var k := "gain" if d > 0 or op in ["xp", "fresh"] else "cost"
+		var k := "gain" if d > 0 or (op == "xp" and d >= 0) or op == "fresh" else "cost"
 		return [[k, str(e["line"])]]
 	match op:
 		"odds":
@@ -1220,6 +1220,10 @@ static func _effect_parts(e: Dictionary, facts: Dictionary) -> Array:
 				tw += " " + _refuse_words(d, int(facts.get("trust", 0)))
 			return [["gain" if d > 0 else "cost", tw]]
 		"xp":
+			if d < 0 and who == "subject":
+				# A session he misses: development he already had in hand is lost
+				# (never below none, ClubStories.apply_choice).
+				return [["cost", "He loses %d development points. A senior game gives %d." % [-d, SENIOR_GAME_XP]]]
 			var whom: String = "He gets" if who == "subject" else ("{first_b} gets" if who == "b" else ("Each player in the side gets" if who == "side" else ("Each of the others gets" if who == "others" else "Every player gets")))
 			return [["gain", "%s %d development points. A senior game gives %d." % [whom, d, SENIOR_GAME_XP]]]
 		"fresh":
@@ -1243,6 +1247,8 @@ static func _effect_parts(e: Dictionary, facts: Dictionary) -> Array:
 			var short := 100 - HEAVY_LEGS_START
 			if who == "subject":
 				return [["cost", "Heavy legs on game day: he starts %d%% short of fresh. He is %d%% more likely to be injured." % [short, rise]]]
+			if who == "leaders":
+				return [["cost", "Heavy legs for the leadership group on game day: each leader starts %d%% short of fresh. Each is %d%% more likely to be injured." % [short, rise]]]
 			return [["cost", "Heavy legs across the %s on game day: each player starts %d%% short of fresh. Each is %d%% more likely to be injured." % [
 					"side" if who == "side" else "whole list", short, rise]]]
 		"expects_game":
@@ -1301,10 +1307,12 @@ static func _effect_parts(e: Dictionary, facts: Dictionary) -> Array:
 					["cost", "He plays sore: %s chance he is hurt again, by any injury. %s. He starts %s short of fresh legs." % [
 						_sore_chance(facts), _injury_length_words(), _pct(100 - roundi(ClubLife.SORE_LEGS))]]]
 		"slow_start":
-			return [["cost", _slow_words(e)]]
+			return [["cost", _slow_words(e, facts)]]
 		"loss_sting":
-			return [["cost", "If we lose that final, about a %s chance our morale also falls %s." % [
-					_pct(int(e.get("chance", 0))), _pct(absi(int(e.get("d", 0))))]]]
+			# Outside the finals the sting is this week's game (GameState._settle_loss_sting).
+			var game := "this week's game" if facts.has("finals_week") and int(facts["finals_week"]) == 0 else "that final"
+			return [["cost", "If we lose %s, about a %s chance our morale also falls %s." % [
+					game, _pct(int(e.get("chance", 0))), _pct(absi(int(e.get("d", 0))))]]]
 		"role_trial":
 			return [["gain", _trial_words(e)], ["cost", _trial_cost_words(e, facts)]]
 		# The development talk (T5.r93, GameState.dev_talk): games there if it takes.
@@ -1476,21 +1484,23 @@ static func _broken_words(sting: int, trust: int, facts: Dictionary) -> String:
 
 
 ## A slow start: the chance, the match it is for and what it costs at the first bounce.
-static func _slow_words(e: Dictionary) -> String:
+static func _slow_words(e: Dictionary, facts: Dictionary = {}) -> String:
 	var who := str(e.get("who", "subject"))
 	# "on": "week" is this week's game (a card in the season), "grand_final" is
-	# Saturday; a finals card's chance is for the next final.
+	# Saturday; a finals card's chance is for the next final. A card with no
+	# "on" dealt outside the finals is for this week's game too.
 	var when := "his next final" if who == "subject" else "its next final"
 	if str(e.get("on", "")) == "grand_final":
 		when = "Saturday"
-	elif str(e.get("on", "")) == "week":
+	elif str(e.get("on", "")) == "week" or (facts.has("finals_week") and int(facts["finals_week"]) == 0):
 		when = "this week's game"
 	var legs := _pct(100 - roundi(ClubLife.SLOW_LEGS))
 	var chance := _pct(int(e.get("chance", 0)))
 	if who == "subject":
-		return "About a %s chance he starts %s slowly, %s short of fresh legs at the first bounce." % [chance, when, legs]
-	return "About a %s chance %s starts %s slowly, every one of them %s short of fresh legs at the first bounce." % [
-			chance, "the side" if who == "side" else "the whole list", when, legs]
+		return "About a %s chance he starts %s slowly: %s short of his best running at the first bounce, coming back as he gets a rest on the bench." % [chance, when, legs]
+	var group := {"side": "the side", "leaders": "the leadership group"}.get(who, "the whole list") as String
+	return "About a %s chance %s starts %s slowly: %s short of their best running at the first bounce, coming back as they rotate through the bench." % [
+			chance, group, when, legs]
 
 
 ## A culture strand's step: "Standards rises 1%."
