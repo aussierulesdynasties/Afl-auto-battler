@@ -10,9 +10,10 @@ extends RefCounted
 ##   MED|seed|year|league median OVR of the best-22 players over clubs (season end)
 ##   COH|seed|draft year|year|pick|OVR at pick|age|OVR now|MED (every drafted player still listed, season end)
 ##   USER|seed|year|wins|games   (the autopilot user club, for AI v coach)
-## Args after the impl name: seeds (comma list) club seasons arms (comma list of step:gap[:night scale[:readiness 0/1]], the
+## Args after the impl name: seeds (comma list) club seasons arms (comma list of step:gap, the
 ## Potential.YOUTH_STEP_PACE / YOUTH_GAP_PACE to try; default the shipped values). Careers run in turn.
 ## godot --headless --path . --script tools/audit/run_audit.gd -- growth_curve_impl 11,12 MEL 10 1:1,0.5:0.7
+const Ovr := preload("res://tests/ovr.gd")
 
 var seed_n := 1
 var gen_ids := {}
@@ -38,7 +39,7 @@ func _snapshot(tag: String, year: int, lists: Dictionary) -> void:
 			continue
 		var ovs: Array = []
 		for p in lists[code]:
-			var o := float(p["overall"])
+			var o := float(Ovr.of(p))
 			ovs.append(o)
 			all_ov.append(o)
 			var a := clampi(int(float(p.get("age", 25.0))), 17, 34)
@@ -100,8 +101,8 @@ func _run_draft(d: Draft, national: bool, year: int) -> void:
 func _note(p: Dictionary, pick: int, national: bool, year: int) -> void:
 	if national:
 		gen_ids[str(p["id"])] = true
-		cohort.append({"id": str(p["id"]), "year": year, "pick": pick, "ovr0": int(p["overall"]),
-				"pot0": int(p.get("potential", p["overall"])), "ready": str(p.get("readiness", "-")), "age0": int(float(p.get("age", 18.0)))})
+		cohort.append({"id": str(p["id"]), "year": year, "pick": pick, "ovr0": int(Ovr.of(p)),
+				"pot0": int(p.get("potential", Ovr.of(p))), "ready": str(p.get("readiness", "-")), "age0": int(float(p.get("age", 18.0)))})
 
 
 func _track(lists: Dictionary, year: int) -> void:
@@ -111,12 +112,12 @@ func _track(lists: Dictionary, year: int) -> void:
 	for code in lists:
 		var ovs: Array = []
 		var ranked: Array = (lists[code] as Array).duplicate()
-		ranked.sort_custom(func(a, b): return float(a["overall"]) > float(b["overall"]))
+		ranked.sort_custom(func(a, b): return float(Ovr.of(a)) > float(Ovr.of(b)))
 		for i in range(mini(22, ranked.size())):
 			top22[str(ranked[i]["id"])] = true
 		for p in lists[code]:
 			by_id[str(p["id"])] = p
-			ovs.append(float(p["overall"]))
+			ovs.append(float(Ovr.of(p)))
 		ovs.sort()
 		ovs.reverse()
 		best22.append_array(ovs.slice(0, 22))
@@ -127,7 +128,7 @@ func _track(lists: Dictionary, year: int) -> void:
 		var q = by_id.get(str(e["id"]))
 		if q != null:
 			print("COH|%d|%d|%d|%d|%d|%d|%d|%.1f|%d|%s|%d|%d" % [seed_n, int(e["year"]), year, int(e["pick"]), int(e["ovr0"]),
-					int(float(q.get("age", 0.0))), int(q["overall"]), thr, 1 if top22.has(str(e["id"])) else 0,
+					int(float(q.get("age", 0.0))), int(Ovr.of(q)), thr, 1 if top22.has(str(e["id"])) else 0,
 					e["ready"], int(e["pot0"]), int(e["age0"])])
 	var bands := {}
 	for e in cohort:
@@ -140,7 +141,7 @@ func _track(lists: Dictionary, year: int) -> void:
 		bands[b][1] += float(e["ovr0"])
 		var p = by_id.get(str(e["id"]))
 		if p != null:
-			bands[b][2] += float(p["overall"])
+			bands[b][2] += float(Ovr.of(p))
 			bands[b][3] += 1
 	for b in bands:
 		var v: Array = bands[b]
@@ -158,8 +159,6 @@ func run() -> void:
 			var sp := arm.split(":")
 			Potential.YOUTH_STEP_PACE = float(sp[0])
 			Potential.YOUTH_GAP_PACE = float(sp[1])
-			Prospects.DRAFT_NIGHT_SCALE = float(sp[2]) if sp.size() > 2 else 1.0
-			Prospects.DRAFT_READINESS = sp.size() > 3 and int(sp[3]) != 0
 		for sd in seeds:
 			seed_n = int(sd)
 			gen_ids = {}
@@ -172,7 +171,7 @@ func _career(club: String, seasons: int) -> void:
 	GameState.autosave_enabled = false
 	GameState.career_seed = seed_n
 	GameState.replay_seed = seed_n
-	print("GA|%d|%s|%d|step %.2f|gap %.2f|night %.2f|ready %d" % [seed_n, club, seasons, Potential.YOUTH_STEP_PACE, Potential.YOUTH_GAP_PACE, Prospects.DRAFT_NIGHT_SCALE, 1 if Prospects.DRAFT_READINESS else 0])
+	print("GA|%d|%s|%d|step %.2f|gap %.2f" % [seed_n, club, seasons, Potential.YOUTH_STEP_PACE, Potential.YOUTH_GAP_PACE])
 	GameState.begin_real_lists()
 	_snapshot("pre", GameDB.DATA_SEASON, GameState.league_lists)
 	GameState.choose_real_club(club)

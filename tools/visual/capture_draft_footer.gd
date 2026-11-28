@@ -87,7 +87,7 @@ func _finished_draft(cover: bool) -> Control:
 			board = board.filter(func(p): return str(p["role"]) != "DEF" and str(p.get("role2", "")) != "DEF")
 		if board.is_empty():
 			break
-		board.sort_custom(func(x, y): return int(x["value"]) < int(y["value"]))
+		board.sort_custom(func(x, y): return d.price(x) < d.price(y))
 		ui.call("_on_pick", board[0])
 	ui.call("_refresh")
 	for i in range(8):

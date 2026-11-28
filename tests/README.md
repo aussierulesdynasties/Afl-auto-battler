@@ -245,9 +245,8 @@ autosave off, so running the tests never touches a real career.
 `XDG_DATA_HOME`, removed afterwards), so two runs at once - two worktrees,
 two branches - cannot overwrite each other's test saves. Running a single
 runner by hand still uses Godot's normal user folder.
-A non-Godot mirror of the same maths runs in CI-friendly Python:
-`python3 tools/intake_harness.py` (data/schema validation + a six-season
-intake/development simulation over the real lists).
+`python3 tools/intake_harness.py` checks the draft-class CSV (header, ranks,
+names, positions, heights, birth dates, under-18 stats) without Godot.
 
 Both runners exit nonzero on failure. They use the shipped GDScript, not a
 Python/JavaScript reimplementation.

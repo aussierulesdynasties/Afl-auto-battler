@@ -7,6 +7,7 @@ extends RefCounted
 ## Args after the impl name: seed club seasons policy
 ##   policy "eager"   - the highest-POT eligible player, any job
 ##   policy "unicorn" - prefer a job in a line he does not have yet (FWD/MID/DEF)
+const Ovr := preload("res://tests/ovr.gd")
 
 var club := "MEL"
 var policy := "eager"
@@ -40,8 +41,8 @@ func _fill_projects(started: Dictionary) -> void:
 		var p: Dictionary = cands[0][0]
 		var job := _pick_job(p, cands[0][1])
 		GameState.set_player_plan(str(p["id"]), GameState.LEARN_PREFIX + job)
-		started[str(p["id"])] = {"job": job, "own": int(p["overall"]), "age": float(p.get("age", 25.0)),
-				"pot": int(p.get("potential", 0)), "gap": int(p["overall"]) - int(p["project"]["start_there"])}
+		started[str(p["id"])] = {"job": job, "own": int(Ovr.of(p)), "age": float(p.get("age", 25.0)),
+				"pot": int(p.get("potential", 0)), "gap": int(Ovr.of(p)) - int(p["project"]["start_there"])}
 
 
 func _run_draft(d: Draft) -> void:
@@ -62,7 +63,7 @@ func run() -> void:
 	GameState.reset()
 	GameState.autosave_enabled = false
 	var pool: Array = GameDB.all_players_sorted() + GameDB.all_draftees_sorted()
-	pool.sort_custom(func(a, b): return a["overall"] > b["overall"])
+	pool.sort_custom(func(a, b): return Ovr.of(a) > Ovr.of(b))
 	GameState.draft = Draft.new(pool, GameDB.active_clubs(GameState.season_year).duplicate(), seed)
 	GameState.draft.start_for_user(club)
 	_run_draft(GameState.draft)
@@ -73,7 +74,7 @@ func run() -> void:
 		var start_ovr := {}
 		var eligible_start := {}
 		for p in GameState.my_list:
-			start_ovr[str(p["id"])] = int(p["overall"])
+			start_ovr[str(p["id"])] = int(Ovr.of(p))
 			if int(p.get("potential", 0)) >= GameState.PROJECT_POT[1] and not (p.get("attr", {}) as Dictionary).is_empty():
 				eligible_start[str(p["id"])] = true
 		var ai_pos := {}
@@ -125,7 +126,7 @@ func run() -> void:
 			var id := str(p["id"])
 			if not start_ovr.has(id):
 				continue
-			var d := int(p["overall"]) - int(start_ovr[id])
+			var d := int(Ovr.of(p)) - int(start_ovr[id])
 			if started.has(id):
 				proj_d.append(d)
 			elif eligible_start.has(id) and float(p.get("age", 25.0)) <= 27.0:

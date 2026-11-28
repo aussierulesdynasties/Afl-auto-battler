@@ -2,7 +2,7 @@ extends SceneTree
 ## godot --headless --path . --script tests/run_calibration_tests.gd
 ## Engine calibration guard. Plays MATCHES seeded games of the shipped
 ## MatchSim between the real 2026 lists and compares per-team-per-game totals
-## with the real 2026 averages (the same benchmark tools/sim_harness.py uses).
+## with the real 2026 averages.
 ## Fails if any stat drifts outside TOLERANCE, so an engine change that
 ## quietly breaks realism turns CI red. Classes are reached through load():
 ## a --script runner compiles before the autoloads exist.
@@ -47,8 +47,6 @@ func _run() -> void:
 	await process_frame
 	var db = root.get_node("GameDB")
 	# Engine against the real 2026 numbers: plays on the data without the director's
-	# hand-set OVR rows (data/ovr_overrides.csv), which are not 2026 form.
-	db.skip_ovr_overrides = true
 	db.reload()
 	var squad_script = load("res://scripts/sim/Squad.gd")
 	var sim_script = load("res://scripts/sim/MatchSim.gd")
@@ -143,7 +141,7 @@ func _test_engine_against_2026(db, squad_script, sim_script) -> void:
 
 
 ## Per-team-per-game real averages: every club's season totals over its games
-## played (the most games any of its players played), as in sim_harness.py.
+## played (the most games any of its players played).
 func _benchmarks(db) -> Dictionary:
 	var keys := ["gl", "bh", "di", "ki", "mk", "tk", "if50", "cl", "ho", "rb", "onepct", "cg", "ff"]
 	var tot := {}

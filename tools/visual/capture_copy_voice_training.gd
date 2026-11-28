@@ -6,6 +6,7 @@ extends SceneTree
 ## Writes <prefix>_<state>.png for: intro, list_no_change, group, player, player_changed,
 ## player_lifted, stat_focus, stat_locked, learning, reserves, two_traits, and (row 135's second
 ## pass, 2026-11-15) learn_full, carry_on, potential.
+const Ovr := preload("res://tests/ovr.gd")
 
 const CLUB := "FRE"
 var _out := "copy_voice_training"
@@ -181,7 +182,7 @@ func _run() -> void:
 	if _want("potential"):
 		_fresh(intro_keys)
 		var t: Dictionary = _best()
-		t["potential"] = int(t["overall"]) - 3
+		t["potential"] = int(Ovr.of(t)) - 3
 		var ui9: Node = await _open()
 		ui9.call("_open_player", str(t["id"]))
 		ui9.set("_advanced", true)
@@ -206,7 +207,7 @@ func _want(state: String) -> bool:
 func _best() -> Dictionary:
 	var best: Dictionary = _state.my_list[0]
 	for q in _state.my_list:
-		if int(q.get("overall", 0)) > int(best.get("overall", 0)):
+		if int(Ovr.of(q, 0)) > int(Ovr.of(best, 0)):
 			best = q
 	return best
 

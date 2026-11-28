@@ -15,6 +15,7 @@ extends RefCounted
 ##   DC    each draft pick followed one and three seasons on
 ## Args after the impl name: mode seed club seasons (default redraft 1 MEL 10).
 ## godot --headless --path . --script tools/audit/run_audit.gd -- draft_strategy_impl real 11 MEL 10
+const Ovr := preload("res://tests/ovr.gd")
 
 var mode := "redraft"
 var seed_n := 1
@@ -32,18 +33,18 @@ static func _mean(xs: Array) -> float:
 
 
 static func _pot(p: Dictionary) -> float:
-	return maxf(float(p.get("overall", 0)), float(p.get("potential", p.get("overall", 0))))
+	return maxf(float(Ovr.of(p, 0)), float(p.get("potential", Ovr.of(p, 0))))
 
 
 ## Worth as the National Draft AI sees it before scouting noise: 35% OVR, 65% POT.
 static func _worth(p: Dictionary) -> float:
-	return float(p.get("overall", 0)) * 0.35 + _pot(p) * 0.65
+	return float(Ovr.of(p, 0)) * 0.35 + _pot(p) * 0.65
 
 
 func _measures(list: Array, code: String, tag: String, year: int) -> void:
 	var ovr: Array = []
 	for p in list:
-		ovr.append(float(p["overall"]))
+		ovr.append(float(Ovr.of(p)))
 	ovr.sort()
 	ovr.reverse()
 	var best := _mean(ovr.slice(0, mini(23, ovr.size())))
@@ -65,7 +66,7 @@ func _measures(list: Array, code: String, tag: String, year: int) -> void:
 	var ovs: Array = []
 	for p in u23:
 		pots.append(_pot(p))
-		ovs.append(float(p["overall"]))
+		ovs.append(float(Ovr.of(p)))
 	var sq := Squad.new(code, list, true, code)
 	print("LIST|%s|%d|%s|%d|%s|%d|%.2f|%.2f|%d|%d|%d|%.2f|%.2f|%.2f|%.2f" % [mode, seed_n, tag, year, code,
 			list.size(), best, depth, u23.size(), mid, old, _mean(pots), _mean(ovs), sq.strength(), depth32])
@@ -90,7 +91,7 @@ func _snapshot(tag: String, year: int, lists: Dictionary) -> void:
 		var ov: Array = []
 		var po: Array = []
 		for p in ps:
-			ov.append(float(p["overall"]))
+			ov.append(float(Ovr.of(p)))
 			po.append(_pot(p))
 		print("AGE|%s|%d|%s|%d|%d|%d|%.2f|%.2f" % [mode, seed_n, tag, year, a, ps.size(), _mean(ov), _mean(po)])
 
@@ -98,7 +99,7 @@ func _snapshot(tag: String, year: int, lists: Dictionary) -> void:
 func _pool_line(players: Array) -> void:
 	var ovr: Array = []
 	for p in players:
-		ovr.append(float(p["overall"]))
+		ovr.append(float(Ovr.of(p)))
 	ovr.sort()
 	ovr.reverse()
 	print("POOL|%s|%d|%d|%.2f|%.2f" % [mode, seed_n, ovr.size(), _mean(ovr.slice(0, mini(414, ovr.size()))), _mean(ovr)])
@@ -116,7 +117,7 @@ func _log_pick(d: Draft, c: Dictionary, code: String, pick_no: int, rnd: int, go
 			continue
 		var w := d._worth(p) if tag == "league" else _worth(p)
 		bw = maxf(bw, w)
-		bo = maxf(bo, float(p["overall"]))
+		bo = maxf(bo, float(Ovr.of(p)))
 		bp = maxf(bp, _pot(p))
 		if w > cw + 0.001:
 			better += 1
@@ -137,11 +138,11 @@ func _log_pick(d: Draft, c: Dictionary, code: String, pick_no: int, rnd: int, go
 				spick = p
 		ngap = bw - _worth(spick) if not spick.is_empty() else 0.0
 	print("DP|%s|%d|%s|%d|%d|%d|%s|%.0f|%d|%d|%.2f|%.2f|%d|%d|%d|%s|%.2f|%.2f" % [mode, seed_n, tag, year, pick_no,
-			rnd, code, float(c.get("age", 0)), int(c["overall"]), int(_pot(c)), cw, bw,
+			rnd, code, float(c.get("age", 0)), int(Ovr.of(c)), int(_pot(c)), cw, bw,
 			int(bo), int(bp), better, str(c.get("role", "")), ngap, ngap2])
 	if tag != "league":
 		cohort.append({"id": str(c["id"]), "year": year, "pick": pick_no, "age0": float(c.get("age", 0)),
-				"ovr0": int(c["overall"]), "pot0": int(_pot(c))})
+				"ovr0": int(Ovr.of(c)), "pot0": int(_pot(c))})
 
 
 ## The gap if the club picked on its scouted read times its positional need
@@ -212,7 +213,7 @@ func _track(lists: Dictionary, year: int) -> void:
 		else:
 			var p: Dictionary = f[0]
 			print("DC|%s|%d|%d|%d|%s|1|%.0f|%d|%.0f|%d|%d|%d|%s" % [mode, seed_n, int(e["year"]), off, str(e["id"]),
-					float(p.get("age", 0)), int(p["overall"]), float(e["age0"]), int(e["ovr0"]), int(e["pot0"]), int(e["pick"]), str(f[1])])
+					float(p.get("age", 0)), int(Ovr.of(p)), float(e["age0"]), int(e["ovr0"]), int(e["pot0"]), int(e["pick"]), str(f[1])])
 
 
 func run() -> void:
@@ -240,7 +241,7 @@ func run() -> void:
 		_pool_line(all_now)
 	else:
 		var pool: Array = GameDB.all_players_sorted() + GameDB.all_draftees_sorted()
-		pool.sort_custom(func(a, b): return a["overall"] > b["overall"])
+		pool.sort_custom(func(a, b): return Ovr.of(a) > Ovr.of(b))
 		_pool_line(pool)
 		GameState.draft = Draft.new(pool, GameDB.active_clubs(GameState.season_year).duplicate(), seed_n)
 		GameState.draft.start_for_user(club)

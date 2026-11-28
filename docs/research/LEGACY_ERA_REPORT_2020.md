@@ -12,32 +12,32 @@ Built by `tools/legacy_1990s/build_start_2020.py --report`. Per player per game,
 
 ## Rating spread: the 2020 lists (rated on 2019) against 2026
 
-Players who played the data season, as the game rates them at load (2020: each position scaled on 2019; 2026: the game's own anchors).
+Every listed player as the game rates them at load: each OVR read from the start's attributes file at his AFL position (2020: rated on 2019; 2026: on 2026).
 
 | Start | players | 80+ | 85+ | 90+ | median | 90th pct | best |
 |---|---|---|---|---|---|---|---|
-| 2020 | 598 | 72 | 40 | 21 | 65 | 81 | 99 |
-| 2026 | 669 | 85 | 42 | 25 | 62 | 81 | 99 |
+| 2020 | 634 | 69 | 48 | 26 | 66 | 81 | 94 |
+| 2026 | 724 | 44 | 15 | 5 | 62 | 77 | 94 |
 
 | Club | 2020 median | 2020 80+ | 2026 median | 2026 80+ |
 |---|---|---|---|---|
-| ADE | 63 | 5 | 64 | 8 |
-| BRL | 63 | 6 | 66 | 6 |
-| CAR | 62 | 3 | 64 | 3 |
-| COL | 65 | 5 | 62 | 5 |
-| ESS | 68 | 6 | 61 | 2 |
-| FRE | 62 | 2 | 65 | 6 |
-| GCS | 64 | 3 | 63 | 5 |
-| GEE | 67 | 4 | 63 | 5 |
-| GWS | 63 | 5 | 62 | 3 |
-| HAW | 68 | 3 | 65 | 5 |
-| MEL | 62 | 3 | 66 | 5 |
-| NTH | 63 | 1 | 62 | 4 |
-| PAD | 67 | 3 | 61 | 3 |
-| RIC | 64 | 4 | 59 | 3 |
-| STK | 65 | 2 | 62 | 6 |
-| SYD | 66 | 4 | 66 | 7 |
-| WBD | 66 | 6 | 59 | 6 |
-| WCE | 69 | 7 | 59 | 3 |
+| ADE | 62 | 4 | 64 | 5 |
+| BRL | 67 | 3 | 65 | 3 |
+| CAR | 64 | 5 | 62 | 1 |
+| COL | 67 | 3 | 63 | 2 |
+| ESS | 66 | 1 | 59 | 0 |
+| FRE | 66 | 4 | 63 | 3 |
+| GCS | 63 | 3 | 61 | 2 |
+| GEE | 66 | 6 | 65 | 4 |
+| GWS | 67 | 6 | 65 | 3 |
+| HAW | 68 | 4 | 62 | 4 |
+| MEL | 62 | 2 | 65 | 5 |
+| NTH | 63 | 4 | 63 | 1 |
+| PAD | 63 | 3 | 60 | 2 |
+| RIC | 66 | 4 | 57 | 0 |
+| STK | 68 | 4 | 58 | 2 |
+| SYD | 63 | 3 | 66 | 4 |
+| WBD | 69 | 4 | 59 | 2 |
+| WCE | 69 | 6 | 57 | 1 |
 
-Top 15 in 2020: Michael Walters (FRE) 99, Brodie Smith (ADE) 98, Gary Ablett (GEE) 97, Brodie Grundy (COL) 96, Tom Papley (SYD) 96, Jordan De Goey (COL) 95, Patrick Dangerfield (GEE) 94, Jason Johannisen (WBD) 94, Jamie Cripps (WCE) 93, Adam Treloar (COL) 92, Anthony McDonald-Tipungwuti (ESS) 92, Lachie Weller (GCS) 92, Luke Breust (HAW) 92, Max Gawn (MEL) 92, Dustin Martin (RIC) 91
+Top 15 in 2020: Harris Andrews (BRL) 94, Jeremy McGovern (WCE) 94, Brodie Grundy (COL) 93, Tom Hawkins (GEE) 93, Sam Day (GCS) 92, Phil Davis (GWS) 92, Lachie Neale (BRL) 91, Liam Jones (CAR) 91, Jacob Weitering (CAR) 91, Cale Hooker (ESS) 91, James Sicily (HAW) 91, Max Gawn (MEL) 91, Tim Membrey (STK) 91, Jack Darling (WCE) 91, Taylor Walker (ADE) 90

@@ -40,7 +40,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import build_start as B  # noqa: E402
 
-ROOT, LEG, H = B.ROOT, B.LEG, B.H
+ROOT, LEG = B.ROOT, B.LEG
 YEAR = 2020
 DATA_SEASON = 2019
 START_DATE = "2020-03-01"
@@ -262,19 +262,13 @@ def build_staff(cache, lists):
 
 
 # ------------------------------------------------------------- era report --
-def rate_file(path):
-    hp = []
+def stat_rows(path):
+    """The lists' stat rows, numbers as floats (a blank is 0)."""
     with open(path, newline="", encoding="utf-8") as fh:
-        for r in csv.DictReader(fh):
-            e = {("one_pct" if k == "onepct" else "pct_played" if k == "pctp" else k): (r[k] if r[k] == "" else float(r[k]))
-                 for k in B.ENRICHED[4:28]}
-            hp.append(B.harness_player({**e, "first": r["first"], "last": r["last"]}, r["club"], r["num"]))
-    return hp
+        return [{k: float(r[k] or 0.0) for k in B.ENRICHED[4:28]} for r in csv.DictReader(fh)]
 
 
-def shape(hp, fit):
-    H.set_unrecorded(B.unrecorded_in(hp))
-    H.derive_ratings(hp)
+def shape(hp):
     by_club = defaultdict(list)
     for p in hp:
         by_club[p["club"]].append(p["overall"])
@@ -293,7 +287,7 @@ def era_report(by_year, rated):
                          ("2021-25", range(2021, 2026)), ("2026 base", [2026])):
         tot, gm = defaultdict(float), 0.0
         if years == [2026]:
-            src = rate_file(os.path.join(ROOT, "data", "players_enriched_2026.csv"))
+            src = stat_rows(os.path.join(ROOT, "data", "players_enriched_2026.csv"))
             for p in src:
                 gm += p["gm"]
                 for k in stats:
@@ -306,8 +300,9 @@ def era_report(by_year, rated):
                         tot[k] += e[k]
         lines.append("| %s | %s |" % (label, " | ".join("%.1f" % (tot[k] / gm) for k in stats)))
 
-    c20, a20 = shape(rate_file(os.path.join(OUT_DIR, "players_%d.csv" % YEAR)), True)
-    c26, a26 = shape(rate_file(os.path.join(ROOT, "data", "players_enriched_2026.csv")), False)
+    hp20 = B.start_ratings(os.path.join(OUT_DIR, "attributes_%d.csv" % YEAR))
+    c20, a20 = shape(hp20)
+    c26, a26 = shape(B.start_ratings(os.path.join(ROOT, "data", "attributes_2026.csv")))
 
     def summ(allv):
         n = len(allv)
@@ -315,8 +310,8 @@ def era_report(by_year, rated):
                 allv[n // 2], allv[int(n * 0.9)], allv[-1])
 
     lines += ["", "## Rating spread: the 2020 lists (rated on 2019) against 2026", "",
-              "Players who played the data season, as the game rates them at load "
-              "(2020: each position scaled on 2019; 2026: the game's own anchors).", "",
+              "Every listed player as the game rates them at load: each OVR read from the start's "
+              "attributes file at his AFL position (2020: rated on 2019; 2026: on 2026).", "",
               "| Start | players | 80+ | 85+ | 90+ | median | 90th pct | best |", "|---|---|---|---|---|---|---|---|"]
     for label, allv in (("2020", a20), ("2026", a26)):
         lines.append("| %s | %d | %d | %d | %d | %d | %d | %d |" % ((label,) + summ(allv)))
@@ -326,8 +321,6 @@ def era_report(by_year, rated):
         lines.append("| %s | %s | %s | %s | %s |" % (
             c, v20[len(v20) // 2] if v20 else "-", sum(x >= 80 for x in v20) if v20 else "-",
             v26[len(v26) // 2] if v26 else "-", sum(x >= 80 for x in v26) if v26 else "-"))
-    hp20 = rate_file(os.path.join(OUT_DIR, "players_%d.csv" % YEAR))
-    shape(hp20, True)
     top = sorted(hp20, key=lambda p: -p["overall"])[:15]
     lines += ["", "Top 15 in 2020: " + ", ".join("%s (%s) %d" % (p["name"], p["club"], p["overall"]) for p in top)]
     return "\n".join(lines) + "\n"

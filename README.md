@@ -29,7 +29,6 @@ scripts/core/              GameDB (data loader), Router (navigation)
 scripts/state/             GameState (the season you are playing)
 scripts/ui/                the oval animation and every screen
 scenes/                    thin .tscn wrappers - all UI is built in code
-tools/sim_harness.py       ratings mirror (its match half is stale; see its header)
 docs/DESIGN.md             full design + engine docs  <- read this
 ```
 
@@ -131,21 +130,13 @@ Routine handballs tick by quickly; scores and quarter breaks get room to land.
 Speed controls run 1x–8x with a skip-to-full-time button — about ninety seconds
 at the default 4x.
 
-`docs/preview_match.png` is a static render of exactly this screen, frozen on a
-real simulated goal, produced by `tools/render_preview.py` (which shares
-PitchView's geometry constants and can also emit an SVG). It is what the game
-draws, not a concept sketch:
-
-![The match screen](docs/preview_match.png)
-
 ## Simulation quality
 
 The engine is calibrated against real 2026 numbers rather than guessed at.
 `tests/run_calibration_tests.gd` plays 400 seeded matches of the shipped
 engine between the real 2026 lists and compares per-team-per-game totals with
 the real 2026 averages derived from the harvested player data
-(`tests/run_calibration_tests.gd` is the guard; the Python match mirror in
-`tools/sim_harness.py` is stale since 2026-10-08):
+(`tests/run_calibration_tests.gd` is the guard):
 
 ```
 Stat/team/game   REAL 2026      SIM  ratio
@@ -203,14 +194,12 @@ Season.gd     24-round fixture (circle-method round-robin), ladder with the
 Draft.gd      the cap, snake draft, rival AI picks and shared pick history
 ```
 
-Every match is seeded, so a result is reproducible. `MatchSim.gd` began as a
-port of `tools/sim_harness.py`; the Python match half is stale since 2026-10-08
-and the engine's tunables live in `Ratings.T`. **Run the `calibration` suite
+Every match is seeded, so a result is reproducible. The engine's tunables live
+in `Ratings.T`. **Run the `calibration` suite
 after any change to the match engine** (`tools/run_tests.sh calibration`):
 
 ```bash
 python3 tools/build_history.py             # draft pedigree + rated 2021-25 seasons
-python3 tools/sim_harness.py --ratings     # dump ratings to data/ratings_preview.csv
 python3 tools/validate_data.py             # dataset integrity check
 ```
 

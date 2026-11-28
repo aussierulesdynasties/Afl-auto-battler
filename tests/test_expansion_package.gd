@@ -1,4 +1,5 @@
 extends RefCounted
+const Ovr := preload("res://tests/ovr.gd")
 ## Expansion package suite: how a new club builds its list (director's
 ## ruling, 2026-10-14; Expansion and ExpansionBuild): the club brings
 ## state-league signings, early draft picks, a senior player for the pick it
@@ -65,7 +66,7 @@ func _new_career(club := "GEE") -> void:
 	GameState.career_seed = SUITE_SEED
 	GameState.replay_seed = SUITE_SEED
 	var pool: Array = GameDB.all_players_sorted() + GameDB.all_draftees_sorted()
-	pool.sort_custom(func(a, b): return a["overall"] > b["overall"])
+	pool.sort_custom(func(a, b): return Ovr.of(a) > Ovr.of(b))
 	GameState.draft = Draft.new(pool, GameDB.active_clubs(GameState.season_year).duplicate(), SUITE_SEED)
 	GameState.draft.start_for_user(club)
 	_run_plain(GameState.draft)
@@ -185,7 +186,7 @@ func _test_rules() -> void:
 	var roomy := ""
 	var best := 0
 	for p in a + b:
-		var room := int(p["potential"]) - int(p["overall"])
+		var room := int(p["potential"]) - int(Ovr.of(p))
 		best = maxi(best, int(p["potential"]))
 		if room < 0 or room > 4:
 			roomy += "%s +%d " % [str(p["id"]), room]
@@ -231,8 +232,8 @@ func _test_draft_seats() -> void:
 	var clubs := GameDB.active_clubs(2027)
 	var pool := []
 	for i in range(54):
-		pool.append({"id": "T%02d" % i, "overall": 70 - i / 2, "potential": 80, "role": ["MID", "DEF", "FWD", "RUCK"][i % 4],
-				"role2": "", "age": 18.0, "value": 3, "name": "T%02d" % i, "club": ""})
+		pool.append(Ovr.to({"id": "T%02d" % i,  "potential": 80, "role": ["MID", "DEF", "FWD", "RUCK"][i % 4],
+				"role2": "", "age": 18.0, "value": 3, "name": "T%02d" % i, "club": ""}, 70 - i / 2))
 	var d := Draft.build_intake(pool, clubs.duplicate(), clubs.duplicate(), 7, {}, {}, {})
 	d.add_guest("TAS", 30, {"RUCK": 3, "MID": 10, "DEF": 9, "FWD": 8}, [])
 	var picks: Array = Expansion.first_draft_picks("TAS", clubs.size(), d.target_size)
@@ -415,7 +416,7 @@ func _test_your_player_is_approached() -> void:
 		for p in GameState.my_list:
 			p["contract_years"] = 3
 		for p in GameState.my_list:
-			if float(p.get("age", 30.0)) < 27.0 and (target.is_empty() or int(p["overall"]) > int(target["overall"])):
+			if float(p.get("age", 30.0)) < 27.0 and (target.is_empty() or int(Ovr.of(p)) > int(Ovr.of(target))):
 				target = p
 		target["contract_years"] = 1
 		GameState._next_week_event()
@@ -487,7 +488,7 @@ func _test_who_a_rival_keeps() -> void:
 		var list: Array = GameState.season.lists[club]
 		for q in list:
 			q["contract_years"] = 3
-		list.sort_custom(func(x, y): return int(x["overall"]) > int(y["overall"]))
+		list.sort_custom(func(x, y): return int(Ovr.of(x)) > int(Ovr.of(y)))
 		# The 13th-best player (5th for kept and let go), never a recognised ruck: the one ruck slot
 		# picks by tap work, not overall (Ratings.select_22), so lifting his
 		# teammates' ratings could never make his club willing to let a sole
@@ -520,14 +521,14 @@ func _test_who_a_rival_keeps() -> void:
 		if case == "let go":
 			for q in list:
 				if q != p:
-					q["overall"] = maxi(int(q["overall"]), int(p["overall"]) + 8)
-					q["potential"] = maxi(int(q.get("potential", 0)), int(q["overall"]))
+					Ovr.to(q, maxi(int(Ovr.of(q)), int(Ovr.of(p)) + 8))
+					q["potential"] = maxi(int(q.get("potential", 0)), int(Ovr.of(q)))
 			# A competent club delists him only for someone better (#888): a free
 			# agent at his position who beats him.
 			var fa: Dictionary = p.duplicate(true)
 			fa["id"] = "FA_" + str(p["id"])
-			fa["overall"] = int(p["overall"]) + 6
-			fa["potential"] = maxi(int(fa.get("potential", 0)), int(fa["overall"]))
+			Ovr.to(fa, int(Ovr.of(p)) + 6)
+			fa["potential"] = maxi(int(fa.get("potential", 0)), int(Ovr.of(fa)))
 			GameState.free_agents.append(fa)
 			# Last season's free agents leave the market before the new club's
 			# approaches settle, so in the off-season the one who beats him is
@@ -543,10 +544,10 @@ func _test_who_a_rival_keeps() -> void:
 				if str(d.get("role", "")) != role and str(d.get("role2", "")) != role:
 					d["role2"] = role
 				if str(d.get("role", "")) == role or str(d.get("role2", "")) == role:
-					d["overall"] = maxi(int(d["overall"]), int(p["overall"]) + 6)
-					d["potential"] = maxi(int(d.get("potential", 0)), maxi(int(d["overall"]), int(p.get("potential", 0)) + 6))
+					Ovr.to(d, maxi(int(Ovr.of(d)), int(Ovr.of(p)) + 6))
+					d["potential"] = maxi(int(d.get("potential", 0)), maxi(int(Ovr.of(d)), int(p.get("potential", 0)) + 6))
 		elif case.begins_with("cap"):
-			p["overall"] = maxi(int(p["overall"]), 84)
+			Ovr.to(p, maxi(int(Ovr.of(p)), 84))
 			p["potential"] = maxi(int(p.get("potential", 0)), 86)
 			var others := 0
 			for q in list:

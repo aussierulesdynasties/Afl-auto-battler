@@ -4,31 +4,31 @@ Built by `tools/legacy_1990s/build_start.py --report`. Per player per game, ever
 
 | Seasons | di | ki | hb | mk | tk | gl | cl | cp | if50 | rb | rated 80+ per season | median OVR |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 1987-89 | 15.3 | 10.2 | 5.0 | 3.4 | 1.2 | 0.7 | - | - | - | - | 26.0 | 59 |
-| 1990-99 | 14.5 | 9.3 | 5.2 | 3.4 | 1.3 | 0.7 | - | - | - | - | 23.0 | 56 |
-| 2000-09 | 14.6 | 8.8 | 5.8 | 4.2 | 2.1 | 0.6 | 1.6 | 5.4 | 2.3 | 1.5 | 42.0 | 60 |
-| 2010-19 | 16.7 | 9.4 | 7.3 | 4.1 | 3.0 | 0.6 | 1.7 | 6.4 | 2.3 | 1.6 | 38.6 | 61 |
-| 2020-25 | 15.3 | 9.1 | 6.2 | 3.9 | 2.5 | 0.5 | 1.6 | 5.8 | 2.2 | 1.7 | 39.3 | 61 |
+| 1987-89 | 15.3 | 10.2 | 5.0 | 3.4 | 1.2 | 0.7 | - | - | - | - | 18.0 | 65 |
+| 1990-99 | 14.5 | 9.3 | 5.2 | 3.4 | 1.3 | 0.7 | - | - | - | - | 22.3 | 63 |
+| 2000-09 | 14.6 | 8.8 | 5.8 | 4.2 | 2.1 | 0.6 | 1.6 | 5.4 | 2.3 | 1.5 | 56.2 | 65 |
+| 2010-19 | 16.7 | 9.4 | 7.3 | 4.1 | 3.0 | 0.6 | 1.7 | 6.4 | 2.3 | 1.6 | 52.8 | 66 |
+| 2020-25 | 15.3 | 9.1 | 6.2 | 3.9 | 2.5 | 0.5 | 1.6 | 5.8 | 2.2 | 1.7 | 44.8 | 64 |
 
 ## The 1990 lists as the game loads them
 
-Rated on 1989 by `tools/sim_harness.py` (the game rates again at load, the same model).
+Each OVR read from `data/legacy/1990/attributes_1990.csv` at his AFL position (Rating.of_attrs).
 
 | Club | players | median OVR | best | 80+ |
 |---|---|---|---|---|
-| BRL | 31 | 66 | 79 | 0 |
-| CAR | 35 | 67 | 87 | 4 |
-| COL | 29 | 66 | 82 | 2 |
-| ESS | 33 | 66 | 92 | 4 |
-| FIT | 27 | 64 | 81 | 2 |
-| GEE | 33 | 67 | 87 | 3 |
-| HAW | 29 | 68 | 97 | 2 |
-| MEL | 31 | 65 | 82 | 2 |
-| NTH | 33 | 62 | 78 | 0 |
-| RIC | 29 | 62 | 87 | 1 |
-| STK | 28 | 66 | 83 | 2 |
-| SYD | 31 | 64 | 81 | 1 |
-| WBD | 31 | 64 | 80 | 1 |
-| WCE | 31 | 64 | 84 | 2 |
+| BRL | 34 | 67 | 80 | 1 |
+| CAR | 36 | 65 | 90 | 1 |
+| COL | 30 | 64 | 86 | 2 |
+| ESS | 37 | 66 | 91 | 3 |
+| FIT | 29 | 64 | 86 | 2 |
+| GEE | 35 | 67 | 93 | 3 |
+| HAW | 31 | 68 | 94 | 3 |
+| MEL | 33 | 66 | 79 | 0 |
+| NTH | 34 | 62 | 77 | 0 |
+| RIC | 29 | 66 | 76 | 0 |
+| STK | 32 | 62 | 93 | 2 |
+| SYD | 34 | 65 | 77 | 0 |
+| WBD | 32 | 62 | 76 | 0 |
+| WCE | 32 | 69 | 86 | 2 |
 
-Top 15 in 1990: Jason Dunstall (HAW) 97, Terry Daniher (ESS) 92, Simon Madden (ESS) 91, Greg Dear (HAW) 90, Mil Hanna (CAR) 87, Gary Ablett (GEE) 87, Michael Pickering (RIC) 87, Phil Scott (WCE) 84, David Grant (STK) 83, Adrian Gleeson (CAR) 82, Simon Verbeek (CAR) 82, Justin Madden (CAR) 82, Peter Daicos (COL) 82, Michael Long (ESS) 82, Jim Stynes (MEL) 82
+Top 15 in 1990: Jason Dunstall (HAW) 94, Gary Ablett (GEE) 93, Tony Lockett (STK) 93, Paul Salmon (ESS) 91, Stephen Kernahan (CAR) 90, Brian Taylor (COL) 86, Richard Osborne (FIT) 86, Stevan Jackson (WCE) 86, John Ironmonger (FIT) 86, Damian Monkhorst (COL) 84, Darren Flanigan (GEE) 84, Peter Curran (HAW) 84, Paul Harding (STK) 83, Greg Dear (HAW) 82, Peter Sumich (WCE) 82

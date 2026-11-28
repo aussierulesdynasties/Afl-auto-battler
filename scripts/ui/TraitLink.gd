@@ -47,7 +47,7 @@ static func earn_text(key: String) -> String:
 		return ""
 	if key == "wet_weather":
 		return "Earned with Contested ball %d and kicking and handballing together %d or better." % [
-				int(Traits.WET_WEATHER["contested"]), int(Traits.WET_WEATHER["disposal"])]
+				int(Traits.WET_WEATHER["contested_ball"]), int(Traits.WET_WEATHER["disposal"])]
 	var d: Dictionary = Traits.DEFS.get(key, {})
 	if d.is_empty():
 		return ""

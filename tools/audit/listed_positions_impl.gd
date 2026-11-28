@@ -6,6 +6,7 @@ extends RefCounted
 ## then a summary: listed x first position, and the median OVR of each first
 ## position. Run it on two checkouts and join on id to list every move.
 ## Reads; changes nothing. No arguments.
+const Ovr := preload("res://tests/ovr.gd")
 
 
 func run() -> void:
@@ -16,12 +17,12 @@ func run() -> void:
 		var role := str(p.get("role", ""))
 		print("ROW %s|%s|%s|%s|%s|%s|%d|%d|%d" % [str(p.get("id", "")), str(p.get("club", "")),
 				str(p.get("real_name", "")), listed, role, str(p.get("role2", "")),
-				int(p.get("overall", 0)), int(p.get("potential", 0)), int(p.get("gm", 0))])
+				int(Ovr.of(p, 0)), int(p.get("potential", 0)), int(p.get("gm", 0))])
 		var k := "%s>%s" % [listed if listed != "" else "(none)", role]
 		cross[k] = int(cross.get(k, 0)) + 1
 		if not by_role.has(role):
 			by_role[role] = []
-		(by_role[role] as Array).append(int(p.get("overall", 0)))
+		(by_role[role] as Array).append(int(Ovr.of(p, 0)))
 	print("PLAYERS %d" % GameDB.players.size())
 	var keys := cross.keys()
 	keys.sort()

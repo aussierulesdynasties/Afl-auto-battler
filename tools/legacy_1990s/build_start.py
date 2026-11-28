@@ -41,10 +41,10 @@ Australian or Team of the Year pick, a Brownlow top 3 (4th-10th score half) -
 weighted by how recent (the last season in full, then 0.75, 0.5). The game
 lifts an honoured player's rating to a floor on that score (Ratings.HONOURS_*).
 
-Every season is rated against its own season's players: the Wheelo skills
-and the APR overall against his position (tools/wheelo/seasons_rated.py,
-interview 2026-11-15), so ratings are per era (director 2026-11-10, "A: per
-era"; 2026-11-13, "Scale each position per season").
+Every season is rated against its own season's players: his OVR read from
+that season's attributes at his AFL position (tools/wheelo/history.py, the
+rating rebuild, docs/RATING_REBUILD.md), so ratings are per era (director
+2026-11-10, "A: per era"; 2026-11-13, "Scale each position per season").
 
     python3 tools/legacy_1990s/build_start.py            # write the files
     python3 tools/legacy_1990s/build_start.py --report   # also the era report
@@ -63,7 +63,6 @@ ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)
 LEG = os.path.join(ROOT, "data", "legacy")
 OUT_DIR = os.path.join(LEG, "1990")
 sys.path.insert(0, os.path.join(ROOT, "tools"))
-import sim_harness as H  # noqa: E402
 
 DATA_SEASON = 1989
 START_DATE = "1990-03-01"
@@ -85,7 +84,7 @@ def load_positions():
     """data/legacy/known_lines.csv (tools/legacy_1990s/positions.py): the line
     each player is known for, from his Wikipedia article. {(first, last, dob):
     (pos, pos2)} and {afltables_id: (pos, pos2)}, each FWD / MID / DEF / RUC
-    (pos2 "" when he is known for one line). tools/wheelo/seasons_rated.py
+    (pos2 "" when he is known for one line). tools/wheelo/model.py
     reads it to tell a pre-2012 season's line (his real position, where a
     record gives one, is data/legacy/positions.csv: real_position)."""
     by_key, by_id = {}, {}
@@ -201,9 +200,9 @@ FULL_STATS_FROM = 2003
 def real_position(pid, season, role=""):
     """His real position (RUCK, MID, DEF or FWD) from data/legacy/positions.csv
     for a season before FULL_STATS_FROM, '' with no record. A record naming
-    several roles ("DEF|MID") is passed whole when role is '' (the harness
-    picks by his role scores); given role (his stats' reading), it is that
-    role when the record names it, else the record's first role."""
+    several roles ("DEF|MID") is passed whole when role is ''; given role
+    (the line of his rated AFL position that season), it is that role when
+    the record names it, else the record's first role."""
     global _positions
     if season >= FULL_STATS_FROM:
         return ""
@@ -244,30 +243,14 @@ def recorded(r, missing):
     return out
 
 
-def harness_player(r, club, num_):
-    p = {"club": club, "num": num_, "name": "%s %s" % (r["first"], r["last"]),
-         "surname": r["last"], "real_pos": real_position(r.get("afltables_id", ""), int(r.get("year") or 9999)),
-         "id": "%s_%s" % (club, num_)}
-    p["blank"] = []
-    for k in H.STAT_KEYS:
-        src = {"onepct": "one_pct", "pctp": "pct_played"}.get(k, k)
-        v = r.get(src, r.get(k))
-        p[k] = float(v or 0.0)
-        if v is None or v == "":
-            p["blank"].append(k)
-    return p
-
-
-def unrecorded_in(hp):
-    """Ratings.find_unrecorded: stats blank on most of these players."""
-    return {k for k in H.STAT_KEYS if sum(k in p["blank"] for p in hp) * 2 > len(hp)}
-
-
 def rate_seasons(by_year):
-    """{year: {afltables_id: (overall, games, recorded row, role)}}."""
+    """{year: {afltables_id: (overall, games, recorded row, role)}}: his OVR read
+    from that season's attributes at his AFL position (tools/wheelo/history.py),
+    his role that position's line. The recorded row feeds the stats, heights and
+    the era report."""
+    hist = history()
+    by_slug = hist.rated_seasons(set(by_year))
     rated = {}
-    # Every past season is rated as a past start's players are (Ratings.listed_lines).
-    H.LISTED_LINES = H.PAST_LISTED_LINES
     for y in sorted(by_year):
         missing = unrecorded(by_year[y])
         # A player traded mid-season has a row per club: one season, summed.
@@ -285,29 +268,33 @@ def rate_seasons(by_year):
             else:
                 merged[pid] = dict(r)
         est = {pid: recorded(r, missing) for pid, r in merged.items()}
-        H.set_unrecorded({GAME_KEY.get(k, k) for k in missing})
-        players = [harness_player(e, code(e["club"]), i) for i, e in enumerate(est.values())]
-        H.derive_ratings(players)
-        rated[y] = {pid: (p["overall"], int(e["gm"]), e, p["role"])
-                    for (pid, e), p in zip(est.items(), players)}
-        # The season's overall is the director's (interview 2026-11-15): the
-        # AFL Player Rating against his position from 2012, before it his
-        # skills weighted as the AFL Player Rating weights them
-        # (tools/wheelo/seasons_rated.py). The estimated row above still
-        # feeds the stats, heights and the era report.
-        new = wheelo_rated(y)
-        for pid, (ovr, g, e, role) in list(rated[y].items()):
-            got = new.get(pid)
+        season = by_slug.get(y, {})
+        rated[y] = {}
+        for pid, e in est.items():
+            got = season.get(hist.slug_of(pid))
             if got is not None:
-                rated[y][pid] = (int(round(got["ovr"])), g, e, role)
+                line = hist.W.LINE[got[2]]
+                rated[y][pid] = (got[0], int(e["gm"]), e, "RUCK" if line == "RUC" else line)
     return rated
 
 
-def wheelo_rated(year):
+def history():
+    """tools/wheelo/history.py, loaded late: it imports this module (attributes.py)."""
     if os.path.join(ROOT, "tools", "wheelo") not in sys.path:
         sys.path.insert(0, os.path.join(ROOT, "tools", "wheelo"))
-    import seasons_rated  # noqa: E402  (imports this module: loaded late)
-    return seasons_rated.rated(year)
+    import history as hist  # noqa: E402
+    return hist
+
+
+def start_ratings(path):
+    """A start's lists as the game rates them at load: [{club, name, overall}],
+    each OVR read from the attributes file at his AFL position (Rating.of_attrs).
+    tools/wheelo/attributes.py writes the file from the lists: run it first
+    when they change."""
+    hist = history()
+    with open(path, newline="", encoding="utf-8") as fh:
+        return [{"club": r["club"], "name": "%s %s" % (r["first"], r["last"]), "overall": hist.of_attrs(r, r["apos"])}
+                for r in csv.DictReader(fh)]
 
 
 # ---------------------------------------------------------------- honours --
@@ -565,7 +552,7 @@ def write(path, cols, rows):
 
 
 # ------------------------------------------------------------- era report --
-def era_report(by_year, rated, players):
+def era_report(by_year, rated):
     """Markdown: each decade's per-game averages and rating spread vs 2025."""
     stats = ["di", "ki", "hb", "mk", "tk", "gl", "cl", "cp", "if50", "rb"]
     lines = ["# Era averages against today (Legacy mode, row 142)", "",
@@ -592,16 +579,8 @@ def era_report(by_year, rated, players):
         lines.append("| %s | %s | %.1f | %d |" % (label, " | ".join(cells), n80 / len(list(years)),
                                                   ovrs[len(ovrs) // 2]))
     lines += ["", "## The 1990 lists as the game loads them", "",
-              "Rated on 1989 by `tools/sim_harness.py` (the game rates again at load, the same model).", ""]
-    hp = []
-    for r in players:
-        e = dict((k, r[k]) for k in ENRICHED[4:28])
-        p = harness_player({**{("one_pct" if k == "onepct" else "pct_played" if k == "pctp" else k): v
-                               for k, v in e.items()}, "first": r["first"], "last": r["last"]},
-                           r["club"], r["num"])
-        hp.append(p)
-    H.set_unrecorded(unrecorded_in(hp))
-    H.derive_ratings(hp)
+              "Each OVR read from `data/legacy/1990/attributes_1990.csv` at his AFL position (Rating.of_attrs).", ""]
+    hp = start_ratings(os.path.join(OUT_DIR, "attributes_1990.csv"))
     by_club = defaultdict(list)
     for p in hp:
         by_club[p["club"]].append(p["overall"])
@@ -637,7 +616,7 @@ def main():
     if a.report:
         path = os.path.join(ROOT, "docs", "research", "LEGACY_ERA_REPORT.md")
         with open(path, "w", newline="\n", encoding="utf-8") as fh:
-            fh.write(era_report(by_year, rated, players))
+            fh.write(era_report(by_year, rated))
         print("wrote", os.path.relpath(path, ROOT))
 
 

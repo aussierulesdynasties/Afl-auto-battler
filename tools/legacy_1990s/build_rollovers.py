@@ -62,10 +62,10 @@ LAST_DATA = 2025
 REAL_2026 = os.path.join(ROOT, "data", "draftees_2026.csv")
 # A club's first season: its real list that year is the list it fields.
 ENTRIES = {"ADE": 1991, "FRE": 1995, "PAD": 1997, "GCS": 2011, "GWS": 2012}
-CLASS_COLS = ["year", "rank", "kind", "club", "first", "last", "dob", "height_cm", "role", "origin", "tie", "peak",
-              "last_season"]
-ENTRY_COLS = ["year", "club", "num", "first", "last", "dob", "height_cm", "list", "role", "peak", "known", "src", "ovr",
-              "last_season"] + B.ADD_STATS[4:28]
+CLASS_COLS = ["year", "rank", "kind", "club", "first", "last", "dob", "height_cm", "role", "role2", "origin", "tie",
+              "peak", "last_season"]
+ENTRY_COLS = ["year", "club", "num", "first", "last", "dob", "height_cm", "list", "role", "role2", "peak", "known",
+              "src", "ovr", "last_season"] + B.ADD_STATS[4:28]
 
 
 def read(path):
@@ -87,20 +87,25 @@ def entered(club):
 
 
 def role_of(pid, rated, height):
-    """His position at his best rated season (most games if none had 8), or
-    a ruck by height; '' leaves it to the game. His real position, when that
-    season is before 2003, comes first (director 2026-11-15)."""
-    best = None
+    """(line, second line). His line is the one he played the most rated games
+    in (director 2026-11-27: "Most games"). A line with as many games is his
+    second line (director 2026-11-27: "why arent they simply dual role"), and
+    of the tied lines his own is the one of his best OVR. Never played: a ruck
+    by height, or '' to leave it to the game. A season before 2003 counts
+    under his real position (director 2026-11-15)."""
+    games, best = defaultdict(int), defaultdict(int)
     for y in rated:
         got = rated[y].get(pid) if pid else None
         if got and got[1] > 0:
-            k = (got[1] >= B.PEAK_GAMES, got[0], got[1])
-            if best is None or k > best[0]:
-                best = (k, got[3], y)
-    if best:
-        return B.real_position(pid, best[2], best[1]) or best[1]
+            line = B.real_position(pid, y, got[3]) or got[3]
+            games[line] += got[1]
+            best[line] = max(best[line], got[0])
+    if games:
+        order = sorted(games, key=lambda k: (games[k], best[k]), reverse=True)
+        tied = [k for k in order[1:] if games[k] == games[order[0]]]
+        return order[0], (tied[0] if tied else "")
     h = B.num(height) or 0
-    return "RUCK" if h >= 199 else ""
+    return ("RUCK" if h >= 199 else ""), ""
 
 
 # A swept player enters the open draft like any other: the sim's clubs pick
@@ -243,7 +248,8 @@ def main():
                 "year": year, "rank": rank, "kind": r["draft"], "club": B.code(r["club"]),
                 "first": r["first"], "last": r["last"], "dob": dob,
                 "height_cm": b.get("height_cm", "") or B.page_height(dg, r["first"], r["last"], dob),
-                "role": role_of(pid, rated, b.get("height_cm", "") or B.page_height(dg, r["first"], r["last"], dob)),
+                **dict(zip(("role", "role2"), role_of(
+                    pid, rated, b.get("height_cm", "") or B.page_height(dg, r["first"], r["last"], dob)))),
                 "origin": r["origin"], "tie": "FS" if r["flag"] == "father_son" else "",
                 "peak": peak_of(pid, rated, year + 1),
                 "last_season": last_of(pid, r["first"], r["last"], dob, year),
@@ -266,7 +272,7 @@ def main():
             classes.append({
                 "year": year, "rank": rank, "kind": "signing", "club": club,
                 "first": r["first"], "last": r["last"], "dob": r["dob"],
-                "height_cm": r["height_cm"], "role": role_of(pid, rated, r["height_cm"]),
+                "height_cm": r["height_cm"], **dict(zip(("role", "role2"), role_of(pid, rated, r["height_cm"]))),
                 "origin": r["origin"], "tie": tie_of(r),
                 "peak": peak_of(pid, rated, year + 1),
                 "last_season": last_of(pid, r["first"], r["last"], r["dob"], year),
@@ -309,7 +315,8 @@ def main():
                     break
             row = {"year": year, "club": club, "num": r["num"], "first": r["first"], "last": r["last"],
                    "dob": r["dob"], "height_cm": r["height_cm"], "list": r["list"],
-                   "role": latest[1][3] if latest else role_of(pid, rated, r["height_cm"]),
+                   **dict(zip(("role", "role2"), (latest[1][3], "") if latest
+                                else role_of(pid, rated, r["height_cm"]))),
                    "peak": peak_of(pid, rated, year), "known": known, "src": latest[0] if latest and not known else "",
                    "ovr": latest[1][0] if latest and not known else "",
                    # His last real season: he retires about then (LegacyRollover).

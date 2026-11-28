@@ -12,6 +12,7 @@ extends RefCounted
 ##   SUMMARY by club and club year over all careers.
 ## Args: seeds (comma list) club seasons (default 301 RIC 6).
 ## godot --headless --path . --script tools/audit/run_audit.gd -- forge_start_impl 301,302 RIC 6
+const Ovr := preload("res://tests/ovr.gd")
 
 const CODE := "COB"
 
@@ -25,14 +26,14 @@ func _spec() -> Dictionary:
 
 func _top(list: Array, n: int) -> Array:
 	var ovr := list.duplicate()
-	ovr.sort_custom(func(a, b): return int(a["overall"]) > int(b["overall"]))
+	ovr.sort_custom(func(a, b): return int(Ovr.of(a)) > int(Ovr.of(b)))
 	return ovr.slice(0, mini(n, ovr.size()))
 
 
 func _strength(list: Array) -> float:
 	var t := 0.0
 	for p in _top(list, 22):
-		t += float(p["overall"])
+		t += float(Ovr.of(p))
 	return t / 22.0
 
 
@@ -112,7 +113,7 @@ func _entry(seed: int) -> void:
 			arr.size(), str(counts), str(in22), float(Contracts.payroll(arr)) / maxf(1.0, float(GameState.salary_cap))])
 	var bits := PackedStringArray()
 	for p in _top(arr, 12):
-		bits.append("%s %d %.0fy %s" % [GameDB.player_display_name(p), int(p["overall"]), float(p.get("age", 0)), _origin(p, st)])
+		bits.append("%s %d %.0fy %s" % [GameDB.player_display_name(p), int(Ovr.of(p)), float(p.get("age", 0)), _origin(p, st)])
 	print("TOP %d %d | %s" % [seed, GameState.season_year, ", ".join(bits)])
 
 

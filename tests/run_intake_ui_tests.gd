@@ -1,4 +1,5 @@
 extends SceneTree
+const Ovr := preload("res://tests/ovr.gd")
 ## godot --headless --path . --script tests/run_intake_ui_tests.gd
 ## Intake-draft presentation regressions on the shared DraftScene: it must
 ## open straight to the board in intake mode, keep every control on-viewport
@@ -246,7 +247,7 @@ func _test_intake_by_taps() -> void:
 	var scouting: GDScript = load("res://scripts/sim/DraftScouting.gd")
 	var scout: Dictionary = scouting.projection(prospect, draft.user_club, draft.seed,
 			draft.scouting_mult_for(draft.user_club))
-	_check(ovr != null and (ovr.get_child(0) as Label).text == scouting.range_text(scout["overall"])
+	_check(ovr != null and (ovr.get_child(0) as Label).text == scouting.range_text(Ovr.of(scout))
 			and (ovr.get_child(1) as Label).text == "Projected OVR",
 			"His projected OVR is shown as a scouting range")
 	_check(ui.find_child("DetailAllRatings", true, false) == null,

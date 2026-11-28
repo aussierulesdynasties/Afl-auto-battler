@@ -3,6 +3,7 @@ extends SceneTree
 ##   godot --path . --script tools/visual/capture_finals_cards.gd -- --out /tmp/finals --club FRE [--only id,id]
 ## Writes <out>_<card id>[_wk3].png. Each card is built from the facts the game would give it in that
 ## week (a finals game is fabricated: the ladder, the bracket and the honour roll are set, nothing else).
+const Ovr := preload("res://tests/ovr.gd")
 
 var CS = null
 var SD = null
@@ -147,7 +148,7 @@ func _run() -> void:
 				sea.finals["slots"] = {}
 		var rec: Dictionary = state.captaincy_record(club)
 		var by_fit: Array = state.my_list.duplicate()
-		by_fit.sort_custom(func(x, y): return int(x["overall"]) > int(y["overall"]))
+		by_fit.sort_custom(func(x, y): return int(Ovr.of(x)) > int(Ovr.of(y)))
 		var p: Dictionary = {}
 		match str(sh[1]):
 			"captain":
@@ -164,7 +165,7 @@ func _run() -> void:
 			"kid":
 				var youngest: Dictionary = by_fit[10]
 				for q in by_fit:
-					if float(q["age"]) < float(youngest["age"]) and int(q["overall"]) > 55:
+					if float(q["age"]) < float(youngest["age"]) and int(Ovr.of(q)) > 55:
 						youngest = q
 				p = youngest
 		if id == "gf_racing_the_clock":

@@ -1,4 +1,5 @@
 extends RefCounted
+const Ovr := preload("res://tests/ovr.gd")
 ## Career save regression suite. A save must reload into the same career:
 ## same lists, ladder, fixture position and draft, with shared player dicts
 ## still shared, so the next round plays out identically either way.
@@ -25,13 +26,12 @@ func run() -> void:
 	_t("_test_review_after_reload")
 	_t("_test_breeze_end_survives")
 	_t("_test_training_survives")
-	_t("_test_adjusted_players_survive")
 	_t("_test_no_save_mid_match")
 	_t("_test_mid_draft_round_trip")
 	_t("_test_intake_and_second_season")
 	_t("_test_bad_file_is_ignored")
 	_t("_test_old_club_code_migrates")
-	_t("_test_old_version_save_upgrades")
+	_t("_test_old_version_save_refused")
 	_t("_test_unreadable_save_says_why")
 	_t("_test_safe_replacement")
 	_t("_test_fictional_identity")
@@ -42,7 +42,7 @@ func run() -> void:
 	_t("_test_bug_bash_round_trips")
 	_t("_test_export_import_round_trip")
 	_t("_test_bad_backup_leaves_career")
-	_t("_test_old_save_backup_imports")
+	_t("_test_old_save_backup_refused")
 	_t("_test_earlier_saves_restore")
 	_t("_test_save_costs")
 	_t("_test_honoured_ratings_survive_reload")
@@ -342,7 +342,6 @@ func _test_second_career_plays_like_first() -> void:
 	var first := _career_trace()
 	# What a game that loaded a save mid-career leaves behind: the caches built
 	# from the players as they stand now, not as the 2026 data has them.
-	Prospects.forget_cache()
 	Prospects.generate_class(GameState.season_year, 7)
 	StoryDeck.all()
 	var second := _career_trace()
@@ -397,7 +396,7 @@ func _offseason_trace() -> Dictionary:
 	if GameState.begin_intake_draft():
 		var pool := []
 		for p in GameState.draftee_pool:
-			pool.append("%s:%s:%s" % [str(p.get("id", "")), str(p.get("overall", "")), str(p.get("potential", ""))])
+			pool.append("%s:%s:%s" % [str(p.get("id", "")), str(Ovr.of(p, "")), str(p.get("potential", ""))])
 		out["draft_class"] = pool
 		var d: Draft = GameState.draft
 		var guard := 0
@@ -413,7 +412,7 @@ func _offseason_trace() -> Dictionary:
 	for code in GameState.season.lists:
 		var ids := []
 		for p in GameState.season.lists[code]:
-			ids.append("%s:%s:%s" % [str(p.get("id", "")), str(p.get("overall", "")), str(p.get("potential", ""))])
+			ids.append("%s:%s:%s" % [str(p.get("id", "")), str(Ovr.of(p, "")), str(p.get("potential", ""))])
 		lists.append("%s:%s" % [code, ",".join(ids)])
 	out["lists"] = lists
 	# Everything else the next round reads, so a mismatch names its source.
@@ -497,33 +496,6 @@ func _test_training_survives() -> void:
 			and int(full["skin"]) == 4 and (full["tattoos"] as Array).size() == 1,
 			"A chosen look survives a reload")
 	_check(not full.has("freckles"), "An old save's freckles load cleanly and are dropped")
-
-
-## The director's named-player corrections (Ratings.ATTR_ADJUSTMENTS) are in the
-## attributes a career saves, so a reload gives back exactly what was saved: the
-## correction is not applied again, and an older career keeps what it saved.
-func _test_adjusted_players_survive() -> void:
-	_new_season()
-	GameState.advance()
-	var names := {}
-	for key in Ratings.ATTR_ADJUSTMENTS:
-		names[str(key).split("|")[1]] = true
-	var before := {}
-	for p in GameDB.players:
-		var who := "%s %s" % [p["first"], p["last"]]
-		if names.has(who):
-			var live: Dictionary = GameState._find_player(str(p["id"]))
-			if not live.is_empty():
-				before[who] = {"id": str(p["id"]), "attr": (live["attr"] as Dictionary).duplicate(),
-						"overall": int(live["overall"]), "potential": int(live["potential"])}
-	GameState.save_career()
-	GameState.load_career()
-	for who in names:
-		var was: Dictionary = before.get(who, {})
-		var q: Dictionary = GameState._find_player(str(was.get("id", "")))
-		_check(not was.is_empty() and not q.is_empty() and q["attr"] == was["attr"]
-				and int(q["overall"]) == int(was["overall"]) and int(q["potential"]) == int(was["potential"]),
-				"%s's corrected attributes and POT survive a reload exactly" % who)
 
 
 func _test_no_save_mid_match() -> void:
@@ -664,11 +636,10 @@ func _test_intake_and_second_season() -> void:
 
 
 ## A real save written by the 2026-09-30 build (commit ef3551ca, save
-## version 1, St Kilda still SKN, no season stats): St Kilda after two
-## rounds. It must open, upgraded, never drop to the menu (T5.Q24).
+## version 1, St Kilda after two rounds). A save from before the rating rebuild
+## (CareerSave.FIRST_LOADABLE; director, 2026-11-25: "i dont care about old
+## saves") does not open: the menu says why, in words, and offers no Continue.
 const OLD_SAVE_FIXTURE := "res://tests/fixtures/career_v1_2026-09-30.save.gz"
-const OLD_SAVE_LADDER := ["GWS 8", "PAD 8", "CAR 8", "ADE 6", "BRL 6", "FRE 4", "RIC 4", "GEE 4", "WCE 4",
-		"GCS 4", "ESS 4", "HAW 4", "STK 4", "WBD 4", "NTH 0", "SYD 0", "COL 0", "MEL 0"]
 
 
 func _put_old_save() -> void:
@@ -680,35 +651,19 @@ func _put_old_save() -> void:
 	f.close()
 
 
-func _test_old_version_save_upgrades() -> void:
+func _test_old_version_save_refused() -> void:
 	_put_old_save()
 	var f := FileAccess.open(GameState.save_path, FileAccess.READ)
 	var raw = f.get_var()
 	f.close()
-	_check(raw is Dictionary and int(raw.get("version", 0)) == 1 and CareerSave.VERSION > 1,
-			"The fixture really is an older-version save")
-	_check(GameState.has_saved_career() and GameState.saved_career_problem() == "",
-			"The menu offers Continue for it, with no problem line")
-	var meta := GameState.saved_career_meta()
-	_check(str(meta.get("club", "")) == "STK" and str(meta.get("stage", "")) == "Round 3",
-			"Its header reads St Kilda, round 3: %s" % meta)
+	_check(raw is Dictionary and int(raw.get("version", 0)) == 1 and CareerSave.FIRST_LOADABLE > 1,
+			"The fixture really is a save from before the rating rebuild")
+	_check(not GameState.has_saved_career(), "The menu offers no Continue for it")
+	_check(GameState.saved_career_problem() == GameState.SAVE_TOO_OLD,
+			"It says the save is from before the new player ratings, not that it is damaged (%s)" % GameState.saved_career_problem())
 	GameState.reset()
-	_check(GameState.load_career(), "The older save opens")
-	_check(GameState.my_club == "STK" and GameState.season != null and GameState.season.round_index == 2,
-			"It is the same career: St Kilda, two rounds played")
-	var ladder: Array = GameState.season.ladder_sorted().map(
-			func(r): return "%s %d" % [r["code"], int(r["pts"])])
-	_check(ladder == OLD_SAVE_LADDER, "The ladder is as it was saved: %s" % [ladder])
-	_check(GameState.my_list.size() > 30 and GameState.my_list[0] is Dictionary,
-			"Its list is back")
-	GameState.advance()
-	_check(GameState.season.round_index == 3, "The upgraded career plays on")
-	_check(GameState.save_career(), "It saves again")
-	f = FileAccess.open(GameState.save_path, FileAccess.READ)
-	raw = f.get_var()
-	f.close()
-	_check(int(raw.get("version", 0)) == CareerSave.VERSION, "...as the current version")
-	_check(GameState.load_career() and GameState.season.round_index == 3, "...and reloads")
+	_check(not GameState.load_career() and GameState.season == null, "It does not open")
+	GameState.delete_saved_career()
 
 
 ## A save that cannot be opened says so on the menu instead of the menu
@@ -1074,7 +1029,7 @@ func _test_player_club_follows_list() -> void:
 	GameState.advance()
 	GameState.advance()
 	var ladder := _ladder_sig()
-	var overalls := GameState.my_list.map(func(p): return int(p["overall"]))
+	var overalls := GameState.my_list.map(func(p): return int(Ovr.of(p)))
 	# A save written before format 2: every player still on a club that is not his list's.
 	for code in GameState.season.lists:
 		for p in GameState.season.lists[code]:
@@ -1099,7 +1054,7 @@ func _test_player_club_follows_list() -> void:
 			"On load every player takes his list's club once (%d of %d)" % [counts[1], counts[0]])
 	_check(GameState.my_list.map(func(p): return str(p["id"])) == ids, "The same players, in the same order")
 	_check(_ladder_sig() == ladder, "The ladder is the same")
-	_check(GameState.my_list.map(func(p): return int(p["overall"])) == overalls, "The same ratings")
+	_check(GameState.my_list.map(func(p): return int(Ovr.of(p))) == overalls, "The same ratings")
 	_check(GameState.my_list.all(func(p): return str(p["club"]) == "COL"), "Your players are COL after the load")
 	var kept: Array = []
 	for p in GameState.my_list:
@@ -1250,23 +1205,18 @@ func _test_bad_backup_leaves_career() -> void:
 			"The career still opens where it was")
 
 
-## A save file copied out of an old build (version 1) is a valid backup: it
-## imports, upgraded, as the career it was (T5.Q24).
-func _test_old_save_backup_imports() -> void:
+## A save file copied out of a build from before the rating rebuild (version 1)
+## is not imported: the coach is told why, and nothing is written.
+func _test_old_save_backup_refused() -> void:
 	GameState.delete_saved_career()
 	GameState.reset()
 	var gz := FileAccess.get_file_as_bytes(OLD_SAVE_FIXTURE)
 	var raw := gz.decompress_dynamic(-1, FileAccess.COMPRESSION_GZIP)
-	_check(GameState.import_career(raw) == "", "The old save imports")
-	_check(GameState.load_career() and GameState.my_club == "STK" and GameState.season.round_index == 2,
-			"It opens as St Kilda after two rounds")
-	var ladder: Array = GameState.season.ladder_sorted().map(
-			func(r): return "%s %d" % [r["code"], int(r["pts"])])
-	_check(ladder == OLD_SAVE_LADDER, "With its ladder")
-	var f := FileAccess.open(GameState.save_path, FileAccess.READ)
-	var blob = f.get_var()
-	f.close()
-	_check(int(blob.get("version", 0)) == CareerSave.VERSION, "It is stored as the current version")
+	var why := GameState.import_career(raw)
+	_check(why.contains("before the new player ratings") and why.contains("unchanged"),
+			"The old backup is refused, saying why (%s)" % why)
+	_check(not GameState.has_saved_career() and not FileAccess.file_exists(GameState.save_path),
+			"Nothing was written in its place")
 
 
 ## The last five points of the career are kept; saving twice in one week
@@ -1357,11 +1307,10 @@ func _test_save_costs() -> void:
 	_check(GameDB.reloads == r1 + 1, "...and so does a career after a season was started without a reset")
 
 
-## A past start's honoured players keep their rating through a save and load
-## (bug bash 2026-11-25: 120 of them across the 1990, 2000, 2010 and 2020
-## starts sat a point over their skills and fell that point the first time the
-## career loaded). Their skills are topped up to the rating their honours give
-## them (director, 2026-11-25: "Top up his skills").
+## A past start's players keep their rating through a save and load (bug bash
+## 2026-11-25: 120 across the 1990, 2000, 2010 and 2020 starts once fell a
+## point the first time the career loaded). Their OVR is read from the saved
+## attributes, so it cannot drift.
 func _test_honoured_ratings_survive_reload() -> void:
 	GameState.replay_seed = SUITE_SEED
 	GameState.reset("1990")
@@ -1380,18 +1329,9 @@ func _test_honoured_ratings_survive_reload() -> void:
 	if GameState.season == null:
 		return
 	var before := {}
-	var honoured := 0
-	var on_skills := 0
 	for club in GameState.season.lists:
 		for p in (GameState.season.lists[club] as Array):
-			before[str(p["id"])] = "%d/%d" % [int(p["overall"]), int(p.get("potential", 0))]
-			if bool(p.get("rated_on_honours", false)):
-				honoured += 1
-				var ov := Ratings.rate_overall(p["attr"], str(p["role"]), Ratings.effective_games(p))
-				if ov == int(p["overall"]) and ov >= Ratings.honours_floor(float(p.get("honours", 0.0))):
-					on_skills += 1
-	_check(honoured >= 20 and on_skills == honoured,
-			"Every player rated on his honours has the skills for it, at least his floor (%d of %d)" % [on_skills, honoured])
+			before[str(p["id"])] = "%d/%d" % [int(Rating.ovr(p, 0)), int(p.get("potential", 0))]
 	_check(GameState.save_career(), "The 1990 career saves")
 	_check(GameState.load_career(), "The 1990 career loads")
 	var moved := []
@@ -1402,7 +1342,7 @@ func _test_honoured_ratings_survive_reload() -> void:
 			if not before.has(id):
 				continue
 			seen += 1
-			var now := "%d/%d" % [int(p["overall"]), int(p.get("potential", 0))]
+			var now := "%d/%d" % [int(Rating.ovr(p, 0)), int(p.get("potential", 0))]
 			if now != str(before[id]):
 				moved.append("%s %s %s -> %s" % [p.get("first", ""), p.get("last", ""), before[id], now])
 	_check(before.size() > 400 and seen == before.size() and moved.is_empty(),

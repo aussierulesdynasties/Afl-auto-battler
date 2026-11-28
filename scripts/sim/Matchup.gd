@@ -49,7 +49,7 @@ const PRIORITY := ["missing", "danger", "interceptor", "midfield", "ruck", "atta
 static func line_values(squad: Squad) -> Dictionary:
 	return {
 		# The midfield share of the engine's contest number.
-		"midfield": 0.42 * squad.mid_contest + 0.22 * squad.mid_disposal,
+		"midfield": 0.48 * squad.mid_contest + 0.25 * squad.mid_disposal,
 		"ruck": squad.ruck,
 		"attack": squad.attack,
 		"defence": squad.defence,

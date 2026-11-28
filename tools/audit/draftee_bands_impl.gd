@@ -6,14 +6,13 @@ extends RefCounted
 ## POT kept.
 ## A generated class is drafted as a career drafts it: made a year ahead, then its pool year
 ## (Prospects.age_pool, as GameState._first_class and open_offseason do) before its draft.
-## The real 2026 class is drafted as loaded. Optional second argument: the scale
-## (Prospects.DRAFT_NIGHT_SCALE) to try, e.g. `draftee_bands_impl 30 0.84`.
+## The real 2026 class is drafted as loaded.
 ##   BAND|class|band|picks|mean OVR|median OVR|p10 OVR|p90 OVR|mean POT|median POT
-##   READY|class|band|ready|typical|project   (readiness counts, generated classes)
 ## godot --headless --path . --script tools/audit/run_audit.gd -- draftee_bands_impl 30
+const Ovr := preload("res://tests/ovr.gd")
 
 const BANDS := [[1, 5, "1-5"], [6, 20, "6-20"], [21, 40, "21-40"], [41, 999, "41+"]]
-var _rows := {}   # class -> band -> [[ovr, pot, readiness], ...]
+var _rows := {}   # class -> band -> [[ovr, pot], ...]
 
 
 static func _band(pick: int) -> String:
@@ -71,16 +70,13 @@ func _draft(cls: Array, label: String, s: int) -> void:
 		var b := _band(int(e["pick"]))
 		if not _rows[label].has(b):
 			_rows[label][b] = []
-		var o := int(p["overall"])
-		_rows[label][b].append([o, maxi(o, int(p.get("potential", o))), str(p.get("readiness", ""))])
+		var o := int(Ovr.of(p))
+		_rows[label][b].append([o, maxi(o, int(p.get("potential", o)))])
 
 
 func run() -> void:
 	var args := OS.get_cmdline_user_args()
 	var n := int(args[1]) if args.size() > 1 else 20
-	if args.size() > 2:
-		Prospects.DRAFT_NIGHT_SCALE = float(args[2])
-	print("SCALE|%.2f" % Prospects.DRAFT_NIGHT_SCALE)
 	if GameState.league_lists.is_empty():
 		GameState.begin_real_lists()
 	var real: Array = []
@@ -98,12 +94,9 @@ func run() -> void:
 				continue
 			var ov: Array = []
 			var po: Array = []
-			var rd := {"ready": 0, "typical": 0, "project": 0}
 			for r in rows:
 				ov.append(float(r[0]))
 				po.append(float(r[1]))
-				if rd.has(str(r[2])):
-					rd[str(r[2])] += 1
 			var mo := 0.0
 			var mp := 0.0
 			for i in range(ov.size()):
@@ -111,4 +104,3 @@ func run() -> void:
 				mp += po[i]
 			print("BAND|%s|%s|%d|%.1f|%.1f|%.1f|%.1f|%.1f|%.1f" % [label, str(b[2]), rows.size(),
 					mo / ov.size(), _q(ov, 0.5), _q(ov, 0.1), _q(ov, 0.9), mp / po.size(), _q(po, 0.5)])
-			print("READY|%s|%s|%d|%d|%d" % [label, str(b[2]), rd["ready"], rd["typical"], rd["project"]])
