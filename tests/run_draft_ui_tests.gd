@@ -42,6 +42,7 @@ func _run() -> void:
 	await _t("_test_stage")
 	await _t("_test_league_draft_stays_instant")
 	await _t("_test_take_tasmania")
+	await _t("_test_first_offseason")
 	await _t("_test_rival_why")
 	await _t("_test_draft_fit")
 	await _t("_test_redraft_wears_club")
@@ -1475,3 +1476,82 @@ func _test_draft_fit() -> void:
 	ui.queue_free()
 	await _settle()
 	_state.coach_arch = {}
+
+
+## A real-lists career opens on its own off-season, before the opening
+## National Draft (row 199; director, 2026-11-15: "yes, should be the full off
+## season", "Real lists only"). By finger: choose the club, the off-season's
+## screen is up, free agency takes an offer, Trades & Contracts opens, and
+## Start the draft closes it and shows the board, with the lists the clubs now
+## hold and nobody's contract a season shorter.
+func _test_first_offseason() -> void:
+	_state.reset()
+	_state.begin_real_lists()
+	_state.interview_due = false
+	root.size = Vector2i(390, 844)
+	_check(_state.first_offseason == 0 and not _state.offseason_open(),
+			"Before the club is chosen, the off-season is not open")
+	var ui: Control = load("res://scenes/DraftScene.tscn").instantiate()
+	root.add_child(ui)
+	await _settle()
+	var tile: Button = ui.find_child("Choose_GEE", true, false)
+	var scroll: ScrollContainer = _scroll_of(tile) if tile != null else null
+	if scroll != null:
+		scroll.ensure_control_visible(tile)
+	await _settle()
+	var why: String = await Tap.tap(tile)
+	await _settle()
+	var gate: Node = ui.find_child("FirstOffseason", true, false)
+	_check(why == "" and _state.my_club == "GEE" and gate != null and _state.first_offseason == 1
+			and _state.offseason_open() and ui.find_child("DraftWorkspace", true, false) == null,
+			"A finger on Geelong opens the 2026 off-season before the draft (%s)" % why)
+	# Every real contract runs on: nobody is out of contract in this window.
+	var expiring := 0
+	var listed := 0
+	for code in _state.season.lists:
+		for p in _state.season.lists[code]:
+			listed += 1
+			if int(p.get("contract_years", 1)) <= 1:
+				expiring += 1
+	_check(listed > 300 and expiring == 0, "No listed player is out of contract (%d of %d)" % [expiring, listed])
+	var fa_ids := {}
+	for p in _state.free_agents:
+		fa_ids[str(p["id"])] = true
+	_check(fa_ids.size() > 0, "The players delisted this year are free agents")
+	# Geelong's real list fills its cap: the offer may fail on cap room, never
+	# on the window (before row 199 it said free agency was closed).
+	var offer: Dictionary = _state.sign_free_agent(str(_state.free_agents[0]["id"]), 1) 			if not _state.free_agents.is_empty() else {}
+	_check(not offer.is_empty() and not str(offer.get("reason", "")).begins_with("Free agency is only open"),
+			"Free agency hears your offer before the draft (%s)" % str(offer))
+	why = await Tap.tap(ui.find_child("FirstOffseasonTrades", true, false))
+	await _settle()
+	_check(why == "" and _state.first_offseason == 1 and current_scene != null
+			and str(current_scene.scene_file_path).ends_with("OffseasonScene.tscn"),
+			"Trades & Contracts opens the off-season's screen (%s)" % why)
+	ui.queue_free()
+	await _settle()
+	var draft_ui: Control = load("res://scenes/DraftScene.tscn").instantiate()
+	root.add_child(draft_ui)
+	await _settle()
+	var start: Node = draft_ui.find_child("FirstOffseasonStart", true, false)
+	_check(start != null and (start as Button).text == "Start the draft",
+			"Back at the draft, the off-season's screen is still up")
+	why = await Tap.tap(start)
+	await _settle()
+	var signed := 0
+	for code in _state.league_lists:
+		for p in _state.league_lists[code]:
+			if fa_ids.has(str(p["id"])):
+				signed += 1
+	_check(why == "" and _state.first_offseason == 2 and _state.season == null
+			and not _state.offseason_open() and draft_ui.find_child("FirstOffseason", true, false) == null
+			and draft_ui.find_child("DraftWorkspace", true, false) != null,
+			"Start the draft closes the off-season and shows the board (%s)" % why)
+	_check(signed > 0, "Clubs signed free agents in the window (%d)" % signed)
+	var short := 0
+	for p in _state.league_lists.get("GEE", []):
+		if int(p.get("contract_years", 0)) < 1:
+			short += 1
+	_check(short == 0, "Every Geelong contract still runs into 2027")
+	draft_ui.queue_free()
+	await _settle()

@@ -172,6 +172,9 @@ var offseason_year := 0:         # the season whose off-season has opened
 		# Lists built in the off-season are next season's (EraRules.list_ahead).
 		EraRules.list_ahead = value != 0 and value == season_year
 var fa_closed_year := 0          # the season whose free agency has closed
+## A real-lists career's own off-season before the opening National Draft
+## (row 199): 0 not yet, 1 open, 2 over (or a career without one).
+var first_offseason := 2
 ## This off-season's free-agency compensation picks: [{"club", "player",
 ## "name", "to", "salary", "years", "value", "after"}], slotted into the
 ## national draft when it opens (Contracts.compensation_after).
@@ -858,7 +861,9 @@ func write_history(path: String, meta: Dictionary) -> bool:
 ## the caller then plays the years live. A forged prospect enters in 2026, so
 ## his career has to be played; a seeded run stays reproducible.
 func begin_from_history(first_season: int) -> bool:
-	if replay_seed != 0 or custom_prospect_id != "":
+	# A history made without your Forge creations cannot host them: the years
+	# play out with them instead (director, 2026-11-15).
+	if replay_seed != 0 or custom_prospect_id != "" or not custom_club.is_empty():
 		return false
 	var path := PremadeHistory.pick(first_season)
 	if path == "":
@@ -957,6 +962,7 @@ func _save_state() -> Dictionary:
 		"free_agents": free_agents,
 		"offseason_year": offseason_year,
 		"fa_closed_year": fa_closed_year,
+		"first_offseason": first_offseason,
 		"compensation": compensation,
 		"pick_owner": pick_owner,
 		"pick_got": pick_got,
@@ -1231,6 +1237,7 @@ func _restore_career(state: Dictionary) -> bool:
 	free_agents = state.get("free_agents", [])
 	offseason_year = int(state.get("offseason_year", 0))
 	fa_closed_year = int(state.get("fa_closed_year", 0))
+	first_offseason = int(state.get("first_offseason", 2))
 	compensation = state.get("compensation", [])
 	pick_owner = state.get("pick_owner", {})
 	pick_got = state.get("pick_got", {})
@@ -1832,6 +1839,7 @@ func reset(next_dataset := Datasets.DEFAULT) -> void:
 	free_agents = []
 	offseason_year = 0
 	fa_closed_year = 0
+	first_offseason = 2
 	compensation = []
 	pick_owner = {}
 	pick_got = {}
@@ -2006,6 +2014,7 @@ func create_club(spec: Dictionary) -> String:
 func begin_real_lists() -> void:
 	start_mode = "real"
 	opening_draft = true
+	first_offseason = 0
 	season_year = GameDB.DATA_SEASON
 	my_club = ""
 	my_list = []
@@ -2079,6 +2088,14 @@ func begin_real_lists() -> void:
 		else:
 			open_pool.append(p)
 	draftee_pool = draftee_pool.filter(func(q): return str(q.get("id", "")) != custom_prospect_id)
+	# Your Club Forge club plays the first season as a new club, on the
+	# new-club package: state-league signings, a guest's seat at this draft
+	# holding the extra picks, and sign-on money (TODO row 172).
+	var forged := forged_real_club(active)
+	var playing: Array = active.filter(func(c): return str(c) != forged)
+	var forged_picks: Array = []
+	if forged != "":
+		forged_picks = ExpansionBuild.forged_entry(self, forged, playing.size(), open_pool.size())
 	# The starting lists split into senior and rookie lists, and the opening
 	# National Draft fills the senior list.
 	RookieList.seed_lists(league_lists)
@@ -2097,13 +2114,22 @@ func begin_real_lists() -> void:
 			pairs.append([r, str(p.get("role2", ""))])
 		role_counts[code] = c
 		role_pairs[code] = pairs
-	draft = Draft.build_intake(open_pool, active.duplicate(), opening_order(active),
+	draft = Draft.build_intake(open_pool, playing.duplicate(), opening_order(playing),
 			prospect_read_seed(), sizes, role_counts, role_pairs)
+	if forged != "":
+		draft.add_guest(forged, int(sizes[forged]), role_counts[forged], role_pairs[forged])
+		draft.add_compensation(forged_picks)
 	draft.senior_cap = RookieList.senior_spots()
 	_draft_sees_44()
 	draft.user_max_age = Challenge.max_age(self)
 	OwnProspect.check(self)
 	mark_dirty()
+
+
+## Your Club Forge club, when this real-lists career has it in the league; "".
+func forged_real_club(active: Array) -> String:
+	var code := str(custom_club.get("code", "")).strip_edges()
+	return code if code != "" and active.has(code) else ""
 
 
 ## The 2026 National Draft order: the real 2026 ladder reversed, the premiers
@@ -2187,6 +2213,69 @@ func choose_real_club(code: String) -> void:
 		add_news("draft", no_spot_line)
 	if rebuild:
 		add_news("challenge", "%s The 2026 National Draft is next." % Challenge.stated_line(self))
+	open_first_offseason()
+	mark_dirty()
+
+
+## A real-lists career opens on its own off-season (row 199; director,
+## 2026-11-15: "yes, should be the full off season", "Real lists only"): after
+## the real list moves and before the opening National Draft, every club trades
+## and signs free agents, the real delisted players among them. The real
+## re-signings are done, so nobody is out of contract. The off-season's
+## machinery reads a finished season: the lists stand in one, with no games.
+func open_first_offseason() -> void:
+	if first_offseason != 0 or not opening_draft or draft == null or season != null:
+		return
+	first_offseason = 1
+	var lists := {}
+	var codes := []
+	for code in GameDB.club_order:
+		if league_lists.has(code):
+			codes.append(code)
+			lists[code] = league_lists[code]
+	season = Season.new(codes, lists, _clock_seed(4), season_year)
+	season.finals = {"done": true}
+	ensure_contracts()
+	# An off-season's contracts still count the season just over (the
+	# rollover ticks them, _close_contracts): the real lists' years start
+	# with the next one, so each gains the finished season here.
+	for code in season.lists:
+		for p in season.lists[code]:
+			p["contract_years"] = int(p.get("contract_years", 1)) + 1
+	offseason_year = season_year
+	offseason_log = []
+	compensation = []
+	offseason_staff = Coaches.staff(coaches, my_club) if not coaches.is_empty() and my_club != "" else {}
+	trade_offers = []
+	trade_table = []
+	_collect_trade_requests()
+	_open_trade_market()
+	market_stats = {}
+	_targets_signed = {}
+	fa_lost = []
+	_bars = {}
+	_fa_phase = {}
+	_open_market(free_agents)
+	mark_dirty()
+
+
+## The first off-season ends as the opening National Draft starts: free
+## agency closes, the contracts tick as at any rollover, and the draft reads
+## the lists the clubs now have and the picks they now hold.
+func close_first_offseason() -> void:
+	if first_offseason != 1 or season == null:
+		return
+	_close_contracts()
+	for code in season.lists:
+		league_lists[code] = season.lists[code]
+	my_list = league_lists.get(my_club, [])
+	season = null
+	first_offseason = 2
+	for code in league_lists:
+		if draft.clubs.has(code) or draft.guests.has(code):
+			_draft_sees_list(str(code))
+	_draft_sees_44()
+	draft.set_pick_owners(draft_pick_owners(season_year))
 	mark_dirty()
 
 
@@ -2350,6 +2439,11 @@ func sim_ahead_step() -> String:
 	if not sim_ahead or my_club != "" or choosing_club():
 		return ""
 	if draft != null and draft.intake_mode:
+		# The career's first off-season runs without you too (row 199).
+		if first_offseason == 0:
+			open_first_offseason()
+			close_first_offseason()
+			return "The %d off-season..." % season_year
 		# A draft between seasons (the 2026 one first): every club picks.
 		draft.start_for_user("")
 		finish_intake_draft()
@@ -2614,6 +2708,9 @@ func begin_intake_draft() -> bool:
 func finish_intake_draft() -> bool:
 	if draft == null or not draft.intake_mode or not draft.is_finished():
 		return false
+	# A draft run without the screen (a headless career) closes the off-season
+	# before it (row 199) here, as the screen's Start does before the first pick.
+	close_first_offseason()
 	# This year's picks are spent.
 	for key in pick_owner.keys():
 		if int(str(key).split(":")[0]) <= season_year:
@@ -8624,7 +8721,7 @@ func recruiting_uncertainty_mult() -> float:
 ## over and the national draft has not started.
 func offseason_open() -> bool:
 	return season != null and (season.is_season_over() or season.is_regular_done()) \
-			and not (draft != null and draft.intake_mode) and offseason_year == season_year
+			and not (draft != null and draft.intake_mode and first_offseason != 1) and offseason_year == season_year
 
 
 ## The season's close has run (its awards are out) and the next season has not
@@ -9892,6 +9989,7 @@ func _sign_fa(p: Dictionary, code: String, salary: int, years: int) -> void:
 	clear_market_marks(p)
 	free_agents.erase(p)
 	_bars.erase(code)
+	ExpansionBuild.note_free_agent(self, code, p)
 	offseason_log.append({"kind": "signed", "club": code, "id": str(p["id"]), "salary": salary, "years": years})
 	if bool(p.get("tested", false)):
 		p.erase("tested")
