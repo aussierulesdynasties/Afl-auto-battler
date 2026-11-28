@@ -64,6 +64,8 @@ static func bench(side: int) -> Vector2:
 
 ## Trainers' shorts: black (2025 broadcasts, three clubs).
 const TRAINER_SHORTS := Color(0.04, 0.04, 0.045)
+const VEST_PRINT := preload("res://assets/oval3d/crew_vest_print.png")
+var _vests := [0, 0]
 ## The yellow squeeze bottles trainers hand out (2025 broadcasts).
 const BOTTLE := Color(1.0, 0.86, 0.12)
 
@@ -87,9 +89,13 @@ func build(scene: PackedScene, body: Array, clubs: Array) -> void:
 		# 2025 broadcasts: the purple vest over the club's own top, with black shorts.
 		tee_kits.append(oval._kit({"design": "plain", "base": top, "pattern": top, "pattern2": top,
 				"shorts": TRAINER_SHORTS}))
-		vest_kits.append(oval._kit({"design": "plain", "base": Oval3DCrew.TRAINER_VEST,
+		var vk: ShaderMaterial = oval._kit({"design": "plain", "base": Oval3DCrew.TRAINER_VEST,
 				"pattern": Oval3DCrew.TRAINER_VEST, "pattern2": Oval3DCrew.TRAINER_VEST,
-				"shorts": TRAINER_SHORTS}))
+				"shorts": TRAINER_SHORTS})
+		# Its back print: sponsor patch, number, TRAINER (oval3d_player.gdshader vest_back).
+		vk.set_shader_parameter("vest_back", true)
+		vk.set_shader_parameter("vest_print", VEST_PRINT)
+		vest_kits.append(vk)
 		var tb := (body[side] as ShaderMaterial).duplicate() as ShaderMaterial
 		tb.set_shader_parameter("shorts", TRAINER_SHORTS)
 		trainer_body.append(tb)
@@ -111,7 +117,11 @@ func build(scene: PackedScene, body: Array, clubs: Array) -> void:
 func _add(scene: PackedScene, role: String, side: int, home: Vector2, body: ShaderMaterial, kit: Material,
 		vest: Material, k: int) -> void:
 	var c := oval._player(scene, body, [Color.WHITE])
-	Oval3DCrew.dress(c, role, Oval3D.player_glb, kit, vest)
+	var worn := Oval3DCrew.dress(c, role, Oval3D.player_glb, kit, vest)
+	if worn.has("crew_vest"):
+		# Numbered 1 to 4 within his club, one digit, as the AFL's vests are.
+		(worn["crew_vest"] as GeometryInstance3D).set_instance_shader_parameter("number", _vests[side] + 1)
+		_vests[side] += 1
 	oval.look(c, oval._crew_look(20 + k))
 	(c["ring"] as Node3D).visible = false
 	if role == "trainer":
