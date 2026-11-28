@@ -1,6 +1,8 @@
 # Scoreboard (east end) and the two billboards beyond the SE corner, read off p92.png (u 887-1248, v 445-515).
-# Scoreboard face plane: centre (106,1.5), along SL; its top and bottom edges come out level only at this angle.
-SL=(0.731,0.682);SN=(-0.682,0.731);SC=(106.0,1.5)     # SN faces the camera side
+# Scoreboard face plane: behind the east terrace, facing west across the ground (1954 board, still standing, never moved).
+# Position from 2000-2008 Google Earth aerials and a GE 3D height grid (28 Nov 2026): roof at E122-129, N-15..-33,
+# north end about 6 deg further east. Face centre (122.8,-24.5). Size kept: the grid gives 15.4-19.5 m long.
+SL=(0.105,0.995);SN=(-0.995,0.105);SC=(122.8,-24.5)     # SN faces the ground (west); s runs north
 def SBP(s,d,z):return (SC[0]+SL[0]*s+SN[0]*d,SC[1]+SL[1]*s+SN[1]*d,z)
 def sq(m,pts):quad(m,[SBP(*p) for p in pts])
 def sbox(m,s0,s1,d0,d1,z0,z1,top=None):boxpts(m,[SBP(s0,d0,0)[:2],SBP(s1,d0,0)[:2],SBP(s1,d1,0)[:2],SBP(s0,d1,0)[:2]],z0,z1,top)
