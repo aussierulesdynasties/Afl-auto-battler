@@ -35,7 +35,7 @@ func _run() -> void:
 	_state.autosave_enabled = false
 	_state.save_path = "user://capture_copy_voice_contracts.save"
 	_state.settings_path = "user://capture_copy_voice_contracts.cfg"
-	load("res://scripts/ui/UiKit.gd").apply_appearance("dark")
+	load("res://scripts/ui/UiKit.gd").apply_palette()
 	root.size = Vector2i(390, 844)
 	DisplayServer.window_set_size(Vector2i(390, 844))
 	_keys = load("res://scripts/ui/FirstVisitIntro.gd").TEXT.keys()

@@ -28,7 +28,7 @@ func _run() -> void:
 			_out = str(a[i + 1])
 	await process_frame
 	UiKit = load("res://scripts/ui/UiKit.gd")
-	UiKit.apply_appearance("dark")
+	UiKit.apply_palette()
 	await _sheet("confusables", _confusables())
 	await _sheet("fit", _fit())
 	quit()

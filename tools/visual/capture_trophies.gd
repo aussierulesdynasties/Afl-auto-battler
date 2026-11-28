@@ -13,7 +13,7 @@ extends SceneTree
 ## <out>_flag.png and <out>_medal.png (the sheets), <out>_filtered.png (the
 ## All-Australians alone), <out>_rival_page.png and <out>_rival.png (--rival's
 ## page and trophies) and <out>_stats.png (Season stats, its tabs).
-##   --size WxH   window size (default 390x844)    --light   light appearance
+##   --size WxH   window size (default 390x844)
 ##   --club CODE  the club to coach (default COL; use a coloured club for a look)
 ##   --history    show a stand-in "Before you" row for that club (fixture, not data)
 ##   --rival CODE another club to show (default GWS, which has won nothing)
@@ -31,7 +31,6 @@ func _initialize() -> void:
 
 func _run() -> void:
 	var out := "trophies"
-	var mode := "dark"
 	var a := OS.get_cmdline_user_args()
 	for i in range(a.size()):
 		match str(a[i]):
@@ -41,8 +40,6 @@ func _run() -> void:
 				var wh := str(a[i + 1]).split("x")
 				_w = int(wh[0])
 				_h = int(wh[1])
-			"--light":
-				mode = "light"
 			"--club":
 				_club = str(a[i + 1])
 			"--rival":
@@ -66,7 +63,7 @@ func _run() -> void:
 	state.start_season(_club, db.club_list(_club))
 	# The hub's first-visit note would sit over the room.
 	state.set_setting("seen_season_stats_intro", true)
-	UK.apply_appearance(mode)
+	UK.apply_palette()
 	root.size = Vector2i(_w, _h)
 	DisplayServer.window_set_size(Vector2i(_w, _h))
 	var hub_script = load("res://scripts/ui/StatsHubScene.gd")

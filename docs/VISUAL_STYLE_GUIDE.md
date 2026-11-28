@@ -43,7 +43,7 @@ this game? If it could belong to any sports-management app, it has drifted.
 | Club colour | per club, `team_colour()` | atmosphere and the one primary action; see 2.2 |
 | Role colours | DEF teal, MID green, RUCK gold, FWD red-orange | as ink only, in a fixed-width column; never a box |
 
-Light mode is maintained, not designed for. It uses dedicated pairs, never inverted tokens.
+Dark is the only appearance: light mode was removed (director, 2026-11-26).
 
 ### 2.2 Where colour goes
 
