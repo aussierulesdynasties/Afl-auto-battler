@@ -1,0 +1,115 @@
+# Carlton's past home guernseys (1990-2025) for the 3D match player, one line per footyjumpers
+# picture (tools/kits/kits.txt), each copied from match and club-shop photos (URLs above each line;
+# footyjumpers pages are www.footyjumpers.com/carltonhome.htm and www.footyjumpers.com/images/<name>.gif).
+# Format and ops: tools/kits/kits_today.py. Sponsors, maker and AFL logos left off; the woven CFC
+# monogram is drawn (tools/kits/marks/car_*.png, white = the mark).
+#
+# Colours, sampled from the photos (clubs.csv's #002B5C renders royal blue; every photo is near-black navy):
+#   navy #211D30   1995 Grand Final replica (thecarltonshop), chest median
+#   navy #262C40   2010 round 5 match photo (Judd), the best-lit match photo; used 1998-2020, which
+#                  have no product shot (the other match photos are under-lit, #0E0E13 to #040507)
+#   navy #1E2329   2024 Puma replica, body median;   navy #292D38   2025 Puma replica, body median
+#   #0E0E14        the shadowed inside of a V-neck (2001 and 2018 match photos)
+#   #0C141A        the darker navy V insert under the 2009-13 crew collar (2010 round 5, Judd)
+#   #9FA1AD        the 2001-06 monogram, silver (median of its pixels in the 2003 round 2 photo)
+#   #E6E6EA        the 2014-19 monogram's bevel: the photo's bevel/face ratio (#CCCAD2 / #E2E0E5) on white
+#   #C6CCD3        the 2024 replica's white collar lining; #9BA2B2 the 2025 replica's lining (in shade)
+# Numbers white, no outline (every back photo).
+#
+# Positions: y 0 the top of the shoulder by the neck, 1 the hem, read off fraction grids on the photos.
+# In match photos the hem is hidden, so the top of the shorts is read as 0.86 (the 3D calibration);
+# product shots give the true hem. Monogram height and place from the photos; its width keeps the traced
+# mask's own width-to-height (each mask is traced from the real monogram; on the 1990 and 2024 replicas
+# the monogram measures 0.98 and 0.93 wide per unit high, as their masks do). The 3D body shows a unit of
+# cell x 1.07 times narrower than a unit of cell y (measured on the captures), so the drawn width is
+# mask ratio x height x 1.07. V-necks: the opening is drawn in the shadowed
+# inside navy, as FIT.txt does; crew necks are left to the collar binding.
+#
+# Masks: car_1990_cfc (1995 GF replica, 4x, thresholded), car_1998_cfc (Carlton-1998.gif, 8x, the
+# navy detail lines kept), car_2007_cfc (Carlton-2007.gif, 8x), car_2014_cfc + car_2014_cfc_bevel (face
+# and face-plus-bevel, Carlton-2018.gif, 8x; the 2016 photos show this ladder monogram with its bevel,
+# not the footyjumpers 2014 drawing's older one), car_2020_cfc (2024 Puma replica, 3x).
+
+# 1990-97. Front: thecarltonshop.com.au/afl-hyundai-wool-guernsey (1995 GF replica,
+# cdn11.bigcommerce.com/.../FE1717S-MENS-CARL1995-HYUNDAI-GUERNSEY__08772.1761174819.jpg); Getty
+# media.gettyimages.com/id/2738669 (Kernahan, 1993 round 22) and id/51697266 (Silvagni, 1993 round 6).
+# Back: the replica back (.../FE1717S-FOF-1995-GF-HYUNDAI-GUERNSEY_3__52756.1761522272.jpg).
+# Read off the replica (shoulder 48 px, hem 597 px): a navy polo collar with a navy V opening to 0.16,
+# 0.24 wide at the mouth (no grey anywhere, unlike the footyjumpers drawing); the all-white CFC at
+# y 0.36-0.70 (the 1993 match photo, shorts at 0.86, gives 0.33-0.68). Plain navy armholes. Back: plain
+# navy, white number.
+CAR Carlton-1990 | fill #211D30; vfill #0E0E14 0.16 0.12; mark W car_1990_cfc 0.322 0.36 0.678 0.70; collar #211D30 3; armholes #211D30 1; shorts #211D30 | fill #211D30; collar #211D30 3; armholes #211D30 1; number W
+
+# 1998-2000. Fronts: media.gettyimages.com/id/96942470 (Bradley, 1999 GF), id/1010298 (Koutoufides,
+# 1999 round 5). Back: id/71507860 (Bradley #21, 1998). A plain navy V-neck with a narrow navy rib,
+# 0.13 deep and 0.24 wide (the footyjumpers V, 0.12 x 0.24, agrees; no white, unlike its drawing); the
+# rounder 1998 CFC in white at y 0.37-0.65 (the GF photo leans forward, so the researcher's flatter
+# photo reading is used; footyjumpers 0.37-0.64). Back: plain navy, white number (the Hyundai name under
+# it left off).
+CAR Carlton-1998 | fill #262C40; vfill #0E0E14 0.13 0.12; mark W car_1998_cfc 0.389 0.37 0.611 0.65; collar #262C40 2; armholes #262C40 1; shorts #262C40 | fill #262C40; collar #262C40 2; armholes #262C40 1; number W
+
+# 2001-06. Front: media.gettyimages.com/id/1908069 (Koutoufides, 2003 round 2), id/2348772 (Martyn,
+# training 2003). Back: id/2340221 (Fevola #25, 2003 round 17). A shallow navy V, 0.13 deep and 0.28 wide
+# (footyjumpers 0.12 x 0.28), darker navy inside, no white; the 1998 monogram in silver at y 0.38-0.66;
+# side panels from the armpit (0.34) to the hem, 0.07 wide (the footyjumpers drawing); they sit under
+# the arm, so neither front photo shows them, and the 3D front does not either. Their colour cannot
+# be sampled at Getty size: #1A1F2E is a step darker than the body, as the footyjumpers drawing has it. Back: panels and a white number.
+CAR Carlton-2001 | fill #262C40; rect #1A1F2E 0 0.34 0.07 1; rect #1A1F2E 0.93 0.34 1 1; vfill #0E0E14 0.13 0.14; mark #9FA1AD car_1998_cfc 0.389 0.38 0.611 0.66; collar #262C40 2; armholes #262C40 1; shorts #262C40 | fill #262C40; rect #1A1F2E 0 0.34 0.07 1; rect #1A1F2E 0.93 0.34 1 1; collar #262C40 2; armholes #262C40 1; number W
+
+# 2007-08. Front: media.gettyimages.com/id/74122171 (Fevola, training), id/74122183 (Fevola and
+# Kennedy, training). No back photo found: the footyjumpers back (plain navy, white number). A navy round
+# neck, scooped to about 0.09 (the footyjumpers scoop, drawn as the inside navy, not its white); the 2006
+# CFC in white with its navy detail lines at y 0.36-0.63 (Fevola leans in, Kennedy stands tall: 0.40-0.76
+# and 0.26-0.55; the researcher's 0.37-0.62 and footyjumpers 0.33-0.61 between them). The footyjumpers
+# darker side panels are not on Kennedy's plain side in the photo, so they are left off front and back.
+CAR Carlton-2007 | fill #262C40; poly #0E0E14 0.35 -0.01 0.358 0.03 0.398 0.08 0.45 0.088 0.5 0.091 0.55 0.088 0.602 0.08 0.642 0.03 0.65 -0.01; mark W car_2007_cfc 0.396 0.36 0.604 0.63; collar #262C40 2; armholes #262C40 1; shorts #262C40 | fill #262C40; collar #262C40 2; armholes #262C40 1; number W
+
+# 2009-13. Front: media.gettyimages.com/id/98665282 (Judd, 2010 round 5), id/101275909 (Judd, 2010
+# round 10). Back: id/150144654 (#14, 2012 round 20). A high navy crew collar over a darker navy V insert
+# that runs to a point at 0.12, about 0.34 wide at the neck (both Judd photos; the Nike swoosh sits on
+# it); the 2006 CFC at y 0.34-0.62 (Judd front-on, shorts at 0.86: 0.31-0.60). Back: plain navy, number.
+CAR Carlton-2009 | fill #262C40; vfill #0C141A 0.12 0.17; mark W car_2007_cfc 0.392 0.34 0.608 0.62; collar #262C40 2; armholes #262C40 1; shorts #262C40 | fill #262C40; collar #262C40 2; armholes #262C40 1; number W
+
+# 2014-17. Front: media.gettyimages.com/id/545760138 (2016 round 16). Back: id/545760146 (#42, same
+# match). A navy crew neck, no white; the ladder CFC in white with a pale silver bevel (the 2016 photos;
+# the footyjumpers 2014 drawing shows the older monogram) at y 0.36-0.66. The footyjumpers shoulder and
+# side panels and back-neck roundel cannot be seen in the photos, so they are left off. Back: plain
+# navy, white number.
+CAR Carlton-2014 | fill #262C40; mark #E6E6EA car_2014_cfc_bevel 0.349 0.36 0.651 0.66; mark W car_2014_cfc 0.349 0.36 0.651 0.66; collar #262C40 2; armholes #262C40 1; shorts #262C40 | fill #262C40; collar #262C40 2; armholes #262C40 1; number W
+
+# 2018. Front: media.gettyimages.com/id/942797778 (Murphy, coin toss), id/1023008092 (Murphy leads the
+# team out). No back photo found: the footyjumpers back (grey tape at the back of the neck, side panels
+# from the armpit, white number; its small roundel crest at the back of the neck is too small in the
+# drawing to trace and is left off). A short navy V, 0.10 deep and 0.28 wide, with a navy rib; no white
+# insert and no grey band on the front (both photos); the ladder CFC with its bevel at y 0.34-0.70.
+# Back panels 0.07 wide (the drawing: 16 of 236 px); #313840 is the footyjumpers panel's step (#021A31 to #0D2630) on our navy.
+CAR Carlton-2018 | fill #262C40; vfill #0E0E14 0.10 0.14; mark #E6E6EA car_2014_cfc_bevel 0.319 0.34 0.681 0.70; mark W car_2014_cfc 0.319 0.34 0.681 0.70; collar #262C40 2; armholes #262C40 1; shorts #262C40 | fill #262C40; rect #313840 0 0.34 0.07 1; rect #313840 0.93 0.34 1 1; rect #B5B7BA 0.42 0 0.58 0.04; collar #262C40 2; armholes #262C40 1; number W
+
+# 2019. Front: media.gettyimages.com/id/1164463335 (Cripps through the race), id/1157927236 (Cripps,
+# round 19). No back photo found: the footyjumpers back (side panels, white number; no neck tape; the
+# small roundel left off as for 2018). A navy V, 0.11 deep and 0.28 wide, no white insert; the ladder
+# CFC with its bevel at y 0.34-0.70.
+CAR Carlton-2019 | fill #262C40; vfill #0E0E14 0.11 0.14; mark #E6E6EA car_2014_cfc_bevel 0.319 0.34 0.681 0.70; mark W car_2014_cfc 0.319 0.34 0.681 0.70; collar #262C40 2; armholes #262C40 1; shorts #262C40 | fill #262C40; rect #313840 0 0.34 0.07 1; rect #313840 0.93 0.34 1 1; collar #262C40 2; armholes #262C40 1; number W
+
+# 2020-22. Front: carltonfc.com.au/news/308443/carlton-unveils-2020-playing-kit (Cripps, unveil photo
+# resources.carltonfc.com.au/photo-resources/2019/12/01/d1e80e89-936e-4c32-a76c-256361e244d5/yPdYaAix.jpg),
+# media.gettyimages.com/id/1240531538 (Cripps, 2022 round 8). No back photo found: the footyjumpers back
+# (a small white CFC at the back of the neck, x 0.46-0.54, y 0.03-0.08; white number). A navy crew neck,
+# no white; the all-white ladder CFC (back from 2020, the club's article) at y 0.34-0.66 (the unveil
+# photo, shorts at 0.86, 0.31-0.62; the researcher 0.35-0.68).
+CAR Carlton-2020 | fill #262C40; mark W car_2020_cfc 0.341 0.34 0.659 0.66; collar #262C40 2; armholes #262C40 1; shorts #262C40 | fill #262C40; mark W car_2020_cfc 0.473 0.03 0.527 0.085; collar #262C40 2; armholes #262C40 1; number W
+
+# 2023-24. Front: au.puma.com/au/en/pd/carlton-football-club-2024-replica-home-kids-guernsey/776037.html
+# (images.puma.com/image/upload/.../global/776037/01/fnd/AUS/fmt/png), media.gettyimages.com/id/1593031722
+# (Cripps, 2023). No back photo found: the footyjumpers back (plain navy, white number; the sponsor
+# left off). A navy V band 0.12 deep (Cripps) with the white lining showing inside it, to 0.10 and
+# 0.32 wide (the replica; its navy band is the body navy, so only the lining is drawn); the all-white
+# CFC at y 0.34-0.67 (Cripps 0.32-0.62; the kids replica sits it lower, 0.42-0.68).
+CAR Carlton-2023 | fill #1E2329; vfill #C6CCD3 0.10 0.16; mark W car_2020_cfc 0.336 0.34 0.664 0.67; collar #1E2329 2; armholes #1E2329 1; shorts #1E2329 | fill #1E2329; collar #1E2329 2; armholes #1E2329 1; number W
+
+# 2025. Front and back: thecarltonshop.com.au/2025-puma-mens-home-guernsey-updating/
+# (cdn11.bigcommerce.com/.../78052101__67685.1761547606.png front, .../78052101_bv__17768.1761547606.png
+# back). Read off the replica (shoulder 80 px, hem 1245 px): a navy V band with a light grey lining
+# showing to 0.08, 0.34 wide; the all-white CFC at y 0.33-0.66. Back: plain navy (the replica has no
+# number; white as every year).
+CAR Carlton-2025 | fill #292D38; vfill #9BA2B2 0.08 0.17; mark W car_2020_cfc 0.336 0.33 0.664 0.66; collar #292D38 2; armholes #292D38 1; shorts #292D38 | fill #292D38; collar #292D38 2; armholes #292D38 1; number W
