@@ -4,7 +4,8 @@ extends SceneTree
 ## from a fixed set of cameras, and measured for faults a machine can see without taste:
 ##   - anything of the model standing inside the boundary fence (rays down from above the arena),
 ##   - the fence: a level ray out from the middle every degree, where it first meets the model,
-##   - holes to the void just outside the fence (rays down on the ring past the fence),
+##   - holes to the void just outside the fence (rays down on the ring past the fence), and on out past
+##     where the surrounding land starts (the seam between the stadium's paving and the land),
 ##   - the seats: one floating above its floor, one with the model through it, one inside the fence,
 ##   - how far the fit stretches the model (GroundModels.stretch) and how tall it stands.
 ##   godot --path . --rendering-method mobile --script tools/visual/preinspect_grounds.gd -- OUTDIR [W H] [GROUND ...]
@@ -223,6 +224,25 @@ func _measure(slug: String, ground: Node3D) -> Dictionary:
 				ring.append([a, k, snappedf(float(h["position"].y), 0.1)])
 	r["ring_rays"] = ring_n
 	r["ring_holes"] = ring
+	# Past that ring, out to 25 m beyond where the surrounding land starts (GroundModels.SURROUNDS "inner"): the
+	# seam between the stadium's own paving and the land, where a camera outside sees the void under the world (the
+	# fault audit of 2026-11-28: sky through the earth at eight grounds). Rays down every 3 degrees, every 5 m.
+	var seam := []
+	var seam_n := 0
+	var inner := float((GroundModels.SURROUNDS.get(slug, {}) as Dictionary).get("inner", 0.0))
+	for a in range(0, 360, 3):
+		var d := Vector3(cos(deg_to_rad(a)), 0, sin(deg_to_rad(a)))
+		var e := 1.0 / sqrt(pow(d.x / FX, 2) + pow(d.z / FZ, 2))
+		var k := e + 19.0
+		while k <= maxf(inner + 25.0, e + 19.0):
+			var p: Vector3 = d * k
+			seam_n += 1
+			var h := _ray(space, p + Vector3(0, 300, 0), p + Vector3(0, -80, 0))
+			if h.is_empty():
+				seam.append([a, snappedf(k, 0.1), "none"])
+			k += 5.0
+	r["seam_rays"] = seam_n
+	r["seam_holes"] = seam
 	# The seats, in the model's own metres -> the ground.
 	var seats := GroundModels.seat_transforms(slug)
 	r["seats"] = seats.size()
@@ -267,7 +287,7 @@ func _measure(slug: String, ground: Node3D) -> Dictionary:
 		"stretch": r["stretch"], "height": snappedf(hi.y, 0.1),
 		"inside_hits": intr.size(), "roofed": roofed, "goal_line_hits": posts.size(),
 		"fence_far_or_none_deg": gaps.size(), "fence_short_deg": shorts.size(),
-		"ring_holes": ring.size(), "seats": seats.size(), "seats_checked": n,
+		"ring_holes": ring.size(), "seam_holes": seam.size(), "seats": seats.size(), "seats_checked": n,
 		"seat_drop_median": r["seat_drop_median"], "seats_floating": floating.size(),
 		"seats_buried": buried.size(), "seats_in_fence": in_fence.size(),
 	}

@@ -200,12 +200,15 @@ func apply(p_weather: String, p_slot: String) -> void:
 	weather = p_weather
 	slot = p_slot if p_slot in VignetteKickoff.SLOTS else VignetteKickoff.NIGHT
 	_applied = true
-	var wet := weather == VignetteWeather.WET
+	var indoor := roof_on()
+	# No rain falls under a shut roof (the condition still counts in the match; only its look stays outside).
+	var wet := weather == VignetteWeather.WET and not indoor
 	var hot := weather == VignetteWeather.HOT
 	var d := VignetteKickoff.daylight(slot)
 	# Under a ground's own towers the grass is lit as brightly as by day (a broadcast's turf is the
 	# same green at night), so it takes the day's colours; the old night light kept the darker set.
-	var turf_slot := VignetteKickoff.DAY if slot == VignetteKickoff.NIGHT and _towers() != null else slot
+	# Under a shut roof the roof's lights do the same at any hour.
+	var turf_slot := VignetteKickoff.DAY if (slot == VignetteKickoff.NIGHT and _towers() != null) or indoor else slot
 	var g: Array = VignetteWeather.grass(weather, VignetteGround.GRASS, turf_slot)
 	if wet:
 		# The flat views darken wet turf to show the wet; here the sheen shows it, so the
@@ -238,6 +241,11 @@ func apply(p_weather: String, p_slot: String) -> void:
 		mat.set_shader_parameter("grass_a", g[0] * _tint)
 		mat.set_shader_parameter("grass_b", g[1] * _tint)
 		mat.set_shader_parameter("hot", 0.4)
+	if indoor:
+		# Under the shut roof's even light the cut shows faintly (the 2019 roof-shut photo; PC checks of rounds
+		# 17b and 17c: the day's full stripes, then a fifth of them, read as wide dark bands from the wing).
+		mat.set_shader_parameter("grass_b", (g[0] as Color).lerp(g[1], 0.2) * _tint)
+		mat.set_shader_parameter("stripe_amount", INDOOR_STRIPES)
 	_copy_look()
 
 	# Rule 2.81, the TV broadcast tone: AgX with a footy-TV grade (contrast up a tenth, colour up
@@ -248,6 +256,8 @@ func apply(p_weather: String, p_slot: String) -> void:
 	env.adjustment_saturation = 1.2
 	env.adjustment_color_correction = null
 	sun.shadow_enabled = true
+	sun.light_cull_mask = 0xFFFFF
+	fill.light_cull_mask = 0xFFFFF
 	sun.light_angular_distance = 0.0
 	sun.directional_shadow_max_distance = 160.0
 	_stand_shade(false)
@@ -262,9 +272,11 @@ func apply(p_weather: String, p_slot: String) -> void:
 		if wet:
 			_cloud_light()
 	_set_towers(TOWERS_ON.get(slot, 0.0))
+	if indoor:
+		_indoor()
 	# The exposure, set by the brightness of open grass (rule 2.81): each look's grass near a fine
 	# day's, as a broadcast camera opens up in poorer light.
-	var exposure: float = EXPOSURE[slot]
+	var exposure: float = EXPOSURE[VignetteKickoff.DAY if indoor else slot]
 	if wet:
 		exposure *= EXPOSURE_WET[slot]
 	# The broadcast colour's turf is lighter under the towers than by day; brought back to a
@@ -491,6 +503,72 @@ func _night(wet: bool) -> void:
 		_tower_night(wet)
 
 
+## Under a shut roof (GroundModels.ROOFS: Marvel, shut in every match) the ground is lit by the roof's own lights
+## at any hour, not by the sky (the fault audit of 2026-11-28: the outdoor sky's blue lit the shut bowl and its grey
+## seats read blue-grey). Neutral white light from the roof's lamps (about 5200 K) round the bowl, two lights from
+## opposite sides 60 degrees up, and an even
+## warm-neutral fill from the roof and the stands; no sky reflections (the roof hides the sky). The sky stays
+## drawn behind, for anything seen outside. The stadium throws no shadow under it (GroundModels.set_roof); the men
+## keep theirs.
+const INDOOR_AMBIENT := Color(0.93, 0.91, 0.87)
+const INDOOR_AMBIENT_ENERGY := 0.65
+## The share of the fill a face loses under the shut roof, turned straight down, half down, level, half up, up.
+const INDOOR_SHADE := [0.8, 0.6, 0.3, 0.05, 0.0]
+## The same for the roof itself (GroundModels.ROOF_LAYER), whose lamps hang under it: the 2019 roof-shut photo shows
+## its underside dark charcoal and its trusses only a dim grey over the lit bowl, whichever way a face turns.
+const INDOOR_ROOF_SHADE := [0.45, 0.7, 0.87, 0.85, 0.8]
+## The share of the roof's colour taken toward grey under it shut: the photo's underside is a warm grey (median sRGB
+## 78, 72, 58), where the olive soffit under the lamps' warm light went brown (PC checks: 39, 27, 6 in 17c, 58, 46, 33
+## in 17d with its trusses at 121, 105, 97, twice the underside; the photo's truss lines reach about 113).
+const INDOOR_ROOF_GREY := 0.85
+const INDOOR_LIGHT := Color(1.0, 0.97, 0.92)
+const INDOOR_LIGHT_ENERGY := 0.7
+## The roof's lamps on the far side, which light the near stands' seats from the front (no shadow).
+const INDOOR_FILL_ENERGY := 0.45
+## How much the mown stripes show under the shut roof (stripe_amount; 0.16-0.24 outdoors).
+const INDOOR_STRIPES := 0.04
+
+
+func _indoor() -> void:
+	if env.sky == null:
+		_sky_light(false)
+	fill.visible = true
+	fill.rotation_degrees = Vector3(-60.0, -20.0, 0.0)
+	fill.light_color = INDOOR_LIGHT
+	fill.light_energy = INDOOR_FILL_ENERGY
+	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
+	env.ambient_light_color = INDOOR_AMBIENT
+	env.ambient_light_energy = INDOOR_AMBIENT_ENERGY
+	env.reflected_light_source = Environment.REFLECTION_SOURCE_DISABLED
+	sun.visible = true
+	sun.rotation_degrees = Vector3(-60.0, 160.0, 0.0)
+	sun.light_color = INDOOR_LIGHT
+	sun.light_energy = INDOOR_LIGHT_ENERGY
+	sun.shadow_enabled = true
+	# the lamps hang under the roof: it takes none of their light (GroundModels.ROOF_LAYER)
+	sun.light_cull_mask = 0xFFFFF & ~GroundModels.ROOF_LAYER
+	fill.light_cull_mask = 0xFFFFF & ~GroundModels.ROOF_LAYER
+	_set_towers(0.0)
+
+
+## Is the ground's roof shut (GroundModels.ROOFS)? Its look is then the roof's lights (_indoor).
+func roof_on() -> bool:
+	if ground == "" or oval == null or not GroundModels.ROOFS.has(ground):
+		return false
+	var gr := oval.find_child("Ground", true, false)
+	return gr != null and GroundModels.roof_shut(gr, ground)
+
+
+## The roof was opened or shut (GroundModels.set_roof): the look again for the roof as it now is.
+func roof_changed() -> void:
+	if not _applied:
+		return
+	if clock != null:
+		follow_clock(weather, clock)
+	else:
+		apply(weather, slot)
+
+
 ## The sun's turn for this look, `alt` degrees up (the look's own height, where its brightness
 ## was measured) at the compass bearing the real sun has over this ground at the look's bounce:
 ## the match's own clock when it follows one, else the ground's place mid-season. The sun is in
@@ -612,8 +690,13 @@ func light_stands(model: Node) -> void:
 			var m := mi.get_active_material(i) as StandardMaterial3D
 			if m == null or m.transparency != BaseMaterial3D.TRANSPARENCY_DISABLED or m.emission_enabled:
 				continue
-			if not seen.has(m):
+			# the roof (GroundModels.ROOF_LAYER) gets its own copy: under the shut roof it is shaded apart (_light_stands)
+			var roof := mi.layers == GroundModels.ROOF_LAYER
+			var key: Array = [m, roof]
+			if not seen.has(key):
 				var own := ShaderMaterial.new()
+				if roof:
+					own.set_meta("roof", true)
 				own.shader = STAND_SHADER
 				own.resource_name = m.resource_name    # its name still tells what it is (a screen's face)
 				own.set_shader_parameter("albedo_tex", m.albedo_texture)
@@ -626,9 +709,9 @@ func light_stands(model: Node) -> void:
 				if m.ao_enabled and m.ao_texture != null:
 					own.set_shader_parameter("use_ao", true)
 					own.set_shader_parameter("ao_tex", m.ao_texture)
-				seen[m] = own
+				seen[key] = own
 				_stand_mats.append(own)
-			mi.set_surface_override_material(i, seen[m])
+			mi.set_surface_override_material(i, seen[key])
 	_light_stands()
 
 
@@ -636,6 +719,7 @@ func _light_stands() -> void:
 	if _stand_mats.is_empty():
 		return
 	var amb: Array = [Vector3.ZERO, Vector3.ZERO, Vector3.ZERO, Vector3.ZERO, Vector3.ZERO]
+	var roof_amb: Array = []
 	if env.ambient_light_source == Environment.AMBIENT_SOURCE_SKY and env.sky != null:
 		var sm: ShaderMaterial = env.sky.sky_material
 		var e := env.ambient_light_energy * env.ambient_light_sky_contribution
@@ -643,11 +727,23 @@ func _light_stands() -> void:
 		var sky := stand_light(sm, e, 1.0)
 		for k in amb.size():
 			amb[k] = grey[k] - sky[k]
+	elif roof_on():
+		# Under the shut roof the even fill is the light the field and stands throw back: a face turned down (the
+		# roof's underside, a tier's soffit) gets little of it, so the roof reads dark over the lit bowl (the 2019
+		# roof-shut photo, Wikimedia Commons "Marvel Stadium during curtain raiser.jpg").
+		var a := Vector3(INDOOR_AMBIENT.r, INDOOR_AMBIENT.g, INDOOR_AMBIENT.b) * env.ambient_light_energy
+		roof_amb = amb.duplicate()
+		for k in amb.size():
+			amb[k] = -a * INDOOR_SHADE[k]
+			roof_amb[k] = -a * INDOOR_ROOF_SHADE[k]
 	var e_amb := env.ambient_light_energy * env.ambient_light_sky_contribution
 	for m in _stand_mats:
+		var own_amb: Array = roof_amb if m.has_meta("roof") and not roof_amb.is_empty() else amb
+		m.set_shader_parameter("grey_out", INDOOR_ROOF_GREY if m.has_meta("roof") and not roof_amb.is_empty() else 0.0)
 		for k in AMB_KEYS.size():
-			m.set_shader_parameter(AMB_KEYS[k], amb[k])
-		m.set_shader_parameter("ref_scale", 1.0 / e_amb if e_amb > 0.001 else 0.0)
+			m.set_shader_parameter(AMB_KEYS[k], own_amb[k])
+		var sky_lit := env.ambient_light_source == Environment.AMBIENT_SOURCE_SKY
+		m.set_shader_parameter("ref_scale", 1.0 / e_amb if e_amb > 0.001 and sky_lit else 0.0)
 		# A lit membrane (the Gabba's roof, from below) is not a grey underside: the sun comes through it,
 		# so it reads bright cream as the 2019 photo sphere shows. It keeps the grey correction (without it
 		# the grass's green bounce tinted the cream olive).
@@ -980,6 +1076,9 @@ func follow_clock(p_weather: String, p_clock: Oval3DSunClock) -> void:
 ## moves slower than that, and the sky's light map is only redrawn when it moves.
 func set_hour(h: float) -> void:
 	if clock == null or absf(h - hour) < 1.0 / 60.0:
+		return
+	if roof_on():
+		hour = h    # the roof's lights do not move with the sun (_indoor)
 		return
 	hour = h
 	var alt := clock.sun_altitude(h)

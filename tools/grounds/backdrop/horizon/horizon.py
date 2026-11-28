@@ -61,7 +61,8 @@ LEVEL_M, LEVEL_BASE = 3.4, 1.0   # prep.py's storey height
 JOIN_BELOW = 20.0     # low buildings of one height band that touch are joined
 JOIN_BAND = 3.0
 TIER_M = 3.0         # m: a measured structure's parts with tops this close are one tier
-CANOPY_KEEP = 0.25   # share of the photographed canopy faces kept
+CANOPY_CELL = 6.0    # m: the far canopy's cell (canopy())
+CANOPY_TRIS = 70000  # its triangles after thinning (the old shards' count)
 JOIN_GAP = 2.0        # m: across a lane or a gap between neighbours narrower than twice this, they are one block
 LOW_SIMPLIFY = 3.0    # m: a low block's outline is kept to this
 WEDGES = 8
@@ -116,6 +117,9 @@ def fetch(slug):
 
 WATER_SUBTYPES = ("ocean", "water", "river", "lake", "reservoir", "canal", "pond", "human_made")
 WATER_SKIP_CLASSES = ("swimming_pool", "fountain")
+NEAR_WATER_FROM = 1028.0   # m: the surrounds' painted water runs to here (its outer edge and skirt, GroundModels)
+NEAR_WATER_STEP = 1.0      # m: the near water sheet's tracing grid (near_water())
+NEAR_WATER_LIFT = 0.3      # m: the sheet over the painted water, clear of it at the orbit's distance
 
 
 def fetch_water(slug, con=None):
@@ -684,33 +688,79 @@ def canopy(slug, frame, H, com):
     ahd = lambda zz: frame.floor + zz - H.datum                                   # noqa: E731
     keep &= ahd(c[:, 2]) > land + 2.0
     T, C = T[keep], C[keep]
-    e, n, zz = T[..., 0].ravel(), T[..., 1].ravel(), T[..., 2].ravel()
-    X, Z = frame.xz(e, n)
-    Y = ahd(zz) - drop(X, Z)
-    P = np.stack([X, Y, Z], 1)
-    # weld the photomesh's shared corners, then thin the canopy to CANOPY_KEEP of its faces (quadric decimation):
-    # a tree 2 km out is a few pixels, and its crown's outline, height and colour are what stay
-    V, inv = np.unique(np.round(P, 2), axis=0, return_inverse=True)
-    F = inv.reshape(-1, 3)
-    F = F[(F[:, 0] != F[:, 1]) & (F[:, 1] != F[:, 2]) & (F[:, 0] != F[:, 2])]
+    # The crowns as solid masses, not the photomesh's own faces: thinned, those were loose shards with sky between
+    # them (Westgate Park from the West Gate Bridge, 2026-11-27, where the real park is solid bush). Each CANOPY_CELL
+    # cell the faces fall in takes their highest top over the land and their mean colour; cells one apart are closed
+    # into one mass; each cell is drawn as a low pyramid (its corners shared with its neighbours, its middle at the
+    # top), so a lone tree is a peak and a park a canopy with its edge sloping to the ground.
+    from scipy import ndimage
+    c = T.mean(1)
+    top = ahd(c[:, 2]) - land[keep]
+    e0, n0 = c[:, 0].min() - CANOPY_CELL, c[:, 1].min() - CANOPY_CELL
+    ci = ((c[:, 0] - e0) // CANOPY_CELL).astype(int)
+    cj = ((c[:, 1] - n0) // CANOPY_CELL).astype(int)
+    ni, nj = ci.max() + 2, cj.max() + 2
+    hgt = np.zeros((ni, nj))
+    np.maximum.at(hgt, (ci, cj), top)
+    lc = lin_of(C.astype(np.float64) / 255.0)
+    csum = np.zeros((ni, nj, 3))
+    cnt = np.zeros((ni, nj))
+    np.add.at(csum, (ci, cj), lc)
+    np.add.at(cnt, (ci, cj), 1)
+    seen = cnt > 0
+    mask = ndimage.binary_closing(seen, np.ones((3, 3), bool)) | seen
+    # a closed-in cell takes its nearest photographed cell's height and colour
+    _, (ii, jj) = ndimage.distance_transform_edt(~seen, return_indices=True)
+    hgt = np.where(seen, hgt, hgt[ii, jj])
+    col = np.where(seen[..., None], csum / np.maximum(cnt, 1)[..., None], (csum / np.maximum(cnt, 1)[..., None])[ii, jj])
+    hgt = np.minimum(hgt, 40.0)
+    I, J = np.nonzero(mask)
+    m = len(I)
+    # corners: (ni + 1) x (nj + 1), each at the land plus the mean top of the masked cells round it (the others count 0)
+    mk = np.pad(mask.astype(float), 1)
+    hp = np.pad(hgt * mask, 1)
+    cp = np.pad(col * mask[..., None], ((1, 1), (1, 1), (0, 0)))
+    cn = mk[:-1, :-1] + mk[1:, :-1] + mk[:-1, 1:] + mk[1:, 1:]
+    corner_h = (hp[:-1, :-1] + hp[1:, :-1] + hp[:-1, 1:] + hp[1:, 1:]) / 4
+    corner_c = (cp[:-1, :-1] + cp[1:, :-1] + cp[:-1, 1:] + cp[1:, 1:]) / np.maximum(cn, 1)[..., None]
+    used = np.zeros(corner_h.shape, bool)
+    for di in (0, 1):
+        for dj in (0, 1):
+            used[I + di, J + dj] = True
+    ui, uj = np.nonzero(used)
+    vid = -np.ones(corner_h.shape, np.int64)
+    vid[ui, uj] = np.arange(len(ui))
+    ce, cnn = e0 + ui * CANOPY_CELL, n0 + uj * CANOPY_CELL
+    me, mn = e0 + (I + 0.5) * CANOPY_CELL, n0 + (J + 0.5) * CANOPY_CELL
+    E = np.r_[ce, me]
+    N = np.r_[cnn, mn]
+    L = H.at(E, N, CANOPY_CELL)
+    UP = np.r_[corner_h[ui, uj], hgt[I, J]]
+    X, Z = frame.xz(E, N)
+    V = np.stack([X, L + UP - drop(X, Z), Z], 1)
+    VC = np.r_[corner_c[ui, uj], col[I, J]]
+    mid = len(ui) + np.arange(m)
+    a0, a1, a2, a3 = vid[I, J], vid[I + 1, J], vid[I + 1, J + 1], vid[I, J + 1]
+    F = np.concatenate([np.c_[a0, a1, mid], np.c_[a1, a2, mid], np.c_[a2, a3, mid], np.c_[a3, a0, mid]])
+    # faces wound up (+y): e and n map to x and -z
     import pyfqmr
     from scipy.spatial import cKDTree
     s = pyfqmr.Simplify()
     s.setMesh(V, F.astype(np.int32))
-    s.simplify_mesh(target_count=int(len(F) * CANOPY_KEEP), aggressiveness=5, preserve_border=False, verbose=False)
+    s.simplify_mesh(target_count=CANOPY_TRIS, aggressiveness=7, preserve_border=False, verbose=False)
     V2, F2, _ = s.getMesh()
     V2 = np.asarray(V2, np.float64); F2 = np.asarray(F2, np.int64)
-    # each corner's colour: the median of the photographed faces nearest it
-    mids = P.reshape(-1, 3, 3).mean(1)
-    _, nb = cKDTree(mids).query(V2, k=6)
-    colv = lin_of(np.median(C[nb].astype(np.float64), 1) / 255.0)
+    _, nb = cKDTree(V).query(V2, k=1)
+    colv = VC[nb]
     fn = np.cross(V2[F2[:, 1]] - V2[F2[:, 0]], V2[F2[:, 2]] - V2[F2[:, 0]])
+    flip = fn[:, 1] < 0
+    F2[flip] = F2[flip][:, ::-1]
+    fn[flip] *= -1
     vn = np.zeros_like(V2)
     for k in range(3):
         np.add.at(vn, F2[:, k], fn)
     vn /= np.maximum(np.linalg.norm(vn, axis=1, keepdims=True), 1e-9)
-    vn *= np.where(vn[:, 1:2] < 0, -1, 1)
-    print("canopy faces", len(F), "thinned to", len(F2))
+    print("canopy faces", len(T), "in", int(seen.sum()), "cells,", m, "closed; drawn in", len(F2), "triangles")
     return {"name": "trees_far", "pos": V2.astype(np.float32), "nrm": vn.astype(np.float32),
             "col": np.c_[colv, np.ones(len(colv))].astype(np.float32),
             "idx": F2.ravel().astype(np.uint32), "material": "horizon_trees"}
@@ -924,6 +974,89 @@ def _local_poly(frame, g):
 
 # ---- glb ------------------------------------------------------------------------------------------
 
+def near_water(G, water_y):
+    """The backdrop's painted harbour and river, past the surrounds' edge, as one flat sheet with a hard edge: traced
+    at NEAR_WATER_STEP from the ground's own painted water, so it lies exactly where the painting has it. Seen from
+    the orbit the painting alone smeared the quay by the paddock at the harbour's west end into a soft, ragged beige
+    fringe (its 1.5 m texels stretched over 30 m triangles; the PC's renders, 2026-11-27). Drawn in the painted
+    water's own mean colour, NEAR_WATER_LIFT over it, and lit as the ground is (GroundModels' matte backdrop)."""
+    import mapbox_earcut as earcut
+    from rasterio import features
+    from rasterio.transform import from_origin
+    from shapely.geometry import Point, box, shape
+    from shapely.ops import unary_union
+    for mi, m in enumerate(G.J["meshes"]):
+        if not G.name_of.get(mi, m.get("name", "")).startswith("bg_near_ground"):
+            continue
+        pr = m["primitives"][0]
+        got = reland._ground_texture(G, pr)
+        if got is None or "TEXCOORD_0" not in pr["attributes"]:
+            continue
+        img = got[1]
+        P = G.read(pr["attributes"]["POSITION"]).astype(np.float64)
+        UV = G.read(pr["attributes"]["TEXCOORD_0"]).astype(np.float64)
+        T = G.read(pr["indices"]).reshape(-1, 3)
+        break
+    else:
+        return None
+    wtex = reland._water_texels(img)
+    if not wtex.any():
+        return None
+    colour = lin_of(img[wtex].mean(0) / 255.0)
+    st, half = NEAR_WATER_STEP, SKIRT
+    xs = np.arange(-half + st / 2, half, st)
+    n = len(xs)
+    grid = np.zeros((n, n), np.uint8)
+    h, w = wtex.shape
+    # each ground triangle's own grid points, its UV taken across it (barycentric), the painted texel looked up
+    for a, b, cc in T:
+        A, B, C = P[a, [0, 2]], P[b, [0, 2]], P[cc, [0, 2]]
+        lo, hi = np.minimum(np.minimum(A, B), C), np.maximum(np.maximum(A, B), C)
+        i0, i1 = np.searchsorted(xs, [lo[0], hi[0]])
+        j0, j1 = np.searchsorted(xs, [lo[1], hi[1]])
+        if i1 <= i0 or j1 <= j0:
+            continue
+        gx, gz = np.meshgrid(xs[i0:i1], xs[j0:j1])
+        d = (B[1] - C[1]) * (A[0] - C[0]) + (C[0] - B[0]) * (A[1] - C[1])
+        if abs(d) < 1e-9:
+            continue
+        l1 = ((B[1] - C[1]) * (gx - C[0]) + (C[0] - B[0]) * (gz - C[1])) / d
+        l2 = ((C[1] - A[1]) * (gx - C[0]) + (A[0] - C[0]) * (gz - C[1])) / d
+        l3 = 1 - l1 - l2
+        inside = (l1 >= -1e-6) & (l2 >= -1e-6) & (l3 >= -1e-6) & (np.hypot(gx, gz) >= NEAR_WATER_FROM)
+        if not inside.any():
+            continue
+        u = l1[inside] * UV[a, 0] + l2[inside] * UV[b, 0] + l3[inside] * UV[cc, 0]
+        v = l1[inside] * UV[a, 1] + l2[inside] * UV[b, 1] + l3[inside] * UV[cc, 1]
+        jj, ii = np.nonzero(inside)
+        grid[j0 + jj, i0 + ii] = wtex[np.clip((v * h).astype(int), 0, h - 1), np.clip((u * w).astype(int), 0, w - 1)]
+    tf = from_origin(-half, -half, st, -st)   # row j is z = -half + j * st, column i is x = -half + i * st
+    polys = [shape(g) for g, v in features.shapes(grid, mask=grid > 0, transform=tf) if v == 1]
+    if not polys:
+        return None
+    sheet = unary_union(polys).simplify(st * 0.7).intersection(
+        box(-half, -half, half, half).difference(Point(0, 0).buffer(NEAR_WATER_FROM, 256)))
+    Vs, F, n0 = [], [], 0
+    for pg in getattr(sheet, "geoms", [sheet]):
+        if pg.geom_type != "Polygon" or pg.area < 20.0:
+            continue
+        rings = [np.array(pg.exterior.coords)[:-1]] + [np.array(q.coords)[:-1] for q in pg.interiors]
+        pts = np.concatenate(rings)
+        t = earcut.triangulate_float64(pts, np.cumsum([len(q) for q in rings]).astype(np.uint32)).reshape(-1, 3)
+        F.append(t + n0)
+        Vs.append(pts)
+        n0 += len(pts)
+    if not Vs:
+        return None
+    Q = np.concatenate(Vs)
+    F = np.concatenate(F)
+    pos = np.c_[Q[:, 0], water_y + NEAR_WATER_LIFT - drop(Q[:, 0], Q[:, 1]), Q[:, 1]].astype(np.float32)
+    print("near water sheet", round(sheet.area), "m2 in", len(F), "triangles, colour (linear)", colour.round(4))
+    return {"name": "water_near", "pos": pos, "nrm": np.tile([0.0, 1.0, 0.0], (len(pos), 1)).astype(np.float32),
+            "col": np.tile(np.r_[colour, 1.0], (len(pos), 1)).astype(np.float32),
+            "idx": F.ravel().astype(np.uint32), "material": "water_near"}
+
+
 def write_glb(path, surfaces, images):
     J = {"asset": {"version": "2.0", "generator": "tools/grounds/backdrop/horizon/horizon.py"},
          "scene": 0, "scenes": [{"nodes": []}], "nodes": [], "meshes": [], "materials": [], "accessors": [],
@@ -1013,7 +1146,8 @@ def build(slug, backdrop=None):
     land, land_rep = land_mesh(slug, frame, H, water_y, gain, near, mid, far, water)
     city_s, city_rep = city(slug, frame, H, gain, near)
     trees = canopy(slug, frame, H, com_parts(slug, frame, lambda g: [_local_poly(frame, gg) for gg in getattr(g, "geoms", [g])]))
-    surfaces = land + [city_s] + ([trees] if trees is not None else [])
+    sheet = near_water(G, water_y)
+    surfaces = land + [city_s] + ([trees] if trees is not None else []) + ([sheet] if sheet is not None else [])
     images = {"near": texture_png(near, gain, water), "mid": texture_png(mid, gain, water)}
     out = os.path.join(ROOT, "assets", "grounds", slug, slug + "_horizon.glb")
     size = write_glb(out, surfaces, images)

@@ -36,6 +36,7 @@ func run() -> void:
 	_t("_test_panel_fit")
 	_t("_test_real_lists_start")
 	_t("_test_real_lists_after_draft")
+	_t("_test_real_opening_picks")
 	_t("_test_rebuild_walkouts_sign")
 	_t("_test_gen_traits_rates")
 	_t("_test_draftee_types")
@@ -1839,3 +1840,79 @@ func _test_draft_checks_the_cap() -> void:
 		if int(draft.room_spent.get(code, 0)) > int(draft.club_room[code]):
 			past.append(str(code))
 	_check(past.is_empty(), "No club drafts past its room (%s)" % str(past))
+
+
+## The person, 2026-11-27 ("Why pick 19? That's not the draft pick Melbourne
+## held going into this draft"): a real-lists start "Before the draft" runs the
+## opening 2026 National Draft in its real order, each club with the picks it
+## really held (traded and compensation picks included), and a pick a club used
+## to match a bid on its own academy or father-son man comes up as made.
+func _test_real_opening_picks() -> void:
+	GameState.reset()
+	GameState.replay_seed = 4244
+	GameState.real_after_draft = false
+	GameState.begin_real_lists()
+	var d: Draft = GameState.draft
+	var real_mel := []
+	var real_ric := []
+	for row in GameDB.national_draft:
+		if str(row["club"]) == "MEL":
+			real_mel.append(int(row["pick"]))
+		if str(row["club"]) == "RIC":
+			real_ric.append(int(row["pick"]))
+	var mel := []
+	var ric := []
+	for i in range(d.pick_sequence.size()):
+		if int(d.pick_rounds[i]) > 4:
+			break
+		if str(d.pick_sequence[i]) == "MEL":
+			mel.append(i + 1)
+		if str(d.pick_sequence[i]) == "RIC":
+			ric.append(i + 1)
+	_check(mel == real_mel and mel == [7, 15, 49, 52],
+			"Melbourne hold the picks they really held: %s (real %s)" % [str(mel), str(real_mel)])
+	_check(ric == real_ric, "Richmond's real picks, Port Adelaide's compensation pick among them: %s (real %s)" % [str(ric), str(real_ric)])
+	_check(str(d.pick_origin[6]) == "PAD" and GameState.pick_owner_of(2026, 1, "PAD") == "MEL"
+			and GameState.pick_story(2026, 1, "PAD").contains("Port Adelaide"),
+			"Pick 7 is Port Adelaide's, traded to Melbourne, and the board says so (%s)" % GameState.pick_story(2026, 1, "PAD"))
+	var comp: Dictionary = d.comp_at(7)
+	_check(str(d.pick_sequence[7]) == "RIC" and str(comp.get("name", "")) == "Butters",
+			"Pick 8 is the compensation pick for Butters, held by Richmond (%s)" % str(comp))
+	GameState.choose_real_club("MEL")
+	d = GameState.draft
+	var first: Dictionary = d.pick_history[0] if not d.pick_history.is_empty() else {}
+	_check(bool(first.get("matched", false)) and str(first.get("club", "")) == "PAD" and int(first.get("pick", 0)) == 1
+			and str(first.get("player_name", "")).contains("Cochrane"),
+			"Pick 1 is Port Adelaide matching the bid on their academy man, made as the draft opens (%s)" % str(first))
+	_check(d.is_user_turn() and d.pick_index == 6 and d.upcoming_picks("MEL", 4) == [7, 15, 49, 52],
+			"Melbourne are on the clock at pick 7, then 15, 49 and 52 (%s)" % str(d.upcoming_picks("MEL", 4)))
+	var guard := 0
+	while not d.is_finished() and guard < 400:
+		if d.is_user_turn():
+			if not d.pick_for_me():
+				d.user_pass()
+		else:
+			d.auto_until_user_turn()
+		guard += 1
+	var tied_twice := false
+	for code in d.club_lists:
+		for q in d.club_lists[code] as Array:
+			if GameState.drafted_draftees.has(str(q["id"])):
+				tied_twice = true
+	_check(d.is_finished() and not tied_twice, "The draft runs to the end and no matched man is drafted twice")
+	GameState.reset()
+	# A Club Forge club in the league keeps its new-club picks ahead of them.
+	GameState.replay_seed = 4244
+	_check(GameState.create_club({"name": "Port Melbourne", "short": "Borough", "code": "PMB",
+			"location": "port-melbourne", "primary": "#1B3A8C", "secondary": "#C8102E",
+			"accent": "#FFFFFF", "design": "hoops", "kit": "p/s/a"}) == "", "A Forge club is made")
+	GameState.real_after_draft = false
+	GameState.begin_real_lists()
+	d = GameState.draft
+	var pmb := []
+	for i in range(14):
+		if str(d.pick_sequence[i]) == "PMB":
+			pmb.append(i + 1)
+	_check(pmb == [1, 3, 5, 7, 9, 11, 13] and str(d.pick_sequence[1]) == "PAD",
+			"With a Forge club, its new-club picks stay 1, 3, 5 ... 13 and the real order runs between them (%s)" % str(pmb))
+	GameState.reset()

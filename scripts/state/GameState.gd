@@ -2190,6 +2190,9 @@ func begin_real_lists() -> void:
 		if str(q.get("id", "")) == custom_prospect_id and custom_prospect_id != "":
 			cls.append(q)
 	var open_pool := []
+	# The real picks a matched bid used: that man is on his club's list
+	# already, so his pick comes up in the opening draft as made.
+	var tied_picks := {}
 	# The real rookies are marked first, so the 44 is counted as it stands
 	# (a Category B rookie is outside it) before any tied prospect is listed.
 	for code in league_lists:
@@ -2199,6 +2202,10 @@ func begin_real_lists() -> void:
 		if tie != "" and int(p.get("draft_year", 0)) == season_year and league_lists.has(tie) \
 				and _tie_fits(tie):
 			_assign_draftee(tie, p, str(p.get("tied_type", "tied")))
+			var row: Dictionary = GameDB.national_pick(p)
+			if not row.is_empty() and str(row["club"]) == tie:
+				tied_picks[int(row["pick"])] = {"id": str(p["id"]), "name": GameDB.player_display_name(p),
+						"role": Ratings.role_tag(p), "overall": int(Rating.ovr(p))}
 		else:
 			open_pool.append(p)
 	draftee_pool = draftee_pool.filter(func(q): return str(q.get("id", "")) != custom_prospect_id)
@@ -2232,6 +2239,10 @@ func begin_real_lists() -> void:
 		role_pairs[code] = pairs
 	draft = Draft.build_intake(open_pool, playing.duplicate(), opening_order(playing),
 			prospect_read_seed(), sizes, role_counts, role_pairs)
+	# Before the draft, every club holds the picks it really held on the
+	# night: traded picks and compensation picks as they were.
+	if not real_after_draft:
+		draft.set_real_order(real_opening_slots(playing, tied_picks))
 	if forged != "":
 		draft.add_guest(forged, int(sizes[forged]), role_counts[forged], role_pairs[forged])
 		draft.add_compensation(forged_picks)
@@ -2304,6 +2315,53 @@ func _find_drafted(arr: Array, row: Dictionary) -> Dictionary:
 func forged_real_club(active: Array) -> String:
 	var code := str(custom_club.get("code", "")).strip_edges()
 	return code if code != "" and active.has(code) else ""
+
+
+## The real 2026 National Draft as the opening draft's order
+## (data/national_draft_2026.csv, Draft.set_real_order): who held each pick,
+## where it came from (the last club in "via"), and the free-agency
+## compensation picks as such. A pick a matched bid used (`tied_picks`: pick
+## -> its man, already on his club's list) is made as the draft reaches it, so
+## every other pick keeps its real number. A pick held by a club not in
+## the league goes back to the club it came from. Each traded pick is noted
+## in pick_owner, so the board says how the club got it. [] without the data.
+func real_opening_slots(playing: Array, tied_picks: Dictionary = {}) -> Array:
+	var out := []
+	var year := GameDB.DATA_SEASON
+	# A club's pick in a round is named by where it came from; where the data
+	# has two from one club in one round, neither is said to be traded.
+	var seen := {}
+	for row in GameDB.national_draft:
+		if tied_picks.has(int(row["pick"])) or str(row.get("pick_note", "")).begins_with("FA compensation"):
+			continue
+		var via := str(row.get("via", "")).strip_edges().split(" ", false)
+		var k := "%s:%s" % [row["round"], via[via.size() - 1] if via.size() > 0 else str(row["club"])]
+		seen[k] = int(seen.get(k, 0)) + 1
+	for row in GameDB.national_draft:
+		var club := str(row["club"])
+		if tied_picks.has(int(row["pick"])):
+			if playing.has(club):
+				out.append({"club": club, "round": int(row["round"]), "origin": club, "comp": {},
+						"matched": tied_picks[int(row["pick"])]})
+			continue
+		var via := str(row.get("via", "")).strip_edges().split(" ", false)
+		var origin := str(via[via.size() - 1]) if via.size() > 0 else club
+		if not playing.has(club):
+			club = origin
+		if not playing.has(club):
+			continue
+		if not playing.has(origin):
+			origin = club
+		var rnd := int(row["round"])
+		var note := str(row.get("pick_note", ""))
+		var comp := {}
+		if note.begins_with("FA compensation"):
+			comp = {"club": club, "origin": origin, "round": rnd, "real": true,
+					"name": note.get_slice("(", 1).get_slice(")", 0)}
+		elif origin != club and int(seen.get("%d:%s" % [rnd, origin], 0)) == 1:
+			pick_owner["%d:%d:%s" % [year, rnd, origin]] = club
+		out.append({"club": club, "round": rnd, "origin": origin, "comp": comp})
+	return out
 
 
 ## The 2026 National Draft order: the real 2026 ladder reversed, the premiers
@@ -10635,12 +10693,14 @@ func pick_owner_of(year: int, rnd: int, origin: String) -> String:
 ## came from had it from someone else, "Melbourne's pick, from Carlton, for ...".
 ## A fact, never a grade of the trade.
 func pick_story(year: int, rnd: int, origin: String) -> String:
-	if season == null:
+	# The opening draft of a real-lists start has no season yet, but its
+	# picks were really traded (real_opening_slots).
+	if season == null and not (opening_draft and start_mode == "real"):
 		return ""
 	var holder := pick_owner_of(year, rnd, origin)
 	if holder == origin:
 		var whose := "Your own" if holder == my_club else "%s's own" % GameDB.club_name(holder)
-		if year == season_year and season.ladder.has(origin):
+		if year == season_year and season != null and season.ladder.has(origin):
 			whose += ", %s on the ladder" % ordinal(club_position(origin))
 		return whose
 	var got: Dictionary = pick_got.get("%d:%d:%s" % [year, rnd, origin], {})
