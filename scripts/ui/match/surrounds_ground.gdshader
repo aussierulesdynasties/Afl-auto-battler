@@ -1,6 +1,6 @@
 // The land round a ground with a near map (GroundModels.SURROUNDS "near_map"): the 1 m map over the whole ring and,
 // within near_span m of the middle, the near map at its finer scale (Bellerive: 768 m at 0.375 m), blending into the
-// 1 m map over the near map's last 4 %. Lit as the plain ring's StandardMaterial3D: rough, no shadows received.
+// 1 m map over the near map's last 4 %. Lit as the plain ring's StandardMaterial3D: rough, no specular, no shadows received.
 shader_type spatial;
 render_mode shadows_disabled;
 
@@ -25,4 +25,5 @@ void fragment() {
 	}
 	ALBEDO = c;
 	ROUGHNESS = 1.0;
+	SPECULAR = 0.0;
 }

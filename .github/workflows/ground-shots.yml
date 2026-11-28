@@ -171,6 +171,14 @@ jobs:
             exit 1
           fi
 
+      - name: The ground maps agree at the 1,024 m join
+        # The ground's own surrounds map and its backdrop's near ground meet at 1,024 m. They must draw the same
+        # colour there (tools/grounds/backdrop/join_band.py, #2347): a step over 0.03 is a circle seen from above.
+        if: steps.base.outputs.same != 'true'
+        run: |
+          python3 -m pip install --quiet numpy
+          python3 tools/grounds/backdrop/join_band.py check marvel mcg adelaide gmhba
+
       - name: Film every ground
         if: steps.base.outputs.same != 'true'
         env:

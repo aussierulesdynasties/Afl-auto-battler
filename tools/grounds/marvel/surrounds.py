@@ -24,6 +24,8 @@ from PIL import Image, ImageDraw, ImageFilter
 import land  # noqa: E402  (tools/grounds/marvel/land.py: the real land under each building)
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 import osm_structures  # noqa: E402  (tools/grounds/osm_structures.py: shelters, canopies and the like are not solid blocks)
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "backdrop"))
+import join_band  # noqa: E402  (tools/grounds/backdrop/join_band.py: the backdrop's open ground, the join band)
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(ROOT, "..", "..", "..", "assets", "grounds", "marvel")
@@ -67,6 +69,9 @@ PLAZA = (218, 186, 170)        # the promenades' pavers (Harbour Esplanade, Dock
 BALLAST = (124, 116, 108)       # the Southern Cross yards; round 11 (PC check): about 14 too dark and too cold against Google Earth's warm rust
 RAIL = (92, 80, 70)             # a track: sleepers and rails together, 2.6 m wide (drawn smoothed)
 ROOF = (168, 179, 174)
+# The map's colours above are as they were drawn through GroundModels' old surrounds tint of 0.84. That tint now lives
+# in the map itself, so the ground's material is the backdrop ground's (no tint; plan step 2a on #2347).
+MAP_GAIN = 0.84
 WATER = (36, 68, 82)            # round 10: Google Earth's harbour reads navy (32, 64, 82); (62, 79, 76) rendered grey-green
 URBAN = (132, 134, 132)
 WOOD = (84, 101, 59)
@@ -223,12 +228,18 @@ def stadium_ring(ways):
 
 
 def paint(trees, ways):
+    """The map as the game draws it: paint_raw() through MAP_GAIN."""
+    a = join_band.lin(np.asarray(paint_raw(trees, ways))) * MAP_GAIN
+    return Image.fromarray(join_band.srgb8(a), "RGB")
+
+
+def paint_raw(trees, ways):
     rng = np.random.default_rng(7)
-    n1 = np.asarray(Image.fromarray((rng.random((64, 64)) * 255).astype(np.uint8)).resize((SIZE, SIZE), Image.BICUBIC), float) / 255
-    n2 = np.asarray(Image.fromarray((rng.random((256, 256)) * 255).astype(np.uint8)).resize((SIZE, SIZE), Image.BICUBIC), float) / 255
-    mott = (n1 - 0.5) * 0.22 + (n2 - 0.5) * 0.12
-    base = np.clip(np.array(BASE, float)[None, None, :] * (1.0 + mott[..., None]), 0, 255).astype(np.uint8)
-    im = Image.fromarray(base, "RGB")
+    # Land the map has nothing on (E-Gate's bare yards, the ground between towers) takes the colour the backdrop paints
+    # the same spot (join_band.ground_field), so the two maps agree. A made-up two-scale mottle of BASE there drew as
+    # grey smudges from above (pc5 ray probe, #2347).
+    rng.random((64, 64)), rng.random((256, 256))   # the old mottle's draws, so the grain below stays as it was
+    im = Image.fromarray(join_band.ground_field("marvel", SIZE, float(SIZE), MAP_GAIN), "RGB")
     d = ImageDraw.Draw(im)
 
     def poly(pts):
@@ -303,14 +314,8 @@ def paint(trees, ways):
     arr *= (1.0 - 0.45 * shade)[..., None]
     grain = (rng.random((SIZE, SIZE)) - 0.5) * 10
     arr += grain[..., None]
-    yy, xx = np.mgrid[0:SIZE, 0:SIZE]
-    r = np.hypot(xx - SIZE / 2, yy - SIZE / 2)
-    edge = np.clip((r - 900) / 120, 0, 1)[..., None]
-    # the land fades to a city grey for the backdrop to take over; the harbour and the river stay water to the edge,
-    # where the backdrop's own water meets them (a grey fade there read as a pale band across the water, 2026-11-27)
-    w = np.asarray(Image.fromarray((water * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(1.5)), float)[..., None] / 255
-    edge = edge * (1 - w)
-    arr = arr * (1 - edge) + np.array(URBAN, float) * edge
+    # No fade to a flat grey at the edge any more: join_band.py blends the outer 60 m into the backdrop's own ground
+    # (run `join_band.py apply marvel` after this script)
     return Image.fromarray(np.clip(arr, 0, 255).astype(np.uint8), "RGB")
 
 

@@ -224,7 +224,8 @@ const SURROUNDS := {
 	"marvel": {"y": -0.03, "inner": 120.0, "colour": Color(0.42, 0.43, 0.43),
 			"map": "surrounds.webp", "span": 2048.0, "trees": "trees.bin", "buildings": "buildings.bin",
 			# gates.glb (tools/grounds/marvel/gates.py): the real gates, built to the 2019-26 photos
-			"models": ["bridges.glb", "landmarks.glb", "gates.glb"], "tint": Color(0.84, 0.84, 0.84),
+			# No `tint`: its 0.84 is in the map (surrounds.py MAP_GAIN), so the land is drawn as the backdrop's is (#2347)
+			"models": ["bridges.glb", "landmarks.glb", "gates.glb"],
 			"building_tint": Color.WHITE, "building_style": "towers",
 			# Round 12: the real land (terrain.bin, tools/grounds/marvel/land.py) right up to `inner`. The model's own
 			# pad follows the same land, from 0.9 m under the old street by the harbour to 4.4 m over it on the east.
@@ -801,6 +802,9 @@ static func _add_surrounds(root: Node3D, s: Dictionary, dir := "", fit: Array = 
 		mm.disable_receive_shadows = true
 		mm.texture_repeat = false
 		mm.roughness = 1.0
+		# No specular sheen, as the backdrop's own near ground (_backdrop_materials): the two meet at `outer`, and a
+		# sheen on one side only drew the join as a ring from above (#2347).
+		mm.metallic_specular = 0.0
 		# `tint` brings the painted map to Google Earth's colours under the match light.
 		mm.albedo_color = s.get("tint", Color.WHITE)
 		var mat: Material = mm

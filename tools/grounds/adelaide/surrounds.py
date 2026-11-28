@@ -319,10 +319,8 @@ def paint(trees, ways, size=SIZE, span=float(SIZE)):
     arr *= (1.0 - 0.45 * shade)[..., None]
     grain = (rng.random((size, size)) - 0.5) * 10
     arr += grain[..., None]
-    yy, xx = np.mgrid[0:size, 0:size]
-    r = np.hypot(xx - size / 2, yy - size / 2) / k
-    edge = np.clip((r - 900) / 120, 0, 1)[..., None]
-    arr = arr * (1 - edge) + np.array(URBAN, float) * edge
+    # No fade to a town grey from 900 m: join_band.py blends the outer 60 m into the backdrop's own ground (run
+    # `join_band.py apply adelaide` after this script); the grey read as a hazy ring from above (#2347).
     return Image.fromarray(np.clip(arr, 0, 255).astype(np.uint8), "RGB")
 
 
