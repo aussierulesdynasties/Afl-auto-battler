@@ -279,3 +279,4 @@ What has landed toward each open row of docs/TODO.md and docs/TODO_RULINGS.md, o
 - 202: Merged #2334: 3D crowd: clear error when the crowd bodies are missing; capture tools grade the picture once.
 - 202: Merged #2339: 3D 1.0 plan: Marvel round 18 still in its fix pass.
 - 202: Merged #2350: 3D 1.0 plan: review issues, sprint, speccy parked, Marvel roof.
+- 202: Merged #2333: WACA scoreboard: move it out of the playing area to its real spot, with the SE light tower [hold: director sign-off on #2346].
