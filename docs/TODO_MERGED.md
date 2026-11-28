@@ -275,3 +275,4 @@ What has landed toward each open row of docs/TODO.md and docs/TODO_RULINGS.md, o
 - 202: Merged #2324: 3D 1.0 plan: match the decision log.
 - 202: Merged #2327: Cazaly's: delete the one-off measure scripts, now in the shared Google Earth tool.
 - 202: Merged #2331: 3D 1.0 plan: sprint in review, Marvel backdrop fixes in draft.
+- 202: Merged #2335: 3D 1.0 plan: Marvel round 18, WACA, faces colour redo, held grounds.
