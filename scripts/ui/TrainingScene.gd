@@ -54,6 +54,24 @@ var _overlay: Control
 ## Opened from the training report's "Learn ..." button: bring his new-position
 ## choices into view once the page is built.
 var _scroll_to_learn := false
+## A PC's squad list: one-line rows, down then across in as many columns as fit.
+const PC_ROW_H := 22.0
+const PC_ROW_SEP := 2.0
+## The most men across a band before the list would need a scroll.
+const PC_BAND_MAX := 6
+## A stat-sheet row (_pc_sheet): a click target, not a thumb's.
+const PC_SHEET_ROW_H := 36.0
+## The narrowest list column that still shows a man's position beside his name.
+const PC_POS_MIN_W := 200.0
+var _pc_fit_rows := 99
+var _pc_area_w := 0.0
+var _pc_grid: GridContainer = null
+var _pc_compact := false
+## Stats beside the list open his full page (the panel has no room for every stat).
+var _pc_page := false
+## Which half of his training a PC shows: "dev" (Development focus) or "stat"
+## (Stat focus). It stays as you click down the list.
+var _pc_tab := "dev"
 
 
 func _ready() -> void:
@@ -108,6 +126,11 @@ func handle_back() -> bool:
 		_notice = ""
 		_build()
 		return true
+	if _pc_page:
+		_pc_page = false
+		_advanced = false
+		_build()
+		return true
 	if _showing_detail:
 		_showing_detail = false
 		_build()
@@ -160,6 +183,7 @@ func _build() -> void:
 	UiKit.clear(_root)
 	_list_scroll = null
 	_rows = null
+	_pc_grid = null
 	_detail_scroll = null
 	var guide := UiKit.btn("Stat guide", UiKit.SECONDARY)
 	guide.name = "StatGuideButton"
@@ -177,6 +201,10 @@ func _build() -> void:
 	backing.name = "TrainingHeader"
 	backing.add_child(bar)
 	_root.add_child(backing)
+	var pc := _pc_mode()
+	if pc != "":
+		_build_pc(pc)
+		return
 	if _paged():
 		# Training grid on a phone: the news, the tabs and the cards are one
 		# page that scrolls as a whole (no list scrolling inside a page).
@@ -195,18 +223,593 @@ func _build() -> void:
 		_root.add_child(_summary())
 	if _paged():
 		pass
-	elif _wide:
-		var body := UiKit.hbox(UiKit.Space.ROOM)
-		body.size_flags_vertical = Control.SIZE_EXPAND_FILL
-		_root.add_child(body)
-		body.add_child(_list_panel())
-		body.add_child(_detail_panel())
 	elif _showing_detail and _selected != "":
 		_root.add_child(_detail_panel())
 	else:
 		_root.add_child(_list_panel())
 	UiKit.restore_scroll(_list_scroll, list_y)
 	UiKit.restore_scroll(_detail_scroll, detail_y)
+
+
+## Training on a PC (director's board, Batch 5, "A: one page"): on a window 640
+## tall or more, the squad list sits beside the picked player; on a shorter one
+## the screen is two stages, the squad and the player.
+func _short_pc() -> bool:
+	return UiKit.view_height(self) < 640.0
+
+
+## "one", "squad" or "player" on a PC; "" on a phone.
+func _pc_mode() -> String:
+	if _pc_page and (not _wide or _short_pc()):
+		# His full page carries over as his own page.
+		_pc_page = false
+		_showing_detail = true
+	if not _wide:
+		return ""
+	if not _short_pc():
+		return "player" if _pc_page else "one"
+	return "player" if (_showing_detail and _selected != "") else "squad"
+
+
+## A PC opens your best player rather than an empty panel (director,
+## 2026-10-10: no empty space on a PC).
+func _ensure_selected() -> void:
+	if not GameState.list_player(_selected).is_empty() or GameState.my_list.is_empty():
+		return
+	var best: Dictionary = GameState.my_list[0]
+	for q in GameState.my_list:
+		if int(Rating.ovr(q, 0)) > int(Rating.ovr(best, 0)):
+			best = q
+	_selected = str(best["id"])
+
+
+func _build_pc(mode: String) -> void:
+	_ensure_selected()
+	if mode == "one":
+		# The player beside the list is the one picked: there is no page for Back to close.
+		_showing_detail = false
+	if mode == "player":
+		_root.add_child(_pc_player(true))
+		return
+	_root.add_child(_band())
+	if mode == "one":
+		var body := UiKit.hbox(UiKit.Space.ROOM)
+		body.name = "TrainingBody"
+		body.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		_root.add_child(body)
+		body.add_child(_pc_list(true))
+		body.add_child(_pc_player(false))
+	else:
+		_root.add_child(_pc_list(false))
+
+
+## The week's news as one band across the top: the gear, how many rose and
+## who, the training report and the season plan.
+func _band() -> Control:
+	var panel := UiKit.panel(UiKit.PANEL, UiKit.Space.PAD, 8)
+	panel.name = "TrainingBand"
+	var h := UiKit.hbox(UiKit.Space.LOOSE)
+	panel.add_child(h)
+	var hero := UiArt.view("training_gear", 64.0)
+	if hero != null:
+		hero.name = "TrainingHero"
+		hero.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		h.add_child(hero)
+	var report: Dictionary = GameState.last_training_report
+	var played := int(report.get("count", 0)) > 0
+	var rows: Array = GameState.training_rise_rows() if played else []
+	var v := UiKit.vbox(UiKit.Space.THIN)
+	v.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	h.add_child(v)
+	if not rows.is_empty():
+		var key := _report_key(report, rows)
+		var fresh := _counted_report != key
+		_counted_report = key
+		_wash_head(panel)
+		var head := _results_head(report, rows.size(), fresh)
+		for l in head.find_children("*", "Label", true, false):
+			(l as Label).autowrap_mode = TextServer.AUTOWRAP_OFF
+		v.add_child(head)
+		var more := GameState.training_unlock_line()
+		if more != "":
+			var what := _news_line(more)
+			what.name = "TrainingNews"
+			v.add_child(what)
+		var rl := _rise_list(rows, fresh) as GridContainer
+		rl.columns = 1 if (_short_pc() or rows.size() < 3) else 2
+		rl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		rl.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		for r in rl.get_children():
+			(r as Control).custom_minimum_size.x = 200
+		h.add_child(rl)
+	else:
+		v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		if played:
+			v.add_child(UiKit.lbl(str(report.get("label", "Last game")), 15, UiKit.EMPH, true))
+			var line := GameState.training_summary_line()
+			var what: Control
+			if line != "":
+				what = _news_line(line)
+			else:
+				what = UiKit.lbl("No rating moved after the last game.", UiKit.SECONDARY, UiKit.MUTED)
+			what.name = "TrainingNews"
+			v.add_child(what)
+		else:
+			v.add_child(UiKit.lbl("No game played yet. Our players develop after every game.", UiKit.BODY, UiKit.EMPH, true))
+	if played:
+		var month := TrainingReportSheet.link(self, _open_to_learn)
+		if month != null:
+			month.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+			h.add_child(month)
+		else:
+			var reserves := GameState.reserves_summary_line()
+			if reserves != "":
+				v.add_child(UiKit.lbl(reserves, UiKit.SECONDARY, UiKit.MUTED))
+	var plan_line := SeasonPlanSheet.line(self, func(): _build())
+	if plan_line != null:
+		plan_line.size_flags_horizontal = Control.SIZE_SHRINK_END
+		plan_line.custom_minimum_size.x = 250
+		plan_line.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		h.add_child(plan_line)
+	return panel
+
+
+## The squad: the tabs, the search and the group hint on one line, then every
+## man as a one-line row in a band per position (_pc_fill).
+## `compact`: the list beside the player, name and OVR only.
+func _pc_list(compact: bool) -> Control:
+	_pc_compact = compact
+	var panel := UiKit.panel(UiKit.PANEL, UiKit.Space.PAD, 8)
+	panel.name = "TrainingListPanel"
+	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	var v := UiKit.vbox(UiKit.Space.CLOSE)
+	panel.add_child(v)
+	var top := UiKit.hbox(UiKit.Space.LOOSE)
+	v.add_child(top)
+	var tabs := UiKit.hbox(0)
+	tabs.name = "RoleTabs"
+	top.add_child(tabs)
+	for item in ROLE_TABS:
+		var key := str(item[0])
+		var b := UiKit.tab(str(GRID_TAB_NAMES[key]), _role == key)
+		b.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+		_strengthen_tab(b, _role == key)
+		b.custom_minimum_size.y = 40
+		b.pressed.connect(_set_role.bind(key))
+		tabs.add_child(b)
+	var search := UiKit.search_field(_query)
+	search.custom_minimum_size = Vector2(200, 40)
+	search.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	search.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	search.text_changed.connect(func(text: String):
+		_query = text
+		_refresh_rows())
+	top.add_child(search)
+	var slot := UiKit.hbox(0)
+	slot.name = "GroupSlot"
+	slot.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	slot.alignment = BoxContainer.ALIGNMENT_END
+	if _bulk_selected.is_empty():
+		var hint := UiKit.lbl("%s and hold a player to pick several." % ("Press" if ScreenLayout.is_touch() else "Click"),
+				UiKit.SECONDARY, _soft())
+		hint.name = "GroupHint"
+		hint.autowrap_mode = TextServer.AUTOWRAP_OFF
+		hint.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		slot.add_child(hint)
+	else:
+		slot.add_child(_bulk_bar())
+	if compact:
+		v.add_child(slot)
+	else:
+		top.add_child(slot)
+	var grid := GridContainer.new()
+	grid.name = "TrainingRows"
+	grid.add_theme_constant_override("h_separation", UiKit.Space.LOOSE)
+	grid.add_theme_constant_override("v_separation", int(PC_ROW_SEP))
+	_pc_grid = grid
+	var sc := UiKit.scroll(grid)
+	sc.name = "ListScroll"
+	sc.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_NEVER
+	sc.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_list_scroll = sc
+	v.add_child(sc)
+	sc.resized.connect(_pc_fit.bind(sc))
+	_pc_fill(grid)
+	return panel
+
+
+func _pc_fit(sc: Control) -> void:
+	if sc.size.y <= 0.0:
+		return
+	var fit := maxi(2, int((sc.size.y + PC_ROW_SEP) / (PC_ROW_H + PC_ROW_SEP)))
+	if fit != _pc_fit_rows or absf(sc.size.x - _pc_area_w) > 1.0:
+		_pc_fit_rows = fit
+		_pc_area_w = sc.size.x
+		if is_instance_valid(_pc_grid):
+			_pc_fill.call_deferred(_pc_grid)
+
+
+## A band per position (director, 2026-11-26: "B: band per position"): its
+## head runs across the list and its men fill three across beneath it, best
+## first. A list too long for the box goes four across (up to six) rather
+## than scroll. Every band shares one grid of columns.
+func _pc_fill(grid: GridContainer) -> void:
+	if not is_instance_valid(grid):
+		return
+	UiKit.clear(grid)
+	grid.columns = 1
+	var groups: Array = []
+	for role in ["RUCK", "MID", "DEF", "FWD"]:
+		if _role != "" and _role != role:
+			continue
+		var group: Array = []
+		for p in GameState.my_list:
+			if _role == "" and str(p.get("role", "")) != role:
+				continue
+			if _role != "" and not Ratings.plays_role(p, role):
+				continue
+			if not _matches(p):
+				continue
+			group.append(p)
+		if group.is_empty():
+			continue
+		group.sort_custom(func(a, b): return int(Rating.ovr(a)) > int(Rating.ovr(b)))
+		groups.append([role, group])
+	if groups.is_empty():
+		grid.add_child(UiKit.lbl("No players match.", UiKit.NAME, UiKit.TEXT, true))
+		return
+	var n := 3
+	while n < PC_BAND_MAX and _pc_band_lines(groups, n) > _pc_fit_rows:
+		n += 1
+	var colw := (_pc_area_w - float(UiKit.Space.LOOSE) * float(n - 1)) / float(n) if _pc_area_w > 0.0 else 300.0
+	for g in groups:
+		var role := str(g[0])
+		var men: Array = g[1]
+		grid.add_child(_pc_item(["head", "%s (%d)" % [UiKit.ROLE_LABEL[role], men.size()], role], colw))
+		var band := GridContainer.new()
+		band.name = "Band_" + role
+		band.columns = n
+		band.add_theme_constant_override("h_separation", UiKit.Space.LOOSE)
+		band.add_theme_constant_override("v_separation", int(PC_ROW_SEP))
+		band.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		grid.add_child(band)
+		for p in men:
+			band.add_child(_pc_item(["p", p], colw))
+		# The last row filled out, so its columns are the other bands' columns.
+		for i in range((n - men.size() % n) % n):
+			var gap := Control.new()
+			gap.custom_minimum_size.y = PC_ROW_H
+			gap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			band.add_child(gap)
+
+
+## The lines the bands take at `n` across: a head each, then its rows.
+func _pc_band_lines(groups: Array, n: int) -> int:
+	var lines := 0
+	for g in groups:
+		lines += 1 + int(ceil((g[1] as Array).size() / float(n)))
+	return lines
+
+
+## One line: a position's head, or a man: name, position, OVR (a rise in
+## green, as on his card), and in a wide column where he stands. A narrow
+## column (six across at 960x540) keeps his name and drops the position word:
+## his band already names it.
+func _pc_item(it: Array, colw: float) -> Control:
+	if str(it[0]) == "head":
+		var head := UiKit.lbl(str(it[1]), UiKit.SECONDARY, UiKit.TEXT, true)
+		# One name per band: siblings that share a name are renamed by Godot.
+		head.name = "GroupHead_" + str(it[2])
+		head.custom_minimum_size.y = PC_ROW_H
+		head.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
+		head.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		return head
+	var p: Dictionary = it[1]
+	var id := str(p["id"])
+	var in_group := _bulk_selected.has(id)
+	var b := Button.new()
+	b.name = "Trainee_" + id
+	b.focus_mode = Control.FOCUS_NONE
+	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	b.custom_minimum_size = Vector2(0, PC_ROW_H)
+	UiKit.paint_choice(b, in_group or (_bulk_selected.is_empty() and _pc_compact and id == _selected))
+	var face := UiKit.hbox(UiKit.Space.CLOSE)
+	face.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	face.offset_left = 6
+	face.offset_right = -6
+	b.add_child(face)
+	if in_group:
+		var tick := _Tick.new()
+		tick.name = "Ticked"
+		face.add_child(tick)
+	var full_name := GameDB.player_display_name(p)
+	var n := UiKit.ellipsis(full_name, 13, UiKit.TEXT, true)
+	n.name = "TraineeName"
+	n.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	n.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	n.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS_FORCE
+	n.resized.connect(func():
+		n.text = BenchDrawer._fit_name(full_name, n.size.x, n.get_theme_font_size("font_size")))
+	face.add_child(n)
+	if not _pc_compact and colw >= PC_POS_MIN_W:
+		var pos := UiKit.line(_card_position(p), 12, UiKit.MUTED)
+		pos.custom_minimum_size.x = 48
+		pos.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		face.add_child(pos)
+	var rise := _last_rise(id)
+	var ovr := UiKit.line(("▲ " if rise.size() > 0 else "") + str(int(Rating.ovr(p))), 13,
+			UiKit.GOOD if rise.size() > 0 else UiKit.TEXT, true)
+	ovr.name = "Rating"
+	ovr.custom_minimum_size.x = 38
+	ovr.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	ovr.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	face.add_child(ovr)
+	if not _pc_compact and colw >= 380.0:
+		# Where he stands (injured, omitted, reserves, developing); the name keeps the rest of the row.
+		var status := _card_status(p, id, 132.0)
+		var st := UiKit.ellipsis(str(status[0]), 12, status[1])
+		st.custom_minimum_size.x = 132
+		st.size_flags_horizontal = Control.SIZE_FILL
+		st.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		face.add_child(st)
+	b.tooltip_text = full_name
+	_ignore_mouse(face)
+	b.button_down.connect(_begin_player_hold.bind(id))
+	b.set_meta(WordPress.OWN_HOLD, true)
+	b.button_up.connect(_end_player_hold.bind(id))
+	b.pressed.connect(_press_player.bind(id))
+	return b
+
+
+## The player: who he is on one line, then Development focus and Stat focus
+## as two tabs, one at a time across the panel. `page`: the whole screen (his
+## page); else the panel beside the list.
+func _pc_player(page: bool) -> Control:
+	var panel := UiKit.panel(UiKit.PANEL, UiKit.Space.PAD, 8)
+	panel.name = "TrainingPlayer"
+	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	if not page:
+		panel.size_flags_stretch_ratio = 1.25
+	var outer := UiKit.vbox(UiKit.Space.CLOSE)
+	panel.add_child(outer)
+	var p := GameState.list_player(_selected)
+	if p.is_empty():
+		return panel
+	var head := UiKit.hbox(UiKit.Space.LOOSE)
+	head.name = "PlayerHead"
+	outer.add_child(head)
+	if page:
+		var back := UiKit.text_action("‹ All players", UiKit.BODY)
+		back.name = "AllPlayers"
+		back.pressed.connect(func():
+			_showing_detail = false
+			if _pc_page:
+				_pc_page = false
+				_advanced = false
+			_build())
+		head.add_child(back)
+	var nh := _name_header(p)
+	nh.clip_text = false
+	head.add_child(nh)
+	var duty := GameState.last_duty(_selected)
+	var who := UiKit.line("%s  ·  %s" % [Ratings.role_tag(p), duty if duty != "" else "Not yet played"], 13, UiKit.MUTED)
+	who.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	head.add_child(who)
+	var ovr := UiKit.line("OVR %d" % int(Rating.ovr(p)), 22, UiKit.EMPH, true)
+	ovr.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	head.add_child(ovr)
+	var rise := _last_rise(_selected)
+	var state := UiKit.line(GameState.development_state(p) + ("  ·  up from %d last game" % int(rise[0]) if rise.size() > 0 else ""), 14,
+			UiKit.GOOD if rise.size() > 0 else UiKit.TEXT)
+	state.name = "DevState"
+	state.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	head.add_child(state)
+	var gap := Control.new()
+	gap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	head.add_child(gap)
+	var stats := _advanced and page
+	var adv := UiKit.btn("Hide stats" if stats else "Stats", 13)
+	adv.name = "AdvancedToggle"
+	adv.custom_minimum_size = Vector2(96, 40)
+	adv.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	adv.pressed.connect(func():
+		if not page:
+			# Beside the list: his stats open on his full page.
+			_advanced = true
+			_pc_page = true
+		elif _pc_page:
+			# ...and Hide stats takes him back beside the list.
+			_advanced = false
+			_pc_page = false
+		else:
+			_advanced = not _advanced
+		_build())
+	head.add_child(adv)
+	var chip_row := UiKit.hbox(UiKit.Space.ROOM)
+	chip_row.name = "ChipRow"
+	outer.add_child(chip_row)
+	if not Traits.of(p).is_empty():
+		# The chips flow: they need the row's width, or each wraps onto a line of its own.
+		var chips := UiKit.trait_chips(p)
+		chips.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		chip_row.add_child(chips)
+	if stats:
+		# His potential sits on the traits line, so the stats get its room.
+		var pot := UiKit.line("Potential %d  ·  %s" % [int(p.get("potential", Rating.ovr(p))), _potential_note(p)], 12, UiKit.MUTED)
+		pot.name = "PotentialLine"
+		pot.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		chip_row.add_child(pot)
+	chip_row.visible = chip_row.get_child_count() > 0
+	var foot := UiKit.vbox(UiKit.Space.CLOSE)
+	outer.add_child(foot)
+	var cols := UiKit.hbox(UiKit.Space.ROOM)
+	cols.name = "PlayerColumns"
+	cols.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	outer.add_child(cols)
+	if stats:
+		cols.add_child(_pc_stats(p))
+	else:
+		# Two tabs, one half at full width, so every player fits with every word
+		# (director, 2026-11-26: "A: two tabs for everyone").
+		var tabs := UiKit.segmented("FocusTabs", [["dev", "Development focus"], ["stat", "Stat focus"]], _pc_tab,
+				func(k: String):
+					_pc_tab = k
+					_build())
+		outer.add_child(tabs)
+		outer.move_child(tabs, cols.get_index())
+		# The choices as a stat sheet, both tabs alike: three across beside the
+		# list, four on the player stage.
+		var across := 4 if page else 3
+		if _pc_tab == "stat":
+			var sf := _stat_focus_panel(p)
+			sf.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			# The tab names it; its season stays.
+			(sf.find_child("StatFocusTitle", true, false) as Label).text = "%d season" % GameState.season_year
+			cols.add_child(sf)
+			var pick := sf.find_child("StatFocusPick", true, false) as GridContainer
+			if pick != null:
+				_pc_sheet(pick, across, _focus_choice if _focus_choice != "" else GameState.stat_focus(p), p)
+			# Sized to its words, not stretched across the panel.
+			var lock := sf.find_child("StatFocusLock", true, false) as Control
+			if lock != null:
+				lock.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+		else:
+			var dev := _focus_box(p, true)
+			dev.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			# The tab names it.
+			(dev.find_child("FocusTitle", true, false) as Control).visible = false
+			cols.add_child(dev)
+			for g_name in ["PlayerPlan", "PlayerLearn"]:
+				var g := dev.find_child(g_name, true, false) as GridContainer
+				if g != null:
+					_pc_sheet(g, across, GameState.plan_for(p), {})
+	var hint := _trait_hint(p, true)
+	if hint != null:
+		foot.add_child(hint)
+	var res_line := _reserves_line(duty)
+	if res_line != null:
+		foot.add_child(res_line)
+	foot.visible = foot.get_child_count() > 0
+	return panel
+
+
+## A choice grid as a stat sheet (director, 2026-11-26: "A: stat sheet"): a
+## row each, its words on the left and, for a stat, his number on the right,
+## a thin rule under each; the chosen row outlined in white. `p`: the player
+## whose stats the keys are (StatFocusPick); empty for the development plans.
+func _pc_sheet(grid: GridContainer, across: int, chosen: String, p: Dictionary) -> void:
+	grid.columns = across
+	grid.add_theme_constant_override("h_separation", UiKit.Space.LOOSE)
+	grid.add_theme_constant_override("v_separation", 0)
+	var prefix := str(grid.name) + "_"
+	for c in grid.get_children():
+		var b := c as Button
+		if b == null:
+			continue
+		var key := str(b.name).trim_prefix(prefix)
+		var on := key == chosen
+		var words := GameState.train_stat_label(key) if not p.is_empty() else b.text
+		b.text = ""
+		b.tooltip_text = words
+		b.custom_minimum_size.y = PC_SHEET_ROW_H
+		var sb := StyleBoxFlat.new()
+		sb.content_margin_left = 12
+		sb.content_margin_right = 12
+		sb.bg_color = UiKit.SURFACE if on else Color(0, 0, 0, 0)
+		sb.border_color = UiKit.TEXT if on else UiKit.LINE
+		if on:
+			sb.set_border_width_all(2)
+			sb.set_corner_radius_all(UiKit.RADIUS)
+		else:
+			sb.border_width_bottom = 1
+		for s in ["normal", "hover", "pressed", "hover_pressed"]:
+			b.add_theme_stylebox_override(s, sb)
+		var face := UiKit.hbox(UiKit.Space.CLOSE)
+		face.name = "SheetRow"
+		face.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		face.offset_left = 12
+		face.offset_right = -12
+		b.add_child(face)
+		var nm := UiKit.line(words, 14, UiKit.TEXT, on)
+		nm.name = "SheetWords"
+		nm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		nm.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		nm.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		face.add_child(nm)
+		if not p.is_empty():
+			var num := UiKit.line(PlayerProfile.attr_text(p, key), 14, UiKit.TEXT, true)
+			num.name = "SheetNumber"
+			num.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+			num.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+			face.add_child(num)
+		_ignore_mouse(face)
+	# The last row filled out, so a short sheet keeps the columns of the one above.
+	for i in range((across - grid.get_child_count() % across) % across):
+		var gap := Control.new()
+		gap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		grid.add_child(gap)
+
+
+## His background and every stat, as the Stats button shows them: two columns
+## down then across, a third or fourth only when the box is too short for two.
+func _pc_stats(p: Dictionary) -> Control:
+	var v := UiKit.vbox(UiKit.Space.SLIM)
+	v.name = "PlayerStats"
+	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	v.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	var background := _background_line(p)
+	if background != "":
+		var bl := UiKit.lbl(background, 12, UiKit.MUTED)
+		bl.name = "BackgroundLine"
+		v.add_child(bl)
+	var rows := _stat_list(p)
+	var sc := ScrollContainer.new()
+	sc.name = "StatBox"
+	sc.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_NEVER
+	sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	sc.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	v.add_child(sc)
+	var g := GridContainer.new()
+	g.name = "StatColumns"
+	g.add_theme_constant_override("h_separation", 16)
+	g.add_theme_constant_override("v_separation", 2)
+	g.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	sc.add_child(g)
+	var fill := func(k: int) -> void:
+		for c in g.get_children():
+			g.remove_child(c)
+			c.queue_free()
+		g.columns = k
+		var per := int(ceil(rows.size() / float(k)))
+		for i in range(per):
+			for j in range(k):
+				var idx := j * per + i
+				if idx < rows.size():
+					var r: Array = rows[idx]
+					var sr := _stat_row(p, str(r[0]), str(r[1]), bool(r[2]))
+					sr.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+					# A PC card keeps its words, with less air above and below them.
+					var sb := (sr.get_theme_stylebox("panel") as StyleBoxFlat).duplicate() as StyleBoxFlat
+					sb.content_margin_top = 4
+					sb.content_margin_bottom = 5
+					sr.add_theme_stylebox_override("panel", sb)
+					(sr.get_child(0) as Control).add_theme_constant_override("separation", 2)
+					g.add_child(sr)
+				else:
+					g.add_child(Control.new())
+	fill.call(2)
+	sc.resized.connect(func():
+		await get_tree().process_frame
+		if not is_instance_valid(g) or sc.size.y <= 0.0:
+			return
+		if g.get_combined_minimum_size().y > sc.size.y + 0.5 and g.columns < 4:
+			fill.call(g.columns + 1)
+			sc.resized.emit())
+	return v
 
 
 ## The grid on a phone with the list open: one page, one scroll.
@@ -400,8 +1003,6 @@ func _list_panel() -> Control:
 	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var paged := _paged()
 	panel.size_flags_vertical = Control.SIZE_SHRINK_BEGIN if paged else Control.SIZE_EXPAND_FILL
-	if _wide:
-		panel.custom_minimum_size.x = 280
 	var v := UiKit.vbox(UiKit.Space.CLOSE)
 	panel.add_child(v)
 	var tabs := UiKit.hbox(UiKit.Space.SLIM)
@@ -628,6 +1229,9 @@ func _moved_since_press() -> bool:
 
 
 func _refresh_rows() -> void:
+	if is_instance_valid(_pc_grid):
+		_pc_fill(_pc_grid)
+		return
 	if not is_instance_valid(_rows):
 		_build()
 		return
@@ -1103,25 +1707,15 @@ func _detail_panel() -> Control:
 	var outer := UiKit.vbox(UiKit.Space.CLOSE)
 	panel.add_child(outer)
 	var p := GameState.list_player(_selected)
-	if p.is_empty() and _wide and not GameState.my_list.is_empty():
-		# A wide screen opens your best player rather than an empty panel
-		# (director, 2026-10-10: no empty space on a PC).
-		var best: Dictionary = GameState.my_list[0]
-		for q in GameState.my_list:
-			if int(Rating.ovr(q, 0)) > int(Rating.ovr(best, 0)):
-				best = q
-		_selected = str(best["id"])
-		p = best
 	if p.is_empty():
 		outer.add_child(UiKit.lbl("Choose a player from the list.", UiKit.NAME, UiKit.TEXT, true))
 		outer.add_child(UiKit.lbl("Open a player to choose what kind of footballer he develops into.", UiKit.SECONDARY, UiKit.MUTED))
 		return panel
-	if not _wide:
-		var back := UiKit.btn("‹ All players", UiKit.BODY)
-		back.pressed.connect(func():
-			_showing_detail = false
-			_build())
-		outer.add_child(back)
+	var back := UiKit.btn("‹ All players", UiKit.BODY)
+	back.pressed.connect(func():
+		_showing_detail = false
+		_build())
+	outer.add_child(back)
 	var body := UiKit.vbox(UiKit.Space.CLOSE)
 	_detail_scroll = UiKit.scroll(body)
 	_detail_scroll.name = "DetailScroll"
@@ -1145,64 +1739,14 @@ func _detail_panel() -> Control:
 	if not Traits.of(p).is_empty():
 		body.add_child(UiKit.trait_chips(p))
 	# The decision: what kind of footballer he becomes.
-	var focus := UiKit.panel(UiKit.PANEL_ALT, UiKit.Space.ROOM, 8)
-	body.add_child(focus)
-	var fv := UiKit.vbox(UiKit.Space.TIGHT)
-	focus.add_child(fv)
-	fv.add_child(UiKit.lbl("Development focus", 12, UiKit.MUTED, true))
-	var plan := GameState.plan_for(p)
-	var plan_name := UiKit.lbl(GameState.train_plan_label(plan), UiKit.HEADING, UiKit.EMPH, true)
-	plan_name.name = "FocusName"
-	fv.add_child(plan_name)
-	var meaning := UiKit.lbl(GameState.train_plan_description(plan, str(p.get("role", "MID"))), 13, UiKit.TEXT)
-	meaning.name = "FocusMeaning"
-	meaning.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	fv.add_child(meaning)
-	var progress := _project_line(p)
-	if progress != "":
-		var pl := UiKit.lbl(progress, UiKit.SECONDARY, UiKit.TEXT, true)
-		pl.name = "ProjectProgress"
-		pl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		fv.add_child(pl)
-	var working := _working_on(p)
-	if working != "":
-		fv.add_child(UiKit.lbl("Working on: " + working, 12, UiKit.MUTED))
-	var pid := _selected
-	var on_pick := func(key: String):
-		var q := GameState.list_player(pid)
-		var before := int(Rating.ovr(q, 0))
-		var gains := GameState.set_player_plan(pid, key)
-		_notice = _spend_notice(gains, before, int(Rating.ovr(GameState.list_player(pid), 0)))
-		_build()
-	fv.add_child(_plan_picker(p, on_pick))
-	var learn := _learn_picker(p, on_pick)
-	if learn != null:
-		fv.add_child(UiKit.spacer(UiKit.Space.CLOSE))
-		fv.add_child(learn)
-		if _scroll_to_learn:
-			_scroll_to_learn = false
-			_bring_into_view.call_deferred(learn)
-	if _notice != "":
-		fv.add_child(UiKit.lbl(_notice, UiKit.SECONDARY, UiKit.GOOD, true))
+	body.add_child(_focus_box(p, false))
 	body.add_child(_stat_focus_panel(p))
 	# What is close, and what happened.
-	var close: Array = Traits.near(p)
-	if not close.is_empty():
-		var n: Dictionary = close[0]
-		# "4 more durability and he's an Engine: tires 25% slower."
-		var t_text := Traits.text(str(n["key"]))
-		var hint := UiKit.lbl("%d more %s and he's %s %s: %s" % [int(n["gap"]), GameState.train_stat_label(str(n["stat"])).to_lower(),
-				"an" if "AEIOU".contains(Traits.label(str(n["key"])).left(1)) else "a", Traits.label(str(n["key"])),
-				t_text.left(1).to_lower() + t_text.substr(1)], 12, UiKit.EMPH)
-		hint.name = "TraitHint"
-		hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		TraitLink.tappable(hint, str(n["key"]))
+	var hint := _trait_hint(p)
+	if hint != null:
 		body.add_child(hint)
-	if duty == "Reserves":
-		var res_line := UiKit.lbl("Developing in the reserves: +%d development points last game. A senior game is worth up to %d." % [
-				GameState.xp_gain_for(_selected), _senior_game_xp()], 13, UiKit.MUTED)
-		res_line.name = "ReservesLine"
-		res_line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	var res_line := _reserves_line(duty)
+	if res_line != null:
 		body.add_child(res_line)
 	# Everything else sits behind one button.
 	var adv := UiKit.btn("Hide stats" if _advanced else "Stats", 13)
@@ -1222,13 +1766,100 @@ func _detail_panel() -> Control:
 			var bl := UiKit.lbl(background, 12, UiKit.MUTED)
 			bl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			body.add_child(bl)
-		var rows := []
-		for row in GameState.TRAIN_STATS:
-			rows.append([str(row[0]), str(row[1]), GameState.stat_useful_for(p, str(row[0]))])
-		rows.sort_custom(func(a, b): return bool(a[2]) and not bool(b[2]))
-		for r in rows:
+		for r in _stat_list(p):
 			body.add_child(_stat_row(p, str(r[0]), str(r[1]), bool(r[2])))
 	return panel
+
+
+## Development focus: what kind of footballer he becomes. A PC says here what
+## the focus costs and buys, as a phone's news panel does.
+func _focus_box(p: Dictionary, pc: bool) -> Control:
+	var focus := UiKit.panel(UiKit.PANEL_ALT, UiKit.Space.ROOM, 8)
+	focus.name = "DevelopmentFocus"
+	var fv := UiKit.vbox(UiKit.Space.TIGHT)
+	focus.add_child(fv)
+	var title := UiKit.lbl("Development focus", 12, UiKit.MUTED, true)
+	title.name = "FocusTitle"
+	fv.add_child(title)
+	if pc:
+		var trade := UiKit.lbl(GRID_TRADE_OFF_LINE, UiKit.SMALL, UiKit.TEXT)
+		trade.name = "TrainingTradeOff"
+		trade.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		fv.add_child(trade)
+	var plan := GameState.plan_for(p)
+	var plan_name := UiKit.lbl(GameState.train_plan_label(plan), UiKit.HEADING, UiKit.EMPH, true)
+	plan_name.name = "FocusName"
+	fv.add_child(plan_name)
+	var meaning := UiKit.lbl(GameState.train_plan_description(plan, str(p.get("role", "MID"))), 13, UiKit.TEXT)
+	meaning.name = "FocusMeaning"
+	meaning.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	fv.add_child(meaning)
+	var progress := _project_line(p)
+	if progress != "":
+		var pl := UiKit.lbl(progress, UiKit.SECONDARY, UiKit.TEXT, true)
+		pl.name = "ProjectProgress"
+		pl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		fv.add_child(pl)
+	var working := _working_on(p)
+	if working != "":
+		fv.add_child(UiKit.lbl("Working on: " + working, 12, UiKit.MUTED))
+	var pid := str(p["id"])
+	var on_pick := func(key: String):
+		var q := GameState.list_player(pid)
+		var before := int(Rating.ovr(q, 0))
+		var gains := GameState.set_player_plan(pid, key)
+		_notice = _spend_notice(gains, before, int(Rating.ovr(GameState.list_player(pid), 0)))
+		_build()
+	fv.add_child(_plan_picker(p, on_pick))
+	var learn := _learn_picker(p, on_pick)
+	if learn != null:
+		fv.add_child(UiKit.spacer(UiKit.Space.CLOSE))
+		fv.add_child(learn)
+		if _scroll_to_learn:
+			_scroll_to_learn = false
+			_bring_into_view.call_deferred(learn)
+	if _notice != "":
+		fv.add_child(UiKit.lbl(_notice, UiKit.SECONDARY, UiKit.GOOD, true))
+	return focus
+
+
+## The trait he is closest to: "4 more durability and he's an Engine: tires
+## 25% slower." Null when none is close. `short` (a PC): only the first part,
+## "4 more durability and he's an Engine ›"; a click shows what it does.
+func _trait_hint(p: Dictionary, short := false) -> Control:
+	var close: Array = Traits.near(p)
+	if close.is_empty():
+		return null
+	var n: Dictionary = close[0]
+	var t_text := Traits.text(str(n["key"]))
+	var near := "%d more %s and he's %s %s" % [int(n["gap"]), GameState.train_stat_label(str(n["stat"])).to_lower(),
+			"an" if "AEIOU".contains(Traits.label(str(n["key"])).left(1)) else "a", Traits.label(str(n["key"]))]
+	var hint := UiKit.lbl(near + ("  ›" if short else ": " + t_text.left(1).to_lower() + t_text.substr(1)), 12, UiKit.EMPH)
+	hint.name = "TraitHint"
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	TraitLink.tappable(hint, str(n["key"]))
+	return hint
+
+
+## What the reserves gave him last game, against a senior game. Null unless
+## he played in the reserves.
+func _reserves_line(duty: String) -> Control:
+	if duty != "Reserves":
+		return null
+	var res_line := UiKit.lbl("Developing in the reserves: +%d development points last game. A senior game is worth up to %d." % [
+			GameState.xp_gain_for(_selected), _senior_game_xp()], 13, UiKit.MUTED)
+	res_line.name = "ReservesLine"
+	res_line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	return res_line
+
+
+## Every stat as [key, label, useful in his position], the useful ones first.
+func _stat_list(p: Dictionary) -> Array:
+	var rows := []
+	for row in GameState.TRAIN_STATS:
+		rows.append([str(row[0]), str(row[1]), GameState.stat_useful_for(p, str(row[0]))])
+	rows.sort_custom(func(a, b): return bool(a[2]) and not bool(b[2]))
+	return rows
 
 
 ## One stat a season gets extra work (row 97, director 2026-11-06: "one stat
@@ -1240,7 +1871,9 @@ func _stat_focus_panel(p: Dictionary) -> Control:
 	var v := UiKit.vbox(UiKit.Space.CLOSE)
 	box.add_child(v)
 	var year := GameState.season_year
-	v.add_child(UiKit.lbl("Stat focus  ·  %d season" % year, 12, UiKit.MUTED, true))
+	var title := UiKit.lbl("Stat focus  ·  %d season" % year, 12, UiKit.MUTED, true)
+	title.name = "StatFocusTitle"
+	v.add_child(title)
 	var current := GameState.stat_focus(p)
 	if GameState.project_job(p) != "" and GameState.plan_for(p) == GameState.LEARN_PREFIX + GameState.project_job(p):
 		var hold := UiKit.lbl("On hold while he learns a position. All his training goes into the new role.", 13, UiKit.TEXT)
