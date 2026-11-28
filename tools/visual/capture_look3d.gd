@@ -233,6 +233,14 @@ func _reset(oval, weather: String, slot: String) -> void:
 	oval.turf.apply(weather, slot)
 
 
+## The environment's tone option is the only tone: the match film passes the picture through
+## untoned, at the exposure the environment had before the film took it over.
+func _film_tone_off(oval) -> void:
+	var fm: ShaderMaterial = oval.film.material_override
+	fm.set_shader_parameter("tone", false)
+	oval._env.tonemap_exposure = float(fm.get_shader_parameter("exposure"))
+
+
 ## Every mesh of the crowd (the stands are built in pieces), with today's or the prototype shader.
 func _crowds(oval) -> Array:
 	var out := []
@@ -473,17 +481,20 @@ func _apply(oval, look: String) -> void:
 		# The picture's tone (post-processing), on top of a light above. Godot's tonemappers turn
 		# the scene's light into screen colour: filmic (today), ACES (punchy, saturated), AgX
 		# (natural, keeps bright colours from blowing out), and AgX with a broadcast grade.
+		# The match film already applies today's tone (Oval3DTurf._tone_to_film, since #1839), so a
+		# tone option first turns the film's off: otherwise the picture is toned twice.
 		"filmic":
+			_film_tone_off(oval)
 			env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
 		"aces":
+			_film_tone_off(oval)
 			env.tonemap_mode = Environment.TONE_MAPPER_ACES
 		"agx":
+			_film_tone_off(oval)
 			env.tonemap_mode = Environment.TONE_MAPPER_AGX
 		"agxtv":
-			env.tonemap_mode = Environment.TONE_MAPPER_AGX
-			env.adjustment_enabled = true
-			env.adjustment_contrast = 1.1
-			env.adjustment_saturation = 1.2
+			# Rule 2.81's tone, which the match film already applies (with rule 2.114's white balance).
+			pass
 		# Night under lights (run with SLOT night). The sky at night: black above, the lit stands
 		# round the ground give the side light, the lit grass a little bounce.
 		"nightsky":

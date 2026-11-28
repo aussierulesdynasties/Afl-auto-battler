@@ -79,6 +79,8 @@ What each step does, and the line you must read:
 
 0. Director: "always use upto date assets and lighting/shaders, otherwise we are iterating in the dark". Before every
    film: `git fetch` and merge origin/main into the branch (guernseys, grounds, lighting), keeping the local TEMP edits.
+   Then `bash tools/epic_assets.sh fetch`: the crowd bodies and injury clips live in the private repo since 28 Nov
+   (#2321), so a merge of main deletes them and the crowd fails to draw ("No crowd is drawn" in the log).
 1. `godot --headless --path . --import` after every head rebuild and every merge. Without it Godot films the OLD import of the glb.
 2. Film him jogging (needs the local FOLLOW/CLIP edits in `tools/visual/capture_builds3d.gd`, never committed):
    ```

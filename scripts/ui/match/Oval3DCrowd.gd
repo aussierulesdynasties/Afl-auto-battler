@@ -91,10 +91,12 @@ var _chunks: Array = []      # [{people: [MultiMeshInstance3D per body], cards: 
 ## and away_g each club's guernsey (GameDB.club_guernsey), {} for plain in its first colour.
 func build(a: float, b: float, depth: float, rise_to: float, home: Array, away: Array,
 		home_g := {}, away_g := {}) -> void:
-	var cs: Oval3DCrowdSet = load(CROWD_SET)
+	var cs := crowd_set()
 	var pitch := depth / ROWS
 	var rise := (rise_to - BASE_Y) / ROWS
 	_terrace(a, b, pitch, rise)
+	if cs == null:
+		return
 	_materials(cs, home, away, home_g, away_g)
 	_seat(cs, a, b, pitch, rise)
 
@@ -107,7 +109,9 @@ func build(a: float, b: float, depth: float, rise_to: float, home: Array, away: 
 ## cheer squads, the away end and slug's members' reserve (MEMBERS) are placed.
 func build_on_seats(seats: Array, tmpl: PackedVector3Array, home: Array, away: Array,
 		home_g := {}, away_g := {}, to_field := Transform3D.IDENTITY, slug := "") -> void:
-	var cs: Oval3DCrowdSet = load(CROWD_SET)
+	var cs := crowd_set()
+	if cs == null:
+		return
 	_materials(cs, home, away, home_g, away_g)
 	var spot := sitting_spot(tmpl)
 	var rng := RandomNumberGenerator.new()
@@ -241,6 +245,18 @@ static func _patch(c: Vector2) -> float:
 	return fposmod(sin(k.x * 12.9898 + k.y * 78.233) * 43758.5453, 1.0)
 
 
+## The baked bodies, or null, with one error that names the fix, when the file is not in place. It
+## lives in the private assets repo since 2026-11-28 (#2321, docs/EPIC_ASSETS.md), so a checkout
+## that pulled main without running tools/epic_assets.sh fetch has lost it; before this, every
+## supporter then failed on a script error ("bodies" on a null instance, line 291) and the
+## stand was left half built.
+static func crowd_set() -> Oval3DCrowdSet:
+	var cs: Oval3DCrowdSet = load(CROWD_SET) if ResourceLoader.exists(CROWD_SET) else null
+	if cs == null:
+		push_error("No crowd is drawn: %s is not in place. Run tools/epic_assets.sh fetch (docs/EPIC_ASSETS.md)." % CROWD_SET)
+	return cs
+
+
 ## Where a supporter sits on a seat, in the seat's own space, from its triangles: his origin on
 ## the floor under the seat (its lowest point), PERSON_D - SEAT_F - (SEAT_B - SEAT_F) / 2 behind
 ## the pan's middle as on the stand, facing out over the pan, away from the backrest.
@@ -340,7 +356,7 @@ func _materials(cs: Oval3DCrowdSet, home: Array, away: Array, home_g := {}, away
 
 ## The match clock (s), which every supporter's idle and cheer run on.
 func set_now(t: float) -> void:
-	for m: ShaderMaterial in _people_mats + [_card_mat]:
+	for m: ShaderMaterial in _people_mats + ([_card_mat] if _card_mat else []):
 		m.set_shader_parameter("now", t)
 
 

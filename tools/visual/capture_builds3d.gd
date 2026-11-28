@@ -309,8 +309,10 @@ func _look(oval, expo: float) -> void:
 		oval._sun.light_angular_distance = float(OS.get_environment("SUN_ANGLE"))
 	if OS.has_environment("SHADOW_DIST"):  # TEMP test
 		oval._sun.directional_shadow_max_distance = float(OS.get_environment("SHADOW_DIST"))
-	env.tonemap_mode = Environment.TONE_MAPPER_AGX
-	env.tonemap_exposure = expo
-	env.adjustment_enabled = true
-	env.adjustment_contrast = 1.1
-	env.adjustment_saturation = 1.2
+	# The tone (rule 2.81: AgX, contrast 1.1, saturation 1.2) is the game's own: turf.apply above
+	# hands it to the match film (Oval3DTurf._tone_to_film), which applies it once, as in a match.
+	# Setting it on the environment again here, as this did before the film took it over (#1839,
+	# 2026-11-19), graded every frame twice. expo scales the game's own exposure.
+	if expo != 1.0:
+		var fm: ShaderMaterial = oval.film.material_override
+		fm.set_shader_parameter("exposure", float(fm.get_shader_parameter("exposure")) * expo)
