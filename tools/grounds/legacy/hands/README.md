@@ -54,3 +54,13 @@ Stand and roof heights, light towers (model guesses 35 m). Google Earth 3D here 
 700 m eye) but its mesh is dated 3/8/2022, before the redevelopment: it shows the old west stand at about 4 m
 above the turf, so none of its heights apply to the 2025-26 ground and none are used. The new grandstand's
 heights need photos or newer 3D data.
+
+## Fence refit (2026-11-28)
+
+`tools/grounds/legacy/fence_fourier.py hands measure/turf_2024_2025_enu.json 6 --write` puts the model's fence on
+the measured turf edge pushed out 0.3 m to the rail line (Blacktown's offset), as a K=6 Fourier curve (`fence_fourier`
+in `hands/model/hands.json`, 0.02 m rms to the offset trace). The old ellipse ran from 6.3 m inside the turf to
+3.0 m outside it. The closest ellipse, now the plan's `fence`, is 187.0 x 150.7 m, long axis 57.8° from east,
+centre (-0.69, -1.65); it is 1.25 m rms off the curve (the oval is not symmetric end to end). Every stand front and
+tower clears the new fence by 3.8 m or more. Still assumed, not measured: the rail stands at the grass edge, not on
+the concrete ring.

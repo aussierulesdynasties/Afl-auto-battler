@@ -36,3 +36,11 @@ turf, which cannot be right, and its axis is about 10° off the goals. It needs 
 
 The grey fence or path ring outside the turf (the brightness search was not consistent between dates),
 stand and tower heights.
+
+## Fence refit (2026-11-28)
+
+`tools/grounds/legacy/fence_fourier.py summit measure/turf_2024_2026_enu.json 6 --write` puts the model's fence on
+the measured turf edge pushed out 0.3 m to the rail line (Blacktown's offset), as a K=6 Fourier curve (`fence_fourier`
+in `summit/model/summit.json`, 0.02 m rms to the offset trace). The old ellipse ran from 5.4 m inside the turf to
+3.5 m outside it, its axis about 8° off. The closest ellipse, now the plan's `fence`, is 175.6 x 146.1 m, long axis
+75.9° from east, centre (-3.38, -1.79), 0.34 m rms off the curve. Every building and tower clears it by 3.1 m or more.
