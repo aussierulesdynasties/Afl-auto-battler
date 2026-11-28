@@ -1244,6 +1244,10 @@ func _plant(i: int, p: Dictionary, dt: float, standing: bool) -> void:
 ## Foot f's lowest in his run loop (average build), with the sprint's share of it laid over.
 func foot_floor(i: int, f: int) -> float:
 	var w := float(_fast[i]) if i < _fast.size() else 0.0
+	# Easing out of a sprint (_ease): the sprint's share of the pose fades with the ease.
+	if i < _blend.size() and not (_blend[i] as Dictionary).is_empty():
+		var b: Dictionary = _blend[i]
+		w = maxf(w, float(b.get("fast", 0.0)) * (1.0 - smoothstep(0.0, BLEND, float(b["t"]))))
 	if w <= 0.0 or _fast_floor.size() <= FAST_STEPS:
 		return float(_floor[f])
 	var x := w * FAST_STEPS

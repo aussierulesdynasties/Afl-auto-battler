@@ -4453,13 +4453,20 @@ func _test_sprint_blend(res: Dictionary) -> void:
 	var planted := 0    # frames a foot of a man mostly sprinting is down (at his blend's floor)
 	var slid := 0       # of those, sliding over the turf faster than 0.5 m/s
 	var last := {}
+	var eased := 0      # frames a man has just come out of a full sprint (easing into another clip)
+	var eased_ok := 0   # of those, with the planted-foot test still at the sprint's feet
 	for k in range(1800):
 		d.advance(dt)
 		oval.sync(dt)
 		for j in range(oval.players.size()):
 			var pj: Dictionary = oval.players[j]
 			var cur := str((pj["anim"] as AnimationPlayer).current_animation)
-			if cur != "jog" or not (anim._blend[j] as Dictionary).is_empty() or float(anim._fast[j]) < 0.5:
+			var bl: Dictionary = anim._blend[j]
+			if not bl.is_empty() and float(bl.get("fast", 0.0)) > 0.9 and float(bl["t"]) < Oval3DAnim.BLEND * 0.25:
+				# Just out of a sprint: the planted-foot test still has the sprint's lower feet.
+				eased += 1
+				eased_ok += 1 if anim.foot_floor(j, 0) < float(anim._floor[0]) - 0.02 else 0
+			if cur != "jog" or not bl.is_empty() or float(anim._fast[j]) < 0.5:
 				last.erase(j)
 				continue
 			if (anim._pace[j] as Vector2).length() > Oval3DAnim.FAST_FULL * 1.05:
@@ -4481,6 +4488,8 @@ func _test_sprint_blend(res: Dictionary) -> void:
 			last[j] = now
 	_check(flat > 100 and sprinting > flat * 9 / 10, "A man flat out off the ball sprints (%d of %d flat-out frames)"
 			% [sprinting, flat])
+	_check(eased > 0 and eased_ok == eased, "Easing out of a sprint, his feet are judged at the sprint's height, not snapped up to the run's (%d of %d frames)"
+			% [eased_ok, eased])
 	_check(planted > 500 and slid < planted / 10, "A sprinting man's planted feet stay put (%d of %d planted-foot frames sliding)"
 			% [slid, planted])
 	oval.queue_free()
