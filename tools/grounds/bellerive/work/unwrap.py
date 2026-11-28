@@ -1,0 +1,11 @@
+# python work/unwrap.py : satellite unwrapped to polar (rows = bearing 0..360 every 0.5 deg, cols = r 50..180 m every 0.25 m)
+import cv2,numpy as np
+S=cv2.imread('sat/esri_025.png');B=np.arange(0,360,0.5);R=np.arange(50,180,0.25)
+b,r=np.meshgrid(np.radians(B),R,indexing='ij');mx=(800+4*r*np.sin(b)).astype(np.float32);my=(800-4*r*np.cos(b)).astype(np.float32)
+U=cv2.remap(S,mx-0.5,my-0.5,cv2.INTER_LINEAR);np.save('work/unwrap.npy',U)
+V=U.copy()
+for k in range(0,len(R),40):V[:,k]=(0,255,255)
+for k in range(0,len(B),20):V[k,:]=(255,0,255)
+for k in range(0,len(B),20):cv2.putText(V,str(int(B[k])),(2,k+12),0,0.4,(255,0,255),1)
+for k in range(0,len(R),40):cv2.putText(V,str(int(R[k])),(k+2,10),0,0.35,(0,255,255),1)
+for i in range(4):cv2.imwrite(f'work/uw{i}.png',V[i*180:(i+1)*180])
