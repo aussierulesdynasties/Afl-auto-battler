@@ -2509,21 +2509,21 @@ func _test_menu_and_career() -> void:
 	var twords: Label = tsheet.find_child("TrustWords", true, false)
 	var twhy: Button = tsheet.find_child("TrustWhy", true, false)
 	var treasons: Control = tsheet.find_child("TrustReasons", true, false)
-	_check(twords != null and twords.text == "Opinion of you 61/100." and treasons != null and not treasons.visible,
+	_check(twords != null and twords.text.replace(String.chr(0xA0), " ") == "His opinion of you: 61 out of 100." and treasons != null and not treasons.visible,
 			"The profile shows his opinion of you out of 100, with the reasons folded away (%s)" % (twords.text if twords != null else "missing"))
 	var why_tap: String = await Tap.tap(twhy) if twhy != null else "missing"
 	await _settle()
 	var first_reason: Label = treasons.get_child(1) if treasons != null and treasons.get_child_count() > 2 else null
 	_check(why_tap == "" and treasons.visible and twhy.size.y >= 44 and first_reason != null
 			and first_reason.text.begins_with("Round 5, ") and first_reason.text.ends_with("Opinion of you +5.")
-			and (treasons.get_child(0) as Label).text.contains("he may refuse to re-sign with you"),
+			and (treasons.get_child(0) as Label).text.contains("he may refuse to re-sign with us"),
 			"A tap on Why shows the rule, then his reasons newest first with their size (%s, %s)" % [why_tap,
 					first_reason.text if first_reason != null else "missing"])
 	tsheet.queue_free()
 	var ssheet: Control = load("res://scripts/ui/PlayerSheet.gd").open(current_scene, stranger)
 	await _settle()
 	var swords: Label = ssheet.find_child("TrustWords", true, false)
-	_check(swords != null and swords.text == "Opinion of you 50/100.",
+	_check(swords != null and swords.text.replace(String.chr(0xA0), " ") == "His opinion of you: 50 out of 100.",
 			"A player you've had nothing to do with is at 50/100 (%s)" % (swords.text if swords != null else "missing"))
 	ssheet.queue_free()
 	_state.relations = saved_rel

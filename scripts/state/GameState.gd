@@ -13100,9 +13100,8 @@ static func stat_useful_for_role(role: String, key: String) -> bool:
 	return false
 
 
-## Where he stands against his projection, in words: "Developing", "Near his
-## projected peak", "At his projected peak", "Past his projection" (or
-## "Rehab year").
+## Where he stands against his potential (POT), in words: "Developing", "Near his
+## potential", "At his potential", "Beyond his potential" (or "Rehab year").
 func development_state(p: Dictionary) -> String:
 	if bool(p.get("rehab", false)):
 		return "Rehab year"
@@ -13110,10 +13109,10 @@ func development_state(p: Dictionary) -> String:
 	if gap >= 3:
 		return "Developing"
 	if gap >= 1:
-		return "Near his projected peak"
+		return "Near his potential"
 	if gap == 0:
-		return "At his projected peak"
-	return "Past his projection"
+		return "At his potential"
+	return "Beyond his potential"
 
 
 ## Buy stat points while XP lasts, each one going to the best weight per XP.

@@ -30,7 +30,6 @@ ALLOW = {
     # this question"); these lines name the button, so the word stays.
     "scripts/sim/SkipOrders.gd": [2, "auto-pick", "kept: names the Auto-pick button (director, 2026-11-12)"],
 
-    "scripts/state/GameState.gd": [1, "projection", "row 138"],
     "scripts/ui/DraftScene.gd": [1, "projection", "row 136: draft"],
     "scripts/ui/FirstVisitIntro.gd": [1, "auto-pick", "kept: names the Auto-pick button (director, 2026-11-12)"],
     "scripts/ui/PreSeasonScene.gd": [10, "starter", "row 136: pre-season"],
@@ -145,6 +144,25 @@ TRAINING_OLD = [
     "but two players are already learning", "comes off it", "until you lock", "his projected peak",
 ]
 
+## The profile pass (copy voice pass 9): per file, the rewritten lines of the player profile and the
+## lines they replaced. Where he stands against his POT says "potential", never "projection".
+PROFILE_PASS = {
+    "scripts/ui/PlayerSheet.gd": [[
+        "His opinion of you sets how much a talk lifts him.\\nUnder %d, he may refuse to re-sign with us.",
+        "Each point under adds %d%% to the odds he refuses.",
+        "Out for %s with a %s injury.", "Injured. Out for %s.", "\"\\n\".join(state)",
+        "Development focus: %s", "He runs %.1f km a game this season.",
+        "Only %d of his attributes are rated.", "Nickname, or leave it blank",
+    ], ["The higher his opinion of you", "re-sign with you", "Injured: out", "\"Development: %s",
+        "This season: %.1f km", "rated on record", "blank for none"]],
+    "scripts/state/GameState.gd": [[
+        "\"Near his potential\"", "\"At his potential\"", "\"Beyond his potential\"",
+    ], ["\"Near his projected peak\"", "\"At his projected peak\"", "\"Past his projection\""]],
+    "scripts/sim/Trust.gd": [[
+        "His opinion of you: %d out of 100",
+    ], ["Opinion of you %d/100"]],
+}
+
 ## The contracts and trades pass (copy voice pass 8, with the T3.R56 trade and contract tutorials
 ## and the off-season brief): per file, the rewritten lines and the lines they replaced.
 CONTRACTS_PASS = {
@@ -208,7 +226,8 @@ CONTRACTS_PASS = {
 PASSES = [(HUB, "copy voice pass 2, hub", HUB_NEW, HUB_OLD)] + [
     (path, "copy voice pass 5, team and coaching", v[0], v[1]) for path, v in TEAM_PASS.items()] + [
     (TRAINING, "copy voice pass 6, training", TRAINING_NEW, TRAINING_OLD)] + [
-    (path, "copy voice pass 8, contracts and trades", v[0], v[1]) for path, v in CONTRACTS_PASS.items()]
+    (path, "copy voice pass 8, contracts and trades", v[0], v[1]) for path, v in CONTRACTS_PASS.items()] + [
+    (path, "copy voice pass 9, profile", v[0], v[1]) for path, v in PROFILE_PASS.items()]
 
 LITERAL = re.compile(r'"([^"\n]*)"')
 

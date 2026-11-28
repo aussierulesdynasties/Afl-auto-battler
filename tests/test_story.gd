@@ -453,7 +453,7 @@ func _test_choice_stakes_are_stated() -> void:
 func _test_trust_rules() -> void:
 	var rel := {}
 	var k := Trust.player_key("x")
-	_check(Trust.value(rel, k) == 0 and Trust.opinion(0) == 50 and Trust.opinion_line(0) == "Opinion of you 50/100",
+	_check(Trust.value(rel, k) == 0 and Trust.opinion(0) == 50 and Trust.opinion_line(0) == "His opinion of you: 50 out of 100",
 			"Nobody has a view of you to begin with: his opinion of you is 50/100")
 	# Shown as 50 + trust / 2, rounded (director 2026-11-08); the bands are unchanged.
 	_check(Trust.opinion(Trust.LOWEST) == 0 and Trust.opinion(Trust.HIGHEST) == 100 and Trust.opinion(-12) == 44
@@ -465,11 +465,11 @@ func _test_trust_rules() -> void:
 			"A move's size in the opinion shown: half the trust move, from where he starts and inside the scale")
 	_check(Trust.change(rel, k, 40, "Big moment", 2027, "Round 3") == Trust.STEP_MAX,
 			"One moment moves trust at most %d" % Trust.STEP_MAX)
-	_check(Trust.opinion_line(Trust.value(rel, k)) == "Opinion of you 60/100" and Trust.band(Trust.value(rel, k)) == "trusts",
+	_check(Trust.opinion_line(Trust.value(rel, k)) == "His opinion of you: 60 out of 100" and Trust.band(Trust.value(rel, k)) == "trusts",
 			"Twenty up: his opinion of you is 60/100")
 	for i in range(12):
 		Trust.change(rel, k, 10, "Moment %d" % i, 2027, "Round %d" % i)
-	_check(Trust.value(rel, k) == Trust.HIGHEST and Trust.opinion_line(Trust.HIGHEST) == "Opinion of you 100/100",
+	_check(Trust.value(rel, k) == Trust.HIGHEST and Trust.opinion_line(Trust.HIGHEST) == "His opinion of you: 100 out of 100",
 			"Trust tops out at 100/100")
 	var r := Trust.reasons(rel, k)
 	# 20 + 8 x 10 reaches the top at Moment 7; the four after it moved nothing
