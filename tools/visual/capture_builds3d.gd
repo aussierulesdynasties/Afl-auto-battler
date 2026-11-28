@@ -74,8 +74,14 @@ func _run() -> void:
 		for i in range(home_list.size()):
 			if str(home_list[i].get("id", "")) == _follow:
 				home_list[i] = Ovr.to(home_list[i].duplicate(true), 99)
+	var away_list: Array = gdb.club_list(_away)
+	if _follow != "":  # TEMP FOLLOW: the same for a followed man of the away side (Darcy, FRE_4)
+		away_list = away_list.duplicate()
+		for i in range(away_list.size()):
+			if str(away_list[i].get("id", "")) == _follow:
+				away_list[i] = Ovr.to(away_list[i].duplicate(true), 99)
 	var res: Dictionary = load("res://scripts/sim/MatchSim.gd").new(Squad_.new(_home, home_list, true, _home),
-			Squad_.new(_away, gdb.club_list(_away), false, _away), 31).run()
+			Squad_.new(_away, away_list, false, _away), 31).run()
 	_make_clouds()
 	await _clouds.changed
 	if mode == "lineup":
@@ -126,6 +132,14 @@ func _lineup(out: String, res: Dictionary, gdb, flat: bool) -> void:
 		men.append(p)
 		print("MAN %s %s %s pid %s h %s w %s build %s leg %.3f" % [club, _lineup_men[i][1], _lineup_men[i][2], who.get("id", "?"),
 				who.get("height_cm", "?"), who.get("weight_kg", "?"), p.get("build", {}), float(p.get("leg", 1.0))])
+	if OS.get_environment("HEADPITCH") != "":  # TEMP Darcy baseline2: idle frozen at 0.4 s, head bone tipped about the world left-right axis (+ = face up, deg)
+		for i in range(men.size()):
+			(men[i]["anim"] as AnimationPlayer).pause()
+			var sk3: Skeleton3D = men[i]["skel"]
+			var hi := sk3.find_bone("head")
+			var ax: Vector3 = (sk3.get_bone_global_pose(sk3.get_bone_parent(hi)).basis.inverse() * (sk3.global_transform.basis.inverse() * Vector3.RIGHT)).normalized()
+			sk3.set_bone_pose_rotation(hi, Quaternion(ax, deg_to_rad(-float(OS.get_environment("HEADPITCH")))) * sk3.get_bone_pose_rotation(hi))
+			print("HEADPITCH ", OS.get_environment("HEADPITCH"), " axis(parent) ", ax)
 	var cam: Camera3D = oval.camera
 	cam.keep_aspect = Camera3D.KEEP_WIDTH
 	# Which way the men face: their front is +z or -z in the GLB; film both ends, label by file.
@@ -141,6 +155,17 @@ func _lineup(out: String, res: Dictionary, gdb, flat: bool) -> void:
 		var skel: Skeleton3D = men[i]["skel"]
 		var h: Vector3 = skel.global_transform * skel.get_bone_global_pose(skel.find_bone("head")).origin + Vector3(0, 0.02, 0)
 		views["head%d" % i] = [h + Vector3(0, 0.0, 3.0), h, 0.5]
+		if OS.get_environment("LEVEL") != "":  # TEMP Darcy baseline2: level cameras at his eye height, each distance in LEVELD
+			var lv := OS.get_environment("LEVEL").split(",")  # eye dx, dy, dz from h (m)
+			var e := h + Vector3(float(lv[0]), float(lv[1]), float(lv[2]))
+			for dd in OS.get_environment("LEVELD").split(","):  # distances from his eyes (m)
+				var D := float(dd)
+				# 85 mm full-frame equivalent: the 900 px frame height spans 23.9 deg (a 36 mm-wide square crop)
+				views["head%d_lvl_%s" % [i, dd]] = [e + Vector3(0, 0, D), e, 2.0 * D * tan(deg_to_rad(11.95)) * 16.0 / 9.0]
+				# the same eye, face the size it has at 0.8 m with 85 mm (a longer lens; perspective set by distance alone)
+				views["head%d_lvlz_%s" % [i, dd]] = [e + Vector3(0, 0, D), e, 0.3385 * 16.0 / 9.0]
+				views["head%d_lvlq_%s" % [i, dd]] = [e + Vector3(D * 0.7071, 0, D * 0.7071), e, 0.3385 * 16.0 / 9.0]  # TEMP round6: three-quarter
+				views["head%d_lvlp_%s" % [i, dd]] = [e + Vector3(D, 0, 0), e, 0.3385 * 16.0 / 9.0]  # TEMP round6: profile
 		views["head%d_q" % i] = [h + Vector3(2.1, 0.0, 2.1), h, 0.5]
 		views["head%d_b" % i] = [h + Vector3(1.8, 1.2, -2.1), h, 0.5]
 		# His head and neck side on, level with his throat, 0.6 m across: the line from his collar to his chin.
@@ -166,7 +191,7 @@ func _lineup(out: String, res: Dictionary, gdb, flat: bool) -> void:
 			ap2.play("jog")
 			ap2.pause()
 			var sk: Skeleton3D = men[i]["skel"]
-			for ang in [["q", Vector3(2.1, 0.0, 2.1)], ["p", Vector3(3.0, -0.1, 0.0)], ["b", Vector3(-1.8, 0.6, -2.4)]]:
+			for ang in [["f", Vector3(0.0, 0.0, 3.0)], ["q", Vector3(2.1, 0.0, 2.1)], ["p", Vector3(3.0, -0.1, 0.0)], ["b", Vector3(-1.8, 0.6, -2.4)]]:
 				for k in range(90):
 					ap2.seek(k / 30.0, true)
 					for j in range(men.size()):
@@ -181,6 +206,8 @@ func _lineup(out: String, res: Dictionary, gdb, flat: bool) -> void:
 		print("CLIP done")
 		return
 	for v in views:
+		if OS.get_environment("ONLYV") != "" and not v.contains(OS.get_environment("ONLYV")):  # TEMP Darcy baseline2: only the named views
+			continue
 		var eye: Vector3 = views[v][0]
 		var aim: Vector3 = views[v][1]
 		cam.global_position = eye
@@ -206,6 +233,7 @@ func _match(out: String, res: Dictionary) -> void:
 	var f0 := int(t0 / DT)
 	var f1 := int((t0 + dur) / DT)
 	var balls := []
+	var yaws := []  # TEMP FOLLOW: his world facing each frame
 	var n := 0
 	var who := -1
 	print("FOLLOW ", _follow)
@@ -213,25 +241,49 @@ func _match(out: String, res: Dictionary) -> void:
 		if str(oval.players[i].get("pid", "")) == _follow and _follow != "":
 			who = i
 	print("FOLLOW index ", who)
-	while n <= f1 and not d.idle():
+	var seen := 0
+	var first := -1  # TEMP FOLLOW: the film starts the first frame he is on the ground
+	while (n <= f1 or (_follow != "" and (first < 0 or n <= first + int(dur / DT)))) and not d.idle():
 		d.advance(DT)
 		oval.sync(DT)
+		who = -1  # TEMP FOLLOW: look him up every frame (he may start on the bench; an interchange re-dresses a slot)
+		for i in range(oval.players.size()):
+			if str(oval.players[i].get("pid", "")) == _follow and _follow != "":
+				who = i
+		if who >= 0:
+			seen += 1
+			if first < 0:
+				first = n
 		balls.append(oval.ball.global_position if who < 0 else (oval.players[who]["node"] as Node3D).global_position)
+		yaws.append(0.0 if who < 0 else (oval.players[who]["node"] as Node3D).global_rotation.y)
 		n += 1
+	if _follow != "" and first >= 0:
+		f0 = first
+		f1 = first + int(dur / DT)
 	f1 = mini(f1, balls.size() - 1)
+	print("FOLLOW frames on ground ", seen, " of ", balls.size(), " first ", first, " window ", f0, "-", f1)
 	oval.queue_free()
 	await process_frame
+	var faces := []  # TEMP FOLLOW: his facing averaged over half a second (a unit-vector mean, so it wraps)
+	for f in range(f0, f1 + 1):
+		var v := Vector2.ZERO
+		for g in range(maxi(f0, f - 15), mini(yaws.size() - 1, f + 15) + 1):
+			v += Vector2(sin(yaws[g]), cos(yaws[g]))
+		faces.append(atan2(v.x, v.y))
 	var aims := []
 	for f in range(f0, f1 + 1):
 		var a := Vector3.ZERO
 		var c := 0
-		for g in range(maxi(0, f - 30), mini(balls.size() - 1, f + 30) + 1):
+		var sm := 30 if _follow == "" else 5  # TEMP FOLLOW: a short average, so a 1.6 m frame keeps a running man
+		for g in range(maxi(f0 if _follow != "" else 0, f - sm), mini(balls.size() - 1, f + sm) + 1):
 			a += balls[g]
 			c += 1
 		a /= float(c)
 		a.y = 1.0 if _follow == "" else 1.9
 		aims.append(a)
-	for shot in [["main", Vector2i(1080, 608), 57.0], ["close", Vector2i(1080, 608), 14.0 if _follow == "" else 3.0]]:
+	for shot in [["main", Vector2i(1080, 608), 57.0], ["close", Vector2i(1080, 608), 14.0 if _follow == "" else 1.6]]:
+		if OS.get_environment("SHOTS") != "" and not str(shot[0]) in OS.get_environment("SHOTS"):
+			continue  # TEMP: render only the named shots
 		var size: Vector2i = shot[1]
 		root.size = size
 		DisplayServer.window_set_size(size)
@@ -252,6 +304,12 @@ func _match(out: String, res: Dictionary) -> void:
 				continue
 			var aim: Vector3 = aims[clampi(n - f0, 0, f1 - f0)]
 			var eye := Vector3(0.0, 15.0, HALF_WID + 25.0) if shot[0] == "main" else aim + (Vector3(0.0, 3.0, 22.0) if _follow == "" else Vector3(0.0, 0.3, 7.0))
+			if _follow != "":  # TEMP FOLLOW: wide eye on the boundary (clear of the crowd); close eye swings round him until no man blocks his head
+				if shot[0] == "main":
+					var ex := aim.x * 0.5
+					eye = Vector3(ex, 9.0, (MatchMotion.HALF_WID - 3.0) * sqrt(maxf(0.0, 1.0 - pow(ex / (MatchMotion.HALF_LEN - 3.0), 2.0))))
+				else:
+					eye = _clear_eye(oval, aim, faces[clampi(n - f0, 0, f1 - f0)])
 			cam.global_position = eye
 			cam.look_at(aim, Vector3.UP)
 			cam.fov = rad_to_deg(2.0 * atan(float(shot[2]) * 0.5 / eye.distance_to(aim)))
@@ -265,6 +323,29 @@ func _match(out: String, res: Dictionary) -> void:
 		print("SHOT %s done" % shot[0])
 		oval.queue_free()
 		await process_frame
+
+
+## TEMP FOLLOW: an eye 4 m from his head, at the last angle if nothing blocks the line to it, else the nearest clear
+## angle (15 degree steps). Blocked = another man's body (a 0.45 m column, ground to 2 m) within reach of the line.
+func _clear_eye(oval, aim: Vector3, last: float) -> Vector3:
+	var best := Vector3.ZERO
+	for k in range(25):
+		var a := last + deg_to_rad(15.0) * float((k + 1) / 2) * (1.0 if k % 2 == 1 else -1.0) if k > 0 else last
+		var e := aim + Vector3(sin(a) * 4.0, 0.2, cos(a) * 4.0)
+		if k == 0:
+			best = e
+		var hit := false
+		for q in oval.players:
+			var pos: Vector3 = (q["node"] as Node3D).global_position
+			if Vector2(pos.x - aim.x, pos.z - aim.z).length() < 0.6:
+				continue  # him
+			for t in [0.25, 0.4, 0.55, 0.7, 0.85, 1.0]:
+				var on: Vector3 = aim.lerp(e, t)
+				if Vector2(on.x - pos.x, on.z - pos.z).length() < 0.45 and on.y < pos.y + 2.0:
+					hit = true
+		if not hit:
+			return e
+	return best
 
 
 func _make_clouds() -> void:

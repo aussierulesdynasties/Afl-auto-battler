@@ -2532,6 +2532,7 @@ static var _headless := {}
 static var _heads_info = null
 static var _socket := {}
 static var _socket_heads := {}
+static var _socket_grooms := {}  # TEMP Darcy faces test
 static var _skin_maps := {}
 
 
@@ -2592,6 +2593,37 @@ func _head(p: Dictionary, pid: String) -> void:
 	if skin != "":
 		head.set_instance_shader_parameter("skin", Color(skin))
 	p["head_node"] = head
+	var gkey := path + str(body.get_meta("full_mesh").get_instance_id())
+	if _socket_grooms.has(gkey):  # TEMP Darcy faces test: grooms cast no shadow
+		var gh := MeshInstance3D.new()
+		gh.name = "HeadGrooms"
+		gh.mesh = _socket_grooms[gkey]
+		gh.transform = body.transform
+		gh.skin = body.skin
+		gh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		body.get_parent().add_child(gh)
+		gh.skeleton = gh.get_path_to(body.get_node(body.skeleton))
+	if OS.has_environment("COLLARPROBE"):  # TEMP Darcy: which mesh is which round the collar (unshaded flat colours)
+		var pal := [Color(0, 0, 1), Color(1, 1, 0), Color(0, 1, 1), Color(1, 0, 1), Color(1, 0.5, 0), Color(0.5, 0, 1), Color(1, 1, 1), Color(0.5, 0.5, 0.5)]
+		var n := 0
+		for mi in (p["node"] as Node3D).find_children("*", "MeshInstance3D", true, false):
+			var m := mi as MeshInstance3D
+			if not m.has_meta("kit"):
+				continue
+			for s in range(m.mesh.get_surface_count()):
+				var sm := m.mesh.surface_get_material(s)
+				var nm := sm.resource_name if sm != null else ""
+				var pm := StandardMaterial3D.new()
+				pm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+				pm.albedo_color = Color(1, 0, 0) if nm == "ARD_skin" else pal[n % pal.size()]
+				if nm != "ARD_skin":
+					n += 1
+				m.set_surface_override_material(s, pm)
+				print("COLLARPROBE ", m.name, " surface ", s, " ", nm, " ", pm.albedo_color)
+		var hm := StandardMaterial3D.new()
+		hm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		hm.albedo_color = Color(0, 1, 0)
+		head.material_override = hm
 
 
 ## The socket ring (socket.json): "ring" its points in order round the neck, "centre" the middle of
@@ -2715,9 +2747,26 @@ static func socket_head(path: String, full: Mesh) -> Mesh:
 	var share := PackedFloat32Array()
 	share.resize(hv.size())
 	var at := []
+	# TEMP Darcy collar: under the guernsey's collar (its top edge sits 20 mm above the socket, 4% out from
+	# it) his neck is drawn in toward the neck's centre line, so when he moves it stays inside the collar
+	# instead of crossing it in a saw-tooth line. Full pull at the collar top, none on the socket itself
+	# (the join with the body stays shut) and none from 15 mm above the collar top.
+	var collar_q := float(OS.get_environment("COLLAR_Q")) if OS.has_environment("COLLAR_Q") else 0.0
+	var sc: Vector3 = socket()["centre"]
 	for i in range(hv.size()):
 		hv[i] = xf * hv[i]
 		hn[i] = (xf.basis * hn[i]).normalized()
+		if collar_q > 0.0:
+			var ca: Array = _socket_at(_socket_angle(hv[i], sc))
+			var rp: Vector3 = (ring[ca[0]] as Vector3).lerp(ring[ca[1]], ca[2])
+			var up := hv[i].y - rp.y
+			var rr := Vector2(rp.x - sc.x, rp.z - sc.z).length()
+			var dv := Vector2(hv[i].x - sc.x, hv[i].z - sc.z)
+			var w := smoothstep(0.0, 0.020, up) * (1.0 - smoothstep(0.020, 0.035, up))
+			var nr := lerpf(dv.length(), minf(dv.length(), rr * collar_q), w)
+			if dv.length() > 1e-6:
+				dv = dv * (nr / dv.length())
+				hv[i] = Vector3(sc.x + dv.x, hv[i].y, sc.z + dv.y)
 		var j: int = nearest.call(hv[i])
 		for k in range(per):
 			bones[i * per + k] = bb[j * per + k]
@@ -2808,7 +2857,100 @@ static func socket_head(path: String, full: Mesh) -> Mesh:
 	mat.set_shader_parameter("skin_head_nrm", load("res://assets/oval3d/skin/Head_Normal.png"))
 	mat.set_shader_parameter("skin_head_srmf", load("res://assets/oval3d/skin/Head_SRMF.png"))
 	mat.set_shader_parameter("sss", float(OS.get_environment("HEAD_SSS")) if OS.has_environment("HEAD_SSS") else 0.0)  # TEMP test
+	mat.set_shader_parameter("eye_probe", int(OS.get_environment("EYEPROBE")) if OS.has_environment("EYEPROBE") else 0)  # TEMP Darcy: iris probe
 	out.surface_set_material(0, mat)
+	# TEMP (Darcy faces test, not for main): his MetaHuman groom cards (hair, moustache, brows) from
+	# <pid>_grooms.glb, each card point skinned like the nearest point of his head, as extra surfaces.
+	var gpath := path.replace(".glb", "_grooms.glb")
+	if ResourceLoader.exists(gpath):
+		var hcells := {}
+		for i in range(hv.size()):
+			var hk := Vector3i((hv[i] / 0.01).floor())
+			if not hcells.has(hk):
+				hcells[hk] = PackedInt32Array()
+			hcells[hk].append(i)
+		var hnear := func(v: Vector3) -> int:
+			var c := Vector3i((v / 0.01).floor())
+			var best := -1
+			var bd := INF
+			for reach in range(0, 12):
+				for dx in range(-reach, reach + 1):
+					for dy in range(-reach, reach + 1):
+						for dz in range(-reach, reach + 1):
+							if maxi(absi(dx), maxi(absi(dy), absi(dz))) != reach:
+								continue
+							var cell = hcells.get(c + Vector3i(dx, dy, dz))
+							if cell == null:
+								continue
+							for i in cell:
+								var d := hv[i].distance_squared_to(v)
+								if d < bd:
+									bd = d
+									best = i
+				if best >= 0 and sqrt(bd) < 0.01 * reach:
+					break
+			return best
+		var groot: Node = (load(gpath) as PackedScene).instantiate()
+		# Own mesh (own MeshInstance, cast_shadow off in the caller): the cards don't shade each other black.
+		var gout := ArrayMesh.new()
+		for gm in groot.find_children("*", "MeshInstance3D", true, false):
+			var gmi := gm as MeshInstance3D
+			var gx := Transform3D.IDENTITY
+			var nn: Node = gmi
+			while nn != groot and nn is Node3D:
+				gx = (nn as Node3D).transform * gx
+				nn = nn.get_parent()
+			for s in range(gmi.mesh.get_surface_count()):
+				var ga := gmi.mesh.surface_get_arrays(s)
+				var gv: PackedVector3Array = ga[Mesh.ARRAY_VERTEX]
+				var gn: PackedVector3Array = ga[Mesh.ARRAY_NORMAL]
+				var gb := PackedInt32Array()
+				var gw := PackedFloat32Array()
+				gb.resize(gv.size() * per)
+				gw.resize(gv.size() * per)
+				for i in range(gv.size()):
+					gv[i] = gx * gv[i]
+					gn[i] = (gx.basis * gn[i]).normalized()
+					var j: int = hnear.call(gv[i])
+					for k in range(per):
+						gb[i * per + k] = bones[j * per + k]
+						gw[i * per + k] = weights[j * per + k]
+				ga[Mesh.ARRAY_VERTEX] = gv
+				ga[Mesh.ARRAY_NORMAL] = gn
+				ga[Mesh.ARRAY_BONES] = gb
+				ga[Mesh.ARRAY_WEIGHTS] = gw
+				ga[Mesh.ARRAY_TANGENT] = null
+				gout.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, ga, [], {}, am.surface_get_format(skin_s) & Mesh.ARRAY_FLAG_USE_8_BONE_WEIGHTS)
+				var gsrc := gmi.mesh.surface_get_material(s)
+				var gmat := StandardMaterial3D.new()
+				if gsrc is BaseMaterial3D:
+					gmat.albedo_texture = (gsrc as BaseMaterial3D).albedo_texture
+				# TEMP Darcy: coverage-preserving mips (covmips.py) beside the glb, <pid>_<groom>.mips, raw RGBA8 levels
+				var mp := gpath.replace(".glb", "_" + String(gmi.name).trim_prefix("groom_") + ".mips")
+				if FileAccess.file_exists(mp) and gmat.albedo_texture != null:
+					var tw := gmat.albedo_texture.get_width()
+					var mimg := Image.create_from_data(tw, tw, true, Image.FORMAT_RGBA8, FileAccess.get_file_as_bytes(mp))
+					gmat.albedo_texture = ImageTexture.create_from_image(mimg)
+					print("GROOM mips ", mp, " ", tw, " levels ", mimg.get_mipmap_count())
+				match OS.get_environment("HAIRPROBE"):  # TEMP Darcy: hair-dark probe
+					"unshaded":
+						gmat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+					"noshadow":
+						gmat.disable_receive_shadows = true
+					"mask":
+						gmat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+						gmat.albedo_color = Color(8.0, 0.0, 0.0)
+					"nospec":
+						gmat.specular_mode = BaseMaterial3D.SPECULAR_DISABLED
+						gmat.disable_receive_shadows = true
+				gmat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
+				gmat.alpha_scissor_threshold = 0.35
+				gmat.cull_mode = BaseMaterial3D.CULL_DISABLED
+				gmat.roughness = 0.6
+				gout.surface_set_material(gout.get_surface_count() - 1, gmat)
+				print("GROOM surface ", gmi.name, " ", gv.size(), " points")
+		groot.free()
+		_socket_grooms[key] = gout
 	_socket_heads[key] = out
 	return out
 
@@ -2898,12 +3040,80 @@ static func _without_head(m: Mesh) -> Mesh:
 		if keep.is_empty():
 			keep = PackedInt32Array([0, 0, 0])
 		a[Mesh.ARRAY_INDEX] = keep
-		out.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, a, am.surface_get_blend_shape_arrays(s), {},
+		var bsa := am.surface_get_blend_shape_arrays(s)
+		if nm == "ARD_guernsey" and not OS.has_environment("COLLAR_OFF"):
+			_collar_even(a, bsa if am.blend_shape_mode == Mesh.BLEND_SHAPE_MODE_NORMALIZED else [])
+		out.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, a, bsa, {},
 				_custom_format(am, s))
 		out.surface_set_material(s, mat)
 		out.surface_set_name(s, am.surface_get_name(s))
 	_headless[m] = out
 	return out
+
+
+## TEMP Darcy collar. The guernsey's collar top is cut as a saw-tooth round the back and back-sides: teeth
+## reach the collar top (20 mm above the socket) with notches between them down at 8-10 mm, and the notches
+## read as spikes against his neck. Each notch point on the collar's open edge, round the back and sides (more
+## than 60 degrees from the front), is lifted onto the collar's top line (its height and its distance out
+## from the neck at that angle), so the collar top runs as one even line. Body builds move it the same.
+static func _collar_even(a: Array, bsa: Array) -> void:
+	var vs: PackedVector3Array = a[Mesh.ARRAY_VERTEX]
+	var idx: PackedInt32Array = a[Mesh.ARRAY_INDEX]
+	var c: Vector3 = socket()["centre"]
+	var ring: Array = socket()["ring"]
+	# Points welded by position (split normals and seams cut the collar into pieces), then each welded
+	# edge counted: an edge on one triangle only is the collar's open edge.
+	var wid := PackedInt32Array()
+	wid.resize(vs.size())
+	var keys := {}
+	for i in range(vs.size()):
+		var k := Vector3i((vs[i] / 0.0005).round())
+		if not keys.has(k):
+			keys[k] = keys.size()
+		wid[i] = keys[k]
+	var edges := {}
+	for f in range(0, idx.size(), 3):
+		for e in range(3):
+			var p := wid[idx[f + e]]
+			var q := wid[idx[f + (e + 1) % 3]]
+			var ek := Vector2i(mini(p, q), maxi(p, q))
+			edges[ek] = edges.get(ek, 0) + 1
+	var open := {}
+	for ek in edges:
+		if edges[ek] == 1:
+			open[ek.x] = true
+			open[ek.y] = true
+	var moved := 0
+	var off := PackedVector3Array()
+	off.resize(vs.size())
+	for i in range(vs.size()):
+		if not open.has(wid[i]):
+			continue
+		var t := _socket_angle(vs[i], c)
+		if t < deg_to_rad(60.0) or t > deg_to_rad(300.0):
+			continue
+		var at := _socket_at(t)
+		var rp: Vector3 = (ring[at[0]] as Vector3).lerp(ring[at[1]], at[2])
+		var rr := Vector2(rp.x - c.x, rp.z - c.z).length()
+		var d := Vector2(vs[i].x - c.x, vs[i].z - c.z)
+		var up := vs[i].y - rp.y
+		var q := d.length() / rr
+		if OS.has_environment("COLLAR_DBG") and up > -0.005 and q < 1.3:
+			print("COLLARDBG %.1f %.1f %.2f" % [rad_to_deg(t), up * 1000.0, q])
+		if up < 0.005 or up > 0.022 or q < 1.0 or q > 1.17:
+			continue
+		var nd := d.normalized() * rr * 1.04
+		var nv := Vector3(c.x + nd.x, rp.y + 0.020, c.z + nd.y)
+		off[i] = nv - vs[i]
+		vs[i] = nv
+		moved += 1
+	a[Mesh.ARRAY_VERTEX] = vs
+	for b in bsa:
+		var sv: PackedVector3Array = b[Mesh.ARRAY_VERTEX]
+		for i in range(sv.size()):
+			sv[i] += off[i]
+		b[Mesh.ARRAY_VERTEX] = sv
+	print("COLLAR even: %d notch points lifted" % moved)
 
 
 ## The custom channels' types on surface s (the MetaHuman's own skin coordinates ride in

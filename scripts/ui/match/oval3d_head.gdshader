@@ -11,6 +11,7 @@ render_mode cull_disabled;
 uniform sampler2D tex : source_color, filter_linear_mipmap_anisotropic;
 uniform float rough = 0.6;
 uniform float sss = 0.0;
+uniform int eye_probe = 0;  // TEMP Darcy iris probe: 1 eyes no specular, 2 eyes no ambient/indirect (AO 0), 3 both
 uniform vec3 beard_dark : source_color = vec3(0.06, 0.04, 0.03);
 instance uniform vec4 skin : source_color = vec4(0.76, 0.57, 0.45, 1.0);
 // The stock MetaHuman head's pores and sheen (director 2026-11-19: "Add the pore map"), read at the head's second
@@ -69,6 +70,9 @@ void fragment() {
 	// His head is skin and hair in one texture: all of it takes the soft skin light; a beard card's back does not.
 	skin_wrap = 1.0;
 	spec_amt = 0.5;
+	if (has_maps < 0.5 && (eye_probe == 1 || eye_probe == 3)) { SPECULAR = 0.0; spec_amt = 0.0; }
+	if (has_maps < 0.5 && (eye_probe == 2 || eye_probe == 3)) { AO = 0.0; AO_LIGHT_AFFECT = 0.0; }
+	if (eye_probe == 4) { float lm = dot(texture(tex, UV).rgb, vec3(0.333)); ALBEDO = vec3(0.0); SPECULAR = 0.0; spec_amt = 0.0; skin_wrap = 0.0; vec3 tc = texture(tex, UV).rgb; EMISSION = (has_maps < 0.5 && tc.g - tc.r > 0.02 && lm > 0.05) ? vec3(0.0, 8.0, 0.0) : vec3(0.0); }  // TEMP Darcy: iris mask
 	if (!FRONT_FACING && bend < 0.5) {
 		ALBEDO = beard_dark;
 		EMISSION = vec3(0.0);
