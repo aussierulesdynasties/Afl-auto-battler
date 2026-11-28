@@ -81,10 +81,17 @@ func _run() -> void:
 # Helpers
 
 ## A Collingwood season with its whole record, and the night opened on it.
-func _open() -> Control:
+## The record is made again each time (Fixture.build replaces the whole of
+## it: the count's place, the awards, the nominations), on one career started
+## once; a test that saves and loads asks for a `fresh` one of its own
+## (director 2026-11-14: "shrink the tests").
+var _started := false
+func _open(fresh := false) -> Control:
 	Engine.time_scale = 1.0
-	_state.reset()
-	_state.start_season("COL", _db.club_list("COL"))
+	if fresh or not _started or _state.my_club != "COL" or _state.season == null:
+		_state.reset()
+		_state.start_season("COL", _db.club_list("COL"))
+		_started = not fresh
 	Fixture.build(_state, "COL")
 	return await _show()
 
@@ -276,6 +283,12 @@ func _test_live() -> void:
 	why = await _tap(c, "CountSkipRound")
 	_check(why == "" and int(view.rounds) == r + 1 and int(view.matches) <= 1 and view.live,
 			"Skip round reads the rest of the round at once and the count keeps going (round %d to %d)" % [r, int(view.rounds)])
+	# Skip round on to the last round before halfway (a game read costs a
+	# board drawn again), then live: the break must still hold there.
+	for i in range(int(view.break_after)):
+		if int(view.rounds) >= int(view.break_after) - 1:
+			break
+		await _tap(c, "CountSkipRound")
 	Engine.time_scale = FAST
 	_check(await _until(func() -> bool: return view.at_break) and _find(c, "CountRisingStar") != null,
 			"Live, the count stops at halfway for the Rising Star")
@@ -303,7 +316,7 @@ func _test_live() -> void:
 ## presented, over the final board, and stays there when the night is picked
 ## up again after a save; one tap on goes to the winner.
 func _test_skip_before_the_break() -> void:
-	var c := await _open()
+	var c := await _open(true)
 	await _tap(c, "AwardsNext")
 	var why := await _tap(c, "CountSkipAll")
 	var view = _find(c, "AwardsCount")
@@ -452,7 +465,7 @@ func _fits(c: Control, size: Vector2i, when: String) -> void:
 ## A night left part way is picked up where it was, after a save and a
 ## reload; a replay starts again from Round 1 and leaves the place alone.
 func _test_resume() -> void:
-	var c := await _open()
+	var c := await _open(true)
 	for i in range(3):
 		await _tap(c, "AwardsNext")
 	var at: Dictionary = _state.season_awards.get("count_at", {})
@@ -505,6 +518,7 @@ func _test_back() -> void:
 ## A season recorded part way (a save from before the record, or one loaded
 ## during the season) keeps the winner-by-winner reveal.
 func _test_older_save() -> void:
+	_started = false
 	_state.reset()
 	_state.start_season("COL", _db.club_list("COL"))
 	Fixture.build(_state, "COL")

@@ -224,8 +224,11 @@ func _test_bench_debut() -> void:
 
 func _test_old_save() -> void:
 	_fresh()
-	_state.advance()
-	_state.advance()
+	# Two games on the ladder, a win and a loss, set rather than played (director
+	# 2026-11-14: "shrink the tests less than 10 seconds too").
+	var row: Dictionary = _state.my_ladder_row()
+	row["w"] = int(row["w"]) + 1
+	row["l"] = int(row["l"]) + 1
 	_check(_state.save_career(), "(setup) saved")
 	var blob := CareerSave.read(_state.save_path)
 	blob.erase("milestone_log")
