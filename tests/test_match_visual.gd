@@ -2230,7 +2230,7 @@ func _label_run(what: String, ringed_count: int) -> void:
 		if guard % 6 != 0:
 			continue
 		var tr := pv.token_radius()
-		var fs := clampi(int(tr * 1.15), 9, 12)
+		var fs := PitchView.role_label_size(tr)
 		var discs := pv.disc_positions()
 		var lay := pv.role_label_layout(tr, fs)
 		var wanted := pv.label_wanted()
