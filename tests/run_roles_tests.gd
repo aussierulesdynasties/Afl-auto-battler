@@ -745,6 +745,9 @@ func _test_selection_pages_tests() -> void:
 			_check(col2 != null and lsc != null and col2.is_ancestor_of(lsc) and grid2 != null and grid2.columns == 2
 					and lsc.size.y >= size.y * 0.5,
 					"PC: the players not picked take the right column, two across, %d tall (%s)" % [int(lsc.size.y) if lsc != null else 0, ptag])
+			# One line a man (Batch 5, the director's board): the old card's extras stay in his tooltip and profile.
+			_check(grid2.get_child_count() > 0 and (grid2.get_child(0) as Control).size.y <= 30.0,
+					"PC: a player not picked is a one-line row (%s, %d tall)" % [ptag, int((grid2.get_child(0) as Control).size.y) if grid2.get_child_count() > 0 else 0])
 			var tl: String = await Tap.tap(grid2.get_child(0))
 			await _settle()
 			_check(tl == "" and ui.find_child("PickedBar", true, false) != null,
@@ -799,13 +802,31 @@ func _test_selection_pages_tests() -> void:
 		if ap != null:
 			ap.get_popup().hide()
 			await _settle()
+		# Our side | Not picked (Batch 5, the director's board): the players not
+		# picked have a stage of their own, and Back from it goes to the oval.
+		var field9: Control = ui.find_child("BuilderField", true, false)
+		var rest9: Control = ui.find_child("NotPickedStage", true, false)
+		var tap_rest: String = await Tap.tap(ui.find_child("SelectionStages_rest", true, false))
+		await _settle()
+		_check(tap_rest == "" and rest9 != null and rest9.is_visible_in_tree() and not field9.is_visible_in_tree(),
+				"PC 960x540: a real click on Not picked shows the players not picked on a stage of their own (%s: %s)" % [club, tap_rest])
+		_check(ui.call("handle_back") == true and field9.is_visible_in_tree() and not rest9.is_visible_in_tree(),
+				"PC 960x540: Back from the players not picked goes to the oval (%s)" % club)
+		tap_rest = await Tap.tap(ui.find_child("SelectionStages_rest", true, false))
+		await _settle()
+		# ...and a real click on one takes him back to the oval, held, his line under the switch.
 		var grid9: GridContainer = ui.find_child("NotSelected", true, false)
 		var tap_np: String = "no player not picked"
-		if grid9 != null and grid9.get_child_count() > 0:
+		if tap_rest != "":
+			tap_np = "Not picked: " + tap_rest
+		elif grid9 != null and grid9.get_child_count() > 0:
 			tap_np = await Tap.tap(grid9.get_child(0))
 		await _settle()
-		_check(tap_np == "" and ui.find_child("PickedBar", true, false) != null,
-				"PC 960x540: a real tap on a player not picked picks him up (%s: %s)" % [club, tap_np])
+		var bar9: Control = ui.find_child("PickedBar", true, false)
+		var note9: Control = ui.find_child("StageNote", true, false)
+		_check(tap_np == "" and bar9 != null and note9 != null and note9.is_ancestor_of(bar9) and bar9.is_visible_in_tree()
+				and field9.is_visible_in_tree() and str(ui.get("_stage")) == "side",
+				"PC 960x540: a real click on a player not picked takes him back to the oval, held (%s: %s)" % [club, tap_np])
 		ui.queue_free()
 		await _settle()
 	root.size = Vector2i(420, 860)
