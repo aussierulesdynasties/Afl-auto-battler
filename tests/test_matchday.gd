@@ -31,6 +31,7 @@ func run() -> void:
 	_t("_test_coaches_votes")
 	_t("_test_report_glance")
 	_t("_test_lift_skips_short_games")
+	_t("_test_lift_needs_the_minutes")
 	_t("_test_club_markers")
 	_t("_test_palette_snapshot")
 	_t("_test_headlines")
@@ -427,6 +428,77 @@ func _test_lift_skips_short_games() -> void:
 				named_hurt = str(p["name"])
 	_check(hurt_seen > 0 and named_hurt == "",
 			"No player hurt before the last quarter is in Needs a lift (%d matches with one; named %s)" % [hurt_seen, named_hurt])
+
+
+## Needs a lift names a man who had the game (director playtest of 1.0.15:
+## "0?" beside a man named with 0 disposals). The sim counts every player's
+## minutes on the ground, from the opening line-up and every interchange; one
+## on for under half the game is never named, so a bare "0 disposals" never
+## stands for a man who barely played.
+func _test_lift_needs_the_minutes() -> void:
+	var poor := {"kicks": 4, "handballs": 3, "tackles": 1}   # rating 13
+	var report := {"quarters": 4, "my_ranked": [
+			{"id": "a", "name": "One quarter", "stats": {}, "tog": 32},
+			{"id": "b", "name": "Full game", "stats": poor, "tog": 104}]}
+	var names := (CoachReport.glance(report, true)["lift"] as Array).map(func(x): return str(x["name"]))
+	_check(not names.has("One quarter"), "A man on for one quarter is not someone who needs a lift (%s)" % str(names))
+	_check(names.has("Full game"), "A poor game over most of the match is named (%s)" % str(names))
+	# From real matches: minutes add up from the line-ups and the interchange
+	# log, and nobody short of half the game is named.
+	var short_seen := 0
+	var named_short := []
+	var off_by := 0
+	var has_tog := true
+	for seed in range(30):
+		var sim := MatchSim.new(Squad.new("MEL", GameDB.club_list("MEL"), true, "MEL"),
+				Squad.new("BRL", GameDB.club_list("BRL"), false, "BRL"), 9300 + seed)
+		var res := sim.run()
+		res["home"] = "MEL"
+		res["away"] = "BRL"
+		if not res.has("tog"):
+			has_tog = false
+			break
+		var tog: Dictionary = res["tog"]
+		for side in range(2):
+			# The same minutes, worked out from the opening bench and the subs.
+			var on_since := {}
+			var mins := {}
+			var by_num := {}
+			var bench := {}
+			for r in (res["bench"] as Array)[side]:
+				bench[str(r["id"])] = true
+			for p in (res["roster"] as Array)[side]:
+				by_num[int(p["num"])] = str(p["id"])
+				if not bench.has(str(p["id"])):
+					on_since[str(p["id"])] = 0
+			for ev in res["events"]:
+				if str(ev.get("kind", "")) != "sub" or int(ev.get("side", -1)) != side:
+					continue
+				var off := str(by_num.get(int(ev["off_num"]), ""))
+				if on_since.has(off):
+					mins[off] = int(mins.get(off, 0)) + int(ev["min"]) - int(on_since[off])
+					on_since.erase(off)
+				on_since[str(ev["player_id"])] = int(ev["min"])
+			for id in on_since:
+				mins[id] = int(mins.get(id, 0)) + 120 - int(on_since[id])
+			for id in mins:
+				if int(mins[id]) != int(tog.get(id, -1)):
+					off_by += 1
+			for p in (res["roster"] as Array)[side]:
+				if int(tog.get(str(p["id"]), 0)) < 60:
+					short_seen += 1
+			var rep := CoachReport.match_report(res, side)
+			var by_name := {}
+			for e in rep["my_ranked"]:
+				by_name[str(e["name"])] = str(e["id"])
+			for p in CoachReport.glance(rep, true)["lift"]:
+				var t := int(tog.get(str(by_name.get(str(p["name"]), "")), 0))
+				if t < 60:
+					named_short.append("%s %d min, %s" % [p["name"], t, p["line"]])
+	_check(has_tog, "A match result counts each player's minutes on the ground")
+	_check(off_by == 0 and short_seen > 0,
+			"Minutes on the ground match the line-ups and the interchange log (%d off; %d short games seen)" % [off_by, short_seen])
+	_check(named_short.is_empty(), "Nobody on for under half the game is in Needs a lift (%s)" % str(named_short))
 
 
 ## The half-time report at a glance: a few lines and a few players, in words.

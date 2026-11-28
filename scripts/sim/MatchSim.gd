@@ -155,6 +155,11 @@ var season_plans := ["", ""]
 var interchanges := [0, 0]
 var _chain_no := 0
 var _played := [{}, {}]      # side -> id -> true: everyone who took the field
+## Time on the ground, in match minutes: player id -> minutes banked from
+## stints that have ended, and id -> the minute his current stint began.
+## Read only (result()["tog"]): Needs a lift asks whether a man had the game.
+var _tog := {}
+var _on_since := {}
 
 ## Where the result came from: expected points each cause added (positive
 ## helps that side). Pure arithmetic on the probabilities already rolled -
@@ -496,6 +501,7 @@ func _init(home: Squad, away: Squad, seed: int = 0) -> void:
 			energy_caps[str(p["id"])] = Workload.energy_cap(p)
 			energy[str(p["id"])] = _start_energy(p)
 			_played[side][str(p["id"])] = true
+			_on_since[str(p["id"])] = 0
 		for p in (squads[side] as Squad).bench:
 			energy_caps[str(p["id"])] = Workload.energy_cap(p)
 			energy[str(p["id"])] = _start_energy(p)
@@ -4486,6 +4492,7 @@ func end_quarter() -> Dictionary:
 		"goals": [goals(0), goals(1)],
 		"behinds": [behinds(0), behinds(1)],
 		"impact": impact.duplicate(true),
+		"tog": time_on_ground(mini(quarter, 4) * 30),
 	})
 	_emit("quarter", -1, fp, null, "End of quarter %d - %s %d.%d (%d) | %s %d.%d (%d)" % [
 		quarter, squads[0].name, goals(0), behinds(0), score(0),
@@ -4833,6 +4840,20 @@ const CLANGER_MARKED := 0.3
 const PRESS_KICK_MARKED := 0.4
 
 
+## Minutes each player has spent on the ground so far (player id -> int),
+## both sides, from the opening line-ups and every interchange. A player who
+## never took the field is not in it.
+## `at`: the minute to count to (a quarter's siren); -1 is now.
+func time_on_ground(at := -1) -> Dictionary:
+	var now := at
+	if now < 0:
+		now = current_minute if _q_active else maxi(current_minute, mini(current_quarter - 1, 4) * 30)
+	var out := _tog.duplicate()
+	for id in _on_since:
+		out[id] = int(out.get(id, 0)) + maxi(0, now - int(_on_since[id]))
+	return out
+
+
 ## The 18 on-ground players per side, so the pitch view can draw real
 ## guernseys and the match stats screen can show a real box score.
 func rosters() -> Array:
@@ -4916,6 +4937,7 @@ func result() -> Dictionary:
 		"interceptor": interceptor.duplicate(),
 		"interceptor_changes": interceptor_changes.duplicate(true),
 		"injuries": injuries.duplicate(true),
+		"tog": time_on_ground(),
 		"reports": reports.duplicate(true),
 		"synergies": synergies.duplicate(true),
 		"tag_drops": tag_drops.duplicate(true),
@@ -5491,6 +5513,11 @@ func _swap(side: int, gi: int, bi: int) -> void:
 	sq.bench[bi] = off
 	interchanges[side] += 1
 	_played[side][str(on["id"])] = true
+	var off_id := str(off["id"])
+	if _on_since.has(off_id):
+		_tog[off_id] = int(_tog.get(off_id, 0)) + maxi(0, current_minute - int(_on_since[off_id]))
+		_on_since.erase(off_id)
+	_on_since[str(on["id"])] = current_minute
 	events.append({
 		"q": current_quarter, "min": current_minute, "kind": "sub", "side": side, "fp": fp,
 		"name": GameDB.player_display_name(on_slot), "player_id": str(on["id"]),

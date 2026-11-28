@@ -368,6 +368,8 @@ static func half_time_report(res: Dictionary, my_side: int) -> Dictionary:
 			# Only who was hurt by half-time.
 			"injuries": (res.get("injuries", []) as Array).filter(
 					func(i): return int((i as Dictionary).get("q", 5)) <= 2),
+			# Minutes on the ground by the half-time siren.
+			"tog": (ht.get("tog", {}) as Dictionary).duplicate(),
 		}
 		return _build_report(ht_res, my_side, 2)
 	return _build_report(res, my_side, _quarters_played(res))
@@ -403,6 +405,13 @@ static func _build_report(res: Dictionary, my_side: int, quarters: int) -> Dicti
 		for e in my_ranked:
 			if str(e["id"]) == str(rec.get("id", "")):
 				e["hurt_min"] = int(rec.get("min", 0))
+	# Minutes on the ground (MatchSim.time_on_ground), so Needs a lift can
+	# tell a man who barely played from one who had the game. Older results
+	# have none: then nobody is left out on it.
+	if res.has("tog"):
+		var tog: Dictionary = res["tog"]
+		for e in my_ranked:
+			e["tog"] = int(tog.get(str(e["id"]), 0))
 	var my_by_delta := _by_delta(my_ranked)
 	var opp_by_delta := _by_delta(opp_ranked)
 
@@ -723,6 +732,10 @@ const LIFT_BELOW := 50.0
 ## before this share of it is gone (minutes of 30 a quarter) had a short
 ## game, not a poor one, and his injury is on the injury surfaces.
 const LIFT_MIN_SHARE := 0.75
+## And one who spent less than this share of it on the ground (a starter
+## left on the bench after a quarter, a late change) barely played: a quiet
+## line from him is about his minutes, not his game.
+const LIFT_MIN_GROUND := 0.5
 
 
 static func glance(report: Dictionary, full_time := false) -> Dictionary:
@@ -782,6 +795,8 @@ static func glance(report: Dictionary, full_time := false) -> Dictionary:
 	var quarters := int(report.get("quarters", 4))
 	var quiet := func(d: Dictionary) -> bool:
 		if d.has("hurt_min") and float(d["hurt_min"]) < LIFT_MIN_SHARE * 30.0 * float(quarters):
+			return false
+		if d.has("tog") and float(d["tog"]) < LIFT_MIN_GROUND * 30.0 * float(quarters):
 			return false
 		return MatchNotes.rating(d.get("stats", {})) < LIFT_BELOW * float(quarters) / 4.0
 	return {
