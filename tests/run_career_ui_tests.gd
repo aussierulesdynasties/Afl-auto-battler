@@ -5670,12 +5670,13 @@ func _test_skip_season() -> void:
 	# Played out the long way: Sim the week until the season is over. Both
 	# runs start in the finals, where the long press skips to the end of them.
 	# The start is saved and loaded for the second run rather than played again.
+	# Sim the week runs on its own orders (SimOrders.defaults: the side picked on form, as the skip's).
 	_skip_start_finals(5511)
 	_check(_state.save_career(), "The finals start saves")
 	var year: int = _state.season_year
 	var guard := 0
 	while not _state.season.is_season_over() and guard < 80:
-		_state.advance()
+		_state.sim_week()
 		guard += 1
 	var played := _skip_shape()
 
@@ -5804,13 +5805,14 @@ func _test_skip_home_away() -> void:
 	var ask_before: bool = _state.confirm_sim_round()
 	_state.set_confirm_sim_round(false)
 
-	# Played out the long way: Sim the week to the last home-and-away round.
+	# Played out the long way: Sim the week to the last home-and-away round,
+	# on its own orders (SimOrders.defaults: the side picked on form, as the skip's).
 	_skip_start(5512)
 	_state.season.round_index = _state.season.fixture.size() - 3
 	var year: int = _state.season_year
 	var guard := 0
 	while not _state.season.is_regular_done() and guard < 80:
-		_state.advance()
+		_state.sim_week()
 		guard += 1
 	var played := _skip_shape()
 
