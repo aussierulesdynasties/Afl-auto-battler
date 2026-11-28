@@ -329,7 +329,9 @@ func _test_in_career() -> void:
 			"High performance funding directly changes gameplan execution (%.2f to %.2f)" % [
 			lean_exec, elite_exec])
 	GameState.department_budget["high_performance"] = ClubBudget.STANDARD
-	GameState.advance()
+	# Every club's coaching is read before a round (the week's prep reads it the same
+	# way); the round itself is the live week below.
+	GameState._refresh_coach_tactics()
 	_check(not CoachEffects.table.is_empty() and CoachEffects.table.has("SYD") and bool(CoachEffects.table["SYD"]["ai"])
 			and not bool(CoachEffects.table["GEE"]["ai"]), "Every club's tactics are read from its staff; yours are your calls")
 	_check(bool(CoachEffects.table["GEE"]["assistant"]) and not bool(CoachEffects.table["SYD"]["assistant"]),
@@ -337,15 +339,6 @@ func _test_in_career() -> void:
 	var simmed: MatchSim = GameState.season.match_sim("GEE", "SYD", 4242)
 	_check(simmed.assistant_active(0) and not simmed.assistant_active(1),
 			"A simulated round's match has your assistant on your side")
-	var res: Dictionary = GameState.my_last_result()
-	var before := 0
-	for p in GameState.my_list:
-		before += int(p.get("xp", 0))
-	GameState._grant_match_xp(res)
-	var after := 0
-	for p in GameState.my_list:
-		after += int(p.get("xp", 0))
-	_check(before == after, "A round's XP is paid once, however often it is asked")
 	# Your side as the match is given it this week, to compare after loading.
 	GameState._refresh_coach_tactics()
 	var want := GameState.my_squad()
@@ -389,6 +382,16 @@ func _test_in_career() -> void:
 		if hist.size() >= 2 and ((hist[1]["plans"] as Array)[0] as Dictionary).has("pep"):
 			coached = true
 	_check(coached, "...and the round's other matches still use their coaches' calls")
+	var res: Dictionary = GameState.my_last_result()
+	_check(not res.is_empty(), "(setup) the live week left a result to pay XP on")
+	var before := 0
+	for p in GameState.my_list:
+		before += int(p.get("xp", 0))
+	GameState._grant_match_xp(res)
+	var after := 0
+	for p in GameState.my_list:
+		after += int(p.get("xp", 0))
+	_check(before == after, "A round's XP is paid once, however often it is asked")
 
 
 ## The plan gate's "Gain for this list today" scales the written upside by

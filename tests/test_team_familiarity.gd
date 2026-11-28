@@ -377,10 +377,10 @@ func _test_screens() -> void:
 	_check(not GameState.my_week_notes().map(func(n): return str(n.get("key", ""))).has("own_familiarity"), "The meter replaces the week's sentence")
 	ui.queue_free()
 	await _settle()
-	# The trade screen says the rule once you ask for a man.
+	# The trade screen says the rule once you ask for a man. Its Trade and Free
+	# agency tabs are built straight onto a box: the scene is never opened, so the
+	# whole off-season it opens (GameState.open_offseason) is not run for two lines.
 	var off: Control = load("res://scenes/OffseasonScene.tscn").instantiate()
-	root.add_child(off)
-	await _settle()
 	off.set("_trade_club", "MEL")
 	off.set("_theirs", [str(GameState.season.lists["MEL"][0]["id"])])
 	var trade := VBoxContainer.new()
@@ -395,5 +395,5 @@ func _test_screens() -> void:
 	_check(agents.find_child("AgentsFamiliarity", true, false) != null, "So does free agency")
 	trade.queue_free()
 	agents.queue_free()
-	off.queue_free()
+	off.free()
 	await _settle()

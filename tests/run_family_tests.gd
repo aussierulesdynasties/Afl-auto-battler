@@ -217,6 +217,7 @@ func _test_relations() -> void:
 	var bad := ""
 	var same_again := true
 	var total_kids := 0
+	var twin_ties := 0
 	for y in range(2027, 2047):
 		var live: Array = []
 		for e in pseudo:
@@ -232,19 +233,23 @@ func _test_relations() -> void:
 			if cards.has(e["id"]):
 				pseudo = pseudo.filter(func(z): return z["id"] != e["id"])
 		var cls: Array = pros.generate_class(y, seed_)
-		var twin: Array = pros.generate_class(y, seed_)
+		# The same year and seed again, in the later years where retired fathers give ties.
+		var twin: Array = pros.generate_class(y, seed_) if y >= 2042 else []
 		var ret: Array = fties.retired_entries(cards, y)
 		var all_entries := entries.duplicate()
 		all_entries.append_array(ret)
 		fties.assign(cls, y, seed_, all_entries)
-		fties.assign(twin, y, seed_, all_entries)
+		if not twin.is_empty():
+			fties.assign(twin, y, seed_, all_entries)
 		var ages := {}
 		for e in all_entries:
 			ages[e["id"]] = float(e["age"])
 		for i in range(cls.size()):
 			total_kids += 1
-			if JSON.stringify(cls[i].get("family", [])) != JSON.stringify(twin[i].get("family", [])):
-				same_again = false
+			if not twin.is_empty():
+				twin_ties += (twin[i].get("family", []) as Array).size()
+				if JSON.stringify(cls[i].get("family", [])) != JSON.stringify(twin[i].get("family", [])):
+					same_again = false
 			for f in cls[i].get("family", []):
 				var oa: float = ages[f["id"]]
 				var ka: float = float(cls[i]["age"])
@@ -267,7 +272,7 @@ func _test_relations() -> void:
 	_check(bad == "", "No impossible ages in 20 generated classes: " + bad)
 	_check(sons > 0 and brothers > 0, "Both kinds of tie turn up over 20 classes")
 	_check(float(sons + brothers) / float(total_kids) < 0.12, "Ties stay rare")
-	_check(same_again, "The same year and seed give the same families")
+	_check(same_again and twin_ties > 0, "The same year and seed give the same families (%d ties compared)" % twin_ties)
 
 	# A tie on a generated draftee: bio line both ways, real surname, save round trip.
 	_state.reset()
@@ -289,7 +294,8 @@ func _test_relations() -> void:
 		var kid_id := str(kid["id"])
 		var line_before: String = _rel.line(kid)
 		_check(_state.save_career(), "The career saves")
-		_state.reset()
+		# load_career resets the state itself; emptying the pool proves the tie comes off the disk.
+		_state.draftee_pool = []
 		_check(_state.load_career(), "The career loads")
 		var back := {}
 		for q in _state.draftee_pool:

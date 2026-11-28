@@ -432,7 +432,7 @@ func _test_draftee_potential() -> void:
 func _test_save_and_backfill() -> void:
 	GameState.reset()
 	GameState.start_season("PAD", GameDB.club_list("PAD"))
-	GameState.advance()
+	# No round is played: what is saved is on every player from the first day.
 	var rozee := {}
 	for q in GameState.my_list:
 		if str(q["real_name"]) == "Connor Rozee":

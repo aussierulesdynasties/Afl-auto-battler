@@ -91,17 +91,20 @@ func _test_plan_lines() -> void:
 
 ## The record of calls under the Game plan, Pep talk and Rotations: nothing
 ## before the first bounce, then a line for each quarter played, in order,
-## with the right clubs and calls (theirs only for the game plan).
+## with the right clubs and calls (theirs only for the game plan). One match is
+## played; the break is opened at each screen size over it.
 func _test_calls_record() -> void:
 	var db = root.get_node("GameDB")
 	var Cr = load("res://scripts/sim/CoachReport.gd")
 	var UK = load("res://scripts/ui/UiKit.gd")
-	for sz in [Vector2i(390, 844), Vector2i(1280, 720)]:
-		_state.reset()
-		_state.start_season("MEL", db.club_list("MEL"))
-		_check(_state.prepare_interactive_match(), "A live match is prepared (calls record %s)" % str(sz))
-		var sim = _state.pending_sim
-		var mine := int(sim.moment_side)
+	var sizes := [Vector2i(390, 844), Vector2i(1280, 720)]
+	_state.reset()
+	_state.start_season("MEL", db.club_list("MEL"))
+	_check(_state.prepare_interactive_match(), "A live match is prepared (calls record)")
+	var sim = _state.pending_sim
+	var mine := int(sim.moment_side)
+	for sz in sizes:
+		root.size = sz
 		var pre: Control = load("res://scenes/MatchScene.tscn").instantiate()
 		root.add_child(pre)
 		await _settle()
@@ -109,29 +112,29 @@ func _test_calls_record() -> void:
 				"No record, and no header, before the first bounce (%s)" % str(sz))
 		pre.queue_free()
 		await _settle()
-		var plans := ["attacking", "defensive"]
-		var peps := ["fire_up", "heat"]
-		var rots := ["hard", "stars"]
-		for q in range(2):
-			sim.set_tactics(mine, {"gameplan": plans[q], "pep": peps[q], "tag_id": ""})
-			sim.set_rotation_policy(mine, rots[q])
-			sim.run_quarter()
-			if q == 0:
-				root.size = sz
-				var m0: Control = load("res://scenes/MatchScene.tscn").instantiate()
-				root.add_child(m0)
-				await _settle()
-				_check(m0.find_child("CallsRecord_gameplan", true, false) != null,
-						"After Q1 the record appears (%s)" % str(sz))
-				m0.queue_free()
-				await _settle()
+	var plans := ["attacking", "defensive"]
+	var peps := ["fire_up", "heat"]
+	var rots := ["hard", "stars"]
+	for q in range(2):
+		sim.set_tactics(mine, {"gameplan": plans[q], "pep": peps[q], "tag_id": ""})
+		sim.set_rotation_policy(mine, rots[q])
+		sim.run_quarter()
+		if q == 0:
+			var m0: Control = load("res://scenes/MatchScene.tscn").instantiate()
+			root.add_child(m0)
+			await _settle()
+			_check(m0.find_child("CallsRecord_gameplan", true, false) != null,
+					"After Q1 the record appears (%s)" % str(root.size))
+			m0.queue_free()
+			await _settle()
+	var other := 1 - mine
+	var mine_code := str(sim.squads[mine].code)
+	var other_code := str(sim.squads[other].code)
+	for sz in sizes:
 		root.size = sz
 		var m: Control = load("res://scenes/MatchScene.tscn").instantiate()
 		root.add_child(m)
 		await _settle()
-		var other := 1 - mine
-		var mine_code := str(sim.squads[mine].code)
-		var other_code := str(sim.squads[other].code)
 		for kind in ["gameplan", "pep"]:
 			var rec: Node = m.find_child("CallsRecord_" + kind, true, false)
 			_check(rec != null, "A record of %s calls shows at half time (%s)" % [kind, str(sz)])
@@ -163,7 +166,6 @@ func _test_calls_record() -> void:
 							"Both club names wear their club's ink (Q%d, %s)" % [q + 1, str(sz)])
 		m.queue_free()
 		await _settle()
-
 
 
 func _settle() -> void:

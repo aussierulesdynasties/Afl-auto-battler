@@ -156,9 +156,13 @@ func _test_ticks_on_completion() -> void:
 	await _hub()
 	_check(_mark_text("training") == "Done" and WC.left(_state) == 0, "Opening Training ticks its job")
 	_state.save_career()
-	_state.reset()
+	# load_career resets the state itself; clearing the ticks proves they come off the disk.
+	_state.week_checks = {}
 	_check(_state.load_career() and WC.left(_state) == 0, "The week's ticks survive save and load")
-	_state.advance()
+	# The next week, without playing the round (its matches are not under test here).
+	var week_was: int = _state.story_week()
+	_state.season.round_index += 1
+	_check(_state.story_week() != week_was, "(setup) the calendar moves to the next week")
 	var open := []
 	for it in WC.items(_state):
 		if not bool(it["done"]):
