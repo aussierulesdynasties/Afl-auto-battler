@@ -82,7 +82,10 @@ COLOUR_CUES = {
         ["margin_colour(winner == me)", "Won by / Lost by", 1]],
     "OffseasonScene.gd": [
         ["room >= 0 else UiKit.BAD", "cap room / over the cap by", 1],
-        ["talk[\"stays\"]", "his reason in words", 1],
+        ["talk[\"stays\"]", "his reason in words", 2],
+        ["return [\"Going around again\"", "the row says Going around again", 1],
+        ["return [\"Re-signed\"", "the row says Re-signed", 1],
+        ["return [\"Talks broke down\"", "the row says Talks broke down", 1],
         ["terms[\"refuse\"]", "his reason in words", 1],
         ["room_after >= 0 else UiKit.BAD", "none, over the cap", 1],
         ["verdict[\"ok\"]", "the club's reason in words", 1]],
