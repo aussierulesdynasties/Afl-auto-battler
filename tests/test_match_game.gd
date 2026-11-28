@@ -57,6 +57,7 @@ func run() -> void:
 	_t("_test_spoils_and_crumbs")
 	_t("_test_roaming_interceptor")
 	_t("_test_six_plans")
+	_t("_test_kick_lanes")
 	_t("_test_press_by_zone")
 	_t("_test_zone_intercepts")
 	_t("_test_rotation_words_true")
@@ -4079,6 +4080,88 @@ func _test_six_plans() -> void:
 	_check(CoachReport.plan_label("fast") == "Attack Corridor" and CoachReport.plan_label("press") == "Defensive Press"
 			and not MatchSim.PLANS.has("fast") and not MatchSim.PLANS.has("press") and MatchSim.PLANS.size() == 4,
 			"Five plans (balanced and four others), and the old names read as the merged ones")
+
+
+## Kick lanes (row T2.25; the director: "lanes are recorded and affect play,
+## not presentation only"). Every kick logs its lane, the game plan decides how
+## often each lane is chosen, and the lane changes what the kick does.
+func _test_kick_lanes() -> void:
+	var seeds := [3101, 3102, 3103, 3104]
+	_check(seeds.size() == 4, "Four paired seeds")
+	# Recorded: every kick carries a lane (a marked kick logs as "mark"; a
+	# receiver's mark at the end of a kick is not a kick and has none); the
+	# lane log counts exactly the tagged disposals; no handball has a lane.
+	var sim := _sim(3101)
+	var r := sim.run()
+	var kicks := 0
+	var tagged_kicks := 0
+	var tagged := 0
+	var hb_clean := true
+	for e in r["events"]:
+		var kind := str(e.get("kind", ""))
+		var has_lane := MatchSim.LANES.has(str(e.get("lane", "")))
+		if has_lane:
+			tagged += 1
+		if kind == "kick":
+			kicks += 1
+			if has_lane:
+				tagged_kicks += 1
+		elif kind == "handball":
+			hb_clean = hb_clean and not e.has("lane")
+	var logged := 0
+	for side in 2:
+		for lane in MatchSim.LANES:
+			logged += int((sim.lane_log[side] as Dictionary).get(lane, 0))
+	_check(kicks > 50 and tagged_kicks == kicks, "Every kick logs its lane (%d of %d)" % [tagged_kicks, kicks])
+	_check(tagged == logged, "The lane log counts every laned kick (%d logged, %d tagged)" % [logged, tagged])
+	_check(hb_clean, "A handball has no lane")
+	# Chosen by the plan: the same seeds, side 0 on each plan.
+	var share := {}
+	for plan in ["balanced", "attacking", "defensive", "controlled"]:
+		var n := {"corridor": 0, "switch": 0, "line": 0}
+		for sd in seeds:
+			var s := _sim(sd)
+			s.set_tactics(0, {"gameplan": plan})
+			s.run()
+			for lane in MatchSim.LANES:
+				n[lane] += int((s.lane_log[0] as Dictionary).get(lane, 0))
+		var tot := float(n["corridor"] + n["switch"] + n["line"])
+		share[plan] = {"corridor": n["corridor"] / tot, "switch": n["switch"] / tot, "line": n["line"] / tot}
+	_check(share["attacking"]["corridor"] > share["balanced"]["corridor"] + 0.15
+			and share["attacking"]["corridor"] > share["defensive"]["corridor"] + 0.25,
+			"Attack Corridor kicks through the corridor most (%s)" % str(share))
+	_check(share["controlled"]["switch"] > share["balanced"]["switch"] + 0.12,
+			"Controlled Tempo switches the most (%s)" % str(share))
+	_check(share["defensive"]["line"] > share["attacking"]["line"] + 0.2,
+			"Defensive Press goes down the line most (%s)" % str(share))
+	# Affects play: both sides forced down one lane, paired seeds.
+	var out := {}
+	for lane in MatchSim.LANES:
+		var o := {"m_per_kick": 0.0, "throwins": 0, "score": 0}
+		var k := 0
+		for sd in seeds:
+			var s := _sim(sd)
+			var only := {"corridor": 0.0, "switch": 0.0, "line": 0.0}
+			only[lane] = 1.0
+			for plan in s.lane_plan:
+				s.lane_plan[plan] = only
+			var rr := s.run()
+			for side in range(2):
+				o["m_per_kick"] += float((s.lane_log[side] as Dictionary).get(lane + "_m", 0.0))
+				k += int((s.lane_log[side] as Dictionary).get(lane, 0))
+			for e in rr["events"]:
+				if str(e.get("kind", "")) == "throwin":
+					o["throwins"] += 1
+			o["score"] += int(rr["score"][0]) + int(rr["score"][1])
+		o["m_per_kick"] /= maxf(1.0, float(k))
+		out[lane] = o
+	_check(out["corridor"]["m_per_kick"] > out["line"]["m_per_kick"]
+			and out["line"]["m_per_kick"] > out["switch"]["m_per_kick"],
+			"The corridor gains the most ground a kick, the switch the least (%s)" % str(out))
+	_check(out["line"]["throwins"] > out["corridor"]["throwins"],
+			"Down the line runs out of bounds more than the corridor (%s)" % str(out))
+	_check(out["corridor"]["score"] != out["line"]["score"],
+			"The lane changes the scoreboard on the same seeds (%s)" % str(out))
 
 
 ## The full-time decision summary (director, 2026-10-11): each call has its

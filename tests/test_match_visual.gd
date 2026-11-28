@@ -788,8 +788,12 @@ func _test_truth(res: Dictionary) -> Array:
 ## weather merge redraws the match again: seed 42 has 15 (main 8; it swung 18
 ## to 8 on main from weather alone), over trace_collect's 12 matches 183 long
 ## collects (main 196). No worse than main, so main's cap stands: 18.
+## Kick lanes (row T2.25) send line and switch kicks wide of the central team
+## shape: over trace_collect's 36 matches 668 long collects (main 585), seed 42
+## 24. Director 2026-11-10 "Draw lanes wide": loosen to measured, the extra
+## pauses go to the 2.42 pause work: 24.
 const PAUSE_S := 1.5
-const PAUSE_MAX := 18
+const PAUSE_MAX := 24
 const PAUSE_PRESSURE_MAX := 1
 
 

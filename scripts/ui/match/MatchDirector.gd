@@ -1054,17 +1054,38 @@ func _loc(k: int) -> Vector2:
 			dy = clampf(dy_raw * 0.7, -32.0, 32.0) + _rng.randf_range(-5.0, 5.0)
 			if absf(x - src.x) < 12.0 and absf(dy) < 10.0:
 				dy = (signf(dy_raw) if dy_raw != 0.0 else 1.0) * _rng.randf_range(10.0, 18.0)
-			# (The roll is made as before whatever the plan, so the stream is unchanged.)
-			if absf(src.y) > 22.0 and _rng.randf() < 0.1 and _plan_of(int(ev.get("side", 0))) != "attacking":
-				dy = -src.y * 1.3 + _rng.randf_range(-5.0, 5.0)   # a switch of play (never down the corridor)
+			# The kick's lane is MatchSim's (row T2.25: chosen by the game plan
+			# and logged on the kick). A replay from before lanes has none and
+			# keeps the old random switch. (The roll is made either way, so the
+			# stream is unchanged.)
+			var lane := str((events[pk] as Dictionary).get("lane", "")) if pk >= 0 else ""
+			var roll := _rng.randf()
+			var wing := signf(src.y) if absf(src.y) > 4.0 else (signf(ry) if ry != 0.0 else 1.0)
+			match lane:
+				"corridor":
+					dy = -src.y * 0.8 + _rng.randf_range(-6.0, 6.0)
+				"switch":
+					# Across to the far wing.
+					dy = -wing * _rng.randf_range(22.0, 30.0) - src.y
+				"line":
+					# Along his own boundary line (the clamp below keeps it in play).
+					dy = wing * _rng.randf_range(28.0, 36.0) - src.y
+				_:
+					if absf(src.y) > 22.0 and roll < 0.1 and _plan_of(int(ev.get("side", 0))) != "attacking":
+						dy = -src.y * 1.3 + _rng.randf_range(-5.0, 5.0)   # a switch of play
+			if lane != "" and a >= 0:
+				# The lane aims the kick; it still lands within LANE_REACH of
+				# the player the log says wins it, so play never waits on him.
+				dy = clampf(src.y + dy, ry - LANE_REACH, ry + LANE_REACH) - src.y
 		var y := src.y + dy
 		var side := int(ev.get("side", 0))
-		if _plan_of(side) == "attacking" and a >= 0 and int(tokens[a]["side"]) == side and _lane.has(a):
+		var kick_lane := str((events[pk] as Dictionary).get("lane", "")) if pk >= 0 and not hb else ""
+		if _plan_of(side) == "attacking" and kick_lane in ["", "corridor"] and a >= 0 				and int(tokens[a]["side"]) == side and _lane.has(a) and absf(float(_lane[a])) < 16.0:
 			# Attack Corridor: the ball goes to the receiver's lane. He leads
 			# from his slot, up his lane, never across to the ball, so the
 			# receivers never converge on one column.
 			y = float(_lane[a]) + _rng.randf_range(-1.0, 1.0)
-		elif x * _dir(side) < -45.0:
+		elif kick_lane == "" and x * _dir(side) < -45.0:
 			y *= 1.15   # clearing from defence: toward the boundary, away from the corridor
 		p = Vector2(x, y)
 		if hb and p.distance_to(src) < 3.0:
@@ -1207,6 +1228,9 @@ func _scrap(p: Dictionary, who: int) -> void:
 	ball["h"] = 0.3
 
 
+## How far across the ground a kick's lane (MatchSim, row T2.25) may put the
+## ball from the player who wins it next: the lane aims it, he is within reach.
+const LANE_REACH := 12.0
 ## The longest a player is left collecting before the ball is his.
 const COLLECT_LIMIT := 6.0
 ## How much longer than its flat flight a kick may hang so its receiver gets
@@ -2091,14 +2115,15 @@ func _crash_late(t: Dictionary, g: Vector2) -> void:
 ## ball; and every spot stays STRUCT_MARGIN inside the boundary and out of the
 ## pockets under the phone's bench strip. `spots` is id -> spot, changed in place.
 func _structure_limits(side: int, spots: Dictionary, ball_p: Vector2, crash: bool) -> void:
+	var corridor := side == _poss and not crash and _plan_of(side) == "attacking"
 	for id in spots:
-		spots[id] = _keep_in(spots[id])
+		spots[id] = _keep_in(spots[id], corridor)
 	# No pile: two spots closer than SPOT_GAP part along the ground, the one
 	# further up it going forward; a player the play is steering (a lead, the
 	# ball's press and support) stands where he is and the spot gives way.
 	var dir := _dir(side)
 	# Attack Corridor: in its lanes, two in one lane stand a whole disc apart.
-	var gap := LANE_SPACE if side == _poss and not crash and _plan_of(side) == "attacking" else SPOT_GAP
+	var gap := LANE_SPACE if corridor else SPOT_GAP
 	var fixed := []
 	for t in tokens:
 		if int(t["side"]) == side and not spots.has(int(t["id"])):
@@ -2150,7 +2175,7 @@ func _structure_limits(side: int, spots: Dictionary, ball_p: Vector2, crash: boo
 				p = ball_p + (out.normalized() if out.length() > 0.01 else Vector2(-dir, 0.0)) * CONTEST_KEEP
 			else:
 				p = ball_p + out
-		spots[id] = _keep_in(p)
+		spots[id] = _keep_in(p, corridor)
 	if side != _poss or crash or _plan_of(side) == "attacking":
 		return   # Attack Corridor keeps its lanes instead (_attack_lanes)
 	# In possession each line keeps its width. Spread about the line's middle;
@@ -2193,7 +2218,14 @@ func _structure_limits(side: int, spots: Dictionary, ball_p: Vector2, crash: boo
 ## A structure spot kept STRUCT_MARGIN inside the boundary line and out of the
 ## pockets the phone's bench strip covers (beyond POCKET_Y across, deeper than
 ## POCKET_X): a disc there would sit on the line or under the strip.
-static func _keep_in(p: Vector2) -> Vector2:
+## `lane`: Attack Corridor's spot keeps its lane across the ground and comes in
+## along it only (the radial clamp squeezed a line of three under LANE_GAP deep
+## in a pocket once kick lanes took the ball there, row T2.25).
+static func _keep_in(p: Vector2, lane := false) -> Vector2:
+	var ay := MatchMotion.HALF_WID - STRUCT_MARGIN
+	if lane and absf(p.y) < ay:
+		var ax := (MatchMotion.HALF_LEN - STRUCT_MARGIN) * sqrt(1.0 - p.y * p.y / (ay * ay))
+		p.x = clampf(p.x, -ax, ax)
 	p = MatchMotion.clamp_to_oval(p, STRUCT_MARGIN)
 	if absf(p.y) > POCKET_Y and absf(p.x) > POCKET_X:
 		p.x = POCKET_X * signf(p.x)
@@ -2347,7 +2379,7 @@ func _structure_spot(t: Dictionary, ball_p: Vector2, poss: int) -> Vector2:
 			var half := slot == "CHF" or slot == "HFL" or slot == "HFR"
 			var behind := ball_p.x - dir * FLOOD_HALF_BEHIND
 			world.x = lerpf(world.x, behind, FLOOD_HALF_SHARE if half else FLOOD_PUSH * 0.25)
-	return _keep_in(world)
+	return _keep_in(world, has and plan == "attacking")
 
 
 ## The Defensive Press, drawn (V1, press pilot). `bx` is the ball's distance
