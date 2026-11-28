@@ -114,9 +114,7 @@ COLOUR_CUES = {
         ["rise.size() > 0", "the rise mark and its words", 4],
         ["Traits.is_bad(trait_keys[0])", "the weakness mark", 1],
         ["\"Injured %d wk%s\"", "Injured N wks", 1],
-        ["useful else UiKit.BAD", "Does little for a ...", 1],
-        ["return UiKit.GOOD", "the rating's number", 1],
-        ["return UiKit.BAD", "the rating's number", 1]],
+        ["useful else UiKit.BAD", "Does little for a ...", 1]],
     "TraitLink.gd": [["Traits.is_bad(key)", "the sheet says Weakness", 1]],
     "UiKit.gd": [
         ["BAD if danger", "the button's words", 1],

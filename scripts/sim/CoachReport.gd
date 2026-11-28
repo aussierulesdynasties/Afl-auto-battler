@@ -650,7 +650,7 @@ static func _second_half_keys(res: Dictionary, my_side: int, opp_side: int, my_t
 
 	# 2. Our quiet star - a high-rated player well below par.
 	for p in my_ranked:
-		if int(p["overall"]) >= 76 and float(p["delta"]) <= -4.0:
+		if int(p["overall"]) >= 80 and float(p["delta"]) <= -4.0:
 			keys.append("%s has been quiet: %s." % [str(p["name"]), str(p["line"])])
 			break
 

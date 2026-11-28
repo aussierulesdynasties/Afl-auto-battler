@@ -36,7 +36,7 @@ const DEFS := {
 			"scout": "Lives at the feet of the pack."},
 	"sharpshooter": {"label": "Sharpshooter", "stat": "goalkicking", "min": 85, "roles": [],
 			"text": "Every shot is 6% more likely to be a goal.",
-			"scout": "Reliable set shot."},
+			"scout": "Kicks straight, set shot or on the run."},
 	"playmaker": {"label": "Playmaker", "stat": "vision", "min": 70, "roles": [],
 			"text": "Shots from this player's inside-50 deliveries are 5% more likely to be goals.",
 			"scout": "Sets up goals with clever ball use going inside 50."},

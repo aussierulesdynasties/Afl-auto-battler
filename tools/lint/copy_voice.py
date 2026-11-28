@@ -59,7 +59,7 @@ STATS_PASS = {
         "Kicks straight. Turns his shots into goals instead of behinds.",
         "Tackles and hurries the opposition. Most of our defence comes from it.",
         "Where we expect him to peak. It is not a limit. His growth slows as he nears it.",
-        "Contest is our stoppage work. Attack is our forwards and carry. Defence is our pressure and intercept.",
+        "Contest is our stoppage work. Attack is our forwards and our midfielders' running. Defence is our defenders' pressure and how they read the play.",
         "A standout stat earns a trait. The right mix of them on the ground switches on a synergy. The Team screen shows ours, and when one is a player short",
         "Every player risks injury each game. Durability lowers the risk. Tired players win less ball. Rotate them from the coach's box.",
         "Players earn development every game. What each one is developing as decides where it goes. A stat costs more the higher it already is. Past POT it costs much more.",

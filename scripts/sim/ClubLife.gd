@@ -313,7 +313,7 @@ static func morale_after_match(list: Array, played: Dictionary, won: bool, softe
 		if played.has(id):
 			add_morale(p, (MATCH_MORALE_WIN if won else MATCH_MORALE_LOSS) + swing)
 		elif int(p.get("injury_weeks", 0)) <= 0 and not unavailable.has(id):
-			var loss := 6 if int(Rating.ovr(p, 0)) >= 78 else 3
+			var loss := 6 if int(Rating.ovr(p, 0)) >= EXTENSION_MIN_OVR else 3
 			add_morale(p, -int(round(sting * CoachEffects.softened(loss, _sting_share(float(soften.get(id, 0.0)), culture_s)))))
 		else:
 			# Injured players drift back toward settled.
